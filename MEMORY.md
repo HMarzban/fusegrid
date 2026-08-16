@@ -18,6 +18,12 @@ append an entry when it makes a non-trivial change.
 
 ## 2026-08-16 — Initialized opencode for rollblock
 - Added `opencode.json` (schema + `instructions` + `permission`) and `AGENTS.md`
-  (architecture, commands, conventions).
+   (architecture, commands, conventions).
 - Established this episodic-memory convention; agents must append here after
   any non-trivial change.
+
+## 2026-08-16 — git baseline commit
+- `git init` + `.gitignore` (ignores `.DS_Store`, `node_modules/`, the two
+  unreferenced ~5.6MB `Gemini_Generated_Image_*.jpeg` moodboard assets, logs/.env).
+- Committed baseline `d3975af`: full deterministic single-player sim + procedural
+  render + netcode seam, 16/16 tests passing. Not yet a remote/VCS-tracked branch.
