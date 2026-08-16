@@ -1,0 +1,13 @@
+# macOS
+.DS_Store
+
+# Node (zero-dependency now, but future-proof)
+node_modules/
+
+# Design / moodboard assets — not referenced by code, not versioned
+Gemini_Generated_Image_*.jpeg
+
+# Local env / logs
+*.log
+.env
+.env.*

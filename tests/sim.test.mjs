@@ -1,0 +1,102 @@
+import {step, createWorld, newIntent, loadLevel} from "../src/core/sim.js";
+import {CFG} from "../src/core/config.js";
+import {tileOf} from "../src/core/board.js";
+
+let pass=0, fail=0;
+function check(name, cond, detail){ cond?pass++:fail++;
+  console.log((cond?"  PASS ":"  FAIL ")+name+(detail!==undefined?" -> "+detail:"")); }
+
+// ---- determinism: two fresh worlds + identical input => identical outcome ----
+function runSteps(seed, level, frames, inputFn){
+  const w=createWorld(seed, level);
+  loadLevel(w, level, false);
+  w.state="PLAY";
+  const inps={0:newIntent()};
+  const fireEdge={prev:false};
+  for(let i=0;i<frames;i++){
+    const it=inputFn(w, i, fireEdge) || inps[0];
+    step(w, CFG.STEP, inps);
+    inps[0].firePrev=inps[0].fire;
+  }
+  return w;
+}
+
+// 1) no-input determinism
+const a=runSteps(12345, 1, 60, ()=>({0:{move:{x:0,y:0},fire:false,firePrev:false,shift:false,remote:false,kick:false}}));
+const b=runSteps(12345, 1, 60, ()=>({0:{move:{x:0,y:0},fire:false,firePrev:false,shift:false,remote:false,kick:false}}));
+check("deterministic no-input sim (score matches)", a.score===b.score, a.score+" vs "+b.score);
+check("deterministic no-input sim (enemy count matches)", a.enemies.length===b.enemies.length, a.enemies.length+" vs "+b.enemies.length);
+
+// 2) movement: hold RIGHT -> player x increases
+{
+  const w=createWorld(1,1); loadLevel(w,1,false); w.state="PLAY";
+  const start=w.players[0].x;
+  for(let i=0;i<30;i++) step(w,CFG.STEP,{0:{move:{x:1,y:0},fire:false,firePrev:false,shift:false,remote:false,kick:false}});
+  check("player moves right", w.players[0].x>start+5, start.toFixed(1)+" -> "+w.players[0].x.toFixed(1));
+}
+
+// 3) border clamp: hold RIGHT + UP for many frames => stays inside board
+{
+  const w=createWorld(1,1); loadLevel(w,1,false); w.state="PLAY";
+  for(let i=0;i<300;i++) step(w,CFG.STEP,{0:{move:{x:1,y:-1},fire:false,firePrev:false,shift:false,remote:false,kick:false}});
+  const p=w.players[0];
+  const xt=tileOf(p.x), yt=tileOf(p.y);
+  check("player clamped inside border", xt>=1 && xt<=CFG.COLS-2 && yt>=1 && yt<=CFG.ROWS-2, "tile "+xt+","+yt);
+}
+
+// 4) blast kills an adjacent enemy
+{
+  const w=createWorld(1,1); loadLevel(w,1,false); w.state="PLAY";
+  const p=w.players[0];
+  const enemy=w.enemies[0];
+  enemy.invuln=false; enemy.invulnT=0; enemy.speed=0;
+  enemy.x=p.x+CFG.TILE; enemy.y=p.y;
+  p.bombs=2;
+  w.bombs.push({x:p.x,y:p.y,tx:tileOf(p.x),ty:tileOf(p.y),timer:0.01,radius:1,pierce:false,line:false,dir:null,variant:"normal",dead:false});
+  for(let i=0;i<180;i++) step(w,CFG.STEP,{0:{move:{x:0,y:0},fire:false,firePrev:false,shift:false,remote:false,kick:false}});
+  check("blast kills adjacent enemy", enemy.dead===true, "enemy.dead="+enemy.dead);
+}
+
+// 5) power-up pickup applies (+bomb)
+{
+  const w=createWorld(1,1); loadLevel(w,1,false); w.state="PLAY";
+  const p=w.players[0];
+  if(w.items.length){
+    const it=w.items[0]; it.pdef={t:"bomb",apply:(ww,pl)=>pl.bombs++};
+    it.x=p.x; it.y=p.y;
+    const before=p.bombs;
+    step(w,CFG.STEP,{0:{move:{x:0,y:0},fire:false,firePrev:false,shift:false,remote:false,kick:false}});
+    check("power-up walk-over +1 bomb", p.bombs===before+1, before+" -> "+p.bombs);
+  } else check("power-up walk-over +1 bomb", false, "no items");
+}
+
+// 6) auto-advance: clear all enemies -> level increments after WIN_DELAY
+{
+  const w=createWorld(1,1); loadLevel(w,1,false);
+  w.enemies.forEach(e=>e.dead=true);
+  w.state="PLAY";
+  const level0=w.level;
+  // fewer than WIN_DELAY
+  for(let i=0;i<50;i++) step(w,CFG.STEP,{0:{move:{x:0,y:0},fire:false,firePrev:false,switch:false,shift:false,remote:false,kick:false}});
+  check("not advanced before WIN_DELAY", w.state==="PLAY" && w.level===level0, "level "+w.level);
+  for(let i=0;i<150;i++) step(w,CFG.STEP,{0:{move:{x:0,y:0},fire:false,firePrev:false,shift:false,remote:false,kick:false}});
+  check("auto-advanced to next level", w.level===level0+1, "level "+level0+" -> "+w.level);
+}
+
+// 7) line bomb pierces bricks (enemy beyond bricks gets killed; normal bomb wouldn't)
+{
+  const w=createWorld(1,1); loadLevel(w,1,false); w.state="PLAY";
+  const p=w.players[0];
+  w.enemies.length=0;
+  // place 3 bricks to the right of player at row 1
+  for(let i=1;i<=5;i++){ w.grid[1*CFG.COLS+1+i]=1; }
+  const enemy={type:"walker",x:6*CFG.TILE+CFG.TILE/2,y:1*CFG.TILE+CFG.TILE/2,tx:6,ty:1,dir:{x:1,y:0},speed:0,r:13,color:"#fff",dead:false,invuln:false,invulnT:0,cd:999,home:{x:6,y:1},pass:false};
+  w.enemies.push(enemy);
+  p.bombKind="line"; p.face={x:1,y:0};
+  w.bombs.push({x:p.x,y:p.y,tx:tileOf(p.x),ty:tileOf(p.y),timer:0.01,radius:5,pierce:false,line:true,dir:{x:1,y:0},variant:"line",dead:false});
+  for(let i=0;i<180;i++) step(w,CFG.STEP,{0:{move:{x:0,y:0},fire:false,firePrev:false,shift:false,remote:false,kick:false}});
+  check("line bomb pierces bricks", enemy.dead===true, "enemy.dead="+enemy.dead);
+}
+
+console.log("\n  SIM RESULT: "+pass+" PASS / "+fail+" FAIL");
+process.exit(fail?1:0);

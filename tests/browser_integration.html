@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body>
+<!-- Browser integration test: runs the REAL wired game (main.js) then asserts
+     gameplay via the documented window.__GAME__ hooks. Result -> document.title. -->
+<canvas id="game" width="600" height="520"></canvas>
+<script type="module">
+ import {createGame} from "../src/main.js";
+ const c=document.getElementById("game");
+ createGame(c,{audio:null});
+ const G=window.__GAME__.G;
+ G.state="PLAY";
+
+ let pass=0, fail=0, results=[];
+ const step=window.__GAME__.step;
+ const ok=(n,cp,d)=>{ cp?pass++:fail++; results.push((cp?"PASS ":"FAIL ")+n+(d?" -> "+d:"")); };
+
+ ok("g.state PLAY after boot", G.state==="PLAY");
+ ok("board has 195 cells", G.grid && G.grid.length===195);
+ ok("enemies spawned", G.enemies.length>0, ""+G.enemies.length);
+
+ // blast kill (place a bomb adjacent to a frozen enemy, let fuse burn)
+ function guaranteedKill(){
+   const e=G.enemies.filter(x=>!x.dead)[0]; if(!e) return null;
+   const p=G.players[0];
+   e.invuln=false; e.invulnT=0; e.speed=0;
+   e.x=p.x+40; e.y=p.y;
+   p.bombs=3;
+   G.bombs.push({x:p.x,y:p.y,tx:Math.floor(p.x/40),ty:Math.floor(p.y/40),
+     timer:0.02,radius:1,pierce:false,line:false,dir:null,variant:"normal",dead:false});
+   return e;
+ }
+ const target=guaranteedKill();
+ for(let i=0;i<60;i++) step(1);
+ ok("blast kills enemy in browser build", target && target.dead, "dead="+((target&&target.dead)||false));
+
+ // level advance
+ G.enemies.forEach(e=>e.dead=true);
+ const lvl=G.level;
+ for(let i=0;i<180;i++) step(1);
+ ok("auto-advance to next level", G.level===lvl+1, "level "+lvl+"->"+G.level);
+
+ ok("no NaN in player position", !Number.isNaN(G.players[0].x) && !Number.isNaN(G.players[0].y));
+
+ document.title="SELTEST "+pass+"/"+(pass+fail)+" "+results.join(" | ");
+ window.__selftest={pass,fail,results};
+ const out=document.createElement("pre"); out.id="result";
+ out.textContent="SELTEST "+pass+"/"+(pass+fail)+"\n"+results.join("\n");
+ document.body.appendChild(out);
+ console.log("SELTEST "+pass+"/"+(pass+fail)+" "+results.join(" | "));
+</script>
+</body></html>

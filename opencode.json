@@ -1,0 +1,17 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+   "instructions": ["AGENTS.md", "MEMORY.md"],
+  "permission": {
+    "bash": {
+      "node --test*": "allow",
+      "node serve.js*": "allow",
+      "npm test*": "allow",
+      "npm start*": "allow",
+      "*": "ask"
+    },
+    "external_directory": {
+      "~/secrets/**": "deny",
+      "*": "allow"
+    }
+  }
+}

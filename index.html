@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEO·BOMBERMAN</title>
+<style>
+  :root{
+    --bg:radial-gradient(120% 120% at 50% 0%,#122036,#070a12 70%);
+    --panel:#141a2b; --line:#26324a; --accent:#37f0d0;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:#dfe7f5;
+    font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    display:flex;align-items:center;justify-content:center;overflow:hidden}
+  #wrap{display:flex;flex-direction:column;align-items:center;gap:10px;padding:14px}
+  #hud{display:flex;gap:16px;align-items:center;font-size:13px;letter-spacing:.5px;
+    background:var(--panel);padding:8px 16px;border-radius:10px;border:1px solid var(--line);
+    box-shadow:0 6px 24px rgba(0,0,0,.45);flex-wrap:wrap;justify-content:center}
+  #hud b{color:var(--accent);font-weight:700}
+  #hud .sep{color:#3a4a68}
+  #stage{position:relative;line-height:0}
+  canvas{image-rendering:pixelated;display:block;border-radius:10px;
+    border:1px solid var(--line);box-shadow:0 12px 48px rgba(0,0,0,.6),0 0 0 4px #0a0e18;
+    touch-action:none}
+  .btn{background:var(--panel);color:#dfe7f5;border:1px solid var(--line);
+    padding:8px 14px;border-radius:8px;cursor:pointer;font:inherit;font-size:12px;
+    letter-spacing:.5px;transition:.12s}
+  .btn:hover{border-color:var(--accent);color:var(--accent)}
+  .btn:active{transform:translateY(1px)}
+  #controls{display:flex;gap:8px}
+  .muted{opacity:.45}
+  .hint{font-size:11px;color:#7385ad;max-width:560px;text-align:center;line-height:1.55}
+  .hint kbd{background:#1d2740;border:1px solid #33436a;border-radius:4px;
+    padding:1px 5px;color:#a9bbe0}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="hud">
+    <span>SCORE <b id="score">0</b></span><span class="sep">·</span>
+    <span>LV <b id="level">1</b></span><span class="sep">·</span>
+    <span>LIVES <b id="lives">3</b></span><span class="sep">·</span>
+    <span>ENEMIES <b id="enemies">0</b></span><span class="sep">·</span>
+    <span>BOMB <b id="bombs">1</b></span><span class="sep">·</span>
+    <span>FLAME <b id="range">1</b></span>
+  </div>
+  <div id="stage"><canvas id="c" aria-label="Neo Bomberman game board"></canvas></div>
+  <div id="controls">
+    <button class="btn" id="btnPause">Pause</button>
+    <button class="btn" id="btnSound">Sound: On</button>
+    <button class="btn" id="btnRestart">Restart</button>
+  </div>
+  <div class="hint">
+    <kbd>WASD</kbd>/<kbd>Arrows</kbd> move · <kbd>Space</kbd> bomb ·
+    <kbd>Shift</kbd> throw · <kbd>Q</kbd> remote · <kbd>K</kbd> kick ·
+    <kbd>P</kbd> pause
+  </div>
+</div>
+
+<!-- Entry point. Single browser thread: input → sim → render.
+     The authoritative sim lives in src/core/sim.js (Node-testable, no DOM).
+     Future multiplayer: swap LocalTransport → WebSocketTransport in main.js. -->
+<script type="module">
+   import {createGame} from "./src/main.js";
+   import {createAudio} from "./src/audio.js";
+   const canvas=document.getElementById("c");
+   const audio=createAudio();
+   window.__audio=audio;
+   createGame(canvas,{audio, canvasEl:canvas});
+</script>
+</body>
+</html>
