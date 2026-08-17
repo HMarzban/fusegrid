@@ -1,7 +1,7 @@
 # Design — Pseudo-3D Dimetric Renderer (rollblock)
 
-**Date:** 2026-08-16 (revised 2026-08-17, round 3 after 3-reviewer Santa review)
-**Status:** Revised (round 3) — ready for cold execution (pending final confirmation review)
+**Date:** 2026-08-16 (revised 2026-08-17, round 4 after 3-reviewer Santa review)
+**Status:** Revised (round 4) — ready for cold execution (pending final confirmation review)
 **Decisions locked:** Option (b) pseudo-3D dimetric. Zero runtime dependencies (no
 engine, no build). No change to `src/core/` or `src/net/`. v1 is a **fixed**
 dimetric tilt — no moving camera, no camera input stream.
@@ -12,7 +12,7 @@ dimetric tilt — no moving camera, no camera input stream.
 > - Round 2 fixed: floor/background never drawn, `byDepth` comparator + tie-break
 >   undefined, `WALL_H`/`PAD` used but not declared, board bbox + `canvasW` wrong,
 >   §4.5 contradicted `fit()`/resize, §3 contradicted §4.4 on where `PROJ` lives.
-> - Round 3 (this revision) fixed the remaining cold-execution gaps: the 3D path
+> - Round 3 fixed the remaining cold-execution gaps: the 3D path
 >   omitted `consumeEvents` (would leak `world.events`, kill audio + fx); items and
 >   blades were absent from the painter list (invisible power-ups/explosions); the
 >   per-entity sprite interface was unspecified; the 3D canvas background was
@@ -20,8 +20,16 @@ dimetric tilt — no moving camera, no camera input stream.
 >   margin math was ambiguous; `camera.js`'s export shape contradicted §4.5; the
 >   overlay mechanism was unspecified; the headless stub was a fragile method list;
 >   `FLOOR_H` was dead; `WALL_H`/`BRICK_H` were "e.g."; top-face colors were
->   ambiguous; `byDepth` had no home; shadows were under-specified. All resolved
->   below.
+>   ambiguous; `byDepth` had no home; shadows were under-specified.
+> - Round 4 (this revision) closed the last gaps the third review round found:
+>   liveness filters were unpinned (3D would draw taken items / a dead player,
+>   diverging from 2D); `drawPlayer` was mis-described as a loop; step 6's "per
+>   biome / billboard scale" contradicted the pinned single-`PROJ` design; plus
+>   nits — floor count (all 195), `drawLogo` center forwarding, floor checkerboard
+>   parity, fx shape (rect), `draw3dBackground` colors, `shade` rounding,
+>   `updateHud` line ref, blades moved to tier 3 (explosions over standing bricks,
+>   2D parity), step-7 MENU-state smoke test, `draw*Body` exports, and a step-1
+>   forward-reference note. All resolved below.
 
 ## 1. Goal
 
@@ -128,51 +136,67 @@ project(gx, gy):
   `sy ∈ [footprintS_y - H, footprintS_y]` — **the top face is the highest
   point, the footprint is the lowest**. (Standard "blocks sit on the ground"
   isometric look; this is what makes the §4.5 top/bottom margins differ.)
-- **Painter entries (complete list — every drawable in the world):**
+- **Painter entries (complete list — live drawables only; skip taken items,
+  dead enemies, and non-alive players, mirroring the 2D guards at
+  `sprites.js:183/195` and `renderer.js:42`):**
   - **Floor tile `(x,y)`:** `depth = x+y`, `tier = 0`, `draw` = flat diamond
-    filled with the biome floor color (checkerboard `floor0`/`floor1`). No
-    extrusion. This is the ground plane.
+    filled with the biome floor color — checkerboard
+    `((x+y)&1) ? b.floor1 : b.floor0` (mirrors `sprites.js:71`). One floor
+    painter per tile, **all `COLS×ROWS = 195`** (walls/bricks draw over their
+    own floor; no visual difference). No extrusion. This is the ground plane.
   - **Wall `(x,y)`:** `depth = x+y`, `tier = 2`, `draw` = three quads — top face
     `= b.wall`, front-left `= shade(b.wall, 0.7)`, front-right `= shade(b.wall,
     0.85)`. Extrusion `WALL_H = 24`.
   - **Brick `(x,y)`:** `depth = x+y`, `tier = 2`, `draw` = three quads — top face
     `= b.brickB`, front-left `= shade(b.brickB, 0.7)`, front-right `=
     shade(b.brickB, 0.85)`. Extrusion `BRICK_H = 14`.
-  - **Item (power-up) at `(it.x,it.y)`:** `depth = (it.x+it.y)/TILE`, `tier = 1`,
-    billboard: `ctx.save(); ctx.translate(projSx, projSy); drawItemBody(ctx,
-    world, it); ctx.restore()` where `(projSx,projSy) = project(it.x/TILE,
-    it.y/TILE)`.
+  - **Item (power-up) at `(it.x,it.y)`, only `!it.taken`:** `depth =
+    (it.x+it.y)/TILE`, `tier = 1`, billboard: `ctx.save(); ctx.translate(projSx,
+    projSy); drawItemBody(ctx, world, it); ctx.restore()` where `(projSx,projSy)
+    = project(it.x/TILE, it.y/TILE)`.
   - **Bomb at `(bm.x,bm.y)`:** `depth = (bm.x+bm.y)/TILE`, `tier = 1`, billboard
     via `drawBombBody`.
   - **Blade tile `t` (of blade `bl`) at grid `(t.tx,t.ty)`:** `depth = t.tx+t.ty`,
-    `tier = 1`, billboard via `drawBladeBody` at `project(t.tx+0.5, t.ty+0.5)`
-    (the tile center). A blade with N tiles contributes N painters.
-  - **Enemy at `(e.x,e.y)`:** `depth = (e.x+e.y)/TILE`, `tier = 1`, billboard via
-    `drawEnemyBody`.
-  - **Player at `(p.x,p.y)`:** `depth = (p.x+p.y)/TILE`, `tier = 1`, billboard via
-    `drawPlayerBody`.
+    `tier = 3`, billboard via `drawBladeBody` at `project(t.tx+0.5, t.ty+0.5)`
+    (the tile center). A blade with N tiles contributes N painters. **Tier 3
+    (above block tier 2)** so an explosion over a standing brick (pierce/line
+    bombs don't break bricks — `sim.js:157`) renders on top, matching 2D
+    (`renderer.js:39-40`); depth still dominates for blocks in front.
+  - **Enemy at `(e.x,e.y)`, only `!e.dead`:** `depth = (e.x+e.y)/TILE`, `tier =
+    1`, billboard via `drawEnemyBody`.
+  - **Player at `(p.x,p.y)`, only `p.alive !== false`:** `depth = (p.x+p.y)/TILE`,
+    `tier = 1`, billboard via `drawPlayerBody`.
   - **fx particle at `(p.x,p.y)`:** `depth = (p.x+p.y)/TILE`, `tier = 1`, `draw`
-    = a projected quad/circle of the particle's `color`/`size`, alpha
+    = a projected **filled quad** (rect) of the particle's `color`/`size`, alpha
     `max(0,1-p.t/p.life)`, at `project(p.x/TILE, p.y/TILE)`. (Drawn inline — no
-    body extraction; the 2D `drawFx` is left untouched.)
+    body extraction; the 2D `drawFx` is left untouched. 2D uses `fillRect`
+    squares — `fx.js:66` — so a projected rect matches; confetti rotation is
+    dropped in 3D.)
 - **Per-entity sprite interface (pinned).** The 2D draw fns in `sprites.js`
-  (`drawItems:182`, `drawEnemies:194`, `drawPlayer:235`, `drawBombs:266`,
-  `drawBlades:293`) each loop the array and do `c.save(); c.translate(x,y);
-  <body>; c.restore()`. **Extract the `<body>`** (the relative-coordinate
-  drawing, which already assumes the origin is the entity center) into a
-  per-entity function: `drawItemBody(c, world, it)`, `drawEnemyBody(c, world,
-  e)`, `drawPlayerBody(c, world, p)`, `drawBombBody(c, world, bm)`,
-  `drawBladeBody(c, world, bl, t)`. The 2D fns become thin wrappers (loop +
-  `translate` + body) — a **behavior-preserving refactor** (identical 2D
-  output). The 3D path calls the body inside `ctx.translate(projSx, projSy)` so
-  the same art renders as a billboard. **Billboard anchor = center** (the 2D
-  art is centered at origin).
+  (`drawItems:182`, `drawEnemies:194`, `drawBombs:266`, `drawBlades:293`) each
+  loop the array and do `c.save(); c.translate(x,y); <body>; c.restore()`.
+  `drawPlayer` (`sprites.js:235`) is different: it takes `(c, world)`, selects
+  `world.players[0]` internally, and does `c.save(); c.translate(p.x,p.y);
+  <body>; c.restore()` with **no loop**. **Extract the `<body>`** (the
+  relative-coordinate drawing, which already assumes the origin is the entity
+  center) into a per-entity function: `drawItemBody(c, world, it)`,
+  `drawEnemyBody(c, world, e)`, `drawPlayerBody(c, world, p)`,
+  `drawBombBody(c, world, bm)`, `drawBladeBody(c, world, bl, t)`. **The five
+  `draw*Body` functions are exported from `sprites.js`** (so `scene3d.js` can
+  import them). The 2D fns become thin wrappers — a **behavior-preserving
+  refactor** (identical 2D output): `drawItems`/`drawEnemies`/`drawBombs`/
+  `drawBlades` loop the array (applying the liveness filter) + `translate` +
+  body; `drawPlayer` becomes a loop over `world.players` (skip
+  `p.alive===false`) + `translate` + `drawPlayerBody(c, world, p)`. The 3D path
+  calls the body inside `ctx.translate(projSx, projSy)` so the same art renders
+  as a billboard. **Billboard anchor = center** (the 2D art is centered at
+  origin).
 - **Sort comparator (pinned):**
   ```
   byDepth(a, b) = (a.depth - b.depth) || (a.tier - b.tier)
   ```
   Draw back-to-front (ascending). **Tier breaks equal-depth ties as
-  floor(0) < entity(1) < block(2).** This is what makes a wall occlude an
+  floor(0) < entity(1) < block(2) < blade(3).** This is what makes a wall occlude an
   entity resting in the tile directly behind it: that entity's depth equals the
   wall's back-corner depth, and the wall (tier 2) sorts after the entity
   (tier 1), so the wall draws on top.
@@ -202,8 +226,8 @@ PROJ = {                                // frozen module-level constant
 ```
 buildPainters(world) -> [ { depth, tier, draw(ctx) } ]   // complete list, unsorted
 byDepth(a, b) -> number                                  // the §4.3 comparator
-shade(rgbHex, factor) -> "rgb(r,g,b)"                    // darkens a #rrggbb string
-draw3dBackground(c, world)                               // biome gradient over canvasW×canvasH
+shade(rgbHex, factor) -> "rgb(r,g,b)"                    // darkens #rrggbb; each channel = Math.round(v*factor)
+draw3dBackground(c, world)                               // linear gradient b.bg0->b.bg1 over canvasW×canvasH (sprites.js:93-94)
 ```
 
 `renderer.js` 3D path — **shares the 2D prologue/epilogue**, branches only in the
@@ -298,7 +322,12 @@ whole canvas to the viewport. No double-scaling.
    `createRenderer` accept `opts.kind` (default `"2d"`), branch `render` to the
    2D or 3D path (shared `consumeEvents`/shake prologue + `drawOverlay`/
    `updateHud` epilogue, per §4.4), and gate `bakeAtlas()` on `kind === "2d"`.
-   Surface unchanged. No behavior change to 2D. *Guard: 16 tests (no-regression).*
+   Surface unchanged. No behavior change to 2D. The 3D branch body references
+   `camera.js`/`scene3d.js`, which land in steps 2–5; step 1 only adds the
+   `kind` param, the default-`"2d"` path, and an empty 3D branch stub (the
+   browser entry is fully wired once step 5 lands — the 16-test guard is
+   unaffected, since tests never import the renderer). *Guard: 16 tests
+   (no-regression).*
 2. **Projection + unit test.** New `src/render/r3d/camera.js` with `project`
    and `PROJ` (all constants pinned per §4.4/§4.5). **Add `tests/r3d.test.mjs`**
    (matching the existing `check()` harness style in `tests/sim.test.mjs:5-7`):
@@ -317,9 +346,12 @@ whole canvas to the viewport. No double-scaling.
 4. **Painter list + unit test.** New `src/render/r3d/scene3d.js` with
    `buildPainters`, `byDepth`, `shade`, `draw3dBackground`. **Extend
    `tests/r3d.test.mjs`**:
-   - the painter list contains **every floor tile**, every wall, every brick,
-     every item, every bomb, every blade tile, every enemy, the player, and every
-     fx particle (assert the counts match the world);
+   - the painter list contains **all 195 floor tiles**, every wall, every brick,
+     every **live** item (`!it.taken`), every bomb, every blade tile, every
+     **live** enemy (`!e.dead`), the **alive** player, and every fx particle —
+     assert each count matches the corresponding filtered world set; and an
+     explicit case: mark an item `taken` / set the player `alive=false` → both
+     are excluded from the painter list;
    - it sorts correctly by `(depth, tier)`;
    - a front wall sorts after a back entity (different depths);
    - a **behind-wall entity at equal depth** sorts *before* the wall (occluded);
@@ -334,14 +366,21 @@ whole canvas to the viewport. No double-scaling.
    cx, cy)` and `drawLogo(c, time, cx, cy)` in `scenes.js` with defaults equal
    to the current 2D values (`w=COLS*TILE, h=ROWS*TILE, cx=w/2, cy=h/2`), so the
    2D call `drawOverlay(c, world)` is unchanged; the 3D path passes
-   `(PROJ.canvasW, PROJ.canvasH, 304, 188)`. (`updateHud` is DOM-based —
-   `scenes.js:44-59` — and needs no change.) Tune the extrusion heights, shade
-   factors, and billboard scale per biome. *Guard: 16 tests.*
+   `(PROJ.canvasW, PROJ.canvasH, 304, 188)`. **`drawOverlay` forwards its
+   `(cx, cy)` to `drawLogo(c, world.time, cx, cy)`** (the current call at
+   `scenes.js:29` is `drawLogo(c, world.time)`); `drawLogo` keeps its internal
+   `y-34` offset and defaults `cx=COLS*TILE/2, cy=ROWS*TILE/2`. (`updateHud` is
+   DOM-based — `scenes.js:44-50` — and needs no change.) If the look is off,
+   tune the **pinned** constants in `PROJ` (`WALL_H`, `BRICK_H`) and the shade
+   factors (0.7/0.85) — no per-biome values, no new scale knob. *Guard: 16
+   tests.*
 7. **Headless render smoke test.** Extend `tests/r3d.test.mjs`: build a world,
    and — because `createRenderer` takes a **canvas** (`renderer.js:12`), not a
    ctx — pass a **fake canvas whose `getContext("2d")` returns a universal Proxy
-   stub** (below). Call `render` for both `kind:"2d"` and `kind:"3d"`, assert no
-   throw. Append a dated `MEMORY.md` entry. *Guard: the new test.*
+   stub** (below). Call `render` for both `kind:"2d"` and `kind:"3d"` in a
+   **non-PLAY state** (`loadLevel` leaves `state="MENU"` — `world.js:47`), so the
+   3D `drawOverlay`/`drawLogo` parameter path is exercised; assert no throw.
+   Append a dated `MEMORY.md` entry. *Guard: the new test.*
 
 > **Universal no-op ctx stub** (robust to any method the 2D/3D path calls):
 > ```
