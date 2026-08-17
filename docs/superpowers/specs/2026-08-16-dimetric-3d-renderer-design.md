@@ -1,7 +1,7 @@
 # Design — Pseudo-3D Dimetric Renderer (rollblock)
 
-**Date:** 2026-08-16 (revised 2026-08-17, round 4 after 3-reviewer Santa review)
-**Status:** Revised (round 4) — ready for cold execution (pending final confirmation review)
+**Date:** 2026-08-16 (revised 2026-08-17, round 5 after 3-reviewer Santa review)
+**Status:** Revised (round 5) — ready for cold execution (pending final confirmation review)
 **Decisions locked:** Option (b) pseudo-3D dimetric. Zero runtime dependencies (no
 engine, no build). No change to `src/core/` or `src/net/`. v1 is a **fixed**
 dimetric tilt — no moving camera, no camera input stream.
@@ -21,15 +21,24 @@ dimetric tilt — no moving camera, no camera input stream.
 >   overlay mechanism was unspecified; the headless stub was a fragile method list;
 >   `FLOOR_H` was dead; `WALL_H`/`BRICK_H` were "e.g."; top-face colors were
 >   ambiguous; `byDepth` had no home; shadows were under-specified.
-> - Round 4 (this revision) closed the last gaps the third review round found:
+> - Round 4 closed the last gaps the third review round found:
 >   liveness filters were unpinned (3D would draw taken items / a dead player,
 >   diverging from 2D); `drawPlayer` was mis-described as a loop; step 6's "per
 >   biome / billboard scale" contradicted the pinned single-`PROJ` design; plus
 >   nits — floor count (all 195), `drawLogo` center forwarding, floor checkerboard
->   parity, fx shape (rect), `draw3dBackground` colors, `shade` rounding,
+>   parity, fx shape (rect), `draw3dBackground` colors, `shade` Math.round,
 >   `updateHud` line ref, blades moved to tier 3 (explosions over standing bricks,
 >   2D parity), step-7 MENU-state smoke test, `draw*Body` exports, and a step-1
->   forward-reference note. All resolved below.
+>   forward-reference note.
+> - Round 5 (this revision) closed the final gaps the fourth review round found:
+>   the fx painter leaked `globalAlpha` into later painters (now `save/restore`
+>   isolated + exact `fillRect` + `world.fx||[]`); the `drawPlayer` double-loop
+>   contradiction (2D call site collapses to a single `drawPlayer(ctx, world)`);
+>   plus nits — wall/brick side-face vertex lists pinned, `b = biomeOf(...)`
+>   defined, `draw3dBackground` gradient endpoints, `PROJ` `TILE_W/TILE_H` shown
+>   CFG-derived, §4.5 `main.js` import wording, step-2 test corner named, step-3
+>   blade `globalAlpha` reset placement, and an accepted fx-vs-blade tier
+>   divergence note. All resolved below.
 
 ## 1. Goal
 
@@ -97,8 +106,9 @@ createRenderer(canvas, opts = { kind: "2d", audio, hud })
 ### 4.2 Projection (frozen module constants)
 
 A fixed **2:1 dimetric** transform, computed only in the renderer. All
-parameters are **frozen module-level constants** in `camera.js` derived from
-`CFG` — there is no per-frame mutable state.
+parameters are **frozen module-level constants** in `camera.js` — `TILE_W`/
+`TILE_H` derived from `CFG`, the rest pinned design constants — with no per-frame
+mutable state.
 
 ```
 TILE_W = CFG.TILE         // 40  (diamond width in screen x)
@@ -128,6 +138,9 @@ project(gx, gy):
   and everything sits on a ground plane. (The 2D layer order at
   `renderer.js:37-42` draws all bricks before all entities, which cannot
   produce correct occlusion.)
+- Throughout §4.3, `b = biomeOf(world.level)` (the active biome palette,
+  `sprites.js:56`) — the source of `b.floor0`/`b.floor1`/`b.wall`/`b.brickB`/
+  `b.bg0`/`b.bg1`.
 - **Extrusion convention (pinned):** a block's **ground footprint** is the tile
   diamond at `project(x,y)..project(x+1,y+1)`. Its **top face** is the same
   diamond shifted **up** by `H` (each corner's `sy -= H`). Two side faces
@@ -135,7 +148,11 @@ project(gx, gy):
   footprint's front edges. The block therefore occupies screen
   `sy ∈ [footprintS_y - H, footprintS_y]` — **the top face is the highest
   point, the footprint is the lowest**. (Standard "blocks sit on the ground"
-  isometric look; this is what makes the §4.5 top/bottom margins differ.)
+  isometric look; this is what makes the §4.5 top/bottom margins differ.) Let
+  `N=project(x,y)`, `E=project(x+1,y)`, `S=project(x+1,y+1)`, `W=project(x,y+1)`,
+  and `top(c)` = `c` with `sy -= H`. The two **visible** (south-facing) side
+  faces are: **front-left** = `[top(W), top(S), S, W]`, **front-right** =
+  `[top(E), top(S), S, E]` (the north-facing faces are hidden).
 - **Painter entries (complete list — live drawables only; skip taken items,
   dead enemies, and non-alive players, mirroring the 2D guards at
   `sprites.js:183/195` and `renderer.js:42`):**
@@ -167,11 +184,15 @@ project(gx, gy):
   - **Player at `(p.x,p.y)`, only `p.alive !== false`:** `depth = (p.x+p.y)/TILE`,
     `tier = 1`, billboard via `drawPlayerBody`.
   - **fx particle at `(p.x,p.y)`:** `depth = (p.x+p.y)/TILE`, `tier = 1`, `draw`
-    = a projected **filled quad** (rect) of the particle's `color`/`size`, alpha
-    `max(0,1-p.t/p.life)`, at `project(p.x/TILE, p.y/TILE)`. (Drawn inline — no
-    body extraction; the 2D `drawFx` is left untouched. 2D uses `fillRect`
-    squares — `fx.js:66` — so a projected rect matches; confetti rotation is
-    dropped in 3D.)
+    = `ctx.save(); ctx.globalAlpha = max(0,1-p.t/p.life); ctx.fillStyle =
+    p.color; ctx.fillRect(projSx - p.size/2, projSy - p.size/2, p.size, p.size);
+    ctx.restore();` where `(projSx,projSy) = project(p.x/TILE, p.y/TILE)` — an
+    **axis-aligned** `size×size` rect at the projected point (not the square's
+    corners projected into a diamond), matching 2D's `fillRect` (`fx.js:66`);
+    confetti rotation is dropped in 3D. The `save/restore` isolates
+    `globalAlpha` so later painters aren't tinted. `buildPainters` iterates
+    `world.fx || []` (a fresh world has no `world.fx` until the first
+    `consumeEvents` — `fx.js:47`).
 - **Per-entity sprite interface (pinned).** The 2D draw fns in `sprites.js`
   (`drawItems:182`, `drawEnemies:194`, `drawBombs:266`, `drawBlades:293`) each
   loop the array and do `c.save(); c.translate(x,y); <body>; c.restore()`.
@@ -186,8 +207,11 @@ project(gx, gy):
   import them). The 2D fns become thin wrappers — a **behavior-preserving
   refactor** (identical 2D output): `drawItems`/`drawEnemies`/`drawBombs`/
   `drawBlades` loop the array (applying the liveness filter) + `translate` +
-  body; `drawPlayer` becomes a loop over `world.players` (skip
-  `p.alive===false`) + `translate` + `drawPlayerBody(c, world, p)`. The 3D path
+  body; `drawPlayer` keeps its 2-arg signature and **loops `world.players`
+  internally** (skip `p.alive===false`) — so the 2D call site at `renderer.js:42`
+  collapses from `for(const p of world.players){ if(p.alive!==false)
+  drawPlayer(ctx, world, p); }` to a single `drawPlayer(ctx, world)` (no double
+  loop). The 3D path
   calls the body inside `ctx.translate(projSx, projSy)` so the same art renders
   as a billboard. **Billboard anchor = center** (the 2D art is centered at
   origin).
@@ -199,7 +223,9 @@ project(gx, gy):
   floor(0) < entity(1) < block(2) < blade(3).** This is what makes a wall occlude an
   entity resting in the tile directly behind it: that entity's depth equals the
   wall's back-corner depth, and the wall (tier 2) sorts after the entity
-  (tier 1), so the wall draws on top.
+  (tier 1), so the wall draws on top. (fx is tier 1, so a same-depth blade
+  (tier 3) draws over it — an accepted v1 divergence from 2D, where fx draws
+  after blades; a rare edge case, no test.)
 - **No separate shadows in v1.** The extruded side faces already convey block
   height, and the entity/player sprites draw their own ground-shadow ellipse
   (e.g. `sprites.js:243`). A separate shadow quad is deferred (§7).
@@ -214,8 +240,8 @@ project(gx, gy):
 ```
 project(gx, gy) -> { sx, sy }          // pure; uses PROJ
 PROJ = {                                // frozen module-level constant
-  TILE_W: 40, TILE_H: 20,               // = CFG.TILE, CFG.TILE/2
-  WALL_H: 24, BRICK_H: 14,              // extrusion heights (pinned)
+  TILE_W: CFG.TILE, TILE_H: CFG.TILE/2, // 40, 20 (derived from CFG)
+  WALL_H: 24, BRICK_H: 14,              // extrusion heights (pinned design constants)
   PAD: 24,                              // canvas padding (pinned)
   OFF_X: 284, OFF_Y: 48,                // centering offsets (see §4.5)
   canvasW: 608, canvasH: 352,           // backing-store size (see §4.5)
@@ -227,7 +253,7 @@ PROJ = {                                // frozen module-level constant
 buildPainters(world) -> [ { depth, tier, draw(ctx) } ]   // complete list, unsorted
 byDepth(a, b) -> number                                  // the §4.3 comparator
 shade(rgbHex, factor) -> "rgb(r,g,b)"                    // darkens #rrggbb; each channel = Math.round(v*factor)
-draw3dBackground(c, world)                               // linear gradient b.bg0->b.bg1 over canvasW×canvasH (sprites.js:93-94)
+draw3dBackground(c, world)                               // createLinearGradient(0,0,0,PROJ.canvasH), stops b.bg0->b.bg1, fillRect(0,0,PROJ.canvasW,PROJ.canvasH)
 ```
 
 `renderer.js` 3D path — **shares the 2D prologue/epilogue**, branches only in the
@@ -251,12 +277,10 @@ function render(world, dt){
     /* existing 2D draw, unchanged (renderer.js:35-43) */
   }
   ctx.restore();
-  if(world.state !== "PLAY")
-    drawOverlay(ctx, world,
-      kind==="3d" ? PROJ.canvasW : CFG.COLS*CFG.TILE,
-      kind==="3d" ? PROJ.canvasH : CFG.ROWS*CFG.TILE,
-      kind==="3d" ? 304 : CFG.COLS*CFG.TILE/2,
-      kind==="3d" ? 188 : CFG.ROWS*CFG.TILE/2);
+  if(world.state !== "PLAY"){
+    if(kind === "3d") drawOverlay(ctx, world, PROJ.canvasW, PROJ.canvasH, 304, 188);
+    else drawOverlay(ctx, world);   // 2D: defaults (COLS*TILE × ROWS*TILE, centered)
+  }
   updateHud(hud, world);
 }
 ```
@@ -264,9 +288,10 @@ The 3D overlay center `(304, 188) = project(COLS/2, ROWS/2)` (the board center).
 
 ### 4.5 Canvas sizing + centering (3D mode)
 
-All derived from `PROJ`. `main.js` imports **`PROJ`** (reads `PROJ.canvasW` /
-`PROJ.canvasH`) — it does **not** import `TILE_W`/`TILE_H` (those are internal to
-`project`).
+All derived from `PROJ`. `main.js` imports **`PROJ`** and reads only
+`PROJ.canvasW` / `PROJ.canvasH` (the other `PROJ` fields — `TILE_W`/`TILE_H`/
+`WALL_H`/`BRICK_H`/`PAD`/`OFF_X`/`OFF_Y` — are consumed by `camera.js`/
+`scene3d.js`, not `main.js`).
 
 ```
 canvasW = (COLS + ROWS) * (TILE_W / 2) + 2*PAD            // 560 + 48 = 608
@@ -331,7 +356,8 @@ whole canvas to the viewport. No double-scaling.
 2. **Projection + unit test.** New `src/render/r3d/camera.js` with `project`
    and `PROJ` (all constants pinned per §4.4/§4.5). **Add `tests/r3d.test.mjs`**
    (matching the existing `check()` harness style in `tests/sim.test.mjs:5-7`):
-   - a known tile corner maps to a known `{sx,sy}`;
+   - a known tile corner maps to a known `{sx,sy}` (e.g. `project(0,0) →
+     {sx:284, sy:48}`);
    - `OFF_X`/`OFF_Y` center the drawn board bbox `sx∈[-260,300], sy∈[0,280]`
      (left/right/bottom margins = `PAD`, top wall top = `PAD`);
    - `sy` is monotonic in `gx+gy`;
@@ -341,8 +367,10 @@ whole canvas to the viewport. No double-scaling.
 3. **Per-entity sprite bodies (behavior-preserving refactor).** In `sprites.js`,
    extract `drawItemBody`/`drawEnemyBody`/`drawPlayerBody`/`drawBombBody`/
    `drawBladeBody` from the existing loop bodies; rewrite the 2D fns as thin
-   wrappers (loop + `translate` + body). 2D output is byte-identical. *Guard: 16
-   tests + the step-7 smoke test (2D render unchanged).*
+   wrappers (loop + `translate` + body). 2D output is byte-identical. (The
+   per-blade `c.globalAlpha=1` reset at `sprites.js:306` stays in the 2D
+   `drawBlades` wrapper, outside the tile loop; `drawBladeBody` covers one tile.)
+   *Guard: 16 tests + the step-7 smoke test (2D render unchanged).*
 4. **Painter list + unit test.** New `src/render/r3d/scene3d.js` with
    `buildPainters`, `byDepth`, `shade`, `draw3dBackground`. **Extend
    `tests/r3d.test.mjs`**:
