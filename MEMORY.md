@@ -16,6 +16,14 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-08-23 — Debt sweep executed (6 parked findings, 852a9c9..c30f377)
+- One commit per area: sameWorld full-field comparator; input pointercancel/
+  pointerleave + strict document guard + public-getter tests; serve.js root→404
+  (GET / still serves index) + single normalize; renderer strict kind + BIOMES-
+  length bake + spec fx.js:73 ref; r3d split wall/brick tier-2 counts + blade
+  translate exactly-once; runSteps fireEdge functional. All suites green.
+  Report: task-report-debt-sweep.md. Left: touch-device manual smoke.
+
 ## 2026-08-23 — T21+T22 executed (dual-kind render smoke + P5 dead-code sweep; P4/P5 shipped)
 - `289ba27`: r3d #11 renders MENU world via createRenderer kind:"2d"+"3d" on Proxy-stub
   canvas (spec §6 step 7), 31/31. Sweep commit: deleted POWER_BY_TYPE, audio.prime/isMuted,
