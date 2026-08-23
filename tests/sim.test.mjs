@@ -1,5 +1,5 @@
 import {step, createWorld, newIntent, loadLevel} from "../src/core/sim.js";
-import {CFG} from "../src/core/config.js";
+import {CFG,T,key} from "../src/core/config.js";
 import {tileOf} from "../src/core/board.js";
 
 let pass=0, fail=0;
@@ -136,6 +136,30 @@ check("deterministic no-input sim (enemy count matches)", a.enemies.length===b.e
   step(w2, CFG.STEP, zero);
   check("contact with shield consumes shield, keeps life",
     w2.lives===l2 && w2.players[0].shield===false);
+}
+
+// 5b) chain reaction coverage
+function injectBomb(w,tx,ty,timer,radius){
+  w.bombs.push({x:tx*CFG.TILE+20,y:ty*CFG.TILE+20,tx,ty,timer,radius:radius||1,
+    pierce:false,line:false,dir:null,variant:"normal",dead:false});
+}
+{
+  // distance-2 bomb in open line DOES chain
+  const w=createWorld(5,1); loadLevel(w,1,false); w.state="PLAY";
+  w.enemies=[]; w.blades=[]; w.bombs=[];
+  injectBomb(w,4,6,0,2);            // pops immediately, radius 2 reaches col 6
+  injectBomb(w,6,6,99,1);           // distance 2, long fuse
+  step(w, CFG.STEP, {0:newIntent()});
+  check("distance-2 bomb chained", w.bombs.every(b=>b.dead));
+}
+{
+  // wall between bombs blocks the chain
+  const w=createWorld(5,1); loadLevel(w,1,false); w.state="PLAY";
+  w.enemies=[]; w.blades=[]; w.bombs=[];
+  w.grid[key(5,6)]=T.WALL;
+  injectBomb(w,4,6,0,1); injectBomb(w,6,6,99,1);
+  step(w, CFG.STEP, {0:newIntent()});
+  check("wall blocks chain", w.bombs.some(b=>!b.dead && b.tx===6));
 }
 
 console.log("\n  SIM RESULT: "+pass+" PASS / "+fail+" FAIL");

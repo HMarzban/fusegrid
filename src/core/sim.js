@@ -166,9 +166,10 @@ function detonate(w,bomb,emit){
        }
      }
   emit({t:"boom", x:bomb.x, y:bomb.y});
-   // chain
-  for(const b of w.bombs)
-    if(!b.dead && Math.abs(b.tx-bomb.tx)+Math.abs(b.ty-bomb.ty)===1) detonate(w,b,emit);
+   // chain: any live bomb sitting on a blast-covered tile detonates too
+  const covered=new Set(tiles.map(t=>key(t.tx,t.ty)));
+  for(const b of w.bombs.slice())
+    if(!b.dead && covered.has(key(b.tx,b.ty))) detonate(w,b,emit);
  }
 
 function breakBrick(w,tx,ty,emit){
