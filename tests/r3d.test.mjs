@@ -236,5 +236,63 @@ initFx();
   check('createRenderer(fake,{kind:"3d"}).render(MENU world) no-throw',ok3);
 }
 
+// 12) menudraw.layout(): normalized fields sane for BOTH canvas sizes
+{
+  const {layout}=await import("../src/render/menudraw.js");
+  for(const [W,H] of [[600,520],[608,352]]){
+    const L=layout(W,H);
+    check(`layout(${W},${H}) returns frozen object`, !!L&&Object.isFrozen(L));
+    check(`layout(${W},${H}) all 11 numeric fields present`,
+      ["cx","top","logoCy","logoScale","itemsY","itemH","footY",
+       "chipW","chipGap","tableY","rowH"].every(k=>typeof L[k]==="number"),
+      Object.keys(L).join(","));
+    check(`layout(${W},${H}) cx==W/2 and top in (0,H*0.17)`,
+      L.cx===W/2&&L.top>0&&L.top<H*0.17, L.cx+","+L.top);
+    check(`layout(${W},${H}) logoCy in (0,H/2)`,
+      L.logoCy>0&&L.logoCy<H*0.5, L.logoCy+"");
+    check(`layout(${W},${H}) logoScale clamped [0.72,1.0]`,
+      L.logoScale>=0.72&&L.logoScale<=1.0, L.logoScale+"");
+    check(`layout(${W},${H}) itemsY within [0.45H,0.55H]; itemH int clamp [24,34]`,
+      L.itemsY>=H*0.45&&L.itemsY<=H*0.55
+        &&Number.isInteger(L.itemH)&&L.itemH>=24&&L.itemH<=34,
+      L.itemsY+","+L.itemH);
+    check(`layout(${W},${H}) footY==H-20; chipW 44; chipGap 14`,
+      L.footY===H-20&&L.chipW===44&&L.chipGap===14,
+      L.footY+","+L.chipW+","+L.chipGap);
+    check(`layout(${W},${H}) tableY above itemsY; rowH>0`,
+      L.tableY>0&&L.tableY<L.itemsY&&L.rowH>0, L.tableY+","+L.rowH);
+  }
+  check("logoScale clamps to 0.72 for short canvas", layout(400,200).logoScale===0.72,
+    layout(400,200).logoScale+"");
+}
+
+// 13) menu/intro draw fns: Proxy-stub-canvas smoke at BOTH sizes (no throw)
+{
+  const md=await import("../src/render/menudraw.js");
+  const {DEFAULT_SCORES}=await import("../src/app/highscores.js");
+  initFx();
+  const stub=new Proxy(function(){},{
+    get:(t,p)=>(p===Symbol.toPrimitive?()=>"":stub),
+    apply:()=>stub,set:()=>true});
+  for(const [W,H] of [[600,520],[608,352]]){
+    const L=md.layout(W,H);
+    let ok=true;
+    try{
+      md.drawIntroChrome(stub,0.30,W,H);   // logo reveal beat
+      md.drawIntroChrome(stub,2.00,W,H);   // mid-flyover
+      md.drawIntroChrome(stub,4.60,W,H);   // settle/tagline beat
+      md.drawMenu(stub,{cursor:2,enterT:0.50,
+        items:["START GAME","LEVEL SELECT","RENDER 3D","SOUND OFF",
+               "HOW TO PLAY","HIGH SCORES"]},L,0.50);
+      md.drawLevelSelect(stub,3,L,0.40);
+      md.drawHowTo(stub,L,0.40);
+      md.drawScores(stub,DEFAULT_SCORES,L,0.40);
+      md.drawDim(stub,0.62,W,H);
+      md.drawFade(stub,0.50,W,H);
+    }catch(e){ ok=false; console.log(W+"x"+H+" smoke:",e.message); }
+    check(`all menu draw fns no-throw on stub ctx at ${W}x${H}`,ok);
+  }
+}
+
 console.log("\n  R3D RESULT: "+pass+" PASS / "+fail+" FAIL");
 process.exit(fail?1:0);
