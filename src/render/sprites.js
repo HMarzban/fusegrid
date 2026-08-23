@@ -179,23 +179,24 @@ export function drawIcon(c,type,col,time){
    }
   c.restore();
 }
+export function drawItemBody(c, world, it){
+  const pulse=1+Math.sin(world.time*5)*0.10; c.scale(pulse,pulse);
+  c.fillStyle="rgba(8,12,24,0.92)"; c.beginPath(); c.arc(0,0,CFG.TILE*0.34,0,7); c.fill();
+  c.strokeStyle="rgba(255,255,255,0.25)"; c.lineWidth=2; c.beginPath(); c.arc(0,0,CFG.TILE*0.34,0,7); c.stroke();
+  drawIcon(c,it.t,it.col,world.time);
+}
 export function drawItems(c, world){
   for(const it of world.items){ if(it.taken)continue;
     c.save(); c.translate(it.x,it.y);
-    const pulse=1+Math.sin(world.time*5)*0.10; c.scale(pulse,pulse);
-    c.fillStyle="rgba(8,12,24,0.92)"; c.beginPath(); c.arc(0,0,CFG.TILE*0.34,0,7); c.fill();
-    c.strokeStyle="rgba(255,255,255,0.25)"; c.lineWidth=2; c.beginPath(); c.arc(0,0,CFG.TILE*0.34,0,7); c.stroke();
-    drawIcon(c,it.t,it.col,world.time);
+    drawItemBody(c,world,it);
     c.restore();
   }
 }
 
 /* ---- entities ---- */
-export function drawEnemies(c, world){
-  for(const e of world.enemies){ if(e.dead)continue;
-   c.save(); c.translate(e.x,e.y);
-    const bob = e.type==="stationary" ? Math.sin(world.time*3)*1.5 : e.speed>0 ? Math.sin(world.time*12+e.home.x*0.7)*1.6 : 0;
-    c.translate(0,bob);
+/* drawEnemyBody draws one enemy at origin; the render bob stays in the
+   drawEnemies wrapper (positioning concern) so bodies stay translate-free. */
+export function drawEnemyBody(c, world, e){
     const r=e.r;
     if(e.type==="stationary"){
       const s=1+Math.sin(world.time*3)*0.06; c.scale(s,s);
@@ -229,12 +230,17 @@ export function drawEnemies(c, world){
         }
       }
     if(e.invuln && Math.floor(world.time*12)%2) c.globalAlpha=0.5;
+}
+export function drawEnemies(c, world){
+  for(const e of world.enemies){ if(e.dead)continue;
+   c.save(); c.translate(e.x,e.y);
+    const bob = e.type==="stationary" ? Math.sin(world.time*3)*1.5 : e.speed>0 ? Math.sin(world.time*12+e.home.x*0.7)*1.6 : 0;
+    c.translate(0,bob);
+    drawEnemyBody(c,world,e);
     c.restore();
   }
 }
-export function drawPlayer(c, world){
-  const p=world.players[0]; if(!p||!p.alive)return;
-  c.save(); c.translate(p.x,p.y);
+export function drawPlayerBody(c, world, p){
   const r=CFG.TILE*0.36;
   const moving=!!(p.face.x||p.face.y)&&p.iFrames<=0;
   const bob=moving?Math.sin(p.walk*18)*1.8:Math.sin(world.time*4)*1.0;
@@ -261,48 +267,58 @@ export function drawPlayer(c, world){
     rr(c,-r*0.9,r*0.75,r*0.44,r*0.45,2); c.fill(); rr(c,r*0.46,r*0.75,r*0.44,r*0.45,2); c.fill(); }
   if(p.passing){ c.strokeStyle="rgba(119,255,153,0.6)"; c.lineWidth=2;
     c.beginPath(); c.arc(0,0,r*1.25,0,7); c.stroke(); }
-  c.restore();
+}
+export function drawPlayer(c, world){
+  for(const p of world.players){ if(p.alive===false)continue;
+    c.save(); c.translate(p.x,p.y);
+    drawPlayerBody(c,world,p);
+    c.restore();
+  }
+}
+export function drawBombBody(c, world, bm){
+  const t=1-Math.max(0,bm.timer)/CFG.FUSE;
+  const pulse=1+Math.sin(world.time*18)*0.10*t;
+  c.scale(pulse,pulse);
+  const r=CFG.TILE*0.30;
+  c.fillStyle="rgba(0,0,0,0.35)"; c.beginPath(); c.ellipse(0,r*0.9,r*0.8,r*0.25,0,0,7); c.fill();
+  c.fillStyle="#15181f"; c.beginPath(); c.arc(0,0,r,0,7); c.fill();
+  if(bm.variant==="power"){ for(let i=0;i<8;i++){const a=i/8*6.283;
+    c.fillStyle="#0a0d14"; c.beginPath();
+    c.moveTo(Math.cos(a)*r*0.9,Math.sin(a)*r*0.9);
+    c.lineTo(Math.cos(a+0.14)*r*1.25,Math.sin(a+0.14)*r*1.25);
+    c.lineTo(Math.cos(a-0.14)*r*1.25,Math.sin(a-0.14)*r*1.25); c.fill();} }
+  else if(bm.variant==="pierce"){ c.strokeStyle="#8f8fff"; c.lineWidth=2;
+    for(let i=0;i<6;i++){const a=i/6*6.283+world.time*3; c.beginPath();
+      c.moveTo(Math.cos(a)*r*0.9,Math.sin(a)*r*0.9); c.lineTo(Math.cos(a)*r*1.35,Math.sin(a)*r*1.35); c.stroke();} }
+  c.fillStyle="rgba(255,255,255,0.45)"; c.beginPath(); c.arc(-r*0.32,-r*0.32,r*0.30,0,7); c.fill();
+  c.fillStyle="#0a0d14"; c.fillRect(-r*0.18,-r*1.05,r*0.36,r*0.5);
+  c.strokeStyle="#ff9d5a"; c.lineWidth=2.5; c.beginPath(); c.moveTo(0,-r*0.95); c.lineTo(0,-r*1.2); c.stroke();
+  c.fillStyle=Math.floor(world.time*14)%2?"#ff5d73":"#ffd447";
+  c.beginPath(); c.arc(0,-r*1.24,r*0.13+Math.sin(world.time*30)*0.03,0,7); c.fill();
+  if(bm.variant==="line"){ c.fillStyle="#15181f";
+    for(let i=-1;i<=1;i++){ if(i===0)continue; c.beginPath(); c.arc(i*r*0.9,0,r*0.5,0,7); c.fill(); } }
 }
 export function drawBombs(c, world){
   for(const bm of world.bombs){
     c.save(); c.translate(bm.x,bm.y);
-    const t=1-Math.max(0,bm.timer)/CFG.FUSE;
-    const pulse=1+Math.sin(world.time*18)*0.10*t;
-    c.scale(pulse,pulse);
-    const r=CFG.TILE*0.30;
-    c.fillStyle="rgba(0,0,0,0.35)"; c.beginPath(); c.ellipse(0,r*0.9,r*0.8,r*0.25,0,0,7); c.fill();
-    c.fillStyle="#15181f"; c.beginPath(); c.arc(0,0,r,0,7); c.fill();
-    if(bm.variant==="power"){ for(let i=0;i<8;i++){const a=i/8*6.283;
-      c.fillStyle="#0a0d14"; c.beginPath();
-      c.moveTo(Math.cos(a)*r*0.9,Math.sin(a)*r*0.9);
-      c.lineTo(Math.cos(a+0.14)*r*1.25,Math.sin(a+0.14)*r*1.25);
-      c.lineTo(Math.cos(a-0.14)*r*1.25,Math.sin(a-0.14)*r*1.25); c.fill();} }
-    else if(bm.variant==="pierce"){ c.strokeStyle="#8f8fff"; c.lineWidth=2;
-      for(let i=0;i<6;i++){const a=i/6*6.283+world.time*3; c.beginPath();
-        c.moveTo(Math.cos(a)*r*0.9,Math.sin(a)*r*0.9); c.lineTo(Math.cos(a)*r*1.35,Math.sin(a)*r*1.35); c.stroke();} }
-    c.fillStyle="rgba(255,255,255,0.45)"; c.beginPath(); c.arc(-r*0.32,-r*0.32,r*0.30,0,7); c.fill();
-    c.fillStyle="#0a0d14"; c.fillRect(-r*0.18,-r*1.05,r*0.36,r*0.5);
-    c.strokeStyle="#ff9d5a"; c.lineWidth=2.5; c.beginPath(); c.moveTo(0,-r*0.95); c.lineTo(0,-r*1.2); c.stroke();
-    c.fillStyle=Math.floor(world.time*14)%2?"#ff5d73":"#ffd447";
-    c.beginPath(); c.arc(0,-r*1.24,r*0.13+Math.sin(world.time*30)*0.03,0,7); c.fill();
-    if(bm.variant==="line"){ c.fillStyle="#15181f";
-      for(let i=-1;i<=1;i++){ if(i===0)continue; c.beginPath(); c.arc(i*r*0.9,0,r*0.5,0,7); c.fill(); } }
+    drawBombBody(c,world,bm);
     c.restore();
   }
 }
+export function drawBladeBody(c, world, bl, t){
+  const age=bl.t/bl.ttl;
+  c.save(); c.translate(t.tx*CFG.TILE+CFG.TILE/2, t.ty*CFG.TILE+CFG.TILE/2);
+  const g=c.createRadialGradient(0,0,1,0,0,CFG.TILE*0.6);
+  if(age<0.3){ g.addColorStop(0,"#ffffff"); g.addColorStop(1,"rgba(255,248,216,0)"); }
+  else if(age<0.7){ g.addColorStop(0,"#fff8d8"); g.addColorStop(0.5,"#ffcf5a"); g.addColorStop(1,"rgba(255,93,115,0)"); }
+  else { g.addColorStop(0,"#ff5d73"); g.addColorStop(1,"rgba(255,93,115,0)"); }
+  c.globalAlpha=Math.max(0,1-age); c.fillStyle=g;
+  c.beginPath(); c.arc(0,0,CFG.TILE*0.55*(0.6+age*0.6),0,7); c.fill();
+  c.restore();
+}
 export function drawBlades(c, world){
   for(const bl of world.blades){
-    const age=bl.t/bl.ttl;
-    for(const t of bl.tiles){
-      c.save(); c.translate(t.tx*CFG.TILE+CFG.TILE/2, t.ty*CFG.TILE+CFG.TILE/2);
-      const g=c.createRadialGradient(0,0,1,0,0,CFG.TILE*0.6);
-      if(age<0.3){ g.addColorStop(0,"#ffffff"); g.addColorStop(1,"rgba(255,248,216,0)"); }
-      else if(age<0.7){ g.addColorStop(0,"#fff8d8"); g.addColorStop(0.5,"#ffcf5a"); g.addColorStop(1,"rgba(255,93,115,0)"); }
-      else { g.addColorStop(0,"#ff5d73"); g.addColorStop(1,"rgba(255,93,115,0)"); }
-      c.globalAlpha=Math.max(0,1-age); c.fillStyle=g;
-      c.beginPath(); c.arc(0,0,CFG.TILE*0.55*(0.6+age*0.6),0,7); c.fill();
-      c.restore();
-      }
+    for(const t of bl.tiles){ drawBladeBody(c,world,bl,t); }
     c.globalAlpha=1;
   }
 }

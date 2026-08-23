@@ -52,7 +52,7 @@ export function createRenderer(canvas, opts={}){
       drawBombs(ctx, world);
       drawBlades(ctx, world);
       drawEnemies(ctx, world);
-      for(const p of world.players){ if(p.alive!==false) drawPlayer(ctx, world, p); }
+      drawPlayer(ctx, world);
       drawFx(ctx);
     }
     ctx.restore();
