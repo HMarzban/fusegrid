@@ -16,6 +16,13 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-08-23 — Action fixes: remote edge-latch, button blur, hint copy (18c2412..3c68ac2)
+- Q/remote was latching (no KeyQ keyup) and level-triggered in sim; fixed with
+  world.remoteEdge beside fireEdge (same alive-gated discipline, not reset in
+  loadLevel — matches fireEdge). RED 27/2→GREEN 29/0; all suites green.
+  btnPause/Sound/Restart blur after click; hint marks throw/remote/kick as
+  power-gated. Left: manual smoke (button focus+Space, Q feel); ui/ untracked.
+
 ## 2026-08-23 — Debt sweep executed (6 parked findings, 852a9c9..c30f377)
 - One commit per area: sameWorld full-field comparator; input pointercancel/
   pointerleave + strict document guard + public-getter tests; serve.js root→404
