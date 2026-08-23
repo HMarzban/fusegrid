@@ -1,4 +1,6 @@
 import {SCREEN,ITEMS,createMenuApp} from "../src/app/menuapp.js";
+import {Input} from "../src/input.js";
+import {createAudio} from "../src/audio.js";
 
 let pass=0, fail=0;
 function check(name, cond, detail){ cond?pass++:fail++;
@@ -348,6 +350,72 @@ check("ITEMS frozen, 6 entries", Object.isFrozen(ITEMS)&&ITEMS.length===6
   const a=createMenuApp(); a.screen=SCREEN.MENU; a.cursor=1; a.confirm();
   check("push resets subT/repeat", a.subT===0&&a.repT===0&&a.repDir===0, a.subT);
   frames(a,4,DT); check("update advances subT", a.subT>0, a.subT.toFixed(3));
+}
+
+// ---- input side-channel: onUiKey fires BEFORE the game switch ----
+{
+  const inp=new Input(null);
+  const seen=[];
+  inp.onUiKey=c=>seen.push(c);
+  const pd=()=>{};
+  inp._onKey({code:"KeyQ",preventDefault:pd});
+  inp._onKey({code:"Space",preventDefault:pd});
+  check("onUiKey receives every keydown code, in order",
+    seen.join()==="KeyQ,Space", seen.join());
+  check("game switch still ran after side-channel (remote+fire latched)",
+    inp._intent.remote===true&&inp._intent.fire===true);
+}
+{
+  const inp=new Input(null);
+  const pd=()=>{};
+  inp._onKey({code:"ArrowUp",preventDefault:pd});
+  inp._onKey({code:"KeyP",preventDefault:pd});
+  check("unset onUiKey: zero behavior change (axes + onPause intact)",
+    inp.input.up===true);
+}
+{
+  const inp=new Input(null);
+  let n=0; inp.onUiKey=()=>n++;
+  inp._onKeyUp({code:"Space"});
+  check("keyup does NOT hit onUiKey (keydown-only channel)", n===0);
+}
+
+// ---- audio cue sheet (§5): jingle scheduling + muted guard ----
+{
+  const a=createAudio();
+  const realST=globalThis.setTimeout;
+  const calls=[]; const ids=[];
+  globalThis.setTimeout=(fn,ms)=>{ calls.push(ms); ids.push(realST(()=>{},1e9)); return ids[ids.length-1]; };
+  try{
+    a.play("uiJingle");
+    check("uiJingle unmuted: arpeggio 0/120/240/360ms + closer 480ms",
+      calls.length===5&&calls[0]===0&&calls[1]===120&&calls[2]===240
+        &&calls[3]===360&&calls[4]===480, JSON.stringify(calls));
+    calls.length=0;
+    a.toggle();                       // -> muted
+    a.play("uiJingle");
+    check("uiJingle muted: ZERO timers scheduled", calls.length===0);
+    a.toggle();                       // -> unmuted
+    calls.length=0;
+    a.play("uiSel");
+    check("uiSel schedules one 70ms follow-up",
+      calls.length===1&&calls[0]===70, JSON.stringify(calls));
+    calls.length=0;
+    ["uiMove","uiBack","uiTog","uiDenied"].forEach(n=>a.play(n));
+    check("simple cues are immediate beeps (no timers)", calls.length===0,
+      JSON.stringify(calls));
+  }finally{
+    globalThis.setTimeout=realST;
+    ids.forEach(id=>clearTimeout(id));
+  }
+}
+{
+  let ok=true;
+  try{
+    const a=createAudio();
+    ["uiJingle","uiMove","uiSel","uiBack","uiTog","uiDenied"].forEach(n=>a.play(n));
+  }catch(e){ ok=false; }
+  check("all six cues headless no-throw (createAudio importable/instantiable)", ok);
 }
 
 console.log("\n  MENUAPP RESULT: "+pass+" PASS / "+fail+" FAIL");

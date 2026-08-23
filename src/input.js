@@ -5,6 +5,7 @@ export class Input {
   constructor(el){
     this._intent={move:{x:0,y:0}, fire:false, firePrev:false,
       shift:false, remote:false, kick:false};
+    this.onUiKey=null;
     this.el=el;
     this._onKey=this._onKey.bind(this);
     this._onKeyUp=this._onKeyUp.bind(this);
@@ -28,6 +29,7 @@ export class Input {
        }
     }
  _onKey(e){
+    if(this.onUiKey)this.onUiKey(e.code);
     const i=this._intent;
     switch(e.code){
       case "KeyW":case "ArrowUp":this.input.up=true;break;
