@@ -16,6 +16,13 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-08-23 — T6+T7 executed (input latch/axes fixed; WIN state + win/lose events live)
+- `4caea59`: pointer down/up split (_onFireDown/_onFireUp) + setIntent sign fix (routed
+  through `input` getter — brief's literal `_held.` crashes fresh headless Input).
+  `32e90de`: board clear → WIN+win event, fire edge advances with carry; hurtPlayer emits
+  lose. Suite 22/22 sim, all green; browser smoke of overlays left to user.
+  Report: .superpowers/sdd/2026-08-23-master-plan/task-report-t6-t7.md
+
 ## 2026-08-23 — T4+T5 executed (contact damage via hurtPlayer; chain by blast coverage)
 - `041cdec`: checkContact now calls hurtPlayer (shield→hurt event, else life loss); `aad680b`:
   detonate() chains any bomb on a blast-covered tile (was Manhattan-1). Suite 14/14 sim green.
