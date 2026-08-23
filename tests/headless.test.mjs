@@ -56,5 +56,32 @@ check("null-canvas renderer render() does not throw", ok);
   check("loop in GAME steps the sim", g.world.time>0, "time "+g.world.time);
 }
 
+// ---- fix round 1: MENU logo (spec §2) + 0.25s intro-skip fade ramp ----
+{
+  const texts=[], sets=[];
+  const rec=new Proxy(function(){},{
+    get:(t,p)=>{
+      if(p===Symbol.toPrimitive)return()=>"" ;
+      return (...a)=>{ if(p==="fillText")texts.push(String(a[0])); return rec; };
+     },
+    apply:()=>rec,
+    set:(t,p,v)=>{ if(p==="fillStyle")sets.push(String(v)); return true; }
+   });
+  const fake={getContext:()=>rec,addEventListener(){},style:{}};
+  const g=createGame(fake,{seed:5});
+  g.app.skip();                          // INTRO -> MENU
+  for(let i=1;i<=20;i++)g.loop(i*16);    // ~0.32s of MENU frames
+  check("MENU draws NEO wordmark (drawLogo reused per spec §2)",
+    texts.indexOf("NEO")>=0,
+    texts.filter(t=>t==="NEO"||t==="BOMBERMAN").join(","));
+  const alphas=sets.filter(s=>s.slice(0,13)==="rgba(7,10,18,")
+    .map(s=>parseFloat(s.slice(13)));
+  check("skip fade ramps past menu veil in first frames (alpha>0.9)",
+    alphas.some(a=>a>0.9), "max "+Math.max.apply(null,[0].concat(alphas)));
+  check("fade settled after 0.25s (back to 0.62 veil)",
+    alphas.slice(-6).every(a=>a<=0.73),
+    "tail "+alphas.slice(-4).map(a=>a.toFixed(2)).join(","));
+}
+
 console.log(fail? "HEADLESS FAIL":"HEADLESS OK");
 process.exit(fail?1:0);

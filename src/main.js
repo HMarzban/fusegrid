@@ -6,6 +6,7 @@
 import {CFG} from "./core/config.js";
 import {createWorld, loadLevel, step} from "./core/sim.js";
 import {createRenderer} from "./render/renderer.js";
+import {drawLogo} from "./render/scenes.js";
 import {PROJ} from "./render/r3d/camera.js";
 import * as menudraw from "./render/menudraw.js";
 import {SCREEN, ITEMS, createMenuApp} from "./app/menuapp.js";
@@ -137,13 +138,22 @@ export function createGame(canvas, opts={}){
     if(s===SCREEN.INTRO)
       return menudraw.drawIntroChrome(c,app.subT,cw,chh);
     if(s===SCREEN.MENU){
+      const L=menudraw.layout(cw,chh);
       menudraw.drawDim(c,0.62,cw,chh);
+      // 0.25s INTRO→MENU fade-out (skip + natural end): extra veil k ramps
+      // 1→0 over the first 0.25s of MENU entry (spec §1)
+      if(app.subT<0.25)menudraw.drawFade(c,1-app.subT/0.25,cw,chh);
+      // logo per spec §2: reuse drawLogo at logoScale via ctx.scale
+      c.save();
+      c.translate(L.cx,L.logoCy);
+      c.scale(L.logoScale,L.logoScale);
+      drawLogo(c,world.time,0,0);
+      c.restore();
       menudraw.drawMenu(c,{cursor:app.cursor,enterT:app.subT,
         items:[ITEMS[0],ITEMS[1],
           "RENDER "+(app.render3d?"3D":"2D"),
           "SOUND "+(app.sound?"ON":"OFF"),
-          ITEMS[4],ITEMS[5]]},
-        menudraw.layout(cw,chh),app.subT);
+          ITEMS[4],ITEMS[5]]},L,app.subT);
       return;
      }
     const L=menudraw.layout(cw,chh);
