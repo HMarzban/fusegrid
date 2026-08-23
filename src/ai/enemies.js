@@ -1,5 +1,6 @@
 import {CFG, DIRS4, DIRS8, key, clamp} from "../core/config.js";
 import {tileOf, isWall, solidAt, aabb, bfsNext, moveEntity} from "../core/board.js";
+import {hurtPlayer} from "../core/entities.js";
 
 /* Update every enemy on the world for one fixed step. PURE & DETERMINISTIC:
    uses world.rng (seeded) instead of Math.random so the sim is replayable and
@@ -69,9 +70,8 @@ export function updateEnemies(world, dt, input, emit){
 function checkContact(w,e,emit){
   const p=w.players[0];
   if(p.iFrames>0)return;
-  const hit = Math.hypot(e.x-p.x,e.y-p.y) < e.r + CFG.TILE*0.26;
-  if(hit){
-    if(p.shield){ p.shield=false; p.iFrames=CFG.IFRAMES; emit({t:"kill", x:e.x, y:e.y}); }
-    else emit({t:"hurt", x:p.x, y:p.y});
+  if(Math.hypot(e.x-p.x,e.y-p.y) < e.r + CFG.TILE*0.26){
+    if(p.shield){ p.shield=false; p.iFrames=CFG.IFRAMES; emit({t:"hurt", x:p.x, y:p.y}); }
+    else hurtPlayer(w, emit);
    }
  }

@@ -113,5 +113,30 @@ check("deterministic no-input sim (enemy count matches)", a.enemies.length===b.e
   check("line bomb pierces bricks", enemy.dead===true, "enemy.dead="+enemy.dead);
 }
 
+// 8) enemy contact damage
+{
+  const w=createWorld(999,1); loadLevel(w,1,false); w.state="PLAY";
+  const e=w.enemies[0];
+  e.invuln=false; e.invulnT=0; e.type="stationary"; e.speed=0;
+  e.home={x:1,y:1};
+  e.x=w.players[0].x; e.y=w.players[0].y; e.r=20;
+  w.players[0].iFrames=0; w.players[0].shield=false;
+  const livesBefore=w.lives;
+  const zero={0:newIntent()};
+  step(w, CFG.STEP, zero);
+  check("enemy contact decrements lives", w.lives===livesBefore-1, w.lives+" vs "+livesBefore);
+  // shield consumes instead
+  const w2=createWorld(999,1); loadLevel(w2,1,false); w2.state="PLAY";
+  const e2=w2.enemies[0];
+  e2.invuln=false; e2.invulnT=0; e2.type="stationary"; e2.speed=0;
+  e2.home={x:1,y:1};
+  e2.x=w2.players[0].x; e2.y=w2.players[0].y; e2.r=20;
+  w2.players[0].iFrames=0; w2.players[0].shield=true;
+  const l2=w2.lives;
+  step(w2, CFG.STEP, zero);
+  check("contact with shield consumes shield, keeps life",
+    w2.lives===l2 && w2.players[0].shield===false);
+}
+
 console.log("\n  SIM RESULT: "+pass+" PASS / "+fail+" FAIL");
 process.exit(fail?1:0);
