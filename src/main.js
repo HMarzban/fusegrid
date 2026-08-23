@@ -68,12 +68,14 @@ export function createGame(canvas, opts={}){
    // UI buttons
   if(typeof document!=="undefined" && document.getElementById){
     const bp=document.getElementById("btnPause");
-    if(bp)bp.onclick=onPause;
+    // blur after each click so Space never re-triggers a focused button
+    if(bp)bp.onclick=(e)=>{ onPause(); e&&e.currentTarget&&e.currentTarget.blur(); };
     const bs=document.getElementById("btnSound");
-    if(bs)bs.onclick=()=>{ const on=(opts.audio && opts.audio.toggle && opts.audio.toggle());
-      bs.textContent="Sound: "+(on?"On":"Off"); };
+    if(bs)bs.onclick=(e)=>{ const on=(opts.audio && opts.audio.toggle && opts.audio.toggle());
+      bs.textContent="Sound: "+(on?"On":"Off"); e&&e.currentTarget&&e.currentTarget.blur(); };
     const br=document.getElementById("btnRestart");
-    if(br)br.onclick=()=>{ loadLevel(world,1,false); world.state="PLAY"; };
+    if(br)br.onclick=(e)=>{ loadLevel(world,1,false); world.state="PLAY";
+      e&&e.currentTarget&&e.currentTarget.blur(); };
     }
 
    // auto-start from ?play=1
