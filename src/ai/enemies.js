@@ -43,7 +43,7 @@ export function updateEnemies(world, dt, input, emit){
                              : solidAt(w.grid,nx,ny);
       if(!blocked){ ndir=d; break; }
       }
-    if(ndir)e.dir=ndir;
+    if(ndir)e.dir={x:ndir.x,y:ndir.y};
     }
   moveEntity(e, w.grid, e.dir.x*sp, e.dir.y*sp, e.pass);
    // keep on board (wall/border)

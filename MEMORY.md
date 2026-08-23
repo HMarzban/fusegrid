@@ -16,6 +16,15 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-08-23 — T9 fix round 1: deepened harness caught shared-DIRS corruption
+- 1800-tick/3-seed harness exposed `e.dir` aliasing frozen DIRS4/DIRS8 literals
+  (moveEntity bounce flips + border clamps mutated them, leaking across worlds in-process).
+  Fixed by copying candidates on assignment (enemies.js:46). No rng/outcome change on a
+  pristine process; baseline-v2 replays stay valid.
+
+## 2026-08-23 — T9–T13 adversarial review (determinism purge)
+- Verified: substitutions semantics-exact (21k-case fuzz, 0 diffs), purity gate clean (broad grep), commit scopes exact. Found: replay harness fires ZERO enemy-AI decisions in 300 ticks (cd init ≥4s) so T13's branch is unexercised; sameWorld omits player pos/bomb timers/item taken. Fix when touching harness next.
+
 ## 2026-08-23 — Determinism baseline v2
 - Purged transcendentals from sim (squared distances, integer substeps, render-only bob),
   deduped enemy candidate dirs. Replays valid only from commits ≥ this point.
