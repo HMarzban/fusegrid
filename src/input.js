@@ -53,6 +53,7 @@ export class Input {
       case "KeyD":case "ArrowRight":this.input.right=false;break;
       case "Space":case "KeyJ":case "KeyX":i.fire=false;i.remote=false;break;
       case "ShiftLeft":case "ShiftRight":i.shift=false;break;
+      case "KeyQ":i.remote=false;break;
       case "KeyK":i.kick=false;break;
       }
     }

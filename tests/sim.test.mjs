@@ -215,5 +215,34 @@ function injectBomb(w,tx,ty,timer,radius){
   check("simulated pointercancel clears fire (touch latch)", inp._intent.fire===false);
 }
 
+// 9c) input layer: releasing Q clears the remote latch (no stuck hold)
+{
+  const inp=new Input(null);
+  inp._onKey({code:"KeyQ"});
+  check("keydown KeyQ sets remote", inp._intent.remote===true);
+  inp._onKeyUp({code:"KeyQ"});
+  check("keyup KeyQ clears remote", inp._intent.remote===false);
+}
+
+// 9d) sim layer: remote detonates on press EDGE only (not every held tick)
+{
+  const w=createWorld(7,1); loadLevel(w,1,false); w.state="PLAY";
+  w.enemies=[]; w.blades=[]; w.bombs=[];
+  w.players[0].remote=true;
+  const hold={0:{...newIntent(),remote:true}};
+  injectBomb(w,4,6,99,1);
+  step(w, CFG.STEP, hold);
+  check("remote press detonates live bomb", w.bombs.length===0,
+    "boms left "+w.bombs.length);
+  injectBomb(w,4,6,99,1);
+  step(w, CFG.STEP, hold);            // still held -> edge must be latched
+  check("remote held latches (bomb survives)", w.bombs.length===1 && !w.bombs[0].dead,
+    "bombs "+w.bombs.length+(w.bombs[0]?(" dead="+w.bombs[0].dead):""));
+  step(w, CFG.STEP, {0:newIntent()}); // release
+  step(w, CFG.STEP, hold);            // re-press
+  check("remote re-press detonates again", w.bombs.length===0,
+    "boms left "+w.bombs.length);
+}
+
 console.log("\n  SIM RESULT: "+pass+" PASS / "+fail+" FAIL");
 process.exit(fail?1:0);

@@ -93,9 +93,11 @@ function updatePlayer(world, dt, inp, emit){
       placeBomb(w, p.x, p.y, emit);
       }
     }
-  if(inp.remote && p.remote){
+  const re=!!inp.remote;
+  if(re && !w.remoteEdge && p.remote){
     for(const b of w.bombs.slice())detonate(w,b,emit);
      }
+  w.remoteEdge=re;
   w.fireEdge=!!inp.fire;
    // collect items by walking over them
   for(const it of w.items){

@@ -22,6 +22,7 @@ export function createWorld(seed=1, level=1){
     state:"MENU",                    // MENU PLAY WIN LOSE PAUSE
     time:0, tick:0, winTimer:0,
     fireEdge:false,
+    remoteEdge:false,                // press-edge latch for remote detonation
    };
 }
 
