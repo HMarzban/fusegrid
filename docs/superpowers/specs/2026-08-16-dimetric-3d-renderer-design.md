@@ -188,7 +188,7 @@ project(gx, gy):
     p.color; ctx.fillRect(projSx - p.size/2, projSy - p.size/2, p.size, p.size);
     ctx.restore();` where `(projSx,projSy) = project(p.x/TILE, p.y/TILE)` — an
     **axis-aligned** `size×size` rect at the projected point (not the square's
-    corners projected into a diamond), matching 2D's `fillRect` (`fx.js:66`);
+    corners projected into a diamond), matching 2D's `fillRect` (`fx.js:65`);
     confetti rotation is dropped in 3D. The `save/restore` isolates
     `globalAlpha` so later painters aren't tinted. `buildPainters` iterates
     `getFx()` (the fx-module accessor) instead of `world.fx||[]`; particle
