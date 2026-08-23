@@ -100,7 +100,8 @@ function updatePlayer(world, dt, inp, emit){
    // collect items by walking over them
   for(const it of w.items){
     if(it.taken)continue;
-    if(Math.hypot(it.x-p.x,it.y-p.y)<CFG.TILE*CFG.PICKUP_R){
+    const dx=it.x-p.x, dy=it.y-p.y;
+    if(dx*dx+dy*dy < (CFG.TILE*CFG.PICKUP_R)**2){
       it.taken=true; w.score+=CFG.ITEM_SCORE; applyPower(w, it.pdef, it.x, it.y);
        }
      }

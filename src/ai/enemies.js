@@ -70,7 +70,7 @@ export function updateEnemies(world, dt, input, emit){
 function checkContact(w,e,emit){
   const p=w.players[0];
   if(p.iFrames>0)return;
-  if(Math.hypot(e.x-p.x,e.y-p.y) < e.r + CFG.TILE*CFG.CONTACT_R){
+  const dx=e.x-p.x, dy=e.y-p.y; if(dx*dx+dy*dy < (e.r+CFG.TILE*CFG.CONTACT_R)**2){
     if(p.shield){ p.shield=false; p.iFrames=CFG.IFRAMES; emit({t:"hurt", x:p.x, y:p.y}); }
     else hurtPlayer(w, emit);
    }

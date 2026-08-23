@@ -84,7 +84,7 @@ export function loadLevel(world, level, keepProgress=false){
   for(let y=1;y<CFG.ROWS-1;y++)for(let x=1;x<CFG.COLS-1;x++){
     if(w.grid[key(x,y)]!==T.EMPTY)continue;
     const tx=x*CFG.TILE+CFG.TILE/2, ty=y*CFG.TILE+CFG.TILE/2;
-    if(Math.hypot(tx-w.players[0].x,ty-w.players[0].y)<CFG.TILE*CFG.SPAWN_CLEAR)continue;
+    const ddx=tx-w.players[0].x, ddy=ty-w.players[0].y; if(ddx*ddx+ddy*ddy < (CFG.TILE*CFG.SPAWN_CLEAR)**2)continue;
     free.push([x,y]);
    }
   for(let i=free.length-1;i>0;i--){const j=rng.int(0,i);[free[i],free[j]]=[free[j],free[i]];}
