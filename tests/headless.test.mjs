@@ -83,5 +83,14 @@ check("null-canvas renderer render() does not throw", ok);
     "tail "+alphas.slice(-4).map(a=>a.toFixed(2)).join(","));
 }
 
+// ---- fix round 2: INTRO auto-advances to MENU at INTRO_DUR (no key) ----
+{
+  const g=createGame(null,{seed:3});
+  let t=0;
+  for(let i=0;i<330;i++){ t+=16; g.loop(t); }   // ~5.28s, zero input
+  check("intro auto-advances to MENU at INTRO_DUR without any key",
+    g.app.screen===SCREEN.MENU, "screen "+g.app.screen);
+}
+
 console.log(fail? "HEADLESS FAIL":"HEADLESS OK");
 process.exit(fail?1:0);

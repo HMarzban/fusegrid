@@ -10,7 +10,7 @@ import {drawLogo} from "./render/scenes.js";
 import {PROJ} from "./render/r3d/camera.js";
 import * as menudraw from "./render/menudraw.js";
 import {SCREEN, ITEMS, createMenuApp} from "./app/menuapp.js";
-import {introPhase} from "./app/intro.js";
+import {introPhase, INTRO_DUR} from "./app/intro.js";
 import {loadScores, recordScore, saveScores} from "./app/highscores.js";
 import {Input} from "./input.js";
 
@@ -194,6 +194,9 @@ export function createGame(canvas, opts={}){
          }
      }else{
       app.update(dt,shellInput);
+      // §1: INTRO→MENU at t>=INTRO_DUR — same skip() path as a user keypress,
+      // so the 0.25s MENU-entry fade fires identically
+      if(app.screen===SCREEN.INTRO&&app.subT>=INTRO_DUR)app.skip();
       acc=0;
      }
     // render: INTRO flyover transform wraps the ARENA draw only (zoom>=1 so
