@@ -16,6 +16,14 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-08-23 — T3 executed (serve.js hardened: traversal/400/ACAO/stream/loopback)
+- `4893b30`: path.relative containment (kills string-prefix sibling leak — proven 200 TOPSECRET
+  pre-fix via raw socket), decode-before-join → 400 on bad %, ACAO:* deleted, stream error→404,
+  binds 127.0.0.1 + prints server.address().port for PORT=0. tests/serve.test.mjs: traversal
+  checks MUST use raw sockets — fetch/curl collapse ../ AND %2e%2e client-side. Stream-error
+  handler untested (race-prone); browser smoke left to user. Report:
+  .superpowers/sdd/2026-08-23-master-plan/task-report-t3.md
+
 ## 2026-08-23 — T1+T2 executed (replay harness feeds inputs; headless import fixes)
 - T1 `e12fbff`: runSteps now applies inputFn output (full map or bare intent); new
   check 1b proves rightward input moves x (was 60 vs 60 vacuous). T2 `84bfc3e`:
