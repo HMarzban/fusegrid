@@ -16,6 +16,49 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-08-23 — Menu/intro FINAL FIX WAVE (C1/I1/I2/I3) — all four fixed, 9/9 green
+- One commit: pointer single-fire (non-GAME pointerdown swallows Input's fire
+  latch; _attach now registers el listeners headless so C1 is testable), cue
+  sheet live via main.js app-method wrappers (move/back/confirm/tog + boot
+  jingle), onPause gated to GAME (ghost pause dead), keydown repeats filtered
+  before dispatch. menuapp 93/0, headless +15 checks; core/net/ui untouched.
+
+## 2026-08-23 — Menu/intro FINAL whole-feature gate: NOT-READY (C1/I1/I2/I3)
+- Proven at HEAD: pointer confirm double-fires (direct call + fire-latch rising
+  edge) → intro click-skip auto-starts run, RENDER/SOUND clicks net no-op,
+  subscreens bounce; ui* cue sheet has ZERO callers (jingle never fires, §0.4);
+  Esc/P/btnPause outside GAME flip hidden world→PAUSE (ghost overlay behind
+  menus); OS key-repeat unfiltered breaks AC6 cadence in browsers. AC table
+  11✓/2✗; six deferred minors re-triaged DEFER. Fix list + repro recipe in
+  session log; core/ still untouched, suites 9/9 green.
+
+## 2026-08-23 — Menu shell fix round 2 (4aeaa3b): intro natural end
+- main loop now auto-calls app.skip() (machine's own transition) when
+  screen===INTRO && subT>=INTRO_DUR — spec §1 t≥DUR + §9.1; fade path shared
+  with user skip. Headless 14→15 (330 frames no-key → MENU). All green.
+
+## 2026-08-23 — Menu T5/T6 fix round 1 (2062af8): MENU logo + skip fade
+- F1: drawShell MENU branch now translates/scales to L.logoCy/L.logoScale and
+  reuses scenes.drawLogo(c,world.time,0,0). F2: drawFade wired — extra veil
+  k=1-subT/0.25 over first 0.25s of MENU entry (covers skip + natural end).
+  Headless 11→14 via recording-proxy canvas (fillText/fillStyle spy). All green.
+
+## 2026-08-23 — Menu/intro T5+T6 independent review (954208e..319f217)
+- T6 Approved/spec✅ (all sub-edits verified, core diff=0, battery green; KeyM-wrapper +
+  PLAY-repoint + last==null fix judged sound). T5 Needs-fixes/spec❌: MENU screen never
+  draws the §2 logo (drawShell MENU branch = dim+items only); minors: drawFade unwired
+  (no skip fade), push/pop+toggle-flash absent, veil ramp [1.40,2.80] vs spec-text
+  [1.40,4.20] (pre-existing T2, byte-consistent dup).
+
+## 2026-08-23 — Menu/intro T5+T6 executed (menudraw layer + main.js shell; f0c34b6..319f217)
+- `f0c34b6`: src/render/menudraw.js (layout frozen, 8 draw fns, local easing dup,
+  mono-advance estimate) + r3d layout/smoke checks both sizes (51/0). `319f217`:
+  main.js shell wiring — app/onStart, PLAY-frozen backdrop, INTRO flyover
+  transform (introPhase fractions), per-kind renderer cache + live toggle resize,
+  onUiKey M-quit persist, frame-latched noteWorldEdge LOSE record, __GAME__
+  app/state/begin re-point; headless 2→11. Fixed latent `if(!last)` t=0 bug.
+  Left: manual browser smoke (visuals/audio/skip/3d flyover).
+
 ## 2026-08-23 — Action fixes: remote edge-latch, button blur, hint copy (18c2412..3c68ac2)
 - Q/remote was latching (no KeyQ keyup) and level-triggered in sim; fixed with
   world.remoteEdge beside fireEdge (same alive-gated discipline, not reset in
