@@ -16,6 +16,14 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-08-23 — T1+T2 executed (replay harness feeds inputs; headless import fixes)
+- T1 `e12fbff`: runSteps now applies inputFn output (full map or bare intent); new
+  check 1b proves rightward input moves x (was 60 vs 60 vacuous). T2 `84bfc3e`:
+  main.js debug globals guarded by `typeof window` (`__GAME__` name kept), renderer
+  null-canvas fallback is a real noop ctx — brief's list missed arcTo/bezierCurveTo/
+  quadraticCurveTo, added them. Full suite 3/3 green. Report:
+  .superpowers/sdd/2026-08-23-master-plan/task-report-t1-t2.md
+
 ## 2026-08-23 — Master plan finalized (planning team: architect + test strategist + design calls)
 - Wrote docs/superpowers/plans/2026-08-23-master-plan.md: P0 harness/env fixes →
   P1 gameplay bugs → P2 determinism purge (ONE baseline-v2 bump) → P3 fx out of world →
