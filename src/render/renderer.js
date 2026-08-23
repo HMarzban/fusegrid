@@ -31,7 +31,7 @@ export function createRenderer(canvas, opts={}){
       if(audio) audio.play(world.events[i].t);
     }
     world.events.length=0;
-    updateFx(world, dt||CFG.STEP);
+    updateFx(dt||CFG.STEP);
   }
   function render(world, dt){
     if(!world) return;
@@ -47,7 +47,7 @@ export function createRenderer(canvas, opts={}){
     drawBlades(ctx, world);
     drawEnemies(ctx, world);
     for(const p of world.players){ if(p.alive!==false) drawPlayer(ctx, world, p); }
-    drawFx(ctx, world);
+    drawFx(ctx);
     ctx.restore();
     if(world.state!=="PLAY") drawOverlay(ctx, world);
     updateHud(hud, world);

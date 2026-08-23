@@ -191,8 +191,9 @@ project(gx, gy):
     corners projected into a diamond), matching 2D's `fillRect` (`fx.js:66`);
     confetti rotation is dropped in 3D. The `save/restore` isolates
     `globalAlpha` so later painters aren't tinted. `buildPainters` iterates
-    `world.fx || []` (a fresh world has no `world.fx` until the first
-    `consumeEvents` — `fx.js:47`).
+    `getFx()` (the fx-module accessor) instead of `world.fx||[]`; particle
+    storage lives in the fx module singleton (`fx.js:7` `parts`, reset by
+    `initFx()`).
 - **Per-entity sprite interface (pinned).** The 2D draw fns in `sprites.js`
   (`drawItems:182`, `drawEnemies:194`, `drawBombs:266`, `drawBlades:293`) each
   loop the array and do `c.save(); c.translate(x,y); <body>; c.restore()`.

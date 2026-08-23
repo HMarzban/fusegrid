@@ -17,7 +17,6 @@ export function createWorld(seed=1, level=1){
     bombs:[],
     blades:[],
     items:[],
-    particles:[],
     events:[],                       // drained by the renderer (audio/particles)
     score:0, lives:CFG.PLAYER_START.lives,
     state:"MENU",                    // MENU PLAY WIN LOSE PAUSE
@@ -47,7 +46,7 @@ export function loadLevel(world, level, keepProgress=false){
   w.state="MENU";
   w.rng=createRng((w.seed^level*40503)>>>0);
   w.grid=genBoard(w.seed, level);
-  w.bombs=[]; w.blades=[]; w.enemies=[]; w.items=[]; w.particles=[]; w.events=[];
+  w.bombs=[]; w.blades=[]; w.enemies=[]; w.items=[]; w.events=[];
   w.winTimer=0; w.lastBlades=0;
 
   w.players.forEach((p,i)=>{
