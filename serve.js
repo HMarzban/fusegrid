@@ -1,8 +1,6 @@
 /* Minimal, safe, zero-dep static file server for native ES modules.
-   Usage: `node serve.js` or `npm start` → http://localhost:8080/index.html
-   Not required for local play (double-click index.html works too if your
-   browser allows file:// ES modules, which most modern ones do), but the
-   recommended dev entry so module imports work everywhere. */
+   Usage: `node serve.js` or `npm start` → http://127.0.0.1:8080/index.html
+   Binds loopback only; PORT env overrides (0 = ephemeral, printed on boot). */
 import http from "http";
 import fs from "fs";
 import path from "path";
@@ -24,30 +22,31 @@ const MIME={
   ".css" :"text/css; charset=utf-8",
 };
 
-function safePath(urlPath){
-  const p=path.normalize(decodeURIComponent(urlPath));
-  if(!p.startsWith(ROOT)) return null;
-  return p;
+function safePath(p){
+  const rel=path.relative(ROOT,path.normalize(p));
+  if(rel===""||rel.startsWith("..")||path.isAbsolute(rel)) return null;
+  return path.normalize(p);
 }
 const server=http.createServer((req,res)=>{
   let url=req.url.split("?")[0];
   if(url==="/"||url==="") url="/index.html";
   try{
-    const fp=safePath(path.join(ROOT, url));
+    let decoded;
+    try{ decoded=decodeURIComponent(url); }
+    catch{ res.writeHead(400);res.end("bad request"); return; }
+    const fp=safePath(path.join(ROOT,decoded));
     if(!fp){ res.writeHead(403);res.end("forbidden"); return; }
     fs.stat(fp,(err,stats)=>{
-       if(err||!stats.isFile()){ res.writeHead(404);res.end("not found"); return; }
+      if(err||!stats.isFile()){ res.writeHead(404);res.end("not found"); return; }
       const ext=path.extname(fp).toLowerCase();
       res.writeHead(200, {
         "Content-Type": MIME[ext]||"application/octet-stream",
-        "Cache-Control":"no-cache",
-        "Access-Control-Allow-Origin":"*"
-       });
-      fs.createReadStream(fp).pipe(res);
+        "Cache-Control":"no-cache"
       });
-    } catch(e){ res.writeHead(500); res.end("internal"); }
-   });
-server.listen(PORT, ()=>{
-  console.log(`neo-bomberman serving ${ROOT} on http://localhost:${PORT}`);
-  console.log(`  open http://localhost:${PORT}/index.html in a browser`);
+      fs.createReadStream(fp).on("error",()=>{ if(!res.headersSent)res.writeHead(404); res.end(); }).pipe(res);
+    });
+  } catch(e){ res.writeHead(500); res.end("internal"); }
+});
+server.listen(PORT,"127.0.0.1",()=>{
+  console.log(`neo-bomberman serving ${ROOT} on http://127.0.0.1:${server.address().port}`);
 });
