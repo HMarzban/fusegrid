@@ -1,6 +1,7 @@
 import {step, createWorld, newIntent, loadLevel} from "../src/core/sim.js";
 import {CFG,T,key} from "../src/core/config.js";
 import {tileOf} from "../src/core/board.js";
+import {Input} from "../src/input.js";
 
 let pass=0, fail=0;
 function check(name, cond, detail){ cond?pass++:fail++;
@@ -160,6 +161,21 @@ function injectBomb(w,tx,ty,timer,radius){
   injectBomb(w,4,6,0,2); injectBomb(w,6,6,99,1); // radius-2 footprint would reach col 6 if not wall-blocked
   step(w, CFG.STEP, {0:newIntent()});
   check("wall blocks chain", w.bombs.some(b=>!b.dead && b.tx===6));
+}
+
+// 9b) input layer headless checks
+{
+  const inp=new Input(null);
+  inp._onFireDown({});
+  check("pointerdown sets fire", inp._intent.fire===true);
+  inp._onFireUp({});
+  check("pointerup clears fire", inp._intent.fire===false);
+  inp.setIntent({move:{x:1,y:0}});
+  check("setIntent x:+1 -> right held, left clear",
+    inp._held.right===true && inp._held.left===false);
+  inp.setIntent({move:{x:0,y:-1}});
+  check("setIntent y:-1 -> up held, down clear",
+    inp._held.up===true && inp._held.down===false);
 }
 
 console.log("\n  SIM RESULT: "+pass+" PASS / "+fail+" FAIL");

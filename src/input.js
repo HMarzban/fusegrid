@@ -8,7 +8,8 @@ export class Input {
     this.el=el;
     this._onKey=this._onKey.bind(this);
     this._onKeyUp=this._onKeyUp.bind(this);
-    this._onFire=this._onFire.bind(this);
+    this._onFireDown=this._onFireDown.bind(this);
+    this._onFireUp=this._onFireUp.bind(this);
     this._onBlur=this._onBlur.bind(this);
     this._attach();
     }
@@ -19,8 +20,8 @@ export class Input {
     window.addEventListener("blur",this._onBlur);
     if(document)document.addEventListener("visibilitychange",this._onBlur);
     if(this.el){
-      this.el.addEventListener("pointerdown",this._onFire);
-      this.el.addEventListener("pointerup",this._onFire);
+      this.el.addEventListener("pointerdown",this._onFireDown);
+      this.el.addEventListener("pointerup",this._onFireUp);
        }
     }
  _onKey(e){
@@ -52,7 +53,8 @@ export class Input {
       case "KeyK":i.kick=false;break;
       }
     }
- _onFire(e){ this._intent.fire=true; }
+ _onFireDown(e){ this._intent.fire=true; }
+ _onFireUp(e){ this._intent.fire=false; }
  _onBlur(){
     this.input.up=this.input.down=this.input.left=this.input.right=false;
     this._intent.fire=false;this._intent.shift=false;this._intent.remote=false;
@@ -80,8 +82,10 @@ export class Input {
     for(const k in o){
       if(k==="move"||k==="up"||k==="down"||k==="left"||k==="right"){
         // movement: set held axes; the next intent() picks them up
-        if(k==="move"){this._held.left=!!o.move.x*-1; this._held.right=!!o.move.x; this._held.up=!!o.move.y*-1; this._held.down=!!o.move.y;}
-        else this._held[k]=!!o[k];
+        const h=this.input;
+        if(k==="move"){h.left=o.move.x<0; h.right=o.move.x>0;
+          h.up=o.move.y<0; h.down=o.move.y>0;}
+        else h[k]=!!o[k];
          } else this._intent[k]=o[k];
       }
      }
