@@ -21,7 +21,6 @@ export function updateEnemies(world, dt, input, emit){
   if(e.invuln){ e.invulnT=Math.max(0,e.invulnT-dt); e.invuln=e.invulnT>0; }
 
   if(e.type==="stationary"){
-    e.y=(e.home.y*CFG.TILE+CFG.TILE/2)+Math.sin(e.home.y*CFG.TILE*0+ (w.time*3))*1.5;
     // contact check (stationary can still hit you if you walk into it)
     checkContact(w, e, emitFx);
     continue;

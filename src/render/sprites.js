@@ -194,7 +194,7 @@ export function drawItems(c, world){
 export function drawEnemies(c, world){
   for(const e of world.enemies){ if(e.dead)continue;
    c.save(); c.translate(e.x,e.y);
-    const bob = e.speed>0 ? Math.sin(world.time*12+e.home.x*0.7)*1.6 : 0;
+    const bob = e.type==="stationary" ? Math.sin(world.time*3)*1.5 : e.speed>0 ? Math.sin(world.time*12+e.home.x*0.7)*1.6 : 0;
     c.translate(0,bob);
     const r=e.r;
     if(e.type==="stationary"){
