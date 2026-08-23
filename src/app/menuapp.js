@@ -76,6 +76,7 @@ export function createMenuApp(opts={}){
       return false;
      },
     _tapMove(dir,lat){
+      if(this.screen===SCREEN.INTRO)return this.skip();
       const ok=lat?this.screen===SCREEN.LEVEL:this.screen===SCREEN.MENU;
       if(ok&&this.move(dir)){ this._taps[dir]=true; return true; }
       return false;

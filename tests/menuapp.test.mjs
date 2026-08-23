@@ -72,6 +72,13 @@ check("ITEMS frozen, 6 entries", Object.isFrozen(ITEMS)&&ITEMS.length===6
   const a=createMenuApp(); frames(a,3,DT,null,true);
   check("confirmHeld rising edge in INTRO skips", a.screen===SCREEN.MENU);
 }
+{
+  const codes=["ArrowUp","KeyW","ArrowDown","KeyS","ArrowLeft","KeyA",
+    "ArrowRight","KeyD"];
+  const results=codes.map(c=>{ const a=createMenuApp(); a.key(c); return a.screen; });
+  check("all 8 direction codes skip INTRO (§4/§9.2 any-key)",
+    results.every(s=>s===SCREEN.MENU), JSON.stringify(results));
+}
 
 // ---- menu cursor: wrap both directions ----
 {
