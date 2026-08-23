@@ -387,6 +387,34 @@ check("ITEMS frozen, 6 entries", Object.isFrozen(ITEMS)&&ITEMS.length===6
   check("keyup does NOT hit onUiKey (keydown-only channel)", n===0);
 }
 
+// ---- I3: OS key-repeat filter (repeats never re-dispatch UI or game logic) ----
+{
+  const inp=new Input(null);
+  const seen=[]; inp.onUiKey=c=>seen.push(c);
+  const pd=()=>{};
+  inp._onKey({code:"ArrowDown",repeat:true,preventDefault:pd});
+  check("I3 repeat keydown: onUiKey NOT dispatched", seen.length===0,
+    JSON.stringify(seen));
+  check("I3 repeat keydown does not latch axis", inp.input.down===false);
+  inp._onKey({code:"ArrowDown",preventDefault:pd});
+  check("I3 first press dispatches once + latches axis",
+    seen.join()==="ArrowDown"&&inp.input.down===true);
+  inp._onKey({code:"ArrowDown",repeat:true,preventDefault:pd});
+  check("I3 held-key repeat does not re-dispatch", seen.length===1,
+    JSON.stringify(seen));
+  inp._onKeyUp({code:"ArrowDown"});
+  check("I3 keyup clears axis normally", inp.input.down===false);
+}
+{
+  const inp=new Input(null);
+  const pd=()=>{};
+  inp._onKey({code:"Space",repeat:true,preventDefault:pd});
+  check("I3 fire repeat cannot CREATE fire latch", inp._intent.fire===false);
+  inp._onKey({code:"Space",preventDefault:pd});
+  inp._onKey({code:"Space",repeat:true,preventDefault:pd});
+  check("I3 held fire stays latched through repeats", inp._intent.fire===true);
+}
+
 // ---- audio cue sheet (§5): jingle scheduling + muted guard ----
 {
   const a=createAudio();

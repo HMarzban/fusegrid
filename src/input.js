@@ -15,22 +15,27 @@ export class Input {
     this._attach();
     }
  _attach(){
-    if(typeof window==="undefined")return;
-    window.addEventListener("keydown",this._onKey);
-    window.addEventListener("keyup",this._onKeyUp);
-    window.addEventListener("blur",this._onBlur);
-    if(typeof document!=="undefined" && document)
-      document.addEventListener("visibilitychange",this._onBlur);
+    if(typeof window!=="undefined"){
+      window.addEventListener("keydown",this._onKey);
+      window.addEventListener("keyup",this._onKeyUp);
+      window.addEventListener("blur",this._onBlur);
+      if(typeof document!=="undefined" && document)
+        document.addEventListener("visibilitychange",this._onBlur);
+     }
+    // element listeners need no window: headless tests exercise the SAME
+    // registration order as the browser (Input's fire latch before main.js)
     if(this.el){
       this.el.addEventListener("pointerdown",this._onFireDown);
       this.el.addEventListener("pointerup",this._onFireUp);
       this.el.addEventListener("pointercancel",this._onFireUp);
       this.el.addEventListener("pointerleave",this._onFireUp);
        }
-    }
+     }
  _onKey(e){
-    if(this.onUiKey)this.onUiKey(e.code);
     const i=this._intent;
+    if(["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight","KeyJ","KeyX"].indexOf(e.code)>=0)e.preventDefault();
+    if(e.repeat)return;   // OS auto-repeat: one logical press per physical press
+    if(this.onUiKey)this.onUiKey(e.code);
     switch(e.code){
       case "KeyW":case "ArrowUp":this.input.up=true;break;
       case "KeyS":case "ArrowDown":this.input.down=true;break;
@@ -42,10 +47,7 @@ export class Input {
       case "KeyK":i.kick=true;break;
       case "KeyP":case "Escape":this.onPause&&this.onPause();return;
       }
-     /* keep the held-state on the intent so the movement axes stay stable
-        between ticks; movement axes are recomputed from held keys each tick */
-    if(["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight","KeyJ","KeyX"].indexOf(e.code)>=0 && e.code !== "KeyP" && e.code !== "Escape")e.preventDefault();
-    }
+     }
  _onKeyUp(e){
     const i=this._intent;
     switch(e.code){

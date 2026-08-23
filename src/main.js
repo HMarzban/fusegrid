@@ -63,8 +63,27 @@ export function createGame(canvas, opts={}){
     setBtn("btnPause","Pause");
     };
 
+  const audio=opts.audio||null;
   const app=createMenuApp({level:1,sound:true,render3d:is3d,
-    audio:opts.audio||null,autoplay,onStart});
+    audio,autoplay,onStart});
+  /* §5 cue sheet — wired HERE in the app layer, never in render/sim. Wrappers
+     shadow the machine methods so every successful transition plays exactly
+     one cue; RENDER/SOUND confirms get uiTog instead of uiSel, and subscreen
+     confirm (= back()) is cued once by the back wrapper alone. */
+  if(audio){
+    const m0=app.move.bind(app), b0=app.back.bind(app),
+      c0=app.confirm.bind(app);
+    app.move=(d)=>{ const r=m0(d); if(r)audio.play("uiMove"); return r; };
+    app.back=()=>{ const r=b0(); if(r)audio.play("uiBack"); return r; };
+    app.confirm=()=>{
+      const sB=app.screen, cB=app.cursor, r=c0();
+      if(!r)return r;
+      if(sB===SCREEN.MENU&&(cB===2||cB===3))audio.play("uiTog");
+      else if(sB!==SCREEN.HOWTO&&sB!==SCREEN.SCORES)audio.play("uiSel");
+      return r;
+     };
+    if(!autoplay)audio.play("uiJingle");   // §0.4: jingle once at INTRO start
+   }
   if(autoplay)app.startRun();
 
   /* app.update() contract adapter over the live Input (held axes + fire) */
@@ -95,15 +114,22 @@ export function createGame(canvas, opts={}){
    };
 
   const onPause=()=>{
+    if(app.screen!==SCREEN.GAME)return;   // I2: pause exists only inside GAME;
+     // outside it the world is a frozen backdrop and PAUSE would ghost-render
     if(world.state==="PLAY"){ world.state="PAUSE"; setBtn("btnPause","Resume"); }
     else if(world.state==="PAUSE"){ world.state="PLAY"; setBtn("btnPause","Pause"); }
     };
   input.onPause=onPause;
 
-  /* pointer outside GAME = skip (INTRO) or confirm (menus) */
+  /* pointer outside GAME = skip (INTRO) or confirm (menus).
+     C1 single-fire: Input's fire latch listens on the SAME event (registered
+     first, in the constructor), so swallow it here — otherwise the latched
+     intent.fire re-enters as a rising-edge confirm on the next frame
+     (auto-start after skip, toggles bouncing back, subscreens bouncing). */
   if(canvas){
     canvas.addEventListener("pointerdown",()=>{
       if(app.screen===SCREEN.GAME)return;
+      input._intent.fire=false;
       if(app.screen===SCREEN.INTRO)app.skip(); else app.confirm();
      });
    }
@@ -227,7 +253,9 @@ export function createGame(canvas, opts={}){
     const bs=document.getElementById("btnSound");
     if(bs)bs.onclick=(e)=>{ const on=(opts.audio && opts.audio.toggle && opts.audio.toggle());
       app.sound=!!on;
-      bs.textContent="Sound: "+(on?"On":"Off"); e&&e.currentTarget&&e.currentTarget.blur(); };
+      bs.textContent="Sound: "+(on?"On":"Off");
+      if(audio)audio.play("uiTog");   // §5 tog cue on the button toggle too
+      e&&e.currentTarget&&e.currentTarget.blur(); };
     const br=document.getElementById("btnRestart");
     if(br)br.onclick=(e)=>{ loadLevel(world,1,false); world.state="PLAY";
       e&&e.currentTarget&&e.currentTarget.blur(); };
