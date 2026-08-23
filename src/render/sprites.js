@@ -21,7 +21,7 @@ export function bakeAtlas(){
   if(BAKED.ready || !canMakeCanvas()) return;
   const make=(w,h)=>{ const c=document.createElement("canvas"); c.width=w;c.height=h; return c; };
   biomeOf(1); // touch
-  for(let i=0;i<4;i++){
+  for(let i=0;i<BIOMES.length;i++){
     const b=biomeOf(i+1);
     const fA=make(CFG.TILE,CFG.TILE), a=fA.getContext("2d");
     a.fillStyle=b.floor0; a.fillRect(0,0,CFG.TILE,CFG.TILE);

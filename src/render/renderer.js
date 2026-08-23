@@ -12,7 +12,7 @@ import {PROJ} from "./r3d/camera.js";
    consumeEvents(world,dt) flushes world.events into fx/audio, returns this so
    callers can chain. render(world) paints one frame. */
 export function createRenderer(canvas, opts={}){
-  const kind = opts.kind || "2d";
+  const kind = opts.kind==="3d" ? "3d" : "2d";
   if(kind === "2d") bakeAtlas();
   const noop=()=>{};
   const ctx = canvas && canvas.getContext ? canvas.getContext("2d",{alpha:false})
