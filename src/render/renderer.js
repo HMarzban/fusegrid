@@ -6,6 +6,7 @@ import {
 import {onEvent, updateFx, drawFx, getShake, initFx, syncFx} from "./fx.js";
 import {drawOverlay, updateHud, makeHud} from "./scenes.js";
 import {draw3dBackground, buildPainters, byDepth} from "./r3d/scene3d.js";
+import {PROJ} from "./r3d/camera.js";
 
 /* Renderer: owns a 2D context + view. Reads world, never mutates sim state.
    consumeEvents(world,dt) flushes world.events into fx/audio, returns this so
@@ -59,7 +60,10 @@ export function createRenderer(canvas, opts={}){
       drawFx(ctx);
     }
     ctx.restore();
-    if(world.state!=="PLAY") drawOverlay(ctx, world);
+    if(world.state!=="PLAY"){
+      if(kind === "3d") drawOverlay(ctx, world, PROJ.canvasW, PROJ.canvasH, 304, 188);
+      else drawOverlay(ctx, world);
+    }
     updateHud(hud, world);
   }
   return {canvas, ctx, render, consumeEvents, getShake};
