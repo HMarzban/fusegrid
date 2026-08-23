@@ -37,6 +37,7 @@ let pass=0,fail=0;
 const check=(n,c,d)=>{c?pass++:fail++;console.log((c?"  PASS ":"  FAIL ")+n+(d?" -> "+d:""));}
 
 check("serves index.html",(await get("/index.html")).status===200);
+check("GET / serves index.html",(await get("/")).status===200);
 check("rejects encoded parent traversal",(await rawGet("/%2e%2e/AGENTS.md")).status===403);
 check("rejects encoded sibling-prefix dir",(await rawGet(`/%2e%2e/${basename(sibling)}/secret.txt`)).status===403);
 {
@@ -44,6 +45,10 @@ check("rejects encoded sibling-prefix dir",(await rawGet(`/%2e%2e/${basename(sib
   check("rejects raw literal-dot sibling traversal (no secret leaked)",r.status===403&&!r.body.includes("TOPSECRET"),`${r.status}`);
 }
 check("400 on malformed percent-encoding",(await get("/%zz")).status===400);
+{
+  const r=await rawGet("/%2e"); // decodes to "/." -> resolves to ROOT itself
+  check("ROOT-itself request is 404 (not 403, no listing)",r.status===404,r.status+"");
+}
 check("no wildcard CORS header",!((await get("/index.html")).headers.get("access-control-allow-origin")));
 
 srv.kill(); rmSync(sandbox,{recursive:true,force:true}); rmSync(sibling,{recursive:true,force:true});

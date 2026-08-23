@@ -23,9 +23,10 @@ const MIME={
 };
 
 function safePath(p){
-  const rel=path.relative(ROOT,path.normalize(p));
-  if(rel===""||rel.startsWith("..")||path.isAbsolute(rel)) return null;
-  return path.normalize(p);
+  const n=path.normalize(p);
+  const rel=path.relative(ROOT,n);
+  if(rel.startsWith("..")||path.isAbsolute(rel)) return null;
+  return n;
 }
 const server=http.createServer((req,res)=>{
   let url=req.url.split("?")[0];
