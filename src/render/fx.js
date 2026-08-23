@@ -5,12 +5,20 @@ import {CFG} from "../core/config.js";
    renderer never mutates simulation-shaped state and headless worlds carry no
    fx baggage. */
 const fx={shakeT:0,shakeX:0,shakeY:0,parts:[]};
+let tag=null;
 
 export function initFx(){
   fx.shakeT=0; fx.shakeX=0; fx.shakeY=0; fx.parts=[];
 }
 export function getShake(){ return {x:fx.shakeX, y:fx.shakeY}; }
 export function getFx(){ return fx.parts; }
+
+/* Wipes particles whenever the world identity (seed:level) changes — replaces
+   the old loadLevel `w.particles=[]` wipe now that storage lives here. */
+export function syncFx(world){
+  const t=world ? world.seed+":"+world.level : null;
+  if(t!==tag){ tag=t; fx.parts=[]; }
+}
 
 export function onEvent(world, ev, time){
   switch(ev.t){

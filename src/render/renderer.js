@@ -3,7 +3,7 @@ import {
   bakeAtlas, drawGrid, drawBiomeBackground, drawBricks,
   drawItems, drawEnemies, drawPlayer, drawBombs, drawBlades
 } from "./sprites.js";
-import {onEvent, updateFx, drawFx, getShake, initFx} from "./fx.js";
+import {onEvent, updateFx, drawFx, getShake, initFx, syncFx} from "./fx.js";
 import {drawOverlay, updateHud, makeHud} from "./scenes.js";
 
 /* Renderer: owns a 2D context + view. Reads world, never mutates sim state.
@@ -26,6 +26,7 @@ export function createRenderer(canvas, opts={}){
   initFx();
 
   function consumeEvents(world, dt){
+    syncFx(world);
     for(let i=0;i<world.events.length;i++){
       onEvent(world, world.events[i], world.time);
       if(audio) audio.play(world.events[i].t);
