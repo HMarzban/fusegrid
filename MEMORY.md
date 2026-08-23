@@ -16,6 +16,14 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-08-23 — T4+T5 executed (contact damage via hurtPlayer; chain by blast coverage)
+- `041cdec`: checkContact now calls hurtPlayer (shield→hurt event, else life loss); `aad680b`:
+  detonate() chains any bomb on a blast-covered tile (was Manhattan-1). Suite 14/14 sim green.
+- Two brief-test drifts fixed minimally, documented: T4 needed e.home={x:1,y:1} (stationary
+  branch teleports y to home each tick); T5 bomb-A radius 1→2 (radius-1 footprint can't reach
+  distance 2 — wall case was vacuous). Auto-advance stayed green; no superseded markers.
+  Report: .superpowers/sdd/2026-08-23-master-plan/task-report-t4-t5.md
+
 ## 2026-08-23 — T3 executed (serve.js hardened: traversal/400/ACAO/stream/loopback)
 - `4893b30`: path.relative containment (kills string-prefix sibling leak — proven 200 TOPSECRET
   pre-fix via raw socket), decode-before-join → 400 on bad %, ACAO:* deleted, stream error→404,
