@@ -8,6 +8,10 @@ function check(name, cond, detail){ cond?pass++:fail++;
   console.log((cond?"  PASS ":"  FAIL ")+name+(detail!==undefined?" -> "+detail:"")); }
 
 // ---- determinism: two fresh worlds + identical input => identical outcome ----
+/* runSteps(seed, level, frames, inputFn) — inputFn(world, i, fireEdge) returns
+   either a full inputs map ({0:intent}) or a bare intent for pid 0.
+   fireEdge.prev mirrors pid-0's previous tick's post-step fire state, so
+   generators can emit proper press edges (fire = !fireEdge.prev). */
 function runSteps(seed, level, frames, inputFn){
   const w=createWorld(seed, level);
   loadLevel(w, level, false);
@@ -23,8 +27,20 @@ function runSteps(seed, level, frames, inputFn){
     }
     step(w, CFG.STEP, inps);
     inps[0].firePrev=inps[0].fire;
+    fireEdge.prev=inps[0].fire;
   }
   return w;
+}
+
+// 1c) harness fireEdge actually tracks pid-0 fire across ticks
+{
+  let sawTrue=false;
+  runSteps(12345, 1, 10, (w,i,fe)=>{
+    sawTrue=sawTrue||fe.prev===true;
+    const it=newIntent(); it.fire=(i<2);
+    return {0:it};
+  });
+  check("runSteps fireEdge.prev mirrors prior-tick fire", sawTrue);
 }
 
 // 1b) the harness must actually deliver generated inputs
