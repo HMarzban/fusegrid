@@ -1,26 +1,39 @@
 /* BROWSER ENTRY — wires input → deterministic sim → renderer.
-   Only module that runs the RAF loop. The sim (step) and renderer never
-   import this. */
+   Only module that runs the RAF loop. Also owns the app SHELL
+   (BOOT→INTRO→MENU⇄subs→GAME, src/app/menuapp.js): the sim steps ONLY while
+   the shell is in GAME; other screens render the frozen arena behind menu
+   chrome (src/render/menudraw.js). The sim never sees any of this. */
 import {CFG} from "./core/config.js";
 import {createWorld, loadLevel, step} from "./core/sim.js";
 import {createRenderer} from "./render/renderer.js";
 import {PROJ} from "./render/r3d/camera.js";
+import * as menudraw from "./render/menudraw.js";
+import {SCREEN, ITEMS, createMenuApp} from "./app/menuapp.js";
+import {introPhase} from "./app/intro.js";
+import {loadScores, recordScore, saveScores} from "./app/highscores.js";
 import {Input} from "./input.js";
 
-export function createGame(canvas, opts={}){
-  // ?render=3d selects the dimetric path (spec step 5); default stays "2d"
-  const is3d=typeof location!=="undefined"&&/[?&]render=3d/.test(location.search||"");
+const SCREEN_NAME=["BOOT","INTRO","MENU","LEVEL","HOWTO","SCORES","GAME"];
 
+export function createGame(canvas, opts={}){
+  // flags parsed ONCE (?render=3d selects the dimetric path; ?play=1 skips the
+  // shell straight into GAME)
+  const is3d=typeof location!=="undefined"&&/[?&]render=3d/.test(location.search||"");
+  const autoplay=(typeof location!=="undefined"
+    &&/[?&]play=1/.test(location.search||""))||opts.autoplay===true;
+  const dateStr=()=>new Date().toISOString().slice(0,10);
+
+  // frozen backdrop world: created exactly as today but NEVER forced to
+  // "MENU" — it simply is not stepped until a run starts (spec §7 edit 1)
   const world=createWorld(opts.seed!=null?opts.seed:((Math.random()*1e9)>>>0), 1);
   loadLevel(world,1,false);
-  world.state="MENU";
+  world.state="PLAY";
 
-   // size the canvas to the board in device pixels; scale via CSS to fit
-   // (fit() stays the CSS-scale authority in both kinds)
+  let fit=null;
   if(canvas){
     canvas.width=is3d?PROJ.canvasW:CFG.COLS*CFG.TILE;
     canvas.height=is3d?PROJ.canvasH:CFG.ROWS*CFG.TILE;
-    const fit=()=>{
+    fit=()=>{
       if(typeof window==="undefined")return;
       const maxW=window.innerWidth-40, maxH=window.innerHeight-180;
       const s=Math.max(0.3, Math.min(maxW/canvas.width, maxH/canvas.height, 1.8));
@@ -28,41 +41,169 @@ export function createGame(canvas, opts={}){
       canvas.style.height=(canvas.height*s)+"px";
        };
     fit();
-    window.addEventListener("resize", fit);
+    if(typeof window!=="undefined")window.addEventListener("resize", fit);
     }
 
   const input=new Input(opts.canvasEl||canvas);
+  let prevSt=null;
+
+  function setBtn(id,txt){
+    if(typeof document==="undefined")return;
+    const el=document.getElementById(id); if(el)el.textContent=txt;
+    }
+
+  /* run handoff (menu START / LEVEL select): fresh board, score reset */
+  const onStart=(args)=>{
+    loadLevel(world,args.level,false);
+    world.score=0;
+    world.state="PLAY";
+    app.inGame=true;
+    prevSt="PLAY";
+    setBtn("btnPause","Pause");
+    };
+
+  const app=createMenuApp({level:1,sound:true,render3d:is3d,
+    audio:opts.audio||null,autoplay,onStart});
+  if(autoplay)app.startRun();
+
+  /* app.update() contract adapter over the live Input (held axes + fire) */
+  const shellInput={
+    get input(){return input.input;},
+    get confirmHeld(){return input._intent.fire;}
+   };
+  /* high-score persist through the guarded default store (§6) */
+  const persistScore=()=>{
+    if(!(world.score>0))return;
+    saveScores(recordScore(loadScores(),
+      {s:world.score,l:world.level,d:dateStr()}));
+   };
+  /* UI key side-channel: ALWAYS routed to the shell; M-in-PAUSE records the
+     score then quits to MENU (spec §4 table). Machine self-gates elsewhere. */
+  input.onUiKey=(code)=>{
+    if(code==="KeyM"){
+      if(app.screen===SCREEN.GAME&&app.worldState==="PAUSE"){
+        persistScore();
+        app.quitToMenu("PAUSE");
+        if(world.state==="PAUSE")world.state="PLAY";   // drop PAUSE overlay
+        setBtn("btnPause","Pause");
+        prevSt=null;
+       }
+      return;
+     }
+    app.key(code);
+   };
+
   const onPause=()=>{
     if(world.state==="PLAY"){ world.state="PAUSE"; setBtn("btnPause","Resume"); }
     else if(world.state==="PAUSE"){ world.state="PLAY"; setBtn("btnPause","Pause"); }
     };
   input.onPause=onPause;
 
-   // renderer uses the real canvas; fall back to a no-op renderer on failure
-  let renderer;
-  try{ renderer=createRenderer(canvas,{kind:is3d?"3d":"2d",
-    audio:opts.audio||null, hud:opts.hud||null}); }
-  catch(e){ console.warn("renderer init failed", e); renderer={render(){},consumeEvents(){}}; }
+  /* pointer outside GAME = skip (INTRO) or confirm (menus) */
+  if(canvas){
+    canvas.addEventListener("pointerdown",()=>{
+      if(app.screen===SCREEN.GAME)return;
+      if(app.screen===SCREEN.INTRO)app.skip(); else app.confirm();
+     });
+   }
 
-  let last=0, acc=0, running=true;
+  /* renderer cache per kind, lazily built; both share the canvas
+     (bakeAtlas idempotent). Toggle resizes W/H before the next render. */
+  const rcache={};
+  let curKind=is3d;
+  function getRenderer(kind){
+    if(canvas){
+      canvas.width=kind==="3d"?PROJ.canvasW:CFG.COLS*CFG.TILE;
+      canvas.height=kind==="3d"?PROJ.canvasH:CFG.ROWS*CFG.TILE;
+      if(fit)fit();
+     }
+    if(!rcache[kind]){
+      try{ rcache[kind]=createRenderer(canvas,{kind,
+        audio:opts.audio||null,hud:opts.hud||null}); }
+      catch(e){ console.warn("renderer init failed", e);
+        rcache[kind]={ctx:{save(){},restore(){},translate(){},scale(){}},
+          render(){},consumeEvents(){}}; }
+     }
+    return rcache[kind];
+   }
+  let renderer=getRenderer(is3d?"3d":"2d");
+
+  /* per-screen menu chrome over the frozen arena */
+  function drawShell(c){
+    const s=app.screen;
+    if(s===SCREEN.BOOT||s===SCREEN.GAME)return;   // GAME keeps its own overlays
+    const cw=canvas?canvas.width:(curKind?PROJ.canvasW:CFG.COLS*CFG.TILE);
+    const chh=canvas?canvas.height:(curKind?PROJ.canvasH:CFG.ROWS*CFG.TILE);
+    if(s===SCREEN.INTRO)
+      return menudraw.drawIntroChrome(c,app.subT,cw,chh);
+    if(s===SCREEN.MENU){
+      menudraw.drawDim(c,0.62,cw,chh);
+      menudraw.drawMenu(c,{cursor:app.cursor,enterT:app.subT,
+        items:[ITEMS[0],ITEMS[1],
+          "RENDER "+(app.render3d?"3D":"2D"),
+          "SOUND "+(app.sound?"ON":"OFF"),
+          ITEMS[4],ITEMS[5]]},
+        menudraw.layout(cw,chh),app.subT);
+      return;
+     }
+    const L=menudraw.layout(cw,chh);
+    if(s===SCREEN.LEVEL){
+      menudraw.drawDim(c,0.72,cw,chh);
+      menudraw.drawLevelSelect(c,app.level,L,app.subT);
+     }
+    else if(s===SCREEN.HOWTO){
+      menudraw.drawDim(c,0.72,cw,chh);
+      menudraw.drawHowTo(c,L,app.subT);
+     }
+    else if(s===SCREEN.SCORES){
+      menudraw.drawDim(c,0.72,cw,chh);
+      menudraw.drawScores(c,loadScores(),L,app.subT);
+     }
+   }
+
+  let last=null, acc=0, running=true;
   function loop(t){
-    if(!last)last=t;
+    if(last==null)last=t;
     let dt=(t-last)/1000; last=t; dt=Math.min(dt,0.25);
-    acc+=dt;
-    let steps=0;
-    while(acc>=CFG.STEP){
-      const it=input.intent();
-      step(world, CFG.STEP, {0:it});
-      input.advance();
-      acc-=CFG.STEP; steps++;
-      if(steps>6){ acc=0; break; }    // hard cap (anti spiral-of-death)
-       }
+    if(app.render3d!==curKind){ curKind=app.render3d;
+      renderer=getRenderer(curKind?"3d":"2d"); }
+    if(app.screen===SCREEN.GAME){
+      // §1 score-record edge, frame-polled (main latches prev world state)
+      const entry=app.noteWorldEdge(prevSt,world.state,
+        {s:world.score,l:world.level,d:dateStr()});
+      prevSt=world.state;
+      if(entry)saveScores(recordScore(loadScores(),entry));
+      acc+=dt;
+      let steps=0;
+      while(acc>=CFG.STEP){
+        const it=input.intent();
+        step(world, CFG.STEP, {0:it});
+        input.advance();
+        acc-=CFG.STEP; steps++;
+        if(steps>6){ acc=0; break; }    // hard cap (anti spiral-of-death)
+         }
+     }else{
+      app.update(dt,shellInput);
+      acc=0;
+     }
+    // render: INTRO flyover transform wraps the ARENA draw only (zoom>=1 so
+    // no edge gaps); camX/camY are canvas fractions
+    const c=renderer.ctx||
+      {save(){},restore(){},translate(){},scale(){}};
+    c.save();
+    if(app.screen===SCREEN.INTRO){
+      const ph=introPhase(app.subT);
+      const cw=canvas?canvas.width:(curKind?PROJ.canvasW:CFG.COLS*CFG.TILE);
+      const chh=canvas?canvas.height:(curKind?PROJ.canvasH:CFG.ROWS*CFG.TILE);
+      c.translate(cw/2,chh/2);
+      c.scale(ph.zoom,ph.zoom);
+      c.translate(-ph.camX*cw,-ph.camY*chh);
+     }
     renderer.render(world, dt);
-    if(running) requestAnimationFrame(loop);
-    }
-  function setBtn(id,txt){
-    if(typeof document==="undefined")return;
-    const el=document.getElementById(id); if(el)el.textContent=txt;
+    c.restore();
+    drawShell(c);
+    if(running && typeof requestAnimationFrame!=="undefined")
+      requestAnimationFrame(loop);
     }
 
    // UI buttons
@@ -72,26 +213,22 @@ export function createGame(canvas, opts={}){
     if(bp)bp.onclick=(e)=>{ onPause(); e&&e.currentTarget&&e.currentTarget.blur(); };
     const bs=document.getElementById("btnSound");
     if(bs)bs.onclick=(e)=>{ const on=(opts.audio && opts.audio.toggle && opts.audio.toggle());
+      app.sound=!!on;
       bs.textContent="Sound: "+(on?"On":"Off"); e&&e.currentTarget&&e.currentTarget.blur(); };
     const br=document.getElementById("btnRestart");
     if(br)br.onclick=(e)=>{ loadLevel(world,1,false); world.state="PLAY";
       e&&e.currentTarget&&e.currentTarget.blur(); };
     }
 
-   // auto-start from ?play=1
-  if(typeof location!=="undefined" && /[?&]play=1/.test(location.search||"")){
-    world.state="PLAY";
-    }
-
    // debug/test hook (browser only; opt-in via opts.debug or ?debug=1)
   if(typeof window!=="undefined" &&
      (opts.debug===true || /[?&]debug=1/.test(location.search||""))){
     window.__GAME__={
-      G:world, renderer, input,
+      G:world, renderer, input, app,
       step:(n=1)=>{ for(let i=0;i<n;i++){const it=input.intent(); step(world,CFG.STEP,{0:it}); input.advance();} renderer.render(world,CFG.STEP*n); },
-      state:()=>world.state,
-      reset:()=>{ loadLevel(world,1,false); world.state="MENU"; },
-      begin:()=>{ if(world.state==="MENU") world.state="PLAY"; },
+      state:()=>app.screen===SCREEN.GAME?world.state:SCREEN_NAME[app.screen],
+      reset:()=>{ app.toMenu(); },
+      begin:()=>{ app.startRun(); },
       setKeys:(o)=>input.setIntent(o),
       clearAllEnemies:()=>{ world.enemies.forEach(e=>{e.dead=true;}); return world.enemies.length; },
       advance:()=>{ loadLevel(world,world.level+1,true); world.state="PLAY"; },
@@ -103,7 +240,7 @@ export function createGame(canvas, opts={}){
 
    // boot
   if(typeof requestAnimationFrame!=="undefined") requestAnimationFrame(loop);
-  return {world, input, renderer, loop,
+  return {world, input, renderer, app, loop,
     stop(){ running=false; },
     start(){ running=true; if(typeof requestAnimationFrame!=="undefined") requestAnimationFrame(loop); },
     setBtn};
