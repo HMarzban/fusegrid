@@ -30,7 +30,7 @@ export function applyPower(world, pdef, x, y){
 export function hurtPlayer(world, emit){
   const p=world.players[0];
   world.lives--;
-  world.score=Math.max(0,world.score-20);
+  world.score=Math.max(0,world.score-CFG.DEATH_PENALTY);
   p.passing=false; p.kick=false; p.throw=false; p.remote=false; p.shield=false; p.bombKind="normal";
   world.events.push({t:"hurt", x:p.x, y:p.y});
   if(world.lives<=0){
@@ -58,7 +58,7 @@ export function createPlayer(pid=0){
 }
 
 export function spawnEnemy(type,x,y,level,rng){
-  const base=1.5+level*0.12;
+  const base=CFG.ENEMY_BASE_SPEED+level*CFG.ENEMY_LEVEL_CURVE;
   const spec={
     walker:     {speed:base,    color:"#8affc1", r:CFG.TILE*0.34},
     fast:       {speed:base*2.0,color:"#ffd447", r:CFG.TILE*0.32},
@@ -72,6 +72,6 @@ export function spawnEnemy(type,x,y,level,rng){
     x:x*CFG.TILE+CFG.TILE/2, y:y*CFG.TILE+CFG.TILE/2, tx:x, ty:y,
     dir:{x:1,y:0}, speed:spec.speed, color:spec.color, r:spec.r,
     pass:!!spec.pass, dead:false,
-    invuln:true, invulnT:1.2, cd:4+(rng?rng.int(0,12):6), home:{x,y},
+    invuln:true, invulnT:CFG.ENEMY_INVULN_T, cd:4+(rng?rng.int(0,12):6), home:{x,y},
   };
 }

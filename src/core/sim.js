@@ -62,11 +62,11 @@ function updatePlayer(world, dt, inp, emit){
   if(dx||dy){
     p.tx=tileOf(p.x); p.ty=tileOf(p.y);
     if(p.passing){
-      moveEntity(p, w.grid, dx*sp*2.4, dy*sp*2.4, true);
+      moveEntity(p, w.grid, dx*sp*CFG.PASS_MULT, dy*sp*CFG.PASS_MULT, true);
       if(w.grid[key(p.tx,p.ty)]===T.BRICK){
         w.grid[key(p.tx,p.ty)]=T.EMPTY; revealItem(w,p.tx,p.ty,emit);
         w.events.push({t:"brick", x:p.x, y:p.y});
-        w.score+=10;
+        w.score+=CFG.BRICK_SCORE;
        }
      } else {
       moveEntity(p, w.grid, dx*sp, 0, false);
@@ -77,7 +77,7 @@ function updatePlayer(world, dt, inp, emit){
         if(w.grid[key(tx,ty)]===T.BRICK){
           w.grid[key(tx,ty)]=T.EMPTY; revealItem(w,tx,ty,emit);
           w.events.push({t:"brick", x:tx*CFG.TILE+CFG.TILE/2, y:ty*CFG.TILE+CFG.TILE/2});
-          w.score+=10;
+          w.score+=CFG.BRICK_SCORE;
           }
        }
      }
@@ -100,8 +100,8 @@ function updatePlayer(world, dt, inp, emit){
    // collect items by walking over them
   for(const it of w.items){
     if(it.taken)continue;
-    if(Math.hypot(it.x-p.x,it.y-p.y)<CFG.TILE*0.45){
-      it.taken=true; w.score+=50; applyPower(w, it.pdef, it.x, it.y);
+    if(Math.hypot(it.x-p.x,it.y-p.y)<CFG.TILE*CFG.PICKUP_R){
+      it.taken=true; w.score+=CFG.ITEM_SCORE; applyPower(w, it.pdef, it.x, it.y);
        }
      }
   // keep firePrev in sync so the next tick's edge works even without input
@@ -178,13 +178,13 @@ function breakBrick(w,tx,ty,emit){
   w.grid[key(tx,ty)]=T.EMPTY;
   revealItem(w,tx,ty,emit);
   w.events.push({t:"brick", x:px, y:py});
-  w.score+=10;
+  w.score+=CFG.BRICK_SCORE;
  }
 
 function revealItem(w,tx,ty,emit){
   const cxx=tx*CFG.TILE+CFG.TILE/2, cyy=ty*CFG.TILE+CFG.TILE/2;
   for(const it of w.items) if(!it.taken && tileOf(it.x)===tx && tileOf(it.y)===ty){
-    it.taken=true; w.score+=50; applyPower(w,it.pdef,cxx,cyy);
+    it.taken=true; w.score+=CFG.ITEM_SCORE; applyPower(w,it.pdef,cxx,cyy);
      }
  }
 

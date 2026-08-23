@@ -61,7 +61,7 @@ export function updateEnemies(world, dt, input, emit){
   if(w.enemies.length===0 && w.state==="PLAY"){
     w.winTimer+=dt;
     if(w.winTimer>=CFG.WIN_DELAY){
-      return {advance:true, bonus:w.score+=500+w.lives*100};
+      return {advance:true, bonus:w.score+=CFG.LEVEL_BONUS+w.lives*CFG.LEVEL_BONUS_PER_LIFE};
       }
     }
   return null;
@@ -70,7 +70,7 @@ export function updateEnemies(world, dt, input, emit){
 function checkContact(w,e,emit){
   const p=w.players[0];
   if(p.iFrames>0)return;
-  if(Math.hypot(e.x-p.x,e.y-p.y) < e.r + CFG.TILE*0.26){
+  if(Math.hypot(e.x-p.x,e.y-p.y) < e.r + CFG.TILE*CFG.CONTACT_R){
     if(p.shield){ p.shield=false; p.iFrames=CFG.IFRAMES; emit({t:"hurt", x:p.x, y:p.y}); }
     else hurtPlayer(w, emit);
    }
