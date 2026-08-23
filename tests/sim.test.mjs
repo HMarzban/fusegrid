@@ -14,11 +14,26 @@ function runSteps(seed, level, frames, inputFn){
   const inps={0:newIntent()};
   const fireEdge={prev:false};
   for(let i=0;i<frames;i++){
-    const it=inputFn(w, i, fireEdge) || inps[0];
+    const gen=inputFn(w, i, fireEdge);
+    if(gen){
+      if(gen[0]) inps[0]=gen[0];                 // full inputs map
+      else { for(const k in gen) inps[0][k]=gen[k]; } // bare intent for pid 0
+      if(inps[0].firePrev===undefined) inps[0].firePrev=inps[0].fire;
+    }
     step(w, CFG.STEP, inps);
     inps[0].firePrev=inps[0].fire;
   }
   return w;
+}
+
+// 1b) the harness must actually deliver generated inputs
+{
+  const w=runSteps(12345, 1, 30, ()=>({0:{move:{x:1,y:0},fire:false,firePrev:false,shift:false,remote:false,kick:false}}));
+  const w2=createWorld(12345,1); loadLevel(w2,1,false); w2.state="PLAY";
+  const zero={0:newIntent()};
+  for(let i=0;i<30;i++){ step(w2, CFG.STEP, zero); zero[0].firePrev=zero[0].fire; }
+  check("harness feeds rightward input (x moved)", w.players[0].x>w2.players[0].x,
+    w.players[0].x+" vs "+w2.players[0].x);
 }
 
 // 1) no-input determinism
