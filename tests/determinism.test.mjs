@@ -29,6 +29,10 @@ function sameWorld(x,y){
   if(x.state!==y.state)return false;
   const p0=x.players[0], p1=y.players[0];
   if(p0.x!==p1.x||p0.y!==p1.y)return false;
+  if(p0.tx!==p1.tx||p0.ty!==p1.ty||p0.bombs!==p1.bombs||p0.range!==p1.range
+    ||p0.iFrames!==p1.iFrames||p0.shield!==p1.shield||p0.bombKind!==p1.bombKind
+    ||p0.passing!==p1.passing||p0.kick!==p1.kick||p0.throw!==p1.throw
+    ||p0.remote!==p1.remote)return false;
   if(x.enemies.length!==y.enemies.length)return false;
   for(let i=0;i<x.enemies.length;i++){
     const a=x.enemies[i], b=y.enemies[i];
@@ -36,6 +40,7 @@ function sameWorld(x,y){
     if(a.dir.x!==b.dir.x||a.dir.y!==b.dir.y)return false;
     if(a.type!==b.type||a.dead!==b.dead)return false;
     if(a.home.x!==b.home.x||a.home.y!==b.home.y)return false;
+    if(a.cd!==b.cd||a.invulnT!==b.invulnT||a.speed!==b.speed||a.pass!==b.pass)return false;
   }
   if(x.bombs.length!==y.bombs.length)return false;
   for(let i=0;i<x.bombs.length;i++){
@@ -48,7 +53,16 @@ function sameWorld(x,y){
     const a=x.items[i], b=y.items[i];
     if(a.x!==b.x||a.y!==b.y||a.taken!==b.taken)return false;
   }
-  return x.score===y.score && x.lives===y.lives && x.tick===y.tick;
+  return x.score===y.score && x.lives===y.lives && x.tick===y.tick
+    && x.winTimer===y.winTimer
+    && bladesEq(x.blades,y.blades);
+}
+function bladesEq(a,b){
+  if(a.length!==b.length)return false;
+  for(let i=0;i<a.length;i++){
+    if(a[i].t!==b[i].t||a[i].ttl!==b[i].ttl||a[i].variant!==b[i].variant)return false;
+  }
+  return true;
 }
 function script(i){
   const moves=[{x:1,y:0},{x:0,y:1},{x:-1,y:0},{x:0,y:-1}];
