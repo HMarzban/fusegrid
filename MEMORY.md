@@ -16,6 +16,12 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-08-23 — T8 executed (balance tunables hoisted into frozen CFG; pure rename)
+- `4329aec`: 12 new CFG keys (CONTACT_R…ENEMY_INVULN_T) replace scattered literals across
+  sim/world/entities/enemies — values verbatim, killEnemy ternary left structural. All
+  suites green. Note: `tests/determinism.test.mjs` from the plan doesn't exist; replay
+  checks live in sim/protocol tests. Report: task-report-t8.md
+
 ## 2026-08-23 — T6+T7 executed (input latch/axes fixed; WIN state + win/lose events live)
 - `4caea59`: pointer down/up split (_onFireDown/_onFireUp) + setIntent sign fix (routed
   through `input` getter — brief's literal `_held.` crashes fresh headless Input).
