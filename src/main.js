@@ -2,8 +2,7 @@
    Only module that runs the RAF loop. The sim (step) and renderer never
    import this. */
 import {CFG} from "./core/config.js";
-import {createWorld, loadLevel} from "./core/sim.js";
-import {step} from "./core/sim.js";
+import {createWorld, loadLevel, step} from "./core/sim.js";
 import {createRenderer} from "./render/renderer.js";
 import {PROJ} from "./render/r3d/camera.js";
 import {Input} from "./input.js";
@@ -82,8 +81,9 @@ export function createGame(canvas, opts={}){
     world.state="PLAY";
     }
 
-   // debug/test hook (browser only)
-  if(typeof window!=="undefined"){
+   // debug/test hook (browser only; opt-in via opts.debug or ?debug=1)
+  if(typeof window!=="undefined" &&
+     (opts.debug===true || /[?&]debug=1/.test(location.search||""))){
     window.__GAME__={
       G:world, renderer, input,
       step:(n=1)=>{ for(let i=0;i<n;i++){const it=input.intent(); step(world,CFG.STEP,{0:it}); input.advance();} renderer.render(world,CFG.STEP*n); },

@@ -22,7 +22,6 @@ export function createWorld(seed=1, level=1){
     state:"MENU",                    // MENU PLAY WIN LOSE PAUSE
     time:0, tick:0, winTimer:0,
     fireEdge:false,
-    lastBlades:0,
    };
 }
 
@@ -47,7 +46,7 @@ export function loadLevel(world, level, keepProgress=false){
   w.rng=createRng((w.seed^level*40503)>>>0);
   w.grid=genBoard(w.seed, level);
   w.bombs=[]; w.blades=[]; w.enemies=[]; w.items=[]; w.events=[];
-  w.winTimer=0; w.lastBlades=0;
+  w.winTimer=0;
 
   w.players.forEach((p,i)=>{
     p.x=1.5*CFG.TILE; p.y=1.5*CFG.TILE; p.tx=1; p.ty=1;

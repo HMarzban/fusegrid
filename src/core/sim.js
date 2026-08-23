@@ -1,5 +1,5 @@
 import {CFG,T,key,clamp} from "./config.js";
-import {tileOf, isWall, isBrick, solidAt, aabb, moveEntity} from "./board.js";
+import {tileOf, isWall, aabb, moveEntity} from "./board.js";
 import {createWorld, loadLevel} from "./world.js";
 import {applyPower, hurtPlayer} from "./entities.js";
 import {updateEnemies} from "../ai/enemies.js";

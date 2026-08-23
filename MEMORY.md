@@ -16,6 +16,58 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-08-23 — T21+T22 executed (dual-kind render smoke + P5 dead-code sweep; P4/P5 shipped)
+- `289ba27`: r3d #11 renders MENU world via createRenderer kind:"2d"+"3d" on Proxy-stub
+  canvas (spec §6 step 7), 31/31. Sweep commit: deleted POWER_BY_TYPE, audio.prime/isMuted,
+  transport MSG re-export+import, world.lastBlades, unused imports (sim isBrick/solidAt;
+  enemies key/clamp/aabb/DIRS4-import; board clamp), main.js dup imports; biomeIndex
+  %4→%BIOMES.length; __GAME__ gated behind opts.debug||?debug=1 (browser_integration passes
+  {debug:true}). All suites green; kept net/, rng accessors, BIOMES[].name, dual paint path.
+  Left open: manual npm-start browser smoke (sound toggle/?debug=1); ui/bookshelf untouched.
+
+## 2026-08-23 — T19+T20 executed (?render=3d wiring + parameterized overlays; blade billboard pre-work)
+- `7b602a0`: main.js ?render=3d → PROJ backing store + kind:"3d"; renderer 3D
+  branch live. Controller pre-work done RED→GREEN: drawBladeBody now
+  translate-free (translate in 2D wrapper), scene3d blades billboard at
+  project(tx+.5,ty+.5) — new r3d check #10 proves (284,98). `2b75e97`:
+  drawOverlay/drawLogo parameterized (2D-preserving defaults), 3D epilogue
+  centers overlay at (304,188). All suites green per commit. Left: step-7
+  dual-kind smoke test; browser visual check. Report: task-report-t19-t20.md
+
+## 2026-08-23 — T18 executed (scene3d painter list + shade/background + step-4 tests)
+- `994923d`: buildPainters/byDepth/shade/draw3dBackground per §4.3/§4.4; blade painter
+  calls drawBladeBody with NO pre-translate (self-translating body) — but body still
+  lands at flat 2D coords, so projected-position mismatch deferred to steps 5–7.
+  r3d suite 28/28 (counts, liveness exclusions, equal-depth occlusion, shade), full
+  suite green. Report: task-report-t18.md
+
+## 2026-08-23 — T17 independent diff review: PASS with one forward-compat flag
+- Verified exhaustively (normalized line-multiset + per-body extraction vs 0f028d7):
+  bodies verbatim moves, only wrapper scaffolding added; exports/scope/tests clean.
+  Flag for steps 4–5: drawBladeBody self-translates to absolute tile coords (not
+  translate-free like the other four) — scene3d must not pre-translate or blades
+  render far off-position; step-7 no-throw smoke would NOT catch it.
+
+## 2026-08-23 — T17 executed (draw*Body extraction; 2D wrappers behavior-preserving)
+- `150661d`: five exported body fns in sprites.js (verbatim line moves, ws-insensitive
+  diff verified); drawPlayer loops world.players internally (skip alive===false, §4.3
+  round-5), renderer call site collapsed to one call; enemy bob + per-blade alpha=1 stay
+  in wrappers. Suite green. Note: alive-filter edge (undefined) now draws — unreachable
+  with sim's boolean alive. Report: task-report-t17.md
+
+## 2026-08-23 — T15+T16 executed (renderer kind adapter; dimetric camera PROJ + tests)
+- `5dc4871`: createRenderer takes opts.kind (default "2d", bakeAtlas gated), shared
+  prologue/epilogue per §4.4, empty 3D stub; 2D default unchanged. `0f028d7`:
+  src/render/r3d/camera.js (project + frozen PROJ derived from §4.5 formulas) and
+  tests/r3d.test.mjs (10 checks: corner map, bbox/margins, monotonic sy, margin eqs).
+  RED→GREEN observed; full suite 6/6 files green. Report: task-report-t15-t16.md
+
+## 2026-08-23 — T9 fix-round-1 re-review: F1/F2 ADDRESSED, deviation upheld
+- Independently reproduced RED at e84d3b9 (3 seeds unequal, DIRS8 mutated) and GREEN
+  post-fix; probe counted 5–8 real AI-decision executions/seed in 1800 ticks. Residuals
+  flagged non-blocking: sameWorld still omits player tx/ty/bombs/iFrames/shield, enemy
+  cd/invulnT/speed, w.winTimer; harness self-proof label satisfied by bounce flips too.
+
 ## 2026-08-23 — T9 fix round 1: deepened harness caught shared-DIRS corruption
 - 1800-tick/3-seed harness exposed `e.dir` aliasing frozen DIRS4/DIRS8 literals
   (moveEntity bounce flips + border clamps mutated them, leaking across worlds in-process).

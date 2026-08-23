@@ -1,4 +1,4 @@
-import {CFG, T, key, biomeOf} from "../core/config.js";
+import {CFG, T, key, biomeOf, BIOMES} from "../core/config.js";
 
 /* RENDER LAYER — reads world, never mutates it. Every draw fn takes a 2D
    context as its first argument (no global ctx) and is a pure function of
@@ -49,7 +49,7 @@ export function bakeAtlas(){
   BAKED.ready=true;
 }
 
-function biomeIndex(level){ return (Math.max(1,level)-1)%4; }
+function biomeIndex(level){ return (Math.max(1,level)-1)%BIOMES.length; }
 
 /* ---- tiles ---- */
 export function drawGrid(c, world){

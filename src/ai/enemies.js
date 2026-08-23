@@ -1,5 +1,5 @@
-import {CFG, DIRS4, DIRS8, key, clamp} from "../core/config.js";
-import {tileOf, isWall, solidAt, aabb, bfsNext, moveEntity} from "../core/board.js";
+import {CFG, DIRS8} from "../core/config.js";
+import {tileOf, isWall, solidAt, bfsNext, moveEntity} from "../core/board.js";
 import {hurtPlayer} from "../core/entities.js";
 
 /* Update every enemy on the world for one fixed step. PURE & DETERMINISTIC:

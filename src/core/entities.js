@@ -16,7 +16,6 @@ export const POWER = [
   {t:"pierce", col:"#8f8fff", apply:(w,p)=>p.bombKind="pierce"},
   {t:"remote", col:"#9aa3c0", permanent:false, apply:(w,p)=>p.remote=true},
 ];
-export const POWER_BY_TYPE=Object.fromEntries(POWER.map(p=>[p.t,p]));
 
 /* Apply a power-up. PURE (deterministic, no Math.random). `pdef` is a POWER
    entry. Some effects mutate `world` (heart), most mutate the player. */

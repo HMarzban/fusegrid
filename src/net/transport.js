@@ -1,7 +1,7 @@
 /* TRANSPORT — a transport-agnostic seam so future multiplayer can swap in a
    WebSocket without touching the sim or renderer. Phase-1 ships LocalTransport
    (in-process loopback, zero network) which is how single-player runs. */
-import {encode, decode, MSG} from "./protocol.js";
+import {encode, decode} from "./protocol.js";
 
 /* Common interface every transport implements:
      connect()
@@ -69,5 +69,3 @@ export class WebSocketTransport extends Transport{
      }
   close(){ if(this._ws){ this._ws.close(); this._ws=null; } this._subs={}; }
 }
-
-export { MSG };

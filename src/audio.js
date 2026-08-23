@@ -1,5 +1,5 @@
 // Audio layer — WebAudio oscillator SFX. Graceful: no-op if unavailable.
-// createAudio() returns { prime(), play(name), toggle(), isMuted() }.
+// createAudio() returns { play(name), toggle() }.
 export function createAudio(){
   let ctx=null, muted=false, ok=true;
   function ensure(){
@@ -27,7 +27,6 @@ export function createAudio(){
     }catch(e){}
   }
   return {
-    prime(){ ensure(); },
     play(name){
       switch(name){
         case "bomb":  beep(220,0.12,"sawtooth",0.10); break;
@@ -40,6 +39,5 @@ export function createAudio(){
       }
     },
     toggle(){ muted=!muted; return !muted; },
-    isMuted(){ return muted; },
   };
 }

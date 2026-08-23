@@ -1,4 +1,4 @@
-import {CFG,T,key,clamp} from "./config.js";
+import {CFG,T,key} from "./config.js";
 import {createRng} from "./rng.js";
 const dirs4=[{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];
 export function tileOf(px){return Math.floor(px/CFG.TILE);}
