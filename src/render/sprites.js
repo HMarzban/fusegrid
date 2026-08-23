@@ -305,9 +305,11 @@ export function drawBombs(c, world){
     c.restore();
   }
 }
+/* drawBladeBody draws one blade tile at origin; positioning stays in the
+   drawBlades wrapper so bodies stay translate-free. */
 export function drawBladeBody(c, world, bl, t){
   const age=bl.t/bl.ttl;
-  c.save(); c.translate(t.tx*CFG.TILE+CFG.TILE/2, t.ty*CFG.TILE+CFG.TILE/2);
+  c.save();
   const g=c.createRadialGradient(0,0,1,0,0,CFG.TILE*0.6);
   if(age<0.3){ g.addColorStop(0,"#ffffff"); g.addColorStop(1,"rgba(255,248,216,0)"); }
   else if(age<0.7){ g.addColorStop(0,"#fff8d8"); g.addColorStop(0.5,"#ffcf5a"); g.addColorStop(1,"rgba(255,93,115,0)"); }
@@ -318,7 +320,11 @@ export function drawBladeBody(c, world, bl, t){
 }
 export function drawBlades(c, world){
   for(const bl of world.blades){
-    for(const t of bl.tiles){ drawBladeBody(c,world,bl,t); }
+    for(const t of bl.tiles){
+      c.save(); c.translate(t.tx*CFG.TILE+CFG.TILE/2, t.ty*CFG.TILE+CFG.TILE/2);
+      drawBladeBody(c,world,bl,t);
+      c.restore();
+    }
     c.globalAlpha=1;
   }
 }

@@ -5,6 +5,7 @@ import {
 } from "./sprites.js";
 import {onEvent, updateFx, drawFx, getShake, initFx, syncFx} from "./fx.js";
 import {drawOverlay, updateHud, makeHud} from "./scenes.js";
+import {draw3dBackground, buildPainters, byDepth} from "./r3d/scene3d.js";
 
 /* Renderer: owns a 2D context + view. Reads world, never mutates sim state.
    consumeEvents(world,dt) flushes world.events into fx/audio, returns this so
@@ -42,8 +43,10 @@ export function createRenderer(canvas, opts={}){
     ctx.save();
     if(ctx.translate) ctx.translate(Math.round(shake.x),Math.round(shake.y));
     if(kind === "3d"){
-      /* dimetric path — stub for now; camera.js/scene3d.js land in spec
-         steps 2-5. Prologue/epilogue above/below stay shared with 2D. */
+      draw3dBackground(ctx, world);
+      const ps=buildPainters(world);
+      ps.sort(byDepth);
+      for(const p of ps) p.draw(ctx);
     } else {
       drawBiomeBackground(ctx, world);
       drawGrid(ctx, world);

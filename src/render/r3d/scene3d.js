@@ -12,9 +12,9 @@ import {getFx} from "../fx.js";
    Extrusion convention: top face = footprint diamond shifted up by H
    (each corner sy -= H); visible south faces are front-left [top(W),top(S),S,W]
    and front-right [top(E),top(S),S,E].
-   NOTE: blades do NOT pre-translate to the projected point — drawBladeBody
-   self-translates to absolute coords inside its own save/restore; the other
-   four bodies are relative art and DO get ctx.translate(projSx,projSy). */
+   All five sprite bodies are translate-free relative art; billboardPainter
+   pre-translates to the projected point and calls the body inside
+   save/restore (blade tiles anchor at their center: tx+.5, ty+.5). */
 
 export function byDepth(a,b){ return (a.depth-b.depth)||(a.tier-b.tier); }
 
@@ -51,9 +51,9 @@ function blockPainter(c,x,y,h,topCol,leftCol,rightCol){
   quad(c,tW,tS,S,W); c.fillStyle=leftCol; c.fill();
   quad(c,tE,tS,S,E); c.fillStyle=rightCol; c.fill();
 }
-function billboardPainter(c,gx,gy,world,body,bodyArg){
+function billboardPainter(c,gx,gy,world,body,...rest){
   const q=project(gx,gy);
-  c.save(); c.translate(q.sx,q.sy); body(c,world,bodyArg); c.restore();
+  c.save(); c.translate(q.sx,q.sy); body(c,world,...rest); c.restore();
 }
 
 /* Complete painter list for the world, UNSORTED — the caller sorts with
@@ -85,7 +85,7 @@ export function buildPainters(world){
         drawBombBody,bm)});
   for(const bl of world.blades)for(const t of bl.tiles)
     ps.push({depth:t.tx+t.ty,tier:3,
-      draw:c=>drawBladeBody(c,world,bl,t)});   // self-translating body
+      draw:c=>billboardPainter(c,t.tx+0.5,t.ty+0.5,world,drawBladeBody,bl,t)});
   for(const e of world.enemies){ if(e.dead)continue;
     ps.push({depth:(e.x+e.y)/CFG.TILE,tier:1,
       draw:c=>billboardPainter(c,e.x/CFG.TILE,e.y/CFG.TILE,world,

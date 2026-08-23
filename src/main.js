@@ -5,17 +5,22 @@ import {CFG} from "./core/config.js";
 import {createWorld, loadLevel} from "./core/sim.js";
 import {step} from "./core/sim.js";
 import {createRenderer} from "./render/renderer.js";
+import {PROJ} from "./render/r3d/camera.js";
 import {Input} from "./input.js";
 
 export function createGame(canvas, opts={}){
+  // ?render=3d selects the dimetric path (spec step 5); default stays "2d"
+  const is3d=typeof location!=="undefined"&&/[?&]render=3d/.test(location.search||"");
+
   const world=createWorld(opts.seed!=null?opts.seed:((Math.random()*1e9)>>>0), 1);
   loadLevel(world,1,false);
   world.state="MENU";
 
    // size the canvas to the board in device pixels; scale via CSS to fit
+   // (fit() stays the CSS-scale authority in both kinds)
   if(canvas){
-    canvas.width=CFG.COLS*CFG.TILE;
-    canvas.height=CFG.ROWS*CFG.TILE;
+    canvas.width=is3d?PROJ.canvasW:CFG.COLS*CFG.TILE;
+    canvas.height=is3d?PROJ.canvasH:CFG.ROWS*CFG.TILE;
     const fit=()=>{
       if(typeof window==="undefined")return;
       const maxW=window.innerWidth-40, maxH=window.innerHeight-180;
@@ -36,7 +41,8 @@ export function createGame(canvas, opts={}){
 
    // renderer uses the real canvas; fall back to a no-op renderer on failure
   let renderer;
-  try{ renderer=createRenderer(canvas,{audio:opts.audio||null, hud:opts.hud||null}); }
+  try{ renderer=createRenderer(canvas,{kind:is3d?"3d":"2d",
+    audio:opts.audio||null, hud:opts.hud||null}); }
   catch(e){ console.warn("renderer init failed", e); renderer={render(){},consumeEvents(){}}; }
 
   let last=0, acc=0, running=true;

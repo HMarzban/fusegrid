@@ -182,5 +182,30 @@ initFx();
   check("draw3dBackground + every painter draw no-throw on stub ctx",ok);
 }
 
+// 10) blade billboards: painter pre-translates to the projected tile center
+//     project(2.5,2.5) = {sx:(2.5-2.5)*20+284=284, sy:(2.5+2.5)*10+48=98}
+{
+  initFx();
+  const w={seed:1,level:1,time:0,
+    grid:new Array(CFG.COLS*CFG.ROWS).fill(T.EMPTY),
+    players:[],enemies:[],bombs:[],items:[],
+    blades:[{ttl:CFG.BLADE_TTL,t:0.1,tiles:[{tx:2,ty:2}]}]};
+  const bp=buildPainters(w).find(p=>p.tier===3);
+  const calls=[];
+  const spy=new Proxy(function(){},{
+    get:(t,p)=>{
+      if(p===Symbol.toPrimitive)return()=>"" ;
+      if(p==="translate")return(...a)=>calls.push(a);
+      return spy;
+    },
+    apply:()=>spy,set:()=>true});
+  let ok=true;
+  try{ bp.draw(spy); }catch(e){ ok=false; console.log(e.message); }
+  const q=project(2.5,2.5);
+  check("blade painter billboards at project(tx+.5,ty+.5)",
+    ok&&calls.some(a=>a[0]===q.sx&&a[1]===q.sy),
+    "translate calls "+JSON.stringify(calls)+" want ("+q.sx+","+q.sy+")");
+}
+
 console.log("\n  R3D RESULT: "+pass+" PASS / "+fail+" FAIL");
 process.exit(fail?1:0);
