@@ -10,7 +10,8 @@ import {drawOverlay, updateHud, makeHud} from "./scenes.js";
    consumeEvents(world,dt) flushes world.events into fx/audio, returns this so
    callers can chain. render(world) paints one frame. */
 export function createRenderer(canvas, opts={}){
-  bakeAtlas();
+  const kind = opts.kind || "2d";
+  if(kind === "2d") bakeAtlas();
   const noop=()=>{};
   const ctx = canvas && canvas.getContext ? canvas.getContext("2d",{alpha:false})
     : {save:noop,restore:noop,translate:noop,rotate:noop,scale:noop,
@@ -40,15 +41,20 @@ export function createRenderer(canvas, opts={}){
     const shake=getShake();
     ctx.save();
     if(ctx.translate) ctx.translate(Math.round(shake.x),Math.round(shake.y));
-    drawBiomeBackground(ctx, world);
-    drawGrid(ctx, world);
-    drawBricks(ctx, world);
-    drawItems(ctx, world);
-    drawBombs(ctx, world);
-    drawBlades(ctx, world);
-    drawEnemies(ctx, world);
-    for(const p of world.players){ if(p.alive!==false) drawPlayer(ctx, world, p); }
-    drawFx(ctx);
+    if(kind === "3d"){
+      /* dimetric path — stub for now; camera.js/scene3d.js land in spec
+         steps 2-5. Prologue/epilogue above/below stay shared with 2D. */
+    } else {
+      drawBiomeBackground(ctx, world);
+      drawGrid(ctx, world);
+      drawBricks(ctx, world);
+      drawItems(ctx, world);
+      drawBombs(ctx, world);
+      drawBlades(ctx, world);
+      drawEnemies(ctx, world);
+      for(const p of world.players){ if(p.alive!==false) drawPlayer(ctx, world, p); }
+      drawFx(ctx);
+    }
     ctx.restore();
     if(world.state!=="PLAY") drawOverlay(ctx, world);
     updateHud(hud, world);
