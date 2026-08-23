@@ -43,7 +43,7 @@ const emptyInputs=Object.freeze(Object.keys(newIntent()).reduce((o,k)=>(o[0]={mo
    updatePlayer(world, dt, inputs[0]||emptyInputs[0], emit);
    updateBombs(world, dt, emit);
    const adv=updateEnemies(world, dt, inputs, emit);
-   if(adv&&adv.advance){ loadLevel(world, world.level+1, true); world.state="PLAY"; }
+   if(adv&&adv.advance){ world.events.push({t:"win"}); world.state="WIN"; }
  }
 
 function startGame(world){

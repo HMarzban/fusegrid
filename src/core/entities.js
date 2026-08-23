@@ -36,6 +36,7 @@ export function hurtPlayer(world, emit){
   if(world.lives<=0){
     world.state="LOSE";
     world.players[0].alive=false;
+    world.events.push({t:"lose"});
     return true;
      }
   p.x=1.5*CFG.TILE; p.y=1.5*CFG.TILE; p.iFrames=CFG.IFRAMES*1.6;

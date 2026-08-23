@@ -86,7 +86,7 @@ check("deterministic no-input sim (enemy count matches)", a.enemies.length===b.e
   } else check("power-up walk-over +1 bomb", false, "no items");
 }
 
-// 6) auto-advance: clear all enemies -> level increments after WIN_DELAY
+// 6) board clear -> WIN state; fire edge advances with carry
 {
   const w=createWorld(1,1); loadLevel(w,1,false);
   w.enemies.forEach(e=>e.dead=true);
@@ -96,7 +96,12 @@ check("deterministic no-input sim (enemy count matches)", a.enemies.length===b.e
   for(let i=0;i<50;i++) step(w,CFG.STEP,{0:{move:{x:0,y:0},fire:false,firePrev:false,switch:false,shift:false,remote:false,kick:false}});
   check("not advanced before WIN_DELAY", w.state==="PLAY" && w.level===level0, "level "+w.level);
   for(let i=0;i<150;i++) step(w,CFG.STEP,{0:{move:{x:0,y:0},fire:false,firePrev:false,shift:false,remote:false,kick:false}});
-  check("auto-advanced to next level", w.level===level0+1, "level "+level0+" -> "+w.level);
+  check("board clear enters WIN state", w.state==="WIN");
+  check("win event emitted", w.events.some(e=>e.t==="win"));
+  // fire edge advances with carry
+  const fire={0:{...newIntent(),fire:true,firePrev:false}};
+  step(w, CFG.STEP, fire);
+  check("fire edge advances level with carry", w.state==="PLAY" && w.level===2 && w.score>0);
 }
 
 // 7) line bomb pierces bricks (enemy beyond bricks gets killed; normal bomb wouldn't)
@@ -137,6 +142,19 @@ check("deterministic no-input sim (enemy count matches)", a.enemies.length===b.e
   step(w2, CFG.STEP, zero);
   check("contact with shield consumes shield, keeps life",
     w2.lives===l2 && w2.players[0].shield===false);
+  // lives exhausted -> LOSE state + lose event
+  const w3=createWorld(999,1); loadLevel(w3,1,false); w3.state="PLAY";
+  const e3=w3.enemies[0];
+  e3.invuln=false; e3.invulnT=0; e3.type="stationary"; e3.speed=0;
+  e3.home={x:1,y:1}; e3.x=1.5*CFG.TILE; e3.y=1.5*CFG.TILE; e3.r=20;
+  w3.players[0].shield=false; w3.players[0].iFrames=0;
+  let guard=0;
+  while(w3.lives>0 && guard++<5000){
+    w3.players[0].x=w3.players[0].y=1.5*CFG.TILE;
+    step(w3, CFG.STEP, zero);
+   }
+  check("lives exhausted enters LOSE", w3.state==="LOSE");
+  check("lose event emitted", w3.events.some(ev=>ev.t==="lose"));
 }
 
 // 5b) chain reaction coverage
