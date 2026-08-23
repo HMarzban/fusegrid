@@ -75,7 +75,9 @@ export function aabb(g,tx,ty,px,py,rad){
    const check=passBrick?function(px,py,r){return wallHits(g,px,py,r);}
                           :function(px,py,r){return circleHitsSolid(g,px,py,r);};
    const step=CFG.TILE*0.25;
-   const n=Math.max(1,Math.ceil(Math.hypot(dx,dy)/step));
+   let n=1;
+   const dist2=dx*dx+dy*dy, cell=step*step;
+   while(n*n*cell<dist2)n++;
    let bx=false,by=false;
    for(let i=0;i<n;i++){
      const nx=e.x+dx/n;
