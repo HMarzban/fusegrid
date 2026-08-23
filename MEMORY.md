@@ -16,6 +16,23 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-08-23 — Master plan finalized (planning team: architect + test strategist + design calls)
+- Wrote docs/superpowers/plans/2026-08-23-master-plan.md: P0 harness/env fixes →
+  P1 gameplay bugs → P2 determinism purge (ONE baseline-v2 bump) → P3 fx out of world →
+  P4 dimetric renderer (spec steps 1–7) → P5 cleanup. Design calls locked: WIN-state
+  routing for level clear (fanfare/confetti wired), audio.prime deleted not wired,
+  debug globals gated behind ?debug=1, all balance tunables hoisted to CFG.
+- Spec §5.1 (hypot stays) and step-4 fx source amended BY the plan tasks before P4 runs.
+
+## 2026-08-23 — Five-agent codebase review (arch/code-quality/dead-code/tests/security)
+- Ran 5 parallel review agents. Verified live bugs: enemy contact damage never calls
+  `hurtPlayer` (enemies.js:75 only emits an event); determinism test harness discards its
+  generated inputs (sim.test.mjs:17-18, replay tests are vacuous); pointer `pointerup`
+  latches fire=true; chain detonation only chains distance-1 bombs (sim.js:170).
+- serve.js prefix-match traversal gap (`startsWith(ROOT)` without sep) + `ACAO:*`.
+- Open decisions left: wire-vs-delete fx "win" branch & audio.prime; gate debug globals;
+  snapshot completeness vs lockstep-only netcode (applySnapshot fabricates enemy dynamics).
+
 ## 2026-08-16 — Initialized opencode for rollblock
 - Added `opencode.json` (schema + `instructions` + `permission`) and `AGENTS.md`
    (architecture, commands, conventions).
