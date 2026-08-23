@@ -157,7 +157,7 @@ function injectBomb(w,tx,ty,timer,radius){
   const w=createWorld(5,1); loadLevel(w,1,false); w.state="PLAY";
   w.enemies=[]; w.blades=[]; w.bombs=[];
   w.grid[key(5,6)]=T.WALL;
-  injectBomb(w,4,6,0,1); injectBomb(w,6,6,99,1);
+  injectBomb(w,4,6,0,2); injectBomb(w,6,6,99,1); // radius-2 footprint would reach col 6 if not wall-blocked
   step(w, CFG.STEP, {0:newIntent()});
   check("wall blocks chain", w.bombs.some(b=>!b.dead && b.tx===6));
 }
