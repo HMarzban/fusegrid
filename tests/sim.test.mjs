@@ -190,10 +190,13 @@ function injectBomb(w,tx,ty,timer,radius){
   check("pointerup clears fire", inp._intent.fire===false);
   inp.setIntent({move:{x:1,y:0}});
   check("setIntent x:+1 -> right held, left clear",
-    inp._held.right===true && inp._held.left===false);
+    inp.input.right===true && inp.input.left===false);
   inp.setIntent({move:{x:0,y:-1}});
   check("setIntent y:-1 -> up held, down clear",
-    inp._held.up===true && inp._held.down===false);
+    inp.input.up===true && inp.input.down===false);
+  inp._onFireDown({});
+  inp._onFireUp({}); // pointercancel/pointerleave route to the same handler
+  check("simulated pointercancel clears fire (touch latch)", inp._intent.fire===false);
 }
 
 console.log("\n  SIM RESULT: "+pass+" PASS / "+fail+" FAIL");

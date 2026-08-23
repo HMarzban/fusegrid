@@ -18,10 +18,13 @@ export class Input {
     window.addEventListener("keydown",this._onKey);
     window.addEventListener("keyup",this._onKeyUp);
     window.addEventListener("blur",this._onBlur);
-    if(document)document.addEventListener("visibilitychange",this._onBlur);
+    if(typeof document!=="undefined" && document)
+      document.addEventListener("visibilitychange",this._onBlur);
     if(this.el){
       this.el.addEventListener("pointerdown",this._onFireDown);
       this.el.addEventListener("pointerup",this._onFireUp);
+      this.el.addEventListener("pointercancel",this._onFireUp);
+      this.el.addEventListener("pointerleave",this._onFireUp);
        }
     }
  _onKey(e){
