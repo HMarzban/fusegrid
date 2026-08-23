@@ -81,8 +81,16 @@ initFx();
   const cnt=t=>ps.filter(p=>p.tier===t).length;
   check("195 floor painters (tier 0)",
     cnt(0)===195&&cnt(0)===CFG.COLS*CFG.ROWS, cnt(0)+"");
-  check("every wall+brick painter (tier 2)",
-    cnt(2)===walls+bricks, cnt(2)+" vs "+(walls+bricks));
+  { // kind-aware tier-2: walls and bricks asserted separately (swap-invisible
+    // in a combined total), each against a single-kind grid scan
+    const onlyWalls={...w.grid}, onlyBricks={...w.grid};
+    for(const k in onlyWalls) if(onlyWalls[k]===T.BRICK)onlyWalls[k]=T.EMPTY;
+    for(const k in onlyBricks) if(onlyBricks[k]===T.WALL)onlyBricks[k]=T.EMPTY;
+    const cw=buildPainters({...w,grid:onlyWalls}).filter(p=>p.tier===2).length;
+    const cb=buildPainters({...w,grid:onlyBricks}).filter(p=>p.tier===2).length;
+    check("every wall painter (tier 2, walls-only grid)",cw===walls,cw+" vs "+walls);
+    check("every brick painter (tier 2, bricks-only grid)",cb===bricks,cb+" vs "+bricks);
+  }
   check("every blade tile painter (tier 3)",
     cnt(3)===bladeTiles, cnt(3)+" vs "+bladeTiles);
   check("live items+bombs+enemies+player+fx painters (tier 1)",
@@ -203,9 +211,10 @@ initFx();
   let ok=true;
   try{ bp.draw(spy); }catch(e){ ok=false; console.log(e.message); }
   const q=project(2.5,2.5);
-  check("blade painter billboards at project(tx+.5,ty+.5)",
-    ok&&calls.some(a=>a[0]===q.sx&&a[1]===q.sy),
-    "translate calls "+JSON.stringify(calls)+" want ("+q.sx+","+q.sy+")");
+  const hits=calls.filter(a=>a[0]===q.sx&&a[1]===q.sy).length;
+  check("blade painter billboards at project(tx+.5,ty+.5) (exactly once)",
+    ok&&hits===1&&calls.length===1,
+    "translate calls "+JSON.stringify(calls)+" want exactly 1 at ("+q.sx+","+q.sy+")");
 }
 
 // 11) headless render smoke (spec §6 step 7): full createRenderer pipeline,
