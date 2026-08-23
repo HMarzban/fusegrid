@@ -4,6 +4,7 @@ import {buildPainters, byDepth, shade, draw3dBackground}
   from "../src/render/r3d/scene3d.js";
 import {createWorld, loadLevel} from "../src/core/sim.js";
 import {initFx, getFx} from "../src/render/fx.js";
+import {createRenderer} from "../src/render/renderer.js";
 
 let pass=0, fail=0;
 function check(name, cond, detail){ cond?pass++:fail++;
@@ -205,6 +206,25 @@ initFx();
   check("blade painter billboards at project(tx+.5,ty+.5)",
     ok&&calls.some(a=>a[0]===q.sx&&a[1]===q.sy),
     "translate calls "+JSON.stringify(calls)+" want ("+q.sx+","+q.sy+")");
+}
+
+// 11) headless render smoke (spec §6 step 7): full createRenderer pipeline,
+//     both kinds, non-PLAY state (loadLevel leaves state="MENU") so the
+//     drawOverlay/drawLogo parameter path is exercised; assert no throw.
+{
+  initFx();
+  const stub=new Proxy(function(){},{
+    get:(t,p)=>(p===Symbol.toPrimitive?()=>"":stub),
+    apply:()=>stub,set:()=>true});
+  const fakeCanvas={getContext:()=>stub};
+  const w=createWorld(7,1); loadLevel(w,1,false);
+  let ok2=true, ok3=true;
+  try{ createRenderer(fakeCanvas,{kind:"2d"}).render(w); }
+  catch(e){ ok2=false; console.log("2d smoke:",e.message); }
+  try{ createRenderer(fakeCanvas,{kind:"3d"}).render(w); }
+  catch(e){ ok3=false; console.log("3d smoke:",e.message); }
+  check('createRenderer(fake,{kind:"2d"}).render(MENU world) no-throw',ok2);
+  check('createRenderer(fake,{kind:"3d"}).render(MENU world) no-throw',ok3);
 }
 
 console.log("\n  R3D RESULT: "+pass+" PASS / "+fail+" FAIL");
