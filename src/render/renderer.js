@@ -11,8 +11,15 @@ import {drawOverlay, updateHud, makeHud} from "./scenes.js";
    callers can chain. render(world) paints one frame. */
 export function createRenderer(canvas, opts={}){
   bakeAtlas();
+  const noop=()=>{};
   const ctx = canvas && canvas.getContext ? canvas.getContext("2d",{alpha:false})
-    : (()=>({})()); // headless/fallback: a no-op ctx is acceptable for tests
+    : {save:noop,restore:noop,translate:noop,rotate:noop,scale:noop,
+       fillRect:noop,strokeRect:noop,clearRect:noop,beginPath:noop,closePath:noop,
+       moveTo:noop,lineTo:noop,arc:noop,arcTo:noop,bezierCurveTo:noop,
+       quadraticCurveTo:noop,fill:noop,stroke:noop,ellipse:noop,
+       createLinearGradient:()=>({addColorStop:noop}),
+       createRadialGradient:()=>({addColorStop:noop}),
+       drawImage:noop,fillText:noop,strokeText:noop,setTransform:noop};
   if(ctx.imageSmoothingEnabled!==undefined) ctx.imageSmoothingEnabled=false;
   const hud = opts.hud || makeHud(typeof document!=="undefined"?document:null);
   const audio = opts.audio || null;

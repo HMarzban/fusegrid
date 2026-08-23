@@ -76,20 +76,22 @@ export function createGame(canvas, opts={}){
     world.state="PLAY";
     }
 
-   // debug/test hook
-  window.__GAME__={
-    G:world, renderer, input,
-    step:(n=1)=>{ for(let i=0;i<n;i++){const it=input.intent(); step(world,CFG.STEP,{0:it}); input.advance();} renderer.render(world,CFG.STEP*n); },
-    state:()=>world.state,
-    reset:()=>{ loadLevel(world,1,false); world.state="MENU"; },
-    begin:()=>{ if(world.state==="MENU") world.state="PLAY"; },
-    setKeys:(o)=>input.setIntent(o),
-    clearAllEnemies:()=>{ world.enemies.forEach(e=>{e.dead=true;}); return world.enemies.length; },
-    advance:()=>{ loadLevel(world,world.level+1,true); world.state="PLAY"; },
-    canvas,
+   // debug/test hook (browser only)
+  if(typeof window!=="undefined"){
+    window.__GAME__={
+      G:world, renderer, input,
+      step:(n=1)=>{ for(let i=0;i<n;i++){const it=input.intent(); step(world,CFG.STEP,{0:it}); input.advance();} renderer.render(world,CFG.STEP*n); },
+      state:()=>world.state,
+      reset:()=>{ loadLevel(world,1,false); world.state="MENU"; },
+      begin:()=>{ if(world.state==="MENU") world.state="PLAY"; },
+      setKeys:(o)=>input.setIntent(o),
+      clearAllEnemies:()=>{ world.enemies.forEach(e=>{e.dead=true;}); return world.enemies.length; },
+      advance:()=>{ loadLevel(world,world.level+1,true); world.state="PLAY"; },
+      canvas,
     };
-  window.__pause=onPause;
-  window.__resume=()=>{ if(world.state==="PAUSE") world.state="PLAY"; };
+    window.__pause=onPause;
+    window.__resume=()=>{ if(world.state==="PAUSE") world.state="PLAY"; };
+  }
 
    // boot
   if(typeof requestAnimationFrame!=="undefined") requestAnimationFrame(loop);
