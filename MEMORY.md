@@ -16,6 +16,10 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-08-23 — Determinism baseline v2
+- Purged transcendentals from sim (squared distances, integer substeps, render-only bob),
+  deduped enemy candidate dirs. Replays valid only from commits ≥ this point.
+
 ## 2026-08-23 — T8 executed (balance tunables hoisted into frozen CFG; pure rename)
 - `4329aec`: 12 new CFG keys (CONTACT_R…ENEMY_INVULN_T) replace scattered literals across
   sim/world/entities/enemies — values verbatim, killEnemy ternary left structural. All

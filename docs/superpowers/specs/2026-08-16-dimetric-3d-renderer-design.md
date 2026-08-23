@@ -328,8 +328,10 @@ whole canvas to the viewport. No double-scaling.
 
 ## 5. Determinism guardrails (non-negotiable)
 
-1. **Zero sim math.** No new floating-point work in `src/core/`. The existing
-   `Math.ceil(Math.hypot(...))` sub-step in `board.js:78` stays exactly as-is.
+1. **Zero NEW sim math.** Legacy transcendental sites were replaced during the
+   determinism-purge phase (see plan 2026-08-23, P2): squared-distance compares
+   at sim/enemies/world, integer substep loop in board.js, stationary bob
+   relocated to render.
 2. **No projection/camera value in `world`.** Never stored in `world`, never in
    a snapshot, never an argument to `step()`. (Structurally enforced:
    `makeSnapshot` serializes an explicit field list — `protocol.js:22-37` — so

@@ -36,7 +36,7 @@ export function updateEnemies(world, dt, input, emit){
       if(next)ndir={x:Math.sign(next.x-e.tx),y:Math.sign(next.y-e.ty)}||e.dir;
      }
     // fall back to a deterministic random legal direction
-    const cands=shuffle(DIRS4.slice().concat(DIRS8.slice()));
+    const cands=shuffle(DIRS8.slice());
     for(const d of cands){
       const nx=e.x+d.x*sp, ny=e.y+d.y*sp;
       const blocked = e.pass ? isWall(w.grid,tileOf(nx),tileOf(ny))
