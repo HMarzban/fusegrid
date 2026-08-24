@@ -1,7 +1,9 @@
 import {createGame} from "../src/main.js";
 import {createRenderer} from "../src/render/renderer.js";
 import {createWorld, loadLevel} from "../src/core/sim.js";
-import {SCREEN} from "../src/app/menuapp.js";
+import {SCREEN, IDLE_T} from "../src/app/menuapp.js";
+import {CFG} from "../src/core/config.js";
+import {loadScores} from "../src/app/highscores.js";
 
 let pass=0, fail=0;
 function check(name, cond, detail){ cond?pass++:fail++;
@@ -205,6 +207,99 @@ function mkCanvas(){
   const g=createGame(null,{autoplay:true});
   check("flag off: no net harness (default path untouched)",
     !g.net);
+}
+
+// ---- ATTRACT MODE (spec §1/§4/§5/§6): idle entry, demo harness, exit ----
+{
+  const g=createGame(null,{seed:21});
+  g.app.skip();                          // INTRO -> MENU
+  let t=1000;
+  for(let i=0;i<590;i++){ t+=16; g.loop(t); }        // ~9.4s idle
+  check("attract: below IDLE_T stays MENU, no demo, sim untouched",
+    g.app.screen===SCREEN.MENU&&g.demo===null&&g.world.time===0,
+    g.app.screen+"/"+String(g.demo));
+  for(let i=0;i<50;i++){ t+=16; g.loop(t); }         // crosses 10s
+  check("attract: >=IDLE_T enters ATTRACT with seeded level-1 demo",
+    g.app.screen===SCREEN.ATTRACT&&!!g.demo
+    &&g.demo.world.seed===20260823&&g.demo.world.level===1
+    &&g.demo.world.state==="PLAY",
+    g.app.screen+"/"+(g.demo&&g.demo.world.level));
+  for(let i=0;i<60;i++){ t+=16; g.loop(t); }
+  check("attract: demo world steps through the fixed-step accumulator",
+    !!g.demo&&g.demo.world.time>0,String(g.demo&&g.demo.world.time));
+  check("attract: live game world still frozen while demo runs",
+    g.world.time===0&&g.world.tick===0);
+  // rollover via the 20s cap: force t to the edge, one big frame rolls it
+  const edge=20-CFG.STEP/2;
+  g.demo.t=edge; t+=250; g.loop(t);      // dt capped at 0.25 -> >=1 demo step
+  check("attract: cap rollover 1 -> 2 (fresh world, PLAY)",
+    g.demo.world.level===2&&g.demo.world.state==="PLAY"&&g.demo.t<1,
+    "lvl="+g.demo.world.level+" t="+g.demo.t.toFixed(3));
+  g.demo.t=edge; t+=250; g.loop(t);
+  check("attract: rollover 2 -> 3", g.demo.world.level===3);
+  g.demo.t=edge; t+=250; g.loop(t);
+  check("attract: rollover 3 -> 1 (cycle wraps)", g.demo.world.level===1);
+  // exit paths: key exits instantly, demo discarded on next frame, cursor kept
+  g.app.cursor=4;
+  const r=g.app.key("Escape");
+  check("attract: any key exits instantly to MENU", r===true
+    &&g.app.screen===SCREEN.MENU);
+  t+=16; g.loop(t);
+  check("attract: demo discarded after exit", g.demo===null);
+  check("attract: cursor preserved across round-trip", g.app.cursor===4);
+}
+
+// ---- score isolation (spec §6): long attract incl. deaths never records ----
+{
+  const baseline=JSON.stringify(loadScores());
+  const g=createGame(null,{seed:23});
+  g.app.skip(); g.app.cursor=2;
+  g.app.enterAttract();                  // direct entry for a deterministic run
+  const levels=new Set();
+  let t=2000;
+  for(let i=0;i<400;i++){                // ~100s wall => >=40s sim => >=2 caps
+    t+=250; g.loop(t);
+    if(g.demo){
+      levels.add(g.demo.world.level);
+      g.demo.world.score=(g.demo.world.score+7919)%100000;   // poison
+     }
+   }
+  check("isolation: scores byte-equal baseline after poisoned long attract",
+    JSON.stringify(loadScores())===baseline,
+    JSON.stringify(loadScores()).slice(0,60));
+  check("isolation: cycles visited roll through 1,2,3",
+    levels.has(1)&&levels.has(2)&&levels.has(3),[...levels].join(","));
+  check("isolation: live world pristine (time/tick/score zero)",
+    g.world.time===0&&g.world.tick===0&&g.world.score===0);
+}
+
+// ---- renderer opts (spec §5.5): hud:false + sfx gate, defaults identical ----
+{
+  const sent={score:{textContent:"-"},level:{textContent:"-"},
+    lives:{textContent:"-"},enemies:{textContent:"-"},
+    bombs:{textContent:"-"},range:{textContent:"-"}};
+  const plays=[];
+  const r=createRenderer(null,{hud:sent,audio:{play:n=>plays.push(n)}});
+  const w=createWorld(5,1); loadLevel(w,1,false); w.state="PLAY";
+  w.events.push({t:"boom",x:0,y:0});
+  r.render(w,1/60);
+  check("renderer defaults: HUD written + sfx played + fx consumed",
+    sent.score.textContent!=="-"&&plays.join()==="boom"&&w.events.length===0,
+    sent.score.textContent+"/"+plays.join());
+  sent.score.textContent="-"; sent.lives.textContent="-"; plays.length=0;
+  w.events.push({t:"kill",x:0,y:0,color:"#fff"});
+  r.render(w,1/60,{hud:false});
+  check("opts.hud=false skips HUD writes but keeps fx",
+    sent.score.textContent==="-"&&sent.lives.textContent==="-"
+      &&w.events.length===0,
+    sent.score.textContent+"/"+sent.lives.textContent);
+  check("opts default sfx stays on under hud:false",
+    plays.join()==="kill",plays.join());
+  plays.length=0;
+  w.events.push({t:"hurt",x:0,y:0});
+  r.render(w,1/60,{hud:false,sfx:false});
+  check("opts.sfx=false gates audio.play only (fx intact)",
+    plays.length===0&&w.events.length===0);
 }
 
 console.log(fail? "HEADLESS FAIL":"HEADLESS OK");

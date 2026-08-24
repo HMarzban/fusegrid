@@ -1,4 +1,4 @@
-import {SCREEN,ITEMS,createMenuApp} from "../src/app/menuapp.js";
+import {SCREEN,ITEMS,IDLE_T,createMenuApp} from "../src/app/menuapp.js";
 import {Input} from "../src/input.js";
 import {createAudio} from "../src/audio.js";
 
@@ -451,6 +451,54 @@ check("ITEMS frozen, 6 entries", Object.isFrozen(ITEMS)&&ITEMS.length===6
     ["uiJingle","uiMove","uiSel","uiBack","uiTog","uiDenied"].forEach(n=>a.play(n));
   }catch(e){ ok=false; }
   check("all six cues headless no-throw (createAudio importable/instantiable)", ok);
+}
+
+// ---- ATTRACT (spec §1): idle bookkeeping, entry/exit, guards ----
+{
+  check("SCREEN.ATTRACT appended =7, still frozen",
+    Object.isFrozen(SCREEN)&&SCREEN.ATTRACT===7, JSON.stringify(SCREEN));
+  check("indices stable", SCREEN.BOOT===0&&SCREEN.INTRO===1&&SCREEN.MENU===2
+    &&SCREEN.LEVEL===3&&SCREEN.HOWTO===4&&SCREEN.SCORES===5&&SCREEN.GAME===6);
+  check("IDLE_T exported =10", IDLE_T===10);
+}
+{
+  const a=createMenuApp(); a.screen=SCREEN.MENU; a.cursor=3;
+  frames(a,594,DT);                       // 9.90s of empty updates
+  check("9.9s idle stays MENU (below threshold)",
+    a.screen===SCREEN.MENU&&a.idleT<IDLE_T,a.idleT.toFixed(2));
+  frames(a,12,DT);                        // +0.20s -> crosses 10s mid-window
+  check(">=10s idle enters ATTRACT; cursor preserved; timers reset",
+    a.screen===SCREEN.ATTRACT&&a.cursor===3&&a.subT<=12*DT&&a.repT===0
+      &&a.repDir===0,a.cursor+"/"+a.subT.toFixed(3));
+  frames(a,120,DT,{down:true});           // held axes in ATTRACT
+  check("axes ignored in ATTRACT: no exit, no cursor drift",
+    a.screen===SCREEN.ATTRACT&&a.cursor===3);
+  check("subT still advances in ATTRACT (hint blink)", a.subT>0,
+    a.subT.toFixed(2));
+  const b=createMenuApp();
+  check("exitAttract() outside ATTRACT is false no-op",
+    b.exitAttract()===false&&b.screen===SCREEN.INTRO);
+  check("key(any code incl KeyM) exits to MENU + resets idle",
+    a.key("KeyM")===true&&a.screen===SCREEN.MENU&&a.idleT===0);
+  check("cursor survived the attract round-trip", a.cursor===3);
+  a.key("Escape");                        // at MENU now: plain back no-op
+  check("post-exit Escape at MENU does not bounce", a.screen===SCREEN.MENU);
+  frames(a,601,DT);                       // idle again -> re-enter
+  check("idle re-entry after exit works", a.screen===SCREEN.ATTRACT);
+  check("confirm() exits ATTRACT (pointer path calls confirm today)",
+    a.confirm()===true&&a.screen===SCREEN.MENU);
+}
+{
+  const a=createMenuApp(); a.screen=SCREEN.LEVEL; a.level=1;
+  frames(a,700,DT);                       // 11.7s parked outside MENU
+  check("idleT reset outside MENU blocks entry from LEVEL",
+    a.screen===SCREEN.LEVEL,a.screen);
+}
+{
+  const a=createMenuApp({autoplay:true});
+  frames(a,700,DT,{up:true},true);
+  check("GAME branch never accumulates idle nor enters ATTRACT",
+    a.screen===SCREEN.GAME&&a.idleT===0);
 }
 
 console.log("\n  MENUAPP RESULT: "+pass+" PASS / "+fail+" FAIL");

@@ -8,10 +8,12 @@
 // 110ms. key(code) is the discrete side-channel (Enter/Esc/Backspace/M +
 // arrows/WASD as taps); taps are handed to update() via a per-frame consume map
 // so wiring BOTH channels never double-moves.
-export const SCREEN=Object.freeze({BOOT:0,INTRO:1,MENU:2,LEVEL:3,HOWTO:4,SCORES:5,GAME:6});
+export const SCREEN=Object.freeze({BOOT:0,INTRO:1,MENU:2,LEVEL:3,HOWTO:4,
+  SCORES:5,GAME:6,ATTRACT:7});
 export const ITEMS=Object.freeze(["START GAME","LEVEL SELECT","RENDER","SOUND",
   "HOW TO PLAY","HIGH SCORES"]);
 const REP_FIRST=0.35, REP_NEXT=0.11;
+export const IDLE_T=10;   // MENU idle seconds before ATTRACT takes over
 
 export function createMenuApp(opts={}){
   const o=opts||{};
@@ -28,6 +30,7 @@ export function createMenuApp(opts={}){
     repT:0,
     repDir:0,
     prevConfirm:false,
+    idleT:0,
     worldState:null,
     _taps:{},
     /* Advance the shell by dt seconds. Reads held axes + confirmHeld only. */
@@ -38,6 +41,7 @@ export function createMenuApp(opts={}){
       this.prevConfirm=ch;
       this.subT+=d;
       if(this.screen===SCREEN.GAME){ this.repT=0;this.repDir=0;this._hot=false;this._taps={};return; }
+      if(this.screen===SCREEN.ATTRACT)return;   // subT already advanced -> hint blink
       const ax=(input&&input.input)||{};
       let dir=0;
       if(this.screen===SCREEN.MENU)dir=ax.up?-1:ax.down?1:0;
@@ -58,9 +62,15 @@ export function createMenuApp(opts={}){
       }else{ this.repDir=0; this.repT=0; this._hot=false; }
       if(rising)this.confirm();
       this._taps={};
+      if(this.screen===SCREEN.MENU){
+        this.idleT+=d;
+        if(this.idleT>=IDLE_T)this.enterAttract();
+       }else this.idleT=0;
      },
     /* Discrete key tap (Enter/Esc/Backspace/M + arrows-as-tap fallback). */
     key(code){
+      if(this.screen===SCREEN.ATTRACT)return this.exitAttract();
+      this.idleT=0;
       switch(code){
         case "Enter": case "NumpadEnter": return this.confirm();
         case "Escape": case "Backspace":
@@ -76,12 +86,15 @@ export function createMenuApp(opts={}){
       return false;
      },
     _tapMove(dir,lat){
+      this.idleT=0;
       if(this.screen===SCREEN.INTRO)return this.skip();
       const ok=lat?this.screen===SCREEN.LEVEL:this.screen===SCREEN.MENU;
       if(ok&&this.move(dir)){ this._taps[dir]=true; return true; }
       return false;
      },
     confirm(){
+      if(this.screen===SCREEN.ATTRACT)return this.exitAttract();
+      this.idleT=0;
       switch(this.screen){
         case SCREEN.INTRO: return this.skip();
         case SCREEN.MENU:{
@@ -109,6 +122,7 @@ export function createMenuApp(opts={}){
      },
     skip(){ return this.screen===SCREEN.INTRO?this._push(SCREEN.MENU):false; },
     move(dir){
+      this.idleT=0;
       if(this.screen===SCREEN.MENU){
         this.cursor=(this.cursor+dir+ITEMS.length)%ITEMS.length;
         return true;
@@ -125,8 +139,22 @@ export function createMenuApp(opts={}){
       const args={level:this.level};
       this.screen=SCREEN.GAME; this.inGame=true;
       this.subT=0; this.repT=0; this.repDir=0; this._hot=false; this._taps={};
+      this.idleT=0;
       if(onStart)onStart(args);
       return args;
+     },
+    /* ATTRACT (spec §1): idle demo takeover. The machine never creates the
+       demo world — main owns that harness; entry/exit only flip state here. */
+    enterAttract(){
+      this.screen=SCREEN.ATTRACT;
+      this.subT=0; this.repT=0; this.repDir=0; this._hot=false; this._taps={};
+      return true;
+     },
+    exitAttract(){
+      if(this.screen!==SCREEN.ATTRACT)return false;
+      this.idleT=0;
+      this._push(SCREEN.MENU);
+      return true;
      },
     /* M-quit: valid ONLY while in GAME with world paused (state passed in). */
     quitToMenu(worldState){
@@ -139,6 +167,7 @@ export function createMenuApp(opts={}){
     _toMenuInner(){
       this.screen=SCREEN.MENU; this.inGame=false;
       this.subT=0; this.repT=0; this.repDir=0; this._hot=false; this._taps={};
+      this.idleT=0;
      },
     _push(s){
       this.screen=s; this.subT=0; this.repT=0; this.repDir=0; this._hot=false; this._taps={};

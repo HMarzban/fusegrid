@@ -28,18 +28,21 @@ export function createRenderer(canvas, opts={}){
   const audio = opts.audio || null;
   initFx();
 
-  function consumeEvents(world, dt){
+  function consumeEvents(world, dt, playSfx=true){
     syncFx(world);
     for(let i=0;i<world.events.length;i++){
       onEvent(world, world.events[i], world.time);
-      if(audio) audio.play(world.events[i].t);
+      if(audio&&playSfx!==false) audio.play(world.events[i].t);
     }
     world.events.length=0;
     updateFx(dt||CFG.STEP);
   }
-  function render(world, dt){
+  /* render(world,dt,o): additive opts — o.hud===false skips HUD DOM writes
+     (attract demo must not touch the score readout), o.sfx===false gates
+     audio.play only. Defaults (o undefined) are byte-identical. */
+  function render(world, dt, o){
     if(!world) return;
-    consumeEvents(world, dt);
+    consumeEvents(world, dt, !(o&&o.sfx===false));
     const shake=getShake();
     ctx.save();
     if(ctx.translate) ctx.translate(Math.round(shake.x),Math.round(shake.y));
@@ -64,7 +67,7 @@ export function createRenderer(canvas, opts={}){
       if(kind === "3d") drawOverlay(ctx, world, PROJ.canvasW, PROJ.canvasH, 304, 188);
       else drawOverlay(ctx, world);
     }
-    updateHud(hud, world);
+    if(!(o&&o.hud===false)) updateHud(hud, world);
   }
   return {canvas, ctx, render, consumeEvents, getShake};
 }

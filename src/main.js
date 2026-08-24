@@ -10,14 +10,20 @@ import {drawLogo} from "./render/scenes.js";
 import {PROJ} from "./render/r3d/camera.js";
 import * as menudraw from "./render/menudraw.js";
 import {SCREEN, ITEMS, createMenuApp} from "./app/menuapp.js";
+import {createDemobot} from "./app/demobot.js";
 import {introPhase, INTRO_DUR} from "./app/intro.js";
 import {loadScores, recordScore, saveScores} from "./app/highscores.js";
+
+const SCREEN_NAME=["BOOT","INTRO","MENU","LEVEL","HOWTO","SCORES","GAME",
+  "ATTRACT"];
+
+/* ATTRACT demo harness constants (spec §1): fixed seed, levels cycle 1..3,
+   20s sim-time cap per cycle before rollover. */
+const DEMO_SEED=20260823, DEMO_CAP=20;
 import {Input} from "./input.js";
 import {mountTouch} from "./touch.js";
 import {createLockstep} from "./net/lockstep.js";
 import {LocalTransport} from "./net/transport.js";
-
-const SCREEN_NAME=["BOOT","INTRO","MENU","LEVEL","HOWTO","SCORES","GAME"];
 
 export function createGame(canvas, opts={}){
   // flags parsed ONCE (?render=3d selects the dimetric path; ?play=1 skips the
@@ -103,8 +109,7 @@ export function createGame(canvas, opts={}){
 
   const audio=opts.audio||null;
   const app=createMenuApp({level:1,sound:true,render3d:is3d,
-    audio,autoplay,onStart});
-  /* §5 cue sheet — wired HERE in the app layer, never in render/sim. Wrappers
+    audio,autoplay,onStart});  /* §5 cue sheet — wired HERE in the app layer, never in render/sim. Wrappers
      shadow the machine methods so every successful transition plays exactly
      one cue; RENDER/SOUND confirms get uiTog instead of uiSel, and subscreen
      confirm (= back()) is cued once by the back wrapper alone. */
@@ -159,7 +164,7 @@ export function createGame(canvas, opts={}){
     };
   input.onPause=onPause;
 
-  /* pointer outside GAME = skip (INTRO) or confirm (menus).
+  /* pointer outside GAME = skip (INTRO) / confirm (menus) / exit ATTRACT.
      C1 single-fire: Input's fire latch listens on the SAME event (registered
      first, in the constructor), so swallow it here — otherwise the latched
      intent.fire re-enters as a rising-edge confirm on the next frame
@@ -168,8 +173,55 @@ export function createGame(canvas, opts={}){
     canvas.addEventListener("pointerdown",()=>{
       if(app.screen===SCREEN.GAME)return;
       input._intent.fire=false;
+      if(app.screen===SCREEN.ATTRACT){app.exitAttract();return;}
       if(app.screen===SCREEN.INTRO)app.skip(); else app.confirm();
      });
+   }
+  /* pad taps bubble to #stage: exit ATTRACT too (spec §4 exit triggers).
+     Toolbar buttons are NOT inside #stage — they unlock but never exit. */
+  {
+    const stageEl=(typeof document!=="undefined"&&document)?
+      document.getElementById("stage"):null;
+    if(stageEl)stageEl.addEventListener("pointerdown",()=>{
+      if(app.screen===SCREEN.ATTRACT)app.exitAttract();
+     });
+   }
+
+  /* music unlock (spec §4): first gesture anywhere unlocks the loop.
+     Window-level {once:true} catches canvas AND #stage pad taps; a toolbar
+     button press also unlocks without exiting attract. */
+  if(typeof window!=="undefined"&&audio){
+    const unlockOnce=()=>audio.unlock();
+    window.addEventListener("keydown",unlockOnce,{once:true});
+    window.addEventListener("pointerdown",unlockOnce,{once:true});
+   }
+
+  /* ATTRACT demo harness (spec §1): main owns the demo world; the shell
+     machine only flips state. Same fixed-step accumulator discipline as the
+     GAME branch; cycle rollover on LOSE/WIN or 20s sim-time cap. */
+  let demo=null;
+  const newDemoWorld=(lvl)=>{
+    const w=createWorld(DEMO_SEED,lvl);
+    loadLevel(w,lvl,false);            // loadLevel sets MENU...
+    w.state="PLAY";                    // ...so force PLAY explicitly
+    return w;
+   };
+  const rollDemo=()=>{
+    demo.cycle=(demo.cycle%3)+1;
+    demo.world=newDemoWorld(demo.cycle);
+    demo.t=0;
+   };
+  function stepDemo(dt){
+    demo.acc+=dt;
+    let n=0;
+    while(demo.acc>=CFG.STEP){
+      const it=demo.bot.intent(demo.world);
+      step(demo.world,CFG.STEP,{0:it});
+      demo.t+=CFG.STEP; demo.acc-=CFG.STEP; n++;
+      if(demo.world.state==="LOSE"||demo.world.state==="WIN"
+        ||demo.t>=DEMO_CAP)rollDemo();
+      if(n>6){demo.acc=0;break;}       // same anti-spiral cap as GAME
+     }
    }
 
   /* renderer cache per kind, lazily built; both share the canvas
@@ -201,6 +253,12 @@ export function createGame(canvas, opts={}){
     const chh=canvas?canvas.height:(curKind?PROJ.canvasH:CFG.ROWS*CFG.TILE);
     if(s===SCREEN.INTRO)
       return menudraw.drawIntroChrome(c,app.subT,cw,chh);
+    if(s===SCREEN.ATTRACT){
+      // no dim: the demo IS the show; only the blinking footer hint
+      const L=menudraw.layout(cw,chh);
+      menudraw.drawAttractHint(c,L,cw,chh,app.subT);
+      return;
+     }
     if(s===SCREEN.MENU){
       const L=menudraw.layout(cw,chh);
       menudraw.drawDim(c,0.62,cw,chh);
@@ -242,6 +300,11 @@ export function createGame(canvas, opts={}){
     if(app.render3d!==curKind){ curKind=app.render3d;
       renderer=getRenderer(curKind?"3d":"2d"); }
     touch.update(app.screen===SCREEN.GAME);   // pad lives only inside GAME
+    // §4 ducking: frame-polled, idempotent, self-heals across transitions
+    if(audio){
+      audio.duck(app.screen===SCREEN.GAME&&audio.unlocked());
+      audio.pump();
+     }
     if(app.screen===SCREEN.GAME){
       // §1 score-record edge, frame-polled (main latches prev world state)
       const entry=app.noteWorldEdge(prevSt,world.state,
@@ -267,8 +330,18 @@ export function createGame(canvas, opts={}){
       if(app.screen===SCREEN.INTRO&&app.subT>=INTRO_DUR)app.skip();
       acc=0;
      }
+    // ATTRACT: re-read the screen AFTER app.update — the machine may have
+    // entered/exited mid-frame; create/step or discard the demo accordingly
+    const attract=app.screen===SCREEN.ATTRACT;
+    if(attract){
+      if(!demo)demo={world:newDemoWorld(1),bot:createDemobot(DEMO_SEED),
+        cycle:1,t:0,acc:0};
+      stepDemo(dt);
+     }else if(demo)demo=null;
     // render: INTRO flyover transform wraps the ARENA draw only (zoom>=1 so
-    // no edge gaps); camX/camY are canvas fractions
+    // no edge gaps); camX/camY are canvas fractions. ATTRACT renders the DEMO
+    // world with HUD suppressed; every other screen renders the frozen live
+    // world exactly as before.
     const c=renderer.ctx||
       {save(){},restore(){},translate(){},scale(){}};
     c.save();
@@ -280,7 +353,8 @@ export function createGame(canvas, opts={}){
       c.scale(ph.zoom,ph.zoom);
       c.translate(-ph.camX*cw,-ph.camY*chh);
      }
-    renderer.render(world, dt);
+    renderer.render(attract&&demo?demo.world:world, dt,
+      attract?{hud:false}:undefined);
     c.restore();
     drawShell(c);
     if(running && typeof requestAnimationFrame!=="undefined")
@@ -324,6 +398,7 @@ export function createGame(canvas, opts={}){
    // boot
   if(typeof requestAnimationFrame!=="undefined") requestAnimationFrame(loop);
    return {world, input, renderer, app, net, loop,
+    get demo(){return demo;},          // read-only for tests (spec §5.4)
     stop(){ running=false; },
     start(){ running=true; if(typeof requestAnimationFrame!=="undefined") requestAnimationFrame(loop); },
     setBtn};

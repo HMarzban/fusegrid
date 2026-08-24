@@ -228,6 +228,14 @@ export function drawScores(c,scores,L,t){
   c.fillText("ESC BACK",L.cx,L.footY);
 }
 
+/* ATTRACT hint: 1Hz-blink footer over the live demo (spec §5.6). */
+export function drawAttractHint(c,L,t){
+  if((t%1)>=0.6)return;
+  c.fillStyle=MUTED; c.font=font(11,"900");
+  c.textAlign="center"; c.textBaseline="middle";
+  c.fillText("DEMO — PRESS ANY KEY",L.cx,L.footY);
+}
+
 /* Full-canvas veil washes. */
 export function drawDim(c,alpha,W,H){
   c.fillStyle="rgba(7,10,18,"+Math.max(0,Math.min(1,alpha))+")";
