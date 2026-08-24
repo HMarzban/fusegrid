@@ -16,6 +16,12 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-08-24 — Micro-polish: unlock-gated jingle, attract-exit fade pinned, dead imports
+- P1: boot uiJingle now defers to first gesture via fireJingle latch on unlockOnce (suspended ctx froze all 5 oscillators into a chord-blob); I1 test re-pointed to deferral + new window-stub block proves once-only post-unlock firing; drive-by: main.js debug hook `location` guard aligned with file's own typeof pattern (latent headless crash). P2: ATTRACT→MENU veil already rode _push(MENU) subT reset — probe+regression test pinned (k≈0.94 frame-1, settles ≤0.73), zero prod change. P4: demobot tileOf/solidAt imports removed (bfsNext kept) + fs grep gate. Headless 59→66 checks; battery 13 files green.
+
+## 2026-08-24 — Music+attract fix round F1-F3 (ea3b42d): clamp, duck-aware unmute, GAME-gated toolbar
+- audio.js pump catch-up clamp (hidden-tab gap → ONE step @now+0.05, was 61-step burst) + toggle() restores ducked?MUS_DUCK:MUS_BASE (old "unmute→0.5" test superseded); main.js btnPause/btnRestart onclick early-return unless GAME (restart was wiping live backdrop during ATTRACT; in-GAME behavior byte-identical). RED→GREEN: music 39/0, headless +6 checks, battery 13 files green. Report: task-report-D.md fix section (.superpowers gitignored, on disk).
+
 ## 2026-08-23 — Music + attract mode shipped (34b3ca8..598c903): chiptune loop, demobot, idle demo
 - audio.js: MUSIC_PATTERN (entries carry `s` — spec snippet dropped it; also fixed its paren typo), frame-pumped lookahead on ctx.currentTime only, duck 0.5↔0.16 @.35/.6s, toggle=single mute gate; demobot.js per §2 (flee BFS must walk THROUGH danger tiles or corner bots freeze; state setter added for purity test); menuapp ATTRACT=7 + IDLE_T=10 + guards; main demo harness seed 20260823 cycles 1..3 cap 20s, {hud:false}, window-once unlock, #stage exits but toolbar doesn't; EXTRA idleT resets in startRun/_toMenuInner else stale ≥10s idle instantly re-enters ATTRACT after M-quit. Music 37/0, demobot 21/0, menuapp 108/0, headless +16, battery 13 files green. Report: .superpowers/sdd/2026-08-23-campaigns/task-report-D.md. Left: manual browser/device smoke (§6 MANUAL list).
 

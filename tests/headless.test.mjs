@@ -139,8 +139,8 @@ function mkCanvas(){
   const plays=[];
   const audio={play:n=>plays.push(n),toggle:()=>false};
   const g=createGame(null,{seed:12,audio});
-  check("I1 uiJingle fires exactly once at intro start",
-    plays.length===1&&plays[0]==="uiJingle",JSON.stringify(plays));
+  check("P1 jingle deferred while audio locked (stub cannot unlock)",
+    plays.length===0,JSON.stringify(plays));
   plays.length=0;
   g.app.screen=SCREEN.MENU;
   g.app.move(1);
@@ -168,6 +168,31 @@ function mkCanvas(){
   g.app.key("Escape");                          // back
   check("I1 HOWTO enter->uiSel then Esc back->uiBack",
     plays.join()==="uiSel,uiBack",JSON.stringify(plays));
+}
+
+// P1: uiJingle gated on audio unlock — a suspended ctx freezes currentTime,
+// so boot-time scheduling replays all 5 oscillators as one chord-blob on the
+// first gesture. Jingle must ride the unlock handler instead.
+{
+  const plays=[];
+  const audio={play:n=>plays.push(n),toggle:()=>false,_u:false,
+    unlock(){this._u=true;return true;},unlocked(){return !!this._u;}};
+  const L={};
+  globalThis.window={addEventListener:(ty,fn)=>{(L[ty]=L[ty]||[]).push(fn);}};
+  try{
+    createGame(null,{seed:14,audio});
+    check("P1 locked ctx: nothing scheduled before first gesture",
+      plays.length===0,JSON.stringify(plays));
+    // neutral gesture key (F15): Input also listens on window and must not
+    // produce any ui* cue here — isolates the jingle assertion
+    L.keydown.forEach(f=>f({code:"F15"}));
+    check("P1 first gesture -> exactly one uiJingle after unlock",
+      plays.join()==="uiJingle",JSON.stringify(plays));
+    L.pointerdown.forEach(f=>f({}));
+    L.keydown.forEach(f=>f({code:"F16"}));
+    check("P1 second listener/gesture never replays the jingle",
+      plays.length===1,JSON.stringify(plays));
+   }finally{ delete globalThis.window; }
 }
 
 // I2: pause exists only inside GAME
@@ -247,6 +272,41 @@ function mkCanvas(){
   t+=16; g.loop(t);
   check("attract: demo discarded after exit", g.demo===null);
   check("attract: cursor preserved across round-trip", g.app.cursor===4);
+}
+
+// ---- P2: ATTRACT->MENU gets the 0.25s veil (demo board vs live backdrop
+//        would otherwise hard-cut). Mirrors the INTRO->MENU skip-fade check. ----
+{
+  const texts=[], sets=[];
+  const rec=new Proxy(function(){},{
+    get:(t,p)=>{
+      if(p===Symbol.toPrimitive)return()=>"" ;
+      return (...a)=>{ if(p==="fillText")texts.push(String(a[0])); return rec; };
+     },
+    apply:()=>rec,
+    set:(t,p,v)=>{ if(p==="fillStyle")sets.push(String(v)); return true; }
+   });
+  const fake={getContext:()=>rec,addEventListener(){},style:{}};
+  const g=createGame(fake,{seed:41});
+  g.app.skip();
+  g.app.enterAttract();
+  let t=1000;
+  g.loop(t); t+=64; g.loop(t);           // demo live before exit
+  check("P2 probe: attract active pre-exit",
+    g.app.screen===SCREEN.ATTRACT&&!!g.demo,String(g.app.screen));
+  sets.length=0;
+  g.app.key("Escape");                   // exitAttract -> MENU, subT reset
+  const alphas=[];
+  for(let i=1;i<=20;i++){ t+=16; g.loop(t);
+    alphas.push(...sets.filter(s=>String(s).slice(0,13)==="rgba(7,10,18,")
+      .map(s=>parseFloat(String(s).slice(13))));
+    sets.length=0;
+   }
+  check("P2 post-attract MENU: fade veil k>0.9 in first frames",
+    alphas.some(a=>a>0.9),"max "+Math.max.apply(null,[0].concat(alphas)));
+  check("P2 veil settles to plain 0.62 dim after 0.25s",
+    alphas.slice(-6).every(a=>a<=0.73),
+    "tail "+alphas.slice(-4).map(a=>a.toFixed(2)).join(","));
 }
 
 // ---- score isolation (spec §6): long attract incl. deaths never records ----
@@ -341,6 +401,15 @@ function mkCanvas(){
     check("F3 GAME: btnRestart still reloads level 1 fresh PLAY",
       g2.world.level===1&&g2.world.state==="PLAY",g2.world.level+"/"+g2.world.state);
    }finally{ delete globalThis.document; }
+}
+
+// ---- P4: demobot imports pruned (tileOf/solidAt unused; bfsNext lives) ----
+{
+  const fs=await import("node:fs");
+  const src=fs.readFileSync(new URL("../src/app/demobot.js",
+    import.meta.url),"utf8");
+  check("demobot: no dead tileOf/solidAt refs, bfsNext kept",
+    !/\btileOf\b/.test(src)&&!/\bsolidAt\b/.test(src)&&/\bbfsNext\b/.test(src));
 }
 
 console.log(fail? "HEADLESS FAIL":"HEADLESS OK");

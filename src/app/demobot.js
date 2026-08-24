@@ -9,7 +9,7 @@
    BFS chase -> seeded wander. Fire uses a press-edge latch mirroring the sim's
    fire/firePrev contract so holding "want" never double-places bombs. */
 import {CFG,T,key,DIRS4} from "../core/config.js";
-import {tileOf,solidAt,bfsNext} from "../core/board.js";
+import {bfsNext} from "../core/board.js";
 import {createRng} from "../core/rng.js";
 
 export const NOOP=Object.freeze({move:{x:0,y:0},fire:false,firePrev:false,

@@ -108,6 +108,11 @@ export function createGame(canvas, opts={}){
     };
 
   const audio=opts.audio||null;
+  /* P1 (§0.4): the boot jingle must never schedule against a suspended ctx —
+     currentTime is frozen there, so all 5 oscillators land on one timestamp
+     and replay as a chord-blob on the first gesture. Fire immediately only if
+     already unlocked; otherwise defer to the unlock handler below. */
+  let fireJingle=()=>{};
   const app=createMenuApp({level:1,sound:true,render3d:is3d,
     audio,autoplay,onStart});  /* §5 cue sheet — wired HERE in the app layer, never in render/sim. Wrappers
      shadow the machine methods so every successful transition plays exactly
@@ -125,7 +130,12 @@ export function createGame(canvas, opts={}){
       else if(sB!==SCREEN.HOWTO&&sB!==SCREEN.SCORES)audio.play("uiSel");
       return r;
      };
-    if(!autoplay)audio.play("uiJingle");   // §0.4: jingle once at INTRO start
+    fireJingle=()=>{
+      if(autoplay||fireJingle._done)return;
+      fireJingle._done=true;
+      audio.play("uiJingle");
+     };
+    if(audio.unlocked&&audio.unlocked())fireJingle();
    }
   if(autoplay)app.startRun();
 
@@ -191,7 +201,7 @@ export function createGame(canvas, opts={}){
      Window-level {once:true} catches canvas AND #stage pad taps; a toolbar
      button press also unlocks without exiting attract. */
   if(typeof window!=="undefined"&&audio){
-    const unlockOnce=()=>audio.unlock();
+    const unlockOnce=()=>{ audio.unlock(); fireJingle(); };  // P1: deferred jingle
     window.addEventListener("keydown",unlockOnce,{once:true});
     window.addEventListener("pointerdown",unlockOnce,{once:true});
    }
@@ -382,7 +392,8 @@ export function createGame(canvas, opts={}){
 
    // debug/test hook (browser only; opt-in via opts.debug or ?debug=1)
   if(typeof window!=="undefined" &&
-     (opts.debug===true || /[?&]debug=1/.test(location.search||""))){
+     (opts.debug===true || (typeof location!=="undefined"
+       &&/[?&]debug=1/.test(location.search||"")))){
     window.__GAME__={
       G:world, renderer, input, app, net,
       step:(n=1)=>{ for(let i=0;i<n;i++){const it=input.intent(); step(world,CFG.STEP,{0:it}); input.advance();} renderer.render(world,CFG.STEP*n); },
