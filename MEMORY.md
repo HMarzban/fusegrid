@@ -16,6 +16,27 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-08-23 — Netcode lockstep v1 shipped (d3e1bcc..1d2f325): gates, two-world proof, ?net=local
+- protocol.js WELCOME/PAUSE/RESUME/RESTART/MENU/ERROR + validateInput/validateWelcome fail-closed
+  gates (seq dup/stale/gap classes, u31 seed, DELAY=2 window; windowLen=Infinity buffer mode for
+  catch-up); new net/lockstep.js (stall/no-advance, stallEvent@30, pid-ascending consume, LEAVE→
+  hurtPlayer+leave event+unknown_pid halt, host RPCs at tick alignment); LocalTransport.dropped;
+  main.js ?net=local dual-peer harness (flag-off byte-identical). Proof: sameWorld replica +
+  meta-paced settle barrier, 52 checks incl. lag/blackout/dup/gap/leave/pause cases. ⚠️ Spec file
+  2026-08-23-netcode-lockstep-design.md MISSING from repo despite f5d4269 message claiming it —
+  implemented from task brief; report: .superpowers/sdd/2026-08-23-campaigns/task-report-C.md.
+
+## 2026-08-23 — Renderer v2 independent review (fd18448..ea6b250): Approved, §3 deviation ACCEPTED
+- Independently reconstructed depth-0 counterexample (board.js:15 border wall
+  @(0,0)=BLOCK@d0 vs player shadow @d≈2.x ⇒ global lastShadow<firstBlock chain
+  impossible under depth-primary byDepth; shadow-special comparator proven
+  non-transitive via 3-cycle block<d22/entity>d25/shadow) → per-slot invariant
+  is the correct spec reading; §3/§6 need one-line amendment. Hand-recomputed
+  diamondTransform {a:.5,b:.25,c:-.5,d:.25,284,124} ✓; tiers/literals/camera-
+  frozen/bakeAtlas-guard/additive-sprites all verified; battery re-run green.
+  Flagged: spec §5.4 "sprites.js NO CHANGE" self-contradicts §2 (BAKED not
+  exported — accessor unavoidable); BIOMES elements shallow-frozen only.
+
 ## 2026-08-23 — Renderer v2 polish shipped: textured diamond tops + shadow tier + biome heights
 - scene3d: TIERS renumber (F0/S1/E2/B3/L4), diamondTransform (spec §2 vector
   pinned), heightFor (BIOMES hWall/hBrick ?? PROJ; J24/14 I30/18 F18/10 A26/15),
