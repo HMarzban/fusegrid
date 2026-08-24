@@ -412,5 +412,26 @@ function mkCanvas(){
     !/\btileOf\b/.test(src)&&!/\bsolidAt\b/.test(src)&&/\bbfsNext\b/.test(src));
 }
 
+// ---- Area 4: distinct opts.canvasEl breaks the C1 swallow silently ----
+// Input listens on opts.canvasEl but main's anti-double-fire pointerdown
+// swallow registers on the render canvas; a mismatch must warn (dev-facing).
+{
+  const warns=[];
+  const ow=console.warn; console.warn=(...a)=>warns.push(a.join(" "));
+  try{
+    createGame(mkCanvas(),{seed:51,canvasEl:mkCanvas()});
+    check("canvasEl seam: distinct element warns exactly once",
+      warns.length===1,JSON.stringify(warns));
+    warns.length=0;
+    const cv=mkCanvas();
+    createGame(cv,{seed:52,canvasEl:cv});
+    check("canvasEl seam: identical element stays silent",warns.length===0,
+      JSON.stringify(warns));
+    createGame(mkCanvas(),{seed:53});
+    check("canvasEl seam: absent canvasEl stays silent",warns.length===0,
+      JSON.stringify(warns));
+   }finally{ console.warn=ow; }
+}
+
 console.log(fail? "HEADLESS FAIL":"HEADLESS OK");
 process.exit(fail?1:0);

@@ -59,6 +59,14 @@ export function createGame(canvas, opts={}){
     }
 
   const input=new Input(opts.canvasEl||canvas);
+  /* C1 seam guard: the anti-double-fire pointerdown swallow below registers
+     on the RENDER canvas while Input's fire latch listens on opts.canvasEl.
+     When they differ, taps on canvasEl latch fire with no swallow to eat
+     them — confirms double-fire silently. Warn so hosts notice. */
+  if(opts.canvasEl&&opts.canvasEl!==canvas)
+    console.warn("[rollblock] opts.canvasEl differs from the render canvas:"
+      +" menu pointer confirms will double-fire (C1 swallow is bound to the"
+      +" render canvas only). Pass the same element to both.");
   /* virtual pad: #stage children (never canvas listeners — C1 swallow intact);
      desktop/headless builds nothing, update() is a silent no-op there */
   const touch=mountTouch(input,(typeof document!=="undefined"&&document)?
