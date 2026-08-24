@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-08-24 — REAL-3D S1 skeleton shipped (1b53a41..aabd953): vendored three + dual-canvas tri-state
+- src/render/three/{scene,materials,lights,camrig,wrapper}: buildScene instanced walls/bricks (X=x−300/Z=y−260, in-place rescan, level-rebuild flag), frozen §6 light rig, orbit/dolly/reset + GAME-gated mount, createRenderer3D {canvas,overlay,ctx,render,consumeEvents,getShake} with headless stub mode; main.js tri-state 2d/3d/iso (?render=3d|iso), RENDER toggle REAL 3D⇄CLASSIC 2D, #gl under #c, flyover+camTransform gated to non-3d, KeyR resets orbit; renderer.js "iso" alias. Drive-by fix: g.renderer now a live getter (was boot-time stale copy). RED→GREEN 36 checks (tests/three.test.mjs), battery 15/15 green, sim/net/input/core diff=0. Left: manual browser smoke (shadows/orbit/iso-parity/DPR). Report: .superpowers/sdd/2026-08-24-real3d/task-report-S1.md
+
 ## 2026-08-24 — Camera control shipped (bccb0b4..3cbdcef): GAME-only pan/zoom/reset
 - cameraCtl.js pure math (anchor pan1=d−(z1/z0)(d−pan0), clampAxis degenerate→0, wheel exp(−ΔY·.0015), pinch ratio, transform triple); input.js button≠0 fire-guard; main.js cam closure + mountCameraCtl (GAME-gated, getKind follows RENDER toggle), KeyR/onStart reset, outer transform in GAME branch only — renderer/core/net diff 0. Battery 14/14 files, camera 37/0, headless +12 checks (f/g/h incl. exact drag deltas + MENU-frame triple-absence). Left: manual browser/device smokes per spec §5. Report: task-report-CAM.md.
 
