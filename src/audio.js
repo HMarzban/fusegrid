@@ -1,7 +1,33 @@
-// Audio layer — WebAudio oscillator SFX. Graceful: no-op if unavailable.
-// createAudio() returns { play(name), toggle() }.
+// Audio layer — WebAudio oscillator SFX + chiptune loop. Graceful: no-op if
+// unavailable. createAudio() returns { play(name), toggle(), unlock(), duck(on),
+// pump(), unlocked() } plus the pure frozen MUSIC_PATTERN export.
+//
+// MUSIC ENGINE (spec §3): oscillator-only; graph per note is
+// osc→noteGain→musicGain→destination while SFX beeps stay direct-to-destination
+// so ducking never touches them. Scheduling is frame-driven lookahead on the
+// WebAudio clock ONLY — main calls pump() once per RAF; there is deliberately
+// NO setInterval/setTimeout/Date anywhere in note scheduling.
+
+/* Pure pattern data: 8 bars @100BPM eighths = 64 steps (A-A-F-G x2), lead
+   octave-up bars 5-8, offbeat hats. Sparse [step,freqHz,durSteps] lists over
+   absolute steps 0..63 mapped to {s,f,d,t,v}; pump looks each up by stepIdx. */
+export const MUSIC_PATTERN=(()=>{const S=.15,L=64,bass=[],lead=[],hat=[];
+ const roots=[[55,82.4],[55,82.4],[43.65,65.4],[49,73.42],
+              [55,82.4],[55,82.4],[43.65,65.4],[49,73.42]];
+ roots.forEach(([r,q],b)=>{const o=b*8;bass.push([o,r,2],[o+2,r,2],[o+4,q,2],[o+6,r,2]);});
+ const ph=[[[0,220],[2,261.6],[3,293.7],[4,329.6],[6,293.7]],[[0,261.6],[1,392],[3,329.6]],
+   [[0,246.9],[2,293.7],[3,349.2],[5,329.6]],[[0,220],[2,196],[4,246.9]]];
+ ph.forEach((bar,i)=>bar.forEach(([s,f])=>{lead.push([i*8+s,f,2]);
+   lead.push([32+i*8+s,f*2,2]);}));
+ for(let i=1;i<L;i+=2)hat.push([i,4800,1]);
+ const E=(a,t,v)=>a.map(([s,f,d])=>({s,f,d:d*S,t,v}));
+ return Object.freeze({STEP:S,LEN:L,bass:Object.freeze(E(bass,"square",.10)),
+   lead:Object.freeze(E(lead,"square",.07)),hat:Object.freeze(E(hat,"triangle",.02))});})();
+const MUS_BASE=0.5,MUS_DUCK=0.16,LOOKAHEAD=0.12,MUS_FLOOR=0.0001;
+
 export function createAudio(){
   let ctx=null, muted=false, ok=true;
+  let musicGain=null, nextT=0, stepIdx=0, ducked=false;
   function ensure(){
     if(!ctx){
       try{
@@ -26,6 +52,62 @@ export function createAudio(){
       o.stop(t+dur+0.02);
     }catch(e){}
   }
+  /* ---- music engine (spec §3/§4) ---- */
+  function rampMusicGain(v,dur){
+    try{
+      const g=musicGain.gain,t=ctx.currentTime;
+      g.cancelScheduledValues(t);
+      g.setValueAtTime(Math.max(MUS_FLOOR,g.value),t);
+      g.exponentialRampToValueAtTime(v,t+dur);
+     }catch(e){}
+   }
+  function note(n,t){
+    try{
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.type=n.t; o.frequency.value=n.f;
+      o.connect(g); g.connect(musicGain);
+      g.gain.setValueAtTime(n.v,t);
+      g.gain.exponentialRampToValueAtTime(MUS_FLOOR,t+n.d);
+      o.start(t); o.stop(t+n.d+0.03);
+     }catch(e){}
+   }
+  function emitStep(s,t){
+    const P=MUSIC_PATTERN;
+    for(const n of P.bass)if(n.s===s)note(n,t);
+    for(const n of P.lead)if(n.s===s)note(n,t);
+    for(const n of P.hat)if(n.s===s)note(n,t);
+   }
+  function unlock(){
+    if(!ensure())return false;
+    try{
+      if(ctx.state==="suspended")ctx.resume();
+      if(!musicGain){
+        musicGain=ctx.createGain();
+        musicGain.gain.value=muted?MUS_FLOOR:MUS_BASE;
+        musicGain.connect(ctx.destination);
+       }
+      nextT=ctx.currentTime+0.05;
+      return true;
+     }catch(e){ return false; }
+   }
+  function unlocked(){ return !!ctx&&!!musicGain; }
+  function duck(on){
+    on=!!on;
+    if(!musicGain||on===ducked)return;
+    ducked=on;
+    rampMusicGain(on?MUS_DUCK:MUS_BASE,on?0.35:0.6);
+   }
+  function pump(){
+    if(!ctx||!musicGain||muted)return;
+    try{
+      const horizon=ctx.currentTime+LOOKAHEAD,P=MUSIC_PATTERN;
+      while(nextT<=horizon){
+        emitStep(stepIdx,nextT);
+        nextT+=P.STEP;
+        stepIdx=(stepIdx+1)%P.LEN;
+       }
+     }catch(e){}
+   }
   return {
     play(name){
       switch(name){
@@ -49,6 +131,11 @@ export function createAudio(){
         case "uiDenied": beep(180,0.09,"square",0.07); break;
       }
     },
-    toggle(){ muted=!muted; return !muted; },
+    toggle(){
+      muted=!muted;
+      if(musicGain)rampMusicGain(muted?MUS_FLOOR:MUS_BASE,muted?0.01:0.6);
+      return !muted;
+     },
+    unlock,unlocked,duck,pump,
   };
 }
