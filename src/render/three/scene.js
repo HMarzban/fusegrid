@@ -88,3 +88,11 @@ export function buildScene(world, atlas){
 }
 
 export {disposeGroup};
+
+/* GL draw-call estimate for the §8 perf gate: every mesh/points/line/sprite
+   is one call (InstancedMesh included via isMesh); groups/lights are free. */
+export function countDrawCalls(root){
+  let n=0;
+  root.traverse(o=>{ if(o.isMesh||o.isPoints||o.isLine||o.isSprite)n++; });
+  return n;
+}

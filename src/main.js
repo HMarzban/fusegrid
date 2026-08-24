@@ -414,7 +414,8 @@ export function createGame(canvas, opts={}){
     // render: INTRO flyover transform wraps the ARENA draw only (zoom>=1 so
     // no edge gaps); camX/camY are canvas fractions. ATTRACT renders the DEMO
     // world with HUD suppressed; every other screen renders the frozen live
-    // world exactly as before.
+    // world exactly as before. real3d S3: in kind "3d" INTRO rides o.intro —
+    // the wrapper's flythrough owns the WebGL camera instead.
     const c=renderer.ctx||
       {save(){},restore(){},translate(){},scale(){}};
     c.save();
@@ -441,7 +442,9 @@ export function createGame(canvas, opts={}){
       camTransform(c,cw,chh,cam);
      }
     renderer.render(attract&&demo?demo.world:world, dt,
-      attract?{hud:false}:undefined);
+      attract?{hud:false}
+        :app.screen===SCREEN.INTRO&&curKind==="3d"?{intro:app.subT}
+        :undefined);
     c.restore();
     drawShell(c);
     if(running && typeof requestAnimationFrame!=="undefined")

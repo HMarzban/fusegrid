@@ -45,8 +45,10 @@ const BOMB_COL={normal:"#15181f",power:"#5a1626",pierce:"#34346a",
   line:"#1b2430"};
 const BOMBM={}; for(const k in BOMB_COL)
   BOMBM["b_"+k]=sharedMat(new THREE.MeshLambertMaterial({color:BOMB_COL[k]}));
-const SPARK_A=sharedMat(new THREE.MeshLambertMaterial({color:"#ff5d73"}));
-const SPARK_B=sharedMat(new THREE.MeshLambertMaterial({color:"#ffd447"}));
+/* S3: fuse spark is an unlit Basic glow (2D parity: flat fill, no lighting)
+   that flickers scale exactly like drawBombBody's r*0.13+sin(t*30)*0.03. */
+const SPARK_A=sharedMat(new THREE.MeshBasicMaterial({color:"#ff5d73"}));
+const SPARK_B=sharedMat(new THREE.MeshBasicMaterial({color:"#ffd447"}));
 
 export function createPools(biome, atlas){
   const group=new THREE.Group();
@@ -154,6 +156,7 @@ export function createPools(biome, atlas){
       if(s.userData.v!==vk){ s.userData.v=vk; s.children[0].material=
         BOMBM[vk]; }
       s.children[2].material=(Math.floor(t*14)%2)?SPARK_B:SPARK_A;
+      s.children[2].scale.setScalar(1+Math.sin(t*30)*0.23);
      }
     for(;bi<POOL_CAPS.bombs;bi++)bombs[bi].visible=false;
 
@@ -170,11 +173,12 @@ export function createPools(biome, atlas){
      }
     for(;ii<POOL_CAPS.items;ii++)items[ii].visible=false;
 
-    let n=0;
+    let n=0, maxSc=0;
     const bls=world.blades||[];
     for(let i=0;i<bls.length;i++){
       const bl=bls[i], tls=bl.tiles; if(!tls)continue;
       const sc=Math.max(0.001,1-bl.t/(bl.ttl||1));
+      if(sc>maxSc)maxSc=sc;
       for(let j=0;j<tls.length&&n<POOL_CAPS.blades;j++){
         const tl=tls[j];
         _p.set(tl.tx*CFG.TILE+CFG.TILE/2-W2,5,
@@ -186,6 +190,10 @@ export function createPools(biome, atlas){
      }
     blades.count=n;
     blades.instanceMatrix.needsUpdate=true;
+    /* S3 emissive pulse: white-hot when fresh -> amber -> ember, flickering
+       on world.time (mirrors drawBladeBody's age phases); idle ember off. */
+    const phase=maxSc>0.7?1:maxSc>0.3?0.7:0.45;
+    bladeMat.emissiveIntensity=n>0?phase*(0.8+0.2*Math.sin(t*24)):0.3;
    }
 
   update({players:[],enemies:[],bombs:[],items:[],blades:[],time:0});

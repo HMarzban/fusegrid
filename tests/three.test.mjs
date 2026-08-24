@@ -1,11 +1,15 @@
-/* REAL-3D S1+S2 (spec 2026-08-24-real3d-design §2/§4/§5/§6/§7): Node-only
+/* REAL-3D S1+S2+S3 (spec 2026-08-24-real3d-design §2/§3/§4/§5/§6/§7): Node-only
    checks — vendor import, frozen light rig, biome materials, buildScene
    instanced counts vs grid scan + brick rescan/rebuild, camrig math, wrapper
    surface, renderer "iso" alias, headless createGame surface; S2 adds entity
    pool counts/visibility vs world sets, px->world transform sync, facing
    rotation, invuln flicker, bomb pulse/tint, blade ttl fade, per-type enemy
    variants + identity colors, zero-asset texture-source probes, and the
-   sim/net/input purity grep gate. No DOM anywhere. */
+   sim/net/input purity grep gate; S3 adds fx-store Points particles (pool cap
+   + px->world mapping + ttl fade), introCam flythrough keyframe math + camera
+   drive, blade emissive pulse + fuse-spark glow, attract-through-3D harness
+   with rebuild rollover, shake end-to-end (event -> store -> lookAt offset),
+   and the ≤500-draw-call / DPR≤2 perf gate. No DOM anywhere. */
 import {createLights} from "../src/render/three/lights.js";
 import {build} from "../src/render/three/materials.js";
 import {buildScene} from "../src/render/three/scene.js";
@@ -518,6 +522,191 @@ await sec("S2.detonation",async()=>{
   check("S2 simulated detonation breaks brick (instanced count drops)",
     nAfter<nBricks&&brick.count===nAfter,
     brick.count+"/"+nAfter+" was "+nBricks);
+});
+
+// ---- §S3.A THREE.Points particle pool consumes the fx store data ----
+await sec("S3.A",async()=>{
+  const m=await import("../src/render/three/particles.js");
+  const {createParticles,PART_CAP}=m;
+  check("S3.A pool cap fixed >=256", typeof PART_CAP==="number"
+    &&PART_CAP>=256, String(PART_CAP));
+  const fxp=createParticles();
+  check("S3.A is a frustum-cull-free THREE.Points",
+    fxp.points.isPoints===true&&fxp.points.frustumCulled===false);
+  fxp.update([]);
+  check("S3.A empty store -> drawRange 0",
+    fxp.points.geometry.drawRange.count===0);
+  fxp.update([
+    {x:300,y:260,vx:0,vy:0,t:0,life:1,color:"#ff0000",size:3},
+    {x:100,y:80,vx:0,vy:0,t:0.5,life:1,color:"#ff0000",size:3}]);
+  const geo=fxp.points.geometry;
+  check("S3.A drawRange === live parts", geo.drawRange.count===2);
+  const pa=geo.attributes.position.array, ca=geo.attributes.color.array;
+  check("S3.A px->world mapping X=x-300 Y=8 Z=y-260 (slot0)",
+    Math.abs(pa[0]-0)<1e-9&&Math.abs(pa[1]-8)<1e-9
+    &&Math.abs(pa[2]-0)<1e-9, pa[0]+"/"+pa[1]+"/"+pa[2]);
+    check("S3.A ttl fade dims vertex color (k=1-t/life)",
+      Math.abs(ca[0]-1)<1e-6&&Math.abs(ca[3]-0.5)<1e-6,
+      ca[0].toFixed(3)+"/"+ca[3].toFixed(3));
+  const many=[];
+  for(let i=0;i<PART_CAP+50;i++)many.push({x:i,y:i,t:0,life:2,
+    color:"#ffffff",size:2});
+  fxp.update(many);
+  check("S3.A overflow clamps to cap", geo.drawRange.count===PART_CAP,
+    geo.drawRange.count+"/"+PART_CAP);
+  fxp.update([{confetti:true,x:300,y:-10,vx:0,vy:1,t:0,life:2,
+    color:"#ffd447",size:4}]);
+  check("S3.A confetti rains from sky (high Y, north Z)",
+    Math.abs(pa[1]-(CFG.ROWS*CFG.TILE+40+10)*0.45)<1e-9
+    &&Math.abs(pa[2]+270)<1e-9, pa[1].toFixed(1));
+});
+
+// ---- §S3.B wrapper fx hook + shake end-to-end (event->store->camera) ----
+await sec("S3.B",async()=>{
+  const sj=await import("../src/render/three/wrapper.js");
+  const {getShake,getFx}=await import("../src/render/fx.js");
+  const realRnd=Math.random;
+  Math.random=()=>0.75;                    // deterministic shake/particle spread
+  try{
+    const r=sj.createRenderer3D(null,null,{audio:null,hud:null});
+    const w=createWorld(41,1); loadLevel(w,1,false); w.state="PLAY";
+    w.events.push({t:"boom",x:300,y:260});
+    let threw=false;
+    try{ r.render(w,1/60); }catch(e){ threw=true; console.log(e.message); }
+    check("S3.B boom render spawns 20 store particles (no throw)",
+      !threw&&getFx().length===20, "parts="+getFx().length);
+    const dbg=r._dbg;
+    check("S3.B wrapper feeds Points pool from store (drawRange 20)",
+      !!dbg&&dbg.particles.points.geometry.drawRange.count===20);
+    const sh=getShake();
+    const wantX=0.25*(0.3-1/60)*18;        // rnd .75 => (+0.25)*shakeT*18
+    check("S3.B boom -> shakeT decays to px offsets (+1.275,+1.275)",
+      Math.abs(sh.x-wantX)<1e-9&&Math.abs(sh.y-wantX)<1e-9,
+      sh.x.toFixed(4)+" want "+wantX.toFixed(4));
+    const qWith=dbg.camera.quaternion.clone();
+    applyOrbit(dbg.camera,createRig(),{x:0,y:0});
+    check("S3.B end-to-end: shaken lookAt differs from calm lookAt "
+        +"(SHAKE_3D_K px->world)", !qWith.equals(dbg.camera.quaternion));
+    check("S3.B DPR clamp <=2 (headless dpr 1)",
+      sj.DPR_MAX===2&&dbg.dpr<=sj.DPR_MAX, "dpr="+dbg.dpr);
+   } finally{ Math.random=realRnd; }
+});
+
+// ---- §S3.C introCam keyframes monotonic + endpoints match introPhase ----
+await sec("S3.C",async()=>{
+  const ft=await import("../src/render/three/flythrough.js");
+  const {introPhase,INTRO_DUR}=await import("../src/app/intro.js");
+  const st0=ft.introCam(0), stE=ft.introCam(INTRO_DUR);
+  check("S3.C start frame matches introPhase zoom start (dist=560/1.55)",
+    Math.abs(st0.dist-560/1.55)<1e-4, st0.dist.toFixed(3));
+  check("S3.C start target rides lower-third drift (tz=(camY-.5)*520)",
+    Math.abs(st0.target[2]-83.2)<1e-9, st0.target[2].toFixed(2));
+  check("S3.C end frame == orbit rig defaults (seamless handoff)",
+    Math.abs(stE.dist-560)<1e-9&&stE.az===-0.6&&stE.el===0.9
+    &&stE.target[2]===0, stE.az+"/"+stE.el+"/"+stE.dist);
+  let mono=true;
+  for(let s=0;s<=INTRO_DUR+1e-9;s+=0.25){
+    const a=ft.introCam(s), b=ft.introCam(Math.min(INTRO_DUR,s+0.25));
+    if(b.dist<a.dist-1e-9||b.target[2]>a.target[2]+1e-9||b.el>a.el+1e-9)
+      mono=false;
+   }
+  check("S3.C keyframes monotonic (dist up, target-z/el down)", mono);
+  let tracks=true;
+  for(let s=0;s<=INTRO_DUR;s+=0.5)
+    if(Math.abs(ft.introCam(s).dist*introPhase(s).zoom-560)>1e-6)tracks=false;
+  check("S3.C dist tracks introPhase fractions (dist*zoom==560)", tracks);
+  check("S3.C flyover swings azimuth out mid-beat (cinematic arc)",
+    ft.introCam(2.8).az>-0.4&&ft.introCam(0).az===-0.6,
+    ft.introCam(2.8).az.toFixed(3));
+  const r=createRenderer3D(null,null,{audio:null,hud:null});
+  const w=createWorld(43,1); loadLevel(w,1,false); w.state="MENU";
+  const camA=new THREE.PerspectiveCamera();
+  applyOrbit(camA,ft.introCam(2.8),{x:0,y:0});
+  r.render(w,1/60,{intro:2.8});
+  check("S3.C wrapper o.intro drives camera exactly via introCam+applyOrbit",
+    Math.abs(r._dbg.camera.position.x-camA.position.x)<1e-9
+    &&Math.abs(r._dbg.camera.position.z-camA.position.z)<1e-9,
+    r._dbg.camera.position.x.toFixed(2)+" vs "+camA.position.x.toFixed(2));
+  const g=createGame(mkCanvas(),{seed:61,render3d:true});
+  g.app.screen=1; g.app.subT=1.0;             // INTRO mid-flyover
+  let threw=false; let t=1000;
+  try{ for(let i=0;i<5;i++){ t+=16; g.loop(t); } }
+  catch(e){ threw=true; console.log(e.message); }
+  check("S3.C main loop renders INTRO through 3D kind (no throw, no swap)",
+    !threw&&"overlay"in g.renderer);
+});
+
+// ---- §S3.D ATTRACT demo world through the 3D path (rebuild rollover) ----
+await sec("S3.D",async()=>{
+  const g=createGame(mkCanvas(),{seed:51,render3d:true});
+  g.app.screen=7; g.app.subT=99;              // ATTRACT (idle threshold past)
+  let t=2000, threw=false;
+  try{ for(let i=0;i<6;i++){ t+=16; g.loop(t); } }
+  catch(e){ threw=true; console.log(e.message); }
+  const dbg=g.renderer._dbg;
+  const wallA=dbg&&slotsOf(dbg.scene,"wall")[0];
+  check("S3.D attract frames build demo scene through 3D (no throw)",
+    !threw&&!!g.demo&&!!wallA&&wallA.count>0,
+    "demo="+(g.demo?"yes":"no"));
+  check("S3.D particle Points live in scene during attract",
+    !!dbg&&dbg.scene.children.some(o=>o.isPoints));
+  const lvlA=g.demo.world.level;
+  g.demo.world.state="WIN";                   // force cycle rollover 1->2
+  try{ t+=16; g.loop(t); }catch(e){ threw=true; console.log(e.message); }
+  const wallB=slotsOf(g.renderer._dbg.scene,"wall")[0];
+  check("S3.D demo rollover rebuilds scene for next level",
+    !threw&&g.demo.world.level!==lvlA&&wallB!==undefined&&wallB!==wallA
+    &&wallB.count>0, lvlA+"->"+g.demo.world.level);
+  let hudOk=true;
+  try{ g.renderer.render(g.demo.world,1/60,{hud:false}); }
+  catch(e){ hudOk=false; console.log(e.message); }
+  check("S3.D o.hud===false honored (attract render, HUD suppressed)",
+    hudOk);
+});
+
+// ---- §S3.E perf gate: draw-call budget <=500 + blade/fuse emissive curves ----
+await sec("S3.E",async()=>{
+  const sj=await import("../src/render/three/scene.js");   // countDrawCalls
+  const w=createWorld(44,1); loadLevel(w,1,false);
+  w.enemies=[]; w.items=[];
+  for(let i=0;i<16;i++)w.enemies.push(mkE(["walker","chaser","fast",
+    "stationary","boomerang","rocket"][i%6],60+i*30,80));
+  for(let i=0;i<32;i++)w.items.push({x:60+i*15,y:120,t:"fire",
+    col:"#ff8a3c",taken:false,pdef:null});
+  const nb=Math.min(CFG.MAX_BOMBS,8);
+  for(let i=0;i<nb;i++)w.bombs.push({x:60+i*40,y:160,tx:i,ty:2,
+    timer:CFG.FUSE,variant:"normal"});
+  w.blades=[{x:200,y:120,tiles:[{tx:5,ty:3},{tx:6,ty:3}],t:0,
+    ttl:CFG.BLADE_TTL,variant:"normal"}];
+  const r=createRenderer3D(null,null,{audio:null,hud:null});
+  let calls=-1, threw=false;
+  try{ r.render(w,1/60); calls=sj.countDrawCalls(r._dbg.scene); }
+  catch(e){ threw=true; console.log(e.message); }
+  check("S3.E draw-call budget <=500 (spec §8; got "+calls+")",
+    !threw&&calls>0&&calls<=500, String(calls));
+  // blade emissive pulse curve (fresh white-hot -> aged ember)
+  const w2=createWorld(45,1); loadLevel(w2,1,false); w2.time=0;
+  w2.blades=[{x:200,y:120,tiles:[{tx:5,ty:3}],t:0,ttl:CFG.BLADE_TTL,
+    variant:"normal"}];
+  const sc2=buildScene(w2); sc2.update(w2);
+  const bm=slotsOf(sc2.group,"blade")[0].material;
+  const iFresh=bm.emissiveIntensity;
+  w2.time=Math.PI/48; sc2.update(w2);        // sin(24t)==1 peak
+  const iPeak=bm.emissiveIntensity;
+  w2.blades[0].t=w2.blades[0].ttl*0.8; w2.time=0; sc2.update(w2);
+  const iOld=bm.emissiveIntensity;
+  check("S3.E blade emissive pulse: fresh .8 -> peak 1.0 -> ember .36",
+    Math.abs(iFresh-0.8)<1e-9&&Math.abs(iPeak-1.0)<1e-9
+    &&Math.abs(iOld-0.36)<1e-9, iFresh.toFixed(2)+"/"+iPeak.toFixed(2)
+    +"/"+iOld.toFixed(2));
+  // fuse spark: unlit glow + 2D-parity flicker 1+-0.23*sin(t*30)
+  w2.time=0.05; w2.bombs=[{x:60,y:60,tx:1,ty:1,timer:CFG.FUSE,
+    variant:"normal"}]; sc2.update(w2);
+  const sp=slotsOf(sc2.group,"bomb")[0].children[2];
+  check("S3.E fuse spark is unlit Basic glow, scale flickers 2D parity",
+    sp.material.isMeshBasicMaterial
+    &&Math.abs(sp.scale.x-(1+Math.sin(0.05*30)*0.23))<1e-9,
+    sp.material.type+" s="+sp.scale.x.toFixed(3));
 });
 
 console.log(fail? "THREE FAIL":"THREE OK");

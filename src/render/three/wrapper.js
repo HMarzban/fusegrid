@@ -11,11 +11,14 @@ import {CFG} from "../../core/config.js";
 import {biomeOf} from "../../core/config.js";
 import {buildScene, disposeGroup} from "./scene.js";
 import {createRig, applyOrbit} from "./camrig.js";
+import {introCam} from "./flythrough.js";
+import {createParticles} from "./particles.js";
 import {buildAtlas} from "./textures.js";
-import {onEvent, updateFx, getShake, syncFx} from "../fx.js";
+import {onEvent, updateFx, getShake, getFx, syncFx} from "../fx.js";
 
 const W=CFG.COLS*CFG.TILE, H=CFG.ROWS*CFG.TILE;
 const noop=()=>{};
+export const DPR_MAX=2;                     // spec §9.9
 
 function makeOverlayCtx(canvas){
   if(canvas&&canvas.getContext)
@@ -36,14 +39,15 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
   /* GL init guarded three ways: absent canvas (headless), context probe that
      is not a real object (recording-proxy test stubs return functions), and
      constructor throw (no WebGL) all degrade to stub mode. */
-  let gl=null;
+  let gl=null, dprUsed=1;
   try{
     if(glCanvas&&typeof glCanvas.getContext==="function"){
       const probe=glCanvas.getContext("webgl2");
       if(probe&&typeof probe==="object"){
         gl=new THREE.WebGLRenderer({canvas:glCanvas,alpha:true,antialias:true});
         const dpr=(typeof devicePixelRatio!=="undefined"?devicePixelRatio:1)||1;
-        gl.setPixelRatio(Math.min(dpr,2));          // spec §9.9: DPR <= 2
+        dprUsed=Math.min(dpr,DPR_MAX);
+        gl.setPixelRatio(dprUsed);                // spec §9.9: DPR <= 2
         gl.setSize(W,H,false);                      // logical box; CSS scales
         gl.shadowMap.enabled=true;
         gl.shadowMap.type=THREE.PCFSoftShadowMap;   // spec §6
@@ -54,6 +58,10 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
   const scene3=new THREE.Scene();
   const camera=new THREE.PerspectiveCamera(45,W/H,1,2500);
   const rig=createRig();
+  /* S3: fx-store particles ride the scene ROOT (not sc.group) so level
+     rebuilds never orphan live bursts; syncFx wipes them on world change. */
+  const fxp=createParticles();
+  scene3.add(fxp.points);
   /* zero-asset atlas (§5): built once lazily; null headless => color
      fallbacks everywhere downstream */
   let atlas, atlasTried=false;
@@ -84,10 +92,22 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
     if(!world)return;
     consumeEvents(world, dt, !(o&&o.sfx===false));
     if(!sc||sc.update(world))rebuild(world);   // brick rescan / level rebuild
-    applyOrbit(camera,rig,getShake());         // shake = camera-target offset
+    /* S3: INTRO in kind 3d hands the camera to the flythrough keyframes
+       (o.intro = app.subT from main; logo/tagline stay on the 2D overlay);
+       every other screen keeps the orbit rig + shake. */
+    if(o&&o.intro!=null)applyOrbit(camera,introCam(o.intro),{x:0,y:0});
+    else applyOrbit(camera,rig,getShake());    // shake = camera-target offset
+    fxp.update(getFx());
     if(gl)gl.render(scene3,camera);
    }
 
-  return {canvas:glCanvas,overlay:overlayCanvas,ctx:ovCtx,render,
+  const surface={canvas:glCanvas,overlay:overlayCanvas,ctx:ovCtx,render,
     consumeEvents,getShake};
+  /* Test/perf seam (non-enumerable: Object.keys surface contract unchanged):
+     scene root for the §8 draw-call traverse, camera for shake/flythrough
+     math checks, particles pool + effective DPR for the DPR<=2 gate. */
+  Object.defineProperty(surface,"_dbg",{enumerable:false,value:{
+    get scene(){return scene3;},get camera(){return camera;},
+    get particles(){return fxp;},get dpr(){return dprUsed;}}});
+  return surface;
 }
