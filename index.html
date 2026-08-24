@@ -87,7 +87,7 @@
    import {createAudio} from "./src/audio.js";
    const canvas=document.getElementById("c");
    const audio=createAudio();
-   window.__audio=audio;
+   if(/[?&]debug=1/.test(location.search||""))window.__audio=audio;
    createGame(canvas,{audio, canvasEl:canvas});
 </script>
 </body>
