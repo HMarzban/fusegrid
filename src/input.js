@@ -61,8 +61,12 @@ export class Input {
       case "KeyK":i.kick=false;break;
       }
     }
- _onFireDown(e){ this._intent.fire=true; }
- _onFireUp(e){ this._intent.fire=false; }
+ /* Camera §2: non-primary buttons never touch the fire latch (undefined ->
+    primary so padFire({})/keyboard stay intact). */
+ _onFireDown(e){ if(e&&e.button!==undefined&&e.button!==0)return;
+   this._intent.fire=true; }
+ _onFireUp(e){ if(e&&e.button!==undefined&&e.button!==0)return;
+   this._intent.fire=false; }
  /* Virtual-pad fire routing: delegates to the SAME latch handlers the canvas
     tap uses, so pad bombs ride the existing fire-edge/advance() path. */
  padFire(down){ down?this._onFireDown({}):this._onFireUp({}); }
