@@ -9,6 +9,7 @@ import * as THREE from "../../../vendor/three.module.js";
 import {CFG,T,biomeOf} from "../../core/config.js";
 import {build as buildMaterials} from "./materials.js";
 import {createLights} from "./lights.js";
+import {createPools} from "./entities.js";
 
 const W=CFG.COLS*CFG.TILE, D=CFG.ROWS*CFG.TILE;
 const MAT=new THREE.Matrix4();
@@ -16,16 +17,16 @@ const MAT=new THREE.Matrix4();
 function disposeGroup(group){
   const mats=new Set();
   group.traverse(o=>{
-    if(o.geometry)o.geometry.dispose();
+    if(o.geometry&&!o.geometry._shared)o.geometry.dispose();
     const m=o.material;
-    if(m)(Array.isArray(m)?m:[m]).forEach(x=>mats.add(x));
+    if(m)(Array.isArray(m)?m:[m]).forEach(x=>{ if(!x._shared)mats.add(x); });
    });
-  mats.forEach(m=>{ if(m.map)m.map.dispose(); m.dispose(); });
+  mats.forEach(m=>{ if(m.map&&!m.map._shared)m.map.dispose(); m.dispose(); });
 }
 
-export function buildScene(world){
+export function buildScene(world, atlas){
   const biome=biomeOf(world.level);
-  const mats=buildMaterials(biome);
+  const mats=buildMaterials(biome,atlas);
   const group=new THREE.Group();
 
   const floor=new THREE.Mesh(new THREE.PlaneGeometry(W,D),mats.floor);
@@ -64,7 +65,11 @@ export function buildScene(world){
   lights.dir.target.position.set(0,0,0);
   group.add(lights.dir.target);
 
-  const scene={group,level:world.level,brick,
+  // entity pools (S2): fixed slots, visibility-toggled, synced every update
+  const pools=createPools(biome,atlas);
+  group.add(pools.group);
+
+  const scene={group,level:world.level,brick,pools,
     update(world){
       let n=0;
       for(let y=0;y<CFG.ROWS;y++)for(let x=0;x<CFG.COLS;x++)
@@ -75,6 +80,7 @@ export function buildScene(world){
          }
       brick.count=n;
       brick.instanceMatrix.needsUpdate=true;
+      pools.update(world);
       return world.level!==scene.level;
      }};
   scene.update(world);          // initial brick fill

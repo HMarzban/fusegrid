@@ -15,6 +15,20 @@ export function canMakeCanvas(){
     return !!(el&&el.getContext&&el.getContext("2d")); }catch(_){return false;}
 }
 
+/* Capture any translate-free body painter into an offscreen canvas — real DOM
+   canvas in the browser, injected factory in Node tests. Returns null when
+   neither source exists so callers keep their vector/color fallbacks (the
+   real-3D zero-asset texture pipeline feeds these canvases to CanvasTexture). */
+export function captureSprite(w,h,paint,mk){
+  const c=mk?mk():(canMakeCanvas()?document.createElement("canvas"):null);
+  if(!c||typeof c.getContext!=="function")return null;
+  c.width=w; c.height=h;
+  const ctx=c.getContext("2d");
+  if(!ctx)return null;
+  paint(ctx);
+  return c;
+}
+
 /* ---- one-time sprite atlas (per biome) ---- */
 const BAKED={floorA:{},floorB:{},wall:{},brick:{},ready:false};
 export function bakeAtlas(){

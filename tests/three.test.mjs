@@ -1,18 +1,30 @@
-/* REAL-3D S1 (spec 2026-08-24-real3d-design §2/§4/§6/§7): Node-only checks —
-   vendor import, frozen light rig, biome materials, buildScene instanced
-   counts vs grid scan + brick rescan/rebuild, camrig math, wrapper surface,
-   renderer "iso" alias, headless createGame surface. No DOM anywhere. */
+/* REAL-3D S1+S2 (spec 2026-08-24-real3d-design §2/§4/§5/§6/§7): Node-only
+   checks — vendor import, frozen light rig, biome materials, buildScene
+   instanced counts vs grid scan + brick rescan/rebuild, camrig math, wrapper
+   surface, renderer "iso" alias, headless createGame surface; S2 adds entity
+   pool counts/visibility vs world sets, px->world transform sync, facing
+   rotation, invuln flicker, bomb pulse/tint, blade ttl fade, per-type enemy
+   variants + identity colors, zero-asset texture-source probes, and the
+   sim/net/input purity grep gate. No DOM anywhere. */
 import {createLights} from "../src/render/three/lights.js";
 import {build} from "../src/render/three/materials.js";
 import {buildScene} from "../src/render/three/scene.js";
+import {createPools} from "../src/render/three/entities.js";
+import {atlasSources, buildAtlas} from "../src/render/three/textures.js";
 import {createRig, orbitBy, dollBy, resetOrbit, applyOrbit,
   SHAKE_3D_K} from "../src/render/three/camrig.js";
 import {createRenderer3D} from "../src/render/three/wrapper.js";
 import {createRenderer} from "../src/render/renderer.js";
-import {createWorld, loadLevel} from "../src/core/sim.js";
+import {createWorld, loadLevel, step} from "../src/core/sim.js";
 import {CFG, T, BIOMES} from "../src/core/config.js";
+import {spawnEnemy, POWER} from "../src/core/entities.js";
 import {createGame} from "../src/main.js";
 import * as THREE from "../vendor/three.module.js";
+import {readdirSync, readFileSync} from "node:fs";
+const slotsOf=(g,tag)=>{ const out=[];
+  g.traverse(o=>{ if(o.userData&&o.userData.tag===tag)out.push(o); });
+  return out; };
+const visOf=(g,tag)=>slotsOf(g,tag).filter(o=>o.visible).length;
 
 let pass=0, fail=0;
 function check(name, cond, detail){ cond?pass++:fail++;
@@ -208,6 +220,305 @@ function mkCanvas(){
   check("default boot keeps classic 2D surface byte-path",
     !("overlay"in g.renderer)&&typeof g.renderer.render==="function");
 }
+
+// ---- §S2 helpers ----
+function mkE(type,x,y,over){
+  return Object.assign({type,x,y,tx:Math.floor(x/CFG.TILE),
+    ty:Math.floor(y/CFG.TILE),dir:{x:0,y:1},speed:1,color:"#ffffff",
+    r:CFG.TILE*0.34,pass:false,dead:false,invuln:false,invulnT:0,cd:4,
+    home:{x:1,y:1}},over||{});
+}
+function matScale(inst,i){
+  const m=new THREE.Matrix4(),p=new THREE.Vector3(),q=new THREE.Quaternion(),
+    s=new THREE.Vector3();
+  inst.getMatrixAt(i,m); m.decompose(p,q,s); return {p,q,s};
+}
+/* S2 sections run under a guard so a missing-feature crash prints FAILs
+   instead of aborting the whole file (clean RED before implementation).
+   Promise-aware: async sections are awaited by their caller. */
+async function sec(name,fn){ try{ const r=fn(); if(r&&r.then)await r; }
+  catch(e){ fail++;
+    console.log("  FAIL "+name+" (threw -> "+e.message+")"); } }
+
+// ---- §S2.A pool counts + visibility vs world sets ----
+sec("S2.A",()=>{
+  const w=createWorld(21,1); loadLevel(w,1,false);
+  w.enemies=[mkE("walker",100,80),mkE("fast",180,140),
+    mkE("stationary",260,200),mkE("rocket",340,260,{dead:true})];
+  w.items=[{x:100,y:120,t:"fire",col:"#ff8a3c",taken:false,pdef:null},
+    {x:140,y:120,t:"remote",col:"#9aa3c0",taken:true,pdef:null},
+    {x:180,y:120,t:"kick",col:"#c07a3a",taken:false,pdef:null}];
+  w.bombs=[{x:60,y:60,tx:1,ty:1,timer:CFG.FUSE,variant:"normal"},
+    {x:100,y:60,tx:2,ty:1,timer:1.25,variant:"power"}];
+  w.blades=[{x:200,y:120,tiles:[{tx:5,ty:3},{tx:6,ty:3},{tx:5,ty:4}],
+    t:0,ttl:CFG.BLADE_TTL,variant:"normal"}];
+  const sc=buildScene(w); sc.update(w);
+  const g=sc.group;
+  check("S2 player slot visible (alive)", visOf(g,"player")===1);
+  check("S2 enemy slots visible === live enemies (dead filtered)",
+    visOf(g,"enemy")===3, visOf(g,"enemy"));
+  check("S2 item slots visible === untaken items",
+    visOf(g,"item")===2, visOf(g,"item"));
+  check("S2 bomb slots visible === live bombs",
+    visOf(g,"bomb")===2, visOf(g,"bomb"));
+  const inst=slotsOf(g,"blade")[0];
+  check("S2 blade pool is InstancedMesh", !!inst&&inst.isInstancedMesh);
+  check("S2 blade instances === blast tiles across live blades",
+    inst.count===3, inst.count);
+  check("S2 fixed pool sizes: enemies<=16 bombs<=MAX_BOMBS items<=32 "
+      +"bladeCap>=16*33",
+    slotsOf(g,"enemy").length===16
+    &&slotsOf(g,"bomb").length===CFG.MAX_BOMBS
+    &&slotsOf(g,"item").length===32
+    &&inst.instanceMatrix.count>=16*(1+4*CFG.MAX_RANGE));
+});
+
+// ---- §S2.B transform sync: continuous px -> world units + facing ----
+sec("S2.B",()=>{
+  const w=createWorld(22,1); loadLevel(w,1,false);
+  w.enemies=[mkE("walker",200,80,{dir:{x:0,y:-1}})];
+  w.bombs=[{x:100,y:100,tx:2,ty:2,timer:CFG.FUSE,variant:"normal"}];
+  const sc=buildScene(w); sc.update(w);
+  const g=sc.group;
+  const ps=slotsOf(g,"player")[0];
+  const W=CFG.COLS*CFG.TILE, D=CFG.ROWS*CFG.TILE;
+  check("S2 player world x/z from px (X=x-W/2, Z=y-D/2, y above floor)",
+    Math.abs(ps.position.x-(w.players[0].x-W/2))<1e-9
+    &&Math.abs(ps.position.z-(w.players[0].y-D/2))<1e-9&&ps.position.y>0,
+    ps.position.x.toFixed(1)+"/"+ps.position.z.toFixed(1));
+  const es=slotsOf(g,"enemy")[0];
+  check("S2 enemy slot tracks its live entry position",
+    Math.abs(es.position.x-(-100))<1e-9&&Math.abs(es.position.z-(-180))<1e-9,
+    es.position.x.toFixed(1)+"/"+es.position.z.toFixed(1));
+  const bs=slotsOf(g,"bomb")[0];
+  check("S2 bomb slot at bomb px", Math.abs(bs.position.x+200)<1e-9
+    &&Math.abs(bs.position.z+160)<1e-9);
+  w.players[0].face={x:1,y:0}; sc.update(w);
+  check("S2 facing rotation.y = atan2(face.x,face.y) (+X -> pi/2)",
+    Math.abs(ps.rotation.y-Math.PI/2)<1e-9, ps.rotation.y.toFixed(3));
+  w.players[0].face={x:0,y:-1}; sc.update(w);
+  check("S2 facing -Y -> pi", Math.abs(ps.rotation.y-Math.PI)<1e-9);
+  check("S2 enemy dir drives slot rotation",
+    Math.abs(es.rotation.y-Math.atan2(0,-1))<1e-9);
+});
+
+// ---- §S2.C lifecycle: death / take / expiry hide slots ----
+sec("S2.C",()=>{
+  const w=createWorld(23,1); loadLevel(w,1,false);
+  w.enemies=[mkE("walker",100,80),mkE("chaser",180,140)];
+  w.items=[{x:100,y:120,t:"fire",col:"#ff8a3c",taken:false,pdef:null}];
+  w.blades=[{x:200,y:120,tiles:[{tx:5,ty:3},{tx:6,ty:3}],t:0,
+    ttl:CFG.BLADE_TTL,variant:"normal"}];
+  const sc=buildScene(w); const g=sc.group;
+  sc.update(w);
+  check("S2 baseline 2 enemies visible", visOf(g,"enemy")===2);
+  w.enemies[0].dead=true; sc.update(w);
+  check("S2 death hides slot (visible drops to 1)", visOf(g,"enemy")===1);
+  w.items[0].taken=true; sc.update(w);
+  check("S2 taken item hides slot", visOf(g,"item")===0);
+  const inst=slotsOf(g,"blade")[0];
+  check("S2 blade count 2 before clear", inst.count===2);
+  w.blades=[]; sc.update(w);
+  check("S2 expired/cleared blades -> count 0", inst.count===0);
+  w.players[0].alive=false; sc.update(w);
+  check("S2 dead player hides slot", visOf(g,"player")===0);
+});
+
+// ---- §S2.D bomb pulse ∝ timer, variant tint, fuse hint ----
+sec("S2.D",()=>{
+  const w=createWorld(24,1); loadLevel(w,1,false);
+  w.time=0.05;
+  w.bombs=[{x:60,y:60,tx:1,ty:1,timer:CFG.FUSE,variant:"normal"},
+    {x:100,y:60,tx:2,ty:1,timer:CFG.FUSE*0.5,variant:"power"}];
+  const sc=buildScene(w); sc.update(w);
+  const bs=slotsOf(sc.group,"bomb");
+  check("S2 bomb at full fuse scale 1 (pulse amp 0)",
+    Math.abs(bs[0].scale.x-1)<1e-9, bs[0].scale.x.toFixed(4));
+  const want=1+Math.sin(w.time*18)*0.10*(1-0.5);
+  check("S2 bomb pulse amplitude grows as timer -> 0 (∝ 1-timer/FUSE)",
+    Math.abs(bs[1].scale.x-want)<1e-9&&bs[1].scale.x>1.005,
+    bs[1].scale.x.toFixed(4)+" want "+want.toFixed(4));
+  check("S2 fuse hint present (body + spark children)",
+    bs[0].children.length>=2&&bs[1].children.length>=2,
+    bs[0].children.length+"/"+bs[1].children.length);
+  const c0="#"+bs[0].children[0].material.color.getHexString();
+  const c1="#"+bs[1].children[0].material.color.getHexString();
+  check("S2 variant tint: power body color differs from normal", c0!==c1,
+    c0+" vs "+c1);
+});
+
+// ---- §S2.E blade ttl-driven fade (shrink with age) ----
+sec("S2.E",()=>{
+  const w=createWorld(25,1); loadLevel(w,1,false);
+  w.blades=[{x:200,y:120,tiles:[{tx:5,ty:3},{tx:6,ty:3},{tx:5,ty:4}],t:0,
+    ttl:CFG.BLADE_TTL,variant:"normal"}];
+  const sc=buildScene(w); sc.update(w);
+  const inst=slotsOf(sc.group,"blade")[0];
+  const s0=matScale(inst,0).s;
+  check("S2 blade tile at age0 scale 1 at arm tile center",
+    Math.abs(s0.x-1)<1e-9&&Math.abs(matScale(inst,0).p.x-(-80))<1e-9
+    &&Math.abs(matScale(inst,0).p.z-(-120))<1e-9&&matScale(inst,0).p.y>0);
+  w.blades[0].t=w.blades[0].ttl*0.5; sc.update(w);
+  const s1=matScale(inst,0).s;
+  check("S2 blade scale shrinks with bl.t/bl.ttl",
+    Math.abs(s1.x-0.5)<1e-9, s1.x.toFixed(3));
+});
+
+// ---- §S2.F per-type enemy variants + identity colors from entities.js ----
+sec("S2.F",()=>{
+  const w=createWorld(26,1); loadLevel(w,1,false);
+  const types=["walker","chaser","fast","stationary","boomerang","rocket"];
+  w.enemies=types.map((t,i)=>mkE(t,60+i*40,80));
+  const sc=buildScene(w); sc.update(w);
+  const es=slotsOf(sc.group,"enemy");
+  const wantGeo={walker:"SphereGeometry",chaser:"SphereGeometry",
+    fast:"SphereGeometry",stationary:"BoxGeometry",boomerang:"TorusGeometry",
+    rocket:"ConeGeometry"};
+  let geoOk=true, colOk=true, det=[];
+  for(let i=0;i<types;i++){
+    if(es[i].geometry.type!==wantGeo[types[i]])geoOk=false;
+    const proto=spawnEnemy(types[i],0,0,1,null);
+    const have="#"+es[i].material.color.getHexString();
+    if(have.toLowerCase()!==proto.color.toLowerCase()){colOk=false;det.push(
+      types[i]+":"+have+"!="+proto.color);}
+   }
+  check("S2 enemy mesh variant per type (sphere/box/torus/cone)", geoOk,
+    es.map(e=>e.geometry.type).join(","));
+  check("S2 identity colors match entities.js spawnEnemy table"
+      +" (biome-independent)", colOk, det.join(" "));
+});
+
+// ---- §S2.G invuln flicker (visibility toggles) ----
+sec("S2.G",()=>{
+  const w=createWorld(27,1); loadLevel(w,1,false);
+  w.enemies=[mkE("walker",100,80,{invuln:true})];
+  const sc=buildScene(w); const g=sc.group;
+  w.players[0].iFrames=0.09;               // floor(.09*12)%2 === 1 -> hidden
+  w.time=0.05;                             // enemy phase even -> visible
+  sc.update(w);
+  check("S2 player iFrames flicker hides on odd phase",
+    visOf(g,"player")===0&&visOf(g,"enemy")===1);
+  w.players[0].iFrames=0.17;               // even phase -> visible
+  w.time=0.09;                             // enemy odd phase -> hidden
+  sc.update(w);
+  check("S2 enemy invuln flicker mirrors 2D parity (time*12)",
+    visOf(g,"player")===1&&visOf(g,"enemy")===0);
+});
+
+// ---- §S2.H pool caps hold under overflow ----
+sec("S2.H",()=>{
+  const w=createWorld(28,1); loadLevel(w,1,false);
+  w.enemies=[]; w.items=[];
+  for(let i=0;i<18;i++)w.enemies.push(mkE("walker",60+i*20,80));
+  for(let i=0;i<34;i++)w.items.push({x:60+i*8,y:120,t:"fire",
+    col:"#ff8a3c",taken:false,pdef:null});
+  const sc=buildScene(w); sc.update(w);
+  const g=sc.group;
+  check("S2 overflow clamps to pool caps (16 enemies / 32 items)",
+    visOf(g,"enemy")===16&&visOf(g,"item")===32
+    &&slotsOf(g,"enemy").length===16&&slotsOf(g,"item").length===32,
+    visOf(g,"enemy")+"/"+visOf(g,"item"));
+});
+
+// ---- §S2.I zero-asset texture pipeline (spec §5) ----
+function recFactory(){
+  const canvases=[];
+  const mk=()=>{
+    const ops=[]; const cv={style:{},_ops:ops};
+    let wd=0,ht=0;
+    Object.defineProperty(cv,"width",{get:()=>wd,set:v=>{wd=v;
+      ops.push("size:"+v);}});
+    Object.defineProperty(cv,"height",{get:()=>ht,set:v=>{ht=v;
+      ops.push("sizeH:"+v);}});
+    const ctx=new Proxy({},{get:(t,p)=>{
+      if(typeof p==="symbol")return undefined;
+      return (...a)=>{ops.push(String(p));};},
+      set:(t,p,v)=>{if(typeof p!=="symbol")ops.push("set:"+String(p));
+        return true;}});
+    cv.getContext=()=>ctx;
+    canvases.push(cv); return cv; };
+  return {mk,canvases};
+}
+{
+  const f=recFactory();
+  const kinds=["player","enemy_walker","enemy_stationary","bomb","item_fire"];
+  const src=atlasSources(f.mk);
+  let ok=true,det=[];
+  for(const k of kinds){
+    const cv=src[k];
+    if(!cv){ok=false;det.push(k+":missing");continue;}
+    const paints=cv._ops.filter(o=>o==="fill"||o==="stroke"||o==="fillRect"
+      ||o==="arc"||o==="beginPath").length;
+    if(cv.width!==64||cv.height!==64||paints<5
+      ||!cv._ops.includes("set:fillStyle")){ok=false;
+      det.push(k+":"+cv.width+"x"+cv.height+" paints="+paints);}
+   }
+  check("S2 texture sources paint non-blank 64x64 via sprite art fns"
+      +" (headless op-probe)", ok, det.join(" "));
+  check("S2 buildAtlas() headless (no DOM) => null (color fallback rule)",
+    buildAtlas()===null);
+  const atlas=buildAtlas(f.mk);
+  check("S2 buildAtlas(factory) wraps CanvasTexture NearestFilter+sRGB",
+    !!atlas&&atlas.player.isTexture===true
+    &&atlas.player.magFilter===THREE.NearestFilter
+    &&atlas.enemy_rocket.isTexture===true
+    &&atlas.bomb.colorSpace===THREE.SRGBColorSpace
+    &&atlas.item_fire.isTexture===true);
+  const w=createWorld(29,1); loadLevel(w,1,false);
+  const poolsJunk=createPools(BIOMES[0],{player:"junk-not-a-texture"});
+  const face=poolsJunk.player.children.find(o=>o.isMesh
+    &&o.geometry.type==="PlaneGeometry");
+  check("S2 non-Texture atlas entries rejected (materials keep flat colors)",
+    !face.material.map);
+  const scPlain=buildScene(w);
+  const pcapsule=slotsOf(scPlain.group,"player")[0].children.find(
+    o=>o.isMesh&&o.geometry.type==="CapsuleGeometry");
+  check("S2 headless player = Lambert capsule body, map-free fallback",
+    !!pcapsule&&pcapsule.material.isMeshLambertMaterial
+    &&!pcapsule.material.map);
+  const es0=slotsOf(scPlain.group,"enemy")[0];
+  const protoW=spawnEnemy("walker",0,0,1,null);
+  check("S2 headless enemy material flat identity color, map-free",
+    es0.material.isMeshLambertMaterial&&!es0.material.map
+    &&"#"+es0.material.color.getHexString()
+      ===protoW.color.toLowerCase());
+}
+
+// ---- §S2.J purity gate: sim/net/input carry zero three/render-three refs ----
+sec("S2.J",()=>{
+  const bad=[];
+  const scanFile=p=>{ if(/vendor\/three|render\/three/.test(readFileSync(p,
+    "utf8")))bad.push(p); };
+  const scanDir=d=>{ for(const f of readdirSync(d))
+    if(f.endsWith(".js"))scanFile(d+"/"+f); };
+  scanDir("src/core"); scanDir("src/net"); scanFile("src/input.js");
+  check("S2 grep gate: no vendor/three or render/three refs in src/core,"
+      +" src/net, src/input.js", bad.length===0, bad.join(","));
+});
+
+// ---- real detonation: blade tiles + brick drop through the live sim ----
+await sec("S2.detonation",async()=>{
+  const w=createWorld(30,1); loadLevel(w,1,false); w.state="PLAY";
+  w.grid[1*CFG.COLS+2]=T.BRICK;              // guarantee a brick beside spawn
+  const nBricks=w.grid.reduce((a,v)=>a+(v===T.BRICK?1:0),0);
+  const inp={move:{x:0,y:0},fire:true,firePrev:false,shift:false,
+    remote:false,kick:false};
+  step(w,CFG.STEP,[inp]);                    // rising edge places bomb @ (1,1)
+  for(let i=0;i<400&&!w.blades.length;i++){inp.firePrev=true;
+    step(w,CFG.STEP,[inp]);}
+  const sc=buildScene(w); sc.update(w);
+  const inst=slotsOf(sc.group,"blade")[0];
+  const want=w.blades.reduce((a,bl)=>a+bl.tiles.length,0);
+  check("S2 live-sim detonation: blade instances === blast tiles",
+    w.blades.length===1&&inst.count===want&&want>=1,
+    inst.count+"/"+want+" blades="+w.blades.length);
+  const nAfter=w.grid.reduce((a,v)=>a+(v===T.BRICK?1:0),0);
+  sc.update(w);
+  const brick=sc.group.children.find(o=>o.userData.tag==="brick");
+  check("S2 simulated detonation breaks brick (instanced count drops)",
+    nAfter<nBricks&&brick.count===nAfter,
+    brick.count+"/"+nAfter+" was "+nBricks);
+});
 
 console.log(fail? "THREE FAIL":"THREE OK");
 process.exit(fail?1:0);

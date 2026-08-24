@@ -11,6 +11,7 @@ import {CFG} from "../../core/config.js";
 import {biomeOf} from "../../core/config.js";
 import {buildScene, disposeGroup} from "./scene.js";
 import {createRig, applyOrbit} from "./camrig.js";
+import {buildAtlas} from "./textures.js";
 import {onEvent, updateFx, getShake, syncFx} from "../fx.js";
 
 const W=CFG.COLS*CFG.TILE, H=CFG.ROWS*CFG.TILE;
@@ -53,10 +54,18 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
   const scene3=new THREE.Scene();
   const camera=new THREE.PerspectiveCamera(45,W/H,1,2500);
   const rig=createRig();
+  /* zero-asset atlas (§5): built once lazily; null headless => color
+     fallbacks everywhere downstream */
+  let atlas, atlasTried=false;
+  function getAtlas(){
+    if(!atlasTried){ atlasTried=true;
+      try{ atlas=buildAtlas(); }catch(e){ atlas=null; } }
+    return atlas;
+   }
   let sc=null;
   function rebuild(world){
     if(sc){ scene3.remove(sc.group); disposeGroup(sc.group); }
-    sc=buildScene(world);
+    sc=buildScene(world,getAtlas());
     scene3.background=new THREE.Color(biomeOf(world.level).bg1);
     scene3.add(sc.group);
    }
