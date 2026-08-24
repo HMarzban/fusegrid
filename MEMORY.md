@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-08-23 — Netcode fix round F1-F4 (76bfd8a): seq-first, neutral LEAVE, pinned codes, fail-closed decode
+- F1: onInput classifies dup/stale/gap BEFORE tick floor; fresh seq consumes ledger slot even when payload dropped (below-floor drop no longer freezes lastSeq → recovery traffic can't fabricate bad_seq halts). F2: LEAVE is neutral — hurtPlayer removed, survivor keeps lives/score. F3: ERROR_CODES pinned {bad_seq,bad_seed,bad_shape,unknown_pid}, makeError coerces, bad_host/bad_tick folded to bad_shape, WELCOME invalid → bad_seed+close. F4: decode never throws (null), capsOk §4.3 ≤64 deep cap, WebSocketTransport._onmessage guarded boundary + _validate hook (v2). Spec A1-A3 (+§2.3 corrected to neutral). RED→GREEN: net_lockstep 59/0, protocol 15/0, full battery 11/11.
+
 ## 2026-08-23 — Netcode lockstep v1 shipped (d3e1bcc..1d2f325): gates, two-world proof, ?net=local
 - protocol.js WELCOME/PAUSE/RESUME/RESTART/MENU/ERROR + validateInput/validateWelcome fail-closed
   gates (seq dup/stale/gap classes, u31 seed, DELAY=2 window; windowLen=Infinity buffer mode for

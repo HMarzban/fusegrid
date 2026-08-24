@@ -24,18 +24,20 @@ Scope ruling (binding, HoE): **v1 = lockstep-ready core, NO internet play.** Zer
 | INPUT | `{t:"input", pid, seq, tick, inputs}` | seq monotonic per-pid from 0 |
 | LEAVE | `{t:"leave", pid}` | graceful exit |
 | PAUSE / RESUME / RESTART / MENU | `{t:"pause"|"resume"|"restart"|"menu", pid}` | host-gated RPCs |
-| ERROR | `{t:"error", code, msg}` | codes: `"bad_seq"`, `"bad_seed"`, `"bad_shape"`, `"unknown_pid"` |
+| ERROR | `{type:"error", reason, detail?}` | codes pinned: `"bad_seq"`, `"bad_seed"`, `"bad_shape"`, `"unknown_pid"` |
 
 All post-WELCOME messages carry pid. `inputs` = full intent map. `seq`/`tick` integers ≥0. Decoder rejects unknown `t` fail-closed (drop, no throw).
+
+> **A1 (implementation note):** messages use the **`type`** field spelling (`{type:"input",...}`); the `t:` column above is shorthand. Final ERROR code set = `{bad_seq, bad_seed, bad_shape, unknown_pid}` — pinned in `protocol.js` as `ERROR_CODES`; unpinned reasons coerce to `bad_shape`.
 
 ### §2.2 Seed semantics
 Host generates seed; distributes only via `WELCOME.seed`. Both peers `loadLevel(seed)` with identical u32 ⇒ identical boards/RNG. Joiner never generates a seed; WELCOME failing validation → hard reject (`ERROR bad_seed` + close).
 
 ### §2.3 LEAVE handling
-On LEAVE from P: stop accepting P's inputs; mark P's player entity dead via existing sim death path (entity stays on board); append `leave` event to world.events. Later INPUT from left pid → `ERROR unknown_pid`.
+On LEAVE from P: stop accepting P's inputs; append `leave` event to world.events. **NO world/player mutation** (FIX ROUND: leaving is neutral — the survivor keeps lives/score/powers; the earlier "mark dead via sim death path" wording was removed). Later INPUT from left pid → `ERROR unknown_pid`.
 
 ### §2.4 Pause/resume/restart/menu
-Host-gated RPCs: any peer may request, host applies, stamps its tick; requesters apply when their buffer reaches that tick. RESTART allocates fresh seed + re-handshake.
+**A2 (v1 pin): host-only issuance.** Only the host (pid 0) may originate PAUSE/RESUME/RESTART/MENU; an inbound RPC stamped with a non-host pid is a protocol violation → `ERROR bad_shape` + halt. RESTART reuses the CURRENT seed (fresh-seed re-handshake = v2). Peers apply RPCs when their buffer reaches the stamped tick.
 
 ## §3 SEQ CONSUMPTION + LOCKSTEP BUFFER (`src/net/lockstep.js`)
 
@@ -47,7 +49,8 @@ Per simulated tick T:
 3. All present → consume ascending pid order, step merged map, advance.
 
 ### §3.2 Seq rule
-Accept iff `seq === lastSeq[pid]+1` (init −1). `seq<=lastSeq` → silent drop (dup/replay). `seq>lastSeq+1` → `ERROR bad_seq` + halt (gaps fatal in v1). lastSeq resets on RESTART/MENU.
+Accept iff `seq === lastSeq[pid]+1` (init −1). `seq<=lastSeq` → silent drop (dup/replay). `seq>lastSeq+1` → `ERROR bad_seq` + halt (gaps fatal in v1).
+**A3: lastSeq is CONTINUOUS across RESTART/MENU and all RPCs — it never resets in v1.** A reset would fabricate gaps against traffic already in flight (and seq classification runs BEFORE any tick-window rule, so a fresh seq consumes its ledger slot even when the payload is dropped for staleness); a coordinated, barrier-synchronized reset = v2 work.
 
 ### §3.3 Stall timeout
 Stalled ≥30 consecutive frames → emit `stall` event, keep waiting. No auto-disconnect v1.
