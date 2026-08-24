@@ -9,7 +9,6 @@ const HERE=dirname(fileURLToPath(import.meta.url));
 const sandbox=mkdtempSync(join(tmpdir(),"serve-test-"));
 const sibling=sandbox+"-rollblock-notes";
 mkdirSync(sibling);
-mkdirSync(join(sandbox,"rollblock-notes"));
 writeFileSync(join(sibling,"secret.txt"),"TOPSECRET");
 writeFileSync(join(sandbox,"index.html"),"<html>ok</html>");
 copyFileSync(join(HERE,"..","serve.js"),join(sandbox,"serve.js"));
@@ -51,6 +50,14 @@ check("400 on malformed percent-encoding",(await get("/%zz")).status===400);
 }
 check("no wildcard CORS header",!((await get("/index.html")).headers.get("access-control-allow-origin")));
 
-srv.kill(); rmSync(sandbox,{recursive:true,force:true}); rmSync(sibling,{recursive:true,force:true});
+// await child exit before rmSync: killing and immediately deleting the cwd
+// raced the process still holding sandbox paths (flaky EBUSY/ENOENT)
+srv.kill();
+await new Promise(resolve=>{
+  const done=()=>resolve();
+  srv.once("exit",done);
+  setTimeout(()=>{ srv.removeListener("exit",done); resolve(); },2000);
+ });
+rmSync(sandbox,{recursive:true,force:true}); rmSync(sibling,{recursive:true,force:true});
 console.log(fail? "SERVE FAIL":"SERVE OK");
 process.exit(fail?1:0);

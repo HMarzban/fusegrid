@@ -3,7 +3,13 @@ import {CFG} from "../core/config.js";
 /* FX layer: particles, screen shake, confetti. Renderer-local; built from
    world.events. All particle storage lives in this module singleton, so the
    renderer never mutates simulation-shaped state and headless worlds carry no
-   fx baggage. */
+   fx baggage.
+   SINGLE-RENDERER ASSUMPTION: one live renderer owns the singleton at a time.
+   Sequential re-create is safe — initFx() fully resets state and syncFx()
+   retags by world identity, both idempotent — so the main.js per-kind
+   renderer cache and any rebuild are fine. Two renderers stepping
+   SIMULTANEOUSLY would interleave particles/shake in one store; no such
+   caller exists and none should be added without refactoring storage out. */
 const fx={shakeT:0,shakeX:0,shakeY:0,parts:[]};
 let tag=null;
 
