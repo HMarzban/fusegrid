@@ -302,6 +302,39 @@ initFx();
   }
 }
 
+// 13b) toggle-flash (§3 pinned row): selected value row glows accent for
+//        120ms after the machine's togT stamp; idle sentinel draws clean
+{
+  const md=await import("../src/render/menudraw.js");
+  const L=md.layout(600,520);
+  const items=["START GAME","LEVEL SELECT","RENDER 3D","SOUND OFF",
+               "HOW TO PLAY","HIGH SCORES"];
+  const mk=()=>{
+    const sets=[];
+    const stub=new Proxy(function(){},{
+      get:(t,p)=>(p===Symbol.toPrimitive?()=>"":stub),
+      apply:()=>stub,
+      set:(t,p,v)=>{if(p==="shadowBlur")sets.push(v);return true;}});
+    return {stub,sets};};
+  {
+    const {stub,sets}=mk();
+    md.drawMenu(stub,{cursor:2,enterT:1.00,togT:0.97,items},L,1.00);
+    check("toggle-flash: mid-window glow on flipped row",
+      sets.some(v=>v>0&&v<=14)&&!sets.some(v=>v<0),JSON.stringify(sets));
+  }
+  {
+    const {stub,sets}=mk();
+    md.drawMenu(stub,{cursor:2,enterT:1.00,togT:-1,items},L,1.00);
+    check("toggle-flash: idle sentinel (-1) never glows", sets.length===0);
+  }
+  {
+    const {stub,sets}=mk();
+    md.drawMenu(stub,{cursor:2,enterT:1.00,togT:0.85,items},L,1.00);
+    check("toggle-flash: window closed after 120ms", sets.length===0,
+      JSON.stringify(sets));
+  }
+}
+
 // 14) textured tops: diamondTransform matrix (spec §2 worked vector),
 //     exact corner mapping, parallelogram closure over tiles x heights
 {

@@ -31,6 +31,8 @@ export function createMenuApp(opts={}){
     repDir:0,
     prevConfirm:false,
     idleT:0,
+    togT:-1,     // MENU toggle-flash timestamp (§3): subT at last RENDER/SOUND
+                 // flip, -1 sentinel otherwise; cleared wherever subT resets
     worldState:null,
     _taps:{},
     /* Advance the shell by dt seconds. Reads held axes + confirmHeld only. */
@@ -101,11 +103,13 @@ export function createMenuApp(opts={}){
           const item=this.cursor;
           if(item===0)return this.startRun();
           if(item===1)return this._push(SCREEN.LEVEL);
-          if(item===2){ this.render3d=!this.render3d; return true; }
+          if(item===2){
+            this.render3d=!this.render3d; this.togT=this.subT; return true; }
           if(item===3){
             if(audio)this.sound=!!audio.toggle(); else this.sound=!this.sound;
+            this.togT=this.subT;
             return true;
-          }
+           }
           if(item===4)return this._push(SCREEN.HOWTO);
           if(item===5)return this._push(SCREEN.SCORES);
           return false;
@@ -139,6 +143,7 @@ export function createMenuApp(opts={}){
       const args={level:this.level};
       this.screen=SCREEN.GAME; this.inGame=true;
       this.subT=0; this.repT=0; this.repDir=0; this._hot=false; this._taps={};
+      this.togT=-1;
       this.idleT=0;
       if(onStart)onStart(args);
       return args;
@@ -148,6 +153,7 @@ export function createMenuApp(opts={}){
     enterAttract(){
       this.screen=SCREEN.ATTRACT;
       this.subT=0; this.repT=0; this.repDir=0; this._hot=false; this._taps={};
+      this.togT=-1;
       return true;
      },
     exitAttract(){
@@ -167,10 +173,12 @@ export function createMenuApp(opts={}){
     _toMenuInner(){
       this.screen=SCREEN.MENU; this.inGame=false;
       this.subT=0; this.repT=0; this.repDir=0; this._hot=false; this._taps={};
+      this.togT=-1;
       this.idleT=0;
      },
     _push(s){
       this.screen=s; this.subT=0; this.repT=0; this.repDir=0; this._hot=false; this._taps={};
+      this.togT=-1;
       return true;
      },
     /* §1 score edge, frame-polled: caller latches prevSt each frame and passes

@@ -281,7 +281,7 @@ export function createGame(canvas, opts={}){
       c.scale(L.logoScale,L.logoScale);
       drawLogo(c,world.time,0,0);
       c.restore();
-      menudraw.drawMenu(c,{cursor:app.cursor,enterT:app.subT,
+      menudraw.drawMenu(c,{cursor:app.cursor,enterT:app.subT,togT:app.togT,
         items:[ITEMS[0],ITEMS[1],
           "RENDER "+(app.render3d?"3D":"2D"),
           "SOUND "+(app.sound?"ON":"OFF"),

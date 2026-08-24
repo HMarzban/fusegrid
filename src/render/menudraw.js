@@ -99,12 +99,17 @@ export function drawIntroChrome(c,t,W,H){
   }
 }
 
-/* MAIN MENU over the dimmed frozen arena. ui={cursor,items,enterT}; item
-   entries may carry a value token ("RENDER 3D"/"SOUND OFF") drawn in accent. */
+/* MAIN MENU over the dimmed frozen arena. ui={cursor,items,enterT,togT}; item
+   entries may carry a value token ("RENDER 3D"/"SOUND OFF") drawn in accent.
+   §3 pinned row: the just-flipped value flashes accent, fading over 120ms from
+   the machine's flip stamp togT (-1 = idle). The flipped row is necessarily
+   the selected one (toggles go through confirm), so the glow rides sel. */
 export function drawMenu(c,ui,L,t){
   const cur=(ui&&ui.cursor)|0;
   const items=(ui&&ui.items)||[];
   const et=(ui&&typeof ui.enterT==="number")?ui.enterT:t;
+  const fk=(ui&&typeof ui.togT==="number"&&ui.togT>=0)
+    ?1-clamp01((t-ui.togT)/0.12):0;
   const size=13;
   let maxW=0;
   for(const it of items){
@@ -130,7 +135,9 @@ export function drawMenu(c,ui,L,t){
     c.fillText(label,x,y);
     if(val){
       c.fillStyle=ACCENT;
+      if(sel&&fk>0){c.shadowColor=ACCENT;c.shadowBlur=14*fk;}
       c.fillText(val,x+monoW(label,size),y);
+      if(sel&&fk>0)c.shadowBlur=0;
     }
     c.globalAlpha=1;
     if(sel){

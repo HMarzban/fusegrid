@@ -501,5 +501,38 @@ check("ITEMS frozen, 6 entries", Object.isFrozen(ITEMS)&&ITEMS.length===6
     a.screen===SCREEN.GAME&&a.idleT===0);
 }
 
+// ---- togT flip timestamp (toggle-flash §3): set on RENDER/SOUND flip only ----
+{
+  const a=createMenuApp(); a.screen=SCREEN.MENU;
+  check("togT exposed, sentinel -1 before any flip", a.togT===-1,a.togT);
+  frames(a,10,DT);                        // subT = 10/60
+  const tAt=a.subT;
+  a.cursor=2; a.confirm();                // RENDER flip
+  check("RENDER flip stamps togT=subT and flips render3d",
+    a.togT===tAt&&a.render3d===true,a.togT+" vs "+tAt);
+  const tHold=a.togT;
+  frames(a,7,DT);
+  a.move(1);
+  check("frames+move (non-toggle menu actions) leave togT untouched",
+    a.togT===tHold&&a.screen===SCREEN.MENU,a.togT);
+}
+{
+  const a=createMenuApp({autoplay:true}); // boots straight into GAME
+  a.screen=SCREEN.MENU; a.inGame=false;
+  frames(a,20,DT);
+  a.cursor=3; a.confirm();                // SOUND flip
+  const tSnd=a.togT;
+  check("SOUND flip stamps togT=subT", tSnd===a.subT,tSnd+"/"+a.subT);
+  a.move(1); a.move(-1);
+  check("move() leaves togT untouched", a.togT===tSnd);
+  frames(a,5,DT);
+  a.cursor=2; a.confirm();
+  check("second flip re-stamps togT to the new subT",
+    a.togT===a.subT&&a.togT>tSnd,a.togT+"/"+tSnd);
+  a.cursor=4; a.confirm();                // push HOWTO (subT reset site)
+  check("screen transition clears togT sentinel (stale-flash guard)",
+    a.screen===SCREEN.HOWTO&&a.togT===-1,a.togT);
+}
+
 console.log("\n  MENUAPP RESULT: "+pass+" PASS / "+fail+" FAIL");
 process.exit(fail?1:0);
