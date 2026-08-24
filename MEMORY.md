@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-08-23 — Music + attract mode shipped (34b3ca8..598c903): chiptune loop, demobot, idle demo
+- audio.js: MUSIC_PATTERN (entries carry `s` — spec snippet dropped it; also fixed its paren typo), frame-pumped lookahead on ctx.currentTime only, duck 0.5↔0.16 @.35/.6s, toggle=single mute gate; demobot.js per §2 (flee BFS must walk THROUGH danger tiles or corner bots freeze; state setter added for purity test); menuapp ATTRACT=7 + IDLE_T=10 + guards; main demo harness seed 20260823 cycles 1..3 cap 20s, {hud:false}, window-once unlock, #stage exits but toolbar doesn't; EXTRA idleT resets in startRun/_toMenuInner else stale ≥10s idle instantly re-enters ATTRACT after M-quit. Music 37/0, demobot 21/0, menuapp 108/0, headless +16, battery 13 files green. Report: .superpowers/sdd/2026-08-23-campaigns/task-report-D.md. Left: manual browser/device smoke (§6 MANUAL list).
+
 ## 2026-08-23 — Netcode fix round F1-F4 (76bfd8a): seq-first, neutral LEAVE, pinned codes, fail-closed decode
 - F1: onInput classifies dup/stale/gap BEFORE tick floor; fresh seq consumes ledger slot even when payload dropped (below-floor drop no longer freezes lastSeq → recovery traffic can't fabricate bad_seq halts). F2: LEAVE is neutral — hurtPlayer removed, survivor keeps lives/score. F3: ERROR_CODES pinned {bad_seq,bad_seed,bad_shape,unknown_pid}, makeError coerces, bad_host/bad_tick folded to bad_shape, WELCOME invalid → bad_seed+close. F4: decode never throws (null), capsOk §4.3 ≤64 deep cap, WebSocketTransport._onmessage guarded boundary + _validate hook (v2). Spec A1-A3 (+§2.3 corrected to neutral). RED→GREEN: net_lockstep 59/0, protocol 15/0, full battery 11/11.
 
