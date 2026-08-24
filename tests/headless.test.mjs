@@ -191,5 +191,21 @@ function mkCanvas(){
     g.world.state==="PLAY"&&g.app.screen===SCREEN.MENU);
 }
 
+// ---- ?net=local dual-peer lockstep harness (netcode v1 dev aid) ----
+{
+  const g=createGame(null,{autoplay:true,netLocal:true});
+  check("net=local builds dual-peer lockstep harness",
+    !!g.net&&!!g.net.lsA&&!!g.net.lsB&&!!g.net.wB, String(!!g.net));
+  let t=0; for(let i=0;i<80;i++){ t+=16; g.loop(t); }
+  const a=g.world.tick,b=g.net.wB.tick;
+  check("net=local drives both worlds in lockstep (equal ticks+score)",
+    a>0&&a===b&&g.world.score===g.net.wB.score,a+"/"+b);
+}
+{
+  const g=createGame(null,{autoplay:true});
+  check("flag off: no net harness (default path untouched)",
+    !g.net);
+}
+
 console.log(fail? "HEADLESS FAIL":"HEADLESS OK");
 process.exit(fail?1:0);

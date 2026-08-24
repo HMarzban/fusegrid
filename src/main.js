@@ -14,6 +14,8 @@ import {introPhase, INTRO_DUR} from "./app/intro.js";
 import {loadScores, recordScore, saveScores} from "./app/highscores.js";
 import {Input} from "./input.js";
 import {mountTouch} from "./touch.js";
+import {createLockstep} from "./net/lockstep.js";
+import {LocalTransport} from "./net/transport.js";
 
 const SCREEN_NAME=["BOOT","INTRO","MENU","LEVEL","HOWTO","SCORES","GAME"];
 
@@ -23,6 +25,10 @@ export function createGame(canvas, opts={}){
   const is3d=typeof location!=="undefined"&&/[?&]render=3d/.test(location.search||"");
   const autoplay=(typeof location!=="undefined"
     &&/[?&]play=1/.test(location.search||""))||opts.autoplay===true;
+  // ?net=local dev aid: run the world through a two-peer lockstep harness
+  // (flag off = byte-identical default path below)
+  const netLocal=(typeof location!=="undefined"
+    &&/[?&]net=local/.test(location.search||""))||opts.netLocal===true;
   const dateStr=()=>new Date().toISOString().slice(0,10);
 
   // frozen backdrop world: created exactly as today but NEVER forced to
@@ -52,6 +58,33 @@ export function createGame(canvas, opts={}){
   const touch=mountTouch(input,(typeof document!=="undefined"&&document)?
     document.getElementById("stage"):null);
   let prevSt=null;
+
+  /* ?net=local harness: world A stays the live game world; a mirror peer B
+     (same seed) runs the same lockstep protocol over crossed LocalTransports.
+     B is driven by a deterministic script so both peers keep stepping. */
+  let net=null;
+  if(netLocal){
+    const wB=createWorld(world.seed,1);
+    loadLevel(wB,1,false); wB.state="PLAY";
+    let lsA=null,lsB=null;
+    const tA=new LocalTransport((m)=>{ if(lsB)lsB.handleMessage(m); });
+    const tB=new LocalTransport((m)=>{ if(lsA)lsA.handleMessage(m); });
+    lsA=createLockstep({selfPid:0,world,transport:tA,dt:CFG.STEP,
+      players:[0,1]});
+    lsB=createLockstep({selfPid:1,world:wB,transport:tB,dt:CFG.STEP,
+      players:[0,1]});
+    let bf=0;
+    net={lsA,lsB,wB,
+      drive(){
+        lsA.pushIntent(input.intent());
+        input.advance();
+        const m=[{x:0,y:-1},{x:-1,y:0},{x:0,y:1},{x:1,y:0}][bf%4];
+        lsB.pushIntent({move:m,fire:(bf%19===0),shift:(bf%41===0),
+          remote:(bf%97===0),kick:false});
+        bf++;
+        lsA.tick(); lsB.tick();
+       }};
+   }
 
   function setBtn(id,txt){
     if(typeof document==="undefined")return;
@@ -218,9 +251,12 @@ export function createGame(canvas, opts={}){
       acc+=dt;
       let steps=0;
       while(acc>=CFG.STEP){
-        const it=input.intent();
-        step(world, CFG.STEP, {0:it});
-        input.advance();
+        if(net)net.drive();
+        else{
+          const it=input.intent();
+          step(world, CFG.STEP, {0:it});
+          input.advance();
+         }
         acc-=CFG.STEP; steps++;
         if(steps>6){ acc=0; break; }    // hard cap (anti spiral-of-death)
          }
@@ -271,7 +307,7 @@ export function createGame(canvas, opts={}){
   if(typeof window!=="undefined" &&
      (opts.debug===true || /[?&]debug=1/.test(location.search||""))){
     window.__GAME__={
-      G:world, renderer, input, app,
+      G:world, renderer, input, app, net,
       step:(n=1)=>{ for(let i=0;i<n;i++){const it=input.intent(); step(world,CFG.STEP,{0:it}); input.advance();} renderer.render(world,CFG.STEP*n); },
       state:()=>app.screen===SCREEN.GAME?world.state:SCREEN_NAME[app.screen],
       reset:()=>{ app.toMenu(); },
@@ -287,7 +323,7 @@ export function createGame(canvas, opts={}){
 
    // boot
   if(typeof requestAnimationFrame!=="undefined") requestAnimationFrame(loop);
-  return {world, input, renderer, app, loop,
+   return {world, input, renderer, app, net, loop,
     stop(){ running=false; },
     start(){ running=true; if(typeof requestAnimationFrame!=="undefined") requestAnimationFrame(loop); },
     setBtn};
