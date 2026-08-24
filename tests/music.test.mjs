@@ -1,4 +1,5 @@
-import {createAudio, MUSIC_PATTERN} from "../src/audio.js";
+import {createAudio, MUSIC_PATTERN, MUSIC_PATTERN_B, MUSIC_SECTIONS}
+  from "../src/audio.js";
 
 let pass=0, fail=0;
 function check(name, cond, detail){ cond?pass++:fail++;
@@ -74,6 +75,40 @@ function installAC(ac){
   check("durations positive, within pattern span", durs);
 }
 
+// ---- B section (AABB cycle): pure frozen data, same mix, new pitches ----
+{
+  check("sections frozen [A,A,B,B]", Object.isFrozen(MUSIC_SECTIONS)
+    &&JSON.stringify(MUSIC_SECTIONS)==='["A","A","B","B"]',
+    JSON.stringify(MUSIC_SECTIONS));
+  check("B pattern frozen (root + tracks)", Object.isFrozen(MUSIC_PATTERN_B)
+    &&Object.isFrozen(MUSIC_PATTERN_B.bass)&&Object.isFrozen(MUSIC_PATTERN_B.lead)
+    &&Object.isFrozen(MUSIC_PATTERN_B.hat));
+  check("B STEP/LEN match A (interleavable sections)",
+    MUSIC_PATTERN_B.STEP===MUSIC_PATTERN.STEP
+    &&MUSIC_PATTERN_B.LEN===MUSIC_PATTERN.LEN);
+  const T_OF={bass:"square",lead:"square",hat:"triangle"},V_OF={bass:.10,lead:.07,
+    hat:.02};
+  check("B instrument mix matches A exactly (count+type+volume per track)",
+    ["bass","lead","hat"].every(k=>MUSIC_PATTERN_B[k].length
+      ===MUSIC_PATTERN[k].length
+      &&MUSIC_PATTERN_B[k].every(n=>n.t===T_OF[k]&&near(n.v,V_OF[k]))),
+    MUSIC_PATTERN_B.bass.length+","+MUSIC_PATTERN_B.lead.length
+    +","+MUSIC_PATTERN_B.hat.length);
+  check("B hats on odd steps only", MUSIC_PATTERN_B.hat.length===32
+    &&MUSIC_PATTERN_B.hat.every(n=>n.s%2===1));
+  const roots=p=>[0,8,16,24].map(s=>p.bass.find(n=>n.s===s).f);
+  check("B root progression differs from A",
+    JSON.stringify(roots(MUSIC_PATTERN_B))!==JSON.stringify(roots(MUSIC_PATTERN)),
+    roots(MUSIC_PATTERN).join("/")+" vs "+roots(MUSIC_PATTERN_B).join("/"));
+  check("B lead contour differs from A",
+    JSON.stringify(MUSIC_PATTERN_B.lead.map(n=>[n.s%32,n.f]))
+      !==JSON.stringify(MUSIC_PATTERN.lead.filter(n=>n.s<32).map(n=>[n.s,n.f])));
+  const fin=a=>a.every(n=>["s","f","d","v"].every(k=>typeof n[k]==="number"
+    &&Number.isFinite(n[k]))&&typeof n.t==="string");
+  check("B entries all finite {s,f,d,t,v}", fin(MUSIC_PATTERN_B.bass)
+    &&fin(MUSIC_PATTERN_B.lead)&&fin(MUSIC_PATTERN_B.hat));
+}
+
 // ---- unlock/lazy graph + pump lookahead scheduling ----
 {
   const ac=mkAC(); installAC(ac);
@@ -97,13 +132,14 @@ function installAC(ac){
     ac.starts.every((s,i)=>i===0||s.t>=ac.starts[i-1].t)
     &&ac.starts.some(s=>near(s.t,0.20,1e-9)));
 
-  // drive 21s in 0.1s pumps => >LEN*STEP (9.6s) covered twice: seamless wrap
+  // drive 80s in 0.1s pumps => >2 full AABB cycles (256 steps = 38.4s):
+  // seamless wrap now means step k+256 === step k across the WHOLE cycle
   const before=ac.starts.length;
-  for(let i=0;i<210;i++){ ac.currentTime+=0.1; a.pump(); }
+  for(let i=0;i<800;i++){ ac.currentTime+=0.1; a.pump(); }
   check("long drive keeps start times monotonic",
     ac.starts.slice(before).every((s,i,arr)=>i===0
       ||s.t>=arr[i-1].t));
-  const t0=ac.starts[0].t,S=MUSIC_PATTERN.STEP;
+  const t0=ac.starts[0].t,S=MUSIC_PATTERN.STEP,CYC=256;
   const buckets=new Map();
   for(const s of ac.starts){
     const k=Math.round((s.t-t0)/S);
@@ -112,11 +148,11 @@ function installAC(ac){
    }
   const sig=k=>{ const arr=(buckets.get(k)||[]).sort(); return arr.join("|"); };
   let wrap=true,probe=0;
-  for(let k=0;k<64;k++){
-    if(buckets.has(k)&&buckets.has(k+64)){ probe++;
-      if(sig(k)!==sig(k+64)){wrap=false;break;} }
+  for(let k=0;k<CYC;k++){
+    if(buckets.has(k)&&buckets.has(k+CYC)){ probe++;
+      if(sig(k)!==sig(k+CYC)){wrap=false;break;} }
    }
-  check("seamless wrap: step k+N === step k (pitch/type identical)", wrap&&probe>60,
+  check("seamless wrap: step k+256 === step k (full AABB cycle)", wrap&&probe>250,
     "compared "+probe+" steps");
 
   // note envelope: v -> 0.0001 ramp over d, stop at t+d+0.03
@@ -229,6 +265,36 @@ function installAC(ac){
     "steps="+ts.length+" ["+ts.slice(0,4).map(t=>t.toFixed(2)).join(",")+"...]");
   check("catch-up clamp: step lands at clamped now+0.05 (9.05)",
     ts.length===1&&near(ts[0],9.05), String(ts[0]));
+}
+
+// ---- AABB cycle end-to-end (pump level): B-only bass markers prove the
+//        section order A(0-63) A(64-127) B(128-191) B(192-255) wrap(256+) ----
+{
+  const ac=mkAC(); installAC(ac);
+  const a=createAudio(); a.unlock();               // nextT=now+0.05 anchor
+  for(let i=0;i<520;i++){ ac.currentTime+=0.1; a.pump(); }   // 52s ≈ 346 steps
+  // B-exclusive pitches (absent from every A track: A bass is
+  // {55,82.4,43.65,65.4,49,73.42}, A lead >=196): Bb1 root/quint family + A2
+  const isBmark=f=>[110,58.27,87.31].some(m=>Math.abs(f-m)<0.02);
+  const isB=new Set();
+  // derive the anchor from the first start: unlock's nextT=now+0.05 may be
+  // clamped once if the first pump lags the clock — shift cancels in k-space
+  const t0=ac.starts[0].t,S=MUSIC_PATTERN.STEP;
+  for(const st of ac.starts)if(isBmark(st.f))isB.add(Math.round((st.t-t0)/S));
+  // B bass marker steps within a 64-step section: D bar quint (4), Bb bar
+  // roots+quints (16,18,20,22), then the octave-up repeat (+32)
+  const EXP=[4,16,18,20,22,36,48,50,52,54];
+  const secIsB=lo=>EXP.every(e=>isB.has(lo+e))
+    &&![...isB].some(k=>k>=lo&&k<lo+64&&!EXP.includes(k-lo));
+  check("AABB: section 1 (steps 0-63) plays A — zero B markers",
+    ![...isB].some(k=>k>=0&&k<64),[...isB].filter(k=>k<64).join(","));
+  check("AABB: section 2 (steps 64-127) plays A again",
+    ![...isB].some(k=>k>=64&&k<127&&isB.has(k)));
+  check("AABB: section 3 (steps 128-191) plays B", secIsB(128),
+    [...isB].filter(k=>k>=128&&k<192).sort((x,y)=>x-y).join(","));
+  check("AABB: section 4 (steps 192-255) plays B again", secIsB(192));
+  check("AABB: cycle wraps — steps 256+ play A again",
+    ![...isB].some(k=>k>=256&&k<320),[...isB].filter(k=>k>=256).join(","));
 }
 
 // ---- grep gate: no wall-clock/random in scheduling code (spec §6) ----
