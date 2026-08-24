@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-08-24 — V1.1 polish pack (82a0f00..1f465aa): music B-section, __audio gate, toggle-flash, canvasEl warn, serve test fixes
+- Music loop now AABB (MUSIC_PATTERN_B D–C–Bb–G + MUSIC_SECTIONS, pump selects per stepN — tests derive t0 from first start since unlock anchor may clamp once); menuapp togT stamp (-1 sentinel, cleared at every subT reset) drives drawMenu's 120ms accent glow on the selected value row; distinct opts.canvasEl now console.warns once (C1 swallow stays render-canvas-bound by design); serve.test dropped decoy dir + awaits child exit before rmSync; fx.js header documents single-renderer singleton. RED→GREEN areas 1/3/4; battery 13/13 green. Left: manual ?debug=1/__audio, flash-feel, A/B listen smokes. Report: .superpowers/sdd/2026-08-23-campaigns/task-report-POLISH.md
+
 ## 2026-08-24 — Micro-polish: unlock-gated jingle, attract-exit fade pinned, dead imports
 - P1: boot uiJingle now defers to first gesture via fireJingle latch on unlockOnce (suspended ctx froze all 5 oscillators into a chord-blob); I1 test re-pointed to deferral + new window-stub block proves once-only post-unlock firing; drive-by: main.js debug hook `location` guard aligned with file's own typeof pattern (latent headless crash). P2: ATTRACT→MENU veil already rode _push(MENU) subT reset — probe+regression test pinned (k≈0.94 frame-1, settles ≤0.73), zero prod change. P4: demobot tileOf/solidAt imports removed (bfsNext kept) + fs grep gate. Headless 59→66 checks; battery 13 files green.
 
