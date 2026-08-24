@@ -13,13 +13,13 @@ import {PROJ} from "./r3d/camera.js";
    callers can chain. render(world) paints one frame. */
 export function createRenderer(canvas, opts={}){
   const kind = opts.kind==="3d" ? "3d" : "2d";
-  if(kind === "2d") bakeAtlas();
+  bakeAtlas(); // idempotent (BAKED.ready); textured 3D tops need sources too
   const noop=()=>{};
   const ctx = canvas && canvas.getContext ? canvas.getContext("2d",{alpha:false})
     : {save:noop,restore:noop,translate:noop,rotate:noop,scale:noop,
        fillRect:noop,strokeRect:noop,clearRect:noop,beginPath:noop,closePath:noop,
-       moveTo:noop,lineTo:noop,arc:noop,arcTo:noop,bezierCurveTo:noop,
-       quadraticCurveTo:noop,fill:noop,stroke:noop,ellipse:noop,
+        moveTo:noop,lineTo:noop,arc:noop,arcTo:noop,bezierCurveTo:noop,
+        quadraticCurveTo:noop,fill:noop,stroke:noop,ellipse:noop,transform:noop,
        createLinearGradient:()=>({addColorStop:noop}),
        createRadialGradient:()=>({addColorStop:noop}),
        drawImage:noop,fillText:noop,strokeText:noop,setTransform:noop};

@@ -49,6 +49,13 @@ export function bakeAtlas(){
   BAKED.ready=true;
 }
 
+/* Standalone baked tile source for the 3D textured top faces (spec §2).
+   type: "wall" | "brick". Null until baked / in headless contexts. */
+export function bakedTile(bi,type){
+  const s=BAKED.ready&&BAKED[type]&&BAKED[type][bi];
+  return s||null;
+}
+
 function biomeIndex(level){ return (Math.max(1,level)-1)%BIOMES.length; }
 
 /* ---- tiles ---- */

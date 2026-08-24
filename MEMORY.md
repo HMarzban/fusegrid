@@ -16,6 +16,37 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-08-23 — Renderer v2 polish shipped: textured diamond tops + shadow tier + biome heights
+- scene3d: TIERS renumber (F0/S1/E2/B3/L4), diamondTransform (spec §2 vector
+  pinned), heightFor (BIOMES hWall/hBrick ?? PROJ; J24/14 I30/18 F18/10 A26/15),
+  blockPainter affine-textured tops w/ per-call smoothing, lazy 64px radial
+  shadow disc (blocks .22 bbox-inscribed, entities .26 rx*0.5 squash); renderer
+  bakeAtlas unconditional + noop ctx transform; sprites additive bakedTile()
+  accessor only (2D draw fns untouched); camera.js byte-frozen. RED→GREEN r3d
+  67/0, full battery green. DEVIATION (documented in test #16): spec §3's
+  GLOBAL shadow-band chain is unsatisfiable with "byDepth untouched" +
+  "shadow.depth=caster depth" + v1 depth-interleaved occlusion (depth-0 border
+  wall vs spawn entity) → shadows ride caster depth slot (floor<shadow<upper
+  per slot pinned instead); far-behind fringes = accepted stylization.
+
+## 2026-08-23 — Touch controls independent review (fd18448): Approved, spec ✅ §1-§7
+- Verified vs spec+report+diff: routing purity grep-clean (setIntent/padFire
+  only; input.js strictly +3, keyboard byte-identical), pid bookkeeping sound
+  (up/cancel/lostpointercapture idempotent), C1 intact (main.js:135 swallow is
+  pre-existing), GAME-gate survives M-quit/LOSE/WIN both ways, [hidden] not
+  overridden by author CSS, scope = 5 files no core/net/ui. Re-ran touch 39/0 +
+  full battery green. Minors: capture-fail stuck-axis on ancient WebViews,
+  same-pid dual-claim API edge, move-through-dead-center untested. Cannot
+  verify: real-device manual list (latency/safe-area/ghost-click/fit).
+
+## 2026-08-23 — Touch controls shipped (fd18448): virtual pad via Input pipeline
+- src/touch.js (hasTouch/PadMapper/mountTouch; per-control pid claim, 4-way
+  cross zones w/ 20% dead center, setIntent/padFire-only routing, zero canvas
+  listeners), input.padFire, main.js touch.update(GAME gate), index.html
+  #touchpad skeleton+CSS. RED→GREEN: touch 39/0; full battery green (sim 29,
+  menuapp 93, r3d 51…). Left open: real-device manual smoke (latency/safe-area/
+  iOS ghost-click) per spec §6 MANUAL list.
+
 ## 2026-08-23 — Menu/intro FINAL FIX WAVE (C1/I1/I2/I3) — all four fixed, 9/9 green
 - One commit: pointer single-fire (non-GAME pointerdown swallows Input's fire
   latch; _attach now registers el listeners headless so C1 is testable), cue

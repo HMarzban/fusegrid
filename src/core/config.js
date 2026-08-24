@@ -14,10 +14,10 @@ export const CFG = Object.freeze({
 });
 export const T = Object.freeze({EMPTY:0, BRICK:1, WALL:2});
 export const BIOMES = Object.freeze([
-  {name:"JUNGLE", bg0:"#123a33",bg1:"#0a201d",brickA:"#57c34a",brickB:"#2f7d34",brickHi:"#8fe87a",wall:"#5b6c86",wallHi:"#7f93b4",floor0:"#123028",floor1:"#0c241f"},
-  {name:"ICE",    bg0:"#2b4a7a",bg1:"#0f2350",brickA:"#7fb4ff",brickB:"#3f6fbf",brickHi:"#cfe6ff",wall:"#8ea6c8",wallHi:"#c2d4ea",floor0:"#123056",floor1:"#0c2040"},
-  {name:"FACTORY",bg0:"#4a3f2b",bg1:"#241d12",brickA:"#d78a3c",brickB:"#9c5f26",brickHi:"#ffc27a",wall:"#6b7382",wallHi:"#98a2b2",floor0:"#2a2418",floor1:"#1a1610"},
-  {name:"ARENA",  bg0:"#3a2b4a",bg1:"#1c1330",brickA:"#ff5d73",brickB:"#b03a4d",brickHi:"#ff9db0",wall:"#6a5a82",wallHi:"#9a86b4",floor0:"#241a34",floor1:"#181028"},
+  {name:"JUNGLE", bg0:"#123a33",bg1:"#0a201d",brickA:"#57c34a",brickB:"#2f7d34",brickHi:"#8fe87a",wall:"#5b6c86",wallHi:"#7f93b4",floor0:"#123028",floor1:"#0c241f",hWall:24,hBrick:14},
+  {name:"ICE",    bg0:"#2b4a7a",bg1:"#0f2350",brickA:"#7fb4ff",brickB:"#3f6fbf",brickHi:"#cfe6ff",wall:"#8ea6c8",wallHi:"#c2d4ea",floor0:"#123056",floor1:"#0c2040",hWall:30,hBrick:18},
+  {name:"FACTORY",bg0:"#4a3f2b",bg1:"#241d12",brickA:"#d78a3c",brickB:"#9c5f26",brickHi:"#ffc27a",wall:"#6b7382",wallHi:"#98a2b2",floor0:"#2a2418",floor1:"#1a1610",hWall:18,hBrick:10},
+  {name:"ARENA",  bg0:"#3a2b4a",bg1:"#1c1330",brickA:"#ff5d73",brickB:"#b03a4d",brickHi:"#ff9db0",wall:"#6a5a82",wallHi:"#9a86b4",floor0:"#241a34",floor1:"#181028",hWall:26,hBrick:15},
 ]);
 export const biomeOf = lvl => BIOMES[(Math.max(1,lvl)-1)%BIOMES.length];
 export function key(x,y){return y*CFG.COLS+x;}
