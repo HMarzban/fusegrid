@@ -302,5 +302,46 @@ function mkCanvas(){
     plays.length===0&&w.events.length===0);
 }
 
+// ---- fix round F3: toolbar GAME-gates (btnPause/btnRestart inert outside GAME) ----
+{
+  const stubs={btnPause:{textContent:"Pause"},
+    btnSound:{textContent:"Sound: On"},btnRestart:{textContent:"Restart"}};
+  globalThis.document={getElementById:(id)=>stubs[id]||null};
+  try{
+    const ev={currentTarget:{blur(){}}};
+    // outside GAME (ATTRACT): clicks must not touch live world or flip labels
+    const g=createGame(null,{seed:31});
+    g.app.skip();
+    g.app.enterAttract();
+    let t=3000; g.loop(t); t+=250; g.loop(t);  // frame 1 creates demo (dt=0), frame 2 steps it
+    check("F3 probe: attract active with demo running",
+      g.app.screen===SCREEN.ATTRACT&&!!g.demo,String(g.app.screen));
+    const w=g.world;
+    w.score=7777; w.enemies=[];          // poison markers a stray loadLevel would wipe
+    const tick0=w.tick;
+    stubs.btnPause.onclick(ev);
+    stubs.btnRestart.onclick(ev);
+    check("F3 attract: btnPause+btnRestart leave live world untouched",
+      w.score===7777&&w.enemies.length===0&&w.tick===tick0
+      &&w.state==="PLAY",
+      w.score+"/"+w.enemies.length+"/"+w.tick+"/"+w.state);
+    check("F3 attract: no PAUSE/label flip over the demo",
+      stubs.btnPause.textContent==="Pause",stubs.btnPause.textContent);
+    check("F3 attract: demo world keeps stepping untouched",
+      !!g.demo&&g.demo.world.time>0,String(g.demo&&g.demo.world.time));
+    // inside GAME: byte-identical behavior preserved
+    const g2=createGame(null,{autoplay:true});
+    stubs.btnPause.onclick(ev);
+    check("F3 GAME: btnPause still pauses + flips label to Resume",
+      g2.world.state==="PAUSE"&&stubs.btnPause.textContent==="Resume",
+      g2.world.state+"/"+stubs.btnPause.textContent);
+    stubs.btnPause.onclick(ev);
+    g2.world.level=2;
+    stubs.btnRestart.onclick(ev);
+    check("F3 GAME: btnRestart still reloads level 1 fresh PLAY",
+      g2.world.level===1&&g2.world.state==="PLAY",g2.world.level+"/"+g2.world.state);
+   }finally{ delete globalThis.document; }
+}
+
 console.log(fail? "HEADLESS FAIL":"HEADLESS OK");
 process.exit(fail?1:0);

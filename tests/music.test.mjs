@@ -179,7 +179,9 @@ function installAC(ac){
   check("duck-out restores 0.5 over 0.6s", near(r[1],0.5)&&near(r[2]-ac.currentTime,0.6),
     JSON.stringify(r));
 
-  // mute ramp overrides duck state instantly; unmute returns to BASE not duck
+  // mute ramp overrides duck state instantly; unmute returns to DUCKED target
+  // (fix round F2: restore must respect ducked=true, else frame-polled
+  //  duck(true) in GAME idempotently no-ops and music blasts at full volume)
   a.duck(true);
   a.toggle();
   r=lastRamp();
@@ -187,7 +189,8 @@ function installAC(ac){
     JSON.stringify(r));
   a.toggle();
   r=lastRamp();
-  check("unmute restores base 0.5 (self-heals over duck)", near(r[1],0.5),
+  check("unmute while ducked restores 0.16 NOT 0.5", near(r[1],0.16)
+    &&Math.abs(r[1]-0.5)>0.1,
     JSON.stringify(r));
 }
 
@@ -212,6 +215,20 @@ function installAC(ac){
     ac.currentTime+=0.2; a.pump();     // muted -> no notes
     return ac.starts.length===before;
    })());
+}
+
+// ---- fix round F1: scheduler catch-up clamp (tab-hidden RAF resume) ----
+{
+  const ac=mkAC(); installAC(ac);
+  const a=createAudio(); a.unlock();       // nextT=now+0.05
+  ac.currentTime=9.0;                      // RAF paused ~9s: clock ran past nextT
+  a.pump();
+  const ts=[...new Set(ac.starts.map(s=>s.t))];
+  check("catch-up clamp: long gap collapses to exactly ONE step",
+    ac.starts.length>0&&ts.length===1,
+    "steps="+ts.length+" ["+ts.slice(0,4).map(t=>t.toFixed(2)).join(",")+"...]");
+  check("catch-up clamp: step lands at clamped now+0.05 (9.05)",
+    ts.length===1&&near(ts[0],9.05), String(ts[0]));
 }
 
 // ---- grep gate: no wall-clock/random in scheduling code (spec §6) ----

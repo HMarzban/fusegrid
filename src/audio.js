@@ -100,6 +100,10 @@ export function createAudio(){
   function pump(){
     if(!ctx||!musicGain||muted)return;
     try{
+      /* catch-up clamp: RAF pauses on hidden tabs while ctx.currentTime keeps
+         running; without this, resume schedules every missed step at past
+         timestamps as one burst glitch */
+      if(nextT<ctx.currentTime)nextT=ctx.currentTime+0.05;
       const horizon=ctx.currentTime+LOOKAHEAD,P=MUSIC_PATTERN;
       while(nextT<=horizon){
         emitStep(stepIdx,nextT);
@@ -133,7 +137,11 @@ export function createAudio(){
     },
     toggle(){
       muted=!muted;
-      if(musicGain)rampMusicGain(muted?MUS_FLOOR:MUS_BASE,muted?0.01:0.6);
+      /* duck-aware restore (F2): unmute while ducked must return to MUS_DUCK,
+         else main's frame-polled duck(true) idempotently no-ops until the
+         screen flips and music blasts at full volume inside GAME */
+      if(musicGain)rampMusicGain(muted?MUS_FLOOR:(ducked?MUS_DUCK:MUS_BASE),
+        muted?0.01:0.6);
       return !muted;
      },
     unlock,unlocked,duck,pump,

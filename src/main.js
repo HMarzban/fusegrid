@@ -364,8 +364,10 @@ export function createGame(canvas, opts={}){
    // UI buttons
   if(typeof document!=="undefined" && document.getElementById){
     const bp=document.getElementById("btnPause");
-    // blur after each click so Space never re-triggers a focused button
-    if(bp)bp.onclick=(e)=>{ onPause(); e&&e.currentTarget&&e.currentTarget.blur(); };
+    // F3 GAME-gate: toolbar must be inert over ATTRACT/MENU (demo world is
+    // live there); blur after each click so Space never re-triggers focus
+    if(bp)bp.onclick=(e)=>{ if(app.screen!==SCREEN.GAME)return;
+      onPause(); e&&e.currentTarget&&e.currentTarget.blur(); };
     const bs=document.getElementById("btnSound");
     if(bs)bs.onclick=(e)=>{ const on=(opts.audio && opts.audio.toggle && opts.audio.toggle());
       app.sound=!!on;
@@ -373,7 +375,8 @@ export function createGame(canvas, opts={}){
       if(audio)audio.play("uiTog");   // §5 tog cue on the button toggle too
       e&&e.currentTarget&&e.currentTarget.blur(); };
     const br=document.getElementById("btnRestart");
-    if(br)br.onclick=(e)=>{ loadLevel(world,1,false); world.state="PLAY";
+    if(br)br.onclick=(e)=>{ if(app.screen!==SCREEN.GAME)return;
+      loadLevel(world,1,false); world.state="PLAY";
       e&&e.currentTarget&&e.currentTarget.blur(); };
     }
 
