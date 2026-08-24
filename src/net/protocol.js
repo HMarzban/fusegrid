@@ -1,20 +1,106 @@
 /* PROTOCOL — message shapes for future authoritative multiplayer.
    Phase-1: JSON. Same typed shapes upgrade to binary later.
-   The sim NEVER imports this; only net/transport + net/client + server do. */
+   The sim NEVER imports this; only net/transport + net/lockstep + server do. */
 export const MSG={
   JOIN:   "join",     // {type,pid,name?,seed?}
-  INPUT:  "input",    // {type,seq,pid,move:{x,y},fire,shift,remote,kick}
+  INPUT:  "input",    // {type,seq,pid,tick,move:{x,y},fire,shift,remote,kick}
   SNAPSHOT:"snapshot",// {type,tick,seed,level,state,players[],bombs[],enemies[]}
   EVENT:  "event",    // {type,e:{t,x,y,color?}} (cosmetic fx)
-  LEAVE:  "leave",    // {type,pid}
+  LEAVE:  "leave",    // {type,pid,tick}
+  WELCOME:"welcome",  // {type,pid,seed,tick,players?}
+  PAUSE:  "pause",    // host RPC {type,pid,tick}
+  RESUME: "resume",   // host RPC {type,pid,tick}
+  RESTART:"restart",  // host RPC {type,pid,tick}
+  MENU:   "menu",     // host RPC {type,pid,tick}
+  ERROR:  "error",    // {type,reason,detail?} — protocol violation report
 };
+export const MAX_PLAYERS=4;
+export const DELAY=2;                 // lockstep lookahead window (ticks)
+export const SEED_MAX=0x7FFFFFFF;     // u31 seed range
+
+const KNOWN_TYPES=new Set(Object.values(MSG));
+export function isKnownType(msg){
+  return !!msg&&typeof msg.type==="string"&&KNOWN_TYPES.has(msg.type);
+}
 
 /* A per-player input. This is exactly what a client SENDS the server:
-   intent only (move vector + edges), never coordinates the server decides. */
-export function makeInput(seq, pid, input){
-  return {type:MSG.INPUT, seq, pid,
+   intent only (move vector + edges), never coordinates the server decides.
+   Lockstep v1 adds `tick`: the buffer tick this intent applies at. */
+export function makeInput(seq, pid, input, tick){
+  const m={type:MSG.INPUT, seq, pid,
     move:{x:input.move?input.move.x:0, y:input.move?input.move.y:0},
     fire:!!input.fire, shift:!!input.shift, remote:!!input.remote, kick:!!input.kick};
+  if(tick!==undefined)m.tick=tick;
+  return m;
+}
+
+/* Lockstep session open: seed + roster so every peer derives the same world. */
+export function makeWelcome(pid, seed, tick, players){
+  const w={type:MSG.WELCOME, pid, seed, tick};
+  if(players)w.players=players.map(p=>({pid:p.pid}));
+  return w;
+}
+
+/* Host-only control RPC; `type` is one of MSG.PAUSE/RESUME/RESTART/MENU. */
+export function makeRpc(type, pid, tick){
+  return {type, pid, tick};
+}
+
+/* Protocol-violation report (bad_seq / unknown_pid / bad_host / bad_tick). */
+export function makeError(reason, detail){
+  const e={type:MSG.ERROR, reason};
+  if(detail!==undefined)e.detail=detail;
+  return e;
+}
+
+const isInt=v=>typeof v==="number"&&Number.isInteger(v);
+const inDirSet=v=>v===-1||v===0||v===1;
+
+/* Fail-closed input gate (§4). Structural faults -> {ok:false,reason:"invalid"}.
+   Sequence classes let the caller pick drop-vs-halt:
+     seq === lastSeq   -> "dup"   (already have it; silent drop)
+     seq <  lastSeq    -> "stale" (old news; silent drop)
+     seq >  lastSeq+1  -> "gap"   (desync risk; caller emits bad_seq + halt)
+   Default tick window is [nowTick, nowTick+DELAY]; callers that BUFFER ahead
+   (lockstep catch-up) pass windowLen=Infinity to enforce only tick>=nowTick. */
+export function validateInput(msg, lastSeq, nowTick, windowLen){
+  const wl=windowLen===undefined?DELAY:windowLen;
+  if(!msg||msg.type!==MSG.INPUT)return{ok:false,reason:"invalid"};
+  if(!isInt(msg.seq)||msg.seq<0)return{ok:false,reason:"invalid"};
+  if(!isInt(msg.pid)||msg.pid<0||msg.pid>=MAX_PLAYERS)
+    return{ok:false,reason:"invalid"};
+  if(!isInt(msg.tick)||!Number.isFinite(msg.tick))
+    return{ok:false,reason:"invalid"};
+  if(msg.tick<nowTick||msg.tick>nowTick+wl)return{ok:false,reason:"invalid"};
+  if(!msg.move||!isInt(msg.move.x)||!inDirSet(msg.move.x)
+    ||!isInt(msg.move.y)||!inDirSet(msg.move.y))
+    return{ok:false,reason:"invalid"};
+  for(const k of ["fire","shift","remote","kick"])
+    if(typeof msg[k]!=="boolean")return{ok:false,reason:"invalid"};
+  if(lastSeq!=null){
+    if(msg.seq===lastSeq)return{ok:false,reason:"dup"};
+    if(msg.seq<lastSeq)return{ok:false,reason:"stale"};
+    if(msg.seq>lastSeq+1)return{ok:false,reason:"gap"};
+  }
+  return{ok:true};
+}
+
+/* Fail-closed welcome gate: pid range, u31 seed, finite tick, roster cap. */
+export function validateWelcome(msg){
+  if(!msg||msg.type!==MSG.WELCOME)return{ok:false,reason:"invalid"};
+  if(!isInt(msg.pid)||msg.pid<0||msg.pid>=MAX_PLAYERS)
+    return{ok:false,reason:"invalid"};
+  if(!isInt(msg.seed)||msg.seed<0||msg.seed>SEED_MAX)
+    return{ok:false,reason:"invalid"};
+  if(!isInt(msg.tick)||msg.tick<0)return{ok:false,reason:"invalid"};
+  if(msg.players!==undefined){
+    if(!Array.isArray(msg.players)||msg.players.length>MAX_PLAYERS)
+      return{ok:false,reason:"invalid"};
+    for(const p of msg.players)
+      if(!p||!isInt(p.pid)||p.pid<0||p.pid>=MAX_PLAYERS)
+        return{ok:false,reason:"invalid"};
+  }
+  return{ok:true};
 }
 
 /* Authoritative snapshot the server sends to every client. Intentionally
@@ -36,8 +122,9 @@ export function makeSnapshot(world, seed, level){
    };
 }
 
-/* Apply an authoritative snapshot into a client world (reconciliation).
-   Overwrites positions/flags; keeps transient server-owned state. */
+/* @deprecated Lockstep-incompatible. Snapshot reconciliation fabricates enemy
+   dynamics and cannot reproduce a peer's exact state; lockstep v1 (net/lockstep)
+   never calls it. Kept only for the legacy authoritative-server path. */
 export function applySnapshot(world, snap){
   world.tick=snap.tick; world.state=snap.state;
   world.score=snap.score; world.lives=snap.lives;

@@ -22,27 +22,29 @@ export class LocalTransport extends Transport{
     this._server=server || null;            // a function(world, inputMsg) or null
     this._subs={};                          // type -> [cb]
     this._queue=[];
+    this.dropped=0;                         // undeliverable send() attempts
      }
- connect(){ /* synchronous loopback */ }
- send(msg){
+  connect(){ /* synchronous loopback */ }
+  send(msg){
     // If a server is wired, run it now (authoritative). Otherwise no-op.
+    if(this._closed){ this.dropped++; return; }
     if(this._server){
       this._server(msg, this);
        } else {
       this._queue.push(msg);
       }
      }
- on(type, cb){
+  on(type, cb){
     this._subs[type]=this._subs[type]||[];
     this._subs[type].push(cb);
     return ()=>{ this._subs[type]=this._subs[type].filter(c=>c!==cb); };
      }
- _emit(type, payload){
+  _emit(type, payload){
     const list=this._subs[type];
     if(list) for(const cb of list.slice()) cb(payload);
       }
- close(){ this._subs={}; this._queue=[]; }
-}
+  close(){ this._subs={}; this._queue=[]; this._closed=true; }
+ }
 
 /* WebSocketTransport — the network seam. Wired in Phase 2. The interface is
    identical to LocalTransport; swapping is a one-liner in main.js.
