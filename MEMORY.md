@@ -280,3 +280,5 @@ append an entry when it makes a non-trivial change.
 - Next: design the dimetric renderer (renderer adapter + camera view + depth-sort + faux extrude/shadow). Implementation gate held pending design approval.
 ## 2026-08-23 — Campaigns trio shipped on campaigns/touch-render-net
 - A touch pad (fd18448, multitouch move+bomb via Input pipeline, 39 checks) · B renderer v2 (ea6b250, affine diamond tops + caster-slot shadows after spec-chain proven unsatisfiable, biome heights, 67 r3d) · C lockstep v1 (d3e1bcc..35b8572, seq-first windows, neutral LEAVE, pinned codes, fail-closed decode, two-world proof 59 checks; ?net=local). Specs committed incl restored netcode doc.
+## 2026-08-24 — ENGINE DECISION REVERSAL: Path A vendored Three.js approved by user
+- User judged dimetric 'not really 3D' and game elements 'not game-like'; explicitly approved vendored three.module.js (no npm, no build, MIT) + keep 2D fallback. Sim/protocol/tests untouched by design. Dimetric demotes to ?render=iso legacy. Branch campaign/real3d. This supersedes the 2026-08-16 zero-dep-renderer lock for the RENDER LAYER ONLY — sim purity invariants unchanged.
