@@ -12,7 +12,10 @@ import {PROJ} from "./r3d/camera.js";
    consumeEvents(world,dt) flushes world.events into fx/audio, returns this so
    callers can chain. render(world) paints one frame. */
 export function createRenderer(canvas, opts={}){
-  const kind = opts.kind==="3d" ? "3d" : "2d";
+  /* real3d §7: "iso" aliases into the legacy branch (dimetric kept as
+     ?render=iso legacy path). Real kind "3d" never reaches this factory —
+     main routes it to render/three/wrapper.js createRenderer3D. */
+  const kind = opts.kind==="3d"||opts.kind==="iso" ? "3d" : "2d";
   bakeAtlas(); // idempotent (BAKED.ready); textured 3D tops need sources too
   const noop=()=>{};
   const ctx = canvas && canvas.getContext ? canvas.getContext("2d",{alpha:false})

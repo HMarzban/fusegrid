@@ -17,6 +17,11 @@ Single thread, three stages: `input → sim → render`.
   - `config.js` — frozen `CFG`, tile constants `T`, `BIOMES`, helpers.
   - `board.js`, `world.js`, `entities.js`, `rng.js` — sim support.
 - `src/render/` — renderer + sprites/scenes/fx. Pure read of world state.
+  - `src/render/three/` — real-3D path (S1+): vendored `vendor/three.module.js`
+    (r160, MIT, relative import — no npm dep). `wrapper.js` createRenderer3D
+    renders WebGL into `#gl` under the classic overlay `#c`; kind "iso" pins
+    legacy dimetric (`r3d/`), menu RENDER toggles REAL 3D ⇄ CLASSIC 2D.
+    Scene/camrig/lights are Node-testable; sim/protocol untouched.
 - `src/ai/enemies.js` — enemy AI, operates on sim state.
 - `src/net/` — `protocol.js`, `transport.js`. Multiplayer-ready: swap
   `LocalTransport` → `WebSocketTransport` in `main.js`.

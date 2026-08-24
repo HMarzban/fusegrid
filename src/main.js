@@ -20,17 +20,21 @@ const SCREEN_NAME=["BOOT","INTRO","MENU","LEVEL","HOWTO","SCORES","GAME",
 /* ATTRACT demo harness constants (spec §1): fixed seed, levels cycle 1..3,
    20s sim-time cap per cycle before rollover. */
 const DEMO_SEED=20260823, DEMO_CAP=20;
- import {Input} from "./input.js";
- import {mountTouch} from "./touch.js";
- import {createCamera,resetCamera,mountCameraCtl,
-   transform as camTransform} from "./render/cameraCtl.js";
+  import {Input} from "./input.js";
+  import {mountTouch} from "./touch.js";
+  import {createCamera,resetCamera,mountCameraCtl,
+    transform as camTransform} from "./render/cameraCtl.js";
+  import {createRenderer3D} from "./render/three/wrapper.js";
+  import {createRig,resetOrbit,mountOrbitCtl} from "./render/three/camrig.js";
 import {createLockstep} from "./net/lockstep.js";
 import {LocalTransport} from "./net/transport.js";
 
 export function createGame(canvas, opts={}){
-  // flags parsed ONCE (?render=3d selects the dimetric path; ?play=1 skips the
-  // shell straight into GAME)
-  const is3d=typeof location!=="undefined"&&/[?&]render=3d/.test(location.search||"");
+  // flags parsed ONCE (real3d §7: ?render=3d selects the real-3D path,
+  // ?render=iso pins the legacy dimetric path; ?play=1 skips the shell)
+  const rm=(typeof location!=="undefined"
+    &&(location.search||"").match(/[?&]render=(3d|iso)\b/))||null;
+  const urlKind=rm?rm[1]:null;
   const autoplay=(typeof location!=="undefined"
     &&/[?&]play=1/.test(location.search||""))||opts.autoplay===true;
   // ?net=local dev aid: run the world through a two-peer lockstep harness
@@ -47,8 +51,8 @@ export function createGame(canvas, opts={}){
 
   let fit=null;
   if(canvas){
-    canvas.width=is3d?PROJ.canvasW:CFG.COLS*CFG.TILE;
-    canvas.height=is3d?PROJ.canvasH:CFG.ROWS*CFG.TILE;
+    canvas.width=CFG.COLS*CFG.TILE;
+    canvas.height=CFG.ROWS*CFG.TILE;
     fit=()=>{
       if(typeof window==="undefined")return;
       const maxW=window.innerWidth-40, maxH=window.innerHeight-180;
@@ -76,11 +80,18 @@ export function createGame(canvas, opts={}){
   let prevSt=null;
 
   /* USER CAMERA (spec §1): render-side closure state, NEVER in world/snapshot.
-     Handlers self-gate on GAME via getActive; menus/attract stay authored. */
+     Handlers self-gate on GAME via getActive; menus/attract stay authored.
+     real3d §4: 2D/iso keep cameraCtl pan/zoom (cameraCtl untouched); kind "3d"
+     hands the rig to camrig orbit/dolly instead — mutually exclusive gates. */
   const cam=createCamera();
-  if(canvas)mountCameraCtl({canvas,input,cam,
-    getActive:()=>app.screen===SCREEN.GAME,
-    getKind:()=>curKind?"3d":"2d"});
+  const rig=createRig();
+  if(canvas){
+    mountCameraCtl({canvas,input,cam,
+      getActive:()=>app.screen===SCREEN.GAME&&effKind()!=="3d",
+      getKind:()=>effKind()==="iso"?"3d":"2d"});
+    mountOrbitCtl({canvas,input,camrig:rig,
+      getActive:()=>app.screen===SCREEN.GAME&&effKind()==="3d"});
+   }
 
   /* ?net=local harness: world A stays the live game world; a mirror peer B
      (same seed) runs the same lockstep protocol over crossed LocalTransports.
@@ -131,7 +142,8 @@ export function createGame(canvas, opts={}){
      and replay as a chord-blob on the first gesture. Fire immediately only if
      already unlocked; otherwise defer to the unlock handler below. */
   let fireJingle=()=>{};
-  const app=createMenuApp({level:1,sound:true,render3d:is3d,
+  const app=createMenuApp({level:1,sound:true,
+    render3d:urlKind==="3d"||opts.render3d===true,
     audio,autoplay,onStart});  /* §5 cue sheet — wired HERE in the app layer, never in render/sim. Wrappers
      shadow the machine methods so every successful transition plays exactly
      one cue; RENDER/SOUND confirms get uiTog instead of uiSel, and subscreen
@@ -172,7 +184,10 @@ export function createGame(canvas, opts={}){
      score then quits to MENU (spec §4 table). Machine self-gates elsewhere. */
   input.onUiKey=(code)=>{
     if(code==="KeyR"){
-      if(app.screen===SCREEN.GAME)resetCamera(cam);   // §2 reset, GAME only
+      if(app.screen===SCREEN.GAME){
+        resetCamera(cam);              // §2 reset, GAME only
+        resetOrbit(rig);               // real3d §4: 3D rig resets too
+       }
       return;
      }
     if(code==="KeyM"){
@@ -256,33 +271,58 @@ export function createGame(canvas, opts={}){
      }
    }
 
-  /* renderer cache per kind, lazily built; both share the canvas
-     (bakeAtlas idempotent). Toggle resizes W/H before the next render. */
+  /* renderer cache per kind, lazily built. Tri-state (real3d §1/§7):
+     "2d" classic (default, byte-identical), "3d" real-3D wrapper on the
+     dual canvas (#gl under #c), "iso" legacy dimetric pinned by ?render=iso
+     (menu toggle flips app.render3d between 3d/2d only). */
+  const glCanvas=(typeof document!=="undefined"&&document)?
+    document.getElementById("gl"):null;
   const rcache={};
-  let curKind=is3d;
-  function getRenderer(kind){
-    if(canvas){
-      canvas.width=kind==="3d"?PROJ.canvasW:CFG.COLS*CFG.TILE;
-      canvas.height=kind==="3d"?PROJ.canvasH:CFG.ROWS*CFG.TILE;
-      if(fit)fit();
+  function effKind(){
+    if(urlKind==="iso")return "iso";
+    return app.render3d?"3d":"2d";
+   }
+  let curKind=effKind();
+  /* overlay #c keeps the CLASSIC space for 2d/3d; iso needs its projected
+     dims. #gl is sized to the logical box (DPR handled in the wrapper) and
+     [hidden]-toggled to kind "3d". */
+  function sizeCanvases(kind){
+    const w=kind==="iso"?PROJ.canvasW:CFG.COLS*CFG.TILE;
+    const h=kind==="iso"?PROJ.canvasH:CFG.ROWS*CFG.TILE;
+    if(canvas){canvas.width=w;canvas.height=h;}
+    if(glCanvas){
+      glCanvas.width=CFG.COLS*CFG.TILE;
+      glCanvas.height=CFG.ROWS*CFG.TILE;
+      glCanvas.hidden=kind!=="3d";
      }
+    if(fit)fit();
+   }
+  function getRenderer(kind){
+    sizeCanvases(kind);
     if(!rcache[kind]){
-      try{ rcache[kind]=createRenderer(canvas,{kind,
-        audio:opts.audio||null,hud:opts.hud||null}); }
+      try{
+        rcache[kind]=kind==="3d"
+          ?createRenderer3D(glCanvas,canvas,
+            {audio:opts.audio||null,hud:opts.hud||null})
+          :createRenderer(canvas,{kind,audio:opts.audio||null,
+            hud:opts.hud||null});
+       }
       catch(e){ console.warn("renderer init failed", e);
         rcache[kind]={ctx:{save(){},restore(){},translate(){},scale(){}},
           render(){},consumeEvents(){}}; }
      }
     return rcache[kind];
    }
-  let renderer=getRenderer(is3d?"3d":"2d");
+  let renderer=getRenderer(curKind);
 
   /* per-screen menu chrome over the frozen arena */
   function drawShell(c){
     const s=app.screen;
     if(s===SCREEN.BOOT||s===SCREEN.GAME)return;   // GAME keeps its own overlays
-    const cw=canvas?canvas.width:(curKind?PROJ.canvasW:CFG.COLS*CFG.TILE);
-    const chh=canvas?canvas.height:(curKind?PROJ.canvasH:CFG.ROWS*CFG.TILE);
+    const cw=canvas?canvas.width:(curKind==="iso"?PROJ.canvasW
+      :CFG.COLS*CFG.TILE);
+    const chh=canvas?canvas.height:(curKind==="iso"?PROJ.canvasH
+      :CFG.ROWS*CFG.TILE);
     if(s===SCREEN.INTRO)
       return menudraw.drawIntroChrome(c,app.subT,cw,chh);
     if(s===SCREEN.ATTRACT){
@@ -305,7 +345,7 @@ export function createGame(canvas, opts={}){
       c.restore();
       menudraw.drawMenu(c,{cursor:app.cursor,enterT:app.subT,togT:app.togT,
         items:[ITEMS[0],ITEMS[1],
-          "RENDER "+(app.render3d?"3D":"2D"),
+          "RENDER "+(app.render3d?"REAL 3D":"CLASSIC 2D"),
           "SOUND "+(app.sound?"ON":"OFF"),
           ITEMS[4],ITEMS[5]]},L,app.subT);
       return;
@@ -329,8 +369,9 @@ export function createGame(canvas, opts={}){
   function loop(t){
     if(last==null)last=t;
     let dt=(t-last)/1000; last=t; dt=Math.min(dt,0.25);
-    if(app.render3d!==curKind){ curKind=app.render3d;
-      renderer=getRenderer(curKind?"3d":"2d"); }
+    const k=effKind();
+    if(k!==curKind){ curKind=k;
+      renderer=getRenderer(k); }        // live RENDER toggle: cache swap
     touch.update(app.screen===SCREEN.GAME);   // pad lives only inside GAME
     // §4 ducking: frame-polled, idempotent, self-heals across transitions
     if(audio){
@@ -377,10 +418,14 @@ export function createGame(canvas, opts={}){
     const c=renderer.ctx||
       {save(){},restore(){},translate(){},scale(){}};
     c.save();
-    if(app.screen===SCREEN.INTRO){
+    // real3d §7: INTRO flyover + user camTransform ride ONLY non-3d kinds —
+    // in "3d" the orbit rig/flythrough own the WebGL camera (S3).
+    if(curKind!=="3d"&&app.screen===SCREEN.INTRO){
       const ph=introPhase(app.subT);
-      const cw=canvas?canvas.width:(curKind?PROJ.canvasW:CFG.COLS*CFG.TILE);
-      const chh=canvas?canvas.height:(curKind?PROJ.canvasH:CFG.ROWS*CFG.TILE);
+      const cw=canvas?canvas.width:(curKind==="iso"?PROJ.canvasW
+        :CFG.COLS*CFG.TILE);
+      const chh=canvas?canvas.height:(curKind==="iso"?PROJ.canvasH
+        :CFG.ROWS*CFG.TILE);
       c.translate(cw/2,chh/2);
       c.scale(ph.zoom,ph.zoom);
       c.translate(-ph.camX*cw,-ph.camY*chh);
@@ -388,9 +433,11 @@ export function createGame(canvas, opts={}){
     // §1: user camera rides ONLY the GAME branch (same outer-transform
     // pattern as the flyover, but persistent + user-driven); menu/intro/
     // attract keep their authored framing untouched.
-    if(app.screen===SCREEN.GAME){
-      const cw=canvas?canvas.width:(curKind?PROJ.canvasW:CFG.COLS*CFG.TILE);
-      const chh=canvas?canvas.height:(curKind?PROJ.canvasH:CFG.ROWS*CFG.TILE);
+    if(curKind!=="3d"&&app.screen===SCREEN.GAME){
+      const cw=canvas?canvas.width:(curKind==="iso"?PROJ.canvasW
+        :CFG.COLS*CFG.TILE);
+      const chh=canvas?canvas.height:(curKind==="iso"?PROJ.canvasH
+        :CFG.ROWS*CFG.TILE);
       camTransform(c,cw,chh,cam);
      }
     renderer.render(attract&&demo?demo.world:world, dt,
@@ -441,7 +488,9 @@ export function createGame(canvas, opts={}){
 
    // boot
   if(typeof requestAnimationFrame!=="undefined") requestAnimationFrame(loop);
-   return {world, input, renderer, app, net, loop,
+   return {world, input,
+    get renderer(){return renderer;},   // live ref: RENDER toggle swaps it
+    app, net, loop,
     get cam(){return cam;},            // read-only ref for tests (spec §4.3)
     get demo(){return demo;},          // read-only for tests (spec §5.4)
     stop(){ running=false; },

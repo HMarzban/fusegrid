@@ -20,6 +20,11 @@
   #hud b{color:var(--accent);font-weight:700}
   #hud .sep{color:#3a4a68}
   #stage{position:relative;line-height:0}
+  /* real3d §7 dual-canvas: WebGL #gl under the classic overlay #c; both
+     absolute inset:0, touchpad stays above (z-index 5) */
+  #gl{position:absolute;inset:0;width:100%;height:100%;z-index:0}
+  #gl[hidden]{display:none}
+  #c{position:relative;z-index:1}
   canvas{image-rendering:pixelated;display:block;border-radius:10px;
     border:1px solid var(--line);box-shadow:0 12px 48px rgba(0,0,0,.6),0 0 0 4px #0a0e18;
     touch-action:none}
@@ -60,7 +65,7 @@
     <span>BOMB <b id="bombs">1</b></span><span class="sep">·</span>
     <span>FLAME <b id="range">1</b></span>
   </div>
-  <div id="stage"><canvas id="c" aria-label="Neo Bomberman game board"></canvas>
+  <div id="stage"><canvas id="gl" hidden></canvas><canvas id="c" aria-label="Neo Bomberman game board"></canvas>
     <div id="touchpad" hidden>
       <div id="tpad" role="group" aria-label="Move pad"></div>
       <div id="tbomb" role="button" aria-label="Bomb"></div>
