@@ -102,6 +102,7 @@ function sameWorld(x,y){                    // replica of determinism comparator
   if(x.state!==y.state)return false;
   const p0=x.players[0], p1=y.players[0];
   if(p0.x!==p1.x||p0.y!==p1.y)return false;
+  if(p0.alive!==p1.alive||p0.speed!==p1.speed)return false;
   if(p0.tx!==p1.tx||p0.ty!==p1.ty||p0.bombs!==p1.bombs||p0.range!==p1.range
     ||p0.iFrames!==p1.iFrames||p0.shield!==p1.shield||p0.bombKind!==p1.bombKind
     ||p0.passing!==p1.passing||p0.kick!==p1.kick||p0.throw!==p1.throw
@@ -128,6 +129,8 @@ function sameWorld(x,y){                    // replica of determinism comparator
   }
   return x.score===y.score && x.lives===y.lives && x.tick===y.tick
     && x.winTimer===y.winTimer
+    && x.level===y.level && x.time===y.time
+    && x.fireEdge===y.fireEdge && x.remoteEdge===y.remoteEdge
     && x.blades.length===y.blades.length
     && x.blades.every((bl,i)=>bl.t===y.blades[i].t&&bl.ttl===y.blades[i].ttl
       &&bl.variant===y.blades[i].variant);
@@ -291,8 +294,9 @@ const N=650;
     JSON.stringify(evA)+"|"+JSON.stringify(evB));
   check("(d) both worlds agree post-leave (full equality)",
     h.wA.tick===h.wB.tick&&sameWorld(h.wA,h.wB), h.wA.tick+"/"+h.wB.tick);
-  check("(d) death path applied (lives decremented identically)",
-    h.wA.lives===h.wB.lives&&h.wA.lives===2, h.wA.lives+"/"+h.wB.lives);
+  check("(d) leave is neutral: no hurt on survivor (F2)",
+    h.wA.lives===h.wB.lives&&h.wA.lives===3&&h.wA.score===h.wB.score,
+    h.wA.lives+"/"+h.wB.lives+" score "+h.wA.score);
   const ghost={type:"input",seq:9999,pid:1,tick:h.lsA.nextExec+1,
     move:{x:0,y:0},fire:false,shift:false,remote:false,kick:false};
   h.lsA.handleMessage(ghost);
@@ -330,6 +334,83 @@ const N=650;
     sameWorld(h.wA,h.wB)&&h.wA.tick===h.wB.tick);
   const rogue=h.lsB.rpc(MSG.PAUSE);
   check("(e) non-host rpc() refused", rogue===false&&!h.lsB.halted);
+}
+
+// ---- (f) F1: seq ledger advances across below-floor drops -> recovery ----
+{
+  const w=createWorld(31,1); loadLevel(w,1,false); w.state="PLAY";
+  const t={send(){}, close(){this.closed=true;}};
+  const ls=createLockstep({selfPid:1,world:w,transport:t,dt:CFG.STEP,
+    players:[0,1]});
+  let seq0=0;
+  const remote=(tick)=>ls.handleMessage({type:"input",seq:seq0++,pid:0,tick,
+    move:{x:1,y:0},fire:false,shift:false,remote:false,kick:false});
+  for(let i=0;i<30;i++){
+    ls.pushIntent({move:{x:0,y:i%2?-1:1},fire:false,shift:false,
+      remote:false,kick:false});
+    remote(ls.nextExec+DELAY); ls.tick();
+  }
+  check("(f) aligned warm phase: 30 ticks, no errors",
+    !ls.halted&&ls.nextExec===30&&seq0===30&&ls.errors.length===0,
+    ls.nextExec+"/"+seq0);
+  const d0=ls.invalidDrops;
+  remote(ls.nextExec-5); remote(ls.nextExec-5); remote(ls.nextExec-5);
+  check("(f) below-floor traffic dropped silently but seqs consumed",
+    !ls.halted&&ls.invalidDrops===d0+3&&ls.lastSeq.get(0)===32,
+    "drops="+(ls.invalidDrops-d0)+" lastSeq="+ls.lastSeq.get(0));
+  const e0=ls.errors.length;
+  remote(ls.nextExec+DELAY);
+  check("(f) recovery traffic accepted: no fabricated gap, no halt",
+    !ls.halted&&ls.errors.length===e0&&ls.lastSeq.get(0)===33&&!t.closed,
+    JSON.stringify(ls.error));
+  let ran=0;
+  for(let i=0;i<10;i++){
+    ls.pushIntent({move:{x:1,y:0},fire:false,shift:false,remote:false,kick:false});
+    remote(ls.nextExec+DELAY);
+    if(ls.tick().executed)ran++;
+  }
+  check("(f) session resumes executing post-recovery",
+    ran>=8&&!ls.halted, String(ran));
+}
+
+// ---- (g) F3: pinned error codes (bad_seq/bad_seed/bad_shape/unknown_pid) ----
+{
+  const mkLs=(pid)=>{const w=createWorld(7,1); loadLevel(w,1,false);
+    w.state="PLAY";
+    const t={send(){}, close(){this.closed=true;}};
+    return {t, ls:createLockstep({selfPid:pid,world:w,transport:t,
+      dt:CFG.STEP, players:[0,1]})};};
+  {
+    const {t,ls}=mkLs(1);
+    ls.handleMessage({type:"welcome",pid:9,seed:-5,tick:0});
+    check("(g) invalid welcome -> bad_seed + transport close",
+      ls.halted&&ls.error&&ls.error.reason==="bad_seed"&&t.closed===true,
+      JSON.stringify(ls.error));
+  }
+  {
+    const {ls}=mkLs(1);
+    for(let i=0;i<5;i++){
+      ls.pushIntent({move:{x:1,y:0},fire:false,shift:false,remote:false,kick:false});
+      ls.handleMessage({type:"input",seq:i,pid:0,tick:ls.nextExec+DELAY,
+        move:{x:0,y:0},fire:false,shift:false,remote:false,kick:false});
+      ls.tick();
+    }
+    ls.handleMessage({type:"pause",pid:2,tick:ls.nextExec+DELAY});
+    check("(g) peer-issued RPC -> bad_shape halt (host-only v1)",
+      ls.halted&&ls.error.reason==="bad_shape",JSON.stringify(ls.error));
+  }
+  {
+    const {ls}=mkLs(1);
+    for(let i=0;i<3;i++){
+      ls.pushIntent({move:{x:1,y:0},fire:false,shift:false,remote:false,kick:false});
+      ls.handleMessage({type:"input",seq:i,pid:0,tick:ls.nextExec+DELAY,
+        move:{x:0,y:0},fire:false,shift:false,remote:false,kick:false});
+      ls.tick();
+    }
+    ls.handleMessage({type:"leave",pid:0,tick:-1});
+    check("(g) stale-tick leave -> bad_shape (bad_tick folded)",
+      ls.halted&&ls.error.reason==="bad_shape",JSON.stringify(ls.error));
+  }
 }
 
 console.log(fail? "NET_LOCKSTEP FAIL":"NET_LOCKSTEP OK");

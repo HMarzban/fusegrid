@@ -46,8 +46,12 @@ export function makeRpc(type, pid, tick){
   return {type, pid, tick};
 }
 
-/* Protocol-violation report (bad_seq / unknown_pid / bad_host / bad_tick). */
+/* Protocol-violation report. `reason` is pinned to ERROR_CODES; anything else
+   coerces to "bad_shape" so the wire only ever carries known codes. */
+export const ERROR_CODES=Object.freeze(new Set(
+  ["bad_seq","bad_seed","bad_shape","unknown_pid"]));
 export function makeError(reason, detail){
+  if(!ERROR_CODES.has(reason))reason="bad_shape";
   const e={type:MSG.ERROR, reason};
   if(detail!==undefined)e.detail=detail;
   return e;
@@ -143,6 +147,21 @@ export function applySnapshot(world, snap){
   world.bombs    = snap.bombs.slice();
 }
 
-/* Encode/decode (JSON for phase 1). Swap to binary later without touching shapes. */
+/* Encode/decode (JSON for phase 1). Swap to binary later without touching shapes.
+   decode is fail-closed: undecodable input -> null (drop + count upstream), never throw. */
 export function encode(msg){ return JSON.stringify(msg); }
-export function decode(str){ return JSON.parse(str); }
+export function decode(str){
+  try{ return JSON.parse(str); }catch{ return null; }
+}
+
+/* §4.3 array caps: any array-bearing payload passes length<=64 before the
+   receive boundary delivers it (deep, bounded). Oversize -> caller drops. */
+export function capsOk(v, depth){
+  if(depth===undefined)depth=0;
+  if(depth>8)return false;
+  if(Array.isArray(v))
+    return v.length<=64&&v.every(m=>capsOk(m,depth+1));
+  if(v&&typeof v==="object")
+    return Object.values(v).every(m=>capsOk(m,depth+1));
+  return true;
+}

@@ -5,12 +5,12 @@
    Outbound: transport.send(msg). Inbound: handleMessage(msg) (also auto-wired
    via transport.on when the transport supports emission).
    Policy tiers: malformed traffic is dropped silently + counted; SEQUENCE and
-   roster violations (bad_seq / unknown_pid / bad_host / bad_tick) halt the
-   session fail-closed and surface as ls.error. */
-import {MSG, MAX_PLAYERS, DELAY, makeInput, validateInput, validateWelcome}
+   roster violations halt the session fail-closed with pinned ERROR codes
+   (bad_seq / bad_seed / bad_shape / unknown_pid) surfaced as ls.error. */
+import {MSG, MAX_PLAYERS, DELAY, makeInput, makeError, validateInput,
+  validateWelcome}
   from "./protocol.js";
 import {loadLevel, step} from "../core/sim.js";
-import {hurtPlayer} from "../core/entities.js";
 
 export const HOST_PID=0;
 const RPC_KINDS=[MSG.PAUSE,MSG.RESUME,MSG.RESTART,MSG.MENU];
@@ -19,6 +19,7 @@ const neutralIntent=Object.freeze({move:{x:0,y:0},fire:false,shift:false,
 const normIntent=(i)=>({move:{x:i&&i.move?i.move.x:0,y:i&&i.move?i.move.y:0},
   fire:!!(i&&i.fire), shift:!!(i&&i.shift), remote:!!(i&&i.remote),
   kick:!!(i&&i.kick)});
+const isInt=v=>typeof v==="number"&&Number.isInteger(v);
 
 export function createLockstep(opts){
   const selfPid=opts.selfPid;
@@ -57,8 +58,7 @@ export function createLockstep(opts){
     ls.halted=true;
     ls.error={reason,detail};
     ls.errors.push(ls.error);
-    transport.send({type:MSG.ERROR,from:selfPid,reason,
-      detail:detail==null?null:detail});
+    transport.send(makeError(reason,detail==null?null:detail));
    };
 
   ls.pushIntent=(intent)=>{
@@ -110,7 +110,9 @@ export function createLockstep(opts){
       case MSG.WELCOME: {
         const v=validateWelcome(msg);
         if(v.ok)break;                                 // roster is frozen in v1
-        ls.invalidDrops++; break;                      // fail-closed, silent
+        fail("bad_seed",msg&&msg.seed!=null?msg.seed:null); // hard reject §2.2
+        if(transport&&typeof transport.close==="function")transport.close();
+        break;
        }
       case MSG.ERROR: ls.errors.push(msg); break;
       default:
@@ -122,17 +124,20 @@ export function createLockstep(opts){
   function onInput(m){
     if(ls.halted)return;
     if(ls.leftPids.has(m.pid)){ fail("unknown_pid",m.pid); return; }
+    // §3.2 seq classification FIRST (before any tick-window rule): dup/stale
+    // are silent drops, gap is fatal, and a FRESH seq consumes its ledger slot
+    // even when the payload then fails later gates — otherwise one below-floor
+    // drop freezes lastSeq and catch-up traffic reads as a fabricated gap,
+    // deadlocking the session under cursor skew.
+    if(!isInt(m.seq)||m.seq<0){ ls.invalidDrops++; return; }
     const last=ls.lastSeq.has(m.pid)?ls.lastSeq.get(m.pid):null;
-    // forward-unbounded window: in-order catch-up backlogs must buffer, and a
-    // receiver can never be past a tick whose input is still undelivered (it
-    // stalls instead), so tick>=nextExec is the only time-rule we need here.
-    const v=validateInput(m,last,ls.nextExec,Infinity);
-    if(!v.ok){
-      if(v.reason==="gap"){ fail("bad_seq",m.seq); }
-      else { ls.invalidDrops++; }                      // dup/stale/malformed
-      return;
-     }
+    if(last!=null){
+      if(m.seq<=last){ ls.invalidDrops++; return; }        // dup / stale replay
+      if(m.seq>last+1){ fail("bad_seq",m.seq); return; }   // gap: fatal in v1
+    }
     ls.lastSeq.set(m.pid,m.seq);
+    const v=validateInput(m,null,ls.nextExec,Infinity);
+    if(!v.ok){ ls.invalidDrops++; return; }                // shape/tick fault
     let b=ls.buffer.get(m.tick);
     if(!b){b=new Map();ls.buffer.set(m.tick,b);}
     b.set(m.pid,normIntent(m));
@@ -144,7 +149,7 @@ export function createLockstep(opts){
     if(typeof p!=="number"||!Number.isInteger(p)||p<0||p>=MAX_PLAYERS
       ||p===selfPid){ ls.invalidDrops++; return; }
     if(typeof m.tick!=="number"||!Number.isInteger(m.tick)
-      ||m.tick<ls.nextExec){ fail("bad_tick",m.tick); return; }
+      ||m.tick<ls.nextExec){ fail("bad_shape",m.tick); return; }
     if(ls.leftPids.has(p))return;
     ls.leftPids.add(p);
     scheduleDeath(m.tick,p);
@@ -152,9 +157,9 @@ export function createLockstep(opts){
 
   function onRpc(m){
     if(ls.halted)return;
-    if(m.pid!==HOST_PID){ fail("bad_host",m.pid); return; }
+    if(m.pid!==HOST_PID){ fail("bad_shape",m.pid); return; }  // host-only v1
     if(typeof m.tick!=="number"||!Number.isInteger(m.tick)
-      ||m.tick<ls.nextExec){ fail("bad_tick",m.tick); return; }
+      ||m.tick<ls.nextExec){ fail("bad_shape",m.tick); return; }
     applyRpcLocal(m.type,m.tick,m.pid);
    }
 
@@ -174,13 +179,13 @@ export function createLockstep(opts){
       return{executed:false,stalled:true};        // no world/time advance
      }
     ls.stalled=false; ls.stallCount=0;
-    // 1) leave deaths due this tick (pid-ascending, deterministic)
+    // 1) leave events due this tick (pid-ascending, deterministic). LEAVE is
+    // neutral: the departed peer's inputs stop; NO world/player mutation —
+    // the survivor keeps lives/score/powers untouched.
     const due=ls.deaths.filter(d=>d.tick===T).sort((x,y)=>x.pid-y.pid);
     ls.deaths=ls.deaths.filter(d=>d.tick!==T);
-    for(const d of due){
+    for(const d of due)
       ls.world.events.push({t:"leave",pid:d.pid});
-      hurtPlayer(ls.world,(e)=>ls.world.events.push(e));  // existing sim path
-    }
     // 2) host RPCs due this tick (kind-ascending, deterministic)
     const rs=ls.rpcs.filter(r=>r.tick===T).sort((x,y)=>x.kind<y.kind?-1:1);
     ls.rpcs=ls.rpcs.filter(r=>r.tick!==T);

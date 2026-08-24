@@ -1,7 +1,7 @@
 /* TRANSPORT — a transport-agnostic seam so future multiplayer can swap in a
    WebSocket without touching the sim or renderer. Phase-1 ships LocalTransport
    (in-process loopback, zero network) which is how single-player runs. */
-import {encode, decode} from "./protocol.js";
+import {encode, decode, isKnownType, capsOk} from "./protocol.js";
 
 /* Common interface every transport implements:
      connect()
@@ -48,20 +48,28 @@ export class LocalTransport extends Transport{
 
 /* WebSocketTransport — the network seam. Wired in Phase 2. The interface is
    identical to LocalTransport; swapping is a one-liner in main.js.
-   NOT used today (no server), so it stays a clean, unused seam. */
+   NOT used today (no server), so it stays a clean, unused seam. [v2]
+   Receive boundary (guarded, v2-marked): decode never throws; unknown types
+   and §4.3-oversized payloads drop + count on `dropped`; an optional
+   `_validate(msg)->bool` hook can reject pre-delivery the same way. */
 export class WebSocketTransport extends Transport{
   constructor(url){
     super();
     this._url=url; this._ws=null; this._subs={};
+    this.dropped=0;                          // undeliverable/invalid frames
+    this._validate=null;                     // optional msg->bool gate (v2)
     }
   connect(){
     if(typeof WebSocket==="undefined") return;
     this._ws=new WebSocket(this._url);
-    this._ws.onmessage=(e)=>{
-      const msg=decode(e.data);
-      const list=this._subs[msg.type];
-      if(list) for(const cb of list.slice()) cb(msg);
-       };
+    this._ws.onmessage=(e)=>this._onmessage(e);
+     }
+  _onmessage(e){
+    const msg=decode(e&&e.data!==undefined?e.data:null);
+    if(!msg||!isKnownType(msg)||!capsOk(msg)){ this.dropped++; return; }
+    if(this._validate&&!this._validate(msg)){ this.dropped++; return; }
+    const list=this._subs[msg.type];
+    if(list) for(const cb of list.slice()) cb(msg);
      }
   send(msg){ if(this._ws && this._ws.readyState===1) this._ws.send(encode(msg)); }
   on(type, cb){
