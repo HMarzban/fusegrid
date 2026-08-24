@@ -20,8 +20,10 @@ const SCREEN_NAME=["BOOT","INTRO","MENU","LEVEL","HOWTO","SCORES","GAME",
 /* ATTRACT demo harness constants (spec §1): fixed seed, levels cycle 1..3,
    20s sim-time cap per cycle before rollover. */
 const DEMO_SEED=20260823, DEMO_CAP=20;
-import {Input} from "./input.js";
-import {mountTouch} from "./touch.js";
+ import {Input} from "./input.js";
+ import {mountTouch} from "./touch.js";
+ import {createCamera,resetCamera,mountCameraCtl,
+   transform as camTransform} from "./render/cameraCtl.js";
 import {createLockstep} from "./net/lockstep.js";
 import {LocalTransport} from "./net/transport.js";
 
@@ -73,6 +75,13 @@ export function createGame(canvas, opts={}){
     document.getElementById("stage"):null);
   let prevSt=null;
 
+  /* USER CAMERA (spec §1): render-side closure state, NEVER in world/snapshot.
+     Handlers self-gate on GAME via getActive; menus/attract stay authored. */
+  const cam=createCamera();
+  if(canvas)mountCameraCtl({canvas,input,cam,
+    getActive:()=>app.screen===SCREEN.GAME,
+    getKind:()=>curKind?"3d":"2d"});
+
   /* ?net=local harness: world A stays the live game world; a mirror peer B
      (same seed) runs the same lockstep protocol over crossed LocalTransports.
      B is driven by a deterministic script so both peers keep stepping. */
@@ -112,8 +121,9 @@ export function createGame(canvas, opts={}){
     world.state="PLAY";
     app.inGame=true;
     prevSt="PLAY";
+    resetCamera(cam);                    // §2: every run starts framed
     setBtn("btnPause","Pause");
-    };
+   };
 
   const audio=opts.audio||null;
   /* P1 (§0.4): the boot jingle must never schedule against a suspended ctx —
@@ -161,6 +171,10 @@ export function createGame(canvas, opts={}){
   /* UI key side-channel: ALWAYS routed to the shell; M-in-PAUSE records the
      score then quits to MENU (spec §4 table). Machine self-gates elsewhere. */
   input.onUiKey=(code)=>{
+    if(code==="KeyR"){
+      if(app.screen===SCREEN.GAME)resetCamera(cam);   // §2 reset, GAME only
+      return;
+     }
     if(code==="KeyM"){
       if(app.screen===SCREEN.GAME&&app.worldState==="PAUSE"){
         persistScore();
@@ -371,6 +385,14 @@ export function createGame(canvas, opts={}){
       c.scale(ph.zoom,ph.zoom);
       c.translate(-ph.camX*cw,-ph.camY*chh);
      }
+    // §1: user camera rides ONLY the GAME branch (same outer-transform
+    // pattern as the flyover, but persistent + user-driven); menu/intro/
+    // attract keep their authored framing untouched.
+    if(app.screen===SCREEN.GAME){
+      const cw=canvas?canvas.width:(curKind?PROJ.canvasW:CFG.COLS*CFG.TILE);
+      const chh=canvas?canvas.height:(curKind?PROJ.canvasH:CFG.ROWS*CFG.TILE);
+      camTransform(c,cw,chh,cam);
+     }
     renderer.render(attract&&demo?demo.world:world, dt,
       attract?{hud:false}:undefined);
     c.restore();
@@ -403,7 +425,7 @@ export function createGame(canvas, opts={}){
      (opts.debug===true || (typeof location!=="undefined"
        &&/[?&]debug=1/.test(location.search||"")))){
     window.__GAME__={
-      G:world, renderer, input, app, net,
+      G:world, renderer, input, app, net, cam,
       step:(n=1)=>{ for(let i=0;i<n;i++){const it=input.intent(); step(world,CFG.STEP,{0:it}); input.advance();} renderer.render(world,CFG.STEP*n); },
       state:()=>app.screen===SCREEN.GAME?world.state:SCREEN_NAME[app.screen],
       reset:()=>{ app.toMenu(); },
@@ -420,6 +442,7 @@ export function createGame(canvas, opts={}){
    // boot
   if(typeof requestAnimationFrame!=="undefined") requestAnimationFrame(loop);
    return {world, input, renderer, app, net, loop,
+    get cam(){return cam;},            // read-only ref for tests (spec §4.3)
     get demo(){return demo;},          // read-only for tests (spec §5.4)
     stop(){ running=false; },
     start(){ running=true; if(typeof requestAnimationFrame!=="undefined") requestAnimationFrame(loop); },

@@ -433,5 +433,115 @@ function mkCanvas(){
    }finally{ console.warn=ow; }
 }
 
+// ---- CAMERA CONTROL (spec §5 f/g/h): GAME-only pan/zoom/reset ----
+// Canvas stub with REAL width/height + arg-capturing ctx so the outer
+// transform triple is observable per frame.
+function mkCamCanvas(w,h){
+  const L={}, calls=[];
+  const ctx=new Proxy(function(){},{
+    get:(t,p)=>{
+      if(p===Symbol.toPrimitive)return()=>"" ;
+      return (...a)=>{ calls.push([p,a]); return ctx; };
+     },
+    apply:()=>ctx,
+    set:()=>true
+   });
+  const el={width:w,height:h,style:{},getContext:()=>ctx,
+    getBoundingClientRect:()=>({left:0,top:0,width:w,height:h}),
+    addEventListener(ty,fn){(L[ty]=L[ty]||[]).push(fn);},
+    removeEventListener(ty,fn){const a=L[ty]||[];const i=a.indexOf(fn);
+      if(i>=0)a.splice(i,1);},
+    fire(ty,ev){(L[ty]=L[ty]||[]).slice().forEach(fn=>fn(ev||{}));}};
+  return {el,L,calls,fire:(ty,ev)=>el.fire(ty,ev)};
+}
+const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
+  c[0]==="translate"&&c[1][0]===cw/2+cam.x&&c[1][1]===ch/2+cam.y
+  &&a[i+1]&&a[i+1][0]==="scale"&&a[i+1][1][0]===cam.zoom
+  &&a[i+2]&&a[i+2][0]==="translate"&&a[i+2][1][0]===-cw/2);
+{
+  const win={innerWidth:2000,innerHeight:1200,hs:{},
+    addEventListener(t,f){(win.hs[t]=win.hs[t]||[]).push(f);},
+    removeEventListener(t,f){const a=win.hs[t]||[];const i=a.indexOf(f);
+      if(i>=0)a.splice(i,1);}};
+  globalThis.window=win;
+  const wfire=(t,ev)=>(win.hs[t]||[]).forEach(f=>f(ev||{}));
+  try{
+    const cv=mkCamCanvas(600,520);
+    const g=createGame(cv.el,{seed:61});
+    check("cam exposed on game object at identity",
+      !!g.cam&&g.cam.x===0&&g.cam.y===0&&g.cam.zoom===1,String(JSON.stringify(g.cam)));
+    // (f) inert outside GAME: MENU-frame wheel/right-drag leave cam frozen
+    g.app.skip();                          // INTRO -> MENU
+    g.loop(0);
+    cv.fire("wheel",{deltaY:-240,clientX:450,clientY:260,preventDefault(){}});
+    wfire("pointermove",{pointerId:9,button:0,clientX:400,clientY:250});
+    wfire("pointerup",{pointerId:9,button:2});
+    check("(f) MENU wheel+drag leave cam frozen {0,0,1}",
+      g.cam.x===0&&g.cam.y===0&&g.cam.zoom===1,String(JSON.stringify(g.cam)));
+    cv.calls.length=0;
+    let t=16; g.loop(t);
+    check("(f) MENU frame carries no camera transform",
+      !camTriple(cv.calls,g.cam,600,520));
+    // enter GAME via START confirm (cursor 0)
+    g.app.confirm();
+    t+=16; g.loop(t);
+    // (g) right-drag pans by canvas-space delta (rect scale 1 here)
+    cv.el.fire("pointerdown",{pointerId:1,button:2,clientX:300,clientY:260});
+    wfire("pointermove",{pointerId:1,buttons:2,clientX:347.5,clientY:222});
+    wfire("pointerup",{pointerId:1,button:2,clientX:347.5,clientY:222});
+    check("(g) right-drag pans cam exactly", g.cam.x===47.5&&g.cam.y===-38,
+      String(JSON.stringify(g.cam)));
+    check("(g) right-button never latched fire", g.input._intent.fire===false);
+    cv.calls.length=0;
+    t+=16; g.loop(t);
+    check("(g) GAME frame emits translate(cx+x,cy+y)->scale(z)->translate(-cx,-cy)",
+      camTriple(cv.calls,g.cam,600,520),
+      "cam="+JSON.stringify(g.cam));
+    // (h) KeyR reset through the real Input->onUiKey route
+    g.input._onKey({code:"KeyR"});
+    check("(h) KeyR in GAME restores identity",
+      g.cam.x===0&&g.cam.y===0&&g.cam.zoom===1,String(JSON.stringify(g.cam)));
+    // wheel zoom: clamped + cursor-anchored (world x under cursor fixed)
+    cv.fire("wheel",{deltaY:-20000,clientX:450,clientY:130,preventDefault(){}});
+    check("(h) huge wheel-in clamps to MAX_Z", g.cam.zoom===2.5,String(g.cam.zoom));
+    g.input._onKey({code:"KeyR"});
+    const wxPre=(450-300-g.cam.x)/g.cam.zoom+300;
+    cv.fire("wheel",{deltaY:-120,clientX:450,clientY:130,preventDefault(){}});
+    const wxPost=(450-300-g.cam.x)/g.cam.zoom+300;
+    check("(h) wheel zoom cursor-anchored", Math.abs(wxPost-wxPre)<1e-9,
+      wxPre.toFixed(6)+"->"+wxPost.toFixed(6));
+    check("(h) moderate wheel-in lands on exp(+0.18)", Math.abs(g.cam.zoom-Math.exp(0.18))<1e-9);
+    // pinch: 1st finger latches fire (Input), 2nd cancels it and zooms.
+    // KeyR first so the pinch math is exact from identity zoom.
+    g.input._onKey({code:"KeyR"});
+    cv.el.fire("pointerdown",{pointerId:10,clientX:200,clientY:200});
+    check("(h) pinch 1st finger latches fire (pre-existing path)",
+      g.input._intent.fire===true);
+    cv.el.fire("pointerdown",{pointerId:11,clientX:280,clientY:200});
+    check("(h) pinch 2nd finger cancels pending fire latch",
+      g.input._intent.fire===false);
+    wfire("pointermove",{pointerId:11,clientX:360,clientY:200});
+    check("(h) pinch spread ratio 2 -> zoom exactly 2 anchored at mid",
+      g.cam.zoom===2&&g.cam.x===20&&g.cam.y===60,String(JSON.stringify(g.cam)));
+    wfire("pointerup",{pointerId:10,button:0});
+    wfire("pointerup",{pointerId:11,button:0});
+    // GAME -> MENU via the KeyM pause-quit side channel; cam must not leak
+    // into menu framing, then onStart resets for the fresh run
+    g.world.state="PAUSE";
+    t+=16; g.loop(t);                    // GAME frame latches app.worldState
+    g.input._onKey({code:"KeyM"});
+    check("KeyM quit lands MENU with demo-free backdrop",
+      g.app.screen===SCREEN.MENU,String(g.app.screen));
+    cv.calls.length=0;
+    t+=16; g.loop(t);
+    check("(f) post-quit MENU frame still transform-free",
+      !camTriple(cv.calls,g.cam,600,520));
+    g.app.confirm();                       // START GAME -> onStart resetCam
+    check("(h) onStart (fresh run) resets cam to identity",
+      g.app.screen===SCREEN.GAME&&g.cam.x===0&&g.cam.y===0&&g.cam.zoom===1,
+      String(JSON.stringify(g.cam)));
+   }finally{ delete globalThis.window; }
+}
+
 console.log(fail? "HEADLESS FAIL":"HEADLESS OK");
 process.exit(fail?1:0);
