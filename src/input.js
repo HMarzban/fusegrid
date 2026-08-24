@@ -63,6 +63,9 @@ export class Input {
     }
  _onFireDown(e){ this._intent.fire=true; }
  _onFireUp(e){ this._intent.fire=false; }
+ /* Virtual-pad fire routing: delegates to the SAME latch handlers the canvas
+    tap uses, so pad bombs ride the existing fire-edge/advance() path. */
+ padFire(down){ down?this._onFireDown({}):this._onFireUp({}); }
  _onBlur(){
     this.input.up=this.input.down=this.input.left=this.input.right=false;
     this._intent.fire=false;this._intent.shift=false;this._intent.remote=false;

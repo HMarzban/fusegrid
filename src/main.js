@@ -13,6 +13,7 @@ import {SCREEN, ITEMS, createMenuApp} from "./app/menuapp.js";
 import {introPhase, INTRO_DUR} from "./app/intro.js";
 import {loadScores, recordScore, saveScores} from "./app/highscores.js";
 import {Input} from "./input.js";
+import {mountTouch} from "./touch.js";
 
 const SCREEN_NAME=["BOOT","INTRO","MENU","LEVEL","HOWTO","SCORES","GAME"];
 
@@ -46,6 +47,10 @@ export function createGame(canvas, opts={}){
     }
 
   const input=new Input(opts.canvasEl||canvas);
+  /* virtual pad: #stage children (never canvas listeners — C1 swallow intact);
+     desktop/headless builds nothing, update() is a silent no-op there */
+  const touch=mountTouch(input,(typeof document!=="undefined"&&document)?
+    document.getElementById("stage"):null);
   let prevSt=null;
 
   function setBtn(id,txt){
@@ -203,6 +208,7 @@ export function createGame(canvas, opts={}){
     let dt=(t-last)/1000; last=t; dt=Math.min(dt,0.25);
     if(app.render3d!==curKind){ curKind=app.render3d;
       renderer=getRenderer(curKind?"3d":"2d"); }
+    touch.update(app.screen===SCREEN.GAME);   // pad lives only inside GAME
     if(app.screen===SCREEN.GAME){
       // §1 score-record edge, frame-polled (main latches prev world state)
       const entry=app.noteWorldEdge(prevSt,world.state,

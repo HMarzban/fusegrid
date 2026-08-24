@@ -23,6 +23,21 @@
   canvas{image-rendering:pixelated;display:block;border-radius:10px;
     border:1px solid var(--line);box-shadow:0 12px 48px rgba(0,0,0,.6),0 0 0 4px #0a0e18;
     touch-action:none}
+  /* touch controls (§2): stage children, never canvas listeners; fixed px so
+     they overlay the scaled canvas independent of fit() */
+  #touchpad{position:absolute;inset:0;pointer-events:none;z-index:5;
+    -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+  #touchpad>div{position:absolute;pointer-events:auto;background:var(--panel);
+    border:2px solid var(--line);border-radius:14px;opacity:.55;
+    touch-action:none;-webkit-user-select:none;user-select:none;
+    -webkit-tap-highlight-color:transparent}
+  #touchpad>div:active{opacity:.85;border-color:var(--accent)}
+  #tpad{width:128px;height:128px;
+    left:calc(12px + env(safe-area-inset-left));
+    bottom:calc(12px + env(safe-area-inset-bottom))}
+  #tbomb{width:72px;height:72px;border-radius:50%;
+    right:calc(16px + env(safe-area-inset-right));
+    bottom:calc(16px + env(safe-area-inset-bottom))}
   .btn{background:var(--panel);color:#dfe7f5;border:1px solid var(--line);
     padding:8px 14px;border-radius:8px;cursor:pointer;font:inherit;font-size:12px;
     letter-spacing:.5px;transition:.12s}
@@ -45,7 +60,12 @@
     <span>BOMB <b id="bombs">1</b></span><span class="sep">·</span>
     <span>FLAME <b id="range">1</b></span>
   </div>
-  <div id="stage"><canvas id="c" aria-label="Neo Bomberman game board"></canvas></div>
+  <div id="stage"><canvas id="c" aria-label="Neo Bomberman game board"></canvas>
+    <div id="touchpad" hidden>
+      <div id="tpad" role="group" aria-label="Move pad"></div>
+      <div id="tbomb" role="button" aria-label="Bomb"></div>
+    </div>
+  </div>
   <div id="controls">
     <button class="btn" id="btnPause">Pause</button>
     <button class="btn" id="btnSound">Sound: On</button>
