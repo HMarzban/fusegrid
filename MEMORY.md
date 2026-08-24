@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-08-24 — Camera control shipped (bccb0b4..3cbdcef): GAME-only pan/zoom/reset
+- cameraCtl.js pure math (anchor pan1=d−(z1/z0)(d−pan0), clampAxis degenerate→0, wheel exp(−ΔY·.0015), pinch ratio, transform triple); input.js button≠0 fire-guard; main.js cam closure + mountCameraCtl (GAME-gated, getKind follows RENDER toggle), KeyR/onStart reset, outer transform in GAME branch only — renderer/core/net diff 0. Battery 14/14 files, camera 37/0, headless +12 checks (f/g/h incl. exact drag deltas + MENU-frame triple-absence). Left: manual browser/device smokes per spec §5. Report: task-report-CAM.md.
+
 ## 2026-08-24 — V1.1 polish pack (82a0f00..1f465aa): music B-section, __audio gate, toggle-flash, canvasEl warn, serve test fixes
 - Music loop now AABB (MUSIC_PATTERN_B D–C–Bb–G + MUSIC_SECTIONS, pump selects per stepN — tests derive t0 from first start since unlock anchor may clamp once); menuapp togT stamp (-1 sentinel, cleared at every subT reset) drives drawMenu's 120ms accent glow on the selected value row; distinct opts.canvasEl now console.warns once (C1 swallow stays render-canvas-bound by design); serve.test dropped decoy dir + awaits child exit before rmSync; fx.js header documents single-renderer singleton. RED→GREEN areas 1/3/4; battery 13/13 green. Left: manual ?debug=1/__audio, flash-feel, A/B listen smokes. Report: .superpowers/sdd/2026-08-23-campaigns/task-report-POLISH.md
 
