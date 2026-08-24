@@ -94,6 +94,7 @@ export function mountCameraCtl({canvas,input,getActive,cam,
     if(e.button===2)drag=ptOf(e);
    };
   const onMove=(e)=>{
+    if(!active())return;
     if(pts.has(e.pointerId))pts.set(e.pointerId,ptOf(e));
     if(pinch&&pts.size>=2){
       const v=[...pts.values()];

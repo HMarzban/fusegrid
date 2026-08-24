@@ -186,3 +186,20 @@ check("wheel mapping k=0.0015", WHEEL_K===0.0015);
 
 console.log("\n  CAMERA RESULT: "+pass+" PASS / "+fail+" FAIL");
 process.exit(fail?1:0);
+
+// reviewer-prescribed: onMove gated on active state (mid-drag menu quit)
+{
+  const {mountCameraCtl}=await import("../src/render/cameraCtl.js");
+  const cam={x:0,y:0,zoom:1};
+  let on=false;
+  const handlers={};
+  const fakeEl={addEventListener:(t,f)=>{handlers[t]=f;},setPointerCapture(){} ,releasePointerCapture(){},removeEventListener(){}};
+  const fakeInput={_intent:{fire:false}};
+  mountCameraCtl({canvas:fakeEl,input:fakeInput,getActive:()=>on,cam,
+    windowStub:{addEventListener(){},removeEventListener(){}},documentStub:{addEventListener(){},removeEventListener(){}}});
+  on=true;
+  handlers.pointerdown({button:2,pointerId:5,clientX:100,clientY:100});
+  on=false;                                  // KeyM quit mid-drag
+  handlers.pointermove({pointerId:5,clientX:200,clientY:180});
+  check("onMove inert when inactive (mid-drag quit)", cam.x===0&&cam.y===0, `${cam.x},${cam.y}`);
+}
