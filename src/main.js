@@ -479,6 +479,16 @@ export function createGame(canvas, opts={}){
     if(br)br.onclick=(e)=>{ if(app.screen!==SCREEN.GAME)return;
       loadLevel(world,1,false); world.state="PLAY";
       e&&e.currentTarget&&e.currentTarget.blur(); };
+    const bm=document.getElementById("btnMenu");
+    // GAME-gated quit-to-menu riding KeyM's exact record path (persist-if->0,
+    // machine M-quit, PAUSE-overlay drop, label reset)
+    if(bm)bm.onclick=(e)=>{ if(app.screen!==SCREEN.GAME)return;
+      persistScore();
+      app.quitToMenu("PAUSE");
+      if(world.state==="PAUSE")world.state="PLAY";
+      setBtn("btnPause","Pause");
+      prevSt=null;
+      e&&e.currentTarget&&e.currentTarget.blur(); };
     }
 
    // debug/test hook (browser only; opt-in via opts.debug or ?debug=1)

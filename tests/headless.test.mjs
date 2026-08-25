@@ -403,6 +403,52 @@ function mkCanvas(){
    }finally{ delete globalThis.document; }
 }
 
+// ---- MENU BUTTON wave: toolbar Menu = score-recorded quit-to-menu ----
+{
+  const stubs={btnPause:{textContent:"Pause"},
+    btnSound:{textContent:"Sound: On"},btnRestart:{textContent:"Restart"},
+    btnMenu:{textContent:"Menu"}};
+  const noop=()=>{};
+  globalThis.document={addEventListener:noop,removeEventListener:noop,
+    getElementById:(id)=>stubs[id]||null};
+  const mem={};
+  globalThis.window={addEventListener:noop,removeEventListener:noop,
+    localStorage:{getItem:(k)=>(k in mem?mem[k]:null),
+      setItem:(k,v)=>{mem[k]=String(v);}}};
+  const blurs=[];
+  const ev={currentTarget:{blur(){blurs.push(1);}}};
+  const dispatch=(b)=>{ if(typeof b.onclick==="function")b.onclick(ev); };
+  try{
+    // during GAME (PLAY): dispatch -> MENU + score recorded via KeyM path
+    const g=createGame(null,{autoplay:true});
+    check("menu-btn wired by main.js in toolbar",
+      typeof stubs.btnMenu.onclick==="function",
+      String(typeof stubs.btnMenu.onclick));
+    g.world.score=1234;
+    dispatch(stubs.btnMenu);
+    check("menu-btn during GAME lands on MENU screen",
+      g.app.screen===SCREEN.MENU,String(g.app.screen));
+    check("menu-btn during GAME leaves world as PLAY backdrop (no PAUSE ghost)",
+      g.world.state==="PLAY",g.world.state);
+    check("menu-btn records score>0 through the highscores store",
+      loadScores().some(r=>r.s===1234&&r.l===1),
+      JSON.stringify(loadScores().slice(0,3)));
+    check("menu-btn resets Pause label like KeyM-quit",
+      stubs.btnPause.textContent==="Pause",stubs.btnPause.textContent);
+    check("menu-btn blurs after click (sibling parity)",blurs.length===1,
+      String(blurs.length));
+    // during MENU: no-op — screen stays, nothing persisted
+    const g2=createGame(null,{seed:5});
+    g2.app.skip();
+    g2.world.score=5555;
+    delete mem["nb.highscores.v1"];
+    dispatch(stubs.btnMenu);
+    check("menu-btn at MENU is a full no-op",
+      g2.app.screen===SCREEN.MENU&&!("nb.highscores.v1" in mem),
+      g2.app.screen+"/"+Object.keys(mem).join());
+   }finally{ delete globalThis.document; delete globalThis.window; }
+}
+
 // ---- P4: demobot imports pruned (tileOf/solidAt unused; bfsNext lives) ----
 {
   const fs=await import("node:fs");
