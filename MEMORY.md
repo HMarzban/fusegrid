@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-08-24 — 3D overlay fix (83561ff): WIN/LOSE/PAUSE now paint the 2D layer in kind 3d
+- wrapper.js render tail: state-gated drawOverlay(ovCtx,world) (defaults already 600×520 classic space) + updateHud(hud,world) routed like kind 2d ({hud:false} suppresses); chips stay opt-in and draw after the veil; MENU excluded (shell owns menus). RED→GREEN: new S5.overlay section in three.test.mjs (8 checks), battery 15/15.
+
 ## 2026-08-24 — REAL-3D S4 art pass shipped (bc2d554..550991d): hero/enemy silhouettes, layered blasts + flash pool, HUD chips, checker+trim
 - User critique "elements not game-like" fixed: player = 7-mesh hero (capsule/helmet-sphere/atlas-textured visor/antenna/boots), enemies keep S2.F base-geometry contract + 2 ref-swapped detail children per type (feet/nose/trail/turret/wings/fins) w/ per-type bob, boomerang wing pinwheel; bombs gain highlight blob + metal cap (children[0]/[2] indices preserved); blades = outer(exact prior ttl contract, biome.brickHi-tinted emissive)+white-hot additive core w/ spawn overshoot pop 0.88→0.55sc; FLASH_CAP=3 pooled PointLights ride blast centers; drawHudChips (hearts ≤6 + "+n", BOMB/FLAME icon chips, menudraw palette) opt-in ONLY via main's GAME-screen {hud:true} — wrapper clears overlay first, menus byte-untouched; scene adds checker InstancedMesh (instanceColor floor0/floor1) over kept plane + 4 wallHi trim rails. RED raced clean (102 prior green), GREEN 136 checks incl. exact 138-call fat-world budget ≤500; battery 15/15; core/net/input diff=0. Test-side fixes: recorder gradient chain, HUD_STUB quadraticCurveTo, compose/decompose scale tol 1e-6. Left: browser smoke (art feel, DPR crispness); 3D PAUSE/WIN overlay still absent (pre-existing). Report: .superpowers/sdd/2026-08-24-real3d/task-report-S4.md
 
