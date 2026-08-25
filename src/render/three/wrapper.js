@@ -14,7 +14,7 @@ import {createRig, applyOrbit} from "./camrig.js";
 import {introCam} from "./flythrough.js";
 import {createParticles} from "./particles.js";
 import {buildAtlas} from "./textures.js";
-import {drawHudChips} from "../scenes.js";
+import {drawHudChips, drawOverlay, updateHud} from "../scenes.js";
 import {onEvent, updateFx, getShake, getFx, syncFx} from "../fx.js";
 
 const W=CFG.COLS*CFG.TILE, H=CFG.ROWS*CFG.TILE;
@@ -36,6 +36,7 @@ function makeOverlayCtx(canvas){
 export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
   const ovCtx=makeOverlayCtx(overlayCanvas);
   const audio=opts.audio||null;
+  const hud=opts.hud||null;
 
   /* GL init guarded three ways: absent canvas (headless), context probe that
      is not a real object (recording-proxy test stubs return functions), and
@@ -100,13 +101,21 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
     else applyOrbit(camera,rig,getShake());    // shake = camera-target offset
     fxp.update(getFx());
     if(gl)gl.render(scene3,camera);
-    /* S4: HUD chips ride the overlay only on explicit opt-in ({hud:true}
-       from main's GAME screen) — the overlay is cleared first so chips never
-       smear; menus/intro/attract frames stay untouched. */
-    if(o&&o.hud===true){
+    /* S4+S5: WIN/LOSE/PAUSE overlays ride the classic 2D layer exactly like
+       kind 2d — drawOverlay's defaults already match this canvas' space
+       (600x520, centered); the overlay is cleared first so nothing smears.
+       MENU stays out: shell screens own their canvases via menudraw. Chips
+       remain opt-in ({hud:true}) and draw after the veil (2D parity). */
+    const ov=world.state==="WIN"||world.state==="LOSE"
+      ||world.state==="PAUSE";
+    if(ov||(o&&o.hud===true)){
       ovCtx.clearRect(0,0,W,H);
-      drawHudChips(ovCtx,world);
+      if(ov)drawOverlay(ovCtx,world);
+      if(o&&o.hud===true)drawHudChips(ovCtx,world);
      }
+    /* S5: DOM #hud ids route like the 2D path — {hud:false} suppresses
+       (attract demo), every other frame writes score/level/lives/etc. */
+    if(!(o&&o.hud===false))updateHud(hud,world);
    }
 
   const surface={canvas:glCanvas,overlay:overlayCanvas,ctx:ovCtx,render,

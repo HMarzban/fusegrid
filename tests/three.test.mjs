@@ -985,5 +985,62 @@ await sec("S4.E",async()=>{
     calls===wantCalls&&calls<=500, String(calls));
 });
 
+// ---- §S5 state overlays: WIN/LOSE/PAUSE paint the classic 2D layer in
+//      kind 3d; PLAY/MENU leave it untouched; DOM #hud routes like kind 2d ----
+await sec("S5.overlay",async()=>{
+  const textsOf=(ops)=>ops.filter(o=>o[0]==="fillText")
+    .map(o=>String(o[1][0]));
+  const OV_HEADS=["LEVEL 1 CLEARED","GAME OVER","PAUSED"];
+  const frame=(state,o,hud)=>{
+    const cv=hudRecorder();
+    const r=createRenderer3D(null,{getContext:()=>cv.rec},
+      {audio:null,hud:hud||null});
+    const w=createWorld(81,1); loadLevel(w,1,false); w.state=state;
+    r.render(w,1/60,o);
+    return cv.ops;
+   };
+  for(const st of ["WIN","LOSE","PAUSE"]){
+    const ops=frame(st,{hud:true});
+    check("S5 "+st+" veil+head text on the 2D layer in kind 3d",
+      ops.some(x=>x[0]==="clearRect")
+      &&ops.some(x=>x[0]==="fillRect"&&x[1][2]===600&&x[1][3]===520)
+      &&textsOf(ops).some(t=>OV_HEADS.includes(t)),
+      st+": "+textsOf(ops).join("|"));
+   }
+  const playOps=frame("PLAY",{hud:true});
+  check("S5 PLAY never paints overlay heads (chips only)",
+    !textsOf(playOps).some(t=>OV_HEADS.includes(t)),
+    textsOf(playOps).join("|"));
+  const quietOps=frame("PLAY",undefined);
+  check("S5 PLAY default frame leaves overlay untouched",
+    quietOps.length===0,"ops="+quietOps.length);
+  const menuOps=frame("MENU",undefined);
+  check("S5 MENU stays out of the overlay gate (shell owns menus)",
+    menuOps.length===0,"ops="+menuOps.length);
+  const dom={score:{textContent:"x"},level:{textContent:"x"},
+    lives:{textContent:"x"},enemies:{textContent:"x"},
+    bombs:{textContent:"x"},range:{textContent:"x"}};
+  const cvH=hudRecorder();
+  const rh=createRenderer3D(null,{getContext:()=>cvH.rec},
+    {audio:null,hud:dom});
+  const wh=createWorld(82,1); loadLevel(wh,1,false); wh.state="WIN";
+  wh.score=1234;
+  rh.render(wh,1/60,{hud:true});
+  check("S5 updateHud routes DOM ids through the 3D path (like kind 2d)",
+    dom.score.textContent===1234&&dom.lives.textContent===wh.lives
+    &&dom.level.textContent===wh.level,
+    dom.score.textContent+"/"+dom.lives.textContent+"/"
+      +dom.level.textContent);
+  const dom2={score:{textContent:"keep"},level:{textContent:"keep"},
+    lives:{textContent:"keep"},enemies:{textContent:"keep"},
+    bombs:{textContent:"keep"},range:{textContent:"keep"}};
+  const cvH2=hudRecorder();
+  const rh2=createRenderer3D(null,{getContext:()=>cvH2.rec},
+    {audio:null,hud:dom2});
+  rh2.render(wh,1/60,{hud:false});
+  check("S5 o.hud===false suppresses updateHud (attract parity)",
+    dom2.score.textContent==="keep", String(dom2.score.textContent));
+});
+
 console.log(fail? "THREE FAIL":"THREE OK");
 process.exit(fail?1:0);
