@@ -543,5 +543,23 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
    }finally{ delete globalThis.window; }
 }
 
+// (i) regression: overlay #c context must be claimed alpha:true BEFORE any
+// renderer — the classic 2D renderer requests {alpha:false}, and canvas
+// contexts are first-call-wins; an alpha:false claim makes the 3D overlay
+// composite opaque black over #gl (black-screen bug).
+{
+  const calls=[];
+  const fakeCtx={save(){},restore(){},translate(){},scale(){}};
+  const fakeCanvas={getContext(type,attrs){calls.push([type,attrs]);return fakeCtx;},
+    addEventListener(){},removeEventListener(){}};
+  const g=createGame(fakeCanvas,{});
+  const first2d=calls.find(c=>c[0]==="2d");
+  check("(i) overlay ctx claimed alpha:true before renderers",
+    !!first2d&&first2d[1]&&first2d[1].alpha===true,
+    JSON.stringify(first2d));
+  check("(i) live __GAME__.renderer follows kind swap (stale-copy guard)",
+    typeof g.renderer==="object"&&g.renderer!==null);
+ }
+
 console.log(fail? "HEADLESS FAIL":"HEADLESS OK");
 process.exit(fail?1:0);

@@ -286,6 +286,11 @@ export function createGame(canvas, opts={}){
   /* overlay #c keeps the CLASSIC space for 2d/3d; iso needs its projected
      dims. #gl is sized to the logical box (DPR handled in the wrapper) and
      [hidden]-toggled to kind "3d". */
+  /* #c's 2D context must be alpha-capable: canvas contexts are first-call-
+     wins, and the classic renderer requests {alpha:false}. If IT claims the
+     context first, the 3D overlay later gets that same opaque context and
+     clearRect composites as opaque black over #gl (black-screen bug). */
+  if(canvas&&canvas.getContext)canvas.getContext("2d",{alpha:true});
   function sizeCanvases(kind){
     const w=kind==="iso"?PROJ.canvasW:CFG.COLS*CFG.TILE;
     const h=kind==="iso"?PROJ.canvasH:CFG.ROWS*CFG.TILE;
@@ -476,7 +481,7 @@ export function createGame(canvas, opts={}){
      (opts.debug===true || (typeof location!=="undefined"
        &&/[?&]debug=1/.test(location.search||"")))){
     window.__GAME__={
-      G:world, renderer, input, app, net, cam,
+      G:world, get renderer(){return renderer;}, input, app, net, cam,
       step:(n=1)=>{ for(let i=0;i<n;i++){const it=input.intent(); step(world,CFG.STEP,{0:it}); input.advance();} renderer.render(world,CFG.STEP*n); },
       state:()=>app.screen===SCREEN.GAME?world.state:SCREEN_NAME[app.screen],
       reset:()=>{ app.toMenu(); },
