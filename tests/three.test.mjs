@@ -20,7 +20,7 @@ import {buildScene, countDrawCalls} from "../src/render/three/scene.js";
 import {createPools} from "../src/render/three/entities.js";
 import {atlasSources, buildAtlas} from "../src/render/three/textures.js";
 import {createRig, orbitBy, dollBy, resetOrbit, applyOrbit,
-  SHAKE_3D_K} from "../src/render/three/camrig.js";
+  SHAKE_3D_K, DRAG_K} from "../src/render/three/camrig.js";
 import {createRenderer3D} from "../src/render/three/wrapper.js";
 import {createRenderer} from "../src/render/renderer.js";
 import {createWorld, loadLevel, step} from "../src/core/sim.js";
@@ -127,22 +127,23 @@ function scan(grid){
     (loadLevel(w,2,false), s.update(w)===true));
 }
 
-// ---- §4 camrig: state defaults, clamps, reset, applyOrbit + shake ----
+// ---- §4 camrig: fixed full-board rig (camera-research spec §3/§4) ----
 {
   const st=createRig();
-  check("rig defaults az-0.6 el0.9 dist560 target origin",
-    st.az===-0.6&&st.el===0.9&&st.dist===560
-    &&st.target[0]===0&&st.target[1]===0&&st.target[2]===0);
+  check("rig defaults az0 el1.152(66°) dist700 target origin",
+    st.az===0&&st.el===1.152&&st.dist===700
+    &&st.target[0]===0&&st.target[1]===0&&st.target[2]===0,
+    st.az+"/"+st.el+"/"+st.dist);
   orbitBy(st, 10, 10);
-  check("orbitBy clamps el to 1.35 (az free)", st.el===1.35&&st.az===9.4,
+  check("orbitBy clamps el to 1.35 (az free)", st.el===1.35&&st.az===10,
     "az="+st.az+" el="+st.el);
   orbitBy(st,-100,-100);
   check("orbitBy clamps el to 0.25", st.el===0.25);
-  dollBy(st,10000); check("dollBy clamps dist to 900", st.dist===900);
-  dollBy(st,-10000); check("dollBy clamps dist to 240", st.dist===240);
+  dollBy(st,10000); check("dollBy clamps dist to 880", st.dist===880);
+  dollBy(st,-10000); check("dollBy clamps dist to 500", st.dist===500);
   resetOrbit(st);
-  check("resetOrbit restores defaults", st.az===-0.6&&st.el===0.9
-    &&st.dist===560);
+  check("resetOrbit restores authored rig", st.az===0&&st.el===1.152
+    &&st.dist===700);
   const cam=new THREE.PerspectiveCamera();
   applyOrbit(cam,st,{x:0,y:0});
   const se=Math.sin(st.el), ce=Math.cos(st.el);
@@ -227,6 +228,63 @@ function mkCanvas(){
   const g=createGame(mkCanvas(),{seed:78,autoplay:true});
   check("default boot keeps classic 2D surface byte-path",
     !("overlay"in g.renderer)&&typeof g.renderer.render==="function");
+}
+
+// ---- §CAM fixed-rig wave (camera-research spec §4): free-orbit demoted
+// behind ?orbit=1 (opts.orbit headless); wheel dolly always live in GAME+3d,
+// clamped to the 500..880 band; rig exposed read-only for tests. ----
+{
+  function mkOrbitCanvas(){
+    const L={};
+    const rec=new Proxy(function(){},{
+      get:(t,p)=>p===Symbol.toPrimitive?()=>"":(()=>rec),
+      apply:()=>rec, set:()=>true});
+    return {width:600,height:520,style:{},getContext:()=>rec,
+      getBoundingClientRect:()=>({left:0,top:0,width:600,height:520}),
+      addEventListener(ty,fn){(L[ty]=L[ty]||[]).push(fn);},
+      removeEventListener(){},
+      fire(ty,ev){(L[ty]=L[ty]||[]).slice().forEach(f=>f(ev||{}));}};
+   }
+  const win={innerWidth:2000,innerHeight:1200,hs:{},
+    addEventListener(t,f){(win.hs[t]=win.hs[t]||[]).push(f);},
+    removeEventListener(t,f){const a=win.hs[t]||[];const i=a.indexOf(f);
+      if(i>=0)a.splice(i,1);}};
+  globalThis.window=win;
+  const wfire=(t,ev)=>(win.hs[t]||[]).forEach(f=>f(ev||{}));
+  try{
+    // default boot: right-drag orbit INERT during GAME+3d
+    const cv=mkOrbitCanvas();
+    const g=createGame(cv,{seed:81,autoplay:true,render3d:true});
+    const R=()=>g.rig||{};
+    check("rig exposed read-only at authored defaults",
+      !!g.rig&&g.rig.az===0&&g.rig.el===1.152&&g.rig.dist===700,
+      JSON.stringify(g.rig));
+    cv.fire("pointerdown",{pointerId:1,button:2,clientX:300,clientY:260});
+    wfire("pointermove",{pointerId:1,buttons:2,clientX:400,clientY:260});
+    wfire("pointerup",{pointerId:1,button:2,clientX:400,clientY:260});
+    check("orbit gate off: right-drag leaves rig frozen",
+      R().az===0&&R().el===1.152,String(R().az+"/"+R().el));
+    // wheel dolly stays live, clamped to the new band (deltaY<0 = zoom in)
+    cv.fire("wheel",{deltaY:-100000,preventDefault(){}});
+    check("wheel dolly in clamps to DIST_MIN 500", R().dist===500,
+      String(R().dist));
+    cv.fire("wheel",{deltaY:100000,preventDefault(){}});
+    check("wheel dolly out clamps to DIST_MAX 880", R().dist===880,
+      String(R().dist));
+    // opt-in orbit (?orbit=1 / opts.orbit): right-drag orbits again
+    const cv2=mkOrbitCanvas();
+    const g2=createGame(cv2,{seed:82,autoplay:true,render3d:true,orbit:true});
+    cv2.fire("pointerdown",{pointerId:1,button:2,clientX:300,clientY:260});
+    wfire("pointermove",{pointerId:1,buttons:2,clientX:400,clientY:260});
+    wfire("pointerup",{pointerId:1,button:2,clientX:400,clientY:260});
+    check("opts.orbit: right-drag orbits by DRAG_K*px",
+      Math.abs((g2.rig||{}).az-100*DRAG_K)<1e-9&&(g2.rig||{}).el===1.152,
+      "az="+(g2.rig||{}).az);
+    g2.input._onKey({code:"KeyR"});
+    check("KeyR restores exact authored rig after orbit",
+      (g2.rig||{}).az===0&&(g2.rig||{}).el===1.152&&(g2.rig||{}).dist===700,
+      JSON.stringify(g2.rig));
+   }finally{ delete globalThis.window; }
 }
 
 // ---- §S2 helpers ----
@@ -601,12 +659,12 @@ await sec("S3.C",async()=>{
   const ft=await import("../src/render/three/flythrough.js");
   const {introPhase,INTRO_DUR}=await import("../src/app/intro.js");
   const st0=ft.introCam(0), stE=ft.introCam(INTRO_DUR);
-  check("S3.C start frame matches introPhase zoom start (dist=560/1.55)",
-    Math.abs(st0.dist-560/1.55)<1e-4, st0.dist.toFixed(3));
+  check("S3.C start frame matches introPhase zoom start (dist=700/1.55)",
+    Math.abs(st0.dist-700/1.55)<1e-4, st0.dist.toFixed(3));
   check("S3.C start target rides lower-third drift (tz=(camY-.5)*520)",
     Math.abs(st0.target[2]-83.2)<1e-9, st0.target[2].toFixed(2));
-  check("S3.C end frame == orbit rig defaults (seamless handoff)",
-    Math.abs(stE.dist-560)<1e-9&&stE.az===-0.6&&stE.el===0.9
+  check("S3.C end frame == fixed rig defaults (seamless handoff)",
+    Math.abs(stE.dist-700)<1e-9&&stE.az===0&&stE.el===1.152
     &&stE.target[2]===0, stE.az+"/"+stE.el+"/"+stE.dist);
   let mono=true;
   for(let s=0;s<=INTRO_DUR+1e-9;s+=0.25){
@@ -617,10 +675,10 @@ await sec("S3.C",async()=>{
   check("S3.C keyframes monotonic (dist up, target-z/el down)", mono);
   let tracks=true;
   for(let s=0;s<=INTRO_DUR;s+=0.5)
-    if(Math.abs(ft.introCam(s).dist*introPhase(s).zoom-560)>1e-6)tracks=false;
-  check("S3.C dist tracks introPhase fractions (dist*zoom==560)", tracks);
+    if(Math.abs(ft.introCam(s).dist*introPhase(s).zoom-700)>1e-6)tracks=false;
+  check("S3.C dist tracks introPhase fractions (dist*zoom==700)", tracks);
   check("S3.C flyover swings azimuth out mid-beat (cinematic arc)",
-    ft.introCam(2.8).az>-0.4&&ft.introCam(0).az===-0.6,
+    ft.introCam(2.8).az>0.2&&ft.introCam(0).az===0,
     ft.introCam(2.8).az.toFixed(3));
   const r=createRenderer3D(null,null,{audio:null,hud:null});
   const w=createWorld(43,1); loadLevel(w,1,false); w.state="MENU";

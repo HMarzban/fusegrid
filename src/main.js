@@ -41,6 +41,10 @@ export function createGame(canvas, opts={}){
   // (flag off = byte-identical default path below)
   const netLocal=(typeof location!=="undefined"
     &&/[?&]net=local/.test(location.search||""))||opts.netLocal===true;
+  // camera-research spec §4: free-orbit demoted behind ?orbit=1 — wheel/pinch
+  // dolly stays always-on within the clamps; right-drag orbit is opt-in.
+  const orbitEn=opts.orbit??(typeof location!=="undefined"
+    &&/[?&]orbit=1/.test(location.search||""));
   const dateStr=()=>new Date().toISOString().slice(0,10);
 
   // frozen backdrop world: created exactly as today but NEVER forced to
@@ -90,7 +94,8 @@ export function createGame(canvas, opts={}){
       getActive:()=>app.screen===SCREEN.GAME&&effKind()!=="3d",
       getKind:()=>effKind()==="iso"?"3d":"2d"});
     mountOrbitCtl({canvas,input,camrig:rig,
-      getActive:()=>app.screen===SCREEN.GAME&&effKind()==="3d"});
+      getActive:()=>app.screen===SCREEN.GAME&&effKind()==="3d"&&orbitEn,
+      getDolly:()=>app.screen===SCREEN.GAME&&effKind()==="3d"});
    }
 
   /* ?net=local harness: world A stays the live game world; a mirror peer B
@@ -501,6 +506,7 @@ export function createGame(canvas, opts={}){
     get renderer(){return renderer;},   // live ref: RENDER toggle swaps it
     app, net, loop,
     get cam(){return cam;},            // read-only ref for tests (spec §4.3)
+    get rig(){return rig;},            // read-only 3D rig ref for tests
     get demo(){return demo;},          // read-only for tests (spec §5.4)
     stop(){ running=false; },
     start(){ running=true; if(typeof requestAnimationFrame!=="undefined") requestAnimationFrame(loop); },

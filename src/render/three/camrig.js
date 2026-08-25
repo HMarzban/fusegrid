@@ -6,9 +6,11 @@
 import {clamp} from "../../core/config.js";
 import * as THREE from "../../../vendor/three.module.js";
 
-export const EL_MIN=0.25, EL_MAX=1.35, DIST_MIN=240, DIST_MAX=900;
+export const EL_MIN=0.25, EL_MAX=1.35, DIST_MIN=500, DIST_MAX=880;
 export const SHAKE_3D_K=0.06;      // world-units per shake px
-const DEF={az:-0.6,el:0.9,dist:560};
+/* fixed full-board rig (camera-research spec §3): az=0 axis-aligned,
+   el 66° steep lane-readable tilt, dist 700 fits 600x520wu + ICE trim. */
+const DEF={az:0,el:1.152,dist:700};
 export const DRAG_K=0.005;         // rad per drag px
 export const WHEEL_DOLLY_K=0.6;    // world-units per wheel deltaY tick
 
@@ -42,11 +44,15 @@ export function applyOrbit(camera,st,shake){
   return camera;
 }
 
-/* DOM wiring: same discipline as cameraCtl.mountCameraCtl — inert unless
-   getActive(), client px divided by canvas CSS scale, pinch = dolly with
-   fire-latch cancel, contextmenu swallowed while mounted. */
-export function mountOrbitCtl({canvas,getActive,camrig,input}){
-  const active=getActive||(()=>false);
+/* DOM wiring: same discipline as cameraCtl.mountCameraCtl — client px divided
+   by canvas CSS scale, pinch = dolly with fire-latch cancel, contextmenu
+   swallowed while mounted. TWO gates (camera-research spec §4): right-drag
+   orbit needs getActive() (main wires GAME+3d+?orbit=1); wheel/pinch dolly
+   rides getDolly() when given (GAME+3d, always-on within clamps) and falls
+   back to getActive() otherwise. */
+export function mountOrbitCtl({canvas,getActive,getDolly,input,camrig}){
+  const canOrbit=getActive||(()=>false);
+  const canDolly=getDolly||canOrbit;
   if(!canvas)return {detach(){}};
   const w=typeof window!=="undefined"?window:null;
   const ptOf=(e)=>{
@@ -59,7 +65,7 @@ export function mountOrbitCtl({canvas,getActive,camrig,input}){
   let pinch=null;
   const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
   const onDown=(e)=>{
-    if(!active())return;
+    if(!(canOrbit()||canDolly()))return;
     if(e.pointerId!=null){
       pts.set(e.pointerId,ptOf(e));
       if(pts.size===2){            // pinch start: kill pending fire latch
@@ -68,10 +74,10 @@ export function mountOrbitCtl({canvas,getActive,camrig,input}){
         pinch={d0:dist(v[0],v[1])||1};
        }
      }
-    if(e.button===2)drag=ptOf(e);
+    if(e.button===2&&canOrbit())drag=ptOf(e);
    };
   const onMove=(e)=>{
-    if(!active())return;
+    if(!(canOrbit()||canDolly()))return;
     if(pts.has(e.pointerId))pts.set(e.pointerId,ptOf(e));
     if(pinch&&pts.size>=2){        // spread ratio r -> dist/r
       const v=[...pts.values()];
@@ -91,7 +97,7 @@ export function mountOrbitCtl({canvas,getActive,camrig,input}){
     if(e.button===2||e.type==="pointercancel")drag=null;
    };
   const onWheel=(e)=>{
-    if(!active())return;
+    if(!canDolly())return;
     e.preventDefault();
     dollBy(camrig,e.deltaY*WHEEL_DOLLY_K);
    };
