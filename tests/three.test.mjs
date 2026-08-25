@@ -9,10 +9,14 @@
    + px->world mapping + ttl fade), introCam flythrough keyframe math + camera
    drive, blade emissive pulse + fuse-spark glow, attract-through-3D harness
    with rebuild rollover, shake end-to-end (event -> store -> lookAt offset),
-   and the ≤500-draw-call / DPR≤2 perf gate. No DOM anywhere. */
+    and the ≤500-draw-call / DPR≤2 perf gate; S4 adds the game-element art
+    pass — hero/enemy silhouette parts (SLOT_MESH), layered blast cores with
+    scale-pop easing, pooled ≤3 flash PointLights, overlay HUD chips
+    (drawHudChips) gated on o.hud===true, checker floor tiles + border-wall
+    trim, and the exact post-S4 draw-call count within budget. No DOM anywhere. */
 import {createLights} from "../src/render/three/lights.js";
 import {build} from "../src/render/three/materials.js";
-import {buildScene} from "../src/render/three/scene.js";
+import {buildScene, countDrawCalls} from "../src/render/three/scene.js";
 import {createPools} from "../src/render/three/entities.js";
 import {atlasSources, buildAtlas} from "../src/render/three/textures.js";
 import {createRig, orbitBy, dollBy, resetOrbit, applyOrbit,
@@ -707,6 +711,276 @@ await sec("S3.E",async()=>{
     sp.material.isMeshBasicMaterial
     &&Math.abs(sp.scale.x-(1+Math.sin(0.05*30)*0.23))<1e-9,
     sp.material.type+" s="+sp.scale.x.toFixed(3));
+});
+
+// ---- §S4.A character silhouettes: hero parts + per-type enemy details ----
+await sec("S4.A",async()=>{
+  const ent=await import("../src/render/three/entities.js");
+  const {SLOT_MESH}=ent;
+  check("S4.A SLOT_MESH exported (player/enemy/bomb/item meshes per slot)",
+    typeof SLOT_MESH==="object"&&SLOT_MESH.player>=6&&SLOT_MESH.enemy===3
+    &&SLOT_MESH.bomb===5, JSON.stringify(SLOT_MESH));
+  const w=createWorld(71,1); loadLevel(w,1,false);
+  const pools=createPools(BIOMES[0],null);
+  const kinds=pools.player.children.map(o=>o.geometry?o.geometry.type:null)
+    .filter(Boolean);
+  check("S4.A player = hero silhouette (capsule torso, helmet head sphere,"
+      +" visor plane, antenna rod+ball, 2 feet)",
+    kinds.length===SLOT_MESH.player
+    &&kinds.includes("CapsuleGeometry")
+    &&kinds.filter(k=>k==="SphereGeometry").length>=2
+    &&kinds.includes("PlaneGeometry")
+    &&kinds.includes("CylinderGeometry")
+    &&kinds.filter(k=>k==="BoxGeometry").length>=2,
+    kinds.join(","));
+  const visor=pools.player.children.find(o=>o.isMesh
+    &&o.geometry.type==="PlaneGeometry");
+  check("S4.A visor plate rides the head front (above torso, +Z facing)",
+    visor.position.y>CFG.TILE*0.3&&visor.position.z>0,
+    visor.position.y.toFixed(2)+"/"+visor.position.z.toFixed(2));
+  // per-type enemy detail children (base mesh keeps prior geometry contract)
+  w.enemies=["walker","chaser","fast","stationary","boomerang","rocket"]
+    .map((t,i)=>mkE(t,60+i*40,80));
+  const sc=buildScene(w); sc.update(w);
+  const es=slotsOf(sc.group,"enemy");
+  const wantDetail={walker:["BoxGeometry","BoxGeometry"],
+    chaser:["ConeGeometry","BoxGeometry"],fast:["BoxGeometry","BoxGeometry"],
+    stationary:["CylinderGeometry","SphereGeometry"],
+    boomerang:["BoxGeometry","BoxGeometry"],
+    rocket:["BoxGeometry","BoxGeometry"]};
+  let detOk=true,det=[];
+  for(let i=0;i<6;i++){
+    const got=es[i].children.map(o=>o.geometry.type);
+    if(got.length!==2||got[0]!==wantDetail[w.enemies[i].type][0]
+      ||got[1]!==wantDetail[w.enemies[i].type][1]){detOk=false;
+      det.push(w.enemies[i].type+":"+got.join("+"));}
+   }
+  check("S4.A enemy detail silhouettes per type"
+      +" (feet/nose/trail/turret/wings/fins)", detOk, det.join(" "));
+  check("S4.A enemy base identity colors survive the art pass",
+    "#"+es[3].material.color.getHexString()
+      ===spawnEnemy("stationary",0,0,1,null).color.toLowerCase());
+  // idle bob: render-side only — y breathes with world.time, x/z pinned
+  w.time=0; sc.update(w);
+  const y0=es[0].position.y, x0=es[0].position.x;
+  w.time=0.13; sc.update(w);
+  check("S4.A walker idle bob animates y (render-side), x/z pinned",
+    Math.abs(y0-es[0].position.y)>0.01&&Math.abs(x0-es[0].position.x)<1e-9,
+    y0.toFixed(2)+"->"+es[0].position.y.toFixed(2));
+  const pw=createWorld(78,1); loadLevel(pw,1,false);
+  const pp=createPools(BIOMES[0],null);
+  const drive=(t)=>pp.update({players:pw.players,enemies:[],bombs:[],
+    items:[],blades:[],time:t});
+  drive(0);
+  const py0=pp.player.position.y;
+  drive(0.19);
+  check("S4.A player idle bob animates y (render-side)",
+    Math.abs(py0-pp.player.position.y)>0.01,
+    py0.toFixed(2)+"->"+pp.player.position.y.toFixed(2));
+});
+
+// ---- §S4.B bomb art: highlight + metal cap on the classic sphere ----
+await sec("S4.B",async()=>{
+  const {SLOT_MESH}=await import("../src/render/three/entities.js");
+  const w=createWorld(72,1); loadLevel(w,1,false);
+  w.bombs=[{x:60,y:60,tx:1,ty:1,timer:CFG.FUSE,variant:"normal"}];
+  const sc=buildScene(w); sc.update(w);
+  const b=slotsOf(sc.group,"bomb")[0];
+  const k=b.children.map(o=>o.geometry.type);
+  check("S4.B bomb slot = body+fuse+spark+highlight+cap (prior indices kept)",
+    b.children.length===SLOT_MESH.bomb&&k[0]==="SphereGeometry"
+    &&k[1]==="BoxGeometry"&&k[2]==="SphereGeometry"
+    &&k[3]==="SphereGeometry"&&k[4]==="CylinderGeometry", k.join(","));
+  const hi=b.children[3], cap=b.children[4];
+  check("S4.B highlight is white translucent spec blob",
+    hi.material.transparent===true
+    &&"#"+hi.material.color.getHexString()==="#ffffff", 
+    "#"+hi.material.color.getHexString());
+  check("S4.B metal cap sits between body top and fuse",
+    "#"+cap.material.color.getHexString()!=="#15181f"
+    &&cap.position.y>b.children[0].position.y
+    &&cap.position.y<b.children[1].position.y,
+    cap.position.y.toFixed(2));
+});
+
+// ---- §S4.C explosion drama: layered core pop + pooled flash lights ----
+await sec("S4.C",async()=>{
+  const ent=await import("../src/render/three/entities.js");
+  const {FLASH_CAP}=ent;
+  check("S4.C FLASH_CAP exported and === 3", FLASH_CAP===3, String(FLASH_CAP));
+  const w=createWorld(73,1); loadLevel(w,1,false); w.time=0;
+  w.blades=[{x:200,y:120,tiles:[{tx:5,ty:3}],t:0,ttl:CFG.BLADE_TTL,
+    variant:"normal"}];
+  const sc=buildScene(w); sc.update(w);
+  const layers=slotsOf(sc.group,"blade");
+  check("S4.C blades are TWO layered instanced meshes (outer + core)",
+    layers.length===2&&layers[0].isInstancedMesh&&layers[1].isInstancedMesh,
+    layers.length+"");
+  const core=layers[1];
+  check("S4.C core layer is white-hot unlit glow",
+    core.material.isMeshBasicMaterial
+    &&"#"+core.material.color.getHexString()==="#fff8d8",
+    "#"+core.material.color.getHexString());
+  const sCore0=matScale(core,0).s.x;
+  const sOuter0=matScale(layers[0],0).s.x;
+  check("S4.C scale-pop: core overshoots at t=0 (0.55*1.6=0.88), outer "
+      +"keeps exact sc=1 (prior contract)",
+    Math.abs(sCore0-0.88)<1e-9&&Math.abs(sOuter0-1)<1e-9,
+    "core="+sCore0.toFixed(3)+" outer="+sOuter0.toFixed(3));
+  w.blades[0].t=w.blades[0].ttl*0.2; sc.update(w);
+  const sCore1=matScale(core,0).s.x;
+  const sOuter1=matScale(layers[0],0).s.x;
+  check("S4.C pop settles by 20% ttl: core=0.55*sc=0.44, outer=0.8 exact",
+    Math.abs(sCore1-0.44)<1e-9&&Math.abs(sOuter1-0.8)<1e-9,
+    "core="+sCore1.toFixed(3)+" outer="+sOuter1.toFixed(3));
+  // flash light pool
+  const flash=slotsOf(sc.group,"flash");
+  check("S4.C exactly FLASH_CAP point lights tagged 'flash'",
+    flash.length===FLASH_CAP&&flash.every(l=>l.isPointLight), flash.length);
+  check("S4.C live blast drives flash 0 intensity>0, spare lights dark",
+    flash[0].intensity>0&&flash[1].intensity===0&&flash[2].intensity===0,
+    flash.map(l=>l.intensity.toFixed(2)).join("/"));
+  check("S4.C flash rides blast center (X=x-W/2, Y=26, Z=y-D/2)",
+    Math.abs(flash[0].position.x+100)<1e-9
+    &&Math.abs(flash[0].position.z-(-140))<1e-9&&flash[0].position.y===26,
+    flash[0].position.x.toFixed(1)+"/"+flash[0].position.z.toFixed(1));
+  w.blades=[{x:60,y:60,tiles:[{tx:1,ty:1}],t:0,ttl:CFG.BLADE_TTL},
+    {x:100,y:60,tiles:[{tx:2,ty:1}],t:CFG.BLADE_TTL*0.5,ttl:CFG.BLADE_TTL},
+    {x:140,y:60,tiles:[{tx:3,ty:1}],t:CFG.BLADE_TTL*0.9,ttl:CFG.BLADE_TTL},
+    {x:180,y:60,tiles:[{tx:4,ty:1}],t:0,ttl:CFG.BLADE_TTL},
+    {x:220,y:60,tiles:[{tx:5,ty:1}],t:0,ttl:CFG.BLADE_TTL}];
+  sc.update(w);
+  const f2=slotsOf(sc.group,"flash");
+  check("S4.C overflow: pool stays capped at 3, freshest-first assignment",
+    f2.length===FLASH_CAP&&f2.every(l=>l.isPointLight)
+    &&f2[0].intensity>f2[1].intensity&&f2[1].intensity>f2[2].intensity
+    &&f2[2].intensity>0, f2.map(l=>l.intensity.toFixed(2)).join("/"));
+  w.blades=[]; sc.update(w);
+  check("S4.C no blasts -> all flash lights dark",
+    slotsOf(sc.group,"flash").every(l=>l.intensity===0));
+});
+
+// ---- §S4.D overlay HUD chips (hearts / BOMB / FLAME) ----
+function hudRecorder(){
+  const ops=[];
+  const rec=new Proxy(function(){},{
+    get:(t,p)=>{
+      if(p===Symbol.toPrimitive)return()=>"";
+
+      return(...a)=>{ops.push([String(p),a]);};},
+    set:(t,p,v)=>{ops.push(["set:"+String(p),v]);return true;}});
+  return {rec,ops};
+}
+const HUD_STUB={save(){},restore(){},translate(){},scale(){},beginPath(){},
+  closePath(){},moveTo(){},lineTo(){},bezierCurveTo(){},arcTo(){},arc(){},
+  fill(){},stroke(){},fillRect(){},strokeRect(){},fillText(){},
+  createLinearGradient:()=>({addColorStop(){}}),
+  createRadialGradient:()=>({addColorStop(){}})};
+await sec("S4.D",async()=>{
+  const scenes=await import("../src/render/scenes.js");
+  const {drawHudChips}=scenes;
+  const mkW=(lives,bombs,range)=>({state:"PLAY",lives,
+    players:[{bombs,range}]});
+  let threw=false;
+  try{ drawHudChips(HUD_STUB,mkW(3,2,3)); }
+  catch(e){ threw=true; console.log(e.message); }
+  check("S4.D drawHudChips no-throw on stub ctx", !threw);
+  const r=hudRecorder();
+  drawHudChips(r.rec,mkW(9,2,3));
+  const texts=r.ops.filter(o=>o[0]==="fillText").map(o=>String(o[1][0]));
+  const curves=r.ops.filter(o=>o[0]==="bezierCurveTo").length;
+  check("S4.D lives drawn as heart glyphs (vector curves), capped at 6"
+      +" with +n overflow text",
+    curves>=12&&texts.includes("+3"), "curves="+curves);
+  check("S4.D BOMB chip: label + count from players[0].bombs",
+    texts.includes("BOMB")&&texts.includes("2"), texts.join("|"));
+  check("S4.D FLAME chip: label + count from players[0].range",
+    texts.includes("FLAME")&&texts.includes("3"), texts.join("|"));
+  check("S4.D chips paint panel backgrounds",
+    r.ops.some(o=>o[0]==="fillRect")&&r.ops.some(o=>o[0]==="strokeRect"));
+  // DOM HUD ids keep working (updateHud contract untouched)
+  const dom={lives:{textContent:""},bombs:{textContent:""},
+    range:{textContent:""}};
+  scenes.updateHud(dom,mkW(4,5,6));
+  check("S4.D updateHud still writes lives/bombs/range DOM ids",
+    dom.lives.textContent===4&&dom.bombs.textContent===5
+    &&dom.range.textContent===6,
+    dom.lives.textContent+"/"+dom.bombs.textContent+"/"+dom.range.textContent);
+  // wrapper integration: o.hud===true paints chips on the overlay ctx
+  const cv=hudRecorder();
+  const fake={getContext:()=>cv.rec};
+  const rw=createRenderer3D(null,fake,{audio:null,hud:null});
+  const wg=createWorld(74,1); loadLevel(wg,1,false); wg.state="PLAY";
+  rw.render(wg,1/60,{hud:true});
+  check("S4.E wrapper o.hud===true draws HUD chips on overlay (cleared first)",
+    cv.ops.some(o=>o[0]==="clearRect")&&cv.ops.some(
+      o=>o[0]==="fillText"), "ops="+cv.ops.length);
+  const cv2=hudRecorder();
+  const fake2={getContext:()=>cv2.rec};
+  const rw2=createRenderer3D(null,fake2,{audio:null,hud:null});
+  rw2.render(wg,1/60);
+  check("S4.E wrapper default frame leaves overlay untouched (menus safe)",
+    !cv2.ops.some(o=>o[0]==="clearRect")
+    &&!cv2.ops.some(o=>o[0]==="fillText"),"ops="+cv2.ops.length);
+  // 2D renderer: chips only on explicit opt-in, defaults byte-identical
+  const cr=hudRecorder();
+  const r2d=createRenderer({getContext:()=>cr.rec},{kind:"2d",hud:null,
+    audio:null});
+  const w2=createWorld(75,1); loadLevel(w2,1,false); w2.state="PLAY";
+  r2d.render(w2,1/60,{hud:true});
+  check("S4.E classic renderer o.hud===true draws chips too",
+    cr.ops.some(o=>o[0]==="fillText"));
+});
+
+// ---- §S4.E ground polish: checker floor tiles + border trim + call budget ----
+await sec("S4.E",async()=>{
+  const ent=await import("../src/render/three/entities.js");
+  const {SLOT_MESH}=ent;
+  const w=createWorld(76,1); loadLevel(w,1,false);
+  const biome=BIOMES[0];
+  const sc=buildScene(w);
+  const g=sc.group;
+  const checker=g.children.find(o=>o.userData.tag==="checker");
+  check("S4.E checker floor: instanced tile grid over the base plane",
+    !!checker&&checker.isInstancedMesh
+    &&checker.count===CFG.COLS*CFG.ROWS
+    &&!!checker.instanceColor, checker?String(checker.count):"missing");
+  const cTmp=new THREE.Color();
+  checker.getColorAt(0,cTmp); const a="#"+cTmp.getHexString();
+  checker.getColorAt(1,cTmp); const b2="#"+cTmp.getHexString();
+  check("S4.E checker alternates biome.floor0/floor1 per tile",
+    a===biome.floor0.toLowerCase()&&b2===biome.floor1.toLowerCase(),
+    a+" vs "+b2);
+  const trim=g.children.filter(o=>o.userData.tag==="trim");
+  check("S4.E border trim: 4 wall-top rails in biome.wallHi",
+    trim.length===4&&trim.every(m=>m.isMesh)
+    &&trim.every(m=>"#"+m.material.color.getHexString()
+      ===biome.wallHi.toLowerCase()), trim.length+"");
+  const spanNS=trim.find(m=>m.geometry.parameters.width>
+    m.geometry.parameters.depth);
+  check("S4.E trim frames the arena above wall height",
+    !!spanNS&&spanNS.position.y>=biome.hWall
+    &&trim.every(m=>m.castShadow===false),
+    spanNS?("y="+spanNS.position.y):"missing");
+  // post-S4 fat-world draw-call count: exact formula, still <=500
+  const wf=createWorld(77,1); loadLevel(wf,1,false);
+  wf.enemies=[]; wf.items=[];
+  for(let i=0;i<16;i++)wf.enemies.push(mkE("walker",60+i*30,80));
+  for(let i=0;i<32;i++)wf.items.push({x:60+i*15,y:120,t:"fire",
+    col:"#ff8a3c",taken:false,pdef:null});
+  const nb=Math.min(CFG.MAX_BOMBS,8);
+  for(let i=0;i<nb;i++)wf.bombs.push({x:60+i*40,y:160,tx:i,ty:2,
+    timer:CFG.FUSE,variant:"normal"});
+  wf.blades=[{x:200,y:120,tiles:[{tx:5,ty:3}],t:0,ttl:CFG.BLADE_TTL}];
+  const r=createRenderer3D(null,null,{audio:null,hud:null});
+  let calls=-1;
+  try{ r.render(wf,1/60); calls=countDrawCalls(r._dbg.scene); }
+  catch(e){ console.log(e.message); }
+  const wantCalls=7                       /* plane+checker+wall+brick+trim4 */
+    +SLOT_MESH.player+16*SLOT_MESH.enemy+nb*SLOT_MESH.bomb
+    +32*SLOT_MESH.item+2+1;               /* blade layers + fx Points */
+  check("S4.E fat-world draw calls === "+wantCalls+" (<=500 gate)",
+    calls===wantCalls&&calls<=500, String(calls));
 });
 
 console.log(fail? "THREE FAIL":"THREE OK");
