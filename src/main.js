@@ -444,6 +444,7 @@ export function createGame(canvas, opts={}){
     renderer.render(attract&&demo?demo.world:world, dt,
       attract?{hud:false}
         :app.screen===SCREEN.INTRO&&curKind==="3d"?{intro:app.subT}
+        :app.screen===SCREEN.GAME?{hud:true}   // S4 overlay HUD chips
         :undefined);
     c.restore();
     drawShell(c);

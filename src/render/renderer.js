@@ -4,7 +4,7 @@ import {
   drawItems, drawEnemies, drawPlayer, drawBombs, drawBlades
 } from "./sprites.js";
 import {onEvent, updateFx, drawFx, getShake, initFx, syncFx} from "./fx.js";
-import {drawOverlay, updateHud, makeHud} from "./scenes.js";
+import {drawOverlay, updateHud, makeHud, drawHudChips} from "./scenes.js";
 import {draw3dBackground, buildPainters, byDepth} from "./r3d/scene3d.js";
 import {PROJ} from "./r3d/camera.js";
 
@@ -71,6 +71,9 @@ export function createRenderer(canvas, opts={}){
       else drawOverlay(ctx, world);
     }
     if(!(o&&o.hud===false)) updateHud(hud, world);
+    /* S4: overlay HUD chips — explicit opt-in only ({hud:true} during GAME),
+       drawn after restore so they never shake with the camera. */
+    if(o&&o.hud===true) drawHudChips(ctx, world);
   }
   return {canvas, ctx, render, consumeEvents, getShake};
 }

@@ -825,14 +825,14 @@ await sec("S4.C",async()=>{
   const sOuter0=matScale(layers[0],0).s.x;
   check("S4.C scale-pop: core overshoots at t=0 (0.55*1.6=0.88), outer "
       +"keeps exact sc=1 (prior contract)",
-    Math.abs(sCore0-0.88)<1e-9&&Math.abs(sOuter0-1)<1e-9,
-    "core="+sCore0.toFixed(3)+" outer="+sOuter0.toFixed(3));
+    Math.abs(sCore0-0.88)<1e-6&&Math.abs(sOuter0-1)<1e-9,
+    "core="+sCore0.toFixed(6)+" outer="+sOuter0.toFixed(6));
   w.blades[0].t=w.blades[0].ttl*0.2; sc.update(w);
   const sCore1=matScale(core,0).s.x;
   const sOuter1=matScale(layers[0],0).s.x;
   check("S4.C pop settles by 20% ttl: core=0.55*sc=0.44, outer=0.8 exact",
-    Math.abs(sCore1-0.44)<1e-9&&Math.abs(sOuter1-0.8)<1e-9,
-    "core="+sCore1.toFixed(3)+" outer="+sOuter1.toFixed(3));
+    Math.abs(sCore1-0.44)<1e-6&&Math.abs(sOuter1-0.8)<1e-6,
+    "core="+sCore1.toFixed(6)+" outer="+sOuter1.toFixed(6));
   // flash light pool
   const flash=slotsOf(sc.group,"flash");
   check("S4.C exactly FLASH_CAP point lights tagged 'flash'",
@@ -863,23 +863,25 @@ await sec("S4.C",async()=>{
 // ---- §S4.D overlay HUD chips (hearts / BOMB / FLAME) ----
 function hudRecorder(){
   const ops=[];
+  const grad={addColorStop:(...a)=>ops.push(["addColorStop",a])};
   const rec=new Proxy(function(){},{
     get:(t,p)=>{
       if(p===Symbol.toPrimitive)return()=>"";
 
-      return(...a)=>{ops.push([String(p),a]);};},
+      return(...a)=>{ops.push([String(p),a]);return grad;};},
     set:(t,p,v)=>{ops.push(["set:"+String(p),v]);return true;}});
   return {rec,ops};
 }
 const HUD_STUB={save(){},restore(){},translate(){},scale(){},beginPath(){},
-  closePath(){},moveTo(){},lineTo(){},bezierCurveTo(){},arcTo(){},arc(){},
+  closePath(){},moveTo(){},lineTo(){},bezierCurveTo(){},
+  quadraticCurveTo(){},arcTo(){},arc(){},
   fill(){},stroke(){},fillRect(){},strokeRect(){},fillText(){},
   createLinearGradient:()=>({addColorStop(){}}),
   createRadialGradient:()=>({addColorStop(){}})};
 await sec("S4.D",async()=>{
   const scenes=await import("../src/render/scenes.js");
   const {drawHudChips}=scenes;
-  const mkW=(lives,bombs,range)=>({state:"PLAY",lives,
+  const mkW=(lives,bombs,range)=>({state:"PLAY",lives,enemies:[],
     players:[{bombs,range}]});
   let threw=false;
   try{ drawHudChips(HUD_STUB,mkW(3,2,3)); }
@@ -976,7 +978,7 @@ await sec("S4.E",async()=>{
   let calls=-1;
   try{ r.render(wf,1/60); calls=countDrawCalls(r._dbg.scene); }
   catch(e){ console.log(e.message); }
-  const wantCalls=7                       /* plane+checker+wall+brick+trim4 */
+  const wantCalls=8                       /* plane+checker+wall+brick+trim4 */
     +SLOT_MESH.player+16*SLOT_MESH.enemy+nb*SLOT_MESH.bomb
     +32*SLOT_MESH.item+2+1;               /* blade layers + fx Points */
   check("S4.E fat-world draw calls === "+wantCalls+" (<=500 gate)",

@@ -60,6 +60,43 @@ export function buildScene(world, atlas){
   brick.userData.tag="brick";
   group.add(brick);
 
+  // S4 checker tint: instanced quads hovering just above the base plane,
+  // per-instance colors alternate biome.floor0/floor1 (zero-asset polish;
+  // atlas.floor map, when present, multiplies on top)
+  const chkGeo=new THREE.PlaneGeometry(CFG.TILE,CFG.TILE);
+  chkGeo.rotateX(-Math.PI/2);
+  const checker=new THREE.InstancedMesh(chkGeo,
+    new THREE.MeshLambertMaterial({color:"#ffffff"}),CFG.COLS*CFG.ROWS);
+  {
+    const cA=new THREE.Color(biome.floor0), cB=new THREE.Color(biome.floor1);
+    let ci=0;
+    for(let y=0;y<CFG.ROWS;y++)for(let x=0;x<CFG.COLS;x++){
+      MAT.makeTranslation((x+0.5)*CFG.TILE-W/2,0.4,(y+0.5)*CFG.TILE-D/2);
+      checker.setMatrixAt(ci,MAT);
+      checker.setColorAt(ci++,(x+y)&1?cB:cA);
+     }
+    checker.instanceMatrix.needsUpdate=true;
+    if(checker.instanceColor)checker.instanceColor.needsUpdate=true;
+   }
+  checker.receiveShadow=true; checker.userData.tag="checker";
+  group.add(checker);
+
+  // S4 border trim: wall-top rails framing the arena in biome.wallHi
+  {
+    const trimMat=new THREE.MeshLambertMaterial({color:biome.wallHi});
+    const rail=(w,d,x,z)=>{
+      const m=new THREE.Mesh(new THREE.BoxGeometry(w,6,d),trimMat);
+      m.position.set(x,biome.hWall+3,z);
+      m.castShadow=false; m.receiveShadow=true;
+      m.userData.tag="trim";
+      group.add(m);
+     };
+    rail(W+CFG.TILE,10,0,(D-CFG.TILE)/2);
+    rail(W+CFG.TILE,10,0,-(D-CFG.TILE)/2);
+    rail(10,D-CFG.TILE,(W-CFG.TILE)/2,0);
+    rail(10,D-CFG.TILE,-(W-CFG.TILE)/2,0);
+   }
+
   const lights=createLights(biome);
   group.add(lights.hemi,lights.dir,lights.amb);
   lights.dir.target.position.set(0,0,0);

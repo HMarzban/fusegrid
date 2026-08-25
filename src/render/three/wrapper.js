@@ -14,6 +14,7 @@ import {createRig, applyOrbit} from "./camrig.js";
 import {introCam} from "./flythrough.js";
 import {createParticles} from "./particles.js";
 import {buildAtlas} from "./textures.js";
+import {drawHudChips} from "../scenes.js";
 import {onEvent, updateFx, getShake, getFx, syncFx} from "../fx.js";
 
 const W=CFG.COLS*CFG.TILE, H=CFG.ROWS*CFG.TILE;
@@ -99,6 +100,13 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
     else applyOrbit(camera,rig,getShake());    // shake = camera-target offset
     fxp.update(getFx());
     if(gl)gl.render(scene3,camera);
+    /* S4: HUD chips ride the overlay only on explicit opt-in ({hud:true}
+       from main's GAME screen) — the overlay is cleared first so chips never
+       smear; menus/intro/attract frames stay untouched. */
+    if(o&&o.hud===true){
+      ovCtx.clearRect(0,0,W,H);
+      drawHudChips(ovCtx,world);
+     }
    }
 
   const surface={canvas:glCanvas,overlay:overlayCanvas,ctx:ovCtx,render,
