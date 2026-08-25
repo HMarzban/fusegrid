@@ -1,5 +1,5 @@
 import {CFG, DIRS8} from "../core/config.js";
-import {tileOf, isWall, solidAt, bfsNext, moveEntity} from "../core/board.js";
+import {tileOf, isWall, solidAt, bfsNext, moveEntity, bombsBlock} from "../core/board.js";
 import {hurtPlayer} from "../core/entities.js";
 
 /* Update every enemy on the world for one fixed step. PURE & DETERMINISTIC:
@@ -40,12 +40,13 @@ export function updateEnemies(world, dt, input, emit){
     for(const d of cands){
       const nx=e.x+d.x*sp, ny=e.y+d.y*sp;
       const blocked = e.pass ? isWall(w.grid,tileOf(nx),tileOf(ny))
-                             : solidAt(w.grid,nx,ny);
+                             : solidAt(w.grid,nx,ny)
+                              ||bombsBlock(w.bombs,e.x,e.y,nx,ny,e.r*0.9);
       if(!blocked){ ndir=d; break; }
       }
     if(ndir)e.dir={x:ndir.x,y:ndir.y};
     }
-  moveEntity(e, w.grid, e.dir.x*sp, e.dir.y*sp, e.pass);
+  moveEntity(e, w.grid, e.dir.x*sp, e.dir.y*sp, e.pass, e.pass?undefined:w.bombs);
    // keep on board (wall/border)
   if(e.tx<1){ e.x=CFG.TILE; e.dir.x=1; }
   else if(e.tx>CFG.COLS-2){ e.x=(CFG.COLS-2)*CFG.TILE+CFG.TILE/2; e.dir.x=-1; }

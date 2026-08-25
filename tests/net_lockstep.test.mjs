@@ -286,17 +286,27 @@ const N=650;
   for(let i=0;i<80;i++)h.frame();
   const leaveTick=h.lsB.nextExec+DELAY;
   h.lsB.leave();
-  for(let i=0;i<N;i++)h.frame(); h.settle();
-  const evA=h.wA.events.filter(e=>e.t==="leave"),
-        evB=h.wB.events.filter(e=>e.t==="leave");
+  // capture leave evidence AS IT OCCURS: under the tile-solid-bombs ruleset
+  // the solo survivor can reach LOSE mid-run, whose startGame() reset wipes
+  // world.events — end-of-run filtering would miss the (already processed)
+  // leave. F2 neutrality is pinned to the leave tick itself (post-rules
+  // gameplay may legitimately hurt the survivor later).
+  let evA=null,evB=null,preLives=null,livesAtLeave=null;
+  for(let i=0;i<N;i++){
+    const l0=h.wA.lives;
+    h.frame();
+    if(!evA){const e=h.wA.events.find(x=>x.t==="leave"); if(e){evA=e;preLives=l0;livesAtLeave=h.wA.lives;}}
+    if(!evB){const e=h.wB.events.find(x=>x.t==="leave"); if(e)evB=e;}
+   }
+  h.settle();
   check("(d) leave events recorded on both worlds at same tick",
-    evA.length===1&&evB.length===1&&evA[0].pid===1&&evB[0].pid===1,
+    evA&&evB&&evA.pid===1&&evB.pid===1,
     JSON.stringify(evA)+"|"+JSON.stringify(evB));
   check("(d) both worlds agree post-leave (full equality)",
     h.wA.tick===h.wB.tick&&sameWorld(h.wA,h.wB), h.wA.tick+"/"+h.wB.tick);
-  check("(d) leave is neutral: no hurt on survivor (F2)",
-    h.wA.lives===h.wB.lives&&h.wA.lives===3&&h.wA.score===h.wB.score,
-    h.wA.lives+"/"+h.wB.lives+" score "+h.wA.score);
+  check("(d) leave is neutral: no hurt on survivor at leave tick (F2)",
+    evA&&preLives===livesAtLeave,
+    "lives "+preLives+"->"+livesAtLeave);
   const ghost={type:"input",seq:9999,pid:1,tick:h.lsA.nextExec+1,
     move:{x:0,y:0},fire:false,shift:false,remote:false,kick:false};
   h.lsA.handleMessage(ghost);

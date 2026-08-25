@@ -69,8 +69,9 @@ function updatePlayer(world, dt, inp, emit){
         w.score+=CFG.BRICK_SCORE;
        }
      } else {
-      moveEntity(p, w.grid, dx*sp, 0, false);
-      moveEntity(p, w.grid, 0, dy*sp, false);
+      // canon: live bombs are tile-solid (bombsBlock gives walk-off + no re-entry)
+      moveEntity(p, w.grid, dx*sp, 0, false, w.bombs);
+      moveEntity(p, w.grid, 0, dy*sp, false, w.bombs);
       // KICK: break the brick in front of the player
       if(inp.kick && p.kick){
         const tx=tileOf(p.x+p.face.x*CFG.TILE), ty=tileOf(p.y+p.face.y*CFG.TILE);

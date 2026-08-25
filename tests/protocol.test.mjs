@@ -50,12 +50,12 @@ function check(name, cond, detail){ cond?pass++:fail++;
   const seed=31337;
   const w1=createWorld(seed,1); loadLevel(w1,1,false); w1.state="PLAY";
   const w2=createWorld(seed,1); loadLevel(w2,1,false); w2.state="PLAY";
-  const inputs=[];
-  for(let i=0;i<120;i++){
-    const it={move:{x:(i%5===0)?1:0,y:(i%7===0)?-1:0},fire:(i%10===0),firePrev:(i%10===1),
-      shift:false,remote:false,kick:false};
-    inputs.push(it); step(w1,1/60,{0:it});
-   } for(let i=0;i<120;i++) step(w2,1/60,{0:inputs[i]});
+  // fresh intent objects per step: step() writes back firePrev, so sharing
+  // one array across worlds would feed w2 mutated edges (latent harness bug)
+  const gen=i=>({move:{x:(i%5===0)?1:0,y:(i%7===0)?-1:0},fire:(i%10===0),
+    firePrev:(i%10===1),shift:false,remote:false,kick:false});
+  for(let i=0;i<120;i++) step(w1,1/60,{0:gen(i)});
+  for(let i=0;i<120;i++) step(w2,1/60,{0:gen(i)});
   check("deterministic replay matches after 120 divergent-input ticks",
     w1.score===w2.score && Math.round(w1.players[0].x)===Math.round(w2.players[0].x),
     "score "+w1.score+"/"+w2.score+"/ x "+w1.players[0].x+"/"+w2.players[0].x);

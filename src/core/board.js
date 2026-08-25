@@ -62,6 +62,22 @@ export function aabb(g,tx,ty,px,py,rad){
      if(solidAt(g,tx*CFG.TILE+CFG.TILE/2,ty*CFG.TILE+CFG.TILE/2))return true;
    return false;
   }
+   // Bomb tile-solidity (canon) with walk-off/graze escape: a live bomb blocks
+   // an entity from ENTERING its zone (half-tile + body radius around the bomb
+   // tile center), but a move is only rejected when it gets strictly deeper —
+   // so an entity standing on / grazing a bomb can always finish leaving it,
+   // yet once out it can never push back in.
+ export function bombsBlock(bombs,cx,cy,qx,qy,rad){
+   const zone=CFG.TILE/2+rad;
+   for(let i=0;i<bombs.length;i++){
+     const b=bombs[i],bx=b.tx*CFG.TILE+CFG.TILE/2,by=b.ty*CFG.TILE+CFG.TILE/2;
+     const dp=Math.max(Math.abs(cx-bx),Math.abs(cy-by));
+     const dq=Math.max(Math.abs(qx-bx),Math.abs(qy-by));
+     if(dp>=zone){ if(dq<zone)return true; }
+     else if(dq<dp)return true;
+    }
+   return false;
+  }
    // circle-vs-wall/border only. Used by brick-penetrators so they NEVER leave the board.
  export function wallHits(g,px,py,rad){
    const tx0=tileOf(px-rad),tx1=tileOf(px+rad),ty0=tileOf(py-rad),ty1=tileOf(py+rad);
@@ -71,9 +87,11 @@ export function aabb(g,tx,ty,px,py,rad){
   }
    // Sub-stepped move. `check` decides collision; flips e.dir once per axis on contact.
    // Returns {bouncedX, bouncedY}. passBrick => wall-only check (brick penetrator).
- export function moveEntity(e,g,dx,dy,passBrick){
-   const check=passBrick?function(px,py,r){return wallHits(g,px,py,r);}
-                          :function(px,py,r){return circleHitsSolid(g,px,py,r);};
+   // `bombs` = optional live-bomb array threaded to bombsBlock (tile-solid bombs).
+ export function moveEntity(e,g,dx,dy,passBrick,bombs){
+   const rad=e.r*0.9;
+   const check=(cx,cy,qx,qy)=> (passBrick?wallHits(g,qx,qy,rad):circleHitsSolid(g,qx,qy,rad))
+                             ||(bombs&&bombsBlock(bombs,cx,cy,qx,qy,rad));
    const step=CFG.TILE*0.25;
    let n=1;
    const dist2=dx*dx+dy*dy, cell=step*step;
@@ -81,10 +99,10 @@ export function aabb(g,tx,ty,px,py,rad){
    let bx=false,by=false;
    for(let i=0;i<n;i++){
      const nx=e.x+dx/n;
-     if(check(nx,e.y,e.r*0.9)){ if(!bx){bx=true; if(e.dir)e.dir.x=-e.dir.x;} }
+     if(check(e.x,e.y,nx,e.y)){ if(!bx){bx=true; if(e.dir)e.dir.x=-e.dir.x;} }
      else e.x=nx;
      const ny=e.y+dy/n;
-     if(check(e.x,ny,e.r*0.9)){ if(!by){by=true; if(e.dir)e.dir.y=-e.dir.y;} }
+     if(check(e.x,e.y,e.x,ny)){ if(!by){by=true; if(e.dir)e.dir.y=-e.dir.y;} }
      else e.y=ny;
     }
    e.tx=tileOf(e.x); e.ty=tileOf(e.y);
