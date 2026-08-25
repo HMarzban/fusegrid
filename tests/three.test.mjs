@@ -13,7 +13,11 @@
     pass — hero/enemy silhouette parts (SLOT_MESH), layered blast cores with
     scale-pop easing, pooled ≤3 flash PointLights, overlay HUD chips
     (drawHudChips) gated on o.hud===true, checker floor tiles + border-wall
-    trim, and the exact post-S4 draw-call count within budget. No DOM anywhere. */
+    trim, and the exact post-S4 draw-call count within budget; the 2026-08-25
+    elements-redesign wave adds capsule-box pickups + glow rings, glossy Phong
+    bombs with variant base rings, enemy eye strips + visor wedge, the
+    bomberman player stack, crossed-quad flame blasts, and the §3 glyph/eye/
+    visor/fire texture painters. No DOM anywhere. */
 import {createLights} from "../src/render/three/lights.js";
 import {build} from "../src/render/three/materials.js";
 import {buildScene, countDrawCalls} from "../src/render/three/scene.js";
@@ -409,9 +413,19 @@ sec("S2.D",()=>{
     bs[0].children.length+"/"+bs[1].children.length);
   const c0="#"+bs[0].children[0].material.color.getHexString();
   const c1="#"+bs[1].children[0].material.color.getHexString();
-  check("S2 variant tint: power body color differs from normal", c0!==c1,
-    c0+" vs "+c1);
-});
+  check("S2 glossy body NEVER recolored across variants (#15181f Phong)",
+    bs[0].children[0].material.isMeshPhongMaterial
+    &&c0==="#15181f"&&c1==="#15181f", c0+" vs "+c1);
+  const r0=bs[0].children[3], r1=bs[1].children[3];
+  check("S2 variant identity rides the base ring (normal hidden,"
+      +" power #ff4d5e)",
+    r0&&r0.geometry.type==="TorusGeometry"&&r0.visible===false
+    &&r1.visible===true&&"#"+r1.material.color.getHexString()==="#ff4d5e",
+    r0&&("#"+r1.material.color.getHexString())+" vis="+r1.visible);
+  check("S2 squash-stretch pulse: scale.y squashed vs scale.x while burning",
+    Math.abs(bs[1].scale.x-bs[1].scale.y)>1e-6,
+    bs[1].scale.x.toFixed(4)+"/"+bs[1].scale.y.toFixed(4));
+ });
 
 // ---- §S2.E blade ttl-driven fade (shrink with age) ----
 sec("S2.E",()=>{
@@ -498,6 +512,9 @@ function recFactory(){
       ops.push("sizeH:"+v);}});
     const ctx=new Proxy({},{get:(t,p)=>{
       if(typeof p==="symbol")return undefined;
+      if(p==="createLinearGradient"||p==="createRadialGradient")
+        return(...a)=>{ops.push([String(p),a]);
+          return {addColorStop:(...s)=>ops.push(["addColorStop",s])};};
       return (...a)=>{ops.push(String(p));};},
       set:(t,p,v)=>{if(typeof p!=="symbol")ops.push("set:"+String(p));
         return true;}});
@@ -505,7 +522,7 @@ function recFactory(){
     canvases.push(cv); return cv; };
   return {mk,canvases};
 }
-{
+await sec("S2.I",()=>{
   const f=recFactory();
   const kinds=["player","enemy_walker","enemy_stationary","bomb","item_fire"];
   const src=atlasSources(f.mk);
@@ -530,25 +547,109 @@ function recFactory(){
     &&atlas.enemy_rocket.isTexture===true
     &&atlas.bomb.colorSpace===THREE.SRGBColorSpace
     &&atlas.item_fire.isTexture===true);
+  // §3 redesign: item glyph painters replace the drawItemBody capture; eye
+  // strips / visor / fire ramp join the zero-asset pipeline.
+  const f2=recFactory();
+  const src2=atlasSources(f2.mk);
+  const itemKeys=POWER.map(pd=>"item_"+pd.t);
+  let itOk=true,itDet=[];
+  for(const k of itemKeys){
+    const cv=src2[k];
+    if(!cv||cv.width!==64||cv.height!==64){itOk=false;itDet.push(k+":size");
+      continue;}
+    const paints=cv._ops.filter(o=>o==="stroke"||o==="beginPath").length;
+    if(paints<4||!cv._ops.includes("set:strokeStyle")
+      ||!cv._ops.includes("set:fillStyle")){itOk=false;
+      itDet.push(k+":paints="+paints);}
+   }
+  check("S2.R item glyph sources: all 12 POWER keys, 64x64 stroked glyphs"
+      +" (no plate capture)", itOk&&itemKeys.length===12,
+    itDet.join(" ")+" n="+itemKeys.length);
+  const EYE_TYPES=["walker","chaser","fast","stationary","boomerang",
+    "rocket"];
+  let eyeOk=true,eyeDet=[];
+  for(const t of EYE_TYPES){
+    const cv=src2["eye_"+t];
+    if(!cv||cv.width!==64||cv.height!==32){eyeOk=false;
+      eyeDet.push(t+":missing");continue;}
+    const arcs=cv._ops.filter(o=>o==="arc"||o==="ellipse").length;
+    if(arcs<4||!cv._ops.includes("set:fillStyle")){eyeOk=false;
+      eyeDet.push(t+":arcs="+arcs);}
+   }
+  check("S2.R eye strips: 6 per-type sources, 64x32 sclera+pupil ellipses",
+    eyeOk, eyeDet.join(" "));
+  const vis=src2.visor;
+  check("S2.R visor source: 128x32 navy band + two glints",
+    !!vis&&vis.width===128&&vis.height===32
+    &&vis._ops.filter(o=>o==="fillRect"||o==="fill").length>=3
+    &&vis._ops.includes("set:fillStyle"),
+    vis?vis.width+"x"+vis.height:"missing");
+  const fir=src2.fire;
+  check("S2.R fire ramp source: 64x64 vertical gradient",
+    !!fir&&fir.width===64&&fir.height===64
+    &&fir._ops.some(o=>o[0]==="createLinearGradient")
+    &&fir._ops.some(o=>o[0]==="addColorStop")&&fir._ops.includes("fillRect"),
+    fir?"ok":"missing");
+  const atlas2=buildAtlas(f2.mk);
+  check("S2.R buildAtlas exposes new keys NearestFilter+sRGB flagged _shared",
+    !!atlas2&&atlas2.item_power.isTexture===true
+    &&atlas2.eye_fast.magFilter===THREE.NearestFilter
+    &&atlas2.visor.colorSpace===THREE.SRGBColorSpace
+    &&atlas2.fire.isTexture===true
+    &&atlas2.item_heart._shared===true&&atlas2.eye_chaser._shared===true
+    &&atlas2.visor._shared===true&&atlas2.fire._shared===true);
+  // headless pools: every new map falls back to a flat bright color
   const w=createWorld(29,1); loadLevel(w,1,false);
-  const poolsJunk=createPools(BIOMES[0],{player:"junk-not-a-texture"});
-  const face=poolsJunk.player.children.find(o=>o.isMesh
-    &&o.geometry.type==="PlaneGeometry");
-  check("S2 non-Texture atlas entries rejected (materials keep flat colors)",
-    !face.material.map);
+  w.items=[{x:100,y:120,t:"fire",col:"#ff8a3c",taken:false,pdef:null}];
   const scPlain=buildScene(w);
-  const pcapsule=slotsOf(scPlain.group,"player")[0].children.find(
-    o=>o.isMesh&&o.geometry.type==="CapsuleGeometry");
-  check("S2 headless player = Lambert capsule body, map-free fallback",
-    !!pcapsule&&pcapsule.material.isMeshLambertMaterial
-    &&!pcapsule.material.map);
-  const es0=slotsOf(scPlain.group,"enemy")[0];
+  const gP=scPlain.pools.player.children;
+  const bodyM=gP.find(o=>o.geometry.type==="SphereGeometry"
+    &&o.geometry.parameters.radius===CFG.TILE*0.26);
+  const dome=gP.find(o=>o.geometry.parameters
+    &&o.geometry.parameters.thetaLength===Math.PI/2);
+  const band=gP.find(o=>o.geometry.type==="CylinderGeometry"
+    &&o.geometry.parameters.openEnded===true);
+  check("R.headless player: white Lambert sphere body + dome helmet + navy"
+      +" visor band fallback (map-free)",
+    !!bodyM&&bodyM.material.isMeshLambertMaterial&&!bodyM.material.map
+    &&"#"+bodyM.material.color.getHexString()==="#f4f7ff"
+    &&!!dome&&!!band&&!band.material.map
+    &&"#"+band.material.color.getHexString()==="#0b1020");
+  const es0=scPlain.pools.enemies[0];
+  const eye0=es0.children[es0.children.length-1];
+  check("R.headless enemy eye strip last child, Basic #f4f7ff fallback",
+    eye0.geometry.type==="PlaneGeometry"
+    &&eye0.material.isMeshBasicMaterial&&eye0.material.transparent
+    &&!eye0.material.map
+    &&"#"+eye0.material.color.getHexString()==="#f4f7ff");
   const protoW=spawnEnemy("walker",0,0,1,null);
   check("S2 headless enemy material flat identity color, map-free",
     es0.material.isMeshLambertMaterial&&!es0.material.map
     &&"#"+es0.material.color.getHexString()
       ===protoW.color.toLowerCase());
-}
+  const bmH=scPlain.pools.blades.material;
+  check("R.headless blasts: additive Basic flame fallback #ffb347 on"
+      +" crossed quads (8 verts / 12 idx)",
+    bmH.isMeshBasicMaterial&&!bmH.map
+    &&bmH.blending===THREE.AdditiveBlending&&bmH.side===THREE.DoubleSide
+    &&bmH.depthWrite===false
+    &&"#"+bmH.color.getHexString()==="#ffb347"
+    &&scPlain.pools.blades.geometry.attributes.position.count===8
+    &&scPlain.pools.blades.geometry.index.count===12);
+  const its0=scPlain.pools.items[0];
+  check("R.headless item pickup = lit cube in POWER color + additive ring",
+    its0.children[0].geometry.type==="BoxGeometry"
+    &&its0.children[0].material.isMeshLambertMaterial
+    &&!its0.children[0].material.map
+    &&"#"+its0.children[0].material.color.getHexString()==="#ff8a3c"
+    &&its0.children[1].material.isMeshBasicMaterial
+    &&its0.children[1].material.transparent===true
+    &&its0.children[1].material.depthWrite===false);
+  const poolsJunk=createPools(BIOMES[0],{player:"junk-not-a-texture"});
+  const eyeJunk=poolsJunk.enemies[0].children[2];
+  check("S2 non-Texture atlas entries rejected (materials keep flat colors)",
+    !eyeJunk.material.map);
+ });
 
 // ---- §S2.J purity gate: sim/net/input carry zero three/render-three refs ----
 sec("S2.J",()=>{
@@ -746,21 +847,26 @@ await sec("S3.E",async()=>{
   catch(e){ threw=true; console.log(e.message); }
   check("S3.E draw-call budget <=500 (spec §8; got "+calls+")",
     !threw&&calls>0&&calls<=500, String(calls));
-  // blade emissive pulse curve (fresh white-hot -> aged ember)
+  // flame-cross opacity curve (§4): sc*(.55+.45*sin(24t)); Lambert/emissive
+  // machinery purged in the elements redesign
   const w2=createWorld(45,1); loadLevel(w2,1,false); w2.time=0;
   w2.blades=[{x:200,y:120,tiles:[{tx:5,ty:3}],t:0,ttl:CFG.BLADE_TTL,
     variant:"normal"}];
   const sc2=buildScene(w2); sc2.update(w2);
   const bm=slotsOf(sc2.group,"blade")[0].material;
-  const iFresh=bm.emissiveIntensity;
+  const oFresh=bm.opacity;
   w2.time=Math.PI/48; sc2.update(w2);        // sin(24t)==1 peak
-  const iPeak=bm.emissiveIntensity;
+  const oPeak=bm.opacity;
   w2.blades[0].t=w2.blades[0].ttl*0.8; w2.time=0; sc2.update(w2);
-  const iOld=bm.emissiveIntensity;
-  check("S3.E blade emissive pulse: fresh .8 -> peak 1.0 -> ember .36",
-    Math.abs(iFresh-0.8)<1e-9&&Math.abs(iPeak-1.0)<1e-9
-    &&Math.abs(iOld-0.36)<1e-9, iFresh.toFixed(2)+"/"+iPeak.toFixed(2)
-    +"/"+iOld.toFixed(2));
+  const oOld=bm.opacity;
+  check("S3.E flame opacity: fresh .55 -> flicker peak 1.0 -> aged .11",
+    Math.abs(oFresh-0.55)<1e-9&&Math.abs(oPeak-1.0)<1e-9
+    &&Math.abs(oOld-0.11)<1e-9, oFresh.toFixed(2)+"/"+oPeak.toFixed(2)
+    +"/"+oOld.toFixed(2));
+  check("S3.E blasts are unlit additive flame quads (emissive purged)",
+    bm.isMeshBasicMaterial&&bm.transparent===true&&bm.depthWrite===false
+    &&bm.blending===THREE.AdditiveBlending
+    &&bm.side===THREE.DoubleSide);
   // fuse spark: unlit glow + 2D-parity flicker 1+-0.23*sin(t*30)
   w2.time=0.05; w2.bombs=[{x:60,y:60,tx:1,ty:1,timer:CFG.FUSE,
     variant:"normal"}]; sc2.update(w2);
@@ -775,46 +881,59 @@ await sec("S3.E",async()=>{
 await sec("S4.A",async()=>{
   const ent=await import("../src/render/three/entities.js");
   const {SLOT_MESH}=ent;
-  check("S4.A SLOT_MESH exported (player/enemy/bomb/item meshes per slot)",
-    typeof SLOT_MESH==="object"&&SLOT_MESH.player>=6&&SLOT_MESH.enemy===3
-    &&SLOT_MESH.bomb===5, JSON.stringify(SLOT_MESH));
+  check("S4.A SLOT_MESH exported (player7/enemy4/bomb5/item2)",
+    typeof SLOT_MESH==="object"&&SLOT_MESH.player===7
+    &&SLOT_MESH.enemy===4&&SLOT_MESH.bomb===5&&SLOT_MESH.item===2,
+    JSON.stringify(SLOT_MESH));
   const w=createWorld(71,1); loadLevel(w,1,false);
   const pools=createPools(BIOMES[0],null);
   const kinds=pools.player.children.map(o=>o.geometry?o.geometry.type:null)
     .filter(Boolean);
-  check("S4.A player = hero silhouette (capsule torso, helmet head sphere,"
-      +" visor plane, antenna rod+ball, 2 feet)",
+  check("S4.A player = bomberman stack (white sphere body, helmet dome,"
+      +" visor band, antenna rod+ball, 2 boots; capsule gone)",
     kinds.length===SLOT_MESH.player
-    &&kinds.includes("CapsuleGeometry")
-    &&kinds.filter(k=>k==="SphereGeometry").length>=2
-    &&kinds.includes("PlaneGeometry")
-    &&kinds.includes("CylinderGeometry")
-    &&kinds.filter(k=>k==="BoxGeometry").length>=2,
+    &&!kinds.includes("CapsuleGeometry")
+    &&kinds.filter(k=>k==="SphereGeometry").length>=3
+    &&kinds.filter(k=>k==="CylinderGeometry").length>=2
+    &&kinds.filter(k=>k==="BoxGeometry").length===2,
     kinds.join(","));
-  const visor=pools.player.children.find(o=>o.isMesh
-    &&o.geometry.type==="PlaneGeometry");
-  check("S4.A visor plate rides the head front (above torso, +Z facing)",
-    visor.position.y>CFG.TILE*0.3&&visor.position.z>0,
-    visor.position.y.toFixed(2)+"/"+visor.position.z.toFixed(2));
-  // per-type enemy detail children (base mesh keeps prior geometry contract)
+  const dome=pools.player.children.find(o=>o.isMesh&&o.geometry.parameters
+    &&o.geometry.parameters.thetaLength===Math.PI/2);
+  check("S4.A helmet is a true hemisphere dome (thetaLength pi/2)", !!dome);
+  const band=pools.player.children.find(o=>o.isMesh
+    &&o.geometry.type==="CylinderGeometry"
+    &&o.geometry.parameters.openEnded===true);
+  check("S4.A visor band = open cylinder segment facing +Z above torso",
+    !!band&&Math.abs(band.geometry.parameters.thetaLength-Math.PI*1.1)<1e-9
+    &&band.position.y>CFG.TILE*0.3,
+    band?band.position.y.toFixed(2):"missing");
+  // per-type enemy detail children (base mesh keeps prior geometry contract);
+  // eyes ride children[2] AFTER the two ref-swapped details
   w.enemies=["walker","chaser","fast","stationary","boomerang","rocket"]
     .map((t,i)=>mkE(t,60+i*40,80));
   const sc=buildScene(w); sc.update(w);
   const es=slotsOf(sc.group,"enemy");
   const wantDetail={walker:["BoxGeometry","BoxGeometry"],
-    chaser:["ConeGeometry","BoxGeometry"],fast:["BoxGeometry","BoxGeometry"],
+    chaser:["BoxGeometry","BoxGeometry"],fast:["BoxGeometry","BoxGeometry"],
     stationary:["CylinderGeometry","SphereGeometry"],
     boomerang:["BoxGeometry","BoxGeometry"],
-    rocket:["BoxGeometry","BoxGeometry"]};
+    rocket:["BoxGeometry","ConeGeometry"]};
   let detOk=true,det=[];
   for(let i=0;i<6;i++){
     const got=es[i].children.map(o=>o.geometry.type);
-    if(got.length!==2||got[0]!==wantDetail[w.enemies[i].type][0]
-      ||got[1]!==wantDetail[w.enemies[i].type][1]){detOk=false;
+    if(got.length!==3||got[0]!==wantDetail[w.enemies[i].type][0]
+      ||got[1]!==wantDetail[w.enemies[i].type][1]
+      ||got[2]!=="PlaneGeometry"){detOk=false;
       det.push(w.enemies[i].type+":"+got.join("+"));}
    }
-  check("S4.A enemy detail silhouettes per type"
-      +" (feet/nose/trail/turret/wings/fins)", detOk, det.join(" "));
+  check("S4.A enemy silhouettes per type with eye strip last"
+      +" (feet/visor/fins/turret/wings/fin+nose)", detOk, det.join(" "));
+  const chR=spawnEnemy("chaser",0,0,1,null).r;
+  const chaser=es[1].children[0];
+  check("S4.A chaser detail is the visor wedge (r*.55 wide, tiltX -.2)",
+    Math.abs(chaser.geometry.parameters.width-chR*0.55)<1e-9
+    &&Math.abs(chaser.rotation.x+0.2)<1e-9,
+    chaser.geometry.parameters.width.toFixed(2));
   check("S4.A enemy base identity colors survive the art pass",
     "#"+es[3].material.color.getHexString()
       ===spawnEnemy("stationary",0,0,1,null).color.toLowerCase());
@@ -837,29 +956,109 @@ await sec("S4.A",async()=>{
     py0.toFixed(2)+"->"+pp.player.position.y.toFixed(2));
 });
 
-// ---- §S4.B bomb art: highlight + metal cap on the classic sphere ----
+// ---- §S4.B bomb art v2: glossy Phong sphere + variant base rings ----
 await sec("S4.B",async()=>{
-  const {SLOT_MESH}=await import("../src/render/three/entities.js");
   const w=createWorld(72,1); loadLevel(w,1,false);
   w.bombs=[{x:60,y:60,tx:1,ty:1,timer:CFG.FUSE,variant:"normal"}];
   const sc=buildScene(w); sc.update(w);
   const b=slotsOf(sc.group,"bomb")[0];
   const k=b.children.map(o=>o.geometry.type);
-  check("S4.B bomb slot = body+fuse+spark+highlight+cap (prior indices kept)",
-    b.children.length===SLOT_MESH.bomb&&k[0]==="SphereGeometry"
-    &&k[1]==="BoxGeometry"&&k[2]==="SphereGeometry"
-    &&k[3]==="SphereGeometry"&&k[4]==="CylinderGeometry", k.join(","));
-  const hi=b.children[3], cap=b.children[4];
-  check("S4.B highlight is white translucent spec blob",
-    hi.material.transparent===true
-    &&"#"+hi.material.color.getHexString()==="#ffffff", 
-    "#"+hi.material.color.getHexString());
-  check("S4.B metal cap sits between body top and fuse",
-    "#"+cap.material.color.getHexString()!=="#15181f"
-    &&cap.position.y>b.children[0].position.y
-    &&cap.position.y<b.children[1].position.y,
-    cap.position.y.toFixed(2));
+  check("S4.B bomb slot = body+fuse+spark+ring+cap (children[0]/[2] kept)",
+    b.children.length===5&&k[0]==="SphereGeometry"
+    &&k[1]==="CylinderGeometry"&&k[2]==="SphereGeometry"
+    &&k[3]==="TorusGeometry"&&k[4]==="CylinderGeometry", k.join(","));
+  const body=b.children[0];
+  check("S4.B glossy Phong body (shininess 110, white specular, #15181f)",
+    body.material.isMeshPhongMaterial&&body.material.shininess===110
+    &&"#"+body.material.specular.getHexString()==="#ffffff"
+    &&"#"+body.material.color.getHexString()==="#15181f",
+    body.material.type+" shin="+body.material.shininess);
+  check("S4.B painted highlight blob deleted (no translucent white child)",
+    !b.children.some(o=>o!==body&&o.material.transparent
+      &&"#"+o.material.color.getHexString()==="#ffffff"));
+  check("S4.B thin tilted rod fuse, cap stack, spark raised to TILE*.84",
+    Math.abs(b.children[1].rotation.z-0.35)<1e-9
+    &&b.children[1].geometry.parameters.radiusTop===1.5
+    &&Math.abs(b.children[4].position.y-CFG.TILE*0.63)<1e-9
+    &&Math.abs(b.children[2].position.y-CFG.TILE*0.84)<1e-9,
+    "fuseZ="+b.children[1].rotation.z.toFixed(2));
 });
+// ---- §R.VAR variant ring color/visibility matrix across all 5 variants ----
+await sec("R.VAR",async()=>{
+  const VAR={normal:[false,null],power:[true,"#ff4d5e"],
+    pierce:[true,"#8f8fff"],line:[true,"#ffd447"],remote:[true,"#9aa3c0"]};
+  const vm=createWorld(79,1); loadLevel(vm,1,false); vm.time=0.05;
+  vm.bombs=Object.keys(VAR).map((v,i)=>({x:60+i*40,y:60,tx:i,ty:1,
+    timer:CFG.FUSE,variant:v}));
+  const scv=buildScene(vm); scv.update(vm);
+  const vb=slotsOf(scv.group,"bomb").filter(s=>s.visible);
+  let ok=vb.length===5,det=[];
+  Object.keys(VAR).forEach((v,i)=>{
+    const rg=vb[i].children[3], bd=vb[i].children[0];
+    const ringOk=rg.visible===VAR[v][0]
+      &&(!VAR[v][0]||"#"+rg.material.color.getHexString()===VAR[v][1]);
+    if(!ringOk)det.push(v+":ring/"+rg.visible+"/"
+      +(rg.visible?"#"+rg.material.color.getHexString():"-"));
+    if(!bd.material.isMeshPhongMaterial
+      ||"#"+bd.material.color.getHexString()!=="#15181f")
+      det.push(v+":body-recolored");
+   });
+  check("R.VAR variant matrix: normal hidden; power/pierce/line/remote hues;"
+      +" body never recolored", ok&&det.length===0,
+    det.join(" ")||vb.length+" slots");
+});
+
+// ---- §R.items capsule-box pickup + icon faces + additive glow ring ----
+await sec("R.items",async()=>{
+  const w=createWorld(80,1); loadLevel(w,1,false); w.time=0;
+  w.items=[{x:100,y:120,t:"fire",col:"#ff8a3c",taken:false,pdef:null},
+    {x:140,y:120,t:"pierce",col:"#8f8fff",taken:false,pdef:null}];
+  const sc=buildScene(w); sc.update(w);
+  const its=slotsOf(sc.group,"item").filter(s=>s.visible);
+  check("R.items slot = pickup cube + glow ring (2 meshes)",
+    its.length===2&&its.every(s=>s.children.length===2
+      &&s.children.every(o=>o.isMesh)),
+    its.length+"/"+(its[0]?its[0].children.length:"-"));
+  const pk=its[0].children[0], rg=its[0].children[1];
+  check("R.items pickup is lit TILE*.44 cube casting a shadow",
+    pk.geometry.type==="BoxGeometry"
+    &&pk.geometry.parameters.width===CFG.TILE*0.44
+    &&pk.geometry.parameters.height===CFG.TILE*0.44
+    &&pk.geometry.parameters.depth===CFG.TILE*0.44
+    &&pk.castShadow===true&&pk.material.isMeshLambertMaterial);
+  const rpos=rg.geometry.attributes.position.array;
+  let flat=true;
+  for(let i=1;i<rpos.length;i+=3)if(Math.abs(rpos[i])>1e-9)flat=false;
+  check("R.items ring: RingGeometry(.30T,.46T) baked flat on the floor at"
+      +" y=1.5, additive",
+    rg.geometry.type==="RingGeometry"
+    &&rg.geometry.parameters.innerRadius===CFG.TILE*0.30
+    &&rg.geometry.parameters.outerRadius===CFG.TILE*0.46
+    &&flat&&Math.abs(rg.position.y-1.5)<1e-9
+    &&rg.material.isMeshBasicMaterial&&rg.material.transparent
+    &&rg.material.blending===THREE.AdditiveBlending
+    &&rg.material.depthWrite===false);
+  check("R.items rings tinted by POWER colors (fire #ff8a3c / pierce"
+      +" #8f8fff)",
+    "#"+rg.material.color.getHexString()==="#ff8a3c"
+    &&"#"+its[1].children[1].material.color.getHexString()==="#8f8fff");
+  // §4 animations: bob +-5 @ sin(3t) about y=TILE*.66; spin 2.6t; ring pulse
+  const drive=(t)=>{w.time=t;sc.update(w);};
+  drive(0);
+  const ry0=pk.rotation.y;
+  drive(Math.PI/6);                          // sin(3t)==1 -> top of bob
+  check("R.items bob +-5 about TILE*.66 @sin(3t), spin advances 2.6t",
+    Math.abs(pk.position.y-(CFG.TILE*0.66+5))<1e-9
+    &&Math.abs((pk.rotation.y-ry0)-2.6*Math.PI/6)<1e-9,
+    pk.position.y.toFixed(2));
+  check("R.items pickup stays POWER-bright Lambert (never dark plate)",
+    "#"+pk.material.color.getHexString()==="#ff8a3c"&&!pk.material.map);
+  drive(Math.PI/10);                         // sin(5t)==1 -> pulse peak
+  check("R.items ring pulses opacity .30+.22sin(5t), scale 1+.08sin(5t)",
+    Math.abs(rg.material.opacity-0.52)<1e-9
+    &&Math.abs(rg.scale.x-1.08)<1e-9,
+    rg.material.opacity.toFixed(3)+"/"+rg.scale.x.toFixed(2));
+ });
 
 // ---- §S4.C explosion drama: layered core pop + pooled flash lights ----
 await sec("S4.C",async()=>{
@@ -874,10 +1073,18 @@ await sec("S4.C",async()=>{
   check("S4.C blades are TWO layered instanced meshes (outer + core)",
     layers.length===2&&layers[0].isInstancedMesh&&layers[1].isInstancedMesh,
     layers.length+"");
+  check("S4.C blast outer layer = merged crossed flame quads"
+      +" (8 verts / 12 idx)",
+    layers[0].geometry.type==="BufferGeometry"
+    &&layers[0].geometry.attributes.position.count===8
+    &&layers[0].geometry.index.count===12,
+    layers[0].geometry.attributes.position.count+"/"
+      +(layers[0].geometry.index?layers[0].geometry.index.count:"-"));
   const core=layers[1];
-  check("S4.C core layer is white-hot unlit glow",
+  check("S4.C core layer is white-hot unlit glow (#fff3b0, TILE*.40)",
     core.material.isMeshBasicMaterial
-    &&"#"+core.material.color.getHexString()==="#fff8d8",
+    &&"#"+core.material.color.getHexString()==="#fff3b0"
+    &&core.geometry.parameters.width===CFG.TILE*0.40,
     "#"+core.material.color.getHexString());
   const sCore0=matScale(core,0).s.x;
   const sOuter0=matScale(layers[0],0).s.x;
@@ -1039,8 +1246,9 @@ await sec("S4.E",async()=>{
   const wantCalls=8                       /* plane+checker+wall+brick+trim4 */
     +SLOT_MESH.player+16*SLOT_MESH.enemy+nb*SLOT_MESH.bomb
     +32*SLOT_MESH.item+2+1;               /* blade layers + fx Points */
-  check("S4.E fat-world draw calls === "+wantCalls+" (<=500 gate)",
-    calls===wantCalls&&calls<=500, String(calls));
+  check("S4.E fat-world draw calls === "+wantCalls+" (=186 post-redesign,"
+      +" <=500 gate)",
+    calls===wantCalls&&wantCalls===186&&calls<=500, String(calls));
 });
 
 // ---- §S5 state overlays: WIN/LOSE/PAUSE paint the classic 2D layer in
