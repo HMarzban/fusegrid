@@ -16,6 +16,12 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-08-25 — 3D ELEMENTS REDESIGN shipped (d1bb0cb): pickups, glossy bombs, silhouettes, flame crosses
+- Spec 2026-08-25-elements-redesign §2–§5 executed RED→GREEN (24 fails→173 checks OK): items = capsule-box pickups w/ all-face glyph textures + additive POWER rings; bomb = Phong #15181f shininess110 sphere (highlight child deleted) + variant base TORUS hues (normal hidden, body never recolored); enemies get eye strips children[2] + chaser visor wedge/fast swept fins/rocket ID tip; player = bomberman stack (sphere body+π/2 dome+open visor band+antenna); blasts = crossedQuads(8v/12idx) Basic additive fire-ramp (emissive purged); 4 new texture painters ×12/×6/visor/fire, atlas `_shared=true`. Fat-world formula 138→186 ≤500. Scope=3 files only; battery 15/15. Interpretations in task-report-elements.md (rocket=[fin,ID-tipCone], item slot origin at floor). Left: manual browser smoke of §6 acceptance 1–7.
+
+## 2026-08-25 — Camera overhaul + toolbar Menu button (5de5b0d..24c1295)
+- Fixed full-board rig DEF={az0,el1.152,dist700}, DIST band 500–880, flythrough re-keyed (BASE 700, az 0, el 1.28→1.152 snap); free-orbit demoted behind ?orbit=1 via NEW mountOrbitCtl getDolly gate (wheel/pinch stay always-on, right-drag opt-in), g.rig getter added; btnMenu after Restart = GAME-gated KeyM-quit clone (persist-if->0, quitToMenu("PAUSE"), label reset, blur). RED 20 fails → GREEN, battery 15/15, core/net untouched. Left: manual browser smoke of §5 checklist. Report: .superpowers/sdd/2026-08-25-polish/task-report-cam-menu.md
+
 ## 2026-08-24 — 3D overlay fix (83561ff): WIN/LOSE/PAUSE now paint the 2D layer in kind 3d
 - wrapper.js render tail: state-gated drawOverlay(ovCtx,world) (defaults already 600×520 classic space) + updateHud(hud,world) routed like kind 2d ({hud:false} suppresses); chips stay opt-in and draw after the veil; MENU excluded (shell owns menus). RED→GREEN: new S5.overlay section in three.test.mjs (8 checks), battery 15/15.
 
