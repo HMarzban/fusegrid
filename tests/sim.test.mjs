@@ -341,5 +341,106 @@ function rulesWorld(seed){
   check("R4c rocket (pass) phases through bombs", reached3, "tx="+rkt.tx);
 }
 
+// ==================== RULES OVERHAUL: real sliding kick ====================
+const KICK_LANE=7; // hand-cleared corridor row used by the kick tests
+function kickWorld(seed){
+  const w=rulesWorld(seed);
+  // cols 2..13 open: (13,7) is genBoard BRICK (odd/odd, uncarved) and must be
+  // cleared so the corridor truly reaches the col-14 border wall
+  for(let x=2;x<=13;x++) w.grid[key(x,KICK_LANE)]=T.EMPTY;
+  // parked far guard enemy: keeps the board "live" so the all-clear WIN
+  // timer can't freeze the sim mid-slide (see demobot.test same trick)
+  const far=spawnEnemy("stationary",1,11,1,w.rng);
+  far.invuln=false; far.invulnT=0;
+  w.enemies.push(far);
+  return w;
+}
+function kickSetup(seed,kickPower){
+  const w=kickWorld(seed||11);
+  const p=w.players[0];
+  p.kick=!!kickPower;
+  p.x=3.5*CFG.TILE; p.y=(KICK_LANE+.5)*CFG.TILE; p.tx=3; p.ty=KICK_LANE;
+  injectBomb(w,4,KICK_LANE,99,1);
+  return w;
+}
+
+// R5) kick launches the bomb; it slides and halts before obstacles
+{
+  // a) slides across open tiles, halts against the border wall (col 14)
+  const w=kickSetup(11,true);
+  const b=w.bombs[0], p=w.players[0];
+  const hold={0:{...newIntent(),move:{x:1,y:0},kick:true}};
+  let maxTx=4;
+  for(let i=0;i<400;i++){ step(w,CFG.STEP,hold); if(b.tx>maxTx)maxTx=b.tx; }
+  check("R5a kick slides bomb >=3 tiles", maxTx>=8, "maxTx="+maxTx);
+  check("R5a slider halts before border wall",
+    !b.dead&&b.tx===13&&!b.slide&&Math.abs(b.x-(13.5*CFG.TILE))<1,
+    "tx="+b.tx+" x="+b.x.toFixed(1)+" slide="+JSON.stringify(b.slide));
+
+  // b) stops before another bomb, chain intact, fuse kept ticking
+  const w2=kickWorld(12);
+  const p2=w2.players[0]; p2.kick=true;
+  p2.x=3.5*CFG.TILE; p2.y=(KICK_LANE+.5)*CFG.TILE; p2.tx=3; p2.ty=KICK_LANE;
+  injectBomb(w2,4,KICK_LANE,99,1);
+  injectBomb(w2,9,KICK_LANE,99,1);
+  const hold2={0:{...newIntent(),move:{x:1,y:0},kick:true}};
+  for(let i=0;i<400;i++) step(w2,CFG.STEP,hold2);
+  const s=w2.bombs.find(bb=>bb.tx===4||bb.prog!==undefined);
+  check("R5b slider stops before another bomb",
+    w2.bombs.some(bb=>bb.tx===8&&!bb.slide)&&w2.bombs.length===2,
+    JSON.stringify(w2.bombs.map(bb=>({tx:bb.tx,slide:!!bb.slide}))));
+  // fuse intact -> detonates on timer and chains the parked bomb
+  const sl=w2.bombs.find(bb=>bb.tx===8);
+  if(sl)sl.timer=0.01;
+  for(let i=0;i<10;i++) step(w2,CFG.STEP,{0:newIntent()});
+  check("R5b slider detonates + chains parked bomb", w2.bombs.length===0,
+    "bombs left "+w2.bombs.length);
+
+  // c) stops before an enemy tile; enemy untouched by the stop itself
+  const w3=kickWorld(13);
+  const en=spawnEnemy("walker",9,KICK_LANE,1,w3.rng);
+  en.invuln=false; en.invulnT=0; en.cd=99999; en.speed=0; en.home={x:9,y:KICK_LANE};
+  w3.enemies.push(en);
+  const p3=w3.players[0]; p3.kick=true;
+  p3.x=3.5*CFG.TILE; p3.y=(KICK_LANE+.5)*CFG.TILE; p3.tx=3; p3.ty=KICK_LANE;
+  injectBomb(w3,4,KICK_LANE,99,1);
+  const hold3={0:{...newIntent(),move:{x:1,y:0},kick:true}};
+  for(let i=0;i<400;i++) step(w3,CFG.STEP,hold3);
+  check("R5c slider stops before enemy tile",
+    w3.bombs.some(bb=>bb.tx===8&&!bb.slide)&&en.tx===9&&!en.dead,
+    "bomb "+w3.bombs.map(bb=>bb.tx)+" enemy "+en.tx);
+
+  // d) fuse ticks during the slide
+  const w4=kickSetup(14,true);
+  const b4=w4.bombs[0]; const t0=b4.timer;
+  const hold4={0:{...newIntent(),move:{x:1,y:0},kick:true}};
+  for(let i=0;i<20;i++) step(w4,CFG.STEP,hold4);
+  check("R5d fuse ticks while sliding",
+    b4.timer<t0&&b4.timer>0&&!b4.dead, t0.toFixed(2)+" -> "+b4.timer.toFixed(2));
+}
+
+// R6) without the kick power nothing launches
+{
+  const w=kickSetup(15,false);
+  const b=w.bombs[0];
+  const hold={0:{...newIntent(),move:{x:1,y:0},kick:true}};
+  for(let i=0;i<120;i++) step(w,CFG.STEP,hold);
+  check("R6 no kick power => bomb never launches",
+    b.tx===4&&b.ty===KICK_LANE&&!b.slide, "tx="+b.tx+" slide="+JSON.stringify(b.slide));
+}
+
+// R7) kick no longer breaks bricks (old power removed)
+{
+  const w=rulesWorld(16);
+  const p=w.players[0];
+  p.kick=true;
+  p.x=2.5*CFG.TILE; p.y=1.5*CFG.TILE; p.tx=2; p.ty=1;
+  w.grid[key(3,1)]=T.BRICK;
+  const hold={0:{...newIntent(),move:{x:1,y:0},kick:true}};
+  for(let i=0;i<40;i++) step(w,CFG.STEP,hold);
+  check("R7 kick leaves bricks intact (brick-break kick removed)",
+    w.grid[key(3,1)]===T.BRICK, "grid="+w.grid[key(3,1)]);
+}
+
 console.log("\n  SIM RESULT: "+pass+" PASS / "+fail+" FAIL");
 process.exit(fail?1:0);

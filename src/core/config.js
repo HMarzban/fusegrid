@@ -11,6 +11,7 @@ export const CFG = Object.freeze({
   LEVEL_BONUS:500, LEVEL_BONUS_PER_LIFE:100,
   ENEMY_BASE_SPEED:1.5, ENEMY_LEVEL_CURVE:0.12, ENEMY_INVULN_T:1.2,
   IFRAMES: 1.4, BLADE_TTL: 0.34,
+  KICK_SPEED: 4.5,
 });
 export const T = Object.freeze({EMPTY:0, BRICK:1, WALL:2});
 export const BIOMES = Object.freeze([

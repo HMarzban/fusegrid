@@ -61,6 +61,7 @@ function updatePlayer(world, dt, inp, emit){
   const sp=p.speed*CFG.TILE*dt;
   if(dx||dy){
     p.tx=tileOf(p.x); p.ty=tileOf(p.y);
+    const ptx=p.tx, pty=p.ty;
     if(p.passing){
       moveEntity(p, w.grid, dx*sp*CFG.PASS_MULT, dy*sp*CFG.PASS_MULT, true);
       if(w.grid[key(p.tx,p.ty)]===T.BRICK){
@@ -72,14 +73,16 @@ function updatePlayer(world, dt, inp, emit){
       // canon: live bombs are tile-solid (bombsBlock gives walk-off + no re-entry)
       moveEntity(p, w.grid, dx*sp, 0, false, w.bombs);
       moveEntity(p, w.grid, 0, dy*sp, false, w.bombs);
-      // KICK: break the brick in front of the player
+      // KICK: moving into a bomb launches it (slides until an obstacle).
+      // Axis preference: X when dx!=0, else Y. Replaces the old brick-break.
       if(inp.kick && p.kick){
-        const tx=tileOf(p.x+p.face.x*CFG.TILE), ty=tileOf(p.y+p.face.y*CFG.TILE);
-        if(w.grid[key(tx,ty)]===T.BRICK){
-          w.grid[key(tx,ty)]=T.EMPTY; revealItem(w,tx,ty,emit);
-          w.events.push({t:"brick", x:tx*CFG.TILE+CFG.TILE/2, y:ty*CFG.TILE+CFG.TILE/2});
-          w.score+=CFG.BRICK_SCORE;
-          }
+        let sx=0,sy=0;
+        if(dx)sx=dx>0?1:-1; else if(dy)sy=dy>0?1:-1;
+        if(sx||sy){
+          const b=w.bombs.find(bb=>!bb.dead&&!bb.slide
+            &&bb.tx===ptx+sx&&bb.ty===pty+sy);
+          if(b)launchSlider(w,b,sx,sy);
+         }
        }
      }
     p.x=clamp(p.x, 1.5*CFG.TILE, (CFG.COLS-1.5)*CFG.TILE);
@@ -112,9 +115,49 @@ function updatePlayer(world, dt, inp, emit){
   if(inp.firePrev!==undefined) inp.firePrev=w.fireEdge;
  }
 
+function launchSlider(w,b,sx,sy){
+  // no-op when the very first leg is blocked: kicking a wall/bomb/enemy-
+  // adjacent resting bomb must not jitter it (stable halts under held key)
+  if(sliderStopAt(w,b,b.tx+sx,b.ty+sy))return false;
+  b.x=(b.tx+.5)*CFG.TILE; b.y=(b.ty+.5)*CFG.TILE;
+  b.slide={x:sx,y:sy}; b.prog=0;
+  return true;
+}
+
+/* Tile-to-tile slider: progress 0..1 toward the next tile center; on arrival
+   the NEXT tile is stop-checked (WALL/BRICK/bomb/enemy) before commit, so a
+   kicked bomb always halts just short of obstacles. Fuse keeps ticking. */
+function advanceSlider(w,b,dt){
+  let travel=b.prog+CFG.KICK_SPEED*dt;
+  while(travel>=1){
+    const nx=b.tx+b.slide.x, ny=b.ty+b.slide.y;
+    if(sliderStopAt(w,b,nx,ny)){
+      b.prog=0; b.slide=null;
+      b.x=(b.tx+.5)*CFG.TILE; b.y=(b.ty+.5)*CFG.TILE;
+      return;
+     }
+    b.tx=nx; b.ty=ny; travel-=1;
+   }
+  b.prog=travel;
+  b.x=(b.tx+.5+b.slide.x*travel)*CFG.TILE;
+  b.y=(b.ty+.5+b.slide.y*travel)*CFG.TILE;
+}
+
+function sliderStopAt(w,b,tx,ty){
+  const v=w.grid[key(tx,ty)];
+  if(v===undefined||v===T.WALL||v===T.BRICK)return true;
+  if(w.bombs.some(o=>o!==b&&!o.dead&&o.tx===tx&&o.ty===ty))return true;
+  if(w.enemies.some(e=>!e.dead&&e.tx===tx&&e.ty===ty))return true;
+  return false;
+}
+
 function updateBombs(world, dt, emit){
   const w=world;
-  for(const b of w.bombs){ if(!b.dead){ b.timer-=dt; if(b.timer<=0)detonate(w,b,emit); } }
+  for(const b of w.bombs){
+    if(b.dead)continue;
+    if(b.slide)advanceSlider(w,b,dt);
+    b.timer-=dt; if(b.timer<=0)detonate(w,b,emit);
+   }
   w.bombs=w.bombs.filter(b=>!b.dead);
   for(const bl of w.blades) bl.t+=dt;
   w.blades=w.blades.filter(bl=>bl.t<bl.ttl);
