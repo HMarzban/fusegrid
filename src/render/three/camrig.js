@@ -6,16 +6,16 @@
 import {clamp} from "../../core/config.js";
 import * as THREE from "../../../vendor/three.module.js";
 
-export const EL_MIN=0.25, EL_MAX=1.35, DIST_MIN=500, DIST_MAX=880;
+export const EL_MIN=0.21, EL_MAX=0.87, DIST_MIN=560, DIST_MAX=1000;  // el = POLAR from +Y: 0.419 rad = 66 deg above horizon
 export const SHAKE_3D_K=0.06;      // world-units per shake px
 /* fixed full-board rig (camera-research spec §3): az=0 axis-aligned,
    el 66° steep lane-readable tilt, dist 700 fits 600x520wu + ICE trim. */
-const DEF={az:0,el:1.152,dist:700};
+const DEF={az:0,el:0.419,dist:800,target:[0,-25,0]};
 export const DRAG_K=0.005;         // rad per drag px
 export const WHEEL_DOLLY_K=0.6;    // world-units per wheel deltaY tick
 
 export function createRig(){
-  return {az:DEF.az,el:DEF.el,dist:DEF.dist,target:[0,0,0]};
+  return {az:DEF.az,el:DEF.el,dist:DEF.dist,target:DEF.target.slice()};
 }
 export function orbitBy(st,dAz,dEl){
   st.az+=dAz;

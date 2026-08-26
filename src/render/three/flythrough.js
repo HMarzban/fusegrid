@@ -10,7 +10,7 @@
 import {CFG} from "../../core/config.js";
 import {introPhase,INTRO_DUR} from "../../app/intro.js";
 
-export const BASE_DIST=700;
+export const BASE_DIST=800;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const seg=(t,a,b)=>clamp((t-a)/(b-a),0,1);
 const easeInOutCubic=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
@@ -23,7 +23,7 @@ export function introCam(subT){
   let az=0;
   if(k>0&&k<1)az+=0.38*Math.sin(Math.PI*k);
   const e=easeOutCubic(seg(s,1.40,INTRO_DUR));
-  const el=e>=1?1.152:1.28+(1.152-1.28)*e;
+  const el=e>=1?0.419:0.35+(0.419-0.35)*e;
   return {az,el,dist:BASE_DIST/ph.zoom,
     target:[0,0,(ph.camY-0.5)*CFG.ROWS*CFG.TILE]};
 }

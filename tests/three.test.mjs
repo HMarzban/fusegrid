@@ -134,27 +134,27 @@ function scan(grid){
 // ---- §4 camrig: fixed full-board rig (camera-research spec §3/§4) ----
 {
   const st=createRig();
-  check("rig defaults az0 el1.152(66°) dist700 target origin",
-    st.az===0&&st.el===1.152&&st.dist===700
-    &&st.target[0]===0&&st.target[1]===0&&st.target[2]===0,
+  check("rig defaults az0 el0.419(66° elev) dist800 target y-25",
+    st.az===0&&st.el===0.419&&st.dist===800
+    &&st.target[0]===0&&st.target[1]===-25&&st.target[2]===0,
     st.az+"/"+st.el+"/"+st.dist);
   orbitBy(st, 10, 10);
-  check("orbitBy clamps el to 1.35 (az free)", st.el===1.35&&st.az===10,
+  check("orbitBy clamps el to 0.87 (az free)", st.el===0.87&&st.az===10,
     "az="+st.az+" el="+st.el);
   orbitBy(st,-100,-100);
-  check("orbitBy clamps el to 0.25", st.el===0.25);
-  dollBy(st,10000); check("dollBy clamps dist to 880", st.dist===880);
-  dollBy(st,-10000); check("dollBy clamps dist to 500", st.dist===500);
+  check("orbitBy clamps el to 0.21", st.el===0.21);
+  dollBy(st,10000); check("dollBy clamps dist to 1000", st.dist===1000);
+  dollBy(st,-10000); check("dollBy clamps dist to 560", st.dist===560);
   resetOrbit(st);
-  check("resetOrbit restores authored rig", st.az===0&&st.el===1.152
-    &&st.dist===700);
+  check("resetOrbit restores authored rig", st.az===0&&st.el===0.419
+    &&st.dist===800);
   const cam=new THREE.PerspectiveCamera();
   applyOrbit(cam,st,{x:0,y:0});
   const se=Math.sin(st.el), ce=Math.cos(st.el);
   check("applyOrbit position = target + spherical(az,el,dist)",
-    Math.abs(cam.position.x-st.dist*se*Math.sin(st.az))<1e-9
-    &&Math.abs(cam.position.y-st.dist*ce)<1e-9
-    &&Math.abs(cam.position.z-st.dist*se*Math.cos(st.az))<1e-9,
+    Math.abs(cam.position.x-(st.target[0]+st.dist*se*Math.sin(st.az)))<1e-9
+    &&Math.abs(cam.position.y-(st.target[1]+st.dist*ce))<1e-9
+    &&Math.abs(cam.position.z-(st.target[2]+st.dist*se*Math.cos(st.az)))<1e-9,
     cam.position.x.toFixed(2)+","+cam.position.y.toFixed(2)
       +","+cam.position.z.toFixed(2));
   const cam2=new THREE.PerspectiveCamera(), cam3=new THREE.PerspectiveCamera();
@@ -261,19 +261,19 @@ function mkCanvas(){
     const g=createGame(cv,{seed:81,autoplay:true,render3d:true});
     const R=()=>g.rig||{};
     check("rig exposed read-only at authored defaults",
-      !!g.rig&&g.rig.az===0&&g.rig.el===1.152&&g.rig.dist===700,
+      !!g.rig&&g.rig.az===0&&g.rig.el===0.419&&g.rig.dist===800,
       JSON.stringify(g.rig));
     cv.fire("pointerdown",{pointerId:1,button:2,clientX:300,clientY:260});
     wfire("pointermove",{pointerId:1,buttons:2,clientX:400,clientY:260});
     wfire("pointerup",{pointerId:1,button:2,clientX:400,clientY:260});
     check("orbit gate off: right-drag leaves rig frozen",
-      R().az===0&&R().el===1.152,String(R().az+"/"+R().el));
+      R().az===0&&R().el===0.419,String(R().az+"/"+R().el));
     // wheel dolly stays live, clamped to the new band (deltaY<0 = zoom in)
     cv.fire("wheel",{deltaY:-100000,preventDefault(){}});
-    check("wheel dolly in clamps to DIST_MIN 500", R().dist===500,
+    check("wheel dolly in clamps to DIST_MIN 560", R().dist===560,
       String(R().dist));
     cv.fire("wheel",{deltaY:100000,preventDefault(){}});
-    check("wheel dolly out clamps to DIST_MAX 880", R().dist===880,
+    check("wheel dolly out clamps to DIST_MAX 1000", R().dist===1000,
       String(R().dist));
     // opt-in orbit (?orbit=1 / opts.orbit): right-drag orbits again
     const cv2=mkOrbitCanvas();
@@ -282,11 +282,11 @@ function mkCanvas(){
     wfire("pointermove",{pointerId:1,buttons:2,clientX:400,clientY:260});
     wfire("pointerup",{pointerId:1,button:2,clientX:400,clientY:260});
     check("opts.orbit: right-drag orbits by DRAG_K*px",
-      Math.abs((g2.rig||{}).az-100*DRAG_K)<1e-9&&(g2.rig||{}).el===1.152,
+      Math.abs((g2.rig||{}).az-100*DRAG_K)<1e-9&&(g2.rig||{}).el===0.419,
       "az="+(g2.rig||{}).az);
     g2.input._onKey({code:"KeyR"});
     check("KeyR restores exact authored rig after orbit",
-      (g2.rig||{}).az===0&&(g2.rig||{}).el===1.152&&(g2.rig||{}).dist===700,
+      (g2.rig||{}).az===0&&(g2.rig||{}).el===0.419&&(g2.rig||{}).dist===800,
       JSON.stringify(g2.rig));
    }finally{ delete globalThis.window; }
 }
@@ -760,24 +760,23 @@ await sec("S3.C",async()=>{
   const ft=await import("../src/render/three/flythrough.js");
   const {introPhase,INTRO_DUR}=await import("../src/app/intro.js");
   const st0=ft.introCam(0), stE=ft.introCam(INTRO_DUR);
-  check("S3.C start frame matches introPhase zoom start (dist=700/1.55)",
-    Math.abs(st0.dist-700/1.55)<1e-4, st0.dist.toFixed(3));
+  check("S3.C start frame matches introPhase zoom start (dist=800/1.55)",
+    Math.abs(st0.dist-800/1.55)<1e-4, st0.dist.toFixed(3));
   check("S3.C start target rides lower-third drift (tz=(camY-.5)*520)",
     Math.abs(st0.target[2]-83.2)<1e-9, st0.target[2].toFixed(2));
   check("S3.C end frame == fixed rig defaults (seamless handoff)",
-    Math.abs(stE.dist-700)<1e-9&&stE.az===0&&stE.el===1.152
+    Math.abs(stE.dist-800)<1e-9&&stE.az===0&&stE.el===0.419
     &&stE.target[2]===0, stE.az+"/"+stE.el+"/"+stE.dist);
   let mono=true;
   for(let s=0;s<=INTRO_DUR+1e-9;s+=0.25){
-    const a=ft.introCam(s), b=ft.introCam(Math.min(INTRO_DUR,s+0.25));
-    if(b.dist<a.dist-1e-9||b.target[2]>a.target[2]+1e-9||b.el>a.el+1e-9)
-      mono=false;
+    const a=ft.introCam(s), b=ft.introCam(Math.min(INTRO_DUR,s+0.25)); a.el0=a.el; b.el0=b.el;
+    if(b.dist<a.dist-1e-9||b.el<b.el0-1e-9)mono=false; // dist up, el rises to rig default
    }
   check("S3.C keyframes monotonic (dist up, target-z/el down)", mono);
   let tracks=true;
   for(let s=0;s<=INTRO_DUR;s+=0.5)
-    if(Math.abs(ft.introCam(s).dist*introPhase(s).zoom-700)>1e-6)tracks=false;
-  check("S3.C dist tracks introPhase fractions (dist*zoom==700)", tracks);
+    if(Math.abs(ft.introCam(s).dist*introPhase(s).zoom-800)>1e-6)tracks=false;
+  check("S3.C dist tracks introPhase fractions (dist*zoom==800)", tracks);
   check("S3.C flyover swings azimuth out mid-beat (cinematic arc)",
     ft.introCam(2.8).az>0.2&&ft.introCam(0).az===0,
     ft.introCam(2.8).az.toFixed(3));
