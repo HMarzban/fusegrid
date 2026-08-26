@@ -16,6 +16,10 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-08-26 — RULES OVERHAUL complete: bombs tile-solid, sliding kick, chaser BFS routes bombs — DETERMINISM BASELINE v3
+- Canon per spec 2026-08-25-rules-audit §3 MUSTs: bombs are tile-solid for player+non-pass enemies with own-tile walk-off/no-re-entry exemption (board.js bombsBlock); kick = real slider replacing brick-break (launchSlider/advanceSlider, KICK_SPEED=4.5, halts on WALL/BRICK/bomb/enemy, fuse ticks mid-slide, chain intact); bfsNext(blocked) + chaser/fast route around live bomb tiles (pass types exempt) + corner-escape rescan when a bomb zone bounces a lane-transition step (pixel-vs-tile deadlock). RED→GREEN R1–R9 in sim.test.mjs (R8b/R9 discriminated pre-fix HEAD; R8b needed the escape-rescan beyond naive BFS gating). Battery 15/15. REPLAY BASELINE v3: validity begins at 59e06c0 — rng draw sequence may shift (escape rescan consumes extra draws on bomb-zone bounces).
+- Commits d12b0bc + 8ff0476 (prior session, legs 1–2), 59e06c0 (leg 3 this session), memory commit follows. SHOULD 5 / COULD 6–7 skipped by scope; report .superpowers/sdd/2026-08-25-polish/task-report-rules.md.
+
 ## 2026-08-25 — 3D ELEMENTS REDESIGN shipped (d1bb0cb): pickups, glossy bombs, silhouettes, flame crosses
 - Spec 2026-08-25-elements-redesign §2–§5 executed RED→GREEN (24 fails→173 checks OK): items = capsule-box pickups w/ all-face glyph textures + additive POWER rings; bomb = Phong #15181f shininess110 sphere (highlight child deleted) + variant base TORUS hues (normal hidden, body never recolored); enemies get eye strips children[2] + chaser visor wedge/fast swept fins/rocket ID tip; player = bomberman stack (sphere body+π/2 dome+open visor band+antenna); blasts = crossedQuads(8v/12idx) Basic additive fire-ramp (emissive purged); 4 new texture painters ×12/×6/visor/fire, atlas `_shared=true`. Fat-world formula 138→186 ≤500. Scope=3 files only; battery 15/15. Interpretations in task-report-elements.md (rocket=[fin,ID-tipCone], item slot origin at floor). Left: manual browser smoke of §6 acceptance 1–7.
 
