@@ -149,19 +149,34 @@ function paintGlyph(c,pd){
   (GLYPH[pd.t]||GLYPH.power)(c,pd.col);
 }
 
-/* ---- §3 eye strips: two sclerae + pupils + brows, offset varies per type ---- */
+/* ---- §3 eye strips (enemy-identity 2026-08-25: BOLDENED — bigger sclerae
+   with dark outline, fatter pupils, heavier brows; the big tilted face
+   planes need the extra contrast to read from the 66° rig) ---- */
 function paintEyes(c,t){
   const idx=Math.max(0,ENEMY_TYPES.indexOf(t));
   const dx=(idx%3-1)*3, dy=(idx<3?-1:1)*1.5, slope=(idx-2.5)*0.05;
   c.fillStyle="#f4f7ff";
-  for(const ex of [20,44]){ c.beginPath();
-    c.ellipse(ex+dx*0.4,16,9,7,0,0,Math.PI*2); c.fill(); }
+  for(const ex of [19,45]){ c.beginPath();
+    c.ellipse(ex+dx*0.4,16,11.5,9,0,0,Math.PI*2); c.fill(); }
+  c.strokeStyle="#101521"; c.lineWidth=2.5;
+  for(const ex of [19,45]){ c.beginPath();
+    c.ellipse(ex+dx*0.4,16,11.5,9,0,0,Math.PI*2); c.stroke(); }
   c.fillStyle="#101521";
-  for(const ex of [20,44]){ c.beginPath();
-    c.arc(ex+dx,16+dy,3.6,0,Math.PI*2); c.fill(); }
-  c.strokeStyle="#101521"; c.lineWidth=3; c.lineCap="round";
-  for(const ex of [20,44]){ c.beginPath();
-    c.moveTo(ex-9,7-slope*9); c.lineTo(ex+9,7+slope*9); c.stroke(); }
+  for(const ex of [19,45]){ c.beginPath();
+    c.arc(ex+dx,16+dy,5.2,0,Math.PI*2); c.fill(); }
+  c.strokeStyle="#101521"; c.lineWidth=4.5; c.lineCap="round";
+  for(const ex of [19,45]){ c.beginPath();
+    c.moveTo(ex-12,6-slope*11); c.lineTo(ex+12,6+slope*11); c.stroke(); }
+}
+
+/* ---- stationary visor SLIT (identity §2: NOT eyes — the square reads via
+   a dark seam with a faint magenta rim glow) ---- */
+function paintSlit(c){
+  c.globalAlpha=0.55; c.strokeStyle="#c58aff"; c.lineWidth=3;
+  c.strokeRect(3,8,58,16);
+  c.globalAlpha=1; c.fillStyle="#150a1c"; c.fillRect(6,11,52,10);
+  c.globalAlpha=0.35; c.fillStyle="#c58aff"; c.fillRect(9,14,46,4);
+  c.globalAlpha=1;
 }
 
 /* ---- §3 visor band: navy strip with two cyan glints ---- */
@@ -198,7 +213,8 @@ export function atlasSources(mk, level=1){
   for(const pd of POWER)
     o["item_"+pd.t]=captureSprite(S,S,(c)=>paintGlyph(c,pd),mk);
   for(const t of ENEMY_TYPES)
-    o["eye_"+t]=captureSprite(64,32,(c)=>paintEyes(c,t),mk);
+    o["eye_"+t]=captureSprite(64,32,(c)=>t==="stationary"?paintSlit(c):
+      paintEyes(c,t),mk);
   o.visor=captureSprite(128,32,paintVisor,mk);
   o.fire=captureSprite(S,S,paintFire,mk);
   if(typeof document!=="undefined"){

@@ -8,9 +8,13 @@
    truth, biome-independent); atlas maps merge only when they are real
    THREE.Textures, so headless keeps flat bright fallbacks. v2 silhouettes:
    capsule-box pickups + additive glow rings, glossy Phong bombs with variant
-   base rings, enemy eye strips behind exactly 2 ref-swapped detail children,
-   bomberman player stack, crossed-quad flame blasts. Idle bob/spin are
-   render-side only (never touch sim state). */
+   base rings, bomberman player stack, crossed-quad flame blasts. Enemy
+   identity 2026-08-25: per-type 3D designs translated silhouette-first from
+   the TOP-DOWN 2D sprites (blob trio = glossy Phong spheres with baked
+   scale + big tilted face planes, stationary square shell + magenta core +
+   visor slit, boomerang flat C-torus with hub/bead spinning at t*10,
+   rocket upright 3-sided pyramid on a pad with flickering flame). Idle
+   bob/stomp/spin/breathe are render-side only (never touch sim state). */
 import * as THREE from "../../../vendor/three.module.js";
 import {CFG} from "../../core/config.js";
 import {spawnEnemy} from "../../core/entities.js";
@@ -34,79 +38,131 @@ const _m=new THREE.Matrix4(), _p=new THREE.Vector3(),
   _q=new THREE.Quaternion(), _s=new THREE.Vector3();
 
 /* per-type geometry + material caches (shared across pool slots & rebuilds:
-   flagged _shared so disposeGroup never frees them mid-flight) */
-const GEO={}, MATE={}, EH={};
+   flagged _shared so disposeGroup never frees them mid-flight). Enemy-
+   identity 2026-08-25 §2: every base reproduces the TOP-DOWN 2D footprint
+   first (silhouette beats texture at the 66° rig). Blob trio = glossy
+   Phong(60) spheres with baked silhouette scale; stationary keeps the
+   #2a1030 square shell; boomerang is a FLAT C-torus; rocket is an upright
+   3-sided pyramid (apex +Y, no pre-rotation). */
+const GEO={}, MATE={};
+export const EH={};
 function sharedGeo(g){ g._shared=true; return g; }
 function sharedMat(m){ m._shared=true; return m; }
 for(const t of ENEMY_TYPES){
-  const r=PROTO[t].r; let g,h=r;
-  if(t==="stationary"){ g=new THREE.BoxGeometry(r*2.3,r*2.3,r*2.3); h=r*1.15; }
-  else if(t==="rocket"){ g=new THREE.ConeGeometry(r*0.95,r*2.6,12);
-    g.rotateX(Math.PI/2); h=r*0.95; }
-  else if(t==="boomerang"){ g=new THREE.TorusGeometry(r*0.72,r*0.26,8,22,
-    4.6); h=r*0.98; }
-  else g=new THREE.SphereGeometry(r,16,12);
+  const r=PROTO[t].r; let g,h,m;
+  if(t==="walker"){ g=new THREE.SphereGeometry(r,16,12); h=r;
+    m=new THREE.MeshPhongMaterial({color:PROTO[t].color,shininess:60}); }
+  else if(t==="chaser"){ g=new THREE.SphereGeometry(r,16,12);
+    g.scale(0.86,1.22,0.86); h=r*1.22;
+    m=new THREE.MeshPhongMaterial({color:PROTO[t].color,shininess:60}); }
+  else if(t==="fast"){ g=new THREE.SphereGeometry(r,16,12);
+    g.scale(1.20,0.80,1.05); h=r*0.80;
+    m=new THREE.MeshPhongMaterial({color:PROTO[t].color,shininess:60}); }
+  else if(t==="stationary"){ g=new THREE.BoxGeometry(r*2.3,r*2.3,r*2.3);
+    h=r*1.15; m=new THREE.MeshLambertMaterial({color:"#2a1030"}); }
+  else if(t==="boomerang"){ g=new THREE.TorusGeometry(r*0.72,r*0.19,8,26,
+      4.7); g.rotateX(-Math.PI/2); h=r*0.55;
+    m=new THREE.MeshLambertMaterial({color:PROTO[t].color}); }
+  else{ g=new THREE.ConeGeometry(r*1.02,r*2.5,3); h=r*1.25;
+    m=new THREE.MeshLambertMaterial({color:PROTO[t].color}); }
   GEO["e_"+t]=sharedGeo(g); EH["e_"+t]=h;
-  MATE["e_"+t]=sharedMat(new THREE.MeshLambertMaterial({color:PROTO[t].color}));
+  MATE["e_"+t]=sharedMat(m);
+}
+
+/* merge two indexed BufferGeometries into one draw call (crossedQuads
+   precedent) — used for the fast twin fins so the slot child count stays
+   at the fixed 4-mesh contract. */
+function mergeGeos(a,b){
+  const g=new THREE.BufferGeometry(),
+    na=a.attributes.position.count;
+  g.setAttribute("position",new THREE.Float32BufferAttribute([
+    ...Array.from(a.attributes.position.array),
+    ...Array.from(b.attributes.position.array)],3));
+  g.setAttribute("normal",new THREE.Float32BufferAttribute([
+    ...Array.from(a.attributes.normal.array),
+    ...Array.from(b.attributes.normal.array)],3));
+  g.setAttribute("uv",new THREE.Float32BufferAttribute([
+    ...Array.from(a.attributes.uv.array),
+    ...Array.from(b.attributes.uv.array)],2));
+  g.setIndex([...Array.from(a.index.array),
+    ...Array.from(b.index.array).map(v=>v+na)]);
+  return g;
 }
 
 /* Enemy detail silhouettes: exactly 2 child meshes per slot, per-type
    geometry/material/transform caches swapped BY REFERENCE on type change
-   (the eye strip rides children[2], appended separately). Local frame: +Z is
-   the facing direction (slot rotation.y = atan2(dir)). */
+   (the big face/slit plane rides children[2], appended separately). Local
+   frame: +Z is the facing direction (slot rotation.y = atan2(dir)). */
 const DARK=sharedMat(new THREE.MeshLambertMaterial({color:"#0a0f1a"}));
-const ID={}; for(const t of ENEMY_TYPES)ID[t]=MATE["e_"+t];
-const GD={}, MD={}, GT={}, GR={};
+/* rocket flame flicker mats: #ffde7a⇄#ff7a3a on floor(t*10)%2 (2D parity) */
+const FLAME_A=sharedMat(new THREE.MeshBasicMaterial({color:"#ffde7a"}));
+const FLAME_B=sharedMat(new THREE.MeshBasicMaterial({color:"#ff7a3a"}));
+export const GD={}, MD={}, GT={}, GR={};
 {
   let r,K;
   K="e_walker"; r=PROTO.walker.r;
-  GD[K]=[sharedGeo(new THREE.BoxGeometry(r*0.34,r*0.22,r*0.40)),
-    sharedGeo(new THREE.BoxGeometry(r*0.34,r*0.22,r*0.40))];
+  const foot=sharedGeo(new THREE.BoxGeometry(r*0.52,r*0.26,r*0.60));
+  GD[K]=[foot,foot];
   MD[K]=[DARK,DARK];
-  GT[K]=[[-r*0.45,-r*0.85,0],[r*0.45,-r*0.85,0]]; GR[K]=[[0,0,0],[0,0,0]];
+  GT[K]=[[-r*0.52,r*0.14,r*0.50],[r*0.52,r*0.14,r*0.50]]; GR[K]=[[0,0,0],
+    [0,0,0]];
   K="e_chaser"; r=PROTO.chaser.r;
-  GD[K]=[sharedGeo(new THREE.BoxGeometry(r*0.55,r*0.28,r*0.14)),
-    sharedGeo(new THREE.BoxGeometry(r*0.18,r*0.55,r*0.55))];
+  GD[K]=[sharedGeo(new THREE.BoxGeometry(r*0.22,r*0.85,r*1.35)),
+    sharedGeo(new THREE.BoxGeometry(r*0.55,r*0.26,r*0.16))];
   MD[K]=[DARK,DARK];
-  GT[K]=[[0,r*0.75,r*0.95],[0,r*0.35,-r*0.75]];
-  GR[K]=[[-0.2,0,0],[0,0,0]];
+  GT[K]=[[0,r*1.22,0],[0,r*1.15,r*0.95]]; GR[K]=[[0,0,0],[0,0,0]];
   K="e_fast"; r=PROTO.fast.r;
-  GD[K]=[sharedGeo(new THREE.BoxGeometry(r*0.75,r*0.30,r*0.10)),
-    sharedGeo(new THREE.BoxGeometry(r*0.75,r*0.30,r*0.10))];
-  const trailA=sharedMat(new THREE.MeshBasicMaterial({color:"#ffd447",
-    transparent:true,opacity:0.45,depthWrite:false}));
-  const trailB=sharedMat(new THREE.MeshBasicMaterial({color:"#ffd447",
-    transparent:true,opacity:0.25,depthWrite:false}));
-  MD[K]=[trailA,trailB];
-  GT[K]=[[-r*0.55,-r*0.1,-r*0.2],[r*0.55,-r*0.1,-r*0.2]];
-  GR[K]=[[0,0.45,0],[0,-0.45,0]];
+  const finA=new THREE.BoxGeometry(r*0.85,r*0.24,r*0.14);
+  finA.rotateX(-0.55); finA.translate(-r*0.5,r*0.60,-r*0.25);
+  const finB=new THREE.BoxGeometry(r*0.85,r*0.24,r*0.14);
+  finB.rotateX(-0.55); finB.translate(r*0.5,r*0.60,-r*0.25);
+  const trailM=sharedMat(new THREE.MeshBasicMaterial({color:"#ffd447",
+    transparent:true,opacity:0.30,depthWrite:false,
+    blending:THREE.AdditiveBlending}));
+  GD[K]=[sharedGeo(mergeGeos(finA,finB)),
+    sharedGeo(new THREE.BoxGeometry(r*1.15,r*0.42,r*1.5))];
+  MD[K]=[DARK,trailM];
+  GT[K]=[[0,0,0],[0,r*0.55,-r*1.35]]; GR[K]=[[0,0,0],[0,0,0]];
   K="e_stationary"; r=PROTO.stationary.r;
-  GD[K]=[sharedGeo(new THREE.CylinderGeometry(r*0.16,r*0.22,r*0.85,
-      10)),sharedGeo(new THREE.SphereGeometry(r*0.34,10,8))];
-  const barrel=sharedMat(new THREE.MeshLambertMaterial({color:"#150a1c"}));
-  MD[K]=[barrel,ID.stationary];
-  GT[K]=[[0,r*1.47,0],[0,r*1.05,r*0.55]]; GR[K]=[[0,0,0],[0,0,0]];
+  const coreM=sharedMat(new THREE.MeshBasicMaterial({
+    color:PROTO.stationary.color}));
+  const hoodM=sharedMat(new THREE.MeshLambertMaterial({color:"#150a1c"}));
+  GD[K]=[sharedGeo(new THREE.BoxGeometry(r*1.2,r*1.2,r*1.2)),
+    sharedGeo(new THREE.BoxGeometry(r*1.5,r*0.18,r*0.30))];
+  MD[K]=[coreM,hoodM];
+  GT[K]=[[0,r*1.15,0],[0,r*1.38,r*1.08]]; GR[K]=[[0,0,0],[0,0,0]];
   K="e_boomerang"; r=PROTO.boomerang.r;
-  const wing=sharedGeo(new THREE.BoxGeometry(r*1.5,r*0.22,r*0.22));
-  GD[K]=[wing,wing];
-  MD[K]=[ID.boomerang,ID.boomerang];
-  GT[K]=[[0,0,0],[0,0,0]]; GR[K]=[[0,0,0],[0,0,0]];
+  const hubM=sharedMat(new THREE.MeshBasicMaterial({color:"#ffffff"}));
+  const beadM=sharedMat(new THREE.MeshBasicMaterial({
+    color:PROTO.boomerang.color}));
+  GD[K]=[sharedGeo(new THREE.SphereGeometry(r*0.26,10,8)),
+    sharedGeo(new THREE.SphereGeometry(r*0.12,8,6))];
+  MD[K]=[hubM,beadM];
+  GT[K]=[[0,0,0],[Math.cos(4.7)*r*0.72,0,-Math.sin(4.7)*r*0.72]];
+  GR[K]=[[0,0,0],[0,0,0]];
   K="e_rocket"; r=PROTO.rocket.r;
-  const fin=sharedGeo(new THREE.BoxGeometry(r*0.08,r*0.7,r*0.55));
-  const nose=sharedGeo(new THREE.ConeGeometry(r*0.30,r*0.50,10));
-  nose.rotateX(Math.PI/2);
-  GD[K]=[fin,nose];
-  const finMat=sharedMat(new THREE.MeshLambertMaterial({color:"#3a1c10"}));
-  MD[K]=[finMat,ID.rocket];
-  GT[K]=[[0,0,-r*0.55],[0,0,r*1.05]];
-  GR[K]=[[0,0,Math.PI/4],[0,0,0]];
+  const padM=sharedMat(new THREE.MeshLambertMaterial({color:"#3a1c10"}));
+  const flameG=sharedGeo(new THREE.ConeGeometry(r*0.34,r*0.66,8));
+  flameG.rotateX(Math.PI);
+  GD[K]=[sharedGeo(new THREE.CylinderGeometry(r*0.80,r*0.92,r*0.30,12)),
+    flameG];
+  MD[K]=[padM,FLAME_A];
+  GT[K]=[[0,r*0.15,0],[0,r*0.10,0]]; GR[K]=[[0,0,0],[0,0,0]];
 }
-/* eye-strip placement per type (children[2]): sphere bases ride the equator
-   front; the stationary box base mounts low on its flat face */
-const EYT={};
+/* face/slit plane placement per type (children[2]): blob trio gets a BIG
+   plane tilted at the camera (identity §2), stationary's IS the visor slit,
+   boomerang/rocket keep the small legacy strip. */
+export const GF={}, EYR={};
+export const EYT={};
 for(const t of ENEMY_TYPES){
-  const r=PROTO[t].r, k="e_"+t;
-  EYT[k]=t==="stationary"?[0,EH[k]*0.55,r*1.18]:[0,EH[k]+r*0.15,r*0.92];
+  const r=PROTO[t].r,k="e_"+t;
+  if(t==="stationary"){ GF[k]=sharedGeo(new THREE.PlaneGeometry(r*1.5,
+      r*0.38)); EYT[k]=[0,r*1.15,r*1.16]; EYR[k]=[0,0,0]; }
+  else if(t==="walker"||t==="chaser"||t==="fast"){
+    GF[k]=sharedGeo(new THREE.PlaneGeometry(r*1.7,r*0.9));
+    EYT[k]=[0,EH[k]+r*0.35,r*0.70]; EYR[k]=[-0.45,0,0]; }
+  else{ GF[k]=sharedGeo(new THREE.PlaneGeometry(CFG.TILE*0.34,
+      CFG.TILE*0.16)); EYT[k]=[0,EH[k]+r*0.15,r*0.92]; EYR[k]=[0,0,0]; }
 }
 /* idle bob per type [amp, freq] — render-side breathing only */
 const BOB={"e_walker":[1.8,12],"e_chaser":[1.2,9],"e_fast":[1.0,16],
@@ -168,8 +224,6 @@ export function createPools(biome, atlas){
   player.add(body,helmet,visor,rod,ball,footL,footR);
 
   const enemies=[], bombs=[], items=[];
-  const eyeGeo=sharedGeo(new THREE.PlaneGeometry(CFG.TILE*0.34,
-    CFG.TILE*0.16));
   const eyeMats={};
   function eyeFor(t){
     let m=eyeMats[t];
@@ -189,8 +243,8 @@ export function createPools(biome, atlas){
       d.position.set(...GT.e_walker[j]); d.rotation.set(...GR.e_walker[j]);
       d.castShadow=true; s.add(d);
      }
-    const ey=new THREE.Mesh(eyeGeo,eyeFor("walker"));
-    ey.position.set(...EYT.e_walker);
+    const ey=new THREE.Mesh(GF.e_walker,eyeFor("walker"));
+    ey.position.set(...EYT.e_walker); ey.rotation.set(...EYR.e_walker);
     s.add(ey);
     enemies.push(s); group.add(s);
    }
@@ -330,16 +384,27 @@ export function createPools(biome, atlas){
           d[j].material=MD[kk][j];
           d[j].position.set(GT[kk][j][0],GT[kk][j][1],GT[kk][j][2]);
           d[j].rotation.set(GR[kk][j][0],GR[kk][j][1],GR[kk][j][2]); }
+        d[2].geometry=GF[kk];
         d[2].material=eyeFor(kk.slice(2));
         d[2].position.set(EYT[kk][0],EYT[kk][1],EYT[kk][2]);
+        d[2].rotation.set(EYR[kk][0],EYR[kk][1],EYR[kk][2]);
        }
       const bb=BOB[kk];
       s.position.set(e.x-W2,EH[kk]+bb[0]*
         Math.sin(t*bb[1]+(e.home?e.home.x*0.7:0)),e.y-D2);
-      s.rotation.y=Math.atan2(e.dir?e.dir.x:0,e.dir?e.dir.y:1);
-      if(kk==="e_boomerang"){ s.children[0].rotation.y=t*10;
-        s.children[1].rotation.y=Math.PI/2+t*10; }
-     }
+      /* identity §4: boomerang spin overrides facing yaw; stationary
+         breathes 1+.04sin(3t); walker feet stomp alternately; rocket flame
+         swaps on the 10Hz parity. All render-side, zero-alloc. */
+      if(kk==="e_boomerang")s.rotation.y=(t*10)%(Math.PI*2);
+      else s.rotation.y=Math.atan2(e.dir?e.dir.x:0,e.dir?e.dir.y:1);
+      s.scale.setScalar(kk==="e_stationary"?
+        1+0.04*Math.sin(t*3):1);
+      if(kk==="e_walker"){ const st=Math.sin(t*12),fr=PROTO.walker.r*0.16;
+        s.children[0].position.y=GT.e_walker[0][1]+Math.max(0,st)*fr;
+        s.children[1].position.y=GT.e_walker[1][1]+Math.max(0,-st)*fr; }
+      else if(kk==="e_rocket")s.children[1].material=
+        (Math.floor(t*10)%2)?FLAME_B:FLAME_A;
+       }
     for(;ei<POOL_CAPS.enemies;ei++)enemies[ei].visible=false;
 
     let bi=0;
