@@ -27,7 +27,7 @@ export function genBoard(seed,level){
     if(grid[key(x,y)]===T.BRICK && rng.next()<0.32) grid[key(x,y)]=T.EMPTY;
   return grid;
 }
-export function bfsNext(g,sx,sy,tx,ty,passBrick){
+export function bfsNext(g,sx,sy,tx,ty,passBrick,blocked){
   if(sx===tx&&sy===ty)return null;
   const C=CFG.COLS,R=CFG.ROWS,prev=new Map(),seen=new Set(),q=[[sx,sy]];
   seen.add(key(sx,sy));
@@ -39,6 +39,7 @@ export function bfsNext(g,sx,sy,tx,ty,passBrick){
       const val=g[k];
       if(val===T.WALL)continue;
       if(val===T.BRICK&&!passBrick)continue;
+      if(blocked&&blocked.has(k))continue;
       if(seen.has(k))continue;
       seen.add(k);prev.set(k,key(x,y));
       if(nx===tx&&ny===ty){

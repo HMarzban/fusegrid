@@ -1,7 +1,7 @@
 import {step, createWorld, newIntent, loadLevel} from "../src/core/sim.js";
 import {spawnEnemy} from "../src/core/entities.js";
 import {CFG,T,key} from "../src/core/config.js";
-import {tileOf} from "../src/core/board.js";
+import {tileOf,bfsNext} from "../src/core/board.js";
 import {Input} from "../src/input.js";
 
 let pass=0, fail=0;
@@ -440,6 +440,44 @@ function kickSetup(seed,kickPower){
   for(let i=0;i<40;i++) step(w,CFG.STEP,hold);
   check("R7 kick leaves bricks intact (brick-break kick removed)",
     w.grid[key(3,1)]===T.BRICK, "grid="+w.grid[key(3,1)]);
+}
+
+// ==================== RULES OVERHAUL: chaser BFS routes around bombs ====================
+{
+  // fully open room rows 4..8 x cols 3..11: the bomb parked mid-lane at
+  // (7,6) between chaser (4,6) and player (10,6) is the ONLY obstacle, so
+  // any progress past column 7 must come from routing around its tile
+  const w=rulesWorld(21);
+  for(let y=4;y<=8;y++)for(let x=3;x<=11;x++) w.grid[key(x,y)]=T.EMPTY;
+  const ch=spawnEnemy("chaser",4,6,1,w.rng);
+  ch.invuln=false; ch.invulnT=0; ch.cd=0.001; ch.dir={x:1,y:0};
+  w.enemies.push(ch);
+  injectBomb(w,7,6,99,1);
+  const p=w.players[0];
+  p.x=10.5*CFG.TILE; p.y=6.5*CFG.TILE; p.tx=10; p.ty=6; p.iFrames=99999;
+  let onBomb=false, past=false;
+  for(let i=0;i<480;i++){
+    ch.cd=Math.min(ch.cd,0.02); // test-side: force BFS re-decision every tick
+    step(w,CFG.STEP,{0:newIntent()});
+    if(ch.tx===7&&ch.ty===6)onBomb=true;
+    if(ch.tx>=9&&ch.ty===6)past=true;
+   }
+  check("R8a chaser never enters bomb tile", !onBomb,
+    "final "+ch.tx+","+ch.ty+" dir "+JSON.stringify(ch.dir));
+  check("R8b chaser BFS detours around bomb", past,
+    "final "+ch.tx+","+ch.ty+" dir "+JSON.stringify(ch.dir));
+}
+
+// R9) board-level BFS unit: from the tile beside the bomb, the route must
+// not step INTO the blocked bomb tile when a detour exists
+{
+  const w=rulesWorld(21);
+  for(let y=4;y<=8;y++)for(let x=3;x<=11;x++) w.grid[key(x,y)]=T.EMPTY;
+  const blocked=new Set([key(7,6)]);
+  const n=bfsNext(w.grid,6,6,10,6,false,blocked);
+  check("R9 bfsNext(blocked) detours off bomb tile",
+    n!==null && !(n.x===7&&n.y===6),
+    n?("next "+n.x+","+n.y):"null");
 }
 
 console.log("\n  SIM RESULT: "+pass+" PASS / "+fail+" FAIL");

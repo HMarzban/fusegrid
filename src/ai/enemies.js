@@ -1,4 +1,4 @@
-import {CFG, DIRS8} from "../core/config.js";
+import {CFG, DIRS8, key} from "../core/config.js";
 import {tileOf, isWall, solidAt, bfsNext, moveEntity, bombsBlock} from "../core/board.js";
 import {hurtPlayer} from "../core/entities.js";
 
@@ -9,6 +9,9 @@ export function updateEnemies(world, dt, input, emit){
   const w=world, p=w.players[0];
   const emitFx = emit || ((e)=>w.events.push(e));
   const pt={x:tileOf(p.x), y:tileOf(p.y)};
+  // live bomb tiles block chaser/fast BFS (pass types ignore them)
+  const bombKeys=new Set();
+  for(const b of w.bombs) if(!b.dead) bombKeys.add(key(b.tx,b.ty));
 
   // deterministic shuffle using the world rng (no Math.random)
   const shuffle=(arr)=>{
@@ -32,10 +35,13 @@ export function updateEnemies(world, dt, input, emit){
     e.cd=6+w.rng.int(0,14);
     let ndir=null;
     if(e.type==="chaser"||e.type==="fast"){
-      const next=bfsNext(w.grid,e.tx,e.ty,pt.x,pt.y,e.pass);
+      const next=bfsNext(w.grid,e.tx,e.ty,pt.x,pt.y,e.pass,
+        e.pass?null:bombKeys);
       if(next)ndir={x:Math.sign(next.x-e.tx),y:Math.sign(next.y-e.ty)}||e.dir;
      }
-    // fall back to a deterministic random legal direction
+    // fall back to a deterministic random legal direction ONLY when BFS
+    // found no route (e.g. bomb seals the corridor)
+    if(!ndir){
     const cands=shuffle(DIRS8.slice());
     for(const d of cands){
       const nx=e.x+d.x*sp, ny=e.y+d.y*sp;
@@ -44,9 +50,25 @@ export function updateEnemies(world, dt, input, emit){
                               ||bombsBlock(w.bombs,e.x,e.y,nx,ny,e.r*0.9);
       if(!blocked){ ndir=d; break; }
       }
+     }
     if(ndir)e.dir={x:ndir.x,y:ndir.y};
     }
-  moveEntity(e, w.grid, e.dir.x*sp, e.dir.y*sp, e.pass, e.pass?undefined:w.bombs);
+  const mvx=e.dir.x*sp, mvy=e.dir.y*sp;
+  const mv=moveEntity(e, w.grid, mvx, mvy, e.pass, e.pass?undefined:w.bombs);
+  // bomb-zone corner escape: BFS plans from tile coords while the body may sit
+  // between lanes; if a bomb zone bounced the intended step, re-scan for any
+  // legal direction now (deterministic) instead of flip-flopping on the boundary
+  if(!e.pass&&(mv.bouncedX||mv.bouncedY)
+    &&(bombsBlock(w.bombs,e.x,e.y,e.x+Math.sign(mvx)*sp,e.y,e.r*0.9)
+      ||bombsBlock(w.bombs,e.x,e.y,e.x,e.y+Math.sign(mvy)*sp,e.r*0.9))){
+    const cands=shuffle(DIRS8.slice());
+    for(const d of cands){
+      const nx=e.x+d.x*sp, ny=e.y+d.y*sp;
+      if(!(solidAt(w.grid,nx,ny)||bombsBlock(w.bombs,e.x,e.y,nx,ny,e.r*0.9))){
+        e.dir={x:d.x,y:d.y}; break;
+       }
+     }
+   }
    // keep on board (wall/border)
   if(e.tx<1){ e.x=CFG.TILE; e.dir.x=1; }
   else if(e.tx>CFG.COLS-2){ e.x=(CFG.COLS-2)*CFG.TILE+CFG.TILE/2; e.dir.x=-1; }
