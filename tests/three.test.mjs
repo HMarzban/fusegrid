@@ -17,7 +17,13 @@
     elements-redesign wave adds capsule-box pickups + glow rings, glossy Phong
     bombs with variant base rings, enemy eye strips + visor wedge, the
     bomberman player stack, crossed-quad flame blasts, and the §3 glyph/eye/
-    visor/fire texture painters. No DOM anywhere. */
+    visor/fire texture painters; the 2026-08-25 enemy-identity wave adds the
+    silhouette-first per-type redesign checks (§6 EI.*) — nose-up 3-sided
+    rocket pyramid, flat-C boomerang torus, baked chaser/fast silhouette
+    scaling, big tilted face planes / stationary slit, exported GD/EH/EYT
+    tables, ref-swap contracts, merged fast fins, boomerang spin override,
+    rocket flame swap, headless bright fallbacks, and the unchanged 186-call
+    fat-world budget. No DOM anywhere. */
 import {createLights} from "../src/render/three/lights.js";
 import {build} from "../src/render/three/materials.js";
 import {buildScene, countDrawCalls} from "../src/render/three/scene.js";
@@ -455,17 +461,25 @@ sec("S2.F",()=>{
     fast:"SphereGeometry",stationary:"BoxGeometry",boomerang:"TorusGeometry",
     rocket:"ConeGeometry"};
   let geoOk=true, colOk=true, det=[];
-  for(let i=0;i<types;i++){
+  for(let i=0;i<types.length;i++){
     if(es[i].geometry.type!==wantGeo[types[i]])geoOk=false;
     const proto=spawnEnemy(types[i],0,0,1,null);
     const have="#"+es[i].material.color.getHexString();
-    if(have.toLowerCase()!==proto.color.toLowerCase()){colOk=false;det.push(
-      types[i]+":"+have+"!="+proto.color);}
+    const want=types[i]==="stationary"?"#2a1030":proto.color;
+    if(have.toLowerCase()!==want.toLowerCase()){colOk=false;det.push(
+      types[i]+":"+have+"!="+want);}
    }
   check("S2 enemy mesh variant per type (sphere/box/torus/cone)", geoOk,
     es.map(e=>e.geometry.type).join(","));
   check("S2 identity colors match entities.js spawnEnemy table"
-      +" (biome-independent)", colOk, det.join(" "));
+      +" (biome-independent; stationary wears the #2a1030 shell)", colOk,
+    det.join(" "));
+  const stCore=es[3].children[0];
+  check("S2 stationary identity rides the core cube (#c58aff Basic)",
+    stCore.material.isMeshBasicMaterial
+    &&"#"+stCore.material.color.getHexString()
+      ===spawnEnemy("stationary",0,0,1,null).color.toLowerCase(),
+    stCore.material.type);
 });
 
 // ---- §S2.G invuln flicker (visibility toggles) ----
@@ -565,8 +579,7 @@ await sec("S2.I",()=>{
   check("S2.R item glyph sources: all 12 POWER keys, 64x64 stroked glyphs"
       +" (no plate capture)", itOk&&itemKeys.length===12,
     itDet.join(" ")+" n="+itemKeys.length);
-  const EYE_TYPES=["walker","chaser","fast","stationary","boomerang",
-    "rocket"];
+  const EYE_TYPES=["walker","chaser","fast","boomerang","rocket"];
   let eyeOk=true,eyeDet=[];
   for(const t of EYE_TYPES){
     const cv=src2["eye_"+t];
@@ -576,8 +589,16 @@ await sec("S2.I",()=>{
     if(arcs<4||!cv._ops.includes("set:fillStyle")){eyeOk=false;
       eyeDet.push(t+":arcs="+arcs);}
    }
-  check("S2.R eye strips: 6 per-type sources, 64x32 sclera+pupil ellipses",
+  check("S2.R eye strips: 5 boldened types, 64x32 sclera+pupil ellipses",
     eyeOk, eyeDet.join(" "));
+  const slit=src2.eye_stationary;
+  check("S2.R stationary slit source: dark bar + faint magenta rim, no eyes",
+    !!slit&&slit.width===64&&slit.height===32
+    &&slit._ops.includes("fillRect")
+    &&slit._ops.some(o=>o==="stroke"||o==="strokeRect")
+    &&slit._ops.includes("set:globalAlpha")
+    &&!slit._ops.includes("ellipse"),
+    slit?"ok":"missing");
   const vis=src2.visor;
   check("S2.R visor source: 128x32 navy band + two glints",
     !!vis&&vis.width===128&&vis.height===32
@@ -623,8 +644,10 @@ await sec("S2.I",()=>{
     &&!eye0.material.map
     &&"#"+eye0.material.color.getHexString()==="#f4f7ff");
   const protoW=spawnEnemy("walker",0,0,1,null);
-  check("S2 headless enemy material flat identity color, map-free",
-    es0.material.isMeshLambertMaterial&&!es0.material.map
+  check("S2 headless enemy body = glossy Phong shininess 60, flat identity"
+      +" color, map-free",
+    es0.material.isMeshPhongMaterial&&es0.material.shininess===60
+    &&!es0.material.map
     &&"#"+es0.material.color.getHexString()
       ===protoW.color.toLowerCase());
   const bmH=scPlain.pools.blades.material;
@@ -913,10 +936,11 @@ await sec("S4.A",async()=>{
   const sc=buildScene(w); sc.update(w);
   const es=slotsOf(sc.group,"enemy");
   const wantDetail={walker:["BoxGeometry","BoxGeometry"],
-    chaser:["BoxGeometry","BoxGeometry"],fast:["BoxGeometry","BoxGeometry"],
-    stationary:["CylinderGeometry","SphereGeometry"],
-    boomerang:["BoxGeometry","BoxGeometry"],
-    rocket:["BoxGeometry","ConeGeometry"]};
+    chaser:["BoxGeometry","BoxGeometry"],
+    fast:["BufferGeometry","BoxGeometry"],
+    stationary:["BoxGeometry","BoxGeometry"],
+    boomerang:["SphereGeometry","SphereGeometry"],
+    rocket:["CylinderGeometry","ConeGeometry"]};
   let detOk=true,det=[];
   for(let i=0;i<6;i++){
     const got=es[i].children.map(o=>o.geometry.type);
@@ -925,16 +949,24 @@ await sec("S4.A",async()=>{
       ||got[2]!=="PlaneGeometry"){detOk=false;
       det.push(w.enemies[i].type+":"+got.join("+"));}
    }
-  check("S4.A enemy silhouettes per type with eye strip last"
-      +" (feet/visor/fins/turret/wings/fin+nose)", detOk, det.join(" "));
+  check("S4.A enemy silhouettes per type with face/slit plane last"
+      +" (feet/crest+snout/fins+trail/core+hood/hub+bead/pad+flame)", detOk,
+    det.join(" "));
   const chR=spawnEnemy("chaser",0,0,1,null).r;
-  const chaser=es[1].children[0];
-  check("S4.A chaser detail is the visor wedge (r*.55 wide, tiltX -.2)",
-    Math.abs(chaser.geometry.parameters.width-chR*0.55)<1e-9
-    &&Math.abs(chaser.rotation.x+0.2)<1e-9,
-    chaser.geometry.parameters.width.toFixed(2));
-  check("S4.A enemy base identity colors survive the art pass",
-    "#"+es[3].material.color.getHexString()
+  const crest=es[1].children[0];
+  check("S4.A chaser detail is the dorsal crest (r*.22 wide, fore-aft"
+      +" r*1.35 ridge on the tall egg)",
+    Math.abs(crest.geometry.parameters.width-chR*0.22)<1e-9
+    &&Math.abs(crest.geometry.parameters.depth-chR*1.35)<1e-9
+    &&Math.abs(crest.position.x)<1e-9
+    &&Math.abs(crest.position.y-chR*1.22)<1e-9,
+    crest.geometry.parameters.width.toFixed(2));
+  const stShell=es[3];
+  const stCore=stShell.children[0];
+  check("S4.A stationary shell #2a1030 keeps magenta core accent (#c58aff)",
+    "#"+stShell.material.color.getHexString()==="#2a1030"
+    &&stCore.material.isMeshBasicMaterial
+    &&"#"+stCore.material.color.getHexString()
       ===spawnEnemy("stationary",0,0,1,null).color.toLowerCase());
   // idle bob: render-side only — y breathes with world.time, x/z pinned
   w.time=0; sc.update(w);
@@ -1306,6 +1338,141 @@ await sec("S5.overlay",async()=>{
   check("S5 o.hud===false suppresses updateHud (attract parity)",
     dom2.score.textContent==="keep", String(dom2.score.textContent));
 });
+
+// ---- §EI enemy-identity wave (spec 2026-08-25-enemy-identity §6):
+// nose-up rocket pyramid, flat-C boomerang, baked silhouette scaling,
+// face/slit plane placement + contracts, merged fast fins, spin/flame
+// animation overrides, headless bright fallbacks, unchanged 186 budget ----
+await sec("EI",async()=>{
+  const ent=await import("../src/render/three/entities.js");
+  const {GD,EH,EYT}=ent;
+  const R=(t)=>spawnEnemy(t,0,0,1,null).r;
+  check("EI.exports GD/EH/EYT tables exported for spec §6 probes",
+    !!GD&&!!EH&&!!EYT,Object.keys(ent).filter(k=>["GD","EH","EYT"]
+      .includes(k)).join(","));
+  const w=createWorld(90,1); loadLevel(w,1,false);
+  const types=["walker","chaser","fast","stationary","boomerang","rocket"];
+  w.enemies=types.map((t,i)=>mkE(t,60+i*40,80));
+  const sc=buildScene(w); sc.update(w);
+  const es=slotsOf(sc.group,"enemy");
+  // §6.1 rocket: upright 3-sided pyramid — radialSegments===3, NO pre-rotation
+  { const rk=es[5].geometry; rk.computeBoundingBox();
+    const bb=rk.boundingBox, dy=bb.max.y-bb.min.y,
+      dh=Math.max(bb.max.x-bb.min.x,bb.max.z-bb.min.z);
+    check("EI.1 rocket base Cone(r*1.02,h=r*2.5,radialSegments=3) stands"
+        +" nose-UP (height===r*2.5 > horizontal extent)",
+      rk.parameters.radialSegments===3
+      &&Math.abs(rk.parameters.height-R("rocket")*2.5)<1e-9
+      &&Math.abs(dy-R("rocket")*2.5)<1e-9&&dh<dy,
+      "seg="+rk.parameters.radialSegments+" dy="+dy.toFixed(1)
+        +" dh="+dh.toFixed(1)); }
+  // §6.2 boomerang: flat C-arc (rotateX -pi/2), arc≈4.7
+  { const bg=es[4].geometry; bg.computeBoundingBox();
+    const bb=bg.boundingBox;
+    check("EI.2 boomerang torus arc≈4.7 lies FLAT (y-extent ≤ tube*2.4)",
+      Math.abs(bg.parameters.arc-4.7)<1e-9
+      &&bb.max.y-bb.min.y<=bg.parameters.tube*2.4+1e-9,
+      "arc="+bg.parameters.arc+" dy="+(bb.max.y-bb.min.y).toFixed(3)
+        +" cap="+(bg.parameters.tube*2.4).toFixed(3)); }
+  // §6.3 baked silhouette scaling live on the bases
+  { const cg=es[1].geometry; cg.computeBoundingBox();
+    const bc=cg.boundingBox;
+    const fg=es[2].geometry; fg.computeBoundingBox();
+    const bf=fg.boundingBox;
+    const ac=(bc.max.y-bc.min.y)/(bc.max.x-bc.min.x);
+    const af=(bf.max.y-bf.min.y)/(bf.max.x-bf.min.x);
+    check("EI.3 baked silhouettes: chaser tall egg y/x>1.3, fast low puck"
+        +" y/x<0.75",
+      ac>1.3&&af<0.75,"chaser="+ac.toFixed(3)+" fast="+af.toFixed(3)); }
+  // §6.4 slot contracts: children.length===3, face plane LAST
+  { let ok=true,det=[];
+    for(let i=0;i<6;i++){ const c=es[i].children;
+      if(c.length!==3||!c[2]||c[2].geometry.type!=="PlaneGeometry"){ok=false;
+        det.push(types[i]+":"+(c?c.length:"-"));} }
+    check("EI.4 every enemy slot children.length===3 with face/slit plane"
+        +" LAST",
+      ok,det.join(" "));
+    if(GD){
+      const before=[es[0].children[0].geometry,es[0].children[1].geometry,
+        es[0].children[2].geometry,es[0].geometry];
+      w.enemies[0].type="rocket"; sc.update(w);
+      const s0=slotsOf(sc.group,"enemy")[0];
+      check("EI.4b type change swaps [0]/[1] BY REFERENCE from GD (+base"
+          +" and face geo follow)",
+        s0.children[0].geometry===GD.e_rocket[0]
+        &&s0.children[1].geometry===GD.e_rocket[1]
+        &&s0.geometry!==before[3]&&s0.children[2].geometry!==before[2],
+        "g0same="+(s0.children[0].geometry===before[0]));
+      w.enemies[0].type="walker"; sc.update(w); } }
+  if(EH&&EYT){
+    // §6.5 face-plane placement per type
+    { let ok=true,det=[];
+      for(const t of ["walker","chaser","fast"]){ const k="e_"+t;
+        if(!(EYT[k][1]>EH[k]&&EYT[k][2]>0)){ok=false;det.push(t);} }
+      check("EI.5 blob-trio face planes ride above EH, forward of center",
+        ok,det.join(" "));
+      check("EI.5b stationary slit plane z ≈ r*1.16",
+        Math.abs(EYT.e_stationary[2]-R("stationary")*1.16)<1e-9,
+        String(EYT.e_stationary[2])); }
+    // §6.6 fast fins merged into ONE geometry (two boxes => 72 idx)
+    check("EI.6 fast fins MERGED into one BufferGeometry (>12 idx;"
+        +" two boxes = 72)",
+      GD.e_fast[0].index.count>12&&GD.e_fast[0].index.count===72,
+      String(GD.e_fast[0].index.count)); }
+  // §6.7 boomerang slot yaw overridden to t*10 (spin beats facing)
+  { const wb=createWorld(91,1); loadLevel(wb,1,false);
+    wb.enemies=[mkE("boomerang",100,80,{dir:{x:1,y:0}})];
+    const scb=buildScene(wb);
+    wb.time=0.37; scb.update(wb);
+    const rot=slotsOf(scb.group,"enemy")[0].rotation.y;
+    const want=(0.37*10)%(Math.PI*2);
+    check("EI.7 boomerang slot yaw OVERRIDDEN to (t*10) mod 2π, not"
+        +" atan2(dir)",
+      Math.abs(rot-want)<1e-9&&Math.abs(rot-Math.PI/2)>1e-3,
+      rot.toFixed(3)+" want "+want.toFixed(3)+" (atan2 would be "
+        +(Math.PI/2).toFixed(3)+")"); }
+  // §6.8 rocket flame material alternates across floor(t*10)%2
+  { const wr=createWorld(92,1); loadLevel(wr,1,false);
+    wr.enemies=[mkE("rocket",100,80)];
+    const scr=buildScene(wr); const sr=slotsOf(scr.group,"enemy")[0];
+    wr.time=0.04; scr.update(wr);
+    const a="#"+sr.children[1].material.color.getHexString();
+    wr.time=0.11; scr.update(wr);
+    const b="#"+sr.children[1].material.color.getHexString();
+    check("EI.8 rocket flame mat swaps #ffde7a⇄#ff7a3a on floor(t*10)%2",
+      a==="#ffde7a"&&b==="#ff7a3a",a+"->"+b); }
+  // §6.9 headless fallback colors bright, zero DOM
+  { const pools=createPools(BIOMES[0],null);
+    const drive=(t,en)=>pools.update({players:[],enemies:en,bombs:[],
+      items:[],blades:[],time:t});
+    drive(0,[mkE("fast",100,80)]);
+    const trail=pools.enemies[0].children[1].material;
+    check("EI.9 headless trail slab bright additive #ffd447 @ .30",
+      "#"+trail.color.getHexString()==="#ffd447"
+      &&trail.blending===THREE.AdditiveBlending
+      &&Math.abs(trail.opacity-0.30)<1e-9&&!trail.map);
+    drive(0,[mkE("walker",100,80)]);
+    const face=pools.enemies[0].children[2].material;
+    check("EI.9b headless face/slit fallback bright #f4f7ff (no DOM atlas)",
+      "#"+face.color.getHexString()==="#f4f7ff"&&!face.map
+      &&typeof document==="undefined"); }
+  // §6.10 fat-world draw-call formula UNCHANGED at 186 across the 6-type mix
+  { const wf=createWorld(93,1); loadLevel(wf,1,false);
+    wf.enemies=[]; wf.items=[];
+    for(let i=0;i<16;i++)wf.enemies.push(mkE(types[i%6],60+i*30,80));
+    for(let i=0;i<32;i++)wf.items.push({x:60+i*15,y:120,t:"fire",
+      col:"#ff8a3c",taken:false,pdef:null});
+    const nb=Math.min(CFG.MAX_BOMBS,8);
+    for(let i=0;i<nb;i++)wf.bombs.push({x:60+i*40,y:160,tx:i,ty:2,
+      timer:CFG.FUSE,variant:"normal"});
+    wf.blades=[{x:200,y:120,tiles:[{tx:5,ty:3}],t:0,ttl:CFG.BLADE_TTL}];
+    const r=createRenderer3D(null,null,{audio:null,hud:null});
+    r.render(wf,1/60);
+    const calls=countDrawCalls(r._dbg.scene);
+    check("EI.10 fat-world draw calls UNCHANGED at 186 (≤500 gate,"
+        +" 6-type mix)",
+      calls===186&&calls<=500,String(calls)); }
+ });
 
 console.log(fail? "THREE FAIL":"THREE OK");
 process.exit(fail?1:0);
