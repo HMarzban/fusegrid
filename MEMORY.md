@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-01 — SEO + social preview
+- Pages now has title/description/canonical, Open Graph + Twitter large card, og.png 1200x630, apple-touch-icon, robots.txt, sitemap. Repo README shows the same card.
+
 ## 2026-09-01 — 3D camera frames the full board
 - Default rig dist 800→1000. sizeCanvases no longer assigns #gl width/height (Retina 2× buffer was cropped to the bottom-left quarter). START resets the 3D rig; wrapper re-syncs setSize when the buffer drifts.
 

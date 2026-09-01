@@ -626,6 +626,25 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
     !/href=["']\//.test(indexHtml));
   check("GitHub Pages skips Jekyll (.nojekyll)",
     existsSync(join(ROOT,".nojekyll")));
+  check("index.html has a meta description",
+    /name=["']description["']/.test(indexHtml)
+    &&/content=["'][^"']{40,}["']/.test(indexHtml));
+  check("index.html has Open Graph + Twitter large card",
+    /property=["']og:image["']/.test(indexHtml)
+    &&/property=["']og:title["']/.test(indexHtml)
+    &&/name=["']twitter:card["']/.test(indexHtml)
+    &&/summary_large_image/.test(indexHtml));
+  check("og:image is the public Pages URL",
+    /og:image["']\s+content=["']https:\/\/hmarzban\.github\.io\/fusegrid\/og\.png["']/.test(indexHtml));
+  check("canonical is the public Pages URL",
+    /rel=["']canonical["']/.test(indexHtml)
+    &&/href=["']https:\/\/hmarzban\.github\.io\/fusegrid\/["']/.test(indexHtml));
+  check("social preview PNG exists", existsSync(join(ROOT,"og.png")));
+  check("robots.txt and sitemap.xml exist",
+    existsSync(join(ROOT,"robots.txt"))&&existsSync(join(ROOT,"sitemap.xml")));
+  const pagesYml=readFileSync(join(ROOT,".github/workflows/pages.yml"),"utf8");
+  check("Pages workflow stages og.png and robots.txt",
+    /og\.png/.test(pagesYml)&&/robots\.txt/.test(pagesYml));
   check("five biomes: selectable 1-5 never wrap",
     BIOMES.length===5&&biomeOf(1).name!==biomeOf(5).name
     &&BIOMES.map(b=>b.name).join()==="JUNGLE,ICE,FACTORY,WATER,ARENA",

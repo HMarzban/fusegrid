@@ -64,6 +64,8 @@ not shell screens. Do not add them as `SCREEN` values.
 - `npm start` / `node serve.js` — loopback only: `http://127.0.0.1:8080/index.html`.
 - Public play is **GitHub Pages** (`https://hmarzban.github.io/fusegrid/`).
   Static files only (`.nojekyll`, relative asset hrefs). Do not rebind `serve.js`.
+  Social/SEO: keep `og.png` (1200×630), `robots.txt`, and `sitemap.xml` in the
+  Pages stage set. `og:image` must stay an absolute Pages URL.
 
 Flags: `?render=3d|iso`, `?play=1`, `?net=local`, `?orbit=1`, `?debug=1`.
 

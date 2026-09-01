@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://hmarzban.github.io/fusegrid/sitemap.xml

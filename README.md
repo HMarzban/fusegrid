@@ -1,5 +1,7 @@
 # FUSEGRID
 
+[![FUSE / GRID — play in the browser](og.png)](https://hmarzban.github.io/fusegrid/)
+
 Deterministic single-player bomb-grid arcade. ES modules, no bundler, no npm runtime deps.
 
 **Play:** [hmarzban.github.io/fusegrid](https://hmarzban.github.io/fusegrid/)

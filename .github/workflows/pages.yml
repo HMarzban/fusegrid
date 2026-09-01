@@ -21,7 +21,7 @@ jobs:
       - name: Stage playable files
         run: |
           mkdir -p _site
-          cp index.html favicon.svg _site/
+          cp index.html favicon.svg apple-touch-icon.png og.png robots.txt sitemap.xml _site/
           cp -R src vendor _site/
           touch _site/.nojekyll
       - uses: actions/configure-pages@v5
