@@ -126,27 +126,6 @@ export function makeSnapshot(world, seed, level){
    };
 }
 
-/* @deprecated Lockstep-incompatible. Snapshot reconciliation fabricates enemy
-   dynamics and cannot reproduce a peer's exact state; lockstep v1 (net/lockstep)
-   never calls it. Kept only for the legacy authoritative-server path. */
-export function applySnapshot(world, snap){
-  world.tick=snap.tick; world.state=snap.state;
-  world.score=snap.score; world.lives=snap.lives;
-  for(const sp of snap.players){
-    const p=world.players[sp.pid];
-    if(!p)continue;
-    p.x=sp.x; p.y=sp.y; p.face=sp.face; p.bombKind=sp.bombKind;
-    p.bombs=sp.bombs; p.range=sp.range; p.shield=sp.shield; p.iFrames=sp.iFrames;
-   }
-   // enemies reconciled by position/type (server is source of truth)
-  world.enemies = snap.enemies
-    .filter(se=>!se.dead)
-    .map(se=>({x:se.x,y:se.y,tx:Math.floor(se.x/40),ty:Math.floor(se.y/40),
-      dir:{x:1,y:0},type:se.type,color:se.color,r:14,dead:false,
-      invuln:false,invulnT:0,cd:999,home:{x:0,y:0},speed:1,pass:false}));
-  world.bombs    = snap.bombs.slice();
-}
-
 /* Encode/decode (JSON for phase 1). Swap to binary later without touching shapes.
    decode is fail-closed: undecodable input -> null (drop + count upstream), never throw. */
 export function encode(msg){ return JSON.stringify(msg); }

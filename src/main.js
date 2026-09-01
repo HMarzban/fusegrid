@@ -6,7 +6,7 @@
 import {CFG} from "./core/config.js";
 import {createWorld, loadLevel, step} from "./core/sim.js";
 import {createRenderer} from "./render/renderer.js";
-import {drawLogo} from "./render/scenes.js";
+import {drawLogo, makeHud} from "./render/scenes.js";
 import {PROJ} from "./render/r3d/camera.js";
 import * as menudraw from "./render/menudraw.js";
 import {SCREEN, ITEMS, createMenuApp} from "./app/menuapp.js";
@@ -24,8 +24,8 @@ const DEMO_SEED=20260823, DEMO_CAP=20;
   import {mountTouch} from "./touch.js";
   import {createCamera,resetCamera,mountCameraCtl,
     transform as camTransform} from "./render/cameraCtl.js";
-  import {createRenderer3D} from "./render/three/wrapper.js";
   import {createRig,resetOrbit,mountOrbitCtl} from "./render/three/camrig.js";
+  import {loadRenderer3D} from "./render/three/load.js";
 import {createLockstep} from "./net/lockstep.js";
 import {LocalTransport} from "./net/transport.js";
 
@@ -307,22 +307,32 @@ export function createGame(canvas, opts={}){
      }
     if(fit)fit();
    }
+  let createRenderer3D=opts.createRenderer3D||null;
+  let threeP=null;
   function getRenderer(kind){
     sizeCanvases(kind);
-    if(!rcache[kind]){
-      try{
-        rcache[kind]=kind==="3d"
-          ?createRenderer3D(glCanvas,canvas,
-            {audio:opts.audio||null,hud:opts.hud||null})
-          :createRenderer(canvas,{kind,audio:opts.audio||null,
-            hud:opts.hud||null});
-       }
-      catch(e){ console.warn("renderer init failed", e);
-        rcache[kind]={ctx:{save(){},restore(){},translate(){},scale(){}},
-          render(){},consumeEvents(){}}; }
+    if(rcache[kind])return rcache[kind];
+    if(kind==="3d"&&!createRenderer3D){
+      if(!threeP) threeP=loadRenderer3D().then(m=>{
+        createRenderer3D=m.createRenderer3D;
+        if(effKind()==="3d") renderer=getRenderer("3d");
+      });
+      return rcache["2d"]||getRenderer("2d");
      }
+    try{
+      const hud=opts.hud||makeHud(typeof document!=="undefined"?document:null);
+      rcache[kind]=kind==="3d"
+        ?createRenderer3D(glCanvas,canvas,
+          {audio:opts.audio||null,hud,rig})
+        :createRenderer(canvas,{kind,audio:opts.audio||null,hud});
+     }
+    catch(e){ console.warn("renderer init failed", e);
+      rcache[kind]={ctx:{save(){},restore(){},translate(){},scale(){}},
+        render(){},consumeEvents(){}}; }
     return rcache[kind];
    }
+  if((urlKind==="3d"||opts.render3d)&&!createRenderer3D) loadRenderer3D().then(m=>{
+    createRenderer3D=m.createRenderer3D; renderer=getRenderer("3d"); });
   let renderer=getRenderer(curKind);
 
   /* per-screen menu chrome over the frozen arena */
@@ -478,6 +488,8 @@ export function createGame(canvas, opts={}){
     const br=document.getElementById("btnRestart");
     if(br)br.onclick=(e)=>{ if(app.screen!==SCREEN.GAME)return;
       loadLevel(world,1,false); world.state="PLAY";
+      setBtn("btnPause","Pause");
+      prevSt="PLAY";
       e&&e.currentTarget&&e.currentTarget.blur(); };
     const bm=document.getElementById("btnMenu");
     // GAME-gated quit-to-menu riding KeyM's exact record path (persist-if->0,

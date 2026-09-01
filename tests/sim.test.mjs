@@ -1,5 +1,5 @@
 import {step, createWorld, newIntent, loadLevel} from "../src/core/sim.js";
-import {spawnEnemy} from "../src/core/entities.js";
+import {spawnEnemy, hurtPlayer} from "../src/core/entities.js";
 import {CFG,T,key} from "../src/core/config.js";
 import {tileOf,bfsNext} from "../src/core/board.js";
 import {Input} from "../src/input.js";
@@ -478,6 +478,96 @@ function kickSetup(seed,kickPower){
   check("R9 bfsNext(blocked) detours off bomb tile",
     n!==null && !(n.x===7&&n.y===6),
     n?("next "+n.x+","+n.y):"null");
+}
+
+// ==================== SIM RULES V4: center blast, chain after hit, fireEdge ====
+{
+  const w=rulesWorld();
+  const p=w.players[0];
+  p.iFrames=0; p.shield=false;
+  const lives0=w.lives;
+  injectBomb(w,tileOf(p.x),tileOf(p.y),0,1);
+  step(w,CFG.STEP,{0:newIntent()});
+  check("R10 stand on own bomb takes damage",
+    w.lives<lives0||p.iFrames>0||w.state==="LOSE",
+    "lives "+w.lives+" iFrames "+p.iFrames+" state "+w.state);
+}
+
+{
+  const w=rulesWorld();
+  const p=w.players[0];
+  w.lives=1; p.iFrames=0; p.shield=false;
+  p.x=1.5*CFG.TILE; p.y=1.5*CFG.TILE; p.tx=1; p.ty=1;
+  for(let x=1;x<=4;x++) w.grid[key(x,1)]=T.EMPTY;
+  injectBomb(w,1,1,0,2);
+  injectBomb(w,3,1,99,1);
+  const b2=w.bombs[1];
+  step(w,CFG.STEP,{0:newIntent()});
+  check("R11 lethal blast still chains second bomb",
+    (w.state==="LOSE"||w.lives===0)&&b2.dead===true,
+    "b2.dead="+b2.dead+" lives="+w.lives+" state="+w.state);
+}
+
+{
+  const w=rulesWorld();
+  const p=w.players[0];
+  w.lives=1; p.iFrames=0; p.shield=false;
+  p.x=1.5*CFG.TILE; p.y=1.5*CFG.TILE;
+  const e1=spawnEnemy("stationary",1,1,1,w.rng);
+  const e2=spawnEnemy("stationary",1,1,1,w.rng);
+  e1.invuln=false; e1.invulnT=0; e1.speed=0; e1.x=p.x; e1.y=p.y;
+  e2.invuln=false; e2.invulnT=0; e2.speed=0; e2.x=p.x; e2.y=p.y;
+  w.enemies.push(e1,e2);
+  step(w,CFG.STEP,{0:newIntent()});
+  step(w,CFG.STEP,{0:newIntent()});
+  const loses=w.events.filter(e=>e.t==="lose").length;
+  check("R12 LOSE then overlap does not double-hurt",
+    w.lives===0&&loses===1,
+    "lives="+w.lives+" loseEvents="+loses+" state="+w.state);
+}
+
+{
+  const w=rulesWorld();
+  const p=w.players[0];
+  p.throw=true; p.face={x:1,y:0};
+  p.x=1.5*CFG.TILE; p.y=1.5*CFG.TILE; p.tx=1; p.ty=1;
+  w.grid[key(2,1)]=T.EMPTY;
+  const en=spawnEnemy("walker",2,1,1,w.rng);
+  en.invuln=false; en.invulnT=0; en.dead=false;
+  w.enemies.push(en);
+  step(w,CFG.STEP,{0:{...newIntent(),fire:true,firePrev:false,shift:true}});
+  check("R13 throw onto live enemy tile refused",
+    w.bombs.length===0,
+    "bombs="+w.bombs.length+" enemy "+en.tx+","+en.ty);
+}
+
+{
+  const w=rulesWorld();
+  const p=w.players[0];
+  p.bombs=8;
+  p.x=1.5*CFG.TILE; p.y=1.5*CFG.TILE; p.tx=1; p.ty=1;
+  w.grid[key(1,1)]=T.EMPTY; w.grid[key(3,1)]=T.EMPTY;
+  const lock={0:{move:{x:0,y:0},fire:true,shift:false,remote:false,kick:false}};
+  step(w,CFG.STEP,lock);
+  p.x=3.5*CFG.TILE; p.tx=3;
+  step(w,CFG.STEP,lock);
+  check("R14 lockstep fire without firePrev places exactly one",
+    w.bombs.length===1,
+    "bombs="+w.bombs.length);
+}
+
+{
+  const w=rulesWorld();
+  w.lives=3;
+  injectBomb(w,5,5,2.0,1);
+  w.blades.push({tx:4,ty:5,ttl:0.2,dead:false});
+  const nB=w.bombs.length, nF=w.blades.length, bomb=w.bombs[0];
+  const lost=hurtPlayer(w);
+  check("R15 survive keeps live bombs (COULD 7)",
+    lost===false&&w.lives===2&&w.bombs.length===nB&&w.bombs[0]===bomb,
+    "lost="+lost+" lives="+w.lives+" bombs="+w.bombs.length);
+  check("R15 survive keeps live blades (COULD 7)",
+    w.blades.length===nF, "blades="+w.blades.length);
 }
 
 console.log("\n  SIM RESULT: "+pass+" PASS / "+fail+" FAIL");

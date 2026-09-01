@@ -423,5 +423,30 @@ const N=650;
   }
 }
 
+// held fire with no firePrev (wire shape) must place once, not every tile
+{
+  const seed=20260901;
+  const mk=()=>{const w=createWorld(seed,1); loadLevel(w,1,false);
+    w.state="PLAY"; w.players[0].bombs=8; w.enemies.length=0; return w;};
+  const wA=mk(), wB=mk();
+  const q=[];
+  const tA={send(m){q.push({to:"B",m});}};
+  const tB={send(m){q.push({to:"A",m});}};
+  const lsA=createLockstep({selfPid:0,world:wA,transport:tA,dt:CFG.STEP,
+    players:[0,1]});
+  const lsB=createLockstep({selfPid:1,world:wB,transport:tB,dt:CFG.STEP,
+    players:[0,1]});
+  const pump=()=>{ while(q.length){ const e=q.shift();
+    (e.to==="A"?lsA:lsB).handleMessage(e.m); } };
+  const hold={move:{x:1,y:0},fire:true,shift:false,remote:false,kick:false};
+  for(let i=0;i<30;i++){
+    lsA.pushIntent(hold); lsB.pushIntent(hold); pump();
+    lsA.tick(); lsB.tick();
+  }
+  check("held fire without firePrev places exactly one bomb (both peers)",
+    wA.bombs.length===1&&wB.bombs.length===1&&sameWorld(wA,wB),
+    "A="+wA.bombs.length+" B="+wB.bombs.length);
+}
+
 console.log(fail? "NET_LOCKSTEP FAIL":"NET_LOCKSTEP OK");
 process.exit(fail?1:0);

@@ -90,9 +90,9 @@ function updatePlayer(world, dt, inp, emit){
     }
   p.iFrames=Math.max(0,p.iFrames-dt);
    // fire / throw / remote
-  if(inp.fire && !inp.firePrev){
+  if(inp.fire && !w.fireEdge){
     if(inp.shift && p.throw){
-      placeBomb(w, p.x+p.face.x*CFG.TILE*1.1, p.y+p.face.y*CFG.TILE*1.1, emit);
+      placeBomb(w, p.x+p.face.x*CFG.TILE*1.1, p.y+p.face.y*CFG.TILE*1.1, emit, true);
        } else {
       placeBomb(w, p.x, p.y, emit);
       }
@@ -165,7 +165,7 @@ function updateBombs(world, dt, emit){
 
 /* Single source of truth for a cross blast. */
 function computeBlast(w,cx,cy,radius,pierce,line,dir){
-  const tiles=[];
+  const tiles=[{tx:cx,ty:cy,brick:false}];
   const arms = line ? [dir||{x:1,y:0}] : [{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];
   for(const d of arms){
     let blocked=false;
@@ -180,12 +180,13 @@ function computeBlast(w,cx,cy,radius,pierce,line,dir){
   return tiles;
  }
 
-function placeBomb(w,px,py,emit){
+function placeBomb(w,px,py,emit,thrown){
   const p=w.players[0];
   if(w.bombs.length>=p.bombs)return false;
   const tx=tileOf(px), ty=tileOf(py);
   if(w.grid[key(tx,ty)]!==T.EMPTY)return false;
   if(w.bombs.some(b=>b.tx===tx&&b.ty===ty))return false;
+  if(thrown && w.enemies.some(e=>!e.dead&&e.tx===tx&&e.ty===ty))return false;
   const variant=p.bombKind;
   const radius = variant==="power"?CFG.PLAYER_START.range+2
                 :(variant==="line"||variant==="pierce")?Math.max(p.range,5)
@@ -207,9 +208,9 @@ function detonate(w,bomb,emit){
   for(const t of tiles){
     for(const e of w.enemies)
       if(!e.dead && !e.invuln && aabb(w.grid,t.tx,t.ty,e.x,e.y,e.r)) killEnemy(w,e,emit);
-    if(aabb(w.grid,t.tx,t.ty,p.x,p.y,CFG.TILE*0.30) && p.iFrames<=0){
+    if(aabb(w.grid,t.tx,t.ty,p.x,p.y,CFG.TILE*0.30) && p.alive && p.iFrames<=0){
       if(p.shield){ p.shield=false; p.iFrames=CFG.IFRAMES; emit({t:"hurt", x:p.x, y:p.y}); }
-      else { hurtPlayer(w, emit); return; }
+      else hurtPlayer(w, emit);
        }
      }
   emit({t:"boom", x:bomb.x, y:bomb.y});

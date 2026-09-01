@@ -48,6 +48,8 @@ export function loadLevel(world, level, keepProgress=false){
   w.grid=genBoard(w.seed, level);
   w.bombs=[]; w.blades=[]; w.enemies=[]; w.items=[]; w.events=[];
   w.winTimer=0;
+  w.fireEdge=false;
+  w.remoteEdge=false;
 
   w.players.forEach((p,i)=>{
     p.x=1.5*CFG.TILE; p.y=1.5*CFG.TILE; p.tx=1; p.ty=1;

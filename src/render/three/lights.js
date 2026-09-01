@@ -4,7 +4,7 @@
 import * as THREE from "../../../vendor/three.module.js";
 
 export function createLights(biome){
-  const hemi=new THREE.HemisphereLight("#cfe8ff",biome.bg1,0.85);
+  const hemi=new THREE.HemisphereLight(biome.sky||"#cfe8ff",biome.bg1,0.85);
   const dir=new THREE.DirectionalLight("#ffffff",1.6);
   dir.position.set(300,420,220);
   dir.castShadow=true;

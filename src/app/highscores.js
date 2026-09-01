@@ -13,7 +13,8 @@ function defaultStore(){
 function copyDefaults(){ return DEFAULT_SCORES.map(r=>({s:r.s,l:r.l,d:r.d})); }
 function isRow(r){
   return !!r&&typeof r==="object"&&!Array.isArray(r)
-    &&Number.isFinite(r.s)&&Number.isFinite(r.l)&&typeof r.d==="string";
+    &&Number.isFinite(r.s)&&Number.isFinite(r.l)
+    &&typeof r.d==="string"&&r.d.length<=32;
 }
 
 export function loadScores(store){
@@ -26,7 +27,7 @@ export function loadScores(store){
   if(typeof raw!=="string")return copyDefaults();
   try{
     const v=JSON.parse(raw);
-    if(!Array.isArray(v)||!v.every(isRow))return copyDefaults();
+    if(!Array.isArray(v)||v.length>10||!v.every(isRow))return copyDefaults();
     return v.map(r=>({s:r.s,l:r.l,d:r.d}));
   }catch(_){ return copyDefaults(); }
 }

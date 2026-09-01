@@ -4,7 +4,6 @@
    getActive() (main wires it to GAME + kind==="3d"). cameraCtl.js stays
    untouched for 2D/iso. */
 import {clamp} from "../../core/config.js";
-import * as THREE from "../../../vendor/three.module.js";
 
 export const EL_MIN=0.21, EL_MAX=0.87, DIST_MIN=560, DIST_MAX=1000;  // el = POLAR from +Y: 0.419 rad = 66 deg above horizon
 export const SHAKE_3D_K=0.06;      // world-units per shake px

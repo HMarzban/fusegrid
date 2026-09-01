@@ -58,6 +58,17 @@ check("DEFAULT_SCORES sorted by s desc",
   check("non-array JSON -> defaults", eq(loadScores(s),DEFAULT_SCORES));
 }
 {
+  const s=mapStore();
+  const rows=Array.from({length:11},(_,i)=>({s:i,l:1,d:"2026-08-23"}));
+  s.setItem(HS_KEY,JSON.stringify(rows));
+  check("array longer than 10 -> defaults", eq(loadScores(s),DEFAULT_SCORES));
+}
+{
+  const s=mapStore();
+  s.setItem(HS_KEY,JSON.stringify([{s:1,l:1,d:"x".repeat(33)}]));
+  check("d longer than 32 -> defaults", eq(loadScores(s),DEFAULT_SCORES));
+}
+{
   const s=mapStore(); s.setItem(HS_KEY,42);
   check("non-string raw -> defaults", eq(loadScores(s),DEFAULT_SCORES));
 }

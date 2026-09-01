@@ -2,57 +2,82 @@
 
 ## Project
 
-Neo-Bomberman ("rollblock") — a modular, deterministic, Canvas-2D arcade game.
-Pure ES modules, **zero runtime dependencies**. The authoritative simulation is
+Neo-Bomberman ("rollblock") — a modular, deterministic arcade game.
+Pure ES modules. **Zero `package.json` runtime dependencies.** The sim is
 framework-free so it runs identically under Node (tests) and the browser.
+
+The product path is **REAL 3D ⇄ CLASSIC 2D**. Three.js r160 is **vendored**
+(`vendor/three.module.js`, MIT, relative import — not an npm dep). The 2026-08-16
+"no Three" lock applies to the **sim** only; the render layer reversed it.
+
+This is a **single-player** game. Lockstep is a local two-world **harness**, not
+internet play. Do not swap `WebSocketTransport` in and call it multiplayer —
+`step()` only consumes `inputs[0]` / `players[0]`.
 
 ## Architecture
 
 Single thread, three stages: `input → sim → render`.
 
-- `src/main.js` — **browser entry only**. Owns the `requestAnimationFrame` loop,
-  wires input to sim to renderer. Never imported by sim or renderer.
-- `src/core/` — deterministic simulation, no DOM, no browser globals.
-  - `sim.js` — `createWorld`, `loadLevel`, `step(world, dt, intents)`.
-  - `config.js` — frozen `CFG`, tile constants `T`, `BIOMES`, helpers.
-  - `board.js`, `world.js`, `entities.js`, `rng.js` — sim support.
-- `src/render/` — renderer + sprites/scenes/fx. Pure read of world state.
-  - `src/render/three/` — real-3D path (S1+): vendored `vendor/three.module.js`
-    (r160, MIT, relative import — no npm dep). `wrapper.js` createRenderer3D
-    renders WebGL into `#gl` under the classic overlay `#c`; kind "iso" pins
-    legacy dimetric (`r3d/`), menu RENDER toggles REAL 3D ⇄ CLASSIC 2D.
-    Scene/camrig/lights are Node-testable; sim/protocol untouched.
-- `src/ai/enemies.js` — enemy AI, operates on sim state.
-- `src/net/` — `protocol.js`, `transport.js`. Multiplayer-ready: swap
-  `LocalTransport` → `WebSocketTransport` in `main.js`.
-- `src/input.js` — `Input` (keyboard + buttons). `src/audio.js` — `createAudio`.
+Two state machines:
 
-Future multiplayer: replace `LocalTransport` with `WebSocketTransport` in
-`main.js`; the sim stays authoritative.
+| Layer | States | Owner |
+|---|---|---|
+| Shell | INTRO → MENU ⇄ LEVEL/HOWTO/SCORES → GAME; idle → ATTRACT | `src/app/menuapp.js` |
+| Sim | PLAY / WIN / LOSE / PAUSE | `src/core/sim.js` |
+
+The sim ticks only while the shell is GAME. PAUSE/WIN/LOSE are `world.state`,
+not shell screens. Do not add them as `SCREEN` values.
+
+- `src/main.js` — **browser entry only**. RAF loop, URL flags, toolbar, attract
+  harness, kind switch. Never imported by sim or renderer.
+- `src/core/` — deterministic simulation, no DOM, no browser globals.
+  - `world.js` — `createWorld`, `loadLevel` (re-exported from `sim.js`).
+  - `sim.js` — `step(world, dt, intents)`.
+  - `config.js` — frozen `CFG`, `T`, `BIOMES` (array frozen; **entries are not**).
+  - `board.js`, `entities.js`, `rng.js` — sim support.
+- `src/render/` — reads world; drains `world.events` into fx/audio.
+  - kind `"2d"` — classic Canvas (`createRenderer`).
+  - kind `"3d"` — `createRenderer3D` (`#gl` WebGL under `#c` overlay).
+  - kind `"iso"` — legacy dimetric (`r3d/`), pinned by `?render=iso` only.
+    `createRenderer({kind:"3d"|"iso"})` is the **dimetric** branch. Real 3D
+    never enters that factory. Menu RENDER flips 3D ⇄ 2D only.
+  - Live 3D default rig (polar `el` from +Y): `{az:0, el:0.419, dist:800}`.
+    Spec text that says `el:1.152` / `dist:700` is stale (unit-bug era).
+- `src/app/` — menu shell, intro beats, demobot, highscores. Not read by `step()`.
+- `src/ai/enemies.js` — enemy AI on sim state.
+- `src/net/` — `protocol.js`, `lockstep.js`, `transport.js`.
+  Default play uses **no** transport. `?net=local` is a 1P pair proof.
+  `applySnapshot` was removed (lockstep-only). `makeSnapshot` remains for harness dumps.
+- `src/input.js`, `src/touch.js`, `src/audio.js` — input + chiptune.
 
 ## Commands
 
 - `npm test` / `node --test` — run tests (`tests/*.test.mjs`).
-- `npm start` / `node serve.js` — static server at `http://localhost:8080/index.html`.
+- `npm start` / `node serve.js` — loopback only: `http://127.0.0.1:8080/index.html`.
+
+Flags: `?render=3d|iso`, `?play=1`, `?net=local`, `?orbit=1`, `?debug=1`.
 
 Node v26, `"type": "module"`. No build step, no bundler.
 
 ## Conventions
 
-- **Determinism**: `step()` must be pure w.r.t. world state + intent. Never read
-  time/DOM/`Math.random` inside the sim — use `src/core/rng.js`.
-- **No DOM in sim/render logic** that must stay Node-testable — guard with
-  `typeof document === "undefined"` only at the `main.js`/entry boundary.
-- Frozen config objects (`Object.freeze`) — mutate world state, not `CFG`/`BIOMES`.
-- Keep the zero-dependency invariant; do not add `package.json` deps.
+- **Determinism**: `step()` is pure w.r.t. world + intent. No time/DOM/`Math.random`
+  in the sim — use `src/core/rng.js`. Replay/outcome validity: **baseline v4**
+  (center-tile blast + fireEdge place) begins at the prod/hardening ship.
+- **No DOM in `src/core`**. Render factories may touch DOM (atlas, WebGL, HUD).
+  Node-testable three **math** stays DOM-free.
+- Frozen `CFG` — mutate world, not config. `BIOMES` elements are shallow.
+- Keep zero **npm** deps. Vendored render libs are OK.
+- 3D draw-call budget is `<=500` (fat-world currently 186). Child-index
+  contracts in `three.test.mjs` are ABI — do not "flex" them in a drive-by.
 - No comments unless the file already uses explanatory block comments (its style).
   Match the compact, no-whitespace-after-key style already in the codebase.
 
 ## Testing
 
 Tests live in `tests/*.test.mjs` and run under `node --test`. Keep the sim
-importable without a DOM. `tests/browser_integration.html` is for manual browser
-checks via the served page.
+importable without a DOM. `tests/browser_integration.html` is manual. Visual 3D feel is
+not covered by Node — play-verify in a browser after render changes.
 
 ## Memory
 

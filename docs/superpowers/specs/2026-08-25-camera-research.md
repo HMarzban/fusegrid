@@ -50,19 +50,18 @@ Board X∈[-300,300], Z∈[-260,260]; FOV 45° vert (wrapper.js:61), aspect 600/
 - Vertical footprint V = 520·sin(el)+36·cos(el); horizontal U = 600 (+8% margin).
 - **az = 0** (axis-aligned: grid columns vertical on screen, +X right, row 0 far;
   reads identically to the 2D map; no diagonal ambiguity).
-- **el = 66° = 1.152 rad** (steep enough for lane reading like top-down, keeps
-  block sides/bomb fuses visible; inside existing clamp [0.25,1.35]).
-- **dist = 700**: V=490 → ×1.15 margin → d≥680; U=648 → d≥678. 700 ≈3%
-  headroom both axes; player ≈36px tall on the 520px canvas — readable.
-- **target = [0,0,0]** (board center, floor plane).
+- **el = 66° above horizon = polar 0.419 rad from +Y** (`camrig` `el` is polar,
+  not elevation-from-horizon; `1.152` was the unit-bug that framed at 24°).
+- **dist = 800**: full-board fit after the polar fix (was 700 under the wrong el).
+- **target = [0,-25,0]** (board center, slight Y drop for ICE trim).
+- Dolly band live: `DIST_MIN=560`, `DIST_MAX=1000`. Clamp `EL_MIN=0.21`, `EL_MAX=0.87`.
 
 ## §4 Implementation deltas
 
-- `camrig.js`: `DEF={az:0,el:1.152,dist:700}`; `DIST_MIN 240→500`,
-  `DIST_MAX 900→880` (zoom sanity band ±~25%). Orbit math untouched.
-- `flythrough.js`: `BASE_DIST 560→700`; az base `-0.6→0` (keep ±0.38 swing);
-  el start `1.04→1.28`, settle `0.90→1.152`. Segment-end snap then lands
-  exactly on new createRig() defaults — handoff stays seamless by construction.
+- `camrig.js` (HEAD): `DEF={az:0,el:0.419,dist:800,target:[0,-25,0]}`;
+  `DIST_MIN=560`, `DIST_MAX=1000`. Orbit math untouched.
+- `flythrough.js`: `BASE_DIST=800`; settle `el=0.419` so INTRO last frame ==
+  `createRig()` defaults — handoff stays seamless by construction.
 - `main.js`: pass an orbit-enabled gate into mountOrbitCtl getActive:
   `GAME && kind==="3d" && (opts.orbit ?? /[?&]orbit=1/.test(location.search))`.
   Wheel/pinch dolly stays always-on within clamps; right-drag orbit becomes
@@ -74,10 +73,10 @@ Board X∈[-300,300], Z∈[-260,260]; FOV 45° vert (wrapper.js:61), aspect 600/
 
 1. Spawn frame: all 4 corners + border trim fully visible, ≥20px CSS margin.
 2. Player legible (~≥30px) in all four corners with NO camera input.
-3. Bomb fuse/spark + enemy silhouettes distinguishable at dist 700.
+3. Bomb fuse/spark + enemy silhouettes distinguishable at dist 800.
 4. Grid columns render vertically (az=0); lanes unambiguous.
 5. Default play: zero camera motion except shake; WIN/LOSE unaffected.
-6. Without `?orbit=1`: right-drag inert; wheel dollies clamped 500..880; pinch same.
+6. Without `?orbit=1`: right-drag inert; wheel dollies clamped 560..1000; pinch same.
 7. With `?orbit=1`: orbit works, KeyR returns to exact authored rig.
 8. INTRO last frame == createRig() defaults (no visible snap at handoff).
 9. ATTRACT/demobot fully readable single-screen (no camera drift over 20s cap).

@@ -37,6 +37,7 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
   const ovCtx=makeOverlayCtx(overlayCanvas);
   const audio=opts.audio||null;
   const hud=opts.hud||null;
+  const rig=opts.rig||createRig();
 
   /* GL init guarded three ways: absent canvas (headless), context probe that
      is not a real object (recording-proxy test stubs return functions), and
@@ -59,7 +60,6 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
 
   const scene3=new THREE.Scene();
   const camera=new THREE.PerspectiveCamera(45,W/H,1,2500);
-  const rig=createRig();
   /* S3: fx-store particles ride the scene ROOT (not sc.group) so level
      rebuilds never orphan live bursts; syncFx wipes them on world change. */
   const fxp=createParticles();
@@ -108,8 +108,8 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
        remain opt-in ({hud:true}) and draw after the veil (2D parity). */
     const ov=world.state==="WIN"||world.state==="LOSE"
       ||world.state==="PAUSE";
+    ovCtx.clearRect(0,0,W,H);
     if(ov||(o&&o.hud===true)){
-      ovCtx.clearRect(0,0,W,H);
       if(ov)drawOverlay(ovCtx,world);
       if(o&&o.hud===true)drawHudChips(ovCtx,world);
      }

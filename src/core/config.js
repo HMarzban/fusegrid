@@ -15,10 +15,11 @@ export const CFG = Object.freeze({
 });
 export const T = Object.freeze({EMPTY:0, BRICK:1, WALL:2});
 export const BIOMES = Object.freeze([
-  {name:"JUNGLE", bg0:"#123a33",bg1:"#0a201d",brickA:"#57c34a",brickB:"#2f7d34",brickHi:"#8fe87a",wall:"#5b6c86",wallHi:"#7f93b4",floor0:"#123028",floor1:"#0c241f",hWall:24,hBrick:14},
-  {name:"ICE",    bg0:"#2b4a7a",bg1:"#0f2350",brickA:"#7fb4ff",brickB:"#3f6fbf",brickHi:"#cfe6ff",wall:"#8ea6c8",wallHi:"#c2d4ea",floor0:"#123056",floor1:"#0c2040",hWall:30,hBrick:18},
-  {name:"FACTORY",bg0:"#4a3f2b",bg1:"#241d12",brickA:"#d78a3c",brickB:"#9c5f26",brickHi:"#ffc27a",wall:"#6b7382",wallHi:"#98a2b2",floor0:"#2a2418",floor1:"#1a1610",hWall:18,hBrick:10},
-  {name:"ARENA",  bg0:"#3a2b4a",bg1:"#1c1330",brickA:"#ff5d73",brickB:"#b03a4d",brickHi:"#ff9db0",wall:"#6a5a82",wallHi:"#9a86b4",floor0:"#241a34",floor1:"#181028",hWall:26,hBrick:15},
+  {name:"JUNGLE", bg0:"#0e4a28",bg1:"#062416",brickA:"#42f024",brickB:"#14a018",brickHi:"#d4ff70",wall:"#d4a030",wallHi:"#ffe878",floor0:"#1a7a30",floor1:"#126024",hWall:22,hBrick:12,sky:"#7ec8ff"},
+  {name:"ICE",    bg0:"#4a9ae0",bg1:"#0a2048",brickA:"#f4fcff",brickB:"#b0dcf0",brickHi:"#ffffff",wall:"#2e4a78",wallHi:"#d0e8f8",floor0:"#7eb8e0",floor1:"#5a9cc8",hWall:36,hBrick:20,sky:"#c8e4ff"},
+  {name:"FACTORY",bg0:"#3d4a58",bg1:"#0e1218",brickA:"#ff9a20",brickB:"#c45010",brickHi:"#ffe06a",wall:"#8a96a4",wallHi:"#d0d8e0",floor0:"#3a3c40",floor1:"#282a2e",hWall:16,hBrick:8,sky:"#f0c070"},
+  {name:"WATER",  bg0:"#0a3a48",bg1:"#041820",brickA:"#3ad0c8",brickB:"#1a7a78",brickHi:"#b8fff4",wall:"#6a7a88",wallHi:"#c0d0dc",floor0:"#0e4a58",floor1:"#0a3844",hWall:28,hBrick:14,sky:"#1a6080"},
+  {name:"ARENA",  bg0:"#4a2058",bg1:"#140818",brickA:"#ff6a8c",brickB:"#c23058",brickHi:"#ffc0d0",wall:"#6a6460",wallHi:"#c8b8b0",floor0:"#3a2848",floor1:"#281830",hWall:20,hBrick:12,sky:"#2a1840"},
 ]);
 export const biomeOf = lvl => BIOMES[(Math.max(1,lvl)-1)%BIOMES.length];
 export function key(x,y){return y*CFG.COLS+x;}

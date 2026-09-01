@@ -56,8 +56,8 @@ check("vendor three.module.js imports + is r160", THREE.REVISION==="160",
 // ---- §6 lights: frozen rig values ----
 {
   const b=BIOMES[0], L=createLights(b);
-  check("hemi sky #cfe8ff ground bg1 intensity .85",
-    hexOf(L.hemi)==="#cfe8ff"
+  check("hemi sky uses biome.sky (fallback #cfe8ff) ground bg1 intensity .85",
+    hexOf(L.hemi)===(b.sky||"#cfe8ff").toLowerCase()
     &&"#"+L.hemi.groundColor.getHexString()==="#"+b.bg1.replace("#","")
     &&L.hemi.intensity===0.85,
     hexOf(L.hemi)+"/"+L.hemi.groundColor.getHexString()+"/"+L.hemi.intensity);
@@ -215,7 +215,7 @@ function mkCanvas(){
     addEventListener(){},removeEventListener(){}};
 }
 {
-  const g=createGame(mkCanvas(),{seed:77,autoplay:true,render3d:true});
+  const g=createGame(mkCanvas(),{seed:77,autoplay:true,render3d:true,createRenderer3D});
   check("opts.render3d boots the 3D wrapper surface",
     !!g.renderer&&"overlay"in g.renderer&&typeof g.renderer.getShake
       ==="function"
@@ -264,7 +264,7 @@ function mkCanvas(){
   try{
     // default boot: right-drag orbit INERT during GAME+3d
     const cv=mkOrbitCanvas();
-    const g=createGame(cv,{seed:81,autoplay:true,render3d:true});
+    const g=createGame(cv,{seed:81,autoplay:true,render3d:true,createRenderer3D});
     const R=()=>g.rig||{};
     check("rig exposed read-only at authored defaults",
       !!g.rig&&g.rig.az===0&&g.rig.el===0.419&&g.rig.dist===800,
@@ -283,7 +283,7 @@ function mkCanvas(){
       String(R().dist));
     // opt-in orbit (?orbit=1 / opts.orbit): right-drag orbits again
     const cv2=mkOrbitCanvas();
-    const g2=createGame(cv2,{seed:82,autoplay:true,render3d:true,orbit:true});
+    const g2=createGame(cv2,{seed:82,autoplay:true,render3d:true,orbit:true,createRenderer3D});
     cv2.fire("pointerdown",{pointerId:1,button:2,clientX:300,clientY:260});
     wfire("pointermove",{pointerId:1,buttons:2,clientX:400,clientY:260});
     wfire("pointerup",{pointerId:1,button:2,clientX:400,clientY:260});
@@ -691,6 +691,7 @@ await sec("S2.detonation",async()=>{
   const w=createWorld(30,1); loadLevel(w,1,false); w.state="PLAY";
   w.grid[1*CFG.COLS+2]=T.BRICK;              // guarantee a brick beside spawn
   const nBricks=w.grid.reduce((a,v)=>a+(v===T.BRICK?1:0),0);
+  w.players[0].iFrames=999;                  // v4 center blast would hurt + wipe blades
   const inp={move:{x:0,y:0},fire:true,firePrev:false,shift:false,
     remote:false,kick:false};
   step(w,CFG.STEP,[inp]);                    // rising edge places bomb @ (1,1)
@@ -812,7 +813,7 @@ await sec("S3.C",async()=>{
     Math.abs(r._dbg.camera.position.x-camA.position.x)<1e-9
     &&Math.abs(r._dbg.camera.position.z-camA.position.z)<1e-9,
     r._dbg.camera.position.x.toFixed(2)+" vs "+camA.position.x.toFixed(2));
-  const g=createGame(mkCanvas(),{seed:61,render3d:true});
+  const g=createGame(mkCanvas(),{seed:61,render3d:true,createRenderer3D});
   g.app.screen=1; g.app.subT=1.0;             // INTRO mid-flyover
   let threw=false; let t=1000;
   try{ for(let i=0;i<5;i++){ t+=16; g.loop(t); } }
@@ -823,7 +824,7 @@ await sec("S3.C",async()=>{
 
 // ---- §S3.D ATTRACT demo world through the 3D path (rebuild rollover) ----
 await sec("S3.D",async()=>{
-  const g=createGame(mkCanvas(),{seed:51,render3d:true});
+  const g=createGame(mkCanvas(),{seed:51,render3d:true,createRenderer3D});
   g.app.screen=7; g.app.subT=99;              // ATTRACT (idle threshold past)
   let t=2000, threw=false;
   try{ for(let i=0;i<6;i++){ t+=16; g.loop(t); } }
@@ -1217,8 +1218,8 @@ await sec("S4.D",async()=>{
   const fake2={getContext:()=>cv2.rec};
   const rw2=createRenderer3D(null,fake2,{audio:null,hud:null});
   rw2.render(wg,1/60);
-  check("S4.E wrapper default frame leaves overlay untouched (menus safe)",
-    !cv2.ops.some(o=>o[0]==="clearRect")
+  check("S4.E wrapper default frame clears overlay (no chips, menus safe)",
+    cv2.ops.some(o=>o[0]==="clearRect")
     &&!cv2.ops.some(o=>o[0]==="fillText"),"ops="+cv2.ops.length);
   // 2D renderer: chips only on explicit opt-in, defaults byte-identical
   const cr=hudRecorder();
@@ -1309,11 +1310,15 @@ await sec("S5.overlay",async()=>{
     !textsOf(playOps).some(t=>OV_HEADS.includes(t)),
     textsOf(playOps).join("|"));
   const quietOps=frame("PLAY",undefined);
-  check("S5 PLAY default frame leaves overlay untouched",
-    quietOps.length===0,"ops="+quietOps.length);
+  check("S5 PLAY default frame clears overlay (no smear)",
+    quietOps.some(x=>x[0]==="clearRect")
+    &&!textsOf(quietOps).some(t=>OV_HEADS.includes(t)),
+    "ops="+quietOps.length+" texts="+textsOf(quietOps).join("|"));
   const menuOps=frame("MENU",undefined);
-  check("S5 MENU stays out of the overlay gate (shell owns menus)",
-    menuOps.length===0,"ops="+menuOps.length);
+  check("S5 MENU clears overlay, stays out of the paint gate (shell owns menus)",
+    menuOps.some(x=>x[0]==="clearRect")
+    &&!textsOf(menuOps).some(t=>OV_HEADS.includes(t)),
+    "ops="+menuOps.length+" texts="+textsOf(menuOps).join("|"));
   const dom={score:{textContent:"x"},level:{textContent:"x"},
     lives:{textContent:"x"},enemies:{textContent:"x"},
     bombs:{textContent:"x"},range:{textContent:"x"}};
@@ -1337,6 +1342,33 @@ await sec("S5.overlay",async()=>{
   rh2.render(wh,1/60,{hud:false});
   check("S5 o.hud===false suppresses updateHud (attract parity)",
     dom2.score.textContent==="keep", String(dom2.score.textContent));
+});
+
+// ---- §S5 shared orbit rig: opts.rig is live (wrapper applyOrbit uses it) ----
+await sec("S5.rig",async()=>{
+  const rig=createRig();
+  dollBy(rig,50);
+  const r=createRenderer3D(null,null,{audio:null,hud:null,rig});
+  const w=createWorld(83,1); loadLevel(w,1,false); w.state="PLAY";
+  r.render(w,1/60);
+  const want=new THREE.PerspectiveCamera();
+  applyOrbit(want,rig,r.getShake());
+  const got=r._dbg.camera.position;
+  check("S5 opts.rig is live: camera matches applyOrbit on the shared rig",
+    Math.abs(got.x-want.position.x)<1e-9
+    &&Math.abs(got.y-want.position.y)<1e-9
+    &&Math.abs(got.z-want.position.z)<1e-9,
+    got.x.toFixed(3)+","+got.y.toFixed(3)+","+got.z.toFixed(3)
+      +" vs "+want.position.x.toFixed(3)+","+want.position.y.toFixed(3)
+      +","+want.position.z.toFixed(3));
+  const fresh=createRig();
+  const freshCam=new THREE.PerspectiveCamera();
+  applyOrbit(freshCam,fresh,r.getShake());
+  check("S5 opts.rig is not a private createRig() copy",
+    Math.abs(got.x-freshCam.position.x)>1e-6
+    ||Math.abs(got.y-freshCam.position.y)>1e-6
+    ||Math.abs(got.z-freshCam.position.z)>1e-6,
+    "dist="+rig.dist+" vs "+fresh.dist);
 });
 
 // ---- §EI enemy-identity wave (spec 2026-08-25-enemy-identity §6):

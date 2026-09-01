@@ -1,9 +1,14 @@
+import {readFileSync} from "node:fs";
+import {dirname, join} from "node:path";
+import {fileURLToPath} from "node:url";
 import {createGame} from "../src/main.js";
 import {createRenderer} from "../src/render/renderer.js";
 import {createWorld, loadLevel} from "../src/core/sim.js";
 import {SCREEN, IDLE_T} from "../src/app/menuapp.js";
-import {CFG} from "../src/core/config.js";
+import {CFG, BIOMES, biomeOf} from "../src/core/config.js";
 import {loadScores} from "../src/app/highscores.js";
+
+const ROOT=dirname(fileURLToPath(import.meta.url))+"/..";
 
 let pass=0, fail=0;
 function check(name, cond, detail){ cond?pass++:fail++;
@@ -395,11 +400,12 @@ function mkCanvas(){
     check("F3 GAME: btnPause still pauses + flips label to Resume",
       g2.world.state==="PAUSE"&&stubs.btnPause.textContent==="Resume",
       g2.world.state+"/"+stubs.btnPause.textContent);
-    stubs.btnPause.onclick(ev);
     g2.world.level=2;
     stubs.btnRestart.onclick(ev);
     check("F3 GAME: btnRestart still reloads level 1 fresh PLAY",
       g2.world.level===1&&g2.world.state==="PLAY",g2.world.level+"/"+g2.world.state);
+    check("F3 GAME: btnRestart from PAUSE resets Pause label",
+      stubs.btnPause.textContent==="Pause",stubs.btnPause.textContent);
    }finally{ delete globalThis.document; }
 }
 
@@ -606,6 +612,18 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   check("(i) live __GAME__.renderer follows kind swap (stale-copy guard)",
     typeof g.renderer==="object"&&g.renderer!==null);
  }
+
+{
+  const main=readFileSync(join(ROOT,"src/main.js"),"utf8");
+  check("main.js does not statically import three wrapper",
+    !/from\s+["']\.\/render\/three\/wrapper\.js["']/.test(main));
+  check("index.html links a favicon",
+    /rel=["']icon["']/.test(readFileSync(join(ROOT,"index.html"),"utf8")));
+  check("five biomes: selectable 1-5 never wrap",
+    BIOMES.length===5&&biomeOf(1).name!==biomeOf(5).name
+    &&BIOMES.map(b=>b.name).join()==="JUNGLE,ICE,FACTORY,WATER,ARENA",
+    BIOMES.map(b=>b.name).join());
+}
 
 console.log(fail? "HEADLESS FAIL":"HEADLESS OK");
 process.exit(fail?1:0);

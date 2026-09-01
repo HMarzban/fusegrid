@@ -39,7 +39,6 @@ export function hurtPlayer(world, emit){
     return true;
      }
   p.x=1.5*CFG.TILE; p.y=1.5*CFG.TILE; p.iFrames=CFG.IFRAMES*1.6;
-  world.bombs=[]; world.blades=[];
   return false;
  }
 

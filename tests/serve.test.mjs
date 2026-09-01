@@ -49,6 +49,7 @@ check("400 on malformed percent-encoding",(await get("/%zz")).status===400);
   check("ROOT-itself request is 404 (not 403, no listing)",r.status===404,r.status+"");
 }
 check("no wildcard CORS header",!((await get("/index.html")).headers.get("access-control-allow-origin")));
+check("nosniff header", (await get("/index.html")).headers.get("x-content-type-options")==="nosniff");
 
 // await child exit before rmSync: killing and immediately deleting the cwd
 // raced the process still holding sandbox paths (flaky EBUSY/ENOENT)

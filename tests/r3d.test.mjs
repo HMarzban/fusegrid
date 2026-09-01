@@ -368,24 +368,27 @@ initFx();
 
 // 15) per-biome heights: consumption, ??-fallback, PROJ/freeze invariants
 {
-  check("heightFor JUNGLE 24/14",
-    heightFor(1,true)===24&&heightFor(1,false)===14,
+  check("heightFor JUNGLE 22/12",
+    heightFor(1,true)===22&&heightFor(1,false)===12,
     heightFor(1,true)+"/"+heightFor(1,false));
-  check("heightFor ICE 30/18",
-    heightFor(2,true)===30&&heightFor(2,false)===18,
+  check("heightFor ICE 36/20",
+    heightFor(2,true)===36&&heightFor(2,false)===20,
     heightFor(2,true)+"/"+heightFor(2,false));
-  check("heightFor FACTORY 18/10",
-    heightFor(3,true)===18&&heightFor(3,false)===10,
+  check("heightFor FACTORY 16/8",
+    heightFor(3,true)===16&&heightFor(3,false)===8,
     heightFor(3,true)+"/"+heightFor(3,false));
-  check("heightFor ARENA 26/15",
-    heightFor(4,true)===26&&heightFor(4,false)===15,
+  check("heightFor WATER 28/14",
+    heightFor(4,true)===28&&heightFor(4,false)===14,
     heightFor(4,true)+"/"+heightFor(4,false));
+  check("heightFor ARENA 20/12",
+    heightFor(5,true)===20&&heightFor(5,false)===12,
+    heightFor(5,true)+"/"+heightFor(5,false));
   const b=BIOMES[0],sw=b.hWall,sb=b.hBrick;
   delete b.hWall; delete b.hBrick;
   const fb=heightFor(1,true)===PROJ.WALL_H&&heightFor(1,false)===PROJ.BRICK_H;
   b.hWall=sw; b.hBrick=sb;
   check("field-less biome falls back to PROJ.WALL_H/BRICK_H",fb);
-  check("fallback restore",heightFor(1,true)===24&&heightFor(1,false)===14);
+  check("fallback restore",heightFor(1,true)===22&&heightFor(1,false)===12);
   const snap='{"TILE_W":40,"TILE_H":20,"WALL_H":24,"BRICK_H":14,'+
     '"PAD":24,"OFF_X":284,"OFF_Y":48,"canvasW":608,"canvasH":352}';
   check("camera.PROJ byte-snapshot unchanged (spec §4: camera untouched)",

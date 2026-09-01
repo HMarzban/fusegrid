@@ -16,6 +16,15 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-01 — Leftovers + five-biome looks
+- COULD 7: survive no longer wipes bombs/blades. 2D boot no longer statically imports Three (loadRenderer3D + opts.createRenderer3D). applySnapshot removed. Favicon.svg. Five biomes JUNGLE/ICE/FACTORY/WATER/ARENA (no L5 wrap). Iso stays museum via ?render=iso.
+
+## 2026-09-01 — Headed play-verify + Restart label
+- Closed the 3D follow-up: S2 iFrames guard so live-sim detonation measures blades (three.test THREE OK); headed 3D HUD/orbit/overlay/RENDER toggle/own-bomb hurt all checked. Restart-from-PAUSE now resets the Pause label (F3 assert). Battery 15/15. Still no commit.
+
+## 2026-09-01 — Production hardening campaign (prod/hardening)
+- HoE staff review locked findings, then a file-owned fleet: sim rules v4 (center-tile blast, no abort-on-death chain, checkContact alive, place via world.fireEdge, throw refuses enemy tile), 3D shared rig + DOM HUD + overlay clear, applySnapshot pid quarantine, AGENTS.md truth, camera spec amended to polar el 0.419 / dist 800. Replay baseline **v4**. Not internet MP; serve.js stays loopback. `ui/bookshelf/` quarantined (not this game). Left: headed play-verify of toggle/HUD/orbit.
+
 ## 2026-08-26 — Enemy identity 3D shipped (b4f2c8a RED + eeb38d6 GREEN)
 - Spec 2026-08-25-enemy-identity §2/§4/§5/§6 executed: rocket upright 3-sided pyramid (no pre-rot) + pad + flame swap @10Hz; boomerang FLAT C-torus arc 4.7 + hub/bead + slot yaw override (t*10)%2π; trio Phong60 w/ baked scales (chaser tall+crest/snout, fast low+MERGED fins(72idx)+trail .30) + walker feet stomp; stationary #2a1030 shell + core cube + slit-plane z r*1.16 + breathe; big tilted face planes via new GF/EYR tables; boldened eyes + slit painter. GD/EH/EYT/GF/EYR exported (§6 probes required). Δdraws=0 → 186 ≤500 across 6-type mix. Battery 15/15, three.test 189/0. Interpretations in task-report-enemy-id.md (walker-only stomp; core fully enclosed at literal sizes). Left: §7 browser screenshot smoke.
 

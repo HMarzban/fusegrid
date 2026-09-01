@@ -1,8 +1,9 @@
 import {step, createWorld, loadLevel} from "../src/core/sim.js";
 import {
-  MSG, makeInput, makeSnapshot, applySnapshot, encode, decode,
+  MSG, makeInput, makeSnapshot, encode, decode,
   makeError, ERROR_CODES, capsOk, isKnownType
 } from "../src/net/protocol.js";
+import * as proto from "../src/net/protocol.js";
 import {LocalTransport, WebSocketTransport} from "../src/net/transport.js";
 
 let pass=0, fail=0;
@@ -25,24 +26,18 @@ function check(name, cond, detail){ cond?pass++:fail++;
     msg.move.x===1 && msg.move.y===-1 && msg.fire===true && msg.remote===false);
 }
 
-// 3) server-authoritative snapshot + client reconciliation
-//    server runs authoritative sim; client gets a snapshot and reconciles.
+// 3) makeSnapshot stays compact; applySnapshot is gone (lockstep-only net)
 {
   const seed=99;
   const server=createWorld(seed,1); loadLevel(server,1,false); server.state="PLAY";
-  // server simulates 100 ticks
   for(let i=0;i<100;i++) step(server, 1/60, {0:{move:{x:1,y:0},fire:true,firePrev:(i%3===0),shift:false,remote:false,kick:false}});
   const snap=makeSnapshot(server, seed, 1);
-
-  const client=createWorld(seed,1); loadLevel(client,1,false); client.state="PLAY";
-  applySnapshot(client, snap);
-  check("snapshot reconciles player position",
-    Math.round(client.players[0].x)===snap.players[0].x &&
-    Math.round(client.players[0].y)===snap.players[0].y,
-    "client x,y = "+client.players[0].x+","+client.players[0].y+" == "+snap.players[0].x+"," +snap.players[0].y);
-  check("snapshot reconciles score/lives",
-    client.score===snap.score && client.lives===snap.lives,
-    "score "+client.score+"/"+snap.score+" lives "+client.lives+"/"+snap.lives);
+  check("makeSnapshot carries tick/score/lives/players",
+    snap.type===MSG.SNAPSHOT&&snap.tick===server.tick
+    &&snap.score===server.score&&snap.lives===server.lives
+    &&snap.players.length===server.players.length);
+  check("applySnapshot is not on the protocol surface",
+    proto.applySnapshot===undefined, typeof proto.applySnapshot);
 }
 
 // 4) determinism across an independent replay (the netcode linchpin)

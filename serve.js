@@ -42,7 +42,8 @@ const server=http.createServer((req,res)=>{
       const ext=path.extname(fp).toLowerCase();
       res.writeHead(200, {
         "Content-Type": MIME[ext]||"application/octet-stream",
-        "Cache-Control":"no-cache"
+        "Cache-Control":"no-cache",
+        "X-Content-Type-Options":"nosniff"
       });
       fs.createReadStream(fp).on("error",()=>{ if(!res.headersSent)res.writeHead(404); res.end(); }).pipe(res);
     });
