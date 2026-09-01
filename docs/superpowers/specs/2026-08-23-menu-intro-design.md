@@ -111,7 +111,7 @@ Beats (nominal 5.0 s):
 
 | t (s) | Beat |
 |---|---|
-| 0.00–0.90 | Logo reveal: "NEO" fades/slides down 14px (easeOutCubic), "BOMBERMAN" wipes in via per-letter alpha stagger 60 ms + scale 0.92→1 (easeOutBack). Jingle fires at t=0.15. |
+| 0.00–0.90 | Logo reveal: "FUSE" fades/slides down 14px (easeOutCubic), "GRID" wipes in via per-letter alpha stagger 60 ms + scale 0.92→1 (easeOutBack). Jingle fires at t=0.15. |
 | 0.90–1.50 | Logo hold (static). |
 | 1.40–4.20 | Flyover: arena zoom 1.55→1.18, camera drift from board lower-third to center (easeInOutCubic on both), veil α 0.55→0.18. Logo exits upward 20px + fade (easeInCubic, 1.40–1.90). |
 | 4.20–5.00 | Settle: zoom→1.00 easeOutCubic; veil→0.62; tagline "PRESS ENTER" fades in at `footY` (blinking 1 Hz). |
@@ -176,7 +176,7 @@ const seg=(t,a,b)=>clamp01((t-a)/(b-a));   // progress of t within [a,b] (second
 | What | Curve / duration |
 |---|---|
 | Intro logo in | fade easeOutCubic 500ms; slide 14px easeOutCubic; letter scale easeOutBack 450ms |
-| Letter stagger | per-letter delay 60ms, LTR across "BOMBERMAN" |
+| Letter stagger | per-letter delay 60ms, LTR across "GRID" |
 | Flyover zoom/drift | easeInOutCubic over seg(1.40,4.20) |
 | Settle | easeOutCubic 800ms |
 | Skip fade | linear 250ms veil ramp |

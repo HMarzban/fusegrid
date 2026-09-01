@@ -63,6 +63,8 @@ export function createGame(canvas, opts={}){
       const s=Math.max(0.3, Math.min(maxW/canvas.width, maxH/canvas.height, 1.8));
       canvas.style.width=(canvas.width*s)+"px";
       canvas.style.height=(canvas.height*s)+"px";
+      const glEl=typeof document!=="undefined"&&document.getElementById("gl");
+      if(glEl){ glEl.style.width=canvas.style.width; glEl.style.height=canvas.style.height; }
        };
     fit();
     if(typeof window!=="undefined")window.addEventListener("resize", fit);
@@ -138,6 +140,7 @@ export function createGame(canvas, opts={}){
     app.inGame=true;
     prevSt="PLAY";
     resetCamera(cam);                    // §2: every run starts framed
+    resetOrbit(rig);
     setBtn("btnPause","Pause");
    };
 
@@ -301,8 +304,6 @@ export function createGame(canvas, opts={}){
     const h=kind==="iso"?PROJ.canvasH:CFG.ROWS*CFG.TILE;
     if(canvas){canvas.width=w;canvas.height=h;}
     if(glCanvas){
-      glCanvas.width=CFG.COLS*CFG.TILE;
-      glCanvas.height=CFG.ROWS*CFG.TILE;
       glCanvas.hidden=kind!=="3d";
      }
     if(fit)fit();

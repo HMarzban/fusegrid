@@ -3,6 +3,8 @@
 ## Project
 
 Fusegrid ("rollblock") — a modular, deterministic arcade game.
+Public GitHub is https://github.com/HMarzban/fusegrid. In-game wordmark is
+FUSE/GRID; the local folder stays `rollblock`.
 Pure ES modules. **Zero `package.json` runtime dependencies.** The sim is
 framework-free so it runs identically under Node (tests) and the browser.
 
@@ -34,15 +36,21 @@ not shell screens. Do not add them as `SCREEN` values.
   - `world.js` — `createWorld`, `loadLevel` (re-exported from `sim.js`).
   - `sim.js` — `step(world, dt, intents)`.
   - `config.js` — frozen `CFG`, `T`, `BIOMES` (array frozen; **entries are not**).
+    Five looks: JUNGLE, ICE, FACTORY, WATER, ARENA (level 5 is ARENA).
   - `board.js`, `entities.js`, `rng.js` — sim support.
 - `src/render/` — reads world; drains `world.events` into fx/audio.
-  - kind `"2d"` — classic Canvas (`createRenderer`).
+  - kind `"2d"` — classic Canvas (`createRenderer`). Do not statically import
+    `vendor/three.module.js` on this path; lazy-load via `src/render/three/load.js`.
   - kind `"3d"` — `createRenderer3D` (`#gl` WebGL under `#c` overlay).
   - kind `"iso"` — legacy dimetric (`r3d/`), pinned by `?render=iso` only.
     `createRenderer({kind:"3d"|"iso"})` is the **dimetric** branch. Real 3D
     never enters that factory. Menu RENDER flips 3D ⇄ 2D only.
-  - Live 3D default rig (polar `el` from +Y): `{az:0, el:0.419, dist:800}`.
-    Spec text that says `el:1.152` / `dist:700` is stale (unit-bug era).
+  - Live 3D default rig (polar `el` from +Y): `{az:0, el:0.419, dist:1000}`.
+    Must frame the whole 15×13 board (all four corners + ICE trim).
+    Spec text that says `el:1.152` / `dist:700` or live `dist:800` is stale.
+    Never assign `#gl.width`/`#gl.height` from `sizeCanvases` — wrapper owns
+    the Retina drawing buffer (`setPixelRatio` + `setSize`). Stomping it
+    crops WebGL to the bottom-left quarter on dpr=2.
 - `src/app/` — menu shell, intro beats, demobot, highscores. Not read by `step()`.
 - `src/ai/enemies.js` — enemy AI on sim state.
 - `src/net/` — `protocol.js`, `lockstep.js`, `transport.js`.
@@ -54,6 +62,8 @@ not shell screens. Do not add them as `SCREEN` values.
 
 - `npm test` / `node --test` — run tests (`tests/*.test.mjs`).
 - `npm start` / `node serve.js` — loopback only: `http://127.0.0.1:8080/index.html`.
+- Public play is **GitHub Pages** (`https://hmarzban.github.io/fusegrid/`).
+  Static files only (`.nojekyll`, relative asset hrefs). Do not rebind `serve.js`.
 
 Flags: `?render=3d|iso`, `?play=1`, `?net=local`, `?orbit=1`, `?debug=1`.
 
@@ -62,8 +72,8 @@ Node v26, `"type": "module"`. No build step, no bundler.
 ## Conventions
 
 - **Determinism**: `step()` is pure w.r.t. world + intent. No time/DOM/`Math.random`
-  in the sim — use `src/core/rng.js`. Replay/outcome validity: **baseline v4**
-  (center-tile blast + fireEdge place) begins at the prod/hardening ship.
+  in the sim — use `src/core/rng.js`. Replay/outcome validity: **baseline v5**
+  (enemy candidates DIRS4, no diagonal wander) begins at the GitHub Pages ship.
 - **No DOM in `src/core`**. Render factories may touch DOM (atlas, WebGL, HUD).
   Node-testable three **math** stays DOM-free.
 - Frozen `CFG` — mutate world, not config. `BIOMES` elements are shallow.
@@ -89,3 +99,10 @@ not covered by Node — play-verify in a browser after render changes.
 - **Standing rule:** after any non-trivial change, append a dated entry to
   `MEMORY.md` (newest first) so the next session/agent inherits context. Keep it
   to 1–2 lines: what changed, why, or what's left open.
+
+## Learned User Preferences
+- Public name and wordmark are Fusegrid / FUSE/GRID; keep the local checkout as `rollblock`; do not put Bomberman on public surfaces.
+- This repository is the arcade game only — do not add unrelated demos.
+
+## Learned Workspace Facts
+- Surviving a hit leaves live bombs and blades in the world.

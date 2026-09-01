@@ -101,5 +101,17 @@ function run(seed){
     "changes="+changes+" within "+HORIZON+" ticks");
 }
 
+{
+  const w=createWorld(20260823,1); loadLevel(w,1,false); w.state="PLAY";
+  let diag=0;
+  for(let i=0;i<HORIZON;i++){
+    step(w, CFG.STEP, script(i));
+    for(const e of w.enemies){
+      if(e.dir.x&&e.dir.y)diag++;
+    }
+  }
+  check("COULD 6: enemy dirs stay 4-way (no diagonal)", diag===0, "diag="+diag);
+}
+
 console.log(fail? "DETERMINISM FAIL":"DETERMINISM OK");
 process.exit(fail?1:0);

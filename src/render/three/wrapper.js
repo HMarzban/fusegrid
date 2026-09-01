@@ -100,7 +100,14 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
     if(o&&o.intro!=null)applyOrbit(camera,introCam(o.intro),{x:0,y:0});
     else applyOrbit(camera,rig,getShake());    // shake = camera-target offset
     fxp.update(getFx());
-    if(gl)gl.render(scene3,camera);
+    if(gl){
+      const wantW=Math.floor(W*dprUsed), wantH=Math.floor(H*dprUsed);
+      if(gl.domElement.width!==wantW||gl.domElement.height!==wantH){
+        gl.setSize(W,H,false);
+        camera.aspect=W/H; camera.updateProjectionMatrix();
+       }
+      gl.render(scene3,camera);
+     }
     /* S4+S5: WIN/LOSE/PAUSE overlays ride the classic 2D layer exactly like
        kind 2d — drawOverlay's defaults already match this canvas' space
        (600x520, centered); the overlay is cleared first so nothing smears.

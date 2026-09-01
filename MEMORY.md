@@ -16,6 +16,12 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-01 — 3D camera frames the full board
+- Default rig dist 800→1000. sizeCanvases no longer assigns #gl width/height (Retina 2× buffer was cropped to the bottom-left quarter). START resets the 3D rig; wrapper re-syncs setSize when the buffer drifts.
+
+## 2026-09-01 — GitHub Pages + public basics + DIRS4
+- Static Pages deploy (relative favicon, .nojekyll, Actions workflow). MIT LICENSE, README play link, FUSE/GRID spec copy. Enemies wander DIRS4 (COULD 6); replay baseline v5. Local ancestor branches deleted after push.
+
 ## 2026-09-01 — Public rename to Fusegrid
 - GitHub is https://github.com/HMarzban/fusegrid (public). In-game wordmark is FUSE/GRID; title, README, package name, and serve log match. Local folder stays rollblock.
 

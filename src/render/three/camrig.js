@@ -5,11 +5,12 @@
    untouched for 2D/iso. */
 import {clamp} from "../../core/config.js";
 
-export const EL_MIN=0.21, EL_MAX=0.87, DIST_MIN=560, DIST_MAX=1000;  // el = POLAR from +Y: 0.419 rad = 66 deg above horizon
+export const EL_MIN=0.21, EL_MAX=0.87, DIST_MIN=560, DIST_MAX=1400;  // el = POLAR from +Y: 0.419 rad = 66 deg above horizon
 export const SHAKE_3D_K=0.06;      // world-units per shake px
-/* fixed full-board rig (camera-research spec §3): az=0 axis-aligned,
-   el 66° steep lane-readable tilt, dist 700 fits 600x520wu + ICE trim. */
-const DEF={az:0,el:0.419,dist:800,target:[0,-25,0]};
+/* fixed full-board rig: az=0 axis-aligned, el 66° lane-readable tilt.
+   dist 1000 keeps ICE wall corners inside |ndc|<=0.75 (≥20px CSS margin).
+   800 left the near walls at |ndc|≈0.98 and read as half a board. */
+const DEF={az:0,el:0.419,dist:1000,target:[0,-25,0]};
 export const DRAG_K=0.005;         // rad per drag px
 export const WHEEL_DOLLY_K=0.6;    // world-units per wheel deltaY tick
 

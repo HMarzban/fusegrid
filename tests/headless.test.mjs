@@ -1,4 +1,4 @@
-import {readFileSync} from "node:fs";
+import {existsSync, readFileSync} from "node:fs";
 import {dirname, join} from "node:path";
 import {fileURLToPath} from "node:url";
 import {createGame} from "../src/main.js";
@@ -617,8 +617,15 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   const main=readFileSync(join(ROOT,"src/main.js"),"utf8");
   check("main.js does not statically import three wrapper",
     !/from\s+["']\.\/render\/three\/wrapper\.js["']/.test(main));
-  check("index.html links a favicon",
-    /rel=["']icon["']/.test(readFileSync(join(ROOT,"index.html"),"utf8")));
+  check("main.js does not stomp #gl drawing buffer (Retina viewport)",
+    !/glCanvas\.width\s*=/.test(main));
+  const indexHtml=readFileSync(join(ROOT,"index.html"),"utf8");
+  check("index.html links a relative favicon (GitHub project Pages)",
+    /rel=["']icon["']/.test(indexHtml)&&/href=["']favicon\.svg["']/.test(indexHtml));
+  check("index.html has no root-absolute asset hrefs",
+    !/href=["']\//.test(indexHtml));
+  check("GitHub Pages skips Jekyll (.nojekyll)",
+    existsSync(join(ROOT,".nojekyll")));
   check("five biomes: selectable 1-5 never wrap",
     BIOMES.length===5&&biomeOf(1).name!==biomeOf(5).name
     &&BIOMES.map(b=>b.name).join()==="JUNGLE,ICE,FACTORY,WATER,ARENA",

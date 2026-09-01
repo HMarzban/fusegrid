@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FUSEGRID</title>
-<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
 <style>
   :root{
     --bg:radial-gradient(120% 120% at 50% 0%,#122036,#070a12 70%);
@@ -66,7 +66,7 @@
     <span>BOMB <b id="bombs">1</b></span><span class="sep">·</span>
     <span>FLAME <b id="range">1</b></span>
   </div>
-  <div id="stage"><canvas id="gl" hidden></canvas><canvas id="c" aria-label="Neo Bomberman game board"></canvas>
+  <div id="stage"><canvas id="gl" hidden></canvas><canvas id="c" aria-label="Fusegrid game board"></canvas>
     <div id="touchpad" hidden>
       <div id="tpad" role="group" aria-label="Move pad"></div>
       <div id="tbomb" role="button" aria-label="Bomb"></div>
@@ -88,7 +88,7 @@
 
 <!-- Entry point. Single browser thread: input → sim → render.
      The authoritative sim lives in src/core/sim.js (Node-testable, no DOM).
-     Future multiplayer: swap LocalTransport → WebSocketTransport in main.js. -->
+     Single-player only; lockstep is a local harness, not internet play. -->
 <script type="module">
    import {createGame} from "./src/main.js";
    import {createAudio} from "./src/audio.js";

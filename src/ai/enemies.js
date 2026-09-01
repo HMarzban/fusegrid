@@ -1,4 +1,4 @@
-import {CFG, DIRS8, key} from "../core/config.js";
+import {CFG, DIRS4, key} from "../core/config.js";
 import {tileOf, isWall, solidAt, bfsNext, moveEntity, bombsBlock} from "../core/board.js";
 import {hurtPlayer} from "../core/entities.js";
 
@@ -42,7 +42,7 @@ export function updateEnemies(world, dt, input, emit){
     // fall back to a deterministic random legal direction ONLY when BFS
     // found no route (e.g. bomb seals the corridor)
     if(!ndir){
-    const cands=shuffle(DIRS8.slice());
+    const cands=shuffle(DIRS4.slice());
     for(const d of cands){
       const nx=e.x+d.x*sp, ny=e.y+d.y*sp;
       const blocked = e.pass ? isWall(w.grid,tileOf(nx),tileOf(ny))
@@ -61,7 +61,7 @@ export function updateEnemies(world, dt, input, emit){
   if(!e.pass&&(mv.bouncedX||mv.bouncedY)
     &&(bombsBlock(w.bombs,e.x,e.y,e.x+Math.sign(mvx)*sp,e.y,e.r*0.9)
       ||bombsBlock(w.bombs,e.x,e.y,e.x,e.y+Math.sign(mvy)*sp,e.r*0.9))){
-    const cands=shuffle(DIRS8.slice());
+    const cands=shuffle(DIRS4.slice());
     for(const d of cands){
       const nx=e.x+d.x*sp, ny=e.y+d.y*sp;
       if(!(solidAt(w.grid,nx,ny)||bombsBlock(w.bombs,e.x,e.y,nx,ny,e.r*0.9))){

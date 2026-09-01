@@ -10,7 +10,7 @@
 import {CFG} from "../../core/config.js";
 import {introPhase,INTRO_DUR} from "../../app/intro.js";
 
-export const BASE_DIST=800;
+export const BASE_DIST=1000;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const seg=(t,a,b)=>clamp((t-a)/(b-a),0,1);
 const easeInOutCubic=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
