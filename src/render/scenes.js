@@ -13,8 +13,8 @@ export function drawLogo(c, time, cx=CFG.COLS*CFG.TILE/2,
     c.lineWidth=size*0.14; c.strokeStyle=outline||"#0a0d14"; c.lineJoin="round";
     c.strokeText(txt,x,yy); c.fillStyle=fill; c.fillText(txt,x,yy);
    }
-  text("NEO", y-30, 34, "#ffd447", "#3a2a00");
-  text("BOMBERMAN", y+18, 46, "#ff5d73", "#3a0014");
+  text("FUSE", y-30, 34, "#ffd447", "#3a2a00");
+  text("GRID", y+18, 46, "#ff5d73", "#3a0014");
   c.restore();
 }
 export function drawOverlay(c, world, w=CFG.COLS*CFG.TILE,

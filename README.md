@@ -1,6 +1,6 @@
-# NEO·BOMBERMAN (rollblock)
+# FUSEGRID
 
-Deterministic single-player arcade. ES modules, no bundler, no npm runtime deps.
+Deterministic single-player bomb-grid arcade. ES modules, no bundler, no npm runtime deps.
 
 ```bash
 npm start          # http://127.0.0.1:8080/index.html  (loopback only)

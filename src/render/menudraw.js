@@ -51,16 +51,15 @@ export function drawIntroChrome(c,t,W,H){
     const slide=14*(1-reveal)-20*exit;
     c.save();
     c.textAlign="center"; c.textBaseline="middle"; c.lineJoin="round";
-    // NEO: whole-word fade + slide (easeOutCubic)
+    // FUSE: whole-word fade + slide (easeOutCubic)
     c.save();
     c.translate(L.cx,L.logoCy-30+slide);
     c.scale(L.logoScale,L.logoScale);
     c.globalAlpha*=a;
     c.font=font(34,"900"); c.lineWidth=34*0.14; c.strokeStyle="#3a2a00";
-    c.strokeText("NEO",0,0); c.fillStyle="#ffd447"; c.fillText("NEO",0,0);
+    c.strokeText("FUSE",0,0); c.fillStyle="#ffd447"; c.fillText("FUSE",0,0);
     c.restore();
-    // BOMBERMAN: per-letter stagger 60ms LTR, scale 0.92->1 easeOutBack
-    const word="BOMBERMAN", size=46, adv=size*0.6*L.logoScale;
+    const word="GRID", size=46, adv=size*0.6*L.logoScale;
     const x0=L.cx-(word.length*adv)/2+adv/2;
     for(let i=0;i<word.length;i++){
       const lt=t-i*0.06;

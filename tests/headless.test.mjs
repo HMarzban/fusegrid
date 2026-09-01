@@ -78,9 +78,9 @@ check("null-canvas renderer render() does not throw", ok);
   const g=createGame(fake,{seed:5});
   g.app.skip();                          // INTRO -> MENU
   for(let i=1;i<=20;i++)g.loop(i*16);    // ~0.32s of MENU frames
-  check("MENU draws NEO wordmark (drawLogo reused per spec §2)",
-    texts.indexOf("NEO")>=0,
-    texts.filter(t=>t==="NEO"||t==="BOMBERMAN").join(","));
+  check("MENU draws FUSE wordmark (drawLogo reused per spec §2)",
+    texts.indexOf("FUSE")>=0,
+    texts.filter(t=>t==="FUSE"||t==="GRID").join(","));
   const alphas=sets.filter(s=>s.slice(0,13)==="rgba(7,10,18,")
     .map(s=>parseFloat(s.slice(13)));
   check("skip fade ramps past menu veil in first frames (alpha>0.9)",

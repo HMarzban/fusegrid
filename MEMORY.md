@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-01 — Public rename to Fusegrid
+- GitHub is https://github.com/HMarzban/fusegrid (public). In-game wordmark is FUSE/GRID; title, README, package name, and serve log match. Local folder stays rollblock.
+
 ## 2026-09-01 — Leftovers + five-biome looks
 - COULD 7: survive no longer wipes bombs/blades. 2D boot no longer statically imports Three (loadRenderer3D + opts.createRenderer3D). applySnapshot removed. Favicon.svg. Five biomes JUNGLE/ICE/FACTORY/WATER/ARENA (no L5 wrap). Iso stays museum via ?render=iso.
 

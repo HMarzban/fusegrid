@@ -50,5 +50,5 @@ const server=http.createServer((req,res)=>{
   } catch(e){ res.writeHead(500); res.end("internal"); }
 });
 server.listen(PORT,"127.0.0.1",()=>{
-  console.log(`neo-bomberman serving ${ROOT} on http://127.0.0.1:${server.address().port}`);
+  console.log(`fusegrid serving ${ROOT} on http://127.0.0.1:${server.address().port}`);
 });

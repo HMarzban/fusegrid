@@ -1,8 +1,8 @@
 {
-  "name": "neo-bomberman",
+  "name": "fusegrid",
   "version": "1.0.0",
   "type": "module",
-  "description": "Neo-Bomberman — modular Canvas-2D arcade, multiplayer-ready",
+  "description": "Fusegrid — deterministic single-player bomb-grid arcade",
   "scripts": {
     "start": "node serve.js",
     "test": "node --test"

@@ -2,7 +2,7 @@
 
 ## Project
 
-Neo-Bomberman ("rollblock") — a modular, deterministic arcade game.
+Fusegrid ("rollblock") — a modular, deterministic arcade game.
 Pure ES modules. **Zero `package.json` runtime dependencies.** The sim is
 framework-free so it runs identically under Node (tests) and the browser.
 
