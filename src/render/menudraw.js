@@ -23,8 +23,8 @@ export function layout(W,H){
     top:H*0.16,
     logoCy:H*0.27,
     logoScale:Math.max(0.72,Math.min(1.0,(H/520)*1.0)),
-    itemsY:H*0.50,
-    itemH:Math.max(24,Math.min(34,Math.round(H*0.075))),
+    itemsY:H*0.45,
+    itemH:Math.max(24,Math.min(34,Math.round(H*0.062))),
     footY:H-20,
     chipW:44,
     chipGap:14,
@@ -146,7 +146,13 @@ export function drawMenu(c,ui,L,t){
   }
   c.fillStyle=MUTED; c.font=font(11);
   c.textAlign="center";
-  c.fillText("↑↓ MOVE · ENTER SELECT",L.cx,L.footY);
+  c.fillText("↑↓ MOVE · ENTER SELECT",L.cx,L.footY-16);
+  c.fillStyle=selAccent(items,cur);
+  c.font=font(11);
+  c.fillText("SOURCE  github.com/HMarzban/fusegrid",L.cx,L.footY);
+}
+function selAccent(items,cur){
+  return String(items[cur]||"").indexOf("SOURCE")===0?ACCENT:MUTED;
 }
 
 /* LEVEL SELECT: five chips 44x34 gap 14 centered at itemsY; sel in 1..5. */
@@ -175,7 +181,8 @@ export function drawHowTo(c,L,t){
   c.textAlign="left"; c.textBaseline="middle";
   c.fillText("HOW TO PLAY",L.cx-210,L.top);
   const rows=["WASD / Arrows  move","Space  bomb","Shift + Space  throw *",
-    "Q  remote *","K + move  kick *","P  pause"];
+    "Q  remote *","K + move  kick *","P  pause",
+    "github.com/HMarzban/fusegrid  source"];
   const x=L.cx-210;
   let y=L.itemsY-10;
   const lh=L.itemH*0.8;

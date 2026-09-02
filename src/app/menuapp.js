@@ -11,7 +11,8 @@
 export const SCREEN=Object.freeze({BOOT:0,INTRO:1,MENU:2,LEVEL:3,HOWTO:4,
   SCORES:5,GAME:6,ATTRACT:7});
 export const ITEMS=Object.freeze(["START GAME","LEVEL SELECT","RENDER","SOUND",
-  "HOW TO PLAY","HIGH SCORES"]);
+  "HOW TO PLAY","HIGH SCORES","SOURCE"]);
+export const SOURCE_URL="https://github.com/HMarzban/fusegrid";
 const REP_FIRST=0.35, REP_NEXT=0.11;
 export const IDLE_T=10;   // MENU idle seconds before ATTRACT takes over
 
@@ -19,6 +20,7 @@ export function createMenuApp(opts={}){
   const o=opts||{};
   const audio=o.audio||null;
   const onStart=o.onStart||null;
+  const onSource=o.onSource||null;
   const app={
     screen:o.autoplay?SCREEN.GAME:SCREEN.INTRO,
     cursor:0,
@@ -112,6 +114,7 @@ export function createMenuApp(opts={}){
            }
           if(item===4)return this._push(SCREEN.HOWTO);
           if(item===5)return this._push(SCREEN.SCORES);
+          if(item===6){ if(onSource)onSource(); return true; }
           return false;
          }
         case SCREEN.LEVEL: return this.startRun();

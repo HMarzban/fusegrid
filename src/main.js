@@ -9,7 +9,7 @@ import {createRenderer} from "./render/renderer.js";
 import {drawLogo, makeHud} from "./render/scenes.js";
 import {PROJ} from "./render/r3d/camera.js";
 import * as menudraw from "./render/menudraw.js";
-import {SCREEN, ITEMS, createMenuApp} from "./app/menuapp.js";
+import {SCREEN, ITEMS, SOURCE_URL, createMenuApp} from "./app/menuapp.js";
 import {createDemobot} from "./app/demobot.js";
 import {introPhase, INTRO_DUR} from "./app/intro.js";
 import {loadScores, recordScore, saveScores} from "./app/highscores.js";
@@ -150,9 +150,13 @@ export function createGame(canvas, opts={}){
      and replay as a chord-blob on the first gesture. Fire immediately only if
      already unlocked; otherwise defer to the unlock handler below. */
   let fireJingle=()=>{};
+  const onSource=()=>{
+    if(typeof window!=="undefined")
+      window.open(SOURCE_URL,"_blank","noopener,noreferrer");
+  };
   const app=createMenuApp({level:1,sound:true,
     render3d:urlKind==="3d"||opts.render3d===true,
-    audio,autoplay,onStart});  /* §5 cue sheet — wired HERE in the app layer, never in render/sim. Wrappers
+    audio,autoplay,onStart,onSource});  /* §5 cue sheet — wired HERE in the app layer, never in render/sim. Wrappers
      shadow the machine methods so every successful transition plays exactly
      one cue; RENDER/SOUND confirms get uiTog instead of uiSel, and subscreen
      confirm (= back()) is cued once by the back wrapper alone. */
@@ -368,7 +372,7 @@ export function createGame(canvas, opts={}){
         items:[ITEMS[0],ITEMS[1],
           "RENDER "+(app.render3d?"REAL 3D":"CLASSIC 2D"),
           "SOUND "+(app.sound?"ON":"OFF"),
-          ITEMS[4],ITEMS[5]]},L,app.subT);
+          ITEMS[4],ITEMS[5],ITEMS[6]]},L,app.subT);
       return;
      }
     const L=menudraw.layout(cw,chh);

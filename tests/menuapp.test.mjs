@@ -1,4 +1,4 @@
-import {SCREEN,ITEMS,IDLE_T,createMenuApp} from "../src/app/menuapp.js";
+import {SCREEN,ITEMS,SOURCE_URL,IDLE_T,createMenuApp} from "../src/app/menuapp.js";
 import {Input} from "../src/input.js";
 import {createAudio} from "../src/audio.js";
 
@@ -21,8 +21,11 @@ const DT=1/60;
 check("SCREEN frozen with BOOT..GAME", Object.isFrozen(SCREEN)
   &&SCREEN.BOOT===0&&SCREEN.INTRO===1&&SCREEN.MENU===2&&SCREEN.LEVEL===3
   &&SCREEN.HOWTO===4&&SCREEN.SCORES===5&&SCREEN.GAME===6, JSON.stringify(SCREEN));
-check("ITEMS frozen, 6 entries", Object.isFrozen(ITEMS)&&ITEMS.length===6
-  &&ITEMS[0]==="START GAME"&&ITEMS[5]==="HIGH SCORES", JSON.stringify(ITEMS));
+check("ITEMS frozen, 7 entries", Object.isFrozen(ITEMS)&&ITEMS.length===7
+  &&ITEMS[0]==="START GAME"&&ITEMS[5]==="HIGH SCORES"&&ITEMS[6]==="SOURCE",
+  JSON.stringify(ITEMS));
+check("SOURCE_URL is the public repo",
+  SOURCE_URL==="https://github.com/HMarzban/fusegrid");
 {
   const a=createMenuApp();
   const surf=["screen","cursor","level","sound","render3d","subT","repT","repDir",
@@ -111,6 +114,14 @@ check("ITEMS frozen, 6 entries", Object.isFrozen(ITEMS)&&ITEMS.length===6
   check("HOW TO PLAY -> HOWTO", b.screen===SCREEN.HOWTO);
   const c=createMenuApp(); c.screen=SCREEN.MENU; c.cursor=5; c.confirm();
   check("HIGH SCORES -> SCORES", c.screen===SCREEN.SCORES);
+  let srcHits=0;
+  const d=createMenuApp({onSource:()=>{srcHits++;}});
+  d.screen=SCREEN.MENU; d.cursor=6; d.confirm();
+  check("SOURCE -> onSource, stays MENU",
+    srcHits===1&&d.screen===SCREEN.MENU&&d.inGame===false);
+  const e=createMenuApp(); e.screen=SCREEN.MENU; e.cursor=6;
+  check("SOURCE without onSource stays MENU",
+    e.confirm()===true&&e.screen===SCREEN.MENU);
 }
 {
   const a=createMenuApp(); a.screen=SCREEN.MENU; a.cursor=2;

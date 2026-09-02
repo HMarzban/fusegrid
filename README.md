@@ -4,7 +4,7 @@
 
 Deterministic single-player bomb-grid arcade. ES modules, no bundler, no npm runtime deps.
 
-**Play:** [hmarzban.github.io/fusegrid](https://hmarzban.github.io/fusegrid/)
+**Play:** [hmarzban.github.io/fusegrid/](https://hmarzban.github.io/fusegrid/) — share this URL **with the trailing slash** so chat apps load the preview card.
 
 ## Play locally
 

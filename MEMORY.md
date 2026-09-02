@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-02 — Menu SOURCE + share-card review
+- MENU has SOURCE (opens github.com/HMarzban/fusegrid); toolbar Source link; footer shows the repo path. Share preview fails on the no-slash Pages 301 (no OG tags); share `…/fusegrid/` with the trailing slash.
+
 ## 2026-09-01 — SEO + social preview
 - Pages now has title/description/canonical, Open Graph + Twitter large card, og.png 1200x630, apple-touch-icon, robots.txt, sitemap. Repo README shows the same card.
 
