@@ -161,7 +161,7 @@ export function buildPainters(world){
         b.brickB,shade(b.brickB,0.7),shade(b.brickB,0.85),kSrc)});
     }
   }
-  for(const it of world.items){ if(it.taken)continue;
+  for(const it of world.items){ if(it.taken||it.buried)continue;
     entShadow(ps,it.x/CFG.TILE,it.y/CFG.TILE,CFG.TILE*0.30);
     ps.push({depth:(it.x+it.y)/CFG.TILE,tier:TIERS.ENTITY,
       draw:c=>billboardPainter(c,it.x/CFG.TILE,it.y/CFG.TILE,world,

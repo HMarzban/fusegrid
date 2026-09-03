@@ -170,7 +170,7 @@ function scan(grid){
   applyOrbit(cam3,st,{x:100,y:-50});
   cam3.updateMatrixWorld(true);
   check("shake offsets lookAt by SHAKE_3D_K world-units/px (orientation shifts)",
-    SHAKE_3D_K===0.06&&!q0.equals(cam3.quaternion),
+    SHAKE_3D_K===0.09&&!q0.equals(cam3.quaternion),
     "K="+SHAKE_3D_K);
 }
 
@@ -431,6 +431,15 @@ sec("S2.D",()=>{
   check("S2 squash-stretch pulse: scale.y squashed vs scale.x while burning",
     Math.abs(bs[1].scale.x-bs[1].scale.y)>1e-6,
     bs[1].scale.x.toFixed(4)+"/"+bs[1].scale.y.toFixed(4));
+  const wF=createWorld(24,1); loadLevel(wF,1,false);
+  wF.fuse=2.1; wF.time=0.05;
+  wF.bombs=[{x:60,y:60,tx:1,ty:1,timer:2.1,variant:"normal"}];
+  const scF=buildScene(wF); scF.update(wF);
+  const bF=slotsOf(scF.group,"bomb")[0];
+  const leak=1+Math.sin(wF.time*18)*0.10*(1-2.1/CFG.FUSE);
+  check("S2 bomb pulse uses world.fuse not CFG.FUSE",
+    Math.abs(bF.scale.x-1)<1e-9&&Math.abs(bF.scale.x-leak)>1e-3,
+    bF.scale.x.toFixed(4)+" leak "+leak.toFixed(4));
  });
 
 // ---- §S2.E blade ttl-driven fade (shrink with age) ----
@@ -766,8 +775,8 @@ await sec("S3.B",async()=>{
     check("S3.B wrapper feeds Points pool from store (drawRange 20)",
       !!dbg&&dbg.particles.points.geometry.drawRange.count===20);
     const sh=getShake();
-    const wantX=0.25*(0.3-1/60)*18;        // rnd .75 => (+0.25)*shakeT*18
-    check("S3.B boom -> shakeT decays to px offsets (+1.275,+1.275)",
+    const wantX=0.25*(0.22-1/60)*18;        // rnd .75 => (+0.25)*shakeT*18
+    check("S3.B boom -> shakeT decays to px offsets (+0.915,+0.915)",
       Math.abs(sh.x-wantX)<1e-9&&Math.abs(sh.y-wantX)<1e-9,
       sh.x.toFixed(4)+" want "+wantX.toFixed(4));
     const qWith=dbg.camera.quaternion.clone();

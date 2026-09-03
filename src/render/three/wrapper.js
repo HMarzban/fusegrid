@@ -15,7 +15,7 @@ import {introCam} from "./flythrough.js";
 import {createParticles} from "./particles.js";
 import {buildAtlas} from "./textures.js";
 import {drawHudChips, drawOverlay, updateHud} from "../scenes.js";
-import {onEvent, updateFx, getShake, getFx, syncFx} from "../fx.js";
+import {onEvent, updateFx, getShake, getFlash, getFx, syncFx} from "../fx.js";
 
 const W=CFG.COLS*CFG.TILE, H=CFG.ROWS*CFG.TILE;
 const noop=()=>{};
@@ -54,6 +54,10 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
         gl.setSize(W,H,false);                      // logical box; CSS scales
         gl.shadowMap.enabled=true;
         gl.shadowMap.type=THREE.PCFSoftShadowMap;   // spec §6
+        if(THREE.ACESFilmicToneMapping!=null){
+          gl.toneMapping=THREE.ACESFilmicToneMapping;
+          gl.toneMappingExposure=1;
+         }
        }
      }
    }catch(e){ gl=null; }
@@ -64,19 +68,27 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
      rebuilds never orphan live bursts; syncFx wipes them on world change. */
   const fxp=createParticles();
   scene3.add(fxp.points);
-  /* zero-asset atlas (§5): built once lazily; null headless => color
-     fallbacks everywhere downstream */
-  let atlas, atlasTried=false;
-  function getAtlas(){
-    if(!atlasTried){ atlasTried=true;
-      try{ atlas=buildAtlas(); }catch(e){ atlas=null; } }
+  /* zero-asset atlas (§5): lazy per world.level; reused across rebuilds
+     until the level changes (old maps dispose on replace). Headless =>
+     null => color fallbacks downstream. */
+  let atlas=null, atlasLvl, atlasReady=false;
+  function getAtlas(world){
+    const lvl=world&&world.level;
+    if(atlasReady&&atlasLvl===lvl)return atlas;
+    let next=null;
+    try{ next=buildAtlas(undefined,lvl); }catch(e){ next=null; }
+    if(atlas&&atlas!==next)
+      for(const k in atlas){ const tx=atlas[k]; if(tx&&tx.dispose)tx.dispose(); }
+    atlas=next; atlasLvl=lvl; atlasReady=true;
     return atlas;
    }
   let sc=null;
   function rebuild(world){
     if(sc){ scene3.remove(sc.group); disposeGroup(sc.group); }
-    sc=buildScene(world,getAtlas());
-    scene3.background=new THREE.Color(biomeOf(world.level).bg1);
+    sc=buildScene(world,getAtlas(world));
+    const biome=biomeOf(world.level);
+    scene3.background=new THREE.Color(biome.bg1);
+    scene3.fog=new THREE.Fog(biome.bg1,700,1600);
     scene3.add(sc.group);
    }
 
@@ -116,6 +128,13 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
     const ov=world.state==="WIN"||world.state==="LOSE"
       ||world.state==="PAUSE";
     ovCtx.clearRect(0,0,W,H);
+    const fl=getFlash();
+    if(fl>0){
+      ovCtx.globalAlpha=fl*0.28;
+      ovCtx.fillStyle="#ffe8a8";
+      ovCtx.fillRect(0,0,W,H);
+      ovCtx.globalAlpha=1;
+    }
     if(ov||(o&&o.hud===true)){
       if(ov)drawOverlay(ovCtx,world);
       if(o&&o.hud===true)drawHudChips(ovCtx,world);

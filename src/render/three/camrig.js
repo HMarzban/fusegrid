@@ -6,7 +6,7 @@
 import {clamp} from "../../core/config.js";
 
 export const EL_MIN=0.21, EL_MAX=0.87, DIST_MIN=560, DIST_MAX=1400;  // el = POLAR from +Y: 0.419 rad = 66 deg above horizon
-export const SHAKE_3D_K=0.06;      // world-units per shake px
+export const SHAKE_3D_K=0.09;      // world-units per shake px
 /* fixed full-board rig: az=0 axis-aligned, el 66° lane-readable tilt.
    dist 1000 keeps ICE wall corners inside |ndc|<=0.75 (≥20px CSS margin).
    800 left the near walls at |ndc|≈0.98 and read as half a board. */

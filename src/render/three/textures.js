@@ -198,9 +198,9 @@ function paintFire(c){
 }
 
 /* Returns {player, enemy_<type>..., bomb, item_<pdef>..., eye_<type>...,
-   visor, fire, wall?, brick?} with canvas|null per key; wall/brick ride the
-   existing bakedTile atlas when the browser has baked it (biome keyed by
-   `level`). */
+   visor, fire, wall?, brick?, floor?} with canvas|null per key; wall/brick/
+   floor ride the existing bakedTile atlas when the browser has baked it
+   (biome keyed by `level`). */
 export function atlasSources(mk, level=1){
   const o={};
   const fake={time:0};
@@ -223,6 +223,7 @@ export function atlasSources(mk, level=1){
       const bi=BIOMES.indexOf(biomeOf(level));
       o.wall=bakedTile(bi,"wall");
       o.brick=bakedTile(bi,"brick");
+      o.floor=bakedTile(bi,"floorA");
      }catch(_){ /* stay asset-free */ }
    }
   return o;
