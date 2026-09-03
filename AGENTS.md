@@ -74,6 +74,11 @@ not shell screens. Do not add them as `SCREEN` values.
   never musicGain). Music is a track table: menu AABB (identity), intro bed,
   one theme per biome. `setTrack` + `musicCue(screen,level)` from the shell;
   GAME/ATTRACT follow the room, everything else plays menu. `reveal` is a cue.
+- `src/pwa/` — Node-testable app-shell list + SW register. `src/main.js`
+  registers `./sw.js` (module, scope `./`). Precache lives in `shell.js`
+  (`fusegrid-shell-vN`). Must include `vendor/three.module.js`. Never cache
+  `og.png`. Never imported by `src/core`. Bump `CACHE_NAME` and the REV
+  token in `sw.js` together when the file list or shipped bytes change.
 
 ## Commands
 
@@ -83,6 +88,8 @@ not shell screens. Do not add them as `SCREEN` values.
   Static files only (`.nojekyll`, relative asset hrefs). Do not rebind `serve.js`.
   Social/SEO: keep `og.png` (1200×630), `robots.txt`, and `sitemap.xml` in the
   Pages stage set. `og:image` must stay an absolute Pages URL.
+  PWA: also stage `manifest.webmanifest`, `sw.js`, `icon-192.png`, `icon-512.png`.
+  `serve.js` MIME includes `.webmanifest`.
 
 Flags: `?render=3d|iso`, `?play=1`, `?net=local`, `?orbit=1`, `?debug=1`.
 
@@ -136,3 +143,4 @@ not covered by Node — play-verify in a browser after render changes.
 - Gold WALL never breaks; green BRICK breaks and stops a normal blast.
 - Rooms 6–8 use SAND / VOID / CROWN palettes, chiptune cues (`sand` / `void` / `crown`), and boom tints (kick 69 / 40 / 82). Rooms 1–5 stay JUNGLE–ARENA. Ice/water/arena boom numbers stay. Menu/intro use the default boom.
 - Live 3D uses one frozen rig `{az:0, el:0.419, dist:1000}` and one frozen light recipe; do not add a per-biome camera or light table. VOID staying dark is the look, not a bug.
+- PWA is a versioned app-shell precache (`fusegrid-shell-vN`). Offline after the first visit; first visit still needs network. Relative `./` scope covers Pages `/fusegrid/` and loopback. iOS install is Add to Home Screen; module SW wants 16.4+.

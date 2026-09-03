@@ -16,6 +16,7 @@ import { createDemobot } from "./app/demobot.js";
 import { introPhase, INTRO_DUR } from "./app/intro.js";
 import { loadScores, recordScore, saveScores, scoreEntry } from "./app/highscores.js";
 import { loadPactUnlocked, savePactUnlocked } from "./app/pactstore.js";
+import { registerSW } from "./pwa/register.js";
 
 const SCREEN_NAME = [
   "BOOT",
@@ -48,6 +49,7 @@ import { createLockstep } from "./net/lockstep.js";
 import { LocalTransport } from "./net/transport.js";
 
 export function createGame(canvas, opts = {}) {
+  registerSW();
   // flags parsed ONCE (real3d §7: ?render=3d selects the real-3D path,
   // ?render=iso pins the legacy dimetric path; ?play=1 skips the shell)
   const rm =

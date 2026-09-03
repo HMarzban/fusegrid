@@ -20,6 +20,7 @@ const MIME={
   ".jpeg":"image/jpeg",
   ".svg" :"image/svg+xml",
   ".css" :"text/css; charset=utf-8",
+  ".webmanifest":"application/manifest+json",
 };
 
 function safePath(p){
