@@ -174,6 +174,20 @@ function mkCanvas(){
   check("I1 HOWTO enter->uiSel then Esc back->uiBack",
     plays.join()==="uiSel,uiBack",JSON.stringify(plays));
 }
+{
+  const plays=[];
+  const audio={play:n=>plays.push(n),toggle:()=>false};
+  const g=createGame(null,{seed:14,audio});
+  g.app.screen=SCREEN.LEVEL; g.app.level=1; g.app.heat=0;
+  g.app.key("ArrowUp");
+  check("I1 LEVEL ArrowUp through wrapper heats PLUS, room stays 1",
+    g.app.heat===1&&g.app.level===1, "heat="+g.app.heat+" lv="+g.app.level);
+  plays.length=0;
+  g.app.move(-1,1);
+  check("I1 wrapped move(-1,1) heats MAX and cues uiMove",
+    g.app.heat===2&&plays.join()==="uiMove",
+    "heat="+g.app.heat+" plays="+plays.join());
+}
 
 // P1: uiJingle gated on audio unlock — a suspended ctx freezes currentTime,
 // so boot-time scheduling replays all 5 oscillators as one chord-blob on the
@@ -277,6 +291,23 @@ function mkCanvas(){
   t+=16; g.loop(t);
   check("attract: demo discarded after exit", g.demo===null);
   check("attract: cursor preserved across round-trip", g.app.cursor===4);
+}
+
+{
+  const g=createGame(null,{seed:21});
+  g.app.skip();
+  g.app.heat=2;
+  let t=1000;
+  for(let i=0;i<640;i++){ t+=16; g.loop(t); }
+  check("attract: demo stays CORE even if shell heat is MAX",
+    g.app.heat===2&&g.demo&&g.demo.world.heat===0&&g.demo.world.fuse===CFG.FUSE
+    &&(g.demo.world.pact|0)===0,
+    "app="+g.app.heat+" demo="+(g.demo&&g.demo.world.heat)+" fuse="+(g.demo&&g.demo.world.fuse));
+  const edge=20-CFG.STEP/2;
+  g.demo.t=edge; t+=250; g.loop(t);
+  check("attract: rollover demo stays CORE",
+    g.demo.world.heat===0&&g.demo.world.fuse===CFG.FUSE,
+    "heat="+g.demo.world.heat+" fuse="+g.demo.world.fuse);
 }
 
 // ---- P2: ATTRACT->MENU gets the 0.25s veil (demo board vs live backdrop
@@ -443,6 +474,14 @@ function mkCanvas(){
       stubs.btnPause.textContent==="Pause",stubs.btnPause.textContent);
     check("menu-btn blurs after click (sibling parity)",blurs.length===1,
       String(blurs.length));
+    delete mem["nb.highscores.v1"];
+    const gMax=createGame(null,{autoplay:true});
+    gMax.world.score=1234;
+    gMax.world.heat=2;
+    dispatch(stubs.btnMenu);
+    check("menu-btn MAX persist stores s*3 and t=2",
+      loadScores().some(r=>r.s===3702&&r.t===2&&r.l===1),
+      JSON.stringify(loadScores().slice(0,3)));
     // during MENU: no-op — screen stays, nothing persisted
     const g2=createGame(null,{seed:5});
     g2.app.skip();
@@ -645,9 +684,16 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   const pagesYml=readFileSync(join(ROOT,".github/workflows/pages.yml"),"utf8");
   check("Pages workflow stages og.png and robots.txt",
     /og\.png/.test(pagesYml)&&/robots\.txt/.test(pagesYml));
-  check("five biomes: selectable 1-5 never wrap",
-    BIOMES.length===5&&biomeOf(1).name!==biomeOf(5).name
-    &&BIOMES.map(b=>b.name).join()==="JUNGLE,ICE,FACTORY,WATER,ARENA",
+  check("rooms 1-5 stay JUNGLE ICE FACTORY WATER ARENA",
+    BIOMES.slice(0,5).map(b=>b.name).join()==="JUNGLE,ICE,FACTORY,WATER,ARENA"
+    &&biomeOf(1).name!==biomeOf(5).name
+    &&biomeOf(1).brickA==="#42f024"&&biomeOf(2).hWall===36,
+    BIOMES.slice(0,5).map(b=>b.name).join());
+  check("rooms 6-8 unique palettes SAND VOID CROWN",
+    BIOMES.length===8
+    &&biomeOf(6).name==="SAND"&&biomeOf(7).name==="VOID"&&biomeOf(8).name==="CROWN"
+    &&biomeOf(6).name!==biomeOf(1).name
+    &&biomeOf(6).hWall<=36&&biomeOf(7).hWall<=36&&biomeOf(8).hWall<=36,
     BIOMES.map(b=>b.name).join());
 }
 
