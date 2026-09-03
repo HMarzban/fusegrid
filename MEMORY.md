@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-03 — Share card sells Heat + 3D
+- Regenerated `og.png` 1200×630 (3D jungle board + CORE / PLUS / MAX chips). `index.html` / README copy match Heat, Pact, rooms 6–8. Favicon bomb mark kept — still crisp in the same navy / gold / teal family.
+
 ## 2026-09-03 — Docs inherit Heat / Pact / rooms / attract
 - AGENTS/README now match CORE/PLUS/MAX, attract CORE+pact=0, `isFinale` overlay, `boomOf`, `pactstore.js`, `scoreEntry`/`noteWorldEdge`, and the parked list.
 

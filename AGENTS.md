@@ -130,7 +130,7 @@ not covered by Node — play-verify in a browser after render changes.
 
 ## Learned Workspace Facts
 - Surviving a hit leaves live bombs and blades in the world.
-- Share the play URL with a trailing slash (`https://hmarzban.github.io/fusegrid/`); the no-slash GitHub Pages 301 has no Open Graph tags, so link previews fail.
+- Share the play URL with a trailing slash (`https://hmarzban.github.io/fusegrid/`); the no-slash GitHub Pages 301 has no Open Graph tags, so link previews fail. Share card is root `og.png` (1200×630); `og:image` stays the absolute Pages URL. Card sells REAL 3D ⇄ CLASSIC 2D plus CORE / PLUS / MAX; never Bomberman on the image or tags.
 - A just-planted bomb is not solid while the bomber still occupies that tile; after leaving, re-entry is blocked (plant-and-leave / R16).
 - FLAME is blast length in tiles (starts at 1, caps at 8, persists across death and rooms); BOMB is how many bombs can be live at once.
 - Gold WALL never breaks; green BRICK breaks and stops a normal blast.

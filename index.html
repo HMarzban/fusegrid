@@ -3,30 +3,30 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FUSEGRID — play in the browser</title>
-<meta name="description" content="Fusegrid is a deterministic single-player bomb-grid arcade. Play in the browser: real 3D or classic 2D. Clear every enemy. Collect bombs, flame, kick, throw, remote, and shield.">
+<title>FUSE/GRID — play in the browser</title>
+<meta name="description" content="Fusegrid is a single-player bomb-grid arcade. Flip REAL 3D ⇄ CLASSIC 2D. Heat CORE / PLUS / MAX. After the first CLEAR: Pact and rooms 6–8. Play in the browser.">
 <meta name="theme-color" content="#070a12">
 <link rel="canonical" href="https://hmarzban.github.io/fusegrid/">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Fusegrid">
-<meta property="og:title" content="FUSEGRID — play in the browser">
-<meta property="og:description" content="Deterministic single-player bomb-grid arcade. Real 3D or classic 2D. One player. Play in the browser.">
+<meta property="og:title" content="FUSE/GRID — play in the browser">
+<meta property="og:description" content="Single-player bomb-grid arcade. REAL 3D ⇄ CLASSIC 2D. Heat CORE / PLUS / MAX. Pact and rooms 6–8 after CLEAR.">
 <meta property="og:url" content="https://hmarzban.github.io/fusegrid/">
 <meta property="og:image" content="https://hmarzban.github.io/fusegrid/og.png">
 <meta property="og:image:secure_url" content="https://hmarzban.github.io/fusegrid/og.png">
 <meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="FUSE / GRID wordmark on a dark navy card with a tilted green arena and a lit bomb.">
+<meta property="og:image:alt" content="FUSE/GRID wordmark, CORE / PLUS / MAX heat chips, and a real-3D jungle arena with a lit bomb.">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="FUSEGRID — play in the browser">
-<meta name="twitter:description" content="Deterministic single-player bomb-grid arcade. Real 3D or classic 2D. Play in the browser.">
+<meta name="twitter:title" content="FUSE/GRID — play in the browser">
+<meta name="twitter:description" content="Single-player bomb-grid arcade. REAL 3D ⇄ CLASSIC 2D. Heat CORE / PLUS / MAX. Pact and rooms 6–8 after CLEAR.">
 <meta name="twitter:image" content="https://hmarzban.github.io/fusegrid/og.png">
-<meta name="twitter:image:alt" content="FUSE / GRID wordmark on a dark navy card with a tilted green arena and a lit bomb.">
+<meta name="twitter:image:alt" content="FUSE/GRID wordmark, CORE / PLUS / MAX heat chips, and a real-3D jungle arena with a lit bomb.">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"VideoGame","name":"Fusegrid","alternateName":"FUSE/GRID","url":"https://hmarzban.github.io/fusegrid/","description":"Deterministic single-player bomb-grid arcade. Play in the browser: real 3D or classic 2D.","genre":["Arcade","Action"],"playMode":"SinglePlayer","applicationCategory":"Game","operatingSystem":"Web","image":"https://hmarzban.github.io/fusegrid/og.png"}
+{"@context":"https://schema.org","@type":"VideoGame","name":"Fusegrid","alternateName":"FUSE/GRID","url":"https://hmarzban.github.io/fusegrid/","description":"Single-player bomb-grid arcade. Play in the browser: REAL 3D ⇄ CLASSIC 2D. Heat CORE / PLUS / MAX. Pact and rooms 6–8 after the first CLEAR.","genre":["Arcade","Action"],"playMode":"SinglePlayer","applicationCategory":"Game","operatingSystem":"Web","image":"https://hmarzban.github.io/fusegrid/og.png"}
 </script>
 <style>
   :root{
@@ -77,9 +77,11 @@
   .hint{font-size:11px;color:#7385ad;max-width:560px;text-align:center;line-height:1.55}
   .hint kbd{background:#1d2740;border:1px solid #33436a;border-radius:4px;
     padding:1px 5px;color:#a9bbe0}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 </style>
 </head>
 <body>
+<h1 class="sr-only">Fusegrid</h1>
 <div id="wrap">
   <div id="hud">
     <span>SCORE <b id="score">0</b></span><span class="sep">·</span>

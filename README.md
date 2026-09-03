@@ -1,10 +1,12 @@
 # FUSEGRID
 
-[![FUSE / GRID — play in the browser](og.png)](https://hmarzban.github.io/fusegrid/)
+[![FUSE/GRID — play in the browser](og.png)](https://hmarzban.github.io/fusegrid/)
 
-Deterministic single-player bomb-grid arcade. ES modules, no bundler, no npm runtime deps.
+Single-player bomb-grid arcade. Flip REAL 3D ⇄ CLASSIC 2D. Heat CORE / PLUS / MAX. After the first CLEAR: Pact and rooms 6–8. ES modules, no bundler, no npm runtime deps.
 
 **Play:** [hmarzban.github.io/fusegrid/](https://hmarzban.github.io/fusegrid/) — share this URL **with the trailing slash** so chat apps load the preview card.
+
+Cabinet: START, LEVEL SELECT, RENDER, HOW TO, ITEMS, ENEMIES, HIGH SCORES, SOURCE. Each room has its own chiptune and boom.
 
 ## Play locally
 
@@ -33,7 +35,7 @@ Internet multiplayer is not shipped — the sim is one player.
 
 ## Levels
 
-Five biomes on the first telling (1–5, no wrap). After the first FUSE/GRID CLEAR, rooms 6–8 and Pact toggles (`1`–`4`) unlock.
+Five biomes on the first telling (1–5, no wrap). After the first FUSE/GRID CLEAR, rooms 6–8 and Pact toggles (`1`–`4`: LAST / BARE / THIN / SHRINK) unlock.
 
 | Lv | Look |
 |---|---|
