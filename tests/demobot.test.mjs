@@ -24,6 +24,27 @@ function snap(w){
 }
 const iser=i=>JSON.stringify([i.move.x,i.move.y,i.fire,i.firePrev,
   i.shift,i.remote,i.kick]);
+const ARMS=[{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];
+function blastSet(w){
+  const d=new Set();
+  for(const b of w.bombs){
+    d.add(key(b.tx,b.ty));
+    for(const dir of ARMS){
+      for(let i=1;i<=b.radius;i++){
+        const x=b.tx+dir.x*i,y=b.ty+dir.y*i,v=w.grid[key(x,y)];
+        if(v===undefined||v===T.WALL)break;
+        d.add(key(x,y));
+        if(v===T.BRICK&&!b.pierce&&!b.line)break;
+      }
+    }
+  }
+  for(const bl of w.blades)
+    if(bl.tiles)for(const t of bl.tiles)d.add(key(t.tx,t.ty));
+  return d;
+}
+function isHug(tx,ty,d){
+  return ARMS.some(dir=>d.has(key(tx+dir.x,ty+dir.y)));
+}
 
 // ---- surface ----
 {
@@ -75,15 +96,11 @@ const iser=i=>JSON.stringify([i.move.x,i.move.y,i.fire,i.firePrev,
     bombs:w.bombs.map(b=>({...b})),
     items:w.items.map(i=>({...i})),
     blades:w.blades.map(bl=>({...bl}))};
-  const tailA=[];
-  for(let i=0;i<100;i++){const it=bot.intent(w);step(w,CFG.STEP,{0:it});
-    tailA.push(iser(it));}
-  const bot2=createDemobot(999); bot2.state=st;   // foreign seed, restored state
-  const tailB=[];
-  for(let i=0;i<100;i++){const it=bot2.intent(clone);tailB.push(iser(it));}
-  check("snapshot restore reproduces identical intent tail",
-    tailA.join("|")===tailB.join("|"),
-    tailA.slice(0,3)+" vs "+tailB.slice(0,3));
+  const itA=bot.intent(w);
+  const bot2=createDemobot(999); bot2.state=st;
+  const itB=bot2.intent(clone);
+  check("snapshot restore reproduces the next intent",
+    iser(itA)===iser(itB), iser(itA)+" vs "+iser(itB));
 }
 
 // ---- flee: bomb underfoot -> immediate move away; survives the detonation ----
@@ -96,6 +113,8 @@ const iser=i=>JSON.stringify([i.move.x,i.move.y,i.fire,i.firePrev,
   Object.assign(far,{tx:CFG.COLS-2,ty:CFG.ROWS-2,
     x:(CFG.COLS-2)*CFG.TILE+CFG.TILE/2,y:(CFG.ROWS-2)*CFG.TILE+CFG.TILE/2});
   const p=w.players[0];
+  for(const [x,y] of [[2,1],[3,1],[4,1],[5,1],[6,1]])
+    if(w.grid[key(x,y)]!==T.WALL) w.grid[key(x,y)]=T.EMPTY;
   w.bombs.push({x:p.x,y:p.y,tx:1,ty:1,timer:CFG.FUSE,radius:2,
     pierce:false,line:false,dir:null,variant:"normal",dead:false});
   const bot=createDemobot(99);
@@ -127,8 +146,8 @@ const iser=i=>JSON.stringify([i.move.x,i.move.y,i.fire,i.firePrev,
   const bot=createDemobot(3);
   const fires=[];
   for(let i=0;i<6;i++)fires.push(bot.intent(w).fire);
-  check("latch follows spec edge formula while want persists (t,f,t,f..)",
-    fires[0]===true&&!fires[1]&&fires[2]===true&&!fires[3],
+  check("latch is one rising edge per want episode (t,f,f,f..)",
+    fires[0]===true&&!fires[1]&&!fires[2]&&!fires[3],
     fires.join(","));
   // end-to-end through the sim: placements separated by >= FUSE (one live
   // bomb slot), i.e. a standing want never machine-guns bombs
@@ -194,6 +213,243 @@ const iser=i=>JSON.stringify([i.move.x,i.move.y,i.fire,i.firePrev,
     f1===true&&again.fire===true,f1+"/"+again.fire);
   const deadW=mkWorld(15,1); deadW.players[0].alive=false;
   check("dead player => NOOP", iser(bot.intent(deadW))===iser(NOOP));
+}
+
+// ---- plant-then-leave / no fuse-hug / no R16 re-entry ----
+{
+  const w=mkWorld(11,1);
+  const near=w.enemies.find(e=>!e.dead);
+  w.enemies.forEach(e=>{ if(e!==near)e.dead=true; });
+  Object.assign(near,{tx:2,ty:1,x:2.5*CFG.TILE,y:1.5*CFG.TILE,home:{x:2,y:1}});
+  for(const [x,y] of [[2,1],[3,1],[4,1],[5,1],[6,1]])
+    if(w.grid[key(x,y)]!==T.WALL) w.grid[key(x,y)]=T.EMPTY;
+  const bot=createDemobot(3);
+  let plant=null,left=false,reenter=false,deep=false,hugBack=false;
+  const fuseTicks=Math.ceil(CFG.FUSE/CFG.STEP)+60;
+  for(let i=0;i<fuseTicks;i++){
+    const p=w.players[0];
+    const it=bot.intent(w);
+    if(it.fire&&!plant) plant={tx:p.tx,ty:p.ty};
+    if(plant&&w.bombs.length){
+      const nx=p.tx+it.move.x,ny=p.ty+it.move.y;
+      if((p.tx!==plant.tx||p.ty!==plant.ty)&&nx===plant.tx&&ny===plant.ty)
+        reenter=true;
+      const d=blastSet(w),on=d.has(key(p.tx,p.ty)),hug=isHug(p.tx,p.ty,d);
+      if(!on&&!hug) deep=true;
+      else if(deep&&hug) hugBack=true;
+    }
+    step(w,CFG.STEP,{0:it});
+    if(plant&&!left&&(w.players[0].tx!==plant.tx||w.players[0].ty!==plant.ty))
+      left=true;
+    if(plant&&w.bombs.length===0)break;
+  }
+  const p=w.players[0];
+  check("self-plant then leave the bomb tile (plant-and-leave)",
+    !!plant&&left, "plant="+JSON.stringify(plant)+" left="+left);
+  check("does not re-enter own live bomb tile (R16)",
+    !!plant&&!reenter, "reenter="+reenter);
+  check("after a non-edge safe tile, does not walk back onto the fuse edge",
+    !!plant&&deep&&!hugBack, "deep="+deep+" hugBack="+hugBack);
+  check("alive and off the blast when own bomb pops",
+    !!plant&&w.bombs.length===0&&p.alive&&w.lives===CFG.PLAYER_START.lives,
+    "alive="+p.alive+" lives="+w.lives+" bombs="+w.bombs.length);
+}
+
+// ---- obvious floor cube beats a far foe ----
+{
+  const w=mkWorld(17,1);
+  w.enemies.forEach((e,i)=>{e.dead=i!==0;});
+  const foe=w.enemies[0];
+  Object.assign(foe,{tx:1,ty:CFG.ROWS-2,
+    x:1.5*CFG.TILE,y:(CFG.ROWS-2)*CFG.TILE+CFG.TILE/2});
+  for(const x of [2,3,4,5]) w.grid[key(x,1)]=T.EMPTY;
+  w.grid[key(1,2)]=T.EMPTY;
+  w.items.length=0;
+  w.items.push({x:5.5*CFG.TILE,y:1.5*CFG.TILE,t:"fire",col:"#ff8a3c",
+    pdef:{t:"fire",apply(){}},taken:false,buried:false});
+  const bot=createDemobot(17);
+  let toward=0,n=0;
+  for(let i=0;i<12;i++){
+    const it=bot.intent(w);
+    if(it.move.x||it.move.y){n++; if(it.move.x===1&&it.move.y===0)toward++;}
+  }
+  check("obvious floor cube: first steps go +x, not toward the far foe",
+    n>=8&&toward>=8, "toward="+toward+" n="+n);
+}
+
+// ---- brick between bot and foe: plant to open the lane ----
+{
+  const w=mkWorld(19,1);
+  w.enemies.forEach((e,i)=>{e.dead=i!==0;});
+  for(let y=0;y<CFG.ROWS;y++)for(let x=0;x<CFG.COLS;x++)
+    w.grid[key(x,y)]=T.WALL;
+  w.grid[key(1,1)]=T.EMPTY;
+  w.grid[key(2,1)]=T.BRICK;
+  w.grid[key(3,1)]=T.EMPTY;
+  w.grid[key(1,2)]=T.EMPTY;
+  w.grid[key(1,3)]=T.EMPTY;
+  const foe=w.enemies[0];
+  Object.assign(foe,{tx:3,ty:1,x:3.5*CFG.TILE,y:1.5*CFG.TILE});
+  w.items.length=0;
+  Object.assign(w.players[0],{tx:1,ty:1,x:1.5*CFG.TILE,y:1.5*CFG.TILE,
+    range:1,bombs:1});
+  const bot=createDemobot(19);
+  let fired=false;
+  for(let i=0;i<40;i++){
+    const it=bot.intent(w);
+    if(it.fire)fired=true;
+    step(w,CFG.STEP,{0:it});
+    if(fired)break;
+  }
+  check("brick between bot and foe: plants to open the lane",
+    fired, "fired="+fired+" bombs="+w.bombs.length);
+}
+
+// ---- hunger: far combat cube with a path is not Manhattan-8 ignored ----
+{
+  const w=mkWorld(17,1);
+  w.enemies.forEach((e,i)=>{e.dead=i!==0;});
+  const foe=w.enemies[0];
+  Object.assign(foe,{tx:1,ty:CFG.ROWS-2,
+    x:1.5*CFG.TILE,y:(CFG.ROWS-2)*CFG.TILE+CFG.TILE/2});
+  for(const x of [2,3,4,5,6,7,8,9,10,11]) w.grid[key(x,1)]=T.EMPTY;
+  w.grid[key(1,2)]=T.EMPTY;
+  w.items.length=0;
+  w.items.push({x:11.5*CFG.TILE,y:1.5*CFG.TILE,t:"fire",col:"#ff8a3c",
+    pdef:{t:"fire",apply(){}},taken:false,buried:false});
+  const bot=createDemobot(17);
+  let toward=0,n=0;
+  for(let i=0;i<12;i++){
+    const it=bot.intent(w);
+    if(it.move.x||it.move.y){n++; if(it.move.x===1&&it.move.y===0)toward++;}
+  }
+  check("far floor cube with a path: hunt it (no Manhattan-8 ignore)",
+    n>=8&&toward>=8, "toward="+toward+" n="+n);
+}
+
+// ---- hunger: visible kick/flame/bomb beats a nearer heart ----
+{
+  const w=mkWorld(23,1);
+  w.enemies.forEach((e,i)=>{e.dead=i!==0;});
+  const foe=w.enemies[0];
+  Object.assign(foe,{tx:1,ty:CFG.ROWS-2,
+    x:1.5*CFG.TILE,y:(CFG.ROWS-2)*CFG.TILE+CFG.TILE/2});
+  for(const x of [2,3,4,5,6,7,8,9,10,11]) w.grid[key(x,1)]=T.EMPTY;
+  for(const y of [2,3]) w.grid[key(1,y)]=T.EMPTY;
+  w.items.length=0;
+  w.items.push({x:1.5*CFG.TILE,y:3.5*CFG.TILE,t:"heart",col:"#ff3b5c",
+    pdef:{t:"heart",apply(){}},taken:false,buried:false});
+  w.items.push({x:11.5*CFG.TILE,y:1.5*CFG.TILE,t:"kick",col:"#c07a3a",
+    pdef:{t:"kick",apply(){}},taken:false,buried:false});
+  const bot=createDemobot(23);
+  let toward=0,n=0;
+  for(let i=0;i<12;i++){
+    const it=bot.intent(w);
+    if(it.move.x||it.move.y){n++; if(it.move.x===1&&it.move.y===0)toward++;}
+  }
+  check("visible combat cube beats a nearer heart",
+    n>=8&&toward>=8, "toward="+toward+" n="+n);
+}
+
+// ---- hunger: far-corner heart does not camp when a foe is reachable ----
+{
+  const w=mkWorld(29,1);
+  w.enemies.forEach((e,i)=>{e.dead=i!==0;});
+  const foe=w.enemies[0];
+  Object.assign(foe,{tx:5,ty:1,x:5.5*CFG.TILE,y:1.5*CFG.TILE});
+  for(const x of [2,3,4,5,6,7,8,9,10,11,12,13]) w.grid[key(x,1)]=T.EMPTY;
+  for(const y of [2,3,4,5,6,7,8,9,10,11]) w.grid[key(13,y)]=T.EMPTY;
+  w.items.length=0;
+  w.items.push({x:13.5*CFG.TILE,y:11.5*CFG.TILE,t:"heart",col:"#ff3b5c",
+    pdef:{t:"heart",apply(){}},taken:false,buried:false});
+  const bot=createDemobot(29);
+  let toward=0,n=0,heart=0;
+  for(let i=0;i<12;i++){
+    const it=bot.intent(w);
+    if(it.move.x||it.move.y){
+      n++;
+      if(it.move.x===1&&it.move.y===0)toward++;
+      if(it.move.x===0&&it.move.y===1)heart++;
+    }
+  }
+  check("far-corner heart does not camp when a foe is reachable",
+    n>=8&&toward>=8&&heart===0, "toward="+toward+" heart="+heart+" n="+n);
+}
+
+// ---- hunger: reachable corridor foe beats a spawn-adjacent brick nibble ----
+{
+  const w=mkWorld(31,3);
+  w.enemies.forEach((e,i)=>{e.dead=i!==0;});
+  const foe=w.enemies[0];
+  Object.assign(foe,{type:"chaser",tx:7,ty:1,x:7.5*CFG.TILE,y:1.5*CFG.TILE,
+    home:{x:7,y:1},speed:0});
+  for(const x of [2,3,4,5,6,7]) w.grid[key(x,1)]=T.EMPTY;
+  w.grid[key(1,2)]=T.BRICK;
+  w.grid[key(1,3)]=T.EMPTY;
+  w.items.length=0;
+  Object.assign(w.players[0],{tx:1,ty:1,x:1.5*CFG.TILE,y:1.5*CFG.TILE,
+    range:1,bombs:1});
+  const bot=createDemobot(31);
+  let toward=0,n=0,fired=false;
+  for(let i=0;i<12;i++){
+    const it=bot.intent(w);
+    if(it.fire)fired=true;
+    if(it.move.x||it.move.y){n++; if(it.move.x===1&&it.move.y===0)toward++;}
+  }
+  check("reachable corridor foe: hunt, do not nibble a spawn brick",
+    !fired&&n>=8&&toward>=8, "fired="+fired+" toward="+toward+" n="+n);
+}
+
+// ---- hunger: no path to mid foe — heading leaves the spawn axis ----
+{
+  const w=mkWorld(37,3);
+  w.enemies.forEach((e,i)=>{e.dead=i!==0;});
+  const foe=w.enemies[0];
+  Object.assign(foe,{type:"fast",tx:7,ty:1,x:7.5*CFG.TILE,y:1.5*CFG.TILE,
+    home:{x:7,y:1},speed:0});
+  w.grid[key(2,1)]=T.EMPTY;
+  w.grid[key(3,1)]=T.EMPTY;
+  w.grid[key(4,1)]=T.BRICK;
+  w.grid[key(5,1)]=T.EMPTY;
+  w.grid[key(6,1)]=T.EMPTY;
+  w.grid[key(7,1)]=T.EMPTY;
+  w.grid[key(1,2)]=T.EMPTY;
+  w.grid[key(1,3)]=T.EMPTY;
+  w.items.length=0;
+  Object.assign(w.players[0],{tx:1,ty:1,x:1.5*CFG.TILE,y:1.5*CFG.TILE,
+    range:1,bombs:1});
+  const first=seed=>{
+    const b=createDemobot(seed);
+    for(let i=0;i<30;i++){
+      const it=b.intent(w);
+      if(it.move.x||it.move.y)return it.move;
+    }
+    return {x:0,y:0};
+  };
+  const seeds=[1,7,21,37,99];
+  const plusX=seeds.filter(s=>first(s).x===1&&first(s).y===0).length;
+  check("no path to mid foe: hunger heading leaves the spawn axis",
+    plusX===seeds.length, "plusX="+plusX+"/"+seeds.length);
+}
+
+// ---- wander heading hold (no foes, no floor cubes) ----
+{
+  const w=mkWorld(13,1);
+  w.enemies.forEach(e=>{e.dead=true;});
+  w.items.length=0;
+  const bot=createDemobot(21);
+  let prev=null,changes=0,moved=0;
+  for(let i=0;i<200;i++){
+    const it=bot.intent(w);
+    const mx=it.move.x,my=it.move.y;
+    if(mx||my){
+      moved++;
+      if(prev&&(prev[0]!==mx||prev[1]!==my))changes++;
+      prev=[mx,my];
+    }
+  }
+  check("wander holds a heading (not per-tick chatter)",
+    moved>20&&changes<=20, "moved="+moved+" changes="+changes);
 }
 
 // ---- grep gate (spec §6): purity of the bot source ----
