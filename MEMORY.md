@@ -16,6 +16,72 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-03 — Docs inherit Heat / Pact / rooms / attract
+- AGENTS/README now match CORE/PLUS/MAX, attract CORE+pact=0, `isFinale` overlay, `boomOf`, `pactstore.js`, `scoreEntry`/`noteWorldEdge`, and the parked list.
+
+## 2026-09-03 — Headed QA pass (rooms + persist)
+- L6/L7 overlay advances (same `isFinale` as sim); LEVEL SELECT 1–8 after CLEAR; rooms 6–8 looks/themes/booms; #gl 1200×1040 at dpr=2; attract CORE/pact=0; MAX persist writes heat `t`.
+
+## 2026-09-03 — Attract demobot hunger pass
+- Same intent FSM: combat cubes (FLAME/BOMB/KICK) hunt beyond Manhattan 8; reachable foes beat spawn-brick nibble; hunger wander aims at a blocked mid-board foe. Soft hearts stay capped. Headed 20s re-watch still useful.
+
+## 2026-09-02 — Attract demobot plays like a casual
+- Intent FSM + sticky heading in `src/app/demobot.js`: plant-then-leave (R16), no fuse-hug, floor cubes before far foes, brick plants only if useful+escape. Attract still CORE/pact=0. Headed 20s watch still needed.
+
+## 2026-09-02 — SAND / VOID / CROWN boom tints
+- Rooms 6–8 boom now uses `boomOf` (`src/audio/boom.js`): sand dry kick 69, void swallowed kick 40, crown metallic kick 82. Ice/water/arena numbers unchanged; menu/intro/jungle/factory stay default. Music STEP/bass untouched.
+
+## 2026-09-02 — Thermo-nuclear judo (eight blockers)
+- One `isFinale`/`ROOM_LOCK`/`ROOM_MAX` (L6/L7 overlay no longer says CLEAR). `scoreEntry` + boolean `noteWorldEdge`. Pact persist left core. Heat/pact tables + `applyPact`. Track tables peeled. Tests split under 1k.
+
+## 2026-09-02 — SAND / VOID / CROWN chiptune themes
+- Rooms 6–8 cue sand / void / crown. Distinct STEP and bass roots. Boom SFX stay on the five-theme tints.
+
+## 2026-09-02 — Headed cam/light QA rooms 1–8
+- REAL 3D and CLASSIC 2D: frozen rig {az:0,el:0.419,dist:1000} and frozen lights hold. #gl is 1200×1040 at dpr=2. VOID is dark on purpose. No per-biome retune.
+
+## 2026-09-02 — SAND / VOID / CROWN for rooms 6–8
+- Appended three palettes. Rooms 1–5 unchanged. Music still wraps jungle→arena. Draw-call 186 stays.
+
+## 2026-09-02 — Score × heat at persist
+- Board stores CORE ×1 / PLUS ×2 / MAX ×3 via `heatScore`. Live `world.score` and HUD stay raw. M-quit / Menu / finale now write heat `t` so MAX cannot land as CORE.
+
+## 2026-09-02 — Extra rooms 6–8 after first CLEAR
+- Same unlock as Pact. Rooms 6–8 reuse biomes (wrap) and add fast/chaser/rocket on top of the room-5 roster. L5 still finales; L6–7 advance; L8 finales.
+
+## 2026-09-02 — Pact afterburner (LAST / BARE / THIN / SHRINK)
+- After first room-5 CLEAR, LEVEL SELECT `1–4` toggles spice that Heat does not set. Attract and locked START stay pact 0. CORE with no toggles stays v6.
+
+## 2026-09-02 — Leftover closeout (shake pins + attract CORE)
+- three.test now pins live SHAKE_3D_K 0.09 and boom shake +0.22. Attract demo stays CORE even if shell heat is MAX. 3D bomb pulse pin uses world.fuse.
+
+## 2026-09-02 — Heat grades CORE / PLUS / MAX
+- LEVEL SELECT gained a second chip rail. CORE is today’s v6 path bit-identical. PLUS/MAX introduce the next foe sooner and tighten fuse / floor cubes / chase. Attract stays CORE. Scores tag `t` and fold the mark into LEVEL. Audio wrapper now forwards `move(dir,axis)` so ↑/↓ actually change heat in the browser. Audio wrapper now forwards `move(dir,axis)` so ↑/↓ actually change heat in the browser.
+
+## 2026-09-02 — ENEMIES field-guide menu
+- MENU gained ENEMIES (SCREEN.ENEMIES=9, after ITEMS): live 2D bodies + name/help/rooms for all 6 FOES. ITEMS stays the cube catalog. HOW TO points at both pages.
+
+## 2026-09-02 — Layered production SFX
+- Game cues are stacks now (pitch envelope + noise + filter), not one beep. Kill rises, hurt falls; boom tints with the biome track; unbury `reveal` finally plays. UI timer ABI (jingle 0/120/240/360/480, sel 70ms) unchanged.
+
+## 2026-09-02 — Per-biome chiptune tracks
+- Music is a track table now: intro bed, menu AABB identity, and one theme per biome (tempo + roots + voicing). GAME/ATTRACT follow the room; other shell screens stay on menu. Default pump without setTrack is still AABB.
+
+## 2026-09-02 — Menu shell fit + selection
+- Padded inset on every overlay; selected row is a rail + drawn caret, not a flush bar. HIGH SCORES derives row pitch from the inner body so all 10 runs and ESC BACK stay inside the plate at 520 and 352.
+
+## 2026-09-02 — Arcade cabinet menu chrome
+- Shared plate / kicker / icon-well chrome on MENU, LEVEL, HOW TO, ITEMS, SCORES. ITEMS is now a two-column card catalog (teal keep-rail on permanent pickups). Layout ABI unchanged.
+
+## 2026-09-02 — ITEMS menu + walkable pickups
+- MENU has ITEMS (SCREEN.ITEMS=8): icon + name + help for all 12 powers. Brick pickups stay buried until the brick breaks; loadLevel also drops floor cubes on EMPTY tiles so you can walk them up. Re-entry/apply behavior of each power is unchanged.
+
+## 2026-09-02 — Plant-and-leave in 1-tile corridors
+- Off-center plant was a soft-lock: bomb zone rejected recentering and the pillar AABB ate the held axis. On-tile bombs now skip solidity; `moveEntity` lane-slides toward tile center so hold-escape works (R16/b/c). Re-entry after leaving the tile is still blocked.
+
+## 2026-09-02 — Feel + pillars + biome atlas + finale
+- Tracks A/B/C landed: stacked boom shake/flash + kick/throw/remote SFX; interior WALL pillars, floor pickups, staged roster, L5 FIRE → menu; per-level 3D atlas/fog and 2D teal hero / CLEAR copy. Replay baseline v6. Attract bot now stays out of a live blast pocket. `three.test` still pins shake 0.06/0.3 (live 0.09/0.22); file edits were gated.
+
 ## 2026-09-02 — Menu SOURCE + share-card review
 - MENU has SOURCE (opens github.com/HMarzban/fusegrid); toolbar Source link; footer shows the repo path. Share preview fails on the no-slash Pages 301 (no OG tags); share `…/fusegrid/` with the trailing slash.
 

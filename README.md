@@ -33,7 +33,7 @@ Internet multiplayer is not shipped — the sim is one player.
 
 ## Levels
 
-Five biomes, selectable 1–5 (no wrap):
+Five biomes on the first telling (1–5, no wrap). After the first FUSE/GRID CLEAR, rooms 6–8 and Pact toggles (`1`–`4`) unlock.
 
 | Lv | Look |
 |---|---|
@@ -42,8 +42,11 @@ Five biomes, selectable 1–5 (no wrap):
 | 3 | FACTORY — amber crates, steel |
 | 4 | WATER — teal sewer / ruins |
 | 5 | ARENA — night court, rose bricks |
+| 6 | SAND — ochre dunes, low walls |
+| 7 | VOID — violet dark, tall cliffs |
+| 8 | CROWN — gold court, finale |
 
-Clear every enemy to advance. Collect bombs, flame, kick, throw, remote, and shield.
+On LEVEL SELECT, ←/→ picks the room and ↑/↓ picks Heat (CORE / PLUS / MAX). Clear every enemy to advance. Collect bombs, flame, kick, throw, remote, and shield. High scores store Heat-scaled points (CORE ×1 / PLUS ×2 / MAX ×3); the live HUD stays raw.
 
 ## License
 

@@ -24,7 +24,9 @@ Two state machines:
 
 | Layer | States | Owner |
 |---|---|---|
-| Shell | INTRO → MENU ⇄ LEVEL/HOWTO/SCORES → GAME; idle → ATTRACT | `src/app/menuapp.js` |
+| Shell | INTRO → MENU ⇄ LEVEL/HOWTO/ITEMS/ENEMIES/SCORES → GAME; idle → ATTRACT | `src/app/menuapp.js` |
+
+Heat grades CORE / PLUS / MAX live on LEVEL SELECT (`←/→` room, `↑/↓` heat). CORE is replay baseline v6. Attract is always CORE + pact=0. After a first FUSE/GRID CLEAR, LEVEL SELECT also offers Pact toggles (`1–4`). Knobs live on `world`, not frozen `CFG`. Score × heat is persist-only (CORE ×1 / PLUS ×2 / MAX ×3); live HUD stays raw.
 | Sim | PLAY / WIN / LOSE / PAUSE | `src/core/sim.js` |
 
 The sim ticks only while the shell is GAME. PAUSE/WIN/LOSE are `world.state`,
@@ -36,7 +38,13 @@ not shell screens. Do not add them as `SCREEN` values.
   - `world.js` — `createWorld`, `loadLevel` (re-exported from `sim.js`).
   - `sim.js` — `step(world, dt, intents)`.
   - `config.js` — frozen `CFG`, `T`, `BIOMES` (array frozen; **entries are not**).
-    Five looks: JUNGLE, ICE, FACTORY, WATER, ARENA (level 5 is ARENA).
+    Eight looks: JUNGLE, ICE, FACTORY, WATER, ARENA, then SAND, VOID, CROWN
+    (rooms 6–8 after first CLEAR). One chiptune theme per look.
+    Room policy: `ROOM_LOCK=5`, `ROOM_MAX=8`, `isFinale`, `roomCap`
+    (L5 and L8 finale; L6/L7 advance). Overlay must use the same `isFinale`
+    predicate.
+  - `heat.js` / `pact.js` — heat tables + bitmask/`applyPact`. Persist is
+    `src/app/pactstore.js`, not `src/core`.
   - `board.js`, `entities.js`, `rng.js` — sim support.
 - `src/render/` — reads world; drains `world.events` into fx/audio.
   - kind `"2d"` — classic Canvas (`createRenderer`). Do not statically import
@@ -51,12 +59,21 @@ not shell screens. Do not add them as `SCREEN` values.
     Never assign `#gl.width`/`#gl.height` from `sizeCanvases` — wrapper owns
     the Retina drawing buffer (`setPixelRatio` + `setSize`). Stomping it
     crops WebGL to the bottom-left quarter on dpr=2.
-- `src/app/` — menu shell, intro beats, demobot, highscores. Not read by `step()`.
+- `src/app/` — menu shell, intro beats, demobot, highscores, `pactstore.js`. Not read by `step()`.
+  Demobot is an intent FSM (plant-and-leave, hunger for combat cubes / corridor
+  foes); attract still CORE/pact=0. Highscores use `scoreEntry`; `noteWorldEdge`
+  is a boolean edge, not a score writer.
 - `src/ai/enemies.js` — enemy AI on sim state.
 - `src/net/` — `protocol.js`, `lockstep.js`, `transport.js`.
   Default play uses **no** transport. `?net=local` is a 1P pair proof.
   `applySnapshot` was removed (lockstep-only). `makeSnapshot` remains for harness dumps.
 - `src/input.js`, `src/touch.js`, `src/audio.js` — input + chiptune.
+  Track tables live in `src/audio/tracks.js`. Boom tints live in
+  `src/audio/boom.js` (`boomOf`). `musicCue` uses `biomeOf(level).name`.
+  Oscillator SFX stay direct-to-destination (layered voice + noise + filter,
+  never musicGain). Music is a track table: menu AABB (identity), intro bed,
+  one theme per biome. `setTrack` + `musicCue(screen,level)` from the shell;
+  GAME/ATTRACT follow the room, everything else plays menu. `reveal` is a cue.
 
 ## Commands
 
@@ -74,8 +91,9 @@ Node v26, `"type": "module"`. No build step, no bundler.
 ## Conventions
 
 - **Determinism**: `step()` is pure w.r.t. world + intent. No time/DOM/`Math.random`
-  in the sim — use `src/core/rng.js`. Replay/outcome validity: **baseline v5**
-  (enemy candidates DIRS4, no diagonal wander) begins at the GitHub Pages ship.
+  in the sim — use `src/core/rng.js`. Replay/outcome validity: **baseline v6**
+  (interior WALL pillars, floor pickups, staged roster, L5 finale; DIRS4
+  wander) begins after the 2026-09-02 gameplay pass. v5 was DIRS4-only.
 - **No DOM in `src/core`**. Render factories may touch DOM (atlas, WebGL, HUD).
   Node-testable three **math** stays DOM-free.
 - Frozen `CFG` — mutate world, not config. `BIOMES` elements are shallow.
@@ -105,6 +123,16 @@ not covered by Node — play-verify in a browser after render changes.
 ## Learned User Preferences
 - Public name and wordmark are Fusegrid / FUSE/GRID; keep the local checkout as `rollblock`; do not put Bomberman on public surfaces.
 - This repository is the arcade game only — do not add unrelated demos.
+- Keep a visible path to the public repo: menu SOURCE and the toolbar Source control open https://github.com/HMarzban/fusegrid.
+- Keep ITEMS, ENEMIES, and HOW TO as in-menu help so pickups and foes are explained in the shell, not only as HUD chips.
+- Difficulty is Heat on LEVEL SELECT (CORE / PLUS / MAX), not a tenth menu row and not a global Easy/Hard speed slider. Pact (`1–4`) and rooms 6–8 unlock after the first FUSE/GRID CLEAR. Score × heat is persist-only (CORE ×1 / PLUS ×2 / MAX ×3); live HUD stays raw. Mid-run heat, Easy/Hard, always-on Sudden Death, internet play, score × Pact, brick tints 6–8, and streamed/stereo stay parked unless reopened.
+- Do not commit `.cursor/`.
 
 ## Learned Workspace Facts
 - Surviving a hit leaves live bombs and blades in the world.
+- Share the play URL with a trailing slash (`https://hmarzban.github.io/fusegrid/`); the no-slash GitHub Pages 301 has no Open Graph tags, so link previews fail.
+- A just-planted bomb is not solid while the bomber still occupies that tile; after leaving, re-entry is blocked (plant-and-leave / R16).
+- FLAME is blast length in tiles (starts at 1, caps at 8, persists across death and rooms); BOMB is how many bombs can be live at once.
+- Gold WALL never breaks; green BRICK breaks and stops a normal blast.
+- Rooms 6–8 use SAND / VOID / CROWN palettes, chiptune cues (`sand` / `void` / `crown`), and boom tints (kick 69 / 40 / 82). Rooms 1–5 stay JUNGLE–ARENA. Ice/water/arena boom numbers stay. Menu/intro use the default boom.
+- Live 3D uses one frozen rig `{az:0, el:0.419, dist:1000}` and one frozen light recipe; do not add a per-biome camera or light table. VOID staying dark is the look, not a bug.
