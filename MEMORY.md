@@ -16,6 +16,18 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-03 — Demobot far-board (12,11) pin
+- L-shaped corridor hunger test + spec append; logic already in intent FSM combat-cube hunt.
+
+## 2026-09-03 — Roadmap phases 1–4 (stereo, bricks, pact HS, pace)
+- WebAudio stereo pan per voice; iso brickA/B/Hi; HIGH SCORES PACT column + `p` field; global pace EASY/NORM/HARD on `world.pace` + `nb.pace.v1`. Specs under `docs/superpowers/specs/2026-09-03-*`. PWA shell v2.
+
+## 2026-09-03 — Production QA pass (8/8 Pages)
+- Headed smoke on https://hmarzban.github.io/fusegrid/: boot, locked LEVEL SELECT, play/pause, 3D⇄2D, attract, PWA SW `fusegrid-shell-v1`, zero console errors. Pact unlock verified then cleaned on test profile.
+
+## 2026-09-03 — README refresh
+- Two-audience README (`1ee877b`): play link, Heat/Pact/unlock, PWA, dev setup; aligned with AGENTS and index meta.
+
 ## 2026-09-03 — PWA app-shell offline
 - Precache app-shell (not network-first): `manifest.webmanifest` + module `sw.js` + `src/pwa/shell.js`. Three.js is cached; `og.png` is not. Relative `./` scope covers Pages `/fusegrid/` and loopback. First visit still needs network.
 

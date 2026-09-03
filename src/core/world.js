@@ -35,6 +35,7 @@ export function createWorld(seed = 1, level = 1) {
     pact: 0,
     shrinkT: 0,
     shrinkGen: 0,
+    pace: 0,
   };
 }
 

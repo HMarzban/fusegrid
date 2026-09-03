@@ -132,7 +132,7 @@ not covered by Node — play-verify in a browser after render changes.
 - This repository is the arcade game only — do not add unrelated demos.
 - Keep a visible path to the public repo: menu SOURCE and the toolbar Source control open https://github.com/HMarzban/fusegrid.
 - Keep ITEMS, ENEMIES, and HOW TO as in-menu help so pickups and foes are explained in the shell, not only as HUD chips.
-- Difficulty is Heat on LEVEL SELECT (CORE / PLUS / MAX), not a tenth menu row and not a global Easy/Hard speed slider. Pact (`1–4`) and rooms 6–8 unlock after the first FUSE/GRID CLEAR. Score × heat is persist-only (CORE ×1 / PLUS ×2 / MAX ×3); live HUD stays raw. Mid-run heat, Easy/Hard, always-on Sudden Death, internet play, score × Pact, brick tints 6–8, and streamed/stereo stay parked unless reopened.
+- Difficulty is Heat on LEVEL SELECT (CORE / PLUS / MAX). Global **pace** (EASY / NORM / HARD) is a separate LEVEL SELECT control (`[`/`]`), persisted in `nb.pace.v1`, scaling player/enemy move speed on `world.pace` — not frozen `CFG`. Pact (`1–4`) and rooms 6–8 unlock after the first FUSE/GRID CLEAR. Score × heat is persist-only; HIGH SCORES fifth column tags pact bitmask (`p`). Music uses WebAudio stereo panning on the oscillator engine (zero npm deps). Mid-run heat, always-on Sudden Death, and internet play stay parked.
 - Do not commit `.cursor/`.
 
 ## Learned Workspace Facts

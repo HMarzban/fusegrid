@@ -56,7 +56,7 @@ check("heatScore clamps 99 heat to MAX", heatScore(1200, 99) === 3600);
   const m = scoreEntry({ score: 1234, level: 1, heat: 2 }, "2026-09-02");
   check(
     "scoreEntry CORE keeps raw; MAX triples",
-    e.s === 1234 && e.l === 3 && e.d === "2026-09-02" && e.t === 0 &&
+    e.s === 1234 && e.l === 3 && e.d === "2026-09-02" && !("t" in e) &&
       m.s === 3702 && m.t === 2,
     JSON.stringify({ e, m }),
   );

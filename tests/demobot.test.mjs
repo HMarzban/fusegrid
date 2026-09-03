@@ -305,6 +305,29 @@ function isHug(tx,ty,d){
     fired, "fired="+fired+" bombs="+w.bombs.length);
 }
 
+// ---- hunger: far-board combat cube at (12,11) via L-shaped corridor ----
+{
+  const w=mkWorld(41,1);
+  w.enemies.forEach((e,i)=>{e.dead=i!==0;});
+  const foe=w.enemies[0];
+  Object.assign(foe,{tx:1,ty:CFG.ROWS-2,
+    x:1.5*CFG.TILE,y:(CFG.ROWS-2)*CFG.TILE+CFG.TILE/2});
+  for(let x=2;x<=12;x++) w.grid[key(x,1)]=T.EMPTY;
+  for(let y=2;y<=11;y++) w.grid[key(12,y)]=T.EMPTY;
+  w.grid[key(1,2)]=T.EMPTY;
+  w.items.length=0;
+  w.items.push({x:12.5*CFG.TILE,y:11.5*CFG.TILE,t:"kick",col:"#c07a3a",
+    pdef:{t:"kick",apply(){}},taken:false,buried:false});
+  const bot=createDemobot(41);
+  let toward=0,n=0;
+  for(let i=0;i<12;i++){
+    const it=bot.intent(w);
+    if(it.move.x||it.move.y){n++; if(it.move.x===1&&it.move.y===0)toward++;}
+  }
+  check("far-board (12,11) kick cube: hunt via corridor, not the far foe",
+    n>=8&&toward>=8, "toward="+toward+" n="+n);
+}
+
 // ---- hunger: far combat cube with a path is not Manhattan-8 ignored ----
 {
   const w=mkWorld(17,1);

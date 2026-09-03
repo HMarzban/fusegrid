@@ -7,6 +7,8 @@
 import { roomCap } from "../core/config.js";
 import { POWER, FOES } from "../core/entities.js";
 import { HEAT_COL, HEAT_MARK, HEAT_NAME } from "../core/heat.js";
+import { PACE_NAME } from "../core/pace.js";
+import { pactLabel } from "../core/pact.js";
 import { PACT, PACT_COL, PACT_NAME } from "../core/pact.js";
 import { drawIcon, drawEnemyBody } from "./sprites.js";
 const ACCENT = "#37f0d0",
@@ -302,18 +304,21 @@ function selAccent(items, cur) {
 }
 
 /* LEVEL SELECT: five chips 44x34 gap 14; sel in 1..5. */
-export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked) {
+export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked, pace) {
   const S = shell(c, L, 400);
   const h = heat | 0;
+  let p = pace | 0;
+  if (p < -1) p = -1;
+  else if (p > 1) p = 1;
   const showPact = !!unlocked;
-  head(c, S, "SELECT LEVEL", showPact ? "ROOM + HEAT + PACT" : "ROOM + HEAT");
+  head(c, S, "SELECT LEVEL", showPact ? "ROOM + HEAT + PACE + PACT" : "ROOM + HEAT + PACE");
   const rooms = roomCap(showPact);
   const chipW = showPact ? 34 : L.chipW;
   const chipGap = showPact ? 8 : L.chipGap;
   const total = rooms * chipW + (rooms - 1) * chipGap;
   const sx = S.mid - total / 2;
   const mid = (S.headY + 28 + S.footY - 22) / 2;
-  const cy = Math.round(mid - (showPact ? 48 : 36));
+  const cy = Math.round(mid - (showPact ? 58 : 48));
   for (let i = 0; i < rooms; i++) {
     const x = sx + i * (chipW + chipGap),
       on = i + 1 === sel;
@@ -352,13 +357,35 @@ export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked) {
     c.textBaseline = "middle";
     c.fillText(HEAT_MARK[i] + " " + HEAT_NAME[i], x + hw / 2, hy + 13);
   }
+  const pw2 = 60,
+    pg2 = 10,
+    ptot2 = 3 * pw2 + 2 * pg2,
+    px2 = S.mid - ptot2 / 2,
+    pzy = hy + 34;
+  for (let i = 0; i < 3; i++) {
+    const x = px2 + i * (pw2 + pg2),
+      on = i === p + 1,
+      col = on ? ACCENT : MUTED;
+    if (on) {
+      c.fillStyle = "rgba(55,240,208,0.12)";
+      c.fillRect(x, pzy, pw2, 22);
+    }
+    c.strokeStyle = on ? ACCENT : LINE;
+    c.lineWidth = on ? 2 : 1;
+    c.strokeRect(x + 0.5, pzy + 0.5, pw2 - 1, 21);
+    c.fillStyle = col;
+    c.font = font(10, on ? "900" : "");
+    c.textAlign = "center";
+    c.textBaseline = "middle";
+    c.fillText(PACE_NAME[i], x + pw2 / 2, pzy + 11);
+  }
   if (showPact) {
     const bits = [PACT.LAST, PACT.BARE, PACT.THIN, PACT.SHRINK];
     const pw = 70,
       pg = 8,
       ptot = 4 * pw + 3 * pg,
       px0 = S.mid - ptot / 2,
-      py = hy + 34;
+      py = pzy + 34;
     const mask = pact | 0;
     for (let i = 0; i < 4; i++) {
       const x = px0 + i * (pw + pg),
@@ -382,8 +409,8 @@ export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked) {
     c,
     S,
     showPact
-      ? "ENTER START · ←/→ ROOM · ↑/↓ HEAT · 1–4 PACT · ESC BACK"
-      : "ENTER START · ←/→ ROOM · ↑/↓ HEAT · ESC BACK",
+      ? "ENTER START · ←/→ ROOM · ↑/↓ HEAT · [ ] PACE · 1–4 PACT · ESC"
+      : "ENTER START · ←/→ ROOM · ↑/↓ HEAT · [ ] PACE · ESC BACK",
   );
 }
 
@@ -566,17 +593,18 @@ export function drawScores(c, scores, L, t) {
   const slots = 1 + Math.max(1, nShow);
   const rowH = (bodyBot - bodyTop) / slots;
   const gap = 10;
-  const cw = [36, 72, 52, Math.max(88, S.iw - 36 - 72 - 52 - gap * 3)];
+  const cw = [32, 64, 40, 36, Math.max(56, S.iw - 32 - 64 - 40 - 36 - gap * 4)];
   const xs = [S.ix];
-  for (let i = 0; i < 3; i++) xs.push(xs[i] + cw[i] + gap);
+  for (let i = 0; i < 4; i++) xs.push(xs[i] + cw[i] + gap);
   const hy = bodyTop + rowH / 2;
   c.font = font(9, "900");
   c.fillStyle = MUTED;
   c.textAlign = "left";
   c.textBaseline = "middle";
   c.fillText("RANK", xs[0], hy);
-  c.fillText("LEVEL", xs[2], hy);
-  c.fillText("DATE", xs[3], hy);
+  c.fillText("LV", xs[2], hy);
+  c.fillText("PACT", xs[3], hy);
+  c.fillText("DATE", xs[4], hy);
   c.textAlign = "right";
   c.fillText("SCORE", xs[1] + cw[1], hy);
   c.strokeStyle = LINE;
@@ -596,7 +624,8 @@ export function drawScores(c, scores, L, t) {
     c.textAlign = "left";
     c.fillText(String(i + 1), xs[0], y);
     c.fillText(String(r.l) + (HEAT_MARK[r.t | 0] || "·"), xs[2], y);
-    c.fillText(String(r.d), xs[3], y);
+    c.fillText(pactLabel(r.p | 0), xs[3], y);
+    c.fillText(String(r.d), xs[4], y);
     c.textAlign = "right";
     c.fillStyle = i === 0 ? ACCENT : TEXT;
     c.fillText(String(r.s), xs[1] + cw[1], y);

@@ -31,7 +31,8 @@ export {
 const MUS_BASE = 0.5,
   MUS_DUCK = 0.16,
   LOOKAHEAD = 0.12,
-  MUS_FLOOR = 0.0001;
+  MUS_FLOOR = 0.0001,
+  MUS_PAN = Object.freeze({ bass: -0.32, lead: 0.32, hat: 0.1, pad: -0.06 });
 
 export function createAudio() {
   let ctx = null,
@@ -150,7 +151,15 @@ export function createAudio() {
       o.type = n.t;
       o.frequency.value = n.f;
       o.connect(g);
-      g.connect(musicGain);
+      let dest = musicGain;
+      const pv = n.p;
+      if (pv != null && ctx.createStereoPanner) {
+        const pan = ctx.createStereoPanner();
+        pan.pan.value = pv;
+        pan.connect(musicGain);
+        dest = pan;
+      }
+      g.connect(dest);
       g.gain.setValueAtTime(n.v, t);
       g.gain.exponentialRampToValueAtTime(MUS_FLOOR, t + n.d);
       o.start(t);
@@ -161,7 +170,9 @@ export function createAudio() {
     for (const k of ["bass", "lead", "hat", "pad"]) {
       const a = P[k];
       if (!a) continue;
-      for (const n of a) if (n.s === s) note(n, t);
+      const pan = MUS_PAN[k];
+      for (const n of a)
+        if (n.s === s) note({ ...n, p: n.p != null ? n.p : pan }, t);
     }
   }
   function patOf(n) {

@@ -158,7 +158,7 @@ export function buildPainters(world){
       blockShadow(ps,x,y);
       ps.push({depth:x+y,tier:TIERS.BLOCK,draw:c=>blockPainter(c,x,y,
         heightFor(world.level,false),
-        b.brickB,shade(b.brickB,0.7),shade(b.brickB,0.85),kSrc)});
+        b.brickA,shade(b.brickB,0.72),shade(b.brickHi,0.88),kSrc)});
     }
   }
   for(const it of world.items){ if(it.taken||it.buried)continue;

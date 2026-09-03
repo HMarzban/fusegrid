@@ -4,6 +4,7 @@ import { createWorld, loadLevel } from "./world.js";
 import { applyPower, hurtPlayer } from "./entities.js";
 import { updateEnemies } from "../ai/enemies.js";
 import { hasPact, PACT } from "./pact.js";
+import { paceMul } from "./pace.js";
 
 /* A clean intent for one player for this tick. This is exactly what a network
    client would send the server: move vector + edge-triggered fire/remote. */
@@ -120,7 +121,7 @@ function updatePlayer(world, dt, inp, emit) {
     p.face.x = dx;
     p.face.y = dy;
   }
-  const sp = p.speed * CFG.TILE * dt;
+  const sp = p.speed * CFG.TILE * dt * paceMul(w.pace);
   if (dx || dy) {
     p.tx = tileOf(p.x);
     p.ty = tileOf(p.y);

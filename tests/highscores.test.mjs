@@ -263,3 +263,53 @@ check(
 
 console.log("\n  HIGHSCORES RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);
+
+// ---- pact column metadata ----
+{
+  const st = mapStore();
+  st.setItem(HS_KEY, '[{"s":100,"l":1,"d":"2026-08-23","p":5}]');
+  const got = loadScores(st);
+  check("loadScores preserves p bitmask", got[0].p === 5);
+}
+{
+  const list = [{ s: 100, l: 1, d: "2026-08-23" }];
+  const row = recordScore(list, { s: 90, l: 1, d: "2026-08-23", p: 3 });
+  check("recordScore stores optional p", row.some((r) => r.p === 3));
+}
+{
+  const a = { s: 500, l: 3, d: "2026-08-23", t: 0, p: 0 };
+  const b = { s: 500, l: 3, d: "2026-08-23", t: 0, p: 7 };
+  const sorted = recordScore([], a);
+  const both = recordScore(sorted, b);
+  check("tie-break: higher p ranks above same s/t/l", both[0].p === 7);
+}
+{
+  const w = { score: 100, level: 2, heat: 1, pact: 9 };
+  const e = scoreEntry(w, "2026-09-03");
+  check("scoreEntry tags pact when non-zero", e.s === 200 && e.t === 1 && e.p === 9);
+}
+
+// ---- pact column metadata ----
+{
+  const st = mapStore();
+  st.setItem(HS_KEY, '[{"s":100,"l":1,"d":"2026-08-23","p":5}]');
+  const got = loadScores(st);
+  check("loadScores preserves p bitmask", got[0].p === 5);
+}
+{
+  const list = [{ s: 100, l: 1, d: "2026-08-23" }];
+  const row = recordScore(list, { s: 90, l: 1, d: "2026-08-23", p: 3 });
+  check("recordScore stores optional p", row.some((r) => r.p === 3));
+}
+{
+  const a = { s: 500, l: 3, d: "2026-08-23", t: 0, p: 0 };
+  const b = { s: 500, l: 3, d: "2026-08-23", t: 0, p: 7 };
+  const sorted = recordScore([], a);
+  const both = recordScore(sorted, b);
+  check("tie-break: higher p ranks above same s/t/l", both[0].p === 7);
+}
+{
+  const w = { score: 100, level: 2, heat: 1, pact: 9 };
+  const e = scoreEntry(w, "2026-09-03");
+  check("scoreEntry tags pact when non-zero", e.s === 200 && e.t === 1 && e.p === 9);
+}

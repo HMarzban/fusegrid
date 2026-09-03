@@ -6,6 +6,17 @@ export function clampPact(p){ return (p|0)&15; }
 export function hasPact(p,bit){ return (clampPact(p)&(bit|0))!==0; }
 export function togglePact(p,bit){ return clampPact(p)^(bit|0); }
 
+export function pactLabel(p){
+  const bits=clampPact(p);
+  if(!bits)return "—";
+  const out=[];
+  if(bits&PACT.LAST)out.push("L");
+  if(bits&PACT.BARE)out.push("B");
+  if(bits&PACT.THIN)out.push("T");
+  if(bits&PACT.SHRINK)out.push("S");
+  return out.join("");
+}
+
 export function applyPact(profile,pact){
   const p=Object.assign({},profile);
   if(hasPact(pact,PACT.LAST))p.lives=1;

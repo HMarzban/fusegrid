@@ -11,6 +11,7 @@
 import { roomCap } from "../core/config.js";
 import { clampHeat } from "../core/heat.js";
 import { clampPact, PACT, togglePact } from "../core/pact.js";
+import { clampPace } from "../core/pace.js";
 export const SCREEN = Object.freeze({
   BOOT: 0,
   INTRO: 1,
@@ -50,6 +51,7 @@ export function createMenuApp(opts = {}) {
     level: Math.min(roomCap(o.pactUnlocked), Math.max(1, o.level | 0 || 1)),
     heat: clampHeat(o.heat),
     pact: clampPact(o.pact),
+    pace: clampPace(o.pace),
     pactUnlocked: !!o.pactUnlocked,
     sound: o.sound !== false,
     render3d: !!o.render3d,
@@ -162,6 +164,10 @@ export function createMenuApp(opts = {}) {
         case "Digit4":
         case "Numpad4":
           return this.togglePactBit(PACT.SHRINK);
+        case "BracketLeft":
+          return this.adjustPace(-1);
+        case "BracketRight":
+          return this.adjustPace(1);
       }
       return false;
     },
@@ -254,6 +260,15 @@ export function createMenuApp(opts = {}) {
       }
       return false;
     },
+    adjustPace(dir) {
+      this.idleT = 0;
+      if (this.screen !== SCREEN.LEVEL) return false;
+      const np = clampPace(this.pace + (dir < 0 ? -1 : 1));
+      if (np === this.pace) return false;
+      this.pace = np;
+      if (o.onPaceChange) o.onPaceChange(np);
+      return true;
+    },
     togglePactBit(bit) {
       this.idleT = 0;
       if (this.screen !== SCREEN.LEVEL || !this.pactUnlocked) return false;
@@ -266,6 +281,7 @@ export function createMenuApp(opts = {}) {
         level: this.level,
         heat: this.heat | 0,
         pact: this.pactUnlocked ? clampPact(this.pact) : 0,
+        pace: this.pace | 0,
       };
       this.screen = SCREEN.GAME;
       this.inGame = true;

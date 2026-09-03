@@ -1,4 +1,5 @@
 import { clampHeat, heatScore } from "../core/heat.js";
+import { clampPact } from "../core/pact.js";
 
 export const HS_KEY = "nb.highscores.v1";
 export const DEFAULT_SCORES = Object.freeze(
@@ -34,7 +35,8 @@ function isRow(r) {
     Number.isFinite(r.s) &&
     Number.isFinite(r.l) &&
     typeof r.d === "string" &&
-    r.d.length <= 32
+    r.d.length <= 32 &&
+    (r.p == null || (Number.isFinite(r.p) && (r.p | 0) === clampPact(r.p)))
   );
 }
 
@@ -55,6 +57,7 @@ export function loadScores(store) {
     return v.map((r) => {
       const o = { s: r.s, l: r.l, d: r.d };
       if (r.t) o.t = r.t | 0;
+      if (r.p) o.p = clampPact(r.p);
       return o;
     });
   } catch (_) {
@@ -65,12 +68,15 @@ export function loadScores(store) {
 export function recordScore(list, entry) {
   const t = Number.isFinite(entry.t) ? entry.t | 0 : 0;
   const row = { s: entry.s, l: entry.l, d: entry.d };
+  const pact = clampPact(entry.p);
+  if (pact) row.p = pact;
   if (t) row.t = clampHeat(t);
   return [...list, row]
     .sort(
       (a, b) =>
         b.s - a.s ||
         (b.t | 0) - (a.t | 0) ||
+        (b.p | 0) - (a.p | 0) ||
         b.l - a.l ||
         (a.d < b.d ? -1 : a.d > b.d ? 1 : 0),
     )
@@ -78,12 +84,16 @@ export function recordScore(list, entry) {
 }
 
 export function scoreEntry(world, date) {
-  return {
-    s: heatScore(world.score, world.heat),
+  const t = world.heat | 0;
+  const p = clampPact(world.pact);
+  const row = {
+    s: heatScore(world.score, t),
     l: world.level,
     d: date,
-    t: world.heat | 0,
   };
+  if (t) row.t = t;
+  if (p) row.p = p;
+  return row;
 }
 
 export function qualifies(score, list) {

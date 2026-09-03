@@ -16,6 +16,8 @@ import { createDemobot } from "./app/demobot.js";
 import { introPhase, INTRO_DUR } from "./app/intro.js";
 import { loadScores, recordScore, saveScores, scoreEntry } from "./app/highscores.js";
 import { loadPactUnlocked, savePactUnlocked } from "./app/pactstore.js";
+import { loadPace, savePace } from "./app/pacestore.js";
+import { clampPace, paceToken } from "./core/pace.js";
 import { registerSW } from "./pwa/register.js";
 
 const SCREEN_NAME = [
@@ -222,6 +224,7 @@ export function createGame(canvas, opts = {}) {
   const onStart = (args) => {
     world.heat = clampHeat(args && args.heat);
     world.pact = clampPact(args && args.pact);
+    world.pace = clampPace(args && args.pace);
     loadLevel(world, args.level, false);
     world.score = 0;
     world.state = "PLAY";
@@ -246,6 +249,8 @@ export function createGame(canvas, opts = {}) {
     level: 1,
     sound: true,
     pactUnlocked: loadPactUnlocked(),
+    pace: loadPace(),
+    onPaceChange: (p) => savePace(p),
     render3d: urlKind === "3d" || opts.render3d === true,
     audio,
     autoplay,
@@ -567,6 +572,7 @@ export function createGame(canvas, opts = {}) {
         app.heat,
         app.pact,
         app.pactUnlocked,
+        app.pace,
       );
     } else if (s === SCREEN.HOWTO) {
       menudraw.drawDim(c, 0.72, cw, chh);

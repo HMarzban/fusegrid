@@ -689,6 +689,10 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
     &&biomeOf(1).name!==biomeOf(5).name
     &&biomeOf(1).brickA==="#42f024"&&biomeOf(2).hWall===36,
     BIOMES.slice(0,5).map(b=>b.name).join());
+  check("rooms 6-8 brickA differ pairwise",
+    biomeOf(6).brickA!==biomeOf(7).brickA
+    &&biomeOf(7).brickA!==biomeOf(8).brickA
+    &&biomeOf(6).brickA!==biomeOf(8).brickA);
   check("rooms 6-8 unique palettes SAND VOID CROWN",
     BIOMES.length===8
     &&biomeOf(6).name==="SAND"&&biomeOf(7).name==="VOID"&&biomeOf(8).name==="CROWN"

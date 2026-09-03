@@ -8,6 +8,7 @@ import {
   bombsBlock,
 } from "../core/board.js";
 import { hurtPlayer } from "../core/entities.js";
+import { paceMul } from "../core/pace.js";
 
 /* Update every enemy on the world for one fixed step. PURE & DETERMINISTIC:
    uses world.rng (seeded) instead of Math.random so the sim is replayable and
@@ -43,7 +44,7 @@ export function updateEnemies(world, dt, input, emit) {
       continue;
     }
     if (e.speed === 0) continue;
-    const sp = e.speed * CFG.TILE * dt;
+    const sp = e.speed * CFG.TILE * dt * paceMul(world.pace);
     e.cd -= dt;
     if (e.cd <= 0) {
       e.cd =

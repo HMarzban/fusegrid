@@ -113,6 +113,16 @@ Hunger pins (same FSM, hungrier goals):
 - No path to a mid-board foe: first heading leaves the spawn axis
   toward that foe (hunger wander), still 18–42 hold.
 
+## Far-board corridor example (2026-09-03)
+
+Attract rooms 1–3 can place combat cubes deep on the board (e.g. a KICK
+at tile `(12,11)` with an L-shaped EMPTY corridor: east along row 1,
+then south along column 12). When that path exists and the tile is not
+in `danger`, the bot hunts the combat cube — first steps go +x along
+the corridor, not toward a parked far foe on another axis. Same FSM;
+no cross-map TAS, no fuse suicide. Pin: `far-board (12,11) kick cube`
+in `tests/demobot.test.mjs`.
+
 ## Out of this pass
 
 `main.js` harness, Attract CORE/pact, heat, Pact, rooms 6–8, boom table,
