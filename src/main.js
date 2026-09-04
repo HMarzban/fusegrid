@@ -7,6 +7,7 @@ import { CFG } from "./core/config.js";
 import { createWorld, loadLevel, step } from "./core/sim.js";
 import { createRenderer } from "./render/renderer.js";
 import { drawLogo, makeHud } from "./render/scenes.js";
+import { paintBombPad } from "./render/sprites.js";
 import { PROJ } from "./render/r3d/camera.js";
 import * as menudraw from "./render/menudraw.js";
 import { SCREEN, ITEMS, SOURCE_URL, createMenuApp } from "./app/menuapp.js";
@@ -130,6 +131,8 @@ export function createGame(canvas, opts = {}) {
       ? document.getElementById("stage")
       : null,
   );
+  if (typeof document !== "undefined" && document)
+    paintBombPad(document.getElementById("tbomb"));
   let prevSt = null;
 
   /* USER CAMERA (spec §1): render-side closure state, NEVER in world/snapshot.
@@ -788,6 +791,7 @@ export function createGame(canvas, opts = {}) {
       },
       input,
       app,
+      audio,
       net,
       cam,
       get demo() {

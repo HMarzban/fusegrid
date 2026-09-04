@@ -22,12 +22,12 @@
     rocket pyramid, flat-C boomerang torus, baked chaser/fast silhouette
     scaling, big tilted face planes / stationary slit, exported GD/EH/EYT
     tables, ref-swap contracts, merged fast fins, boomerang spin override,
-    rocket flame swap, headless bright fallbacks, and the unchanged 186-call
-    fat-world budget. No DOM anywhere. */
+    rocket flame swap, headless bright fallbacks, and the 146-call
+    fat-world budget after instanced pickups. No DOM anywhere. */
 import {createLights} from "../src/render/three/lights.js";
 import {build} from "../src/render/three/materials.js";
 import {buildScene, countDrawCalls} from "../src/render/three/scene.js";
-import {createPools} from "../src/render/three/entities.js";
+import {createPools, SLOT_MESH} from "../src/render/three/entities.js";
 import {atlasSources, buildAtlas} from "../src/render/three/textures.js";
 import {createRig, orbitBy, dollBy, resetOrbit, applyOrbit,
   SHAKE_3D_K, DRAG_K} from "../src/render/three/camrig.js";
@@ -43,6 +43,9 @@ const slotsOf=(g,tag)=>{ const out=[];
   g.traverse(o=>{ if(o.userData&&o.userData.tag===tag)out.push(o); });
   return out; };
 const visOf=(g,tag)=>slotsOf(g,tag).filter(o=>o.visible).length;
+const itemLive=(g)=>slotsOf(g,"item").filter(o=>o.isInstancedMesh&&o.castShadow)
+  .reduce((a,o)=>a+(o.count||0),0);
+const itemDraws=(g)=>slotsOf(g,"item").filter(o=>o.isInstancedMesh).length;
 
 let pass=0, fail=0;
 function check(name, cond, detail){ cond?pass++:fail++;
@@ -334,18 +337,18 @@ sec("S2.A",()=>{
   check("S2 enemy slots visible === live enemies (dead filtered)",
     visOf(g,"enemy")===3, visOf(g,"enemy"));
   check("S2 item slots visible === untaken items",
-    visOf(g,"item")===2, visOf(g,"item"));
+    itemLive(g)===2, itemLive(g));
   check("S2 bomb slots visible === live bombs",
     visOf(g,"bomb")===2, visOf(g,"bomb"));
   const inst=slotsOf(g,"blade")[0];
   check("S2 blade pool is InstancedMesh", !!inst&&inst.isInstancedMesh);
   check("S2 blade instances === blast tiles across live blades",
     inst.count===3, inst.count);
-  check("S2 fixed pool sizes: enemies<=16 bombs<=MAX_BOMBS items<=32 "
+  check("S2 fixed pool sizes: enemies<=16 bombs<=MAX_BOMBS items=12*2 "
       +"bladeCap>=16*33",
     slotsOf(g,"enemy").length===16
     &&slotsOf(g,"bomb").length===CFG.MAX_BOMBS
-    &&slotsOf(g,"item").length===32
+    &&itemDraws(g)===POWER.length*SLOT_MESH.item
     &&inst.instanceMatrix.count>=16*(1+4*CFG.MAX_RANGE));
 });
 
@@ -391,7 +394,7 @@ sec("S2.C",()=>{
   w.enemies[0].dead=true; sc.update(w);
   check("S2 death hides slot (visible drops to 1)", visOf(g,"enemy")===1);
   w.items[0].taken=true; sc.update(w);
-  check("S2 taken item hides slot", visOf(g,"item")===0);
+  check("S2 taken item hides slot", itemLive(g)===0);
   const inst=slotsOf(g,"blade")[0];
   check("S2 blade count 2 before clear", inst.count===2);
   w.blades=[]; sc.update(w);
@@ -518,9 +521,9 @@ sec("S2.H",()=>{
   const sc=buildScene(w); sc.update(w);
   const g=sc.group;
   check("S2 overflow clamps to pool caps (16 enemies / 32 items)",
-    visOf(g,"enemy")===16&&visOf(g,"item")===32
-    &&slotsOf(g,"enemy").length===16&&slotsOf(g,"item").length===32,
-    visOf(g,"enemy")+"/"+visOf(g,"item"));
+    visOf(g,"enemy")===16&&itemLive(g)===32
+    &&slotsOf(g,"enemy").length===16&&itemDraws(g)===POWER.length*SLOT_MESH.item,
+    visOf(g,"enemy")+"/"+itemLive(g));
 });
 
 // ---- §S2.I zero-asset texture pipeline (spec §5) ----
@@ -570,8 +573,9 @@ await sec("S2.I",()=>{
     &&atlas.enemy_rocket.isTexture===true
     &&atlas.bomb.colorSpace===THREE.SRGBColorSpace
     &&atlas.item_fire.isTexture===true);
-  // §3 redesign: item glyph painters replace the drawItemBody capture; eye
-  // strips / visor / fire ramp join the zero-asset pipeline.
+  // Item atlas keys stay paintItemFace (drawIcon on a navy 64²). Unique
+  // ITEM_GEO bodies live on the slot; these probes are the face maps only.
+  // Eye strips / visor / fire ramp stay in the zero-asset pipeline.
   const f2=recFactory();
   const src2=atlasSources(f2.mk);
   const itemKeys=POWER.map(pd=>"item_"+pd.t);
@@ -1055,7 +1059,7 @@ await sec("R.items",async()=>{
   w.items=[{x:100,y:120,t:"fire",col:"#ff8a3c",taken:false,pdef:null},
     {x:140,y:120,t:"pierce",col:"#8f8fff",taken:false,pdef:null}];
   const sc=buildScene(w); sc.update(w);
-  const its=slotsOf(sc.group,"item").filter(s=>s.visible);
+  const its=sc.pools.items.filter(s=>s.visible);
   check("R.items slot = unique body + glow ring (2 meshes)",
     its.length===2&&its.every(s=>s.children.length===2
       &&s.children.every(o=>o.isMesh)),
@@ -1285,10 +1289,10 @@ await sec("S4.E",async()=>{
   catch(e){ console.log(e.message); }
   const wantCalls=8                       /* plane+checker+wall+brick+trim4 */
     +SLOT_MESH.player+16*SLOT_MESH.enemy+nb*SLOT_MESH.bomb
-    +32*SLOT_MESH.item+2+1;               /* blade layers + fx Points */
-  check("S4.E fat-world draw calls === "+wantCalls+" (=186 post-redesign,"
+    +POWER.length*SLOT_MESH.item+2+1;     /* instanced item kinds + blades + fx */
+  check("S4.E fat-world draw calls === "+wantCalls+" (=146 instanced pickups,"
       +" <=500 gate)",
-    calls===wantCalls&&wantCalls===186&&calls<=500, String(calls));
+    calls===wantCalls&&wantCalls===146&&calls<=500, String(calls));
 });
 
 // ---- §S5 state overlays: WIN/LOSE/PAUSE paint the classic 2D layer in
@@ -1382,7 +1386,7 @@ await sec("S5.rig",async()=>{
 // ---- §EI enemy-identity wave (spec 2026-08-25-enemy-identity §6):
 // nose-up rocket pyramid, flat-C boomerang, baked silhouette scaling,
 // face/slit plane placement + contracts, merged fast fins, spin/flame
-// animation overrides, headless bright fallbacks, unchanged 186 budget ----
+// animation overrides, headless bright fallbacks, 146 instanced-pickup budget ----
 await sec("EI",async()=>{
   const ent=await import("../src/render/three/entities.js");
   const {GD,EH,EYT}=ent;
@@ -1496,7 +1500,7 @@ await sec("EI",async()=>{
     check("EI.9b headless face/slit fallback bright #f4f7ff (no DOM atlas)",
       "#"+face.color.getHexString()==="#f4f7ff"&&!face.map
       &&typeof document==="undefined"); }
-  // §6.10 fat-world draw-call formula UNCHANGED at 186 across the 6-type mix
+  // §6.10 fat-world draw-call formula pinned at 146 (instanced pickups)
   { const wf=createWorld(93,1); loadLevel(wf,1,false);
     wf.enemies=[]; wf.items=[];
     for(let i=0;i<16;i++)wf.enemies.push(mkE(types[i%6],60+i*30,80));
@@ -1509,9 +1513,9 @@ await sec("EI",async()=>{
     const r=createRenderer3D(null,null,{audio:null,hud:null});
     r.render(wf,1/60);
     const calls=countDrawCalls(r._dbg.scene);
-    check("EI.10 fat-world draw calls UNCHANGED at 186 (≤500 gate,"
+    check("EI.10 fat-world draw calls pinned at 146 (≤500 gate,"
         +" 6-type mix)",
-      calls===186&&calls<=500,String(calls)); }
+      calls===146&&calls<=500,String(calls)); }
  });
 
 console.log(fail? "THREE FAIL":"THREE OK");

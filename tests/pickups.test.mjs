@@ -111,6 +111,16 @@ const APPLY = {
   const itemOf = audioMod.itemOf;
   const CUE = audioMod.ITEM_CUE;
   check("ITEM_CUE covers 12 kinds", !!CUE && IDS.every((t) => CUE[t]));
+  check(
+    "item_burrow is not required; cues are the 12 pickups",
+    !!CUE &&
+      !CUE.burrow &&
+      IDS.indexOf("burrow") < 0 &&
+      Object.keys(CUE).length === 12 &&
+      Object.keys(CUE).every((k) => IDS.indexOf(k) >= 0) &&
+      itemOf("burrow") === itemOf("fire"),
+    Object.keys(CUE).join(","),
+  );
   if (typeof itemOf === "function" && CUE) {
     const f0s = IDS.map((t) => itemOf(t).f0);
     check(

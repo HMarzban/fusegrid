@@ -540,19 +540,21 @@ export function drawItemsHelp(c, L, t) {
   foot(c, S, "WALK OVER A CUBE TO COLLECT · ESC BACK");
 }
 
-/* ENEMIES: two-column field guide of every FOES type, live 2D bodies. */
+/* ENEMIES: 3-col field guide. Short canvas stacks well over name so all
+   nine + ESC BACK stay inside the plate (HIGH SCORES inset). */
 export function drawEnemiesHelp(c, L, t) {
   const S = shell(c, L, 640);
   head(c, S, "ENEMIES", "FIELD GUIDE");
   const n = FOES.length,
     cols = n > 6 ? 3 : 2,
     rows = Math.ceil(n / cols);
-  const gap = 7;
-  const y0 = S.headY + 20,
-    y1 = S.footY - 18;
-  const cw = (S.iw - gap) / cols,
-    ch = (y1 - y0) / rows - 3;
-  const ws = Math.min(32, Math.max(18, ch - 14));
+  const gap = 6;
+  const y0 = S.headY + 18,
+    y1 = S.footY - 16;
+  const cw = (S.iw - gap * (cols - 1)) / cols,
+    ch = (y1 - y0) / rows - 2;
+  const short = ch < 72;
+  const ws = Math.min(short ? 22 : 32, Math.max(16, short ? ch - 20 : ch - 14));
   const dummy = {
     type: "walker",
     color: "#8affc1",
@@ -566,39 +568,60 @@ export function drawEnemiesHelp(c, L, t) {
       col = i % cols,
       row = (i - col) / cols;
     const x = S.ix + col * (cw + gap),
-      y = y0 + row * (ch + 3);
+      y = y0 + row * (ch + 2);
     c.fillStyle = "rgba(4,7,14,0.72)";
     c.fillRect(x, y, cw, ch);
     c.strokeStyle = LINE;
     c.lineWidth = 1;
     c.strokeRect(x + 0.5, y + 0.5, cw - 1, ch - 1);
-    const ix = x + 10 + ws / 2,
-      iy = y + ch / 2;
-    well(c, ix, iy, ws);
     dummy.type = f.t;
     dummy.color = f.col;
-    c.save();
-    c.translate(ix, iy);
-    c.scale(ws / 30, ws / 30);
-    drawEnemyBody(c, world, dummy);
-    c.restore();
-    const tx = x + ws + 18,
-      mid = y + ch / 2;
-    c.textAlign = "left";
-    c.textBaseline = "middle";
-    c.fillStyle = TEXT;
-    c.font = font(cols === 3 ? 9 : ch < 40 ? 10 : 12, "900");
-    c.fillText(f.name, tx, mid - (cols === 3 ? 8 : 11));
-    c.fillStyle = MUTED;
-    c.font = font(cols === 3 ? 7 : ch < 40 ? 8 : 9);
-    c.fillText(f.help, tx, mid + 2);
-    c.fillStyle = ACCENT;
-    c.globalAlpha = 0.75;
-    c.font = font(cols === 3 ? 7 : 8, "900");
-    c.fillText("ROOMS " + f.rooms, tx, mid + (cols === 3 ? 12 : 15));
-    c.globalAlpha = 1;
+    if (short) {
+      const ix = x + cw / 2,
+        iy = y + 6 + ws / 2;
+      well(c, ix, iy, ws);
+      c.save();
+      c.translate(ix, iy);
+      c.scale(ws / 30, ws / 30);
+      drawEnemyBody(c, world, dummy);
+      c.restore();
+      c.textAlign = "center";
+      c.textBaseline = "middle";
+      c.fillStyle = TEXT;
+      c.font = font(9, "900");
+      c.fillText(f.name, x + cw / 2, y + ch - 14);
+      c.fillStyle = ACCENT;
+      c.globalAlpha = 0.75;
+      c.font = font(7, "900");
+      c.fillText("ROOMS " + f.rooms, x + cw / 2, y + ch - 5);
+      c.globalAlpha = 1;
+    } else {
+      const ix = x + 10 + ws / 2,
+        iy = y + ch / 2;
+      well(c, ix, iy, ws);
+      c.save();
+      c.translate(ix, iy);
+      c.scale(ws / 30, ws / 30);
+      drawEnemyBody(c, world, dummy);
+      c.restore();
+      const tx = x + ws + 18,
+        mid = y + ch / 2;
+      c.textAlign = "left";
+      c.textBaseline = "middle";
+      c.fillStyle = TEXT;
+      c.font = font(ch < 40 ? 10 : 12, "900");
+      c.fillText(f.name, tx, mid - 11);
+      c.fillStyle = MUTED;
+      c.font = font(ch < 40 ? 8 : 9);
+      c.fillText(f.help, tx, mid + 2);
+      c.fillStyle = ACCENT;
+      c.globalAlpha = 0.75;
+      c.font = font(8, "900");
+      c.fillText("ROOMS " + f.rooms, tx, mid + 15);
+      c.globalAlpha = 1;
+    }
   }
-  foot(c, S, "TOUCH HURTS · BOMB TO CLEAR · ESC BACK");
+  foot(c, S, "ESC BACK");
 }
 
 /* HIGH SCORES: RANK / SCORE / LEVEL / DATE fitted inside the plate.

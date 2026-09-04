@@ -1,3 +1,4 @@
+import {paintBombPad} from "./render/sprites.js";
 /* TOUCH CONTROLS — virtual pad over the existing Input pipeline (spec §1-§4).
    PadMapper is the headless core: pure zone math, mutates input ONLY via
    setIntent/padFire, Node-testable with zero DOM. DOM mounting lives behind a
@@ -68,6 +69,7 @@ export function mountTouch(input,stage){
     box.appendChild(d); box.appendChild(b); stage.appendChild(box);
    }
   const padEl=box.querySelector("#tpad"), bombEl=box.querySelector("#tbomb");
+  paintBombPad(bombEl);
   const map=new PadMapper(input);
   const snap=(el)=>{ const r=el.getBoundingClientRect();
     return {left:r.left,top:r.top,width:r.width,height:r.height}; };

@@ -224,6 +224,29 @@ function mkE(type, x, y) {
       f0s.every((f) => typeof f === "number") && new Set(f0s).size === 9,
       f0s.join(","),
     );
+    const extras = ["burrow", "shade", "knight"];
+    check(
+      "foe_burrow foe_shade foe_knight are first-class cues",
+      extras.every((t) => CUE[t] && sfxOf({ t: "kill", type: t }) === "foe_" + t),
+      extras.map((t) => sfxOf({ t: "kill", type: t })).join(","),
+    );
+    const recipes = TYPES.map((t) => {
+      const c = foeOf(t);
+      return c.f0 + ":" + c.osc + ":" + c.dur;
+    });
+    check(
+      "foe recipes unique (f0+osc+dur), new three sit apart",
+      new Set(recipes).size === 9 &&
+        extras.every((t) => {
+          const c = foeOf(t);
+          return (
+            c.f0 !== foeOf("boomerang").f0 &&
+            c.f0 !== foeOf("rocket").f0 &&
+            c.f0 !== foeOf("walker").f0
+          );
+        }),
+      recipes.join("|"),
+    );
   }
 }
 
@@ -348,7 +371,7 @@ function mkE(type, x, y) {
   } catch (e) {
     console.log(e.message);
   }
-  check("fat-world draw calls stay 186", calls === 186, String(calls));
+  check("fat-world draw calls stay 146", calls === 146, String(calls));
 }
 
 console.log("\n" + pass + " passed, " + fail + " failed");

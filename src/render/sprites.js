@@ -963,6 +963,32 @@ export function drawBladeBody(c, world, bl, t) {
   c.fill();
   c.restore();
 }
+export function stampBombIcon(c) {
+  c.save();
+  drawIcon(c, "bomb", "#ff5d73", 0);
+  c.restore();
+}
+export function paintBombPad(el) {
+  if (!el) return false;
+  let cv = el.querySelector("canvas");
+  if (!cv) {
+    if (typeof document === "undefined") return false;
+    cv = document.createElement("canvas");
+    cv.setAttribute("aria-hidden", "true");
+    el.appendChild(cv);
+  }
+  cv.width = 64;
+  cv.height = 64;
+  const ctx = cv.getContext && cv.getContext("2d");
+  if (!ctx) return false;
+  ctx.clearRect(0, 0, 64, 64);
+  ctx.save();
+  ctx.translate(32, 36);
+  ctx.scale(1.4, 1.4);
+  stampBombIcon(ctx);
+  ctx.restore();
+  return true;
+}
 export function drawBlades(c, world) {
   for (const bl of world.blades) {
     for (const t of bl.tiles) {

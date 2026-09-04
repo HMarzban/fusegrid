@@ -69,8 +69,10 @@
     left:calc(12px + env(safe-area-inset-left));
     bottom:calc(12px + env(safe-area-inset-bottom))}
   #tbomb{width:72px;height:72px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
     right:calc(16px + env(safe-area-inset-right));
     bottom:calc(16px + env(safe-area-inset-bottom))}
+  #tbomb canvas{width:40px;height:40px;pointer-events:none}
   .btn{background:var(--panel);color:#dfe7f5;border:1px solid var(--line);
     padding:8px 14px;border-radius:8px;cursor:pointer;font:inherit;font-size:12px;
     letter-spacing:.5px;transition:.12s}
@@ -98,7 +100,7 @@
   <div id="stage"><canvas id="gl" hidden></canvas><canvas id="c" aria-label="Fusegrid game board"></canvas>
     <div id="touchpad" hidden>
       <div id="tpad" role="group" aria-label="Move pad"></div>
-      <div id="tbomb" role="button" aria-label="Bomb"></div>
+      <div id="tbomb" role="button" aria-label="Bomb"><canvas id="tbomb-icon" width="64" height="64" aria-hidden="true"></canvas></div>
     </div>
   </div>
   <div id="controls">

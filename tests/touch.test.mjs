@@ -1,5 +1,7 @@
+import {readFileSync} from "node:fs";
 import {Input} from "../src/input.js";
 import {hasTouch, PadMapper, mountTouch} from "../src/touch.js";
+import {stampBombIcon} from "../src/render/sprites.js";
 
 let pass=0, fail=0;
 function check(name, cond, detail){ cond?pass++:fail++;
@@ -157,6 +159,21 @@ check("hasTouch({ontouchstart:null}) true", hasTouch({ontouchstart:null})===true
   check("stub update/unmount are silent no-ops", threw===false);
   check("stub never touches input", !inp._intent.fire&&
     !inp.input.up&&!inp.input.down&&!inp.input.left&&!inp.input.right);
+}
+
+{
+  const html=readFileSync(new URL("../index.html", import.meta.url),"utf8");
+  check("#tbomb hosts a bomb canvas",
+    /id="tbomb"[^>]*>[\s\S]*id="tbomb-icon"/.test(html));
+  const fills=[];
+  const c={
+    fillStyle:"", strokeStyle:"", lineWidth:1, lineJoin:"", lineCap:"",
+    save(){}, restore(){}, beginPath(){}, closePath(){}, fill(){ fills.push(c.fillStyle); },
+    stroke(){}, moveTo(){}, lineTo(){}, quadraticCurveTo(){}, arc(){},
+  };
+  stampBombIcon(c);
+  check("stampBombIcon uses HUD BOMB color",
+    fills.indexOf("#ff5d73")>=0, fills.join(","));
 }
 
 console.log("\n  TOUCH RESULT: "+pass+" PASS / "+fail+" FAIL");

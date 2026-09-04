@@ -207,7 +207,15 @@ function check(name, cond, detail) {
       strokeRect() {},
       clearRect() {},
       fillText(s, x, y) {
-        texts.push({ s: String(s), x, y });
+        const m = /(\d+(?:\.\d+)?)px/.exec(c.font);
+        texts.push({
+          s: String(s),
+          x,
+          y,
+          font: c.font,
+          px: m ? +m[1] : 10,
+          align: c.textAlign,
+        });
       },
       strokeText() {},
       beginPath() {},
@@ -329,18 +337,46 @@ function check(name, cond, detail) {
       ];
       const hits = names.map((n) => texts.find((t) => t.s === n));
       const esc = texts.find((t) => t.s.indexOf("ESC BACK") >= 0);
+      const cards = rects.filter((r) => r.fill === "rgba(4,7,14,0.72)");
+      const textEnd = (t) => {
+        const w = t.s.length * t.px * 0.62;
+        return t.align === "center" ? t.x + w / 2 : t.x + w;
+      };
+      const inPlate = (t) =>
+        t.y > p.y + 8 &&
+        t.y < p.y + p.h - 4 &&
+        t.x > p.x + 4 &&
+        textEnd(t) < p.x + p.w - 8;
+      const cardIn = cards.every(
+        (r) =>
+          r.x >= p.x + 8 &&
+          r.y >= p.y + 8 &&
+          r.x + r.w <= p.x + p.w - 8 &&
+          r.y + r.h <= p.y + p.h - 8,
+      );
+      const rooms = texts.filter((t) => t.s.indexOf("ROOMS ") === 0);
       check(
         `enemies 9 + ESC inside plate at ${W}x${H}`,
         !!p &&
           !!esc &&
           hits.every((h) => !!h) &&
-          hits.every((h) => h.y > p.y + 8 && h.y < p.y + p.h - 8) &&
-          esc.y < p.y + p.h - 4,
+          hits.every((h) => inPlate(h)) &&
+          rooms.length === 9 &&
+          rooms.every((t) => inPlate(t)) &&
+          cards.length === 9 &&
+          cardIn &&
+          inPlate(esc) &&
+          esc.s === "ESC BACK" &&
+          cards.every((r) => r.y + r.h < esc.y - 4),
         JSON.stringify({
           py: p && p.y,
           ph: p && p.h,
-          esc: esc && esc.y,
-          hits: hits.map((h) => h && h.y),
+          pw: p && p.w,
+          px: p && p.x,
+          esc,
+          hits,
+          rooms: rooms.map((t) => ({ s: t.s, x: t.x, y: t.y, end: textEnd(t) })),
+          cards: cards.map((r) => ({ x: r.x, y: r.y, w: r.w, h: r.h })),
         }),
       );
     }

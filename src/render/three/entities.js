@@ -56,7 +56,8 @@ const _m = new THREE.Matrix4(),
   _c = new THREE.Color();
 const BL_W = new THREE.Color("#ffffff"),
   BL_A = new THREE.Color("#ffb347"),
-  BL_R = new THREE.Color("#ff5d73");
+  BL_R = new THREE.Color("#ff5d73"),
+  _axisY = new THREE.Vector3(0, 1, 0);
 
 /* per-type geometry + material caches (shared across pool slots & rebuilds:
    flagged _shared so disposeGroup never frees them mid-flight). Enemy-
@@ -654,6 +655,35 @@ export function createPools(biome, atlas) {
     }
     return m;
   }
+  const itemBodies = {},
+    itemRingIM = {};
+  for (const pd of POWER) {
+    const body = new THREE.InstancedMesh(
+      ITEM_GEO[pd.t],
+      matForItem(pd.t, pd.col),
+      POOL_CAPS.items,
+    );
+    body.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    body.frustumCulled = false;
+    body.castShadow = true;
+    body.count = 0;
+    body.userData.tag = "item";
+    body.userData.kind = pd.t;
+    itemBodies[pd.t] = body;
+    group.add(body);
+    const ring = new THREE.InstancedMesh(
+      iringGeo,
+      ringForItem(pd.t, pd.col),
+      POOL_CAPS.items,
+    );
+    ring.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    ring.frustumCulled = false;
+    ring.count = 0;
+    ring.userData.tag = "item";
+    ring.userData.kind = pd.t;
+    itemRingIM[pd.t] = ring;
+    group.add(ring);
+  }
   for (let i = 0; i < POOL_CAPS.items; i++) {
     const s = new THREE.Group();
     s.userData.tag = "item";
@@ -664,7 +694,6 @@ export function createPools(biome, atlas) {
     s.add(q, rg);
     s.visible = false;
     items.push(s);
-    group.add(s);
   }
   /* Blasts v2: crossed flame-gradient quads merged into ONE BufferGeometry
      per layer — outer amber cross keeps the exact prior ttl-shrink contract,
@@ -870,6 +899,8 @@ export function createPools(biome, atlas) {
     }
     for (; bi < POOL_CAPS.bombs; bi++) bombs[bi].visible = false;
 
+    const counts = {};
+    for (const pd of POWER) counts[pd.t] = 0;
     let ii = 0;
     const its = world.items || [];
     for (let i = 0; i < its.length && ii < POOL_CAPS.items; i++) {
@@ -882,17 +913,36 @@ export function createPools(biome, atlas) {
         rg = s.children[1];
       pk.position.y = CFG.TILE * 0.66 + 5 * Math.sin(3 * t);
       pk.rotation.y = 2.6 * t + ii * 0.9;
-      const pg = ITEM_GEO[it.t] || ITEM_GEO.fire;
+      const kind = ITEM_GEO[it.t] ? it.t : "fire";
+      const pg = ITEM_GEO[kind];
       if (pk.geometry !== pg) pk.geometry = pg;
-      const pm = matForItem(it.t, it.col);
+      const pm = matForItem(kind, it.col);
       if (pk.material !== pm) pk.material = pm;
-      const rm = ringForItem(it.t, it.col);
+      const rm = ringForItem(kind, it.col);
       if (rg.material !== rm) rg.material = rm;
       rm.opacity = 0.3 + 0.22 * Math.sin(5 * t);
       const rs = 1 + 0.08 * Math.sin(5 * t);
       rg.scale.set(rs, rs, rs);
+      const slot = counts[kind]++;
+      _p.set(it.x - W2, CFG.TILE * 0.66 + 5 * Math.sin(3 * t), it.y - D2);
+      _q.setFromAxisAngle(_axisY, 2.6 * t + slot * 0.9);
+      _s.set(1, 1, 1);
+      _m.compose(_p, _q, _s);
+      itemBodies[kind].setMatrixAt(slot, _m);
+      _p.set(it.x - W2, 1.5, it.y - D2);
+      _q.identity();
+      _s.set(rs, rs, rs);
+      _m.compose(_p, _q, _s);
+      itemRingIM[kind].setMatrixAt(slot, _m);
     }
     for (; ii < POOL_CAPS.items; ii++) items[ii].visible = false;
+    for (const pd of POWER) {
+      const n = counts[pd.t] || 0;
+      itemBodies[pd.t].count = n;
+      itemBodies[pd.t].instanceMatrix.needsUpdate = true;
+      itemRingIM[pd.t].count = n;
+      itemRingIM[pd.t].instanceMatrix.needsUpdate = true;
+    }
 
     let n = 0,
       maxSc = 0;

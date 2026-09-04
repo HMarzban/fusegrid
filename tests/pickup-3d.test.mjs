@@ -204,13 +204,32 @@ function mkE(type, x, y) {
     SLOT_MESH.player +
     16 * SLOT_MESH.enemy +
     nb * SLOT_MESH.bomb +
-    32 * SLOT_MESH.item +
+    POWER.length * SLOT_MESH.item +
     2 +
     1;
   check(
-    "fat-world draw calls stay 186",
-    calls === want && want === 186 && calls <= 500,
+    "fat-world draw calls stay 146",
+    calls === want && want === 146 && calls <= 500,
     String(calls),
+  );
+  const im = [];
+  try {
+    r._dbg.scene.traverse((o) => {
+      if (o.isInstancedMesh && o.userData.tag === "item") im.push(o);
+    });
+  } catch (e) {}
+  const fire = im.find(
+    (o) => o.userData.kind === "fire" && o.geometry.type === "ConeGeometry",
+  );
+  check(
+    "item draws are 12 kinds × body+ring InstancedMesh",
+    im.length === 24,
+    String(im.length),
+  );
+  check(
+    "N FLAME = 1 draw",
+    !!fire && fire.count === 32,
+    fire ? String(fire.count) : "missing",
   );
   const pools = createPools(BIOMES[0], null);
   check(
