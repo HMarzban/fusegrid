@@ -191,27 +191,31 @@ export function createMenuApp(opts = {}) {
         case SCREEN.INTRO:
           return this.skip();
         case SCREEN.MENU: {
-          const item = this.cursor;
-          if (item === 0) return this.startRun();
-          if (item === 1) return this._push(SCREEN.LEVEL);
-          if (item === 2) {
-            this.render3d = !this.render3d;
-            this.togT = this.subT;
-            return true;
-          }
-          if (item === 3) {
-            if (audio) this.sound = !!audio.toggle();
-            else this.sound = !this.sound;
-            this.togT = this.subT;
-            return true;
-          }
-          if (item === 4) return this._push(SCREEN.HOWTO);
-          if (item === 5) return this._push(SCREEN.ITEMS);
-          if (item === 6) return this._push(SCREEN.ENEMIES);
-          if (item === 7) return this._push(SCREEN.SCORES);
-          if (item === 8) {
-            if (onSource) onSource();
-            return true;
+          switch (ITEMS[this.cursor]) {
+            case "START GAME":
+              return this.startRun();
+            case "LEVEL SELECT":
+              return this._push(SCREEN.LEVEL);
+            case "RENDER":
+              this.render3d = !this.render3d;
+              this.togT = this.subT;
+              return true;
+            case "SOUND":
+              if (audio) this.sound = !!audio.toggle();
+              else this.sound = !this.sound;
+              this.togT = this.subT;
+              return true;
+            case "HOW TO PLAY":
+              return this._push(SCREEN.HOWTO);
+            case "ITEMS":
+              return this._push(SCREEN.ITEMS);
+            case "ENEMIES":
+              return this._push(SCREEN.ENEMIES);
+            case "HIGH SCORES":
+              return this._push(SCREEN.SCORES);
+            case "SOURCE":
+              if (onSource) onSource();
+              return true;
           }
           return false;
         }

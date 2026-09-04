@@ -548,5 +548,18 @@ const APPLY = {
   check("drawBombBody has no chimney fillRect", !ops.includes("fillRect"));
 }
 
+{
+  let icons = null,
+    same = false;
+  try {
+    icons = await import("../src/render/icons.js");
+    same = icons.drawIcon === drawIcon;
+  } catch (_) {}
+  check(
+    "drawIcon lives in icons.js and sprites re-exports it",
+    !!icons && typeof icons.drawIcon === "function" && same,
+  );
+}
+
 console.log("\n" + pass + " passed, " + fail + " failed");
 if (fail) process.exit(1);

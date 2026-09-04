@@ -672,15 +672,17 @@ await sec("S2.I",()=>{
     &&"#"+bmH.color.getHexString()==="#ffb347"
     &&scPlain.pools.blades.geometry.attributes.position.count===8
     &&scPlain.pools.blades.geometry.index.count===12);
-  const its0=scPlain.pools.items[0];
+  const fireB=scPlain.pools.itemBodies.fire;
+  const fireR=scPlain.pools.itemRingIM.fire;
   check("R.headless item pickup = unique geo in POWER color + additive ring",
-    its0.children[0].geometry.type==="ConeGeometry"
-    &&its0.children[0].material.isMeshLambertMaterial
-    &&!its0.children[0].material.map
-    &&"#"+its0.children[0].material.color.getHexString()==="#ff8a3c"
-    &&its0.children[1].material.isMeshBasicMaterial
-    &&its0.children[1].material.transparent===true
-    &&its0.children[1].material.depthWrite===false);
+    fireB.isInstancedMesh&&fireB.geometry.type==="ConeGeometry"
+    &&fireB.material.isMeshLambertMaterial
+    &&!fireB.material.map
+    &&"#"+fireB.material.color.getHexString()==="#ff8a3c"
+    &&fireR.isInstancedMesh
+    &&fireR.material.isMeshBasicMaterial
+    &&fireR.material.transparent===true
+    &&fireR.material.depthWrite===false);
   const poolsJunk=createPools(BIOMES[0],{player:"junk-not-a-texture"});
   const eyeJunk=poolsJunk.enemies[0].children[2];
   check("S2 non-Texture atlas entries rejected (materials keep flat colors)",
@@ -1059,49 +1061,56 @@ await sec("R.items",async()=>{
   w.items=[{x:100,y:120,t:"fire",col:"#ff8a3c",taken:false,pdef:null},
     {x:140,y:120,t:"pierce",col:"#8f8fff",taken:false,pdef:null}];
   const sc=buildScene(w); sc.update(w);
-  const its=sc.pools.items.filter(s=>s.visible);
-  check("R.items slot = unique body + glow ring (2 meshes)",
-    its.length===2&&its.every(s=>s.children.length===2
-      &&s.children.every(o=>o.isMesh)),
-    its.length+"/"+(its[0]?its[0].children.length:"-"));
-  const pk=its[0].children[0], rg=its[0].children[1];
+  const fire=sc.pools.itemBodies.fire, pierce=sc.pools.itemBodies.pierce;
+  const fireR=sc.pools.itemRingIM.fire, pierceR=sc.pools.itemRingIM.pierce;
+  check("R.items slot = unique body + glow ring InstancedMeshes (no Group pool)",
+    fire.isInstancedMesh&&pierce.isInstancedMesh
+    &&fireR.isInstancedMesh&&pierceR.isInstancedMesh
+    &&fire.count===1&&pierce.count===1&&!sc.pools.items,
+    (fire?fire.count:"-")+"/"+(pierce?pierce.count:"-"));
   check("R.items fire body is a cone spike casting a shadow",
-    pk.geometry.type==="ConeGeometry"
-    &&pk.geometry.parameters.radialSegments===7
-    &&pk.castShadow===true&&pk.material.isMeshLambertMaterial
-    &&"#"+pk.material.color.getHexString()==="#ff8a3c");
-  const rpos=rg.geometry.attributes.position.array;
+    fire.geometry.type==="ConeGeometry"
+    &&fire.geometry.parameters.radialSegments===7
+    &&fire.castShadow===true&&fire.material.isMeshLambertMaterial
+    &&"#"+fire.material.color.getHexString()==="#ff8a3c");
+  const rpos=fireR.geometry.attributes.position.array;
   let flat=true;
   for(let i=1;i<rpos.length;i+=3)if(Math.abs(rpos[i])>1e-9)flat=false;
+  const ring0=matScale(fireR,0);
   check("R.items ring: RingGeometry(.30T,.46T) baked flat on the floor at"
       +" y=1.5, additive",
-    rg.geometry.type==="RingGeometry"
-    &&rg.geometry.parameters.innerRadius===CFG.TILE*0.30
-    &&rg.geometry.parameters.outerRadius===CFG.TILE*0.46
-    &&flat&&Math.abs(rg.position.y-1.5)<1e-9
-    &&rg.material.isMeshBasicMaterial&&rg.material.transparent
-    &&rg.material.blending===THREE.AdditiveBlending
-    &&rg.material.depthWrite===false);
+    fireR.geometry.type==="RingGeometry"
+    &&fireR.geometry.parameters.innerRadius===CFG.TILE*0.30
+    &&fireR.geometry.parameters.outerRadius===CFG.TILE*0.46
+    &&flat&&Math.abs(ring0.p.y-1.5)<1e-9
+    &&fireR.material.isMeshBasicMaterial&&fireR.material.transparent
+    &&fireR.material.blending===THREE.AdditiveBlending
+    &&fireR.material.depthWrite===false);
   check("R.items rings tinted by POWER colors (fire #ff8a3c / pierce"
       +" #8f8fff)",
-    "#"+rg.material.color.getHexString()==="#ff8a3c"
-    &&"#"+its[1].children[1].material.color.getHexString()==="#8f8fff");
+    "#"+fireR.material.color.getHexString()==="#ff8a3c"
+    &&"#"+pierceR.material.color.getHexString()==="#8f8fff");
   // §4 animations: bob +-5 @ sin(3t) about y=TILE*.66; spin 2.6t; ring pulse
   const drive=(t)=>{w.time=t;sc.update(w);};
   drive(0);
-  const ry0=pk.rotation.y;
+  const q0=matScale(fire,0).q;
   drive(Math.PI/6);                          // sin(3t)==1 -> top of bob
+  const bob=matScale(fire,0);
+  const wantQ=new THREE.Quaternion().setFromAxisAngle(
+    new THREE.Vector3(0,1,0),2.6*Math.PI/6);
   check("R.items bob +-5 about TILE*.66 @sin(3t), spin advances 2.6t",
-    Math.abs(pk.position.y-(CFG.TILE*0.66+5))<1e-9
-    &&Math.abs((pk.rotation.y-ry0)-2.6*Math.PI/6)<1e-9,
-    pk.position.y.toFixed(2));
+    Math.abs(bob.p.y-(CFG.TILE*0.66+5))<1e-6
+    &&Math.abs(bob.q.y-wantQ.y)<1e-6&&Math.abs(bob.q.w-wantQ.w)<1e-6
+    &&Math.abs(q0.y)<1e-6,
+    bob.p.y.toFixed(2));
   check("R.items pickup stays POWER-bright Lambert (never dark plate)",
-    "#"+pk.material.color.getHexString()==="#ff8a3c"&&!pk.material.map);
+    "#"+fire.material.color.getHexString()==="#ff8a3c"&&!fire.material.map);
   drive(Math.PI/10);                         // sin(5t)==1 -> pulse peak
+  const pulse=matScale(fireR,0);
   check("R.items ring pulses opacity .30+.22sin(5t), scale 1+.08sin(5t)",
-    Math.abs(rg.material.opacity-0.52)<1e-9
-    &&Math.abs(rg.scale.x-1.08)<1e-9,
-    rg.material.opacity.toFixed(3)+"/"+rg.scale.x.toFixed(2));
+    Math.abs(fireR.material.opacity-0.52)<1e-6
+    &&Math.abs(pulse.s.x-1.08)<1e-6,
+    fireR.material.opacity.toFixed(3)+"/"+pulse.s.x.toFixed(2));
  });
 
 // ---- §S4.C explosion drama: layered core pop + pooled flash lights ----

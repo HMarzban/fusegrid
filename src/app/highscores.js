@@ -1,5 +1,6 @@
 import { clampHeat, heatScore } from "../core/heat.js";
 import { clampPact } from "../core/pact.js";
+import { defaultStore } from "./store.js";
 
 export const HS_KEY = "nb.highscores.v1";
 export const DEFAULT_SCORES = Object.freeze(
@@ -17,13 +18,6 @@ export const DEFAULT_SCORES = Object.freeze(
   ].map((r) => Object.freeze({ s: r.s, l: r.l, d: "2026-08-23" })),
 );
 
-function defaultStore() {
-  try {
-    if (typeof window !== "undefined" && window.localStorage)
-      return window.localStorage;
-  } catch (_) {}
-  return null;
-}
 function copyDefaults() {
   return DEFAULT_SCORES.map((r) => ({ s: r.s, l: r.l, d: r.d }));
 }

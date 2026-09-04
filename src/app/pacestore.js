@@ -1,14 +1,7 @@
 import { clampPace } from "../core/pace.js";
+import { defaultStore } from "./store.js";
 
 export const PACE_KEY = "nb.pace.v1";
-
-function defaultStore() {
-  try {
-    if (typeof window !== "undefined" && window.localStorage)
-      return window.localStorage;
-  } catch (_) {}
-  return null;
-}
 
 export function loadPace(store) {
   try {

@@ -7,6 +7,7 @@ import {
 } from "../src/app/menuapp.js";
 import { Input } from "../src/input.js";
 import { createAudio } from "../src/audio.js";
+import { readFileSync } from "node:fs";
 
 let pass = 0,
   fail = 0;
@@ -917,6 +918,52 @@ check(
     "screen transition clears togT sentinel (stale-flash guard)",
     a.screen === SCREEN.HOWTO && a.togT === -1,
     a.togT,
+  );
+}
+
+{
+  const src = readFileSync("src/app/menuapp.js", "utf8");
+  check(
+    "MENU confirm dispatches by ITEMS label, not item===N",
+    !/item === \d/.test(src) && /ITEMS\[this\.cursor\]/.test(src),
+  );
+  const want = {
+    "START GAME": SCREEN.GAME,
+    "LEVEL SELECT": SCREEN.LEVEL,
+    RENDER: SCREEN.MENU,
+    SOUND: SCREEN.MENU,
+    "HOW TO PLAY": SCREEN.HOWTO,
+    ITEMS: SCREEN.ITEMS,
+    ENEMIES: SCREEN.ENEMIES,
+    "HIGH SCORES": SCREEN.SCORES,
+    SOURCE: SCREEN.MENU,
+  };
+  let srcHits = 0,
+    started = 0;
+  const a = createMenuApp({
+    onStart: () => {
+      started++;
+    },
+    onSource: () => {
+      srcHits++;
+    },
+  });
+  let ok = true,
+    det = [];
+  for (const label of ITEMS) {
+    a.screen = SCREEN.MENU;
+    a.inGame = false;
+    a.cursor = ITEMS.indexOf(label);
+    a.confirm();
+    if (a.screen !== want[label]) {
+      ok = false;
+      det.push(label + "->" + a.screen);
+    }
+  }
+  check(
+    "confirm follows ITEMS labels (SOURCE/START/RENDER stay MENU/GAME/MENU)",
+    ok && started === 1 && srcHits === 1 && want.RENDER === SCREEN.MENU,
+    det.join(" ") || "ok",
   );
 }
 

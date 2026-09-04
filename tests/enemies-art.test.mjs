@@ -374,5 +374,18 @@ function mkE(type, x, y) {
   check("fat-world draw calls stay 146", calls === 146, String(calls));
 }
 
+{
+  let bodies = null,
+    same = false;
+  try {
+    bodies = await import("../src/render/enemybody.js");
+    same = bodies.drawEnemyBody === drawEnemyBody;
+  } catch (_) {}
+  check(
+    "drawEnemyBody lives in enemybody.js and sprites re-exports it",
+    !!bodies && typeof bodies.drawEnemyBody === "function" && same,
+  );
+}
+
 console.log("\n" + pass + " passed, " + fail + " failed");
 if (fail) process.exit(1);

@@ -1,12 +1,6 @@
-export const PACT_KEY = "nb.pact.v1";
+import { defaultStore } from "./store.js";
 
-function defaultStore() {
-  try {
-    if (typeof window !== "undefined" && window.localStorage)
-      return window.localStorage;
-  } catch (_) {}
-  return null;
-}
+export const PACT_KEY = "nb.pact.v1";
 
 export function loadPactUnlocked(store) {
   try {

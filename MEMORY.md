@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-04 — Thermo-nuclear judo 1–6
+- Deleted the unused 3D item Group pool (one InstancedMesh write); split `drawIcon`/`drawEnemyBody`; `ENEMY_3D` + `ITEM_MAKE` tables; `crossedQuads` calls `mergeGeos`; MENU confirm follows `ITEMS` labels; one `defaultStore`. Fat-world 146. PWA v13.
+
 ## 2026-09-04 — Leftovers 1–6 headed + fat-world 146
 - REAL 3D rooms 6–8 BURROW/SHADE/KNIGHT read on frozen `{az:0,el:0.419,dist:1000}`; ENEMIES plate fits 608×352 and 600×520 with `ESC BACK`; 12 `item_*` + 9 `foe_*` play with 0 console errors (`item_burrow` is not a cue); `#tbomb` paints `drawIcon("bomb")`; per-kind InstancedMesh pickups pin fat-world **146**. PWA v12.
 

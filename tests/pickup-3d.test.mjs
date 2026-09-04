@@ -1,5 +1,12 @@
 import { atlasSources } from "../src/render/three/textures.js";
-import { createPools, SLOT_MESH } from "../src/render/three/entities.js";
+import {
+  createPools,
+  SLOT_MESH,
+  ENEMY_TYPES,
+  ITEM_GEO,
+} from "../src/render/three/entities.js";
+import * as entMod from "../src/render/three/entities.js";
+import { readFileSync } from "node:fs";
 import { buildScene, countDrawCalls } from "../src/render/three/scene.js";
 import { createRenderer3D } from "../src/render/three/wrapper.js";
 import { createWorld, loadLevel } from "../src/core/sim.js";
@@ -233,9 +240,14 @@ function mkE(type, x, y) {
   );
   const pools = createPools(BIOMES[0], null);
   check(
-    "headless item slot stays body + ring (2)",
-    pools.items[0].children.length === 2,
-    String(pools.items[0].children.length),
+    "headless item slot is InstancedMesh body + ring (no Group pool)",
+    SLOT_MESH.item === 2
+      && !!pools.itemBodies
+      && !!pools.itemRingIM
+      && !pools.items
+      && pools.itemBodies.fire.isInstancedMesh
+      && pools.itemRingIM.fire.isInstancedMesh,
+    pools.items ? "ghost items[] still allocated" : "ok",
   );
   const mix = POWER.map((pd, i) => ({
     x: 60 + i * 15,
@@ -253,20 +265,69 @@ function mkE(type, x, y) {
     blades: [],
     time: 0,
   });
-  const uuids = mix.map((_, i) => pools.items[i].children[0].geometry.uuid);
+  const uuids = POWER.map((pd) => pools.itemBodies?.[pd.t]?.geometry?.uuid);
   check(
     "12 pickup body geos are unique (not one shared cube)",
-    new Set(uuids).size === 12,
+    uuids.every(Boolean) && new Set(uuids).size === 12,
     uuids.join(" ").slice(0, 80),
   );
+  const fireGeo = pools.itemBodies?.fire?.geometry;
+  const fireMat = pools.itemBodies?.fire?.material;
   check(
     "headless fire body is not a leftover cube",
-    pools.items[0].children[0].geometry.type !== "BoxGeometry"
-      && "#" + pools.items[0].children[0].material.color.getHexString()
-        === "#ff8a3c",
-    pools.items[0].children[0].geometry.type,
+    !!fireGeo
+      && fireGeo.type !== "BoxGeometry"
+      && fireMat
+      && "#" + fireMat.color.getHexString() === "#ff8a3c",
+    fireGeo ? fireGeo.type : "missing",
   );
   buildScene(wf);
+}
+
+{
+  const missing = [];
+  for (const t of ENEMY_TYPES) {
+    const r = entMod.ENEMY_3D && entMod.ENEMY_3D[t];
+    if (
+      !r ||
+      !r.geo ||
+      !r.mat ||
+      !r.details ||
+      r.details.length !== 2 ||
+      !r.face ||
+      !r.bob ||
+      r.bob.length !== 2 ||
+      !Number.isFinite(r.h)
+    )
+      missing.push(t);
+  }
+  check(
+    "ENEMY_3D has one row per type (geo, mat, details, face, bob)",
+    missing.length === 0 && ENEMY_TYPES.length === 9,
+    missing.join(" ") || "ok",
+  );
+  check(
+    "ITEM_GEO has a row per POWER kind",
+    POWER.every((pd) => ITEM_GEO[pd.t] && ITEM_GEO[pd.t].isBufferGeometry),
+    POWER.filter((pd) => !ITEM_GEO[pd.t]).map((pd) => pd.t).join(" ") || "ok",
+  );
+  const entSrc = readFileSync("src/render/three/entities.js", "utf8");
+  let geoSrc = "";
+  try {
+    geoSrc = readFileSync("src/render/three/geos.js", "utf8");
+  } catch (_) {}
+  const src = entSrc + geoSrc;
+  check(
+    "item geos are ITEM_MAKE table, not itemGeoFor if-else",
+    !/function itemGeoFor/.test(src) && /ITEM_MAKE/.test(src),
+  );
+  check(
+    "crossedQuads calls mergeGeos (no copied merge)",
+    /function crossedQuads[\s\S]{0,250}mergeGeos\(/.test(src) &&
+      !/function crossedQuads[\s\S]{0,800}setAttribute\(\s*"position"/.test(
+        src,
+      ),
+  );
 }
 
 console.log("\n" + pass + " passed, " + fail + " failed");

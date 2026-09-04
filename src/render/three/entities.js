@@ -77,55 +77,6 @@ function sharedMat(m) {
   m._shared = true;
   return m;
 }
-for (const t of ENEMY_TYPES) {
-  const r = PROTO[t].r;
-  let g, h, m;
-  if (t === "walker") {
-    g = new THREE.SphereGeometry(r, 16, 12);
-    h = r;
-    m = new THREE.MeshPhongMaterial({ color: PROTO[t].color, shininess: 60 });
-  } else if (t === "chaser") {
-    g = new THREE.SphereGeometry(r, 16, 12);
-    g.scale(0.86, 1.22, 0.86);
-    h = r * 1.22;
-    m = new THREE.MeshPhongMaterial({ color: PROTO[t].color, shininess: 60 });
-  } else if (t === "fast") {
-    g = new THREE.SphereGeometry(r, 16, 12);
-    g.scale(1.2, 0.8, 1.05);
-    h = r * 0.8;
-    m = new THREE.MeshPhongMaterial({ color: PROTO[t].color, shininess: 60 });
-  } else if (t === "stationary") {
-    g = new THREE.BoxGeometry(r * 2.3, r * 2.3, r * 2.3);
-    h = r * 1.15;
-    m = new THREE.MeshLambertMaterial({ color: "#2a1030" });
-  } else if (t === "boomerang") {
-    g = new THREE.TorusGeometry(r * 0.72, r * 0.19, 8, 26, 4.7);
-    g.rotateX(-Math.PI / 2);
-    h = r * 0.55;
-    m = new THREE.MeshLambertMaterial({ color: PROTO[t].color });
-  } else if (t === "burrow") {
-    g = new THREE.CylinderGeometry(r * 0.95, r * 0.82, r * 1.05, 10);
-    g.rotateZ(Math.PI / 2);
-    h = r * 0.55;
-    m = new THREE.MeshPhongMaterial({ color: PROTO[t].color, shininess: 40 });
-  } else if (t === "shade") {
-    g = new THREE.OctahedronGeometry(r * 1.05, 0);
-    h = r * 1.05;
-    m = new THREE.MeshLambertMaterial({ color: PROTO[t].color });
-  } else if (t === "knight") {
-    g = new THREE.BoxGeometry(r * 1.55, r * 2.15, r * 1.45);
-    h = r * 1.08;
-    m = new THREE.MeshLambertMaterial({ color: PROTO[t].color });
-  } else {
-    g = new THREE.ConeGeometry(r * 1.02, r * 2.5, 3);
-    h = r * 1.25;
-    m = new THREE.MeshLambertMaterial({ color: PROTO[t].color });
-  }
-  GEO["e_" + t] = sharedGeo(g);
-  EH["e_" + t] = h;
-  MATE["e_" + t] = sharedMat(m);
-}
-
 /* merge two indexed BufferGeometries into one draw call (crossedQuads
    precedent) — used for the fast twin fins so the slot child count stays
    at the fixed 4-mesh contract. */
@@ -170,77 +121,113 @@ function mergeGeos(a, b) {
 }
 
 const IT = CFG.TILE;
-function itemGeoFor(t) {
-  let g;
-  if (t === "fire") g = new THREE.ConeGeometry(IT * 0.18, IT * 0.5, 7);
-  else if (t === "bomb") g = new THREE.SphereGeometry(IT * 0.22, 12, 10);
-  else if (t === "speed") g = new THREE.OctahedronGeometry(IT * 0.26, 0);
-  else if (t === "heart") {
+const ITEM_MAKE = {
+  fire: () => new THREE.ConeGeometry(IT * 0.18, IT * 0.5, 7),
+  bomb: () => new THREE.SphereGeometry(IT * 0.22, 12, 10),
+  speed: () => new THREE.OctahedronGeometry(IT * 0.26, 0),
+  heart: () => {
     const a = new THREE.SphereGeometry(IT * 0.15, 8, 6);
     a.translate(-IT * 0.09, IT * 0.06, 0);
     const b = new THREE.SphereGeometry(IT * 0.15, 8, 6);
     b.translate(IT * 0.09, IT * 0.06, 0);
-    g = mergeGeos(a, b);
-  } else if (t === "shield")
-    g = new THREE.CylinderGeometry(IT * 0.2, IT * 0.22, IT * 0.36, 8);
-  else if (t === "kick") g = new THREE.BoxGeometry(IT * 0.2, IT * 0.16, IT * 0.38);
-  else if (t === "throw") g = new THREE.SphereGeometry(IT * 0.16, 10, 8);
-  else if (t === "pass") g = new THREE.BoxGeometry(IT * 0.38, IT * 0.14, IT * 0.28);
-  else if (t === "line") {
-    g = new THREE.CylinderGeometry(IT * 0.055, IT * 0.055, IT * 0.52, 6);
+    return mergeGeos(a, b);
+  },
+  shield: () => new THREE.CylinderGeometry(IT * 0.2, IT * 0.22, IT * 0.36, 8),
+  kick: () => new THREE.BoxGeometry(IT * 0.2, IT * 0.16, IT * 0.38),
+  throw: () => new THREE.SphereGeometry(IT * 0.16, 10, 8),
+  pass: () => new THREE.BoxGeometry(IT * 0.38, IT * 0.14, IT * 0.28),
+  line: () => {
+    const g = new THREE.CylinderGeometry(IT * 0.055, IT * 0.055, IT * 0.52, 6);
     g.rotateZ(Math.PI / 2);
-  } else if (t === "power") g = new THREE.OctahedronGeometry(IT * 0.34, 0);
-  else if (t === "pierce") g = new THREE.ConeGeometry(IT * 0.11, IT * 0.52, 5);
-  else g = new THREE.CylinderGeometry(IT * 0.16, IT * 0.18, IT * 0.3, 10);
-  return sharedGeo(g);
-}
+    return g;
+  },
+  power: () => new THREE.OctahedronGeometry(IT * 0.34, 0),
+  pierce: () => new THREE.ConeGeometry(IT * 0.11, IT * 0.52, 5),
+  remote: () => new THREE.CylinderGeometry(IT * 0.16, IT * 0.18, IT * 0.3, 10),
+};
 export const ITEM_GEO = {};
-for (const pd of POWER) ITEM_GEO[pd.t] = itemGeoFor(pd.t);
+for (const pd of POWER) ITEM_GEO[pd.t] = sharedGeo(ITEM_MAKE[pd.t]());
 
-/* Enemy detail silhouettes: exactly 2 child meshes per slot, per-type
-   geometry/material/transform caches swapped BY REFERENCE on type change
-   (the big face/slit plane rides children[2], appended separately). Local
-   frame: +Z is the facing direction (slot rotation.y = atan2(dir)). */
+/* Enemy identity: one ENEMY_3D[type] row (geo, mat, details, face, bob).
+   GD/EH/EYT stay derived so the §6 ABI probes keep working. */
 const DARK = sharedMat(new THREE.MeshLambertMaterial({ color: "#0a0f1a" }));
-/* rocket flame flicker mats: #ffde7a⇄#ff7a3a on floor(t*10)%2 (2D parity) */
 const FLAME_A = sharedMat(new THREE.MeshBasicMaterial({ color: "#ffde7a" }));
 const FLAME_B = sharedMat(new THREE.MeshBasicMaterial({ color: "#ff7a3a" }));
 export const GD = {},
   MD = {},
   GT = {},
   GR = {};
+export const GF = {},
+  EYR = {};
+export const EYT = {};
+const BOB = {};
+export const ENEMY_3D = {};
+function putEnemy(t, rec) {
+  ENEMY_3D[t] = rec;
+  const k = "e_" + t;
+  GEO[k] = rec.geo;
+  MATE[k] = rec.mat;
+  EH[k] = rec.h;
+  GD[k] = [rec.details[0].geo, rec.details[1].geo];
+  MD[k] = [rec.details[0].mat, rec.details[1].mat];
+  GT[k] = [rec.details[0].pos, rec.details[1].pos];
+  GR[k] = [rec.details[0].rot, rec.details[1].rot];
+  GF[k] = rec.face.geo;
+  EYT[k] = rec.face.pos;
+  EYR[k] = rec.face.rot;
+  BOB[k] = rec.bob;
+}
+function phongMat(color, shininess) {
+  return sharedMat(new THREE.MeshPhongMaterial({ color, shininess }));
+}
+function lambertMat(color) {
+  return sharedMat(new THREE.MeshLambertMaterial({ color }));
+}
 {
-  let r, K;
-  K = "e_walker";
-  r = PROTO.walker.r;
+  const r = PROTO.walker.r;
   const foot = sharedGeo(new THREE.BoxGeometry(r * 0.52, r * 0.26, r * 0.6));
-  GD[K] = [foot, foot];
-  MD[K] = [DARK, DARK];
-  GT[K] = [
-    [-r * 0.52, r * 0.14, r * 0.5],
-    [r * 0.52, r * 0.14, r * 0.5],
-  ];
-  GR[K] = [
-    [0, 0, 0],
-    [0, 0, 0],
-  ];
-  K = "e_chaser";
-  r = PROTO.chaser.r;
-  GD[K] = [
-    sharedGeo(new THREE.BoxGeometry(r * 0.22, r * 0.85, r * 1.35)),
-    sharedGeo(new THREE.BoxGeometry(r * 0.55, r * 0.26, r * 0.16)),
-  ];
-  MD[K] = [DARK, DARK];
-  GT[K] = [
-    [0, r * 1.22, 0],
-    [0, r * 1.15, r * 0.95],
-  ];
-  GR[K] = [
-    [0, 0, 0],
-    [0, 0, 0],
-  ];
-  K = "e_fast";
-  r = PROTO.fast.r;
+  putEnemy("walker", {
+    geo: sharedGeo(new THREE.SphereGeometry(r, 16, 12)),
+    mat: phongMat(PROTO.walker.color, 60),
+    h: r,
+    details: [
+      { geo: foot, mat: DARK, pos: [-r * 0.52, r * 0.14, r * 0.5], rot: [0, 0, 0] },
+      { geo: foot, mat: DARK, pos: [r * 0.52, r * 0.14, r * 0.5], rot: [0, 0, 0] },
+    ],
+    face: {
+      geo: sharedGeo(new THREE.PlaneGeometry(r * 1.7, r * 0.9)),
+      pos: [0, r + r * 0.35, r * 0.7],
+      rot: [-0.45, 0, 0],
+    },
+    bob: [1.8, 12],
+  });
+}
+{
+  const r = PROTO.chaser.r,
+    h = r * 1.22;
+  const g = new THREE.SphereGeometry(r, 16, 12);
+  g.scale(0.86, 1.22, 0.86);
+  putEnemy("chaser", {
+    geo: sharedGeo(g),
+    mat: phongMat(PROTO.chaser.color, 60),
+    h,
+    details: [
+      { geo: sharedGeo(new THREE.BoxGeometry(r * 0.22, r * 0.85, r * 1.35)), mat: DARK, pos: [0, r * 1.22, 0], rot: [0, 0, 0] },
+      { geo: sharedGeo(new THREE.BoxGeometry(r * 0.55, r * 0.26, r * 0.16)), mat: DARK, pos: [0, r * 1.15, r * 0.95], rot: [0, 0, 0] },
+    ],
+    face: {
+      geo: sharedGeo(new THREE.PlaneGeometry(r * 1.7, r * 0.9)),
+      pos: [0, h + r * 0.35, r * 0.7],
+      rot: [-0.45, 0, 0],
+    },
+    bob: [1.2, 9],
+  });
+}
+{
+  const r = PROTO.fast.r,
+    h = r * 0.8;
+  const g = new THREE.SphereGeometry(r, 16, 12);
+  g.scale(1.2, 0.8, 1.05);
   const finA = new THREE.BoxGeometry(r * 0.85, r * 0.24, r * 0.14);
   finA.rotateX(-0.55);
   finA.translate(-r * 0.5, r * 0.6, -r * 0.25);
@@ -256,96 +243,111 @@ export const GD = {},
       blending: THREE.AdditiveBlending,
     }),
   );
-  GD[K] = [
-    sharedGeo(mergeGeos(finA, finB)),
-    sharedGeo(new THREE.BoxGeometry(r * 1.15, r * 0.42, r * 1.5)),
-  ];
-  MD[K] = [DARK, trailM];
-  GT[K] = [
-    [0, 0, 0],
-    [0, r * 0.55, -r * 1.35],
-  ];
-  GR[K] = [
-    [0, 0, 0],
-    [0, 0, 0],
-  ];
-  K = "e_stationary";
-  r = PROTO.stationary.r;
-  const coreM = sharedMat(
-    new THREE.MeshBasicMaterial({
-      color: PROTO.stationary.color,
-    }),
-  );
+  putEnemy("fast", {
+    geo: sharedGeo(g),
+    mat: phongMat(PROTO.fast.color, 60),
+    h,
+    details: [
+      { geo: sharedGeo(mergeGeos(finA, finB)), mat: DARK, pos: [0, 0, 0], rot: [0, 0, 0] },
+      { geo: sharedGeo(new THREE.BoxGeometry(r * 1.15, r * 0.42, r * 1.5)), mat: trailM, pos: [0, r * 0.55, -r * 1.35], rot: [0, 0, 0] },
+    ],
+    face: {
+      geo: sharedGeo(new THREE.PlaneGeometry(r * 1.7, r * 0.9)),
+      pos: [0, h + r * 0.35, r * 0.7],
+      rot: [-0.45, 0, 0],
+    },
+    bob: [1.0, 16],
+  });
+}
+{
+  const r = PROTO.stationary.r;
+  const coreM = sharedMat(new THREE.MeshBasicMaterial({ color: PROTO.stationary.color }));
   const hoodM = sharedMat(new THREE.MeshLambertMaterial({ color: "#150a1c" }));
-  GD[K] = [
-    sharedGeo(new THREE.BoxGeometry(r * 1.2, r * 1.2, r * 1.2)),
-    sharedGeo(new THREE.BoxGeometry(r * 1.5, r * 0.18, r * 0.3)),
-  ];
-  MD[K] = [coreM, hoodM];
-  GT[K] = [
-    [0, r * 1.15, 0],
-    [0, r * 1.38, r * 1.08],
-  ];
-  GR[K] = [
-    [0, 0, 0],
-    [0, 0, 0],
-  ];
-  K = "e_boomerang";
-  r = PROTO.boomerang.r;
+  putEnemy("stationary", {
+    geo: sharedGeo(new THREE.BoxGeometry(r * 2.3, r * 2.3, r * 2.3)),
+    mat: lambertMat("#2a1030"),
+    h: r * 1.15,
+    details: [
+      { geo: sharedGeo(new THREE.BoxGeometry(r * 1.2, r * 1.2, r * 1.2)), mat: coreM, pos: [0, r * 1.15, 0], rot: [0, 0, 0] },
+      { geo: sharedGeo(new THREE.BoxGeometry(r * 1.5, r * 0.18, r * 0.3)), mat: hoodM, pos: [0, r * 1.38, r * 1.08], rot: [0, 0, 0] },
+    ],
+    face: {
+      geo: sharedGeo(new THREE.PlaneGeometry(r * 1.5, r * 0.38)),
+      pos: [0, r * 1.15, r * 1.16],
+      rot: [0, 0, 0],
+    },
+    bob: [1.5, 3],
+  });
+}
+{
+  const r = PROTO.boomerang.r,
+    h = r * 0.55;
+  const g = new THREE.TorusGeometry(r * 0.72, r * 0.19, 8, 26, 4.7);
+  g.rotateX(-Math.PI / 2);
   const hubM = sharedMat(new THREE.MeshBasicMaterial({ color: "#ffffff" }));
-  const beadM = sharedMat(
-    new THREE.MeshBasicMaterial({
-      color: PROTO.boomerang.color,
-    }),
-  );
-  GD[K] = [
-    sharedGeo(new THREE.SphereGeometry(r * 0.26, 10, 8)),
-    sharedGeo(new THREE.SphereGeometry(r * 0.12, 8, 6)),
-  ];
-  MD[K] = [hubM, beadM];
-  GT[K] = [
-    [0, 0, 0],
-    [Math.cos(4.7) * r * 0.72, 0, -Math.sin(4.7) * r * 0.72],
-  ];
-  GR[K] = [
-    [0, 0, 0],
-    [0, 0, 0],
-  ];
-  K = "e_rocket";
-  r = PROTO.rocket.r;
+  const beadM = sharedMat(new THREE.MeshBasicMaterial({ color: PROTO.boomerang.color }));
+  putEnemy("boomerang", {
+    geo: sharedGeo(g),
+    mat: lambertMat(PROTO.boomerang.color),
+    h,
+    details: [
+      { geo: sharedGeo(new THREE.SphereGeometry(r * 0.26, 10, 8)), mat: hubM, pos: [0, 0, 0], rot: [0, 0, 0] },
+      { geo: sharedGeo(new THREE.SphereGeometry(r * 0.12, 8, 6)), mat: beadM, pos: [Math.cos(4.7) * r * 0.72, 0, -Math.sin(4.7) * r * 0.72], rot: [0, 0, 0] },
+    ],
+    face: {
+      geo: sharedGeo(new THREE.PlaneGeometry(CFG.TILE * 0.34, CFG.TILE * 0.16)),
+      pos: [0, h + r * 0.15, r * 0.92],
+      rot: [0, 0, 0],
+    },
+    bob: [2.0, 10],
+  });
+}
+{
+  const r = PROTO.rocket.r,
+    h = r * 1.25;
   const padM = sharedMat(new THREE.MeshLambertMaterial({ color: "#3a1c10" }));
   const flameG = sharedGeo(new THREE.ConeGeometry(r * 0.34, r * 0.66, 8));
   flameG.rotateX(Math.PI);
-  GD[K] = [
-    sharedGeo(new THREE.CylinderGeometry(r * 0.8, r * 0.92, r * 0.3, 12)),
-    flameG,
-  ];
-  MD[K] = [padM, FLAME_A];
-  GT[K] = [
-    [0, r * 0.15, 0],
-    [0, r * 0.1, 0],
-  ];
-  GR[K] = [
-    [0, 0, 0],
-    [0, 0, 0],
-  ];
-  K = "e_burrow";
-  r = PROTO.burrow.r;
-  GD[K] = [
-    sharedGeo(new THREE.BoxGeometry(r * 0.22, r * 0.18, r * 0.55)),
-    sharedGeo(new THREE.BoxGeometry(r * 0.22, r * 0.18, r * 0.55)),
-  ];
-  MD[K] = [DARK, DARK];
-  GT[K] = [
-    [-r * 0.55, r * 0.2, r * 0.55],
-    [r * 0.55, r * 0.2, r * 0.55],
-  ];
-  GR[K] = [
-    [0, 0.35, 0],
-    [0, -0.35, 0],
-  ];
-  K = "e_shade";
-  r = PROTO.shade.r;
+  putEnemy("rocket", {
+    geo: sharedGeo(new THREE.ConeGeometry(r * 1.02, r * 2.5, 3)),
+    mat: lambertMat(PROTO.rocket.color),
+    h,
+    details: [
+      { geo: sharedGeo(new THREE.CylinderGeometry(r * 0.8, r * 0.92, r * 0.3, 12)), mat: padM, pos: [0, r * 0.15, 0], rot: [0, 0, 0] },
+      { geo: flameG, mat: FLAME_A, pos: [0, r * 0.1, 0], rot: [0, 0, 0] },
+    ],
+    face: {
+      geo: sharedGeo(new THREE.PlaneGeometry(CFG.TILE * 0.34, CFG.TILE * 0.16)),
+      pos: [0, h + r * 0.15, r * 0.92],
+      rot: [0, 0, 0],
+    },
+    bob: [1.4, 7],
+  });
+}
+{
+  const r = PROTO.burrow.r,
+    h = r * 0.55;
+  const g = new THREE.CylinderGeometry(r * 0.95, r * 0.82, r * 1.05, 10);
+  g.rotateZ(Math.PI / 2);
+  putEnemy("burrow", {
+    geo: sharedGeo(g),
+    mat: phongMat(PROTO.burrow.color, 40),
+    h,
+    details: [
+      { geo: sharedGeo(new THREE.BoxGeometry(r * 0.22, r * 0.18, r * 0.55)), mat: DARK, pos: [-r * 0.55, r * 0.2, r * 0.55], rot: [0, 0.35, 0] },
+      { geo: sharedGeo(new THREE.BoxGeometry(r * 0.22, r * 0.18, r * 0.55)), mat: DARK, pos: [r * 0.55, r * 0.2, r * 0.55], rot: [0, -0.35, 0] },
+    ],
+    face: {
+      geo: sharedGeo(new THREE.PlaneGeometry(CFG.TILE * 0.34, CFG.TILE * 0.16)),
+      pos: [0, h + r * 0.15, r * 0.92],
+      rot: [0, 0, 0],
+    },
+    bob: [1.1, 8],
+  });
+}
+{
+  const r = PROTO.shade.r,
+    h = r * 1.05;
   const wispM = sharedMat(
     new THREE.MeshBasicMaterial({
       color: PROTO.shade.color,
@@ -354,73 +356,42 @@ export const GD = {},
       depthWrite: false,
     }),
   );
-  GD[K] = [
-    sharedGeo(new THREE.SphereGeometry(r * 0.16, 8, 6)),
-    sharedGeo(new THREE.SphereGeometry(r * 0.12, 8, 6)),
-  ];
-  MD[K] = [wispM, wispM];
-  GT[K] = [
-    [-r * 0.85, r * 0.15, 0],
-    [r * 0.8, -r * 0.1, 0],
-  ];
-  GR[K] = [
-    [0, 0, 0],
-    [0, 0, 0],
-  ];
-  K = "e_knight";
-  r = PROTO.knight.r;
+  putEnemy("shade", {
+    geo: sharedGeo(new THREE.OctahedronGeometry(r * 1.05, 0)),
+    mat: lambertMat(PROTO.shade.color),
+    h,
+    details: [
+      { geo: sharedGeo(new THREE.SphereGeometry(r * 0.16, 8, 6)), mat: wispM, pos: [-r * 0.85, r * 0.15, 0], rot: [0, 0, 0] },
+      { geo: sharedGeo(new THREE.SphereGeometry(r * 0.12, 8, 6)), mat: wispM, pos: [r * 0.8, -r * 0.1, 0], rot: [0, 0, 0] },
+    ],
+    face: {
+      geo: sharedGeo(new THREE.PlaneGeometry(CFG.TILE * 0.34, CFG.TILE * 0.16)),
+      pos: [0, h + r * 0.15, r * 0.92],
+      rot: [0, 0, 0],
+    },
+    bob: [2.2, 6],
+  });
+}
+{
+  const r = PROTO.knight.r,
+    h = r * 1.08;
   const plumeM = sharedMat(new THREE.MeshLambertMaterial({ color: "#8a6a28" }));
-  GD[K] = [
-    sharedGeo(new THREE.BoxGeometry(r * 0.16, r * 0.7, r * 0.12)),
-    sharedGeo(new THREE.BoxGeometry(r * 1.15, r * 0.2, r * 0.18)),
-  ];
-  MD[K] = [plumeM, DARK];
-  GT[K] = [
-    [0, r * 1.55, 0],
-    [0, r * 0.35, r * 0.78],
-  ];
-  GR[K] = [
-    [0, 0, 0],
-    [0, 0, 0],
-  ];
+  putEnemy("knight", {
+    geo: sharedGeo(new THREE.BoxGeometry(r * 1.55, r * 2.15, r * 1.45)),
+    mat: lambertMat(PROTO.knight.color),
+    h,
+    details: [
+      { geo: sharedGeo(new THREE.BoxGeometry(r * 0.16, r * 0.7, r * 0.12)), mat: plumeM, pos: [0, r * 1.55, 0], rot: [0, 0, 0] },
+      { geo: sharedGeo(new THREE.BoxGeometry(r * 1.15, r * 0.2, r * 0.18)), mat: DARK, pos: [0, r * 0.35, r * 0.78], rot: [0, 0, 0] },
+    ],
+    face: {
+      geo: sharedGeo(new THREE.PlaneGeometry(r * 1.7, r * 0.9)),
+      pos: [0, h + r * 0.35, r * 0.7],
+      rot: [-0.45, 0, 0],
+    },
+    bob: [1.3, 7],
+  });
 }
-/* face/slit plane placement per type (children[2]): blob trio gets a BIG
-   plane tilted at the camera (identity §2), stationary's IS the visor slit,
-   boomerang/rocket keep the small legacy strip. */
-export const GF = {},
-  EYR = {};
-export const EYT = {};
-for (const t of ENEMY_TYPES) {
-  const r = PROTO[t].r,
-    k = "e_" + t;
-  if (t === "stationary") {
-    GF[k] = sharedGeo(new THREE.PlaneGeometry(r * 1.5, r * 0.38));
-    EYT[k] = [0, r * 1.15, r * 1.16];
-    EYR[k] = [0, 0, 0];
-  } else if (t === "walker" || t === "chaser" || t === "fast" || t === "knight") {
-    GF[k] = sharedGeo(new THREE.PlaneGeometry(r * 1.7, r * 0.9));
-    EYT[k] = [0, EH[k] + r * 0.35, r * 0.7];
-    EYR[k] = [-0.45, 0, 0];
-  } else {
-    GF[k] = sharedGeo(
-      new THREE.PlaneGeometry(CFG.TILE * 0.34, CFG.TILE * 0.16),
-    );
-    EYT[k] = [0, EH[k] + r * 0.15, r * 0.92];
-    EYR[k] = [0, 0, 0];
-  }
-}
-/* idle bob per type [amp, freq] — render-side breathing only */
-const BOB = {
-  e_walker: [1.8, 12],
-  e_chaser: [1.2, 9],
-  e_fast: [1.0, 16],
-  e_stationary: [1.5, 3],
-  e_boomerang: [2.0, 10],
-  e_rocket: [1.4, 7],
-  e_burrow: [1.1, 8],
-  e_shade: [2.2, 6],
-  e_knight: [1.3, 7],
-};
 
 /* Bomb v2: ONE glossy Phong body (variants never recolor it) + colored base
    TORUS rings per bombKind; normal hides its ring. */
@@ -535,8 +506,7 @@ export function createPools(biome, atlas) {
   player.add(body, helmet, visor, rod, ball, footL, footR);
 
   const enemies = [],
-    bombs = [],
-    items = [];
+    bombs = [];
   const eyeMats = {};
   function eyeFor(t) {
     let m = eyeMats[t];
@@ -684,17 +654,6 @@ export function createPools(biome, atlas) {
     itemRingIM[pd.t] = ring;
     group.add(ring);
   }
-  for (let i = 0; i < POOL_CAPS.items; i++) {
-    const s = new THREE.Group();
-    s.userData.tag = "item";
-    const q = new THREE.Mesh(ITEM_GEO.fire, matForItem("fire", "#ff8a3c"));
-    q.castShadow = true;
-    const rg = new THREE.Mesh(iringGeo, ringForItem("fire", "#ff8a3c"));
-    rg.position.y = 1.5;
-    s.add(q, rg);
-    s.visible = false;
-    items.push(s);
-  }
   /* Blasts v2: crossed flame-gradient quads merged into ONE BufferGeometry
      per layer — outer amber cross keeps the exact prior ttl-shrink contract,
      inner white-hot core pops at spawn (overshoot easing settles by 20%
@@ -703,43 +662,7 @@ export function createPools(biome, atlas) {
     const a = new THREE.PlaneGeometry(sz, sz),
       b = new THREE.PlaneGeometry(sz, sz);
     b.rotateY(Math.PI / 2);
-    const g = new THREE.BufferGeometry(),
-      n = a.attributes.position.count;
-    g.setAttribute(
-      "position",
-      new THREE.Float32BufferAttribute(
-        [
-          ...Array.from(a.attributes.position.array),
-          ...Array.from(b.attributes.position.array),
-        ],
-        3,
-      ),
-    );
-    g.setAttribute(
-      "normal",
-      new THREE.Float32BufferAttribute(
-        [
-          ...Array.from(a.attributes.normal.array),
-          ...Array.from(b.attributes.normal.array),
-        ],
-        3,
-      ),
-    );
-    g.setAttribute(
-      "uv",
-      new THREE.Float32BufferAttribute(
-        [
-          ...Array.from(a.attributes.uv.array),
-          ...Array.from(b.attributes.uv.array),
-        ],
-        2,
-      ),
-    );
-    g.setIndex([
-      ...Array.from(a.index.array),
-      ...Array.from(b.index.array).map((v) => v + n),
-    ]);
-    return sharedGeo(g);
+    return sharedGeo(mergeGeos(a, b));
   }
   const bladeGeo = crossedQuads(CFG.TILE * 0.98);
   const bladeMat = new THREE.MeshBasicMaterial({
@@ -901,29 +824,16 @@ export function createPools(biome, atlas) {
 
     const counts = {};
     for (const pd of POWER) counts[pd.t] = 0;
-    let ii = 0;
+    let nLive = 0;
     const its = world.items || [];
-    for (let i = 0; i < its.length && ii < POOL_CAPS.items; i++) {
+    for (let i = 0; i < its.length && nLive < POOL_CAPS.items; i++) {
       const it = its[i];
       if (it.taken || it.buried) continue;
-      const s = items[ii++];
-      s.visible = true;
-      s.position.set(it.x - W2, 0, it.y - D2);
-      const pk = s.children[0],
-        rg = s.children[1];
-      pk.position.y = CFG.TILE * 0.66 + 5 * Math.sin(3 * t);
-      pk.rotation.y = 2.6 * t + ii * 0.9;
+      nLive++;
       const kind = ITEM_GEO[it.t] ? it.t : "fire";
-      const pg = ITEM_GEO[kind];
-      if (pk.geometry !== pg) pk.geometry = pg;
-      const pm = matForItem(kind, it.col);
-      if (pk.material !== pm) pk.material = pm;
-      const rm = ringForItem(kind, it.col);
-      if (rg.material !== rm) rg.material = rm;
-      rm.opacity = 0.3 + 0.22 * Math.sin(5 * t);
-      const rs = 1 + 0.08 * Math.sin(5 * t);
-      rg.scale.set(rs, rs, rs);
       const slot = counts[kind]++;
+      const rs = 1 + 0.08 * Math.sin(5 * t);
+      itemRingIM[kind].material.opacity = 0.3 + 0.22 * Math.sin(5 * t);
       _p.set(it.x - W2, CFG.TILE * 0.66 + 5 * Math.sin(3 * t), it.y - D2);
       _q.setFromAxisAngle(_axisY, 2.6 * t + slot * 0.9);
       _s.set(1, 1, 1);
@@ -935,7 +845,6 @@ export function createPools(biome, atlas) {
       _m.compose(_p, _q, _s);
       itemRingIM[kind].setMatrixAt(slot, _m);
     }
-    for (; ii < POOL_CAPS.items; ii++) items[ii].visible = false;
     for (const pd of POWER) {
       const n = counts[pd.t] || 0;
       itemBodies[pd.t].count = n;
@@ -1007,7 +916,8 @@ export function createPools(biome, atlas) {
     player,
     enemies,
     bombs,
-    items,
+    itemBodies,
+    itemRingIM,
     blades,
     cores,
     flashes,

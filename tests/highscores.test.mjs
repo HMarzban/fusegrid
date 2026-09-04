@@ -261,6 +261,42 @@ check(
   );
 }
 
+const _fs = await import("node:fs");
+let _store = null;
+try {
+  _store = await import("../src/app/store.js");
+} catch (_) {}
+check(
+  "defaultStore helper exists and is null headless",
+  !!_store &&
+    typeof _store.defaultStore === "function" &&
+    _store.defaultStore() === null,
+);
+if (_store) {
+  const ls = { getItem() {}, setItem() {} };
+  globalThis.window = { localStorage: ls };
+  check(
+    "defaultStore uses window.localStorage when present",
+    _store.defaultStore() === ls,
+  );
+  delete globalThis.window;
+}
+{
+  let shared = true;
+  for (const f of ["pactstore.js", "pacestore.js", "highscores.js"]) {
+    const src = _fs.readFileSync("src/app/" + f, "utf8");
+    if (
+      !/from\s+["']\.\/store\.js["']/.test(src) ||
+      /function defaultStore/.test(src)
+    )
+      shared = false;
+  }
+  check(
+    "pactstore/pacestore/highscores share store.js defaultStore",
+    shared,
+  );
+}
+
 console.log("\n  HIGHSCORES RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);
 
