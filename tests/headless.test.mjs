@@ -6,6 +6,7 @@ import {createRenderer} from "../src/render/renderer.js";
 import {createWorld, loadLevel} from "../src/core/sim.js";
 import {SCREEN, IDLE_T} from "../src/app/menuapp.js";
 import {CFG, BIOMES, biomeOf} from "../src/core/config.js";
+import {PROJ} from "../src/render/r3d/camera.js";
 import {loadScores} from "../src/app/highscores.js";
 
 const ROOT=dirname(fileURLToPath(import.meta.url))+"/..";
@@ -699,6 +700,137 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
     &&biomeOf(6).name!==biomeOf(1).name
     &&biomeOf(6).hWall<=36&&biomeOf(7).hWall<=36&&biomeOf(8).hWall<=36,
     BIOMES.map(b=>b.name).join());
+}
+
+// ---- main.js split: the browser entry stays lean and import-clean, and the
+// seams it used to inline (flags / attract / net pair / shell chrome /
+// toolbar / debug hook) are importable modules of their own. ----
+{
+  const L=readFileSync(join(ROOT,"src/main.js"),"utf8").split("\n");
+  check("main.js stays a lean browser entry (<=620 lines)",
+    L.length<=620,String(L.length));
+  const lastImp=L.reduce((a,l,i)=>/^import[\s{]/.test(l)?i:a,-1);
+  const firstDecl=L.findIndex(l=>/^(export\s|const\s|let\s|var\s|function\s|class\s)/.test(l));
+  check("main.js keeps every import at the top (no mid-file import sprawl)",
+    firstDecl<0||lastImp<firstDecl,
+    "lastImport@"+(lastImp+1)+" firstDecl@"+(firstDecl+1));
+}
+
+// URL/opts flag parsing is pure over a search string (no location needed)
+{
+  const {readFlags}=await import("../src/app/flags.js");
+  check("flags: ?render=3d selects the real-3D path",
+    readFlags("?render=3d").urlKind==="3d");
+  check("flags: ?render=iso pins the legacy dimetric path",
+    readFlags("?render=iso").urlKind==="iso");
+  check("flags: an unknown render value is ignored",
+    readFlags("?render=4d").urlKind===null,
+    String(readFlags("?render=4d").urlKind));
+  check("flags: ?play=1 and opts.autoplay both autoplay, default off",
+    readFlags("?play=1").autoplay===true
+    &&readFlags("",{autoplay:true}).autoplay===true
+    &&readFlags("").autoplay===false);
+  check("flags: ?net=local arms the two-peer harness, default off",
+    readFlags("?a=1&net=local").netLocal===true
+    &&readFlags("").netLocal===false);
+  check("flags: opts.orbit overrides the URL (explicit false wins)",
+    readFlags("?orbit=1",{orbit:false}).orbit===false
+    &&readFlags("?orbit=1").orbit===true
+    &&readFlags("").orbit===false);
+  check("flags: ?debug=1 or opts.debug opens the window hook",
+    readFlags("?debug=1").debug===true
+    &&readFlags("",{debug:true}).debug===true
+    &&readFlags("").debug===false);
+}
+
+// ATTRACT demo harness as a module: CORE seed, pact-free, 20s cap rollover
+{
+  const {createDemo,stepDemo,DEMO_SEED,DEMO_CAP}=
+    await import("../src/app/attract.js");
+  check("attract: harness pinned to CORE seed 20260823 and a 20s cap",
+    DEMO_SEED===20260823&&DEMO_CAP===20,DEMO_SEED+"/"+DEMO_CAP);
+  const d=createDemo();
+  check("attract: a fresh demo is a CORE pact-free level-1 PLAY world",
+    d.cycle===1&&d.world.level===1&&d.world.state==="PLAY"
+    &&d.world.heat===0&&(d.world.pact|0)===0&&d.world.seed===DEMO_SEED,
+    d.world.level+"/"+d.world.state+"/"+d.world.heat);
+  stepDemo(d,1/60);
+  check("attract: stepDemo advances the demo world",d.world.time>0,
+    String(d.world.time));
+  d.t=DEMO_CAP-CFG.STEP/2;
+  stepDemo(d,0.25);
+  check("attract: the 20s cap rolls 1 -> 2 into a fresh CORE world",
+    d.cycle===2&&d.world.level===2&&d.world.state==="PLAY"
+    &&d.t<1&&d.world.heat===0,
+    "cycle="+d.cycle+" lvl="+d.world.level+" t="+d.t.toFixed(3));
+}
+
+// ?net=local two-peer harness as a module (single-player proof, not netplay)
+{
+  const {createLocalPair}=await import("../src/net/localpair.js");
+  const w=createWorld(1234,1); loadLevel(w,1,false); w.state="PLAY";
+  const stub={intent:()=>({move:{x:0,y:0},fire:false,shift:false,
+    remote:false,kick:false}),advance(){}};
+  const pair=createLocalPair(w,stub);
+  check("localpair: mirror peer B mirrors A's seed on level 1 PLAY",
+    pair.wB.seed===w.seed&&pair.wB.level===1&&pair.wB.state==="PLAY",
+    pair.wB.seed+"/"+pair.wB.level);
+  for(let i=0;i<40;i++)pair.drive();
+  check("localpair: drive() keeps both peers on the same tick",
+    w.tick>0&&w.tick===pair.wB.tick,w.tick+"/"+pair.wB.tick);
+}
+
+// shell chrome view: the canvas/kind fallback box the shell draws into
+{
+  const {dims,kindSize}=await import("../src/render/shellview.js");
+  check("shellview: a null canvas falls back to the classic logical box",
+    dims(null,"2d").cw===CFG.COLS*CFG.TILE
+    &&dims(null,"2d").ch===CFG.ROWS*CFG.TILE,
+    dims(null,"2d").cw+"x"+dims(null,"2d").ch);
+  check("shellview: kind iso falls back to the projected box",
+    dims(null,"iso").cw===PROJ.canvasW&&dims(null,"iso").ch===PROJ.canvasH);
+  check("shellview: a real canvas always wins over the fallback",
+    dims({width:640,height:480},"iso").cw===640
+    &&dims({width:640,height:480},"iso").ch===480);
+  check("shellview: kindSize drives sizeCanvases per kind",
+    kindSize("3d").w===CFG.COLS*CFG.TILE&&kindSize("3d").h===CFG.ROWS*CFG.TILE
+    &&kindSize("iso").w===PROJ.canvasW&&kindSize("iso").h===PROJ.canvasH);
+}
+
+// toolbar + debug hook: DOM-only seams that must stay silent under Node
+{
+  const {mountToolbar,setBtn}=await import("../src/app/toolbar.js");
+  let threw=false;
+  try{ mountToolbar({inGame:()=>true}); setBtn("btnPause","Pause"); }
+  catch(e){ threw=true; console.log(e.message); }
+  check("toolbar: wiring and setBtn are silent no-ops without a document",
+    !threw);
+}
+{
+  const {mountDebugHook}=await import("../src/app/debughook.js");
+  check("debug hook: module exports a mount function",
+    typeof mountDebugHook==="function");
+  const noop=()=>{};
+  const win={addEventListener:noop,removeEventListener:noop};
+  globalThis.window=win;
+  try{
+    const g=createGame(null,{seed:71,debug:true});
+    check("debug hook: opts.debug exposes __GAME__ over the live world",
+      !!win.__GAME__&&win.__GAME__.G===g.world
+      &&typeof win.__pause==="function"&&typeof win.__resume==="function");
+    check("debug hook: state() names the shell screen outside GAME",
+      win.__GAME__.state()==="INTRO",String(win.__GAME__.state()));
+    win.__GAME__.begin();
+    check("debug hook: begin() starts a run, state() then reports the world",
+      win.__GAME__.state()==="PLAY",String(win.__GAME__.state()));
+   }finally{ delete globalThis.window; }
+  const clean={addEventListener:noop,removeEventListener:noop};
+  globalThis.window=clean;
+  try{
+    createGame(null,{seed:72});
+    check("debug hook: without the flag window stays clean",
+      !clean.__GAME__&&!clean.__pause);
+   }finally{ delete globalThis.window; }
 }
 
 console.log(fail? "HEADLESS FAIL":"HEADLESS OK");

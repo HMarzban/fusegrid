@@ -11,3 +11,9 @@ Gemini_Generated_Image_*.jpeg
 *.log
 .env
 .env.*
+
+# Agent/editor local state — never shipped, never reviewed
+.cursor/
+
+# Browser-MCP capture scratch: regenerated every session, PNGs stay local
+e2e-artifacts/

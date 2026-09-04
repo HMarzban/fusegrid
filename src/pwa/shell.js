@@ -1,14 +1,18 @@
-export const CACHE_NAME = "fusegrid-shell-v14";
+export const CACHE_NAME = "fusegrid-shell-v15";
 
 const SRC = Object.freeze([
   "src/ai/enemies.js",
+  "src/app/attract.js",
+  "src/app/debughook.js",
   "src/app/demobot.js",
+  "src/app/flags.js",
   "src/app/highscores.js",
   "src/app/intro.js",
   "src/app/menuapp.js",
   "src/app/pactstore.js",
   "src/app/pacestore.js",
   "src/app/store.js",
+  "src/app/toolbar.js",
   "src/audio.js",
   "src/audio/boom.js",
   "src/audio/foe.js",
@@ -25,6 +29,7 @@ const SRC = Object.freeze([
   "src/core/world.js",
   "src/input.js",
   "src/main.js",
+  "src/net/localpair.js",
   "src/net/lockstep.js",
   "src/net/protocol.js",
   "src/net/transport.js",
@@ -39,6 +44,7 @@ const SRC = Object.freeze([
   "src/render/r3d/scene3d.js",
   "src/render/renderer.js",
   "src/render/scenes.js",
+  "src/render/shellview.js",
   "src/render/sprites.js",
   "src/render/three/camrig.js",
   "src/render/three/entities.js",

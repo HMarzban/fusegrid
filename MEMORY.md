@@ -16,6 +16,10 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-04 — Split main.js into its seams (865 -> 567) + ignore capture noise
+- `main.js` keeps only the RAF loop, fixed-step accumulator, renderer cache and handler wiring; the six seams it inlined moved to `app/flags.js`, `app/attract.js`, `app/toolbar.js`, `app/debughook.js`, `net/localpair.js` and `render/shellview.js` (which also owns `kindSize`/`dims`, collapsing four copies of the canvas/kind fallback). The mid-file import run after `DEMO_SEED` is gone; `headless.test.mjs` now gates line count AND import position so it cannot come back. Behaviour unchanged: 24/24, fat-world still 143, MENU + REAL 3D play-verified headed. PWA v15 for the six new files.
+- `.gitignore` now covers `.cursor/` and `e2e-artifacts/` so browser-MCP capture scratch stops showing up in `git status`.
+
 ## 2026-09-04 — REAL 3D cam/light/frame: 54.5° rig, key+fill, one cabinet rim
 - Rig is now `{az:0,el:0.62,dist:960,target:[0,-44,0]}`: X binds the fit at every elevation, so the 3/4 read cost ~40 units of dolly; `el:0.419` (66°) was a ceiling security-cam. Lights split into warm key `#fff4e2` 1.05 (only caster) + cool fill `#bcd4ff` 0.45 opposite-and-behind, hemi 0.55, ambient 0.18 — 2.3:1, since `PCFSoftShadowMap` ignores `shadow.radius`. The 4 crossing `wallHi` rails became ONE `ExtrudeGeometry` rim with a hole, so fat-world 146 -> **143**. `three.test.mjs` gains a framing gate (all 8 biomes' corners + rim tops, worst ICE `|ndc| 0.913`) and a rim gate (one mesh, real hole, reach == RIM_W). PWA v14. Left open: play-verify headed on JUNGLE + ICE.
 

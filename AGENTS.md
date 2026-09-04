@@ -32,8 +32,14 @@ Heat grades CORE / PLUS / MAX live on LEVEL SELECT (`←/→` room, `↑/↓` he
 The sim ticks only while the shell is GAME. PAUSE/WIN/LOSE are `world.state`,
 not shell screens. Do not add them as `SCREEN` values.
 
-- `src/main.js` — **browser entry only**. RAF loop, URL flags, toolbar, attract
-  harness, kind switch. Never imported by sim or renderer.
+- `src/main.js` — **browser entry only**. RAF loop, fixed-step accumulator,
+  renderer cache + kind switch, and the handler wiring that binds them. Never
+  imported by sim or renderer. Its seams live beside it and must stay OUT of
+  `main.js`: `src/app/flags.js` (URL/opts, pure over a search string),
+  `src/app/attract.js` (demo world + `stepDemo`), `src/app/toolbar.js` (button
+  DOM + `setBtn`), `src/app/debughook.js` (`window.__GAME__`),
+  `src/net/localpair.js` (`?net=local`), `src/render/shellview.js`
+  (`drawShell` + the `kindSize`/`dims` logical box).
 - `src/core/` — deterministic simulation, no DOM, no browser globals.
   - `world.js` — `createWorld`, `loadLevel` (re-exported from `sim.js`).
   - `sim.js` — `step(world, dt, intents)`.
@@ -64,7 +70,14 @@ not shell screens. Do not add them as `SCREEN` values.
     crops WebGL to the bottom-left quarter on dpr=2.
   - The board border is ONE extruded cabinet rim (`tag:"trim"`, `RIM_W 18` /
     `RIM_LIP 6`) with a hole — never four rails, which crossed at the corners.
-- `src/app/` — menu shell, intro beats, demobot, highscores, `pactstore.js`. Not read by `step()`.
+  - `shellview.js` routes `app.screen` to `menudraw.js` and owns `kindSize` /
+    `dims`, the one logical box every screen measures against (a real canvas
+    wins, otherwise kind picks the classic box or the projected one). It is
+    the only render module that may read `src/app/` — screen constants only,
+    and scores arrive as a getter so `highscores` stays on the app side.
+- `src/app/` — menu shell, intro beats, demobot, highscores, `pactstore.js`,
+  plus the entry seams above (`flags` / `attract` / `toolbar` / `debughook`).
+  Not read by `step()`.
   Demobot is an intent FSM (plant-and-leave, hunger for combat cubes / corridor
   foes); attract still CORE/pact=0. Highscores use `scoreEntry`; `noteWorldEdge`
   is a boolean edge, not a score writer.
