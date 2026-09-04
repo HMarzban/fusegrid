@@ -1,5 +1,9 @@
 import { CFG } from "../core/config.js";
 
+/* The dark seal every cabinet glyph and every foe contour strokes itself
+   with — one constant so the two families keep the same craft. */
+export const RIM = "rgba(0,0,0,0.55)";
+
 export function rr(c, x, y, w, h, r) {
   c.beginPath();
   c.moveTo(x + r, y);
@@ -14,7 +18,7 @@ export function rr(c, x, y, w, h, r) {
 export function drawIcon(c, type, col, time) {
   c.save();
   c.lineWidth = 2;
-  c.strokeStyle = "rgba(0,0,0,0.55)";
+  c.strokeStyle = RIM;
   c.lineJoin = "round";
   c.lineCap = "round";
   c.fillStyle = col;

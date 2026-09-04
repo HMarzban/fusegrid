@@ -96,13 +96,67 @@ function stub() {
     },
   });
 }
-function dummy(type) {
+/* Axis-aligned extent recorder. The ENEMIES well is a square of side ws
+   centred on the icon and menudraw scales bodies by ws/30, so at r=14 a body
+   has to stay inside +-15 local units or it paints over the cell. Only
+   boomerang rotates, about the origin, which preserves max radius. */
+function bounds() {
+  const b = { x0: 0, x1: 0, y0: 0, y1: 0 };
+  const at = (x, y) => {
+    if (typeof x !== "number" || typeof y !== "number") return;
+    b.x0 = Math.min(b.x0, x);
+    b.x1 = Math.max(b.x1, x);
+    b.y0 = Math.min(b.y0, y);
+    b.y1 = Math.max(b.y1, y);
+  };
+  const box = (x, y, w, h) => {
+    at(x, y);
+    at(x + w, y + h);
+  };
+  return {
+    _b: b,
+    save() {},
+    restore() {},
+    translate() {},
+    scale() {},
+    rotate() {},
+    beginPath() {},
+    closePath() {},
+    fill() {},
+    stroke() {},
+    moveTo: at,
+    lineTo: at,
+    quadraticCurveTo(x1, y1, x, y) {
+      at(x1, y1);
+      at(x, y);
+    },
+    bezierCurveTo(a1, b1, a2, b2, x, y) {
+      at(a1, b1);
+      at(a2, b2);
+      at(x, y);
+    },
+    arc(x, y, rad) {
+      box(x - rad, y - rad, rad * 2, rad * 2);
+    },
+    arcTo(x1, y1, x, y) {
+      at(x1, y1);
+      at(x, y);
+    },
+    ellipse(x, y, rx, ry) {
+      box(x - rx, y - ry, rx * 2, ry * 2);
+    },
+    fillRect: box,
+    strokeRect: box,
+  };
+}
+function dummy(type, dir) {
   return {
     type,
     color: "#ffffff",
     r: 14,
     home: { x: 1, y: 1 },
     invuln: false,
+    dir,
   };
 }
 function mkE(type, x, y) {
@@ -152,19 +206,52 @@ function mkE(type, x, y) {
     for (let j = i + 1; j < TYPES.length; j++)
       if (sigs[TYPES[i]] === sigs[TYPES[j]]) distinct = false;
   check("drawEnemyBody silhouettes are distinct", distinct);
-  const w = stub();
-  drawEnemyBody(w, { time: 0 }, dummy("walker"));
-  check(
-    "WALKER has boots plus a pack",
-    w._ops.filter((o) => o === "fillRect").length >= 3,
-    w._ops.filter((o) => o === "fillRect").length,
-  );
-  const ch = stub();
-  drawEnemyBody(ch, { time: 0 }, dummy("chaser"));
-  check("CHASER is a tall egg (scale)", ch._ops.includes("scale"));
-  const fa = stub();
-  drawEnemyBody(fa, { time: 0 }, dummy("fast"));
-  check("FAST is a wide puck (scale)", fa._ops.includes("scale"));
+  const noGround = [],
+    noRim = [],
+    noEye = [],
+    flat = [],
+    scaled = [];
+  for (const t of TYPES) {
+    const c = stub();
+    drawEnemyBody(c, { time: 0 }, dummy(t));
+    if (!c._ops.includes("ellipse")) noGround.push(t);
+    if (!(c._ops.includes("set:strokeStyle") && c._ops.includes("stroke")))
+      noRim.push(t);
+    if (!c._ops.includes("arc")) noEye.push(t);
+    if (c._ops.filter((o) => o === "set:fillStyle").length < 4) flat.push(t);
+    if (c._ops.includes("scale")) scaled.push(t);
+  }
+  check("every foe lays a contact shade on the floor", !noGround.length, noGround.join(","));
+  check("every foe seals its contour with a dark rim", !noRim.length, noRim.join(","));
+  check("every foe carries a sculpted eye", !noEye.length, noEye.join(","));
+  check("every foe builds three tonal values", !flat.length, flat.join(","));
+  check("no body leaves an ambient scale on the ctx", !scaled.length, scaled.join(","));
+  const HEADS = ["walker", "chaser", "fast", "burrow", "knight"];
+  const PLANTED = ["stationary", "boomerang", "rocket", "shade"];
+  const noTurn = [],
+    drifted = [];
+  for (const t of TYPES) {
+    const f = stub(),
+      b = stub();
+    drawEnemyBody(f, { time: 0 }, dummy(t, { x: 0, y: 1 }));
+    drawEnemyBody(b, { time: 0 }, dummy(t, { x: 0, y: -1 }));
+    const turns = JSON.stringify(f._ops) !== JSON.stringify(b._ops);
+    if (HEADS.includes(t) && !turns) noTurn.push(t);
+    if (PLANTED.includes(t) && turns) drifted.push(t);
+  }
+  check("head-bearing foes turn their back walking away", !noTurn.length, noTurn.join(","));
+  check("planted, spinning and headless foes ignore dir", !drifted.length, drifted.join(","));
+  const over = [];
+  for (const t of TYPES) {
+    let m = 0;
+    for (const time of [0, 0.31, 0.77, 1.4]) {
+      const c = bounds();
+      drawEnemyBody(c, { time }, dummy(t));
+      m = Math.max(m, -c._b.x0, c._b.x1, -c._b.y0, c._b.y1);
+    }
+    if (!(m <= 15.2)) over.push(t + ":" + m.toFixed(1));
+  }
+  check("every body fits the ENEMIES well at r=14", !over.length, over.join(" "));
 }
 
 {
@@ -385,6 +472,12 @@ function mkE(type, x, y) {
   check(
     "drawEnemyBody lives in enemybody.js and sprites re-exports it",
     !!bodies && typeof bodies.drawEnemyBody === "function" && same,
+  );
+  const icons = await import("../src/render/icons.js");
+  check(
+    "foe rim is the item-glyph rim (one shared constant)",
+    icons.RIM === "rgba(0,0,0,0.55)",
+    String(icons.RIM),
   );
 }
 

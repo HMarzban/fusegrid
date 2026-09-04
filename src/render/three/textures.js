@@ -23,21 +23,26 @@ function src(mk,paint){
    },mk);
 }
 
-/* Face-plane paints: visor / lens / slit, not cartoon sclerae. Contrast
-   still has to read from the 66° rig on a 64×32 strip. */
+/* Face-plane paints: the same socket / iris / specular / brow build the 2D
+   bodies use, so a foe reads as one character in CLASSIC 2D and REAL 3D.
+   Contrast still has to carry from the rig on a 64×32 strip. */
 function paintEyes(c,t){
   c.fillStyle="#101521";
-  c.fillRect(4,8,56,16);
+  c.fillRect(3,7,58,19);
   const a=t==="fast"||t==="burrow"?[20,44]:t==="rocket"?[18,46]:[22,42];
   const col=t==="fast"?"#ffd447":t==="burrow"?"#c48a3a":t==="rocket"?"#ffde7a":
     t==="knight"?"#d4b05a":t==="chaser"?"#66c8ff":t==="shade"?"#6b7cff":
     t==="boomerang"?"#ff9dd6":"#8affc1";
+  c.fillStyle="#05070c";
+  for(const ex of a){ c.beginPath(); c.arc(ex,17,8,0,Math.PI*2); c.fill(); }
   c.fillStyle=col;
-  for(const ex of a){ c.beginPath(); c.ellipse(ex,16,8,5.5,0,0,Math.PI*2); c.fill(); }
-  c.strokeStyle="#101521"; c.lineWidth=2;
-  for(const ex of a){ c.beginPath(); c.ellipse(ex,16,8,5.5,0,0,Math.PI*2); c.stroke(); }
-  c.fillStyle="#101521";
-  for(const ex of a){ c.beginPath(); c.arc(ex,16,2.6,0,Math.PI*2); c.fill(); }
+  for(const ex of a){ c.beginPath(); c.arc(ex,17,5.6,0,Math.PI*2); c.fill(); }
+  c.fillStyle="#05070c";
+  for(const ex of a){ c.beginPath(); c.arc(ex,17.6,2.3,0,Math.PI*2); c.fill(); }
+  c.fillStyle="#ffffff";
+  for(const ex of a){ c.beginPath(); c.arc(ex-2.4,14.6,1.8,0,Math.PI*2); c.fill(); }
+  c.fillStyle="#05070c";
+  c.fillRect(3,7,58,4);
 }
 
 /* ---- stationary visor SLIT (identity §2: NOT eyes — the square reads via

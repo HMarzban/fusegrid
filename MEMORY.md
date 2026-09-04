@@ -16,6 +16,10 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-04 — Foes rebuilt as characters, not colored tokens
+- The `926c368` "mature silhouettes" pass never landed in 2D: bodies were still one flat fill of `e.color` with a `fillRect` visor, no floor contact, and walker/chaser/fast all fell out of the same circle branch. `enemybody.js` is now one shared five-beat build (contact shade, dark contour, inset body, upper-left sheen, sculpted eye) over nine distinct contours — bell, pillbox, delta, leaning hull, open ring, missile, grub, ragged hood, crowned helm. Creatures get an eye (sclera / iris / pupil / specular), machines get a lens.
+- Shading stacks opaque fills because the headless ctx has neither `clip()` nor gradients; tones lerp off `e.color` (quantised + memoised) so `spawnEnemy` stays the one palette source. No `c.scale()` in any body, so a bounds test can pin every foe inside the ENEMIES well at r=14 — `fast` used to overflow it by 60%. `e.dir` now drives a three-quarter face shift and a real turn-your-back pose. Art only: seed-42 roster and the 180-step AI pin are untouched, draw calls stay 143. PWA v17.
+
 ## 2026-09-04 — Share card rebuilt on a real 3D board render
 - The old `og.png` predated `1a13216`, so it advertised a look the game no longer has (and its CTA pill ran off the bottom edge). New card composites an actual live capture: JUNGLE, the 54.5° rig, warm key + cool fill, the one cabinet rim, and a blast mid-detonation. Captured headed by setting `scene.background=null` so the WebGL clear is transparent and the board drops straight onto the card field — no chroma key, no pasted screenshot rectangle.
 - 1200×630, 644 KB (was 1.25 MB). Alignment from `29e7e4a` preserved and now asserted at build time: CTA left == CORE left (120), CTA right == MAX right (575), chip gaps 20/20. Type sits at a 10% left inset, 22.7% top, 19.4% bottom. `index.html` / README alt copy rewritten to match; PWA v16 since `index.html` bytes moved.
