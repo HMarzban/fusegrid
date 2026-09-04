@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-04 — Share-card CTA on heat-chip grid
+- Root `og.png` 1200×630: PLAY IN THE BROWSER left = CORE left (x=44), right = MAX right (x=731); CORE/PLUS/MAX gaps stay 20/21px. Art otherwise unchanged.
+
 ## 2026-09-04 — PWA reload on new CACHE_NAME
 - Returning installs were stuck on cache-first until site data clear. `registerSW` now calls `registration.update()` and reloads once on `controllerchange`. skipWaiting + claim already in `sw.js`. Shell `fusegrid-shell-v11`.
 
