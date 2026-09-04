@@ -72,7 +72,8 @@ not shell screens. Do not add them as `SCREEN` values.
   `src/audio/boom.js` (`boomOf`). Pickup grab tints live in
   `src/audio/item.js` (`itemOf` / `sfxOf`); `play("item_"+kind)` from power
   events that carry `kind`. Catalog stays 12; `applyPower` semantics unchanged.
-  Pickup glyphs live in `drawIcon`; 3D cube faces reuse `paintItemFace`.
+  Pickup glyphs live in `drawIcon`; HOW TO / HUD chips / 2D bombs reuse them.
+  3D cube faces reuse `paintItemFace`.
   Foe kill tints live in `src/audio/foe.js` (`foeOf`); `sfxOf` maps
   `kill`+`type` to `foe_<t>`. ENEMIES / arena 2D use `drawEnemyBody`
   (WALKER pack, CHASER egg, FAST puck). Do not retune `src/ai/enemies.js`.

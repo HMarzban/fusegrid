@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-04 — Cabinet rest (HOW TO / HUD / bombs)
+- HOW TO paints `drawIcon` wells for BOMB / THROW / REMOTE / KICK; HUD BOMB chip uses POWER `#ff5d73`; 2D planted bombs share the pickup silhouette (curved fuse, + pip, dark charge). 3D bomb slot stays 5 / fat-world 186. Spec `2026-09-04-cabinet-rest-design.md`. PWA v7.
+
 ## 2026-09-04 — Enemy cabinet silhouettes + kill tints
 - WALKER pack / CHASER egg / FAST puck in `drawEnemyBody` (3D faces reuse the same paint). Kill emit gains `type`; `foe_*` table in `src/audio/foe.js`. AI untouched. Spec `2026-09-04-enemy-redesign-design.md`. PWA v6.
 

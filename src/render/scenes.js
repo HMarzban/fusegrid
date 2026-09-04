@@ -163,7 +163,7 @@ export function drawHudChips(c, world) {
     c.font = "900 13px ui-monospace,monospace";
     c.fillText(String(count), x + 31, 33);
   };
-  chip(140, 76, "BOMB", p.bombs || 0, "#ffd447");
+  chip(140, 76, "BOMB", p.bombs || 0, "#ff5d73");
   chip(224, 82, "FLAME", p.range || 0, "#ff8a3c");
   const scx = CFG.COLS * CFG.TILE - 12;
   c.textAlign = "right";

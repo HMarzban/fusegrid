@@ -743,16 +743,16 @@ export function drawBombBody(c, world, bm) {
   const r = CFG.TILE * 0.3;
   c.fillStyle = "rgba(0,0,0,0.35)";
   c.beginPath();
-  c.ellipse(0, r * 0.9, r * 0.8, r * 0.25, 0, 0, 7);
+  c.ellipse(0, r * 0.98, r * 0.8, r * 0.25, 0, 0, 7);
   c.fill();
   c.fillStyle = "#15181f";
   c.beginPath();
-  c.arc(0, 0, r, 0, 7);
+  c.arc(0, r * 0.08, r, 0, 7);
   c.fill();
   c.strokeStyle = "#0a0d14";
   c.lineWidth = 1.75;
   c.beginPath();
-  c.arc(0, 0, r, 0, 7);
+  c.arc(0, r * 0.08, r, 0, 7);
   c.stroke();
   if (bm.variant === "power") {
     for (let i = 0; i < 8; i++) {
@@ -777,26 +777,32 @@ export function drawBombBody(c, world, bm) {
   }
   c.fillStyle = "rgba(255,255,255,0.45)";
   c.beginPath();
-  c.arc(-r * 0.32, -r * 0.32, r * 0.3, 0, 7);
+  c.arc(-r * 0.3, -r * 0.18, r * 0.26, 0, 7);
   c.fill();
-  c.fillStyle = "#0a0d14";
-  c.fillRect(-r * 0.18, -r * 1.05, r * 0.36, r * 0.5);
+  c.strokeStyle = "#fff";
+  c.lineWidth = 2.2;
+  c.beginPath();
+  c.moveTo(-r * 0.28, r * 0.08);
+  c.lineTo(r * 0.28, r * 0.08);
+  c.moveTo(0, -r * 0.2);
+  c.lineTo(0, r * 0.36);
+  c.stroke();
   c.strokeStyle = "#ff9d5a";
   c.lineWidth = 2.5;
   c.beginPath();
-  c.moveTo(0, -r * 0.95);
-  c.lineTo(0, -r * 1.2);
+  c.moveTo(r * 0.22, -r * 0.62);
+  c.quadraticCurveTo(r * 0.48, -r * 0.95, r * 0.58, -r * 1.22);
   c.stroke();
   c.fillStyle = Math.floor(world.time * 14) % 2 ? "#ff5d73" : "#ffd447";
   c.beginPath();
-  c.arc(0, -r * 1.24, r * 0.13 + Math.sin(world.time * 30) * 0.03, 0, 7);
+  c.arc(r * 0.6, -r * 1.26, r * 0.13 + Math.sin(world.time * 30) * 0.03, 0, 7);
   c.fill();
   if (bm.variant === "line") {
     c.fillStyle = "#15181f";
     for (let i = -1; i <= 1; i++) {
       if (i === 0) continue;
       c.beginPath();
-      c.arc(i * r * 0.9, 0, r * 0.5, 0, 7);
+      c.arc(i * r * 0.9, r * 0.08, r * 0.5, 0, 7);
       c.fill();
     }
   }

@@ -188,6 +188,7 @@ function check(name, cond, detail) {
   const rec = () => {
     const texts = [],
       rects = [];
+    let quads = 0;
     const c = {
       fillStyle: "",
       strokeStyle: "",
@@ -199,6 +200,7 @@ function check(name, cond, detail) {
       shadowColor: "",
       shadowBlur: 0,
       lineJoin: "round",
+      lineCap: "round",
       fillRect(x, y, w, h) {
         rects.push({ x, y, w, h, fill: c.fillStyle });
       },
@@ -217,13 +219,17 @@ function check(name, cond, detail) {
       arc() {},
       arcTo() {},
       ellipse() {},
+      quadraticCurveTo() {
+        quads++;
+      },
+      bezierCurveTo() {},
       save() {},
       restore() {},
       translate() {},
       scale() {},
       rotate() {},
     };
-    return { c, texts, rects };
+    return { c, texts, rects, get quads() { return quads; } };
   };
   const plateOf = (rects) => rects.find((r) => r.fill === "rgba(8,12,22,0.92)");
   const last = (arr) => arr[arr.length - 1];
@@ -324,6 +330,39 @@ function check(name, cond, detail) {
           py: p && p.y,
           ph: p && p.h,
           esc: esc && esc.y,
+          hits: hits.map((h) => h && h.y),
+        }),
+      );
+    }
+    {
+      const recd = rec();
+      md.drawHowTo(recd.c, L, 1);
+      const { texts, rects, quads } = recd;
+      const p = plateOf(rects);
+      const names = ["BOMB", "THROW", "REMOTE", "KICK"];
+      const hits = names.map((n) =>
+        texts.find((t) => t.s === n || t.s.indexOf(n) === 0),
+      );
+      const title = texts.find((t) => t.s === "HOW TO PLAY");
+      const esc = texts.find((t) => t.s.indexOf("ESC") >= 0);
+      check(
+        `how to catalog glyphs + plate at ${W}x${H}`,
+        !!p &&
+          !!title &&
+          !!esc &&
+          hits.every((h) => !!h) &&
+          hits.every((h) => h.y > p.y + 8 && h.y < p.y + p.h - 8) &&
+          title.y > p.y &&
+          title.y < p.y + p.h &&
+          esc.y < p.y + p.h - 4 &&
+          quads >= 1 &&
+          !texts.some((t) => t.s === "bomb") &&
+          !texts.some((t) => t.s.indexOf("5 rooms") >= 0),
+        JSON.stringify({
+          py: p && p.y,
+          ph: p && p.h,
+          quads,
+          labels: texts.map((t) => t.s),
           hits: hits.map((h) => h && h.y),
         }),
       );

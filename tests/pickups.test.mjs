@@ -3,7 +3,8 @@ import { applyPower, POWER } from "../src/core/entities.js";
 import { CFG } from "../src/core/config.js";
 import { createAudio } from "../src/audio.js";
 import * as audioMod from "../src/audio.js";
-import { drawIcon, paintItemFace } from "../src/render/sprites.js";
+import { drawIcon, paintItemFace, drawBombBody } from "../src/render/sprites.js";
+import { drawHudChips } from "../src/render/scenes.js";
 import { createRenderer } from "../src/render/renderer.js";
 import { initFx, onEvent, getFx } from "../src/render/fx.js";
 
@@ -413,6 +414,128 @@ const APPLY = {
     for (let j = i + 1; j < IDS.length; j++)
       if (faceSigs[IDS[i]] === faceSigs[IDS[j]]) faceDistinct = false;
   check("paintItemFace silhouettes are distinct", faceDistinct);
+}
+
+{
+  const fills = [];
+  const texts = [];
+  const c = {
+    fillStyle: "",
+    strokeStyle: "",
+    lineWidth: 1,
+    font: "",
+    textAlign: "left",
+    textBaseline: "middle",
+    save() {},
+    restore() {},
+    translate() {},
+    scale() {},
+    beginPath() {},
+    closePath() {},
+    moveTo() {},
+    lineTo() {},
+    bezierCurveTo() {},
+    quadraticCurveTo() {},
+    arc() {},
+    fill() {},
+    stroke() {},
+    fillRect() {},
+    strokeRect() {},
+    fillText(s) {
+      texts.push(String(s));
+    },
+  };
+  const rec = new Proxy(c, {
+    set(t, p, v) {
+      if (p === "fillStyle") fills.push(String(v));
+      t[p] = v;
+      return true;
+    },
+  });
+  drawHudChips(rec, {
+    lives: 3,
+    score: 0,
+    heat: 0,
+    players: [{ bombs: 2, range: 3 }],
+  });
+  check(
+    "HUD still paints BOMB / FLAME",
+    texts.includes("BOMB") && texts.includes("FLAME") && texts.includes("2")
+      && texts.includes("3"),
+    texts.join("|"),
+  );
+  check(
+    "HUD chips use catalog heart/BOMB/FLAME colors",
+    fills.includes("#ff3b5c") && fills.includes("#ff5d73")
+      && fills.includes("#ff8a3c"),
+    fills.join("|"),
+  );
+}
+
+{
+  const ops = [];
+  const c = {
+    save() {
+      ops.push("save");
+    },
+    restore() {
+      ops.push("restore");
+    },
+    scale() {
+      ops.push("scale");
+    },
+    beginPath() {
+      ops.push("beginPath");
+    },
+    moveTo(x, y) {
+      ops.push(["m", +x.toFixed(2), +y.toFixed(2)]);
+    },
+    lineTo(x, y) {
+      ops.push(["l", +x.toFixed(2), +y.toFixed(2)]);
+    },
+    quadraticCurveTo() {
+      ops.push("quad");
+    },
+    bezierCurveTo() {
+      ops.push("bez");
+    },
+    arc() {
+      ops.push("arc");
+    },
+    ellipse() {
+      ops.push("ellipse");
+    },
+    fill() {
+      ops.push("fill");
+    },
+    stroke() {
+      ops.push("stroke");
+    },
+    fillRect() {
+      ops.push("fillRect");
+    },
+  };
+  const rec = new Proxy(c, {
+    set(t, p, v) {
+      if (typeof p !== "symbol") ops.push("set:" + String(p));
+      t[p] = v;
+      return true;
+    },
+  });
+  drawBombBody(
+    rec,
+    { time: 0.2, fuse: 3 },
+    { timer: 3, variant: "normal" },
+  );
+  const moves = ops.filter((o) => Array.isArray(o) && o[0] === "m");
+  const lines = ops.filter((o) => Array.isArray(o) && o[0] === "l");
+  check("drawBombBody uses curved fuse", ops.includes("quad"));
+  check(
+    "drawBombBody paints a + pip",
+    moves.length >= 2 && lines.length >= 2,
+    moves.length + "/" + lines.length,
+  );
+  check("drawBombBody has no chimney fillRect", !ops.includes("fillRect"));
 }
 
 console.log("\n" + pass + " passed, " + fail + " failed");

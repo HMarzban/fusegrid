@@ -425,12 +425,12 @@ export function drawHowTo(c, L, t) {
   const S = shell(c, L, 520);
   head(c, S, "HOW TO PLAY", "CONTROLS");
   const rows = [
-    ["WASD / ARROWS", "move"],
-    ["SPACE", "bomb"],
-    ["SHIFT + SPACE", "throw *"],
-    ["Q", "remote *"],
-    ["K + MOVE", "kick *"],
-    ["P", "pause"],
+    ["WASD / ARROWS", "MOVE", null],
+    ["SPACE", "BOMB", "bomb"],
+    ["SHIFT + SPACE", "THROW *", "throw"],
+    ["Q", "REMOTE *", "remote"],
+    ["K + MOVE", "KICK *", "kick"],
+    ["P", "PAUSE", null],
   ];
   const cols = 2,
     noteY = S.footY - 30;
@@ -448,14 +448,29 @@ export function drawHowTo(c, L, t) {
     c.strokeStyle = LINE;
     c.lineWidth = 1;
     c.strokeRect(x + 0.5, y + 0.5, cw - 9, rh - 7);
+    const kind = rows[i][2];
+    const ws = Math.min(22, Math.max(14, rh - 14));
+    let tx = x + 10;
+    if (kind) {
+      const p = POWER.find((d) => d.t === kind);
+      const ix = x + 10 + ws / 2,
+        iy = y + (rh - 6) / 2;
+      well(c, ix, iy, ws, p && p.col);
+      c.save();
+      c.translate(ix, iy);
+      c.scale((ws / 28) * 0.72, (ws / 28) * 0.72);
+      drawIcon(c, kind, (p && p.col) || ACCENT, t);
+      c.restore();
+      tx = x + ws + 16;
+    }
     c.textAlign = "left";
     c.textBaseline = "middle";
     c.fillStyle = ACCENT;
     c.font = font(9, "900");
-    c.fillText(rows[i][0], x + 10, y + (rh - 6) / 2 - 6);
+    c.fillText(rows[i][0], tx, y + (rh - 6) / 2 - 6);
     c.fillStyle = TEXT;
     c.font = font(12);
-    c.fillText(rows[i][1], x + 10, y + (rh - 6) / 2 + 8);
+    c.fillText(rows[i][1], tx, y + (rh - 6) / 2 + 8);
   }
   c.textAlign = "center";
   c.fillStyle = MUTED;
@@ -468,7 +483,7 @@ export function drawHowTo(c, L, t) {
   c.fillStyle = ACCENT;
   c.font = font(10);
   c.fillText(
-    "clear every enemy · 5 rooms · gold wall never breaks",
+    "clear every enemy · gold wall never breaks",
     S.mid,
     noteY + 14,
   );
