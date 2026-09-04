@@ -23,24 +23,21 @@ function src(mk,paint){
    },mk);
 }
 
-/* ---- §3 eye strips (enemy-identity 2026-08-25: BOLDENED — bigger sclerae
-   with dark outline, fatter pupils, heavier brows; the big tilted face
-   planes need the extra contrast to read from the 66° rig) ---- */
+/* Face-plane paints: visor / lens / slit, not cartoon sclerae. Contrast
+   still has to read from the 66° rig on a 64×32 strip. */
 function paintEyes(c,t){
-  const idx=Math.max(0,ENEMY_TYPES.indexOf(t));
-  const dx=(idx%3-1)*3, dy=(idx<3?-1:1)*1.5, slope=(idx-2.5)*0.05;
-  c.fillStyle="#f4f7ff";
-  for(const ex of [19,45]){ c.beginPath();
-    c.ellipse(ex+dx*0.4,16,11.5,9,0,0,Math.PI*2); c.fill(); }
-  c.strokeStyle="#101521"; c.lineWidth=2.5;
-  for(const ex of [19,45]){ c.beginPath();
-    c.ellipse(ex+dx*0.4,16,11.5,9,0,0,Math.PI*2); c.stroke(); }
   c.fillStyle="#101521";
-  for(const ex of [19,45]){ c.beginPath();
-    c.arc(ex+dx,16+dy,5.2,0,Math.PI*2); c.fill(); }
-  c.strokeStyle="#101521"; c.lineWidth=4.5; c.lineCap="round";
-  for(const ex of [19,45]){ c.beginPath();
-    c.moveTo(ex-12,6-slope*11); c.lineTo(ex+12,6+slope*11); c.stroke(); }
+  c.fillRect(4,8,56,16);
+  const a=t==="fast"||t==="burrow"?[20,44]:t==="rocket"?[18,46]:[22,42];
+  const col=t==="fast"?"#ffd447":t==="burrow"?"#c48a3a":t==="rocket"?"#ffde7a":
+    t==="knight"?"#d4b05a":t==="chaser"?"#66c8ff":t==="shade"?"#6b7cff":
+    t==="boomerang"?"#ff9dd6":"#8affc1";
+  c.fillStyle=col;
+  for(const ex of a){ c.beginPath(); c.ellipse(ex,16,8,5.5,0,0,Math.PI*2); c.fill(); }
+  c.strokeStyle="#101521"; c.lineWidth=2;
+  for(const ex of a){ c.beginPath(); c.ellipse(ex,16,8,5.5,0,0,Math.PI*2); c.stroke(); }
+  c.fillStyle="#101521";
+  for(const ex of a){ c.beginPath(); c.arc(ex,16,2.6,0,Math.PI*2); c.fill(); }
 }
 
 /* ---- stationary visor SLIT (identity §2: NOT eyes — the square reads via

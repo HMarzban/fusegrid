@@ -542,10 +542,10 @@ export function drawItemsHelp(c, L, t) {
 
 /* ENEMIES: two-column field guide of every FOES type, live 2D bodies. */
 export function drawEnemiesHelp(c, L, t) {
-  const S = shell(c, L, 560);
+  const S = shell(c, L, 640);
   head(c, S, "ENEMIES", "FIELD GUIDE");
   const n = FOES.length,
-    cols = 2,
+    cols = n > 6 ? 3 : 2,
     rows = Math.ceil(n / cols);
   const gap = 7;
   const y0 = S.headY + 20,
@@ -587,15 +587,15 @@ export function drawEnemiesHelp(c, L, t) {
     c.textAlign = "left";
     c.textBaseline = "middle";
     c.fillStyle = TEXT;
-    c.font = font(ch < 40 ? 10 : 12, "900");
-    c.fillText(f.name, tx, mid - 11);
+    c.font = font(cols === 3 ? 9 : ch < 40 ? 10 : 12, "900");
+    c.fillText(f.name, tx, mid - (cols === 3 ? 8 : 11));
     c.fillStyle = MUTED;
-    c.font = font(ch < 40 ? 8 : 9);
-    c.fillText(f.help, tx, mid + 3);
+    c.font = font(cols === 3 ? 7 : ch < 40 ? 8 : 9);
+    c.fillText(f.help, tx, mid + 2);
     c.fillStyle = ACCENT;
     c.globalAlpha = 0.75;
-    c.font = font(8, "900");
-    c.fillText("ROOMS " + f.rooms, tx, mid + 15);
+    c.font = font(cols === 3 ? 7 : 8, "900");
+    c.fillText("ROOMS " + f.rooms, tx, mid + (cols === 3 ? 12 : 15));
     c.globalAlpha = 1;
   }
   foot(c, S, "TOUCH HURTS · BOMB TO CLEAR · ESC BACK");

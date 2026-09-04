@@ -77,7 +77,9 @@ not shell screens. Do not add them as `SCREEN` values.
   (`SLOT_MESH.item === 2`); `paintItemFace` stays for atlas tests.
   Foe kill tints live in `src/audio/foe.js` (`foeOf`); `sfxOf` maps
   `kill`+`type` to `foe_<t>`. ENEMIES / arena 2D use `drawEnemyBody`
-  (WALKER pack, CHASER egg, FAST puck). Do not retune `src/ai/enemies.js`.
+  (visor grunt / bunker / drone / hunter helm / wraith / missile, plus
+  BURROW / SHADE / KNIGHT on rooms 6–8). Hunt is `e.hunt` at spawn; do not
+  retune wander / still / chase / phase algorithms.
   `musicCue` uses `biomeOf(level).name`.
   Oscillator SFX stay direct-to-destination (layered voice + noise + filter,
   never musicGain). Music is a track table: menu AABB (identity), intro bed,

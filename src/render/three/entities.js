@@ -28,6 +28,9 @@ export const ENEMY_TYPES = [
   "stationary",
   "boomerang",
   "rocket",
+  "burrow",
+  "shade",
+  "knight",
 ];
 const PROTO = {};
 for (const t of ENEMY_TYPES) PROTO[t] = spawnEnemy(t, 0, 0, 1, null);
@@ -98,6 +101,19 @@ for (const t of ENEMY_TYPES) {
     g = new THREE.TorusGeometry(r * 0.72, r * 0.19, 8, 26, 4.7);
     g.rotateX(-Math.PI / 2);
     h = r * 0.55;
+    m = new THREE.MeshLambertMaterial({ color: PROTO[t].color });
+  } else if (t === "burrow") {
+    g = new THREE.CylinderGeometry(r * 0.95, r * 0.82, r * 1.05, 10);
+    g.rotateZ(Math.PI / 2);
+    h = r * 0.55;
+    m = new THREE.MeshPhongMaterial({ color: PROTO[t].color, shininess: 40 });
+  } else if (t === "shade") {
+    g = new THREE.OctahedronGeometry(r * 1.05, 0);
+    h = r * 1.05;
+    m = new THREE.MeshLambertMaterial({ color: PROTO[t].color });
+  } else if (t === "knight") {
+    g = new THREE.BoxGeometry(r * 1.55, r * 2.15, r * 1.45);
+    h = r * 1.08;
     m = new THREE.MeshLambertMaterial({ color: PROTO[t].color });
   } else {
     g = new THREE.ConeGeometry(r * 1.02, r * 2.5, 3);
@@ -312,6 +328,60 @@ export const GD = {},
     [0, 0, 0],
     [0, 0, 0],
   ];
+  K = "e_burrow";
+  r = PROTO.burrow.r;
+  GD[K] = [
+    sharedGeo(new THREE.BoxGeometry(r * 0.22, r * 0.18, r * 0.55)),
+    sharedGeo(new THREE.BoxGeometry(r * 0.22, r * 0.18, r * 0.55)),
+  ];
+  MD[K] = [DARK, DARK];
+  GT[K] = [
+    [-r * 0.55, r * 0.2, r * 0.55],
+    [r * 0.55, r * 0.2, r * 0.55],
+  ];
+  GR[K] = [
+    [0, 0.35, 0],
+    [0, -0.35, 0],
+  ];
+  K = "e_shade";
+  r = PROTO.shade.r;
+  const wispM = sharedMat(
+    new THREE.MeshBasicMaterial({
+      color: PROTO.shade.color,
+      transparent: true,
+      opacity: 0.45,
+      depthWrite: false,
+    }),
+  );
+  GD[K] = [
+    sharedGeo(new THREE.SphereGeometry(r * 0.16, 8, 6)),
+    sharedGeo(new THREE.SphereGeometry(r * 0.12, 8, 6)),
+  ];
+  MD[K] = [wispM, wispM];
+  GT[K] = [
+    [-r * 0.85, r * 0.15, 0],
+    [r * 0.8, -r * 0.1, 0],
+  ];
+  GR[K] = [
+    [0, 0, 0],
+    [0, 0, 0],
+  ];
+  K = "e_knight";
+  r = PROTO.knight.r;
+  const plumeM = sharedMat(new THREE.MeshLambertMaterial({ color: "#8a6a28" }));
+  GD[K] = [
+    sharedGeo(new THREE.BoxGeometry(r * 0.16, r * 0.7, r * 0.12)),
+    sharedGeo(new THREE.BoxGeometry(r * 1.15, r * 0.2, r * 0.18)),
+  ];
+  MD[K] = [plumeM, DARK];
+  GT[K] = [
+    [0, r * 1.55, 0],
+    [0, r * 0.35, r * 0.78],
+  ];
+  GR[K] = [
+    [0, 0, 0],
+    [0, 0, 0],
+  ];
 }
 /* face/slit plane placement per type (children[2]): blob trio gets a BIG
    plane tilted at the camera (identity §2), stationary's IS the visor slit,
@@ -326,7 +396,7 @@ for (const t of ENEMY_TYPES) {
     GF[k] = sharedGeo(new THREE.PlaneGeometry(r * 1.5, r * 0.38));
     EYT[k] = [0, r * 1.15, r * 1.16];
     EYR[k] = [0, 0, 0];
-  } else if (t === "walker" || t === "chaser" || t === "fast") {
+  } else if (t === "walker" || t === "chaser" || t === "fast" || t === "knight") {
     GF[k] = sharedGeo(new THREE.PlaneGeometry(r * 1.7, r * 0.9));
     EYT[k] = [0, EH[k] + r * 0.35, r * 0.7];
     EYR[k] = [-0.45, 0, 0];
@@ -346,6 +416,9 @@ const BOB = {
   e_stationary: [1.5, 3],
   e_boomerang: [2.0, 10],
   e_rocket: [1.4, 7],
+  e_burrow: [1.1, 8],
+  e_shade: [2.2, 6],
+  e_knight: [1.3, 7],
 };
 
 /* Bomb v2: ONE glossy Phong body (variants never recolor it) + colored base

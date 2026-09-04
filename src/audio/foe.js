@@ -28,6 +28,18 @@ export const FOE_CUE = Object.freeze({
     f0: 82, f1: 55, osc: "sawtooth", dur: 0.16, hp: 60,
     harm: 41, noise: 180, q: 0.7,
   }),
+  burrow: Object.freeze({
+    f0: 147, f1: 82, osc: "triangle", dur: 0.13, hp: 80,
+    harm: 73, noise: 220, q: 1.2,
+  }),
+  shade: Object.freeze({
+    f0: 311, f1: 196, osc: "sine", dur: 0.15, hp: 240,
+    harm: 466, noise: 900, q: 2.2,
+  }),
+  knight: Object.freeze({
+    f0: 262, f1: 165, osc: "square", dur: 0.14, hp: 140,
+    harm: 131, noise: 420, q: 1.5,
+  }),
 });
 
 export function foeOf(t) {

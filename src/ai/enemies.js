@@ -47,14 +47,13 @@ export function updateEnemies(world, dt, input, emit) {
     const sp = e.speed * CFG.TILE * dt * paceMul(world.pace);
     e.cd -= dt;
     if (e.cd <= 0) {
-      e.cd =
-        e.type === "chaser" || e.type === "fast"
-          ? w.chaseCd == null
-            ? 0.35
-            : w.chaseCd
-          : 6 + w.rng.int(0, 14);
+      e.cd = e.hunt
+        ? w.chaseCd == null
+          ? 0.35
+          : w.chaseCd
+        : 6 + w.rng.int(0, 14);
       let ndir = null;
-      if (e.type === "chaser" || e.type === "fast") {
+      if (e.hunt) {
         const next = bfsNext(
           w.grid,
           e.tx,

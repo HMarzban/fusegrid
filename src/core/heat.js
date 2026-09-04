@@ -56,7 +56,7 @@ const MAX_L5 = Object.freeze([
   "rocket",
   "boomerang",
 ]);
-const ROOM_EXTRA = Object.freeze(["fast", "chaser", "rocket"]);
+const ROOM_EXTRA = Object.freeze(["burrow", "shade", "knight"]);
 const HEAT_PROFILES = Object.freeze([
   Object.freeze({
     heat: 0,

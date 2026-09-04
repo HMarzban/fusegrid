@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-04 — Mature foes + L6–8 exclusive bodies
+- Redrew the six cabinet/arena faces (visor, bunker, drone, helm, wraith, missile). Rooms 6–8 append BURROW / SHADE / KNIGHT (`ROOM_EXTRA`); CORE L1–5 roster strings stay v6. Hunt flag `e.hunt`. Fat-world still 186. Spec `2026-09-04-mature-enemies-design.md`. PWA v9.
+
 ## 2026-09-04 — Unique 3D pickup geos keep 186
 - 12 shared body geos swapped in `SLOT_MESH.item === 2` (cone/sphere/octa/heart-merge/etc.). Foe slots stay 4 (already unique). Fat-world still 186. Spec `2026-09-04-unique-3d-meshes-design.md`. PWA v8.
 

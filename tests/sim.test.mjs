@@ -850,8 +850,8 @@ function rulesWorld(seed) {
 
 {
   check(
-    "R19 FOES catalog is 6 named types",
-    FOES.length === 6 &&
+    "R19 FOES catalog is 9 named types",
+    FOES.length === 9 &&
       Object.isFrozen(FOES) &&
       FOES.every((d) => d.t && d.name && d.help && d.col && d.rooms),
     FOES.map((d) => d.t).join(","),

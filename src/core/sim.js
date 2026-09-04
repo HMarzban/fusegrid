@@ -399,7 +399,16 @@ function revealItem(w, tx, ty, emit) {
 function killEnemy(w, e, emit) {
   if (e.dead) return;
   e.dead = true;
-  w.score += e.type === "rocket" ? 300 : e.type === "boomerang" ? 250 : 100;
+  w.score +=
+    e.type === "rocket"
+      ? 300
+      : e.type === "boomerang" || e.type === "shade"
+        ? 250
+        : e.type === "knight"
+          ? 200
+          : e.type === "burrow"
+            ? 150
+            : 100;
   emit({ t: "kill", x: e.x, y: e.y, color: e.color, type: e.type });
 }
 

@@ -316,11 +316,21 @@ function check(name, cond, detail) {
       const { c, texts, rects } = rec();
       md.drawEnemiesHelp(c, L, 1);
       const p = plateOf(rects);
-      const names = ["WALKER", "SENTRY", "FAST", "CHASER", "PHANTOM", "ROCKET"];
+      const names = [
+        "WALKER",
+        "SENTRY",
+        "FAST",
+        "CHASER",
+        "PHANTOM",
+        "ROCKET",
+        "BURROW",
+        "SHADE",
+        "KNIGHT",
+      ];
       const hits = names.map((n) => texts.find((t) => t.s === n));
       const esc = texts.find((t) => t.s.indexOf("ESC BACK") >= 0);
       check(
-        `enemies 6 + ESC inside plate at ${W}x${H}`,
+        `enemies 9 + ESC inside plate at ${W}x${H}`,
         !!p &&
           !!esc &&
           hits.every((h) => !!h) &&

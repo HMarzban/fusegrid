@@ -26,6 +26,9 @@ const NAMES = {
   chaser: "CHASER",
   boomerang: "PHANTOM",
   rocket: "ROCKET",
+  burrow: "BURROW",
+  shade: "SHADE",
+  knight: "KNIGHT",
 };
 const TYPES = Object.keys(NAMES);
 
@@ -123,10 +126,14 @@ function mkE(type, x, y) {
 }
 
 {
-  check("FOES catalog is 6", FOES.length === 6, String(FOES.length));
+  check("FOES catalog is 9", FOES.length === 9, String(FOES.length));
   const got = FOES.map((f) => f.t + ":" + f.name).join(",");
   const want = TYPES.map((t) => t + ":" + NAMES[t]).join(",");
-  check("FOES names are WALKER SENTRY FAST CHASER PHANTOM ROCKET", got === want, got);
+  check(
+    "FOES names are WALKER SENTRY FAST CHASER PHANTOM ROCKET BURROW SHADE KNIGHT",
+    got === want,
+    got,
+  );
 }
 
 {
@@ -209,12 +216,12 @@ function mkE(type, x, y) {
   );
   const foeOf = audioMod.foeOf;
   const CUE = audioMod.FOE_CUE;
-  check("FOE_CUE covers 6 types", !!CUE && TYPES.every((t) => CUE[t]));
+  check("FOE_CUE covers 9 types", !!CUE && TYPES.every((t) => CUE[t]));
   if (typeof foeOf === "function" && CUE) {
     const f0s = TYPES.map((t) => foeOf(t).f0);
     check(
       "foeOf f0 is unique per type",
-      f0s.every((f) => typeof f === "number") && new Set(f0s).size === 6,
+      f0s.every((f) => typeof f === "number") && new Set(f0s).size === 9,
       f0s.join(","),
     );
   }

@@ -83,12 +83,15 @@ check(
     heatRoster(5, HEAT.MAX).filter((t) => t === "boomerang").length === 2,
 );
 check(
-  "R22 extra rooms reuse L5 roster plus new foes",
-  heatRoster(6, 0).filter((t) => t === "fast").length ===
-    heatRoster(5, 0).filter((t) => t === "fast").length + 1 &&
-    heatRoster(8, 0).includes("rocket") &&
-    heatRoster(5, 0).join() ===
-      "walker,chaser,fast,stationary,boomerang,rocket",
+  "R22 extra rooms keep L5 CORE string and add exclusive foes",
+  heatRoster(5, 0).join() ===
+    "walker,chaser,fast,stationary,boomerang,rocket" &&
+    heatRoster(6, 0).join() ===
+      "walker,chaser,fast,stationary,boomerang,rocket,burrow" &&
+    heatRoster(7, 0).includes("shade") &&
+    heatRoster(8, 0).includes("knight") &&
+    heatRoster(6, 0).filter((t) => t === "fast").length ===
+      heatRoster(5, 0).filter((t) => t === "fast").length,
 );
 
 {

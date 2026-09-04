@@ -111,43 +111,64 @@ export const FOES = Object.freeze([
     t: "walker",
     name: "WALKER",
     col: "#8affc1",
-    rooms: "1-5",
+    rooms: "1-8",
     help: "wanders the lanes · 100",
   }),
   Object.freeze({
     t: "stationary",
     name: "SENTRY",
     col: "#c58aff",
-    rooms: "1-3, 5",
-    help: "stands still · touch still hurts",
+    rooms: "1-3, 5-8",
+    help: "still · contact hurts",
   }),
   Object.freeze({
     t: "fast",
     name: "FAST",
     col: "#ffd447",
-    rooms: "2-5",
-    help: "twice as fast · hunts you · 100",
+    rooms: "2-8",
+    help: "2× hunt · 100",
   }),
   Object.freeze({
     t: "chaser",
     name: "CHASER",
     col: "#66c8ff",
-    rooms: "3-5",
+    rooms: "3-8",
     help: "hunts you down · 100",
   }),
   Object.freeze({
     t: "boomerang",
     name: "PHANTOM",
     col: "#ff9dd6",
-    rooms: "4-5",
-    help: "walks through green bricks · 250",
+    rooms: "4-8",
+    help: "phases bricks · 250",
   }),
   Object.freeze({
     t: "rocket",
     name: "ROCKET",
     col: "#ff7a59",
-    rooms: "5",
-    help: "through bricks · 300 · room 5",
+    rooms: "5-8",
+    help: "phases · 300",
+  }),
+  Object.freeze({
+    t: "burrow",
+    name: "BURROW",
+    col: "#c48a3a",
+    rooms: "6-8",
+    help: "crawls the sand · 150",
+  }),
+  Object.freeze({
+    t: "shade",
+    name: "SHADE",
+    col: "#6b7cff",
+    rooms: "7-8",
+    help: "phases bricks · 250",
+  }),
+  Object.freeze({
+    t: "knight",
+    name: "KNIGHT",
+    col: "#d4b05a",
+    rooms: "8",
+    help: "hunts in plate · 200",
   }),
 ]);
 
@@ -231,7 +252,22 @@ export function spawnEnemy(type, x, y, level, rng, opts) {
       r: CFG.TILE * 0.4,
       pass: true,
     },
+    burrow: { speed: base * 0.85, color: "#c48a3a", r: CFG.TILE * 0.32 },
+    shade: {
+      speed: base * 1.6,
+      color: "#6b7cff",
+      r: CFG.TILE * 0.3,
+      pass: true,
+    },
+    knight: {
+      speed: base * 1.3,
+      color: "#d4b05a",
+      r: CFG.TILE * 0.34,
+      hunt: true,
+    },
   }[type] || { speed: base, color: "#8affc1", r: CFG.TILE * 0.34 };
+  const hunt =
+    !!spec.hunt || type === "chaser" || type === "fast";
   return {
     type,
     x: x * CFG.TILE + CFG.TILE / 2,
@@ -243,11 +279,12 @@ export function spawnEnemy(type, x, y, level, rng, opts) {
     color: spec.color,
     r: spec.r,
     pass: !!spec.pass,
+    hunt,
     dead: false,
     invuln: true,
     invulnT,
     cd:
-      type === "chaser" || type === "fast"
+      type === "chaser" || type === "fast" || type === "knight"
         ? 0.2 + (rng ? rng.next() * 0.3 : 0.15)
         : 4 + (rng ? rng.int(0, 12) : 6),
     home: { x, y },
