@@ -128,7 +128,7 @@ function mkE(type, x, y) {
 
 {
   check(
-    "SLOT_MESH.item stays 2 (cube + ring)",
+    "SLOT_MESH.item stays 2 (body + ring)",
     SLOT_MESH.item === 2,
     JSON.stringify(SLOT_MESH),
   );
@@ -214,9 +214,38 @@ function mkE(type, x, y) {
   );
   const pools = createPools(BIOMES[0], null);
   check(
-    "headless item slot is still cube + ring",
+    "headless item slot stays body + ring (2)",
     pools.items[0].children.length === 2,
     String(pools.items[0].children.length),
+  );
+  const mix = POWER.map((pd, i) => ({
+    x: 60 + i * 15,
+    y: 120,
+    t: pd.t,
+    col: pd.col,
+    taken: false,
+    pdef: null,
+  }));
+  pools.update({
+    players: [],
+    enemies: [],
+    bombs: [],
+    items: mix,
+    blades: [],
+    time: 0,
+  });
+  const uuids = mix.map((_, i) => pools.items[i].children[0].geometry.uuid);
+  check(
+    "12 pickup body geos are unique (not one shared cube)",
+    new Set(uuids).size === 12,
+    uuids.join(" ").slice(0, 80),
+  );
+  check(
+    "headless fire body is not a leftover cube",
+    pools.items[0].children[0].geometry.type !== "BoxGeometry"
+      && "#" + pools.items[0].children[0].material.color.getHexString()
+        === "#ff8a3c",
+    pools.items[0].children[0].geometry.type,
   );
   buildScene(wf);
 }

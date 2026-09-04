@@ -669,8 +669,8 @@ await sec("S2.I",()=>{
     &&scPlain.pools.blades.geometry.attributes.position.count===8
     &&scPlain.pools.blades.geometry.index.count===12);
   const its0=scPlain.pools.items[0];
-  check("R.headless item pickup = lit cube in POWER color + additive ring",
-    its0.children[0].geometry.type==="BoxGeometry"
+  check("R.headless item pickup = unique geo in POWER color + additive ring",
+    its0.children[0].geometry.type==="ConeGeometry"
     &&its0.children[0].material.isMeshLambertMaterial
     &&!its0.children[0].material.map
     &&"#"+its0.children[0].material.color.getHexString()==="#ff8a3c"
@@ -1056,17 +1056,16 @@ await sec("R.items",async()=>{
     {x:140,y:120,t:"pierce",col:"#8f8fff",taken:false,pdef:null}];
   const sc=buildScene(w); sc.update(w);
   const its=slotsOf(sc.group,"item").filter(s=>s.visible);
-  check("R.items slot = pickup cube + glow ring (2 meshes)",
+  check("R.items slot = unique body + glow ring (2 meshes)",
     its.length===2&&its.every(s=>s.children.length===2
       &&s.children.every(o=>o.isMesh)),
     its.length+"/"+(its[0]?its[0].children.length:"-"));
   const pk=its[0].children[0], rg=its[0].children[1];
-  check("R.items pickup is lit TILE*.44 cube casting a shadow",
-    pk.geometry.type==="BoxGeometry"
-    &&pk.geometry.parameters.width===CFG.TILE*0.44
-    &&pk.geometry.parameters.height===CFG.TILE*0.44
-    &&pk.geometry.parameters.depth===CFG.TILE*0.44
-    &&pk.castShadow===true&&pk.material.isMeshLambertMaterial);
+  check("R.items fire body is a cone spike casting a shadow",
+    pk.geometry.type==="ConeGeometry"
+    &&pk.geometry.parameters.radialSegments===7
+    &&pk.castShadow===true&&pk.material.isMeshLambertMaterial
+    &&"#"+pk.material.color.getHexString()==="#ff8a3c");
   const rpos=rg.geometry.attributes.position.array;
   let flat=true;
   for(let i=1;i<rpos.length;i+=3)if(Math.abs(rpos[i])>1e-9)flat=false;

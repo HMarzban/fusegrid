@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-04 — Unique 3D pickup geos keep 186
+- 12 shared body geos swapped in `SLOT_MESH.item === 2` (cone/sphere/octa/heart-merge/etc.). Foe slots stay 4 (already unique). Fat-world still 186. Spec `2026-09-04-unique-3d-meshes-design.md`. PWA v8.
+
 ## 2026-09-04 — Cabinet rest (HOW TO / HUD / bombs)
 - HOW TO paints `drawIcon` wells for BOMB / THROW / REMOTE / KICK; HUD BOMB chip uses POWER `#ff5d73`; 2D planted bombs share the pickup silhouette (curved fuse, + pip, dark charge). 3D bomb slot stays 5 / fat-world 186. Spec `2026-09-04-cabinet-rest-design.md`. PWA v7.
 

@@ -17,7 +17,7 @@
    bob/stomp/spin/breathe are render-side only (never touch sim state). */
 import * as THREE from "../../../vendor/three.module.js";
 import { CFG } from "../../core/config.js";
-import { spawnEnemy } from "../../core/entities.js";
+import { POWER, spawnEnemy } from "../../core/entities.js";
 
 const W2 = (CFG.COLS * CFG.TILE) / 2,
   D2 = (CFG.ROWS * CFG.TILE) / 2;
@@ -151,6 +151,34 @@ function mergeGeos(a, b) {
   ]);
   return g;
 }
+
+const IT = CFG.TILE;
+function itemGeoFor(t) {
+  let g;
+  if (t === "fire") g = new THREE.ConeGeometry(IT * 0.18, IT * 0.5, 7);
+  else if (t === "bomb") g = new THREE.SphereGeometry(IT * 0.22, 12, 10);
+  else if (t === "speed") g = new THREE.OctahedronGeometry(IT * 0.26, 0);
+  else if (t === "heart") {
+    const a = new THREE.SphereGeometry(IT * 0.15, 8, 6);
+    a.translate(-IT * 0.09, IT * 0.06, 0);
+    const b = new THREE.SphereGeometry(IT * 0.15, 8, 6);
+    b.translate(IT * 0.09, IT * 0.06, 0);
+    g = mergeGeos(a, b);
+  } else if (t === "shield")
+    g = new THREE.CylinderGeometry(IT * 0.2, IT * 0.22, IT * 0.36, 8);
+  else if (t === "kick") g = new THREE.BoxGeometry(IT * 0.2, IT * 0.16, IT * 0.38);
+  else if (t === "throw") g = new THREE.SphereGeometry(IT * 0.16, 10, 8);
+  else if (t === "pass") g = new THREE.BoxGeometry(IT * 0.38, IT * 0.14, IT * 0.28);
+  else if (t === "line") {
+    g = new THREE.CylinderGeometry(IT * 0.055, IT * 0.055, IT * 0.52, 6);
+    g.rotateZ(Math.PI / 2);
+  } else if (t === "power") g = new THREE.OctahedronGeometry(IT * 0.34, 0);
+  else if (t === "pierce") g = new THREE.ConeGeometry(IT * 0.11, IT * 0.52, 5);
+  else g = new THREE.CylinderGeometry(IT * 0.16, IT * 0.18, IT * 0.3, 10);
+  return sharedGeo(g);
+}
+export const ITEM_GEO = {};
+for (const pd of POWER) ITEM_GEO[pd.t] = itemGeoFor(pd.t);
 
 /* Enemy detail silhouettes: exactly 2 child meshes per slot, per-type
    geometry/material/transform caches swapped BY REFERENCE on type change
@@ -518,11 +546,7 @@ export function createPools(biome, atlas) {
     bombs.push(s);
     group.add(s);
   }
-  /* Items v2: lit cube pickup (one icon texture lights all 6 faces) +
-     additive floor glow ring tinted by the POWER color. */
-  const pickGeo = sharedGeo(
-    new THREE.BoxGeometry(CFG.TILE * 0.44, CFG.TILE * 0.44, CFG.TILE * 0.44),
-  );
+  /* Items: unique shared geo per POWER.t + additive floor glow ring. */
   const iringGeo = sharedGeo(
     (() => {
       const g = new THREE.RingGeometry(CFG.TILE * 0.3, CFG.TILE * 0.46, 20);
@@ -536,10 +560,7 @@ export function createPools(biome, atlas) {
     let m = itemMats[t];
     if (!m) {
       m = sharedMat(new THREE.MeshLambertMaterial());
-      if (atlas && atlas["item_" + t] instanceof THREE.Texture) {
-        m.map = atlas["item_" + t];
-        m.color.set("#ffffff");
-      } else m.color.set(col || "#ffffff");
+      m.color.set(col || "#ffffff");
       itemMats[t] = m;
     }
     return m;
@@ -563,7 +584,7 @@ export function createPools(biome, atlas) {
   for (let i = 0; i < POOL_CAPS.items; i++) {
     const s = new THREE.Group();
     s.userData.tag = "item";
-    const q = new THREE.Mesh(pickGeo, matForItem("fire", "#ff8a3c"));
+    const q = new THREE.Mesh(ITEM_GEO.fire, matForItem("fire", "#ff8a3c"));
     q.castShadow = true;
     const rg = new THREE.Mesh(iringGeo, ringForItem("fire", "#ff8a3c"));
     rg.position.y = 1.5;
@@ -788,6 +809,8 @@ export function createPools(biome, atlas) {
         rg = s.children[1];
       pk.position.y = CFG.TILE * 0.66 + 5 * Math.sin(3 * t);
       pk.rotation.y = 2.6 * t + ii * 0.9;
+      const pg = ITEM_GEO[it.t] || ITEM_GEO.fire;
+      if (pk.geometry !== pg) pk.geometry = pg;
       const pm = matForItem(it.t, it.col);
       if (pk.material !== pm) pk.material = pm;
       const rm = ringForItem(it.t, it.col);
