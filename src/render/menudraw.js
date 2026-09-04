@@ -47,6 +47,12 @@ function plate(c, x, y, w, h) {
 function well(c, x, y, s, col) {
   c.fillStyle = "rgba(4,7,14,0.95)";
   c.fillRect(x - s / 2, y - s / 2, s, s);
+  if (col) {
+    c.fillStyle = col;
+    c.globalAlpha = 0.14;
+    c.fillRect(x - s / 2 + 2, y - s / 2 + 2, s - 4, s - 4);
+    c.globalAlpha = 1;
+  }
   c.strokeStyle = col || LINE;
   c.lineWidth = 1.5;
   c.strokeRect(x - s / 2 + 0.5, y - s / 2 + 0.5, s - 1, s - 1);

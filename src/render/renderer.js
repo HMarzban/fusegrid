@@ -1,4 +1,5 @@
 import {CFG} from "../core/config.js";
+import {sfxOf} from "../audio/item.js";
 import {
   bakeAtlas, drawGrid, drawBiomeBackground, drawBricks,
   drawItems, drawEnemies, drawPlayer, drawBombs, drawBlades
@@ -35,7 +36,7 @@ export function createRenderer(canvas, opts={}){
     syncFx(world);
     for(let i=0;i<world.events.length;i++){
       onEvent(world, world.events[i], world.time);
-      if(audio&&playSfx!==false) audio.play(world.events[i].t);
+      if(audio&&playSfx!==false) audio.play(sfxOf(world.events[i]));
     }
     world.events.length=0;
     updateFx(dt||CFG.STEP);

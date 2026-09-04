@@ -37,27 +37,27 @@ function spark(c,x,y){
 const GLYPH={
   fire(c,col){
     c.fillStyle=col; c.beginPath();
-    c.moveTo(32,7); c.bezierCurveTo(44,19,51,30,47,43);
-    c.bezierCurveTo(44,53,38,57,32,57);
-    c.bezierCurveTo(26,57,20,53,17,43);
-    c.bezierCurveTo(13,30,22,21,26,12);
+    c.moveTo(32,6); c.bezierCurveTo(46,20,52,32,48,46);
+    c.bezierCurveTo(44,56,38,58,32,58);
+    c.bezierCurveTo(26,58,20,56,16,46);
+    c.bezierCurveTo(12,32,20,20,32,6);
     c.closePath(); c.fill();
     c.strokeStyle="#ffffff"; c.lineWidth=3; c.beginPath();
-    c.moveTo(32,26); c.quadraticCurveTo(39,36,32,48); c.stroke();
-    spark(c,45,15);
+    c.moveTo(32,24); c.quadraticCurveTo(39,36,32,48); c.stroke();
+    spark(c,46,14);
    },
   bomb(c,col){
     c.fillStyle=col; c.beginPath(); c.arc(31,39,15,0,Math.PI*2); c.fill();
     c.strokeStyle=col; c.lineWidth=5; c.beginPath();
     c.moveTo(39,27); c.quadraticCurveTo(45,14,55,11); c.stroke();
     c.strokeStyle="#ffffff"; c.lineWidth=3; c.beginPath();
-    c.moveTo(28,33); c.lineTo(34,40); c.lineTo(29,40); c.lineTo(35,48);
+    c.moveTo(24,39); c.lineTo(38,39); c.moveTo(31,32); c.lineTo(31,46);
     c.stroke();
    },
   speed(c,col){
     c.fillStyle=col; c.beginPath();
-    c.moveTo(37,6); c.lineTo(17,36); c.lineTo(30,36); c.lineTo(26,58);
-    c.lineTo(47,26); c.lineTo(33,26); c.closePath(); c.fill();
+    c.moveTo(38,6); c.lineTo(16,34); c.lineTo(30,34); c.lineTo(24,58);
+    c.lineTo(50,28); c.lineTo(34,28); c.closePath(); c.fill();
     c.strokeStyle="#ffffff"; c.lineWidth=2.5; c.beginPath();
     c.moveTo(33,12); c.lineTo(24,28); c.stroke();
     spark(c,44,44);
@@ -78,41 +78,45 @@ const GLYPH={
     c.bezierCurveTo(21,54,11,47,11,33);
     c.lineTo(11,15); c.closePath(); c.fill();
     c.strokeStyle="#ffffff"; c.lineWidth=3; c.beginPath();
-    c.moveTo(32,18); c.lineTo(32,46); c.moveTo(20,30); c.lineTo(44,30);
-    c.stroke();
+    c.moveTo(32,18); c.lineTo(42,30); c.lineTo(32,46); c.lineTo(22,30);
+    c.closePath(); c.stroke();
     spark(c,45,45);
    },
   kick(c,col){
-    c.beginPath(); c.moveTo(23,8); c.lineTo(23,36); c.lineTo(45,45);
-    c.lineTo(45,54); c.lineTo(15,54); c.lineTo(15,8); c.closePath();
-    c.strokeStyle=col; c.lineWidth=6; c.stroke();
+    c.fillStyle=col; c.beginPath();
+    c.moveTo(24,8); c.lineTo(36,8); c.lineTo(38,34); c.lineTo(52,40);
+    c.lineTo(52,54); c.lineTo(18,54); c.closePath(); c.fill();
     c.strokeStyle="#ffffff"; c.lineWidth=3; c.beginPath();
-    c.moveTo(19,49); c.lineTo(41,49); c.stroke();
-    c.fillStyle=col; c.beginPath(); c.arc(29,20,3,0,Math.PI*2); c.fill();
+    c.moveTo(20,48); c.lineTo(48,48); c.stroke();
+    c.beginPath(); c.moveTo(10,26); c.lineTo(20,32); c.lineTo(10,38); c.stroke();
    },
   throw(c,col){
     c.strokeStyle=col; c.lineWidth=6; c.beginPath();
-    c.arc(32,44,18,Math.PI,Math.PI*2); c.stroke();
-    c.fillStyle=col; c.beginPath(); c.arc(50,44,6,0,Math.PI*2); c.fill();
+    c.arc(28,46,20,Math.PI*1.05,Math.PI*1.9); c.stroke();
+    c.fillStyle=col; c.beginPath(); c.arc(50,18,7,0,Math.PI*2); c.fill();
     c.strokeStyle="#ffffff"; c.lineWidth=2.5; c.beginPath();
-    c.moveTo(10,52); c.lineTo(20,44); c.stroke();
+    c.arc(50,18,3,0,Math.PI*2); c.stroke();
+    spark(c,14,50);
    },
   pass(c,col){
-    c.strokeStyle=col; c.lineWidth=6; c.beginPath();
-    c.moveTo(26,15); c.lineTo(11,32); c.lineTo(26,49); c.stroke();
-    c.beginPath(); c.moveTo(38,15); c.lineTo(53,32); c.lineTo(38,49);
-    c.stroke();
-    c.strokeStyle="#ffffff"; c.lineWidth=2.5; c.beginPath();
-    c.moveTo(32,24); c.lineTo(32,40); c.stroke();
-    c.fillStyle=col; c.beginPath(); c.arc(32,32,3.5,0,Math.PI*2); c.fill();
+    c.strokeStyle=col; c.lineWidth=5; c.beginPath();
+    c.moveTo(16,14); c.lineTo(48,14); c.stroke();
+    c.beginPath(); c.moveTo(16,50); c.lineTo(48,50); c.stroke();
+    c.beginPath(); c.moveTo(12,20); c.lineTo(12,44); c.stroke();
+    c.beginPath(); c.moveTo(52,20); c.lineTo(52,44); c.stroke();
+    c.strokeStyle="#ffffff"; c.lineWidth=3; c.beginPath();
+    c.moveTo(10,32); c.lineTo(40,32); c.stroke();
+    c.fillStyle=col; c.beginPath();
+    c.moveTo(38,24); c.lineTo(56,32); c.lineTo(38,40); c.closePath(); c.fill();
    },
   line(c,col){
-    c.strokeStyle=col; c.lineWidth=6;
-    for(const y of [16,32,48]){ c.beginPath();
-      c.moveTo(13,y); c.lineTo(51,y); c.stroke(); }
-    c.fillStyle=col; c.fillRect(29,29,6,6);
+    c.strokeStyle=col; c.lineWidth=7; c.beginPath();
+    c.moveTo(8,32); c.lineTo(40,32); c.stroke();
+    c.fillStyle=col; c.beginPath();
+    c.moveTo(36,18); c.lineTo(58,32); c.lineTo(36,46); c.closePath(); c.fill();
     c.strokeStyle="#ffffff"; c.lineWidth=2.5; c.beginPath();
-    c.moveTo(13,10); c.lineTo(51,10); c.stroke();
+    c.moveTo(12,18); c.lineTo(22,18); c.moveTo(26,18); c.lineTo(36,18);
+    c.stroke();
    },
   power(c,col){
     c.fillStyle=col; c.beginPath();
@@ -124,24 +128,21 @@ const GLYPH={
     spark(c,48,16);
    },
   pierce(c,col){
+    c.fillStyle="#12203a"; c.fillRect(8,8,10,18); c.fillRect(8,38,10,18);
     c.fillStyle=col; c.beginPath();
-    c.moveTo(10,20); c.lineTo(10,44); c.lineTo(54,32); c.closePath();
-    c.fill();
-    c.strokeStyle=col; c.lineWidth=4; c.beginPath();
-    c.moveTo(8,14); c.lineTo(20,14); c.moveTo(8,50); c.lineTo(20,50);
-    c.stroke();
+    c.moveTo(6,28); c.lineTo(38,28); c.lineTo(38,20); c.lineTo(58,32);
+    c.lineTo(38,44); c.lineTo(38,36); c.lineTo(6,36); c.closePath(); c.fill();
     c.strokeStyle="#ffffff"; c.lineWidth=2.5; c.beginPath();
-    c.moveTo(44,32); c.lineTo(52,32); c.stroke();
-    spark(c,30,11);
+    c.moveTo(44,32); c.lineTo(54,32); c.stroke();
+    spark(c,28,12);
    },
   remote(c,col){
+    c.fillStyle=col; c.fillRect(16,36,32,20);
     c.strokeStyle=col; c.lineWidth=5; c.beginPath();
-    c.moveTo(32,56); c.lineTo(32,20); c.stroke();
-    c.lineWidth=4;
-    c.beginPath(); c.arc(32,18,9,-Math.PI*0.8,-Math.PI*0.2); c.stroke();
-    c.beginPath(); c.arc(32,18,16,-Math.PI*0.75,-Math.PI*0.25); c.stroke();
-    c.fillStyle="#ffffff"; c.beginPath(); c.arc(32,18,3,0,Math.PI*2);
-    c.fill();
+    c.moveTo(32,36); c.lineTo(32,16); c.stroke();
+    c.beginPath(); c.moveTo(18,16); c.lineTo(46,16); c.stroke();
+    c.fillStyle="#ffffff"; c.beginPath(); c.arc(40,46,3,0,Math.PI*2); c.fill();
+    spark(c,20,50);
    }
 };
 function paintGlyph(c,pd){

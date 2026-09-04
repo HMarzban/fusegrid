@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-03 — Pickup visual + SFX redesign
+- Cabinet glyphs in `drawIcon` + 3D `GLYPH`; 12-tint grab cues (`item_*` via `sfxOf`). applyPower unchanged; THROW/LINE/REMOTE colors unique. Spec `2026-09-03-pickup-redesign-design.md`. Headed 3D look + ear-check still open.
+
 ## 2026-09-03 — Demobot far-board (12,11) pin
 - L-shaped corridor hunger test + spec append; logic already in intent FSM combat-cube hunt.
 

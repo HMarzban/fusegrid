@@ -59,7 +59,7 @@ export const POWER = [
   },
   {
     t: "throw",
-    col: "#c07a3a",
+    col: "#ffb347",
     permanent: false,
     name: "THROW",
     help: "Shift+Space tosses a bomb",
@@ -75,7 +75,7 @@ export const POWER = [
   },
   {
     t: "line",
-    col: "#b8c0d8",
+    col: "#d0e4ff",
     name: "LINE",
     help: "long blast the way you face",
     apply: (w, p) => (p.bombKind = "line"),
@@ -96,7 +96,7 @@ export const POWER = [
   },
   {
     t: "remote",
-    col: "#9aa3c0",
+    col: "#e8c35a",
     permanent: false,
     name: "REMOTE",
     help: "Q detonates your bombs",
@@ -154,7 +154,7 @@ export const FOES = Object.freeze([
 /* Apply a power-up. PURE (deterministic, no Math.random). `pdef` is a POWER
    entry. Some effects mutate `world` (heart), most mutate the player. */
 export function applyPower(world, pdef, x, y) {
-  world.events.push({ t: "power", x, y, col: pdef.col });
+  world.events.push({ t: "power", x, y, col: pdef.col, kind: pdef.t });
   pdef.apply(world, world.players[0]);
 }
 

@@ -69,7 +69,10 @@ not shell screens. Do not add them as `SCREEN` values.
   `applySnapshot` was removed (lockstep-only). `makeSnapshot` remains for harness dumps.
 - `src/input.js`, `src/touch.js`, `src/audio.js` — input + chiptune.
   Track tables live in `src/audio/tracks.js`. Boom tints live in
-  `src/audio/boom.js` (`boomOf`). `musicCue` uses `biomeOf(level).name`.
+  `src/audio/boom.js` (`boomOf`). Pickup grab tints live in
+  `src/audio/item.js` (`itemOf` / `sfxOf`); `play("item_"+kind)` from power
+  events that carry `kind`. Catalog stays 12; `applyPower` semantics unchanged.
+  Pickup glyphs live in `drawIcon` + 3D `GLYPH`. `musicCue` uses `biomeOf(level).name`.
   Oscillator SFX stay direct-to-destination (layered voice + noise + filter,
   never musicGain). Music is a track table: menu AABB (identity), intro bed,
   one theme per biome. `setTrack` + `musicCue(screen,level)` from the shell;
