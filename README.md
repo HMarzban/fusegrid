@@ -2,7 +2,7 @@
 
 **FUSE/GRID** is a single-player, deterministic bomb-grid arcade you play in the browser. Flip **REAL 3D ⇄ CLASSIC 2D** from the cabinet menu, pick your Heat on LEVEL SELECT, and clear every enemy to advance.
 
-[![Play Fusegrid in the browser — share card shows REAL 3D, Heat chips, and the FUSE/GRID wordmark](og.png)](https://hmarzban.github.io/fusegrid/)
+[![Play Fusegrid in the browser — share card shows the real 3D board mid-blast, Heat chips, and the FUSE/GRID wordmark](og.png)](https://hmarzban.github.io/fusegrid/)
 
 **Play now:** [https://hmarzban.github.io/fusegrid/](https://hmarzban.github.io/fusegrid/)
 

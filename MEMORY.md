@@ -16,6 +16,10 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-04 — Share card rebuilt on a real 3D board render
+- The old `og.png` predated `1a13216`, so it advertised a look the game no longer has (and its CTA pill ran off the bottom edge). New card composites an actual live capture: JUNGLE, the 54.5° rig, warm key + cool fill, the one cabinet rim, and a blast mid-detonation. Captured headed by setting `scene.background=null` so the WebGL clear is transparent and the board drops straight onto the card field — no chroma key, no pasted screenshot rectangle.
+- 1200×630, 644 KB (was 1.25 MB). Alignment from `29e7e4a` preserved and now asserted at build time: CTA left == CORE left (120), CTA right == MAX right (575), chip gaps 20/20. Type sits at a 10% left inset, 22.7% top, 19.4% bottom. `index.html` / README alt copy rewritten to match; PWA v16 since `index.html` bytes moved.
+
 ## 2026-09-04 — Split main.js into its seams (865 -> 567) + ignore capture noise
 - `main.js` keeps only the RAF loop, fixed-step accumulator, renderer cache and handler wiring; the six seams it inlined moved to `app/flags.js`, `app/attract.js`, `app/toolbar.js`, `app/debughook.js`, `net/localpair.js` and `render/shellview.js` (which also owns `kindSize`/`dims`, collapsing four copies of the canvas/kind fallback). The mid-file import run after `DEMO_SEED` is gone; `headless.test.mjs` now gates line count AND import position so it cannot come back. Behaviour unchanged: 24/24, fat-world still 143, MENU + REAL 3D play-verified headed. PWA v15 for the six new files.
 - `.gitignore` now covers `.cursor/` and `e2e-artifacts/` so browser-MCP capture scratch stops showing up in `git status`.
