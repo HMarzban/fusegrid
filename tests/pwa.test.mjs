@@ -165,6 +165,70 @@ check("registerSW no-op in Node", registerSW() === false);
   );
 }
 
+{
+  const updates = [];
+  const listeners = {};
+  let reloads = 0;
+  const nav = {
+    serviceWorker: {
+      register() {
+        return Promise.resolve({
+          update() {
+            updates.push(1);
+            return Promise.resolve();
+          },
+        });
+      },
+      addEventListener(type, fn) {
+        (listeners[type] ||= []).push(fn);
+      },
+    },
+  };
+  const loc = {
+    reload() {
+      reloads++;
+    },
+  };
+  check(
+    "registerSW wires update + reload env",
+    registerSW({
+      navigator: nav,
+      href: "http://127.0.0.1:8080/",
+      location: loc,
+    }) === true,
+  );
+  check(
+    "registerSW listens for controllerchange",
+    Array.isArray(listeners.controllerchange) &&
+      listeners.controllerchange.length === 1,
+  );
+  if (listeners.controllerchange && listeners.controllerchange[0]) {
+    listeners.controllerchange[0]();
+    listeners.controllerchange[0]();
+  }
+  check(
+    "controllerchange reloads once",
+    reloads === 1,
+    reloads,
+  );
+  await Promise.resolve();
+  await Promise.resolve();
+  check(
+    "registerSW calls registration.update",
+    updates.length === 1,
+    updates.length,
+  );
+}
+
+const spec = readFileSync(
+  join(ROOT, "docs/superpowers/specs/2026-09-03-pwa-offline-design.md"),
+  "utf8",
+);
+check(
+  "spec documents controllerchange reload",
+  /controllerchange/.test(spec) && /registration\.update/.test(spec),
+);
+
 const sw = readFileSync(join(ROOT, "sw.js"), "utf8");
 check("sw.js imports shell", /from\s+["']\.\/src\/pwa\/shell\.js["']/.test(sw));
 check("sw.js skipWaiting", sw.includes("skipWaiting"));

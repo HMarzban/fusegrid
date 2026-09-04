@@ -18,10 +18,28 @@ export function registerSW(env) {
         ? location.href
         : "";
   if (!href) return false;
+  const loc =
+    env && Object.prototype.hasOwnProperty.call(env, "location")
+      ? env.location
+      : typeof location !== "undefined"
+        ? location
+        : undefined;
   try {
     const url = new URL("./sw.js", href).href;
-    nav.serviceWorker
+    const sw = nav.serviceWorker;
+    if (typeof sw.addEventListener === "function") {
+      let refreshing = false;
+      sw.addEventListener("controllerchange", () => {
+        if (refreshing) return;
+        refreshing = true;
+        if (loc && typeof loc.reload === "function") loc.reload();
+      });
+    }
+    sw
       .register(url, { type: "module", scope: "./" })
+      .then((reg) => {
+        if (reg && typeof reg.update === "function") return reg.update();
+      })
       .catch(() => {});
     return true;
   } catch {

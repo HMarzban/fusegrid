@@ -29,8 +29,11 @@ network-only so share crawlers never stale-lock the card.
   A REV string in `sw.js` must equal `CACHE_NAME` so a version bump changes
   SW bytes (import-only edits do not wake Chromium).
 - `src/pwa/register.js` — `navigator.serviceWorker.register("./sw.js",
-  {type:"module", scope:"./"} )`. No-op without `navigator`. Called from
-  `src/main.js` only. Never imported by `src/core`.
+  {type:"module", scope:"./"} )` then `registration.update()`. Listens
+  for `controllerchange` and `location.reload()` once (in-memory guard)
+  so skipWaiting + claim is not a silent takeover. No-op without
+  `navigator`. Called from `src/main.js` only. Never imported by
+  `src/core`.
 - `index.html` — relative manifest link + iOS web-app metas. Keep existing
   OG/Twitter/canonical/theme-color. No root-absolute hrefs.
 
@@ -48,4 +51,6 @@ and `icon-512.png` into `_site` (today it only stages html/icons/og/src/vendor).
 - iOS: Add to Home Screen; standalone chrome differs; audio still needs a
   gesture. Module SW wants iOS 16.4+.
 - Content edits need a `CACHE_NAME` / REV bump or installed clients keep the
-  old shell until `sw.js` bytes change.
+  old shell until `sw.js` bytes change. After that bump, returning clients
+  call `registration.update()`, activate immediately (skipWaiting + claim),
+  and reload once on `controllerchange`.

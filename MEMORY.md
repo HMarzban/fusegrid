@@ -16,6 +16,12 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-04 — PWA reload on new CACHE_NAME
+- Returning installs were stuck on cache-first until site data clear. `registerSW` now calls `registration.update()` and reloads once on `controllerchange`. skipWaiting + claim already in `sw.js`. Shell `fusegrid-shell-v11`.
+
+## 2026-09-04 — Leftovers 1–6 (3D foes, plate, cues, #tbomb, instanced pickups)
+- Headed REAL 3D rooms 6–8: BURROW/SHADE/KNIGHT read on frozen rig `{az:0,el:0.419,dist:1000}`; geos kept. ENEMIES plate stacks on 608×352 with `ESC BACK`. item_burrow is not a pickup; 9 unique `foe_*` recipes. `#tbomb` paints HUD `drawIcon("bomb")`. Per-kind InstancedMesh pickups pin fat-world **146**. PWA v10.
+
 ## 2026-09-04 — Share card og.png refresh
 - Replaced root `og.png` 1200×630: one-line FUSE/GRID, REAL 3D ⇄ CLASSIC 2D, CORE/PLUS/MAX chips, knight helm + cabinet bomb; alt copy matches.
 
