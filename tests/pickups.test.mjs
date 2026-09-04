@@ -3,7 +3,7 @@ import { applyPower, POWER } from "../src/core/entities.js";
 import { CFG } from "../src/core/config.js";
 import { createAudio } from "../src/audio.js";
 import * as audioMod from "../src/audio.js";
-import { drawIcon } from "../src/render/sprites.js";
+import { drawIcon, paintItemFace } from "../src/render/sprites.js";
 import { createRenderer } from "../src/render/renderer.js";
 
 let pass = 0,
@@ -258,6 +258,12 @@ const APPLY = {
       restore() {
         ops.push("restore");
       },
+      translate() {
+        ops.push("translate");
+      },
+      scale() {
+        ops.push("scale");
+      },
       beginPath() {
         ops.push("beginPath");
       },
@@ -290,6 +296,9 @@ const APPLY = {
       },
       fillRect() {
         ops.push("fillRect");
+      },
+      rect() {
+        ops.push("rect");
       },
       fillText() {
         ops.push("fillText");
@@ -333,6 +342,25 @@ const APPLY = {
     !sh._ops.includes("fillText"),
     sh._ops.filter((o) => o === "fillText").length,
   );
+  const faceSigs = {};
+  for (const t of IDS) {
+    const c = stub();
+    paintItemFace(c, t, "#ffffff");
+    const paints = c._ops.filter(
+      (o) =>
+        o === "fill" ||
+        o === "stroke" ||
+        o === "fillRect" ||
+        o === "beginPath",
+    ).length;
+    check("paintItemFace paints " + t, paints >= 4, String(paints));
+    faceSigs[t] = JSON.stringify(c._ops);
+  }
+  let faceDistinct = true;
+  for (let i = 0; i < IDS.length; i++)
+    for (let j = i + 1; j < IDS.length; j++)
+      if (faceSigs[IDS[i]] === faceSigs[IDS[j]]) faceDistinct = false;
+  check("paintItemFace silhouettes are distinct", faceDistinct);
 }
 
 console.log("\n" + pass + " passed, " + fail + " failed");

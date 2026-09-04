@@ -462,6 +462,23 @@ export function drawIcon(c, type, col, time) {
   }
   c.restore();
 }
+/* 64² REAL 3D cube face: navy plate + cabinet glyph. Atlas key item_<t>. */
+export function paintItemFace(c, type, col) {
+  c.fillStyle = "#0b1020";
+  c.fillRect(0, 0, 64, 64);
+  c.save();
+  c.translate(32, 32);
+  c.scale(2.35, 2.35);
+  drawIcon(c, type, col, 0);
+  c.restore();
+  c.strokeStyle = "rgba(255,255,255,0.16)";
+  c.lineWidth = 2;
+  c.beginPath();
+  c.rect(2, 2, 60, 60);
+  c.stroke();
+  c.beginPath();
+  c.stroke();
+}
 export function drawItemBody(c, world, it) {
   const pulse = 1 + Math.sin(world.time * 5) * 0.1;
   c.scale(pulse, pulse);

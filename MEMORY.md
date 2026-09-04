@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-04 — REAL 3D pickup faces
+- 3D cubes reuse `paintItemFace` (`drawIcon` on a navy 64²). `GLYPH` table deleted. Slot still 2 meshes; fat-world 186. Spec `2026-09-04-pickup-3d-design.md`. Collect FX + foe art still next.
+
 ## 2026-09-03 — Pickup visual + SFX redesign
 - Cabinet glyphs in `drawIcon` + 3D `GLYPH`; 12-tint grab cues (`item_*` via `sfxOf`). applyPower unchanged; THROW/LINE/REMOTE colors unique. Spec `2026-09-03-pickup-redesign-design.md`. Headed 3D look + ear-check still open.
 
