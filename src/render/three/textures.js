@@ -29,18 +29,23 @@ function src(mk,paint){
 function paintEyes(c,t){
   c.fillStyle="#101521";
   c.fillRect(3,7,58,19);
-  const a=t==="fast"||t==="burrow"?[20,44]:t==="rocket"?[18,46]:[22,42];
+  /* walker carries ONE big eye in 2D (enemybody.js), so it does here too;
+     the single socket scales up to keep the same visual weight. */
+  const a=t==="walker"?[32]:t==="fast"||t==="burrow"?[20,44]
+    :t==="rocket"?[18,46]:[22,42];
+  const k=t==="walker"?1.3:1;
   const col=t==="fast"?"#ffd447":t==="burrow"?"#c48a3a":t==="rocket"?"#ffde7a":
     t==="knight"?"#d4b05a":t==="chaser"?"#66c8ff":t==="shade"?"#6b7cff":
     t==="boomerang"?"#ff9dd6":"#8affc1";
   c.fillStyle="#05070c";
-  for(const ex of a){ c.beginPath(); c.arc(ex,17,8,0,Math.PI*2); c.fill(); }
+  for(const ex of a){ c.beginPath(); c.arc(ex,17,8*k,0,Math.PI*2); c.fill(); }
   c.fillStyle=col;
-  for(const ex of a){ c.beginPath(); c.arc(ex,17,5.6,0,Math.PI*2); c.fill(); }
+  for(const ex of a){ c.beginPath(); c.arc(ex,17,5.6*k,0,Math.PI*2); c.fill(); }
   c.fillStyle="#05070c";
-  for(const ex of a){ c.beginPath(); c.arc(ex,17.6,2.3,0,Math.PI*2); c.fill(); }
+  for(const ex of a){ c.beginPath(); c.arc(ex,17.6,2.3*k,0,Math.PI*2); c.fill(); }
   c.fillStyle="#ffffff";
-  for(const ex of a){ c.beginPath(); c.arc(ex-2.4,14.6,1.8,0,Math.PI*2); c.fill(); }
+  for(const ex of a){ c.beginPath();
+    c.arc(ex-2.4*k,14.6,1.8*k,0,Math.PI*2); c.fill(); }
   c.fillStyle="#05070c";
   c.fillRect(3,7,58,4);
 }

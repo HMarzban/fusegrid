@@ -16,6 +16,21 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-04 — REAL 3D enemy bodies rebuilt to the 2D character language
+- Nine `ENEMY_3D` hulls replaced the spheres/boxes: lathe profiles (walker bell,
+  rocket ogive, shade cowl) plus extruded plates (fast delta, tail fins), fused by
+  a now-variadic, index-tolerant `mergeGeos` INSIDE the existing four-mesh slot, so
+  `SLOT_MESH.enemy` stays 4 and fat-world stays 143 draw calls.
+- Authored for the frozen rig: at 54.5° the plan-view footprint carries the read, so
+  every foe got a distinct footprint, and brows / warning bands are lathe profile
+  steps rather than extra meshes. Six `three.test.mjs` pins re-pinned deliberately
+  with exact numbers (reasons in the spec); `EYT.e_stationary[2]`, the `GD.e_rocket`
+  ref-swap, the magenta-core-on-`children[0]` pins and 143 all held. AI untouched.
+- Play-verify caught three things Node could not: `stationary`'s lens hung off the
+  hull, `shade`'s eyes were edge-on, `rocket`'s scorch read as a puddle. Also a
+  stale `fusegrid-shell-v9` SW served pre-change bytes twice — clear the SW before
+  trusting a 3D screenshot. PWA v17 -> v18.
+
 ## 2026-09-04 — Foes rebuilt as characters, not colored tokens
 - The `926c368` "mature silhouettes" pass never landed in 2D: bodies were still one flat fill of `e.color` with a `fillRect` visor, no floor contact, and walker/chaser/fast all fell out of the same circle branch. `enemybody.js` is now one shared five-beat build (contact shade, dark contour, inset body, upper-left sheen, sculpted eye) over nine distinct contours — bell, pillbox, delta, leaning hull, open ring, missile, grub, ragged hood, crowned helm. Creatures get an eye (sclera / iris / pupil / specular), machines get a lens.
 - Shading stacks opaque fills because the headless ctx has neither `clip()` nor gradients; tones lerp off `e.color` (quantised + memoised) so `spawnEnemy` stays the one palette source. No `c.scale()` in any body, so a bounds test can pin every foe inside the ENEMIES well at r=14 — `fast` used to overflow it by 60%. `e.dir` now drives a three-quarter face shift and a real turn-your-back pose. Art only: seed-42 roster and the 180-step AI pin are untouched, draw calls stay 143. PWA v17.

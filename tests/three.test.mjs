@@ -507,9 +507,12 @@ sec("S2.F",()=>{
   w.enemies=types.map((t,i)=>mkE(t,60+i*40,80));
   const sc=buildScene(w); sc.update(w);
   const es=slotsOf(sc.group,"enemy");
-  const wantGeo={walker:"SphereGeometry",chaser:"SphereGeometry",
-    fast:"SphereGeometry",stationary:"BoxGeometry",boomerang:"TorusGeometry",
-    rocket:"ConeGeometry"};
+  /* enemy-3d-bodies 2026-09-04 re-pin: the scaled spheres and the plain box
+     are gone. walker/rocket revolve a lathe profile, chaser/fast/stationary
+     merge their parts, boomerang keeps its flat C-torus. */
+  const wantGeo={walker:"LatheGeometry",chaser:"BufferGeometry",
+    fast:"BufferGeometry",stationary:"BufferGeometry",
+    boomerang:"TorusGeometry",rocket:"LatheGeometry"};
   let geoOk=true, colOk=true, det=[];
   for(let i=0;i<types.length;i++){
     if(es[i].geometry.type!==wantGeo[types[i]])geoOk=false;
@@ -519,7 +522,7 @@ sec("S2.F",()=>{
     if(have.toLowerCase()!==want.toLowerCase()){colOk=false;det.push(
       types[i]+":"+have+"!="+want);}
    }
-  check("S2 enemy mesh variant per type (sphere/box/torus/cone)", geoOk,
+  check("S2 enemy mesh variant per type (lathe/merged/torus)", geoOk,
     es.map(e=>e.geometry.type).join(","));
   check("S2 identity colors match entities.js spawnEnemy table"
       +" (biome-independent; stationary wears the #2a1030 shell)", colOk,
@@ -991,12 +994,15 @@ await sec("S4.A",async()=>{
     .map((t,i)=>mkE(t,60+i*40,80));
   const sc=buildScene(w); sc.update(w);
   const es=slotsOf(sc.group,"enemy");
-  const wantDetail={walker:["BoxGeometry","BoxGeometry"],
-    chaser:["BoxGeometry","BoxGeometry"],
-    fast:["BufferGeometry","BoxGeometry"],
-    stationary:["BoxGeometry","BoxGeometry"],
-    boomerang:["SphereGeometry","SphereGeometry"],
-    rocket:["CylinderGeometry","ConeGeometry"]};
+  /* enemy-3d-bodies 2026-09-04 re-pin: every detail mesh is now a merged
+     assembly (mirrored walker sides, lens+core, fins+lens, crest+brow,
+     hem tatters, tail fins). boomerang detail B stays a raw bezel torus. */
+  const wantDetail={walker:["BufferGeometry","BufferGeometry"],
+    chaser:["BufferGeometry","BufferGeometry"],
+    fast:["BufferGeometry","BufferGeometry"],
+    stationary:["BufferGeometry","BufferGeometry"],
+    boomerang:["BufferGeometry","TorusGeometry"],
+    rocket:["BufferGeometry","BufferGeometry"]};
   let detOk=true,det=[];
   for(let i=0;i<6;i++){
     const got=es[i].children.map(o=>o.geometry.type);
@@ -1006,17 +1012,24 @@ await sec("S4.A",async()=>{
       det.push(w.enemies[i].type+":"+got.join("+"));}
    }
   check("S4.A enemy silhouettes per type with face/slit plane last"
-      +" (feet/crest+snout/fins+trail/core+hood/hub+bead/pad+flame)", detOk,
+      +" (sides/crest+brow/fins+chevrons/lens+hardware/hem+bezel/fins+exhaust)",
+    detOk,
     det.join(" "));
+  /* enemy-3d-bodies 2026-09-04 re-pin: the crest is merged with the
+     down-angled brow, so .parameters is gone. Pin the bbox facts that make
+     it a dorsal ridge instead of a lump: narrow across X, long fore-aft, and
+     riding ABOVE the hull's own centre line. A lump fails dx<dz; a crest
+     that slid down the flank fails max.y>0. */
   const chR=spawnEnemy("chaser",0,0,1,null).r;
   const crest=es[1].children[0];
-  check("S4.A chaser detail is the dorsal crest (r*.22 wide, fore-aft"
-      +" r*1.35 ridge on the tall egg)",
-    Math.abs(crest.geometry.parameters.width-chR*0.22)<1e-9
-    &&Math.abs(crest.geometry.parameters.depth-chR*1.35)<1e-9
-    &&Math.abs(crest.position.x)<1e-9
-    &&Math.abs(crest.position.y-chR*1.22)<1e-9,
-    crest.geometry.parameters.width.toFixed(2));
+  crest.geometry.computeBoundingBox();
+  const cbb=crest.geometry.boundingBox;
+  const cdx=cbb.max.x-cbb.min.x, cdz=cbb.max.z-cbb.min.z;
+  check("S4.A chaser detail A is a dorsal ridge: thin across X (<r*1.0),"
+      +" long fore-aft (>r*1.4), top above the hull centre",
+    cdx<chR*1.0&&cdz>chR*1.4&&cbb.max.y>0
+    &&Math.abs(crest.position.x)<1e-9,
+    "dx="+cdx.toFixed(2)+" dz="+cdz.toFixed(2)+" top="+cbb.max.y.toFixed(2));
   const stShell=es[3];
   const stCore=stShell.children[0];
   check("S4.A stationary shell #2a1030 keeps magenta core accent (#c58aff)",
@@ -1449,7 +1462,7 @@ await sec("S5.rig",async()=>{
 // animation overrides, headless bright fallbacks, 143 instanced-pickup budget ----
 await sec("EI",async()=>{
   const ent=await import("../src/render/three/entities.js");
-  const {GD,EH,EYT}=ent;
+  const {GD,EH,EYT,ENEMY_TYPES:ENEMY_T}=ent;
   const R=(t)=>spawnEnemy(t,0,0,1,null).r;
   check("EI.exports GD/EH/EYT tables exported for spec §6 probes",
     !!GD&&!!EH&&!!EYT,Object.keys(ent).filter(k=>["GD","EH","EYT"]
@@ -1459,17 +1472,30 @@ await sec("EI",async()=>{
   w.enemies=types.map((t,i)=>mkE(t,60+i*40,80));
   const sc=buildScene(w); sc.update(w);
   const es=slotsOf(sc.group,"enemy");
-  // §6.1 rocket: upright 3-sided pyramid — radialSegments===3, NO pre-rotation
+  /* §6.1 rocket: OGIVE warhead. enemy-3d-bodies 2026-09-04 re-pin — the
+     3-sided pyramid became a revolved lathe profile, which carries
+     "segments", not "radialSegments". The replacement pins the ogive itself:
+     total height still r*2.5, still taller than wide, the apex is a single
+     point on the axis (a nose, not a flat top), and the widest radius sits
+     BELOW that apex (a nose cone, not a funnel). */
   { const rk=es[5].geometry; rk.computeBoundingBox();
     const bb=rk.boundingBox, dy=bb.max.y-bb.min.y,
       dh=Math.max(bb.max.x-bb.min.x,bb.max.z-bb.min.z);
-    check("EI.1 rocket base Cone(r*1.02,h=r*2.5,radialSegments=3) stands"
-        +" nose-UP (height===r*2.5 > horizontal extent)",
-      rk.parameters.radialSegments===3
-      &&Math.abs(rk.parameters.height-R("rocket")*2.5)<1e-9
-      &&Math.abs(dy-R("rocket")*2.5)<1e-9&&dh<dy,
-      "seg="+rk.parameters.radialSegments+" dy="+dy.toFixed(1)
-        +" dh="+dh.toFixed(1)); }
+    const pa=rk.attributes.position;
+    let apexOff=0, wr=0, wy=0;
+    for(let i=0;i<pa.count;i++){
+      const rad=Math.hypot(pa.getX(i),pa.getZ(i));
+      if(Math.abs(pa.getY(i)-bb.max.y)<1e-3)apexOff=Math.max(apexOff,rad);
+      if(rad>wr){wr=rad; wy=pa.getY(i);}
+     }
+    check("EI.1 rocket base is an OGIVE lathe standing nose-UP: height"
+        +" ===r*2.5 > horizontal, apex a single axis point, widest radius"
+        +" BELOW the apex",
+      Math.abs(dy-R("rocket")*2.5)<1e-9&&dh<dy
+      &&apexOff<R("rocket")*0.02&&bb.max.y-wy>R("rocket")*0.5,
+      "dy="+dy.toFixed(1)+" dh="+dh.toFixed(1)
+        +" apexOff="+apexOff.toFixed(3)
+        +" widestBelow="+(bb.max.y-wy).toFixed(1)); }
   // §6.2 boomerang: flat C-arc (rotateX -pi/2), arc≈4.7
   { const bg=es[4].geometry; bg.computeBoundingBox();
     const bb=bg.boundingBox;
@@ -1509,19 +1535,41 @@ await sec("EI",async()=>{
         "g0same="+(s0.children[0].geometry===before[0]));
       w.enemies[0].type="walker"; sc.update(w); } }
   if(EH&&EYT){
-    // §6.5 face-plane placement per type
-    { let ok=true,det=[];
-      for(const t of ["walker","chaser","fast"]){ const k="e_"+t;
-        if(!(EYT[k][1]>EH[k]&&EYT[k][2]>0)){ok=false;det.push(t);} }
-      check("EI.5 blob-trio face planes ride above EH, forward of center",
+    /* §6.5 face-plane placement. enemy-3d-bodies 2026-09-04 re-pin: the old
+       pin REQUIRED the strip to float above the hull (EYT[1]>EH), which is
+       exactly the floating-decal look this pass removed. Every plane now
+       rides the body it belongs to, so the pin is inverted and widened to
+       all nine: the plane must sit INSIDE the hull's world-Y span and
+       forward of centre. A face that floats off its body again fails here.
+       boomerang is the one exception - its socket lies FLAT at the hub, so
+       it is pinned on rot.x instead of z. */
+    { const ENT3=ent.ENEMY_3D;
+      let ok=true,det=[];
+      for(const t of ENEMY_T){ const k="e_"+t, rec=ENT3[t];
+        rec.geo.computeBoundingBox();
+        const hb=rec.geo.boundingBox;
+        const fy=EH[k]+EYT[k][1];
+        const inside=fy>=EH[k]+hb.min.y-1e-6&&fy<=EH[k]+hb.max.y+1e-6;
+        const fwd=t==="boomerang"
+          ?Math.abs(rec.face.rot[0]+Math.PI/2)<1e-9
+          :EYT[k][2]>0;
+        if(!(inside&&fwd)){ok=false;
+          det.push(t+":y"+fy.toFixed(1)+" in["
+            +(EH[k]+hb.min.y).toFixed(1)+","+(EH[k]+hb.max.y).toFixed(1)+"]"
+            +" z"+EYT[k][2].toFixed(1));} }
+      check("EI.5 all nine face planes sit INSIDE the hull's world-Y span"
+          +" and forward of centre (boomerang flat at the hub)",
         ok,det.join(" "));
       check("EI.5b stationary slit plane z ≈ r*1.16",
         Math.abs(EYT.e_stationary[2]-R("stationary")*1.16)<1e-9,
         String(EYT.e_stationary[2])); }
-    // §6.6 fast fins merged into ONE geometry (two boxes => 72 idx)
-    check("EI.6 fast fins MERGED into one BufferGeometry (>12 idx;"
-        +" two boxes = 72)",
-      GD.e_fast[0].index.count>12&&GD.e_fast[0].index.count===72,
+    /* §6.6 fast detail A merged into ONE geometry. enemy-3d-bodies
+       2026-09-04 re-pin: 72 was two boxes. It is now two extruded raked fins
+       plus the dark cockpit lens, so the exact count moves 72 -> 372. Kept
+       exact (not a range) so a silent fin rebuild still fails. */
+    check("EI.6 fast detail A MERGED into one BufferGeometry"
+        +" (2 raked fins + cockpit lens = 372 idx)",
+      GD.e_fast[0].index.count===372,
       String(GD.e_fast[0].index.count)); }
   // §6.7 boomerang slot yaw overridden to t*10 (spin beats facing)
   { const wb=createWorld(91,1); loadLevel(wb,1,false);
@@ -1576,6 +1624,260 @@ await sec("EI",async()=>{
     check("EI.10 fat-world draw calls pinned at 143 (≤500 gate,"
         +" 6-type mix)",
       calls===143&&calls<=500,String(calls)); }
+ });
+
+/* ---- §EB enemy 3D bodies (spec 2026-09-04-enemy-3d-bodies "Per foe"):
+   the nine silhouettes translated from the 2D character language. The old
+   suite only exercised six types; these cover all nine and pin the one
+   footprint fact per foe that carries its read at the frozen 54.5° rig. ---- */
+await sec("EB",async()=>{
+  const ent=await import("../src/render/three/entities.js");
+  const {ENEMY_3D,ENEMY_TYPES,GD,EH,SLOT_MESH}=ent;
+  const R=(t)=>spawnEnemy(t,0,0,1,null).r;
+  const box=(g)=>{ g.computeBoundingBox(); return g.boundingBox; };
+  const dim=(g)=>{ const b=box(g);
+    return {x:b.max.x-b.min.x,y:b.max.y-b.min.y,z:b.max.z-b.min.z,b}; };
+
+  check("EB.0 slot budget untouched: SLOT_MESH.enemy still 4"
+      +" (hull + 2 details + face)",
+    SLOT_MESH.enemy===4, JSON.stringify(SLOT_MESH));
+  check("EB.0b all nine types build a full record", ENEMY_TYPES.length===9
+    &&ENEMY_TYPES.every(t=>{ const r=ENEMY_3D[t];
+      return !!r&&!!r.geo&&r.details.length===2&&!!r.details[0].geo
+        &&!!r.details[1].geo&&!!r.face.geo; }),
+    ENEMY_TYPES.join(","));
+  { const seen=new Set(ENEMY_TYPES.map(t=>ENEMY_3D[t].geo));
+    check("EB.0c the nine hulls are nine DISTINCT geometries (no type"
+        +" silently reusing another's body)",
+      seen.size===9, String(seen.size)); }
+  /* Every hull must fit its own tile or bodies clip the walls they walk
+     between. Details (pauldrons, plumes, fins) may overhang; hulls may not. */
+  { let ok=true,det=[];
+    for(const t of ENEMY_TYPES){ const d=dim(ENEMY_3D[t].geo);
+      if(d.x>CFG.TILE||d.z>CFG.TILE){ok=false;
+        det.push(t+":"+d.x.toFixed(1)+"x"+d.z.toFixed(1));} }
+    check("EB.0d every hull footprint fits inside one TILE", ok,
+      det.join(" ")||"all <= "+CFG.TILE); }
+
+  // --- walker: bell hood whose profile FLARES then steps back in (the brow)
+  { const g=ENEMY_3D.walker.geo;
+    const pp=g.parameters.points;
+    let flare=false;
+    for(let i=1;i<pp.length-1;i++)
+      if(pp[i].x>pp[i-1].x&&pp[i+1].x<pp[i].x&&pp[i].y>0)flare=true;
+    check("EB.1 walker hull is a lathe bell with a BROW step (radius flares"
+        +" out then narrows above centre, so the ridge shades the face)",
+      g.type==="LatheGeometry"&&flare,
+      pp.map(p=>p.x.toFixed(1)).join(">")); }
+  { const a=GD.e_walker[0], b=GD.e_walker[1];
+    const ba=box(a), bb2=box(b);
+    check("EB.1b walker details are MIRRORED sides (left/right), so the"
+        +" existing alternating stomp still has two transforms to drive",
+      a!==b&&ba.max.x<0&&bb2.min.x>0
+      &&Math.abs(ba.min.x+bb2.max.x)<1e-4,
+      "L["+ba.min.x.toFixed(1)+","+ba.max.x.toFixed(1)+"] R["
+        +bb2.min.x.toFixed(1)+","+bb2.max.x.toFixed(1)+"]"); }
+
+  // --- stationary: planted trapezoid, base WIDER than top, no legs
+  { const d=dim(ENEMY_3D.stationary.geo);
+    const g=ENEMY_3D.stationary.geo, pa=g.attributes.position;
+    let loW=0, hiW=0;
+    for(let i=0;i<pa.count;i++){
+      const rad=Math.hypot(pa.getX(i),pa.getZ(i));
+      if(pa.getY(i)<d.b.min.y+1e-3)loW=Math.max(loW,rad);
+      if(pa.getY(i)>d.b.max.y-1e-3)hiW=Math.max(hiW,rad);
+     }
+    check("EB.2 stationary hull is a PLANTED trapezoid: base strictly wider"
+        +" than top, and it rests on the floor (no legs to lift)",
+      loW>hiW*1.15&&Math.abs(EH.e_stationary+d.b.min.y)<1e-6,
+      "base="+loW.toFixed(1)+" top="+hiW.toFixed(1)); }
+
+  // --- fast: the only straight-edged, flat footprint
+  { const d=dim(ENEMY_3D.fast.geo);
+    check("EB.3 fast hull is a FLAT delta plate (y/x < 0.45) and hovers"
+        +" clear of the floor",
+      d.y/d.x<0.45&&EH.e_fast+d.b.min.y>0.5,
+      "y/x="+(d.y/d.x).toFixed(3)
+        +" gap="+(EH.e_fast+d.b.min.y).toFixed(2)); }
+
+  // --- chaser: forward lean. The hull is tilted, so its crown overhangs +Z.
+  { const g=ENEMY_3D.chaser.geo, pa=g.attributes.position;
+    const b=box(g);
+    let topZ=-1e9, botZ=-1e9;
+    for(let i=0;i<pa.count;i++){
+      if(pa.getY(i)>b.max.y-R("chaser")*0.25)topZ=Math.max(topZ,pa.getZ(i));
+      if(pa.getY(i)<b.min.y+R("chaser")*0.25)botZ=Math.max(botZ,pa.getZ(i));
+     }
+    check("EB.4 chaser hull LEANS forward: its crown overhangs its base"
+        +" toward +Z (travel)",
+      topZ>botZ+R("chaser")*0.10,
+      "topZ="+topZ.toFixed(1)+" botZ="+botZ.toFixed(1)); }
+
+  // --- boomerang: translucent, so you see the floor through it
+  { const m=ENEMY_3D.boomerang.mat;
+    check("EB.5 boomerang hull is TRANSLUCENT (the 'phases bricks' tell)",
+      m.transparent===true&&m.opacity<0.9,
+      m.opacity.toFixed(2)); }
+
+  // --- rocket: hovers, and its exhaust reaches the floor without piercing it
+  { const d=dim(ENEMY_3D.rocket.geo);
+    const ex=box(GD.e_rocket[1]);
+    check("EB.6 rocket HOVERS (hull clear of the floor) and its exhaust"
+        +" reaches the floor without piercing it",
+      EH.e_rocket+d.b.min.y>1&&EH.e_rocket+ex.min.y>=-1e-6
+      &&EH.e_rocket+ex.min.y<1,
+      "hull="+(EH.e_rocket+d.b.min.y).toFixed(2)
+        +" exhaust="+(EH.e_rocket+ex.min.y).toFixed(2)); }
+
+  // --- burrow: the only body far longer than it is tall
+  { const d=dim(ENEMY_3D.burrow.geo);
+    check("EB.7 burrow hull is a LOW SEGMENTED grub: fore-aft length > 2.2x"
+        +" its height, and it hugs the floor",
+      d.z/d.y>2.2&&EH.e_burrow+d.b.min.y<R("burrow")*0.1,
+      "z/y="+(d.z/d.y).toFixed(2)); }
+
+  // --- shade: no feet, no shadow, a floor glow instead
+  { const d=dim(ENEMY_3D.shade.geo);
+    const g=ENEMY_3D.shade.geo, pa=g.attributes.position;
+    const lows=new Set();
+    for(let i=0;i<pa.count;i++)
+      if(pa.getY(i)<d.b.min.y+R("shade")*0.55)
+        lows.add(Math.atan2(pa.getZ(i),pa.getX(i)).toFixed(2));
+    check("EB.8 shade hull FLOATS clear of the floor and its hem is ragged"
+        +" (low verts scattered around the ring, not one flat rim)",
+      EH.e_shade+d.b.min.y>0.5&&lows.size>=4,
+      "gap="+(EH.e_shade+d.b.min.y).toFixed(2)+" hemAz="+lows.size); }
+
+  // --- knight: crown spikes breaking the helm's top outline
+  { const g=ENEMY_3D.knight.geo, pa=g.attributes.position;
+    const b=box(g);
+    let above=0;
+    for(let i=0;i<pa.count;i++)if(pa.getY(i)>R("knight")*1.02)above++;
+    check("EB.9 knight hull carries CROWN spikes above the helm top",
+      above>0&&b.max.y>R("knight")*1.4,
+      "aboveHelm="+above+" top="+b.max.y.toFixed(1)); }
+  /* MeshPhongMaterial always carries a .specular (default #111111), so the
+     separation is measured on specular BRIGHTNESS: knight takes a warm hot
+     highlight, fast keeps the dull default. */
+  { const m=ENEMY_3D.knight.mat, fm=ENEMY_3D.fast.mat;
+    const ls=(x)=>x.specular.getHSL({},THREE.SRGBColorSpace).l;
+    check("EB.9b CROWN separation: knight alone takes a BRIGHT specular, so"
+        +" the frozen key highlights it off gold walls; fast stays dull",
+      m.isMeshPhongMaterial&&ls(m)>0.5&&m.shininess>fm.shininess
+      &&ls(fm)<0.2,
+      "knight="+ls(m).toFixed(2)+"@"+m.shininess
+        +" fast="+ls(fm).toFixed(2)+"@"+fm.shininess); }
+  { const nb=ENEMY_3D.knight.details[1].mat;
+    check("EB.9c knight nasal bar is UNLIT and pale (sits above every gold"
+        +" value in CROWN regardless of light angle)",
+      nb.isMeshBasicMaterial
+      &&nb.color.getHSL({},THREE.SRGBColorSpace).l>0.8,
+      "#"+nb.color.getHexString()); }
+
+  // --- shade is the ONLY type that does not cast (glow replaces the shadow)
+  { const w=createWorld(94,1); loadLevel(w,1,false);
+    w.enemies=ENEMY_TYPES.map((t,i)=>mkE(t,60+i*30,80));
+    const sc=buildScene(w); sc.update(w);
+    const es=slotsOf(sc.group,"enemy");
+    const cast={};
+    ENEMY_TYPES.forEach((t,i)=>{ cast[t]=es[i].castShadow; });
+    check("EB.10 shade is the ONLY foe that casts NO shadow (its additive"
+        +" floor glow stands in for one); the other eight all cast",
+      cast.shade===false
+      &&ENEMY_TYPES.filter(t=>t!=="shade").every(t=>cast[t]===true),
+      JSON.stringify(cast));
+    check("EB.10b shade detail B is an additive floor ring lying flat just"
+        +" above the boards",
+      ENEMY_3D.shade.details[1].mat.blending===THREE.AdditiveBlending
+      &&Math.abs(EH.e_shade+ENEMY_3D.shade.details[1].pos[1]
+        +box(GD.e_shade[1]).min.y)<2,
+      String(ENEMY_3D.shade.details[1].mat.blending));
+    /* every hull swaps clean: cycle one slot through all nine types and the
+       four meshes must follow BY REFERENCE every time (ref-swap contract). */
+    let swapOk=true, sdet=[];
+    for(const t of ENEMY_TYPES){
+      w.enemies[0].type=t; sc.update(w);
+      const s=slotsOf(sc.group,"enemy")[0], k="e_"+t;
+      if(s.geometry!==ENEMY_3D[t].geo||s.children[0].geometry!==GD[k][0]
+        ||s.children[1].geometry!==GD[k][1]
+        ||s.children[2].geometry!==ENEMY_3D[t].face.geo){swapOk=false;
+        sdet.push(t);}
+     }
+    check("EB.11 cycling one slot through ALL NINE types ref-swaps hull +"
+        +" both details + face every time",
+      swapOk, sdet.join(" ")||"9/9"); }
+
+  // --- boomerang socket + eye hold still while the hem spins
+  { const wb=createWorld(95,1); loadLevel(wb,1,false);
+    wb.enemies=[mkE("boomerang",100,80,{dir:{x:1,y:0}})];
+    const scb=buildScene(wb);
+    wb.time=0.37; scb.update(wb);
+    const s=slotsOf(scb.group,"enemy")[0];
+    const face=s.children[2];
+    /* the plane lies flat (rot.x=-pi/2) so an in-plane rot.z cancels the
+       parent yaw about world Y; net world orientation of the socket is the
+       unrotated flat plane, whatever the slot is doing. */
+    s.updateMatrixWorld(true);
+    const world=new THREE.Quaternion();
+    face.getWorldQuaternion(world);
+    const flat=new THREE.Quaternion().setFromAxisAngle(
+      new THREE.Vector3(1,0,0),-Math.PI/2);
+    check("EB.12 boomerang socket eye COUNTER-SPINS the slot: the hem turns"
+        +" at t*10 but the eye holds a fixed world orientation",
+      Math.abs(s.rotation.y-(0.37*10)%(Math.PI*2))<1e-9
+      &&Math.abs(face.rotation.z+s.rotation.y)<1e-9
+      &&world.angleTo(flat)<1e-5,
+      "slot="+s.rotation.y.toFixed(3)+" face.z="+face.rotation.z.toFixed(3)
+        +" worldErr="+world.angleTo(flat).toExponential(1)); }
+
+  // --- stationary lens pulses (2D parity: the lens core breathes)
+  { const ws=createWorld(96,1); loadLevel(ws,1,false);
+    ws.enemies=[mkE("stationary",100,80)];
+    const scs=buildScene(ws);
+    ws.time=0; scs.update(ws);
+    const lens=slotsOf(scs.group,"enemy")[0].children[0];
+    const s0=lens.scale.x;
+    ws.time=Math.PI/6; scs.update(ws);       // sin(3t)==1 peak
+    check("EB.13 stationary hex lens PULSES on sin(3t) (2D lens-core parity)",
+      Math.abs(s0-1)<1e-9&&lens.scale.x>1.02,
+      s0.toFixed(3)+"->"+lens.scale.x.toFixed(3)); }
+ });
+
+// ---- §MG mergeGeos is variadic and index-tolerant --------------------------
+await sec("MG",async()=>{
+  const ent=await import("../src/render/three/entities.js");
+  const {mergeGeos}=ent;
+  check("MG.0 mergeGeos exported", typeof mergeGeos==="function");
+  /* the crossed-quad precedent must stay byte-exact: two indexed
+     PlaneGeometries => 8 verts / 12 idx (pinned in S4.C too). */
+  { const a=new THREE.PlaneGeometry(10,10), b=new THREE.PlaneGeometry(10,10);
+    b.rotateY(Math.PI/2);
+    const g=mergeGeos(a,b);
+    check("MG.1 two indexed inputs stay 8 verts / 12 idx (crossed-quad"
+        +" contract)",
+      g.attributes.position.count===8&&g.index.count===12,
+      g.attributes.position.count+"/"+g.index.count); }
+  /* ExtrudeGeometry emits NO index; merging it used to throw on
+     a.index.array. Synthesised indices keep the tri list intact. */
+  { const s=new THREE.Shape();
+    s.moveTo(0,1); s.lineTo(1,-1); s.lineTo(-1,-1);
+    const ex=new THREE.ExtrudeGeometry(s,{depth:2,bevelEnabled:false});
+    check("MG.2 ExtrudeGeometry really is non-indexed (the case that used"
+        +" to throw)", ex.index===null);
+    const g=mergeGeos(ex);
+    check("MG.3 non-indexed input gets a synthesised index (count ==="
+        +" vertex count, all attrs present)",
+      g.index.count===ex.attributes.position.count
+      &&!!g.attributes.position&&!!g.attributes.normal&&!!g.attributes.uv,
+      g.index.count+"/"+ex.attributes.position.count); }
+  { const a=new THREE.BoxGeometry(4,4,4), b=new THREE.BoxGeometry(2,2,2),
+      c=new THREE.BoxGeometry(1,1,1);
+    const g=mergeGeos(a,b,c);
+    check("MG.4 variadic: three inputs merge into ONE geometry with offset"
+        +" indices",
+      g.attributes.position.count===72&&g.index.count===108
+      &&Math.max(...Array.from(g.index.array))===71,
+      g.attributes.position.count+"/"+g.index.count); }
  });
 
 console.log(fail? "THREE FAIL":"THREE OK");

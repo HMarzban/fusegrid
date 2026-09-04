@@ -70,6 +70,18 @@ not shell screens. Do not add them as `SCREEN` values.
     crops WebGL to the bottom-left quarter on dpr=2.
   - The board border is ONE extruded cabinet rim (`tag:"trim"`, `RIM_W 18` /
     `RIM_LIP 6`) with a hole — never four rails, which crossed at the corners.
+  - Enemy bodies: one `ENEMY_3D[type]` row per foe, each exactly FOUR meshes
+    (hull + two ref-swapped details + `eye_<type>` face plane), so
+    `SLOT_MESH.enemy` stays 4 and fat-world stays 143. Parts are
+    pre-transformed and fused by `mergeGeos` (variadic, and it synthesises an
+    index because `ExtrudeGeometry` emits none) — never added as children.
+    `lathe(pts,seg,r)` profiles run bottom -> top or normals invert; a radius
+    that flares then narrows is a brow / warning band, which is how a
+    one-material hull gets a two-tone read. Detail channel order is PER TYPE,
+    not global (`stationary` keeps its magenta Basic core on `children[0]`
+    because two tests pin it there; `walker` splits into mirrored halves so
+    the alternating stomp keeps two transforms). `shade` is the only foe with
+    `castShadow=false`; additive accents never cast.
   - `shellview.js` routes `app.screen` to `menudraw.js` and owns `kindSize` /
     `dims`, the one logical box every screen measures against (a real canvas
     wins, otherwise kind picks the classic box or the projected one). It is
@@ -176,4 +188,7 @@ not covered by Node — play-verify in a browser after render changes.
 - Rooms 6–8 use SAND / VOID / CROWN palettes, chiptune cues (`sand` / `void` / `crown`), and boom tints (kick 69 / 40 / 82). Those rooms append exclusive BURROW / SHADE / KNIGHT (`ROOM_EXTRA`); do not replace CORE L1–5 spawn lists. Rooms 1–5 stay JUNGLE–ARENA. Ice/water/arena boom numbers stay. Menu/intro use the default boom.
 - Live 3D uses one frozen rig `{az:0, el:0.62, dist:960, target:[0,-44,0]}` (54.5° 3/4) and one frozen light recipe — warm key `#fff4e2` 1.05 with the only shadow, cool fill `#bcd4ff` 0.45 opposite-and-behind (never casts), hemi 0.55, ambient 0.18. Key:fill 2.3:1; `PCFSoftShadowMap` ignores `shadow.radius`, so softness is the ratio, not blur. Do not add a per-biome camera or light table. VOID staying dark is the look, not a bug.
 - The 3D board sits in a cabinet well: ONE `ExtrudeGeometry` rim with a hole, tinted `wall`→`bg1` so it recedes. Four rails crossed at the corners and stuck out — never go back. Border is 1 draw call, so fat-world is 143.
+- At `el:0.62` the camera sits 54.5° above the horizon — past 45°, so it reads more TOP than side. The PLAN-VIEW FOOTPRINT is an enemy's primary cue, and nine distinguishable footprints beat nine distinguishable profiles: three scaled spheres were three circles from up there. Detail below the waist buys grounding and shadow shape, not visibility, and a face plane has to face the RIG (rake it up) rather than the direction of travel.
+- A stale service worker serves pre-change bytes and looks exactly like a render change that did not land. Unregister the SW and delete its caches before trusting any headed 3D screenshot.
+- CROWN's collision is its `brickA` `#ffd447`, which is `fast`'s identity colour exactly. The three golds separate on value and shape, never hue: `knight` is the only bright-specular Phong body plus an unlit pale nasal bar, `fast` carries dark fins over a straight-edged delta, `burrow` is a duller value with an additive plume. Do not restyle the biome to fix this.
 - PWA is a versioned app-shell precache (`fusegrid-shell-vN`). Offline after the first visit; first visit still needs network. Relative `./` scope covers Pages `/fusegrid/` and loopback. New `CACHE_NAME`/REV: `register.update` + one-shot `controllerchange` reload. iOS install is Add to Home Screen; module SW wants 16.4+.
