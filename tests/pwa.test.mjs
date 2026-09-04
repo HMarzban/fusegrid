@@ -55,6 +55,11 @@ check(
   "manifest copy has no Bomberman",
   !JSON.stringify(manifest).toLowerCase().includes("bomberman"),
 );
+check(
+  "manifest description names browser and 3D",
+  /browser/i.test(manifest.description) && /3D/.test(manifest.description),
+  manifest.description,
+);
 
 const icon192 = (manifest.icons || []).find((i) => i.sizes === "192x192");
 const icon512 = (manifest.icons || []).find((i) => i.sizes === "512x512");

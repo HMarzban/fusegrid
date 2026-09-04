@@ -139,7 +139,11 @@ not shell screens. Do not add them as `SCREEN` values.
 - Public play is **GitHub Pages** (`https://hmarzban.github.io/fusegrid/`).
   Static files only (`.nojekyll`, relative asset hrefs). Do not rebind `serve.js`.
   Social/SEO: keep `og.png` (1200×630), `robots.txt`, and `sitemap.xml` in the
-  Pages stage set. `og:image` must stay an absolute Pages URL.
+  Pages stage set. `og:image` must stay an absolute Pages URL. GitHub About
+  description + topics are live SEO (not in git): lead with play-in-browser +
+  REAL 3D ⇄ CLASSIC 2D + Heat, not "deterministic". Keep topics filled. Repo
+  Settings → Social preview has no API — upload `og.png` there when the card
+  changes.
   PWA: also stage `manifest.webmanifest`, `sw.js`, `icon-192.png`, `icon-512.png`.
   `serve.js` MIME includes `.webmanifest`.
 
@@ -189,7 +193,7 @@ not covered by Node — play-verify in a browser after render changes.
 
 ## Learned Workspace Facts
 - Surviving a hit leaves live bombs and blades in the world.
-- Share the play URL with a trailing slash (`https://hmarzban.github.io/fusegrid/`); the no-slash GitHub Pages 301 has no Open Graph tags, so link previews fail. Share card is root `og.png` (1200×630); `og:image` stays the absolute Pages URL. The hero is a REAL screenshot of the live 3D board (JUNGLE, transparent clear via `scene.background=null`, blast mid-detonation) — never generated key art, which drifts from the game. Card sells REAL 3D ⇄ CLASSIC 2D plus CORE / PLUS / MAX; the PLAY IN THE BROWSER pill spans that chip row (left = CORE left, right = MAX right) and type keeps a 10% inset. Never Bomberman on the image or tags.
+- Share the play URL with a trailing slash (`https://hmarzban.github.io/fusegrid/`); the no-slash GitHub Pages 301 has no Open Graph tags, so link previews fail. Share card is root `og.png` (1200×630); `og:image` stays the absolute Pages URL. The hero is a REAL screenshot of the live 3D board (JUNGLE, transparent clear via `scene.background=null`, blast mid-detonation) — never generated key art, which drifts from the game. Card sells REAL 3D ⇄ CLASSIC 2D plus CORE / PLUS / MAX; the PLAY IN THE BROWSER pill spans that chip row (left = CORE left, right = MAX right) and type keeps a 10% inset. Never Bomberman on the image or tags. Public About/meta copy leads with play-in-browser + REAL 3D ⇄ CLASSIC 2D + Heat; "deterministic" stays a contributor word, not the storefront lead.
 - A just-planted bomb is not solid while the bomber still occupies that tile; after leaving, re-entry is blocked (plant-and-leave / R16).
 - FLAME is blast length in tiles (starts at 1, caps at 8, persists across death and rooms); BOMB is how many bombs can be live at once.
 - Gold WALL never breaks; green BRICK breaks and stops a normal blast.

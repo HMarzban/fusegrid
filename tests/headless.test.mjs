@@ -679,6 +679,23 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   check("canonical is the public Pages URL",
     /rel=["']canonical["']/.test(indexHtml)
     &&/href=["']https:\/\/hmarzban\.github\.io\/fusegrid\/["']/.test(indexHtml));
+  check("title sells play-in-browser arcade",
+    /<title>FUSE\/GRID — play the bomb-grid arcade in the browser<\/title>/.test(indexHtml));
+  check("meta description names 3D and the browser",
+    /name=["']description["'][^>]+3D/.test(indexHtml)
+    &&/name=["']description["'][^>]+browser/.test(indexHtml));
+  check("og:locale is en_US",
+    /property=["']og:locale["']/.test(indexHtml)&&/en_US/.test(indexHtml));
+  const ld=JSON.parse((indexHtml.match(/<script type="application\/ld\+json">\s*([^<]+)/)||[])[1]||"null");
+  const ldType=ld&&ld["@type"];
+  check("JSON-LD is a free VideoGame",
+    ld
+    &&(ldType==="VideoGame"||(Array.isArray(ldType)&&ldType.includes("VideoGame")))
+    &&ld.isAccessibleForFree===true
+    &&ld.offers&&String(ld.offers.price)==="0",
+    JSON.stringify(ldType));
+  check("sr-only H1 names the arcade",
+    /<h1 class="sr-only">[^<]*arcade[^<]*<\/h1>/.test(indexHtml));
   check("social preview PNG exists", existsSync(join(ROOT,"og.png")));
   check("robots.txt and sitemap.xml exist",
     existsSync(join(ROOT,"robots.txt"))&&existsSync(join(ROOT,"sitemap.xml")));

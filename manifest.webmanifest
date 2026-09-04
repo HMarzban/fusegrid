@@ -2,7 +2,7 @@
   "id": "./",
   "name": "Fusegrid",
   "short_name": "FUSE/GRID",
-  "description": "Deterministic single-player bomb-grid arcade. REAL 3D or classic 2D. Play offline after the first visit.",
+  "description": "Play Fusegrid in the browser. Single-player bomb-grid arcade. REAL 3D or classic 2D. Offline after the first visit.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

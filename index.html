@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FUSE/GRID — play in the browser</title>
-<meta name="description" content="Fusegrid is a single-player bomb-grid arcade. Flip REAL 3D ⇄ CLASSIC 2D. Heat CORE / PLUS / MAX. After the first CLEAR: Pact and rooms 6–8. Play in the browser.">
+<title>FUSE/GRID — play the bomb-grid arcade in the browser</title>
+<meta name="description" content="Play Fusegrid in the browser — a single-player bomb-grid arcade. Flip REAL 3D ⇄ CLASSIC 2D. Heat CORE / PLUS / MAX. Pact and rooms 6–8 after CLEAR.">
+<meta name="author" content="Hossein Marzban">
 <meta name="theme-color" content="#070a12">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,9 +15,10 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta property="og:type" content="website">
+<meta property="og:locale" content="en_US">
 <meta property="og:site_name" content="Fusegrid">
-<meta property="og:title" content="FUSE/GRID — play in the browser">
-<meta property="og:description" content="Single-player bomb-grid arcade. REAL 3D ⇄ CLASSIC 2D. Heat CORE / PLUS / MAX. Pact and rooms 6–8 after CLEAR.">
+<meta property="og:title" content="FUSE/GRID — play the bomb-grid arcade in the browser">
+<meta property="og:description" content="Play Fusegrid in the browser. Single-player bomb-grid arcade. REAL 3D ⇄ CLASSIC 2D. Heat CORE / PLUS / MAX.">
 <meta property="og:url" content="https://hmarzban.github.io/fusegrid/">
 <meta property="og:image" content="https://hmarzban.github.io/fusegrid/og.png">
 <meta property="og:image:secure_url" content="https://hmarzban.github.io/fusegrid/og.png">
@@ -25,12 +27,13 @@
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="FUSE/GRID wordmark beside the real 3D board — gold cabinet rim, green brick grid, a bomb mid-blast — with REAL 3D ⇄ CLASSIC 2D, CORE / PLUS / MAX heat chips and a PLAY IN THE BROWSER button.">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="FUSE/GRID — play in the browser">
-<meta name="twitter:description" content="Single-player bomb-grid arcade. REAL 3D ⇄ CLASSIC 2D. Heat CORE / PLUS / MAX. Pact and rooms 6–8 after CLEAR.">
+<meta name="twitter:title" content="FUSE/GRID — play the bomb-grid arcade in the browser">
+<meta name="twitter:description" content="Play Fusegrid in the browser. Single-player bomb-grid arcade. REAL 3D ⇄ CLASSIC 2D. Heat CORE / PLUS / MAX.">
+<meta name="twitter:url" content="https://hmarzban.github.io/fusegrid/">
 <meta name="twitter:image" content="https://hmarzban.github.io/fusegrid/og.png">
 <meta name="twitter:image:alt" content="FUSE/GRID wordmark beside the real 3D board — gold cabinet rim, green brick grid, a bomb mid-blast — with REAL 3D ⇄ CLASSIC 2D, CORE / PLUS / MAX heat chips and a PLAY IN THE BROWSER button.">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"VideoGame","name":"Fusegrid","alternateName":"FUSE/GRID","url":"https://hmarzban.github.io/fusegrid/","description":"Single-player bomb-grid arcade. Play in the browser: REAL 3D ⇄ CLASSIC 2D. Heat CORE / PLUS / MAX. Pact and rooms 6–8 after the first CLEAR.","genre":["Arcade","Action"],"playMode":"SinglePlayer","applicationCategory":"Game","operatingSystem":"Web","image":"https://hmarzban.github.io/fusegrid/og.png"}
+{"@context":"https://schema.org","@type":["VideoGame","WebApplication"],"name":"Fusegrid","alternateName":"FUSE/GRID","url":"https://hmarzban.github.io/fusegrid/","sameAs":"https://github.com/HMarzban/fusegrid","description":"Play Fusegrid in the browser — a single-player bomb-grid arcade. Flip REAL 3D ⇄ CLASSIC 2D. Heat CORE / PLUS / MAX. Pact and rooms 6–8 after the first CLEAR.","genre":["Arcade","Action"],"playMode":"SinglePlayer","applicationCategory":"GameApplication","operatingSystem":"Web Browser","gamePlatform":"Web Browser","inLanguage":"en","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"image":"https://hmarzban.github.io/fusegrid/og.png","screenshot":"https://hmarzban.github.io/fusegrid/og.png","author":{"@type":"Person","name":"Hossein Marzban","url":"https://github.com/HMarzban"}}
 </script>
 <style>
   :root{
@@ -87,7 +90,9 @@
 </style>
 </head>
 <body>
-<h1 class="sr-only">Fusegrid</h1>
+<h1 class="sr-only">Fusegrid — bomb-grid arcade you play in the browser</h1>
+<p class="sr-only">Single-player bomb-grid arcade. Flip REAL 3D and classic 2D. Heat CORE, PLUS, and MAX. Eight rooms. Free — no account.</p>
+<noscript><p>Play Fusegrid in the browser — a single-player bomb-grid arcade. JavaScript is required.</p></noscript>
 <div id="wrap">
   <div id="hud">
     <span>SCORE <b id="score">0</b></span><span class="sep">·</span>

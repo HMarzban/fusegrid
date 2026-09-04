@@ -2,7 +2,7 @@
   "name": "fusegrid",
   "version": "1.0.0",
   "type": "module",
-  "description": "Fusegrid — deterministic single-player bomb-grid arcade",
+  "description": "Play Fusegrid in the browser — a single-player bomb-grid arcade with REAL 3D and classic 2D.",
   "scripts": {
     "start": "node serve.js",
     "test": "node --test"

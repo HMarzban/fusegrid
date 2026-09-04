@@ -122,4 +122,4 @@ MIT — see [`LICENSE`](LICENSE). Three.js r160 is vendored under MIT in `vendor
 
 ## Repository
 
-[https://github.com/HMarzban/fusegrid](https://github.com/Hmarzban/fusegrid)
+[https://github.com/HMarzban/fusegrid](https://github.com/HMarzban/fusegrid)

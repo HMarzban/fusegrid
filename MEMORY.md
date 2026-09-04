@@ -16,6 +16,10 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-04 — Public SEO: About copy, topics, and page metadata
+- GitHub About no longer leads with "deterministic" (a contributor word). Description is play-in-browser + REAL 3D ⇄ CLASSIC 2D + Heat; topics filled (javascript / game / arcade / webgl / threejs / pwa / …). Repo Settings → Social preview has no API — still needs a manual `og.png` upload.
+- `index.html` title/description/OG/Twitter/JSON-LD now match that storefront (free VideoGame + WebApplication, sr-only H1 + crawler paragraph). Manifest + package.json copy aligned. PWA v20.
+
 ## 2026-09-04 — REAL 3D framing filled out, and the murk was two bugs
 - Rig is now `{az:0, el:0.54, dist:870, target:[0,-48,0]}` (59.1°) fitted to the
   PLAYFIELD corners instead of the decorative bezel: board area 38.9% -> 50.9% of the
