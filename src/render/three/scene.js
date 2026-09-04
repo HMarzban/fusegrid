@@ -13,6 +13,36 @@ import {createPools} from "./entities.js";
 
 const W=CFG.COLS*CFG.TILE, D=CFG.ROWS*CFG.TILE;
 const MAT=new THREE.Matrix4();
+/* Cabinet rim (2026-09-04 cam-light-frame): the border used to be four
+   wallHi rails at one height, and the N/S pair spanned W+TILE, so they
+   crossed the E/W pair and stuck out past every corner. One extruded ring
+   with a hole cannot overlap itself — there are no corner pieces — and it
+   costs 1 draw call instead of 4. Solid from the floor to LIP above the wall
+   top so the arena sits in a well rather than under a floating rail; tinted
+   DOWN toward bg1 so the frame recedes and the bevel carries the highlight.
+   Bevel is inset so total reach stays exactly RIM_W. */
+export const RIM_W=18, RIM_LIP=6, RIM_BEV=2, RIM_IN=4;
+
+function buildRim(biome){
+  const oX=W/2+RIM_W-RIM_BEV, oZ=D/2+RIM_W-RIM_BEV;
+  const iX=W/2-RIM_IN+RIM_BEV, iZ=D/2-RIM_IN+RIM_BEV;
+  const shape=new THREE.Shape();
+  shape.moveTo(-oX,-oZ); shape.lineTo(oX,-oZ); shape.lineTo(oX,oZ);
+  shape.lineTo(-oX,oZ); shape.closePath();
+  const hole=new THREE.Path();          // reverse winding => real hole
+  hole.moveTo(-iX,-iZ); hole.lineTo(-iX,iZ); hole.lineTo(iX,iZ);
+  hole.lineTo(iX,-iZ); hole.closePath();
+  shape.holes.push(hole);
+  const geo=new THREE.ExtrudeGeometry(shape,{
+    depth:biome.hWall+RIM_LIP-RIM_BEV,bevelEnabled:true,
+    bevelThickness:RIM_BEV,bevelSize:RIM_BEV,bevelSegments:1,curveSegments:1});
+  geo.rotateX(-Math.PI/2);              // extrude runs +Z -> lay it flat
+  const col=new THREE.Color(biome.wall).lerp(new THREE.Color(biome.bg1),0.35);
+  const rim=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({color:col}));
+  rim.castShadow=false; rim.receiveShadow=true;
+  rim.userData.tag="trim";
+  return rim;
+}
 
 function disposeGroup(group){
   const mats=new Set();
@@ -91,24 +121,10 @@ export function buildScene(world, atlas){
   checker.receiveShadow=true; checker.userData.tag="checker";
   group.add(checker);
 
-  // S4 border trim: wall-top rails framing the arena in biome.wallHi
-  {
-    const trimMat=new THREE.MeshLambertMaterial({color:biome.wallHi});
-    const rail=(w,d,x,z)=>{
-      const m=new THREE.Mesh(new THREE.BoxGeometry(w,6,d),trimMat);
-      m.position.set(x,biome.hWall+3,z);
-      m.castShadow=false; m.receiveShadow=true;
-      m.userData.tag="trim";
-      group.add(m);
-     };
-    rail(W+CFG.TILE,10,0,(D-CFG.TILE)/2);
-    rail(W+CFG.TILE,10,0,-(D-CFG.TILE)/2);
-    rail(10,D-CFG.TILE,(W-CFG.TILE)/2,0);
-    rail(10,D-CFG.TILE,-(W-CFG.TILE)/2,0);
-   }
+  group.add(buildRim(biome));
 
   const lights=createLights(biome);
-  group.add(lights.hemi,lights.dir,lights.amb);
+  group.add(lights.hemi,lights.dir,lights.fill,lights.amb);
   lights.dir.target.position.set(0,0,0);
   group.add(lights.dir.target);
 

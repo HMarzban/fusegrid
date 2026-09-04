@@ -22,11 +22,12 @@
     rocket pyramid, flat-C boomerang torus, baked chaser/fast silhouette
     scaling, big tilted face planes / stationary slit, exported GD/EH/EYT
     tables, ref-swap contracts, merged fast fins, boomerang spin override,
-    rocket flame swap, headless bright fallbacks, and the 146-call
+    rocket flame swap, headless bright fallbacks, and the 143-call
     fat-world budget after instanced pickups. No DOM anywhere. */
 import {createLights} from "../src/render/three/lights.js";
 import {build} from "../src/render/three/materials.js";
-import {buildScene, countDrawCalls} from "../src/render/three/scene.js";
+import {buildScene, countDrawCalls, RIM_W, RIM_LIP,
+  RIM_BEV} from "../src/render/three/scene.js";
 import {createPools, SLOT_MESH} from "../src/render/three/entities.js";
 import {atlasSources, buildAtlas} from "../src/render/three/textures.js";
 import {createRig, orbitBy, dollBy, resetOrbit, applyOrbit,
@@ -59,21 +60,31 @@ check("vendor three.module.js imports + is r160", THREE.REVISION==="160",
 // ---- §6 lights: frozen rig values ----
 {
   const b=BIOMES[0], L=createLights(b);
-  check("hemi sky uses biome.sky (fallback #cfe8ff) ground bg1 intensity .85",
+  check("hemi sky uses biome.sky (fallback #cfe8ff) ground bg1 intensity .55",
     hexOf(L.hemi)===(b.sky||"#cfe8ff").toLowerCase()
     &&"#"+L.hemi.groundColor.getHexString()==="#"+b.bg1.replace("#","")
-    &&L.hemi.intensity===0.85,
+    &&L.hemi.intensity===0.55,
     hexOf(L.hemi)+"/"+L.hemi.groundColor.getHexString()+"/"+L.hemi.intensity);
   const d=L.dir;
-  check("dir white 1.6 at (300,420,220) castShadow",
-    d.intensity===1.6&&hexOf(d)==="#ffffff"&&d.position.x===300
-    &&d.position.y===420&&d.position.z===220&&d.castShadow===true);
+  check("key warm #fff4e2 1.05 at (-240,560,320) castShadow",
+    d.intensity===1.05&&hexOf(d)==="#fff4e2"&&d.position.x===-240
+    &&d.position.y===560&&d.position.z===320&&d.castShadow===true);
   const c=d.shadow.camera;
-  check("dir shadow ortho ±340/±280 near10 far1200 map1024 bias -5e-4",
-    c.left===-340&&c.right===340&&c.top===280&&c.bottom===-280
-    &&c.near===10&&c.far===1200&&d.shadow.mapSize.width===1024
-    &&d.shadow.mapSize.height===1024&&d.shadow.bias===-0.0005);
-  check("ambient #ffffff 0.25", L.amb.intensity===0.25&&hexOf(L.amb)==="#ffffff");
+  check("key shadow ortho ±420/±380 near10 far1400 map1024 bias -4e-4 nb .02",
+    c.left===-420&&c.right===420&&c.top===380&&c.bottom===-380
+    &&c.near===10&&c.far===1400&&d.shadow.mapSize.width===1024
+    &&d.shadow.mapSize.height===1024&&d.shadow.bias===-0.0004
+    &&d.shadow.normalBias===0.02);
+  const fl=L.fill;
+  check("fill cool #bcd4ff 0.45 opposite-and-behind, NEVER casts",
+    !!fl&&fl.isDirectionalLight&&fl.intensity===0.45&&hexOf(fl)==="#bcd4ff"
+    &&fl.position.x===300&&fl.position.y===260&&fl.position.z===-220
+    &&fl.castShadow===false, fl?hexOf(fl)+"/"+fl.intensity:"missing");
+  check("key:fill ratio 2.3:1 (PCFSoft ignores shadow.radius, so the ratio "
+      +"IS the softness)",
+    Math.abs(d.intensity/fl.intensity-2.3333)<0.01,
+    (d.intensity/fl.intensity).toFixed(3));
+  check("ambient #ffffff 0.18", L.amb.intensity===0.18&&hexOf(L.amb)==="#ffffff");
 }
 
 // ---- §2 materials: flat MeshLambert colors from BIOMES ----
@@ -143,20 +154,20 @@ function scan(grid){
 // ---- §4 camrig: fixed full-board rig (camera-research spec §3/§4) ----
 {
   const st=createRig();
-  check("rig defaults az0 el0.419(66° elev) dist1000 target y-25",
-    st.az===0&&st.el===0.419&&st.dist===1000
-    &&st.target[0]===0&&st.target[1]===-25&&st.target[2]===0,
+  check("rig defaults az0 el0.62(54.5° elev) dist960 target y-44",
+    st.az===0&&st.el===0.62&&st.dist===960
+    &&st.target[0]===0&&st.target[1]===-44&&st.target[2]===0,
     st.az+"/"+st.el+"/"+st.dist);
   orbitBy(st, 10, 10);
-  check("orbitBy clamps el to 0.87 (az free)", st.el===0.87&&st.az===10,
+  check("orbitBy clamps el to EL_MAX 1.05 (az free)", st.el===1.05&&st.az===10,
     "az="+st.az+" el="+st.el);
   orbitBy(st,-100,-100);
-  check("orbitBy clamps el to 0.21", st.el===0.21);
+  check("orbitBy clamps el to EL_MIN 0.18", st.el===0.18);
   dollBy(st,10000); check("dollBy clamps dist to 1400", st.dist===1400);
   dollBy(st,-10000); check("dollBy clamps dist to 560", st.dist===560);
   resetOrbit(st);
-  check("resetOrbit restores authored rig", st.az===0&&st.el===0.419
-    &&st.dist===1000);
+  check("resetOrbit restores authored rig", st.az===0&&st.el===0.62
+    &&st.dist===960);
   const cam=new THREE.PerspectiveCamera();
   applyOrbit(cam,st,{x:0,y:0});
   const se=Math.sin(st.el), ce=Math.cos(st.el);
@@ -175,6 +186,33 @@ function scan(grid){
   check("shake offsets lookAt by SHAKE_3D_K world-units/px (orientation shifts)",
     SHAKE_3D_K===0.09&&!q0.equals(cam3.quaternion),
     "K="+SHAKE_3D_K);
+}
+
+// ---- §4b framing gate: the frozen rig must hold ALL 8 biomes on screen ----
+/* Regression for the 2026-09-04 cam pass. Project every board corner at the
+   floor and at the rim top through the real wrapper camera (fov 45, 600x520)
+   and assert nothing leaves the safe area. ICE is the worst case (tallest
+   walls) at 0.913; a future rig edit that crops it fails here instead of in
+   someone's browser. */
+{
+  const W4=CFG.COLS*CFG.TILE, D4=CFG.ROWS*CFG.TILE;
+  const cam=new THREE.PerspectiveCamera(45,W4/D4,1,2500);
+  applyOrbit(cam,createRig(),{x:0,y:0});
+  cam.updateMatrixWorld(true);
+  let worst=0, worstAt="", lo=1, hi=-1;
+  for(const b of BIOMES)
+    for(const sx of [-1,1])for(const sz of [-1,1])
+      for(const y of [0,b.hWall+RIM_LIP]){
+        const v=new THREE.Vector3(sx*(W4/2+RIM_W),y,sz*(D4/2+RIM_W))
+          .project(cam);
+        const m=Math.max(Math.abs(v.x),Math.abs(v.y));
+        if(m>worst){worst=m; worstAt=b.name;}
+        lo=Math.min(lo,v.y); hi=Math.max(hi,v.y);
+       }
+  check("§4b rig frames all 8 biomes: corners + rim tops at |ndc|<=0.96",
+    worst<=0.96, worst.toFixed(4)+" worst @"+worstAt);
+  check("§4b board sits vertically centred (|cy|<0.05)",
+    Math.abs((lo+hi)/2)<0.05, ((lo+hi)/2).toFixed(4));
 }
 
 // ---- §1 wrapper surface contract ----
@@ -270,13 +308,13 @@ function mkCanvas(){
     const g=createGame(cv,{seed:81,autoplay:true,render3d:true,createRenderer3D});
     const R=()=>g.rig||{};
     check("rig exposed read-only at authored defaults",
-      !!g.rig&&g.rig.az===0&&g.rig.el===0.419&&g.rig.dist===1000,
+      !!g.rig&&g.rig.az===0&&g.rig.el===0.62&&g.rig.dist===960,
       JSON.stringify(g.rig));
     cv.fire("pointerdown",{pointerId:1,button:2,clientX:300,clientY:260});
     wfire("pointermove",{pointerId:1,buttons:2,clientX:400,clientY:260});
     wfire("pointerup",{pointerId:1,button:2,clientX:400,clientY:260});
     check("orbit gate off: right-drag leaves rig frozen",
-      R().az===0&&R().el===0.419,String(R().az+"/"+R().el));
+      R().az===0&&R().el===0.62,String(R().az+"/"+R().el));
     // wheel dolly stays live, clamped to the new band (deltaY<0 = zoom in)
     cv.fire("wheel",{deltaY:-100000,preventDefault(){}});
     check("wheel dolly in clamps to DIST_MIN 560", R().dist===560,
@@ -291,11 +329,11 @@ function mkCanvas(){
     wfire("pointermove",{pointerId:1,buttons:2,clientX:400,clientY:260});
     wfire("pointerup",{pointerId:1,button:2,clientX:400,clientY:260});
     check("opts.orbit: right-drag orbits by DRAG_K*px",
-      Math.abs((g2.rig||{}).az-100*DRAG_K)<1e-9&&(g2.rig||{}).el===0.419,
+      Math.abs((g2.rig||{}).az-100*DRAG_K)<1e-9&&(g2.rig||{}).el===0.62,
       "az="+(g2.rig||{}).az);
     g2.input._onKey({code:"KeyR"});
     check("KeyR restores exact authored rig after orbit",
-      (g2.rig||{}).az===0&&(g2.rig||{}).el===0.419&&(g2.rig||{}).dist===1000,
+      (g2.rig||{}).az===0&&(g2.rig||{}).el===0.62&&(g2.rig||{}).dist===960,
       JSON.stringify(g2.rig));
    }finally{ delete globalThis.window; }
 }
@@ -799,13 +837,15 @@ await sec("S3.C",async()=>{
   const ft=await import("../src/render/three/flythrough.js");
   const {introPhase,INTRO_DUR}=await import("../src/app/intro.js");
   const st0=ft.introCam(0), stE=ft.introCam(INTRO_DUR);
-  check("S3.C start frame matches introPhase zoom start (dist=1000/1.55)",
-    Math.abs(st0.dist-1000/1.55)<1e-4, st0.dist.toFixed(3));
+  check("S3.C start frame matches introPhase zoom start (dist=960/1.55)",
+    Math.abs(st0.dist-960/1.55)<1e-4, st0.dist.toFixed(3));
   check("S3.C start target rides lower-third drift (tz=(camY-.5)*520)",
     Math.abs(st0.target[2]-83.2)<1e-9, st0.target[2].toFixed(2));
-  check("S3.C end frame == fixed rig defaults (seamless handoff)",
-    Math.abs(stE.dist-1000)<1e-9&&stE.az===0&&stE.el===0.419
-    &&stE.target[2]===0, stE.az+"/"+stE.el+"/"+stE.dist);
+  check("S3.C end frame == fixed rig defaults, target y included (it used "
+      +"to pop 0 -> -25 on the last frame)",
+    Math.abs(stE.dist-960)<1e-9&&stE.az===0&&stE.el===0.62
+    &&stE.target[1]===-44&&stE.target[2]===0,
+    stE.az+"/"+stE.el+"/"+stE.dist+"/"+stE.target[1]);
   let mono=true;
   for(let s=0;s<=INTRO_DUR+1e-9;s+=0.25){
     const a=ft.introCam(s), b=ft.introCam(Math.min(INTRO_DUR,s+0.25)); a.el0=a.el; b.el0=b.el;
@@ -814,8 +854,8 @@ await sec("S3.C",async()=>{
   check("S3.C keyframes monotonic (dist up, target-z/el down)", mono);
   let tracks=true;
   for(let s=0;s<=INTRO_DUR;s+=0.5)
-    if(Math.abs(ft.introCam(s).dist*introPhase(s).zoom-1000)>1e-6)tracks=false;
-  check("S3.C dist tracks introPhase fractions (dist*zoom==1000)", tracks);
+    if(Math.abs(ft.introCam(s).dist*introPhase(s).zoom-960)>1e-6)tracks=false;
+  check("S3.C dist tracks introPhase fractions (dist*zoom==960)", tracks);
   check("S3.C flyover swings azimuth out mid-beat (cinematic arc)",
     ft.introCam(2.8).az>0.2&&ft.introCam(0).az===0,
     ft.introCam(2.8).az.toFixed(3));
@@ -1271,17 +1311,28 @@ await sec("S4.E",async()=>{
   check("S4.E checker alternates biome.floor0/floor1 per tile",
     a===biome.floor0.toLowerCase()&&b2===biome.floor1.toLowerCase(),
     a+" vs "+b2);
+  /* Border is ONE extruded ring, not four rails: the old N/S pair spanned
+     W+TILE and crossed the E/W pair at every corner. A 4-rail regression
+     fails the count; a spanning-rail regression fails the reach. */
   const trim=g.children.filter(o=>o.userData.tag==="trim");
-  check("S4.E border trim: 4 wall-top rails in biome.wallHi",
-    trim.length===4&&trim.every(m=>m.isMesh)
-    &&trim.every(m=>"#"+m.material.color.getHexString()
-      ===biome.wallHi.toLowerCase()), trim.length+"");
-  const spanNS=trim.find(m=>m.geometry.parameters.width>
-    m.geometry.parameters.depth);
-  check("S4.E trim frames the arena above wall height",
-    !!spanNS&&spanNS.position.y>=biome.hWall
-    &&trim.every(m=>m.castShadow===false),
-    spanNS?("y="+spanNS.position.y):"missing");
+  check("S4.E border is ONE cabinet rim (never 4 crossing rails)",
+    trim.length===1&&trim[0].isMesh&&trim[0].castShadow===false
+    &&trim[0].receiveShadow===true, trim.length+"");
+  const rim=trim[0];
+  rim.geometry.computeBoundingBox();
+  const bb=rim.geometry.boundingBox;
+  const Wr=CFG.COLS*CFG.TILE, Dr=CFG.ROWS*CFG.TILE;
+  check("S4.E rim is a ring: shape carries a hole, symmetric, reach==RIM_W",
+    rim.geometry.parameters.shapes.holes.length===1
+    &&Math.abs(bb.max.x+bb.min.x)<1e-9&&Math.abs(bb.max.z+bb.min.z)<1e-9
+    &&Math.abs(bb.max.x-(Wr/2+RIM_W))<1e-9
+    &&Math.abs(bb.max.z-(Dr/2+RIM_W))<1e-9,
+    bb.max.x+"/"+bb.max.z);
+  check("S4.E rim caps the wall ring RIM_LIP above wall top, tinted DOWN",
+    Math.abs(bb.max.y-(biome.hWall+RIM_LIP))<1e-9
+    &&Math.abs(bb.min.y+RIM_BEV)<1e-9
+    &&"#"+rim.material.color.getHexString()!==biome.wallHi.toLowerCase(),
+    "y="+bb.min.y+".."+bb.max.y);
   // post-S4 fat-world draw-call count: exact formula, still <=500
   const wf=createWorld(77,1); loadLevel(wf,1,false);
   wf.enemies=[]; wf.items=[];
@@ -1296,12 +1347,12 @@ await sec("S4.E",async()=>{
   let calls=-1;
   try{ r.render(wf,1/60); calls=countDrawCalls(r._dbg.scene); }
   catch(e){ console.log(e.message); }
-  const wantCalls=8                       /* plane+checker+wall+brick+trim4 */
+  const wantCalls=5                       /* plane+checker+wall+brick+rim1 */
     +SLOT_MESH.player+16*SLOT_MESH.enemy+nb*SLOT_MESH.bomb
     +POWER.length*SLOT_MESH.item+2+1;     /* instanced item kinds + blades + fx */
-  check("S4.E fat-world draw calls === "+wantCalls+" (=146 instanced pickups,"
+  check("S4.E fat-world draw calls === "+wantCalls+" (one-rim border,"
       +" <=500 gate)",
-    calls===wantCalls&&wantCalls===146&&calls<=500, String(calls));
+    calls===wantCalls&&wantCalls===143&&calls<=500, String(calls));
 });
 
 // ---- §S5 state overlays: WIN/LOSE/PAUSE paint the classic 2D layer in
@@ -1395,7 +1446,7 @@ await sec("S5.rig",async()=>{
 // ---- §EI enemy-identity wave (spec 2026-08-25-enemy-identity §6):
 // nose-up rocket pyramid, flat-C boomerang, baked silhouette scaling,
 // face/slit plane placement + contracts, merged fast fins, spin/flame
-// animation overrides, headless bright fallbacks, 146 instanced-pickup budget ----
+// animation overrides, headless bright fallbacks, 143 instanced-pickup budget ----
 await sec("EI",async()=>{
   const ent=await import("../src/render/three/entities.js");
   const {GD,EH,EYT}=ent;
@@ -1509,7 +1560,7 @@ await sec("EI",async()=>{
     check("EI.9b headless face/slit fallback bright #f4f7ff (no DOM atlas)",
       "#"+face.color.getHexString()==="#f4f7ff"&&!face.map
       &&typeof document==="undefined"); }
-  // §6.10 fat-world draw-call formula pinned at 146 (instanced pickups)
+  // §6.10 fat-world draw-call formula pinned at 143 (instanced pickups)
   { const wf=createWorld(93,1); loadLevel(wf,1,false);
     wf.enemies=[]; wf.items=[];
     for(let i=0;i<16;i++)wf.enemies.push(mkE(types[i%6],60+i*30,80));
@@ -1522,9 +1573,9 @@ await sec("EI",async()=>{
     const r=createRenderer3D(null,null,{audio:null,hud:null});
     r.render(wf,1/60);
     const calls=countDrawCalls(r._dbg.scene);
-    check("EI.10 fat-world draw calls pinned at 146 (≤500 gate,"
+    check("EI.10 fat-world draw calls pinned at 143 (≤500 gate,"
         +" 6-type mix)",
-      calls===146&&calls<=500,String(calls)); }
+      calls===143&&calls<=500,String(calls)); }
  });
 
 console.log(fail? "THREE FAIL":"THREE OK");

@@ -207,7 +207,7 @@ function mkE(type, x, y) {
     console.log(e.message);
   }
   const want =
-    8 +
+    5 + /* plane + checker + wall + brick + one cabinet rim */
     SLOT_MESH.player +
     16 * SLOT_MESH.enemy +
     nb * SLOT_MESH.bomb +
@@ -215,8 +215,8 @@ function mkE(type, x, y) {
     2 +
     1;
   check(
-    "fat-world draw calls stay 146",
-    calls === want && want === 146 && calls <= 500,
+    "fat-world draw calls stay 143",
+    calls === want && want === 143 && calls <= 500,
     String(calls),
   );
   const im = [];

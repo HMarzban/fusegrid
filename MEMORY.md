@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-04 — REAL 3D cam/light/frame: 54.5° rig, key+fill, one cabinet rim
+- Rig is now `{az:0,el:0.62,dist:960,target:[0,-44,0]}`: X binds the fit at every elevation, so the 3/4 read cost ~40 units of dolly; `el:0.419` (66°) was a ceiling security-cam. Lights split into warm key `#fff4e2` 1.05 (only caster) + cool fill `#bcd4ff` 0.45 opposite-and-behind, hemi 0.55, ambient 0.18 — 2.3:1, since `PCFSoftShadowMap` ignores `shadow.radius`. The 4 crossing `wallHi` rails became ONE `ExtrudeGeometry` rim with a hole, so fat-world 146 -> **143**. `three.test.mjs` gains a framing gate (all 8 biomes' corners + rim tops, worst ICE `|ndc| 0.913`) and a rim gate (one mesh, real hole, reach == RIM_W). PWA v14. Left open: play-verify headed on JUNGLE + ICE.
+
 ## 2026-09-04 — Thermo-nuclear judo 1–6
 - Deleted the unused 3D item Group pool (one InstancedMesh write); split `drawIcon`/`drawEnemyBody`; `ENEMY_3D` + `ITEM_MAKE` tables; `crossedQuads` calls `mergeGeos`; MENU confirm follows `ITEMS` labels; one `defaultStore`. Fat-world 146. PWA v13.
 

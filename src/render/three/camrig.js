@@ -5,12 +5,16 @@
    untouched for 2D/iso. */
 import {clamp} from "../../core/config.js";
 
-export const EL_MIN=0.21, EL_MAX=0.87, DIST_MIN=560, DIST_MAX=1400;  // el = POLAR from +Y: 0.419 rad = 66 deg above horizon
+export const EL_MIN=0.18, EL_MAX=1.05, DIST_MIN=560, DIST_MAX=1400;  // el = POLAR from +Y: 0.62 rad = 54.5 deg above horizon
 export const SHAKE_3D_K=0.09;      // world-units per shake px
-/* fixed full-board rig: az=0 axis-aligned, el 66° lane-readable tilt.
-   dist 1000 keeps ICE wall corners inside |ndc|<=0.75 (≥20px CSS margin).
-   800 left the near walls at |ndc|≈0.98 and read as half a board. */
-const DEF={az:0,el:0.419,dist:1000,target:[0,-25,0]};
+/* fixed full-board rig: az=0 axis-aligned, el 54.5° readable 3/4.
+   The board is 15 wide by 13 deep, so X binds the fit at EVERY elevation and
+   the fitting distance only moves 900..970 across 66°..48° — the 3/4 read is
+   nearly free. el 0.419 (66°) was a ceiling security-cam: cube sides showed
+   at 0.45 of top depth. 0.62 lifts that to 0.71 and still clears the tallest
+   walls (ICE 36). dist 960 / target y -44 centre every biome's board + rim
+   inside |ndc|<=0.92 (worst ICE 0.913, ~26px CSS margin at 600 wide). */
+const DEF={az:0,el:0.62,dist:960,target:[0,-44,0]};
 export const DRAG_K=0.005;         // rad per drag px
 export const WHEEL_DOLLY_K=0.6;    // world-units per wheel deltaY tick
 

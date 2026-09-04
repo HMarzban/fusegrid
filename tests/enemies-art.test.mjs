@@ -371,7 +371,8 @@ function mkE(type, x, y) {
   } catch (e) {
     console.log(e.message);
   }
-  check("fat-world draw calls stay 146", calls === 146, String(calls));
+  // 143 since the 4-rail border collapsed to one extruded cabinet rim
+  check("fat-world draw calls stay 143", calls === 143, String(calls));
 }
 
 {

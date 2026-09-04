@@ -53,12 +53,17 @@ not shell screens. Do not add them as `SCREEN` values.
   - kind `"iso"` — legacy dimetric (`r3d/`), pinned by `?render=iso` only.
     `createRenderer({kind:"3d"|"iso"})` is the **dimetric** branch. Real 3D
     never enters that factory. Menu RENDER flips 3D ⇄ 2D only.
-  - Live 3D default rig (polar `el` from +Y): `{az:0, el:0.419, dist:1000}`.
-    Must frame the whole 15×13 board (all four corners + ICE trim).
-    Spec text that says `el:1.152` / `dist:700` or live `dist:800` is stale.
+  - Live 3D default rig (polar `el` from +Y): `{az:0, el:0.62, dist:960,
+    target:[0,-44,0]}` — 54.5° above horizon, a readable 3/4. X binds the fit
+    at every elevation, so elevation is nearly free; `el:0.419` (66°) was a
+    ceiling security-cam. Must frame the whole 15×13 board (all four corners
+    + ICE tall walls); worst case ICE sits at `|ndc| 0.913`. Any text saying
+    `el:0.419` / `dist:1000` / `el:1.152` / `dist:700` / `dist:800` is stale.
     Never assign `#gl.width`/`#gl.height` from `sizeCanvases` — wrapper owns
     the Retina drawing buffer (`setPixelRatio` + `setSize`). Stomping it
     crops WebGL to the bottom-left quarter on dpr=2.
+  - The board border is ONE extruded cabinet rim (`tag:"trim"`, `RIM_W 18` /
+    `RIM_LIP 6`) with a hole — never four rails, which crossed at the corners.
 - `src/app/` — menu shell, intro beats, demobot, highscores, `pactstore.js`. Not read by `step()`.
   Demobot is an intent FSM (plant-and-leave, hunger for combat cubes / corridor
   foes); attract still CORE/pact=0. Highscores use `scoreEntry`; `noteWorldEdge`
@@ -119,7 +124,7 @@ Node v26, `"type": "module"`. No build step, no bundler.
   Node-testable three **math** stays DOM-free.
 - Frozen `CFG` — mutate world, not config. `BIOMES` elements are shallow.
 - Keep zero **npm** deps. Vendored render libs are OK.
-- 3D draw-call budget is `<=500` (fat-world currently 146). Child-index
+- 3D draw-call budget is `<=500` (fat-world currently 143). Child-index
   contracts in `three.test.mjs` are ABI — do not "flex" them in a drive-by.
 - No comments unless the file already uses explanatory block comments (its style).
   Match the compact, no-whitespace-after-key style already in the codebase.
@@ -151,10 +156,11 @@ not covered by Node — play-verify in a browser after render changes.
 
 ## Learned Workspace Facts
 - Surviving a hit leaves live bombs and blades in the world.
-- Share the play URL with a trailing slash (`https://hmarzban.github.io/fusegrid/`); the no-slash GitHub Pages 301 has no Open Graph tags, so link previews fail. Share card is root `og.png` (1200×630); `og:image` stays the absolute Pages URL. Card sells REAL 3D ⇄ CLASSIC 2D plus CORE / PLUS / MAX; never Bomberman on the image or tags.
+- Share the play URL with a trailing slash (`https://hmarzban.github.io/fusegrid/`); the no-slash GitHub Pages 301 has no Open Graph tags, so link previews fail. Share card is root `og.png` (1200×630); `og:image` stays the absolute Pages URL. Card sells REAL 3D ⇄ CLASSIC 2D plus CORE / PLUS / MAX; the PLAY IN THE BROWSER pill spans that chip row (left = CORE left, right = MAX right). Never Bomberman on the image or tags.
 - A just-planted bomb is not solid while the bomber still occupies that tile; after leaving, re-entry is blocked (plant-and-leave / R16).
 - FLAME is blast length in tiles (starts at 1, caps at 8, persists across death and rooms); BOMB is how many bombs can be live at once.
 - Gold WALL never breaks; green BRICK breaks and stops a normal blast.
-- Rooms 6–8 use SAND / VOID / CROWN palettes, chiptune cues (`sand` / `void` / `crown`), and boom tints (kick 69 / 40 / 82). Rooms 1–5 stay JUNGLE–ARENA. Ice/water/arena boom numbers stay. Menu/intro use the default boom.
-- Live 3D uses one frozen rig `{az:0, el:0.419, dist:1000}` and one frozen light recipe; do not add a per-biome camera or light table. VOID staying dark is the look, not a bug.
+- Rooms 6–8 use SAND / VOID / CROWN palettes, chiptune cues (`sand` / `void` / `crown`), and boom tints (kick 69 / 40 / 82). Those rooms append exclusive BURROW / SHADE / KNIGHT (`ROOM_EXTRA`); do not replace CORE L1–5 spawn lists. Rooms 1–5 stay JUNGLE–ARENA. Ice/water/arena boom numbers stay. Menu/intro use the default boom.
+- Live 3D uses one frozen rig `{az:0, el:0.62, dist:960, target:[0,-44,0]}` (54.5° 3/4) and one frozen light recipe — warm key `#fff4e2` 1.05 with the only shadow, cool fill `#bcd4ff` 0.45 opposite-and-behind (never casts), hemi 0.55, ambient 0.18. Key:fill 2.3:1; `PCFSoftShadowMap` ignores `shadow.radius`, so softness is the ratio, not blur. Do not add a per-biome camera or light table. VOID staying dark is the look, not a bug.
+- The 3D board sits in a cabinet well: ONE `ExtrudeGeometry` rim with a hole, tinted `wall`→`bg1` so it recedes. Four rails crossed at the corners and stuck out — never go back. Border is 1 draw call, so fat-world is 143.
 - PWA is a versioned app-shell precache (`fusegrid-shell-vN`). Offline after the first visit; first visit still needs network. Relative `./` scope covers Pages `/fusegrid/` and loopback. New `CACHE_NAME`/REV: `register.update` + one-shot `controllerchange` reload. iOS install is Add to Home Screen; module SW wants 16.4+.
