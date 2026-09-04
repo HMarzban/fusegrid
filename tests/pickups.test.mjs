@@ -5,6 +5,7 @@ import { createAudio } from "../src/audio.js";
 import * as audioMod from "../src/audio.js";
 import { drawIcon, paintItemFace } from "../src/render/sprites.js";
 import { createRenderer } from "../src/render/renderer.js";
+import { initFx, onEvent, getFx } from "../src/render/fx.js";
 
 let pass = 0,
   fail = 0;
@@ -123,7 +124,58 @@ const APPLY = {
         return (c.dur || 0) + (c.when || 0) <= 0.2;
       }),
     );
+    const kick = itemOf("kick"),
+      thrw = itemOf("throw");
+    check(
+      "item KICK is a down-slap, THROW is a rising whoosh",
+      kick.osc === "sine" &&
+        thrw.osc === "sawtooth" &&
+        kick.f1 < kick.f0 &&
+        thrw.f1 > thrw.f0 &&
+        kick.f0 < 220 &&
+        thrw.f0 > 380,
+    );
+    const bomb = itemOf("bomb"),
+      pwr = itemOf("power");
+    check(
+      "item BOMB is a low thunk, POWER is a pip sting",
+      bomb.f0 < 250 &&
+        !bomb.pip &&
+        pwr.f0 > 500 &&
+        !!pwr.pip &&
+        pwr.pip > pwr.f0,
+    );
   }
+}
+
+{
+  initFx();
+  onEvent(
+    { seed: 1, level: 1 },
+    { t: "power", x: 100, y: 120, col: "#ff3b5c", kind: "heart" },
+  );
+  const parts = getFx();
+  check(
+    "power grab emits a burst, not a blink",
+    parts.length >= 18,
+    String(parts.length),
+  );
+  check(
+    "power grab includes streaks",
+    parts.some((p) => p.streak),
+    parts.filter((p) => p.streak).length,
+  );
+  check(
+    "power grab keeps the pickup color",
+    parts.some((p) => p.color === "#ff3b5c"),
+  );
+  initFx();
+  onEvent({ seed: 1, level: 1 }, { t: "kick", x: 0, y: 0 });
+  check(
+    "kick action FX still speaks",
+    getFx().length >= 8,
+    String(getFx().length),
+  );
 }
 
 {

@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-04 — Collect grab burst
+- `power` FX is 16+6 sparks + 6 streaks (2D overlay; 3D Points already consume the store). Item cue pairs KICK/THROW and BOMB/POWER pinned. Event still `t:power`+`kind`.
+
 ## 2026-09-04 — REAL 3D pickup faces
 - 3D cubes reuse `paintItemFace` (`drawIcon` on a navy 64²). `GLYPH` table deleted. Slot still 2 meshes; fat-world 186. Spec `2026-09-04-pickup-3d-design.md`. Collect FX + foe art still next.
 

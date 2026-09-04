@@ -34,7 +34,9 @@ export function onEvent(world, ev, time){
                    fx.shakeT=Math.min(0.7,fx.shakeT+0.22); fx.flashT=1; break;
     case "kill":  addParticles(ev.x, ev.y, 22, ev.color||"#8affc1");
                    fx.shakeT=Math.min(0.7,fx.shakeT+0.08); break;
-    case "power": addParticles(ev.x, ev.y, 12, ev.col||"#37f0d0"); break;
+    case "power": addParticles(ev.x, ev.y, 16, ev.col||"#37f0d0");
+                   addParticles(ev.x, ev.y, 6, "#fff8d8");
+                   addStreaks(ev.x, ev.y, 6, ev.col||"#37f0d0"); break;
     case "brick": addParticles(ev.x, ev.y, 6, "#c9793f"); break;
     case "hurt":  addParticles(ev.x, ev.y, 6, "#ff5d73");
                    addParticles(ev.x, ev.y, 4, "#ff8a9a");
