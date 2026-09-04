@@ -2,10 +2,10 @@
 // unavailable. createAudio() returns { play(name), toggle(), unlock(), duck(on),
 // pump(), unlocked(), setTrack(id), cue(screen,level), track() } plus the pure
 // frozen MUSIC_PATTERN / MUSIC_PATTERN_B / MUSIC_SECTIONS / MUSIC_TRACKS /
-// musicCue / BOOM_DEFAULT / BOOM_TINTS / boomOf / ITEM_CUE / itemOf / sfxOf
-// exports. Default track is
+// musicCue / BOOM_DEFAULT / BOOM_TINTS / boomOf / ITEM_CUE / itemOf / sfxOf /
+// FOE_CUE / foeOf exports. Default track is
 // menu (AABB). GAME/ATTRACT follow biome. Boom tints live in ./audio/boom.js.
-// Pickup grab tints live in ./audio/item.js.
+// Pickup grab tints live in ./audio/item.js. Foe kill tints live in ./audio/foe.js.
 //
 // MUSIC ENGINE (spec §3): oscillator-only; graph per note is
 // osc→noteGain→musicGain→destination while SFX layers stay direct-to-destination
@@ -15,6 +15,7 @@
 
 import { boomOf } from "./audio/boom.js";
 import { itemOf } from "./audio/item.js";
+import { foeOf } from "./audio/foe.js";
 import {
   MUSIC_PATTERN,
   MUSIC_PATTERN_B,
@@ -24,6 +25,7 @@ import {
 } from "./audio/tracks.js";
 export { BOOM_DEFAULT, BOOM_TINTS, boomOf } from "./audio/boom.js";
 export { ITEM_CUE, itemOf, sfxOf } from "./audio/item.js";
+export { FOE_CUE, foeOf } from "./audio/foe.js";
 export {
   MUSIC_PATTERN,
   MUSIC_PATTERN_B,
@@ -146,6 +148,28 @@ export function createAudio() {
         { t: "highpass", f0: C.php || 700 },
         C.when || 0.06,
       );
+  }
+  function cueFoe(type) {
+    const C = foeOf(type);
+    const dur = C.dur || 0.08;
+    voice(C.osc || "square", C.f0, C.f1 == null ? C.f0 : C.f1, dur, C.vol || 0.1, {
+      t: "highpass",
+      f0: C.hp || 200,
+    });
+    if (C.harm)
+      voice(
+        C.ht || "sine",
+        C.harm,
+        C.harm1 == null ? C.harm : C.harm1,
+        C.hdur || 0.1,
+        C.hvol || 0.04,
+      );
+    if (C.noise)
+      noise(C.ndur || 0.05, C.nvol || 0.04, {
+        t: C.nt || "bandpass",
+        f0: C.noise,
+        q: C.q || 2,
+      });
   }
   function noise(dur, vol, spec, when) {
     if (muted || !ensure()) return;
@@ -403,6 +427,7 @@ export function createAudio() {
           break;
         default:
           if (name && name.indexOf("item_") === 0) cueItem(name.slice(5));
+          else if (name && name.indexOf("foe_") === 0) cueFoe(name.slice(4));
       }
     },
     toggle() {

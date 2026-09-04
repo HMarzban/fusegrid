@@ -60,5 +60,6 @@ export function itemOf(t) {
 
 export function sfxOf(ev) {
   if (ev && ev.t === "power" && ev.kind) return "item_" + ev.kind;
+  if (ev && ev.t === "kill" && ev.type) return "foe_" + ev.type;
   return ev && ev.t;
 }

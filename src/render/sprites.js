@@ -556,6 +556,8 @@ export function drawEnemyBody(c, world, e) {
     c.fill();
   } else {
     const fling = Math.sin(world.time * 14 + e.home.x) > 0;
+    if (e.type === "chaser") c.scale(0.72, 1.42);
+    else if (e.type === "fast") c.scale(1.42, 0.7);
     c.fillStyle = e.color;
     c.beginPath();
     c.arc(0, 0, r, 0, 7);
@@ -598,6 +600,12 @@ export function drawEnemyBody(c, world, e) {
     c.fillStyle = "#0a0f1a";
     c.fillRect(-r * 0.5, fling ? r * 0.75 : r * 0.8, r * 0.34, r * 0.24);
     c.fillRect(r * 0.16, fling ? r * 0.8 : r * 0.75, r * 0.34, r * 0.24);
+    if (e.type === "walker") {
+      c.fillStyle = "#071018";
+      c.fillRect(-r * 0.38, -r * 0.12, r * 0.76, r * 0.52);
+      c.fillStyle = "#2a4a38";
+      c.fillRect(-r * 0.28, -r * 0.02, r * 0.56, r * 0.32);
+    }
     if (e.type === "fast") {
       c.fillStyle = "rgba(255,210,71,0.5)";
       for (let i = 1; i <= 3; i++)

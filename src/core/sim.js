@@ -400,7 +400,7 @@ function killEnemy(w, e, emit) {
   if (e.dead) return;
   e.dead = true;
   w.score += e.type === "rocket" ? 300 : e.type === "boomerang" ? 250 : 100;
-  emit({ t: "kill", x: e.x, y: e.y, color: e.color });
+  emit({ t: "kill", x: e.x, y: e.y, color: e.color, type: e.type });
 }
 
 /* Renderer consumes world.events for audio/particle fx. The sim never writes

@@ -559,12 +559,12 @@ export function drawEnemiesHelp(c, L, t) {
     c.strokeRect(x + 0.5, y + 0.5, cw - 1, ch - 1);
     const ix = x + 10 + ws / 2,
       iy = y + ch / 2;
-    well(c, ix, iy, ws, f.col);
+    well(c, ix, iy, ws);
     dummy.type = f.t;
     dummy.color = f.col;
     c.save();
     c.translate(ix, iy);
-    c.scale(ws / 40, ws / 40);
+    c.scale(ws / 30, ws / 30);
     drawEnemyBody(c, world, dummy);
     c.restore();
     const tx = x + ws + 18,

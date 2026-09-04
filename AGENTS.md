@@ -73,6 +73,9 @@ not shell screens. Do not add them as `SCREEN` values.
   `src/audio/item.js` (`itemOf` / `sfxOf`); `play("item_"+kind)` from power
   events that carry `kind`. Catalog stays 12; `applyPower` semantics unchanged.
   Pickup glyphs live in `drawIcon`; 3D cube faces reuse `paintItemFace`.
+  Foe kill tints live in `src/audio/foe.js` (`foeOf`); `sfxOf` maps
+  `kill`+`type` to `foe_<t>`. ENEMIES / arena 2D use `drawEnemyBody`
+  (WALKER pack, CHASER egg, FAST puck). Do not retune `src/ai/enemies.js`.
   `musicCue` uses `biomeOf(level).name`.
   Oscillator SFX stay direct-to-destination (layered voice + noise + filter,
   never musicGain). Music is a track table: menu AABB (identity), intro bed,

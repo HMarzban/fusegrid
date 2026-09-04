@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-04 — Enemy cabinet silhouettes + kill tints
+- WALKER pack / CHASER egg / FAST puck in `drawEnemyBody` (3D faces reuse the same paint). Kill emit gains `type`; `foe_*` table in `src/audio/foe.js`. AI untouched. Spec `2026-09-04-enemy-redesign-design.md`. PWA v6.
+
 ## 2026-09-04 — Collect grab burst
 - `power` FX is 16+6 sparks + 6 streaks (2D overlay; 3D Points already consume the store). Item cue pairs KICK/THROW and BOMB/POWER pinned. Event still `t:power`+`kind`.
 
