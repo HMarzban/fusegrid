@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-04 — Share card og.png refresh
+- Replaced root `og.png` 1200×630: one-line FUSE/GRID, REAL 3D ⇄ CLASSIC 2D, CORE/PLUS/MAX chips, knight helm + cabinet bomb; alt copy matches.
+
 ## 2026-09-04 — Mature foes + L6–8 exclusive bodies
 - Redrew the six cabinet/arena faces (visor, bunker, drone, helm, wraith, missile). Rooms 6–8 append BURROW / SHADE / KNIGHT (`ROOM_EXTRA`); CORE L1–5 roster strings stay v6. Hunt flag `e.hunt`. Fat-world still 186. Spec `2026-09-04-mature-enemies-design.md`. PWA v9.
 
