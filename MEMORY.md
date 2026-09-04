@@ -16,6 +16,23 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-04 — REAL 3D framing filled out, and the murk was two bugs
+- Rig is now `{az:0, el:0.54, dist:870, target:[0,-48,0]}` (59.1°) fitted to the
+  PLAYFIELD corners instead of the decorative bezel: board area 38.9% -> 50.9% of the
+  canvas, dead height 38% -> 28%, ICE occlusion 0.64 -> 0.54 tile. The brief's premise
+  was backwards — X binds the fit at EVERY elevation, so vertical fill DECREASES as the
+  camera lowers; a higher camera fills more frame AND hides less.
+- "Too dark" was not the light values. `Fog(bg1,700,1600)` was erasing 43% of the far
+  corners (89% at `DIST_MAX`) and ACES@1.0 crushed linear 0.02->0.007, capped white at
+  0.763, and zeroed JUNGLE `floor0`'s red channel outright. Fog dropped, `NoToneMapping`
+  for CLASSIC 2D palette parity, recipe lifted x1.2 with key:fill held at exactly 2.3333.
+  VOID is still the darkest room; its darkness is albedo, not rig.
+- `§4b` gained FLOORS (worst >= 0.90, ndc_y span >= 1.32) that both fail the old rig, so
+  the gate now catches a board shrinking back into a void, not just one leaving frame.
+  24/24 tests, 143 draw calls, PWA v19. Left open: the residual ~28% background band can
+  only go by widening `RIM_W` so the cabinet fills the surround — costs the biome
+  `bg1`/`sky` read, so it needs the user's eye first.
+
 ## 2026-09-04 — REAL 3D enemy bodies rebuilt to the 2D character language
 - Nine `ENEMY_3D` hulls replaced the spheres/boxes: lathe profiles (walker bell,
   rocket ogive, shade cowl) plus extruded plates (fast delta, tail fins), fused by

@@ -55,10 +55,13 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
         gl.setSize(W,H,false);                      // logical box; CSS scales
         gl.shadowMap.enabled=true;
         gl.shadowMap.type=THREE.PCFSoftShadowMap;   // spec §6
-        if(THREE.ACESFilmicToneMapping!=null){
-          gl.toneMapping=THREE.ACESFilmicToneMapping;
-          gl.toneMappingExposure=1;
-         }
+        /* NO tone mapping (2026-09-04 brightness pass). CLASSIC 2D blits the
+           authored BIOMES hex literally, so REAL 3D has to as well or the two
+           renderers disagree about one palette. ACES at exposure 1 also mapped
+           linear 0.02 -> 0.007, capped white at 0.763, and its input matrix
+           annihilated low channels — JUNGLE floor0 came out with NO red at
+           all. That was the "murky, no punch" complaint. */
+        gl.toneMapping=THREE.NoToneMapping;
        }
      }
    }catch(e){ gl=null; }
@@ -89,7 +92,11 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
     sc=buildScene(world,getAtlas(world));
     const biome=biomeOf(world.level);
     scene3.background=new THREE.Color(biome.bg1);
-    scene3.fog=new THREE.Fog(biome.bg1,700,1600);
+    /* No distance fog. The far board corners sit at d 963, and
+       Fog(bg1,700,1600) was replacing 43% of them with the darkest colour in
+       the biome — 89% out at the DIST_MAX dolly clamp. A board that must stay
+       legible at every zoom cannot have fog over it. */
+    scene3.fog=null;
     scene3.add(sc.group);
    }
 

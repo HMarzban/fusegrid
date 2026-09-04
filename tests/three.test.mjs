@@ -60,14 +60,14 @@ check("vendor three.module.js imports + is r160", THREE.REVISION==="160",
 // ---- §6 lights: frozen rig values ----
 {
   const b=BIOMES[0], L=createLights(b);
-  check("hemi sky uses biome.sky (fallback #cfe8ff) ground bg1 intensity .55",
+  check("hemi sky uses biome.sky (fallback #cfe8ff) ground bg1 intensity .72",
     hexOf(L.hemi)===(b.sky||"#cfe8ff").toLowerCase()
     &&"#"+L.hemi.groundColor.getHexString()==="#"+b.bg1.replace("#","")
-    &&L.hemi.intensity===0.55,
+    &&L.hemi.intensity===0.72,
     hexOf(L.hemi)+"/"+L.hemi.groundColor.getHexString()+"/"+L.hemi.intensity);
   const d=L.dir;
-  check("key warm #fff4e2 1.05 at (-240,560,320) castShadow",
-    d.intensity===1.05&&hexOf(d)==="#fff4e2"&&d.position.x===-240
+  check("key warm #fff4e2 1.26 at (-240,560,320) castShadow",
+    d.intensity===1.26&&hexOf(d)==="#fff4e2"&&d.position.x===-240
     &&d.position.y===560&&d.position.z===320&&d.castShadow===true);
   const c=d.shadow.camera;
   check("key shadow ortho ±420/±380 near10 far1400 map1024 bias -4e-4 nb .02",
@@ -76,15 +76,15 @@ check("vendor three.module.js imports + is r160", THREE.REVISION==="160",
     &&d.shadow.mapSize.height===1024&&d.shadow.bias===-0.0004
     &&d.shadow.normalBias===0.02);
   const fl=L.fill;
-  check("fill cool #bcd4ff 0.45 opposite-and-behind, NEVER casts",
-    !!fl&&fl.isDirectionalLight&&fl.intensity===0.45&&hexOf(fl)==="#bcd4ff"
+  check("fill cool #bcd4ff 0.54 opposite-and-behind, NEVER casts",
+    !!fl&&fl.isDirectionalLight&&fl.intensity===0.54&&hexOf(fl)==="#bcd4ff"
     &&fl.position.x===300&&fl.position.y===260&&fl.position.z===-220
     &&fl.castShadow===false, fl?hexOf(fl)+"/"+fl.intensity:"missing");
   check("key:fill ratio 2.3:1 (PCFSoft ignores shadow.radius, so the ratio "
       +"IS the softness)",
     Math.abs(d.intensity/fl.intensity-2.3333)<0.01,
     (d.intensity/fl.intensity).toFixed(3));
-  check("ambient #ffffff 0.18", L.amb.intensity===0.18&&hexOf(L.amb)==="#ffffff");
+  check("ambient #ffffff 0.30", L.amb.intensity===0.30&&hexOf(L.amb)==="#ffffff");
 }
 
 // ---- §2 materials: flat MeshLambert colors from BIOMES ----
@@ -154,9 +154,9 @@ function scan(grid){
 // ---- §4 camrig: fixed full-board rig (camera-research spec §3/§4) ----
 {
   const st=createRig();
-  check("rig defaults az0 el0.62(54.5° elev) dist960 target y-44",
-    st.az===0&&st.el===0.62&&st.dist===960
-    &&st.target[0]===0&&st.target[1]===-44&&st.target[2]===0,
+  check("rig defaults az0 el0.54(59.1° elev) dist870 target y-48",
+    st.az===0&&st.el===0.54&&st.dist===870
+    &&st.target[0]===0&&st.target[1]===-48&&st.target[2]===0,
     st.az+"/"+st.el+"/"+st.dist);
   orbitBy(st, 10, 10);
   check("orbitBy clamps el to EL_MAX 1.05 (az free)", st.el===1.05&&st.az===10,
@@ -166,8 +166,8 @@ function scan(grid){
   dollBy(st,10000); check("dollBy clamps dist to 1400", st.dist===1400);
   dollBy(st,-10000); check("dollBy clamps dist to 560", st.dist===560);
   resetOrbit(st);
-  check("resetOrbit restores authored rig", st.az===0&&st.el===0.62
-    &&st.dist===960);
+  check("resetOrbit restores authored rig", st.az===0&&st.el===0.54
+    &&st.dist===870);
   const cam=new THREE.PerspectiveCamera();
   applyOrbit(cam,st,{x:0,y:0});
   const se=Math.sin(st.el), ce=Math.cos(st.el);
@@ -188,31 +188,67 @@ function scan(grid){
     "K="+SHAKE_3D_K);
 }
 
-// ---- §4b framing gate: the frozen rig must hold ALL 8 biomes on screen ----
-/* Regression for the 2026-09-04 cam pass. Project every board corner at the
-   floor and at the rim top through the real wrapper camera (fov 45, 600x520)
-   and assert nothing leaves the safe area. ICE is the worst case (tallest
-   walls) at 0.913; a future rig edit that crops it fails here instead of in
-   someone's browser. */
+// ---- §4b framing gate: the rig must FILL the frame, and not crop it ----
+/* Regression for the 2026-09-04 framing pass. The basis is the PLAYFIELD —
+   board corners at the floor and at the wall top, which is exactly the outer
+   top corner of the border cubes — not the decorative bezel, which is allowed
+   to run past the two bottom corners the way a real cabinet well does.
+   TWO of these gates are floors, because a ceiling alone happily passed the
+   defect this pass fixed: the old {el:0.62,dist:960,target y -44} rig scored
+   worst 0.8439 and span 1.1767, a board floating in 40% dead height. X binds
+   the fit at every elevation, always on the near ICE wall-top corner. */
 {
   const W4=CFG.COLS*CFG.TILE, D4=CFG.ROWS*CFG.TILE;
   const cam=new THREE.PerspectiveCamera(45,W4/D4,1,2500);
   applyOrbit(cam,createRig(),{x:0,y:0});
   cam.updateMatrixWorld(true);
-  let worst=0, worstAt="", lo=1, hi=-1;
+  const ndc=(x,y,z)=>new THREE.Vector3(x,y,z).project(cam);
+  let worst=0, worstAt="", lo=1, hi=-1, bezel=0;
   for(const b of BIOMES)
-    for(const sx of [-1,1])for(const sz of [-1,1])
-      for(const y of [0,b.hWall+RIM_LIP]){
-        const v=new THREE.Vector3(sx*(W4/2+RIM_W),y,sz*(D4/2+RIM_W))
-          .project(cam);
+    for(const sx of [-1,1])for(const sz of [-1,1]){
+      for(const y of [0,b.hWall]){          // playfield: the fit contract
+        const v=ndc(sx*W4/2,y,sz*D4/2);
         const m=Math.max(Math.abs(v.x),Math.abs(v.y));
         if(m>worst){worst=m; worstAt=b.name;}
         lo=Math.min(lo,v.y); hi=Math.max(hi,v.y);
        }
-  check("§4b rig frames all 8 biomes: corners + rim tops at |ndc|<=0.96",
+      for(const y of [0,b.hWall+RIM_LIP])   // bezel: bounded, not pinned
+        { const v=ndc(sx*(W4/2+RIM_W),y,sz*(D4/2+RIM_W));
+          bezel=Math.max(bezel,Math.abs(v.x),Math.abs(v.y)); }
+     }
+  check("§4b nothing cropped: playfield corners + wall tops, all 8 biomes,"
+      +" |ndc|<=0.96",
     worst<=0.96, worst.toFixed(4)+" worst @"+worstAt);
+  check("§4b frame is FILLED, not floating: worst playfield corner >=0.90"
+      +" (el .62/dist 960 scored 0.8439 and shipped a board in a void)",
+    worst>=0.90, worst.toFixed(4));
+  check("§4b dead height is gated: playfield ndc_y span >=1.32 of 2.0"
+      +" (el .62/dist 960 scored 1.1767 = 306px of 520)",
+    hi-lo>=1.32, (hi-lo).toFixed(4)+" = "+((hi-lo)*260).toFixed(0)+"px/520");
   check("§4b board sits vertically centred (|cy|<0.05)",
     Math.abs((lo+hi)/2)<0.05, ((lo+hi)/2).toFixed(4));
+  check("§4b cabinet bezel may bleed past the near corners but must not fly"
+      +" off screen (|ndc|<=1.10)",
+    bezel<=1.10, bezel.toFixed(4));
+}
+
+// ---- §6b brightness gate: no tone mapping, no fog over the board ----
+/* The 2026-09-04 brightness pass. ACES at exposure 1 mapped linear 0.02 to
+   0.007 and capped white at 0.763; Fog(bg1,700,1600) replaced 43% of the far
+   board corners with the darkest colour in the biome. Tone mapping needs a GL
+   context so it is a source gate in the spirit of S2.J; the fog lives on the
+   scene and reads straight out of stub mode. */
+{
+  const wr=readFileSync("src/render/three/wrapper.js","utf8");
+  check("§6b wrapper sets NoToneMapping — CLASSIC 2D blits the authored hex,"
+      +" so REAL 3D must not regrade the same palette",
+    /toneMapping=THREE\.NoToneMapping/.test(wr)
+    &&!/ACESFilmicToneMapping/.test(wr));
+  const rb=createRenderer3D(null,null,{audio:null,hud:null});
+  const wb=createWorld(9,1); loadLevel(wb,1,false); wb.state="PLAY";
+  rb.render(wb,1/60);
+  check("§6b no distance fog over the board (it was erasing the far half"
+      +" toward bg1)", rb._dbg.scene.fog==null, String(rb._dbg.scene.fog));
 }
 
 // ---- §1 wrapper surface contract ----
@@ -308,13 +344,13 @@ function mkCanvas(){
     const g=createGame(cv,{seed:81,autoplay:true,render3d:true,createRenderer3D});
     const R=()=>g.rig||{};
     check("rig exposed read-only at authored defaults",
-      !!g.rig&&g.rig.az===0&&g.rig.el===0.62&&g.rig.dist===960,
+      !!g.rig&&g.rig.az===0&&g.rig.el===0.54&&g.rig.dist===870,
       JSON.stringify(g.rig));
     cv.fire("pointerdown",{pointerId:1,button:2,clientX:300,clientY:260});
     wfire("pointermove",{pointerId:1,buttons:2,clientX:400,clientY:260});
     wfire("pointerup",{pointerId:1,button:2,clientX:400,clientY:260});
     check("orbit gate off: right-drag leaves rig frozen",
-      R().az===0&&R().el===0.62,String(R().az+"/"+R().el));
+      R().az===0&&R().el===0.54,String(R().az+"/"+R().el));
     // wheel dolly stays live, clamped to the new band (deltaY<0 = zoom in)
     cv.fire("wheel",{deltaY:-100000,preventDefault(){}});
     check("wheel dolly in clamps to DIST_MIN 560", R().dist===560,
@@ -329,11 +365,11 @@ function mkCanvas(){
     wfire("pointermove",{pointerId:1,buttons:2,clientX:400,clientY:260});
     wfire("pointerup",{pointerId:1,button:2,clientX:400,clientY:260});
     check("opts.orbit: right-drag orbits by DRAG_K*px",
-      Math.abs((g2.rig||{}).az-100*DRAG_K)<1e-9&&(g2.rig||{}).el===0.62,
+      Math.abs((g2.rig||{}).az-100*DRAG_K)<1e-9&&(g2.rig||{}).el===0.54,
       "az="+(g2.rig||{}).az);
     g2.input._onKey({code:"KeyR"});
     check("KeyR restores exact authored rig after orbit",
-      (g2.rig||{}).az===0&&(g2.rig||{}).el===0.62&&(g2.rig||{}).dist===960,
+      (g2.rig||{}).az===0&&(g2.rig||{}).el===0.54&&(g2.rig||{}).dist===870,
       JSON.stringify(g2.rig));
    }finally{ delete globalThis.window; }
 }
@@ -840,25 +876,25 @@ await sec("S3.C",async()=>{
   const ft=await import("../src/render/three/flythrough.js");
   const {introPhase,INTRO_DUR}=await import("../src/app/intro.js");
   const st0=ft.introCam(0), stE=ft.introCam(INTRO_DUR);
-  check("S3.C start frame matches introPhase zoom start (dist=960/1.55)",
-    Math.abs(st0.dist-960/1.55)<1e-4, st0.dist.toFixed(3));
+  check("S3.C start frame matches introPhase zoom start (dist=870/1.55)",
+    Math.abs(st0.dist-870/1.55)<1e-4, st0.dist.toFixed(3));
   check("S3.C start target rides lower-third drift (tz=(camY-.5)*520)",
     Math.abs(st0.target[2]-83.2)<1e-9, st0.target[2].toFixed(2));
   check("S3.C end frame == fixed rig defaults, target y included (it used "
       +"to pop 0 -> -25 on the last frame)",
-    Math.abs(stE.dist-960)<1e-9&&stE.az===0&&stE.el===0.62
-    &&stE.target[1]===-44&&stE.target[2]===0,
+    Math.abs(stE.dist-870)<1e-9&&stE.az===0&&stE.el===0.54
+    &&stE.target[1]===-48&&stE.target[2]===0,
     stE.az+"/"+stE.el+"/"+stE.dist+"/"+stE.target[1]);
   let mono=true;
   for(let s=0;s<=INTRO_DUR+1e-9;s+=0.25){
-    const a=ft.introCam(s), b=ft.introCam(Math.min(INTRO_DUR,s+0.25)); a.el0=a.el; b.el0=b.el;
-    if(b.dist<a.dist-1e-9||b.el<b.el0-1e-9)mono=false; // dist up, el rises to rig default
+    const a=ft.introCam(s), b=ft.introCam(Math.min(INTRO_DUR,s+0.25));
+    if(b.dist<a.dist-1e-9||b.el>a.el+1e-9)mono=false;  // dist out, el lifts
    }
-  check("S3.C keyframes monotonic (dist up, target-z/el down)", mono);
+  check("S3.C keyframes monotonic (dist out, el lifts toward the rig)", mono);
   let tracks=true;
   for(let s=0;s<=INTRO_DUR;s+=0.5)
-    if(Math.abs(ft.introCam(s).dist*introPhase(s).zoom-960)>1e-6)tracks=false;
-  check("S3.C dist tracks introPhase fractions (dist*zoom==960)", tracks);
+    if(Math.abs(ft.introCam(s).dist*introPhase(s).zoom-870)>1e-6)tracks=false;
+  check("S3.C dist tracks introPhase fractions (dist*zoom==870)", tracks);
   check("S3.C flyover swings azimuth out mid-beat (cinematic arc)",
     ft.introCam(2.8).az>0.2&&ft.introCam(0).az===0,
     ft.introCam(2.8).az.toFixed(3));

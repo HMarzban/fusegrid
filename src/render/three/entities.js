@@ -197,7 +197,7 @@ function lambertMat(color) {
 }
 /* The nine bodies (enemy-3d-bodies 2026-09-04). Translated silhouette-first
    from the 2D characters in enemybody.js, for the FROZEN rig only: az 0,
-   el 0.62 = 54.5 deg above the horizon. Past 45 deg the camera reads more
+   el 0.54 = 59.1 deg above the horizon. Past 45 deg the camera reads more
    top than side, so the PLAN-VIEW FOOTPRINT is the primary cue and nine
    distinguishable footprints beat nine distinguishable profiles. Detail
    below the waist is spent on grounding and shadow shape, not on being seen.

@@ -59,12 +59,20 @@ not shell screens. Do not add them as `SCREEN` values.
   - kind `"iso"` — legacy dimetric (`r3d/`), pinned by `?render=iso` only.
     `createRenderer({kind:"3d"|"iso"})` is the **dimetric** branch. Real 3D
     never enters that factory. Menu RENDER flips 3D ⇄ 2D only.
-  - Live 3D default rig (polar `el` from +Y): `{az:0, el:0.62, dist:960,
-    target:[0,-44,0]}` — 54.5° above horizon, a readable 3/4. X binds the fit
-    at every elevation, so elevation is nearly free; `el:0.419` (66°) was a
-    ceiling security-cam. Must frame the whole 15×13 board (all four corners
-    + ICE tall walls); worst case ICE sits at `|ndc| 0.913`. Any text saying
-    `el:0.419` / `dist:1000` / `el:1.152` / `dist:700` / `dist:800` is stale.
+  - Live 3D default rig (polar `el` from +Y): `{az:0, el:0.54, dist:870,
+    target:[0,-48,0]}` — 59.1° above horizon, a readable 3/4. X binds the fit
+    at EVERY elevation (always the near ICE wall-top corner), so vertical fill
+    DECREASES as the camera lowers — a higher camera fills more frame AND
+    hides less. All `el` buys is the 3/4 read, `side:top = tan(el)`:
+    `el:0.419` scored 0.445 and was a ceiling security-cam, 0.54 scores
+    0.599. The fit basis is the PLAYFIELD (`|x|<=300`, `|z|<=260`,
+    `y<=hWall`), NOT the decorative bezel, which may bleed ~2.4% past the two
+    bottom corners the way a cabinet well runs off screen. Must frame the whole
+    15×13 board (all four corners + ICE tall walls); worst case ICE sits at
+    `|ndc| 0.9449` and the board fills 50.9% of the canvas. Any text saying
+    `el:0.62` / `dist:960` / `target:[0,-44,0]` / `|ndc| 0.913` /
+    `el:0.419` / `dist:1000` / `el:1.152` / `dist:700` / `dist:800` is
+    stale.
     Never assign `#gl.width`/`#gl.height` from `sizeCanvases` — wrapper owns
     the Retina drawing buffer (`setPixelRatio` + `setSize`). Stomping it
     crops WebGL to the bottom-left quarter on dpr=2.
@@ -186,9 +194,9 @@ not covered by Node — play-verify in a browser after render changes.
 - FLAME is blast length in tiles (starts at 1, caps at 8, persists across death and rooms); BOMB is how many bombs can be live at once.
 - Gold WALL never breaks; green BRICK breaks and stops a normal blast.
 - Rooms 6–8 use SAND / VOID / CROWN palettes, chiptune cues (`sand` / `void` / `crown`), and boom tints (kick 69 / 40 / 82). Those rooms append exclusive BURROW / SHADE / KNIGHT (`ROOM_EXTRA`); do not replace CORE L1–5 spawn lists. Rooms 1–5 stay JUNGLE–ARENA. Ice/water/arena boom numbers stay. Menu/intro use the default boom.
-- Live 3D uses one frozen rig `{az:0, el:0.62, dist:960, target:[0,-44,0]}` (54.5° 3/4) and one frozen light recipe — warm key `#fff4e2` 1.05 with the only shadow, cool fill `#bcd4ff` 0.45 opposite-and-behind (never casts), hemi 0.55, ambient 0.18. Key:fill 2.3:1; `PCFSoftShadowMap` ignores `shadow.radius`, so softness is the ratio, not blur. Do not add a per-biome camera or light table. VOID staying dark is the look, not a bug.
+- Live 3D uses one frozen rig `{az:0, el:0.54, dist:870, target:[0,-48,0]}` (59.1° 3/4) and one frozen light recipe — warm key `#fff4e2` 1.26 with the only shadow, cool fill `#bcd4ff` 0.54 opposite-and-behind (never casts), hemi 0.72, ambient 0.30. Key:fill 2.3333:1; `PCFSoftShadowMap` ignores `shadow.radius`, so softness is the ratio, not blur. The renderer runs `NoToneMapping` and the scene carries NO fog: ACES at exposure 1 mapped linear 0.02→0.007, capped white at 0.763 and zeroed JUNGLE `floor0`'s red channel, while `Fog(bg1,700,1600)` replaced 43% of the far board corners with `bg1` (89% at the `DIST_MAX` dolly clamp). CLASSIC 2D blits the authored hex, so REAL 3D must not regrade the same palette. Do not add a per-biome camera or light table. VOID staying dark is the look, not a bug — its darkness is albedo, not rig, so one global recipe preserves it. Stale: `el:0.62` / `dist:960` / `target y -44`, key 1.05 / fill 0.45 / hemi 0.55 / ambient 0.18, ACES tone mapping, and any `scene.fog`.
 - The 3D board sits in a cabinet well: ONE `ExtrudeGeometry` rim with a hole, tinted `wall`→`bg1` so it recedes. Four rails crossed at the corners and stuck out — never go back. Border is 1 draw call, so fat-world is 143.
-- At `el:0.62` the camera sits 54.5° above the horizon — past 45°, so it reads more TOP than side. The PLAN-VIEW FOOTPRINT is an enemy's primary cue, and nine distinguishable footprints beat nine distinguishable profiles: three scaled spheres were three circles from up there. Detail below the waist buys grounding and shadow shape, not visibility, and a face plane has to face the RIG (rake it up) rather than the direction of travel.
+- At `el:0.54` the camera sits 59.1° above the horizon — past 45°, so it reads more TOP than side. The PLAN-VIEW FOOTPRINT is an enemy's primary cue, and nine distinguishable footprints beat nine distinguishable profiles: three scaled spheres were three circles from up there. Detail below the waist buys grounding and shadow shape, not visibility, and a face plane has to face the RIG (rake it up) rather than the direction of travel.
 - A stale service worker serves pre-change bytes and looks exactly like a render change that did not land. Unregister the SW and delete its caches before trusting any headed 3D screenshot.
 - CROWN's collision is its `brickA` `#ffd447`, which is `fast`'s identity colour exactly. The three golds separate on value and shape, never hue: `knight` is the only bright-specular Phong body plus an unlit pale nasal bar, `fast` carries dark fins over a straight-edged delta, `burrow` is a duller value with an additive plume. Do not restyle the biome to fix this.
 - PWA is a versioned app-shell precache (`fusegrid-shell-vN`). Offline after the first visit; first visit still needs network. Relative `./` scope covers Pages `/fusegrid/` and loopback. New `CACHE_NAME`/REV: `register.update` + one-shot `controllerchange` reload. iOS install is Add to Home Screen; module SW wants 16.4+.

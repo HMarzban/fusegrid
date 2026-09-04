@@ -5,16 +5,24 @@
    untouched for 2D/iso. */
 import {clamp} from "../../core/config.js";
 
-export const EL_MIN=0.18, EL_MAX=1.05, DIST_MIN=560, DIST_MAX=1400;  // el = POLAR from +Y: 0.62 rad = 54.5 deg above horizon
+export const EL_MIN=0.18, EL_MAX=1.05, DIST_MIN=560, DIST_MAX=1400;  // el = POLAR from +Y: 0.54 rad = 59.1 deg above horizon
 export const SHAKE_3D_K=0.09;      // world-units per shake px
-/* fixed full-board rig: az=0 axis-aligned, el 54.5° readable 3/4.
-   The board is 15 wide by 13 deep, so X binds the fit at EVERY elevation and
-   the fitting distance only moves 900..970 across 66°..48° — the 3/4 read is
-   nearly free. el 0.419 (66°) was a ceiling security-cam: cube sides showed
-   at 0.45 of top depth. 0.62 lifts that to 0.71 and still clears the tallest
-   walls (ICE 36). dist 960 / target y -44 centre every biome's board + rim
-   inside |ndc|<=0.92 (worst ICE 0.913, ~26px CSS margin at 600 wide). */
-const DEF={az:0,el:0.62,dist:960,target:[0,-44,0]};
+/* fixed full-board rig: az=0 axis-aligned, el 59.1° readable 3/4.
+   X binds the fit at EVERY elevation — always the NEAR ICE wall-top corner,
+   because near corners project widest — so horizontal fill pins at 96% and
+   the vertical axis carries all the slack. That makes vertical fill
+   MONOTONICALLY DECREASING in el: tilting away from vertical foreshortens the
+   depth axis faster than it grows the near edge. A higher camera therefore
+   fills more frame AND hides less behind walls; the only thing el buys is the
+   3/4 read, measured here as side:top = tan(el).
+   0.62 (0.714) framed the board into 38.9% of the canvas with ~103px of dead
+   bg1 above and below. 0.54 (0.599) takes 50.9% and cuts ICE occlusion
+   0.64 -> 0.54 tile, while staying 35% clear of the 0.419 ceiling security-cam
+   that scored 0.445. The fit basis is the PLAYFIELD, not the decorative bezel:
+   dist 870 / target y -48 put the worst board corner at |ndc| 0.9449 with the
+   board centred to 0.0005, and let the cabinet bezel bleed 2.4% past the two
+   bottom corners the way a real well runs off the screen. */
+const DEF={az:0,el:0.54,dist:870,target:[0,-48,0]};
 export const DRAG_K=0.005;         // rad per drag px
 export const WHEEL_DOLLY_K=0.6;    // world-units per wheel deltaY tick
 
