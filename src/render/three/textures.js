@@ -60,14 +60,13 @@ function paintSlit(c){
   c.globalAlpha=1;
 }
 
-/* ---- §3 visor band: navy strip with two cyan glints ---- */
+/* ---- §3 visor: the 2D slit, so both renderers show the same face — a
+   near-black well across the strip, one lit core bar, one white specular
+   pip. Strip stays 128x32, NearestFilter + sRGB + _shared. ---- */
 function paintVisor(c){
-  c.fillStyle="#0b1020"; c.fillRect(0,6,128,20);
-  c.fillStyle="#59f7ff";
-  for(const gx of [26,78]){
-    c.beginPath(); c.moveTo(gx+10,9); c.lineTo(gx+18,9);
-    c.lineTo(gx+10,23); c.lineTo(gx+2,23); c.closePath(); c.fill();
-   }
+  c.fillStyle="#080b14"; c.fillRect(0,4,128,24);
+  c.globalAlpha=0.42; c.fillStyle="#7fe0ff"; c.fillRect(10,12,108,7);
+  c.globalAlpha=1; c.fillStyle="#ffffff"; c.fillRect(16,9,10,4);
 }
 
 /* ---- §3 blast ramp: vertical fire gradient, alpha fades at the top edge ---- */

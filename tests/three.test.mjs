@@ -690,7 +690,7 @@ await sec("S2.I",()=>{
     &&!slit._ops.includes("ellipse"),
     slit?"ok":"missing");
   const vis=src2.visor;
-  check("S2.R visor source: 128x32 navy band + two glints",
+  check("S2.R visor source: 128x32 dark well + lit core bar + specular pip",
     !!vis&&vis.width===128&&vis.height===32
     &&vis._ops.filter(o=>o==="fillRect"||o==="fill").length>=3
     &&vis._ops.includes("set:fillStyle"),
@@ -1034,6 +1034,30 @@ await sec("S4.A",async()=>{
     &&pools.player.children[0].material.isMeshLambertMaterial,
     visor?visor.rotation.x.toFixed(2)+" y="+visor.position.y.toFixed(2)
       :"missing");
+  const wS=createWorld(73,1); loadLevel(wS,1,false);
+  const scP=buildScene(wS);
+  const pl=scP.pools.player;
+  wS.players[0].color="#ff00aa";
+  scP.update(wS);
+  const crownS=pl.children.find(o=>o.geometry.type==="LatheGeometry");
+  check("S4.A crownMat follows p.color and nothing else does",
+    "#"+crownS.material.color.getHexString()==="#ff00aa"
+    &&pl.children.filter(o=>"#"+o.material.color.getHexString()==="#ff00aa")
+      .length===1,
+    "#"+crownS.material.color.getHexString());
+  check("S4.A player has exactly one Phong child and zero additive children",
+    pl.children.filter(o=>o.material.isMeshPhongMaterial).length===1
+    &&pl.children.filter(o=>o.material.blending===THREE.AdditiveBlending)
+      .length===0
+    &&pl.children.filter(o=>o.material.isMeshLambertMaterial).length===4);
+  wS.players[0].kick=true; scP.update(wS);
+  const bootS=pl.children[3];
+  check("S4.A p.kick still flips the boot material",
+    "#"+bootS.material.color.getHexString()==="#c07a3a");
+  wS.players[0].kick=false; wS.players[0].passing=true; scP.update(wS);
+  check("S4.A p.passing lerps the hull, not the crown",
+    "#"+pl.children[0].material.color.getHexString()!=="#dfe7f2"
+    &&"#"+crownS.material.color.getHexString()==="#ff00aa");
   // per-type enemy detail children (base mesh keeps prior geometry contract);
   // eyes ride children[2] AFTER the two ref-swapped details
   w.enemies=["walker","chaser","fast","stationary","boomerang","rocket"]
