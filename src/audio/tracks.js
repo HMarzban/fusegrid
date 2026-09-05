@@ -196,32 +196,33 @@ function transp(P, r) {
 function tr(A, B, secs) {
   return Object.freeze({ A, B, sections: secs || MUSIC_SECTIONS });
 }
+/* INTRO — held breath. D Dorian on D4, STEP 0.17 (88 BPM), 4 bars of 32 steps,
+   sections ["A"] and no B. Bar 1 states the motif (1-3-5-6-5) alone, bar 2
+   rests outright, bar 3 restates it an octave up, bar 4 holds the 6th — the
+   note that names the mode — by itself. The sine pad drone joins at step 8 and
+   the single A1 bass pedal at step 16 sits on the DOMINANT, so the bed never
+   grounds the tonic. No hat: every later biome's reharmonization of the figure
+   is then a discovery rather than a repeat. */
 const INTRO_A = mkPat(
-  0.2,
+  0.17,
   32,
+  [[16, 55, 16]],
   [
-    [0, 55, 4],
-    [8, 49, 4],
-    [16, 43.65, 4],
-    [24, 55, 4],
+    [0, 293.66, 1],
+    [1, 349.23, 1],
+    [2, 440.0, 1],
+    [3, 493.88, 3],
+    [6, 440.0, 1],
+    [16, 587.33, 1],
+    [17, 698.46, 1],
+    [18, 880.0, 1],
+    [19, 987.77, 3],
+    [22, 880.0, 1],
+    [24, 493.88, 7],
   ],
-  [
-    [4, 220, 3],
-    [12, 246.9, 3],
-    [20, 196, 4],
-    [28, 329.6, 2],
-  ],
-  [
-    [7, 3200, 1],
-    [15, 3200, 1],
-    [23, 3200, 1],
-    [31, 3200, 1],
-  ],
-  ["triangle", 0.08, "triangle", 0.05, "triangle", 0.015, "triangle", 0.025],
-  [
-    [0, 110, 8],
-    [16, 98, 8],
-  ],
+  [],
+  ["triangle", 0.08, "triangle", 0.05, "triangle", 0.015, "sine", 0.03],
+  [[8, 146.83, 16]],
 );
 const JUNGLE_A = mkPat(
   0.14,
@@ -418,7 +419,7 @@ const ARENA_A = mkPat(
   ["square", 0.12, "square", 0.09, "triangle", 0.028],
 );
 const SAND_A = mkPat(
-  0.17,
+  0.139,
   64,
   pulse([
     [69.3, 103.83],

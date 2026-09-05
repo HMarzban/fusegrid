@@ -806,7 +806,7 @@ function installAC(ac) {
   );
   check(
     "sand void crown STEP and first bass",
-    MUSIC_TRACKS.sand.A.STEP === 0.17 &&
+    MUSIC_TRACKS.sand.A.STEP === 0.139 &&
       MUSIC_TRACKS.void.A.STEP === 0.19 &&
       MUSIC_TRACKS.crown.A.STEP === 0.13 &&
       MUSIC_TRACKS.sand.A.bass[0].f === 69.3 &&
@@ -1351,6 +1351,75 @@ function installAC(ac) {
     soundsDeg(P, D, 3) === true &&
       soundsDeg(P, D, 1) === false &&
       soundsDeg({ bass: [], lead: [], hat: mk([[0, 349.23]]) }, D, 3) === false,
+  );
+}
+
+// ---- intro: held breath (D Dorian, PLAIN unaccompanied) ----
+{
+  const T = MUSIC_TRACKS.intro,
+    A = T.A,
+    f0 = TONIC.intro;
+  check(
+    "intro STEP 0.17 (88 BPM), LEN 32, sections [A], no B at all",
+    A.STEP === 0.17 &&
+      A.LEN === 32 &&
+      JSON.stringify(T.sections) === '["A"]' &&
+      T.B === null,
+    A.STEP + "/" + A.LEN + "/" + JSON.stringify(T.sections),
+  );
+  check("intro has no hat at all", A.hat.length === 0, A.hat.length);
+  check(
+    "intro bass is ONE A1 pedal on the dominant, entering at step 16",
+    A.bass.length === 1 &&
+      A.bass[0].s === 16 &&
+      A.bass[0].f === 55 &&
+      Math.round(A.bass[0].d / A.STEP) === 16,
+    JSON.stringify(A.bass),
+  );
+  check(
+    "intro bar 1 is lead and nothing else — the motif arrives unharmonized",
+    A.lead.some((n) => n.s < 8) &&
+      !A.bass.some((n) => n.s < 8) &&
+      !A.hat.some((n) => n.s < 8) &&
+      !(A.pad || []).some((n) => n.s < 8),
+  );
+  check("intro states PLAIN on D4 at step 0", motifAt(A.lead, 0, f0, 1));
+  const lo = Math.min(...A.lead.filter((n) => n.s < 8).map((n) => n.f)),
+    hi = Math.min(
+      ...A.lead.filter((n) => n.s >= 16 && n.s < 24).map((n) => n.f),
+    );
+  check(
+    "intro bar 2 rests; bar 3 restates the motif one octave up",
+    !A.lead.some((n) => n.s >= 8 && n.s < 16) &&
+      motifAt(A.lead, 16, f0, 1) &&
+      Math.abs(semi(hi, lo) - 12) <= 0.05,
+    lo + " -> " + hi,
+  );
+  const b4 = A.lead.filter((n) => n.s >= 24);
+  check(
+    "intro bar 4 holds the 6th alone — the modal fingerprint, sustained",
+    b4.length === 1 &&
+      isDeg(b4[0].f, f0, DEG6) &&
+      Math.round(b4[0].d / A.STEP) >= 4,
+    JSON.stringify(b4),
+  );
+  check(
+    "intro pad is one 16-step D3 drone from step 8",
+    A.pad &&
+      A.pad.length === 1 &&
+      A.pad[0].s === 8 &&
+      near(A.pad[0].f, 146.83, 0.01) &&
+      Math.round(A.pad[0].d / A.STEP) === 16,
+    JSON.stringify(A.pad),
+  );
+  check("intro occupies at most 18 of its 32 steps", occ(A) <= 18, occ(A));
+  check("intro register lanes never cross", lanes(A));
+}
+{
+  check(
+    "R3c pre-move: sand STEP is 0.139, so intro's 0.17 stays unique",
+    MUSIC_TRACKS.sand.A.STEP === 0.139,
+    MUSIC_TRACKS.sand.A.STEP,
   );
 }
 
