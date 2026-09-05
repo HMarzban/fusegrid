@@ -10,7 +10,7 @@ precache (`src/pwa/shell.js` / `sw.js`).
 
 | File | Use | Provenance |
 |---|---|---|
-| `cover-630x500.png` | itch.io game cover (630×500) | Center-crop of the root `og.png` hero (1200×630, itself a real capture of the live 3D board mid-blast) — cropped only, never upscaled. |
+| `cover-630x500.png` | itch.io game cover (630×500) | Dedicated live capture (not a crop of `og.png`, whose 1200-wide hero has no 630×500 crop that clears its own text without cutting it): real 3D (`?render=3d&debug=1`), JUNGLE room 1, a bomb planted and detonated via the debug hook's `step(n)` (RAF is paused while the capture tab is backgrounded, same as the GIF capture), caught ~50ms after the blast opens a BRICK. `#gl` + `#c` composited onto an offscreen canvas at native 2x-DPR resolution (1200×1040), then downscaled-only (0.525×, no upscale) to a 630×500 cover-fit crop (full width kept, ~44px trimmed off top and bottom). No HUD chips (the debug hook's render call omits `{hud:true}`), so there is no text at all — nothing to cut off. |
 | `still-jungle.png` | Screenshot — room 1 JUNGLE | Live 3D capture: `#gl` (WebGL board) composited with `#c` (HUD overlay) onto an offscreen canvas, read synchronously right after a forced render. |
 | `still-ice.png` | Screenshot — room 2 ICE | Same technique, room 2. |
 | `still-crown.png` | Screenshot — room 8 CROWN | Same technique, room 8 (the finale look, normally gated behind the first FUSE/GRID CLEAR; reached directly via the sim for capture, not through a save-scummed unlock). |
