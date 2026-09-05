@@ -2,7 +2,7 @@ import { createWorld, loadLevel, step } from "../src/core/sim.js";
 import { CFG } from "../src/core/config.js";
 import { POWER } from "../src/core/entities.js";
 import { drawIcon, RIM, ITEM_FAMILY, ITEM_SHAPE, ITEM_ACCENT } from "../src/render/icons.js";
-import { drawItemBody, drawPlayerBody } from "../src/render/sprites.js";
+import { drawItemBody, drawItemChrome, drawPlayerBody } from "../src/render/sprites.js";
 
 let pass = 0,
   fail = 0;
@@ -213,6 +213,68 @@ const maxAbs = (b) => Math.max(-b.x0, b.x1, -b.y0, b.y1);
         "|pierce:#8f8fff:0|remote:#e8c35a:0",
     cat,
   );
+}
+
+{
+  const chrome = {};
+  for (const fam of ["cap", "vit", "utl", "bls"]) {
+    const c = stub();
+    drawItemChrome(c, fam, 0, 0);
+    chrome[fam] = JSON.stringify(c._ops);
+  }
+  const vals = Object.values(chrome);
+  check("four distinct family chrome signatures", new Set(vals).size === 4);
+  const byKind = {};
+  for (const t of IDS) {
+    const c = stub();
+    drawItemChrome(c, ITEM_FAMILY[t], 0, 0);
+    byKind[t] = JSON.stringify(c._ops);
+  }
+  const wrong = IDS.filter((t) => byKind[t] !== chrome[ITEM_FAMILY[t]]);
+  check("kinds inside one family share a chrome signature", !wrong.length, wrong.join(" "));
+  const noDisc = [];
+  for (const t of IDS) {
+    const c = stub();
+    drawItemBody(c, { time: 0 }, { t, col: "#ffffff", x: 0, y: 0 });
+    const disc = c._ops.some(
+      (o) => o[0] === "arc" && Math.abs(o[3] - CFG.TILE * 0.34) < 1e-6,
+    );
+    if (!disc) noDisc.push(t);
+  }
+  check("base disc present for all 12", !noDisc.length, noDisc.join(" ") || "ok");
+  const dashed = [];
+  for (const fam of ["cap", "vit", "utl", "bls"]) {
+    const c = stub();
+    drawItemChrome(c, fam, 0, 0);
+    if (names(c._ops).includes("setLineDash")) dashed.push(fam);
+  }
+  check("no setLineDash anywhere in the chrome", !dashed.length, dashed.join(" ") || "ok");
+}
+
+{
+  const still = [],
+    slotty = [],
+    unstable = [];
+  for (const t of IDS) {
+    const a = stub(),
+      b = stub();
+    drawItemBody(a, { time: 0 }, { t, col: "#ffffff", x: 80, y: 120 });
+    drawItemBody(b, { time: 0.5 }, { t, col: "#ffffff", x: 80, y: 120 });
+    if (JSON.stringify(a._ops) === JSON.stringify(b._ops)) still.push(t);
+    const c1 = stub(),
+      c2 = stub();
+    drawItemBody(c1, { time: 0.3 }, { t, col: "#ffffff", x: 80, y: 120 });
+    drawItemBody(c2, { time: 0.3 }, { t, col: "#ffffff", x: 80, y: 120 });
+    if (JSON.stringify(c1._ops) !== JSON.stringify(c2._ops)) unstable.push(t);
+    const d1 = stub(),
+      d2 = stub();
+    drawItemBody(d1, { time: 0.3 }, { t, col: "#ffffff", x: 80, y: 120 });
+    drawItemBody(d2, { time: 0.3 }, { t, col: "#ffffff", x: 200, y: 40 });
+    if (JSON.stringify(d1._ops) === JSON.stringify(d2._ops)) slotty.push(t);
+  }
+  check("idle echo is live (t 0 vs 0.5 differ)", !still.length, still.join(" ") || "ok");
+  check("same kind at same (x,y) is identical", !unstable.length, unstable.join(" ") || "ok");
+  check("phase comes from grid position, not slot", !slotty.length, slotty.join(" ") || "ok");
 }
 
 console.log("\n" + pass + " passed, " + fail + " failed");
