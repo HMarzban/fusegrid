@@ -1,4 +1,28 @@
+export function isEmbedded(env) {
+  const envTop =
+    env && Object.prototype.hasOwnProperty.call(env, "top")
+      ? env.top
+      : typeof globalThis.top !== "undefined"
+        ? globalThis.top
+        : undefined;
+  const envSelf =
+    env && Object.prototype.hasOwnProperty.call(env, "self")
+      ? env.self
+      : typeof globalThis.self !== "undefined"
+        ? globalThis.self
+        : undefined;
+  if (envTop !== envSelf) return true;
+  const href =
+    env && env.href
+      ? env.href
+      : typeof location !== "undefined" && location.href
+        ? location.href
+        : "";
+  return /[?&]embed=1(?:&|$)/.test(href);
+}
+
 export function registerSW(env) {
+  if (isEmbedded(env)) return false;
   const nav =
     env && Object.prototype.hasOwnProperty.call(env, "navigator")
       ? env.navigator

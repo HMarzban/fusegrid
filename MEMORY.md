@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-04 — registerSW no-ops in iframes and ?embed=1
+- Added `isEmbedded(env)` (top !== self, or `[?&]embed=1` in href) to `src/pwa/register.js`; `registerSW` returns false before calling `navigator.serviceWorker.register` when embedded, so an iframe listing (itch/Newgrounds/Game Jolt) never steals the SW/cache from the top-level Pages origin. PWA v23 -> v24 (register.js precached bytes changed).
+
 ## 2026-09-04 — HIGH SCORES gained CORE/PLUS/MAX tabs
 - `scoresForHeat(list, heat)` filters the one persisted `nb.highscores.v1` list at draw time (CORE keeps legacy rows with no `t`); `app.scoreHeat` is a display-only `clampHeat` value cycled with `←/→` while on SCORES (`move`/`_tapMove`), and `drawScores` gained a `heat` param for the tab row + `NO <NAME> RUNS YET` empty state. PWA v23.
 

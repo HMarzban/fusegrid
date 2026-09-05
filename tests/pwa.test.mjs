@@ -6,7 +6,7 @@ import {
   PRECACHE,
   fetchPolicy,
 } from "../src/pwa/shell.js";
-import { registerSW } from "../src/pwa/register.js";
+import { registerSW, isEmbedded } from "../src/pwa/register.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -139,6 +139,72 @@ check(
 );
 
 check("registerSW no-op in Node", registerSW() === false);
+
+check(
+  "registerSW skips iframe",
+  registerSW({
+    href: "https://hmarzban.github.io/fusegrid/",
+    navigator: { serviceWorker: { register() {}, addEventListener() {} } },
+    top: { mark: 1 },
+    self: { mark: 2 },
+  }) === false,
+);
+check(
+  "registerSW skips ?embed=1",
+  registerSW({
+    href: "https://hmarzban.github.io/fusegrid/?embed=1",
+    navigator: { serviceWorker: { register() {}, addEventListener() {} } },
+    top: null,
+    self: null,
+  }) === false,
+);
+check(
+  "isEmbedded true for iframe (top !== self)",
+  isEmbedded({ top: { mark: 1 }, self: { mark: 2 }, href: "https://x/" }) ===
+    true,
+);
+check(
+  "isEmbedded true for ?embed=1 href",
+  isEmbedded({
+    top: null,
+    self: null,
+    href: "https://hmarzban.github.io/fusegrid/?embed=1",
+  }) === true,
+);
+check(
+  "isEmbedded true for &embed=1 mid-query",
+  isEmbedded({
+    top: null,
+    self: null,
+    href: "https://hmarzban.github.io/fusegrid/?x=1&embed=1",
+  }) === true,
+);
+check(
+  "isEmbedded false for top===self, no flag",
+  isEmbedded({ top: null, self: null, href: "https://hmarzban.github.io/fusegrid/" }) ===
+    false,
+);
+{
+  const same = { mark: 1 };
+  const calls = [];
+  check(
+    "registerSW still registers on the normal Pages path (top===self, no embed flag)",
+    registerSW({
+      href: "https://hmarzban.github.io/fusegrid/",
+      navigator: {
+        serviceWorker: {
+          register(url, opts) {
+            calls.push({ url, opts });
+            return Promise.resolve();
+          },
+        },
+      },
+      top: same,
+      self: same,
+    }) === true && calls[0].url === "https://hmarzban.github.io/fusegrid/sw.js",
+    calls[0] && calls[0].url,
+  );
+}
 {
   const calls = [];
   const nav = {
