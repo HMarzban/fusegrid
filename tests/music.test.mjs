@@ -836,10 +836,10 @@ function installAC(ac) {
   check(
     "sand void crown STEP and first bass",
     MUSIC_TRACKS.sand.A.STEP === 0.139 &&
-      MUSIC_TRACKS.void.A.STEP === 0.19 &&
+      MUSIC_TRACKS.void.A.STEP === 0.234 &&
       MUSIC_TRACKS.crown.A.STEP === 0.13 &&
       MUSIC_TRACKS.sand.A.bass[0].f === 69.3 &&
-      MUSIC_TRACKS.void.A.bass[0].f === 49 &&
+      MUSIC_TRACKS.void.A.bass[0].f === 61.74 &&
       MUSIC_TRACKS.crown.A.bass[0].f === 98,
   );
   const fin = (a) =>
@@ -898,9 +898,9 @@ function installAC(ac) {
   check("setTrack water returns water", a.setTrack("water") === "water");
   a.pump();
   check(
-    "water downbeat is B1=61.74, not menu A1",
-    ac.starts.some((s) => near(s.f, 61.74, 0.05)) &&
-      !ac.starts.some((s) => near(s.f, 55, 0.05)),
+    "water downbeat is G1=49.00, not menu's D2=73.42",
+    ac.starts.some((s) => near(s.f, 49, 0.05)) &&
+      !ac.starts.some((s) => near(s.f, 73.42, 0.05)),
     ac.starts
       .slice(0, 6)
       .map((s) => s.f.toFixed(1))
@@ -1523,6 +1523,66 @@ function installAC(ac) {
     occ(A) + "/" + breathBar(A),
   );
   check("arena register lanes never cross, A and B", lanes(A) && lanes(B));
+}
+
+// ---- void: dread, subtraction (B Locrian, FRAG-MID and nothing else) ----
+{
+  const T = MUSIC_TRACKS.void,
+    A = T.A,
+    B = T.B,
+    f0 = TONIC.void;
+  check(
+    "void STEP 0.234 (64 BPM), B1 61.74 — outside the tempo band on purpose",
+    A.STEP === 0.234 && A.bass[0].f === 61.74,
+    A.STEP + "/" + A.bass[0].f,
+  );
+  check(
+    "void is two voices: empty hat array, no pad key at all",
+    A.hat.length === 0 && A.pad === undefined,
+    A.hat.length + "/" + A.pad,
+  );
+  check(
+    "void is the only sine lead in the score",
+    A.lead.length > 0 && A.lead.every((n) => n.t === "sine"),
+    A.lead[0] && A.lead[0].t,
+  );
+  check(
+    "void bass is a sustained pedal at the lowest gain in the score",
+    A.bass.length <= 2 &&
+      A.bass.every((n) => Math.round(n.d / A.STEP) >= 8) &&
+      A.bass[0].v < 0.05,
+    A.bass.length + " notes @v" + A.bass[0].v,
+  );
+  check(
+    "void lead NEVER sounds degree 1 — no ground under the figure",
+    !A.lead.some((n) => isDeg(n.f, f0, DEG1)),
+    A.lead.map((n) => pcOf(n.f, f0).toFixed(2)).join(","),
+  );
+  let frags = 0,
+    plains = 0;
+  for (let b = 0; b < 8; b++) {
+    if (fragMidAt(A.lead, b * 8, f0)) frags++;
+    if (motifAt(A.lead, b * 8, f0, 1)) plains++;
+  }
+  check(
+    "void plays FRAG-MID at least twice and the whole motif never",
+    frags >= 2 && plains === 0,
+    frags + " frag / " + plains + " plain",
+  );
+  check(
+    "void is the sparsest track in the game: at most 20 of 64 steps",
+    occ(A) <= 20,
+    occ(A),
+  );
+  check("void B is hand-authored — its hat is not A's array", B.hat !== A.hat);
+  check("void register lanes never cross, A and B", lanes(A) && lanes(B));
+}
+{
+  check(
+    "R3c pre-move: water root is G1 49.00 now that void has taken 61.74",
+    MUSIC_TRACKS.water.A.bass[0].f === 49,
+    MUSIC_TRACKS.water.A.bass[0].f,
+  );
 }
 
 console.log("\n  MUSIC RESULT: " + pass + " PASS / " + fail + " FAIL");

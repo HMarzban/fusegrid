@@ -345,7 +345,7 @@ const WATER_A = mkPat(
   0.16,
   64,
   pulse([
-    [61.74, 92.5],
+    [49, 92.5],
     [55, 82.4],
     [49, 73.42],
     [61.74, 92.5],
@@ -558,39 +558,63 @@ const SAND_A = mkPat(
   hats(64, 2800, 2),
   ["square", 0.09, "triangle", 0.07, "triangle", 0.016],
 );
+/* VOID — dread, subtraction. B Locrian on B, STEP 0.234 (64 BPM), the one
+   deliberate exception to the 104-140 band. TWO voices: a triangle pedal on B1
+   at the lowest gain in the score, and the score's only sine lead. The lead
+   plays FRAG-MID — degrees 3-5-6 on steps 1, 2, 3 of a bar — and nothing else,
+   so both ends of the motif are gone: no tonic under the figure (the lead
+   never sounds degree 1 at any octave) and no settle after it. The
+   incompleteness is the horror; nothing dissonant was added to get it, and
+   CROWN is what finally finishes the phrase. Empty hat, no pad key at all. */
 const VOID_A = mkPat(
-  0.19,
+  0.234,
   64,
-  pulse([
-    [49, 73.42],
-    [46.25, 69.3],
-    [43.65, 65.41],
-    [49, 82.4],
-  ]),
-  oct([
-    [
-      [0, 196, 3],
-      [4, 146.8, 4],
-    ],
-    [
-      [0, 174.6, 4],
-      [5, 220, 3],
-    ],
-    [
-      [0, 164.8, 3],
-      [3, 196, 3],
-    ],
-    [
-      [0, 146.8, 4],
-      [4, 174.6, 3],
-    ],
-  ]),
-  hats(64, 1800, 4),
-  ["triangle", 0.07, "triangle", 0.05, "triangle", 0.012, "triangle", 0.022],
   [
-    [0, 98, 16],
-    [32, 87.31, 16],
+    [0, 61.74, 32],
+    [32, 61.74, 32],
   ],
+  [
+    [4, 392.0, 3],
+    [9, 293.66, 1],
+    [10, 349.23, 1],
+    [11, 392.0, 3],
+    [20, 349.23, 4],
+    [33, 587.33, 1],
+    [34, 698.46, 1],
+    [35, 783.99, 3],
+    [42, 523.25, 4],
+    [49, 293.66, 1],
+    [50, 349.23, 1],
+    [51, 392.0, 3],
+    [58, 261.63, 6],
+  ],
+  [],
+  ["triangle", 0.04, "sine", 0.05, "triangle", 0.012],
+);
+/* VOID B — hand-authored (its own, still empty, hat array), same two voices.
+   The pedal drops to the flat fifth and the fragment moves in register: the
+   same dread from another angle, still with nothing resolved. */
+const VOID_B = mkPat(
+  0.234,
+  64,
+  [
+    [0, 43.65, 32],
+    [32, 43.65, 32],
+  ],
+  [
+    [5, 349.23, 3],
+    [17, 587.33, 1],
+    [18, 698.46, 1],
+    [19, 783.99, 3],
+    [28, 440.0, 4],
+    [41, 293.66, 1],
+    [42, 349.23, 1],
+    [43, 392.0, 3],
+    [54, 329.63, 4],
+    [61, 261.63, 3],
+  ],
+  [],
+  ["triangle", 0.04, "sine", 0.05, "triangle", 0.012],
 );
 const CROWN_A = mkPat(
   0.13,
@@ -639,7 +663,7 @@ export const MUSIC_TRACKS = Object.freeze({
   water: tr(WATER_A, transp(WATER_A, 1.122462)),
   arena: tr(ARENA_A, ARENA_B),
   sand: tr(SAND_A, transp(SAND_A, 1.122462)),
-  void: tr(VOID_A, transp(VOID_A, 1.059463)),
+  void: tr(VOID_A, VOID_B),
   crown: tr(CROWN_A, transp(CROWN_A, 1.125)),
 });
 export function musicCue(screen, level) {
