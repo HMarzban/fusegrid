@@ -522,7 +522,7 @@ export function createGame(canvas, opts = {}) {
       curKind = k;
       renderer = getRenderer(k);
     } // live RENDER toggle: cache swap
-    touch.update(app.screen === SCREEN.GAME); // pad lives only inside GAME
+    touch.update(app.screen === SCREEN.GAME, world.state === "PLAY");
     /* HUD is a live-gameplay artifact: the DOM strip shows only inside GAME.
        PAUSE/WIN/LOSE are world.state, so GAME already covers them. Full
        opacity, not dimmed — it is DOM outside the canvas, nothing overlays it. */

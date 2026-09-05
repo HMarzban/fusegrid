@@ -176,5 +176,77 @@ check("hasTouch({ontouchstart:null}) true", hasTouch({ontouchstart:null})===true
     fills.indexOf("#ff5d73")>=0, fills.join(","));
 }
 
+// ---- §PAUSE pill: the touch-only pause affordance, inside #touchpad ----
+{
+  const html=readFileSync(new URL("../index.html", import.meta.url),"utf8");
+  check("#touchpad hosts a #tpause pill with a button role",
+    /id="tpause"[\s\S]{0,80}?aria-label="Pause"/.test(html)
+    &&/id="tpause"[\s\S]{0,80}?role="button"/.test(html),
+    (html.match(/<div id="tpause"[^>]*>/)||[])[0]);
+  check("#tpause is a 44px round pill drawn from bars, never a canvas",
+    /#tpause\{[^}]*width:44px[^}]*height:44px/.test(html)
+    &&/border-radius:50%/.test((html.match(/#tpause\{[^}]*\}/)||[""])[0])
+    &&/#tpause::before/.test(html)&&/#tpause::after/.test(html),
+    (html.match(/#tpause\{[^}]*\}/)||[])[0]);
+  check("the toolbar and the keyboard legend are gone from index.html",
+    !/id="controls"/.test(html)&&!/class="hint"/.test(html)
+    &&!/btnPause|btnSound|btnRestart|btnMenu/.test(html),
+    (html.match(/id="controls"[^>]*/)||["clean"])[0]);
+}
+{
+  const inp=new Input(null);
+  const t=mountTouch(inp,null);
+  let threw=false;
+  try{ t.update(true,true); t.update(true,false); t.update(false,false); }
+  catch(e){ threw=true; }
+  check("headless stub takes the two-arg update silently",threw===false);
+}
+{
+  const els=new Map();
+  const mk=(id)=>{ const e={id,hidden:false,style:{},children:[],
+    setAttribute(){}, appendChild(c){ e.children.push(c); },
+    querySelector(sel){ return sel[0]==="#"?(els.get(sel.slice(1))||null):null; },
+    addEventListener(){}, removeEventListener(){},
+    getBoundingClientRect(){ return {left:0,top:0,width:44,height:44}; },
+    getContext(){ return null; }};
+    els.set(id,e); return e; };
+  const box=mk("touchpad"), pad=mk("tpad"), bomb=mk("tbomb"),
+    pill=mk("tpause"), stage=mk("stage");
+  box.children.push(pad,bomb,pill);
+  const noop=()=>{};
+  globalThis.window={ontouchstart:null,addEventListener:noop,removeEventListener:noop};
+  globalThis.document={addEventListener:noop,removeEventListener:noop,
+    getElementById:(id)=>els.get(id)||null,
+    createElement:(tag)=>mk("_"+tag)};
+  try{
+    const inp=new Input(null);
+    const t=mountTouch(inp,stage);
+    check("mount normalises to hidden-box / visible-children",
+      box.hidden===true&&pad.hidden===false&&bomb.hidden===false
+      &&pill.hidden===false,
+      [box.hidden,pad.hidden,bomb.hidden,pill.hidden].join());
+    t.update(false,false);
+    check("outside GAME the whole pad box hides",box.hidden===true);
+    t.update(true,true);
+    check("GAME + PLAY shows box, pad, bomb and pill",
+      box.hidden===false&&pad.hidden===false&&bomb.hidden===false
+      &&pill.hidden===false,
+      [box.hidden,pad.hidden,bomb.hidden,pill.hidden].join());
+    inp.setIntent({move:{x:1,y:0}}); inp.padFire(true);
+    t.update(true,false);
+    check("GAME + PAUSE hides the 128px pad and the 72px bomb, keeps the pill"
+      +" (they sit in the same corners as the pause rows)",
+      box.hidden===false&&pad.hidden===true&&bomb.hidden===true
+      &&pill.hidden===false,
+      [box.hidden,pad.hidden,bomb.hidden,pill.hidden].join());
+    check("hiding the pad clears every held intent",
+      !inp.input.up&&!inp.input.down&&!inp.input.left&&!inp.input.right
+      &&!inp._intent.fire);
+    t.update(true,true);
+    check("resuming brings the pad and bomb back",
+      pad.hidden===false&&bomb.hidden===false);
+   }finally{ delete globalThis.window; delete globalThis.document; }
+}
+
 console.log("\n  TOUCH RESULT: "+pass+" PASS / "+fail+" FAIL");
 process.exit(fail?1:0);

@@ -70,6 +70,13 @@ export function mountTouch(input,stage){
    }
   const padEl=box.querySelector("#tpad"), bombEl=box.querySelector("#tbomb");
   paintBombPad(bombEl);
+  let pauseEl=box.querySelector("#tpause");
+  if(!pauseEl){   // static skeleton missing the pill: build it
+    pauseEl=document.createElement("div"); pauseEl.id="tpause";
+    pauseEl.setAttribute("role","button");
+    pauseEl.setAttribute("aria-label","Pause");
+    box.appendChild(pauseEl);
+   }
   const map=new PadMapper(input);
   const snap=(el)=>{ const r=el.getBoundingClientRect();
     return {left:r.left,top:r.top,width:r.width,height:r.height}; };
@@ -93,14 +100,30 @@ export function mountTouch(input,stage){
       el.removeEventListener("lostpointercapture",h.up); };
    };
   const unbindPad=bind(padEl,"pad"), unbindBomb=bind(bombEl,"bomb");
-  let shown=false;
+  /* The pill is not a PadMapper control — it has no zones and no claim, it
+     just calls the same onPause the P key does. */
+  const onPauseTap=(e)=>{ if(e&&e.preventDefault)e.preventDefault();
+    if(input.onPause)input.onPause(); };
+  pauseEl.addEventListener("pointerdown",onPauseTap);
+  const unbindPause=()=>pauseEl.removeEventListener("pointerdown",onPauseTap);
+  box.hidden=true; padEl.hidden=false; bombEl.hidden=false;
+  pauseEl.hidden=false;
+  let shown=false, played=false;
   return {
-    update(inGame){          // visible ONLY in GAME; hide clears held state
-      if(inGame===shown)return;
-      shown=inGame; box.hidden=!inGame;
-      if(!inGame)map.clear();
+    /* Visible ONLY in GAME; INSIDE game the move pad and the bomb button
+       additionally hide whenever the world is not PLAYing, because a 128px pad
+       and a 72px button sit in the same corners as the pause rows and would
+       swallow taps aimed at them. The pill stays — it is how a touch player
+       resumes. Hiding either clears held state. */
+    update(inGame, playing){
+      const ig=!!inGame, pl=playing===undefined?ig:!!playing;
+      if(ig!==shown){ shown=ig; box.hidden=!ig; if(!ig)map.clear(); }
+      if(pl!==played){
+        played=pl; padEl.hidden=!pl; bombEl.hidden=!pl;
+        if(!pl)map.clear();
+       }
      },
-    unmount(){ unbindPad(); unbindBomb(); shown=false; box.hidden=true;
-      map.clear(); }
+    unmount(){ unbindPad(); unbindBomb(); unbindPause();
+      shown=false; played=false; box.hidden=true; map.clear(); }
    };
  }

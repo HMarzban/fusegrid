@@ -502,6 +502,15 @@ function mkCanvas(){
   check("toolbar.js is gone and main.js no longer imports it",
     !/toolbar\.js|mountToolbar|setBtn/.test(src));
 }
+{
+  // #hud{display:flex} is an author rule; the browser's own [hidden]{display:
+  // none} is a lower-priority UA rule, so an ID selector beats it regardless
+  // of source order and the JS-set .hidden=true would be invisible without an
+  // explicit #hud[hidden] override — the same gotcha #gl already carries.
+  const indexHtml=readFileSync(join(ROOT,"index.html"),"utf8");
+  check("#hud[hidden] actually hides it (author CSS beats the UA default)",
+    /#hud\[hidden\]\s*\{\s*display:\s*none\s*\}/.test(indexHtml));
+}
 
 // F3 toolbar GAME-gates and the toolbar Menu-button wave are gone with
 // toolbar.js: every wave they exercised (Pause/Restart/Menu GAME-gating,
