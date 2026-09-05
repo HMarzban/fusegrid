@@ -40,8 +40,8 @@ const MUS_BASE = 0.5,
   MUS_FLOOR = 0.0001,
   MUS_PAN = Object.freeze({ bass: -0.32, lead: 0.32, hat: 0.1, pad: -0.06 });
 
-export function createAudio() {
-  let ctx = null,
+export function createAudio(opts) {
+  let ctx = (opts && opts.ctx) || null,
     muted = false,
     ok = true;
   /* Settings volumes (nb.settings.v1). Stored as 0..1 scalars and applied by
@@ -298,6 +298,27 @@ export function createAudio() {
       }
     } catch (e) {}
   }
+  /* Offline bulk scheduler — dev-only (tools/bounce/), unreachable in the
+     shipped game: nothing under src/ calls it. Walks steps from a LOCAL t=0
+     through the same patOf/emitStep/note the live path uses; nextT is never
+     read or written, so a stray call cannot desync pump(). */
+  function bounceTrack(id, seconds) {
+    if (!ctx || !musicGain) return 0;
+    const pid = curId,
+      pstep = stepN;
+    if (id && MUSIC_TRACKS[id]) curId = id;
+    let t = 0,
+      n = 0;
+    while (t < seconds) {
+      const P = patOf(n);
+      emitStep(P, n % P.LEN, t);
+      t += P.STEP;
+      n++;
+    }
+    curId = pid;
+    stepN = pstep;
+    return n;
+  }
   return {
     play(name) {
       const ice = curId === "ice",
@@ -455,6 +476,7 @@ export function createAudio() {
     unlocked,
     duck,
     pump,
+    bounceTrack,
     setVols(v) {
       const c = (x) => (typeof x === "number" && isFinite(x) ? Math.max(0, Math.min(1, x)) : 1);
       if (v && v.mus != null) musVol = c(v.mus);

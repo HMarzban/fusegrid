@@ -1064,5 +1064,87 @@ function installAC(ac) {
   check("unmute returns to the scaled base", near(lastRamp()[1], 0.5), JSON.stringify(lastRamp()));
 }
 
+// ---- R3a seam: injectable ctx + bulk bounce scheduler ----
+{
+  delete globalThis.window;
+  const ac = mkAC();
+  const a = createAudio({ ctx: ac });
+  check(
+    "createAudio({ctx}) unlocks with no window at all",
+    a.unlock() === true && a.unlocked() === true,
+  );
+  check(
+    "bounceTrack is on the returned object",
+    typeof a.bounceTrack === "function",
+  );
+  ac.starts.length = 0;
+  const S = MUSIC_TRACKS.jungle.A.STEP;
+  const n = a.bounceTrack("jungle", 6);
+  check(
+    "bounceTrack returns the step count it scheduled",
+    n >= Math.floor(6 / S) && n <= Math.ceil(6 / S) + 1,
+    n,
+  );
+  check(
+    "bounce anchors at t=0 and never runs past `seconds`",
+    ac.starts.length > 0 &&
+      ac.starts.every((s) => s.t >= 0 && s.t < 6) &&
+      ac.starts.some((s) => near(s.t, 0, 1e-9)),
+    ac.starts.length,
+  );
+  check(
+    "bounceTrack restores curId — the live track is untouched",
+    a.track() === "menu",
+    a.track(),
+  );
+  check(
+    "bounceTrack is a no-op before unlock (no ctx, no musicGain)",
+    createAudio().bounceTrack("menu", 4) === 0,
+  );
+  check(
+    "unknown id bounces the current track, never throws",
+    a.bounceTrack("nope", 2) > 0 && a.track() === "menu",
+  );
+}
+
+// ---- R3a: bounceTrack schedules exactly what pump() schedules ----
+{
+  const live = mkAC();
+  installAC(live);
+  const a1 = createAudio();
+  a1.unlock();
+  a1.setTrack("jungle");
+  for (let i = 0; i < 60; i++) {
+    live.currentTime += 0.1;
+    a1.pump();
+  }
+  const off = mkAC();
+  const a2 = createAudio({ ctx: off });
+  a2.unlock();
+  a2.bounceTrack("jungle", 6);
+  const S = MUSIC_TRACKS.jungle.A.STEP;
+  const trace = (ac) => {
+    const t0 = ac.starts[0].t;
+    return ac.starts.map((s) =>
+      [
+        Math.round((s.t - t0) / S),
+        s.f.toFixed(2),
+        s.type,
+        s.g.gain._l[0][1].toFixed(4),
+      ].join(":"),
+    );
+  };
+  const L = trace(live),
+    O = trace(off),
+    K = 40;
+  check(
+    "bounce trace === pump trace (same patOf/emitStep/note, anchor removed)",
+    L.length >= K &&
+      O.length >= K &&
+      L.slice(0, K).join(",") === O.slice(0, K).join(","),
+    L.slice(0, 3).join(",") + "  vs  " + O.slice(0, 3).join(","),
+  );
+}
+
 console.log("\n  MUSIC RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);
