@@ -611,6 +611,42 @@ export function drawEnemiesHelp(c, L, t) {
   foot(c, S, "ESC BACK");
 }
 
+/* GUIDE (folds HOW TO PLAY / ITEMS / ENEMIES one hop under MENU): a plain
+   3-row list navigated exactly like MENU — own cursor, wraps both ways, tap
+   confirms the row under the cursor. Not the SETTINGS knob model: these
+   rows are doors to open, not values to adjust, so there is no value
+   column and no dedicated hit-test (spec §2 — MENU has none either). */
+const GUIDE_LABEL = ["HOW TO PLAY", "ITEMS", "ENEMIES"];
+export function guideGeom(L) {
+  const S = shellBox(L, 480);
+  const y0 = S.headY + 26,
+    y1 = S.footY - 14;
+  return { S, y0, rowH: (y1 - y0) / 3 };
+}
+export function drawGuide(c, L, t, cursor) {
+  const cur = cursor | 0;
+  const S = shell(c, L, 480);
+  head(c, S, "GUIDE", "HOW TO · ITEMS · ENEMIES");
+  const g = guideGeom(L);
+  for (let i = 0; i < 3; i++) {
+    const y = g.y0 + i * g.rowH + g.rowH / 2;
+    const sel = i === cur;
+    if (sel) {
+      c.fillStyle = "rgba(55,240,208,0.14)";
+      c.fillRect(S.ix, y - g.rowH / 2 + 2, S.iw, g.rowH - 4);
+      c.fillStyle = ACCENT;
+      c.fillRect(S.ix, y - g.rowH / 2 + 2, 3, g.rowH - 4);
+      caret(c, S.ix + 8, y, g.rowH - 4);
+    }
+    c.textAlign = "left";
+    c.textBaseline = "middle";
+    c.font = font(14, sel ? "900" : "");
+    c.fillStyle = sel ? TEXT : MUTED;
+    c.fillText(GUIDE_LABEL[i], S.ix + 22, y);
+  }
+  foot(c, S, "↑↓ ROW · ENTER OPEN · ESC BACK");
+}
+
 /* Local cabinet plaques (plan 5): bit order matches src/app/plaques.js
    PLAQUE = {CLEAR:1,PLUS:2,MAX:4,CROWN:8} — this file must not import
    src/app, so the names are duplicated here rather than imported. */

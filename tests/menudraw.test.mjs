@@ -121,6 +121,7 @@ function check(name, cond, detail) {
       md.drawHowTo(stub, L, 0.4);
       md.drawItemsHelp(stub, L, 0.4);
       md.drawEnemiesHelp(stub, L, 0.4);
+      md.drawGuide(stub, L, 0.4, 0);
       md.drawScores(stub, DEFAULT_SCORES, L, 0.4);
       const sv = { mus: 100, sfx: 100, snd: 1, r3d: 0, cam: 0, bri: 100, shk: 1, flx: 0 };
       md.drawSettings(stub, L, 0.4, { row: 0, vals: sv, r3d: false, togT: -1, rev: "v0" });
@@ -265,9 +266,7 @@ function check(name, cond, detail) {
             "PLAY|CORE",
             "LEVEL SELECT|CORE",
             "OPTIONS",
-            "HOW TO PLAY",
-            "ITEMS",
-            "ENEMIES",
+            "GUIDE",
             "HIGH SCORES",
             "SOURCE",
           ],
@@ -434,6 +433,23 @@ function check(name, cond, detail) {
           labels: texts.map((t) => t.s),
           hits: hits.map((h) => h && h.y),
         }),
+      );
+    }
+    {
+      const { c, texts, rects } = rec();
+      md.drawGuide(c, L, 1, 1);
+      const p = plateOf(rects);
+      const rows = ["HOW TO PLAY", "ITEMS", "ENEMIES"];
+      const hits = rows.map((n) => texts.find((t) => t.s === n));
+      const esc = texts.find((t) => t.s.indexOf("ESC BACK") >= 0);
+      check(
+        `guide: three rows + ESC inside the plate at ${W}x${H}`,
+        !!p &&
+          !!esc &&
+          hits.every((h) => !!h) &&
+          hits.every((h) => h.y > p.y + 8 && h.y < p.y + p.h - 8) &&
+          esc.y < p.y + p.h - 4,
+        JSON.stringify({ py: p && p.y, ph: p && p.h, hits, esc }),
       );
     }
     {

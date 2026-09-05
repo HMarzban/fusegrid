@@ -84,8 +84,6 @@ export function drawShell(c, app, world, canvas, kind, getScores, getPlaques) {
           ITEMS[3],
           ITEMS[4],
           ITEMS[5],
-          ITEMS[6],
-          ITEMS[7],
         ],
       },
       L,
@@ -115,6 +113,9 @@ export function drawShell(c, app, world, canvas, kind, getScores, getPlaques) {
   } else if (s === SCREEN.ENEMIES) {
     menudraw.drawDim(c, 0.72, cw, chh);
     menudraw.drawEnemiesHelp(c, L, app.subT);
+  } else if (s === SCREEN.GUIDE) {
+    menudraw.drawDim(c, 0.72, cw, chh);
+    menudraw.drawGuide(c, L, app.subT, app.guideRow);
   } else if (s === SCREEN.SCORES) {
     menudraw.drawDim(c, 0.72, cw, chh);
     menudraw.drawScores(
