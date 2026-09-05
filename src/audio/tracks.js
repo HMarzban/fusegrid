@@ -2,8 +2,9 @@ import { biomeOf } from "../core/config.js";
 import { SCREEN } from "../app/menuapp.js";
 
 /* Pure pattern data: 8 bars @100BPM eighths = 64 steps (A-A-F-G x2), lead
-   octave-up bars 5-8, offbeat hats. Sparse [step,freqHz,durSteps] lists over
-   absolute steps 0..63 mapped to {s,f,d,t,v}; pump looks each up by stepIdx. */
+   octave-up bars 5-8, offbeat hats. Sparse [step,freqHz,durSteps,vel?] lists
+   over absolute steps 0..63 mapped to {s,f,d,t,v}; vel defaults to the
+   channel's mix value when omitted. pump looks each up by stepIdx. */
 export const MUSIC_PATTERN = (() => {
   const S = 0.15,
     L = 64,
@@ -56,7 +57,8 @@ export const MUSIC_PATTERN = (() => {
     }),
   );
   for (let i = 1; i < L; i += 2) hat.push([i, 4800, 1]);
-  const E = (a, t, v) => a.map(([s, f, d]) => ({ s, f, d: d * S, t, v }));
+  const E = (a, t, v) =>
+    a.map(([s, f, d, nv]) => ({ s, f, d: d * S, t, v: nv == null ? v : nv }));
   return Object.freeze({
     STEP: S,
     LEN: L,
@@ -122,7 +124,8 @@ export const MUSIC_PATTERN_B = (() => {
     }),
   );
   for (let i = 1; i < L; i += 2) hat.push([i, 4800, 1]);
-  const E = (a, t, v) => a.map(([s, f, d]) => ({ s, f, d: d * S, t, v }));
+  const E = (a, t, v) =>
+    a.map(([s, f, d, nv]) => ({ s, f, d: d * S, t, v: nv == null ? v : nv }));
   return Object.freeze({
     STEP: S,
     LEN: L,
@@ -136,7 +139,9 @@ export const MUSIC_SECTIONS = Object.freeze(["A", "A", "B", "B"]);
 function mkPat(S, L, bass, lead, hat, mix, pad) {
   const E = (a, t, v) =>
     Object.freeze(
-      a.map(([s, f, d]) => Object.freeze({ s, f, d: d * S, t, v })),
+      a.map(([s, f, d, nv]) =>
+        Object.freeze({ s, f, d: d * S, t, v: nv == null ? v : nv }),
+      ),
     );
   const o = {
     STEP: S,
@@ -151,25 +156,25 @@ function mkPat(S, L, bass, lead, hat, mix, pad) {
 }
 function pulse(roots) {
   const b = [];
-  roots.forEach(([r, q], i) => {
+  roots.forEach(([r, q, v], i) => {
     const o = i * 8;
-    b.push([o, r, 2], [o + 2, r, 2], [o + 4, q, 2], [o + 6, r, 2]);
+    b.push([o, r, 2, v], [o + 2, r, 2, v], [o + 4, q, 2, v], [o + 6, r, 2, v]);
   });
   return b;
 }
 function oct(ph) {
   const L = [];
   ph.forEach((bar, i) =>
-    bar.forEach(([s, f, d]) => {
+    bar.forEach(([s, f, d, v]) => {
       const du = d == null ? 2 : d;
-      L.push([i * 8 + s, f, du], [32 + i * 8 + s, f * 2, du]);
+      L.push([i * 8 + s, f, du, v], [32 + i * 8 + s, f * 2, du, v]);
     }),
   );
   return L;
 }
-function hats(L, f, step) {
+function hats(L, f, step, v) {
   const h = [];
-  for (let i = step > 1 ? 1 : 0; i < L; i += step) h.push([i, f, 1]);
+  for (let i = step > 1 ? 1 : 0; i < L; i += step) h.push([i, f, 1, v]);
   return h;
 }
 function transp(P, r) {

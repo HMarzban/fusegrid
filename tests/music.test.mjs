@@ -1146,5 +1146,25 @@ function installAC(ac) {
   );
 }
 
+// ---- R3a: the v? tuple is legal to author and authored nowhere yet ----
+{
+  const chans = [];
+  for (const id of Object.keys(MUSIC_TRACKS)) {
+    const tr = MUSIC_TRACKS[id];
+    for (const sec of ["A", "B"]) {
+      const P = tr[sec];
+      if (!P) continue;
+      for (const k of ["bass", "lead", "hat", "pad"])
+        if (P[k] && P[k].length) chans.push([id + "." + sec + "." + k, P[k]]);
+    }
+  }
+  const spread = chans.filter(([, a]) => new Set(a.map((n) => n.v)).size !== 1);
+  check(
+    "every channel stamps exactly one v — stepped dynamics land in R3c, not here",
+    chans.length > 30 && spread.length === 0,
+    chans.length + " channels, spread: " + spread.map(([n]) => n).join(","),
+  );
+}
+
 console.log("\n  MUSIC RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);
