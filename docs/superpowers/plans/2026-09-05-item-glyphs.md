@@ -4,6 +4,8 @@
 
 **Goal:** All twelve cabinet glyphs run the same five shading beats instead of one flat fill, `drawItemBody` shows family instead of restating hue, and `icons.js` becomes the one craft module the whole cabinet shares.
 
+> **Revision P1.5 — 2026-09-05.** The first pass shipped and was rejected: *"the new itemts are not really intutive design graphic and people confiuse from the look, let's review it, and make more intiutive and more reall look."* Every `ITEM_SHAPE` / `ITEM_ACCENT` block below is the **re-authored, semantic-first** set — each glyph is now a real nameable object (flame, bomb, bolt, heart, shield, boot, thrown bomb, brick wall, beam, explosion, arrowhead, detonator), per the spec's rewritten §1.6. `speed` / `heart` / `shield` are byte-identical to the first pass because they already read. Budgets moved with it: outline `<= 14` verts, accent `<= 4` paint ops (spec §1.7). The five-beat driver, the family tables and `drawItemChrome` are unchanged.
+
 **Architecture:** `tone` / `dk` / `lt` / `poly` / `oval` / `seal` move out of `enemybody.js` into `icons.js`; `enemybody.js` takes an **imports-only** diff so the foe op streams stay byte-identical. `icons.js` grows three tables — `ITEM_FAMILY` (the mechanical split already encoded in `POWER`), `ITEM_SHAPE` (one `poly()` outline per kind), `ITEM_ACCENT` (one small tell per kind) — and `drawIcon` becomes a single five-beat driver over them. `drawItemBody` gains `drawItemChrome`, the 2D echo of the 3D family ring, on the grid-derived phase.
 
 **Tech Stack:** Pure ES modules, `node --test` / `tests/*.test.mjs`, Canvas 2D. Zero npm runtime deps. `icons.js` imports `CFG` and nothing else — the kind-`"2d"` path must never reach three.
@@ -17,9 +19,10 @@
 - `tests/enemies-art.test.mjs` must stay green with **zero edits**. If it goes red, the move was done wrong — do not edit the suite to make it pass.
 - `tests/pickups.test.mjs`, `menudraw.test.mjs`, `touch.test.mjs`, `r3d.test.mjs`, `media.test.mjs` all stay green with zero edits.
 - One clock: `world.time`, read render-side. `performance.now()` is forbidden. Per-instance phase is `ph = (it.x * 0.7 + it.y * 1.3) / CFG.TILE`, never `slot`.
-- Legibility budget: outline `<= 12` vertices, accent `<= 3` paint ops and never a hairline, nothing painted outside `±1.20 * s`, no `fillText` in any glyph ever.
+- Legibility budget (P1.5 numbers): outline `<= 14` vertices, accent `<= 4` paint ops and never a hairline (`lineWidth >= s*0.12`), nothing painted outside `±1.20 * s`, no `fillText` in any glyph ever. Only `power` reaches 14 verts and only `bomb` reaches 3 accent ops. The `±1.20 * s` fit is the one number that did **not** move — it is real containment from `well()`, and the form shadow's `+0.07s / +0.09s` means an *outline* vertex may not exceed `±1.13 / ±1.11`.
+- No `arc` or `ellipse` in an accent unless a full circle is meant: the fit recorder bounds a partial arc by its whole circle, so a 40° signal arc fails the gate for pixels it never paints. `remote`'s signal arcs and its round button are `quadraticCurveTo`.
 - `setLineDash` is not available on the headless stub context and must not be used — draw the dashes as arcs.
-- `drawBombBody` is **not touched**; its `quad`-fuse / `+`-pip / no-`fillRect` pins live there and take zero edits. The `bomb` *glyph*'s accent mirrors it (a `quadraticCurveTo` fuse, a `+` pip, no `fillRect`).
+- `drawBombBody` is **not touched**; its `quad`-fuse / `+`-pip / no-`fillRect` pins live there and take zero edits. The `bomb` *glyph* mirrors its story, not its ops: a `quadraticCurveTo` fuse and a `#ffd447` spark, no `fillRect`. (P1.5 dropped the glyph's `+` pip for a white specular crescent — the pip was a `drawBombBody` pin, never a `drawIcon` one, and the crescent is what makes the orb read as a solid body rather than a berry.)
 - No comments unless the file already uses explanatory block comments (its style). `icons.js` and `enemybody.js` both do — sparse, at decision points.
 - Never write the banned grid-bomb franchise name into any committed file.
 - PWA: bump `CACHE_NAME` (`src/pwa/shell.js:1`) and `REV` (`sw.js:3`) **together**, `current vN → vN+1`, in every commit here — all three touch `SRC` bytes.
@@ -291,8 +294,8 @@ EOF
 **Interfaces:**
 - Consumes: `CFG`, `RIM`, `dk`, `lt`, `seal`, `poly`
 - Produces:
-  - `export const ITEM_SHAPE = { <t>: [[x,y] | [x,y,cx,cy], ...] }` — 12 keys, `<= 12` verts each, `s`-units
-  - `export const ITEM_ACCENT = { <t>: (c, s, col) => void }` — 12 keys, `<= 3` paint ops each
+  - `export const ITEM_SHAPE = { <t>: [[x,y] | [x,y,cx,cy], ...] }` — 12 keys, `<= 14` verts each, `s`-units
+  - `export const ITEM_ACCENT = { <t>: (c, s, col) => void }` — 12 keys, `<= 4` paint ops each
   - `export function drawIcon(c, type, col, time)` — arity unchanged
 
 - [ ] **Step 1: Write the failing tests** — extend the `icons.js` import to `import { drawIcon, RIM, ITEM_FAMILY, ITEM_SHAPE, ITEM_ACCENT } from "../src/render/icons.js";`, then insert before the `console.log` summary in `tests/items-art.test.mjs`
@@ -407,39 +410,38 @@ EOF
 node --test tests/items-art.test.mjs
 ```
 
-Expected: FAIL — `ITEM_SHAPE is not defined` / `>=4 distinct fillStyle` fails for every kind (today's glyphs write 1–3).
+Expected: FAIL — `ITEM_SHAPE is not defined` / `>=4 distinct fillStyle` fails for every kind (today's glyphs write 1–3). On the P1.5 re-run the RED is narrower and just as real: `outline budget <= 12 vertices -> power` (the seven-spike explosion is 14) plus the per-kind outline pins of spec §4.5b.
 
 - [ ] **Step 3: Implement**
 
 Replace everything from the `/* ---- items / power-up icons ---- */` comment to the end of `src/render/icons.js` with the three blocks below.
 
-**3a — `ITEM_SHAPE`.** Outlines in `s`-units for `poly()`. The eight flat kinds are the spec §1.6 plan outlines verbatim — the same table `three/entities.js` imports in P2, which is why the 2D notch/point count and the 3D one cannot drift. The five upright kinds are authored here.
+**3a — `ITEM_SHAPE`.** Outlines in `s`-units for `poly()`, semantic-first per the spec's revised §1.6: each one is a nameable object, not an abstract silhouette. The seven flat kinds are still the table `three/entities.js` imports in P2, so the 2D and 3D reads cannot drift; `bomb` is the one declared carve-out (round orb in 2D, low-`seg` faceted lathe in 3D — a sphere is a circle in plan view). `speed` / `heart` / `shield` are byte-identical to the first pass.
 
 ```js
 export const ITEM_SHAPE = {
+  /* FLAME — teardrop, licking tip, one notch where the tongue peels off. */
   fire: [
-    [0, -1.05],
-    [0.34, -0.42, 0.3, -0.8],
-    [0.62, 0.12, 0.62, -0.16],
-    [0.44, 0.72, 0.62, 0.52],
-    [0, 0.92, 0.2, 0.92],
-    [-0.44, 0.72, -0.2, 0.92],
-    [-0.62, 0.12, -0.62, 0.52],
-    [-0.34, -0.42, -0.62, -0.16],
+    [0.08, -1.16],
+    [0.5, -0.24, 0.46, -0.76],
+    [0.66, 0.36, 0.78, 0.02],
+    [0, 0.94, 0.5, 0.88],
+    [-0.66, 0.36, -0.5, 0.88],
+    [-0.5, -0.2, -0.78, 0.02],
+    [-0.2, -0.64, -0.36, -0.5],
+    [-0.08, -0.9],
   ],
+  /* BOMB — the classic orb: round body, collared neck for the fuse. The
+     in-game 2D bomb reuses this read, so the two must agree. */
   bomb: [
-    [0, -0.92],
-    [0.46, -0.6, 0.3, -0.86],
-    [0.38, -0.34],
-    [0.62, -0.06],
-    [0.52, 0.28],
-    [0.74, 0.52, 0.7, 0.36],
-    [0, 0.96, 0.52, 0.96],
-    [-0.74, 0.52, -0.52, 0.96],
-    [-0.52, 0.28, -0.7, 0.36],
-    [-0.62, -0.06],
-    [-0.38, -0.34],
-    [-0.46, -0.6],
+    [-0.74, 0.32],
+    [-0.24, -0.36, -0.78, -0.14],
+    [-0.24, -0.62],
+    [0.24, -0.62],
+    [0.24, -0.36],
+    [0.74, 0.32, 0.78, -0.14],
+    [0, 1.08, 0.74, 1.02],
+    [-0.74, 0.32, -0.74, 1.02],
   ],
   speed: [[0.3, -1.02], [-0.62, 0.02], [-0.06, 0.02], [-0.34, 1.02], [0.66, -0.1], [0.1, -0.1]],
   heart: [
@@ -462,60 +464,103 @@ export const ITEM_SHAPE = {
     [-0.76, 0.16, -0.68, 0.52],
     [-0.84, -0.62],
   ],
-  kick: [[-0.9, -0.34], [0.34, -0.42], [0.98, -0.8], [1.06, -0.1], [0.4, 0.44], [-0.86, 0.36]],
-  throw: [[0, -1.0], [0.66, 0.1], [0.34, 0.62], [0, 0.44], [-0.34, 0.62], [-0.66, 0.1]],
+  /* KICK — a boot in profile mid-kick. The foot has to stay thin and run
+     nearly twice the shaft's length, or the ankle bend reads as an elbow. */
+  kick: [
+    [-0.66, -1.1],
+    [0.1, -1.1],
+    [0.14, 0.02],
+    [0.92, -0.18, 0.52, 0.08],
+    [1.0, 0.3, 1.1, 0.02],
+    [0, 0.62],
+    [-0.36, 0.66],
+    [-0.72, 0.46],
+  ],
+  /* THROW — the same orb BOMB uses, half the size and thrown clear of
+     centre; the trajectory it rode is the accent. Mass distribution is the
+     whole separation from BOMB: big centred orb there, small orb plus a long
+     arc here. */
+  throw: [
+    [0.66, 0.36],
+    [0.14, -0.16, 0.66, -0.16],
+    [-0.08, -0.24],
+    [0, -0.56],
+    [-0.24, -0.48],
+    [-0.38, 0.36, -0.38, -0.16],
+    [0.14, 0.88, -0.38, 0.88],
+    [0.66, 0.36, 0.66, 0.88],
+  ],
+  /* PASS — a brick wall, wider than it is tall, with a gap knocked through
+     the middle. The arrow that threads the gap is the accent. */
   pass: [
-    [-0.92, -0.62], [-0.34, -0.62], [-0.34, 0.16], [0.34, 0.16],
-    [0.34, -0.62], [0.92, -0.62], [0.92, 0.7], [-0.92, 0.7],
+    [-1.1, -0.66], [-0.24, -0.66], [-0.24, 0.1], [0.24, 0.1],
+    [0.24, -0.66], [1.1, -0.66], [1.1, 0.74], [-1.1, 0.74],
   ],
-  remote: [[-0.86, -0.56], [0.3, -0.56], [0.3, -0.16], [0.86, -0.16], [0.86, 0.62], [-0.86, 0.62]],
-  line: [[-1.1, 0], [-0.22, -0.2], [0.22, -0.2], [1.1, 0], [0.22, 0.2], [-0.22, 0.2]],
+  /* REMOTE — a hand detonator: a wide low box with a thin antenna standing
+     off the right shoulder. The plunger button is the accent. */
+  remote: [
+    [-0.86, -0.12], [0.3, -0.12], [0.4, -1.12], [0.58, -1.12],
+    [0.5, -0.12], [0.86, -0.12], [0.86, 0.88], [-0.86, 0.88],
+  ],
+  /* LINE — a directed beam: flared origin, long shaft, arrowhead tip. The
+     asymmetry is what stops it reading as a plain double-headed arrow. */
+  line: [
+    [-1.1, -0.44], [-0.62, -0.17], [0.3, -0.17], [0.3, -0.5], [1.1, 0],
+    [0.3, 0.5], [0.3, 0.17], [-0.62, 0.17], [-1.1, 0.44],
+  ],
+  /* POWER — a blast, not a sparkle: seven spikes of deliberately uneven
+     length, the comic-explosion outline every player already knows. */
   power: [
-    [0, -1.1], [0.26, -0.26], [1.1, 0], [0.26, 0.26],
-    [0, 1.1], [-0.26, 0.26], [-1.1, 0], [-0.26, -0.26],
+    [0, -1.12], [0.3, -0.42], [0.86, -0.74], [0.5, -0.14],
+    [1.12, 0.16], [0.42, 0.36], [0.66, 1.02], [0.06, 0.52],
+    [-0.5, 1.04], [-0.42, 0.34], [-1.12, 0.3], [-0.44, -0.16],
+    [-0.8, -0.86], [-0.28, -0.4],
   ],
+  /* PIERCE — one broad arrowhead, tip-dominant, with a notched tail. The
+     brick it punched through is the accent, spraying behind the tip. */
   pierce: [
-    [0, -1.15], [0.2, -0.34], [0.54, -0.16], [0.28, 0.06], [0.34, 0.66],
-    [0, 0.44], [-0.34, 0.66], [-0.28, 0.06], [-0.54, -0.16], [-0.2, -0.34],
+    [0, -1.14], [0.62, -0.18], [0.26, -0.18], [0.34, 0.98],
+    [0, 0.72], [-0.34, 0.98], [-0.26, -0.18], [-0.62, -0.18],
   ],
 };
 ```
 
-**3b — `ITEM_ACCENT`.** Beat 5: one small tell where the 3D mesa or flare band sits, in the kind's existing second colour where it has one, else `#fff3b0`. Every entry is `<= 3` paint ops, writes at least one `fillStyle`, and any stroke carries `lineWidth >= s*0.12` so nothing survives as a hairline at `0.41x`.
+**3b — `ITEM_ACCENT`.** Beat 5, now carrying real semantic load rather than only a bright tell: `kick`'s dark sole is what makes the boot a shoe, `pass`'s mortar is what makes the rectangle masonry, `throw`'s arc-arrow is the verb. Colours stay the kind's existing second colour where it has one (`#ffd447` / `#ffce8a` / `#ff5d73` / `#12203a` / `#0d3f78`), else `#fff3b0`, plus `dk(col, …)` for the two structural accents. Every entry is `<= 4` paint ops, writes at least one `fillStyle`, and any stroke carries `lineWidth >= s*0.12`. Multiple subpaths inside one `beginPath` cost one op — that is how `pass`'s five mortar bars and `pierce`'s four shards stay inside budget.
 
 ```js
 export const ITEM_ACCENT = {
+  /* the inner tongue */
   fire: (c, s) => {
     c.fillStyle = "#ffd447";
     c.beginPath();
-    c.moveTo(0, -s * 0.46);
-    c.quadraticCurveTo(s * 0.3, s * 0.1, 0, s * 0.5);
-    c.quadraticCurveTo(-s * 0.3, s * 0.1, 0, -s * 0.46);
+    c.moveTo(s * 0.02, -s * 0.42);
+    c.quadraticCurveTo(s * 0.3, s * 0.14, 0, s * 0.62);
+    c.quadraticCurveTo(-s * 0.3, s * 0.14, s * 0.02, -s * 0.42);
     c.fill();
   },
+  /* fuse curling off the collar, lit tip, one specular crescent on the orb */
   bomb: (c, s) => {
     c.strokeStyle = "#ffd447";
-    c.lineWidth = s * 0.16;
+    c.lineWidth = s * 0.18;
     c.beginPath();
-    c.moveTo(s * 0.2, -s * 0.72);
-    c.quadraticCurveTo(s * 0.46, -s * 0.9, s * 0.52, -s * 1.06);
+    c.moveTo(s * 0.12, -s * 0.58);
+    c.quadraticCurveTo(s * 0.52, -s * 0.68, s * 0.5, -s * 0.94);
     c.stroke();
     c.fillStyle = "#ffd447";
     c.beginPath();
-    c.moveTo(s * 0.52, -s * 1.14);
-    c.lineTo(s * 0.68, -s * 1.0);
-    c.lineTo(s * 0.52, -s * 0.86);
-    c.lineTo(s * 0.36, -s * 1.0);
+    c.moveTo(s * 0.5, -s * 1.16);
+    c.lineTo(s * 0.66, -s * 0.98);
+    c.lineTo(s * 0.5, -s * 0.8);
+    c.lineTo(s * 0.34, -s * 0.98);
     c.closePath();
     c.fill();
-    c.strokeStyle = "#ffffff";
-    c.lineWidth = s * 0.14;
+    c.fillStyle = "#ffffff";
     c.beginPath();
-    c.moveTo(-s * 0.2, s * 0.2);
-    c.lineTo(s * 0.2, s * 0.2);
-    c.moveTo(0, 0);
-    c.lineTo(0, s * 0.4);
-    c.stroke();
+    c.moveTo(-s * 0.46, s * 0.26);
+    c.quadraticCurveTo(-s * 0.54, -s * 0.16, -s * 0.14, -s * 0.26);
+    c.quadraticCurveTo(-s * 0.38, -s * 0.02, -s * 0.3, s * 0.32);
+    c.closePath();
+    c.fill();
   },
   speed: (c, s) => {
     c.fillStyle = "#fff3b0";
@@ -547,128 +592,195 @@ export const ITEM_ACCENT = {
     c.closePath();
     c.fill();
   },
-  kick: (c, s) => {
-    c.fillStyle = "#ffce8a";
+  /* the dark sole that makes it a shoe, then the toe cap and two chevrons */
+  kick: (c, s, col) => {
+    c.fillStyle = dk(col, 0.62);
     c.beginPath();
-    c.moveTo(s * 0.4, -s * 0.52);
-    c.lineTo(s * 0.92, -s * 0.66);
-    c.lineTo(s * 0.96, -s * 0.14);
-    c.lineTo(s * 0.46, s * 0.1);
+    c.moveTo(s * 1.0, s * 0.3);
+    c.lineTo(0, s * 0.62);
+    c.lineTo(-s * 0.36, s * 0.66);
+    c.lineTo(-s * 0.42, s * 0.36);
+    c.lineTo(0, s * 0.32);
+    c.lineTo(s * 0.94, s * 0.02);
     c.closePath();
     c.fill();
+    c.fillStyle = "#ffce8a";
     c.beginPath();
-    c.moveTo(-s * 0.98, -s * 0.14);
-    c.lineTo(-s * 0.56, s * 0.02);
-    c.lineTo(-s * 0.98, s * 0.18);
-    c.lineTo(-s * 0.78, s * 0.02);
+    c.moveTo(s * 0.56, -s * 0.08);
+    c.lineTo(s * 0.9, -s * 0.2);
+    c.lineTo(s * 1.0, s * 0.12);
+    c.lineTo(s * 0.62, s * 0.22);
+    c.closePath();
+    c.moveTo(-s * 1.18, -s * 0.66);
+    c.lineTo(-s * 0.92, -s * 0.4);
+    c.lineTo(-s * 1.18, -s * 0.14);
+    c.lineTo(-s * 1.06, -s * 0.4);
+    c.closePath();
+    c.moveTo(-s * 1.18, s * 0.06);
+    c.lineTo(-s * 0.92, s * 0.32);
+    c.lineTo(-s * 1.18, s * 0.58);
+    c.lineTo(-s * 1.06, s * 0.32);
     c.closePath();
     c.fill();
   },
+  /* the throwing arc, drawn as a real arrow so the verb reads, arcing over
+     the orb and away */
   throw: (c, s) => {
     c.fillStyle = "#fff3b0";
     c.beginPath();
-    c.moveTo(0, -s * 0.72);
-    c.lineTo(s * 0.2, s * 0.06);
-    c.lineTo(0, s * 0.3);
-    c.lineTo(-s * 0.2, s * 0.06);
+    c.moveTo(-s * 1.04, s * 0.66);
+    c.quadraticCurveTo(-s * 0.84, -s * 0.94, s * 0.6, -s * 0.92);
+    c.lineTo(s * 0.46, -s * 1.16);
+    c.lineTo(s * 1.1, -s * 0.7);
+    c.lineTo(s * 0.4, -s * 0.44);
+    c.lineTo(s * 0.52, -s * 0.68);
+    c.quadraticCurveTo(-s * 0.58, -s * 0.66, -s * 0.8, s * 0.66);
     c.closePath();
+    c.fill();
+    c.fillStyle = "#ffd447";
+    c.beginPath();
+    c.moveTo(-s * 0.12, -s * 0.76);
+    c.lineTo(s * 0.06, -s * 0.58);
+    c.lineTo(-s * 0.12, -s * 0.4);
+    c.lineTo(-s * 0.3, -s * 0.58);
+    c.closePath();
+    c.fill();
+  },
+  /* mortar courses make it masonry; the arrow threads the knocked-out gap */
+  pass: (c, s, col) => {
+    c.fillStyle = dk(col, 0.62);
+    c.beginPath();
+    c.moveTo(-s * 1.1, s * 0.16);
+    c.lineTo(s * 1.1, s * 0.16);
+    c.lineTo(s * 1.1, s * 0.3);
+    c.lineTo(-s * 1.1, s * 0.3);
+    c.closePath();
+    c.moveTo(-s * 0.68, -s * 0.66);
+    c.lineTo(-s * 0.54, -s * 0.66);
+    c.lineTo(-s * 0.54, s * 0.16);
+    c.lineTo(-s * 0.68, s * 0.16);
+    c.closePath();
+    c.moveTo(s * 0.54, -s * 0.66);
+    c.lineTo(s * 0.68, -s * 0.66);
+    c.lineTo(s * 0.68, s * 0.16);
+    c.lineTo(s * 0.54, s * 0.16);
+    c.closePath();
+    c.moveTo(-s * 0.4, s * 0.3);
+    c.lineTo(-s * 0.26, s * 0.3);
+    c.lineTo(-s * 0.26, s * 0.74);
+    c.lineTo(-s * 0.4, s * 0.74);
+    c.closePath();
+    c.moveTo(s * 0.26, s * 0.3);
+    c.lineTo(s * 0.4, s * 0.3);
+    c.lineTo(s * 0.4, s * 0.74);
+    c.lineTo(s * 0.26, s * 0.74);
+    c.closePath();
+    c.fill();
+    c.fillStyle = "#fff3b0";
+    c.beginPath();
+    c.moveTo(0, -s * 1.16);
+    c.lineTo(s * 0.4, -s * 0.6);
+    c.lineTo(s * 0.16, -s * 0.6);
+    c.lineTo(s * 0.16, s * 0.98);
+    c.lineTo(-s * 0.16, s * 0.98);
+    c.lineTo(-s * 0.16, -s * 0.6);
+    c.lineTo(-s * 0.4, -s * 0.6);
+    c.closePath();
+    c.fill();
+  },
+  /* the big red plunger button, and the signal leaving the antenna */
+  remote: (c, s) => {
+    c.fillStyle = "#ff5d73";
+    c.beginPath();
+    c.moveTo(-s * 0.34, s * 0.38);
+    c.quadraticCurveTo(-s * 0.34, s * 0.04, 0, s * 0.04);
+    c.quadraticCurveTo(s * 0.34, s * 0.04, s * 0.34, s * 0.38);
+    c.quadraticCurveTo(s * 0.34, s * 0.72, 0, s * 0.72);
+    c.quadraticCurveTo(-s * 0.34, s * 0.72, -s * 0.34, s * 0.38);
     c.fill();
     c.strokeStyle = "#fff3b0";
     c.lineWidth = s * 0.14;
     c.beginPath();
-    c.moveTo(-s * 0.86, s * 0.52);
-    c.quadraticCurveTo(-s * 0.3, -s * 0.3, s * 0.52, s * 0.1);
+    c.moveTo(s * 0.7, -s * 1.16);
+    c.quadraticCurveTo(s * 0.9, -s * 0.96, s * 0.76, -s * 0.76);
+    c.moveTo(s * 0.9, -s * 1.18);
+    c.quadraticCurveTo(s * 1.18, -s * 0.92, s * 0.96, -s * 0.64);
     c.stroke();
   },
-  pass: (c, s) => {
-    c.fillStyle = "#fff3b0";
-    c.beginPath();
-    c.moveTo(-s * 0.6, -s * 0.48);
-    c.lineTo(-s * 0.38, -s * 0.48);
-    c.lineTo(-s * 0.38, s * 0.16);
-    c.lineTo(-s * 0.6, s * 0.16);
-    c.closePath();
-    c.fill();
-    c.beginPath();
-    c.moveTo(s * 0.38, -s * 0.48);
-    c.lineTo(s * 0.6, -s * 0.48);
-    c.lineTo(s * 0.6, s * 0.16);
-    c.lineTo(s * 0.38, s * 0.16);
-    c.closePath();
-    c.fill();
-  },
-  remote: (c, s) => {
-    c.fillStyle = "#ff5d73";
-    c.beginPath();
-    c.moveTo(s * 0.38, -s * 0.06);
-    c.lineTo(s * 0.78, -s * 0.06);
-    c.lineTo(s * 0.78, s * 0.3);
-    c.lineTo(s * 0.38, s * 0.3);
-    c.closePath();
-    c.fill();
-  },
+  /* the hot core down the shaft, and the muzzle burst it was fired from */
   line: (c, s) => {
     c.fillStyle = "#fff3b0";
     c.beginPath();
-    c.moveTo(-s * 0.86, 0);
-    c.lineTo(-s * 0.18, -s * 0.08);
-    c.lineTo(s * 0.18, -s * 0.08);
-    c.lineTo(s * 0.86, 0);
-    c.lineTo(s * 0.18, s * 0.08);
-    c.lineTo(-s * 0.18, s * 0.08);
-    c.closePath();
-    c.fill();
-    c.beginPath();
-    c.moveTo(-s * 0.52, -s * 0.34);
-    c.lineTo(-s * 0.28, -s * 0.34);
-    c.lineTo(-s * 0.28, -s * 0.24);
-    c.lineTo(-s * 0.52, -s * 0.24);
-    c.closePath();
-    c.fill();
-    c.beginPath();
-    c.moveTo(s * 0.28, s * 0.24);
-    c.lineTo(s * 0.52, s * 0.24);
-    c.lineTo(s * 0.52, s * 0.34);
-    c.lineTo(s * 0.28, s * 0.34);
-    c.closePath();
-    c.fill();
-  },
-  power: (c, s) => {
-    c.fillStyle = "#fff3b0";
-    c.beginPath();
-    c.moveTo(0, -s * 0.86);
-    c.lineTo(s * 0.14, -s * 0.14);
-    c.lineTo(s * 0.86, 0);
-    c.lineTo(s * 0.14, s * 0.14);
-    c.lineTo(0, s * 0.86);
-    c.lineTo(-s * 0.14, s * 0.14);
-    c.lineTo(-s * 0.86, 0);
-    c.lineTo(-s * 0.14, -s * 0.14);
+    c.moveTo(-s * 0.86, -s * 0.07);
+    c.lineTo(s * 0.3, -s * 0.07);
+    c.lineTo(s * 0.3, -s * 0.28);
+    c.lineTo(s * 0.88, 0);
+    c.lineTo(s * 0.3, s * 0.28);
+    c.lineTo(s * 0.3, s * 0.07);
+    c.lineTo(-s * 0.86, s * 0.07);
     c.closePath();
     c.fill();
     c.fillStyle = "#ffffff";
     c.beginPath();
-    c.moveTo(-s * 0.16, 0);
-    c.lineTo(0, -s * 0.16);
-    c.lineTo(s * 0.16, 0);
-    c.lineTo(0, s * 0.16);
+    for (let i = 0; i < 8; i++) {
+      const a = (i * Math.PI) / 4,
+        r = i % 2 ? 0.15 : 0.42;
+      const x = -s * 0.74 + Math.cos(a) * s * r,
+        y = Math.sin(a) * s * r;
+      i ? c.lineTo(x, y) : c.moveTo(x, y);
+    }
     c.closePath();
     c.fill();
   },
+  /* the white-hot heart of the blast, ringed by its inner flare */
+  power: (c, s) => {
+    c.fillStyle = "#fff3b0";
+    c.beginPath();
+    for (let i = 0; i < 8; i++) {
+      const a = (i * Math.PI) / 4,
+        r = i % 2 ? 0.24 : 0.56;
+      const x = Math.cos(a) * s * r,
+        y = Math.sin(a) * s * r;
+      i ? c.lineTo(x, y) : c.moveTo(x, y);
+    }
+    c.closePath();
+    c.fill();
+    c.fillStyle = "#ffffff";
+    c.beginPath();
+    c.moveTo(-s * 0.22, 0);
+    c.lineTo(0, -s * 0.22);
+    c.lineTo(s * 0.22, 0);
+    c.lineTo(0, s * 0.22);
+    c.closePath();
+    c.fill();
+  },
+  /* the brick it went through, split into shards behind the tip */
   pierce: (c, s) => {
     c.fillStyle = "#12203a";
     c.beginPath();
-    c.moveTo(-s * 0.86, -s * 0.2);
-    c.lineTo(-s * 0.44, -s * 0.2);
-    c.lineTo(-s * 0.44, s * 0.34);
-    c.lineTo(-s * 0.86, s * 0.34);
+    c.moveTo(-s * 1.04, -s * 0.36);
+    c.lineTo(-s * 0.66, -s * 0.16);
+    c.lineTo(-s * 0.98, s * 0.04);
+    c.closePath();
+    c.moveTo(s * 1.04, -s * 0.36);
+    c.lineTo(s * 0.66, -s * 0.16);
+    c.lineTo(s * 0.98, s * 0.04);
+    c.closePath();
+    c.moveTo(-s * 0.88, s * 0.34);
+    c.lineTo(-s * 0.5, s * 0.22);
+    c.lineTo(-s * 0.68, s * 0.62);
+    c.closePath();
+    c.moveTo(s * 0.88, s * 0.34);
+    c.lineTo(s * 0.5, s * 0.22);
+    c.lineTo(s * 0.68, s * 0.62);
     c.closePath();
     c.fill();
+    c.fillStyle = "#fff3b0";
     c.beginPath();
-    c.moveTo(s * 0.44, -s * 0.2);
-    c.lineTo(s * 0.86, -s * 0.2);
-    c.lineTo(s * 0.86, s * 0.34);
-    c.lineTo(s * 0.44, s * 0.34);
+    c.moveTo(0, -s * 0.92);
+    c.lineTo(s * 0.22, -s * 0.4);
+    c.lineTo(0, -s * 0.52);
+    c.lineTo(-s * 0.22, -s * 0.4);
     c.closePath();
     c.fill();
   },
@@ -924,7 +1036,7 @@ node serve.js
 
 Score these lines pass/fail and fix until every one passes:
 
-- [ ] ITEMS well at 16px: all 12 glyphs separable
+- [ ] ITEMS well at 16px: all 12 glyphs separable — **and each one nameable in one second without its label** (spec §5 line 14; this is the line the user applied)
 - [ ] HUD chips at 14px: HEART / BOMB / FLAME separable
 - [ ] HOW TO PLAY rows: bomb / throw / remote / kick glyphs read
 - [ ] touch bomb pad still reads as BOMB

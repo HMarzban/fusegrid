@@ -1,5 +1,16 @@
 # Items + player character art (2026-09-05)
 
+> **Revision P1.5 — 2026-09-05.** The first glyph pass shipped and the user
+> rejected it: *"the new itemts are not really intutive design graphic and
+> people confiuse from the look, let's review it, and make more intiutive and
+> more reall look."* Screenshot diagnosis: BOMB read as a berry, KICK as a
+> slipper, THROW as a vague arrow, PASS as a magnet, LINE as a minnow, POWER
+> as a generic sparkle, PIERCE as a magic spark, REMOTE as a folder. The pass
+> had optimised plan-view distinctness and craft; players judge an icon by
+> *"what nameable object is this?"* in one glance. §1.6, §1.7 and §4.5 are
+> rewritten semantic-first below, and the outline / accent budgets are
+> renegotiated to pay for it. Everything else in this spec stands.
+
 Sixth pass on the 12 pickups, second on the hero. The 2026-09-04 enemy pass
 made nine foes read as characters; items and the player did not get that
 treatment and now look like the placeholder art in a cast of finished art.
@@ -206,6 +217,27 @@ per-frame path stays allocation-free.
 
 ### 1.6 Per kind — all twelve
 
+**The binding rule (P1.5).** Each glyph depicts a **real, nameable object** a
+player recognises instantly at the ITEMS-menu chip (~44px) *and* at the HUD
+chip (~16–20px). Semantics **win** any conflict with the plan-view
+distinctness budget: when the two fight, the 2D glyph keeps the nameable
+object and the **3D body** carries the plan-view separation instead. A glyph
+that a reviewer has to be told the meaning of is a failed glyph, however
+distinct its silhouette.
+
+Two 2D↔3D carve-outs follow from that, and they are deliberate, not drift:
+
+- **`bomb`.** The 2D glyph is the classic round orb (round body, collared
+  neck, curling fuse, lit spark). A sphere is a circle in plan view, so the
+  **3D** `bomb` stays the low-`seg` (4-gon) faceted lathe of §1.6's CAPACITY
+  row — a square footprint wearing the fuse/spark read on its upper tier.
+  The orb is the *2D* truth; the facets are the *3D* truth; the shared story
+  is "banded charge with a lit fuse". §5 line 13 is scoped accordingly.
+- **`kick` chevrons, `remote` antenna + signal arcs, `throw` arc-arrow,
+  `pass` mortar, `pierce` shards.** These are 2D-glyph accents. Their 3D
+  counterparts stay the mesa on the plate outline; a chevron drawn in plan
+  view would be invisible from 59.1° anyway.
+
 `IT = CFG.TILE` (40). Lathe profiles are `[radius, y]` in `r`-units and run
 **bottom → top**. Flat outlines are plan coordinates in `r`-units, fed to
 `plate(pts, thick, r).rotateX(-Math.PI/2)`; the second coordinate becomes Z,
@@ -215,45 +247,55 @@ per-frame path stays allocation-free.
 
 | kind | 3D shape (one line) | Plan-view silhouette | Accent (mesa / flare band) | 2D glyph upgrade |
 |---|---|---|---|---|
-| `fire` `#ff8a3c` | `lathe([[0.62,0],[0.92,0.30],[0.70,0.66],[0.34,1.26],[0,2.00]], 3, IT*0.22)` — one tall 3-sided spike | **equilateral triangle**, half-width 8.1, height 17.6 | the `0.62→0.92` flare at `y 0.30`, the brow of the spike | single tall tongue with the existing `#ffd447` core, now on the five-beat stack; one tier |
-| `bomb` `#ff5d73` | `lathe([[0.74,0],[1.00,0.26],[0.80,0.52],[1.00,0.80],[0.78,1.06],[0.40,1.44],[0,1.62]], 4, IT*0.24)` — **two** stacked flare bands | **square**, half-width 9.6, height 15.6 — wider and shorter than fire | the upper `0.80→1.00` band (the second tier) | round charge banded into two tiers + fuse spark + the "+" pip; the pip stays (`quad` fuse and no `fillRect` are pinned) |
-| `speed` `#3db4ff` | `lathe([[0.55,0],[0.86,0.34],[0.60,0.78],[0.26,1.50],[0,2.30]], 3, IT*0.20).scale(1.9, 1, 0.5)` — a blade-thin raked shard | **sliver triangle**, 13.1 × 3.4, elongation 3.8:1, sweeps under spin | the `0.55→0.86` flare on the leading edge | the existing bolt, raked further and re-stacked; no second tier |
+| `fire` `#ff8a3c` | `lathe([[0.62,0],[0.92,0.30],[0.70,0.66],[0.34,1.26],[0,2.00]], 3, IT*0.22)` — one tall 3-sided spike | **equilateral triangle**, half-width 8.1, height 17.6 | the `0.62→0.92` flare at `y 0.30`, the brow of the spike | **a flame.** Teardrop, pointed licking tip, one notch on the left where the tongue peels off; the `#ffd447` inner tongue is the accent. 8 verts / 1 op |
+| `bomb` `#ff5d73` | `lathe([[0.74,0],[1.00,0.26],[0.80,0.52],[1.00,0.80],[0.78,1.06],[0.40,1.44],[0,1.62]], 4, IT*0.24)` — **two** stacked flare bands | **square**, half-width 9.6, height 15.6 — wider and shorter than fire | the upper `0.80→1.00` band (the second tier) | **a bomb.** The classic orb: round body, squared collar, `#ffd447` fuse curling up-right to a lit spark, one white specular crescent on the body. The 2D↔3D carve-out above applies. 8 verts / 3 ops |
+| `speed` `#3db4ff` | `lathe([[0.55,0],[0.86,0.34],[0.60,0.78],[0.26,1.50],[0,2.30]], 3, IT*0.20).scale(1.9, 1, 0.5)` — a blade-thin raked shard | **sliver triangle**, 13.1 × 3.4, elongation 3.8:1, sweeps under spin | the `0.55→0.86` flare on the leading edge | **a lightning bolt.** Kept byte-identical from P1 — it already read. 6 verts / 1 op |
 
 **VITALITY — low dome. Within-family axis: notched vs unbroken.**
 
 | kind | 3D shape | Plan-view silhouette | Accent | 2D glyph upgrade |
 |---|---|---|---|---|
-| `heart` `#ff3b5c` | `mergeGeos(D.clone().translate(-IT*0.12,0,0), D.clone().translate(IT*0.12,0,0))` where `D = lathe([[0.86,0],[1.00,0.22],[0.84,0.52],[0.50,0.82],[0,1.00]], 6, IT*0.16)` | **twin 6-gon lobes with a waist notch on the front and back perimeter**, 22.4 × 12.8, height 6.4 — the only twin-lobe footprint in the set | the two lobe crowns | full heart, five-beat, waist cleft opened so the outline notch is visible at 16px |
-| `shield` `#6fb7ff` | `lathe([[1.00,0],[1.06,0.18],[0.96,0.40],[0.66,0.72],[0,0.92]], 8, IT*0.21)` | **clean unbroken 8-gon**, half-width 8.9, height 7.7 — the only convex closed round outline left in the 12 | the `1.00→1.06` rim flare | heater shield + chevron, five-beat; perimeter stays unbroken (no notch anywhere) |
+| `heart` `#ff3b5c` | `mergeGeos(D.clone().translate(-IT*0.12,0,0), D.clone().translate(IT*0.12,0,0))` where `D = lathe([[0.86,0],[1.00,0.22],[0.84,0.52],[0.50,0.82],[0,1.00]], 6, IT*0.16)` | **twin 6-gon lobes with a waist notch on the front and back perimeter**, 22.4 × 12.8, height 6.4 — the only twin-lobe footprint in the set | the two lobe crowns | **a heart.** Kept byte-identical from P1 — it already read. Also the HUD lives glyph, whose `>= 12` curve-op gate (`three.test.mjs` S4.D) depends on the quadratic lobes: do not re-author it as a polygon. 8 verts / 1 op |
+| `shield` `#6fb7ff` | `lathe([[1.00,0],[1.06,0.18],[0.96,0.40],[0.66,0.72],[0,0.92]], 8, IT*0.21)` | **clean unbroken 8-gon**, half-width 8.9, height 7.7 — the only convex closed round *3D* outline in the 12 (P1.5: the 2D `bomb` glyph is now round too; the two never meet, since the 3D `bomb` stays a 4-gon) | the `1.00→1.06` rim flare | **a shield.** Kept byte-identical from P1 — heater crest + chevron already read. 8 verts / 1 op |
 
 **UTILITY — flat wedge. Within-family axis: where the outline is cut.**
 
 | kind | Plan outline (shared 2D↔3D, `r`) | 3D | Accent mesa | 2D glyph |
 |---|---|---|---|---|
-| `kick` `#c07a3a` | `[[-0.90,-0.34],[0.34,-0.42],[0.98,-0.80],[1.06,-0.10],[0.40,0.44],[-0.86,0.36]]`, `r = IT*0.24` | flat wedge, front-right **toe flare**, footprint 19.6 × 12 | the toe lobe `[[0.40,-0.52],[0.92,-0.66],[0.96,-0.14],[0.46,0.10]]` | boot-from-above replaces the side boot; motion chevron kept as the accent |
-| `throw` `#ffb347` | `[[0,-1.00],[0.66,0.10],[0.34,0.62],[0,0.44],[-0.34,0.62],[-0.66,0.10]]`, `r = IT*0.23` | symmetric **dart**, single forward point, notched tail | spine `[[0,-0.72],[0.20,0.06],[0,0.30],[-0.20,0.06]]` | dart + toss arc; the arc is the accent, the dart is the body |
-| `pass` `#77ff99` | `[[-0.92,-0.62],[-0.34,-0.62],[-0.34,0.16],[0.34,0.16],[0.34,-0.62],[0.92,-0.62],[0.92,0.70],[-0.92,0.70]]`, `r = IT*0.24` | **U with a through-slot** cut from the front edge — the only negative-space footprint. A simple polygon, no `Shape` hole | two mesa bars flanking the slot mouth — two extra plates, four merged in total | the slot is drawn as a real gap in the glyph outline, not as a dashed line |
-| `remote` `#e8c35a` | `[[-0.86,-0.56],[0.30,-0.56],[0.30,-0.16],[0.86,-0.16],[0.86,0.62],[-0.86,0.62]]`, `r = IT*0.24` | **stepped rectangle**, L-key cut out of one back corner — the only rectilinear step | chip `[[0.38,-0.06],[0.78,-0.06],[0.78,0.30],[0.38,0.30]]` inside the step, keeping the existing red button as the 2D accent | plunger detonator re-cut so the L-step is in the outline |
+| `kick` `#c07a3a` | `mesa(ITEM_SHAPE.kick, [M_KICK], IT*0.24)` — the profile boot read as a flat plate | boot profile: long thin foot, short shaft; footprint ~21 × 21 | the toe lobe | **a boot, in profile, mid-kick.** Shaft up-left, ankle, foot running right and rising; the toe is a quadratic so it rounds. Accents: a `dk(col,0.62)` **sole** strip along the bottom edge (the single strongest "this is a shoe" cue), then `#ffce8a` toe cap + two trailing motion chevrons in one fill. The foot must stay **thin and ~2× the shaft's length** — equal masses read as an elbow, which is exactly how the P1 wedge failed. 8 verts / 2 ops |
+| `throw` `#ffb347` | `mesa(ITEM_SHAPE.throw, [M_THROW], IT*0.23)` | orb-plus-nub plate, held yaw | the orb crown | **a bomb sailing along a thrown arc.** Body = the same orb BOMB uses at **half size**, pushed off centre to the lower right, with a fuse nub. Accent = the arc itself, drawn as a real filled **arrow** (tail lower-left, head upper-right) plus a `#ffd447` fuse spark. Mass distribution is the entire separation from BOMB: big centred orb there, small orb + long arc here. A bare curve reads as a sprout — the arrowhead is what makes it a verb. 8 verts / 2 ops |
+| `pass` `#77ff99` | `mesa(ITEM_SHAPE.pass, [M_PASS, M_PASS_L, M_PASS_R], IT*0.24)` | **wall with a through-gap**, wider than deep. A simple polygon, no `Shape` hole | two mesa bars flanking the gap mouth | **a brick wall you walk through.** Body = a wall ~1.8× wider than tall with a gap notched up from the bottom edge. Accents: `dk(col,0.62)` **mortar courses** (one horizontal course + staggered verticals, one fill) so it is unmistakably masonry, then a `#fff3b0` arrow threading the gap bottom-to-top. **Wall-dominant** — that is what keeps it off PIERCE. 8 verts / 2 ops |
+| `remote` `#e8c35a` | `mesa(ITEM_SHAPE.remote, [M_REMOTE], IT*0.24)` | box plate with the antenna spur in the outline | chip inside the box | **a hand detonator.** Body = a wide low box with a **thin antenna** standing off the right shoulder, both in the outline. Accents: one big round `#ff5d73` **plunger button** (four quadratics — never an `arc`, see §1.7) and two `#fff3b0` signal curves off the antenna tip. 8 verts / 2 ops |
 
 **BLAST-SPECIAL — flat star. Within-family axis: point count (1 / 2 / 4).**
 
 | kind | Plan outline (shared 2D↔3D, `r`) | 3D | Accent mesa | 2D glyph |
 |---|---|---|---|---|
-| `line` `#d0e4ff` | `[[-1.10,0],[-0.22,-0.20],[0.22,-0.20],[1.10,0],[0.22,0.20],[-0.22,0.20]]`, `r = IT*0.26` | **2-point needle bar**, 57 × 10.4, ratio 5.5:1, holds yaw | the central spine | the existing spear, re-cut to a two-ended needle; energy ticks stay as the accent |
-| `power` `#ff4d5e` | `[[0,-1.10],[0.26,-0.26],[1.10,0],[0.26,0.26],[0,1.10],[-0.26,0.26],[-1.10,0],[-0.26,-0.26]]`, `r = IT*0.24` | **4-point cross star**, half-width 10.6, 4-fold symmetric, spins | the four arm spines | 4-point cross-star, five-beat; white centre pip stays |
-| `pierce` `#8f8fff` | `[[0,-1.15],[0.20,-0.34],[0.54,-0.16],[0.28,0.06],[0.34,0.66],[0,0.44],[-0.34,0.66],[-0.28,0.06],[-0.54,-0.16],[-0.20,-0.34]]`, `r = IT*0.24` | **1-point barbed spike** with stepped shoulders and a split tail, holds yaw | the forward spine | arrow-through-slabs re-cut so the barbs are in the outline; the two `#12203a` slabs stay as the accent |
+| `line` `#d0e4ff` | `mesa(ITEM_SHAPE.line, [M_LINE], IT*0.26)` | **directed bar**, long, holds yaw | the central spine | **a beam with an arrowhead.** Body = flared origin at the left, long shaft, arrowhead tip at the right — the asymmetry is what stops it reading as a plain double-headed arrow. Accents: a `#fff3b0` hot core down the shaft, and a white 8-spike **muzzle burst** at the origin. 9 verts / 2 ops |
+| `power` `#ff4d5e` | `mesa(ITEM_SHAPE.power, [M_POWER], IT*0.24)` | **7-spike blast star**, spins (rotationally busy, so spin costs it no identity) | the arm spines | **an explosion.** Seven spikes of deliberately **uneven** length — the comic-boom outline. Even, regular arms read as a sparkle or a medical cross, which is precisely how the P1 8-point star failed. Accents: an inner `#fff3b0` flare ring and a white hot core. **14 verts** / 2 ops — the kind that spends the renegotiated budget |
+| `pierce` `#8f8fff` | `mesa(ITEM_SHAPE.pierce, [M_PIERCE], IT*0.24)` | **1-point spike**, holds yaw | the forward spine | **an arrowhead punching through a brick.** Body = one broad **tip-dominant** arrowhead with a notched tail; no rectangle anywhere. Accents: four `#12203a` brick **shards** spraying behind the tip (one fill) and a `#fff3b0` edge highlight on the tip. Tip-dominant vs PASS's wall-dominant is the whole separation. 8 verts / 2 ops |
 
 Geometry type after build: `fire` / `bomb` / `speed` / `shield` are
 `LatheGeometry`; the other eight are `BufferGeometry` (merged). All twelve
 geometry `uuid`s stay pairwise unique. `castShadow = true` on every body
 InstancedMesh; never on a ring.
 
-**Closest pair, watch it in the headed loop:** `bomb` (spinning 4-gon,
-`maxR 10`) and `power` (spinning 4-fold cross, `maxR 11`) both sweep toward
-a circle of similar radius under spin. They separate on **height** — bomb is
-a 15.6-tall upright shard, power a ~7-tall flat plate — and on the family
-ring (hairline vs spiked). If the reviewer can confuse any pair at two
-tiles, it will be this one.
+**Closest pairs, watch them in the headed loop (P1.5 replaces the old
+`bomb`/`power` note).** The op-stream distinctness gates cannot catch either
+of these — coordinates always differ — so they are review lines, not asserts:
+
+1. **`pass` vs `pierce`** — both are "brick + arrow". They separate at
+   **mass** level, never at detail level: `pass` is wall-dominant (whole
+   brick, clean gap, thin arrow threading it), `pierce` is tip-dominant (big
+   arrowhead, loose shards, no brick outline at all). At 16px a
+   fragmenting-vs-intact brick distinction would not survive; a
+   brick-dominant vs tip-dominant silhouette does.
+2. **`bomb` vs `throw`** — both are "orb + curve". Same remedy: `bomb` is a
+   large centred orb with a small fuse appendage; `throw` is a small
+   off-centre orb at the end of a large sweeping arc-arrow.
+3. **`line` vs `pierce`** at the 13px chip, where both collapse toward "an
+   arrow". They hold apart on axis (`line` points right and holds yaw,
+   `pierce` points up) plus `line`'s muzzle burst and `pierce`'s dark shards.
 
 ### 1.7 The 2D glyph — the cabinet five-beat
 
@@ -292,10 +334,29 @@ touch bomb pad 64px canvas at `1.4×` (largest, ~34px), in-arena board
 `(ws/28)*0.72` — **worst case `0.41×`, roughly a 10px glyph**, HUD/SCORES
 well 14–22px. Rules that make one glyph serve all four:
 
-- Outline is **≤ 12 vertices**. No filigree survives `0.41×`.
-- Accent ops **≤ 3** and the accent is a solid shape, never a hairline.
+- Outline is **≤ 14 vertices** (P1.5: was 12). Renegotiated, not waived. The
+  twelve nameable objects cost 6–14 and only one kind — `power`'s
+  seven-spike explosion — reaches the ceiling; every other glyph lands at
+  6–9. The old 12 was a legibility heuristic, and the heuristic was wrong
+  about *where* legibility comes from: an even, low-vertex outline is what
+  made POWER a sparkle and BOMB a berry. Irregularity is the read.
+- Accent ops **≤ 4** paint ops (P1.5: was 3) and the accent is a solid
+  shape, never a hairline (`lineWidth >= s*0.12` on any stroke). Only `bomb`
+  spends 3; nothing spends 4. The extra headroom exists so a kind can afford
+  a **structural** accent (`kick`'s sole, `pass`'s mortar) *plus* its bright
+  tell, instead of choosing. Note that multiple subpaths in one `beginPath`
+  cost **one** op — `pass`'s five mortar bars and `pierce`'s four shards are
+  one fill each, which is why the ceiling did not have to move further.
 - Nothing paints outside **`±1.20 * s`** on either axis, so the well never
-  clips the form-shadow offset.
+  clips the form-shadow offset. **Unchanged and non-negotiable** — this one
+  is a real containment constraint from `well()`, not a heuristic. Note the
+  form shadow adds `+0.07s / +0.09s`, so an *outline* vertex may not exceed
+  `±1.13 / ±1.11`; accents are drawn unoffset and may use the full `1.20`.
+- Arcs and ellipses are **banned in accents** except where a full circle is
+  intended. The fit recorder bounds a partial `arc` by its whole circle, so
+  a 40° signal arc would fail the gate for pixels it never paints. Draw
+  curves as `quadraticCurveTo` — this is why `remote`'s signal arcs and its
+  round plunger button are quadratics.
 - No `fillText` in any glyph, ever (already pinned).
 
 ### 1.8 `drawItemBody` — family chrome and the 2D idle echo
@@ -534,7 +595,16 @@ only.
    `col` passed in — proves the dark form precedes the lit body.
 4. Chip fit: at `s = CFG.TILE*0.3`, no op coordinate outside `±1.20*s` on
    either axis.
-5. Outline budget: `<= 12` vertices per glyph outline, `<= 3` accent ops.
+5. Outline budget: `<= 14` vertices per glyph outline, `<= 4` accent paint
+   ops, every accent writes at least one `fillStyle`, no stroke thinner than
+   `s * 0.12` (P1.5 numbers — see §1.7 for why they moved).
+5b. **Per-kind outline pins.** Vertex count plus the rounded outline bbox
+   (`w`, `h` in `s`-units) pinned per kind, so a future "harmless re-skin"
+   cannot silently undo the semantic pass the way a distinctness-only gate
+   would allow. Plus a **mass-separation** gate over the three closest pairs
+   of §1.6: `pass`/`pierce`, `bomb`/`throw` and `line`/`pierce` must each
+   differ in outline aspect ratio by a real margin, which is the machine-
+   checkable half of "they separate at mass level".
 6. `ITEM_FAMILY` covers all 12 `POWER.t`, has exactly 4 distinct values, and
    its `"cap"` set is exactly the `permanent === true` set.
 7. `drawItemBody` family chrome: four distinct ring signatures across
@@ -644,7 +714,14 @@ fails.
 11. ITEMS well at 16px and HUD chips at 14px: all 12 glyphs still separable.
 12. The touch bomb pad still reads as BOMB.
 13. Both renderers agree on the story: the notch/point/tier count a kind
-    shows in 2D is the count it shows in 3D.
+    shows in 2D is the count it shows in 3D — **except** for the two
+    carve-outs §1.6 names (`bomb`'s 2D orb vs its 3D 4-gon lathe, and the
+    five 2D-only accents). Those are reviewed as "same story, different
+    medium", not as "same outline".
+14. **(P1.5 — the line the user actually applied, and the one that governs.)**
+    At the ITEMS chip, and again at the HUD chip, **name the object** in each
+    glyph in one second without reading its label. Twelve for twelve, or the
+    pass is not done. "Distinct from its neighbours" is not a passing answer.
 
 **Media recapture (P5, after the loop passes).** The 3D look ships again, so
 every committed still is stale. Re-run the live capture

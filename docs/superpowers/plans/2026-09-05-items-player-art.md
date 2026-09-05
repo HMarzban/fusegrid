@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Revision P1.5 — 2026-09-05.** The first glyph pass (P1, commits `7705394`..`9e990d6`) was rejected by the user as unintuitive. The twelve glyphs were re-authored semantic-first — every one must now be a **nameable object** at both chip sizes — and the outline / accent budgets were renegotiated to `<= 14` verts / `<= 4` paint ops to pay for it. Spec §1.6, §1.7, §4.5 and §5 line 13/14 carry the new rule; P1 and P2's tables were updated to match. No hue moved, no interface changed.
+
 **Goal:** The twelve pickups and the hero read as finished arcade art in CLASSIC 2D and REAL 3D, at the same craft level the 2026-09-04 enemy pass reached — no circles-from-above, no flat one-value bodies, no toy tells on the player.
 
 **Architecture:** Five independently landable plans. `src/render/icons.js` becomes the shared cabinet-craft module (the five-beat helpers move in from `enemybody.js`, which keeps an imports-only diff) and grows the three tables every other plan reads: `ITEM_FAMILY`, `ITEM_SHAPE`, `ITEM_ACCENT`. The 2D glyph is authored first and the 3D body is translated from it, foe-pass order. Items keep `SLOT_MESH.item === 2` and earn their two-tone from geometry; the additive ring stops restating hue and carries family. The player collapses 7 kit-bashed children into a 5-mesh stack, moving fat-world 143 → 141.
@@ -93,8 +95,8 @@ export const ITEM_FAMILY = {
   kick: "utl", throw: "utl", pass: "utl", remote: "utl",
   line: "bls", power: "bls", pierce: "bls",
 };
-export const ITEM_SHAPE = { /* 12 keys; each an outline for poly(), <= 12 verts, s-units */ };
-export const ITEM_ACCENT = { /* 12 keys; each (c, s, col) => void, <= 3 paint ops */ };
+export const ITEM_SHAPE = { /* 12 keys; each an outline for poly(), <= 14 verts, s-units */ };
+export const ITEM_ACCENT = { /* 12 keys; each (c, s, col) => void, <= 4 paint ops */ };
 export function drawIcon(c, type, col, time)         /* arity stays 4; every call site passes time */
 
 /* src/render/sprites.js */
@@ -191,7 +193,8 @@ P1 and P3 are 2D-only and can land while P2 is in flight. P2 and P4 are the only
 1. §4.20 lists fat-world `=== 141` under P2, but P2 does not move `SLOT_MESH.player`, so fat-world is still **143** while P2 is landing. §6's P4 row is the binding one ("**all four** fat-world sites 143→141"). P2 therefore adds **no** new fat-world literal; it re-runs the existing formula gate unchanged and asserts only `<= 500`.
 2. §2.3's geometry column writes the visor rake as `plate(...).rotateX(-0.6)`, but §3's replacement probe reads `-0.62 <= rotation.x <= -0.58` off the **mesh**. The probe is the ABI: the geometry is `plate(VISOR_P, 0.14, TILE*0.19)` (so `.type === "ExtrudeGeometry"` for the histogram) and the rake is `visor.rotation.x = -0.6` on the mesh.
 3. §4.13 asks for `±1.10r` vertically, but §2.2's own beat-1 contact ellipse reaches `r*0.98 + r*0.20 = 1.18r` by construction. Neither authored number is changed: the gate splits into `±1.05r` horizontally, `±1.20r` vertically overall, and `±1.10r` vertically for **everything but the contact shade**. (P3.)
-4. §1.6's `pass` row asks for "two mesa bars flanking the slot mouth — two extra plates, four merged in total" without naming the fourth outline. Resolved as shelf + back mesa slab + two flanking bars, and the two bars are the same coordinates P1's `pass` accent fills, so the 2D and 3D reads match. (P1 T2 / P2 T1.)
-5. §1.6's `kick` row says the 2D accent is the motion chevron while §1.7's beat 5 says the accent sits where the mesa sits. Resolved by painting both — the toe lobe at the mesa position plus the heel chevron — two ops, inside the `<= 3` budget. (P1 T2.)
+4. ~~§1.6's `pass` row asks for "two mesa bars flanking the slot mouth" without naming the fourth outline.~~ **Mooted by P1.5.** `pass` is now a brick wall with a bottom-notched gap, and its 2D accent is mortar-plus-arrow, not two bars. The 3D build still merges shelf + back slab + two flanking bars (`M_PASS`, `M_PASS_L`, `M_PASS_R`), but they now flank the *gap* of the new outline; there is no 2D/3D coordinate identity left to preserve, and none is needed.
+5. ~~§1.6's `kick` row says the 2D accent is the motion chevron while §1.7's beat 5 says the accent sits where the mesa sits.~~ **Mooted by P1.5.** `kick` now paints a `dk(col,0.62)` sole (structure) *plus* a `#ffce8a` toe cap and two chevrons in a single second fill — two paint ops against the renegotiated `<= 4` ceiling. The mesa sits on the toe, as beat 5 asks; the chevrons are declared 2D-only in the spec's §1.6 carve-out list.
+5b. **New (P1.5).** `bomb` is the one kind whose 2D and 3D outlines deliberately disagree: round orb in `ITEM_SHAPE`, low-`seg` 4-gon lathe in `ITEM_MAKE`. §5 acceptance line 13 is scoped for it in the spec; no plan may "fix" the divergence by rounding the 3D body, which would re-introduce defect I1.
 6. §4.5's vertex and accent-op budgets are not measurable from a canvas op stream, and §4.7's chrome signatures are not separable from the glyph's own paths. Resolved by making the data addressable: `ITEM_SHAPE` / `ITEM_ACCENT` become exports of `icons.js`, and the chrome becomes `drawItemChrome`. Both are in the shared-interfaces block above.
 7. §3's quoted plan figure for `line` ("57 × 10.4") does not follow from `r = IT*0.26` (`2.2 × 10.4 = 22.9`); its ratio `5.5:1` does. No number is changed — the anti-collapse gate computes `w/d` and `maxR` from the built geometry at runtime, and P2 carries the hand-derived expected table.
