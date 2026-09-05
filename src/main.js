@@ -6,7 +6,7 @@
 import { CFG } from "./core/config.js";
 import { createWorld, loadLevel, step } from "./core/sim.js";
 import { createRenderer } from "./render/renderer.js";
-import { makeHud } from "./render/scenes.js";
+import { makeHud, copyPayload } from "./render/scenes.js";
 import { paintBombPad } from "./render/sprites.js";
 import { dims, drawShell, kindSize } from "./render/shellview.js";
 import { SCREEN, SOURCE_URL, createMenuApp } from "./app/menuapp.js";
@@ -228,6 +228,16 @@ export function createGame(canvas, opts = {}) {
       if (app.screen === SCREEN.GAME) {
         resetCamera(cam); // §2 reset, GAME only
         resetOrbit(rig); // real3d §4: 3D rig resets too
+      }
+      return;
+    }
+    if (code === "KeyC") {
+      if (app.screen === SCREEN.GAME) {
+        if (world.state === "WIN" || world.state === "LOSE") {
+          const t = copyPayload(world);
+          if (typeof navigator !== "undefined" && navigator.clipboard)
+            navigator.clipboard.writeText(t).catch(() => {});
+        }
       }
       return;
     }

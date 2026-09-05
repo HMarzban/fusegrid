@@ -8,6 +8,7 @@ import {SCREEN, IDLE_T} from "../src/app/menuapp.js";
 import {CFG, BIOMES, biomeOf} from "../src/core/config.js";
 import {PROJ} from "../src/render/r3d/camera.js";
 import {loadScores} from "../src/app/highscores.js";
+import {copyPayload} from "../src/render/scenes.js";
 
 const ROOT=dirname(fileURLToPath(import.meta.url))+"/..";
 
@@ -851,6 +852,30 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
     check("debug hook: without the flag window stays clean",
       !clean.__GAME__&&!clean.__pause);
    }finally{ delete globalThis.window; }
+}
+
+// KeyC: copy the run stamp only on WIN/LOSE inside GAME (real Input->onUiKey route)
+{
+  const calls=[];
+  navigator.clipboard={writeText:(t)=>{calls.push(t);return Promise.resolve();}};
+  try{
+    const g=createGame(null,{seed:5,autoplay:true});
+    g.world.state="WIN"; g.world.level=1; g.world.heat=0; g.world.score=0;
+    g.input._onKey({code:"KeyC"});
+    check("KeyC on WIN copies runStamp + play URL",
+      calls.length===1&&calls[0]===copyPayload(g.world),JSON.stringify(calls));
+    g.world.state="PLAY";
+    g.input._onKey({code:"KeyC"});
+    check("KeyC during PLAY copies nothing", calls.length===1);
+    g.world.state="LOSE";
+    g.input._onKey({code:"KeyC"});
+    check("KeyC on LOSE copies runStamp + play URL",
+      calls.length===2&&calls[1]===copyPayload(g.world));
+    g.app.screen=SCREEN.MENU;
+    g.world.state="WIN";
+    g.input._onKey({code:"KeyC"});
+    check("KeyC outside GAME is a no-op", calls.length===2);
+   }finally{ delete navigator.clipboard; }
 }
 
 console.log(fail? "HEADLESS FAIL":"HEADLESS OK");
