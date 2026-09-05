@@ -24,7 +24,7 @@
     tables, ref-swap contracts, merged fast fins, boomerang spin override,
     rocket flame swap, headless bright fallbacks, and the 143-call
     fat-world budget after instanced pickups. No DOM anywhere. */
-import {createLights} from "../src/render/three/lights.js";
+import {createLights, LIGHT_BASE, applyBright} from "../src/render/three/lights.js";
 import {build} from "../src/render/three/materials.js";
 import {buildScene, countDrawCalls, RIM_W, RIM_LIP,
   RIM_BEV} from "../src/render/three/scene.js";
@@ -1958,6 +1958,74 @@ await sec("MG",async()=>{
       &&Math.max(...Array.from(g.index.array))===71,
       g.attributes.position.count+"/"+g.index.count); }
  });
+
+// ---- §SET brightness: one uniform multiplier over the frozen recipe ----
+{
+  const b=BIOMES[0];
+  const L1=createLights(b), L0=createLights(b,1);
+  check("§SET bare createLights(biome) is byte-identical to k=1 and to"
+      +" LIGHT_BASE",
+    L1.hemi.intensity===L0.hemi.intensity&&L1.dir.intensity===L0.dir.intensity
+    &&L1.fill.intensity===L0.fill.intensity&&L1.amb.intensity===L0.amb.intensity
+    &&L1.hemi.intensity===LIGHT_BASE.hemi&&L1.dir.intensity===LIGHT_BASE.key
+    &&L1.fill.intensity===LIGHT_BASE.fill&&L1.amb.intensity===LIGHT_BASE.amb,
+    [L1.hemi.intensity,L1.dir.intensity,L1.fill.intensity,
+      L1.amb.intensity].join("/"));
+  for(const k of [0.7,1.3]){
+    const L=createLights(b,k);
+    check("§SET createLights scales all four intensities at k="+k,
+      Math.abs(L.hemi.intensity-LIGHT_BASE.hemi*k)<1e-9
+      &&Math.abs(L.dir.intensity-LIGHT_BASE.key*k)<1e-9
+      &&Math.abs(L.fill.intensity-LIGHT_BASE.fill*k)<1e-9
+      &&Math.abs(L.amb.intensity-LIGHT_BASE.amb*k)<1e-9,
+      [L.hemi.intensity,L.dir.intensity,L.fill.intensity,
+        L.amb.intensity].join("/"));
+    check("§SET key:fill stays 2.3333 at k="+k+" (a uniform scale cannot"
+        +" move a ratio)",
+      Math.abs(L.dir.intensity/L.fill.intensity-1.26/0.54)<1e-9,
+      (L.dir.intensity/L.fill.intensity).toFixed(4));
+    check("§SET k="+k+" leaves the shadow rig frozen",
+      L.dir.castShadow===true&&L.fill.castShadow===false
+      &&L.dir.shadow.mapSize.width===1024&&L.dir.shadow.camera.left===-420
+      &&L.dir.shadow.camera.far===1400);
+   }
+  const A=createLights(b,1);
+  applyBright(A,1.3);
+  check("§SET applyBright rescales from LIGHT_BASE, never from the current"
+      +" value (repeat calls do not compound)",
+    Math.abs(A.dir.intensity-LIGHT_BASE.key*1.3)<1e-9,String(A.dir.intensity));
+  applyBright(A,1.3);
+  check("§SET applyBright is idempotent",
+    Math.abs(A.dir.intensity-LIGHT_BASE.key*1.3)<1e-9,String(A.dir.intensity));
+  applyBright(A,1);
+  check("§SET applyBright(L,1) restores the frozen recipe exactly",
+    A.hemi.intensity===LIGHT_BASE.hemi&&A.dir.intensity===LIGHT_BASE.key
+    &&A.fill.intensity===LIGHT_BASE.fill&&A.amb.intensity===LIGHT_BASE.amb);
+}
+{
+  const r=createRenderer3D(null,null,{audio:null,hud:null});
+  const w=createWorld(11,1); loadLevel(w,1,false); w.state="PLAY";
+  const key=()=>{ let d=null;
+    r._dbg.scene.traverse(o=>{ if(o.isDirectionalLight&&o.castShadow)d=o; });
+    return d; };
+  r.render(w,1/60);
+  check("§SET default render leaves the key at LIGHT_BASE (k=1 is a no-op)",
+    key().intensity===LIGHT_BASE.key,String(key().intensity));
+  r.render(w,1/60,{bright:1.3});
+  check("§SET o.bright rescales the live lights in place",
+    Math.abs(key().intensity-LIGHT_BASE.key*1.3)<1e-9,String(key().intensity));
+  loadLevel(w,2,false);
+  r.render(w,1/60,{bright:1.3});
+  check("§SET a level rebuild keeps the stored brightness",
+    Math.abs(key().intensity-LIGHT_BASE.key*1.3)<1e-9,String(key().intensity));
+  r.render(w,1/60,{bright:1});
+  check("§SET back to k=1 restores the frozen recipe",
+    key().intensity===LIGHT_BASE.key,String(key().intensity));
+  check("§SET wrapper surface keys unchanged by the brightness opt",
+    Object.keys(r).sort().join(",")
+      ==="canvas,consumeEvents,ctx,getShake,overlay,render",
+    Object.keys(r).sort().join(","));
+}
 
 console.log(fail? "THREE FAIL":"THREE OK");
 process.exit(fail?1:0);

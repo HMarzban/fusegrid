@@ -12,12 +12,24 @@ import {CFG} from "../core/config.js";
    caller exists and none should be added without refactoring storage out. */
 const fx={shakeT:0,shakeX:0,shakeY:0,flashT:0,parts:[]};
 let tag=null;
+/* Settings damping (nb.settings.v1). Applied INSIDE the two getters so both
+   render paths and both call sites are covered without touching either draw
+   site. NOT reset by initFx(): these are user preference, and every renderer
+   construction calls initFx() — a RENDER toggle would otherwise drop them. */
+let flashK=1, shakeK=1;
+const k01=(v,d)=>(typeof v==="number"&&isFinite(v)?Math.max(0,Math.min(1,v)):d);
+export function setFxOpts(o){
+  if(o){ if(o.flashK!=null)flashK=k01(o.flashK,flashK);
+    if(o.shakeK!=null)shakeK=k01(o.shakeK,shakeK); }
+  return {flashK,shakeK};
+}
+export function getFxOpts(){ return {flashK,shakeK}; }
 
 export function initFx(){
   fx.shakeT=0; fx.shakeX=0; fx.shakeY=0; fx.flashT=0; fx.parts=[];
 }
-export function getShake(){ return {x:fx.shakeX, y:fx.shakeY}; }
-export function getFlash(){ return fx.flashT; }
+export function getShake(){ return {x:fx.shakeX*shakeK, y:fx.shakeY*shakeK}; }
+export function getFlash(){ return fx.flashT*flashK; }
 export function getFx(){ return fx.parts; }
 
 /* Wipes particles whenever the world identity (seed:level) changes — replaces

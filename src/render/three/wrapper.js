@@ -11,6 +11,7 @@ import {CFG} from "../../core/config.js";
 import {biomeOf} from "../../core/config.js";
 import {sfxOf} from "../../audio/item.js";
 import {buildScene, disposeGroup} from "./scene.js";
+import {applyBright} from "./lights.js";
 import {createRig, applyOrbit} from "./camrig.js";
 import {introCam} from "./flythrough.js";
 import {createParticles} from "./particles.js";
@@ -86,10 +87,10 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
     atlas=next; atlasLvl=lvl; atlasReady=true;
     return atlas;
    }
-  let sc=null;
+  let sc=null, brightK=1;
   function rebuild(world){
     if(sc){ scene3.remove(sc.group); disposeGroup(sc.group); }
-    sc=buildScene(world,getAtlas(world));
+    sc=buildScene(world,getAtlas(world),brightK);
     const biome=biomeOf(world.level);
     scene3.background=new THREE.Color(biome.bg1);
     /* No distance fog. The far board corners sit at d 963, and
@@ -113,7 +114,11 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
   function render(world, dt, o){
     if(!world)return;
     consumeEvents(world, dt, !(o&&o.sfx===false));
+    const bk=o&&typeof o.bright==="number"&&isFinite(o.bright)?o.bright:brightK;
+    const bChanged=bk!==brightK;
+    brightK=bk;
     if(!sc||sc.update(world))rebuild(world);   // brick rescan / level rebuild
+    else if(bChanged&&sc.lights)applyBright(sc.lights,brightK);
     /* S3: INTRO in kind 3d hands the camera to the flythrough keyframes
        (o.intro = app.subT from main; logo/tagline stay on the 2D overlay);
        every other screen keeps the orbit rig + shake. */

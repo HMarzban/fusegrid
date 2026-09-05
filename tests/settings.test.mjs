@@ -5,6 +5,15 @@ import {
   loadSettings,
   saveSettings,
 } from "../src/app/settings.js";
+import {
+  setFxOpts,
+  getFxOpts,
+  getShake,
+  getFlash,
+  initFx,
+  onEvent,
+  updateFx,
+} from "../src/render/fx.js";
 
 let pass = 0,
   fail = 0;
@@ -139,6 +148,53 @@ check(
     threw = true;
   }
   check("a throwing store never escapes load/save", !threw);
+}
+
+{
+  initFx();
+  setFxOpts({ flashK: 1, shakeK: 1 });
+  check(
+    "setFxOpts defaults are 1/1",
+    JSON.stringify(getFxOpts()) === '{"flashK":1,"shakeK":1}',
+    JSON.stringify(getFxOpts()),
+  );
+  onEvent({ seed: 1, level: 1 }, { t: "boom", x: 10, y: 10 }, 0);
+  updateFx(0);
+  const rawFlash = getFlash(),
+    rawShake = getShake();
+  check(
+    "boom leaves a live flash and a live shake to damp",
+    rawFlash > 0 && (Math.abs(rawShake.x) > 0 || Math.abs(rawShake.y) > 0),
+    rawFlash + "/" + JSON.stringify(rawShake),
+  );
+  setFxOpts({ flashK: 0.25 });
+  check(
+    "flashK 0.25 quarters getFlash() (the #ffe8a8 wash peaks at 0.07, not 0.28)",
+    Math.abs(getFlash() - rawFlash * 0.25) < 1e-9,
+    rawFlash + " -> " + getFlash(),
+  );
+  setFxOpts({ shakeK: 0 });
+  check("shakeK 0 zeroes BOTH getShake axes", getShake().x === 0 && getShake().y === 0, JSON.stringify(getShake()));
+  setFxOpts({ flashK: 1, shakeK: 1 });
+  check(
+    "restoring 1/1 returns the raw values untouched",
+    Math.abs(getFlash() - rawFlash) < 1e-9 && Math.abs(getShake().x - rawShake.x) < 1e-9,
+    getFlash() + "/" + getShake().x,
+  );
+  setFxOpts({ flashK: 0.25, shakeK: 0 });
+  initFx();
+  check(
+    "initFx() clears fx state but NOT the user knobs (every renderer build calls it)",
+    getFlash() === 0 && JSON.stringify(getFxOpts()) === '{"flashK":0.25,"shakeK":0}',
+    JSON.stringify(getFxOpts()),
+  );
+  check(
+    "setFxOpts clamps out of range and ignores missing keys",
+    JSON.stringify(setFxOpts({ flashK: 5 })) === '{"flashK":1,"shakeK":0}' &&
+      JSON.stringify(setFxOpts({ shakeK: -1 })) === '{"flashK":1,"shakeK":0}',
+    JSON.stringify(getFxOpts()),
+  );
+  setFxOpts({ flashK: 1, shakeK: 1 });
 }
 
 console.log("\n  SETTINGS RESULT: " + pass + " PASS / " + fail + " FAIL");

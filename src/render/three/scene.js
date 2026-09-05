@@ -54,7 +54,7 @@ function disposeGroup(group){
   mats.forEach(m=>{ if(m.map&&!m.map._shared)m.map.dispose(); m.dispose(); });
 }
 
-export function buildScene(world, atlas){
+export function buildScene(world, atlas, bright){
   const biome=biomeOf(world.level);
   const mats=buildMaterials(biome,atlas);
   const group=new THREE.Group();
@@ -123,7 +123,7 @@ export function buildScene(world, atlas){
 
   group.add(buildRim(biome));
 
-  const lights=createLights(biome);
+  const lights=createLights(biome,bright);
   group.add(lights.hemi,lights.dir,lights.fill,lights.amb);
   lights.dir.target.position.set(0,0,0);
   group.add(lights.dir.target);
@@ -132,7 +132,7 @@ export function buildScene(world, atlas){
   const pools=createPools(biome,atlas);
   group.add(pools.group);
 
-  const scene={group,level:world.level,brick,pools,
+  const scene={group,level:world.level,brick,pools,lights,
     update(world){
       let n=0;
       for(let y=0;y<CFG.ROWS;y++)for(let x=0;x<CFG.COLS;x++)
