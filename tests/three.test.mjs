@@ -1297,7 +1297,7 @@ await sec("S4.D",async()=>{
   const r=hudRecorder();
   drawHudChips(r.rec,mkW(9,2,3));
   const texts=r.ops.filter(o=>o[0]==="fillText").map(o=>String(o[1][0]));
-  const curves=r.ops.filter(o=>o[0]==="bezierCurveTo").length;
+  const curves=r.ops.filter(o=>o[0]==="bezierCurveTo"||o[0]==="quadraticCurveTo").length;
   check("S4.D lives drawn as heart glyphs (vector curves), capped at 6"
       +" with +n overflow text",
     curves>=12&&texts.includes("+3"), "curves="+curves);
