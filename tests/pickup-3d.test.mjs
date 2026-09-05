@@ -231,7 +231,7 @@ function mkE(type, x, y) {
     });
   } catch (e) {}
   const fire = im.find(
-    (o) => o.userData.kind === "fire" && o.geometry.type === "ConeGeometry",
+    (o) => o.userData.kind === "fire" && o.geometry.type === "LatheGeometry",
   );
   check(
     "item draws are 12 kinds × body+ring InstancedMesh",
@@ -332,6 +332,60 @@ function mkE(type, x, y) {
       !/function crossedQuads[\s\S]{0,800}setAttribute\(\s*"position"/.test(
         src,
       ),
+  );
+}
+
+{
+  const pairs = {};
+  for (const pd of POWER) {
+    const pos = ITEM_GEO[pd.t].attributes.position;
+    let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity, maxR = 0;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i), z = pos.getZ(i);
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (z < z0) z0 = z;
+      if (z > z1) z1 = z;
+      const rr = Math.sqrt(x * x + z * z);
+      if (rr > maxR) maxR = rr;
+    }
+    pairs[pd.t] =
+      Math.round(((x1 - x0) / (z1 - z0)) * 10) / 10 + "/" + Math.round(maxR);
+  }
+  check(
+    "plan-view footprints are pairwise distinct (w/d, maxR)",
+    new Set(Object.values(pairs)).size === 12,
+    POWER.map((pd) => pd.t + " " + pairs[pd.t]).join("  "),
+  );
+  const LATHE = ["fire", "bomb", "speed", "shield"];
+  const wrong = POWER.filter((pd) =>
+    LATHE.includes(pd.t)
+      ? ITEM_GEO[pd.t].type !== "LatheGeometry"
+      : ITEM_GEO[pd.t].type !== "BufferGeometry",
+  ).map((pd) => pd.t + ":" + ITEM_GEO[pd.t].type);
+  check(
+    "build split: fire/bomb/speed/shield lathe, the other eight merged",
+    !wrong.length,
+    wrong.join(" ") || "ok",
+  );
+  const roundy = POWER.filter((pd) =>
+    /Cone|Cylinder|Sphere|Torus|Octahedron|Box/.test(ITEM_GEO[pd.t].type),
+  ).map((pd) => pd.t);
+  check(
+    "no pickup is a solid of revolution or a leftover primitive",
+    !roundy.length,
+    roundy.join(" ") || "ok",
+  );
+  const wrongUp = POWER.filter((pd) => !LATHE.includes(pd.t)).filter((pd) => {
+    const nor = ITEM_GEO[pd.t].attributes.normal;
+    let up = 0;
+    for (let i = 0; i < nor.count; i++) if (nor.getY(i) > 0.9) up++;
+    return up === 0;
+  }).map((pd) => pd.t);
+  check(
+    "every flat body has upward-facing cap normals",
+    !wrongUp.length,
+    wrongUp.join(" ") || "ok",
   );
 }
 

@@ -752,7 +752,7 @@ await sec("S2.I",()=>{
   const fireB=scPlain.pools.itemBodies.fire;
   const fireR=scPlain.pools.itemRingIM.fire;
   check("R.headless item pickup = unique geo in POWER color + additive ring",
-    fireB.isInstancedMesh&&fireB.geometry.type==="ConeGeometry"
+    fireB.isInstancedMesh&&fireB.geometry.type==="LatheGeometry"
     &&fireB.material.isMeshLambertMaterial
     &&!fireB.material.map
     &&"#"+fireB.material.color.getHexString()==="#ff8a3c"
@@ -1157,9 +1157,9 @@ await sec("R.items",async()=>{
     &&fireR.isInstancedMesh&&pierceR.isInstancedMesh
     &&fire.count===1&&pierce.count===1&&!sc.pools.items,
     (fire?fire.count:"-")+"/"+(pierce?pierce.count:"-"));
-  check("R.items fire body is a cone spike casting a shadow",
-    fire.geometry.type==="ConeGeometry"
-    &&fire.geometry.parameters.radialSegments===7
+  check("R.items fire body is a low-seg lathe spike casting a shadow",
+    fire.geometry.type==="LatheGeometry"
+    &&fire.geometry.parameters.segments===3
     &&fire.castShadow===true&&fire.material.isMeshLambertMaterial
     &&"#"+fire.material.color.getHexString()==="#ff8a3c");
   const rpos=fireR.geometry.attributes.position.array;

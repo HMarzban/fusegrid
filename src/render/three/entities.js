@@ -18,6 +18,7 @@
 import * as THREE from "../../../vendor/three.module.js";
 import { CFG } from "../../core/config.js";
 import { POWER, spawnEnemy } from "../../core/entities.js";
+import { ITEM_FAMILY, ITEM_SHAPE } from "../icons.js";
 
 const W2 = (CFG.COLS * CFG.TILE) / 2,
   D2 = (CFG.ROWS * CFG.TILE) / 2;
@@ -123,39 +124,109 @@ function lathe(pts, seg, r) {
 function plate(pts, thick, r) {
   const s = new THREE.Shape();
   s.moveTo(pts[0][0] * r, pts[0][1] * r);
-  for (let i = 1; i < pts.length; i++) s.lineTo(pts[i][0] * r, pts[i][1] * r);
-  const g = new THREE.ExtrudeGeometry(s, {
-    depth: thick * r,
-    bevelEnabled: false,
-  });
+  /* A vertex is [x,y] for a line or [x,y,cx,cy] for a quadratic — the same
+     contract poly() reads in icons.js, so one table really does feed both
+     renderers. Dropping the control point here would quietly chord the
+     boot's toe and the thrown orb. */
+  for (let i = 1; i < pts.length; i++) {
+    const p = pts[i];
+    if (p.length === 4) s.quadraticCurveTo(p[2] * r, p[3] * r, p[0] * r, p[1] * r);
+    else s.lineTo(p[0] * r, p[1] * r);
+  }
+  const g = new THREE.ExtrudeGeometry(s, { depth: thick * r, bevelEnabled: false });
   g.translate(0, 0, (-thick * r) / 2);
   return g;
 }
 
+/* Items (items-player-art 2026-09-05) for the FROZEN rig: at 59.1 deg the
+   PLAN-VIEW FOOTPRINT is the primary read, and a solid of revolution is a
+   circle in plan view by definition — which is why six of the old twelve
+   were the same disc at different radii. Upright families are low-seg
+   lathes (seg IS the identity axis: 3/4/6/8); flat families are an outer
+   shelf fused with an inner mesa, whose 0.205r riser is the lit facet that
+   gives a single flat Lambert its two-tone. The flat outlines are
+   ITEM_SHAPE, the same table drawIcon draws, so the notch/point count a
+   kind shows in 2D is the count it shows in 3D. */
+function mesa(out, ins, r) {
+  /* ExtrudeGeometry's cap normals follow the shape's signed area, and the
+     twelve authored outlines do not share a winding — so half the flat
+     bodies would face their lit cap at the floor. Same class of trap as the
+     lathe bottom -> top rule; normalised here so ITEM_SHAPE stays one table
+     byte-identical for both renderers. */
+  const cw = (p) => {
+    let a = 0;
+    for (let i = 0; i < p.length; i++) {
+      const q = p[(i + 1) % p.length];
+      a += p[i][0] * q[1] - q[0] * p[i][1];
+    }
+    return a < 0 ? p.slice().reverse() : p;
+  };
+  const parts = [plate(cw(out), 0.55, r).rotateX(-Math.PI / 2)];
+  for (const p of ins)
+    parts.push(
+      plate(cw(p), 0.4, r)
+        .rotateX(-Math.PI / 2)
+        .translate(0, 0.28 * r, 0),
+    );
+  return mergeGeos(...parts);
+}
+/* Mesas track the P1.5 semantic outlines: each one is the lit facet on the
+   feature that names the object — the boot's toe, the thrown orb, the gap
+   the wall was breached at, the detonator's button plate, the beam's core,
+   the blast's heart, the arrowhead's forward spine. */
+/* Both of these sit UNDER a quadratic edge, so they were derived by
+   evaluating the curve, not by eyeballing the vertex list. kick's instep
+   bows down to y=0.00 at x=0.53 and only reaches y=-0.18 at its x=0.92
+   endpoint; throw's orb is the circle centred (0.14, 0.36) r 0.52, which is
+   nowhere near the nub at y=-0.56. A mesa poking outside its shelf merges
+   as a floating shelf, which reads as a rendering bug. */
+const M_KICK = [[0.48, 0.1], [0.86, -0.04], [0.94, 0.2], [0.52, 0.34]];
+const M_THROW = [[0.06, 0], [0.34, 0.28], [0.06, 0.56], [-0.22, 0.28]];
+const M_PASS = [[-0.9, 0.24], [0.9, 0.24], [0.9, 0.56], [-0.9, 0.56]];
+const M_PASS_L = [[-0.68, -0.5], [-0.4, -0.5], [-0.4, 0.06], [-0.68, 0.06]];
+const M_PASS_R = [[0.4, -0.5], [0.68, -0.5], [0.68, 0.06], [0.4, 0.06]];
+const M_REMOTE = [[-0.3, 0.1], [0.3, 0.1], [0.3, 0.6], [-0.3, 0.6]];
+const M_LINE = [
+  [-0.86, -0.07], [0.3, -0.07], [0.3, -0.28],
+  [0.88, 0], [0.3, 0.28], [0.3, 0.07], [-0.86, 0.07],
+];
+const M_POWER = [
+  [0, -0.56], [0.17, -0.17], [0.56, 0], [0.17, 0.17],
+  [0, 0.56], [-0.17, 0.17], [-0.56, 0], [-0.17, -0.17],
+];
+const M_PIERCE = [[0, -0.92], [0.22, -0.4], [0, -0.52], [-0.22, -0.4]];
 const IT = CFG.TILE;
 const ITEM_MAKE = {
-  fire: () => new THREE.ConeGeometry(IT * 0.18, IT * 0.5, 7),
-  bomb: () => new THREE.SphereGeometry(IT * 0.22, 12, 10),
-  speed: () => new THREE.OctahedronGeometry(IT * 0.26, 0),
+  fire: () =>
+    lathe([[0.62, 0], [0.92, 0.3], [0.7, 0.66], [0.34, 1.26], [0, 2.0]], 3, IT * 0.22),
+  bomb: () =>
+    lathe(
+      [[0.74, 0], [1.0, 0.26], [0.8, 0.52], [1.0, 0.8], [0.78, 1.06], [0.4, 1.44], [0, 1.62]],
+      4,
+      IT * 0.24,
+    ),
+  speed: () =>
+    lathe([[0.55, 0], [0.86, 0.34], [0.6, 0.78], [0.26, 1.5], [0, 2.3]], 3, IT * 0.2).scale(
+      1.9,
+      1,
+      0.5,
+    ),
   heart: () => {
-    const a = new THREE.SphereGeometry(IT * 0.15, 8, 6);
-    a.translate(-IT * 0.09, IT * 0.06, 0);
-    const b = new THREE.SphereGeometry(IT * 0.15, 8, 6);
-    b.translate(IT * 0.09, IT * 0.06, 0);
-    return mergeGeos(a, b);
+    const D = lathe([[0.86, 0], [1.0, 0.22], [0.84, 0.52], [0.5, 0.82], [0, 1.0]], 6, IT * 0.16);
+    return mergeGeos(
+      D.clone().translate(-IT * 0.12, 0, 0),
+      D.clone().translate(IT * 0.12, 0, 0),
+    );
   },
-  shield: () => new THREE.CylinderGeometry(IT * 0.2, IT * 0.22, IT * 0.36, 8),
-  kick: () => new THREE.BoxGeometry(IT * 0.2, IT * 0.16, IT * 0.38),
-  throw: () => new THREE.SphereGeometry(IT * 0.16, 10, 8),
-  pass: () => new THREE.BoxGeometry(IT * 0.38, IT * 0.14, IT * 0.28),
-  line: () => {
-    const g = new THREE.CylinderGeometry(IT * 0.055, IT * 0.055, IT * 0.52, 6);
-    g.rotateZ(Math.PI / 2);
-    return g;
-  },
-  power: () => new THREE.OctahedronGeometry(IT * 0.34, 0),
-  pierce: () => new THREE.ConeGeometry(IT * 0.11, IT * 0.52, 5),
-  remote: () => new THREE.CylinderGeometry(IT * 0.16, IT * 0.18, IT * 0.3, 10),
+  shield: () =>
+    lathe([[1.0, 0], [1.06, 0.18], [0.96, 0.4], [0.66, 0.72], [0, 0.92]], 8, IT * 0.21),
+  kick: () => mesa(ITEM_SHAPE.kick, [M_KICK], IT * 0.24),
+  throw: () => mesa(ITEM_SHAPE.throw, [M_THROW], IT * 0.23),
+  pass: () => mesa(ITEM_SHAPE.pass, [M_PASS, M_PASS_L, M_PASS_R], IT * 0.24),
+  remote: () => mesa(ITEM_SHAPE.remote, [M_REMOTE], IT * 0.24),
+  line: () => mesa(ITEM_SHAPE.line, [M_LINE], IT * 0.26),
+  power: () => mesa(ITEM_SHAPE.power, [M_POWER], IT * 0.23),
+  pierce: () => mesa(ITEM_SHAPE.pierce, [M_PIERCE], IT * 0.24),
 };
 export const ITEM_GEO = {};
 for (const pd of POWER) ITEM_GEO[pd.t] = sharedGeo(ITEM_MAKE[pd.t]());
