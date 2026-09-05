@@ -2,7 +2,7 @@ import { step, createWorld, newIntent, loadLevel } from "../src/core/sim.js";
 import { HEAT, heatRoster, heatProfile, heatScore } from "../src/core/heat.js";
 import { PACT, applyPact } from "../src/core/pact.js";
 import { CFG, T, key, ROOM_LOCK, ROOM_MAX, isFinale, roomCap } from "../src/core/config.js";
-import { winHeadline } from "../src/render/scenes.js";
+import { winHeadline, overlayCue, runStamp, copyPayload } from "../src/render/scenes.js";
 import { scoreEntry } from "../src/app/highscores.js";
 import { PACT_KEY, loadPactUnlocked, savePactUnlocked } from "../src/app/pactstore.js";
 import { readFileSync } from "node:fs";
@@ -43,6 +43,39 @@ check(
 check(
   "winHeadline finale latch wins",
   winHeadline({ level: 6, finale: true }) === "FUSE/GRID CLEAR",
+);
+
+check(
+  "overlayCue WIN mid",
+  overlayCue({ state: "WIN", level: 3, finale: false, score: 10, heat: 0 }) ===
+    "SPACE / TAP · next room",
+);
+check(
+  "overlayCue WIN finale",
+  overlayCue({ state: "WIN", level: 5, finale: false, score: 10, heat: 1 }) ===
+    "SPACE / TAP · menu",
+);
+check(
+  "overlayCue LOSE",
+  overlayCue({ state: "LOSE", level: 4, score: 99, heat: 2 }) ===
+    "SPACE / TAP · new run",
+);
+check(
+  "overlayCue PAUSE names quit",
+  overlayCue({ state: "PAUSE", heat: 1 }).includes("M / MENU"),
+);
+check(
+  "runStamp is raw score + biome + heat",
+  runStamp({ level: 3, heat: 1, score: 1840 }) === "L3 FACTORY · PLUS · 1840",
+);
+check(
+  "runStamp CORE",
+  runStamp({ level: 1, heat: 0, score: 0 }) === "L1 JUNGLE · CORE · 0",
+);
+check(
+  "copyPayload appends the play URL with a trailing slash",
+  copyPayload({ level: 1, heat: 0, score: 0 }) ===
+    "L1 JUNGLE · CORE · 0 https://hmarzban.github.io/fusegrid/",
 );
 
 check("heatScore CORE 1200 stays 1200", heatScore(1200, 0) === 1200);

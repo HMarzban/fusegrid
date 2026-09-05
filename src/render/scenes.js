@@ -1,5 +1,5 @@
-import { CFG, isFinale } from "../core/config.js";
-import { HEAT_COL, heatToken } from "../core/heat.js";
+import { CFG, isFinale, biomeOf } from "../core/config.js";
+import { HEAT_COL, heatToken, HEAT_NAME, clampHeat } from "../core/heat.js";
 import { drawIcon } from "./sprites.js";
 
 /* Scene UI: menu logo, HUD, and the CLEARED / GAME OVER / PAUSED overlays.
@@ -33,6 +33,24 @@ export function winHeadline(world) {
     ? "FUSE/GRID CLEAR"
     : "LEVEL " + world.level + " CLEARED";
 }
+export function overlayCue(world) {
+  if (world.state === "WIN") {
+    const fin = isFinale(world.level) || world.finale;
+    return fin ? "SPACE / TAP · menu" : "SPACE / TAP · next room";
+  }
+  if (world.state === "LOSE") return "SPACE / TAP · new run";
+  if (world.state === "PAUSE") return "P · resume · M / MENU · quit";
+  return "";
+}
+export function runStamp(world) {
+  const lv = world.level | 0;
+  const bio = biomeOf(lv).name;
+  const heat = HEAT_NAME[clampHeat(world.heat)];
+  return "L" + lv + " " + bio + " · " + heat + " · " + (world.score | 0);
+}
+export function copyPayload(world) {
+  return runStamp(world) + " https://hmarzban.github.io/fusegrid/";
+}
 export function drawOverlay(
   c,
   world,
@@ -54,42 +72,22 @@ export function drawOverlay(
     c.fillStyle = col;
     c.fillText(txt, cx, cy - 16);
   }
-  function sub(txt, col) {
+  function sub(txt, col, dy = 20) {
     c.font = "15px ui-monospace,monospace";
     c.fillStyle = col || "#c3d2ee";
-    c.fillText(txt, cx, cy + 20);
+    c.fillText(txt, cx, cy + dy);
   }
-  if (world.state === "MENU") {
-    drawLogo(c, world.time, cx, cy);
-    sub("Press FIRE / SPACE to start", "#9fb3d8");
-    c.font = "11px ui-monospace,monospace";
-    c.fillStyle = "#6f7fa0";
-    c.fillText("clear every enemy to advance · collect power-ups", cx, cy + 44);
-  } else if (world.state === "WIN") {
-    const fin = isFinale(world.level) || world.finale;
+  if (world.state === "WIN") {
     head(winHeadline(world), "#37f0d0");
-    const heat = world.heat ? " · " + heatToken(world.heat) : "";
-    sub(
-      fin
-        ? "Score " + world.score + heat + " · press FIRE for menu"
-        : "Score " + world.score + heat + " · press FIRE for next level",
-      "#9fb3d8",
-    );
+    sub(runStamp(world), "#9fb3d8");
+    sub(overlayCue(world) + " · C copy", "#9fb3d8", 44);
   } else if (world.state === "LOSE") {
     head("GAME OVER", "#ff5d73");
-    sub(
-      "Score " +
-        world.score +
-        (world.heat ? " · " + heatToken(world.heat) : "") +
-        " · press FIRE to retry",
-      "#9fb3d8",
-    );
+    sub(runStamp(world), "#9fb3d8");
+    sub(overlayCue(world) + " · C copy", "#9fb3d8", 44);
   } else if (world.state === "PAUSE") {
     head("PAUSED", "#ffd447");
-    sub(
-      (world.heat ? heatToken(world.heat) + " · " : "") + "press P to resume",
-      "#9fb3d8",
-    );
+    sub(overlayCue(world), "#9fb3d8");
   }
 }
 export function updateHud(hud, world) {
