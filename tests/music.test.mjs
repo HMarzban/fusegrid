@@ -1472,5 +1472,58 @@ function installAC(ac) {
   check("menu B is hand-authored — its hat is not A's array", B.hat !== A.hat);
 }
 
+// ---- arena: aggressive, combat-ready (A Aeolian, ANTIC) ----
+{
+  const T = MUSIC_TRACKS.arena,
+    A = T.A,
+    B = T.B,
+    f0 = TONIC.arena;
+  check(
+    "arena STEP 0.107 (140 BPM), A1 55.00 root",
+    A.STEP === 0.107 && A.bass[0].f === 55,
+    A.STEP + "/" + A.bass[0].f,
+  );
+  check(
+    "arena is the one track with all four channels dense",
+    A.bass.length > 0 &&
+      A.lead.length > 0 &&
+      A.hat.length > 0 &&
+      !!A.pad &&
+      A.pad.length > 0,
+    chansOf(A).length,
+  );
+  check(
+    "arena timbres: square bass, square lead, triangle hat, sawtooth pad",
+    A.bass[0].t === "square" &&
+      A.lead[0].t === "square" &&
+      A.hat[0].t === "triangle" &&
+      A.pad[0].t === "sawtooth",
+    chansOf(A)
+      .map((a) => a[0].t)
+      .join(","),
+  );
+  check(
+    "arena hat is straight — every hit on an even step",
+    A.hat.every((n) => n.s % 2 === 0),
+    A.hat.length,
+  );
+  check(
+    "arena ANTIC: the motif head sits at step 15, one step before bar 3",
+    motifAt(A.lead, 15, f0, 1),
+    motifHead(A.lead, f0, 1, 64),
+  );
+  check(
+    "arena stabs on the and of 2 and 4 (lead notes at 3 and 7 mod 8)",
+    A.lead.some((n) => n.s % 8 === 3) && A.lead.some((n) => n.s % 8 === 7),
+  );
+  check("arena B is hand-authored — its hat is not A's array", B.hat !== A.hat);
+  check(
+    "arena is dense but not solid: at most 62 of 64 steps, and it still breathes",
+    occ(A) <= 62 && breathBar(A) >= 0,
+    occ(A) + "/" + breathBar(A),
+  );
+  check("arena register lanes never cross, A and B", lanes(A) && lanes(B));
+}
+
 console.log("\n  MUSIC RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);
