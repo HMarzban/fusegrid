@@ -624,14 +624,22 @@ export function drawEnemiesHelp(c, L, t) {
   foot(c, S, "ESC BACK");
 }
 
-/* HIGH SCORES: CORE / PLUS / MAX heat tabs above RANK / SCORE / LEVEL /
-   DATE, fitted inside the plate. Row pitch is derived from the inner body,
-   not L.tableY / L.rowH, so all ten runs plus tabs plus the in-plate foot
-   stay inside the shell at 352 and 520. `scores` arrives already filtered
-   by heat (scoresForHeat lives in src/app/highscores.js — this file must
-   not import src/app); `heat` is only used for the tab highlight and the
-   empty-tab label. */
-export function drawScores(c, scores, L, t, heat) {
+/* Local cabinet plaques (plan 5): bit order matches src/app/plaques.js
+   PLAQUE = {CLEAR:1,PLUS:2,MAX:4,CROWN:8} — this file must not import
+   src/app, so the names are duplicated here rather than imported. */
+const PLAQUE_NAME = ["CLEAR", "PLUS", "MAX", "CROWN"];
+
+/* HIGH SCORES: CORE / PLUS / MAX heat tabs, four plaque chips (CLEAR / PLUS /
+   MAX / CROWN — dim when locked) under the tabs, then RANK / SCORE / LEVEL /
+   DATE, all fitted inside the plate. Row pitch is derived from the inner
+   body, not L.tableY / L.rowH, so all ten runs plus tabs plus chips plus the
+   in-plate foot stay inside the shell at 352 and 520. `scores` arrives
+   already filtered by heat (scoresForHeat lives in src/app/highscores.js —
+   this file must not import src/app); `heat` is only used for the tab
+   highlight and the empty-tab label. `plaques` is the unlocked bitmask
+   (src/app/plaques.js), reaching this draw through the same shell-router
+   path as scores/heat — see shellview.js's getPlaques. */
+export function drawScores(c, scores, L, t, heat, plaques) {
   const S = shell(c, L, 480);
   const h = clampHeat(heat);
   head(c, S, "HIGH SCORES", "BEST RUNS");
@@ -658,9 +666,34 @@ export function drawScores(c, scores, L, t, heat) {
     c.textBaseline = "middle";
     c.fillText(HEAT_NAME[i], x + tabW / 2, tabY + tabH / 2 + 1);
   }
+  const pmask = plaques | 0;
+  const chipW = 74,
+    chipGap = 8,
+    chipH = 20,
+    chipTot = 4 * chipW + 3 * chipGap,
+    chipX0 = S.mid - chipTot / 2,
+    chipY = tabY + tabH + 8;
+  for (let i = 0; i < 4; i++) {
+    const x = chipX0 + i * (chipW + chipGap),
+      on = (pmask & (1 << i)) !== 0;
+    if (on) {
+      c.fillStyle = "rgba(55,240,208,0.14)";
+      c.fillRect(x, chipY, chipW, chipH);
+    }
+    c.globalAlpha = on ? 1 : 0.4;
+    c.strokeStyle = on ? ACCENT : LINE;
+    c.lineWidth = on ? 2 : 1;
+    c.strokeRect(x + 0.5, chipY + 0.5, chipW - 1, chipH - 1);
+    c.fillStyle = on ? ACCENT : MUTED;
+    c.font = font(9, on ? "900" : "");
+    c.textAlign = "center";
+    c.textBaseline = "middle";
+    c.fillText(PLAQUE_NAME[i], x + chipW / 2, chipY + chipH / 2 + 1);
+    c.globalAlpha = 1;
+  }
   const list = Array.isArray(scores) ? scores : [];
   const nShow = Math.min(10, list.length);
-  const bodyTop = tabY + tabH + 10,
+  const bodyTop = chipY + chipH + 10,
     bodyBot = S.footY - 18;
   if (!nShow) {
     c.fillStyle = MUTED;

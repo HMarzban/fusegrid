@@ -19,6 +19,7 @@ import { mountDebugHook } from "./app/debughook.js";
 import { introPhase, INTRO_DUR } from "./app/intro.js";
 import { loadScores, recordScore, saveScores, scoreEntry, scoresForHeat } from "./app/highscores.js";
 import { loadPactUnlocked, savePactUnlocked } from "./app/pactstore.js";
+import { loadPlaques, savePlaques, unlockPlaques } from "./app/plaques.js";
 import { loadPace, savePace } from "./app/pacestore.js";
 import {
   loadCoachSeen,
@@ -463,6 +464,8 @@ export function createGame(canvas, opts = {}) {
         persistScore();
         savePactUnlocked();
         app.pactUnlocked = true;
+        // plan 5: finale-WIN edge only — LOSE skips world.finale, ATTRACT steps demo.world
+        savePlaques(unlockPlaques(loadPlaques(), world));
         app.toMenu();
         world.finale = false;
         setBtn("btnPause", "Pause");
@@ -534,7 +537,7 @@ export function createGame(canvas, opts = {}) {
     );
     c.restore();
     drawShell(c, app, world, canvas, curKind, (heat) =>
-      scoresForHeat(loadScores(), heat),
+      scoresForHeat(loadScores(), heat), () => loadPlaques(),
     );
     if (running && typeof requestAnimationFrame !== "undefined")
       requestAnimationFrame(loop);

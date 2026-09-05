@@ -433,6 +433,149 @@ function check(name, cond, detail) {
   }
 }
 
+// 13d) plaque chips on the SCORES plate: four labels, locked vs unlocked
+//      styling distinct, chips stay inside the plate at both sizes, and
+//      the pre-existing rows/tabs/foot still stay inside the plate too.
+{
+  const md = await import("../src/render/menudraw.js");
+  const { DEFAULT_SCORES } = await import("../src/app/highscores.js");
+  const rec = () => {
+    const texts = [],
+      rects = [];
+    const c = {
+      fillStyle: "",
+      strokeStyle: "",
+      lineWidth: 1,
+      globalAlpha: 1,
+      font: "",
+      textAlign: "left",
+      textBaseline: "middle",
+      shadowColor: "",
+      shadowBlur: 0,
+      fillRect(x, y, w, h) {
+        rects.push({ x, y, w, h, fill: c.fillStyle });
+      },
+      strokeRect() {},
+      clearRect() {},
+      fillText(s, x, y) {
+        texts.push({
+          s: String(s),
+          x,
+          y,
+          fill: c.fillStyle,
+          alpha: c.globalAlpha,
+          align: c.textAlign,
+        });
+      },
+      strokeText() {},
+      beginPath() {},
+      moveTo() {},
+      lineTo() {},
+      closePath() {},
+      fill() {},
+      stroke() {},
+      arc() {},
+      save() {},
+      restore() {},
+      translate() {},
+      scale() {},
+    };
+    return { c, texts, rects };
+  };
+  const plateOf = (rects) => rects.find((r) => r.fill === "rgba(8,12,22,0.92)");
+  const PLAQUE = { CLEAR: 1, PLUS: 2, MAX: 4, CROWN: 8 };
+  // "PLUS"/"MAX" also name the HEAT tabs drawn above the chip row, so
+  // disambiguate every chip by the unique "CLEAR" text's row-y, not by
+  // first-match on the label string alone.
+  const chipsOf = (texts) => {
+    const clear = texts.find((t) => t.s === "CLEAR");
+    const rowY = clear && clear.y;
+    const near = (s) =>
+      texts.find((t) => t.s === s && Math.abs(t.y - rowY) < 0.01);
+    return {
+      clear,
+      plus: near("PLUS"),
+      max: near("MAX"),
+      crown: texts.find((t) => t.s === "CROWN"),
+    };
+  };
+  for (const [W, H] of [
+    [600, 520],
+    [608, 352],
+  ]) {
+    const L = md.layout(W, H);
+    {
+      // mixed mask: CLEAR + MAX unlocked, PLUS + CROWN still locked
+      const { c, texts, rects } = rec();
+      md.drawScores(
+        c,
+        DEFAULT_SCORES,
+        L,
+        1,
+        0,
+        PLAQUE.CLEAR | PLAQUE.MAX,
+      );
+      const p = plateOf(rects);
+      const { clear, plus, max, crown } = chipsOf(texts);
+      const esc = texts.find((t) => t.s.indexOf("ESC BACK") >= 0);
+      const ten = texts.find((t) => t.s === "10");
+      check(
+        `all four plaque labels (CLEAR/PLUS/MAX/CROWN) painted inside the plate at ${W}x${H}`,
+        !!p &&
+          !!clear &&
+          !!plus &&
+          !!max &&
+          !!crown &&
+          [clear, plus, max, crown].every(
+            (t) => t.x > p.x && t.x < p.x + p.w && t.y > p.y + 8 && t.y < p.y + p.h - 4,
+          ),
+        JSON.stringify({ py: p && p.y, ph: p && p.h, clear, plus, max, crown }),
+      );
+      check(
+        `unlocked chips (CLEAR/MAX) read bright/full-alpha, locked chips (PLUS/CROWN) read dim at ${W}x${H}`,
+        !!clear &&
+          !!max &&
+          !!plus &&
+          !!crown &&
+          clear.alpha === 1 &&
+          max.alpha === 1 &&
+          plus.alpha < 1 &&
+          crown.alpha < 1,
+        JSON.stringify({ clear, plus, max, crown }),
+      );
+      check(
+        `plaque chips still leave the 10-row table + heat-tabs foot inside the plate at ${W}x${H}`,
+        !!ten && !!esc && ten.y < esc.y && esc.y < p.y + p.h - 4 && ten.y > p.y + 8,
+        JSON.stringify({ ten: ten && ten.y, esc: esc && esc.y, py: p && p.y, ph: p && p.h }),
+      );
+    }
+    {
+      // all locked (mask omitted / 0): every chip reads dim
+      const { c, texts } = rec();
+      md.drawScores(c, DEFAULT_SCORES, L, 1, 0);
+      const { clear, plus, max, crown } = chipsOf(texts);
+      const chips = [clear, plus, max, crown];
+      check(
+        `no mask arg -> all four chips locked/dim at ${W}x${H}`,
+        chips.every((t) => !!t && t.alpha < 1),
+        JSON.stringify(chips),
+      );
+    }
+    {
+      // all unlocked (mask 15): every chip reads bright/full-alpha
+      const { c, texts } = rec();
+      md.drawScores(c, DEFAULT_SCORES, L, 1, 0, 15);
+      const { clear, plus, max, crown } = chipsOf(texts);
+      const chips = [clear, plus, max, crown];
+      check(
+        `mask 15 -> all four chips unlocked/full-alpha at ${W}x${H}`,
+        chips.every((t) => !!t && t.alpha === 1),
+        JSON.stringify(chips),
+      );
+    }
+  }
+}
+
 // 14) drawAttractHint: attract now plays on tap, so the copy says so
 {
   const md = await import("../src/render/menudraw.js");
@@ -459,24 +602,39 @@ function check(name, cond, detail) {
 }
 
 // 15) wiring check: scoreHeat reaches drawScores through shellview + main's
-//     getScores getter (untested by any direct call — this only exercises
-//     the drawScores/menudraw side, not the browser entry point)
+//     getScores getter, and the plaques mask now rides the same shell-router
+//     path via a getPlaques getter (untested by any direct call — this only
+//     exercises the drawScores/menudraw side, not the browser entry point)
 {
   const shellSrc = readFileSync("src/render/shellview.js", "utf8");
   check(
     "shellview passes app.scoreHeat into the getter and into drawScores",
     /getScores\(app\.scoreHeat\)/.test(shellSrc) &&
-      /drawScores\(c, getScores\(app\.scoreHeat\), L, app\.subT, app\.scoreHeat\)/.test(
+      /drawScores\(\s*c,\s*getScores\(app\.scoreHeat\),\s*L,\s*app\.subT,\s*app\.scoreHeat,\s*getPlaques/.test(
         shellSrc,
       ),
-    shellSrc.match(/menudraw\.drawScores\([^)]*\)/)?.[0],
+    shellSrc.match(/menudraw\.drawScores\([^;]*\);/s)?.[0],
   );
   const mainSrc = readFileSync("src/main.js", "utf8");
   check(
-    "main.js wires scoresForHeat into the getScores getter passed to drawShell",
+    "main.js wires scoresForHeat and loadPlaques into the getters passed to drawShell",
     /scoresForHeat/.test(mainSrc) &&
-      /\(heat\)\s*=>\s*scoresForHeat\(loadScores\(\),\s*heat\)/.test(mainSrc),
+      /\(heat\)\s*=>\s*scoresForHeat\(loadScores\(\),\s*heat\)/.test(mainSrc) &&
+      /\(\)\s*=>\s*loadPlaques\(\)/.test(mainSrc),
     mainSrc.match(/drawShell\([^;]*\);/s)?.[0],
+  );
+  check(
+    "main.js only calls unlockPlaques on the finale-WIN persist edge (never inside step()/attract, never from a LOSE)",
+    /if\s*\(world\.finale\s*&&\s*world\.state\s*===\s*"MENU"\)\s*\{[^}]*savePlaques\(unlockPlaques\(loadPlaques\(\),\s*world\)\)/s.test(
+      mainSrc,
+    ) &&
+      (mainSrc.match(/unlockPlaques\(/g) || []).length === 1,
+    (mainSrc.match(/if\s*\(world\.finale[^\n]*\n(?:.*\n){0,8}/)||[])[0],
+  );
+  const attractSrc = readFileSync("src/app/attract.js", "utf8");
+  check(
+    "attract.js never references the plaques unlock (ATTRACT can't reach the finale-WIN edge)",
+    !/unlockPlaques|savePlaques|plaques\.js/.test(attractSrc),
   );
 }
 

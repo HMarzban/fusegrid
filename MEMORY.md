@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-04 — Added the four local cabinet plaques (CLEAR/PLUS/MAX/CROWN)
+- `src/app/plaques.js` persists `nb.plaques.v1` (bitmask, mirrors `pactstore.js`); `unlockPlaques` is called from main.js ONLY at the existing finale-WIN persist edge (`if (world.finale && world.state === "MENU")`, beside `savePactUnlocked`) — a LOSE never sets `world.finale` and ATTRACT steps a separate `demo.world`, so neither can reach it. Four chips painted on the SCORES plate under the heat tabs in `menudraw.js`'s `drawScores` (dim when locked); the mask reaches the draw via a `getPlaques` callback threaded through `drawShell` alongside the existing `getScores` path, so `menudraw.js` still never imports `src/app`. PWA bumped v27->v28 (Task 1: added plaques.js to SRC) ->v29 (Task 2: wiring + chip paint).
+
 ## 2026-09-04 — Added the ghost coach (first-run WASD/SPACE nudge)
 - `src/app/coach.js` persists `nb.coach.v1`; `drawCoach` (scenes.js) paints faded W/A/S/D + SPACE near spawn (1,1), alpha `1-time/3`, gated by a pre-computed `open` (render/ can't import app/, so scenes.js can't read `COACH_DUR` from coach.js — its own local copy must stay in sync by hand). main.js latches the first `bomb` event and persists dismissal right after the physics step, before that same frame's `renderer.render()` drains `world.events` — the one place in the RAF loop where a just-planted bomb is still visible. Never draws on ATTRACT (demo world is state PLAY too) since `coach` is only passed alongside `{hud:true}`, itself gated on `app.screen===GAME`. PWA bumped v24->v25->v26.
 

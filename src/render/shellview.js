@@ -24,7 +24,7 @@ export function dims(canvas, kind) {
   return { cw: canvas ? canvas.width : s.w, ch: canvas ? canvas.height : s.h };
 }
 
-export function drawShell(c, app, world, canvas, kind, getScores) {
+export function drawShell(c, app, world, canvas, kind, getScores, getPlaques) {
   const s = app.screen;
   if (s === SCREEN.BOOT || s === SCREEN.GAME) return; // GAME keeps its own overlays
   const { cw, ch: chh } = dims(canvas, kind);
@@ -94,6 +94,13 @@ export function drawShell(c, app, world, canvas, kind, getScores) {
     menudraw.drawEnemiesHelp(c, L, app.subT);
   } else if (s === SCREEN.SCORES) {
     menudraw.drawDim(c, 0.72, cw, chh);
-    menudraw.drawScores(c, getScores(app.scoreHeat), L, app.subT, app.scoreHeat);
+    menudraw.drawScores(
+      c,
+      getScores(app.scoreHeat),
+      L,
+      app.subT,
+      app.scoreHeat,
+      getPlaques ? getPlaques() : 0,
+    );
   }
 }
