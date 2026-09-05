@@ -350,5 +350,53 @@ const maxAbs = (b) => Math.max(-b.x0, b.x1, -b.y0, b.y1);
   check("phase comes from grid position, not slot", !slotty.length, slotty.join(" ") || "ok");
 }
 
+const R = CFG.TILE * 0.36;
+const P = (o) =>
+  Object.assign(
+    {
+      x: 0, y: 0, color: "#37f0d0", face: { x: 0, y: 1 },
+      iFrames: 0, walk: 0, shield: false, kick: false, passing: false,
+    },
+    o || {},
+  );
+
+{
+  const c = stub();
+  drawPlayerBody(c, { time: 0 }, P());
+  const ops = c._ops;
+  const arcs = names(ops).filter((n) => n === "arc").length;
+  check("zero-arc rule: shield and passing false emit no arc", arcs === 0, String(arcs));
+  check(
+    "antenna ball gone: no #ff5d73 fill or stroke",
+    !setsOf(ops, "fillStyle").includes("#ff5d73") &&
+      !setsOf(ops, "strokeStyle").includes("#ff5d73"),
+  );
+  check("no fillText in drawPlayerBody", !names(ops).includes("fillText"));
+  check("beat 1 is a contact ellipse", names(ops).includes("ellipse"));
+  const iRim = ops.findIndex((o) => o[0] === "set" && o[1] === "strokeStyle" && o[2] === RIM);
+  check(
+    "player seals its contour with RIM",
+    iRim >= 0 && ops.findIndex((o) => o[0] === "stroke") > iRim,
+    String(iRim),
+  );
+}
+
+{
+  const b1 = box();
+  drawPlayerBody(b1, { time: 0 }, P());
+  const hx = Math.max(-b1._b.x0, b1._b.x1),
+    vy = Math.max(-b1._b.y0, b1._b.y1);
+  check("player fits +-1.05r horizontally", hx <= R * 1.05 + 1e-6, hx.toFixed(2));
+  check("player fits +-1.20r vertically", vy <= R * 1.2 + 1e-6, vy.toFixed(2));
+  const b2 = box({ noEllipse: true });
+  drawPlayerBody(b2, { time: 0 }, P());
+  const vy2 = Math.max(-b2._b.y0, b2._b.y1);
+  check(
+    "only the contact shade passes +-1.10r vertically",
+    vy2 <= R * 1.1 + 1e-6,
+    vy2.toFixed(2),
+  );
+}
+
 console.log("\n" + pass + " passed, " + fail + " failed");
 if (fail) process.exit(1);

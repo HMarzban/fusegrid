@@ -1,5 +1,5 @@
 import { CFG, T, key, biomeOf, BIOMES } from "../core/config.js";
-import { drawIcon, rr, RIM, ITEM_FAMILY } from "./icons.js";
+import { drawIcon, rr, RIM, ITEM_FAMILY, dk, lt, poly, seal } from "./icons.js";
 import { drawEnemyBody } from "./enemybody.js";
 export { drawIcon, drawEnemyBody };
 
@@ -319,6 +319,28 @@ export function drawEnemies(c, world) {
     c.restore();
   }
 }
+/* SIGNAL RUNNER (items-player-art 2026-09-05). The collision was never with
+   a mascot, it was with WALKER: from above, two round bodies of the same
+   size and value. Per the three-golds lesson the fix is never a re-hue — the
+   player becomes the only body on the board with a LIGHT MATTE HULL carrying
+   DARK PARTS, which is a value-structure difference and survives at two
+   tiles. The kite is widest at the shoulder yoke; nothing in the nine-foe
+   cast has one. Antenna, ball, round eyes and balloon dome are gone. */
+const HULL = "#dfe7f2";
+const S_RUNNER = poly([
+  [-0.34, -1.02], [0.34, -1.02], [0.52, -0.62], [0.92, -0.1],
+  [0.86, 0.52], [0.44, 0.92], [-0.44, 0.92], [-0.86, 0.52],
+  [-0.92, -0.1], [-0.52, -0.62],
+]);
+function boot(c, r, s) {
+  c.beginPath();
+  c.moveTo(s * r * 0.2, r * 0.7);
+  c.lineTo(s * r * 0.62, r * 0.7);
+  c.lineTo(s * r * 0.56, r * 0.98);
+  c.lineTo(s * r * 0.26, r * 0.98);
+  c.closePath();
+  c.fill();
+}
 export function drawPlayerBody(c, world, p) {
   const r = CFG.TILE * 0.36,
     col = p.color || "#37f0d0";
@@ -328,69 +350,24 @@ export function drawPlayerBody(c, world, p) {
     : Math.sin(world.time * 4) * 1.0;
   c.translate(0, bob);
   if (p.iFrames > 0 && Math.floor(p.iFrames * 12) % 2) c.globalAlpha = 0.4;
-  c.fillStyle = "rgba(0,0,0,0.35)";
+  c.fillStyle = "rgba(0,0,0,0.34)";
   c.beginPath();
-  c.ellipse(0, r * 1.0, r * 0.7, r * 0.22, 0, 0, 7);
+  c.ellipse(0, r * 0.98, r * 0.72, r * 0.2, 0, 0, 7);
   c.fill();
-  c.fillStyle = col;
-  rr(c, -r * 0.7, r * 0.05, r * 1.4, r * 0.95, 7);
+  S_RUNNER(c, r, 1, 0, 0);
+  c.fillStyle = dk(HULL, 0.56);
   c.fill();
-  c.strokeStyle = "#0a0d14";
-  c.lineWidth = 1.75;
-  rr(c, -r * 0.7, r * 0.05, r * 1.4, r * 0.95, 7);
-  c.stroke();
-  c.fillStyle = "rgba(255,255,255,0.25)";
-  rr(c, -r * 0.6, r * 0.13, r * 1.2, r * 0.3, 4);
+  seal(c);
+  S_RUNNER(c, r, 0.8, 0, -r * 0.09);
+  c.fillStyle = HULL;
   c.fill();
-  c.fillStyle = "#0d3f78";
-  rr(c, -r * 0.7, r * 0.75, r * 1.4, r * 0.3, 4);
-  c.fill();
-  c.fillStyle = "#f4f7ff";
-  rr(c, -r * 0.85, -r * 0.95, r * 1.7, r * 1.35, 9);
-  c.fill();
-  c.strokeStyle = "#0a0d14";
-  c.lineWidth = 1.75;
-  rr(c, -r * 0.85, -r * 0.95, r * 1.7, r * 1.35, 9);
-  c.stroke();
-  c.fillStyle = col;
-  rr(c, -r * 0.78, -r * 0.95, r * 1.56, r * 0.52, 8);
-  c.fill();
-  c.strokeStyle = "#0a0d14";
-  c.lineWidth = 1.5;
-  rr(c, -r * 0.78, -r * 0.95, r * 1.56, r * 0.52, 8);
-  c.stroke();
-  c.strokeStyle = "#0a0d14";
-  c.lineWidth = 2;
-  c.lineCap = "round";
+  c.fillStyle = lt(HULL, 0.4);
   c.beginPath();
-  c.moveTo(0, -r * 0.95);
-  c.lineTo(0, -r * 1.38);
-  c.stroke();
-  c.fillStyle = "#ff5d73";
-  c.beginPath();
-  c.arc(0, -r * 1.42, r * 0.11, 0, 7);
+  c.ellipse(-r * 0.32, -r * 0.34, r * 0.36, r * 0.18, -0.6, 0, 7);
   c.fill();
-  c.fillStyle = "rgba(255,255,255,0.6)";
-  rr(c, -r * 0.6, -r * 0.85, r * 0.6, r * 0.25, 4);
-  c.fill();
-  c.fillStyle = "#0b1020";
-  rr(c, -r * 0.62, -r * 0.5, r * 1.24, r * 0.45, 4);
-  c.fill();
-  const ex = p.face.x < 0 ? -r * 0.05 : p.face.x > 0 ? r * 0.05 : 0;
-  c.fillStyle = "#7fe0ff";
-  c.beginPath();
-  c.arc(-r * 0.24 + ex, -r * 0.28, r * 0.14, 0, 7);
-  c.fill();
-  c.beginPath();
-  c.arc(r * 0.28 + ex, -r * 0.28, r * 0.14, 0, 7);
-  c.fill();
-  c.fillStyle = "#08131f";
-  c.beginPath();
-  c.arc(-r * 0.2 + ex, -r * 0.3, r * 0.06, 0, 7);
-  c.fill();
-  c.beginPath();
-  c.arc(r * 0.32 + ex, -r * 0.3, r * 0.06, 0, 7);
-  c.fill();
+  c.fillStyle = p.kick ? "#c07a3a" : "#0d3f78";
+  boot(c, r, -1);
+  boot(c, r, 1);
   if (p.shield) {
     c.strokeStyle = "#6fb7ff";
     c.lineWidth = 2.5;
