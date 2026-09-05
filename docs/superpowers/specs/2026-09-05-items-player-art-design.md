@@ -349,9 +349,11 @@ well 14–22px. Rules that make one glyph serve all four:
   one fill each, which is why the ceiling did not have to move further.
 - Nothing paints outside **`±1.20 * s`** on either axis, so the well never
   clips the form-shadow offset. **Unchanged and non-negotiable** — this one
-  is a real containment constraint from `well()`, not a heuristic. Note the
-  form shadow adds `+0.07s / +0.09s`, so an *outline* vertex may not exceed
-  `±1.13 / ±1.11`; accents are drawn unoffset and may use the full `1.20`.
+  is a real containment constraint from `well()`, not a heuristic. The
+  headroom it leaves is **one-sided**: beat 1 repaints the outline offset by
+  `(+0.07s, +0.09s)`, so a *positive* outline vertex may reach `1.13 / 1.11`
+  while a negative one may use the full `-1.20`. Accents are drawn unoffset
+  and get the full `1.20` in both directions.
 - Arcs and ellipses are **banned in accents** except where a full circle is
   intended. The fit recorder bounds a partial `arc` by its whole circle, so
   a 40° signal arc would fail the gate for pixels it never paints. Draw

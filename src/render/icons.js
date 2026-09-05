@@ -77,31 +77,34 @@ export const ITEM_FAMILY = {
   pierce: "bls",
 };
 
-/* ---- items / power-up icons (cabinet glyphs, readable at 40px) ---- */
+/* ---- items / power-up icons (cabinet glyphs, readable at 40px) ----
+   Semantic-first (P1.5): every outline is a real object a player can name in
+   one second at the 16px well, not an abstract silhouette chosen for
+   plan-view distinctness. Where the two rules fight, the nameable object
+   wins and the 3D body carries the plan-view separation instead. */
 export const ITEM_SHAPE = {
+  /* FLAME — teardrop, licking tip, one notch where the tongue peels off. */
   fire: [
-    [0, -1.05],
-    [0.34, -0.42, 0.3, -0.8],
-    [0.62, 0.12, 0.62, -0.16],
-    [0.44, 0.72, 0.62, 0.52],
-    [0, 0.92, 0.2, 0.92],
-    [-0.44, 0.72, -0.2, 0.92],
-    [-0.62, 0.12, -0.62, 0.52],
-    [-0.34, -0.42, -0.62, -0.16],
+    [0.08, -1.16],
+    [0.5, -0.24, 0.46, -0.76],
+    [0.66, 0.36, 0.78, 0.02],
+    [0, 0.94, 0.5, 0.88],
+    [-0.66, 0.36, -0.5, 0.88],
+    [-0.5, -0.2, -0.78, 0.02],
+    [-0.2, -0.64, -0.36, -0.5],
+    [-0.08, -0.9],
   ],
+  /* BOMB — the classic orb: round body, collared neck for the fuse. The
+     in-game 2D bomb reuses this read, so the two must agree. */
   bomb: [
-    [0, -0.92],
-    [0.46, -0.6, 0.3, -0.86],
-    [0.38, -0.34],
-    [0.62, -0.06],
-    [0.52, 0.28],
-    [0.74, 0.52, 0.7, 0.36],
-    [0, 0.96, 0.52, 0.96],
-    [-0.74, 0.52, -0.52, 0.96],
-    [-0.52, 0.28, -0.7, 0.36],
-    [-0.62, -0.06],
-    [-0.38, -0.34],
-    [-0.46, -0.6],
+    [-0.74, 0.32],
+    [-0.24, -0.36, -0.78, -0.14],
+    [-0.24, -0.62],
+    [0.24, -0.62],
+    [0.24, -0.36],
+    [0.74, 0.32, 0.78, -0.14],
+    [0, 1.08, 0.74, 1.02],
+    [-0.74, 0.32, -0.74, 1.02],
   ],
   speed: [[0.3, -1.02], [-0.62, 0.02], [-0.06, 0.02], [-0.34, 1.02], [0.66, -0.1], [0.1, -0.1]],
   heart: [
@@ -124,55 +127,98 @@ export const ITEM_SHAPE = {
     [-0.76, 0.16, -0.68, 0.52],
     [-0.84, -0.62],
   ],
-  kick: [[-0.9, -0.34], [0.34, -0.42], [0.98, -0.8], [1.06, -0.1], [0.4, 0.44], [-0.86, 0.36]],
-  throw: [[0, -1.0], [0.66, 0.1], [0.34, 0.62], [0, 0.44], [-0.34, 0.62], [-0.66, 0.1]],
+  /* KICK — a boot in profile mid-kick. The foot has to stay thin and run
+     nearly twice the shaft's length, or the ankle bend reads as an elbow. */
+  kick: [
+    [-0.66, -1.1],
+    [0.1, -1.1],
+    [0.14, 0.02],
+    [0.92, -0.18, 0.52, 0.08],
+    [1.0, 0.3, 1.1, 0.02],
+    [0, 0.62],
+    [-0.36, 0.66],
+    [-0.72, 0.46],
+  ],
+  /* THROW — the same orb BOMB uses, half the size and thrown clear of
+     centre; the trajectory it rode is the accent. Mass distribution is the
+     whole separation from BOMB: big centred orb there, small orb plus a long
+     arc here. */
+  throw: [
+    [0.66, 0.36],
+    [0.14, -0.16, 0.66, -0.16],
+    [-0.08, -0.24],
+    [0, -0.56],
+    [-0.24, -0.48],
+    [-0.38, 0.36, -0.38, -0.16],
+    [0.14, 0.88, -0.38, 0.88],
+    [0.66, 0.36, 0.66, 0.88],
+  ],
+  /* PASS — a brick wall, wider than it is tall, with a gap knocked through
+     the middle. The arrow that threads the gap is the accent. */
   pass: [
-    [-0.92, -0.62], [-0.34, -0.62], [-0.34, 0.16], [0.34, 0.16],
-    [0.34, -0.62], [0.92, -0.62], [0.92, 0.7], [-0.92, 0.7],
+    [-1.1, -0.66], [-0.24, -0.66], [-0.24, 0.1], [0.24, 0.1],
+    [0.24, -0.66], [1.1, -0.66], [1.1, 0.74], [-1.1, 0.74],
   ],
-  remote: [[-0.86, -0.56], [0.3, -0.56], [0.3, -0.16], [0.86, -0.16], [0.86, 0.62], [-0.86, 0.62]],
-  line: [[-1.1, 0], [-0.22, -0.2], [0.22, -0.2], [1.1, 0], [0.22, 0.2], [-0.22, 0.2]],
+  /* REMOTE — a hand detonator: a wide low box with a thin antenna standing
+     off the right shoulder. The plunger button is the accent. */
+  remote: [
+    [-0.86, -0.12], [0.3, -0.12], [0.4, -1.12], [0.58, -1.12],
+    [0.5, -0.12], [0.86, -0.12], [0.86, 0.88], [-0.86, 0.88],
+  ],
+  /* LINE — a directed beam: flared origin, long shaft, arrowhead tip. The
+     asymmetry is what stops it reading as a plain double-headed arrow. */
+  line: [
+    [-1.1, -0.44], [-0.62, -0.17], [0.3, -0.17], [0.3, -0.5], [1.1, 0],
+    [0.3, 0.5], [0.3, 0.17], [-0.62, 0.17], [-1.1, 0.44],
+  ],
+  /* POWER — a blast, not a sparkle: seven spikes of deliberately uneven
+     length, the comic-explosion outline every player already knows. */
   power: [
-    [0, -1.1], [0.26, -0.26], [1.1, 0], [0.26, 0.26],
-    [0, 1.1], [-0.26, 0.26], [-1.1, 0], [-0.26, -0.26],
+    [0, -1.12], [0.3, -0.42], [0.86, -0.74], [0.5, -0.14],
+    [1.12, 0.16], [0.42, 0.36], [0.66, 1.02], [0.06, 0.52],
+    [-0.5, 1.04], [-0.42, 0.34], [-1.12, 0.3], [-0.44, -0.16],
+    [-0.8, -0.86], [-0.28, -0.4],
   ],
+  /* PIERCE — one broad arrowhead, tip-dominant, with a notched tail. The
+     brick it punched through is the accent, spraying behind the tip. */
   pierce: [
-    [0, -1.15], [0.2, -0.34], [0.54, -0.16], [0.28, 0.06], [0.34, 0.66],
-    [0, 0.44], [-0.34, 0.66], [-0.28, 0.06], [-0.54, -0.16], [-0.2, -0.34],
+    [0, -1.14], [0.62, -0.18], [0.26, -0.18], [0.34, 0.98],
+    [0, 0.72], [-0.34, 0.98], [-0.26, -0.18], [-0.62, -0.18],
   ],
 };
 export const ITEM_ACCENT = {
+  /* the inner tongue */
   fire: (c, s) => {
     c.fillStyle = "#ffd447";
     c.beginPath();
-    c.moveTo(0, -s * 0.46);
-    c.quadraticCurveTo(s * 0.3, s * 0.1, 0, s * 0.5);
-    c.quadraticCurveTo(-s * 0.3, s * 0.1, 0, -s * 0.46);
+    c.moveTo(s * 0.02, -s * 0.42);
+    c.quadraticCurveTo(s * 0.3, s * 0.14, 0, s * 0.62);
+    c.quadraticCurveTo(-s * 0.3, s * 0.14, s * 0.02, -s * 0.42);
     c.fill();
   },
+  /* fuse curling off the collar, lit tip, one specular crescent on the orb */
   bomb: (c, s) => {
     c.strokeStyle = "#ffd447";
-    c.lineWidth = s * 0.16;
+    c.lineWidth = s * 0.18;
     c.beginPath();
-    c.moveTo(s * 0.2, -s * 0.72);
-    c.quadraticCurveTo(s * 0.46, -s * 0.9, s * 0.52, -s * 1.06);
+    c.moveTo(s * 0.12, -s * 0.58);
+    c.quadraticCurveTo(s * 0.52, -s * 0.68, s * 0.5, -s * 0.94);
     c.stroke();
     c.fillStyle = "#ffd447";
     c.beginPath();
-    c.moveTo(s * 0.52, -s * 1.14);
-    c.lineTo(s * 0.68, -s * 1.0);
-    c.lineTo(s * 0.52, -s * 0.86);
-    c.lineTo(s * 0.36, -s * 1.0);
+    c.moveTo(s * 0.5, -s * 1.16);
+    c.lineTo(s * 0.66, -s * 0.98);
+    c.lineTo(s * 0.5, -s * 0.8);
+    c.lineTo(s * 0.34, -s * 0.98);
     c.closePath();
     c.fill();
-    c.strokeStyle = "#ffffff";
-    c.lineWidth = s * 0.14;
+    c.fillStyle = "#ffffff";
     c.beginPath();
-    c.moveTo(-s * 0.2, s * 0.2);
-    c.lineTo(s * 0.2, s * 0.2);
-    c.moveTo(0, 0);
-    c.lineTo(0, s * 0.4);
-    c.stroke();
+    c.moveTo(-s * 0.46, s * 0.26);
+    c.quadraticCurveTo(-s * 0.54, -s * 0.16, -s * 0.14, -s * 0.26);
+    c.quadraticCurveTo(-s * 0.38, -s * 0.02, -s * 0.3, s * 0.32);
+    c.closePath();
+    c.fill();
   },
   speed: (c, s) => {
     c.fillStyle = "#fff3b0";
@@ -204,128 +250,195 @@ export const ITEM_ACCENT = {
     c.closePath();
     c.fill();
   },
-  kick: (c, s) => {
-    c.fillStyle = "#ffce8a";
+  /* the dark sole that makes it a shoe, then the toe cap and two chevrons */
+  kick: (c, s, col) => {
+    c.fillStyle = dk(col, 0.62);
     c.beginPath();
-    c.moveTo(s * 0.4, -s * 0.52);
-    c.lineTo(s * 0.92, -s * 0.66);
-    c.lineTo(s * 0.96, -s * 0.14);
-    c.lineTo(s * 0.46, s * 0.1);
+    c.moveTo(s * 1.0, s * 0.3);
+    c.lineTo(0, s * 0.62);
+    c.lineTo(-s * 0.36, s * 0.66);
+    c.lineTo(-s * 0.42, s * 0.36);
+    c.lineTo(0, s * 0.32);
+    c.lineTo(s * 0.94, s * 0.02);
     c.closePath();
     c.fill();
+    c.fillStyle = "#ffce8a";
     c.beginPath();
-    c.moveTo(-s * 0.98, -s * 0.14);
-    c.lineTo(-s * 0.56, s * 0.02);
-    c.lineTo(-s * 0.98, s * 0.18);
-    c.lineTo(-s * 0.78, s * 0.02);
+    c.moveTo(s * 0.56, -s * 0.08);
+    c.lineTo(s * 0.9, -s * 0.2);
+    c.lineTo(s * 1.0, s * 0.12);
+    c.lineTo(s * 0.62, s * 0.22);
+    c.closePath();
+    c.moveTo(-s * 1.18, -s * 0.66);
+    c.lineTo(-s * 0.92, -s * 0.4);
+    c.lineTo(-s * 1.18, -s * 0.14);
+    c.lineTo(-s * 1.06, -s * 0.4);
+    c.closePath();
+    c.moveTo(-s * 1.18, s * 0.06);
+    c.lineTo(-s * 0.92, s * 0.32);
+    c.lineTo(-s * 1.18, s * 0.58);
+    c.lineTo(-s * 1.06, s * 0.32);
     c.closePath();
     c.fill();
   },
+  /* the throwing arc, drawn as a real arrow so the verb reads, arcing over
+     the orb and away */
   throw: (c, s) => {
     c.fillStyle = "#fff3b0";
     c.beginPath();
-    c.moveTo(0, -s * 0.72);
-    c.lineTo(s * 0.2, s * 0.06);
-    c.lineTo(0, s * 0.3);
-    c.lineTo(-s * 0.2, s * 0.06);
+    c.moveTo(-s * 1.04, s * 0.66);
+    c.quadraticCurveTo(-s * 0.84, -s * 0.94, s * 0.6, -s * 0.92);
+    c.lineTo(s * 0.46, -s * 1.16);
+    c.lineTo(s * 1.1, -s * 0.7);
+    c.lineTo(s * 0.4, -s * 0.44);
+    c.lineTo(s * 0.52, -s * 0.68);
+    c.quadraticCurveTo(-s * 0.58, -s * 0.66, -s * 0.8, s * 0.66);
     c.closePath();
+    c.fill();
+    c.fillStyle = "#ffd447";
+    c.beginPath();
+    c.moveTo(-s * 0.12, -s * 0.76);
+    c.lineTo(s * 0.06, -s * 0.58);
+    c.lineTo(-s * 0.12, -s * 0.4);
+    c.lineTo(-s * 0.3, -s * 0.58);
+    c.closePath();
+    c.fill();
+  },
+  /* mortar courses make it masonry; the arrow threads the knocked-out gap */
+  pass: (c, s, col) => {
+    c.fillStyle = dk(col, 0.62);
+    c.beginPath();
+    c.moveTo(-s * 1.1, s * 0.16);
+    c.lineTo(s * 1.1, s * 0.16);
+    c.lineTo(s * 1.1, s * 0.3);
+    c.lineTo(-s * 1.1, s * 0.3);
+    c.closePath();
+    c.moveTo(-s * 0.68, -s * 0.66);
+    c.lineTo(-s * 0.54, -s * 0.66);
+    c.lineTo(-s * 0.54, s * 0.16);
+    c.lineTo(-s * 0.68, s * 0.16);
+    c.closePath();
+    c.moveTo(s * 0.54, -s * 0.66);
+    c.lineTo(s * 0.68, -s * 0.66);
+    c.lineTo(s * 0.68, s * 0.16);
+    c.lineTo(s * 0.54, s * 0.16);
+    c.closePath();
+    c.moveTo(-s * 0.4, s * 0.3);
+    c.lineTo(-s * 0.26, s * 0.3);
+    c.lineTo(-s * 0.26, s * 0.74);
+    c.lineTo(-s * 0.4, s * 0.74);
+    c.closePath();
+    c.moveTo(s * 0.26, s * 0.3);
+    c.lineTo(s * 0.4, s * 0.3);
+    c.lineTo(s * 0.4, s * 0.74);
+    c.lineTo(s * 0.26, s * 0.74);
+    c.closePath();
+    c.fill();
+    c.fillStyle = "#fff3b0";
+    c.beginPath();
+    c.moveTo(0, -s * 1.16);
+    c.lineTo(s * 0.4, -s * 0.6);
+    c.lineTo(s * 0.16, -s * 0.6);
+    c.lineTo(s * 0.16, s * 0.98);
+    c.lineTo(-s * 0.16, s * 0.98);
+    c.lineTo(-s * 0.16, -s * 0.6);
+    c.lineTo(-s * 0.4, -s * 0.6);
+    c.closePath();
+    c.fill();
+  },
+  /* the big red plunger button, and the signal leaving the antenna */
+  remote: (c, s) => {
+    c.fillStyle = "#ff5d73";
+    c.beginPath();
+    c.moveTo(-s * 0.34, s * 0.38);
+    c.quadraticCurveTo(-s * 0.34, s * 0.04, 0, s * 0.04);
+    c.quadraticCurveTo(s * 0.34, s * 0.04, s * 0.34, s * 0.38);
+    c.quadraticCurveTo(s * 0.34, s * 0.72, 0, s * 0.72);
+    c.quadraticCurveTo(-s * 0.34, s * 0.72, -s * 0.34, s * 0.38);
     c.fill();
     c.strokeStyle = "#fff3b0";
     c.lineWidth = s * 0.14;
     c.beginPath();
-    c.moveTo(-s * 0.86, s * 0.52);
-    c.quadraticCurveTo(-s * 0.3, -s * 0.3, s * 0.52, s * 0.1);
+    c.moveTo(s * 0.7, -s * 1.16);
+    c.quadraticCurveTo(s * 0.9, -s * 0.96, s * 0.76, -s * 0.76);
+    c.moveTo(s * 0.9, -s * 1.18);
+    c.quadraticCurveTo(s * 1.18, -s * 0.92, s * 0.96, -s * 0.64);
     c.stroke();
   },
-  pass: (c, s) => {
-    c.fillStyle = "#fff3b0";
-    c.beginPath();
-    c.moveTo(-s * 0.6, -s * 0.48);
-    c.lineTo(-s * 0.38, -s * 0.48);
-    c.lineTo(-s * 0.38, s * 0.16);
-    c.lineTo(-s * 0.6, s * 0.16);
-    c.closePath();
-    c.fill();
-    c.beginPath();
-    c.moveTo(s * 0.38, -s * 0.48);
-    c.lineTo(s * 0.6, -s * 0.48);
-    c.lineTo(s * 0.6, s * 0.16);
-    c.lineTo(s * 0.38, s * 0.16);
-    c.closePath();
-    c.fill();
-  },
-  remote: (c, s) => {
-    c.fillStyle = "#ff5d73";
-    c.beginPath();
-    c.moveTo(s * 0.38, -s * 0.06);
-    c.lineTo(s * 0.78, -s * 0.06);
-    c.lineTo(s * 0.78, s * 0.3);
-    c.lineTo(s * 0.38, s * 0.3);
-    c.closePath();
-    c.fill();
-  },
+  /* the hot core down the shaft, and the muzzle burst it was fired from */
   line: (c, s) => {
     c.fillStyle = "#fff3b0";
     c.beginPath();
-    c.moveTo(-s * 0.86, 0);
-    c.lineTo(-s * 0.18, -s * 0.08);
-    c.lineTo(s * 0.18, -s * 0.08);
-    c.lineTo(s * 0.86, 0);
-    c.lineTo(s * 0.18, s * 0.08);
-    c.lineTo(-s * 0.18, s * 0.08);
-    c.closePath();
-    c.fill();
-    c.beginPath();
-    c.moveTo(-s * 0.52, -s * 0.34);
-    c.lineTo(-s * 0.28, -s * 0.34);
-    c.lineTo(-s * 0.28, -s * 0.24);
-    c.lineTo(-s * 0.52, -s * 0.24);
-    c.closePath();
-    c.fill();
-    c.beginPath();
-    c.moveTo(s * 0.28, s * 0.24);
-    c.lineTo(s * 0.52, s * 0.24);
-    c.lineTo(s * 0.52, s * 0.34);
-    c.lineTo(s * 0.28, s * 0.34);
-    c.closePath();
-    c.fill();
-  },
-  power: (c, s) => {
-    c.fillStyle = "#fff3b0";
-    c.beginPath();
-    c.moveTo(0, -s * 0.86);
-    c.lineTo(s * 0.14, -s * 0.14);
-    c.lineTo(s * 0.86, 0);
-    c.lineTo(s * 0.14, s * 0.14);
-    c.lineTo(0, s * 0.86);
-    c.lineTo(-s * 0.14, s * 0.14);
-    c.lineTo(-s * 0.86, 0);
-    c.lineTo(-s * 0.14, -s * 0.14);
+    c.moveTo(-s * 0.86, -s * 0.07);
+    c.lineTo(s * 0.3, -s * 0.07);
+    c.lineTo(s * 0.3, -s * 0.28);
+    c.lineTo(s * 0.88, 0);
+    c.lineTo(s * 0.3, s * 0.28);
+    c.lineTo(s * 0.3, s * 0.07);
+    c.lineTo(-s * 0.86, s * 0.07);
     c.closePath();
     c.fill();
     c.fillStyle = "#ffffff";
     c.beginPath();
-    c.moveTo(-s * 0.16, 0);
-    c.lineTo(0, -s * 0.16);
-    c.lineTo(s * 0.16, 0);
-    c.lineTo(0, s * 0.16);
+    for (let i = 0; i < 8; i++) {
+      const a = (i * Math.PI) / 4,
+        r = i % 2 ? 0.15 : 0.42;
+      const x = -s * 0.74 + Math.cos(a) * s * r,
+        y = Math.sin(a) * s * r;
+      i ? c.lineTo(x, y) : c.moveTo(x, y);
+    }
     c.closePath();
     c.fill();
   },
+  /* the white-hot heart of the blast, ringed by its inner flare */
+  power: (c, s) => {
+    c.fillStyle = "#fff3b0";
+    c.beginPath();
+    for (let i = 0; i < 8; i++) {
+      const a = (i * Math.PI) / 4,
+        r = i % 2 ? 0.24 : 0.56;
+      const x = Math.cos(a) * s * r,
+        y = Math.sin(a) * s * r;
+      i ? c.lineTo(x, y) : c.moveTo(x, y);
+    }
+    c.closePath();
+    c.fill();
+    c.fillStyle = "#ffffff";
+    c.beginPath();
+    c.moveTo(-s * 0.22, 0);
+    c.lineTo(0, -s * 0.22);
+    c.lineTo(s * 0.22, 0);
+    c.lineTo(0, s * 0.22);
+    c.closePath();
+    c.fill();
+  },
+  /* the brick it went through, split into shards behind the tip */
   pierce: (c, s) => {
     c.fillStyle = "#12203a";
     c.beginPath();
-    c.moveTo(-s * 0.86, -s * 0.2);
-    c.lineTo(-s * 0.44, -s * 0.2);
-    c.lineTo(-s * 0.44, s * 0.34);
-    c.lineTo(-s * 0.86, s * 0.34);
+    c.moveTo(-s * 1.04, -s * 0.36);
+    c.lineTo(-s * 0.66, -s * 0.16);
+    c.lineTo(-s * 0.98, s * 0.04);
+    c.closePath();
+    c.moveTo(s * 1.04, -s * 0.36);
+    c.lineTo(s * 0.66, -s * 0.16);
+    c.lineTo(s * 0.98, s * 0.04);
+    c.closePath();
+    c.moveTo(-s * 0.88, s * 0.34);
+    c.lineTo(-s * 0.5, s * 0.22);
+    c.lineTo(-s * 0.68, s * 0.62);
+    c.closePath();
+    c.moveTo(s * 0.88, s * 0.34);
+    c.lineTo(s * 0.5, s * 0.22);
+    c.lineTo(s * 0.68, s * 0.62);
     c.closePath();
     c.fill();
+    c.fillStyle = "#fff3b0";
     c.beginPath();
-    c.moveTo(s * 0.44, -s * 0.2);
-    c.lineTo(s * 0.86, -s * 0.2);
-    c.lineTo(s * 0.86, s * 0.34);
-    c.lineTo(s * 0.44, s * 0.34);
+    c.moveTo(0, -s * 0.92);
+    c.lineTo(s * 0.22, -s * 0.4);
+    c.lineTo(0, -s * 0.52);
+    c.lineTo(-s * 0.22, -s * 0.4);
     c.closePath();
     c.fill();
   },

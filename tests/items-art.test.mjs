@@ -163,8 +163,8 @@ const maxAbs = (b) => Math.max(-b.x0, b.x1, -b.y0, b.y1);
 }
 
 {
-  const bigOutline = IDS.filter((t) => !ITEM_SHAPE[t] || ITEM_SHAPE[t].length > 12);
-  check("outline budget <= 12 vertices", !bigOutline.length, bigOutline.join(" ") || "ok");
+  const bigOutline = IDS.filter((t) => !ITEM_SHAPE[t] || ITEM_SHAPE[t].length > 14);
+  check("outline budget <= 14 vertices", !bigOutline.length, bigOutline.join(" ") || "ok");
   const bigAccent = [],
     hairline = [],
     noFill = [];
@@ -172,14 +172,87 @@ const maxAbs = (b) => Math.max(-b.x0, b.x1, -b.y0, b.y1);
     const c = stub();
     ITEM_ACCENT[t](c, S, "#ffffff");
     const ops = c._ops;
-    if (paints(ops) > 3) bigAccent.push(t + ":" + paints(ops));
+    if (paints(ops) > 4) bigAccent.push(t + ":" + paints(ops));
     if (!setsOf(ops, "fillStyle").length) noFill.push(t);
     const lw = setsOf(ops, "lineWidth").map(Number);
     if (names(ops).includes("stroke") && !lw.every((w) => w >= S * 0.12)) hairline.push(t);
   }
-  check("accent budget <= 3 paint ops", !bigAccent.length, bigAccent.join(" ") || "ok");
+  check("accent budget <= 4 paint ops", !bigAccent.length, bigAccent.join(" ") || "ok");
   check("every accent writes a fillStyle (solid shape)", !noFill.length, noFill.join(" ") || "ok");
   check("no accent is a hairline stroke", !hairline.length, hairline.join(" ") || "ok");
+  /* drawIcon's beat 1 repaints the outline offset by (+0.07s, +0.09s), so
+     the headroom is one-sided: a positive vertex may reach 1.13 / 1.11, a
+     negative one the full -1.20. */
+  const spill = [];
+  for (const t of IDS) {
+    const xs = ITEM_SHAPE[t].map((p) => p[0]),
+      ys = ITEM_SHAPE[t].map((p) => p[1]);
+    if (
+      Math.max(...xs) > 1.13 + 1e-9 ||
+      Math.max(...ys) > 1.11 + 1e-9 ||
+      Math.min(...xs) < -1.2 - 1e-9 ||
+      Math.min(...ys) < -1.2 - 1e-9
+    )
+      spill.push(t);
+  }
+  check("outline leaves room for the form-shadow offset", !spill.length, spill.join(" ") || "ok");
+}
+
+/* Per-kind outline pins. Distinctness alone would let a future pass re-skin
+   every glyph back into abstract silhouettes without a single red line — the
+   failure that cost this program a whole revision. Vertex count plus the
+   rounded outline bbox is coarse enough to survive nudges and specific
+   enough that swapping the object trips it. */
+{
+  const PIN = {
+    fire: [8, 1.32, 2.1],
+    bomb: [8, 1.48, 1.7],
+    speed: [6, 1.28, 2.04],
+    heart: [8, 2.0, 1.76],
+    shield: [8, 1.68, 1.92],
+    kick: [8, 1.72, 1.76],
+    throw: [8, 1.04, 1.44],
+    pass: [8, 2.2, 1.4],
+    remote: [8, 1.72, 2.0],
+    line: [9, 2.2, 1.0],
+    power: [14, 2.24, 2.16],
+    pierce: [8, 1.24, 2.12],
+  };
+  const wrong = [];
+  const dims = {};
+  for (const t of IDS) {
+    const p = ITEM_SHAPE[t];
+    const xs = p.map((v) => v[0]),
+      ys = p.map((v) => v[1]);
+    const w = +(Math.max(...xs) - Math.min(...xs)).toFixed(2),
+      h = +(Math.max(...ys) - Math.min(...ys)).toFixed(2);
+    dims[t] = [p.length, w, h];
+    const e = PIN[t];
+    if (!e || e[0] !== p.length || Math.abs(e[1] - w) > 0.02 || Math.abs(e[2] - h) > 0.02)
+      wrong.push(t + ":" + dims[t].join("/"));
+  }
+  check("every outline matches its per-kind pin", !wrong.length, wrong.join(" ") || "ok");
+  /* The three pairs the op-stream gates structurally cannot catch, because
+     two different objects always differ in coordinates. They are held apart
+     by MASS, so mass is what gets asserted. */
+  const ar = (t) => dims[t][1] / dims[t][2];
+  const area = (t) => dims[t][1] * dims[t][2];
+  const apart = (a, b, k) =>
+    check(
+      "closest pair " + a + "/" + b + " separates on outline aspect",
+      Math.abs(ar(a) - ar(b)) >= k,
+      ar(a).toFixed(2) + " vs " + ar(b).toFixed(2) + " (need " + k + ")",
+    );
+  apart("pass", "pierce", 0.9);
+  apart("line", "pierce", 1.4);
+  /* bomb/throw are both "orb plus curve" at nearly the same aspect, so the
+     one that matters is bulk: BOMB is a big centred orb, THROW a small orb
+     that gave its room to the arc. */
+  check(
+    "closest pair bomb/throw separates on outline bulk",
+    area("bomb") / area("throw") >= 1.4,
+    (area("bomb") / area("throw")).toFixed(2) + "x (need 1.4)",
+  );
 }
 
 {
