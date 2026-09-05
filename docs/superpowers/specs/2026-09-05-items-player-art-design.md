@@ -395,146 +395,202 @@ companion edit because no hue moves.
 
 ## §2 Player — SIGNAL RUNNER
 
-The recommended concept, taken with two sharpenings.
+> **REVISION R1 — 2026-09-05.** The P1 build of this section was **rejected by
+> the user**: *"the game's main character looks a bit too silly and doesn't
+> feel mature enough. Let's revise the character's design and overall look."*
+> At the live 28px size the P1 body read as a **white egg with a teal cap**:
+> a near-circular outline filled at 90% luminance is a cute shape however many
+> facets are cut into it, and the 3D hull read as a rounded boiler for the
+> same reason. §2.1–§2.3 below are the R1 direction and supersede the P1 text
+> wholesale; §2.0 records what did not change and why the failure happened.
 
-**Sharpening 1 — the collision is with WALKER, not with a mascot.** From
-above, `p.color #37f0d0` teal and walker `#8affc1` mint are two round bodies
-of near-identical size and value. Per the three-golds lesson the fix is
-never a re-hue: the player becomes the only body on the board with a
-**light matte hull carrying dark parts** (a near-black visor slit and two
-dark boots) against a cast where every foe is a single saturated hue. That
-is a value-*structure* difference, which survives at 2 tiles; a value-level
-difference would not.
+### 2.0 What R1 keeps, and the lesson
 
-**Sharpening 2 — the 7-8-head heroic ratio is unbuildable here.** At 28px a
-1/7 head is 4px and disappears. "Mature proportion" in this cabinet means
-the head stops dominating: crown mass drops from ~50% of the stack to
-**26.8% in 3D / 32% in 2D**, and the shoulder line goes from narrower than
-the head to **1.48× the crown half-width**. Those are the numbers to hit.
+**Kept, unchanged, because none of it was the problem:** the WALKER separation
+story, `p.color` as the sole identity placement on the crown/crest, exactly
+one specular surface (the visor), the five-beat 2D craft, the 5-mesh 3D stack
+(`SLOT_MESH.player` stays **5**, fat-world stays **141**), the same five
+geometry types, no antenna / ball / round eyes / dome, and every state mapping
+in §2.4.
 
-### 2.1 Concept lock
+**The lesson, which is P1's lesson repeated one level up.** P1 optimised for
+*plan-view distinctness from nine foes* and won that on paper — and the whole
+suite stayed green through a body no human would call the hero. The gates
+could see a fit box and an op stream; they could not see **roundness,
+brightness or stubbiness**. R1 adds three gates that can (§2.5), each of which
+fails on the P1 body. The general rule this program keeps re-learning: *an
+agent judges the zoomed capture, the player judges the tiny live sprite* —
+so the acceptance artefact is a 1:1 board with the hero **next to a foe**,
+and only then a nearest-neighbour upscale of those same pixels.
 
-- **Above-view silhouette:** a kite — widest at a two-chip shoulder yoke,
-  tapering up to a narrow hexagonal crown and down to a narrow boot stance.
-  Nothing in the nine-foe cast has a shoulder yoke.
-- **Shape language:** angular trim on one rounded core. Hexagonal torso and
-  crown (faceted, not spherical), squared pauldron chips, a straight-cut
-  visor slit.
-- **Material:** **one matte hull** (`MeshLambertMaterial`, cool desaturated
-  `#dfe7f2`) against **exactly one specular surface** (the visor,
-  `MeshPhongMaterial`, `shininess 120`, `specular #ffffff`). Nothing else on
-  the player is glossy, emissive, or additive.
-- **`p.color` placement: the crown, and only the crown.** One rule in both
-  renderers, replacing today's split (2D paints it on torso *and* head band;
-  3D paints it on the dome). The crown is the largest surface visible from
-  directly above, so identity reads instantly at 59.1°.
-- **Facing cue:** yaw only in 3D (`atan2(face.x, face.y)`, unchanged); in 2D
-  the visor cluster slides along `face.x` and is **replaced by a nape plate
-  when `face.y < -0.5`**, matching the `walker`/`chaser` convention.
-- **Deleted outright:** the antenna rod, the antenna ball, the two round
-  cyan eyes, the balloon dome. In both renderers, in the same program.
-  Never reintroduce them.
+### 2.1 Concept lock (R1)
 
-### 2.2 2D — `drawPlayerBody` five-beat
+- **Silhouette:** a **shouldered wedge** — a helmeted head over a short neck
+  step, a hard shoulder **ledge** (out almost level, then a long vertical
+  pauldron edge), a torso that sheds ~1.7× of its width within half a radius,
+  and a stance carried by two long dark legs rather than by the hull's own
+  base. Nothing in the nine-foe cast has a shoulder ledge; nothing else on the
+  board has legs of this length.
+- **Value:** the hull is **mid-value gunmetal `#8d97ac`** (Rec.709 L 0.59),
+  down from P1's `#dfe7f2` (L 0.90). **Brightness was the cuteness.** A mid
+  value also separates *better* from walker's mint `#8affc1`, and it leaves
+  the white visor pip as the one genuinely bright element on the character.
+  Floor: the hull must stay in **L 0.28–0.62** — dark enough not to read as a
+  toy, light enough to hold against the dark biome floors, where the 3D hull
+  (which has no dark contour) is the binding case, not the 2D one.
+- **Shape language:** hard armour facets. Angular pauldron plates, a straight
+  visor slit, a pointed crest — no soft sheen ellipse anywhere on the body.
+- **`p.color` placement: the crest, and only the crest.** A **crest, not a
+  cap**: pointed, and in 2D every vertex stays *inside* the helmet contour.
+  R1 iteration 1 let the crest wings overhang and the horizontal underside
+  instantly became a peaked-cap brim — the exact silliness the rejection
+  named. Do not reintroduce an overhang.
+- **Facing cue:** unchanged — yaw only in 3D (`atan2(face.x, face.y)`); in 2D
+  the visor cluster slides on `face.x` and is replaced by a nape plate when
+  `face.y < -0.5`.
+- **Authority:** the hero must be the most **capable-looking** body on the
+  board. The measurable form of that is §2.5's two 3D gates; the P1 stack
+  failed both, at a 12.1 half-span against walker's 13.6 collision radius.
+
+### 2.2 2D — `drawPlayerBody` five-beat (R1)
 
 `r = CFG.TILE * 0.36` (unchanged). Silhouette, `poly()` in `r`-units:
 
 ```
-S_RUNNER = [[-0.34,-1.02],[0.34,-1.02],[0.52,-0.62],[0.92,-0.10],
-            [0.86,0.52],[0.44,0.92],[-0.44,0.92],[-0.86,0.52],
-            [-0.92,-0.10],[-0.52,-0.62]]
+S_RUNNER = [[-0.36,-1.00],[0.36,-1.00],[0.52,-0.80],[0.44,-0.54],
+            [0.34,-0.46],[0.86,-0.40],[0.90,-0.06],[0.68,0.12],
+            [0.56,0.32],[0.50,0.54],[-0.50,0.54],[-0.56,0.32],
+            [-0.68,0.12],[-0.90,-0.06],[-0.86,-0.40],[-0.34,-0.46],
+            [-0.44,-0.54],[-0.52,-0.80]]
+CREST    = [[0,-1.09],[0.32,-0.96],[0.48,-0.80],[0.44,-0.70],
+            [-0.44,-0.70],[-0.48,-0.80],[-0.32,-0.96]]
 ```
 
-Widest at `y = -0.10` (`±0.92r`, the yoke), narrowing to `±0.34r` at the
-crown and `±0.44r` at the stance. Height `1.94r ≈ 28px`. Crown band spans
-`y ∈ [-1.02, -0.40]` = `0.62r` of `1.94r` = **32%**.
+Numbers to hit: helmet half-width `0.52r`, shoulder half-width `0.90r`
+(**1.73× the helmet** — the heroic ratio that is actually buildable at this
+size), waist `0.50r`. The `(0.34,-0.46)` pair is a **neck step**: two pixels
+of notch at 28px, and it is what stops the shoulders reading as if they
+sprout from the ears. Hull height `1.54r`; legs add `0.52r` below it.
 
-Beats, in paint order — the same five `enemybody.js` runs, plus the
-player-only beats:
+Beats, in paint order:
 
-1. **contact shade** — `ellipse(0, r*0.98, r*0.72, r*0.20)`,
-   `rgba(0,0,0,0.34)`. Matches `contact()`.
-2. **dark contour** — `S_RUNNER` at `k = 1`, filled `dk(HULL, 0.56)`,
-   sealed with `RIM`.
-3. **inset lit body** — `S_RUNNER` at `k = 0.8`, lifted `-r*0.09`, filled
-   `HULL = "#dfe7f2"`. The leftover crescent below is the form shadow.
-4. **upper-left sheen** — `ellipse(-r*0.32, -r*0.34, r*0.36, r*0.18, -0.6)`
-   filled `lt(HULL, 0.4)`.
-5. **face** — the crown band (trapezoid across `y ∈ [-1.00, -0.44]`) filled
-   `col = p.color` and sealed — **the one and only `p.color` fill in the
-   whole body** — then the visor: a `#0b1020` slot spanning `±0.42r` at
-   `y ∈ [-0.52, -0.30]`, a `#7fe0ff` lit core bar inset inside it, and one
-   white specular pip at the slot's upper-left — **a small quad, not an
-   `arc`**, per the zero-arc rule in §4.11. The visor cluster shifts by
-   `fx = clamp(p.face.x, -1, 1) * r * 0.10`.
-6. **grounding** — two boot trapezoids at `±0.42r`, `y ∈ [0.70, 0.98]`,
-   `#0d3f78`, flipping to `#c07a3a` under `p.kick`.
-7. **back pose** — when `p.face.y < -0.5` the visor cluster is not drawn;
-   a `dk(HULL, 0.34)` nape bar and a small dark pack chip take its place.
+1. **contact shade** — `ellipse(0, r*1.00, r*0.60, r*0.18)`, `rgba(0,0,0,0.34)`.
+   Narrower than P1's, to sit under a narrower stance.
+2. **dark contour** — `S_RUNNER` at `k = 1`, `dk(HULL, 0.56)`, sealed `RIM`.
+3. **inset lit body** — `S_RUNNER` at `k = 0.8`, lifted `-r*0.09`, `HULL`.
+4. **armour facets** — the two pauldron **top plates**, `lt(HULL, 0.42)`,
+   two subpaths in one `beginPath` so this is still one beat. These draw the
+   shoulder ledge, which is the single strongest maturity cue at this size.
+   P1's rotated sheen ellipse is gone; the zero-arc rule now holds absolutely
+   for the body (the contact shade is the only `ellipse`).
+5. **face** — `CREST` filled `col = p.color` and sealed (**the one and only
+   `p.color` fill in the body**), then the visor: a `#0b1020` slot across
+   `y ∈ [-0.68,-0.48]`, a `#7fe0ff` **hairline** core inside it, and one
+   white specular pip — all quads, no `arc`. The core bar is deliberately
+   thin: against a mid-value hull a fat cyan band becomes a second bright
+   element and reads as a cartoon eye. Cluster shifts by
+   `fx = clamp(p.face.x,-1,1) * r * 0.10`.
+6. **grounding** — two **leg** contours (hip `y=0.42` to toe `y=1.06`, with
+   an outward toe flick), `#0d3f78`, flipping to `#c07a3a` under `p.kick`.
+   P1's `0.06r` boot chips glued to the egg's underside are gone.
+7. **back pose** — `p.face.y < -0.5` swaps the visor cluster for a
+   `dk(HULL,0.34)` nape bar and a `dk(HULL,0.62)` pack chip.
 
-`p.shield` cyan ring, `p.kick` cleats, `p.passing` green ring, the iFrames
-alpha flicker, and the walk/idle bob are **unchanged** — they are already
-parity-correct and orthogonal to the hull.
+`p.shield` ring, `p.kick` cleats, `p.passing` ring, the iFrames flicker and
+the walk/idle bob are unchanged.
 
-### 2.3 3D — the 5-mesh stack
+### 2.3 3D — the 5-mesh stack (R1)
 
-`SLOT_MESH.player: 7 → 5`. Added in this order; child index is the new ABI.
+`SLOT_MESH.player` stays **5** and the geometry-type histogram is unchanged
+(1 `BufferGeometry`, 1 `LatheGeometry`, 1 `ExtrudeGeometry`, 2 `BoxGeometry`)
+— **every mesh was reshaped, none added, none retyped.**
 
 | idx | mesh | geometry | `.type` | material | shadow |
 |---|---|---|---|---|---|
-| 0 | `hull` | `mergeGeos(torso, yokeL, yokeR)` | `BufferGeometry` | `hullMat` Lambert `#dfe7f2` (matte) | cast + receive |
-| 1 | `crown` | `lathe(CROWN_P, 6, TILE*0.19)`, `y = TILE*0.52` | `LatheGeometry` | `crownMat` Lambert, `p.color` | cast |
-| 2 | `visor` | `plate(VISOR_P, 0.14, TILE*0.19).rotateX(-0.6)`, `y = TILE*0.60`, `z = TILE*0.16` | `ExtrudeGeometry` | `visorMat` Phong `#0b1020`, `shininess 120`, `specular #ffffff`, `map: atlas.visor` when present | none |
-| 3 | `bootL` | `BoxGeometry(TILE*0.20, TILE*0.11, TILE*0.26)` at `(-TILE*0.17, TILE*0.055, 0)` | `BoxGeometry` | `bootMat` Lambert | cast |
-| 4 | `bootR` | same geometry at `(+TILE*0.17, ...)` | `BoxGeometry` | same | cast |
+| 0 | `hull` | `mergeGeos(torso, pauldronL, pauldronR)` | `BufferGeometry` | `hullMat` Lambert `PLAYER_HULL` | cast + receive |
+| 1 | `crown` | `lathe(CROWN_P, 5, TILE*0.17).rotateY(PI/5)`, `y = TILE*0.54` | `LatheGeometry` | `crownMat` Lambert, `p.color` | cast |
+| 2 | `visor` | `plate(VISOR_P, 0.14, TILE*0.19).rotateX(-0.6)`, `y = TILE*0.60`, `z = TILE*0.145` | `ExtrudeGeometry` | `visorMat` Phong `#0b1020`, `shininess 120`, `specular #ffffff`, `map: atlas.visor` when present | none |
+| 3 | `bootL` | `BoxGeometry(TILE*0.15, TILE*0.26, TILE*0.26)` at `(-TILE*0.13, TILE*0.13, 0)` | `BoxGeometry` | `bootMat` Lambert | cast |
+| 4 | `bootR` | same geometry at `(+TILE*0.13, ...)` | `BoxGeometry` | same | cast |
 
 ```
-TORSO_P = [[0.52,0.14],[0.66,0.44],[0.62,0.86],[0.74,1.02],
-           [0.56,1.22],[0.30,1.34],[0,1.36]]        lathe(...,6, TILE*0.30)
-CROWN_P = [[0.98,0],[1.06,0.16],[0.92,0.30],[0.74,0.58],[0.44,0.84],[0,1.00]]
-YOKE_P  = [[-0.34,-0.30],[0.34,-0.30],[0.34,0.30],[-0.34,0.30]]
-          plate(YOKE_P, 0.26, TILE*0.30).rotateX(-PI/2)
-          .translate(±TILE*0.20, TILE*0.36, 0)
-VISOR_P = [[-0.86,-0.20],[0.86,-0.20],[0.72,0.22],[-0.72,0.22]]
+TORSO_P  = [[0.44,0.50],[0.38,0.88],[0.52,1.20],[0.86,1.44],
+            [0.66,1.60],[0.42,1.74],[0.44,1.86]]   lathe(...,6, TILE*0.30)
+CROWN_P  = [[0.60,0],[0.92,0.18],[1.00,0.42],[0.90,0.74],[0.56,1.02],[0,1.24]]
+PAULD_P  = [[-0.46,-0.46],[0.52,-0.26],[0.52,0.26],[-0.46,0.46]]
+           plate(pauldPts(s), 0.42, TILE*0.30).rotateX(-PI/2)
+           .rotateZ(-s*0.34).translate(s*TILE*0.23, TILE*0.42, 0)
+VISOR_P  = [[-0.52,-0.30],[0.52,-0.30],[0.42,0.26],[-0.42,0.26]]
 ```
 
-Both profiles run **bottom → top** and each flares once then narrows
-(`TORSO_P` at `1.02` = the shoulder line; `CROWN_P` at `0.16` = the brow),
-so a single Lambert hull carries a two-tone read exactly as the foe hulls
-do.
+Both profiles still run **bottom → top** and each still flares once then
+narrows (`TORSO_P` at `1.44` is the shoulder line, `CROWN_P` at `0.42` the
+brow), so one Lambert hull keeps its two-tone read.
 
-Derived numbers to hit: shoulder half-width `TILE*0.30 = 12`; crown
-half-width `1.06 * TILE*0.19 = 8.1`; ratio **1.48**. Stack height
-`TILE*0.52 + TILE*0.19 = 28.4`; crown height `7.6` = **26.8%**.
-Plan-view footprint: hexagon plus two rectangular yoke chips, `24 × 16` —
-the only shoulder-yoked footprint on the board.
+**Three decisions that cost iterations and must not be undone:**
 
-**Visor rake `rotation.x = -0.6` is not an invented number.** It is
-`e_fast`'s face rake exactly (`entities.js:370`), the deepest rake in the
-cast apart from `shade`'s hood, and `fast` is the foe whose face sits most
-nearly on top of its hull — the same situation as a crown-mounted visor. A
-vertical band (`rot 0`, today) faces the horizon and shows the rig nothing.
+1. **The pauldron is a wedge, and it is mirrored by reversing its points.**
+   A plate symmetric in `x` presents one big flat facet to the 59.1° rig and
+   the pair reads as a **coat hanger** — an even slab has no inboard end to
+   bury in the torso. `PAULD_P` is authored for the right shoulder (outer
+   edge at `+x`), deep where it meets the ribs and shallow at the tip;
+   `pauldPts(-1)` negates `x` **and reverses the order**, because
+   `ExtrudeGeometry` takes its cap normals from the shape's signed area —
+   the same trap `mesa()` documents. The `-s*0.34` cant drops the outer edge
+   so the plate reads as armour rather than as a table.
+2. **The crown is seg 5, turned a fifth.** three.js lathes start a *vertex*
+   at `+Z`, so `rotateY(PI/5)` puts a flat **face** forward for the visor to
+   sit on; a corner at `+Z` leaves the visor's ends floating off a ridge.
+   Seg 4 (iteration 1) gives a square plan whose top facet reads as a **box**;
+   seg 6 is a circle at this size. A pentagon has no parallel silhouette
+   edges and its plan view is shared with no foe.
+3. **The head must be far narrower than the shoulders.** Iteration 2 gave the
+   crown the torso's own radius and the helmet simply *hid the chest* — the
+   hero became a teal pentagon on a stand. Locked ratio: head plan width
+   **12.9** against a **31.8** shoulder span (41%).
 
-`paintVisor` (`textures.js:63-72`) is repainted from "navy band + two cyan
-glints" to the 2D slit, so the two renderers show the same face: near-black
-well `#080b14` across the strip, one `#7fe0ff` lit core bar at ~42% alpha,
-one white specular pip. Strip stays **128×32**, still `NearestFilter` +
-`SRGBColorSpace` + `_shared`, still null under the headless guarded factory
-(fallback `visorMat.color = "#0b1020"`, never a dark placeholder for a
-*lit* surface — the visor is meant to be dark).
+Derived numbers to hit (TILE 40): shoulder span **31.8**, plan depth **20.6**
+(**aspect 1.54**), stack height **30.0**, head width **12.9**, leg height
+**10.4**. Walker for comparison: `29.0 × 26.5 × 27.5`. The hero is now the
+tallest and the widest body on the board and the only **shouldered** footprint
+on it; P1 was neither.
 
-**State mapping — behaviour preserved, materials renamed:**
+`paintVisor` (`textures.js`) is **unchanged** — deep well, one thin lit core
+bar, one white pip is already exactly the R1 visor, and the 2D core bar was
+thinned to match it rather than the other way round.
 
-| state | today | after |
+### 2.4 State mapping — unchanged from P1
+
+| state | mapping |
+|---|---|
+| `p.color` | `crownMat.color` (the only placement) |
+| `p.shield` | `crownMat.emissive #6fb7ff` pulse + `visorMat.color` lerp |
+| `p.kick` | `bootMat.color` `#c07a3a` / `#0d3f78` |
+| `p.passing` | `hullMat.color` base `PLAYER_HULL`, lerp toward `#77ff99` 0.38 |
+| iFrames flicker, `player.visible`, yaw, walk/idle bob | unchanged |
+
+**One hull hex, one place.** `PLAYER_HULL` is exported from
+`src/render/sprites.js` and imported by `src/render/three/entities.js`
+(`sprites.js` pulls in `icons.js` / `config.js` / `enemybody.js` only, so the
+module graph stays a DAG). P1 carried the literal twice and a future revision
+would have moved one of them.
+
+### 2.5 The five gates R1 adds
+
+Three in `tests/items-art.test.mjs`, two in `tests/three.test.mjs`. All five
+**fail on the P1 body** — that is the point of them.
+
+| gate | P1 | R1 |
 |---|---|---|
-| `p.color` | `helmetMat.color` | `crownMat.color` (the only placement) |
-| `p.shield` | `helmetMat.emissive #6fb7ff` pulse + `visorMat.color` lerp | identical, on `crownMat` / `visorMat` |
-| `p.kick` | `bootMat.color` `#c07a3a` / `#0d3f78` | identical |
-| `p.passing` | `bodyMat.color` lerp toward `#77ff99` 0.38 | `hullMat.color` base `#dfe7f2`, same lerp |
-| iFrames flicker, `player.visible`, yaw, walk/idle bob | unchanged | unchanged |
+| hull sheds `>= 1.55×` its width `0.50r` below the shoulder line | **1.06** | 1.71 |
+| `lum(PLAYER_HULL)` within `0.28 .. 0.62` | **0.90** | 0.59 |
+| legs run `>= 0.50r` below the hull contour | **0.06** | 0.52 |
+| 3D shoulder half-span `>= CFG.TILE*0.34` (its own collision radius) | **12.08** | 15.92 |
+| 3D plan footprint `x/z >= 1.40` (shouldered, not a disc) | **1.36** | 1.54 |
 
-Materials drop from 5 to 4 and the player gains exactly one specular
-surface. No additive material on the player at all.
+The first is a **horizontal slice** of the recorded beat-2 contour, because a
+fit box and an op stream structurally cannot tell a tapered torso from a
+barrel — which is exactly how the egg shipped.
 
 ---
 
@@ -576,6 +632,21 @@ Nothing else in `three.test.mjs` moves. The `itemDraws` / `visOf` /
 `slotsOf` / `itemLive` helpers (`three.test.mjs:43-49`) traverse by
 `userData.tag`, so shape swaps are invisible to them — the tag/kind scheme
 must therefore stay exactly as it is.
+
+### §3.R1 — pins the 2026-09-05 R1 player revision moves
+
+Everything in the table above stays as P4 left it: `SLOT_MESH.player` is
+still 5, fat-world is still 141, and the geometry-type histogram is untouched
+because R1 **reshaped profiles and retyped nothing**.
+
+| Pin | Site | P1 | R1 | Kind |
+|---|---|---|---|---|
+| hull hex | `sprites.js` `PLAYER_HULL` (now **exported**, imported by `three/entities.js`) | `#dfe7f2` | **`#8d97ac`** | source |
+| R.headless hull probe | `tests/three.test.mjs` | `#dfe7f2` | **`#8d97ac`** | test |
+| S4.A `p.passing` base probe | `tests/three.test.mjs` | `!== "#dfe7f2"` | **`!== "#8d97ac"`** | test |
+| taper / value / stance gates | `tests/items-art.test.mjs` | — | **3 new gates**, all RED on P1 (§2.5) | test |
+| shoulder half-span / plan aspect | `tests/three.test.mjs` S4.A | — | **2 new gates**, both RED on P1 (§2.5) | test |
+| `paintVisor` | `textures.js` | — | **byte-identical**; the 2D core bar was thinned to match *it* | source |
 
 ---
 

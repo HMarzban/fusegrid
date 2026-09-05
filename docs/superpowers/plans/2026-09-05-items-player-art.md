@@ -182,6 +182,7 @@ P1 and P3 are 2D-only and can land while P2 is in flight. P2 and P4 are the only
 | AGENTS.md specular claim | `AGENTS.md:206` | "only bright-specular Phong body" | "…Phong **foe**; the player visor is the cast's one other Phong surface" | **P4** |
 | AGENTS.md player bullet | new, beside the enemy-bodies bullet | — | 5-mesh stack line | **P4** |
 | R.headless player probe **(spec §3 misses this one)** | `tests/three.test.mjs:716-728` | sphere body + dome + open-cylinder band | hull Lambert `#dfe7f2` + crown lathe + Phong visor `#0b1020` | **P4** |
+| R.headless hull hex **(moved again by R1 2026-09-05 — see spec §2/§3.R1)** | `tests/three.test.mjs` | `#dfe7f2` | **`#8d97ac`** | **R1** |
 | S2.R visor check name **(spec §3 misses this one)** | `tests/three.test.mjs:693` | "navy band + two glints" | "dark well + lit core bar + specular pip" — the assertion itself still passes | **P4** |
 | banned-franchise strings | `three/entities.js` header (~11) and player block (771); `tests/three.test.mjs:1009-1010` | present | rewritten, word gone | **P4** |
 | `og.png` / cover / stills / gif provenance | `media/README.md`, `AGENTS.md:197` | current art | recaptured | **P5** |

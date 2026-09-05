@@ -90,12 +90,20 @@ not shell screens. Do not add them as `SCREEN` values.
     because two tests pin it there; `walker` splits into mirrored halves so
     the alternating stomp keeps two transforms). `shade` is the only foe with
     `castShadow=false`; additive accents never cast.
-  - Player body: a FIVE-mesh stack — one merged matte hull (torso lathe
-    fused with two yoke chips), one `p.color` crown lathe, one Phong visor
-    raked `-0.6` to face the rig, two boots — so `SLOT_MESH.player` is 5 and
-    fat-world is 141. No antenna, no ball, no round eyes, no sphere. `p.color`
-    lives on the crown and nowhere else, in both renderers. Separation from
-    WALKER is a light matte hull carrying dark parts, never a re-hue.
+  - Player body (R1 2026-09-05): a FIVE-mesh stack — one merged **gunmetal**
+    hull (tapered torso lathe fused with two canted wedge pauldrons), one
+    `p.color` crest lathe (seg 5, `rotateY(PI/5)` so a flat FACE, not a
+    corner, points at `+Z` for the visor to sit on), one Phong visor raked
+    `-0.6` to face the rig, two leg boxes — so `SLOT_MESH.player` is 5 and
+    fat-world is 141. No antenna, no ball, no round eyes, no sphere.
+    `p.color` lives on the crest and nowhere else, in both renderers, and the
+    hull hex is exported ONCE as `PLAYER_HULL` from `sprites.js`. The hero
+    reads **lean, armoured and shouldered**, never round or bright: a
+    near-white hull was rejected as "too silly" (see spec §2 R1), so keep the
+    hull mid-value (L 0.28–0.62), the shoulder half-span at or past the
+    player's own `TILE*0.34` collision radius, and the plan footprint wider
+    than deep (`x/z >= 1.40`). Separation from WALKER is that shouldered,
+    desaturated structure carrying dark parts — never a re-hue.
   - `shellview.js` routes `app.screen` to `menudraw.js` and owns `kindSize` /
     `dims`, the one logical box every screen measures against (a real canvas
     wins, otherwise kind picks the classic box or the projected one). It is
