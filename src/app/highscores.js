@@ -90,6 +90,12 @@ export function scoreEntry(world, date) {
   return row;
 }
 
+export function scoresForHeat(list, heat) {
+  const h = clampHeat(heat);
+  const rows = Array.isArray(list) ? list : [];
+  return rows.filter((r) => (r.t | 0) === h);
+}
+
 export function qualifies(score, list) {
   return list.length < 10 || score > list[list.length - 1].s;
 }

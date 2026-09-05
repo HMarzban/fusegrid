@@ -5,6 +5,7 @@ import {
   recordScore,
   qualifies,
   saveScores,
+  scoresForHeat,
 } from "../src/app/highscores.js";
 
 let pass = 0,
@@ -295,6 +296,28 @@ if (_store) {
     "pactstore/pacestore/highscores share store.js defaultStore",
     shared,
   );
+}
+
+// ---- scoresForHeat: CORE tab includes legacy rows with no t; PLUS/MAX are exact ----
+check(
+  "CORE tab includes rows with no t",
+  scoresForHeat(DEFAULT_SCORES, 0).length === DEFAULT_SCORES.length,
+);
+{
+  const mixed = [
+    { s: 100, l: 1, d: "2026-09-04" },
+    { s: 200, l: 2, d: "2026-09-04", t: 1 },
+    { s: 300, l: 3, d: "2026-09-04", t: 2 },
+  ];
+  check(
+    "PLUS tab is only t===1",
+    scoresForHeat(mixed, 1).map((r) => r.s).join() === "200",
+  );
+  check(
+    "MAX tab is only t===2",
+    scoresForHeat(mixed, 2).map((r) => r.s).join() === "300",
+  );
+  check("empty PLUS is empty array", scoresForHeat(DEFAULT_SCORES, 1).length === 0);
 }
 
 console.log("\n  HIGHSCORES RESULT: " + pass + " PASS / " + fail + " FAIL");
