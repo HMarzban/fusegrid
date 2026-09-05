@@ -39,6 +39,13 @@ function sink(n) {
   while (x && x._dst) x = x._dst;
   return x;
 }
+// walks a start's node chain to the first real GainNode (skips any biquad
+// filter hop voice()/noise() insert ahead of the amplitude gain)
+function gainNode(s) {
+  let x = s.g;
+  while (x && !x.gain) x = x._dst;
+  return x;
+}
 function mkAC() {
   const ac = {
     currentTime: 0,
@@ -982,6 +989,78 @@ function installAC(ac) {
   );
   check("audio.js free of Math.random/Date.", !/Math\.random|Date\./.test(src));
   check("audio.js free of setInterval calls", !/\bsetInterval\s*\(/.test(src));
+}
+
+// ---- settings volumes (S1): SFX scales the value, music scales its targets ----
+{
+  const ac = mkAC();
+  installAC(ac);
+  const a = createAudio();
+  a.unlock();
+  check(
+    "setVols reports 1/1 by default and clamps to 0..1",
+    JSON.stringify(a.setVols({})) === '{"mus":1,"sfx":1}' &&
+      JSON.stringify(a.setVols({ mus: 5, sfx: -2 })) === '{"mus":1,"sfx":0}',
+    JSON.stringify(a.setVols({})),
+  );
+  a.setVols({ mus: 1, sfx: 1 });
+  ac.starts.length = 0;
+  a.play("uiMove");
+  const full = gainNode(ac.starts[0]).gain._l.find((e) => e[0] === "ramp")[1];
+  a.setVols({ sfx: 0.5 });
+  ac.starts.length = 0;
+  a.play("uiMove");
+  const half = gainNode(ac.starts[0]).gain._l.find((e) => e[0] === "ramp")[1];
+  check("sfxVol 0.5 halves the peak ramp", near(half, full * 0.5), full + " -> " + half);
+  check(
+    "sfx still routes direct-to-destination at a scaled volume",
+    ac.starts.every((s) => sink(s.g) === ac.destination),
+    String(ac.starts.length),
+  );
+  a.setVols({ sfx: 0 });
+  ac.starts.length = 0;
+  a.play("uiMove");
+  a.play("boom");
+  check(
+    "sfxVol 0 creates no node at all (exponentialRamp to 0 would throw)",
+    ac.starts.length === 0,
+    String(ac.starts.length),
+  );
+  a.setVols({ sfx: 1 });
+  ac.starts.length = 0;
+  a.play("uiMove");
+  check("sfxVol back to 1 restores the authored peak", near(gainNode(ac.starts[0]).gain._l.find((e) => e[0] === "ramp")[1], full));
+}
+{
+  const ac = mkAC();
+  installAC(ac);
+  const a = createAudio();
+  a.setVols({ mus: 0.5 });
+  a.unlock();
+  a.pump();
+  const mg = ac.starts.length ? ac.starts[0].g._dst : null;
+  check("musicGain init scales with musVol", !!mg && near(mg.gain.value, 0.25), String(mg && mg.gain.value));
+  const lastRamp = () => {
+    const l = mg.gain._l;
+    for (let i = l.length - 1; i >= 0; i--) if (l[i][0] === "ramp") return l[i];
+    return null;
+  };
+  a.duck(true);
+  check("duck target scales too (0.16 * 0.5)", near(lastRamp()[1], 0.08), JSON.stringify(lastRamp()));
+  a.duck(false);
+  check("duck-out restores the scaled base", near(lastRamp()[1], 0.25), JSON.stringify(lastRamp()));
+  a.setVols({ mus: 0 });
+  check("musVol 0 floors at MUS_FLOOR, never a literal 0", near(lastRamp()[1], 0.0001), JSON.stringify(lastRamp()));
+  a.setVols({ mus: 1 });
+  check(
+    "musVol 1 is byte-identical to today's MUS_BASE",
+    near(lastRamp()[1], 0.5),
+    JSON.stringify(lastRamp()),
+  );
+  a.toggle();
+  check("mute still wins over any musVol", near(lastRamp()[1], 0.0001), JSON.stringify(lastRamp()));
+  a.toggle();
+  check("unmute returns to the scaled base", near(lastRamp()[1], 0.5), JSON.stringify(lastRamp()));
 }
 
 console.log("\n  MUSIC RESULT: " + pass + " PASS / " + fail + " FAIL");

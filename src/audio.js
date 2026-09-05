@@ -44,6 +44,15 @@ export function createAudio() {
   let ctx = null,
     muted = false,
     ok = true;
+  /* Settings volumes (nb.settings.v1). Stored as 0..1 scalars and applied by
+     SCALING THE VALUE: SFX multiply their one peak-amplitude ramp, music
+     multiplies its three gain targets. No sfxGain node — that would re-couple
+     duck() to SFX and fail the direct-to-destination pin. At 1/1 every number
+     below is byte-identical to the authored mix. */
+  let musVol = 1,
+    sfxVol = 1;
+  const musBase = () => Math.max(MUS_FLOOR, MUS_BASE * musVol);
+  const musDuck = () => Math.max(MUS_FLOOR, MUS_DUCK * musVol);
   let musicGain = null,
     nextT = 0,
     stepN = 0,
@@ -89,7 +98,7 @@ export function createAudio() {
     return f;
   }
   function voice(type, f0, f1, dur, vol, spec, when) {
-    if (muted || !ensure()) return;
+    if (muted || sfxVol <= 0 || !ensure()) return;
     const c = ctx;
     try {
       if (c.state === "suspended") c.resume();
@@ -110,7 +119,7 @@ export function createAudio() {
       } else o.connect(g);
       g.connect(c.destination);
       g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(vol, t + 0.004);
+      g.gain.exponentialRampToValueAtTime(vol * sfxVol, t + 0.004);
       g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
       o.start(t);
       o.stop(t + dur + 0.03);
@@ -172,7 +181,7 @@ export function createAudio() {
       });
   }
   function noise(dur, vol, spec, when) {
-    if (muted || !ensure()) return;
+    if (muted || sfxVol <= 0 || !ensure()) return;
     const c = ctx,
       buf = noiseBuf();
     if (!buf || !c.createBufferSource) return;
@@ -189,7 +198,7 @@ export function createAudio() {
       } else s.connect(g);
       g.connect(c.destination);
       g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(vol, t + 0.003);
+      g.gain.exponentialRampToValueAtTime(vol * sfxVol, t + 0.003);
       g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
       s.start(t);
       s.stop(t + dur + 0.02);
@@ -254,7 +263,7 @@ export function createAudio() {
       if (ctx.state === "suspended") ctx.resume();
       if (!musicGain) {
         musicGain = ctx.createGain();
-        musicGain.gain.value = muted ? MUS_FLOOR : MUS_BASE;
+        musicGain.gain.value = muted ? MUS_FLOOR : musBase();
         musicGain.connect(ctx.destination);
       }
       nextT = ctx.currentTime + 0.05;
@@ -270,7 +279,7 @@ export function createAudio() {
     on = !!on;
     if (!musicGain || on === ducked) return;
     ducked = on;
-    rampMusicGain(on ? MUS_DUCK : MUS_BASE, on ? 0.35 : 0.6);
+    rampMusicGain(on ? musDuck() : musBase(), on ? 0.35 : 0.6);
   }
   function pump() {
     applyTrack();
@@ -437,7 +446,7 @@ export function createAudio() {
          screen flips and music blasts at full volume inside GAME */
       if (musicGain)
         rampMusicGain(
-          muted ? MUS_FLOOR : ducked ? MUS_DUCK : MUS_BASE,
+          muted ? MUS_FLOOR : ducked ? musDuck() : musBase(),
           muted ? 0.01 : 0.6,
         );
       return !muted;
@@ -446,6 +455,14 @@ export function createAudio() {
     unlocked,
     duck,
     pump,
+    setVols(v) {
+      const c = (x) => (typeof x === "number" && isFinite(x) ? Math.max(0, Math.min(1, x)) : 1);
+      if (v && v.mus != null) musVol = c(v.mus);
+      if (v && v.sfx != null) sfxVol = c(v.sfx);
+      if (musicGain)
+        rampMusicGain(muted ? MUS_FLOOR : ducked ? musDuck() : musBase(), 0.12);
+      return { mus: musVol, sfx: sfxVol };
+    },
     setTrack(id) {
       if (id && MUSIC_TRACKS[id]) wantId = id;
       applyTrack();
