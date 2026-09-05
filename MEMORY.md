@@ -16,6 +16,10 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-05 — R3b soundtrack wave 1
+- `intro`/`menu`/`arena`/`void`/`crown` rewritten around one motif (1̂3̂5̂6̂5̂) with hand-authored B sections for the last four; `menu` walks a tresillo bass with the lead in counterpoint and `oct()` is gone from it; `arena` and `crown` stop the whole band for a bar so SFX have a hole to land in, and `crown.B`'s hat quotes `arena.A`'s step pattern.
+- Three wave-2 numbers were pre-moved to keep the tempo/root distinctness pins green mid-wave: sand `STEP` 0.139, water root 49.00, factory root 82.41. Controller render gate signed (rests visible, A/B contrast visible, mood ordering correct); **user listen still open** — R3c waits on it. Bounces + waveform/spectrogram PNGs + MP3s in `.superpowers/sdd/2026-09-05-soundtrack/wav/wave1/`.
+
 ## 2026-09-05 — R3a soundtrack seam
 - `createAudio({ctx})` + `bounceTrack(id, seconds)` let an `OfflineAudioContext` render any track to WAV via `tools/bounce/` (dev-only, never precached, `out/` gitignored); `tracks.js` note tuples now accept an optional 4th velocity element (`[s,f,d,v?]`) which no track authors yet.
 - The ten pre-rewrite bounces are parked in `.superpowers/sdd/2026-09-05-soundtrack/wav/before/` as the A/B reference for R3b/R3c's listening checkpoints.
