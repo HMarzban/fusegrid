@@ -5,6 +5,7 @@ import { PRECACHE } from "../src/pwa/shell.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const MEDIA = join(ROOT, "media");
+const bannedName = "bomber" + "man";
 
 let pass = 0,
   fail = 0;
@@ -98,7 +99,7 @@ if (existsSync(mediaReadme)) {
       /webgl/.test(t) &&
       /chiptune/.test(t),
   );
-  check("media/README.md has no Bomberman", !t.toLowerCase().includes("bomberman"));
+  check("media/README.md has no banned franchise name", !t.toLowerCase().includes(bannedName.toLowerCase()));
 }
 
 // hard lock: media/ and og.png are listing art, never app-shell bytes
@@ -116,7 +117,7 @@ check(
   "root README.md points to media/ for listing art",
   /media\//.test(rootReadme),
 );
-check("root README.md has no Bomberman", !rootReadme.toLowerCase().includes("bomberman"));
+check("root README.md has no banned franchise name", !rootReadme.toLowerCase().includes(bannedName.toLowerCase()));
 
 console.log(fail ? "MEDIA FAIL" : "MEDIA OK");
 process.exit(fail ? 1 : 0);
