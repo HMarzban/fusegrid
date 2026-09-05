@@ -1652,5 +1652,49 @@ function installAC(ac) {
   );
 }
 
+// ---- R3b cross-track: staging, timbre scarcity, and the wave-1 sweep ----
+{
+  const HAND = ["menu", "arena", "void", "crown"];
+  const TRANSP = ["jungle", "ice", "factory", "water", "sand"];
+  check(
+    "hand-authored B: menu/arena/void/crown each own a distinct hat array",
+    HAND.every((k) => MUSIC_TRACKS[k].B.hat !== MUSIC_TRACKS[k].A.hat),
+    HAND.filter((k) => MUSIC_TRACKS[k].B.hat === MUSIC_TRACKS[k].A.hat).join(","),
+  );
+  check(
+    "transp B: the five biomes still share A's hat array by identity",
+    TRANSP.every((k) => MUSIC_TRACKS[k].B.hat === MUSIC_TRACKS[k].A.hat),
+    TRANSP.filter((k) => MUSIC_TRACKS[k].B.hat !== MUSIC_TRACKS[k].A.hat).join(","),
+  );
+  const sineLead = Object.keys(MUSIC_TRACKS).filter(
+    (k) => MUSIC_TRACKS[k].A.lead[0].t === "sine",
+  );
+  check(
+    "exactly one sine lead in the whole score, and it is VOID",
+    sineLead.length === 1 && sineLead[0] === "void",
+    sineLead.join(","),
+  );
+  const W1 = ["intro", "menu", "arena", "void", "crown"];
+  check(
+    "wave 1: every A keeps its register lanes and has a breath bar",
+    W1.every(
+      (k) => lanes(MUSIC_TRACKS[k].A) && breathBar(MUSIC_TRACKS[k].A) >= 0,
+    ),
+    W1.filter(
+      (k) => !lanes(MUSIC_TRACKS[k].A) || breathBar(MUSIC_TRACKS[k].A) < 0,
+    ).join(","),
+  );
+  check(
+    "wave 1: no rewritten track occupies every step of its loop",
+    W1.every((k) => occ(MUSIC_TRACKS[k].A) < MUSIC_TRACKS[k].A.LEN),
+    W1.map((k) => k + ":" + occ(MUSIC_TRACKS[k].A)).join(" "),
+  );
+  check(
+    "wave 1: every rewritten track uses at least two distinct waveforms",
+    W1.every((k) => waves(MUSIC_TRACKS[k].A) >= 2),
+    W1.map((k) => k + ":" + waves(MUSIC_TRACKS[k].A)).join(" "),
+  );
+}
+
 console.log("\n  MUSIC RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);
