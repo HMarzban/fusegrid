@@ -222,8 +222,8 @@ function mkE(type, x, y) {
     2 +
     1;
   check(
-    "fat-world draw calls stay 143",
-    calls === want && want === 143 && calls <= 500,
+    "fat-world draw calls stay 141",
+    calls === want && want === 141 && calls <= 500,
     String(calls),
   );
   const im = [];

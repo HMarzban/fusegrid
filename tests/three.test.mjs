@@ -16,7 +16,7 @@
     trim, and the exact post-S4 draw-call count within budget; the 2026-08-25
     elements-redesign wave adds capsule-box pickups + glow rings, glossy Phong
     bombs with variant base rings, enemy eye strips + visor wedge, the
-    bomberman player stack, crossed-quad flame blasts, and the §3 glyph/eye/
+    signal-runner player stack, crossed-quad flame blasts, and the §3 glyph/eye/
     visor/fire texture painters; the 2026-08-25 enemy-identity wave adds the
     silhouette-first per-type redesign checks (§6 EI.*) — nose-up 3-sided
     rocket pyramid, flat-C boomerang torus, baked chaser/fast silhouette
@@ -714,18 +714,16 @@ await sec("S2.I",()=>{
   w.items=[{x:100,y:120,t:"fire",col:"#ff8a3c",taken:false,pdef:null}];
   const scPlain=buildScene(w);
   const gP=scPlain.pools.player.children;
-  const bodyM=gP.find(o=>o.geometry.type==="SphereGeometry"
-    &&o.geometry.parameters.radius===CFG.TILE*0.26);
-  const dome=gP.find(o=>o.geometry.parameters
-    &&o.geometry.parameters.thetaLength===Math.PI/2);
-  const band=gP.find(o=>o.geometry.type==="CylinderGeometry"
-    &&o.geometry.parameters.openEnded===true);
-  check("R.headless player: white Lambert sphere body + dome helmet + navy"
-      +" visor band fallback (map-free)",
-    !!bodyM&&bodyM.material.isMeshLambertMaterial&&!bodyM.material.map
-    &&"#"+bodyM.material.color.getHexString()==="#f4f7ff"
-    &&!!dome&&!!band&&!band.material.map
-    &&"#"+band.material.color.getHexString()==="#0b1020");
+  const hullM=gP[0];
+  const crownM=gP.find(o=>o.geometry.type==="LatheGeometry");
+  const visorM=gP.find(o=>o.material.isMeshPhongMaterial);
+  check("R.headless player: matte Lambert hull + p.color crown lathe + dark"
+      +" Phong visor fallback (map-free)",
+    !!hullM&&hullM.material.isMeshLambertMaterial&&!hullM.material.map
+    &&"#"+hullM.material.color.getHexString()==="#dfe7f2"
+    &&!!crownM&&crownM.material.isMeshLambertMaterial
+    &&!!visorM&&!visorM.material.map
+    &&"#"+visorM.material.color.getHexString()==="#0b1020");
   const es0=scPlain.pools.enemies[0];
   const eye0=es0.children[es0.children.length-1];
   check("R.headless enemy eye strip last child, Basic #f4f7ff fallback",
@@ -998,32 +996,44 @@ await sec("S3.E",async()=>{
 await sec("S4.A",async()=>{
   const ent=await import("../src/render/three/entities.js");
   const {SLOT_MESH}=ent;
-  check("S4.A SLOT_MESH exported (player7/enemy4/bomb5/item2)",
-    typeof SLOT_MESH==="object"&&SLOT_MESH.player===7
+  check("S4.A SLOT_MESH exported (player5/enemy4/bomb5/item2)",
+    typeof SLOT_MESH==="object"&&SLOT_MESH.player===5
     &&SLOT_MESH.enemy===4&&SLOT_MESH.bomb===5&&SLOT_MESH.item===2,
     JSON.stringify(SLOT_MESH));
   const w=createWorld(71,1); loadLevel(w,1,false);
   const pools=createPools(BIOMES[0],null);
   const kinds=pools.player.children.map(o=>o.geometry?o.geometry.type:null)
     .filter(Boolean);
-  check("S4.A player = bomberman stack (white sphere body, helmet dome,"
-      +" visor band, antenna rod+ball, 2 boots; capsule gone)",
+  check("S4.A player = merged matte hull + p.color crown lathe + Phong visor"
+      +" + 2 boots (no sphere, no cylinder, no capsule)",
     kinds.length===SLOT_MESH.player
     &&!kinds.includes("CapsuleGeometry")
-    &&kinds.filter(k=>k==="SphereGeometry").length>=3
-    &&kinds.filter(k=>k==="CylinderGeometry").length>=2
-    &&kinds.filter(k=>k==="BoxGeometry").length===2,
+    &&kinds.filter(k=>k==="SphereGeometry").length===0
+    &&kinds.filter(k=>k==="CylinderGeometry").length===0
+    &&kinds.filter(k=>k==="BoxGeometry").length===2
+    &&kinds.filter(k=>k==="BufferGeometry").length===1
+    &&kinds.filter(k=>k==="LatheGeometry").length===1
+    &&kinds.filter(k=>k==="ExtrudeGeometry").length===1,
     kinds.join(","));
-  const dome=pools.player.children.find(o=>o.isMesh&&o.geometry.parameters
-    &&o.geometry.parameters.thetaLength===Math.PI/2);
-  check("S4.A helmet is a true hemisphere dome (thetaLength pi/2)", !!dome);
-  const band=pools.player.children.find(o=>o.isMesh
-    &&o.geometry.type==="CylinderGeometry"
-    &&o.geometry.parameters.openEnded===true);
-  check("S4.A visor band = open cylinder segment facing +Z above torso",
-    !!band&&Math.abs(band.geometry.parameters.thetaLength-Math.PI*1.1)<1e-9
-    &&band.position.y>CFG.TILE*0.3,
-    band?band.position.y.toFixed(2):"missing");
+  const crown=pools.player.children.find(o=>o.isMesh
+    &&o.geometry.type==="LatheGeometry");
+  const cp=crown&&crown.geometry.parameters&&crown.geometry.parameters.points;
+  let cmax=-1;
+  if(cp){ let best=-1;
+    for(let i=0;i<cp.length;i++) if(cp[i].x>best){best=cp[i].x;cmax=i;} }
+  check("S4.A crown flares then narrows (max radius at neither end)",
+    !!cp&&cp.length>=6&&cmax>0&&cmax<cp.length-1,
+    cp?cmax+"/"+cp.length:"missing");
+  const phongs=pools.player.children.filter(o=>o.isMesh
+    &&o.material.isMeshPhongMaterial);
+  const visor=phongs[0];
+  check("S4.A visor is the player's one Phong surface, raked to face the rig",
+    phongs.length===1&&visor.material.shininess>=90
+    &&visor.rotation.x>=-0.62&&visor.rotation.x<=-0.58
+    &&visor.position.y>CFG.TILE*0.5
+    &&pools.player.children[0].material.isMeshLambertMaterial,
+    visor?visor.rotation.x.toFixed(2)+" y="+visor.position.y.toFixed(2)
+      :"missing");
   // per-type enemy detail children (base mesh keeps prior geometry contract);
   // eyes ride children[2] AFTER the two ref-swapped details
   w.enemies=["walker","chaser","fast","stationary","boomerang","rocket"]
@@ -1410,7 +1420,7 @@ await sec("S4.E",async()=>{
     +POWER.length*SLOT_MESH.item+2+1;     /* instanced item kinds + blades + fx */
   check("S4.E fat-world draw calls === "+wantCalls+" (one-rim border,"
       +" <=500 gate)",
-    calls===wantCalls&&wantCalls===143&&calls<=500, String(calls));
+    calls===wantCalls&&wantCalls===141&&calls<=500, String(calls));
 });
 
 // ---- §S5 state overlays: WIN/LOSE/PAUSE paint the classic 2D layer in
@@ -1666,9 +1676,9 @@ await sec("EI",async()=>{
     const r=createRenderer3D(null,null,{audio:null,hud:null});
     r.render(wf,1/60);
     const calls=countDrawCalls(r._dbg.scene);
-    check("EI.10 fat-world draw calls pinned at 143 (≤500 gate,"
+    check("EI.10 fat-world draw calls pinned at 141 (≤500 gate,"
         +" 6-type mix)",
-      calls===143&&calls<=500,String(calls)); }
+      calls===141&&calls<=500,String(calls)); }
  });
 
 /* ---- §EB enemy 3D bodies (spec 2026-09-04-enemy-3d-bodies "Per foe"):

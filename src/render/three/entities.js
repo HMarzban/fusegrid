@@ -8,7 +8,7 @@
    truth, biome-independent); atlas maps merge only when they are real
    THREE.Textures, so headless keeps flat bright fallbacks. v2 silhouettes:
    capsule-box pickups + additive glow rings, glossy Phong bombs with variant
-   base rings, bomberman player stack, crossed-quad flame blasts. Enemy
+   base rings, signal-runner player stack, crossed-quad flame blasts. Enemy
    identity 2026-08-25: per-type 3D designs translated silhouette-first from
    the TOP-DOWN 2D sprites (blob trio = glossy Phong spheres with baked
    scale + big tilted face planes, stationary square shell + magenta core +
@@ -47,7 +47,7 @@ export const POOL_CAPS = {
 };
 /* Mesh counts per pool slot (base + art children) — feed the draw-call
    budget formula. */
-export const SLOT_MESH = { player: 7, enemy: 4, bomb: 5, item: 2 };
+export const SLOT_MESH = { player: 5, enemy: 4, bomb: 5, item: 2 };
 export const FLASH_CAP = 3;
 
 const _m = new THREE.Matrix4(),
@@ -840,90 +840,64 @@ const SPARK_B = sharedMat(new THREE.MeshBasicMaterial({ color: "#ffd447" }));
 export function createPools(biome, atlas) {
   const group = new THREE.Group();
 
-  /* Player v2: bomberman stack — white sphere body, p.color hemisphere dome,
-     open visor band segment facing +Z, antenna rod+ball, two boots. Slot
-     group carries the ground origin; children stack upward. */
+  /* SIGNAL RUNNER (items-player-art 2026-09-05): five meshes — one merged
+     matte hull (torso lathe fused with two yoke chips), one p.color crown
+     lathe, one Phong visor, two boots. Both profiles run bottom -> top and
+     each flares once then narrows (TORSO_P at 1.02 is the shoulder line,
+     CROWN_P at 0.16 the brow), so a single Lambert hull carries a two-tone
+     read exactly as the foe hulls do. The visor rake -0.6 is e_fast's face
+     rake: a vertical band faces the horizon and shows the frozen 59.1 deg
+     rig nothing. p.color lives on the crown and nowhere else, because the
+     crown is the largest surface visible from directly above. The dome, the
+     antenna rod and ball and the round eyes are gone for good. */
   const player = new THREE.Group();
   player.userData.tag = "player";
-  const helmetMat = sharedMat(
-    new THREE.MeshLambertMaterial({ color: "#37f0d0" }),
+  const T = CFG.TILE;
+  const TORSO_P = [
+    [0.52, 0.14], [0.66, 0.44], [0.62, 0.86], [0.74, 1.02],
+    [0.56, 1.22], [0.3, 1.34], [0, 1.36],
+  ];
+  const CROWN_P = [[0.98, 0], [1.06, 0.16], [0.92, 0.3], [0.74, 0.58], [0.44, 0.84], [0, 1.0]];
+  const YOKE_P = [[-0.34, -0.3], [0.34, -0.3], [0.34, 0.3], [-0.34, 0.3]];
+  const VISOR_P = [[-0.86, -0.2], [0.86, -0.2], [0.72, 0.22], [-0.72, 0.22]];
+  const hullMat = sharedMat(new THREE.MeshLambertMaterial({ color: "#dfe7f2" }));
+  const crownMat = sharedMat(new THREE.MeshLambertMaterial({ color: "#37f0d0" }));
+  const bootMat = sharedMat(new THREE.MeshLambertMaterial({ color: "#0d3f78" }));
+  const yoke = (s) =>
+    plate(YOKE_P, 0.26, T * 0.3)
+      .rotateX(-Math.PI / 2)
+      .translate(s * T * 0.2, T * 0.36, 0);
+  const hull = new THREE.Mesh(
+    sharedGeo(mergeGeos(lathe(TORSO_P, 6, T * 0.3), yoke(-1), yoke(1))),
+    hullMat,
   );
-  const bodyMat = sharedMat(
-    new THREE.MeshLambertMaterial({ color: "#f4f7ff" }),
-  );
-  const T4 = CFG.TILE * 0.01;
-  const body = new THREE.Mesh(
-    sharedGeo(new THREE.SphereGeometry(CFG.TILE * 0.26, 16, 12)),
-    bodyMat,
-  );
-  body.position.y = CFG.TILE * 0.3;
-  body.castShadow = true;
-  body.receiveShadow = true;
-  const helmet = new THREE.Mesh(
-    sharedGeo(
-      new THREE.SphereGeometry(
-        CFG.TILE * 0.29,
-        16,
-        12,
-        0,
-        Math.PI * 2,
-        0,
-        Math.PI / 2,
-      ),
-    ),
-    helmetMat,
-  );
-  helmet.position.y = CFG.TILE * 0.34;
-  helmet.castShadow = true;
-  const visorMat = new THREE.MeshBasicMaterial({ transparent: true });
+  hull.castShadow = true;
+  hull.receiveShadow = true;
+  const crown = new THREE.Mesh(sharedGeo(lathe(CROWN_P, 6, T * 0.19)), crownMat);
+  crown.position.y = T * 0.52;
+  crown.castShadow = true;
+  const visorMat = new THREE.MeshPhongMaterial({
+    color: "#0b1020",
+    shininess: 120,
+    specular: new THREE.Color("#ffffff"),
+    transparent: true,
+  });
   let visorBase = "#0b1020";
   if (atlas && atlas.visor instanceof THREE.Texture) {
     visorMat.map = atlas.visor;
     visorMat.color.set("#ffffff");
     visorBase = "#ffffff";
-  } else visorMat.color.set("#0b1020");
-  const visor = new THREE.Mesh(
-    sharedGeo(
-      new THREE.CylinderGeometry(
-        CFG.TILE * 0.245,
-        CFG.TILE * 0.245,
-        CFG.TILE * 0.11,
-        16,
-        1,
-        true,
-        -Math.PI * 0.55,
-        Math.PI * 1.1,
-      ),
-    ),
-    visorMat,
-  );
-  visor.position.y = CFG.TILE * 0.33;
-  const rodMat = sharedMat(new THREE.MeshLambertMaterial({ color: "#0b1020" }));
-  const rod = new THREE.Mesh(
-    sharedGeo(
-      new THREE.CylinderGeometry(T4 * 0.9, T4 * 0.9, CFG.TILE * 0.14, 6),
-    ),
-    rodMat,
-  );
-  rod.position.y = CFG.TILE * 0.7;
-  const ballMat = sharedMat(new THREE.MeshBasicMaterial({ color: "#ff5d73" }));
-  const ball = new THREE.Mesh(
-    sharedGeo(new THREE.SphereGeometry(T4 * 0.62, 8, 6)),
-    ballMat,
-  );
-  ball.position.y = CFG.TILE * 0.82;
-  const footGeo = sharedGeo(
-    new THREE.BoxGeometry(CFG.TILE * 0.22, CFG.TILE * 0.1, CFG.TILE * 0.26),
-  );
-  const bootMat = sharedMat(
-    new THREE.MeshLambertMaterial({ color: "#0d3f78" }),
-  );
-  const footL = new THREE.Mesh(footGeo, bootMat);
-  footL.position.set(-CFG.TILE * 0.15, CFG.TILE * 0.05, 0);
-  const footR = new THREE.Mesh(footGeo, bootMat);
-  footR.position.set(CFG.TILE * 0.15, CFG.TILE * 0.05, 0);
-  footL.castShadow = footR.castShadow = true;
-  player.add(body, helmet, visor, rod, ball, footL, footR);
+  }
+  const visor = new THREE.Mesh(sharedGeo(plate(VISOR_P, 0.14, T * 0.19)), visorMat);
+  visor.position.set(0, T * 0.6, T * 0.16);
+  visor.rotation.x = -0.6;
+  const footGeo = sharedGeo(new THREE.BoxGeometry(T * 0.2, T * 0.11, T * 0.26));
+  const bootL = new THREE.Mesh(footGeo, bootMat);
+  bootL.position.set(-T * 0.17, T * 0.055, 0);
+  const bootR = new THREE.Mesh(footGeo, bootMat);
+  bootR.position.set(T * 0.17, T * 0.055, 0);
+  bootL.castShadow = bootR.castShadow = true;
+  player.add(hull, crown, visor, bootL, bootR);
 
   const enemies = [],
     bombs = [];
@@ -1179,22 +1153,20 @@ export function createPools(biome, atlas) {
         p.face ? p.face.x : 0,
         p.face ? p.face.y : 1,
       );
-      helmetMat.color.set(p.color || "#37f0d0");
+      crownMat.color.set(p.color || "#37f0d0");
       const pulse = 0.5 + 0.5 * Math.sin(t * 8);
       if (p.shield) {
-        helmetMat.emissive.set("#6fb7ff");
-        helmetMat.emissiveIntensity = 0.35 + 0.65 * pulse;
-        visorMat.color
-          .set(visorBase)
-          .lerp(_c.set("#6fb7ff"), 0.4 + 0.5 * pulse);
+        crownMat.emissive.set("#6fb7ff");
+        crownMat.emissiveIntensity = 0.35 + 0.65 * pulse;
+        visorMat.color.set(visorBase).lerp(_c.set("#6fb7ff"), 0.4 + 0.5 * pulse);
       } else {
-        helmetMat.emissive.set("#000000");
-        helmetMat.emissiveIntensity = 1;
+        crownMat.emissive.set("#000000");
+        crownMat.emissiveIntensity = 1;
         visorMat.color.set(visorBase);
       }
       bootMat.color.set(p.kick ? "#c07a3a" : "#0d3f78");
-      bodyMat.color.set("#f4f7ff");
-      if (p.passing) bodyMat.color.lerp(_c.set("#77ff99"), 0.38);
+      hullMat.color.set("#dfe7f2");
+      if (p.passing) hullMat.color.lerp(_c.set("#77ff99"), 0.38);
     } else player.visible = false;
 
     let ei = 0;

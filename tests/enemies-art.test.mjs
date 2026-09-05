@@ -458,8 +458,8 @@ function mkE(type, x, y) {
   } catch (e) {
     console.log(e.message);
   }
-  // 143 since the 4-rail border collapsed to one extruded cabinet rim
-  check("fat-world draw calls stay 143", calls === 143, String(calls));
+  // 141 since the player stack dropped from seven meshes to five
+  check("fat-world draw calls stay 141", calls === 141, String(calls));
 }
 
 {
