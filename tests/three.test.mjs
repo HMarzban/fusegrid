@@ -1687,7 +1687,7 @@ await sec("EI",async()=>{
     check("EI.9b headless face/slit fallback bright #f4f7ff (no DOM atlas)",
       "#"+face.color.getHexString()==="#f4f7ff"&&!face.map
       &&typeof document==="undefined"); }
-  // §6.10 fat-world draw-call formula pinned at 143 (instanced pickups)
+  // §6.10 fat-world draw-call formula pinned at 141 (instanced pickups)
   { const wf=createWorld(93,1); loadLevel(wf,1,false);
     wf.enemies=[]; wf.items=[];
     for(let i=0;i<16;i++)wf.enemies.push(mkE(types[i%6],60+i*30,80));

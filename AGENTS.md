@@ -76,11 +76,11 @@ not shell screens. Do not add them as `SCREEN` values.
     Never assign `#gl.width`/`#gl.height` from `sizeCanvases` — wrapper owns
     the Retina drawing buffer (`setPixelRatio` + `setSize`). Stomping it
     crops WebGL to the bottom-left quarter on dpr=2.
-  - The board border is ONE extruded cabinet rim (`tag:"trim"`, `RIM_W 18` /
+  - The board border is ONE extruded cabinet rim (`tag:"trim"`, `RIM_W 36` /
     `RIM_LIP 6`) with a hole — never four rails, which crossed at the corners.
   - Enemy bodies: one `ENEMY_3D[type]` row per foe, each exactly FOUR meshes
     (hull + two ref-swapped details + `eye_<type>` face plane), so
-    `SLOT_MESH.enemy` stays 4 and fat-world stays 143. Parts are
+    `SLOT_MESH.enemy` stays 4 and fat-world stays 141. Parts are
     pre-transformed and fused by `mergeGeos` (variadic, and it synthesises an
     index because `ExtrudeGeometry` emits none) — never added as children.
     `lathe(pts,seg,r)` profiles run bottom -> top or normals invert; a radius
@@ -90,6 +90,12 @@ not shell screens. Do not add them as `SCREEN` values.
     because two tests pin it there; `walker` splits into mirrored halves so
     the alternating stomp keeps two transforms). `shade` is the only foe with
     `castShadow=false`; additive accents never cast.
+  - Player body: a FIVE-mesh stack — one merged matte hull (torso lathe
+    fused with two yoke chips), one `p.color` crown lathe, one Phong visor
+    raked `-0.6` to face the rig, two boots — so `SLOT_MESH.player` is 5 and
+    fat-world is 141. No antenna, no ball, no round eyes, no sphere. `p.color`
+    lives on the crown and nowhere else, in both renderers. Separation from
+    WALKER is a light matte hull carrying dark parts, never a re-hue.
   - `shellview.js` routes `app.screen` to `menudraw.js` and owns `kindSize` /
     `dims`, the one logical box every screen measures against (a real canvas
     wins, otherwise kind picks the classic box or the projected one). It is
@@ -161,7 +167,7 @@ Node v26, `"type": "module"`. No build step, no bundler.
   Node-testable three **math** stays DOM-free.
 - Frozen `CFG` — mutate world, not config. `BIOMES` elements are shallow.
 - Keep zero **npm** deps. Vendored render libs are OK.
-- 3D draw-call budget is `<=500` (fat-world currently 143). Child-index
+- 3D draw-call budget is `<=500` (fat-world currently 141). Child-index
   contracts in `three.test.mjs` are ABI — do not "flex" them in a drive-by.
 - No comments unless the file already uses explanatory block comments (its style).
   Match the compact, no-whitespace-after-key style already in the codebase.
@@ -184,12 +190,13 @@ not covered by Node — play-verify in a browser after render changes.
   to 1–2 lines: what changed, why, or what's left open.
 
 ## Learned User Preferences
-- Public name and wordmark are Fusegrid / FUSE/GRID; keep the local checkout as `rollblock`; do not put Bomberman on public surfaces.
+- Public name and wordmark are Fusegrid / FUSE/GRID; keep the local checkout as `rollblock`. Never write Bomberman into any committed file (specs, comments, commit messages, docs, alt text, tags) — it is a private quality reference only; `docs/` is public.
 - This repository is the arcade game only — do not add unrelated demos.
 - Keep a visible path to the public repo: menu SOURCE and the toolbar Source control open https://github.com/HMarzban/fusegrid.
 - Keep ITEMS, ENEMIES, and HOW TO as in-menu help so pickups and foes are explained in the shell, not only as HUD chips.
 - Difficulty is Heat on LEVEL SELECT (CORE / PLUS / MAX). Global **pace** (EASY / NORM / HARD) is a separate LEVEL SELECT control (`[`/`]`), persisted in `nb.pace.v1`, scaling player/enemy move speed on `world.pace` — not frozen `CFG`. Pact (`1–4`) and rooms 6–8 unlock after the first FUSE/GRID CLEAR. Score × heat is persist-only; HIGH SCORES fifth column tags pact bitmask (`p`). Music uses WebAudio stereo panning on the oscillator engine (zero npm deps). Mid-run heat, always-on Sudden Death, and internet play stay parked.
-- Do not commit `.cursor/`.
+- Foes must read as arcade characters (distinct silhouette, face or lens, shading, facing) in CLASSIC 2D and REAL 3D, not flat colored tokens. `enemybody.js` is the 2D five-beat build; 3D matches via merged hulls in the four-mesh slot. Art only — do not retune AI.
+- Do not commit `.cursor/` or `e2e-artifacts/` (both gitignored).
 
 ## Learned Workspace Facts
 - Surviving a hit leaves live bombs and blades in the world.
@@ -199,8 +206,8 @@ not covered by Node — play-verify in a browser after render changes.
 - Gold WALL never breaks; green BRICK breaks and stops a normal blast.
 - Rooms 6–8 use SAND / VOID / CROWN palettes, chiptune cues (`sand` / `void` / `crown`), and boom tints (kick 69 / 40 / 82). Those rooms append exclusive BURROW / SHADE / KNIGHT (`ROOM_EXTRA`); do not replace CORE L1–5 spawn lists. Rooms 1–5 stay JUNGLE–ARENA. Ice/water/arena boom numbers stay. Menu/intro use the default boom.
 - Live 3D uses one frozen rig `{az:0, el:0.54, dist:870, target:[0,-48,0]}` (59.1° 3/4) and one frozen light recipe — warm key `#fff4e2` 1.26 with the only shadow, cool fill `#bcd4ff` 0.54 opposite-and-behind (never casts), hemi 0.72, ambient 0.30. Key:fill 2.3333:1; `PCFSoftShadowMap` ignores `shadow.radius`, so softness is the ratio, not blur. The renderer runs `NoToneMapping` and the scene carries NO fog: ACES at exposure 1 mapped linear 0.02→0.007, capped white at 0.763 and zeroed JUNGLE `floor0`'s red channel, while `Fog(bg1,700,1600)` replaced 43% of the far board corners with `bg1` (89% at the `DIST_MAX` dolly clamp). CLASSIC 2D blits the authored hex, so REAL 3D must not regrade the same palette. Do not add a per-biome camera or light table. VOID staying dark is the look, not a bug — its darkness is albedo, not rig, so one global recipe preserves it. Stale: `el:0.62` / `dist:960` / `target y -44`, key 1.05 / fill 0.45 / hemi 0.55 / ambient 0.18, ACES tone mapping, and any `scene.fog`.
-- The 3D board sits in a cabinet well: ONE `ExtrudeGeometry` rim with a hole, tinted `wall`→`bg1` so it recedes. Four rails crossed at the corners and stuck out — never go back. Border is 1 draw call, so fat-world is 143.
+- The 3D board sits in a cabinet well: ONE `ExtrudeGeometry` rim with a hole, tinted `wall`→`bg1` so it recedes. Four rails crossed at the corners and stuck out — never go back. Border is 1 draw call, so fat-world is 141.
 - At `el:0.54` the camera sits 59.1° above the horizon — past 45°, so it reads more TOP than side. The PLAN-VIEW FOOTPRINT is an enemy's primary cue, and nine distinguishable footprints beat nine distinguishable profiles: three scaled spheres were three circles from up there. Detail below the waist buys grounding and shadow shape, not visibility, and a face plane has to face the RIG (rake it up) rather than the direction of travel.
 - A stale service worker serves pre-change bytes and looks exactly like a render change that did not land. Unregister the SW and delete its caches before trusting any headed 3D screenshot.
-- CROWN's collision is its `brickA` `#ffd447`, which is `fast`'s identity colour exactly. The three golds separate on value and shape, never hue: `knight` is the only bright-specular Phong body plus an unlit pale nasal bar, `fast` carries dark fins over a straight-edged delta, `burrow` is a duller value with an additive plume. Do not restyle the biome to fix this.
+- CROWN's collision is its `brickA` `#ffd447`, which is `fast`'s identity colour exactly. The three golds separate on value and shape, never hue: `knight` is the only bright-specular Phong **foe** plus an unlit pale nasal bar — the player visor is the cast's one other Phong surface, `fast` carries dark fins over a straight-edged delta, `burrow` is a duller value with an additive plume. Do not restyle the biome to fix this.
 - PWA is a versioned app-shell precache (`fusegrid-shell-vN`). Offline after the first visit; first visit still needs network. Relative `./` scope covers Pages `/fusegrid/` and loopback. New `CACHE_NAME`/REV: `register.update` + one-shot `controllerchange` reload. iOS install is Add to Home Screen; module SW wants 16.4+.
