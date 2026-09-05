@@ -2,7 +2,8 @@ import { step, createWorld, newIntent, loadLevel } from "../src/core/sim.js";
 import { HEAT, heatRoster, heatProfile, heatScore } from "../src/core/heat.js";
 import { PACT, applyPact } from "../src/core/pact.js";
 import { CFG, T, key, ROOM_LOCK, ROOM_MAX, isFinale, roomCap } from "../src/core/config.js";
-import { winHeadline, overlayCue, runStamp, copyPayload } from "../src/render/scenes.js";
+import { winHeadline, overlayCue, runStamp, copyPayload, drawOverlay,
+  overlayBox, pauseHit, PAUSE_ROWS, PAUSE_ROW_H } from "../src/render/scenes.js";
 import { scoreEntry } from "../src/app/highscores.js";
 import { PACT_KEY, loadPactUnlocked, savePactUnlocked } from "../src/app/pactstore.js";
 import { readFileSync } from "node:fs";
@@ -61,8 +62,10 @@ check(
     "SPACE / TAP · new run",
 );
 check(
-  "overlayCue PAUSE names quit",
-  overlayCue({ state: "PAUSE", heat: 1 }).includes("M / MENU"),
+  "overlayCue PAUSE is the pause-list cue, exactly",
+  overlayCue({ state: "PAUSE", heat: 1 }) ===
+    "↑↓ SELECT · ENTER CONFIRM · P RESUME · M QUIT",
+  overlayCue({ state: "PAUSE", heat: 1 }),
 );
 check(
   "runStamp is raw score + biome + heat",
@@ -240,6 +243,97 @@ check(
   check("loadPactUnlocked empty is false", loadPactUnlocked(st) === false);
   check("savePactUnlocked writes nb.pact.v1=1", savePactUnlocked(st) === true && st.getItem(PACT_KEY) === "1");
   check("loadPactUnlocked after save", loadPactUnlocked(st) === true);
+}
+
+// ---- pause chrome: one named box feeds both draws and both hit tests ----
+{
+  check(
+    "PAUSE_ROWS is the four-verb list, frozen, pitch 26",
+    Object.isFrozen(PAUSE_ROWS) &&
+      PAUSE_ROWS.join("|") === "RESUME|RESTART|OPTIONS|QUIT TO MENU" &&
+      PAUSE_ROW_H === 26,
+    PAUSE_ROWS.join("|"),
+  );
+  const b2 = overlayBox("2d"),
+    b3 = overlayBox("3d"),
+    bi = overlayBox("iso");
+  check(
+    "overlayBox: 2d and real 3d share the 600x520 centred box",
+    b2.w === 600 && b2.h === 520 && b2.cx === 300 && b2.cy === 260 &&
+      JSON.stringify(b3) === JSON.stringify(b2),
+    JSON.stringify(b2),
+  );
+  check(
+    "overlayBox: iso keeps today's projected box at 304,188",
+    bi.w === 608 && bi.h === 352 && bi.cx === 304 && bi.cy === 188,
+    JSON.stringify(bi),
+  );
+  for (const B of [b2, bi]) {
+    const tag = B.w + "x" + B.h;
+    let all = true;
+    for (let i = 0; i < 4; i++)
+      if (pauseHit(B.cx, B.cy - 30 + i * PAUSE_ROW_H, B) !== i) all = false;
+    check("pauseHit maps every row centre in " + tag, all);
+    check(
+      "pauseHit vertical band is +-13 in " + tag,
+      pauseHit(B.cx, B.cy - 30 + 13, B) === 0 && pauseHit(B.cx, B.cy - 30 - 14, B) === -1,
+    );
+    check(
+      "pauseHit horizontal band is +-130 in " + tag,
+      pauseHit(B.cx + 130, B.cy - 30, B) === 0 && pauseHit(B.cx + 131, B.cy - 30, B) === -1,
+    );
+    check(
+      "pauseHit off the rows is -1 in " + tag,
+      pauseHit(B.cx, B.cy + 86, B) === -1 && pauseHit(B.cx, B.cy - 70, B) === -1,
+    );
+    check(
+      "the whole list (cy-70 .. cy+86) clears the " + tag + " box",
+      B.cy - 70 > 0 && B.cy + 86 < B.h,
+      B.cy - 70 + ".." + (B.cy + 86),
+    );
+  }
+}
+{
+  const texts = [];
+  const c = new Proxy(function () {}, {
+    get: (t, p) => {
+      if (p === Symbol.toPrimitive) return () => "";
+      return (...a) => {
+        if (p === "fillText") texts.push(String(a[0]));
+        return c;
+      };
+    },
+    apply: () => c,
+    set: () => true,
+  });
+  const B = overlayBox("2d");
+  drawOverlay(c, { state: "PAUSE" }, B.w, B.h, B.cx, B.cy);
+  check(
+    "drawOverlay PAUSE defaults to the list at cursor 0",
+    texts.includes("PAUSED") &&
+      PAUSE_ROWS.every((r) => texts.includes(r)) &&
+      texts.includes("↑↓ SELECT · ENTER CONFIRM · P RESUME · M QUIT"),
+    texts.join("|"),
+  );
+  texts.length = 0;
+  drawOverlay(c, { state: "PAUSE" }, B.w, B.h, B.cx, B.cy, { view: 1, cursor: 0 });
+  check(
+    "drawOverlay view 1 paints the veil only — no PAUSED under the settings plate",
+    texts.length === 0,
+    texts.join("|"),
+  );
+  texts.length = 0;
+  drawOverlay(
+    c,
+    { state: "WIN", level: 3, finale: false, score: 10, heat: 0 },
+    B.w, B.h, B.cx, B.cy,
+    { view: 1, cursor: 2 },
+  );
+  check(
+    "drawOverlay WIN/LOSE branches ignore ui entirely",
+    texts.some((s) => s.indexOf("CLEARED") >= 0),
+    texts.join("|"),
+  );
 }
 
 console.log("\n  HEAT RESULT: " + pass + " PASS / " + fail + " FAIL");

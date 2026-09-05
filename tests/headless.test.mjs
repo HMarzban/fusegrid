@@ -810,8 +810,11 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   // S2 options-screen wave: +24 lines (menudraw settingsHit/layout import,
   // onSettings persist+apply wiring, the live-settings re-seed, the SETTINGS
   // tap router in canvas pointerdown) — bumped 655->679.
-  check("main.js stays a lean browser entry (<=679 lines)",
-    L.length<=679,String(L.length));
+  // S3.1 pause-list wave: +64 lines (overlayBox/pauseHit import, onPauseCmd
+  // handler, pauseView-aware onPause, the unconditional GAME app.update call,
+  // pause render opts, the GAME-branch pointerdown router) — bumped 679->743.
+  check("main.js stays a lean browser entry (<=743 lines)",
+    L.length<=743,String(L.length));
   const lastImp=L.reduce((a,l,i)=>/^import[\s{]/.test(l)?i:a,-1);
   const firstDecl=L.findIndex(l=>/^(export\s|const\s|let\s|var\s|function\s|class\s)/.test(l));
   check("main.js keeps every import at the top (no mid-file import sprawl)",
@@ -969,6 +972,106 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   check("KeyC on ATTRACT falls through to app.key and starts a CORE run",
     g.app.screen===SCREEN.GAME&&g.world.state==="PLAY"&&(g.world.heat|0)===0,
     g.app.screen+"/"+g.world.state);
+}
+
+// ---- P1 PAUSE list: every row's wave, and the score semantics they inherit ----
+{
+  const noop=()=>{};
+  const mem={};
+  globalThis.window={addEventListener:noop,removeEventListener:noop,
+    localStorage:{getItem:(k)=>(k in mem?mem[k]:null),
+      setItem:(k,v)=>{mem[k]=String(v);}}};
+  try{
+    {
+      const g=createGame(null,{autoplay:true});
+      g.input.onPause();
+      check("P1 P pauses inside GAME and resets the list",
+        g.world.state==="PAUSE"&&g.app.pauseCursor===0&&g.app.pauseView===0,
+        g.world.state+"/"+g.app.pauseCursor+"/"+g.app.pauseView);
+      check("P1 the shell stays GAME through PAUSE (music/HUD/touch gates)",
+        g.app.screen===SCREEN.GAME,String(g.app.screen));
+      g.loop(16);
+      g.app.confirm();                        // row 0 RESUME
+      check("P1 RESUME returns to PLAY",g.world.state==="PLAY",g.world.state);
+    }
+    {
+      delete mem["nb.highscores.v1"];
+      const g=createGame(null,{autoplay:true});
+      g.world.score=1500; g.world.level=3;
+      g.input.onPause(); g.loop(16);
+      g.app.pauseCursor=1; g.app.confirm();   // RESTART
+      check("P1 RESTART reloads L1 at PLAY with the score zeroed",
+        g.world.level===1&&g.world.state==="PLAY"&&g.world.score===0,
+        g.world.level+"/"+g.world.state+"/"+g.world.score);
+      check("P1 RESTART BANKS the run first (the toolbar button lost it)",
+        loadScores().some(r=>r.s===1500),
+        JSON.stringify(loadScores().slice(0,3)));
+    }
+    {
+      delete mem["nb.highscores.v1"];
+      const g=createGame(null,{autoplay:true});
+      g.world.score=1234;
+      g.input.onPause(); g.loop(16);
+      g.app.pauseCursor=3; g.app.confirm();   // QUIT TO MENU
+      check("P1 QUIT lands on MENU with no PAUSE ghost",
+        g.app.screen===SCREEN.MENU&&g.world.state==="PLAY",
+        g.app.screen+"/"+g.world.state);
+      check("P1 QUIT records the score exactly like KeyM",
+        loadScores().some(r=>r.s===1234&&r.l===1),
+        JSON.stringify(loadScores().slice(0,3)));
+      delete mem["nb.highscores.v1"];
+      const gMax=createGame(null,{autoplay:true});
+      gMax.world.score=1234; gMax.world.heat=2;
+      gMax.input.onPause(); gMax.loop(16);
+      gMax.app.pauseCursor=3; gMax.app.confirm();
+      check("P1 QUIT MAX persist stores s*3 and t=2",
+        loadScores().some(r=>r.s===3702&&r.t===2&&r.l===1),
+        JSON.stringify(loadScores().slice(0,3)));
+    }
+    {
+      const g=createGame(null,{autoplay:true});
+      g.input.onPause(); g.loop(16);
+      g.app.pauseCursor=2; g.app.confirm();   // OPTIONS
+      check("P1 OPTIONS opens inline — pauseView 1, shell still GAME",
+        g.app.pauseView===1&&g.app.screen===SCREEN.GAME
+        &&g.world.state==="PAUSE",
+        g.app.pauseView+"/"+g.app.screen+"/"+g.world.state);
+      g.app.optRow=6; g.app.confirm();
+      check("P1 the paused page drives the SAME knob code",
+        g.app.settings.shk===0,String(g.app.settings.shk));
+      g.input.onPause();
+      check("P1 P on the paused page returns to the LIST, never to play",
+        g.app.pauseView===0&&g.world.state==="PAUSE",
+        g.app.pauseView+"/"+g.world.state);
+      g.input.onPause();
+      check("P1 P on the list resumes",g.world.state==="PLAY",g.world.state);
+    }
+    {
+      const g=createGame(null,{autoplay:true});
+      g.input.onPause(); g.loop(16);
+      g.input._onKey({code:"ArrowDown",preventDefault(){}});
+      check("P1 ArrowDown taps down the pause list",g.app.pauseCursor===1,
+        String(g.app.pauseCursor));
+      g.app.pauseCursor=0;
+      g.input._onKey({code:"ArrowUp",preventDefault(){}});
+      check("P1 ArrowUp wraps to the last row",g.app.pauseCursor===3,
+        String(g.app.pauseCursor));
+      g.app.pauseView=1;
+      g.input.onUiKey("KeyM");
+      check("P1 KeyM quits from the OPTIONS view too",
+        g.app.screen===SCREEN.MENU,String(g.app.screen));
+    }
+    {
+      const g=createGame(null,{autoplay:true});
+      g.input._onKey({code:"Space",preventDefault(){}});
+      let t=0; g.loop(t); t+=20; g.loop(t);
+      g.input.onPause();
+      t+=20; g.loop(t);
+      check("P1 a held fire across the PLAY->PAUSE edge does not confirm a row"
+        +" (app.update runs every GAME frame, so prevConfirm never resets)",
+        g.world.state==="PAUSE",g.world.state);
+    }
+   }finally{ delete globalThis.window; }
 }
 
 console.log(fail? "HEADLESS FAIL":"HEADLESS OK");

@@ -49,6 +49,15 @@ export const OPT_ROWS = Object.freeze([
   "REDUCE FLASH",
   "RESET DEFAULTS",
 ]);
+/* PAUSE list (spec §3). world.state stays PAUSE and the shell stays GAME —
+   that is what keeps the room's track playing, the HUD gate open, the touch
+   gate honest and every screen===GAME guard true. */
+export const PAUSE_ITEMS = Object.freeze([
+  "RESUME",
+  "RESTART",
+  "OPTIONS",
+  "QUIT TO MENU",
+]);
 export const SOURCE_URL = "https://github.com/HMarzban/fusegrid";
 const REP_FIRST = 0.35,
   REP_NEXT = 0.11;
@@ -60,6 +69,7 @@ export function createMenuApp(opts = {}) {
   const onStart = o.onStart || null;
   const onSource = o.onSource || null;
   const onSettings = o.onSettings || null;
+  const onPauseCmd = o.onPauseCmd || null;
   const app = {
     screen: o.autoplay ? SCREEN.GAME : SCREEN.INTRO,
     cursor: 0,
@@ -69,6 +79,8 @@ export function createMenuApp(opts = {}) {
     settings: clampSettings(o.settings),
     optRow: 0, // OPTIONS row cursor — its OWN field, so the MENU cursor
     // survives a round trip through the page
+    pauseCursor: 0,
+    pauseView: 0, // 0 list / 1 inline OPTIONS; both reset on the PLAY->PAUSE edge
     pact: clampPact(o.pact),
     pace: clampPace(o.pace),
     pactUnlocked: !!o.pactUnlocked,
@@ -94,6 +106,19 @@ export function createMenuApp(opts = {}) {
       this.prevConfirm = ch;
       this.subT += d;
       if (this.screen === SCREEN.GAME) {
+        if (this.worldState === "PAUSE") {
+          const ax = (input && input.input) || {};
+          let dir = 0,
+            axis = 1;
+          if (this.pauseView === 1 && (ax.left || ax.right)) {
+            dir = ax.left ? -1 : 1;
+            axis = 0;
+          } else dir = ax.up ? -1 : ax.down ? 1 : 0;
+          this._repeat(d, dir, axis);
+          if (rising) this.confirm();
+          this._taps = {};
+          return;
+        }
         this.repT = 0;
         this.repDir = 0;
         this._hot = false;
@@ -114,6 +139,18 @@ export function createMenuApp(opts = {}) {
           axis = 1;
         }
       }
+      this._repeat(d, dir, axis);
+      if (rising) this.confirm();
+      this._taps = {};
+      if (this.screen === SCREEN.MENU) {
+        this.idleT += d;
+        if (this.idleT >= IDLE_T) this.enterAttract();
+      } else this.idleT = 0;
+    },
+    /* Shared hold-to-repeat: first move at REP_FIRST, then REP_NEXT. The
+       _taps map is how key()'s discrete channel and this held-axis channel
+       avoid double-moving on the same frame. */
+    _repeat(d, dir, axis) {
       if (dir) {
         if (this.repDir !== dir || this.repAxis !== axis) {
           this.repDir = dir;
@@ -138,12 +175,6 @@ export function createMenuApp(opts = {}) {
         this.repT = 0;
         this._hot = false;
       }
-      if (rising) this.confirm();
-      this._taps = {};
-      if (this.screen === SCREEN.MENU) {
-        this.idleT += d;
-        if (this.idleT >= IDLE_T) this.enterAttract();
-      } else this.idleT = 0;
     },
     /* Discrete key tap (Enter/Esc/Backspace/M + arrows-as-tap fallback). */
     key(code) {
@@ -197,6 +228,14 @@ export function createMenuApp(opts = {}) {
     _tapMove(dir, lat) {
       this.idleT = 0;
       if (this.screen === SCREEN.INTRO) return this.skip();
+      if (
+        this.screen === SCREEN.GAME &&
+        this.worldState === "PAUSE" &&
+        this.move(dir, lat ? 0 : 1)
+      ) {
+        this._taps[dir + ":" + (lat ? 0 : 1)] = true;
+        return true;
+      }
       if (this.screen === SCREEN.MENU && !lat && this.move(dir, 0)) {
         this._taps[dir + ":0"] = true;
         return true;
@@ -221,6 +260,8 @@ export function createMenuApp(opts = {}) {
       switch (this.screen) {
         case SCREEN.INTRO:
           return this.skip();
+        case SCREEN.GAME:
+          return this.worldState === "PAUSE" ? this.confirmPause() : false;
         case SCREEN.MENU: {
           switch (ITEMS[this.cursor]) {
             case "PLAY":
@@ -286,6 +327,15 @@ export function createMenuApp(opts = {}) {
     },
     move(dir, axis) {
       this.idleT = 0;
+      if (this.screen === SCREEN.GAME) {
+        if (this.worldState !== "PAUSE") return false;
+        if (this.pauseView === 1)
+          return (axis | 0) === 1 ? this.optMove(dir) : this.optAdjust(dir);
+        if ((axis | 0) !== 1) return false;
+        const n = PAUSE_ITEMS.length;
+        this.pauseCursor = (this.pauseCursor + (dir < 0 ? -1 : 1) + n) % n;
+        return true;
+      }
       if (this.screen === SCREEN.MENU) {
         this.cursor = (this.cursor + dir + ITEMS.length) % ITEMS.length;
         return true;
@@ -409,6 +459,34 @@ export function createMenuApp(opts = {}) {
       this.render3d = !!this.settings.r3d;
       this.togT = this.subT;
       if (onSettings) onSettings(this.settings, "reset");
+      return true;
+    },
+    /* OPTIONS here is an INLINE page, not a screen jump: jumping to
+       SCREEN.SETTINGS would flip musicCue from the room's biome track to the
+       menu track mid-run, hide the touch pad and falsify every screen===GAME
+       guard, for a page the player closes in four seconds. */
+    confirmPause() {
+      if (this.pauseView === 1) return this.optCycle();
+      const cmd = PAUSE_ITEMS[this.pauseCursor];
+      if (cmd === "OPTIONS") {
+        this.pauseView = 1;
+        this.optRow = 0;
+        this.togT = -1;
+        return true;
+      }
+      if (onPauseCmd) onPauseCmd(cmd);
+      return true;
+    },
+    pauseBack() {
+      if (this.pauseView !== 1) return false;
+      this.pauseView = 0;
+      this.togT = -1;
+      return true;
+    },
+    enterPause() {
+      this.pauseCursor = 0;
+      this.pauseView = 0;
+      this.togT = -1;
       return true;
     },
     togglePactBit(bit) {

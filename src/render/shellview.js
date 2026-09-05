@@ -8,7 +8,7 @@ import { CFG } from "../core/config.js";
 import { heatToken } from "../core/heat.js";
 import { SCREEN, ITEMS } from "../app/menuapp.js";
 import { PROJ } from "./r3d/camera.js";
-import { drawLogo } from "./scenes.js";
+import { drawLogo, overlayBox } from "./scenes.js";
 import * as menudraw from "./menudraw.js";
 import { CACHE_NAME } from "../pwa/shell.js";
 
@@ -33,7 +33,25 @@ export function dims(canvas, kind) {
 
 export function drawShell(c, app, world, canvas, kind, getScores, getPlaques) {
   const s = app.screen;
-  if (s === SCREEN.BOOT || s === SCREEN.GAME) return; // GAME keeps its own overlays
+  if (s === SCREEN.BOOT) return;
+  if (s === SCREEN.GAME) {
+    /* All shell chrome routing stays in the one module whose job it is. The
+       paused OPTIONS page measures against overlayBox — the SAME box the
+       pause list uses — never dims(canvas, kind), so list and page never
+       disagree by a pixel. */
+    if (world.state === "PAUSE" && app.pauseView === 1) {
+      const B = overlayBox(kind);
+      menudraw.drawDim(c, 0.72, B.w, B.h);
+      menudraw.drawSettings(c, menudraw.layout(B.w, B.h), app.subT, {
+        row: app.optRow,
+        vals: app.settings,
+        r3d: app.render3d,
+        togT: app.togT,
+        rev: REV,
+      });
+    }
+    return;
+  }
   const { cw, ch: chh } = dims(canvas, kind);
   if (s === SCREEN.INTRO) return menudraw.drawIntroChrome(c, app.subT, cw, chh);
   if (s === SCREEN.ATTRACT) {

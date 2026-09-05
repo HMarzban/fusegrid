@@ -6,7 +6,7 @@
 import { CFG } from "./core/config.js";
 import { createWorld, loadLevel, step } from "./core/sim.js";
 import { createRenderer } from "./render/renderer.js";
-import { makeHud, copyPayload } from "./render/scenes.js";
+import { makeHud, copyPayload, overlayBox, pauseHit } from "./render/scenes.js";
 import { paintBombPad } from "./render/sprites.js";
 import { dims, drawShell, kindSize } from "./render/shellview.js";
 import { settingsHit, layout as menuLayout } from "./render/menudraw.js";
@@ -205,6 +205,32 @@ export function createGame(canvas, opts = {}) {
     autoplay,
     onStart,
     onSource,
+    onPauseCmd: (cmd) => {
+      if (cmd === "RESUME") {
+        world.state = "PLAY";
+        return;
+      }
+      if (cmd === "RESTART") {
+        // the toolbar button dropped the run silently; two adjacent rows must
+        // not have different score semantics
+        persistScore();
+        loadLevel(world, 1, false);
+        world.score = 0;
+        world.state = "PLAY";
+        world.fireEdge = true; // a held fire CONFIRMED the row; never a same-frame plant
+        setBtn("btnPause", "Pause");
+        prevSt = "PLAY";
+        coachPlanted = false;
+        return;
+      }
+      if (cmd === "QUIT TO MENU") {
+        persistScore();
+        app.quitToMenu("PAUSE");
+        if (world.state === "PAUSE") world.state = "PLAY";
+        setBtn("btnPause", "Pause");
+        prevSt = null;
+      }
+    },
   });
   /* One live blob from here on: the machine clamped and re-seeded main's copy
      (?render=3d precedence), so onStart / KeyR / the render opts all read the
@@ -308,8 +334,13 @@ export function createGame(canvas, opts = {}) {
   const onPause = () => {
     if (app.screen !== SCREEN.GAME) return; // I2: pause exists only inside GAME;
     // outside it the world is a frozen backdrop and PAUSE would ghost-render
+    if (app.pauseView === 1) {
+      app.pauseBack(); // P/Escape on the inline page backs to the LIST, never to play
+      return;
+    }
     if (world.state === "PLAY") {
       world.state = "PAUSE";
+      app.enterPause();
       setBtn("btnPause", "Resume");
     } else if (world.state === "PAUSE") {
       world.state = "PLAY";
@@ -325,7 +356,32 @@ export function createGame(canvas, opts = {}) {
      (auto-start after skip, toggles bouncing back, subscreens bouncing). */
   if (canvas) {
     canvas.addEventListener("pointerdown", (ev) => {
-      if (app.screen === SCREEN.GAME) return;
+      if (app.screen === SCREEN.GAME) {
+        if (world.state !== "PAUSE") return;
+        input._intent.fire = false;
+        /* camrig's ptOf pattern: client px / the CSS scale of the OVERLAY
+           canvas — never #gl's Retina drawing buffer, which the wrapper owns. */
+        const r = canvas.getBoundingClientRect();
+        const k = canvas.width / (r.width || canvas.width);
+        const px = (ev.clientX - r.left) / k,
+          py = (ev.clientY - r.top) / k;
+        const B = overlayBox(curKind);
+        if (app.pauseView === 1) {
+          const row = settingsHit(px, py, menuLayout(B.w, B.h));
+          if (row < 0) app.pauseBack();
+          else {
+            app.optRow = row;
+            app.confirm();
+          }
+          return;
+        }
+        const row = pauseHit(px, py, B);
+        if (row >= 0) {
+          app.pauseCursor = row;
+          app.confirm();
+        }
+        return;
+      }
       input._intent.fire = false;
       if (app.screen === SCREEN.ATTRACT) {
         app.playFromAttract();
@@ -491,6 +547,13 @@ export function createGame(canvas, opts = {}) {
       if (app.noteWorldEdge(prevSt, world.state))
         saveScores(recordScore(loadScores(), scoreEntry(world, dateStr())));
       prevSt = world.state;
+      /* The shell machine runs during GAME too — unconditionally, not only
+         while paused. prevConfirm is only written inside update(), so skipping
+         PLAY frames would leave it false and a player holding fire when they
+         press P would get a rising edge (= instant RESUME) on the first paused
+         frame. Placed after noteWorldEdge so the pause branch reads a fresh
+         app.worldState. */
+      app.update(dt, shellInput);
       acc += dt;
       if (world.state === "PLAY") coachT += dt; // PAUSE must not burn the coach window
       let steps = 0;
@@ -590,6 +653,7 @@ export function createGame(canvas, opts = {}) {
                 coachOpen(coachSeen, coachT, coachPlanted)
                   ? Math.max(0, 1 - coachT / COACH_DUR)
                   : 0,
+              pause: { view: app.pauseView | 0, cursor: app.pauseCursor | 0 },
             }
           : undefined;
     // BRIGHTNESS is 3D only — CLASSIC 2D blits the authored hex unregraded.

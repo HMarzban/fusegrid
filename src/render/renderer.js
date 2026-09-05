@@ -5,9 +5,8 @@ import {
   drawItems, drawEnemies, drawPlayer, drawBombs, drawBlades
 } from "./sprites.js";
 import {onEvent, updateFx, drawFx, getShake, getFlash, initFx, syncFx} from "./fx.js";
-import {drawOverlay, updateHud, makeHud, drawHudChips, drawCoach} from "./scenes.js";
+import {drawOverlay, overlayBox, updateHud, makeHud, drawHudChips, drawCoach} from "./scenes.js";
 import {draw3dBackground, buildPainters, byDepth} from "./r3d/scene3d.js";
-import {PROJ} from "./r3d/camera.js";
 
 /* Renderer: owns a 2D context + view. Reads world, never mutates sim state.
    consumeEvents(world,dt) flushes world.events into fx/audio, returns this so
@@ -75,8 +74,8 @@ export function createRenderer(canvas, opts={}){
       ctx.globalAlpha=1;
     }
     if(world.state!=="PLAY"){
-      if(kind === "3d") drawOverlay(ctx, world, PROJ.canvasW, PROJ.canvasH, 304, 188);
-      else drawOverlay(ctx, world);
+      const B=overlayBox(kind==="3d"?"iso":"2d");
+      drawOverlay(ctx, world, B.w, B.h, B.cx, B.cy, o&&o.pause);
       if(world.state==="WIN"||world.state==="LOSE") drawFx(ctx);
     }
     if(!(o&&o.hud===false)) updateHud(hud, world);

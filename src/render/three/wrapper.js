@@ -16,7 +16,7 @@ import {createRig, applyOrbit} from "./camrig.js";
 import {introCam} from "./flythrough.js";
 import {createParticles} from "./particles.js";
 import {buildAtlas} from "./textures.js";
-import {drawHudChips, drawOverlay, updateHud, drawCoach} from "../scenes.js";
+import {drawHudChips, drawOverlay, overlayBox, updateHud, drawCoach} from "../scenes.js";
 import {onEvent, updateFx, getShake, getFlash, getFx, syncFx} from "../fx.js";
 
 const W=CFG.COLS*CFG.TILE, H=CFG.ROWS*CFG.TILE;
@@ -149,7 +149,8 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
       ovCtx.globalAlpha=1;
     }
     if(ov||(o&&o.hud===true)){
-      if(ov)drawOverlay(ovCtx,world);
+      if(ov){ const B=overlayBox("3d");
+        drawOverlay(ovCtx,world,B.w,B.h,B.cx,B.cy,o&&o.pause); }
       if(o&&o.hud===true)drawHudChips(ovCtx,world);
       if(o&&o.hud===true)drawCoach(ovCtx,(o&&o.coach)||0);
      }

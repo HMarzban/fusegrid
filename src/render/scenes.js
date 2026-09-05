@@ -2,6 +2,7 @@ import { CFG, isFinale, biomeOf } from "../core/config.js";
 import { HEAT_COL, heatToken, HEAT_NAME, clampHeat } from "../core/heat.js";
 import { drawIcon } from "./sprites.js";
 import { rr } from "./icons.js";
+import { PROJ } from "./r3d/camera.js";
 
 /* Scene UI: menu logo, HUD, and the CLEARED / GAME OVER / PAUSED overlays.
    Pure draw; reads world + (optionally) DOM for HUD. */
@@ -40,7 +41,8 @@ export function overlayCue(world) {
     return fin ? "SPACE / TAP · menu" : "SPACE / TAP · next room";
   }
   if (world.state === "LOSE") return "SPACE / TAP · new run";
-  if (world.state === "PAUSE") return "P · resume · M / MENU · quit";
+  if (world.state === "PAUSE")
+    return "↑↓ SELECT · ENTER CONFIRM · P RESUME · M QUIT";
   return "";
 }
 export function runStamp(world) {
@@ -52,6 +54,33 @@ export function runStamp(world) {
 export function copyPayload(world) {
   return runStamp(world) + " https://hmarzban.github.io/fusegrid/";
 }
+/* Pause-list row copy mirrors src/app/menuapp.js PAUSE_ITEMS — render/ must
+   not import src/app (only shellview.js may), so the labels are duplicated
+   here the way menudraw's PLAQUE_NAME is. */
+export const PAUSE_ROWS = Object.freeze([
+  "RESUME",
+  "RESTART",
+  "OPTIONS",
+  "QUIT TO MENU",
+]);
+export const PAUSE_ROW_H = 26;
+/* The ONE named coordinate space for pause chrome: it feeds both drawOverlay
+   call sites and both hit tests, so the list, the inline OPTIONS page and the
+   tap map can never disagree by a pixel. */
+export function overlayBox(kind) {
+  if (kind === "iso")
+    return { w: PROJ.canvasW, h: PROJ.canvasH, cx: 304, cy: 188 };
+  const w = CFG.COLS * CFG.TILE,
+    h = CFG.ROWS * CFG.TILE;
+  return { w, h, cx: w / 2, cy: h / 2 };
+}
+export function pauseHit(x, y, box) {
+  const B = box || overlayBox("2d");
+  if (Math.abs(x - B.cx) > 130) return -1;
+  for (let i = 0; i < PAUSE_ROWS.length; i++)
+    if (Math.abs(y - (B.cy - 30 + i * PAUSE_ROW_H)) <= 13) return i;
+  return -1;
+}
 export function drawOverlay(
   c,
   world,
@@ -59,6 +88,7 @@ export function drawOverlay(
   h = CFG.ROWS * CFG.TILE,
   cx = w / 2,
   cy = h / 2,
+  ui = { view: 0, cursor: 0 },
 ) {
   c.fillStyle = "rgba(6,10,20,0.80)";
   c.fillRect(0, 0, w, h);
@@ -87,8 +117,29 @@ export function drawOverlay(
     sub(runStamp(world), "#9fb3d8");
     sub(overlayCue(world) + " · C copy", "#9fb3d8", 44);
   } else if (world.state === "PAUSE") {
-    head("PAUSED", "#ffd447");
-    sub(overlayCue(world), "#9fb3d8");
+    const u = ui || {};
+    /* view 1 = the inline OPTIONS page: veil only, so drawShell's settings
+       plate never lands on top of a live PAUSED headline. */
+    if ((u.view | 0) === 1) return;
+    const cur = u.cursor | 0;
+    c.font = "900 40px ui-monospace,monospace";
+    c.strokeText("PAUSED", cx, cy - 70);
+    c.fillStyle = "#ffd447";
+    c.fillText("PAUSED", cx, cy - 70);
+    for (let i = 0; i < PAUSE_ROWS.length; i++) {
+      const y = cy - 30 + i * PAUSE_ROW_H,
+        on = i === cur;
+      if (on) {
+        c.fillStyle = "rgba(55,240,208,0.14)";
+        c.fillRect(cx - 130, y - 13, 260, 26);
+        c.fillStyle = "#37f0d0";
+        c.fillRect(cx - 130, y - 13, 3, 26);
+      }
+      c.font = "900 " + (on ? 16 : 15) + "px ui-monospace,monospace";
+      c.fillStyle = on ? "#dfe7f5" : "#7385ad";
+      c.fillText(PAUSE_ROWS[i], cx, y);
+    }
+    sub(overlayCue(world), "#9fb3d8", 86);
   }
 }
 export function updateHud(hud, world) {
