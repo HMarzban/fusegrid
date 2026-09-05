@@ -16,7 +16,6 @@ import { clampHeat } from "./core/heat.js";
 import { clampPact } from "./core/pact.js";
 import { createDemo, stepDemo } from "./app/attract.js";
 import { readFlags, locationSearch } from "./app/flags.js";
-import { mountToolbar, setBtn } from "./app/toolbar.js";
 import { mountDebugHook } from "./app/debughook.js";
 import { introPhase, INTRO_DUR } from "./app/intro.js";
 import { loadScores, recordScore, saveScores, scoreEntry, scoresForHeat } from "./app/highscores.js";
@@ -166,7 +165,6 @@ export function createGame(canvas, opts = {}) {
     resetCamera(cam); // §2: every run starts framed
     resetOrbit(rig);
     rig.dist = camPreset(settings.cam);
-    setBtn("btnPause", "Pause");
   };
 
   const audio = opts.audio || null;
@@ -218,7 +216,6 @@ export function createGame(canvas, opts = {}) {
         world.score = 0;
         world.state = "PLAY";
         world.fireEdge = true; // a held fire CONFIRMED the row; never a same-frame plant
-        setBtn("btnPause", "Pause");
         prevSt = "PLAY";
         coachPlanted = false;
         return;
@@ -227,7 +224,6 @@ export function createGame(canvas, opts = {}) {
         persistScore();
         app.quitToMenu("PAUSE");
         if (world.state === "PAUSE") world.state = "PLAY";
-        setBtn("btnPause", "Pause");
         prevSt = null;
       }
     },
@@ -323,7 +319,6 @@ export function createGame(canvas, opts = {}) {
         persistScore();
         app.quitToMenu("PAUSE");
         if (world.state === "PAUSE") world.state = "PLAY"; // drop PAUSE overlay
-        setBtn("btnPause", "Pause");
         prevSt = null;
       }
       return;
@@ -341,11 +336,7 @@ export function createGame(canvas, opts = {}) {
     if (world.state === "PLAY") {
       world.state = "PAUSE";
       app.enterPause();
-      setBtn("btnPause", "Resume");
-    } else if (world.state === "PAUSE") {
-      world.state = "PLAY";
-      setBtn("btnPause", "Pause");
-    }
+    } else if (world.state === "PAUSE") world.state = "PLAY";
   };
   input.onPause = onPause;
 
@@ -408,8 +399,7 @@ export function createGame(canvas, opts = {}) {
       } else app.confirm();
     });
   }
-  /* pad taps bubble to #stage: play from ATTRACT too (spec §4 tap-to-play).
-     Toolbar buttons are NOT inside #stage — they unlock but never play. */
+  /* pad taps bubble to #stage: play from ATTRACT too (spec §4 tap-to-play). */
   {
     const stageEl =
       typeof document !== "undefined" && document
@@ -422,8 +412,7 @@ export function createGame(canvas, opts = {}) {
   }
 
   /* music unlock (spec §4): first gesture anywhere unlocks the loop.
-     Window-level {once:true} catches canvas AND #stage pad taps; a toolbar
-     button press also unlocks without exiting attract. */
+     Window-level {once:true} catches canvas AND #stage pad taps alike. */
   if (typeof window !== "undefined" && audio) {
     const unlockOnce = () => {
       audio.unlock();
@@ -444,6 +433,10 @@ export function createGame(canvas, opts = {}) {
   const glCanvas =
     typeof document !== "undefined" && document
       ? document.getElementById("gl")
+      : null;
+  const hudEl =
+    typeof document !== "undefined" && document
+      ? document.getElementById("hud")
       : null;
   const rcache = {};
   function effKind() {
@@ -530,6 +523,10 @@ export function createGame(canvas, opts = {}) {
       renderer = getRenderer(k);
     } // live RENDER toggle: cache swap
     touch.update(app.screen === SCREEN.GAME); // pad lives only inside GAME
+    /* HUD is a live-gameplay artifact: the DOM strip shows only inside GAME.
+       PAUSE/WIN/LOSE are world.state, so GAME already covers them. Full
+       opacity, not dimmed — it is DOM outside the canvas, nothing overlays it. */
+    if (hudEl) hudEl.hidden = app.screen !== SCREEN.GAME;
     // §4 ducking: frame-polled, idempotent, self-heals across transitions
     if (audio) {
       audio.duck(app.screen === SCREEN.GAME && audio.unlocked());
@@ -592,7 +589,6 @@ export function createGame(canvas, opts = {}) {
         savePlaques(unlockPlaques(loadPlaques(), world));
         app.toMenu();
         world.finale = false;
-        setBtn("btnPause", "Pause");
         prevSt = null;
       }
     } else {
@@ -640,7 +636,7 @@ export function createGame(canvas, opts = {}) {
     let ro = attract
       ? { hud: false }
       : app.screen === SCREEN.INTRO && curKind === "3d"
-        ? { intro: app.subT }
+        ? { intro: app.subT, hud: false }
         : app.screen === SCREEN.GAME
           ? {
               hud: true, // S4 overlay HUD chips
@@ -655,7 +651,7 @@ export function createGame(canvas, opts = {}) {
                   : 0,
               pause: { view: app.pauseView | 0, cursor: app.pauseCursor | 0 },
             }
-          : undefined;
+          : { hud: false };
     // BRIGHTNESS is 3D only — CLASSIC 2D blits the authored hex unregraded.
     if (curKind === "3d") ro = { ...(ro || {}), bright: settings.bri / 100 };
     renderer.render(attract && demo ? demo.world : world, dt, ro);
@@ -664,35 +660,6 @@ export function createGame(canvas, opts = {}) {
     if (running && typeof requestAnimationFrame !== "undefined")
       requestAnimationFrame(loop);
   }
-
-  // UI buttons (src/app/toolbar.js owns the DOM, main owns every decision)
-  mountToolbar({
-    inGame: () => app.screen === SCREEN.GAME,
-    onPause,
-    onSound: () => {
-      const on = opts.audio && opts.audio.toggle && opts.audio.toggle();
-      app.sound = !!on;
-      if (audio) audio.play("uiTog"); // §5 tog cue on the button toggle too
-      return on;
-    },
-    onRestart: () => {
-      loadLevel(world, 1, false);
-      world.state = "PLAY";
-      world.fireEdge = true; // a held fire STARTED the run; never a same-frame plant
-      setBtn("btnPause", "Pause");
-      prevSt = "PLAY";
-      coachPlanted = false;
-    },
-    // quit-to-menu riding KeyM's exact record path (persist-if->0, machine
-    // M-quit, PAUSE-overlay drop, label reset)
-    onMenu: () => {
-      persistScore();
-      app.quitToMenu("PAUSE");
-      if (world.state === "PAUSE") world.state = "PLAY";
-      setBtn("btnPause", "Pause");
-      prevSt = null;
-    },
-  });
 
   // debug/test hook (browser only; opt-in via opts.debug or ?debug=1)
   if (flags.debug)
@@ -737,6 +704,5 @@ export function createGame(canvas, opts = {}) {
       if (typeof requestAnimationFrame !== "undefined")
         requestAnimationFrame(loop);
     },
-    setBtn,
   };
 }

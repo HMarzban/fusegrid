@@ -470,103 +470,42 @@ function mkCanvas(){
     plays.length===0&&w.events.length===0);
 }
 
-// ---- fix round F3: toolbar GAME-gates (btnPause/btnRestart inert outside GAME) ----
+// ---- S3.2 #hud strip gate: GAME only, full opacity through PAUSE ----
 {
-  const stubs={btnPause:{textContent:"Pause"},
-    btnSound:{textContent:"Sound: On"},btnRestart:{textContent:"Restart"}};
-  globalThis.document={getElementById:(id)=>stubs[id]||null};
-  try{
-    const ev={currentTarget:{blur(){}}};
-    // outside GAME (ATTRACT): clicks must not touch live world or flip labels
-    const g=createGame(null,{seed:31});
-    g.app.cabinetSeen=true;                // seen cabinet: skip lands on MENU
-    g.app.skip();
-    g.app.enterAttract();
-    let t=3000; g.loop(t); t+=250; g.loop(t);  // frame 1 creates demo (dt=0), frame 2 steps it
-    check("F3 probe: attract active with demo running",
-      g.app.screen===SCREEN.ATTRACT&&!!g.demo,String(g.app.screen));
-    const w=g.world;
-    w.score=7777; w.enemies=[];          // poison markers a stray loadLevel would wipe
-    const tick0=w.tick;
-    stubs.btnPause.onclick(ev);
-    stubs.btnRestart.onclick(ev);
-    check("F3 attract: btnPause+btnRestart leave live world untouched",
-      w.score===7777&&w.enemies.length===0&&w.tick===tick0
-      &&w.state==="PLAY",
-      w.score+"/"+w.enemies.length+"/"+w.tick+"/"+w.state);
-    check("F3 attract: no PAUSE/label flip over the demo",
-      stubs.btnPause.textContent==="Pause",stubs.btnPause.textContent);
-    check("F3 attract: demo world keeps stepping untouched",
-      !!g.demo&&g.demo.world.time>0,String(g.demo&&g.demo.world.time));
-    // inside GAME: byte-identical behavior preserved
-    const g2=createGame(null,{autoplay:true});
-    stubs.btnPause.onclick(ev);
-    check("F3 GAME: btnPause still pauses + flips label to Resume",
-      g2.world.state==="PAUSE"&&stubs.btnPause.textContent==="Resume",
-      g2.world.state+"/"+stubs.btnPause.textContent);
-    g2.world.level=2;
-    stubs.btnRestart.onclick(ev);
-    check("F3 GAME: btnRestart still reloads level 1 fresh PLAY",
-      g2.world.level===1&&g2.world.state==="PLAY",g2.world.level+"/"+g2.world.state);
-    check("F3 GAME: btnRestart from PAUSE resets Pause label",
-      stubs.btnPause.textContent==="Pause",stubs.btnPause.textContent);
-   }finally{ delete globalThis.document; }
-}
-
-// ---- MENU BUTTON wave: toolbar Menu = score-recorded quit-to-menu ----
-{
-  const stubs={btnPause:{textContent:"Pause"},
-    btnSound:{textContent:"Sound: On"},btnRestart:{textContent:"Restart"},
-    btnMenu:{textContent:"Menu"}};
+  const hudEl={hidden:false};
+  const els={hud:hudEl};
   const noop=()=>{};
   globalThis.document={addEventListener:noop,removeEventListener:noop,
-    getElementById:(id)=>stubs[id]||null};
-  const mem={};
-  globalThis.window={addEventListener:noop,removeEventListener:noop,
-    localStorage:{getItem:(k)=>(k in mem?mem[k]:null),
-      setItem:(k,v)=>{mem[k]=String(v);}}};
-  const blurs=[];
-  const ev={currentTarget:{blur(){blurs.push(1);}}};
-  const dispatch=(b)=>{ if(typeof b.onclick==="function")b.onclick(ev); };
+    getElementById:(id)=>els[id]||null};
   try{
-    // during GAME (PLAY): dispatch -> MENU + score recorded via KeyM path
-    const g=createGame(null,{autoplay:true});
-    check("menu-btn wired by main.js in toolbar",
-      typeof stubs.btnMenu.onclick==="function",
-      String(typeof stubs.btnMenu.onclick));
-    g.world.score=1234;
-    dispatch(stubs.btnMenu);
-    check("menu-btn during GAME lands on MENU screen",
-      g.app.screen===SCREEN.MENU,String(g.app.screen));
-    check("menu-btn during GAME leaves world as PLAY backdrop (no PAUSE ghost)",
-      g.world.state==="PLAY",g.world.state);
-    check("menu-btn records score>0 through the highscores store",
-      loadScores().some(r=>r.s===1234&&r.l===1),
-      JSON.stringify(loadScores().slice(0,3)));
-    check("menu-btn resets Pause label like KeyM-quit",
-      stubs.btnPause.textContent==="Pause",stubs.btnPause.textContent);
-    check("menu-btn blurs after click (sibling parity)",blurs.length===1,
-      String(blurs.length));
-    delete mem["nb.highscores.v1"];
-    const gMax=createGame(null,{autoplay:true});
-    gMax.world.score=1234;
-    gMax.world.heat=2;
-    dispatch(stubs.btnMenu);
-    check("menu-btn MAX persist stores s*3 and t=2",
-      loadScores().some(r=>r.s===3702&&r.t===2&&r.l===1),
-      JSON.stringify(loadScores().slice(0,3)));
-    // during MENU: no-op — screen stays, nothing persisted
-    const g2=createGame(null,{seed:5});
-    g2.app.cabinetSeen=true;               // seen cabinet: skip lands on MENU
-    g2.app.skip();
-    g2.world.score=5555;
-    delete mem["nb.highscores.v1"];
-    dispatch(stubs.btnMenu);
-    check("menu-btn at MENU is a full no-op",
-      g2.app.screen===SCREEN.MENU&&!("nb.highscores.v1" in mem),
-      g2.app.screen+"/"+Object.keys(mem).join());
-   }finally{ delete globalThis.document; delete globalThis.window; }
+    const g=createGame(null,{seed:41});
+    g.app.cabinetSeen=true; g.app.skip();       // seen cabinet -> MENU
+    g.loop(16);
+    check("#hud strip is hidden outside GAME",hudEl.hidden===true,
+      String(hudEl.hidden));
+    g.app.cursor=0; g.app.confirm();            // PLAY
+    g.loop(32);
+    check("#hud strip is shown inside GAME",hudEl.hidden===false,
+      String(hudEl.hidden));
+    g.input.onPause();
+    g.loop(48);
+    check("#hud stays visible through PAUSE (world.state, not a SCREEN)",
+      hudEl.hidden===false,String(hudEl.hidden));
+   }finally{ delete globalThis.document; }
 }
+{
+  const src=readFileSync(join(ROOT,"src/main.js"),"utf8");
+  check("main.js passes {hud:false} on every non-GAME render, closing the"
+    +" undefined gap that wrote the frozen backdrop's zeros",
+    /:\s*\{\s*hud:\s*false\s*\}/.test(src)&&!/:\s*undefined;/.test(src),
+    (src.match(/let ro =[\s\S]{0,600}?renderer\.render/)||[])[0]);
+  check("toolbar.js is gone and main.js no longer imports it",
+    !/toolbar\.js|mountToolbar|setBtn/.test(src));
+}
+
+// F3 toolbar GAME-gates and the toolbar Menu-button wave are gone with
+// toolbar.js: every wave they exercised (Pause/Restart/Menu GAME-gating,
+// score-recorded quit) is now asserted through the P1 pause-list pins below.
 
 // ---- P4: demobot imports pruned (tileOf/solidAt unused; bfsNext lives) ----
 {
@@ -903,15 +842,7 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
     &&kindSize("iso").w===PROJ.canvasW&&kindSize("iso").h===PROJ.canvasH);
 }
 
-// toolbar + debug hook: DOM-only seams that must stay silent under Node
-{
-  const {mountToolbar,setBtn}=await import("../src/app/toolbar.js");
-  let threw=false;
-  try{ mountToolbar({inGame:()=>true}); setBtn("btnPause","Pause"); }
-  catch(e){ threw=true; console.log(e.message); }
-  check("toolbar: wiring and setBtn are silent no-ops without a document",
-    !threw);
-}
+// debug hook: DOM-only seam that must stay silent under Node
 {
   const {mountDebugHook}=await import("../src/app/debughook.js");
   check("debug hook: module exports a mount function",

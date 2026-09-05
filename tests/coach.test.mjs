@@ -236,46 +236,32 @@ check("round-trip", loadCoachSeen(store) === true);
   );
 }
 
-// ---- parked: toolbar Restart has the same loadLevel/fireEdge hole as
-// onStart used to. A Space held across the click must not plant on frame 1. ----
+// ---- parked: pause RESTART has the same loadLevel/fireEdge hole onStart used
+// to. A Space held across the confirm must not plant on frame 1. ----
 {
-  const stubs = {
-    btnPause: { textContent: "Pause" },
-    btnSound: { textContent: "Sound: On" },
-    btnRestart: { textContent: "Restart" },
-    btnMenu: { textContent: "Menu" },
-  };
-  const ev = { currentTarget: { blur() {} } };
-  globalThis.document = { getElementById: (id) => stubs[id] || null };
-  try {
-    const { canvas } = fakeCanvasTexts();
-    const g = createGame(canvas, { autoplay: true, seed: 77 });
-    g.input._onKey({ code: "Space", preventDefault() {} });
-    let t = 0;
-    g.loop(t);
-    t += 20;
-    g.loop(t);
-    check(
-      "held fire after autoplay onStart has not planted",
-      g.world.bombs.length === 0,
-    );
-    stubs.btnRestart.onclick(ev);
-    check(
-      "Restart reloads L1 PLAY",
-      g.world.level === 1 && g.world.state === "PLAY",
-    );
-    t += 20;
-    g.loop(t);
-    t += 20;
-    g.loop(t);
-    check(
-      "held fire across toolbar Restart plants no bomb",
-      g.world.bombs.length === 0,
-      JSON.stringify(g.world.bombs),
-    );
-  } finally {
-    delete globalThis.document;
-  }
+  const { canvas } = fakeCanvasTexts();
+  const g = createGame(canvas, { autoplay: true, seed: 77 });
+  g.input._onKey({ code: "Space", preventDefault() {} });
+  let t = 0;
+  g.loop(t);
+  t += 20;
+  g.loop(t);
+  check("held fire after autoplay onStart has not planted", g.world.bombs.length === 0);
+  g.input.onPause();
+  t += 20;
+  g.loop(t);
+  g.app.pauseCursor = 1;
+  g.app.confirm(); // RESTART
+  check("pause RESTART reloads L1 PLAY", g.world.level === 1 && g.world.state === "PLAY");
+  t += 20;
+  g.loop(t);
+  t += 20;
+  g.loop(t);
+  check(
+    "held fire across pause RESTART plants no bomb",
+    g.world.bombs.length === 0,
+    JSON.stringify(g.world.bombs),
+  );
 }
 
 console.log("\n  COACH RESULT: " + pass + " PASS / " + fail + " FAIL");
