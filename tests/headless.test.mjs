@@ -69,8 +69,8 @@ check("null-canvas renderer render() does not throw", ok);
   g.app.cabinetSeen=true;
   g.app.skip();
   g.app.level=3;
-  g.app.confirm();                       // cursor at 0 = START GAME
-  check("confirm START GAME -> world PLAY + app GAME + inGame",
+  g.app.confirm();                       // cursor at 0 = PLAY
+  check("confirm PLAY -> world PLAY + app GAME + inGame",
     g.world.state==="PLAY"&&g.app.screen===SCREEN.GAME&&g.app.inGame===true,
     g.world.state+"/"+g.app.screen);
   check("onStart applied level + reset score",
@@ -199,6 +199,52 @@ function mkCanvas(){
   check("C1 subscreen does not bounce back", g.app.screen===SCREEN.HOWTO);
 }
 
+// S2 REVIEW FIX: SETTINGS tap-to-row pointer glue had zero behavioral
+// coverage (only source-regex checks existed). Drive the REAL handler —
+// a fake canvas with getBoundingClientRect, a captured pointerdown listener,
+// synthetic clientX/clientY — through settingsHit()'s row math (row center
+// y = y0+i*rowH+rowH/2 at the 600x520 layout: rowH=30, y0=121.2).
+{
+  const cv=mkCamCanvas(600,520);
+  const g=createGame(cv.el,{seed:71});
+  g.app.cabinetSeen=true;                       // seen cabinet: skip -> MENU
+  g.app.skip();
+  g.app.cursor=2;                               // OPTIONS
+  cv.fire("pointerdown",{clientX:1,clientY:1}); // MENU tap: off SETTINGS, coords unused
+  check("tap glue: OPTIONS push lands on SETTINGS row 0",
+    g.app.screen===SCREEN.SETTINGS&&g.app.optRow===0,
+    g.app.screen+"/"+g.app.optRow);
+  cv.fire("pointerdown",{clientX:300,clientY:136});   // row 0 MUSIC band
+  check("tap glue: row 0 tap sets optRow and cycles MUSIC",
+    g.app.optRow===0&&g.app.settings.mus===0,
+    "optRow="+g.app.optRow+" mus="+g.app.settings.mus);
+  cv.fire("pointerdown",{clientX:300,clientY:316});   // row 6 SCREEN SHAKE band
+  check("tap glue: row 6 tap sets optRow and toggles the knob",
+    g.app.optRow===6&&g.app.settings.shk===0,
+    "optRow="+g.app.optRow+" shk="+g.app.settings.shk);
+  cv.fire("pointerdown",{clientX:10,clientY:200});    // outside the plate (x<ix)
+  check("tap glue: tap outside the plate backs out to MENU",
+    g.app.screen===SCREEN.MENU,String(g.app.screen));
+}
+// same glue, PAUSE-OPTIONS surface (S3): pauseView 1 shares settingsHit/menuLayout
+{
+  const cv=mkCamCanvas(600,520);
+  const g=createGame(cv.el,{autoplay:true,seed:72});
+  g.input.onPause(); g.loop(16);
+  g.app.pauseCursor=2; g.app.confirm();          // OPTIONS row -> pauseView 1
+  check("PAUSE tap glue setup: pauseView 1 at row 0",
+    g.app.pauseView===1&&g.app.optRow===0,
+    g.app.pauseView+"/"+g.app.optRow);
+  cv.fire("pointerdown",{clientX:300,clientY:316});   // row 6 SCREEN SHAKE band
+  check("PAUSE tap glue: row 6 tap toggles the same knob code",
+    g.app.optRow===6&&g.app.settings.shk===0,
+    "optRow="+g.app.optRow+" shk="+g.app.settings.shk);
+  cv.fire("pointerdown",{clientX:10,clientY:200});    // outside the plate
+  check("PAUSE tap glue: tap outside the plate backs to the LIST, not play",
+    g.app.pauseView===0&&g.world.state==="PAUSE",
+    g.app.pauseView+"/"+g.world.state);
+}
+
 // I1: ui* cue sheet live from the app layer (main.js wrappers)
 {
   const plays=[];
@@ -212,8 +258,8 @@ function mkCanvas(){
   check("I1 cursor move -> uiMove",
     plays.join()==="uiMove",JSON.stringify(plays));
   plays.length=0;
-  g.app.cursor=0; g.app.confirm();              // START GAME
-  check("I1 confirm START -> uiSel + run starts",
+  g.app.cursor=0; g.app.confirm();              // PLAY
+  check("I1 confirm PLAY -> uiSel + run starts",
     plays.join()==="uiSel"&&g.app.screen===SCREEN.GAME,JSON.stringify(plays));
 }
 {
@@ -596,7 +642,7 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
     let t=16; g.loop(t);
     check("(f) MENU frame carries no camera transform",
       !camTriple(cv.calls,g.cam,600,520));
-    // enter GAME via START confirm (cursor 0)
+    // enter GAME via PLAY confirm (cursor 0)
     g.app.confirm();
     t+=16; g.loop(t);
     // (g) right-drag pans by canvas-space delta (rect scale 1 here)
@@ -650,7 +696,7 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
     t+=16; g.loop(t);
     check("(f) post-quit MENU frame still transform-free",
       !camTriple(cv.calls,g.cam,600,520));
-    g.app.confirm();                       // START GAME -> onStart resetCam
+    g.app.confirm();                       // PLAY -> onStart resetCam
     check("(h) onStart (fresh run) resets cam to identity",
       g.app.screen===SCREEN.GAME&&g.cam.x===0&&g.cam.y===0&&g.cam.zoom===1,
       String(JSON.stringify(g.cam)));

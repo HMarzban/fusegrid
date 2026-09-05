@@ -252,12 +252,9 @@ export function drawMenu(c, ui, L, t) {
       val = str.slice(pipe + 1);
       hasVal = true;
     } else {
-      const sp = str.indexOf(" ");
-      hasVal =
-        sp > 0 &&
-        (str.slice(0, sp) === "RENDER" || str.slice(0, sp) === "SOUND");
-      label = hasVal ? str.slice(0, sp) : str;
-      val = hasVal ? str.slice(sp).trim() : "";
+      label = str;
+      val = "";
+      hasVal = false;
     }
     const k = easeOutCubic(clamp01((et - i * 0.03) / 0.22));
     const y = y0 + padY + i * span + span / 2 + 6 * (1 - k);
