@@ -332,6 +332,7 @@ const S_RUNNER = poly([
   [0.86, 0.52], [0.44, 0.92], [-0.44, 0.92], [-0.86, 0.52],
   [-0.92, -0.1], [-0.52, -0.62],
 ]);
+const CROWN = poly([[-0.34, -1.0], [0.34, -1.0], [0.62, -0.44], [-0.62, -0.44]]);
 function boot(c, r, s) {
   c.beginPath();
   c.moveTo(s * r * 0.2, r * 0.7);
@@ -365,6 +366,54 @@ export function drawPlayerBody(c, world, p) {
   c.beginPath();
   c.ellipse(-r * 0.32, -r * 0.34, r * 0.36, r * 0.18, -0.6, 0, 7);
   c.fill();
+  const fx = Math.max(-1, Math.min(1, p.face.x || 0)) * r * 0.1;
+  CROWN(c, r, 1, 0, 0);
+  c.fillStyle = col;
+  c.fill();
+  seal(c);
+  if (p.face.y < -0.5) {
+    c.fillStyle = dk(HULL, 0.34);
+    c.beginPath();
+    c.moveTo(-r * 0.4, -r * 0.5);
+    c.lineTo(r * 0.4, -r * 0.5);
+    c.lineTo(r * 0.4, -r * 0.3);
+    c.lineTo(-r * 0.4, -r * 0.3);
+    c.closePath();
+    c.fill();
+    c.fillStyle = dk(HULL, 0.62);
+    c.beginPath();
+    c.moveTo(-r * 0.16, -r * 0.22);
+    c.lineTo(r * 0.16, -r * 0.22);
+    c.lineTo(r * 0.16, r * 0.04);
+    c.lineTo(-r * 0.16, r * 0.04);
+    c.closePath();
+    c.fill();
+  } else {
+    c.fillStyle = "#0b1020";
+    c.beginPath();
+    c.moveTo(-r * 0.42 + fx, -r * 0.52);
+    c.lineTo(r * 0.42 + fx, -r * 0.52);
+    c.lineTo(r * 0.42 + fx, -r * 0.3);
+    c.lineTo(-r * 0.42 + fx, -r * 0.3);
+    c.closePath();
+    c.fill();
+    c.fillStyle = "#7fe0ff";
+    c.beginPath();
+    c.moveTo(-r * 0.34 + fx, -r * 0.46);
+    c.lineTo(r * 0.34 + fx, -r * 0.46);
+    c.lineTo(r * 0.34 + fx, -r * 0.36);
+    c.lineTo(-r * 0.34 + fx, -r * 0.36);
+    c.closePath();
+    c.fill();
+    c.fillStyle = "#ffffff";
+    c.beginPath();
+    c.moveTo(-r * 0.36 + fx, -r * 0.5);
+    c.lineTo(-r * 0.22 + fx, -r * 0.5);
+    c.lineTo(-r * 0.26 + fx, -r * 0.42);
+    c.lineTo(-r * 0.4 + fx, -r * 0.42);
+    c.closePath();
+    c.fill();
+  }
   c.fillStyle = p.kick ? "#c07a3a" : "#0d3f78";
   boot(c, r, -1);
   boot(c, r, 1);

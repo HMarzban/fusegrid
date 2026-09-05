@@ -398,5 +398,60 @@ const P = (o) =>
   );
 }
 
+{
+  const c = stub();
+  drawPlayerBody(c, { time: 0 }, P());
+  const fills = setsOf(c._ops, "fillStyle");
+  check(
+    "player writes >=4 distinct fillStyle",
+    new Set(fills).size >= 4,
+    [...new Set(fills)].join(" "),
+  );
+  check(
+    "visor slot, lit core and specular pip are all present",
+    fills.includes("#0b1020") && fills.includes("#7fe0ff") && fills.includes("#ffffff"),
+    fills.join(" "),
+  );
+  check(
+    "one-placement rule: p.color is exactly one fillStyle",
+    fills.filter((v) => v === "#37f0d0").length === 1,
+    String(fills.filter((v) => v === "#37f0d0").length),
+  );
+}
+
+{
+  const up = stub(),
+    down = stub();
+  drawPlayerBody(up, { time: 0 }, P({ face: { x: 0, y: -1 } }));
+  drawPlayerBody(down, { time: 0 }, P({ face: { x: 0, y: 1 } }));
+  check(
+    "back pose differs from front",
+    JSON.stringify(up._ops) !== JSON.stringify(down._ops),
+  );
+  check(
+    "back pose shows the nape, not the visor",
+    !setsOf(up._ops, "fillStyle").includes("#7fe0ff") &&
+      setsOf(up._ops, "fillStyle").includes("#37f0d0"),
+  );
+  const lf = stub(),
+    rt = stub();
+  drawPlayerBody(lf, { time: 0 }, P({ face: { x: -1, y: 0 } }));
+  drawPlayerBody(rt, { time: 0 }, P({ face: { x: 1, y: 0 } }));
+  check(
+    "face.x slides the visor cluster",
+    JSON.stringify(lf._ops) !== JSON.stringify(rt._ops),
+  );
+  const k0 = stub(),
+    k1 = stub();
+  drawPlayerBody(k0, { time: 0 }, P());
+  drawPlayerBody(k1, { time: 0 }, P({ kick: true }));
+  check(
+    "p.kick flips the boot fill",
+    setsOf(k0._ops, "fillStyle").includes("#0d3f78") &&
+      setsOf(k1._ops, "fillStyle").includes("#c07a3a") &&
+      !setsOf(k1._ops, "fillStyle").includes("#0d3f78"),
+  );
+}
+
 console.log("\n" + pass + " passed, " + fail + " failed");
 if (fail) process.exit(1);
