@@ -1955,5 +1955,106 @@ function installAC(ac) {
   check("sand register lanes never cross, A and B", lanes(A) && lanes(B));
 }
 
+// ---- R3c: the whole score, quantified over all ten tracks ----
+{
+  const IDS = Object.keys(MUSIC_TRACKS);
+  const LADDER = {
+    arena: 0.107,
+    crown: 0.113,
+    factory: 0.119,
+    jungle: 0.129,
+    menu: 0.134,
+    sand: 0.139,
+    ice: 0.144,
+    water: 0.15,
+    intro: 0.17,
+    void: 0.234,
+  };
+  check(
+    "the tempo ladder is the authored one, ten distinct values",
+    IDS.every((k) => MUSIC_TRACKS[k].A.STEP === LADDER[k]) &&
+      new Set(Object.values(LADDER)).size === 10,
+    IDS.map((k) => k + " " + MUSIC_TRACKS[k].A.STEP).join(" "),
+  );
+  const ROOT = {
+    jungle: 73.42,
+    ice: 87.31,
+    factory: 82.41,
+    water: 49,
+    arena: 55,
+    sand: 123.47,
+    void: 61.74,
+    crown: 65.41,
+  };
+  check(
+    "the eight biome roots are the authored ones, all distinct",
+    Object.keys(ROOT).every((k) => MUSIC_TRACKS[k].A.bass[0].f === ROOT[k]) &&
+      new Set(Object.values(ROOT)).size === 8,
+    Object.keys(ROOT)
+      .map((k) => MUSIC_TRACKS[k].A.bass[0].f)
+      .join(","),
+  );
+  const sawBass = IDS.filter((k) => MUSIC_TRACKS[k].A.bass[0].t === "sawtooth");
+  check(
+    "exactly one sawtooth bass in the whole score, and it is FACTORY",
+    sawBass.length === 1 && sawBass[0] === "factory",
+    sawBass.join(","),
+  );
+  check(
+    "every track uses at least two distinct waveforms",
+    IDS.every((k) => waves(MUSIC_TRACKS[k].A) >= 2),
+    IDS.map((k) => k + ":" + waves(MUSIC_TRACKS[k].A)).join(" "),
+  );
+  check(
+    "register lanes never cross, in every A and every B",
+    IDS.every(
+      (k) =>
+        lanes(MUSIC_TRACKS[k].A) &&
+        (!MUSIC_TRACKS[k].B || lanes(MUSIC_TRACKS[k].B)),
+    ),
+    IDS.filter((k) => !lanes(MUSIC_TRACKS[k].A)).join(","),
+  );
+  check(
+    "no track puts a note on every step of its loop",
+    IDS.every((k) => occ(MUSIC_TRACKS[k].A) < MUSIC_TRACKS[k].A.LEN),
+    IDS.map((k) => k + ":" + occ(MUSIC_TRACKS[k].A)).join(" "),
+  );
+  check(
+    "every track has a breath bar — 8 consecutive steps with zero lead",
+    IDS.every((k) => breathBar(MUSIC_TRACKS[k].A) >= 0),
+    IDS.filter((k) => breathBar(MUSIC_TRACKS[k].A) < 0).join(","),
+  );
+  const BAND = {
+    intro: [0, 18],
+    menu: [44, 48],
+    jungle: [40, 58],
+    ice: [0, 34],
+    factory: [40, 58],
+    water: [0, 44],
+    arena: [0, 62],
+    sand: [0, 38],
+    void: [0, 20],
+    crown: [40, 58],
+  };
+  check(
+    "occupancy lands in band for all ten — rests are authored, not left over",
+    IDS.every((k) => {
+      const o = occ(MUSIC_TRACKS[k].A);
+      return o >= BAND[k][0] && o <= BAND[k][1];
+    }),
+    IDS.map((k) => k + ":" + occ(MUSIC_TRACKS[k].A)).join(" "),
+  );
+  const ionian = IDS.filter(
+    (k) =>
+      soundsDeg(MUSIC_TRACKS[k].A, TONIC[k], 5) &&
+      soundsDeg(MUSIC_TRACKS[k].A, TONIC[k], 11),
+  );
+  check(
+    "only CROWN's A sounds both a perfect fourth and a leading tone — Ionian, alone",
+    ionian.length === 1 && ionian[0] === "crown",
+    ionian.join(","),
+  );
+}
+
 console.log("\n  MUSIC RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);
