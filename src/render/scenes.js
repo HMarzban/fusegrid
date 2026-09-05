@@ -178,19 +178,15 @@ export function drawHudChips(c, world) {
 
 /* Ghost coach (first-run nudge): faded W A S D + a SPACE pill drawn once near
    the spawn tile (1,1) so a first-time player sees the controls, then never
-   again. Persist state (nb.coach.v1, COACH_DUR) lives in src/app/coach.js —
-   render/ must not import src/app (only shellview.js may, for screen
-   constants), so the caller pre-computes `open` and only world.time feeds
-   the fade here. COACH_DUR mirrors src/app/coach.js's constant of the same
-   value; keep them in sync by hand across that boundary. */
-const COACH_DUR = 3,
-  COACH_TEXT = "#eef3ff",
+   again. Persist state (nb.coach.v1) and the fade duration (COACH_DUR) live
+   in src/app/coach.js — render/ must not import src/app (only shellview.js
+   may, for screen constants), so main.js precomputes the fade alpha from
+   COACH_DUR and passes the plain number down; this file never re-derives it. */
+const COACH_TEXT = "#eef3ff",
   COACH_PANEL = "rgba(10,14,24,0.82)",
   COACH_LINE = "#3a4a6a";
-export function drawCoach(c, world, open) {
-  if (!open) return;
-  const alpha = Math.max(0, Math.min(1, 1 - (world.time || 0) / COACH_DUR));
-  if (alpha <= 0) return;
+export function drawCoach(c, world, alpha) {
+  if (!(alpha > 0)) return;
   c.save();
   c.globalAlpha = alpha;
   c.textAlign = "center";

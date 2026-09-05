@@ -38,7 +38,7 @@ check("seen never opens", coachOpen(true, 0, false) === false);
 saveCoachSeen(store);
 check("round-trip", loadCoachSeen(store) === true);
 
-// ---- Task 2 pin: drawCoach draws the WASD + SPACE ghost only while open ----
+// ---- Task 2 pin: drawCoach draws the WASD + SPACE ghost only while alpha>0 ----
 {
   const texts = [];
   const noop = () => {};
@@ -50,7 +50,7 @@ check("round-trip", loadCoachSeen(store) === true);
     clearRect: noop, ellipse: noop, setTransform: noop,
     fillText: (t) => texts.push(String(t)), strokeText: noop,
   };
-  drawCoach(c, { time: 0 }, true);
+  drawCoach(c, { time: 0 }, 1);
   check("drawCoach open draws a W key", texts.some((t) => t.includes("W")), texts.join(","));
   check("drawCoach open draws a SPACE pill", texts.some((t) => t.includes("SPACE")), texts.join(","));
 }
@@ -65,7 +65,7 @@ check("round-trip", loadCoachSeen(store) === true);
     apply: () => rec,
     set: (t, p) => { calls.push(p); return true; },
   });
-  drawCoach(rec, { time: 0 }, false);
+  drawCoach(rec, { time: 0 }, 0);
   check("drawCoach closed draws nothing", calls.length === 0, calls.join(","));
 }
 

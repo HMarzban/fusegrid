@@ -20,7 +20,12 @@ import { introPhase, INTRO_DUR } from "./app/intro.js";
 import { loadScores, recordScore, saveScores, scoreEntry, scoresForHeat } from "./app/highscores.js";
 import { loadPactUnlocked, savePactUnlocked } from "./app/pactstore.js";
 import { loadPace, savePace } from "./app/pacestore.js";
-import { loadCoachSeen, saveCoachSeen, coachOpen } from "./app/coach.js";
+import {
+  loadCoachSeen,
+  saveCoachSeen,
+  coachOpen,
+  COACH_DUR,
+} from "./app/coach.js";
 import { clampPace } from "./core/pace.js";
 import { registerSW } from "./pwa/register.js";
 import { Input } from "./input.js";
@@ -516,10 +521,14 @@ export function createGame(canvas, opts = {}) {
             ? {
                 hud: true, // S4 overlay HUD chips
                 // ghost coach: GAME screen (not ATTRACT, whose demo world is
-                // state PLAY too) AND world.state==="PLAY" (not PAUSE/WIN/LOSE)
+                // state PLAY too) AND world.state==="PLAY" (not PAUSE/WIN/LOSE).
+                // Fade alpha (not a bool) computed here from COACH_DUR so
+                // render/scenes.js never re-derives that constant.
                 coach:
                   world.state === "PLAY" &&
-                  coachOpen(coachSeen, world.time, coachPlanted),
+                  coachOpen(coachSeen, world.time, coachPlanted)
+                    ? Math.max(0, 1 - world.time / COACH_DUR)
+                    : 0,
               }
             : undefined,
     );

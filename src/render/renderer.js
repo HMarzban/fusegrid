@@ -84,8 +84,9 @@ export function createRenderer(canvas, opts={}){
        drawn after restore so they never shake with the camera. */
     if(o&&o.hud===true) drawHudChips(ctx, world);
     /* ghost coach (plan 4): same opt-in gate as the HUD chips; o.coach is
-       precomputed in main.js from coachOpen(...) + world.state==="PLAY". */
-    if(o&&o.hud===true) drawCoach(ctx, world, !!(o&&o.coach));
+       the fade alpha precomputed in main.js from coachOpen(...) + COACH_DUR
+       + world.state==="PLAY" (0 when closed), never re-derived here. */
+    if(o&&o.hud===true) drawCoach(ctx, world, (o&&o.coach)||0);
   }
   return {canvas, ctx, render, consumeEvents, getShake};
 }

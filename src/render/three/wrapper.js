@@ -146,7 +146,7 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
     if(ov||(o&&o.hud===true)){
       if(ov)drawOverlay(ovCtx,world);
       if(o&&o.hud===true)drawHudChips(ovCtx,world);
-      if(o&&o.hud===true)drawCoach(ovCtx,world,!!(o&&o.coach));
+      if(o&&o.hud===true)drawCoach(ovCtx,world,(o&&o.coach)||0);
      }
     /* S5: DOM #hud ids route like the 2D path — {hud:false} suppresses
        (attract demo), every other frame writes score/level/lives/etc. */
