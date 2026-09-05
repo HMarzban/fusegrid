@@ -16,6 +16,10 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-05 — R3c soundtrack wave 2
+- `ice`/`jungle`/`factory`/`water`/`sand` rewritten, so all ten tracks now share one motif (1̂3̂5̂6̂5̂) over one parent collection in eight modal rotations; these five keep a `transp` B at its stated ratio (ice ×1.122462, jungle ×1.189207, factory ×0.890899, water ×1.33484, sand ×1.059463) while `menu`/`arena`/`void`/`crown` have hand-authored ones. `water.A/B.bass` and `sand.A/B.lead` are the only channels using per-note velocity — R3a's uniform-`v` pin is now an explicit allow-list of exactly those four.
+- The all-ten-quantified pins (tempo ladder, biome roots, timbre scarcity, lanes, breath bars, per-track occupancy bands, Ionian uniqueness) land here because they could only be true once every track was rewritten. Controller render gate signed (rests visible, mood ordering correct, every B measurably modulates); **both the user listen and the live play-verify are still open**. Flag for a later pass: `sand` first, then `factory`, want hand-authored Bs — a semitone `transp` reads as repetition, and the hat shared by identity anchors the spectrum through every modulation (which is also why factory's metric modulation stays deferred). Bounces + PNGs + MP3s in `.superpowers/sdd/2026-09-05-soundtrack/wav/wave2/`.
+
 ## 2026-09-05 — R3b soundtrack wave 1
 - `intro`/`menu`/`arena`/`void`/`crown` rewritten around one motif (1̂3̂5̂6̂5̂) with hand-authored B sections for the last four; `menu` walks a tresillo bass with the lead in counterpoint and `oct()` is gone from it; `arena` and `crown` stop the whole band for a bar so SFX have a hole to land in, and `crown.B`'s hat quotes `arena.A`'s step pattern.
 - Three wave-2 numbers were pre-moved to keep the tempo/root distinctness pins green mid-wave: sand `STEP` 0.139, water root 49.00, factory root 82.41. Controller render gate signed (rests visible, A/B contrast visible, mood ordering correct); **user listen still open** — R3c waits on it. Bounces + waveform/spectrogram PNGs + MP3s in `.superpowers/sdd/2026-09-05-soundtrack/wav/wave1/`.
