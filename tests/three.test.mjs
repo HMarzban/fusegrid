@@ -1179,26 +1179,33 @@ await sec("R.items",async()=>{
       +" #8f8fff)",
     "#"+fireR.material.color.getHexString()==="#ff8a3c"
     &&"#"+pierceR.material.color.getHexString()==="#8f8fff");
-  // §4 animations: bob +-5 @ sin(3t) about y=TILE*.66; spin 2.6t; ring pulse
+  // §4 animations: bob +-4 @ sin(3t+ph) about y=TILE*.66; spin 2.2t+ph
+  // (CAPACITY family, ph = grid phase, not slot); ring pulse
   const drive=(t)=>{w.time=t;sc.update(w);};
+  const ph=(100*0.7+120*1.3)/CFG.TILE;
+  const upY=new THREE.Vector3(0,1,0);
   drive(0);
   const q0=matScale(fire,0).q;
-  drive(Math.PI/6);                          // sin(3t)==1 -> top of bob
+  const wantQ0=new THREE.Quaternion().setFromAxisAngle(upY,ph);
+  const t1=(Math.PI/2-ph)/3;                 // sin(3t+ph)==1 -> top of bob
+  drive(t1);
   const bob=matScale(fire,0);
-  const wantQ=new THREE.Quaternion().setFromAxisAngle(
-    new THREE.Vector3(0,1,0),2.6*Math.PI/6);
-  check("R.items bob +-5 about TILE*.66 @sin(3t), spin advances 2.6t",
-    Math.abs(bob.p.y-(CFG.TILE*0.66+5))<1e-6
-    &&Math.abs(bob.q.y-wantQ.y)<1e-6&&Math.abs(bob.q.w-wantQ.w)<1e-6
-    &&Math.abs(q0.y)<1e-6,
+  const wantQ=new THREE.Quaternion().setFromAxisAngle(upY,2.2*t1+ph);
+  // quaternion sign is a double cover (q === -q as a rotation), so compare
+  // via angleTo rather than raw components once ph pushes the half-angle
+  // past +-pi/2.
+  check("R.items bob +-4 about TILE*.66 @sin(3t+ph), spin advances 2.2t+ph",
+    Math.abs(bob.p.y-(CFG.TILE*0.66+4))<1e-6
+    &&bob.q.angleTo(wantQ)<1e-6&&q0.angleTo(wantQ0)<1e-6,
     bob.p.y.toFixed(2));
   check("R.items pickup stays POWER-bright Lambert (never dark plate)",
     "#"+fire.material.color.getHexString()==="#ff8a3c"&&!fire.material.map);
   drive(Math.PI/10);                         // sin(5t)==1 -> pulse peak
   const pulse=matScale(fireR,0);
-  check("R.items ring pulses opacity .30+.22sin(5t), scale 1+.08sin(5t)",
-    Math.abs(fireR.material.opacity-0.52)<1e-6
-    &&Math.abs(pulse.s.x-1.08)<1e-6,
+  check("R.items ring pulses opacity .30+.10sin(5t), scale fixed at"
+      +" RING_SCALE (1, fire carries no blast reach)",
+    Math.abs(fireR.material.opacity-0.40)<1e-6
+    &&Math.abs(pulse.s.x-1)<1e-6,
     fireR.material.opacity.toFixed(3)+"/"+pulse.s.x.toFixed(2));
  });
 

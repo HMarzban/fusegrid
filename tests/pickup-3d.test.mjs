@@ -431,5 +431,50 @@ function mkE(type, x, y) {
   check("ring geometries are sharedGeo", !shared.length, shared.join(" ") || "ok");
 }
 
+{
+  const pools = createPools(BIOMES[0], null);
+  const mk = (t, x, y) => ({ x, y, t, col: "#ffffff", taken: false, pdef: null });
+  const snap = (items, time) => {
+    pools.update({ players: [], enemies: [], bombs: [], items, blades: [], time });
+    const out = {};
+    for (const pd of POWER) {
+      const im = pools.itemBodies[pd.t];
+      if (!im.count) continue;
+      const a = [];
+      for (let i = 0; i < 16; i++) a.push(+im.instanceMatrix.array[i].toFixed(6));
+      out[pd.t] = a.join(",") + "|" + pools.itemRingIM[pd.t].material.opacity.toFixed(6);
+    }
+    return out;
+  };
+  const one = POWER.map((pd) => mk(pd.t, 80, 120));
+  const a = snap(one, 0),
+    b = snap(one, 0.5);
+  const still = POWER.filter((pd) => a[pd.t] === b[pd.t]).map((pd) => pd.t);
+  check("every kind animates between t=0 and t=0.5", !still.length, still.join(" ") || "ok");
+  const c1 = snap(POWER.map((pd) => mk(pd.t, 80, 120)), 0.3);
+  const c2 = snap(POWER.map((pd) => mk(pd.t, 200, 40)), 0.3);
+  const slotty = POWER.filter((pd) => c1[pd.t] === c2[pd.t]).map((pd) => pd.t);
+  check("phase comes from grid position, not slot", !slotty.length, slotty.join(" ") || "ok");
+  const two = [mk("kick", 80, 120), mk("kick", 80, 120)];
+  pools.update({ players: [], enemies: [], bombs: [], items: two, blades: [], time: 0.3 });
+  const m = pools.itemBodies.kick.instanceMatrix.array;
+  let same = true;
+  for (let i = 0; i < 16; i++) if (Math.abs(m[i] - m[i + 16]) > 1e-9) same = false;
+  check("two items of one kind at the same (x,y) are identical", same);
+  const scales = {};
+  pools.update({
+    players: [], enemies: [], bombs: [],
+    items: [mk("line", 80, 120), mk("pierce", 120, 120), mk("power", 160, 120)],
+    blades: [], time: 0,
+  });
+  for (const t of ["line", "pierce", "power"])
+    scales[t] = +pools.itemRingIM[t].instanceMatrix.array[0].toFixed(3);
+  check(
+    "RING_SCALE encodes blast reach: line 0.86 / pierce 1 / power 1.16",
+    scales.line === 0.86 && scales.pierce === 1 && scales.power === 1.16,
+    JSON.stringify(scales),
+  );
+}
+
 console.log("\n" + pass + " passed, " + fail + " failed");
 if (fail) process.exit(1);

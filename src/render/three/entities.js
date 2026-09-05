@@ -54,6 +54,7 @@ const _m = new THREE.Matrix4(),
   _p = new THREE.Vector3(),
   _q = new THREE.Quaternion(),
   _s = new THREE.Vector3(),
+  _e = new THREE.Euler(),
   _c = new THREE.Color();
 const BL_W = new THREE.Color("#ffffff"),
   BL_A = new THREE.Color("#ffb347"),
@@ -1296,13 +1297,38 @@ export function createPools(biome, atlas) {
       nLive++;
       const kind = ITEM_GEO[it.t] ? it.t : "fire";
       const slot = counts[kind]++;
-      const rs = 1 + 0.08 * Math.sin(5 * t);
-      itemRingIM[kind].material.opacity = 0.3 + 0.22 * Math.sin(5 * t);
-      _p.set(it.x - W2, CFG.TILE * 0.66 + 5 * Math.sin(3 * t), it.y - D2);
-      _q.setFromAxisAngle(_axisY, 2.6 * t + slot * 0.9);
+      const fam = ITEM_FAMILY[kind] || "cap";
+      /* slot is a compaction index: collecting one pickup re-indexes its
+         neighbours and their animation jumps. Grid phase is stable, zero
+         alloc, and identical to the number drawItemBody uses. Non-spinning
+         kinds hold rot.y = 0 so the authored plan outline is what the
+         player always sees; ph phases the rhythm, never the yaw. */
+      const ph = (it.x * 0.7 + it.y * 1.3) / CFG.TILE;
+      let hy, ry = 0, rz = 0, op;
+      if (fam === "cap") {
+        hy = CFG.TILE * 0.66 + 4 * Math.sin(3 * t + ph);
+        ry = 2.2 * t + ph;
+        op = 0.3 + 0.1 * Math.sin(5 * t);
+      } else if (fam === "vit") {
+        hy = CFG.TILE * 0.62 + 5 * Math.sin(2.4 * t + ph);
+        op = 0.26 + 0.08 * Math.sin(2.4 * t);
+      } else if (fam === "utl") {
+        hy = CFG.TILE * 0.64 + 3 * Math.sin(3.4 * t + ph);
+        rz = 0.16 * Math.sin(7 * t + ph);
+        op = 0.34 + 0.06 * Math.sin(7 * t);
+      } else {
+        hy = CFG.TILE * 0.66 + 4 * Math.sin(3 * t + ph);
+        if (kind === "power") ry = 1.8 * t + ph;
+        op = 0.3 + 0.3 * Math.sin(9 * t);
+      }
+      itemRingIM[kind].material.opacity = op;
+      _p.set(it.x - W2, hy, it.y - D2);
+      _e.set(0, ry, rz);
+      _q.setFromEuler(_e);
       _s.set(1, 1, 1);
       _m.compose(_p, _q, _s);
       itemBodies[kind].setMatrixAt(slot, _m);
+      const rs = RING_SCALE[kind] || 1;
       _p.set(it.x - W2, 1.5, it.y - D2);
       _q.identity();
       _s.set(rs, rs, rs);
