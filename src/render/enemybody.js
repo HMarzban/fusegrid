@@ -1,4 +1,4 @@
-import { rr, RIM } from "./icons.js";
+import { rr, RIM, tone, dk, lt, poly, oval, seal } from "./icons.js";
 
 /* drawEnemyBody draws one enemy at origin; the render bob stays in the
    drawEnemies wrapper (positioning concern) so bodies stay translate-free.
@@ -15,40 +15,11 @@ import { rr, RIM } from "./icons.js";
 const ROCK = "#0b0e16";
 const VOID = "#080a16";
 
-/* Tones are quantised to 1/32 and memoised: bodies ask for ~10 each and 16
-   of them repaint every frame, so a fresh rgb() string per ask would churn. */
-const TONES = {};
-function tone(col, k, to) {
-  const q = Math.round(k * 32) / 32;
-  const key = col + q + to;
-  let v = TONES[key];
-  if (v) return v;
-  const n = parseInt(String(col).slice(1), 16) || 0;
-  const m = (b) => Math.round(b + (to - b) * q);
-  v =
-    "rgb(" +
-    m((n >> 16) & 255) +
-    "," +
-    m((n >> 8) & 255) +
-    "," +
-    m(n & 255) +
-    ")";
-  return (TONES[key] = v);
-}
-const dk = (col, k) => tone(col, k, 0);
-const lt = (col, k) => tone(col, k, 255);
-
 function contact(c, r, w) {
   c.fillStyle = "rgba(0,0,0,0.34)";
   c.beginPath();
   c.ellipse(0, r * 0.86, r * w, r * 0.17, 0, 0, 7);
   c.fill();
-}
-function seal(c) {
-  c.strokeStyle = RIM;
-  c.lineWidth = 2;
-  c.lineJoin = "round";
-  c.stroke();
 }
 /* shape(c,r,k,ox,oy): the contour at inset k, nudged by (ox,oy). Pass 1 is
    the dark form plus the rim, pass 2 the lit body lifted off the floor so
@@ -107,30 +78,6 @@ function lens(c, x, y, rad, col) {
   c.beginPath();
   c.arc(x, y, rad * 0.26, 0, 7);
   c.fill();
-}
-/* A vertex is [x,y] for a line or [x,y,cx,cy] for a quadratic. */
-function poly(pts) {
-  return (c, r, k, ox, oy) => {
-    c.beginPath();
-    for (let i = 0; i < pts.length; i++) {
-      const p = pts[i],
-        x = ox + p[0] * r * k,
-        y = oy + p[1] * r * k;
-      if (i === 0) c.moveTo(x, y);
-      else if (p.length === 4)
-        c.quadraticCurveTo(ox + p[2] * r * k, oy + p[3] * r * k, x, y);
-      else c.lineTo(x, y);
-    }
-    c.closePath();
-  };
-}
-/* Plates keep their centre and only thin their radii, so a body built from
-   offset ovals does not drift when shell insets it. */
-function oval(cy, rx, ry) {
-  return (c, r, k, ox, oy) => {
-    c.beginPath();
-    c.ellipse(ox, oy + cy * r, rx * r * k, ry * r * k, 0, 0, 7);
-  };
 }
 
 const S_WALKER = poly([

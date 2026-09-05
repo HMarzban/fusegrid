@@ -14,6 +14,69 @@ export function rr(c, x, y, w, h, r) {
   c.closePath();
 }
 
+/* Tones are quantised to 1/32 and memoised: bodies and glyphs ask for ~10
+   each and 16 of them repaint every frame, so a fresh rgb() string per ask
+   would churn. One table for the whole cabinet since the craft is shared. */
+const TONES = {};
+export function tone(col, k, to) {
+  const q = Math.round(k * 32) / 32;
+  const key = col + q + to;
+  let v = TONES[key];
+  if (v) return v;
+  const n = parseInt(String(col).slice(1), 16) || 0;
+  const m = (b) => Math.round(b + (to - b) * q);
+  v = "rgb(" + m((n >> 16) & 255) + "," + m((n >> 8) & 255) + "," + m(n & 255) + ")";
+  return (TONES[key] = v);
+}
+export const dk = (col, k) => tone(col, k, 0);
+export const lt = (col, k) => tone(col, k, 255);
+export function seal(c) {
+  c.strokeStyle = RIM;
+  c.lineWidth = 2;
+  c.lineJoin = "round";
+  c.stroke();
+}
+/* A vertex is [x,y] for a line or [x,y,cx,cy] for a quadratic. */
+export function poly(pts) {
+  return (c, r, k, ox, oy) => {
+    c.beginPath();
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i],
+        x = ox + p[0] * r * k,
+        y = oy + p[1] * r * k;
+      if (i === 0) c.moveTo(x, y);
+      else if (p.length === 4) c.quadraticCurveTo(ox + p[2] * r * k, oy + p[3] * r * k, x, y);
+      else c.lineTo(x, y);
+    }
+    c.closePath();
+  };
+}
+/* Plates keep their centre and only thin their radii, so a body built from
+   offset ovals does not drift when shell insets it. */
+export function oval(cy, rx, ry) {
+  return (c, r, k, ox, oy) => {
+    c.beginPath();
+    c.ellipse(ox, oy + cy * r, rx * r * k, ry * r * k, 0, 0, 7);
+  };
+}
+/* The mechanical split already encoded in POWER: permanent stat growth,
+   survival, transient toggle, bombKind selector. Families separate on
+   silhouette, ring profile and idle rhythm — never on hue. */
+export const ITEM_FAMILY = {
+  fire: "cap",
+  bomb: "cap",
+  speed: "cap",
+  heart: "vit",
+  shield: "vit",
+  kick: "utl",
+  throw: "utl",
+  pass: "utl",
+  remote: "utl",
+  line: "bls",
+  power: "bls",
+  pierce: "bls",
+};
+
 /* ---- items / power-up icons (cabinet glyphs, readable at 40px) ---- */
 export function drawIcon(c, type, col, time) {
   c.save();
