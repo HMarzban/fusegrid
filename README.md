@@ -116,6 +116,13 @@ npm test           # node --test
 
 Architecture, conventions, and agent notes live in [`AGENTS.md`](AGENTS.md).
 
+### Listing art
+
+Store/listing art (itch.io cover, room stills, and a short gameplay GIF) lives
+in [`media/`](media/), captured from the live game — see
+[`media/README.md`](media/README.md) for what each asset is and the zip
+recipe for an itch/Newgrounds/Game Jolt HTML5 upload.
+
 ## License
 
 MIT — see [`LICENSE`](LICENSE). Three.js r160 is vendored under MIT in `vendor/three.module.js`.
