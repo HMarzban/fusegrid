@@ -574,6 +574,7 @@ export function createGame(canvas, opts = {}) {
     onRestart: () => {
       loadLevel(world, 1, false);
       world.state = "PLAY";
+      world.fireEdge = true; // a held fire STARTED the run; never a same-frame plant
       setBtn("btnPause", "Pause");
       prevSt = "PLAY";
       coachPlanted = false;

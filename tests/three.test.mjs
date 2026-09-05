@@ -1364,6 +1364,8 @@ await sec("S4.E",async()=>{
      W+TILE and crossed the E/W pair at every corner. A 4-rail regression
      fails the count; a spanning-rail regression fails the reach. */
   const trim=g.children.filter(o=>o.userData.tag==="trim");
+  check("S4.E cabinet rim fills the surround (RIM_W 36, bezel still |ndc|<=1.10)",
+    RIM_W===36, String(RIM_W));
   check("S4.E border is ONE cabinet rim (never 4 crossing rails)",
     trim.length===1&&trim[0].isMesh&&trim[0].castShadow===false
     &&trim[0].receiveShadow===true, trim.length+"");

@@ -21,7 +21,7 @@ const MAT=new THREE.Matrix4();
    top so the arena sits in a well rather than under a floating rail; tinted
    DOWN toward bg1 so the frame recedes and the bevel carries the highlight.
    Bevel is inset so total reach stays exactly RIM_W. */
-export const RIM_W=18, RIM_LIP=6, RIM_BEV=2, RIM_IN=4;
+export const RIM_W=36, RIM_LIP=6, RIM_BEV=2, RIM_IN=4;
 
 function buildRim(biome){
   const oX=W/2+RIM_W-RIM_BEV, oZ=D/2+RIM_W-RIM_BEV;

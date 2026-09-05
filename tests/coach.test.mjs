@@ -190,13 +190,14 @@ check("round-trip", loadCoachSeen(store) === true);
     "coach still opens at run start despite the held fire",
     texts.includes("W") && texts.includes("SPACE"),
   );
+  texts.length = 0;
   while (g.world.time < COACH_DUR) {
     t += 16;
     g.loop(t);
   }
   check(
     "coach survives the full COACH_DUR window (no phantom plant closed it early)",
-    g.world.bombs.length === 0,
+    g.world.bombs.length === 0 && texts.includes("SPACE"),
   );
 }
 
@@ -233,6 +234,48 @@ check("round-trip", loadCoachSeen(store) === true);
     "coach still draws after a world.time-exhausting pause (coachT tracked PLAY time only)",
     texts.includes("W") && texts.includes("SPACE"),
   );
+}
+
+// ---- parked: toolbar Restart has the same loadLevel/fireEdge hole as
+// onStart used to. A Space held across the click must not plant on frame 1. ----
+{
+  const stubs = {
+    btnPause: { textContent: "Pause" },
+    btnSound: { textContent: "Sound: On" },
+    btnRestart: { textContent: "Restart" },
+    btnMenu: { textContent: "Menu" },
+  };
+  const ev = { currentTarget: { blur() {} } };
+  globalThis.document = { getElementById: (id) => stubs[id] || null };
+  try {
+    const { canvas } = fakeCanvasTexts();
+    const g = createGame(canvas, { autoplay: true, seed: 77 });
+    g.input._onKey({ code: "Space", preventDefault() {} });
+    let t = 0;
+    g.loop(t);
+    t += 20;
+    g.loop(t);
+    check(
+      "held fire after autoplay onStart has not planted",
+      g.world.bombs.length === 0,
+    );
+    stubs.btnRestart.onclick(ev);
+    check(
+      "Restart reloads L1 PLAY",
+      g.world.level === 1 && g.world.state === "PLAY",
+    );
+    t += 20;
+    g.loop(t);
+    t += 20;
+    g.loop(t);
+    check(
+      "held fire across toolbar Restart plants no bomb",
+      g.world.bombs.length === 0,
+      JSON.stringify(g.world.bombs),
+    );
+  } finally {
+    delete globalThis.document;
+  }
 }
 
 console.log("\n  COACH RESULT: " + pass + " PASS / " + fail + " FAIL");

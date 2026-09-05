@@ -667,29 +667,62 @@ export function drawScores(c, scores, L, t, heat, plaques) {
     c.fillText(HEAT_NAME[i], x + tabW / 2, tabY + tabH / 2 + 1);
   }
   const pmask = plaques | 0;
-  const chipW = 74,
-    chipGap = 8,
-    chipH = 20,
-    chipTot = 4 * chipW + 3 * chipGap,
-    chipX0 = S.mid - chipTot / 2,
-    chipY = tabY + tabH + 8;
-  for (let i = 0; i < 4; i++) {
-    const x = chipX0 + i * (chipW + chipGap),
-      on = (pmask & (1 << i)) !== 0;
-    if (on) {
-      c.fillStyle = "rgba(55,240,208,0.14)";
-      c.fillRect(x, chipY, chipW, chipH);
+  // Compact shells (H<520, e.g. the 608x352 3D projected box) reuse the
+  // logoScale<1 signal layout() already derives from H (same test drawMenu's
+  // logo scaling rides) to paint the four plaques inline on the tab row's
+  // right side instead of a dedicated row, reclaiming that row's height for
+  // the score table.
+  const compact = L.logoScale < 1;
+  let chipY, chipH;
+  if (compact) {
+    chipY = tabY;
+    chipH = tabH;
+    const cGap = 4,
+      cX0 = tabX0 + tabTot + 10,
+      cW = Math.max(16, (S.ix + S.iw - cX0 - 3 * cGap) / 4);
+    for (let i = 0; i < 4; i++) {
+      const x = cX0 + i * (cW + cGap),
+        on = (pmask & (1 << i)) !== 0;
+      if (on) {
+        c.fillStyle = "rgba(55,240,208,0.14)";
+        c.fillRect(x, chipY, cW, chipH);
+      }
+      c.globalAlpha = on ? 1 : 0.4;
+      c.strokeStyle = on ? ACCENT : LINE;
+      c.lineWidth = on ? 1.5 : 1;
+      c.strokeRect(x + 0.5, chipY + 0.5, cW - 1, chipH - 1);
+      c.fillStyle = on ? ACCENT : MUTED;
+      c.font = font(7, on ? "900" : "");
+      c.textAlign = "center";
+      c.textBaseline = "middle";
+      c.fillText(PLAQUE_NAME[i], x + cW / 2, chipY + chipH / 2 + 1);
+      c.globalAlpha = 1;
     }
-    c.globalAlpha = on ? 1 : 0.4;
-    c.strokeStyle = on ? ACCENT : LINE;
-    c.lineWidth = on ? 2 : 1;
-    c.strokeRect(x + 0.5, chipY + 0.5, chipW - 1, chipH - 1);
-    c.fillStyle = on ? ACCENT : MUTED;
-    c.font = font(9, on ? "900" : "");
-    c.textAlign = "center";
-    c.textBaseline = "middle";
-    c.fillText(PLAQUE_NAME[i], x + chipW / 2, chipY + chipH / 2 + 1);
-    c.globalAlpha = 1;
+  } else {
+    const chipW = 74,
+      chipGap = 8,
+      chipTot = 4 * chipW + 3 * chipGap,
+      chipX0 = S.mid - chipTot / 2;
+    chipY = tabY + tabH + 8;
+    chipH = 20;
+    for (let i = 0; i < 4; i++) {
+      const x = chipX0 + i * (chipW + chipGap),
+        on = (pmask & (1 << i)) !== 0;
+      if (on) {
+        c.fillStyle = "rgba(55,240,208,0.14)";
+        c.fillRect(x, chipY, chipW, chipH);
+      }
+      c.globalAlpha = on ? 1 : 0.4;
+      c.strokeStyle = on ? ACCENT : LINE;
+      c.lineWidth = on ? 2 : 1;
+      c.strokeRect(x + 0.5, chipY + 0.5, chipW - 1, chipH - 1);
+      c.fillStyle = on ? ACCENT : MUTED;
+      c.font = font(9, on ? "900" : "");
+      c.textAlign = "center";
+      c.textBaseline = "middle";
+      c.fillText(PLAQUE_NAME[i], x + chipW / 2, chipY + chipH / 2 + 1);
+      c.globalAlpha = 1;
+    }
   }
   const list = Array.isArray(scores) ? scores : [];
   const nShow = Math.min(10, list.length);

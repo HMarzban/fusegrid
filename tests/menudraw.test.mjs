@@ -490,12 +490,16 @@ function check(name, cond, detail) {
   const chipsOf = (texts) => {
     const clear = texts.find((t) => t.s === "CLEAR");
     const rowY = clear && clear.y;
-    const near = (s) =>
-      texts.find((t) => t.s === s && Math.abs(t.y - rowY) < 0.01);
+    const rightmost = (s) => {
+      const hits = texts.filter(
+        (t) => t.s === s && Math.abs(t.y - rowY) < 0.01,
+      );
+      return hits.sort((a, b) => a.x - b.x)[hits.length - 1];
+    };
     return {
       clear,
-      plus: near("PLUS"),
-      max: near("MAX"),
+      plus: rightmost("PLUS"),
+      max: rightmost("MAX"),
       crown: texts.find((t) => t.s === "CROWN"),
     };
   };
@@ -572,6 +576,25 @@ function check(name, cond, detail) {
         chips.every((t) => !!t && t.alpha === 1),
         JSON.stringify(chips),
       );
+    }
+    {
+      const { c, texts } = rec();
+      md.drawScores(c, DEFAULT_SCORES, L, 1, 0, 15);
+      const plusTab = texts.find((t) => t.s === "PLUS");
+      const clear = texts.find((t) => t.s === "CLEAR");
+      if (H === 352) {
+        check(
+          "608x352 plaques sit on the heat-tab row (compact)",
+          !!plusTab && !!clear && Math.abs(clear.y - plusTab.y) < 0.5,
+          JSON.stringify({ plusY: plusTab && plusTab.y, clearY: clear && clear.y }),
+        );
+      } else {
+        check(
+          "600x520 plaques stay on a dedicated row under the heat tabs",
+          !!plusTab && !!clear && clear.y > plusTab.y + 16,
+          JSON.stringify({ plusY: plusTab && plusTab.y, clearY: clear && clear.y }),
+        );
+      }
     }
   }
 }
