@@ -1009,14 +1009,42 @@ export function createPools(biome, atlas) {
     bombs.push(s);
     group.add(s);
   }
-  /* Items: unique shared geo per POWER.t + additive floor glow ring. */
-  const iringGeo = sharedGeo(
-    (() => {
-      const g = new THREE.RingGeometry(CFG.TILE * 0.3, CFG.TILE * 0.46, 20);
-      g.rotateX(-Math.PI / 2);
-      return g;
-    })(),
-  );
+  /* Items: unique shared geo per POWER.t + additive floor glow ring. The
+     ring was twelve copies of one RingGeometry restating pdef.col, which
+     the body already states. It now carries FAMILY — the one accent
+     channel an item gets. Four geometries, still twelve InstancedMeshes:
+     geometry count is not draw count. */
+  const ITEM_RING_GEO = (() => {
+    const T = CFG.TILE,
+      flat = (g) => {
+        g.rotateX(-Math.PI / 2);
+        return g;
+      };
+    const utl = [],
+      bls = [new THREE.RingGeometry(T * 0.3, T * 0.36, 24)];
+    for (let i = 0; i < 6; i++)
+      utl.push(
+        new THREE.RingGeometry(T * 0.32, T * 0.44, 3, 1, (i * Math.PI) / 3, (Math.PI / 3) * 0.62),
+      );
+    for (let i = 0; i < 8; i++)
+      bls.push(
+        new THREE.RingGeometry(T * 0.36, T * 0.48, 2, 1, (i * Math.PI) / 4 - 0.1, 0.2),
+      );
+    return {
+      cap: sharedGeo(flat(new THREE.RingGeometry(T * 0.36, T * 0.41, 24))),
+      vit: sharedGeo(
+        flat(
+          mergeGeos(
+            new THREE.RingGeometry(T * 0.28, T * 0.32, 24),
+            new THREE.RingGeometry(T * 0.42, T * 0.46, 24),
+          ),
+        ),
+      ),
+      utl: sharedGeo(flat(mergeGeos(...utl))),
+      bls: sharedGeo(flat(mergeGeos(...bls))),
+    };
+  })();
+  const RING_SCALE = { line: 0.86, pierce: 1.0, power: 1.16 };
   const itemMats = {},
     itemRings = {};
   function matForItem(t, col) {
@@ -1061,7 +1089,7 @@ export function createPools(biome, atlas) {
     itemBodies[pd.t] = body;
     group.add(body);
     const ring = new THREE.InstancedMesh(
-      iringGeo,
+      ITEM_RING_GEO[ITEM_FAMILY[pd.t] || "cap"],
       ringForItem(pd.t, pd.col),
       POOL_CAPS.items,
     );

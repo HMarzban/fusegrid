@@ -1166,11 +1166,11 @@ await sec("R.items",async()=>{
   let flat=true;
   for(let i=1;i<rpos.length;i+=3)if(Math.abs(rpos[i])>1e-9)flat=false;
   const ring0=matScale(fireR,0);
-  check("R.items ring: RingGeometry(.30T,.46T) baked flat on the floor at"
-      +" y=1.5, additive",
+  check("R.items ring: CAPACITY family RingGeometry(.36T,.41T) baked flat on"
+      +" the floor at y=1.5, additive",
     fireR.geometry.type==="RingGeometry"
-    &&fireR.geometry.parameters.innerRadius===CFG.TILE*0.30
-    &&fireR.geometry.parameters.outerRadius===CFG.TILE*0.46
+    &&fireR.geometry.parameters.innerRadius===CFG.TILE*0.36
+    &&fireR.geometry.parameters.outerRadius===CFG.TILE*0.41
     &&flat&&Math.abs(ring0.p.y-1.5)<1e-9
     &&fireR.material.isMeshBasicMaterial&&fireR.material.transparent
     &&fireR.material.blending===THREE.AdditiveBlending

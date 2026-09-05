@@ -13,6 +13,8 @@ import { createWorld, loadLevel } from "../src/core/sim.js";
 import { CFG, BIOMES } from "../src/core/config.js";
 import { POWER } from "../src/core/entities.js";
 import { drawIcon } from "../src/render/sprites.js";
+import * as THREE from "../vendor/three.module.js";
+import { ITEM_FAMILY } from "../src/render/icons.js";
 
 let pass = 0,
   fail = 0;
@@ -387,6 +389,46 @@ function mkE(type, x, y) {
     !wrongUp.length,
     wrongUp.join(" ") || "ok",
   );
+}
+
+{
+  const pools = createPools(BIOMES[0], null);
+  const geos = POWER.map((pd) => pools.itemRingIM[pd.t].geometry.uuid);
+  check(
+    "exactly 4 distinct ring geometries across the 12 ring meshes",
+    new Set(geos).size === 4,
+    String(new Set(geos).size),
+  );
+  const byFam = {};
+  for (const pd of POWER) {
+    const f = ITEM_FAMILY[pd.t];
+    const u = pools.itemRingIM[pd.t].geometry.uuid;
+    if (byFam[f] === undefined) byFam[f] = u;
+  }
+  const mixed = POWER.filter(
+    (pd) => pools.itemRingIM[pd.t].geometry.uuid !== byFam[ITEM_FAMILY[pd.t]],
+  ).map((pd) => pd.t);
+  check("ring geometry is keyed by family", !mixed.length, mixed.join(" ") || "ok");
+  const bad = POWER.filter((pd) => {
+    const ring = pools.itemRingIM[pd.t],
+      body = pools.itemBodies[pd.t];
+    return (
+      ring.material.blending !== THREE.AdditiveBlending ||
+      ring.material.depthWrite !== false ||
+      ring.material.transparent !== true ||
+      ring.castShadow !== false ||
+      body.castShadow !== true
+    );
+  }).map((pd) => pd.t);
+  check(
+    "rings additive + depthWrite false + never cast; bodies cast",
+    !bad.length,
+    bad.join(" ") || "ok",
+  );
+  const shared = POWER.filter((pd) => pools.itemRingIM[pd.t].geometry._shared !== true).map(
+    (pd) => pd.t,
+  );
+  check("ring geometries are sharedGeo", !shared.length, shared.join(" ") || "ok");
 }
 
 console.log("\n" + pass + " passed, " + fail + " failed");
