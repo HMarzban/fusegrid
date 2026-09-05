@@ -167,10 +167,12 @@ export function makeHud(dom) {
   };
 }
 
-/* S4 overlay HUD chips (real3d §3): lives as heart glyphs, BOMB/FLAME as
-   icon+count chips, painted on the overlay ctx in board space. Palette and
-   mono type match menudraw; the DOM #hud ids stay authoritative via
-   updateHud — these chips are the in-arena readout. Opt-in per frame via
+/* S4 overlay HUD chips (real3d §3): lives as heart glyphs, BOMB/FLAME/LV/
+   ENEMIES as icon+count (or label-only) chips, painted on the overlay ctx
+   in board space — the sole in-game HUD since the DOM #hud strip was
+   removed (GUIDE+HUD plan). Palette and mono type match menudraw.
+   makeHud/updateHud's DOM-id contract is untouched for its own tests, but
+   nothing in the shipped page reads it anymore. Opt-in per frame via
    o.hud===true so menus/attract keep their authored canvases untouched. */
 const HUD_TEXT = "#dfe7f5",
   HUD_MUTED = "#7385ad",
@@ -195,26 +197,39 @@ export function drawHudChips(c, world) {
     c.font = "900 12px ui-monospace,monospace";
     c.fillText("+" + (lives - n), 16 + 6 * 19, 25);
   }
-  const chip = (x, w, label, count, col) => {
+  const chip = (x, w, label, count, col, icon) => {
     c.fillStyle = HUD_PANEL;
     c.fillRect(x, 10, w, 30);
     c.strokeStyle = HUD_LINE;
     c.lineWidth = 1;
     c.strokeRect(x + 0.5, 10.5, w - 1, 29);
-    c.save();
-    c.translate(x + 17, 25);
-    c.scale(0.55, 0.55);
-    drawIcon(c, label === "BOMB" ? "bomb" : "fire", col, 0);
-    c.restore();
+    let tx = x + 10;
+    if (icon) {
+      c.save();
+      c.translate(x + 17, 25);
+      c.scale(0.55, 0.55);
+      drawIcon(c, icon, col, 0);
+      c.restore();
+      tx = x + 31;
+    }
     c.fillStyle = HUD_MUTED;
     c.font = "9px ui-monospace,monospace";
-    c.fillText(label, x + 31, 18);
+    c.fillText(label, tx, 18);
     c.fillStyle = HUD_TEXT;
     c.font = "900 13px ui-monospace,monospace";
-    c.fillText(String(count), x + 31, 33);
+    c.fillText(String(count), tx, 33);
   };
-  chip(140, 76, "BOMB", p.bombs || 0, "#ff5d73");
-  chip(224, 82, "FLAME", p.range || 0, "#ff8a3c");
+  chip(140, 76, "BOMB", p.bombs || 0, "#ff5d73", "bomb");
+  chip(224, 82, "FLAME", p.range || 0, "#ff8a3c", "fire");
+  chip(314, 64, "LV", world.level | 0, null, null);
+  chip(
+    386,
+    94,
+    "ENEMIES",
+    Array.isArray(world.enemies) ? world.enemies.length : 0,
+    null,
+    null,
+  );
   const scx = CFG.COLS * CFG.TILE - 12;
   c.textAlign = "right";
   const hk = world.heat | 0;

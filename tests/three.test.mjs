@@ -1342,7 +1342,8 @@ const HUD_STUB={save(){},restore(){},translate(){},scale(){},beginPath(){},
 await sec("S4.D",async()=>{
   const scenes=await import("../src/render/scenes.js");
   const {drawHudChips}=scenes;
-  const mkW=(lives,bombs,range)=>({state:"PLAY",lives,enemies:[],
+  const mkW=(lives,bombs,range,level,foes)=>({state:"PLAY",lives,
+    level:level|0,enemies:new Array(foes|0).fill(0),
     players:[{bombs,range}]});
   let threw=false;
   try{ drawHudChips(HUD_STUB,mkW(3,2,3)); }
@@ -1359,6 +1360,13 @@ await sec("S4.D",async()=>{
     texts.includes("BOMB")&&texts.includes("2"), texts.join("|"));
   check("S4.D FLAME chip: label + count from players[0].range",
     texts.includes("FLAME")&&texts.includes("3"), texts.join("|"));
+  const r2=hudRecorder();
+  drawHudChips(r2.rec,mkW(9,2,3,4,5));
+  const texts2=r2.ops.filter(o=>o[0]==="fillText").map(o=>String(o[1][0]));
+  check("S4.D LV chip: label + count from world.level",
+    texts2.includes("LV")&&texts2.includes("4"), texts2.join("|"));
+  check("S4.D ENEMIES chip: label + count from world.enemies.length",
+    texts2.includes("ENEMIES")&&texts2.includes("5"), texts2.join("|"));
   check("S4.D chips paint panel backgrounds",
     r.ops.some(o=>o[0]==="fillRect")&&r.ops.some(o=>o[0]==="strokeRect"));
   // DOM HUD ids keep working (updateHud contract untouched)

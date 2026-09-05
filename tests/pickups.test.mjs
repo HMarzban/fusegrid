@@ -466,12 +466,20 @@ const APPLY = {
     lives: 3,
     score: 0,
     heat: 0,
+    level: 4,
+    enemies: [1, 2],
     players: [{ bombs: 2, range: 3 }],
   });
   check(
     "HUD still paints BOMB / FLAME",
     texts.includes("BOMB") && texts.includes("FLAME") && texts.includes("2")
       && texts.includes("3"),
+    texts.join("|"),
+  );
+  check(
+    "HUD paints the migrated LV / ENEMIES chips",
+    texts.includes("LV") && texts.includes("4") &&
+      texts.includes("ENEMIES") && texts.includes("2"),
     texts.join("|"),
   );
   check(

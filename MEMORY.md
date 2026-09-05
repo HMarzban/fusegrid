@@ -16,6 +16,10 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-05 — GUIDE fold + HUD strip removal
+- MENU is six rows now (PLAY/LEVEL SELECT/OPTIONS/GUIDE/HIGH SCORES/SOURCE); HOW TO PLAY/ITEMS/ENEMIES fold under a new `GUIDE` row (`SCREEN.GUIDE`=11, appended after `SETTINGS`:10) with its own cursor and MENU's own wrap-both-ways navigation, and `back()` from those three now returns to GUIDE, not MENU.
+- This explicitly reverses the S3 "keep `#hud`, gated to `SCREEN.GAME`" call: the DOM `#hud` strip is deleted outright (markup + CSS + `main.js`'s gate), not kept behind a flag. Its two facts the canvas didn't already have (`LV`, `ENEMIES` remaining) are now painted as two more chips beside BOMB/FLAME in `drawHudChips`.
+
 ## 2026-09-05 — Pause menu + chrome removal (S3)
 - The PAUSE overlay is now a four-verb list (RESUME/RESTART/OPTIONS/QUIT TO MENU); `world.state` stays `PAUSE` and the shell stays `GAME` throughout, so the room's track keeps playing and every `screen===GAME` guard stays true. `overlayBox(kind)` names the one coordinate space `drawOverlay` and `pauseHit` both read, so the list and the tap map can never disagree by a pixel.
 - OPTIONS from pause is an inline `app.pauseView===1` page on the same `drawSettings` body, not a `_push(SCREEN.SETTINGS)` jump — a screen jump would flip the music cue to the menu track and close the HUD/touch gates mid-run for a page the player closes in four seconds. `RESTART` now calls `persistScore()` before zeroing the run, banking the score the toolbar button used to drop silently.

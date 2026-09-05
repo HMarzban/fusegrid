@@ -516,29 +516,6 @@ function mkCanvas(){
     plays.length===0&&w.events.length===0);
 }
 
-// ---- S3.2 #hud strip gate: GAME only, full opacity through PAUSE ----
-{
-  const hudEl={hidden:false};
-  const els={hud:hudEl};
-  const noop=()=>{};
-  globalThis.document={addEventListener:noop,removeEventListener:noop,
-    getElementById:(id)=>els[id]||null};
-  try{
-    const g=createGame(null,{seed:41});
-    g.app.cabinetSeen=true; g.app.skip();       // seen cabinet -> MENU
-    g.loop(16);
-    check("#hud strip is hidden outside GAME",hudEl.hidden===true,
-      String(hudEl.hidden));
-    g.app.cursor=0; g.app.confirm();            // PLAY
-    g.loop(32);
-    check("#hud strip is shown inside GAME",hudEl.hidden===false,
-      String(hudEl.hidden));
-    g.input.onPause();
-    g.loop(48);
-    check("#hud stays visible through PAUSE (world.state, not a SCREEN)",
-      hudEl.hidden===false,String(hudEl.hidden));
-   }finally{ delete globalThis.document; }
-}
 {
   const src=readFileSync(join(ROOT,"src/main.js"),"utf8");
   check("main.js passes {hud:false} on every non-GAME render, closing the"
@@ -547,15 +524,6 @@ function mkCanvas(){
     (src.match(/let ro =[\s\S]{0,600}?renderer\.render/)||[])[0]);
   check("toolbar.js is gone and main.js no longer imports it",
     !/toolbar\.js|mountToolbar|setBtn/.test(src));
-}
-{
-  // #hud{display:flex} is an author rule; the browser's own [hidden]{display:
-  // none} is a lower-priority UA rule, so an ID selector beats it regardless
-  // of source order and the JS-set .hidden=true would be invisible without an
-  // explicit #hud[hidden] override — the same gotcha #gl already carries.
-  const indexHtml=readFileSync(join(ROOT,"index.html"),"utf8");
-  check("#hud[hidden] actually hides it (author CSS beats the UA default)",
-    /#hud\[hidden\]\s*\{\s*display:\s*none\s*\}/.test(indexHtml));
 }
 
 // F3 toolbar GAME-gates and the toolbar Menu-button wave are gone with

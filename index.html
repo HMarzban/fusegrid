@@ -45,12 +45,6 @@
     font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
     display:flex;align-items:center;justify-content:center;overflow:hidden}
   #wrap{display:flex;flex-direction:column;align-items:center;gap:10px;padding:14px}
-  #hud{display:flex;gap:16px;align-items:center;font-size:13px;letter-spacing:.5px;
-    background:var(--panel);padding:8px 16px;border-radius:10px;border:1px solid var(--line);
-    box-shadow:0 6px 24px rgba(0,0,0,.45);flex-wrap:wrap;justify-content:center}
-  #hud[hidden]{display:none}
-  #hud b{color:var(--accent);font-weight:700}
-  #hud .sep{color:#3a4a68}
   #stage{position:relative;line-height:0}
   /* real3d §7 dual-canvas: WebGL #gl under the classic overlay #c; both
      absolute inset:0, touchpad stays above (z-index 5) */
@@ -94,14 +88,6 @@
 <p class="sr-only">Single-player bomb-grid arcade. Flip REAL 3D and classic 2D. Heat CORE, PLUS, and MAX. Eight rooms. Free — no account.</p>
 <noscript><p>Play Fusegrid in the browser — a single-player bomb-grid arcade. JavaScript is required.</p></noscript>
 <div id="wrap">
-  <div id="hud">
-    <span>SCORE <b id="score">0</b></span><span class="sep">·</span>
-    <span>LV <b id="level">1</b></span><span class="sep">·</span>
-    <span>LIVES <b id="lives">3</b></span><span class="sep">·</span>
-    <span>ENEMIES <b id="enemies">0</b></span><span class="sep">·</span>
-    <span>BOMB <b id="bombs">1</b></span><span class="sep">·</span>
-    <span>FLAME <b id="range">1</b></span>
-  </div>
   <div id="stage"><canvas id="gl" hidden></canvas><canvas id="c" aria-label="Fusegrid game board"></canvas>
     <div id="touchpad" hidden>
       <div id="tpad" role="group" aria-label="Move pad"></div>
