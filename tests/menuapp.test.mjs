@@ -836,8 +836,8 @@ check(
     b.exitAttract() === false && b.screen === SCREEN.INTRO,
   );
   check(
-    "key(any code incl KeyM) exits to MENU + resets idle",
-    a.key("KeyM") === true && a.screen === SCREEN.MENU && a.idleT === 0,
+    "key(Escape) exits ATTRACT to MENU + resets idle",
+    a.key("Escape") === true && a.screen === SCREEN.MENU && a.idleT === 0,
   );
   check("cursor survived the attract round-trip", a.cursor === 3);
   a.key("Escape"); // at MENU now: plain back no-op
@@ -845,8 +845,54 @@ check(
   frames(a, 601, DT); // idle again -> re-enter
   check("idle re-entry after exit works", a.screen === SCREEN.ATTRACT);
   check(
-    "confirm() exits ATTRACT (pointer path calls confirm today)",
-    a.confirm() === true && a.screen === SCREEN.MENU,
+    "confirm() on ATTRACT plays",
+    a.confirm() !== false && a.screen === SCREEN.GAME,
+  );
+}
+{
+  const started = [];
+  const a = createMenuApp({
+    onStart: (args) => started.push(args),
+  });
+  a.screen = SCREEN.MENU;
+  a.level = 4;
+  a.heat = 2;
+  a.pact = 1;
+  a.pace = 1;
+  a.cursor = 3;
+  a.enterAttract();
+  const args = a.playFromAttract();
+  check(
+    "playFromAttract starts CORE L1 and keeps LEVEL SELECT picks",
+    a.screen === SCREEN.GAME &&
+      a.inGame === true &&
+      args.level === 1 &&
+      args.heat === 0 &&
+      args.pact === 0 &&
+      args.pace === 1 &&
+      a.level === 4 &&
+      a.heat === 2 &&
+      a.pact === 1 &&
+      started.length === 1,
+    JSON.stringify(args) + " heat=" + a.heat,
+  );
+  const b = createMenuApp();
+  check(
+    "playFromAttract outside ATTRACT is false",
+    b.playFromAttract() === false && b.screen === SCREEN.INTRO,
+  );
+  const c = createMenuApp({ onStart: (args) => started.push(args) });
+  c.enterAttract();
+  check(
+    "Escape still exits to MENU (no run)",
+    c.key("Escape") === true &&
+      c.screen === SCREEN.MENU &&
+      started.length === 1,
+  );
+  c.enterAttract();
+  check(
+    "confirm on ATTRACT plays",
+    c.confirm() && c.screen === SCREEN.GAME,
   );
 }
 {

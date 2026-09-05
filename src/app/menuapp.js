@@ -127,7 +127,10 @@ export function createMenuApp(opts = {}) {
     },
     /* Discrete key tap (Enter/Esc/Backspace/M + arrows-as-tap fallback). */
     key(code) {
-      if (this.screen === SCREEN.ATTRACT) return this.exitAttract();
+      if (this.screen === SCREEN.ATTRACT) {
+        if (code === "Escape" || code === "Backspace") return this.exitAttract();
+        return this.playFromAttract();
+      }
       this.idleT = 0;
       switch (code) {
         case "Enter":
@@ -185,7 +188,7 @@ export function createMenuApp(opts = {}) {
       return false;
     },
     confirm() {
-      if (this.screen === SCREEN.ATTRACT) return this.exitAttract();
+      if (this.screen === SCREEN.ATTRACT) return this.playFromAttract();
       this.idleT = 0;
       switch (this.screen) {
         case SCREEN.INTRO:
@@ -316,6 +319,28 @@ export function createMenuApp(opts = {}) {
       this.idleT = 0;
       this._push(SCREEN.MENU);
       return true;
+    },
+    /* Tap/confirm/non-Escape key on ATTRACT: start a CORE room-1 run, keeping
+       LEVEL SELECT's level/heat/pact picks untouched for next time. */
+    playFromAttract() {
+      if (this.screen !== SCREEN.ATTRACT) return false;
+      const args = {
+        level: 1,
+        heat: 0,
+        pact: 0,
+        pace: this.pace | 0,
+      };
+      this.screen = SCREEN.GAME;
+      this.inGame = true;
+      this.subT = 0;
+      this.repT = 0;
+      this.repDir = 0;
+      this._hot = false;
+      this._taps = {};
+      this.togT = -1;
+      this.idleT = 0;
+      if (onStart) onStart(args);
+      return args;
     },
     /* M-quit: valid ONLY while in GAME with world paused (state passed in). */
     quitToMenu(worldState) {
