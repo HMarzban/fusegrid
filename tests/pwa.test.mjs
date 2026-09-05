@@ -180,6 +180,14 @@ check(
   }) === true,
 );
 check(
+  "isEmbedded true for ?embed=1 followed by a hash fragment",
+  isEmbedded({
+    top: null,
+    self: null,
+    href: "https://hmarzban.github.io/fusegrid/?embed=1#x",
+  }) === true,
+);
+check(
   "isEmbedded false for top===self, no flag",
   isEmbedded({ top: null, self: null, href: "https://hmarzban.github.io/fusegrid/" }) ===
     false,

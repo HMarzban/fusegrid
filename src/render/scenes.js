@@ -176,16 +176,20 @@ export function drawHudChips(c, world) {
   c.restore();
 }
 
-/* Ghost coach (first-run nudge): faded W A S D + a SPACE pill drawn once near
-   the spawn tile (1,1) so a first-time player sees the controls, then never
-   again. Persist state (nb.coach.v1) and the fade duration (COACH_DUR) live
-   in src/app/coach.js — render/ must not import src/app (only shellview.js
-   may, for screen constants), so main.js precomputes the fade alpha from
-   COACH_DUR and passes the plain number down; this file never re-derives it. */
+/* Ghost coach (first-run nudge): faded W A S D + a SPACE pill drawn once so a
+   first-time player sees the controls, then never again. In CLASSIC 2D this
+   paints straight onto the board context near the spawn tile (1,1); in REAL
+   3D it paints onto the fixed HUD-space overlay canvas instead (wrapper.js),
+   so it is NOT tied to any world tile there — a fixed on-screen panel, same
+   as the HUD chips. Persist state (nb.coach.v1) and the fade duration
+   (COACH_DUR) live in src/app/coach.js — render/ must not import src/app
+   (only shellview.js may, for screen constants), so main.js precomputes the
+   fade alpha from COACH_DUR and passes the plain number down; this file
+   never re-derives it. */
 const COACH_TEXT = "#eef3ff",
   COACH_PANEL = "rgba(10,14,24,0.82)",
   COACH_LINE = "#3a4a6a";
-export function drawCoach(c, world, alpha) {
+export function drawCoach(c, alpha) {
   if (!(alpha > 0)) return;
   c.save();
   c.globalAlpha = alpha;

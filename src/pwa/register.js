@@ -18,7 +18,7 @@ export function isEmbedded(env) {
       : typeof location !== "undefined" && location.href
         ? location.href
         : "";
-  return /[?&]embed=1(?:&|$)/.test(href);
+  return /[?&]embed=1(?:[&#]|$)/.test(href);
 }
 
 export function registerSW(env) {

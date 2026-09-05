@@ -115,6 +115,11 @@ export function createGame(canvas, opts = {}) {
      in an EARLIER run never dismisses the coach in a later, still-unseen one. */
   let coachSeen = loadCoachSeen();
   let coachPlanted = false;
+  /* coachT (plan 4 fix): world.time accumulates even through PAUSE (sim.js
+     bumps it before the PAUSE early-return) and loadLevel never resets it, so
+     it cannot gate the coach window on its own — coachT is main's own PLAY-
+     only clock for that gate (see the RAF loop's step branch and onStart). */
+  let coachT = 0;
 
   /* USER CAMERA (spec §1): render-side closure state, NEVER in world/snapshot.
      Handlers self-gate on GAME via getActive; menus/attract stay authored.
@@ -150,9 +155,11 @@ export function createGame(canvas, opts = {}) {
     loadLevel(world, args.level, false);
     world.score = 0;
     world.state = "PLAY";
+    world.fireEdge = true; // a held fire STARTED the run; never a same-frame plant
     app.inGame = true;
     prevSt = "PLAY";
-    coachPlanted = false; // fresh run: world.time restarts at 0 too
+    coachPlanted = false;
+    coachT = 0; // fresh run: coachT restarts at 0 (world.time never does)
     resetCamera(cam); // §2: every run starts framed
     resetOrbit(rig);
     setBtn("btnPause", "Pause");
@@ -220,7 +227,12 @@ export function createGame(canvas, opts = {}) {
     };
     if (audio.unlocked && audio.unlocked()) fireJingle();
   }
-  if (autoplay) app.startRun();
+  if (autoplay) {
+    app.startRun();
+    saveCabinetSeen(); // ?play=1 skips bootFromIntro, whose own markCabinet
+    // never fires; without this a first-timer shared a ?play=1 link gets
+    // boot-from-intro'd again on their next, non-autoplay visit
+  }
 
   /* app.update() contract adapter over the live Input (held axes + fire) */
   const shellInput = {
@@ -253,8 +265,8 @@ export function createGame(canvas, opts = {}) {
           if (typeof navigator !== "undefined" && navigator.clipboard)
             navigator.clipboard.writeText(t).catch(() => {});
         }
-      }
-      return;
+        return;
+      } // outside GAME (e.g. ATTRACT): fall through to app.key so KeyC still plays
     }
     if (code === "KeyM") {
       if (app.screen === SCREEN.GAME && app.worldState === "PAUSE") {
@@ -402,6 +414,11 @@ export function createGame(canvas, opts = {}) {
     });
   let renderer = getRenderer(curKind);
 
+  // drawShell getters (plan 5): hoisted once so the RAF loop below allocates
+  // no new closures per frame.
+  const getScoresForHeat = (heat) => scoresForHeat(loadScores(), heat);
+  const getPlaquesFn = () => loadPlaques();
+
   let last = null,
     acc = 0,
     running = true;
@@ -434,6 +451,7 @@ export function createGame(canvas, opts = {}) {
         saveScores(recordScore(loadScores(), scoreEntry(world, dateStr())));
       prevSt = world.state;
       acc += dt;
+      if (world.state === "PLAY") coachT += dt; // PAUSE must not burn the coach window
       let steps = 0;
       while (acc >= CFG.STEP) {
         if (net) net.drive();
@@ -457,7 +475,7 @@ export function createGame(canvas, opts = {}) {
          flips closed (DUR elapsed or a plant), never in the draw code. */
       if (!coachSeen) {
         if (world.events.some((e) => e.t === "bomb")) coachPlanted = true;
-        if (!coachOpen(coachSeen, world.time, coachPlanted)) {
+        if (!coachOpen(coachSeen, coachT, coachPlanted)) {
           saveCoachSeen();
           coachSeen = true;
         }
@@ -531,16 +549,14 @@ export function createGame(canvas, opts = {}) {
                 // render/scenes.js never re-derives that constant.
                 coach:
                   world.state === "PLAY" &&
-                  coachOpen(coachSeen, world.time, coachPlanted)
-                    ? Math.max(0, 1 - world.time / COACH_DUR)
+                  coachOpen(coachSeen, coachT, coachPlanted)
+                    ? Math.max(0, 1 - coachT / COACH_DUR)
                     : 0,
               }
             : undefined,
     );
     c.restore();
-    drawShell(c, app, world, canvas, curKind, (heat) =>
-      scoresForHeat(loadScores(), heat), () => loadPlaques(),
-    );
+    drawShell(c, app, world, canvas, curKind, getScoresForHeat, getPlaquesFn);
     if (running && typeof requestAnimationFrame !== "undefined")
       requestAnimationFrame(loop);
   }

@@ -86,7 +86,7 @@ export function createRenderer(canvas, opts={}){
     /* ghost coach (plan 4): same opt-in gate as the HUD chips; o.coach is
        the fade alpha precomputed in main.js from coachOpen(...) + COACH_DUR
        + world.state==="PLAY" (0 when closed), never re-derived here. */
-    if(o&&o.hud===true) drawCoach(ctx, world, (o&&o.coach)||0);
+    if(o&&o.hud===true) drawCoach(ctx, (o&&o.coach)||0);
   }
   return {canvas, ctx, render, consumeEvents, getShake};
 }

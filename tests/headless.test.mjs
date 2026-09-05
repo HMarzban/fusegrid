@@ -83,6 +83,21 @@ check("null-canvas renderer render() does not throw", ok);
     g.app.screen+"/"+g.world.state);
 }
 {
+  // MINOR 3: ?play=1/autoplay bypasses bootFromIntro (whose own markCabinet
+  // never fires), so main.js must mark the cabinet seen itself or a shared
+  // ?play=1 link never persists nb.cabinet.v1 and the next, non-autoplay
+  // visit gets boot-from-intro'd again.
+  const mem={};
+  globalThis.window={addEventListener:()=>{},
+    localStorage:{getItem:(k)=>(k in mem?mem[k]:null),
+      setItem:(k,v)=>{mem[k]=String(v);}}};
+  try{
+    createGame(null,{autoplay:true});
+    check("autoplay marks the cabinet seen (nb.cabinet.v1)",
+      mem["nb.cabinet.v1"]==="1", JSON.stringify(mem));
+  }finally{ delete globalThis.window; }
+}
+{
   const m=createGame(null,{seed:9});
   m.loop(0); m.loop(200);
   check("loop in MENU never steps the sim", m.world.time===0, "time "+m.world.time);
@@ -330,6 +345,8 @@ function mkCanvas(){
   g.app.cursor=4;
   const esc=g.app.key("Escape");
   check("attract: Escape exits to MENU", esc===true && g.app.screen===SCREEN.MENU);
+  t+=16; g.loop(t);
+  check("attract: demo discarded after exit", g.demo===null);
   for(let i=0;i<640;i++){ t+=16; g.loop(t); }
   check("attract: re-entered after Escape", g.app.screen===SCREEN.ATTRACT);
   const play=g.app.key("Enter");
@@ -777,8 +794,11 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   const L=readFileSync(join(ROOT,"src/main.js"),"utf8").split("\n");
   // plan 7: +2 lines (cabinetseen.js import + cabinetSeen/markCabinet opts)
   // for the first-visit-play wiring main.js alone can hold (app-layer persist).
-  check("main.js stays a lean browser entry (<=622 lines)",
-    L.length<=622,String(L.length));
+  // final fix wave: +16 lines (coachT accumulator + reset, world.fireEdge
+  // reset-run guard, autoplay markCabinet call, KeyC ATTRACT fallthrough,
+  // hoisted drawShell getters) — bumped 622->640.
+  check("main.js stays a lean browser entry (<=640 lines)",
+    L.length<=640,String(L.length));
   const lastImp=L.reduce((a,l,i)=>/^import[\s{]/.test(l)?i:a,-1);
   const firstDecl=L.findIndex(l=>/^(export\s|const\s|let\s|var\s|function\s|class\s)/.test(l));
   check("main.js keeps every import at the top (no mid-file import sprawl)",
@@ -925,6 +945,17 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
     g.input._onKey({code:"KeyC"});
     check("KeyC outside GAME is a no-op", calls.length===2);
    }finally{ delete navigator.clipboard; }
+}
+
+// MINOR 4: KeyC's GAME-only early return must not swallow ATTRACT's
+// key-to-play path (any non-Escape/Backspace key on ATTRACT starts a run).
+{
+  const g=createGame(null,{seed:12});
+  g.app.screen=SCREEN.ATTRACT;
+  g.input._onKey({code:"KeyC"});
+  check("KeyC on ATTRACT falls through to app.key and starts a CORE run",
+    g.app.screen===SCREEN.GAME&&g.world.state==="PLAY"&&(g.world.heat|0)===0,
+    g.app.screen+"/"+g.world.state);
 }
 
 console.log(fail? "HEADLESS FAIL":"HEADLESS OK");

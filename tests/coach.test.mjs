@@ -50,7 +50,7 @@ check("round-trip", loadCoachSeen(store) === true);
     clearRect: noop, ellipse: noop, setTransform: noop,
     fillText: (t) => texts.push(String(t)), strokeText: noop,
   };
-  drawCoach(c, { time: 0 }, 1);
+  drawCoach(c, 1);
   check("drawCoach open draws a W key", texts.some((t) => t.includes("W")), texts.join(","));
   check("drawCoach open draws a SPACE pill", texts.some((t) => t.includes("SPACE")), texts.join(","));
 }
@@ -65,7 +65,7 @@ check("round-trip", loadCoachSeen(store) === true);
     apply: () => rec,
     set: (t, p) => { calls.push(p); return true; },
   });
-  drawCoach(rec, { time: 0 }, 0);
+  drawCoach(rec, 0);
   check("drawCoach closed draws nothing", calls.length === 0, calls.join(","));
 }
 
@@ -164,6 +164,75 @@ check("round-trip", loadCoachSeen(store) === true);
   } finally {
     delete globalThis.window;
   }
+}
+
+// ---- CRITICAL 1 regression: a Space held across the moment a run starts
+// (INTRO boot / MENU START / ATTRACT all funnel through main.js's onStart,
+// the single choke point) must not read as a same-frame bomb plant. Before
+// the fix, loadLevel() clears world.fireEdge while the held key leaves
+// inp.fire===true, so frame 1's edge check (fire && !fireEdge) fired: a bomb
+// landed under spawn AND coachPlanted latched, killing the coach in 2 frames. ----
+{
+  const { texts, canvas } = fakeCanvasTexts();
+  const g = createGame(canvas, { seed: 111 }); // unseen cabinet: boots via INTRO
+  g.input._onKey({ code: "Space", preventDefault() {} }); // fire held from INTRO
+  g.app.bootFromIntro(); // INTRO -> GAME (onStart), fire still held throughout
+  let t = 0;
+  g.loop(t);
+  t += 20; // t=0 alone never crosses CFG.STEP (no step() runs yet); this is
+  g.loop(t); // the first frame that actually advances the sim
+  check(
+    "held fire across an INTRO-boot run start plants no bomb",
+    g.world.bombs.length === 0,
+    JSON.stringify(g.world.bombs),
+  );
+  check(
+    "coach still opens at run start despite the held fire",
+    texts.includes("W") && texts.includes("SPACE"),
+  );
+  while (g.world.time < COACH_DUR) {
+    t += 16;
+    g.loop(t);
+  }
+  check(
+    "coach survives the full COACH_DUR window (no phantom plant closed it early)",
+    g.world.bombs.length === 0,
+  );
+}
+
+// ---- IMPORTANT 2 regression: pausing for longer than COACH_DUR of wall
+// time must not exhaust the coach window. world.time keeps accumulating
+// through PAUSE (sim.js bumps it before the early-return) and loadLevel
+// never resets it, so the OLD gate (coachOpen(seen, world.time, planted))
+// could read world.time>=COACH_DUR purely from a pause and close the coach
+// for the rest of the session. coachT (main.js-owned, PLAY-time only) fixes
+// this — pin the pause case. ----
+{
+  const { texts, canvas } = fakeCanvasTexts();
+  const g = createGame(canvas, { autoplay: true, seed: 66 });
+  let t = 0;
+  g.loop(t);
+  check("coach open at run start (pre-pause)", texts.includes("SPACE"));
+  g.input.onPause(); // PLAY -> PAUSE
+  check("run is paused", g.world.state === "PAUSE");
+  let guard = 0;
+  while (g.world.time < COACH_DUR + 0.5 && guard < 5000) {
+    t += 16;
+    g.loop(t);
+    guard++;
+  }
+  check(
+    "world.time exceeded COACH_DUR while paused (the bug's precondition)",
+    g.world.time >= COACH_DUR,
+    "time=" + g.world.time.toFixed(2),
+  );
+  g.input.onPause(); // PAUSE -> PLAY
+  texts.length = 0;
+  g.loop((t += 16));
+  check(
+    "coach still draws after a world.time-exhausting pause (coachT tracked PLAY time only)",
+    texts.includes("W") && texts.includes("SPACE"),
+  );
 }
 
 console.log("\n  COACH RESULT: " + pass + " PASS / " + fail + " FAIL");
