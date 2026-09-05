@@ -797,8 +797,12 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   // final fix wave: +16 lines (coachT accumulator + reset, world.fireEdge
   // reset-run guard, autoplay markCabinet call, KeyC ATTRACT fallthrough,
   // hoisted drawShell getters) — bumped 622->640.
-  check("main.js stays a lean browser entry (<=640 lines)",
-    L.length<=640,String(L.length));
+  // S1 settings-store wave: +11 lines (settings.js + fx.js imports, the
+  // settings/applySettings closure boot-applies every knob, camPreset
+  // re-applied after every resetOrbit, o.bright threaded into render opts)
+  // — bumped 640->655.
+  check("main.js stays a lean browser entry (<=655 lines)",
+    L.length<=655,String(L.length));
   const lastImp=L.reduce((a,l,i)=>/^import[\s{]/.test(l)?i:a,-1);
   const firstDecl=L.findIndex(l=>/^(export\s|const\s|let\s|var\s|function\s|class\s)/.test(l));
   check("main.js keeps every import at the top (no mid-file import sprawl)",

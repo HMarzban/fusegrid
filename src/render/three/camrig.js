@@ -26,6 +26,20 @@ const DEF={az:0,el:0.54,dist:870,target:[0,-48,0]};
 export const DRAG_K=0.005;         // rad per drag px
 export const WHEEL_DOLLY_K=0.6;    // world-units per wheel deltaY tick
 
+/* CAMERA presets are persisted starting DOLLY positions, not new rigs: el, az
+   and target never move. dist is already a live player axis (wheel/pinch runs
+   unguarded in GAME+3d within DIST_MIN/DIST_MAX), so a preset is that same
+   axis made discoverable. Measured against the §4b projection at RIM_W 36 /
+   RIM_LIP 6: bezel 1.0974 / 0.9622 / 0.8673 against the 1.10 gate, worst
+   playfield corner 0.9449 / 0.8322 / 0.7524. No preset dollies IN (860 scores
+   1.1148); FAR stops at 1040 because 1080 drops the corner to 0.7180. */
+export const CAM_PRESET=Object.freeze([870,960,1040]);
+export const CAM_NAME=Object.freeze(["STANDARD","WIDE","FAR"]);
+export function camPreset(i){
+  const n=typeof i==="number"&&isFinite(i)?i|0:0;
+  return CAM_PRESET[n<0?0:n>2?2:n];
+}
+
 export function createRig(){
   return {az:DEF.az,el:DEF.el,dist:DEF.dist,target:DEF.target.slice()};
 }

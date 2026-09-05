@@ -31,7 +31,8 @@ import {buildScene, countDrawCalls, RIM_W, RIM_LIP,
 import {createPools, SLOT_MESH} from "../src/render/three/entities.js";
 import {atlasSources, buildAtlas} from "../src/render/three/textures.js";
 import {createRig, orbitBy, dollBy, resetOrbit, applyOrbit,
-  SHAKE_3D_K, DRAG_K} from "../src/render/three/camrig.js";
+  SHAKE_3D_K, DRAG_K, DIST_MIN, DIST_MAX,
+  CAM_PRESET, CAM_NAME, camPreset} from "../src/render/three/camrig.js";
 import {createRenderer3D} from "../src/render/three/wrapper.js";
 import {createRenderer} from "../src/render/renderer.js";
 import {createWorld, loadLevel, step} from "../src/core/sim.js";
@@ -2025,6 +2026,65 @@ await sec("MG",async()=>{
     Object.keys(r).sort().join(",")
       ==="canvas,consumeEvents,ctx,getShake,overlay,render",
     Object.keys(r).sort().join(","));
+}
+
+// ---- §SET camera presets: persisted dolly stops, not new rigs ----
+/* Re-runs §4b's own projection at each preset. The rig's el/az/target never
+   move — only dist — so the only gate that can break is the bezel, which is
+   monotonically increasing as dist shrinks: 870 already sits at 1.0974 of
+   1.10 and dist 860 scores 1.1148. The two §4b FLOORS bind the authored
+   default only; they are not a ceiling on where a player may dolly, which the
+   always-live wheel already proves (DIST_MAX 1400 scores 0.5256 today). */
+{
+  const W4=CFG.COLS*CFG.TILE, D4=CFG.ROWS*CFG.TILE;
+  const at=(dist)=>{
+    const cam=new THREE.PerspectiveCamera(45,W4/D4,1,2500);
+    const st=createRig(); st.dist=dist;
+    applyOrbit(cam,st,{x:0,y:0});
+    cam.updateMatrixWorld(true);
+    const ndc=(x,y,z)=>new THREE.Vector3(x,y,z).project(cam);
+    let worst=0, bez=0;
+    for(const b of BIOMES)
+      for(const sx of [-1,1])for(const sz of [-1,1]){
+        for(const y of [0,b.hWall]){
+          const v=ndc(sx*W4/2,y,sz*D4/2);
+          worst=Math.max(worst,Math.abs(v.x),Math.abs(v.y));
+         }
+        for(const y of [0,b.hWall+RIM_LIP]){
+          const v=ndc(sx*(W4/2+RIM_W),y,sz*(D4/2+RIM_W));
+          bez=Math.max(bez,Math.abs(v.x),Math.abs(v.y));
+         }
+       }
+    return {worst,bez};
+   };
+  check("§SET CAM_PRESET is exactly [870,960,1040], frozen",
+    Object.isFrozen(CAM_PRESET)&&CAM_PRESET.join()==="870,960,1040",
+    CAM_PRESET.join());
+  check("§SET CAM_NAME is STANDARD/WIDE/FAR, frozen, same arity",
+    Object.isFrozen(CAM_NAME)&&CAM_NAME.join()==="STANDARD,WIDE,FAR"
+    &&CAM_NAME.length===CAM_PRESET.length, CAM_NAME.join());
+  check("§SET no preset dollies IN past the authored 870 (dist 860 scores"
+      +" bezel 1.1148 and fails outright)",
+    CAM_PRESET.every(d=>d>=870), CAM_PRESET.join());
+  check("§SET every preset sits inside the live dolly clamps",
+    CAM_PRESET.every(d=>d>=DIST_MIN&&d<=DIST_MAX),
+    DIST_MIN+".."+DIST_MAX);
+  check("§SET STANDARD IS the authored rig — a bare createRig() is unmoved",
+    CAM_PRESET[0]===createRig().dist&&createRig().el===0.54
+    &&createRig().az===0&&createRig().target[1]===-48,
+    JSON.stringify(createRig()));
+  for(let i=0;i<CAM_PRESET.length;i++){
+    const r=at(CAM_PRESET[i]);
+    check("§SET "+CAM_NAME[i]+" keeps the cabinet bezel on screen"
+        +" (|ndc|<=1.10)", r.bez<=1.10, r.bez.toFixed(4));
+   }
+  check("§SET FAR still holds the worst playfield corner above 0.75"
+      +" (dist 1080 scores 0.7180 = a board in a void)",
+    at(1040).worst>=0.75, at(1040).worst.toFixed(4));
+  check("§SET camPreset clamps every out-of-range index",
+    camPreset(-5)===870&&camPreset(0)===870&&camPreset(1)===960
+    &&camPreset(2)===1040&&camPreset(99)===1040&&camPreset(undefined)===870,
+    [camPreset(-5),camPreset(99),camPreset(undefined)].join());
 }
 
 console.log(fail? "THREE FAIL":"THREE OK");

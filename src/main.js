@@ -9,6 +9,7 @@ import { createRenderer } from "./render/renderer.js";
 import { makeHud, copyPayload } from "./render/scenes.js";
 import { paintBombPad } from "./render/sprites.js";
 import { dims, drawShell, kindSize } from "./render/shellview.js";
+import { setFxOpts } from "./render/fx.js";
 import { SCREEN, SOURCE_URL, createMenuApp } from "./app/menuapp.js";
 import { clampHeat } from "./core/heat.js";
 import { clampPact } from "./core/pact.js";
@@ -22,6 +23,7 @@ import { loadPactUnlocked, savePactUnlocked } from "./app/pactstore.js";
 import { loadCabinetSeen, saveCabinetSeen } from "./app/cabinetseen.js";
 import { loadPlaques, savePlaques, unlockPlaques } from "./app/plaques.js";
 import { loadPace, savePace } from "./app/pacestore.js";
+import { loadSettings } from "./app/settings.js";
 import {
   loadCoachSeen,
   saveCoachSeen,
@@ -38,7 +40,7 @@ import {
   mountCameraCtl,
   transform as camTransform,
 } from "./render/cameraCtl.js";
-import { createRig, resetOrbit, mountOrbitCtl } from "./render/three/camrig.js";
+import { createRig, resetOrbit, mountOrbitCtl, camPreset } from "./render/three/camrig.js";
 import { loadRenderer3D } from "./render/three/load.js";
 import { createLocalPair } from "./net/localpair.js";
 
@@ -162,6 +164,7 @@ export function createGame(canvas, opts = {}) {
     coachT = 0; // fresh run: coachT restarts at 0 (world.time never does)
     resetCamera(cam); // §2: every run starts framed
     resetOrbit(rig);
+    rig.dist = camPreset(settings.cam);
     setBtn("btnPause", "Pause");
   };
 
@@ -175,14 +178,23 @@ export function createGame(canvas, opts = {}) {
     if (typeof window !== "undefined")
       window.open(SOURCE_URL, "_blank", "noopener,noreferrer");
   };
+  // SETTINGS (nb.settings.v1): loaded once at boot; applySettings is the seam S2's OPTIONS rows call again.
+  const settings = loadSettings();
+  if (settings.snd === 0 && audio && audio.toggle) audio.toggle();
+  const applySettings = (S) => {
+    if (audio && audio.setVols) audio.setVols({ mus: S.mus / 100, sfx: S.sfx / 100 });
+    setFxOpts({ flashK: S.flx ? 0.25 : 1, shakeK: S.shk ? 1 : 0 });
+    rig.dist = camPreset(S.cam);
+  };
+  applySettings(settings);
   const app = createMenuApp({
     level: 1,
-    sound: true,
+    sound: settings.snd !== 0,
     pactUnlocked: loadPactUnlocked(),
     cabinetSeen: loadCabinetSeen(), markCabinet: () => saveCabinetSeen(),
     pace: loadPace(),
     onPaceChange: (p) => savePace(p),
-    render3d: urlKind === "3d" || opts.render3d === true,
+    render3d: urlKind === "3d" || opts.render3d === true || settings.r3d === 1,
     audio,
     autoplay,
     onStart,
@@ -255,6 +267,7 @@ export function createGame(canvas, opts = {}) {
       if (app.screen === SCREEN.GAME) {
         resetCamera(cam); // §2 reset, GAME only
         resetOrbit(rig); // real3d §4: 3D rig resets too
+        rig.dist = camPreset(settings.cam);
       }
       return;
     }
@@ -533,28 +546,27 @@ export function createGame(canvas, opts = {}) {
       const { cw, ch } = dims(canvas, curKind);
       camTransform(c, cw, ch, cam);
     }
-    renderer.render(
-      attract && demo ? demo.world : world,
-      dt,
-      attract
-        ? { hud: false }
-        : app.screen === SCREEN.INTRO && curKind === "3d"
-          ? { intro: app.subT }
-          : app.screen === SCREEN.GAME
-            ? {
-                hud: true, // S4 overlay HUD chips
-                // ghost coach: GAME screen (not ATTRACT, whose demo world is
-                // state PLAY too) AND world.state==="PLAY" (not PAUSE/WIN/LOSE).
-                // Fade alpha (not a bool) computed here from COACH_DUR so
-                // render/scenes.js never re-derives that constant.
-                coach:
-                  world.state === "PLAY" &&
-                  coachOpen(coachSeen, coachT, coachPlanted)
-                    ? Math.max(0, 1 - coachT / COACH_DUR)
-                    : 0,
-              }
-            : undefined,
-    );
+    let ro = attract
+      ? { hud: false }
+      : app.screen === SCREEN.INTRO && curKind === "3d"
+        ? { intro: app.subT }
+        : app.screen === SCREEN.GAME
+          ? {
+              hud: true, // S4 overlay HUD chips
+              // ghost coach: GAME screen (not ATTRACT, whose demo world is
+              // state PLAY too) AND world.state==="PLAY" (not PAUSE/WIN/LOSE).
+              // Fade alpha (not a bool) computed here from COACH_DUR so
+              // render/scenes.js never re-derives that constant.
+              coach:
+                world.state === "PLAY" &&
+                coachOpen(coachSeen, coachT, coachPlanted)
+                  ? Math.max(0, 1 - coachT / COACH_DUR)
+                  : 0,
+            }
+          : undefined;
+    // BRIGHTNESS is 3D only — CLASSIC 2D blits the authored hex unregraded.
+    if (curKind === "3d") ro = { ...(ro || {}), bright: settings.bri / 100 };
+    renderer.render(attract && demo ? demo.world : world, dt, ro);
     c.restore();
     drawShell(c, app, world, canvas, curKind, getScoresForHeat, getPlaquesFn);
     if (running && typeof requestAnimationFrame !== "undefined")
