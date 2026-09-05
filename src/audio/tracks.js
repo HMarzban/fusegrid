@@ -266,43 +266,50 @@ const JUNGLE_A = mkPat(
   hats(64, 3600, 2),
   ["square", 0.1, "triangle", 0.08, "triangle", 0.018],
 );
+/* ICE — brittle, echoing. F Lydian on F, STEP 0.144 (104 BPM). Register
+   separation is the whole idea: the bass is cut back to four long cracks and
+   NOTHING melodic sounds below C5, so the absence of low end is what reads as
+   ice. The lead runs the motif in AUG — doubled durations, two bars per
+   statement, steps 0/2/4/6/12 — and each statement is answered by a single
+   short ping an octave above it, the echo off the walls. The sine pad holds
+   Lydian chord tones including the raised fourth (B3), the glassy note that
+   names the mode. Hat: one 6200 Hz tick every eight steps, just off the
+   downbeat. 26 of 64 steps occupied; bar 4 is empty of everything but the pad. */
 const ICE_A = mkPat(
-  0.18,
+  0.144,
   64,
-  pulse([
-    [73.42, 110],
-    [65.41, 98],
-    [58.27, 87.31],
-    [73.42, 146.8],
-  ]),
-  oct([
-    [
-      [0, 587.3],
-      [3, 698.5],
-      [6, 880],
-    ],
-    [
-      [0, 659.3],
-      [2, 784],
-      [5, 659.3],
-    ],
-    [
-      [0, 523.3],
-      [4, 698.5],
-    ],
-    [
-      [0, 587.3],
-      [3, 440],
-      [6, 523.3],
-    ],
-  ]),
-  hats(64, 6200, 4),
-  ["triangle", 0.08, "triangle", 0.06, "triangle", 0.015, "triangle", 0.028],
   [
-    [0, 293.7, 8],
-    [16, 261.6, 8],
-    [32, 246.9, 8],
-    [48, 293.7, 8],
+    [0, 87.31, 8],
+    [20, 65.41, 6],
+    [32, 87.31, 8],
+    [52, 98.0, 4],
+  ],
+  [
+    [0, 698.46, 2],
+    [2, 880.0, 2],
+    [4, 1046.5, 2],
+    [6, 1174.66, 6],
+    [12, 1046.5, 2],
+    [15, 1396.91, 1],
+    [16, 1174.66, 2],
+    [18, 1046.5, 2],
+    [21, 987.77, 3],
+    [32, 698.46, 2],
+    [34, 880.0, 2],
+    [36, 1046.5, 2],
+    [38, 1174.66, 6],
+    [44, 1046.5, 2],
+    [46, 1396.91, 1],
+    [48, 987.77, 4],
+    [52, 880.0, 4],
+  ],
+  hats(64, 6200, 8),
+  ["triangle", 0.08, "triangle", 0.06, "triangle", 0.015, "sine", 0.03],
+  [
+    [0, 349.23, 12],
+    [16, 246.94, 12],
+    [32, 261.63, 12],
+    [48, 329.63, 12],
   ],
 );
 const FACTORY_A = mkPat(

@@ -1696,5 +1696,52 @@ function installAC(ac) {
   );
 }
 
+// ---- ice: brittle, echoing (F Lydian, AUG — register separation is the idea) ----
+{
+  const T = MUSIC_TRACKS.ice,
+    A = T.A,
+    B = T.B,
+    f0 = TONIC.ice;
+  check(
+    "ice STEP 0.144 (104 BPM), F2 87.31 root, B up a whole tone",
+    A.STEP === 0.144 &&
+      A.bass[0].f === 87.31 &&
+      Math.abs(B.bass[0].f / A.bass[0].f - 1.122462) < 1e-9,
+    A.STEP + "/" + A.bass[0].f,
+  );
+  check(
+    "ice bass is reduced to occasional cracks: <= 6 notes, none under 4 steps",
+    A.bass.length <= 6 && A.bass.every((n) => Math.round(n.d / A.STEP) >= 4),
+    A.bass.length + " notes",
+  );
+  check(
+    "ice lead lives above C5 — the absence of low end IS the ice",
+    A.lead.length > 0 && A.lead.every((n) => n.f >= 523.25),
+    Math.min(...A.lead.map((n) => n.f)),
+  );
+  check(
+    "ice states the motif in AUG — steps 0,2,4,6,12, two bars per statement",
+    motifAt(A.lead, 0, f0, 2),
+    motifHead(A.lead, f0, 2, 64),
+  );
+  check(
+    "ice pad sounds the Lydian sharp 4 — the glassy, uncanny tone",
+    !!A.pad && A.pad.some((n) => isDeg(n.f, f0, [6])),
+    (A.pad || []).map((n) => pcOf(n.f, f0).toFixed(1)).join(","),
+  );
+  check(
+    "ice hat ticks every 8 steps at 6200 Hz",
+    A.hat.length > 0 &&
+      A.hat.every((n) => n.s % 8 === A.hat[0].s % 8 && n.f === 6200),
+    A.hat.length,
+  );
+  check(
+    "ice is sparse: at most 34 of 64 steps, and it breathes",
+    occ(A) <= 34 && breathBar(A) >= 0,
+    occ(A) + "/" + breathBar(A),
+  );
+  check("ice register lanes never cross, A and B", lanes(A) && lanes(B));
+}
+
 console.log("\n  MUSIC RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);
