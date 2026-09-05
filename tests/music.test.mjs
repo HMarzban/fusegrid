@@ -21,6 +21,80 @@ function check(name, cond, detail) {
 }
 const near = (a, b, eps) => Math.abs(a - b) <= (eps == null ? 1e-9 : eps);
 
+/* Interval pins measure pitch CLASS above the track's own tonic, read from this
+   table — never A.bass[0].f, because intro's bass sits on the DOMINANT and
+   sand's on the drone FIFTH (spec 1b). Inferring a tonic from bass[0] would
+   silently measure the wrong intervals on those two. */
+const TONIC = Object.freeze({
+  intro: 293.66,
+  menu: 293.66,
+  jungle: 293.66,
+  ice: 349.23,
+  factory: 329.63,
+  water: 392.0,
+  arena: 440.0,
+  sand: 329.63,
+  void: 493.88,
+  crown: 261.63,
+});
+const semi = (f, f0) => 12 * Math.log2(f / f0);
+const pcOf = (f, f0) => {
+  const x = semi(f, f0) % 12;
+  return x < 0 ? x + 12 : x;
+};
+const isDeg = (f, f0, set) => {
+  const p = pcOf(f, f0);
+  return set.some(
+    (d) => Math.abs(p - d) <= 0.05 || Math.abs(p - d - 12) <= 0.05,
+  );
+};
+/* One helper covers all eight modes because the motif's degrees are exactly the
+   ones every mode agrees on to within these pairs: 3 swings minor/major, 5 is
+   diminished only in Locrian, 6 is the modal fingerprint. */
+const DEG1 = [0],
+  DEG3 = [3, 4],
+  DEG5 = [6, 7],
+  DEG6 = [8, 9];
+const figureAt = (chan, s0, f0, offs, degs) =>
+  offs.every((off, i) =>
+    chan.some((n) => n.s === s0 + off && isDeg(n.f, f0, degs[i])),
+  );
+const motifAt = (chan, s0, f0, k) =>
+  figureAt(
+    chan,
+    s0,
+    f0,
+    [0, 1, 2, 3, 6].map((x) => x * (k || 1)),
+    [DEG1, DEG3, DEG5, DEG6, DEG5],
+  );
+const fragMidAt = (chan, s0, f0) =>
+  figureAt(chan, s0, f0, [1, 2, 3], [DEG3, DEG5, DEG6]);
+const motifHead = (chan, f0, k, len) => {
+  for (let s = 0; s < (len || 64); s++) if (motifAt(chan, s, f0, k)) return s;
+  return -1;
+};
+const chansOf = (P) =>
+  ["bass", "lead", "hat", "pad"].map((k) => P[k]).filter((a) => a && a.length);
+const occ = (P) => {
+  const s = new Set();
+  for (const a of chansOf(P)) for (const n of a) s.add(n.s);
+  return s.size;
+};
+const breathBar = (P) => {
+  for (let b = 0; b * 8 < P.LEN; b++)
+    if (!P.lead.some((n) => n.s >= b * 8 && n.s < b * 8 + 8)) return b;
+  return -1;
+};
+const lanes = (P) =>
+  P.bass.length > 0 &&
+  P.lead.length > 0 &&
+  Math.max(...P.bass.map((n) => n.f)) < Math.min(...P.lead.map((n) => n.f));
+const waves = (P) => new Set(chansOf(P).map((a) => a[0].t)).size;
+const soundsDeg = (P, f0, d) =>
+  ["bass", "lead", "pad"].some(
+    (k) => P[k] && P[k].some((n) => isDeg(n.f, f0, [d])),
+  );
+
 // ---- fake AudioContext: records oscillator starts + gain automation ----
 function auto(v0) {
   return {
@@ -1163,6 +1237,120 @@ function installAC(ac) {
     "every channel stamps exactly one v — stepped dynamics land in R3c, not here",
     chans.length > 30 && spread.length === 0,
     chans.length + " channels, spread: " + spread.map(([n]) => n).join(","),
+  );
+}
+
+// ---- R3b helpers: proved against synthetic channels, not track data ----
+{
+  const mk = (l) => l.map(([s, f]) => ({ s, f, d: 1, t: "square", v: 0.1 }));
+  const D = TONIC.menu;
+  const plain = mk([
+    [0, 293.66],
+    [1, 349.23],
+    [2, 440.0],
+    [3, 493.88],
+    [6, 440.0],
+  ]);
+  check("motifAt matches PLAIN on the tonic", motifAt(plain, 0, D, 1));
+  check(
+    "motifAt is octave-blind — pitch class, not absolute Hz",
+    motifAt(
+      mk([
+        [0, 587.32],
+        [1, 698.46],
+        [2, 880.0],
+        [3, 987.77],
+        [6, 880.0],
+      ]),
+      0,
+      D,
+      1,
+    ),
+  );
+  const aug = mk([
+    [0, 293.66],
+    [2, 349.23],
+    [4, 440.0],
+    [6, 493.88],
+    [12, 440.0],
+  ]);
+  check(
+    "motifAt matches AUG at k=2 and rejects it at k=1",
+    motifAt(aug, 0, D, 2) && !motifAt(aug, 0, D, 1),
+  );
+  check(
+    "motifAt rejects a wrong flash note — only 6 (8 or 9 semitones) will do",
+    !motifAt(
+      mk([
+        [0, 293.66],
+        [1, 349.23],
+        [2, 440.0],
+        [3, 392.0],
+        [6, 440.0],
+      ]),
+      0,
+      D,
+      1,
+    ),
+  );
+  check(
+    "motifHead finds an ANTIC head that straddles the bar line",
+    motifHead(
+      mk([
+        [15, 293.66],
+        [16, 349.23],
+        [17, 440.0],
+        [18, 493.88],
+        [21, 440.0],
+      ]),
+      D,
+      1,
+      64,
+    ) === 15,
+  );
+  check(
+    "fragMidAt is tonic-relative: 3-5-6 with no tonic under it",
+    fragMidAt(
+      mk([
+        [1, 349.23],
+        [2, 440.0],
+        [3, 493.88],
+      ]),
+      0,
+      D,
+    ) &&
+      !fragMidAt(
+        mk([
+          [1, 293.66],
+          [2, 349.23],
+          [3, 440.0],
+        ]),
+        0,
+        D,
+      ),
+  );
+  const P = {
+    LEN: 16,
+    STEP: 0.1,
+    bass: mk([
+      [0, 73.42],
+      [3, 73.42],
+    ]),
+    lead: mk([
+      [0, 293.66],
+      [2, 349.23],
+    ]),
+    hat: mk([[2, 4800]]),
+  };
+  check("occ counts distinct occupied steps across channels", occ(P) === 3, occ(P));
+  check("breathBar finds the first lead-free bar", breathBar(P) === 1, breathBar(P));
+  check("lanes: max bass < min lead", lanes(P));
+  check("waves counts distinct channel timbres", waves(P) === 1, waves(P));
+  check(
+    "soundsDeg reads bass/lead/pad and ignores the hat",
+    soundsDeg(P, D, 3) === true &&
+      soundsDeg(P, D, 1) === false &&
+      soundsDeg({ bass: [], lead: [], hat: mk([[0, 349.23]]) }, D, 3) === false,
   );
 }
 
