@@ -1798,5 +1798,46 @@ function installAC(ac) {
   check("jungle register lanes never cross, A and B", lanes(A) && lanes(B));
 }
 
+// ---- factory: mechanical, cold competence (E Phrygian, CANON) ----
+{
+  const T = MUSIC_TRACKS.factory,
+    A = T.A,
+    B = T.B,
+    f0 = TONIC.factory;
+  check(
+    "factory STEP 0.119 (126 BPM), E2 82.41 root, B down a whole tone",
+    A.STEP === 0.119 &&
+      A.bass[0].f === 82.41 &&
+      Math.abs(B.bass[0].f / A.bass[0].f - 0.890899) < 1e-9,
+    A.STEP + "/" + A.bass[0].f,
+  );
+  check(
+    "factory bass is sawtooth — one of the two scarce identity timbres",
+    A.bass.every((n) => n.t === "sawtooth"),
+    A.bass[0].t,
+  );
+  check(
+    "factory hat is square on every even step — the 2 side of the interlock",
+    A.hat.length > 0 && A.hat.every((n) => n.t === "square" && n.s % 2 === 0),
+    A.hat.length + "/" + A.hat[0].t,
+  );
+  check("factory has no pad at all", A.pad === undefined, String(A.pad));
+  const bh = motifHead(A.bass, f0, 1, 64),
+    lh = motifHead(A.lead, f0, 1, 64);
+  const bf = bh >= 0 && A.bass.find((n) => n.s === bh).f,
+    lf = lh >= 0 && A.lead.find((n) => n.s === lh).f;
+  check(
+    "CANON: the lead states the motif exactly 8 steps after the bass, an octave up",
+    bh >= 0 && lh === bh + 8 && lf > bf && isDeg(lf, bf, DEG1),
+    "bass@" + bh + " lead@" + lh,
+  );
+  check(
+    "factory drives without filling: 40-58 of 64 steps, and it breathes",
+    occ(A) >= 40 && occ(A) <= 58 && breathBar(A) >= 0,
+    occ(A) + "/" + breathBar(A),
+  );
+  check("factory register lanes never cross, A and B", lanes(A) && lanes(B));
+}
+
 console.log("\n  MUSIC RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);

@@ -331,41 +331,74 @@ const ICE_A = mkPat(
     [48, 329.63, 12],
   ],
 );
+/* FACTORY — mechanical, cold competence. E Phrygian on E, STEP 0.119 (126 BPM),
+   and the flat second is the menace: the bass cadences F-F-E in the last bar.
+   CANON is the form. The sawtooth bass — the only one in the score, an identity
+   marker rather than a fourth default timbre — states the motif low in bar 1,
+   and the square lead answers it exactly eight steps later, one octave up. The
+   engine ostinato that follows sustains 3+3+2 (three-step cells, then a
+   two-step one) against a square hat on every even step, so the two grids
+   coincide only twice a bar: the 2-against-3 interlock. Bar 5 cuts the hat and
+   the lead entirely — the machine skips a beat, which is also where a blast is
+   most likely to land, and SFX render outside musicGain and sit on top. No pad.
+   The B-section metric modulation the brief asks for is not attempted: transp
+   returns the SAME hat array by identity, so a regrouping B hat cannot exist. */
 const FACTORY_A = mkPat(
-  0.12,
+  0.119,
   64,
-  pulse([
-    [82.41, 98],
-    [65.41, 98],
-    [77.78, 116.54],
-    [98, 130.81],
-  ]),
-  oct([
-    [
-      [0, 261.6, 1],
-      [1, 261.6, 1],
-      [4, 311.1, 1],
-      [5, 261.6, 1],
-    ],
-    [
-      [0, 196],
-      [2, 261.6],
-      [4, 311.1],
-      [6, 349.2],
-    ],
-    [
-      [0, 233.1],
-      [3, 196],
-      [6, 261.6],
-    ],
-    [
-      [0, 196],
-      [2, 174.6],
-      [4, 196],
-    ],
-  ]),
-  hats(64, 2400, 1),
-  ["square", 0.11, "square", 0.08, "triangle", 0.022],
+  [
+    [0, 82.41, 1],
+    [1, 98.0, 1],
+    [2, 123.47, 1],
+    [3, 130.81, 3],
+    [6, 123.47, 1],
+    [8, 82.41, 3],
+    [11, 82.41, 3],
+    [14, 123.47, 2],
+    [16, 87.31, 3],
+    [19, 87.31, 3],
+    [22, 130.81, 2],
+    [24, 98.0, 3],
+    [27, 98.0, 3],
+    [30, 123.47, 2],
+    [32, 82.41, 3],
+    [35, 82.41, 3],
+    [38, 123.47, 2],
+    [40, 82.41, 3],
+    [43, 82.41, 3],
+    [46, 130.81, 2],
+    [48, 110.0, 3],
+    [51, 110.0, 3],
+    [54, 82.41, 2],
+    [56, 87.31, 3],
+    [59, 87.31, 3],
+    [62, 82.41, 2],
+  ],
+  [
+    [8, 164.81, 1],
+    [9, 196.0, 1],
+    [10, 246.94, 1],
+    [11, 261.63, 3],
+    [14, 246.94, 1],
+    [17, 329.63, 1],
+    [21, 293.66, 3],
+    [25, 261.63, 1],
+    [27, 246.94, 1],
+    [30, 196.0, 2],
+    [40, 329.63, 1],
+    [41, 392.0, 1],
+    [42, 493.88, 1],
+    [43, 523.25, 3],
+    [46, 493.88, 1],
+    [49, 493.88, 1],
+    [53, 440.0, 3],
+    [57, 349.23, 1],
+    [61, 329.63, 3],
+  ],
+  [0, 1, 2, 3, 5, 6, 7].flatMap((b) =>
+    [0, 2, 4, 6].map((o) => [b * 8 + o, 2400, 1]),
+  ),
+  ["sawtooth", 0.09, "square", 0.075, "square", 0.018],
 );
 const WATER_A = mkPat(
   0.16,
@@ -807,7 +840,7 @@ export const MUSIC_TRACKS = Object.freeze({
   menu: tr(MUSIC_PATTERN, MUSIC_PATTERN_B, MUSIC_SECTIONS),
   jungle: tr(JUNGLE_A, transp(JUNGLE_A, 1.189207)),
   ice: tr(ICE_A, transp(ICE_A, 1.122462)),
-  factory: tr(FACTORY_A, transp(FACTORY_A, 1.189207)),
+  factory: tr(FACTORY_A, transp(FACTORY_A, 0.890899)),
   water: tr(WATER_A, transp(WATER_A, 1.122462)),
   arena: tr(ARENA_A, ARENA_B),
   sand: tr(SAND_A, transp(SAND_A, 1.122462)),
