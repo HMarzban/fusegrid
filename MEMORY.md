@@ -16,6 +16,10 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-05 — R3a soundtrack seam
+- `createAudio({ctx})` + `bounceTrack(id, seconds)` let an `OfflineAudioContext` render any track to WAV via `tools/bounce/` (dev-only, never precached, `out/` gitignored); `tracks.js` note tuples now accept an optional 4th velocity element (`[s,f,d,v?]`) which no track authors yet.
+- The ten pre-rewrite bounces are parked in `.superpowers/sdd/2026-09-05-soundtrack/wav/before/` as the A/B reference for R3b/R3c's listening checkpoints.
+
 ## 2026-09-05 — GUIDE fold + HUD strip removal
 - MENU is six rows now (PLAY/LEVEL SELECT/OPTIONS/GUIDE/HIGH SCORES/SOURCE); HOW TO PLAY/ITEMS/ENEMIES fold under a new `GUIDE` row (`SCREEN.GUIDE`=11, appended after `SETTINGS`:10) with its own cursor and MENU's own wrap-both-ways navigation, and `back()` from those three now returns to GUIDE, not MENU.
 - This explicitly reverses the S3 "keep `#hud`, gated to `SCREEN.GAME`" call: the DOM `#hud` strip is deleted outright (markup + CSS + `main.js`'s gate), not kept behind a flag. Its two facts the canvas didn't already have (`LV`, `ENEMIES` remaining) are now painted as two more chips beside BOMB/FLAME in `drawHudChips`.
