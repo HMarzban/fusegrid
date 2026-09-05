@@ -19,6 +19,10 @@ import * as THREE from "../../../vendor/three.module.js";
 import { CFG } from "../../core/config.js";
 import { POWER, spawnEnemy } from "../../core/entities.js";
 import { ITEM_FAMILY, ITEM_SHAPE } from "../icons.js";
+/* One hull hex for both renderers — R1's mid-value armour has to move in
+   lockstep or the two players stop being one character. sprites.js pulls in
+   icons.js / config.js / enemybody.js only, so this stays a DAG. */
+import { PLAYER_HULL } from "../sprites.js";
 
 const W2 = (CFG.COLS * CFG.TILE) / 2,
   D2 = (CFG.ROWS * CFG.TILE) / 2;
@@ -840,41 +844,83 @@ const SPARK_B = sharedMat(new THREE.MeshBasicMaterial({ color: "#ffd447" }));
 export function createPools(biome, atlas) {
   const group = new THREE.Group();
 
-  /* SIGNAL RUNNER (items-player-art 2026-09-05): five meshes — one merged
-     matte hull (torso lathe fused with two yoke chips), one p.color crown
-     lathe, one Phong visor, two boots. Both profiles run bottom -> top and
-     each flares once then narrows (TORSO_P at 1.02 is the shoulder line,
-     CROWN_P at 0.16 the brow), so a single Lambert hull carries a two-tone
-     read exactly as the foe hulls do. The visor rake -0.6 is e_fast's face
-     rake: a vertical band faces the horizon and shows the frozen 59.1 deg
-     rig nothing. p.color lives on the crown and nowhere else, because the
-     crown is the largest surface visible from directly above. The dome, the
-     antenna rod and ball and the round eyes are gone for good. */
+  /* SIGNAL RUNNER — R1 (items-player-art 2026-09-05, revised same day on the
+     user's rejection of P1). Still FIVE meshes and the same five geometry
+     types — one merged matte hull, one p.color crown lathe, one Phong visor,
+     two boots — every profile RESHAPED, nothing added. What P1 got wrong at
+     the live size: the torso lathe topped out at 8.9 units of radius against
+     walker's 12.8, so the hero was the SMALLEST body on the board and its
+     near-constant radius read as a rounded boiler under a cap.
+
+     R1 numbers. The torso sheds to a 0.38 waist and flares to 0.80 at the
+     shoulder line (y 1.36), and the flat yoke chips become swept PAULDRON
+     plates reaching +-T*0.36 = 14.4 — just past the player's own T*0.34
+     collision radius, so the hero finally reads as the widest thing on the
+     board. That also buys the footprint: 28.8 across by 19.2 deep, a
+     SHOULDERED plan view (1.5:1) no round foe hull can hold, which is the
+     separation cue the frozen 59.1 deg rig actually sees.
+
+     The crown drops from seg 6 (a hexagon is a circle at this size) to seg 4
+     rotated a quarter-face, so its plan view is an axis-aligned faceted
+     wedge that turns with the yaw — a crest, not a cap — while r rises to
+     T*0.22 to keep the p.color plan AREA it had as a hexagon. The quarter
+     turn is what puts a flat face at +Z for the visor to sit on; a corner at
+     +Z would leave the visor's ends floating off a ridge.
+
+     Unchanged: bottom -> top profiles, flare-then-narrow on both (TORSO_P at
+     1.36, CROWN_P at 0.26 the brow), the visor rake -0.6 (e_fast's face
+     rake), p.color on the crown and nowhere else, and no dome / antenna /
+     ball / round eyes ever again. */
   const player = new THREE.Group();
   player.userData.tag = "player";
   const T = CFG.TILE;
   const TORSO_P = [
-    [0.52, 0.14], [0.66, 0.44], [0.62, 0.86], [0.74, 1.02],
-    [0.56, 1.22], [0.3, 1.34], [0, 1.36],
+    [0.44, 0.5], [0.38, 0.88], [0.52, 1.2], [0.86, 1.44],
+    [0.66, 1.6], [0.42, 1.74], [0.44, 1.86],
   ];
-  const CROWN_P = [[0.98, 0], [1.06, 0.16], [0.92, 0.3], [0.74, 0.58], [0.44, 0.84], [0, 1.0]];
-  const YOKE_P = [[-0.34, -0.3], [0.34, -0.3], [0.34, 0.3], [-0.34, 0.3]];
-  const VISOR_P = [[-0.86, -0.2], [0.86, -0.2], [0.72, 0.22], [-0.72, 0.22]];
-  const hullMat = sharedMat(new THREE.MeshLambertMaterial({ color: "#dfe7f2" }));
+  const CROWN_P = [
+    [0.6, 0], [0.92, 0.18], [1.0, 0.42], [0.9, 0.74], [0.56, 1.02], [0, 1.24],
+  ];
+  /* Authored for the RIGHT shoulder, outer edge at +x: deep where it meets
+     the ribs, shallow at the tip. Iteration 2 used a plate symmetric in x
+     and the pair read as a coat hanger — an even slab has no inboard end to
+     bury in the torso. Mirroring reverses the winding, and ExtrudeGeometry
+     takes its cap normals from the signed area (the trap mesa() documents),
+     so the left copy is reversed back. */
+  const PAULD_P = [[-0.46, -0.46], [0.52, -0.26], [0.52, 0.26], [-0.46, 0.46]];
+  const pauldPts = (s) => {
+    const p = PAULD_P.map((v) => [v[0] * s, v[1]]);
+    return s < 0 ? p.slice().reverse() : p;
+  };
+  const VISOR_P = [[-0.52, -0.3], [0.52, -0.3], [0.42, 0.26], [-0.42, 0.26]];
+  const hullMat = sharedMat(new THREE.MeshLambertMaterial({ color: PLAYER_HULL }));
   const crownMat = sharedMat(new THREE.MeshLambertMaterial({ color: "#37f0d0" }));
   const bootMat = sharedMat(new THREE.MeshLambertMaterial({ color: "#0d3f78" }));
-  const yoke = (s) =>
-    plate(YOKE_P, 0.26, T * 0.3)
+  /* Canted shoulder plates. Flat slabs (iteration 1) presented one big top
+     facet to the 59.1 deg rig and read as a table; dropping the outer edge
+     0.30 rad turns the same plate into armour and keeps the reach. */
+  const pauldron = (s) =>
+    plate(pauldPts(s), 0.42, T * 0.3)
       .rotateX(-Math.PI / 2)
-      .translate(s * T * 0.2, T * 0.36, 0);
+      .rotateZ(-s * 0.34)
+      .translate(s * T * 0.23, T * 0.42, 0);
   const hull = new THREE.Mesh(
-    sharedGeo(mergeGeos(lathe(TORSO_P, 6, T * 0.3), yoke(-1), yoke(1))),
+    sharedGeo(mergeGeos(lathe(TORSO_P, 6, T * 0.3), pauldron(-1), pauldron(1))),
     hullMat,
   );
   hull.castShadow = true;
   hull.receiveShadow = true;
-  const crown = new THREE.Mesh(sharedGeo(lathe(CROWN_P, 6, T * 0.19)), crownMat);
-  crown.position.y = T * 0.52;
+  /* seg 5 with a quarter-face turn: three.js lathes start a VERTEX at +Z, so
+     rotating a fifth of a turn puts a flat FACE forward for the visor to sit
+     on. Iteration 1 used seg 4 and the square plan plus its top facet read
+     as a box; a pentagon has no parallel silhouette edges and its plan view
+     is shared with no foe. The base ring matches the torso collar so the
+     helmet grows out of the shoulders instead of perching on them. */
+  const crown = new THREE.Mesh(
+    sharedGeo(lathe(CROWN_P, 5, T * 0.17).rotateY(Math.PI / 5)),
+    crownMat,
+  );
+  crown.position.y = T * 0.54;
   crown.castShadow = true;
   const visorMat = new THREE.MeshPhongMaterial({
     color: "#0b1020",
@@ -889,13 +935,15 @@ export function createPools(biome, atlas) {
     visorBase = "#ffffff";
   }
   const visor = new THREE.Mesh(sharedGeo(plate(VISOR_P, 0.14, T * 0.19)), visorMat);
-  visor.position.set(0, T * 0.6, T * 0.16);
+  visor.position.set(0, T * 0.6, T * 0.145);
   visor.rotation.x = -0.6;
-  const footGeo = sharedGeo(new THREE.BoxGeometry(T * 0.2, T * 0.11, T * 0.26));
+  /* Legs, not foot chips: 0.26T of dark under the waist is the 3D half of
+     the stance the 2D boot contour carries. */
+  const footGeo = sharedGeo(new THREE.BoxGeometry(T * 0.15, T * 0.26, T * 0.26));
   const bootL = new THREE.Mesh(footGeo, bootMat);
-  bootL.position.set(-T * 0.17, T * 0.055, 0);
+  bootL.position.set(-T * 0.13, T * 0.13, 0);
   const bootR = new THREE.Mesh(footGeo, bootMat);
-  bootR.position.set(T * 0.17, T * 0.055, 0);
+  bootR.position.set(T * 0.13, T * 0.13, 0);
   bootL.castShadow = bootR.castShadow = true;
   player.add(hull, crown, visor, bootL, bootR);
 
@@ -1165,7 +1213,7 @@ export function createPools(biome, atlas) {
         visorMat.color.set(visorBase);
       }
       bootMat.color.set(p.kick ? "#c07a3a" : "#0d3f78");
-      hullMat.color.set("#dfe7f2");
+      hullMat.color.set(PLAYER_HULL);
       if (p.passing) hullMat.color.lerp(_c.set("#77ff99"), 0.38);
     } else player.visible = false;
 

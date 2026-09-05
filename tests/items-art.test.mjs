@@ -2,7 +2,18 @@ import { createWorld, loadLevel, step } from "../src/core/sim.js";
 import { CFG } from "../src/core/config.js";
 import { POWER } from "../src/core/entities.js";
 import { drawIcon, RIM, ITEM_FAMILY, ITEM_SHAPE, ITEM_ACCENT } from "../src/render/icons.js";
-import { drawItemBody, drawItemChrome, drawPlayerBody } from "../src/render/sprites.js";
+import {
+  drawItemBody,
+  drawItemChrome,
+  drawPlayerBody,
+  PLAYER_HULL,
+} from "../src/render/sprites.js";
+
+/* Rec.709 relative luminance of a #rrggbb literal, 0..1. */
+const lum = (h) => {
+  const n = parseInt(String(h).slice(1), 16) || 0;
+  return (0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255;
+};
 
 let pass = 0,
   fail = 0;
@@ -395,6 +406,62 @@ const P = (o) =>
     "only the contact shade passes +-1.10r vertically",
     vy2 <= R * 1.1 + 1e-6,
     vy2.toFixed(2),
+  );
+}
+
+/* R1 (2026-09-05, user rejection "too silly / not mature enough"). The gates
+   above stayed green through a WHITE EGG: a fit box and an op-stream cannot
+   see roundness, brightness or stubbiness. These three can, and they are the
+   three levers the rejection named. Each one fails on the P1 body. */
+{
+  const c = stub();
+  drawPlayerBody(c, { time: 0 }, P());
+  const ops = c._ops;
+  /* beat 1 is the contact ellipse, so beat 2 (the k=1 hull contour) is the
+     SECOND beginPath; read its vertices back out of the recorder. */
+  const starts = ops.map((o, i) => (o[0] === "beginPath" ? i : -1)).filter((i) => i >= 0);
+  const end = starts[1] + 1 + ops.slice(starts[1] + 1).findIndex((o) => o[0] === "closePath");
+  const pts = ops
+    .slice(starts[1] + 1, end)
+    .filter((o) => o[0] === "moveTo" || o[0] === "lineTo")
+    .map((o) => [o[1], o[2]]);
+  /* Half-width of the contour at height y — a horizontal slice, which is the
+     only thing that can tell a tapered torso from a barrel. */
+  const hw = (y) => {
+    let m = 0;
+    for (let i = 0; i < pts.length; i++) {
+      const a = pts[i],
+        b = pts[(i + 1) % pts.length];
+      if ((a[1] - y) * (b[1] - y) > 0) continue;
+      if (a[1] === b[1]) {
+        m = Math.max(m, Math.abs(a[0]), Math.abs(b[0]));
+        continue;
+      }
+      const t = (y - a[1]) / (b[1] - a[1]);
+      m = Math.max(m, Math.abs(a[0] + t * (b[0] - a[0])));
+    }
+    return m;
+  };
+  const shoulder = Math.max(...pts.map((p) => Math.abs(p[0])));
+  const wide = pts.reduce((a, p) => (Math.abs(p[0]) > Math.abs(a[0]) ? p : a), pts[0]);
+  const bot = Math.max(...pts.map((p) => p[1]));
+  const hip = hw(Math.min(wide[1] + R * 0.5, bot));
+  check(
+    "R1 taper: hull sheds >= 1.55x its width 0.50r below the shoulder line",
+    pts.length >= 8 && hip > 0 && shoulder / hip >= 1.55,
+    (shoulder / hip).toFixed(2),
+  );
+  check(
+    "R1 value: hull is mid-value armour, never a bright shell",
+    lum(PLAYER_HULL) >= 0.28 && lum(PLAYER_HULL) <= 0.62,
+    PLAYER_HULL + " L=" + lum(PLAYER_HULL).toFixed(2),
+  );
+  const b3 = box({ noEllipse: true });
+  drawPlayerBody(b3, { time: 0 }, P());
+  check(
+    "R1 stance: legs run >= 0.50r below the hull contour",
+    b3._b.y1 - bot >= R * 0.5 - 1e-6,
+    ((b3._b.y1 - bot) / R).toFixed(2),
   );
 }
 

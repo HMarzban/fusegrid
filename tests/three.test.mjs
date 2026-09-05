@@ -721,7 +721,7 @@ await sec("S2.I",()=>{
   check("R.headless player: matte Lambert hull + p.color crown lathe + dark"
       +" Phong visor fallback (map-free)",
     !!hullM&&hullM.material.isMeshLambertMaterial&&!hullM.material.map
-    &&"#"+hullM.material.color.getHexString()==="#dfe7f2"
+    &&"#"+hullM.material.color.getHexString()==="#8d97ac"
     &&!!crownM&&crownM.material.isMeshLambertMaterial
     &&!!visorM&&!visorM.material.map
     &&"#"+visorM.material.color.getHexString()==="#0b1020");
@@ -1035,6 +1035,18 @@ await sec("S4.A",async()=>{
     &&pools.player.children[0].material.isMeshLambertMaterial,
     visor?visor.rotation.x.toFixed(2)+" y="+visor.position.y.toFixed(2)
       :"missing");
+  /* R1 (2026-09-05): the P1 stack maxed out at a 12.1 half-span against
+     walker's 13.6 sim radius, so the hero was literally the smaller body on
+     the board and read as a boiler in plan view. Two gates: shoulders at
+     least the player's own collision radius, and a SHOULDERED footprint —
+     wider across than deep — which no round foe hull can hold. */
+  pools.player.updateMatrixWorld(true);
+  const pbb=new THREE.Box3().setFromObject(pools.player);
+  const spanX=pbb.max.x-pbb.min.x, spanZ=pbb.max.z-pbb.min.z;
+  check("S4.A player shoulder half-span >= its own collision radius",
+    spanX/2>=CFG.TILE*0.34-1e-6, (spanX/2).toFixed(2)+" vs "+(CFG.TILE*0.34));
+  check("S4.A plan footprint is shouldered (x/z >= 1.40), not a disc",
+    spanZ>0&&spanX/spanZ>=1.4, (spanX/spanZ).toFixed(2));
   const wS=createWorld(73,1); loadLevel(wS,1,false);
   const scP=buildScene(wS);
   const pl=scP.pools.player;
@@ -1057,7 +1069,7 @@ await sec("S4.A",async()=>{
     "#"+bootS.material.color.getHexString()==="#c07a3a");
   wS.players[0].kick=false; wS.players[0].passing=true; scP.update(wS);
   check("S4.A p.passing lerps the hull, not the crown",
-    "#"+pl.children[0].material.color.getHexString()!=="#dfe7f2"
+    "#"+pl.children[0].material.color.getHexString()!=="#8d97ac"
     &&"#"+crownS.material.color.getHexString()==="#ff00aa");
   // per-type enemy detail children (base mesh keeps prior geometry contract);
   // eyes ride children[2] AFTER the two ref-swapped details

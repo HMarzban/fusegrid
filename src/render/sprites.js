@@ -319,26 +319,56 @@ export function drawEnemies(c, world) {
     c.restore();
   }
 }
-/* SIGNAL RUNNER (items-player-art 2026-09-05). The collision was never with
-   a mascot, it was with WALKER: from above, two round bodies of the same
-   size and value. Per the three-golds lesson the fix is never a re-hue — the
-   player becomes the only body on the board with a LIGHT MATTE HULL carrying
-   DARK PARTS, which is a value-structure difference and survives at two
-   tiles. The kite is widest at the shoulder yoke; nothing in the nine-foe
-   cast has one. Antenna, ball, round eyes and balloon dome are gone. */
-const HULL = "#dfe7f2";
+/* SIGNAL RUNNER — R1 (items-player-art 2026-09-05, revised same day after
+   the user rejected P1: "looks a bit too silly and doesn't feel mature
+   enough"). P1 optimised the WALKER collision and won it on paper; at the
+   28px live size the body still read as a WHITE EGG WITH A CAP, because a
+   near-circular outline filled 90%-luminance white is a cute shape however
+   many facets it has. R1 keeps the whole separation story and re-cuts the
+   three things that carry maturity at 28px:
+
+   TAPER — the outline is a shouldered wedge, not a barrel: widest at the
+   pauldron line (+-0.94r, upper third), shedding 1.9x of that width within
+   half a radius, closing at a +-0.42r waist. The hull STOPS at the waist and
+   two long dark legs carry the lower third, so the bright mass is a third
+   smaller and the figure has a stance instead of a base.
+   VALUE — the hull drops from #dfe7f2 (L 0.90) to gunmetal #77839b (L 0.51).
+   Brightness is what read as cute; a mid value also separates BETTER from
+   walker's mint, and it leaves the visor pip as the one bright thing.
+   EDGE — the p.color cap becomes a swept CREST that overhangs the helmet,
+   and the soft sheen ellipse becomes hard armour facets. Zero-arc rule
+   holds: nothing here is an arc.
+   Unchanged: p.color placement (crest only), the single specular visor, the
+   RIM seal, the five beats, no antenna / ball / round eyes / dome. */
+export const PLAYER_HULL = "#8d97ac";
+const HULL = PLAYER_HULL;
+/* The shoulder is a LEDGE, not a slope: the jaw runs out to +-0.92r almost
+   level, then drops down a vertical pauldron edge. Iteration 1 used a single
+   diagonal from helmet to shoulder tip and it read as a cloak / bell. */
 const S_RUNNER = poly([
-  [-0.34, -1.02], [0.34, -1.02], [0.52, -0.62], [0.92, -0.1],
-  [0.86, 0.52], [0.44, 0.92], [-0.44, 0.92], [-0.86, 0.52],
-  [-0.92, -0.1], [-0.52, -0.62],
+  [-0.36, -1.0], [0.36, -1.0], [0.52, -0.8], [0.44, -0.54],
+  [0.34, -0.46], [0.86, -0.4], [0.9, -0.06], [0.68, 0.12],
+  [0.56, 0.32], [0.5, 0.54], [-0.5, 0.54], [-0.56, 0.32],
+  [-0.68, 0.12], [-0.9, -0.06], [-0.86, -0.4], [-0.34, -0.46],
+  [-0.44, -0.54], [-0.52, -0.8],
 ]);
-const CROWN = poly([[-0.34, -1.0], [0.34, -1.0], [0.62, -0.44], [-0.62, -0.44]]);
+/* A crest, not a cap. Iteration 1 let the wings overhang the helmet and the
+   horizontal underside instantly became a peaked cap brim — the exact
+   silliness the rejection named. R1 keeps every vertex INSIDE the helmet
+   contour, so this is the helmet's own pointed upper shell. */
+const CREST = poly([
+  [0, -1.09], [0.32, -0.96], [0.48, -0.8], [0.44, -0.7],
+  [-0.44, -0.7], [-0.48, -0.8], [-0.32, -0.96],
+]);
+/* Leg + boot in one contour, hip to toe — 0.58r of dark below the hull. The
+   P1 boots were 0.06r chips glued to the egg's underside. */
 function boot(c, r, s) {
   c.beginPath();
-  c.moveTo(s * r * 0.2, r * 0.7);
-  c.lineTo(s * r * 0.62, r * 0.7);
-  c.lineTo(s * r * 0.56, r * 0.98);
-  c.lineTo(s * r * 0.26, r * 0.98);
+  c.moveTo(s * r * 0.08, r * 0.42);
+  c.lineTo(s * r * 0.44, r * 0.42);
+  c.lineTo(s * r * 0.46, r * 0.88);
+  c.lineTo(s * r * 0.56, r * 1.06);
+  c.lineTo(s * r * 0.1, r * 1.06);
   c.closePath();
   c.fill();
 }
@@ -353,7 +383,7 @@ export function drawPlayerBody(c, world, p) {
   if (p.iFrames > 0 && Math.floor(p.iFrames * 12) % 2) c.globalAlpha = 0.4;
   c.fillStyle = "rgba(0,0,0,0.34)";
   c.beginPath();
-  c.ellipse(0, r * 0.98, r * 0.72, r * 0.2, 0, 0, 7);
+  c.ellipse(0, r * 1.0, r * 0.6, r * 0.18, 0, 0, 7);
   c.fill();
   S_RUNNER(c, r, 1, 0, 0);
   c.fillStyle = dk(HULL, 0.56);
@@ -362,55 +392,71 @@ export function drawPlayerBody(c, world, p) {
   S_RUNNER(c, r, 0.8, 0, -r * 0.09);
   c.fillStyle = HULL;
   c.fill();
-  c.fillStyle = lt(HULL, 0.4);
+  /* Beat 4 — hard armour facets, not a soft sheen: the two pauldron TOP
+     plates, which is what actually draws the shoulder ledge at this size.
+     Both sit inside the k=0.8 inset so the dark contour stays unbroken. Two
+     subpaths, one fill: still one beat. */
+  c.fillStyle = lt(HULL, 0.42);
   c.beginPath();
-  c.ellipse(-r * 0.32, -r * 0.34, r * 0.36, r * 0.18, -0.6, 0, 7);
+  c.moveTo(-r * 0.7, -r * 0.38);
+  c.lineTo(-r * 0.36, -r * 0.42);
+  c.lineTo(-r * 0.32, -r * 0.24);
+  c.lineTo(-r * 0.66, -r * 0.2);
+  c.closePath();
+  c.moveTo(r * 0.36, -r * 0.42);
+  c.lineTo(r * 0.7, -r * 0.38);
+  c.lineTo(r * 0.66, -r * 0.2);
+  c.lineTo(r * 0.32, -r * 0.24);
+  c.closePath();
   c.fill();
   const fx = Math.max(-1, Math.min(1, p.face.x || 0)) * r * 0.1;
-  CROWN(c, r, 1, 0, 0);
+  CREST(c, r, 1, 0, 0);
   c.fillStyle = col;
   c.fill();
   seal(c);
   if (p.face.y < -0.5) {
     c.fillStyle = dk(HULL, 0.34);
     c.beginPath();
-    c.moveTo(-r * 0.4, -r * 0.5);
-    c.lineTo(r * 0.4, -r * 0.5);
-    c.lineTo(r * 0.4, -r * 0.3);
-    c.lineTo(-r * 0.4, -r * 0.3);
+    c.moveTo(-r * 0.42, -r * 0.68);
+    c.lineTo(r * 0.42, -r * 0.68);
+    c.lineTo(r * 0.36, -r * 0.5);
+    c.lineTo(-r * 0.36, -r * 0.5);
     c.closePath();
     c.fill();
     c.fillStyle = dk(HULL, 0.62);
     c.beginPath();
-    c.moveTo(-r * 0.16, -r * 0.22);
-    c.lineTo(r * 0.16, -r * 0.22);
-    c.lineTo(r * 0.16, r * 0.04);
-    c.lineTo(-r * 0.16, r * 0.04);
+    c.moveTo(-r * 0.24, -r * 0.28);
+    c.lineTo(r * 0.24, -r * 0.28);
+    c.lineTo(r * 0.2, r * 0.16);
+    c.lineTo(-r * 0.2, r * 0.16);
     c.closePath();
     c.fill();
   } else {
+    /* The visor is a SLIT: a deep near-black well, a hairline lit core and
+       one white pip. R1 halves the core bar — against a mid-value hull a fat
+       cyan band was the second bright element and read as a cartoon eye. */
     c.fillStyle = "#0b1020";
     c.beginPath();
-    c.moveTo(-r * 0.42 + fx, -r * 0.52);
-    c.lineTo(r * 0.42 + fx, -r * 0.52);
-    c.lineTo(r * 0.42 + fx, -r * 0.3);
-    c.lineTo(-r * 0.42 + fx, -r * 0.3);
+    c.moveTo(-r * 0.42 + fx, -r * 0.68);
+    c.lineTo(r * 0.42 + fx, -r * 0.68);
+    c.lineTo(r * 0.36 + fx, -r * 0.48);
+    c.lineTo(-r * 0.36 + fx, -r * 0.48);
     c.closePath();
     c.fill();
     c.fillStyle = "#7fe0ff";
     c.beginPath();
-    c.moveTo(-r * 0.34 + fx, -r * 0.46);
-    c.lineTo(r * 0.34 + fx, -r * 0.46);
-    c.lineTo(r * 0.34 + fx, -r * 0.36);
-    c.lineTo(-r * 0.34 + fx, -r * 0.36);
+    c.moveTo(-r * 0.32 + fx, -r * 0.63);
+    c.lineTo(r * 0.32 + fx, -r * 0.63);
+    c.lineTo(r * 0.31 + fx, -r * 0.54);
+    c.lineTo(-r * 0.31 + fx, -r * 0.54);
     c.closePath();
     c.fill();
     c.fillStyle = "#ffffff";
     c.beginPath();
-    c.moveTo(-r * 0.36 + fx, -r * 0.5);
-    c.lineTo(-r * 0.22 + fx, -r * 0.5);
-    c.lineTo(-r * 0.26 + fx, -r * 0.42);
-    c.lineTo(-r * 0.4 + fx, -r * 0.42);
+    c.moveTo(-r * 0.36 + fx, -r * 0.66);
+    c.lineTo(-r * 0.24 + fx, -r * 0.66);
+    c.lineTo(-r * 0.27 + fx, -r * 0.58);
+    c.lineTo(-r * 0.39 + fx, -r * 0.58);
     c.closePath();
     c.fill();
   }
@@ -428,9 +474,9 @@ export function drawPlayerBody(c, world, p) {
   }
   if (p.kick) {
     c.fillStyle = "#c07a3a";
-    rr(c, -r * 0.9, r * 0.75, r * 0.44, r * 0.45, 2);
+    rr(c, -r * 0.86, r * 0.7, r * 0.34, r * 0.36, 2);
     c.fill();
-    rr(c, r * 0.46, r * 0.75, r * 0.44, r * 0.45, 2);
+    rr(c, r * 0.52, r * 0.7, r * 0.34, r * 0.36, 2);
     c.fill();
   }
   if (p.passing) {
