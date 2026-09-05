@@ -1,6 +1,7 @@
 import {
   SCREEN,
   ITEMS,
+  OPT_ROWS,
   SOURCE_URL,
   IDLE_T,
   createMenuApp,
@@ -52,15 +53,25 @@ check(
   JSON.stringify(SCREEN),
 );
 check(
-  "ITEMS frozen, 9 entries",
+  "ITEMS frozen, 8 entries",
   Object.isFrozen(ITEMS) &&
-    ITEMS.length === 9 &&
-    ITEMS[0] === "START GAME" &&
-    ITEMS[5] === "ITEMS" &&
-    ITEMS[6] === "ENEMIES" &&
-    ITEMS[7] === "HIGH SCORES" &&
-    ITEMS[8] === "SOURCE",
+    ITEMS.length === 8 &&
+    ITEMS[0] === "PLAY" &&
+    ITEMS[2] === "OPTIONS" &&
+    ITEMS[7] === "SOURCE",
   JSON.stringify(ITEMS),
+);
+check(
+  "SETTINGS appended at 10 — never inserted, or every later frozen value shifts",
+  SCREEN.SETTINGS === 10 && SCREEN.ENEMIES === 9 && SCREEN.ITEMS === 8 && SCREEN.ATTRACT === 7,
+  JSON.stringify(SCREEN),
+);
+check(
+  "OPT_ROWS frozen, the nine spec rows in order",
+  Object.isFrozen(OPT_ROWS) &&
+    OPT_ROWS.join("|") ===
+      "MUSIC|SFX|SOUND|RENDER|CAMERA|BRIGHTNESS|SCREEN SHAKE|REDUCE FLASH|RESET DEFAULTS",
+  OPT_ROWS.join("|"),
 );
 check(
   "SOURCE_URL is the public repo",
@@ -277,7 +288,7 @@ check(
   check("KeyS tap = cursor+1", b.cursor === 1, b.cursor);
 }
 
-// ---- confirm dispatch per item ----
+// ---- confirm dispatch per cursor index (spec §1 table) ----
 {
   let started = null;
   const a = createMenuApp({
@@ -286,61 +297,50 @@ check(
     },
   });
   a.screen = SCREEN.MENU;
+  a.cursor = 0;
   a.confirm();
   check(
-    "START GAME -> onStart({level}) + GAME + inGame",
+    "cursor 0 PLAY -> onStart({level}) + GAME + inGame",
     a.screen === SCREEN.GAME &&
       a.inGame === true &&
       started &&
       started.level === 1 &&
       typeof started.level === "number",
+    JSON.stringify(started),
   );
 }
 {
-  const a = createMenuApp();
-  a.screen = SCREEN.MENU;
-  a.cursor = 1;
-  a.confirm();
-  check("LEVEL SELECT -> LEVEL screen", a.screen === SCREEN.LEVEL);
-  const b = createMenuApp();
-  b.screen = SCREEN.MENU;
-  b.cursor = 4;
-  b.confirm();
-  check("HOW TO PLAY -> HOWTO", b.screen === SCREEN.HOWTO);
-  const items = createMenuApp();
-  items.screen = SCREEN.MENU;
-  items.cursor = 5;
-  items.confirm();
-  check("ITEMS -> ITEMS screen", items.screen === SCREEN.ITEMS);
-  const foes = createMenuApp();
-  foes.screen = SCREEN.MENU;
-  foes.cursor = 6;
-  foes.confirm();
-  check("ENEMIES -> ENEMIES screen", foes.screen === SCREEN.ENEMIES);
-  const c = createMenuApp();
-  c.screen = SCREEN.MENU;
-  c.cursor = 7;
-  c.confirm();
-  check("HIGH SCORES -> SCORES", c.screen === SCREEN.SCORES);
+  for (const [cur, screen] of [
+    [1, SCREEN.LEVEL],
+    [2, SCREEN.SETTINGS],
+    [3, SCREEN.HOWTO],
+    [4, SCREEN.ITEMS],
+    [5, SCREEN.ENEMIES],
+    [6, SCREEN.SCORES],
+  ]) {
+    const a = createMenuApp();
+    a.screen = SCREEN.MENU;
+    a.cursor = cur;
+    a.confirm();
+    check(
+      "cursor " + cur + " (" + ITEMS[cur] + ") -> screen " + screen,
+      a.screen === screen,
+      String(a.screen),
+    );
+  }
   let srcHits = 0;
-  const d = createMenuApp({
+  const s = createMenuApp({
     onSource: () => {
       srcHits++;
     },
   });
-  d.screen = SCREEN.MENU;
-  d.cursor = 8;
-  d.confirm();
+  s.screen = SCREEN.MENU;
+  s.cursor = 7;
+  s.confirm();
   check(
-    "SOURCE -> onSource, stays MENU",
-    srcHits === 1 && d.screen === SCREEN.MENU && d.inGame === false,
-  );
-  const e = createMenuApp();
-  e.screen = SCREEN.MENU;
-  e.cursor = 8;
-  check(
-    "SOURCE without onSource stays MENU",
-    e.confirm() === true && e.screen === SCREEN.MENU,
+    "cursor 7 SOURCE -> onSource(), screen stays MENU",
+    srcHits === 1 && s.screen === SCREEN.MENU,
+    srcHits + "/" + s.screen,
   );
 }
 {
@@ -348,36 +348,18 @@ check(
   a.screen = SCREEN.MENU;
   a.cursor = 2;
   a.confirm();
+  check("OPTIONS entry resets optRow and clears togT", a.optRow === 0 && a.togT === -1);
   check(
-    "RENDER toggles 2d->3d, stays MENU",
-    a.render3d === true && a.screen === SCREEN.MENU,
+    "SETTINGS joins back()'s poppable list",
+    a.key("Escape") === true && a.screen === SCREEN.MENU,
+    String(a.screen),
   );
-  a.confirm();
-  check("RENDER toggles back", a.render3d === false);
-  const b = createMenuApp();
-  b.screen = SCREEN.MENU;
-  b.cursor = 3;
-  b.confirm();
-  check(
-    "SOUND toggles flag, stays MENU",
-    b.sound === false && b.screen === SCREEN.MENU,
-  );
-}
-{
-  let toggles = 0;
-  const fake = {
-    toggle() {
-      toggles++;
-      return false;
-    },
-  };
-  const a = createMenuApp({ audio: fake });
-  a.screen = SCREEN.MENU;
-  a.cursor = 3;
+  a.cursor = 2;
   a.confirm();
   check(
-    "SOUND with audio: flag synced to toggle() return",
-    toggles === 1 && a.sound === false,
+    "confirm on SETTINGS is NOT back — Enter is consumed by the row",
+    a.confirm() === true && a.screen === SCREEN.SETTINGS,
+    String(a.screen),
   );
 }
 {
@@ -387,6 +369,105 @@ check(
     "confirm() in GAME is no-op",
     a.confirm() === false && a.screen === SCREEN.GAME,
   );
+}
+
+// ---- OPTIONS knobs: clamp, wrap, 3D gating, reset ----
+{
+  const seen = [];
+  const a = createMenuApp({
+    onSettings: (s, k) => {
+      seen.push(k);
+    },
+  });
+  a.screen = SCREEN.SETTINGS;
+  check(
+    "settings default to the shipped blob",
+    a.settings.mus === 100 && a.settings.sfx === 100 && a.settings.bri === 100 && a.settings.cam === 0,
+    JSON.stringify(a.settings),
+  );
+  a.cursor = 5;
+  a.optMove(1);
+  check("optMove moves optRow and never the MENU cursor", a.optRow === 1 && a.cursor === 5, a.optRow + "/" + a.cursor);
+  a.optRow = 0;
+  check("MUSIC left steps down by 10", a.move(-1, 0) === true && a.settings.mus === 90, a.settings.mus);
+  for (let i = 0; i < 20; i++) a.move(-1, 0);
+  check(
+    "MUSIC clamps at 0 and reports no-change (adjust never wraps)",
+    a.settings.mus === 0 && a.move(-1, 0) === false,
+    a.settings.mus,
+  );
+  check("MUSIC Enter wraps 0 -> 10", a.optCycle() === true && a.settings.mus === 10, a.settings.mus);
+  a.settings.mus = 100;
+  check("MUSIC Enter wraps 100 -> 0", a.optCycle() === true && a.settings.mus === 0, a.settings.mus);
+  a.optRow = 8;
+  check(
+    "RESET DEFAULTS restores every field",
+    a.optCycle() === true && a.settings.mus === 100 && a.settings.bri === 100 && a.settings.shk === 1,
+    JSON.stringify(a.settings),
+  );
+  check(
+    "every accepted change reports through onSettings",
+    seen.indexOf("mus") >= 0 && seen.indexOf("reset") >= 0,
+    seen.join(","),
+  );
+}
+{
+  const a = createMenuApp();
+  a.screen = SCREEN.SETTINGS;
+  a.optRow = 4;
+  check("CAMERA rejects adjust in CLASSIC 2D", a.move(1, 0) === false && a.settings.cam === 0);
+  check("CAMERA rejects Enter in CLASSIC 2D", a.optCycle() === false && a.settings.cam === 0);
+  a.optRow = 5;
+  check("BRIGHTNESS rejects adjust in CLASSIC 2D", a.move(1, 0) === false && a.settings.bri === 100);
+  a.optRow = 3;
+  a.optCycle();
+  check("RENDER flips render3d and r3d together", a.render3d === true && a.settings.r3d === 1);
+  a.optRow = 4;
+  check("CAMERA cycles STANDARD -> WIDE in REAL 3D", a.optCycle() === true && a.settings.cam === 1);
+  a.move(1, 0);
+  check("CAMERA adjusts to FAR then clamps", a.settings.cam === 2 && a.move(1, 0) === false, a.settings.cam);
+  check("CAMERA Enter wraps FAR -> STANDARD", a.optCycle() === true && a.settings.cam === 0);
+  a.optRow = 5;
+  for (let i = 0; i < 10; i++) a.move(1, 0);
+  check("BRIGHTNESS clamps at 130", a.settings.bri === 130 && a.move(1, 0) === false, a.settings.bri);
+  check("BRIGHTNESS Enter wraps 130 -> 70", a.optCycle() === true && a.settings.bri === 70, a.settings.bri);
+  a.optRow = 3;
+  a.optCycle();
+  check("RENDER back to CLASSIC 2D re-locks the two 3D rows", a.render3d === false && a.settings.r3d === 0);
+}
+{
+  let toggles = 0;
+  const a = createMenuApp({
+    audio: {
+      toggle: () => {
+        toggles++;
+        return false;
+      },
+    },
+  });
+  a.screen = SCREEN.SETTINGS;
+  a.optRow = 2;
+  a.optCycle();
+  check(
+    "SOUND row drives audio.toggle() and syncs both flags",
+    toggles === 1 && a.sound === false && a.settings.snd === 0,
+    toggles + "/" + a.sound + "/" + a.settings.snd,
+  );
+  check("SOUND left is a no-op when already OFF", a.move(-1, 0) === false && toggles === 1);
+}
+{
+  const a = createMenuApp();
+  a.screen = SCREEN.SETTINGS;
+  a.optRow = 8;
+  a.optMove(1);
+  check("optMove wraps 8 -> 0", a.optRow === 0, a.optRow);
+  a.optMove(-1);
+  check("optMove wraps 0 -> 8", a.optRow === 8, a.optRow);
+  a.optRow = 0;
+  a.key("ArrowDown");
+  check("ArrowDown tap moves the row (axis 1)", a.optRow === 1, a.optRow);
+  a.key("ArrowLeft");
+  check("ArrowLeft tap adjusts the row (axis 0)", a.settings.sfx === 90, a.settings.sfx);
 }
 
 // ---- confirm rising-edge discipline (held != double) ----
@@ -1022,56 +1103,38 @@ check(
   );
 }
 
-// ---- togT flip timestamp (toggle-flash §3): set on RENDER/SOUND flip only ----
+// ---- togT flip timestamp (§2): stamped on every SETTINGS knob change ----
 {
   const a = createMenuApp();
-  a.screen = SCREEN.MENU;
-  check("togT exposed, sentinel -1 before any flip", a.togT === -1, a.togT);
-  frames(a, 10, DT); // subT = 10/60
+  a.screen = SCREEN.SETTINGS;
+  check("togT exposed, sentinel -1 before any change", a.togT === -1, a.togT);
+  frames(a, 10, DT);
   const tAt = a.subT;
-  a.cursor = 2;
-  a.confirm(); // RENDER flip
+  a.optRow = 6;
+  a.optCycle();
   check(
-    "RENDER flip stamps togT=subT and flips render3d",
-    a.togT === tAt && a.render3d === true,
+    "knob change stamps togT=subT",
+    a.togT === tAt && a.settings.shk === 0,
     a.togT + " vs " + tAt,
   );
-  const tHold = a.togT;
+  const hold = a.togT;
   frames(a, 7, DT);
-  a.move(1);
-  check(
-    "frames+move (non-toggle menu actions) leave togT untouched",
-    a.togT === tHold && a.screen === SCREEN.MENU,
-    a.togT,
-  );
+  a.optMove(1);
+  check("row moves leave togT untouched", a.togT === hold, a.togT);
+  frames(a, 5, DT);
+  a.optRow = 7;
+  a.optCycle();
+  check("second change re-stamps togT to the new subT", a.togT === a.subT && a.togT > hold, a.togT + "/" + hold);
+  a.back();
+  check("screen transition clears the togT sentinel", a.screen === SCREEN.MENU && a.togT === -1, a.togT);
 }
 {
-  const a = createMenuApp({ autoplay: true }); // boots straight into GAME
-  a.screen = SCREEN.MENU;
-  a.inGame = false;
-  frames(a, 20, DT);
-  a.cursor = 3;
-  a.confirm(); // SOUND flip
-  const tSnd = a.togT;
-  check("SOUND flip stamps togT=subT", tSnd === a.subT, tSnd + "/" + a.subT);
-  a.move(1);
-  a.move(-1);
-  check("move() leaves togT untouched", a.togT === tSnd);
-  frames(a, 5, DT);
-  a.cursor = 2;
-  a.confirm();
-  check(
-    "second flip re-stamps togT to the new subT",
-    a.togT === a.subT && a.togT > tSnd,
-    a.togT + "/" + tSnd,
-  );
-  a.cursor = 4;
-  a.confirm(); // push HOWTO (subT reset site)
-  check(
-    "screen transition clears togT sentinel (stale-flash guard)",
-    a.screen === SCREEN.HOWTO && a.togT === -1,
-    a.togT,
-  );
+  const a = createMenuApp();
+  a.screen = SCREEN.SETTINGS;
+  a.optRow = 4;
+  frames(a, 10, DT);
+  a.optCycle();
+  check("a REJECTED 3D-only change never stamps togT", a.togT === -1, a.togT);
 }
 
 {
@@ -1081,10 +1144,9 @@ check(
     !/item === \d/.test(src) && /ITEMS\[this\.cursor\]/.test(src),
   );
   const want = {
-    "START GAME": SCREEN.GAME,
+    PLAY: SCREEN.GAME,
     "LEVEL SELECT": SCREEN.LEVEL,
-    RENDER: SCREEN.MENU,
-    SOUND: SCREEN.MENU,
+    OPTIONS: SCREEN.SETTINGS,
     "HOW TO PLAY": SCREEN.HOWTO,
     ITEMS: SCREEN.ITEMS,
     ENEMIES: SCREEN.ENEMIES,
@@ -1114,8 +1176,8 @@ check(
     }
   }
   check(
-    "confirm follows ITEMS labels (SOURCE/START/RENDER stay MENU/GAME/MENU)",
-    ok && started === 1 && srcHits === 1 && want.RENDER === SCREEN.MENU,
+    "confirm follows ITEMS labels (SOURCE stays MENU, PLAY starts the run)",
+    ok && started === 1 && srcHits === 1 && want.OPTIONS === SCREEN.SETTINGS,
     det.join(" ") || "ok",
   );
 }

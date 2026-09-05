@@ -12,6 +12,7 @@ import { roomCap } from "../core/config.js";
 import { clampHeat } from "../core/heat.js";
 import { clampPact, PACT, togglePact } from "../core/pact.js";
 import { clampPace } from "../core/pace.js";
+import { clampSettings, DEFAULTS } from "./settings.js";
 export const SCREEN = Object.freeze({
   BOOT: 0,
   INTRO: 1,
@@ -23,17 +24,30 @@ export const SCREEN = Object.freeze({
   ATTRACT: 7,
   ITEMS: 8,
   ENEMIES: 9,
+  SETTINGS: 10, // appended — inserting shifts every frozen value after it
 });
 export const ITEMS = Object.freeze([
-  "START GAME",
+  "PLAY",
   "LEVEL SELECT",
-  "RENDER",
-  "SOUND",
+  "OPTIONS",
   "HOW TO PLAY",
   "ITEMS",
   "ENEMIES",
   "HIGH SCORES",
   "SOURCE",
+]);
+/* OPTIONS rows, frozen and index-addressed: optRow, drawSettings and
+   settingsHit all agree because they all count this array. */
+export const OPT_ROWS = Object.freeze([
+  "MUSIC",
+  "SFX",
+  "SOUND",
+  "RENDER",
+  "CAMERA",
+  "BRIGHTNESS",
+  "SCREEN SHAKE",
+  "REDUCE FLASH",
+  "RESET DEFAULTS",
 ]);
 export const SOURCE_URL = "https://github.com/HMarzban/fusegrid";
 const REP_FIRST = 0.35,
@@ -45,12 +59,16 @@ export function createMenuApp(opts = {}) {
   const audio = o.audio || null;
   const onStart = o.onStart || null;
   const onSource = o.onSource || null;
+  const onSettings = o.onSettings || null;
   const app = {
     screen: o.autoplay ? SCREEN.GAME : SCREEN.INTRO,
     cursor: 0,
     level: Math.min(roomCap(o.pactUnlocked), Math.max(1, o.level | 0 || 1)),
     heat: clampHeat(o.heat),
     scoreHeat: 0,
+    settings: clampSettings(o.settings),
+    optRow: 0, // OPTIONS row cursor — its OWN field, so the MENU cursor
+    // survives a round trip through the page
     pact: clampPact(o.pact),
     pace: clampPace(o.pace),
     pactUnlocked: !!o.pactUnlocked,
@@ -64,8 +82,8 @@ export function createMenuApp(opts = {}) {
     repAxis: 0,
     prevConfirm: false,
     idleT: 0,
-    togT: -1, // MENU toggle-flash timestamp (§3): subT at last RENDER/SOUND
-    // flip, -1 sentinel otherwise; cleared wherever subT resets
+    togT: -1, // SETTINGS knob-flash timestamp (§2): subT at the last accepted
+    // change, -1 sentinel otherwise; cleared wherever subT resets
     worldState: null,
     _taps: {},
     /* Advance the shell by dt seconds. Reads held axes + confirmHeld only. */
@@ -87,7 +105,7 @@ export function createMenuApp(opts = {}) {
       let dir = 0,
         axis = 0;
       if (this.screen === SCREEN.MENU) dir = ax.up ? -1 : ax.down ? 1 : 0;
-      else if (this.screen === SCREEN.LEVEL) {
+      else if (this.screen === SCREEN.LEVEL || this.screen === SCREEN.SETTINGS) {
         if (ax.left || ax.right) {
           dir = ax.left ? -1 : 1;
           axis = 0;
@@ -187,6 +205,10 @@ export function createMenuApp(opts = {}) {
         this._taps[dir + ":" + (lat ? 0 : 1)] = true;
         return true;
       }
+      if (this.screen === SCREEN.SETTINGS && this.move(dir, lat ? 0 : 1)) {
+        this._taps[dir + ":" + (lat ? 0 : 1)] = true;
+        return true;
+      }
       if (this.screen === SCREEN.SCORES && lat && this.move(dir, 0)) {
         this._taps[dir + ":0"] = true;
         return true;
@@ -201,19 +223,13 @@ export function createMenuApp(opts = {}) {
           return this.skip();
         case SCREEN.MENU: {
           switch (ITEMS[this.cursor]) {
-            case "START GAME":
+            case "PLAY":
               return this.startRun();
             case "LEVEL SELECT":
               return this._push(SCREEN.LEVEL);
-            case "RENDER":
-              this.render3d = !this.render3d;
-              this.togT = this.subT;
-              return true;
-            case "SOUND":
-              if (audio) this.sound = !!audio.toggle();
-              else this.sound = !this.sound;
-              this.togT = this.subT;
-              return true;
+            case "OPTIONS":
+              this.optRow = 0;
+              return this._push(SCREEN.SETTINGS);
             case "HOW TO PLAY":
               return this._push(SCREEN.HOWTO);
             case "ITEMS":
@@ -230,6 +246,8 @@ export function createMenuApp(opts = {}) {
         }
         case SCREEN.LEVEL:
           return this.startRun();
+        case SCREEN.SETTINGS:
+          return this.optCycle();
         case SCREEN.HOWTO:
         case SCREEN.SCORES:
         case SCREEN.ITEMS:
@@ -244,7 +262,8 @@ export function createMenuApp(opts = {}) {
         this.screen === SCREEN.HOWTO ||
         this.screen === SCREEN.SCORES ||
         this.screen === SCREEN.ITEMS ||
-        this.screen === SCREEN.ENEMIES
+        this.screen === SCREEN.ENEMIES ||
+        this.screen === SCREEN.SETTINGS
       )
         return this._push(SCREEN.MENU);
       return false;
@@ -291,6 +310,8 @@ export function createMenuApp(opts = {}) {
         this.scoreHeat = nh;
         return true;
       }
+      if (this.screen === SCREEN.SETTINGS)
+        return (axis | 0) === 1 ? this.optMove(dir) : this.optAdjust(dir);
       return false;
     },
     adjustPace(dir) {
@@ -300,6 +321,94 @@ export function createMenuApp(opts = {}) {
       if (np === this.pace) return false;
       this.pace = np;
       if (o.onPaceChange) o.onPaceChange(np);
+      return true;
+    },
+    /* OPTIONS knobs (spec §2). LEVEL SELECT is the only precedent for
+       in-subscreen adjustment, so this copies its move(dir,axis) shape: axis 1
+       = up/down = row, axis 0 = left/right = adjust. Adjust CLAMPS, Enter
+       CYCLES (which is what gives touch full control, since a tap maps to
+       Enter on the row it hits). Every accepted change stamps togT and reports
+       through o.onSettings — the same shape onPaceChange already uses. */
+    optMove(dir) {
+      this.idleT = 0;
+      const n = OPT_ROWS.length;
+      this.optRow = (this.optRow + (dir < 0 ? -1 : 1) + n) % n;
+      return true;
+    },
+    _optSet(key, v) {
+      if (this.settings[key] === v) return false;
+      this.settings[key] = v;
+      if (key === "r3d") this.render3d = !!v;
+      this.togT = this.subT;
+      if (onSettings) onSettings(this.settings, key);
+      return true;
+    },
+    /* SOUND is the one row whose truth lives outside the blob: audio.toggle()
+       owns the mute, the blob only records where it landed. */
+    _optSound(v) {
+      if (this.settings.snd === (v ? 1 : 0)) return false;
+      if (audio) this.sound = !!audio.toggle();
+      else this.sound = !this.sound;
+      this.settings.snd = this.sound ? 1 : 0;
+      this.togT = this.subT;
+      if (onSettings) onSettings(this.settings, "snd");
+      return true;
+    },
+    _opt3dLocked(r) {
+      return (r === "CAMERA" || r === "BRIGHTNESS") && !this.render3d;
+    },
+    optAdjust(dir) {
+      this.idleT = 0;
+      const r = OPT_ROWS[this.optRow],
+        d = dir < 0 ? -1 : 1;
+      if (this._opt3dLocked(r)) return false;
+      if (r === "MUSIC" || r === "SFX") {
+        const k = r === "MUSIC" ? "mus" : "sfx";
+        return this._optSet(k, Math.min(100, Math.max(0, this.settings[k] + d * 10)));
+      }
+      if (r === "BRIGHTNESS")
+        return this._optSet("bri", Math.min(130, Math.max(70, this.settings.bri + d * 10)));
+      if (r === "CAMERA")
+        return this._optSet("cam", Math.min(2, Math.max(0, this.settings.cam + d)));
+      if (r === "SOUND") return this._optSound(d > 0 ? 1 : 0);
+      if (r === "RENDER") return this._optSet("r3d", d > 0 ? 1 : 0);
+      if (r === "SCREEN SHAKE") return this._optSet("shk", d > 0 ? 1 : 0);
+      if (r === "REDUCE FLASH") return this._optSet("flx", d > 0 ? 1 : 0);
+      return false;
+    },
+    optCycle() {
+      this.idleT = 0;
+      const r = OPT_ROWS[this.optRow];
+      if (this._opt3dLocked(r)) return false;
+      if (r === "MUSIC" || r === "SFX") {
+        const k = r === "MUSIC" ? "mus" : "sfx";
+        return this._optSet(k, this.settings[k] >= 100 ? 0 : this.settings[k] + 10);
+      }
+      if (r === "BRIGHTNESS")
+        return this._optSet("bri", this.settings.bri >= 130 ? 70 : this.settings.bri + 10);
+      if (r === "CAMERA") return this._optSet("cam", (this.settings.cam + 1) % 3);
+      if (r === "SOUND") return this._optSound(this.settings.snd ? 0 : 1);
+      if (r === "RENDER") return this._optSet("r3d", this.settings.r3d ? 0 : 1);
+      if (r === "SCREEN SHAKE") return this._optSet("shk", this.settings.shk ? 0 : 1);
+      if (r === "REDUCE FLASH") return this._optSet("flx", this.settings.flx ? 0 : 1);
+      if (r === "RESET DEFAULTS") return this.optReset();
+      return false;
+    },
+    /* Writes DEFAULTS and re-applies every knob live. Progress data
+       (highscores / plaques / pact / pace) lives under other keys and is never
+       touched. */
+    optReset() {
+      this.idleT = 0;
+      const d = clampSettings(DEFAULTS);
+      if (this.sound !== !!d.snd) {
+        if (audio) this.sound = !!audio.toggle();
+        else this.sound = !this.sound;
+      }
+      for (const k in d) this.settings[k] = d[k];
+      this.settings.snd = this.sound ? 1 : 0;
+      this.render3d = !!this.settings.r3d;
+      this.togT = this.subT;
+      if (onSettings) onSettings(this.settings, "reset");
       return true;
     },
     togglePactBit(bit) {
@@ -408,5 +517,10 @@ export function createMenuApp(opts = {}) {
       return (prevSt === "PLAY" || prevSt === "WIN") && st === "LOSE";
     },
   };
+  /* ?render=3d / opts.render3d win at boot over the persisted r3d, so the blob
+     is re-seeded IN MEMORY to whatever actually took effect — display and
+     storage never disagree, and a URL override is never written to disk. */
+  app.settings.r3d = app.render3d ? 1 : 0;
+  app.settings.snd = app.sound ? 1 : 0;
   return app;
 }
