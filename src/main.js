@@ -20,6 +20,7 @@ import { introPhase, INTRO_DUR } from "./app/intro.js";
 import { loadScores, recordScore, saveScores, scoreEntry, scoresForHeat } from "./app/highscores.js";
 import { loadPactUnlocked, savePactUnlocked } from "./app/pactstore.js";
 import { loadPace, savePace } from "./app/pacestore.js";
+import { loadCoachSeen, saveCoachSeen, coachOpen } from "./app/coach.js";
 import { clampPace } from "./core/pace.js";
 import { registerSW } from "./pwa/register.js";
 import { Input } from "./input.js";
@@ -102,6 +103,11 @@ export function createGame(canvas, opts = {}) {
   if (typeof document !== "undefined" && document)
     paintBombPad(document.getElementById("tbomb"));
   let prevSt = null;
+  /* ghost coach (plan 4): nb.coach.v1 persists across sessions; coachPlanted
+     is a per-run latch (reset whenever a fresh run starts below) so a plant
+     in an EARLIER run never dismisses the coach in a later, still-unseen one. */
+  let coachSeen = loadCoachSeen();
+  let coachPlanted = false;
 
   /* USER CAMERA (spec §1): render-side closure state, NEVER in world/snapshot.
      Handlers self-gate on GAME via getActive; menus/attract stay authored.
@@ -139,6 +145,7 @@ export function createGame(canvas, opts = {}) {
     world.state = "PLAY";
     app.inGame = true;
     prevSt = "PLAY";
+    coachPlanted = false; // fresh run: world.time restarts at 0 too
     resetCamera(cam); // §2: every run starts framed
     resetOrbit(rig);
     setBtn("btnPause", "Pause");
@@ -434,6 +441,19 @@ export function createGame(canvas, opts = {}) {
           break;
         } // hard cap (anti spiral-of-death)
       }
+      /* ghost coach (plan 4): latch the first plant BEFORE renderer.render()
+         drains world.events below (src/render/ zeroes the array on every
+         frame's consumeEvents) — this is the only point in the loop where a
+         "bomb" pushed by this frame's step() is still readable. Persist is
+         app-layer only, fires once (the !coachSeen gate) the frame coachOpen
+         flips closed (DUR elapsed or a plant), never in the draw code. */
+      if (!coachSeen) {
+        if (world.events.some((e) => e.t === "bomb")) coachPlanted = true;
+        if (!coachOpen(coachSeen, world.time, coachPlanted)) {
+          saveCoachSeen();
+          coachSeen = true;
+        }
+      }
       if (world.finale && world.state === "MENU") {
         persistScore();
         savePactUnlocked();
@@ -493,7 +513,14 @@ export function createGame(canvas, opts = {}) {
         : app.screen === SCREEN.INTRO && curKind === "3d"
           ? { intro: app.subT }
           : app.screen === SCREEN.GAME
-            ? { hud: true } // S4 overlay HUD chips
+            ? {
+                hud: true, // S4 overlay HUD chips
+                // ghost coach: GAME screen (not ATTRACT, whose demo world is
+                // state PLAY too) AND world.state==="PLAY" (not PAUSE/WIN/LOSE)
+                coach:
+                  world.state === "PLAY" &&
+                  coachOpen(coachSeen, world.time, coachPlanted),
+              }
             : undefined,
     );
     c.restore();
@@ -519,6 +546,7 @@ export function createGame(canvas, opts = {}) {
       world.state = "PLAY";
       setBtn("btnPause", "Pause");
       prevSt = "PLAY";
+      coachPlanted = false;
     },
     // quit-to-menu riding KeyM's exact record path (persist-if->0, machine
     // M-quit, PAUSE-overlay drop, label reset)

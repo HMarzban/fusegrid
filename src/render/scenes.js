@@ -1,6 +1,7 @@
 import { CFG, isFinale, biomeOf } from "../core/config.js";
 import { HEAT_COL, heatToken, HEAT_NAME, clampHeat } from "../core/heat.js";
 import { drawIcon } from "./sprites.js";
+import { rr } from "./icons.js";
 
 /* Scene UI: menu logo, HUD, and the CLEARED / GAME OVER / PAUSED overlays.
    Pure draw; reads world + (optionally) DOM for HUD. */
@@ -172,5 +173,56 @@ export function drawHudChips(c, world) {
   c.fillStyle = HUD_TEXT;
   c.font = "900 13px ui-monospace,monospace";
   c.fillText(String(world.score | 0), scx, 33);
+  c.restore();
+}
+
+/* Ghost coach (first-run nudge): faded W A S D + a SPACE pill drawn once near
+   the spawn tile (1,1) so a first-time player sees the controls, then never
+   again. Persist state (nb.coach.v1, COACH_DUR) lives in src/app/coach.js —
+   render/ must not import src/app (only shellview.js may, for screen
+   constants), so the caller pre-computes `open` and only world.time feeds
+   the fade here. COACH_DUR mirrors src/app/coach.js's constant of the same
+   value; keep them in sync by hand across that boundary. */
+const COACH_DUR = 3,
+  COACH_TEXT = "#eef3ff",
+  COACH_PANEL = "rgba(10,14,24,0.82)",
+  COACH_LINE = "#3a4a6a";
+export function drawCoach(c, world, open) {
+  if (!open) return;
+  const alpha = Math.max(0, Math.min(1, 1 - (world.time || 0) / COACH_DUR));
+  if (alpha <= 0) return;
+  c.save();
+  c.globalAlpha = alpha;
+  c.textAlign = "center";
+  c.textBaseline = "middle";
+  c.lineWidth = 1;
+  c.strokeStyle = COACH_LINE;
+  const ox = CFG.TILE * 2.4,
+    oy = CFG.TILE * 1.3,
+    ks = 22,
+    gap = 4;
+  const cap = (dx, dy, label) => {
+    c.fillStyle = COACH_PANEL;
+    rr(c, ox + dx, oy + dy, ks, ks, 5);
+    c.fill();
+    c.stroke();
+    c.fillStyle = COACH_TEXT;
+    c.font = "900 12px ui-monospace,monospace";
+    c.fillText(label, ox + dx + ks / 2, oy + dy + ks / 2 + 1);
+  };
+  cap(ks + gap, 0, "W");
+  cap(0, ks + gap, "A");
+  cap(ks + gap, ks + gap, "S");
+  cap((ks + gap) * 2, ks + gap, "D");
+  const pw = (ks + gap) * 3 - gap,
+    ph = 18,
+    py = oy + (ks + gap) * 2 + 6;
+  c.fillStyle = COACH_PANEL;
+  rr(c, ox, py, pw, ph, 8);
+  c.fill();
+  c.stroke();
+  c.fillStyle = COACH_TEXT;
+  c.font = "900 10px ui-monospace,monospace";
+  c.fillText("SPACE", ox + pw / 2, py + ph / 2 + 1);
   c.restore();
 }

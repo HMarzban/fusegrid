@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-04 — Added the ghost coach (first-run WASD/SPACE nudge)
+- `src/app/coach.js` persists `nb.coach.v1`; `drawCoach` (scenes.js) paints faded W/A/S/D + SPACE near spawn (1,1), alpha `1-time/3`, gated by a pre-computed `open` (render/ can't import app/, so scenes.js can't read `COACH_DUR` from coach.js — its own local copy must stay in sync by hand). main.js latches the first `bomb` event and persists dismissal right after the physics step, before that same frame's `renderer.render()` drains `world.events` — the one place in the RAF loop where a just-planted bomb is still visible. Never draws on ATTRACT (demo world is state PLAY too) since `coach` is only passed alongside `{hud:true}`, itself gated on `app.screen===GAME`. PWA bumped v24->v25->v26.
+
 ## 2026-09-04 — Committed a real media/ listing pack
 - Captured `media/` from the live game on loopback (SW unregistered + caches cleared first): `cover-630x500.png` (cropped from the real `og.png` hero, no upscale), `still-jungle/ice/crown/menu.png` (JUNGLE/ICE via direct sim `loadLevel`, CROWN via room 8 the same way — no Pact-unlock save-scum needed since the sim itself has no gate; MENU from `#c` in 2D kind), and `play.gif` (~4.2s/12fps/630px, a real JUNGLE run: move, plant, fuse, blast opens a brick, movement resumes). `media/README.md` documents each asset, the zip recipe (omits `tests/`, `docs/`, `.git`, `media/`, `og.png`), and the itch blurb. Root `README.md` points at `media/`. `tests/media.test.mjs` pins the cover at 630×500 and guards `media/`/`og.png` out of the PWA precache. Note: the automation browser tab runs backgrounded (`document.hidden`), which fully pauses `requestAnimationFrame` — the GIF was captured by driving the real deterministic `step()`/`render()` via the debug hook's `step(n)` instead of relying on wall-clock RAF.
 

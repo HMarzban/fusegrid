@@ -15,7 +15,7 @@ import {createRig, applyOrbit} from "./camrig.js";
 import {introCam} from "./flythrough.js";
 import {createParticles} from "./particles.js";
 import {buildAtlas} from "./textures.js";
-import {drawHudChips, drawOverlay, updateHud} from "../scenes.js";
+import {drawHudChips, drawOverlay, updateHud, drawCoach} from "../scenes.js";
 import {onEvent, updateFx, getShake, getFlash, getFx, syncFx} from "../fx.js";
 
 const W=CFG.COLS*CFG.TILE, H=CFG.ROWS*CFG.TILE;
@@ -146,6 +146,7 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
     if(ov||(o&&o.hud===true)){
       if(ov)drawOverlay(ovCtx,world);
       if(o&&o.hud===true)drawHudChips(ovCtx,world);
+      if(o&&o.hud===true)drawCoach(ovCtx,world,!!(o&&o.coach));
      }
     /* S5: DOM #hud ids route like the 2D path — {hud:false} suppresses
        (attract demo), every other frame writes score/level/lives/etc. */
