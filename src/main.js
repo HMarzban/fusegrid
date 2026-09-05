@@ -9,6 +9,7 @@ import { createRenderer } from "./render/renderer.js";
 import { makeHud, copyPayload } from "./render/scenes.js";
 import { paintBombPad } from "./render/sprites.js";
 import { dims, drawShell, kindSize } from "./render/shellview.js";
+import { settingsHit, layout as menuLayout } from "./render/menudraw.js";
 import { setFxOpts } from "./render/fx.js";
 import { SCREEN, SOURCE_URL, createMenuApp } from "./app/menuapp.js";
 import { clampHeat } from "./core/heat.js";
@@ -23,7 +24,7 @@ import { loadPactUnlocked, savePactUnlocked } from "./app/pactstore.js";
 import { loadCabinetSeen, saveCabinetSeen } from "./app/cabinetseen.js";
 import { loadPlaques, savePlaques, unlockPlaques } from "./app/plaques.js";
 import { loadPace, savePace } from "./app/pacestore.js";
-import { loadSettings } from "./app/settings.js";
+import { loadSettings, saveSettings } from "./app/settings.js";
 import {
   loadCoachSeen,
   saveCoachSeen,
@@ -179,7 +180,7 @@ export function createGame(canvas, opts = {}) {
       window.open(SOURCE_URL, "_blank", "noopener,noreferrer");
   };
   // SETTINGS (nb.settings.v1): loaded once at boot; applySettings is the seam S2's OPTIONS rows call again.
-  const settings = loadSettings();
+  let settings = loadSettings();
   if (settings.snd === 0 && audio && audio.toggle) audio.toggle();
   const applySettings = (S) => {
     if (audio && audio.setVols) audio.setVols({ mus: S.mus / 100, sfx: S.sfx / 100 });
@@ -195,11 +196,22 @@ export function createGame(canvas, opts = {}) {
     pace: loadPace(),
     onPaceChange: (p) => savePace(p),
     render3d: urlKind === "3d" || opts.render3d === true || settings.r3d === 1,
+    settings,
+    onSettings: (s) => {
+      saveSettings(s);
+      applySettings(s);
+    },
     audio,
     autoplay,
     onStart,
     onSource,
-  }); /* §5 cue sheet — wired HERE in the app layer, never in render/sim. Wrappers
+  });
+  /* One live blob from here on: the machine clamped and re-seeded main's copy
+     (?render=3d precedence), so onStart / KeyR / the render opts all read the
+     object the OPTIONS rows actually mutate. */
+  settings = app.settings;
+  applySettings(settings);
+  /* §5 cue sheet — wired HERE in the app layer, never in render/sim. Wrappers
      shadow the machine methods so every successful transition plays exactly
      one cue; RENDER/SOUND confirms get uiTog instead of uiSel, and subscreen
      confirm (= back()) is cued once by the back wrapper alone. */
@@ -219,10 +231,9 @@ export function createGame(canvas, opts = {}) {
     };
     app.confirm = () => {
       const sB = app.screen,
-        cB = app.cursor,
         r = c0();
       if (!r) return r;
-      if (sB === SCREEN.MENU && (cB === 2 || cB === 3)) audio.play("uiTog");
+      if (sB === SCREEN.SETTINGS) audio.play("uiTog");
       else if (
         sB !== SCREEN.HOWTO &&
         sB !== SCREEN.SCORES &&
@@ -313,7 +324,7 @@ export function createGame(canvas, opts = {}) {
      intent.fire re-enters as a rising-edge confirm on the next frame
      (auto-start after skip, toggles bouncing back, subscreens bouncing). */
   if (canvas) {
-    canvas.addEventListener("pointerdown", () => {
+    canvas.addEventListener("pointerdown", (ev) => {
       if (app.screen === SCREEN.GAME) return;
       input._intent.fire = false;
       if (app.screen === SCREEN.ATTRACT) {
@@ -321,7 +332,24 @@ export function createGame(canvas, opts = {}) {
         return;
       }
       if (app.screen === SCREEN.INTRO) app.skip();
-      else app.confirm();
+      else if (app.screen === SCREEN.SETTINGS) {
+        /* Tap a row = Enter on it; tap outside the band = back. Client px are
+           divided by the CSS scale of the OVERLAY canvas — never #gl's Retina
+           drawing buffer, which the wrapper owns. */
+        const r = canvas.getBoundingClientRect();
+        const k = canvas.width / (r.width || canvas.width);
+        const { cw, ch } = dims(canvas, curKind);
+        const row = settingsHit(
+          (ev.clientX - r.left) / k,
+          (ev.clientY - r.top) / k,
+          menuLayout(cw, ch),
+        );
+        if (row < 0) app.back();
+        else {
+          app.optRow = row;
+          app.confirm();
+        }
+      } else app.confirm();
     });
   }
   /* pad taps bubble to #stage: play from ATTRACT too (spec §4 tap-to-play).

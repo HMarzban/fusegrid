@@ -307,7 +307,7 @@ function mkCanvas(){
   g.input._onKey({code:"KeyR"});
   check("KeyR inside GAME with 3D rig does not throw (resetOrbit route)",
     g.world.state==="PLAY");
-  g.app.screen=2; g.app.cursor=2; g.app.confirm();   // RENDER toggle back to 2D
+  g.app.screen=10; g.app.optRow=3; g.app.confirm();  // OPTIONS RENDER row -> 2D
   t+=16; g.loop(t);
   check("RENDER toggle swaps to classic surface (no overlay key)",
     !("overlay"in g.renderer), String(Object.keys(g.renderer)));

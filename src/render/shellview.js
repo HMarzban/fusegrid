@@ -10,6 +10,7 @@ import { SCREEN, ITEMS } from "../app/menuapp.js";
 import { PROJ } from "./r3d/camera.js";
 import { drawLogo } from "./scenes.js";
 import * as menudraw from "./menudraw.js";
+import { CACHE_NAME } from "../pwa/shell.js";
 
 export function kindSize(kind) {
   const iso = kind === "iso";
@@ -18,6 +19,12 @@ export function kindSize(kind) {
     h: iso ? PROJ.canvasH : CFG.ROWS * CFG.TILE,
   };
 }
+
+/* Build kicker for the OPTIONS head. CACHE_NAME is the only build identifier
+   in the repo, and the PWA rule already forces it to change whenever shipped
+   bytes do — same precedent as scores arriving through a getter: a screen fed
+   from outside app/world gets its value handed in, not re-derived downstream. */
+const REV = CACHE_NAME.replace("fusegrid-shell-", "");
 
 export function dims(canvas, kind) {
   const s = kindSize(kind);
@@ -52,17 +59,15 @@ export function drawShell(c, app, world, canvas, kind, getScores, getPlaques) {
       {
         cursor: app.cursor,
         enterT: app.subT,
-        togT: app.togT,
         items: [
           ITEMS[0] + "|" + heatToken(app.heat),
           ITEMS[1] + "|" + heatToken(app.heat),
-          "RENDER " + (app.render3d ? "REAL 3D" : "CLASSIC 2D"),
-          "SOUND " + (app.sound ? "ON" : "OFF"),
+          ITEMS[2],
+          ITEMS[3],
           ITEMS[4],
           ITEMS[5],
           ITEMS[6],
           ITEMS[7],
-          ITEMS[8],
         ],
       },
       L,
@@ -102,5 +107,14 @@ export function drawShell(c, app, world, canvas, kind, getScores, getPlaques) {
       app.scoreHeat,
       getPlaques ? getPlaques() : 0,
     );
+  } else if (s === SCREEN.SETTINGS) {
+    menudraw.drawDim(c, 0.72, cw, chh);
+    menudraw.drawSettings(c, L, app.subT, {
+      row: app.optRow,
+      vals: app.settings,
+      r3d: app.render3d,
+      togT: app.togT,
+      rev: REV,
+    });
   }
 }

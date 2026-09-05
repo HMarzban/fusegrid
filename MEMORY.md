@@ -16,6 +16,11 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-05 — OPTIONS screen + eight-row menu (S2)
+- `SCREEN.SETTINGS` is 10, appended after `ENEMIES:9` (never inserted); `ITEMS` drops to 8 with PLAY/LEVEL SELECT/OPTIONS/HOW TO PLAY/ITEMS/ENEMIES/HIGH SCORES/SOURCE. RENDER and SOUND fold into OPTIONS' nine `OPT_ROWS`, so there is one write path per persisted `nb.settings.v1` value instead of a mirrored menu toggle.
+- `app.optRow` is its own cursor, separate from `app.cursor` — entering/leaving OPTIONS never disturbs where the MENU list was left. `drawSettings`/`settingsHit`/`settingsGeom` share one layout budget so a tap can never land on a row the plate did not paint; `drawMenu` drops the `togT` toggle-flash arg entirely (it moved to `drawSettings` with the knobs it now flashes).
+- The OPTIONS head kicker reads `CACHE_NAME` (via `shellview.js`'s `REV`) so a player can self-diagnose stale cached bytes from the screen itself.
+
 ## 2026-09-05 — Settings store + live knobs (S1 of the settings-menu program)
 - `src/app/settings.js`: one `nb.settings.v1` JSON blob (8 knobs) on the `store.js` scaffold, clamped identically on load and save; corrupt/partial/non-object payloads self-heal per field and nothing here ever throws.
 - `audio.js` `setVols({mus,sfx})` scales the value at the existing peak-amplitude ramp sites (`voice`/`noise`) and the three `musicGain` targets — no new gain node, so SFX stay wired direct-to-destination and `duck()` still never touches them; `sfxVol<=0` early-returns beside `muted`.

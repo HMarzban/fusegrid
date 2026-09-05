@@ -775,6 +775,27 @@ function check(name, cond, detail) {
     "attract.js never references the plaques unlock (ATTRACT can't reach the finale-WIN edge)",
     !/unlockPlaques|savePlaques|plaques\.js/.test(attractSrc),
   );
+  check(
+    "shellview derives the build kicker from CACHE_NAME and passes it as rev",
+    /import\s*\{\s*CACHE_NAME\s*\}\s*from\s*"\.\.\/pwa\/shell\.js"/.test(shellSrc) &&
+      /CACHE_NAME\.replace\("fusegrid-shell-",\s*""\)/.test(shellSrc) &&
+      /rev:\s*REV/.test(shellSrc),
+    shellSrc.match(/const REV[^\n]*/)?.[0],
+  );
+  check(
+    "shellview routes SCREEN.SETTINGS to drawSettings with app.optRow + app.settings",
+    /SCREEN\.SETTINGS/.test(shellSrc) &&
+      /row:\s*app\.optRow/.test(shellSrc) &&
+      /vals:\s*app\.settings/.test(shellSrc),
+    shellSrc.match(/menudraw\.drawSettings\([^;]*\);/s)?.[0],
+  );
+  check(
+    "main.js persists every settings change and re-applies it live",
+    /onSettings:/.test(mainSrc) &&
+      /saveSettings\(/.test(mainSrc) &&
+      /applySettings\(/.test(mainSrc),
+    mainSrc.match(/onSettings:[^\n]*\n(?:.*\n){0,3}/)?.[0],
+  );
 }
 
 console.log("\n  MENUDRAW RESULT: " + pass + " PASS / " + fail + " FAIL");

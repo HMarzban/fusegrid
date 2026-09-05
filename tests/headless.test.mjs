@@ -182,14 +182,18 @@ function mkCanvas(){
   for(let i=1;i<=10;i++)g.loop(i*16);
   check("C1 click-skip does not auto-start a run",
     g.app.screen===SCREEN.MENU&&g.world.time===0, g.app.screen);
-  g.app.cursor=2; cv.fire("pointerdown");       // RENDER toggle
-  check("C1 RENDER click toggles exactly once",
-    g.app.render3d===true&&g.app.screen===SCREEN.MENU,
-    "render3d="+g.app.render3d);
+  g.app.cursor=2; cv.fire("pointerdown");       // OPTIONS
+  check("C1 OPTIONS click pushes SETTINGS once",
+    g.app.screen===SCREEN.SETTINGS&&g.app.optRow===0,String(g.app.screen));
   for(let i=11;i<=20;i++)g.loop(i*16);
-  check("C1 toggle is not re-fired by rising edge next frame",
-    g.app.render3d===true&&g.app.screen===SCREEN.MENU);
-  g.app.cursor=4; cv.fire("pointerdown");       // HOW TO PLAY
+  check("C1 push is not re-fired by rising edge next frame",
+    g.app.screen===SCREEN.SETTINGS&&g.app.optRow===0);
+  g.app.optRow=3; g.app.confirm();              // RENDER row
+  check("C1 RENDER row toggles exactly once",
+    g.app.render3d===true&&g.app.settings.r3d===1,
+    "render3d="+g.app.render3d);
+  g.app.key("Escape");
+  g.app.cursor=3; cv.fire("pointerdown");       // HOW TO PLAY
   check("C1 subscreen click lands once", g.app.screen===SCREEN.HOWTO);
   for(let i=21;i<=30;i++)g.loop(i*16);
   check("C1 subscreen does not bounce back", g.app.screen===SCREEN.HOWTO);
@@ -217,14 +221,16 @@ function mkCanvas(){
   const audio={play:n=>plays.push(n),toggle:()=>false};
   const g=createGame(null,{seed:13,audio});
   g.app.screen=SCREEN.MENU; g.app.cursor=2; plays.length=0;
-  g.app.confirm();                              // RENDER toggle
-  check("I1 RENDER confirm -> uiTog (never uiSel)",
-    plays.join()==="uiTog",JSON.stringify(plays));
-  g.app.cursor=3; plays.length=0;
-  g.app.confirm();                              // SOUND toggle
-  check("I1 SOUND confirm -> uiTog", plays.join()==="uiTog",
+  g.app.confirm();                              // OPTIONS push
+  check("I1 OPTIONS confirm -> uiSel + SETTINGS",
+    plays.join()==="uiSel"&&g.app.screen===SCREEN.SETTINGS,
     JSON.stringify(plays));
-  g.app.cursor=4; plays.length=0;
+  g.app.optRow=6; plays.length=0;
+  g.app.confirm();                              // SCREEN SHAKE knob
+  check("I1 SETTINGS knob confirm -> uiTog (never uiSel)",
+    plays.join()==="uiTog"&&g.app.settings.shk===0,JSON.stringify(plays));
+  g.app.key("Escape");
+  g.app.cursor=3; plays.length=0;
   g.app.confirm();                              // push HOWTO
   g.app.key("Escape");                          // back
   check("I1 HOWTO enter->uiSel then Esc back->uiBack",
@@ -801,8 +807,11 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   // settings/applySettings closure boot-applies every knob, camPreset
   // re-applied after every resetOrbit, o.bright threaded into render opts)
   // — bumped 640->655.
-  check("main.js stays a lean browser entry (<=655 lines)",
-    L.length<=655,String(L.length));
+  // S2 options-screen wave: +24 lines (menudraw settingsHit/layout import,
+  // onSettings persist+apply wiring, the live-settings re-seed, the SETTINGS
+  // tap router in canvas pointerdown) — bumped 655->679.
+  check("main.js stays a lean browser entry (<=679 lines)",
+    L.length<=679,String(L.length));
   const lastImp=L.reduce((a,l,i)=>/^import[\s{]/.test(l)?i:a,-1);
   const firstDecl=L.findIndex(l=>/^(export\s|const\s|let\s|var\s|function\s|class\s)/.test(l));
   check("main.js keeps every import at the top (no mid-file import sprawl)",
