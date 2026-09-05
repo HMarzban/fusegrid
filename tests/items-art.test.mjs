@@ -1,7 +1,7 @@
 import { createWorld, loadLevel, step } from "../src/core/sim.js";
 import { CFG } from "../src/core/config.js";
 import { POWER } from "../src/core/entities.js";
-import { drawIcon, RIM, ITEM_FAMILY } from "../src/render/icons.js";
+import { drawIcon, RIM, ITEM_FAMILY, ITEM_SHAPE, ITEM_ACCENT } from "../src/render/icons.js";
 import { drawItemBody, drawPlayerBody } from "../src/render/sprites.js";
 
 let pass = 0,
@@ -111,6 +111,108 @@ const maxAbs = (b) => Math.max(-b.x0, b.x1, -b.y0, b.y1);
     ),
   );
   check("enemybody still exports drawEnemyBody", typeof eb.drawEnemyBody === "function");
+}
+
+{
+  const sig = {};
+  for (const t of IDS) {
+    const c = stub();
+    drawIcon(c, t, "#ffffff", 0);
+    const ops = c._ops;
+    sig[t] = JSON.stringify(ops);
+    const fills = setsOf(ops, "fillStyle");
+    check(
+      "five-beat value stack: " + t + " writes >=4 distinct fillStyle",
+      new Set(fills).size >= 4,
+      [...new Set(fills)].join(" "),
+    );
+    check(
+      "five-beat paints: " + t + " >= 3",
+      paints(ops) >= 3,
+      String(paints(ops)),
+    );
+    const iRim = ops.findIndex((o) => o[0] === "set" && o[1] === "strokeStyle" && o[2] === RIM);
+    const iStroke = ops.findIndex((o) => o[0] === "stroke");
+    check(
+      "glyph seals with RIM: " + t,
+      iRim >= 0 && iStroke > iRim,
+      iRim + "/" + iStroke,
+    );
+    check(
+      "dark form precedes the lit body: " + t,
+      fills.length > 0 && fills[0] !== "#ffffff",
+      String(fills[0]),
+    );
+    check("no fillText in " + t, !names(ops).includes("fillText"));
+  }
+  let distinct = true;
+  for (let i = 0; i < IDS.length; i++)
+    for (let j = i + 1; j < IDS.length; j++)
+      if (sig[IDS[i]] === sig[IDS[j]]) distinct = false;
+  check("all 12 drawIcon op streams are pairwise distinct", distinct);
+}
+
+{
+  const over = [];
+  for (const t of IDS) {
+    const c = box();
+    drawIcon(c, t, "#ffffff", 0);
+    if (!(maxAbs(c._b) <= 1.2 * S + 1e-6)) over.push(t + ":" + maxAbs(c._b).toFixed(2));
+  }
+  check("every glyph fits +-1.20*s", !over.length, over.join(" ") || "<=" + (1.2 * S));
+}
+
+{
+  const bigOutline = IDS.filter((t) => !ITEM_SHAPE[t] || ITEM_SHAPE[t].length > 12);
+  check("outline budget <= 12 vertices", !bigOutline.length, bigOutline.join(" ") || "ok");
+  const bigAccent = [],
+    hairline = [],
+    noFill = [];
+  for (const t of IDS) {
+    const c = stub();
+    ITEM_ACCENT[t](c, S, "#ffffff");
+    const ops = c._ops;
+    if (paints(ops) > 3) bigAccent.push(t + ":" + paints(ops));
+    if (!setsOf(ops, "fillStyle").length) noFill.push(t);
+    const lw = setsOf(ops, "lineWidth").map(Number);
+    if (names(ops).includes("stroke") && !lw.every((w) => w >= S * 0.12)) hairline.push(t);
+  }
+  check("accent budget <= 3 paint ops", !bigAccent.length, bigAccent.join(" ") || "ok");
+  check("every accent writes a fillStyle (solid shape)", !noFill.length, noFill.join(" ") || "ok");
+  check("no accent is a hairline stroke", !hairline.length, hairline.join(" ") || "ok");
+}
+
+{
+  const w = createWorld(42, 1);
+  loadLevel(w, 1, false);
+  w.state = "PLAY";
+  const start = w.enemies
+    .map((e) => e.type + "," + e.x.toFixed(2) + "," + e.y.toFixed(2))
+    .join("|");
+  check(
+    "art-only: seed-42 L1 roster unchanged",
+    start === "walker,180.00,220.00|walker,300.00,100.00|stationary,300.00,140.00",
+    start,
+  );
+  const intent = { move: { x: 0, y: 0 }, fire: false, firePrev: false, shift: false, remote: false, kick: false };
+  for (let i = 0; i < 180; i++) step(w, CFG.STEP, { 0: intent });
+  const end = w.enemies
+    .map((e) => e.type + "," + (e.dead ? 1 : 0) + "," + e.x.toFixed(2) + "," + e.y.toFixed(2))
+    .join("|");
+  check(
+    "art-only: 180 PLAY steps unchanged",
+    end === "walker,0,182.16,220.00|walker,0,300.00,100.00|stationary,0,300.00,140.00",
+    end,
+  );
+  const cat = POWER.map((p) => p.t + ":" + p.col + ":" + (p.permanent ? 1 : 0)).join("|");
+  check(
+    "art-only: POWER catalog fingerprint unchanged",
+    cat ===
+      "fire:#ff8a3c:1|bomb:#ff5d73:1|speed:#3db4ff:1|heart:#ff3b5c:0|shield:#6fb7ff:0" +
+        "|kick:#c07a3a:0|throw:#ffb347:0|pass:#77ff99:0|line:#d0e4ff:0|power:#ff4d5e:0" +
+        "|pierce:#8f8fff:0|remote:#e8c35a:0",
+    cat,
+  );
 }
 
 console.log("\n" + pass + " passed, " + fail + " failed");

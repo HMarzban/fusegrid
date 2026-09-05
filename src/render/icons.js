@@ -78,254 +78,281 @@ export const ITEM_FAMILY = {
 };
 
 /* ---- items / power-up icons (cabinet glyphs, readable at 40px) ---- */
+export const ITEM_SHAPE = {
+  fire: [
+    [0, -1.05],
+    [0.34, -0.42, 0.3, -0.8],
+    [0.62, 0.12, 0.62, -0.16],
+    [0.44, 0.72, 0.62, 0.52],
+    [0, 0.92, 0.2, 0.92],
+    [-0.44, 0.72, -0.2, 0.92],
+    [-0.62, 0.12, -0.62, 0.52],
+    [-0.34, -0.42, -0.62, -0.16],
+  ],
+  bomb: [
+    [0, -0.92],
+    [0.46, -0.6, 0.3, -0.86],
+    [0.38, -0.34],
+    [0.62, -0.06],
+    [0.52, 0.28],
+    [0.74, 0.52, 0.7, 0.36],
+    [0, 0.96, 0.52, 0.96],
+    [-0.74, 0.52, -0.52, 0.96],
+    [-0.52, 0.28, -0.7, 0.36],
+    [-0.62, -0.06],
+    [-0.38, -0.34],
+    [-0.46, -0.6],
+  ],
+  speed: [[0.3, -1.02], [-0.62, 0.02], [-0.06, 0.02], [-0.34, 1.02], [0.66, -0.1], [0.1, -0.1]],
+  heart: [
+    [0, 0.98],
+    [-0.62, 0.2, -0.42, 0.72],
+    [-1.0, -0.34, -0.94, -0.1],
+    [-0.54, -0.78, -0.94, -0.72],
+    [0, -0.2, -0.22, -0.62],
+    [0.54, -0.78, 0.22, -0.62],
+    [1.0, -0.34, 0.94, -0.72],
+    [0.62, 0.2, 0.94, -0.1],
+  ],
+  shield: [
+    [0, -0.94],
+    [0.84, -0.62],
+    [0.76, 0.16],
+    [0.4, 0.72, 0.68, 0.52],
+    [0, 0.98, 0.16, 0.92],
+    [-0.4, 0.72, -0.16, 0.92],
+    [-0.76, 0.16, -0.68, 0.52],
+    [-0.84, -0.62],
+  ],
+  kick: [[-0.9, -0.34], [0.34, -0.42], [0.98, -0.8], [1.06, -0.1], [0.4, 0.44], [-0.86, 0.36]],
+  throw: [[0, -1.0], [0.66, 0.1], [0.34, 0.62], [0, 0.44], [-0.34, 0.62], [-0.66, 0.1]],
+  pass: [
+    [-0.92, -0.62], [-0.34, -0.62], [-0.34, 0.16], [0.34, 0.16],
+    [0.34, -0.62], [0.92, -0.62], [0.92, 0.7], [-0.92, 0.7],
+  ],
+  remote: [[-0.86, -0.56], [0.3, -0.56], [0.3, -0.16], [0.86, -0.16], [0.86, 0.62], [-0.86, 0.62]],
+  line: [[-1.1, 0], [-0.22, -0.2], [0.22, -0.2], [1.1, 0], [0.22, 0.2], [-0.22, 0.2]],
+  power: [
+    [0, -1.1], [0.26, -0.26], [1.1, 0], [0.26, 0.26],
+    [0, 1.1], [-0.26, 0.26], [-1.1, 0], [-0.26, -0.26],
+  ],
+  pierce: [
+    [0, -1.15], [0.2, -0.34], [0.54, -0.16], [0.28, 0.06], [0.34, 0.66],
+    [0, 0.44], [-0.34, 0.66], [-0.28, 0.06], [-0.54, -0.16], [-0.2, -0.34],
+  ],
+};
+export const ITEM_ACCENT = {
+  fire: (c, s) => {
+    c.fillStyle = "#ffd447";
+    c.beginPath();
+    c.moveTo(0, -s * 0.46);
+    c.quadraticCurveTo(s * 0.3, s * 0.1, 0, s * 0.5);
+    c.quadraticCurveTo(-s * 0.3, s * 0.1, 0, -s * 0.46);
+    c.fill();
+  },
+  bomb: (c, s) => {
+    c.strokeStyle = "#ffd447";
+    c.lineWidth = s * 0.16;
+    c.beginPath();
+    c.moveTo(s * 0.2, -s * 0.72);
+    c.quadraticCurveTo(s * 0.46, -s * 0.9, s * 0.52, -s * 1.06);
+    c.stroke();
+    c.fillStyle = "#ffd447";
+    c.beginPath();
+    c.moveTo(s * 0.52, -s * 1.14);
+    c.lineTo(s * 0.68, -s * 1.0);
+    c.lineTo(s * 0.52, -s * 0.86);
+    c.lineTo(s * 0.36, -s * 1.0);
+    c.closePath();
+    c.fill();
+    c.strokeStyle = "#ffffff";
+    c.lineWidth = s * 0.14;
+    c.beginPath();
+    c.moveTo(-s * 0.2, s * 0.2);
+    c.lineTo(s * 0.2, s * 0.2);
+    c.moveTo(0, 0);
+    c.lineTo(0, s * 0.4);
+    c.stroke();
+  },
+  speed: (c, s) => {
+    c.fillStyle = "#fff3b0";
+    c.beginPath();
+    c.moveTo(s * 0.22, -s * 0.78);
+    c.lineTo(-s * 0.3, -s * 0.02);
+    c.lineTo(-s * 0.04, -s * 0.02);
+    c.lineTo(s * 0.06, -s * 0.34);
+    c.closePath();
+    c.fill();
+  },
+  heart: (c, s) => {
+    c.fillStyle = "#fff3b0";
+    c.beginPath();
+    c.moveTo(-s * 0.74, -s * 0.52);
+    c.quadraticCurveTo(-s * 0.4, -s * 0.76, -s * 0.2, -s * 0.5);
+    c.quadraticCurveTo(-s * 0.44, -s * 0.6, -s * 0.62, -s * 0.34);
+    c.closePath();
+    c.fill();
+  },
+  shield: (c, s) => {
+    c.fillStyle = "#0d3f78";
+    c.beginPath();
+    c.moveTo(0, -s * 0.46);
+    c.lineTo(s * 0.34, -s * 0.02);
+    c.lineTo(0, s * 0.44);
+    c.lineTo(-s * 0.34, -s * 0.02);
+    c.lineTo(0, s * 0.1);
+    c.closePath();
+    c.fill();
+  },
+  kick: (c, s) => {
+    c.fillStyle = "#ffce8a";
+    c.beginPath();
+    c.moveTo(s * 0.4, -s * 0.52);
+    c.lineTo(s * 0.92, -s * 0.66);
+    c.lineTo(s * 0.96, -s * 0.14);
+    c.lineTo(s * 0.46, s * 0.1);
+    c.closePath();
+    c.fill();
+    c.beginPath();
+    c.moveTo(-s * 0.98, -s * 0.14);
+    c.lineTo(-s * 0.56, s * 0.02);
+    c.lineTo(-s * 0.98, s * 0.18);
+    c.lineTo(-s * 0.78, s * 0.02);
+    c.closePath();
+    c.fill();
+  },
+  throw: (c, s) => {
+    c.fillStyle = "#fff3b0";
+    c.beginPath();
+    c.moveTo(0, -s * 0.72);
+    c.lineTo(s * 0.2, s * 0.06);
+    c.lineTo(0, s * 0.3);
+    c.lineTo(-s * 0.2, s * 0.06);
+    c.closePath();
+    c.fill();
+    c.strokeStyle = "#fff3b0";
+    c.lineWidth = s * 0.14;
+    c.beginPath();
+    c.moveTo(-s * 0.86, s * 0.52);
+    c.quadraticCurveTo(-s * 0.3, -s * 0.3, s * 0.52, s * 0.1);
+    c.stroke();
+  },
+  pass: (c, s) => {
+    c.fillStyle = "#fff3b0";
+    c.beginPath();
+    c.moveTo(-s * 0.6, -s * 0.48);
+    c.lineTo(-s * 0.38, -s * 0.48);
+    c.lineTo(-s * 0.38, s * 0.16);
+    c.lineTo(-s * 0.6, s * 0.16);
+    c.closePath();
+    c.fill();
+    c.beginPath();
+    c.moveTo(s * 0.38, -s * 0.48);
+    c.lineTo(s * 0.6, -s * 0.48);
+    c.lineTo(s * 0.6, s * 0.16);
+    c.lineTo(s * 0.38, s * 0.16);
+    c.closePath();
+    c.fill();
+  },
+  remote: (c, s) => {
+    c.fillStyle = "#ff5d73";
+    c.beginPath();
+    c.moveTo(s * 0.38, -s * 0.06);
+    c.lineTo(s * 0.78, -s * 0.06);
+    c.lineTo(s * 0.78, s * 0.3);
+    c.lineTo(s * 0.38, s * 0.3);
+    c.closePath();
+    c.fill();
+  },
+  line: (c, s) => {
+    c.fillStyle = "#fff3b0";
+    c.beginPath();
+    c.moveTo(-s * 0.86, 0);
+    c.lineTo(-s * 0.18, -s * 0.08);
+    c.lineTo(s * 0.18, -s * 0.08);
+    c.lineTo(s * 0.86, 0);
+    c.lineTo(s * 0.18, s * 0.08);
+    c.lineTo(-s * 0.18, s * 0.08);
+    c.closePath();
+    c.fill();
+    c.beginPath();
+    c.moveTo(-s * 0.52, -s * 0.34);
+    c.lineTo(-s * 0.28, -s * 0.34);
+    c.lineTo(-s * 0.28, -s * 0.24);
+    c.lineTo(-s * 0.52, -s * 0.24);
+    c.closePath();
+    c.fill();
+    c.beginPath();
+    c.moveTo(s * 0.28, s * 0.24);
+    c.lineTo(s * 0.52, s * 0.24);
+    c.lineTo(s * 0.52, s * 0.34);
+    c.lineTo(s * 0.28, s * 0.34);
+    c.closePath();
+    c.fill();
+  },
+  power: (c, s) => {
+    c.fillStyle = "#fff3b0";
+    c.beginPath();
+    c.moveTo(0, -s * 0.86);
+    c.lineTo(s * 0.14, -s * 0.14);
+    c.lineTo(s * 0.86, 0);
+    c.lineTo(s * 0.14, s * 0.14);
+    c.lineTo(0, s * 0.86);
+    c.lineTo(-s * 0.14, s * 0.14);
+    c.lineTo(-s * 0.86, 0);
+    c.lineTo(-s * 0.14, -s * 0.14);
+    c.closePath();
+    c.fill();
+    c.fillStyle = "#ffffff";
+    c.beginPath();
+    c.moveTo(-s * 0.16, 0);
+    c.lineTo(0, -s * 0.16);
+    c.lineTo(s * 0.16, 0);
+    c.lineTo(0, s * 0.16);
+    c.closePath();
+    c.fill();
+  },
+  pierce: (c, s) => {
+    c.fillStyle = "#12203a";
+    c.beginPath();
+    c.moveTo(-s * 0.86, -s * 0.2);
+    c.lineTo(-s * 0.44, -s * 0.2);
+    c.lineTo(-s * 0.44, s * 0.34);
+    c.lineTo(-s * 0.86, s * 0.34);
+    c.closePath();
+    c.fill();
+    c.beginPath();
+    c.moveTo(s * 0.44, -s * 0.2);
+    c.lineTo(s * 0.86, -s * 0.2);
+    c.lineTo(s * 0.86, s * 0.34);
+    c.lineTo(s * 0.44, s * 0.34);
+    c.closePath();
+    c.fill();
+  },
+};
+/* The cabinet five-beat: form shadow offset down-right (opposite the frozen
+   warm key), RIM seal, body, upper-left sheen, one accent. A glyph in a
+   well() is not standing on a floor, so beat 1 is a form shadow, not a
+   contact ellipse. `time` is kept in the signature: every call site passes
+   it and the idle echo lives in drawItemBody, not here. */
 export function drawIcon(c, type, col, time) {
+  const shape = ITEM_SHAPE[type];
+  if (!shape) return;
+  const s = CFG.TILE * 0.3,
+    path = poly(shape);
   c.save();
-  c.lineWidth = 2;
-  c.strokeStyle = RIM;
   c.lineJoin = "round";
   c.lineCap = "round";
+  path(c, s, 1, s * 0.07, s * 0.09);
+  c.fillStyle = dk(col, 0.58);
+  c.fill();
+  path(c, s, 1, 0, 0);
+  seal(c);
   c.fillStyle = col;
-  const s = CFG.TILE * 0.3;
-  const st = () => c.stroke();
-  switch (type) {
-    case "fire":
-      c.beginPath();
-      c.moveTo(0, -s * 1.05);
-      c.quadraticCurveTo(s * 0.88, -s * 0.12, s * 0.55, s * 0.78);
-      c.quadraticCurveTo(s * 0.12, s * 0.32, 0, s * 0.88);
-      c.quadraticCurveTo(-s * 0.12, s * 0.32, -s * 0.55, s * 0.78);
-      c.quadraticCurveTo(-s * 0.88, -s * 0.12, 0, -s * 1.05);
-      c.fill();
-      st();
-      c.fillStyle = "#ffd447";
-      c.beginPath();
-      c.moveTo(0, -s * 0.28);
-      c.quadraticCurveTo(s * 0.32, s * 0.28, 0, s * 0.58);
-      c.quadraticCurveTo(-s * 0.32, s * 0.28, 0, -s * 0.28);
-      c.fill();
-      c.fillStyle = "#fff3b0";
-      c.beginPath();
-      c.arc(s * 0.4, -s * 0.52, s * 0.1, 0, 7);
-      c.fill();
-      break;
-    case "bomb":
-      c.beginPath();
-      c.arc(0, s * 0.14, s * 0.7, 0, 7);
-      c.fill();
-      st();
-      c.strokeStyle = col;
-      c.beginPath();
-      c.moveTo(s * 0.18, -s * 0.46);
-      c.quadraticCurveTo(s * 0.42, -s * 0.72, s * 0.52, -s * 0.95);
-      c.stroke();
-      c.fillStyle = "#ffd447";
-      c.beginPath();
-      c.arc(s * 0.55, -s * 0.98, s * 0.14, 0, 7);
-      c.fill();
-      c.strokeStyle = "#fff";
-      c.lineWidth = 2.2;
-      c.beginPath();
-      c.moveTo(-s * 0.22, s * 0.14);
-      c.lineTo(s * 0.22, s * 0.14);
-      c.moveTo(0, -s * 0.08);
-      c.lineTo(0, s * 0.36);
-      c.stroke();
-      break;
-    case "speed":
-      c.beginPath();
-      c.moveTo(s * 0.18, -s);
-      c.lineTo(-s * 0.55, s * 0.04);
-      c.lineTo(-s * 0.04, s * 0.04);
-      c.lineTo(-s * 0.22, s);
-      c.lineTo(s * 0.62, -s * 0.06);
-      c.lineTo(s * 0.1, -s * 0.06);
-      c.closePath();
-      c.fill();
-      st();
-      c.strokeStyle = "#cfe6ff";
-      c.lineWidth = 1.5;
-      c.beginPath();
-      c.moveTo(s * 0.04, -s * 0.68);
-      c.lineTo(-s * 0.26, -s * 0.02);
-      c.stroke();
-      break;
-    case "heart":
-      c.beginPath();
-      c.moveTo(0, s * 0.72);
-      c.bezierCurveTo(-s * 1.05, -s * 0.04, -s * 0.42, -s * 1.02, 0, -s * 0.26);
-      c.bezierCurveTo(s * 0.42, -s * 1.02, s * 1.05, -s * 0.04, 0, s * 0.72);
-      c.fill();
-      st();
-      c.fillStyle = "rgba(255,255,255,0.55)";
-      c.beginPath();
-      c.arc(-s * 0.22, -s * 0.16, s * 0.14, 0, 7);
-      c.fill();
-      break;
-    case "shield":
-      c.beginPath();
-      c.moveTo(0, -s);
-      c.lineTo(s * 0.82, -s * 0.55);
-      c.lineTo(s * 0.72, s * 0.28);
-      c.quadraticCurveTo(s * 0.48, s * 0.72, 0, s);
-      c.quadraticCurveTo(-s * 0.48, s * 0.72, -s * 0.72, s * 0.28);
-      c.lineTo(-s * 0.82, -s * 0.55);
-      c.closePath();
-      c.fill();
-      st();
-      c.strokeStyle = "#0d3f78";
-      c.lineWidth = 2.2;
-      c.beginPath();
-      c.moveTo(0, -s * 0.42);
-      c.lineTo(s * 0.3, -s * 0.04);
-      c.lineTo(0, s * 0.4);
-      c.lineTo(-s * 0.3, -s * 0.04);
-      c.closePath();
-      c.stroke();
-      break;
-    case "kick":
-      c.beginPath();
-      c.moveTo(-s * 0.12, -s * 0.78);
-      c.lineTo(s * 0.3, -s * 0.78);
-      c.lineTo(s * 0.34, s * 0.12);
-      c.lineTo(s * 0.88, s * 0.26);
-      c.lineTo(s * 0.88, s * 0.64);
-      c.lineTo(-s * 0.2, s * 0.64);
-      c.closePath();
-      c.fill();
-      st();
-      c.fillStyle = "#8a5326";
-      c.fillRect(-s * 0.2, s * 0.48, s * 1.08, s * 0.16);
-      c.strokeStyle = "#ffce8a";
-      c.lineWidth = 2;
-      c.beginPath();
-      c.moveTo(-s * 0.88, -s * 0.12);
-      c.lineTo(-s * 0.42, 0);
-      c.lineTo(-s * 0.88, s * 0.12);
-      c.stroke();
-      break;
-    case "throw":
-      c.strokeStyle = col;
-      c.lineWidth = s * 0.2;
-      c.beginPath();
-      c.arc(-s * 0.08, s * 0.42, s * 0.88, Math.PI * 1.12, Math.PI * 1.85);
-      c.stroke();
-      c.fillStyle = col;
-      c.beginPath();
-      c.arc(s * 0.7, -s * 0.38, s * 0.3, 0, 7);
-      c.fill();
-      c.strokeStyle = "rgba(0,0,0,0.55)";
-      c.lineWidth = 2;
-      c.stroke();
-      c.fillStyle = "#ffd447";
-      c.beginPath();
-      c.arc(s * 0.8, -s * 0.55, s * 0.1, 0, 7);
-      c.fill();
-      break;
-    case "pass":
-      c.strokeStyle = col;
-      c.lineWidth = 2.2;
-      c.beginPath();
-      c.moveTo(-s * 0.55, -s * 0.55);
-      c.lineTo(s * 0.55, -s * 0.55);
-      c.stroke();
-      c.beginPath();
-      c.moveTo(-s * 0.55, s * 0.55);
-      c.lineTo(s * 0.55, s * 0.55);
-      c.stroke();
-      c.beginPath();
-      c.moveTo(-s * 0.7, -s * 0.32);
-      c.lineTo(-s * 0.7, s * 0.32);
-      c.stroke();
-      c.beginPath();
-      c.moveTo(s * 0.7, -s * 0.32);
-      c.lineTo(s * 0.7, s * 0.32);
-      c.stroke();
-      c.lineWidth = s * 0.2;
-      c.beginPath();
-      c.moveTo(-s * 0.78, 0);
-      c.lineTo(s * 0.32, 0);
-      c.stroke();
-      c.fillStyle = col;
-      c.beginPath();
-      c.moveTo(s * 0.22, -s * 0.3);
-      c.lineTo(s * 0.85, 0);
-      c.lineTo(s * 0.22, s * 0.3);
-      c.closePath();
-      c.fill();
-      break;
-    case "line":
-      c.strokeStyle = col;
-      c.lineWidth = s * 0.26;
-      c.beginPath();
-      c.moveTo(-s, 0);
-      c.lineTo(s * 0.32, 0);
-      c.stroke();
-      c.fillStyle = col;
-      c.beginPath();
-      c.moveTo(s * 0.18, -s * 0.4);
-      c.lineTo(s * 1.05, 0);
-      c.lineTo(s * 0.18, s * 0.4);
-      c.closePath();
-      c.fill();
-      c.lineWidth = 2;
-      c.beginPath();
-      c.moveTo(-s * 0.55, -s * 0.38);
-      c.lineTo(-s * 0.28, -s * 0.38);
-      c.moveTo(-s * 0.08, -s * 0.38);
-      c.lineTo(s * 0.18, -s * 0.38);
-      c.stroke();
-      break;
-    case "power":
-      c.beginPath();
-      c.moveTo(0, -s * 1.05);
-      c.lineTo(s * 0.22, -s * 0.22);
-      c.lineTo(s * 1.05, 0);
-      c.lineTo(s * 0.22, s * 0.22);
-      c.lineTo(0, s * 1.05);
-      c.lineTo(-s * 0.22, s * 0.22);
-      c.lineTo(-s * 1.05, 0);
-      c.lineTo(-s * 0.22, -s * 0.22);
-      c.closePath();
-      c.fill();
-      st();
-      c.fillStyle = "#fff";
-      c.beginPath();
-      c.arc(0, 0, s * 0.16, 0, 7);
-      c.fill();
-      break;
-    case "pierce":
-      c.fillStyle = "#12203a";
-      c.fillRect(-s * 0.88, -s * 0.72, s * 0.28, s * 0.48);
-      c.fillRect(-s * 0.88, s * 0.24, s * 0.28, s * 0.48);
-      c.fillStyle = col;
-      c.beginPath();
-      c.moveTo(-s * 0.98, -s * 0.14);
-      c.lineTo(s * 0.22, -s * 0.14);
-      c.lineTo(s * 0.22, -s * 0.4);
-      c.lineTo(s * 0.98, 0);
-      c.lineTo(s * 0.22, s * 0.4);
-      c.lineTo(s * 0.22, s * 0.14);
-      c.lineTo(-s * 0.98, s * 0.14);
-      c.closePath();
-      c.fill();
-      st();
-      break;
-    case "remote":
-      c.fillStyle = col;
-      rr(c, -s * 0.55, s * 0.08, s * 1.1, s * 0.68, 3);
-      c.fill();
-      st();
-      c.fillStyle = "#3a4256";
-      rr(c, -s * 0.34, s * 0.22, s * 0.68, s * 0.38, 2);
-      c.fill();
-      c.fillStyle = col;
-      c.fillRect(-s * 0.1, -s * 0.52, s * 0.2, s * 0.64);
-      c.fillRect(-s * 0.42, -s * 0.75, s * 0.84, s * 0.22);
-      c.fillStyle = "#ff5d73";
-      c.beginPath();
-      c.arc(s * 0.28, s * 0.4, s * 0.1, 0, 7);
-      c.fill();
-      break;
-  }
+  c.fill();
+  path(c, s, 0.62, 0, -s * 0.1);
+  c.fillStyle = lt(col, 0.34);
+  c.fill();
+  ITEM_ACCENT[type](c, s, col);
   c.restore();
 }
