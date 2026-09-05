@@ -599,41 +599,54 @@ const ARENA_B = mkPat(
     [48, 174.61, 6],
   ],
 );
+/* SAND — heat-shimmer, mirage. E Phrygian natural 3 on E: FACTORY's mode with
+   the third raised, the same machine under a hotter sun. STEP 0.139 (108 BPM).
+   The bass opens on the drone FIFTH B2 rather than the tonic, which is what
+   lets sand share E with FACTORY while keeping the eight biome roots distinct
+   and holding the whole score to ONE chromatic guest here — the raised third
+   G#. Three tacet-heavy drone notes are the entire bass part.
+   The lead states the motif with a one-step appoggiatura leaning into that G#:
+   a full extra step at low velocity, since the engine has no sub-step grace
+   notes. Every phrase crescendos through stepped [s,f,d,v] velocities and then
+   drops out rather than holding one level — the heat waves — over long trailing
+   rests: four of the eight bars are empty of lead entirely. Mirage is things
+   fading, not looping cleanly. */
 const SAND_A = mkPat(
   0.139,
   64,
-  pulse([
-    [69.3, 103.83],
-    [69.3, 103.83],
-    [77.78, 116.54],
-    [61.74, 92.5],
-  ]),
-  oct([
-    [
-      [0, 207.7],
-      [2, 246.9],
-      [4, 277.2],
-      [6, 311.1],
-    ],
-    [
-      [0, 233.1],
-      [3, 349.2],
-      [5, 277.2],
-    ],
-    [
-      [0, 185],
-      [2, 207.7],
-      [4, 246.9],
-      [6, 207.7],
-    ],
-    [
-      [0, 277.2],
-      [2, 246.9],
-      [4, 207.7],
-    ],
-  ]),
-  hats(64, 2800, 2),
-  ["square", 0.09, "triangle", 0.07, "triangle", 0.016],
+  [
+    [0, 123.47, 20],
+    [24, 82.41, 12],
+    [44, 123.47, 16],
+  ],
+  [
+    [0, 329.63, 1, 0.04],
+    [1, 349.23, 1, 0.03],
+    [2, 415.3, 1, 0.06],
+    [3, 493.88, 1, 0.07],
+    [4, 523.25, 3, 0.09],
+    [7, 493.88, 2, 0.05],
+    [16, 329.63, 1, 0.04],
+    [17, 415.3, 2, 0.07],
+    [19, 493.88, 3, 0.09],
+    [32, 659.26, 1, 0.04],
+    [33, 698.46, 1, 0.03],
+    [34, 830.61, 1, 0.06],
+    [35, 987.77, 1, 0.08],
+    [36, 1046.5, 3, 0.1],
+    [39, 987.77, 2, 0.05],
+    [48, 415.3, 1, 0.05],
+    [49, 523.25, 1, 0.07],
+    [51, 493.88, 4, 0.09],
+  ],
+  [0, 1, 2, 3, 4, 5].map((b) => [b * 8 + 6, 2800, 1]),
+  ["triangle", 0.07, "square", 0.07, "triangle", 0.014, "sine", 0.025],
+  [
+    [12, 207.65, 4],
+    [28, 246.94, 4],
+    [44, 261.63, 6],
+    [60, 207.65, 4],
+  ],
 );
 /* VOID — dread, subtraction. B Locrian on B, STEP 0.234 (64 BPM), the one
    deliberate exception to the 104-140 band. TWO voices: a triangle pedal on B1
@@ -861,7 +874,7 @@ export const MUSIC_TRACKS = Object.freeze({
   factory: tr(FACTORY_A, transp(FACTORY_A, 0.890899)),
   water: tr(WATER_A, transp(WATER_A, 1.33484)),
   arena: tr(ARENA_A, ARENA_B),
-  sand: tr(SAND_A, transp(SAND_A, 1.122462)),
+  sand: tr(SAND_A, transp(SAND_A, 1.059463)),
   void: tr(VOID_A, VOID_B),
   crown: tr(CROWN_A, CROWN_B),
 });

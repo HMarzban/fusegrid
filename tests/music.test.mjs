@@ -838,7 +838,7 @@ function installAC(ac) {
     MUSIC_TRACKS.sand.A.STEP === 0.139 &&
       MUSIC_TRACKS.void.A.STEP === 0.234 &&
       MUSIC_TRACKS.crown.A.STEP === 0.113 &&
-      MUSIC_TRACKS.sand.A.bass[0].f === 69.3 &&
+      MUSIC_TRACKS.sand.A.bass[0].f === 123.47 &&
       MUSIC_TRACKS.void.A.bass[0].f === 61.74 &&
       MUSIC_TRACKS.crown.A.bass[0].f === 65.41,
   );
@@ -1263,7 +1263,12 @@ function installAC(ac) {
   }
   /* Stepped dynamics is the direction brief's main maturity lever and the whole
      reason the [s,f,d,v?] tuple exists. Exactly these channels use it. */
-  const STEPPED = ["water.A.bass", "water.B.bass"];
+  const STEPPED = [
+    "water.A.bass",
+    "water.B.bass",
+    "sand.A.lead",
+    "sand.B.lead",
+  ];
   const spread = chans.filter(([, a]) => new Set(a.map((n) => n.v)).size !== 1);
   check(
     "per-note velocity is authored only where the spec asks for it",
@@ -1898,6 +1903,56 @@ function installAC(ac) {
     occ(A) + "/" + breathBar(A),
   );
   check("water register lanes never cross, A and B", lanes(A) && lanes(B));
+}
+
+// ---- sand: heat-shimmer, mirage (E Phrygian n3 — factory's mode, third raised) ----
+{
+  const T = MUSIC_TRACKS.sand,
+    A = T.A,
+    B = T.B;
+  check(
+    "sand STEP 0.139 (108 BPM), opens on its drone FIFTH B2 123.47, B up a semitone",
+    A.STEP === 0.139 &&
+      A.bass[0].f === 123.47 &&
+      Math.abs(B.bass[0].f / A.bass[0].f - 1.059463) < 1e-9,
+    A.STEP + "/" + A.bass[0].f,
+  );
+  check(
+    "sand bass is a drone, mostly tacet: <= 4 notes, none under 8 steps",
+    A.bass.length <= 4 && A.bass.every((n) => Math.round(n.d / A.STEP) >= 8),
+    A.bass.length + " notes",
+  );
+  const GS = [207.65, 415.3];
+  const soundsGs = (P) =>
+    chansOf(P).some((a) =>
+      a.some((n) => GS.some((m) => Math.abs(n.f - m) < 0.02)),
+    );
+  const others = Object.keys(MUSIC_TRACKS).filter((k) => k !== "sand");
+  check(
+    "sand.A raises the third to G#, and it is the only A section that sounds it",
+    soundsGs(A) && !others.some((k) => soundsGs(MUSIC_TRACKS[k].A)),
+    others.filter((k) => soundsGs(MUSIC_TRACKS[k].A)).join(","),
+  );
+  const appo = A.lead.filter((n) => {
+    const nxt = A.lead.find((m) => m.s === n.s + 1);
+    return nxt && n.v < nxt.v && GS.some((m) => Math.abs(nxt.f - m) < 0.02);
+  });
+  check(
+    "sand leans into the G# with a quiet one-step appoggiatura before it",
+    appo.length >= 1,
+    appo.map((n) => n.s).join(","),
+  );
+  check(
+    "sand swells in steps: 3 or more distinct lead velocities — the heat waves",
+    new Set(A.lead.map((n) => n.v)).size >= 3,
+    [...new Set(A.lead.map((n) => n.v))].sort().join(","),
+  );
+  check(
+    "sand is front-loaded phrases and long trailing rests: <= 38 of 64 steps",
+    occ(A) <= 38 && breathBar(A) >= 0,
+    occ(A) + "/" + breathBar(A),
+  );
+  check("sand register lanes never cross, A and B", lanes(A) && lanes(B));
 }
 
 console.log("\n  MUSIC RESULT: " + pass + " PASS / " + fail + " FAIL");
