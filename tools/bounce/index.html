@@ -1,0 +1,53 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>bounce (dev-only, never shipped)</title>
+    <style>
+      body {
+        font-family: monospace;
+        margin: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <p>
+      sink:
+      <input id="sink" size="30" value="http://127.0.0.1:8081" />
+    </p>
+    <p><button id="all">BOUNCE ALL</button></p>
+    <div id="buttons"></div>
+    <pre id="log"></pre>
+    <script type="module">
+      import { IDS, renderTrack, post } from "./bounce.js";
+
+      const log = document.getElementById("log");
+      const sinkInput = document.getElementById("sink");
+      const line = (s) => {
+        log.textContent += s + "\n";
+      };
+
+      async function bounceOne(id) {
+        try {
+          const { secs, steps, wav } = await renderTrack(id);
+          await post(sinkInput.value, id, wav);
+          line(id + " · " + secs + "s · " + steps + " steps · " + wav.length + " bytes · ok");
+        } catch (e) {
+          line(id + " · error · " + e.message);
+        }
+      }
+
+      const buttons = document.getElementById("buttons");
+      IDS.forEach((id) => {
+        const b = document.createElement("button");
+        b.textContent = id;
+        b.onclick = () => bounceOne(id);
+        buttons.appendChild(b);
+      });
+
+      document.getElementById("all").onclick = async () => {
+        for (const id of IDS) await bounceOne(id);
+      };
+    </script>
+  </body>
+</html>

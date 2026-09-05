@@ -17,3 +17,6 @@ Gemini_Generated_Image_*.jpeg
 
 # Browser-MCP capture scratch: regenerated every session, PNGs stay local
 e2e-artifacts/
+
+# Offline music bounces: regenerated on demand, never shipped, never reviewed
+tools/bounce/out/
