@@ -259,8 +259,8 @@ function installAC(ac) {
       Object.isFrozen(MUSIC_PATTERN.hat),
   );
   check(
-    "STEP=0.15 LEN=64 (100BPM eighths, 8 bars)",
-    MUSIC_PATTERN.STEP === 0.15 && MUSIC_PATTERN.LEN === 64,
+    "STEP=0.134 LEN=64 (112 BPM sixteenths, 8 bars of 2/4)",
+    MUSIC_PATTERN.STEP === 0.134 && MUSIC_PATTERN.LEN === 64,
   );
   const fin = (a) =>
     a.every(
@@ -276,38 +276,48 @@ function installAC(ac) {
       fin(MUSIC_PATTERN.hat),
   );
   check(
-    "bass 8 bars x 4 notes = 32",
-    MUSIC_PATTERN.bass.length === 32,
-    MUSIC_PATTERN.bass.length,
+    "bass 20 tresillo hits — every one on step 0, 3 or 6 of its bar",
+    MUSIC_PATTERN.bass.length === 20 &&
+      MUSIC_PATTERN.bass.every((n) => [0, 3, 6].includes(n.s % 8)),
+    MUSIC_PATTERN.bass.length +
+      ":" +
+      [...new Set(MUSIC_PATTERN.bass.map((n) => n.s % 8))].sort().join(","),
   );
   check(
-    "lead doubled to octave-up bars 5-8 (30 entries)",
-    MUSIC_PATTERN.lead.length === 30,
+    "lead 24-32 notes, silent through bars 4 and 8",
+    MUSIC_PATTERN.lead.length >= 24 &&
+      MUSIC_PATTERN.lead.length <= 32 &&
+      !MUSIC_PATTERN.lead.some((n) => (n.s >= 24 && n.s < 32) || n.s >= 56),
     MUSIC_PATTERN.lead.length,
   );
   check(
-    "hats on odd steps only",
-    MUSIC_PATTERN.hat.length === 32 &&
-      MUSIC_PATTERN.hat.every((n) => n.s % 2 === 1),
+    "hat 16 offbeat ticks — steps 2 and 6 of each bar, never the downbeat",
+    MUSIC_PATTERN.hat.length === 16 &&
+      MUSIC_PATTERN.hat.every((n) => n.s % 8 === 2 || n.s % 8 === 6),
+    MUSIC_PATTERN.hat.length,
   );
   const bassByS = new Map(MUSIC_PATTERN.bass.map((n) => [n.s, n]));
   check(
-    "A-A-F-G roots (A1=55 F1=43.65 G1=49)",
-    bassByS.get(0).f === 55 &&
-      bassByS.get(2).f === 55 &&
-      bassByS.get(4).f === 82.4 &&
-      bassByS.get(16).f === 43.65 &&
-      bassByS.get(24).f === 49,
+    "Dm - G - Am - Dm walk (D2 73.42, G1 49, A1 55, D2 73.42)",
+    bassByS.get(0).f === 73.42 &&
+      bassByS.get(8).f === 49 &&
+      bassByS.get(16).f === 55 &&
+      bassByS.get(24).f === 73.42,
+    [0, 8, 16, 24].map((s) => bassByS.get(s) && bassByS.get(s).f).join("/"),
   );
-  const leadLo = new Map(
-    MUSIC_PATTERN.lead.filter((n) => n.s < 32).map((n) => [n.s, n]),
+  const loBar = new Map(
+    MUSIC_PATTERN.lead.filter((n) => n.s < 32).map((n) => [n.s, n.f]),
   );
-  const octOk = MUSIC_PATTERN.lead
-    .filter((n) => n.s >= 32)
-    .every(
-      (n) => leadLo.has(n.s - 32) && near(n.f, leadLo.get(n.s - 32).f * 2),
-    );
-  check("bars 5-8 lead is bars 1-4 up one octave", octOk);
+  const differ = MUSIC_PATTERN.lead.filter(
+    (n) =>
+      n.s >= 32 &&
+      (!loBar.has(n.s - 32) || !near(n.f, loBar.get(n.s - 32) * 2, 0.05)),
+  ).length;
+  check(
+    "bars 5-8 are a varied restatement, not an octave copy (oct() unused on menu)",
+    differ >= 4,
+    differ + " of " + MUSIC_PATTERN.lead.filter((n) => n.s >= 32).length,
+  );
   const durs = [
     MUSIC_PATTERN.bass,
     MUSIC_PATTERN.lead,
@@ -336,25 +346,23 @@ function installAC(ac) {
     MUSIC_PATTERN_B.STEP === MUSIC_PATTERN.STEP &&
       MUSIC_PATTERN_B.LEN === MUSIC_PATTERN.LEN,
   );
-  const T_OF = { bass: "square", lead: "square", hat: "triangle" },
-    V_OF = { bass: 0.1, lead: 0.07, hat: 0.02 };
+  const T_OF = { bass: "square", lead: "square", hat: "triangle" };
+  const vset = (a) => [...new Set(a.map((n) => n.v))].sort().join(",");
   check(
-    "B instrument mix matches A exactly (count+type+volume per track)",
+    "B instrument mix matches A (same count, same t per channel, same v set)",
     ["bass", "lead", "hat"].every(
       (k) =>
         MUSIC_PATTERN_B[k].length === MUSIC_PATTERN[k].length &&
-        MUSIC_PATTERN_B[k].every((n) => n.t === T_OF[k] && near(n.v, V_OF[k])),
+        MUSIC_PATTERN_B[k].every((n) => n.t === T_OF[k]) &&
+        vset(MUSIC_PATTERN_B[k]) === vset(MUSIC_PATTERN[k]),
     ),
-    MUSIC_PATTERN_B.bass.length +
-      "," +
-      MUSIC_PATTERN_B.lead.length +
-      "," +
-      MUSIC_PATTERN_B.hat.length,
+    ["bass", "lead", "hat"].map((k) => vset(MUSIC_PATTERN_B[k])).join(" | "),
   );
   check(
-    "B hats on odd steps only",
-    MUSIC_PATTERN_B.hat.length === 32 &&
-      MUSIC_PATTERN_B.hat.every((n) => n.s % 2 === 1),
+    "B hat 16 offbeat ticks, same skeleton as A",
+    MUSIC_PATTERN_B.hat.length === 16 &&
+      MUSIC_PATTERN_B.hat.every((n) => n.s % 8 === 2 || n.s % 8 === 6),
+    MUSIC_PATTERN_B.hat.length,
   );
   const roots = (p) =>
     [0, 8, 16, 24].map((s) => p.bass.find((n) => n.s === s).f);
@@ -363,6 +371,15 @@ function installAC(ac) {
     JSON.stringify(roots(MUSIC_PATTERN_B)) !==
       JSON.stringify(roots(MUSIC_PATTERN)),
     roots(MUSIC_PATTERN).join("/") + " vs " + roots(MUSIC_PATTERN_B).join("/"),
+  );
+  const FS = [92.5, 185.0, 369.99];
+  const soundsFs = (p) =>
+    ["bass", "lead", "hat"].some((k) =>
+      p[k].some((n) => FS.some((m) => Math.abs(n.f - m) < 0.02)),
+    );
+  check(
+    "B tonicizes G major and imports the one F# the collection does not own",
+    soundsFs(MUSIC_PATTERN_B) && !soundsFs(MUSIC_PATTERN),
   );
   check(
     "B lead contour differs from A",
@@ -414,10 +431,14 @@ function installAC(ac) {
 
   ac.currentTime = 0.11;
   a.pump();
+  // step 1 lands one STEP past the 0.05 anchor — derived, not the 0.2 literal
+  // the old 0.15 tempo happened to produce (both sides add the same operands)
+  const t1 = 0.05 + MUSIC_PATTERN.STEP;
   check(
     "frame pump advances lookahead monotonically",
     ac.starts.every((s, i) => i === 0 || s.t >= ac.starts[i - 1].t) &&
-      ac.starts.some((s) => near(s.t, 0.2, 1e-9)),
+      ac.starts.some((s) => near(s.t, t1, 1e-9)),
+    t1,
   );
 
   // drive 80s in 0.1s pumps => >2 full AABB cycles (256 steps = 38.4s):
@@ -457,10 +478,11 @@ function installAC(ac) {
       }
     }
   }
+  const expected = 2 * occ(MUSIC_PATTERN) + 2 * occ(MUSIC_PATTERN_B);
   check(
     "seamless wrap: step k+256 === step k (full AABB cycle)",
-    wrap && probe > 250,
-    "compared " + probe + " steps",
+    wrap && probe >= expected - 2,
+    "compared " + probe + " of " + expected + " occupied steps",
   );
 
   // note envelope: v -> 0.0001 ramp over d, stop at t+d+0.03
@@ -704,11 +726,18 @@ function installAC(ac) {
   for (let i = 0; i < 520; i++) {
     ac.currentTime += 0.1;
     a.pump();
-  } // 52s ≈ 346 steps
-  // B-exclusive pitches (absent from every A track: A bass is
-  // {55,82.4,43.65,65.4,49,73.42}, A lead >=196): Bb1 root/quint family + A2
+  } // 52s of 0.1s frames
+  // B-exclusive pitches: the F# that only menu's B section sounds (spec 1b —
+  // every A section is pure white-key, and the two chromatic guests in the
+  // score are menu's F# and sand's G#).
   const isBmark = (f) =>
-    [110, 58.27, 87.31].some((m) => Math.abs(f - m) < 0.02);
+    [92.5, 185.0, 369.99].some((m) => Math.abs(f - m) < 0.02);
+  const covered = Math.floor((520 * 0.1) / MUSIC_PATTERN.STEP);
+  check(
+    "B-marker drive still reaches past step 320 at the new tempo",
+    covered > 330,
+    covered + " steps in 52 s at STEP " + MUSIC_PATTERN.STEP,
+  );
   const isB = new Set();
   // derive the anchor from the first start: unlock's nextT=now+0.05 may be
   // clamped once if the first pump lags the clock — shift cancels in k-space
@@ -716,9 +745,9 @@ function installAC(ac) {
     S = MUSIC_PATTERN.STEP;
   for (const st of ac.starts)
     if (isBmark(st.f)) isB.add(Math.round((st.t - t0) / S));
-  // B bass marker steps within a 64-step section: D bar quint (4), Bb bar
-  // roots+quints (16,18,20,22), then the octave-up repeat (+32)
-  const EXP = [4, 16, 18, 20, 22, 36, 48, 50, 52, 54];
+  // F# lands on one step per bar of B's four-bar phrase, doubled across the
+  // 8-bar section
+  const EXP = [11, 29, 43, 61];
   const secIsB = (lo) =>
     EXP.every((e) => isB.has(lo + e)) &&
     ![...isB].some((k) => k >= lo && k < lo + 64 && !EXP.includes(k - lo));
@@ -885,8 +914,8 @@ function installAC(ac) {
   a.setTrack("menu");
   a.pump();
   check(
-    "setTrack menu restores A1=55 identity bass",
-    ac.starts.some((s) => near(s.f, 55, 0.05)),
+    "setTrack menu restores the D2 73.42 identity bass",
+    ac.starts.some((s) => near(s.f, 73.42, 0.05)),
     ac.starts
       .slice(0, 6)
       .map((s) => s.f.toFixed(1))
@@ -1421,6 +1450,26 @@ function installAC(ac) {
     MUSIC_TRACKS.sand.A.STEP === 0.139,
     MUSIC_TRACKS.sand.A.STEP,
   );
+}
+
+// ---- menu: confident, swaggering (D Dorian, the identity theme) ----
+{
+  const A = MUSIC_PATTERN,
+    B = MUSIC_PATTERN_B,
+    f0 = TONIC.menu;
+  check("menu bar 1 states PLAIN", motifAt(A.lead, 0, f0, 1));
+  check(
+    "menu A and B each occupy 46 +/- 2 of 64 steps",
+    occ(A) >= 44 && occ(A) <= 48 && occ(B) >= 44 && occ(B) <= 48,
+    occ(A) + "/" + occ(B),
+  );
+  check(
+    "menu breathes in both sections",
+    breathBar(A) >= 0 && breathBar(B) >= 0,
+    breathBar(A) + "/" + breathBar(B),
+  );
+  check("menu register lanes never cross, A and B", lanes(A) && lanes(B));
+  check("menu B is hand-authored — its hat is not A's array", B.hat !== A.hat);
 }
 
 console.log("\n  MUSIC RESULT: " + pass + " PASS / " + fail + " FAIL");

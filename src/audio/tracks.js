@@ -1,62 +1,67 @@
 import { biomeOf } from "../core/config.js";
 import { SCREEN } from "../app/menuapp.js";
 
-/* Pure pattern data: 8 bars @100BPM eighths = 64 steps (A-A-F-G x2), lead
-   octave-up bars 5-8, offbeat hats. Sparse [step,freqHz,durSteps,vel?] lists
-   over absolute steps 0..63 mapped to {s,f,d,t,v}; vel defaults to the
-   channel's mix value when omitted. pump looks each up by stepIdx. */
+/* MENU — the score's identity theme. D Dorian, STEP 0.134 (112 BPM
+   sixteenths), 8 bars of 2/4 = 64 steps. The bass walks Dm-G-Am-Dm on the
+   3+3+2 tresillo (steps 0, 3 and 6 of each bar) rather than pumping four even
+   hits; the lead answers it in sixteenths off those accents instead of
+   doubling them; the hat ticks the offbeats only. Bars 4 and 8 drop the lead
+   and two thirds of the bass, so the loop breathes twice a pass, and bars 5-8
+   are a varied restatement rather than an octave copy. Bar 1 states the motif
+   (1-3-5-6-5) plain. Sparse [step,freqHz,durSteps,vel?] lists over absolute
+   steps 0..63 mapped to {s,f,d,t,v}; vel defaults to the channel's mix value
+   when omitted. pump looks each up by stepIdx. */
 export const MUSIC_PATTERN = (() => {
-  const S = 0.15,
+  const S = 0.134,
     L = 64,
     bass = [],
-    lead = [],
     hat = [];
-  const roots = [
-    [55, 82.4],
-    [55, 82.4],
-    [43.65, 65.4],
+  /* [root, fifth]; a zero fifth marks a breath bar — downbeat only, the {3,6}
+     hits dropped, which is what makes bars 4 and 8 read as rest not mistake */
+  const bars = [
+    [73.42, 110.0],
     [49, 73.42],
-    [55, 82.4],
-    [55, 82.4],
-    [43.65, 65.4],
+    [55, 82.41],
+    [73.42, 0],
+    [73.42, 110.0],
     [49, 73.42],
+    [55, 82.41],
+    [73.42, 0],
   ];
-  roots.forEach(([r, q], b) => {
+  bars.forEach(([r, q], b) => {
     const o = b * 8;
-    bass.push([o, r, 2], [o + 2, r, 2], [o + 4, q, 2], [o + 6, r, 2]);
+    if (!q) return bass.push([o, r, 3]);
+    bass.push([o, r, 2], [o + 3, r, 2], [o + 6, q, 2]);
   });
-  const ph = [
-    [
-      [0, 220],
-      [2, 261.6],
-      [3, 293.7],
-      [4, 329.6],
-      [6, 293.7],
-    ],
-    [
-      [0, 261.6],
-      [1, 392],
-      [3, 329.6],
-    ],
-    [
-      [0, 246.9],
-      [2, 293.7],
-      [3, 349.2],
-      [5, 329.6],
-    ],
-    [
-      [0, 220],
-      [2, 196],
-      [4, 246.9],
-    ],
+  const lead = [
+    [0, 293.66, 1],
+    [1, 349.23, 1],
+    [2, 440.0, 1],
+    [3, 493.88, 3],
+    [6, 440.0, 1],
+    [9, 493.88, 1],
+    [12, 440.0, 1],
+    [13, 392.0, 1],
+    [15, 329.63, 1],
+    [16, 440.0, 1],
+    [17, 523.25, 1],
+    [20, 493.88, 1],
+    [21, 440.0, 1],
+    [32, 440.0, 1],
+    [33, 587.33, 2],
+    [36, 523.25, 1],
+    [37, 493.88, 1],
+    [40, 392.0, 1],
+    [41, 440.0, 1],
+    [44, 493.88, 1],
+    [45, 523.25, 2],
+    [48, 587.33, 1],
+    [49, 523.25, 1],
+    [52, 493.88, 2],
+    [54, 440.0, 2],
   ];
-  ph.forEach((bar, i) =>
-    bar.forEach(([s, f]) => {
-      lead.push([i * 8 + s, f, 2]);
-      lead.push([32 + i * 8 + s, f * 2, 2]);
-    }),
-  );
-  for (let i = 1; i < L; i += 2) hat.push([i, 4800, 1]);
+  for (let b = 0; b * 8 < L; b++)
+    hat.push([b * 8 + 2, 4800, 1], [b * 8 + 6, 4800, 1]);
   const E = (a, t, v) =>
     a.map(([s, f, d, nv]) => ({ s, f, d: d * S, t, v: nv == null ? v : nv }));
   return Object.freeze({
@@ -68,62 +73,63 @@ export const MUSIC_PATTERN = (() => {
   });
 })();
 
-/* B SECTION (design-dept long-session fatigue fix): D–C–Bb–G descent under a
-   higher lead contour. Identical rhythm skeleton, instrument mix and step
-   count as A so the two interleave as one seamless loop: pump cycles
-   A→A→B→B (MUSIC_SECTIONS) before wrapping, instead of A forever. */
+/* B SECTION: same tresillo skeleton, same instrument mix and the same note
+   count per channel as A, so the two interleave as one seamless loop — pump
+   cycles A→A→B→B (MUSIC_SECTIONS) before wrapping. What changes is the
+   destination: B tonicizes G major for eight bars and snaps back, which
+   imports the one F# the parent white-key collection does not own (the bass
+   arpeggiates D-F#-A in bars 2 and 6; the lead leans on F# into G in bars 4
+   and 8). B breathes in different bars than A — bars 3 and 7 — because those
+   leaning F#s live exactly where A's lead is silent. This is the template the
+   other three hand-authored B sections follow. */
 export const MUSIC_PATTERN_B = (() => {
-  const S = 0.15,
+  const S = 0.134,
     L = 64,
     bass = [],
-    lead = [],
     hat = [];
-  const roots = [
-    [73.42, 110],
-    [65.4, 98],
-    [58.27, 87.31],
-    [49, 73.42],
-    [73.42, 110],
-    [65.4, 98],
-    [58.27, 87.31],
-    [49, 73.42],
+  /* per bar, the three tresillo pitches; a one-entry bar is a downbeat-only
+     breath bar, matching A's skeleton hit for hit */
+  const bars = [
+    [49, 49, 73.42],
+    [73.42, 92.5, 110.0],
+    [65.41, 65.41, 98.0],
+    [49],
   ];
-  roots.forEach(([r, q], b) => {
-    const o = b * 8;
-    bass.push([o, r, 2], [o + 2, r, 2], [o + 4, q, 2], [o + 6, r, 2]);
-  });
-  const ph = [
-    [
-      [0, 293.7],
-      [2, 349.2],
-      [4, 440],
-      [6, 349.2],
-    ],
-    [
-      [0, 329.6],
-      [2, 392],
-      [3, 523.2],
-      [5, 392],
-    ],
-    [
-      [0, 349.2],
-      [2, 466.2],
-      [3, 440],
-      [5, 349.2],
-    ],
-    [
-      [0, 293.7],
-      [2, 246.9],
-      [4, 196],
-    ],
+  for (let b = 0; b * 8 < L; b++) {
+    const o = b * 8,
+      c = bars[b % 4];
+    if (c.length === 1) bass.push([o, c[0], 3]);
+    else bass.push([o, c[0], 2], [o + 3, c[1], 2], [o + 6, c[2], 2]);
+  }
+  const lead = [
+    [0, 392.0, 1],
+    [1, 493.88, 1],
+    [2, 587.33, 1],
+    [3, 659.26, 3],
+    [6, 587.33, 1],
+    [8, 587.33, 1],
+    [9, 523.25, 1],
+    [12, 493.88, 1],
+    [13, 440.0, 1],
+    [15, 392.0, 1],
+    [26, 440.0, 1],
+    [27, 493.88, 1],
+    [29, 369.99, 2],
+    [31, 392.0, 1],
+    [32, 587.33, 1],
+    [33, 659.26, 1],
+    [36, 783.99, 2],
+    [37, 659.26, 1],
+    [40, 587.33, 1],
+    [41, 523.25, 1],
+    [44, 493.88, 1],
+    [45, 392.0, 1],
+    [59, 493.88, 1],
+    [61, 369.99, 2],
+    [63, 392.0, 1],
   ];
-  ph.forEach((bar, i) =>
-    bar.forEach(([s, f]) => {
-      lead.push([i * 8 + s, f, 2]);
-      lead.push([32 + i * 8 + s, f * 2, 2]);
-    }),
-  );
-  for (let i = 1; i < L; i += 2) hat.push([i, 4800, 1]);
+  for (let b = 0; b * 8 < L; b++)
+    hat.push([b * 8 + 2, 4800, 1], [b * 8 + 6, 4800, 1]);
   const E = (a, t, v) =>
     a.map(([s, f, d, nv]) => ({ s, f, d: d * S, t, v: nv == null ? v : nv }));
   return Object.freeze({
