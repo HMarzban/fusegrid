@@ -1743,5 +1743,60 @@ function installAC(ac) {
   check("ice register lanes never cross, A and B", lanes(A) && lanes(B));
 }
 
+// ---- jungle: overgrown, humid, alive (D Dorian, strict call-and-response) ----
+{
+  const T = MUSIC_TRACKS.jungle,
+    A = T.A,
+    B = T.B,
+    f0 = TONIC.jungle;
+  check(
+    "jungle STEP 0.129 (116 BPM), D2 73.42 root — room 1 is literally the menu's key",
+    A.STEP === 0.129 &&
+      A.bass[0].f === 73.42 &&
+      Math.abs(B.bass[0].f / A.bass[0].f - 1.189207) < 1e-9,
+    A.STEP + "/" + A.bass[0].f,
+  );
+  const leadS = new Set(A.lead.map((n) => n.s));
+  check(
+    "call and response: no step carries both a bass and a lead note",
+    !A.bass.some((n) => leadS.has(n.s)),
+    A.bass
+      .filter((n) => leadS.has(n.s))
+      .map((n) => n.s)
+      .join(","),
+  );
+  check(
+    "jungle bass is a 3+3+2 ostinato — every hit on step 0, 3 or 6 of its bar",
+    A.bass.every((n) => [0, 3, 6].includes(n.s % 8)),
+    [...new Set(A.bass.map((n) => n.s % 8))].sort().join(","),
+  );
+  check(
+    "jungle bass rests through bars 5 and 8 — the lead owns them",
+    !A.bass.some((n) => (n.s >= 32 && n.s < 40) || n.s >= 56),
+  );
+  check(
+    "jungle pad is two 32-step canopy drones",
+    !!A.pad &&
+      A.pad.length === 2 &&
+      A.pad.every((n) => Math.round(n.d / A.STEP) === 32) &&
+      near(A.pad[0].f, 110, 0.01) &&
+      near(A.pad[1].f, 146.83, 0.01),
+    JSON.stringify((A.pad || []).map((n) => [n.s, n.f])),
+  );
+  let frags = 0;
+  for (let b = 0; b < 8; b++) if (fragMidAt(A.lead, b * 8, f0)) frags++;
+  check(
+    "jungle answers in FRAG-MID and states PLAIN once, at bar 5",
+    frags >= 3 && motifAt(A.lead, 32, f0, 1),
+    frags + " frag bars",
+  );
+  check(
+    "jungle is alive but not solid: 40-58 of 64 steps, and it breathes",
+    occ(A) >= 40 && occ(A) <= 58 && breathBar(A) >= 0,
+    occ(A) + "/" + breathBar(A),
+  );
+  check("jungle register lanes never cross, A and B", lanes(A) && lanes(B));
+}
+
 console.log("\n  MUSIC RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);

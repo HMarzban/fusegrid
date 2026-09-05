@@ -230,41 +230,60 @@ const INTRO_A = mkPat(
   ["triangle", 0.08, "triangle", 0.05, "triangle", 0.015, "sine", 0.03],
   [[8, 146.83, 16]],
 );
+/* JUNGLE — overgrown, humid, alive. D Dorian on D, STEP 0.129 (116 BPM), and
+   its root is deliberately the menu's D2: room 1 is home, in the menu's own
+   key. Strict call and response — the bass asks in 3+3+2, the lead answers in
+   the gaps, and NO step carries both. That forces two authored consequences
+   rather than accidents: the answer bars (2, 4, 7) drop the ostinato's step-3
+   hit, because FRAG-MID sits on steps 1-3 and step 3 is a tresillo step; and
+   the bass rests through bar 5, where the lead states PLAIN, and bar 8, where
+   nothing plays at all. The hat echoes every tresillo hit one step late (1/4/7)
+   like a drip off a leaf, and stops with the band in bar 8. Two long sine
+   drones — A2 then D3 — are the canopy over all of it. */
 const JUNGLE_A = mkPat(
-  0.14,
+  0.129,
   64,
-  pulse([
-    [82.4, 123.47],
-    [82.4, 123.47],
-    [73.42, 110],
-    [65.41, 98],
-  ]),
-  oct([
-    [
-      [0, 164.8],
-      [2, 196],
-      [4, 220],
-      [6, 246.9],
-    ],
-    [
-      [0, 196],
-      [3, 329.6],
-      [5, 246.9],
-    ],
-    [
-      [0, 146.8],
-      [2, 164.8],
-      [4, 196],
-      [6, 164.8],
-    ],
-    [
-      [0, 220],
-      [2, 196],
-      [4, 164.8],
-    ],
-  ]),
-  hats(64, 3600, 2),
-  ["square", 0.1, "triangle", 0.08, "triangle", 0.018],
+  [
+    [0, 73.42, 2],
+    [3, 73.42, 2],
+    [6, 110.0, 2],
+    [8, 73.42, 2],
+    [14, 110.0, 2],
+    [16, 98.0, 2],
+    [19, 98.0, 2],
+    [22, 73.42, 2],
+    [24, 110.0, 2],
+    [30, 82.41, 2],
+    [40, 87.31, 2],
+    [43, 87.31, 2],
+    [46, 130.81, 2],
+    [48, 73.42, 2],
+    [54, 110.0, 2],
+  ],
+  [
+    [9, 349.23, 1],
+    [10, 440.0, 1],
+    [11, 493.88, 3],
+    [25, 174.61, 1],
+    [26, 220.0, 1],
+    [27, 246.94, 3],
+    [32, 587.33, 1],
+    [33, 698.46, 1],
+    [34, 880.0, 1],
+    [35, 987.77, 3],
+    [38, 880.0, 1],
+    [49, 349.23, 1],
+    [50, 440.0, 1],
+    [51, 493.88, 5],
+  ],
+  [0, 1, 2, 3, 4, 5, 6].flatMap((b) =>
+    [1, 4, 7].map((o) => [b * 8 + o, 3600, 1]),
+  ),
+  ["square", 0.1, "triangle", 0.08, "triangle", 0.018, "sine", 0.03],
+  [
+    [0, 110.0, 32],
+    [32, 146.83, 32],
+  ],
 );
 /* ICE — brittle, echoing. F Lydian on F, STEP 0.144 (104 BPM). Register
    separation is the whole idea: the bass is cut back to four long cracks and
@@ -786,7 +805,7 @@ const CROWN_B = mkPat(
 export const MUSIC_TRACKS = Object.freeze({
   intro: tr(INTRO_A, null, Object.freeze(["A"])),
   menu: tr(MUSIC_PATTERN, MUSIC_PATTERN_B, MUSIC_SECTIONS),
-  jungle: tr(JUNGLE_A, transp(JUNGLE_A, 1.125)),
+  jungle: tr(JUNGLE_A, transp(JUNGLE_A, 1.189207)),
   ice: tr(ICE_A, transp(ICE_A, 1.122462)),
   factory: tr(FACTORY_A, transp(FACTORY_A, 1.189207)),
   water: tr(WATER_A, transp(WATER_A, 1.122462)),
