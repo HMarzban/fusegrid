@@ -2,6 +2,7 @@ import {
   SCREEN,
   ITEMS,
   OPT_ROWS,
+  GUIDE_ROWS,
   SOURCE_URL,
   IDLE_T,
   createMenuApp,
@@ -53,18 +54,28 @@ check(
   JSON.stringify(SCREEN),
 );
 check(
-  "ITEMS frozen, 8 entries",
+  "ITEMS frozen, 6 entries",
   Object.isFrozen(ITEMS) &&
-    ITEMS.length === 8 &&
+    ITEMS.length === 6 &&
     ITEMS[0] === "PLAY" &&
     ITEMS[2] === "OPTIONS" &&
-    ITEMS[7] === "SOURCE",
+    ITEMS[3] === "GUIDE" &&
+    ITEMS[5] === "SOURCE",
   JSON.stringify(ITEMS),
 );
 check(
-  "SETTINGS appended at 10 — never inserted, or every later frozen value shifts",
-  SCREEN.SETTINGS === 10 && SCREEN.ENEMIES === 9 && SCREEN.ITEMS === 8 && SCREEN.ATTRACT === 7,
+  "SETTINGS appended at 10, GUIDE appended at 11 — never inserted",
+  SCREEN.SETTINGS === 10 &&
+    SCREEN.GUIDE === 11 &&
+    SCREEN.ENEMIES === 9 &&
+    SCREEN.ITEMS === 8,
   JSON.stringify(SCREEN),
+);
+check(
+  "GUIDE_ROWS frozen, the three folded rows in order",
+  Object.isFrozen(GUIDE_ROWS) &&
+    GUIDE_ROWS.join("|") === "HOW TO PLAY|ITEMS|ENEMIES",
+  GUIDE_ROWS.join("|"),
 );
 check(
   "OPT_ROWS frozen, the nine spec rows in order",
@@ -313,10 +324,8 @@ check(
   for (const [cur, screen] of [
     [1, SCREEN.LEVEL],
     [2, SCREEN.SETTINGS],
-    [3, SCREEN.HOWTO],
-    [4, SCREEN.ITEMS],
-    [5, SCREEN.ENEMIES],
-    [6, SCREEN.SCORES],
+    [3, SCREEN.GUIDE],
+    [4, SCREEN.SCORES],
   ]) {
     const a = createMenuApp();
     a.screen = SCREEN.MENU;
@@ -335,12 +344,73 @@ check(
     },
   });
   s.screen = SCREEN.MENU;
-  s.cursor = 7;
+  s.cursor = 5;
   s.confirm();
   check(
-    "cursor 7 SOURCE -> onSource(), screen stays MENU",
+    "cursor 5 SOURCE -> onSource(), screen stays MENU",
     srcHits === 1 && s.screen === SCREEN.MENU,
     srcHits + "/" + s.screen,
+  );
+}
+{
+  const a = createMenuApp();
+  a.screen = SCREEN.MENU;
+  a.cursor = 3;
+  a.confirm();
+  check(
+    "GUIDE entry resets guideRow",
+    a.screen === SCREEN.GUIDE && a.guideRow === 0,
+    a.guideRow,
+  );
+  for (const [row, screen] of [
+    [0, SCREEN.HOWTO],
+    [1, SCREEN.ITEMS],
+    [2, SCREEN.ENEMIES],
+  ]) {
+    const g = createMenuApp();
+    g.screen = SCREEN.MENU;
+    g.cursor = 3;
+    g.confirm(); // -> GUIDE, guideRow 0
+    g.guideRow = row;
+    g.confirm();
+    check(
+      "GUIDE row " + row + " (" + GUIDE_ROWS[row] + ") -> screen " + screen,
+      g.screen === screen,
+      String(g.screen),
+    );
+    check(
+      "back() from " + GUIDE_ROWS[row] + " returns to GUIDE, not MENU",
+      g.back() === true && g.screen === SCREEN.GUIDE && g.guideRow === row,
+      String(g.screen),
+    );
+  }
+  check(
+    "back() from GUIDE returns to MENU",
+    a.back() === true && a.screen === SCREEN.MENU,
+    String(a.screen),
+  );
+}
+{
+  const a = createMenuApp();
+  a.screen = SCREEN.GUIDE;
+  a.guideRow = 0;
+  a.move(-1);
+  check("GUIDE cursor wraps UP past top", a.guideRow === 2, a.guideRow);
+  a.move(1);
+  a.move(1);
+  check("GUIDE cursor wraps DOWN past bottom", a.guideRow === 1, a.guideRow);
+}
+{
+  const a = createMenuApp();
+  a.screen = SCREEN.GUIDE;
+  a.key("ArrowDown");
+  check("GUIDE ArrowDown tap = guideRow+1", a.guideRow === 1, a.guideRow);
+  a.idleT = 5;
+  frames(a, 300, DT); // 5s more — GUIDE must not accumulate toward ATTRACT
+  check(
+    "GUIDE never accumulates idle toward ATTRACT",
+    a.screen === SCREEN.GUIDE && a.idleT === 0,
+    a.idleT,
   );
 }
 {
@@ -511,7 +581,8 @@ check(
   const a = createMenuApp();
   a.screen = SCREEN.HOWTO;
   a.back();
-  check("back(): HOWTO->MENU", a.screen === SCREEN.MENU);
+  check("back(): HOWTO->GUIDE", a.screen === SCREEN.GUIDE);
+  a.back();
   check(
     "back() at MENU root is no-op",
     a.back() === false && a.screen === SCREEN.MENU,
@@ -537,21 +608,21 @@ check(
   const b = createMenuApp();
   b.screen = SCREEN.HOWTO;
   b.confirm();
-  check("Enter/confirm in HOWTO = back", b.screen === SCREEN.MENU);
+  check("Enter/confirm in HOWTO = back", b.screen === SCREEN.GUIDE);
   const i = createMenuApp();
   i.screen = SCREEN.ITEMS;
   i.confirm();
-  check("Enter/confirm in ITEMS = back", i.screen === SCREEN.MENU);
+  check("Enter/confirm in ITEMS = back", i.screen === SCREEN.GUIDE);
   i.screen = SCREEN.ITEMS;
   i.back();
-  check("back(): ITEMS->MENU", i.screen === SCREEN.MENU);
+  check("back(): ITEMS->GUIDE", i.screen === SCREEN.GUIDE);
   const f = createMenuApp();
   f.screen = SCREEN.ENEMIES;
   f.confirm();
-  check("Enter/confirm in ENEMIES = back", f.screen === SCREEN.MENU);
+  check("Enter/confirm in ENEMIES = back", f.screen === SCREEN.GUIDE);
   f.screen = SCREEN.ENEMIES;
   f.back();
-  check("back(): ENEMIES->MENU", f.screen === SCREEN.MENU);
+  check("back(): ENEMIES->GUIDE", f.screen === SCREEN.GUIDE);
 }
 
 // ---- SCORES: scoreHeat is display-only, cycled by move(dir,0) ----
@@ -1147,9 +1218,7 @@ check(
     PLAY: SCREEN.GAME,
     "LEVEL SELECT": SCREEN.LEVEL,
     OPTIONS: SCREEN.SETTINGS,
-    "HOW TO PLAY": SCREEN.HOWTO,
-    ITEMS: SCREEN.ITEMS,
-    ENEMIES: SCREEN.ENEMIES,
+    GUIDE: SCREEN.GUIDE,
     "HIGH SCORES": SCREEN.SCORES,
     SOURCE: SCREEN.MENU,
   };

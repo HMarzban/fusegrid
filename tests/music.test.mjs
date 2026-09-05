@@ -761,7 +761,8 @@ function installAC(ac) {
       musicCue(SCREEN.HOWTO, 1) === "menu" &&
       musicCue(SCREEN.ITEMS, 1) === "menu" &&
       musicCue(SCREEN.ENEMIES, 1) === "menu" &&
-      musicCue(SCREEN.SCORES, 1) === "menu",
+      musicCue(SCREEN.SCORES, 1) === "menu" &&
+      musicCue(SCREEN.GUIDE, 1) === "menu",
   );
   check(
     "musicCue GAME follows biome 1..8",

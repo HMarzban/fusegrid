@@ -25,17 +25,19 @@ export const SCREEN = Object.freeze({
   ITEMS: 8,
   ENEMIES: 9,
   SETTINGS: 10, // appended — inserting shifts every frozen value after it
+  GUIDE: 11, // appended — folds HOW TO PLAY/ITEMS/ENEMIES one hop deeper
 });
 export const ITEMS = Object.freeze([
   "PLAY",
   "LEVEL SELECT",
   "OPTIONS",
-  "HOW TO PLAY",
-  "ITEMS",
-  "ENEMIES",
+  "GUIDE",
   "HIGH SCORES",
   "SOURCE",
 ]);
+/* GUIDE rows, frozen and index-addressed: guideRow, drawGuide and confirm's
+   GUIDE dispatch all count this array. */
+export const GUIDE_ROWS = Object.freeze(["HOW TO PLAY", "ITEMS", "ENEMIES"]);
 /* OPTIONS rows, frozen and index-addressed: optRow, drawSettings and
    settingsHit all agree because they all count this array. */
 export const OPT_ROWS = Object.freeze([
@@ -79,6 +81,7 @@ export function createMenuApp(opts = {}) {
     settings: clampSettings(o.settings),
     optRow: 0, // OPTIONS row cursor — its OWN field, so the MENU cursor
     // survives a round trip through the page
+    guideRow: 0, // GUIDE row cursor — its OWN field too, same reason
     pauseCursor: 0,
     pauseView: 0, // 0 list / 1 inline OPTIONS; both reset on the PLAY->PAUSE edge
     pact: clampPact(o.pact),
@@ -129,7 +132,8 @@ export function createMenuApp(opts = {}) {
       const ax = (input && input.input) || {};
       let dir = 0,
         axis = 0;
-      if (this.screen === SCREEN.MENU) dir = ax.up ? -1 : ax.down ? 1 : 0;
+      if (this.screen === SCREEN.MENU || this.screen === SCREEN.GUIDE)
+        dir = ax.up ? -1 : ax.down ? 1 : 0;
       else if (this.screen === SCREEN.LEVEL || this.screen === SCREEN.SETTINGS) {
         if (ax.left || ax.right) {
           dir = ax.left ? -1 : 1;
@@ -240,6 +244,10 @@ export function createMenuApp(opts = {}) {
         this._taps[dir + ":0"] = true;
         return true;
       }
+      if (this.screen === SCREEN.GUIDE && !lat && this.move(dir, 0)) {
+        this._taps[dir + ":0"] = true;
+        return true;
+      }
       if (this.screen === SCREEN.LEVEL && this.move(dir, lat ? 0 : 1)) {
         this._taps[dir + ":" + (lat ? 0 : 1)] = true;
         return true;
@@ -271,12 +279,9 @@ export function createMenuApp(opts = {}) {
             case "OPTIONS":
               this.optRow = 0;
               return this._push(SCREEN.SETTINGS);
-            case "HOW TO PLAY":
-              return this._push(SCREEN.HOWTO);
-            case "ITEMS":
-              return this._push(SCREEN.ITEMS);
-            case "ENEMIES":
-              return this._push(SCREEN.ENEMIES);
+            case "GUIDE":
+              this.guideRow = 0;
+              return this._push(SCREEN.GUIDE);
             case "HIGH SCORES":
               return this._push(SCREEN.SCORES);
             case "SOURCE":
@@ -289,6 +294,16 @@ export function createMenuApp(opts = {}) {
           return this.startRun();
         case SCREEN.SETTINGS:
           return this.optCycle();
+        case SCREEN.GUIDE:
+          switch (GUIDE_ROWS[this.guideRow]) {
+            case "HOW TO PLAY":
+              return this._push(SCREEN.HOWTO);
+            case "ITEMS":
+              return this._push(SCREEN.ITEMS);
+            case "ENEMIES":
+              return this._push(SCREEN.ENEMIES);
+          }
+          return false;
         case SCREEN.HOWTO:
         case SCREEN.SCORES:
         case SCREEN.ITEMS:
@@ -299,12 +314,16 @@ export function createMenuApp(opts = {}) {
     },
     back() {
       if (
-        this.screen === SCREEN.LEVEL ||
         this.screen === SCREEN.HOWTO ||
-        this.screen === SCREEN.SCORES ||
         this.screen === SCREEN.ITEMS ||
-        this.screen === SCREEN.ENEMIES ||
-        this.screen === SCREEN.SETTINGS
+        this.screen === SCREEN.ENEMIES
+      )
+        return this._push(SCREEN.GUIDE);
+      if (
+        this.screen === SCREEN.LEVEL ||
+        this.screen === SCREEN.SCORES ||
+        this.screen === SCREEN.SETTINGS ||
+        this.screen === SCREEN.GUIDE
       )
         return this._push(SCREEN.MENU);
       return false;
@@ -338,6 +357,11 @@ export function createMenuApp(opts = {}) {
       }
       if (this.screen === SCREEN.MENU) {
         this.cursor = (this.cursor + dir + ITEMS.length) % ITEMS.length;
+        return true;
+      }
+      if (this.screen === SCREEN.GUIDE) {
+        this.guideRow =
+          (this.guideRow + dir + GUIDE_ROWS.length) % GUIDE_ROWS.length;
         return true;
       }
       if (this.screen === SCREEN.LEVEL) {

@@ -193,10 +193,10 @@ function mkCanvas(){
     g.app.render3d===true&&g.app.settings.r3d===1,
     "render3d="+g.app.render3d);
   g.app.key("Escape");
-  g.app.cursor=3; cv.fire("pointerdown");       // HOW TO PLAY
-  check("C1 subscreen click lands once", g.app.screen===SCREEN.HOWTO);
+  g.app.cursor=3; cv.fire("pointerdown");       // GUIDE
+  check("C1 subscreen click lands once", g.app.screen===SCREEN.GUIDE);
   for(let i=21;i<=30;i++)g.loop(i*16);
-  check("C1 subscreen does not bounce back", g.app.screen===SCREEN.HOWTO);
+  check("C1 subscreen does not bounce back", g.app.screen===SCREEN.GUIDE);
 }
 
 // S2 REVIEW FIX: SETTINGS tap-to-row pointer glue had zero behavioral
@@ -277,9 +277,9 @@ function mkCanvas(){
     plays.join()==="uiTog"&&g.app.settings.shk===0,JSON.stringify(plays));
   g.app.key("Escape");
   g.app.cursor=3; plays.length=0;
-  g.app.confirm();                              // push HOWTO
+  g.app.confirm();                              // push GUIDE
   g.app.key("Escape");                          // back
-  check("I1 HOWTO enter->uiSel then Esc back->uiBack",
+  check("I1 GUIDE enter->uiSel then Esc back->uiBack",
     plays.join()==="uiSel,uiBack",JSON.stringify(plays));
 }
 {
