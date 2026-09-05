@@ -689,7 +689,7 @@ export function drawAttractHint(c, L, t) {
   c.font = font(11, "900");
   c.textAlign = "center";
   c.textBaseline = "middle";
-  c.fillText("DEMO — PRESS ANY KEY", L.cx, L.footY);
+  c.fillText("DEMO — TAP TO PLAY", L.cx, L.footY);
 }
 
 /* Full-canvas veil washes. */

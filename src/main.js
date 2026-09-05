@@ -257,7 +257,7 @@ export function createGame(canvas, opts = {}) {
   };
   input.onPause = onPause;
 
-  /* pointer outside GAME = skip (INTRO) / confirm (menus) / exit ATTRACT.
+  /* pointer outside GAME = skip (INTRO) / confirm (menus) / play (ATTRACT).
      C1 single-fire: Input's fire latch listens on the SAME event (registered
      first, in the constructor), so swallow it here — otherwise the latched
      intent.fire re-enters as a rising-edge confirm on the next frame
@@ -267,15 +267,15 @@ export function createGame(canvas, opts = {}) {
       if (app.screen === SCREEN.GAME) return;
       input._intent.fire = false;
       if (app.screen === SCREEN.ATTRACT) {
-        app.exitAttract();
+        app.playFromAttract();
         return;
       }
       if (app.screen === SCREEN.INTRO) app.skip();
       else app.confirm();
     });
   }
-  /* pad taps bubble to #stage: exit ATTRACT too (spec §4 exit triggers).
-     Toolbar buttons are NOT inside #stage — they unlock but never exit. */
+  /* pad taps bubble to #stage: play from ATTRACT too (spec §4 tap-to-play).
+     Toolbar buttons are NOT inside #stage — they unlock but never play. */
   {
     const stageEl =
       typeof document !== "undefined" && document
@@ -283,7 +283,7 @@ export function createGame(canvas, opts = {}) {
         : null;
     if (stageEl)
       stageEl.addEventListener("pointerdown", () => {
-        if (app.screen === SCREEN.ATTRACT) app.exitAttract();
+        if (app.screen === SCREEN.ATTRACT) app.playFromAttract();
       });
   }
 

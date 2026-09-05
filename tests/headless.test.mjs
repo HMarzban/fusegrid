@@ -284,14 +284,17 @@ function mkCanvas(){
   check("attract: rollover 2 -> 3", g.demo.world.level===3);
   g.demo.t=edge; t+=250; g.loop(t);
   check("attract: rollover 3 -> 1 (cycle wraps)", g.demo.world.level===1);
-  // exit paths: key exits instantly, demo discarded on next frame, cursor kept
+  // exit paths: Escape exits instantly, demo discarded on next frame, cursor kept
   g.app.cursor=4;
-  const r=g.app.key("Escape");
-  check("attract: any key exits instantly to MENU", r===true
-    &&g.app.screen===SCREEN.MENU);
-  t+=16; g.loop(t);
-  check("attract: demo discarded after exit", g.demo===null);
-  check("attract: cursor preserved across round-trip", g.app.cursor===4);
+  const esc=g.app.key("Escape");
+  check("attract: Escape exits to MENU", esc===true && g.app.screen===SCREEN.MENU);
+  for(let i=0;i<640;i++){ t+=16; g.loop(t); }
+  check("attract: re-entered after Escape", g.app.screen===SCREEN.ATTRACT);
+  const play=g.app.key("Enter");
+  check("attract: Enter starts a CORE run",
+    play && g.app.screen===SCREEN.GAME
+    && g.world.level===1 && (g.world.heat|0)===0 && (g.world.pact|0)===0
+    && g.world.state==="PLAY" && g.app.cursor===4);
 }
 
 {

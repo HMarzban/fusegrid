@@ -16,6 +16,12 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-04 — Attract now starts a run instead of just exiting
+- Added `playFromAttract()` on the shell: tap/pointer/#stage/confirm/any non-Escape key from ATTRACT now starts a CORE room-1 run (keeping LEVEL SELECT's level/heat/pact picks for next time); only Escape/Backspace still exit to MENU. Hint copy is now `DEMO — TAP TO PLAY`. PWA bumped to v21 (menuapp.js/main.js/menudraw.js precache bytes changed).
+
+## 2026-09-04 — Arcade-loop spec + seven step plans
+- Locked the portal-inspired work as `docs/superpowers/specs/2026-09-04-arcade-loop-design.md` and one plan per step under `docs/superpowers/plans/2026-09-04-*.md` (index: attract play, end screen, scores-by-heat, ghost coach, plaques, listing pack, first-visit). Not implemented yet.
+
 ## 2026-09-04 — Public SEO: About copy, topics, and page metadata
 - GitHub About no longer leads with "deterministic" (a contributor word). Description is play-in-browser + REAL 3D ⇄ CLASSIC 2D + Heat; topics filled (javascript / game / arcade / webgl / threejs / pwa / …). Repo Settings → Social preview has no API — still needs a manual `og.png` upload.
 - `index.html` title/description/OG/Twitter/JSON-LD now match that storefront (free VideoGame + WebApplication, sr-only H1 + crawler paragraph). Manifest + package.json copy aligned. PWA v20.

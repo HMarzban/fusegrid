@@ -416,5 +416,30 @@ function check(name, cond, detail) {
   }
 }
 
+// 14) drawAttractHint: attract now plays on tap, so the copy says so
+{
+  const md = await import("../src/render/menudraw.js");
+  const texts = [];
+  const c = {
+    fillStyle: "",
+    strokeStyle: "",
+    font: "",
+    textAlign: "left",
+    textBaseline: "middle",
+    fillRect() {},
+    strokeRect() {},
+    fillText(s) {
+      texts.push(String(s));
+    },
+  };
+  const L = md.layout(600, 520);
+  md.drawAttractHint(c, L, 0);
+  check(
+    "attract hint says TAP TO PLAY",
+    texts.some((t) => t.includes("TAP TO PLAY")),
+    texts.join("|"),
+  );
+}
+
 console.log("\n  MENUDRAW RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);
