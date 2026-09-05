@@ -56,6 +56,7 @@ export function createMenuApp(opts = {}) {
     pactUnlocked: !!o.pactUnlocked,
     sound: o.sound !== false,
     render3d: !!o.render3d,
+    cabinetSeen: !!o.cabinetSeen,
     inGame: !!o.autoplay,
     subT: 0,
     repT: 0,
@@ -249,7 +250,20 @@ export function createMenuApp(opts = {}) {
       return false;
     },
     skip() {
-      return this.screen === SCREEN.INTRO ? this._push(SCREEN.MENU) : false;
+      return this.screen === SCREEN.INTRO ? this.bootFromIntro() : false;
+    },
+    /* First-visit play (plan 7): any INTRO gesture — skip, confirm, an
+       any-key tap, or main's ~5s auto-advance, all of which fall through
+       skip() — boots an unseen cabinet straight into a CORE room-1 run,
+       same handoff as playFromAttract. A returning player (cabinetSeen
+       persisted, or pact already unlocked from an earlier ?play=1/autoplay
+       run that never touched INTRO) still lands on today's MENU. */
+    bootFromIntro() {
+      if (this.screen !== SCREEN.INTRO) return false;
+      if (this.cabinetSeen || this.pactUnlocked) return this._push(SCREEN.MENU);
+      this.cabinetSeen = true;
+      if (o.markCabinet) o.markCabinet();
+      return this._playCore({ level: 1, heat: 0, pact: 0, pace: this.pace | 0 });
     },
     move(dir, axis) {
       this.idleT = 0;
@@ -336,12 +350,12 @@ export function createMenuApp(opts = {}) {
        LEVEL SELECT's level/heat/pact picks untouched for next time. */
     playFromAttract() {
       if (this.screen !== SCREEN.ATTRACT) return false;
-      const args = {
-        level: 1,
-        heat: 0,
-        pact: 0,
-        pace: this.pace | 0,
-      };
+      return this._playCore({ level: 1, heat: 0, pact: 0, pace: this.pace | 0 });
+    },
+    /* Shared CORE handoff for playFromAttract/bootFromIntro (plan 7): reset
+       the shell into GAME and hand args to main's onStart. Callers gate the
+       screen check themselves before reaching here. */
+    _playCore(args) {
       this.screen = SCREEN.GAME;
       this.inGame = true;
       this.subT = 0;

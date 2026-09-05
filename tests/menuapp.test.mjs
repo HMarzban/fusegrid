@@ -139,32 +139,97 @@ check(
 }
 
 // ---- intro skip paths ----
+// plan 7 (first-visit play now): bootFromIntro() branches on cabinetSeen/
+// pactUnlocked. These pins now pass cabinetSeen:true to exercise a RETURNING
+// cabinet's original MENU-bound skip/key/confirmHeld/any-key paths; the
+// matching unseen-cabinet -> CORE GAME paths are pinned in the block right
+// after, and the flag/handoff details (args, marking, pact-unlock OR) live in
+// tests/cabinetseen.test.mjs.
 {
-  const a = createMenuApp();
+  const a = createMenuApp({ cabinetSeen: true });
   a.skip();
-  check("skip(): INTRO->MENU", a.screen === SCREEN.MENU);
+  check("skip(): INTRO->MENU (seen cabinet)", a.screen === SCREEN.MENU);
   check(
     "skip() outside INTRO is no-op",
     a.skip() === false && a.screen === SCREEN.MENU,
   );
 }
 {
+  const a = createMenuApp({ cabinetSeen: true });
+  a.key("Enter");
+  check("Enter in INTRO skips (seen cabinet)", a.screen === SCREEN.MENU);
+}
+{
+  const a = createMenuApp({ cabinetSeen: true });
+  a.key("Escape");
+  check("Escape in INTRO skips (seen cabinet)", a.screen === SCREEN.MENU);
+  const b = createMenuApp({ cabinetSeen: true });
+  b.key("Backspace");
+  check("Backspace in INTRO skips (seen cabinet)", b.screen === SCREEN.MENU);
+}
+{
+  const a = createMenuApp({ cabinetSeen: true });
+  frames(a, 3, DT, null, true);
+  check(
+    "confirmHeld rising edge in INTRO skips (seen cabinet)",
+    a.screen === SCREEN.MENU,
+  );
+}
+{
+  const codes = [
+    "ArrowUp",
+    "KeyW",
+    "ArrowDown",
+    "KeyS",
+    "ArrowLeft",
+    "KeyA",
+    "ArrowRight",
+    "KeyD",
+  ];
+  const results = codes.map((c) => {
+    const a = createMenuApp({ cabinetSeen: true });
+    a.key(c);
+    return a.screen;
+  });
+  check(
+    "all 8 direction codes skip INTRO (§4/§9.2 any-key, seen cabinet)",
+    results.every((s) => s === SCREEN.MENU),
+    JSON.stringify(results),
+  );
+}
+
+// ---- plan 7: unseen cabinet — any INTRO gesture boots straight to CORE GAME ----
+{
+  const a = createMenuApp();
+  a.skip();
+  check(
+    "skip(): unseen cabinet -> CORE GAME (not MENU)",
+    a.screen === SCREEN.GAME,
+  );
+}
+{
   const a = createMenuApp();
   a.key("Enter");
-  check("Enter in INTRO skips", a.screen === SCREEN.MENU);
+  check(
+    "Enter in INTRO: unseen cabinet -> CORE GAME",
+    a.screen === SCREEN.GAME,
+  );
 }
 {
   const a = createMenuApp();
   a.key("Escape");
-  check("Escape in INTRO skips", a.screen === SCREEN.MENU);
-  const b = createMenuApp();
-  b.key("Backspace");
-  check("Backspace in INTRO skips", b.screen === SCREEN.MENU);
+  check(
+    "Escape in INTRO: unseen cabinet -> CORE GAME",
+    a.screen === SCREEN.GAME,
+  );
 }
 {
   const a = createMenuApp();
   frames(a, 3, DT, null, true);
-  check("confirmHeld rising edge in INTRO skips", a.screen === SCREEN.MENU);
+  check(
+    "confirmHeld rising edge in INTRO: unseen cabinet -> CORE GAME",
+    a.screen === SCREEN.GAME,
+  );
 }
 {
   const codes = [
@@ -183,8 +248,8 @@ check(
     return a.screen;
   });
   check(
-    "all 8 direction codes skip INTRO (§4/§9.2 any-key)",
-    results.every((s) => s === SCREEN.MENU),
+    "all 8 direction codes: unseen cabinet -> CORE GAME (§4/§9.2 any-key)",
+    results.every((s) => s === SCREEN.GAME),
     JSON.stringify(results),
   );
 }
@@ -339,6 +404,7 @@ check(
 {
   let n = 0;
   const a = createMenuApp({
+    cabinetSeen: true, // seen cabinet: skip lands on MENU, not a CORE run
     onStart: () => {
       n++;
     },

@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-04 — First-visit Play Now: unseen cabinets skip INTRO straight to CORE
+- `src/app/cabinetseen.js` persists `nb.cabinet.v1` (mirrors coach.js's "1"-flag). Every INTRO exit path (skip/confirm/any-key tap/main's ~5s auto-advance) already funneled through one choke point, `menuapp.js`'s `skip()`; it now delegates to a new `bootFromIntro()` that boots straight to a CORE room-1 GAME (and marks the cabinet seen) unless `cabinetSeen` or `pactUnlocked` is already true, in which case it still lands on MENU. `playFromAttract` and `bootFromIntro` now share one `_playCore(args)` reset+onStart helper (the prior duplication a deferred review flagged). No backfill of the flag on pact-unlock: any path to pact-unlock already implies cabinetSeen is true (bootFromIntro sets it before the very first run) except the `?play=1`/autoplay bypass, which the `pactUnlocked` OR-check already covers. PWA v29->v30 (cabinetseen.js added to SRC).
+
 ## 2026-09-04 — Added the four local cabinet plaques (CLEAR/PLUS/MAX/CROWN)
 - `src/app/plaques.js` persists `nb.plaques.v1` (bitmask, mirrors `pactstore.js`); `unlockPlaques` is called from main.js ONLY at the existing finale-WIN persist edge (`if (world.finale && world.state === "MENU")`, beside `savePactUnlocked`) — a LOSE never sets `world.finale` and ATTRACT steps a separate `demo.world`, so neither can reach it. Four chips painted on the SCORES plate under the heat tabs in `menudraw.js`'s `drawScores` (dim when locked); the mask reaches the draw via a `getPlaques` callback threaded through `drawShell` alongside the existing `getScores` path, so `menudraw.js` still never imports `src/app`. PWA bumped v27->v28 (Task 1: added plaques.js to SRC) ->v29 (Task 2: wiring + chip paint).
 

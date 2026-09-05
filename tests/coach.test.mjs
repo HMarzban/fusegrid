@@ -100,6 +100,7 @@ check("round-trip", loadCoachSeen(store) === true);
 {
   const { texts, canvas } = fakeCanvasTexts();
   const g = createGame(canvas, { seed: 77 });
+  g.app.cabinetSeen = true; // seen cabinet: skip lands on MENU
   g.app.skip(); // INTRO -> MENU
   let t = 1000;
   for (let i = 0; i < 650; i++) { t += 16; g.loop(t); } // cross IDLE_T=10s

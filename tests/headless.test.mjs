@@ -36,11 +36,37 @@ check("null-canvas renderer render() does not throw", ok);
   check("boot world frozen as PLAY backdrop (never MENU)",
     g.world.state==="PLAY"&&g.world.level===1,
     g.world.state+","+g.world.level);
+}
+
+// ---- plan 7 (first-visit play now): headless boot check ----
+// A fresh cabinet (no nb.cabinet.v1, no pact unlock — the only real defaults
+// under Node, where defaultStore() finds no window.localStorage) skips
+// straight into a CORE room-1 GAME on the very first INTRO gesture. Every
+// OTHER block below only wants a known MENU to test something unrelated, so
+// it stamps g.app.cabinetSeen=true right after construction to keep
+// exercising the returning-player path unchanged.
+{
+  const g=createGame(null,{seed:42});
+  check("boots unseen: no cabinet flag, no pact unlock",
+    g.app.cabinetSeen===false&&g.app.pactUnlocked===false);
   g.app.skip();
-  check("app.skip() reaches MENU", g.app.screen===SCREEN.MENU, g.app.screen);
+  check("unseen cabinet: app.skip() boots straight to CORE GAME",
+    g.app.screen===SCREEN.GAME&&g.world.state==="PLAY"&&g.world.level===1
+    &&(g.world.heat|0)===0&&(g.world.pact|0)===0,
+    g.app.screen+"/"+g.world.level+"/"+g.world.heat+"/"+g.world.pact);
+  check("unseen cabinet: the first INTRO gesture marks it seen",
+    g.app.cabinetSeen===true);
+}
+{
+  const g=createGame(null,{seed:43});
+  g.app.cabinetSeen=true;                // simulate a returning player
+  g.app.skip();
+  check("seen cabinet: app.skip() still reaches MENU",
+    g.app.screen===SCREEN.MENU, g.app.screen);
 }
 {
   const g=createGame(null,{seed:42});
+  g.app.cabinetSeen=true;
   g.app.skip();
   g.app.level=3;
   g.app.confirm();                       // cursor at 0 = START GAME
@@ -78,6 +104,7 @@ check("null-canvas renderer render() does not throw", ok);
    });
   const fake={getContext:()=>rec,addEventListener(){},style:{}};
   const g=createGame(fake,{seed:5});
+  g.app.cabinetSeen=true;                // seen cabinet: skip lands on MENU
   g.app.skip();                          // INTRO -> MENU
   for(let i=1;i<=20;i++)g.loop(i*16);    // ~0.32s of MENU frames
   check("MENU draws FUSE wordmark (drawLogo reused per spec §2)",
@@ -92,12 +119,23 @@ check("null-canvas renderer render() does not throw", ok);
     "tail "+alphas.slice(-4).map(a=>a.toFixed(2)).join(","));
 }
 
-// ---- fix round 2: INTRO auto-advances to MENU at INTRO_DUR (no key) ----
+// ---- fix round 2: INTRO auto-advances at INTRO_DUR (no key) ----
+// plan 7: the ~5s auto-skip is also an INTRO gesture, so an unseen cabinet
+// rides it straight into CORE GAME; a seen cabinet still lands on MENU.
 {
   const g=createGame(null,{seed:3});
   let t=0;
   for(let i=0;i<330;i++){ t+=16; g.loop(t); }   // ~5.28s, zero input
-  check("intro auto-advances to MENU at INTRO_DUR without any key",
+  check("unseen cabinet: intro auto-advance boots straight to CORE GAME",
+    g.app.screen===SCREEN.GAME&&g.world.state==="PLAY"&&g.world.level===1,
+    "screen "+g.app.screen);
+}
+{
+  const g=createGame(null,{seed:3});
+  g.app.cabinetSeen=true;                       // seen cabinet
+  let t=0;
+  for(let i=0;i<330;i++){ t+=16; g.loop(t); }   // ~5.28s, zero input
+  check("seen cabinet: intro auto-advances to MENU at INTRO_DUR without any key",
     g.app.screen===SCREEN.MENU, "screen "+g.app.screen);
 }
 
@@ -121,6 +159,7 @@ function mkCanvas(){
 {
   const cv=mkCanvas();
   const g=createGame(cv,{seed:11});
+  g.app.cabinetSeen=true;                       // seen cabinet: click -> MENU
   cv.fire("pointerdown");                       // INTRO click -> skip only
   check("C1 intro click skips to MENU, no fire latch",
     g.app.screen===SCREEN.MENU&&g.input._intent.fire===false,
@@ -230,6 +269,7 @@ function mkCanvas(){
   g.input.onPause();
   check("I2 onPause outside GAME leaves world untouched",
     g.world.state==="PLAY"&&g.app.screen===SCREEN.INTRO);
+  g.app.cabinetSeen=true;                // seen cabinet: skip lands on MENU
   g.app.skip();
   g.input._onKey({code:"KeyP"});
   check("I2 KeyP at MENU routes to app only (world stays PLAY)",
@@ -258,6 +298,7 @@ function mkCanvas(){
 // ---- ATTRACT MODE (spec §1/§4/§5/§6): idle entry, demo harness, exit ----
 {
   const g=createGame(null,{seed:21});
+  g.app.cabinetSeen=true;                // seen cabinet: skip lands on MENU
   g.app.skip();                          // INTRO -> MENU
   let t=1000;
   for(let i=0;i<590;i++){ t+=16; g.loop(t); }        // ~9.4s idle
@@ -300,6 +341,7 @@ function mkCanvas(){
 
 {
   const g=createGame(null,{seed:21});
+  g.app.cabinetSeen=true;                // seen cabinet: skip lands on MENU
   g.app.skip();
   g.app.heat=2;
   let t=1000;
@@ -329,6 +371,7 @@ function mkCanvas(){
    });
   const fake={getContext:()=>rec,addEventListener(){},style:{}};
   const g=createGame(fake,{seed:41});
+  g.app.cabinetSeen=true;                // seen cabinet: skip lands on MENU
   g.app.skip();
   g.app.enterAttract();
   let t=1000;
@@ -354,6 +397,7 @@ function mkCanvas(){
 {
   const baseline=JSON.stringify(loadScores());
   const g=createGame(null,{seed:23});
+  g.app.cabinetSeen=true;                // seen cabinet: skip lands on MENU
   g.app.skip(); g.app.cursor=2;
   g.app.enterAttract();                  // direct entry for a deterministic run
   const levels=new Set();
@@ -412,6 +456,7 @@ function mkCanvas(){
     const ev={currentTarget:{blur(){}}};
     // outside GAME (ATTRACT): clicks must not touch live world or flip labels
     const g=createGame(null,{seed:31});
+    g.app.cabinetSeen=true;                // seen cabinet: skip lands on MENU
     g.app.skip();
     g.app.enterAttract();
     let t=3000; g.loop(t); t+=250; g.loop(t);  // frame 1 creates demo (dt=0), frame 2 steps it
@@ -489,6 +534,7 @@ function mkCanvas(){
       JSON.stringify(loadScores().slice(0,3)));
     // during MENU: no-op — screen stays, nothing persisted
     const g2=createGame(null,{seed:5});
+    g2.app.cabinetSeen=true;               // seen cabinet: skip lands on MENU
     g2.app.skip();
     g2.world.score=5555;
     delete mem["nb.highscores.v1"];
@@ -567,6 +613,7 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
     check("cam exposed on game object at identity",
       !!g.cam&&g.cam.x===0&&g.cam.y===0&&g.cam.zoom===1,String(JSON.stringify(g.cam)));
     // (f) inert outside GAME: MENU-frame wheel/right-drag leave cam frozen
+    g.app.cabinetSeen=true;                // seen cabinet: skip lands on MENU
     g.app.skip();                          // INTRO -> MENU
     g.loop(0);
     cv.fire("wheel",{deltaY:-240,clientX:450,clientY:260,preventDefault(){}});
@@ -728,8 +775,10 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
 // toolbar / debug hook) are importable modules of their own. ----
 {
   const L=readFileSync(join(ROOT,"src/main.js"),"utf8").split("\n");
-  check("main.js stays a lean browser entry (<=620 lines)",
-    L.length<=620,String(L.length));
+  // plan 7: +2 lines (cabinetseen.js import + cabinetSeen/markCabinet opts)
+  // for the first-visit-play wiring main.js alone can hold (app-layer persist).
+  check("main.js stays a lean browser entry (<=622 lines)",
+    L.length<=622,String(L.length));
   const lastImp=L.reduce((a,l,i)=>/^import[\s{]/.test(l)?i:a,-1);
   const firstDecl=L.findIndex(l=>/^(export\s|const\s|let\s|var\s|function\s|class\s)/.test(l));
   check("main.js keeps every import at the top (no mid-file import sprawl)",

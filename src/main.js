@@ -19,6 +19,7 @@ import { mountDebugHook } from "./app/debughook.js";
 import { introPhase, INTRO_DUR } from "./app/intro.js";
 import { loadScores, recordScore, saveScores, scoreEntry, scoresForHeat } from "./app/highscores.js";
 import { loadPactUnlocked, savePactUnlocked } from "./app/pactstore.js";
+import { loadCabinetSeen, saveCabinetSeen } from "./app/cabinetseen.js";
 import { loadPlaques, savePlaques, unlockPlaques } from "./app/plaques.js";
 import { loadPace, savePace } from "./app/pacestore.js";
 import {
@@ -171,6 +172,7 @@ export function createGame(canvas, opts = {}) {
     level: 1,
     sound: true,
     pactUnlocked: loadPactUnlocked(),
+    cabinetSeen: loadCabinetSeen(), markCabinet: () => saveCabinetSeen(),
     pace: loadPace(),
     onPaceChange: (p) => savePace(p),
     render3d: urlKind === "3d" || opts.render3d === true,
