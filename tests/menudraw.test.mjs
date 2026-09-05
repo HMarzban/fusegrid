@@ -122,6 +122,10 @@ function check(name, cond, detail) {
       md.drawItemsHelp(stub, L, 0.4);
       md.drawEnemiesHelp(stub, L, 0.4);
       md.drawScores(stub, DEFAULT_SCORES, L, 0.4);
+      const sv = { mus: 100, sfx: 100, snd: 1, r3d: 0, cam: 0, bri: 100, shk: 1, flx: 0 };
+      md.drawSettings(stub, L, 0.4, { row: 0, vals: sv, r3d: false, togT: -1, rev: "v0" });
+      md.drawSettings(stub, L, 0.4, { row: 8, vals: sv, r3d: true, togT: 0.3, rev: "v0" });
+      md.drawSettings(stub, L, 0.4, {});
       md.drawDim(stub, 0.62, W, H);
       md.drawFade(stub, 0.5, W, H);
     } catch (e) {
@@ -132,19 +136,12 @@ function check(name, cond, detail) {
   }
 }
 
-// 13b) toggle-flash (§3 pinned row): selected value row glows accent for
-//        120ms after the machine's togT stamp; idle sentinel draws clean
+// 13b) toggle-flash (§2 pinned row): the changed OPTIONS value glows accent
+//        for 120ms after the machine's togT stamp; idle sentinel draws clean
 {
   const md = await import("../src/render/menudraw.js");
   const L = md.layout(600, 520);
-  const items = [
-    "START GAME",
-    "LEVEL SELECT",
-    "RENDER 3D",
-    "SOUND OFF",
-    "HOW TO PLAY",
-    "HIGH SCORES",
-  ];
+  const vals = { mus: 100, sfx: 100, snd: 1, r3d: 1, cam: 0, bri: 100, shk: 1, flx: 0 };
   const mk = () => {
     const sets = [];
     const stub = new Proxy(function () {}, {
@@ -159,23 +156,33 @@ function check(name, cond, detail) {
   };
   {
     const { stub, sets } = mk();
-    md.drawMenu(stub, { cursor: 2, enterT: 1.0, togT: 0.97, items }, L, 1.0);
+    md.drawSettings(stub, L, 1.0, { row: 0, vals, r3d: true, togT: 0.97, rev: "v0" });
     check(
-      "toggle-flash: mid-window glow on flipped row",
+      "toggle-flash: mid-window glow on the changed row",
       sets.some((v) => v > 0 && v <= 14) && !sets.some((v) => v < 0),
       JSON.stringify(sets),
     );
   }
   {
     const { stub, sets } = mk();
-    md.drawMenu(stub, { cursor: 2, enterT: 1.0, togT: -1, items }, L, 1.0);
-    check("toggle-flash: idle sentinel (-1) never glows", sets.length === 0);
+    md.drawSettings(stub, L, 1.0, { row: 0, vals, r3d: true, togT: -1, rev: "v0" });
+    check("toggle-flash: idle sentinel (-1) never glows", sets.length === 0, JSON.stringify(sets));
   }
   {
     const { stub, sets } = mk();
-    md.drawMenu(stub, { cursor: 2, enterT: 1.0, togT: 0.85, items }, L, 1.0);
+    md.drawSettings(stub, L, 1.0, { row: 0, vals, r3d: true, togT: 0.85, rev: "v0" });
+    check("toggle-flash: window closed after 120ms", sets.length === 0, JSON.stringify(sets));
+  }
+  {
+    const { stub, sets } = mk();
+    md.drawMenu(
+      stub,
+      { cursor: 2, enterT: 1.0, togT: 0.97, items: ["PLAY|CORE", "LEVEL SELECT|CORE", "OPTIONS"] },
+      L,
+      1.0,
+    );
     check(
-      "toggle-flash: window closed after 120ms",
+      "drawMenu ignores a stray togT — the flash is a SETTINGS concept now",
       sets.length === 0,
       JSON.stringify(sets),
     );
@@ -255,10 +262,9 @@ function check(name, cond, detail) {
           cursor: 0,
           enterT: 1,
           items: [
-            "START GAME",
-            "LEVEL SELECT",
-            "RENDER REAL 3D",
-            "SOUND ON",
+            "PLAY|CORE",
+            "LEVEL SELECT|CORE",
+            "OPTIONS",
             "HOW TO PLAY",
             "ITEMS",
             "ENEMIES",
@@ -270,7 +276,7 @@ function check(name, cond, detail) {
         1,
       );
       const p = plateOf(rects);
-      const start = texts.find((t) => t.s === "START GAME");
+      const start = texts.find((t) => t.s === "PLAY");
       const src = texts.find((t) => t.s === "SOURCE");
       const move = texts.find((t) => t.s.indexOf("MOVE") >= 0);
       check(
@@ -430,6 +436,116 @@ function check(name, cond, detail) {
         }),
       );
     }
+    {
+      const { c, texts, rects } = rec();
+      const g = md.settingsGeom(L);
+      md.drawSettings(c, L, 1, {
+        row: 4,
+        vals: { mus: 100, sfx: 100, snd: 1, r3d: 1, cam: 2, bri: 130, shk: 1, flx: 0 },
+        r3d: true,
+        togT: -1,
+        rev: "v99",
+      });
+      const p = plateOf(rects);
+      const first = texts.find((t) => t.s === "MUSIC");
+      const lastRow = texts.find((t) => t.s === "RESET DEFAULTS");
+      const note = texts.find((t) => t.s.indexOf("BOMB SPACE") >= 0);
+      const touch = texts.find((t) => t.s.indexOf("TAP PAUSE PILL") >= 0);
+      const ft = texts.find((t) => t.s.indexOf("ENTER CYCLE") >= 0);
+      const kick = texts.find((t) => t.s === "BUILD v99");
+      check(
+        `options plate: nine rows, both notes and the foot all inside at ${W}x${H}`,
+        !!p &&
+          !!first &&
+          !!lastRow &&
+          !!note &&
+          !!touch &&
+          !!ft &&
+          !!kick &&
+          first.y > p.y + 8 &&
+          lastRow.y < note.y &&
+          note.y < touch.y &&
+          touch.y < ft.y &&
+          ft.y < p.y + p.h - 8,
+        JSON.stringify({ p, first, lastRow, note, touch, ft }),
+      );
+      check(
+        `options row pitch matches the spec budget at ${W}x${H}`,
+        Math.abs(g.rowH - (H === 520 ? 30 : 173.68 / 9)) < 0.01 &&
+          Math.abs(g.y0 - (H === 520 ? 121.2 : 94.32)) < 0.01 &&
+          Math.abs(g.noteY - (H === 520 ? 446 : 278)) < 0.01,
+        [g.y0, g.rowH, g.noteY].join("/"),
+      );
+      check(
+        `3D rows show a real value in REAL 3D at ${W}x${H}`,
+        texts.some((t) => t.s === "FAR") && texts.some((t) => t.s === "130"),
+        texts.map((t) => t.s).join("|"),
+      );
+    }
+    {
+      const { c, texts } = rec();
+      md.drawSettings(c, L, 1, {
+        row: 0,
+        vals: { mus: 100, sfx: 100, snd: 1, r3d: 0, cam: 2, bri: 130, shk: 1, flx: 0 },
+        r3d: false,
+        togT: -1,
+        rev: "v99",
+      });
+      check(
+        `3D-only rows read an em dash in CLASSIC 2D at ${W}x${H}`,
+        texts.filter((t) => t.s === "—").length === 2 && !texts.some((t) => t.s === "FAR"),
+        texts.map((t) => t.s).join("|"),
+      );
+      check(
+        `CLASSIC 2D still draws all nine labels — rows never hide at ${W}x${H}`,
+        [
+          "MUSIC",
+          "SFX",
+          "SOUND",
+          "RENDER",
+          "CAMERA",
+          "BRIGHTNESS",
+          "SCREEN SHAKE",
+          "REDUCE FLASH",
+          "RESET DEFAULTS",
+        ].every((n) => texts.some((t) => t.s === n)),
+        texts.map((t) => t.s).join("|"),
+      );
+    }
+  }
+}
+
+// 13e) settingsHit: the tap map derived from the same shellBox the page draws
+{
+  const md = await import("../src/render/menudraw.js");
+  for (const [W, H] of [
+    [600, 520],
+    [608, 352],
+  ]) {
+    const L = md.layout(W, H);
+    const g = md.settingsGeom(L);
+    const mid = g.S.ix + g.S.iw / 2;
+    let all = true;
+    for (let i = 0; i < 9; i++) {
+      const y = g.y0 + i * g.rowH + g.rowH / 2;
+      if (md.settingsHit(mid, y, L) !== i) all = false;
+    }
+    check(`settingsHit maps every row centre at ${W}x${H}`, all);
+    check(`settingsHit above the band is -1 at ${W}x${H}`, md.settingsHit(mid, g.y0 - 1, L) === -1);
+    check(
+      `settingsHit below the band is -1 at ${W}x${H}`,
+      md.settingsHit(mid, g.y0 + 9 * g.rowH + 1, L) === -1,
+    );
+    check(`settingsHit left of the plate is -1 at ${W}x${H}`, md.settingsHit(g.S.ix - 2, g.y0 + 2, L) === -1);
+    check(
+      `settingsHit right of the plate is -1 at ${W}x${H}`,
+      md.settingsHit(g.S.ix + g.S.iw + 2, g.y0 + 2, L) === -1,
+    );
+    check(
+      `settingsHit rows are contiguous — no dead gutter at ${W}x${H}`,
+      md.settingsHit(mid, g.y0 + g.rowH - 0.001, L) === 0 && md.settingsHit(mid, g.y0 + g.rowH, L) === 1,
+      String(md.settingsHit(mid, g.y0 + g.rowH, L)),
+    );
   }
 }
 

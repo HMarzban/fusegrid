@@ -214,21 +214,16 @@ export function drawIntroChrome(c, t, W, H) {
   }
 }
 
-/* MAIN MENU over the dimmed frozen arena. ui={cursor,items,enterT,togT}; item
-   entries may carry a value token ("RENDER 3D"/"SOUND OFF") drawn in accent.
-   §3 pinned row: the just-flipped value flashes accent, fading over 120ms from
-   the machine's flip stamp togT (-1 = idle). The flipped row is necessarily
-   the selected one (toggles go through confirm), so the glow rides sel.
+/* MAIN MENU over the dimmed frozen arena. ui={cursor,items,enterT}; item
+   entries may carry a value token ("PLAY|CORE") drawn in accent. The 120ms
+   toggle-flash moved to drawSettings with the toggles themselves (§2), so
+   ui.togT is gone rather than passed here as a permanent -1.
    List plate sits under the logo with a small inset; rows stay inside the
    plate so the highlight never kisses the border. */
 export function drawMenu(c, ui, L, t) {
   const cur = (ui && ui.cursor) | 0;
   const items = (ui && ui.items) || [];
   const et = ui && typeof ui.enterT === "number" ? ui.enterT : t;
-  const fk =
-    ui && typeof ui.togT === "number" && ui.togT >= 0
-      ? 1 - clamp01((t - ui.togT) / 0.12)
-      : 0;
   const n = items.length;
   const hintBand = 34;
   const logoBot = L.logoCy + 10 * L.logoScale;
@@ -289,12 +284,7 @@ export function drawMenu(c, ui, L, t) {
           : val.indexOf("CORE") >= 0
             ? MUTED
             : ACCENT;
-      if (sel && fk > 0) {
-        c.shadowColor = c.fillStyle;
-        c.shadowBlur = 14 * fk;
-      }
       c.fillText(val, slotR, y);
-      if (sel && fk > 0) c.shadowBlur = 0;
     }
     c.globalAlpha = 1;
   }
@@ -782,6 +772,119 @@ export function drawScores(c, scores, L, t, heat, plaques) {
     c.fillText(String(r.s), xs[1] + cw[1], y);
   }
   foot(c, S, "← → HEAT · ESC BACK");
+}
+
+/* OPTIONS (spec §2): nine live knob rows on LEVEL SELECT's adjust model.
+   ui = {row, vals, r3d, togT, rev}; vals is the nb.settings.v1 blob and rev is
+   the build tag shellview derives from CACHE_NAME. Rows NEVER hide or reflow —
+   the two 3D-only rows dim to 0.45 and read an em dash in CLASSIC 2D, so the
+   list is the same nine lines in both kinds. CAM_NAME mirrors camrig.js's
+   CAM_PRESET order; this file must not import from src/render/three (the 2D
+   path never loads three), so the names are duplicated here the way
+   PLAQUE_NAME is. */
+const CAM_NAME = ["STANDARD", "WIDE", "FAR"];
+const OPT_LABEL = [
+  "MUSIC",
+  "SFX",
+  "SOUND",
+  "RENDER",
+  "CAMERA",
+  "BRIGHTNESS",
+  "SCREEN SHAKE",
+  "REDUCE FLASH",
+  "RESET DEFAULTS",
+];
+const OPT_3D = [false, false, false, false, true, true, false, false, false];
+export function settingsRows(vals, r3d) {
+  const v = vals || {};
+  const on = (b) => (b ? "ON" : "OFF");
+  return [
+    String(v.mus | 0),
+    String(v.sfx | 0),
+    on(v.snd),
+    r3d ? "REAL 3D" : "CLASSIC 2D",
+    CAM_NAME[Math.min(2, Math.max(0, v.cam | 0))],
+    String(v.bri | 0),
+    on(v.shk),
+    on(v.flx),
+    "",
+  ];
+}
+/* One source for the layout budget: the page draws it and settingsHit reads
+   it, so a tap can never land on a row the plate did not paint. */
+export function settingsGeom(L) {
+  const S = shellBox(L, 520);
+  const noteY = S.footY - 30;
+  const y0 = S.headY + 22;
+  return { S, noteY, y0, rowH: Math.min(30, (noteY - 10 - y0) / 9) };
+}
+export function settingsHit(x, y, L) {
+  const g = settingsGeom(L);
+  if (x < g.S.ix || x > g.S.ix + g.S.iw) return -1;
+  // +1e-9: a row boundary computed as g.y0 + n*g.rowH can land a hair under
+  // the true multiple (float sum error), which floor() would misread as the
+  // row above — full-pitch bands must stay contiguous with no dead gutter.
+  const i = Math.floor((y - g.y0) / g.rowH + 1e-9);
+  return i >= 0 && i < 9 ? i : -1;
+}
+export function drawSettings(c, L, t, ui) {
+  const u = ui || {};
+  const cur = u.row | 0,
+    r3d = !!u.r3d;
+  const vals = settingsRows(u.vals, r3d);
+  const g = settingsGeom(L);
+  const S = shell(c, L, 520);
+  head(c, S, "OPTIONS", "BUILD " + (u.rev || ""));
+  const fk =
+    typeof u.togT === "number" && u.togT >= 0 ? 1 - clamp01((t - u.togT) / 0.12) : 0;
+  for (let i = 0; i < 9; i++) {
+    const y = g.y0 + i * g.rowH + g.rowH / 2;
+    const sel = i === cur,
+      dim = OPT_3D[i] && !r3d;
+    c.globalAlpha = dim ? 0.45 : 1;
+    if (sel) {
+      c.fillStyle = "rgba(55,240,208,0.14)";
+      c.fillRect(S.ix, y - g.rowH / 2 + 2, S.iw, g.rowH - 4);
+      c.fillStyle = ACCENT;
+      c.fillRect(S.ix, y - g.rowH / 2 + 2, 3, g.rowH - 4);
+      caret(c, S.ix + 8, y, g.rowH - 4);
+    }
+    c.textAlign = "left";
+    c.textBaseline = "middle";
+    c.font = font(g.rowH < 24 ? 10 : 12, sel ? "900" : "");
+    c.fillStyle = sel ? TEXT : MUTED;
+    c.fillText(OPT_LABEL[i], S.ix + 22, y);
+    const val = dim ? "—" : vals[i];
+    if (val) {
+      c.textAlign = "right";
+      c.fillStyle = sel ? ACCENT : TEXT;
+      if (sel && fk > 0) {
+        c.shadowColor = c.fillStyle;
+        c.shadowBlur = 14 * fk;
+      }
+      c.fillText(val, S.ix + S.iw, y);
+      if (sel && fk > 0) c.shadowBlur = 0;
+    }
+    c.globalAlpha = 1;
+  }
+  /* CONTROLS: display-only bindings plus the touch note. Always drawn, never
+     device-gated — HOW TO PLAY keeps the long form with icons. */
+  c.textAlign = "center";
+  c.fillStyle = MUTED;
+  c.font = font(9);
+  c.fillText(
+    "MOVE WASD/ARROWS · BOMB SPACE · THROW SHIFT+SPACE · REMOTE Q · KICK K+MOVE · PAUSE P",
+    S.mid,
+    g.noteY,
+  );
+  c.fillStyle = ACCENT;
+  c.font = font(10);
+  c.fillText(
+    "TOUCH · LEFT PAD MOVES · RIGHT BUTTON BOMBS · TAP PAUSE PILL",
+    S.mid,
+    g.noteY + 14,
+  );
+  foot(c, S, "↑↓ ROW · ←→ ADJUST · ENTER CYCLE · ESC BACK");
 }
 
 /* ATTRACT hint: 1Hz-blink footer over the live demo (spec §5.6). */
