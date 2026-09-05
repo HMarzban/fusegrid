@@ -25,6 +25,9 @@ function check(name, cond, detail) {
   );
 }
 
+function roundArg(v) {
+  return typeof v === "number" ? Math.round(v * 100) / 100 : v;
+}
 function recFactory() {
   const canvases = [];
   const mk = () => {
@@ -53,17 +56,19 @@ function recFactory() {
           if (typeof p === "symbol") return undefined;
           if (p === "createLinearGradient" || p === "createRadialGradient")
             return (...a) => {
-              ops.push([String(p), a]);
+              ops.push([String(p), a.map(roundArg)]);
               return {
-                addColorStop: (...s) => ops.push(["addColorStop", s]),
+                addColorStop: (...s) =>
+                  ops.push(["addColorStop", s.map(roundArg)]),
               };
             };
           return (...a) => {
-            ops.push(String(p));
+            ops.push([String(p), a.map(roundArg)]);
           };
         },
         set: (t, p, v) => {
-          if (typeof p !== "symbol") ops.push("set:" + String(p));
+          if (typeof p !== "symbol")
+            ops.push(["set:" + String(p), [roundArg(v)]]);
           return true;
         },
       },
