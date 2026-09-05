@@ -1,4 +1,5 @@
 import { initFx } from "../src/render/fx.js";
+import { readFileSync } from "node:fs";
 
 let pass = 0,
   fail = 0;
@@ -297,17 +298,23 @@ function check(name, cond, detail) {
     }
     {
       const { c, texts, rects } = rec();
-      md.drawScores(c, DEFAULT_SCORES, L, 1);
+      md.drawScores(c, DEFAULT_SCORES, L, 1, 0);
       const p = plateOf(rects);
-      const esc = texts.find((t) => t.s === "ESC BACK");
+      const esc = texts.find((t) => t.s.indexOf("ESC BACK") >= 0);
       const ten = texts.find((t) => t.s === "10");
       const dates = texts.filter((t) => t.s === "2026-08-23");
+      const tabs = ["CORE", "PLUS", "MAX"].map((n) =>
+        texts.find((t) => t.s === n),
+      );
       check(
-        `scores 10 + ESC inside plate at ${W}x${H}`,
+        `scores CORE/PLUS/MAX tabs + 10 rows + foot inside plate at ${W}x${H}`,
         !!p &&
           !!esc &&
           !!ten &&
           dates.length === 10 &&
+          tabs.every((t) => !!t) &&
+          tabs.every((t) => t.y > p.y + 8 && t.y < ten.y) &&
+          esc.s.indexOf("HEAT") >= 0 &&
           ten.y < esc.y &&
           esc.y < p.y + p.h - 4 &&
           last(dates).y < esc.y &&
@@ -317,7 +324,17 @@ function check(name, cond, detail) {
           ph: p && p.h,
           ten: ten && ten.y,
           esc: esc && esc.y,
+          tabsY: tabs.map((t) => t && t.y),
         }),
+      );
+    }
+    {
+      const { c, texts } = rec();
+      md.drawScores(c, [], L, 1, 1);
+      check(
+        `empty PLUS tab shows NO PLUS RUNS YET at ${W}x${H}`,
+        texts.some((t) => t.s === "NO PLUS RUNS YET"),
+        texts.map((t) => t.s).join("|"),
       );
     }
     {
@@ -438,6 +455,28 @@ function check(name, cond, detail) {
     "attract hint says TAP TO PLAY",
     texts.some((t) => t.includes("TAP TO PLAY")),
     texts.join("|"),
+  );
+}
+
+// 15) wiring check: scoreHeat reaches drawScores through shellview + main's
+//     getScores getter (untested by any direct call — this only exercises
+//     the drawScores/menudraw side, not the browser entry point)
+{
+  const shellSrc = readFileSync("src/render/shellview.js", "utf8");
+  check(
+    "shellview passes app.scoreHeat into the getter and into drawScores",
+    /getScores\(app\.scoreHeat\)/.test(shellSrc) &&
+      /drawScores\(c, getScores\(app\.scoreHeat\), L, app\.subT, app\.scoreHeat\)/.test(
+        shellSrc,
+      ),
+    shellSrc.match(/menudraw\.drawScores\([^)]*\)/)?.[0],
+  );
+  const mainSrc = readFileSync("src/main.js", "utf8");
+  check(
+    "main.js wires scoresForHeat into the getScores getter passed to drawShell",
+    /scoresForHeat/.test(mainSrc) &&
+      /\(heat\)\s*=>\s*scoresForHeat\(loadScores\(\),\s*heat\)/.test(mainSrc),
+    mainSrc.match(/drawShell\([^;]*\);/s)?.[0],
   );
 }
 

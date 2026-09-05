@@ -94,6 +94,6 @@ export function drawShell(c, app, world, canvas, kind, getScores) {
     menudraw.drawEnemiesHelp(c, L, app.subT);
   } else if (s === SCREEN.SCORES) {
     menudraw.drawDim(c, 0.72, cw, chh);
-    menudraw.drawScores(c, getScores(), L, app.subT);
+    menudraw.drawScores(c, getScores(app.scoreHeat), L, app.subT, app.scoreHeat);
   }
 }

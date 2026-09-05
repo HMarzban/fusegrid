@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-04 — HIGH SCORES gained CORE/PLUS/MAX tabs
+- `scoresForHeat(list, heat)` filters the one persisted `nb.highscores.v1` list at draw time (CORE keeps legacy rows with no `t`); `app.scoreHeat` is a display-only `clampHeat` value cycled with `←/→` while on SCORES (`move`/`_tapMove`), and `drawScores` gained a `heat` param for the tab row + `NO <NAME> RUNS YET` empty state. PWA v23.
+
 ## 2026-09-04 — Honest end screen: SPACE/TAP cues, a copyable run stamp, KeyC
 - `scenes.js` gained `overlayCue`/`runStamp`/`copyPayload` (raw `world.score`, `biomeOf`, `HEAT_NAME`); WIN/LOSE/PAUSE overlays now speak SPACE/TAP instead of FIRE/"retry", and drop the dead `state==="MENU"` branch (grep found nothing else paints it — the shell's MENU chrome always paints over it the same frame). `KeyC` in `main.js` copies the stamp + Pages URL on WIN/LOSE inside GAME. PWA bumped to v22.
 

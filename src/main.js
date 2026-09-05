@@ -17,7 +17,7 @@ import { readFlags, locationSearch } from "./app/flags.js";
 import { mountToolbar, setBtn } from "./app/toolbar.js";
 import { mountDebugHook } from "./app/debughook.js";
 import { introPhase, INTRO_DUR } from "./app/intro.js";
-import { loadScores, recordScore, saveScores, scoreEntry } from "./app/highscores.js";
+import { loadScores, recordScore, saveScores, scoreEntry, scoresForHeat } from "./app/highscores.js";
 import { loadPactUnlocked, savePactUnlocked } from "./app/pactstore.js";
 import { loadPace, savePace } from "./app/pacestore.js";
 import { clampPace } from "./core/pace.js";
@@ -497,7 +497,9 @@ export function createGame(canvas, opts = {}) {
             : undefined,
     );
     c.restore();
-    drawShell(c, app, world, canvas, curKind, loadScores);
+    drawShell(c, app, world, canvas, curKind, (heat) =>
+      scoresForHeat(loadScores(), heat),
+    );
     if (running && typeof requestAnimationFrame !== "undefined")
       requestAnimationFrame(loop);
   }

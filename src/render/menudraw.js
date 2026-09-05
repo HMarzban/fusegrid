@@ -6,7 +6,7 @@
    must not import from src/app. */
 import { roomCap } from "../core/config.js";
 import { POWER, FOES } from "../core/entities.js";
-import { HEAT_COL, HEAT_MARK, HEAT_NAME } from "../core/heat.js";
+import { HEAT_COL, HEAT_MARK, HEAT_NAME, clampHeat } from "../core/heat.js";
 import { PACE_NAME } from "../core/pace.js";
 import { pactLabel } from "../core/pact.js";
 import { PACT, PACT_COL, PACT_NAME } from "../core/pact.js";
@@ -624,16 +624,57 @@ export function drawEnemiesHelp(c, L, t) {
   foot(c, S, "ESC BACK");
 }
 
-/* HIGH SCORES: RANK / SCORE / LEVEL / DATE fitted inside the plate.
-   Row pitch is derived from the inner body, not L.tableY / L.rowH, so all
-   ten runs plus the in-plate ESC BACK stay inside the shell at 352 and 520. */
-export function drawScores(c, scores, L, t) {
+/* HIGH SCORES: CORE / PLUS / MAX heat tabs above RANK / SCORE / LEVEL /
+   DATE, fitted inside the plate. Row pitch is derived from the inner body,
+   not L.tableY / L.rowH, so all ten runs plus tabs plus the in-plate foot
+   stay inside the shell at 352 and 520. `scores` arrives already filtered
+   by heat (scoresForHeat lives in src/app/highscores.js — this file must
+   not import src/app); `heat` is only used for the tab highlight and the
+   empty-tab label. */
+export function drawScores(c, scores, L, t, heat) {
   const S = shell(c, L, 480);
+  const h = clampHeat(heat);
   head(c, S, "HIGH SCORES", "BEST RUNS");
+  const tabW = 64,
+    tabGap = 8,
+    tabH = 18,
+    tabTot = 3 * tabW + 2 * tabGap,
+    tabX0 = S.mid - tabTot / 2,
+    tabY = S.headY + 18;
+  for (let i = 0; i < 3; i++) {
+    const x = tabX0 + i * (tabW + tabGap),
+      on = i === h,
+      col = HEAT_COL[i];
+    if (on) {
+      c.fillStyle = "rgba(55,240,208,0.12)";
+      c.fillRect(x, tabY, tabW, tabH);
+    }
+    c.strokeStyle = on ? col : LINE;
+    c.lineWidth = on ? 2 : 1;
+    c.strokeRect(x + 0.5, tabY + 0.5, tabW - 1, tabH - 1);
+    c.fillStyle = on ? col : MUTED;
+    c.font = font(9, on ? "900" : "");
+    c.textAlign = "center";
+    c.textBaseline = "middle";
+    c.fillText(HEAT_NAME[i], x + tabW / 2, tabY + tabH / 2 + 1);
+  }
   const list = Array.isArray(scores) ? scores : [];
   const nShow = Math.min(10, list.length);
-  const bodyTop = S.headY + 22,
+  const bodyTop = tabY + tabH + 10,
     bodyBot = S.footY - 18;
+  if (!nShow) {
+    c.fillStyle = MUTED;
+    c.font = font(12, "900");
+    c.textAlign = "center";
+    c.textBaseline = "middle";
+    c.fillText(
+      "NO " + HEAT_NAME[h] + " RUNS YET",
+      S.mid,
+      (bodyTop + bodyBot) / 2,
+    );
+    foot(c, S, "← → HEAT · ESC BACK");
+    return;
+  }
   const slots = 1 + Math.max(1, nShow);
   const rowH = (bodyBot - bodyTop) / slots;
   const gap = 10;
@@ -674,7 +715,7 @@ export function drawScores(c, scores, L, t) {
     c.fillStyle = i === 0 ? ACCENT : TEXT;
     c.fillText(String(r.s), xs[1] + cw[1], y);
   }
-  foot(c, S, "ESC BACK");
+  foot(c, S, "← → HEAT · ESC BACK");
 }
 
 /* ATTRACT hint: 1Hz-blink footer over the live demo (spec §5.6). */

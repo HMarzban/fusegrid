@@ -407,6 +407,47 @@ check(
   check("back(): ENEMIES->MENU", f.screen === SCREEN.MENU);
 }
 
+// ---- SCORES: scoreHeat is display-only, cycled by move(dir,0) ----
+// NOTE: the real move() contract on MENU ignores `axis` entirely (ANY dir
+// call moves the cursor and returns true) — verified against menuapp.js
+// before writing this block. So "MENU left/right" below asserts scoreHeat
+// is untouched, not that move() returns false (it returns true, same as
+// any other MENU move).
+{
+  const a = createMenuApp();
+  a.screen = SCREEN.SCORES;
+  check("scoreHeat defaults CORE", (a.scoreHeat | 0) === 0);
+  check(
+    "SCORES right heats PLUS",
+    a.move(1, 0) === true && a.scoreHeat === 1,
+  );
+  check("SCORES right again MAX", a.move(1, 0) && a.scoreHeat === 2);
+  check(
+    "SCORES right sticks at MAX",
+    a.move(1, 0) === false && a.scoreHeat === 2,
+  );
+  check("SCORES left back to PLUS", a.move(-1, 0) && a.scoreHeat === 1);
+  a.screen = SCREEN.MENU;
+  const cursorBefore = a.cursor;
+  const menuMoved = a.move(1, 0);
+  check(
+    "MENU left/right do not touch scoreHeat (real MENU move() ignores axis, always moves cursor)",
+    menuMoved === true && a.cursor !== cursorBefore && a.scoreHeat === 1,
+  );
+}
+{
+  const a = createMenuApp();
+  a.screen = SCREEN.SCORES;
+  check(
+    "key ArrowRight (lateral tap) cycles scoreHeat via _tapMove",
+    a.key("ArrowRight") === true && a.scoreHeat === 1,
+  );
+  check(
+    "key ArrowUp (non-lateral tap) on SCORES is a no-op for scoreHeat",
+    a.key("ArrowUp") === false && a.scoreHeat === 1,
+  );
+}
+
 // ---- cursor repeat timing (synthetic dt) ----
 {
   const a = createMenuApp();

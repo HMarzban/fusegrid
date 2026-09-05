@@ -50,6 +50,7 @@ export function createMenuApp(opts = {}) {
     cursor: 0,
     level: Math.min(roomCap(o.pactUnlocked), Math.max(1, o.level | 0 || 1)),
     heat: clampHeat(o.heat),
+    scoreHeat: 0,
     pact: clampPact(o.pact),
     pace: clampPace(o.pace),
     pactUnlocked: !!o.pactUnlocked,
@@ -185,6 +186,10 @@ export function createMenuApp(opts = {}) {
         this._taps[dir + ":" + (lat ? 0 : 1)] = true;
         return true;
       }
+      if (this.screen === SCREEN.SCORES && lat && this.move(dir, 0)) {
+        this._taps[dir + ":0"] = true;
+        return true;
+      }
       return false;
     },
     confirm() {
@@ -263,6 +268,13 @@ export function createMenuApp(opts = {}) {
         const nl = Math.min(cap, Math.max(1, this.level + dir));
         if (nl === this.level) return false;
         this.level = nl;
+        return true;
+      }
+      if (this.screen === SCREEN.SCORES) {
+        if ((axis | 0) !== 0) return false;
+        const nh = clampHeat(this.scoreHeat + dir);
+        if (nh === this.scoreHeat) return false;
+        this.scoreHeat = nh;
         return true;
       }
       return false;
