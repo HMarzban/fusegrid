@@ -328,16 +328,16 @@ export function drawEnemies(c, world) {
    three things that carry maturity at 28px:
 
    TAPER — the outline is a shouldered wedge, not a barrel: widest at the
-   pauldron line (+-0.94r, upper third), shedding 1.9x of that width within
-   half a radius, closing at a +-0.42r waist. The hull STOPS at the waist and
+   pauldron line (0.9r, upper third), shedding 1.9x of that width within
+   half a radius, closing at a 0.5r waist. The hull STOPS at the waist and
    two long dark legs carry the lower third, so the bright mass is a third
    smaller and the figure has a stance instead of a base.
-   VALUE — the hull drops from #dfe7f2 (L 0.90) to gunmetal #77839b (L 0.51).
+   VALUE — the hull drops from #dfe7f2 (L 0.90) to gunmetal #8d97ac (L 0.59).
    Brightness is what read as cute; a mid value also separates BETTER from
    walker's mint, and it leaves the visor pip as the one bright thing.
-   EDGE — the p.color cap becomes a swept CREST that overhangs the helmet,
-   and the soft sheen ellipse becomes hard armour facets. Zero-arc rule
-   holds: nothing here is an arc.
+   EDGE — the p.color cap becomes a swept CREST with every vertex inside the
+   helmet contour, and the soft sheen ellipse becomes hard armour facets.
+   Zero-arc rule holds: nothing here is an arc.
    Unchanged: p.color placement (crest only), the single specular visor, the
    RIM seal, the five beats, no antenna / ball / round eyes / dome. */
 export const PLAYER_HULL = "#8d97ac";

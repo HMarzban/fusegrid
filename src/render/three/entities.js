@@ -854,17 +854,17 @@ export function createPools(biome, atlas) {
 
      R1 numbers. The torso sheds to a 0.38 waist and flares to 0.80 at the
      shoulder line (y 1.36), and the flat yoke chips become swept PAULDRON
-     plates reaching +-T*0.36 = 14.4 — just past the player's own T*0.34
+     plates reaching ±T*0.23 — just past the player's own T*0.34
      collision radius, so the hero finally reads as the widest thing on the
-     board. That also buys the footprint: 28.8 across by 19.2 deep, a
-     SHOULDERED plan view (1.5:1) no round foe hull can hold, which is the
+     board. That also buys the footprint: 31.8 across by 20.6 deep, a
+     SHOULDERED plan view (1.54:1) no round foe hull can hold, which is the
      separation cue the frozen 59.1 deg rig actually sees.
 
-     The crown drops from seg 6 (a hexagon is a circle at this size) to seg 4
-     rotated a quarter-face, so its plan view is an axis-aligned faceted
+     The crown drops from seg 6 (a hexagon is a circle at this size) to seg 5
+     rotated a fifth, so its plan view is an axis-aligned faceted
      wedge that turns with the yaw — a crest, not a cap — while r rises to
-     T*0.22 to keep the p.color plan AREA it had as a hexagon. The quarter
-     turn is what puts a flat face at +Z for the visor to sit on; a corner at
+     T*0.17 to keep the p.color plan AREA it had as a hexagon. Rotating a
+     fifth puts a flat face at +Z for the visor to sit on; a corner at
      +Z would leave the visor's ends floating off a ridge.
 
      Unchanged: bottom -> top profiles, flare-then-narrow on both (TORSO_P at
@@ -911,7 +911,7 @@ export function createPools(biome, atlas) {
   hull.castShadow = true;
   hull.receiveShadow = true;
   /* seg 5 with a quarter-face turn: three.js lathes start a VERTEX at +Z, so
-     rotating a fifth of a turn puts a flat FACE forward for the visor to sit
+     rotating a tenth of a full turn puts a flat FACE forward for the visor to sit
      on. Iteration 1 used seg 4 and the square plan plus its top facet read
      as a box; a pentagon has no parallel silhouette edges and its plan view
      is shared with no foe. The base ring matches the torso collar so the
