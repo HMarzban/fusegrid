@@ -400,49 +400,67 @@ const FACTORY_A = mkPat(
   ),
   ["sawtooth", 0.09, "square", 0.075, "square", 0.018],
 );
+/* WATER — flowing, undertow. G Mixolydian on G, STEP 0.15 (100 BPM); the flat
+   seventh is what makes it major-but-not-quite, wet rather than bright. Two
+   independent lines, not harmony-by-doubling: the lead states the motif with
+   its two long notes stretched so the flash and the settle tie ACROSS bar
+   lines, and the sine pad answers it with INV — the same figure mirrored below
+   the tonic — so that at every step where both sound, one rises exactly where
+   the other falls. Deliberately not the house tresillo: water's identity is
+   long ties, so it never collapses into another syncopated track.
+   The bass is the first channel in the score to author the [s,f,d,v] tuple:
+   eight long notes crescendoing through stepped velocities across each
+   four-bar phrase, a swell the old one-v-per-channel encoding could not say at
+   all. Bar 8 is bass and pad alone, ringing out. */
 const WATER_A = mkPat(
-  0.16,
+  0.15,
   64,
-  pulse([
-    [49, 92.5],
-    [55, 82.4],
-    [49, 73.42],
-    [61.74, 92.5],
-  ]),
-  oct([
-    [
-      [0, 220, 3],
-      [3, 246.9, 3],
-      [6, 196, 2],
-    ],
-    [
-      [0, 164.8, 4],
-      [4, 220, 3],
-    ],
-    [
-      [0, 174.6, 3],
-      [3, 196, 2],
-      [5, 220, 3],
-    ],
-    [
-      [0, 246.9, 4],
-      [4, 196, 3],
-    ],
-  ]),
   [
-    [2, 4000, 1],
-    [10, 4000, 1],
-    [18, 4000, 1],
-    [26, 4000, 1],
-    [34, 4000, 1],
-    [42, 4000, 1],
-    [50, 4000, 1],
-    [58, 4000, 1],
+    [0, 49, 6, 0.05],
+    [8, 49, 6, 0.07],
+    [16, 65.41, 6, 0.09],
+    [24, 43.65, 6, 0.11],
+    [32, 49, 6, 0.06],
+    [40, 55.0, 6, 0.08],
+    [48, 65.41, 6, 0.1],
+    [56, 49, 8, 0.12],
   ],
-  ["triangle", 0.09, "triangle", 0.07, "triangle", 0.016, "triangle", 0.03],
   [
-    [0, 123.47, 16],
-    [32, 110, 16],
+    [0, 392.0, 2],
+    [1, 493.88, 2],
+    [2, 587.33, 2],
+    [3, 659.26, 6],
+    [6, 587.33, 5],
+    [12, 349.23, 4],
+    [16, 523.25, 6],
+    [22, 587.33, 5],
+    [32, 440.0, 8],
+    [40, 493.88, 5],
+    [46, 587.33, 6],
+    [48, 523.25, 3],
+    [52, 659.26, 4],
+  ],
+  [0, 1, 2, 3, 4, 5, 6].flatMap((b) =>
+    [2, 6].map((o) => [b * 8 + o, 4000, 1]),
+  ),
+  ["triangle", 0.09, "triangle", 0.07, "triangle", 0.016, "sine", 0.03],
+  [
+    [0, 196.0, 2],
+    [1, 164.81, 2],
+    [2, 130.81, 2],
+    [3, 123.47, 6],
+    [6, 130.81, 5],
+    [10, 146.83, 6],
+    [18, 146.83, 6],
+    [26, 174.61, 6],
+    [32, 196.0, 2],
+    [33, 164.81, 2],
+    [34, 130.81, 2],
+    [35, 123.47, 6],
+    [38, 130.81, 5],
+    [44, 164.81, 4],
+    [50, 130.81, 5],
+    [56, 146.83, 8],
   ],
 );
 /* Straight eighths: one hit on every even step of bars 1-7, tacet through the
@@ -841,7 +859,7 @@ export const MUSIC_TRACKS = Object.freeze({
   jungle: tr(JUNGLE_A, transp(JUNGLE_A, 1.189207)),
   ice: tr(ICE_A, transp(ICE_A, 1.122462)),
   factory: tr(FACTORY_A, transp(FACTORY_A, 0.890899)),
-  water: tr(WATER_A, transp(WATER_A, 1.122462)),
+  water: tr(WATER_A, transp(WATER_A, 1.33484)),
   arena: tr(ARENA_A, ARENA_B),
   sand: tr(SAND_A, transp(SAND_A, 1.122462)),
   void: tr(VOID_A, VOID_B),

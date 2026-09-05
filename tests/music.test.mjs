@@ -1261,11 +1261,14 @@ function installAC(ac) {
         if (P[k] && P[k].length) chans.push([id + "." + sec + "." + k, P[k]]);
     }
   }
+  /* Stepped dynamics is the direction brief's main maturity lever and the whole
+     reason the [s,f,d,v?] tuple exists. Exactly these channels use it. */
+  const STEPPED = ["water.A.bass", "water.B.bass"];
   const spread = chans.filter(([, a]) => new Set(a.map((n) => n.v)).size !== 1);
   check(
-    "every channel stamps exactly one v — stepped dynamics land in R3c, not here",
-    chans.length > 30 && spread.length === 0,
-    chans.length + " channels, spread: " + spread.map(([n]) => n).join(","),
+    "per-note velocity is authored only where the spec asks for it",
+    chans.length > 30 && spread.every(([n]) => STEPPED.includes(n)),
+    spread.map(([n]) => n).join(","),
   );
 }
 
@@ -1837,6 +1840,64 @@ function installAC(ac) {
     occ(A) + "/" + breathBar(A),
   );
   check("factory register lanes never cross, A and B", lanes(A) && lanes(B));
+}
+
+// ---- water: flowing, undertow (G Mixolydian, PLAIN stretched, pad runs INV) ----
+{
+  const T = MUSIC_TRACKS.water,
+    A = T.A,
+    B = T.B;
+  check(
+    "water STEP 0.15 (100 BPM), G1 49.00 root, B up a perfect fourth",
+    A.STEP === 0.15 &&
+      A.bass[0].f === 49 &&
+      Math.abs(B.bass[0].f / A.bass[0].f - 1.33484) < 1e-9,
+    A.STEP + "/" + A.bass[0].f,
+  );
+  const longs = A.lead.filter((n) => Math.round(n.d / A.STEP) >= 4);
+  check(
+    "water lead is legato: at least 6 notes of 4+ steps",
+    longs.length >= 6,
+    longs.length,
+  );
+  check(
+    "at least one lead note starts late in a bar and holds past the bar line",
+    A.lead.some((n) => (n.s % 8) + Math.round(n.d / A.STEP) > 8 && n.s % 8 >= 6),
+    A.lead
+      .filter((n) => n.s % 8 >= 6)
+      .map((n) => (n.s % 8) + "+" + Math.round(n.d / A.STEP))
+      .join(","),
+  );
+  check(
+    "water bass swells through stepped velocity — 3 or more distinct v values",
+    new Set(A.bass.map((n) => n.v)).size >= 3,
+    [...new Set(A.bass.map((n) => n.v))].sort().join(","),
+  );
+  const shared = [...new Set((A.pad || []).map((n) => n.s))]
+    .filter((s) => A.lead.some((l) => l.s === s))
+    .sort((a, b) => a - b);
+  let opp = 0,
+    cmp = 0;
+  for (let i = 1; i < shared.length; i++) {
+    const pf = (s) => A.pad.find((n) => n.s === s).f,
+      lf = (s) => A.lead.find((n) => n.s === s).f;
+    const dp = pf(shared[i]) - pf(shared[i - 1]),
+      dl = lf(shared[i]) - lf(shared[i - 1]);
+    if (dp === 0 || dl === 0) continue;
+    cmp++;
+    if (dp * dl < 0) opp++;
+  }
+  check(
+    "water pad runs INV under the lead — contrary motion at every shared step",
+    shared.length >= 4 && cmp >= 3 && opp === cmp,
+    opp + "/" + cmp + " over " + shared.length + " shared steps",
+  );
+  check(
+    "water is unhurried: at most 44 of 64 steps, and it breathes",
+    occ(A) <= 44 && breathBar(A) >= 0,
+    occ(A) + "/" + breathBar(A),
+  );
+  check("water register lanes never cross, A and B", lanes(A) && lanes(B));
 }
 
 console.log("\n  MUSIC RESULT: " + pass + " PASS / " + fail + " FAIL");

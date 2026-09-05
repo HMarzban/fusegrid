@@ -1,4 +1,4 @@
-export const CACHE_NAME = "fusegrid-shell-v69";
+export const CACHE_NAME = "fusegrid-shell-v70";
 
 const SRC = Object.freeze([
   "src/ai/enemies.js",
