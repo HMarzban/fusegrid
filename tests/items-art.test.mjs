@@ -442,6 +442,13 @@ const P = (o) =>
     }
     return m;
   };
+  /* Fail LOUDLY if a future beat lands before the contour and slides the
+     index: a wrong slice must not be readable as a taper failure. */
+  check(
+    "R1 beat 2 is the hull contour (taper gate reads the right polygon)",
+    pts.length >= 16 && Math.max(...pts.map((p) => Math.abs(p[0]))) > R * 0.5,
+    pts.length + " verts",
+  );
   const shoulder = Math.max(...pts.map((p) => Math.abs(p[0])));
   const wide = pts.reduce((a, p) => (Math.abs(p[0]) > Math.abs(a[0]) ? p : a), pts[0]);
   const bot = Math.max(...pts.map((p) => p[1]));
