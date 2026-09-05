@@ -837,10 +837,10 @@ function installAC(ac) {
     "sand void crown STEP and first bass",
     MUSIC_TRACKS.sand.A.STEP === 0.139 &&
       MUSIC_TRACKS.void.A.STEP === 0.234 &&
-      MUSIC_TRACKS.crown.A.STEP === 0.13 &&
+      MUSIC_TRACKS.crown.A.STEP === 0.113 &&
       MUSIC_TRACKS.sand.A.bass[0].f === 69.3 &&
       MUSIC_TRACKS.void.A.bass[0].f === 61.74 &&
-      MUSIC_TRACKS.crown.A.bass[0].f === 98,
+      MUSIC_TRACKS.crown.A.bass[0].f === 65.41,
   );
   const fin = (a) =>
     a &&
@@ -1582,6 +1582,73 @@ function installAC(ac) {
     "R3c pre-move: water root is G1 49.00 now that void has taken 61.74",
     MUSIC_TRACKS.water.A.bass[0].f === 49,
     MUSIC_TRACKS.water.A.bass[0].f,
+  );
+}
+
+// ---- crown: finale gold (C Ionian, RESOLVED — the only pure major) ----
+{
+  const T = MUSIC_TRACKS.crown,
+    A = T.A,
+    B = T.B,
+    f0 = TONIC.crown;
+  check(
+    "crown STEP 0.113 (133 BPM), C2 65.41 root",
+    A.STEP === 0.113 && A.bass[0].f === 65.41,
+    A.STEP + "/" + A.bass[0].f,
+  );
+  check(
+    "crown timbres: square bass, square lead, triangle hat, sawtooth pad",
+    A.bass[0].t === "square" &&
+      A.lead[0].t === "square" &&
+      A.hat[0].t === "triangle" &&
+      !!A.pad &&
+      A.pad[0].t === "sawtooth",
+    chansOf(A)
+      .map((a) => a[0].t)
+      .join(","),
+  );
+  check(
+    "crown B's hat quotes arena A's step pattern verbatim — the victory lap",
+    JSON.stringify(B.hat.map((n) => n.s)) ===
+      JSON.stringify(MUSIC_TRACKS.arena.A.hat.map((n) => n.s)) &&
+      B.hat !== A.hat,
+    B.hat.length + " vs arena " + MUSIC_TRACKS.arena.A.hat.length,
+  );
+  const head = motifHead(B.lead, f0, 1, 64);
+  const headF = head >= 0 && B.lead.find((n) => n.s === head).f;
+  const tail = B.lead.filter((n) => n.s === head + 7);
+  check(
+    "crown B states RESOLVED — the tonic VOID withheld, an octave above the head",
+    head >= 0 &&
+      tail.length === 1 &&
+      Math.abs(semi(tail[0].f, headF) - 12) <= 0.05 &&
+      Math.round(tail[0].d / B.STEP) >= 2,
+    head + " -> " + JSON.stringify(tail),
+  );
+  check(
+    "crown.A sounds a perfect fourth AND a leading tone — the Ionian pair",
+    soundsDeg(A, f0, 5) && soundsDeg(A, f0, 11),
+  );
+  const dbl = (A.pad || []).filter((p) =>
+    A.lead.some((l) => l.s === p.s && Math.abs(semi(p.f, l.f) - 12) <= 0.05),
+  );
+  check(
+    "crown pad doubles the lead an octave up for brass weight (>= 8 shared steps)",
+    dbl.length >= 8,
+    dbl.length,
+  );
+  check(
+    "crown is full but not solid: 40-58 of 64 steps, and it breathes",
+    occ(A) >= 40 && occ(A) <= 58 && breathBar(A) >= 0,
+    occ(A) + "/" + breathBar(A),
+  );
+  check("crown register lanes never cross, A and B", lanes(A) && lanes(B));
+}
+{
+  check(
+    "R3c pre-move: factory root is E2 82.41 now that crown has taken 65.41",
+    MUSIC_TRACKS.factory.A.bass[0].f === 82.41,
+    MUSIC_TRACKS.factory.A.bass[0].f,
   );
 }
 
