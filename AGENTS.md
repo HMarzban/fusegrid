@@ -24,7 +24,7 @@ Two state machines:
 
 | Layer | States | Owner |
 |---|---|---|
-| Shell | INTRO → MENU ⇄ LEVEL/HOWTO/ITEMS/ENEMIES/SCORES → GAME; idle → ATTRACT | `src/app/menuapp.js` |
+| Shell | INTRO → MENU ⇄ LEVEL/SCORES/SETTINGS/GUIDE(→HOWTO/ITEMS/ENEMIES) → GAME; idle → ATTRACT | `src/app/menuapp.js` |
 
 Heat grades CORE / PLUS / MAX live on LEVEL SELECT (`←/→` room, `↑/↓` heat). CORE is replay baseline v6. Attract is always CORE + pact=0. After a first FUSE/GRID CLEAR, LEVEL SELECT also offers Pact toggles (`1–4`). Knobs live on `world`, not frozen `CFG`. Score × heat is persist-only (CORE ×1 / PLUS ×2 / MAX ×3); live HUD stays raw.
 | Sim | PLAY / WIN / LOSE / PAUSE | `src/core/sim.js` |
@@ -36,10 +36,9 @@ not shell screens. Do not add them as `SCREEN` values.
   renderer cache + kind switch, and the handler wiring that binds them. Never
   imported by sim or renderer. Its seams live beside it and must stay OUT of
   `main.js`: `src/app/flags.js` (URL/opts, pure over a search string),
-  `src/app/attract.js` (demo world + `stepDemo`), `src/app/toolbar.js` (button
-  DOM + `setBtn`), `src/app/debughook.js` (`window.__GAME__`),
-  `src/net/localpair.js` (`?net=local`), `src/render/shellview.js`
-  (`drawShell` + the `kindSize`/`dims` logical box).
+  `src/app/attract.js` (demo world + `stepDemo`), `src/app/debughook.js`
+  (`window.__GAME__`), `src/net/localpair.js` (`?net=local`),
+  `src/render/shellview.js` (`drawShell` + the `kindSize`/`dims` logical box).
 - `src/core/` — deterministic simulation, no DOM, no browser globals.
   - `world.js` — `createWorld`, `loadLevel` (re-exported from `sim.js`).
   - `sim.js` — `step(world, dt, intents)`.
@@ -73,6 +72,9 @@ not shell screens. Do not add them as `SCREEN` values.
     `el:0.62` / `dist:960` / `target:[0,-44,0]` / `|ndc| 0.913` /
     `el:0.419` / `dist:1000` / `el:1.152` / `dist:700` / `dist:800` is
     stale.
+    Hazard: the cabinet bezel gate sits at `|ndc| 1.0974` against the `<=1.10`
+    ceiling, with `CAM_PRESET` STANDARD (`dist:870`) landing exactly there —
+    any camera/rig/`RIM_W` change must re-run `tests/three.test.mjs` §4b first.
     Never assign `#gl.width`/`#gl.height` from `sizeCanvases` — wrapper owns
     the Retina drawing buffer (`setPixelRatio` + `setSize`). Stomping it
     crops WebGL to the bottom-left quarter on dpr=2.
@@ -110,7 +112,7 @@ not shell screens. Do not add them as `SCREEN` values.
     the only render module that may read `src/app/` — screen constants only,
     and scores arrive as a getter so `highscores` stays on the app side.
 - `src/app/` — menu shell, intro beats, demobot, highscores, `pactstore.js`,
-  plus the entry seams above (`flags` / `attract` / `toolbar` / `debughook`).
+  plus the entry seams above (`flags` / `attract` / `debughook`).
   Not read by `step()`.
   Demobot is an intent FSM (plant-and-leave, hunger for combat cubes / corridor
   foes); attract still CORE/pact=0. Highscores use `scoreEntry`; `noteWorldEdge`
@@ -200,7 +202,7 @@ not covered by Node — play-verify in a browser after render changes.
 ## Learned User Preferences
 - Public name and wordmark are Fusegrid / FUSE/GRID; keep the local checkout as `rollblock`. Never write Bomberman into any committed file (specs, comments, commit messages, docs, alt text, tags) — it is a private quality reference only; `docs/` is public.
 - This repository is the arcade game only — do not add unrelated demos.
-- Keep a visible path to the public repo: menu SOURCE and the toolbar Source control open https://github.com/HMarzban/fusegrid.
+- Keep a visible path to the public repo: menu SOURCE opens https://github.com/HMarzban/fusegrid.
 - Keep ITEMS, ENEMIES, and HOW TO as in-menu help so pickups and foes are explained in the shell, not only as HUD chips.
 - Difficulty is Heat on LEVEL SELECT (CORE / PLUS / MAX). Global **pace** (EASY / NORM / HARD) is a separate LEVEL SELECT control (`[`/`]`), persisted in `nb.pace.v1`, scaling player/enemy move speed on `world.pace` — not frozen `CFG`. Pact (`1–4`) and rooms 6–8 unlock after the first FUSE/GRID CLEAR. Score × heat is persist-only; HIGH SCORES fifth column tags pact bitmask (`p`). Music uses WebAudio stereo panning on the oscillator engine (zero npm deps). Mid-run heat, always-on Sudden Death, and internet play stay parked.
 - Foes must read as arcade characters (distinct silhouette, face or lens, shading, facing) in CLASSIC 2D and REAL 3D, not flat colored tokens. `enemybody.js` is the 2D five-beat build; 3D matches via merged hulls in the four-mesh slot. Art only — do not retune AI.

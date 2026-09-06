@@ -45,8 +45,10 @@ the bounce harness and the `[s, f, d, v?]` tuple must both be landed and green.
     takes 65.41; 82.41 is factory's own new E2 tonic and is distinct from
     jungle's 82.4).
   Nothing else about those three tracks moves here. `sand`'s `d` values stay
-  baked at `steps × 0.17`, so sand plays ~22 % legato for one wave. Intentional;
-  R3c rewrites it.
+  expressed in the same step counts baked for `STEP 0.17`; moving `STEP` to
+  `0.139` only speeds sand's TEMPO — the articulation ratio (`d` against the
+  beat grid) is unchanged, not a shift toward legato. Intentional; R3c
+  rewrites the `d` values themselves.
 - **Wave 1 authors ONE `v` per channel.** The `[s,f,d,v?]` tuple exists but its
   first user is R3c's `water`. If a track here genuinely needs stepped dynamics,
   narrow R3a's uniform-`v` pin in the same commit and re-home its ledger row —
@@ -454,8 +456,10 @@ prescribed — the pins above are the contract:
 
 Then, in the same file, change `SAND_A`'s first `mkPat` argument from `0.17` to
 `0.139`. **Nothing else about `SAND_A` moves in this wave** — its note `d`
-values stay baked at `steps × 0.17`, so sand plays ~22 % legato until R3c
-rewrites it. That is deliberate: it is the smallest edit that keeps
+values stay expressed in the same step counts; the `STEP` move only speeds
+sand's TEMPO, leaving the articulation ratio (`d` against the beat grid)
+unchanged — not a shift toward legato — until R3c rewrites the `d` values
+themselves. That is deliberate: it is the smallest edit that keeps
 `music.test.mjs:701-718` green now that intro owns `0.17`.
 
 - [ ] **Step 4: Run to PASS — full battery**
