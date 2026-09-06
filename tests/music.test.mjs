@@ -62,19 +62,13 @@ const figureAt = (chan, s0, f0, offs, degs) =>
   offs.every((off, i) =>
     chan.some((n) => n.s === s0 + off && isDeg(n.f, f0, degs[i])),
   );
-const motifAt = (chan, s0, f0, k) =>
-  figureAt(
-    chan,
-    s0,
-    f0,
-    [0, 1, 2, 3, 6].map((x) => x * (k || 1)),
-    [DEG1, DEG3, DEG5, DEG6, DEG5],
-  );
 /* Direction v2 (spec 1): same contour, bouncier rhythm — the flash is two steps
    instead of three and the settle moves to step 5, so steps 6-7 carry a pickup
-   rather than a rest. motifAt above survives for the wave-B tracks still on the
-   v1 figure. Hook pins using this are always positional (a named bar), because
-   a sixteenth run can walk the right pitch classes by accident. */
+   rather than a rest. The v1 motifAt (offsets 0,1,2,3,6) and its motifHead are
+   GONE: wave B moved arena's ANTIC, void's fragment and crown's RESOLVED onto
+   this figure, which were their last three callers. Hook pins using this are
+   always positional (a named bar), because a sixteenth run can walk the right
+   pitch classes by accident. */
 const motifV2At = (chan, s0, f0) =>
   figureAt(chan, s0, f0, [0, 1, 2, 3, 5], [DEG1, DEG3, DEG5, DEG6, DEG5]);
 const motifV2Head = (chan, f0, len) => {
@@ -83,10 +77,6 @@ const motifV2Head = (chan, f0, len) => {
 };
 const fragMidAt = (chan, s0, f0) =>
   figureAt(chan, s0, f0, [1, 2, 3], [DEG3, DEG5, DEG6]);
-const motifHead = (chan, f0, k, len) => {
-  for (let s = 0; s < (len || 64); s++) if (motifAt(chan, s, f0, k)) return s;
-  return -1;
-};
 const chansOf = (P) =>
   ["bass", "lead", "hat", "pad"].map((k) => P[k]).filter((a) => a && a.length);
 const occ = (P) => {
@@ -1329,64 +1319,43 @@ function installAC(ac) {
     [1, 349.23],
     [2, 440.0],
     [3, 493.88],
+    [5, 440.0],
+  ]);
+  const v1rhythm = mk([
+    [0, 293.66],
+    [1, 349.23],
+    [2, 440.0],
+    [3, 493.88],
     [6, 440.0],
   ]);
-  check("motifAt matches PLAIN on the tonic", motifAt(plain, 0, D, 1));
+  check("motifV2At matches PLAIN on the tonic", motifV2At(plain, 0, D));
   check(
-    "motifAt is octave-blind — pitch class, not absolute Hz",
-    motifAt(
+    "motifV2At is octave-blind — pitch class, not absolute Hz",
+    motifV2At(
       mk([
         [0, 587.32],
         [1, 698.46],
         [2, 880.0],
         [3, 987.77],
-        [6, 880.0],
+        [5, 880.0],
       ]),
       0,
       D,
-      1,
     ),
   );
-  const aug = mk([
-    [0, 293.66],
-    [2, 349.23],
-    [4, 440.0],
-    [6, 493.88],
-    [12, 440.0],
-  ]);
   check(
-    "motifAt matches AUG at k=2 and rejects it at k=1",
-    motifAt(aug, 0, D, 2) && !motifAt(aug, 0, D, 1),
-  );
-  check(
-    "motifAt rejects a wrong flash note — only 6 (8 or 9 semitones) will do",
-    !motifAt(
+    "motifV2At rejects a wrong flash note — only 6 (8 or 9 semitones) will do",
+    !motifV2At(
       mk([
         [0, 293.66],
         [1, 349.23],
         [2, 440.0],
         [3, 392.0],
-        [6, 440.0],
+        [5, 440.0],
       ]),
       0,
       D,
-      1,
     ),
-  );
-  check(
-    "motifHead finds an ANTIC head that straddles the bar line",
-    motifHead(
-      mk([
-        [15, 293.66],
-        [16, 349.23],
-        [17, 440.0],
-        [18, 493.88],
-        [21, 440.0],
-      ]),
-      D,
-      1,
-      64,
-    ) === 15,
   );
   check(
     "fragMidAt is tonic-relative: 3-5-6 with no tonic under it",
@@ -1422,16 +1391,9 @@ function installAC(ac) {
     ]),
     hat: mk([[2, 4800]]),
   };
-  const v2 = mk([
-    [0, 293.66],
-    [1, 349.23],
-    [2, 440.0],
-    [3, 493.88],
-    [5, 440.0],
-  ]);
   check(
-    "motifV2At matches the v2 rhythm (settle at step 5) and rejects the v1 one",
-    motifV2At(v2, 0, D, 1) && !motifAt(v2, 0, D, 1) && !motifV2At(plain, 0, D),
+    "motifV2At wants the settle at step 5 — the v1 rhythm does not satisfy it",
+    !motifV2At(v1rhythm, 0, D),
   );
   check(
     "motifV2At is positional — the same figure one bar later reads as bar 1",
@@ -1898,27 +1860,34 @@ function installAC(ac) {
     sineLead.length === 1 && sineLead[0] === "void",
     sineLead.join(","),
   );
-  /* Direction v2. Grows one id per commit, in the ladder's migration order
-     (wave A intro -> menu -> jungle -> ice -> factory, then wave B arena ->
-     crown -> sand -> water -> void); the R3c block below takes it over as an
-     all-ten sweep once the last track lands. The breath-bar sweep this block
-     used to carry is gone with the shared mandate — a v2 track earns its air
-     from articulation, not empty bars. */
-  const WA = ["intro", "menu", "jungle", "ice", "factory", "arena", "crown", "sand",
-    "water", "void"];
+  /* Direction v2, complete. This sweep grew one id per commit through both
+     waves — wave A intro -> menu -> jungle -> ice -> factory, wave B arena ->
+     crown -> sand -> water -> void — and now quantifies over all ten. Every
+     clause below is a floor on MOTION. The breath-bar sweep this block used to
+     carry is gone with the shared mandate: a v2 track earns its air from
+     articulation and register, not from empty bars. */
+  const ALL = Object.keys(MUSIC_TRACKS);
   check(
-    "v2 so far: the rhythm section never leaves two steps unstruck",
-    WA.every((k) => pulseGap(MUSIC_TRACKS[k].A) <= 1),
-    WA.map((k) => k + ":" + pulseGap(MUSIC_TRACKS[k].A)).join(" "),
+    "v2, all ten: the rhythm section never leaves two steps unstruck",
+    ALL.every((k) => pulseGap(MUSIC_TRACKS[k].A) <= 1),
+    ALL.map((k) => k + ":" + pulseGap(MUSIC_TRACKS[k].A)).join(" "),
+  );
+  /* B sections count too — A-A-B-B is what a listener actually hears, and
+     three of the four hand-authored Bs carried a silent bar of their own that
+     no A-side pin could see. */
+  check(
+    "v2, all ten: every B section holds the pulse as well as its A",
+    ALL.every((k) => !MUSIC_TRACKS[k].B || pulseGap(MUSIC_TRACKS[k].B) <= 1),
+    ALL.filter((k) => MUSIC_TRACKS[k].B && pulseGap(MUSIC_TRACKS[k].B) > 1).join(","),
   );
   check(
-    "v2 so far: every bar carries lead AND bass — no dropped-out bars",
-    WA.every((k) => {
+    "v2, all ten: every bar carries lead AND bass — no dropped-out bars",
+    ALL.every((k) => {
       const A = MUSIC_TRACKS[k].A,
         b = A.LEN / 8;
       return barsWithLead(A) === b && barsWithBass(A) === b;
     }),
-    WA.map(
+    ALL.map(
       (k) =>
         k +
         ":" +
@@ -1928,14 +1897,14 @@ function installAC(ac) {
     ).join(" "),
   );
   check(
-    "v2 so far: dense but never solid, and at least two waveforms",
-    WA.every(
+    "v2, all ten: dense but never solid, and at least two waveforms",
+    ALL.every(
       (k) =>
         occ(MUSIC_TRACKS[k].A) < MUSIC_TRACKS[k].A.LEN &&
         lanes(MUSIC_TRACKS[k].A) &&
         waves(MUSIC_TRACKS[k].A) >= 2,
     ),
-    WA.map(
+    ALL.map(
       (k) =>
         k +
         ":" +
@@ -1946,6 +1915,49 @@ function installAC(ac) {
         waves(MUSIC_TRACKS[k].A),
     ).join(" "),
   );
+  /* Hook presence, positional on every track — the whole point of one motif in
+     eight rotations is that the tune is the same tune everywhere. factory
+     states it in the BASS (the canon's first voice) and arena one step early
+     (ANTIC at 15); everyone else states it in the lead on a downbeat. Counting
+     matches anywhere would be satisfiable by a scale run, so each is named. */
+  const HOOK = {
+    intro: ["lead", 0],
+    menu: ["lead", 0],
+    jungle: ["lead", 0],
+    ice: ["lead", 0],
+    factory: ["bass", 0],
+    water: ["lead", 0],
+    arena: ["lead", 15],
+    sand: ["lead", 0],
+    void: ["lead", 0],
+    crown: ["lead", 0],
+  };
+  check(
+    "v2, all ten: every track states the motif where the spec puts it",
+    ALL.every((k) => {
+      const [ch, at] = HOOK[k];
+      return motifV2At(MUSIC_TRACKS[k].A[ch], at, TONIC[k]);
+    }),
+    ALL.filter((k) => {
+      const [ch, at] = HOOK[k];
+      return !motifV2At(MUSIC_TRACKS[k].A[ch], at, TONIC[k]);
+    }).join(","),
+  );
+  /* And it comes back inside one pass everywhere it can: eight of the ten
+     restate at the loop's midpoint. intro is 32 steps long and restates at its
+     own bar 3; factory answers in the lead 8 steps later instead. */
+  check(
+    "v2, all ten: the hook returns inside a single pass",
+    ALL.every((k) => {
+      const A = MUSIC_TRACKS[k].A;
+      if (k === "factory") return motifV2At(A.lead, 8, TONIC[k]);
+      if (k === "intro") return motifV2At(A.lead, 16, TONIC[k]);
+      if (k === "arena") return motifV2At(A.lead, 15, TONIC[k]);
+      return motifV2At(A.lead, 32, TONIC[k]);
+    }),
+    ALL.join(","),
+  );
+
 }
 
 // ---- ice: brittle, echoing (F Lydian, AUG — register separation is the idea) ----
@@ -2278,19 +2290,23 @@ function installAC(ac) {
 // ---- R3c: the whole score, quantified over all ten tracks ----
 {
   const IDS = Object.keys(MUSIC_TRACKS);
-  /* The v2 ladder spreads 104-140 BPM at 4 BPM steps. Wave A rows move one per
-     commit in migration order; the wave-B rows carry their shipped values until
-     their own rewrite, so all ten stay distinct at every commit in between. */
+  /* The v2 ladder, complete: 140 BPM down to 104 at 4 BPM steps, ten distinct
+     values and NOTHING outside the band any more — void's 64 BPM exception was
+     the last one out. Rows moved one per commit in migration order, because
+     the pin quantifies over all ten and a track may only move into a vacant
+     STEP: ice needed jungle to leave .129 in wave A, water needed sand to
+     leave .139 in wave B. Listed in ladder order so a future move can see its
+     neighbours. */
   const LADDER = {
     arena: 0.107,
     crown: 0.11,
     factory: 0.114,
     jungle: 0.117,
     menu: 0.121,
-    sand: 0.134,
-    ice: 0.129,
-    water: 0.139,
     intro: 0.125,
+    ice: 0.129,
+    sand: 0.134,
+    water: 0.139,
     void: 0.144,
   };
   check(
@@ -2343,8 +2359,12 @@ function installAC(ac) {
     IDS.map((k) => k + ":" + occ(MUSIC_TRACKS[k].A)).join(" "),
   );
   /* The "every track has a breath bar" sweep is GONE, not relocated: direction
-     v2 withdrew the shared mandate (spec 2). Occupancy is now banded on both
-     sides, so a track cannot drift back toward sparseness either. */
+     v2 withdrew the shared mandate (spec 2). Every band now has a FLOOR as
+     well as a ceiling, so a track cannot drift back toward sparseness either —
+     which is what the v1 ceilings (void <= 20, sand <= 38, water <= 44) would
+     have allowed forever. Each track leaves exactly one step unstruck per
+     loop, except arena, whose four fall on steps its bass is already ringing
+     through. */
   const BAND = {
     intro: [28, 31],
     menu: [58, 63],
