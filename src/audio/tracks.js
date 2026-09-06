@@ -596,18 +596,24 @@ const WATER_A = mkPat(
     [56, 146.83, 8],
   ],
 );
-/* Straight eighths: one hit on every even step of bars 1-7, tacet through the
-   silent last bar. ARENA authors this figure; CROWN's B quotes the step
-   pattern verbatim as its victory lap past the room the player fought. */
-const EVEN8 = Object.freeze(Array.from({ length: 28 }, (_, i) => i * 2));
+/* Straight eighths: one hit on every even step of all eight bars. ARENA authors
+   this figure; CROWN's B quotes the step pattern verbatim as its victory lap
+   past the room the player fought. */
+const EVEN8 = Object.freeze(Array.from({ length: 32 }, (_, i) => i * 2));
 /* ARENA — aggressive, combat-ready. A Aeolian on A, STEP 0.107 (140 BPM), all
-   four voices dense. The motif head lands at step 15, one whole step BEFORE
-   the bar-3 downbeat it belongs to, so the fanfare punches ahead of the grid
-   without any sub-step timing the engine cannot express; the rest of the lead
-   stabs the "and" of 2 and 4. Plain Aeolian, no colour tones — deliberately
-   harder than the modal biomes around it. The whole band stops for bar 8: SFX
-   render outside musicGain and always sit on top, so the music leaves the
-   hole rather than fighting for it. */
+   four voices dense. The reference track for what arcade-correct sounds like:
+   tempo, mode, root, density and the anticipation hook are all as authored.
+   The motif head lands at step 15, one whole step BEFORE the bar-3 downbeat it
+   belongs to, so the fanfare punches ahead of the grid without any sub-step
+   timing the engine cannot express; it carries the v2 rhythm like every other
+   track (two-step flash at 18, settle at 20), and the rest of the lead stabs
+   the "and" of 2 and 4. Plain Aeolian, no colour tones — deliberately harder
+   than the modal biomes around it, and clear of G# so the leading tone stays
+   CROWN's and SAND's. The one v2 correction is bar 8: it used to stop the
+   whole band, which the offline render measured as 0.92 s under -50 dB four
+   times per bounce — by far the largest hole in the score, in the very track
+   the direction calls already correct. Every voice now plays it, on an E
+   turnaround that hands back to the top. */
 const ARENA_A = mkPat(
   0.107,
   64,
@@ -619,6 +625,7 @@ const ARENA_A = mkPat(
     [55, 82.41],
     [55, 82.41],
     [43.65, 65.41],
+    [41.2, 61.74],
   ].flatMap(([r, q], b) => [
     [b * 8, r, 2],
     [b * 8 + 3, r, 2],
@@ -635,8 +642,8 @@ const ARENA_A = mkPat(
     [15, 440.0, 1],
     [16, 523.25, 1],
     [17, 659.26, 1],
-    [18, 698.46, 3],
-    [21, 659.26, 1],
+    [18, 698.46, 2],
+    [20, 659.26, 1],
     [23, 587.33, 1],
     [25, 587.33, 1],
     [27, 493.88, 1],
@@ -655,6 +662,11 @@ const ARENA_A = mkPat(
     [51, 493.88, 1],
     [53, 440.0, 1],
     [55, 392.0, 1],
+    [56, 440.0, 1],
+    [57, 523.25, 1],
+    [59, 493.88, 1],
+    [61, 440.0, 1],
+    [63, 392.0, 1],
   ],
   EVEN8.map((s) => [s, 5200, 1]),
   ["square", 0.12, "square", 0.09, "triangle", 0.028, "sawtooth", 0.03],
@@ -666,12 +678,13 @@ const ARENA_A = mkPat(
     [32, 220.0, 6],
     [40, 220.0, 6],
     [48, 174.61, 6],
+    [56, 164.81, 6],
   ],
 );
 /* ARENA B — hand-authored, not transposed: a listener's ear clocks a
    pitch-shifted repeat as repetition, not new material. Same skeleton, same
-   mix, same silent last bar; the destination is C major, the relative major,
-   and the anticipated head restates the motif on C. */
+   mix, same eight played bars; the destination is C major, the relative major,
+   the anticipated head restates the motif on C, and bar 8 turns around on G. */
 const ARENA_B = mkPat(
   0.107,
   64,
@@ -683,6 +696,7 @@ const ARENA_B = mkPat(
     [65.41, 98.0],
     [65.41, 98.0],
     [43.65, 65.41],
+    [49, 73.42],
   ].flatMap(([r, q], b) => [
     [b * 8, r, 2],
     [b * 8 + 3, r, 2],
@@ -699,8 +713,8 @@ const ARENA_B = mkPat(
     [15, 523.25, 1],
     [16, 659.26, 1],
     [17, 783.99, 1],
-    [18, 880.0, 3],
-    [21, 783.99, 1],
+    [18, 880.0, 2],
+    [20, 783.99, 1],
     [23, 698.46, 1],
     [25, 698.46, 1],
     [27, 659.26, 1],
@@ -719,6 +733,11 @@ const ARENA_B = mkPat(
     [51, 587.33, 1],
     [53, 523.25, 1],
     [55, 493.88, 1],
+    [56, 523.25, 1],
+    [57, 659.26, 1],
+    [59, 587.33, 1],
+    [61, 523.25, 1],
+    [63, 493.88, 1],
   ],
   EVEN8.map((s) => [s, 5200, 1]),
   ["square", 0.12, "square", 0.09, "triangle", 0.028, "sawtooth", 0.03],
@@ -730,6 +749,7 @@ const ARENA_B = mkPat(
     [32, 130.81, 6],
     [40, 130.81, 6],
     [48, 174.61, 6],
+    [56, 196.0, 6],
   ],
 );
 /* SAND — heat-shimmer, mirage. E Phrygian natural 3 on E: FACTORY's mode with

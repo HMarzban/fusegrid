@@ -1568,12 +1568,15 @@ function installAC(ac) {
   check("intro register lanes never cross", lanes(A));
 }
 {
-  /* Wave-B note: crown's own commit moves it to .110 and retires this guard —
-     rewrite it then, do not delete the distinctness thought behind it. */
+  /* The ladder pin quantifies over all ten, so a track may only move into a
+     STEP that is already vacant. Crown's clause is discharged — arena's commit
+     is wave B's first and crown moves to .110 in the next one, into a value
+     nobody holds. What is still live is water's: it wants .139, which sand
+     holds until sand's own commit vacates it. This guard retires there. */
   check(
-    "wave-B pre-move: crown .113 and sand .139 still hold, so intro's .125 is free",
-    MUSIC_TRACKS.sand.A.STEP === 0.139 && MUSIC_TRACKS.crown.A.STEP === 0.113,
-    MUSIC_TRACKS.sand.A.STEP + "/" + MUSIC_TRACKS.crown.A.STEP,
+    "wave-B pre-move: sand still holds .139, so water's move is still blocked",
+    MUSIC_TRACKS.sand.A.STEP === 0.139 && MUSIC_TRACKS.water.A.STEP === 0.15,
+    MUSIC_TRACKS.sand.A.STEP + "/" + MUSIC_TRACKS.water.A.STEP,
   );
 }
 
@@ -1637,19 +1640,35 @@ function installAC(ac) {
     A.hat.length,
   );
   check(
-    "arena ANTIC: the motif head sits at step 15, one step before bar 3",
-    motifAt(A.lead, 15, f0, 1),
-    motifHead(A.lead, f0, 1, 64),
+    "arena ANTIC: the v2 figure one step early — head at 15, settle at 20",
+    motifV2At(A.lead, 15, f0),
+    motifV2Head(A.lead, f0, 64),
   );
   check(
     "arena stabs on the and of 2 and 4 (lead notes at 3 and 7 mod 8)",
     A.lead.some((n) => n.s % 8 === 3) && A.lead.some((n) => n.s % 8 === 7),
   );
   check("arena B is hand-authored — its hat is not A's array", B.hat !== A.hat);
+  /* The reference track's one v2 correction: bar 8 was a full-band stop — the
+     whole rhythm section out for eight steps, which the offline render measured
+     as 0.92 s under -50 dB, four times per bounce. Every voice now plays it. */
   check(
-    "arena is dense but not solid: at most 62 of 64 steps, and it still breathes",
-    occ(A) <= 62 && breathBar(A) >= 0,
-    occ(A) + "/" + breathBar(A),
+    "arena plays all eight bars — the full-band stop at bar 8 is gone",
+    barsWithLead(A) === 8 &&
+      barsWithBass(A) === 8 &&
+      barsWithLead(B) === 8 &&
+      barsWithBass(B) === 8,
+    barsWithLead(A) + "/" + barsWithBass(A) + " " + barsWithLead(B) + "/" + barsWithBass(B),
+  );
+  check(
+    "arena pulse never gaps, in BOTH hand-authored sections",
+    pulseGap(A) <= 1 && pulseGap(B) <= 1,
+    pulseGap(A) + "/" + pulseGap(B),
+  );
+  check(
+    "arena is dense but not solid: 56-62 of 64 steps, A and B alike",
+    occ(A) >= 56 && occ(A) <= 62 && occ(B) >= 56 && occ(B) <= 62,
+    occ(A) + "/" + occ(B),
   );
   check("arena register lanes never cross, A and B", lanes(A) && lanes(B));
 }
@@ -1803,18 +1822,20 @@ function installAC(ac) {
     sineLead.length === 1 && sineLead[0] === "void",
     sineLead.join(","),
   );
-  /* Direction v2 wave A. Grows one id per commit, in the ladder's migration
-     order (intro -> menu -> jungle -> ice -> factory); wave B extends it to all
-     ten. The breath-bar sweep this block used to carry is gone with the shared
-     mandate — a v2 track earns its air from articulation, not empty bars. */
-  const WA = ["intro", "menu", "jungle", "ice", "factory"];
+  /* Direction v2. Grows one id per commit, in the ladder's migration order
+     (wave A intro -> menu -> jungle -> ice -> factory, then wave B arena ->
+     crown -> sand -> water -> void); the R3c block below takes it over as an
+     all-ten sweep once the last track lands. The breath-bar sweep this block
+     used to carry is gone with the shared mandate — a v2 track earns its air
+     from articulation, not empty bars. */
+  const WA = ["intro", "menu", "jungle", "ice", "factory", "arena"];
   check(
-    "v2 wave A: the rhythm section never leaves two steps unstruck",
+    "v2 so far: the rhythm section never leaves two steps unstruck",
     WA.every((k) => pulseGap(MUSIC_TRACKS[k].A) <= 1),
     WA.map((k) => k + ":" + pulseGap(MUSIC_TRACKS[k].A)).join(" "),
   );
   check(
-    "v2 wave A: every bar carries lead AND bass — no dropped-out bars",
+    "v2 so far: every bar carries lead AND bass — no dropped-out bars",
     WA.every((k) => {
       const A = MUSIC_TRACKS[k].A,
         b = A.LEN / 8;
@@ -1830,7 +1851,7 @@ function installAC(ac) {
     ).join(" "),
   );
   check(
-    "v2 wave A: dense but never solid, and at least two waveforms",
+    "v2 so far: dense but never solid, and at least two waveforms",
     WA.every(
       (k) =>
         occ(MUSIC_TRACKS[k].A) < MUSIC_TRACKS[k].A.LEN &&
@@ -2204,7 +2225,7 @@ function installAC(ac) {
     ice: [58, 63],
     factory: [56, 62],
     water: [0, 44],
-    arena: [0, 62],
+    arena: [56, 62],
     sand: [0, 38],
     void: [0, 20],
     crown: [40, 58],
