@@ -59,6 +59,14 @@ Four consequences that decide every argument downstream:
    menace. **Banned outright: tritone stings, dissonant clusters (two notes a
    semitone or a tritone apart struck on the same step), and low rumbles
    (nothing below 55 Hz).**
+   *(Re-synced 2026-09-06. The 55 Hz floor meets the one root §1b freezes below
+   it: water's biome root is G1 **49.00**, so the two sentences cannot both be
+   literal. Moving the root would break the ROOT table, the pre-move check and
+   the runtime "water downbeat is 49.00, not menu's 98.00" identity pin — which
+   would INVERT — so the floor ships as a **global uniqueness claim**: among the
+   composed patterns exactly ONE bass note sits under 55 Hz, it is water's
+   downbeat at step 0, and it is 49.00. The exception names its own offender by
+   track, step and value, so it cannot drift into a second note.)*
 4. **Headroom is authored, not mixed in.** Per-channel `v` ceilings are
    `bass ≤ 0.09`, `lead ≤ 0.07`, `hat ≤ 0.02`, `pad ≤ 0.03`, and the **sum of a
    pattern's channel peaks is ≤ 0.20**. (v2's arena sums to 0.268; that is the
@@ -255,7 +263,12 @@ The remaining seven, specified but not yet composed. Each row is binding on its
 own wave; the roots and the two collection facts of §1b are already fixed.
 
 **`water` — flowing, 3-against-4. [WAVE 2]** G Mixolydian · `STEP 0.144`
-(104.2 BPM). Bass `triangle`, lead `sine`, pad `sine`, **no hat** — a calm room.
+(104.2 BPM). Bass `triangle`, lead `triangle`, pad `sine`, **no hat** — a calm
+room. *(Re-synced 2026-09-06: this row and the waveform roster below both said
+lead `sine`, which contradicts §5 row 8 — "exactly one sine lead, and it is
+VOID" — in the same document. The suite encodes row 8, so water shipped a
+`triangle` lead and VOID keeps the score's only `sine` one. The prose was the
+half that was wrong.)*
 Feel: **dotted three-step cells against the eight-step bar**, which is how a
 3-against-4 lilt is spelt on an integer grid; the cells walk out of phase with
 the bar and re-align every three bars. Hook: the dotted `5̂ 6̂ 1̂` cell at bars 0
@@ -274,9 +287,13 @@ the lead outlines a chord per bar in rising thirds rather than stepping. Hook:
 `1̂ 3̂ 5̂ 7̂` rising across two bars, at bars 0 and 4.
 
 **`factory` — playful mechanical staccato. [WAVE 2]** E **Dorian** ·
-`STEP 0.130` (115.4 BPM). Bass `triangle`, lead **`square` @ ≤ 0.035** — the
-score's one square colour, and the only place a chip edge is wanted — hat
-`triangle`. Feel: **short notes, one step long, on a strict 2-against-3
+`STEP 0.130` (115.4 BPM). Bass `triangle`, lead `triangle`, hat **`square`
+@ ≤ 0.035** — the score's one square colour, and the only place a chip edge is
+wanted. *(Re-synced 2026-09-06: this row put the `square` on the LEAD while the
+§5 allow-list the suite encodes admits `square` on a `hat` only. Resolved to the
+hat, and factory's identity survives as "one square colour in the composed
+score, and it is FACTORY's hat" — a pin, where the lead reading was prose.)*
+Feel: **short notes, one step long, on a strict 2-against-3
 interlock**; playful, not menacing. Phrygian's ♭2 goes; the Dorian ♮6 is what
 turns the machine friendly. No pad. Hook: the `1̂ 5̂` pump at bar 0, answered by
 the lead at bar 2.
@@ -336,14 +353,23 @@ wave the occupied set is `{.107 arena, .110 crown, .114 factory, .125 intro,
   must also be rewritten before or with `crown`** if `crown.B`'s hat quotation is
   to keep quoting the *v3* arena; ship `arena` first inside wave 3 and re-derive
   the quote.
+- **As shipped:** the two constraints above are in tension — `arena` had to go
+  first for the quotation and could not take `.125` until `intro` left it — so
+  `arena` shipped at a temporary **`.126`** (119.0 BPM, in band, and vacant) for
+  two commits, through `crown`, and moved to `.125` inside the `intro` commit.
+  The authored ladder is now exactly the one above.
 
 **Waveform roster (v3).** `triangle` is the default for every role; `sine` for
-pads, for the two soft leads (`void`, `water`) and for `menu`'s hat; `square`
-only as a low-velocity colour (`factory`'s lead, `v ≤ 0.035`); **`sawtooth`
-nowhere in the music layer.** Every track still uses at least two distinct
-waveforms. The v2 scarcity markers change accordingly: `sine` lead = VOID
-survives; **`sawtooth` bass = FACTORY does not** — factory's identity becomes its
-staccato and its square colour.
+pads, for the **one** soft lead (`void`) and for `menu`'s hat; `square` only as a
+low-velocity colour (`factory`'s **hat**, `v ≤ 0.035`); **`sawtooth` nowhere in
+the music layer.** Every track still uses at least two distinct waveforms. The v2
+scarcity markers change accordingly: `sine` lead = VOID survives; **`sawtooth`
+bass = FACTORY does not** — factory's identity becomes its staccato and its
+square colour. *(Re-synced 2026-09-06 on both counts: this sentence used to list
+`water` as a second `sine` lead, which §5 row 8 forbids in the same document, and
+to place the `square` on factory's lead, which the allow-list above forbids. Both
+resolved the way the suite reads them — water's lead is `triangle`, factory's
+`square` is the hat.)*
 
 **Per-note velocity** stays legal (`[s, f, d, v?]`) and stays scarce. v3 spells
 accent as a *pitch* choice wherever it can, so the "authored only where the spec
@@ -398,17 +424,17 @@ wave A did, and shrinks by one id per commit.
 | 2 | "the hook returns a second time" on nine of ten (`RETURN`) | same — v2 ids only; v3 tracks pin their **own** hook's return | scoped |
 | 3 | all ten `pulseGap ≤ 1` (A and B) | v3 relaxes to **`≤ 3`**, plus a stronger fact in its place: **bass note spans cover every step of the loop** — the low end never lets go, which is what `pulseGap` was really reaching for | scoped + replaced |
 | 4 | all ten "every bar carries lead AND bass" | kept for v2 ids; v3 keeps `barsWithBass === 8` but drops the lead clause (a spacious room may rest a lead bar) | scoped |
-| 5 | occupancy **bands with floors** (`intro` 28–31, most 58–63) | kept as a per-track band table, with v3 rows: `menu` 32–44, `jungle` 54–62, `void` 34–46 | re-valued |
+| 5 | occupancy **bands with floors** (`intro` 28–31, most 58–63) | kept as a per-track band table. Preview rows `menu` 32–44, `jungle` 54–62, `void` 34–46; **as shipped, the other seven re-valued too** — `ice` 28–40, `factory` 54–62, `water` 34–46, `arena` 42–54, `sand` 44–54, `crown` 58–63, `intro` 14–22 (of its own 32 steps, not 64) | re-valued |
 | 6 | tempo ladder `.107 … .144` (104–140 BPM) | re-valued to the v3 ladder; the **distinctness** clause is unchanged and is what forces the migration order | re-valued |
 | 7 | "exactly one sawtooth bass, and it is FACTORY" | **deleted** at the end of wave 2 — v3 has no sawtooth music timbre. Kept until factory is recomposed, because it is true of the shipped data until then | scoped, then deleted |
-| 8 | "exactly one sine lead, and it is VOID" | **kept**, unchanged — void keeps the sine lead | — |
+| 8 | "exactly one sine lead, and it is VOID" | **kept**, unchanged — void keeps the sine lead. This is the row §2's `water` line and the waveform roster were re-synced against on 2026-09-06: a green pin outranks prose that contradicts it | — |
 | 8a | "VOID is the sparsest of the ten by rhythm-section density" (`bass ∪ hat` strikes fewer steps than anyone else's) | **retired.** It does not survive v3: `water` and `sand` get **no hat**, so their rhythm sections are bass onsets only and will read sparser than void's 32 the moment wave 2 lands — and the failure would name *water* while the disagreement is void's. Replaced by the v3-correct identity claim, **void is quieter than every other track** (channel-peak sum, a comparison rather than a ceiling, so it survives a composer making the track denser): 0.132 against 0.157–0.268 | preview |
 | 9 | menu `A.bass.length === 40` on `0/2/3/4/6`; `A.hat.length === 32` even; `A.lead` 44–56 | `A.bass.length === 34` on `0/2/4/6` + a step-7 pickup in bars 4 and 8; `A.hat.length === 16` on `2/6`; `A.lead.length === 35` | re-valued |
 | 10 | menu roots `73.42 / 49.00 / 55.00 / 73.42` at steps 0/8/16/24 | `98.00 / 82.41 / 65.41 / 73.42` — G–Em–C–D | re-valued |
 | 11 | `B.hat.length === 32`, even steps | `=== 16`, on `2/6`, same skeleton as A | re-valued |
 | 12 | "B tonicizes G major and imports the one F♯ the collection does not own" | "B tonicizes **D major** and imports the F♯ **`menu.A` does not own**" — the marker set and the derived `EXP` are unchanged in *mechanism*, and the claim is narrowed from the score to `menu` (§1b) | re-worded |
 | 13 | "water downbeat is 49.00, not menu's 73.42" / "setTrack menu restores 73.42" | `…not menu's 98.00` / `restores the G2 98.00 identity bass` | re-valued |
-| 14 | `TONIC.menu = 293.66` | `392.00` (G4). `jungle` 293.66 and `void` 493.88 are unchanged | re-valued |
+| 14 | `TONIC.menu = 293.66` | `392.00` (G4). `jungle` 293.66 and `void` 493.88 are unchanged. **`TONIC.intro` moved too, 293.66 → `261.63`** with intro's rewrite into C major hexatonic: that table feeds every interval pin and the score-wide Ionian-pair sweep, so leaving it on D would have measured the wrong degrees on one track and nowhere else | re-valued |
 | 15 | staging: `HAND = menu/arena/void/crown`, `TRANSP = jungle/ice/factory/water/sand` | `jungle` moves to `HAND` in the preview wave; `ice`/`factory`/`water`/`sand` follow on wave 2 | re-valued |
 | 16 | "only CROWN's A sounds a perfect fourth **and** a leading tone" | **kept**, unchanged — and it is a trap for every new collection (§1b) | — |
 | 17 | "sand raises the third to G♯ and is the only A section that sounds it" | **kept**, unchanged — E Mixolydian keeps G♯ | — |
@@ -424,13 +450,18 @@ v3 id list so they never straitjacket a track that has not been rewritten yet:
 | velocity ceiling | `bass ≤ 0.09`, `lead ≤ 0.07`, `hat ≤ 0.02`, `pad ≤ 0.03` |
 | headroom | the sum of a pattern's channel peak `v` is `≤ 0.20` |
 | in-collection | every `bass`/`lead`/`pad` pitch class lies in that **pattern's** declared collection (per-section: A and B may differ). Kills tritone stings and semitone clusters by construction on the pentatonic tracks |
-| no rumble | every `bass` pitch is `≥ 55 Hz` |
+| no rumble | **as shipped:** exactly ONE `bass` note in the composed score sits under 55 Hz — water's G1 `49.00` at step 0 — and every other pitch is `≥ 55 Hz`. Stated as uniqueness rather than as a floor because §1b freezes that root (see §0a.3) |
 | no shared motif | `motifV2Head` is `-1` in the lead and the bass of every v3 pattern |
-| distinct contour | the v3 leads are **pairwise different as `(Δstep, Δsemitone)` sequences** — not as Hz lists, which differ vacuously between keys |
-| distinct feel | the v3 tracks' `bass` step-sets mod 8 are pairwise distinct, and so are their `lead` step-sets mod 8 |
+| distinct contour | **every pattern's** lead is a different `(Δstep, Δsemitone)` sequence — all nineteen, not the ten A sections — not a Hz list, which differs vacuously between keys |
+| distinct feel | **every pattern's** `bass` **groove** is its own: the step-set mod 8 AND the **cut** (the note lengths in steps at each struck residue), pairwise over all nineteen patterns. The cut is half the fact because a step-set alone reads `0/3/6` as 3+3+2 and as 3+4+2 the same way. Scoped separately: `lead` step-sets mod 8 are pairwise distinct across the **ten A sections only** — a B section may sit its melody on another room's grid, and four of them do |
 | distinct triple | no two of the ten share `(root, collection, STEP)`; no two share `STEP` at all |
 | A ≠ B | for each v3 track: `B.hat !== A.hat` (identity), `B`'s bass step-set mod 8 differs from `A`'s, and `B`'s root progression differs from `A`'s |
 | low end holds | the union of a pattern's `bass` note **spans** (`[s, s + d/STEP)`) covers every step of the loop |
+| one square colour | **replaces the retired "one sawtooth bass, and it is FACTORY"** (v3 has no sawtooth in the music layer, so that pin read green over an empty set): the composed score carries exactly one `square` channel and it is **`factory`'s hat**, both sections |
+| ice leaps | `ice`'s lead never steps — no interval between consecutive notes is under a **minor third** — which is what makes "arpeggios, not scales" checkable rather than described |
+| factory interlock | the bass grid and the lead grid coincide **exactly once a bar**, on step 4 — the count, not just the shape, is pinned |
+| crown fanfare | the hook is `1̂ 3̂ 5̂ 8̂` with the **octave HELD** (`d ≥ 4` steps) at bars 0 and 4, and the pad doubles the lead an octave up on `≥ 8` shared steps |
+| intro quotation | `intro`'s lead opens on menu's head `1̂ 3̂ 5̂ 6̂` on 0/2/4/6 from `C4 261.63` — the score's one deliberate cross-track quotation besides `crown.B`'s hat |
 
 ### 6. Verification
 
