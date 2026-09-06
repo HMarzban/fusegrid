@@ -336,9 +336,17 @@ const JUNGLE_A = mkPat(
 /* JUNGLE B — hand-authored, which is new: a transp B shares A's hat array by
    identity and so cannot re-cut a rhythm, and an un-re-cut B is exactly the
    sameness v3 exists to remove. B lifts to A MAJOR PENTATONIC (A B C# E F#),
-   the dominant, and RE-CUTS the tresillo from 0/3/6 to 0/2/5 (durations 2/3/3,
-   still tiling the bar) with the hat moved to 3/6. Same four timbres, same
-   velocities, same note counts in bass and hat — the groove is what moves. */
+   the dominant, with the hat moved to 3/6. Same four timbres, same velocities,
+   same note counts in bass and hat — the groove is what moves.
+   The tresillo LIMPS: even bars cut 2+3+3 on 0/2/5, odd bars 3+2+3 on 0/3/5, so
+   the middle cell falls a step later every second bar and the phrase is two bars
+   long where A's is one. A flat 0/2/5 was arena's A groove note for note
+   (2+3+3, and arena sits one rung down the tempo ladder), which is a room
+   arriving twice; the limp is what makes this jungle's own. The odd bar's middle
+   cell lands WITH the hat on 3 — the pocket it vacates is the one the ear
+   follows. Occupancy 60 -> 56, inside jungle's 54-62 band: every onset outside
+   0/2/5 doubles one the lead or the hat already strikes, so this groove is
+   bought at exactly four steps and no more were available. */
 const JUNGLE_B = mkPat(
   0.132,
   64,
@@ -351,11 +359,21 @@ const JUNGLE_B = mkPat(
     [110.0, 164.81, 220.0],
     [123.47, 123.47, 185.0],
     [82.41, 123.47, 164.81],
-  ].flatMap((c, b) => [
-    [b * 8, c[0], 2],
-    [b * 8 + 2, c[1], 3],
-    [b * 8 + 5, c[2], 3],
-  ]),
+  ].flatMap((c, b) => {
+    const o = b * 8;
+    /* even bar 2+3+3 on 0/2/5, odd bar 3+2+3 on 0/3/5 — the limp */
+    return b % 2
+      ? [
+          [o, c[0], 3],
+          [o + 3, c[1], 2],
+          [o + 5, c[2], 3],
+        ]
+      : [
+          [o, c[0], 2],
+          [o + 2, c[1], 3],
+          [o + 5, c[2], 3],
+        ];
+  }),
   [
     [1, 1108.73, 2],
     [4, 987.77, 3],
@@ -438,10 +456,16 @@ const ICE_A = mkPat(
 /* ICE B — hand-authored, replacing the whole-tone transposition: a transp B
    shares A's hat array by identity and cannot re-cut anything. B lifts a fifth
    to C LYDIAN, which swaps F natural for F# and keeps the mode's colour from
-   the other end, HALVES the bass to two four-step notes on 0 and 4 so the room
-   starts to move, and shifts the glint from the half-bar to step 2. The lead
-   keeps its strike-and-ring shape and answers A's rising groups with falling
-   ones. */
+   the other end, splits A's one-note bar in TWO so the room starts to move, and
+   shifts the glint from the half-bar to step 2. The lead keeps its
+   strike-and-ring shape and answers A's rising groups with falling ones.
+   The split is UNEVEN — a six-step bell on 0 and a two-step answer on 6 that
+   lifts into the next bar — not the even 4+4 it shipped as, because 0/4 at four
+   steps each is void's half-time bed exactly, and void is the other slow, wide,
+   sparse room in the score. A bell's second strike arriving late is also the
+   truer reading: 4+4 is a pulse, 6+2 is a decay and a pickup. Bass onsets plus
+   the glint still gap by three at most, which is what ice's sparse grid is held
+   to; a second strike any earlier than 6 breaks it. */
 const ICE_B = mkPat(
   0.135,
   64,
@@ -455,8 +479,8 @@ const ICE_B = mkPat(
     [110.0, 82.41],
     [98.0, 130.81],
   ].flatMap(([r, q], b) => [
-    [b * 8, r, 4],
-    [b * 8 + 4, q, 4],
+    [b * 8, r, 6],
+    [b * 8 + 6, q, 2],
   ]),
   [
     [1046.5, 783.99, 1318.51, 880.0],
@@ -531,10 +555,19 @@ const FACTORY_A = mkPat(
   ["triangle", 0.08, "triangle", 0.06, "square", 0.016],
 );
 /* FACTORY B — hand-authored, and it INVERTS the interlock rather than moving
-   it: the bass takes the threes (0/3/6, durations 3/3/2) and the lead takes the
-   twos (staccato on every even step), so the same machine reads as running the
-   other way round. Down a whole tone to D DORIAN, and the square blips move to
-   1 and 5. Step 7 is B's deliberate hole. */
+   it: the bass takes the threes and the lead takes the twos (staccato on every
+   even step), so the same machine reads as running the other way round. Down a
+   whole tone to D DORIAN, and the square blips move to 1 and 5.
+   The threes now run PAST the barline — 3+3+3+3+2+2 over a two-bar phrase, so
+   the cells land 0/3/6 in the even bar, 9/12/14 in the odd one, and the pair of
+   twos at the end is the cog re-syncing with the bar. This is the literal form
+   of the room's own 2-against-3: in A the two grids coincide once a bar, in B
+   the three-cell refuses the bar for thirteen steps and then catches up. Inside
+   the bar at 3+3+2 it was jungle's A tresillo note for note, on the same D2 root
+   and one rung away on the tempo ladder — the closest two rooms came to sounding
+   alike anywhere in the score. Step 7 is still B's hole (and 15 with it); the
+   odd bar adds one at 11, where the cog has slipped. Occupancy 56 -> 52: the
+   holes are the phrase, not a thinning. */
 const FACTORY_B = mkPat(
   0.13,
   64,
@@ -547,11 +580,22 @@ const FACTORY_B = mkPat(
     [73.42, 146.83, 130.81],
     [110.0, 220.0, 164.81],
     [98.0, 196.0, 146.83],
-  ].flatMap((c, b) => [
-    [b * 8, c[0], 3],
-    [b * 8 + 3, c[1], 3],
-    [b * 8 + 6, c[2], 2],
-  ]),
+  ].flatMap((c, b) => {
+    /* even bar 0/3/6 at 3+3+3 — the third cell rings PAST the barline; the odd
+       bar picks the chain up at 1/4/6 (steps 9/12/14) and closes 3+2+2 */
+    const cut = b % 2
+      ? [
+          [1, 3],
+          [4, 2],
+          [6, 2],
+        ]
+      : [
+          [0, 3],
+          [3, 3],
+          [6, 3],
+        ];
+    return cut.map(([s, d], i) => [b * 8 + s, c[i], d]);
+  }),
   [
     [293.66, 440.0, 349.23, 440.0],
     [293.66, 493.88, 392.0, 440.0],
@@ -639,10 +683,17 @@ const WATER_A = mkPat(
 /* WATER B — hand-authored: the lift is to the FLAT SEVENTH, F major pentatonic
    (F G A C D), five notes G Mixolydian already owns, so the modulation is modal
    rather than chromatic and the room never changes colour. What changes is the
-   phase: A's cells walk ACROSS the bar, B's sit INSIDE it — 0/3/6 of every bar,
-   durations 3/3/2 — so the same dotted lilt suddenly agrees with the barline
-   and the second half of the cycle feels like it has settled. The lead answers
-   in the pockets on 1/4/7. B opens on F2 87.31 where A opens on G1 49.00. */
+   phase: A's cells walk ACROSS the bar, B's sit INSIDE it, so the same dotted
+   lilt suddenly agrees with the barline and the second half of the cycle feels
+   like it has settled. The lead answers in the pockets on 1/4/7. B opens on
+   F2 87.31 where A opens on G1 49.00.
+   Inside the bar the cut TURNS like a tide: 3+3+2 on 0/3/6 leaning late, then
+   2+3+3 on 0/2/5 leaning early, and back. A flat 3+3+2 every bar was jungle's A
+   tresillo — a staccato bounce, which is the one thing this room is not — and
+   the turn is what a dotted figure does in water rather than in a canopy. Both
+   bars still start on the downbeat, which is the settling B exists for, and bass
+   onsets alone still gap by no more than two, the pin that stands in for the hat
+   this room does not have. */
 const WATER_B = mkPat(
   0.144,
   64,
@@ -655,11 +706,21 @@ const WATER_B = mkPat(
     [87.31, 130.81, 174.61],
     [110.0, 146.83, 130.81],
     [130.81, 196.0, 146.83],
-  ].flatMap(([r, q, o], b) => [
-    [b * 8, r, 3],
-    [b * 8 + 3, q, 3],
-    [b * 8 + 6, o, 2],
-  ]),
+  ].flatMap(([r, q, o], b) => {
+    const t = b * 8;
+    /* the tide turns: late-leaning 3+3+2, then early-leaning 2+3+3 */
+    return b % 2
+      ? [
+          [t, r, 2],
+          [t + 2, q, 3],
+          [t + 5, o, 3],
+        ]
+      : [
+          [t, r, 3],
+          [t + 3, q, 3],
+          [t + 6, o, 2],
+        ];
+  }),
   [
     [261.63, 293.66, 349.23],
     [392.0, 440.0, 523.25],
@@ -766,9 +827,16 @@ const ARENA_A = mkPat(
   ],
 );
 /* ARENA B — hand-authored, and it moves the weight rather than the pitch: down
-   a fifth to D DORIAN, the bass re-cut to 3+2+3 on 0/3/5, and the hat pushed
-   OFF the beat onto 1/3/5 so the room's drive comes from the backbeat instead
-   of the downbeat. Step 7 is B's deliberate hole. */
+   a fifth to D DORIAN, and the hat pushed OFF the beat onto 1/3/5 so the room's
+   drive comes from the backbeat instead of the downbeat.
+   The bass keeps A's tresillo HEAD and then stops running: 2+3 on 0/2 as in A,
+   and the third cell HELD four steps from 4 to the barline instead of striking
+   again — the fanfare planting its feet where A keeps stepping. 3+2+3 on 0/3/5
+   was sand's A groove exactly, and a lazy desert bar under an arena's backbeat
+   was the loudest wrong pairing in the score. Steps 6 and 7 are B's deliberate
+   hole and the reason its onset grid gaps by two where A's never gaps by more
+   than one: with the hat on 1/3/5 they are the only adjacent pair left, so a
+   bass note anywhere past 4 would spend the backbeat this section is built on. */
 const ARENA_B = mkPat(
   0.125,
   64,
@@ -782,9 +850,10 @@ const ARENA_B = mkPat(
     [87.31, 174.61, 130.81],
     [110.0, 220.0, 164.81],
   ].flatMap((c, b) => [
-    [b * 8, c[0], 3],
-    [b * 8 + 3, c[1], 2],
-    [b * 8 + 5, c[2], 3],
+    [b * 8, c[0], 2],
+    [b * 8 + 2, c[1], 3],
+    /* the third cell is HELD to the barline, not struck again */
+    [b * 8 + 4, c[2], 4],
   ]),
   [
     [587.33, 440.0, 587.33, 698.46],
@@ -868,9 +937,15 @@ const SAND_A = mkPat(
 );
 /* SAND B — hand-authored: down a fifth to A MIXOLYDIAN, which trades the G#
    for a G natural and lets the room cool a shade without changing its clothes.
-   The dotted cut moves from 3+2+3 to 3+3+2 on 0/3/6, so B leans later in the
-   bar than A does, and the lead answers on 1/4/7 — one step behind, as in A,
-   but now landing on the last step of the bar rather than inside it. */
+   The dotted cut leans LATER than A's — 3+3+2 on 0/3/6 — and the lead answers on
+   1/4/7, one step behind as in A but now landing on the last step of the bar
+   rather than inside it.
+   It does not hold that lean: every second bar the last cell SLIPS back to
+   3+2+3, so the phrase is two bars long and the room never quite settles into a
+   count — which is what "lazy" means here, and what a flat 3+3+2 could not say,
+   because flat 3+3+2 is jungle's A tresillo at a slower tempo and this room has
+   no hat to tell them apart. The slipped bar is A's own cut, arriving as the
+   answer rather than as the statement. */
 const SAND_B = mkPat(
   0.148,
   64,
@@ -883,11 +958,21 @@ const SAND_B = mkPat(
     [110.0, 164.81, 123.47],
     [138.59, 110.0, 164.81],
     [196.0, 164.81, 146.83],
-  ].flatMap((c, b) => [
-    [b * 8, c[0], 3],
-    [b * 8 + 3, c[1], 3],
-    [b * 8 + 6, c[2], 2],
-  ]),
+  ].flatMap((c, b) => {
+    const t = b * 8;
+    /* the lean slips back every second bar: 3+3+2, then 3+2+3 */
+    return b % 2
+      ? [
+          [t, c[0], 3],
+          [t + 3, c[1], 2],
+          [t + 5, c[2], 3],
+        ]
+      : [
+          [t, c[0], 3],
+          [t + 3, c[1], 3],
+          [t + 6, c[2], 2],
+        ];
+  }),
   [
     [659.26, 587.33, 554.37],
     [493.88, 440.0, 493.88],

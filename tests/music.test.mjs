@@ -194,6 +194,30 @@ const contour = (chan) =>
     .join(",");
 const stepSet = (chan) =>
   [...new Set(chan.map((n) => n.s % 8))].sort((a, b) => a - b).join(",");
+/* A groove is WHERE the bass lands and HOW the bar is divided between those
+   landings. A step-set alone reads 0/3/6 as 3+3+2 and 0/3/6 as 3+4+2 as the
+   same rhythm, and an ear does not: the CUT is the note lengths in steps at
+   each struck residue, and a pattern's groove is the pair. Both are read mod 8
+   and the cut keeps a SET per residue, so the signature is blind to WHICH bar a
+   length falls in — a two-bar phrase and its mirror (3+2+3 | 3+3+2 against
+   3+3+2 | 3+2+3) collapse to one signature. That is the one thing this sweep
+   cannot separate; nothing in the score relies on it today (the nineteen are
+   distinct on step-sets alone), and a future mirrored pair must be heard, not
+   waved through on a green line here. */
+const bassCut = (P) => {
+  const m = new Map();
+  for (const n of P.bass) {
+    const k = n.s % 8,
+      d = Math.max(1, Math.round(n.d / P.STEP));
+    if (!m.has(k)) m.set(k, new Set());
+    m.get(k).add(d);
+  }
+  return [...m.keys()]
+    .sort((a, b) => a - b)
+    .map((k) => [...m.get(k)].sort((a, b) => a - b).join("|"))
+    .join(",");
+};
+const groove = (P) => stepSet(P.bass) + " [" + bassCut(P) + "]";
 const peakSum = (P) =>
   chansOf(P).reduce((t, a) => t + Math.max(...a.map((n) => n.v)), 0);
 const patsOf = (id) =>
@@ -1542,6 +1566,32 @@ function installAC(ac) {
       soundsDeg(P, D, 1) === false &&
       soundsDeg({ bass: [], lead: [], hat: mk([[0, 349.23]]) }, D, 3) === false,
   );
+  /* bassCut / groove, proved on synthetic bars: the cut is what separates two
+     patterns that LAND on the same steps but divide the bar differently, which
+     is the half of "distinct feel" a step-set cannot see. */
+  const bars8 = (cells) => ({
+    LEN: cells.length > 3 ? 16 : 8,
+    STEP: 0.1,
+    bass: cells.map(([s, d]) => ({ s, f: 73.42, d: d * 0.1, t: "triangle", v: 0.08 })),
+  });
+  const T332 = bars8([[0, 3], [3, 3], [6, 2]]),
+    T342 = bars8([[0, 3], [3, 4], [6, 2]]);
+  check(
+    "bassCut reads note LENGTHS in steps, one entry per struck residue",
+    bassCut(T332) === "3,3,2",
+    bassCut(T332),
+  );
+  check(
+    "groove separates one step-set cut two ways — 0/3/6 as 3+3+2 is not 3+4+2",
+    stepSet(T332.bass) === stepSet(T342.bass) && groove(T332) !== groove(T342),
+    groove(T332) + " vs " + groove(T342),
+  );
+  check(
+    "a residue struck at two lengths keeps both — a two-bar phrase is ONE groove",
+    bassCut(bars8([[0, 3], [3, 2], [5, 3], [8, 3], [11, 3], [14, 2]])) ===
+      "3,2|3,3,2",
+    bassCut(bars8([[0, 3], [3, 2], [5, 3], [8, 3], [11, 3], [14, 2]])),
+  );
 }
 
 // ---- intro: a short warm bed (C major hexatonic, quoting menu's head) ----
@@ -1793,13 +1843,18 @@ function installAC(ac) {
     occ(A) >= 42 && occ(A) <= 54,
     occ(A) + "/" + occ(B),
   );
+  /* B keeps A's 2+3 tresillo head and HOLDS the third cell to the barline
+     (2+3+4 on 0/2/4) instead of striking it. It shipped as 3+2+3 on 0/3/5,
+     which is sand's A groove note for note — a lazy desert bar under an arena
+     backbeat. Steps 6-7 are the hole that buys the pulseGap-2 pin above: with
+     the hat on 1/3/5 they are the only adjacent pair left in the bar. */
   check(
-    "arena B re-cuts to 0/3/5 in D Dorian and moves the hat off the beat",
+    "arena B holds the tresillo's third cell — 2+3+4 on 0/2/4, hat off the beat",
     B.hat !== A.hat &&
-      stepSet(B.bass) === "0,3,5" &&
+      groove(B) === "0,2,4 [2,3,4]" &&
       stepSet(B.hat) === "1,3,5" &&
       B.bass[0].f === 73.42,
-    stepSet(B.bass) + " / " + stepSet(B.hat),
+    groove(B) + " / hat " + stepSet(B.hat),
   );
   check("arena register lanes never cross, A and B", lanes(A) && lanes(B));
 }
@@ -2157,13 +2212,16 @@ function installAC(ac) {
     occ(A) >= 28 && occ(A) <= 40,
     occ(A) + "/" + occ(B),
   );
+  /* B splits A's one-note bar UNEVENLY — a six-step bell and a two-step answer
+     that lifts into the next bar. An even 4+4 on 0/4 was void's half-time bed
+     exactly, and void is the other slow, wide, sparse room in the score. */
   check(
-    "ice B is hand-authored now — C Lydian, bass halved to 0/4, hat moved to 2",
+    "ice B is hand-authored now — C Lydian, bell split 6+2 on 0/6, hat moved to 2",
     B.hat !== A.hat &&
-      stepSet(B.bass) === "0,4" &&
+      groove(B) === "0,6 [6,2]" &&
       stepSet(B.hat) === "2" &&
       B.bass[0].f === 130.81,
-    stepSet(A.bass) + " vs " + stepSet(B.bass),
+    groove(A) + " vs " + groove(B),
   );
   check("ice register lanes never cross, A and B", lanes(A) && lanes(B));
 }
@@ -2247,14 +2305,19 @@ function installAC(ac) {
     "jungle B is hand-authored now, not transp — it owns its own hat array",
     B.hat !== A.hat,
   );
+  /* The tresillo LIMPS: 2+3+3 on 0/2/5, then 3+2+3 on 0/3/5. A flat 0/2/5 was
+     arena's A groove note for note, one rung down the tempo ladder. The phrase
+     string pins the bar PARITY, which the groove signature cannot see (it keeps
+     a set of lengths per residue and so reads a phrase and its mirror alike). */
   check(
-    "jungle B re-CUTS the tresillo to 0/2/5 and moves the hat to 3/6",
-    stepSet(B.bass) === "0,2,5" &&
+    "jungle B LIMPS the tresillo — 2+3+3 then 3+2+3, hat on 3/6",
+    groove(B) === "0,2,3,5 [2|3,3,2,3]" &&
       stepSet(B.hat) === "3,6" &&
-      B.bass.every(
-        (n) => Math.round(n.d / B.STEP) === (n.s % 8 === 0 ? 2 : 3),
-      ),
-    stepSet(B.bass) + " / " + stepSet(B.hat),
+      B.bass
+        .filter((n) => n.s < 16)
+        .map((n) => n.s + ":" + Math.round(n.d / B.STEP))
+        .join(" ") === "0:2 2:3 5:3 8:3 11:2 13:3",
+    groove(B) + " / hat " + stepSet(B.hat),
   );
 }
 
@@ -2332,13 +2395,22 @@ function installAC(ac) {
     occ(A) >= 54 && occ(A) <= 62 && occ(A) < A.LEN,
     occ(A) + "/" + occ(B),
   );
+  /* The threes run PAST the barline — 3+3+3+3+2+2 over two bars, cells on
+     0/3/6 then 9/12/14 — which is 2-against-3 stated at phrase length: A's two
+     grids coincide once a bar, B's three-cell refuses the bar for thirteen steps
+     and then catches up. Inside the bar at 3+3+2 it was jungle's A tresillo note
+     for note, on the same D2 root and one rung away on the ladder. */
   check(
-    "factory B INVERTS the interlock — bass in threes, lead in twos",
+    "factory B INVERTS the interlock — bass threes ACROSS the bar, lead in twos",
     B.hat !== A.hat &&
-      stepSet(B.bass) === "0,3,6" &&
+      groove(B) === "0,1,3,4,6 [3,3,3,2,2|3]" &&
       stepSet(B.lead) === "0,2,4,6" &&
+      B.bass
+        .filter((n) => n.s < 16)
+        .map((n) => n.s + ":" + Math.round(n.d / B.STEP))
+        .join(" ") === "0:3 3:3 6:3 9:3 12:2 14:2" &&
       B.bass[0].f === 73.42,
-    stepSet(B.bass) + " / " + stepSet(B.lead),
+    groove(B) + " / lead " + stepSet(B.lead),
   );
   check("factory register lanes never cross, A and B", lanes(A) && lanes(B));
 }
@@ -2429,19 +2501,23 @@ function installAC(ac) {
   );
   /* B lifts to the flat seventh — F major pentatonic, five notes G Mixolydian
      already owns, so the lift is modal rather than chromatic — and RE-PHASES
-     the cells into the bar (0/3/6 every bar) instead of across it. Note that
-     the shared A-vs-B root clause reads bass at steps 0/8/16/24 and A's walking
-     grid only lands on two of those, so here that clause is carried by step 0:
-     B opens on F2 87.31 where A opens on G1 49.00. */
+     the cells into the bar (both bars start on the downbeat) instead of across
+     it. Inside the bar the cut TURNS: 3+3+2 leaning late, then 2+3+3 leaning
+     early. A flat 3+3+2 every bar was jungle's A tresillo, a staccato bounce,
+     which is the one thing this room is not. Note that the shared A-vs-B root
+     clause reads bass at steps 0/8/16/24 and A's walking grid only lands on two
+     of those, so here that clause is carried by step 0: B opens on F2 87.31
+     where A opens on G1 49.00. */
   check(
-    "water B lifts to the flat 7th and re-phases the cells INTO the bar (0/3/6)",
-    stepSet(B.bass) === "0,3,6" &&
+    "water B lifts to the flat 7th and TURNS the cut inside the bar, 3+3+2 / 2+3+3",
+    groove(B) === "0,2,3,5,6 [2|3,3,3,3,2]" &&
       B.bass.length === 24 &&
       B.bass[0].f === 87.31 &&
-      B.bass.every(
-        (n) => Math.round(n.d / B.STEP) === (n.s % 8 === 6 ? 2 : 3),
-      ),
-    stepSet(A.bass) + " vs " + stepSet(B.bass),
+      B.bass
+        .filter((n) => n.s < 16)
+        .map((n) => n.s + ":" + Math.round(n.d / B.STEP))
+        .join(" ") === "0:3 3:3 6:2 8:2 10:3 13:3",
+    groove(A) + " vs " + groove(B),
   );
   check("water register lanes never cross, A and B", lanes(A) && lanes(B));
 }
@@ -2535,10 +2611,19 @@ function installAC(ac) {
     occ(A) >= 44 && occ(A) <= 54,
     occ(A) + "/" + occ(B),
   );
+  /* B leans later than A (3+3+2 on 0/3/6) and does not hold the lean: every
+     second bar the last cell SLIPS back to A's own 3+2+3, so the phrase is two
+     bars long and the room never settles into a count. A flat 3+3+2 is jungle's
+     A tresillo at a slower tempo, and this room has no hat to tell them apart. */
   check(
-    "sand B walks down a fifth to A Mixolydian and re-cuts the bass to 0/3/6",
-    stepSet(B.bass) === "0,3,6" && B.bass[0].f === 110.0,
-    stepSet(A.bass) + " vs " + stepSet(B.bass),
+    "sand B walks down a fifth to A Mixolydian and SLIPS its lean every second bar",
+    groove(B) === "0,3,5,6 [3,2|3,3,2]" &&
+      B.bass[0].f === 110.0 &&
+      B.bass
+        .filter((n) => n.s < 16)
+        .map((n) => n.s + ":" + Math.round(n.d / B.STEP))
+        .join(" ") === "0:3 3:3 6:2 8:3 11:2 13:3",
+    groove(A) + " vs " + groove(B),
   );
   check("sand register lanes never cross, A and B", lanes(A) && lanes(B));
 }
@@ -2816,34 +2901,47 @@ function installAC(ac) {
   /* "Different from the other one", pinned two ways. A Hz-list comparison
      between tracks in different keys is VACUOUSLY unequal and pins nothing; a
      (delta-step, delta-semitone) contour is the melodic shape, and a step-set
-     mod 8 is the groove. Both quantify pairwise over the composed ids, so they
-     are empty on the first commit of a wave and bite from the second. */
+     plus its CUT is the groove.
+     Scope, which is the whole point of this round: the first two sweeps run
+     over every PATTERN in the score — nineteen of them, all ten A sections and
+     the nine Bs — not over the ten A sections alone. Quantifying over `.A` let
+     four B sections ship on a groove another pattern already owned
+     (`factory.B`/`water.B`/`sand.B` all landed on `jungle.A`'s tresillo,
+     `jungle.B` on `arena.A`, `ice.B` on `void.A`, `arena.B` on `sand.A`), and a
+     room the player hears in its B half is a room they hear. The lead STEP-SET
+     clause stays scoped to the A sections deliberately: a B section may sit its
+     melody on the same grid as another room's (four of them do, and menu's own
+     two sections share one), because a section is separated by its contour and
+     by the low end under it, not by which steps its tune starts on. */
+  const PPAIRS = [];
+  for (let i = 0; i < PATS.length; i++)
+    for (let j = i + 1; j < PATS.length; j++) PPAIRS.push([PATS[i], PATS[j]]);
+  const cdup = PPAIRS.filter(
+    ([[, a], [, b]]) => contour(a.lead) === contour(b.lead),
+  ).map(([[n], [m]]) => n + "=" + m);
+  check(
+    "v3: every pattern's lead contour is its own SHAPE, not a Hz list — all 19",
+    cdup.length === 0,
+    cdup.join(" ") || PATS.length + " patterns, " + PPAIRS.length + " pairs",
+  );
+  const gdup = PPAIRS.filter(
+    ([[, a], [, b]]) => groove(a) === groove(b),
+  ).map(([[n], [m]]) => n + "=" + m);
+  check(
+    "v3: no two patterns in the score share a bass groove — step-set AND cut",
+    gdup.length === 0,
+    gdup.join(" ") || PATS.map(([n, P]) => n + " " + groove(P)).join(" | "),
+  );
   const pairs = [];
   for (let i = 0; i < V3.length; i++)
     for (let j = i + 1; j < V3.length; j++) pairs.push([V3[i], V3[j]]);
   check(
-    "v3: composed lead contours are pairwise different as SHAPES, not as Hz",
+    "v3: composed lead step-sets are pairwise distinct across the ten A sections",
     pairs.every(
       ([a, b]) =>
-        contour(MUSIC_TRACKS[a].A.lead) !== contour(MUSIC_TRACKS[b].A.lead),
-    ),
-    pairs.map(([a, b]) => a + "/" + b).join(" ") || "(1 composed, no pair yet)",
-  );
-  check(
-    "v3: composed bass and lead step-sets are pairwise distinct grooves",
-    pairs.every(
-      ([a, b]) =>
-        stepSet(MUSIC_TRACKS[a].A.bass) !== stepSet(MUSIC_TRACKS[b].A.bass) &&
         stepSet(MUSIC_TRACKS[a].A.lead) !== stepSet(MUSIC_TRACKS[b].A.lead),
     ),
-    V3.map(
-      (k) =>
-        k +
-        " b" +
-        stepSet(MUSIC_TRACKS[k].A.bass) +
-        " l" +
-        stepSet(MUSIC_TRACKS[k].A.lead),
-    ).join(" | "),
+    V3.map((k) => k + " l" + stepSet(MUSIC_TRACKS[k].A.lead)).join(" | "),
   );
   /* No two of the ten share (root, STEP) — the stronger half of "no two share
      root + collection + STEP", and the clause that forces the migration order. */
