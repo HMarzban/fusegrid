@@ -1716,8 +1716,10 @@ function installAC(ac) {
     "void is the sparsest of the ten by pattern density, and 58-63 of 64 steps",
     occ(A) >= 58 &&
       occ(A) <= 63 &&
+      occ(B) >= 58 &&
+      occ(B) <= 63 &&
       others.every((k) => rhythm(MUSIC_TRACKS[k].A) > rhythm(A)),
-    occ(A) + " occ, rhythm " + rhythm(A),
+    occ(A) + "/" + occ(B) + " occ, rhythm " + rhythm(A),
   );
   check("void B is hand-authored — its hat is not A's array", B.hat !== A.hat);
   check("void register lanes never cross, A and B", lanes(A) && lanes(B));
@@ -1943,19 +1945,34 @@ function installAC(ac) {
       return !motifV2At(MUSIC_TRACKS[k].A[ch], at, TONIC[k]);
     }).join(","),
   );
-  /* And it comes back inside one pass everywhere it can: eight of the ten
-     restate at the loop's midpoint. intro is 32 steps long and restates at its
-     own bar 3; factory answers in the lead 8 steps later instead. */
+  /* And it comes back inside one pass: nine of the ten state it a SECOND time,
+     at a position that is not the one the HOOK table just checked. intro is 32
+     steps long and restates at its own bar 3; factory answers in the lead 8
+     steps later; everyone else restates at the loop's midpoint. ARENA is
+     excluded by name rather than by re-checking step 15 — its anticipation
+     head is stated once by design, and asserting the same step twice would
+     read green while testing nothing. */
+  const RETURN = {
+    intro: 16,
+    menu: 32,
+    jungle: 32,
+    ice: 32,
+    factory: 8,
+    water: 32,
+    sand: 32,
+    void: 32,
+    crown: 32,
+  };
   check(
-    "v2, all ten: the hook returns inside a single pass",
-    ALL.every((k) => {
-      const A = MUSIC_TRACKS[k].A;
-      if (k === "factory") return motifV2At(A.lead, 8, TONIC[k]);
-      if (k === "intro") return motifV2At(A.lead, 16, TONIC[k]);
-      if (k === "arena") return motifV2At(A.lead, 15, TONIC[k]);
-      return motifV2At(A.lead, 32, TONIC[k]);
-    }),
-    ALL.join(","),
+    "v2, nine of ten: the hook returns a second time inside a single pass",
+    Object.keys(RETURN).every((k) =>
+      motifV2At(MUSIC_TRACKS[k].A.lead, RETURN[k], TONIC[k]),
+    ) &&
+      !Object.keys(RETURN).includes("arena") &&
+      Object.keys(RETURN).length === 9,
+    Object.keys(RETURN)
+      .filter((k) => !motifV2At(MUSIC_TRACKS[k].A.lead, RETURN[k], TONIC[k]))
+      .join(","),
   );
 
 }
