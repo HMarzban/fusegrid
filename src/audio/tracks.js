@@ -753,46 +753,88 @@ const ARENA_B = mkPat(
   ],
 );
 /* SAND — heat-shimmer, mirage. E Phrygian natural 3 on E: FACTORY's mode with
-   the third raised, the same machine under a hotter sun. STEP 0.139 (108 BPM).
-   The bass opens on the drone FIFTH B2 rather than the tonic, which is what
-   lets sand share E with FACTORY while keeping the eight biome roots distinct
-   and holding the whole score to ONE chromatic guest here — the raised third
-   G#. Three tacet-heavy drone notes are the entire bass part.
-   The lead states the motif with a one-step appoggiatura leaning into that G#:
-   a full extra step at low velocity, since the engine has no sub-step grace
-   notes. Every phrase crescendos through stepped [s,f,d,v] velocities and then
-   drops out rather than holding one level — the heat waves — over long trailing
-   rests: four of the eight bars are empty of lead entirely. Mirage is things
-   fading, not looping cleanly. */
+   the third raised, the same machine under a hotter sun. STEP 0.134 (112 BPM).
+   The bass still opens on the drone FIFTH B2 123.47 — which is what lets sand
+   share E with FACTORY while keeping the eight biome roots distinct, and holds
+   the whole score to ONE chromatic guest here, the raised third G#. What has
+   gone is the drone itself: three tacet notes of eight-plus steps are now a
+   moving root-fifth pattern, four hits a bar on 0, 3, 5 and 7 of all eight
+   bars, weighted to the fifth (three of the four) and putting two of those
+   fifths off the beat. The four sustains meet end to end, so the shimmer never
+   drops out, and the hat takes the beats the bass leaves — 2, 4 and 6.
+   The lead states the motif at bars 1 and 5 and keeps the one-step
+   appoggiatura leaning into the G#: a quiet step immediately before it, since
+   the engine has no sub-step grace notes. It still swells through stepped
+   [s,f,d,v] velocities — sand's lead and water's bass are the only two
+   channels in the score that author per-note velocity — but the swell now
+   decorates a bouncing bass instead of trailing off into empty bars. Mirage is
+   heat moving, not sound stopping. Step 57 is the loop's one unstruck step. */
 const SAND_A = mkPat(
-  0.139,
+  0.134,
   64,
   [
-    [0, 123.47, 20],
-    [24, 82.41, 12],
-    [44, 123.47, 16],
-  ],
+    [123.47, 82.41],
+    [130.81, 87.31],
+    [123.47, 82.41],
+    [164.81, 110.0],
+    [123.47, 82.41],
+    [130.81, 87.31],
+    [98.0, 65.41],
+    [123.47, 82.41],
+  ].flatMap(([q, r], b) => [
+    [b * 8, q, 3],
+    [b * 8 + 3, r, 2],
+    [b * 8 + 5, q, 2],
+    [b * 8 + 7, q, 1],
+  ]),
   [
-    [0, 329.63, 1, 0.04],
-    [1, 349.23, 1, 0.03],
-    [2, 415.3, 1, 0.06],
-    [3, 493.88, 1, 0.07],
-    [4, 523.25, 3, 0.09],
-    [7, 493.88, 2, 0.05],
-    [16, 329.63, 1, 0.04],
-    [17, 415.3, 2, 0.07],
-    [19, 493.88, 3, 0.09],
-    [32, 659.26, 1, 0.04],
-    [33, 698.46, 1, 0.03],
-    [34, 830.61, 1, 0.06],
-    [35, 987.77, 1, 0.08],
-    [36, 1046.5, 3, 0.1],
-    [39, 987.77, 2, 0.05],
-    [48, 415.3, 1, 0.05],
-    [49, 523.25, 1, 0.07],
-    [51, 493.88, 4, 0.09],
+    [0, 329.63, 1, 0.05],
+    [1, 415.3, 1, 0.08],
+    [2, 493.88, 1, 0.08],
+    [3, 523.25, 2, 0.09],
+    [5, 493.88, 1, 0.07],
+    [6, 440.0, 1, 0.06],
+    [7, 415.3, 1, 0.06],
+    [8, 349.23, 1, 0.06],
+    [9, 440.0, 1, 0.07],
+    [11, 523.25, 2, 0.08],
+    [13, 440.0, 1, 0.06],
+    [15, 349.23, 1, 0.05],
+    [16, 349.23, 1, 0.04],
+    [17, 415.3, 2, 0.09],
+    [19, 493.88, 1, 0.07],
+    [21, 440.0, 1, 0.06],
+    [23, 415.3, 1, 0.06],
+    [24, 440.0, 1, 0.06],
+    [25, 523.25, 1, 0.07],
+    [27, 659.26, 2, 0.09],
+    [29, 523.25, 1, 0.07],
+    [31, 440.0, 1, 0.05],
+    [32, 659.26, 1, 0.05],
+    [33, 830.61, 1, 0.08],
+    [34, 987.77, 1, 0.08],
+    [35, 1046.5, 2, 0.09],
+    [37, 987.77, 1, 0.07],
+    [38, 880.0, 1, 0.06],
+    [39, 830.61, 1, 0.06],
+    [40, 698.46, 1, 0.06],
+    [41, 880.0, 1, 0.07],
+    [43, 1046.5, 2, 0.08],
+    [45, 880.0, 1, 0.06],
+    [47, 698.46, 1, 0.05],
+    [48, 523.25, 1, 0.06],
+    [49, 659.26, 1, 0.07],
+    [51, 830.61, 2, 0.09],
+    [53, 659.26, 1, 0.07],
+    [55, 523.25, 1, 0.05],
+    [56, 493.88, 1, 0.06],
+    [59, 440.0, 1, 0.06],
+    [61, 415.3, 1, 0.05],
+    [63, 329.63, 2, 0.04],
   ],
-  [0, 1, 2, 3, 4, 5].map((b) => [b * 8 + 6, 2800, 1]),
+  [0, 1, 2, 3, 4, 5, 6, 7].flatMap((b) =>
+    [2, 4, 6].map((o) => [b * 8 + o, 2800, 1]),
+  ),
   ["triangle", 0.07, "square", 0.07, "triangle", 0.014, "sine", 0.025],
   [
     [12, 207.65, 4],

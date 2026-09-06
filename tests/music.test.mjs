@@ -883,7 +883,7 @@ function installAC(ac) {
   );
   check(
     "sand void crown STEP and first bass",
-    MUSIC_TRACKS.sand.A.STEP === 0.139 &&
+    MUSIC_TRACKS.sand.A.STEP === 0.134 &&
       MUSIC_TRACKS.void.A.STEP === 0.234 &&
       MUSIC_TRACKS.crown.A.STEP === 0.11 &&
       MUSIC_TRACKS.sand.A.bass[0].f === 123.47 &&
@@ -1568,15 +1568,17 @@ function installAC(ac) {
   check("intro register lanes never cross", lanes(A));
 }
 {
-  /* The ladder pin quantifies over all ten, so a track may only move into a
-     STEP that is already vacant. Crown's clause is discharged — arena's commit
-     is wave B's first and crown moves to .110 in the next one, into a value
-     nobody holds. What is still live is water's: it wants .139, which sand
-     holds until sand's own commit vacates it. This guard retires there. */
+  /* The ladder's last ordering constraint is discharged here: water wants
+     .139 and sand has just vacated it, void's .144 was freed by ice in wave A,
+     and crown took .110 from nobody. So the pre-move guard that stood in this
+     block retires rather than being re-valued into a tautology — what replaces
+     it is the fact that made it necessary, checked directly. */
   check(
-    "wave-B pre-move: sand still holds .139, so water's move is still blocked",
-    MUSIC_TRACKS.sand.A.STEP === 0.139 && MUSIC_TRACKS.water.A.STEP === 0.15,
-    MUSIC_TRACKS.sand.A.STEP + "/" + MUSIC_TRACKS.water.A.STEP,
+    "the ladder's last blocked move is unblocked: .139 is vacant for water",
+    !Object.keys(MUSIC_TRACKS).some((k) => MUSIC_TRACKS[k].A.STEP === 0.139),
+    Object.keys(MUSIC_TRACKS)
+      .filter((k) => MUSIC_TRACKS[k].A.STEP === 0.139)
+      .join(","),
   );
 }
 
@@ -1869,7 +1871,7 @@ function installAC(ac) {
      all-ten sweep once the last track lands. The breath-bar sweep this block
      used to carry is gone with the shared mandate — a v2 track earns its air
      from articulation, not empty bars. */
-  const WA = ["intro", "menu", "jungle", "ice", "factory", "arena", "crown"];
+  const WA = ["intro", "menu", "jungle", "ice", "factory", "arena", "crown", "sand"];
   check(
     "v2 so far: the rhythm section never leaves two steps unstruck",
     WA.every((k) => pulseGap(MUSIC_TRACKS[k].A) <= 1),
@@ -2143,18 +2145,41 @@ function installAC(ac) {
 {
   const T = MUSIC_TRACKS.sand,
     A = T.A,
-    B = T.B;
+    B = T.B,
+    f0 = TONIC.sand;
   check(
-    "sand STEP 0.139 (108 BPM), opens on its drone FIFTH B2 123.47, B up a semitone",
-    A.STEP === 0.139 &&
+    "sand STEP 0.134 (112 BPM), opens on its drone FIFTH B2 123.47, B up a semitone",
+    A.STEP === 0.134 &&
       A.bass[0].f === 123.47 &&
       Math.abs(B.bass[0].f / A.bass[0].f - 1.059463) < 1e-9,
     A.STEP + "/" + A.bass[0].f,
   );
+  /* The drone fifth survives as a COLOUR, not as the whole part: three of the
+     four hits a bar are the fifth and two of those are off the beat, so the
+     pitch that opened v1's tacet drone is now what the pattern leans on. */
   check(
-    "sand bass is a drone, mostly tacet: <= 4 notes, none under 8 steps",
-    A.bass.length <= 4 && A.bass.every((n) => Math.round(n.d / A.STEP) >= 8),
-    A.bass.length + " notes",
+    "sand bass moves: 32 notes on 0/3/5/7 of all eight bars, none over 3 steps",
+    A.bass.length === 32 &&
+      A.bass.every((n) => [0, 3, 5, 7].includes(n.s % 8)) &&
+      A.bass.every((n) => Math.round(n.d / A.STEP) <= 3) &&
+      barsWithBass(A) === 8,
+    A.bass.length + ":" + [...new Set(A.bass.map((n) => n.s % 8))].sort().join(","),
+  );
+  check(
+    "sand bass is weighted to the fifth, and off the beat — 24 of its 32 notes",
+    A.bass.filter((n) => [0, 5, 7].includes(n.s % 8)).length === 24 &&
+      A.bass.filter((n) => [5, 7].includes(n.s % 8)).every((n) => n.s % 2 === 1),
+    [...new Set(A.bass.map((n) => n.f))].sort((x, y) => x - y).join(","),
+  );
+  check(
+    "sand hat fills the beats the bass leaves — 2/4/6, all eight bars",
+    A.hat.length === 24 && A.hat.every((n) => [2, 4, 6].includes(n.s % 8)),
+    A.hat.length + ":" + [...new Set(A.hat.map((n) => n.s % 8))].sort().join(","),
+  );
+  check(
+    "sand states the motif at bars 0 and 4 over the moving bass",
+    motifV2At(A.lead, 0, f0) && motifV2At(A.lead, 32, f0),
+    motifV2Head(A.lead, f0, 64),
   );
   const GS = [207.65, 415.3];
   const soundsGs = (P) =>
@@ -2182,9 +2207,14 @@ function installAC(ac) {
     [...new Set(A.lead.map((n) => n.v))].sort().join(","),
   );
   check(
-    "sand is front-loaded phrases and long trailing rests: <= 38 of 64 steps",
-    occ(A) <= 38 && breathBar(A) >= 0,
-    occ(A) + "/" + breathBar(A),
+    "sand shimmers without stopping: every bar carries lead, pulse never gaps",
+    barsWithLead(A) === 8 && pulseGap(A) <= 1,
+    barsWithLead(A) + "/" + pulseGap(A),
+  );
+  check(
+    "sand is dense but not solid: 58-63 of 64 steps",
+    occ(A) >= 58 && occ(A) <= 63,
+    occ(A),
   );
   check("sand register lanes never cross, A and B", lanes(A) && lanes(B));
 }
@@ -2201,7 +2231,7 @@ function installAC(ac) {
     factory: 0.114,
     jungle: 0.117,
     menu: 0.121,
-    sand: 0.139,
+    sand: 0.134,
     ice: 0.129,
     water: 0.15,
     intro: 0.125,
@@ -2267,7 +2297,7 @@ function installAC(ac) {
     factory: [56, 62],
     water: [0, 44],
     arena: [56, 62],
-    sand: [0, 38],
+    sand: [58, 63],
     void: [0, 20],
     crown: [58, 63],
   };
