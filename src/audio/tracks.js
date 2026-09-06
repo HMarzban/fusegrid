@@ -281,53 +281,84 @@ const INTRO_A = mkPat(
     [16, 110.0, 16],
   ],
 );
-/* JUNGLE — overgrown, humid, alive. D Dorian on D, STEP 0.129 (116 BPM), and
+/* JUNGLE — overgrown, humid, alive. D Dorian on D, STEP 0.117 (128 BPM), and
    its root is deliberately the menu's D2: room 1 is home, in the menu's own
-   key. Strict call and response — the bass asks in 3+3+2, the lead answers in
-   the gaps, and NO step carries both. That forces two authored consequences
-   rather than accidents: the answer bars (2, 4, 7) drop the ostinato's step-3
-   hit, because FRAG-MID sits on steps 1-3 and step 3 is a tresillo step; and
-   the bass rests through bar 5, where the lead states PLAIN, and bar 8, where
-   nothing plays at all. The hat echoes every tresillo hit one step late (1/4/7)
-   like a drip off a leaf, and stops with the band in bar 8. Two long sine
-   drones — A2 then D3 — are the canopy over all of it. */
+   key. Call and response as INTERLOCK, not alternation: the bass asks in 3+3+2
+   on steps 0/3/6 of all eight bars — it never sits a bar out — and the hat
+   echoes each hit one step late on 1/4/7 like a drip off a leaf. The two
+   together strike six of every eight steps, leaving single-step pockets at 2
+   and 5, and the lead answers INTO those pockets and across them: sharing a
+   step with the bass is now allowed, which is what lets the ostinato keep its
+   step-3 hit in every bar. The motif (1-3-5-6-5, v2 rhythm) is stated at bar 1
+   and again an octave up at bar 5, with the short answer figure looping in
+   between, so the earworm arrives four times a pass instead of once. Two long
+   sine drones — A2 then D3 — are the canopy over all of it. Step 61 is the
+   loop's one unstruck step. */
 const JUNGLE_A = mkPat(
-  0.129,
+  0.117,
   64,
   [
-    [0, 73.42, 2],
-    [3, 73.42, 2],
-    [6, 110.0, 2],
-    [8, 73.42, 2],
-    [14, 110.0, 2],
-    [16, 98.0, 2],
-    [19, 98.0, 2],
-    [22, 73.42, 2],
-    [24, 110.0, 2],
-    [30, 82.41, 2],
-    [40, 87.31, 2],
-    [43, 87.31, 2],
-    [46, 130.81, 2],
-    [48, 73.42, 2],
-    [54, 110.0, 2],
-  ],
+    [73.42, 73.42, 110.0],
+    [73.42, 73.42, 110.0],
+    [98.0, 98.0, 73.42],
+    [110.0, 110.0, 82.41],
+    [73.42, 73.42, 110.0],
+    [87.31, 87.31, 130.81],
+    [98.0, 98.0, 146.83],
+    [73.42, 110.0, 82.41],
+  ].flatMap((c, b) => [
+    [b * 8, c[0], 2],
+    [b * 8 + 3, c[1], 2],
+    [b * 8 + 6, c[2], 2],
+  ]),
   [
+    [0, 293.66, 1],
+    [1, 349.23, 1],
+    [2, 440.0, 1],
+    [3, 493.88, 2],
+    [5, 440.0, 1],
+    [6, 392.0, 1],
+    [7, 440.0, 1],
     [9, 349.23, 1],
     [10, 440.0, 1],
-    [11, 493.88, 3],
-    [25, 174.61, 1],
-    [26, 220.0, 1],
-    [27, 246.94, 3],
+    [11, 493.88, 2],
+    [13, 440.0, 1],
+    [14, 392.0, 1],
+    [16, 392.0, 1],
+    [17, 440.0, 1],
+    [18, 493.88, 1],
+    [19, 523.25, 2],
+    [21, 493.88, 1],
+    [22, 440.0, 1],
+    [24, 440.0, 1],
+    [26, 392.0, 1],
+    [27, 349.23, 2],
+    [29, 329.63, 1],
+    [30, 293.66, 1],
     [32, 587.33, 1],
     [33, 698.46, 1],
     [34, 880.0, 1],
-    [35, 987.77, 3],
-    [38, 880.0, 1],
-    [49, 349.23, 1],
-    [50, 440.0, 1],
-    [51, 493.88, 5],
+    [35, 987.77, 2],
+    [37, 880.0, 1],
+    [38, 783.99, 1],
+    [39, 698.46, 1],
+    [41, 698.46, 1],
+    [42, 880.0, 1],
+    [43, 987.77, 2],
+    [45, 880.0, 1],
+    [46, 783.99, 1],
+    [48, 783.99, 1],
+    [49, 880.0, 1],
+    [50, 987.77, 1],
+    [51, 1046.5, 2],
+    [53, 987.77, 1],
+    [54, 880.0, 1],
+    [56, 880.0, 1],
+    [58, 783.99, 1],
+    [59, 698.46, 2],
+    [62, 587.33, 1],
   ],
-  [0, 1, 2, 3, 4, 5, 6].flatMap((b) =>
+  [0, 1, 2, 3, 4, 5, 6, 7].flatMap((b) =>
     [1, 4, 7].map((o) => [b * 8 + o, 3600, 1]),
   ),
   ["square", 0.1, "triangle", 0.08, "triangle", 0.018, "sine", 0.03],

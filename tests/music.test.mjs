@@ -1805,7 +1805,7 @@ function installAC(ac) {
      order (intro -> menu -> jungle -> ice -> factory); wave B extends it to all
      ten. The breath-bar sweep this block used to carry is gone with the shared
      mandate — a v2 track earns its air from articulation, not empty bars. */
-  const WA = ["intro", "menu"];
+  const WA = ["intro", "menu", "jungle"];
   check(
     "v2 wave A: the rhythm section never leaves two steps unstruck",
     WA.every((k) => pulseGap(MUSIC_TRACKS[k].A) <= 1),
@@ -1902,29 +1902,32 @@ function installAC(ac) {
     B = T.B,
     f0 = TONIC.jungle;
   check(
-    "jungle STEP 0.129 (116 BPM), D2 73.42 root — room 1 is literally the menu's key",
-    A.STEP === 0.129 &&
+    "jungle STEP 0.117 (128 BPM), D2 73.42 root — room 1 is literally the menu's key",
+    A.STEP === 0.117 &&
       A.bass[0].f === 73.42 &&
       Math.abs(B.bass[0].f / A.bass[0].f - 1.189207) < 1e-9,
     A.STEP + "/" + A.bass[0].f,
   );
-  const leadS = new Set(A.lead.map((n) => n.s));
   check(
-    "call and response: no step carries both a bass and a lead note",
-    !A.bass.some((n) => leadS.has(n.s)),
-    A.bass
-      .filter((n) => leadS.has(n.s))
-      .map((n) => n.s)
-      .join(","),
+    "jungle bass is a 3+3+2 ostinato in ALL EIGHT bars — it never rests a bar",
+    A.bass.length === 24 &&
+      A.bass.every((n) => [0, 3, 6].includes(n.s % 8)) &&
+      barsWithBass(A) === 8,
+    A.bass.length +
+      ":" +
+      [...new Set(A.bass.map((n) => n.s % 8))].sort().join(",") +
+      "/" +
+      barsWithBass(A),
   );
   check(
-    "jungle bass is a 3+3+2 ostinato — every hit on step 0, 3 or 6 of its bar",
-    A.bass.every((n) => [0, 3, 6].includes(n.s % 8)),
-    [...new Set(A.bass.map((n) => n.s % 8))].sort().join(","),
+    "jungle hat echoes one step behind each tresillo hit — 1/4/7, all eight bars",
+    A.hat.length === 24 && A.hat.every((n) => [1, 4, 7].includes(n.s % 8)),
+    A.hat.length + ":" + [...new Set(A.hat.map((n) => n.s % 8))].sort().join(","),
   );
   check(
-    "jungle bass rests through bars 5 and 8 — the lead owns them",
-    !A.bass.some((n) => (n.s >= 32 && n.s < 40) || n.s >= 56),
+    "jungle interlock leaves single-step pockets at 2 and 5, never a gap",
+    pulseGap(A) <= 1 && barsWithLead(A) === 8,
+    pulseGap(A) + "/" + barsWithLead(A),
   );
   check(
     "jungle pad is two 32-step canopy drones",
@@ -1935,17 +1938,15 @@ function installAC(ac) {
       near(A.pad[1].f, 146.83, 0.01),
     JSON.stringify((A.pad || []).map((n) => [n.s, n.f])),
   );
-  let frags = 0;
-  for (let b = 0; b < 8; b++) if (fragMidAt(A.lead, b * 8, f0)) frags++;
   check(
-    "jungle answers in FRAG-MID and states PLAIN once, at bar 5",
-    frags >= 3 && motifAt(A.lead, 32, f0, 1),
-    frags + " frag bars",
+    "jungle states the motif at bar 0 AND bar 4 — the answer loops between them",
+    motifV2At(A.lead, 0, f0) && motifV2At(A.lead, 32, f0),
+    motifV2Head(A.lead, f0, 64),
   );
   check(
-    "jungle is alive but not solid: 40-58 of 64 steps, and it breathes",
-    occ(A) >= 40 && occ(A) <= 58 && breathBar(A) >= 0,
-    occ(A) + "/" + breathBar(A),
+    "jungle is alive but not solid: 58-63 of 64 steps",
+    occ(A) >= 58 && occ(A) <= 63,
+    occ(A),
   );
   check("jungle register lanes never cross, A and B", lanes(A) && lanes(B));
 }
@@ -2109,7 +2110,7 @@ function installAC(ac) {
     arena: 0.107,
     crown: 0.113,
     factory: 0.119,
-    jungle: 0.129,
+    jungle: 0.117,
     menu: 0.121,
     sand: 0.139,
     ice: 0.144,
@@ -2172,7 +2173,7 @@ function installAC(ac) {
   const BAND = {
     intro: [28, 31],
     menu: [58, 63],
-    jungle: [40, 58],
+    jungle: [58, 63],
     ice: [0, 34],
     factory: [40, 58],
     water: [0, 44],
