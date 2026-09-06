@@ -846,95 +846,108 @@ const ARENA_B = mkPat(
     [56, 196.0, 6],
   ],
 );
-/* SAND — heat-shimmer, mirage. E Phrygian natural 3 on E: FACTORY's mode with
-   the third raised, the same machine under a hotter sun. STEP 0.134 (112 BPM).
-   The bass still opens on the drone FIFTH B2 123.47 — which is what lets sand
-   share E with FACTORY while keeping the eight biome roots distinct, and holds
-   the whole score to ONE chromatic guest here, the raised third G#. What has
-   gone is the drone itself: three tacet notes of eight-plus steps are now a
-   moving root-fifth pattern, four hits a bar on 0, 3, 5 and 7 of all eight
-   bars, weighted to the fifth (three of the four) and putting two of those
-   fifths off the beat. The four sustains meet end to end, so the shimmer never
-   drops out, and the hat takes the beats the bass leaves — 2, 4 and 6.
-   The lead states the motif at bars 1 and 5 and keeps the one-step
-   appoggiatura leaning into the G#: a quiet step immediately before it, since
-   the engine has no sub-step grace notes. It still swells through stepped
-   [s,f,d,v] velocities — sand's lead and water's bass are the only two
-   channels in the score that author per-note velocity — but the swell now
-   decorates a bouncing bass instead of trailing off into empty bars. Mirage is
-   heat moving, not sound stopping. Step 57 is the loop's one unstruck step. */
+/* SAND — direction v3: dotted, lazy and warm. E MIXOLYDIAN opening on its
+   fifth, so the bass still starts on the drone B2 123.47 that keeps the eight
+   biome roots distinct, and the mode still owns the raised third G# that no
+   other A section in the score is allowed to sound. STEP 0.148 (101.4 BPM),
+   the second-slowest of the ten.
+   Dotted like water, cut the other way round: 3+2+3 INSIDE the bar where
+   water's threes roll ACROSS it, at a slower step, and phrased in long
+   descending arcs instead of a rolling walk. The two calm rooms share a
+   palette — triangle, triangle, sine pad, no hat — so what actually separates
+   them is REGISTER and phrase length: water opens on G1 49.00 and roams two
+   octaves, sand sits on B2 123.47 and keeps lead and bass inside one each,
+   mid-high and compressed. Nothing here is a shimmer or a mirage; v2 read
+   "sand" as heat-haze menace and v3 reads it as a warm, unhurried room.
+   The lead is BEHIND THE BEAT — 1, 4 and 6, one step after every downbeat —
+   and its hook is the lazy fall 6-5-3 (C# B G#) stated at bars 0 and 4. The
+   G# lands on 415.30 there and again inside the second pad drone at 207.65.
+   No per-note velocity anywhere: v3 spells accent as a pitch choice, and this
+   was the last channel in the score still authoring the [s,f,d,v] tuple.
+   Channel peaks sum to 0.156. */
 const SAND_A = mkPat(
-  0.134,
+  0.148,
   64,
   [
-    [123.47, 82.41],
-    [130.81, 87.31],
-    [123.47, 82.41],
-    [164.81, 110.0],
-    [123.47, 82.41],
-    [130.81, 87.31],
-    [98.0, 65.41],
-    [123.47, 82.41],
-  ].flatMap(([q, r], b) => [
-    [b * 8, q, 3],
-    [b * 8 + 3, r, 2],
-    [b * 8 + 5, q, 2],
-    [b * 8 + 7, q, 1],
+    [123.47, 110.0, 92.5],
+    [82.41, 123.47, 110.0],
+    [138.59, 123.47, 110.0],
+    [92.5, 82.41, 123.47],
+    [123.47, 110.0, 92.5],
+    [82.41, 123.47, 146.83],
+    [164.81, 146.83, 123.47],
+    [110.0, 92.5, 82.41],
+  ].flatMap((c, b) => [
+    [b * 8, c[0], 3],
+    [b * 8 + 3, c[1], 2],
+    [b * 8 + 5, c[2], 3],
   ]),
   [
-    [0, 329.63, 1, 0.05],
-    [1, 415.3, 1, 0.08],
-    [2, 493.88, 1, 0.08],
-    [3, 523.25, 2, 0.09],
-    [5, 493.88, 1, 0.07],
-    [6, 440.0, 1, 0.06],
-    [7, 415.3, 1, 0.06],
-    [8, 349.23, 1, 0.06],
-    [9, 440.0, 1, 0.07],
-    [11, 523.25, 2, 0.08],
-    [13, 440.0, 1, 0.06],
-    [15, 349.23, 1, 0.05],
-    [16, 349.23, 1, 0.04],
-    [17, 415.3, 2, 0.09],
-    [19, 493.88, 1, 0.07],
-    [21, 440.0, 1, 0.06],
-    [23, 415.3, 1, 0.06],
-    [24, 440.0, 1, 0.06],
-    [25, 523.25, 1, 0.07],
-    [27, 659.26, 2, 0.09],
-    [29, 523.25, 1, 0.07],
-    [31, 440.0, 1, 0.05],
-    [32, 659.26, 1, 0.05],
-    [33, 830.61, 1, 0.08],
-    [34, 987.77, 1, 0.08],
-    [35, 1046.5, 2, 0.09],
-    [37, 987.77, 1, 0.07],
-    [38, 880.0, 1, 0.06],
-    [39, 830.61, 1, 0.06],
-    [40, 698.46, 1, 0.06],
-    [41, 880.0, 1, 0.07],
-    [43, 1046.5, 2, 0.08],
-    [45, 880.0, 1, 0.06],
-    [47, 698.46, 1, 0.05],
-    [48, 523.25, 1, 0.06],
-    [49, 659.26, 1, 0.07],
-    [51, 830.61, 2, 0.09],
-    [53, 659.26, 1, 0.07],
-    [55, 523.25, 1, 0.05],
-    [56, 493.88, 1, 0.06],
-    [59, 440.0, 1, 0.06],
-    [61, 415.3, 1, 0.05],
-    [63, 329.63, 2, 0.04],
-  ],
-  [0, 1, 2, 3, 4, 5, 6, 7].flatMap((b) =>
-    [2, 4, 6].map((o) => [b * 8 + o, 2800, 1]),
-  ),
-  ["triangle", 0.07, "square", 0.07, "triangle", 0.014, "sine", 0.025],
+    [554.37, 493.88, 415.3],
+    [440.0, 369.99, 329.63],
+    [415.3, 440.0, 493.88],
+    [440.0, 493.88, 554.37],
+    [554.37, 493.88, 415.3],
+    [369.99, 440.0, 493.88],
+    [659.26, 587.33, 554.37],
+    [493.88, 440.0, 369.99],
+  ].flatMap((c, b) => [
+    [b * 8 + 1, c[0], 3],
+    [b * 8 + 4, c[1], 2],
+    [b * 8 + 6, c[2], b === 7 ? 2 : 3],
+  ]),
+  [],
+  ["triangle", 0.075, "triangle", 0.055, "triangle", 0.012, "sine", 0.026],
   [
-    [12, 207.65, 4],
-    [28, 246.94, 4],
-    [44, 261.63, 6],
-    [60, 207.65, 4],
+    [0, 246.94, 16],
+    [16, 207.65, 16],
+    [32, 277.18, 16],
+    [48, 246.94, 16],
+  ],
+);
+/* SAND B — hand-authored: down a fifth to A MIXOLYDIAN, which trades the G#
+   for a G natural and lets the room cool a shade without changing its clothes.
+   The dotted cut moves from 3+2+3 to 3+3+2 on 0/3/6, so B leans later in the
+   bar than A does, and the lead answers on 1/4/7 — one step behind, as in A,
+   but now landing on the last step of the bar rather than inside it. */
+const SAND_B = mkPat(
+  0.148,
+  64,
+  [
+    [110.0, 164.81, 146.83],
+    [110.0, 164.81, 123.47],
+    [146.83, 110.0, 164.81],
+    [196.0, 146.83, 123.47],
+    [110.0, 164.81, 146.83],
+    [110.0, 164.81, 123.47],
+    [138.59, 110.0, 164.81],
+    [196.0, 164.81, 146.83],
+  ].flatMap((c, b) => [
+    [b * 8, c[0], 3],
+    [b * 8 + 3, c[1], 3],
+    [b * 8 + 6, c[2], 2],
+  ]),
+  [
+    [659.26, 587.33, 554.37],
+    [493.88, 440.0, 493.88],
+    [554.37, 587.33, 659.26],
+    [587.33, 554.37, 493.88],
+    [783.99, 739.99, 659.26],
+    [587.33, 554.37, 493.88],
+    [440.0, 493.88, 554.37],
+    [587.33, 493.88, 440.0],
+  ].flatMap((c, b) => [
+    [b * 8 + 1, c[0], 3],
+    [b * 8 + 4, c[1], 3],
+    [b * 8 + 7, c[2], 1],
+  ]),
+  [],
+  ["triangle", 0.075, "triangle", 0.055, "triangle", 0.012, "sine", 0.026],
+  [
+    [0, 220.0, 16],
+    [16, 246.94, 16],
+    [32, 277.18, 16],
+    [48, 220.0, 16],
   ],
 );
 /* VOID — direction v3: spacious, mysterious and PLEASANT. B MINOR PENTATONIC
@@ -1253,7 +1266,7 @@ export const MUSIC_TRACKS = Object.freeze({
   factory: tr(FACTORY_A, transp(FACTORY_A, 0.890899)),
   water: tr(WATER_A, WATER_B),
   arena: tr(ARENA_A, ARENA_B),
-  sand: tr(SAND_A, transp(SAND_A, 1.059463)),
+  sand: tr(SAND_A, SAND_B),
   void: tr(VOID_A, VOID_B),
   crown: tr(CROWN_A, CROWN_B),
 });

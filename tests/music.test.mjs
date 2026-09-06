@@ -128,7 +128,7 @@ const soundsDeg = (P, f0, d) =>
    V3 grows one id per commit, exactly as the v2 sweeps did. Every v2-direction
    sweep below quantifies over V2ONLY instead of over all ten, so the suite stays
    green on a mixed tree and nothing is scoped away permanently. */
-const V3 = ["menu", "jungle", "void", "water"];
+const V3 = ["menu", "jungle", "void", "water", "sand"];
 const V2ONLY = Object.keys(MUSIC_TRACKS).filter((k) => !V3.includes(k));
 /* Declared per PATTERN, not per track: v3 gives A and B their own key, so the
    in-collection pin has to read a section's own tonic and collection. Neither
@@ -147,6 +147,8 @@ const V3KEY = {
   "void.B": { f0: 329.63, set: PENT_MIN, name: "E minor pentatonic" },
   "water.A": { f0: 392.0, set: MIXO, name: "G Mixolydian" },
   "water.B": { f0: 349.23, set: PENT_MAJ, name: "F major pentatonic" },
+  "sand.A": { f0: 329.63, set: MIXO, name: "E Mixolydian" },
+  "sand.B": { f0: 440.0, set: MIXO, name: "A Mixolydian" },
 };
 /* Index in the declared collection, extended across octaves, so "three adjacent
    collection steps falling" is idx, idx-1, idx-2 read from ANY degree — which is
@@ -950,7 +952,7 @@ function installAC(ac) {
   );
   check(
     "sand void crown STEP and first bass",
-    MUSIC_TRACKS.sand.A.STEP === 0.134 &&
+    MUSIC_TRACKS.sand.A.STEP === 0.148 &&
       MUSIC_TRACKS.void.A.STEP === 0.152 &&
       MUSIC_TRACKS.crown.A.STEP === 0.11 &&
       MUSIC_TRACKS.sand.A.bass[0].f === 123.47 &&
@@ -1380,7 +1382,7 @@ function installAC(ac) {
      maturity lever; v3 spells accent as a PITCH choice wherever it can, so the
      list shrinks as each track is recomposed and the remaining names are the
      ones still carrying v2 data. */
-  const STEPPED = ["sand.A.lead", "sand.B.lead"];
+  const STEPPED = [];
   const spread = chans.filter(([, a]) => new Set(a.map((n) => n.v)).size !== 1);
   check(
     "per-note velocity is authored only where the spec asks for it",
@@ -1990,8 +1992,8 @@ function installAC(ac) {
   /* jungle joined HAND with its v3 rewrite: a transposed B shares A's hat array
      by identity and therefore cannot re-cut a rhythm, which is exactly the
      sameness v3 exists to remove. ice/factory/water/sand follow on wave 2. */
-  const HAND = ["menu", "jungle", "arena", "void", "crown", "water"];
-  const TRANSP = ["ice", "factory", "sand"];
+  const HAND = ["menu", "jungle", "arena", "void", "crown", "water", "sand"];
+  const TRANSP = ["ice", "factory"];
   check(
     "hand-authored B: each of these owns a distinct hat array",
     HAND.every((k) => MUSIC_TRACKS[k].B.hat !== MUSIC_TRACKS[k].A.hat),
@@ -2435,46 +2437,66 @@ function installAC(ac) {
   check("water register lanes never cross, A and B", lanes(A) && lanes(B));
 }
 
-// ---- sand: heat-shimmer, mirage (E Phrygian n3 — factory's mode, third raised) ----
+// ---- sand: dotted, lazy, warm (E Mixolydian opening on its fifth) ----
 {
   const T = MUSIC_TRACKS.sand,
     A = T.A,
     B = T.B,
     f0 = TONIC.sand;
   check(
-    "sand STEP 0.134 (112 BPM), opens on its drone FIFTH B2 123.47, B up a semitone",
-    A.STEP === 0.134 &&
+    "sand STEP 0.148 -> 101.4 BPM, opens on its drone FIFTH B2 123.47, in band",
+    A.STEP === 0.148 &&
       A.bass[0].f === 123.47 &&
-      Math.abs(B.bass[0].f / A.bass[0].f - 1.059463) < 1e-9,
-    A.STEP + "/" + A.bass[0].f,
-  );
-  /* The drone fifth survives as a COLOUR, not as the whole part: three of the
-     four hits a bar are the fifth and two of those are off the beat, so the
-     pitch that opened v1's tacet drone is now what the pattern leans on. */
-  check(
-    "sand bass moves: 32 notes on 0/3/5/7 of all eight bars, none over 3 steps",
-    A.bass.length === 32 &&
-      A.bass.every((n) => [0, 3, 5, 7].includes(n.s % 8)) &&
-      A.bass.every((n) => Math.round(n.d / A.STEP) <= 3) &&
-      barsWithBass(A) === 8,
-    A.bass.length + ":" + [...new Set(A.bass.map((n) => n.s % 8))].sort().join(","),
+      15 / A.STEP >= 96 &&
+      15 / A.STEP <= 120,
+    A.STEP + " -> " + (15 / A.STEP).toFixed(1) + " BPM / " + A.bass[0].f,
   );
   check(
-    "sand bass is weighted to the fifth, and off the beat — 24 of its 32 notes",
-    A.bass.filter((n) => [0, 5, 7].includes(n.s % 8)).length === 24 &&
-      A.bass.filter((n) => [5, 7].includes(n.s % 8)).every((n) => n.s % 2 === 1),
-    [...new Set(A.bass.map((n) => n.f))].sort((x, y) => x - y).join(","),
+    "sand is the other calm room: triangle bass, triangle lead, sine pad, NO hat",
+    A.bass[0].t === "triangle" &&
+      A.lead[0].t === "triangle" &&
+      A.hat.length === 0 &&
+      B.hat.length === 0 &&
+      !!A.pad &&
+      A.pad[0].t === "sine",
+    chansOf(A)
+      .map((a) => a[0].t)
+      .join(","),
+  );
+  /* Dotted like water's, but cut the other way round and phrased in long
+     descending arcs: 3+2+3 rather than water's rolling threes, INSIDE the bar
+     rather than across it, and at a slower STEP. The two calm rooms share a
+     palette, so what separates them is REGISTER and phrase: water opens on
+     G1 49.00 and roams two octaves; sand sits on B2 123.47 and stays inside
+     one, mid-high and compressed. */
+  check(
+    "sand bass is the lazy dotted cut 3+2+3 on 0/3/5, tiling all eight bars",
+    A.bass.length === 24 &&
+      stepSet(A.bass) === "0,3,5" &&
+      barsWithBass(A) === 8 &&
+      A.bass.every(
+        (n) => Math.round(n.d / A.STEP) === (n.s % 8 === 3 ? 2 : 3),
+      ),
+    A.bass.length + ":" + stepSet(A.bass),
   );
   check(
-    "sand hat fills the beats the bass leaves — 2/4/6, all eight bars",
-    A.hat.length === 24 && A.hat.every((n) => [2, 4, 6].includes(n.s % 8)),
-    A.hat.length + ":" + [...new Set(A.hat.map((n) => n.s % 8))].sort().join(","),
+    "sand's lead is BEHIND THE BEAT — 1/4/6, one step after every downbeat",
+    A.lead.length === 24 &&
+      stepSet(A.lead) === "1,4,6" &&
+      barsWithLead(A) === 8,
+    A.lead.length + ":" + stepSet(A.lead),
   );
+  const fall = (chan, s0) =>
+    figureAt(chan, s0, f0, [1, 4, 6], [DEG6, DEG5, DEG3]);
   check(
-    "sand states the motif at bars 0 and 4 over the moving bass",
-    motifV2At(A.lead, 0, f0) && motifV2At(A.lead, 32, f0),
-    motifV2Head(A.lead, f0, 64),
+    "sand's hook is the lazy fall 6-5-3 (C# B G#), at bars 0 and 4",
+    fall(A.lead, 0) && fall(A.lead, 32),
   );
+  /* Kept from v2, unchanged in mechanism: E Mixolydian owns G# as its third,
+     and the failure message names SAND rather than whichever track reached for
+     the pitch — so every new collection is checked against it before a note is
+     written. Reads chansOf, so a hat at some coincidental frequency would trip
+     it too; none of the ten hats sit near G#3 or G#4. */
   const GS = [207.65, 415.3];
   const soundsGs = (P) =>
     chansOf(P).some((a) =>
@@ -2482,33 +2504,32 @@ function installAC(ac) {
     );
   const others = Object.keys(MUSIC_TRACKS).filter((k) => k !== "sand");
   check(
-    "sand.A raises the third to G#, and it is the only A section that sounds it",
+    "sand.A keeps G# as its third, and is the only A section that sounds it",
     soundsGs(A) && !others.some((k) => soundsGs(MUSIC_TRACKS[k].A)),
     others.filter((k) => soundsGs(MUSIC_TRACKS[k].A)).join(","),
   );
-  const appo = A.lead.filter((n) => {
-    const nxt = A.lead.find((m) => m.s === n.s + 1);
-    return nxt && n.v < nxt.v && GS.some((m) => Math.abs(nxt.f - m) < 0.02);
-  });
   check(
-    "sand leans into the G# with a quiet one-step appoggiatura before it",
-    appo.length >= 1,
-    appo.map((n) => n.s).join(","),
+    "sand pad is four 16-step drones, and the G# is inside one of them",
+    !!A.pad &&
+      A.pad.length === 4 &&
+      A.pad.every((n) => Math.round(n.d / A.STEP) === 16) &&
+      A.pad.some((n) => Math.abs(n.f - 207.65) < 0.02),
+    JSON.stringify((A.pad || []).map((n) => [n.s, n.f])),
   );
   check(
-    "sand swells in steps: 3 or more distinct lead velocities — the heat waves",
-    new Set(A.lead.map((n) => n.v)).size >= 3,
-    [...new Set(A.lead.map((n) => n.v))].sort().join(","),
+    "sand holds its pulse with no hat at all — bass onsets gap by two at most",
+    pulseGap(A) <= 2 && pulseGap(B) <= 2,
+    pulseGap(A) + "/" + pulseGap(B),
   );
   check(
-    "sand shimmers without stopping: every bar carries lead, pulse never gaps",
-    barsWithLead(A) === 8 && pulseGap(A) <= 1,
-    barsWithLead(A) + "/" + pulseGap(A),
+    "sand is warm and unhurried: 44-54 of 64 steps",
+    occ(A) >= 44 && occ(A) <= 54,
+    occ(A) + "/" + occ(B),
   );
   check(
-    "sand is dense but not solid: 58-63 of 64 steps",
-    occ(A) >= 58 && occ(A) <= 63,
-    occ(A),
+    "sand B walks down a fifth to A Mixolydian and re-cuts the bass to 0/3/6",
+    stepSet(B.bass) === "0,3,6" && B.bass[0].f === 110.0,
+    stepSet(A.bass) + " vs " + stepSet(B.bass),
   );
   check("sand register lanes never cross, A and B", lanes(A) && lanes(B));
 }
@@ -2530,7 +2551,7 @@ function installAC(ac) {
     intro: 0.125,
     jungle: 0.132,
     ice: 0.129,
-    sand: 0.134,
+    sand: 0.148,
     menu: 0.137,
     water: 0.144,
     void: 0.152,
@@ -2598,7 +2619,7 @@ function installAC(ac) {
     factory: [56, 62],
     water: [34, 46],
     arena: [56, 62],
-    sand: [58, 63],
+    sand: [44, 54],
     void: [34, 46],
     crown: [58, 63],
   };
