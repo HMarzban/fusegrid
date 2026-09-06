@@ -128,7 +128,7 @@ const soundsDeg = (P, f0, d) =>
    V3 grows one id per commit, exactly as the v2 sweeps did. Every v2-direction
    sweep below quantifies over V2ONLY instead of over all ten, so the suite stays
    green on a mixed tree and nothing is scoped away permanently. */
-const V3 = ["menu"];
+const V3 = ["menu", "jungle"];
 const V2ONLY = Object.keys(MUSIC_TRACKS).filter((k) => !V3.includes(k));
 /* Declared per PATTERN, not per track: v3 gives A and B their own key, so the
    in-collection pin has to read a section's own tonic and collection. Neither
@@ -140,6 +140,8 @@ const PENT_MAJ = [0, 2, 4, 7, 9],
 const V3KEY = {
   "menu.A": { f0: 392.0, set: HEX_MAJ, name: "G major hexatonic" },
   "menu.B": { f0: 293.66, set: PENT_MAJ, name: "D major pentatonic" },
+  "jungle.A": { f0: 293.66, set: PENT_MAJ, name: "D major pentatonic" },
+  "jungle.B": { f0: 440.0, set: PENT_MAJ, name: "A major pentatonic" },
 };
 /* Index in the declared collection, extended across octaves, so "three adjacent
    collection steps falling" is idx, idx-1, idx-2 read from ANY degree — which is
@@ -1949,15 +1951,18 @@ function installAC(ac) {
 
 // ---- R3b cross-track: staging, timbre scarcity, and the wave-1 sweep ----
 {
-  const HAND = ["menu", "arena", "void", "crown"];
-  const TRANSP = ["jungle", "ice", "factory", "water", "sand"];
+  /* jungle joined HAND with its v3 rewrite: a transposed B shares A's hat array
+     by identity and therefore cannot re-cut a rhythm, which is exactly the
+     sameness v3 exists to remove. ice/factory/water/sand follow on wave 2. */
+  const HAND = ["menu", "jungle", "arena", "void", "crown"];
+  const TRANSP = ["ice", "factory", "water", "sand"];
   check(
-    "hand-authored B: menu/arena/void/crown each own a distinct hat array",
+    "hand-authored B: each of these owns a distinct hat array",
     HAND.every((k) => MUSIC_TRACKS[k].B.hat !== MUSIC_TRACKS[k].A.hat),
     HAND.filter((k) => MUSIC_TRACKS[k].B.hat === MUSIC_TRACKS[k].A.hat).join(","),
   );
   check(
-    "transp B: the five biomes still share A's hat array by identity",
+    "transp B: the remaining biomes still share A's hat array by identity",
     TRANSP.every((k) => MUSIC_TRACKS[k].B.hat === MUSIC_TRACKS[k].A.hat),
     TRANSP.filter((k) => MUSIC_TRACKS[k].B.hat !== MUSIC_TRACKS[k].A.hat).join(","),
   );
@@ -2148,60 +2153,94 @@ function installAC(ac) {
   check("ice register lanes never cross, A and B", lanes(A) && lanes(B));
 }
 
-// ---- jungle: overgrown, humid, alive (D Dorian, strict call-and-response) ----
+// ---- jungle: bouncy, bright (D major pentatonic, tresillo) ----
 {
   const T = MUSIC_TRACKS.jungle,
     A = T.A,
     B = T.B,
     f0 = TONIC.jungle;
   check(
-    "jungle STEP 0.117 (128 BPM), D2 73.42 root — room 1 is literally the menu's key",
-    A.STEP === 0.117 &&
+    "jungle STEP 0.132 -> 113.6 BPM, D2 73.42 root, a fifth below menu's G",
+    A.STEP === 0.132 &&
       A.bass[0].f === 73.42 &&
-      Math.abs(B.bass[0].f / A.bass[0].f - 1.189207) < 1e-9,
-    A.STEP + "/" + A.bass[0].f,
+      15 / A.STEP >= 96 &&
+      15 / A.STEP <= 120,
+    A.STEP + " -> " + (15 / A.STEP).toFixed(1) + " BPM / " + A.bass[0].f,
   );
   check(
-    "jungle bass is a 3+3+2 ostinato in ALL EIGHT bars — it never rests a bar",
+    "jungle timbres: triangle bass, triangle lead, triangle hat, sine pad",
+    A.bass[0].t === "triangle" &&
+      A.lead[0].t === "triangle" &&
+      A.hat[0].t === "triangle" &&
+      !!A.pad &&
+      A.pad[0].t === "sine",
+    chansOf(A)
+      .map((a) => a[0].t)
+      .join(","),
+  );
+  /* The 3+3+2 survives from v2 because it is the right groove for this room —
+     but its cells now TILE the bar (3, 3, 2 steps long), which is what makes
+     the bass continuous as well as syncopated. */
+  check(
+    "jungle bass is the 3+3+2 tresillo on 0/3/6, and its cells tile the bar",
     A.bass.length === 24 &&
-      A.bass.every((n) => [0, 3, 6].includes(n.s % 8)) &&
-      barsWithBass(A) === 8,
-    A.bass.length +
-      ":" +
-      [...new Set(A.bass.map((n) => n.s % 8))].sort().join(",") +
-      "/" +
-      barsWithBass(A),
+      stepSet(A.bass) === "0,3,6" &&
+      barsWithBass(A) === 8 &&
+      A.bass.every(
+        (n) => Math.round(n.d / A.STEP) === (n.s % 8 === 6 ? 2 : 3),
+      ),
+    A.bass.length + ":" + stepSet(A.bass),
   );
   check(
-    "jungle hat echoes one step behind each tresillo hit — 1/4/7, all eight bars",
-    A.hat.length === 24 && A.hat.every((n) => [1, 4, 7].includes(n.s % 8)),
-    A.hat.length + ":" + [...new Set(A.hat.map((n) => n.s % 8))].sort().join(","),
+    "jungle hat is a light off-tick on 1 and 4 only — 16 hits at 3200 Hz",
+    A.hat.length === 16 &&
+      A.hat.every((n) => [1, 4].includes(n.s % 8) && n.f === 3200),
+    A.hat.length + ":" + stepSet(A.hat),
   );
   check(
-    "jungle interlock leaves single-step pockets at 2 and 5, never a gap",
-    pulseGap(A) <= 1 && barsWithLead(A) === 8,
-    pulseGap(A) + "/" + barsWithLead(A),
+    "jungle's lead skips in the tresillo's POCKETS — 2/4/5 plus a step-7 pickup",
+    stepSet(A.lead) === "2,4,5,7" &&
+      A.lead
+        .filter((n) => n.s % 8 === 7)
+        .map((n) => n.s)
+        .join(",") === "15,31,47,63" &&
+      barsWithLead(A) === 8,
+    stepSet(A.lead),
+  );
+  const bounce = (chan, s0) =>
+    figureAt(chan, s0, f0, [2, 4, 5], [DEG5, DEG3, DEG5]);
+  check(
+    "jungle's hook is the offbeat bounce 5-3-5 on steps 2/4/5, at bars 0 and 4",
+    bounce(A.lead, 0) && bounce(A.lead, 32),
   );
   check(
-    "jungle pad is two 32-step canopy drones",
+    "jungle pad is two 32-step canopy drones, A3 then D4",
     !!A.pad &&
       A.pad.length === 2 &&
       A.pad.every((n) => Math.round(n.d / A.STEP) === 32) &&
-      near(A.pad[0].f, 110, 0.01) &&
-      near(A.pad[1].f, 146.83, 0.01),
+      near(A.pad[0].f, 220, 0.01) &&
+      near(A.pad[1].f, 293.66, 0.01),
     JSON.stringify((A.pad || []).map((n) => [n.s, n.f])),
   );
   check(
-    "jungle states the motif at bar 0 AND bar 4 — the answer loops between them",
-    motifV2At(A.lead, 0, f0) && motifV2At(A.lead, 32, f0),
-    motifV2Head(A.lead, f0, 64),
-  );
-  check(
-    "jungle is alive but not solid: 58-63 of 64 steps",
-    occ(A) >= 58 && occ(A) <= 63,
-    occ(A),
+    "jungle is lively but not solid: 54-62 of 64 steps, A and B alike",
+    occ(A) >= 54 && occ(A) <= 62 && occ(B) >= 54 && occ(B) <= 62,
+    occ(A) + "/" + occ(B),
   );
   check("jungle register lanes never cross, A and B", lanes(A) && lanes(B));
+  check(
+    "jungle B is hand-authored now, not transp — it owns its own hat array",
+    B.hat !== A.hat,
+  );
+  check(
+    "jungle B re-CUTS the tresillo to 0/2/5 and moves the hat to 3/6",
+    stepSet(B.bass) === "0,2,5" &&
+      stepSet(B.hat) === "3,6" &&
+      B.bass.every(
+        (n) => Math.round(n.d / B.STEP) === (n.s % 8 === 0 ? 2 : 3),
+      ),
+    stepSet(B.bass) + " / " + stepSet(B.hat),
+  );
 }
 
 // ---- factory: mechanical, cold competence (E Phrygian, CANON) ----
@@ -2423,8 +2462,8 @@ function installAC(ac) {
     arena: 0.107,
     crown: 0.11,
     factory: 0.114,
-    jungle: 0.117,
     intro: 0.125,
+    jungle: 0.132,
     ice: 0.129,
     sand: 0.134,
     menu: 0.137,
@@ -2489,7 +2528,7 @@ function installAC(ac) {
   const BAND = {
     intro: [28, 31],
     menu: [32, 44],
-    jungle: [58, 63],
+    jungle: [54, 62],
     ice: [58, 63],
     factory: [56, 62],
     water: [58, 63],

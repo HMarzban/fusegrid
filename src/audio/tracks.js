@@ -275,90 +275,132 @@ const INTRO_A = mkPat(
     [16, 110.0, 16],
   ],
 );
-/* JUNGLE — overgrown, humid, alive. D Dorian on D, STEP 0.117 (128 BPM), and
-   its root is deliberately the menu's D2: room 1 is home, in the menu's own
-   key. Call and response as INTERLOCK, not alternation: the bass asks in 3+3+2
-   on steps 0/3/6 of all eight bars — it never sits a bar out — and the hat
-   echoes each hit one step late on 1/4/7 like a drip off a leaf. The two
-   together strike six of every eight steps, leaving single-step pockets at 2
-   and 5, and the lead answers INTO those pockets and across them: sharing a
-   step with the bass is now allowed, which is what lets the ostinato keep its
-   step-3 hit in every bar. The motif (1-3-5-6-5, v2 rhythm) is stated at bar 1
-   and again an octave up at bar 5, with the short answer figure looping in
-   between, so the earworm arrives four times a pass instead of once. Two long
-   sine drones — A2 then D3 — are the canopy over all of it. Step 61 is the
-   loop's one unstruck step. */
+/* JUNGLE — direction v3: bouncy and bright. D MAJOR PENTATONIC (D E F# A B),
+   STEP 0.132 (113.6 BPM). Room 1 keeps its D2 root but no longer keeps the
+   menu's key — under v3 every room is its own piece, and D pentatonic sits a
+   fifth below menu's G hexatonic with a different collection, a different
+   tempo, a different groove and a different palette.
+   The 3+3+2 tresillo survives from v2 because it is the right groove for a
+   room like this, but its cells now TILE the bar: steps 0 and 3 ring three
+   steps, step 6 rings two, so the three cells meet end to end and the bass is
+   continuous as well as syncopated. That is what "bouncy" costs — motion, not
+   volume.
+   The hat drops from three hits a bar to two (1 and 4, 3200 Hz, v 0.016): a
+   light off-tick behind the first two tresillo cells, not a drive. The lead
+   skips in the POCKETS the tresillo leaves — 2, 4 and 5, plus a step-7 pickup
+   in the even bars — so it is off the beat everywhere and never runs four
+   consecutive steps, which is also why the retired five-note motif cannot
+   appear here by accident. The hook is the bounce 5-3-5 (A F# A) on 2/4/5,
+   stated at bars 1 and 5. Two long sine drones, A3 then D4, are the canopy.
+   Channel peaks sum to 0.187. */
 const JUNGLE_A = mkPat(
-  0.117,
+  0.132,
   64,
   [
     [73.42, 73.42, 110.0],
+    [73.42, 110.0, 146.83],
+    [123.47, 123.47, 185.0],
+    [110.0, 110.0, 164.81],
     [73.42, 73.42, 110.0],
-    [98.0, 98.0, 73.42],
-    [110.0, 110.0, 82.41],
-    [73.42, 73.42, 110.0],
-    [87.31, 87.31, 130.81],
-    [98.0, 98.0, 146.83],
-    [73.42, 110.0, 82.41],
+    [73.42, 110.0, 146.83],
+    [82.41, 123.47, 164.81],
+    [110.0, 164.81, 110.0],
   ].flatMap((c, b) => [
-    [b * 8, c[0], 2],
-    [b * 8 + 3, c[1], 2],
+    [b * 8, c[0], 3],
+    [b * 8 + 3, c[1], 3],
     [b * 8 + 6, c[2], 2],
   ]),
   [
-    [0, 293.66, 1],
-    [1, 349.23, 1],
-    [2, 440.0, 1],
-    [3, 493.88, 2],
-    [5, 440.0, 1],
-    [6, 392.0, 1],
-    [7, 440.0, 1],
-    [9, 349.23, 1],
-    [10, 440.0, 1],
-    [11, 493.88, 2],
-    [13, 440.0, 1],
-    [14, 392.0, 1],
-    [16, 392.0, 1],
-    [17, 440.0, 1],
-    [18, 493.88, 1],
-    [19, 523.25, 2],
-    [21, 493.88, 1],
-    [22, 440.0, 1],
-    [24, 440.0, 1],
-    [26, 392.0, 1],
-    [27, 349.23, 2],
-    [29, 329.63, 1],
-    [30, 293.66, 1],
-    [32, 587.33, 1],
-    [33, 698.46, 1],
+    [2, 880.0, 1],
+    [4, 739.99, 1],
+    [5, 880.0, 2],
+    [10, 987.77, 1],
+    [12, 880.0, 1],
+    [13, 739.99, 2],
+    [15, 659.26, 1],
+    [18, 739.99, 1],
+    [20, 587.33, 1],
+    [21, 739.99, 2],
+    [26, 659.26, 1],
+    [28, 739.99, 1],
+    [29, 659.26, 2],
+    [31, 587.33, 1],
     [34, 880.0, 1],
-    [35, 987.77, 2],
-    [37, 880.0, 1],
-    [38, 783.99, 1],
-    [39, 698.46, 1],
-    [41, 698.46, 1],
-    [42, 880.0, 1],
-    [43, 987.77, 2],
-    [45, 880.0, 1],
-    [46, 783.99, 1],
-    [48, 783.99, 1],
-    [49, 880.0, 1],
+    [36, 739.99, 1],
+    [37, 880.0, 2],
+    [42, 1174.66, 1],
+    [44, 987.77, 1],
+    [45, 880.0, 2],
+    [47, 739.99, 1],
     [50, 987.77, 1],
-    [51, 1046.5, 2],
-    [53, 987.77, 1],
-    [54, 880.0, 1],
-    [56, 880.0, 1],
-    [58, 783.99, 1],
-    [59, 698.46, 2],
-    [62, 587.33, 1],
+    [52, 880.0, 1],
+    [53, 739.99, 2],
+    [58, 659.26, 1],
+    [60, 739.99, 1],
+    [61, 659.26, 2],
+    [63, 587.33, 1],
   ],
   [0, 1, 2, 3, 4, 5, 6, 7].flatMap((b) =>
-    [1, 4, 7].map((o) => [b * 8 + o, 3600, 1]),
+    [1, 4].map((o) => [b * 8 + o, 3200, 1]),
   ),
-  ["square", 0.1, "triangle", 0.08, "triangle", 0.018, "sine", 0.03],
+  ["triangle", 0.08, "triangle", 0.065, "triangle", 0.016, "sine", 0.026],
   [
-    [0, 110.0, 32],
-    [32, 146.83, 32],
+    [0, 220.0, 32],
+    [32, 293.66, 32],
+  ],
+);
+/* JUNGLE B — hand-authored, which is new: a transp B shares A's hat array by
+   identity and so cannot re-cut a rhythm, and an un-re-cut B is exactly the
+   sameness v3 exists to remove. B lifts to A MAJOR PENTATONIC (A B C# E F#),
+   the dominant, and RE-CUTS the tresillo from 0/3/6 to 0/2/5 (durations 2/3/3,
+   still tiling the bar) with the hat moved to 3/6. Same four timbres, same
+   velocities, same note counts in bass and hat — the groove is what moves. */
+const JUNGLE_B = mkPat(
+  0.132,
+  64,
+  [
+    [110.0, 110.0, 164.81],
+    [110.0, 164.81, 220.0],
+    [92.5, 92.5, 138.59],
+    [82.41, 123.47, 164.81],
+    [110.0, 110.0, 164.81],
+    [110.0, 164.81, 220.0],
+    [123.47, 123.47, 185.0],
+    [82.41, 123.47, 164.81],
+  ].flatMap((c, b) => [
+    [b * 8, c[0], 2],
+    [b * 8 + 2, c[1], 3],
+    [b * 8 + 5, c[2], 3],
+  ]),
+  [
+    [1, 1108.73, 2],
+    [4, 987.77, 3],
+    [9, 880.0, 2],
+    [12, 739.99, 3],
+    [15, 659.26, 1],
+    [17, 739.99, 2],
+    [20, 880.0, 3],
+    [25, 987.77, 2],
+    [28, 880.0, 3],
+    [31, 739.99, 1],
+    [33, 1318.51, 2],
+    [36, 1108.73, 3],
+    [41, 987.77, 2],
+    [44, 880.0, 3],
+    [47, 739.99, 1],
+    [49, 880.0, 2],
+    [52, 739.99, 3],
+    [57, 659.26, 2],
+    [60, 739.99, 3],
+    [63, 880.0, 1],
+  ],
+  [0, 1, 2, 3, 4, 5, 6, 7].flatMap((b) =>
+    [3, 6].map((o) => [b * 8 + o, 3200, 1]),
+  ),
+  ["triangle", 0.08, "triangle", 0.065, "triangle", 0.016, "sine", 0.026],
+  [
+    [0, 329.63, 32],
+    [32, 220.0, 32],
   ],
 );
 /* ICE — brittle, glittering. F Lydian on F, STEP 0.129 (116 BPM). The cold is
@@ -1227,7 +1269,7 @@ const CROWN_B = mkPat(
 export const MUSIC_TRACKS = Object.freeze({
   intro: tr(INTRO_A, null, Object.freeze(["A"])),
   menu: tr(MUSIC_PATTERN, MUSIC_PATTERN_B, MUSIC_SECTIONS),
-  jungle: tr(JUNGLE_A, transp(JUNGLE_A, 1.189207)),
+  jungle: tr(JUNGLE_A, JUNGLE_B),
   ice: tr(ICE_A, transp(ICE_A, 1.122462)),
   factory: tr(FACTORY_A, transp(FACTORY_A, 0.890899)),
   water: tr(WATER_A, transp(WATER_A, 1.33484)),
