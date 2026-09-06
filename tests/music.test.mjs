@@ -879,7 +879,7 @@ function installAC(ac) {
   check(
     "sand void crown STEP and first bass",
     MUSIC_TRACKS.sand.A.STEP === 0.134 &&
-      MUSIC_TRACKS.void.A.STEP === 0.234 &&
+      MUSIC_TRACKS.void.A.STEP === 0.144 &&
       MUSIC_TRACKS.crown.A.STEP === 0.11 &&
       MUSIC_TRACKS.sand.A.bass[0].f === 123.47 &&
       MUSIC_TRACKS.void.A.bass[0].f === 61.74 &&
@@ -1655,21 +1655,28 @@ function installAC(ac) {
   check("arena register lanes never cross, A and B", lanes(A) && lanes(B));
 }
 
-// ---- void: dread, subtraction (B Locrian, FRAG-MID and nothing else) ----
+// ---- void: dread, driving (B Locrian, sine lead, half-density rhythm) ----
 {
   const T = MUSIC_TRACKS.void,
     A = T.A,
     B = T.B,
     f0 = TONIC.void;
   check(
-    "void STEP 0.234 (64 BPM), B1 61.74 — outside the tempo band on purpose",
-    A.STEP === 0.234 && A.bass[0].f === 61.74,
+    "void STEP 0.144 (104 BPM), B1 61.74 — the bottom of the band, not outside it",
+    A.STEP === 0.144 && A.bass[0].f === 61.74,
     A.STEP + "/" + A.bass[0].f,
   );
+  /* Withdrawn together (spec 5 item 2): the empty hat, the absent pad, the
+     never-resolving lead and the 20/64 ceiling were one device — subtraction
+     as the whole creative move. Dread is now bought with mode and timbre,
+     which cost neither tempo nor silence. */
   check(
-    "void is two voices: empty hat array, no pad key at all",
-    A.hat.length === 0 && A.pad === undefined,
-    A.hat.length + "/" + A.pad,
+    "void has a hat and a pad again — four voices, not two",
+    A.hat.length === 16 &&
+      A.hat.every((n) => [2, 6].includes(n.s % 8)) &&
+      !!A.pad &&
+      A.pad.length > 0,
+    A.hat.length + " hat / " + (A.pad || []).length + " pad",
   );
   check(
     "void is the only sine lead in the score",
@@ -1677,39 +1684,68 @@ function installAC(ac) {
     A.lead[0] && A.lead[0].t,
   );
   check(
-    "void bass is a sustained pedal at the lowest gain in the score",
-    A.bass.length <= 2 &&
-      A.bass.every((n) => Math.round(n.d / A.STEP) >= 8) &&
-      A.bass[0].v < 0.05,
-    A.bass.length + " notes @v" + A.bass[0].v,
+    "void bass is root-octave at half the other tracks' density — 0 and 4, all bars",
+    A.bass.length === 16 &&
+      A.bass.every((n) => [0, 4].includes(n.s % 8)) &&
+      A.bass.every((n) => Math.round(n.d / A.STEP) === 4) &&
+      barsWithBass(A) === 8,
+    A.bass.length + ":" + [...new Set(A.bass.map((n) => n.s % 8))].sort().join(","),
   );
   check(
-    "void lead NEVER sounds degree 1 — no ground under the figure",
-    !A.lead.some((n) => isDeg(n.f, f0, DEG1)),
-    A.lead.map((n) => pcOf(n.f, f0).toFixed(2)).join(","),
-  );
-  let frags = 0,
-    plains = 0;
-  for (let b = 0; b < 8; b++) {
-    if (fragMidAt(A.lead, b * 8, f0)) frags++;
-    if (motifAt(A.lead, b * 8, f0, 1)) plains++;
-  }
-  check(
-    "void plays FRAG-MID at least twice and the whole motif never",
-    frags >= 2 && plains === 0,
-    frags + " frag / " + plains + " plain",
+    "void bass alternates root and its own octave, an eighth-note pedal no more",
+    [0, 1, 2, 3, 4, 5, 6, 7].every((b) => {
+      const r = (A.bass.find((n) => n.s === b * 8) || { f: 0 }).f,
+        o = (A.bass.find((n) => n.s === b * 8 + 4) || { f: 0 }).f;
+      return r > 0 && Math.abs(semi(o, r) - 12) <= 0.05;
+    }),
+    [...new Set(A.bass.map((n) => n.f))].sort((x, y) => x - y).join(","),
   );
   check(
-    "void is the sparsest track in the game: at most 20 of 64 steps",
-    occ(A) <= 20,
-    occ(A),
+    "void's lead SOUNDS the tonic — the withheld resolution is withdrawn",
+    A.lead.some((n) => isDeg(n.f, f0, DEG1)),
+    A.lead.filter((n) => isDeg(n.f, f0, DEG1)).map((n) => n.s).join(","),
+  );
+  let frags = 0;
+  for (let b = 0; b < 8; b++) if (fragMidAt(A.lead, b * 8, f0)) frags++;
+  check(
+    "void states the WHOLE motif at bars 0 and 4, with FRAG-MID as a colour between",
+    motifV2At(A.lead, 0, f0) && motifV2At(A.lead, 32, f0) && frags >= 2,
+    motifV2Head(A.lead, f0, 64) + " / " + frags + " frag",
+  );
+  check(
+    "void pulse never gaps, in BOTH hand-authored sections",
+    pulseGap(A) <= 1 && pulseGap(B) <= 1,
+    pulseGap(A) + "/" + pulseGap(B),
+  );
+  check(
+    "void plays every bar in both sections — nothing drops out",
+    barsWithLead(A) === 8 &&
+      barsWithBass(A) === 8 &&
+      barsWithLead(B) === 8 &&
+      barsWithBass(B) === 8,
+    barsWithLead(A) + "/" + barsWithBass(A) + " " + barsWithLead(B) + "/" + barsWithBass(B),
+  );
+  /* Still the sparsest of the ten, by RELATIVE density rather than by absence:
+     its bass and hat strike 32 of 64 steps where every other track's strike
+     48 or more, and its band sits a clear step below theirs. It has a floor,
+     so it cannot drift back toward the 20/64 it used to be pinned at. */
+  const others = Object.keys(MUSIC_TRACKS).filter(
+    (k) => k !== "void" && k !== "intro",
+  );
+  const rhythm = (P) => new Set([...P.bass, ...P.hat].map((n) => n.s)).size;
+  check(
+    "void is the sparsest of the ten by pattern density, and 48-58 of 64 steps",
+    occ(A) >= 48 &&
+      occ(A) <= 58 &&
+      others.every((k) => rhythm(MUSIC_TRACKS[k].A) > rhythm(A)),
+    occ(A) + " occ, rhythm " + rhythm(A),
   );
   check("void B is hand-authored — its hat is not A's array", B.hat !== A.hat);
   check("void register lanes never cross, A and B", lanes(A) && lanes(B));
 }
 {
   check(
-    "R3c pre-move: water root is G1 49.00 now that void has taken 61.74",
+    "R3c pre-move: water root is G1 49.00, distinct from void's 61.74",
     MUSIC_TRACKS.water.A.bass[0].f === 49,
     MUSIC_TRACKS.water.A.bass[0].f,
   );
@@ -1852,7 +1888,7 @@ function installAC(ac) {
      used to carry is gone with the shared mandate — a v2 track earns its air
      from articulation, not empty bars. */
   const WA = ["intro", "menu", "jungle", "ice", "factory", "arena", "crown", "sand",
-    "water"];
+    "water", "void"];
   check(
     "v2 so far: the rhythm section never leaves two steps unstruck",
     WA.every((k) => pulseGap(MUSIC_TRACKS[k].A) <= 1),
@@ -2238,7 +2274,7 @@ function installAC(ac) {
     ice: 0.129,
     water: 0.139,
     intro: 0.125,
-    void: 0.234,
+    void: 0.144,
   };
   check(
     "the tempo ladder is the authored one, ten distinct values",
@@ -2301,7 +2337,7 @@ function installAC(ac) {
     water: [58, 63],
     arena: [56, 62],
     sand: [58, 63],
-    void: [0, 20],
+    void: [48, 58],
     crown: [58, 63],
   };
   check(

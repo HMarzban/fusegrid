@@ -874,63 +874,142 @@ const SAND_A = mkPat(
     [60, 207.65, 4],
   ],
 );
-/* VOID — dread, subtraction. B Locrian on B, STEP 0.234 (64 BPM), the one
-   deliberate exception to the 104-140 band. TWO voices: a triangle pedal on B1
-   at the lowest gain in the score, and the score's only sine lead. The lead
-   plays FRAG-MID — degrees 3-5-6 on steps 1, 2, 3 of a bar — and nothing else,
-   so both ends of the motif are gone: no tonic under the figure (the lead
-   never sounds degree 1 at any octave) and no settle after it. The
-   incompleteness is the horror; nothing dissonant was added to get it, and
-   CROWN is what finally finishes the phrase. Empty hat, no pad key at all. */
+/* VOID — dread, something watching. B Locrian on B, STEP 0.144 (104 BPM): the
+   BOTTOM of the arcade band, not outside it. This was the score's biggest
+   single conflict with the direction — 64 BPM, an empty hat array, no pad key,
+   a lead pinned never to sound its own tonic, and a 20-of-64 ceiling that made
+   it "the sparsest track in the game". All four were one device, subtraction,
+   and the offline render priced it at 34 sub-50 dB intervals with the longest
+   running 2.5 seconds. Dread is now bought with the two things that cost
+   neither tempo nor silence: the mode, and the SINE lead that is still void's
+   identity marker and still the only one in the score.
+   VOID is nonetheless still the sparsest of the ten, by RELATIVE density: bass
+   and hat strike 32 of the 64 steps where every other track's strike 48 or
+   more. The bass is root against its own octave on steps 0 and 4 only — half
+   the pattern density of anything else here — but each note rings four steps,
+   so the low end is continuous while the ONSETS stay half-time. The hat is the
+   darkest tick in the score at 2000 Hz, on 2 and 6, which is what closes the
+   two-step holes the half-time bass would otherwise leave. The lead states the
+   WHOLE motif at bars 1 and 5 — tonic included, resolution included — and
+   keeps FRAG-MID between them as the colour it always should have been rather
+   than as the entire diet. Two long sine drones hold B against F, the tritone
+   that names the mode. Bars 7 and 8 drop the pedal to the flat sixth and the
+   flat fifth; nothing else moves. */
 const VOID_A = mkPat(
-  0.234,
+  0.144,
   64,
   [
-    [0, 61.74, 32],
-    [32, 61.74, 32],
-  ],
+    [61.74, 123.47],
+    [61.74, 123.47],
+    [61.74, 123.47],
+    [61.74, 123.47],
+    [61.74, 123.47],
+    [61.74, 123.47],
+    [49.0, 98.0],
+    [43.65, 87.31],
+  ].flatMap(([r, o], b) => [
+    [b * 8, r, 4],
+    [b * 8 + 4, o, 4],
+  ]),
   [
-    [4, 392.0, 3],
-    [9, 293.66, 1],
-    [10, 349.23, 1],
-    [11, 392.0, 3],
-    [20, 349.23, 4],
+    [0, 493.88, 1],
+    [1, 587.33, 1],
+    [2, 698.46, 1],
+    [3, 783.99, 2],
+    [5, 698.46, 1],
+    [7, 659.26, 1],
+    [9, 587.33, 1],
+    [10, 698.46, 1],
+    [11, 783.99, 3],
+    [17, 659.26, 2],
+    [21, 587.33, 2],
+    [25, 587.33, 1],
+    [26, 698.46, 1],
+    [27, 783.99, 3],
+    [32, 493.88, 1],
     [33, 587.33, 1],
     [34, 698.46, 1],
-    [35, 783.99, 3],
-    [42, 523.25, 4],
-    [49, 293.66, 1],
-    [50, 349.23, 1],
-    [51, 392.0, 3],
-    [58, 261.63, 6],
+    [35, 783.99, 2],
+    [37, 698.46, 1],
+    [39, 587.33, 1],
+    [41, 587.33, 1],
+    [42, 698.46, 1],
+    [43, 783.99, 3],
+    [49, 392.0, 1],
+    [50, 493.88, 1],
+    [51, 587.33, 3],
+    [57, 349.23, 2],
+    [59, 440.0, 1],
+    [61, 523.25, 3],
   ],
-  [],
-  ["triangle", 0.04, "sine", 0.05, "triangle", 0.012],
+  [0, 1, 2, 3, 4, 5, 6, 7].flatMap((b) =>
+    [2, 6].map((o) => [b * 8 + o, 2000, 1]),
+  ),
+  ["triangle", 0.05, "sine", 0.055, "triangle", 0.012, "sine", 0.022],
+  [
+    [0, 246.94, 32],
+    [32, 174.61, 32],
+  ],
 );
-/* VOID B — hand-authored (its own, still empty, hat array), same two voices.
-   The pedal drops to the flat fifth and the fragment moves in register: the
-   same dread from another angle, still with nothing resolved. */
+/* VOID B — hand-authored, with its own (now real) hat array and the same four
+   voices. The pedal sits on the flat fifth for the whole section and the
+   fragment moves down a register: the same dread from another angle, over the
+   same half-time pulse. The drones swap, so F is underneath this time. */
 const VOID_B = mkPat(
-  0.234,
+  0.144,
   64,
   [
-    [0, 43.65, 32],
-    [32, 43.65, 32],
-  ],
+    [43.65, 87.31],
+    [43.65, 87.31],
+    [43.65, 87.31],
+    [43.65, 87.31],
+    [43.65, 87.31],
+    [43.65, 87.31],
+    [41.2, 82.41],
+    [43.65, 87.31],
+  ].flatMap(([r, o], b) => [
+    [b * 8, r, 4],
+    [b * 8 + 4, o, 4],
+  ]),
   [
-    [5, 349.23, 3],
-    [17, 587.33, 1],
-    [18, 698.46, 1],
-    [19, 783.99, 3],
-    [28, 440.0, 4],
-    [41, 293.66, 1],
-    [42, 349.23, 1],
-    [43, 392.0, 3],
-    [54, 329.63, 4],
-    [61, 261.63, 3],
+    [0, 349.23, 1],
+    [1, 440.0, 1],
+    [2, 523.25, 1],
+    [3, 587.33, 2],
+    [5, 523.25, 1],
+    [7, 493.88, 1],
+    [9, 440.0, 1],
+    [10, 523.25, 1],
+    [11, 587.33, 3],
+    [17, 493.88, 2],
+    [21, 440.0, 2],
+    [25, 440.0, 1],
+    [26, 523.25, 1],
+    [27, 587.33, 3],
+    [32, 349.23, 1],
+    [33, 440.0, 1],
+    [34, 523.25, 1],
+    [35, 587.33, 2],
+    [37, 523.25, 1],
+    [39, 440.0, 1],
+    [41, 440.0, 1],
+    [42, 523.25, 1],
+    [43, 587.33, 3],
+    [49, 329.63, 1],
+    [50, 392.0, 1],
+    [51, 493.88, 3],
+    [57, 349.23, 2],
+    [59, 392.0, 1],
+    [61, 440.0, 3],
   ],
-  [],
-  ["triangle", 0.04, "sine", 0.05, "triangle", 0.012],
+  [0, 1, 2, 3, 4, 5, 6, 7].flatMap((b) =>
+    [2, 6].map((o) => [b * 8 + o, 2000, 1]),
+  ),
+  ["triangle", 0.05, "sine", 0.055, "triangle", 0.012, "sine", 0.022],
+  [
+    [0, 174.61, 32],
+    [32, 246.94, 32],
+  ],
 );
 /* CROWN — finale gold. C Ionian on C, the only pure major in the game, earned
    by contrast with everything before it; STEP 0.110 (136 BPM). Ionian is what
