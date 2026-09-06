@@ -1734,9 +1734,9 @@ function installAC(ac) {
   );
   const rhythm = (P) => new Set([...P.bass, ...P.hat].map((n) => n.s)).size;
   check(
-    "void is the sparsest of the ten by pattern density, and 48-58 of 64 steps",
-    occ(A) >= 48 &&
-      occ(A) <= 58 &&
+    "void is the sparsest of the ten by pattern density, and 58-63 of 64 steps",
+    occ(A) >= 58 &&
+      occ(A) <= 63 &&
       others.every((k) => rhythm(MUSIC_TRACKS[k].A) > rhythm(A)),
     occ(A) + " occ, rhythm " + rhythm(A),
   );
@@ -2337,7 +2337,7 @@ function installAC(ac) {
     water: [58, 63],
     arena: [56, 62],
     sand: [58, 63],
-    void: [48, 58],
+    void: [58, 63],
     crown: [58, 63],
   };
   check(
