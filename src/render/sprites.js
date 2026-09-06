@@ -587,10 +587,15 @@ export function drawPlayerBody(c, world, p) {
     c.fill();
   }
   if (p.passing) {
+    /* r*1.5 x r*1.16 grazed the fin's own outer edge: at the fin's [1.3,-0.46]
+       vertex the ring radius toward that angle beat the vertex by only 0.64,
+       under the 2px stroke's own half-width, so the stroke painted 0.36 ONTO
+       the fin. r*1.58 x r*1.22 clears every fin vertex by >=0.5 including the
+       stroke, the same margin class as the shield ellipse. */
     c.strokeStyle = "rgba(119,255,153,0.6)";
     c.lineWidth = 2;
     c.beginPath();
-    c.ellipse(0, 0, r * 1.5, r * 1.16, 0, 0, 7);
+    c.ellipse(0, 0, r * 1.58, r * 1.22, 0, 0, 7);
     c.stroke();
   }
 }

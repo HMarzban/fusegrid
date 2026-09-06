@@ -165,10 +165,14 @@ const names = (ops) => ops.map((o) => o[0]);
 function blocks(ops) {
   const out = [];
   let cur = null,
-    fs = null;
+    fs = null,
+    ss = null,
+    lw = null;
   for (let i = 0; i < ops.length; i++) {
     const o = ops[i];
     if (o[0] === "set" && o[1] === "fillStyle") fs = o[2];
+    else if (o[0] === "set" && o[1] === "strokeStyle") ss = o[2];
+    else if (o[0] === "set" && o[1] === "lineWidth") lw = +o[2];
     else if (o[0] === "beginPath") cur = { pts: [], fill: null, el: null };
     else if (!cur) continue;
     else if (o[0] === "moveTo" || o[0] === "lineTo") cur.pts.push([o[1], o[2]]);
@@ -182,6 +186,15 @@ function blocks(ops) {
       cur.sealed = ops
         .slice(i + 1, i + 5)
         .some((q) => q[0] === "set" && q[1] === "strokeStyle" && q[2] === RIM);
+      out.push(cur);
+      cur = null;
+    } else if (o[0] === "stroke") {
+      /* Stroke-only blocks (the shield/passing state-ring ellipses draw no
+         fill) never pushed before — a lone beginPath+ellipse+stroke used to
+         vanish with cur discarded on the next beginPath. Recorded the same
+         way as a fill block, keyed by strokeStyle/lineWidth instead. */
+      cur.stroke = ss;
+      cur.lineWidth = lw;
       out.push(cur);
       cur = null;
     }
@@ -640,6 +653,36 @@ const P = (o) =>
       ? (lum(PLAYER_SUIT) - lumOf(contour[0].fill)).toFixed(3) +
         (contour[0].sealed ? " sealed" : " UNSEALED")
       : "no contour block",
+  );
+}
+
+/* MAKO gate — STATE-RING vs FIN TIP (fix round 1, 2026-09-06). The three
+   state overlays are ELLIPSES sized off the fins, but every fit/shape gate
+   above poses the hero with shield/kick/passing all false, so a ring that
+   actually crossed a fin tip had no test that could see it — exactly what
+   happened to `passing` (r*1.5 x r*1.16 painted 0.36 unit ONTO the fin's own
+   [1.3,-0.46] vertex once the 2px stroke's half-width is counted). Pinned
+   directly: the ring must clear every fin vertex by more than half its own
+   stroke width, for BOTH rings that ever draw one. */
+function ringRadiusAtAngle(el, x, y) {
+  const th = Math.atan2(y - el.y, x - el.x);
+  const cs = Math.cos(th) / el.rx,
+    sn = Math.sin(th) / el.ry;
+  return 1 / Math.hypot(cs, sn);
+}
+for (const state of ["passing", "shield"]) {
+  const c = stub();
+  drawPlayerBody(c, { time: 0 }, P({ [state]: true }));
+  const bl = blocks(c._ops);
+  const fin = bl.find((b) => b.fill === TEAL);
+  const ring = bl.find((b) => b.el && b.stroke);
+  const clear = Math.min(
+    ...fin.pts.map(([x, y]) => ringRadiusAtAngle(ring.el, x, y) - Math.hypot(x, y)),
+  );
+  check(
+    "MAKO " + state + " ring clears the fin tip past its own stroke width",
+    clear > ring.lineWidth / 2,
+    clear.toFixed(3) + " vs lineWidth/2 " + (ring.lineWidth / 2).toFixed(3),
   );
 }
 
