@@ -1,5 +1,5 @@
 import { createWorld, loadLevel, step } from "../src/core/sim.js";
-import { CFG } from "../src/core/config.js";
+import { CFG, BIOMES } from "../src/core/config.js";
 import { POWER } from "../src/core/entities.js";
 import { drawIcon, RIM, ITEM_FAMILY, ITEM_SHAPE, ITEM_ACCENT } from "../src/render/icons.js";
 import {
@@ -7,12 +7,46 @@ import {
   drawItemChrome,
   drawPlayerBody,
   PLAYER_HULL,
+  PLAYER_SUIT,
 } from "../src/render/sprites.js";
 
 /* Rec.709 relative luminance of a #rrggbb literal, 0..1. */
 const lum = (h) => {
   const n = parseInt(String(h).slice(1), 16) || 0;
   return (0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255;
+};
+/* Same, but tolerant of the "rgb(r,g,b)" strings tone()/dk()/lt() return —
+   the outline gate has to weigh a SHADE against its own base hex. */
+const lumOf = (v) => {
+  const s = String(v);
+  if (s[0] === "#") return lum(s);
+  const m = s.match(/(\d+)\D+(\d+)\D+(\d+)/);
+  return m ? (0.2126 * +m[1] + 0.7152 * +m[2] + 0.0722 * +m[3]) / 255 : NaN;
+};
+const rgbOf = (h) => {
+  const n = parseInt(String(h).slice(1), 16) || 0;
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+};
+/* HSL hue in degrees. */
+const hueOf = (h) => {
+  const [r, g, b] = rgbOf(h).map((v) => v / 255);
+  const mx = Math.max(r, g, b),
+    d = mx - Math.min(r, g, b);
+  if (!d) return 0;
+  const x = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return (x * 60 + 360) % 360;
+};
+/* Chroma as normalised channel spread. Preferred over HSL saturation because
+   it has no pathology near L=0.5 and is what actually decides whether the
+   hue axis means anything: two NEAR-NEUTRAL colours at the same value are
+   the same colour however far apart their nominal hue angles sit. */
+const chromaOf = (h) => {
+  const c = rgbOf(h);
+  return (Math.max(...c) - Math.min(...c)) / 255;
+};
+const dHue = (a, b) => {
+  const d = Math.abs(a - b) % 360;
+  return d > 180 ? 360 - d : d;
 };
 
 let pass = 0,
@@ -458,17 +492,108 @@ const P = (o) =>
     pts.length >= 8 && hip > 0 && shoulder / hip >= 1.55,
     (shoulder / hip).toFixed(2),
   );
-  check(
-    "R1 value: hull is mid-value armour, never a bright shell",
-    lum(PLAYER_HULL) >= 0.28 && lum(PLAYER_HULL) <= 0.62,
-    PLAYER_HULL + " L=" + lum(PLAYER_HULL).toFixed(2),
-  );
   const b3 = box({ noEllipse: true });
   drawPlayerBody(b3, { time: 0 }, P());
   check(
     "R1 stance: legs run >= 0.50r below the hull contour",
     b3._b.y1 - bot >= R * 0.5 - 1e-6,
     ((b3._b.y1 - bot) / R).toFixed(2),
+  );
+  /* IONVEST gate 1 — HEAD RATIO. R1 shipped a 3.4-head figure (29% head);
+     small-sprite heroes read at 2-2.5 heads, and a 29px sprite simply has no
+     pixels left for a face at adult proportions. Measured, not asserted: the
+     head/torso SEAM is the neck pinch — the narrowest contour vertex between
+     the crown edge and the widest (pauldron) vertex — so the gate survives
+     vertex nudges that a hard-coded y would not. */
+  const crown = Math.min(...pts.map((p) => p[1]));
+  const neckCand = pts.filter((p) => p[1] > crown + 1e-6 && p[1] < wide[1] - 1e-6);
+  const neck = neckCand.reduce((a, p) => (Math.abs(p[0]) < Math.abs(a[0]) ? p : a), neckCand[0]);
+  check(
+    "IONVEST seam gate reads a real neck pinch (loud if the contour changes shape)",
+    neckCand.length >= 4 && Math.abs(neck[0]) < shoulder * 0.6,
+    (Math.abs(neck[0]) / shoulder).toFixed(2) + " of shoulder",
+  );
+  const headRatio = (neck[1] - b3._b.y0) / (b3._b.y1 - b3._b.y0);
+  check(
+    "IONVEST proportion: head module is 38-50% of the figure (2-2.5 heads)",
+    headRatio >= 0.38 && headRatio <= 0.5,
+    headRatio.toFixed(3),
+  );
+  /* IONVEST gate 2 — OUTLINE PRESENT, and backed. The RIM seal is a 2px
+     55%-alpha line; on its own it could not rescue the rejected build. What
+     makes the silhouette survive a same-value backdrop is the DARK CONTOUR
+     BAND the seal is drawn on. Weigh it, don't just check seal() ran: a
+     static call-order check passed on the rejected build too. */
+  const cf = ops.slice(end).find((o) => o[0] === "set" && o[1] === "fillStyle");
+  const iSeal = ops.findIndex(
+    (o, i) => i > end && o[0] === "set" && o[1] === "strokeStyle" && o[2] === RIM,
+  );
+  check(
+    "IONVEST outline: the contour band is >= 0.12 darker than the suit, and sealed",
+    cf && lum(PLAYER_SUIT) - lumOf(cf[2]) >= 0.12 && iSeal > end,
+    (cf ? (lum(PLAYER_SUIT) - lumOf(cf[2])).toFixed(3) : "no fill") + " @" + iSeal,
+  );
+}
+
+/* IONVEST gate 3 — PER-BIOME SEPARATION (2026-09-06, on the user's rejection
+   "in the 2D the main charecter is terrible look"; FACTORY screenshot).
+   Replaces R1's `lum(PLAYER_HULL) in [0.28,0.62]` band, which stayed GREEN on
+   a hull that vanished: a band on one hex cannot see the BACKDROP. These gates
+   weigh the 2D suit against every one of the 40 swatches the game actually
+   paints behind it.
+
+   FORMULA: this file's Rec.709 `lum`. research-2d-hero.md tabulates Rec.601.
+   The two agree on gunmetal (0.590 either way — it is near-neutral, so its
+   "verification" of the formula was non-discriminating) and diverge hard on a
+   saturated suit (#b83fc0 is L .384 at 709, .447 at 601). One formula per
+   repo; every number quoted here is 709.
+
+   MOVED PIN, deliberately: the research's gate 1 asks for `min dL >= 0.12`
+   over all 40 swatches. That is not satisfiable by ANY hex — the 40 swatches
+   cover the value axis densely (#b83fc0's nearest is JUNGLE floor0 #1a7a30 at
+   dL=0.007; the research quoted 0.254, which is ARENA floor0, not the
+   minimum). The research's own gate 2 names the real failure condition — both
+   axes collapsing on the SAME swatch — so the AND is what ships. */
+{
+  const SWATCH = ["floor0", "floor1", "wall", "brickA", "brickB"];
+  const L = lum(PLAYER_SUIT),
+    H = hueOf(PLAYER_SUIT);
+  const bad = [];
+  let near = 0,
+    worst = 360,
+    worstAt = "";
+  for (const B of BIOMES)
+    for (const k of SWATCH) {
+      const s = B[k],
+        dL = Math.abs(L - lum(s)),
+        dH = dHue(H, hueOf(s));
+      if (dL >= 0.12) continue;
+      near++;
+      if (dH < worst) {
+        worst = dH;
+        worstAt = B.name + "." + k + " " + s;
+      }
+      if (dH < 25) bad.push(B.name + "." + k + " " + s + " dL" + dL.toFixed(3) + " dH" + dH.toFixed(1));
+    }
+  check(
+    "IONVEST separation: no biome swatch collapses on BOTH value and hue",
+    !bad.length,
+    bad.join("; ") ||
+      near + " swatches within dL 0.12, worst dHue " + worst.toFixed(1) + " (" + worstAt + ")",
+  );
+  check(
+    "IONVEST chroma: the suit is saturated, so gate 3's hue axis is real",
+    chromaOf(PLAYER_SUIT) >= 0.35,
+    PLAYER_SUIT + " C=" + chromaOf(PLAYER_SUIT).toFixed(3),
+  );
+  /* 2D and 3D diverge BY DESIGN from 2026-09-06. 3D has no dark contour, so
+     value alone separates it and the gunmetal hull it was tuned against is
+     still correct there; only the 2D suit is re-hued. Pin both so a future
+     "one hex, one place" tidy-up cannot silently re-merge them. */
+  check(
+    "2D/3D divergence: PLAYER_HULL stays the 3D gunmetal, PLAYER_SUIT is 2D-only",
+    PLAYER_HULL === "#8d97ac" && PLAYER_SUIT !== PLAYER_HULL,
+    PLAYER_HULL + " / " + PLAYER_SUIT,
   );
 }
 

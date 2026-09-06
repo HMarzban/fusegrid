@@ -340,17 +340,69 @@ export function drawEnemies(c, world) {
    Zero-arc rule holds: nothing here is an arc.
    Unchanged: p.color placement (crest only), the single specular visor, the
    RIM seal, the five beats, no antenna / ball / round eyes / dome. */
+/* The 3D hull hex. STILL GUNMETAL, and still exported for three/entities.js —
+   the 3D runner was not rejected and is not touched by the 2D revision below.
+   Read the IONVEST block before assuming this is also the 2D colour. */
 export const PLAYER_HULL = "#8d97ac";
-const HULL = PLAYER_HULL;
-/* The shoulder is a LEDGE, not a slope: the jaw runs out to +-0.92r almost
+/* IONVEST — 2D revision, 2026-09-06, on the user's rejection of R1's 2D body
+   ("in the 2D the main charecter is terrible look", FACTORY screenshot). The
+   user explicitly allowed 2D and 3D to look DIFFERENT, so this is the point
+   where the two renderers' palettes split.
+
+   R1's shape work — the taper, the crest, the long boots — was never the
+   complaint and is kept. Two MEASURED defects are fixed:
+
+   COLOUR. `PLAYER_HULL` #8d97ac against FACTORY's wall #8a96a4 is dL=0.008
+   and dHue=8.3 degrees: value AND hue collapse on the SAME swatch, so both
+   the dark-contour beat and the lit-body beat land on the wall's own value
+   and a 2px 55%-alpha seal is left doing all the separation work at 29px.
+   That is why it read as a shapeless blob. The 2D suit becomes a HUED
+   #cd5ac3 orchid (L .479, chroma .451, hue 305): across all 40 biome
+   swatches, every swatch that comes within dL 0.12 is at least 41 degrees of
+   hue away (worst: ARENA brickA #ff6a8c). Note there is no hex that clears
+   dL 0.12 against ALL 40 — the swatches cover the value axis densely — so
+   the thing to hold open is the AND, which is also the thing that failed.
+   The VALUE inside that family was picked from rendered rooms, not taste:
+   the research's #b83fc0 (L .384) shipped in iteration 1 and read weakly in
+   VOID, where brickA #6a20c8 sat 32.0 Lab-dE away — the tightest pair in the
+   game. Lifting to L .479 puts the worst pair at 44.6 dE (still VOID brickA)
+   and is the only value in the family that also clears BOTH bright floors —
+   ICE .671, SAND .608 — on value alone rather than on hue.
+   3D keeps gunmetal: it has no dark contour, value alone separates it there,
+   and it was not what the user rejected.
+
+   PROPORTION. R1's figure was 29% head (~3.4 heads) — adult proportions on a
+   29px sprite, which is the other half of "blob": there were never enough
+   pixels for a face. The shoulder-ledge seam rises from -0.46r to -0.20r, so
+   the head module is now 41% (~2.4 heads), the small-sprite convention. The
+   waist (0.54r) and the boot span (0.42r..1.06r) are unchanged; the pauldron
+   facets and the visor cluster move up with the seam and grow into the room.
+
+   Unchanged: p.color on the CREST only (one placement), the visor slit +
+   specular pip, the RIM seal, the five beats, the zero-arc rule. Added: one
+   swept FIN off the crest's rear flank — the silhouette hook, five vertices,
+   still zero-arc, still no brim. */
+export const PLAYER_SUIT = "#cd5ac3";
+const HULL = PLAYER_SUIT;
+/* The shoulder is a LEDGE, not a slope: the jaw runs out to +-0.88r almost
    level, then drops down a vertical pauldron edge. Iteration 1 used a single
-   diagonal from helmet to shoulder tip and it read as a cloak / bell. */
+   diagonal from helmet to shoulder tip and it read as a cloak / bell.
+   IONVEST raises the jaw/neck pair (-0.54/-0.46 -> -0.34/-0.20) and the
+   pauldron pair with it; below the waist nothing moved. */
 const S_RUNNER = poly([
-  [-0.36, -1.0], [0.36, -1.0], [0.52, -0.8], [0.44, -0.54],
-  [0.34, -0.46], [0.86, -0.4], [0.9, -0.06], [0.68, 0.12],
-  [0.56, 0.32], [0.5, 0.54], [-0.5, 0.54], [-0.56, 0.32],
-  [-0.68, 0.12], [-0.9, -0.06], [-0.86, -0.4], [-0.34, -0.46],
-  [-0.44, -0.54], [-0.52, -0.8],
+  [-0.36, -1.0], [0.36, -1.0], [0.52, -0.78], [0.46, -0.34],
+  [0.34, -0.2], [0.88, -0.14], [0.9, 0.1], [0.68, 0.26],
+  [0.56, 0.4], [0.5, 0.54], [-0.5, 0.54], [-0.56, 0.4],
+  [-0.68, 0.26], [-0.9, 0.1], [-0.88, -0.14], [-0.34, -0.2],
+  [-0.46, -0.34], [-0.52, -0.78],
+]);
+/* The silhouette hook. One stiff swept fin off the crest's REAR-LEFT flank,
+   rooted under the crest so the crest's own seal caps it. Asymmetric on
+   purpose: at 29px an exterior bump is the only detail that survives, and a
+   symmetric pair would read as a second brim. Every vertex stays inside the
+   +-1.05r / -1.10r fit box the gates hold. */
+const FIN = poly([
+  [-0.44, -0.88], [-0.72, -1.02], [-0.96, -0.96], [-0.78, -0.8], [-0.48, -0.72],
 ]);
 /* A crest, not a cap. Iteration 1 let the wings overhang the helmet and the
    horizontal underside instantly became a peaked cap brim — the exact
@@ -398,18 +450,29 @@ export function drawPlayerBody(c, world, p) {
      subpaths, one fill: still one beat. */
   c.fillStyle = lt(HULL, 0.42);
   c.beginPath();
-  c.moveTo(-r * 0.7, -r * 0.38);
-  c.lineTo(-r * 0.36, -r * 0.42);
-  c.lineTo(-r * 0.32, -r * 0.24);
-  c.lineTo(-r * 0.66, -r * 0.2);
+  c.moveTo(-r * 0.66, -r * 0.12);
+  c.lineTo(-r * 0.34, -r * 0.16);
+  c.lineTo(-r * 0.3, r * 0.02);
+  c.lineTo(-r * 0.6, r * 0.06);
   c.closePath();
-  c.moveTo(r * 0.36, -r * 0.42);
-  c.lineTo(r * 0.7, -r * 0.38);
-  c.lineTo(r * 0.66, -r * 0.2);
-  c.lineTo(r * 0.32, -r * 0.24);
+  c.moveTo(r * 0.34, -r * 0.16);
+  c.lineTo(r * 0.66, -r * 0.12);
+  c.lineTo(r * 0.6, r * 0.06);
+  c.lineTo(r * 0.3, r * 0.02);
   c.closePath();
   c.fill();
   const fx = Math.max(-1, Math.min(1, p.face.x || 0)) * r * 0.1;
+  /* The fin goes on BEFORE the crest so the crest paints over its root and
+     the two read as one helmet, not a glued-on flap. A SHADED SUIT tone, not
+     p.color and not the contour dark: iteration 1 filled it dk(HULL,0.56)
+     and it disappeared outright on VOID's near-black floor, which is exactly
+     where a silhouette hook has to work. One value step below the lit body
+     keeps it chromatic against any floor while still reading as the helmet's
+     shadow side. The one-placement rule keeps teal on the crest alone. */
+  FIN(c, r, 1, 0, 0);
+  c.fillStyle = dk(HULL, 0.2);
+  c.fill();
+  seal(c);
   CREST(c, r, 1, 0, 0);
   c.fillStyle = col;
   c.fill();
@@ -417,46 +480,50 @@ export function drawPlayerBody(c, world, p) {
   if (p.face.y < -0.5) {
     c.fillStyle = dk(HULL, 0.34);
     c.beginPath();
-    c.moveTo(-r * 0.42, -r * 0.68);
-    c.lineTo(r * 0.42, -r * 0.68);
-    c.lineTo(r * 0.36, -r * 0.5);
-    c.lineTo(-r * 0.36, -r * 0.5);
+    c.moveTo(-r * 0.38, -r * 0.62);
+    c.lineTo(r * 0.38, -r * 0.62);
+    c.lineTo(r * 0.32, -r * 0.42);
+    c.lineTo(-r * 0.32, -r * 0.42);
     c.closePath();
     c.fill();
     c.fillStyle = dk(HULL, 0.62);
     c.beginPath();
-    c.moveTo(-r * 0.24, -r * 0.28);
-    c.lineTo(r * 0.24, -r * 0.28);
-    c.lineTo(r * 0.2, r * 0.16);
-    c.lineTo(-r * 0.2, r * 0.16);
+    c.moveTo(-r * 0.22, -r * 0.16);
+    c.lineTo(r * 0.22, -r * 0.16);
+    c.lineTo(r * 0.18, r * 0.26);
+    c.lineTo(-r * 0.18, r * 0.26);
     c.closePath();
     c.fill();
   } else {
     /* The visor is a SLIT: a deep near-black well, a hairline lit core and
        one white pip. R1 halves the core bar — against a mid-value hull a fat
-       cyan band was the second bright element and read as a cartoon eye. */
+       cyan band was the second bright element and read as a cartoon eye.
+       IONVEST drops the cluster 0.06r and deepens the well from 0.20r to
+       0.24r: the seam move gave the helmet a third more height, and a visor
+       left at R1's size would have floated in it. Still a slit, not an eye —
+       the well stays wider than it is tall. */
     c.fillStyle = "#0b1020";
     c.beginPath();
-    c.moveTo(-r * 0.42 + fx, -r * 0.68);
-    c.lineTo(r * 0.42 + fx, -r * 0.68);
-    c.lineTo(r * 0.36 + fx, -r * 0.48);
-    c.lineTo(-r * 0.36 + fx, -r * 0.48);
+    c.moveTo(-r * 0.38 + fx, -r * 0.62);
+    c.lineTo(r * 0.38 + fx, -r * 0.62);
+    c.lineTo(r * 0.33 + fx, -r * 0.38);
+    c.lineTo(-r * 0.33 + fx, -r * 0.38);
     c.closePath();
     c.fill();
     c.fillStyle = "#7fe0ff";
     c.beginPath();
-    c.moveTo(-r * 0.32 + fx, -r * 0.63);
-    c.lineTo(r * 0.32 + fx, -r * 0.63);
-    c.lineTo(r * 0.31 + fx, -r * 0.54);
-    c.lineTo(-r * 0.31 + fx, -r * 0.54);
+    c.moveTo(-r * 0.3 + fx, -r * 0.56);
+    c.lineTo(r * 0.3 + fx, -r * 0.56);
+    c.lineTo(r * 0.29 + fx, -r * 0.46);
+    c.lineTo(-r * 0.29 + fx, -r * 0.46);
     c.closePath();
     c.fill();
     c.fillStyle = "#ffffff";
     c.beginPath();
-    c.moveTo(-r * 0.36 + fx, -r * 0.66);
-    c.lineTo(-r * 0.24 + fx, -r * 0.66);
-    c.lineTo(-r * 0.27 + fx, -r * 0.58);
-    c.lineTo(-r * 0.39 + fx, -r * 0.58);
+    c.moveTo(-r * 0.34 + fx, -r * 0.59);
+    c.lineTo(-r * 0.22 + fx, -r * 0.59);
+    c.lineTo(-r * 0.25 + fx, -r * 0.5);
+    c.lineTo(-r * 0.37 + fx, -r * 0.5);
     c.closePath();
     c.fill();
   }
