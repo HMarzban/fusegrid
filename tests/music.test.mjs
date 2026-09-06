@@ -885,7 +885,7 @@ function installAC(ac) {
     "sand void crown STEP and first bass",
     MUSIC_TRACKS.sand.A.STEP === 0.139 &&
       MUSIC_TRACKS.void.A.STEP === 0.234 &&
-      MUSIC_TRACKS.crown.A.STEP === 0.113 &&
+      MUSIC_TRACKS.crown.A.STEP === 0.11 &&
       MUSIC_TRACKS.sand.A.bass[0].f === 123.47 &&
       MUSIC_TRACKS.void.A.bass[0].f === 61.74 &&
       MUSIC_TRACKS.crown.A.bass[0].f === 65.41,
@@ -1740,9 +1740,25 @@ function installAC(ac) {
     B = T.B,
     f0 = TONIC.crown;
   check(
-    "crown STEP 0.113 (133 BPM), C2 65.41 root",
-    A.STEP === 0.113 && A.bass[0].f === 65.41,
+    "crown STEP 0.110 (136 BPM), C2 65.41 root",
+    A.STEP === 0.11 && A.bass[0].f === 65.41,
     A.STEP + "/" + A.bass[0].f,
+  );
+  check(
+    "crown bass is a dotted fanfare root-fifth-octave in all eight bars",
+    A.bass.length === 32 &&
+      A.bass.every((n) => [0, 3, 4, 6].includes(n.s % 8)) &&
+      barsWithBass(A) === 8 &&
+      A.bass.filter((n) => n.s % 8 === 0).every((n) => Math.round(n.d / A.STEP) === 3),
+    A.bass.length + ":" + [...new Set(A.bass.map((n) => n.s % 8))].sort().join(","),
+  );
+  check(
+    "crown A's own hat is the offbeat — 1/5/7, never the even-step quote",
+    A.hat.length === 24 &&
+      A.hat.every((n) => [1, 5, 7].includes(n.s % 8)) &&
+      JSON.stringify(A.hat.map((n) => n.s)) !==
+        JSON.stringify(B.hat.map((n) => n.s)),
+    A.hat.length + ":" + [...new Set(A.hat.map((n) => n.s % 8))].sort().join(","),
   );
   check(
     "crown timbres: square bass, square lead, triangle hat, sawtooth pad",
@@ -1762,16 +1778,28 @@ function installAC(ac) {
       B.hat !== A.hat,
     B.hat.length + " vs arena " + MUSIC_TRACKS.arena.A.hat.length,
   );
-  const head = motifHead(B.lead, f0, 1, 64);
-  const headF = head >= 0 && B.lead.find((n) => n.s === head).f;
-  const tail = B.lead.filter((n) => n.s === head + 7);
-  check(
-    "crown B states RESOLVED — the tonic VOID withheld, an octave above the head",
-    head >= 0 &&
+  /* RESOLVED (spec 1) = the v2 PLAIN plus a sixth note, the tonic one octave
+     above the head, at offset 7. v2 states it in BOTH sections and twice in A:
+     the finale supplies its own payoff rather than withholding it until B. */
+  const resolvedAt = (P, s0) => {
+    if (!motifV2At(P.lead, s0, f0)) return false;
+    const headF = P.lead.find((n) => n.s === s0).f;
+    const tail = P.lead.filter((n) => n.s === s0 + 7);
+    return (
       tail.length === 1 &&
       Math.abs(semi(tail[0].f, headF) - 12) <= 0.05 &&
-      Math.round(tail[0].d / B.STEP) >= 2,
-    head + " -> " + JSON.stringify(tail),
+      Math.round(tail[0].d / P.STEP) >= 2
+    );
+  };
+  check(
+    "crown A states RESOLVED at bars 0 and 4 — the tonic octave, twice a pass",
+    resolvedAt(A, 0) && resolvedAt(A, 32),
+    motifV2Head(A.lead, f0, 64),
+  );
+  check(
+    "crown B states RESOLVED too — the tonic VOID withheld, an octave up",
+    resolvedAt(B, 0),
+    motifV2Head(B.lead, f0, 64),
   );
   check(
     "crown.A sounds a perfect fourth AND a leading tone — the Ionian pair",
@@ -1786,9 +1814,22 @@ function installAC(ac) {
     dbl.length,
   );
   check(
-    "crown is full but not solid: 40-58 of 64 steps, and it breathes",
-    occ(A) >= 40 && occ(A) <= 58 && breathBar(A) >= 0,
-    occ(A) + "/" + breathBar(A),
+    "crown plays all eight bars — the bar-4 full-band stop is gone",
+    barsWithLead(A) === 8 &&
+      barsWithBass(A) === 8 &&
+      barsWithLead(B) === 8 &&
+      barsWithBass(B) === 8,
+    barsWithLead(A) + "/" + barsWithBass(A) + " " + barsWithLead(B) + "/" + barsWithBass(B),
+  );
+  check(
+    "crown pulse never gaps, in BOTH hand-authored sections",
+    pulseGap(A) <= 1 && pulseGap(B) <= 1,
+    pulseGap(A) + "/" + pulseGap(B),
+  );
+  check(
+    "crown is full but not solid: 58-63 of 64 steps, A and B alike",
+    occ(A) >= 58 && occ(A) <= 63 && occ(B) >= 58 && occ(B) <= 63,
+    occ(A) + "/" + occ(B),
   );
   check("crown register lanes never cross, A and B", lanes(A) && lanes(B));
 }
@@ -1828,7 +1869,7 @@ function installAC(ac) {
      all-ten sweep once the last track lands. The breath-bar sweep this block
      used to carry is gone with the shared mandate — a v2 track earns its air
      from articulation, not empty bars. */
-  const WA = ["intro", "menu", "jungle", "ice", "factory", "arena"];
+  const WA = ["intro", "menu", "jungle", "ice", "factory", "arena", "crown"];
   check(
     "v2 so far: the rhythm section never leaves two steps unstruck",
     WA.every((k) => pulseGap(MUSIC_TRACKS[k].A) <= 1),
@@ -2156,7 +2197,7 @@ function installAC(ac) {
      their own rewrite, so all ten stay distinct at every commit in between. */
   const LADDER = {
     arena: 0.107,
-    crown: 0.113,
+    crown: 0.11,
     factory: 0.114,
     jungle: 0.117,
     menu: 0.121,
@@ -2228,7 +2269,7 @@ function installAC(ac) {
     arena: [56, 62],
     sand: [0, 38],
     void: [0, 20],
-    crown: [40, 58],
+    crown: [58, 63],
   };
   check(
     "occupancy lands in band for all ten — rests are authored, not left over",
