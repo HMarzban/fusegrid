@@ -266,20 +266,27 @@ gone; the strict never-share-a-step rule is withdrawn with it; the single bar-5
 **`ice` — brittle, glittering. [WAVE A]** F Lydian · `STEP 0.129`
 (116 BPM, was 104) · B = `transp(A, 1.122462)`.
 Bass `triangle`: **root–fifth alternation on every off-eighth** — steps 1, 3, 5,
-7 of every bar, F2/C3 (G/D and A/E in the turnaround bars) — 32 notes where v1
-had four cracks. This is ice's distinct accent: the only track whose bass lives
-entirely off the beat. Hat `triangle` 6200 Hz on steps 0 and 4 — a bell *on* the
-beat, against the bass's *off* it; the two together are the eighth-note pulse.
-Lead `triangle` above C5, `PLAIN` at normal speed at bars 1 and 5, and it stays
-off step 6 of every bar — that recurring single-step pocket is the track's
-glitter, and it is one step, not one bar. Pad `sine` holds Lydian chord tones
+7 of every bar, each ringing an eighth long, F2/C3 (G/D and A/E in the turnaround
+bars) — 32 notes where v1 had four cracks. This is ice's distinct accent: the
+only track whose bass lives entirely off the beat. Hat `triangle` 6200 Hz on
+every even step — a bell *on* the beat against the bass's *off* it — skipping
+step 62, which is the loop's one deliberate hole. Lead `triangle` above C5,
+`PLAIN` at normal speed at bars 1 and 5. Pad `sine` holds Lydian chord tones
 including the ♯4 (B3 246.94).
 Creative move: **the mode and the register are the cold** — a bright Lydian lead
 two octaves above a bouncing bass, not an absent low end.
-Occupancy **50–60 of 64**. `pulseGap 1`.
+Occupancy **58–63 of 64**. `pulseGap 1`.
 **Changed from v1:** tempo +12 BPM; `AUG` withdrawn, motif at normal speed;
-`bass.length` 4 → 32; hat 8 ticks → 16; the "absence of low end IS the ice"
+`bass.length` 4 → 32; hat 8 ticks → 31; the "absence of low end IS the ice"
 framing is deleted outright.
+*Render iteration (recorded, not hidden):* a first cut put the bell on 0 and 4
+only and left step 6 of **every** bar unstruck. `pulseGap` read 1 and every pin
+was green, but the offline render showed **34** sub-−50 dB holes, one per bar —
+a rest heard as a feature. The lesson generalises: `pulseGap ≤ 1` bounds the
+*grid*, not the *ear*, because a one-step hole plus the engine's exponential
+note decay is ~0.2 s of near-silence. **A v2 track's unstruck step must be one
+per loop, never one per bar** — which is why every other wave-A track has
+exactly one (`intro` 31, `menu`/`jungle` 63/61, `factory` 15).
 
 **`factory` — mechanical, cold competence. [WAVE A]** E Phrygian · `STEP 0.114`
 (132 BPM, was 126) · B = `transp(A, 0.890899)`. No pad.
@@ -538,7 +545,7 @@ Additional v2 pin moves, per track, all wave A:
 | F♯ marker set / `EXP` | `[92.50, 185.00, 369.99]` / hand-written `[11,29,43,61]` | `[92.50, 185.00, 369.99, 739.99, 1479.98]` / **derived from `MUSIC_PATTERN_B`** |
 | intro | `STEP 0.17`, `LEN 32`, `hat.length === 0`, bar 2 rests, bar 4 holds 6̂, occ ≤ 18 | `STEP 0.125`, `LEN 32`, `hat.length === 15`, all four bars carry lead, occ 28–31 |
 | jungle | `STEP 0.129`; no shared bass/lead step; bass silent 32–39 and 56–63 | `STEP 0.117`; bass in **all eight bars**; overlap allowed; `PLAIN` at bars 0 and 4 |
-| ice | `STEP 0.144`; `bass.length <= 6`; `AUG` at 0,2,4,6,12; hat every 8 steps; occ ≤ 34 | `STEP 0.129`; `bass.length === 32`, every `s` odd; `PLAIN` at bars 0 and 4; hat on 0 and 4; occ 50–60 |
+| ice | `STEP 0.144`; `bass.length <= 6`; `AUG` at 0,2,4,6,12; hat every 8 steps; occ ≤ 34 | `STEP 0.129`; `bass.length === 32`, every `s` odd, each 2 steps long; `PLAIN` at bars 0 and 4; `hat.length === 31`, every `s` even but 62; occ 58–63 |
 | factory | `STEP 0.119`; hat 28 hits (bar 5 cut) | `STEP 0.114`; hat 32 hits, every even step, all eight bars; occ 56–62 |
 | `motifAt` helper | offsets `[0,1,2,3,6]` | **`motifV2At`, offsets `[0,1,2,3,5]`**, added alongside; v1 `motifAt` stays until wave B retires its last caller |
 
@@ -587,7 +594,7 @@ Per track, the pins listed in §2, plus the cross-track set:
 
   | | intro | menu | jungle | ice | factory | water | arena | sand | void | crown |
   |---|---|---|---|---|---|---|---|---|---|---|
-  | v2 band | 28–31 (of 32) | 58–63 | 58–63 | 50–60 | 56–62 | *B* | *B* | *B* | *B* | *B* |
+  | v2 band | 28–31 (of 32) | 58–63 | 58–63 | 58–63 | 56–62 | *B* | *B* | *B* | *B* | *B* |
   | v1 band | ≤ 18 | 46 ± 2 | 40–58 | ≤ 34 | 40–58 | ≤ 44 | ≤ 62 | ≤ 38 | ≤ 20 | 40–58 |
 
   Wave-B tracks keep their v1 band until their own rewrite. `menu` stays pinned
@@ -605,9 +612,12 @@ arena → sand → void → crown`, A/B against the reference bounce of what shi
 **Machine pre-check before any listen** — three numbers per track off the WAV,
 because "it feels energetic" is not a finding:
 
-1. `ffmpeg -af silencedetect=n=-50dB:d=0.15` must report **zero** intervals. That
-   is the direct test for "no long rests", and it is stronger than reading the
-   waveform PNG.
+1. `ffmpeg -af silencedetect=n=-50dB:d=0.15`. **Zero is not reachable and is not
+   the bar**: every v2 track has one deliberately unstruck step per loop, and the
+   engine's exponential note decay turns that into ~0.2 s under −50 dB. The bar
+   is **at most one interval per loop pass** — which is what ARENA, the track the
+   research names as already arcade-correct, measures at. More than that means a
+   hole that recurs *within* the loop, and that is the rejected device.
 2. RMS from `-af astats`, compared against the same track's shipped bounce: v2
    must read **measurably hotter**.
 3. `showwavespic` (1200×300) and `showspectrumpic` (1200×400, `legend=1`) — the

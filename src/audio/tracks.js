@@ -364,13 +364,17 @@ const JUNGLE_A = mkPat(
 );
 /* ICE — brittle, glittering. F Lydian on F, STEP 0.129 (116 BPM). The cold is
    the mode and the register, not an absent low end: the bass is a full
-   root-fifth alternation on EVERY off-eighth — steps 1, 3, 5 and 7 of every bar
-   — and it is the only bass in the score that lives entirely off the beat. The
-   6200 Hz hat answers it with a bell ON the beat, steps 0 and 4, so the two
-   voices cover the bar between them and the pulse never gaps. The lead states
-   the motif at normal speed (v2 rhythm) at bars 1 and 5, two octaves above the
-   bass and never below C5, and it stays off step 6 of every bar: that recurring
-   single-step pocket is the glitter, and it is one step, not one bar. The sine
+   root-fifth alternation on EVERY off-eighth — steps 1, 3, 5 and 7 of every bar,
+   each ringing an eighth long so the line connects rather than ticks — and it is
+   the only bass in the score that lives entirely off the beat. The 6200 Hz hat
+   answers it with a bell on every even step, so the two voices cover the bar
+   between them and the pulse never gaps; the hat skips step 62 and nothing else
+   plays there, which is the loop's one deliberate hole. (A first cut put the
+   bell only on 0 and 4 and left step 6 of EVERY bar unstruck: the offline render
+   showed 34 sub-50 dB holes, one per bar — a rest heard as a feature, which is
+   exactly what this direction withdraws.) The lead states the motif at normal
+   speed (v2 rhythm) at bars 1 and 5, two octaves above the bass and never below
+   C5. The sine
    pad holds Lydian chord tones including the raised fourth (B3), the glassy note
    that names the mode. Nothing here reaches for a perfect fourth above F — that
    Bb would collide with CROWN's Ionian-pair pin, and Lydian does not want it. */
@@ -387,10 +391,10 @@ const ICE_A = mkPat(
     [98.0, 146.83],
     [123.47, 164.81],
   ].flatMap(([r, q], b) => [
-    [b * 8 + 1, r, 1],
-    [b * 8 + 3, q, 1],
-    [b * 8 + 5, r, 1],
-    [b * 8 + 7, q, 1],
+    [b * 8 + 1, r, 2],
+    [b * 8 + 3, q, 2],
+    [b * 8 + 5, r, 2],
+    [b * 8 + 7, q, 2],
   ]),
   [
     [0, 698.46, 1],
@@ -434,9 +438,10 @@ const ICE_A = mkPat(
     [59, 783.99, 2],
     [61, 698.46, 1],
   ],
-  [0, 1, 2, 3, 4, 5, 6, 7].flatMap((b) =>
-    [0, 4].map((o) => [b * 8 + o, 6200, 1]),
-  ),
+  [0, 1, 2, 3, 4, 5, 6, 7]
+    .flatMap((b) => [0, 2, 4, 6].map((o) => b * 8 + o))
+    .filter((s) => s !== 62)
+    .map((s) => [s, 6200, 1]),
   ["triangle", 0.08, "triangle", 0.06, "triangle", 0.015, "sine", 0.03],
   [
     [0, 349.23, 12],

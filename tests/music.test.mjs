@@ -1890,9 +1890,10 @@ function installAC(ac) {
     (A.pad || []).map((n) => pcOf(n.f, f0).toFixed(1)).join(","),
   );
   check(
-    "ice hat is a bell ON the beat — steps 0 and 4 at 6200 Hz, against the off-bass",
-    A.hat.length === 16 &&
-      A.hat.every((n) => [0, 4].includes(n.s % 8) && n.f === 6200),
+    "ice hat is a bell on every even step at 6200 Hz, against the off-beat bass",
+    A.hat.length === 31 &&
+      A.hat.every((n) => n.s % 2 === 0 && n.f === 6200) &&
+      !A.hat.some((n) => n.s === 62),
     A.hat.length + ":" + [...new Set(A.hat.map((n) => n.s % 8))].sort().join(","),
   );
   check(
@@ -1901,8 +1902,13 @@ function installAC(ac) {
     pulseGap(A) + "/" + barsWithLead(A),
   );
   check(
-    "ice is light but never thin: 50-60 of 64 steps",
-    occ(A) >= 50 && occ(A) <= 60,
+    "ice bass notes ring an eighth each, so the pulse connects rather than ticks",
+    A.bass.every((n) => Math.round(n.d / A.STEP) === 2),
+    [...new Set(A.bass.map((n) => Math.round(n.d / A.STEP)))].join(","),
+  );
+  check(
+    "ice is dense but not solid: 58-63 of 64 steps",
+    occ(A) >= 58 && occ(A) <= 63,
     occ(A),
   );
   check("ice register lanes never cross, A and B", lanes(A) && lanes(B));
@@ -2193,7 +2199,7 @@ function installAC(ac) {
     intro: [28, 31],
     menu: [58, 63],
     jungle: [58, 63],
-    ice: [50, 60],
+    ice: [58, 63],
     factory: [56, 62],
     water: [0, 44],
     arena: [0, 62],
