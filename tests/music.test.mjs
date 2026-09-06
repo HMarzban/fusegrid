@@ -128,7 +128,7 @@ const soundsDeg = (P, f0, d) =>
    V3 grows one id per commit, exactly as the v2 sweeps did. Every v2-direction
    sweep below quantifies over V2ONLY instead of over all ten, so the suite stays
    green on a mixed tree and nothing is scoped away permanently. */
-const V3 = ["menu", "jungle", "void"];
+const V3 = ["menu", "jungle", "void", "water"];
 const V2ONLY = Object.keys(MUSIC_TRACKS).filter((k) => !V3.includes(k));
 /* Declared per PATTERN, not per track: v3 gives A and B their own key, so the
    in-collection pin has to read a section's own tonic and collection. Neither
@@ -136,7 +136,8 @@ const V2ONLY = Object.keys(MUSIC_TRACKS).filter((k) => !V3.includes(k));
    sting, no dissonant cluster" is free on those tracks rather than inspected. */
 const PENT_MAJ = [0, 2, 4, 7, 9],
   PENT_MIN = [0, 3, 5, 7, 10],
-  HEX_MAJ = [0, 2, 4, 5, 7, 9];
+  HEX_MAJ = [0, 2, 4, 5, 7, 9],
+  MIXO = [0, 2, 4, 5, 7, 9, 10];
 const V3KEY = {
   "menu.A": { f0: 392.0, set: HEX_MAJ, name: "G major hexatonic" },
   "menu.B": { f0: 293.66, set: PENT_MAJ, name: "D major pentatonic" },
@@ -144,6 +145,8 @@ const V3KEY = {
   "jungle.B": { f0: 440.0, set: PENT_MAJ, name: "A major pentatonic" },
   "void.A": { f0: 493.88, set: PENT_MIN, name: "B minor pentatonic" },
   "void.B": { f0: 329.63, set: PENT_MIN, name: "E minor pentatonic" },
+  "water.A": { f0: 392.0, set: MIXO, name: "G Mixolydian" },
+  "water.B": { f0: 349.23, set: PENT_MAJ, name: "F major pentatonic" },
 };
 /* Index in the declared collection, extended across octaves, so "three adjacent
    collection steps falling" is idx, idx-1, idx-2 read from ANY degree — which is
@@ -1373,14 +1376,11 @@ function installAC(ac) {
         if (P[k] && P[k].length) chans.push([id + "." + sec + "." + k, P[k]]);
     }
   }
-  /* Stepped dynamics is the direction brief's main maturity lever and the whole
-     reason the [s,f,d,v?] tuple exists. Exactly these channels use it. */
-  const STEPPED = [
-    "water.A.bass",
-    "water.B.bass",
-    "sand.A.lead",
-    "sand.B.lead",
-  ];
+  /* The [s,f,d,v?] tuple stays legal and stays scarce. It was v2's main
+     maturity lever; v3 spells accent as a PITCH choice wherever it can, so the
+     list shrinks as each track is recomposed and the remaining names are the
+     ones still carrying v2 data. */
+  const STEPPED = ["sand.A.lead", "sand.B.lead"];
   const spread = chans.filter(([, a]) => new Set(a.map((n) => n.v)).size !== 1);
   check(
     "per-note velocity is authored only where the spec asks for it",
@@ -1990,8 +1990,8 @@ function installAC(ac) {
   /* jungle joined HAND with its v3 rewrite: a transposed B shares A's hat array
      by identity and therefore cannot re-cut a rhythm, which is exactly the
      sameness v3 exists to remove. ice/factory/water/sand follow on wave 2. */
-  const HAND = ["menu", "jungle", "arena", "void", "crown"];
-  const TRANSP = ["ice", "factory", "water", "sand"];
+  const HAND = ["menu", "jungle", "arena", "void", "crown", "water"];
+  const TRANSP = ["ice", "factory", "sand"];
   check(
     "hand-authored B: each of these owns a distinct hat array",
     HAND.every((k) => MUSIC_TRACKS[k].B.hat !== MUSIC_TRACKS[k].A.hat),
@@ -2332,82 +2332,105 @@ function installAC(ac) {
   check("factory register lanes never cross, A and B", lanes(A) && lanes(B));
 }
 
-// ---- water: flowing, but moving (G Mixolydian, PLAIN in even values) ----
+// ---- water: flowing, 3-against-4 (G Mixolydian, dotted three-step cells) ----
 {
   const T = MUSIC_TRACKS.water,
     A = T.A,
     B = T.B,
     f0 = TONIC.water;
   check(
-    "water STEP 0.139 (108 BPM), G1 49.00 root, B up a perfect fourth",
-    A.STEP === 0.139 &&
+    "water STEP 0.144 -> 104.2 BPM, G1 49.00 root, inside the v3 96-120 band",
+    A.STEP === 0.144 &&
       A.bass[0].f === 49 &&
-      Math.abs(B.bass[0].f / A.bass[0].f - 1.33484) < 1e-9,
-    A.STEP + "/" + A.bass[0].f,
+      15 / A.STEP >= 96 &&
+      15 / A.STEP <= 120,
+    A.STEP + " -> " + (15 / A.STEP).toFixed(1) + " BPM / " + A.bass[0].f,
   );
-  /* The smoothest, least-syncopated pattern in the set: this is how "flowing"
-     is said now that it is no longer said with held notes. */
+  /* A CALM ROOM: no hat at all, so the rhythm section is bass onsets only and
+     the pulse is carried by the cells themselves.
+     The spec's §2 row asks for a `sine` LEAD here; §5 row 8 keeps "exactly one
+     sine lead in the whole score, and it is VOID" unchanged, and the waveform
+     roster manages to assert both in one breath. The pin sheet wins: water's
+     lead is `triangle`, void keeps its marker, and water's softness is bought
+     with register, an empty hat lane and a 0.06 lead instead. */
   check(
-    "water bass is an even quarter-pulse on 0/2/4/6 — 32 notes, all eight bars",
-    A.bass.length === 32 &&
-      A.bass.every((n) => n.s % 2 === 0) &&
-      A.bass.every((n) => Math.round(n.d / A.STEP) === 2) &&
-      barsWithBass(A) === 8,
-    A.bass.length + ":" + [...new Set(A.bass.map((n) => n.s % 8))].sort().join(","),
+    "water is a calm room: triangle bass, triangle lead, sine pad, NO hat",
+    A.bass[0].t === "triangle" &&
+      A.lead[0].t === "triangle" &&
+      A.hat.length === 0 &&
+      B.hat.length === 0 &&
+      !!A.pad &&
+      A.pad[0].t === "sine",
+    chansOf(A)
+      .map((a) => a[0].t)
+      .join(","),
   );
+  /* 3-against-4 spelt on an integer grid: DOTTED THREE-STEP CELLS against the
+     eight-step bar. The cells tile (each rings until the next begins) and walk
+     out of phase with the bar, re-aligning at the halfway point — which is
+     what puts the hook back on a downbeat at bar 4 without a fractional step. */
+  const HALF = [0, 3, 6, 9, 12, 15, 18, 21, 24, 27, 30];
   check(
-    "water bass walks root-fifth-octave — three pitches a bar, the root on 0",
-    [0, 1, 2, 3, 4, 5, 6, 7].every((b) => {
-      const at = (o) =>
-        (A.bass.find((n) => n.s === b * 8 + o) || { f: 0 }).f;
-      const r = at(0),
-        q = at(2),
-        o = at(4);
-      return (
-        r > 0 &&
-        Math.abs(semi(q, r) - 7) <= 0.05 &&
-        Math.abs(semi(o, r) - 12) <= 0.05 &&
-        at(6) === q
-      );
-    }),
-    [...new Set(A.bass.map((n) => n.f))].sort((x, y) => x - y).join(","),
-  );
-  /* Withdrawn in v2 (spec 5 item 7): the legato lead holding across bar lines
-     and the INV contrary-motion pad. Both are chamber devices; what pins them
-     out is their negation, so they cannot creep back in as "colour". */
-  check(
-    "water lead is in EVEN VALUES — nothing longer than an eighth, no ties",
-    A.lead.every((n) => Math.round(n.d / A.STEP) <= 2) &&
-      !A.lead.some((n) => (n.s % 8) + Math.round(n.d / A.STEP) > 8),
-    [...new Set(A.lead.map((n) => Math.round(n.d / A.STEP)))].sort().join(","),
-  );
-  check(
-    "water states the motif at bars 0 and 4, unstretched",
-    motifV2At(A.lead, 0, f0) && motifV2At(A.lead, 32, f0),
-    motifV2Head(A.lead, f0, 64),
+    "water bass is dotted 3-step cells that tile, re-phasing at the halfway mark",
+    A.bass.length === 22 &&
+      A.bass.map((n) => n.s).join(",") ===
+        HALF.concat(HALF.map((s) => s + 32)).join(",") &&
+      A.bass.every(
+        (n) => Math.round(n.d / A.STEP) === (n.s % 32 === 30 ? 2 : 3),
+      ),
+    A.bass.length + ":" + A.bass.map((n) => n.s).join(","),
   );
   check(
-    "water bass keeps its stepped velocity as an accent — 3+ distinct v values",
-    new Set(A.bass.map((n) => n.v)).size >= 3,
-    [...new Set(A.bass.map((n) => n.v))].sort().join(","),
+    "water's cells touch every residue of the bar — the 3-against-8 signature",
+    stepSet(A.bass) === "0,1,2,3,4,5,6,7",
+    stepSet(A.bass),
   );
-  const shared = (A.pad || []).filter((p) =>
-    A.lead.some((l) => l.s === p.s && Math.abs(semi(p.f, l.f)) > 0.05),
+  const cell = (chan, s0) =>
+    figureAt(chan, s0, f0, [0, 3, 6], [DEG5, DEG6, DEG1]);
+  check(
+    "water's hook is the dotted cell 5-6-1 (D E G) on 0/3/6, at bars 0 and 4",
+    cell(A.lead, 0) && cell(A.lead, 32),
   );
   check(
-    "water pad supports rather than opposes — no INV, and it is not the pulse",
-    !!A.pad && A.pad.every((n) => Math.round(n.d / A.STEP) === 8) && shared.length >= 1,
-    (A.pad || []).length + " pad notes",
+    "water's lead is dotted too, never under three steps apart — nothing hurries",
+    A.lead.length === 21 &&
+      A.lead.every((n) => Math.round(n.d / A.STEP) <= 3) &&
+      A.lead.every((n, i) => i === 0 || n.s - A.lead[i - 1].s >= 3),
+    stepSet(A.lead),
   );
   check(
-    "water flows without stopping: every bar carries lead, pulse never gaps",
-    barsWithLead(A) === 8 && pulseGap(A) <= 1,
-    barsWithLead(A) + "/" + pulseGap(A),
+    "water pad is four 16-step drones under it, not a second pulse",
+    !!A.pad &&
+      A.pad.length === 4 &&
+      A.pad.every((n) => Math.round(n.d / A.STEP) === 16) &&
+      A.pad.map((n) => n.s).join(",") === "0,16,32,48",
+    JSON.stringify((A.pad || []).map((n) => [n.s, n.f])),
   );
   check(
-    "water is dense but not solid: 58-63 of 64 steps",
-    occ(A) >= 58 && occ(A) <= 63,
-    occ(A),
+    "water flows without a hat: bass onsets alone leave no gap over two steps",
+    pulseGap(A) <= 2 && pulseGap(B) <= 2 && barsWithLead(A) === 8,
+    pulseGap(A) + "/" + pulseGap(B),
+  );
+  check(
+    "water is open, not empty: 34-46 of 64 steps",
+    occ(A) >= 34 && occ(A) <= 46,
+    occ(A) + "/" + occ(B),
+  );
+  /* B lifts to the flat seventh — F major pentatonic, five notes G Mixolydian
+     already owns, so the lift is modal rather than chromatic — and RE-PHASES
+     the cells into the bar (0/3/6 every bar) instead of across it. Note that
+     the shared A-vs-B root clause reads bass at steps 0/8/16/24 and A's walking
+     grid only lands on two of those, so here that clause is carried by step 0:
+     B opens on F2 87.31 where A opens on G1 49.00. */
+  check(
+    "water B lifts to the flat 7th and re-phases the cells INTO the bar (0/3/6)",
+    stepSet(B.bass) === "0,3,6" &&
+      B.bass.length === 24 &&
+      B.bass[0].f === 87.31 &&
+      B.bass.every(
+        (n) => Math.round(n.d / B.STEP) === (n.s % 8 === 6 ? 2 : 3),
+      ),
+    stepSet(A.bass) + " vs " + stepSet(B.bass),
   );
   check("water register lanes never cross, A and B", lanes(A) && lanes(B));
 }
@@ -2509,7 +2532,7 @@ function installAC(ac) {
     ice: 0.129,
     sand: 0.134,
     menu: 0.137,
-    water: 0.139,
+    water: 0.144,
     void: 0.152,
   };
   check(
@@ -2573,7 +2596,7 @@ function installAC(ac) {
     jungle: [54, 62],
     ice: [58, 63],
     factory: [56, 62],
-    water: [58, 63],
+    water: [34, 46],
     arena: [56, 62],
     sand: [58, 63],
     void: [34, 46],
@@ -2678,10 +2701,20 @@ function installAC(ac) {
     ),
     PATS.map(([n]) => n + " " + V3KEY[n].name).join(" | "),
   );
+  /* "Nothing below 55 Hz" (spec 0a.3) meets the one root v3 declined to move:
+     water's biome root is G1 49.00 and the ROOT pin holds it there, so the two
+     facts cannot both be literally true. Rather than lower the floor per
+     pattern, the fact is stated as a GLOBAL UNIQUENESS claim — among composed
+     tracks exactly one bass note sits under 55 Hz, it is water's downbeat, and
+     it is at step 0 — so the exception names its own offender by value and
+     cannot drift into a second track or a second note. */
+  const low = PATS.flatMap(([n, P]) =>
+    P.bass.filter((x) => x.f < 55).map((x) => n + "@" + x.s + ":" + x.f),
+  );
   check(
-    "v3: no rumble — every bass note is at or above 55 Hz",
-    PATS.every(([, P]) => P.bass.every((n) => n.f >= 55)),
-    PATS.map(([n, P]) => n + ":" + Math.min(...P.bass.map((x) => x.f))).join(" "),
+    "v3: no rumble — the ONE sub-55 Hz bass note in the score is water's G1 root",
+    low.length <= 1 && low.every((s) => s === "water.A@0:49"),
+    low.join(" ") || "(none)",
   );
   /* The single largest v3 change, pinned as an ABSENCE. NOTE: on a minor-
      pentatonic track this is trivially true (that collection has no 6th degree,

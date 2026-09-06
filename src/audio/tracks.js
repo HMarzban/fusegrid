@@ -574,98 +574,120 @@ const FACTORY_A = mkPat(
   ),
   ["sawtooth", 0.09, "square", 0.075, "square", 0.018],
 );
-/* WATER — flowing, but moving. G Mixolydian on G, STEP 0.139 (108 BPM); the
-   flat seventh is what makes it major-but-not-quite, wet rather than bright.
-   Flowing is now said with an EVEN PULSE instead of with held notes: the bass
-   walks root-fifth-octave-fifth on steps 0, 2, 4 and 6 of every bar, each note
-   an eighth long, the smoothest and least syncopated pattern in the set — the
-   one bass in the score that never lands off the beat. It is also the only
-   channel besides sand's lead that authors the [s,f,d,v] tuple, and the swell
-   survives there as a light ACCENT (root loud, fifth soft) rather than as the
-   whole identity: eight long crescendoing notes were the undertow, and the
-   undertow was the problem. The lead states the motif at bars 1 and 5 in even
-   values, nothing longer than an eighth and nothing tied across a bar line —
-   both the cross-barline legato and the INV contrary-motion pad are withdrawn
-   by name, because two independent lines in contrary motion is a chamber move,
-   not an arcade one. The pad now simply holds one chord tone per bar under it.
-   The hat stays the lightest in the score, 4000 Hz on the "and" of each beat,
-   a texture cue rather than the pulse — the bass is the pulse. Step 61 is the
-   loop's one unstruck step. */
+/* WATER — direction v3: flowing, 3-against-4. G MIXOLYDIAN on G, STEP 0.144
+   (104.2 BPM). The flat seventh is what makes it major-but-not-quite, wet
+   rather than bright, and it is also where B goes.
+   The identity is DOTTED THREE-STEP CELLS against the eight-step bar: the bass
+   moves every three steps and each cell rings until the next begins, so the
+   line is unbroken while its accents walk out of phase with the bar — a
+   3-against-4 lilt spelt entirely on integers, with no fractional step and no
+   smaller STEP bought to fake a triplet. Eleven cells fill each half of the
+   loop (the eleventh rings two steps rather than three), so the grid RE-PHASES
+   at step 32 and the hook lands back on the downbeat of bar 4. The bass step
+   set is therefore all eight residues of the bar — the one such pattern in the
+   score, and water's groove signature.
+   This is a CALM ROOM: no hat at all, so the pulse is the cells themselves,
+   and the lead is dotted too — 21 notes, never less than three steps apart,
+   nothing hurried. The hook is the cell 5-6-1 (D E G) on 0/3/6, stated at bars
+   0 and 4 an octave apart. Four long sine drones sit under all of it.
+   Two spec conflicts resolved here rather than left to trip a later commit.
+   (1) §2 asks for a SINE lead; §5 row 8 keeps "exactly one sine lead, and it is
+   VOID" unchanged, and the waveform roster asserts both in one breath. The pin
+   sheet wins — this lead is triangle, and water's softness comes from register,
+   an empty hat lane and v 0.06. (2) The biome root G1 49.00 does not move (§1b)
+   and the no-rumble floor is 55 Hz, so 49.00 is authored EXACTLY ONCE, at step
+   0, and every other bass note here is G2 98.00 or above 55; the test states
+   that as a score-wide uniqueness claim rather than as a per-pattern excuse.
+   Channel peaks sum to 0.173. The hat slots in the mix array are inert — mkPat
+   reads the pad's timbre and velocity from mix[6]/mix[7], so the pair has to
+   stay in place even on a track whose hat array is empty. */
+const WATER_CELLS = [0, 3, 6, 9, 12, 15, 18, 21, 24, 27, 30];
 const WATER_A = mkPat(
-  0.139,
+  0.144,
   64,
   [
-    [49.0, 73.42, 98.0],
-    [43.65, 65.41, 87.31],
-    [65.41, 98.0, 130.81],
-    [49.0, 73.42, 98.0],
-    [49.0, 73.42, 98.0],
-    [73.42, 110.0, 146.83],
-    [43.65, 65.41, 87.31],
-    [49.0, 73.42, 98.0],
+    [49.0, 73.42, 98.0, 123.47, 110.0, 98.0, 87.31, 130.81, 110.0, 87.31, 73.42],
+    [98.0, 73.42, 82.41, 98.0, 130.81, 110.0, 87.31, 73.42, 82.41, 98.0, 73.42],
+  ].flatMap((half, h) =>
+    WATER_CELLS.map((s, i) => [s + h * 32, half[i], i === 10 ? 2 : 3]),
+  ),
+  [
+    [0, 293.66, 3],
+    [3, 329.63, 3],
+    [6, 392.0, 3],
+    [10, 440.0, 3],
+    [13, 493.88, 3],
+    [16, 523.25, 3],
+    [19, 493.88, 3],
+    [22, 440.0, 3],
+    [25, 392.0, 3],
+    [28, 329.63, 3],
+    [32, 587.33, 3],
+    [35, 659.26, 3],
+    [38, 783.99, 3],
+    [42, 698.46, 3],
+    [45, 659.26, 3],
+    [48, 523.25, 3],
+    [51, 587.33, 3],
+    [54, 659.26, 3],
+    [57, 523.25, 3],
+    [60, 440.0, 3],
+    [63, 392.0, 1],
+  ],
+  [],
+  ["triangle", 0.085, "triangle", 0.06, "triangle", 0.012, "sine", 0.028],
+  [
+    [0, 196.0, 16],
+    [16, 174.61, 16],
+    [32, 261.63, 16],
+    [48, 196.0, 16],
+  ],
+);
+/* WATER B — hand-authored: the lift is to the FLAT SEVENTH, F major pentatonic
+   (F G A C D), five notes G Mixolydian already owns, so the modulation is modal
+   rather than chromatic and the room never changes colour. What changes is the
+   phase: A's cells walk ACROSS the bar, B's sit INSIDE it — 0/3/6 of every bar,
+   durations 3/3/2 — so the same dotted lilt suddenly agrees with the barline
+   and the second half of the cycle feels like it has settled. The lead answers
+   in the pockets on 1/4/7. B opens on F2 87.31 where A opens on G1 49.00. */
+const WATER_B = mkPat(
+  0.144,
+  64,
+  [
+    [87.31, 130.81, 110.0],
+    [87.31, 130.81, 174.61],
+    [130.81, 196.0, 130.81],
+    [98.0, 146.83, 110.0],
+    [87.31, 130.81, 110.0],
+    [87.31, 130.81, 174.61],
+    [110.0, 146.83, 130.81],
+    [130.81, 196.0, 146.83],
   ].flatMap(([r, q, o], b) => [
-    [b * 8, r, 2, 0.1],
-    [b * 8 + 2, q, 2, 0.07],
-    [b * 8 + 4, o, 2, 0.09],
-    [b * 8 + 6, q, 2, 0.07],
+    [b * 8, r, 3],
+    [b * 8 + 3, q, 3],
+    [b * 8 + 6, o, 2],
   ]),
   [
-    [0, 392.0, 1],
-    [1, 493.88, 1],
-    [2, 587.33, 1],
-    [3, 659.26, 2],
-    [5, 587.33, 1],
-    [6, 523.25, 1],
-    [7, 493.88, 1],
-    [8, 440.0, 1],
-    [9, 523.25, 1],
-    [11, 587.33, 2],
-    [13, 523.25, 1],
-    [15, 440.0, 1],
-    [16, 523.25, 1],
-    [17, 587.33, 1],
-    [19, 659.26, 2],
-    [21, 587.33, 1],
-    [23, 523.25, 1],
-    [24, 493.88, 1],
-    [25, 440.0, 1],
-    [27, 392.0, 2],
-    [29, 440.0, 1],
-    [31, 493.88, 1],
-    [32, 392.0, 1],
-    [33, 493.88, 1],
-    [34, 587.33, 1],
-    [35, 659.26, 2],
-    [37, 587.33, 1],
-    [39, 698.46, 1],
-    [40, 587.33, 1],
-    [41, 698.46, 1],
-    [43, 659.26, 2],
-    [45, 587.33, 1],
-    [47, 493.88, 1],
-    [48, 523.25, 1],
-    [49, 659.26, 1],
-    [51, 698.46, 2],
-    [53, 659.26, 1],
-    [55, 523.25, 1],
-    [56, 493.88, 1],
-    [57, 440.0, 1],
-    [59, 392.0, 2],
-    [63, 349.23, 1],
-  ],
-  [0, 1, 2, 3, 4, 5, 6, 7].flatMap((b) =>
-    [3, 7].map((o) => [b * 8 + o, 4000, 1]),
-  ),
-  ["triangle", 0.09, "triangle", 0.07, "triangle", 0.016, "sine", 0.03],
+    [261.63, 293.66, 349.23],
+    [392.0, 440.0, 523.25],
+    [587.33, 523.25, 440.0],
+    [392.0, 349.23, 293.66],
+    [261.63, 349.23, 440.0],
+    [523.25, 587.33, 698.46],
+    [587.33, 523.25, 440.0],
+    [392.0, 349.23, 261.63],
+  ].flatMap((c, b) => [
+    [b * 8 + 1, c[0], 3],
+    [b * 8 + 4, c[1], 3],
+    [b * 8 + 7, c[2], 2],
+  ]),
+  [],
+  ["triangle", 0.085, "triangle", 0.06, "triangle", 0.012, "sine", 0.028],
   [
-    [0, 196.0, 8],
-    [8, 174.61, 8],
-    [16, 261.63, 8],
-    [24, 196.0, 8],
-    [32, 196.0, 8],
-    [40, 293.66, 8],
-    [48, 174.61, 8],
-    [56, 196.0, 8],
+    [0, 174.61, 16],
+    [16, 261.63, 16],
+    [32, 220.0, 16],
+    [48, 174.61, 16],
   ],
 );
 /* Straight eighths: one hit on every even step of all eight bars. ARENA authors
@@ -1229,7 +1251,7 @@ export const MUSIC_TRACKS = Object.freeze({
   jungle: tr(JUNGLE_A, JUNGLE_B),
   ice: tr(ICE_A, transp(ICE_A, 1.122462)),
   factory: tr(FACTORY_A, transp(FACTORY_A, 0.890899)),
-  water: tr(WATER_A, transp(WATER_A, 1.33484)),
+  water: tr(WATER_A, WATER_B),
   arena: tr(ARENA_A, ARENA_B),
   sand: tr(SAND_A, transp(SAND_A, 1.059463)),
   void: tr(VOID_A, VOID_B),
