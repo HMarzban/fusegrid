@@ -445,71 +445,82 @@ const ICE_A = mkPat(
     [48, 329.63, 12],
   ],
 );
-/* FACTORY — mechanical, cold competence. E Phrygian on E, STEP 0.119 (126 BPM),
-   and the flat second is the menace: the bass cadences F-F-E in the last bar.
-   CANON is the form. The sawtooth bass — the only one in the score, an identity
-   marker rather than a fourth default timbre — states the motif low in bar 1,
-   and the square lead answers it exactly eight steps later, one octave up. The
-   engine ostinato that follows sustains 3+3+2 (three-step cells, then a
-   two-step one) against a square hat on every even step, so the two grids
-   coincide only twice a bar: the 2-against-3 interlock. Bar 5 cuts the hat and
-   the lead entirely — the machine skips a beat, which is also where a blast is
-   most likely to land, and SFX render outside musicGain and sit on top. No pad.
-   The B-section metric modulation the brief asks for is not attempted: transp
+/* FACTORY — mechanical, cold competence. E Phrygian on E, STEP 0.114 (132 BPM),
+   and the flat second is the menace. The smallest diff of the ten: the sawtooth
+   engine bass, the 2-against-3 interlock and the CANON were already the right
+   idea. The sawtooth bass — the only one in the score, an identity marker rather
+   than a fourth default timbre — states the motif low in bar 1 (v2 rhythm), and
+   the square lead answers it exactly eight steps later, one octave up, after a
+   two-note anacrusis on steps 5 and 7 that leans in on the Phrygian flat
+   second. The engine ostinato that follows sustains 3+3+2 (three-step cells,
+   then a two-step one) in every bar against a square hat on every even step of
+   every bar, so the two grids coincide only twice a bar: the interlock. The old
+   bar-5 cut-out is filled in — the machine no longer skips a beat, and SFX still
+   sit on top because they render outside musicGain. Nothing reaches for D#: that
+   leading tone plus the perfect fourth this mode already owns would make factory
+   a second Ionian-pair track and break CROWN's uniqueness pin. No pad. The
+   B-section metric modulation the brief asks for is still not attempted: transp
    returns the SAME hat array by identity, so a regrouping B hat cannot exist. */
 const FACTORY_A = mkPat(
-  0.119,
+  0.114,
   64,
   [
     [0, 82.41, 1],
     [1, 98.0, 1],
     [2, 123.47, 1],
-    [3, 130.81, 3],
-    [6, 123.47, 1],
-    [8, 82.41, 3],
-    [11, 82.41, 3],
-    [14, 123.47, 2],
-    [16, 87.31, 3],
-    [19, 87.31, 3],
-    [22, 130.81, 2],
-    [24, 98.0, 3],
-    [27, 98.0, 3],
-    [30, 123.47, 2],
-    [32, 82.41, 3],
-    [35, 82.41, 3],
-    [38, 123.47, 2],
-    [40, 82.41, 3],
-    [43, 82.41, 3],
-    [46, 130.81, 2],
-    [48, 110.0, 3],
-    [51, 110.0, 3],
-    [54, 82.41, 2],
-    [56, 87.31, 3],
-    [59, 87.31, 3],
-    [62, 82.41, 2],
+    [3, 130.81, 2],
+    [5, 123.47, 1],
+    ...[
+      [82.41, 123.47],
+      [87.31, 130.81],
+      [98.0, 123.47],
+      [82.41, 123.47],
+      [82.41, 130.81],
+      [110.0, 82.41],
+      [87.31, 82.41],
+    ].flatMap(([r, q], i) => [
+      [(i + 1) * 8, r, 3],
+      [(i + 1) * 8 + 3, r, 3],
+      [(i + 1) * 8 + 6, q, 2],
+    ]),
   ],
   [
+    [5, 174.61, 1],
+    [7, 146.83, 1],
     [8, 164.81, 1],
     [9, 196.0, 1],
     [10, 246.94, 1],
-    [11, 261.63, 3],
-    [14, 246.94, 1],
-    [17, 329.63, 1],
-    [21, 293.66, 3],
-    [25, 261.63, 1],
-    [27, 246.94, 1],
-    [30, 196.0, 2],
+    [11, 261.63, 2],
+    [13, 246.94, 1],
+    [17, 220.0, 1],
+    [19, 196.0, 1],
+    [21, 174.61, 1],
+    [23, 164.81, 1],
+    [24, 196.0, 1],
+    [25, 246.94, 1],
+    [27, 261.63, 2],
+    [29, 246.94, 1],
+    [31, 220.0, 1],
+    [33, 164.81, 1],
+    [35, 196.0, 1],
+    [37, 246.94, 1],
+    [39, 261.63, 1],
     [40, 329.63, 1],
     [41, 392.0, 1],
     [42, 493.88, 1],
-    [43, 523.25, 3],
-    [46, 493.88, 1],
-    [49, 493.88, 1],
-    [53, 440.0, 3],
-    [57, 349.23, 1],
-    [61, 329.63, 3],
+    [43, 523.25, 2],
+    [45, 493.88, 1],
+    [49, 440.0, 1],
+    [51, 392.0, 1],
+    [53, 349.23, 1],
+    [55, 329.63, 1],
+    [56, 392.0, 1],
+    [57, 493.88, 1],
+    [59, 523.25, 2],
+    [61, 493.88, 1],
+    [63, 440.0, 1],
   ],
-  [0, 1, 2, 3, 5, 6, 7].flatMap((b) =>
+  [0, 1, 2, 3, 4, 5, 6, 7].flatMap((b) =>
     [0, 2, 4, 6].map((o) => [b * 8 + o, 2400, 1]),
   ),
   ["sawtooth", 0.09, "square", 0.075, "square", 0.018],

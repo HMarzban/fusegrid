@@ -1805,7 +1805,7 @@ function installAC(ac) {
      order (intro -> menu -> jungle -> ice -> factory); wave B extends it to all
      ten. The breath-bar sweep this block used to carry is gone with the shared
      mandate — a v2 track earns its air from articulation, not empty bars. */
-  const WA = ["intro", "menu", "jungle", "ice"];
+  const WA = ["intro", "menu", "jungle", "ice", "factory"];
   check(
     "v2 wave A: the rhythm section never leaves two steps unstruck",
     WA.every((k) => pulseGap(MUSIC_TRACKS[k].A) <= 1),
@@ -1971,8 +1971,8 @@ function installAC(ac) {
     B = T.B,
     f0 = TONIC.factory;
   check(
-    "factory STEP 0.119 (126 BPM), E2 82.41 root, B down a whole tone",
-    A.STEP === 0.119 &&
+    "factory STEP 0.114 (132 BPM), E2 82.41 root, B down a whole tone",
+    A.STEP === 0.114 &&
       A.bass[0].f === 82.41 &&
       Math.abs(B.bass[0].f / A.bass[0].f - 0.890899) < 1e-9,
     A.STEP + "/" + A.bass[0].f,
@@ -1983,24 +1983,30 @@ function installAC(ac) {
     A.bass[0].t,
   );
   check(
-    "factory hat is square on every even step — the 2 side of the interlock",
-    A.hat.length > 0 && A.hat.every((n) => n.t === "square" && n.s % 2 === 0),
+    "factory hat is square on every even step of ALL EIGHT bars — bar 5 no longer cuts",
+    A.hat.length === 32 &&
+      A.hat.every((n) => n.t === "square" && n.s % 2 === 0),
     A.hat.length + "/" + A.hat[0].t,
   );
+  check(
+    "factory engine never stalls: bass in every bar, pulse never gaps",
+    barsWithBass(A) === 8 && pulseGap(A) <= 1,
+    barsWithBass(A) + "/" + pulseGap(A),
+  );
   check("factory has no pad at all", A.pad === undefined, String(A.pad));
-  const bh = motifHead(A.bass, f0, 1, 64),
-    lh = motifHead(A.lead, f0, 1, 64);
+  const bh = motifV2Head(A.bass, f0, 64),
+    lh = motifV2Head(A.lead, f0, 64);
   const bf = bh >= 0 && A.bass.find((n) => n.s === bh).f,
     lf = lh >= 0 && A.lead.find((n) => n.s === lh).f;
   check(
-    "CANON: the lead states the motif exactly 8 steps after the bass, an octave up",
-    bh >= 0 && lh === bh + 8 && lf > bf && isDeg(lf, bf, DEG1),
+    "CANON: bass head at bar 0, lead head exactly 8 steps later, an octave up",
+    bh === 0 && lh === 8 && lf > bf && isDeg(lf, bf, DEG1),
     "bass@" + bh + " lead@" + lh,
   );
   check(
-    "factory drives without filling: 40-58 of 64 steps, and it breathes",
-    occ(A) >= 40 && occ(A) <= 58 && breathBar(A) >= 0,
-    occ(A) + "/" + breathBar(A),
+    "factory drives without filling: 56-62 of 64 steps",
+    occ(A) >= 56 && occ(A) <= 62,
+    occ(A),
   );
   check("factory register lanes never cross, A and B", lanes(A) && lanes(B));
 }
@@ -2122,7 +2128,7 @@ function installAC(ac) {
   const LADDER = {
     arena: 0.107,
     crown: 0.113,
-    factory: 0.119,
+    factory: 0.114,
     jungle: 0.117,
     menu: 0.121,
     sand: 0.139,
@@ -2188,7 +2194,7 @@ function installAC(ac) {
     menu: [58, 63],
     jungle: [58, 63],
     ice: [50, 60],
-    factory: [40, 58],
+    factory: [56, 62],
     water: [0, 44],
     arena: [0, 62],
     sand: [0, 38],
