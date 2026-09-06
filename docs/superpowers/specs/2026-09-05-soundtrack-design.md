@@ -1,16 +1,60 @@
 # Soundtrack — design (2026-09-05)
 
-Ten tracks that are all the same idea: a bass pump, an octave-doubled lead, a
+> **Direction v2 — 2026-09-06, on user feedback.** The score that shipped under
+> the first reading of this document was rejected on a listen: it did not sound
+> like the classic bomber-arcade game it is modelled on. The user's words were
+> that the soundtrack is *"not like the real game"* of that genre. The identity
+> below (§0a), the motif's rhythm (§1), the tempo ladder, and every per-track
+> row in §2 are rewritten to the corrected direction. **What survives:** the
+> engine's shape, the five-note motif's *contour*, the one-collection /
+> eight-rotation scheme, the per-biome mood contrast, `MUS_PAN`, `transp`, the
+> hand-authored-B staging, and the CROWN-quotes-ARENA payoff. **What is
+> withdrawn:** rests as a structural feature, breath bars as a shared mandate,
+> withheld resolutions, chamber dynamics, and tempo used as a mood lever. The
+> engine-seam (§3), refuse list (§4) and bounce harness are untouched by v2.
+>
+> Rewrite lands in two waves: **wave A** = `intro`, `menu`, `jungle`, `ice`,
+> `factory`; **wave B** = `water`, `arena`, `sand`, `void`, `crown`. §7 carries
+> the ordering constraints that keep the suite green between them.
+
+Ten tracks that were all the same idea: a bass pump, an octave-doubled lead, a
 hat on every other step, and a "B section" that is A pitch-shifted. Nothing
-rests. Nothing develops. That is a jam-build sequencer patch, not a score.
+developed. That is a jam-build sequencer patch, not a score.
 
 Program R3 rewrites all ten as one score: **one motif, one parent pitch
-collection, eight modal rotations of it, and rests written in on purpose.**
+collection, eight modal rotations of it, and a written arrangement per biome.**
 The engine keeps its shape — oscillator-only, ≤4 channels, integer steps, zero
 deps. What changes is what is written on the grid, plus one injectable-context
 seam so a human can finally *hear* a track before it ships.
 
 ## Locked decisions
+
+### 0a. Identity (v2)
+
+**Bright, driving, hummable arcade pop on 3–4 voices — a constant pulse and a
+tune you can whistle after one loop. Energy first, mood second; darkness is
+expressed through timbre and mode, never through tempo collapse or silence.**
+
+Three consequences that decide every argument downstream:
+
+1. **The rhythm section never stops.** Hat and/or bass carry an audible
+   eighth-note-or-better subdivision through the whole loop, on every track, no
+   exceptions. Measured as `pulseGap` — the longest run of consecutive steps
+   (cyclically) with no `bass` and no `hat` note — which is **≤ 1** everywhere.
+2. **The bass is the single biggest feel lever**, and its default state is
+   *moving*: root–octave or root–fifth patterns that keep bouncing. The bass is
+   never the drone voice, and it never rests for a whole bar.
+3. **"Constant pulse" is density, not literal 100% occupancy.** The shared rule
+   that no track puts a note on all of its steps stays (a fully occupied channel
+   grid is its own monotony, and the pin is cheap). The target is therefore
+   **maximum density short of full occupancy — one deliberate gap per loop, not
+   a rest-laden texture.** Occupancy is pinned as a *band with a floor*, so a
+   track cannot quietly drift back toward sparseness.
+
+**Withdrawn by name, so nobody re-derives them:** mandatory breath bars; the
+"unharmonized first statement"; withheld tonics as tension; legato lines held
+across bar lines; contrary-motion independent voices; "the absence of low end is
+the mood"; and any tempo below the arcade band.
 
 ### 0. The grid, named
 
@@ -38,16 +82,26 @@ becomes Hz by `f = tonic * 2^(semi/12) * 2^oct`:
 
 ### 1. The motif
 
-**Degrees 1̂ – 3̂ – 5̂ – 6̂ – 5̂. Rhythm 1-1-1-3-1 steps, at steps 0, 1, 2, 3, 6
-of a bar. Step 7 rests.** "Arm — arm — arm — flash — settle — breathe."
+**Degrees 1̂ – 3̂ – 5̂ – 6̂ – 5̂ — the contour is unchanged and is not up for
+debate. Rhythm (v2): 1-1-1-2-1 steps, at steps 0, 1, 2, 3, 5 of a bar. Steps 6
+and 7 carry the phrase's pickup into the next bar — never a rest.**
+"Bounce — bounce — bounce — flash — land — run on."
+
+The v1 rhythm (`1-1-1-3-1` at 0,1,2,3,6, step 7 resting) was the chamber
+gesture: a three-step held flash and a trailing breath. v2 shortens the flash to
+two steps so **no note in the figure is longer than an eighth**, moves the
+settle a step earlier so the tail of the bar is free for a pickup, and forbids a
+silent step inside the phrase. The figure is then restatable every one or two
+bars without the loop ever sagging — which is what makes it hummable.
 
 In the engine's phrase encoding (`[s, f, d]` triples, `d` in steps, exactly what
-`mkPat`/`oct` already take), on **D4 in D Dorian**:
+`mkPat` already takes), on **D4 in D Dorian**:
 
 ```js
-// MOTIF, PLAIN — menu bar 1, D Dorian on D4
-[[0, 293.66, 1], [1, 349.23, 1], [2, 440.00, 1], [3, 493.88, 3], [6, 440.00, 1]]
-//   D4  1̂        F4  ♭3̂         A4  5̂          B4  6̂ (held)     A4  5̂
+// MOTIF, PLAIN v2 — menu bar 1, D Dorian on D4, then the pickup
+[[0, 293.66, 1], [1, 349.23, 1], [2, 440.00, 1], [3, 493.88, 2], [5, 440.00, 1],
+ [6, 392.00, 1], [7, 349.23, 1]]
+//   D4 1̂        F4 ♭3̂        A4 5̂          B4 6̂ (2 steps)  A4 5̂   G4 4̂  F4 ♭3̂
 ```
 
 Why this figure survives eight modes: 1̂/5̂ are fixed in every mode but Locrian,
@@ -60,28 +114,30 @@ its longest note is always the modal fingerprint. That is the whole spine.
 
 | Name | Definition | Steps / durations |
 |---|---|---|
-| `PLAIN` | as authored | 0,1,2,3,6 / 1,1,1,3,1 |
-| `AUG` | ×2 durations, two bars | 0,2,4,6,12 / 2,2,2,6,2 |
-| `FRAG-MID` | notes 2–4 only (3̂ 5̂ 6̂) — no tonic, no settle | 1,2,3 / 1,1,3 |
+| `PLAIN` | as authored (v2) | 0,1,2,3,5 / 1,1,1,2,1 |
+| `FRAG-MID` | notes 2–4 only (3̂ 5̂ 6̂) — a colour, never a whole track's diet | 1,2,3 / 1,1,2 |
 | `ANTIC` | whole figure one step early | b·8−1 … / same |
-| `INV` | scale-step mirror below the tonic: 1̂ ↓6̂ ↓4̂ ↓3̂ ↓4̂ | 0,1,2,3,6 / 1,1,1,3,1 |
 | `CANON` | `PLAIN` restated in a second channel exactly 8 steps later | +8 |
-| `RESOLVED` | `PLAIN` + a 6th note, 1̂ one octave above the head | +0,1,2,3,6,7 / …,2 |
+| `RESOLVED` | `PLAIN` + a 6th note, 1̂ one octave above the head | +0,1,2,3,5,7 / …,2 |
+
+**Withdrawn in v2:** `AUG` (the motif in slow motion — a tempo-collapse device
+under another name) and `INV` (contrary-motion counterpoint against the lead).
+Neither has a caller after wave B.
 
 Per-track transformation and mode:
 
-| Track | Mode / tonic | Motif treatment |
-|---|---|---|
-| `intro` | D Dorian | `PLAIN`, unaccompanied — the motif's first statement in the game |
-| `menu` | D Dorian | `PLAIN` (bar 1), developed (bars 2–3, 5–7); B answers it in G major |
-| `jungle` | D Dorian | `FRAG-MID` in the answer slots; `PLAIN` once, at bar 5 |
-| `ice` | F Lydian | `AUG` — the motif in slow motion, two bars per statement |
-| `factory` | E Phrygian | `CANON` — bass states it, lead answers one bar later, an octave up |
-| `water` | G Mixolydian | `PLAIN` with stretched durations; pad runs `INV` against it |
-| `arena` | A Aeolian | `ANTIC` — the head lands one step before the downbeat |
-| `sand` | E Phrygian ♮3 | `PLAIN` with a one-step appoggiatura before the ♮3̂ (G♯) |
-| `void` | B Locrian | `FRAG-MID` only — no tonic under it, no resolution after it |
-| `crown` | C Ionian | `RESOLVED` — the tonic VOID withheld, finally supplied |
+| Track | Mode / tonic | Motif treatment | Wave |
+|---|---|---|---|
+| `intro` | D Dorian | `PLAIN` at bar 1 over the full band, restated an octave up at bar 3 | A |
+| `menu` | D Dorian | `PLAIN` at bars 1 and 5, developed between; B answers it in G major | A |
+| `jungle` | D Dorian | `PLAIN` at bars 1 and 5; the call-and-response answer loops between | A |
+| `ice` | F Lydian | `PLAIN` at normal speed, bars 1 and 5 — no augmentation | A |
+| `factory` | E Phrygian | `CANON` — bass states it, lead answers one bar later, an octave up | A |
+| `water` | G Mixolydian | `PLAIN`, even values — no stretched legato, no `INV` pad | B |
+| `arena` | A Aeolian | `ANTIC` — the head lands one step before the downbeat | B |
+| `sand` | E Phrygian ♮3 | `PLAIN` with a one-step appoggiatura before the ♮3̂ (G♯) | B |
+| `void` | B Locrian | `FRAG-MID` as a colour, over a driving bed — the tonic is sounded | B |
+| `crown` | C Ionian | `RESOLVED` — the motif plus its own octave, the finale's payoff | B |
 
 **`reveal` is not a track.** It is an SFX name in `audio.js`'s `play()` switch
 (`src/audio.js:378`), direct-to-destination, and it does not move (§4).
@@ -97,8 +153,8 @@ load-bearing: **G♯** (SAND's raised third, in `A`) and **F♯** (menu's `B`).
 
 | Track | Tonic | `A.bass[0].f` | Note |
 |---|---|---|---|
-| `intro` | D | **55.00** (A1) | pedal on the *dominant* — the bed never states the tonic in the bass |
-| `menu` | D | **73.42** (D2) | the resolution the intro withholds |
+| `intro` | D | **73.42** (D2) | v2: states the *tonic* from step 0, same D2 as menu/jungle |
+| `menu` | D | **73.42** (D2) | the home root, stated on every downbeat |
 | `jungle` | D | **73.42** (D2) | deliberately identical to `menu` — room 1 is home |
 | `ice` | F | **87.31** (F2) | |
 | `factory` | E | **82.41** (E2) | |
@@ -109,9 +165,12 @@ load-bearing: **G♯** (SAND's raised third, in `A`) and **F♯** (menu's `B`).
 | `crown` | C | **65.41** (C2) | |
 
 The eight biome values are distinct (73.42 / 87.31 / 82.41 / 49.00 / 55.00 /
-123.47 / 61.74 / 65.41) so `music.test.mjs:719-732` holds by construction.
-`menu` and `intro` are not in that set, which is what lets `menu` share room 1's
-root on purpose.
+123.47 / 61.74 / 65.41) so `music.test.mjs`'s biome-root pin holds by
+construction. `menu` and `intro` are not in that set, which is what lets both
+share room 1's root on purpose — in v2 all three sound D2 as their first bass
+note, and the pin is unaffected because it quantifies over the eight biomes
+only. **No mode and no root moves in v2**; the corrected direction is carried
+entirely by tempo, rhythm, density and register.
 
 SAND and FACTORY share the tonic E deliberately: **SAND is FACTORY's mode with
 the third raised** — the same machine under a hotter sun. One accidental (G♯),
@@ -127,149 +186,172 @@ the staging in §2 exists at all rather than converting all nine at once.
 
 Shared rules, true of all ten and pinned once (§6): `LEN = 64` (`intro` 32);
 `sections = ["A","A","B","B"]` (`intro` `["A"]`); `max(bass.f) < min(lead.f)`
-(register lanes never cross); no track puts a note on all 64 steps; every track
-has at least one **breath bar** — 8 consecutive steps with zero `lead` notes.
+(register lanes never cross); **no track puts a note on all 64 steps**; and, for
+every v2 track, **`pulseGap ≤ 1`** — the rhythm section never leaves two
+consecutive steps unstruck.
+
+**The breath-bar mandate is withdrawn.** "Every track has at least one breath bar
+— 8 consecutive steps with zero `lead` notes" institutionalised the exact device
+the user rejected. It is dropped as a shared rule and is not replaced by an
+optional one: a v2 track earns its air from articulation and register, not from
+eight empty steps. (Wave-B tracks keep whatever breath bars their v1 data
+already has until their own rewrite lands; nothing pins them.)
 
 Panning is untouched: `MUS_PAN` stays `{bass:-0.32, lead:0.32, hat:0.1,
 pad:-0.06}` and no track authors `n.p` (§4).
 
+**Format below.** Each row gives target BPM (`STEP = 15 / BPM`) · mode/root ·
+**bass pattern** (the biggest feel lever, and deliberately different on every
+track) · hook placement · hat role · occupancy band · what changed from v1.
+
 ---
 
-**`intro` — held breath.** D Dorian · `STEP 0.170` (88 BPM) · `LEN 32` ·
-`sections ["A"]`, `B` stays `null`.
-Lead `triangle` states `PLAIN` on D4 alone; bar 2 rests; bar 3 restates it an
-octave up; bar 4 holds the 6̂ by itself. Pad `sine` enters at step 8 with one
-16-step D3 drone. Bass `triangle` enters at step 16: **one note**, A1 pedal,
-16 steps. **No hat at all.**
-Creative move: the motif is introduced unharmonized, so every later biome's
-reharmonization is a discovery.
-Pins: `hat.length === 0`; `bass.length === 1 && bass[0].s === 16 && bass[0].f
-=== 55`; steps 0–7 carry `lead` notes and nothing else; `MUSIC_TRACKS.intro.B
-=== null`.
+**`intro` — the cabinet powering up. [WAVE A]** D Dorian · `STEP 0.125`
+(120 BPM, was 88) · `LEN 32` · `sections ["A"]`, `B` stays `null`.
+Bass `triangle`: **straight eighths, plain root–octave alternation** — D2 73.42
+on steps 0 and 4 of each bar, D3 146.83 on 2 and 6 — the simplest pattern in the
+set, in from step 0, tonic first. Bar 4 lifts the pair to A1/A2 as a turnaround.
+Lead `triangle` states `PLAIN` on D4 in bar 1 **over the full band** and restates
+it an octave up at bar 3; bars 2 and 4 are running answers, so all four bars
+carry lead. Hat `triangle` 4800 Hz on every odd step — a sixteenth shaker
+present from the first bar. Pad `sine`: two 16-step drones, D3 then A2.
+Creative move: the game's first four seconds are a **fanfare, not a fade-in** —
+four voices from step 0, and the only unstruck step in the whole loop is the
+last one, a single-step lift back into the loop.
+Occupancy **28–31 of 32**. `pulseGap 1`.
+**Changed from v1:** tempo +32 BPM; the A1 dominant pedal becomes a moving tonic
+bass; the empty hat channel becomes 15 hits; bar 2's outright rest and bar 4's
+lone held 6̂ become written answers; `bass.length` 1 → 16.
 
-**`menu` — confident, swaggering.** D Dorian · `STEP 0.134` (112 BPM) ·
-hand-authored B (kept and rewritten).
-A: bass `square` on the tresillo (`s % 8 ∈ {0,3,6}`) walking Dm → G → Am →
-Dm-breath; lead `square` in straight sixteenths against it — rhythmic
-counterpoint, never unison; hat `triangle` on the offbeats only (`s % 8 ∈
-{2,6}`); no pad. Bars 4 and 8 drop the lead entirely. Bars 5–8 are a **varied
-restatement, not an octave copy** — `oct()` is not used for menu's lead.
-B: tonicizes **G major** for eight bars and snaps back, which imports the one
-F♯ the collection does not own.
-Creative move: B is the template the other three hand-authored Bs follow — same
+**`menu` — confident, swaggering. [WAVE A]** D Dorian · `STEP 0.121`
+(124 BPM, was 112) · hand-authored B.
+A: bass `square` **five hits a bar on steps 0, 2, 3, 4, 6** — the tresillo
+(0/3/6) still carries the accent and the harmony, but it now rides a continuous
+eighth pulse, with the octave on 2 and 6 and the fifth on 4. The Dm → G → Am →
+Dm walk is unchanged (roots 73.42 / 49.00 / 55.00 / 73.42 at steps 0/8/16/24) —
+what changed is that bar 4 lands on the tonic instead of breathing. Lead
+`square` in sixteenths against it, `PLAIN` at bars 1 and 5, developed between;
+**every bar carries lead**. Hat `triangle` on **every even step** — the offbeat-
+only tick is doubled into a straight eighth pulse. No pad.
+B: tonicizes **G major** for eight bars and snaps back, importing the one F♯ the
+collection does not own; same skeleton, same per-channel note counts, same mix.
+Creative move: B is the template the other hand-authored Bs follow — same
 skeleton, same mix, a genuinely different harmonic destination.
-Pins: every `A.bass` note `s % 8 ∈ {0,3,6}` and `A.bass.length === 20`;
-`A.hat.length === 16` with every `s % 8 ∈ {2,6}`; `A.lead` has zero notes in
-steps 24–31 and 56–63; **`B` sounds F♯ (92.50 / 185.00 / 369.99) at exactly
-steps 11, 29, 43, 61 and `A` sounds none of those three pitches.**
+Occupancy **58–63 of 64**, A and B alike (the one free step is 63). `pulseGap 1`.
+Pins: `A.bass.length === 40`, every note `s % 8 ∈ {0,2,3,4,6}`; `A.hat.length
+=== 32`, every `s % 8` even; `A.lead.length` 44–56 with **no lead-free bar**;
+`PLAIN` at bars 0 and 4; **`B` sounds F♯ and `A` sounds none** — the F♯ marker
+set is `{92.50, 185.00, 369.99, 739.99, 1479.98}` and the drive's expected step
+list is *derived from `MUSIC_PATTERN_B`*, not hand-copied, so the two halves of
+the AABB assertion cannot drift apart.
 
-**`jungle` — overgrown, humid, alive.** D Dorian · `STEP 0.129` (116 BPM) ·
-B = `transp(A, 1.189207)` (up a minor third — into the relative major's key).
-Bass `square` 3+3+2 ostinato; lead `triangle` answering in the gaps; hat
-`triangle`; pad `sine` canopy — two 32-step drones, A2 110.00 then D3 146.83.
-Creative move: **strict call-and-response.** The bass asks, the lead answers, and
-they never speak over each other. Two consequences, both authored, not accidents:
-the bass rests through bars 5 and 8 (where the lead's full `PLAIN` statement and
-the breath bar live), and in the six answer bars **the ostinato drops its step-3
-hit** — `FRAG-MID` occupies steps 1,2,3, and step 3 is a tresillo step. Call bars
-are the full 0-3-6; answer bars are 0-6, opened up for the lead.
-Pins: no step carries both a `bass` and a `lead` note; every `A.bass` note has
-`s % 8 ∈ {0,3,6}`; `A.bass` is silent in steps 32–39 and 56–63; `A.pad.length ===
-2` with both durations 32 steps.
+**`jungle` — overgrown, humid, alive. [WAVE A]** D Dorian · `STEP 0.117`
+(128 BPM, was 116) · B = `transp(A, 1.189207)`.
+Bass `square`: the **3+3+2 tresillo ostinato on steps 0/3/6, in all eight bars** —
+the pattern survives, the silence does not. Hat `triangle` 3600 Hz on **1/4/7 of
+all eight bars**, the drip one step behind each tresillo hit; bass and hat
+interlock into a six-of-eight pulse with single-step pockets at 2 and 5. Lead
+`triangle` answers into those pockets and across them — overlap with the bass is
+now allowed and expected. `PLAIN` at bars 1 and 5; the short answer figure loops
+in between so the earworm arrives four times a pass, not once. Pad `sine`
+canopy: two 32-step drones, A2 110.00 then D3 146.83 (unchanged).
+Creative move: call-and-response as **interlock, not alternation** — the answer
+lands in the tresillo's own gaps instead of waiting for the bass to stop.
+Occupancy **58–63 of 64**. `pulseGap 1`.
+**Changed from v1:** tempo +12 BPM; the full-bar bass rests in bars 5 and 8 are
+gone (`barsWithBass` 6 → 8); the "answer bars drop the step-3 hit" thinning is
+gone; the strict never-share-a-step rule is withdrawn with it; the single bar-5
+`PLAIN` becomes two statements plus looping answers.
 
-**`ice` — brittle, echoing.** F Lydian · `STEP 0.144` (104 BPM) ·
-B = `transp(A, 1.122462)` (up a whole tone — the shimmer brightening a step).
-Pad `sine` holds Lydian chord tones including the ♯4 (B, 246.94 / 493.88); lead
-`triangle` runs `AUG`; bass `triangle` is reduced to occasional cracks; hat
-`triangle` at 6200 Hz every 8 steps.
-Creative move: **register separation is the whole idea** — the absence of low
-end is the ice.
-Pins: `A.bass.length <= 6` and every bass note ≥ 4 steps long; every `A.lead.f
->= 523.25` (C5); the lead's first statement is `AUG` at steps 0,2,4,6,12;
-the ♯4 is present in `A.pad`.
+**`ice` — brittle, glittering. [WAVE A]** F Lydian · `STEP 0.129`
+(116 BPM, was 104) · B = `transp(A, 1.122462)`.
+Bass `triangle`: **root–fifth alternation on every off-eighth** — steps 1, 3, 5,
+7 of every bar, F2/C3 (G/D and A/E in the turnaround bars) — 32 notes where v1
+had four cracks. This is ice's distinct accent: the only track whose bass lives
+entirely off the beat. Hat `triangle` 6200 Hz on steps 0 and 4 — a bell *on* the
+beat, against the bass's *off* it; the two together are the eighth-note pulse.
+Lead `triangle` above C5, `PLAIN` at normal speed at bars 1 and 5, and it stays
+off step 6 of every bar — that recurring single-step pocket is the track's
+glitter, and it is one step, not one bar. Pad `sine` holds Lydian chord tones
+including the ♯4 (B3 246.94).
+Creative move: **the mode and the register are the cold** — a bright Lydian lead
+two octaves above a bouncing bass, not an absent low end.
+Occupancy **50–60 of 64**. `pulseGap 1`.
+**Changed from v1:** tempo +12 BPM; `AUG` withdrawn, motif at normal speed;
+`bass.length` 4 → 32; hat 8 ticks → 16; the "absence of low end IS the ice"
+framing is deleted outright.
 
-**`factory` — mechanical, cold competence.** E Phrygian · `STEP 0.119`
-(126 BPM) · B = `transp(A, 0.890899)` (down a whole tone — the machine gearing
-down). No pad.
-Bass **`sawtooth`** — the only sawtooth bass in the score — states the motif low
-in bar 1 and runs an engine ostinato after; lead `square` answers `CANON` at bar
-2, an octave up; hat **`square`** on every even step.
+**`factory` — mechanical, cold competence. [WAVE A]** E Phrygian · `STEP 0.114`
+(132 BPM, was 126) · B = `transp(A, 0.890899)`. No pad.
+The smallest diff of the ten: the sawtooth engine bass, the 2-against-3
+interlock and the `CANON` were already arcade-correct. Bass **`sawtooth`** — the
+only one in the score — states `PLAIN` low in bar 1 and runs the 3+3+2 engine
+ostinato (0 d3, 3 d3, 6 d2) through bars 2–8, never silent for a bar. Lead
+`square` answers `CANON` exactly 8 steps later an octave up, and restates it at
+bar 6 an octave higher again. Hat **`square`** on every even step, **all eight
+bars**.
 Creative move: **2-against-3 interlock** — the ostinato groups in 3s against a
 hat in 2s, coinciding only twice a bar.
-Pins: `A.bass.t === "sawtooth"` and it is the only track whose bass is;
-`A.hat` is `square` and every hat `s % 2 === 0`; the lead's motif head is
-exactly 8 steps after the bass's; `A.pad === undefined`.
-*(The brief's metric modulation at B — hat switching to 3+3+2 — is impossible
-under `transp`, which shares the hat array by identity. Deferred to the pass
-that gives FACTORY a hand-authored B. Not attempted here.)*
+Occupancy **56–62 of 64**. `pulseGap 1`.
+**Changed from v1:** tempo +6 BPM; bar 5's hat-and-lead cut-out is filled in
+(hat 28 → 32 hits); the motif's held flash shortens to the v2 rhythm.
+*(The metric modulation at B — hat regrouping to 3+3+2 — remains impossible
+under `transp`, which shares the hat array by identity. Still deferred.)*
 
-**`water` — flowing, undertow.** G Mixolydian · `STEP 0.150` (100 BPM) ·
-B = `transp(A, 1.334840)` (up a perfect fourth).
-Lead `triangle` in long legato values that hold across bar lines; bass
-`triangle` swelling through stepped `v`; pad `sine` running `INV` **below** the
-lead in contrary motion; hat `triangle`, sparse.
-Creative move: two independent lines, not harmony-by-doubling — when the lead
-rises the pad falls.
-Pins: at least 6 `A.lead` notes are ≥ 4 steps long and at least one starts at
-`s % 8 >= 6` and runs past the bar line; `new Set(A.bass.map(n => n.v)).size >=
-3` (stepped dynamics); at every step where `pad` and `lead` both sound, their
-pitch motion since the previous shared step has opposite sign.
+**`water` — flowing, but moving. [WAVE B]** G Mixolydian · `STEP 0.139`
+(108 BPM, was 100) · B = `transp(A, 1.334840)`.
+Bass `triangle`: **even quarter-pulse root–fifth–octave on steps 0, 2, 4, 6** —
+the smoothest, least-syncopated pattern in the set, which is how "flowing" is
+said without going legato. Lead `triangle` states `PLAIN` in even values. Hat
+`triangle` may stay lighter than the other tracks' as a texture cue but must not
+be the only pulse-carrying voice. Stepped `v` survives as an accent on the bass,
+not as the bass's whole identity.
+**Changed from v1:** tempo +8 BPM; cross-barline legato withdrawn; the `INV`
+contrary-motion pad withdrawn; the swell becomes a bounce.
 
-**`arena` — aggressive, combat-ready.** A Aeolian · `STEP 0.107` (140 BPM) ·
-**hand-authored B.**
-All four voices: bass `square`, lead `square`, hat `triangle` on every even step,
-pad `sawtooth`. Syncopated stabs on the "and" of 2 and 4.
-Creative move: **whole-step anticipation** — the motif head lands one step
-*before* the expected downbeat, so the fanfare punches ahead of the grid without
-sub-step timing.
-Pins: all four channels non-empty and `pad.length > 0` — the only track with all
-four dense; the `ANTIC` motif head sits at step 15 (anticipating bar 3);
-`A.lead` has notes at steps ≡ 3 and ≡ 7 mod 8; `B.hat !== A.hat` (hand-authored).
+**`arena` — aggressive, combat-ready. [WAVE B — reference track]** A Aeolian ·
+`STEP 0.107` (140 BPM) · **hand-authored B.** **Nothing moves here.** All four
+voices dense, syncopated stabs on the "and" of 2 and 4, `ANTIC` head at step 15,
+mode and root unchanged (A Aeolian / A1 55.00 — combat themes in this genre stay
+minor-but-groovy, and a forced mode change risks a root collision). ARENA is the
+**reference for what arcade-correct sounds like** when revising the other nine.
 
-**`sand` — heat-shimmer, mirage.** E Phrygian ♮3 · `STEP 0.139` (108 BPM) ·
-B = `transp(A, 1.059463)` (up a semitone — the haze).
-Bass `triangle` drone on the fifth, mostly tacet; lead `square` with a one-step
-appoggiatura at low `v` resolving into the G♯; hat `triangle`, sparse; pad
-`sine` glassy interjections.
-Creative move: **stepped swells** — each phrase crescendos and drops out rather
-than holding one level; the heat waves.
-Pins: `A.bass[0].f === 123.47`, `A.bass.length <= 4`, every bass note ≥ 8 steps;
-G♯ present (207.65 or 415.30) and `sand.A` is the only **A** section that sounds
-it (the `transp` B sections leave the collection by design, §1b); a lead
-note at step *s* with `v` below the following note's `v`, where that following
-note at *s+1* is the G♯; `new Set(A.lead.map(n => n.v)).size >= 3`.
+**`sand` — heat-shimmer, mirage. [WAVE B]** E Phrygian ♮3 · `STEP 0.134`
+(112 BPM, was 108) · B = `transp(A, 1.059463)`.
+Bass `triangle`: **root–fifth alternation weighted to the fifth on the
+off-beats** — the drone fifth survives as a *colour* (`A.bass[0].f` stays
+123.47, so the biome-root pin holds) but becomes a moving pattern. Lead `square`
+keeps the one-step appoggiatura into the G♯ — a fine hook ornament, now
+decorating a bouncing bass instead of a drone.
+**Changed from v1:** tempo +4 BPM; `bass.length` 3 → a full pattern; the
+"mostly tacet" framing withdrawn.
 
-**`void` — dread, something watching.** B Locrian · `STEP 0.234` (64 BPM) —
-the one deliberate exception to the tempo band · **hand-authored B.**
-**Two voices.** Bass `triangle`, a single sustained B1 pedal at very low `v`.
-Lead **`sine`** — the only sine lead in the score — plays `FRAG-MID` and nothing
-else. `hat` is an empty array. No pad.
-Creative move: **subtraction.** Both ends of the motif are removed: no tonic
-under the figure, no settle after it. The incompleteness is the horror; nothing
-dissonant is added to get it.
-Pins: `A.hat.length === 0` and `A.pad === undefined`; **`A.lead` never sounds
-degree 1̂** — no lead frequency is within 0.05 semitone of a power-of-two
-multiple of 61.74; no bar of `A.lead` matches `PLAIN`, and at least two bars
-match `FRAG-MID`; `A` puts notes on at most **20** of its 64 steps — the sparsest
-track in the game.
+**`void` — dread, something watching. [WAVE B — biggest single rewrite]**
+B Locrian · `STEP 0.144` (104 BPM, was **64**) · **hand-authored B.**
+Tempo joins the **bottom of the arcade band** instead of sitting outside it: the
+genre never slows the transport to signal danger. Mode, tonic (B1 61.74) and the
+**`sine` lead** — VOID's identity marker, dread bought with timbre at no tempo or
+silence cost — are all unchanged. Bass `triangle`: **root–octave at half the
+other tracks' pattern density** (hits on steps 0 and 4 of each bar) — still a
+real, driving pattern, and the sparsest-*feeling* of the ten by relative
+density, not by absence. Hat comes back: lighter than average, but present, so
+`pulseGap ≤ 1` holds here too. `FRAG-MID` stays as a colour; the lead **may
+sound the tonic**.
+**Withdrawn:** the 64 BPM band exception; `A.hat.length === 0`; `A.pad ===
+undefined` as a headline; "the lead never sounds degree 1̂"; and the ≤20/64
+"sparsest track in the game" ceiling.
 
-**`crown` — finale gold.** C Ionian, the only pure major · `STEP 0.113`
-(133 BPM) · **hand-authored B.**
-Bass `square`, lead `square` in a dotted fanfare, hat `triangle`, pad `sawtooth`
-doubling the lead one octave up for brass weight.
-Creative move: **payoff quotation.** `crown.B`'s hat reproduces `arena.A`'s hat
-step-pattern verbatim — a victory lap past the arena — and the lead states
-`RESOLVED`, supplying the tonic VOID refused to play. **The quote is of the step
-pattern, not the wall clock** — `crown .113` against `arena .107` plays the same
-figure about 5% broader, which is what a victory lap should sound like. Do not
-try to match durations; that breaks the pin and the point.
-Pins: `B.hat.map(n => n.s)` deep-equals `arena.A.hat.map(n => n.s)`, and
-`B.hat !== A.hat`; the `RESOLVED` statement's last note is within 0.05 semitone
-of 2× its head; **`crown.A` sounds both a perfect fourth (5 semitones) and a
-leading tone (11) above its tonic, and no other `A` section sounds both** — that
-pair is what separates Ionian from Lydian (which has 11 but ♯4) and from every
-flat-seventh mode in the run; at least 8 `pad` notes
-share a step with a `lead` note at exactly 2× its frequency.
+**`crown` — finale gold. [WAVE B]** C Ionian, the only pure major · `STEP 0.110`
+(136 BPM, was 133) · **hand-authored B.**
+Bass `square`: **dotted-fanfare root–fifth–octave**, matching the dotted lead
+rhythm — a pattern distinct from the other nine. Lead `square` states
+`RESOLVED`; hat `triangle`; pad `sawtooth` doubling the lead an octave up for
+brass weight. **The payoff quotation stays exactly as it is** — `crown.B`'s hat
+reproduces `arena.A`'s hat step pattern verbatim, and `B.hat !== A.hat`. Quoting
+an earlier stage's theme at the finale is genre-authentic and is one of the
+things v1 got right. Mode and root untouched; the Ionian pair (perfect fourth
+**and** leading tone) remains CROWN's alone.
+**Changed from v1:** tempo +3 BPM only, to re-establish ladder distinctness.
 
 ---
 
@@ -285,10 +367,30 @@ array by identity** (`tracks.js:175-190`, `hat: P.hat`):
 ["jungle","ice","factory","water","sand"].every(k => M[k].B.hat === M[k].A.hat)
 ```
 
-**Tempo ladder** (all ten distinct, so `music.test.mjs:701-718` holds):
-`arena .107` · `crown .113` · `factory .119` · `jungle .129` · `menu .134` ·
-`sand .139` · `ice .144` · `water .150` · `intro .170` · `void .234`.
-Seven biomes sit in the brief's 104–140 band; VOID is outside it on purpose.
+**Tempo ladder (v2)** — all ten distinct, evenly spread across the 104–140 BPM
+arcade band at 4-BPM steps, so every value is audibly and not merely numerically
+distinct. **Nothing sits outside the band any more**; VOID moves from 64 BPM to
+the band's floor.
+
+| | arena | crown | factory | jungle | menu | intro | ice | sand | water | void |
+|---|---|---|---|---|---|---|---|---|---|---|
+| BPM | 140 | 136 | 132 | 128 | 124 | 120 | 116 | 112 | 108 | 104 |
+| `STEP` | .107 | .110 | .114 | .117 | .121 | .125 | .129 | .134 | .139 | .144 |
+| wave | B (fixed) | B | A | A | A | A | A | B | B | B |
+
+`STEP` is the 2-decimal-plus rounding of `15 / BPM` that the file already uses;
+the exact quotients are not needed and the rounded values stay distinct.
+
+**Migration ordering — this is load-bearing.** The ladder pin quantifies over all
+ten tracks, so a track may only move into a `STEP` value that is already vacant:
+
+- **wave A order: `intro` → `menu` → `jungle` → `ice` → `factory`.** `ice`'s
+  target `.129` is `jungle`'s v1 value, so `jungle` must vacate first. Every
+  other wave-A target (`.125`, `.121`, `.117`, `.114`) is free from the start.
+- **wave B order: `crown` → `sand` → `water` → `void`** (`arena` never moves).
+  `water`'s target `.139` is `sand`'s v1 value, so `sand` must vacate first;
+  `crown` frees `.113` for nobody but tidies the top of the ladder, and `void`'s
+  `.144` is freed by `ice` in wave A.
 
 **Waveform roster.** `square` for hard roles, `triangle` for colour, plus two
 scarce timbres used exactly once each as identity markers: **`sawtooth` bass =
@@ -297,12 +399,16 @@ FACTORY**, **`sine` lead = VOID**. Pads are `sine` except ARENA/CROWN, which are
 `o.type = n.t` with no whitelist, and the SFX layer already ships `sine` and
 `sawtooth` — a third and fourth music timbre are free.)
 
-**One data-encoding change: per-note velocity.** Stepped dynamics is the
+**One data-encoding change: per-note velocity.** Stepped dynamics was the v1
 brief's main maturity lever and today's `mkPat` cannot express it — `E(a,t,v)`
 stamps one `v` on every note in a channel. Note tuples become **`[s, f, d, v?]`**,
-`v` defaulting to the channel's `mix` value; `pulse`/`oct`/`hats` pass the 4th
-element through. `tracks.js` only. No engine change, no new note field — `{s,f,
-d,t,v}` is unchanged.
+`v` defaulting to the channel's `mix` value; `hats` passes the 4th element
+through. `tracks.js` only. No engine change, no new note field — `{s,f,d,t,v}` is
+unchanged. **v2 demotes it to a local colour**: it is authored only where a track
+block asks for it (today `water.bass` and `sand.lead`, both wave B), and no
+wave-A track uses it — a bass accent in v2 is spelt as a *pitch* choice (root vs
+octave vs fifth) so that the "authored only where the spec asks" pin and the
+B-section `v`-set pin both stay trivially true.
 
 ### 3. Engine seam for listening
 
@@ -404,18 +510,65 @@ graph — the injectable ctx and `bounceTrack` are additive and touch neither.
 | `tracks.js` `mkPat` tuples | `[s, f, d]` | `[s, f, d, v?]` | R3a |
 | `CACHE_NAME` / `sw.js` `REV` | `fusegrid-shell-v55` (moves under us; read it, do not assume) | +1 per plan, both files in the same commit | each |
 
+**v2 addendum — the eight pins that contradict the corrected direction.** These
+are not "content that happens to change"; each one encodes a rejected idea, and
+each is renegotiated rather than merely re-valued. Wave column says who lands it.
+
+| # | v1 pin | v2 replacement | Wave |
+|---|---|---|---|
+| 1 | `void` `STEP 0.234`, "the one deliberate exception to the tempo band" | `STEP 0.144` — the band's floor. There is no exception clause any more | B |
+| 2 | `void` `A.hat.length === 0`, `A.pad === undefined`, "lead never sounds 1̂", occ ≤ 20 | hat present, tonic sounded, `pulseGap ≤ 1`; dread from mode + `sine` timbre; VOID stays the *relatively* sparsest by pattern density, with its own band | B |
+| 3 | all ten: "every track has a breath bar" | **deleted.** Replaced by `pulseGap ≤ 1` on v2 tracks — a floor on motion, not a floor on silence | A (intro) |
+| 4 | `intro` "the bed never states the tonic in the bass" (`bass.length === 1`, A1 55) | 16 straight-eighth notes, D2 73.42 at step 0 | A |
+| 5 | `ice` `A.bass.length <= 6`, notes ≥ 4 steps, `AUG` motif | 32 off-eighth notes, `PLAIN` at normal speed | A |
+| 6 | `sand` `A.bass.length <= 4`, every note ≥ 8 steps, "mostly tacet" | a moving root–fifth pattern; `A.bass[0].f` stays 123.47 so the root pin holds | B |
+| 7 | `water` legato across bar lines + `INV` contrary-motion pad | even quarter-pulse bass, `PLAIN` in even values, no `INV` | B |
+| 8 | "no track puts a note on all 64 steps" + data-derived wrap threshold "because we are writing rests" | **kept, and given a floor.** "Driving" is defined as *maximum density short of full occupancy*: occupancy bands now have a lower bound as well as an upper one, so a composer chasing constant pulse cannot break the pin and a composer drifting back toward sparseness cannot pass it | A/B |
+
+Additional v2 pin moves, per track, all wave A:
+
+| Site | v1 | v2 |
+|---|---|---|
+| menu `STEP` | `0.134` | `0.121` |
+| menu `A.bass` | `length === 20`, `s % 8 ∈ {0,3,6}` | `length === 40`, `s % 8 ∈ {0,2,3,4,6}` |
+| menu `A.lead` | 24–32, silent in 24–31 and 56–63 | 44–56, **no lead-free bar** |
+| menu `A.hat` | `length === 16`, `s % 8 ∈ {2,6}` | `length === 32`, every `s` even |
+| menu `B.hat` | `length === 16`, `s % 8 ∈ {2,6}` | `length === 32`, every `s` even |
+| menu occupancy | 46 ± 2 | 58–63, A and B alike |
+| F♯ marker set / `EXP` | `[92.50, 185.00, 369.99]` / hand-written `[11,29,43,61]` | `[92.50, 185.00, 369.99, 739.99, 1479.98]` / **derived from `MUSIC_PATTERN_B`** |
+| intro | `STEP 0.17`, `LEN 32`, `hat.length === 0`, bar 2 rests, bar 4 holds 6̂, occ ≤ 18 | `STEP 0.125`, `LEN 32`, `hat.length === 15`, all four bars carry lead, occ 28–31 |
+| jungle | `STEP 0.129`; no shared bass/lead step; bass silent 32–39 and 56–63 | `STEP 0.117`; bass in **all eight bars**; overlap allowed; `PLAIN` at bars 0 and 4 |
+| ice | `STEP 0.144`; `bass.length <= 6`; `AUG` at 0,2,4,6,12; hat every 8 steps; occ ≤ 34 | `STEP 0.129`; `bass.length === 32`, every `s` odd; `PLAIN` at bars 0 and 4; hat on 0 and 4; occ 50–60 |
+| factory | `STEP 0.119`; hat 28 hits (bar 5 cut) | `STEP 0.114`; hat 32 hits, every even step, all eight bars; occ 56–62 |
+| `motifAt` helper | offsets `[0,1,2,3,6]` | **`motifV2At`, offsets `[0,1,2,3,5]`**, added alongside; v1 `motifAt` stays until wave B retires its last caller |
+
 ### 6. Verification
 
 **Node (`node --test`), added to `music.test.mjs` as one new block per track.**
-Two shared helpers, both pure over frozen data:
+Shared helpers, all pure over frozen data:
 
 - `semi(f, f0) = 12 * Math.log2(f / f0)`, compared with a 0.05-semitone
   tolerance.
-- `motifAt(chan, bar)` — true when the channel has notes at bar-relative steps
-  0,1,2,3,6 whose semitones above the head are `[0, m3, m5, m6, m5]` with
-  `m3 ∈ {3,4}`, `m5 ∈ {6,7}`, `m6 ∈ {8,9}`. One helper covers all eight modes,
-  because the motif's degrees are exactly the ones every mode agrees on to within
-  those pairs. `fragMidAt` is the 3-note variant.
+- `motifV2At(chan, s0, f0)` — true when the channel has notes at bar-relative
+  steps **0,1,2,3,5** whose semitones above the head are `[0, m3, m5, m6, m5]`
+  with `m3 ∈ {3,4}`, `m5 ∈ {6,7}`, `m6 ∈ {8,9}`. One helper covers all eight
+  modes, because the motif's degrees are exactly the ones every mode agrees on to
+  within those pairs. `motifAt` (offsets `0,1,2,3,6`) survives for the wave-B
+  tracks still on the v1 rhythm; `fragMidAt` is the 3-note variant.
+- `pulseGap(P)` — the longest run of consecutive steps, **read cyclically and
+  keyed off `P.LEN` (not a literal 64 — `intro` is 32)**, carrying no `bass` and
+  no `hat` note. This is the machine reading of "constant pulse".
+- `barsWithLead(P)` / `barsWithBass(P)` — how many 8-step bars carry at least one
+  note in that channel. Both are 8 (or 4 for `intro`) on every v2 track: this is
+  what kills "bars 4 and 8 drop the lead" and "the bass rests through bars 5
+  and 8" without needing a rule about rests.
+
+**Hook pins are positional, never count-based.** `motifV2At` is easier to satisfy
+by accident in a dense sixteenth texture than the sparse v1 figure was — a scale
+run can walk through the right pitch classes. So the motif is always pinned at
+**named bars** ("`PLAIN` at bars 0 and 4", "the canon's bass head at bar 0, its
+lead head 8 steps later"), which asserts the hook is where the spec puts it
+rather than merely that something motif-shaped exists somewhere.
 
 **Durations are never pinned by equality.** `d = steps × STEP` is a float
 (`3 × 0.107 = 0.32100000000000004`); every duration fact is written as
@@ -428,34 +581,49 @@ Per track, the pins listed in §2, plus the cross-track set:
 - timbre scarcity: exactly one sawtooth bass (`factory`), exactly one sine lead
   (`void`), every track ≥ 2 distinct waveforms.
 - quotation: `crown.B.hat` steps deep-equal `arena.A.hat` steps.
-- rests: **no track occupies all 64 steps**, every track has a breath bar, and
-  occupancy (distinct steps carrying any note) lands in band —
-  `void ≤ 20`, `intro ≤ 18` (of 32), `ice ≤ 34`, `sand ≤ 38`, `water ≤ 44`,
-  `jungle`/`factory`/`crown` 40–58, `arena ≤ 62`. **`menu` is a number, not a
-  band**: `occ(menu.A)` and `occ(menu.B)` are each **46 ± 2** (target 46 — 6 bars
-  at ~6 occupied steps plus two 3-step breath bars). It is pinned tightly because
-  the wrap test's `expected` derives from it: at 46/46 the drive compares ~184 of
-  256 buckets, and a menu authored down at 41 would leave both pins consistent
-  while quietly shipping a sparser theme than this spec asks for.
+- density: **no track occupies all of its steps**, `pulseGap ≤ 1` on every v2
+  track, and occupancy (distinct steps carrying any note) lands in a band with a
+  **floor as well as a ceiling** —
+
+  | | intro | menu | jungle | ice | factory | water | arena | sand | void | crown |
+  |---|---|---|---|---|---|---|---|---|---|---|
+  | v2 band | 28–31 (of 32) | 58–63 | 58–63 | 50–60 | 56–62 | *B* | *B* | *B* | *B* | *B* |
+  | v1 band | ≤ 18 | 46 ± 2 | 40–58 | ≤ 34 | 40–58 | ≤ 44 | ≤ 62 | ≤ 38 | ≤ 20 | 40–58 |
+
+  Wave-B tracks keep their v1 band until their own rewrite. `menu` stays pinned
+  on both sides because the wrap test's `expected` derives from it
+  (`2·occ(menu.A) + 2·occ(menu.B)`); at 63/63 the drive compares 252 of 256
+  buckets.
 - `wav.js`: round-trips a synthetic 2-channel buffer to a 44-byte-header
   RIFF/PCM16 blob of the expected length, clamps out-of-range samples.
 
 **The human loop — this is the actual acceptance gate.**
-`node tools/bounce/sink.mjs`, open `tools/bounce/index.html`, bounce all ten,
-then listen to `out/*.wav` in run order: `intro → menu → jungle → ice → factory
-→ water → arena → sand → void → crown`. R3a bounces the *current* tracks first,
-so every later listen is an A/B against what shipped.
+`node tools/bounce/sink.mjs`, open `tools/bounce/index.html`, bounce the wave,
+then listen in run order: `intro → menu → jungle → ice → factory → water →
+arena → sand → void → crown`, A/B against the reference bounce of what shipped.
 
-"Mature" is accepted only when a listener can say all four:
+**Machine pre-check before any listen** — three numbers per track off the WAV,
+because "it feels energetic" is not a finding:
 
-1. **Rests are audible.** There is somewhere in every track where you notice the
-   silence. VOID is mostly silence.
-2. **The motif is traceable by ear** across all ten without being told where it
-   is — including that CROWN finishes the phrase VOID leaves hanging.
-3. **No constant-beep density.** No track is an unbroken sixteenth-note carpet;
-   no two tracks feel like the same patch at different pitches.
-4. **Mood matches the table** blind: played without labels, a listener sorts them
-   into roughly the right biomes.
+1. `ffmpeg -af silencedetect=n=-50dB:d=0.15` must report **zero** intervals. That
+   is the direct test for "no long rests", and it is stronger than reading the
+   waveform PNG.
+2. RMS from `-af astats`, compared against the same track's shipped bounce: v2
+   must read **measurably hotter**.
+3. `showwavespic` (1200×300) and `showspectrumpic` (1200×400, `legend=1`) — the
+   envelope should show no bar-scale notches, and the spectrogram should show
+   continuous bass and hat bands with a lead that visibly *repeats*.
+
+Accepted, v2, only when a listener can say all four:
+
+1. **The pulse never stops.** There is no point in any track where the beat
+   drops out; the rhythm section is continuous from the first bar.
+2. **The tune is hummable after one loop**, and its statements are frequent
+   enough to learn — not one development visited once a pass.
+3. **The bass bounces.** It is the moving voice on every track, and no two tracks
+   share a bass pattern.
+4. **Mood matches the table** blind — carried by mode, timbre and register,
+   with every track inside the same tempo band.
 
 Controller listens first, then the user, and both sign off **before** the pass
 ships. A track that passes every Node pin and fails a listen gets rewritten; the
@@ -480,6 +648,28 @@ A/B against R3a's reference, controller + user sign-off. `CACHE_NAME`/`REV` +1.
 **R3c — wave 2: the five `transp` biomes.** `jungle`, `ice`, `factory`, `water`,
 `sand`, each with its stated ratio. Finishes §5. Final listen is the whole score
 in run order, not just the five. `CACHE_NAME`/`REV` +1.
+
+---
+
+**Direction v2 (2026-09-06) supersedes R3b/R3c's content, not their machinery.**
+The rewrite ships in two waves, one commit per track, each commit carrying its
+own pin renegotiation, its data, and a `CACHE_NAME`/`REV` +1 (`tracks.js` is
+precached). `npm test` is green at every commit — that is the property that makes
+a mid-migration tree reviewable, and it is why the ordering constraints under
+"Tempo ladder (v2)" are not optional.
+
+**Wave A — `intro` → `menu` → `jungle` → `ice` → `factory`.** Lands the v2 motif
+rhythm, the `motifV2At` / `pulseGap` / `barsWith*` helpers, the withdrawal of the
+all-ten breath-bar mandate, and the first five rows of the ladder. The all-ten
+pins (tempo ladder, occupancy bands, biome roots, timbre scarcity) are kept
+satisfiable with mixed v1/v2 data by carrying the wave-B tracks' shipped values
+in the same tables, so nothing is scoped away and nothing is left to a TODO.
+
+**Wave B — `crown` → `sand` → `water` → `void`** (`arena` is already correct and
+does not move). Finishes the ladder, retires `AUG` and `INV` and the last callers
+of the v1 `motifAt`, and replaces the wave-B halves of the occupancy-band and
+ladder tables with their v2 values. After wave B no track sits outside the
+104–140 BPM band and no pin encodes silence as a feature.
 
 ## Refuse
 
@@ -538,3 +728,41 @@ Fixed inline, before locking:
   "100 BPM at STEP 0.15" and makes the 3+3+2 tresillo literal.
 - **Scope.** `reveal` is an SFX, not a track — named and excluded. The `sched.js`
   extraction was cut for not buying the property it was chosen for.
+
+### Self-review — direction v2 (2026-09-06)
+
+- **The v1 self-review was internally consistent and still wrong.** Every entry
+  above defends a choice made under "rests are the maturity lever"; none of them
+  is a mistake *within* that reading. What failed was the reading itself, on the
+  only gate that mattered — a listen. Recorded so the next pass does not mistake
+  a clean pin sheet for an accepted direction.
+- **"Constant pulse" and "no track fills all 64 steps" collide on a literal
+  reading.** Resolved in favour of keeping the pin and defining the target as
+  maximum density short of full occupancy (§0a.3): occupancy bands gained floors,
+  and each v2 track has exactly one deliberately unstruck step (`intro` 31,
+  `menu` 63, `jungle` 61, `factory` 63 …). Without the floor, "≤ 63" would still
+  pass on a track authored at 20.
+- **The tempo ladder is a free choice, not a finding.** No BPM data survived the
+  research; the 4-BPM spacing across 104–140 was picked to keep ten `STEP` values
+  audibly distinct while moving VOID inside the band. It was re-checked against
+  every value the ladder does *not* move, which is what produced the migration
+  ordering — `ice` cannot take `.129` until `jungle` leaves it.
+- **Two pins were traps for the new bass patterns, and both were checked before
+  composing, not after.** The Ionian-uniqueness pin (perfect fourth **and**
+  leading tone, CROWN alone) fails the moment ICE's root–fifth bass reaches for
+  B♭, or FACTORY's for D♯; both patterns are authored to stay off those degrees.
+  And the `[s,f,d,v?]` "stepped dynamics only where the spec asks" pin means no
+  wave-A track may author per-note velocity — so menu's tresillo accent is spelt
+  with *pitch* (root vs octave vs fifth), not with `v`.
+- **`EXP` is derived, not transcribed.** A dense 40-note bass tonicising G major
+  sounds F♯ far more than four times a section, and `secIsB` asserts both "these
+  steps" and "no others". Reading the expected step list off `MUSIC_PATTERN_B`
+  makes the two halves incapable of disagreeing, the same move the wrap test's
+  `expected` already used.
+- **`motifV2At` is a weaker assertion than `motifAt` was**, because a sixteenth
+  run through the right pitch classes can satisfy it by accident. Compensated by
+  pinning the motif at named bars rather than by counting matches anywhere.
+- **The one thing v2 does not touch is the thing v1 got right.** Modes, roots,
+  the white-key rotation, the scarce timbres, the hand-authored-B staging and the
+  CROWN-quotes-ARENA payoff all survive unchanged; the complaint was about
+  energy, and energy is tempo, density and bass motion.
