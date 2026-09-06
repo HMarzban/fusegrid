@@ -98,14 +98,20 @@ not shell screens. Do not add them as `SCREEN` values.
     corner, points at `+Z` for the visor to sit on), one Phong visor raked
     `-0.6` to face the rig, two leg boxes — so `SLOT_MESH.player` is 5 and
     fat-world is 141. No antenna, no ball, no round eyes, no sphere.
-    `p.color` lives on the crest and nowhere else, in both renderers, and the
-    hull hex is exported ONCE as `PLAYER_HULL` from `sprites.js`. The hero
+    `p.color` lives on the crest and nowhere else, in both renderers. The hero
     reads **lean, armoured and shouldered**, never round or bright: a
     near-white hull was rejected as "too silly" (see spec §2 R1), so keep the
-    hull mid-value (L 0.28–0.62), the shoulder half-span at or past the
-    player's own `TILE*0.34` collision radius, and the plan footprint wider
-    than deep (`x/z >= 1.40`). Separation from WALKER is that shouldered,
-    desaturated structure carrying dark parts — never a re-hue.
+    hull mid-value, the shoulder half-span at or past the player's own
+    `TILE*0.34` collision radius, and the plan footprint wider than deep
+    (`x/z >= 1.40`). Separation from WALKER is that shouldered structure
+    carrying dark parts — never a re-hue.
+    **2D and 3D diverge BY DESIGN since IONVEST (2026-09-06, spec §2.6): the
+    3D hull stays gunmetal `PLAYER_HULL`, the 2D suit is orchid `PLAYER_SUIT`
+    `#cd5ac3` with a ~42% head and one swept crest fin.** Both are exported
+    from `sprites.js`; do NOT re-merge them into one hex — gunmetal vanished
+    into FACTORY's wall in 2D (ΔL .008, Δhue 8.3°) but is still correct in 3D,
+    which has no dark contour. The 2D gate is per-biome: no swatch may collapse
+    on value AND hue at once, and the suit must stay chromatic.
   - `shellview.js` routes `app.screen` to `menudraw.js` and owns `kindSize` /
     `dims`, the one logical box every screen measures against (a real canvas
     wins, otherwise kind picks the classic box or the projected one). It is

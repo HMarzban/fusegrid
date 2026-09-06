@@ -592,6 +592,80 @@ The first is a **horizontal slice** of the recorded beat-2 contour, because a
 fit box and an op stream structurally cannot tell a tapered torso from a
 barrel — which is exactly how the egg shipped.
 
+### 2.6 2D divergence — 2026-09-06, on user feedback
+
+> **REVISION IONVEST — 2D ONLY.** The R1 2D body was **rejected by the user**:
+> *"in the 2D the main charecter is terrible look"*, against a FACTORY room
+> screenshot. The user **explicitly allowed 2D and 3D to look different**, so
+> this is the point where the two renderers' palettes split. The 3D SIGNAL
+> RUNNER of §2.3 is **untouched** and remains the spec for the 3D hero.
+
+**Two measured defects, both fixed; R1's shape work otherwise kept.**
+
+*Colour.* R1's `PLAYER_HULL` `#8d97ac` against FACTORY's `wall` `#8a96a4` is
+`ΔL=0.008` and `Δhue=8.3°` — value **and** hue collapse on the **same**
+swatch, so the dark-contour beat and the lit-body beat both land on the wall's
+own value and a 2px 55%-alpha seal is left doing all the separation work at
+29px. That is the blob. The 2D suit is now a **hued** `PLAYER_SUIT`
+`#cd5ac3` orchid (L .479, chroma .451, hue 305°). 3D keeps gunmetal: it has no
+dark contour, value alone separates it there, and it was not what was
+rejected. **`PLAYER_HULL` keeps its value and its export** — `three/entities.js`
+is unchanged.
+
+*Proportion.* R1's figure was **29% head** (~3.4 heads) — adult proportions on
+a 29px sprite, which is the other half of "blob": there were never enough
+pixels for a face. The shoulder-ledge seam rises `-0.46r → -0.20r`, giving a
+**41.4% head** (~2.4 heads), the small-sprite convention. Waist (`0.54r`) and
+boot span (`0.42r..1.06r`) are unchanged; the pauldron facets and the visor
+cluster move up with the seam and grow into the room.
+
+*Added:* one swept **FIN** off the crest's rear-left flank — five vertices,
+still zero-arc, still no brim — as the silhouette hook. `p.color` stays on the
+**crest alone** (one-placement rule intact).
+
+**Moved pins.** R1's `lum(PLAYER_HULL) ∈ [0.28,0.62]` is **retired**: a band on
+one hex cannot see the backdrop, and it stayed green on the rejected build. It
+is replaced by four gates in `tests/items-art.test.mjs`:
+
+| gate | R1 body | IONVEST |
+|---|---|---|
+| no biome swatch collapses on **both** value and hue (`ΔL<0.12 ⟹ Δhue≥25°`), all 8 biomes × `{floor0,floor1,wall,brickA,brickB}` | **FAIL** — FACTORY.wall .008/8.3°, ICE.floor1 .021/16.6°, ICE.floor0 .095/16.2° | worst Δhue **41.1°** (ARENA.brickA) |
+| suit chroma (normalised channel spread) `>= 0.35` | **0.122** | 0.451 |
+| head module is 38–50% of the figure | **0.293** | 0.414 |
+| contour band `>= 0.12` darker than the suit, and sealed | 0.332 | 0.270 |
+| `PLAYER_HULL` stays the 3D gunmetal, `PLAYER_SUIT` is 2D-only | **FAIL** (one hex) | pinned |
+
+**Deviation from the direction authority, recorded deliberately.**
+`research-2d-hero.md` §5 gate 1 asks for `min ΔL >= 0.12` over all 40 swatches.
+**That is not satisfiable by any hex** — the 40 swatches cover the value axis
+densely enough that every colour is within 0.12 of one of them. The research's
+own worst-case figure for its recommended `#b83fc0` (`floor ΔL=0.254`) is
+ARENA `floor0`, not the minimum; the true minimum is JUNGLE `floor0` `#1a7a30`
+at `ΔL=0.007`. The research's gate 2 names the real failure condition — both
+axes collapsing on the **same** swatch — so **the AND is what ships**, and
+gate 1 is folded into it rather than asserted standalone. A **chroma floor**
+is added because it is what makes the hue axis mean anything: two *near-neutral*
+colours at the same value are the same colour however far apart their nominal
+hue angles sit, and that — not hue distance alone — is why gunmetal-on-gray
+failed.
+
+**Luminance formula.** All numbers here are **Rec.709** (`items-art.test.mjs`'s
+own `lum`). The research tabulates Rec.601. The two agree on gunmetal (0.590
+either way — it is near-neutral, so it could not discriminate between the
+formulas) and diverge on a saturated suit. One formula per repo.
+
+**Value chosen from rendered rooms, not from the table.** The research's
+`#b83fc0` (L .384) shipped in capture iteration 1 and read *weakly in VOID*,
+where `brickA` `#6a20c8` sat **32.0 Lab ΔE** away — the tightest pair in the
+game. Lifting the same hue family to L .479 puts the worst pair at **44.6 ΔE**
+and is the only value in the family that also clears **both** bright floors
+(ICE .671, SAND .608) on value alone rather than on hue. ΔE was the
+*selection* method; the shipped gate remains the ΔL/Δhue AND.
+
+**Legal distance** is unchanged and if anything larger: hard-edged helmet,
+crest, fin and lensed visor — non-round, non-white, no pompom, no centred
+cartoon face.
+
 ---
 
 ## §3 ABI renegotiation
