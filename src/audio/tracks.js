@@ -915,169 +915,126 @@ const SAND_A = mkPat(
     [60, 207.65, 4],
   ],
 );
-/* VOID — dread, something watching. B Locrian on B, STEP 0.144 (104 BPM): the
-   BOTTOM of the arcade band, not outside it. This was the score's biggest
-   single conflict with the direction — 64 BPM, an empty hat array, no pad key,
-   a lead pinned never to sound its own tonic, and a 20-of-64 ceiling that made
-   it "the sparsest track in the game". All four were one device, subtraction,
-   and the offline render priced it at 34 sub-50 dB intervals with the longest
-   running 2.5 seconds. Dread is now bought with the two things that cost
-   neither tempo nor silence: the mode, and the SINE lead that is still void's
-   identity marker and still the only one in the score.
-   VOID is nonetheless still the sparsest of the ten, by RELATIVE density: bass
-   and hat strike 32 of the 64 steps where every other track's strike 48 or
-   more. The bass is root against its own octave on steps 0 and 4 only — half
-   the pattern density of anything else here — but each note rings four steps,
-   so the low end is continuous while the ONSETS stay half-time. The hat is the
-   darkest tick in the score at 2000 Hz, on 2 and 6, which is what closes the
-   two-step holes the half-time bass would otherwise leave. The lead states the
-   WHOLE motif at bars 1 and 5 — tonic included, resolution included — and
-   keeps FRAG-MID between them as the colour it always should have been rather
-   than as the entire diet. Two long sine drones hold B against F, the tritone
-   that names the mode. Bars 7 and 8 drop the pedal to the flat sixth and the
-   flat fifth; nothing else moves. Step 63 is the loop's one unstruck step.
-   (Render iteration, recorded rather than hidden: a first cut left the lead
-   off eleven of the odd steps — occupancy 53, two holes a bar — and every pin
-   was green, pulseGap included, because the half-time bass and hat still cover
-   every even step. The offline render found 28 sub-50 dB intervals anyway: at
-   VOID's gains, the lowest in the score, a single unstruck step at .144 is
-   long enough to dip under the threshold even with a note ringing through it.
-   Same lesson wave A learned on ice, at a different scale — pulseGap bounds
-   the GRID, not the ear, and the unstruck step must be one per LOOP. The lead
-   now covers every odd step but 63; the rhythm section is untouched, so VOID
-   keeps the half-time onset density that makes it the sparsest of the ten.) */
+/* VOID — direction v3: spacious, mysterious and PLEASANT. B MINOR PENTATONIC
+   (B D E F# A) on B1 61.74, STEP 0.152 (98.7 BPM) — the slowest of the ten and
+   still inside the band. v2 bought dread with B Locrian's tritone at 104 BPM;
+   v3's brief is mystery, and dread was the wrong target. The levers here are
+   all subtraction of TENSION rather than subtraction of sound: minor pentatonic
+   contains neither a tritone nor a semitone, so no interval in the track can
+   sting; nothing sits below 55 Hz, so there is no rumble; and the four channel
+   peaks sum to 0.132, the quietest track in the game.
+   The bed is half-time and unbroken: root against its own octave on steps 0 and
+   4, each ringing four steps, so the bass SPANS every step of the loop while
+   its onsets stay at half speed. The hat is the softest tick in the score —
+   2400 Hz at v 0.010, on 2 and 6.
+   The sine lead survives as void's identity marker, and it now carries the
+   melodic weight, because the score-wide "the retired motif is gone" pin is
+   trivially true here (minor pentatonic has no 6th degree, so the detector can
+   never fire whatever this track plays). void's own hook is three ADJACENT
+   COLLECTION STEPS FALLING on 0/3/5 — F#-E-D at bar 1, A-F#-E at bar 3,
+   B-A-F# at bar 5, D-B-A at bar 7 — the same gesture read from a different
+   degree each time, with the even bars answering in two held notes. 20 lead
+   notes in 64 steps, none shorter than two steps: the sparsest lead in the
+   score, and still the densest thing about the track. */
 const VOID_A = mkPat(
-  0.144,
+  0.152,
   64,
   [
     [61.74, 123.47],
     [61.74, 123.47],
+    [73.42, 146.83],
+    [55.0, 110.0],
     [61.74, 123.47],
     [61.74, 123.47],
-    [61.74, 123.47],
-    [61.74, 123.47],
-    [49.0, 98.0],
-    [43.65, 87.31],
+    [82.41, 164.81],
+    [92.5, 185.0],
   ].flatMap(([r, o], b) => [
     [b * 8, r, 4],
     [b * 8 + 4, o, 4],
   ]),
   [
-    [0, 493.88, 1],
-    [1, 587.33, 1],
-    [2, 698.46, 1],
-    [3, 783.99, 2],
-    [5, 698.46, 1],
-    [7, 659.26, 1],
-    [9, 587.33, 1],
-    [10, 698.46, 1],
-    [11, 783.99, 2],
-    [13, 698.46, 1],
-    [15, 659.26, 1],
-    [17, 659.26, 1],
-    [19, 587.33, 2],
-    [21, 493.88, 1],
-    [23, 587.33, 1],
-    [25, 587.33, 1],
-    [26, 698.46, 1],
-    [27, 783.99, 2],
-    [29, 698.46, 1],
-    [31, 587.33, 1],
-    [32, 493.88, 1],
-    [33, 587.33, 1],
-    [34, 698.46, 1],
-    [35, 783.99, 2],
-    [37, 698.46, 1],
-    [39, 659.26, 1],
-    [41, 587.33, 1],
-    [42, 698.46, 1],
-    [43, 783.99, 2],
-    [45, 698.46, 1],
-    [47, 587.33, 1],
-    [49, 392.0, 1],
+    [0, 739.99, 3],
+    [3, 659.26, 2],
+    [5, 587.33, 3],
+    [8, 493.88, 4],
+    [12, 587.33, 4],
+    [16, 880.0, 3],
+    [19, 739.99, 2],
+    [21, 659.26, 3],
+    [24, 739.99, 4],
+    [28, 659.26, 4],
+    [32, 987.77, 3],
+    [35, 880.0, 2],
+    [37, 739.99, 3],
+    [40, 659.26, 4],
+    [44, 739.99, 4],
+    [48, 587.33, 3],
     [51, 493.88, 2],
-    [53, 587.33, 1],
-    [55, 698.46, 1],
-    [57, 349.23, 1],
-    [59, 440.0, 1],
-    [61, 523.25, 2],
+    [53, 440.0, 3],
+    [56, 739.99, 4],
+    [60, 587.33, 3],
   ],
   [0, 1, 2, 3, 4, 5, 6, 7].flatMap((b) =>
-    [2, 6].map((o) => [b * 8 + o, 2000, 1]),
+    [2, 6].map((o) => [b * 8 + o, 2400, 1]),
   ),
-  ["triangle", 0.05, "sine", 0.055, "triangle", 0.012, "sine", 0.022],
+  ["triangle", 0.05, "sine", 0.05, "triangle", 0.01, "sine", 0.022],
   [
     [0, 246.94, 32],
-    [32, 174.61, 32],
+    [32, 185.0, 32],
   ],
 );
-/* VOID B — hand-authored, with its own (now real) hat array and the same four
-   voices. The pedal sits on the flat fifth for the whole section and the
-   fragment moves down a register: the same dread from another angle, over the
-   same half-time pulse. The drones swap, so F is underneath this time. */
+/* VOID B — hand-authored, and the bed is RE-CUT rather than transposed: the
+   bass moves to 0 and 5 (durations 5 and 3, still spanning the whole bar) and
+   the hat to 3 and 7, so B breathes on a different part of the bar. The key
+   drops a fourth to E MINOR PENTATONIC (E G A B D), which swaps F# out for G —
+   the same softness from one step further down. The lead's roles swap with it:
+   here the EVEN bars carry the falling hook and the odd bars answer, so the
+   A-A-B-B cycle inverts its own phrasing halfway through. */
 const VOID_B = mkPat(
-  0.144,
+  0.152,
   64,
   [
-    [43.65, 87.31],
-    [43.65, 87.31],
-    [43.65, 87.31],
-    [43.65, 87.31],
-    [43.65, 87.31],
-    [43.65, 87.31],
-    [41.2, 82.41],
-    [43.65, 87.31],
+    [82.41, 164.81],
+    [82.41, 164.81],
+    [98.0, 196.0],
+    [73.42, 146.83],
+    [82.41, 164.81],
+    [82.41, 164.81],
+    [110.0, 220.0],
+    [123.47, 246.94],
   ].flatMap(([r, o], b) => [
-    [b * 8, r, 4],
-    [b * 8 + 4, o, 4],
+    [b * 8, r, 5],
+    [b * 8 + 5, o, 3],
   ]),
   [
-    [0, 349.23, 1],
-    [1, 440.0, 1],
-    [2, 523.25, 1],
-    [3, 587.33, 2],
-    [5, 523.25, 1],
-    [7, 493.88, 1],
-    [9, 440.0, 1],
-    [10, 523.25, 1],
-    [11, 587.33, 2],
-    [13, 523.25, 1],
-    [15, 493.88, 1],
-    [17, 493.88, 1],
-    [19, 440.0, 2],
-    [21, 349.23, 1],
-    [23, 440.0, 1],
-    [25, 440.0, 1],
-    [26, 523.25, 1],
-    [27, 587.33, 2],
-    [29, 523.25, 1],
-    [31, 440.0, 1],
-    [32, 349.23, 1],
-    [33, 440.0, 1],
-    [34, 523.25, 1],
-    [35, 587.33, 2],
-    [37, 523.25, 1],
-    [39, 493.88, 1],
-    [41, 440.0, 1],
-    [42, 523.25, 1],
-    [43, 587.33, 2],
-    [45, 523.25, 1],
-    [47, 440.0, 1],
-    [49, 329.63, 1],
-    [51, 392.0, 2],
-    [53, 440.0, 1],
-    [55, 523.25, 1],
-    [57, 293.66, 1],
-    [59, 349.23, 1],
-    [61, 392.0, 2],
+    [0, 493.88, 4],
+    [4, 440.0, 4],
+    [8, 587.33, 3],
+    [11, 493.88, 2],
+    [13, 440.0, 3],
+    [16, 392.0, 4],
+    [20, 440.0, 4],
+    [24, 493.88, 3],
+    [27, 440.0, 2],
+    [29, 392.0, 3],
+    [32, 659.26, 4],
+    [36, 587.33, 4],
+    [40, 783.99, 3],
+    [43, 659.26, 2],
+    [45, 587.33, 3],
+    [48, 493.88, 4],
+    [52, 587.33, 4],
+    [56, 587.33, 3],
+    [59, 493.88, 2],
+    [61, 440.0, 3],
   ],
   [0, 1, 2, 3, 4, 5, 6, 7].flatMap((b) =>
-    [2, 6].map((o) => [b * 8 + o, 2000, 1]),
+    [3, 7].map((o) => [b * 8 + o, 2400, 1]),
   ),
-  ["triangle", 0.05, "sine", 0.055, "triangle", 0.012, "sine", 0.022],
+  ["triangle", 0.05, "sine", 0.05, "triangle", 0.01, "sine", 0.022],
   [
-    [0, 174.61, 32],
-    [32, 246.94, 32],
+    [0, 246.94, 32],
+    [32, 164.81, 32],
   ],
 );
 /* CROWN — finale gold. C Ionian on C, the only pure major in the game, earned

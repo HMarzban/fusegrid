@@ -128,7 +128,7 @@ const soundsDeg = (P, f0, d) =>
    V3 grows one id per commit, exactly as the v2 sweeps did. Every v2-direction
    sweep below quantifies over V2ONLY instead of over all ten, so the suite stays
    green on a mixed tree and nothing is scoped away permanently. */
-const V3 = ["menu", "jungle"];
+const V3 = ["menu", "jungle", "void"];
 const V2ONLY = Object.keys(MUSIC_TRACKS).filter((k) => !V3.includes(k));
 /* Declared per PATTERN, not per track: v3 gives A and B their own key, so the
    in-collection pin has to read a section's own tonic and collection. Neither
@@ -142,6 +142,8 @@ const V3KEY = {
   "menu.B": { f0: 293.66, set: PENT_MAJ, name: "D major pentatonic" },
   "jungle.A": { f0: 293.66, set: PENT_MAJ, name: "D major pentatonic" },
   "jungle.B": { f0: 440.0, set: PENT_MAJ, name: "A major pentatonic" },
+  "void.A": { f0: 493.88, set: PENT_MIN, name: "B minor pentatonic" },
+  "void.B": { f0: 329.63, set: PENT_MIN, name: "E minor pentatonic" },
 };
 /* Index in the declared collection, extended across octaves, so "three adjacent
    collection steps falling" is idx, idx-1, idx-2 read from ANY degree — which is
@@ -946,7 +948,7 @@ function installAC(ac) {
   check(
     "sand void crown STEP and first bass",
     MUSIC_TRACKS.sand.A.STEP === 0.134 &&
-      MUSIC_TRACKS.void.A.STEP === 0.144 &&
+      MUSIC_TRACKS.void.A.STEP === 0.152 &&
       MUSIC_TRACKS.crown.A.STEP === 0.11 &&
       MUSIC_TRACKS.sand.A.bass[0].f === 123.47 &&
       MUSIC_TRACKS.void.A.bass[0].f === 61.74 &&
@@ -1743,94 +1745,124 @@ function installAC(ac) {
   check("arena register lanes never cross, A and B", lanes(A) && lanes(B));
 }
 
-// ---- void: dread, driving (B Locrian, sine lead, half-density rhythm) ----
+// ---- void: spacious, mysterious, pleasant (B minor pentatonic, sine lead) ----
 {
   const T = MUSIC_TRACKS.void,
     A = T.A,
     B = T.B,
-    f0 = TONIC.void;
+    KA = V3KEY["void.A"],
+    KB = V3KEY["void.B"];
   check(
-    "void STEP 0.144 (104 BPM), B1 61.74 — the bottom of the band, not outside it",
-    A.STEP === 0.144 && A.bass[0].f === 61.74,
-    A.STEP + "/" + A.bass[0].f,
-  );
-  /* Withdrawn together (spec 5 item 2): the empty hat, the absent pad, the
-     never-resolving lead and the 20/64 ceiling were one device — subtraction
-     as the whole creative move. Dread is now bought with mode and timbre,
-     which cost neither tempo nor silence. */
-  check(
-    "void has a hat and a pad again — four voices, not two",
-    A.hat.length === 16 &&
-      A.hat.every((n) => [2, 6].includes(n.s % 8)) &&
-      !!A.pad &&
-      A.pad.length > 0,
-    A.hat.length + " hat / " + (A.pad || []).length + " pad",
+    "void STEP 0.152 -> 98.7 BPM, B1 61.74 — the slowest of the ten, in band",
+    A.STEP === 0.152 &&
+      A.bass[0].f === 61.74 &&
+      15 / A.STEP >= 96 &&
+      15 / A.STEP <= 120,
+    A.STEP + " -> " + (15 / A.STEP).toFixed(1) + " BPM",
   );
   check(
-    "void is the only sine lead in the score",
-    A.lead.length > 0 && A.lead.every((n) => n.t === "sine"),
-    A.lead[0] && A.lead[0].t,
+    "void is still the only sine lead in the score — its identity marker",
+    A.lead.every((n) => n.t === "sine") && B.lead.every((n) => n.t === "sine"),
+    A.lead[0].t,
+  );
+  /* v2 bought dread with mode and timbre at 104 BPM. v3's brief is MYSTERY, and
+     the levers are different: minor pentatonic has neither a tritone nor a
+     semitone, nothing sits below 55 Hz, and this is the quietest track in the
+     game by channel-peak sum. None of that is a rest — void is spacious, not
+     silent, and its bass still rings through every step of the loop. */
+  check(
+    "void is the quietest track in the game: channel peaks sum to 0.132",
+    near(peakSum(A), 0.132, 1e-9) && near(peakSum(B), 0.132, 1e-9),
+    peakSum(A).toFixed(3) + "/" + peakSum(B).toFixed(3),
   );
   check(
-    "void bass is root-octave at half the other tracks' density — 0 and 4, all bars",
+    "void bass is half-time root-octave on 0 and 4, each ringing four steps",
     A.bass.length === 16 &&
-      A.bass.every((n) => [0, 4].includes(n.s % 8)) &&
+      stepSet(A.bass) === "0,4" &&
       A.bass.every((n) => Math.round(n.d / A.STEP) === 4) &&
-      barsWithBass(A) === 8,
-    A.bass.length + ":" + [...new Set(A.bass.map((n) => n.s % 8))].sort().join(","),
+      [0, 1, 2, 3, 4, 5, 6, 7].every((b) => {
+        const r = (A.bass.find((n) => n.s === b * 8) || { f: 0 }).f,
+          o = (A.bass.find((n) => n.s === b * 8 + 4) || { f: 0 }).f;
+        return r > 0 && Math.abs(semi(o, r) - 12) <= 0.05;
+      }),
+    A.bass.length + ":" + stepSet(A.bass),
   );
   check(
-    "void bass alternates root and its own octave, an eighth-note pedal no more",
-    [0, 1, 2, 3, 4, 5, 6, 7].every((b) => {
-      const r = (A.bass.find((n) => n.s === b * 8) || { f: 0 }).f,
-        o = (A.bass.find((n) => n.s === b * 8 + 4) || { f: 0 }).f;
-      return r > 0 && Math.abs(semi(o, r) - 12) <= 0.05;
-    }),
-    [...new Set(A.bass.map((n) => n.f))].sort((x, y) => x - y).join(","),
+    "void hat is the softest tick in the score — 2400 Hz at v 0.010, on 2 and 6",
+    A.hat.length === 16 &&
+      A.hat.every(
+        (n) => [2, 6].includes(n.s % 8) && n.f === 2400 && n.v === 0.01,
+      ),
+    A.hat.length + ":" + stepSet(A.hat),
+  );
+  /* void's OWN hook, and the one that has to carry the melodic weight here: the
+     score-wide "the retired motif is gone" pin is TRIVIALLY true on this track
+     (minor pentatonic has no 6th degree, so the detector can never fire
+     whatever void plays), so the melody is pinned as a gesture in COLLECTION
+     steps rather than in semitones — idx, idx-1, idx-2 reads as the same
+     falling shape started from any degree, which is exactly what it is. */
+  const fall3 = (P, K, s0) => {
+    const ns = [0, 3, 5].map((o) => P.lead.find((n) => n.s === s0 + o));
+    if (ns.some((n) => !n)) return false;
+    const i = ns.map((n) => degIdx(n.f, K.f0, K.set));
+    return (
+      i.every((x) => x != null) && i[1] === i[0] - 1 && i[2] === i[0] - 2
+    );
+  };
+  check(
+    "void's hook is three adjacent collection steps FALLING, on 0/3/5",
+    [0, 16, 32, 48].every((s0) => fall3(A, KA, s0)),
+    [0, 16, 32, 48].map((s0) => (fall3(A, KA, s0) ? "y" : "n")).join(""),
   );
   check(
-    "void's lead SOUNDS the tonic — the withheld resolution is withdrawn",
-    A.lead.some((n) => isDeg(n.f, f0, DEG1)),
-    A.lead.filter((n) => isDeg(n.f, f0, DEG1)).map((n) => n.s).join(","),
-  );
-  let frags = 0;
-  for (let b = 0; b < 8; b++) if (fragMidAt(A.lead, b * 8, f0)) frags++;
-  check(
-    "void states the WHOLE motif at bars 0 and 4, with FRAG-MID as a colour between",
-    motifV2At(A.lead, 0, f0) && motifV2At(A.lead, 32, f0) && frags >= 2,
-    motifV2Head(A.lead, f0, 64) + " / " + frags + " frag",
+    "void's odd bars fall, its even bars answer with two held notes",
+    [8, 24, 40, 56].every(
+      (s0) => A.lead.filter((n) => n.s >= s0 && n.s < s0 + 8).length === 2,
+    ),
   );
   check(
-    "void pulse never gaps, in BOTH hand-authored sections",
-    pulseGap(A) <= 1 && pulseGap(B) <= 1,
-    pulseGap(A) + "/" + pulseGap(B),
+    "void's lead is the sparsest in the score: 20 notes, none under two steps",
+    A.lead.length === 20 &&
+      B.lead.length === 20 &&
+      A.lead.every((n) => Math.round(n.d / A.STEP) >= 2),
+    A.lead.length + " notes",
   );
   check(
-    "void plays every bar in both sections — nothing drops out",
-    barsWithLead(A) === 8 &&
-      barsWithBass(A) === 8 &&
-      barsWithLead(B) === 8 &&
-      barsWithBass(B) === 8,
-    barsWithLead(A) + "/" + barsWithBass(A) + " " + barsWithLead(B) + "/" + barsWithBass(B),
+    "void is SPACIOUS, not empty: 34-46 of 64 steps, A and B alike",
+    occ(A) >= 34 && occ(A) <= 46 && occ(B) >= 34 && occ(B) <= 46,
+    occ(A) + "/" + occ(B),
   );
-  /* Still the sparsest of the ten, by RELATIVE density rather than by absence:
-     its bass and hat strike 32 of 64 steps where every other track's strike
-     48 or more, and its band sits a clear step below theirs. It has a floor,
-     so it cannot drift back toward the 20/64 it used to be pinned at. */
+  /* Still the sparsest of the ten by RELATIVE pattern density — a comparison,
+     not a ceiling, so it survives a composer making the track denser. */
   const others = Object.keys(MUSIC_TRACKS).filter(
     (k) => k !== "void" && k !== "intro",
   );
   const rhythm = (P) => new Set([...P.bass, ...P.hat].map((n) => n.s)).size;
   check(
-    "void is the sparsest of the ten by pattern density, and 58-63 of 64 steps",
-    occ(A) >= 58 &&
-      occ(A) <= 63 &&
-      occ(B) >= 58 &&
-      occ(B) <= 63 &&
-      others.every((k) => rhythm(MUSIC_TRACKS[k].A) > rhythm(A)),
-    occ(A) + "/" + occ(B) + " occ, rhythm " + rhythm(A),
+    "void's rhythm section strikes fewer steps than any other 64-step track's",
+    others.every((k) => rhythm(MUSIC_TRACKS[k].A) > rhythm(A)),
+    rhythm(A) +
+      " vs " +
+      others.map((k) => k + ":" + rhythm(MUSIC_TRACKS[k].A)).join(" "),
   );
-  check("void B is hand-authored — its hat is not A's array", B.hat !== A.hat);
+  check(
+    "void B drops to E minor pentatonic and re-cuts the bed to 0/5 and 3/7",
+    B.hat !== A.hat &&
+      stepSet(B.bass) === "0,5" &&
+      stepSet(B.hat) === "3,7" &&
+      B.bass.every(
+        (n) => Math.round(n.d / B.STEP) === (n.s % 8 === 0 ? 5 : 3),
+      ),
+    stepSet(B.bass) + " / " + stepSet(B.hat),
+  );
+  check(
+    "void B swaps the roles — its EVEN bars carry the falling hook",
+    [8, 24, 40, 56].every((s0) => fall3(B, KB, s0)) &&
+      [0, 16, 32, 48].every(
+        (s0) => B.lead.filter((n) => n.s >= s0 && n.s < s0 + 8).length === 2,
+      ),
+    [8, 24, 40, 56].map((s0) => (fall3(B, KB, s0) ? "y" : "n")).join(""),
+  );
   check("void register lanes never cross, A and B", lanes(A) && lanes(B));
 }
 {
@@ -2468,7 +2500,7 @@ function installAC(ac) {
     sand: 0.134,
     menu: 0.137,
     water: 0.139,
-    void: 0.144,
+    void: 0.152,
   };
   check(
     "the tempo ladder is the authored one, ten distinct values",
@@ -2534,7 +2566,7 @@ function installAC(ac) {
     water: [58, 63],
     arena: [56, 62],
     sand: [58, 63],
-    void: [58, 63],
+    void: [34, 46],
     crown: [58, 63],
   };
   check(
