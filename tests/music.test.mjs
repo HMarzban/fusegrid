@@ -94,11 +94,6 @@ const occ = (P) => {
   for (const a of chansOf(P)) for (const n of a) s.add(n.s);
   return s.size;
 };
-const breathBar = (P) => {
-  for (let b = 0; b * 8 < P.LEN; b++)
-    if (!P.lead.some((n) => n.s >= b * 8 && n.s < b * 8 + 8)) return b;
-  return -1;
-};
 const lanes = (P) =>
   P.bass.length > 0 &&
   P.lead.length > 0 &&
@@ -1480,7 +1475,6 @@ function installAC(ac) {
     barsWithLead(P) + "/" + barsWithBass(P),
   );
   check("occ counts distinct occupied steps across channels", occ(P) === 3, occ(P));
-  check("breathBar finds the first lead-free bar", breathBar(P) === 1, breathBar(P));
   check("lanes: max bass < min lead", lanes(P));
   check("waves counts distinct channel timbres", waves(P) === 1, waves(P));
   check(
@@ -1566,20 +1560,6 @@ function installAC(ac) {
     occ(A),
   );
   check("intro register lanes never cross", lanes(A));
-}
-{
-  /* The ladder's last ordering constraint is discharged here: water wants
-     .139 and sand has just vacated it, void's .144 was freed by ice in wave A,
-     and crown took .110 from nobody. So the pre-move guard that stood in this
-     block retires rather than being re-valued into a tautology — what replaces
-     it is the fact that made it necessary, checked directly. */
-  check(
-    "the ladder's last blocked move is unblocked: .139 is vacant for water",
-    !Object.keys(MUSIC_TRACKS).some((k) => MUSIC_TRACKS[k].A.STEP === 0.139),
-    Object.keys(MUSIC_TRACKS)
-      .filter((k) => MUSIC_TRACKS[k].A.STEP === 0.139)
-      .join(","),
-  );
 }
 
 // ---- menu: confident, swaggering (D Dorian, the identity theme) ----
@@ -1871,7 +1851,8 @@ function installAC(ac) {
      all-ten sweep once the last track lands. The breath-bar sweep this block
      used to carry is gone with the shared mandate — a v2 track earns its air
      from articulation, not empty bars. */
-  const WA = ["intro", "menu", "jungle", "ice", "factory", "arena", "crown", "sand"];
+  const WA = ["intro", "menu", "jungle", "ice", "factory", "arena", "crown", "sand",
+    "water"];
   check(
     "v2 so far: the rhythm section never leaves two steps unstruck",
     WA.every((k) => pulseGap(MUSIC_TRACKS[k].A) <= 1),
@@ -2083,60 +2064,82 @@ function installAC(ac) {
   check("factory register lanes never cross, A and B", lanes(A) && lanes(B));
 }
 
-// ---- water: flowing, undertow (G Mixolydian, PLAIN stretched, pad runs INV) ----
+// ---- water: flowing, but moving (G Mixolydian, PLAIN in even values) ----
 {
   const T = MUSIC_TRACKS.water,
     A = T.A,
-    B = T.B;
+    B = T.B,
+    f0 = TONIC.water;
   check(
-    "water STEP 0.15 (100 BPM), G1 49.00 root, B up a perfect fourth",
-    A.STEP === 0.15 &&
+    "water STEP 0.139 (108 BPM), G1 49.00 root, B up a perfect fourth",
+    A.STEP === 0.139 &&
       A.bass[0].f === 49 &&
       Math.abs(B.bass[0].f / A.bass[0].f - 1.33484) < 1e-9,
     A.STEP + "/" + A.bass[0].f,
   );
-  const longs = A.lead.filter((n) => Math.round(n.d / A.STEP) >= 4);
+  /* The smoothest, least-syncopated pattern in the set: this is how "flowing"
+     is said now that it is no longer said with held notes. */
   check(
-    "water lead is legato: at least 6 notes of 4+ steps",
-    longs.length >= 6,
-    longs.length,
+    "water bass is an even quarter-pulse on 0/2/4/6 — 32 notes, all eight bars",
+    A.bass.length === 32 &&
+      A.bass.every((n) => n.s % 2 === 0) &&
+      A.bass.every((n) => Math.round(n.d / A.STEP) === 2) &&
+      barsWithBass(A) === 8,
+    A.bass.length + ":" + [...new Set(A.bass.map((n) => n.s % 8))].sort().join(","),
   );
   check(
-    "at least one lead note starts late in a bar and holds past the bar line",
-    A.lead.some((n) => (n.s % 8) + Math.round(n.d / A.STEP) > 8 && n.s % 8 >= 6),
-    A.lead
-      .filter((n) => n.s % 8 >= 6)
-      .map((n) => (n.s % 8) + "+" + Math.round(n.d / A.STEP))
-      .join(","),
+    "water bass walks root-fifth-octave — three pitches a bar, the root on 0",
+    [0, 1, 2, 3, 4, 5, 6, 7].every((b) => {
+      const at = (o) =>
+        (A.bass.find((n) => n.s === b * 8 + o) || { f: 0 }).f;
+      const r = at(0),
+        q = at(2),
+        o = at(4);
+      return (
+        r > 0 &&
+        Math.abs(semi(q, r) - 7) <= 0.05 &&
+        Math.abs(semi(o, r) - 12) <= 0.05 &&
+        at(6) === q
+      );
+    }),
+    [...new Set(A.bass.map((n) => n.f))].sort((x, y) => x - y).join(","),
+  );
+  /* Withdrawn in v2 (spec 5 item 7): the legato lead holding across bar lines
+     and the INV contrary-motion pad. Both are chamber devices; what pins them
+     out is their negation, so they cannot creep back in as "colour". */
+  check(
+    "water lead is in EVEN VALUES — nothing longer than an eighth, no ties",
+    A.lead.every((n) => Math.round(n.d / A.STEP) <= 2) &&
+      !A.lead.some((n) => (n.s % 8) + Math.round(n.d / A.STEP) > 8),
+    [...new Set(A.lead.map((n) => Math.round(n.d / A.STEP)))].sort().join(","),
   );
   check(
-    "water bass swells through stepped velocity — 3 or more distinct v values",
+    "water states the motif at bars 0 and 4, unstretched",
+    motifV2At(A.lead, 0, f0) && motifV2At(A.lead, 32, f0),
+    motifV2Head(A.lead, f0, 64),
+  );
+  check(
+    "water bass keeps its stepped velocity as an accent — 3+ distinct v values",
     new Set(A.bass.map((n) => n.v)).size >= 3,
     [...new Set(A.bass.map((n) => n.v))].sort().join(","),
   );
-  const shared = [...new Set((A.pad || []).map((n) => n.s))]
-    .filter((s) => A.lead.some((l) => l.s === s))
-    .sort((a, b) => a - b);
-  let opp = 0,
-    cmp = 0;
-  for (let i = 1; i < shared.length; i++) {
-    const pf = (s) => A.pad.find((n) => n.s === s).f,
-      lf = (s) => A.lead.find((n) => n.s === s).f;
-    const dp = pf(shared[i]) - pf(shared[i - 1]),
-      dl = lf(shared[i]) - lf(shared[i - 1]);
-    if (dp === 0 || dl === 0) continue;
-    cmp++;
-    if (dp * dl < 0) opp++;
-  }
-  check(
-    "water pad runs INV under the lead — contrary motion at every shared step",
-    shared.length >= 4 && cmp >= 3 && opp === cmp,
-    opp + "/" + cmp + " over " + shared.length + " shared steps",
+  const shared = (A.pad || []).filter((p) =>
+    A.lead.some((l) => l.s === p.s && Math.abs(semi(p.f, l.f)) > 0.05),
   );
   check(
-    "water is unhurried: at most 44 of 64 steps, and it breathes",
-    occ(A) <= 44 && breathBar(A) >= 0,
-    occ(A) + "/" + breathBar(A),
+    "water pad supports rather than opposes — no INV, and it is not the pulse",
+    !!A.pad && A.pad.every((n) => Math.round(n.d / A.STEP) === 8) && shared.length >= 1,
+    (A.pad || []).length + " pad notes",
+  );
+  check(
+    "water flows without stopping: every bar carries lead, pulse never gaps",
+    barsWithLead(A) === 8 && pulseGap(A) <= 1,
+    barsWithLead(A) + "/" + pulseGap(A),
+  );
+  check(
+    "water is dense but not solid: 58-63 of 64 steps",
+    occ(A) >= 58 && occ(A) <= 63,
+    occ(A),
   );
   check("water register lanes never cross, A and B", lanes(A) && lanes(B));
 }
@@ -2233,7 +2236,7 @@ function installAC(ac) {
     menu: 0.121,
     sand: 0.134,
     ice: 0.129,
-    water: 0.15,
+    water: 0.139,
     intro: 0.125,
     void: 0.234,
   };
@@ -2295,7 +2298,7 @@ function installAC(ac) {
     jungle: [58, 63],
     ice: [58, 63],
     factory: [56, 62],
-    water: [0, 44],
+    water: [58, 63],
     arena: [56, 62],
     sand: [58, 63],
     void: [0, 20],

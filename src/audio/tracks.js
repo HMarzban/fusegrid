@@ -533,67 +533,98 @@ const FACTORY_A = mkPat(
   ),
   ["sawtooth", 0.09, "square", 0.075, "square", 0.018],
 );
-/* WATER — flowing, undertow. G Mixolydian on G, STEP 0.15 (100 BPM); the flat
-   seventh is what makes it major-but-not-quite, wet rather than bright. Two
-   independent lines, not harmony-by-doubling: the lead states the motif with
-   its two long notes stretched so the flash and the settle tie ACROSS bar
-   lines, and the sine pad answers it with INV — the same figure mirrored below
-   the tonic — so that at every step where both sound, one rises exactly where
-   the other falls. Deliberately not the house tresillo: water's identity is
-   long ties, so it never collapses into another syncopated track.
-   The bass is the first channel in the score to author the [s,f,d,v] tuple:
-   eight long notes crescendoing through stepped velocities across each
-   four-bar phrase, a swell the old one-v-per-channel encoding could not say at
-   all. Bar 8 is bass and pad alone, ringing out. */
+/* WATER — flowing, but moving. G Mixolydian on G, STEP 0.139 (108 BPM); the
+   flat seventh is what makes it major-but-not-quite, wet rather than bright.
+   Flowing is now said with an EVEN PULSE instead of with held notes: the bass
+   walks root-fifth-octave-fifth on steps 0, 2, 4 and 6 of every bar, each note
+   an eighth long, the smoothest and least syncopated pattern in the set — the
+   one bass in the score that never lands off the beat. It is also the only
+   channel besides sand's lead that authors the [s,f,d,v] tuple, and the swell
+   survives there as a light ACCENT (root loud, fifth soft) rather than as the
+   whole identity: eight long crescendoing notes were the undertow, and the
+   undertow was the problem. The lead states the motif at bars 1 and 5 in even
+   values, nothing longer than an eighth and nothing tied across a bar line —
+   both the cross-barline legato and the INV contrary-motion pad are withdrawn
+   by name, because two independent lines in contrary motion is a chamber move,
+   not an arcade one. The pad now simply holds one chord tone per bar under it.
+   The hat stays the lightest in the score, 4000 Hz on the "and" of each beat,
+   a texture cue rather than the pulse — the bass is the pulse. Step 61 is the
+   loop's one unstruck step. */
 const WATER_A = mkPat(
-  0.15,
+  0.139,
   64,
   [
-    [0, 49, 6, 0.05],
-    [8, 49, 6, 0.07],
-    [16, 65.41, 6, 0.09],
-    [24, 43.65, 6, 0.11],
-    [32, 49, 6, 0.06],
-    [40, 55.0, 6, 0.08],
-    [48, 65.41, 6, 0.1],
-    [56, 49, 8, 0.12],
-  ],
+    [49.0, 73.42, 98.0],
+    [43.65, 65.41, 87.31],
+    [65.41, 98.0, 130.81],
+    [49.0, 73.42, 98.0],
+    [49.0, 73.42, 98.0],
+    [73.42, 110.0, 146.83],
+    [43.65, 65.41, 87.31],
+    [49.0, 73.42, 98.0],
+  ].flatMap(([r, q, o], b) => [
+    [b * 8, r, 2, 0.1],
+    [b * 8 + 2, q, 2, 0.07],
+    [b * 8 + 4, o, 2, 0.09],
+    [b * 8 + 6, q, 2, 0.07],
+  ]),
   [
-    [0, 392.0, 2],
-    [1, 493.88, 2],
-    [2, 587.33, 2],
-    [3, 659.26, 6],
-    [6, 587.33, 5],
-    [12, 349.23, 4],
-    [16, 523.25, 6],
-    [22, 587.33, 5],
-    [32, 440.0, 8],
-    [40, 493.88, 5],
-    [46, 587.33, 6],
-    [48, 523.25, 3],
-    [52, 659.26, 4],
+    [0, 392.0, 1],
+    [1, 493.88, 1],
+    [2, 587.33, 1],
+    [3, 659.26, 2],
+    [5, 587.33, 1],
+    [6, 523.25, 1],
+    [7, 493.88, 1],
+    [8, 440.0, 1],
+    [9, 523.25, 1],
+    [11, 587.33, 2],
+    [13, 523.25, 1],
+    [15, 440.0, 1],
+    [16, 523.25, 1],
+    [17, 587.33, 1],
+    [19, 659.26, 2],
+    [21, 587.33, 1],
+    [23, 523.25, 1],
+    [24, 493.88, 1],
+    [25, 440.0, 1],
+    [27, 392.0, 2],
+    [29, 440.0, 1],
+    [31, 493.88, 1],
+    [32, 392.0, 1],
+    [33, 493.88, 1],
+    [34, 587.33, 1],
+    [35, 659.26, 2],
+    [37, 587.33, 1],
+    [39, 698.46, 1],
+    [40, 587.33, 1],
+    [41, 698.46, 1],
+    [43, 659.26, 2],
+    [45, 587.33, 1],
+    [47, 493.88, 1],
+    [48, 523.25, 1],
+    [49, 659.26, 1],
+    [51, 698.46, 2],
+    [53, 659.26, 1],
+    [55, 523.25, 1],
+    [56, 493.88, 1],
+    [57, 440.0, 1],
+    [59, 392.0, 2],
+    [63, 349.23, 1],
   ],
-  [0, 1, 2, 3, 4, 5, 6].flatMap((b) =>
-    [2, 6].map((o) => [b * 8 + o, 4000, 1]),
+  [0, 1, 2, 3, 4, 5, 6, 7].flatMap((b) =>
+    [3, 7].map((o) => [b * 8 + o, 4000, 1]),
   ),
   ["triangle", 0.09, "triangle", 0.07, "triangle", 0.016, "sine", 0.03],
   [
-    [0, 196.0, 2],
-    [1, 164.81, 2],
-    [2, 130.81, 2],
-    [3, 123.47, 6],
-    [6, 130.81, 5],
-    [10, 146.83, 6],
-    [18, 146.83, 6],
-    [26, 174.61, 6],
-    [32, 196.0, 2],
-    [33, 164.81, 2],
-    [34, 130.81, 2],
-    [35, 123.47, 6],
-    [38, 130.81, 5],
-    [44, 164.81, 4],
-    [50, 130.81, 5],
-    [56, 146.83, 8],
+    [0, 196.0, 8],
+    [8, 174.61, 8],
+    [16, 261.63, 8],
+    [24, 196.0, 8],
+    [32, 196.0, 8],
+    [40, 293.66, 8],
+    [48, 174.61, 8],
+    [56, 196.0, 8],
   ],
 );
 /* Straight eighths: one hit on every even step of all eight bars. ARENA authors
