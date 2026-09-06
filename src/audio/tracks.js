@@ -1033,34 +1033,36 @@ const VOID_B = mkPat(
     [32, 164.81, 32],
   ],
 );
-/* CROWN — finale gold. C Ionian on C, the only pure major in the game, earned
-   by contrast with everything before it; STEP 0.110 (136 BPM). Ionian is what
-   the perfect fourth and the leading tone together name — the pair that
-   separates it from Lydian's #4 and from every flat-seventh mode in the run,
-   and CROWN is the only A section in the score that sounds both.
-   The bass is a dotted FANFARE, root-fifth-octave: a dotted-eighth root on
-   step 0, then the fifth on 3, the octave on 4 and the fifth again on 6, in
-   all eight bars over C-G-Am-F-C-F-G-C. Its four sustains meet end to end, so
-   the low end never lets go, and its step set belongs to no other track. The
-   hat answers offbeat on 1, 5 and 7 — deliberately NOT the even-step pattern,
-   because that pattern is the quote B is saving. The lead states RESOLVED (the
-   v2 motif plus a sixth note: the tonic an octave above the head, on step 7)
-   at bar 1 and again an octave up at bar 5, so the finale hands over the note
-   VOID refuses twice a pass instead of withholding it until B. Sawtooth pad
-   doubles the lead an octave up for brass weight. The bar-4 full-band stop is
-   gone: the finale no longer takes a breath before it climbs, it climbs. Step
-   58 is the loop's one unstruck step. */
+/* CROWN — direction v3: a triumphant major fanfare. C IONIAN on C, still the
+   only pure major in the game and still the only A section that sounds both a
+   perfect fourth and a leading tone — the Ionian pair, which every other
+   collection in the score is checked against before a note is written. STEP
+   0.128 (117.2 BPM).
+   The bass keeps the dotted FANFARE it earned in v2 — root on 0 for three
+   steps, fifth on 3, octave on 4, fifth again on 6, over C-G-Am-F-C-F-G-C —
+   because that figure was always right; what was wrong was the timbre. The
+   sawtooth pad is withdrawn BY NAME: it is what made the finale blare, and a
+   finale is the last place a direction called "soft" can afford an edge. The
+   whole band is triangle now, with a sine pad doubling the lead an octave up
+   for the brass weight the sawtooth used to fake.
+   The lead states crown's OWN hook in place of the retired figure's RESOLVED
+   variant: 1-3-5-8, three quick steps up the triad and then the OCTAVE HELD
+   for half a bar, at bars 0 and 4 — and B restates it on the dominant, so the
+   payoff arrives four times a cycle instead of being saved. The hat answers
+   offbeat on 1, 5 and 7, deliberately NOT the even-step pattern, because that
+   pattern is the quote B is saving. Step 47 is the loop's one unstruck step.
+   Channel peaks sum to 0.194. */
 const CROWN_A = mkPat(
-  0.11,
+  0.128,
   64,
   [
     [65.41, 98.0, 130.81],
-    [49.0, 73.42, 98.0],
-    [55.0, 82.41, 110.0],
-    [43.65, 65.41, 87.31],
+    [98.0, 146.83, 196.0],
+    [110.0, 164.81, 220.0],
+    [87.31, 130.81, 174.61],
     [65.41, 98.0, 130.81],
-    [43.65, 65.41, 87.31],
-    [49.0, 73.42, 98.0],
+    [87.31, 130.81, 174.61],
+    [98.0, 146.83, 196.0],
     [65.41, 98.0, 130.81],
   ].flatMap(([r, q, o], b) => [
     [b * 8, r, 3],
@@ -1071,152 +1073,117 @@ const CROWN_A = mkPat(
   [
     [0, 261.63, 1],
     [1, 329.63, 1],
-    [2, 392.0, 1],
-    [3, 440.0, 2],
-    [5, 392.0, 1],
-    [7, 523.25, 2],
-    [8, 493.88, 1],
-    [9, 440.0, 1],
-    [10, 392.0, 1],
-    [11, 587.33, 2],
-    [13, 493.88, 1],
-    [15, 392.0, 1],
-    [16, 440.0, 1],
-    [17, 523.25, 1],
-    [18, 659.26, 2],
-    [20, 523.25, 1],
-    [21, 493.88, 1],
-    [23, 440.0, 1],
-    [24, 349.23, 1],
-    [25, 440.0, 1],
-    [26, 523.25, 1],
-    [27, 587.33, 2],
-    [29, 523.25, 1],
-    [31, 440.0, 1],
+    [2, 392.0, 2],
+    [4, 523.25, 4],
+    [8, 493.88, 2],
+    [10, 440.0, 2],
+    [12, 392.0, 2],
+    [14, 349.23, 2],
+    [16, 440.0, 2],
+    [18, 392.0, 2],
+    [20, 349.23, 2],
+    [22, 329.63, 2],
+    [24, 349.23, 2],
+    [26, 392.0, 2],
+    [28, 440.0, 2],
+    [30, 493.88, 2],
+    [32, 261.63, 1],
+    [33, 329.63, 1],
+    [34, 392.0, 2],
+    [36, 523.25, 4],
+    [40, 587.33, 2],
+    [42, 523.25, 2],
+    [44, 493.88, 2],
+    [46, 440.0, 2],
+    [48, 392.0, 2],
+    [50, 440.0, 2],
+    [52, 493.88, 2],
+    [54, 523.25, 2],
+    [56, 392.0, 2],
+    [58, 349.23, 2],
+    [60, 329.63, 2],
+    [62, 293.66, 2],
+  ],
+  [0, 1, 2, 3, 4, 5, 6, 7]
+    .flatMap((b) => [1, 5, 7].map((o) => b * 8 + o))
+    .filter((s) => s !== 47)
+    .map((s) => [s, 4800, 1]),
+  ["triangle", 0.085, "triangle", 0.065, "triangle", 0.016, "sine", 0.028],
+  [
+    [0, 523.25, 1],
+    [1, 659.26, 1],
+    [2, 783.99, 2],
+    [4, 1046.5, 4],
+    [8, 987.77, 2],
+    [10, 880.0, 2],
+    [12, 783.99, 2],
+    [14, 698.46, 2],
     [32, 523.25, 1],
     [33, 659.26, 1],
-    [34, 783.99, 1],
-    [35, 880.0, 2],
-    [37, 783.99, 1],
-    [39, 1046.5, 2],
-    [40, 698.46, 1],
-    [41, 880.0, 1],
-    [42, 783.99, 1],
-    [43, 698.46, 2],
-    [45, 659.26, 1],
-    [47, 523.25, 1],
-    [48, 587.33, 1],
-    [49, 783.99, 1],
-    [50, 698.46, 1],
-    [51, 587.33, 2],
-    [53, 493.88, 1],
-    [55, 392.0, 1],
-    [56, 523.25, 1],
-    [59, 659.26, 1],
-    [60, 783.99, 1],
-    [61, 1046.5, 3],
-  ],
-  [0, 1, 2, 3, 4, 5, 6, 7].flatMap((b) =>
-    [1, 5, 7].map((o) => [b * 8 + o, 4800, 1]),
-  ),
-  ["square", 0.11, "square", 0.08, "triangle", 0.024, "sawtooth", 0.03],
-  [
-    [0, 523.25, 3],
-    [3, 880.0, 2],
-    [5, 783.99, 2],
-    [7, 1046.5, 2],
-    [16, 880.0, 2],
-    [18, 1318.51, 2],
-    [24, 698.46, 2],
-    [27, 1174.66, 2],
-    [48, 1174.66, 2],
-    [51, 1174.66, 2],
-    [56, 1046.5, 3],
-    [59, 1318.51, 2],
+    [34, 783.99, 2],
+    [36, 1046.5, 4],
+    [40, 1174.66, 2],
+    [42, 1046.5, 2],
+    [44, 987.77, 2],
+    [46, 880.0, 2],
   ],
 );
-/* CROWN B — the payoff. Its hat quotes ARENA A's step pattern verbatim, a
-   victory lap past the room the player fought through; the quote is of the
-   STEP pattern, not the wall clock, so at .110 against arena's .107 the same
-   figure plays about 3% broader, and it lands ON the beat against A's offbeat
-   hat, which is what makes the borrowed figure audible as a borrowing. Bar 1
-   states RESOLVED again on the same skeleton as A. The progression tours away
-   — Am, F, G, Em, Dm — and leaves on the dominant, which is how it hands back
-   to A. Step 63 is B's one unstruck step. */
+/* CROWN B — the payoff, and the score's one deliberate cross-track quotation
+   besides intro's: its hat reproduces ARENA A's step pattern verbatim, a
+   victory lap past the room the player fought through. The quote is of the
+   STEP pattern, not the wall clock, so at .128 against arena's rung the same
+   figure plays a shade broader, and it lands ON the beat against A's offbeat
+   hat, which is what makes a borrowed figure audible as a borrowing. B lifts to
+   G IONIAN, restates the 1-3-5-8 fanfare on the dominant, and re-cuts the bass
+   to 0/2/6 so the finale opens out rather than repeating. Steps 3, 5 and 7 are
+   B's air. */
 const CROWN_B = mkPat(
-  0.11,
+  0.128,
   64,
   [
-    [65.41, 98.0, 130.81],
-    [55.0, 82.41, 110.0],
-    [43.65, 65.41, 87.31],
-    [49.0, 73.42, 98.0],
-    [41.2, 61.74, 82.41],
-    [55.0, 82.41, 110.0],
-    [73.42, 110.0, 146.83],
-    [49.0, 73.42, 98.0],
-  ].flatMap(([r, q, o], b) => [
-    [b * 8, r, 3],
-    [b * 8 + 3, q, 1],
-    [b * 8 + 4, o, 2],
+    [98.0, 196.0, 146.83],
+    [98.0, 196.0, 146.83],
+    [130.81, 261.63, 196.0],
+    [110.0, 220.0, 164.81],
+    [98.0, 196.0, 146.83],
+    [164.81, 329.63, 246.94],
+    [146.83, 293.66, 220.0],
+    [98.0, 196.0, 146.83],
+  ].flatMap(([r, o, q], b) => [
+    [b * 8, r, 2],
+    [b * 8 + 2, o, 4],
     [b * 8 + 6, q, 2],
   ]),
   [
-    [0, 261.63, 1],
-    [1, 329.63, 1],
-    [2, 392.0, 1],
-    [3, 440.0, 2],
-    [5, 392.0, 1],
-    [7, 523.25, 2],
-    [8, 440.0, 1],
-    [9, 523.25, 1],
-    [11, 493.88, 1],
-    [12, 440.0, 1],
-    [13, 392.0, 1],
-    [15, 349.23, 1],
-    [16, 349.23, 1],
-    [17, 392.0, 1],
-    [19, 440.0, 1],
-    [21, 523.25, 1],
-    [23, 587.33, 1],
-    [24, 587.33, 1],
-    [25, 659.26, 1],
-    [27, 493.88, 1],
-    [29, 440.0, 1],
-    [31, 392.0, 1],
-    [32, 329.63, 1],
-    [33, 392.0, 1],
-    [35, 493.88, 1],
-    [37, 440.0, 1],
-    [39, 392.0, 1],
-    [40, 329.63, 1],
-    [41, 440.0, 1],
-    [43, 523.25, 1],
-    [45, 493.88, 1],
-    [47, 440.0, 1],
-    [48, 587.33, 1],
-    [49, 698.46, 1],
-    [51, 587.33, 1],
-    [53, 523.25, 1],
-    [55, 493.88, 1],
-    [56, 392.0, 1],
-    [57, 493.88, 1],
-    [59, 587.33, 1],
-    [61, 493.88, 2],
-  ],
+    [392.0, 493.88, 587.33, 783.99],
+    [739.99, 659.26, 587.33, 523.25],
+    [493.88, 587.33, 659.26, 739.99],
+    [783.99, 739.99, 659.26, 587.33],
+    [392.0, 493.88, 587.33, 783.99],
+    [880.0, 783.99, 739.99, 659.26],
+    [587.33, 659.26, 739.99, 783.99],
+    [587.33, 523.25, 493.88, 440.0],
+  ].flatMap((c, b) =>
+    b % 4 === 0
+      ? [
+          [b * 8, c[0], 1],
+          [b * 8 + 1, c[1], 1],
+          [b * 8 + 2, c[2], 2],
+          [b * 8 + 4, c[3], 4],
+        ]
+      : c.map((f, i) => [b * 8 + i * 2, f, 2]),
+  ),
   EVEN8.map((s) => [s, 4800, 1]),
-  ["square", 0.11, "square", 0.08, "triangle", 0.024, "sawtooth", 0.03],
+  ["triangle", 0.085, "triangle", 0.065, "triangle", 0.016, "sine", 0.028],
   [
-    [0, 523.25, 3],
-    [3, 880.0, 2],
-    [5, 783.99, 2],
-    [7, 1046.5, 2],
-    [16, 698.46, 2],
-    [19, 880.0, 1],
-    [40, 659.26, 1],
-    [41, 880.0, 1],
-    [56, 783.99, 3],
-    [59, 1174.66, 1],
+    [0, 783.99, 1],
+    [1, 987.77, 1],
+    [2, 1174.66, 2],
+    [4, 1567.98, 4],
+    [32, 783.99, 1],
+    [33, 987.77, 1],
+    [34, 1174.66, 2],
+    [36, 1567.98, 4],
   ],
 );
 export const MUSIC_TRACKS = Object.freeze({

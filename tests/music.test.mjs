@@ -137,6 +137,7 @@ const V3 = [
   "ice",
   "factory",
   "arena",
+  "crown",
 ];
 const V2ONLY = Object.keys(MUSIC_TRACKS).filter((k) => !V3.includes(k));
 /* Declared per PATTERN, not per track: v3 gives A and B their own key, so the
@@ -148,7 +149,8 @@ const PENT_MAJ = [0, 2, 4, 7, 9],
   HEX_MAJ = [0, 2, 4, 5, 7, 9],
   MIXO = [0, 2, 4, 5, 7, 9, 10],
   LYD = [0, 2, 4, 6, 7, 9, 11],
-  DOR = [0, 2, 3, 5, 7, 9, 10];
+  DOR = [0, 2, 3, 5, 7, 9, 10],
+  ION = [0, 2, 4, 5, 7, 9, 11];
 const V3KEY = {
   "menu.A": { f0: 392.0, set: HEX_MAJ, name: "G major hexatonic" },
   "menu.B": { f0: 293.66, set: PENT_MAJ, name: "D major pentatonic" },
@@ -166,6 +168,8 @@ const V3KEY = {
   "factory.B": { f0: 293.66, set: DOR, name: "D Dorian" },
   "arena.A": { f0: 440.0, set: DOR, name: "A Dorian" },
   "arena.B": { f0: 293.66, set: DOR, name: "D Dorian" },
+  "crown.A": { f0: 261.63, set: ION, name: "C Ionian" },
+  "crown.B": { f0: 392.0, set: ION, name: "G Ionian" },
 };
 /* Index in the declared collection, extended across octaves, so "three adjacent
    collection steps falling" is idx, idx-1, idx-2 read from ANY degree — which is
@@ -971,7 +975,7 @@ function installAC(ac) {
     "sand void crown STEP and first bass",
     MUSIC_TRACKS.sand.A.STEP === 0.148 &&
       MUSIC_TRACKS.void.A.STEP === 0.152 &&
-      MUSIC_TRACKS.crown.A.STEP === 0.11 &&
+      MUSIC_TRACKS.crown.A.STEP === 0.128 &&
       MUSIC_TRACKS.sand.A.bass[0].f === 123.47 &&
       MUSIC_TRACKS.void.A.bass[0].f === 61.74 &&
       MUSIC_TRACKS.crown.A.bass[0].f === 65.41,
@@ -1928,33 +1932,42 @@ function installAC(ac) {
     B = T.B,
     f0 = TONIC.crown;
   check(
-    "crown STEP 0.110 (136 BPM), C2 65.41 root",
-    A.STEP === 0.11 && A.bass[0].f === 65.41,
-    A.STEP + "/" + A.bass[0].f,
+    "crown STEP 0.128 -> 117.2 BPM, C2 65.41 root, inside the v3 96-120 band",
+    A.STEP === 0.128 &&
+      A.bass[0].f === 65.41 &&
+      15 / A.STEP >= 96 &&
+      15 / A.STEP <= 120,
+    A.STEP + " -> " + (15 / A.STEP).toFixed(1) + " BPM / " + A.bass[0].f,
   );
   check(
     "crown bass is a dotted fanfare root-fifth-octave in all eight bars",
     A.bass.length === 32 &&
-      A.bass.every((n) => [0, 3, 4, 6].includes(n.s % 8)) &&
+      stepSet(A.bass) === "0,3,4,6" &&
       barsWithBass(A) === 8 &&
-      A.bass.filter((n) => n.s % 8 === 0).every((n) => Math.round(n.d / A.STEP) === 3),
-    A.bass.length + ":" + [...new Set(A.bass.map((n) => n.s % 8))].sort().join(","),
+      A.bass
+        .filter((n) => n.s % 8 === 0)
+        .every((n) => Math.round(n.d / A.STEP) === 3),
+    A.bass.length + ":" + stepSet(A.bass),
   );
   check(
     "crown A's own hat is the offbeat — 1/5/7, never the even-step quote",
-    A.hat.length === 24 &&
+    A.hat.length === 23 &&
       A.hat.every((n) => [1, 5, 7].includes(n.s % 8)) &&
+      !A.hat.some((n) => n.s === 47) &&
       JSON.stringify(A.hat.map((n) => n.s)) !==
         JSON.stringify(B.hat.map((n) => n.s)),
-    A.hat.length + ":" + [...new Set(A.hat.map((n) => n.s % 8))].sort().join(","),
+    A.hat.length + ":" + stepSet(A.hat),
   );
+  /* The v2 sawtooth pad is withdrawn BY NAME: that timbre is what made the
+     finale blare, and a finale is the last place a direction called "soft" can
+     afford an edge. The whole band is triangle now, with a sine pad. */
   check(
-    "crown timbres: square bass, square lead, triangle hat, sawtooth pad",
-    A.bass[0].t === "square" &&
-      A.lead[0].t === "square" &&
+    "crown timbres: triangle bass, lead and hat, SINE pad — no sawtooth blare",
+    A.bass[0].t === "triangle" &&
+      A.lead[0].t === "triangle" &&
       A.hat[0].t === "triangle" &&
       !!A.pad &&
-      A.pad[0].t === "sawtooth",
+      A.pad[0].t === "sine",
     chansOf(A)
       .map((a) => a[0].t)
       .join(","),
@@ -1966,28 +1979,29 @@ function installAC(ac) {
       B.hat !== A.hat,
     B.hat.length + " vs arena " + MUSIC_TRACKS.arena.A.hat.length,
   );
-  /* RESOLVED (spec 1) = the v2 PLAIN plus a sixth note, the tonic one octave
-     above the head, at offset 7. v2 states it in BOTH sections and twice in A:
-     the finale supplies its own payoff rather than withholding it until B. */
-  const resolvedAt = (P, s0) => {
-    if (!motifV2At(P.lead, s0, f0)) return false;
-    const headF = P.lead.find((n) => n.s === s0).f;
-    const tail = P.lead.filter((n) => n.s === s0 + 7);
+  /* crown's OWN hook, replacing the retired figure's RESOLVED variant: the
+     triumphant 1-3-5-8, three quick steps up the triad and then the OCTAVE
+     HELD for half a bar. Positional, at the two bars the spec names, in both
+     sections — the finale supplies its own payoff rather than withholding it. */
+  const fanfare8 = (P, s0, t0) => {
+    if (!figureAt(P.lead, s0, t0, [0, 1, 2, 4], [DEG1, DEG3, DEG5, DEG1]))
+      return false;
+    const head = P.lead.find((n) => n.s === s0),
+      oct = P.lead.find((n) => n.s === s0 + 4);
     return (
-      tail.length === 1 &&
-      Math.abs(semi(tail[0].f, headF) - 12) <= 0.05 &&
-      Math.round(tail[0].d / P.STEP) >= 2
+      !!head &&
+      !!oct &&
+      Math.abs(semi(oct.f, head.f) - 12) <= 0.05 &&
+      Math.round(oct.d / P.STEP) >= 4
     );
   };
   check(
-    "crown A states RESOLVED at bars 0 and 4 — the tonic octave, twice a pass",
-    resolvedAt(A, 0) && resolvedAt(A, 32),
-    motifV2Head(A.lead, f0, 64),
+    "crown's hook is the fanfare 1-3-5-8 with the OCTAVE HELD, at bars 0 and 4",
+    fanfare8(A, 0, f0) && fanfare8(A, 32, f0),
   );
   check(
-    "crown B states RESOLVED too — the tonic VOID withheld, an octave up",
-    resolvedAt(B, 0),
-    motifV2Head(B.lead, f0, 64),
+    "crown B restates the fanfare on the dominant — G Ionian, same shape",
+    fanfare8(B, 0, 392.0) && fanfare8(B, 32, 392.0),
   );
   check(
     "crown.A sounds a perfect fourth AND a leading tone — the Ionian pair",
@@ -2015,9 +2029,14 @@ function installAC(ac) {
     pulseGap(A) + "/" + pulseGap(B),
   );
   check(
-    "crown is full but not solid: 58-63 of 64 steps, A and B alike",
-    occ(A) >= 58 && occ(A) <= 63 && occ(B) >= 58 && occ(B) <= 63,
+    "crown is full but not solid: 58-63 of 64 steps, and B is airier",
+    occ(A) >= 58 && occ(A) <= 63 && occ(B) >= 34 && occ(B) < B.LEN,
     occ(A) + "/" + occ(B),
+  );
+  check(
+    "crown B lifts to the dominant and re-cuts the bass to 0/2/6",
+    stepSet(B.bass) === "0,2,6" && B.bass[0].f === 98.0,
+    stepSet(A.bass) + " vs " + stepSet(B.bass),
   );
   check("crown register lanes never cross, A and B", lanes(A) && lanes(B));
 }
@@ -2641,7 +2660,7 @@ function installAC(ac) {
      future move can see its neighbours. */
   const LADDER = {
     arena: 0.126,
-    crown: 0.11,
+    crown: 0.128,
     factory: 0.13,
     intro: 0.125,
     jungle: 0.132,
