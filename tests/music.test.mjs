@@ -128,7 +128,16 @@ const soundsDeg = (P, f0, d) =>
    V3 grows one id per commit, exactly as the v2 sweeps did. Every v2-direction
    sweep below quantifies over V2ONLY instead of over all ten, so the suite stays
    green on a mixed tree and nothing is scoped away permanently. */
-const V3 = ["menu", "jungle", "void", "water", "sand", "ice", "factory"];
+const V3 = [
+  "menu",
+  "jungle",
+  "void",
+  "water",
+  "sand",
+  "ice",
+  "factory",
+  "arena",
+];
 const V2ONLY = Object.keys(MUSIC_TRACKS).filter((k) => !V3.includes(k));
 /* Declared per PATTERN, not per track: v3 gives A and B their own key, so the
    in-collection pin has to read a section's own tonic and collection. Neither
@@ -155,6 +164,8 @@ const V3KEY = {
   "ice.B": { f0: 523.25, set: LYD, name: "C Lydian" },
   "factory.A": { f0: 329.63, set: DOR, name: "E Dorian" },
   "factory.B": { f0: 293.66, set: DOR, name: "D Dorian" },
+  "arena.A": { f0: 440.0, set: DOR, name: "A Dorian" },
+  "arena.B": { f0: 293.66, set: DOR, name: "D Dorian" },
 };
 /* Index in the declared collection, extended across octaves, so "three adjacent
    collection steps falling" is idx, idx-1, idx-2 read from ANY degree — which is
@@ -1684,71 +1695,96 @@ function installAC(ac) {
   );
 }
 
-// ---- arena: aggressive, combat-ready (A Aeolian, ANTIC) ----
+// ---- arena: energetic but soft-timbred (A Dorian, on-the-beat fanfare) ----
 {
   const T = MUSIC_TRACKS.arena,
     A = T.A,
     B = T.B,
     f0 = TONIC.arena;
+  /* Arena is the track v2 got most wrong for v3 and the one v2 called its own
+     reference: loudest in the score (channel peaks summed to 0.268), fastest
+     (140 BPM), the only pattern with two `square` channels AND a `sawtooth`
+     pad. Every one of those is now gone, and the energy is re-bought where v3
+     says energy comes from — rhythm and register, never transport speed. It
+     still sits at the TOP of the band, and it is still the only track whose hat
+     strikes every even step, which is what CROWN's B quotes. */
   check(
-    "arena STEP 0.107 (140 BPM), A1 55.00 root",
-    A.STEP === 0.107 && A.bass[0].f === 55,
-    A.STEP + "/" + A.bass[0].f,
+    "arena STEP 0.126 -> 119.0 BPM, A1 55.00 root, at the top of the v3 band",
+    A.STEP === 0.126 &&
+      A.bass[0].f === 55 &&
+      15 / A.STEP >= 96 &&
+      15 / A.STEP <= 120,
+    A.STEP + " -> " + (15 / A.STEP).toFixed(1) + " BPM / " + A.bass[0].f,
   );
   check(
-    "arena is the one track with all four channels dense",
-    A.bass.length > 0 &&
-      A.lead.length > 0 &&
-      A.hat.length > 0 &&
-      !!A.pad &&
-      A.pad.length > 0,
-    chansOf(A).length,
-  );
-  check(
-    "arena timbres: square bass, square lead, triangle hat, sawtooth pad",
-    A.bass[0].t === "square" &&
-      A.lead[0].t === "square" &&
+    "arena is four SOFT voices: triangle bass, lead and hat, sine pad",
+    A.bass[0].t === "triangle" &&
+      A.lead[0].t === "triangle" &&
       A.hat[0].t === "triangle" &&
-      A.pad[0].t === "sawtooth",
+      !!A.pad &&
+      A.pad[0].t === "sine",
     chansOf(A)
       .map((a) => a[0].t)
       .join(","),
   );
   check(
-    "arena hat is straight — every hit on an even step",
-    A.hat.every((n) => n.s % 2 === 0),
-    A.hat.length,
+    "arena hat is straight — every hit on an even step, all 32 of them",
+    A.hat.length === 32 && A.hat.every((n) => n.s % 2 === 0),
+    A.hat.length + ":" + stepSet(A.hat),
   );
   check(
-    "arena ANTIC: the v2 figure one step early — head at 15, settle at 20",
-    motifV2At(A.lead, 15, f0),
-    motifV2Head(A.lead, f0, 64),
-  );
-  check(
-    "arena stabs on the and of 2 and 4 (lead notes at 3 and 7 mod 8)",
-    A.lead.some((n) => n.s % 8 === 3) && A.lead.some((n) => n.s % 8 === 7),
-  );
-  check("arena B is hand-authored — its hat is not A's array", B.hat !== A.hat);
-  /* The reference track's one v2 correction: bar 8 was a full-band stop — the
-     whole rhythm section out for eight steps, which the offline render measured
-     as 0.92 s under -50 dB, four times per bounce. Every voice now plays it. */
-  check(
-    "arena plays all eight bars — the full-band stop at bar 8 is gone",
-    barsWithLead(A) === 8 &&
+    "arena bass drives 2+3+3 on 0/2/5 — its own cut of the tresillo, tiling",
+    A.bass.length === 24 &&
+      stepSet(A.bass) === "0,2,5" &&
       barsWithBass(A) === 8 &&
-      barsWithLead(B) === 8 &&
-      barsWithBass(B) === 8,
-    barsWithLead(A) + "/" + barsWithBass(A) + " " + barsWithLead(B) + "/" + barsWithBass(B),
+      A.bass.every(
+        (n) => Math.round(n.d / A.STEP) === (n.s % 8 === 0 ? 2 : 3),
+      ),
+    A.bass.length + ":" + stepSet(A.bass),
+  );
+  const fanfare = (chan, s0) =>
+    figureAt(chan, s0, f0, [0, 2, 4, 6], [DEG1, DEG5, DEG1, DEG3]);
+  check(
+    "arena's hook is the four-note fanfare 1-5-1-3 ON THE BEAT, at bars 0 and 4",
+    fanfare(A.lead, 0) && fanfare(A.lead, 32),
   );
   check(
-    "arena pulse never gaps, in BOTH hand-authored sections",
-    pulseGap(A) <= 1 && pulseGap(B) <= 1,
+    "arena answers the fanfare bars with off-beat stabs on 3, and pickups on 7",
+    A.lead.some((n) => n.s % 8 === 3) &&
+      A.lead
+        .filter((n) => n.s % 8 === 7)
+        .map((n) => n.s)
+        .join(",") === "31,63" &&
+      barsWithLead(A) === 8,
+    stepSet(A.lead),
+  );
+  check(
+    "arena's low end never dips under A1 — the whole track sits at or above 55 Hz",
+    Math.min(...A.bass.map((n) => n.f)) === 55 &&
+      Math.min(...B.bass.map((n) => n.f)) >= 55,
+    Math.min(...A.bass.map((n) => n.f)) +
+      "/" +
+      Math.min(...B.bass.map((n) => n.f)),
+  );
+  /* A's grid never leaves two steps unstruck; B trades one step of it for the
+     backbeat, which is the point of pushing its hat off the beat. */
+  check(
+    "arena A never gaps by more than a step; B gaps by two, buying its backbeat",
+    pulseGap(A) === 1 && pulseGap(B) === 2,
     pulseGap(A) + "/" + pulseGap(B),
   );
   check(
-    "arena is dense but not solid: 56-62 of 64 steps, A and B alike",
-    occ(A) >= 56 && occ(A) <= 62 && occ(B) >= 56 && occ(B) <= 62,
+    "arena is driven but no longer solid: 42-54 of 64 steps",
+    occ(A) >= 42 && occ(A) <= 54,
     occ(A) + "/" + occ(B),
+  );
+  check(
+    "arena B re-cuts to 0/3/5 in D Dorian and moves the hat off the beat",
+    B.hat !== A.hat &&
+      stepSet(B.bass) === "0,3,5" &&
+      stepSet(B.hat) === "1,3,5" &&
+      B.bass[0].f === 73.42,
+    stepSet(B.bass) + " / " + stepSet(B.hat),
   );
   check("arena register lanes never cross, A and B", lanes(A) && lanes(B));
 }
@@ -2604,7 +2640,7 @@ function installAC(ac) {
      arena cannot take .125 until intro leaves it. Listed in ladder order so a
      future move can see its neighbours. */
   const LADDER = {
-    arena: 0.107,
+    arena: 0.126,
     crown: 0.11,
     factory: 0.13,
     intro: 0.125,
@@ -2671,7 +2707,7 @@ function installAC(ac) {
     ice: [28, 40],
     factory: [54, 62],
     water: [34, 46],
-    arena: [56, 62],
+    arena: [42, 54],
     sand: [44, 54],
     void: [34, 46],
     crown: [58, 63],

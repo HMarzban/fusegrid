@@ -687,156 +687,124 @@ const WATER_B = mkPat(
    this figure; CROWN's B quotes the step pattern verbatim as its victory lap
    past the room the player fought. */
 const EVEN8 = Object.freeze(Array.from({ length: 32 }, (_, i) => i * 2));
-/* ARENA — aggressive, combat-ready. A Aeolian on A, STEP 0.107 (140 BPM), all
-   four voices dense. The reference track for what arcade-correct sounds like:
-   tempo, mode, root, density and the anticipation hook are all as authored.
-   The motif head lands at step 15, one whole step BEFORE the bar-3 downbeat it
-   belongs to, so the fanfare punches ahead of the grid without any sub-step
-   timing the engine cannot express; it carries the v2 rhythm like every other
-   track (two-step flash at 18, settle at 20), and the rest of the lead stabs
-   the "and" of 2 and 4. Plain Aeolian, no colour tones — deliberately harder
-   than the modal biomes around it, and clear of G# so the leading tone stays
-   CROWN's and SAND's. The one v2 correction is bar 8: it used to stop the
-   whole band, which the offline render measured as 0.92 s under -50 dB four
-   times per bounce — by far the largest hole in the score, in the very track
-   the direction calls already correct. Every voice now plays it, on an E
-   turnaround that hands back to the top. */
+/* ARENA — direction v3: energetic, but SOFT-TIMBRED. A DORIAN on A, STEP 0.126
+   (119.0 BPM, the top of the band). This is the track v2 got most wrong for v3
+   and the one v2 called its own reference: the loudest in the score (channel
+   peaks summed to 0.268), the fastest (140 BPM), and the only pattern with two
+   `square` channels AND a `sawtooth` pad. All of that is withdrawn. Energy is
+   re-bought where v3 says energy comes from — rhythm and register — and never
+   from transport speed or from gain.
+   Aeolian goes to DORIAN for the lifted 6th (F#), which is the difference
+   between a room that means to hurt you and a room that means to test you.
+   The bass drives its own cut of the tresillo, 2+3+3 on 0/2/5, tiling the bar;
+   the hat keeps every even step, which is what makes it quotable and is exactly
+   what CROWN's B borrows; and the lead states a four-note fanfare 1-5-1-3 ON
+   THE BEAT at bars 0 and 4, answers it with off-beat stabs on step 3 in the odd
+   bars, and takes a step-7 pickup into bars 4 and 8. Nothing anticipates the
+   grid any more — v2's ANTIC head one step early was a device the retired motif
+   owned, and this fanfare is squarely on the beat.
+   A1 55.00 is both the root and the floor: this is the only track that touches
+   the no-rumble threshold, and nothing in either section goes under it.
+   Channel peaks sum to 0.196 — the loudest of the ten under v3, and still
+   0.072 below what this same room used to be. */
 const ARENA_A = mkPat(
-  0.107,
+  0.126,
   64,
   [
-    [55, 82.41],
-    [55, 82.41],
-    [43.65, 65.41],
-    [49, 73.42],
-    [55, 82.41],
-    [55, 82.41],
-    [43.65, 65.41],
-    [41.2, 61.74],
-  ].flatMap(([r, q], b) => [
-    [b * 8, r, 2],
-    [b * 8 + 3, r, 2],
-    [b * 8 + 6, q, 2],
+    [55.0, 110.0, 82.41],
+    [55.0, 110.0, 98.0],
+    [73.42, 146.83, 110.0],
+    [98.0, 196.0, 146.83],
+    [55.0, 110.0, 82.41],
+    [55.0, 110.0, 98.0],
+    [92.5, 185.0, 146.83],
+    [82.41, 164.81, 123.47],
+  ].flatMap((c, b) => [
+    [b * 8, c[0], 2],
+    [b * 8 + 2, c[1], 3],
+    [b * 8 + 5, c[2], 3],
   ]),
   [
-    [0, 440.0, 1],
-    [3, 523.25, 1],
-    [5, 493.88, 1],
-    [7, 440.0, 1],
-    [8, 523.25, 1],
-    [11, 587.33, 1],
-    [13, 523.25, 1],
-    [15, 440.0, 1],
-    [16, 523.25, 1],
-    [17, 659.26, 1],
-    [18, 698.46, 2],
-    [20, 659.26, 1],
-    [23, 587.33, 1],
-    [25, 587.33, 1],
-    [27, 493.88, 1],
-    [29, 440.0, 1],
-    [31, 392.0, 1],
-    [32, 440.0, 1],
-    [33, 523.25, 1],
-    [35, 659.26, 1],
-    [37, 587.33, 1],
-    [39, 523.25, 1],
-    [41, 440.0, 1],
-    [43, 698.46, 1],
-    [45, 659.26, 1],
-    [47, 587.33, 1],
-    [48, 523.25, 2],
-    [51, 493.88, 1],
-    [53, 440.0, 1],
-    [55, 392.0, 1],
-    [56, 440.0, 1],
-    [57, 523.25, 1],
-    [59, 493.88, 1],
-    [61, 440.0, 1],
-    [63, 392.0, 1],
-  ],
-  EVEN8.map((s) => [s, 5200, 1]),
-  ["square", 0.12, "square", 0.09, "triangle", 0.028, "sawtooth", 0.03],
-  [
-    [0, 220.0, 6],
-    [8, 220.0, 6],
-    [16, 174.61, 6],
-    [24, 196.0, 6],
-    [32, 220.0, 6],
-    [40, 220.0, 6],
-    [48, 174.61, 6],
-    [56, 164.81, 6],
-  ],
-);
-/* ARENA B — hand-authored, not transposed: a listener's ear clocks a
-   pitch-shifted repeat as repetition, not new material. Same skeleton, same
-   mix, same eight played bars; the destination is C major, the relative major,
-   the anticipated head restates the motif on C, and bar 8 turns around on G. */
-const ARENA_B = mkPat(
-  0.107,
-  64,
-  [
-    [65.41, 98.0],
-    [65.41, 98.0],
-    [49, 73.42],
-    [55, 82.41],
-    [65.41, 98.0],
-    [65.41, 98.0],
-    [43.65, 65.41],
-    [49, 73.42],
-  ].flatMap(([r, q], b) => [
-    [b * 8, r, 2],
-    [b * 8 + 3, r, 2],
-    [b * 8 + 6, q, 2],
-  ]),
-  [
-    [0, 523.25, 1],
-    [3, 659.26, 1],
-    [5, 587.33, 1],
-    [7, 523.25, 1],
-    [8, 659.26, 1],
-    [11, 698.46, 1],
-    [13, 659.26, 1],
-    [15, 523.25, 1],
-    [16, 659.26, 1],
-    [17, 783.99, 1],
-    [18, 880.0, 2],
-    [20, 783.99, 1],
-    [23, 698.46, 1],
-    [25, 698.46, 1],
-    [27, 659.26, 1],
-    [29, 587.33, 1],
-    [31, 523.25, 1],
-    [32, 523.25, 1],
-    [33, 659.26, 1],
-    [35, 783.99, 1],
-    [37, 698.46, 1],
-    [39, 659.26, 1],
-    [41, 523.25, 1],
-    [43, 880.0, 1],
-    [45, 783.99, 1],
-    [47, 698.46, 1],
-    [48, 659.26, 2],
-    [51, 587.33, 1],
-    [53, 523.25, 1],
-    [55, 493.88, 1],
-    [56, 523.25, 1],
-    [57, 659.26, 1],
-    [59, 587.33, 1],
-    [61, 523.25, 1],
+    [0, 440.0, 2],
+    [2, 659.26, 2],
+    [4, 880.0, 2],
+    [6, 1046.5, 2],
+    [8, 783.99, 3],
+    [11, 659.26, 3],
+    [14, 587.33, 2],
+    [16, 587.33, 2],
+    [18, 440.0, 2],
+    [20, 587.33, 2],
+    [22, 739.99, 2],
+    [24, 783.99, 3],
+    [27, 739.99, 3],
+    [30, 659.26, 1],
+    [31, 587.33, 1],
+    [32, 440.0, 2],
+    [34, 659.26, 2],
+    [36, 880.0, 2],
+    [38, 1046.5, 2],
+    [40, 783.99, 3],
+    [43, 659.26, 3],
+    [46, 587.33, 2],
+    [48, 739.99, 2],
+    [50, 880.0, 2],
+    [52, 739.99, 2],
+    [54, 587.33, 2],
+    [56, 659.26, 3],
+    [59, 587.33, 3],
+    [62, 523.25, 1],
     [63, 493.88, 1],
   ],
-  EVEN8.map((s) => [s, 5200, 1]),
-  ["square", 0.12, "square", 0.09, "triangle", 0.028, "sawtooth", 0.03],
+  EVEN8.map((s) => [s, 4200, 1]),
+  ["triangle", 0.088, "triangle", 0.068, "triangle", 0.018, "sine", 0.022],
   [
-    [0, 130.81, 6],
-    [8, 130.81, 6],
-    [16, 196.0, 6],
-    [24, 220.0, 6],
-    [32, 130.81, 6],
-    [40, 130.81, 6],
-    [48, 174.61, 6],
-    [56, 196.0, 6],
+    [0, 220.0, 16],
+    [16, 293.66, 16],
+    [32, 220.0, 16],
+    [48, 329.63, 16],
+  ],
+);
+/* ARENA B — hand-authored, and it moves the weight rather than the pitch: down
+   a fifth to D DORIAN, the bass re-cut to 3+2+3 on 0/3/5, and the hat pushed
+   OFF the beat onto 1/3/5 so the room's drive comes from the backbeat instead
+   of the downbeat. Step 7 is B's deliberate hole. */
+const ARENA_B = mkPat(
+  0.126,
+  64,
+  [
+    [73.42, 146.83, 110.0],
+    [73.42, 146.83, 130.81],
+    [98.0, 196.0, 146.83],
+    [65.41, 130.81, 98.0],
+    [73.42, 146.83, 110.0],
+    [73.42, 146.83, 130.81],
+    [87.31, 174.61, 130.81],
+    [110.0, 220.0, 164.81],
+  ].flatMap((c, b) => [
+    [b * 8, c[0], 3],
+    [b * 8 + 3, c[1], 2],
+    [b * 8 + 5, c[2], 3],
+  ]),
+  [
+    [587.33, 440.0, 587.33, 698.46],
+    [783.99, 698.46, 587.33, 493.88],
+    [587.33, 440.0, 392.0, 493.88],
+    [523.25, 587.33, 659.26, 698.46],
+    [587.33, 440.0, 587.33, 698.46],
+    [880.0, 783.99, 698.46, 587.33],
+    [698.46, 523.25, 440.0, 349.23],
+    [440.0, 493.88, 523.25, 587.33],
+  ].flatMap((c, b) => c.map((f, i) => [b * 8 + i * 2, f, 2])),
+  [0, 1, 2, 3, 4, 5, 6, 7].flatMap((b) =>
+    [1, 3, 5].map((o) => [b * 8 + o, 4200, 1]),
+  ),
+  ["triangle", 0.088, "triangle", 0.068, "triangle", 0.018, "sine", 0.022],
+  [
+    [0, 220.0, 16],
+    [16, 261.63, 16],
+    [32, 293.66, 16],
+    [48, 220.0, 16],
   ],
 );
 /* SAND — direction v3: dotted, lazy and warm. E MIXOLYDIAN opening on its
