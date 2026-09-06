@@ -1,7 +1,7 @@
 # Pact — unlock-gated afterburner (2026-09-02)
 
 Approved as leftover-then-Pact (approach B). Public copy never uses
-Bomberman. Heat stays the telling. Pact is spice you author after a first
+the private reference game's name. Heat stays the telling. Pact is spice you author after a first
 clear.
 
 ## Player-facing

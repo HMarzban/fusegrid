@@ -1,7 +1,7 @@
 # Extra biome music — SAND / VOID / CROWN (2026-09-02)
 
 Approach A. Same chiptune table as the five. Public copy never uses
-Bomberman. Rooms 1–5 cues stay jungle / ice / factory / water / arena.
+the private reference game's name. Rooms 1–5 cues stay jungle / ice / factory / water / arena.
 
 ## Player-facing
 

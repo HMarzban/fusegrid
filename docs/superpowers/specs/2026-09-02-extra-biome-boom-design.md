@@ -4,7 +4,7 @@ Rooms 6–8 already have looks and chiptune beds. Boom still used the
 five-theme tint (ice / water / arena; factory was identity). New ids
 fell through to the default stack. This plate tints boom only.
 
-Public copy never uses Bomberman. Music STEP / bass roots, cameras,
+Public copy never uses the private reference game's name. Music STEP / bass roots, cameras,
 and lights stay frozen.
 
 ## Approaches

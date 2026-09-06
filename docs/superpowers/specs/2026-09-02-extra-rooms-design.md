@@ -1,7 +1,7 @@
 # Extra rooms 6–8 (2026-09-02)
 
 Approach C, after leftover + Pact. Same unlock as Pact (first FUSE/GRID
-CLEAR). Public copy never uses Bomberman.
+CLEAR). Public copy never uses the private reference game's name.
 
 ## Player-facing
 

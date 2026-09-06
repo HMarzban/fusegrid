@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- Public copy never uses Bomberman.
+- Public copy never uses the private reference game's name.
 - Do not change plant / kick / throw / remote / `applyPower` / enemy AI.
 - Plate fit: HOW TO still inside 600×520 and 608×352.
 - Fat-world draw calls === 186. `SLOT_MESH.bomb === 5`.

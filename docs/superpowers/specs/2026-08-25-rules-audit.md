@@ -20,7 +20,7 @@ Scope: `src/core/{sim,board,entities,config}.js`, `src/ai/enemies.js`. Read-only
 FALSE today — neither half holds. Bombs are intangible to everyone: player walks
 through own/enemy-relevant bombs freely, all six enemy types cross them, and chaser
 BFS treats bomb tiles as open floor. The report is therefore a CANON REQUEST: the
-player expects Super-Bomberman solidity and isn't getting it. Root cause: bombs
+player expects the reference series' bomb solidity and isn't getting it. Root cause: bombs
 live only in `world.bombs`; no collision function ever consults them.
 
 ## §3 Recommended ruleset (DECISION)

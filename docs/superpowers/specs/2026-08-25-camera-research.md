@@ -6,20 +6,20 @@ projected to 3D → top-down-ish by nature.
 
 ## §1 Research findings
 
-- **Super Bomberman R** — story mode used a dynamic isometric follow camera;
+- **SBR (the reference series' 2017 entry)** — story mode used a dynamic isometric follow camera;
   reviewers lost lives because bombs/enemies were unreadable and depth was
   unjudgeable (Nintendo World Report hands-on, 2017-03-02); "camera pans out so
   far… almost impossible to see what's going on" (the-pixels.com review).
   Konami shipped a camera-fix SETTING in v1.1 (official support KB) — a patch
   apology for their own default. The praised multiplayer mode uses "the
-  traditional top-down Bomberman camera" (NWR). Lesson: fixed high-angle,
+  traditional top-down [reference-series] camera" (NWR). Lesson: fixed high-angle,
   whole board, zero motion during play.
-- **Bomberman 64** — manual rotation was panned ("changing the camera… the
+- **The reference series' N64 entry** — manual rotation was panned ("changing the camera… the
   whole way through is completely annoying", Archive 64 review; Gamebits:
   hard to find a view into nooks). Crucially the manual LOCKS the camera in
   Battle Mode and boss fights (N64 instruction booklet p8): even Hudson
   conceded arenas need a fixed single-screen view.
-- **Classic SNES Bomberman / SBR battle mode** — pure overhead-to-steep fixed
+- **Classic SNES reference-series entries / SBR battle mode** — pure overhead-to-steep fixed
   angle, entire arena on one screen, never rotates during play.
 - **Crossy Road** — orthographic, FIXED azimuth+elevation for the whole run
   (position ~[300,-300,300], iso-style); chosen explicitly for arcade/boxy
@@ -37,7 +37,7 @@ projected to 3D → top-down-ish by nature.
 
 | Option | Verdict | Rationale |
 |---|---|---|
-| (a) Fixed high-angle, full board | **RECOMMEND** | Whole-arena info = core bomberman skill (bomb chains, enemy tracking); matches SNES/SBR-battle/Crossy evidence; zero per-frame camera logic; netcode/spectator friendly |
+| (a) Fixed high-angle, full board | **RECOMMEND** | Whole-arena info = core grid-bomber skill (bomb chains, enemy tracking); matches SNES/SBR-battle/Crossy evidence; zero per-frame camera logic; netcode/spectator friendly |
 | (b) Follow-cam zoomed on player | REJECT | Fatal board-awareness loss; exactly what SBR story mode shipped and got roasted for |
 | (c) Current free-orbit | Demote | Keep code, gate behind opt-in toggle; B64 shows constant manual orbit annoys |
 | (d) Hybrid lean/parallax | Defer | At 600×520 whole-board scale there is nothing to lean toward; motion without payoff |

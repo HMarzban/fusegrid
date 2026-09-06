@@ -16,7 +16,7 @@
 - `SLOT_MESH.enemy === 4`; fat-world draw calls === 186; do not silently flex original-six child-index pins.
 - Unique 3D pickup `ITEM_GEO` stays; do not revert cabinet rest HOW TO / HUD / bombs.
 - Frozen 3D rig `{az:0, el:0.419, dist:1000}`. No per-biome cameras.
-- Zero npm runtime deps. Never Bomberman on public surfaces.
+- Zero npm runtime deps. Never name the private reference game on public surfaces.
 - PWA: bump `CACHE_NAME` and `sw.js` REV together when shipped bytes change.
 
 ---

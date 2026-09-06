@@ -11,7 +11,7 @@ REAL 3D reads immature. Three faults, one pass:
 3. **Binary lighting.** Key `1.6` against ambient `0.25` with no fill and no
    back light. Lit faces blow out, shadowed faces crush to near-black.
 
-Public name Fusegrid / FUSE/GRID. Never Bomberman on any surface.
+Public name Fusegrid / FUSE/GRID. Never name the private reference game on any surface.
 
 ## Approaches
 

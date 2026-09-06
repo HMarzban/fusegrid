@@ -5,7 +5,7 @@ one shared cube. Foes already have per-type geos on `SLOT_MESH.enemy === 4`.
 This pass gives each of the 12 pickups a cheap unique body **without**
 adding children or leaving 186.
 
-Public name Fusegrid / FUSE/GRID. Never Bomberman on any surface.
+Public name Fusegrid / FUSE/GRID. Never name the private reference game on any surface.
 
 ## Approaches
 

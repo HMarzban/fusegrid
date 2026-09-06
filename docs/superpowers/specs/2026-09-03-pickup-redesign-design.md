@@ -3,7 +3,7 @@
 Visual + SFX pass for the 12 Fusegrid pickups. **Not new powers.** `applyPower`
 semantics, caps, and spawn tables stay identical. Catalog stays 12.
 
-Public name Fusegrid / FUSE/GRID. Never Bomberman on any surface.
+Public name Fusegrid / FUSE/GRID. Never name the private reference game on any surface.
 
 ## Approaches
 

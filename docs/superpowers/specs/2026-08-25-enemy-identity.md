@@ -49,7 +49,7 @@ EH table: walker r · chaser r*1.22 · fast r*.80 · stationary r*1.15 · boomer
 rocket r*1.25. All geos/mats `_shared`; colors still sourced from PROTO/spawnEnemy table.
 
 ## §3 Player + bomb
-NO geometry change: the S4/v2 bomberman stack and glossy Phong bomb already match their 2D
+NO geometry change: the S4/v2 helmeted-hero stack and glossy Phong bomb already match their 2D
 designs (critique targeted enemies only). Contracts kept: bomb children[0] body / [2] spark;
 player 7-mesh stack, helmetMat tint. Zero Δ here.
 

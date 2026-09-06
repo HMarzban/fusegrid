@@ -5,7 +5,7 @@ visual language as the 12-item glyphs (`drawIcon` / ITEMS) and 6 foe
 silhouettes (`drawEnemyBody` / ENEMIES). **Not new rules.** Plant / kick /
 throw / remote / `applyPower` / enemy AI stay bit-identical.
 
-Public name Fusegrid / FUSE/GRID. Never Bomberman on any surface.
+Public name Fusegrid / FUSE/GRID. Never name the private reference game on any surface.
 
 ## Approaches
 

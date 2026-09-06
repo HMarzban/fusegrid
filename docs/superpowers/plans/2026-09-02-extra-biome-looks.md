@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- Public copy never uses Bomberman.
+- Public copy never uses the private reference game's name.
 - Entries 0–4 stay byte-identical.
 - `hWall` ≤ ICE 36.
 - Fat-world draw calls stay 186.

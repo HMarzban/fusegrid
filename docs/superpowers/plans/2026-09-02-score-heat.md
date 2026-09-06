@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- Public copy never uses Bomberman.
+- Public copy never uses the private reference game's name.
 - CORE recorded `s` equals raw `world.score`.
 - Integers only: `s * (1 + clampHeat(heat))`.
 - Do not multiply in `recordScore`, HUD, or `menudraw.js`.

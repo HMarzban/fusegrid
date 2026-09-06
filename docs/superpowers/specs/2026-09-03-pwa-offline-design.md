@@ -1,7 +1,7 @@
 # PWA offline cabinet (2026-09-03)
 
 Installable Fusegrid that plays offline after the first visit. Public name
-Fusegrid / FUSE/GRID. No Bomberman on any surface.
+Fusegrid / FUSE/GRID. Never name the private reference game on any surface.
 
 ## Strategies
 

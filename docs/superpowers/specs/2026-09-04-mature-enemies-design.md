@@ -2,7 +2,7 @@
 
 Visual + roster pass so every room introduces a **new body**, and every
 foe reads as a mature arcade threat at 40px (ENEMIES plate, CLASSIC 2D,
-REAL 3D faces). Public name Fusegrid / FUSE/GRID. Never Bomberman.
+REAL 3D faces). Public name Fusegrid / FUSE/GRID. Never name the private reference game.
 
 ## Approaches
 

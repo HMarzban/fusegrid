@@ -1,7 +1,7 @@
 # Heat grades — CORE / PLUS / MAX (2026-09-02)
 
 Player-facing difficulty for Fusegrid. Approved 2026-09-02. Public copy never uses
-Bomberman. Default **CORE** is today’s v6 story, bit-identical.
+the private reference game's name. Default **CORE** is today’s v6 story, bit-identical.
 
 ## Player-facing
 

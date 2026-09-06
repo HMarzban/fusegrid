@@ -1,7 +1,7 @@
 # Score × heat (2026-09-02)
 
 Plate A after Heat / Pact / rooms 6–8. Adviser-validated: persist-only
-multiply. Public copy never uses Bomberman. CORE board numbers stay raw
+multiply. Public copy never uses the private reference game's name. CORE board numbers stay raw
 `world.score` (×1). Sim does not change.
 
 ## Player-facing

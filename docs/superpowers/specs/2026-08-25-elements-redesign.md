@@ -10,7 +10,7 @@ Sim, net, input, core and sprites.js draw fns byte-untouched; sprites stay textu
 | C1 | Items = flat black quads ("placards") | PlaneGeometry DoubleSide Lambert whose map is the 2D sprite's dark plate; unlit back reads black | Lit capsule-box pickup, icon on all 6 faces, additive floor ring (§2.1) |
 | C2 | Bomb = purple cube + peg | legacy purple BOMB_COL tints; box fuse reads as peg | Glossy black Phong sphere, thin tilted cylinder fuse, variants = colored base TORUS; body never recolored (§2.2) |
 | C3 | Enemies featureless spheres | no face/identity cue | eye-strip texture plane per enemy + sharper per-type detail parts (§2.3) |
-| C4 | Player plain capsule | capsule torso dominates silhouette | bomberman stack: white sphere body + helmet dome + visor band + antenna + boots (§2.4) |
+| C4 | Player plain capsule | capsule torso dominates silhouette | helmeted-hero stack: white sphere body + helmet dome + visor band + antenna + boots (§2.4) |
 | C5 | Blades thin near-black shards | Lambert #101010, emissive too weak at grazing angle | crossed flame-gradient quads + hot core, additive orange/yellow (§2.5) |
 
 ## §2 Element specs
@@ -35,7 +35,7 @@ and read as blobs at distance; keeps today's matForItem ref-swap (zero new per-f
 - EYES appended children[2] (detail swap loop j<2 untouched): Plane(TILE*0.34,TILE*0.16), z=r·0.92, y=EH+r·0.15, Basic{transparent, map:atlas.eye_<type>}, fallback Basic #f4f7ff; slot yaw already faces dir. Stationary (box base): z=r·1.18, y=EH·0.55.
 - Detail upgrades (still exactly 2 ref-swapped children): walker feet nubs keep · chaser nose cone → visor wedge Box(r·.55,r·.28,r·.14) z r·.95 tiltX −.2 · fast trail planes → swept fins Box(r·.75,r·.30,r·.10) at ±x·r·.55 · stationary barrel+sphere keep · boomerang wing pinwheel keeps · rocket fins keep, tip cone uses ID material (brighter nose).
 
-### 2.4 PLAYER — bomberman stack (7 meshes, count unchanged)
+### 2.4 PLAYER — helmeted-hero stack (7 meshes, count unchanged)
 - body Sphere(TILE*0.26,16,12) white #f4f7ff y=TILE*0.30 (replaces capsule).
 - helmet Sphere(TILE*0.29,16,12, 0,2π, 0,π/2) dome y=TILE*0.34 carries the live p.color tint (capMat renamed helmetMat — tint logic unchanged).
 - visor band Cylinder(TILE*0.245,TILE*0.245,TILE*0.11,16,1,true, −π·0.55, π·1.1) open segment facing +Z, y=TILE*0.33, Basic{transparent, map:atlas.visor}, fallback #0b1020.
@@ -78,7 +78,7 @@ Budget: Δ = items +32, enemies +16, bombs/player/blades 0 ⇒ 138+48=186 ≤500
 3. [ ] Bomb = glossy near-black sphere with visible specular; 4 variants differ ONLY by base-ring hue
 4. [ ] All 6 enemy types identifiable by silhouette alone at default camera
 5. [ ] Every enemy shows eyes oriented to its travel direction
-6. [ ] Player reads as bomberman (white body + colored helmet dome + visor + antenna), not a capsule
+6. [ ] Player reads as a helmeted arcade hero (white body + colored helmet dome + visor + antenna), not a capsule
 7. [ ] Blast tiles render orange/yellow additive flame cross + white core; no #101010-dominated pixels
 8. [ ] npm test green incl. updated exact draw-call formula; ≤500 gate passes
 9. [ ] Headless-safe: no DOM access outside guarded factories; full node --test battery passes

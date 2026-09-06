@@ -5,7 +5,7 @@ Leftover from the 2026-09-03 cabinet pass: REAL 3D in-arena items are still
 used a parallel `GLYPH` table, so a spinning cube did not read as FLAME /
 BOMB / KICK.
 
-Public name Fusegrid / FUSE/GRID. Never Bomberman on any surface.
+Public name Fusegrid / FUSE/GRID. Never name the private reference game on any surface.
 
 ## Approaches
 

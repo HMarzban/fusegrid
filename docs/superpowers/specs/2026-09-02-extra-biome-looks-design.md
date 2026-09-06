@@ -1,7 +1,7 @@
 # Extra biome looks for rooms 6–8 (2026-09-02)
 
 Plate C, after score × heat. Adviser-validated: append three palettes.
-Public copy never uses Bomberman. Rooms 1–5 stay the current five looks.
+Public copy never uses the private reference game's name. Rooms 1–5 stay the current five looks.
 Music stays the five-theme wrap.
 
 ## Player-facing

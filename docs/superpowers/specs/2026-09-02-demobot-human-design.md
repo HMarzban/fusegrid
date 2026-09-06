@@ -1,6 +1,6 @@
 # Human-like attract demobot (2026-09-02)
 
-Attract demo AI in `src/app/demobot.js`. Public copy never uses Bomberman.
+Attract demo AI in `src/app/demobot.js`. Public copy never uses the private reference game's name.
 Approved to implement in the same pass (not propose-only). Attract still
 loads **CORE** heat and **pact=0**. `step()` 1P contract, frozen `CFG`,
 mid-run heat, Easy/Hard, Sudden Death, and internet play stay parked.

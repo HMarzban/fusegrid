@@ -4,7 +4,7 @@ Visual + SFX pass for the 6 Fusegrid foes so ENEMIES and in-arena 2D
 match item-cabinet quality. **Not new AI.** `src/ai/enemies.js` step
 outcomes stay bit-identical on a fixed seed. Catalog stays 6.
 
-Public name Fusegrid / FUSE/GRID. Never Bomberman on any surface.
+Public name Fusegrid / FUSE/GRID. Never name the private reference game on any surface.
 
 Names (FOES / `drawEnemiesHelp`): WALKER, SENTRY (`stationary`), FAST,
 CHASER, PHANTOM (`boomerang`), ROCKET.
