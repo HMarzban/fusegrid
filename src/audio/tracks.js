@@ -1,189 +1,180 @@
 import { biomeOf } from "../core/config.js";
 import { SCREEN } from "../app/menuapp.js";
 
-/* MENU — the score's identity theme. D Dorian, STEP 0.121 (124 BPM
-   sixteenths), 8 bars of 2/4 = 64 steps. The bass still walks Dm-G-Am-Dm and
-   the 3+3+2 tresillo still carries the accent, but it now rides a continuous
-   eighth pulse: five hits a bar on steps 0, 2, 3, 4 and 6, with the root on the
-   tresillo steps, the octave on 2 and 6 and the fifth on 4. The accent is spelt
-   in PITCH rather than velocity, which is why no menu channel authors the [s,f,
-   d,v] tuple. The hat doubles from offbeats-only to every even step. Bar 4 now
-   lands on the tonic instead of breathing, every bar carries lead, and the
-   motif (1-3-5-6-5, v2 rhythm: two-step flash, settle on 5, pickup on 6-7) is
-   stated at bar 1 AND bar 5 so the hook returns inside one pass. Bars 5-8 stay
-   a varied restatement rather than an octave copy. Exactly one step in the loop
-   is unstruck — 63, the lift into the turnaround. Sparse [step,freqHz,durSteps,
-   vel?] lists over absolute steps 0..63 mapped to {s,f,d,t,v}; vel defaults to
-   the channel's mix value when omitted. pump looks each up by stepIdx. */
-export const MUSIC_PATTERN = (() => {
-  const S = 0.121,
-    L = 64,
-    bass = [],
-    hat = [];
-  /* [root, fifth]; the octave is derived, so one row says the whole bar */
-  const bars = [
-    [73.42, 110.0],
-    [49, 73.42],
-    [55, 82.41],
-    [73.42, 110.0],
-    [73.42, 110.0],
-    [49, 73.42],
-    [55, 82.41],
-    [73.42, 110.0],
-  ];
-  bars.forEach(([r, q], b) => {
-    const o = b * 8;
-    bass.push(
-      [o, r, 2],
-      [o + 2, r * 2, 1],
-      [o + 3, r, 2],
-      [o + 4, q, 1],
-      [o + 6, r * 2, 2],
-    );
-  });
-  const lead = [
-    [0, 293.66, 1],
-    [1, 349.23, 1],
-    [2, 440.0, 1],
-    [3, 493.88, 2],
-    [5, 440.0, 1],
-    [6, 392.0, 1],
-    [7, 349.23, 1],
-    [8, 329.63, 1],
-    [9, 293.66, 1],
-    [11, 349.23, 1],
-    [12, 440.0, 1],
-    [13, 493.88, 1],
-    [15, 587.33, 1],
-    [16, 440.0, 1],
-    [17, 523.25, 1],
-    [18, 587.33, 1],
-    [19, 659.26, 2],
-    [21, 587.33, 1],
-    [22, 523.25, 1],
-    [23, 440.0, 1],
-    [24, 493.88, 1],
-    [25, 440.0, 1],
-    [27, 392.0, 1],
-    [28, 349.23, 1],
-    [29, 329.63, 1],
-    [31, 293.66, 1],
-    [32, 587.33, 1],
-    [33, 698.46, 1],
-    [34, 880.0, 1],
-    [35, 987.77, 2],
-    [37, 880.0, 1],
-    [38, 783.99, 1],
-    [39, 698.46, 1],
-    [40, 659.26, 1],
-    [41, 587.33, 1],
-    [43, 698.46, 1],
-    [44, 880.0, 1],
-    [45, 987.77, 1],
-    [47, 880.0, 1],
-    [48, 783.99, 1],
-    [49, 880.0, 1],
-    [50, 987.77, 1],
-    [51, 1046.5, 2],
-    [53, 987.77, 1],
-    [54, 880.0, 1],
-    [55, 783.99, 1],
-    [56, 698.46, 1],
-    [57, 659.26, 1],
-    [59, 587.33, 1],
-    [60, 523.25, 1],
-    [61, 440.0, 2],
-  ];
-  for (let b = 0; b * 8 < L; b++)
-    for (const o of [0, 2, 4, 6]) hat.push([b * 8 + o, 4800, 1]);
-  const E = (a, t, v) =>
-    a.map(([s, f, d, nv]) => ({ s, f, d: d * S, t, v: nv == null ? v : nv }));
-  return Object.freeze({
-    STEP: S,
-    LEN: L,
-    bass: Object.freeze(E(bass, "square", 0.1)),
-    lead: Object.freeze(E(lead, "square", 0.07)),
-    hat: Object.freeze(E(hat, "triangle", 0.02)),
-  });
-})();
+/* MENU — direction v3: friendly, memorable, medium. G major HEXATONIC (G A B C
+   D E — major without the leading tone), STEP 0.137 (109.5 BPM sixteenths), 8
+   bars of 2/4 = 64 steps. The collection is hexatonic rather than pentatonic
+   for one reason: the 4th (C) is what I-vi-IV-V needs, and G - Em - C - D twice
+   is the friendliest progression there is. It also keeps menu clear of the
+   Ionian pair (a perfect fourth AND a leading tone) that is CROWN's alone.
+   The bass is an EVEN WALKING EIGHTH — 0/2/4/6 of every bar, root, fifth,
+   octave, fifth, each note ringing a full eighth so the four cells meet end to
+   end and the low end never lets go — with a one-step pickup on step 7 of bars
+   4 and 8. No syncopation anywhere: this is the "medium" in the brief.
+   The lead is in EIGHTHS on even steps, so the tune moves at half the grid's
+   rate and is singable at first hearing: the head 1-3-5-6 (G B D E) rises
+   across bar 1 and returns at bar 5 an octave up, then bars 6-8 walk it back
+   down through C. The only sixteenths in the whole channel are three two-note
+   turns at 14/15, 30/31 and 46/47 lifting into the next phrase — which is also
+   why no four consecutive lead steps are ever struck, and therefore why the
+   retired five-note motif cannot appear here by accident.
+   The hat is SINE, not square: it is the highest and most-struck channel in any
+   pattern, so it is the worst possible place for the one waveform the direction
+   calls harsh. Two ticks a bar at 5000 Hz and v 0.012 — a texture, not a pulse.
+   Three voices, no pad; channel peaks sum to 0.157. Sparse [step,freqHz,
+   durSteps,vel?] lists over absolute steps 0..63 mapped to {s,f,d,t,v}; vel
+   defaults to the channel's mix value when omitted (menu authors none).
+   pump looks each up by stepIdx. */
+const MENU_HAT = [0, 1, 2, 3, 4, 5, 6, 7].flatMap((b) =>
+  [2, 6].map((o) => [b * 8 + o, 5000, 1]),
+);
+const MENU_MIX = ["triangle", 0.085, "triangle", 0.06, "sine", 0.012];
+export const MUSIC_PATTERN = mkPat(
+  0.137,
+  64,
+  /* [root, fifth, octave, fifth] on steps 0/2/4/6; bars 4 and 8 add a pickup */
+  [
+    [98.0, 146.83, 196.0, 146.83],
+    [82.41, 123.47, 164.81, 123.47],
+    [65.41, 98.0, 130.81, 98.0],
+    [73.42, 110.0, 146.83, 110.0],
+    [98.0, 146.83, 196.0, 146.83],
+    [82.41, 123.47, 164.81, 123.47],
+    [65.41, 98.0, 130.81, 98.0],
+    [73.42, 110.0, 146.83, 110.0],
+  ].flatMap((c, b) => {
+    const o = b * 8,
+      row = [
+        [o, c[0], 2],
+        [o + 2, c[1], 2],
+        [o + 4, c[2], 2],
+        [o + 6, c[3], 2],
+      ];
+    if (b === 3) row.push([o + 7, 123.47, 1]);
+    if (b === 7) row.push([o + 7, 164.81, 1]);
+    return row;
+  }),
+  [
+    [0, 392.0, 2],
+    [2, 493.88, 2],
+    [4, 587.33, 2],
+    [6, 659.26, 2],
+    [8, 587.33, 2],
+    [10, 493.88, 2],
+    [12, 440.0, 2],
+    [14, 493.88, 1],
+    [15, 523.25, 1],
+    [16, 587.33, 2],
+    [18, 523.25, 2],
+    [20, 659.26, 2],
+    [22, 587.33, 2],
+    [24, 493.88, 2],
+    [26, 440.0, 2],
+    [28, 392.0, 2],
+    [30, 440.0, 1],
+    [31, 493.88, 1],
+    [32, 783.99, 2],
+    [34, 987.77, 2],
+    [36, 1174.66, 2],
+    [38, 1318.51, 2],
+    [40, 987.77, 2],
+    [42, 880.0, 2],
+    [44, 783.99, 2],
+    [46, 880.0, 1],
+    [47, 987.77, 1],
+    [48, 1046.5, 2],
+    [50, 987.77, 2],
+    [52, 880.0, 2],
+    [54, 783.99, 2],
+    [56, 880.0, 2],
+    [58, 783.99, 2],
+    [60, 659.26, 2],
+    [62, 587.33, 2],
+  ],
+  MENU_HAT,
+  MENU_MIX,
+);
 
-/* B SECTION: same five-hits-a-bar skeleton, same instrument mix and the same
-   note count per channel as A, so the two interleave as one seamless loop —
-   pump cycles A→A→B→B (MUSIC_SECTIONS) before wrapping. What changes is the
-   destination: B tonicizes G major for eight bars and snaps back, which imports
-   the one F# the parent white-key collection does not own. The lead is A's
-   contour read through a scale MAP (D→G E→A F→B G→C A→D B→E C→F#), so it lands
-   on the same steps with a genuinely different harmony rather than a pitch
-   shift; the bass arpeggiates D-F#-A in bars 2, 6 and 8. Nothing breathes here
-   either — B is as dense as A, one free step at 63. This is the template the
-   other three hand-authored B sections follow, and the one place the template
-   deliberately breaks: B's bass accents land on 0/1/3/4/6 where A's land on
-   0/2/3/4/6. A pitch-mapped B on an identical rhythm reads to a listener as
-   repetition however far the harmony travels, so B gets its own accent. */
-export const MUSIC_PATTERN_B = (() => {
-  const S = 0.121,
-    L = 64,
-    bass = [],
-    hat = [];
-  /* per bar, the five pitches in step order 0,1,3,4,6 — A's own order is
-     0,2,3,4,6, and this one step of difference is what stops the whole 33 s
-     A-A-B-B cycle from having a single rhythmic profile. B pushes its octave
-     a sixteenth EARLIER than A does, so the tresillo leans forward here and
-     settles back there; the note count, the mix and the harmony are untouched,
-     which is what keeps B interleavable with A as one seamless loop. */
-  const bars = [
-    [49, 98.0, 49, 73.42, 98.0],
-    [73.42, 92.5, 73.42, 110.0, 146.83],
-    [65.41, 130.81, 65.41, 98.0, 130.81],
-    [49, 98.0, 49, 73.42, 98.0],
-    [49, 98.0, 49, 73.42, 98.0],
-    [73.42, 92.5, 73.42, 110.0, 146.83],
-    [82.41, 164.81, 82.41, 123.47, 164.81],
-    [73.42, 92.5, 73.42, 110.0, 146.83],
-  ];
-  bars.forEach((c, b) => {
-    const o = b * 8;
-    bass.push(
-      [o, c[0], 1],
-      [o + 1, c[1], 2],
-      [o + 3, c[2], 1],
-      [o + 4, c[3], 2],
-      [o + 6, c[4], 2],
-    );
-  });
-  const MAP = {
-    293.66: 392.0,
-    329.63: 440.0,
-    349.23: 493.88,
-    392.0: 523.25,
-    440.0: 587.33,
-    493.88: 659.26,
-    523.25: 369.99,
-    587.33: 783.99,
-    659.26: 880.0,
-    698.46: 987.77,
-    783.99: 1046.5,
-    880.0: 1174.66,
-    987.77: 1318.51,
-    1046.5: 1479.98,
-  };
-  const lead = MUSIC_PATTERN.lead.map((n) => [
-    n.s,
-    MAP[n.f],
-    Math.round(n.d / S),
-  ]);
-  for (let b = 0; b * 8 < L; b++)
-    for (const o of [0, 2, 4, 6]) hat.push([b * 8 + o, 4800, 1]);
-  const E = (a, t, v) =>
-    a.map(([s, f, d, nv]) => ({ s, f, d: d * S, t, v: nv == null ? v : nv }));
-  return Object.freeze({
-    STEP: S,
-    LEN: L,
-    bass: Object.freeze(E(bass, "square", 0.1)),
-    lead: Object.freeze(E(lead, "square", 0.07)),
-    hat: Object.freeze(E(hat, "triangle", 0.02)),
-  });
-})();
+/* MENU B — hand-authored, and a real second piece of writing rather than a
+   pitch shift. It lifts to D MAJOR PENTATONIC (D E F# A B), the dominant side,
+   for eight bars and snaps back: D - D - Bm - A - D - D - Em - A. That import
+   is the F# menu's own A does not own, and it is what music.test.mjs reads to
+   prove the A-A-B-B section order — the drive only ever pumps the DEFAULT
+   track, so the marker is a property of this pair, not of the score (jungle and
+   void sound F# in their own A sections under v3).
+   Same STEP, same LEN, same three timbres, the same per-channel note counts and
+   the same v set as A, so the two interleave as one seamless loop. What differs
+   is the harmony, the melody, and the bass ACCENT: B walks 0/3/4/6 (durations
+   3/1/2/2, still meeting end to end) where A walks 0/2/4/6, so B leans where A
+   strolls. The hat skeleton is deliberately identical — it is the stitch that
+   keeps the two halves one piece. */
+const MENU_B_MIX = MENU_MIX;
+export const MUSIC_PATTERN_B = mkPat(
+  0.137,
+  64,
+  [
+    [73.42, 110.0, 146.83, 110.0],
+    [73.42, 110.0, 146.83, 185.0],
+    [123.47, 185.0, 246.94, 185.0],
+    [110.0, 164.81, 220.0, 164.81],
+    [73.42, 110.0, 146.83, 110.0],
+    [73.42, 110.0, 146.83, 185.0],
+    [82.41, 123.47, 164.81, 123.47],
+    [110.0, 164.81, 220.0, 164.81],
+  ].flatMap((c, b) => {
+    const o = b * 8,
+      row = [
+        [o, c[0], 3],
+        [o + 3, c[1], 1],
+        [o + 4, c[2], 2],
+        [o + 6, c[3], 2],
+      ];
+    if (b === 3) row.push([o + 7, 185.0, 1]);
+    if (b === 7) row.push([o + 7, 92.5, 1]);
+    return row;
+  }),
+  [
+    [0, 440.0, 2],
+    [2, 587.33, 2],
+    [4, 739.99, 2],
+    [6, 659.26, 2],
+    [8, 587.33, 2],
+    [10, 493.88, 2],
+    [12, 440.0, 2],
+    [14, 493.88, 1],
+    [15, 587.33, 1],
+    [16, 739.99, 2],
+    [18, 659.26, 2],
+    [20, 587.33, 2],
+    [22, 493.88, 2],
+    [24, 440.0, 2],
+    [26, 493.88, 2],
+    [28, 587.33, 2],
+    [30, 659.26, 1],
+    [31, 739.99, 1],
+    [32, 880.0, 2],
+    [34, 739.99, 2],
+    [36, 659.26, 2],
+    [38, 587.33, 2],
+    [40, 493.88, 2],
+    [42, 587.33, 2],
+    [44, 659.26, 2],
+    [46, 739.99, 1],
+    [47, 880.0, 1],
+    [48, 987.77, 2],
+    [50, 880.0, 2],
+    [52, 659.26, 2],
+    [54, 587.33, 2],
+    [56, 659.26, 2],
+    [58, 587.33, 2],
+    [60, 493.88, 2],
+    [62, 440.0, 2],
+  ],
+  [0, 1, 2, 3, 4, 5, 6, 7].flatMap((b) =>
+    [2, 6].map((o) => [b * 8 + o, 5000, 1]),
+  ),
+  MENU_B_MIX,
+);
 /* Macro-loop section order: two passes of A then two of B per full cycle. */
 export const MUSIC_SECTIONS = Object.freeze(["A", "A", "B", "B"]);
 function mkPat(S, L, bass, lead, hat, mix, pad) {
