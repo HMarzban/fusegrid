@@ -84,6 +84,8 @@ function check(name, cond, detail) {
 {
   const md = await import("../src/render/menudraw.js");
   const { DEFAULT_SCORES } = await import("../src/app/highscores.js");
+  const { ITEMS } = await import("../src/app/menuapp.js");
+  const { heatToken } = await import("../src/core/heat.js");
   initFx();
   const stub = new Proxy(function () {}, {
     get: (t, p) => (p === Symbol.toPrimitive ? () => "" : stub),
@@ -105,13 +107,15 @@ function check(name, cond, detail) {
         {
           cursor: 2,
           enterT: 0.5,
+          // real shipped rows: shellview.js's own MENU items array
+          // (PLAY/LEVEL SELECT carry a heatToken suffix, the rest don't).
           items: [
-            "START GAME",
-            "LEVEL SELECT",
-            "RENDER 3D",
-            "SOUND OFF",
-            "HOW TO PLAY",
-            "HIGH SCORES",
+            ITEMS[0] + "|" + heatToken(0),
+            ITEMS[1] + "|" + heatToken(0),
+            ITEMS[2],
+            ITEMS[3],
+            ITEMS[4],
+            ITEMS[5],
           ],
         },
         L,

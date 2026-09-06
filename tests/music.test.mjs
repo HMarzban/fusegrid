@@ -314,7 +314,7 @@ function installAC(ac) {
       (!loBar.has(n.s - 32) || !near(n.f, loBar.get(n.s - 32) * 2, 0.05)),
   ).length;
   check(
-    "bars 5-8 are a varied restatement, not an octave copy (oct() unused on menu)",
+    "bars 5-8 are a varied restatement, not a mechanical octave copy",
     differ >= 4,
     differ + " of " + MUSIC_PATTERN.lead.filter((n) => n.s >= 32).length,
   );

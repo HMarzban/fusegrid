@@ -757,7 +757,7 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
 
 // ---- main.js split: the browser entry stays lean and import-clean, and the
 // seams it used to inline (flags / attract / net pair / shell chrome /
-// toolbar / debug hook) are importable modules of their own. ----
+// debug hook) are importable modules of their own. ----
 {
   const L=readFileSync(join(ROOT,"src/main.js"),"utf8").split("\n");
   // plan 7: +2 lines (cabinetseen.js import + cabinetSeen/markCabinet opts)
@@ -775,8 +775,11 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   // S3.1 pause-list wave: +64 lines (overlayBox/pauseHit import, onPauseCmd
   // handler, pauseView-aware onPause, the unconditional GAME app.update call,
   // pause render opts, the GAME-branch pointerdown router) — bumped 679->743.
-  check("main.js stays a lean browser entry (<=743 lines)",
-    L.length<=743,String(L.length));
+  // closing fix wave: main.js untouched this wave, still measured (L.length,
+  // this check's own convention) at 701; pin tightened 743->706 (measured
+  // +5) so the gate keeps biting instead of trailing 42 lines of slack.
+  check("main.js stays a lean browser entry (<=706 lines)",
+    L.length<=706,String(L.length));
   const lastImp=L.reduce((a,l,i)=>/^import[\s{]/.test(l)?i:a,-1);
   const firstDecl=L.findIndex(l=>/^(export\s|const\s|let\s|var\s|function\s|class\s)/.test(l));
   check("main.js keeps every import at the top (no mid-file import sprawl)",

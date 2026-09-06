@@ -18,6 +18,8 @@ const SCREEN_NAME = [
   "ATTRACT",
   "ITEMS",
   "ENEMIES",
+  "SETTINGS",
+  "GUIDE",
 ];
 
 export function mountDebugHook(h) {

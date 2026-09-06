@@ -160,24 +160,6 @@ function mkPat(S, L, bass, lead, hat, mix, pad) {
     o.pad = E(pad, mix[6] || "triangle", mix[7] == null ? 0.03 : mix[7]);
   return Object.freeze(o);
 }
-function pulse(roots) {
-  const b = [];
-  roots.forEach(([r, q, v], i) => {
-    const o = i * 8;
-    b.push([o, r, 2, v], [o + 2, r, 2, v], [o + 4, q, 2, v], [o + 6, r, 2, v]);
-  });
-  return b;
-}
-function oct(ph) {
-  const L = [];
-  ph.forEach((bar, i) =>
-    bar.forEach(([s, f, d, v]) => {
-      const du = d == null ? 2 : d;
-      L.push([i * 8 + s, f, du, v], [32 + i * 8 + s, f * 2, du, v]);
-    }),
-  );
-  return L;
-}
 function hats(L, f, step, v) {
   const h = [];
   for (let i = step > 1 ? 1 : 0; i < L; i += step) h.push([i, f, 1, v]);

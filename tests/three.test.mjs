@@ -35,6 +35,7 @@ import {createRig, orbitBy, dollBy, resetOrbit, applyOrbit,
   CAM_PRESET, CAM_NAME, camPreset} from "../src/render/three/camrig.js";
 import {createRenderer3D} from "../src/render/three/wrapper.js";
 import {createRenderer} from "../src/render/renderer.js";
+import {overlayBox, pauseHit, PAUSE_ROWS} from "../src/render/scenes.js";
 import {createWorld, loadLevel, step} from "../src/core/sim.js";
 import {CFG, T, BIOMES} from "../src/core/config.js";
 import {spawnEnemy, POWER} from "../src/core/entities.js";
@@ -282,6 +283,35 @@ function scan(grid){
   try{ createRenderer(null,{kind:"iso",hud:null,audio:null}).render(w,1/60); }
   catch(e){ ok=false; console.log(e.message); }
   check("createRenderer(kind:'iso') renders legacy branch headless", ok);
+}
+
+// ---- §7b iso pause overlay: drawn row-0 y must map back through pauseHit
+// to row 0 against the SAME box main.js/shellview.js hit-test with
+// (overlayBox("iso")) — regression lock for the draw/hit geometry contract,
+// not the CFG box's y230 (that's the 2d/3d box's row 0, not iso's) ----
+{
+  const w=createWorld(11,1); loadLevel(w,1,false); w.state="PAUSE";
+  const rec=hudRecorder();
+  const r=createRenderer({getContext:()=>rec.rec},{kind:"iso",hud:null,
+    audio:null});
+  r.render(w,1/60,{pause:{view:0,cursor:0}});
+  const B=overlayBox("iso");
+  const rowY=(i)=>{
+    const op=rec.ops.filter(o=>o[0]==="fillText")
+      .find(o=>o[1][0]===PAUSE_ROWS[i]);
+    return op&&op[1][2];
+  };
+  const y0=rowY(0);
+  check("iso pause overlay: RESUME draws at overlayBox('iso') row-0 y "
+      +"(not the CFG box's y230)",
+    y0===B.cy-30, "y0="+y0+" B.cy-30="+(B.cy-30));
+  check("iso pause overlay: drawn row-0 y maps back to pauseHit row 0 "
+      +"against overlayBox('iso')",
+    pauseHit(B.cx, y0, B)===0, "y0="+y0);
+  const y3=rowY(3);
+  check("iso pause overlay: drawn row-3 (QUIT TO MENU) y maps back to "
+      +"pauseHit row 3, never row 0",
+    pauseHit(B.cx, y3, B)===3, "y3="+y3);
 }
 
 // ---- headless createGame surface: render3d seam + live toggle swap ----
