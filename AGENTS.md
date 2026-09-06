@@ -105,13 +105,21 @@ not shell screens. Do not add them as `SCREEN` values.
     `TILE*0.34` collision radius, and the plan footprint wider than deep
     (`x/z >= 1.40`). Separation from WALKER is that shouldered structure
     carrying dark parts — never a re-hue.
-    **2D and 3D diverge BY DESIGN since IONVEST (2026-09-06, spec §2.6): the
-    3D hull stays gunmetal `PLAYER_HULL`, the 2D suit is orchid `PLAYER_SUIT`
-    `#cd5ac3` with a ~42% head and one swept crest fin.** Both are exported
-    from `sprites.js`; do NOT re-merge them into one hex — gunmetal vanished
-    into FACTORY's wall in 2D (ΔL .008, Δhue 8.3°) but is still correct in 3D,
-    which has no dark contour. The 2D gate is per-biome: no swatch may collapse
-    on value AND hue at once, and the suit must stay chromatic.
+    **The 2D hero is MAKO since 2026-09-06 (spec §2.7) — every humanoid was
+    vetoed ("must not be like a human, it must be a creative character"), so
+    Signal Runner and IONVEST are superseded.** A reef critter: ONE low wide
+    mass (no shoulders, no torso-over-legs, no arms), two swept teal ear-fins
+    whose tips run past the body's own half-width so the outline is a CHEVRON,
+    two bulging cream `#f2e6d2` eyes that break the crown, and a grin with two
+    BLUNT teeth (never fangs — hero, not monster). `PLAYER_SUIT` `#c39cff`.
+    The 3D stack below is still the humanoid one and converges on MAKO next.
+    The 2D gate is per-biome over SEVEN swatches (`wallHi` is opaque, and the
+    brick highlight is the real `brickHi`-over-`brickA` composite): no swatch
+    may collapse on value AND hue at once, the body must stay chromatic, and
+    every VOID swatch must clear a Lab ΔE floor because VOID is the one room
+    where hero and scenery share a hue by construction. Foe separation is
+    structure, never a re-hue — `stationary`'s `#c58aff` is un-clearable by any
+    chromatic hex in this family, and that is disclosed, not gated.
   - `shellview.js` routes `app.screen` to `menudraw.js` and owns `kindSize` /
     `dims`, the one logical box every screen measures against (a real canvas
     wins, otherwise kind picks the classic box or the projected one). It is

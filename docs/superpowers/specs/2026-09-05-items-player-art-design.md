@@ -393,7 +393,14 @@ companion edit because no hue moves.
 
 ---
 
-## §2 Player — SIGNAL RUNNER
+## §2 Player — MAKO
+
+> **SUPERSEDED — read §2.7 first.** Everything in §2.0–§2.6 describes SIGNAL
+> RUNNER and IONVEST, two humanoid heroes that the user vetoed outright on
+> 2026-09-06. They are kept because the *lessons* still bind (the separation
+> method, the five-beat build, the 5-mesh budget, the AND gate), but the
+> character they describe is not the shipped one. **§2.7 is the current
+> player.**
 
 > **REVISION R1 — 2026-09-05.** The P1 build of this section was **rejected by
 > the user**: *"the game's main character looks a bit too silly and doesn't
@@ -665,6 +672,80 @@ and is the only value in the family that also clears **both** bright floors
 **Legal distance** is unchanged and if anything larger: hard-edged helmet,
 crest, fin and lensed visor — non-round, non-white, no pompom, no centred
 cartoon face.
+
+### 2.7 Mascot direction — 2026-09-06, on user feedback
+
+> **REVISION MAKO — BOTH RENDERERS.** Every humanoid hero was **rejected by
+> the user**: *"the main character also must not be like a human, it must be a
+> creative character like [a genre classic]."* Signal Runner (§2.1–§2.3) and
+> IONVEST (§2.6) are superseded wholesale. An art-direction round drew three
+> non-human concepts with the repo's own helpers, rendered each on all eight
+> floors beside a real WALKER, and recommended **C · MAKO**; the ruling was to
+> build MAKO with **two tweaks — a playful grin instead of the concept's two
+> pointed fangs, and a lighter body value so it pops on VOID's purple.**
+>
+> **2D and 3D share one character again, by design.** The IONVEST split
+> existed only because gunmetal failed in 2D and was still correct in 3D.
+> MAKO's body hex clears the backdrop gate in both, so the divergence is
+> retired and `PLAYER_HULL` and `PLAYER_SUIT` name the same colour.
+
+**Concept.** A reef critter. An animal, and the only member of the cast with a
+real mouth. Head and body are **one mass** — no shoulders, no torso-over-legs,
+no arms. That single rule is what all three previous heroes broke, and it is
+why they kept reading as a person in armour however the plates were cut.
+
+**The hook.** Two swept teal ear-fins whose tips run **past the body's own
+half-width**, so the outline is a broad **chevron** — the one shape class
+nothing in the enemy cast has, since every foe is a dome or a box. At the
+frozen `el:0.54` rig the plan-view footprint is the primary cue, so the same
+hook carries both renderers. Tips stop at `1.30r` = 18.7px against the 20px
+tile half-width; the walk-flick rotation adds ~0.2px that the fit gate cannot
+see, which is why the static number leaves room. `p.color` lives on the fins
+and nowhere else, in both renderers.
+
+**The face.** Two bulging cream `#f2e6d2` eyes that **break the crown** of the
+silhouette — an outline cue no dome-headed foe has, and the largest,
+highest-contrast facial feature in the game at 1:1. Each is a stacked dark lid
+ellipse then a cream eye offset outward and up, so the leftover crescent is
+thickest on the inner-lower side. Pupils track `face.x` inside fixed eyes; the
+specular does **not** track, so the eye reads as a glassy bulge lit from the
+upper left like every other body in the cabinet. Below them a wide ink grin
+whose corners sit `0.13r` **higher** than the centre of the upper lip — that
+is what makes a wide dark shape read as a smile rather than a maw at 29px —
+carrying **two blunt front teeth** where the concept had two pointed fangs.
+That is the controller's tweak, and it is the difference between a cheeky hero
+and a small predator.
+
+**The value.** The concept base `#9a4ff0` (L .418) collides with VOID, which is
+a violet room: `wallHi` `#8a70b0` is L .479, and the highlight the player
+actually stands beside is `brickHi` composited at `globalAlpha 0.55` over
+`brickA` = **`#a266e6`, L .486** — i.e. the naive reading of "lift the value"
+walks straight into the brick. Clearing both by `ΔL 0.12` in-family means
+`L >= .606`. **`PLAYER_SUIT` = `#c39cff`** (L .672, chroma .388, hue 263.6° —
+4.3° from the concept base) is the value in that window that also maximises the
+Lab distance to VOID's brick face (**55.0 ΔE**) while holding the chroma floor.
+
+**Disclosed, and deliberately not gated.** `stationary` carries `#c58aff`, a
+light violet, and **no hex in MAKO's family clears that foe on value AND hue
+while staying chromatic** — the window is `L <= .359` (darker than the base,
+and invisible on VOID) or `L >= .752` (chroma collapses to pastel). The whole
+violet band was swept to confirm. Separation from the **cast** is AGENTS.md's
+standing rule — structure, never a re-hue — and a finned chevron with two cream
+eyes and a grin is not a dark square bunker with a magenta slit. The AND gate
+is a **backdrop** gate; that is the failure the user actually reported, and it
+is what it is held to.
+
+**Gate moves this revision makes.** Four humanoid-era gates are **deleted**,
+not weakened, because they encode the anatomy the user rejected: the taper
+gate (no shoulder line), the leg-length stance gate (feet, not legs), the neck
+pinch + head-ratio pair (one mass, no neck), and the index-addressed "beat 2 is
+the hull contour" gate — MAKO draws feet and fins *before* the body, so the
+tests now find every part by its **fill**, never by its position in the op
+stream. The horizontal fit box moves `±1.05r → ±1.34r` because the fins are
+the concept, and the constraint it stood for is asserted directly instead: the
+hero must stay inside its own 40px tile. The swatch list grows from five per
+biome to **seven** — `wallHi` is an opaque band over 40% of every wall tile,
+and the brick highlight is the real composite above.
 
 ---
 

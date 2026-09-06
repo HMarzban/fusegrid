@@ -319,110 +319,138 @@ export function drawEnemies(c, world) {
     c.restore();
   }
 }
-/* SIGNAL RUNNER — R1 (items-player-art 2026-09-05, revised same day after
-   the user rejected P1: "looks a bit too silly and doesn't feel mature
-   enough"). P1 optimised the WALKER collision and won it on paper; at the
-   28px live size the body still read as a WHITE EGG WITH A CAP, because a
-   near-circular outline filled 90%-luminance white is a cute shape however
-   many facets it has. R1 keeps the whole separation story and re-cuts the
-   three things that carry maturity at 28px:
+/* MAKO — the reef critter. 2026-09-06, on the user's veto of every humanoid
+   hero ("the main character also must not be like a human, it must be a
+   creative character like [the genre classic]"). An art-direction round put
+   three non-human concepts on all eight floors beside a real WALKER and
+   recommended this one; the ruling was to build it with two tweaks — a
+   PLAYFUL grin instead of the concept's two pointed fangs, and a LIGHTER
+   body value so it pops on VOID's purple. Signal Runner and IONVEST are
+   superseded; their commits stay in history.
 
-   TAPER — the outline is a shouldered wedge, not a barrel: widest at the
-   pauldron line (0.9r, upper third), shedding 1.9x of that width within
-   half a radius, closing at a 0.5r waist. The hull STOPS at the waist and
-   two long dark legs carry the lower third, so the bright mass is a third
-   smaller and the figure has a stance instead of a base.
-   VALUE — the hull drops from #dfe7f2 (L 0.90) to gunmetal #8d97ac (L 0.59).
-   Brightness is what read as cute; a mid value also separates BETTER from
-   walker's mint, and it leaves the visor pip as the one bright thing.
-   EDGE — the p.color cap becomes a swept CREST with every vertex inside the
-   helmet contour, and the soft sheen ellipse becomes hard armour facets.
-   Zero-arc rule holds: nothing here is an arc.
-   Unchanged: p.color placement (crest only), the single specular visor, the
-   RIM seal, the five beats, no antenna / ball / round eyes / dome. */
-/* The 3D hull hex. STILL GUNMETAL, and still exported for three/entities.js —
-   the 3D runner was not rejected and is not touched by the 2D revision below.
-   Read the IONVEST block before assuming this is also the 2D colour. */
+   Species: an animal, and the only member of the cast with a real mouth.
+   Head and body are ONE mass — no shoulders, no torso-over-legs, no arms,
+   which is what made all three previous heroes read as a person in armour.
+
+   THE HOOK is a pair of swept teal ear-fins whose tips run past the body's
+   own half-width, so the outline is a broad CHEVRON. That is the one shape
+   class nothing in the enemy cast has (every foe is a dome or a box), and at
+   the frozen 59.1 deg rig the plan-view footprint is the primary read, so
+   the same hook carries both renderers. Fin tips stop at 1.30r = 18.7px
+   against the 20px tile half-width; the walk-flick rotation adds 0.2px and
+   the fit gate cannot see it, which is why the static number leaves room.
+
+   THE FACE is two bulging cream eyes that BREAK the crown of the silhouette
+   — an outline cue no dome-headed foe has, and the largest, highest-contrast
+   facial feature in the game at 1:1 — over a wide ink grin. Pupils track
+   `face.x` inside fixed eyes, so facing costs no geometry.
+
+   THE VALUE. The concept base was #9a4ff0 (L .418). That collides with VOID,
+   which is a violet room: `wallHi` #8a70b0 is L .479 and the brick highlight
+   the player actually stands beside is `brickHi` composited at alpha 0.55
+   over `brickA` = #a266e6, L .486 — i.e. the naive reading of "lift the
+   value" walks straight into the brick. Clearing both by dL 0.12 in-family
+   means L >= .606, and #c39cff (L .672, chroma .388, hue 263.6 — 4.4 deg
+   from the concept base) is the value that also maximises the Lab distance
+   to VOID's brick face (55.0 dE) while holding the chroma floor.
+   DISCLOSED: no hex in this family also clears the `stationary` foe's light
+   violet #c58aff on value AND hue while staying chromatic (the window is
+   L <= .359, which is invisible on VOID, or L >= .752, which is pastel).
+   Separation from the CAST is AGENTS.md's standing rule — structure, never a
+   re-hue — and a finned chevron with two cream eyes and a grin is not a dark
+   square bunker with a magenta slit. */
+export const PLAYER_SUIT = "#c39cff";
+/* Still exported under the old name for three/entities.js. 2D and 3D
+   diverged for exactly one round (IONVEST vs the gunmetal Signal Runner) and
+   MAKO re-converges them — but not in this commit: the 3D stack is still the
+   humanoid one here, so gunmetal is still the correct hex on that side. */
 export const PLAYER_HULL = "#8d97ac";
-/* IONVEST — 2D revision, 2026-09-06, on the user's rejection of R1's 2D body
-   ("in the 2D the main charecter is terrible look", FACTORY screenshot). The
-   user explicitly allowed 2D and 3D to look DIFFERENT, so this is the point
-   where the two renderers' palettes split.
-
-   R1's shape work — the taper, the crest, the long boots — was never the
-   complaint and is kept. Two MEASURED defects are fixed:
-
-   COLOUR. `PLAYER_HULL` #8d97ac against FACTORY's wall #8a96a4 is dL=0.008
-   and dHue=8.3 degrees: value AND hue collapse on the SAME swatch, so both
-   the dark-contour beat and the lit-body beat land on the wall's own value
-   and a 2px 55%-alpha seal is left doing all the separation work at 29px.
-   That is why it read as a shapeless blob. The 2D suit becomes a HUED
-   #cd5ac3 orchid (L .479, chroma .451, hue 305): across all 40 biome
-   swatches, every swatch that comes within dL 0.12 is at least 41 degrees of
-   hue away (worst: ARENA brickA #ff6a8c). Note there is no hex that clears
-   dL 0.12 against ALL 40 — the swatches cover the value axis densely — so
-   the thing to hold open is the AND, which is also the thing that failed.
-   The VALUE inside that family was picked from rendered rooms, not taste:
-   the research's #b83fc0 (L .384) shipped in iteration 1 and read weakly in
-   VOID, where brickA #6a20c8 sat 32.0 Lab-dE away — the tightest pair in the
-   game. Lifting to L .479 puts the worst pair at 44.6 dE (still VOID brickA)
-   and is the only value in the family that also clears BOTH bright floors —
-   ICE .671, SAND .608 — on value alone rather than on hue.
-   3D keeps gunmetal: it has no dark contour, value alone separates it there,
-   and it was not what the user rejected.
-
-   PROPORTION. R1's figure was 29% head (~3.4 heads) — adult proportions on a
-   29px sprite, which is the other half of "blob": there were never enough
-   pixels for a face. The shoulder-ledge seam rises from -0.46r to -0.20r, so
-   the head module is now 41% (~2.4 heads), the small-sprite convention. The
-   waist (0.54r) and the boot span (0.42r..1.06r) are unchanged; the pauldron
-   facets and the visor cluster move up with the seam and grow into the room.
-
-   Unchanged: p.color on the CREST only (one placement), the visor slit +
-   specular pip, the RIM seal, the five beats, the zero-arc rule. Added: one
-   swept FIN off the crest's rear flank — the silhouette hook, five vertices,
-   still zero-arc, still no brim. */
-export const PLAYER_SUIT = "#cd5ac3";
 const HULL = PLAYER_SUIT;
-/* The shoulder is a LEDGE, not a slope: the jaw runs out to +-0.88r almost
-   level, then drops down a vertical pauldron edge. Iteration 1 used a single
-   diagonal from helmet to shoulder tip and it read as a cloak / bell.
-   IONVEST raises the jaw/neck pair (-0.54/-0.46 -> -0.34/-0.20) and the
-   pauldron pair with it; below the waist nothing moved. */
-const S_RUNNER = poly([
-  [-0.36, -1.0], [0.36, -1.0], [0.52, -0.78], [0.46, -0.34],
-  [0.34, -0.2], [0.88, -0.14], [0.9, 0.1], [0.68, 0.26],
-  [0.56, 0.4], [0.5, 0.54], [-0.5, 0.54], [-0.56, 0.4],
-  [-0.68, 0.26], [-0.9, 0.1], [-0.88, -0.14], [-0.34, -0.2],
-  [-0.46, -0.34], [-0.52, -0.78],
+const EYE = "#f2e6d2",
+  INK = "#12121e",
+  FOOT_COL = "#2e1a4e";
+/* Low and wide: the widest slice is at the flanks, not at a shoulder line,
+   and the mass is 1.8r tall against 1.96r across before the fins. Quadratics
+   only — the zero-arc rule holds, and the two ellipse families on this body
+   (contact shade, eyes) are deliberate exceptions the gates name. */
+const BODY = poly([
+  [0, -0.74],
+  [0.5, -0.56, 0.3, -0.78],
+  [0.88, -0.02, 0.84, -0.32],
+  [0.9, 0.32, 0.98, 0.12],
+  [0.46, 0.64, 0.8, 0.58],
+  [-0.46, 0.64, 0, 0.8],
+  [-0.9, 0.32, -0.8, 0.58],
+  [-0.88, -0.02, -0.98, 0.12],
+  [-0.5, -0.56, -0.84, -0.32],
+  [0, -0.74, -0.3, -0.78],
 ]);
-/* The silhouette hook. One stiff swept fin off the crest's REAR-LEFT flank,
-   rooted under the crest so the crest's own seal caps it. Asymmetric on
-   purpose: at 29px an exterior bump is the only detail that survives, and a
-   symmetric pair would read as a second brim. Every vertex stays inside the
-   +-1.05r / -1.10r fit box the gates hold. */
-const FIN = poly([
-  [-0.44, -0.88], [-0.72, -1.02], [-0.96, -0.96], [-0.78, -0.8], [-0.48, -0.72],
-]);
-/* A crest, not a cap. Iteration 1 let the wings overhang the helmet and the
-   horizontal underside instantly became a peaked cap brim — the exact
-   silliness the rejection named. R1 keeps every vertex INSIDE the helmet
-   contour, so this is the helmet's own pointed upper shell. */
-const CREST = poly([
-  [0, -1.09], [0.32, -0.96], [0.48, -0.8], [0.44, -0.7],
-  [-0.44, -0.7], [-0.48, -0.8], [-0.32, -0.96],
-]);
-/* Leg + boot in one contour, hip to toe — 0.58r of dark below the hull. The
-   P1 boots were 0.06r chips glued to the egg's underside. */
-function boot(c, r, s) {
+/* Swept BLADES, not round paddles, and BOTH in one path so the pair is one
+   fillStyle write — the one-placement rule counts placements, and two poly()
+   calls would also discard the first blade, since poly() opens its own path. */
+function fins(c, r) {
+  /* Iteration 1 rooted the blade at y -0.42 and it landed BEHIND the eyes:
+     the eye lids cover x 0.10..0.82 and the body covers out to 0.98, so only
+     0.32r of blade ever cleared the silhouette and the pair read as
+     earmuffs. The root drops below the eye line instead and the blade sweeps
+     up-and-out, so it is outside the body across most of its height — a
+     blade, and the chevron the whole concept rests on.
+     Iteration 2 cleared the body but the blade was a 4.8px sliver hugging the
+     flank. The tip now rises to -0.84r, level with the eye tops and ABOVE the
+     body's own crown, so the fin is part of the outline rather than a
+     marking beside it, and the outer edge sits at the 1.30r ceiling through
+     the whole of its height instead of only at one vertex. */
+  const P = [
+    [0.48, 0.38], [0.62, -0.36], [0.96, -0.84], [1.3, -0.46], [1.2, 0.12], [0.84, 0.44],
+  ];
   c.beginPath();
-  c.moveTo(s * r * 0.08, r * 0.42);
-  c.lineTo(s * r * 0.44, r * 0.42);
-  c.lineTo(s * r * 0.46, r * 0.88);
-  c.lineTo(s * r * 0.56, r * 1.06);
-  c.lineTo(s * r * 0.1, r * 1.06);
-  c.closePath();
-  c.fill();
+  for (const s of [-1, 1]) {
+    for (let i = 0; i < P.length; i++) {
+      const x = s * P[i][0] * r,
+        y = P[i][1] * r;
+      i ? c.lineTo(x, y) : c.moveTo(x, y);
+    }
+    c.closePath();
+  }
+}
+/* Two stubby feet, one path, one fill. Not legs: MAKO sits low on the floor,
+   and 0.44r of dark under a wide mass is grounding, not stance. */
+function feet(c, r) {
+  const P = [[0.16, 0.48], [0.62, 0.5], [0.7, 0.92], [0.2, 0.92]];
+  c.beginPath();
+  for (const s of [-1, 1]) {
+    for (let i = 0; i < P.length; i++) {
+      const x = s * P[i][0] * r,
+        y = P[i][1] * r;
+      i ? c.lineTo(x, y) : c.moveTo(x, y);
+    }
+    c.closePath();
+  }
+}
+/* The grin. Corners sit 0.13r HIGHER than the centre of the upper lip, which
+   is what makes a wide dark shape read as a smile rather than a maw at 29px. */
+const GRIN = poly([
+  [-0.44, 0.02],
+  [-0.16, 0.15, -0.32, 0.12],
+  [0.16, 0.15, 0, 0.2],
+  [0.44, 0.02, 0.32, 0.12],
+  [0.3, 0.3, 0.44, 0.2],
+  [0, 0.44, 0.18, 0.44],
+  [-0.3, 0.3, -0.18, 0.44],
+  [-0.44, 0.02, -0.44, 0.2],
+]);
+/* THE TWEAK: the concept hung two pointed fangs off the upper lip and read
+   as a small predator. Two blunt front teeth instead — same beat, same one
+   fill, and the character reads as a cheeky hero rather than a monster. */
+function teeth(c, r) {
+  c.beginPath();
+  for (const s of [-1, 1]) {
+    c.moveTo(s * 0.04 * r, 0.16 * r);
+    c.lineTo(s * 0.2 * r, 0.135 * r);
+    c.lineTo(s * 0.22 * r, 0.28 * r);
+    c.lineTo(s * 0.06 * r, 0.305 * r);
+    c.closePath();
+  }
 }
 export function drawPlayerBody(c, world, p) {
   const r = CFG.TILE * 0.36,
@@ -433,103 +461,103 @@ export function drawPlayerBody(c, world, p) {
     : Math.sin(world.time * 4) * 1.0;
   c.translate(0, bob);
   if (p.iFrames > 0 && Math.floor(p.iFrames * 12) % 2) c.globalAlpha = 0.4;
+  /* Beat 1 — contact shade, widened to the body it belongs to. */
   c.fillStyle = "rgba(0,0,0,0.34)";
   c.beginPath();
-  c.ellipse(0, r * 1.0, r * 0.6, r * 0.18, 0, 0, 7);
+  c.ellipse(0, r * 0.96, r * 0.68, r * 0.18, 0, 0, 7);
   c.fill();
-  S_RUNNER(c, r, 1, 0, 0);
-  c.fillStyle = dk(HULL, 0.56);
-  c.fill();
-  seal(c);
-  S_RUNNER(c, r, 0.8, 0, -r * 0.09);
-  c.fillStyle = HULL;
-  c.fill();
-  /* Beat 4 — hard armour facets, not a soft sheen: the two pauldron TOP
-     plates, which is what actually draws the shoulder ledge at this size.
-     Both sit inside the k=0.8 inset so the dark contour stays unbroken. Two
-     subpaths, one fill: still one beat. */
-  c.fillStyle = lt(HULL, 0.42);
-  c.beginPath();
-  c.moveTo(-r * 0.66, -r * 0.12);
-  c.lineTo(-r * 0.34, -r * 0.16);
-  c.lineTo(-r * 0.3, r * 0.02);
-  c.lineTo(-r * 0.6, r * 0.06);
-  c.closePath();
-  c.moveTo(r * 0.34, -r * 0.16);
-  c.lineTo(r * 0.66, -r * 0.12);
-  c.lineTo(r * 0.6, r * 0.06);
-  c.lineTo(r * 0.3, r * 0.02);
-  c.closePath();
-  c.fill();
-  const fx = Math.max(-1, Math.min(1, p.face.x || 0)) * r * 0.1;
-  /* The fin goes on BEFORE the crest so the crest paints over its root and
-     the two read as one helmet, not a glued-on flap. A SHADED SUIT tone, not
-     p.color and not the contour dark: iteration 1 filled it dk(HULL,0.56)
-     and it disappeared outright on VOID's near-black floor, which is exactly
-     where a silhouette hook has to work. One value step below the lit body
-     keeps it chromatic against any floor while still reading as the helmet's
-     shadow side. The one-placement rule keeps teal on the crest alone. */
-  FIN(c, r, 1, 0, 0);
-  c.fillStyle = dk(HULL, 0.2);
+  /* Feet and fins go down FIRST so the body's own contour and seal cap their
+     roots and the whole thing reads as one animal rather than a kit of parts.
+     That also means the body contour is no longer the second beginPath —
+     the gates find parts by fill, never by index. */
+  c.fillStyle = p.kick ? "#c07a3a" : FOOT_COL;
+  feet(c, r);
   c.fill();
   seal(c);
-  CREST(c, r, 1, 0, 0);
+  /* HOOK — the ear-fins, and the only p.color on the character. They flick
+     against the walk bob, which is what sells an animal over a costume. */
+  c.save();
+  c.rotate(Math.sin(world.time * 6) * 0.03);
+  fins(c, r);
   c.fillStyle = col;
   c.fill();
   seal(c);
+  c.restore();
+  /* Beats 2+3 — dark form and seal, then the lit body inset and lifted so
+     the leftover crescent underneath is the form shadow. */
+  BODY(c, r, 1, 0, 0);
+  c.fillStyle = dk(HULL, 0.56);
+  c.fill();
+  seal(c);
+  BODY(c, r, 0.82, 0, -r * 0.07);
+  c.fillStyle = HULL;
+  c.fill();
+  /* Beat 4 — one hard facet on the lit flank. Held to lt(HULL,0.2), not the
+     0.42 the gunmetal hull used: at L .672 a 0.42 lift lands near L .77 and
+     starts competing with the cream eyes, and the eyes being the brightest
+     field on the character is the entire readability case for this concept.
+     Placed on the lower-left FLANK, not the crown: the eye lids own the whole
+     upper body (x 0.10..0.82, y -0.85..-0.15), so iteration 1's crown facet
+     was painted and then covered. Every vertex stays inside the k=0.82 inset
+     so the dark contour band is never broken. */
+  c.fillStyle = lt(HULL, 0.2);
+  c.beginPath();
+  c.moveTo(-r * 0.68, 0);
+  c.lineTo(-r * 0.46, -r * 0.18);
+  c.lineTo(-r * 0.3, r * 0.04);
+  c.lineTo(-r * 0.54, r * 0.26);
+  c.closePath();
+  c.fill();
+  const fx = Math.max(-1, Math.min(1, p.face.x || 0)) * r * 0.1;
   if (p.face.y < -0.5) {
+    /* Walking away: a dark dorsal panel and a gill slot, no face at all. The
+       fins still flag the outline, so the hero stays identifiable from behind. */
     c.fillStyle = dk(HULL, 0.34);
     c.beginPath();
-    c.moveTo(-r * 0.38, -r * 0.62);
-    c.lineTo(r * 0.38, -r * 0.62);
-    c.lineTo(r * 0.32, -r * 0.42);
-    c.lineTo(-r * 0.32, -r * 0.42);
+    c.moveTo(-r * 0.44, -r * 0.34);
+    c.lineTo(r * 0.44, -r * 0.34);
+    c.lineTo(r * 0.36, r * 0.3);
+    c.lineTo(-r * 0.36, r * 0.3);
     c.closePath();
     c.fill();
-    c.fillStyle = dk(HULL, 0.62);
-    c.beginPath();
-    c.moveTo(-r * 0.22, -r * 0.16);
-    c.lineTo(r * 0.22, -r * 0.16);
-    c.lineTo(r * 0.18, r * 0.26);
-    c.lineTo(-r * 0.18, r * 0.26);
-    c.closePath();
-    c.fill();
+    c.fillStyle = INK;
+    c.fillRect(-r * 0.3, -r * 0.06, r * 0.6, r * 0.13);
   } else {
-    /* The visor is a SLIT: a deep near-black well, a hairline lit core and
-       one white pip. R1 halves the core bar — against a mid-value hull a fat
-       cyan band was the second bright element and read as a cartoon eye.
-       IONVEST drops the cluster 0.06r and deepens the well from 0.20r to
-       0.24r: the seam move gave the helmet a third more height, and a visor
-       left at R1's size would have floated in it. Still a slit, not an eye —
-       the well stays wider than it is tall. */
-    c.fillStyle = "#0b1020";
-    c.beginPath();
-    c.moveTo(-r * 0.38 + fx, -r * 0.62);
-    c.lineTo(r * 0.38 + fx, -r * 0.62);
-    c.lineTo(r * 0.33 + fx, -r * 0.38);
-    c.lineTo(-r * 0.33 + fx, -r * 0.38);
-    c.closePath();
-    c.fill();
-    c.fillStyle = "#7fe0ff";
-    c.beginPath();
-    c.moveTo(-r * 0.3 + fx, -r * 0.56);
-    c.lineTo(r * 0.3 + fx, -r * 0.56);
-    c.lineTo(r * 0.29 + fx, -r * 0.46);
-    c.lineTo(-r * 0.29 + fx, -r * 0.46);
-    c.closePath();
+    /* Beat 5 — the face. Grin first, then the eyes on top of it, so a wide
+       eye can overlap the mouth without a hole in the lid. */
+    GRIN(c, r, 1, fx * 0.4, 0);
+    c.fillStyle = INK;
     c.fill();
     c.fillStyle = "#ffffff";
-    c.beginPath();
-    c.moveTo(-r * 0.34 + fx, -r * 0.59);
-    c.lineTo(-r * 0.22 + fx, -r * 0.59);
-    c.lineTo(-r * 0.25 + fx, -r * 0.5);
-    c.lineTo(-r * 0.37 + fx, -r * 0.5);
-    c.closePath();
+    teeth(c, r);
     c.fill();
+    /* Stacked opaque fills, never clip(): the dark lid ellipse lands first
+       and the cream eye lands offset OUTWARD and UP, so the leftover crescent
+       is thickest on the INNER-LOWER side. One shape doing brow, lid and
+       shading, and the lid is what breaks the crown of the silhouette. */
+    for (const s of [-1, 1]) {
+      c.beginPath();
+      c.ellipse(s * r * 0.46, -r * 0.5, r * 0.36, r * 0.35, 0, 0, 7);
+      c.fillStyle = dk(HULL, 0.46);
+      c.fill();
+      seal(c);
+      c.beginPath();
+      c.ellipse(s * r * 0.51, -r * 0.44, r * 0.29, r * 0.28, 0, 0, 7);
+      c.fillStyle = EYE;
+      c.fill();
+      c.beginPath();
+      c.ellipse(s * r * 0.51 + fx * 0.9, -r * 0.41, r * 0.145, r * 0.155, 0, 0, 7);
+      c.fillStyle = INK;
+      c.fill();
+      /* The specular does NOT track: the eye is a fixed glassy bulge lit from
+         the upper left like every other body in the cabinet, and the pupil
+         slides underneath it. */
+      c.beginPath();
+      c.ellipse(s * r * 0.51 - r * 0.07, -r * 0.52, r * 0.062, r * 0.062, 0, 0, 7);
+      c.fillStyle = "#ffffff";
+      c.fill();
+    }
   }
-  c.fillStyle = p.kick ? "#c07a3a" : "#0d3f78";
-  boot(c, r, -1);
-  boot(c, r, 1);
   if (p.shield) {
     c.strokeStyle = "#6fb7ff";
     c.lineWidth = 2.5;
