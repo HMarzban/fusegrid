@@ -587,11 +587,16 @@ export function drawPlayerBody(c, world, p) {
     c.fill();
   }
   if (p.passing) {
-    /* r*1.5 x r*1.16 grazed the fin's own outer edge: at the fin's [1.3,-0.46]
-       vertex the ring radius toward that angle beat the vertex by only 0.64,
-       under the 2px stroke's own half-width, so the stroke painted 0.36 ONTO
-       the fin. r*1.58 x r*1.22 clears every fin vertex by >=0.5 including the
-       stroke, the same margin class as the shield ellipse. */
+    /* r*1.5 x r*1.16 grazed the fin's own outer edge: at the fin's
+       [0.96,-0.84] vertex the ring radius toward that angle beat the vertex by
+       only 0.64, under the 2px stroke's own half-width, so the stroke painted
+       0.36 ONTO the fin. That vertex is the swept SHOULDER, not the [1.3,-0.46]
+       TIP — the tip reaches further out but points where this ellipse is
+       widest, and cleared by 0.97 — so a ring fitted by eye to the widest
+       vertex is fitted to the wrong one. r*1.58 x r*1.22 clears every fin
+       vertex by >=0.5 past the stroke (1.64 at the shoulder, the binding one
+       for all three rings), the same margin class as the shield ellipse
+       (2.23). */
     c.strokeStyle = "rgba(119,255,153,0.6)";
     c.lineWidth = 2;
     c.beginPath();

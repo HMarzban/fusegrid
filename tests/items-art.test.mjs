@@ -661,7 +661,9 @@ const P = (o) =>
    above poses the hero with shield/kick/passing all false, so a ring that
    actually crossed a fin tip had no test that could see it — exactly what
    happened to `passing` (r*1.5 x r*1.16 painted 0.36 unit ONTO the fin's own
-   [1.3,-0.46] vertex once the 2px stroke's half-width is counted). Pinned
+   [0.96,-0.84] vertex — the swept SHOULDER, not the [1.3,-0.46] tip, which
+   reaches further out but points where the ellipse is widest — once the 2px
+   stroke's half-width is counted). Pinned
    directly: the ring must clear every fin vertex by more than half its own
    stroke width, for BOTH rings that ever draw one. */
 function ringRadiusAtAngle(el, x, y) {
