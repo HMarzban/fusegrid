@@ -67,6 +67,17 @@ const motifAt = (chan, s0, f0, k) =>
     [0, 1, 2, 3, 6].map((x) => x * (k || 1)),
     [DEG1, DEG3, DEG5, DEG6, DEG5],
   );
+/* Direction v2 (spec 1): same contour, bouncier rhythm — the flash is two steps
+   instead of three and the settle moves to step 5, so steps 6-7 carry a pickup
+   rather than a rest. motifAt above survives for the wave-B tracks still on the
+   v1 figure. Hook pins using this are always positional (a named bar), because
+   a sixteenth run can walk the right pitch classes by accident. */
+const motifV2At = (chan, s0, f0) =>
+  figureAt(chan, s0, f0, [0, 1, 2, 3, 5], [DEG1, DEG3, DEG5, DEG6, DEG5]);
+const motifV2Head = (chan, f0, len) => {
+  for (let s = 0; s < (len || 64); s++) if (motifV2At(chan, s, f0)) return s;
+  return -1;
+};
 const fragMidAt = (chan, s0, f0) =>
   figureAt(chan, s0, f0, [1, 2, 3], [DEG3, DEG5, DEG6]);
 const motifHead = (chan, f0, k, len) => {
@@ -90,6 +101,33 @@ const lanes = (P) =>
   P.lead.length > 0 &&
   Math.max(...P.bass.map((n) => n.f)) < Math.min(...P.lead.map((n) => n.f));
 const waves = (P) => new Set(chansOf(P).map((a) => a[0].t)).size;
+/* v2 (spec 0a.1): the machine reading of "constant pulse" — the longest run of
+   consecutive steps, read CYCLICALLY and keyed off P.LEN (intro is 32, not 64),
+   carrying neither a bass nor a hat note. <= 1 on every v2 track. */
+const pulseGap = (P) => {
+  const on = new Set();
+  for (const n of P.bass) on.add(n.s);
+  for (const n of P.hat) on.add(n.s);
+  if (!on.size) return P.LEN;
+  let worst = 0,
+    run = 0;
+  for (let i = 0; i < P.LEN * 2; i++) {
+    if (on.has(i % P.LEN)) run = 0;
+    else if (++run > worst && i >= P.LEN) worst = run;
+  }
+  return worst;
+};
+/* How many 8-step bars carry a note in that channel. Both are full on a v2
+   track: this is what retires "bars 4 and 8 drop the lead" and "the bass rests
+   through bars 5 and 8" without a rule about rests. */
+const barsIn = (a, LEN) => {
+  let c = 0;
+  for (let b = 0; b * 8 < LEN; b++)
+    if (a.some((n) => n.s >= b * 8 && n.s < b * 8 + 8)) c++;
+  return c;
+};
+const barsWithLead = (P) => barsIn(P.lead, P.LEN);
+const barsWithBass = (P) => barsIn(P.bass, P.LEN);
 const soundsDeg = (P, f0, d) =>
   ["bass", "lead", "pad"].some(
     (k) => P[k] && P[k].some((n) => isDeg(n.f, f0, [d])),
@@ -1379,6 +1417,58 @@ function installAC(ac) {
     ]),
     hat: mk([[2, 4800]]),
   };
+  const v2 = mk([
+    [0, 293.66],
+    [1, 349.23],
+    [2, 440.0],
+    [3, 493.88],
+    [5, 440.0],
+  ]);
+  check(
+    "motifV2At matches the v2 rhythm (settle at step 5) and rejects the v1 one",
+    motifV2At(v2, 0, D, 1) && !motifAt(v2, 0, D, 1) && !motifV2At(plain, 0, D),
+  );
+  check(
+    "motifV2At is positional — the same figure one bar later reads as bar 1",
+    motifV2Head(
+      mk([
+        [8, 293.66],
+        [9, 349.23],
+        [10, 440.0],
+        [11, 493.88],
+        [13, 440.0],
+      ]),
+      D,
+      64,
+    ) === 8,
+  );
+  const gapP = (bass, hat, LEN) => ({
+    LEN,
+    bass: mk(bass),
+    hat: mk(hat),
+    lead: [],
+  });
+  check(
+    "pulseGap: an 8th hat over an 8th bass leaves single-step pockets",
+    pulseGap(gapP([[0, 55]], [[2, 4800]], 4)) === 1,
+    pulseGap(gapP([[0, 55]], [[2, 4800]], 4)),
+  );
+  check(
+    "pulseGap wraps around the loop and keys off LEN, not a literal 64",
+    pulseGap(gapP([[0, 55]], [], 4)) === 3 &&
+      pulseGap(gapP([[1, 55]], [], 32)) === 31 &&
+      pulseGap(gapP([], [], 16)) === 16,
+    [
+      pulseGap(gapP([[0, 55]], [], 4)),
+      pulseGap(gapP([[1, 55]], [], 32)),
+      pulseGap(gapP([], [], 16)),
+    ].join(","),
+  );
+  check(
+    "barsWithLead / barsWithBass count 8-step bars that carry the channel",
+    barsWithLead(P) === 1 && barsWithBass(P) === 1,
+    barsWithLead(P) + "/" + barsWithBass(P),
+  );
   check("occ counts distinct occupied steps across channels", occ(P) === 3, occ(P));
   check("breathBar finds the first lead-free bar", breathBar(P) === 1, breathBar(P));
   check("lanes: max bass < min lead", lanes(P));
@@ -1391,72 +1481,87 @@ function installAC(ac) {
   );
 }
 
-// ---- intro: held breath (D Dorian, PLAIN unaccompanied) ----
+// ---- intro: the cabinet powering up (D Dorian, PLAIN over the full band) ----
 {
   const T = MUSIC_TRACKS.intro,
     A = T.A,
     f0 = TONIC.intro;
   check(
-    "intro STEP 0.17 (88 BPM), LEN 32, sections [A], no B at all",
-    A.STEP === 0.17 &&
+    "intro STEP 0.125 (120 BPM), LEN 32, sections [A], no B at all",
+    A.STEP === 0.125 &&
       A.LEN === 32 &&
       JSON.stringify(T.sections) === '["A"]' &&
       T.B === null,
     A.STEP + "/" + A.LEN + "/" + JSON.stringify(T.sections),
   );
-  check("intro has no hat at all", A.hat.length === 0, A.hat.length);
   check(
-    "intro bass is ONE A1 pedal on the dominant, entering at step 16",
-    A.bass.length === 1 &&
-      A.bass[0].s === 16 &&
-      A.bass[0].f === 55 &&
-      Math.round(A.bass[0].d / A.STEP) === 16,
-    JSON.stringify(A.bass),
+    "intro bass states the TONIC D2 from step 0 in straight eighths",
+    A.bass.length === 16 &&
+      A.bass[0].s === 0 &&
+      A.bass[0].f === 73.42 &&
+      A.bass.every((n) => n.s % 2 === 0),
+    A.bass.length + " @" + A.bass[0].s + "/" + A.bass[0].f,
   );
   check(
-    "intro bar 1 is lead and nothing else — the motif arrives unharmonized",
+    "intro bass alternates root and octave — D2 73.42 against D3 146.83",
+    A.bass.filter((n) => n.s % 4 === 0).every((n) => n.f === 73.42 || n.f === 55) &&
+      A.bass
+        .filter((n) => n.s % 4 === 2)
+        .every((n) => n.f === 146.83 || n.f === 110),
+    [...new Set(A.bass.map((n) => n.f))].join(","),
+  );
+  check(
+    "intro hat drives from the first bar — 15 odd-step ticks, not an empty array",
+    A.hat.length === 15 && A.hat.every((n) => n.s % 2 === 1),
+    A.hat.length,
+  );
+  check(
+    "intro bar 1 is the whole band — the motif arrives harmonized",
     A.lead.some((n) => n.s < 8) &&
-      !A.bass.some((n) => n.s < 8) &&
-      !A.hat.some((n) => n.s < 8) &&
-      !(A.pad || []).some((n) => n.s < 8),
+      A.bass.some((n) => n.s < 8) &&
+      A.hat.some((n) => n.s < 8) &&
+      (A.pad || []).some((n) => n.s < 8),
   );
-  check("intro states PLAIN on D4 at step 0", motifAt(A.lead, 0, f0, 1));
+  check("intro states PLAIN on D4 at bar 0", motifV2At(A.lead, 0, f0));
   const lo = Math.min(...A.lead.filter((n) => n.s < 8).map((n) => n.f)),
     hi = Math.min(
       ...A.lead.filter((n) => n.s >= 16 && n.s < 24).map((n) => n.f),
     );
   check(
-    "intro bar 2 rests; bar 3 restates the motif one octave up",
-    !A.lead.some((n) => n.s >= 8 && n.s < 16) &&
-      motifAt(A.lead, 16, f0, 1) &&
-      Math.abs(semi(hi, lo) - 12) <= 0.05,
-    lo + " -> " + hi,
-  );
-  const b4 = A.lead.filter((n) => n.s >= 24);
-  check(
-    "intro bar 4 holds the 6th alone — the modal fingerprint, sustained",
-    b4.length === 1 &&
-      isDeg(b4[0].f, f0, DEG6) &&
-      Math.round(b4[0].d / A.STEP) >= 4,
-    JSON.stringify(b4),
+    "intro restates the motif an octave up at bar 2, and no bar is lead-free",
+    motifV2At(A.lead, 16, f0) &&
+      Math.abs(semi(hi, lo) - 12) <= 0.05 &&
+      barsWithLead(A) === 4,
+    lo + " -> " + hi + " / " + barsWithLead(A) + " bars",
   );
   check(
-    "intro pad is one 16-step D3 drone from step 8",
+    "intro pulse never gaps — bass and hat interlock across all 32 steps",
+    pulseGap(A) <= 1 && barsWithBass(A) === 4,
+    pulseGap(A) + "/" + barsWithBass(A),
+  );
+  check(
+    "intro pad is two 16-step drones, D3 then A2",
     A.pad &&
-      A.pad.length === 1 &&
-      A.pad[0].s === 8 &&
+      A.pad.length === 2 &&
+      A.pad[0].s === 0 &&
+      A.pad[1].s === 16 &&
       near(A.pad[0].f, 146.83, 0.01) &&
-      Math.round(A.pad[0].d / A.STEP) === 16,
-    JSON.stringify(A.pad),
+      near(A.pad[1].f, 110.0, 0.01) &&
+      A.pad.every((n) => Math.round(n.d / A.STEP) === 16),
+    JSON.stringify((A.pad || []).map((n) => [n.s, n.f])),
   );
-  check("intro occupies at most 18 of its 32 steps", occ(A) <= 18, occ(A));
+  check(
+    "intro is dense but not solid: 28-31 of its 32 steps",
+    occ(A) >= 28 && occ(A) <= 31,
+    occ(A),
+  );
   check("intro register lanes never cross", lanes(A));
 }
 {
   check(
-    "R3c pre-move: sand STEP is 0.139, so intro's 0.17 stays unique",
-    MUSIC_TRACKS.sand.A.STEP === 0.139,
-    MUSIC_TRACKS.sand.A.STEP,
+    "wave-B pre-move: crown .113 and sand .139 still hold, so intro's .125 is free",
+    MUSIC_TRACKS.sand.A.STEP === 0.139 && MUSIC_TRACKS.crown.A.STEP === 0.113,
+    MUSIC_TRACKS.sand.A.STEP + "/" + MUSIC_TRACKS.crown.A.STEP,
   );
 }
 
@@ -1682,25 +1787,50 @@ function installAC(ac) {
     sineLead.length === 1 && sineLead[0] === "void",
     sineLead.join(","),
   );
-  const W1 = ["intro", "menu", "arena", "void", "crown"];
+  /* Direction v2 wave A. Grows one id per commit, in the ladder's migration
+     order (intro -> menu -> jungle -> ice -> factory); wave B extends it to all
+     ten. The breath-bar sweep this block used to carry is gone with the shared
+     mandate — a v2 track earns its air from articulation, not empty bars. */
+  const WA = ["intro"];
   check(
-    "wave 1: every A keeps its register lanes and has a breath bar",
-    W1.every(
-      (k) => lanes(MUSIC_TRACKS[k].A) && breathBar(MUSIC_TRACKS[k].A) >= 0,
+    "v2 wave A: the rhythm section never leaves two steps unstruck",
+    WA.every((k) => pulseGap(MUSIC_TRACKS[k].A) <= 1),
+    WA.map((k) => k + ":" + pulseGap(MUSIC_TRACKS[k].A)).join(" "),
+  );
+  check(
+    "v2 wave A: every bar carries lead AND bass — no dropped-out bars",
+    WA.every((k) => {
+      const A = MUSIC_TRACKS[k].A,
+        b = A.LEN / 8;
+      return barsWithLead(A) === b && barsWithBass(A) === b;
+    }),
+    WA.map(
+      (k) =>
+        k +
+        ":" +
+        barsWithLead(MUSIC_TRACKS[k].A) +
+        "/" +
+        barsWithBass(MUSIC_TRACKS[k].A),
+    ).join(" "),
+  );
+  check(
+    "v2 wave A: dense but never solid, and at least two waveforms",
+    WA.every(
+      (k) =>
+        occ(MUSIC_TRACKS[k].A) < MUSIC_TRACKS[k].A.LEN &&
+        lanes(MUSIC_TRACKS[k].A) &&
+        waves(MUSIC_TRACKS[k].A) >= 2,
     ),
-    W1.filter(
-      (k) => !lanes(MUSIC_TRACKS[k].A) || breathBar(MUSIC_TRACKS[k].A) < 0,
-    ).join(","),
-  );
-  check(
-    "wave 1: no rewritten track occupies every step of its loop",
-    W1.every((k) => occ(MUSIC_TRACKS[k].A) < MUSIC_TRACKS[k].A.LEN),
-    W1.map((k) => k + ":" + occ(MUSIC_TRACKS[k].A)).join(" "),
-  );
-  check(
-    "wave 1: every rewritten track uses at least two distinct waveforms",
-    W1.every((k) => waves(MUSIC_TRACKS[k].A) >= 2),
-    W1.map((k) => k + ":" + waves(MUSIC_TRACKS[k].A)).join(" "),
+    WA.map(
+      (k) =>
+        k +
+        ":" +
+        occ(MUSIC_TRACKS[k].A) +
+        "/" +
+        MUSIC_TRACKS[k].A.LEN +
+        " w" +
+        waves(MUSIC_TRACKS[k].A),
+    ).join(" "),
   );
 }
 
@@ -1958,6 +2088,9 @@ function installAC(ac) {
 // ---- R3c: the whole score, quantified over all ten tracks ----
 {
   const IDS = Object.keys(MUSIC_TRACKS);
+  /* The v2 ladder spreads 104-140 BPM at 4 BPM steps. Wave A rows move one per
+     commit in migration order; the wave-B rows carry their shipped values until
+     their own rewrite, so all ten stay distinct at every commit in between. */
   const LADDER = {
     arena: 0.107,
     crown: 0.113,
@@ -1967,7 +2100,7 @@ function installAC(ac) {
     sand: 0.139,
     ice: 0.144,
     water: 0.15,
-    intro: 0.17,
+    intro: 0.125,
     void: 0.234,
   };
   check(
@@ -2019,13 +2152,11 @@ function installAC(ac) {
     IDS.every((k) => occ(MUSIC_TRACKS[k].A) < MUSIC_TRACKS[k].A.LEN),
     IDS.map((k) => k + ":" + occ(MUSIC_TRACKS[k].A)).join(" "),
   );
-  check(
-    "every track has a breath bar — 8 consecutive steps with zero lead",
-    IDS.every((k) => breathBar(MUSIC_TRACKS[k].A) >= 0),
-    IDS.filter((k) => breathBar(MUSIC_TRACKS[k].A) < 0).join(","),
-  );
+  /* The "every track has a breath bar" sweep is GONE, not relocated: direction
+     v2 withdrew the shared mandate (spec 2). Occupancy is now banded on both
+     sides, so a track cannot drift back toward sparseness either. */
   const BAND = {
-    intro: [0, 18],
+    intro: [28, 31],
     menu: [44, 48],
     jungle: [40, 58],
     ice: [0, 34],

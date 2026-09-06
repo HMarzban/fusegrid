@@ -184,33 +184,66 @@ function transp(P, r) {
 function tr(A, B, secs) {
   return Object.freeze({ A, B, sections: secs || MUSIC_SECTIONS });
 }
-/* INTRO — held breath. D Dorian on D4, STEP 0.17 (88 BPM), 4 bars of 32 steps,
-   sections ["A"] and no B. Bar 1 states the motif (1-3-5-6-5) alone, bar 2
-   rests outright, bar 3 restates it an octave up, bar 4 holds the 6th — the
-   note that names the mode — by itself. The sine pad drone joins at step 8 and
-   the single A1 bass pedal at step 16 sits on the DOMINANT, so the bed never
-   grounds the tonic. No hat: every later biome's reharmonization of the figure
-   is then a discovery rather than a repeat. */
+/* INTRO — the cabinet powering up. D Dorian on D4, STEP 0.125 (120 BPM), 4 bars
+   of 32 steps, sections ["A"] and no B. The whole band is in at step 0: the
+   bass bounces straight eighths, root against its own octave (D2 73.42 on the
+   beats, D3 146.83 between them) and states the TONIC immediately rather than
+   pedalling the dominant; bar 4 lifts the pair to A1/A2 as a turnaround. The
+   lead states the motif (1-3-5-6-5, v2 rhythm: flash two steps, settle on 5,
+   pickup on 6-7) in bar 1 and restates it an octave up in bar 3, with running
+   answers in bars 2 and 4 — no bar is lead-free. A sixteenth hat ticks every
+   odd step. Two sine drones, D3 then A2, sit under all of it. The one unstruck
+   step in the loop is the last: a single-step lift back into the top, which is
+   also what keeps the "no track fills every step" rule true here. */
 const INTRO_A = mkPat(
-  0.17,
+  0.125,
   32,
-  [[16, 55, 16]],
+  [[73.42, 146.83], [73.42, 146.83], [73.42, 146.83], [55.0, 110.0]].flatMap(
+    ([r, o], b) => [
+      [b * 8, r, 2],
+      [b * 8 + 2, o, 2],
+      [b * 8 + 4, r, 2],
+      [b * 8 + 6, o, 2],
+    ],
+  ),
   [
     [0, 293.66, 1],
     [1, 349.23, 1],
     [2, 440.0, 1],
-    [3, 493.88, 3],
-    [6, 440.0, 1],
+    [3, 493.88, 2],
+    [5, 440.0, 1],
+    [6, 392.0, 1],
+    [7, 349.23, 1],
+    [8, 440.0, 1],
+    [9, 493.88, 1],
+    [10, 587.33, 2],
+    [12, 523.25, 1],
+    [13, 493.88, 1],
+    [14, 440.0, 1],
+    [15, 392.0, 1],
     [16, 587.33, 1],
     [17, 698.46, 1],
     [18, 880.0, 1],
-    [19, 987.77, 3],
-    [22, 880.0, 1],
-    [24, 493.88, 7],
+    [19, 987.77, 2],
+    [21, 880.0, 1],
+    [22, 783.99, 1],
+    [23, 698.46, 1],
+    [24, 659.26, 1],
+    [25, 587.33, 1],
+    [26, 523.25, 1],
+    [27, 493.88, 2],
+    [29, 440.0, 1],
+    [30, 392.0, 2],
   ],
-  [],
+  [0, 1, 2, 3]
+    .flatMap((b) => [1, 3, 5, 7].map((o) => b * 8 + o))
+    .filter((s) => s !== 31)
+    .map((s) => [s, 4800, 1]),
   ["triangle", 0.08, "triangle", 0.05, "triangle", 0.015, "sine", 0.03],
-  [[8, 146.83, 16]],
+  [
+    [0, 146.83, 16],
+    [16, 110.0, 16],
+  ],
 );
 /* JUNGLE — overgrown, humid, alive. D Dorian on D, STEP 0.129 (116 BPM), and
    its root is deliberately the menu's D2: room 1 is home, in the menu's own
