@@ -26,7 +26,7 @@ const near = (a, b, eps) => Math.abs(a - b) <= (eps == null ? 1e-9 : eps);
    sand's on the drone FIFTH (spec 1b). Inferring a tonic from bass[0] would
    silently measure the wrong intervals on those two. */
 const TONIC = Object.freeze({
-  intro: 293.66,
+  intro: 261.63,
   menu: 392.0,
   jungle: 293.66,
   ice: 349.23,
@@ -125,21 +125,13 @@ const soundsDeg = (P, f0, d) =>
   );
 
 /* ---- direction v3 (spec 0a / 1 / 6) ----
-   V3 grows one id per commit, exactly as the v2 sweeps did. Every v2-direction
-   sweep below quantifies over V2ONLY instead of over all ten, so the suite stays
-   green on a mixed tree and nothing is scoped away permanently. */
-const V3 = [
-  "menu",
-  "jungle",
-  "void",
-  "water",
-  "sand",
-  "ice",
-  "factory",
-  "arena",
-  "crown",
-];
-const V2ONLY = Object.keys(MUSIC_TRACKS).filter((k) => !V3.includes(k));
+   V3 grew one id per commit through three waves and is now the WHOLE SCORE, so
+   the shrinking V2ONLY list and every sweep that quantified over it are retired
+   with intro — the last track to be recomposed. Nothing was scoped away
+   permanently: each v2-direction sweep either became a v3 fact below (pulseGap
+   <= 1 -> bass spans cover every step; the HOOK/RETURN motif tables -> the
+   motif-ABSENCE pin) or already had an all-ten form in the R3c block. */
+const V3 = Object.keys(MUSIC_TRACKS);
 /* Declared per PATTERN, not per track: v3 gives A and B their own key, so the
    in-collection pin has to read a section's own tonic and collection. Neither
    pentatonic contains a 6-semitone pair or a semitone, which is why "no tritone
@@ -170,6 +162,7 @@ const V3KEY = {
   "arena.B": { f0: 293.66, set: DOR, name: "D Dorian" },
   "crown.A": { f0: 261.63, set: ION, name: "C Ionian" },
   "crown.B": { f0: 392.0, set: ION, name: "G Ionian" },
+  "intro.A": { f0: 261.63, set: HEX_MAJ, name: "C major hexatonic" },
 };
 /* Index in the declared collection, extended across octaves, so "three adjacent
    collection steps falling" is idx, idx-1, idx-2 read from ANY degree — which is
@@ -1551,78 +1544,96 @@ function installAC(ac) {
   );
 }
 
-// ---- intro: the cabinet powering up (D Dorian, PLAIN over the full band) ----
+// ---- intro: a short warm bed (C major hexatonic, quoting menu's head) ----
 {
   const T = MUSIC_TRACKS.intro,
     A = T.A,
     f0 = TONIC.intro;
   check(
-    "intro STEP 0.125 (120 BPM), LEN 32, sections [A], no B at all",
-    A.STEP === 0.125 &&
+    "intro STEP 0.140 -> 107.1 BPM, LEN 32, sections [A], no B at all",
+    A.STEP === 0.14 &&
       A.LEN === 32 &&
       JSON.stringify(T.sections) === '["A"]' &&
-      T.B === null,
-    A.STEP + "/" + A.LEN + "/" + JSON.stringify(T.sections),
+      T.B === null &&
+      15 / A.STEP >= 96 &&
+      15 / A.STEP <= 120,
+    A.STEP + " -> " + (15 / A.STEP).toFixed(1) + " BPM / " + A.LEN,
+  );
+  /* TONIC.intro moves 293.66 -> 261.63 with the rewrite: v2's intro was D
+     Dorian pedalling the dominant, v3's is C major hexatonic on C2. Every
+     interval pin here and the score-wide Ionian-pair sweep read this table, so
+     leaving it at D would silently measure the wrong degrees on this track and
+     nowhere else. The hexatonic has the 4th and NO leading tone, which is what
+     keeps intro clear of CROWN's pair while sharing its tonic. */
+  check(
+    "intro is C major hexatonic on C2 65.41 — the 4th, and no leading tone",
+    A.bass[0].f === 65.41 &&
+      f0 === 261.63 &&
+      soundsDeg(A, f0, 5) &&
+      !soundsDeg(A, f0, 11),
+    A.bass[0].f + " / tonic " + f0,
   );
   check(
-    "intro bass states the TONIC D2 from step 0 in straight eighths",
-    A.bass.length === 16 &&
-      A.bass[0].s === 0 &&
-      A.bass[0].f === 73.42 &&
-      A.bass.every((n) => n.s % 2 === 0),
-    A.bass.length + " @" + A.bass[0].s + "/" + A.bass[0].f,
+    "intro is three warm voices: triangle bass, triangle lead, sine pad, NO hat",
+    A.bass[0].t === "triangle" &&
+      A.lead[0].t === "triangle" &&
+      A.hat.length === 0 &&
+      !!A.pad &&
+      A.pad[0].t === "sine",
+    chansOf(A)
+      .map((a) => a[0].t)
+      .join(","),
   );
+  /* "The menu head once, UNACCOMPANIED at the top, then the band under it"
+     (spec §2). The v3 sweeps require a bass in every bar and bass spans over
+     every step, so "unaccompanied" is written as the thinnest bar the pattern
+     can have rather than as a silent one: bar 0 carries the head over two long
+     bass notes and nothing else, and the pad — the "band" — does not enter
+     until bar 1. */
   check(
-    "intro bass alternates root and octave — D2 73.42 against D3 146.83",
-    A.bass.filter((n) => n.s % 4 === 0).every((n) => n.f === 73.42 || n.f === 55) &&
+    "intro bar 0 is the head over two long bass notes; the pad enters at bar 1",
+    A.bass.filter((n) => n.s < 8).length === 2 &&
       A.bass
-        .filter((n) => n.s % 4 === 2)
-        .every((n) => n.f === 146.83 || n.f === 110),
-    [...new Set(A.bass.map((n) => n.f))].join(","),
+        .filter((n) => n.s < 8)
+        .every((n) => Math.round(n.d / A.STEP) === 4) &&
+      A.pad.every((n) => n.s >= 8) &&
+      A.lead.filter((n) => n.s < 8).length === 4,
+    A.bass.filter((n) => n.s < 8).length + " bass, pad@" + A.pad[0].s,
+  );
+  const head = (chan, s0) =>
+    figureAt(chan, s0, f0, [0, 2, 4, 6], [DEG1, DEG3, DEG5, DEG6]);
+  check(
+    "intro quotes MENU's head 1-3-5-6 on 0/2/4/6 — the one cross-reference",
+    head(A.lead, 0) &&
+      A.lead.find((n) => n.s === 0).f === 261.63,
+    A.lead
+      .filter((n) => n.s < 8)
+      .map((n) => n.f)
+      .join(","),
   );
   check(
-    "intro hat drives from the first bar — 15 odd-step ticks, not an empty array",
-    A.hat.length === 15 && A.hat.every((n) => n.s % 2 === 1),
-    A.hat.length,
-  );
-  check(
-    "intro bar 1 is the whole band — the motif arrives harmonized",
-    A.lead.some((n) => n.s < 8) &&
-      A.bass.some((n) => n.s < 8) &&
-      A.hat.some((n) => n.s < 8) &&
-      (A.pad || []).some((n) => n.s < 8),
-  );
-  check("intro states PLAIN on D4 at bar 0", motifV2At(A.lead, 0, f0));
-  const lo = Math.min(...A.lead.filter((n) => n.s < 8).map((n) => n.f)),
-    hi = Math.min(
-      ...A.lead.filter((n) => n.s >= 16 && n.s < 24).map((n) => n.f),
-    );
-  check(
-    "intro restates the motif an octave up at bar 2, and no bar is lead-free",
-    motifV2At(A.lead, 16, f0) &&
-      Math.abs(semi(hi, lo) - 12) <= 0.05 &&
+    "intro bass walks 0/4/6 from bar 1 on, and every bar carries lead and bass",
+    stepSet(A.bass) === "0,4,6" &&
+      A.bass.length === 11 &&
+      barsWithBass(A) === 4 &&
       barsWithLead(A) === 4,
-    lo + " -> " + hi + " / " + barsWithLead(A) + " bars",
+    A.bass.length + ":" + stepSet(A.bass),
   );
   check(
-    "intro pulse never gaps — bass and hat interlock across all 32 steps",
-    pulseGap(A) <= 1 && barsWithBass(A) === 4,
-    pulseGap(A) + "/" + barsWithBass(A),
+    "intro pad is three 8-step drones under bars 1-3",
+    A.pad.length === 3 &&
+      A.pad.map((n) => n.s).join(",") === "8,16,24" &&
+      A.pad.every((n) => Math.round(n.d / A.STEP) === 8),
+    JSON.stringify(A.pad.map((n) => [n.s, n.f])),
   );
   check(
-    "intro pad is two 16-step drones, D3 then A2",
-    A.pad &&
-      A.pad.length === 2 &&
-      A.pad[0].s === 0 &&
-      A.pad[1].s === 16 &&
-      near(A.pad[0].f, 146.83, 0.01) &&
-      near(A.pad[1].f, 110.0, 0.01) &&
-      A.pad.every((n) => Math.round(n.d / A.STEP) === 16),
-    JSON.stringify((A.pad || []).map((n) => [n.s, n.f])),
+    "intro holds its bed with no hat — bass onsets gap by three at most",
+    pulseGap(A) <= 3 && bassSpan(A).size === A.LEN,
+    pulseGap(A) + " / spans " + bassSpan(A).size + "/" + A.LEN,
   );
   check(
-    "intro is dense but not solid: 28-31 of its 32 steps",
-    occ(A) >= 28 && occ(A) <= 31,
+    "intro is a BED, not a track: 14-22 of its 32 steps",
+    occ(A) >= 14 && occ(A) <= 22,
     occ(A),
   );
   check("intro register lanes never cross", lanes(A));
@@ -1713,8 +1724,8 @@ function installAC(ac) {
      still sits at the TOP of the band, and it is still the only track whose hat
      strikes every even step, which is what CROWN's B quotes. */
   check(
-    "arena STEP 0.126 -> 119.0 BPM, A1 55.00 root, at the top of the v3 band",
-    A.STEP === 0.126 &&
+    "arena STEP 0.125 -> 120.0 BPM, A1 55.00 root, at the top of the v3 band",
+    A.STEP === 0.125 &&
       A.bass[0].f === 55 &&
       15 / A.STEP >= 96 &&
       15 / A.STEP <= 120,
@@ -2071,122 +2082,6 @@ function installAC(ac) {
     "exactly one sine lead in the whole score, and it is VOID",
     sineLead.length === 1 && sineLead[0] === "void",
     sineLead.join(","),
-  );
-  /* Direction v2's sweep, now SHRINKING one id per commit as v3 composes them
-     (it grew one id per commit through waves A and B). Every clause is a floor
-     on MOTION and a v3 track cannot honestly satisfy them — a spacious room is
-     allowed to be spacious — so they are quantified over the ids still carrying
-     v2 data rather than deleted, and the v3 block at the foot of this file
-     carries the facts that replace them. */
-  const ALL = V2ONLY;
-  check(
-    "v2, not-yet-composed ids: the rhythm section never leaves two steps unstruck",
-    ALL.every((k) => pulseGap(MUSIC_TRACKS[k].A) <= 1),
-    ALL.map((k) => k + ":" + pulseGap(MUSIC_TRACKS[k].A)).join(" "),
-  );
-  /* B sections count too — A-A-B-B is what a listener actually hears, and
-     three of the four hand-authored Bs carried a silent bar of their own that
-     no A-side pin could see. */
-  check(
-    "v2, not-yet-composed ids: every B section holds the pulse as well as its A",
-    ALL.every((k) => !MUSIC_TRACKS[k].B || pulseGap(MUSIC_TRACKS[k].B) <= 1),
-    ALL.filter((k) => MUSIC_TRACKS[k].B && pulseGap(MUSIC_TRACKS[k].B) > 1).join(","),
-  );
-  check(
-    "v2, not-yet-composed ids: every bar carries lead AND bass",
-    ALL.every((k) => {
-      const A = MUSIC_TRACKS[k].A,
-        b = A.LEN / 8;
-      return barsWithLead(A) === b && barsWithBass(A) === b;
-    }),
-    ALL.map(
-      (k) =>
-        k +
-        ":" +
-        barsWithLead(MUSIC_TRACKS[k].A) +
-        "/" +
-        barsWithBass(MUSIC_TRACKS[k].A),
-    ).join(" "),
-  );
-  check(
-    "v2, not-yet-composed ids: dense but never solid, and at least two waveforms",
-    ALL.every(
-      (k) =>
-        occ(MUSIC_TRACKS[k].A) < MUSIC_TRACKS[k].A.LEN &&
-        lanes(MUSIC_TRACKS[k].A) &&
-        waves(MUSIC_TRACKS[k].A) >= 2,
-    ),
-    ALL.map(
-      (k) =>
-        k +
-        ":" +
-        occ(MUSIC_TRACKS[k].A) +
-        "/" +
-        MUSIC_TRACKS[k].A.LEN +
-        " w" +
-        waves(MUSIC_TRACKS[k].A),
-    ).join(" "),
-  );
-  /* Hook presence, positional on every track — the whole point of one motif in
-     eight rotations is that the tune is the same tune everywhere. factory
-     states it in the BASS (the canon's first voice) and arena one step early
-     (ANTIC at 15); everyone else states it in the lead on a downbeat. Counting
-     matches anywhere would be satisfiable by a scale run, so each is named. */
-  const HOOK = {
-    intro: ["lead", 0],
-    menu: ["lead", 0],
-    jungle: ["lead", 0],
-    ice: ["lead", 0],
-    factory: ["bass", 0],
-    water: ["lead", 0],
-    arena: ["lead", 15],
-    sand: ["lead", 0],
-    void: ["lead", 0],
-    crown: ["lead", 0],
-  };
-  check(
-    "v2, not-yet-composed ids: every track states the motif where the spec puts it",
-    ALL.every((k) => {
-      const [ch, at] = HOOK[k];
-      return motifV2At(MUSIC_TRACKS[k].A[ch], at, TONIC[k]);
-    }),
-    ALL.filter((k) => {
-      const [ch, at] = HOOK[k];
-      return !motifV2At(MUSIC_TRACKS[k].A[ch], at, TONIC[k]);
-    }).join(","),
-  );
-  /* And it comes back inside one pass: nine of the ten state it a SECOND time,
-     at a position that is not the one the HOOK table just checked. intro is 32
-     steps long and restates at its own bar 3; factory answers in the lead 8
-     steps later; everyone else restates at the loop's midpoint. ARENA is
-     excluded by name rather than by re-checking step 15 — its anticipation
-     head is stated once by design, and asserting the same step twice would
-     read green while testing nothing. */
-  const RETURN = {
-    intro: 16,
-    menu: 32,
-    jungle: 32,
-    ice: 32,
-    factory: 8,
-    water: 32,
-    sand: 32,
-    void: 32,
-    crown: 32,
-  };
-  /* RET is V2ONLY minus arena, whose anticipation head is stated once by
-     design. The count clause is written against the FILTERED list, not against
-     V2ONLY.length - 1: once wave 3 composes arena (it goes first there, so
-     crown's hat quotation lands on the v3 arena) arena leaves V2ONLY and the
-     "- 1" would want a subtraction that no longer applies, reading red with an
-     empty detail string. */
-  const RET = Object.keys(RETURN).filter((k) => V2ONLY.includes(k));
-  check(
-    "v2, not-yet-composed ids bar arena: the hook returns inside a single pass",
-    RET.every((k) => motifV2At(MUSIC_TRACKS[k].A.lead, RETURN[k], TONIC[k])) &&
-      !RET.includes("arena") &&
-      RET.length === V2ONLY.filter((k) => k !== "arena").length,
-    RET.filter((k) => !motifV2At(MUSIC_TRACKS[k].A.lead, RETURN[k], TONIC[k]))
-      .join(","),
   );
 
 }
@@ -2659,10 +2554,10 @@ function installAC(ac) {
      arena cannot take .125 until intro leaves it. Listed in ladder order so a
      future move can see its neighbours. */
   const LADDER = {
-    arena: 0.126,
+    arena: 0.125,
     crown: 0.128,
     factory: 0.13,
-    intro: 0.125,
+    intro: 0.14,
     jungle: 0.132,
     ice: 0.135,
     sand: 0.148,
@@ -2720,7 +2615,7 @@ function installAC(ac) {
      SPANS rather than from onset count — the v3 block's "bass spans cover every
      step" is the fact that lets a medium-density track still never sag. */
   const BAND = {
-    intro: [28, 31],
+    intro: [14, 22],
     menu: [32, 44],
     jungle: [54, 62],
     ice: [28, 40],
@@ -2907,14 +2802,16 @@ function installAC(ac) {
         roots(B) !== roots(A)
       );
     }),
-    V3.map(
-      (k) =>
-        k +
-        ":" +
-        stepSet(MUSIC_TRACKS[k].A.bass) +
-        " vs " +
-        stepSet(MUSIC_TRACKS[k].B.bass),
-    ).join(" "),
+    V3.filter((k) => MUSIC_TRACKS[k].B)
+      .map(
+        (k) =>
+          k +
+          ":" +
+          stepSet(MUSIC_TRACKS[k].A.bass) +
+          " vs " +
+          stepSet(MUSIC_TRACKS[k].B.bass),
+      )
+      .join(" "),
   );
   /* "Different from the other one", pinned two ways. A Hz-list comparison
      between tracks in different keys is VACUOUSLY unequal and pins nothing; a

@@ -198,65 +198,65 @@ function mkPat(S, L, bass, lead, hat, mix, pad) {
 function tr(A, B, secs) {
   return Object.freeze({ A, B, sections: secs || MUSIC_SECTIONS });
 }
-/* INTRO — the cabinet powering up. D Dorian on D4, STEP 0.125 (120 BPM), 4 bars
-   of 32 steps, sections ["A"] and no B. The whole band is in at step 0: the
-   bass bounces straight eighths, root against its own octave (D2 73.42 on the
-   beats, D3 146.83 between them) and states the TONIC immediately rather than
-   pedalling the dominant; bar 4 lifts the pair to A1/A2 as a turnaround. The
-   lead states the motif (1-3-5-6-5, v2 rhythm: flash two steps, settle on 5,
-   pickup on 6-7) in bar 1 and restates it an octave up in bar 3, with running
-   answers in bars 2 and 4 — no bar is lead-free. A sixteenth hat ticks every
-   odd step. Two sine drones, D3 then A2, sit under all of it. The one unstruck
-   step in the loop is the last: a single-step lift back into the top, which is
-   also what keeps the "no track fills every step" rule true here. */
+/* INTRO — direction v3: a short warm bed. C MAJOR HEXATONIC on C2 65.41, STEP
+   0.140 (107.1 BPM), 4 bars of 32 steps, sections ["A"] and no B. v2's intro
+   was D Dorian at 120 BPM with a sixteenth hat on every odd step — a cabinet
+   powering up, which is a different brief from the one v3 gives it. This is
+   four bars nobody hears for more than a few seconds, so it does one thing:
+   it says hello.
+   Bar 0 is the MENU HEAD — 1-3-5-6, C E G A on steps 0/2/4/6 — the one
+   deliberate cross-reference in the score, the cabinet playing its own theme.
+   It is UNACCOMPANIED in the only sense the v3 sweeps allow: the bass must play
+   every bar and its spans must cover every step, so bar 0 carries the head over
+   two long bass notes and nothing else, and the pad (the "band") does not enter
+   until bar 1. From there the bass walks 0/4/6 and the lead answers in short
+   descending phrases.
+   No hat — the third calm room. Three sine drones under bars 1-3. The
+   collection is hexatonic rather than Ionian for the same reason menu's is:
+   it owns the 4th and NOT the leading tone, so intro can share crown's tonic
+   without becoming a second Ionian-pair track. Channel peaks sum to 0.161. */
 const INTRO_A = mkPat(
-  0.125,
+  0.14,
   32,
-  [[73.42, 146.83], [73.42, 146.83], [73.42, 146.83], [55.0, 110.0]].flatMap(
-    ([r, o], b) => [
-      [b * 8, r, 2],
-      [b * 8 + 2, o, 2],
-      [b * 8 + 4, r, 2],
-      [b * 8 + 6, o, 2],
-    ],
-  ),
   [
-    [0, 293.66, 1],
-    [1, 349.23, 1],
-    [2, 440.0, 1],
-    [3, 493.88, 2],
-    [5, 440.0, 1],
-    [6, 392.0, 1],
-    [7, 349.23, 1],
-    [8, 440.0, 1],
-    [9, 493.88, 1],
-    [10, 587.33, 2],
-    [12, 523.25, 1],
-    [13, 493.88, 1],
-    [14, 440.0, 1],
-    [15, 392.0, 1],
-    [16, 587.33, 1],
-    [17, 698.46, 1],
-    [18, 880.0, 1],
-    [19, 987.77, 2],
-    [21, 880.0, 1],
-    [22, 783.99, 1],
-    [23, 698.46, 1],
-    [24, 659.26, 1],
-    [25, 587.33, 1],
-    [26, 523.25, 1],
-    [27, 493.88, 2],
-    [29, 440.0, 1],
-    [30, 392.0, 2],
+    [0, 65.41, 4],
+    [4, 98.0, 4],
+    [8, 65.41, 4],
+    [12, 98.0, 2],
+    [14, 82.41, 2],
+    [16, 87.31, 4],
+    [20, 130.81, 2],
+    [22, 110.0, 2],
+    [24, 98.0, 4],
+    [28, 146.83, 2],
+    [30, 98.0, 2],
   ],
-  [0, 1, 2, 3]
-    .flatMap((b) => [1, 3, 5, 7].map((o) => b * 8 + o))
-    .filter((s) => s !== 31)
-    .map((s) => [s, 4800, 1]),
-  ["triangle", 0.08, "triangle", 0.05, "triangle", 0.015, "sine", 0.03],
   [
-    [0, 146.83, 16],
-    [16, 110.0, 16],
+    [0, 261.63, 2],
+    [2, 329.63, 2],
+    [4, 392.0, 2],
+    [6, 440.0, 2],
+    [8, 392.0, 2],
+    [10, 440.0, 2],
+    [12, 392.0, 1],
+    [13, 349.23, 1],
+    [14, 329.63, 2],
+    [16, 349.23, 2],
+    [18, 440.0, 2],
+    [20, 523.25, 2],
+    [22, 440.0, 2],
+    [24, 293.66, 2],
+    [26, 329.63, 2],
+    [28, 392.0, 1],
+    [29, 440.0, 1],
+    [30, 523.25, 2],
+  ],
+  [],
+  ["triangle", 0.08, "triangle", 0.055, "triangle", 0.012, "sine", 0.026],
+  [
+    [8, 196.0, 8],
+    [16, 220.0, 8],
+    [24, 293.66, 8],
   ],
 );
 /* JUNGLE — direction v3: bouncy and bright. D MAJOR PENTATONIC (D E F# A B),
@@ -687,8 +687,8 @@ const WATER_B = mkPat(
    this figure; CROWN's B quotes the step pattern verbatim as its victory lap
    past the room the player fought. */
 const EVEN8 = Object.freeze(Array.from({ length: 32 }, (_, i) => i * 2));
-/* ARENA — direction v3: energetic, but SOFT-TIMBRED. A DORIAN on A, STEP 0.126
-   (119.0 BPM, the top of the band). This is the track v2 got most wrong for v3
+/* ARENA — direction v3: energetic, but SOFT-TIMBRED. A DORIAN on A, STEP 0.125
+   (120.0 BPM, the top of the band). This is the track v2 got most wrong for v3
    and the one v2 called its own reference: the loudest in the score (channel
    peaks summed to 0.268), the fastest (140 BPM), and the only pattern with two
    `square` channels AND a `sawtooth` pad. All of that is withdrawn. Energy is
@@ -708,7 +708,7 @@ const EVEN8 = Object.freeze(Array.from({ length: 32 }, (_, i) => i * 2));
    Channel peaks sum to 0.196 — the loudest of the ten under v3, and still
    0.072 below what this same room used to be. */
 const ARENA_A = mkPat(
-  0.126,
+  0.125,
   64,
   [
     [55.0, 110.0, 82.41],
@@ -770,7 +770,7 @@ const ARENA_A = mkPat(
    OFF the beat onto 1/3/5 so the room's drive comes from the backbeat instead
    of the downbeat. Step 7 is B's deliberate hole. */
 const ARENA_B = mkPat(
-  0.126,
+  0.125,
   64,
   [
     [73.42, 146.83, 110.0],
