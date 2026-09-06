@@ -1832,18 +1832,22 @@ function installAC(ac) {
     occ(A) >= 34 && occ(A) <= 46 && occ(B) >= 34 && occ(B) <= 46,
     occ(A) + "/" + occ(B),
   );
-  /* Still the sparsest of the ten by RELATIVE pattern density — a comparison,
-     not a ceiling, so it survives a composer making the track denser. */
-  const others = Object.keys(MUSIC_TRACKS).filter(
-    (k) => k !== "void" && k !== "intro",
-  );
-  const rhythm = (P) => new Set([...P.bass, ...P.hat].map((n) => n.s)).size;
+  /* v2 pinned void's identity as "the sparsest of the ten by rhythm-section
+     density" — bass+hat striking fewer steps than anyone else's. That claim
+     does NOT survive v3: the spec gives water and sand no hat at all, so their
+     rhythm sections are bass onsets only and will read sparser than void's 32
+     the moment wave 2 lands — and the failure would name *water* while the
+     disagreement is void's. Retired here rather than left as a wave-2 trap.
+     What actually distinguishes void under v3 is that it is the QUIETEST track
+     in the game, and that is pinned as a comparison rather than as a ceiling so
+     it survives a composer making the track denser. */
+  const others = Object.keys(MUSIC_TRACKS).filter((k) => k !== "void");
   check(
-    "void's rhythm section strikes fewer steps than any other 64-step track's",
-    others.every((k) => rhythm(MUSIC_TRACKS[k].A) > rhythm(A)),
-    rhythm(A) +
+    "void is quieter than every other track — a comparison, not a ceiling",
+    others.every((k) => peakSum(MUSIC_TRACKS[k].A) > peakSum(A)),
+    peakSum(A).toFixed(3) +
       " vs " +
-      others.map((k) => k + ":" + rhythm(MUSIC_TRACKS[k].A)).join(" "),
+      others.map((k) => k + ":" + peakSum(MUSIC_TRACKS[k].A).toFixed(3)).join(" "),
   );
   check(
     "void B drops to E minor pentatonic and re-cuts the bed to 0/5 and 3/7",
@@ -2107,12 +2111,18 @@ function installAC(ac) {
     void: 32,
     crown: 32,
   };
+  /* RET is V2ONLY minus arena, whose anticipation head is stated once by
+     design. The count clause is written against the FILTERED list, not against
+     V2ONLY.length - 1: once wave 3 composes arena (it goes first there, so
+     crown's hat quotation lands on the v3 arena) arena leaves V2ONLY and the
+     "- 1" would want a subtraction that no longer applies, reading red with an
+     empty detail string. */
   const RET = Object.keys(RETURN).filter((k) => V2ONLY.includes(k));
   check(
     "v2, not-yet-composed ids bar arena: the hook returns inside a single pass",
     RET.every((k) => motifV2At(MUSIC_TRACKS[k].A.lead, RETURN[k], TONIC[k])) &&
       !RET.includes("arena") &&
-      RET.length === V2ONLY.length - 1,
+      RET.length === V2ONLY.filter((k) => k !== "arena").length,
     RET.filter((k) => !motifV2At(MUSIC_TRACKS[k].A.lead, RETURN[k], TONIC[k]))
       .join(","),
   );

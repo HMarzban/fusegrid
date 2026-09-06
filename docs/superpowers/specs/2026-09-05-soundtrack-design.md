@@ -402,6 +402,7 @@ wave A did, and shrinks by one id per commit.
 | 6 | tempo ladder `.107 … .144` (104–140 BPM) | re-valued to the v3 ladder; the **distinctness** clause is unchanged and is what forces the migration order | re-valued |
 | 7 | "exactly one sawtooth bass, and it is FACTORY" | **deleted** at the end of wave 2 — v3 has no sawtooth music timbre. Kept until factory is recomposed, because it is true of the shipped data until then | scoped, then deleted |
 | 8 | "exactly one sine lead, and it is VOID" | **kept**, unchanged — void keeps the sine lead | — |
+| 8a | "VOID is the sparsest of the ten by rhythm-section density" (`bass ∪ hat` strikes fewer steps than anyone else's) | **retired.** It does not survive v3: `water` and `sand` get **no hat**, so their rhythm sections are bass onsets only and will read sparser than void's 32 the moment wave 2 lands — and the failure would name *water* while the disagreement is void's. Replaced by the v3-correct identity claim, **void is quieter than every other track** (channel-peak sum, a comparison rather than a ceiling, so it survives a composer making the track denser): 0.132 against 0.157–0.268 | preview |
 | 9 | menu `A.bass.length === 40` on `0/2/3/4/6`; `A.hat.length === 32` even; `A.lead` 44–56 | `A.bass.length === 34` on `0/2/4/6` + a step-7 pickup in bars 4 and 8; `A.hat.length === 16` on `2/6`; `A.lead.length === 35` | re-valued |
 | 10 | menu roots `73.42 / 49.00 / 55.00 / 73.42` at steps 0/8/16/24 | `98.00 / 82.41 / 65.41 / 73.42` — G–Em–C–D | re-valued |
 | 11 | `B.hat.length === 32`, even steps | `=== 16`, on `2/6`, same skeleton as A | re-valued |
@@ -593,6 +594,21 @@ abstraction or a `sched.js` extraction (§3). Anything reaching `src/core` or
   Minor pentatonic has no 6̂, so the detector cannot fire whatever void plays.
   The real melodic content is pinned by void's own falling-collection-steps hook,
   which is why `degIdx` exists.
+- **One v2 pin was a wave-2 landmine and was defused in the preview wave, not
+  left for the commit that would trip it.** VOID's "sparsest by rhythm-section
+  density" pin compares `bass ∪ hat` onset counts across every 64-step track,
+  and §2 gives `water` and `sand` no hat — so the first wave-2 commit would
+  have gone red with a message naming *water* while the actual disagreement was
+  void's identity claim. Retired and replaced by the quietest-track comparison
+  (§5 row 8a). The general lesson: a cross-track pin written for one track's
+  identity fails on the *other* track, and the failure message points the
+  wrong way.
+- **A second latent trap, same shape, same fix.** The v2 hook-return sweep
+  asserted `RET.length === V2ONLY.length - 1`, encoding "arena is the one
+  not-yet-composed id absent from the RETURN table". Wave 3 composes `arena`
+  first, at which point arena leaves `V2ONLY` and the subtraction no longer
+  applies — red, with an empty detail string. Rewritten against the filtered
+  list, so it stays true through every wave.
 - **Roots deliberately did not move.** v3 already changes tempo, mode, timbre,
   rhythm and melody on every track; moving the root ladder as well would make the
   biome-root pin a second migration with its own ordering constraints, for no
