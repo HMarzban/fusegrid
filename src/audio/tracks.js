@@ -116,13 +116,21 @@ export const MUSIC_PATTERN = (() => {
    on the same steps with a genuinely different harmony rather than a pitch
    shift; the bass arpeggiates D-F#-A in bars 2, 6 and 8. Nothing breathes here
    either — B is as dense as A, one free step at 63. This is the template the
-   other three hand-authored B sections follow. */
+   other three hand-authored B sections follow, and the one place the template
+   deliberately breaks: B's bass accents land on 0/1/3/4/6 where A's land on
+   0/2/3/4/6. A pitch-mapped B on an identical rhythm reads to a listener as
+   repetition however far the harmony travels, so B gets its own accent. */
 export const MUSIC_PATTERN_B = (() => {
   const S = 0.121,
     L = 64,
     bass = [],
     hat = [];
-  /* per bar, the five pitches in step order 0,2,3,4,6 */
+  /* per bar, the five pitches in step order 0,1,3,4,6 — A's own order is
+     0,2,3,4,6, and this one step of difference is what stops the whole 33 s
+     A-A-B-B cycle from having a single rhythmic profile. B pushes its octave
+     a sixteenth EARLIER than A does, so the tresillo leans forward here and
+     settles back there; the note count, the mix and the harmony are untouched,
+     which is what keeps B interleavable with A as one seamless loop. */
   const bars = [
     [49, 98.0, 49, 73.42, 98.0],
     [73.42, 92.5, 73.42, 110.0, 146.83],
@@ -136,10 +144,10 @@ export const MUSIC_PATTERN_B = (() => {
   bars.forEach((c, b) => {
     const o = b * 8;
     bass.push(
-      [o, c[0], 2],
-      [o + 2, c[1], 1],
-      [o + 3, c[2], 2],
-      [o + 4, c[3], 1],
+      [o, c[0], 1],
+      [o + 1, c[1], 2],
+      [o + 3, c[2], 1],
+      [o + 4, c[3], 2],
       [o + 6, c[4], 2],
     );
   });

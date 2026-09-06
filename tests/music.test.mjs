@@ -1584,6 +1584,23 @@ function installAC(ac) {
   );
   check("menu register lanes never cross, A and B", lanes(A) && lanes(B));
   check("menu B is hand-authored — its hat is not A's array", B.hat !== A.hat);
+  /* Wave A shipped B as A's contour read through a scale map: a real
+     modulation, but landing on the SAME steps over the same bass skeleton, so
+     the whole 33 s A-A-B-B cycle had one rhythmic profile — and a listener
+     clocks a substituted repeat as repetition however far the harmony travels.
+     B's bass now accents 0/1/3/4/6 against A's 0/2/3/4/6: the octave arrives a
+     sixteenth earlier, so B leans forward where A settles back. Note count,
+     mix, harmony and the hat are untouched, which is what keeps the two
+     interleavable, so this is pinned as a DIFFERENCE, not as a step list. */
+  const acc = (P) => [...new Set(P.bass.map((n) => n.s % 8))].sort().join(",");
+  check(
+    "menu B is not a rhythmic copy of A — its bass accents fall elsewhere",
+    acc(A) !== acc(B) &&
+      B.bass.length === A.bass.length &&
+      JSON.stringify(A.hat.map((n) => n.s)) ===
+        JSON.stringify(B.hat.map((n) => n.s)),
+    acc(A) + " vs " + acc(B),
+  );
 }
 
 // ---- arena: aggressive, combat-ready (A Aeolian, ANTIC) ----
