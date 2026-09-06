@@ -631,7 +631,15 @@ Accepted, v2, only when a listener can say all four:
 2. **The tune is hummable after one loop**, and its statements are frequent
    enough to learn — not one development visited once a pass.
 3. **The bass bounces.** It is the moving voice on every track, and no two tracks
-   share a bass pattern.
+   share a **rhythm-section profile** — bass steps *and* durations *and* timbre
+   *and* hat placement, taken together. Bass step-positions alone are not the
+   unit: `jungle` and `factory` both run the 3+3+2 on 0/3/6 by design (the
+   research assigns the tresillo to one and the engine ostinato to the other),
+   and they are told apart by everything around those steps — jungle's two-step
+   square against a hat on 1/4/7, factory's three-step sawtooth against a hat on
+   every even step. An earlier wording of this criterion said "no two tracks
+   share a bass pattern," which the direction's own per-track prescriptions
+   already contradict; it is corrected here rather than in the data.
 4. **Mood matches the table** blind — carried by mode, timbre and register,
    with every track inside the same tempo band.
 

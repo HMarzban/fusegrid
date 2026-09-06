@@ -1568,6 +1568,8 @@ function installAC(ac) {
   check("intro register lanes never cross", lanes(A));
 }
 {
+  /* Wave-B note: crown's own commit moves it to .110 and retires this guard —
+     rewrite it then, do not delete the distinctness thought behind it. */
   check(
     "wave-B pre-move: crown .113 and sand .139 still hold, so intro's .125 is free",
     MUSIC_TRACKS.sand.A.STEP === 0.139 && MUSIC_TRACKS.crown.A.STEP === 0.113,
