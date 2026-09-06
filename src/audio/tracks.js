@@ -403,92 +403,94 @@ const JUNGLE_B = mkPat(
     [32, 220.0, 32],
   ],
 );
-/* ICE — brittle, glittering. F Lydian on F, STEP 0.129 (116 BPM). The cold is
-   the mode and the register, not an absent low end: the bass is a full
-   root-fifth alternation on EVERY off-eighth — steps 1, 3, 5 and 7 of every bar,
-   each ringing an eighth long so the line connects rather than ticks — and it is
-   the only bass in the score that lives entirely off the beat. The 6200 Hz hat
-   answers it with a bell on every even step, so the two voices cover the bar
-   between them and the pulse never gaps; the hat skips step 62 and nothing else
-   plays there, which is the loop's one deliberate hole. (A first cut put the
-   bell only on 0 and 4 and left step 6 of EVERY bar unstruck: the offline render
-   showed 34 sub-50 dB holes, one per bar — a rest heard as a feature, which is
-   exactly what this direction withdraws.) The lead states the motif at normal
-   speed (v2 rhythm) at bars 1 and 5, two octaves above the bass and never below
-   C5. The sine
-   pad holds Lydian chord tones including the raised fourth (B3), the glassy note
-   that names the mode. Nothing here reaches for a perfect fourth above F — that
-   Bb would collide with CROWN's Ionian-pair pin, and Lydian does not want it. */
+/* ICE — direction v3: bell-like and high. F LYDIAN on F, STEP 0.135 (111.1
+   BPM). v2 read "ice" as brittle and bought it with a bass bouncing on every
+   off-eighth under a 6200 Hz bell on every even step — 63 onsets a loop, which
+   is a hailstorm, not a bell. A bell needs air around it, so v3 subtracts
+   onsets rather than volume: the bass is ONE note a bar ringing all eight steps
+   (the sparsest onset grid in the score, and its groove signature), the hat is
+   eight sine glints on the half-bar, and everything else the room has is in the
+   lead's register.
+   The lead is ARPEGGIOS, NOT SCALES: 32 notes on the even steps, every one
+   above C5, and no two consecutive notes closer than a minor third — the line
+   cannot walk stepwise even by accident, which is the whole difference between
+   a bell and a run. It is written as a strike and its ring: each half-bar
+   states a chord tone and answers it a fourth or a fifth away, and the four
+   strikes of a two-bar group spell the hook 1-3-5-7 (F A C E) rising, at bars
+   0 and 4.
+   The sine pad holds one Lydian tone per two bars, including the raised fourth
+   B3 246.94 that names the mode, entering where the bass is on A and G so the
+   sharp 4 never sounds struck against the tonic. Nothing reaches for Bb: a
+   perfect fourth above F, on top of the leading tone Lydian already owns, would
+   make ice a second Ionian-pair track and break CROWN's uniqueness pin.
+   Channel peaks sum to 0.162. */
 const ICE_A = mkPat(
-  0.129,
+  0.135,
   64,
-  [
-    [87.31, 130.81],
-    [87.31, 130.81],
-    [98.0, 146.83],
-    [110.0, 164.81],
-    [87.31, 130.81],
-    [87.31, 130.81],
-    [98.0, 146.83],
-    [123.47, 164.81],
-  ].flatMap(([r, q], b) => [
-    [b * 8 + 1, r, 2],
-    [b * 8 + 3, q, 2],
-    [b * 8 + 5, r, 2],
-    [b * 8 + 7, q, 2],
+  [87.31, 87.31, 110.0, 98.0, 87.31, 130.81, 98.0, 110.0].map((f, b) => [
+    b * 8,
+    f,
+    8,
   ]),
   [
-    [0, 698.46, 1],
-    [1, 880.0, 1],
-    [2, 1046.5, 1],
-    [3, 1174.66, 2],
-    [5, 1046.5, 1],
-    [8, 987.77, 1],
-    [9, 1046.5, 1],
-    [10, 880.0, 1],
-    [11, 783.99, 2],
-    [13, 698.46, 1],
-    [16, 880.0, 1],
-    [17, 987.77, 1],
-    [18, 1046.5, 1],
-    [19, 1174.66, 2],
-    [21, 1046.5, 1],
-    [24, 987.77, 1],
-    [25, 880.0, 1],
-    [26, 783.99, 1],
-    [27, 698.46, 2],
-    [29, 659.26, 1],
-    [32, 698.46, 1],
-    [33, 880.0, 1],
-    [34, 1046.5, 1],
-    [35, 1174.66, 2],
-    [37, 1046.5, 1],
-    [40, 1174.66, 1],
-    [41, 1046.5, 1],
-    [42, 987.77, 1],
-    [43, 880.0, 2],
-    [45, 783.99, 1],
-    [48, 698.46, 1],
-    [49, 783.99, 1],
-    [50, 880.0, 1],
-    [51, 987.77, 2],
-    [53, 1046.5, 1],
-    [56, 1046.5, 1],
-    [57, 987.77, 1],
-    [58, 880.0, 1],
-    [59, 783.99, 2],
-    [61, 698.46, 1],
-  ],
-  [0, 1, 2, 3, 4, 5, 6, 7]
-    .flatMap((b) => [0, 2, 4, 6].map((o) => b * 8 + o))
-    .filter((s) => s !== 62)
-    .map((s) => [s, 6200, 1]),
-  ["triangle", 0.08, "triangle", 0.06, "triangle", 0.015, "sine", 0.03],
+    [698.46, 1046.5, 880.0, 1318.51],
+    [1046.5, 783.99, 1318.51, 987.77],
+    [1174.66, 880.0, 1046.5, 783.99],
+    [987.77, 1318.51, 880.0, 1174.66],
+    [698.46, 1046.5, 880.0, 1396.91],
+    [1046.5, 880.0, 1318.51, 783.99],
+    [1174.66, 783.99, 1046.5, 880.0],
+    [1318.51, 987.77, 783.99, 1046.5],
+  ].flatMap((c, b) => c.map((f, i) => [b * 8 + i * 2, f, 2])),
+  [0, 1, 2, 3, 4, 5, 6, 7].map((b) => [b * 8 + 4, 6000, 1]),
+  ["triangle", 0.07, "triangle", 0.055, "sine", 0.012, "sine", 0.025],
   [
-    [0, 349.23, 12],
-    [16, 246.94, 12],
-    [32, 261.63, 12],
-    [48, 329.63, 12],
+    [0, 220.0, 16],
+    [16, 246.94, 16],
+    [32, 261.63, 16],
+    [48, 220.0, 16],
+  ],
+);
+/* ICE B — hand-authored, replacing the whole-tone transposition: a transp B
+   shares A's hat array by identity and cannot re-cut anything. B lifts a fifth
+   to C LYDIAN, which swaps F natural for F# and keeps the mode's colour from
+   the other end, HALVES the bass to two four-step notes on 0 and 4 so the room
+   starts to move, and shifts the glint from the half-bar to step 2. The lead
+   keeps its strike-and-ring shape and answers A's rising groups with falling
+   ones. */
+const ICE_B = mkPat(
+  0.135,
+  64,
+  [
+    [130.81, 98.0],
+    [130.81, 98.0],
+    [110.0, 82.41],
+    [98.0, 73.42],
+    [130.81, 98.0],
+    [92.5, 123.47],
+    [110.0, 82.41],
+    [98.0, 130.81],
+  ].flatMap(([r, q], b) => [
+    [b * 8, r, 4],
+    [b * 8 + 4, q, 4],
+  ]),
+  [
+    [1046.5, 783.99, 1318.51, 880.0],
+    [783.99, 1174.66, 987.77, 1318.51],
+    [880.0, 1318.51, 783.99, 1046.5],
+    [739.99, 987.77, 659.26, 987.77],
+    [1046.5, 783.99, 1318.51, 987.77],
+    [1174.66, 783.99, 1046.5, 739.99],
+    [987.77, 1318.51, 880.0, 1174.66],
+    [783.99, 1046.5, 659.26, 1046.5],
+  ].flatMap((c, b) => c.map((f, i) => [b * 8 + i * 2, f, 2])),
+  [0, 1, 2, 3, 4, 5, 6, 7].map((b) => [b * 8 + 2, 6000, 1]),
+  ["triangle", 0.07, "triangle", 0.055, "sine", 0.012, "sine", 0.025],
+  [
+    [0, 329.63, 16],
+    [16, 369.99, 16],
+    [32, 392.0, 16],
+    [48, 329.63, 16],
   ],
 );
 /* FACTORY — mechanical, cold competence. E Phrygian on E, STEP 0.114 (132 BPM),
@@ -1262,7 +1264,7 @@ export const MUSIC_TRACKS = Object.freeze({
   intro: tr(INTRO_A, null, Object.freeze(["A"])),
   menu: tr(MUSIC_PATTERN, MUSIC_PATTERN_B, MUSIC_SECTIONS),
   jungle: tr(JUNGLE_A, JUNGLE_B),
-  ice: tr(ICE_A, transp(ICE_A, 1.122462)),
+  ice: tr(ICE_A, ICE_B),
   factory: tr(FACTORY_A, transp(FACTORY_A, 0.890899)),
   water: tr(WATER_A, WATER_B),
   arena: tr(ARENA_A, ARENA_B),

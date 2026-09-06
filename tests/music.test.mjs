@@ -128,7 +128,7 @@ const soundsDeg = (P, f0, d) =>
    V3 grows one id per commit, exactly as the v2 sweeps did. Every v2-direction
    sweep below quantifies over V2ONLY instead of over all ten, so the suite stays
    green on a mixed tree and nothing is scoped away permanently. */
-const V3 = ["menu", "jungle", "void", "water", "sand"];
+const V3 = ["menu", "jungle", "void", "water", "sand", "ice"];
 const V2ONLY = Object.keys(MUSIC_TRACKS).filter((k) => !V3.includes(k));
 /* Declared per PATTERN, not per track: v3 gives A and B their own key, so the
    in-collection pin has to read a section's own tonic and collection. Neither
@@ -137,7 +137,8 @@ const V2ONLY = Object.keys(MUSIC_TRACKS).filter((k) => !V3.includes(k));
 const PENT_MAJ = [0, 2, 4, 7, 9],
   PENT_MIN = [0, 3, 5, 7, 10],
   HEX_MAJ = [0, 2, 4, 5, 7, 9],
-  MIXO = [0, 2, 4, 5, 7, 9, 10];
+  MIXO = [0, 2, 4, 5, 7, 9, 10],
+  LYD = [0, 2, 4, 6, 7, 9, 11];
 const V3KEY = {
   "menu.A": { f0: 392.0, set: HEX_MAJ, name: "G major hexatonic" },
   "menu.B": { f0: 293.66, set: PENT_MAJ, name: "D major pentatonic" },
@@ -149,6 +150,8 @@ const V3KEY = {
   "water.B": { f0: 349.23, set: PENT_MAJ, name: "F major pentatonic" },
   "sand.A": { f0: 329.63, set: MIXO, name: "E Mixolydian" },
   "sand.B": { f0: 440.0, set: MIXO, name: "A Mixolydian" },
+  "ice.A": { f0: 349.23, set: LYD, name: "F Lydian" },
+  "ice.B": { f0: 523.25, set: LYD, name: "C Lydian" },
 };
 /* Index in the declared collection, extended across octaves, so "three adjacent
    collection steps falling" is idx, idx-1, idx-2 read from ANY degree — which is
@@ -1992,8 +1995,17 @@ function installAC(ac) {
   /* jungle joined HAND with its v3 rewrite: a transposed B shares A's hat array
      by identity and therefore cannot re-cut a rhythm, which is exactly the
      sameness v3 exists to remove. ice/factory/water/sand follow on wave 2. */
-  const HAND = ["menu", "jungle", "arena", "void", "crown", "water", "sand"];
-  const TRANSP = ["ice", "factory"];
+  const HAND = [
+    "menu",
+    "jungle",
+    "arena",
+    "void",
+    "crown",
+    "water",
+    "sand",
+    "ice",
+  ];
+  const TRANSP = ["factory"];
   check(
     "hand-authored B: each of these owns a distinct hat array",
     HAND.every((k) => MUSIC_TRACKS[k].B.hat !== MUSIC_TRACKS[k].A.hat),
@@ -2131,68 +2143,84 @@ function installAC(ac) {
 
 }
 
-// ---- ice: brittle, echoing (F Lydian, AUG — register separation is the idea) ----
+// ---- ice: bell-like and high (F Lydian, arpeggios over one note a bar) ----
 {
   const T = MUSIC_TRACKS.ice,
     A = T.A,
     B = T.B,
     f0 = TONIC.ice;
   check(
-    "ice STEP 0.129 (116 BPM), F2 87.31 root, B up a whole tone",
-    A.STEP === 0.129 &&
+    "ice STEP 0.135 -> 111.1 BPM, F2 87.31 root, inside the v3 96-120 band",
+    A.STEP === 0.135 &&
       A.bass[0].f === 87.31 &&
-      Math.abs(B.bass[0].f / A.bass[0].f - 1.122462) < 1e-9,
-    A.STEP + "/" + A.bass[0].f,
+      15 / A.STEP >= 96 &&
+      15 / A.STEP <= 120,
+    A.STEP + " -> " + (15 / A.STEP).toFixed(1) + " BPM / " + A.bass[0].f,
+  );
+  /* v2 read "ice" as brittle and bought it with a bass bouncing on every
+     off-eighth and a 6200 Hz bell on every even step — 63 onsets a loop. v3
+     reads it as bell-like, and a bell needs air around it: the bass is now ONE
+     note a bar, ringing all eight steps, the single sparsest onset grid in the
+     score, and the hat is eight sine glints on the half-bar. */
+  check(
+    "ice bass is low and slow — one note a bar, ringing the whole eight steps",
+    A.bass.length === 8 &&
+      stepSet(A.bass) === "0" &&
+      barsWithBass(A) === 8 &&
+      A.bass.every((n) => Math.round(n.d / A.STEP) === 8),
+    A.bass.length + ":" + stepSet(A.bass),
   );
   check(
-    "ice bass bounces on every off-eighth — 32 notes, every one on an odd step",
-    A.bass.length === 32 &&
-      A.bass.every((n) => n.s % 2 === 1) &&
-      barsWithBass(A) === 8,
-    A.bass.length + " notes @" + [...new Set(A.bass.map((n) => n.s % 8))].sort().join(","),
+    "ice hat is a sine glint on the half-bar only — eight in the whole loop",
+    A.hat.length === 8 &&
+      A.hat.every((n) => n.s % 8 === 4 && n.t === "sine"),
+    A.hat.length + ":" + stepSet(A.hat),
   );
   check(
-    "ice bass alternates root and fifth — and never sounds a perfect fourth",
-    A.bass.filter((n) => n.s % 4 === 1).length === 16 &&
-      !soundsDeg({ bass: A.bass, lead: [], pad: [] }, f0, 5),
-    [...new Set(A.bass.map((n) => n.f))].join(","),
-  );
-  check(
-    "ice lead lives above C5 — a bright register over a bouncing bass",
-    A.lead.length > 0 && A.lead.every((n) => n.f >= 523.25),
+    "ice lead lives above C5 — the brightest register in the score",
+    A.lead.length === 32 && A.lead.every((n) => n.f >= 523.25),
     Math.min(...A.lead.map((n) => n.f)),
   );
+  /* ARPEGGIOS, NOT SCALES (spec §2): every lead note is at least three
+     semitones from the one before it, so the line cannot walk stepwise even by
+     accident — which is the difference between a bell and a run. */
   check(
-    "ice states the motif at NORMAL speed at bars 0 and 4 — AUG is withdrawn",
-    motifV2At(A.lead, 0, f0) && motifV2At(A.lead, 32, f0),
-    motifV2Head(A.lead, f0, 64),
+    "ice's lead leaps, never steps — no interval under a minor third",
+    A.lead.every(
+      (n, i) => i === 0 || Math.abs(semi(n.f, A.lead[i - 1].f)) >= 3 - 0.05,
+    ),
+    [...new Set(A.lead.slice(1).map((n, i) =>
+      Math.round(Math.abs(semi(n.f, A.lead[i].f))),
+    ))].sort((x, y) => x - y).join(","),
+  );
+  const bell = (chan, s0) =>
+    figureAt(chan, s0, f0, [0, 4, 8, 12], [DEG1, DEG3, DEG5, [11]]);
+  check(
+    "ice's hook is 1-3-5-7 (F A C E) rising across two bars, at bars 0 and 4",
+    bell(A.lead, 0) && bell(A.lead, 32),
   );
   check(
-    "ice pad sounds the Lydian sharp 4 — the glassy, uncanny tone",
+    "ice pad holds the Lydian sharp 4 — the glassy note that names the mode",
     !!A.pad && A.pad.some((n) => isDeg(n.f, f0, [6])),
     (A.pad || []).map((n) => pcOf(n.f, f0).toFixed(1)).join(","),
   );
   check(
-    "ice hat is a bell on every even step at 6200 Hz, against the off-beat bass",
-    A.hat.length === 31 &&
-      A.hat.every((n) => n.s % 2 === 0 && n.f === 6200) &&
-      !A.hat.some((n) => n.s === 62),
-    A.hat.length + ":" + [...new Set(A.hat.map((n) => n.s % 8))].sort().join(","),
+    "ice's sparse grid still holds: bass plus glint gap by three at most",
+    pulseGap(A) <= 3 && pulseGap(B) <= 3 && barsWithLead(A) === 8,
+    pulseGap(A) + "/" + pulseGap(B),
   );
   check(
-    "ice pulse never gaps — the bell and the off-bass cover it between them",
-    pulseGap(A) <= 1 && barsWithLead(A) === 8,
-    pulseGap(A) + "/" + barsWithLead(A),
+    "ice is airy, not brittle: 28-40 of 64 steps",
+    occ(A) >= 28 && occ(A) <= 40,
+    occ(A) + "/" + occ(B),
   );
   check(
-    "ice bass notes ring an eighth each, so the pulse connects rather than ticks",
-    A.bass.every((n) => Math.round(n.d / A.STEP) === 2),
-    [...new Set(A.bass.map((n) => Math.round(n.d / A.STEP)))].join(","),
-  );
-  check(
-    "ice is dense but not solid: 58-63 of 64 steps",
-    occ(A) >= 58 && occ(A) <= 63,
-    occ(A),
+    "ice B is hand-authored now — C Lydian, bass halved to 0/4, hat moved to 2",
+    B.hat !== A.hat &&
+      stepSet(B.bass) === "0,4" &&
+      stepSet(B.hat) === "2" &&
+      B.bass[0].f === 130.81,
+    stepSet(A.bass) + " vs " + stepSet(B.bass),
   );
   check("ice register lanes never cross, A and B", lanes(A) && lanes(B));
 }
@@ -2550,7 +2578,7 @@ function installAC(ac) {
     factory: 0.114,
     intro: 0.125,
     jungle: 0.132,
-    ice: 0.129,
+    ice: 0.135,
     sand: 0.148,
     menu: 0.137,
     water: 0.144,
@@ -2615,7 +2643,7 @@ function installAC(ac) {
     intro: [28, 31],
     menu: [32, 44],
     jungle: [54, 62],
-    ice: [58, 63],
+    ice: [28, 40],
     factory: [56, 62],
     water: [34, 46],
     arena: [56, 62],
