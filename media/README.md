@@ -47,7 +47,12 @@ row, the CORE/PLUS/MAX chips and the PLAY IN THE BROWSER pill are the
 original, unmodified pixels (restored per-pixel from the previous `og.png`
 inside their row bands after a full repaint, so no trace of the old
 humanoid-era board bleeds through the gaps around the text). Card stays
-fully opaque (0 pixels below alpha 255).
+fully opaque (0 pixels below alpha 255). Disclosed: the dark background
+outside the text glyphs (card chrome, not game pixels) is a calibrated
+radial-gradient approximation of the previous card's background rather than a
+per-pixel restore, measured within ~9 RGB units of the original at the
+corner — the text glyphs themselves are byte-identical restorations and the
+board/hero are real renders.
 
 ## Rebuilding the zip for itch / Newgrounds / Game Jolt
 

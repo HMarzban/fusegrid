@@ -9,8 +9,8 @@
 > identity (§0a), the motif section (§1 — now "no shared motif"), the key/mode
 > table (§1b), every per-track row in §2, the tempo ladder and the pin sheet in
 > §5/§6 are rewritten. **What survives:** the engine's shape (oscillator-only,
-> ≤ 4 channels, integer step grid, zero deps), `MUS_PAN`, `transp`, the
-> hand-authored-B staging, `LEN 64` / `["A","A","B","B"]` / `CYC 256`, the
+> ≤ 4 channels, integer step grid, zero deps), `MUS_PAN`, the hand-authored-B
+> staging, `LEN 64` / `["A","A","B","B"]` / `CYC 256`, the
 > `[s,f,d,v?]` tuple, the bounce harness (§3) and the refuse list (§4).
 > **What is withdrawn:** the one-motif-everywhere spine, the 104–140 BPM band,
 > `square` and `sawtooth` as default music timbres, the white-key
@@ -231,10 +231,13 @@ what "bouncy" means here. Hat is a light off-tick on 1 and 4 only (16 hits, down
 from v2's 24). The lead sits **in the pockets** at 2, 4 and 5, plus a step-7
 pickup in even bars: a skipping, off-the-beat tune over a swung bass.
 Hook: `A F♯ A` (5̂ 3̂ 5̂) on steps 2/4/5, stated at bars 0 and 4.
-B: **A major pentatonic**, the dominant, with the tresillo *re-cut* to 0/2/5
-(durations 2/3/3) and the hat moved to 3/6 — a hand-authored B, not a
-transposition, so `jungle` moves from the `transp` list to the hand-authored one.
-Occupancy **60 of 64**, A and B alike. `pulseGap 1`.
+B: **A major pentatonic**, the dominant, with the tresillo *re-cut* onto the
+step set `0/2/3/5` and the hat moved to 3/6 — a hand-authored B, not a
+transposition, so `jungle` moves from the `transp` list to the hand-authored
+one. The tresillo LIMPS rather than sitting flat: even bars cut `2+3+3` on
+`0/2/5`, odd bars cut `3+2+3` on `0/3/5`, so the middle cell falls a step
+later every second bar and the phrase is two bars long where A's is one.
+Occupancy **60** (A) / **56** (B), both inside jungle's 54–62 band. `pulseGap 1`.
 
 **`void` — spacious, mysterious, pleasant. [PREVIEW]** B minor pentatonic ·
 `STEP 0.152` (98.7 BPM) · hand-authored B.
@@ -322,11 +325,13 @@ Aeolian → Dorian for the lifted 6̂. Hook: `1̂ 5̂ 1̂ 3̂` at bars 0 and 4.
 
 ---
 
-**Hand-authored B after the preview wave: `menu`, `jungle`, `void`, `arena`,
-`crown`.** `transp` B (unchanged, still sharing `A`'s hat array by identity):
-`ice`, `factory`, `water`, `sand` — each of those becomes hand-authored on its
-own wave, because a transposed B on an identical rhythm is exactly the sameness
-v3 exists to remove. `intro` keeps `sections ["A"]` and no B.
+**All nine B sections are hand-authored, as shipped.** `menu`, `jungle`, `void`,
+`arena` and `crown` shipped hand-authored in the preview and wave-3 commits;
+`ice`, `factory`, `water` and `sand` followed on wave 2, each re-cutting its own
+rhythm rather than sharing `A`'s hat array by identity (`water` and `sand`
+author no hat at all, in either section) — a transposed B on an identical
+rhythm is exactly the sameness v3 exists to remove, and no track keeps that
+shape. `intro` keeps `sections ["A"]` and no B.
 
 **Tempo ladder (v3)** — ten distinct values inside 96–120 BPM. The spacing is
 tighter than v2's because the band is narrower; distinctness is carried by
@@ -424,7 +429,7 @@ wave A did, and shrinks by one id per commit.
 | 2 | "the hook returns a second time" on nine of ten (`RETURN`) | same — v2 ids only; v3 tracks pin their **own** hook's return | scoped |
 | 3 | all ten `pulseGap ≤ 1` (A and B) | v3 relaxes to **`≤ 3`**, plus a stronger fact in its place: **bass note spans cover every step of the loop** — the low end never lets go, which is what `pulseGap` was really reaching for | scoped + replaced |
 | 4 | all ten "every bar carries lead AND bass" | kept for v2 ids; v3 keeps `barsWithBass === 8` but drops the lead clause (a spacious room may rest a lead bar) | scoped |
-| 5 | occupancy **bands with floors** (`intro` 28–31, most 58–63) | kept as a per-track band table. Preview rows `menu` 32–44, `jungle` 54–62, `void` 34–46; **as shipped, the other seven re-valued too** — `ice` 28–40, `factory` 54–62, `water` 34–46, `arena` 42–54, `sand` 44–54, `crown` 58–63, `intro` 14–22 (of its own 32 steps, not 64) | re-valued |
+| 5 | occupancy **bands with floors** (`intro` 28–31, most 58–63) | kept as a per-track band table. Preview rows `menu` 32–44, `jungle` 54–62, `void` 34–46; **as shipped, the other seven re-valued too** — `ice` 28–40, `factory` 54–62, `water` 34–46, `arena` 42–54, `sand` 44–54, `crown` 58–63, `intro` 14–22 (of its own 32 steps, not 64). **Bands are per-A-section; B occupancy is unbanded** — `factory.B` 52, `water.B` 48, `arena.B` 56 and `crown.B` 34 all sit outside their own A band by design | re-valued |
 | 6 | tempo ladder `.107 … .144` (104–140 BPM) | re-valued to the v3 ladder; the **distinctness** clause is unchanged and is what forces the migration order | re-valued |
 | 7 | "exactly one sawtooth bass, and it is FACTORY" | **deleted** at the end of wave 2 — v3 has no sawtooth music timbre. Kept until factory is recomposed, because it is true of the shipped data until then | scoped, then deleted |
 | 8 | "exactly one sine lead, and it is VOID" | **kept**, unchanged — void keeps the sine lead. This is the row §2's `water` line and the waveform roster were re-synced against on 2026-09-06: a green pin outranks prose that contradicts it | — |

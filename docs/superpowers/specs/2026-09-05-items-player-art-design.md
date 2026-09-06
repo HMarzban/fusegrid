@@ -589,9 +589,9 @@ Three in `tests/items-art.test.mjs`, two in `tests/three.test.mjs`. All five
 
 | gate | P1 | R1 |
 |---|---|---|
-| hull sheds `>= 1.55×` its width `0.50r` below the shoulder line | **1.06** | 1.71 |
+| hull sheds `>= 1.55×` its width `0.50r` below the shoulder line — **retired by §2.7** (no shoulder line to measure) | **1.06** | 1.71 |
 | `lum(PLAYER_HULL)` within `0.28 .. 0.62` — **retired by §2.6**, replaced by the per-biome separation gates | **0.90** | 0.59 |
-| legs run `>= 0.50r` below the hull contour | **0.06** | 0.52 |
+| legs run `>= 0.50r` below the hull contour — **retired by §2.7** (feet, not legs) | **0.06** | 0.52 |
 | 3D shoulder half-span `>= CFG.TILE*0.34` (its own collision radius) | **12.08** | 15.92 |
 | 3D plan footprint `x/z >= 1.40` (shouldered, not a disc) | **1.36** | 1.54 |
 
