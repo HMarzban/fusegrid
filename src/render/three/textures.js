@@ -1,7 +1,7 @@
 /* Zero-asset texture pipeline (real3d spec §5 + elements-redesign 2026-08-25
    §3): guarded canvas use. Character/bomb sources stay 64x64 captures of the
    EXISTING sprites.js art fns; item pickups reuse paintItemFace (drawIcon),
-   enemy eye strips, the player visor band and the blast flame ramp stay
+   enemy eye strips, the player face plate and the blast flame ramp stay
    direct canvas painters per §3.
    Every CanvasTexture gets NearestFilter + sRGB and a `_shared` flag so
    disposeGroup never frees it mid-flight. Headless (no DOM, no injected
@@ -11,7 +11,7 @@ import * as THREE from "../../../vendor/three.module.js";
 import {CFG, biomeOf, BIOMES} from "../../core/config.js";
 import {POWER} from "../../core/entities.js";
 import {captureSprite, drawPlayerBody, drawEnemyBody, drawBombBody,
-  bakeAtlas, bakedTile, paintItemFace} from "../sprites.js";
+  bakeAtlas, bakedTile, paintItemFace, PLAYER_SUIT} from "../sprites.js";
 import {ENEMY_TYPES, ENEMY_COLORS} from "./entities.js";
 
 const S=64, K=S/(CFG.TILE*2.05);
@@ -60,13 +60,38 @@ function paintSlit(c){
   c.globalAlpha=1;
 }
 
-/* ---- §3 visor: the 2D slit, so both renderers show the same face — a
-   near-black well across the strip, one lit core bar, one white specular
-   pip. Strip stays 128x32, NearestFilter + sRGB + _shared. ---- */
-function paintVisor(c){
-  c.fillStyle="#080b14"; c.fillRect(0,4,128,24);
-  c.globalAlpha=0.42; c.fillStyle="#7fe0ff"; c.fillRect(10,12,108,7);
-  c.globalAlpha=1; c.fillStyle="#ffffff"; c.fillRect(16,9,10,4);
+/* ---- §2.7 MAKO face: the 2D face beats, so both renderers show the ONE
+   character — a body-coloured ground so the plate reads as the front of the
+   head, two bulging cream eyes with ink pupils and a fixed upper-left
+   specular, and a grin with two BLUNT teeth (never fangs). 128x128 rather
+   than the old visor's 128x32 strip: this is a face, not a slit, and the
+   plate's UVs are refitted to its own bounds in entities.js so the square
+   actually lands. NearestFilter + sRGB + _shared as before. ---- */
+function paintFace(c){
+  c.fillStyle=PLAYER_SUIT; c.fillRect(0,0,128,128);
+  /* grin first, eyes over it — a wide eye may overlap the mouth without
+     leaving a hole in the lid, same order as drawPlayerBody */
+  c.fillStyle="#12121e";
+  c.beginPath();
+  c.moveTo(30,86); c.quadraticCurveTo(64,101,98,86);
+  c.quadraticCurveTo(64,124,30,86); c.closePath(); c.fill();
+  c.fillStyle="#ffffff";
+  for(const s of [-1,1]){
+    c.beginPath();
+    c.moveTo(64+s*3,90); c.lineTo(64+s*15,88);
+    c.lineTo(64+s*16,100); c.lineTo(64+s*4,102); c.closePath(); c.fill();
+   }
+  for(const s of [-1,1]){
+    const ex=64+s*25;
+    c.fillStyle="#554470";
+    c.beginPath(); c.ellipse(ex,44,27,26,0,0,Math.PI*2); c.fill();
+    c.fillStyle="#f2e6d2";
+    c.beginPath(); c.ellipse(ex+s*4,39,21,20,0,0,Math.PI*2); c.fill();
+    c.fillStyle="#12121e";
+    c.beginPath(); c.ellipse(ex+s*4,41,11,11,0,0,Math.PI*2); c.fill();
+    c.fillStyle="#ffffff";
+    c.beginPath(); c.ellipse(ex+s*4-6,33,5,5,0,0,Math.PI*2); c.fill();
+   }
 }
 
 /* ---- §3 blast ramp: vertical fire gradient, alpha fades at the top edge ---- */
@@ -78,7 +103,7 @@ function paintFire(c){
 }
 
 /* Returns {player, enemy_<type>..., bomb, item_<pdef>..., eye_<type>...,
-   visor, fire, wall?, brick?, floor?} with canvas|null per key; wall/brick/
+   face, fire, wall?, brick?, floor?} with canvas|null per key; wall/brick/
    floor ride the existing bakedTile atlas when the browser has baked it
    (biome keyed by `level`). */
 export function atlasSources(mk, level=1){
@@ -95,7 +120,7 @@ export function atlasSources(mk, level=1){
   for(const t of ENEMY_TYPES)
     o["eye_"+t]=captureSprite(64,32,(c)=>t==="stationary"?paintSlit(c):
       paintEyes(c,t),mk);
-  o.visor=captureSprite(128,32,paintVisor,mk);
+  o.face=captureSprite(128,128,paintFace,mk);
   o.fire=captureSprite(S,S,paintFire,mk);
   if(typeof document!=="undefined"){
     try{

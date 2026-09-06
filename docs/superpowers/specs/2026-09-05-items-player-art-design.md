@@ -735,6 +735,39 @@ eyes and a grin is not a dark square bunker with a magenta slit. The AND gate
 is a **backdrop** gate; that is the failure the user actually reported, and it
 is what it is held to.
 
+**3D — the same five meshes, roles reassigned.** `SLOT_MESH.player` stays 5,
+the geometry-type histogram stays `2 Box / 1 Buffer / 1 Lathe / 1 Extrude`,
+and fat-world stays 141 — nothing is added and nothing is removed:
+
+| Type | MAKO role | Was |
+|---|---|---|
+| Lathe | squat body, `children[0]`, matte Lambert, the `p.passing` lerp target | crown |
+| Buffer | merged ear-fin pair — the ONE `p.color` mesh | merged torso + pauldrons |
+| Extrude | face plate — the one Phong, raked `-0.6` to the rig | visor |
+| Box ×2 | the two feet — `children[3]` still flips on `p.kick` | boots |
+
+The face plate's own **outline** carries the two eye lobes, so it is not a
+rectangle with a picture on it: seated at `0.53T` it rises past the body's
+crown and the eyes break the silhouette from above exactly as they do in 2D.
+`ExtrudeGeometry`'s `WorldUVGenerator` writes each cap vertex's world x/y
+straight into `uv`, which with the atlas textures on ClampToEdge shows one
+smeared edge pixel instead of the painted face — `fitUV` renormalises the caps
+to the shape's own bounds. Measured footprint **40.4 × 27.1 = 1.49:1**, past
+the 1.40 gate. The fins are raked `-0.5`: at 59.1° a blade standing edge-on
+presents almost nothing, and the fins *are* the footprint.
+
+**Pins moved for 3D, each deliberately.** The face-plate height floor drops
+`TILE*0.5 → TILE*0.34` — the old number was authored for a visor on a helmet
+perched above a humanoid's shoulders, and MAKO's crown sits at 23.0, so a `>20`
+floor would push the face off the top of the character; `TILE*0.34` is the
+player's own collision radius and still says what the gate meant. The atlas key
+`visor` becomes `face` and its source grows `128×32 → 128×128` — a slit fits a
+strip, two bulging eyes over a grin do not. The `p.color` locator moves from
+"the LatheGeometry" to "the BufferGeometry", and the headless probe locates the
+fin mesh by material rather than by geometry type, because the Lathe is now the
+body and `find(LatheGeometry)` would otherwise hand back `children[0]` and
+assert one mesh twice.
+
 **Gate moves this revision makes.** Four humanoid-era gates are **deleted**,
 not weakened, because they encode the anatomy the user rejected: the taper
 gate (no shoulder line), the leg-length stance gate (feet, not legs), the neck

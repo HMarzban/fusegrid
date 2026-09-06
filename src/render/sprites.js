@@ -360,11 +360,12 @@ export function drawEnemies(c, world) {
    re-hue — and a finned chevron with two cream eyes and a grin is not a dark
    square bunker with a magenta slit. */
 export const PLAYER_SUIT = "#c39cff";
-/* Still exported under the old name for three/entities.js. 2D and 3D
-   diverged for exactly one round (IONVEST vs the gunmetal Signal Runner) and
-   MAKO re-converges them — but not in this commit: the 3D stack is still the
-   humanoid one here, so gunmetal is still the correct hex on that side. */
-export const PLAYER_HULL = "#8d97ac";
+/* 2D and 3D diverged for exactly one round — IONVEST's orchid against the
+   gunmetal Signal Runner — because gunmetal vanished into FACTORY's wall in
+   2D and was still correct in 3D, which has no dark contour. MAKO retires
+   that split: one character, one body hex, both renderers. The name survives
+   only because three/entities.js imports it; do not give it a second value. */
+export const PLAYER_HULL = PLAYER_SUIT;
 const HULL = PLAYER_SUIT;
 const EYE = "#f2e6d2",
   INK = "#12121e",

@@ -92,34 +92,44 @@ not shell screens. Do not add them as `SCREEN` values.
     because two tests pin it there; `walker` splits into mirrored halves so
     the alternating stomp keeps two transforms). `shade` is the only foe with
     `castShadow=false`; additive accents never cast.
-  - Player body (R1 2026-09-05): a FIVE-mesh stack — one merged **gunmetal**
-    hull (tapered torso lathe fused with two canted wedge pauldrons), one
-    `p.color` crest lathe (seg 5, `rotateY(PI/5)` so a flat FACE, not a
-    corner, points at `+Z` for the visor to sit on), one Phong visor raked
-    `-0.6` to face the rig, two leg boxes — so `SLOT_MESH.player` is 5 and
-    fat-world is 141. No antenna, no ball, no round eyes, no sphere.
-    `p.color` lives on the crest and nowhere else, in both renderers. The hero
-    reads **lean, armoured and shouldered**, never round or bright: a
-    near-white hull was rejected as "too silly" (see spec §2 R1), so keep the
-    hull mid-value, the shoulder half-span at or past the player's own
-    `TILE*0.34` collision radius, and the plan footprint wider than deep
-    (`x/z >= 1.40`). Separation from WALKER is that shouldered structure
-    carrying dark parts — never a re-hue.
-    **The 2D hero is MAKO since 2026-09-06 (spec §2.7) — every humanoid was
-    vetoed ("must not be like a human, it must be a creative character"), so
-    Signal Runner and IONVEST are superseded.** A reef critter: ONE low wide
-    mass (no shoulders, no torso-over-legs, no arms), two swept teal ear-fins
-    whose tips run past the body's own half-width so the outline is a CHEVRON,
-    two bulging cream `#f2e6d2` eyes that break the crown, and a grin with two
-    BLUNT teeth (never fangs — hero, not monster). `PLAYER_SUIT` `#c39cff`.
-    The 3D stack below is still the humanoid one and converges on MAKO next.
-    The 2D gate is per-biome over SEVEN swatches (`wallHi` is opaque, and the
-    brick highlight is the real `brickHi`-over-`brickA` composite): no swatch
-    may collapse on value AND hue at once, the body must stay chromatic, and
-    every VOID swatch must clear a Lab ΔE floor because VOID is the one room
-    where hero and scenery share a hue by construction. Foe separation is
-    structure, never a re-hue — `stationary`'s `#c58aff` is un-clearable by any
-    chromatic hex in this family, and that is disclosed, not gated.
+  - Player body — **MAKO, the reef critter (2026-09-06, spec §2.7)**. Every
+    humanoid hero was vetoed by the user ("the main character also must not be
+    like a human, it must be a creative character"), so SIGNAL RUNNER and
+    IONVEST are superseded and **2D and 3D share ONE character again, by
+    design**: `PLAYER_HULL` and `PLAYER_SUIT` are the same hex `#c39cff`, both
+    exported from `sprites.js`. Do not re-split them without a measured reason
+    — the IONVEST split existed only because gunmetal died on FACTORY's wall
+    in 2D and was still correct in 3D.
+    Head and body are ONE mass: no shoulders, no torso-over-legs, no arms.
+    That single rule is what all three previous heroes broke. The hook is two
+    swept teal ear-fins whose tips run PAST the body's own half-width, so the
+    outline is a CHEVRON — the one shape class no foe has, since every foe is
+    a dome or a box. The face is two bulging cream `#f2e6d2` eyes that BREAK
+    the crown of the silhouette, over a grin with two BLUNT teeth. Never
+    fangs: hero, not monster. `p.color` lives on the fins and nowhere else, in
+    both renderers.
+    3D is still a FIVE-mesh stack — `SLOT_MESH.player` 5, fat-world 141 — with
+    the SAME five geometry types, roles reassigned rather than added to:
+    **Lathe = squat body** (`children[0]`, matte Lambert, the `p.passing`
+    lerp target), **Buffer = merged ear-fin pair** (the one `p.color` mesh),
+    **Extrude = face plate** (the one Phong, raked `-0.6` to face the rig,
+    its own OUTLINE carrying the two eye lobes), **2 Box = feet**
+    (`children[3]` still flips on `p.kick`). `ExtrudeGeometry`'s UV generator
+    writes world x/y into `uv`, so the face plate is passed through `fitUV`
+    or the atlas texture clamps to one smeared edge pixel. No sphere, no
+    capsule, no cylinder, no antenna. Hold the plan footprint at
+    `x/z >= 1.40` (fins 40.4 across, 27.1 deep = 1.49) and the half-span at
+    or past the player's own `TILE*0.34` collision radius — at `el:0.54` the
+    plan outline is the primary cue and a lathe alone is a circle from up
+    there. Separation from foes is that structure, **never a re-hue**.
+    The 2D colour gate is per-biome over SEVEN swatches (`wallHi` is opaque
+    over 40% of a wall tile, and the brick highlight is the real
+    `brickHi`-at-alpha-0.55-over-`brickA` composite): no swatch may collapse
+    on value AND hue at once, the body must stay chromatic, and every VOID
+    swatch must clear a Lab ΔE floor, because VOID is the one room where hero
+    and scenery share a hue by construction and the hue axis says nothing.
+    Disclosed, not gated: `stationary`'s `#c58aff` is un-clearable by ANY
+    chromatic hex in MAKO's family — the whole violet band was swept.
   - `shellview.js` routes `app.screen` to `menudraw.js` and owns `kindSize` /
     `dims`, the one logical box every screen measures against (a real canvas
     wins, otherwise kind picks the classic box or the projected one). It is

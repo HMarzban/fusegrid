@@ -30,6 +30,7 @@ import {buildScene, countDrawCalls, RIM_W, RIM_LIP,
   RIM_BEV} from "../src/render/three/scene.js";
 import {createPools, SLOT_MESH} from "../src/render/three/entities.js";
 import {atlasSources, buildAtlas} from "../src/render/three/textures.js";
+import {PLAYER_HULL} from "../src/render/sprites.js";
 import {createRig, orbitBy, dollBy, resetOrbit, applyOrbit,
   SHAKE_3D_K, DRAG_K, DIST_MIN, DIST_MAX,
   CAM_PRESET, CAM_NAME, camPreset} from "../src/render/three/camrig.js";
@@ -683,7 +684,7 @@ await sec("S2.I",()=>{
     &&atlas.item_fire.isTexture===true);
   // Item atlas keys stay paintItemFace (drawIcon on a navy 64²). Unique
   // ITEM_GEO bodies live on the slot; these probes are the face maps only.
-  // Eye strips / visor / fire ramp stay in the zero-asset pipeline.
+  // Eye strips / face plate / fire ramp stay in the zero-asset pipeline.
   const f2=recFactory();
   const src2=atlasSources(f2.mk);
   const itemKeys=POWER.map(pd=>"item_"+pd.t);
@@ -720,10 +721,14 @@ await sec("S2.I",()=>{
     &&slit._ops.includes("set:globalAlpha")
     &&!slit._ops.includes("ellipse"),
     slit?"ok":"missing");
-  const vis=src2.visor;
-  check("S2.R visor source: 128x32 dark well + lit core bar + specular pip",
-    !!vis&&vis.width===128&&vis.height===32
-    &&vis._ops.filter(o=>o==="fillRect"||o==="fill").length>=3
+  /* MOVED PIN (MAKO 2026-09-06): the 128x32 visor STRIP becomes a 128x128
+     FACE. A slit fits a strip; two bulging eyes over a grin do not, and the
+     plate's UVs are refitted to its own bounds so a square actually lands. */
+  const vis=src2.face;
+  check("S2.R face source: 128x128, body ground + two eyes + grin, no slit bar",
+    !!vis&&vis.width===128&&vis.height===128
+    &&vis._ops.filter(o=>o==="ellipse").length===8
+    &&vis._ops.filter(o=>o==="fill").length>=11
     &&vis._ops.includes("set:fillStyle"),
     vis?vis.width+"x"+vis.height:"missing");
   const fir=src2.fire;
@@ -736,25 +741,31 @@ await sec("S2.I",()=>{
   check("S2.R buildAtlas exposes new keys NearestFilter+sRGB flagged _shared",
     !!atlas2&&atlas2.item_power.isTexture===true
     &&atlas2.eye_fast.magFilter===THREE.NearestFilter
-    &&atlas2.visor.colorSpace===THREE.SRGBColorSpace
+    &&atlas2.face.colorSpace===THREE.SRGBColorSpace
     &&atlas2.fire.isTexture===true
     &&atlas2.item_heart._shared===true&&atlas2.eye_chaser._shared===true
-    &&atlas2.visor._shared===true&&atlas2.fire._shared===true);
+    &&atlas2.face._shared===true&&atlas2.fire._shared===true);
   // headless pools: every new map falls back to a flat bright color
   const w=createWorld(29,1); loadLevel(w,1,false);
   w.items=[{x:100,y:120,t:"fire",col:"#ff8a3c",taken:false,pdef:null}];
   const scPlain=buildScene(w);
   const gP=scPlain.pools.player.children;
-  const hullM=gP[0];
-  const crownM=gP.find(o=>o.geometry.type==="LatheGeometry");
-  const visorM=gP.find(o=>o.material.isMeshPhongMaterial);
-  check("R.headless player: matte Lambert hull + p.color crown lathe + dark"
-      +" Phong visor fallback (map-free)",
-    !!hullM&&hullM.material.isMeshLambertMaterial&&!hullM.material.map
-    &&"#"+hullM.material.color.getHexString()==="#8d97ac"
-    &&!!crownM&&crownM.material.isMeshLambertMaterial
-    &&!!visorM&&!visorM.material.map
-    &&"#"+visorM.material.color.getHexString()==="#0b1020");
+  const bodyM=gP[0];
+  /* MOVED PIN (MAKO 2026-09-06): the LatheGeometry is now the BODY, so the
+     old `find(LatheGeometry)` would hand back children[0] and the check would
+     assert one mesh twice. The p.color mesh is the merged FIN pair, which is
+     the BufferGeometry — locate it by material, not by geometry type. */
+  const finM=gP.find(o=>o.material===gP[1].material&&o!==bodyM);
+  const faceM=gP.find(o=>o.material.isMeshPhongMaterial);
+  check("R.headless player: matte Lambert body lathe + p.color fin pair + dark"
+      +" Phong face fallback (map-free)",
+    !!bodyM&&bodyM.material.isMeshLambertMaterial&&!bodyM.material.map
+    &&bodyM.geometry.type==="LatheGeometry"
+    &&"#"+bodyM.material.color.getHexString()===PLAYER_HULL
+    &&!!finM&&finM.material.isMeshLambertMaterial
+    &&finM.geometry.type==="BufferGeometry"
+    &&!!faceM&&!faceM.material.map
+    &&"#"+faceM.material.color.getHexString()==="#0b1020");
   const es0=scPlain.pools.enemies[0];
   const eye0=es0.children[es0.children.length-1];
   check("R.headless enemy eye strip last child, Basic #f4f7ff fallback",
@@ -1035,8 +1046,12 @@ await sec("S4.A",async()=>{
   const pools=createPools(BIOMES[0],null);
   const kinds=pools.player.children.map(o=>o.geometry?o.geometry.type:null)
     .filter(Boolean);
-  check("S4.A player = merged matte hull + p.color crown lathe + Phong visor"
-      +" + 2 boots (no sphere, no cylinder, no capsule)",
+  /* HISTOGRAM UNCHANGED, ROLES REASSIGNED (MAKO 2026-09-06): Lathe = the
+     squat body, Buffer = the merged ear-fin pair (the one p.color mesh),
+     Extrude = the face plate, 2 Box = the feet. Nothing added, nothing
+     removed, so SLOT_MESH.player stays 5 and fat-world stays 141. */
+  check("S4.A player = body lathe + merged p.color fin pair + Phong face plate"
+      +" + 2 feet (no sphere, no cylinder, no capsule)",
     kinds.length===SLOT_MESH.player
     &&!kinds.includes("CapsuleGeometry")
     &&kinds.filter(k=>k==="SphereGeometry").length===0
@@ -1052,16 +1067,23 @@ await sec("S4.A",async()=>{
   let cmax=-1;
   if(cp){ let best=-1;
     for(let i=0;i<cp.length;i++) if(cp[i].x>best){best=cp[i].x;cmax=i;} }
-  check("S4.A crown flares then narrows (max radius at neither end)",
+  check("S4.A body lathe flares then narrows (max radius at neither end)",
     !!cp&&cp.length>=6&&cmax>0&&cmax<cp.length-1,
     cp?cmax+"/"+cp.length:"missing");
   const phongs=pools.player.children.filter(o=>o.isMesh
     &&o.material.isMeshPhongMaterial);
   const visor=phongs[0];
-  check("S4.A visor is the player's one Phong surface, raked to face the rig",
+  /* MOVED PIN (MAKO 2026-09-06): the height floor drops TILE*0.5 -> TILE*0.34.
+     It was authored for a visor on a helmet perched above a humanoid's
+     shoulders; MAKO's face is the front of a SQUAT head whose crown sits at
+     23.0, so a >20 floor would push the face off the top of the character.
+     TILE*0.34 is the player's own collision radius, which still says what the
+     gate meant: the face is on the head, never on the belly. The -0.6 rake is
+     unchanged — it is what makes the face legible from the 59.1 deg rig. */
+  check("S4.A face plate is the player's one Phong surface, raked to the rig",
     phongs.length===1&&visor.material.shininess>=90
     &&visor.rotation.x>=-0.62&&visor.rotation.x<=-0.58
-    &&visor.position.y>CFG.TILE*0.5
+    &&visor.position.y>CFG.TILE*0.34
     &&pools.player.children[0].material.isMeshLambertMaterial,
     visor?visor.rotation.x.toFixed(2)+" y="+visor.position.y.toFixed(2)
       :"missing");
@@ -1075,15 +1097,18 @@ await sec("S4.A",async()=>{
   const spanX=pbb.max.x-pbb.min.x, spanZ=pbb.max.z-pbb.min.z;
   check("S4.A player shoulder half-span >= its own collision radius",
     spanX/2>=CFG.TILE*0.34-1e-6, (spanX/2).toFixed(2)+" vs "+(CFG.TILE*0.34));
-  check("S4.A plan footprint is shouldered (x/z >= 1.40), not a disc",
+  check("S4.A plan footprint is a fin chevron (x/z >= 1.40), not a disc",
     spanZ>0&&spanX/spanZ>=1.4, (spanX/spanZ).toFixed(2));
   const wS=createWorld(73,1); loadLevel(wS,1,false);
   const scP=buildScene(wS);
   const pl=scP.pools.player;
   wS.players[0].color="#ff00aa";
   scP.update(wS);
-  const crownS=pl.children.find(o=>o.geometry.type==="LatheGeometry");
-  check("S4.A crownMat follows p.color and nothing else does",
+  /* MOVED LOCATOR (MAKO 2026-09-06): p.color rode the crown LATHE; it now
+     rides the merged fin pair, which is the BufferGeometry. The assertion is
+     the same one — exactly ONE mesh follows p.color. */
+  const crownS=pl.children.find(o=>o.geometry.type==="BufferGeometry");
+  check("S4.A finMat follows p.color and nothing else does",
     "#"+crownS.material.color.getHexString()==="#ff00aa"
     &&pl.children.filter(o=>"#"+o.material.color.getHexString()==="#ff00aa")
       .length===1,
@@ -1095,11 +1120,11 @@ await sec("S4.A",async()=>{
     &&pl.children.filter(o=>o.material.isMeshLambertMaterial).length===4);
   wS.players[0].kick=true; scP.update(wS);
   const bootS=pl.children[3];
-  check("S4.A p.kick still flips the boot material",
+  check("S4.A p.kick still flips the foot material",
     "#"+bootS.material.color.getHexString()==="#c07a3a");
   wS.players[0].kick=false; wS.players[0].passing=true; scP.update(wS);
-  check("S4.A p.passing lerps the hull, not the crown",
-    "#"+pl.children[0].material.color.getHexString()!=="#8d97ac"
+  check("S4.A p.passing lerps the body, not the fins",
+    "#"+pl.children[0].material.color.getHexString()!==PLAYER_HULL
     &&"#"+crownS.material.color.getHexString()==="#ff00aa");
   // per-type enemy detail children (base mesh keeps prior geometry contract);
   // eyes ride children[2] AFTER the two ref-swapped details

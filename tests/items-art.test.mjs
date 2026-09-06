@@ -726,12 +726,15 @@ const P = (o) =>
     "dHue " + Math.abs(hueOf(PLAYER_SUIT) - hueOf("#9a4ff0")).toFixed(1) +
       " dL +" + (lum(PLAYER_SUIT) - lum("#9a4ff0")).toFixed(3),
   );
-  /* 2D and 3D diverged for one round (IONVEST vs the gunmetal Signal Runner).
-     MAKO re-converges them, but not in this commit: the 3D stack is still the
-     humanoid one here, so gunmetal is still correct on that side. */
+  /* CONVERGENCE, replacing IONVEST's divergence pin. The split existed for
+     exactly one round and for exactly one reason — gunmetal vanished into
+     FACTORY's wall in 2D (ΔL .008, Δhue 8.3°) and was still correct in 3D,
+     which has no dark contour. MAKO's body clears the backdrop gate in both,
+     so the hero is ONE character again and there is one body hex. Pinned so a
+     future "3D needs its own value" cannot re-split it without saying why. */
   check(
-    "PLAYER_HULL is still the 3D hex (3D converges on MAKO in the next commit)",
-    PLAYER_HULL === "#8d97ac",
+    "MAKO convergence: PLAYER_HULL and PLAYER_SUIT are the same body hex",
+    PLAYER_HULL === PLAYER_SUIT && PLAYER_SUIT !== "#8d97ac",
     PLAYER_HULL + " / " + PLAYER_SUIT,
   );
 }

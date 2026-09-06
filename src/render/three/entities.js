@@ -143,6 +143,25 @@ function plate(pts, thick, r) {
   return g;
 }
 
+/* ExtrudeGeometry's WorldUVGenerator writes each cap vertex's world x/y
+   straight into `uv`, so a shape a few units across samples uv 0..N and, with
+   the atlas textures on ClampToEdge, shows one smeared edge pixel instead of
+   the painted face. Renormalise the caps to the shape's own bounds. Only the
+   player face plate needs this — every other textured surface in the scene is
+   a Box or a Lathe, whose generators already emit 0..1. */
+function fitUV(g) {
+  g.computeBoundingBox();
+  const b = g.boundingBox,
+    sx = b.max.x - b.min.x || 1,
+    sy = b.max.y - b.min.y || 1;
+  const uv = g.attributes.uv,
+    pos = g.attributes.position;
+  for (let i = 0; i < uv.count; i++)
+    uv.setXY(i, (pos.getX(i) - b.min.x) / sx, (pos.getY(i) - b.min.y) / sy);
+  uv.needsUpdate = true;
+  return g;
+}
+
 /* Items (items-player-art 2026-09-05) for the FROZEN rig: at 59.1 deg the
    PLAN-VIEW FOOTPRINT is the primary read, and a solid of revolution is a
    circle in plan view by definition — which is why six of the old twelve
@@ -844,108 +863,113 @@ const SPARK_B = sharedMat(new THREE.MeshBasicMaterial({ color: "#ffd447" }));
 export function createPools(biome, atlas) {
   const group = new THREE.Group();
 
-  /* SIGNAL RUNNER — R1 (items-player-art 2026-09-05, revised same day on the
-     user's rejection of P1). Still FIVE meshes and the same five geometry
-     types — one merged matte hull, one p.color crown lathe, one Phong visor,
-     two boots — every profile RESHAPED, nothing added. What P1 got wrong at
-     the live size: the torso lathe topped out at 8.9 units of radius against
-     walker's 12.8, so the hero was the SMALLEST body on the board and its
-     near-constant radius read as a rounded boiler under a cap.
+  /* MAKO — the reef critter, 2026-09-06 (spec §2.7). Every humanoid hero was
+     vetoed, so the SIGNAL RUNNER stack is superseded: 2D and 3D share one
+     character again, and the body hex is now `PLAYER_SUIT` in both.
 
-     R1 numbers. The torso sheds to a 0.38 waist and flares to 0.80 at the
-     shoulder line (y 1.36), and the flat yoke chips become swept PAULDRON
-     plates reaching ±T*0.23 — just past the player's own T*0.34
-     collision radius, so the hero finally reads as the widest thing on the
-     board. That also buys the footprint: 31.8 across by 20.6 deep, a
-     SHOULDERED plan view (1.54:1) no round foe hull can hold, which is the
-     separation cue the frozen 59.1 deg rig actually sees.
+     Still FIVE meshes and the SAME five geometry types, so `SLOT_MESH.player`
+     stays 5 and fat-world stays 141 — the roles are reassigned, not added to:
 
-     The crown drops from seg 6 (a hexagon is a circle at this size) to seg 5
-     rotated a fifth, so its plan view is an axis-aligned faceted
-     wedge that turns with the yaw — a crest, not a cap — while r rises to
-     T*0.17 to keep the p.color plan AREA it had as a hexagon. Rotating a
-     fifth puts a flat face at +Z for the visor to sit on; a corner at
-     +Z would leave the visor's ends floating off a ridge.
+       Lathe    squat body, the matte Lambert hull (children[0])
+       Buffer   the merged ear-fin pair, the ONE p.color mesh
+       Extrude  the face plate — eyes and grin, the one Phong surface
+       2x Box   the two feet (p.kick still flips their material)
 
-     Unchanged: bottom -> top profiles, flare-then-narrow on both (TORSO_P at
-     1.36, CROWN_P at 0.26 the brow), the visor rake -0.6 (e_fast's face
-     rake), p.color on the crown and nowhere else, and no dome / antenna /
-     ball / round eyes ever again. */
+     The old stack spent its Lathe on a crown and its Buffer on a merged
+     torso-plus-pauldrons; nothing is added and nothing is removed, so every
+     draw-call number in AGENTS.md is unchanged.
+
+     PLAN-VIEW FOOTPRINT. At `el:0.54` the camera is 59.1 deg above the
+     horizon, so the plan outline is the primary cue and a solid of revolution
+     is a circle from up there. The fins are what make it a chevron: they
+     reach +-20.1 against a 12.0 body radius, and with the face plate leading
+     the depth the footprint is 40.3 x 27.4 = 1.47:1, past the 1.40 gate that
+     no round foe hull can hold.
+
+     THE FACE IS ON A PLATE, and the plate's own OUTLINE carries the two eye
+     lobes — it is not a rectangle with a picture on it. Raked -0.6 to face
+     the rig and seated high on the head, it rises past the body's crown so
+     the eyes break the silhouette from above exactly as they do in 2D;
+     iteration 1 seated it at 0.46T and left a bare violet dome above the
+     face, which read as a forehead on a character that has none. ExtrudeGeometry's default
+     UV generator writes world x/y straight into the uv attribute, which with
+     ClampToEdge means a texture smear rather than a mapped face; `fitUV`
+     renormalises the caps to the shape's own bounds so `atlas.face` actually
+     lands. */
   const player = new THREE.Group();
   player.userData.tag = "player";
   const T = CFG.TILE;
-  const TORSO_P = [
-    [0.44, 0.5], [0.38, 0.88], [0.52, 1.2], [0.86, 1.44],
-    [0.66, 1.6], [0.42, 1.74], [0.44, 1.86],
+  /* Bottom -> top or the normals invert, and the max radius sits at neither
+     end so the body flares then narrows — a squat critter, not a cone. */
+  const BODY_P = [
+    [0.28, 0.1], [0.7, 0.26], [0.97, 0.56], [1.0, 0.94],
+    [0.8, 1.3], [0.44, 1.62], [0.1, 1.8],
   ];
-  const CROWN_P = [
-    [0.6, 0], [0.92, 0.18], [1.0, 0.42], [0.9, 0.74], [0.56, 1.02], [0, 1.24],
+  /* The 2D blade with y flipped into 3D's up. Authored for the RIGHT fin;
+     mirroring reverses the winding and ExtrudeGeometry takes its cap normals
+     from the signed area (the trap mesa() documents), so the left copy is
+     reversed back. */
+  const FIN_P = [
+    [0.48, -0.38], [0.62, 0.36], [0.96, 0.84], [1.3, 0.46], [1.2, -0.12], [0.84, -0.44],
   ];
-  /* Authored for the RIGHT shoulder, outer edge at +x: deep where it meets
-     the ribs, shallow at the tip. Iteration 2 used a plate symmetric in x
-     and the pair read as a coat hanger — an even slab has no inboard end to
-     bury in the torso. Mirroring reverses the winding, and ExtrudeGeometry
-     takes its cap normals from the signed area (the trap mesa() documents),
-     so the left copy is reversed back. */
-  const PAULD_P = [[-0.46, -0.46], [0.52, -0.26], [0.52, 0.26], [-0.46, 0.46]];
-  const pauldPts = (s) => {
-    const p = PAULD_P.map((v) => [v[0] * s, v[1]]);
+  const finPts = (s) => {
+    const p = FIN_P.map((v) => [v[0] * s, v[1]]);
     return s < 0 ? p.slice().reverse() : p;
   };
-  const VISOR_P = [[-0.52, -0.3], [0.52, -0.3], [0.42, 0.26], [-0.42, 0.26]];
-  const hullMat = sharedMat(new THREE.MeshLambertMaterial({ color: PLAYER_HULL }));
-  const crownMat = sharedMat(new THREE.MeshLambertMaterial({ color: "#37f0d0" }));
-  const bootMat = sharedMat(new THREE.MeshLambertMaterial({ color: "#0d3f78" }));
-  /* Canted shoulder plates. Flat slabs (iteration 1) presented one big top
-     facet to the 59.1 deg rig and read as a table; dropping the outer edge
-     0.30 rad turns the same plate into armour and keeps the reach. */
-  const pauldron = (s) =>
-    plate(pauldPts(s), 0.42, T * 0.3)
-      .rotateX(-Math.PI / 2)
-      .rotateZ(-s * 0.34)
-      .translate(s * T * 0.23, T * 0.42, 0);
-  const hull = new THREE.Mesh(
-    sharedGeo(mergeGeos(lathe(TORSO_P, 6, T * 0.3), pauldron(-1), pauldron(1))),
-    hullMat,
-  );
-  hull.castShadow = true;
-  hull.receiveShadow = true;
-  /* seg 5 with a quarter-face turn: three.js lathes start a VERTEX at +Z, so
-     rotating a tenth of a full turn puts a flat FACE forward for the visor to sit
-     on. Iteration 1 used seg 4 and the square plan plus its top facet read
-     as a box; a pentagon has no parallel silhouette edges and its plan view
-     is shared with no foe. The base ring matches the torso collar so the
-     helmet grows out of the shoulders instead of perching on them. */
-  const crown = new THREE.Mesh(
-    sharedGeo(lathe(CROWN_P, 5, T * 0.17).rotateY(Math.PI / 5)),
-    crownMat,
-  );
-  crown.position.y = T * 0.54;
-  crown.castShadow = true;
-  const visorMat = new THREE.MeshPhongMaterial({
+  /* Two eye lobes over a jaw. The dip between the lobes is what stops the
+     plate reading as one wide mask. */
+  const FACE_P = [
+    [-0.95, 0.3],
+    [-0.62, 0.95, -1.02, 0.8],
+    [0, 0.55, -0.2, 0.98],
+    [0.62, 0.95, 0.2, 0.98],
+    [0.95, 0.3, 1.02, 0.8],
+    [0.72, -0.55, 1.0, -0.2],
+    [0, -0.8, 0.36, -0.82],
+    [-0.72, -0.55, -0.36, -0.82],
+    [-0.95, 0.3, -1.0, -0.2],
+  ];
+  const bodyMat = sharedMat(new THREE.MeshLambertMaterial({ color: PLAYER_HULL }));
+  const finMat = sharedMat(new THREE.MeshLambertMaterial({ color: "#37f0d0" }));
+  const bootMat = sharedMat(new THREE.MeshLambertMaterial({ color: "#2e1a4e" }));
+  const body = new THREE.Mesh(sharedGeo(lathe(BODY_P, 8, T * 0.3)), bodyMat);
+  body.castShadow = true;
+  body.receiveShadow = true;
+  /* Splayed out and raked -0.5 toward the rig: a blade standing edge-on
+     presents almost nothing to a camera 59 deg up, and the fins ARE the
+     footprint. Iteration 1 raked them -0.25 and they foreshortened into two
+     small leaves tucked behind the head. */
+  const finGeo = (s) =>
+    plate(finPts(s), 0.16, T * 0.37)
+      .rotateZ(-s * 0.2)
+      .rotateX(-0.5)
+      .translate(0, T * 0.33, 0);
+  const fins = new THREE.Mesh(sharedGeo(mergeGeos(finGeo(-1), finGeo(1))), finMat);
+  fins.castShadow = true;
+  const faceMat = new THREE.MeshPhongMaterial({
     color: "#0b1020",
     shininess: 120,
     specular: new THREE.Color("#ffffff"),
     transparent: true,
   });
-  let visorBase = "#0b1020";
-  if (atlas && atlas.visor instanceof THREE.Texture) {
-    visorMat.map = atlas.visor;
-    visorMat.color.set("#ffffff");
-    visorBase = "#ffffff";
+  let faceBase = "#0b1020";
+  if (atlas && atlas.face instanceof THREE.Texture) {
+    faceMat.map = atlas.face;
+    faceMat.color.set("#ffffff");
+    faceBase = "#ffffff";
   }
-  const visor = new THREE.Mesh(sharedGeo(plate(VISOR_P, 0.14, T * 0.19)), visorMat);
-  visor.position.set(0, T * 0.6, T * 0.145);
-  visor.rotation.x = -0.6;
-  /* Legs, not foot chips: 0.26T of dark under the waist is the 3D half of
-     the stance the 2D boot contour carries. */
-  const footGeo = sharedGeo(new THREE.BoxGeometry(T * 0.15, T * 0.26, T * 0.26));
-  const bootL = new THREE.Mesh(footGeo, bootMat);
-  bootL.position.set(-T * 0.13, T * 0.13, 0);
-  const bootR = new THREE.Mesh(footGeo, bootMat);
-  bootR.position.set(T * 0.13, T * 0.13, 0);
-  bootL.castShadow = bootR.castShadow = true;
-  player.add(hull, crown, visor, bootL, bootR);
+  const face = new THREE.Mesh(sharedGeo(fitUV(plate(FACE_P, 0.5, T * 0.27))), faceMat);
+  face.position.set(0, T * 0.53, T * 0.2);
+  face.rotation.x = -0.6;
+  /* Feet, not legs: MAKO sits low on the floor and 0.16T of dark under a wide
+     mass is grounding, which is the 3D half of what the 2D foot pair does. */
+  const footGeo = sharedGeo(new THREE.BoxGeometry(T * 0.2, T * 0.16, T * 0.24));
+  const footL = new THREE.Mesh(footGeo, bootMat);
+  footL.position.set(-T * 0.17, T * 0.08, T * 0.06);
+  const footR = new THREE.Mesh(footGeo, bootMat);
+  footR.position.set(T * 0.17, T * 0.08, T * 0.06);
+  footL.castShadow = footR.castShadow = true;
+  player.add(body, fins, face, footL, footR);
 
   const enemies = [],
     bombs = [];
@@ -1201,20 +1225,20 @@ export function createPools(biome, atlas) {
         p.face ? p.face.x : 0,
         p.face ? p.face.y : 1,
       );
-      crownMat.color.set(p.color || "#37f0d0");
+      finMat.color.set(p.color || "#37f0d0");
       const pulse = 0.5 + 0.5 * Math.sin(t * 8);
       if (p.shield) {
-        crownMat.emissive.set("#6fb7ff");
-        crownMat.emissiveIntensity = 0.35 + 0.65 * pulse;
-        visorMat.color.set(visorBase).lerp(_c.set("#6fb7ff"), 0.4 + 0.5 * pulse);
+        finMat.emissive.set("#6fb7ff");
+        finMat.emissiveIntensity = 0.35 + 0.65 * pulse;
+        faceMat.color.set(faceBase).lerp(_c.set("#6fb7ff"), 0.4 + 0.5 * pulse);
       } else {
-        crownMat.emissive.set("#000000");
-        crownMat.emissiveIntensity = 1;
-        visorMat.color.set(visorBase);
+        finMat.emissive.set("#000000");
+        finMat.emissiveIntensity = 1;
+        faceMat.color.set(faceBase);
       }
-      bootMat.color.set(p.kick ? "#c07a3a" : "#0d3f78");
-      hullMat.color.set(PLAYER_HULL);
-      if (p.passing) hullMat.color.lerp(_c.set("#77ff99"), 0.38);
+      bootMat.color.set(p.kick ? "#c07a3a" : "#2e1a4e");
+      bodyMat.color.set(PLAYER_HULL);
+      if (p.passing) bodyMat.color.lerp(_c.set("#77ff99"), 0.38);
     } else player.visible = false;
 
     let ei = 0;
