@@ -37,6 +37,9 @@ const TONIC = Object.freeze({
   void: 493.88,
   crown: 261.63,
 });
+/* The one chromatic guest menu's B section imports, in every octave it is
+   authored in — every A section is pure white-key (spec 1b). */
+const FSHARP = Object.freeze([92.5, 185.0, 369.99, 739.99, 1479.98]);
 const semi = (f, f0) => 12 * Math.log2(f / f0);
 const pcOf = (f, f0) => {
   const x = semi(f, f0) % 12;
@@ -297,8 +300,8 @@ function installAC(ac) {
       Object.isFrozen(MUSIC_PATTERN.hat),
   );
   check(
-    "STEP=0.134 LEN=64 (112 BPM sixteenths, 8 bars of 2/4)",
-    MUSIC_PATTERN.STEP === 0.134 && MUSIC_PATTERN.LEN === 64,
+    "STEP=0.121 LEN=64 (124 BPM sixteenths, 8 bars of 2/4)",
+    MUSIC_PATTERN.STEP === 0.121 && MUSIC_PATTERN.LEN === 64,
   );
   const fin = (a) =>
     a.every(
@@ -314,24 +317,24 @@ function installAC(ac) {
       fin(MUSIC_PATTERN.hat),
   );
   check(
-    "bass 20 tresillo hits — every one on step 0, 3 or 6 of its bar",
-    MUSIC_PATTERN.bass.length === 20 &&
-      MUSIC_PATTERN.bass.every((n) => [0, 3, 6].includes(n.s % 8)),
+    "bass 40 hits — the tresillo 0/3/6 riding a continuous eighth pulse",
+    MUSIC_PATTERN.bass.length === 40 &&
+      MUSIC_PATTERN.bass.every((n) => [0, 2, 3, 4, 6].includes(n.s % 8)),
     MUSIC_PATTERN.bass.length +
       ":" +
       [...new Set(MUSIC_PATTERN.bass.map((n) => n.s % 8))].sort().join(","),
   );
   check(
-    "lead 24-32 notes, silent through bars 4 and 8",
-    MUSIC_PATTERN.lead.length >= 24 &&
-      MUSIC_PATTERN.lead.length <= 32 &&
-      !MUSIC_PATTERN.lead.some((n) => (n.s >= 24 && n.s < 32) || n.s >= 56),
-    MUSIC_PATTERN.lead.length,
+    "lead 44-56 notes and NO lead-free bar — the two silent bars are gone",
+    MUSIC_PATTERN.lead.length >= 44 &&
+      MUSIC_PATTERN.lead.length <= 56 &&
+      barsWithLead(MUSIC_PATTERN) === 8,
+    MUSIC_PATTERN.lead.length + " / " + barsWithLead(MUSIC_PATTERN) + " bars",
   );
   check(
-    "hat 16 offbeat ticks — steps 2 and 6 of each bar, never the downbeat",
-    MUSIC_PATTERN.hat.length === 16 &&
-      MUSIC_PATTERN.hat.every((n) => n.s % 8 === 2 || n.s % 8 === 6),
+    "hat 32 ticks — a straight eighth pulse on every even step",
+    MUSIC_PATTERN.hat.length === 32 &&
+      MUSIC_PATTERN.hat.every((n) => n.s % 2 === 0),
     MUSIC_PATTERN.hat.length,
   );
   const bassByS = new Map(MUSIC_PATTERN.bass.map((n) => [n.s, n]));
@@ -397,9 +400,9 @@ function installAC(ac) {
     ["bass", "lead", "hat"].map((k) => vset(MUSIC_PATTERN_B[k])).join(" | "),
   );
   check(
-    "B hat 16 offbeat ticks, same skeleton as A",
-    MUSIC_PATTERN_B.hat.length === 16 &&
-      MUSIC_PATTERN_B.hat.every((n) => n.s % 8 === 2 || n.s % 8 === 6),
+    "B hat 32 even-step ticks, same skeleton as A",
+    MUSIC_PATTERN_B.hat.length === 32 &&
+      MUSIC_PATTERN_B.hat.every((n) => n.s % 2 === 0),
     MUSIC_PATTERN_B.hat.length,
   );
   const roots = (p) =>
@@ -410,7 +413,7 @@ function installAC(ac) {
       JSON.stringify(roots(MUSIC_PATTERN)),
     roots(MUSIC_PATTERN).join("/") + " vs " + roots(MUSIC_PATTERN_B).join("/"),
   );
-  const FS = [92.5, 185.0, 369.99];
+  const FS = FSHARP;
   const soundsFs = (p) =>
     ["bass", "lead", "hat"].some((k) =>
       p[k].some((n) => FS.some((m) => Math.abs(n.f - m) < 0.02)),
@@ -768,8 +771,7 @@ function installAC(ac) {
   // B-exclusive pitches: the F# that only menu's B section sounds (spec 1b —
   // every A section is pure white-key, and the two chromatic guests in the
   // score are menu's F# and sand's G#).
-  const isBmark = (f) =>
-    [92.5, 185.0, 369.99].some((m) => Math.abs(f - m) < 0.02);
+  const isBmark = (f) => FSHARP.some((m) => Math.abs(f - m) < 0.02);
   const covered = Math.floor((520 * 0.1) / MUSIC_PATTERN.STEP);
   check(
     "B-marker drive still reaches past step 320 at the new tempo",
@@ -783,9 +785,17 @@ function installAC(ac) {
     S = MUSIC_PATTERN.STEP;
   for (const st of ac.starts)
     if (isBmark(st.f)) isB.add(Math.round((st.t - t0) / S));
-  // F# lands on one step per bar of B's four-bar phrase, doubled across the
-  // 8-bar section
-  const EXP = [11, 29, 43, 61];
+  // Derived from the frozen B table rather than transcribed: a dense bass
+  // tonicizing G major sounds the leading tone far more than four times, and
+  // secIsB asserts BOTH "these steps" and "no others" — deriving the list is
+  // what stops those two halves from ever disagreeing.
+  const EXP = [
+    ...new Set(
+      ["bass", "lead", "hat"].flatMap((k) =>
+        MUSIC_PATTERN_B[k].filter((n) => isBmark(n.f)).map((n) => n.s),
+      ),
+    ),
+  ].sort((a, b) => a - b);
   const secIsB = (lo) =>
     EXP.every((e) => isB.has(lo + e)) &&
     ![...isB].some((k) => k >= lo && k < lo + 64 && !EXP.includes(k - lo));
@@ -1570,16 +1580,20 @@ function installAC(ac) {
   const A = MUSIC_PATTERN,
     B = MUSIC_PATTERN_B,
     f0 = TONIC.menu;
-  check("menu bar 1 states PLAIN", motifAt(A.lead, 0, f0, 1));
   check(
-    "menu A and B each occupy 46 +/- 2 of 64 steps",
-    occ(A) >= 44 && occ(A) <= 48 && occ(B) >= 44 && occ(B) <= 48,
+    "menu states the motif at bar 0 AND bar 4 — the hook returns mid-loop",
+    motifV2At(A.lead, 0, f0) && motifV2At(A.lead, 32, f0),
+    motifV2Head(A.lead, f0, 64),
+  );
+  check(
+    "menu A and B each occupy 58-63 of 64 steps — one free step, not a rest bar",
+    occ(A) >= 58 && occ(A) <= 63 && occ(B) >= 58 && occ(B) <= 63,
     occ(A) + "/" + occ(B),
   );
   check(
-    "menu breathes in both sections",
-    breathBar(A) >= 0 && breathBar(B) >= 0,
-    breathBar(A) + "/" + breathBar(B),
+    "menu pulse never gaps, in either section",
+    pulseGap(A) <= 1 && pulseGap(B) <= 1,
+    pulseGap(A) + "/" + pulseGap(B),
   );
   check("menu register lanes never cross, A and B", lanes(A) && lanes(B));
   check("menu B is hand-authored — its hat is not A's array", B.hat !== A.hat);
@@ -1791,7 +1805,7 @@ function installAC(ac) {
      order (intro -> menu -> jungle -> ice -> factory); wave B extends it to all
      ten. The breath-bar sweep this block used to carry is gone with the shared
      mandate — a v2 track earns its air from articulation, not empty bars. */
-  const WA = ["intro"];
+  const WA = ["intro", "menu"];
   check(
     "v2 wave A: the rhythm section never leaves two steps unstruck",
     WA.every((k) => pulseGap(MUSIC_TRACKS[k].A) <= 1),
@@ -2096,7 +2110,7 @@ function installAC(ac) {
     crown: 0.113,
     factory: 0.119,
     jungle: 0.129,
-    menu: 0.134,
+    menu: 0.121,
     sand: 0.139,
     ice: 0.144,
     water: 0.15,
@@ -2157,7 +2171,7 @@ function installAC(ac) {
      sides, so a track cannot drift back toward sparseness either. */
   const BAND = {
     intro: [28, 31],
-    menu: [44, 48],
+    menu: [58, 63],
     jungle: [40, 58],
     ice: [0, 34],
     factory: [40, 58],
