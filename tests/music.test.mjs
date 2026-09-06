@@ -128,7 +128,7 @@ const soundsDeg = (P, f0, d) =>
    V3 grows one id per commit, exactly as the v2 sweeps did. Every v2-direction
    sweep below quantifies over V2ONLY instead of over all ten, so the suite stays
    green on a mixed tree and nothing is scoped away permanently. */
-const V3 = ["menu", "jungle", "void", "water", "sand", "ice"];
+const V3 = ["menu", "jungle", "void", "water", "sand", "ice", "factory"];
 const V2ONLY = Object.keys(MUSIC_TRACKS).filter((k) => !V3.includes(k));
 /* Declared per PATTERN, not per track: v3 gives A and B their own key, so the
    in-collection pin has to read a section's own tonic and collection. Neither
@@ -138,7 +138,8 @@ const PENT_MAJ = [0, 2, 4, 7, 9],
   PENT_MIN = [0, 3, 5, 7, 10],
   HEX_MAJ = [0, 2, 4, 5, 7, 9],
   MIXO = [0, 2, 4, 5, 7, 9, 10],
-  LYD = [0, 2, 4, 6, 7, 9, 11];
+  LYD = [0, 2, 4, 6, 7, 9, 11],
+  DOR = [0, 2, 3, 5, 7, 9, 10];
 const V3KEY = {
   "menu.A": { f0: 392.0, set: HEX_MAJ, name: "G major hexatonic" },
   "menu.B": { f0: 293.66, set: PENT_MAJ, name: "D major pentatonic" },
@@ -152,6 +153,8 @@ const V3KEY = {
   "sand.B": { f0: 440.0, set: MIXO, name: "A Mixolydian" },
   "ice.A": { f0: 349.23, set: LYD, name: "F Lydian" },
   "ice.B": { f0: 523.25, set: LYD, name: "C Lydian" },
+  "factory.A": { f0: 329.63, set: DOR, name: "E Dorian" },
+  "factory.B": { f0: 293.66, set: DOR, name: "D Dorian" },
 };
 /* Index in the declared collection, extended across octaves, so "three adjacent
    collection steps falling" is idx, idx-1, idx-2 read from ANY degree — which is
@@ -1992,29 +1995,19 @@ function installAC(ac) {
 
 // ---- R3b cross-track: staging, timbre scarcity, and the wave-1 sweep ----
 {
-  /* jungle joined HAND with its v3 rewrite: a transposed B shares A's hat array
-     by identity and therefore cannot re-cut a rhythm, which is exactly the
-     sameness v3 exists to remove. ice/factory/water/sand follow on wave 2. */
-  const HAND = [
-    "menu",
-    "jungle",
-    "arena",
-    "void",
-    "crown",
-    "water",
-    "sand",
-    "ice",
-  ];
-  const TRANSP = ["factory"];
+  /* The `transp` staging list is EMPTY as of factory, and the helper is gone
+     from tracks.js with it: a transposed B shares A's hat array by identity and
+     therefore cannot re-cut a rhythm, which is exactly the sameness v3 exists
+     to remove. Every track that has a B now hand-authors it, and the claim is
+     stated over all nine rather than over a shrinking list. */
+  const HAND = Object.keys(MUSIC_TRACKS).filter((k) => MUSIC_TRACKS[k].B);
   check(
-    "hand-authored B: each of these owns a distinct hat array",
-    HAND.every((k) => MUSIC_TRACKS[k].B.hat !== MUSIC_TRACKS[k].A.hat),
-    HAND.filter((k) => MUSIC_TRACKS[k].B.hat === MUSIC_TRACKS[k].A.hat).join(","),
-  );
-  check(
-    "transp B: the remaining biomes still share A's hat array by identity",
-    TRANSP.every((k) => MUSIC_TRACKS[k].B.hat === MUSIC_TRACKS[k].A.hat),
-    TRANSP.filter((k) => MUSIC_TRACKS[k].B.hat !== MUSIC_TRACKS[k].A.hat).join(","),
+    "every B in the score is hand-authored — nine tracks, nine distinct hats",
+    HAND.length === 9 &&
+      HAND.every((k) => MUSIC_TRACKS[k].B.hat !== MUSIC_TRACKS[k].A.hat),
+    HAND.filter((k) => MUSIC_TRACKS[k].B.hat === MUSIC_TRACKS[k].A.hat).join(
+      ",",
+    ) || HAND.length + " hand-authored",
   );
   const sineLead = Object.keys(MUSIC_TRACKS).filter(
     (k) => MUSIC_TRACKS[k].A.lead[0].t === "sine",
@@ -2315,49 +2308,87 @@ function installAC(ac) {
   );
 }
 
-// ---- factory: mechanical, cold competence (E Phrygian, CANON) ----
+// ---- factory: playful mechanical staccato (E Dorian, 2-against-3) ----
 {
   const T = MUSIC_TRACKS.factory,
     A = T.A,
     B = T.B,
     f0 = TONIC.factory;
   check(
-    "factory STEP 0.114 (132 BPM), E2 82.41 root, B down a whole tone",
-    A.STEP === 0.114 &&
+    "factory STEP 0.130 -> 115.4 BPM, E2 82.41 root, inside the v3 96-120 band",
+    A.STEP === 0.13 &&
       A.bass[0].f === 82.41 &&
-      Math.abs(B.bass[0].f / A.bass[0].f - 0.890899) < 1e-9,
-    A.STEP + "/" + A.bass[0].f,
+      15 / A.STEP >= 96 &&
+      15 / A.STEP <= 120,
+    A.STEP + " -> " + (15 / A.STEP).toFixed(1) + " BPM / " + A.bass[0].f,
+  );
+  /* E DORIAN, not Phrygian: the flat second was the menace, and the natural 6
+     is what turns the machine friendly. Timbres are soft — the sawtooth engine
+     bass is gone from the score entirely. The one chip edge left in the music
+     layer is this hat, and it is a hat rather than the lead because the v3
+     waveform allow-list puts `square` on hats only; §2 asks for a square LEAD,
+     which would need the allow-list loosened to accommodate prose. */
+  check(
+    "factory is soft-timbred with ONE chip edge: triangle bass and lead, square hat",
+    A.bass[0].t === "triangle" &&
+      A.lead[0].t === "triangle" &&
+      A.hat[0].t === "square" &&
+      A.pad === undefined,
+    chansOf(A)
+      .map((a) => a[0].t)
+      .join(","),
+  );
+  /* STRICT 2-AGAINST-3: the bass runs in twos and rings through, the lead is
+     one-step staccato in threes starting a step late, and the two grids
+     therefore coincide exactly once a bar. That single coincidence is the
+     interlock, and counting it is what stops the two lanes drifting into
+     unison. */
+  check(
+    "factory bass pumps in TWOS — 0/2/4/6, each ringing two steps, all eight bars",
+    A.bass.length === 32 &&
+      stepSet(A.bass) === "0,2,4,6" &&
+      barsWithBass(A) === 8 &&
+      A.bass.every((n) => Math.round(n.d / A.STEP) === 2),
+    A.bass.length + ":" + stepSet(A.bass),
   );
   check(
-    "factory bass is sawtooth — one of the two scarce identity timbres",
-    A.bass.every((n) => n.t === "sawtooth"),
-    A.bass[0].t,
+    "factory lead is STACCATO in THREES — 1/4/7, every note exactly one step",
+    A.lead.length === 24 &&
+      stepSet(A.lead) === "1,4,7" &&
+      A.lead.every((n) => Math.round(n.d / A.STEP) === 1),
+    A.lead.length + ":" + stepSet(A.lead),
   );
   check(
-    "factory hat is square on every even step of ALL EIGHT bars — bar 5 no longer cuts",
-    A.hat.length === 32 &&
-      A.hat.every((n) => n.t === "square" && n.s % 2 === 0),
-    A.hat.length + "/" + A.hat[0].t,
+    "the interlock: the two grids coincide exactly once a bar, on step 4",
+    A.lead.filter((n) => A.bass.some((b) => b.s === n.s)).length === 8 &&
+      A.lead
+        .filter((n) => A.bass.some((b) => b.s === n.s))
+        .every((n) => n.s % 8 === 4),
   );
   check(
-    "factory engine never stalls: bass in every bar, pulse never gaps",
-    barsWithBass(A) === 8 && pulseGap(A) <= 1,
-    barsWithBass(A) + "/" + pulseGap(A),
-  );
-  check("factory has no pad at all", A.pad === undefined, String(A.pad));
-  const bh = motifV2Head(A.bass, f0, 64),
-    lh = motifV2Head(A.lead, f0, 64);
-  const bf = bh >= 0 && A.bass.find((n) => n.s === bh).f,
-    lf = lh >= 0 && A.lead.find((n) => n.s === lh).f;
-  check(
-    "CANON: bass head at bar 0, lead head exactly 8 steps later, an octave up",
-    bh === 0 && lh === 8 && lf > bf && isDeg(lf, bf, DEG1),
-    "bass@" + bh + " lead@" + lh,
+    "factory's hook is the 1-5 pump in the BASS at bar 0, answered by the lead at bar 2",
+    figureAt(A.bass, 0, f0, [0, 4], [DEG1, DEG5]) &&
+      figureAt(A.lead, 16, f0, [1, 4], [DEG1, DEG5]),
   );
   check(
-    "factory drives without filling: 56-62 of 64 steps",
-    occ(A) >= 56 && occ(A) <= 62,
-    occ(A),
+    "factory's square hat is a quiet colour — 12 blips at 2000 Hz, v 0.016",
+    A.hat.length === 12 &&
+      stepSet(A.hat) === "3,5" &&
+      A.hat.every((n) => n.f === 2000 && n.v === 0.016),
+    A.hat.length + ":" + stepSet(A.hat),
+  );
+  check(
+    "factory drives without filling: 54-62 of 64 steps",
+    occ(A) >= 54 && occ(A) <= 62 && occ(A) < A.LEN,
+    occ(A) + "/" + occ(B),
+  );
+  check(
+    "factory B INVERTS the interlock — bass in threes, lead in twos",
+    B.hat !== A.hat &&
+      stepSet(B.bass) === "0,3,6" &&
+      stepSet(B.lead) === "0,2,4,6" &&
+      B.bass[0].f === 73.42,
+    stepSet(B.bass) + " / " + stepSet(B.lead),
   );
   check("factory register lanes never cross, A and B", lanes(A) && lanes(B));
 }
@@ -2575,7 +2606,7 @@ function installAC(ac) {
   const LADDER = {
     arena: 0.107,
     crown: 0.11,
-    factory: 0.114,
+    factory: 0.13,
     intro: 0.125,
     jungle: 0.132,
     ice: 0.135,
@@ -2608,12 +2639,6 @@ function installAC(ac) {
       .map((k) => MUSIC_TRACKS[k].A.bass[0].f)
       .join(","),
   );
-  const sawBass = IDS.filter((k) => MUSIC_TRACKS[k].A.bass[0].t === "sawtooth");
-  check(
-    "exactly one sawtooth bass in the whole score, and it is FACTORY",
-    sawBass.length === 1 && sawBass[0] === "factory",
-    sawBass.join(","),
-  );
   check(
     "every track uses at least two distinct waveforms",
     IDS.every((k) => waves(MUSIC_TRACKS[k].A) >= 2),
@@ -2644,7 +2669,7 @@ function installAC(ac) {
     menu: [32, 44],
     jungle: [54, 62],
     ice: [28, 40],
-    factory: [56, 62],
+    factory: [54, 62],
     water: [34, 46],
     arena: [56, 62],
     sand: [44, 54],
@@ -2706,6 +2731,22 @@ function installAC(ac) {
           .map((a) => a[0].t)
           .join("/"),
     ).join(" "),
+  );
+  /* The v2 scarcity marker "exactly one sawtooth bass, and it is FACTORY" is
+     DELETED with factory's rewrite — v3 has no sawtooth in the music layer at
+     all, so the claim would be about a timbre that no longer exists. This is
+     its v3-correct replacement, and it keeps factory's identity ("its staccato
+     and its square colour") checkable rather than merely described. Quantified
+     over the composed ids so it is vacuous before factory and exact after. */
+  const sq = PATS.flatMap(([n, P]) =>
+    CH.filter((k) => has(P, k) && P[k][0].t === "square").map(
+      (k) => n + "." + k,
+    ),
+  );
+  check(
+    "v3: one square colour in the composed score, and it is FACTORY's hat",
+    sq.every((x) => /^factory\.[AB]\.hat$/.test(x)),
+    sq.join(",") || "(none yet)",
   );
   check(
     "v3: a square channel is a low-velocity COLOUR — every note at v <= 0.035",

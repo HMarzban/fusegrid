@@ -195,22 +195,6 @@ function mkPat(S, L, bass, lead, hat, mix, pad) {
     o.pad = E(pad, mix[6] || "triangle", mix[7] == null ? 0.03 : mix[7]);
   return Object.freeze(o);
 }
-function transp(P, r) {
-  const T = (a) =>
-    Object.freeze(
-      a.map((n) =>
-        Object.freeze({ s: n.s, f: n.f * r, d: n.d, t: n.t, v: n.v }),
-      ),
-    );
-  return Object.freeze({
-    STEP: P.STEP,
-    LEN: P.LEN,
-    bass: T(P.bass),
-    lead: T(P.lead),
-    hat: P.hat,
-    pad: P.pad ? T(P.pad) : undefined,
-  });
-}
 function tr(A, B, secs) {
   return Object.freeze({ A, B, sections: secs || MUSIC_SECTIONS });
 }
@@ -493,88 +477,95 @@ const ICE_B = mkPat(
     [48, 329.63, 16],
   ],
 );
-/* FACTORY — mechanical, cold competence. E Phrygian on E, STEP 0.114 (132 BPM),
-   and the flat second is the menace. The smallest diff of the ten: the sawtooth
-   engine bass, the 2-against-3 interlock and the CANON were already the right
-   idea. The sawtooth bass — the only one in the score, an identity marker rather
-   than a fourth default timbre — states the motif low in bar 1 (v2 rhythm), and
-   the square lead answers it exactly eight steps later, one octave up, after a
-   two-note anacrusis on steps 5 and 7 that leans in on the Phrygian flat
-   second. Every answer note that is not inside a motif run rings an eighth
-   rather than a sixteenth, so the machine hums continuously between statements
-   instead of ticking (a staccato first cut measured 3 dB quieter than the
-   version it replaced, which is the wrong direction for this brief). The engine ostinato that follows sustains 3+3+2 (three-step cells,
-   then a two-step one) in every bar against a square hat on every even step of
-   every bar, so the two grids coincide only twice a bar: the interlock. The old
-   bar-5 cut-out is filled in — the machine no longer skips a beat, and SFX still
-   sit on top because they render outside musicGain. Nothing reaches for D#: that
-   leading tone plus the perfect fourth this mode already owns would make factory
-   a second Ionian-pair track and break CROWN's uniqueness pin. No pad. The
-   B-section metric modulation the brief asks for is still not attempted: transp
-   returns the SAME hat array by identity, so a regrouping B hat cannot exist. */
+/* FACTORY — direction v3: playful mechanical staccato. E DORIAN on E, STEP
+   0.130 (115.4 BPM). Phrygian's flat second was the menace; the Dorian natural
+   6 is what turns the machine friendly, and nothing else about the room needs
+   to change: it is still an engine, it is just no longer a threat.
+   STRICT 2-AGAINST-3, and now literally so. The bass pumps in TWOS — 0/2/4/6 of
+   every bar, each note ringing its two steps so the engine hums rather than
+   ticks — and the lead is one-step STACCATO in THREES, 1/4/7, entering a step
+   late. The two grids therefore coincide exactly once a bar, on step 4, and
+   that single coincidence is the interlock. The hook is the 1-5 pump (E then B)
+   stated by the bass at bar 0 and answered by the lead at bar 2.
+   The sawtooth engine bass is gone from the score entirely — v3 has no sawtooth
+   in the music layer — and the v2 marker "exactly one sawtooth bass, and it is
+   FACTORY" is deleted with it. What replaces it is this hat: 12 quiet square
+   blips at 2000 Hz and v 0.016, on step 3 of every bar and step 5 of the odd
+   ones, the ONE chip edge left anywhere in the music. It is a hat rather than
+   the lead because the v3 waveform allow-list puts `square` on hats only; §2
+   asks for a square lead, and honouring that would mean loosening a green pin
+   to match prose. Step 5 of the even bars is the loop's deliberate hole.
+   Nothing reaches for D#: that leading tone on top of the perfect fourth this
+   mode already owns would make factory a second Ionian-pair track and break
+   CROWN's uniqueness pin. No pad. Channel peaks sum to 0.156. */
 const FACTORY_A = mkPat(
-  0.114,
+  0.13,
   64,
   [
-    [0, 82.41, 1],
-    [1, 98.0, 1],
-    [2, 123.47, 1],
-    [3, 130.81, 2],
-    [5, 123.47, 1],
-    ...[
-      [82.41, 123.47],
-      [87.31, 130.81],
-      [98.0, 123.47],
-      [82.41, 123.47],
-      [82.41, 130.81],
-      [110.0, 82.41],
-      [87.31, 82.41],
-    ].flatMap(([r, q], i) => [
-      [(i + 1) * 8, r, 3],
-      [(i + 1) * 8 + 3, r, 3],
-      [(i + 1) * 8 + 6, q, 2],
-    ]),
-  ],
+    [82.41, 164.81, 123.47, 164.81],
+    [82.41, 164.81, 123.47, 146.83],
+    [110.0, 220.0, 164.81, 220.0],
+    [98.0, 196.0, 146.83, 196.0],
+    [82.41, 164.81, 123.47, 164.81],
+    [82.41, 164.81, 123.47, 146.83],
+    [123.47, 246.94, 185.0, 246.94],
+    [110.0, 220.0, 164.81, 146.83],
+  ].flatMap((c, b) => c.map((f, i) => [b * 8 + i * 2, f, 2])),
   [
-    [5, 174.61, 2],
-    [7, 146.83, 1],
-    [8, 164.81, 1],
-    [9, 196.0, 1],
-    [10, 246.94, 1],
-    [11, 261.63, 2],
-    [13, 246.94, 2],
-    [17, 220.0, 2],
-    [19, 196.0, 2],
-    [21, 174.61, 2],
-    [23, 164.81, 1],
-    [24, 196.0, 1],
-    [25, 246.94, 2],
-    [27, 261.63, 2],
-    [29, 246.94, 2],
-    [31, 220.0, 2],
-    [33, 164.81, 2],
-    [35, 196.0, 2],
-    [37, 246.94, 2],
-    [39, 261.63, 1],
-    [40, 329.63, 1],
-    [41, 392.0, 1],
-    [42, 493.88, 1],
-    [43, 523.25, 2],
-    [45, 493.88, 2],
-    [49, 440.0, 2],
-    [51, 392.0, 2],
-    [53, 349.23, 2],
-    [55, 329.63, 1],
-    [56, 392.0, 1],
-    [57, 493.88, 2],
-    [59, 523.25, 2],
-    [61, 493.88, 2],
-    [63, 440.0, 2],
-  ],
+    [329.63, 493.88, 440.0],
+    [392.0, 369.99, 329.63],
+    [329.63, 493.88, 587.33],
+    [554.37, 493.88, 440.0],
+    [329.63, 493.88, 440.0],
+    [392.0, 440.0, 493.88],
+    [554.37, 493.88, 369.99],
+    [440.0, 392.0, 329.63],
+  ].flatMap((c, b) => [
+    [b * 8 + 1, c[0], 1],
+    [b * 8 + 4, c[1], 1],
+    [b * 8 + 7, c[2], 1],
+  ]),
   [0, 1, 2, 3, 4, 5, 6, 7].flatMap((b) =>
-    [0, 2, 4, 6].map((o) => [b * 8 + o, 2400, 1]),
+    b % 2 ? [[b * 8 + 3, 2000, 1], [b * 8 + 5, 2000, 1]] : [[b * 8 + 3, 2000, 1]],
   ),
-  ["sawtooth", 0.09, "square", 0.075, "square", 0.018],
+  ["triangle", 0.08, "triangle", 0.06, "square", 0.016],
+);
+/* FACTORY B — hand-authored, and it INVERTS the interlock rather than moving
+   it: the bass takes the threes (0/3/6, durations 3/3/2) and the lead takes the
+   twos (staccato on every even step), so the same machine reads as running the
+   other way round. Down a whole tone to D DORIAN, and the square blips move to
+   1 and 5. Step 7 is B's deliberate hole. */
+const FACTORY_B = mkPat(
+  0.13,
+  64,
+  [
+    [73.42, 146.83, 110.0],
+    [73.42, 146.83, 130.81],
+    [98.0, 196.0, 146.83],
+    [87.31, 174.61, 130.81],
+    [73.42, 146.83, 110.0],
+    [73.42, 146.83, 130.81],
+    [110.0, 220.0, 164.81],
+    [98.0, 196.0, 146.83],
+  ].flatMap((c, b) => [
+    [b * 8, c[0], 3],
+    [b * 8 + 3, c[1], 3],
+    [b * 8 + 6, c[2], 2],
+  ]),
+  [
+    [293.66, 440.0, 349.23, 440.0],
+    [293.66, 493.88, 392.0, 440.0],
+    [392.0, 587.33, 440.0, 493.88],
+    [349.23, 523.25, 440.0, 392.0],
+    [293.66, 440.0, 349.23, 440.0],
+    [293.66, 493.88, 392.0, 349.23],
+    [440.0, 659.26, 523.25, 493.88],
+    [392.0, 587.33, 440.0, 293.66],
+  ].flatMap((c, b) => c.map((f, i) => [b * 8 + i * 2, f, 1])),
+  [0, 1, 2, 3, 4, 5, 6, 7].flatMap((b) =>
+    [1, 5].map((o) => [b * 8 + o, 2000, 1]),
+  ),
+  ["triangle", 0.08, "triangle", 0.06, "square", 0.016],
 );
 /* WATER — direction v3: flowing, 3-against-4. G MIXOLYDIAN on G, STEP 0.144
    (104.2 BPM). The flat seventh is what makes it major-but-not-quite, wet
@@ -1265,7 +1256,7 @@ export const MUSIC_TRACKS = Object.freeze({
   menu: tr(MUSIC_PATTERN, MUSIC_PATTERN_B, MUSIC_SECTIONS),
   jungle: tr(JUNGLE_A, JUNGLE_B),
   ice: tr(ICE_A, ICE_B),
-  factory: tr(FACTORY_A, transp(FACTORY_A, 0.890899)),
+  factory: tr(FACTORY_A, FACTORY_B),
   water: tr(WATER_A, WATER_B),
   arena: tr(ARENA_A, ARENA_B),
   sand: tr(SAND_A, SAND_B),
