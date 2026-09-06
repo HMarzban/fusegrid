@@ -1805,7 +1805,7 @@ function installAC(ac) {
      order (intro -> menu -> jungle -> ice -> factory); wave B extends it to all
      ten. The breath-bar sweep this block used to carry is gone with the shared
      mandate — a v2 track earns its air from articulation, not empty bars. */
-  const WA = ["intro", "menu", "jungle"];
+  const WA = ["intro", "menu", "jungle", "ice"];
   check(
     "v2 wave A: the rhythm section never leaves two steps unstruck",
     WA.every((k) => pulseGap(MUSIC_TRACKS[k].A) <= 1),
@@ -1855,26 +1855,34 @@ function installAC(ac) {
     B = T.B,
     f0 = TONIC.ice;
   check(
-    "ice STEP 0.144 (104 BPM), F2 87.31 root, B up a whole tone",
-    A.STEP === 0.144 &&
+    "ice STEP 0.129 (116 BPM), F2 87.31 root, B up a whole tone",
+    A.STEP === 0.129 &&
       A.bass[0].f === 87.31 &&
       Math.abs(B.bass[0].f / A.bass[0].f - 1.122462) < 1e-9,
     A.STEP + "/" + A.bass[0].f,
   );
   check(
-    "ice bass is reduced to occasional cracks: <= 6 notes, none under 4 steps",
-    A.bass.length <= 6 && A.bass.every((n) => Math.round(n.d / A.STEP) >= 4),
-    A.bass.length + " notes",
+    "ice bass bounces on every off-eighth — 32 notes, every one on an odd step",
+    A.bass.length === 32 &&
+      A.bass.every((n) => n.s % 2 === 1) &&
+      barsWithBass(A) === 8,
+    A.bass.length + " notes @" + [...new Set(A.bass.map((n) => n.s % 8))].sort().join(","),
   );
   check(
-    "ice lead lives above C5 — the absence of low end IS the ice",
+    "ice bass alternates root and fifth — and never sounds a perfect fourth",
+    A.bass.filter((n) => n.s % 4 === 1).length === 16 &&
+      !soundsDeg({ bass: A.bass, lead: [], pad: [] }, f0, 5),
+    [...new Set(A.bass.map((n) => n.f))].join(","),
+  );
+  check(
+    "ice lead lives above C5 — a bright register over a bouncing bass",
     A.lead.length > 0 && A.lead.every((n) => n.f >= 523.25),
     Math.min(...A.lead.map((n) => n.f)),
   );
   check(
-    "ice states the motif in AUG — steps 0,2,4,6,12, two bars per statement",
-    motifAt(A.lead, 0, f0, 2),
-    motifHead(A.lead, f0, 2, 64),
+    "ice states the motif at NORMAL speed at bars 0 and 4 — AUG is withdrawn",
+    motifV2At(A.lead, 0, f0) && motifV2At(A.lead, 32, f0),
+    motifV2Head(A.lead, f0, 64),
   );
   check(
     "ice pad sounds the Lydian sharp 4 — the glassy, uncanny tone",
@@ -1882,15 +1890,20 @@ function installAC(ac) {
     (A.pad || []).map((n) => pcOf(n.f, f0).toFixed(1)).join(","),
   );
   check(
-    "ice hat ticks every 8 steps at 6200 Hz",
-    A.hat.length > 0 &&
-      A.hat.every((n) => n.s % 8 === A.hat[0].s % 8 && n.f === 6200),
-    A.hat.length,
+    "ice hat is a bell ON the beat — steps 0 and 4 at 6200 Hz, against the off-bass",
+    A.hat.length === 16 &&
+      A.hat.every((n) => [0, 4].includes(n.s % 8) && n.f === 6200),
+    A.hat.length + ":" + [...new Set(A.hat.map((n) => n.s % 8))].sort().join(","),
   );
   check(
-    "ice is sparse: at most 34 of 64 steps, and it breathes",
-    occ(A) <= 34 && breathBar(A) >= 0,
-    occ(A) + "/" + breathBar(A),
+    "ice pulse never gaps — the bell and the off-bass cover it between them",
+    pulseGap(A) <= 1 && barsWithLead(A) === 8,
+    pulseGap(A) + "/" + barsWithLead(A),
+  );
+  check(
+    "ice is light but never thin: 50-60 of 64 steps",
+    occ(A) >= 50 && occ(A) <= 60,
+    occ(A),
   );
   check("ice register lanes never cross, A and B", lanes(A) && lanes(B));
 }
@@ -2113,7 +2126,7 @@ function installAC(ac) {
     jungle: 0.117,
     menu: 0.121,
     sand: 0.139,
-    ice: 0.144,
+    ice: 0.129,
     water: 0.15,
     intro: 0.125,
     void: 0.234,
@@ -2174,7 +2187,7 @@ function installAC(ac) {
     intro: [28, 31],
     menu: [58, 63],
     jungle: [58, 63],
-    ice: [0, 34],
+    ice: [50, 60],
     factory: [40, 58],
     water: [0, 44],
     arena: [0, 62],

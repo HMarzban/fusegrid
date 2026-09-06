@@ -196,11 +196,6 @@ function mkPat(S, L, bass, lead, hat, mix, pad) {
     o.pad = E(pad, mix[6] || "triangle", mix[7] == null ? 0.03 : mix[7]);
   return Object.freeze(o);
 }
-function hats(L, f, step, v) {
-  const h = [];
-  for (let i = step > 1 ? 1 : 0; i < L; i += step) h.push([i, f, 1, v]);
-  return h;
-}
 function transp(P, r) {
   const T = (a) =>
     Object.freeze(
@@ -367,44 +362,81 @@ const JUNGLE_A = mkPat(
     [32, 146.83, 32],
   ],
 );
-/* ICE — brittle, echoing. F Lydian on F, STEP 0.144 (104 BPM). Register
-   separation is the whole idea: the bass is cut back to four long cracks and
-   NOTHING melodic sounds below C5, so the absence of low end is what reads as
-   ice. The lead runs the motif in AUG — doubled durations, two bars per
-   statement, steps 0/2/4/6/12 — and each statement is answered by a single
-   short ping an octave above it, the echo off the walls. The sine pad holds
-   Lydian chord tones including the raised fourth (B3), the glassy note that
-   names the mode. Hat: one 6200 Hz tick every eight steps, just off the
-   downbeat. 26 of 64 steps occupied; bar 4 is empty of everything but the pad. */
+/* ICE — brittle, glittering. F Lydian on F, STEP 0.129 (116 BPM). The cold is
+   the mode and the register, not an absent low end: the bass is a full
+   root-fifth alternation on EVERY off-eighth — steps 1, 3, 5 and 7 of every bar
+   — and it is the only bass in the score that lives entirely off the beat. The
+   6200 Hz hat answers it with a bell ON the beat, steps 0 and 4, so the two
+   voices cover the bar between them and the pulse never gaps. The lead states
+   the motif at normal speed (v2 rhythm) at bars 1 and 5, two octaves above the
+   bass and never below C5, and it stays off step 6 of every bar: that recurring
+   single-step pocket is the glitter, and it is one step, not one bar. The sine
+   pad holds Lydian chord tones including the raised fourth (B3), the glassy note
+   that names the mode. Nothing here reaches for a perfect fourth above F — that
+   Bb would collide with CROWN's Ionian-pair pin, and Lydian does not want it. */
 const ICE_A = mkPat(
-  0.144,
+  0.129,
   64,
   [
-    [0, 87.31, 8],
-    [20, 65.41, 6],
-    [32, 87.31, 8],
-    [52, 98.0, 4],
-  ],
+    [87.31, 130.81],
+    [87.31, 130.81],
+    [98.0, 146.83],
+    [110.0, 164.81],
+    [87.31, 130.81],
+    [87.31, 130.81],
+    [98.0, 146.83],
+    [123.47, 164.81],
+  ].flatMap(([r, q], b) => [
+    [b * 8 + 1, r, 1],
+    [b * 8 + 3, q, 1],
+    [b * 8 + 5, r, 1],
+    [b * 8 + 7, q, 1],
+  ]),
   [
-    [0, 698.46, 2],
-    [2, 880.0, 2],
-    [4, 1046.5, 2],
-    [6, 1174.66, 6],
-    [12, 1046.5, 2],
-    [15, 1396.91, 1],
-    [16, 1174.66, 2],
-    [18, 1046.5, 2],
-    [21, 987.77, 3],
-    [32, 698.46, 2],
-    [34, 880.0, 2],
-    [36, 1046.5, 2],
-    [38, 1174.66, 6],
-    [44, 1046.5, 2],
-    [46, 1396.91, 1],
-    [48, 987.77, 4],
-    [52, 880.0, 4],
+    [0, 698.46, 1],
+    [1, 880.0, 1],
+    [2, 1046.5, 1],
+    [3, 1174.66, 2],
+    [5, 1046.5, 1],
+    [8, 987.77, 1],
+    [9, 1046.5, 1],
+    [10, 880.0, 1],
+    [11, 783.99, 2],
+    [13, 698.46, 1],
+    [16, 880.0, 1],
+    [17, 987.77, 1],
+    [18, 1046.5, 1],
+    [19, 1174.66, 2],
+    [21, 1046.5, 1],
+    [24, 987.77, 1],
+    [25, 880.0, 1],
+    [26, 783.99, 1],
+    [27, 698.46, 2],
+    [29, 659.26, 1],
+    [32, 698.46, 1],
+    [33, 880.0, 1],
+    [34, 1046.5, 1],
+    [35, 1174.66, 2],
+    [37, 1046.5, 1],
+    [40, 1174.66, 1],
+    [41, 1046.5, 1],
+    [42, 987.77, 1],
+    [43, 880.0, 2],
+    [45, 783.99, 1],
+    [48, 698.46, 1],
+    [49, 783.99, 1],
+    [50, 880.0, 1],
+    [51, 987.77, 2],
+    [53, 1046.5, 1],
+    [56, 1046.5, 1],
+    [57, 987.77, 1],
+    [58, 880.0, 1],
+    [59, 783.99, 2],
+    [61, 698.46, 1],
   ],
-  hats(64, 6200, 8),
+  [0, 1, 2, 3, 4, 5, 6, 7].flatMap((b) =>
+    [0, 4].map((o) => [b * 8 + o, 6200, 1]),
+  ),
   ["triangle", 0.08, "triangle", 0.06, "triangle", 0.015, "sine", 0.03],
   [
     [0, 349.23, 12],
