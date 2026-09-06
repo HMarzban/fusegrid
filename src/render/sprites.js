@@ -559,27 +559,38 @@ export function drawPlayerBody(c, world, p) {
       c.fill();
     }
   }
+  /* The three state overlays are ELLIPSES, not circles, and they are sized
+     off the fins. A circle fitted to the old humanoid (shield r*1.40 = 20.2,
+     passing r*1.25 = 18.0) drew a line straight across both blades, whose
+     tips sit at radius hypot(18.72, 6.62) = 19.85 and which paint underneath
+     the rings — an FX that crosses out the character's own hook. Matching the
+     ring to the body's aspect is also just the right read on a wide animal.
+     These only draw on state, so the fit gates (which pose the hero with all
+     three false) never see them. */
   if (p.shield) {
     c.strokeStyle = "#6fb7ff";
     c.lineWidth = 2.5;
     c.globalAlpha = 0.7;
     c.beginPath();
-    c.arc(0, 0, r * 1.4, 0, 7);
+    c.ellipse(0, 0, r * 1.62, r * 1.26, 0, 0, 7);
     c.stroke();
     c.globalAlpha = 1;
   }
   if (p.kick) {
+    /* Kick pads flare off MAKO's OWN feet (x 0.16..0.70r, y 0.48..0.92r).
+       The old pads were placed against the humanoid's long boots and hung
+       outboard and below, floating over the contact shade. */
     c.fillStyle = "#c07a3a";
-    rr(c, -r * 0.86, r * 0.7, r * 0.34, r * 0.36, 2);
+    rr(c, -r * 0.8, r * 0.52, r * 0.32, r * 0.34, 2);
     c.fill();
-    rr(c, r * 0.52, r * 0.7, r * 0.34, r * 0.36, 2);
+    rr(c, r * 0.48, r * 0.52, r * 0.32, r * 0.34, 2);
     c.fill();
   }
   if (p.passing) {
     c.strokeStyle = "rgba(119,255,153,0.6)";
     c.lineWidth = 2;
     c.beginPath();
-    c.arc(0, 0, r * 1.25, 0, 7);
+    c.ellipse(0, 0, r * 1.5, r * 1.16, 0, 0, 7);
     c.stroke();
   }
 }

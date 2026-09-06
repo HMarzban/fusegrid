@@ -12,6 +12,7 @@ import {CFG, biomeOf, BIOMES} from "../../core/config.js";
 import {POWER} from "../../core/entities.js";
 import {captureSprite, drawPlayerBody, drawEnemyBody, drawBombBody,
   bakeAtlas, bakedTile, paintItemFace, PLAYER_SUIT} from "../sprites.js";
+import {dk} from "../icons.js";
 import {ENEMY_TYPES, ENEMY_COLORS} from "./entities.js";
 
 const S=64, K=S/(CFG.TILE*2.05);
@@ -83,7 +84,7 @@ function paintFace(c){
    }
   for(const s of [-1,1]){
     const ex=64+s*25;
-    c.fillStyle="#554470";
+    c.fillStyle=dk(PLAYER_SUIT,0.46);
     c.beginPath(); c.ellipse(ex,44,27,26,0,0,Math.PI*2); c.fill();
     c.fillStyle="#f2e6d2";
     c.beginPath(); c.ellipse(ex+s*4,39,21,20,0,0,Math.PI*2); c.fill();

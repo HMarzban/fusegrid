@@ -1230,11 +1230,20 @@ export function createPools(biome, atlas) {
       if (p.shield) {
         finMat.emissive.set("#6fb7ff");
         finMat.emissiveIntensity = 0.35 + 0.65 * pulse;
-        faceMat.color.set(faceBase).lerp(_c.set("#6fb7ff"), 0.4 + 0.5 * pulse);
+        /* EMISSIVE, not a colour lerp. `color` MULTIPLIES the map, so lerping
+           it 90% toward blue at peak pulse washed the whole painted face —
+           cream eyes, violet ground, ink grin — into one blue smear. That was
+           harmless when this Phong surface was a dark unpainted slit; on a
+           face it erases the identity exactly when the player is looking. */
+        faceMat.color.set(faceBase);
+        faceMat.emissive.set("#6fb7ff");
+        faceMat.emissiveIntensity = 0.25 + 0.45 * pulse;
       } else {
         finMat.emissive.set("#000000");
         finMat.emissiveIntensity = 1;
         faceMat.color.set(faceBase);
+        faceMat.emissive.set("#000000");
+        faceMat.emissiveIntensity = 1;
       }
       bootMat.color.set(p.kick ? "#c07a3a" : "#2e1a4e");
       bodyMat.color.set(PLAYER_HULL);
