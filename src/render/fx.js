@@ -12,7 +12,7 @@ import {CFG} from "../core/config.js";
    caller exists and none should be added without refactoring storage out. */
 const fx={shakeT:0,shakeX:0,shakeY:0,flashT:0,parts:[],
   cmbN:0,cmbT:0,calS:"",calT:0,nmT:0,nmCd:0};
-let tag=null;
+let tag=null, tagRng=null;
 /* Settings damping (nb.settings.v1). Applied INSIDE the two getters so both
    render paths and both call sites are covered without touching either draw
    site. NOT reset by initFx(): these are user preference, and every renderer
@@ -132,10 +132,19 @@ export function getNearMiss(){ return fx.nmT; }
    the old loadLevel `w.particles=[]` wipe now that storage lives here. R2's
    timers go with them, WITHOUT emitting the open group: feedFx also runs for
    the attract demo world, so an open combo would otherwise leak across the
-   attract <-> live boundary or a room change. */
+   attract <-> live boundary or a room change.
+   world.rng's OBJECT IDENTITY is folded in alongside the seed:level string so
+   a SAME-LEVEL restart also retags. loadLevel (world.js:74) reassigns
+   `w.rng = createRng(...)` to a brand-new object on every call — the only
+   `.rng =` assignment anywhere in src/ — even when seed and level are
+   unchanged, which is exactly the startGame() (sim.js:107-111) and
+   pause-RESTART (main.js) case: same seed, same level, string tag alone never
+   changes. Without this, a room-1 death/restart left a frozen callout and
+   stale particles painting over the new run's first frames. */
 export function syncFx(world){
   const t=world ? world.seed+":"+world.level : null;
-  if(t!==tag){ tag=t; fx.parts=[]; clearR2(); }
+  const r=world ? world.rng : null;
+  if(t!==tag||r!==tagRng){ tag=t; tagRng=r; fx.parts=[]; clearR2(); }
 }
 
 export function onEvent(world, ev, time){

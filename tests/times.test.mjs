@@ -11,6 +11,7 @@ import {
 import { fmtTime, timeLine, drawHudChips, drawOverlay } from "../src/render/scenes.js";
 import { readFileSync } from "node:fs";
 import { createGame } from "../src/main.js";
+import { SCREEN } from "../src/app/menuapp.js";
 
 let pass = 0,
   fail = 0;
@@ -491,6 +492,122 @@ const HUD_W = {
       !/prevSt === "PAUSE"[^\n]*roomT = 0/.test(mainSrc),
     (mainSrc.match(/roomT = 0;[^\n]*/g) || []).join(" | "),
   );
+}
+
+/* ---- SELF-REVIEW PIN C (closing fix wave, finding 1): the WIN-edge write has
+   no behavioral pin on the ACTUAL persisted number — a mutation to
+   `roomT*2+7`, or swapping in `world.time`, both leave every check above
+   green, because Pin A/B assert TIMING behavior and store round-trips in
+   isolation, never the number main.js's WIN edge actually writes.
+   This drives a real createGame through PLAY, pauses mid-run (so world.time
+   and the PLAY-only roomT clock diverge — Pin A's own control), resumes, and
+   independently ACCUMULATES the same PLAY-only clock main.js keeps (sum dt
+   only while state===PLAY, from the exact same t sequence driving the real
+   loop) to predict the number that must land in an injected store on the
+   PLAY->WIN edge — never reading main.js's private `roomT` directly. ---- */
+{
+  const mem = new Map();
+  const store = {
+    getItem: (k) => (mem.has(k) ? mem.get(k) : null),
+    setItem: (k, v) => mem.set(k, String(v)),
+  };
+  globalThis.window = { localStorage: store, addEventListener() {} };
+  try {
+    const g = createGame(null, { autoplay: true, seed: 51 });
+    let t = 2000;
+    g.loop(t); // establishes main.js's internal `last`; dt=0 this frame
+    let expect = 0;
+    const advance = (ms) => {
+      const prevT = t;
+      t += ms;
+      const dt = Math.min((t - prevT) / 1000, 0.25); // mirrors main.js's own clamp
+      if (g.world.state === "PLAY") expect += dt; // mirrors `if(state==="PLAY") roomT+=dt`
+      g.loop(t);
+    };
+    for (let i = 0; i < 30; i++) advance(16);
+    check(
+      "PIN C setup: still PLAY before the pause",
+      g.world.state === "PLAY",
+      g.world.state,
+    );
+    const wtBeforePause = g.world.time;
+    g.input.onPause();
+    check("PIN C: paused", g.world.state === "PAUSE", g.world.state);
+    for (let i = 0; i < 40; i++) advance(16); // world.time advances; expect (roomT) must not
+    check(
+      "PIN C control: world.time DID advance while paused (Pin A's own control, reproduced)",
+      g.world.time > wtBeforePause,
+      wtBeforePause + " -> " + g.world.time,
+    );
+    g.input.onPause(); // resume
+    check("PIN C: resumed", g.world.state === "PLAY", g.world.state);
+    for (let i = 0; i < 20; i++) advance(16);
+
+    const k = timeKey(g.world);
+    g.world.state = "WIN"; // same technique tests/headless.test.mjs uses for a WIN pin
+    advance(16); // this frame's own dt must NOT be added — state is WIN, not PLAY, when roomT is read
+
+    const stored = loadTimes(store).b[k];
+    check(
+      "PIN C: the WIN edge persists the PLAY-only roomT clock, tenths-floored — not a mutated value",
+      stored === Math.floor(expect * 10),
+      stored + " vs floor(" + expect + "*10)=" + Math.floor(expect * 10),
+    );
+    check(
+      "PIN C control: the stored value is NOT world.time's tenths — roomT and world.time really do disagree here",
+      stored !== Math.floor(g.world.time * 10),
+      stored + " vs " + Math.floor(g.world.time * 10),
+    );
+  } finally {
+    delete globalThis.window;
+  }
+}
+
+/* ---- SELF-REVIEW PIN D (closing fix wave, finding 1): the TIME-ATTACK
+   toggle's persist round-trip through the REAL callback chain — createGame's
+   `onTimeAttack`/`loadTimes().on` wiring — not the source regexes below,
+   which only prove the wiring EXISTS, never that it actually persists. ---- */
+{
+  const mem = new Map();
+  const store = {
+    getItem: (k) => (mem.has(k) ? mem.get(k) : null),
+    setItem: (k, v) => mem.set(k, String(v)),
+  };
+  globalThis.window = { localStorage: store, addEventListener() {} };
+  try {
+    const g = createGame(null, { seed: 61 });
+    check(
+      "PIN D: a fresh store seeds app.timeAttack false and loadTimes().on 0",
+      g.app.timeAttack === false && loadTimes(store).on === 0,
+      g.app.timeAttack + " / " + loadTimes(store).on,
+    );
+    g.app.screen = SCREEN.LEVEL;
+    g.app.pactUnlocked = true;
+    const ok1 = g.app.toggleTimeAttack();
+    check(
+      "PIN D: toggleTimeAttack() flips app.timeAttack on and returns true",
+      ok1 === true && g.app.timeAttack === true,
+      ok1 + " / " + g.app.timeAttack,
+    );
+    check(
+      "PIN D: ...and persists through the REAL onTimeAttack callback to the store",
+      loadTimes(store).on === 1,
+      JSON.stringify(loadTimes(store)),
+    );
+    const ok2 = g.app.toggleTimeAttack();
+    check(
+      "PIN D: toggling again flips app.timeAttack back off",
+      ok2 === true && g.app.timeAttack === false,
+      ok2 + " / " + g.app.timeAttack,
+    );
+    check(
+      "PIN D: ...and the store round-trips back to 0",
+      loadTimes(store).on === 0,
+      JSON.stringify(loadTimes(store)),
+    );
+  } finally {
+    delete globalThis.window;
+  }
 }
 
 // ---- wiring: the toggle is seeded from and persisted to nb.times.v1 ----

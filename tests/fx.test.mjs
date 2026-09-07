@@ -12,11 +12,12 @@ import {
   onEvent,
   updateFx,
   getShake,
+  getFx,
   setFxOpts,
 } from "../src/render/fx.js";
 import { createRenderer } from "../src/render/renderer.js";
 import { createRenderer3D } from "../src/render/three/wrapper.js";
-import { createWorld, loadLevel } from "../src/core/sim.js";
+import { createWorld, loadLevel, step, newIntent } from "../src/core/sim.js";
 import { readFileSync } from "node:fs";
 
 let pass = 0,
@@ -249,6 +250,70 @@ const chainW = (n, px, py, blades) => {
   );
 }
 
+// ---- SELF-REVIEW (closing fix wave, finding 2): a SAME-LEVEL restart must
+// also retag, not only a seed:level change. startGame() (sim.js:107-111) and
+// pause RESTART (main.js) both call loadLevel(world,1,false) on a room-1
+// death/restart — same seed, same level, so the seed:level STRING never
+// changes. loadLevel (world.js:74) reassigns `w.rng` to a brand-new object on
+// every call regardless (the only `.rng =` in src/), so folding that identity
+// into the tag is what makes the restart wipe stale R2 state/particles too. ----
+{
+  const w = createWorld(1, 1);
+  loadLevel(w, 1, false);
+  w.state = "PLAY";
+  syncFx(w); // first room load: establishes the tag against this exact world
+
+  // Open + resolve a callout, and leave live particles, on THIS world.
+  const ev = [];
+  for (let i = 0; i < 3; i++) ev.push({ t: "kill", x: 0, y: 0 });
+  ev.push({ t: "boom", x: 0, y: 0 });
+  w.events = ev;
+  feedFx(w, CFG.STEP); // opens the 3-group
+  onEvent(w, { t: "boom", x: 40, y: 40 }); // also leaves live particles
+  w.events = [];
+  feedFx(w, CFG.BLADE_TTL + 0.01); // resolves the group into a callout
+  check(
+    "setup: a callout is live before the restart",
+    getCallout() === "TRIPLE",
+    getCallout(),
+  );
+  check(
+    "setup: particles are live before the restart",
+    getFx().length > 0,
+    getFx().length,
+  );
+
+  // LOSE -> a fire press -> the REAL startGame() path through step() itself
+  // (sim.js:67-74 -> :107-111): a SAME-LEVEL restart, same seed, only
+  // world.rng's object identity actually changes.
+  w.state = "LOSE";
+  w.fireEdge = false;
+  const it = newIntent();
+  it.fire = true;
+  step(w, CFG.STEP, { 0: it });
+  check(
+    "control: this really is a same-level restart (seed/level unchanged)",
+    w.level === 1 && w.state === "PLAY",
+    w.level + "/" + w.state,
+  );
+
+  // First PLAY frame of the NEW run: both renderers call syncFx(world) before
+  // draining events (renderer.js/wrapper.js), so this is what the player's
+  // very first frame actually sees.
+  w.events = [];
+  syncFx(w);
+  check(
+    "R2: syncFx wipes the stale callout on a same-level restart",
+    getCallout() === "",
+    getCallout(),
+  );
+  check(
+    "R2: syncFx wipes stale particles on a same-level restart",
+    getFx().length === 0,
+    getFx().length,
+  );
+}
+
 // ---- 8. PLAY-only gate: feedFx owns the decay, and freezes outside PLAY ----
 {
   initFx();
@@ -446,22 +511,34 @@ const chainW = (n, px, py, blades) => {
     // wiped by the time render() runs.
     const { name, r, ops } = mk();
 
-    // Force a live callout into the fx singleton via the exact chainW/mkW
-    // identity (seed:1, level:1) so the PAUSE render below — which runs
-    // syncFx(world) first — doesn't retag and clear it out from under us.
+    // Force a live callout into the fx singleton on the EXACT SAME world
+    // object the PAUSE render below reuses (closing fix wave, finding 2):
+    // syncFx now folds world.rng's object identity into its tag, so two
+    // independently-built worlds sharing only a seed:level STRING (the old
+    // chainW/mkW fixture vs a real createWorld) no longer count as "the same
+    // world" — loadLevel always hands out a fresh `w.rng`. One real world,
+    // reused for setup and for both render() probes, keeps the identity the
+    // PAUSE render's own syncFx(world) call checks against unchanged.
     setFxOpts({ flashK: 1, shakeK: 1 });
     initFx();
-    const cw = chainW(3);
-    syncFx(cw);
-    feedFx(cw, CFG.BLADE_TTL + 0.01);
+    const pw = createWorld(1, 1);
+    loadLevel(pw, 1, false);
+    pw.state = "PLAY";
+    syncFx(pw);
+    const ev = [];
+    for (let i = 0; i < 3; i++) ev.push({ t: "kill", x: 0, y: 0 });
+    ev.push({ t: "boom", x: 0, y: 0 });
+    pw.events = ev;
+    feedFx(pw, CFG.STEP); // opens the 3-group
+    pw.events = [];
+    feedFx(pw, CFG.BLADE_TTL + 0.01); // resolves it into TRIPLE
     check(
       name + ": setup — the callout is live (TRIPLE) before the render probes",
       getCallout() === "TRIPLE",
       getCallout(),
     );
 
-    const pw = createWorld(1, 1);
-    loadLevel(pw, 1, false);
+    pw.events = [];
     pw.state = "PAUSE";
     const mark1 = ops.length;
     r.render(pw, 1 / 60, { hud: true });
