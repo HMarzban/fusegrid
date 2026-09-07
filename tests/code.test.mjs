@@ -246,7 +246,11 @@ function check(name, cond, detail) {
   check(
     "?code= wins over ?play=1 when both are present",
     /if \(autoplay && !chal\)/.test(src),
-    (src.match(/if \(autoplay[^\n]*/) || [])[0],
+    /* Deviation: narrowed the detail-print pattern to require "&&" — the
+       broader "if (autoplay" pattern's first hit in the file is the
+       unrelated fireJingle guard ("if (autoplay || fireJingle._done) return;"),
+       which would print a misleading detail line on a future RED here. */
+    (src.match(/if \(autoplay && [^\n]*/) || [])[0],
   );
   check(
     "a challenge boot marks the cabinet seen, exactly as ?play=1 does",
