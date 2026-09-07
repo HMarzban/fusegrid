@@ -159,6 +159,29 @@ const TODAY = "2026-09-07";
   );
 }
 
+// ---- 4b. Minor-2 (review 2026-09-07, owner ruling): a stamp mismatch is
+// ABSENT, refused rather than silently compared ----
+{
+  const same = recordDaily({ date: TODAY, best: 500, played: 2, room: 2, pace: 1 }, TODAY, 300, 1, 0);
+  check(
+    "MATCH path: same date, same stamped pace — accumulates normally",
+    same.played === 3 && same.best === 500 && same.pace === 1,
+    JSON.stringify(same),
+  );
+  // stamped under a DIFFERENT pin (pace 2 = HARD) than this run just used (0 = NORM)
+  const mismatch = recordDaily({ date: TODAY, best: 9999, played: 5, room: 8, pace: 2 }, TODAY, 100, 1, 0);
+  check(
+    "MISMATCH path: a record stamped under a different pace pin is ABSENT — TRY 1, no cross-pin comparison",
+    mismatch.date === TODAY && mismatch.played === 1 && mismatch.pace === 1,
+    JSON.stringify(mismatch),
+  );
+  check(
+    "the mismatched run's result REPLACES the record — never silently kept the old (higher) best",
+    mismatch.best === 100,
+    String(mismatch.best),
+  );
+}
+
 // ---- 5. dailyTag ----
 {
   check("an empty record is NEW", dailyTag(clampDaily(null), TODAY) === "NEW");

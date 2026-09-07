@@ -59,15 +59,20 @@ export function saveDaily(v, store) {
   } catch (_) {}
 }
 
-/* The pace is STAMPED as well as the config being pinned, so a record made
-   under a future different pin is refused rather than silently compared. */
+/* The pace is STAMPED as well as the config being pinned: a record whose
+   stamped pace does not match the pace THIS run just used is treated as
+   ABSENT rather than merged into — the run's result REPLACES it under the
+   new stamp (fresh day: played 1, best is this run's own score, no silent
+   comparison to a best made under a different pin). Minor-2 (review
+   2026-09-07, owner ruling): a record made under a future different pin is
+   refused rather than silently compared. */
 export function recordDaily(v, today, score, room, pace) {
   const cur = clampDaily(v);
   const s = cl(score, 0, 9999999),
     r = cl(room, 1, 8),
     p = clampPace(pace) + 1;
   if (!DATE_RE.test(String(today || ""))) return cur;
-  if (cur.date !== today)
+  if (cur.date !== today || cur.pace !== p)
     return { date: today, best: s, played: 1, room: r, pace: p };
   return {
     date: today,

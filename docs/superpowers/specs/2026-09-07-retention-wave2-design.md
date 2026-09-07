@@ -823,6 +823,12 @@ swallowed** — the run-end line prints the pace token (§4.5).
 records the pace it ran at, so a record made under a future different pin is
 refused rather than silently compared.
 
+**Ruling 2026-09-07 (Minor-2, review fix wave):** the refusal is enforced at
+write time — `recordDaily` treats a stamped `pace` that does not match the
+pace this run just used as ABSENT, exactly like a new day (`played` resets to
+1, `best` is this run's own score), rather than merging into a record made
+under a different pin.
+
 `main.js`'s `onStart` gains one line, before `loadLevel` (which reads `w.seed`
 for both `createRng` and `genBoard`, `world.js:74-75`):
 
