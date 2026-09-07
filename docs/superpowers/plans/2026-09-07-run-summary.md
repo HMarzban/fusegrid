@@ -100,10 +100,10 @@ R5, R3, R8 and R10 build on.
   same clamped RAF `dt`, so a machine that trips the `steps > 6` anti-spiral cap
   (`main.js:589-592`) burns wall-clock the sim never sees. R1 adds no new risk;
   it makes the same clock visible.
-- **`main.js`'s line pin rises to 754 exactly once**, in Task 3 (this plan's only
+- **`main.js`'s line pin rises to 755 exactly once**, in Task 3 (this plan's only
   `main.js`-touching task), with its own reason comment appended. Measured today
   is 732 and the additions below total **+22**. If your implementation lands
-  above 754, move the excess into `src/app/bests.js` — **never raise the pin**.
+  above 755, move the excess into `src/app/bests.js` — **never raise the pin**.
 - **`src/pwa/shell.js`'s `SRC` entry for `src/app/bests.js` is mandatory**:
   `tests/pwa.test.mjs:98-103` walks `src/` and requires every `.js` in
   `PRECACHE`, so the suite fails until `shell.js` lists it.
@@ -1359,12 +1359,12 @@ the assertion:
   // R1 run-summary wave: +22 lines (bests.js import; isFinale on the CFG
   // import; the run-state declarations plus startRunState/endRun; startRunState
   // in onStart and pause RESTART; endRun in persistScore; the split edge block;
-  // the feedTally line; ro.run) — bumped 733->754.
-  check("main.js stays a lean browser entry (<=754 lines)",
-    L.length<=754,String(L.length));
+  // the feedTally line; ro.run) — bumped 733->755.
+  check("main.js stays a lean browser entry (<=755 lines)",
+    L.length<=755,String(L.length));
 ```
 
-If your `main.js` measures above 754, move the excess into `src/app/bests.js` —
+If your `main.js` measures above 755, move the excess into `src/app/bests.js` —
 **never raise the pin**.
 
 - [ ] **Step 4: Run to PASS — full battery**

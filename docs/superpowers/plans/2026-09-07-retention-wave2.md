@@ -101,10 +101,10 @@ Verbatim from the spec (§0, §1, §8), binding on all five sub-plans:
   target**. Test-only and docs-only commits bump nothing.
 - **`tests/headless.test.mjs:909`'s `main.js` line pin gets one bump per plan**,
   in that plan's **first** `main.js`-touching task, to that plan's cap
-  (R1 → 754, R5 → 770, R3 → 782, R8 → 792, R10 → 802), each with the file's own
+  (R1 → 755, R5 → 771, R3 → 783, R8 → 793, R10 → 803), each with the file's own
   one-line reason comment appended (`:890-908` convention). **Rule: a plan that
   would exceed its cap moves the excess into its `src/app/*` module, never into
-  a higher pin.** Measured today: 732.
+  a higher pin.** Measured today: 732 by `wc -l`. **The pin measures `split("\n").length`, which is `wc -l` + 1 for this trailing-newline file; every cap in this INDEX and in the five plans is in that measure (R1 landed the pin at 755).**
 - **Both `drawOverlay` call sites and both `drawCoach2` call sites move in the
   same commit** (`renderer.js:79`/`:90`, `wrapper.js:154`/`:157`). Wave-1 §9.2
   was exactly this bug class: one draw site updated, one not.
@@ -712,7 +712,7 @@ same stage.
 | `src/app/flags.js readFlags` | `urlKind autoplay netLocal orbit debug` | **+** `code` | **R8** |
 | `src/app/coach.js` | `COACH_KEY COACH_DUR loadCoachSeen saveCoachSeen coachOpen` | **+** `COACH2_KEY COACH2_DUR loadCoach2 saveCoach2 coach2Seen coach2Mark coachTip`; imports `POWER` from `core/entities.js` | **R10** |
 | `src/main.js` | `coachT roomT bestPrev` | **+** `tally runT bestRun runEnded` (R1); `copyText` (R5); `todayStr dailyDate dailyRec` (R3); `coach2T coach2Kind` (R10); `startRunState`/`endRun` and the split edge block (R1); `isFinale` on the `CFG` import (R1) | **per plan** |
-| `tests/headless.test.mjs:909` | `main.js stays a lean browser entry (<=733 lines)`, measured 732 | **R1 → 754, R5 → 770, R3 → 782, R8 → 792, R10 → 802**, one bump per plan in that plan's **first** `main.js`-touching task, each with its own reason comment | **each plan, once** |
+| `tests/headless.test.mjs:909` | `main.js stays a lean browser entry (<=733 lines)`, measured 732 | **R1 → 755, R5 → 771, R3 → 783, R8 → 793, R10 → 803**, one bump per plan in that plan's **first** `main.js`-touching task, each with its own reason comment | **each plan, once** |
 | `tests/heat.test.mjs:325-335` (WIN branch) | `texts.some(s => s.indexOf("CLEARED") >= 0)` | **unmoved** — the 9th arg defaults `undefined` ⇒ today's layout | — |
 | `tests/heat.test.mjs:49-82` | `overlayCue` × 4 and `runStamp` / `copyPayload` exact strings | **unmoved** — R8 changes only `drawOverlay`'s concatenation | — |
 | `tests/times.test.mjs` `timeLine` / `drawOverlay` pins | 8-arg calls | **unmoved**; the `timeLine` slot moves from dy 44 to dy 68 on a mid-room WIN, and both pins are string-presence pins, not position pins | — |

@@ -88,9 +88,9 @@ before editing, and locate `main.js` edits by string, never by line number.**
   but `main.js` does not emit them until R10.** The store's contract is ten
   kinds and is pinned as ten; the two coach emit sites live in R10's task 3,
   beside the latch that knows when a tip opened and why it closed.
-- **`main.js`'s line pin rises to 770 exactly once**, in **Task 2** — this
-  plan's first `main.js`-touching task. Additions total **+16** over R1's 754.
-  If your implementation lands above 770, move the excess into
+- **`main.js`'s line pin rises to 771 exactly once**, in **Task 2** — this
+  plan's first `main.js`-touching task. Additions total **+16** over R1's 755.
+  If your implementation lands above 771, move the excess into
   `src/app/stats.js` — **never raise the pin**.
 - **`src/pwa/shell.js`'s `SRC` entry for `src/app/stats.js` is mandatory.**
 - PWA: bump `CACHE_NAME` + `sw.js:3` `REV` **together**, `current vN → vN+1`, in
@@ -852,14 +852,14 @@ raise the number in **both** the label and the assertion:
   // R5 stats wave: +16 lines (stats.js import; session_start at boot; the
   // copyText helper replacing the inline clipboard pair; KeyC-on-STATS;
   // onStats; the STATS audio exclusion; the room_enter/room_clear/death/
-  // run_end/score_set/plaque_unlock edges) — bumped 754->770.
-  check("main.js stays a lean browser entry (<=770 lines)",
-    L.length<=770,String(L.length));
+  // run_end/score_set/plaque_unlock edges) — bumped 755->771.
+  check("main.js stays a lean browser entry (<=771 lines)",
+    L.length<=771,String(L.length));
 ```
 
 The bump lands here, in this plan's **first** `main.js`-touching task; Task 4
 adds the remaining lines under the same ceiling. If your implementation lands
-above 770, move the excess into `src/app/stats.js` — **never raise the pin**.
+above 771, move the excess into `src/app/stats.js` — **never raise the pin**.
 
 - [ ] **Step 4: Run to PASS — full battery**
 
