@@ -159,7 +159,7 @@ export function createGame(canvas, opts = {}) {
      withholds the room from recordBest otherwise; the score still records. */
   let tally = newTally(), runT = 0, bestRun = null, runEnded = true, runFromStart = true;
   const startRunState = (fromStart) => {
-    tally = newTally(); runT = 0; runEnded = false; runFromStart = fromStart;
+    tally = newTally(); runT = 0; runEnded = false; runFromStart = fromStart; coach2 = { kind: null, t: 0 };
     bestRun = bestOfRun(loadBests(), bestKey(world));
   };
   const endRun = () => {

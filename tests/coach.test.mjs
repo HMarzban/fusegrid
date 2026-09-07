@@ -659,6 +659,94 @@ check("round-trip", loadCoachSeen(store) === true);
   }
 }
 
+// ---- Major-1 fix (review 2026-09-07): coach2 resets at run start, so a live
+// tip from an earlier run can never repaint (or silently burn a bit) in a
+// fresh one. Two run-start paths are pinned: quit-mid-tip -> START, and a
+// LOSE retry (which never calls onStart at all). ----
+{
+  const m7 = new Map();
+  const ls = { getItem: (k) => (m7.has(k) ? m7.get(k) : null),
+    setItem: (k, v) => m7.set(k, String(v)) };
+  globalThis.window = { localStorage: ls, addEventListener() {} };
+  ls.setItem("nb.coach.v1", "1"); // v1 already seen: isolate v2
+  try {
+    const { texts, canvas } = fakeCanvasTexts();
+    const g = createGame(canvas, { autoplay: true, seed: 201 });
+    let t = 1000;
+    g.loop(t);
+    texts.length = 0;
+    g.world.events.push({ t: "power", kind: "kick", x: 1, y: 1 });
+    g.loop((t += 16));
+    check(
+      "Major-1 setup: KICK tip is live before quitting",
+      texts.includes("KICK · walk into a bomb to slide it"),
+      texts.join("|"),
+    );
+    g.input.onPause();
+    g.loop((t += 16));
+    g.app.pauseCursor = 3; // QUIT TO MENU
+    g.app.confirm();
+    check("Major-1 setup: quitting mid-tip lands on MENU", g.app.screen === SCREEN.MENU, String(g.app.screen));
+    check(
+      "Major-1 setup: nb.coach.v2 is still unwritten — the tip was never dismissed",
+      JSON.stringify(loadCoach2(ls)) === '{"k":0,"t":0,"r":0}',
+      JSON.stringify(loadCoach2(ls)),
+    );
+    g.app.cursor = 0; // PLAY
+    g.app.confirm(); // starts a fresh run via onStart
+    texts.length = 0;
+    g.loop((t += 16));
+    check(
+      "Major-1: a fresh run after a mid-tip QUIT TO MENU repaints no stale tip",
+      !texts.some((s) => s.indexOf("KICK ·") === 0),
+      texts.join("|"),
+    );
+    check(
+      "Major-1: nb.coach.v2 k stays 0 for the never-used verb in the new run",
+      loadCoach2(ls).k === 0,
+      JSON.stringify(loadCoach2(ls)),
+    );
+  } finally {
+    delete globalThis.window;
+  }
+  const m8 = new Map();
+  const ls2 = { getItem: (k) => (m8.has(k) ? m8.get(k) : null),
+    setItem: (k, v) => m8.set(k, String(v)) };
+  globalThis.window = { localStorage: ls2, addEventListener() {} };
+  ls2.setItem("nb.coach.v1", "1");
+  try {
+    const { texts, canvas } = fakeCanvasTexts();
+    const g = createGame(canvas, { autoplay: true, seed: 202 });
+    let t = 1000;
+    g.loop(t); // establishes main's `last`; prevSt latches PLAY
+    texts.length = 0;
+    g.world.events.push({ t: "power", kind: "throw", x: 1, y: 1 });
+    g.loop((t += 16));
+    check(
+      "Major-1 LOSE setup: THROW tip is live before dying",
+      texts.includes("THROW · Shift+Space tosses a bomb"),
+      texts.join("|"),
+    );
+    g.world.state = "LOSE";
+    g.loop((t += 16)); // PLAY -> LOSE edge
+    g.world.state = "PLAY";
+    texts.length = 0;
+    g.loop((t += 16)); // LOSE -> PLAY: a retry never calls onStart (R1)
+    check(
+      "Major-1: a LOSE-retry repaints no stale tip either",
+      !texts.some((s) => s.indexOf("THROW ·") === 0),
+      texts.join("|"),
+    );
+    check(
+      "Major-1: nb.coach.v2 t stays 0 for the never-used verb after a retry",
+      loadCoach2(ls2).t === 0,
+      JSON.stringify(loadCoach2(ls2)),
+    );
+  } finally {
+    delete globalThis.window;
+  }
+}
+
 // ---- the three main.js seams that must not drift ----
 {
   const src = readFileSync("src/main.js", "utf8");
