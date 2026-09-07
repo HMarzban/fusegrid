@@ -917,8 +917,12 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   // that row itself is intentionally NOT edited here (out of this fix wave's
   // authorized scope) — read this file's measured length, not the INDEX's
   // stale numbers, when bumping your own plan's cap.
-  check("main.js stays a lean browser entry (<=760 lines)",
-    L.length<=760,String(L.length));
+  // R5 stats wave: +16 lines (stats.js import; session_start at boot; the
+  // copyText helper replacing the inline clipboard pair; KeyC-on-STATS;
+  // onStats; the STATS audio exclusion; the room_enter/room_clear/death/
+  // run_end/score_set/plaque_unlock edges) — bumped 760->776.
+  check("main.js stays a lean browser entry (<=776 lines)",
+    L.length<=776,String(L.length));
   const lastImp=L.reduce((a,l,i)=>/^import[\s{]/.test(l)?i:a,-1);
   const firstDecl=L.findIndex(l=>/^(export\s|const\s|let\s|var\s|function\s|class\s)/.test(l));
   check("main.js keeps every import at the top (no mid-file import sprawl)",

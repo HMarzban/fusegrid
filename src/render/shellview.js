@@ -84,6 +84,7 @@ export function drawShell(c, app, world, canvas, kind, getScores, getPlaques) {
           ITEMS[3],
           ITEMS[4],
           ITEMS[5],
+          ITEMS[6],
         ],
       },
       L,

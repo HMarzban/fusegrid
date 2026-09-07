@@ -26,6 +26,7 @@ export const SCREEN = Object.freeze({
   ENEMIES: 9,
   SETTINGS: 10, // appended — inserting shifts every frozen value after it
   GUIDE: 11, // appended — folds HOW TO PLAY/ITEMS/ENEMIES one hop deeper
+  STATS: 12, // appended — the opt-in cabinet counters (R5)
 });
 export const ITEMS = Object.freeze([
   "PLAY",
@@ -33,6 +34,7 @@ export const ITEMS = Object.freeze([
   "OPTIONS",
   "GUIDE",
   "HIGH SCORES",
+  "STATS",
   "SOURCE",
 ]);
 /* GUIDE rows, frozen and index-addressed: guideRow, drawGuide and confirm's
@@ -70,6 +72,7 @@ export function createMenuApp(opts = {}) {
   const audio = o.audio || null;
   const onStart = o.onStart || null;
   const onSource = o.onSource || null;
+  const onStats = o.onStats || null;
   const onSettings = o.onSettings || null;
   const onPauseCmd = o.onPauseCmd || null;
   const app = {
@@ -288,6 +291,9 @@ export function createMenuApp(opts = {}) {
               return this._push(SCREEN.GUIDE);
             case "HIGH SCORES":
               return this._push(SCREEN.SCORES);
+            case "STATS":
+              if (onStats) onStats();
+              return this._push(SCREEN.STATS);
             case "SOURCE":
               if (onSource) onSource();
               return true;
@@ -312,6 +318,7 @@ export function createMenuApp(opts = {}) {
         case SCREEN.SCORES:
         case SCREEN.ITEMS:
         case SCREEN.ENEMIES:
+        case SCREEN.STATS:
           return this.back();
       }
       return false;
@@ -327,7 +334,8 @@ export function createMenuApp(opts = {}) {
         this.screen === SCREEN.LEVEL ||
         this.screen === SCREEN.SCORES ||
         this.screen === SCREEN.SETTINGS ||
-        this.screen === SCREEN.GUIDE
+        this.screen === SCREEN.GUIDE ||
+        this.screen === SCREEN.STATS
       )
         return this._push(SCREEN.MENU);
       return false;

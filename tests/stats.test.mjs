@@ -11,6 +11,7 @@ import {
   fmtLong,
 } from "../src/app/stats.js";
 import { newTally, feedTally } from "../src/app/bests.js";
+import { SCREEN, ITEMS, createMenuApp } from "../src/app/menuapp.js";
 
 let pass = 0,
   fail = 0;
@@ -265,6 +266,44 @@ const TODAY = "2026-09-07";
     "feedTally still runs exactly ONE loop over world.events",
     (src.match(/for \(let i = 0; i < ev\.length; i\+\+\)/g) || []).length === 1,
     String((src.match(/ev\.length/g) || []).length),
+  );
+}
+
+// ---- 9. the screen, the row, and the one-shot opt-in ----
+{
+  check("SCREEN.STATS is 12, appended after GUIDE", SCREEN.STATS === 12, SCREEN.STATS);
+  /* Written structurally rather than as an index literal so it survives R3's
+     stage-2 insert: SOURCE is always last because it is the one row that leaves
+     the page, and STATS always sits directly above it. */
+  check(
+    "STATS sits directly above SOURCE, which stays the last row",
+    ITEMS[ITEMS.length - 1] === "SOURCE" && ITEMS[ITEMS.length - 2] === "STATS",
+    JSON.stringify(ITEMS),
+  );
+  let opened = 0;
+  const a = createMenuApp({ onStats: () => opened++ });
+  a.screen = SCREEN.MENU;
+  a.cursor = ITEMS.indexOf("STATS");
+  check(
+    "confirming STATS pushes SCREEN.STATS and fires onStats exactly once",
+    a.confirm() === true && a.screen === SCREEN.STATS && opened === 1,
+    a.screen + "/" + opened,
+  );
+  check("Enter on STATS backs out to MENU, exactly as SCORES does",
+    a.confirm() === true && a.screen === SCREEN.MENU, String(a.screen));
+  a.cursor = ITEMS.indexOf("STATS");
+  a.confirm();
+  check("Escape on STATS backs out to MENU",
+    a.key("Escape") === true && a.screen === SCREEN.MENU, String(a.screen));
+  check("onStats is optional — a machine built without it still pushes",
+    (() => { const b = createMenuApp(); b.screen = SCREEN.MENU;
+      b.cursor = ITEMS.indexOf("STATS"); return b.confirm() === true &&
+      b.screen === SCREEN.STATS; })());
+  const src2 = readFileSync("src/render/shellview.js", "utf8");
+  check(
+    "shellview's MENU items literal renders every shipped row",
+    (src2.match(/ITEMS\[\d\]/g) || []).length === ITEMS.length,
+    (src2.match(/ITEMS\[\d\]/g) || []).join(","),
   );
 }
 

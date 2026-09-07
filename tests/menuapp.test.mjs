@@ -54,19 +54,21 @@ check(
   JSON.stringify(SCREEN),
 );
 check(
-  "ITEMS frozen, 6 entries",
+  "ITEMS frozen, 7 entries",
   Object.isFrozen(ITEMS) &&
-    ITEMS.length === 6 &&
+    ITEMS.length === 7 &&
     ITEMS[0] === "PLAY" &&
     ITEMS[2] === "OPTIONS" &&
     ITEMS[3] === "GUIDE" &&
-    ITEMS[5] === "SOURCE",
+    ITEMS[5] === "STATS" &&
+    ITEMS[6] === "SOURCE",
   JSON.stringify(ITEMS),
 );
 check(
-  "SETTINGS appended at 10, GUIDE appended at 11 — never inserted",
+  "SETTINGS appended at 10, GUIDE at 11, STATS at 12 — never inserted",
   SCREEN.SETTINGS === 10 &&
     SCREEN.GUIDE === 11 &&
+    SCREEN.STATS === 12 &&
     SCREEN.ENEMIES === 9 &&
     SCREEN.ITEMS === 8,
   JSON.stringify(SCREEN),
@@ -326,6 +328,7 @@ check(
     [2, SCREEN.SETTINGS],
     [3, SCREEN.GUIDE],
     [4, SCREEN.SCORES],
+    [5, SCREEN.STATS],
   ]) {
     const a = createMenuApp();
     a.screen = SCREEN.MENU;
@@ -344,10 +347,10 @@ check(
     },
   });
   s.screen = SCREEN.MENU;
-  s.cursor = 5;
+  s.cursor = 6;
   s.confirm();
   check(
-    "cursor 5 SOURCE -> onSource(), screen stays MENU",
+    "cursor 6 SOURCE -> onSource(), screen stays MENU",
     srcHits === 1 && s.screen === SCREEN.MENU,
     srcHits + "/" + s.screen,
   );
@@ -1220,6 +1223,7 @@ check(
     OPTIONS: SCREEN.SETTINGS,
     GUIDE: SCREEN.GUIDE,
     "HIGH SCORES": SCREEN.SCORES,
+    STATS: SCREEN.STATS,
     SOURCE: SCREEN.MENU,
   };
   let srcHits = 0,
