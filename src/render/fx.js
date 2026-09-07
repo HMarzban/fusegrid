@@ -217,3 +217,38 @@ export function drawFx(c){
   }
   c.globalAlpha=1;
 }
+
+/* R2 overlay. Deliberately NOT folded into drawFx, which renderer.js calls
+   TWICE in a WIN/LOSE frame (:66 and :79) and which the 3D path never calls at
+   all (wrapper feeds getFx() to three particles instead). Drawn in overlay/HUD
+   space — the same space drawHudChips and drawCoach use — so CLASSIC 2D and
+   REAL 3D are identical.
+   The close-call is a 6px inner border, not the existing full-screen flashT
+   wash: a new light source over the whole board is exactly the over-juicing
+   report §4 R2 names as the risk. The callout is a static label that fades —
+   no blink, no scale-pop, no colour cycling — which is why it needs no REDUCE
+   FLASH gate of its own; there is nothing to flash. */
+export function drawFxOverlay(c){
+  const BW=CFG.COLS*CFG.TILE, BH=CFG.ROWS*CFG.TILE;
+  if(fx.nmT>0){
+    c.save();
+    c.globalAlpha=0.22*(fx.nmT/0.18);
+    c.fillStyle="#fff8d8";
+    c.fillRect(0,0,BW,6); c.fillRect(0,BH-6,BW,6);
+    c.fillRect(0,6,6,BH-12); c.fillRect(BW-6,6,6,BH-12);
+    c.globalAlpha=1;
+    c.restore();
+  }
+  if(fx.calT>0&&fx.calS){
+    c.save();
+    c.globalAlpha=Math.min(1,fx.calT/0.35);
+    c.textAlign="center"; c.textBaseline="middle";
+    c.font="900 26px ui-monospace,monospace";
+    c.lineWidth=5; c.lineJoin="round"; c.strokeStyle="#0a0d14";
+    c.strokeText(fx.calS,BW/2,96);
+    c.fillStyle="#ffd447";
+    c.fillText(fx.calS,BW/2,96);
+    c.globalAlpha=1;
+    c.restore();
+  }
+}

@@ -4,7 +4,7 @@ import {
   bakeAtlas, drawGrid, drawBiomeBackground, drawBricks,
   drawItems, drawEnemies, drawPlayer, drawBombs, drawBlades
 } from "./sprites.js";
-import {onEvent, updateFx, drawFx, feedFx, getShake, getFlash, initFx, syncFx} from "./fx.js";
+import {onEvent, updateFx, drawFx, drawFxOverlay, feedFx, getShake, getFlash, initFx, syncFx} from "./fx.js";
 import {drawOverlay, overlayBox, updateHud, makeHud, drawHudChips, drawCoach} from "./scenes.js";
 import {draw3dBackground, buildPainters, byDepth} from "./r3d/scene3d.js";
 
@@ -83,6 +83,7 @@ export function createRenderer(canvas, opts={}){
     /* S4: overlay HUD chips — explicit opt-in only ({hud:true} during GAME),
        drawn after restore so they never shake with the camera. */
     if(o&&o.hud===true) drawHudChips(ctx, world);
+    if(o&&o.hud===true) drawFxOverlay(ctx);
     /* ghost coach (plan 4): same opt-in gate as the HUD chips; o.coach is
        the fade alpha precomputed in main.js from coachOpen(...) + COACH_DUR
        + world.state==="PLAY" (0 when closed), never re-derived here. */

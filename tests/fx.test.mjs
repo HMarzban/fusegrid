@@ -6,6 +6,7 @@ import {
   feedFx,
   getCallout,
   getNearMiss,
+  drawFxOverlay,
   initFx,
   syncFx,
   onEvent,
@@ -298,6 +299,88 @@ const chainW = (n, px, py, blades) => {
       f + ": feedFx is dt-guarded exactly like the updateFx beneath it",
       /feedFx\(world,\s*dt\s*\|\|\s*CFG\.STEP\)/.test(src),
       (src.match(/feedFx\([^)]*\)/) || [])[0],
+    );
+  }
+}
+
+// ---- 7. drawFxOverlay: the callout text and the close-call border ----
+{
+  const recCtx = () => {
+    const texts = [],
+      strokes = [],
+      rects = [];
+    const noop = () => {};
+    const c = {
+      save: noop,
+      restore: noop,
+      translate: noop,
+      scale: noop,
+      beginPath: noop,
+      fill: noop,
+      stroke: noop,
+      fillText: (s) => texts.push(String(s)),
+      strokeText: (s) => strokes.push(String(s)),
+      fillRect: (x, y, w, h) => rects.push({ x, y, w, h, fill: c.fillStyle }),
+    };
+    return { c, texts, strokes, rects };
+  };
+
+  setFxOpts({ flashK: 1, shakeK: 1 });
+  initFx();
+  const w = chainW(3);
+  syncFx(w);
+  feedFx(w, CFG.BLADE_TTL + 0.01);
+  const a = recCtx();
+  drawFxOverlay(a.c);
+  check(
+    "drawFxOverlay paints the TRIPLE callout, outlined then filled",
+    a.texts.includes("TRIPLE") && a.strokes.includes("TRIPLE"),
+    a.texts.join("|"),
+  );
+
+  initFx();
+  const b = recCtx();
+  drawFxOverlay(b.c);
+  check(
+    "drawFxOverlay paints nothing when no callout and no flash are live",
+    b.texts.length === 0 && b.rects.length === 0,
+    b.texts.join("|") + " / " + b.rects.length,
+  );
+
+  initFx();
+  const near = chainW(1, ctr(5), ctr(5), [blade([6, 5])]);
+  syncFx(near);
+  feedFx(near, CFG.STEP);
+  const d = recCtx();
+  drawFxOverlay(d.c);
+  const band = d.rects.filter((r) => r.fill === "#fff8d8");
+  check(
+    "close-call paints a 6px inner border of the 600x520 board box in #fff8d8",
+    band.length === 4 &&
+      band.some((r) => r.w === CFG.COLS * CFG.TILE && r.h === 6) &&
+      band.some((r) => r.h === CFG.ROWS * CFG.TILE - 12 && r.w === 6),
+    JSON.stringify(band),
+  );
+}
+
+// ---- wiring: drawFxOverlay is gated on o.hud===true, so ATTRACT stays silent ----
+{
+  for (const [f, chips] of [
+    ["src/render/renderer.js", "drawHudChips(ctx, world"],
+    ["src/render/three/wrapper.js", "drawHudChips(ovCtx,world"],
+  ]) {
+    const src = readFileSync(f, "utf8");
+    const line = (src.match(/^.*drawFxOverlay\(.*$/m) || [""])[0];
+    check(
+      f + ": drawFxOverlay is drawn only under o.hud===true",
+      /o\s*&&\s*o\.hud\s*===\s*true/.test(line),
+      line.trim(),
+    );
+    check(
+      f + ": it sits between the HUD chips and the coach",
+      src.indexOf(chips) < src.indexOf("drawFxOverlay(") &&
+        src.indexOf("drawFxOverlay(") < src.lastIndexOf("drawCoach("),
+      line.trim(),
     );
   }
 }

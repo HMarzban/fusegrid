@@ -16,6 +16,14 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-07 — R2 combo callout + close-call flash (retention wave 1)
+- Multi-kill chains now call out DOUBLE/TRIPLE/QUAD/CHAIN ×n and a blast that
+  stops one tile short of the player pulses a 6px board-edge border, both fed
+  from `feedFx` inside `consumeEvents` (both renderers) with zero `main.js` and
+  zero `sim.js` diff. `feedFx` — not `updateFx` — owns the R2 timer decay and
+  freezes outside PLAY, so a paused player's open combo group survives the
+  pause instead of closing on a paused clock. `tests/fx.test.mjs` new, 44 pins.
+
 ## 2026-09-06 — Pushed to origin: arcade loop, art, settings, soundtrack v3, retention report
 - First push since 569bc0a: three programs (items+player art → MAKO mascot, settings/menu/pause, soundtrack v3 user-approved) plus the retention report and the 2026-09-04 arcade-loop docs. Store art recaptured with MAKO. Tree-wide banned-name gate live. Open: og.png Social-preview upload by hand; retention wave 1 awaiting go; six B-excerpt confirmations.
 
