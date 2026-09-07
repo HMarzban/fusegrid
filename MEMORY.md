@@ -16,6 +16,24 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-07 — R10 coach v2 fix wave (post-review)
+- Reset the `coach2` latch inside `startRunState` (zero net lines), so a live
+  tip from a quit-mid-tip or a LOSE retry can no longer repaint in the next
+  run — the review's one Major finding.
+- A replaced v2 tip now emits `coach_dismissed` (`rn:"replace"`) before the
+  next `coach_shown`, so the ring still pairs shown/dismissed exactly once per
+  displayed tip; spec §3.2's `rn` enum gained `"replace"`.
+- Owner ruling: `coach2Tick` stays in `src/app/coach.js` (the 808-line
+  `main.js` cap leaves no room for it) — blessed into the INDEX ABI ledger and
+  spec §6.1, which previously described a `coach2T`/`coach2Kind` scalar pair
+  and a 5-arg call site that never landed; corrected to the real `coach2 =
+  {kind, t}` object and the actual 4-arg `coach2Tick(coach2, world, v1Open,
+  dt)` (no `store` threaded through — defaults to `defaultStore()`).
+- Killed 5 surviving mutants with new pins: `coach_dismissed` emitted
+  twice/never, the 3D wrapper's alpha/text arg swap and hard-coded alpha, and
+  the pill's `y=130` rect geometry — test-only, no source change (the shipped
+  code was already correct on all five).
+
 ## 2026-09-07 — R10 coach v2
 - First-ever KICK / THROW / REMOTE pickup shows one faded HUD pill composed
   from `POWER[].help` (no new copy), dismissed by using the verb or after
