@@ -1102,10 +1102,18 @@ Shape `{ k: 0|1, t: 0|1, r: 0|1 }` — one bit per verb, `1` = already shown.
 
 **Lifetime = v1's, exactly** (report §4 R10: "in the shape v1 already proved"):
 transient, non-modal, fades over `COACH2_DUR`, dismissed by using the verb,
-never blocks input, never pauses. `main.js` owns the clock (`coach2T`, PLAY-only,
-beside `coachT` — the `main.js:121-124` trap), computes the alpha, and passes the
-finished string and alpha down. The persist write fires once, on the frame the
-window closes, exactly as v1's does (`main.js:600-606`).
+never blocks input, never pauses. **Corrected 2026-09-07 (fix-review Minor-3
+owner ruling)** — the tree does not hold two scalars `coach2T`/`coach2Kind` in
+`main.js`; `main.js` owns one latch object, `coach2 = { kind, t }`, reset at
+every run-start (fix-review Major-1), and calls `coach2Tick(coach2, world,
+v1Open, dt, store)` — which lives in `src/app/coach.js`, blessed there because
+the 808-line `main.js` cap leaves no room for the clock/latch/dismiss logic —
+every GAME frame; `coach2Tick` advances `coach2.t` (PLAY-only, the same
+`main.js:121-124` trap `coachT` dodges) and closes/opens `coach2.kind` in
+place. `main.js` then computes the alpha from `coach2.t` and passes the
+finished string (via `coachTip`, composed in `coach.js`) and alpha down. The
+persist write fires once, on the frame the window closes, exactly as v1's does
+(`main.js:600-606`).
 
 **One tip at a time:** a new trigger replaces a live tip, marks the replaced one
 seen, and emits `coach_dismissed` for it (`rn:"replace"`, fix-review 2026-09-07
@@ -1120,10 +1128,18 @@ panels.
 
 ### 6.2 The copy — derived, and printed here verbatim
 
-Per §1.5, `coachTip(kind)` composes from `POWER` (`entities.js:53-105`):
+Per §1.5, `coachTip(kind)` composes from `POWER` (`entities.js:53-105`).
+**Corrected 2026-09-07 (fix-review Minor-4, doc fix — the implementer's
+deviation is correct and stands):** the bare `POWER.find` below fails this
+section's own §6.4 pin 1 (`coachTip("fire") === ""`) against the real,
+unmodified `POWER` table — `t:"fire"` (FLAME) has a `help` string too, so an
+unguarded `find` leaks it. The shipped body gates on `TIPS`, the same
+`["kick","throw","remote"]` list `coach2Tick` already needs:
 
 ```
+const TIPS = ["kick", "throw", "remote"];
 export function coachTip(kind) {
+  if (TIPS.indexOf(kind) < 0) return "";
   const d = POWER.find((x) => x.t === kind);
   return d ? d.name + " · " + d.help : "";
 }
@@ -1138,7 +1154,10 @@ THROW · Shift+Space tosses a bomb
 REMOTE · Q detonates your bombs
 ```
 
-Longest is 34 chars at the 12 px mono panel face (§6.3) ≈ 245 px.
+Longest is 35 chars (corrected 2026-09-07, fix-review Minor-5 — a doc miscount,
+never a code bug: `"KICK · walk into a bomb to slide it".length === 35`, and
+`drawCoach2`'s pill width is derived from the live string length, never from
+this constant) at the 12 px mono panel face (§6.3) ≈ 276 px.
 
 ### 6.3 The draw — `drawCoach2(c, alpha, text)` in `scenes.js`
 

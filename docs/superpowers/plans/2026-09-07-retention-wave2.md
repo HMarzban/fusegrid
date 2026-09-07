@@ -583,6 +583,13 @@ field overflows. `decodeChallenge` uppercases and trims, requires
 
 ### Coach v2 — `src/app/coach.js` + `src/render/scenes.js` (R10)
 
+**2026-09-07 fix-review note (Minor-3 owner ruling):** `coach2Tick` is blessed
+as part of this module's ABI — it stays in `coach.js`, not `main.js`, because
+the wave's 808-line `main.js` cap leaves no room for the clock/latch/dismiss
+logic it carries. The block below is corrected to match: `coach2Tick`'s real
+signature is listed, and `coachTip`'s body carries the `TIPS` guard it needs to
+pass its own pin (`coachTip("fire") === ""`; see the R10 task report §1).
+
 ```js
 export const COACH2_KEY = "nb.coach.v2";
 export const COACH2_DUR = 3;             // = COACH_DUR (coach.js:4); one timing rule
@@ -591,9 +598,13 @@ export function saveCoach2(v, store)
 export function coach2Seen(v, kind)      // kind: "kick" | "throw" | "remote"
 export function coach2Mark(v, kind)      // -> a NEW object
 export function coachTip(kind) {
+  if (TIPS.indexOf(kind) < 0) return "";  // TIPS = ["kick","throw","remote"]
   const d = POWER.find((x) => x.t === kind);
   return d ? d.name + " · " + d.help : "";
 }
+export function coach2Tick(st, world, v1Open, dt, store)
+  // st: the {kind, t} latch main.js owns and passes in by reference;
+  // returns [[ev, data], ...] stat rows for main.js to emit via stat()
 ```
 
 Shape `{ k: 0|1, t: 0|1, r: 0|1 }` — one bit per verb, `1` = already shown.
@@ -711,8 +722,8 @@ same stage.
 | `tests/menudraw.test.mjs:262-280` | hard-coded six-string items literal | **still passes** (`drawMenu` is generic) but updated at each stage so it keeps mirroring the shipped rows. `:185`'s deliberate three-row literal is **unmoved** | **R5**, then **R3** |
 | `menudraw.js` exports | `drawMenu drawLevelSelect drawHowTo drawItemsHelp drawEnemiesHelp drawGuide drawScores drawSettings drawAttractHint drawDim drawFade layout settingsRows settingsGeom settingsHit` | **+** `drawStats(c, L, t, ui)` | **R5** |
 | `src/app/flags.js readFlags` | `urlKind autoplay netLocal orbit debug` | **+** `code` | **R8** |
-| `src/app/coach.js` | `COACH_KEY COACH_DUR loadCoachSeen saveCoachSeen coachOpen` | **+** `COACH2_KEY COACH2_DUR loadCoach2 saveCoach2 coach2Seen coach2Mark coachTip`; imports `POWER` from `core/entities.js` | **R10** |
-| `src/main.js` | `coachT roomT bestPrev` | **+** `tally runT bestRun runEnded runFromStart` (R1); `copyText` (R5); `todayStr dailyDate dailyRec` (R3); `coach2T coach2Kind` (R10); `startRunState`/`endRun` and the split edge block (R1); `isFinale` on the `CFG` import (R1) | **per plan** |
+| `src/app/coach.js` | `COACH_KEY COACH_DUR loadCoachSeen saveCoachSeen coachOpen` | **+** `COACH2_KEY COACH2_DUR loadCoach2 saveCoach2 coach2Seen coach2Mark coachTip coach2Tick`; imports `POWER` from `core/entities.js`. `coach2Tick` added 2026-09-07 (fix-review Minor-3 owner ruling) — it was landed but missing from this ledger; the whole v1→v2 clock/latch/dismiss transition lives here, blessed, because `main.js`'s 808-line cap has no room for it | **R10** |
+| `src/main.js` | `coachT roomT bestPrev` | **+** `tally runT bestRun runEnded runFromStart` (R1); `copyText` (R5); `todayStr dailyDate dailyRec` (R3); `coach2` (R10, one `{kind, t}` object — **not** the two scalars `coach2T`/`coach2Kind` this row originally said; corrected 2026-09-07, fix-review Minor-3 — `main.js` owns the object and calls `coach2Tick(coach2, world, v1Open, dt, store)` in `coach.js` every GAME frame to advance/dismiss/latch it, then reads `coach2.kind`/`coach2.t` to build `ro.coach2`); `startRunState`/`endRun` and the split edge block (R1); `isFinale` on the `CFG` import (R1) | **per plan** |
 | `tests/headless.test.mjs:909` | `main.js stays a lean browser entry (<=733 lines)`, measured 732 | **R1 → 760, R5 → 776, R3 → 788, R8 → 798, R10 → 808**, one bump per plan in that plan's **first** `main.js`-touching task, each with its own reason comment | **each plan, once** |
 | `tests/heat.test.mjs:325-335` (WIN branch) | `texts.some(s => s.indexOf("CLEARED") >= 0)` | **unmoved** — the 9th arg defaults `undefined` ⇒ today's layout | — |
 | `tests/heat.test.mjs:49-82` | `overlayCue` × 4 and `runStamp` / `copyPayload` exact strings | **unmoved** — R8 changes only `drawOverlay`'s concatenation | — |
