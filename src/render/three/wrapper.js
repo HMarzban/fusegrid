@@ -151,8 +151,8 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
     }
     if(ov||(o&&o.hud===true)){
       if(ov){ const B=overlayBox("3d");
-        drawOverlay(ovCtx,world,B.w,B.h,B.cx,B.cy,o&&o.pause); }
-      if(o&&o.hud===true)drawHudChips(ovCtx,world);
+        drawOverlay(ovCtx,world,B.w,B.h,B.cx,B.cy,o&&o.pause,o&&o.time); }
+      if(o&&o.hud===true)drawHudChips(ovCtx,world,o&&o.time);
       if(o&&o.hud===true&&world.state==="PLAY")drawFxOverlay(ovCtx);
       if(o&&o.hud===true)drawCoach(ovCtx,(o&&o.coach)||0);
      }

@@ -54,6 +54,33 @@ export function runStamp(world) {
 export function copyPayload(world) {
   return runStamp(world) + " https://hmarzban.github.io/fusegrid/";
 }
+/* R7 stopwatch formatting. Pure, exported, pinned. Clamped to [0,599.9] and
+   FLOORED to tenths so it can never disagree with what times.js stored; a room
+   past 9:59.9 pins there, since it is not a time-attack contender. Always six
+   characters or fewer, which is what makes the HUD chip's width budget hold. */
+export function fmtTime(sec) {
+  const n = typeof sec === "number" && isFinite(sec) ? sec : 0;
+  const s = Math.min(599.9, Math.max(0, n));
+  const d = Math.floor(s * 10);
+  const m = Math.floor(d / 10) % 60;
+  return (
+    Math.floor(d / 600) + ":" + (m < 10 ? "0" + m : String(m)) + "." + (d % 10)
+  );
+}
+/* tm.best is main's bestPrev, captured BEFORE the WIN-edge write — otherwise
+   this line would read back the record it just set and every clear would print
+   its own time as the best. */
+export function timeLine(world, tm) {
+  const t = tm || {};
+  return (
+    "ROOM " +
+    ((world && world.level) | 0) +
+    " · " +
+    fmtTime(t.t) +
+    " · " +
+    (t.best == null || t.t < t.best ? "NEW BEST" : "BEST " + fmtTime(t.best))
+  );
+}
 /* Pause-list row copy mirrors src/app/menuapp.js PAUSE_ITEMS — render/ must
    not import src/app (only shellview.js may), so the labels are duplicated
    here the way menudraw's PLAQUE_NAME is. */
@@ -89,6 +116,7 @@ export function drawOverlay(
   cx = w / 2,
   cy = h / 2,
   ui = { view: 0, cursor: 0 },
+  tm,
 ) {
   c.fillStyle = "rgba(6,10,20,0.80)";
   c.fillRect(0, 0, w, h);
@@ -111,7 +139,13 @@ export function drawOverlay(
   if (world.state === "WIN") {
     head(winHeadline(world), "#37f0d0");
     sub(runStamp(world), "#9fb3d8");
-    sub(overlayCue(world) + " · C copy", "#9fb3d8", 44);
+    /* R7: one extra line only when TIME ATTACK is on, which pushes the cue from
+       dy 44 to dy 68 — cy + 68 = 328, well inside the 520 box. LOSE never gets
+       it: a room time is only meaningful on a clear. */
+    if (tm && tm.on) {
+      sub(timeLine(world, tm), "#9fb3d8", 44);
+      sub(overlayCue(world) + " · C copy", "#9fb3d8", 68);
+    } else sub(overlayCue(world) + " · C copy", "#9fb3d8", 44);
   } else if (world.state === "LOSE") {
     head("GAME OVER", "#ff5d73");
     sub(runStamp(world), "#9fb3d8");
@@ -178,7 +212,7 @@ const HUD_TEXT = "#dfe7f5",
   HUD_MUTED = "#7385ad",
   HUD_PANEL = "rgba(13,18,32,0.72)",
   HUD_LINE = "#26324a";
-export function drawHudChips(c, world) {
+export function drawHudChips(c, world, tm) {
   const p = world.players[0] || {};
   c.save();
   c.textBaseline = "middle";
@@ -222,14 +256,22 @@ export function drawHudChips(c, world) {
   chip(140, 76, "BOMB", p.bombs || 0, "#ff5d73", "bomb");
   chip(224, 82, "FLAME", p.range || 0, "#ff8a3c", "fire");
   chip(314, 64, "LV", world.level | 0, null, null);
+  /* R7: the ENEMIES chip narrows from 94 to 64 to make room for the stopwatch,
+     which ends at 530 against the right-aligned score column's left reach of
+     541 at six digits. tm absent or tm.on falsy is byte-identical to before —
+     which is what keeps three.test.mjs and pickups.test.mjs unmoved. If a
+     headed check ever shows overlap, narrow ENEMIES further; never move the
+     right-aligned score column. */
+  const ta = !!(tm && tm.on);
   chip(
     386,
-    94,
+    ta ? 64 : 94,
     "ENEMIES",
     Array.isArray(world.enemies) ? world.enemies.length : 0,
     null,
     null,
   );
+  if (ta) chip(458, 72, "TIME", fmtTime(tm.t), null, null);
   const scx = CFG.COLS * CFG.TILE - 12;
   c.textAlign = "right";
   const hk = world.heat | 0;

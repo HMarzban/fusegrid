@@ -8,6 +8,8 @@ import {
   bestOf,
   recordTime,
 } from "../src/app/times.js";
+import { fmtTime, timeLine, drawHudChips, drawOverlay } from "../src/render/scenes.js";
+import { readFileSync } from "node:fs";
 
 let pass = 0,
   fail = 0;
@@ -191,6 +193,201 @@ function throwStore() {
     })(),
     mapStore() && "see assertion",
   );
+}
+
+/* Shared recorder ctx for the render pins below (and reused by main.js's
+   createGame pin in Task 3) — a superset of the canvas 2D methods drawIcon /
+   rr / poly / seal touch, so a HUD chip's heart/bomb/fire glyph never throws
+   mid-pin. fillText/strokeText are the only calls that record anything. */
+function rec() {
+  const texts = [];
+  const noop = () => {};
+  const c = {
+    save: noop,
+    restore: noop,
+    translate: noop,
+    scale: noop,
+    rotate: noop,
+    beginPath: noop,
+    closePath: noop,
+    moveTo: noop,
+    lineTo: noop,
+    arc: noop,
+    arcTo: noop,
+    bezierCurveTo: noop,
+    quadraticCurveTo: noop,
+    ellipse: noop,
+    fill: noop,
+    stroke: noop,
+    fillRect: noop,
+    strokeRect: noop,
+    clearRect: noop,
+    setTransform: noop,
+    transform: noop,
+    drawImage: noop,
+    createLinearGradient: () => ({ addColorStop: noop }),
+    createRadialGradient: () => ({ addColorStop: noop }),
+    measureText: () => ({ width: 0 }),
+    fillText: (s) => texts.push(String(s)),
+    strokeText: (s) => texts.push(String(s)),
+  };
+  return { c, texts };
+}
+const HUD_W = {
+  lives: 3,
+  score: 0,
+  heat: 0,
+  level: 4,
+  enemies: [1, 2],
+  players: [{ bombs: 2, range: 3 }],
+};
+
+// ---- 5. fmtTime: never longer than six characters ----
+{
+  const want = [
+    [0, "0:00.0"],
+    [41.23, "0:41.2"],
+    [59.99, "0:59.9"],
+    [61, "1:01.0"],
+    [9999, "9:59.9"],
+    [-5, "0:00.0"],
+  ];
+  const bad = want.filter(([n, s]) => fmtTime(n) !== s);
+  check(
+    "fmtTime: clamped, floored, zero-padded",
+    !bad.length,
+    JSON.stringify(bad.map(([n]) => [n, fmtTime(n)])),
+  );
+  check(
+    "fmtTime: never longer than 6 chars, never a throw",
+    want.every(([n]) => fmtTime(n).length <= 6) &&
+      fmtTime(undefined) === "0:00.0" &&
+      fmtTime(NaN) === "0:00.0",
+    fmtTime(undefined),
+  );
+}
+
+// ---- 6. timeLine: both locked copy forms ----
+{
+  check(
+    "timeLine: a slower clear names the standing best",
+    timeLine({ level: 3 }, { on: true, t: 41.23, best: 38.9 }) ===
+      "ROOM 3 · 0:41.2 · BEST 0:38.9",
+    timeLine({ level: 3 }, { on: true, t: 41.23, best: 38.9 }),
+  );
+  check(
+    "timeLine: no prior best is NEW BEST",
+    timeLine({ level: 3 }, { on: true, t: 41.23, best: null }) ===
+      "ROOM 3 · 0:41.2 · NEW BEST",
+    timeLine({ level: 3 }, { on: true, t: 41.23, best: null }),
+  );
+  check(
+    "timeLine: beating the standing best is NEW BEST",
+    timeLine({ level: 3 }, { on: true, t: 41.23, best: 45 }) ===
+      "ROOM 3 · 0:41.2 · NEW BEST",
+    timeLine({ level: 3 }, { on: true, t: 41.23, best: 45 }),
+  );
+}
+
+// ---- 7. drawHudChips: the third arg is optional and absent is byte-identical ----
+{
+  const a = rec();
+  drawHudChips(a.c, HUD_W);
+  const b = rec();
+  drawHudChips(b.c, HUD_W, undefined);
+  const d = rec();
+  drawHudChips(d.c, HUD_W, { on: false, t: 41.23 });
+  check(
+    "drawHudChips with no third arg records today's exact fillText list",
+    a.texts.join("|") === b.texts.join("|") &&
+      a.texts.join("|") === d.texts.join("|") &&
+      !a.texts.includes("TIME"),
+    a.texts.join("|"),
+  );
+  const e = rec();
+  drawHudChips(e.c, HUD_W, { on: true, t: 41.23 });
+  check(
+    "drawHudChips with tm.on paints a TIME chip reading fmtTime(tm.t)",
+    e.texts.includes("TIME") && e.texts.includes("0:41.2"),
+    e.texts.join("|"),
+  );
+  check(
+    "the TIME chip is additive — every existing chip label survives",
+    ["BOMB", "FLAME", "LV", "ENEMIES"].every((s) => e.texts.includes(s)),
+    e.texts.join("|"),
+  );
+}
+
+// ---- 8. drawOverlay: the eighth arg is optional; LOSE and PAUSE untouched ----
+{
+  const W = { state: "WIN", level: 3, finale: false, score: 10, heat: 0 };
+  const a = rec();
+  drawOverlay(a.c, W, 600, 520, 300, 260, undefined, undefined);
+  check(
+    "drawOverlay WIN with no tm records today's lines and no ROOM line",
+    a.texts.some((s) => s.indexOf("CLEARED") >= 0) &&
+      !a.texts.some((s) => s.indexOf("ROOM 3") === 0),
+    a.texts.join("|"),
+  );
+  const b = rec();
+  drawOverlay(b.c, W, 600, 520, 300, 260, undefined, {
+    on: true,
+    t: 41.23,
+    best: 38.9,
+  });
+  check(
+    "drawOverlay WIN with tm.on adds exactly the timeLine string",
+    b.texts.includes("ROOM 3 · 0:41.2 · BEST 0:38.9") &&
+      b.texts.some((s) => s.indexOf("CLEARED") >= 0) &&
+      b.texts.length === a.texts.length + 1,
+    b.texts.join("|"),
+  );
+  const L = rec();
+  const Lw = { state: "LOSE", level: 3, finale: false, score: 10, heat: 0 };
+  drawOverlay(L.c, Lw, 600, 520, 300, 260, undefined, { on: true, t: 41.23, best: null });
+  const L2 = rec();
+  drawOverlay(L2.c, Lw, 600, 520, 300, 260);
+  check(
+    "drawOverlay LOSE ignores tm entirely — a room time means nothing on a death",
+    L.texts.join("|") === L2.texts.join("|"),
+    L.texts.join("|"),
+  );
+  const P = rec();
+  const Pw = { state: "PAUSE", level: 3, finale: false, score: 10, heat: 0 };
+  drawOverlay(P.c, Pw, 600, 520, 300, 260, { view: 0, cursor: 0 }, {
+    on: true,
+    t: 41.23,
+    best: null,
+  });
+  const P2 = rec();
+  drawOverlay(P2.c, Pw, 600, 520, 300, 260, { view: 0, cursor: 0 });
+  check(
+    "drawOverlay PAUSE ignores tm entirely",
+    P.texts.join("|") === P2.texts.join("|"),
+    P.texts.join("|"),
+  );
+}
+
+// ---- wiring: both renderers pass o.time through as tm ----
+{
+  for (const [f, ov, ch] of [
+    ["src/render/renderer.js", "drawOverlay(ctx, world, B.w", "drawHudChips(ctx, world"],
+    ["src/render/three/wrapper.js", "drawOverlay(ovCtx,world,B.w", "drawHudChips(ovCtx,world"],
+  ]) {
+    const src = readFileSync(f, "utf8");
+    const ovLine = (src.match(new RegExp(".*" + ov.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ".*")) || [""])[0];
+    const chLine = (src.match(new RegExp(".*" + ch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ".*")) || [""])[0];
+    check(
+      f + ": drawOverlay receives o.time as its eighth arg",
+      /o\s*&&\s*o\.time/.test(ovLine),
+      ovLine.trim(),
+    );
+    check(
+      f + ": drawHudChips receives o.time as its third arg",
+      /o\s*&&\s*o\.time/.test(chLine),
+      chLine.trim(),
+    );
+  }
 }
 
 console.log("\n  TIMES RESULT: " + pass + " PASS / " + fail + " FAIL");

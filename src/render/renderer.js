@@ -76,13 +76,13 @@ export function createRenderer(canvas, opts={}){
     }
     if(world.state!=="PLAY"){
       const B=overlayBox(kind==="3d"?"iso":"2d");
-      drawOverlay(ctx, world, B.w, B.h, B.cx, B.cy, o&&o.pause);
+      drawOverlay(ctx, world, B.w, B.h, B.cx, B.cy, o&&o.pause, o&&o.time);
       if(world.state==="WIN"||world.state==="LOSE") drawFx(ctx);
     }
     if(!(o&&o.hud===false)) updateHud(hud, world);
     /* S4: overlay HUD chips — explicit opt-in only ({hud:true} during GAME),
        drawn after restore so they never shake with the camera. */
-    if(o&&o.hud===true) drawHudChips(ctx, world);
+    if(o&&o.hud===true) drawHudChips(ctx, world, o&&o.time);
     if(o&&o.hud===true&&world.state==="PLAY") drawFxOverlay(ctx);
     /* ghost coach (plan 4): same opt-in gate as the HUD chips; o.coach is
        the fade alpha precomputed in main.js from coachOpen(...) + COACH_DUR
