@@ -56,14 +56,41 @@ function check(name, cond, detail) {
 
 // ---- 2. a bad code is REFUSED, never guessed ----
 {
+  /* Minor-2 fix (review 2026-09-07): the previous two "range" literals had an
+     INVALID checksum, so decodeChallenge refused them at the checksum check
+     (code.js:40) and the range guard at :43 was never reached — the pins
+     passed for the wrong reason. These two are built with a VALID checksum,
+     computed HERE by mirroring code.js's own (unexported) sumOf/b36 algorithm
+     — sum of char codes mod 36, base36 — rather than typed by hand, so the
+     checksum passes and it is the RANGE guard alone that refuses them. */
+  const chkOf = (body) => {
+    let n = 0;
+    for (let i = 0; i < body.length; i++) n += body.charCodeAt(i);
+    return (n % 36).toString(36).toUpperCase();
+  };
+  // Cross-check the mirrored routine against two codes block 1 already
+  // proved valid, so "valid checksum" rests on more than self-consistency.
+  const chkSelfCheck =
+    chkOf("F1021I3V93H8".slice(0, 11)) === "F1021I3V93H8"[11] &&
+    chkOf("F11Z141Z33Z6".slice(0, 11)) === "F11Z141Z33Z6"[11];
+  const cfgOverBody = "F1" + "0000000" + "ZZ"; // seed 0, cfg 1295 > 143
+  const seedOverBody = "F1" + "ZZZZZZZ" + "00"; // seed 78 364 164 095 > 2^32-1, cfg 0
+  const cfgOver = cfgOverBody + chkOf(cfgOverBody);
+  const seedOver = seedOverBody + chkOf(seedOverBody);
+  check(
+    "the checksum routine mirrored above agrees with the codec on two KNOWN-valid codes, and the two derived range literals are well-formed",
+    chkSelfCheck && cfgOver.length === 12 && seedOver.length === 12 &&
+      /^F1[0-9A-Z]{10}$/.test(cfgOver) && /^F1[0-9A-Z]{10}$/.test(seedOver),
+    cfgOver + " " + seedOver,
+  );
   const bad = [
     ["F1AAAAAAAAAA", "a wrong checksum"],
     ["F21W4LB1C01E", "a wrong version prefix"],
     ["F11W4LB1C01", "eleven characters"],
     ["F11W4LB1C01EX", "thirteen characters"],
     ["f11w4lb1c01x", "lowercase with a broken checksum"],
-    ["F1000000003Z", "cfg above 143"],
-    ["F1ZZZZZZZ01E", "a seed above 2^32-1"],
+    [cfgOver, "cfg above 143, valid checksum — exercises the range guard, not the checksum"],
+    [seedOver, "a seed above 2^32-1, valid checksum — exercises the range guard, not the checksum"],
     [null, "null"],
     [undefined, "undefined"],
     [{}, "an object"],
@@ -81,7 +108,9 @@ function check(name, cond, detail) {
      is not a proof — a mutation whose char-code delta is exactly +/-36 (e.g.
      "0" -> "L") leaves the sum unchanged — so this measures the real rate
      rather than claiming perfection. Measured over all four pinned codes:
-     98.0%-99.1%. The floor is set below the worst of them, with room to move. */
+     98.0%-99.1%. Minor-4 fix (review 2026-09-07): the floor now matches that
+     disclosed range's own worst case (98.0%) instead of sitting 1pp under it,
+     so the pin agrees with code.js:9's and MEMORY.md's "98-99%" claim. */
   const A36 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   const rates = ["F1021I3V93H8", "F11W4LB1C01E", "F1000000000B", "F11Z141Z33Z6"].map(
     (good) => {
@@ -97,8 +126,8 @@ function check(name, cond, detail) {
     },
   );
   check(
-    "at least 97% of single-character typos are refused outright",
-    rates.every((r) => r >= 0.97),
+    "at least 98% of single-character typos are refused outright",
+    rates.every((r) => r >= 0.98),
     rates.map((r) => (100 * r).toFixed(1) + "%").join(" "),
   );
   check(
@@ -235,6 +264,32 @@ function check(name, cond, detail) {
     );
   } finally {
     delete globalThis.window;
+  }
+  /* Minor-3 fix (review 2026-09-07): spec pin 7 asks for an EXECUTED headless
+     `?code=` boot ("world seed/heat/pact/pace match the tuple, the shell is
+     GAME, and nb.pact.v1 is still unset"), not just source-regex greps on
+     main.js. This drives the real door: globalThis.location is the seam
+     locationSearch() reads, exactly as a browser's location.search would be. */
+  {
+    const mem2 = new Map();
+    const ls2 = { getItem: (k) => (mem2.has(k) ? mem2.get(k) : null),
+      setItem: (k, v) => mem2.set(k, String(v)) };
+    globalThis.window = { localStorage: ls2, addEventListener() {} };
+    globalThis.location = { search: "?code=F1021I3V93H8" };
+    try {
+      const g = createGame(null, {});
+      check(
+        "a real ?code= boot drives the first PLAY frame's world to the decoded seed/heat/pact/pace, lands on GAME/PLAY, and starts no daily",
+        g.world.seed === 123456789 && g.world.heat === 2 && g.world.pact === 9 &&
+          g.world.pace === 1 && g.app.screen === SCREEN.GAME && g.world.state === "PLAY" &&
+          ls2.getItem("nb.daily.v1") === null,
+        JSON.stringify({ seed: g.world.seed, heat: g.world.heat, pact: g.world.pact,
+          pace: g.world.pace, screen: g.app.screen, state: g.world.state }),
+      );
+    } finally {
+      delete globalThis.window;
+      delete globalThis.location;
+    }
   }
   const src = readFileSync("src/main.js", "utf8");
   check(
