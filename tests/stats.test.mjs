@@ -459,6 +459,10 @@ const TODAY = "2026-09-07";
   );
   check("statsPayload is pure — same inputs, same string, no store read",
     statsPayload(v, bests, times, TODAY) === pay);
+  check("statsPayload pluralises SESSION like the on-screen note (1 SESSION, 2 SESSIONS)",
+    statsPayload({ ...v, a: { ...v.a, sessions: 1 } }, bests, times, TODAY).indexOf(" · 1 SESSION\n") > 0 &&
+      statsPayload({ ...v, a: { ...v.a, sessions: 2 } }, bests, times, TODAY).indexOf(" · 2 SESSIONS\n") > 0,
+    statsPayload({ ...v, a: { ...v.a, sessions: 1 } }, bests, times, TODAY).split("\n")[0]);
 }
 
 // ---- 11b. wiring: C on STATS exports, C outside GAME still falls through ----

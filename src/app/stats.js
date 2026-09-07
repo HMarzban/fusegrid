@@ -220,7 +220,7 @@ export function statsPayload(v, bests, times, today) {
   const t1 = bestOf(times, "1:0:0:1");
   return (
     "FUSEGRID STATS · " + (a.first || "—") + "→" + (a.last || today || "—") +
-      " · " + a.sessions + " SESSIONS\n" +
+      " · " + a.sessions + (a.sessions === 1 ? " SESSION" : " SESSIONS") + "\n" +
     "RUNS " + a.runs + " · ROOMS " + a.rooms + " · DEATHS " + a.deaths +
       " · KILLS " + a.kills + " · PICKS " + a.picks + " · BRICKS " + a.bricks +
       " · TIME " + fmtLong(a.secs) + "\n" +
