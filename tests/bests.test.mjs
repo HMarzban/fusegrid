@@ -890,7 +890,11 @@ const rec = () => {
       texts.join("|"),
     );
     // --- retry after the LEVEL SELECT death: the sim's LOSE fire edge always
-    // reloads room 1 (D1 arcade reset) and IS from-start again ---
+    // reloads room 1 (startGame -> loadLevel(world,1,false), sim.js:108, the
+    // D1 arcade reset) and IS from-start again. NOTE this pin drives the
+    // retry by forcing world.state directly (matching PIN A above), not
+    // through the real fire-edge/startGame path — the room-1 reload itself
+    // is a source fact (sim.js:107-110), not exercised behaviorally here. ---
     g.world.state = "PLAY";
     g.loop(1032); // LOSE -> PLAY: startRunState(true)
     g.world.level = 6; // forced, standing in for real progression through rooms 1..6
