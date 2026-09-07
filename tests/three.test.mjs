@@ -1441,6 +1441,30 @@ await sec("S4.D",async()=>{
   check("S4.E wrapper o.hud===true draws HUD chips on overlay (cleared first)",
     cv.ops.some(o=>o[0]==="clearRect")&&cv.ops.some(
       o=>o[0]==="fillText"), "ops="+cv.ops.length);
+  // Minor-7 (test quality, review 2026-09-07): the 3D wrapper's drawCoach2
+  // seam was pinned by source-regex only — M15 (alpha/text args swapped) and
+  // M16 (alpha hard-coded to 1) both survived. Drive the real overlay draw.
+  {
+    const TIP="KICK · walk into a bomb to slide it";
+    const cvA=hudRecorder();
+    const rwA=createRenderer3D(null,{getContext:()=>cvA.rec},{audio:null,hud:null});
+    rwA.render(wg,1/60,{hud:true,coach2:{a:1,s:TIP}});
+    check("S4.E wrapper paints the finished coach2 tip on the overlay ctx",
+      cvA.ops.some(o=>o[0]==="fillText"&&o[1][0]===TIP),
+      "ops="+JSON.stringify(cvA.ops.filter(o=>o[0]==="fillText")));
+    const cvB=hudRecorder();
+    const rwB=createRenderer3D(null,{getContext:()=>cvB.rec},{audio:null,hud:null});
+    rwB.render(wg,1/60,{hud:true,coach2:{a:0.5,s:TIP}});
+    check("S4.E wrapper rides o.coach2.a as globalAlpha (not hard-coded)",
+      cvB.ops.some(o=>o[0]==="set:globalAlpha"&&o[1]===0.5),
+      "ops="+JSON.stringify(cvB.ops.filter(o=>o[0]==="set:globalAlpha")));
+    const cvC=hudRecorder();
+    const rwC=createRenderer3D(null,{getContext:()=>cvC.rec},{audio:null,hud:null});
+    rwC.render(wg,1/60,{hud:true,coach2:{a:0,s:TIP}});
+    check("S4.E wrapper alpha 0 paints no coach2 tip",
+      !cvC.ops.some(o=>o[0]==="fillText"&&o[1][0]===TIP),
+      "ops="+JSON.stringify(cvC.ops.filter(o=>o[0]==="fillText")));
+  }
   const cv2=hudRecorder();
   const fake2={getContext:()=>cv2.rec};
   const rw2=createRenderer3D(null,fake2,{audio:null,hud:null});

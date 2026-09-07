@@ -414,6 +414,26 @@ check("round-trip", loadCoachSeen(store) === true);
     texts.length === 1 && texts[0] === "KICK · walk into a bomb to slide it",
     texts.join("|"),
   );
+  // Minor-8 (test quality): the pill's y-geometry (spec §6.3 y=130) is
+  // otherwise unpinned — M21 (y 130 -> 25, through the HUD chip row) survives
+  // without this. rr()'s first ctx call is moveTo(x+r, y), so its y arg is
+  // the rect's top (y-13 in drawCoach2's own coordinates).
+  {
+    const moves = [];
+    const cy = {
+      save: noop, restore: noop, translate: noop, scale: noop, beginPath: noop,
+      closePath: noop, moveTo: (...a) => moves.push(a), lineTo: noop, arc: noop,
+      arcTo: noop, bezierCurveTo: noop, quadraticCurveTo: noop, ellipse: noop,
+      fill: noop, stroke: noop, fillRect: noop, strokeRect: noop, clearRect: noop,
+      setTransform: noop, fillText: noop, strokeText: noop,
+    };
+    drawCoach2(cy, 1, coachTip("kick"));
+    check(
+      "the pill's rect sits at y=130 (rr's first moveTo y-arg is 130-13=117)",
+      moves.length === 1 && moves[0][1] === 117,
+      JSON.stringify(moves),
+    );
+  }
   check(
     "scenes.js reuses v1's panel constants rather than declaring a second set",
     (() => {
@@ -453,6 +473,7 @@ check("round-trip", loadCoachSeen(store) === true);
   };
   globalThis.window = { localStorage: ls, addEventListener() {} };
   ls.setItem("nb.coach.v1", "1"); // v1 already seen: isolate v2
+  setStatsOn(ls); // ring ON: the emission-count pin below (Minor-6) needs it recorded
   try {
     // pin 4: a pickup shows the tip; using the verb dismisses and persists
     const { texts, canvas } = fakeCanvasTexts();
@@ -479,6 +500,19 @@ check("round-trip", loadCoachSeen(store) === true);
       "using the verb dismisses the tip and persists nb.coach.v2",
       loadCoach2(ls).k === 1,
       JSON.stringify(loadCoach2(ls)),
+    );
+    // Minor-6 (test quality): coach_dismissed must fire exactly once per
+    // dismissal — neither zero (M9) nor twice (M8) survives this count.
+    check(
+      "the ring holds exactly one coach_dismissed(kick, rn:use) — never zero, never twice",
+      loadStats(ls).e.filter((x) => x.t === "coach_dismissed" && x.v === "kick" && x.rn === "use").length === 1,
+      JSON.stringify(loadStats(ls).e.filter((x) => x.t.indexOf("coach") === 0)),
+    );
+    check(
+      "coach_shown and coach_dismissed(v2) counts match after the KICK round-trip",
+      loadStats(ls).e.filter((x) => x.t === "coach_shown" && x.v !== "v1").length ===
+        loadStats(ls).e.filter((x) => x.t === "coach_dismissed" && x.v !== "v1").length,
+      JSON.stringify(loadStats(ls).e.filter((x) => x.t.indexOf("coach") === 0)),
     );
     texts.length = 0;
     g.loop((t += 16));
