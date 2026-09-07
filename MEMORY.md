@@ -16,6 +16,14 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-07 — R10 coach v2
+- First-ever KICK / THROW / REMOTE pickup shows one faded HUD pill composed
+  from `POWER[].help` (no new copy), dismissed by using the verb or after
+  `COACH2_DUR`, persisted as three bits in `nb.coach.v2`.
+- The clock is PLAY-only for the same reason `coachT` is, and v1 wins ties so a
+  first-timer never sees two panels; the transition lives in `src/app/coach.js`
+  (not `main.js`) to keep the browser-entry line gate biting.
+
 ## 2026-09-07 — R8 challenge code
 - `B` on a WIN or LOSE copies a bare `?code=<12 chars>` link
   (`https://hmarzban.github.io/fusegrid/?code=F1021I3V93H8`) carrying only

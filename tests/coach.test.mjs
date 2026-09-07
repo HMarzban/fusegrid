@@ -16,6 +16,7 @@ import { drawCoach, drawCoach2 } from "../src/render/scenes.js";
 import { createGame } from "../src/main.js";
 import { SCREEN } from "../src/app/menuapp.js";
 import { POWER } from "../src/core/entities.js";
+import { loadStats, setStatsOn } from "../src/app/stats.js";
 import { readFileSync } from "node:fs";
 
 function fakeCanvasTexts() {
@@ -441,6 +442,241 @@ check("round-trip", loadCoachSeen(store) === true);
       (src.match(/.*drawCoach2\(.*/) || [""])[0].trim(),
     );
   }
+}
+
+// ---- R10 pins 4-9: the live tip through the real loop ----
+{
+  const m3 = new Map();
+  const ls = {
+    getItem: (k) => (m3.has(k) ? m3.get(k) : null),
+    setItem: (k, v) => m3.set(k, String(v)),
+  };
+  globalThis.window = { localStorage: ls, addEventListener() {} };
+  ls.setItem("nb.coach.v1", "1"); // v1 already seen: isolate v2
+  try {
+    // pin 4: a pickup shows the tip; using the verb dismisses and persists
+    const { texts, canvas } = fakeCanvasTexts();
+    const g = createGame(canvas, { autoplay: true, seed: 44 });
+    let t = 1000;
+    g.loop(t);
+    texts.length = 0;
+    g.world.events.push({ t: "power", kind: "kick", x: 1, y: 1 });
+    g.loop((t += 16));
+    check(
+      "a KICK pickup shows the KICK tip on the next frame",
+      texts.includes("KICK · walk into a bomb to slide it"),
+      texts.join("|"),
+    );
+    check(
+      "and it is not yet marked seen — the write happens when the window closes",
+      loadCoach2(ls).k === 0,
+      JSON.stringify(loadCoach2(ls)),
+    );
+    texts.length = 0;
+    g.world.events.push({ t: "kick", x: 1, y: 1 });
+    g.loop((t += 16));
+    check(
+      "using the verb dismisses the tip and persists nb.coach.v2",
+      loadCoach2(ls).k === 1,
+      JSON.stringify(loadCoach2(ls)),
+    );
+    texts.length = 0;
+    g.loop((t += 16));
+    check(
+      "the tip is gone the frame after it is dismissed",
+      !texts.some((s) => s.indexOf("KICK ·") === 0),
+      texts.join("|"),
+    );
+    g.world.events.push({ t: "power", kind: "kick", x: 1, y: 1 });
+    g.loop((t += 16));
+    check(
+      "a second KICK pickup shows nothing — once ever, per verb",
+      !texts.some((s) => s.indexOf("KICK ·") === 0),
+      texts.join("|"),
+    );
+
+    // pin 5: the timeout path
+    texts.length = 0;
+    g.world.events.push({ t: "power", kind: "remote", x: 1, y: 1 });
+    g.loop((t += 16));
+    check("a REMOTE pickup shows the REMOTE tip",
+      texts.includes("REMOTE · Q detonates your bombs"), texts.join("|"));
+    let guard = 0;
+    while (loadCoach2(ls).r === 0 && guard < 500) { t += 16; g.loop(t); guard++; }
+    check(
+      "with no use, the tip times out after COACH2_DUR and persists anyway",
+      loadCoach2(ls).r === 1 && guard > 0 && guard < 500,
+      "frames=" + guard,
+    );
+
+    // pin 6: PAUSE must not burn the window (the 33668f7 trap)
+    texts.length = 0;
+    g.world.events.push({ t: "power", kind: "throw", x: 1, y: 1 });
+    g.loop((t += 16));
+    check("a THROW pickup shows the THROW tip",
+      texts.includes("THROW · Shift+Space tosses a bomb"), texts.join("|"));
+    const wt0 = g.world.time;
+    g.input.onPause();
+    check("run is paused", g.world.state === "PAUSE", g.world.state);
+    let guard2 = 0;
+    while (g.world.time < wt0 + COACH2_DUR + 0.5 && guard2 < 5000) { t += 16; g.loop(t); guard2++; }
+    check(
+      "control: world.time DID exceed COACH2_DUR while paused, so the pin is not vacuous",
+      g.world.time >= wt0 + COACH2_DUR,
+      wt0 + " -> " + g.world.time,
+    );
+    check(
+      "PAUSE did NOT burn the v2 window — the clock is PLAY-only, like coachT",
+      loadCoach2(ls).t === 0,
+      JSON.stringify(loadCoach2(ls)),
+    );
+    g.input.onPause();
+    texts.length = 0;
+    g.loop((t += 16));
+    check(
+      "and the tip is still on screen after the pause",
+      texts.includes("THROW · Shift+Space tosses a bomb"),
+      texts.join("|"),
+    );
+    check(
+      "a tip never paints over the PAUSED veil",
+      (() => {
+        g.input.onPause();
+        texts.length = 0;
+        g.loop((t += 16));
+        const painted = texts.some((s) => s.indexOf("THROW ·") === 0);
+        g.input.onPause();
+        return !painted;
+      })(),
+      texts.join("|"),
+    );
+  } finally {
+    delete globalThis.window;
+  }
+}
+
+// ---- pin 7: two verbs in one batch = one panel, and never the other ----
+{
+  const m4 = new Map();
+  const ls = { getItem: (k) => (m4.has(k) ? m4.get(k) : null),
+    setItem: (k, v) => m4.set(k, String(v)) };
+  globalThis.window = { localStorage: ls, addEventListener() {} };
+  ls.setItem("nb.coach.v1", "1");
+  try {
+    const { texts, canvas } = fakeCanvasTexts();
+    const g = createGame(canvas, { autoplay: true, seed: 45 });
+    let t = 1000;
+    g.loop(t);
+    texts.length = 0;
+    g.world.events.push({ t: "power", kind: "kick", x: 1, y: 1 });
+    g.world.events.push({ t: "power", kind: "throw", x: 1, y: 1 });
+    g.loop((t += 16));
+    const shown = texts.filter((s) => /^(KICK|THROW|REMOTE) · /.test(s));
+    check(
+      "exactly ONE tip panel is live after a two-verb blast",
+      shown.length === 1,
+      JSON.stringify(shown),
+    );
+    check(
+      "the replaced verb is marked seen immediately — it never gets a later turn",
+      loadCoach2(ls).k === 1,
+      JSON.stringify(loadCoach2(ls)),
+    );
+    let guard = 0;
+    while (loadCoach2(ls).t === 0 && guard < 500) { t += 16; g.loop(t); guard++; }
+    check(
+      "and once the live one closes, both verbs are seen for good",
+      loadCoach2(ls).k === 1 && loadCoach2(ls).t === 1,
+      JSON.stringify(loadCoach2(ls)),
+    );
+  } finally {
+    delete globalThis.window;
+  }
+}
+
+// ---- pin 8: v1 wins ties; pin 9: ATTRACT never draws a tip ----
+{
+  const m5 = new Map();
+  const ls = { getItem: (k) => (m5.has(k) ? m5.get(k) : null),
+    setItem: (k, v) => m5.set(k, String(v)) };
+  globalThis.window = { localStorage: ls, addEventListener() {} };
+  /* Ring ON, so "the trigger was deferred" is a positive assertion about what
+     was and was not recorded, rather than a vacuous read of an empty ring. */
+  setStatsOn(ls);
+  const ringHas = (kind, v) =>
+    loadStats(ls).e.some((x) => x.t === kind && (v === undefined || x.v === v));
+  try {
+    // nb.coach.v1 deliberately UNSET: the ghost coach is open
+    const { texts, canvas } = fakeCanvasTexts();
+    const g = createGame(canvas, { autoplay: true, seed: 46 });
+    let t = 0;
+    g.loop(t);
+    check("the ghost coach is open", texts.includes("SPACE"), texts.join("|"));
+    texts.length = 0;
+    g.world.events.push({ t: "power", kind: "kick", x: 1, y: 1 });
+    g.loop((t += 16));
+    check(
+      "a v2 trigger is deferred while v1 is open — never two panels at once",
+      texts.includes("SPACE") && !texts.some((s) => s.indexOf("KICK ·") === 0),
+      texts.join("|"),
+    );
+    check(
+      "and the deferred verb is not burned — it is still unseen",
+      loadCoach2(ls).k === 0,
+      JSON.stringify(loadCoach2(ls)),
+    );
+    check(
+      "the ring recorded v1 opening and did NOT record a v2 tip — deferral, proved",
+      ringHas("coach_shown", "v1") && !ringHas("coach_shown", "kick"),
+      JSON.stringify(loadStats(ls).e.filter((x) => x.t.indexOf("coach") === 0)),
+    );
+  } finally {
+    delete globalThis.window;
+  }
+  const m6 = new Map();
+  const ls2 = { getItem: (k) => (m6.has(k) ? m6.get(k) : null),
+    setItem: (k, v) => m6.set(k, String(v)) };
+  globalThis.window = { localStorage: ls2, addEventListener() {} };
+  ls2.setItem("nb.coach.v1", "1");
+  try {
+    const { texts, canvas } = fakeCanvasTexts();
+    const g = createGame(canvas, { seed: 47 });
+    g.app.cabinetSeen = true;
+    g.app.skip();
+    let t = 1000;
+    for (let i = 0; i < 650; i++) { t += 16; g.loop(t); } // cross IDLE_T
+    check("idle crossed into ATTRACT", g.app.screen === SCREEN.ATTRACT, String(g.app.screen));
+    texts.length = 0;
+    if (g.demo) g.demo.world.events.push({ t: "power", kind: "kick", x: 1, y: 1 });
+    for (let i = 0; i < 5; i++) { t += 16; g.loop(t); }
+    check(
+      "ATTRACT never draws a v2 tip — ro.hud is false there",
+      !texts.some((s) => s.indexOf("KICK ·") === 0),
+      texts.join("|"),
+    );
+  } finally {
+    delete globalThis.window;
+  }
+}
+
+// ---- the three main.js seams that must not drift ----
+{
+  const src = readFileSync("src/main.js", "utf8");
+  check(
+    "ro.coach2 is gated on world.state === PLAY, exactly as ro.coach is",
+    /coach2:\s*\n?\s*world\.state === "PLAY"|coach2: world\.state === "PLAY"/.test(src),
+    (src.match(/coach2:[^\n]*/) || [])[0],
+  );
+  check(
+    "main composes the tip string; render/ receives it finished",
+    /coachTip\(/.test(src) && !/coachTip/.test(readFileSync("src/render/scenes.js", "utf8")),
+    (src.match(/coachTip\([^\n]*/) || [])[0],
+  );
+  check(
+    "the v2 clock lives in the PLAY-only tick, never on a raw dt",
+    /coach2Tick\(coach2, world,/.test(src),
+    (src.match(/coach2Tick\([^\n]*/) || [])[0],
+  );
 }
 
 console.log("\n  COACH RESULT: " + pass + " PASS / " + fail + " FAIL");

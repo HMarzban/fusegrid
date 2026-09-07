@@ -934,8 +934,13 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   // comment + const chal + if(chal) boot branch; the KeyB copy block) —
   // measured 786->797, against the wave's 798 cap (11 lines of headroom left
   // for R10's 808).
-  check("main.js stays a lean browser entry (<=798 lines)",
-    L.length<=798,String(L.length));
+  // R10 coach-v2 wave: +10 lines (three names on the coach.js import; the
+  // coach2 state and its comment; the coach2Tick latch line; v1's coach_shown
+  // and coach_dismissed emits; ro.coach2) — measured 797->807, against the
+  // wave's 808 cap. The v2 transition itself lives in src/app/coach.js
+  // precisely so this gate keeps biting.
+  check("main.js stays a lean browser entry (<=808 lines)",
+    L.length<=808,String(L.length));
   const lastImp=L.reduce((a,l,i)=>/^import[\s{]/.test(l)?i:a,-1);
   const firstDecl=L.findIndex(l=>/^(export\s|const\s|let\s|var\s|function\s|class\s)/.test(l));
   check("main.js keeps every import at the top (no mid-file import sprawl)",

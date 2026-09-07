@@ -34,6 +34,9 @@ import {
   saveCoachSeen,
   coachOpen,
   COACH_DUR,
+  COACH2_DUR,
+  coach2Tick,
+  coachTip,
 } from "./app/coach.js";
 import { clampPace } from "./core/pace.js";
 import { registerSW } from "./pwa/register.js";
@@ -130,6 +133,9 @@ export function createGame(canvas, opts = {}) {
      it cannot gate the coach window on its own — coachT is main's own PLAY-
      only clock for that gate (see the RAF loop's step branch and onStart). */
   let coachT = 0;
+  /* coach v2 (R10): one live tip at a time, its clock PLAY-only for the same
+     reason coachT is — world.time keeps climbing through PAUSE. */
+  let coach2 = { kind: null, t: 0 };
   /* roomT (R7): the SAME trap coachT dodges. world.time is bumped at the top of
      step() before the PAUSE early return (sim.js:42-43 vs :75-77), main's
      fixed-step loop is ungated on world.state, and loadLevel never resets it —
@@ -209,6 +215,7 @@ export function createGame(canvas, opts = {}) {
     roomT = 0;
     bestPrev = null;
     startRunState((args.level | 0) <= 1);
+    if (!coachSeen) stat("coach_shown", { v: "v1" }, dateStr());
     stat("room_enter", { r: world.level | 0, h: world.heat | 0, pc: world.pact | 0, pa: world.pace | 0 }, dateStr());
     resetCamera(cam); // §2: every run starts framed
     resetOrbit(rig);
@@ -657,11 +664,13 @@ export function createGame(canvas, opts = {}) {
          app-layer only, fires once (the !coachSeen gate) the frame coachOpen
          flips closed (DUR elapsed or a plant), never in the draw code. */
       feedTally(tally, world);
+      for (const [ev, d] of coach2Tick(coach2, world, coachOpen(coachSeen, coachT, coachPlanted), dt)) stat(ev, d, dateStr());
       if (tally.dNew > 0) stat("death", { r: world.level | 0 }, dateStr());
       if (!coachSeen) {
         if (world.events.some((e) => e.t === "bomb")) coachPlanted = true;
         if (!coachOpen(coachSeen, coachT, coachPlanted)) {
           saveCoachSeen();
+          stat("coach_dismissed", { v: "v1", rn: coachPlanted ? "plant" : "timeout" }, dateStr());
           coachSeen = true;
         }
       }
@@ -735,6 +744,7 @@ export function createGame(canvas, opts = {}) {
                 coachOpen(coachSeen, coachT, coachPlanted)
                   ? Math.max(0, 1 - coachT / COACH_DUR)
                   : 0,
+              coach2: world.state === "PLAY" ? { a: Math.max(0, 1 - coach2.t / COACH2_DUR), s: coachTip(coach2.kind) } : { a: 0, s: "" },
               pause: { view: app.pauseView | 0, cursor: app.pauseCursor | 0 },
               time: { on: !!app.timeAttack, t: roomT, best: bestPrev },
               run: { r: tally.r, k: tally.k, p: tally.p, t: runT, best: bestRun, fromStart: runFromStart, daily: dailyDate, tries: dailyRec.played, dbest: dailyRec.best },
