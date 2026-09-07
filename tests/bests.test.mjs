@@ -311,18 +311,24 @@ function throwStore() {
   check("feedTally never throws on a junk world", !threw2);
 }
 
+/* rows: [text, y] for every fillText/strokeText call, added NON-destructively
+   beside texts (Minor-1 fix: the review found dy 20/44/68/92/116 entirely
+   unpinned — every existing overlay pin here and elsewhere is string-presence
+   only, since fillText's x/y were discarded). Old callers reading .texts are
+   unaffected. */
 const rec = () => {
   const texts = [];
+  const rows = [];
   const noop = () => {};
   const c = {
     save: noop, restore: noop, translate: noop, scale: noop, rotate: noop,
     beginPath: noop, closePath: noop, moveTo: noop, lineTo: noop, arc: noop,
     arcTo: noop, bezierCurveTo: noop, quadraticCurveTo: noop, ellipse: noop,
     fill: noop, stroke: noop, fillRect: noop, strokeRect: noop,
-    fillText: (s) => texts.push(String(s)),
-    strokeText: (s) => texts.push(String(s)),
+    fillText: (s, x, y) => { texts.push(String(s)); rows.push([String(s), y]); },
+    strokeText: (s, x, y) => { texts.push(String(s)); rows.push([String(s), y]); },
   };
-  return { c, texts };
+  return { c, texts, rows };
 };
 
 // ---- 6. fmtSpan: a THIRD formatter, disjoint from fmtTime and fmtLong ----
@@ -523,6 +529,49 @@ const rec = () => {
       !a.texts.some((s) => s.indexOf("B board") >= 0),
     a.texts.join("|"),
   );
+}
+
+// ---- 12. Minor-1 fix (review 2026-09-07): pin the summary block's vertical
+// layout. Every overlay pin above is string-presence only (fillText's x/y
+// were discarded); this is the first pin that would catch a pitch or offset
+// mutation to the dy 20/44/68/92/116 stack. ----
+{
+  const boxes = [
+    { w: 600, h: 520, cx: 300, cy: 260 },
+    { w: 608, h: 352, cx: 304, cy: 188 },
+  ];
+  const run = { r: 2, k: 5, p: 1, t: 90, best: { s: 500, r: 3 } };
+  for (const B of boxes) {
+    const tag = B.w + "x" + B.h;
+    // LOSE: runStamp, tally, delta, cue — dy 20/44/68/92. LOSE has no
+    // timeLine slot (WIN-only, tm.on-gated), so it never reaches dy 116.
+    const L = rec();
+    drawOverlay(
+      L.c,
+      { state: "LOSE", level: 3, score: 1000, heat: 0, pact: 0, pace: 0 },
+      B.w, B.h, B.cx, B.cy, undefined, undefined, run,
+    );
+    const lDy = L.rows.filter(([, y]) => y > B.cy).map(([, y]) => y - B.cy);
+    check(
+      "Minor-1 LOSE @ " + tag + ": dy stack is 20/44/68/92 under runStamp",
+      JSON.stringify(lDy) === JSON.stringify([20, 44, 68, 92]),
+      JSON.stringify(lDy) + " / " + JSON.stringify(L.rows),
+    );
+    // finale WIN + TIME ATTACK on: runStamp, tally, delta, timeLine, cue —
+    // the one path that reaches all five dy slots (spec §2.4's worst case).
+    const F = rec();
+    drawOverlay(
+      F.c,
+      { state: "WIN", level: 5, score: 1000, heat: 0, pact: 0, pace: 0, finale: false },
+      B.w, B.h, B.cx, B.cy, undefined, { on: true, t: 59, best: 40 }, run,
+    );
+    const fDy = F.rows.filter(([, y]) => y > B.cy).map(([, y]) => y - B.cy);
+    check(
+      "Minor-1 finale WIN @ " + tag + ": dy stack is 20/44/68/92/116 under runStamp",
+      JSON.stringify(fDy) === JSON.stringify([20, 44, 68, 92, 116]),
+      JSON.stringify(fDy) + " / " + JSON.stringify(F.rows),
+    );
+  }
 }
 
 // ---- wiring: both renderers pass o.run through as the ninth arg ----
