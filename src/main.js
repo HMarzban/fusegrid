@@ -3,7 +3,7 @@
    (BOOT→INTRO→MENU⇄subs→GAME, src/app/menuapp.js): the sim steps ONLY while
    the shell is in GAME; other screens render the frozen arena behind menu
    chrome (src/render/shellview.js). The sim never sees any of this. */
-import { CFG } from "./core/config.js";
+import { CFG, isFinale } from "./core/config.js";
 import { createWorld, loadLevel, step } from "./core/sim.js";
 import { createRenderer } from "./render/renderer.js";
 import { makeHud, copyPayload, overlayBox, pauseHit } from "./render/scenes.js";
@@ -25,6 +25,7 @@ import { loadPlaques, savePlaques, unlockPlaques } from "./app/plaques.js";
 import { loadPace, savePace } from "./app/pacestore.js";
 import { loadSettings, saveSettings } from "./app/settings.js";
 import { timeKey, loadTimes, saveTimes, bestOf, recordTime } from "./app/times.js";
+import { bestKey, loadBests, saveBests, bestOfRun, recordBest, newTally, feedTally } from "./app/bests.js";
 import {
   loadCoachSeen,
   saveCoachSeen,
@@ -133,6 +134,20 @@ export function createGame(canvas, opts = {}) {
      overlay can never read back the record it just set. */
   let roomT = 0;
   let bestPrev = null;
+  /* R1: bestRun is a RUN-START snapshot (a score record is per-run and the
+     overlay draws on every room's WIN), and endRun is one idempotent write
+     called from BOTH sim edges below AND from persistScore(), which already
+     runs at all three drop-the-run sites — a quit run is a run that ended. */
+  let tally = newTally(), runT = 0, bestRun = null, runEnded = true;
+  const startRunState = () => {
+    tally = newTally(); runT = 0; runEnded = false;
+    bestRun = bestOfRun(loadBests(), bestKey(world));
+  };
+  const endRun = () => {
+    if (runEnded) return;
+    runEnded = true;
+    saveBests(recordBest(loadBests(), bestKey(world), world.score | 0, world.level | 0));
+  };
 
   /* USER CAMERA (spec §1): render-side closure state, NEVER in world/snapshot.
      Handlers self-gate on GAME via getActive; menus/attract stay authored.
@@ -175,6 +190,7 @@ export function createGame(canvas, opts = {}) {
     coachT = 0; // fresh run: coachT restarts at 0 (world.time never does)
     roomT = 0;
     bestPrev = null;
+    startRunState();
     resetCamera(cam); // §2: every run starts framed
     resetOrbit(rig);
     rig.dist = camPreset(settings.cam);
@@ -227,6 +243,7 @@ export function createGame(canvas, opts = {}) {
         // the toolbar button dropped the run silently; two adjacent rows must
         // not have different score semantics
         persistScore();
+        startRunState();
         loadLevel(world, 1, false);
         world.score = 0;
         world.state = "PLAY";
@@ -307,6 +324,7 @@ export function createGame(canvas, opts = {}) {
   };
   /* high-score persist through the guarded default store (§6) */
   const persistScore = () => {
+    endRun();
     if (!(world.score > 0)) return;
     saveScores(recordScore(loadScores(), scoreEntry(world, dateStr())));
   };
@@ -561,9 +579,12 @@ export function createGame(canvas, opts = {}) {
         const k = timeKey(world), v = loadTimes();
         bestPrev = bestOf(v, k);                 // captured BEFORE the write
         saveTimes(recordTime(v, k, roomT));
+        if (isFinale(world.level)) endRun();     // R1: the finale WIN ends the run
       }
+      if ((prevSt === "PLAY" || prevSt === "WIN") && world.state === "LOSE") endRun();
       if ((prevSt === "WIN" || prevSt === "LOSE") && world.state === "PLAY") {
         roomT = 0; bestPrev = null;              // WIN->next room, LOSE->new run
+        if (prevSt === "LOSE") startRunState();  // R1: a retry never calls onStart
       }
       prevSt = world.state;
       /* The shell machine runs during GAME too — unconditionally, not only
@@ -574,8 +595,7 @@ export function createGame(canvas, opts = {}) {
          app.worldState. */
       app.update(dt, shellInput);
       acc += dt;
-      if (world.state === "PLAY") coachT += dt; // PAUSE must not burn the coach window
-      if (world.state === "PLAY") roomT += dt;  // ...and must not burn the room clock
+      if (world.state === "PLAY") { coachT += dt; roomT += dt; runT += dt; }
       let steps = 0;
       while (acc >= CFG.STEP) {
         if (net) net.drive();
@@ -597,6 +617,7 @@ export function createGame(canvas, opts = {}) {
          "bomb" pushed by this frame's step() is still readable. Persist is
          app-layer only, fires once (the !coachSeen gate) the frame coachOpen
          flips closed (DUR elapsed or a plant), never in the draw code. */
+      feedTally(tally, world);
       if (!coachSeen) {
         if (world.events.some((e) => e.t === "bomb")) coachPlanted = true;
         if (!coachOpen(coachSeen, coachT, coachPlanted)) {
@@ -674,6 +695,7 @@ export function createGame(canvas, opts = {}) {
                   : 0,
               pause: { view: app.pauseView | 0, cursor: app.pauseCursor | 0 },
               time: { on: !!app.timeAttack, t: roomT, best: bestPrev },
+              run: { r: tally.r, k: tally.k, p: tally.p, t: runT, best: bestRun },
             }
           : { hud: false };
     // BRIGHTNESS is 3D only — CLASSIC 2D blits the authored hex unregraded.

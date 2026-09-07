@@ -906,8 +906,12 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   // GAME ro literal) — bumped 706->731.
   // R7 MODES wave: +2 lines (timeAttack seed + onTimeAttack persist beside
   // pace/onPaceChange) — bumped 731->733.
-  check("main.js stays a lean browser entry (<=733 lines)",
-    L.length<=733,String(L.length));
+  // R1 run-summary wave: +22 lines (bests.js import; isFinale on the CFG
+  // import; the run-state declarations plus startRunState/endRun; startRunState
+  // in onStart and pause RESTART; endRun in persistScore; the split edge block;
+  // the feedTally line; ro.run) — bumped 733->755.
+  check("main.js stays a lean browser entry (<=755 lines)",
+    L.length<=755,String(L.length));
   const lastImp=L.reduce((a,l,i)=>/^import[\s{]/.test(l)?i:a,-1);
   const firstDecl=L.findIndex(l=>/^(export\s|const\s|let\s|var\s|function\s|class\s)/.test(l));
   check("main.js keeps every import at the top (no mid-file import sprawl)",

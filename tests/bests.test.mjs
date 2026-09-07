@@ -21,6 +21,7 @@ import {
   fmtTime,
 } from "../src/render/scenes.js";
 import { readFileSync } from "node:fs";
+import { createGame } from "../src/main.js";
 
 let pass = 0,
   fail = 0;
@@ -540,6 +541,151 @@ const rec = () => {
       line.trim(),
     );
   }
+}
+
+/* ---- SELF-REVIEW PIN A (spec §1.2): a retry never calls onStart.
+   startGame runs INSIDE step() on the LOSE screen's fire edge (sim.js:67-74 ->
+   :107-111), so run state reset only in onStart/RESTART goes stale on every
+   retry: run 1 writes best B at its LOSE edge, run 2 still holds the pre-run-1
+   snapshot A, and any run-2 score in (A, B) falsely prints NEW BEST. This pin
+   drives two real runs through the real loop and asserts the second one tells
+   the truth. Ctx stub mirrors tests/times.test.mjs's rec() (the full method
+   list a real createGame render pass needs), not a hand-picked subset. ---- */
+{
+  const mem = new Map();
+  const ls = {
+    getItem: (k) => (mem.has(k) ? mem.get(k) : null),
+    setItem: (k, v) => mem.set(k, String(v)),
+  };
+  globalThis.window = { localStorage: ls, addEventListener() {} };
+  try {
+    const texts = [];
+    const noop = () => {};
+    const rc = {
+      save: noop, restore: noop, translate: noop, scale: noop, rotate: noop,
+      beginPath: noop, closePath: noop, moveTo: noop, lineTo: noop, arc: noop,
+      arcTo: noop, bezierCurveTo: noop, quadraticCurveTo: noop, ellipse: noop,
+      fill: noop, stroke: noop, fillRect: noop, strokeRect: noop,
+      clearRect: noop, setTransform: noop, transform: noop, drawImage: noop,
+      createLinearGradient: () => ({ addColorStop: noop }),
+      createRadialGradient: () => ({ addColorStop: noop }),
+      measureText: () => ({ width: 0 }),
+      fillText: (s) => texts.push(String(s)),
+      strokeText: (s) => texts.push(String(s)),
+    };
+    const fake = { getContext: () => rc, addEventListener() {}, style: {} };
+    const g = createGame(fake, { autoplay: true, seed: 41 });
+    let t = 1000;
+    g.loop(t); // establishes main's `last`; prevSt latches PLAY
+    // --- run 1: a 500-point death ---
+    g.world.score = 500;
+    g.world.state = "LOSE";
+    texts.length = 0;
+    g.loop((t += 16)); // PLAY -> LOSE edge: endRun() writes
+    check(
+      "A: the LOSE edge writes nb.bests.v1 for the CORE plain bucket",
+      JSON.parse(ls.getItem(BESTS_KEY) || "{}").b["0:0:1"].s === 500,
+      ls.getItem(BESTS_KEY),
+    );
+    check(
+      "A: the first run's overlay prints a first-ever record",
+      texts.some((s) => s.indexOf("NEW BEST") >= 0),
+      texts.join("|"),
+    );
+    // --- run 2 through the LOSE->PLAY edge, scoring BELOW run 1 ---
+    g.world.state = "PLAY";
+    g.loop((t += 16)); // LOSE -> PLAY: startRunState() re-snapshots bestRun
+    g.world.score = 300;
+    g.world.state = "LOSE";
+    texts.length = 0;
+    g.loop((t += 16));
+    check(
+      "A: a worse retry NEVER prints NEW BEST — the regression this pin exists for",
+      !texts.some((s) => s.indexOf("NEW BEST") >= 0),
+      texts.join("|"),
+    );
+    check(
+      "A: it prints the gap to the record run 1 just wrote",
+      texts.some((s) => s === "+200 FROM YOUR CORE BEST"),
+      texts.join("|"),
+    );
+    check(
+      "A: and the worse retry did not overwrite the record",
+      JSON.parse(ls.getItem(BESTS_KEY) || "{}").b["0:0:1"].s === 500,
+      ls.getItem(BESTS_KEY),
+    );
+    check(
+      "A: the tally line paints on both WIN and LOSE",
+      texts.some((s) => s.indexOf("ROOMS ") === 0),
+      texts.join("|"),
+    );
+  } finally {
+    delete globalThis.window;
+  }
+}
+
+/* ---- SELF-REVIEW PIN B (spec §1.1, §1.2, §1.6): the three orderings that make
+   the feature truthful, pinned on main.js's own source so a later refactor that
+   reorders them fails here rather than in a player's overlay. ---- */
+{
+  const src = readFileSync("src/main.js", "utf8");
+  check(
+    "B1: bestRun is assigned ONLY inside startRunState — never re-read mid-run",
+    (src.match(/bestRun = /g) || []).length === 2 &&
+      /const startRunState = \(\) => \{[\s\S]{0,200}bestRun = bestOfRun\(/.test(src),
+    (src.match(/bestRun = [^\n]*/g) || []).join(" | "),
+  );
+  check(
+    "B2: the LOSE->PLAY edge is a run start — a retry never reaches onStart",
+    /if \(prevSt === "LOSE"\) startRunState\(\);/.test(src),
+    (src.match(/startRunState\(\);[^\n]*/g) || []).join(" | "),
+  );
+  check(
+    "B3: startRunState has exactly three call sites (onStart, pause RESTART, the LOSE->PLAY edge)",
+    (src.match(/startRunState\(\);/g) || []).length === 3,
+    String((src.match(/startRunState\(\);/g) || []).length),
+  );
+  check(
+    "B4: the run-state reset is SPLIT, not mirrored — roomT still resets on a WIN->PLAY room change",
+    /roomT = 0; bestPrev = null;/.test(src) &&
+      /\(prevSt === "WIN" \|\| prevSt === "LOSE"\) && world\.state === "PLAY"/.test(src),
+    (src.match(/roomT = 0;[^\n]*/g) || []).join(" | "),
+  );
+  const ps = (src.match(/const persistScore = \(\) => \{[\s\S]{0,220}/) || [""])[0];
+  check(
+    "B5: endRun() runs INSIDE persistScore, above its score>0 guard — a quit run is a run that ended",
+    ps.indexOf("endRun()") >= 0 &&
+      ps.indexOf("endRun()") < ps.indexOf("world.score > 0"),
+    ps.trim().slice(0, 160),
+  );
+  const rst = (src.match(/if \(cmd === "RESTART"\)[\s\S]{0,320}/) || [""])[0];
+  check(
+    "B6: pause RESTART calls persistScore BEFORE startRunState — reversing them drops the write",
+    rst.indexOf("persistScore();") >= 0 &&
+      rst.indexOf("persistScore();") < rst.indexOf("startRunState();"),
+    rst.trim().slice(0, 160),
+  );
+  check(
+    /* the bare substring "renderer.render(" also matches the pre-existing
+       ghost-coach doc comment ("BEFORE renderer.render() drains…") a few
+       lines above feedTally's own call site, so the search targets the real
+       call (which passes `attract`) rather than the comment mentioning it. */
+    "B7: feedTally reads the batch BEFORE renderer.render drains world.events",
+    src.indexOf("feedTally(tally, world);") > 0 &&
+      src.indexOf("feedTally(tally, world);") < src.indexOf("renderer.render(attract"),
+    String(src.indexOf("feedTally(tally, world);")),
+  );
+  check(
+    "B8: the run clock is PLAY-only, on the same line coachT and roomT already are",
+    /if \(world\.state === "PLAY"\) \{ coachT \+= dt; roomT \+= dt; runT \+= dt; \}/.test(src),
+    (src.match(/runT \+= dt[^\n]*/) || [])[0],
+  );
+  check(
+    "B9: the finale WIN ends the run through the SAME isFinale predicate the overlay uses",
+    /if \(isFinale\(world\.level\)\) endRun\(\);/.test(src) &&
+      /import \{ CFG, isFinale \} from "\.\/core\/config\.js";/.test(src),
+    (src.match(/if \(isFinale\(world\.level\)\)[^\n]*/) || [])[0],
+  );
 }
 
 console.log("\n  BESTS RESULT: " + pass + " PASS / " + fail + " FAIL");

@@ -16,6 +16,17 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-07 — R1 run summary + per-heat bests
+- Every run end (LOSE, finale WIN, or a quit via pause RESTART/QUIT/KeyM)
+  now writes raw score + furthest room to `nb.bests.v1` keyed on
+  heat/pact/pace; the WIN/LOSE overlay shows a tally line always and a
+  delta line only at a run end (never mid-room), computed only from
+  persisted numbers.
+- Two orderings pinned as regressions in `tests/bests.test.mjs`: `bestRun`
+  is a run-start snapshot (never re-read mid-run), and the LOSE→PLAY edge
+  is a run start because `startGame` runs inside `step()` and never
+  reaches `onStart` — without it a retry falsely prints `NEW BEST`.
+
 ## 2026-09-07 — Retention wave 1 closing fix wave
 - Fixed two coverage gaps the wave's final review flagged as MUST-FIX and
   added behavioral pins for both (`tests/times.test.mjs` Pins C/D,
