@@ -555,5 +555,54 @@ import { createGame } from "../src/main.js";
   }
 }
 
+// ---- 9d. Minor-3 (review 2026-09-07, owner ruling): ro.run.{tries,dbest}
+// reach the LOSE overlay's actual pixels, end to end — the reviewer's own
+// recording-canvas prototype, driving a real createGame through a
+// fillText-recording canvas proxy (the same pattern as
+// tests/headless.test.mjs:112 / :551). Kills M9 (tries: played+1) and M21
+// (dbest: 0), both of which survived the whole suite before this. ----
+{
+  const mem = new Map();
+  const ls = { getItem: (k) => (mem.has(k) ? mem.get(k) : null),
+    setItem: (k, v) => mem.set(k, String(v)) };
+  globalThis.window = { localStorage: ls, addEventListener() {} };
+  const p2 = (n) => (n < 10 ? "0" + n : "" + n);
+  const d0 = new Date();
+  const local = d0.getFullYear() + "-" + p2(d0.getMonth() + 1) + "-" + p2(d0.getDate());
+  // pre-seed a standing record so this run's TRY/BEST are a genuine
+  // accumulation (3/1840), never a fresh day's 1/score — the numbers a
+  // mutated ro.run.tries/dbest (M9/M21) could otherwise fake by accident.
+  ls.setItem(DAILY_KEY, JSON.stringify({ date: local, best: 900, played: 2, room: 3, pace: 1 }));
+  const texts = [];
+  const rec = new Proxy(function () {}, {
+    get: (t, p) => {
+      if (p === Symbol.toPrimitive) return () => "";
+      return (...a) => { if (p === "fillText") texts.push(String(a[0])); return rec; };
+    },
+    apply: () => rec,
+    set: () => true,
+  });
+  const fake = { getContext: () => rec, addEventListener() {}, style: {} };
+  try {
+    const g = createGame(fake, { seed: 777 });
+    g.app.cabinetSeen = true;
+    g.app.skip();
+    g.app.cursor = ITEMS.indexOf("DAILY");
+    g.app.confirm();
+    let t = 1000;
+    g.loop(t);
+    g.world.score = 1840;
+    g.world.state = "LOSE";
+    g.loop((t += 16));
+    check(
+      "ro.run.tries/dbest reach the LOSE overlay pixels exactly — TRY 3, YOUR BEST 1840 (kills M9 and M21)",
+      texts.indexOf("DAILY " + local + " · NORM · TRY 3 · YOUR BEST 1840") >= 0,
+      JSON.stringify(texts),
+    );
+  } finally {
+    delete globalThis.window;
+  }
+}
+
 console.log("\n  DAILY RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);
