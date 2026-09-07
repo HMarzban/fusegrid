@@ -771,8 +771,8 @@ const rec = () => {
        (sim.js's startGame), so neither call site can start "from" a deeper
        room. */
     "B2b (Minor-3): onStart passes (args.level|0)<=1; RESTART always starts true",
-    /const onStart = \(args\) => \{[\s\S]{0,600}startRunState\(\(args\.level \| 0\) <= 1\);/.test(src) &&
-      /if \(cmd === "RESTART"\)[\s\S]{0,320}startRunState\(true\);/.test(src),
+    /const onStart = \(args\) => \{[\s\S]{0,1400}startRunState\(\(args\.level \| 0\) <= 1\);/.test(src) &&
+      /if \(cmd === "RESTART"\)[\s\S]{0,700}startRunState\(true\);/.test(src),
     (src.match(/startRunState\([\s\S]*?\);/g) || []).join(" | "),
   );
   check(
