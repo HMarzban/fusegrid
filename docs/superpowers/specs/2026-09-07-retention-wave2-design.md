@@ -630,7 +630,7 @@ NORM pace). Mixing an IRON run into "CORE BEST" would be the same unit error
   `DAILY 2026-09-07 · NOT PLAYED YET` when `daily.date !== today`, or omitted
   entirely before R3 lands.
 - note 2 — `SINCE 2026-08-30 · LAST 2026-09-07 · 42 SESSIONS · BESTS: NO PACT · NORM`.
-  Width: 70 chars at the 10 px mono face (≈6 px/char) = 420 px against
+  Width: 72 chars at the 10 px mono face (≈6 px/char) = 432 px against
   `S.iw` 448 (74 chars at a 4-digit SESSIONS count — exactly the
   74-char pin). Checked at both sizes (`S.iw` is 448 at each).
   **Ruling 2026-09-07 (review R5 Minor-8):** "BESTS ARE PER HEAT" under-told
