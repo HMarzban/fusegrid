@@ -16,6 +16,24 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-07 — R3 fix wave (review Minor-1..4, Nit-1)
+- Minor-1: a seedless run now falls back to a `bootSeed` remembered once at
+  boot (`main.js`), not whatever `world.seed` a prior DAILY run left behind —
+  two ordinary runs (or a LEVEL SELECT run) bracketing a daily now measure
+  `777 -> 777 -> 4119412512 -> 777 -> 777`, not the reviewer's `...->4119412512
+  ->4119412512`.
+- Minor-2: `recordDaily` treats a stamped `pace` mismatch as a fresh day
+  (refused, never silently merged) — the guarantee the code comment already
+  claimed but didn't enforce.
+- Minor-4: extracted `endRun`'s record+tag write into `daily.js`'s
+  `finishDaily`, one shared start-date param for both halves — per an owner
+  ruling that deliberately kept the shipped `dailyDate`-tagging behavior and
+  rejected the review's own suggested `todayStr()` fix.
+- Minor-3: pinned `ro.run.tries`/`dbest` through the LOSE overlay's actual
+  pixels via a recording-canvas test (no shipped-code change; pure pin gap).
+- Three commits, PWA v131->v133 (the Minor-3 commit is test-only, no bump),
+  37/37 green throughout. `main.js` measured 787->786 against the 788 cap.
+
 ## 2026-09-07 — R3 daily challenge
 - Added a `DAILY` MENU row (index 2, under LEVEL SELECT) that starts a pinned
   CORE room-1 run seeded by a pure FNV-1a hash (`src/app/daily.js`) of the
