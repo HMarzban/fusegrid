@@ -16,6 +16,29 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-07 — R5 fix wave (review Minor-1..8, Nit-8)
+- Fixed two edge gaps: PAUSE->RESTART now emits `room_enter`; `persistScore()`
+  now owns the `score_set` edge too (hoisted from the WIN/LOSE `noteWorldEdge`
+  branch, which now just calls it), so KeyM/QUIT/RESTART bank a qualifying
+  score exactly like a LOSE death already did — no double on the finale path.
+  `main.js` stays at 774/776 lines (net zero: the redundant standalone
+  `endRun()`-on-LOSE call was dropped).
+- Added behavioral pins (`tests/stats.test.mjs`) for room_enter/death wiring
+  through the real `createGame` harness, `clampStats`' lower bound, and the
+  `SCREEN.STATS`/`SCREEN.SCORES` shellview routes; taught
+  `tests/menudraw.test.mjs`'s recording stub to record `moveTo`/`lineTo` so
+  the lifetime/bests rule's position is pinned. Tightened `tests/bests.test.mjs`
+  B9 to pin the whole finale-WIN branch body, not just its first statement.
+  All five gaps mutation-verified RED on a scratch copy before being closed.
+- Owner ruling: STATS note 2 changed from "BESTS ARE PER HEAT" (under-told —
+  the bests rows also require the plain-pact, NORM-pace bucket) to
+  "BESTS: PLAIN · NORM", naming both with the repo's existing words rather
+  than widening the CORE/PLUS/MAX BEST row labels. Spec §3.4 carries a dated
+  Ruling 2026-09-07 note.
+- Documented (comment only) that `bests.js`'s `tally.dr` is reserved/unused —
+  the live deaths-by-room path is `stats.js`'s `v.d` via the `death` edge.
+- Five commits, PWA v124->v127, 36/36 green throughout.
+
 ## 2026-09-07 — R5 STATS screen
 - `nb.stats.v1` records lifetime aggregates (runs/rooms/deaths/kills/picks/
   bricks/secs/sessions) unconditionally from the first run; its 200-entry event
