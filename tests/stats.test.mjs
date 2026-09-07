@@ -84,6 +84,12 @@ const TODAY = "2026-09-07";
       clampStats(7).e.length === 0 &&
       clampStats({ a: 5, e: 5 }).on === 0,
   );
+  check(
+    "clampStats' cnt clamps the LOWER bound too, not just the upper one (Minor-5)",
+    clampStats({ a: { deaths: -5, secs: -1 } }).a.deaths === 0 &&
+      clampStats({ a: { deaths: -5, secs: -1 } }).a.secs === 0,
+    JSON.stringify(clampStats({ a: { deaths: -5, secs: -1 } }).a),
+  );
 }
 
 // ---- 2. session_start ----
@@ -565,6 +571,44 @@ const TODAY = "2026-09-07";
       "the WIN-edge (finale) path emits exactly one score_set — no double (Minor-2)",
       loadStats(ls).e.filter((x) => x.t === "score_set").length === 1,
       JSON.stringify(loadStats(ls).e.filter((x) => x.t === "score_set")),
+    );
+  } finally {
+    delete globalThis.window;
+  }
+}
+
+// ---- 11f. Minor-3: room_enter (onStart + the LOSE->PLAY retry) and death
+// have no behavioral pin through the real main.js wiring — add one ----
+{
+  const mem = new Map();
+  const ls = { getItem: (k) => (mem.has(k) ? mem.get(k) : null),
+    setItem: (k, v) => mem.set(k, String(v)) };
+  globalThis.window = { localStorage: ls, addEventListener() {} };
+  try {
+    setStatsOn(ls);
+    const g = createGame(null, { autoplay: true, seed: 64 });
+    check(
+      "onStart fires exactly one room_enter (Minor-3)",
+      loadStats(ls).e.filter((x) => x.t === "room_enter").length === 1,
+      JSON.stringify(loadStats(ls).e),
+    );
+    let t = 0;
+    g.loop(t); // primes feedTally's lv baseline off the fresh run — no death yet
+    g.world.lives -= 1; // a life lost this frame
+    g.world.state = "LOSE";
+    t += 16;
+    g.loop(t); // death fires exactly once
+    g.world.state = "PLAY"; // the sim's own retry (always room 1)
+    t += 16;
+    g.loop(t); // room_enter fires again on the LOSE->PLAY edge
+    check(
+      "a scripted LOSE->PLAY transition moves deaths by exactly one and lands one room_enter row (Minor-3)",
+      loadStats(ls).a.deaths === 1 &&
+        loadStats(ls).e.filter((x) => x.t === "room_enter").length === 2,
+      JSON.stringify({
+        deaths: loadStats(ls).a.deaths,
+        roomEnters: loadStats(ls).e.filter((x) => x.t === "room_enter").length,
+      }),
     );
   } finally {
     delete globalThis.window;
