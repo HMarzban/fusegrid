@@ -16,6 +16,23 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-07 — R11 fix round 1: revert CROWN brickHi swap
+- R11's CROWN `brickHi` swap (`#fff0a8`→`#d9ffae`) was reverted: REAL 3D's
+  `three/scene.js:100,143` paints `biome.brickHi` as a **solid per-instance
+  cube tint** on every 7th brick (no alpha blend, unlike CLASSIC 2D's
+  `brickHi@.55` composite the audit table models), so the swapped
+  yellow-green rendered those specific bricks as olive/lime cubes among the
+  golds — confirmed by a controlled A/B at room 8 (`?render=3d`). SAND's swap
+  (`#fbf1a0`) stays; it's the only shipped swap now (budget ≤2, 1 used).
+  Corrected `docs/superpowers/specs/2026-09-06-cvd-audit.md` §5 (CROWN moves
+  to known-and-deliberately-unswapped, reason + an R≥G-constraint fix path
+  noted for later) and §6 (`r3d/scene3d.js:161` is CLASSIC 2D's legacy
+  `?render=iso` fallback, not REAL 3D — the 3D mechanism is `three/scene.js`'s
+  solid tint). Re-ran `items-art.test.mjs`/`menudraw.test.mjs` clean, full
+  `npm test` clean; bumped the PWA shell for the changed precached bytes.
+  Headed 3D captures of room 8 (CROWN) and room 6 (SAND) confirm: golds read
+  uniform, SAND highlight reads in-hue.
+
 ## 2026-09-07 — R4 first-visit handoff verification
 - Measured cold-load-to-first-bomb: loopback (this tree, v114) 6.96 s patient /
   3.96 s impatient, both measured; Pages is a disclosed *projection* of 11.04 s

@@ -22,7 +22,7 @@ export const BIOMES = Object.freeze([
   {name:"ARENA",  bg0:"#4a2058",bg1:"#140818",brickA:"#ff6a8c",brickB:"#c23058",brickHi:"#ffc0d0",wall:"#6a6460",wallHi:"#c8b8b0",floor0:"#3a2848",floor1:"#281830",hWall:20,hBrick:12,sky:"#2a1840"},
   {name:"SAND",   bg0:"#6a4a18",bg1:"#241808",brickA:"#e8b040",brickB:"#a07020",brickHi:"#fbf1a0",wall:"#c4a070",wallHi:"#f0e0c0",floor0:"#c49840",floor1:"#a07828",hWall:14,hBrick:8,sky:"#ffd080"},
   {name:"VOID",   bg0:"#0a0614",bg1:"#020108",brickA:"#6a20c8",brickB:"#3a1070",brickHi:"#d0a0ff",wall:"#1a1428",wallHi:"#8a70b0",floor0:"#140e20",floor1:"#0a0814",hWall:32,hBrick:16,sky:"#201040"},
-  {name:"CROWN",  bg0:"#3a2010",bg1:"#140808",brickA:"#ffd447",brickB:"#c49020",brickHi:"#d9ffae",wall:"#8a6040",wallHi:"#f0d080",floor0:"#5a3020",floor1:"#3a2018",hWall:24,hBrick:12,sky:"#f0c060"},
+  {name:"CROWN",  bg0:"#3a2010",bg1:"#140808",brickA:"#ffd447",brickB:"#c49020",brickHi:"#fff0a8",wall:"#8a6040",wallHi:"#f0d080",floor0:"#5a3020",floor1:"#3a2018",hWall:24,hBrick:12,sky:"#f0c060"},
 ]);
 export const biomeOf = lvl => BIOMES[(Math.max(1,lvl)-1)%BIOMES.length];
 export const ROOM_LOCK=5;
