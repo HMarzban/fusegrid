@@ -86,8 +86,10 @@ export function coachTip(kind) {
    emit — this module does not know about nb.stats.v1.
    v1 wins ties: while the ghost coach is open a trigger is deferred to the frame
    v1 closes, so a first-timer never sees two panels. One tip at a time: a new
-   trigger replaces a live one and marks it seen immediately, so a player who
-   grabs two verbs in one blast gets one tip now and never the other. Disclosed. */
+   trigger replaces a live one, marks it seen immediately, and dismisses it
+   (rn:"replace", review 2026-09-07 Minor-1 ruling) BEFORE the new coach_shown,
+   so shown/dismissed still pair exactly once per displayed tip — a player who
+   grabs two verbs in one blast gets one tip now and never the other. */
 export function coach2Tick(st, world, v1Open, dt, store) {
   const out = [];
   const w = world || {};
@@ -105,7 +107,10 @@ export function coach2Tick(st, world, v1Open, dt, store) {
   for (const e of ev) {
     if (!e || e.t !== "power" || TIPS.indexOf(e.kind) < 0) continue;
     if (coach2Seen(loadCoach2(store), e.kind)) continue;
-    if (st.kind) saveCoach2(coach2Mark(loadCoach2(store), st.kind), store);
+    if (st.kind) {
+      saveCoach2(coach2Mark(loadCoach2(store), st.kind), store);
+      out.push(["coach_dismissed", { v: st.kind, rn: "replace" }]);
+    }
     st.kind = e.kind;
     st.t = 0;
     out.push(["coach_shown", { v: e.kind }]);

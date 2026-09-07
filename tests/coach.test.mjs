@@ -562,6 +562,7 @@ check("round-trip", loadCoachSeen(store) === true);
     setItem: (k, v) => m4.set(k, String(v)) };
   globalThis.window = { localStorage: ls, addEventListener() {} };
   ls.setItem("nb.coach.v1", "1");
+  setStatsOn(ls); // ring ON: the replace-path pairing check below needs it recorded
   try {
     const { texts, canvas } = fakeCanvasTexts();
     const g = createGame(canvas, { autoplay: true, seed: 45 });
@@ -582,12 +583,31 @@ check("round-trip", loadCoachSeen(store) === true);
       loadCoach2(ls).k === 1,
       JSON.stringify(loadCoach2(ls)),
     );
+    // Minor-1 fix (review 2026-09-07): the replaced tip is dismissed FIRST,
+    // rn:"replace", so shown/dismissed pair exactly once per displayed tip
+    // even on the replace path.
+    const ringKick = loadStats(ls).e.filter((x) => (x.t === "coach_shown" || x.t === "coach_dismissed") && x.v === "kick");
+    check(
+      "the replaced verb gets a paired coach_shown + coach_dismissed(rn:replace)",
+      ringKick.length === 2 &&
+        ringKick[0].t === "coach_shown" &&
+        ringKick[1].t === "coach_dismissed" &&
+        ringKick[1].rn === "replace",
+      JSON.stringify(ringKick),
+    );
     let guard = 0;
     while (loadCoach2(ls).t === 0 && guard < 500) { t += 16; g.loop(t); guard++; }
     check(
       "and once the live one closes, both verbs are seen for good",
       loadCoach2(ls).k === 1 && loadCoach2(ls).t === 1,
       JSON.stringify(loadCoach2(ls)),
+    );
+    const shownCount2 = loadStats(ls).e.filter((x) => x.t === "coach_shown" && x.v !== "v1").length;
+    const dismissedCount2 = loadStats(ls).e.filter((x) => x.t === "coach_dismissed" && x.v !== "v1").length;
+    check(
+      "and shown/dismissed(v2) counts still match once the throw tip also closes",
+      shownCount2 === dismissedCount2,
+      shownCount2 + " vs " + dismissedCount2,
     );
   } finally {
     delete globalThis.window;

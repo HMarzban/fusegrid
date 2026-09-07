@@ -540,7 +540,7 @@ EVENTS    = ["session_start","room_enter","room_clear","death","win_finale",
   | `score_set` | — | `{t,y,h}` |
   | `plaque_unlock` | — | `{t,y,b}` one per newly-set bit |
   | `coach_shown` | — | `{t,y,v}` (`v` = `"v1"`/`"kick"`/`"throw"`/`"remote"`) |
-  | `coach_dismissed` | — | `{t,y,v,rn}` (`rn` = `"plant"`/`"use"`/`"timeout"`) |
+  | `coach_dismissed` | — | `{t,y,v,rn}` (`rn` = `"plant"`/`"use"`/`"timeout"`/`"replace"` — `"replace"` added 2026-09-07, fix-review Minor-1 ruling: a v2 tip replaced by a new trigger is dismissed first, so shown/dismissed still pair exactly once per displayed tip) |
 
 - **`setStatsOn()`** — sets `on:1`; called once, from `main.js`'s `onStats`
   callback when STATS is first pushed.
@@ -1107,10 +1107,12 @@ beside `coachT` — the `main.js:121-124` trap), computes the alpha, and passes 
 finished string and alpha down. The persist write fires once, on the frame the
 window closes, exactly as v1's does (`main.js:600-606`).
 
-**One tip at a time:** a new trigger replaces a live tip and marks the replaced
-one seen — a player who grabs KICK and THROW in the same blast gets one tip now
-and never the other, which is the tip-fatigue rule (report §4 R10, risk) taken
-literally. Disclosed.
+**One tip at a time:** a new trigger replaces a live tip, marks the replaced one
+seen, and emits `coach_dismissed` for it (`rn:"replace"`, fix-review 2026-09-07
+Minor-1 ruling) **before** the new `coach_shown` — a player who grabs KICK and
+THROW in the same blast gets one tip now and never the other, which is the
+tip-fatigue rule (report §4 R10, risk) taken literally, and the ring still
+pairs shown/dismissed exactly once per displayed tip. Disclosed.
 
 **v1 wins ties:** while the ghost coach is still open (`coachOpen`, `coach.js:24-26`)
 a v2 trigger is deferred to the frame v1 closes, so a first-timer never sees two
