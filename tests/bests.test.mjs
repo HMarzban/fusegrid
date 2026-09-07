@@ -812,7 +812,7 @@ const rec = () => {
   );
   check(
     "B9: the finale WIN ends the run through the SAME isFinale predicate the overlay uses",
-    /if \(isFinale\(world\.level\)\) endRun\(\);/.test(src) &&
+    /if \(isFinale\(world\.level\)\) \{ endRun\(\);/.test(src) &&
       /import \{ CFG, isFinale \} from "\.\/core\/config\.js";/.test(src),
     (src.match(/if \(isFinale\(world\.level\)\)[^\n]*/) || [])[0],
   );

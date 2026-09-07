@@ -16,6 +16,14 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-07 — R5 STATS screen
+- `nb.stats.v1` records lifetime aggregates (runs/rooms/deaths/kills/picks/
+  bricks/secs/sessions) unconditionally from the first run; its 200-entry event
+  ring fills only after the player opens `SCREEN.STATS = 12` once (a MENU row
+  directly above SOURCE). STATS reads `nb.bests.v1`/`nb.times.v1` rather than
+  copying either, and the cabinet leaves the device only through `C` on that
+  screen, as four plain-text lines (`statsPayload`).
+
 ## 2026-09-07 — R1 fix wave (review Minors-1/2/3, Nit-1)
 - Minor-1: the summary overlay's dy 20/44/68/92/116 stack was string-presence
   pinned only; extended the test's fillText/strokeText stub to also record y

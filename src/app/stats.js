@@ -1,6 +1,7 @@
 import { FOES, POWER } from "../core/entities.js";
 import { defaultStore } from "./store.js";
 import { bestOfRun } from "./bests.js";
+import { bestOf } from "./times.js";
 
 export const STATS_KEY = "nb.stats.v1";
 export const RING_MAX = 200;
@@ -191,4 +192,38 @@ export function statsNotes(v, daily, today) {
     s.a.sessions + " SESSIONS · BESTS ARE PER HEAT",
   );
   return out;
+}
+
+/* The payload's one tenths formatter. src/app/ may not import src/render/, so
+   fmtTime cannot be reused; this is the same clamp-and-floor arithmetic over
+   the integer tenths times.js already stores, and block 11's 0:38.9 assertion
+   is what keeps the two from drifting. */
+const fmtT = (sec) => {
+  const d = Math.round(Math.min(5999, Math.max(0, sec)) * 10);
+  return Math.floor(d / 600) + ":" + pad2(Math.floor(d / 10) % 60) + "." + (d % 10);
+};
+
+/* Four plain-text lines, pure over four values. Line 3's time reads
+   nb.times.v1's room-1 CORE-plain key, so the payload NAMES R7's store instead
+   of duplicating it. The URL keeps its trailing slash: the no-slash Pages 301
+   drops the OG tags. main.js hands the times blob in rather than this module
+   reading a store, because purity is what makes the payload pinnable. */
+export function statsPayload(v, bests, times, today) {
+  const s = clampStats(v);
+  const a = s.a;
+  const best = (h) => {
+    const b = bestOfRun(bests, h + ":0:1");
+    return b ? b.s + "/R" + b.r : "—";
+  };
+  const t1 = bestOf(times, "1:0:0:1");
+  return (
+    "FUSEGRID STATS · " + (a.first || "—") + "→" + (a.last || today || "—") +
+      " · " + a.sessions + " SESSIONS\n" +
+    "RUNS " + a.runs + " · ROOMS " + a.rooms + " · DEATHS " + a.deaths +
+      " · KILLS " + a.kills + " · PICKS " + a.picks + " · BRICKS " + a.bricks +
+      " · TIME " + fmtLong(a.secs) + "\n" +
+    "CORE " + best(0) + " · PLUS " + best(1) + " · MAX " + best(2) +
+      " · CORE BEST TIME " + (t1 == null ? "—" : fmtT(t1)) + "\n" +
+    "https://hmarzban.github.io/fusegrid/"
+  );
 }

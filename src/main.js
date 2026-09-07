@@ -18,7 +18,7 @@ import { createDemo, stepDemo } from "./app/attract.js";
 import { readFlags, locationSearch } from "./app/flags.js";
 import { mountDebugHook } from "./app/debughook.js";
 import { introPhase, INTRO_DUR } from "./app/intro.js";
-import { loadScores, recordScore, saveScores, scoreEntry, scoresForHeat } from "./app/highscores.js";
+import { loadScores, recordScore, saveScores, scoreEntry, scoresForHeat, qualifies } from "./app/highscores.js";
 import { loadPactUnlocked, savePactUnlocked } from "./app/pactstore.js";
 import { loadCabinetSeen, saveCabinetSeen } from "./app/cabinetseen.js";
 import { loadPlaques, savePlaques, unlockPlaques } from "./app/plaques.js";
@@ -26,6 +26,7 @@ import { loadPace, savePace } from "./app/pacestore.js";
 import { loadSettings, saveSettings } from "./app/settings.js";
 import { timeKey, loadTimes, saveTimes, bestOf, recordTime } from "./app/times.js";
 import { bestKey, loadBests, saveBests, bestOfRun, recordBest, newTally, feedTally } from "./app/bests.js";
+import { loadStats, setStatsOn, stat, statPlaques, statsRows, statsNotes, statsPayload } from "./app/stats.js";
 import {
   loadCoachSeen,
   saveCoachSeen,
@@ -152,6 +153,7 @@ export function createGame(canvas, opts = {}) {
     runEnded = true;
     saveBests(recordBest(loadBests(), bestKey(world), world.score | 0,
       runFromStart ? (world.level | 0) : 0));
+    stat("run_end", { r: world.level | 0, s: world.score | 0, k: tally.k, p: tally.p, b: tally.b, secs: Math.round(runT), kt: tally.kt, pk: tally.pk }, dateStr());
   };
 
   /* USER CAMERA (spec §1): render-side closure state, NEVER in world/snapshot.
@@ -196,6 +198,7 @@ export function createGame(canvas, opts = {}) {
     roomT = 0;
     bestPrev = null;
     startRunState((args.level | 0) <= 1);
+    stat("room_enter", { r: world.level | 0, h: world.heat | 0, pc: world.pact | 0, pa: world.pace | 0 }, dateStr());
     resetCamera(cam); // §2: every run starts framed
     resetOrbit(rig);
     rig.dist = camPreset(settings.cam);
@@ -239,6 +242,8 @@ export function createGame(canvas, opts = {}) {
     autoplay,
     onStart,
     onSource,
+    onStats: () => { setStatsOn(); const sv = loadStats();
+      app.stats = { rows: statsRows(sv, loadBests()), notes: statsNotes(sv, null, null) }; },
     onPauseCmd: (cmd) => {
       if (cmd === "RESUME") {
         world.state = "PLAY";
@@ -312,6 +317,7 @@ export function createGame(canvas, opts = {}) {
     };
     if (audio.unlocked && audio.unlocked()) fireJingle();
   }
+  stat("session_start", null, dateStr());
   if (autoplay) {
     app.startRun();
     saveCabinetSeen(); // ?play=1 skips bootFromIntro, whose own markCabinet
@@ -334,6 +340,8 @@ export function createGame(canvas, opts = {}) {
     if (!(world.score > 0)) return;
     saveScores(recordScore(loadScores(), scoreEntry(world, dateStr())));
   };
+  const copyText = (s) => { if (typeof navigator !== "undefined" && navigator.clipboard)
+    navigator.clipboard.writeText(s).catch(() => {}); };
   /* UI key side-channel: ALWAYS routed to the shell; M-in-PAUSE records the
      score then quits to MENU (spec §4 table). Machine self-gates elsewhere. */
   input.onUiKey = (code) => {
@@ -346,12 +354,9 @@ export function createGame(canvas, opts = {}) {
       return;
     }
     if (code === "KeyC") {
+      if (app.screen === SCREEN.STATS) { copyText(statsPayload(loadStats(), loadBests(), loadTimes(), dateStr())); return; }
       if (app.screen === SCREEN.GAME) {
-        if (world.state === "WIN" || world.state === "LOSE") {
-          const t = copyPayload(world);
-          if (typeof navigator !== "undefined" && navigator.clipboard)
-            navigator.clipboard.writeText(t).catch(() => {});
-        }
+        if (world.state === "WIN" || world.state === "LOSE") copyText(copyPayload(world));
         return;
       } // outside GAME (e.g. ATTRACT): fall through to app.key so KeyC still plays
     }
@@ -574,8 +579,11 @@ export function createGame(canvas, opts = {}) {
     }
     if (app.screen === SCREEN.GAME) {
       // §1 score-record edge, frame-polled (main latches prev world state)
-      if (app.noteWorldEdge(prevSt, world.state))
-        saveScores(recordScore(loadScores(), scoreEntry(world, dateStr())));
+      if (app.noteWorldEdge(prevSt, world.state)) {
+        const sc = loadScores(), en = scoreEntry(world, dateStr());
+        if (qualifies(en.s, sc)) stat("score_set", { h: world.heat | 0 }, dateStr());
+        saveScores(recordScore(sc, en));
+      }
       /* roomT (R7): unconditional recording on every room WIN — the clock runs
          anyway whether or not TIME ATTACK is on, and a player who switches it
          on already has bests to beat. bestPrev is captured BEFORE the write so
@@ -585,12 +593,14 @@ export function createGame(canvas, opts = {}) {
         const k = timeKey(world), v = loadTimes();
         bestPrev = bestOf(v, k);                 // captured BEFORE the write
         saveTimes(recordTime(v, k, roomT));
-        if (isFinale(world.level)) endRun();     // R1: the finale WIN ends the run
+        if (isFinale(world.level)) { endRun(); stat("win_finale", null, dateStr()); }
+        stat("room_clear", { r: world.level | 0 }, dateStr());
       }
       if ((prevSt === "PLAY" || prevSt === "WIN") && world.state === "LOSE") endRun();
       if ((prevSt === "WIN" || prevSt === "LOSE") && world.state === "PLAY") {
         roomT = 0; bestPrev = null;              // WIN->next room, LOSE->new run
         if (prevSt === "LOSE") startRunState(true); // R1: a retry never calls onStart
+        stat("room_enter", { r: world.level | 0, h: world.heat | 0, pc: world.pact | 0, pa: world.pace | 0 }, dateStr());
       }
       prevSt = world.state;
       /* The shell machine runs during GAME too — unconditionally, not only
@@ -624,6 +634,7 @@ export function createGame(canvas, opts = {}) {
          app-layer only, fires once (the !coachSeen gate) the frame coachOpen
          flips closed (DUR elapsed or a plant), never in the draw code. */
       feedTally(tally, world);
+      if (tally.dNew > 0) stat("death", { r: world.level | 0 }, dateStr());
       if (!coachSeen) {
         if (world.events.some((e) => e.t === "bomb")) coachPlanted = true;
         if (!coachOpen(coachSeen, coachT, coachPlanted)) {
@@ -636,7 +647,9 @@ export function createGame(canvas, opts = {}) {
         savePactUnlocked();
         app.pactUnlocked = true;
         // plan 5: finale-WIN edge only — LOSE skips world.finale, ATTRACT steps demo.world
+        const pq0 = loadPlaques();
         savePlaques(unlockPlaques(loadPlaques(), world));
+        statPlaques(pq0, loadPlaques(), dateStr());
         app.toMenu();
         world.finale = false;
         prevSt = null;

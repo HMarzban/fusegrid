@@ -12,8 +12,9 @@ import {
 } from "../src/app/stats.js";
 import { newTally, feedTally, recordBest } from "../src/app/bests.js";
 import { SCREEN, ITEMS, createMenuApp } from "../src/app/menuapp.js";
-import { statsRows, statsNotes } from "../src/app/stats.js";
+import { statsRows, statsNotes, statsPayload } from "../src/app/stats.js";
 import * as md from "../src/render/menudraw.js";
+import { createGame } from "../src/main.js";
 
 let pass = 0,
   fail = 0;
@@ -367,6 +368,125 @@ const TODAY = "2026-09-07";
     "note 2 fits the plate: 72 chars at ~6px against an inner width of 448",
     n0[0].length <= 74,
     n0[0].length + " chars",
+  );
+}
+
+// ---- 11. the four-line payload, and the one explicit export channel ----
+{
+  const v = clampStats({
+    a: { runs: 118, rooms: 214, deaths: 301, kills: 4820, picks: 913,
+      bricks: 7702, secs: 50820, sessions: 42, first: "2026-08-30", last: TODAY },
+  });
+  let bests = recordBest(undefined, "0:0:1", 1840, 5);
+  bests = recordBest(bests, "1:0:1", 2210, 4);
+  const times = { on: 0, b: { "1:0:0:1": 389 } };
+  const pay = statsPayload(v, bests, times, TODAY);
+  const lines = pay.split("\n");
+  check("statsPayload is exactly four lines", lines.length === 4, JSON.stringify(lines));
+  check(
+    "line 1 is the span and the session count",
+    lines[0] === "FUSEGRID STATS · 2026-08-30→2026-09-07 · 42 SESSIONS",
+    lines[0],
+  );
+  check(
+    "line 2 is the lifetime counters, bricks included",
+    lines[1] ===
+      "RUNS 118 · ROOMS 214 · DEATHS 301 · KILLS 4820 · PICKS 913 · BRICKS 7702 · TIME 14h 07m",
+    lines[1],
+  );
+  check(
+    "line 3 names R7's store rather than duplicating it",
+    lines[2] === "CORE 1840/R5 · PLUS 2210/R4 · MAX — · CORE BEST TIME 0:38.9",
+    lines[2],
+  );
+  check(
+    "line 4 is the play URL WITH its trailing slash",
+    lines[3] === "https://hmarzban.github.io/fusegrid/",
+    lines[3],
+  );
+  check(
+    "the payload is plain text — no JSON, no braces, no brackets",
+    !/[{}\[\]]/.test(pay),
+    pay,
+  );
+  check(
+    "the payload never carries a clock-shaped value and never the refused word",
+    !/\b1[6-9]\d{11}\b/.test(pay) && !/leaderboard/i.test(pay),
+    pay,
+  );
+  check("statsPayload is pure — same inputs, same string, no store read",
+    statsPayload(v, bests, times, TODAY) === pay);
+}
+
+// ---- 11b. wiring: C on STATS exports, C outside GAME still falls through ----
+{
+  const mem = new Map();
+  const ls = { getItem: (k) => (mem.has(k) ? mem.get(k) : null),
+    setItem: (k, v) => mem.set(k, String(v)) };
+  const wrote = [];
+  globalThis.window = { localStorage: ls, addEventListener() {} };
+  navigator.clipboard = { writeText: (s) => { wrote.push(s); return Promise.resolve(); } };
+  try {
+    const g = createGame(null, { seed: 31 });
+    g.app.cabinetSeen = true;
+    g.app.skip();
+    check("session_start recorded at boot",
+      loadStats(ls).a.sessions >= 1, JSON.stringify(loadStats(ls).a));
+    g.app.cursor = ITEMS.indexOf("STATS");
+    g.app.confirm();
+    check("STATS is open and the opt-in flipped on",
+      g.app.screen === SCREEN.STATS && loadStats(ls).on === 1,
+      g.app.screen + "/" + loadStats(ls).on);
+    check("main built the row snapshot for the plate",
+      !!g.app.stats && g.app.stats.rows.length === 9,
+      JSON.stringify(g.app.stats && g.app.stats.rows.length));
+    g.input.onUiKey("KeyC");
+    check("C on STATS writes the four-line payload once",
+      wrote.length === 1 && wrote[0].split("\n").length === 4, JSON.stringify(wrote));
+    /* main.js:332's documented fall-through: outside GAME, KeyC must still
+       reach app.key so it keeps playing. Placing the STATS branch ABOVE the
+       KeyC block instead of inside it is what would break this. */
+    g.app.enterAttract();
+    wrote.length = 0;
+    g.input.onUiKey("KeyC");
+    check("C on ATTRACT copies nothing and still reaches app.key",
+      wrote.length === 0 && g.app.screen === SCREEN.GAME,
+      g.app.screen + "/" + wrote.length);
+  } finally {
+    delete globalThis.window;
+    delete navigator.clipboard;
+  }
+}
+
+// ---- 11c. score_set is gated on the SHIPPED qualifies, and the plaque
+// literal the menudraw pin regexes is read around, never restructured ----
+{
+  const src = readFileSync("src/main.js", "utf8");
+  check(
+    "score_set fires only when the row actually lands",
+    /qualifies\(/.test(src) &&
+      /if \(qualifies\([^\n]*\) stat\("score_set"/.test(src),
+    (src.match(/stat\("score_set"[^\n]*/) || [])[0],
+  );
+  check(
+    "the shipped savePlaques(unlockPlaques(loadPlaques(), world)) literal is untouched",
+    /savePlaques\(unlockPlaques\(loadPlaques\(\), world\)\)/.test(src) &&
+      (src.match(/unlockPlaques\(/g) || []).length === 1,
+    (src.match(/unlockPlaques\([^\n]*/) || [])[0],
+  );
+  check(
+    "run_end is emitted from inside endRun, so a quit run counts exactly once",
+    /const endRun = \(\) => \{[\s\S]{0,400}stat\("run_end"/.test(src),
+    (src.match(/stat\("run_end"[^\n]*/) || [])[0],
+  );
+  check(
+    "KeyC-on-STATS sits INSIDE the KeyC block, above its GAME check",
+    (() => {
+      const blk = (src.match(/if \(code === "KeyC"\) \{[\s\S]{0,420}/) || [""])[0];
+      return blk.indexOf("SCREEN.STATS") > 0 &&
+        blk.indexOf("SCREEN.STATS") < blk.indexOf("SCREEN.GAME");
+    })(),
+    (src.match(/if \(code === "KeyC"\)[\s\S]{0,160}/) || [""])[0],
   );
 }
 
