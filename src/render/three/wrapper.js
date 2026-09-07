@@ -17,7 +17,7 @@ import {introCam} from "./flythrough.js";
 import {createParticles} from "./particles.js";
 import {buildAtlas} from "./textures.js";
 import {drawHudChips, drawOverlay, overlayBox, updateHud, drawCoach} from "../scenes.js";
-import {onEvent, updateFx, getShake, getFlash, getFx, syncFx} from "../fx.js";
+import {onEvent, updateFx, getShake, getFlash, getFx, feedFx, syncFx} from "../fx.js";
 
 const W=CFG.COLS*CFG.TILE, H=CFG.ROWS*CFG.TILE;
 const noop=()=>{};
@@ -103,6 +103,7 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
 
   function consumeEvents(world, dt, playSfx=true){
     syncFx(world);
+    feedFx(world, dt||CFG.STEP);
     for(let i=0;i<world.events.length;i++){
       onEvent(world, world.events[i], world.time);
       if(audio&&playSfx!==false) audio.play(sfxOf(world.events[i]));

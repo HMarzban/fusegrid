@@ -4,7 +4,7 @@ import {
   bakeAtlas, drawGrid, drawBiomeBackground, drawBricks,
   drawItems, drawEnemies, drawPlayer, drawBombs, drawBlades
 } from "./sprites.js";
-import {onEvent, updateFx, drawFx, getShake, getFlash, initFx, syncFx} from "./fx.js";
+import {onEvent, updateFx, drawFx, feedFx, getShake, getFlash, initFx, syncFx} from "./fx.js";
 import {drawOverlay, overlayBox, updateHud, makeHud, drawHudChips, drawCoach} from "./scenes.js";
 import {draw3dBackground, buildPainters, byDepth} from "./r3d/scene3d.js";
 
@@ -33,6 +33,7 @@ export function createRenderer(canvas, opts={}){
 
   function consumeEvents(world, dt, playSfx=true){
     syncFx(world);
+    feedFx(world, dt||CFG.STEP);
     for(let i=0;i<world.events.length;i++){
       onEvent(world, world.events[i], world.time);
       if(audio&&playSfx!==false) audio.play(sfxOf(world.events[i]));

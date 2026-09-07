@@ -10,7 +10,8 @@ import {CFG} from "../core/config.js";
    renderer cache and any rebuild are fine. Two renderers stepping
    SIMULTANEOUSLY would interleave particles/shake in one store; no such
    caller exists and none should be added without refactoring storage out. */
-const fx={shakeT:0,shakeX:0,shakeY:0,flashT:0,parts:[]};
+const fx={shakeT:0,shakeX:0,shakeY:0,flashT:0,parts:[],
+  cmbN:0,cmbT:0,calS:"",calT:0,nmT:0,nmCd:0};
 let tag=null;
 /* Settings damping (nb.settings.v1). Applied INSIDE the two getters so both
    render paths and both call sites are covered without touching either draw
@@ -27,6 +28,10 @@ export function getFxOpts(){ return {flashK,shakeK}; }
 
 export function initFx(){
   fx.shakeT=0; fx.shakeX=0; fx.shakeY=0; fx.flashT=0; fx.parts=[];
+  clearR2();
+}
+function clearR2(){
+  fx.cmbN=0; fx.cmbT=0; fx.calS=""; fx.calT=0; fx.nmT=0; fx.nmCd=0;
 }
 export function getShake(){ return {x:fx.shakeX*shakeK, y:fx.shakeY*shakeK}; }
 export function getFlash(){ return fx.flashT*flashK; }
@@ -86,11 +91,51 @@ export function nearMissOf(world, events){
   return dmin>HIT_D&&dmin<=NEAR_D;
 }
 
+/* R2 feed. Called from consumeEvents in BOTH renderers, between syncFx and the
+   world.events wipe, so it reads the same batch main.js reads non-destructively
+   for the ghost coach — same frame, zero main.js diff, 2D+3D parity for free.
+   PLAY-ONLY, and it owns the decay of every timer below. render() runs on
+   PAUSE/WIN/LOSE frames too (main.js:649), so an ungated feed would close a
+   group on a paused clock and paint the callout on top of the PAUSED list.
+   This is main.js:547's `if(world.state==="PLAY") coachT+=dt` applied to the
+   fx layer. updateFx is deliberately NOT the owner: shake, flash and confetti
+   must keep running through WIN. */
+export function feedFx(world, dt){
+  if(!world||world.state!=="PLAY") return;
+  const d=dt||CFG.STEP, ev=world.events||[];
+  const n=comboOf(ev);
+  if(n>0){ fx.cmbN+=n; fx.cmbT=CFG.BLADE_TTL; }
+  if(fx.cmbT>0&&(fx.cmbT-=d)<=0){
+    if(fx.cmbN>=2){ fx.calS=comboLabel(fx.cmbN); fx.calT=0.90; }
+    fx.cmbN=0; fx.cmbT=0;
+  }
+  fx.calT=Math.max(0,fx.calT-d);
+  fx.nmT=Math.max(0,fx.nmT-d);
+  fx.nmCd=Math.max(0,fx.nmCd-d);
+  /* Evaluated only on frames whose batch carries a boom — "the frame the blast
+     was born" — which reuses the read comboOf already did and removes a
+     freshness constant. REDUCE FLASH (flashK<1) suppresses the flash ENTIRELY
+     at feed time, so nmT is never even set: main.js:189 only damps flx to 0.25,
+     and for a brand-new light source that is not good enough. */
+  if(flashK>=1&&fx.nmCd<=0&&hasBoom(ev)&&nearMissOf(world,ev)){
+    fx.nmT=0.18; fx.nmCd=0.60;
+  }
+}
+function hasBoom(ev){
+  for(let i=0;i<ev.length;i++) if(ev[i]&&ev[i].t==="boom") return true;
+  return false;
+}
+export function getCallout(){ return fx.calT>0?fx.calS:""; }
+export function getNearMiss(){ return fx.nmT; }
+
 /* Wipes particles whenever the world identity (seed:level) changes — replaces
-   the old loadLevel `w.particles=[]` wipe now that storage lives here. */
+   the old loadLevel `w.particles=[]` wipe now that storage lives here. R2's
+   timers go with them, WITHOUT emitting the open group: feedFx also runs for
+   the attract demo world, so an open combo would otherwise leak across the
+   attract <-> live boundary or a room change. */
 export function syncFx(world){
   const t=world ? world.seed+":"+world.level : null;
-  if(t!==tag){ tag=t; fx.parts=[]; }
+  if(t!==tag){ tag=t; fx.parts=[]; clearR2(); }
 }
 
 export function onEvent(world, ev, time){
