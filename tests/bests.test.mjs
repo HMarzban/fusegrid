@@ -811,8 +811,13 @@ const rec = () => {
     (src.match(/runT \+= dt[^\n]*/) || [])[0],
   );
   check(
-    "B9: the finale WIN ends the run through the SAME isFinale predicate the overlay uses",
-    /if \(isFinale\(world\.level\)\) \{ endRun\(\);/.test(src) &&
+    /* Minor-4 (review 2026-09-07): the old regex only pinned that endRun()
+       was the FIRST statement in the branch, so any statement added after it
+       (e.g. a stray world.score = 0) survived undetected (mutation M11). Pin
+       the WHOLE branch body — endRun() then stat("win_finale", ...) and
+       nothing else. */
+    "B9 (Minor-4): the finale WIN branch is EXACTLY endRun() + stat(\"win_finale\", ...), nothing else",
+    /if \(isFinale\(world\.level\)\) \{ endRun\(\); stat\("win_finale", null, dateStr\(\)\); \}/.test(src) &&
       /import \{ CFG, isFinale \} from "\.\/core\/config\.js";/.test(src),
     (src.match(/if \(isFinale\(world\.level\)\)[^\n]*/) || [])[0],
   );

@@ -121,6 +121,9 @@ export function feedTally(t, world) {
     t.d += n;
     t.dNew = n;
     const rm = w.level | 0;
+    // Nit-8 (review 2026-09-07): reserved, not yet consumed — the LIVE deaths-
+    // by-room path is stats.js's v.d, filled by the "death" edge; wiring dr
+    // into run_end on top of that would double-count every death.
     t.dr[rm] = (t.dr[rm] | 0) + n;
   }
   t.lv = lv;
