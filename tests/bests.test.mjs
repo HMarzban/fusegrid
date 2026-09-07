@@ -574,6 +574,76 @@ const rec = () => {
   }
 }
 
+// ---- 13. Minor-3 (owner ruling 2026-09-07): recordBest treats a 0/absent
+// room as "no room info" — it never lowers, and never invents, a stored r.
+// A LEVEL SELECT start writes NO room record; its score still records. ----
+{
+  const seeded = { b: { "0:0:1": { s: 500, r: 4 } } };
+  const a = recordBest(seeded, "0:0:1", 900, 0);
+  check(
+    "recordBest: room 0 raises s but never touches the stored r",
+    a.b["0:0:1"].s === 900 && a.b["0:0:1"].r === 4,
+    JSON.stringify(a.b["0:0:1"]),
+  );
+  const bWorse = recordBest(seeded, "0:0:1", 100, 0);
+  check(
+    "recordBest: room 0 with a WORSE score writes neither field",
+    bWorse.b["0:0:1"].s === 500 && bWorse.b["0:0:1"].r === 4,
+    JSON.stringify(bWorse.b["0:0:1"]),
+  );
+  const fresh = recordBest(clampBests(null), "1:0:1", 300, 0);
+  check(
+    "recordBest: a brand-new bucket with no room info floors r at 1 — the true minimum, never a fabricated deep room",
+    fresh.b["1:0:1"].s === 300 && fresh.b["1:0:1"].r === 1,
+    JSON.stringify(fresh.b["1:0:1"]),
+  );
+  const real = recordBest(seeded, "0:0:1", 100, 6);
+  check(
+    "recordBest: a REAL room argument still raises r exactly as before — the gate is only on 0/absent",
+    real.b["0:0:1"].r === 6,
+    JSON.stringify(real.b["0:0:1"]),
+  );
+  const undef = recordBest(seeded, "0:0:1", 900, undefined);
+  check(
+    "recordBest: an absent room argument (undefined) behaves the same as 0",
+    undef.b["0:0:1"].s === 900 && undef.b["0:0:1"].r === 4,
+    JSON.stringify(undef.b["0:0:1"]),
+  );
+}
+
+// ---- 14. Minor-3 (owner ruling 2026-09-07): deltaLine gates FURTHEST ROOM
+// YET on run.fromStart — a LEVEL SELECT start never claims a room it picked
+// rather than earned, not even inside the FURTHEST-ROOM-YET-and-NEW-BEST
+// combination (that case degrades to plain NEW BEST). Absent fromStart is
+// treated as true — the pre-existing room-1-start behaviour, byte-identical
+// for every caller that predates this ruling (§8's fixtures above). ----
+{
+  const W = { level: 5, score: 900, heat: 0, pact: 0, pace: 0 };
+  check(
+    "R1M3(a): a LEVEL SELECT run (fromStart:false) never prints FURTHEST ROOM YET, even as a first-ever record",
+    deltaLine(W, { best: null, fromStart: false }) === "NEW BEST",
+    deltaLine(W, { best: null, fromStart: false }),
+  );
+  check(
+    "R1M3(a): LEVEL SELECT beating the stored score still just says NEW BEST — never the FURTHEST combo",
+    deltaLine(W, { best: { s: 500, r: 4 }, fromStart: false }) === "NEW BEST",
+    deltaLine(W, { best: { s: 500, r: 4 }, fromStart: false }),
+  );
+  check(
+    "R1M3(a): LEVEL SELECT short of the score falls through to the ordinary gap form — room ignored entirely",
+    deltaLine({ ...W, score: 100 }, { best: { s: 500, r: 4 }, fromStart: false }) ===
+      "+400 FROM YOUR CORE BEST",
+    deltaLine({ ...W, score: 100 }, { best: { s: 500, r: 4 }, fromStart: false }),
+  );
+  check(
+    "R1M3(b): a room-1 start (fromStart:true, or absent — the old default) still fires FURTHEST ROOM YET as before",
+    deltaLine({ ...W, score: 100 }, { best: { s: 2000, r: 2 }, fromStart: true }) ===
+      "FURTHEST ROOM YET" &&
+      deltaLine({ ...W, score: 100 }, { best: { s: 2000, r: 2 } }) === "FURTHEST ROOM YET",
+    deltaLine({ ...W, score: 100 }, { best: { s: 2000, r: 2 } }),
+  );
+}
+
 // ---- wiring: both renderers pass o.run through as the ninth arg ----
 {
   for (const [f, ov] of [
@@ -681,18 +751,29 @@ const rec = () => {
   check(
     "B1: bestRun is assigned ONLY inside startRunState — never re-read mid-run",
     (src.match(/bestRun = /g) || []).length === 2 &&
-      /const startRunState = \(\) => \{[\s\S]{0,200}bestRun = bestOfRun\(/.test(src),
+      /const startRunState = \(fromStart\) => \{[\s\S]{0,200}bestRun = bestOfRun\(/.test(src),
     (src.match(/bestRun = [^\n]*/g) || []).join(" | "),
   );
   check(
-    "B2: the LOSE->PLAY edge is a run start — a retry never reaches onStart",
-    /if \(prevSt === "LOSE"\) startRunState\(\);/.test(src),
-    (src.match(/startRunState\(\);[^\n]*/g) || []).join(" | "),
+    "B2: the LOSE->PLAY edge is a run start — a retry never reaches onStart, and IS from-start again",
+    /if \(prevSt === "LOSE"\) startRunState\(true\);/.test(src),
+    (src.match(/startRunState\([\s\S]*?\);[^\n]*/g) || []).join(" | "),
   );
   check(
     "B3: startRunState has exactly three call sites (onStart, pause RESTART, the LOSE->PLAY edge)",
-    (src.match(/startRunState\(\);/g) || []).length === 3,
-    String((src.match(/startRunState\(\);/g) || []).length),
+    (src.match(/startRunState\([\s\S]*?\);/g) || []).length === 3,
+    String((src.match(/startRunState\([\s\S]*?\);/g) || []).length),
+  );
+  check(
+    /* Minor-3 (owner ruling, review 2026-09-07): a LEVEL SELECT start begins
+       above room 1, so only onStart's fromStart argument can ever be false —
+       the sim's retry after LOSE and the RESTART command both reload room 1
+       (sim.js's startGame), so neither call site can start "from" a deeper
+       room. */
+    "B2b (Minor-3): onStart passes (args.level|0)<=1; RESTART always starts true",
+    /const onStart = \(args\) => \{[\s\S]{0,600}startRunState\(\(args\.level \| 0\) <= 1\);/.test(src) &&
+      /if \(cmd === "RESTART"\)[\s\S]{0,320}startRunState\(true\);/.test(src),
+    (src.match(/startRunState\([\s\S]*?\);/g) || []).join(" | "),
   );
   check(
     "B4: the run-state reset is SPLIT, not mirrored — roomT still resets on a WIN->PLAY room change",
@@ -711,7 +792,7 @@ const rec = () => {
   check(
     "B6: pause RESTART calls persistScore BEFORE startRunState — reversing them drops the write",
     rst.indexOf("persistScore();") >= 0 &&
-      rst.indexOf("persistScore();") < rst.indexOf("startRunState();"),
+      rst.indexOf("persistScore();") < rst.indexOf("startRunState(true);"),
     rst.trim().slice(0, 160),
   );
   check(
@@ -735,6 +816,101 @@ const rec = () => {
       /import \{ CFG, isFinale \} from "\.\/core\/config\.js";/.test(src),
     (src.match(/if \(isFinale\(world\.level\)\)[^\n]*/) || [])[0],
   );
+  check(
+    /* Minor-3 (owner ruling): endRun withholds the room from recordBest
+       unless the run began at room 1 — the score still records either way. */
+    "B10 (Minor-3): endRun passes the room to recordBest ONLY when runFromStart",
+    /saveBests\(recordBest\(loadBests\(\), bestKey\(world\), world\.score \| 0,\s*runFromStart \? \(world\.level \| 0\) : 0\)\);/.test(src),
+    (src.match(/saveBests\(recordBest\([^;]*;/) || [""])[0],
+  );
+  check(
+    /* the review's own M9/M10 class: a wiring pin so a dropped field regresses
+       the ruling silently rather than only in a player's overlay. */
+    "B11 (Minor-3): the ro.run literal carries fromStart so deltaOf can gate the FURTHEST forms",
+    /run: \{[^}]*fromStart: runFromStart[^}]*\}/.test(src),
+    (src.match(/run: \{[^}]*\}/) || [""])[0],
+  );
+}
+
+/* ---- SELF-REVIEW PIN C (Minor-3, owner ruling 2026-09-07): a LEVEL SELECT
+   start writes NO room record and never prints FURTHEST ROOM YET; its score
+   still records — exactly like HIGH SCORES already does for level-select
+   runs. The sim's retry after LOSE always reloads room 1, so it is
+   from-start again and FURTHEST fires normally there (pin (a)/(b)/(c) from
+   the ruling, end-to-end through the real loop and a real store). ---- */
+{
+  const mem = new Map();
+  const ls = {
+    getItem: (k) => (mem.has(k) ? mem.get(k) : null),
+    setItem: (k, v) => mem.set(k, String(v)),
+  };
+  ls.setItem(BESTS_KEY, JSON.stringify({ b: { "0:0:1": { s: 500, r: 4 } } }));
+  globalThis.window = { localStorage: ls, addEventListener() {} };
+  try {
+    const texts = [];
+    const noop = () => {};
+    const rc = {
+      save: noop, restore: noop, translate: noop, scale: noop, rotate: noop,
+      beginPath: noop, closePath: noop, moveTo: noop, lineTo: noop, arc: noop,
+      arcTo: noop, bezierCurveTo: noop, quadraticCurveTo: noop, ellipse: noop,
+      fill: noop, stroke: noop, fillRect: noop, strokeRect: noop,
+      clearRect: noop, setTransform: noop, transform: noop, drawImage: noop,
+      createLinearGradient: () => ({ addColorStop: noop }),
+      createRadialGradient: () => ({ addColorStop: noop }),
+      measureText: () => ({ width: 0 }),
+      fillText: (s) => texts.push(String(s)),
+      strokeText: (s) => texts.push(String(s)),
+    };
+    const fake = { getContext: () => rc, addEventListener() {}, style: {} };
+    const g = createGame(fake, { seed: 49 });
+    g.app.level = 5; // LEVEL SELECT depth
+    g.app.startRun(); // onStart: (args.level|0)<=1 is false -> runFromStart=false
+    check(
+      "C: onStart at a LEVEL SELECT depth loads that room",
+      g.world.level === 5,
+      String(g.world.level),
+    );
+    g.world.score = 900;
+    g.world.state = "LOSE";
+    texts.length = 0;
+    g.loop(1016); // PLAY -> LOSE: endRun() writes, room withheld (fromStart false)
+    check(
+      "C(a): the store's r stays put — a LEVEL SELECT death writes NO room record",
+      JSON.parse(ls.getItem(BESTS_KEY)).b["0:0:1"].r === 4,
+      ls.getItem(BESTS_KEY),
+    );
+    check(
+      "C(a): the score still records, exactly like HIGH SCORES already does for level-select runs",
+      JSON.parse(ls.getItem(BESTS_KEY)).b["0:0:1"].s === 900,
+      ls.getItem(BESTS_KEY),
+    );
+    check(
+      "C(a): the overlay never prints FURTHEST ROOM YET on a LEVEL SELECT death — plain NEW BEST",
+      texts.includes("NEW BEST") && !texts.some((s) => s.indexOf("FURTHEST") >= 0),
+      texts.join("|"),
+    );
+    // --- retry after the LEVEL SELECT death: the sim's LOSE fire edge always
+    // reloads room 1 (D1 arcade reset) and IS from-start again ---
+    g.world.state = "PLAY";
+    g.loop(1032); // LOSE -> PLAY: startRunState(true)
+    g.world.level = 6; // forced, standing in for real progression through rooms 1..6
+    g.world.score = 50;
+    g.world.state = "LOSE";
+    texts.length = 0;
+    g.loop(1048);
+    check(
+      "C(b)/(c): a retry is from-start again — FURTHEST ROOM YET fires normally once it is",
+      texts.some((s) => s.indexOf("FURTHEST ROOM YET") >= 0),
+      texts.join("|"),
+    );
+    check(
+      "C(b): the store's r now advances past the level-select run's untouched 4",
+      JSON.parse(ls.getItem(BESTS_KEY)).b["0:0:1"].r === 6,
+      ls.getItem(BESTS_KEY),
+    );
+  } finally {
+    delete globalThis.window;
+  }
 }
 
 /* ---- SELF-REVIEW PIN D (review Minor-2 + Nit-1): the quit-run write path is

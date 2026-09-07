@@ -910,8 +910,15 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   // import; the run-state declarations plus startRunState/endRun; startRunState
   // in onStart and pause RESTART; endRun in persistScore; the split edge block;
   // the feedTally line; ro.run) — bumped 733->755.
-  check("main.js stays a lean browser entry (<=755 lines)",
-    L.length<=755,String(L.length));
+  // R1 fix wave (review Minor-3, owner ruling 2026-09-07): +5 lines
+  // (runFromStart comment/declaration; startRunState/endRun/ro.run gain the
+  // flag) — bumped 755->760. NOTE for R5/R3/R8/R10 implementers: this shifts
+  // every downstream cap in the INDEX's line-budget row (main.js:715) by +5;
+  // that row itself is intentionally NOT edited here (out of this fix wave's
+  // authorized scope) — read this file's measured length, not the INDEX's
+  // stale numbers, when bumping your own plan's cap.
+  check("main.js stays a lean browser entry (<=760 lines)",
+    L.length<=760,String(L.length));
   const lastImp=L.reduce((a,l,i)=>/^import[\s{]/.test(l)?i:a,-1);
   const firstDecl=L.findIndex(l=>/^(export\s|const\s|let\s|var\s|function\s|class\s)/.test(l));
   check("main.js keeps every import at the top (no mid-file import sprawl)",

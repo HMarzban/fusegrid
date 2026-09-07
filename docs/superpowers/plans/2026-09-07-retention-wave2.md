@@ -689,7 +689,7 @@ same stage.
 | `scenes.js drawOverlay(c,world,w,h,cx,cy,ui,tm)` | 8 args | `(…, tm, run)` — 9th optional; absent ⇒ **byte-identical**. Stack becomes dy 20/44/68/92/116 | **R1** |
 | `scenes.js` `COPY_HINT` | three inline `" · C copy"` at `:147,:148,:152` | **stage 1 (R1)** one module-local constant, same value, three sites; **stage 2 (R8)** the value becomes `" · C copy · B board"`. `overlayCue` untouched | **R1**, then **R8** |
 | `summaryLines` slot 3 | — | **stage 1 (R1)** `deltaLine` at run end; **stage 2 (R3)** `dailyLine` **replaces** it when `run.daily` is set | **R1**, then **R3** |
-| `main.js` `ro.run` | — | **stage 1 (R1)** `{r,k,p,t,best}`; **stage 2 (R3)** `+ {daily,tries,dbest}` | **R1**, then **R3** |
+| `main.js` `ro.run` | — | **stage 1 (R1)** `{r,k,p,t,best,fromStart}` (`fromStart` added 2026-09-07, review Minor-3 owner ruling — gates the FURTHEST forms on a room-1 start; absent ⇒ `true`, byte-identical for pre-ruling callers); **stage 2 (R3)** `+ {daily,tries,dbest}` | **R1**, then **R3** |
 | `renderer.js:79` | `drawOverlay(ctx, world, B.w, B.h, B.cx, B.cy, o&&o.pause, o&&o.time)` | `…, o&&o.time, o&&o.run)` | **R1** |
 | `wrapper.js:154` | `drawOverlay(ovCtx,world,B.w,B.h,B.cx,B.cy,o&&o.pause,o&&o.time)` | `…, o&&o.time, o&&o.run)` — **both sites in the same commit** | **R1** |
 | `renderer.js:90` / `wrapper.js:157` hud block | `drawCoach(ctx, (o&&o.coach)||0)` | **+** a `drawCoach2(…)` line after it, same `o.hud===true` gate, **both sites** | **R10** |

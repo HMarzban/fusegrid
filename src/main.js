@@ -137,16 +137,21 @@ export function createGame(canvas, opts = {}) {
   /* R1: bestRun is a RUN-START snapshot (a score record is per-run and the
      overlay draws on every room's WIN), and endRun is one idempotent write
      called from BOTH sim edges below AND from persistScore(), which already
-     runs at all three drop-the-run sites — a quit run is a run that ended. */
-  let tally = newTally(), runT = 0, bestRun = null, runEnded = true;
-  const startRunState = () => {
-    tally = newTally(); runT = 0; runEnded = false;
+     runs at all three drop-the-run sites — a quit run is a run that ended.
+     Minor-3 fix (review 2026-09-07, owner ruling): runFromStart is true only
+     for a run that BEGINS at room 1 (the sim's retry after LOSE and RESTART
+     both reload room 1, so only onStart can begin above it) — endRun
+     withholds the room from recordBest otherwise; the score still records. */
+  let tally = newTally(), runT = 0, bestRun = null, runEnded = true, runFromStart = true;
+  const startRunState = (fromStart) => {
+    tally = newTally(); runT = 0; runEnded = false; runFromStart = fromStart;
     bestRun = bestOfRun(loadBests(), bestKey(world));
   };
   const endRun = () => {
     if (runEnded) return;
     runEnded = true;
-    saveBests(recordBest(loadBests(), bestKey(world), world.score | 0, world.level | 0));
+    saveBests(recordBest(loadBests(), bestKey(world), world.score | 0,
+      runFromStart ? (world.level | 0) : 0));
   };
 
   /* USER CAMERA (spec §1): render-side closure state, NEVER in world/snapshot.
@@ -190,7 +195,7 @@ export function createGame(canvas, opts = {}) {
     coachT = 0; // fresh run: coachT restarts at 0 (world.time never does)
     roomT = 0;
     bestPrev = null;
-    startRunState();
+    startRunState((args.level | 0) <= 1);
     resetCamera(cam); // §2: every run starts framed
     resetOrbit(rig);
     rig.dist = camPreset(settings.cam);
@@ -243,7 +248,7 @@ export function createGame(canvas, opts = {}) {
         // the toolbar button dropped the run silently; two adjacent rows must
         // not have different score semantics
         persistScore();
-        startRunState();
+        startRunState(true);
         loadLevel(world, 1, false);
         world.score = 0;
         world.state = "PLAY";
@@ -584,7 +589,7 @@ export function createGame(canvas, opts = {}) {
       if ((prevSt === "PLAY" || prevSt === "WIN") && world.state === "LOSE") endRun();
       if ((prevSt === "WIN" || prevSt === "LOSE") && world.state === "PLAY") {
         roomT = 0; bestPrev = null;              // WIN->next room, LOSE->new run
-        if (prevSt === "LOSE") startRunState();  // R1: a retry never calls onStart
+        if (prevSt === "LOSE") startRunState(true); // R1: a retry never calls onStart
       }
       prevSt = world.state;
       /* The shell machine runs during GAME too — unconditionally, not only
@@ -695,7 +700,7 @@ export function createGame(canvas, opts = {}) {
                   : 0,
               pause: { view: app.pauseView | 0, cursor: app.pauseCursor | 0 },
               time: { on: !!app.timeAttack, t: roomT, best: bestPrev },
-              run: { r: tally.r, k: tally.k, p: tally.p, t: runT, best: bestRun },
+              run: { r: tally.r, k: tally.k, p: tally.p, t: runT, best: bestRun, fromStart: runFromStart },
             }
           : { hud: false };
     // BRIGHTNESS is 3D only — CLASSIC 2D blits the authored hex unregraded.

@@ -127,10 +127,18 @@ export function isRunEnd(world) {
 /* Returns [text, hot] so summaryLines never has to sniff its own string for a
    colour. The + in form 5 is a GAP, never a surplus: it is only reachable when
    forms 1-3 did not fire. */
+/* Minor-3 (owner ruling, review 2026-09-07): a LEVEL SELECT start begins
+   above room 1, so "world.level > b.r" would read as a room the player
+   PICKED, not one they earned. run.fromStart (absent => true, the
+   pre-existing room-1-start behaviour) gates FURTHEST ROOM YET alone — never
+   inside the combination either, so that case degrades to plain NEW BEST.
+   The score comparison is unaffected: a level-select run's score is a real
+   run either way. */
 function deltaOf(world, run) {
   const b = run.best;
+  const fromStart = run.fromStart !== false;
   const p = [];
-  if (!b || (world.level | 0) > (b.r | 0)) p.push("FURTHEST ROOM YET");
+  if (fromStart && (!b || (world.level | 0) > (b.r | 0))) p.push("FURTHEST ROOM YET");
   if (!b || (world.score | 0) > (b.s | 0)) p.push("NEW BEST");
   if (p.length) return [p.join(" · "), true];
   if ((world.score | 0) === (b.s | 0))

@@ -16,6 +16,24 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-07 — R1 fix wave (review Minors-1/2/3, Nit-1)
+- Minor-1: the summary overlay's dy 20/44/68/92/116 stack was string-presence
+  pinned only; extended the test's fillText/strokeText stub to also record y
+  and pinned the LOSE (4-row) and finale-WIN (5-row) stacks at both box sizes.
+- Minor-2/Nit-1: added behavioral pins (not just source-order regexes) for
+  KeyM/RESTART/QUIT TO MENU writing `nb.bests.v1`, and for the `runEnded`
+  latch blocking a second write on both the synthetic LOSE-then-quit path and
+  the real finale double-fire (`world.finale && state==="MENU" ->
+  persistScore`).
+- Minor-3 (owner ruling): a run that starts above room 1 (LEVEL SELECT) now
+  writes no room record and never prints FURTHEST ROOM YET (score still
+  records). `startRunState(fromStart)` — `onStart`: `(args.level|0)<=1`;
+  RESTART and the LOSE→PLAY retry: always `true`, since both reload room 1.
+  `endRun` withholds the room from `recordBest` when not from-start;
+  `recordBest` already treated 0/absent as "no info" (no bests.js change
+  needed). `ro.run` gained `fromStart` (absent ⇒ `true`, byte-identical for
+  every pre-ruling caller).
+
 ## 2026-09-07 — R1 run summary + per-heat bests
 - Every run end (LOSE, finale WIN, or a quit via pause RESTART/QUIT/KeyM)
   now writes raw score + furthest room to `nb.bests.v1` keyed on

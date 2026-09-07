@@ -285,6 +285,26 @@ it accumulates the same clamped RAF `dt`, so a machine that trips the
 `steps > 6` anti-spiral cap (`main.js:589-592`) burns wall-clock the sim never
 sees. R1 adds no new risk, it makes the same clock visible.
 
+**Ruling 2026-09-07 (review Minor-3, owner):** A run whose start level is above
+1 writes NO room record and prints NO FURTHEST ROOM YET form (neither alone nor
+in the FURTHEST ROOM YET · NEW BEST combination — that case prints plain
+NEW BEST); its score still records, matching HIGH SCORES, which already
+counts level-select runs. The sim's retry after LOSE and the RESTART command
+both reload room 1, so only `onStart` (menu START / LEVEL SELECT) can begin
+above room 1.
+
+Implementation: run state gains a boolean, `runFromStart`, set in
+`startRunState(fromStart)` — `onStart` passes `(args.level | 0) <= 1`; the
+pause RESTART branch and the LOSE→PLAY edge always pass `true` (both reload
+room 1, so a retry is from-start again). `endRun` passes `world.level | 0` to
+`recordBest` only when `runFromStart` is true, else `0` — `recordBest` already
+treats a `0`/absent room as "no room info" (it never lowers, and never
+invents, the stored `r`; a brand-new bucket floors `r` at `1`, the game's true
+minimum, so the score can still land without fabricating a deep room). The
+overlay's 9th-arg `run` payload carries `fromStart` (absent ⇒ `true`, so every
+caller written before this ruling is byte-identical) so `deltaOf` gates the
+FURTHEST forms on it.
+
 ### 2.4 The summary block — exact lines, order, format
 
 `drawOverlay` gains a **9th optional argument `run`**; absent ⇒ **byte-identical
@@ -363,11 +383,16 @@ return "+" + ((b.s|0) - (world.score|0)) + " FROM YOUR " + bestLabel(world) + " 
 
 | # | form | example |
 |---|---|---|
-| 1 | furthest room, no new score | `FURTHEST ROOM YET` |
+| 1 | furthest room, no new score — **fromStart only, see Ruling 2026-09-07** | `FURTHEST ROOM YET` |
 | 2 | new score, same depth | `NEW BEST` |
-| 3 | both (includes every first-ever run on a bucket) | `FURTHEST ROOM YET · NEW BEST` |
+| 3 | both — includes every first-ever run on a bucket **that began at room 1**; a LEVEL SELECT first-ever run degrades to plain form 2 | `FURTHEST ROOM YET · NEW BEST` |
 | 4 | exact tie | `MATCHED YOUR CORE BEST` |
 | 5 | short of it | `+142 FROM YOUR CORE BEST` |
+
+**Ruling 2026-09-07:** forms 1 and 3 fire only when the run began at room 1
+(`run.fromStart`, §2.3); a LEVEL SELECT run's first-ever record on a bucket
+degrades form 3 to plain form 2 (`NEW BEST`), never the combination. The score
+comparison (forms 2, 4, 5) is unaffected either way.
 
 The `+` is a **gap, never a surplus**: form 5 is only reachable when forms 1–3
 did not fire, i.e. when the run fell short. Worst-case width is form 5 at a full
