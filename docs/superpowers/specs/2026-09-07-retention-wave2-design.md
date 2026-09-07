@@ -394,6 +394,14 @@ return "+" + ((b.s|0) - (world.score|0)) + " FROM YOUR " + bestLabel(world) + " 
 degrades form 3 to plain form 2 (`NEW BEST`), never the combination. The score
 comparison (forms 2, 4, 5) is unaffected either way.
 
+**Ruling 2026-09-07 (final review Nit-6, owner):** a first-ever run on a bucket
+(no prior record) that ends with a score of 0 prints **no delta line at all** —
+a zero-point run set no record worth naming, and a delta that cannot lie must
+not celebrate zero. The record is still written (`{s:0, r:1}`), so the next run
+reads `MATCHED YOUR CORE BEST`. A first-ever run with score > 0 keeps form 3
+(or form 2 off a room-1 start) unchanged; the rows below simply close up
+(`deltaLine` returns the empty form, `scenes.js`).
+
 The `+` is a **gap, never a surplus**: form 5 is only reachable when forms 1–3
 did not fire, i.e. when the run fell short. Worst-case width is form 5 at a full
 bucket — `+1234567 FROM YOUR PLUS · LBTS · HARD BEST`, 42 chars at the 15 px
