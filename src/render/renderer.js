@@ -76,7 +76,7 @@ export function createRenderer(canvas, opts={}){
     }
     if(world.state!=="PLAY"){
       const B=overlayBox(kind==="3d"?"iso":"2d");
-      drawOverlay(ctx, world, B.w, B.h, B.cx, B.cy, o&&o.pause, o&&o.time);
+      drawOverlay(ctx, world, B.w, B.h, B.cx, B.cy, o&&o.pause, o&&o.time, o&&o.run);
       if(world.state==="WIN"||world.state==="LOSE") drawFx(ctx);
     }
     if(!(o&&o.hud===false)) updateHud(hud, world);

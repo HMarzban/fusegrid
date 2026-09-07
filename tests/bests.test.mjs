@@ -10,6 +10,17 @@ import {
   newTally,
   feedTally,
 } from "../src/app/bests.js";
+import {
+  fmtSpan,
+  runLine,
+  bestLabel,
+  deltaLine,
+  isRunEnd,
+  summaryLines,
+  drawOverlay,
+  fmtTime,
+} from "../src/render/scenes.js";
+import { readFileSync } from "node:fs";
 
 let pass = 0,
   fail = 0;
@@ -297,6 +308,238 @@ function throwStore() {
     threw2 = true;
   }
   check("feedTally never throws on a junk world", !threw2);
+}
+
+const rec = () => {
+  const texts = [];
+  const noop = () => {};
+  const c = {
+    save: noop, restore: noop, translate: noop, scale: noop, rotate: noop,
+    beginPath: noop, closePath: noop, moveTo: noop, lineTo: noop, arc: noop,
+    arcTo: noop, bezierCurveTo: noop, quadraticCurveTo: noop, ellipse: noop,
+    fill: noop, stroke: noop, fillRect: noop, strokeRect: noop,
+    fillText: (s) => texts.push(String(s)),
+    strokeText: (s) => texts.push(String(s)),
+  };
+  return { c, texts };
+};
+
+// ---- 6. fmtSpan: a THIRD formatter, disjoint from fmtTime and fmtLong ----
+{
+  const want = [
+    [0, "0:00"],
+    [41.9, "0:41"],
+    [61, "1:01"],
+    [761, "12:41"],
+    [99999, "99:59"],
+    [-5, "0:00"],
+  ];
+  const bad = want.filter(([n, s]) => fmtSpan(n) !== s);
+  check(
+    "fmtSpan: floored to seconds, zero-padded, clamped to 99:59",
+    !bad.length,
+    JSON.stringify(bad.map(([n]) => [n, fmtSpan(n)])),
+  );
+  check(
+    "fmtSpan never throws on junk",
+    fmtSpan(undefined) === "0:00" && fmtSpan(NaN) === "0:00",
+    fmtSpan(undefined),
+  );
+  /* The reason there are two new formatters and not one: fmtTime's six-char HUD
+     guarantee pins a run at 9:59.9, and a run is 4-13 minutes. This assertion
+     fails the moment anyone "simplifies" fmtSpan back onto fmtTime. */
+  check(
+    "fmtSpan and fmtTime disagree past 9:59.9 — that IS the reason fmtSpan exists",
+    fmtTime(761) === "9:59.9" && fmtSpan(761) === "12:41",
+    fmtTime(761) + " vs " + fmtSpan(761),
+  );
+}
+
+// ---- 7. isRunEnd: the ONE predicate for the persist edge and the display edge ----
+{
+  const cases = [
+    [{ state: "LOSE", level: 3 }, true],
+    [{ state: "WIN", level: 3 }, false],
+    [{ state: "WIN", level: 4 }, false],
+    [{ state: "WIN", level: 5 }, true],
+    [{ state: "WIN", level: 8 }, true],
+    [{ state: "WIN", level: 6, finale: true }, true],
+    [{ state: "PLAY", level: 5 }, false],
+    [{ state: "PAUSE", level: 5 }, false],
+  ];
+  const bad = cases.filter(([w, want]) => isRunEnd(w) !== want);
+  check(
+    "isRunEnd: LOSE always; WIN only at the finale; never mid-room, PLAY or PAUSE",
+    !bad.length,
+    JSON.stringify(bad.map(([w]) => [w.state, w.level, isRunEnd(w)])),
+  );
+  check("isRunEnd never throws", isRunEnd(null) === false && isRunEnd({}) === false);
+}
+
+// ---- 8. bestLabel + the five locked delta forms ----
+{
+  check(
+    "bestLabel names the exact bucket the record lives in",
+    bestLabel({ heat: 0, pact: 0, pace: 0 }) === "CORE" &&
+      bestLabel({ heat: 1, pact: 3, pace: 1 }) === "PLUS · LB · HARD" &&
+      bestLabel({ heat: 2, pact: 15, pace: -1 }) === "MAX · LBTS · EASY",
+    bestLabel({ heat: 1, pact: 3, pace: 1 }),
+  );
+  const W = { level: 3, score: 1000, heat: 0, pact: 0, pace: 0 };
+  check(
+    "form 1: furthest room, no new score",
+    deltaLine(W, { best: { s: 2000, r: 2 } }) === "FURTHEST ROOM YET",
+    deltaLine(W, { best: { s: 2000, r: 2 } }),
+  );
+  check(
+    "form 2: new score, same depth",
+    deltaLine(W, { best: { s: 500, r: 3 } }) === "NEW BEST",
+    deltaLine(W, { best: { s: 500, r: 3 } }),
+  );
+  check(
+    "form 3: both — and every first-ever run on a bucket",
+    deltaLine(W, { best: { s: 500, r: 2 } }) === "FURTHEST ROOM YET · NEW BEST" &&
+      deltaLine(W, { best: null }) === "FURTHEST ROOM YET · NEW BEST",
+    deltaLine(W, { best: null }),
+  );
+  check(
+    "form 4: an exact tie names the bucket, never a delta",
+    deltaLine(W, { best: { s: 1000, r: 3 } }) === "MATCHED YOUR CORE BEST",
+    deltaLine(W, { best: { s: 1000, r: 3 } }),
+  );
+  check(
+    "form 5: short of it — the + is a GAP, never a surplus",
+    deltaLine({ ...W, score: 858 }, { best: { s: 1000, r: 5 } }) ===
+      "+142 FROM YOUR CORE BEST",
+    deltaLine({ ...W, score: 858 }, { best: { s: 1000, r: 5 } }),
+  );
+  check(
+    "form 5 is unreachable when forms 1-3 fired — no negative gap can print",
+    !/\+-/.test(deltaLine(W, { best: { s: 500, r: 2 } })) &&
+      !/\+-/.test(deltaLine({ ...W, score: 5000 }, { best: { s: 1000, r: 5 } })),
+    deltaLine({ ...W, score: 5000 }, { best: { s: 1000, r: 5 } }),
+  );
+}
+
+// ---- 9. runLine ----
+{
+  check(
+    "runLine is the locked tally copy",
+    runLine({ r: 4, k: 27, p: 9, t: 761 }) === "ROOMS 4 · KILLS 27 · PICKS 9 · 12:41",
+    runLine({ r: 4, k: 27, p: 9, t: 761 }),
+  );
+  check(
+    "runLine does NOT show bricks — they ride R5's payload, so nothing is counted and never used",
+    runLine({ r: 1, k: 0, p: 0, b: 99, t: 0 }).indexOf("99") < 0,
+    runLine({ r: 1, k: 0, p: 0, b: 99, t: 0 }),
+  );
+}
+
+// ---- 10. summaryLines: [text, col] pairs, and the run-end gate ----
+{
+  const W = { state: "WIN", level: 3, score: 1000, heat: 0, pact: 0, pace: 0 };
+  /* best.r matches W.level so the LOSE/finale checks below isolate the score
+     comparison alone (a lower best.r would ALSO trip FURTHEST ROOM YET at
+     every level>=3 assertion here, since deltaOf compares world.level, not
+     whether the room was cleared). */
+  const run = { r: 2, k: 5, p: 1, t: 90, best: { s: 500, r: 3 } };
+  check("summaryLines with no run is empty", summaryLines(W, undefined).length === 0);
+  const mid = summaryLines(W, run);
+  check(
+    "a mid-room WIN yields exactly ONE pair — the tally line, never a delta",
+    mid.length === 1 && mid[0][0].indexOf("ROOMS 2") === 0,
+    JSON.stringify(mid),
+  );
+  const lose = summaryLines({ ...W, state: "LOSE" }, run);
+  const fin = summaryLines({ ...W, level: 5 }, run);
+  check(
+    "a LOSE and a finale WIN each yield two pairs",
+    lose.length === 2 && fin.length === 2 && lose[1][0] === "NEW BEST",
+    JSON.stringify(lose),
+  );
+  check(
+    "the delta highlights ONLY when a record actually fell",
+    lose[1][1] === "#37f0d0" &&
+      summaryLines({ ...W, state: "LOSE", score: 100 }, run)[1][1] === "#9fb3d8",
+    lose[1][1] +
+      " / " +
+      summaryLines({ ...W, state: "LOSE", score: 100 }, run)[1][1],
+  );
+  check(
+    "the tally line is always the muted sub colour",
+    mid[0][1] === "#9fb3d8",
+    mid[0][1],
+  );
+}
+
+// ---- 11. drawOverlay: the 9th arg is optional; absent is byte-identical ----
+{
+  const W = { state: "WIN", level: 3, finale: false, score: 10, heat: 0 };
+  const a = rec();
+  drawOverlay(a.c, W, 600, 520, 300, 260, undefined, undefined);
+  const b = rec();
+  drawOverlay(b.c, W, 600, 520, 300, 260);
+  check(
+    "drawOverlay WIN with no run records today's exact fillText list",
+    a.texts.join("|") === b.texts.join("|") &&
+      a.texts.some((s) => s.indexOf("CLEARED") >= 0) &&
+      !a.texts.some((s) => s.indexOf("ROOMS ") === 0),
+    a.texts.join("|"),
+  );
+  const r = rec();
+  drawOverlay(r.c, W, 600, 520, 300, 260, undefined, undefined, {
+    r: 2, k: 5, p: 1, t: 90, best: null,
+  });
+  check(
+    "drawOverlay WIN with a run adds the tally line and nothing else mid-room",
+    r.texts.includes("ROOMS 2 · KILLS 5 · PICKS 1 · 1:30") &&
+      r.texts.length === a.texts.length + 1,
+    r.texts.join("|"),
+  );
+  const L = rec();
+  drawOverlay(L.c, { state: "LOSE", level: 3, score: 1000, heat: 0 },
+    600, 520, 300, 260, undefined, undefined,
+    { r: 2, k: 5, p: 1, t: 90, best: { s: 500, r: 3 } });
+  check(
+    "drawOverlay LOSE with a run adds BOTH the tally line and the delta line",
+    L.texts.includes("ROOMS 2 · KILLS 5 · PICKS 1 · 1:30") &&
+      L.texts.includes("NEW BEST"),
+    L.texts.join("|"),
+  );
+  const P = rec();
+  drawOverlay(P.c, { state: "PAUSE" }, 600, 520, 300, 260, { view: 0, cursor: 0 },
+    undefined, { r: 9, k: 9, p: 9, t: 9, best: null });
+  const P2 = rec();
+  drawOverlay(P2.c, { state: "PAUSE" }, 600, 520, 300, 260, { view: 0, cursor: 0 });
+  check(
+    "drawOverlay PAUSE ignores the run entirely",
+    P.texts.join("|") === P2.texts.join("|"),
+    P.texts.join("|"),
+  );
+  check(
+    "the copy hint is still exactly ' · C copy' until R8 changes it",
+    a.texts.some((s) => s.indexOf(" · C copy") > 0) &&
+      !a.texts.some((s) => s.indexOf("B board") >= 0),
+    a.texts.join("|"),
+  );
+}
+
+// ---- wiring: both renderers pass o.run through as the ninth arg ----
+{
+  for (const [f, ov] of [
+    ["src/render/renderer.js", "drawOverlay(ctx, world, B.w"],
+    ["src/render/three/wrapper.js", "drawOverlay(ovCtx,world,B.w"],
+  ]) {
+    const src = readFileSync(f, "utf8");
+    const line = (src.match(
+      new RegExp(".*" + ov.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ".*"),
+    ) || [""])[0];
+    check(
+      f + ": drawOverlay receives o.run as its ninth arg",
+      /o\s*&&\s*o\.run/.test(line),
+      line.trim(),
+    );
+  }
 }
 
 console.log("\n  BESTS RESULT: " + pass + " PASS / " + fail + " FAIL");

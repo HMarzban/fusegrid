@@ -3,6 +3,8 @@ import { HEAT_COL, heatToken, HEAT_NAME, clampHeat } from "../core/heat.js";
 import { drawIcon } from "./sprites.js";
 import { rr } from "./icons.js";
 import { PROJ } from "./r3d/camera.js";
+import { clampPact, pactLabel } from "../core/pact.js";
+import { clampPace, paceToken } from "../core/pace.js";
 
 /* Scene UI: menu logo, HUD, and the CLEARED / GAME OVER / PAUSED overlays.
    Pure draw; reads world + (optionally) DOM for HUD. */
@@ -81,6 +83,78 @@ export function timeLine(world, tm) {
     (t.best == null || t.t < t.best ? "NEW BEST" : "BEST " + fmtTime(t.best))
   );
 }
+/* R1 run formatting. fmtSpan is a THIRD formatter, not a widening of fmtTime:
+   fmtTime clamps at 9:59.9 because its six-character guarantee holds the HUD
+   chip's width budget, and a run is 4-13 minutes. fmtSpan clamps at 99:59; a
+   run left idling in PLAY past 100 minutes pins there, disclosed. STATS'
+   lifetime clock is a third range again (fmtLong, src/app/stats.js). */
+export function fmtSpan(sec) {
+  const n = typeof sec === "number" && isFinite(sec) ? sec : 0;
+  const s = Math.floor(Math.min(5999, Math.max(0, n)));
+  const m = s % 60;
+  return Math.floor(s / 60) + ":" + (m < 10 ? "0" + m : String(m));
+}
+export function runLine(run) {
+  const r = run || {};
+  return (
+    "ROOMS " + (r.r | 0) + " · KILLS " + (r.k | 0) + " · PICKS " + (r.p | 0) +
+    " · " + fmtSpan(r.t)
+  );
+}
+/* bestLabel names the EXACT bucket the record is kept in, so the sentence can
+   never be read against the wrong record. pactLabel/paceToken are src/core,
+   which render/ may read. */
+export function bestLabel(world) {
+  const w = world || {};
+  return (
+    HEAT_NAME[clampHeat(w.heat)] +
+    (clampPact(w.pact) ? " · " + pactLabel(w.pact) : "") +
+    (clampPace(w.pace) ? " · " + paceToken(w.pace) : "")
+  );
+}
+/* The display edge and the persist edge are the SAME edge. A mid-room NEW BEST
+   claims a record that has not been written and that a later death can still
+   take back, and repeating it on rooms 3, 4 and 5 cheapens the one line the
+   whole feature exists for. isFinale is the same predicate winHeadline and
+   overlayCue use, which AGENTS.md requires of overlay code. */
+export function isRunEnd(world) {
+  const w = world || {};
+  return (
+    w.state === "LOSE" ||
+    (w.state === "WIN" && (isFinale(w.level) || !!w.finale))
+  );
+}
+/* Returns [text, hot] so summaryLines never has to sniff its own string for a
+   colour. The + in form 5 is a GAP, never a surplus: it is only reachable when
+   forms 1-3 did not fire. */
+function deltaOf(world, run) {
+  const b = run.best;
+  const p = [];
+  if (!b || (world.level | 0) > (b.r | 0)) p.push("FURTHEST ROOM YET");
+  if (!b || (world.score | 0) > (b.s | 0)) p.push("NEW BEST");
+  if (p.length) return [p.join(" · "), true];
+  if ((world.score | 0) === (b.s | 0))
+    return ["MATCHED YOUR " + bestLabel(world) + " BEST", false];
+  return [
+    "+" + ((b.s | 0) - (world.score | 0)) + " FROM YOUR " + bestLabel(world) + " BEST",
+    false,
+  ];
+}
+export function deltaLine(world, run) {
+  return deltaOf(world || {}, run || {})[0];
+}
+/* [text, col] pairs so the draw never sniffs strings. A record highlights only
+   when a record actually fell — the same honesty rule, in pixels. */
+export function summaryLines(world, run) {
+  if (!run) return [];
+  const out = [[runLine(run), "#9fb3d8"]];
+  if (isRunEnd(world)) {
+    const [s, hot] = deltaOf(world || {}, run);
+    out.push([s, hot ? "#37f0d0" : "#9fb3d8"]);
+  }
+  return out;
+}
+const COPY_HINT = " · C copy";
 /* Pause-list row copy mirrors src/app/menuapp.js PAUSE_ITEMS — render/ must
    not import src/app (only shellview.js may), so the labels are duplicated
    here the way menudraw's PLAQUE_NAME is. */
@@ -117,6 +191,7 @@ export function drawOverlay(
   cy = h / 2,
   ui = { view: 0, cursor: 0 },
   tm,
+  run,
 ) {
   c.fillStyle = "rgba(6,10,20,0.80)";
   c.fillRect(0, 0, w, h);
@@ -138,18 +213,21 @@ export function drawOverlay(
   }
   if (world.state === "WIN") {
     head(winHeadline(world), "#37f0d0");
-    sub(runStamp(world), "#9fb3d8");
-    /* R7: one extra line only when TIME ATTACK is on, which pushes the cue from
-       dy 44 to dy 68 — cy + 68 = 328, well inside the 520 box. LOSE never gets
-       it: a room time is only meaningful on a clear. */
-    if (tm && tm.on) {
-      sub(timeLine(world, tm), "#9fb3d8", 44);
-      sub(overlayCue(world) + " · C copy", "#9fb3d8", 68);
-    } else sub(overlayCue(world) + " · C copy", "#9fb3d8", 44);
+    /* R1: one 24px stack (R7's shipped pitch) at dy 20/44/68/92/116 — stamp,
+       tally, delta, R7's time line, cue. cy+116 is 376 inside the 600x520 box
+       and 304 inside the 608x352 iso box. With run and tm both absent this
+       emits dy 20 then dy 44: today's two lines, at today's positions. */
+    let dy = 20;
+    sub(runStamp(world), "#9fb3d8", dy);
+    for (const [s, col] of summaryLines(world, run)) sub(s, col, (dy += 24));
+    if (tm && tm.on) sub(timeLine(world, tm), "#9fb3d8", (dy += 24));
+    sub(overlayCue(world) + COPY_HINT, "#9fb3d8", (dy += 24));
   } else if (world.state === "LOSE") {
     head("GAME OVER", "#ff5d73");
-    sub(runStamp(world), "#9fb3d8");
-    sub(overlayCue(world) + " · C copy", "#9fb3d8", 44);
+    let dy = 20;
+    sub(runStamp(world), "#9fb3d8", dy);
+    for (const [s, col] of summaryLines(world, run)) sub(s, col, (dy += 24));
+    sub(overlayCue(world) + COPY_HINT, "#9fb3d8", (dy += 24));
   } else if (world.state === "PAUSE") {
     const u = ui || {};
     /* view 1 = the inline OPTIONS page: veil only, so drawShell's settings
