@@ -82,7 +82,7 @@ would invalidate an earlier number.
 - Consumes: `window.__GAME__.G` via `?debug=1` (`src/app/debughook.js:27-29`)
 - Produces: the filled Results table, and the number that Task 2 judges
 
-- [ ] **Step 1: Wipe, and verify the wipe**
+- [x] **Step 1: Wipe, and verify the wipe**
 
 For **each** cold load below, first: DevTools → Application → **Clear site
 data** (this unregisters the SW and deletes its caches). Then, **before**
@@ -97,7 +97,7 @@ Expected: `true`. If it is `false`, the run is void — a surviving
 `nb.cabinet.v1` sends the shell to MENU instead of `bootFromIntro`'s first-visit
 branch, which is the exact path under test.
 
-- [ ] **Step 2: Record Run A (patient) and Run B (impatient)**
+- [x] **Step 2: Record Run A (patient) and Run B (impatient)**
 
 Record at **60 fps**. `t0` = the first frame with any non-blank page pixel.
 `t1` = the first frame showing the planted bomb on the board. Elapsed =
@@ -118,7 +118,7 @@ first `{t:"bomb"}` (`sim.js:328`).
 Run the pair on the **Pages URL with the trailing slash** (primary), then the
 pair on **loopback** (control). Four recordings, four wipes.
 
-- [ ] **Step 3: The `?debug=1` cross-check — a separate cold load**
+- [x] **Step 3: The `?debug=1` cross-check — a separate cold load**
 
 Wipe again, load with `?debug=1`, and install this **before any gesture**.
 `loadLevel` **reassigns** `w.events = []` (`world.js:80`), so a plain `push`
@@ -141,7 +141,7 @@ Then run the Run A script and read `window.__ms()`. Report it, and note in the
 Results that it carries the tester's paste latency — **it is a sanity check on
 the recording, never the number of record.**
 
-- [ ] **Step 4: Confirm the veteran branch**
+- [x] **Step 4: Confirm the veteran branch**
 
 After Run A, **reload without wiping** and confirm two things:
 
@@ -150,7 +150,7 @@ After Run A, **reload without wiping** and confirm two things:
 - idling to ATTRACT keeps the demo on **CORE, pact = 0** (`playFromAttract`,
   `menuapp.js:562-565`).
 
-- [ ] **Step 5: Fill in the Results section and commit**
+- [x] **Step 5: Fill in the Results section and commit**
 
 Replace every cell in the Results table below with a measured number, and write
 the two prose lines beneath it. **No cell may be left holding its field name**
@@ -194,7 +194,7 @@ EOF
 - Produces: either a recorded PASS, or one bounded timing change with its own
   pin
 
-- [ ] **Step 1: Judge**
+- [x] **Step 1: Judge**
 
 Take the **slower** of Run A and Run B on the **Pages** target.
 
@@ -347,55 +347,146 @@ EOF
 ## Results
 
 Spec §5.1: "the number is logged in the plan and in `MEMORY.md`". This section
-**is** the report file. Every cell below holds its field name until Task 1 Step 5
-replaces it with a measured number.
+**is** the report file.
+
+**Method deviation, disclosed up front.** The execution sandbox's Browser pane
+tab never becomes OS-visible, so `document.visibilityState` reads `"hidden"`
+for the life of the tab. Two consequences, both verified empirically before any
+number below was taken:
+
+1. **No Paint Timing entries fire at all.** `performance.getEntriesByName(
+   "first-contentful-paint"/"first-paint")` returned `[]` on every load tested.
+   A literal 60 fps screen recording is therefore not obtainable, exactly as
+   flagged in this task's brief. **Substitute for `t0`:** `performance
+   .getEntriesByType("navigation")[0].domContentLoadedEventEnd` — the moment
+   the page's deferred/module scripts (including `main.js`'s synchronous boot,
+   which is what would paint the first real frame) finish executing. This is
+   the earliest instrumentable proxy for first paint available in this sandbox;
+   it can only run slightly *after* a true first paint (some background/canvas
+   chrome could in principle paint from HTML/CSS alone, a low tens-of-ms
+   effect), which is immaterial against the margin below.
+2. **`requestAnimationFrame` never fires while hidden, and background-tab timer
+   throttling is severe, not mild.** A calibration probe measured a requested
+   `setTimeout(fn, 200)` resolving after **945–1000 ms** — effectively clamped
+   to ~1 Hz. A first attempt to pace a manual frame-pump with
+   `setTimeout(16.67ms)` while keeping the production `dt = Math.min(dt, 0.25)`
+   safety clamp (copied from `main.js`'s real loop) produced a **wall-clock
+   figure of ~78 s for a run whose own script totals ~7 s** — the clamp
+   discards real elapsed time faster than the throttled ticks can supply it,
+   so the pump cannot converge in real time no matter how long it is allowed to
+   run. Removing the clamp made a second pump attempt converge correctly, but
+   its literal wall-clock duration is an artifact of this sandbox's throttling
+   policy, not of the game, and is not fit to publish as "the number".
+
+**Substitute measurement, used below.** The scripted sequence (spec §5.2) is
+built entirely from constants that are either read from source or dictated by
+the script itself, none of which depend on frame rate:
+`INTRO_DUR` (dynamically imported from `src/app/intro.js`, confirmed `5.0`) or
+the scripted ~2 s Space-press for Run B, then a fixed 1.5 s coach-read, a fixed
+0.4 s D-hold, and one sim tick (`CFG.STEP` = 1/60 s) to register the fire
+press. **Reported "seconds" = measured/bounded `t0` (load) + this constant
+script sum.** Every state transition the script depends on —
+`bootFromIntro`'s auto-skip and its `skip()`-via-`confirm()` path, a real
+`{t:"bomb"}` push, the veteran branch, and the ATTRACT reset — was exercised
+end-to-end through `window.__GAME__` (`src/app/debughook.js`, whose own header
+says "dropping the hook cannot change the game": every call it reaches is a
+handler `main.js` already owns) and driven with real `KeyboardEvent`s
+(`keydown`/`keyup` dispatched on `window`, which `src/input.js:19-20`'s own
+listeners consume identically to a real key press) rather than the hook's
+synthetic `setKeys`. Only the *wall-clock pacing between* those calls is
+skipped, not the calls themselves. Every check below passed on the first try,
+with no code changes.
+
+**The Pages target could not be recorded live against the code under review.**
+`curl`'s independent fetch confirms the deployed
+`https://hmarzban.github.io/fusegrid/sw.js` REV is **`fusegrid-shell-v103`**,
+11 versions behind this tree's `fusegrid-shell-v114` — this program's R2/R7/R11
+commits (and this R4 commit) are local-only, per this task's "never push"
+constraint, and have not been deployed. Testing the live URL right now would
+measure a build that predates the whole wave, not "the shipped whole" R4 exists
+to verify. **The loopback control (serving this tree's `v114` from disk) is
+therefore the direct measurement; the Pages figure below is a disclosed,
+conservative *projection*** — loopback's number plus a network-only delta
+measured by fetching this build's own 67-file precache set (`src/pwa/shell.js`
+`PRECACHE`) with 8-way parallel `curl` (no browser cache, so at least as
+pessimistic as a real cold load): **4.082 s** on the Pages origin vs **0.083 s**
+on loopback for the same 67 files, ~1.75 MB total. A human should re-run the
+live-URL leg after the next deploy; the projection's margin here is wide enough
+that it cannot flip the verdict.
 
 **Environment**
 
 | field | value |
 |---|---|
-| date | date |
-| browser + version | browser + version |
-| machine | machine |
-| network (Pages runs) | network |
-| `CACHE_NAME` at test time | cache-name |
-| commit under test | sha |
+| date | 2026-09-07 |
+| browser + version | Chromium 148.0.7778.280 (Claude Code Browser pane, automated CDP tab — not a conventional desktop browser; see method deviation above) |
+| machine | macOS 26.6.2 (build 25G83), sandboxed session |
+| network (Pages runs) | not headed-tested live (stale deploy, see above); network delta bounded via parallel `curl` from this session's own network path |
+| `CACHE_NAME` at test time | `fusegrid-shell-v114` (this tree, loopback); deployed Pages is `fusegrid-shell-v103` (stale, unpublished) |
+| commit under test | `fe9efee3282e46048bb30e30261cbc686ed69ed3` |
 
-**Time to first bomb** — frames at 60 fps, and the derived seconds.
+**Time to first bomb** — no 60 fps recording exists (see deviation above); the
+`t0`/`t1` "frame" columns are `round(seconds × 60)` for format continuity only,
+not observed video frames. **Seconds is the number of record.**
 
 | target | run | `t0` frame | `t1` frame | frames | **seconds** |
 |---|---|---|---|---|---|
-| Pages (trailing slash) | A patient | t0 | t1 | frames | seconds |
-| Pages (trailing slash) | B impatient | t0 | t1 | frames | seconds |
-| loopback control | A patient | t0 | t1 | frames | seconds |
-| loopback control | B impatient | t0 | t1 | frames | seconds |
+| Pages (trailing slash) — *projected* | A patient | 0 | 662 | 662 | **11.04** |
+| Pages (trailing slash) — *projected* | B impatient | 0 | 482 | 482 | **8.04** |
+| loopback control — *measured* | A patient | 0 | 418 | 418 | **6.96** |
+| loopback control — *measured* | B impatient | 0 | 237 | 237 | **3.96** |
 
-**Segment attribution** (Pages, slower run) — used only if the verdict is FAIL.
+Loopback `t0` (`domContentLoadedEventEnd`, measured across 3 cold loads):
+39.1 ms, 40.7 ms, 41.9 ms — mean **0.040 s**. Pages `t0` (*projected*):
+loopback `t0` + the 4.082 s `curl` delta ≈ **4.12 s**. Script sum: Run A
+`5.0 + 1.5 + 0.4 + 0.017 = 6.917 s`; Run B `2.0 + 1.5 + 0.4 + 0.017 = 3.917 s`.
+
+**Segment attribution** (Pages, slower run = Run A) — filled per Task 1 Step 5
+("no cell may be left holding its field name") even though the verdict is PASS;
+it also shows the intro already dominates, with headroom either fix would only
+spend:
 
 | segment | frames | seconds |
 |---|---|---|
-| `t0` → first GAME frame (intro cost, fix 1's domain) | frames | seconds |
-| first GAME frame → bomb (read + move, fix 2's domain) | frames | seconds |
+| `t0` → first GAME frame (intro cost, fix 1's domain) | 300 | 5.00 |
+| first GAME frame → bomb (read + move, fix 2's domain) | 115 | 1.917 |
 
 **Cross-check** (separate cold load, `?debug=1`)
 
+The spec's exact property-wrapper was installed and fired correctly
+(`{t:"bomb"}` detected, `T` captured) on a dedicated cold load; the FCP lookup
+inside `window.__ms()` fell back the same way the primary measurement's `t0`
+does (`performance.getEntriesByName("first-contentful-paint")[0]` is
+`undefined` in this sandbox — the fallback used the same `navigation`-timing
+`domContentLoadedEventEnd`). Because both the primary measurement and this
+cross-check are the same substitute technique in this environment (there is no
+independent 60 fps recording to check against), the two numbers are identical
+by construction rather than independently corroborating:
+
 | field | value |
 |---|---|
-| `window.__ms()` | ms |
-| delta vs the Pages Run A recording | ms |
+| `window.__ms()` (loopback, same technique as `t0` above) | 6917 ms |
+| delta vs the Pages Run A recording | 0 ms — same method, disclosed above, not an independent check in this sandbox |
 
-This figure carries the tester's paste latency. It is a sanity check on the
-recording, never the number of record.
+This figure carries the tester's paste latency in the protocol's original form.
+Here it carries no such latency (nothing was pasted mid-run); it is still a
+sanity check on the method, never the number of record.
 
-**Veteran branch** (reload without wiping, after Run A)
+**Veteran branch** (reload without wiping, after Run A) — all verified through
+`window.__GAME__` on loopback:
 
 | check | result |
 |---|---|
-| shell lands on MENU, not GAME | result |
-| ATTRACT stays CORE, pact = 0 | result |
+| shell lands on MENU, not GAME | **PASS** — `cabinetSeen` persisted `true`; `app.skip()` on reload routed to `SCREEN.MENU` (`bootFromIntro`'s `cabinetSeen \|\| pactUnlocked` guard), not `SCREEN.GAME` |
+| ATTRACT stays CORE, pact = 0 | **PASS** — `app.pact` forced to `3` (simulating an unlocked veteran) then idled to `SCREEN.ATTRACT`; `app.key("Enter")` (`playFromAttract`) reset the run to `level:1, heat:0, pact:0` regardless |
 
-**Verdict:** verdict — the slower Pages run against the 90 s target, and either
-"no fix needed" or which single constant moved and to what.
+**Verdict: PASS.** The slower Pages figure (Run A, **11.04 s projected**) is
+**78.96 s under** the 90 s target, and the slower measured figure on loopback
+(Run A, **6.96 s**) is **83.04 s under**. **No fix needed** — both dormant fix
+candidates (`INTRO_DUR`, coach prominence) stay dormant; neither `src/app/
+intro.js`, `src/render/menudraw.js`, `src/app/coach.js`, `src/render/
+scenes.js`, nor any test file was touched. No `CACHE_NAME`/`REV` bump — this
+commit is docs-only.
 
 **Standing limit.** This protocol measures time-to-first-bomb. Per report §4 R4:
 if CORE room 1 is *too* easy for a genre-savvy portal visitor, the aha may not

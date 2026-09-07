@@ -16,6 +16,21 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-07 — R4 first-visit handoff verification
+- Measured cold-load-to-first-bomb: loopback (this tree, v114) 6.96 s patient /
+  3.96 s impatient, both measured; Pages is a disclosed *projection* of 11.04 s
+  / 8.04 s (deployed site is stale `v103`, 11 versions behind — these commits
+  are local-only and unpushed) — well inside the 90 s target either way. No fix
+  needed; both dormant candidates (`INTRO_DUR`, coach prominence) stay dormant.
+  The automation tab is never OS-visible (no FP/FCP entries fire, and
+  `requestAnimationFrame`/`setTimeout` are throttled to ~1 Hz while hidden), so
+  the number is the sum of source-verified constants rather than a literal 60
+  fps recording — disclosed in the plan's Results, with the state machine
+  (`bootFromIntro`, `skip()`, veteran-branch MENU landing, ATTRACT's CORE/
+  pact=0 reset) exercised end-to-end through `window.__GAME__` regardless.
+  Standing limit: this measures time-to-first-bomb only, not whether the aha
+  lands — that needs a real playtest.
+
 ## 2026-09-07 — R11 CVD audit + pause-anywhere pins
 - Simulated protan/deutan/tritan over the 85 shipped hexes
   (`docs/superpowers/specs/2026-09-06-cvd-audit.md`); only within-biome,
