@@ -306,6 +306,50 @@ function check(name, cond, detail) {
       );
     }
     {
+      const { c, texts } = rec();
+      md.drawLevelSelect(c, 3, L, 1, 1);
+      const all = texts.map((t) => t.s).join("|");
+      check(
+        `level select LOCKED stays byte-identical at ${W}x${H} — no MODES rail`,
+        !/IRON|TIME|MODES/.test(all),
+        all,
+      );
+    }
+    {
+      const { c, texts, rects } = rec();
+      md.drawLevelSelect(c, 3, L, 1, 1, 0, true, 0, true);
+      const all = texts.map((t) => t.s);
+      const p = plateOf(rects);
+      const gloss = texts.find((t) => t.s.indexOf("TIME ATTACK") >= 0);
+      const time = texts.find((t) => t.s === "5 TIME");
+      check(
+        `level select UNLOCKED shows the five MODES chips at ${W}x${H}`,
+        all.includes("1 IRON") &&
+          all.includes("2 BARE") &&
+          all.includes("3 THIN") &&
+          all.includes("4 SHRINK") &&
+          all.includes("5 TIME") &&
+          !all.includes("1 LAST"),
+        all.join("|"),
+      );
+      check(
+        `modes gloss + head + foot copy at ${W}x${H}`,
+        !!gloss &&
+          gloss.s === "5 TIME ATTACK · stopwatch + per-room best" &&
+          all.some((s) => s.indexOf("ROOM + HEAT + PACE + MODES") >= 0) &&
+          all.some((s) => s.indexOf("1–5 MODES") >= 0),
+        all.join("|"),
+      );
+      check(
+        `modes rail + gloss stay inside the plate at ${W}x${H}`,
+        !!p && !!time && !!gloss &&
+          time.y > p.y + 8 &&
+          gloss.y > time.y &&
+          gloss.y < p.y + p.h - 8,
+        JSON.stringify({ py: p && p.y, ph: p && p.h, time, gloss }),
+      );
+    }
+    {
       const { c, texts, rects } = rec();
       md.drawScores(c, DEFAULT_SCORES, L, 1, 0);
       const p = plateOf(rects);

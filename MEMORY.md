@@ -16,6 +16,19 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-07 — R7 stopwatch + MODES
+- Every room clear now records a time under `nb.times.v1` keyed on
+  room/heat/pact/pace (`src/app/times.js`), shown as a HUD stopwatch chip and a
+  `ROOM n · m:ss.t · BEST/NEW BEST` line on the CLEARED overlay when TIME
+  ATTACK is on; recording is unconditional, the toggle only gates display.
+  The clock is a main-owned `roomT`, PLAY-only, mirroring `coachT` — never
+  `world.time`, which runs through PAUSE and never resets per room.
+- MODES is a relabel of the existing LEVEL SELECT Pact rail (`MODE_NAME` in
+  `menudraw.js`, render-side only) with a separated fifth `5 TIME` chip on
+  `Digit5` — no MODES screen, no new `SCREEN`, no new `PACT` bit, and
+  `core/pact.js` untouched, because report §7.2's new-`SCREEN` question is
+  still the owner's to answer.
+
 ## 2026-09-07 — R2 fix round: drawFxOverlay no longer paints over PAUSED/WIN/LOSE
 - Both renderers gated the combo-callout overlay on `o.hud===true` alone; since
   `o.hud` is true for the whole GAME screen regardless of `world.state`, a

@@ -206,6 +206,8 @@ export function createGame(canvas, opts = {}) {
     cabinetSeen: loadCabinetSeen(), markCabinet: () => saveCabinetSeen(),
     pace: loadPace(),
     onPaceChange: (p) => savePace(p),
+    timeAttack: loadTimes().on === 1,
+    onTimeAttack: (on) => saveTimes({ ...loadTimes(), on: on ? 1 : 0 }),
     render3d: urlKind === "3d" || opts.render3d === true || settings.r3d === 1,
     settings,
     onSettings: (s) => {

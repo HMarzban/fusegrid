@@ -782,8 +782,10 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   // declarations + comment beside coachT; onStart and RESTART resets; the
   // WIN-edge record/reset block; the roomT accumulate line; ro.time in the
   // GAME ro literal) — bumped 706->731.
-  check("main.js stays a lean browser entry (<=731 lines)",
-    L.length<=731,String(L.length));
+  // R7 MODES wave: +2 lines (timeAttack seed + onTimeAttack persist beside
+  // pace/onPaceChange) — bumped 731->733.
+  check("main.js stays a lean browser entry (<=733 lines)",
+    L.length<=733,String(L.length));
   const lastImp=L.reduce((a,l,i)=>/^import[\s{]/.test(l)?i:a,-1);
   const firstDecl=L.findIndex(l=>/^(export\s|const\s|let\s|var\s|function\s|class\s)/.test(l));
   check("main.js keeps every import at the top (no mid-file import sprawl)",

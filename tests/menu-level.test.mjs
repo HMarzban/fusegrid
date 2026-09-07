@@ -119,6 +119,55 @@ const DT = 1 / 60;
   check("locked START strips pact", started[1] && started[1].pact === 0);
 }
 {
+  const a = createMenuApp();
+  a.screen = SCREEN.LEVEL;
+  check(
+    "locked Digit5 is a no-op, exactly as Digit1-4 are",
+    a.key("Digit5") === false && a.timeAttack === false,
+    String(a.timeAttack),
+  );
+  a.pactUnlocked = true;
+  const seen = [];
+  const b = createMenuApp({ pactUnlocked: true, onTimeAttack: (v) => seen.push(v) });
+  b.screen = SCREEN.LEVEL;
+  check(
+    "unlocked Digit5 arms TIME ATTACK and reports through onTimeAttack",
+    b.key("Digit5") === true && b.timeAttack === true && seen.join() === "true",
+    JSON.stringify(seen),
+  );
+  check(
+    "Numpad5 is the same door",
+    b.key("Numpad5") === true && b.timeAttack === false && seen.join() === "true,false",
+    JSON.stringify(seen),
+  );
+  const m = createMenuApp({ pactUnlocked: true });
+  m.screen = SCREEN.MENU;
+  check(
+    "Digit5 outside LEVEL is false and changes nothing",
+    m.key("Digit5") === false && m.timeAttack === false,
+  );
+  const got = [];
+  const s = createMenuApp({
+    pactUnlocked: true,
+    timeAttack: true,
+    onStart: (x) => got.push(x),
+  });
+  s.screen = SCREEN.LEVEL;
+  const args = s.startRun();
+  check(
+    "startRun hands onStart NO timeAttack key — it never reaches world or step()",
+    got.length === 1 &&
+      Object.keys(got[0]).sort().join(",") === "heat,level,pace,pact" &&
+      !("timeAttack" in got[0]),
+    JSON.stringify(got[0]),
+  );
+  check(
+    "and startRun's returned args agree with what onStart received",
+    args === got[0],
+    JSON.stringify(args),
+  );
+}
+{
   const a = createMenuApp({ onStart: () => {} });
   a.screen = SCREEN.LEVEL;
   a.level = 2;

@@ -493,5 +493,39 @@ const HUD_W = {
   );
 }
 
+// ---- wiring: the toggle is seeded from and persisted to nb.times.v1 ----
+{
+  const mainSrc = readFileSync("src/main.js", "utf8");
+  check(
+    "main.js seeds app.timeAttack from loadTimes().on",
+    /timeAttack:\s*loadTimes\(\)\.on\s*===\s*1/.test(mainSrc),
+    (mainSrc.match(/timeAttack:[^\n]*/) || [])[0],
+  );
+  check(
+    "main.js persists the toggle through onTimeAttack, the onPaceChange shape",
+    /onTimeAttack:[^\n]*saveTimes\(/.test(mainSrc),
+    (mainSrc.match(/onTimeAttack:[^\n]*/) || [])[0],
+  );
+  const shellSrc = readFileSync("src/render/shellview.js", "utf8");
+  check(
+    "shellview passes app.timeAttack as drawLevelSelect's ninth arg",
+    /app\.pace,\s*\n\s*app\.timeAttack,/.test(shellSrc),
+    (shellSrc.match(/drawLevelSelect\([^;]*\);/s) || [])[0],
+  );
+  const mdSrc = readFileSync("src/render/menudraw.js", "utf8");
+  check(
+    "menudraw keeps MODE_NAME render-side and never touches core PACT_NAME",
+    /MODE_NAME\s*=\s*\[\s*"IRON"/.test(mdSrc) && !/PACT_NAME/.test(mdSrc),
+    (mdSrc.match(/MODE_NAME[^\n]*/) || [])[0],
+  );
+  const pactSrc = readFileSync("src/core/pact.js", "utf8");
+  check(
+    "core/pact.js is untouched — PACT_NAME still LAST, and no fifth bit",
+    /PACT_NAME=Object\.freeze\(\["LAST","BARE","THIN","SHRINK"\]\)/.test(
+      pactSrc.replace(/\s/g, ""),
+    ) && /\(p\|0\)&15/.test(pactSrc.replace(/\s/g, "")),
+  );
+}
+
 console.log("\n  TIMES RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);

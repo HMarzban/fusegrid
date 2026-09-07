@@ -9,7 +9,7 @@ import { POWER, FOES } from "../core/entities.js";
 import { HEAT_COL, HEAT_MARK, HEAT_NAME, clampHeat } from "../core/heat.js";
 import { PACE_NAME } from "../core/pace.js";
 import { pactLabel } from "../core/pact.js";
-import { PACT, PACT_COL, PACT_NAME } from "../core/pact.js";
+import { PACT, PACT_COL } from "../core/pact.js";
 import { drawIcon, drawEnemyBody } from "./sprites.js";
 const ACCENT = "#37f0d0",
   TEXT = "#dfe7f5",
@@ -296,15 +296,26 @@ function selAccent(items, cur) {
   return String(items[cur] || "").indexOf("SOURCE") === 0 ? ACCENT : MUTED;
 }
 
+/* MODES is a PRESENTATION relabel of the four Pact bits, so these names live
+   here and core/pact.js keeps its own frozen name table and pactLabel's
+   L/B/T/S letters — the HIGH SCORES p column and every pact.js pin depend on
+   them. Same render-side duplication precedent as PLAQUE_NAME. IRON is a
+   display name for PACT.LAST (applyPact sets lives = 1); BARE is PACT.BARE
+   verbatim. TIME_COL is deliberately OUTSIDE PACT_COL so the fifth chip cannot
+   read as a fifth Pact bit — that plus the 16px double gap are the two devices
+   that enforce it. #ff8a3c is already the palette's FLAME colour. */
+const MODE_NAME = ["IRON", "BARE", "THIN", "SHRINK"];
+const TIME_COL = "#ff8a3c";
+
 /* LEVEL SELECT: five chips 44x34 gap 14; sel in 1..5. */
-export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked, pace) {
+export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked, pace, timeAttack) {
   const S = shell(c, L, 400);
   const h = heat | 0;
   let p = pace | 0;
   if (p < -1) p = -1;
   else if (p > 1) p = 1;
   const showPact = !!unlocked;
-  head(c, S, "SELECT LEVEL", showPact ? "ROOM + HEAT + PACE + PACT" : "ROOM + HEAT + PACE");
+  head(c, S, "SELECT LEVEL", showPact ? "ROOM + HEAT + PACE + MODES" : "ROOM + HEAT + PACE");
   const rooms = roomCap(showPact);
   const chipW = showPact ? 34 : L.chipW;
   const chipGap = showPact ? 8 : L.chipGap;
@@ -374,9 +385,10 @@ export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked, pace) {
   }
   if (showPact) {
     const bits = [PACT.LAST, PACT.BARE, PACT.THIN, PACT.SHRINK];
-    const pw = 70,
-      pg = 8,
-      ptot = 4 * pw + 3 * pg,
+    const pw = 64,
+      pg = 6,
+      pgap = 16,
+      ptot = 5 * pw + 3 * pg + pgap,
       px0 = S.mid - ptot / 2,
       py = pzy + 34;
     const mask = pact | 0;
@@ -395,14 +407,31 @@ export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked, pace) {
       c.font = font(10, on ? "900" : "");
       c.textAlign = "center";
       c.textBaseline = "middle";
-      c.fillText(i + 1 + " " + PACT_NAME[i], x + pw / 2, py + 11);
+      c.fillText(i + 1 + " " + MODE_NAME[i], x + pw / 2, py + 11);
     }
+    const tx = px0 + 4 * pw + 3 * pg + pgap,
+      ton = !!timeAttack;
+    if (ton) {
+      c.fillStyle = "rgba(55,240,208,0.12)";
+      c.fillRect(tx, py, pw, 22);
+    }
+    c.strokeStyle = ton ? TIME_COL : LINE;
+    c.lineWidth = ton ? 2 : 1;
+    c.strokeRect(tx + 0.5, py + 0.5, pw - 1, 21);
+    c.fillStyle = ton ? TIME_COL : MUTED;
+    c.font = font(10, ton ? "900" : "");
+    c.textAlign = "center";
+    c.textBaseline = "middle";
+    c.fillText("5 TIME", tx + pw / 2, py + 11);
+    c.fillStyle = MUTED;
+    c.font = font(9, "");
+    c.fillText("5 TIME ATTACK · stopwatch + per-room best", S.mid, py + 30);
   }
   foot(
     c,
     S,
     showPact
-      ? "ENTER START · ←/→ ROOM · ↑/↓ HEAT · [ ] PACE · 1–4 PACT · ESC"
+      ? "ENTER START · ←/→ ROOM · ↑/↓ HEAT · [ ] PACE · 1–5 MODES · ESC"
       : "ENTER START · ←/→ ROOM · ↑/↓ HEAT · [ ] PACE · ESC BACK",
   );
 }

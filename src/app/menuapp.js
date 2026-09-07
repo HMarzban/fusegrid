@@ -86,6 +86,7 @@ export function createMenuApp(opts = {}) {
     pauseView: 0, // 0 list / 1 inline OPTIONS; both reset on the PLAY->PAUSE edge
     pact: clampPact(o.pact),
     pace: clampPace(o.pace),
+    timeAttack: !!o.timeAttack,
     pactUnlocked: !!o.pactUnlocked,
     sound: o.sound !== false,
     render3d: !!o.render3d,
@@ -222,6 +223,9 @@ export function createMenuApp(opts = {}) {
         case "Digit4":
         case "Numpad4":
           return this.togglePactBit(PACT.SHRINK);
+        case "Digit5":
+        case "Numpad5":
+          return this.toggleTimeAttack();
         case "BracketLeft":
           return this.adjustPace(-1);
         case "BracketRight":
@@ -517,6 +521,16 @@ export function createMenuApp(opts = {}) {
       this.idleT = 0;
       if (this.screen !== SCREEN.LEVEL || !this.pactUnlocked) return false;
       this.pact = togglePact(this.pact, bit);
+      return true;
+    },
+    /* TIME ATTACK is a DISPLAY toggle: it gates the stopwatch chip and the
+       CLEARED time line and nothing else. It is deliberately absent from
+       startRun's args — it never reaches onStart, world or step(). */
+    toggleTimeAttack() {
+      this.idleT = 0;
+      if (this.screen !== SCREEN.LEVEL || !this.pactUnlocked) return false;
+      this.timeAttack = !this.timeAttack;
+      if (o.onTimeAttack) o.onTimeAttack(this.timeAttack);
       return true;
     },
     /* Start a run at app.level; main's onStart does loadLevel/score/state. */

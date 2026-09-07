@@ -103,6 +103,7 @@ export function drawShell(c, app, world, canvas, kind, getScores, getPlaques) {
       app.pact,
       app.pactUnlocked,
       app.pace,
+      app.timeAttack,
     );
   } else if (s === SCREEN.HOWTO) {
     menudraw.drawDim(c, 0.72, cw, chh);
