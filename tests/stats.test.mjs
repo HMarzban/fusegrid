@@ -15,6 +15,7 @@ import { SCREEN, ITEMS, createMenuApp } from "../src/app/menuapp.js";
 import { statsRows, statsNotes, statsPayload } from "../src/app/stats.js";
 import * as md from "../src/render/menudraw.js";
 import { createGame } from "../src/main.js";
+import { drawShell } from "../src/render/shellview.js";
 
 let pass = 0,
   fail = 0;
@@ -612,6 +613,65 @@ const TODAY = "2026-09-07";
     );
   } finally {
     delete globalThis.window;
+  }
+}
+
+// ---- 11g. Minor-7: the STATS and SCORES shellview routes are unpinned —
+// pin both (STATS is new, SCORES is a pre-existing gap R5 merely inherits) ----
+{
+  const noop = () => {};
+  const mkCtx = () => {
+    const texts = [];
+    const c = {
+      fillStyle: "", strokeStyle: "", lineWidth: 1, globalAlpha: 1, font: "",
+      textAlign: "left", textBaseline: "middle",
+      fillRect: noop, strokeRect: noop, clearRect: noop,
+      fillText(s) { texts.push(String(s)); },
+      strokeText: noop, beginPath: noop, moveTo: noop, lineTo: noop,
+      closePath: noop, fill: noop, stroke: noop, arc: noop, arcTo: noop,
+      ellipse: noop, quadraticCurveTo: noop, bezierCurveTo: noop,
+      save: noop, restore: noop, translate: noop, scale: noop, rotate: noop,
+      setTransform: noop, transform: noop, drawImage: noop,
+      createLinearGradient: () => ({ addColorStop: noop }),
+      createRadialGradient: () => ({ addColorStop: noop }),
+      measureText: () => ({ width: 0 }),
+    };
+    return { c, texts };
+  };
+  {
+    const { c, texts } = mkCtx();
+    drawShell(
+      c,
+      { screen: SCREEN.STATS, subT: 0, stats: { rows: [], notes: [] } },
+      {},
+      null,
+      "2d",
+      () => [],
+      () => 0,
+    );
+    check(
+      "shellview routes SCREEN.STATS to drawStats — YOUR CABINET is painted (Minor-7)",
+      texts.includes("YOUR CABINET"),
+      texts.join("|"),
+    );
+  }
+  {
+    const { c, texts } = mkCtx();
+    drawShell(
+      c,
+      { screen: SCREEN.SCORES, subT: 0, scoreHeat: 0 },
+      {},
+      null,
+      "2d",
+      () => [],
+      () => 0,
+    );
+    check(
+      "shellview routes SCREEN.SCORES to drawScores — BEST RUNS is painted" +
+        " (pre-existing gap, fairness baseline for Minor-7)",
+      texts.includes("BEST RUNS"),
+      texts.join("|"),
+    );
   }
 }
 

@@ -201,8 +201,11 @@ function check(name, cond, detail) {
   const { DEFAULT_SCORES } = await import("../src/app/highscores.js");
   const rec = () => {
     const texts = [],
-      rects = [];
-    let quads = 0;
+      rects = [],
+      lines = []; // Minor-6: moveTo/lineTo segments, so stroked rules are observable
+    let quads = 0,
+      curX = null,
+      curY = null;
     const c = {
       fillStyle: "",
       strokeStyle: "",
@@ -233,8 +236,11 @@ function check(name, cond, detail) {
       },
       strokeText() {},
       beginPath() {},
-      moveTo() {},
-      lineTo() {},
+      moveTo(x, y) { curX = x; curY = y; },
+      lineTo(x, y) {
+        lines.push({ x0: curX, y0: curY, x1: x, y1: y });
+        curX = x; curY = y;
+      },
       closePath() {},
       fill() {},
       stroke() {},
@@ -251,7 +257,7 @@ function check(name, cond, detail) {
       scale() {},
       rotate() {},
     };
-    return { c, texts, rects, get quads() { return quads; } };
+    return { c, texts, rects, lines, get quads() { return quads; } };
   };
   const plateOf = (rects) => rects.find((r) => r.fill === "rgba(8,12,22,0.92)");
   const last = (arr) => arr[arr.length - 1];
@@ -579,7 +585,7 @@ function check(name, cond, detail) {
       );
     }
     {
-      const { c, texts, rects } = rec();
+      const { c, texts, rects, lines } = rec();
       md.drawStats(c, L, 0.4, {
         rows: [
           ["RUNS", "118"], ["ROOMS CLEARED", "214"], ["DEATHS", "301"],
@@ -593,6 +599,27 @@ function check(name, cond, detail) {
       });
       const all = texts.map((t) => t.s);
       const p = plateOf(rects);
+      check(
+        // Minor-6: the rule (moveTo/lineTo, previously unrecorded) must sit
+        // strictly between the PLAY TIME (row 6) and CORE BEST (row 7)
+        // baselines — that is what separates the six lifetime counters from
+        // the three per-heat bests.
+        `the lifetime/bests rule sits strictly between PLAY TIME and CORE BEST at ${W}x${H}`,
+        (() => {
+          const playY = (texts.find((t) => t.s === "PLAY TIME") || {}).y;
+          const coreY = (texts.find((t) => t.s === "CORE BEST") || {}).y;
+          const ruleY = lines.length ? lines[lines.length - 1].y0 : undefined;
+          return (
+            playY != null && coreY != null && ruleY != null &&
+            playY < ruleY && ruleY < coreY
+          );
+        })(),
+        JSON.stringify({
+          lines,
+          playY: (texts.find((t) => t.s === "PLAY TIME") || {}).y,
+          coreY: (texts.find((t) => t.s === "CORE BEST") || {}).y,
+        }),
+      );
       check(
         `stats plate paints all nine labels and the head at ${W}x${H}`,
         ["RUNS", "ROOMS CLEARED", "DEATHS", "KILLS", "PICKUPS", "PLAY TIME",
