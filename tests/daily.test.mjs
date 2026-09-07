@@ -607,24 +607,47 @@ import { createGame } from "../src/main.js";
 // ---- 9e. Nit-3 (review 2026-09-07): Ruling 4's second half — "the row for
 // the new day reads NEW" — pinned end to end through main.js:292's boot
 // re-derivation, `app.dailyTag = dailyTag(dailyRec, todayStr())`. No clock
-// faked: yesterday is computed from the real Date, the same way 9/9c/9d
-// compute "local" for today. ----
+// faked: yesterday/today are computed from the real Date, the same way
+// 9/9c/9d compute "local". Paired with a today-dated positive control so
+// "NEW" is a real read of the planted record, not a vacuous fresh-cabinet
+// default (block 9:393 already covers the no-record case) — the control
+// proves a planted store reaches main's dailyRec at boot at all, which makes
+// the NEW half load-bearing rather than trivially satisfiable. ----
 {
-  const mem = new Map();
-  const ls = { getItem: (k) => (mem.has(k) ? mem.get(k) : null),
-    setItem: (k, v) => mem.set(k, String(v)) };
-  globalThis.window = { localStorage: ls, addEventListener() {} };
   const p2 = (n) => (n < 10 ? "0" + n : "" + n);
+  const d0 = new Date();
+  const local = d0.getFullYear() + "-" + p2(d0.getMonth() + 1) + "-" + p2(d0.getDate());
   const y0 = new Date();
   y0.setDate(y0.getDate() - 1);
   const yesterday = y0.getFullYear() + "-" + p2(y0.getMonth() + 1) + "-" + p2(y0.getDate());
+
+  const mem = new Map();
+  const ls = { getItem: (k) => (mem.has(k) ? mem.get(k) : null),
+    setItem: (k, v) => mem.set(k, String(v)) };
   ls.setItem(DAILY_KEY, JSON.stringify({ date: yesterday, best: 4200, played: 3, room: 5, pace: 1 }));
+  globalThis.window = { localStorage: ls, addEventListener() {} };
   try {
     const g = createGame(null, { seed: 777 });
     check(
       "a fresh boot re-derives the row tag against TODAY, not a stale stamped record — NEW",
       g.app.dailyTag === "NEW",
       g.app.dailyTag,
+    );
+  } finally {
+    delete globalThis.window;
+  }
+
+  const mem2 = new Map();
+  const ls2 = { getItem: (k) => (mem2.has(k) ? mem2.get(k) : null),
+    setItem: (k, v) => mem2.set(k, String(v)) };
+  ls2.setItem(DAILY_KEY, JSON.stringify({ date: local, best: 4200, played: 3, room: 5, pace: 1 }));
+  globalThis.window = { localStorage: ls2, addEventListener() {} };
+  try {
+    const g2 = createGame(null, { seed: 777 });
+    check(
+      "positive control: a TODAY-dated planted record does reach dailyRec at boot — PLAYED",
+      g2.app.dailyTag === "PLAYED",
+      g2.app.dailyTag,
     );
   } finally {
     delete globalThis.window;
