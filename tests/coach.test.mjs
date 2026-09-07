@@ -3,10 +3,20 @@ import {
   loadCoachSeen,
   saveCoachSeen,
   coachOpen,
+  COACH2_KEY,
+  COACH2_DUR,
+  loadCoach2,
+  saveCoach2,
+  coach2Seen,
+  coach2Mark,
+  coachTip,
+  coach2Tick,
 } from "../src/app/coach.js";
 import { drawCoach } from "../src/render/scenes.js";
 import { createGame } from "../src/main.js";
 import { SCREEN } from "../src/app/menuapp.js";
+import { POWER } from "../src/core/entities.js";
+import { readFileSync } from "node:fs";
 
 function fakeCanvasTexts() {
   const texts = [];
@@ -261,6 +271,111 @@ check("round-trip", loadCoachSeen(store) === true);
     "held fire across pause RESTART plants no bomb",
     g.world.bombs.length === 0,
     JSON.stringify(g.world.bombs),
+  );
+}
+
+// ---- R10 pin 1: the copy is DERIVED, and equals the printed strings ----
+{
+  check(
+    "coachTip composes the three locked strings verbatim",
+    coachTip("kick") === "KICK · walk into a bomb to slide it" &&
+      coachTip("throw") === "THROW · Shift+Space tosses a bomb" &&
+      coachTip("remote") === "REMOTE · Q detonates your bombs",
+    [coachTip("kick"), coachTip("throw"), coachTip("remote")].join(" | "),
+  );
+  /* Both halves matter: the strings above are what ships, and this asserts they
+     are the SAME strings the ITEMS help screen shows. A future POWER[].help
+     edit then reads as the copy change it is, instead of forking one line of
+     help into two that quietly disagree. */
+  check(
+    "and they are literally POWER's own name + help — one source, never two",
+    ["kick", "throw", "remote"].every((k) => {
+      const d = POWER.find((x) => x.t === k);
+      return coachTip(k) === d.name + " · " + d.help;
+    }),
+  );
+  check(
+    "coach.js authors no tip copy of its own",
+    !/walk into a bomb|Shift\+Space|detonates your bombs/.test(
+      readFileSync("src/app/coach.js", "utf8"),
+    ),
+  );
+  check(
+    "a verb with no tip is the empty string, never undefined",
+    coachTip("fire") === "" && coachTip(undefined) === "" && coachTip(null) === "",
+    JSON.stringify(coachTip("fire")),
+  );
+  /* Deviation from the design doc (2026-09-07-retention-wave2-design.md §6.2),
+     which states 34: "KICK · walk into a bomb to slide it".length is actually
+     35 (measured here from POWER's own strings) — a one-off miscount in the
+     doc's arithmetic, not a code bug. drawCoach2's pill width is derived from
+     the live string length, so nothing downstream depended on the wrong figure. */
+  check(
+    "the longest tip is 35 chars, measured from POWER's own strings",
+    Math.max(...["kick", "throw", "remote"].map((k) => coachTip(k).length)) === 35,
+    String(Math.max(...["kick", "throw", "remote"].map((k) => coachTip(k).length))),
+  );
+}
+
+// ---- R10 pin 2: the store, on the shared template ----
+{
+  check("COACH2_KEY is nb.coach.v2", COACH2_KEY === "nb.coach.v2", COACH2_KEY);
+  check(
+    "COACH2_DUR equals COACH_DUR — one timing rule, not two",
+    COACH2_DUR === COACH_DUR && COACH2_DUR === 3,
+    COACH2_DUR + "/" + COACH_DUR,
+  );
+  const m2 = new Map();
+  const st = {
+    getItem: (k) => (m2.has(k) ? m2.get(k) : null),
+    setItem: (k, v) => m2.set(k, String(v)),
+  };
+  check(
+    "an unseen cabinet is all zeros",
+    JSON.stringify(loadCoach2(st)) === '{"k":0,"t":0,"r":0}',
+    JSON.stringify(loadCoach2(st)),
+  );
+  const a = coach2Mark(loadCoach2(st), "throw");
+  check("coach2Mark returns a NEW object, never mutating", a.t === 1 && loadCoach2(st).t === 0);
+  saveCoach2(a, st);
+  check(
+    "round-trip through an injected store",
+    loadCoach2(st).t === 1 && loadCoach2(st).k === 0,
+    JSON.stringify(loadCoach2(st)),
+  );
+  check(
+    "coach2Seen reads the bit for each verb and ignores the rest",
+    coach2Seen(loadCoach2(st), "throw") === true &&
+      coach2Seen(loadCoach2(st), "kick") === false &&
+      coach2Seen(loadCoach2(st), "fire") === false,
+  );
+  check(
+    "coach2Mark on an unknown verb is a no-op rather than a new field",
+    JSON.stringify(coach2Mark(loadCoach2(st), "fire")) === JSON.stringify(loadCoach2(st)),
+  );
+  const junk = new Map();
+  const bad = {
+    getItem: () => '{"k":"yes","t":5,"r":null,"zzz":1}',
+    setItem: (k, v) => junk.set(k, String(v)),
+  };
+  check(
+    "a junk blob clamps to the three-bit shape",
+    JSON.stringify(loadCoach2(bad)) === '{"k":1,"t":1,"r":0}',
+    JSON.stringify(loadCoach2(bad)),
+  );
+  let threw = false;
+  try {
+    const hostile = { getItem() { throw new Error("nope"); }, setItem() { throw new Error("nope"); } };
+    loadCoach2(hostile);
+    saveCoach2({ k: 1, t: 0, r: 0 }, hostile);
+  } catch (_) {
+    threw = true;
+  }
+  check("neither loadCoach2 nor saveCoach2 throws on a hostile store", !threw);
+  check(
+    "a corrupt blob degrades to zeros",
+    JSON.stringify(loadCoach2({ getItem: () => "{not json", setItem() {} })) ===
+      '{"k":0,"t":0,"r":0}',
   );
 }
 
