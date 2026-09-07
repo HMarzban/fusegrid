@@ -435,3 +435,33 @@ export function drawCoach(c, alpha) {
   c.fillText("SPACE", ox + pw / 2, py + ph / 2 + 1);
   c.restore();
 }
+
+/* Coach v2 (R10): the same panel language as the ghost coach above, in
+   HUD/overlay space so CLASSIC 2D and REAL 3D are identical — the same space
+   drawHudChips and drawCoach use. y=130 sits below the combo callout at 96 and
+   well below the HUD chip row, which ends at 40. The text arrives FINISHED:
+   main.js composes it in app/coach.js and hands it down, and this file never
+   re-derives it, exactly as it never re-derives COACH_DUR. A fade and nothing
+   else — no blink, no scale-pop, no colour cycling — so REDUCE FLASH players
+   get the same panel rather than no panel. */
+export function drawCoach2(c, alpha, text) {
+  if (!(alpha > 0) || !text) return;
+  const s = String(text);
+  const x = (CFG.COLS * CFG.TILE) / 2,
+    y = 130,
+    w = s.length * 7.2 + 24;
+  c.save();
+  c.globalAlpha = alpha;
+  c.textAlign = "center";
+  c.textBaseline = "middle";
+  c.lineWidth = 1;
+  c.strokeStyle = COACH_LINE;
+  c.fillStyle = COACH_PANEL;
+  rr(c, x - w / 2, y - 13, w, 26, 8);
+  c.fill();
+  c.stroke();
+  c.fillStyle = COACH_TEXT;
+  c.font = "900 12px ui-monospace,monospace";
+  c.fillText(s, x, y + 1);
+  c.restore();
+}

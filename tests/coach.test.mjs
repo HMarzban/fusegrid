@@ -12,7 +12,7 @@ import {
   coachTip,
   coach2Tick,
 } from "../src/app/coach.js";
-import { drawCoach } from "../src/render/scenes.js";
+import { drawCoach, drawCoach2 } from "../src/render/scenes.js";
 import { createGame } from "../src/main.js";
 import { SCREEN } from "../src/app/menuapp.js";
 import { POWER } from "../src/core/entities.js";
@@ -377,6 +377,70 @@ check("round-trip", loadCoachSeen(store) === true);
     JSON.stringify(loadCoach2({ getItem: () => "{not json", setItem() {} })) ===
       '{"k":0,"t":0,"r":0}',
   );
+}
+
+// ---- R10 pin 3: silent when closed, and painted at both draw sites ----
+{
+  const silent = (alpha, text) => {
+    const calls = [];
+    const rec = new Proxy(function () {}, {
+      get: (t, p) => {
+        if (p === Symbol.toPrimitive) return () => "";
+        return (...a) => { calls.push(p); return rec; };
+      },
+      apply: () => rec,
+      set: (t, p) => { calls.push(p); return true; },
+    });
+    drawCoach2(rec, alpha, text);
+    return calls.length === 0;
+  };
+  check("drawCoach2 with alpha 0 draws nothing", silent(0, "KICK · x"));
+  check("drawCoach2 with an empty tip draws nothing", silent(1, ""));
+  check("drawCoach2 with no tip at all draws nothing", silent(1, undefined));
+  const texts = [];
+  const noop = () => {};
+  const c = {
+    save: noop, restore: noop, translate: noop, scale: noop, beginPath: noop,
+    closePath: noop, moveTo: noop, lineTo: noop, arc: noop, arcTo: noop,
+    bezierCurveTo: noop, quadraticCurveTo: noop, ellipse: noop, fill: noop,
+    stroke: noop, fillRect: noop, strokeRect: noop, clearRect: noop,
+    setTransform: noop,
+    fillText: (t) => texts.push(String(t)), strokeText: noop,
+  };
+  drawCoach2(c, 1, coachTip("kick"));
+  check(
+    "an open tip paints its finished string, unmodified",
+    texts.length === 1 && texts[0] === "KICK · walk into a bomb to slide it",
+    texts.join("|"),
+  );
+  check(
+    "scenes.js reuses v1's panel constants rather than declaring a second set",
+    (() => {
+      const src = readFileSync("src/render/scenes.js", "utf8");
+      return (src.match(/const COACH_TEXT =/g) || []).length === 1 &&
+        (src.match(/COACH_PANEL/g) || []).length >= 2 &&
+        !/COACH2_PANEL|COACH2_TEXT|COACH2_LINE/.test(src);
+    })(),
+  );
+  check(
+    "scenes.js never re-derives the tip — main hands the finished string down",
+    !/POWER|coachTip/.test(readFileSync("src/render/scenes.js", "utf8")),
+  );
+  /* Wave-1's own bug class: one draw site updated, one not. Both are asserted
+     in the same pin so they cannot land in different commits. */
+  for (const [f, needle] of [
+    ["src/render/renderer.js", "drawCoach(ctx, (o&&o.coach)||0)"],
+    ["src/render/three/wrapper.js", "drawCoach(ovCtx,(o&&o.coach)||0)"],
+  ]) {
+    const src = readFileSync(f, "utf8");
+    check(
+      f + ": drawCoach2 is wired under the same o.hud===true gate as drawCoach",
+      src.indexOf(needle) > 0 &&
+        /if\s*\(\s*o\s*&&\s*o\.hud\s*===\s*true\s*\)\s*drawCoach2\(/.test(src) &&
+        src.indexOf("drawCoach2(") > src.indexOf(needle),
+      (src.match(/.*drawCoach2\(.*/) || [""])[0].trim(),
+    );
+  }
 }
 
 console.log("\n  COACH RESULT: " + pass + " PASS / " + fail + " FAIL");

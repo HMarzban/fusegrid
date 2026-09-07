@@ -5,7 +5,7 @@ import {
   drawItems, drawEnemies, drawPlayer, drawBombs, drawBlades
 } from "./sprites.js";
 import {onEvent, updateFx, drawFx, drawFxOverlay, feedFx, getShake, getFlash, initFx, syncFx} from "./fx.js";
-import {drawOverlay, overlayBox, updateHud, makeHud, drawHudChips, drawCoach} from "./scenes.js";
+import {drawOverlay, overlayBox, updateHud, makeHud, drawHudChips, drawCoach, drawCoach2} from "./scenes.js";
 import {draw3dBackground, buildPainters, byDepth} from "./r3d/scene3d.js";
 
 /* Renderer: owns a 2D context + view. Reads world, never mutates sim state.
@@ -88,6 +88,7 @@ export function createRenderer(canvas, opts={}){
        the fade alpha precomputed in main.js from coachOpen(...) + COACH_DUR
        + world.state==="PLAY" (0 when closed), never re-derived here. */
     if(o&&o.hud===true) drawCoach(ctx, (o&&o.coach)||0);
+    if(o&&o.hud===true) drawCoach2(ctx, (o&&o.coach2&&o.coach2.a)||0, (o&&o.coach2&&o.coach2.s)||"");
   }
   return {canvas, ctx, render, consumeEvents, getShake};
 }
