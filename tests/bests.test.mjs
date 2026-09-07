@@ -737,5 +737,122 @@ const rec = () => {
   );
 }
 
+/* ---- SELF-REVIEW PIN D (review Minor-2 + Nit-1): the quit-run write path is
+   BEHAVIORAL, not source-order-only — KeyM/RESTART/QUIT TO MENU each drop a
+   live run through persistScore's endRun(), verified by the actual bytes
+   landed in nb.bests.v1, not a regex over main.js. Reproduces the reviewer's
+   own repro: world.state = "PAUSE" -> one g.loop() frame to refresh
+   app.worldState -> the quit call. ---- */
+{
+  const noop = () => {};
+  const mem = {};
+  globalThis.window = {
+    addEventListener: noop, removeEventListener: noop,
+    localStorage: {
+      getItem: (k) => (k in mem ? mem[k] : null),
+      setItem: (k, v) => { mem[k] = String(v); },
+    },
+  };
+  try {
+    delete mem[BESTS_KEY];
+    const g1 = createGame(null, { autoplay: true });
+    g1.world.score = 777;
+    g1.input.onPause();
+    g1.loop(16);
+    g1.input.onUiKey("KeyM");
+    check(
+      "D1: KeyM from PAUSE writes nb.bests.v1 through persistScore's endRun",
+      JSON.parse(mem[BESTS_KEY] || "{}").b["0:0:1"].s === 777,
+      mem[BESTS_KEY],
+    );
+
+    delete mem[BESTS_KEY];
+    const g2 = createGame(null, { autoplay: true });
+    g2.world.score = 888;
+    g2.input.onPause();
+    g2.loop(16);
+    g2.app.pauseCursor = 1; // RESTART
+    g2.app.confirm();
+    check(
+      "D2: pause RESTART writes nb.bests.v1 the same way KeyM does",
+      JSON.parse(mem[BESTS_KEY] || "{}").b["0:0:1"].s === 888,
+      mem[BESTS_KEY],
+    );
+
+    delete mem[BESTS_KEY];
+    const g3 = createGame(null, { autoplay: true });
+    g3.world.score = 999;
+    g3.input.onPause();
+    g3.loop(16);
+    g3.app.pauseCursor = 3; // QUIT TO MENU
+    g3.app.confirm();
+    check(
+      "D3: pause QUIT TO MENU writes nb.bests.v1 the same way KeyM does",
+      JSON.parse(mem[BESTS_KEY] || "{}").b["0:0:1"].s === 999,
+      mem[BESTS_KEY],
+    );
+
+    /* Nit-1: the runEnded latch. LOSE writes once; a following quit call is a
+       no-op — not just "does not throw", but a BYTE-IDENTICAL store. The
+       score bump to 999999 on the second call is LOAD-BEARING: recordBest is
+       monotonic-max, so a duplicate write at the SAME score would move
+       nothing whether or not the latch exists, silently resurrecting the
+       review's M20 (the mutation that deleted the latch and still passed)
+       as green here too. Forcing world.state "PAUSE" straight after "LOSE"
+       is synthetic — the review confirmed PAUSE is unreachable from LOSE in
+       real play — it exists only to drive persistScore's endRun() a second
+       time on the same run; the REACHABLE double-fire is the finale (WIN
+       edge -> `world.finale && state==="MENU"` -> persistScore), pinned
+       separately as D6/D7 below. */
+    delete mem[BESTS_KEY];
+    const g4 = createGame(null, { autoplay: true });
+    g4.world.score = 500;
+    g4.world.state = "LOSE";
+    g4.loop(16); // PLAY -> LOSE: endRun() writes once
+    const afterLose = mem[BESTS_KEY];
+    check(
+      "D4: the LOSE edge writes nb.bests.v1",
+      JSON.parse(afterLose || "{}").b["0:0:1"].s === 500,
+      afterLose,
+    );
+    g4.world.score = 999999; // load-bearing: see comment above — do not simplify away
+    g4.world.state = "PAUSE"; // synthetic: see comment above
+    g4.loop(32);
+    g4.input.onUiKey("KeyM");
+    check(
+      "D5: a following KeyM after LOSE is a no-op — the runEnded latch already fired (store byte-identical)",
+      mem[BESTS_KEY] === afterLose,
+      mem[BESTS_KEY],
+    );
+
+    /* D6/D7: the REACHABLE double-fire (Nit-1's actual finding) — the finale
+       WIN edge ends the run, then world.finale && state==="MENU" runs
+       persistScore() a second time on the same run. */
+    delete mem[BESTS_KEY];
+    const g5 = createGame(null, { autoplay: true });
+    g5.world.level = 5; // a finale room
+    g5.world.score = 4242;
+    g5.world.state = "WIN";
+    g5.loop(16); // PLAY -> WIN at the finale: endRun() writes once
+    const afterFinale = mem[BESTS_KEY];
+    check(
+      "D6: the finale WIN edge writes nb.bests.v1",
+      JSON.parse(afterFinale || "{}").b["0:0:1"].s === 4242,
+      afterFinale,
+    );
+    g5.world.score = 9000000; // load-bearing, same reason as D4/D5 — see comment above
+    g5.world.finale = true;
+    g5.world.state = "MENU";
+    g5.loop(32); // world.finale && state==="MENU" -> persistScore() -> endRun() no-op
+    check(
+      "D7: the finale->MENU persistScore call is a no-op — same latch, the reachable double-fire path",
+      mem[BESTS_KEY] === afterFinale,
+      mem[BESTS_KEY],
+    );
+  } finally {
+    delete globalThis.window;
+  }
+}
+
 console.log("\n  BESTS RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);
