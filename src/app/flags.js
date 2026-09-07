@@ -4,12 +4,16 @@
 export function readFlags(search, opts = {}) {
   const s = String(search || "");
   const rm = s.match(/[?&]render=(3d|iso)\b/);
+  const cm = s.match(/[?&]code=([0-9A-Za-z]{12})\b/);
   return {
     urlKind: rm ? rm[1] : null,
     autoplay: /[?&]play=1/.test(s) || opts.autoplay === true,
     netLocal: /[?&]net=local/.test(s) || opts.netLocal === true,
     orbit: opts.orbit ?? /[?&]orbit=1/.test(s),
     debug: opts.debug === true || /[?&]debug=1/.test(s),
+    // R8: URL-only — unlike the flags above, there is no opts fallback,
+    // because the whole product claim is that the link IS the interaction.
+    code: cm ? cm[1].toUpperCase() : null,
   };
 }
 

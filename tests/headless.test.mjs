@@ -930,8 +930,10 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   // seed write is a ternary against it; endRun's record+tag write moved into
   // daily.js's finishDaily, one shared "today" param for both halves) —
   // measured 787->786.
-  check("main.js stays a lean browser entry (<=788 lines)",
-    L.length<=788,String(L.length));
+  // R8 challenge-code wave: +9 lines (code.js import; the ?code= decode and
+  // playChallenge boot branch; the KeyB copy block) — bumped 788->798.
+  check("main.js stays a lean browser entry (<=798 lines)",
+    L.length<=798,String(L.length));
   const lastImp=L.reduce((a,l,i)=>/^import[\s{]/.test(l)?i:a,-1);
   const firstDecl=L.findIndex(l=>/^(export\s|const\s|let\s|var\s|function\s|class\s)/.test(l));
   check("main.js keeps every import at the top (no mid-file import sprawl)",

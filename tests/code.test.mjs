@@ -1,6 +1,9 @@
 import { CODE_V, encodeChallenge, decodeChallenge } from "../src/app/code.js";
 import { createRng } from "../src/core/rng.js";
 import { readFileSync } from "node:fs";
+import { readFlags } from "../src/app/flags.js";
+import { SCREEN, createMenuApp } from "../src/app/menuapp.js";
+import { createGame } from "../src/main.js";
 
 let pass = 0,
   fail = 0;
@@ -149,6 +152,110 @@ function check(name, cond, detail) {
     "code.js carries no score field, no level field, and no Date/DOM/Math.random",
     !/score|level|Math\.random|\bDate\b|document|window/.test(src),
     (src.match(/score|level|Math\.random|Date|document|window/g) || []).join(","),
+  );
+}
+
+// ---- 5. flags: ?code= parses, and nothing else can inject it ----
+{
+  check(
+    "?code= parses a well-formed twelve-char code, uppercased",
+    readFlags("?code=F1021I3V93H8").code === "F1021I3V93H8" &&
+      readFlags("?code=f1021i3v93h8").code === "F1021I3V93H8",
+    readFlags("?code=f1021i3v93h8").code,
+  );
+  check(
+    "eleven or thirteen characters do not parse",
+    readFlags("?code=F1021I3V93H").code === null &&
+      readFlags("?code=F1021I3V93H8X").code === null,
+    readFlags("?code=F1021I3V93H8X").code,
+  );
+  check(
+    "the field defaults to null and rides beside the shipped flags",
+    readFlags("").code === null &&
+      readFlags("?render=3d&code=F1021I3V93H8").code === "F1021I3V93H8" &&
+      readFlags("?render=3d&code=F1021I3V93H8").urlKind === "3d",
+    JSON.stringify(readFlags("?render=3d&code=F1021I3V93H8")),
+  );
+  check(
+    "opts cannot inject a code — the URL is the only door",
+    readFlags("", { code: "F1021I3V93H8" }).code === null,
+    String(readFlags("", { code: "F1021I3V93H8" }).code),
+  );
+}
+
+// ---- 6. playChallenge honours the decoded pact even when it is locked ----
+{
+  const got = [];
+  const a = createMenuApp({ onStart: (x) => got.push(x) });
+  check("pactUnlocked starts false on a fresh cabinet", a.pactUnlocked === false);
+  a.playChallenge({ seed: 123456789, heat: 2, pact: 9, pace: 1 });
+  check(
+    "the decoded pact bits pass THROUGH a locked gate — stripping them would change the board",
+    got.length === 1 && got[0].pact === 9 && got[0].heat === 2 &&
+      got[0].pace === 1 && got[0].seed === 123456789 && got[0].level === 1,
+    JSON.stringify(got[0]),
+  );
+  check(
+    "and playChallenge never grants the unlock as a side effect",
+    a.pactUnlocked === false && a.screen === SCREEN.GAME,
+    String(a.pactUnlocked),
+  );
+  check(
+    /* Deviation from the plan's literal 999: clampPact is a BITMASK
+       ((p|0)&15, core/pact.js), not a range clamp — 999&15 is 7, not 15, so
+       999 does not exercise "clamps to the max" the way clampHeat/clampPace's
+       99/9 do. -1&15 is 15 (all-ones), which is the junk value that actually
+       proves the point. */
+    "junk clamps rather than reaching the world raw",
+    (() => {
+      const b = createMenuApp({ onStart: (x) => got.push(x) });
+      b.playChallenge({ seed: -1, heat: 99, pact: -1, pace: 9 });
+      const g = got[got.length - 1];
+      return g.heat === 2 && g.pact === 15 && g.pace === 1 && g.seed >= 0;
+    })(),
+    JSON.stringify(got[got.length - 1]),
+  );
+}
+
+// ---- 7. main.js boot: the link IS the interaction ----
+{
+  const mem = new Map();
+  const ls = { getItem: (k) => (mem.has(k) ? mem.get(k) : null),
+    setItem: (k, v) => mem.set(k, String(v)) };
+  globalThis.window = { localStorage: ls, addEventListener() {} };
+  try {
+    const g = createGame(null, { seed: 7, code: "F1021I3V93H8" });
+    /* opts.code is NOT a flags field (block 5 pins that), so this game must
+       boot normally — the door is the URL, and readFlags is what reads it. */
+    check(
+      "opts.code alone does not start a challenge",
+      g.world.seed === 7,
+      String(g.world.seed),
+    );
+  } finally {
+    delete globalThis.window;
+  }
+  const src = readFileSync("src/main.js", "utf8");
+  check(
+    "main.js decodes flags.code at boot and hands it to playChallenge",
+    /flags\.code \? decodeChallenge\(flags\.code\) : null/.test(src) &&
+      /app\.playChallenge\(chal\)/.test(src),
+    (src.match(/const chal[^\n]*/) || [])[0],
+  );
+  check(
+    "?code= wins over ?play=1 when both are present",
+    /if \(autoplay && !chal\)/.test(src),
+    (src.match(/if \(autoplay[^\n]*/) || [])[0],
+  );
+  check(
+    "a challenge boot marks the cabinet seen, exactly as ?play=1 does",
+    /if \(chal\) \{ app\.playChallenge\(chal\); saveCabinetSeen\(\); \}/.test(src),
+    (src.match(/if \(chal\)[^\n]*/) || [])[0],
+  );
+  check(
+    "there is no window.prompt anywhere — src/app is DOM-free and main's seams stay out of main",
+    !/window\.prompt|\bprompt\(/.test(src) &&
+      !/prompt/.test(readFileSync("src/app/code.js", "utf8")),
   );
 }
 

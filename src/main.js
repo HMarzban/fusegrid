@@ -28,6 +28,7 @@ import { timeKey, loadTimes, saveTimes, bestOf, recordTime } from "./app/times.j
 import { bestKey, loadBests, saveBests, bestOfRun, recordBest, newTally, feedTally } from "./app/bests.js";
 import { loadStats, setStatsOn, stat, statPlaques, statsRows, statsNotes, statsPayload } from "./app/stats.js";
 import { dailySeed, loadDaily, dailyTag, dailyStamp, finishDaily } from "./app/daily.js";
+import { decodeChallenge, encodeChallenge } from "./app/code.js";
 import {
   loadCoachSeen,
   saveCoachSeen,
@@ -331,7 +332,11 @@ export function createGame(canvas, opts = {}) {
     if (audio.unlocked && audio.unlocked()) fireJingle();
   }
   stat("session_start", null, dateStr());
-  if (autoplay) {
+  // R8: a decodable ?code= wins over ?play=1 — the more specific instruction.
+  // An undecodable code leaves chal null and the boot proceeds normally.
+  const chal = flags.code ? decodeChallenge(flags.code) : null;
+  if (chal) { app.playChallenge(chal); saveCabinetSeen(); }
+  if (autoplay && !chal) {
     app.startRun();
     saveCabinetSeen(); // ?play=1 skips bootFromIntro, whose own markCabinet
     // never fires; without this a first-timer shared a ?play=1 link gets

@@ -603,6 +603,24 @@ export function createMenuApp(opts = {}) {
       return this._playCore({ level: 1, heat: 0, pact: 0, pace: 0,
                               seed: d.seed, daily: d.date });
     },
+    /* A challenge run honours the DECODED pact bits even when pactUnlocked is
+       false, and never writes nb.pact.v1. That gate governs what a player may
+       choose FOR THEMSELVES; it cannot govern what a shared board CONTAINS,
+       because pact changes the board (applyPact's buriedAdd -> item count ->
+       rng draw order) — stripping it would hand the recipient a different board
+       under the same code, the one thing this feature exists to prevent. A
+       locked recipient still stops at room 5 via roomCap: same boards, shorter
+       run. Both disclosed. */
+    playChallenge(t) {
+      const c = t || {};
+      return this._playCore({
+        level: 1,
+        heat: clampHeat(c.heat),
+        pact: clampPact(c.pact),
+        pace: clampPace(c.pace),
+        seed: c.seed >>> 0,
+      });
+    },
     /* Shared CORE handoff for playFromAttract/bootFromIntro (plan 7): reset
        the shell into GAME and hand args to main's onStart. Callers gate the
        screen check themselves before reaching here. */
