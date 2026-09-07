@@ -355,7 +355,7 @@ const TODAY = "2026-09-07";
   check(
     "with no daily record there is ONE note and it is the session line",
     n0.length === 1 &&
-      n0[0] === "SINCE 2026-08-30 · LAST 2026-09-07 · 42 SESSIONS · BESTS ARE PER HEAT",
+      n0[0] === "SINCE 2026-08-30 · LAST 2026-09-07 · 42 SESSIONS · BESTS: PLAIN · NORM",
     JSON.stringify(n0),
   );
   const n1 = statsNotes(v, { date: TODAY, best: 1840, played: 3 }, TODAY);

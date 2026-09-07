@@ -189,7 +189,7 @@ export function statsNotes(v, daily, today) {
   }
   out.push(
     "SINCE " + (s.a.first || "—") + " · LAST " + (s.a.last || "—") + " · " +
-    s.a.sessions + " SESSIONS · BESTS ARE PER HEAT",
+    s.a.sessions + " SESSIONS · BESTS: PLAIN · NORM",
   );
   return out;
 }

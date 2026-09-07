@@ -629,9 +629,16 @@ NORM pace). Mixing an IRON run into "CORE BEST" would be the same unit error
 - note 1 — `DAILY 2026-09-07 · BEST 1840 · 3 TRIES · YOUR OWN ATTEMPTS ONLY`, or
   `DAILY 2026-09-07 · NOT PLAYED YET` when `daily.date !== today`, or omitted
   entirely before R3 lands.
-- note 2 — `SINCE 2026-08-30 · LAST 2026-09-07 · 42 SESSIONS · BESTS ARE PER HEAT`.
-  Width: 72 chars at the 10 px mono face (≈6 px/char) = 432 px against
-  `S.iw` 448. Checked at both sizes (`S.iw` is 448 at each).
+- note 2 — `SINCE 2026-08-30 · LAST 2026-09-07 · 42 SESSIONS · BESTS: PLAIN · NORM`.
+  Width: 70 chars at the 10 px mono face (≈6 px/char) = 420 px against
+  `S.iw` 448 (72 chars / 432 px at a 4-digit SESSIONS count — still under the
+  74-char pin). Checked at both sizes (`S.iw` is 448 at each).
+  **Ruling 2026-09-07 (review R5 Minor-8):** "BESTS ARE PER HEAT" under-told
+  the filter — rows 7-9 also require the plain-pact, NORM-pace bucket, not
+  heat alone — so note 2 now names both, using the repo's own existing words
+  for that bucket (`PLAIN`: `stats.js`'s own name for the no-pact bucket;
+  `NORM`: `PACE_NAME[1]`) rather than widening the `CORE BEST`/`PLUS BEST`/
+  `MAX BEST` row labels, which this ruling keeps unchanged.
 
 **Failure mode named by report §4 R5** — "under-designed, it reads as a debug
 tool". The mitigations are structural: a real plate, right-aligned values, the

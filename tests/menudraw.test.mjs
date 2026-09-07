@@ -594,7 +594,7 @@ function check(name, cond, detail) {
         ],
         notes: [
           "DAILY 2026-09-07 · NOT PLAYED YET",
-          "SINCE 2026-08-30 · LAST 2026-09-07 · 42 SESSIONS · BESTS ARE PER HEAT",
+          "SINCE 2026-08-30 · LAST 2026-09-07 · 42 SESSIONS · BESTS: PLAIN · NORM",
         ],
       });
       const all = texts.map((t) => t.s);
@@ -630,7 +630,7 @@ function check(name, cond, detail) {
       check(
         `stats plate paints both notes and the copy foot at ${W}x${H}`,
         all.some((s) => s.indexOf("NOT PLAYED YET") >= 0) &&
-          all.some((s) => s.indexOf("BESTS ARE PER HEAT") >= 0) &&
+          all.some((s) => s.indexOf("BESTS: PLAIN · NORM") >= 0) &&
           all.includes("C COPY MY STATS · ESC BACK"),
         all.join("|"),
       );

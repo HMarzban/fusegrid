@@ -1,6 +1,6 @@
 import { CACHE_NAME, PRECACHE, fetchPolicy } from "./src/pwa/shell.js";
 
-const REV = "fusegrid-shell-v126";
+const REV = "fusegrid-shell-v127";
 if (REV !== CACHE_NAME) throw new Error("PWA REV drift");
 
 self.addEventListener("install", (event) => {
