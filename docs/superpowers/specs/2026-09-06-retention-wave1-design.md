@@ -350,6 +350,20 @@ It is a constant on every clear, so times stay comparable; it is **never
 subtracted** — subtracting would put a `CFG` constant into the app layer for
 a cosmetic gain and could go negative on an edge case.
 
+**Disclosed: recorded bests are device-dependent by design, not just by
+frame rate.** `roomT` accumulates the same clamped RAF `dt` the sim steps on
+(`main.js`'s loop clamps `dt` to `0.25` before either `acc` or `roomT` sees
+it), and the sim's own anti-spiral-of-death cap zeroes `acc` outright after 6
+fixed steps in one frame (`main.js`: `if (steps > 6) { acc = 0; break; }`) —
+so a machine hitching badly enough to trip that cap burns real wall-clock time
+that never reaches `world.tick`, yet `roomT` still counts every clamped `dt`
+of it. A best set on a stuttering machine is therefore not directly comparable
+to one set on a smooth one, in either direction: the recorded second count can
+run either ahead of or behind the room's actual simulated tick count. This is
+the same clock every other wall-clock reading in this file (`coachT`, R4's
+timing) already accepts; R7 does not add a new risk, it just makes the number
+visible and persisted.
+
 ### 3.2 `src/app/times.js` — the one new key
 
 `nb.times.v1`, built from the `load*/save*(store)` template shared by
@@ -884,3 +898,47 @@ right-aligned score column.
 **Open owner questions this spec does not answer**, and deliberately: Q1
 (continue-credit, report §7.1 — blocks nothing here) and Q2 (new-`SCREEN`
 policy, §7.2 — §3.4 routes around it rather than settling it).
+
+## 9. As-shipped deviations
+
+Recorded after the wave's closing fix pass, so this file stops implying a plan
+that was executed unchanged. None of these change any binding decision above;
+they correct this document to match what actually shipped.
+
+1. **PWA chain ran v104→v115, not the four illustrative bumps in §7.** §7 named
+   one bump per R-task (`R2 → v104, R7 → v105, R11 → v106 …, R4 → v107 …`); the
+   RULE it states ("one paired bump per precache-touching commit") held exactly
+   — it is the per-task COUNT that undercounted. The shipped chain is 12
+   single-step bumps, `v103` (baseline) → `v115`: two commits unrelated to this
+   wave (the MAKO app icon and the icon-set completion) took `v104` and `v107`;
+   R2 took `v105/v106/v108` for its initial landing plus `v109` for the
+   drawFxOverlay fix round (item 2 below); R7 took `v110→v113`, one per commit;
+   R11 took `v114` (the swap) and `v115` (the CROWN revert, `cc1f055`); R4
+   shipped docs-only and bumped nothing. This closing fix wave adds `v116`.
+2. **The draw site, not just `feedFx`, gates on `world.state==="PLAY"`.** §2.4's
+   wiring line (`if (o && o.hud === true) drawFxOverlay(ctx);`) and §2.6 both
+   describe the freeze as `feedFx`'s alone. A task review found that leaves the
+   overlay itself still painting a callout the timer merely stopped decaying —
+   `render()` runs on PAUSED/WIN/LOSE frames too, so a callout live at the
+   moment of pause kept drawing over the veil. Fixed in `0419fbf`: both draw
+   call sites (`renderer.js:86`, `wrapper.js:156`) also gate on
+   `world.state === "PLAY"`, on top of (not instead of) `feedFx`'s own freeze.
+3. **`nearMissOf`'s shipped signature is `nearMissOf(world, events)`, not
+   `nearMissOf(world)`** (§2.3 line). The planning pass added an optional
+   second parameter (`events = world.events` when the caller passes `undefined`)
+   so `feedFx` and the pins in `tests/fx.test.mjs` can hand it an explicit
+   drained batch instead of relying on `world.events` still being populated —
+   purity and export are unchanged.
+4. **R4's protocol substituted headless timing for a 60 fps recording.** §5
+   describes measuring "the shipped whole"; the environment that actually ran
+   R4 (an automated CDP tab) throttles `requestAnimationFrame`/`setTimeout` to
+   ~1 Hz while hidden and never fires Paint Timing entries, so no video
+   recording was possible. The shipped measurement substitutes Navigation
+   Timing `t0` plus source-verified constants, driven end-to-end through
+   `window.__GAME__` and real `KeyboardEvent`s — disclosed in the plan's
+   Results rather than presented as the frame-accurate recording §5 pictured.
+5. **§4.3's `onPause` line numbers moved.** `main.js` grew between this spec
+   and ship (R7's `roomT`/`times.js` wiring, R2's fix round). `onPause` is now
+   `main.js:346-357` (was cited as `main.js:296-313`); the WIN-branch absence
+   row now reads `main.js:353-356` (was `:305-312`). No logic in `onPause`
+   changed — only its position in the file.

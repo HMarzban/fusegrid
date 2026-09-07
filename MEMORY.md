@@ -16,6 +16,49 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-07 — Retention wave 1 closing fix wave
+- Fixed two coverage gaps the wave's final review flagged as MUST-FIX and
+  added behavioral pins for both (`tests/times.test.mjs` Pins C/D,
+  `tests/fx.test.mjs`'s same-level-restart pin) — RED-verified by mutating
+  `src/main.js`'s WIN-edge line (`roomT*2+7`, and swapping in `world.time`)
+  and reverting `src/render/fx.js`'s `syncFx` to its pre-fix form, each time
+  confirming the new pin actually fails before confirming it passes clean.
+  (1) The WIN-edge `saveTimes(recordTime(v,k,roomT))` had no pin on the
+  ACTUAL persisted number — only on timing/ordering — so either mutation left
+  the suite green; Pin C now drives a real `createGame` through PLAY, a
+  pause (so `roomT` and `world.time` diverge), and a forced WIN edge, then
+  independently re-accumulates the same PLAY-only clock from the same `t`
+  sequence to predict the stored tenths. Pin D round-trips the TIME-ATTACK
+  toggle through the real `toggleTimeAttack()` → `onTimeAttack` → store
+  chain, not the pre-existing source regexes.
+  (2) `syncFx`'s identity tag was `world.seed+":"+world.level` alone, so a
+  same-level restart (`startGame()`/pause-RESTART both call
+  `loadLevel(world,1,false)`) never changed the tag and left a frozen
+  callout/particles painting the new run's first frames. `loadLevel`
+  (`world.js:74`) reassigns `w.rng` to a brand-new object on every call — the
+  only `.rng =` in `src/` (confirmed by a tree grep before changing anything)
+  — so `syncFx` now folds `world.rng`'s object identity into the tag
+  alongside the string. Two pre-existing `fx.test.mjs` cases that relied on
+  two *different* world objects sharing a seed:level string to dodge a retag
+  were updated to reuse one real world throughout, matching the new
+  (correct) semantics. PWA v115→v116 (`fx.js` is precached).
+  (3) `docs/superpowers/specs/2026-09-06-cvd-audit.md` §3's CROWN
+  `brickHi@.55` row still showed the reverted swap's composite; recomputed
+  from the shipped `#fff0a8` with the doc's own formulas and corrected it to
+  `#ffe37c | #e6e67c | #ecec7b | #ffd8d8` (true ΔE 19.2, tritan 8.2 — matches
+  the doc's own already-correct §4 prose).
+  Minors folded in the same wave: the two "measured" labels now read
+  "measured t0 + scripted constants" (`first-play-verify.md`, this file);
+  the two 2026-09-07 icon entries moved from the bottom of this log into the
+  newest-first block; an env-block disclosure line and Task 2 Step 5's
+  checkbox in `first-play-verify.md`; an "as-shipped deviations" §9 in
+  `2026-09-06-retention-wave1-design.md` (PWA chain, the drawFxOverlay
+  PLAY-state gate, `nearMissOf`'s real signature, R4's recording
+  substitution, `onPause`'s moved line numbers); and a disclosure that
+  `roomT` inherits the sim's clamped-dt/spiral-cap behavior, so a recorded
+  best is device-dependent by design on a hitching machine. Full `npm test`
+  0 fail before each commit.
+
 ## 2026-09-07 — R11 fix round 1: revert CROWN brickHi swap
 - R11's CROWN `brickHi` swap (`#fff0a8`→`#d9ffae`) was reverted: REAL 3D's
   `three/scene.js:100,143` paints `biome.brickHi` as a **solid per-instance
@@ -35,7 +78,7 @@ append an entry when it makes a non-trivial change.
 
 ## 2026-09-07 — R4 first-visit handoff verification
 - Measured cold-load-to-first-bomb: loopback (this tree, v114) 6.96 s patient /
-  3.96 s impatient, both measured; Pages is a disclosed *projection* of 11.04 s
+  3.96 s impatient, both measured t0 + scripted constants; Pages is a disclosed *projection* of 11.04 s
   / 8.04 s (deployed site is stale `v103`, 11 versions behind — these commits
   are local-only and unpushed) — well inside the 90 s target either way. No fix
   needed; both dormant candidates (`INTRO_DUR`, coach prominence) stay dormant.
@@ -98,6 +141,16 @@ append an entry when it makes a non-trivial change.
   zero `sim.js` diff. `feedFx` — not `updateFx` — owns the R2 timer decay and
   freezes outside PLAY, so a paused player's open combo group survives the
   pause instead of closing on a paused clock. `tests/fx.test.mjs` new, 44 pins.
+
+## 2026-09-07 — Icon set completion: `apple-touch-icon.png` + `favicon.svg` → MAKO (concept A)
+- `apple-touch-icon.png` re-rendered native at its existing 180×180 through the same rig, full bleed opaque navy at all four corners. `favicon.svg` hand-authored as real SVG paths transcribing `drawA()`'s tier-0 branch onto the same 512-unit space (`A_R`/`FIN_LOGO`/`BODY`/`GRIN` constants, not eyeballed) — the binding fin-tip vertex reproduces the brief's 204.7-of-205 safe-circle number exactly; the PNG-fallback contingency did not fire. PWA `v106 → v107` (both files are precached). `npm test` 33/33, 0 fail.
+
+## 2026-09-07 — App icon → MAKO mark (concept A); the sphere is retired
+- The designer's round produced three scratch concepts (`.superpowers/sdd/2026-09-07-logo/brief.md`): **A MAKO** (the mascot's bust, swept teal ear-fins as silhouette), **B FUSE PATH** (a lit fuse walking the 3×3 lattice, abstract), **C BLAST CORE** (the four-way blast with MAKO in the core). A ships — highest legal distance, only one that survives 16px as a *character*, best pairing with the wordmark (violet/cream sits outside the wordmark's yellow/coral/teal). **B is kept as the secondary/system mark** for a future single-hue context (light-tab favicon, loading glyph, watermark) — not shipped now.
+- Geometry lifted verbatim from `logo-concepts.js` (frozen per the brief: `FIN_LOGO` and `A_R = 163` together — the fin blade is swept flatter/rooted wider than the in-game `sprites.js` blade specifically so the mark clears the maskable circle). Reach checked by hand against the translate: the mark is optically centred by `+0.14r`, so the binding fin tip `[1.24,-0.34]` sits at `hypot(1.24, -0.34+0.14) * 163 = 204.7` of the 205 safe-circle radius — matches the brief's stated number, tightest margin of the three concepts.
+- Rendered through the rig itself (`harness.html` + `save-server.mjs`, browser-driven canvas — the concepts use the real DOM Canvas 2D API, not reproducible in plain Node), never hand-approximated. `icon-512.png` is the native 512 master. `icon-192.png` picked NATIVE-at-192 over a high-quality downsample from 512: `tier(192) === tier(512) === 2` so no feature differs between the two paths (specular/pupils/hairlines only drop below tier 2, i.e. under 160px) — the two renders differ only in anti-aliasing, and native measured sharper (mean gradient magnitude 7.36 vs 6.76 on the same crop). Both PNGs are full bleed, opaque navy at all four corners (alpha 255) — the manifest's pre-existing `purpose:"maskable"` on `icon-512.png` was previously aspirational, since the retired sphere icon had rounded corners baked into transparent-free but non-full-bleed art; it's now actually true.
+- PWA v103 → v104 (`CACHE_NAME` + `REV`, `shell.js`/`sw.js` together — both PNGs are precached bytes). `npm test` 0 fail before and after.
+- Deliberately NOT touched: `apple-touch-icon.png`, `favicon.svg`, `og.png` — all three still carry the old mark/sphere. The brief lists regenerating them as follow-on work; this task's scope was `icon-512.png`/`icon-192.png` only, and `index.html` already had a favicon link (`favicon.svg`) so the conditional add-a-favicon step didn't fire. `manifest.webmanifest` already used `purpose` (any + maskable on 512), so no manifest edit was needed either.
 
 ## 2026-09-06 — Pushed to origin: arcade loop, art, settings, soundtrack v3, retention report
 - First push since 569bc0a: three programs (items+player art → MAKO mascot, settings/menu/pause, soundtrack v3 user-approved) plus the retention report and the 2026-09-04 arcade-loop docs. Store art recaptured with MAKO. Tree-wide banned-name gate live. Open: og.png Social-preview upload by hand; retention wave 1 awaiting go; six B-excerpt confirmations.
@@ -800,13 +853,3 @@ append an entry when it makes a non-trivial change.
 - **The MAKO ring near-miss was recorded against the wrong vertex.** `sprites.js` and MEMORY both named the fin TIP `[1.3,-0.46]`; the binding vertex is the swept SHOULDER `[0.96,-0.84]`, which cleared by 0.64 where the tip cleared by 0.97. The 0.64/0.36 numbers were always the shoulder's. The tip reaches further out but points where the ellipse is widest, so **a ring fitted by eye to the outermost vertex is fitted to the wrong one** — which is exactly the mistake the original `r*1.5 x r*1.16` fit made. Fixed in `sprites.js`, `items-art.test.mjs` and here.
 - PWA v101 → v103 (two shipped-byte commits: `tracks.js`, then `sprites.js`). `npm test` 31/31 before each; music pins 257 → 261.
 - **Still nothing has been heard.** The Browser pane belonged to another agent again this dispatch; the controller re-bounces `jungle.B`, `ice.B`, `factory.B`, `water.B`, `arena.B` and `sand.B`. Report: `.superpowers/sdd/2026-09-06-taste-revision/task-fixwave-report.md`.
-
-## 2026-09-07 — App icon → MAKO mark (concept A); the sphere is retired
-- The designer's round produced three scratch concepts (`.superpowers/sdd/2026-09-07-logo/brief.md`): **A MAKO** (the mascot's bust, swept teal ear-fins as silhouette), **B FUSE PATH** (a lit fuse walking the 3×3 lattice, abstract), **C BLAST CORE** (the four-way blast with MAKO in the core). A ships — highest legal distance, only one that survives 16px as a *character*, best pairing with the wordmark (violet/cream sits outside the wordmark's yellow/coral/teal). **B is kept as the secondary/system mark** for a future single-hue context (light-tab favicon, loading glyph, watermark) — not shipped now.
-- Geometry lifted verbatim from `logo-concepts.js` (frozen per the brief: `FIN_LOGO` and `A_R = 163` together — the fin blade is swept flatter/rooted wider than the in-game `sprites.js` blade specifically so the mark clears the maskable circle). Reach checked by hand against the translate: the mark is optically centred by `+0.14r`, so the binding fin tip `[1.24,-0.34]` sits at `hypot(1.24, -0.34+0.14) * 163 = 204.7` of the 205 safe-circle radius — matches the brief's stated number, tightest margin of the three concepts.
-- Rendered through the rig itself (`harness.html` + `save-server.mjs`, browser-driven canvas — the concepts use the real DOM Canvas 2D API, not reproducible in plain Node), never hand-approximated. `icon-512.png` is the native 512 master. `icon-192.png` picked NATIVE-at-192 over a high-quality downsample from 512: `tier(192) === tier(512) === 2` so no feature differs between the two paths (specular/pupils/hairlines only drop below tier 2, i.e. under 160px) — the two renders differ only in anti-aliasing, and native measured sharper (mean gradient magnitude 7.36 vs 6.76 on the same crop). Both PNGs are full bleed, opaque navy at all four corners (alpha 255) — the manifest's pre-existing `purpose:"maskable"` on `icon-512.png` was previously aspirational, since the retired sphere icon had rounded corners baked into transparent-free but non-full-bleed art; it's now actually true.
-- PWA v103 → v104 (`CACHE_NAME` + `REV`, `shell.js`/`sw.js` together — both PNGs are precached bytes). `npm test` 0 fail before and after.
-- Deliberately NOT touched: `apple-touch-icon.png`, `favicon.svg`, `og.png` — all three still carry the old mark/sphere. The brief lists regenerating them as follow-on work; this task's scope was `icon-512.png`/`icon-192.png` only, and `index.html` already had a favicon link (`favicon.svg`) so the conditional add-a-favicon step didn't fire. `manifest.webmanifest` already used `purpose` (any + maskable on 512), so no manifest edit was needed either.
-
-## 2026-09-07 — Icon set completion: `apple-touch-icon.png` + `favicon.svg` → MAKO (concept A)
-- `apple-touch-icon.png` re-rendered native at its existing 180×180 through the same rig, full bleed opaque navy at all four corners. `favicon.svg` hand-authored as real SVG paths transcribing `drawA()`'s tier-0 branch onto the same 512-unit space (`A_R`/`FIN_LOGO`/`BODY`/`GRIN` constants, not eyeballed) — the binding fin-tip vertex reproduces the brief's 204.7-of-205 safe-circle number exactly; the PNG-fallback contingency did not fire. PWA `v106 → v107` (both files are precached). `npm test` 33/33, 0 fail.

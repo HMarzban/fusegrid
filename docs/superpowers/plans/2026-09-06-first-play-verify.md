@@ -291,7 +291,7 @@ Any fix invalidates Task 1's numbers. Re-run **Task 1 Steps 1–2** in full (fre
 wipes, four recordings) and replace the Results table with the post-fix numbers,
 keeping the pre-fix numbers in the "before" column so the change is auditable.
 
-- [ ] **Step 5: Full battery, MEMORY, commit**
+- [x] **Step 5: Full battery, MEMORY, commit**
 
 ```bash
 node --test
@@ -425,6 +425,11 @@ that it cannot flip the verdict.
 | `CACHE_NAME` at test time | `fusegrid-shell-v114` (this tree, loopback); deployed Pages is `fusegrid-shell-v103` (stale, unpublished) |
 | commit under test | `fe9efee3282e46048bb30e30261cbc686ed69ed3` |
 
+Unchanged by `cc1f055` (one hex + version strings; cannot move the verdict) —
+the CROWN `brickHi` revert and its PWA bump landed after this measurement and
+touch neither `src/app/intro.js`, `src/app/coach.js`, nor any file this
+measurement's segment timing depends on.
+
 **Time to first bomb** — no 60 fps recording exists (see deviation above); the
 `t0`/`t1` "frame" columns are `round(seconds × 60)` for format continuity only,
 not observed video frames. **Seconds is the number of record.**
@@ -433,8 +438,8 @@ not observed video frames. **Seconds is the number of record.**
 |---|---|---|---|---|---|
 | Pages (trailing slash) — *projected* | A patient | 0 | 662 | 662 | **11.04** |
 | Pages (trailing slash) — *projected* | B impatient | 0 | 482 | 482 | **8.04** |
-| loopback control — *measured* | A patient | 0 | 418 | 418 | **6.96** |
-| loopback control — *measured* | B impatient | 0 | 237 | 237 | **3.96** |
+| loopback control — *measured t0 + scripted constants* | A patient | 0 | 418 | 418 | **6.96** |
+| loopback control — *measured t0 + scripted constants* | B impatient | 0 | 237 | 237 | **3.96** |
 
 Loopback `t0` (`domContentLoadedEventEnd`, measured across 3 cold loads):
 39.1 ms, 40.7 ms, 41.9 ms — mean **0.040 s**. Pages `t0` (*projected*):
