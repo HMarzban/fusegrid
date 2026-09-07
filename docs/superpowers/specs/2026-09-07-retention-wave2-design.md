@@ -629,14 +629,14 @@ NORM pace). Mixing an IRON run into "CORE BEST" would be the same unit error
 - note 1 — `DAILY 2026-09-07 · BEST 1840 · 3 TRIES · YOUR OWN ATTEMPTS ONLY`, or
   `DAILY 2026-09-07 · NOT PLAYED YET` when `daily.date !== today`, or omitted
   entirely before R3 lands.
-- note 2 — `SINCE 2026-08-30 · LAST 2026-09-07 · 42 SESSIONS · BESTS: PLAIN · NORM`.
+- note 2 — `SINCE 2026-08-30 · LAST 2026-09-07 · 42 SESSIONS · BESTS: NO PACT · NORM`.
   Width: 70 chars at the 10 px mono face (≈6 px/char) = 420 px against
-  `S.iw` 448 (72 chars / 432 px at a 4-digit SESSIONS count — still under the
+  `S.iw` 448 (74 chars at a 4-digit SESSIONS count — exactly the
   74-char pin). Checked at both sizes (`S.iw` is 448 at each).
   **Ruling 2026-09-07 (review R5 Minor-8):** "BESTS ARE PER HEAT" under-told
   the filter — rows 7-9 also require the plain-pact, NORM-pace bucket, not
   heat alone — so note 2 now names both, using the repo's own existing words
-  for that bucket (`PLAIN`: `stats.js`'s own name for the no-pact bucket;
+  for that bucket (`NO PACT`: HIGH SCORES already paints `PACT` as a column header, so "no pact" decodes on sight — the re-review found `PLAIN` was painted nowhere;
   `NORM`: `PACE_NAME[1]`) rather than widening the `CORE BEST`/`PLUS BEST`/
   `MAX BEST` row labels, which this ruling keeps unchanged.
 
