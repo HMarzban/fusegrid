@@ -183,13 +183,15 @@ export function statsNotes(v, daily, today) {
     out.push(
       daily.date && daily.date === today && (daily.played | 0) > 0
         ? "DAILY " + today + " · BEST " + (daily.best | 0) + " · " +
-          (daily.played | 0) + " TRIES · YOUR OWN ATTEMPTS ONLY"
+          (daily.played | 0) + ((daily.played | 0) === 1 ? " TRY" : " TRIES") +
+          " · YOUR OWN ATTEMPTS ONLY"
         : "DAILY " + today + " · NOT PLAYED YET",
     );
   }
   out.push(
     "SINCE " + (s.a.first || "—") + " · LAST " + (s.a.last || "—") + " · " +
-    s.a.sessions + " SESSIONS · BESTS: NO PACT · NORM",
+    s.a.sessions + (s.a.sessions === 1 ? " SESSION" : " SESSIONS") +
+    " · BESTS: NO PACT · NORM",
   );
   return out;
 }

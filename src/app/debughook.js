@@ -20,6 +20,7 @@ const SCREEN_NAME = [
   "ENEMIES",
   "SETTINGS",
   "GUIDE",
+  "STATS",
 ];
 
 export function mountDebugHook(h) {
@@ -47,7 +48,9 @@ export function mountDebugHook(h) {
       h.renderer().render(world, CFG.STEP * n);
     },
     state: () =>
-      app.screen === SCREEN.GAME ? world.state : SCREEN_NAME[app.screen],
+      app.screen === SCREEN.GAME
+        ? world.state
+        : SCREEN_NAME[app.screen] || String(app.screen),
     reset: () => {
       app.toMenu();
     },

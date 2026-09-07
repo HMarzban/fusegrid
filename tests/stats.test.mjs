@@ -376,6 +376,39 @@ const TODAY = "2026-09-07";
     n0[0].length <= 74,
     n0[0].length + " chars",
   );
+  // Minor-3 (review 2026-09-07): honest pluralisation — "1 TRY"/"1 SESSION"
+  // singular, "n TRIES"/"n SESSIONS" plural, both pinned.
+  const v1 = clampStats({
+    a: { runs: 1, rooms: 0, deaths: 0, kills: 0, picks: 0, bricks: 0, secs: 0,
+      sessions: 1, first: TODAY, last: TODAY },
+  });
+  const n1s = statsNotes(v1, { date: TODAY, best: 0, played: 1 }, TODAY);
+  check(
+    "Minor-3: a single try reads 1 TRY, never 1 TRIES",
+    n1s[0] === "DAILY " + TODAY + " · BEST 0 · 1 TRY · YOUR OWN ATTEMPTS ONLY",
+    n1s[0],
+  );
+  check(
+    "Minor-3: a single session reads 1 SESSION, never 1 SESSIONS",
+    n1s[1] === "SINCE " + TODAY + " · LAST " + TODAY + " · 1 SESSION · BESTS: NO PACT · NORM",
+    n1s[1],
+  );
+  const nPlural = statsNotes(v1, { date: TODAY, best: 0, played: 2 }, TODAY);
+  check(
+    "Minor-3: two tries still pluralises TRIES",
+    nPlural[0] === "DAILY " + TODAY + " · BEST 0 · 2 TRIES · YOUR OWN ATTEMPTS ONLY",
+    nPlural[0],
+  );
+  check(
+    "Minor-3: the existing 42-session/3-try plural pins (n0/n1) are unaffected",
+    n0[0].indexOf("42 SESSIONS") >= 0 && n1[0].indexOf("3 TRIES") >= 0,
+    n0[0] + " / " + n1[0],
+  );
+  check(
+    "Minor-3: the 1 TRY/1 SESSION notes stay within the same 74-char plate budget",
+    n1s[0].length <= 74 && n1s[1].length <= 74,
+    n1s[0].length + "/" + n1s[1].length,
+  );
 }
 
 // ---- 11. the four-line payload, and the one explicit export channel ----

@@ -1047,6 +1047,17 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
     win.__GAME__.begin();
     check("debug hook: begin() starts a run, state() then reports the world",
       win.__GAME__.state()==="PLAY",String(win.__GAME__.state()));
+    // Nit-5 (review 2026-09-07): SCREEN.STATS was appended without extending
+    // SCREEN_NAME; the hardened lookup must still name it, never undefined.
+    g.app.screen=SCREEN.STATS;
+    check("debug hook: state() names STATS explicitly, never undefined (Nit-5)",
+      win.__GAME__.state()==="STATS",String(win.__GAME__.state()));
+    // hardened fallback: a screen index past the end of SCREEN_NAME (a stand-in
+    // for a future appended SCREEN the array has not caught up with yet) must
+    // still name something, never undefined.
+    g.app.screen=99;
+    check("debug hook: state() falls back to the raw index, never undefined, past the end of SCREEN_NAME (Nit-5)",
+      win.__GAME__.state()==="99",String(win.__GAME__.state()));
    }finally{ delete globalThis.window; }
   const clean={addEventListener:noop,removeEventListener:noop};
   globalThis.window=clean;

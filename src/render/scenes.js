@@ -137,6 +137,11 @@ export function isRunEnd(world) {
 function deltaOf(world, run) {
   const b = run.best;
   const fromStart = run.fromStart !== false;
+  /* Nit-6 (owner ruling 2026-09-07): a first-ever run on a bucket (no prior
+     record) that scores exactly 0 sets no record worth naming — no delta line
+     at all, not even FURTHEST ROOM YET. A first-ever run with score > 0 keeps
+     form 3 unchanged. */
+  if (!b && (world.score | 0) === 0) return ["", false];
   const p = [];
   if (fromStart && (!b || (world.level | 0) > (b.r | 0))) p.push("FURTHEST ROOM YET");
   if (!b || (world.score | 0) > (b.s | 0)) p.push("NEW BEST");
@@ -160,7 +165,7 @@ export function summaryLines(world, run) {
     if (run.daily) out.push([dailyLine(world, run), "#9fb3d8"]);
     else {
       const [s, hot] = deltaOf(world || {}, run);
-      out.push([s, hot ? "#37f0d0" : "#9fb3d8"]);
+      if (s) out.push([s, hot ? "#37f0d0" : "#9fb3d8"]);
     }
   }
   return out;

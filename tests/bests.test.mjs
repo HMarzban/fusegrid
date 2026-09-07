@@ -645,6 +645,52 @@ const rec = () => {
   );
 }
 
+// ---- 15. Nit-6 (owner ruling 2026-09-07): a first-ever run on a bucket that
+// scores exactly 0 prints NO delta line at all — a zero-point run set no
+// record worth naming, and "a delta that cannot lie" must not celebrate zero.
+// A first-ever run with score > 0 keeps form 3 unchanged; a prior record
+// present is unaffected even at score 0. ----
+{
+  const Z = { state: "LOSE", level: 1, score: 0, heat: 0, pact: 0, pace: 0 };
+  check(
+    "R10N6(a): a fresh bucket scoring exactly 0 prints no delta line at all",
+    deltaLine(Z, { best: null }) === "",
+    JSON.stringify(deltaLine(Z, { best: null })),
+  );
+  check(
+    "R10N6(b): summaryLines omits the entry entirely — one pair, not two with an empty string",
+    summaryLines(Z, { r: 0, k: 0, p: 0, t: 2, best: null }).length === 1,
+    JSON.stringify(summaryLines(Z, { r: 0, k: 0, p: 0, t: 2, best: null })),
+  );
+  check(
+    "R10N6(c): a fresh bucket scoring 1 keeps form 3 unchanged, from-start",
+    deltaLine({ ...Z, score: 1 }, { best: null }) === "FURTHEST ROOM YET · NEW BEST",
+    deltaLine({ ...Z, score: 1 }, { best: null }),
+  );
+  check(
+    "R10N6(d): a fresh bucket scoring 1, not from-start, still just says NEW BEST",
+    deltaLine({ ...Z, score: 1 }, { best: null, fromStart: false }) === "NEW BEST",
+    deltaLine({ ...Z, score: 1 }, { best: null, fromStart: false }),
+  );
+  check(
+    "R10N6(e): a prior record present is unaffected by the score-0 clause, even at score 0",
+    deltaLine(Z, { best: { s: 500, r: 3 } }) === "+500 FROM YOUR CORE BEST",
+    deltaLine(Z, { best: { s: 500, r: 3 } }),
+  );
+  const z0 = rec();
+  drawOverlay(z0.c, Z, 600, 520, 300, 260, undefined, undefined,
+    { r: 0, k: 0, p: 0, t: 2, best: null });
+  const z1 = rec();
+  drawOverlay(z1.c, { ...Z, score: 1 }, 600, 520, 300, 260, undefined, undefined,
+    { r: 0, k: 0, p: 0, t: 2, best: null });
+  const cueY = (rows) => (rows.find(([s]) => s.indexOf("C copy") >= 0) || [])[1];
+  check(
+    "R10N6(f): the cue row moves up exactly one 24px row when the delta line is skipped",
+    cueY(z0.rows) === cueY(z1.rows) - 24,
+    cueY(z0.rows) + " vs " + cueY(z1.rows),
+  );
+}
+
 // ---- wiring: both renderers pass o.run through as the ninth arg ----
 {
   for (const [f, ov] of [

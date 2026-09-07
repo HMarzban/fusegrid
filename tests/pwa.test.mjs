@@ -101,6 +101,24 @@ const srcJs = walkJs(join(ROOT, "src")).map(
 for (const rel of srcJs) {
   check("PRECACHE has " + rel, PRECACHE.includes(rel));
 }
+{
+  // Minor-4 (review 2026-09-07): "src/app/debughook.js" preceded
+  // "src/app/daily.js", breaking the list's otherwise-alphabetical order at
+  // that pair — swapped so daily.js precedes debughook.js again.
+  const srcApp = PRECACHE.filter((p) => p.startsWith("./src/app/"));
+  const di = srcApp.indexOf("./src/app/daily.js");
+  const dh = srcApp.indexOf("./src/app/debughook.js");
+  check(
+    "daily.js precedes debughook.js (Minor-4)",
+    di >= 0 && dh >= 0 && di < dh,
+    di + "/" + dh,
+  );
+  check(
+    "daily.js and debughook.js sit immediately adjacent, in that order",
+    dh === di + 1,
+    JSON.stringify(srcApp),
+  );
+}
 for (const rel of PRECACHE) {
   if (rel === "./") continue;
   const fp = join(ROOT, rel.replace(/^\.\//, ""));
