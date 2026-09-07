@@ -72,5 +72,31 @@ check(
   survivors.join(", "),
 );
 
+/* R8 framing gate. The report's own instruction is that the refused ranking
+   word never ships on this feature; the code carries a board, not a claim.
+   Scoped to src/ and tests/ because docs/ names the term in order to refuse it
+   — a tree-wide gate would make writing that refusal down impossible. Built by
+   concatenation, like the name gate above, so this file cannot be a survivor of
+   its own scan. */
+const refused = "leader" + "board";
+const refusedHits = [];
+for (const rel of tracked) {
+  if (!/^(src|tests)\//.test(rel)) continue;
+  if (BINARY_EXT.has(extname(rel).toLowerCase())) continue;
+  let buf;
+  try {
+    buf = readFileSync(join(ROOT, rel));
+  } catch {
+    continue;
+  }
+  if (looksBinary(buf)) continue;
+  if (buf.toString("utf8").toLowerCase().includes(refused)) refusedHits.push(rel);
+}
+check(
+  "no file under src/ or tests/ names the refused ranking word",
+  refusedHits.length === 0,
+  refusedHits.join(", "),
+);
+
 console.log(fail ? "BANNED-NAME FAIL" : "BANNED-NAME OK");
 process.exit(fail ? 1 : 0);
