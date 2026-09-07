@@ -27,6 +27,14 @@ Two state machines:
 | Shell | INTRO → MENU ⇄ LEVEL/SCORES/SETTINGS/GUIDE(→HOWTO/ITEMS/ENEMIES) → GAME; idle → ATTRACT | `src/app/menuapp.js` |
 
 Heat grades CORE / PLUS / MAX live on LEVEL SELECT (`←/→` room, `↑/↓` heat). CORE is replay baseline v6. Attract is always CORE + pact=0. After a first FUSE/GRID CLEAR, LEVEL SELECT also offers Pact toggles (`1–4`). Knobs live on `world`, not frozen `CFG`. Score × heat is persist-only (CORE ×1 / PLUS ×2 / MAX ×3); live HUD stays raw.
+
+MENU is eight rows in this order: `PLAY, LEVEL SELECT, DAILY, OPTIONS, GUIDE,
+HIGH SCORES, STATS, SOURCE`. `confirm()` dispatches by **label**, so an insert
+moves no runtime index — but `tests/headless.test.mjs`'s index-driven MENU
+confirms and `tests/menuapp.test.mjs`'s literals must be renegotiated with any
+reorder. `SCREEN.STATS = 12` is **appended** (`menuapp.js:27`'s own rule:
+appended, never inserted). WIN/LOSE run summaries are **not** a SCREEN — they
+live in `drawOverlay`.
 | Sim | PLAY / WIN / LOSE / PAUSE | `src/core/sim.js` |
 
 The sim ticks only while the shell is GAME. PAUSE/WIN/LOSE are `world.state`,
@@ -138,6 +146,16 @@ not shell screens. Do not add them as `SCREEN` values.
 - `src/app/` — menu shell, intro beats, demobot, highscores, `pactstore.js`,
   plus the entry seams above (`flags` / `attract` / `debughook`).
   Not read by `step()`.
+  Retention stores (wave 2, 2026-09-07), one key per module, all `Date`-free
+  and DOM-free: `bests.js` (`nb.bests.v1`, per-run score/room bests keyed
+  `<heat>:<pact>:<pace+1>`, cap 48) · `stats.js` (`nb.stats.v1`, lifetime
+  aggregates always, a 200-entry event ring only after the player opens STATS
+  once) · `daily.js` (`nb.daily.v1`, one board a day from a **date string**,
+  pure FNV-1a `dailySeed`) · `code.js` (no store; a 12-char `F1` challenge code
+  with a checksum). Every date is a string computed in `main.js` (`todayStr`
+  local, `dateStr` UTC) and passed in — `src/app/` never calls `Date`.
+  `nb.times.v1` stays the one best-TIMES store; STATS **reads** both and
+  copies neither.
   Demobot is an intent FSM (plant-and-leave, hunger for combat cubes / corridor
   foes); attract still CORE/pact=0. Highscores use `scoreEntry`; `noteWorldEdge`
   is a boolean edge, not a score writer.
@@ -206,6 +224,37 @@ Node v26, `"type": "module"`. No build step, no bundler.
   contracts in `three.test.mjs` are ABI — do not "flex" them in a drive-by.
 - No comments unless the file already uses explanatory block comments (its style).
   Match the compact, no-whitespace-after-key style already in the codebase.
+- **A delta that cannot lie.** Anything the run summary claims (`NEW BEST`,
+  `FURTHEST ROOM YET`, `MATCHED…`, `+N FROM…`) is computed from a **persisted**
+  number or it is not shown, and only at a run end — `isRunEnd(world)` is the
+  one predicate for both display and persist, and it reuses the same
+  `isFinale` the overlay already uses. `bestRun` is a **run-start snapshot**,
+  read once per run, never re-read mid-run. A run that began above room 1
+  writes no room record and prints no FURTHEST form. A first-ever run on a
+  bucket that scores exactly 0 prints **no delta line at all** (Ruling
+  2026-09-07, Nit-6) — a zero-point run set no record worth naming.
+- **The daily is honour-system and single-device.** No enforcement, no
+  consecutive-day read, no streak/at-risk/welcome-back copy, never framed as
+  competing with anyone — the only claim is *your own attempts are comparable
+  to each other*. Its config is pinned `{level:1, heat:0, pact:0, pace:0}`
+  **and stamped**: a record whose stamped pace differs from this run's is
+  treated as absent, never silently compared. A run that supplies no seed
+  plays the session's remembered `bootSeed`, so an ordinary run is
+  indistinguishable before and after a daily.
+- **The challenge code carries a board, never a claim.** `?code=` is 12 chars
+  (`F1` + seed + cfg + checksum), seed/heat/pact/pace only — **no score
+  field**, and no `window.prompt` / DOM paste box (entry is through
+  `flags.js` alone). The word `leaderboard` is refused in `src/` and `tests/`
+  and executably gated by `tests/banned-name.test.mjs`; `docs/` is exempt
+  because the spec names the term to refuse it.
+- Coach v2 (`nb.coach.v2`) shows **one first-use tip per verb**, once ever,
+  for KICK / THROW / REMOTE, on a **PLAY-only** clock that PAUSE cannot burn.
+  Its copy is composed from `POWER[].help` — never write a second source for
+  those three strings. v1's ghost coach wins ties; a new trigger replaces a
+  live tip (dismissed `rn:"replace"` first, so shown/dismissed pair exactly
+  once — except an abandoned run mid-tip, which leaves that tip's
+  `coach_shown` unpaired by design). The latch resets at **every** run-start
+  path.
 
 ## Testing
 
@@ -247,3 +296,7 @@ not covered by Node — play-verify in a browser after render changes.
 - A stale service worker serves pre-change bytes and looks exactly like a render change that did not land. Unregister the SW and delete its caches before trusting any headed 3D screenshot.
 - CROWN's collision is its `brickA` `#ffd447`, which is `fast`'s identity colour exactly. The three golds separate on value and shape, never hue: `knight` is the only bright-specular Phong **foe** plus an unlit pale nasal bar — the player face plate is the cast's one other Phong surface, `fast` carries dark fins over a straight-edged delta, `burrow` is a duller value with an additive plume. Do not restyle the biome to fix this.
 - PWA is a versioned app-shell precache (`fusegrid-shell-vN`). Offline after the first visit; first visit still needs network. Relative `./` scope covers Pages `/fusegrid/` and loopback. New `CACHE_NAME`/REV: `register.update` + one-shot `controllerchange` reload. iOS install is Add to Home Screen; module SW wants 16.4+.
+- A hidden browser tab pauses `requestAnimationFrame`, so a headed check on an
+  unfocused pane freezes the game loop and every screenshot is stale. Drive the
+  loop through a `MessageChannel`-backed rAF shim, and assert on
+  `window.__GAME__` + a `fillText` recorder rather than on pixels.

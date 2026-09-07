@@ -546,7 +546,14 @@ EVENTS    = ["session_start","room_enter","room_clear","death","win_finale",
   callback when STATS is first pushed.
 - **`statsRows(v, bests)`** (pure) → the nine `[label, value]` pairs of §3.4.
 - **`statsNotes(v, daily, today)`** (pure) → the two note strings of §3.4.
-- **`statsPayload(v, bests, today)`** (pure) → §3.5.
+- **`statsPayload(v, bests, times, today)`** (pure) → §3.5. **Note (2026-09-07,
+  review Minor-2):** this row read `statsPayload(v, bests, today)` — three
+  args — but §3.5's line 3 reads `bestOf(loadTimes(), "1:0:0:1")`, which cannot
+  hold under a pure three-arg signature (a `loadTimes()` inside the function
+  would be a store read). The tree hands the times blob in instead:
+  `statsPayload(loadStats(), loadBests(), loadTimes(), dateStr())`
+  (`stats.js:211`, `main.js:384`). The INDEX already resolved this
+  ("Resolved ambiguity 6"); this note brings §3.2 into agreement with it.
 - **`fmtLong(sec)`** — §1.3.
 
 **`feedTally` is extended, not duplicated** (report §4 R5: R5 reuses R1's tap):
@@ -655,10 +662,15 @@ placing it above the block would break the documented fall-through
 
 ```
     if (code === "KeyC") {
-      if (app.screen === SCREEN.STATS) { copyText(statsPayload(loadStats(), loadBests(), dateStr())); return; }
+      if (app.screen === SCREEN.STATS) { copyText(statsPayload(loadStats(), loadBests(), loadTimes(), dateStr())); return; }
       if (app.screen === SCREEN.GAME) { … unchanged … }
     }
 ```
+
+**Note (2026-09-07, review Minor-2):** this snippet's `statsPayload` call read
+three args; the real call site (`main.js:384`) is the four-arg
+`statsPayload(loadStats(), loadBests(), loadTimes(), dateStr())` shown above,
+matching §3.2's corrected signature.
 
 `copyText` is the two-line clipboard helper factored out of `main.js:327-329`
 (one helper, three call sites after R8) — a net line saving, not a cost.
@@ -1123,7 +1135,16 @@ seen, and emits `coach_dismissed` for it (`rn:"replace"`, fix-review 2026-09-07
 Minor-1 ruling) **before** the new `coach_shown` — a player who grabs KICK and
 THROW in the same blast gets one tip now and never the other, which is the
 tip-fatigue rule (report §4 R10, risk) taken literally, and the ring still
-pairs shown/dismissed exactly once per displayed tip. Disclosed.
+pairs shown/dismissed exactly once per displayed tip on the use, timeout and
+replace paths. **Exception (2026-09-07, R10 re-review Finding 2):** abandoning
+a run mid-tip (QUIT TO MENU or a LOSE retry) resets `coach2` in
+`startRunState` without emitting `coach_dismissed` and without marking the
+verb's bit, so that tip's `coach_shown` is left unpaired and its bit stays
+`0`. This is the same truthful-ring disclosure already accepted for v1 as
+`review-r10.md` Minor-2 ("truthful, not a defect"), and the generous choice:
+the player who quit after
+glimpsing the tip gets it offered again rather than having their one-time
+nudge burned. Disclosed.
 
 **v1 wins ties:** while the ghost coach is still open (`coachOpen`, `coach.js:24-26`)
 a v2 trigger is deferred to the frame v1 closes, so a first-timer never sees two
@@ -1224,7 +1245,7 @@ so a tip never paints over the PAUSED, CLEARED or GAME OVER veil.
 | Site | Today | New | Plan |
 |---|---|---|---|
 | `src/app/bests.js` | — | **new module**: `BESTS_KEY BESTS_MAX bestKey clampBests loadBests saveBests bestOfRun recordBest newTally feedTally` | R1 |
-| `src/app/stats.js` | — | **new module**: `STATS_KEY RING_MAX EVENTS clampStats loadStats saveStats stat setStatsOn statsRows statsNotes statsPayload fmtLong` | R5 |
+| `src/app/stats.js` | — | **new module**: `STATS_KEY RING_MAX EVENTS clampStats loadStats saveStats stat statPlaques setStatsOn statsRows statsNotes statsPayload fmtLong` (`statPlaques` added 2026-09-07, review Minor-1 — exported but was missing from this row) | R5 |
 | `src/app/daily.js` | — | **new module**: `DAILY_KEY dailySeed loadDaily saveDaily recordDaily dailyTag dailyStamp finishDaily` | R3 |
 | `src/app/code.js` | — | **new module**: `CODE_V encodeChallenge decodeChallenge` | R8 |
 | `src/pwa/shell.js` `SRC` | 60 entries incl. `src/app/times.js` | **+4**: `src/app/bests.js` (R1), `src/app/stats.js` (R5), `src/app/daily.js` (R3), `src/app/code.js` (R8) — **mandatory**: `tests/pwa.test.mjs:98-103` walks `src/` and requires every `.js` in `PRECACHE` | all |
@@ -1250,8 +1271,8 @@ so a tip never paints over the PAUSED, CLEARED or GAME OVER veil.
 | `tests/menudraw.test.mjs:262-280` | hard-coded six-string items literal | **still passes** (`drawMenu` is generic) but is updated to eight so it keeps mirroring the shipped rows. `:185`'s deliberate three-row literal is **unmoved** | R5, R3 |
 | `menudraw.js` | `drawMenu drawLevelSelect drawHowTo drawItemsHelp drawEnemiesHelp drawGuide drawScores drawSettings drawAttractHint drawDim drawFade layout settingsRows settingsGeom settingsHit` | **+** `drawStats(c, L, t, ui)` | R5 |
 | `src/app/flags.js readFlags` | `urlKind autoplay netLocal orbit debug` | **+** `code` | R8 |
-| `src/app/coach.js` | `COACH_KEY COACH_DUR loadCoachSeen saveCoachSeen coachOpen` | **+** `COACH2_KEY COACH2_DUR loadCoach2 saveCoach2 coach2Seen coach2Mark coachTip`; imports `POWER` from `core/entities.js` | R10 |
-| `main.js` | `coachT roomT bestPrev` | **+** `tally runT bestRun runEnded runFromStart dailyDate dailyRec coach2T coach2Kind`; `startRunState` / `endRun` / `copyText` helpers; `isFinale` on the `CFG` import; the split edge block (§2.3); `feedTally` line; `ro.run` / `ro.coach2`; `todayStr`; `?code=` boot branch; `KeyB` and `KeyC`-on-STATS branches; four new module imports | all |
+| `src/app/coach.js` | `COACH_KEY COACH_DUR loadCoachSeen saveCoachSeen coachOpen` | **+** `COACH2_KEY COACH2_DUR loadCoach2 saveCoach2 coach2Seen coach2Mark coachTip coach2Tick`; imports `POWER` from `core/entities.js`. `coach2Tick` added 2026-09-07 (fix-review Minor-3 owner ruling) — landed but missing from this row; the whole v1→v2 clock/latch/dismiss transition lives here | R10 |
+| `main.js` | `coachT roomT bestPrev` | **+** `tally runT bestRun runEnded runFromStart dailyDate dailyRec` and a `coach2 = {kind, t}` latch (**not** the two scalars `coach2T`/`coach2Kind` this row originally said; corrected 2026-09-07, fix-review Minor-3 — `main.js` owns the object and calls `coach2Tick(coach2, world, v1Open, dt)` every GAME frame); `startRunState` / `endRun` / `copyText` helpers; `isFinale` on the `CFG` import; the split edge block (§2.3); `feedTally` line; `ro.run` / `ro.coach2`; `todayStr`; `?code=` boot branch; `KeyB` and `KeyC`-on-STATS branches; four new module imports | all |
 | `tests/headless.test.mjs:909` | `main.js stays a lean browser entry (<=733 lines)`, measured 732 | **R1 → 760, R5 → 776, R3 → 788, R8 → 798, R10 → 808 (split-length measure = wc -l + 1; re-based 2026-09-07 after the R1 fix wave landed the pin at 760)**, each with the file's own one-line reason comment appended (`:900-908` convention) so the gate keeps biting. **Rule: a plan that would exceed its cap moves the excess into its `src/app/*` module, never into a higher pin** | all |
 | `tests/heat.test.mjs:325-335` (WIN branch) | `texts.some(s => s.indexOf("CLEARED") >= 0)` | **unmoved** — the 9th arg defaults `undefined` ⇒ today's layout | R1 |
 | `tests/heat.test.mjs:55-82` | `overlayCue` × 4 and `runStamp` / `copyPayload` exact strings | **unmoved** — R8 changes only `drawOverlay`'s concatenation | R8 |

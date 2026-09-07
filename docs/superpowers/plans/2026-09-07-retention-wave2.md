@@ -135,7 +135,7 @@ Verbatim from the spec (§0, §1, §8), binding on all five sub-plans:
 | `src/app/stats.js` | — | **create** | — | — | — |
 | `src/app/daily.js` | — | — | **create** | — | — |
 | `src/app/code.js` | — | — | — | **create** | — |
-| `src/app/coach.js` | — | — | — | — | `COACH2_*`, `loadCoach2`/`saveCoach2`/`coach2Seen`/`coach2Mark`/`coachTip` |
+| `src/app/coach.js` | — | — | — | — | `COACH2_*`, `loadCoach2`/`saveCoach2`/`coach2Seen`/`coach2Mark`/`coachTip`/`coach2Tick` (`coach2Tick` added 2026-09-07, fix-review Minor-3 owner ruling — landed but missing from this row; see the ABI ledger row above for the real signature) |
 | `src/app/flags.js` | — | — | — | `code` | — |
 | `src/app/menuapp.js` | — | `SCREEN.STATS`, `ITEMS` **stage 1**, `confirm`/`back`, `o.onStats` | `ITEMS` **stage 2**, `startDaily`, `_playCore` `seed`/`daily`, `o.dailySeed`, `app.dailyTag` | `playChallenge(t)` | — |
 | `src/render/scenes.js` | `fmtSpan` `runLine` `bestLabel` `deltaLine` `isRunEnd` `summaryLines`, `COPY_HINT`, `drawOverlay` 9th arg | — | `dailyLine`, slot-3 swap | `COPY_HINT` value | `drawCoach2` |
@@ -143,7 +143,7 @@ Verbatim from the spec (§0, §1, §8), binding on all five sub-plans:
 | `src/render/three/wrapper.js` | same seam | — | — | — | same seam |
 | `src/render/menudraw.js` | — | `drawStats` | — | — | — |
 | `src/render/shellview.js` | — | `SCREEN.STATS` route, items literal (7) | items literal (8) + `dailyTag` | — | — |
-| `src/main.js` | `tally` `runT` `bestRun` `runEnded`, `startRunState`, `endRun`, split edge block, `feedTally`, `ro.run` | `stat()` edges, `onStats`, `copyText`, `KeyC`-on-STATS | `todayStr`, `args.seed`, `dailyDate`/`dailyRec`, daily write | `?code=` boot, `KeyB` | `coach2T`/`coach2Kind`, `ro.coach2` |
+| `src/main.js` | `tally` `runT` `bestRun` `runEnded`, `startRunState`, `endRun`, split edge block, `feedTally`, `ro.run` | `stat()` edges, `onStats`, `copyText`, `KeyC`-on-STATS | `todayStr`, `args.seed`, `dailyDate`/`dailyRec`, daily write | `?code=` boot, `KeyB` | `coach2 = {kind, t}` latch (**not** the two scalars `coach2T`/`coach2Kind` this cell originally said; corrected 2026-09-07, fix-review Minor-3 — see `:727`'s ABI ledger row), `ro.coach2` |
 | `src/pwa/shell.js` / `sw.js` | `SRC` += `bests.js`, bump | `SRC` += `stats.js`, bump | `SRC` += `daily.js`, bump | `SRC` += `code.js`, bump | bump |
 | `MEMORY.md` | final commit | final commit | final commit | final commit | final commit |
 
@@ -372,6 +372,7 @@ export function clampStats(raw)                       // any input -> the shape 
 export function loadStats(store)
 export function saveStats(v, store)
 export function stat(ev, data, today, store)          // the ONE edge fn; read-modify-write
+export function statPlaques(prev, next, today, store) // one plaque_unlock stat per newly-set bit (Minor-1, review 2026-09-07: exported but was missing from this ledger)
 export function setStatsOn(store)                     // sets on:1, once
 export function statsRows(v, bests)                   // pure -> nine [label, value] pairs
 export function statsNotes(v, daily, today)           // pure -> the note strings
@@ -661,6 +662,14 @@ adds **no** new events and **no** new pass over `world.events`.
 `menuapp.js` and `shellview.js`, both precached, so it bumps too; only a
 hypothetical test-only commit would not).
 
+**Note (2026-09-07, review Nit-4):** 15 was the planning estimate for these 16
+tasks. The five post-ship fix waves (R1/R5/R3/R8/R10) added nine more
+precache-touching commits (24 through v140, review-final's count), the R10
+fix wave's own INDEX/spec doc pass added one more (25 through v141), and the
+closing wave's Minor-3/Minor-4/Nit-5/Nit-6 commit adds a 26th, bumping
+`CACHE_NAME`/`REV` to v142. The running count is historical bookkeeping, not a
+cap — see `review-final.md` §Findings Nit-4.
+
 ## Program checklist
 
 - [ ] **R1.1** `src/app/bests.js` + `newTally`/`feedTally` + `tests/bests.test.mjs` (pins 1–5) + the `SRC` entry
@@ -691,7 +700,7 @@ same stage.
 |---|---|---|---|
 | `src/app/bests.js` | — | **new module**: `BESTS_KEY BESTS_MAX bestKey clampBests loadBests saveBests bestOfRun recordBest newTally feedTally` | **R1** |
 | `newTally` / `feedTally` shape | — | **stage 1 (R1)** `{r,k,p,b,d,dNew,lv}`; **stage 2 (R5)** `+ {kt,pk,dr}` filled in the same loop | **R1**, then **R5** |
-| `src/app/stats.js` | — | **new module**: `STATS_KEY RING_MAX EVENTS clampStats loadStats saveStats stat setStatsOn statsRows statsNotes statsPayload fmtLong` | **R5** |
+| `src/app/stats.js` | — | **new module**: `STATS_KEY RING_MAX EVENTS clampStats loadStats saveStats stat statPlaques setStatsOn statsRows statsNotes statsPayload fmtLong` | **R5** |
 | `src/app/daily.js` | — | **new module**: `DAILY_KEY dailySeed clampDaily loadDaily saveDaily recordDaily dailyTag dailyStamp finishDaily` | **R3** |
 | `src/app/code.js` | — | **new module**: `CODE_V encodeChallenge decodeChallenge` | **R8** |
 | `src/pwa/shell.js` `SRC` | 60 entries incl. `src/app/times.js` | **+4**: `bests.js` (R1), `stats.js` (R5), `daily.js` (R3), `code.js` (R8) — **mandatory**, `tests/pwa.test.mjs:98-103` | one entry each |

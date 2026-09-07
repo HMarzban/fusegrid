@@ -134,7 +134,7 @@ export function createGame(canvas, opts = {}) {
      only clock for that gate (see the RAF loop's step branch and onStart). */
   let coachT = 0;
   /* coach v2 (R10): one live tip at a time, its clock PLAY-only for the same
-     reason coachT is — world.time keeps climbing through PAUSE. */
+     reason coachT is — world.time keeps climbing through PAUSE. Resets in startRunState (every run-start path); v1's coachT/coachPlanted below reset only in onStart (R10 re-review Finding 3, 2026-09-07 — safe/stricter, not a defect; do not move either). */
   let coach2 = { kind: null, t: 0 };
   /* roomT (R7): the SAME trap coachT dodges. world.time is bumped at the top of
      step() before the PAUSE early return (sim.js:42-43 vs :75-77), main's

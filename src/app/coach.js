@@ -88,8 +88,13 @@ export function coachTip(kind) {
    v1 closes, so a first-timer never sees two panels. One tip at a time: a new
    trigger replaces a live one, marks it seen immediately, and dismisses it
    (rn:"replace", review 2026-09-07 Minor-1 ruling) BEFORE the new coach_shown,
-   so shown/dismissed still pair exactly once per displayed tip — a player who
-   grabs two verbs in one blast gets one tip now and never the other. */
+   so shown/dismissed still pair exactly once per displayed tip on the use,
+   timeout and replace paths — a player who grabs two verbs in one blast gets
+   one tip now and never the other. Exception (R10 re-review Finding 2,
+   2026-09-07): abandoning a run mid-tip resets st (main.js's startRunState)
+   without this function ever running its close branch, so that tip's
+   coach_shown is left unpaired and its bit stays 0 — truthful and generous by
+   design (same disclosure as v1's review-r10.md Minor-2), not a bug. */
 export function coach2Tick(st, world, v1Open, dt, store) {
   const out = [];
   const w = world || {};
