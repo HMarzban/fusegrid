@@ -1106,9 +1106,12 @@ never blocks input, never pauses. **Corrected 2026-09-07 (fix-review Minor-3
 owner ruling)** — the tree does not hold two scalars `coach2T`/`coach2Kind` in
 `main.js`; `main.js` owns one latch object, `coach2 = { kind, t }`, reset at
 every run-start (fix-review Major-1), and calls `coach2Tick(coach2, world,
-v1Open, dt, store)` — which lives in `src/app/coach.js`, blessed there because
-the 808-line `main.js` cap leaves no room for the clock/latch/dismiss logic —
-every GAME frame; `coach2Tick` advances `coach2.t` (PLAY-only, the same
+v1Open, dt)` — `store` is not threaded through; it defaults to
+`defaultStore()`, as `main.js`'s own `loadCoachSeen()`/`saveCoachSeen()` calls
+already do — which lives in
+`src/app/coach.js`, blessed there because the 808-line `main.js` cap leaves no
+room for the clock/latch/dismiss logic — every GAME frame; `coach2Tick`
+advances `coach2.t` (PLAY-only, the same
 `main.js:121-124` trap `coachT` dodges) and closes/opens `coach2.kind` in
 place. `main.js` then computes the alpha from `coach2.t` and passes the
 finished string (via `coachTip`, composed in `coach.js`) and alpha down. The
