@@ -117,6 +117,7 @@ function check(name, cond, detail) {
             ITEMS[4],
             ITEMS[5],
             ITEMS[6],
+            ITEMS[7],
           ],
         },
         L,
@@ -276,6 +277,7 @@ function check(name, cond, detail) {
           items: [
             "PLAY|CORE",
             "LEVEL SELECT|CORE",
+            "DAILY",
             "OPTIONS",
             "GUIDE",
             "HIGH SCORES",

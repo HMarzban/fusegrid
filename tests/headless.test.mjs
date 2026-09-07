@@ -182,7 +182,7 @@ function mkCanvas(){
   for(let i=1;i<=10;i++)g.loop(i*16);
   check("C1 click-skip does not auto-start a run",
     g.app.screen===SCREEN.MENU&&g.world.time===0, g.app.screen);
-  g.app.cursor=2; cv.fire("pointerdown");       // OPTIONS
+  g.app.cursor=3; cv.fire("pointerdown");       // OPTIONS
   check("C1 OPTIONS click pushes SETTINGS once",
     g.app.screen===SCREEN.SETTINGS&&g.app.optRow===0,String(g.app.screen));
   for(let i=11;i<=20;i++)g.loop(i*16);
@@ -193,7 +193,7 @@ function mkCanvas(){
     g.app.render3d===true&&g.app.settings.r3d===1,
     "render3d="+g.app.render3d);
   g.app.key("Escape");
-  g.app.cursor=3; cv.fire("pointerdown");       // GUIDE
+  g.app.cursor=4; cv.fire("pointerdown");       // GUIDE
   check("C1 subscreen click lands once", g.app.screen===SCREEN.GUIDE);
   for(let i=21;i<=30;i++)g.loop(i*16);
   check("C1 subscreen does not bounce back", g.app.screen===SCREEN.GUIDE);
@@ -209,7 +209,7 @@ function mkCanvas(){
   const g=createGame(cv.el,{seed:71});
   g.app.cabinetSeen=true;                       // seen cabinet: skip -> MENU
   g.app.skip();
-  g.app.cursor=2;                               // OPTIONS
+  g.app.cursor=3;                               // OPTIONS
   cv.fire("pointerdown",{clientX:1,clientY:1}); // MENU tap: off SETTINGS, coords unused
   check("tap glue: OPTIONS push lands on SETTINGS row 0",
     g.app.screen===SCREEN.SETTINGS&&g.app.optRow===0,
@@ -266,7 +266,7 @@ function mkCanvas(){
   const plays=[];
   const audio={play:n=>plays.push(n),toggle:()=>false};
   const g=createGame(null,{seed:13,audio});
-  g.app.screen=SCREEN.MENU; g.app.cursor=2; plays.length=0;
+  g.app.screen=SCREEN.MENU; g.app.cursor=3; plays.length=0;
   g.app.confirm();                              // OPTIONS push
   check("I1 OPTIONS confirm -> uiSel + SETTINGS",
     plays.join()==="uiSel"&&g.app.screen===SCREEN.SETTINGS,
@@ -276,7 +276,7 @@ function mkCanvas(){
   check("I1 SETTINGS knob confirm -> uiTog (never uiSel)",
     plays.join()==="uiTog"&&g.app.settings.shk===0,JSON.stringify(plays));
   g.app.key("Escape");
-  g.app.cursor=3; plays.length=0;
+  g.app.cursor=4; plays.length=0;
   g.app.confirm();                              // push GUIDE
   g.app.key("Escape");                          // back
   check("I1 GUIDE enter->uiSel then Esc back->uiBack",

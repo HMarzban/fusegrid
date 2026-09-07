@@ -193,5 +193,87 @@ const TODAY = "2026-09-07";
   );
 }
 
+import { SCREEN, ITEMS, createMenuApp } from "../src/app/menuapp.js";
+import { readFileSync } from "node:fs";
+
+/* Block 7 (slot-3 dailyLine/summaryLines swap) is deferred to Task 3's append:
+   it imports dailyLine from src/render/scenes.js, which Task 3 creates — the
+   plan's Files list for Task 3 owns "scenes.js — dailyLine; summaryLines' slot-3
+   swap", so the test moves with its implementation owner rather than leaving
+   this file (and therefore `npm test`) red for the length of Task 2's commit. */
+
+// ---- 8. the row, the pin, and the untouched startRun contract ----
+{
+  check("DAILY sits directly under LEVEL SELECT", ITEMS[2] === "DAILY", JSON.stringify(ITEMS));
+  /* Written through indexOf so a future insert cannot silently re-point a row
+     at the wrong screen — the failure mode stage 2 exists to catch. */
+  const map = [["OPTIONS", SCREEN.SETTINGS], ["GUIDE", SCREEN.GUIDE],
+    ["HIGH SCORES", SCREEN.SCORES], ["STATS", SCREEN.STATS], ["LEVEL SELECT", SCREEN.LEVEL]];
+  const wrong = map.filter(([label, screen]) => {
+    const a = createMenuApp();
+    a.screen = SCREEN.MENU;
+    a.cursor = ITEMS.indexOf(label);
+    a.confirm();
+    return a.screen !== screen;
+  });
+  check(
+    "every MENU row still reaches its own screen after the stage-2 insert",
+    !wrong.length,
+    JSON.stringify(wrong.map(([l]) => l)),
+  );
+  const got = [];
+  const a = createMenuApp({
+    onStart: (x) => got.push(x),
+    dailySeed: () => ({ seed: dailySeed(TODAY), date: TODAY }),
+  });
+  check("startDaily off MENU is a no-op", a.startDaily() === false, String(a.startDaily()));
+  a.screen = SCREEN.MENU;
+  a.level = 4;
+  a.heat = 2;
+  a.pact = 9;
+  a.pace = -1;
+  a.startDaily();
+  check(
+    "the daily config is PINNED even when the player's own picks are not default",
+    got.length === 1 && got[0].level === 1 && got[0].heat === 0 &&
+      got[0].pact === 0 && got[0].pace === 0 &&
+      got[0].seed === dailySeed(TODAY) && got[0].daily === TODAY,
+    JSON.stringify(got[0]),
+  );
+  check(
+    "and it leaves LEVEL SELECT's own picks untouched for the next normal run",
+    a.level === 4 && a.heat === 2 && a.pact === 9 && a.pace === -1,
+    [a.level, a.heat, a.pact, a.pace].join(","),
+  );
+  check("startDaily entered GAME", a.screen === SCREEN.GAME);
+  const b = createMenuApp({ onStart: () => {} });
+  b.screen = SCREEN.MENU;
+  check(
+    "without o.dailySeed the row is inert rather than starting a bogus board",
+    b.startDaily() === false && b.screen === SCREEN.MENU,
+    String(b.screen),
+  );
+  const c = createMenuApp({ onStart: (x) => got.push(x) });
+  c.screen = SCREEN.LEVEL;
+  const args = c.startRun();
+  check(
+    "startRun's own args are UNCHANGED — no seed, no daily reaches a normal run",
+    Object.keys(args).sort().join(",") === "heat,level,pace,pact",
+    JSON.stringify(args),
+  );
+  check(
+    "the row carries the honour-system marker as its value token",
+    createMenuApp().dailyTag === "NEW" &&
+      createMenuApp({ dailyTag: "PLAYED" }).dailyTag === "PLAYED",
+    createMenuApp().dailyTag,
+  );
+  const shell = readFileSync("src/render/shellview.js", "utf8");
+  check(
+    "shellview renders the DAILY row with its tag, the label|value convention",
+    /ITEMS\[2\] \+ "\|" \+ app\.dailyTag/.test(shell),
+    (shell.match(/ITEMS\[2\][^\n]*/) || [])[0],
+  );
+}
+
 console.log("\n  DAILY RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);

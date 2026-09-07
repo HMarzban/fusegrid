@@ -54,14 +54,15 @@ check(
   JSON.stringify(SCREEN),
 );
 check(
-  "ITEMS frozen, 7 entries",
+  "ITEMS frozen, 8 entries",
   Object.isFrozen(ITEMS) &&
-    ITEMS.length === 7 &&
+    ITEMS.length === 8 &&
     ITEMS[0] === "PLAY" &&
-    ITEMS[2] === "OPTIONS" &&
-    ITEMS[3] === "GUIDE" &&
-    ITEMS[5] === "STATS" &&
-    ITEMS[6] === "SOURCE",
+    ITEMS[2] === "DAILY" &&
+    ITEMS[3] === "OPTIONS" &&
+    ITEMS[4] === "GUIDE" &&
+    ITEMS[6] === "STATS" &&
+    ITEMS[7] === "SOURCE",
   JSON.stringify(ITEMS),
 );
 check(
@@ -325,10 +326,10 @@ check(
 {
   for (const [cur, screen] of [
     [1, SCREEN.LEVEL],
-    [2, SCREEN.SETTINGS],
-    [3, SCREEN.GUIDE],
-    [4, SCREEN.SCORES],
-    [5, SCREEN.STATS],
+    [3, SCREEN.SETTINGS],
+    [4, SCREEN.GUIDE],
+    [5, SCREEN.SCORES],
+    [6, SCREEN.STATS],
   ]) {
     const a = createMenuApp();
     a.screen = SCREEN.MENU;
@@ -347,10 +348,10 @@ check(
     },
   });
   s.screen = SCREEN.MENU;
-  s.cursor = 6;
+  s.cursor = 7;
   s.confirm();
   check(
-    "cursor 6 SOURCE -> onSource(), screen stays MENU",
+    "cursor 7 SOURCE -> onSource(), screen stays MENU",
     srcHits === 1 && s.screen === SCREEN.MENU,
     srcHits + "/" + s.screen,
   );
@@ -358,7 +359,7 @@ check(
 {
   const a = createMenuApp();
   a.screen = SCREEN.MENU;
-  a.cursor = 3;
+  a.cursor = 4;
   a.confirm();
   check(
     "GUIDE entry resets guideRow",
@@ -372,7 +373,7 @@ check(
   ]) {
     const g = createMenuApp();
     g.screen = SCREEN.MENU;
-    g.cursor = 3;
+    g.cursor = 4;
     g.confirm(); // -> GUIDE, guideRow 0
     g.guideRow = row;
     g.confirm();
@@ -419,7 +420,7 @@ check(
 {
   const a = createMenuApp();
   a.screen = SCREEN.MENU;
-  a.cursor = 2;
+  a.cursor = 3;
   a.confirm();
   check("OPTIONS entry resets optRow and clears togT", a.optRow === 0 && a.togT === -1);
   check(
@@ -427,7 +428,7 @@ check(
     a.key("Escape") === true && a.screen === SCREEN.MENU,
     String(a.screen),
   );
-  a.cursor = 2;
+  a.cursor = 3;
   a.confirm();
   check(
     "confirm on SETTINGS is NOT back — Enter is consumed by the row",
@@ -1220,6 +1221,8 @@ check(
   const want = {
     PLAY: SCREEN.GAME,
     "LEVEL SELECT": SCREEN.LEVEL,
+    // no o.dailySeed here, so DAILY is inert and stays on MENU (R3)
+    DAILY: SCREEN.MENU,
     OPTIONS: SCREEN.SETTINGS,
     GUIDE: SCREEN.GUIDE,
     "HIGH SCORES": SCREEN.SCORES,

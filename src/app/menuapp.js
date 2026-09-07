@@ -31,6 +31,7 @@ export const SCREEN = Object.freeze({
 export const ITEMS = Object.freeze([
   "PLAY",
   "LEVEL SELECT",
+  "DAILY",
   "OPTIONS",
   "GUIDE",
   "HIGH SCORES",
@@ -89,6 +90,7 @@ export function createMenuApp(opts = {}) {
     pauseView: 0, // 0 list / 1 inline OPTIONS; both reset on the PLAY->PAUSE edge
     pact: clampPact(o.pact),
     pace: clampPace(o.pace),
+    dailyTag: o.dailyTag || "NEW",
     timeAttack: !!o.timeAttack,
     pactUnlocked: !!o.pactUnlocked,
     sound: o.sound !== false,
@@ -283,6 +285,8 @@ export function createMenuApp(opts = {}) {
               return this.startRun();
             case "LEVEL SELECT":
               return this._push(SCREEN.LEVEL);
+            case "DAILY":
+              return this.startDaily();
             case "OPTIONS":
               this.optRow = 0;
               return this._push(SCREEN.SETTINGS);
@@ -584,6 +588,20 @@ export function createMenuApp(opts = {}) {
     playFromAttract() {
       if (this.screen !== SCREEN.ATTRACT) return false;
       return this._playCore({ level: 1, heat: 0, pact: 0, pace: this.pace | 0 });
+    },
+    /* The daily config is PINNED, not inherited: heat changes the roster, pact
+       changes the item count and therefore the rng draw order, and pace scales
+       player speed — the only claim this feature makes is that YOUR OWN
+       attempts are comparable to each other. There is no DAILY screen: the
+       standing record lives on STATS and the day's verdict on the run-end
+       overlay. Without o.dailySeed the row is inert rather than starting a
+       board derived from nothing. */
+    startDaily() {
+      if (this.screen !== SCREEN.MENU) return false;
+      const d = o.dailySeed ? o.dailySeed() : null;
+      if (!d) return false;
+      return this._playCore({ level: 1, heat: 0, pact: 0, pace: 0,
+                              seed: d.seed, daily: d.date });
     },
     /* Shared CORE handoff for playFromAttract/bootFromIntro (plan 7): reset
        the shell into GAME and hand args to main's onStart. Callers gate the

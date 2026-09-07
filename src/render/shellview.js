@@ -80,11 +80,12 @@ export function drawShell(c, app, world, canvas, kind, getScores, getPlaques) {
         items: [
           ITEMS[0] + "|" + heatToken(app.heat),
           ITEMS[1] + "|" + heatToken(app.heat),
-          ITEMS[2],
+          ITEMS[2] + "|" + app.dailyTag,
           ITEMS[3],
           ITEMS[4],
           ITEMS[5],
           ITEMS[6],
+          ITEMS[7],
         ],
       },
       L,
