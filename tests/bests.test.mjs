@@ -788,7 +788,7 @@ const rec = () => {
       ps.indexOf("endRun()") < ps.indexOf("world.score > 0"),
     ps.trim().slice(0, 160),
   );
-  const rst = (src.match(/if \(cmd === "RESTART"\)[\s\S]{0,320}/) || [""])[0];
+  const rst = (src.match(/if \(cmd === "RESTART"\)[\s\S]{0,700}/) || [""])[0];
   check(
     "B6: pause RESTART calls persistScore BEFORE startRunState — reversing them drops the write",
     rst.indexOf("persistScore();") >= 0 &&

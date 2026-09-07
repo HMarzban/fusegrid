@@ -76,8 +76,8 @@ stale by the time this plan runs — locate every edit by string.**
 - **`overlayCue` is not touched.** R8 changes only `drawOverlay`'s
   concatenation, through R1's `COPY_HINT` constant, so
   `tests/heat.test.mjs:49-69`'s four exact-string pins are unmoved.
-- **`main.js`'s line pin rises to 793 exactly once**, in **Task 2** — this plan's
-  first `main.js`-touching task. Additions total **+9** over R3's 783.
+- **`main.js`'s line pin rises to 798 exactly once**, in **Task 2** — this plan's
+  first `main.js`-touching task. Additions total **+9** over R3's 788.
 - **`src/pwa/shell.js`'s `SRC` entry for `src/app/code.js` is mandatory.**
 - PWA: bump `CACHE_NAME` + `sw.js:3` `REV` **together**, `current vN → vN+1`, in
   **every** commit here. **Read the current value first.**
@@ -593,9 +593,9 @@ the label and the assertion:
 
 ```js
   // R8 challenge-code wave: +9 lines (code.js import; the ?code= decode and
-  // playChallenge boot branch; the KeyB copy block) — bumped 783->793.
-  check("main.js stays a lean browser entry (<=793 lines)",
-    L.length<=793,String(L.length));
+  // playChallenge boot branch; the KeyB copy block) — bumped 788->798.
+  check("main.js stays a lean browser entry (<=798 lines)",
+    L.length<=798,String(L.length));
 ```
 
 The bump lands here; Task 3's `KeyB` block fits under the same ceiling.

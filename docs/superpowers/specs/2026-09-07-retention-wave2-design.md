@@ -313,7 +313,7 @@ pin) and every `drawOverlay(…)` call in `tests/times.test.mjs` unmoved. The
 argument is `main.js`'s `ro.run`:
 
 ```
-              run: { r: tally.r, k: tally.k, p: tally.p, t: runT, best: bestRun,
+              run: { r: tally.r, k: tally.k, p: tally.p, t: runT, best: bestRun, fromStart: runFromStart,
                      daily: dailyDate, tries: dailyRec.played, dbest: dailyRec.best },
 ```
 
@@ -1200,8 +1200,8 @@ so a tip never paints over the PAUSED, CLEARED or GAME OVER veil.
 | `menudraw.js` | `drawMenu drawLevelSelect drawHowTo drawItemsHelp drawEnemiesHelp drawGuide drawScores drawSettings drawAttractHint drawDim drawFade layout settingsRows settingsGeom settingsHit` | **+** `drawStats(c, L, t, ui)` | R5 |
 | `src/app/flags.js readFlags` | `urlKind autoplay netLocal orbit debug` | **+** `code` | R8 |
 | `src/app/coach.js` | `COACH_KEY COACH_DUR loadCoachSeen saveCoachSeen coachOpen` | **+** `COACH2_KEY COACH2_DUR loadCoach2 saveCoach2 coach2Seen coach2Mark coachTip`; imports `POWER` from `core/entities.js` | R10 |
-| `main.js` | `coachT roomT bestPrev` | **+** `tally runT bestRun runEnded dailyDate dailyRec coach2T coach2Kind`; `startRunState` / `endRun` / `copyText` helpers; `isFinale` on the `CFG` import; the split edge block (§2.3); `feedTally` line; `ro.run` / `ro.coach2`; `todayStr`; `?code=` boot branch; `KeyB` and `KeyC`-on-STATS branches; four new module imports | all |
-| `tests/headless.test.mjs:909` | `main.js stays a lean browser entry (<=733 lines)`, measured 732 | **R1 → 754, R5 → 770, R3 → 782, R8 → 792, R10 → 802**, each with the file's own one-line reason comment appended (`:900-908` convention) so the gate keeps biting. **Rule: a plan that would exceed its cap moves the excess into its `src/app/*` module, never into a higher pin** | all |
+| `main.js` | `coachT roomT bestPrev` | **+** `tally runT bestRun runEnded runFromStart dailyDate dailyRec coach2T coach2Kind`; `startRunState` / `endRun` / `copyText` helpers; `isFinale` on the `CFG` import; the split edge block (§2.3); `feedTally` line; `ro.run` / `ro.coach2`; `todayStr`; `?code=` boot branch; `KeyB` and `KeyC`-on-STATS branches; four new module imports | all |
+| `tests/headless.test.mjs:909` | `main.js stays a lean browser entry (<=733 lines)`, measured 732 | **R1 → 760, R5 → 776, R3 → 788, R8 → 798, R10 → 808 (split-length measure = wc -l + 1; re-based 2026-09-07 after the R1 fix wave landed the pin at 760)**, each with the file's own one-line reason comment appended (`:900-908` convention) so the gate keeps biting. **Rule: a plan that would exceed its cap moves the excess into its `src/app/*` module, never into a higher pin** | all |
 | `tests/heat.test.mjs:325-335` (WIN branch) | `texts.some(s => s.indexOf("CLEARED") >= 0)` | **unmoved** — the 9th arg defaults `undefined` ⇒ today's layout | R1 |
 | `tests/heat.test.mjs:55-82` | `overlayCue` × 4 and `runStamp` / `copyPayload` exact strings | **unmoved** — R8 changes only `drawOverlay`'s concatenation | R8 |
 | `tests/times.test.mjs:8,10` (`timeLine`, `drawOverlay` pins) | 8-arg calls | **unmoved**; the `timeLine` slot moves from dy 44 to dy 68 on a mid-room WIN, and both pins are string-presence pins, not position pins | R1 |

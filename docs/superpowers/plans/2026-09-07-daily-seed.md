@@ -90,9 +90,9 @@ plan runs — locate every edit by string.**
 - **On a daily run the daily line REPLACES the delta line in slot 3.** The day's
   comparison is the one that matters that day; the `nb.bests.v1` write still
   happens, so nothing is lost from the record.
-- **`main.js`'s line pin rises to 783 exactly once**, in **Task 3** — this plan's
-  only `main.js`-touching task. Additions total **+12** over R5's 771. If your
-  implementation lands above 783, move the excess into `src/app/daily.js` —
+- **`main.js`'s line pin rises to 788 exactly once**, in **Task 3** — this plan's
+  only `main.js`-touching task. Additions total **+12** over R5's 776. If your
+  implementation lands above 788, move the excess into `src/app/daily.js` —
   **never raise the pin**.
 - **`src/pwa/shell.js`'s `SRC` entry for `src/app/daily.js` is mandatory.**
 - PWA: bump `CACHE_NAME` + `sw.js:3` `REV` **together**, `current vN → vN+1`, in
@@ -1064,9 +1064,9 @@ the label and the assertion:
   // R3 daily wave: +12 lines (daily.js import; the local todayStr beside the
   // UTC dateStr; dailyDate/dailyRec; app.dailyTag at boot; o.dailySeed; the
   // seed and daily stamp in onStart; the nb.daily.v1 write in endRun; ro.run's
-  // three daily fields) — bumped 771->783.
-  check("main.js stays a lean browser entry (<=783 lines)",
-    L.length<=783,String(L.length));
+  // three daily fields) — bumped 776->788.
+  check("main.js stays a lean browser entry (<=788 lines)",
+    L.length<=788,String(L.length));
 ```
 
 - [ ] **Step 4: Run to PASS — full battery**
