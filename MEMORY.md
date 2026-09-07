@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-06 — Pushed to origin: arcade loop, art, settings, soundtrack v3, retention report
+- First push since 569bc0a: three programs (items+player art → MAKO mascot, settings/menu/pause, soundtrack v3 user-approved) plus the retention report and the 2026-09-04 arcade-loop docs. Store art recaptured with MAKO. Tree-wide banned-name gate live. Open: og.png Social-preview upload by hand; retention wave 1 awaiting go; six B-excerpt confirmations.
+
 ## 2026-09-06 — Closing fix wave: tree-wide banned-name gate, AGENTS v3 audio bullet, spec/README sync
 - New `tests/banned-name.test.mjs` walks `git ls-files` (skipping binaries/NUL-sniffed files) and asserts no tracked file contains the private reference game's name, built by concatenation and never as a literal. RED on the current tree, naming `AGENTS.md` — its own rule text spelled the name out; GREEN once both `AGENTS.md` bullets were reworded to talk about "the private reference game" instead. No other survivors in the tracked tree.
 - `AGENTS.md`: fixed the stale "menu AABB (identity)" audio line (all nine B sections are hand-authored now, no identity B), renamed "the player visor" to "the player face plate" (already renamed elsewhere in the file), and added a Learned Workspace Facts bullet summarizing Soundtrack Direction v3 (tempo band, timbre rules, headroom, no shared motif, all-nine-hand-authored) with a pointer to `docs/superpowers/specs/2026-09-05-soundtrack-design.md`.
