@@ -921,8 +921,12 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   // copyText helper replacing the inline clipboard pair; KeyC-on-STATS;
   // onStats; the STATS audio exclusion; the room_enter/room_clear/death/
   // run_end/score_set/plaque_unlock edges) — bumped 760->776.
-  check("main.js stays a lean browser entry (<=776 lines)",
-    L.length<=776,String(L.length));
+  // R3 daily wave: +13 lines (daily.js import; the local todayStr beside the
+  // UTC dateStr; dailyDate/dailyRec; app.dailyTag at boot; o.dailySeed; the
+  // seed and daily stamp in onStart; the nb.daily.v1 write in endRun; ro.run's
+  // three daily fields) — measured 774->787, against the wave's 788 cap.
+  check("main.js stays a lean browser entry (<=788 lines)",
+    L.length<=788,String(L.length));
   const lastImp=L.reduce((a,l,i)=>/^import[\s{]/.test(l)?i:a,-1);
   const firstDecl=L.findIndex(l=>/^(export\s|const\s|let\s|var\s|function\s|class\s)/.test(l));
   check("main.js keeps every import at the top (no mid-file import sprawl)",

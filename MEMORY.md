@@ -16,6 +16,25 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-07 — R3 daily challenge
+- Added a `DAILY` MENU row (index 2, under LEVEL SELECT) that starts a pinned
+  CORE room-1 run seeded by a pure FNV-1a hash (`src/app/daily.js`) of the
+  **local** date — the shipped UTC `dateStr` stays untouched since it stamps
+  persisted high-score rows. Recorded in `nb.daily.v1` with the pace it
+  actually ran at, so a future pin change is visible rather than silently
+  compared.
+- A LOSE-screen retry deliberately replays the same board (`dailyDate`
+  survives `startRunState`) and counts as another try; the run-end overlay's
+  slot 3 shows `DAILY <date> · <PACE> · TRY n · YOUR BEST n` instead of the
+  delta line, and `C` copies a score/date/URL stamp with no code.
+- Honour-system and single-device by decision: enforcement of one attempt per
+  day is refused, and the only copy says `YOUR OWN ATTEMPTS ONLY` (STATS note
+  1) — no streak, no banner, no nag. Inserting DAILY at index 2 moved OPTIONS/
+  GUIDE one slot; the index-driven MENU confirms in `headless.test.mjs` and
+  `menuapp.test.mjs` moved with it in the same commit.
+- Three commits, PWA v128->v131, 37/37 green throughout (`tests/daily.test.mjs`
+  is new, 56 pins). `main.js` measured 774->787 against the wave's 788 cap.
+
 ## 2026-09-07 — R5 fix wave (review Minor-1..8, Nit-8)
 - Fixed two edge gaps: PAUSE->RESTART now emits `room_enter`; `persistScore()`
   now owns the `score_set` edge too (hoisted from the WIN/LOSE `noteWorldEdge`

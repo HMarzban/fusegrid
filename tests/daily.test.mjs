@@ -194,13 +194,48 @@ const TODAY = "2026-09-07";
 }
 
 import { SCREEN, ITEMS, createMenuApp } from "../src/app/menuapp.js";
+import { summaryLines, deltaLine, dailyLine } from "../src/render/scenes.js";
 import { readFileSync } from "node:fs";
 
-/* Block 7 (slot-3 dailyLine/summaryLines swap) is deferred to Task 3's append:
-   it imports dailyLine from src/render/scenes.js, which Task 3 creates — the
-   plan's Files list for Task 3 owns "scenes.js — dailyLine; summaryLines' slot-3
-   swap", so the test moves with its implementation owner rather than leaving
-   this file (and therefore `npm test`) red for the length of Task 2's commit. */
+// ---- 7. slot 3: on a daily run the daily line REPLACES the delta line ----
+{
+  const W = { state: "LOSE", level: 3, score: 1840, heat: 0, pact: 0, pace: 0 };
+  // best.r matches world.level(3) so FURTHEST ROOM YET does not also fire —
+  // this block isolates the delta-vs-daily slot-3 swap, not deltaLine's own
+  // five-form table (covered by bests.test.mjs).
+  const plain = { r: 2, k: 5, p: 1, t: 90, best: { s: 500, r: 3 } };
+  const daily = { ...plain, daily: TODAY, tries: 3, dbest: 1840 };
+  check(
+    "dailyLine is the exact locked copy, and YOUR is in it",
+    dailyLine(W, daily) === "DAILY 2026-09-07 · NORM · TRY 3 · YOUR BEST 1840",
+    dailyLine(W, daily),
+  );
+  check(
+    "the pace token is printed, so the daily's pinned NORM is never a silent surprise",
+    dailyLine({ ...W, pace: 1 }, daily) ===
+      "DAILY 2026-09-07 · HARD · TRY 3 · YOUR BEST 1840",
+    dailyLine({ ...W, pace: 1 }, daily),
+  );
+  const lp = summaryLines(W, plain);
+  const ld = summaryLines(W, daily);
+  check(
+    "a NON-daily LOSE still emits the delta line — R1 is unchanged by this plan",
+    lp.length === 2 && lp[1][0] === "NEW BEST",
+    JSON.stringify(lp),
+  );
+  check(
+    "a daily LOSE emits the daily line INSTEAD of the delta line",
+    ld.length === 2 &&
+      ld[1][0] === dailyLine(W, daily) &&
+      ld[1][0] !== deltaLine(W, daily),
+    JSON.stringify(ld),
+  );
+  check(
+    "a daily MID-ROOM win emits neither — slot 3 is still run-end only",
+    summaryLines({ ...W, state: "WIN" }, daily).length === 1,
+    JSON.stringify(summaryLines({ ...W, state: "WIN" }, daily)),
+  );
+}
 
 // ---- 8. the row, the pin, and the untouched startRun contract ----
 {
@@ -272,6 +307,140 @@ import { readFileSync } from "node:fs";
     "shellview renders the DAILY row with its tag, the label|value convention",
     /ITEMS\[2\] \+ "\|" \+ app\.dailyTag/.test(shell),
     (shell.match(/ITEMS\[2\][^\n]*/) || [])[0],
+  );
+}
+
+import { createGame } from "../src/main.js";
+
+// ---- 9. main.js: the seed reaches the world, and a retry is another TRY ----
+{
+  const mem = new Map();
+  const ls = { getItem: (k) => (mem.has(k) ? mem.get(k) : null),
+    setItem: (k, v) => mem.set(k, String(v)) };
+  const wrote = [];
+  globalThis.window = { localStorage: ls, addEventListener() {} };
+  // Node >=21 ships a getter-only globalThis.navigator; redefine it rather
+  // than assign, and restore the original descriptor in the finally below.
+  const origNavDesc = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+  Object.defineProperty(globalThis, "navigator", {
+    value: { clipboard: { writeText: (s) => { wrote.push(s); return Promise.resolve(); } } },
+    configurable: true,
+  });
+  /* main.js's todayStr is deliberately LOCAL, not the shipped UTC dateStr —
+     a challenge day that flips at 5pm local is the confusion this feature
+     exists to avoid. Recomputed here the same way, at the same instant. */
+  const p2 = (n) => (n < 10 ? "0" + n : "" + n);
+  const d0 = new Date();
+  const local = d0.getFullYear() + "-" + p2(d0.getMonth() + 1) + "-" + p2(d0.getDate());
+  try {
+    const g = createGame(null, { seed: 12345 });
+    g.app.cabinetSeen = true;
+    g.app.skip();
+    check("the row tag starts at NEW on a fresh cabinet", g.app.dailyTag === "NEW", g.app.dailyTag);
+    g.app.cursor = ITEMS.indexOf("DAILY");
+    g.app.confirm();
+    check(
+      "a DAILY run seeds the world from today's local date",
+      g.app.screen === SCREEN.GAME && g.world.seed === dailySeed(local),
+      g.world.seed + " vs " + dailySeed(local),
+    );
+    check(
+      "and it runs CORE, pact 0, NORM regardless of the player's picks",
+      (g.world.heat | 0) === 0 && (g.world.pact | 0) === 0 && (g.world.pace | 0) === 0,
+      [g.world.heat, g.world.pact, g.world.pace].join(","),
+    );
+    let t = 1000;
+    g.loop(t);
+    g.world.score = 1200;
+    g.world.state = "LOSE";
+    g.loop((t += 16));
+    check(
+      "the LOSE edge writes nb.daily.v1 at TRY 1",
+      loadDaily(ls).date === local && loadDaily(ls).played === 1 && loadDaily(ls).best === 1200,
+      ls.getItem("nb.daily.v1"),
+    );
+    check("and the row tag flips to PLAYED", g.app.dailyTag === "PLAYED", g.app.dailyTag);
+    const seedBefore = g.world.seed;
+    g.world.state = "PLAY";
+    g.loop((t += 16)); // LOSE -> PLAY: a retry, NOT a new challenge
+    check(
+      "a retry replays the SAME board — dailyDate must survive startRunState",
+      g.world.seed === seedBefore,
+      seedBefore + " -> " + g.world.seed,
+    );
+    g.world.score = 1840;
+    g.world.state = "LOSE";
+    g.loop((t += 16));
+    check(
+      "the retry counts as TRY 2 and raises the day's best",
+      loadDaily(ls).played === 2 && loadDaily(ls).best === 1840,
+      ls.getItem("nb.daily.v1"),
+    );
+    wrote.length = 0;
+    g.input.onUiKey("KeyC");
+    check(
+      "C on a daily run copies the stamp, not the ordinary run payload",
+      wrote.length === 1 && wrote[0] === dailyStamp(local, g.world.level | 0, 1840),
+      JSON.stringify(wrote),
+    );
+    // a NON-daily run must never touch nb.daily.v1
+    const before = ls.getItem("nb.daily.v1");
+    g.app.toMenu();
+    g.app.cursor = 0;
+    g.app.confirm(); // PLAY: an ordinary run
+    g.loop((t += 16));
+    g.world.score = 9999;
+    g.world.state = "LOSE";
+    g.loop((t += 16));
+    check(
+      "an ordinary run never records into nb.daily.v1",
+      ls.getItem("nb.daily.v1") === before,
+      ls.getItem("nb.daily.v1"),
+    );
+    check(
+      "and STATS note 1 now reads the standing daily record",
+      (() => {
+        g.app.toMenu();
+        g.app.cursor = ITEMS.indexOf("STATS");
+        g.app.confirm();
+        return g.app.stats.notes.length === 2 &&
+          g.app.stats.notes[0].indexOf("YOUR OWN ATTEMPTS ONLY") > 0;
+      })(),
+      JSON.stringify(g.app.stats && g.app.stats.notes),
+    );
+  } finally {
+    delete globalThis.window;
+    if (origNavDesc) Object.defineProperty(globalThis, "navigator", origNavDesc);
+    else delete globalThis.navigator;
+  }
+}
+
+// ---- 9b. the two seams that must not drift ----
+{
+  const src = readFileSync("src/main.js", "utf8");
+  check(
+    "todayStr is LOCAL and the shipped dateStr stays UTC — two helpers, not one",
+    /toISOString\(\)\.slice\(0, 10\)/.test(src) && /getFullYear\(\)/.test(src),
+    (src.match(/const todayStr[^\n]*/) || [])[0],
+  );
+  check(
+    "the seed is applied BEFORE loadLevel, which reads it for both createRng and genBoard",
+    (() => {
+      const blk = (src.match(/const onStart = \(args\) => \{[\s\S]{0,600}/) || [""])[0];
+      return blk.indexOf("world.seed = args.seed") > 0 &&
+        blk.indexOf("world.seed = args.seed") < blk.indexOf("loadLevel(world, args.level");
+    })(),
+    (src.match(/world\.seed = args\.seed[^\n]*/) || [])[0],
+  );
+  check(
+    "startRunState does NOT clear dailyDate — a retry is another attempt at the same board",
+    !/startRunState[\s\S]{0,200}dailyDate = null/.test(src),
+    (src.match(/dailyDate = [^\n]*/g) || []).join(" | "),
+  );
+  check(
+    "src/core is untouched: the seed reaches the sim only through world.seed",
+    (src.match(/world\.seed = /g) || []).length === 1,
+    (src.match(/world\.seed = [^\n]*/g) || []).join(" | "),
   );
 }
 

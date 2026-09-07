@@ -157,10 +157,25 @@ export function summaryLines(world, run) {
   if (!run) return [];
   const out = [[runLine(run), "#9fb3d8"]];
   if (isRunEnd(world)) {
-    const [s, hot] = deltaOf(world || {}, run);
-    out.push([s, hot ? "#37f0d0" : "#9fb3d8"]);
+    if (run.daily) out.push([dailyLine(world, run), "#9fb3d8"]);
+    else {
+      const [s, hot] = deltaOf(world || {}, run);
+      out.push([s, hot ? "#37f0d0" : "#9fb3d8"]);
+    }
   }
   return out;
+}
+/* On a daily run this REPLACES the delta line in slot 3: the day's comparison
+   is the one that matters that day, and the nb.bests.v1 write still happens so
+   nothing is lost from the record. The pace token is printed because the daily
+   pins NORM and ignores the player's own pace — an ignored setting is shown,
+   never swallowed. "YOUR" is the honesty word and it is free. */
+export function dailyLine(world, run) {
+  const w = world || {}, r = run || {};
+  return (
+    "DAILY " + r.daily + " · " + paceToken(w.pace) +
+    " · TRY " + (r.tries | 0) + " · YOUR BEST " + (r.dbest | 0)
+  );
 }
 const COPY_HINT = " · C copy";
 /* Pause-list row copy mirrors src/app/menuapp.js PAUSE_ITEMS — render/ must

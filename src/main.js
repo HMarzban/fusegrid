@@ -27,6 +27,7 @@ import { loadSettings, saveSettings } from "./app/settings.js";
 import { timeKey, loadTimes, saveTimes, bestOf, recordTime } from "./app/times.js";
 import { bestKey, loadBests, saveBests, bestOfRun, recordBest, newTally, feedTally } from "./app/bests.js";
 import { loadStats, setStatsOn, stat, statPlaques, statsRows, statsNotes, statsPayload } from "./app/stats.js";
+import { dailySeed, loadDaily, saveDaily, recordDaily, dailyTag, dailyStamp } from "./app/daily.js";
 import {
   loadCoachSeen,
   saveCoachSeen,
@@ -58,6 +59,10 @@ export function createGame(canvas, opts = {}) {
     autoplay = flags.autoplay,
     orbitEn = flags.orbit;
   const dateStr = () => new Date().toISOString().slice(0, 10);
+  // R3: daily's own LOCAL date, beside the shipped UTC dateStr (which stamps
+  // highscores.js's "d" column and stays untouched — a 5pm local day-flip is
+  // the confusion R3 exists to avoid).
+  const todayStr = () => { const d = new Date(), p = (n) => (n < 10 ? "0" + n : "" + n); return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()); };
 
   // frozen backdrop world: created exactly as today but NEVER forced to
   // "MENU" — it simply is not stepped until a run starts (spec §7 edit 1)
@@ -135,6 +140,9 @@ export function createGame(canvas, opts = {}) {
      overlay can never read back the record it just set. */
   let roomT = 0;
   let bestPrev = null;
+  // R3: dailyDate DELIBERATELY survives a LOSE retry (same world.seed, another
+  // try at the same board); dailyRec is main's cached nb.daily.v1 record.
+  let dailyDate = null, dailyRec = loadDaily();
   /* R1: bestRun is a RUN-START snapshot (a score record is per-run and the
      overlay draws on every room's WIN), and endRun is one idempotent write
      called from BOTH sim edges below AND from persistScore(), which already
@@ -154,6 +162,7 @@ export function createGame(canvas, opts = {}) {
     saveBests(recordBest(loadBests(), bestKey(world), world.score | 0,
       runFromStart ? (world.level | 0) : 0));
     stat("run_end", { r: world.level | 0, s: world.score | 0, k: tally.k, p: tally.p, b: tally.b, secs: Math.round(runT), kt: tally.kt, pk: tally.pk }, dateStr());
+    if (dailyDate) { dailyRec = recordDaily(loadDaily(), dailyDate, world.score | 0, world.level | 0, world.pace | 0); saveDaily(dailyRec); app.dailyTag = dailyTag(dailyRec, dailyDate); }
   };
 
   /* USER CAMERA (spec §1): render-side closure state, NEVER in world/snapshot.
@@ -187,6 +196,8 @@ export function createGame(canvas, opts = {}) {
     world.heat = clampHeat(args && args.heat);
     world.pact = clampPact(args && args.pact);
     world.pace = clampPace(args && args.pace);
+    if (args && args.seed != null) world.seed = args.seed >>> 0;
+    dailyDate = (args && args.daily) || null; // unconditional: an ordinary run clears any prior daily
     loadLevel(world, args.level, false);
     world.score = 0;
     world.state = "PLAY";
@@ -243,7 +254,8 @@ export function createGame(canvas, opts = {}) {
     onStart,
     onSource,
     onStats: () => { setStatsOn(); const sv = loadStats();
-      app.stats = { rows: statsRows(sv, loadBests()), notes: statsNotes(sv, null, null) }; },
+      app.stats = { rows: statsRows(sv, loadBests()), notes: statsNotes(sv, dailyRec, todayStr()) }; },
+    dailySeed: () => { const d = todayStr(); return { seed: dailySeed(d), date: d }; },
     onPauseCmd: (cmd) => {
       if (cmd === "RESUME") {
         world.state = "PLAY";
@@ -278,6 +290,7 @@ export function createGame(canvas, opts = {}) {
      object the OPTIONS rows actually mutate. */
   settings = app.settings;
   applySettings(settings);
+  app.dailyTag = dailyTag(dailyRec, todayStr());
   /* §5 cue sheet — wired HERE in the app layer, never in render/sim. Wrappers
      shadow the machine methods so every successful transition plays exactly
      one cue; RENDER/SOUND confirms get uiTog instead of uiSel, and subscreen
@@ -359,7 +372,7 @@ export function createGame(canvas, opts = {}) {
     if (code === "KeyC") {
       if (app.screen === SCREEN.STATS) { copyText(statsPayload(loadStats(), loadBests(), loadTimes(), dateStr())); return; }
       if (app.screen === SCREEN.GAME) {
-        if (world.state === "WIN" || world.state === "LOSE") copyText(copyPayload(world));
+        if (world.state === "WIN" || world.state === "LOSE") copyText(dailyDate ? dailyStamp(dailyDate, world.level | 0, world.score | 0) : copyPayload(world));
         return;
       } // outside GAME (e.g. ATTRACT): fall through to app.key so KeyC still plays
     }
@@ -714,7 +727,7 @@ export function createGame(canvas, opts = {}) {
                   : 0,
               pause: { view: app.pauseView | 0, cursor: app.pauseCursor | 0 },
               time: { on: !!app.timeAttack, t: roomT, best: bestPrev },
-              run: { r: tally.r, k: tally.k, p: tally.p, t: runT, best: bestRun, fromStart: runFromStart },
+              run: { r: tally.r, k: tally.k, p: tally.p, t: runT, best: bestRun, fromStart: runFromStart, daily: dailyDate, tries: dailyRec.played, dbest: dailyRec.best },
             }
           : { hud: false };
     // BRIGHTNESS is 3D only — CLASSIC 2D blits the authored hex unregraded.
