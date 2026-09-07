@@ -27,7 +27,7 @@ import { loadSettings, saveSettings } from "./app/settings.js";
 import { timeKey, loadTimes, saveTimes, bestOf, recordTime } from "./app/times.js";
 import { bestKey, loadBests, saveBests, bestOfRun, recordBest, newTally, feedTally } from "./app/bests.js";
 import { loadStats, setStatsOn, stat, statPlaques, statsRows, statsNotes, statsPayload } from "./app/stats.js";
-import { dailySeed, loadDaily, saveDaily, recordDaily, dailyTag, dailyStamp } from "./app/daily.js";
+import { dailySeed, loadDaily, dailyTag, dailyStamp, finishDaily } from "./app/daily.js";
 import {
   loadCoachSeen,
   saveCoachSeen,
@@ -66,10 +66,9 @@ export function createGame(canvas, opts = {}) {
 
   // frozen backdrop world: created exactly as today but NEVER forced to
   // "MENU" — it simply is not stepped until a run starts (spec §7 edit 1)
-  const world = createWorld(
-    opts.seed != null ? opts.seed : (Math.random() * 1e9) >>> 0,
-    1,
-  );
+  // Minor-1 (review 2026-09-07, owner ruling): bootSeed is remembered once so a seedless run's onStart falls back to it.
+  const bootSeed = (opts.seed != null ? opts.seed : Math.random() * 1e9) >>> 0;
+  const world = createWorld(bootSeed, 1);
   loadLevel(world, 1, false);
   world.state = "PLAY";
 
@@ -162,7 +161,7 @@ export function createGame(canvas, opts = {}) {
     saveBests(recordBest(loadBests(), bestKey(world), world.score | 0,
       runFromStart ? (world.level | 0) : 0));
     stat("run_end", { r: world.level | 0, s: world.score | 0, k: tally.k, p: tally.p, b: tally.b, secs: Math.round(runT), kt: tally.kt, pk: tally.pk }, dateStr());
-    if (dailyDate) { dailyRec = recordDaily(loadDaily(), dailyDate, world.score | 0, world.level | 0, world.pace | 0); saveDaily(dailyRec); app.dailyTag = dailyTag(dailyRec, dailyDate); }
+    if (dailyDate) { const f = finishDaily(dailyDate, world.score | 0, world.level | 0, world.pace | 0); dailyRec = f.rec; app.dailyTag = f.tag; }
   };
 
   /* USER CAMERA (spec §1): render-side closure state, NEVER in world/snapshot.
@@ -196,7 +195,7 @@ export function createGame(canvas, opts = {}) {
     world.heat = clampHeat(args && args.heat);
     world.pact = clampPact(args && args.pact);
     world.pace = clampPace(args && args.pace);
-    if (args && args.seed != null) world.seed = args.seed >>> 0;
+    world.seed = args && args.seed != null ? args.seed >>> 0 : bootSeed;
     dailyDate = (args && args.daily) || null; // unconditional: an ordinary run clears any prior daily
     loadLevel(world, args.level, false);
     world.score = 0;

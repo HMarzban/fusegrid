@@ -925,6 +925,11 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   // UTC dateStr; dailyDate/dailyRec; app.dailyTag at boot; o.dailySeed; the
   // seed and daily stamp in onStart; the nb.daily.v1 write in endRun; ro.run's
   // three daily fields) — measured 774->787, against the wave's 788 cap.
+  // R3 fix wave (review Minor-1/Minor-4, owner ruling 2026-09-07): net -1
+  // line (bootSeed hoisted out of createWorld's call and remembered; onStart's
+  // seed write is a ternary against it; endRun's record+tag write moved into
+  // daily.js's finishDaily, one shared "today" param for both halves) —
+  // measured 787->786.
   check("main.js stays a lean browser entry (<=788 lines)",
     L.length<=788,String(L.length));
   const lastImp=L.reduce((a,l,i)=>/^import[\s{]/.test(l)?i:a,-1);

@@ -97,3 +97,17 @@ export function dailyStamp(date, level, score) {
     " · https://hmarzban.github.io/fusegrid/"
   );
 }
+
+/* endRun's one record+tag write, kept in ONE place so both halves use the
+   SAME date. Minor-4 (review 2026-09-07, owner ruling): the record AND the
+   tag returned alongside it both belong to the run's START date — a run
+   that crosses local midnight is never tagged PLAYED for a day it never
+   touched. This is structural (one shared "today" param), not a convention
+   two call sites could drift apart on. The row's tag for the ACTUAL current
+   day is a separate concern main.js re-derives at boot via
+   dailyTag(dailyRec, todayStr()) — not this function's job. */
+export function finishDaily(today, score, room, pace, store) {
+  const rec = recordDaily(loadDaily(store), today, score, room, pace);
+  saveDaily(rec, store);
+  return { rec, tag: dailyTag(rec, today) };
+}

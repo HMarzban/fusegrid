@@ -7,6 +7,7 @@ import {
   recordDaily,
   dailyTag,
   dailyStamp,
+  finishDaily,
 } from "../src/app/daily.js";
 
 let pass = 0,
@@ -179,6 +180,36 @@ const TODAY = "2026-09-07";
     "the mismatched run's result REPLACES the record — never silently kept the old (higher) best",
     mismatch.best === 100,
     String(mismatch.best),
+  );
+}
+
+// ---- 4c. Minor-4 (review 2026-09-07, owner ruling): the record AND the tag
+// returned alongside it both belong to the run's START date — never any
+// other date. finishDaily is endRun's one write, in daily.js, so this is
+// structural (one shared date param), not a convention two call sites could
+// drift apart on. ----
+{
+  const st = mapStore();
+  const f = finishDaily("2026-09-06", 1200, 3, 0, st);
+  check(
+    "the daily record belongs to the run's START date",
+    f.rec.date === "2026-09-06" && f.rec.played === 1 && f.rec.best === 1200,
+    JSON.stringify(f.rec),
+  );
+  check(
+    "the tag returned alongside it is computed against that SAME start date — PLAYED",
+    f.tag === "PLAYED",
+    f.tag,
+  );
+  check(
+    "but that record read back against the actual NEW day is NEW — the row is not stuck PLAYED forever",
+    dailyTag(f.rec, "2026-09-07") === "NEW",
+    dailyTag(f.rec, "2026-09-07"),
+  );
+  check(
+    "finishDaily persists the record through the injected store",
+    loadDaily(st).date === "2026-09-06" && loadDaily(st).best === 1200,
+    JSON.stringify(loadDaily(st)),
   );
 }
 
@@ -447,13 +478,16 @@ import { createGame } from "../src/main.js";
     (src.match(/const todayStr[^\n]*/) || [])[0],
   );
   check(
+    /* Nit-1 (review 2026-09-07): widened {0,600} -> {0,1400} to match
+       bests.test.mjs's B2b — the same hazard, so a later wave's onStart
+       growth cannot turn this falsely RED the way the review demonstrated. */
     "the seed is applied BEFORE loadLevel, which reads it for both createRng and genBoard",
     (() => {
-      const blk = (src.match(/const onStart = \(args\) => \{[\s\S]{0,600}/) || [""])[0];
-      return blk.indexOf("world.seed = args.seed") > 0 &&
-        blk.indexOf("world.seed = args.seed") < blk.indexOf("loadLevel(world, args.level");
+      const blk = (src.match(/const onStart = \(args\) => \{[\s\S]{0,1400}/) || [""])[0];
+      return blk.indexOf("world.seed = args") > 0 &&
+        blk.indexOf("world.seed = args") < blk.indexOf("loadLevel(world, args.level");
     })(),
-    (src.match(/world\.seed = args\.seed[^\n]*/) || [])[0],
+    (src.match(/world\.seed = [^\n]*/) || [])[0],
   );
   check(
     "startRunState does NOT clear dailyDate — a retry is another attempt at the same board",
@@ -465,6 +499,60 @@ import { createGame } from "../src/main.js";
     (src.match(/world\.seed = /g) || []).length === 1,
     (src.match(/world\.seed = [^\n]*/g) || []).join(" | "),
   );
+  check(
+    "Minor-1 (owner ruling): a seedless run falls back to the REMEMBERED boot seed, not a fresh draw",
+    /world\.seed = args && args\.seed != null \? args\.seed >>> 0 : bootSeed;/.test(src),
+    (src.match(/world\.seed = args[^\n]*/) || [])[0],
+  );
+  check(
+    "Minor-4 (owner ruling): endRun's write is keyed on dailyDate — the run's START date — never today's date",
+    /finishDaily\(\s*dailyDate\s*,/.test(src),
+    (src.match(/finishDaily\([^)]*\)/) || [])[0],
+  );
+}
+
+// ---- 9c. Minor-1 (review 2026-09-07, owner ruling): "a run that supplies no
+// seed plays the seed the session booted with" — two ordinary runs (and a
+// LEVEL SELECT run) bracketing a daily all share ONE seed, and it is the
+// boot seed, never the daily's. ----
+{
+  const mem = new Map();
+  const ls = { getItem: (k) => (mem.has(k) ? mem.get(k) : null),
+    setItem: (k, v) => mem.set(k, String(v)) };
+  globalThis.window = { localStorage: ls, addEventListener() {} };
+  const p2 = (n) => (n < 10 ? "0" + n : "" + n);
+  const d0 = new Date();
+  const local = d0.getFullYear() + "-" + p2(d0.getMonth() + 1) + "-" + p2(d0.getDate());
+  try {
+    const g = createGame(null, { seed: 777 });
+    g.app.cabinetSeen = true;
+    g.app.skip();
+    const boot = g.world.seed;
+    g.app.cursor = ITEMS.indexOf("PLAY");
+    g.app.confirm(); // ordinary PLAY, before any daily
+    const ordBefore = g.world.seed;
+    g.app.toMenu();
+    g.app.cursor = ITEMS.indexOf("DAILY");
+    g.app.confirm(); // DAILY
+    const daily = g.world.seed;
+    g.app.toMenu();
+    g.app.cursor = ITEMS.indexOf("PLAY");
+    g.app.confirm(); // ordinary PLAY, after the daily
+    const ordAfter = g.world.seed;
+    g.app.toMenu();
+    g.app.cursor = ITEMS.indexOf("LEVEL SELECT");
+    g.app.confirm(); // -> SCREEN.LEVEL
+    g.app.confirm(); // -> startRun()
+    const lvlAfter = g.world.seed;
+    check(
+      "two ordinary runs bracketing a daily share a seed, and it is the boot seed",
+      boot === 777 && ordBefore === 777 && daily === dailySeed(local) &&
+        ordAfter === 777 && lvlAfter === 777,
+      [boot, ordBefore, daily, ordAfter, lvlAfter].join(" -> "),
+    );
+  } finally {
+    delete globalThis.window;
+  }
 }
 
 console.log("\n  DAILY RESULT: " + pass + " PASS / " + fail + " FAIL");

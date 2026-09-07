@@ -833,9 +833,15 @@ under a different pin.
 for both `createRng` and `genBoard`, `world.js:74-75`):
 
 ```
-    if (args && args.seed != null) world.seed = args.seed >>> 0;
+    world.seed = args && args.seed != null ? args.seed >>> 0 : bootSeed;
     dailyDate = (args && args.daily) || null;
 ```
+
+**Ruling 2026-09-07 (Minor-1, review fix wave):** a run that supplies no seed
+plays the seed the session booted with — `bootSeed` is captured once at boot
+(beside `createWorld`) and is the fallback here, so an ordinary or LEVEL
+SELECT run is indistinguishable whether it happens before or after a DAILY
+run in the same session.
 
 A retry from the LOSE screen replays the same `world.seed` (`startGame` →
 `loadLevel(world,1,false)` never touches it), so **`dailyDate` deliberately
