@@ -1,8 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="6" fill="#070a12"/>
-  <circle cx="16" cy="18" r="8" fill="#1a1e28"/>
-  <circle cx="16" cy="18" r="6.5" fill="#2a3144"/>
-  <rect x="15" y="6" width="2" height="5" rx="1" fill="#c8a040"/>
-  <circle cx="16" cy="6" r="1.6" fill="#ff7a3a"/>
-  <circle cx="13.5" cy="16" r="1.4" fill="#37f0d0"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- MAKO (concept A), tier-0 geometry transcribed from
+       .superpowers/sdd/2026-09-07-logo/logo-concepts.js drawA() — the same
+       reduced feature set the rig uses at 16/32px: flat-fill fins, flat-fill
+       body (no dark contour band), grin, and the two grown cream eyes with
+       no lids/pupils. Draw order matches drawA(): fins, then body (so the
+       body caps the fin roots), then grin, then eyes. -->
+  <rect width="512" height="512" rx="96" fill="#0b1020"/>
+  <path fill="#37f0d0" d="M190.8,353.8 L161.46,236.44 L106.04,151.68 L53.88,223.4 L76.7,314.68 L115.82,363.58 Z M321.2,353.8 L350.54,236.44 L405.96,151.68 L458.12,223.4 L435.3,314.68 L396.18,363.58 Z"/>
+  <path fill="#c39cff" d="M256,160.55 Q301.97,154.42 332.61,188.13 Q384.7,224.9 390.83,270.87 Q406.16,292.32 393.9,322.96 Q378.58,362.8 326.48,371.99 Q256,396.51 185.52,371.99 Q133.42,362.8 118.1,322.96 Q105.84,292.32 121.17,270.87 Q127.3,224.9 179.39,188.13 Q210.03,154.42 256,160.55 Z"/>
+  <path fill="#12121e" d="M179.98,285.54 Q200.71,302.81 228.36,308 Q256,316.64 283.64,308 Q311.29,302.81 332.02,285.54 Q332.02,316.64 307.83,333.91 Q287.1,358.1 256,358.1 Q224.9,358.1 204.17,333.91 Q179.98,316.64 179.98,285.54 Z"/>
+  <ellipse cx="174.5" cy="203.84" rx="53.79" ry="52.16" fill="#f2e6d2"/>
+  <ellipse cx="337.5" cy="203.84" rx="53.79" ry="52.16" fill="#f2e6d2"/>
 </svg>
