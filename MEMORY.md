@@ -16,6 +16,46 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-07 — Retention wave 2, closing wave (post review-final.md, verdict SHIP)
+- Closes the five sub-plans (`run-summary.md` R1, `stats-screen.md` R5,
+  `daily-seed.md` R3, `challenge-code.md` R8, `coach-v2.md` R10) under the
+  `retention-wave2.md` INDEX. HEAD is `eb50333`; PWA bumped v141->v142 (one
+  precache-touching code commit for Minor-3/Minor-4/Nit-5/Nit-6, one docs-only
+  commit for the ledger fixes and AGENTS.md, both zero net main.js lines).
+  38/38 test files green, 1566 assertions, 0 fail, throughout.
+- Rulings this wave closed out: R1 Minor-3 (a LEVEL SELECT start's
+  `runFromStart` gates FURTHEST ROOM YET alone, never inside the combo — a
+  room picked isn't a room earned); R5's STATS note 2 pinned
+  `BESTS: NO PACT · NORM` (rows 7-9 read the plain bucket only); R3's boot
+  seed / daily stamp refusal / `finishDaily` start-date trio; R8's
+  `banned-name.test.mjs` gaining a second refused word (`leaderboard`) beside
+  the franchise name; R10's `coach2Tick` blessed into `coach.js` (main.js's
+  808-line cap has no room) plus the `coach2` latch reset in `startRunState`;
+  and this session's own Nit-6 — a first-ever run on a bucket that scores
+  exactly 0 now prints no delta line at all (`deltaLine`/`summaryLines`,
+  `src/render/scenes.js`), rather than celebrating a zero-point run.
+- Also this session: STATS notes pluralise honestly (`1 TRY`/`n TRIES`,
+  `1 SESSION`/`n SESSIONS`); `shell.js`'s SRC list restored to alphabetical
+  order at daily.js/debughook.js; `debughook.js`'s `SCREEN_NAME` gained STATS
+  plus a `|| String(app.screen)` fallback so a future appended SCREEN can't
+  return undefined; four stale `coach2T`/`coach2Kind` doc cells (spec §7 ABI
+  table, INDEX file-map matrix) corrected to the real `coach2 = {kind, t}`
+  latch and 4-arg `coach2Tick`; `statPlaques` added to all three ABI ledgers
+  it was missing from; spec §3.2/§3.5 corrected to the real 4-arg
+  `statsPayload`; an abandoned-run exception added to the "pairs exactly once
+  per displayed tip" claim in spec §6.1 and `coach.js`; AGENTS.md gained the
+  retention-store/MENU/Conventions/coach-v2/rAF-pause bullets review-final.md
+  §G specified, durable memory that didn't exist before this wave.
+- Deferred, owner decisions or wave 3, not fixed: a tap on ATTRACT while
+  parked on the DAILY row starts an ordinary run instead of the daily board
+  (pre-existing `playFromAttract` behavior, disclosed, no fix without an
+  owner call); the four retention stores are never garbage-collected (bounded
+  integers, but wave 3's "reset my cabinet" is the real fix); Nit-1 (a
+  zero-score first run creates the bucket the second run then "matches" —
+  working as adjudicated, no change) and Nit-2 (clamp-on-read leaves hostile
+  JSON on disk until the next write — matches the whole store family's
+  template, disclosure only) both stand with no change.
+
 ## 2026-09-07 — R10 coach v2 fix wave (post-review)
 - Reset the `coach2` latch inside `startRunState` (zero net lines), so a live
   tip from a quit-mid-tip or a LOSE retry can no longer repaint in the next
