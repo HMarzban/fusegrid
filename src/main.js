@@ -255,6 +255,7 @@ export function createGame(canvas, opts = {}) {
         persistScore();
         startRunState(true);
         loadLevel(world, 1, false);
+        stat("room_enter", { r: world.level | 0, h: world.heat | 0, pc: world.pact | 0, pa: world.pace | 0 }, dateStr());
         world.score = 0;
         world.state = "PLAY";
         world.fireEdge = true; // a held fire CONFIRMED the row; never a same-frame plant
@@ -338,7 +339,9 @@ export function createGame(canvas, opts = {}) {
   const persistScore = () => {
     endRun();
     if (!(world.score > 0)) return;
-    saveScores(recordScore(loadScores(), scoreEntry(world, dateStr())));
+    const sc = loadScores(), en = scoreEntry(world, dateStr());
+    if (qualifies(en.s, sc)) stat("score_set", { h: world.heat | 0 }, dateStr());
+    saveScores(recordScore(sc, en));
   };
   const copyText = (s) => { if (typeof navigator !== "undefined" && navigator.clipboard)
     navigator.clipboard.writeText(s).catch(() => {}); };
@@ -578,12 +581,9 @@ export function createGame(canvas, opts = {}) {
       audio.pump();
     }
     if (app.screen === SCREEN.GAME) {
-      // §1 score-record edge, frame-polled (main latches prev world state)
-      if (app.noteWorldEdge(prevSt, world.state)) {
-        const sc = loadScores(), en = scoreEntry(world, dateStr());
-        if (qualifies(en.s, sc)) stat("score_set", { h: world.heat | 0 }, dateStr());
-        saveScores(recordScore(sc, en));
-      }
+      // §1 score-record edge, frame-polled (main latches prev world state) —
+      // persistScore owns both the write AND the score_set edge (Minor-2)
+      if (app.noteWorldEdge(prevSt, world.state)) persistScore();
       /* roomT (R7): unconditional recording on every room WIN — the clock runs
          anyway whether or not TIME ATTACK is on, and a player who switches it
          on already has bests to beat. bestPrev is captured BEFORE the write so
@@ -596,7 +596,7 @@ export function createGame(canvas, opts = {}) {
         if (isFinale(world.level)) { endRun(); stat("win_finale", null, dateStr()); }
         stat("room_clear", { r: world.level | 0 }, dateStr());
       }
-      if ((prevSt === "PLAY" || prevSt === "WIN") && world.state === "LOSE") endRun();
+      // endRun() on this LOSE edge is now covered by persistScore() above (same gate)
       if ((prevSt === "WIN" || prevSt === "LOSE") && world.state === "PLAY") {
         roomT = 0; bestPrev = null;              // WIN->next room, LOSE->new run
         if (prevSt === "LOSE") startRunState(true); // R1: a retry never calls onStart

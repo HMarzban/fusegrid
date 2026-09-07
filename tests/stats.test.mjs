@@ -490,5 +490,86 @@ const TODAY = "2026-09-07";
   );
 }
 
+// ---- 11d. Minor-1: PAUSE -> RESTART emits room_enter too, not just onStart
+// and the WIN/LOSE->PLAY retry ----
+{
+  const mem = new Map();
+  const ls = { getItem: (k) => (mem.has(k) ? mem.get(k) : null),
+    setItem: (k, v) => mem.set(k, String(v)) };
+  globalThis.window = { localStorage: ls, addEventListener() {} };
+  try {
+    setStatsOn(ls);
+    const g = createGame(null, { autoplay: true, seed: 61 });
+    const before = loadStats(ls).e.filter((x) => x.t === "room_enter").length;
+    g.input.onPause();
+    g.loop(16);
+    g.app.pauseCursor = 1; // RESTART
+    g.app.confirm();
+    const after = loadStats(ls).e.filter((x) => x.t === "room_enter").length;
+    check(
+      "PAUSE -> RESTART emits exactly one room_enter (Minor-1)",
+      after === before + 1,
+      before + " -> " + after,
+    );
+  } finally {
+    delete globalThis.window;
+  }
+}
+
+// ---- 11e. Minor-2: score_set fires from persistScore() too — KeyM/QUIT/
+// RESTART bank a qualifying score exactly like the LOSE edge already did;
+// the WIN-edge (finale) path emits exactly one, never a double ----
+{
+  const mem = new Map();
+  const ls = { getItem: (k) => (mem.has(k) ? mem.get(k) : null),
+    setItem: (k, v) => mem.set(k, String(v)) };
+  globalThis.window = { localStorage: ls, addEventListener() {} };
+  try {
+    setStatsOn(ls);
+    const g = createGame(null, { autoplay: true, seed: 62 });
+    g.world.score = 99999; // well above the seeded defaults' 10th (250)
+    g.input.onPause();
+    g.loop(16);
+    g.app.pauseCursor = 3; // QUIT TO MENU
+    g.app.confirm();
+    check(
+      "a qualifying score banked via QUIT TO MENU emits exactly one score_set (Minor-2)",
+      loadStats(ls).e.filter((x) => x.t === "score_set").length === 1,
+      JSON.stringify(loadStats(ls).e.filter((x) => x.t === "score_set")),
+    );
+  } finally {
+    delete globalThis.window;
+  }
+}
+{
+  const mem = new Map();
+  const ls = { getItem: (k) => (mem.has(k) ? mem.get(k) : null),
+    setItem: (k, v) => mem.set(k, String(v)) };
+  globalThis.window = { localStorage: ls, addEventListener() {} };
+  try {
+    setStatsOn(ls);
+    const g = createGame(null, { autoplay: true, seed: 63 });
+    g.world.level = 5; // a finale room
+    g.world.score = 12345;
+    g.world.state = "WIN";
+    g.loop(16); // finale WIN edge: endRun()+win_finale fire directly, NOT persistScore
+    check(
+      "the raw finale WIN edge does not itself emit score_set (only persistScore does)",
+      loadStats(ls).e.filter((x) => x.t === "score_set").length === 0,
+      JSON.stringify(loadStats(ls).e),
+    );
+    g.world.finale = true;
+    g.world.state = "MENU";
+    g.loop(32); // world.finale && state==="MENU" -> persistScore() runs once
+    check(
+      "the WIN-edge (finale) path emits exactly one score_set — no double (Minor-2)",
+      loadStats(ls).e.filter((x) => x.t === "score_set").length === 1,
+      JSON.stringify(loadStats(ls).e.filter((x) => x.t === "score_set")),
+    );
+  } finally {
+    delete globalThis.window;
+  }
+}
+
 console.log("\n  STATS RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);
