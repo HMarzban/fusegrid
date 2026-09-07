@@ -24,6 +24,7 @@ import { loadCabinetSeen, saveCabinetSeen } from "./app/cabinetseen.js";
 import { loadPlaques, savePlaques, unlockPlaques } from "./app/plaques.js";
 import { loadPace, savePace } from "./app/pacestore.js";
 import { loadSettings, saveSettings } from "./app/settings.js";
+import { timeKey, loadTimes, saveTimes, bestOf, recordTime } from "./app/times.js";
 import {
   loadCoachSeen,
   saveCoachSeen,
@@ -122,6 +123,16 @@ export function createGame(canvas, opts = {}) {
      it cannot gate the coach window on its own — coachT is main's own PLAY-
      only clock for that gate (see the RAF loop's step branch and onStart). */
   let coachT = 0;
+  /* roomT (R7): the SAME trap coachT dodges. world.time is bumped at the top of
+     step() before the PAUSE early return (sim.js:42-43 vs :75-77), main's
+     fixed-step loop is ungated on world.state, and loadLevel never resets it —
+     so it is a run clock that double-counts pause, not a room clock. roomT is
+     main's own PLAY-only per-room clock; the HUD chip, the CLEARED line and the
+     persisted best all read it, and world.time is not used by R7 at all.
+     bestPrev is the standing record captured BEFORE the WIN-edge write, so the
+     overlay can never read back the record it just set. */
+  let roomT = 0;
+  let bestPrev = null;
 
   /* USER CAMERA (spec §1): render-side closure state, NEVER in world/snapshot.
      Handlers self-gate on GAME via getActive; menus/attract stay authored.
@@ -162,6 +173,8 @@ export function createGame(canvas, opts = {}) {
     prevSt = "PLAY";
     coachPlanted = false;
     coachT = 0; // fresh run: coachT restarts at 0 (world.time never does)
+    roomT = 0;
+    bestPrev = null;
     resetCamera(cam); // §2: every run starts framed
     resetOrbit(rig);
     rig.dist = camPreset(settings.cam);
@@ -218,6 +231,8 @@ export function createGame(canvas, opts = {}) {
         world.fireEdge = true; // a held fire CONFIRMED the row; never a same-frame plant
         prevSt = "PLAY";
         coachPlanted = false;
+        roomT = 0;
+        bestPrev = null;
         return;
       }
       if (cmd === "QUIT TO MENU") {
@@ -535,6 +550,19 @@ export function createGame(canvas, opts = {}) {
       // §1 score-record edge, frame-polled (main latches prev world state)
       if (app.noteWorldEdge(prevSt, world.state))
         saveScores(recordScore(loadScores(), scoreEntry(world, dateStr())));
+      /* roomT (R7): unconditional recording on every room WIN — the clock runs
+         anyway whether or not TIME ATTACK is on, and a player who switches it
+         on already has bests to beat. bestPrev is captured BEFORE the write so
+         drawOverlay can never read back the record it just set. PAUSE -> PLAY
+         is deliberately NOT a reset: resuming continues the room. */
+      if (prevSt === "PLAY" && world.state === "WIN") {
+        const k = timeKey(world), v = loadTimes();
+        bestPrev = bestOf(v, k);                 // captured BEFORE the write
+        saveTimes(recordTime(v, k, roomT));
+      }
+      if ((prevSt === "WIN" || prevSt === "LOSE") && world.state === "PLAY") {
+        roomT = 0; bestPrev = null;              // WIN->next room, LOSE->new run
+      }
       prevSt = world.state;
       /* The shell machine runs during GAME too — unconditionally, not only
          while paused. prevConfirm is only written inside update(), so skipping
@@ -545,6 +573,7 @@ export function createGame(canvas, opts = {}) {
       app.update(dt, shellInput);
       acc += dt;
       if (world.state === "PLAY") coachT += dt; // PAUSE must not burn the coach window
+      if (world.state === "PLAY") roomT += dt;  // ...and must not burn the room clock
       let steps = 0;
       while (acc >= CFG.STEP) {
         if (net) net.drive();
@@ -642,6 +671,7 @@ export function createGame(canvas, opts = {}) {
                   ? Math.max(0, 1 - coachT / COACH_DUR)
                   : 0,
               pause: { view: app.pauseView | 0, cursor: app.pauseCursor | 0 },
+              time: { on: !!app.timeAttack, t: roomT, best: bestPrev },
             }
           : { hud: false };
     // BRIGHTNESS is 3D only — CLASSIC 2D blits the authored hex unregraded.

@@ -10,6 +10,7 @@ import {
 } from "../src/app/times.js";
 import { fmtTime, timeLine, drawHudChips, drawOverlay } from "../src/render/scenes.js";
 import { readFileSync } from "node:fs";
+import { createGame } from "../src/main.js";
 
 let pass = 0,
   fail = 0;
@@ -388,6 +389,108 @@ const HUD_W = {
       chLine.trim(),
     );
   }
+}
+
+/* ---- SELF-REVIEW PIN A: the stopwatch is roomT, NOT world.time.
+   step() bumps world.time at sim.js:42-43, BEFORE the PAUSE early return at
+   :75-77, and main's step loop is ungated on world.state — so world.time keeps
+   climbing through a pause. This pin fails if anyone ever "simplifies" roomT
+   back to world.time, because it asserts the two clocks DISAGREE. ---- */
+{
+  const { c: rc, texts } = rec();
+  const fake = { getContext: () => rc, addEventListener() {}, style: {} };
+  const g = createGame(fake, { autoplay: true, seed: 41 });
+  /* app.timeAttack is added for real in Task 4; ro.time reads !!app.timeAttack
+     dynamically, so setting it here is exactly what the shipped toggle will do
+     and this pin survives Task 4 unchanged. */
+  g.app.timeAttack = true;
+  const stamp = () => {
+    const t = texts.filter((s) => /^\d:\d\d\.\d$/.test(s));
+    return t.length ? t[t.length - 1] : null;
+  };
+  let t = 1000;
+  for (let i = 0; i < 40; i++) {
+    t += 16;
+    texts.length = 0;
+    g.loop(t);
+  }
+  const running = stamp();
+  check("A: the TIME chip paints a stopwatch while playing", running !== null, running);
+  const wt0 = g.world.time;
+  g.input.onPause();
+  check("A: onPause reaches world.state", g.world.state === "PAUSE", g.world.state);
+  for (let i = 0; i < 60; i++) {
+    t += 16;
+    texts.length = 0;
+    g.loop(t);
+  }
+  const paused = stamp();
+  check(
+    "A: roomT does NOT advance while paused — the chip is frozen",
+    paused === running,
+    running + " -> " + paused,
+  );
+  check(
+    "A: control — world.time DID advance while paused, so the pin is not vacuous",
+    g.world.time > wt0,
+    wt0 + " -> " + g.world.time,
+  );
+  g.input.onPause();
+  for (let i = 0; i < 40; i++) {
+    t += 16;
+    texts.length = 0;
+    g.loop(t);
+  }
+  check(
+    "A: resuming continues the room, it does not restart it",
+    stamp() !== running && stamp() !== "0:00.0",
+    running + " -> " + stamp(),
+  );
+}
+
+/* ---- SELF-REVIEW PIN B: bestPrev is captured BEFORE the write.
+   The WIN-edge persist runs one frame before drawOverlay paints, so a BEST read
+   back from the store would print the time just set. Pinned twice: once on the
+   store semantics, once on the ORDER of the two statements in main.js. ---- */
+{
+  const k = "3:0:0:1";
+  let v = clampTimes(null);
+  let bestPrev = bestOf(v, k); // captured BEFORE
+  v = recordTime(v, k, 41.23);
+  const first = timeLine({ level: 3 }, { on: true, t: 41.23, best: bestPrev });
+  check(
+    "B: the first clear reads NEW BEST, never its own freshly-written time",
+    first === "ROOM 3 · 0:41.2 · NEW BEST",
+    first,
+  );
+  check(
+    "B: reading the store AFTER the write is what this forbids",
+    timeLine({ level: 3 }, { on: true, t: 41.23, best: bestOf(v, k) }) ===
+      "ROOM 3 · 0:41.2 · BEST 0:41.2",
+    "that string is the bug, and the pin above is what excludes it",
+  );
+  bestPrev = bestOf(v, k);
+  v = recordTime(v, k, 44.0);
+  const second = timeLine({ level: 3 }, { on: true, t: 44.0, best: bestPrev });
+  check(
+    "B: a slower second clear names the standing best and does not overwrite it",
+    second === "ROOM 3 · 0:44.0 · BEST 0:41.2" && v.b[k] === 412,
+    second + " / " + v.b[k],
+  );
+  const mainSrc = readFileSync("src/main.js", "utf8");
+  const blk = (mainSrc.match(/prevSt === "PLAY" && world\.state === "WIN"[\s\S]{0,320}/) || [""])[0];
+  check(
+    "B: main.js captures bestPrev BEFORE it calls saveTimes/recordTime",
+    blk.indexOf("bestPrev = bestOf(") >= 0 &&
+      blk.indexOf("bestPrev = bestOf(") < blk.indexOf("saveTimes(recordTime("),
+    blk.trim().slice(0, 200),
+  );
+  check(
+    "B: PAUSE -> PLAY is deliberately NOT a roomT reset — only WIN/LOSE -> PLAY is",
+    /\(prevSt === "WIN" \|\| prevSt === "LOSE"\) && world\.state === "PLAY"/.test(mainSrc) &&
+      !/prevSt === "PAUSE"[^\n]*roomT = 0/.test(mainSrc),
+    (mainSrc.match(/roomT = 0;[^\n]*/g) || []).join(" | "),
+  );
 }
 
 console.log("\n  TIMES RESULT: " + pass + " PASS / " + fail + " FAIL");

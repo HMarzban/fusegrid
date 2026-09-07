@@ -778,8 +778,12 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   // closing fix wave: main.js untouched this wave, still measured (L.length,
   // this check's own convention) at 701; pin tightened 743->706 (measured
   // +5) so the gate keeps biting instead of trailing 42 lines of slack.
-  check("main.js stays a lean browser entry (<=706 lines)",
-    L.length<=706,String(L.length));
+  // R7 stopwatch wave: +25 lines (times.js import; roomT/bestPrev
+  // declarations + comment beside coachT; onStart and RESTART resets; the
+  // WIN-edge record/reset block; the roomT accumulate line; ro.time in the
+  // GAME ro literal) — bumped 706->731.
+  check("main.js stays a lean browser entry (<=731 lines)",
+    L.length<=731,String(L.length));
   const lastImp=L.reduce((a,l,i)=>/^import[\s{]/.test(l)?i:a,-1);
   const firstDecl=L.findIndex(l=>/^(export\s|const\s|let\s|var\s|function\s|class\s)/.test(l));
   check("main.js keeps every import at the top (no mid-file import sprawl)",
