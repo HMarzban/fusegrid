@@ -32,6 +32,60 @@ export function getShake(){ return {x:fx.shakeX*shakeK, y:fx.shakeY*shakeK}; }
 export function getFlash(){ return fx.flashT*flashK; }
 export function getFx(){ return fx.parts; }
 
+/* R2 detectors — PURE, exported, pinned (tests/fx.test.mjs). Both read the
+   drained batch and read-only world state; neither touches the fx singleton,
+   so feedFx below is the only stateful piece of R2.
+   comboOf's boom gate is the discriminator for "from one detonation chain":
+   detonate() is synchronous and recursive (sim.js:353-379), so one chain lands
+   entirely inside one world.events batch as [kills...][boom] groups. A
+   boom-FREE batch is blade attrition — updateBombs re-runs applyBlastHits for
+   every live blade each tick (sim.js:257-259) — and scores nothing. */
+export function comboOf(events){
+  if(!events||!events.length) return 0;
+  let boom=false, n=0;
+  for(let i=0;i<events.length;i++){
+    const e=events[i]; if(!e) continue;
+    if(e.t==="boom") boom=true; else if(e.t==="kill") n++;
+  }
+  return boom?n:0;
+}
+export function comboLabel(n){
+  const k=n|0;
+  if(k<2) return "";
+  if(k===2) return "DOUBLE";
+  if(k===3) return "TRIPLE";
+  if(k===4) return "QUAD";
+  return "CHAIN ×"+k;
+}
+/* Close-call envelope, measured against the REAL hit test: applyBlastHits hits
+   via aabb(w.grid,t.tx,t.ty,p.x,p.y,CFG.TILE*0.3) (sim.js:339-349), so the hit
+   envelope reaches CFG.TILE*0.3 past the tile rect. "Own tile is not a blast
+   tile" is therefore NOT "survived" — the inner bound is that call's own
+   geometry. The outer bound is a design pick: an aligned adjacent tile is
+   exactly 40px and a half-tile-diagonal offset is 44.7px and does not count,
+   so the flash means "the arm stopped one tile short of you". */
+const HIT_D=CFG.TILE*0.5+CFG.TILE*0.3, NEAR_D=CFG.TILE*1.10;
+export function nearMissOf(world, events){
+  if(!world) return false;
+  const p=world.players&&world.players[0];
+  if(!p||!p.alive||p.iFrames>0) return false;
+  const ev=events!==undefined?events:world.events;
+  if(ev&&ev.length) for(let i=0;i<ev.length;i++)
+    if(ev[i]&&ev[i].t==="hurt") return false;
+  const bs=world.blades;
+  if(!bs||!bs.length) return false;
+  let dmin=Infinity;
+  for(const bl of bs){
+    if(!bl||!bl.tiles) continue;
+    for(const t of bl.tiles){
+      const d=Math.max(Math.abs(p.x-(t.tx+0.5)*CFG.TILE),
+                       Math.abs(p.y-(t.ty+0.5)*CFG.TILE));
+      if(d<dmin) dmin=d;
+    }
+  }
+  return dmin>HIT_D&&dmin<=NEAR_D;
+}
+
 /* Wipes particles whenever the world identity (seed:level) changes — replaces
    the old loadLevel `w.particles=[]` wipe now that storage lives here. */
 export function syncFx(world){
