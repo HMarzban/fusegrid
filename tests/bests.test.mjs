@@ -235,7 +235,7 @@ function throwStore() {
   const t = newTally();
   check(
     "newTally is the seven-field R1 shape",
-    Object.keys(t).sort().join(",") === "b,d,dNew,k,lv,p,r" &&
+    Object.keys(t).sort().join(",") === "b,d,dNew,dr,k,kt,lv,p,pk,r" &&
       t.r === 0 && t.k === 0 && t.p === 0 && t.b === 0 && t.d === 0 &&
       t.dNew === 0 && t.lv === null,
     JSON.stringify(t),

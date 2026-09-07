@@ -96,8 +96,10 @@ export function recordBest(v, key, score, room) {
    life (sim.js:344-348) while hurtPlayer emits the same event when one is
    (entities.js:194). lv seeds itself on the first call, so the carry.lives jump
    on a new run is an increase and never a false death. */
+/* R5 extends this shape in place — kt/pk/dr are filled in the SAME loop, so the
+   stats screen adds zero new passes over world.events. */
 export function newTally() {
-  return { r: 0, k: 0, p: 0, b: 0, d: 0, dNew: 0, lv: null };
+  return { r: 0, k: 0, p: 0, b: 0, d: 0, dNew: 0, lv: null, kt: {}, pk: {}, dr: {} };
 }
 
 export function feedTally(t, world) {
@@ -107,8 +109,8 @@ export function feedTally(t, world) {
   for (let i = 0; i < ev.length; i++) {
     const e = ev[i];
     if (!e) continue;
-    if (e.t === "kill") t.k++;
-    else if (e.t === "power") t.p++;
+    if (e.t === "kill") { t.k++; if (e.type) t.kt[e.type] = (t.kt[e.type] | 0) + 1; }
+    else if (e.t === "power") { t.p++; if (e.kind) t.pk[e.kind] = (t.pk[e.kind] | 0) + 1; }
     else if (e.t === "brick") t.b++;
     else if (e.t === "win") t.r++;
   }
@@ -118,6 +120,8 @@ export function feedTally(t, world) {
     const n = t.lv - lv;
     t.d += n;
     t.dNew = n;
+    const rm = w.level | 0;
+    t.dr[rm] = (t.dr[rm] | 0) + n;
   }
   t.lv = lv;
   return t;
