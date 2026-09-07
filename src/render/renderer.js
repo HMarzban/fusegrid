@@ -83,7 +83,7 @@ export function createRenderer(canvas, opts={}){
     /* S4: overlay HUD chips — explicit opt-in only ({hud:true} during GAME),
        drawn after restore so they never shake with the camera. */
     if(o&&o.hud===true) drawHudChips(ctx, world);
-    if(o&&o.hud===true) drawFxOverlay(ctx);
+    if(o&&o.hud===true&&world.state==="PLAY") drawFxOverlay(ctx);
     /* ghost coach (plan 4): same opt-in gate as the HUD chips; o.coach is
        the fade alpha precomputed in main.js from coachOpen(...) + COACH_DUR
        + world.state==="PLAY" (0 when closed), never re-derived here. */

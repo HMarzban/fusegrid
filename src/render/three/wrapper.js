@@ -153,7 +153,7 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
       if(ov){ const B=overlayBox("3d");
         drawOverlay(ovCtx,world,B.w,B.h,B.cx,B.cy,o&&o.pause); }
       if(o&&o.hud===true)drawHudChips(ovCtx,world);
-      if(o&&o.hud===true)drawFxOverlay(ovCtx);
+      if(o&&o.hud===true&&world.state==="PLAY")drawFxOverlay(ovCtx);
       if(o&&o.hud===true)drawCoach(ovCtx,(o&&o.coach)||0);
      }
     /* S5: DOM #hud ids route like the 2D path — {hud:false} suppresses

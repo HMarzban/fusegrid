@@ -14,6 +14,9 @@ import {
   getShake,
   setFxOpts,
 } from "../src/render/fx.js";
+import { createRenderer } from "../src/render/renderer.js";
+import { createRenderer3D } from "../src/render/three/wrapper.js";
+import { createWorld, loadLevel } from "../src/core/sim.js";
 import { readFileSync } from "node:fs";
 
 let pass = 0,
@@ -381,6 +384,115 @@ const chainW = (n, px, py, blades) => {
       src.indexOf(chips) < src.indexOf("drawFxOverlay(") &&
         src.indexOf("drawFxOverlay(") < src.lastIndexOf("drawCoach("),
       line.trim(),
+    );
+    check(
+      f + ": drawFxOverlay is ALSO gated on world.state===\"PLAY\", so a" +
+        " frozen callout (calT>0 while PAUSE/WIN/LOSE holds feedFx's decay)" +
+        " never paints over the state veil",
+      /o\s*&&\s*o\.hud\s*===\s*true\s*&&\s*world\.state\s*===\s*"PLAY"/.test(
+        line,
+      ),
+      line.trim(),
+    );
+  }
+}
+
+// ---- behavioral: a live callout (calT>0, frozen by feedFx's PLAY-only
+//      decay) must not be painted on top of the PAUSED/WIN/LOSE veil, and
+//      must resume painting the instant world.state is PLAY again ----
+{
+  const overlayRecorder = () => {
+    const ops = [];
+    const grad = { addColorStop: (...a) => ops.push(["addColorStop", a]) };
+    const rec = new Proxy(function () {}, {
+      get: (t, p) => {
+        if (p === Symbol.toPrimitive) return () => "";
+        return (...a) => {
+          ops.push([String(p), a]);
+          return grad;
+        };
+      },
+      set: (t, p, v) => {
+        ops.push(["set:" + String(p), v]);
+        return true;
+      },
+    });
+    return { rec, ops };
+  };
+  const hasCallout = (ops) =>
+    ops.some((o) => o[0] === "fillText" && String(o[1][0]) === "TRIPLE");
+
+  for (const mk of [
+    () => {
+      const rec = overlayRecorder();
+      const r = createRenderer({ getContext: () => rec.rec }, {
+        kind: "2d",
+        hud: null,
+        audio: null,
+      });
+      return { name: "renderer.js", r, ops: rec.ops };
+    },
+    () => {
+      const rec = overlayRecorder();
+      const r = createRenderer3D(null, { getContext: () => rec.rec }, {
+        audio: null,
+        hud: null,
+      });
+      return { name: "wrapper.js", r, ops: rec.ops };
+    },
+  ]) {
+    // Renderer construction FIRST — renderer.js's factory calls initFx()
+    // internally, so any callout set up before this point would already be
+    // wiped by the time render() runs.
+    const { name, r, ops } = mk();
+
+    // Force a live callout into the fx singleton via the exact chainW/mkW
+    // identity (seed:1, level:1) so the PAUSE render below — which runs
+    // syncFx(world) first — doesn't retag and clear it out from under us.
+    setFxOpts({ flashK: 1, shakeK: 1 });
+    initFx();
+    const cw = chainW(3);
+    syncFx(cw);
+    feedFx(cw, CFG.BLADE_TTL + 0.01);
+    check(
+      name + ": setup — the callout is live (TRIPLE) before the render probes",
+      getCallout() === "TRIPLE",
+      getCallout(),
+    );
+
+    const pw = createWorld(1, 1);
+    loadLevel(pw, 1, false);
+    pw.state = "PAUSE";
+    const mark1 = ops.length;
+    r.render(pw, 1 / 60, { hud: true });
+    const pauseOps = ops.slice(mark1);
+    check(
+      name + ": a live callout is NOT painted over the PAUSE veil",
+      !hasCallout(pauseOps),
+      pauseOps
+        .filter((o) => o[0] === "fillText")
+        .map((o) => o[1][0])
+        .join("|"),
+    );
+    check(
+      name + ": the callout survives the PAUSE frame untouched" +
+        " (feedFx no-ops outside PLAY)",
+      getCallout() === "TRIPLE",
+      getCallout(),
+    );
+
+    // Same world, same renderer — only the state flips back to PLAY.
+    pw.state = "PLAY";
+    const mark2 = ops.length;
+    r.render(pw, 1 / 60, { hud: true });
+    const playOps = ops.slice(mark2);
+    check(
+      name + ": back on a PLAY frame the callout paints again",
+      hasCallout(playOps),
+      playOps
+        .filter((o) => o[0] === "fillText")
+        .map((o) => o[1][0])
+        .join("|"),
     );
   }
 }

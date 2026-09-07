@@ -16,6 +16,17 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-07 — R2 fix round: drawFxOverlay no longer paints over PAUSED/WIN/LOSE
+- Both renderers gated the combo-callout overlay on `o.hud===true` alone; since
+  `o.hud` is true for the whole GAME screen regardless of `world.state`, a
+  callout frozen mid-fade by `feedFx`'s PLAY-only decay (e.g. LOSE fired
+  inline, no delay) kept painting on top of the state veil. Added
+  `&&world.state==="PLAY"` to the `drawFxOverlay` call in both
+  `src/render/renderer.js` and `src/render/three/wrapper.js`. `tests/fx.test.mjs`
+  gained a regex pin on the gated call line plus a behavioral pin (live
+  callout during PAUSE → no callout text; back to PLAY → resumes). CACHE_NAME
+  / REV bumped v108→v109.
+
 ## 2026-09-07 — R2 combo callout + close-call flash (retention wave 1)
 - Multi-kill chains now call out DOUBLE/TRIPLE/QUAD/CHAIN ×n and a blast that
   stops one tile short of the player pulses a 6px board-edge border, both fed
