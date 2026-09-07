@@ -128,6 +128,9 @@ export function drawShell(c, app, world, canvas, kind, getScores, getPlaques) {
       app.scoreHeat,
       getPlaques ? getPlaques() : 0,
     );
+  } else if (s === SCREEN.STATS) {
+    menudraw.drawDim(c, 0.72, cw, chh);
+    menudraw.drawStats(c, L, app.subT, app.stats);
   } else if (s === SCREEN.SETTINGS) {
     menudraw.drawDim(c, 0.72, cw, chh);
     menudraw.drawSettings(c, L, app.subT, {

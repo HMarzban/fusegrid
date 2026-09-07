@@ -1,5 +1,6 @@
 import { FOES, POWER } from "../core/entities.js";
 import { defaultStore } from "./store.js";
+import { bestOfRun } from "./bests.js";
 
 export const STATS_KEY = "nb.stats.v1";
 export const RING_MAX = 200;
@@ -145,4 +146,49 @@ export function fmtLong(sec) {
   const n = typeof sec === "number" && isFinite(sec) ? sec : 0;
   const s = Math.floor(Math.min(3599999, Math.max(0, n)));
   return Math.floor(s / 3600) + "h " + pad2(Math.floor(s / 60) % 60) + "m";
+}
+
+/* Rows 7-9 read the PLAIN bucket "<heat>:0:1" — no pact, NORM pace. Folding an
+   IRON run into "CORE BEST" would be the same unit error nb.highscores.v1
+   makes; note 2 says so on screen. STATS READS nb.bests.v1 and nb.times.v1 and
+   copies neither — a second copy of a best is a second thing that can disagree
+   with the overlay. */
+export function statsRows(v, bests) {
+  const s = clampStats(v);
+  const best = (h) => {
+    const b = bestOfRun(bests, h + ":0:1");
+    return b ? b.s + " · R" + b.r : "—";
+  };
+  return [
+    ["RUNS", String(s.a.runs)],
+    ["ROOMS CLEARED", String(s.a.rooms)],
+    ["DEATHS", String(s.a.deaths)],
+    ["KILLS", String(s.a.kills)],
+    ["PICKUPS", String(s.a.picks)],
+    ["PLAY TIME", fmtLong(s.a.secs)],
+    ["CORE BEST", best(0)],
+    ["PLUS BEST", best(1)],
+    ["MAX BEST", best(2)],
+  ];
+}
+/* `today` is used for one thing only: deciding whether the stored daily record
+   is today's. It is therefore the DAILY's day (main.js's local todayStr once R3
+   lands), never the UTC dateStr that stamps the aggregates. Before R3, `daily`
+   is null and note 1 is omitted entirely rather than faked. */
+export function statsNotes(v, daily, today) {
+  const s = clampStats(v);
+  const out = [];
+  if (daily && typeof daily === "object") {
+    out.push(
+      daily.date && daily.date === today && (daily.played | 0) > 0
+        ? "DAILY " + today + " · BEST " + (daily.best | 0) + " · " +
+          (daily.played | 0) + " TRIES · YOUR OWN ATTEMPTS ONLY"
+        : "DAILY " + today + " · NOT PLAYED YET",
+    );
+  }
+  out.push(
+    "SINCE " + (s.a.first || "—") + " · LAST " + (s.a.last || "—") + " · " +
+    s.a.sessions + " SESSIONS · BESTS ARE PER HEAT",
+  );
+  return out;
 }

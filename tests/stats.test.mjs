@@ -10,8 +10,10 @@ import {
   setStatsOn,
   fmtLong,
 } from "../src/app/stats.js";
-import { newTally, feedTally } from "../src/app/bests.js";
+import { newTally, feedTally, recordBest } from "../src/app/bests.js";
 import { SCREEN, ITEMS, createMenuApp } from "../src/app/menuapp.js";
+import { statsRows, statsNotes } from "../src/app/stats.js";
+import * as md from "../src/render/menudraw.js";
 
 let pass = 0,
   fail = 0;
@@ -304,6 +306,67 @@ const TODAY = "2026-09-07";
     "shellview's MENU items literal renders every shipped row",
     (src2.match(/ITEMS\[\d\]/g) || []).length === ITEMS.length,
     (src2.match(/ITEMS\[\d\]/g) || []).join(","),
+  );
+}
+
+// ---- 10. the nine rows, the two notes, and the plate ----
+{
+  const v = clampStats({
+    a: { runs: 118, rooms: 214, deaths: 301, kills: 4820, picks: 913,
+      bricks: 7702, secs: 50820, sessions: 42, first: "2026-08-30", last: TODAY },
+  });
+  let bests = recordBest(undefined, "0:0:1", 1840, 5);
+  bests = recordBest(bests, "1:0:1", 2210, 4);
+  const rows = statsRows(v, bests);
+  check("statsRows is exactly nine [label, value] pairs", rows.length === 9, rows.length);
+  check(
+    "the six lifetime counters read the aggregates",
+    rows[0][0] === "RUNS" && rows[0][1] === "118" &&
+      rows[1][0] === "ROOMS CLEARED" && rows[2][0] === "DEATHS" &&
+      rows[3][0] === "KILLS" && rows[4][0] === "PICKUPS" &&
+      rows[5][0] === "PLAY TIME" && rows[5][1] === "14h 07m",
+    JSON.stringify(rows.slice(0, 6)),
+  );
+  check(
+    "rows 7-9 read the PLAIN bucket only — an IRON run is not a CORE best",
+    rows[6][0] === "CORE BEST" && rows[6][1] === "1840 · R5" &&
+      rows[7][0] === "PLUS BEST" && rows[7][1] === "2210 · R4" &&
+      rows[8][0] === "MAX BEST" && rows[8][1] === "—",
+    JSON.stringify(rows.slice(6)),
+  );
+  check(
+    "an IRON (pact) record never leaks into CORE BEST",
+    statsRows(v, recordBest(undefined, "0:1:1", 99999, 8))[6][1] === "—",
+    statsRows(v, recordBest(undefined, "0:1:1", 99999, 8))[6][1],
+  );
+  check(
+    "statsRows on an empty cabinet is still nine rows, never a hole",
+    statsRows(clampStats(null), undefined).length === 9,
+  );
+  const n0 = statsNotes(v, null, null);
+  check(
+    "with no daily record there is ONE note and it is the session line",
+    n0.length === 1 &&
+      n0[0] === "SINCE 2026-08-30 · LAST 2026-09-07 · 42 SESSIONS · BESTS ARE PER HEAT",
+    JSON.stringify(n0),
+  );
+  const n1 = statsNotes(v, { date: TODAY, best: 1840, played: 3 }, TODAY);
+  check(
+    "today's daily note carries the honesty clause",
+    n1.length === 2 &&
+      n1[0] === "DAILY 2026-09-07 · BEST 1840 · 3 TRIES · YOUR OWN ATTEMPTS ONLY",
+    JSON.stringify(n1),
+  );
+  const n2 = statsNotes(v, { date: "2026-09-01", best: 9, played: 1 }, TODAY);
+  check(
+    "a stale daily record reads NOT PLAYED YET for today",
+    n2[0] === "DAILY 2026-09-07 · NOT PLAYED YET",
+    n2[0],
+  );
+  check(
+    "note 2 fits the plate: 72 chars at ~6px against an inner width of 448",
+    n0[0].length <= 74,
+    n0[0].length + " chars",
   );
 }
 

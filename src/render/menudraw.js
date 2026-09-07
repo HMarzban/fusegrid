@@ -836,6 +836,48 @@ export function drawScores(c, scores, L, t, heat, plaques) {
   foot(c, S, "← → HEAT · ESC BACK");
 }
 
+/* STATS (R5): the drawScores scaffold — one plate, a head, a right-aligned
+   value column, a rule, notes and a foot. ui={rows,notes} arrives already
+   computed (app/stats.js), the same getter discipline scores and plaques use:
+   this file must not import src/app. The rule after row 6 is what separates
+   six lifetime counters from three per-heat bests, so the screen reads as a
+   cabinet and not as a debug dump — no JSON is ever painted here. */
+export function drawStats(c, L, t, ui) {
+  const S = shell(c, L, 480);
+  head(c, S, "STATS", "YOUR CABINET");
+  const rows = (ui && ui.rows) || [];
+  const notes = (ui && ui.notes) || [];
+  const top = S.headY + 22,
+    bot = S.footY - 42,
+    rowH = (bot - top) / 9;
+  const size = rowH < 18 ? 11 : 13;
+  c.textBaseline = "middle";
+  for (let i = 0; i < rows.length; i++) {
+    const y = top + (i + 0.5) * rowH;
+    c.textAlign = "left";
+    c.fillStyle = MUTED;
+    c.font = font(9, "900");
+    c.fillText(String(rows[i][0]), S.ix, y);
+    c.textAlign = "right";
+    c.fillStyle = TEXT;
+    c.font = font(size);
+    c.fillText(String(rows[i][1]), S.ix + S.iw, y);
+  }
+  const ry = top + 6 * rowH;
+  c.strokeStyle = LINE;
+  c.lineWidth = 1;
+  c.beginPath();
+  c.moveTo(S.ix, ry);
+  c.lineTo(S.ix + S.iw, ry);
+  c.stroke();
+  c.fillStyle = MUTED;
+  c.font = font(10);
+  c.textAlign = "center";
+  for (let i = 0; i < notes.length && i < 2; i++)
+    c.fillText(String(notes[i]), S.mid, S.footY - (notes.length - i) * 14 - 2);
+  foot(c, S, "C COPY MY STATS · ESC BACK");
+}
+
 /* OPTIONS (spec §2): nine live knob rows on LEVEL SELECT's adjust model.
    ui = {row, vals, r3d, togT, rev}; vals is the nb.settings.v1 blob and rev is
    the build tag shellview derives from CACHE_NAME. Rows NEVER hide or reflow —

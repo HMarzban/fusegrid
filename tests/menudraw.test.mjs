@@ -578,6 +578,47 @@ function check(name, cond, detail) {
         texts.map((t) => t.s).join("|"),
       );
     }
+    {
+      const { c, texts, rects } = rec();
+      md.drawStats(c, L, 0.4, {
+        rows: [
+          ["RUNS", "118"], ["ROOMS CLEARED", "214"], ["DEATHS", "301"],
+          ["KILLS", "4820"], ["PICKUPS", "913"], ["PLAY TIME", "14h 07m"],
+          ["CORE BEST", "1840 · R5"], ["PLUS BEST", "—"], ["MAX BEST", "—"],
+        ],
+        notes: [
+          "DAILY 2026-09-07 · NOT PLAYED YET",
+          "SINCE 2026-08-30 · LAST 2026-09-07 · 42 SESSIONS · BESTS ARE PER HEAT",
+        ],
+      });
+      const all = texts.map((t) => t.s);
+      const p = plateOf(rects);
+      check(
+        `stats plate paints all nine labels and the head at ${W}x${H}`,
+        ["RUNS", "ROOMS CLEARED", "DEATHS", "KILLS", "PICKUPS", "PLAY TIME",
+          "CORE BEST", "PLUS BEST", "MAX BEST", "STATS", "YOUR CABINET"]
+          .every((s) => all.includes(s)),
+        all.join("|"),
+      );
+      check(
+        `stats plate paints both notes and the copy foot at ${W}x${H}`,
+        all.some((s) => s.indexOf("NOT PLAYED YET") >= 0) &&
+          all.some((s) => s.indexOf("BESTS ARE PER HEAT") >= 0) &&
+          all.includes("C COPY MY STATS · ESC BACK"),
+        all.join("|"),
+      );
+      check(
+        `stats plate shows NO json at ${W}x${H} — it is a screen, not a debug dump`,
+        !all.some((s) => /[{}\[\]]/.test(s)),
+        all.join("|"),
+      );
+      const last = texts[texts.length - 1];
+      check(
+        `every stats line stays inside the plate at ${W}x${H}`,
+        !!p && texts.every((t) => t.y > p.y && t.y < p.y + p.h),
+        JSON.stringify({ py: p && p.y, ph: p && p.h, last }),
+      );
+    }
   }
 }
 
