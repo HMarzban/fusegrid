@@ -856,10 +856,18 @@ up. §1.2's `startRunState()` does not clear it.
 
 `loadDaily(store)` clamps and, when `date` fails `/^\d{4}-\d{2}-\d{2}$/`, returns
 the zero record. `recordDaily(v, today, score, room, pace)` returns a **new**
-record: when `v.date !== today` it starts a fresh day (`played:1`, `best:score`,
-`room`, `pace: pace+1`); otherwise `played++`, `best = max(best, score)`,
-`room = max(room, room)`. `dailyTag(v, today)` → `"PLAYED"` when
-`v.date === today && v.played > 0`, else `"NEW"`.
+record. **Ruling 2026-09-07 (Minor-2, review fix wave, §4.4):** "the refusal is
+enforced at write time — `recordDaily` treats a stamped `pace` that does not
+match the pace this run just used as ABSENT, exactly like a new day (`played`
+resets to 1, `best` is this run's own score), rather than merging into a
+record made under a different pin." Concretely: when `v.date !== today` **or**
+the stored `pace` does not match this run's stamped `pace + 1`, the stored
+record is treated as ABSENT — refused, never compared — and this run's result
+**replaces** it under the new stamp (`played:1`, `best:score`, `room`,
+`pace: pace+1`); only when both the date and the stamped pace match does it
+accumulate: `played++`, `best = max(best, score)`, `room = max(room, room)`.
+`dailyTag(v, today)` → `"PLAYED"` when `v.date === today && v.played > 0`,
+else `"NEW"`.
 
 The write happens inside `endRun()` (§2.3), guarded by `dailyDate`, and
 refreshes both `main.js`'s cached `dailyRec` and `app.dailyTag`.
@@ -1193,7 +1201,7 @@ so a tip never paints over the PAUSED, CLEARED or GAME OVER veil.
 |---|---|---|---|
 | `src/app/bests.js` | — | **new module**: `BESTS_KEY BESTS_MAX bestKey clampBests loadBests saveBests bestOfRun recordBest newTally feedTally` | R1 |
 | `src/app/stats.js` | — | **new module**: `STATS_KEY RING_MAX EVENTS clampStats loadStats saveStats stat setStatsOn statsRows statsNotes statsPayload fmtLong` | R5 |
-| `src/app/daily.js` | — | **new module**: `DAILY_KEY dailySeed loadDaily saveDaily recordDaily dailyTag dailyStamp` | R3 |
+| `src/app/daily.js` | — | **new module**: `DAILY_KEY dailySeed loadDaily saveDaily recordDaily dailyTag dailyStamp finishDaily` | R3 |
 | `src/app/code.js` | — | **new module**: `CODE_V encodeChallenge decodeChallenge` | R8 |
 | `src/pwa/shell.js` `SRC` | 60 entries incl. `src/app/times.js` | **+4**: `src/app/bests.js` (R1), `src/app/stats.js` (R5), `src/app/daily.js` (R3), `src/app/code.js` (R8) — **mandatory**: `tests/pwa.test.mjs:98-103` walks `src/` and requires every `.js` in `PRECACHE` | all |
 | `src/pwa/shell.js:1` `CACHE_NAME` + `sw.js:3` `REV` | `fusegrid-shell-v116` | one paired single-step bump **per precache-touching commit**, starting at **v117**. `pwa.test.mjs:79-81` pins the format; `sw.js:4` throws on drift | all |

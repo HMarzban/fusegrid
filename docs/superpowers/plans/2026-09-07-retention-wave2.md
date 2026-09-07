@@ -491,6 +491,7 @@ export function saveDaily(v, store)
 export function recordDaily(v, today, score, room, pace)  // -> a NEW record
 export function dailyTag(v, today)                        // "NEW" | "PLAYED"
 export function dailyStamp(date, level, score)            // the share line
+export function finishDaily(today, score, room, pace, store)  // -> { rec, tag } — endRun's one write, one date (Minor-4)
 // menuapp.js
 startDaily()                                              // MENU only; _playCore + {seed, daily}
 // opt: o.dailySeed()                                     — main hands over {seed, date}
@@ -680,7 +681,7 @@ same stage.
 | `src/app/bests.js` | — | **new module**: `BESTS_KEY BESTS_MAX bestKey clampBests loadBests saveBests bestOfRun recordBest newTally feedTally` | **R1** |
 | `newTally` / `feedTally` shape | — | **stage 1 (R1)** `{r,k,p,b,d,dNew,lv}`; **stage 2 (R5)** `+ {kt,pk,dr}` filled in the same loop | **R1**, then **R5** |
 | `src/app/stats.js` | — | **new module**: `STATS_KEY RING_MAX EVENTS clampStats loadStats saveStats stat setStatsOn statsRows statsNotes statsPayload fmtLong` | **R5** |
-| `src/app/daily.js` | — | **new module**: `DAILY_KEY dailySeed clampDaily loadDaily saveDaily recordDaily dailyTag dailyStamp` | **R3** |
+| `src/app/daily.js` | — | **new module**: `DAILY_KEY dailySeed clampDaily loadDaily saveDaily recordDaily dailyTag dailyStamp finishDaily` | **R3** |
 | `src/app/code.js` | — | **new module**: `CODE_V encodeChallenge decodeChallenge` | **R8** |
 | `src/pwa/shell.js` `SRC` | 60 entries incl. `src/app/times.js` | **+4**: `bests.js` (R1), `stats.js` (R5), `daily.js` (R3), `code.js` (R8) — **mandatory**, `tests/pwa.test.mjs:98-103` | one entry each |
 | `src/pwa/shell.js:1` `CACHE_NAME` + `sw.js:3` `REV` | `fusegrid-shell-v116` **at INDEX time — read it, do not assume** | one paired single-step bump **per precache-touching commit**; **v117 is a floor** | **each commit** |
