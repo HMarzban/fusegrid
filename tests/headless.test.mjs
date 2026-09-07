@@ -346,6 +346,128 @@ function mkCanvas(){
     g.world.state==="PLAY"&&g.app.screen===SCREEN.MENU);
 }
 
+// ---- R11: pause reaches every state a player can be in (spec §4.3).
+// onPause is src/main.js:346-358; KeyP/Escape route through input.js:48.
+// Already pinned above and NOT repeated here: PLAY <-> PAUSE inside GAME,
+// onPause outside GAME leaving the world untouched, KeyP at MENU. ----
+{
+  const fakeTexts = () => {
+    const texts = [];
+    const noop = () => {};
+    const rc = { fillText: (s) => texts.push(String(s)),
+      strokeText: (s) => texts.push(String(s)) };
+    for (const n of ["save","restore","translate","rotate","scale","beginPath",
+      "closePath","moveTo","lineTo","arc","arcTo","bezierCurveTo",
+      "quadraticCurveTo","ellipse","fill","stroke","fillRect","strokeRect",
+      "clearRect","setTransform","transform","drawImage"]) rc[n]=noop;
+    rc.createLinearGradient=()=>({addColorStop:noop});
+    rc.createRadialGradient=()=>({addColorStop:noop});
+    return { canvas:{getContext:()=>rc,addEventListener(){},style:{}}, texts };
+  };
+
+  // 1 + 2: WIN and LOSE are INERT, and that is a decision, not an absence.
+  // The WIN overlay is not time-pressured and already owns SPACE; a pause on a
+  // stopped clock is a no-op. main.js's onPause has no WIN or LOSE branch.
+  for (const st of ["WIN", "LOSE"]) {
+    const g = createGame(null, { autoplay: true, seed: 11 });
+    g.world.state = st;
+    g.input.onPause();
+    check("R11 onPause is inert on " + st + " — world stays " + st,
+      g.world.state === st, g.world.state);
+  }
+
+  // 3: the inline OPTIONS page backs to the pause LIST, never to play.
+  {
+    const g = createGame(null, { autoplay: true, seed: 12 });
+    g.input.onPause();
+    g.app.pauseView = 1;
+    g.input.onPause();
+    check("R11 onPause on the inline OPTIONS page backs to the list, world stays PAUSE",
+      g.app.pauseView === 0 && g.world.state === "PAUSE",
+      g.app.pauseView + "/" + g.world.state);
+  }
+
+  // 4: the room-load frame. WIN + one fire edge runs loadLevel(level+1,true)
+  // and returns to PLAY inside step(); pause must work on that same frame.
+  {
+    const g = createGame(null, { autoplay: true, seed: 13 });
+    let t = 0;
+    g.loop((t += 16));
+    const lv = g.world.level;
+    g.world.state = "WIN";
+    // 34ms (>2*CFG.STEP*1000) so the release frame and the press frame each
+    // independently cross the fixed-step accumulator's CFG.STEP threshold —
+    // main.js's loop() computes dt=(t-last)/1000, and two back-to-back 16ms
+    // frames can land the release and the press inside the SAME step() call
+    // (or skip a step's worth of accumulator entirely), which would collapse
+    // the release-then-press edge main.js:53-65 needs into one observation.
+    g.input._onKeyUp({ code: "Space" });
+    g.loop((t += 34));
+    g.input._onKey({ code: "Space", preventDefault() {} });
+    g.loop((t += 34));
+    check("R11 WIN + fire edge advances a room and returns to PLAY",
+      g.world.level === lv + 1 && g.world.state === "PLAY",
+      g.world.level + "/" + g.world.state);
+    g.input.onPause();
+    check("R11 onPause on the room-load frame pauses — no blocked window between rooms",
+      g.world.state === "PAUSE", g.world.state);
+  }
+
+  // 5: the new-run frame. LOSE + one fire edge runs startGame (room 1, score 0).
+  {
+    const g = createGame(null, { autoplay: true, seed: 14 });
+    let t = 0;
+    g.loop((t += 16));
+    g.world.state = "LOSE";
+    // same 34ms reasoning as pin 4 above.
+    g.input._onKeyUp({ code: "Space" });
+    g.loop((t += 34));
+    g.input._onKey({ code: "Space", preventDefault() {} });
+    g.loop((t += 34));
+    check("R11 LOSE + fire edge starts a fresh run at room 1, PLAY",
+      g.world.level === 1 && g.world.state === "PLAY",
+      g.world.level + "/" + g.world.state);
+    g.input.onPause();
+    check("R11 onPause on the new-run frame pauses — same for the LOSE path",
+      g.world.state === "PAUSE", g.world.state);
+  }
+
+  // 6: ATTRACT is deliberately excluded — it is a demo, not a run.
+  {
+    const g = createGame(null, { seed: 15 });
+    g.app.cabinetSeen = true;
+    g.app.skip();
+    g.app.enterAttract();
+    let t = 1000;
+    g.loop(t);
+    g.loop((t += 64));
+    g.input.onPause();
+    check("R11 onPause is a no-op on ATTRACT — no PAUSE state, demo keeps running",
+      g.world.state === "PLAY" && g.app.screen === SCREEN.ATTRACT && !!g.demo,
+      g.world.state + "/" + g.app.screen);
+  }
+
+  // 7: PAUSE must not burn the coach window. coachT is main's PLAY-only clock
+  // (main.js:577); this is commit 33668f7's fix, and R11 is where it gets a pin.
+  {
+    const { canvas, texts } = fakeTexts();
+    const g = createGame(canvas, { autoplay: true, seed: 16 });
+    let t = 0;
+    g.loop((t += 16));
+    texts.length = 0;
+    g.loop((t += 16));
+    check("R11 the ghost coach is up on a fresh run", texts.includes("SPACE"),
+      texts.join("|"));
+    g.input.onPause();
+    for (let i = 0; i < 300; i++) g.loop((t += 16)); // ~4.8s paused, past COACH_DUR 3
+    g.input.onPause();
+    texts.length = 0;
+    g.loop((t += 16));
+    check("R11 PAUSE does not advance coachT, so the coach window survives the pause",
+      texts.includes("SPACE"), texts.join("|"));
+  }
+}
+
 // ---- ?net=local dual-peer lockstep harness (netcode v1 dev aid) ----
 {
   const g=createGame(null,{autoplay:true,netLocal:true});

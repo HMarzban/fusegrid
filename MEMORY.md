@@ -16,6 +16,25 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-07 — R11 CVD audit + pause-anywhere pins
+- Simulated protan/deutan/tritan over the 85 shipped hexes
+  (`docs/superpowers/specs/2026-09-06-cvd-audit.md`); only within-biome,
+  same-object swatch pairs (floor0/1, wall/wallHi, brickA/B/brickHi) were ever
+  eligible for a swap — cross-object pairs have their own silhouettes,
+  pickups carry `drawIcon` glyphs, chips carry labels, and re-hueing a foe is
+  the one fix AGENTS.md forbids by name. Found 5 collisions, swapped the 2
+  with a genuinely small fix (SAND, CROWN `brickHi`); JUNGLE/FACTORY have no
+  small-step fix at any distance and ARENA loses to the ≤2 cap — both
+  recorded unswapped. Re-ran `items-art.test.mjs`/`menudraw.test.mjs` clean;
+  bumped the PWA shell v113→v114 for the changed precached bytes.
+- Pinned pause on the 7 states `tests/headless.test.mjs` never verified: WIN/
+  LOSE are inert (stated decision, not oversight), the inline OPTIONS page
+  backs to the list, the room-load and new-run single frames, ATTRACT stays
+  unpausable, and PAUSE doesn't burn the ghost-coach window (commit
+  33668f7's fix, confirmed by mutation to go RED). No source change; the
+  WIN/LOSE fire-edge pins needed 34ms loop steps instead of 16ms since two
+  16ms frames can land inside the same fixed-step accumulator tick.
+
 ## 2026-09-07 — R7 stopwatch + MODES
 - Every room clear now records a time under `nb.times.v1` keyed on
   room/heat/pact/pace (`src/app/times.js`), shown as a HUD stopwatch chip and a
