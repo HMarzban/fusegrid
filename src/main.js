@@ -380,6 +380,12 @@ export function createGame(canvas, opts = {}) {
         return;
       } // outside GAME (e.g. ATTRACT): fall through to app.key so KeyC still plays
     }
+    if (code === "KeyB" && app.screen === SCREEN.GAME &&
+        (world.state === "WIN" || world.state === "LOSE")) {
+      copyText("https://hmarzban.github.io/fusegrid/?code=" +
+        encodeChallenge({ seed: world.seed, heat: world.heat, pact: world.pact, pace: world.pace }));
+      return;
+    }
     if (code === "KeyM") {
       if (app.screen === SCREEN.GAME && app.worldState === "PAUSE") {
         persistScore();

@@ -177,7 +177,7 @@ export function dailyLine(world, run) {
     " · TRY " + (r.tries | 0) + " · YOUR BEST " + (r.dbest | 0)
   );
 }
-const COPY_HINT = " · C copy";
+const COPY_HINT = " · C copy · B board";
 /* Pause-list row copy mirrors src/app/menuapp.js PAUSE_ITEMS — render/ must
    not import src/app (only shellview.js may), so the labels are duplicated
    here the way menudraw's PLAQUE_NAME is. */

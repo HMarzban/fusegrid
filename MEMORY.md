@@ -16,6 +16,22 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-07 — R8 challenge code
+- `B` on a WIN or LOSE copies a bare `?code=<12 chars>` link
+  (`https://hmarzban.github.io/fusegrid/?code=F1021I3V93H8`) carrying only
+  seed/heat/pact/pace — no score, no room, no date, no stamp. Entered through
+  `readFlags`'s `code` field (`src/app/flags.js`) with no DOM prompt: `src/app/`
+  stays DOM-free and `main.js`'s seams stay out of `main.js`.
+- The one-character base36 checksum (`src/app/code.js`) makes a mistyped link a
+  refusal (`decodeChallenge` returns `null`) rather than a different board
+  played under the sender's code — measured at 98.0-99.1% of single-character
+  typos across the four pinned codes, disclosed rather than claimed perfect.
+- The refused ranking word is now gated out of `src/` and `tests/` by a new
+  case-insensitive assertion in `tests/banned-name.test.mjs` (`docs/` stays
+  exempt — it names the term only to refuse it); two pre-existing pins in
+  `tests/daily.test.mjs`/`tests/stats.test.mjs` wrote it as a literal regex and
+  were rewritten to the same concatenation form the gate itself uses.
+
 ## 2026-09-07 — R3 fix wave (review Minor-1..4, Nit-1)
 - Minor-1: a seedless run now falls back to a `bootSeed` remembered once at
   boot (`main.js`), not whatever `world.seed` a prior DAILY run left behind —

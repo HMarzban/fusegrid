@@ -524,9 +524,10 @@ const rec = () => {
     P.texts.join("|"),
   );
   check(
-    "the copy hint is still exactly ' · C copy' until R8 changes it",
-    a.texts.some((s) => s.indexOf(" · C copy") > 0) &&
-      !a.texts.some((s) => s.indexOf("B board") >= 0),
+    // R8 deviation: this pin named its own future — COPY_HINT's stage 2
+    // (" · C copy · B board") has now landed, so the assertion flips to match.
+    "the copy hint reads ' · C copy · B board' now that R8 has landed",
+    a.texts.some((s) => s.indexOf(" · C copy · B board") > 0),
     a.texts.join("|"),
   );
 }

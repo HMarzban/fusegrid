@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { readFlags } from "../src/app/flags.js";
 import { SCREEN, createMenuApp } from "../src/app/menuapp.js";
 import { createGame } from "../src/main.js";
+import { drawOverlay } from "../src/render/scenes.js";
 
 let pass = 0,
   fail = 0;
@@ -256,6 +257,99 @@ function check(name, cond, detail) {
     "there is no window.prompt anywhere — src/app is DOM-free and main's seams stay out of main",
     !/window\.prompt|\bprompt\(/.test(src) &&
       !/prompt/.test(readFileSync("src/app/code.js", "utf8")),
+  );
+}
+
+// ---- 8. the overlay hint says "board", which is the framing ----
+{
+  const texts = [];
+  const noop = () => {};
+  const c = {
+    save: noop, restore: noop, translate: noop, scale: noop, beginPath: noop,
+    closePath: noop, moveTo: noop, lineTo: noop, arc: noop, arcTo: noop,
+    bezierCurveTo: noop, quadraticCurveTo: noop, ellipse: noop, fill: noop,
+    stroke: noop, fillRect: noop, strokeRect: noop,
+    fillText: (s) => texts.push(String(s)), strokeText: (s) => texts.push(String(s)),
+  };
+  drawOverlay(c, { state: "WIN", level: 3, finale: false, score: 10, heat: 0 },
+    600, 520, 300, 260);
+  check(
+    "the WIN cue line now offers both keys",
+    texts.some((s) => s === "SPACE / TAP · next room · C copy · B board"),
+    texts.join("|"),
+  );
+  texts.length = 0;
+  drawOverlay(c, { state: "LOSE", level: 3, score: 10, heat: 0 }, 600, 520, 300, 260);
+  check(
+    "and so does the LOSE cue line",
+    texts.some((s) => s === "SPACE / TAP · new run · C copy · B board"),
+    texts.join("|"),
+  );
+  /* R8 deviation: written by concatenation, not as a literal regex — this
+     file is scoped by tests/banned-name.test.mjs's new R8 gate, and the
+     refused word spelled out in the source text would trip its own scan. */
+  const refusedWord = "leader" + "board";
+  check(
+    "the legend says 'board', never the refused ranking word",
+    !texts.some((s) => s.toLowerCase().includes(refusedWord)),
+    texts.join("|"),
+  );
+}
+
+// ---- 9. KeyB: only at a run end, only the bare link ----
+{
+  const mem = new Map();
+  const ls = { getItem: (k) => (mem.has(k) ? mem.get(k) : null),
+    setItem: (k, v) => mem.set(k, String(v)) };
+  const wrote = [];
+  globalThis.window = { localStorage: ls, addEventListener() {} };
+  // Node >=21 ships a getter-only globalThis.navigator (tests/daily.test.mjs's
+  // own note) — mutate its .clipboard rather than reassigning the binding.
+  navigator.clipboard = { writeText: (s) => { wrote.push(s); return Promise.resolve(); } };
+  try {
+    const g = createGame(null, { autoplay: true, seed: 123456789 });
+    g.loop(1000);
+    g.input.onUiKey("KeyB");
+    check("B during PLAY copies nothing", wrote.length === 0, JSON.stringify(wrote));
+    g.world.state = "WIN";
+    g.input.onUiKey("KeyB");
+    check(
+      "B on a WIN copies the bare ?code= link for THIS board",
+      wrote.length === 1 &&
+        wrote[0] === "https://hmarzban.github.io/fusegrid/?code=" +
+          encodeChallenge({ seed: g.world.seed, heat: g.world.heat,
+            pact: g.world.pact, pace: g.world.pace }),
+      JSON.stringify(wrote),
+    );
+    check(
+      "the payload carries no score, no room, no date — a challenge, not a claim",
+      wrote[0].indexOf(String(g.world.score | 0)) < 0 || (g.world.score | 0) === 0,
+      wrote[0],
+    );
+    check(
+      "and the copied link round-trips back to this exact board",
+      (() => {
+        const d = decodeChallenge(wrote[0].split("?code=")[1]);
+        return d && d.seed === (g.world.seed >>> 0) && d.heat === (g.world.heat | 0) &&
+          d.pact === (g.world.pact | 0) && d.pace === (g.world.pace | 0);
+      })(),
+      wrote[0],
+    );
+    wrote.length = 0;
+    g.app.toMenu();
+    g.input.onUiKey("KeyB");
+    check("B on MENU copies nothing and is not swallowed by the shell",
+      wrote.length === 0, JSON.stringify(wrote));
+  } finally {
+    delete globalThis.window;
+    delete navigator.clipboard;
+  }
+  const src = readFileSync("src/main.js", "utf8");
+  check(
+    "the KeyB payload is the link and nothing else — no stamp, no score",
+    /copyText\("https:\/\/hmarzban\.github\.io\/fusegrid\/\?code=" \+/.test(src) &&
+      !/KeyB[\s\S]{0,300}world\.score/.test(src),
+    (src.match(/if \(code === "KeyB"[\s\S]{0,200}/) || [""])[0],
   );
 }
 
