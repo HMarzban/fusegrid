@@ -19,6 +19,9 @@ append an entry when it makes a non-trivial change.
 ## 2026-09-17 — Deployment verification and architecture
 - Added a Node 26 test job for pull requests and as a Pages deployment dependency; added a human-facing architecture note with reproducibility, storage, and multiplayer limits.
 
+## 2026-09-07 — Retention wave 2 wrap: docs sweep
+- After the closing wave: `5a071c3` records the zero-score first-run ruling under spec §2.4; `18f9d9d` pluralises SESSION in the copied stats text (shell v143). README Features and controls now describe OPTIONS → RENDER, TIME ATTACK on 5, the run summary, DAILY, the challenge code, STATS, coach v2 and the GUIDE fold. `CHANGELOG.md` added (Keep a Changelog; entries dated and tagged by PWA shell revision) — keep it current per wave. Memory dir (`fusegrid-project-facts`) updated the same day.
+
 ## 2026-09-07 — Retention wave 2, closing wave (post review-final.md, verdict SHIP)
 - Closes the five sub-plans (`run-summary.md` R1, `stats-screen.md` R5,
   `daily-seed.md` R3, `challenge-code.md` R8, `coach-v2.md` R10) under the

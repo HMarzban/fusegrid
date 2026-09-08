@@ -10,11 +10,16 @@ Share that URL **with the trailing slash** so chat apps load the preview card (`
 
 ## Features
 
-- **REAL 3D ⇄ CLASSIC 2D** — menu **RENDER** toggles WebGL and classic Canvas; no reload.
+- **REAL 3D ⇄ CLASSIC 2D** — **OPTIONS → RENDER** toggles WebGL and classic Canvas; no reload. OPTIONS also holds music and SFX volume, the 3D camera preset, brightness, screen shake, and reduce-flash.
 - **Heat** — CORE / PLUS / MAX on LEVEL SELECT (`↑/↓`). CORE is the baseline run; PLUS and MAX tighten fuse, spawns, and pressure.
 - **Eight rooms** — five biomes on a fresh install (JUNGLE → ARENA), then SAND, VOID, and CROWN after your first clear.
-- **Pact afterburner** — optional LAST / BARE / THIN / SHRINK toggles (`1`–`4`) unlock with rooms 6–8; CORE with every toggle off matches baseline v6.
-- **Cabinet help** — HOW TO, ITEMS, ENEMIES, HIGH SCORES, and **SOURCE** (opens [github.com/HMarzban/fusegrid](https://github.com/HMarzban/fusegrid)).
+- **Pact afterburner** — optional LAST / BARE / THIN / SHRINK toggles (`1`–`4`) unlock with rooms 6–8; CORE with every toggle off matches baseline v6. `5` adds TIME ATTACK: a play-only stopwatch with a per-room best.
+- **Run summary** — GAME OVER and the finale show your tally and a delta against your saved best for that heat: NEW BEST, FURTHEST ROOM YET, MATCHED, or how far short you fell. Combo callouts and a close-call flash fire during play (both respect reduce-flash).
+- **DAILY** — one board a day, seeded from the date. Your tries and best for the day are kept on this device only; nobody is ranked.
+- **Challenge code** — on the end screen, `B` copies a twelve-character board code (seed, heat, pact, pace — never a score). Open `…/fusegrid/?code=XXXXXXXXXXXX` to play the same board.
+- **STATS** — a cabinet page with lifetime runs, rooms, deaths, kills, pickups, play time, and your CORE / PLUS / MAX bests; `C` copies it as text. Four local plaques on HIGH SCORES.
+- **Coach** — a ghost shows the first bomb on a fresh install, then one short tip the first time you pick up KICK, THROW, or REMOTE.
+- **Cabinet help** — **GUIDE** (HOW TO, ITEMS, ENEMIES), HIGH SCORES, STATS, and **SOURCE** (opens [github.com/HMarzban/fusegrid](https://github.com/HMarzban/fusegrid)).
 - **Chiptune + boom** — each room has its own theme and blast tint.
 - **PWA** — install from the browser; offline play after the first visit (first load still needs network).
 - **Pure ES modules** — no bundler, no npm runtime dependencies. Three.js r160 is vendored for 3D only.
@@ -32,10 +37,12 @@ Clear every enemy in the room to advance. Gold **WALL** never breaks; green **BR
 | Shift + Space | Throw *(needs throw power-up)* |
 | Q | Detonate remote *(needs remote power-up)* |
 | K + move | Kick *(needs kick power-up)* |
-| P | Pause |
+| P | Pause (RESUME / RESTART / OPTIONS / QUIT TO MENU) |
 | M / Menu | Quit to menu |
+| C *(end screen or STATS)* | Copy your result or your stats as text |
+| B *(end screen)* | Copy the board's challenge code |
 
-On touch devices during a run, a virtual D-pad and bomb button overlay the stage. Power-ups marked with `*` in the in-game HOW TO need their pickup first.
+On touch devices during a run, a virtual D-pad and bomb button overlay the stage. Power-ups marked with `*` in the in-game HOW TO need their pickup first. Everything the game remembers lives in your browser's local storage; there is no account, server, or leaderboard. See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
 
 ## Progression
 
