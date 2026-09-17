@@ -114,7 +114,9 @@ npm test           # node --test
 
 **Test Pact locally without clearing room 5:** in devtools console, `localStorage.setItem('nb.pact.v1','1')` then reload LEVEL SELECT.
 
-Architecture, conventions, and agent notes live in [`AGENTS.md`](AGENTS.md).
+Read the [architecture and tradeoffs](docs/architecture.md) for the simulation/rendering boundary, replay checks, and multiplayer limits. Contributor conventions and agent notes remain in [`AGENTS.md`](AGENTS.md).
+
+Pull requests run the Node test suite. Pages deployment runs only after those tests pass on the commit being deployed.
 
 ### Listing art
 
