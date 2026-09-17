@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-09-17 — Deployment verification and architecture
+- Added a Node 26 test job for pull requests and as a Pages deployment dependency; added a human-facing architecture note with reproducibility, storage, and multiplayer limits.
+
 ## 2026-09-07 — Retention wave 2, closing wave (post review-final.md, verdict SHIP)
 - Closes the five sub-plans (`run-summary.md` R1, `stats-screen.md` R5,
   `daily-seed.md` R3, `challenge-code.md` R8, `coach-v2.md` R10) under the
