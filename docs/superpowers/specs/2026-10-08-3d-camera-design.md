@@ -135,6 +135,17 @@ Three things do **not** reset `dist`:
 
 `resetOrbit` stays where it is. Only `dist` is in the ruling.
 
+**The "selected" preset has to be live.** `main.js`'s `settings` is the boot
+copy. `menuapp` holds its own `clampSettings(o.settings)` clone
+(`menuapp.js:86`, `settings.js:28-40`) and passes *that* object to
+`onSettings`. So every `camPreset(settings.cam)` read already returns the
+boot-time preset after an OPTIONS change: today's `onStart` and R in GAME do
+this, and so would the two new edges. That is a latent bug: pick WIDE, start a
+run, and you get STANDARD.
+
+The fix is `onSettings: (s) => { saveSettings(s); settings = s; applySettings(s); }`.
+`settings = s;` rides the existing `saveSettings(s);` line, so it is +0 lines.
+
 ### 2.3 File map
 
 | File | Change |
@@ -143,10 +154,13 @@ Three things do **not** reset `dist`:
 | `src/render/three/wrapper.js` | import `CAM_FOV`; fov + far 3000; fog comment to past tense |
 | `src/render/three/particles.js` | `size:19.5` |
 | `src/render/three/flythrough.js` | `BASE_DIST`/`SETTLE_EL`/`TARGET_Y`, start el 0.74 |
-| `src/main.js` | two appends (§2.2), +0 lines |
+| `src/main.js` | two appends and `settings = s` (§2.2), +0 lines |
 | `src/render/sprites.js:338`, `src/render/three/entities.js:165,295,882` | comment numbers 59.1 → 52.2 (still past 45°, so "more TOP than side" holds) |
 | `tests/three.test.mjs` | §4, §4b, §CAM, S3.C, §SET (§2.4); comment at `:1082` |
 | `tests/items-art.test.mjs:599` | comment 59.1 → 52.2 |
+| `tests/headless.test.mjs:1022` | cap comment line (C1 +0) |
+| `src/pwa/shell.js:1`, `sw.js:3` | `fusegrid-shell-v159` |
+| `MEMORY.md` | one dated line |
 | `AGENTS.md` | the default-rig paragraph and its Hazard (`:72-88`), MAKO "at `el:0.54`" (`:133`), the frozen rig/light fact (`:320`), the "At `el:0.54` … 59.1°" fact (`:322`) |
 
 In AGENTS.md:
@@ -179,6 +193,9 @@ In AGENTS.md:
   - **New, through `createGame`'s frame loop with `render3d`:** after a wheel
     out to 2529, the WIN→PLAY, LOSE→PLAY and pause-RESTART edges each restore
     `camPreset(settings.cam)`. A PAUSE→PLAY resume keeps 2529.
+  - **New:** set CAMERA to WIDE through OPTIONS (`app.settings` path), wheel
+    out, cross a room edge → `rig.dist === 1671`. A run start → 1671 as well.
+    This pins "selected", and it fails on HEAD's boot copy.
 - **S3.C (`:915`).**
   - The start dist is 1503/1.55 (969.677).
   - The end frame equals `createRig()`: dist 1503, el 0.66, target y −17,
@@ -317,6 +334,19 @@ That is −17 lines in total. `sizeCanvases` keeps calling `fit()` (`:546`).
 `src/pwa/shell.js` SRC gains `"src/app/fit.js"`, alphabetised after
 `demobot.js`.
 
+**File map**
+
+| File | Change |
+|---|---|
+| `src/app/fit.js` (new) | `FIT_RES`, `fitBox`, `mountFit` |
+| `src/main.js` | the fit block → `mountFit`, plus the import (−17) |
+| `index.html` | `@media` block out, six `body[data-lay]` rules in, comment |
+| `src/pwa/shell.js`, `sw.js` | SRC + `fusegrid-shell-v160` |
+| `tests/fit.test.mjs` (new) | §3.4 |
+| `tests/touch.test.mjs` | D5 rewrite, `#tpause` pin |
+| `tests/headless.test.mjs:1024` | cap 812 → 799, plus the comment line |
+| `AGENTS.md`, `MEMORY.md` | the `fit.js` seam beside flags/attract/debughook; one dated line |
+
 ### 3.4 Pins
 
 - **New `tests/fit.test.mjs`.**
@@ -416,6 +446,16 @@ if (hit) app.key(hit); else if (app.resetArm) app.resetArm = false; else app.con
 - This is +4 lines. `app.key` already owns the two-press semantics
   (`menuapp.js:242-246`), so nothing changes in `menuapp.js`.
 
+**File map**
+
+| File | Change |
+|---|---|
+| `src/render/menudraw.js` | `STATS_FOOT` / `RESET_FOOT` constants, `statsHit` |
+| `src/main.js` | the STATS tap branch, plus `statsHit` on the existing import line (+4) |
+| `src/pwa/shell.js`, `sw.js` | `fusegrid-shell-v161` |
+| `tests/menudraw.test.mjs`, `tests/headless.test.mjs` | §4.3, plus the cap comment line |
+| `AGENTS.md`, `MEMORY.md` | the TROPHIES/Reset "or a tap" wording; one dated line |
+
 ### 4.3 Pins
 
 - **`tests/menudraw.test.mjs`.**
@@ -498,6 +538,8 @@ if (hit) app.key(hit); else if (app.resetArm) app.resetArm = false; else app.con
 8. **The layout predicate is `body[data-lay]` written by `fit()`**, not a
    separate CSS media query.
 9. **Ship order is C1 → C2 → T1** for the line budget.
+10. **`settings` must be live** (§2.2). The study assumed `camPreset(settings.cam)`
+    already followed OPTIONS. It does not: `main.js` keeps the boot copy.
 
 ## 8. Accepted trade-offs and assumptions
 
