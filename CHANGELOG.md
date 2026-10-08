@@ -6,6 +6,38 @@ version number of its own; each entry is dated and names the PWA shell
 revision (`CACHE_NAME` in `src/pwa/shell.js`) that shipped it, since that is
 what makes an installed copy update.
 
+## shell v158 · 2026-10-08
+
+### Added
+- **Medals.** Eight medals, each earned on a finale clear (room 5 or room 8)
+  and settled only when the run ends. A newly won medal is named once, in
+  gold, on the run summary. Press `T` on STATS to open the MEDALS page
+  (`n/8`, earned rows lit); Esc or Enter goes back. Store: `nb.medals.v1`.
+- **Ghost replay.** Clear a room faster than before and the cabinet keeps
+  your route. Next time you play that exact board (same seed, room, heat,
+  pact and pace), a translucent copy of you races alongside in CLASSIC 2D
+  and REAL 3D. It freezes with PAUSE, only ever saves a faster clear, and
+  never touches the game itself. Store: `nb.ghost.v1`.
+- **DAYS PLAYED.** STATS gains a lifetime count of the days you entered a
+  room; `C` copies it too. Never a streak.
+- **Reset my cabinet.** On STATS, `R` arms a red confirm and a second `R`
+  wipes scores, bests, stats, daily, times, medals, plaques, ghosts, pact and
+  coach, then reloads. Your settings and pace are kept. Any other key cancels.
+
+### Changed
+- The PAUSE footer now reads `ENTER / TAP CONFIRM`, so touch players see how
+  to pick a row.
+
+### Fixed
+- **Touch.** MENU rows are tappable, so every row is reachable without a
+  keyboard. Taps on PAUSE and OPTIONS rows land on the right row on a scaled
+  canvas. The bomb button hides when you are not playing. On short landscape
+  phones the pad and bomb button move into the side gutters instead of
+  covering the board.
+- Internal: `sitemap.xml` lastmod refreshed; `main.js` line pin raised once
+  (808 → 812) for the ghost hook. MEDALS and Reset stay keyboard-only by
+  design.
+
 ## shell v145 · 2026-10-08
 
 ### Fixed

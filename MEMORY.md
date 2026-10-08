@@ -16,6 +16,11 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-08 — Retention wave 3
+- Shipped through shell v158: PAUSE TAP hint, DAYS PLAYED, eight medals + MEDALS page (SCREEN 13), ghost replay 2D/3D, reset my cabinet, and the touch audit fixes D1/D2/D4/D5. main.js cap 808→812 once.
+- Rulings: days played is lifetime-only (consecutive-day ban stands); medals need a finale WIN; a ghost is valid only for its exact 5-tuple board; reset keeps only settings + pace. D3 (MEDALS/Reset keyboard-only) is status quo by spec.
+- Open: whether touch should reach MEDALS/Reset is an owner call; nothing pushed.
+
 ## 2026-10-08 — D5 fix: body spans the viewport so the gutter controls aren't clipped (v158)
 - `html,body{display:flex;overflow:hidden}` made body a flex item only as wide as #wrap, so its clip cut off the v157 gutter pad/bomb (elementFromPoint hit HTML). Added `width:100%`; touch test now fails if that rule has overflow:hidden without width:100%. Browser-verified at 812x375 (pad/bomb hit-test) and 375x812 (unchanged).
 

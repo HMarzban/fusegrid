@@ -42,7 +42,8 @@ live in `drawOverlay`.
 The sim ticks only while the shell is GAME. PAUSE/WIN/LOSE are `world.state`,
 not shell screens. Do not add them as `SCREEN` values.
 
-- `src/main.js` — **browser entry only**. RAF loop, fixed-step accumulator,
+- `src/main.js` — **browser entry only**, pinned `<=812` lines
+  (`tests/headless.test.mjs`; raised 808→812 once in wave 3 for `ro.ghost`). RAF loop, fixed-step accumulator,
   renderer cache + kind switch, and the handler wiring that binds them. Never
   imported by sim or renderer. Its seams live beside it and must stay OUT of
   `main.js`: `src/app/flags.js` (URL/opts, pure over a search string),
@@ -261,7 +262,8 @@ Node v26, `"type": "module"`. No build step, no bundler.
 - **The daily is honour-system and single-device.** No enforcement, no
   consecutive-day read, no streak/at-risk/welcome-back copy, never framed as
   competing with anyone — the only claim is *your own attempts are comparable
-  to each other*. Its config is pinned `{level:1, heat:0, pact:0, pace:0}`
+  to each other*. STATS `DAYS PLAYED` is a lifetime count and does not
+  break this ban: it never reads consecutive days. Its config is pinned `{level:1, heat:0, pact:0, pace:0}`
   **and stamped**: a record whose stamped pace differs from this run's is
   treated as absent, never silently compared. A run that supplies no seed
   plays the session's remembered `bootSeed`, so an ordinary run is

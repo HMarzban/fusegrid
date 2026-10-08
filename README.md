@@ -17,7 +17,10 @@ Share that URL **with the trailing slash** so chat apps load the preview card (`
 - **Run summary** — GAME OVER and the finale show your tally and a delta against your saved best for that heat: NEW BEST, FURTHEST ROOM YET, MATCHED, or how far short you fell. Combo callouts and a close-call flash fire during play (both respect reduce-flash).
 - **DAILY** — one board a day, seeded from the date. Your tries and best for the day are kept on this device only; nobody is ranked.
 - **Challenge code** — on the end screen, `B` copies a twelve-character board code (seed, heat, pact, pace — never a score). Open `…/fusegrid/?code=XXXXXXXXXXXX` to play the same board.
-- **STATS** — a cabinet page with lifetime runs, rooms, deaths, kills, pickups, play time, and your CORE / PLUS / MAX bests; `C` copies it as text. Four local plaques on HIGH SCORES.
+- **STATS** — a cabinet page with lifetime runs, rooms, deaths, kills, pickups, play time, and your CORE / PLUS / MAX bests; `C` copies it as text. Four local plaques on HIGH SCORES. STATS also counts lifetime **DAYS PLAYED**.
+- **Medals** — eight medals for finale clears; `T` on STATS opens the MEDALS page.
+- **Ghost** — after your fastest clear of a room, replaying that exact board (same seed, room, heat, pact, pace) races a translucent copy of your best route, in 2D and 3D.
+- **Reset my cabinet** — on STATS, press `R` twice to wipe progress and reload; settings and pace are kept, any other key cancels.
 - **Coach** — a ghost shows the first bomb on a fresh install, then one short tip the first time you pick up KICK, THROW, or REMOTE.
 - **Cabinet help** — **GUIDE** (HOW TO, ITEMS, ENEMIES), HIGH SCORES, STATS, and **SOURCE** (opens [github.com/HMarzban/fusegrid](https://github.com/HMarzban/fusegrid)).
 - **Chiptune + boom** — each room has its own theme and blast tint.
@@ -41,6 +44,8 @@ Clear every enemy in the room to advance. Gold **WALL** never breaks; green **BR
 | M / Menu | Quit to menu |
 | C *(end screen or STATS)* | Copy your result or your stats as text |
 | B *(end screen)* | Copy the board's challenge code |
+| T *(STATS)* | Open the MEDALS page |
+| R, R *(STATS)* | Reset my cabinet (two presses; any other key cancels) |
 
 On touch devices during a run, a virtual D-pad and bomb button overlay the stage. Power-ups marked with `*` in the in-game HOW TO need their pickup first. Everything the game remembers lives in your browser's local storage; there is no account, server, or leaderboard. See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
 
