@@ -298,6 +298,9 @@ check("hasTouch({ontouchstart:null}) true", hasTouch({ontouchstart:null})===true
     bad.join(" | ")||"812x375 stage "+(600*(375-spareH)/520).toFixed(1));
   check("the gutter rules carry no display: (the [hidden] guard stays the only one)",
     !/display:/.test(inner),inner);
+  const bodyRule=(html.match(/html,body\{[^}]*\}/)||[""])[0];
+  check("body spans the viewport so its overflow:hidden clip holds the side gutters",
+    !/overflow:hidden/.test(bodyRule)||/[{;\s]width:100%/.test(bodyRule),bodyRule);
 }
 
 console.log("\n  TOUCH RESULT: "+pass+" PASS / "+fail+" FAIL");

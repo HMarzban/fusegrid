@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-08 — D5 fix: body spans the viewport so the gutter controls aren't clipped (v158)
+- `html,body{display:flex;overflow:hidden}` made body a flex item only as wide as #wrap, so its clip cut off the v157 gutter pad/bomb (elementFromPoint hit HTML). Added `width:100%`; touch test now fails if that rule has overflow:hidden without width:100%. Browser-verified at 812x375 (pad/bomb hit-test) and 375x812 (unchanged).
+
 ## 2026-10-08 — D5: short-landscape touch controls move to the side gutters (v157)
 - At 812x375 fit() gives a 225px stage but pad+bomb need 12+128+72+16=228, so they overlapped and covered ~half the board. `@media (max-height:500px) and (min-aspect-ratio:4/3)` puts `#tpad` at `right:calc(100% + 12px)` and `#tbomb` at `left:calc(100% + 16px)` (full size, off the board); touch test sweeps W 560–1400 × H 280–1000 against fit()'s math. CSS-only, main.js +0. Open: the PAUSE hint still draws at ~5.6 CSS px there (scales with s).
 
