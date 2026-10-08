@@ -49,6 +49,9 @@ correction. Public copy never names the private reference game. The word
 - `main.js` stays inside the budget in §5.
 - Each code commit gets one paired `CACHE_NAME` + `sw.js` REV bump (§6).
 - The draw-call budget and fat-world 141 do not move. Nothing here adds a mesh.
+- The iso/2D render paths (`r3d/`, `cameraCtl.js`, `renderer.js`) and the
+  600×520 / 608×352 logical boxes are untouched. Only `fit()` changes, and it
+  sizes every kind.
 
 ---
 
@@ -135,16 +138,18 @@ Three things do **not** reset `dist`:
 
 `resetOrbit` stays where it is. Only `dist` is in the ruling.
 
-**The "selected" preset has to be live.** `main.js`'s `settings` is the boot
-copy. `menuapp` holds its own `clampSettings(o.settings)` clone
-(`menuapp.js:86`, `settings.js:28-40`) and passes *that* object to
-`onSettings`. So every `camPreset(settings.cam)` read already returns the
-boot-time preset after an OPTIONS change: today's `onStart` and R in GAME do
-this, and so would the two new edges. That is a latent bug: pick WIDE, start a
-run, and you get STANDARD.
+**The "selected" preset is already live at HEAD.** `menuapp` clamps its own
+clone (`menuapp.js:86`, `settings.js:28-40`), but `main.js:304` rebinds
+`settings = app.settings;` right after `createMenuApp` ("One live blob from
+here on"). `_optSet` (`menuapp.js:439-445`) and `optReset` (`:508`) mutate
+that same object in place. So `camPreset(settings.cam)` already follows
+OPTIONS: pick WIDE, wheel out (HEAD clamps at 1400), press PLAY, and `onStart` sets 960; KeyR
+gives 960 too. `onSettings` does not change, and C1 adds nothing to `main.js`
+beyond the two appends above.
 
-The fix is `onSettings: (s) => { saveSettings(s); settings = s; applySettings(s); }`.
-`settings = s;` rides the existing `saveSettings(s);` line, so it is +0 lines.
+*Ruling 2026-10-08 (spec review): d9ba25d's "latent bug" and its
+`settings = s` fix are withdrawn. `s === app.settings`, so the change was a
+no-op and the bug does not exist.*
 
 ### 2.3 File map
 
@@ -154,8 +159,9 @@ The fix is `onSettings: (s) => { saveSettings(s); settings = s; applySettings(s)
 | `src/render/three/wrapper.js` | import `CAM_FOV`; fov + far 3000; fog comment to past tense |
 | `src/render/three/particles.js` | `size:19.5` |
 | `src/render/three/flythrough.js` | `BASE_DIST`/`SETTLE_EL`/`TARGET_Y`, start el 0.74 |
-| `src/main.js` | two appends and `settings = s` (§2.2), +0 lines |
-| `src/render/sprites.js:338`, `src/render/three/entities.js:165,295,882` | comment numbers 59.1 → 52.2 (still past 45°, so "more TOP than side" holds) |
+| `src/main.js` | the two appends (§2.2), +0 lines |
+| `src/render/three/camrig.js:8` (trailing comment), `src/render/sprites.js:338`, `src/render/three/entities.js:165,295,882` | comment numbers `el 0.54` / 59.1 → `el 0.66` / 52.2 (still past 45°, so "more TOP than side" holds) |
+| `src/render/three/camrig.js:23` | the bezel "bleed 2.4%" → 7.5% (see the AGENTS.md note below) |
 | `tests/three.test.mjs` | §4, §4b, §CAM, S3.C, §SET (§2.4); comment at `:1082` |
 | `tests/items-art.test.mjs:599` | comment 59.1 → 52.2 |
 | `tests/headless.test.mjs:1022` | cap comment line (C1 +0) |
@@ -166,6 +172,10 @@ The fix is `onSettings: (s) => { saveSettings(s); settings = s; applySettings(s)
 In AGENTS.md:
 - The new rig text states that fill vs elevation is FOV-conditional.
 - The Hazard becomes "STANDARD sits at 1.0746, dolly-in limit 1473.54".
+- The playfield-basis sentence's "bezel may bleed ~2.4%" (`AGENTS.md:79`) is
+  restated for the 1.0746 bezel: about 7.5% past the two bottom corners. The
+  2.4% came from the 2026-09-04 bezel at |ndc| 1.0238, so it was already stale
+  at HEAD's 1.0974 (9.7%).
 - Add these to the stale lists: `el:0.54`, `dist:870`, `target:[0,-48,0]`,
   FOV 45, `|ndc| 0.9449`, fill 50.9%, bezel 1.0974, `CAM_PRESET [870,960,1040]`,
   `DIST 560/1400`.
@@ -193,9 +203,12 @@ In AGENTS.md:
   - **New, through `createGame`'s frame loop with `render3d`:** after a wheel
     out to 2529, the WIN→PLAY, LOSE→PLAY and pause-RESTART edges each restore
     `camPreset(settings.cam)`. A PAUSE→PLAY resume keeps 2529.
-  - **New:** set CAMERA to WIDE through OPTIONS (`app.settings` path), wheel
-    out, cross a room edge → `rig.dist === 1671`. A run start → 1671 as well.
-    This pins "selected", and it fails on HEAD's boot copy.
+  - **New (regression guard):** set CAMERA to WIDE through OPTIONS
+    (`app.settings` path), wheel out, cross a room edge → `rig.dist === 1671`.
+    A run start → 1671 as well. The run-start (`onStart`) half already passes
+    at HEAD because of `main.js:304`. Only the room-edge half goes red →
+    green, through the new `main.js:635` append (the RESTART append is pinned
+    red → green by the pin above).
 - **S3.C (`:915`).**
   - The start dist is 1503/1.55 (969.677).
   - The end frame equals `createRig()`: dist 1503, el 0.66, target y −17,
@@ -316,6 +329,10 @@ body[data-lay=l] #tpause{right:auto;bottom:auto;left:calc(100% + 54px);top:0}
 - The base `#tpause` rule stays without `top:`.
 - Each `data-lay` rule carries no `display:`.
 - Update the touch-controls explanatory comment (`index.html:57-60`) to match.
+- Update the `#tpause` comment (`index.html:81-84`). It says the pill "sits
+  ABOVE the stage" and "fit() keeps >=90px clear above the stage". Both turn
+  false: landscape moves the pill to the right gutter, desktop reserves 48
+  (24 px a side), and portrait gets a 60 px top pad.
 
 ### 3.3 `main.js`
 
@@ -340,7 +357,7 @@ That is −17 lines in total. `sizeCanvases` keeps calling `fit()` (`:546`).
 |---|---|
 | `src/app/fit.js` (new) | `FIT_RES`, `fitBox`, `mountFit` |
 | `src/main.js` | the fit block → `mountFit`, plus the import (−17) |
-| `index.html` | `@media` block out, six `body[data-lay]` rules in, comment |
+| `index.html` | `@media` block out, six `body[data-lay]` rules in, the touch-controls comment (`:57-60`) and the `#tpause` comment (`:81-84`) |
 | `src/pwa/shell.js`, `sw.js` | SRC + `fusegrid-shell-v160` |
 | `tests/fit.test.mjs` (new) | §3.4 |
 | `tests/touch.test.mjs` | D5 rewrite, `#tpause` pin |
@@ -362,11 +379,13 @@ That is −17 lines in total. `sizeCanvases` keeps calling `fit()` (`:546`).
     - swapping to 375×812 and firing `orientationchange` re-fits to `p`
   - A headless call (no `window`) is a no-op.
 - **`tests/touch.test.mjs`.**
-  - **The D5 block (`:265-300`) is rewritten** to import `FIT_RES`/`fitBox`.
+  - **The D5 block (`:270-304`) is rewritten** to import `FIT_RES`/`fitBox`.
     It parses the gaps from the `body[data-lay=…]` rules and sweeps touch
     viewports.
     - **Landscape:** W 560–1400 × H 280–1000, W>H. Every gutter fits the pad,
-      the bomb and the pill. The stage height is ≥ 126.
+      the bomb and the pill. The stage height is ≥ 126. The pad's top edge
+      stays on screen (it always does for H ≥ 280, so this guards a future
+      reserve change rather than a current case).
     - **Portrait:** W 320–1000 × H 480–1400, H≥W. The stage top is ≥ 52. The
       space below is ≥ 150 for the pad and ≥ 122 for the bomb. The stage
       width is ≥ 6 + 128 + 14 + 72.
@@ -427,7 +446,8 @@ That is −17 lines in total. `sizeCanvases` keeps calling `fit()` (`:546`).
 
 ### 4.2 `main.js`
 
-Add a STATS branch to the canvas `pointerdown` non-GAME chain (`:475-488`). It
+Add a STATS branch to the canvas `pointerdown` non-GAME chain (`:462-485`; the
+screen if/else runs `:467-485`). It
 uses the same overlay-canvas mapping as v154/v155:
 - `getBoundingClientRect` and `k = canvas.width / r.width`
 - `dims(canvas, curKind)` and `menuLayout(cw, ch)`
@@ -509,6 +529,11 @@ if (hit) app.key(hit); else if (app.resetArm) app.resetArm = false; else app.con
   **v160** (C2, SRC gains `src/app/fit.js`), **v161** (T1).
 - This spec commit is docs-only and bumps nothing.
 - Each step appends one dated `MEMORY.md` line.
+- **CHANGELOG.md** gets one player-facing entry, for shell v161, in a separate
+  close-out commit after T1 (as `2b4ffb4` did for wave 3). It covers the new
+  camera, the phone fit, and tappable MEDALS / RESET. It also corrects the v158
+  entry's "MEDALS and Reset stay keyboard-only by design" and "Press `T` on
+  STATS" lines, which T1 makes incomplete.
 - AGENTS.md edits:
   - C1: the rig, the Hazard, the facts, the stale lists (§2.3)
   - C2: a `src/app/fit.js` mention among the `main.js` seams, with the
@@ -538,8 +563,9 @@ if (hit) app.key(hit); else if (app.resetArm) app.resetArm = false; else app.con
 8. **The layout predicate is `body[data-lay]` written by `fit()`**, not a
    separate CSS media query.
 9. **Ship order is C1 → C2 → T1** for the line budget.
-10. **`settings` must be live** (§2.2). The study assumed `camPreset(settings.cam)`
-    already followed OPTIONS. It does not: `main.js` keeps the boot copy.
+
+The study was right that `camPreset(settings.cam)` already follows OPTIONS
+(`main.js:304`); see the §2.2 ruling.
 
 ## 8. Accepted trade-offs and assumptions
 

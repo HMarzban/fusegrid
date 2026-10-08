@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-08 — Camera spec (C1/C2/T1) review fixes
+- `docs/superpowers/specs/2026-10-08-3d-camera-design.md`: d9ba25d's "settings is a boot copy" bug was wrong. `main.js:304` already rebinds `settings = app.settings`, so the `settings = s` fix and §7 #10 are withdrawn. The WIDE pin stays as a regression guard: its run-start half passes at HEAD, and its room-edge half goes green with the C1 append. Also fixed citations, the comment/CHANGELOG coverage, and the iso/2D-untouched gate. No code yet.
+
 ## 2026-10-08 — Retention wave 3
 - Shipped through shell v158: PAUSE TAP hint, DAYS PLAYED, eight medals + MEDALS page (SCREEN 13), ghost replay 2D/3D, reset my cabinet, and the touch audit fixes D1/D2/D4/D5. main.js cap 808→812 once.
 - Rulings: days played is lifetime-only (consecutive-day ban stands); medals need a finale WIN; a ghost is valid only for its exact 5-tuple board; reset keeps only settings + pace. D3 (MEDALS/Reset keyboard-only) is status quo by spec.
