@@ -245,6 +245,31 @@ function mkCanvas(){
     g.app.pauseView===0&&g.world.state==="PAUSE",
     g.app.pauseView+"/"+g.world.state);
 }
+// D1: a SCALED canvas (CSS 300x260 over a 600x520 buffer, k=2) — client px
+// map to buffer px by MULTIPLYING by k; the 1:1 rects above masked an inverse.
+{
+  const cv=mkCamCanvas(600,520);
+  cv.el.getBoundingClientRect=()=>({left:0,top:0,width:300,height:260});
+  const g=createGame(cv.el,{autoplay:true,seed:73});
+  g.input.onPause(); g.loop(16);
+  cv.fire("pointerdown",{clientX:150,clientY:141});   // OPTIONS row (buf 300,282)
+  check("D1 scaled tap: pause OPTIONS row opens the inline page",
+    g.app.pauseCursor===2&&g.app.pauseView===1,
+    g.app.pauseCursor+"/"+g.app.pauseView);
+  cv.fire("pointerdown",{clientX:150,clientY:158});   // row 6 (buf 300,316)
+  check("D1 scaled tap: pause OPTIONS row 6 toggles SCREEN SHAKE",
+    g.app.pauseView===1&&g.app.optRow===6&&g.app.settings.shk===0,
+    g.app.pauseView+"/"+g.app.optRow+"/"+g.app.settings.shk);
+  const cs=mkCamCanvas(600,520);
+  cs.el.getBoundingClientRect=()=>({left:0,top:0,width:300,height:260});
+  const h=createGame(cs.el,{seed:74});
+  h.app.cabinetSeen=true; h.app.skip(); h.app.cursor=3;
+  cs.fire("pointerdown",{clientX:1,clientY:1});
+  cs.fire("pointerdown",{clientX:150,clientY:158});   // row 6 (buf 300,316)
+  check("D1 scaled tap: SETTINGS row 6 toggles SCREEN SHAKE",
+    h.app.screen===SCREEN.SETTINGS&&h.app.optRow===6&&h.app.settings.shk===0,
+    h.app.screen+"/"+h.app.optRow+"/"+h.app.settings.shk);
+}
 
 // I1: ui* cue sheet live from the app layer (main.js wrappers)
 {

@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-08 — D1: pause / OPTIONS taps scale the right way (v154)
+- `main.js` pause + SETTINGS pointerdown now map client px `* k` (was `/ k`, inverted on any scaled canvas, so phone taps never reached a pause row). Pinned on a 300x260-over-600x520 rect in headless D1; camrig/cameraCtl `ptOf` keep the old form (drag deltas only, untouched). main.js +0.
+
 ## 2026-10-08 — Wave-3 Reset: reset my cabinet on STATS (v153)
 - New `src/app/reset.js` (12 CLEAR keys, KEEP settings + pace); STATS `R` twice clears + reloads, any other key disarms, armed plate names the loss in red. main.js +3 (812 = cap). Headed on a bare URL: arm / arrow-cancel / confirm reloads into the first-visit CORE run, options + pace kept.
 

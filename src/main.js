@@ -436,12 +436,12 @@ export function createGame(canvas, opts = {}) {
       if (app.screen === SCREEN.GAME) {
         if (world.state !== "PAUSE") return;
         input._intent.fire = false;
-        /* camrig's ptOf pattern: client px / the CSS scale of the OVERLAY
-           canvas — never #gl's Retina drawing buffer, which the wrapper owns. */
+        /* Client px times k (buffer px per CSS px) of the OVERLAY canvas —
+           never #gl's Retina drawing buffer, which the wrapper owns. */
         const r = canvas.getBoundingClientRect();
         const k = canvas.width / (r.width || canvas.width);
-        const px = (ev.clientX - r.left) / k,
-          py = (ev.clientY - r.top) / k;
+        const px = (ev.clientX - r.left) * k,
+          py = (ev.clientY - r.top) * k;
         const B = overlayBox(curKind);
         if (app.pauseView === 1) {
           const row = settingsHit(px, py, menuLayout(B.w, B.h));
@@ -473,8 +473,8 @@ export function createGame(canvas, opts = {}) {
         const k = canvas.width / (r.width || canvas.width);
         const { cw, ch } = dims(canvas, curKind);
         const row = settingsHit(
-          (ev.clientX - r.left) / k,
-          (ev.clientY - r.top) / k,
+          (ev.clientX - r.left) * k,
+          (ev.clientY - r.top) * k,
           menuLayout(cw, ch),
         );
         if (row < 0) app.back();
