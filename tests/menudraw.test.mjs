@@ -822,6 +822,36 @@ function check(name, cond, detail) {
   }
 }
 
+// 13f) menuHit: the MENU tap map shares drawMenu's geometry — every painted
+//      label lands on its own row, the plate edges are -1, bands contiguous.
+{
+  const md = await import("../src/render/menudraw.js");
+  const items = ["PLAY", "LEVEL SELECT", "DAILY", "OPTIONS", "GUIDE", "HIGH SCORES", "STATS", "SOURCE"];
+  const n = items.length;
+  for (const [W, H] of [
+    [600, 520],
+    [608, 352],
+  ]) {
+    const L = md.layout(W, H);
+    const at = {};
+    const rc = new Proxy({}, {
+      get: (t, p) => (p === "fillText" ? (s, x, y) => (at[s] = [x, y]) : () => {}),
+      set: () => true,
+    });
+    md.drawMenu(rc, { cursor: 0, items, enterT: 9 }, L, 9);
+    check(`menuHit maps every painted label to its row at ${W}x${H}`,
+      items.every((s, i) => at[s] && md.menuHit(at[s][0], at[s][1], L, n) === i), JSON.stringify(at));
+    const g = md.menuGeom(L, n);
+    const mid = g.bx + g.rw / 2, top = g.y0 + g.padY;
+    check(`menuHit above the rows is -1 at ${W}x${H}`, md.menuHit(mid, top - 1, L, n) === -1);
+    check(`menuHit below the rows is -1 at ${W}x${H}`, md.menuHit(mid, top + n * g.span + 1, L, n) === -1);
+    check(`menuHit left of the plate is -1 at ${W}x${H}`, md.menuHit(g.bx - 2, top + 2, L, n) === -1);
+    check(`menuHit right of the plate is -1 at ${W}x${H}`, md.menuHit(g.bx + g.rw + 2, top + 2, L, n) === -1);
+    check(`menuHit rows are contiguous — no dead gutter at ${W}x${H}`,
+      md.menuHit(mid, top + g.span - 0.001, L, n) === 0 && md.menuHit(mid, top + g.span, L, n) === 1);
+  }
+}
+
 // 13d) plaque chips on the SCORES plate: four labels, locked vs unlocked
 //      styling distinct, chips stay inside the plate at both sizes, and
 //      the pre-existing rows/tabs/foot still stay inside the plate too.

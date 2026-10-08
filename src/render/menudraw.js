@@ -220,23 +220,34 @@ export function drawIntroChrome(c, t, W, H) {
    ui.togT is gone rather than passed here as a permanent -1.
    List plate sits under the logo with a small inset; rows stay inside the
    plate so the highlight never kisses the border. */
-export function drawMenu(c, ui, L, t) {
-  const cur = (ui && ui.cursor) | 0;
-  const items = (ui && ui.items) || [];
-  const et = ui && typeof ui.enterT === "number" ? ui.enterT : t;
-  const n = items.length;
+export function menuGeom(L, n) {
   const hintBand = 34;
   const logoBot = L.logoCy + 10 * L.logoScale;
   const bandTop = Math.max(logoBot + 8, 8);
   const bandBot = L.footY - hintBand;
-  const padX = 16,
-    padY = 12;
+  const padY = 12;
   const inner = Math.max(1, bandBot - bandTop - padY * 2);
   const span = n ? Math.min(L.itemH, Math.max(18, inner / n)) : L.itemH;
   const h = n * span + padY * 2;
   const y0 = bandTop + Math.max(0, (bandBot - bandTop - h) / 2);
   const rw = Math.min(L.cx * 2 - 56, 340);
-  const bx = L.cx - rw / 2;
+  return { bx: L.cx - rw / 2, y0, rw, h, span, padY };
+}
+/* Settled rows only (no entrance slide); same +1e-9 floor guard as
+   settingsHit so full-pitch bands stay contiguous. */
+export function menuHit(x, y, L, n) {
+  const g = menuGeom(L, n);
+  if (x < g.bx || x > g.bx + g.rw) return -1;
+  const i = Math.floor((y - g.y0 - g.padY) / g.span + 1e-9);
+  return i >= 0 && i < n ? i : -1;
+}
+export function drawMenu(c, ui, L, t) {
+  const cur = (ui && ui.cursor) | 0;
+  const items = (ui && ui.items) || [];
+  const et = ui && typeof ui.enterT === "number" ? ui.enterT : t;
+  const n = items.length;
+  const { bx, y0, rw, h, span, padY } = menuGeom(L, n);
+  const padX = 16;
   plate(c, bx, y0, rw, h);
   const size = 13;
   const rh = Math.max(16, span - 4);

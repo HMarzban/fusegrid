@@ -166,7 +166,8 @@ function mkCanvas(){
     apply:()=>rec,
     set:()=>true
    });
-  return {getContext:()=>rec,style:{},
+  return {getContext:()=>rec,style:{},width:600,height:520,
+    getBoundingClientRect:()=>({left:0,top:0,width:600,height:520}),
     addEventListener(ty,fn){(L[ty]=L[ty]||[]).push(fn);},
     fire(ty,ev){(L[ty]=L[ty]||[]).forEach(fn=>fn(ev||{}));}};
 }
@@ -269,6 +270,22 @@ function mkCanvas(){
   check("D1 scaled tap: SETTINGS row 6 toggles SCREEN SHAKE",
     h.app.screen===SCREEN.SETTINGS&&h.app.optRow===6&&h.app.settings.shk===0,
     h.app.screen+"/"+h.app.optRow+"/"+h.app.settings.shk);
+}
+// D2: MENU taps land on the TAPPED row, not the cursor. Same scaled canvas;
+// the STATS row is located by the label drawMenu actually paints (fillText).
+{
+  const cv=mkCamCanvas(600,520);
+  cv.el.getBoundingClientRect=()=>({left:0,top:0,width:300,height:260});
+  const g=createGame(cv.el,{seed:75});
+  g.app.cabinetSeen=true; g.app.skip();
+  for(let i=1;i<=40;i++)g.loop(i*16);            // settle the row entrance
+  const at=cv.calls.filter(c=>c[0]==="fillText"&&c[1][0]==="STATS").pop();
+  check("D2 setup: MENU painted a STATS label at cursor 0",
+    !!at&&g.app.screen===SCREEN.MENU&&g.app.cursor===0,String(at&&at[1]));
+  cv.fire("pointerdown",{clientX:at[1][1]/2,clientY:at[1][2]/2});
+  check("D2 MENU tap on the STATS row opens STATS, not a PLAY run",
+    g.app.screen===SCREEN.STATS&&g.app.cursor===6,
+    g.app.screen+"/"+g.app.cursor);
 }
 
 // I1: ui* cue sheet live from the app layer (main.js wrappers)
@@ -1002,6 +1019,8 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   // Reset wave: +3 lines (reset.js import; the onReset opt; the onUiKey
   // disarm line; the KeyR-not-on-STATS gate rides the existing intercept,
   // wave-3 spec §7.3/§8) — measured 812, against the 812 cap.
+  // D2 MENU tap wave: +0 lines (MENU rides the SETTINGS tap branch; menuHit
+  // and ITEMS ride existing import lines) — measured 812, against the 812 cap.
   check("main.js stays a lean browser entry (<=812 lines)",
     L.length<=812,String(L.length));
   const lastImp=L.reduce((a,l,i)=>/^import[\s{]/.test(l)?i:a,-1);

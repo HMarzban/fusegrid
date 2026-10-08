@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-08 — D2: MENU rows are tappable (v155)
+- New `menuGeom`/`menuHit` in `menudraw.js` (drawMenu reads the same geometry); MENU rides main.js's SETTINGS tap branch, a row tap sets the cursor then confirms, an off-row tap still confirms the cursor. main.js +0 (812 = cap). STATS (DAYS PLAYED) is now tap-reachable; MEDALS (`T`) and Reset (`R` twice) are still keyboard-only per AGENTS.md — open for an owner ruling.
+
 ## 2026-10-08 — D1: pause / OPTIONS taps scale the right way (v154)
 - `main.js` pause + SETTINGS pointerdown now map client px `* k` (was `/ k`, inverted on any scaled canvas, so phone taps never reached a pause row). Pinned on a 300x260-over-600x520 rect in headless D1; camrig/cameraCtl `ptOf` keep the old form (drag deltas only, untouched). main.js +0.
 

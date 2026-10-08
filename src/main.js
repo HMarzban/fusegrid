@@ -9,9 +9,9 @@ import { createRenderer } from "./render/renderer.js";
 import { copyPayload, isRunEnd, overlayBox, pauseHit } from "./render/scenes.js";
 import { paintBombPad } from "./render/sprites.js";
 import { dims, drawShell, kindSize } from "./render/shellview.js";
-import { settingsHit, layout as menuLayout } from "./render/menudraw.js";
+import { menuHit, settingsHit, layout as menuLayout } from "./render/menudraw.js";
 import { setFxOpts } from "./render/fx.js";
-import { SCREEN, SOURCE_URL, createMenuApp } from "./app/menuapp.js";
+import { ITEMS, SCREEN, SOURCE_URL, createMenuApp } from "./app/menuapp.js";
 import { clampHeat } from "./core/heat.js";
 import { clampPact } from "./core/pact.js";
 import { createDemo, stepDemo } from "./app/attract.js";
@@ -465,23 +465,23 @@ export function createGame(canvas, opts = {}) {
         return;
       }
       if (app.screen === SCREEN.INTRO) app.skip();
-      else if (app.screen === SCREEN.SETTINGS) {
-        /* Tap a row = Enter on it; tap outside the band = back. Client px are
-           divided by the CSS scale of the OVERLAY canvas — never #gl's Retina
-           drawing buffer, which the wrapper owns. */
+      else if (app.screen === SCREEN.SETTINGS || app.screen === SCREEN.MENU) {
+        /* Tap a row = Enter on it; off the rows OPTIONS backs out and MENU
+           confirms its cursor. Client px map through the CSS scale of the
+           OVERLAY canvas — never #gl's Retina buffer, which the wrapper owns. */
+        const menu = app.screen === SCREEN.MENU;
         const r = canvas.getBoundingClientRect();
         const k = canvas.width / (r.width || canvas.width);
         const { cw, ch } = dims(canvas, curKind);
-        const row = settingsHit(
+        const row = (menu ? menuHit : settingsHit)(
           (ev.clientX - r.left) * k,
           (ev.clientY - r.top) * k,
           menuLayout(cw, ch),
+          ITEMS.length,
         );
-        if (row < 0) app.back();
-        else {
-          app.optRow = row;
-          app.confirm();
-        }
+        if (!menu && row < 0) return app.back();
+        if (row >= 0) app[menu ? "cursor" : "optRow"] = row;
+        app.confirm();
       } else app.confirm();
     });
   }
