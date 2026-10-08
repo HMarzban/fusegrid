@@ -6,6 +6,17 @@ version number of its own; each entry is dated and names the PWA shell
 revision (`CACHE_NAME` in `src/pwa/shell.js`) that shipped it, since that is
 what makes an installed copy update.
 
+## [Unreleased] — shell v145 · 2026-10-08 · on local `main`, not yet pushed
+
+### Fixed
+- **Touch pause button no longer hides your score.** On a portrait phone the
+  round pause button sat over the top-right HUD score; it now sits just above
+  the play area, so every digit stays readable during a run.
+
+### Removed
+- Internal: dead DOM HUD helpers left over from an older renderer. Nothing
+  on screen changes.
+
 ## shell v143 · 2026-09-07 · pushed (`18f9d9d`)
 
 ### Added
