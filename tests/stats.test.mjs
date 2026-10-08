@@ -716,6 +716,24 @@ const TODAY = "2026-09-07";
     const { c, texts } = mkCtx();
     drawShell(
       c,
+      { screen: SCREEN.STATS, subT: 0, stats: { rows: [], notes: [] }, resetArm: true },
+      {},
+      null,
+      "2d",
+      () => [],
+      () => 0,
+    );
+    check(
+      "shellview hands app.resetArm to drawStats — the armed foot is painted, the idle foot is not",
+      texts.includes("R AGAIN ERASES + RELOADS · ANY OTHER KEY CANCELS · KEEPS OPTIONS + PACE") &&
+        !texts.includes("T MEDALS · C COPY MY STATS · R RESET · ESC BACK"),
+      texts.join("|"),
+    );
+  }
+  {
+    const { c, texts } = mkCtx();
+    drawShell(
+      c,
       { screen: SCREEN.SCORES, subT: 0, scoreHeat: 0 },
       {},
       null,
