@@ -611,24 +611,18 @@ function mkCanvas(){
 
 // ---- renderer opts (spec §5.5): hud:false + sfx gate, defaults identical ----
 {
-  const sent={score:{textContent:"-"},level:{textContent:"-"},
-    lives:{textContent:"-"},enemies:{textContent:"-"},
-    bombs:{textContent:"-"},range:{textContent:"-"}};
   const plays=[];
-  const r=createRenderer(null,{hud:sent,audio:{play:n=>plays.push(n)}});
+  const r=createRenderer(null,{audio:{play:n=>plays.push(n)}});
   const w=createWorld(5,1); loadLevel(w,1,false); w.state="PLAY";
   w.events.push({t:"boom",x:0,y:0});
   r.render(w,1/60);
-  check("renderer defaults: HUD written + sfx played + fx consumed",
-    sent.score.textContent!=="-"&&plays.join()==="boom"&&w.events.length===0,
-    sent.score.textContent+"/"+plays.join());
-  sent.score.textContent="-"; sent.lives.textContent="-"; plays.length=0;
+  check("renderer defaults: sfx played + fx consumed",
+    plays.join()==="boom"&&w.events.length===0,plays.join());
+  plays.length=0;
   w.events.push({t:"kill",x:0,y:0,color:"#fff"});
   r.render(w,1/60,{hud:false});
-  check("opts.hud=false skips HUD writes but keeps fx",
-    sent.score.textContent==="-"&&sent.lives.textContent==="-"
-      &&w.events.length===0,
-    sent.score.textContent+"/"+sent.lives.textContent);
+  check("opts.hud=false still consumes fx",w.events.length===0,
+    String(w.events.length));
   check("opts default sfx stays on under hud:false",
     plays.join()==="kill",plays.join());
   plays.length=0;

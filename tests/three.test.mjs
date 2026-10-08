@@ -1424,14 +1424,6 @@ await sec("S4.D",async()=>{
     texts2.includes("ENEMIES")&&texts2.includes("5"), texts2.join("|"));
   check("S4.D chips paint panel backgrounds",
     r.ops.some(o=>o[0]==="fillRect")&&r.ops.some(o=>o[0]==="strokeRect"));
-  // DOM HUD ids keep working (updateHud contract untouched)
-  const dom={lives:{textContent:""},bombs:{textContent:""},
-    range:{textContent:""}};
-  scenes.updateHud(dom,mkW(4,5,6));
-  check("S4.D updateHud still writes lives/bombs/range DOM ids",
-    dom.lives.textContent===4&&dom.bombs.textContent===5
-    &&dom.range.textContent===6,
-    dom.lives.textContent+"/"+dom.bombs.textContent+"/"+dom.range.textContent);
   // wrapper integration: o.hud===true paints chips on the overlay ctx
   const cv=hudRecorder();
   const fake={getContext:()=>cv.rec};
@@ -1548,7 +1540,7 @@ await sec("S4.E",async()=>{
 });
 
 // ---- §S5 state overlays: WIN/LOSE/PAUSE paint the classic 2D layer in
-//      kind 3d; PLAY/MENU leave it untouched; DOM #hud routes like kind 2d ----
+//      kind 3d; PLAY/MENU leave it untouched ----
 await sec("S5.overlay",async()=>{
   const textsOf=(ops)=>ops.filter(o=>o[0]==="fillText")
     .map(o=>String(o[1][0]));
@@ -1583,29 +1575,6 @@ await sec("S5.overlay",async()=>{
     menuOps.some(x=>x[0]==="clearRect")
     &&!textsOf(menuOps).some(t=>OV_HEADS.includes(t)),
     "ops="+menuOps.length+" texts="+textsOf(menuOps).join("|"));
-  const dom={score:{textContent:"x"},level:{textContent:"x"},
-    lives:{textContent:"x"},enemies:{textContent:"x"},
-    bombs:{textContent:"x"},range:{textContent:"x"}};
-  const cvH=hudRecorder();
-  const rh=createRenderer3D(null,{getContext:()=>cvH.rec},
-    {audio:null,hud:dom});
-  const wh=createWorld(82,1); loadLevel(wh,1,false); wh.state="WIN";
-  wh.score=1234;
-  rh.render(wh,1/60,{hud:true});
-  check("S5 updateHud routes DOM ids through the 3D path (like kind 2d)",
-    dom.score.textContent===1234&&dom.lives.textContent===wh.lives
-    &&dom.level.textContent===wh.level,
-    dom.score.textContent+"/"+dom.lives.textContent+"/"
-      +dom.level.textContent);
-  const dom2={score:{textContent:"keep"},level:{textContent:"keep"},
-    lives:{textContent:"keep"},enemies:{textContent:"keep"},
-    bombs:{textContent:"keep"},range:{textContent:"keep"}};
-  const cvH2=hudRecorder();
-  const rh2=createRenderer3D(null,{getContext:()=>cvH2.rec},
-    {audio:null,hud:dom2});
-  rh2.render(wh,1/60,{hud:false});
-  check("S5 o.hud===false suppresses updateHud (attract parity)",
-    dom2.score.textContent==="keep", String(dom2.score.textContent));
 });
 
 // ---- §S5 shared orbit rig: opts.rig is live (wrapper applyOrbit uses it) ----

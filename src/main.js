@@ -6,7 +6,7 @@
 import { CFG, isFinale } from "./core/config.js";
 import { createWorld, loadLevel, step } from "./core/sim.js";
 import { createRenderer } from "./render/renderer.js";
-import { makeHud, copyPayload, overlayBox, pauseHit } from "./render/scenes.js";
+import { copyPayload, overlayBox, pauseHit } from "./render/scenes.js";
 import { paintBombPad } from "./render/sprites.js";
 import { dims, drawShell, kindSize } from "./render/shellview.js";
 import { settingsHit, layout as menuLayout } from "./render/menudraw.js";
@@ -552,16 +552,13 @@ export function createGame(canvas, opts = {}) {
       return rcache["2d"] || getRenderer("2d");
     }
     try {
-      const hud =
-        opts.hud || makeHud(typeof document !== "undefined" ? document : null);
       rcache[kind] =
         kind === "3d"
           ? createRenderer3D(glCanvas, canvas, {
               audio: opts.audio || null,
-              hud,
               rig,
             })
-          : createRenderer(canvas, { kind, audio: opts.audio || null, hud });
+          : createRenderer(canvas, { kind, audio: opts.audio || null });
     } catch (e) {
       console.warn("renderer init failed", e);
       rcache[kind] = {

@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-08 — Loose ends T3: dead DOM HUD helpers removed
+- `makeHud`/`updateHud` and the `hud` renderer-constructor plumbing are gone (index.html has no HUD ids; the canvas chips are the only HUD). Per-frame `o.hud===true` gates and main.js `{hud:false}` literals stay as pinned. main.js 806->803 lines; shell v144.
+
 ## 2026-09-17 — Deployment verification and architecture
 - Added a Node 26 test job for pull requests and as a Pages deployment dependency; added a human-facing architecture note with reproducibility, storage, and multiplayer limits.
 

@@ -282,38 +282,13 @@ export function drawOverlay(
     sub(overlayCue(world), "#9fb3d8", 86);
   }
 }
-export function updateHud(hud, world) {
-  const p = world.players[0];
-  const set = (id, v) => {
-    if (hud && hud[id]) hud[id].textContent = v;
-  };
-  set("score", world.score);
-  set("level", world.level);
-  set("lives", world.lives);
-  set("enemies", world.enemies.length);
-  if (p) {
-    set("bombs", p.bombs);
-    set("range", p.range);
-  }
-}
-export function makeHud(dom) {
-  return {
-    score: dom && dom.getElementById ? dom.getElementById("score") : null,
-    level: dom && dom.getElementById ? dom.getElementById("level") : null,
-    lives: dom && dom.getElementById ? dom.getElementById("lives") : null,
-    enemies: dom && dom.getElementById ? dom.getElementById("enemies") : null,
-    bombs: dom && dom.getElementById ? dom.getElementById("bombs") : null,
-    range: dom && dom.getElementById ? dom.getElementById("range") : null,
-  };
-}
 
 /* S4 overlay HUD chips (real3d §3): lives as heart glyphs, BOMB/FLAME/LV/
    ENEMIES as icon+count (or label-only) chips, painted on the overlay ctx
    in board space — the sole in-game HUD since the DOM #hud strip was
    removed (GUIDE+HUD plan). Palette and mono type match menudraw.
-   makeHud/updateHud's DOM-id contract is untouched for its own tests, but
-   nothing in the shipped page reads it anymore. Opt-in per frame via
-   o.hud===true so menus/attract keep their authored canvases untouched. */
+   Opt-in per frame via o.hud===true so menus/attract keep their authored
+   canvases untouched. */
 const HUD_TEXT = "#dfe7f5",
   HUD_MUTED = "#7385ad",
   HUD_PANEL = "rgba(13,18,32,0.72)",

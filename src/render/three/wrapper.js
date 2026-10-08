@@ -16,7 +16,7 @@ import {createRig, applyOrbit} from "./camrig.js";
 import {introCam} from "./flythrough.js";
 import {createParticles} from "./particles.js";
 import {buildAtlas} from "./textures.js";
-import {drawHudChips, drawOverlay, overlayBox, updateHud, drawCoach, drawCoach2} from "../scenes.js";
+import {drawHudChips, drawOverlay, overlayBox, drawCoach, drawCoach2} from "../scenes.js";
 import {onEvent, updateFx, getShake, getFlash, getFx, feedFx, drawFxOverlay, syncFx} from "../fx.js";
 
 const W=CFG.COLS*CFG.TILE, H=CFG.ROWS*CFG.TILE;
@@ -38,7 +38,6 @@ function makeOverlayCtx(canvas){
 export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
   const ovCtx=makeOverlayCtx(overlayCanvas);
   const audio=opts.audio||null;
-  const hud=opts.hud||null;
   const rig=opts.rig||createRig();
 
   /* GL init guarded three ways: absent canvas (headless), context probe that
@@ -157,9 +156,6 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
       if(o&&o.hud===true)drawCoach(ovCtx,(o&&o.coach)||0);
       if(o&&o.hud===true)drawCoach2(ovCtx,(o&&o.coach2&&o.coach2.a)||0,(o&&o.coach2&&o.coach2.s)||"");
      }
-    /* S5: DOM #hud ids route like the 2D path — {hud:false} suppresses
-       (attract demo), every other frame writes score/level/lives/etc. */
-    if(!(o&&o.hud===false))updateHud(hud,world);
    }
 
   const surface={canvas:glCanvas,overlay:overlayCanvas,ctx:ovCtx,render,

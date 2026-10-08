@@ -5,7 +5,7 @@ import {
   drawItems, drawEnemies, drawPlayer, drawBombs, drawBlades
 } from "./sprites.js";
 import {onEvent, updateFx, drawFx, drawFxOverlay, feedFx, getShake, getFlash, initFx, syncFx} from "./fx.js";
-import {drawOverlay, overlayBox, updateHud, makeHud, drawHudChips, drawCoach, drawCoach2} from "./scenes.js";
+import {drawOverlay, overlayBox, drawHudChips, drawCoach, drawCoach2} from "./scenes.js";
 import {draw3dBackground, buildPainters, byDepth} from "./r3d/scene3d.js";
 
 /* Renderer: owns a 2D context + view. Reads world, never mutates sim state.
@@ -27,7 +27,6 @@ export function createRenderer(canvas, opts={}){
        createRadialGradient:()=>({addColorStop:noop}),
        drawImage:noop,fillText:noop,strokeText:noop,setTransform:noop};
   if(ctx.imageSmoothingEnabled!==undefined) ctx.imageSmoothingEnabled=false;
-  const hud = opts.hud || makeHud(typeof document!=="undefined"?document:null);
   const audio = opts.audio || null;
   initFx();
 
@@ -41,9 +40,9 @@ export function createRenderer(canvas, opts={}){
     world.events.length=0;
     updateFx(dt||CFG.STEP);
   }
-  /* render(world,dt,o): additive opts — o.hud===false skips HUD DOM writes
-     (attract demo must not touch the score readout), o.sfx===false gates
-     audio.play only. Defaults (o undefined) are byte-identical. */
+  /* render(world,dt,o): additive opts — o.hud===true opts into the overlay
+     chips/coach (GAME only), o.sfx===false gates audio.play only. Defaults
+     (o undefined) are byte-identical. */
   function render(world, dt, o){
     if(!world) return;
     consumeEvents(world, dt, !(o&&o.sfx===false));
@@ -79,7 +78,6 @@ export function createRenderer(canvas, opts={}){
       drawOverlay(ctx, world, B.w, B.h, B.cx, B.cy, o&&o.pause, o&&o.time, o&&o.run);
       if(world.state==="WIN"||world.state==="LOSE") drawFx(ctx);
     }
-    if(!(o&&o.hud===false)) updateHud(hud, world);
     /* S4: overlay HUD chips — explicit opt-in only ({hud:true} during GAME),
        drawn after restore so they never shake with the camera. */
     if(o&&o.hud===true) drawHudChips(ctx, world, o&&o.time);
