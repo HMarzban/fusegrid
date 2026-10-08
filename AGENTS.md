@@ -164,6 +164,12 @@ not shell screens. Do not add them as `SCREEN` values.
   ONLY at `isRunEnd` in `endRun` from the run tally (`clear5` = L5 WIN with
   `t.r` 5, `clear8` = L8 WIN with `t.r` 3) plus `runT`; the summary's gold
   medal line prints only bits `settleMedals` read back as newly persisted.
+  `ghost.js` (`nb.ghost.v1`, wave 3, version-stamped, LRU 16): one ghost per
+  `{seed, level, heat, pact, pace}` room — a 10/s position log on the PLAY-only
+  `roomT`, faster clears only, never fed to `step()`. `ghostTick` sits between
+  the PLAY clock line and the step loop (a new `world.grid` object is the room
+  start, so the sim's own retry/next-room record from roomT ~dt); attract
+  never records. CLASSIC 2D draws it under foes at `GHOST_A` 0.4; iso never.
   Demobot is an intent FSM (plant-and-leave, hunger for combat cubes / corridor
   foes); attract still CORE/pact=0. Highscores use `scoreEntry`; `noteWorldEdge`
   is a boolean edge, not a score writer.

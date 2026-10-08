@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-08 — Wave 3 R9a ghost store + recorder + CLASSIC 2D ghost (v150)
+- New `src/app/ghost.js` (`nb.ghost.v1`, 5-tuple key, faster-only, LRU 16, 2400-sample cap); `ghostTick` before the step loop (pin 6b fails if moved after it); 2D `drawGhost` at alpha 0.4 between blades and foes; main.js +3 (809, cap 808->812, the wave's one raise). Headed: retry race, PAUSE freeze, VOID-vs-SHADE and `stationary` reads pass. R9b (3D) next.
+
 ## 2026-10-08 — R6 review: same-frame HEART masked a lost life (v149)
 - `feedTally` now expects `t.lv` + this batch's heart `power` events, so a heart and a hit in one frame (up to 7 steps) count a death and FLAWLESS/UNSCATHED cannot lie; also fixes the STATS `death` edge undercount. Spec §4.1 ruling; `src/core` untouched.
 
