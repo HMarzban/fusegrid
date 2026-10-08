@@ -11,6 +11,7 @@ import {
   medalRows,
 } from "../src/app/medals.js";
 import { PLAQUES_KEY } from "../src/app/plaques.js";
+import { newTally, feedTally } from "../src/app/bests.js";
 
 let pass = 0,
   fail = 0;
@@ -118,6 +119,17 @@ check(
   "a mid-room WIN (L3) unlocks nothing",
   unlockMedals(W({ level: 3 }), T({ r: 3 }), 10) === 0,
 );
+{
+  const t = newTally();
+  feedTally(t, { lives: 3, level: 1, events: [] });
+  feedTally(t, { lives: 3, level: 2, events: [{ t: "power", kind: "heart" }, { t: "hurt" }] });
+  for (let i = 0; i < 5; i++) feedTally(t, { lives: 3, level: 5, events: [{ t: "win" }] });
+  check(
+    "FLAWLESS not when a same-frame HEART masked a lost life (R6 review)",
+    t.r === 5 && t.d === 1 && !has(W(), t, 999, MEDAL.FLAWLESS),
+    JSON.stringify(t),
+  );
+}
 check(
   "unlockMedals never throws on empty input",
   unlockMedals(null, null, 0) === 0 && unlockMedals({}, {}, 0) === 0,

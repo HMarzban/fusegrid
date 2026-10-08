@@ -311,6 +311,27 @@ function throwStore() {
   check("feedTally never throws on a junk world", !threw2);
 }
 
+// ---- 5b. a HEART in the same batch cannot mask a lost life (R6 review) ----
+{
+  const heart = { t: "power", kind: "heart" };
+  const t = newTally();
+  feedTally(t, { lives: 3, level: 1, events: [] });
+  feedTally(t, { lives: 3, level: 1, events: [heart, { t: "hurt" }] });
+  check("lives level + one heart power is ONE life lost", t.d === 1 && t.dNew === 1 && t.dr[1] === 1, JSON.stringify(t));
+  const u = newTally();
+  feedTally(u, { lives: 3, level: 1, events: [] });
+  feedTally(u, { lives: 4, level: 1, events: [heart] });
+  check("one heart with lives+1 is no death", u.d === 0 && u.dNew === 0 && u.lv === 4, JSON.stringify(u));
+  const v = newTally();
+  feedTally(v, { lives: 3, level: 2, events: [] });
+  feedTally(v, { lives: 2, level: 2, events: [{ t: "hurt" }, heart, { t: "hurt" }] });
+  check("two hurts and one heart is d += 2", v.d === 2 && v.dNew === 2 && v.dr[2] === 2, JSON.stringify(v));
+  const s = newTally();
+  feedTally(s, { lives: 3, level: 1, events: [] });
+  feedTally(s, { lives: 4, level: 1, events: [heart, { t: "hurt" }] });
+  check("a heart with a SHIELDED hurt is no death", s.d === 0 && s.dNew === 0, JSON.stringify(s));
+}
+
 /* rows: [text, y] for every fillText/strokeText call, added NON-destructively
    beside texts (Minor-1 fix: the review found dy 20/44/68/92/116 entirely
    unpinned — every existing overlay pin here and elsewhere is string-presence

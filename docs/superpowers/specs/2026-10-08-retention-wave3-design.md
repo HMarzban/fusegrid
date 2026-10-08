@@ -301,6 +301,12 @@ and `runT` is `main.js`'s PLAY-only run clock (`main.js:641`).
 | 64 | `SPRINT` | `clear5 && heat 0 && pact 0 && pace 0 && runT < 180` | Pool "speed clear". Threshold MEASURED (§4.4) |
 | 128 | `IRON CROWN` | `clear8 && clampHeat(w.heat) === 2` | MAX heat across rooms 6-8 in ONE run (`clear8`, `t.r === 3`). That goes beyond `PLAQUE.MAX` + `PLAQUE.CROWN`, which a single MAX-heat room-8 start earns together |
 
+**Ruling 2026-10-08 (R6 review, FLAWLESS premise):** `t.d` did not count lives
+lost. `feedTally` compares lives once per frame, a frame runs up to 7 sim steps,
+and a HEART (`entities.js:41`, the only `lives++`) plus a lost life in one frame
+left lives level. `feedTally` now expects `t.lv` plus the batch's `power`
+events with `kind === "heart"`, so the FLAWLESS/UNSCATHED rows hold. App layer only.
+
 **Rejected from the pool:**
 
 | candidate | reason |

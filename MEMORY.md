@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-08 — R6 review: same-frame HEART masked a lost life (v149)
+- `feedTally` now expects `t.lv` + this batch's heart `power` events, so a heart and a hit in one frame (up to 7 steps) count a death and FLAWLESS/UNSCATHED cannot lie; also fixes the STATS `death` edge undercount. Spec §4.1 ruling; `src/core` untouched.
+
 ## 2026-10-08 — Wave 3 R6 medals + MEDALS page (v148)
 - New `src/app/medals.js` (`nb.medals.v1`, 8 bits, settle at `isRunEnd` only, read-back announcement); `SCREEN.TROPHIES = 13` via `T` on STATS; STATS foot `T MEDALS · C COPY MY STATS · ESC BACK`; run summary gold `MEDAL · …` line; main.js +2 (806/808). Touch players cannot open the page (disclosed).
 

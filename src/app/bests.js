@@ -95,7 +95,10 @@ export function recordBest(v, key, score, room) {
    world.lives, never {t:"hurt"}: a shielded hit emits hurt without losing a
    life (sim.js:344-348) while hurtPlayer emits the same event when one is
    (entities.js:194). lv seeds itself on the first call, so the carry.lives jump
-   on a new run is an increase and never a false death. */
+   on a new run is an increase and never a false death. A frame runs up to 7
+   sim steps, so a HEART (the only lives++) and a lost life can share one batch
+   and leave lives level: the expected lives are t.lv plus this batch's heart
+   power events (R6 review 2026-10-08). */
 /* R5 extends this shape in place — kt/pk/dr are filled in the SAME loop, so the
    stats screen adds zero new passes over world.events. */
 export function newTally() {
@@ -106,18 +109,19 @@ export function feedTally(t, world) {
   const w = world || {};
   t.dNew = 0;
   const ev = Array.isArray(w.events) ? w.events : [];
+  let h = 0;
   for (let i = 0; i < ev.length; i++) {
     const e = ev[i];
     if (!e) continue;
     if (e.t === "kill") { t.k++; if (e.type) t.kt[e.type] = (t.kt[e.type] | 0) + 1; }
-    else if (e.t === "power") { t.p++; if (e.kind) t.pk[e.kind] = (t.pk[e.kind] | 0) + 1; }
+    else if (e.t === "power") { t.p++; if (e.kind) t.pk[e.kind] = (t.pk[e.kind] | 0) + 1; if (e.kind === "heart") h++; }
     else if (e.t === "brick") t.b++;
     else if (e.t === "win") t.r++;
   }
   const lv = w.lives | 0;
   if (t.lv === null) t.lv = lv;
-  else if (lv < t.lv) {
-    const n = t.lv - lv;
+  else if (lv < t.lv + h) {
+    const n = t.lv + h - lv;
     t.d += n;
     t.dNew = n;
     const rm = w.level | 0;
