@@ -125,7 +125,7 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
     /* S3: INTRO in kind 3d hands the camera to the flythrough keyframes
        (o.intro = app.subT from main; logo/tagline stay on the 2D overlay);
        every other screen keeps the orbit rig + shake. */
-    if(o&&o.intro!=null)applyOrbit(camera,introCam(o.intro),{x:0,y:0});
+    if(o&&o.intro!=null)applyOrbit(camera,introCam(o.intro,rig.dist),{x:0,y:0});
     else applyOrbit(camera,rig,getShake());    // shake = camera-target offset
     fxp.update(getFx());
     if(gl){

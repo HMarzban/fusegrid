@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-08 — D1: intro flythrough lands on the CAMERA preset (shell v162)
+- `introCam(subT,base=BASE_DIST)` and the wrapper passes `rig.dist`, so WIDE/FAR settle at 1671/1827 instead of cutting from 1503 (324 units for FAR) on the INTRO->MENU frame. STANDARD unchanged; S3.C pins a 0-unit handoff for all three presets.
+
 ## 2026-10-08 — T1: MEDALS and Reset tappable on STATS (shell v161)
 - `menudraw.statsHit` maps taps on the painted `T MEDALS` / `R RESET` / armed `R AGAIN` foot tokens (0.6 em zones, half a separator each side) to `KeyT` / `KeyR` via `app.key`; an off-label tap while armed disarms, idle still backs to MENU. main.js 795→799 (cap 799). Headed 375×812 touch: real token edges sit inside the zones (advance 6.02 px), MEDALS/back/arm/disarm/confirm+reload all landed. CHANGELOG close-out (v161 entry + the v158 "keyboard-only" lines) still pending.
 

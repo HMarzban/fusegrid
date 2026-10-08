@@ -1057,6 +1057,17 @@ await sec("S3.C",async()=>{
     Math.abs(r._dbg.camera.position.x-camA.position.x)<1e-9
     &&Math.abs(r._dbg.camera.position.z-camA.position.z)<1e-9,
     r._dbg.camera.position.x.toFixed(2)+" vs "+camA.position.x.toFixed(2));
+  const pre=[];
+  for(const d of CAM_PRESET){
+    const rg2=createRig(); rg2.dist=d;
+    const r2=createRenderer3D(null,null,{audio:null,hud:null,rig:rg2});
+    r2.render(w,1/60,{intro:INTRO_DUR});
+    const ip=r2._dbg.camera.position.clone();
+    r2.render(w,1/60,{});
+    pre.push(ip.distanceTo(r2._dbg.camera.position));
+   }
+  check("S3.C flythrough lands on the CAMERA preset dist (WIDE/FAR no pop on"
+      +" the INTRO->MENU frame)", pre.every(x=>x<1e-6), pre.join());
   const g=createGame(mkCanvas(),{seed:61,render3d:true,createRenderer3D});
   g.app.screen=1; g.app.subT=1.0;             // INTRO mid-flyover
   let threw=false; let t=1000;
