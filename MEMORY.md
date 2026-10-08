@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-08 — Wave-3 Reset: reset my cabinet on STATS (v153)
+- New `src/app/reset.js` (12 CLEAR keys, KEEP settings + pace); STATS `R` twice clears + reloads, any other key disarms, armed plate names the loss in red. main.js +3 (812 = cap). Headed on a bare URL: arm / arrow-cancel / confirm reloads into the first-visit CORE run, options + pace kept.
+
 ## 2026-10-08 — Wave-3 R9b: REAL 3D ghost (v152)
 - `createPools` gains `ghost(g)`: ONE lazy merged `PLAYER_HULL` Lambert (clones of the five MAKO parts, face raked by the literal matrix; opacity 0.4, no depthWrite, never casts) outside the player slot; `wrapper.js` feeds `o.ghost` after update/rebuild. Fat-world 141 unmoved, 142 while racing; main.js +0. Headed: retry race, PAUSE freeze, `stationary` and VOID/SHADE reads all pass at 0.4.
 

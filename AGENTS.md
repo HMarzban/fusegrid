@@ -172,6 +172,12 @@ not shell screens. Do not add them as `SCREEN` values.
   never records. CLASSIC 2D draws it under foes at `GHOST_A` 0.4; REAL 3D
   draws one merged `PLAYER_HULL` Lambert (opacity 0.4, no depthWrite, never
   casts) that `pools.ghost` builds lazily outside the player slot; iso never.
+  `reset.js` (no store, wave 3): STATS `R` arms, a second `R` runs
+  `clearCabinet` + `location.reload()`, any other key disarms (`_push` too).
+  CLEAR = highscores, bests, stats, daily, times, medals, plaques, ghost,
+  pact, coach v1/v2, cabinet (12); KEEP = `nb.settings.v1`, `nb.pace.v1`.
+  Lists import each store's own `*_KEY`; `tests/reset.test.mjs` fails on any
+  unclassified `nb.*` literal in `src/`, so a new store must join one list.
   Demobot is an intent FSM (plant-and-leave, hunger for combat cubes / corridor
   foes); attract still CORE/pact=0. Highscores use `scoreEntry`; `noteWorldEdge`
   is a boolean edge, not a score writer.
