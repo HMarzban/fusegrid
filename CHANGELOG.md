@@ -6,13 +6,14 @@ version number of its own; each entry is dated and names the PWA shell
 revision (`CACHE_NAME` in `src/pwa/shell.js`) that shipped it, since that is
 what makes an installed copy update.
 
-## shell v158 · 2026-10-08
+## shell v163 · 2026-10-08
 
 ### Added
 - **Medals.** Eight medals, each earned on a finale clear (room 5 or room 8)
   and settled only when the run ends. A newly won medal is named once, in
-  gold, on the run summary. Press `T` on STATS to open the MEDALS page
-  (`n/8`, earned rows lit); Esc or Enter goes back. Store: `nb.medals.v1`.
+  gold, on the run summary. Press `T` (or tap `T MEDALS`) on STATS to open
+  the MEDALS page (`n/8`, earned rows lit); Esc, Enter or a tap goes back.
+  Store: `nb.medals.v1`.
 - **Ghost replay.** Clear a room faster than before and the cabinet keeps
   your route. Next time you play that exact board (same seed, room, heat,
   pact and pace), a translucent copy of you races alongside in CLASSIC 2D
@@ -20,23 +21,35 @@ what makes an installed copy update.
   never touches the game itself. Store: `nb.ghost.v1`.
 - **DAYS PLAYED.** STATS gains a lifetime count of the days you entered a
   room; `C` copies it too. Never a streak.
-- **Reset my cabinet.** On STATS, `R` arms a red confirm and a second `R`
-  wipes scores, bests, stats, daily, times, medals, plaques, ghosts, pact and
-  coach, then reloads. Your settings and pace are kept. Any other key cancels.
+- **Reset my cabinet.** On STATS, `R` (or a tap on `R RESET`) arms a red
+  confirm and a second `R` (or a tap on `R AGAIN`) wipes scores, bests,
+  stats, daily, times, medals, plaques, ghosts, pact and coach, then
+  reloads. Your settings and pace are kept. Anything else cancels.
 
 ### Changed
-- The PAUSE footer now reads `ENTER / TAP CONFIRM`, so touch players see how
-  to pick a row.
+- **New REAL 3D camera.** A lower 3/4 angle through a flatter lens, so
+  block fronts read on every row, the board is centred with no skew, and it
+  is noticeably bigger on screen. The whole board stays visible; WIDE and
+  FAR still pull back, and the intro fly-in lands on whichever you chose.
+- **Zoom resets each room.** Wheel or pinch still zooms in 3D, but the
+  camera returns to your CAMERA preset at every room and run start, so a
+  stray trackpad scroll never sticks.
+- **Bigger game on screen.** The stage now fills more of the window on
+  desktop and phone, and re-fits when you resize or rotate.
+- **Phone controls off the board.** In portrait the pad and bomb button sit
+  below the board and pause above it; on landscape they sit in the side
+  gutters. The bomb button hides when you are not playing.
+- **Touch.** MEDALS and Reset on STATS are tappable, and the PAUSE footer
+  reads `ENTER / TAP CONFIRM`.
 
 ### Fixed
-- **Touch.** MENU rows are tappable, so every row is reachable without a
-  keyboard. Taps on PAUSE and OPTIONS rows land on the right row on a scaled
-  canvas. The bomb button hides when you are not playing. On short landscape
-  phones the pad and bomb button move into the side gutters instead of
-  covering the board.
-- Internal: `sitemap.xml` lastmod refreshed; `main.js` line pin raised once
-  (808 → 812) for the ghost hook. MEDALS and Reset stay keyboard-only by
-  design.
+- MENU rows are tappable, so every row is reachable without a keyboard.
+- Taps on PAUSE and OPTIONS rows land on the right row on a scaled canvas.
+- With CAMERA set to WIDE or FAR, the intro no longer jumps at the end.
+- After a slow load, the ghost no longer runs ahead of you on the same
+  route.
+- Internal: `fit()` moved to `src/app/fit.js`; `main.js` line pin now 799;
+  `sitemap.xml` lastmod refreshed.
 
 ## shell v145 · 2026-10-08
 

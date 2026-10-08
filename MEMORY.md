@@ -16,6 +16,11 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-08 — Wave 3 close + 3D camera C
+- Docs close-out through shell v163: CHANGELOG top entry rewritten in place (v158 → v163, covers wave 3 + camera + phone fit + STATS taps + both D1 fixes), README camera/zoom/phone/tap lines. AGENTS rig text already updated by f88b81e/2fa293e/caaf638.
+- Rulings: R12 DAYS PLAYED is lifetime (never a streak); eight medals, finale-WIN only; ghost valid only on the exact seed/room/heat/pact/pace 5-tuple; Reset keeps `nb.settings.v1` + `nb.pace.v1`; camera C (el 0.66, FOV 24, dist 1503, target y -17) picked by the user from a contact sheet; zoom resets per room/run/RESTART; D1/H4 status quo.
+- Open nits: first frame after a zoomed room/retry still renders at the zoomed dist; a first visit counts two SESSIONS (pre-existing). Unpushed.
+
 ## 2026-10-08 — D1: ghost no longer leads after a load hitch (shell v163)
 - main.js adds `Math.min(dt, 7*CFG.STEP - acc)` to `roomT` (read before `acc += dt`), so a frame past the 7-step cap no longer pushes roomT ahead of the simulated PLAY time; the ghost and TIME ATTACK both read it. coachT/runT still add full dt (left alone). Pinned by times PIN E (3 hitches, RED 1.3 vs 0.98); bests B8 regex updated.
 
