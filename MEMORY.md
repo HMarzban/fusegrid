@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-08 — Wave 3 R6 medals + MEDALS page (v148)
+- New `src/app/medals.js` (`nb.medals.v1`, 8 bits, settle at `isRunEnd` only, read-back announcement); `SCREEN.TROPHIES = 13` via `T` on STATS; STATS foot `T MEDALS · C COPY MY STATS · ESC BACK`; run summary gold `MEDAL · …` line; main.js +2 (806/808). Touch players cannot open the page (disclosed).
+
 ## 2026-10-08 — Wave 3 R12 DAYS PLAYED (v147)
 - `nb.stats.v1` gains `a.days`/`a.day`; the three `room_enter` literals carry `ld: todayStr()` (main.js +0, 804/808); STATS is 10 rows (rule after row 7, empty rows draw as 10), payload line 1 ends `N DAYS PLAYED`; attract never counts (headless pin). Headed: both plates show 10 rows, rule between DAYS PLAYED and CORE BEST.
 

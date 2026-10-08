@@ -33,7 +33,9 @@ HIGH SCORES, STATS, SOURCE`. `confirm()` dispatches by **label**, so an insert
 moves no runtime index — but `tests/headless.test.mjs`'s index-driven MENU
 confirms and `tests/menuapp.test.mjs`'s literals must be renegotiated with any
 reorder. `SCREEN.STATS = 12` is **appended** (`menuapp.js:27`'s own rule:
-appended, never inserted). WIN/LOSE run summaries are **not** a SCREEN — they
+appended, never inserted). `SCREEN.TROPHIES = 13` (the MEDALS page) is
+appended too: opened from STATS by `T` (keyboard only), backs out to STATS,
+never a MENU row. WIN/LOSE run summaries are **not** a SCREEN — they
 live in `drawOverlay`.
 | Sim | PLAY / WIN / LOSE / PAUSE | `src/core/sim.js` |
 
@@ -157,7 +159,11 @@ not shell screens. Do not add them as `SCREEN` values.
   with a checksum). Every date is a string computed in `main.js` (`todayStr`
   local, `dateStr` UTC) and passed in — `src/app/` never calls `Date`.
   `nb.times.v1` stays the one best-TIMES store; STATS **reads** both and
-  copies neither.
+  copies neither. `medals.js` (`nb.medals.v1`, wave 3, one int `& 255`, never
+  `nb.plaques.v1`'s `&15`): eight medals, each needing a finale WIN, evaluated
+  ONLY at `isRunEnd` in `endRun` from the run tally (`clear5` = L5 WIN with
+  `t.r` 5, `clear8` = L8 WIN with `t.r` 3) plus `runT`; the summary's gold
+  medal line prints only bits `settleMedals` read back as newly persisted.
   Demobot is an intent FSM (plant-and-leave, hunger for combat cubes / corridor
   foes); attract still CORE/pact=0. Highscores use `scoreEntry`; `noteWorldEdge`
   is a boolean edge, not a score writer.
