@@ -291,6 +291,29 @@ function mkCanvas(){
     g.app.screen===SCREEN.STATS&&plays.join()==="uiBack",JSON.stringify(plays));
 }
 {
+  const noop=()=>{};
+  const mem={"nb.medals.v1":"129"};
+  globalThis.window={addEventListener:noop,removeEventListener:noop,
+    localStorage:{getItem:(k)=>(k in mem?mem[k]:null),
+      setItem:(k,v)=>{mem[k]=String(v);}}};
+  try{
+    const cv=mkCamCanvas(600,520);
+    const g=createGame(cv.el,{seed:15});
+    g.app.screen=SCREEN.MENU; g.app.cursor=6;
+    g.app.confirm();                              // STATS row -> onStats
+    check("R6 STATS confirm wires the stored medals into app.stats.trophies",
+      g.app.screen===SCREEN.STATS&&(g.app.stats.trophies||[]).length===8,
+      g.app.screen+"/"+JSON.stringify(g.app.stats&&g.app.stats.trophies));
+    g.input.onUiKey("KeyT");
+    cv.calls.length=0;
+    g.loop(16); g.loop(32);
+    const texts=cv.calls.filter(c=>c[0]==="fillText").map(c=>String(c[1][0]));
+    check("R6 MEDALS page draws the stored medals end to end (onStats + shellview route)",
+      g.app.screen===SCREEN.TROPHIES&&texts.includes("2/8")&&texts.includes("FLAWLESS")
+        &&texts.includes("IRON CROWN"),texts.join("|"));
+  }finally{ delete globalThis.window; }
+}
+{
   const plays=[];
   const audio={play:n=>plays.push(n),toggle:()=>false};
   const g=createGame(null,{seed:14,audio});
