@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-08 — Wave 3 R12 DAYS PLAYED (v147)
+- `nb.stats.v1` gains `a.days`/`a.day`; the three `room_enter` literals carry `ld: todayStr()` (main.js +0, 804/808); STATS is 10 rows (rule after row 7, empty rows draw as 10), payload line 1 ends `N DAYS PLAYED`; attract never counts (headless pin). Headed: both plates show 10 rows, rule between DAYS PLAYED and CORE BEST.
+
 ## 2026-10-08 — Wave 3 R0 polish (v146)
 - PAUSE footer now `↑↓ SELECT · ENTER / TAP CONFIRM · P RESUME · M QUIT` (static, closes the loose-ends touch nit), heat pin proves one-line fit in 2d/iso boxes (headed: 460.6px real width); `sitemap.xml` lastmod 2026-10-08 (no bump).
 

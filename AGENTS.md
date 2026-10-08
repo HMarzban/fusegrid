@@ -150,7 +150,9 @@ not shell screens. Do not add them as `SCREEN` values.
   and DOM-free: `bests.js` (`nb.bests.v1`, per-run score/room bests keyed
   `<heat>:<pact>:<pace+1>`, cap 48) · `stats.js` (`nb.stats.v1`, lifetime
   aggregates always, a 200-entry event ring only after the player opens STATS
-  once) · `daily.js` (`nb.daily.v1`, one board a day from a **date string**,
+  once; STATS is ten rows — seven lifetime incl. `DAYS PLAYED` (`a.days`, one
+  per new LOCAL `ld` at `room_enter`, monotonic, self-heals a future `a.day`,
+  never a streak) + three bests) · `daily.js` (`nb.daily.v1`, one board a day from a **date string**,
   pure FNV-1a `dailySeed`) · `code.js` (no store; a 12-char `F1` challenge code
   with a checksum). Every date is a string computed in `main.js` (`todayStr`
   local, `dateStr` UTC) and passed in — `src/app/` never calls `Date`.
