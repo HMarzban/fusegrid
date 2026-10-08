@@ -335,7 +335,7 @@ export function drawEnemies(c, world) {
    THE HOOK is a pair of swept teal ear-fins whose tips run past the body's
    own half-width, so the outline is a broad CHEVRON. That is the one shape
    class nothing in the enemy cast has (every foe is a dome or a box), and at
-   the frozen 59.1 deg rig the plan-view footprint is the primary read, so
+   the frozen 52.2 deg rig the plan-view footprint is the primary read, so
    the same hook carries both renderers. Fin tips stop at 1.30r = 18.7px
    against the 20px tile half-width; the walk-flick rotation adds 0.2px and
    the fit gate cannot see it, which is why the static number leaves room.

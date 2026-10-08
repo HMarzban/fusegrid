@@ -32,7 +32,7 @@ import {createPools, SLOT_MESH} from "../src/render/three/entities.js";
 import {atlasSources, buildAtlas} from "../src/render/three/textures.js";
 import {PLAYER_HULL} from "../src/render/sprites.js";
 import {createRig, orbitBy, dollBy, resetOrbit, applyOrbit,
-  SHAKE_3D_K, DRAG_K, DIST_MIN, DIST_MAX,
+  SHAKE_3D_K, DRAG_K, DIST_MIN, DIST_MAX, WHEEL_DOLLY_K, CAM_FOV,
   CAM_PRESET, CAM_NAME, camPreset} from "../src/render/three/camrig.js";
 import {createRenderer3D} from "../src/render/three/wrapper.js";
 import {createRenderer} from "../src/render/renderer.js";
@@ -157,20 +157,20 @@ function scan(grid){
 // ---- §4 camrig: fixed full-board rig (camera-research spec §3/§4) ----
 {
   const st=createRig();
-  check("rig defaults az0 el0.54(59.1° elev) dist870 target y-48",
-    st.az===0&&st.el===0.54&&st.dist===870
-    &&st.target[0]===0&&st.target[1]===-48&&st.target[2]===0,
+  check("rig defaults az0 el0.66(52.2° elev) dist1503 target y-17",
+    st.az===0&&st.el===0.66&&st.dist===1503
+    &&st.target[0]===0&&st.target[1]===-17&&st.target[2]===0,
     st.az+"/"+st.el+"/"+st.dist);
   orbitBy(st, 10, 10);
   check("orbitBy clamps el to EL_MAX 1.05 (az free)", st.el===1.05&&st.az===10,
     "az="+st.az+" el="+st.el);
   orbitBy(st,-100,-100);
   check("orbitBy clamps el to EL_MIN 0.18", st.el===0.18);
-  dollBy(st,10000); check("dollBy clamps dist to 1400", st.dist===1400);
-  dollBy(st,-10000); check("dollBy clamps dist to 560", st.dist===560);
+  dollBy(st,10000); check("dollBy clamps dist to 2529", st.dist===2529);
+  dollBy(st,-10000); check("dollBy clamps dist to 892", st.dist===892);
   resetOrbit(st);
-  check("resetOrbit restores authored rig", st.az===0&&st.el===0.54
-    &&st.dist===870);
+  check("resetOrbit restores authored rig", st.az===0&&st.el===0.66
+    &&st.dist===1503);
   const cam=new THREE.PerspectiveCamera();
   applyOrbit(cam,st,{x:0,y:0});
   const se=Math.sin(st.el), ce=Math.cos(st.el);
@@ -189,6 +189,8 @@ function scan(grid){
   check("shake offsets lookAt by SHAKE_3D_K world-units/px (orientation shifts)",
     SHAKE_3D_K===0.09&&!q0.equals(cam3.quaternion),
     "K="+SHAKE_3D_K);
+  check("wheel dolly K scales with the default dist (0.6*1503/870 = 1.04)",
+    WHEEL_DOLLY_K===1.04, String(WHEEL_DOLLY_K));
 }
 
 // ---- §4b framing gate: the rig must FILL the frame, and not crop it ----
@@ -199,10 +201,17 @@ function scan(grid){
    TWO of these gates are floors, because a ceiling alone happily passed the
    defect this pass fixed: the old {el:0.62,dist:960,target y -44} rig scored
    worst 0.8439 and span 1.1767, a board floating in 40% dead height. X binds
-   the fit at every elevation, always on the near ICE wall-top corner. */
+   the fit at every elevation, always on the near ICE wall-top corner.
+   The 2026-10-08 camera pass (spec 2026-10-08-3d-camera-design §2) adds two
+   more floors for the third complaint, "too top-down" and "skewed": the
+   FOV 45 / dist 870 / el .54 rig scored near-row side:top 0.339 and keystone
+   0.722, so the near half read as a security cam with the blocks splayed
+   out. FOV 24 / 1503 / el .66 scores 0.617 and 0.807. */
 {
   const W4=CFG.COLS*CFG.TILE, D4=CFG.ROWS*CFG.TILE;
-  const cam=new THREE.PerspectiveCamera(45,W4/D4,1,2500);
+  check("§4b the lens has one source: CAM_FOV===24", CAM_FOV===24,
+    String(CAM_FOV));
+  const cam=new THREE.PerspectiveCamera(CAM_FOV,W4/D4,1,3000);
   applyOrbit(cam,createRig(),{x:0,y:0});
   cam.updateMatrixWorld(true);
   const ndc=(x,y,z)=>new THREE.Vector3(x,y,z).project(cam);
@@ -233,6 +242,18 @@ function scan(grid){
   check("§4b cabinet bezel may bleed past the near corners but must not fly"
       +" off screen (|ndc|<=1.10)",
     bezel<=1.10, bezel.toFixed(4));
+  const T4=CFG.TILE, z11=11*T4-D4/2;
+  const a=ndc(0,0,z11+T4), b=ndc(0,T4,z11+T4), c=ndc(0,T4,z11);
+  const sideTop=(b.y-a.y)/(c.y-b.y);
+  check("§4b near row reads 3/4, not security cam: row-11 cube side:top"
+      +" >=0.55 (FOV 45/870 scored 0.339)",
+    sideTop>=0.55, sideTop.toFixed(4));
+  const fl=ndc(-W4/2,0,-D4/2), fr=ndc(W4/2,0,-D4/2),
+    nl=ndc(-W4/2,0,D4/2), nr=ndc(W4/2,0,D4/2);
+  const key=(fr.x-fl.x)/(nr.x-nl.x);
+  check("§4b keystone far/near floor width >=0.78, blocks do not splay"
+      +" (FOV 45/870 scored 0.722)",
+    key>=0.78, key.toFixed(4));
 }
 
 // ---- §6b brightness gate: no tone mapping, no fog over the board ----
@@ -252,6 +273,22 @@ function scan(grid){
   rb.render(wb,1/60);
   check("§6b no distance fog over the board (it was erasing the far half"
       +" toward bg1)", rb._dbg.scene.fog==null, String(rb._dbg.scene.fog));
+}
+
+// ---- §6c lens (camera spec §2.1): one FOV source, far plane, particle size ----
+/* sizeAttenuation ignores FOV, so a point's size relative to a tile scales
+   with tan(fov/2): tan 22.5°/tan 12° = 1.9487 takes the authored 10 to 19.5.
+   The far plane covers the furthest bezel corner at DIST_MAX 2529 over every
+   az and EL_MIN..EL_MAX (2918.6). */
+{
+  const rl=createRenderer3D(null,null,{audio:null,hud:null});
+  check("§6c wrapper camera uses CAM_FOV and far 3000",
+    rl._dbg.camera.fov===CAM_FOV&&rl._dbg.camera.far===3000,
+    rl._dbg.camera.fov+"/"+rl._dbg.camera.far);
+  const {createParticles}=await import("../src/render/three/particles.js");
+  const pz=createParticles().points.material.size;
+  check("§6c particle size keeps its board scale at FOV 24 (19.5)",
+    pz===19.5, String(pz));
 }
 
 // ---- §1 wrapper surface contract ----
@@ -351,7 +388,7 @@ function mkCanvas(){
 
 // ---- §CAM fixed-rig wave (camera-research spec §4): free-orbit demoted
 // behind ?orbit=1 (opts.orbit headless); wheel dolly always live in GAME+3d,
-// clamped to the 500..880 band; rig exposed read-only for tests. ----
+// clamped to DIST_MIN..DIST_MAX; rig exposed read-only for tests. ----
 {
   function mkOrbitCanvas(){
     const L={};
@@ -376,19 +413,19 @@ function mkCanvas(){
     const g=createGame(cv,{seed:81,autoplay:true,render3d:true,createRenderer3D});
     const R=()=>g.rig||{};
     check("rig exposed read-only at authored defaults",
-      !!g.rig&&g.rig.az===0&&g.rig.el===0.54&&g.rig.dist===870,
+      !!g.rig&&g.rig.az===0&&g.rig.el===0.66&&g.rig.dist===1503,
       JSON.stringify(g.rig));
     cv.fire("pointerdown",{pointerId:1,button:2,clientX:300,clientY:260});
     wfire("pointermove",{pointerId:1,buttons:2,clientX:400,clientY:260});
     wfire("pointerup",{pointerId:1,button:2,clientX:400,clientY:260});
     check("orbit gate off: right-drag leaves rig frozen",
-      R().az===0&&R().el===0.54,String(R().az+"/"+R().el));
+      R().az===0&&R().el===0.66,String(R().az+"/"+R().el));
     // wheel dolly stays live, clamped to the new band (deltaY<0 = zoom in)
     cv.fire("wheel",{deltaY:-100000,preventDefault(){}});
-    check("wheel dolly in clamps to DIST_MIN 560", R().dist===560,
+    check("wheel dolly in clamps to DIST_MIN 892", R().dist===892,
       String(R().dist));
     cv.fire("wheel",{deltaY:100000,preventDefault(){}});
-    check("wheel dolly out clamps to DIST_MAX 1400", R().dist===1400,
+    check("wheel dolly out clamps to DIST_MAX 2529", R().dist===2529,
       String(R().dist));
     // opt-in orbit (?orbit=1 / opts.orbit): right-drag orbits again
     const cv2=mkOrbitCanvas();
@@ -397,12 +434,79 @@ function mkCanvas(){
     wfire("pointermove",{pointerId:1,buttons:2,clientX:400,clientY:260});
     wfire("pointerup",{pointerId:1,button:2,clientX:400,clientY:260});
     check("opts.orbit: right-drag orbits by DRAG_K*px",
-      Math.abs((g2.rig||{}).az-100*DRAG_K)<1e-9&&(g2.rig||{}).el===0.54,
+      Math.abs((g2.rig||{}).az-100*DRAG_K)<1e-9&&(g2.rig||{}).el===0.66,
       "az="+(g2.rig||{}).az);
     g2.input._onKey({code:"KeyR"});
     check("KeyR restores exact authored rig after orbit",
-      (g2.rig||{}).az===0&&(g2.rig||{}).el===0.54&&(g2.rig||{}).dist===870,
+      (g2.rig||{}).az===0&&(g2.rig||{}).el===0.66&&(g2.rig||{}).dist===1503,
       JSON.stringify(g2.rig));
+   }finally{ delete globalThis.window; }
+}
+
+/* ---- §CAM zoom reset (ruling 2026-10-08, camera spec §2.2): a wheel/pinch
+   dolly lives for one room. dist returns to the SELECTED preset at every
+   room start and every run start, through createGame's real frame loop;
+   PAUSE -> PLAY continues the room and keeps the dolly. ---- */
+{
+  const mem=new Map();
+  globalThis.window={innerWidth:2000,innerHeight:1200,
+    localStorage:{getItem:k=>mem.has(k)?mem.get(k):null,
+      setItem:(k,v)=>mem.set(k,String(v)),removeItem:k=>mem.delete(k)},
+    addEventListener(){},removeEventListener(){}};
+  const cvOf=()=>{const L={};const rec=new Proxy(function(){},{
+      get:(t,p)=>p===Symbol.toPrimitive?()=>"":(()=>rec),
+      apply:()=>rec, set:()=>true});
+    return {width:600,height:520,style:{},getContext:()=>rec,
+      getBoundingClientRect:()=>({left:0,top:0,width:600,height:520}),
+      addEventListener(ty,fn){(L[ty]=L[ty]||[]).push(fn);},
+      removeEventListener(){},
+      out(){(L.wheel||[]).forEach(f=>f({deltaY:100000,preventDefault(){}}));}};};
+  const boot=(seed)=>{const cv=cvOf();
+    const g=createGame(cv,{seed,autoplay:true,render3d:true,createRenderer3D});
+    g.loop(1000); return {cv,g};};
+  try{
+    for(const end of ["WIN","LOSE"]){
+      const {cv,g}=boot(end==="WIN"?84:85);
+      cv.out();
+      const zoomed=g.rig.dist;
+      g.world.state=end; g.loop(1016);
+      g.world.state="PLAY"; g.loop(1032);
+      check("§CAM "+end+"->PLAY restores the selected preset (wheeled to "
+          +zoomed+")",
+        zoomed===2529&&g.rig.dist===camPreset(g.app.settings.cam)
+        &&g.rig.dist===1503, String(g.rig.dist));
+     }
+    {
+      const {cv,g}=boot(86);
+      cv.out();
+      g.input.onPause(); g.loop(1016);
+      g.app.pauseCursor=1; g.app.confirm();          // RESTART
+      check("§CAM pause RESTART restores the selected preset",
+        g.rig.dist===1503, String(g.rig.dist));
+     }
+    {
+      const {cv,g}=boot(87);
+      cv.out();
+      g.input.onPause(); g.loop(1016);
+      g.app.pauseCursor=0; g.app.confirm();          // RESUME
+      g.loop(1032); g.loop(1048);
+      check("§CAM PAUSE->PLAY resume keeps the dolly (the room continues)",
+        g.world.state==="PLAY"&&g.rig.dist===2529,
+        g.world.state+" "+g.rig.dist);
+     }
+    {
+      const {cv,g}=boot(88);
+      g.app.settings.cam=1;                          // OPTIONS row mutates app.settings
+      cv.out();
+      g.world.state="WIN"; g.loop(1016);
+      g.world.state="PLAY"; g.loop(1032);
+      check("§CAM WIDE via app.settings: a room edge restores 1671",
+        g.rig.dist===1671, String(g.rig.dist));
+      cv.out();
+      g.app.startRun();
+      check("§CAM WIDE via app.settings: a run start restores 1671",
+        g.rig.dist===1671, String(g.rig.dist));
+     }
    }finally{ delete globalThis.window; }
 }
 
@@ -916,15 +1020,21 @@ await sec("S3.C",async()=>{
   const ft=await import("../src/render/three/flythrough.js");
   const {introPhase,INTRO_DUR}=await import("../src/app/intro.js");
   const st0=ft.introCam(0), stE=ft.introCam(INTRO_DUR);
-  check("S3.C start frame matches introPhase zoom start (dist=870/1.55)",
-    Math.abs(st0.dist-870/1.55)<1e-4, st0.dist.toFixed(3));
+  check("S3.C start frame matches introPhase zoom start (dist=1503/1.55)",
+    Math.abs(st0.dist-1503/1.55)<1e-4, st0.dist.toFixed(3));
   check("S3.C start target rides lower-third drift (tz=(camY-.5)*520)",
     Math.abs(st0.target[2]-83.2)<1e-9, st0.target[2].toFixed(2));
   check("S3.C end frame == fixed rig defaults, target y included (it used "
       +"to pop 0 -> -25 on the last frame)",
-    Math.abs(stE.dist-870)<1e-9&&stE.az===0&&stE.el===0.54
-    &&stE.target[1]===-48&&stE.target[2]===0,
+    Math.abs(stE.dist-1503)<1e-9&&stE.az===0&&stE.el===0.66
+    &&stE.target[1]===-17&&stE.target[2]===0,
     stE.az+"/"+stE.el+"/"+stE.dist+"/"+stE.target[1]);
+  const rg=createRig();
+  check("S3.C handoff constants ARE the rig (BASE_DIST/SETTLE_EL/TARGET_Y"
+      +" cannot drift from createRig)",
+    ft.BASE_DIST===CAM_PRESET[0]&&ft.SETTLE_EL===rg.el
+    &&ft.TARGET_Y===rg.target[1],
+    ft.BASE_DIST+"/"+ft.SETTLE_EL+"/"+ft.TARGET_Y);
   let mono=true;
   for(let s=0;s<=INTRO_DUR+1e-9;s+=0.25){
     const a=ft.introCam(s), b=ft.introCam(Math.min(INTRO_DUR,s+0.25));
@@ -933,8 +1043,8 @@ await sec("S3.C",async()=>{
   check("S3.C keyframes monotonic (dist out, el lifts toward the rig)", mono);
   let tracks=true;
   for(let s=0;s<=INTRO_DUR;s+=0.5)
-    if(Math.abs(ft.introCam(s).dist*introPhase(s).zoom-870)>1e-6)tracks=false;
-  check("S3.C dist tracks introPhase fractions (dist*zoom==870)", tracks);
+    if(Math.abs(ft.introCam(s).dist*introPhase(s).zoom-1503)>1e-6)tracks=false;
+  check("S3.C dist tracks introPhase fractions (dist*zoom==1503)", tracks);
   check("S3.C flyover swings azimuth out mid-beat (cinematic arc)",
     ft.introCam(2.8).az>0.2&&ft.introCam(0).az===0,
     ft.introCam(2.8).az.toFixed(3));
@@ -1079,7 +1189,7 @@ await sec("S4.A",async()=>{
      23.0, so a >20 floor would push the face off the top of the character.
      TILE*0.34 is the player's own collision radius, which still says what the
      gate meant: the face is on the head, never on the belly. The -0.6 rake is
-     unchanged — it is what makes the face legible from the 59.1 deg rig. */
+     unchanged — it is what makes the face legible from the 52.2 deg rig. */
   check("S4.A face plate is the player's one Phong surface, raked to the rig",
     phongs.length===1&&visor.material.shininess>=90
     &&visor.rotation.x>=-0.62&&visor.rotation.x<=-0.58
@@ -2099,14 +2209,15 @@ await sec("MG",async()=>{
 // ---- §SET camera presets: persisted dolly stops, not new rigs ----
 /* Re-runs §4b's own projection at each preset. The rig's el/az/target never
    move — only dist — so the only gate that can break is the bezel, which is
-   monotonically increasing as dist shrinks: 870 already sits at 1.0974 of
-   1.10 and dist 860 scores 1.1148. The two §4b FLOORS bind the authored
-   default only; they are not a ceiling on where a player may dolly, which the
-   always-live wheel already proves (DIST_MAX 1400 scores 0.5256 today). */
+   monotonically increasing as dist shrinks: 1503 sits at 1.0746 of 1.10,
+   the dolly-in limit is 1473.54 and dist 1470 scores 1.1031. The two §4b
+   FLOORS bind the authored default only; they are not a ceiling on where a
+   player may dolly, which the always-live wheel already proves (DIST_MAX
+   2529 scores 0.5255). */
 {
   const W4=CFG.COLS*CFG.TILE, D4=CFG.ROWS*CFG.TILE;
   const at=(dist)=>{
-    const cam=new THREE.PerspectiveCamera(45,W4/D4,1,2500);
+    const cam=new THREE.PerspectiveCamera(CAM_FOV,W4/D4,1,3000);
     const st=createRig(); st.dist=dist;
     applyOrbit(cam,st,{x:0,y:0});
     cam.updateMatrixWorld(true);
@@ -2125,21 +2236,21 @@ await sec("MG",async()=>{
        }
     return {worst,bez};
    };
-  check("§SET CAM_PRESET is exactly [870,960,1040], frozen",
-    Object.isFrozen(CAM_PRESET)&&CAM_PRESET.join()==="870,960,1040",
+  check("§SET CAM_PRESET is exactly [1503,1671,1827], frozen",
+    Object.isFrozen(CAM_PRESET)&&CAM_PRESET.join()==="1503,1671,1827",
     CAM_PRESET.join());
   check("§SET CAM_NAME is STANDARD/WIDE/FAR, frozen, same arity",
     Object.isFrozen(CAM_NAME)&&CAM_NAME.join()==="STANDARD,WIDE,FAR"
     &&CAM_NAME.length===CAM_PRESET.length, CAM_NAME.join());
-  check("§SET no preset dollies IN past the authored 870 (dist 860 scores"
-      +" bezel 1.1148 and fails outright)",
-    CAM_PRESET.every(d=>d>=870), CAM_PRESET.join());
+  check("§SET no preset dollies IN past the authored 1503 (dist 1470 scores"
+      +" bezel 1.1031 and fails outright)",
+    CAM_PRESET.every(d=>d>=1503), CAM_PRESET.join());
   check("§SET every preset sits inside the live dolly clamps",
     CAM_PRESET.every(d=>d>=DIST_MIN&&d<=DIST_MAX),
     DIST_MIN+".."+DIST_MAX);
   check("§SET STANDARD IS the authored rig — a bare createRig() is unmoved",
-    CAM_PRESET[0]===createRig().dist&&createRig().el===0.54
-    &&createRig().az===0&&createRig().target[1]===-48,
+    CAM_PRESET[0]===createRig().dist&&createRig().el===0.66
+    &&createRig().az===0&&createRig().target[1]===-17,
     JSON.stringify(createRig()));
   for(let i=0;i<CAM_PRESET.length;i++){
     const r=at(CAM_PRESET[i]);
@@ -2147,11 +2258,11 @@ await sec("MG",async()=>{
         +" (|ndc|<=1.10)", r.bez<=1.10, r.bez.toFixed(4));
    }
   check("§SET FAR still holds the worst playfield corner above 0.75"
-      +" (dist 1080 scores 0.7180 = a board in a void)",
-    at(1040).worst>=0.75, at(1040).worst.toFixed(4));
+      +" (dist 1905 scores 0.7180 = a board in a void)",
+    at(1827).worst>=0.75, at(1827).worst.toFixed(4));
   check("§SET camPreset clamps every out-of-range index",
-    camPreset(-5)===870&&camPreset(0)===870&&camPreset(1)===960
-    &&camPreset(2)===1040&&camPreset(99)===1040&&camPreset(undefined)===870,
+    camPreset(-5)===1503&&camPreset(0)===1503&&camPreset(1)===1671
+    &&camPreset(2)===1827&&camPreset(99)===1827&&camPreset(undefined)===1503,
     [camPreset(-5),camPreset(99),camPreset(undefined)].join());
 }
 

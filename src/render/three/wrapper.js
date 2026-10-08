@@ -12,7 +12,7 @@ import {biomeOf} from "../../core/config.js";
 import {sfxOf} from "../../audio/item.js";
 import {buildScene, disposeGroup} from "./scene.js";
 import {applyBright} from "./lights.js";
-import {createRig, applyOrbit} from "./camrig.js";
+import {createRig, applyOrbit, CAM_FOV} from "./camrig.js";
 import {introCam} from "./flythrough.js";
 import {createParticles} from "./particles.js";
 import {buildAtlas} from "./textures.js";
@@ -67,7 +67,7 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
    }catch(e){ gl=null; }
 
   const scene3=new THREE.Scene();
-  const camera=new THREE.PerspectiveCamera(45,W/H,1,2500);
+  const camera=new THREE.PerspectiveCamera(CAM_FOV,W/H,1,3000);
   /* S3: fx-store particles ride the scene ROOT (not sc.group) so level
      rebuilds never orphan live bursts; syncFx wipes them on world change. */
   const fxp=createParticles();
@@ -92,10 +92,12 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
     sc=buildScene(world,getAtlas(world),brightK);
     const biome=biomeOf(world.level);
     scene3.background=new THREE.Color(biome.bg1);
-    /* No distance fog. The far board corners sit at d 963, and
-       Fog(bg1,700,1600) was replacing 43% of them with the darkest colour in
-       the biome — 89% out at the DIST_MAX dolly clamp. A board that must stay
-       legible at every zoom cannot have fog over it. */
+    /* No distance fog. On the rig of the 2026-09-04 pass the far board
+       corners sat at d 963, and Fog(bg1,700,1600) was replacing 43% of them
+       with the darkest colour in the biome — 89% out at the DIST_MAX dolly
+       clamp. They now sit at 1689.9 (2700.4 at DIST_MAX), so fog would only
+       bite harder. A board that must stay legible at every zoom cannot have
+       fog over it. */
     scene3.fog=null;
     scene3.add(sc.group);
    }

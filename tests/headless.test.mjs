@@ -1021,6 +1021,8 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   // wave-3 spec §7.3/§8) — measured 812, against the 812 cap.
   // D2 MENU tap wave: +0 lines (MENU rides the SETTINGS tap branch; menuHit
   // and ITEMS ride existing import lines) — measured 812, against the 812 cap.
+  // C1 camera wave: +0 lines (the zoom reset rides the RESTART and the
+  // (WIN|LOSE)->PLAY reset lines) — measured 812, against the 812 cap.
   check("main.js stays a lean browser entry (<=812 lines)",
     L.length<=812,String(L.length));
   const lastImp=L.reduce((a,l,i)=>/^import[\s{]/.test(l)?i:a,-1);

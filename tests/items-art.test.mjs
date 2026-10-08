@@ -596,7 +596,7 @@ const P = (o) =>
       " feet " + feet.length,
   );
   /* THE concept gate. The designer's whole case for MAKO over the two
-     alternatives was the plan-view footprint at the frozen 59.1 deg rig, and
+     alternatives was the plan-view footprint at the frozen 52.2 deg rig, and
      the 2D silhouette is where that lives in this renderer: a chevron that
      spreads sideways, never a standing mass.
      Measured on the noEllipse box ON PURPOSE. The contact shade is scenery,

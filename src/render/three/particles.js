@@ -35,7 +35,7 @@ export function createParticles(){
   geo.setAttribute("position",new THREE.BufferAttribute(pos,3));
   geo.setAttribute("color",new THREE.BufferAttribute(col,3));
   geo.setDrawRange(0,0);
-  const mat=new THREE.PointsMaterial({size:10,sizeAttenuation:true,
+  const mat=new THREE.PointsMaterial({size:19.5,sizeAttenuation:true,
     vertexColors:true,transparent:true,depthWrite:false,
     blending:THREE.AdditiveBlending});
   const disc=discMap(); if(disc)mat.map=disc;

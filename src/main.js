@@ -286,7 +286,7 @@ export function createGame(canvas, opts = {}) {
         world.fireEdge = true; // a held fire CONFIRMED the row; never a same-frame plant
         prevSt = "PLAY";
         coachPlanted = false;
-        roomT = 0;
+        roomT = 0; rig.dist = camPreset(settings.cam);
         bestPrev = null;
         return;
       }
@@ -632,7 +632,7 @@ export function createGame(canvas, opts = {}) {
       }
       // endRun() on this LOSE edge is now covered by persistScore() above (same gate)
       if ((prevSt === "WIN" || prevSt === "LOSE") && world.state === "PLAY") {
-        roomT = 0; bestPrev = null;              // WIN->next room, LOSE->new run
+        roomT = 0; bestPrev = null; rig.dist = camPreset(settings.cam); // WIN->next room, LOSE->new run
         if (prevSt === "LOSE") startRunState(true); // R1: a retry never calls onStart
         stat("room_enter", { r: world.level | 0, h: world.heat | 0, pc: world.pact | 0, pa: world.pace | 0, ld: todayStr() }, dateStr());
       }

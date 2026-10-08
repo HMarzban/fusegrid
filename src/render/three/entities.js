@@ -162,7 +162,7 @@ function fitUV(g) {
   return g;
 }
 
-/* Items (items-player-art 2026-09-05) for the FROZEN rig: at 59.1 deg the
+/* Items (items-player-art 2026-09-05) for the FROZEN rig: at 52.2 deg the
    PLAN-VIEW FOOTPRINT is the primary read, and a solid of revolution is a
    circle in plan view by definition — which is why six of the old twelve
    were the same disc at different radii. Upright families are low-seg
@@ -292,7 +292,7 @@ function lambertMat(color) {
 }
 /* The nine bodies (enemy-3d-bodies 2026-09-04). Translated silhouette-first
    from the 2D characters in enemybody.js, for the FROZEN rig only: az 0,
-   el 0.54 = 59.1 deg above the horizon. Past 45 deg the camera reads more
+   el 0.66 = 52.2 deg above the horizon. Past 45 deg the camera reads more
    top than side, so the PLAN-VIEW FOOTPRINT is the primary cue and nine
    distinguishable footprints beat nine distinguishable profiles. Detail
    below the waist is spent on grounding and shadow shape, not on being seen.
@@ -879,7 +879,7 @@ export function createPools(biome, atlas) {
      torso-plus-pauldrons; nothing is added and nothing is removed, so every
      draw-call number in AGENTS.md is unchanged.
 
-     PLAN-VIEW FOOTPRINT. At `el:0.54` the camera is 59.1 deg above the
+     PLAN-VIEW FOOTPRINT. At `el:0.66` the camera is 52.2 deg above the
      horizon, so the plan outline is the primary cue and a solid of revolution
      is a circle from up there. The fins are what make it a chevron: they
      reach +-20.1 against a 12.0 body radius, and with the face plate leading

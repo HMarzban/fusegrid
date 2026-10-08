@@ -5,35 +5,42 @@
    untouched for 2D/iso. */
 import {clamp} from "../../core/config.js";
 
-export const EL_MIN=0.18, EL_MAX=1.05, DIST_MIN=560, DIST_MAX=1400;  // el = POLAR from +Y: 0.54 rad = 59.1 deg above horizon
+export const EL_MIN=0.18, EL_MAX=1.05, DIST_MIN=892, DIST_MAX=2529;  // el = POLAR from +Y: 0.66 rad = 52.2 deg above horizon
 export const SHAKE_3D_K=0.09;      // world-units per shake px
-/* fixed full-board rig: az=0 axis-aligned, el 59.1° readable 3/4.
+export const CAM_FOV=24;           // vertical, degrees; wrapper + tests read it
+/* fixed full-board rig (camera spec 2026-10-08, the user's pick C): az=0
+   axis-aligned, el 52.2° above the horizon, a 24° lens from dist 1503.
    X binds the fit at EVERY elevation — always the NEAR ICE wall-top corner,
-   because near corners project widest — so horizontal fill pins at 96% and
-   the vertical axis carries all the slack. That makes vertical fill
+   because near corners project widest — so horizontal fill pins near 94% and
+   the vertical axis carries all the slack. At ONE lens, vertical fill is
    MONOTONICALLY DECREASING in el: tilting away from vertical foreshortens the
-   depth axis faster than it grows the near edge. A higher camera therefore
-   fills more frame AND hides less behind walls; the only thing el buys is the
-   3/4 read, measured here as side:top = tan(el).
-   0.62 (0.714) framed the board into 38.9% of the canvas with ~103px of dead
-   bg1 above and below. 0.54 (0.599) takes 50.9% and cuts ICE occlusion
-   0.64 -> 0.54 tile, while staying 35% clear of the 0.419 ceiling security-cam
-   that scored 0.445. The fit basis is the PLAYFIELD, not the decorative bezel:
-   dist 870 / target y -48 put the worst board corner at |ndc| 0.9449 with the
-   board centred to 0.0005, and let the cabinet bezel bleed 2.4% past the two
-   bottom corners the way a real well runs off the screen. */
-const DEF={az:0,el:0.54,dist:870,target:[0,-48,0]};
+   depth axis faster than it grows the near edge. Across lenses it is not:
+   el .54 at FOV 45 / dist 870 took 50.9% of the canvas, el .66 at FOV 24
+   takes 54.2%, because the narrow lens widens the near edge less (keystone
+   far/near 0.722 -> 0.807). The lens is what bought the fill.
+   It also fixed the third complaint, "too top-down" and "skewed", which were
+   one defect: at FOV 45 the viewing angle changed across the board, and the
+   near row's side:top was 0.339 — more top-down than the rejected el 0.419
+   security cam (0.445) — with blocks splaying outward. At FOV 24 the rows
+   read 0.970 / 0.794 / 0.617 far to near. The fit basis is the PLAYFIELD,
+   not the decorative bezel: dist 1503 / target y -17 put the worst board
+   corner at |ndc| 0.9397 with the board centred to 0.0005, and let the
+   cabinet bezel (|ndc| 1.0746) bleed about 7.5% past the two bottom corners
+   the way a real well runs off the screen. */
+const DEF={az:0,el:0.66,dist:1503,target:[0,-17,0]};
 export const DRAG_K=0.005;         // rad per drag px
-export const WHEEL_DOLLY_K=0.6;    // world-units per wheel deltaY tick
+export const WHEEL_DOLLY_K=1.04;   // world-units per wheel deltaY tick: 0.6 x 1503/870, same fraction of the default dist
 
 /* CAMERA presets are persisted starting DOLLY positions, not new rigs: el, az
    and target never move. dist is already a live player axis (wheel/pinch runs
    unguarded in GAME+3d within DIST_MIN/DIST_MAX), so a preset is that same
    axis made discoverable. Measured against the §4b projection at RIM_W 36 /
-   RIM_LIP 6: bezel 1.0974 / 0.9622 / 0.8673 against the 1.10 gate, worst
-   playfield corner 0.9449 / 0.8322 / 0.7524. No preset dollies IN (860 scores
-   1.1148); FAR stops at 1040 because 1080 drops the corner to 0.7180. */
-export const CAM_PRESET=Object.freeze([870,960,1040]);
+   RIM_LIP 6: bezel 1.0746 / 0.9495 / 0.8568 against the 1.10 gate, worst
+   playfield corner 0.9397 / 0.8323 / 0.7524. No preset dollies IN: the bezel
+   limit is 1473.54 (1474 scores 1.0996, 1470 scores 1.1031); FAR stops at
+   1827 because 1905 drops the corner to 0.7180. DIST_MIN/DIST_MAX keep the
+   old clamp extremes: 892 scores worst 1.7709, 2529 scores 0.5255. */
+export const CAM_PRESET=Object.freeze([1503,1671,1827]);
 export const CAM_NAME=Object.freeze(["STANDARD","WIDE","FAR"]);
 export function camPreset(i){
   const n=typeof i==="number"&&isFinite(i)?i|0:0;
