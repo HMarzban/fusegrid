@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-08 — Loose ends B-MINOR-1: touch pause pill moved off the HUD score
+- `#tpause` now sits above the stage (`bottom:calc(100% + 8px);right:0`) instead of its top-right corner, where on a ~0.55-scaled portrait canvas it covered the right-aligned HUD score; `fit()` keeps >=90px clear above. `touch.test.mjs` pins it; shell v145.
+
 ## 2026-10-08 — Loose ends T3: dead DOM HUD helpers removed
 - `makeHud`/`updateHud` and the `hud` renderer-constructor plumbing are gone (index.html has no HUD ids; the canvas chips are the only HUD). Per-frame `o.hud===true` gates and main.js `{hud:false}` literals stay as pinned. main.js 806->803 lines; shell v144.
 
