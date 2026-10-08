@@ -30,6 +30,7 @@ import { loadStats, setStatsOn, stat, statPlaques, statsRows, statsNotes, statsP
 import { dailySeed, loadDaily, dailyTag, dailyStamp, finishDaily } from "./app/daily.js";
 import { decodeChallenge, encodeChallenge } from "./app/code.js";
 import { settleMedals, medalLine, medalRows, loadMedals } from "./app/medals.js";
+import { createGhost, ghostTick, ghostAt } from "./app/ghost.js";
 import {
   loadCoachSeen,
   saveCoachSeen,
@@ -137,6 +138,7 @@ export function createGame(canvas, opts = {}) {
   /* coach v2 (R10): one live tip at a time, its clock PLAY-only for the same
      reason coachT is — world.time keeps climbing through PAUSE. Resets in startRunState (every run-start path); v1's coachT/coachPlanted below reset only in onStart (R10 re-review Finding 3, 2026-09-07 — safe/stricter, not a defect; do not move either). */
   let coach2 = { kind: null, t: 0 };
+  const ghost = createGhost();
   /* roomT (R7): the SAME trap coachT dodges. world.time is bumped at the top of
      step() before the PAUSE early return (sim.js:42-43 vs :75-77), main's
      fixed-step loop is ungated on world.state, and loadLevel never resets it —
@@ -641,6 +643,7 @@ export function createGame(canvas, opts = {}) {
       app.update(dt, shellInput);
       acc += dt;
       if (world.state === "PLAY") { coachT += dt; roomT += dt; runT += dt; }
+      ghostTick(ghost, world, roomT);
       let steps = 0;
       while (acc >= CFG.STEP) {
         if (net) net.drive();
@@ -745,7 +748,7 @@ export function createGame(canvas, opts = {}) {
                   : 0,
               coach2: world.state === "PLAY" ? { a: Math.max(0, 1 - coach2.t / COACH2_DUR), s: coachTip(coach2.kind) } : { a: 0, s: "" },
               pause: { view: app.pauseView | 0, cursor: app.pauseCursor | 0 },
-              time: { on: !!app.timeAttack, t: roomT, best: bestPrev },
+              time: { on: !!app.timeAttack, t: roomT, best: bestPrev }, ghost: ghostAt(ghost, world, roomT),
               run: { r: tally.r, k: tally.k, p: tally.p, t: runT, best: bestRun, fromStart: runFromStart, daily: dailyDate, tries: dailyRec.played, dbest: dailyRec.best, md: medalLine(tally.mn) },
             }
           : { hud: false };

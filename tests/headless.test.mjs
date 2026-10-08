@@ -969,8 +969,11 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   // R6 medals wave: +2 lines (medals.js import; the endRun settleMedals line;
   // isRunEnd, trophies, ro.run.md and the TROPHIES cue exclusion ride
   // existing lines) — measured 806, against the 808 cap.
-  check("main.js stays a lean browser entry (<=808 lines)",
-    L.length<=808,String(L.length));
+  // R9a ghost wave: +3 lines (ghost.js import; const ghost; the ghostTick line
+  // between the PLAY-only clock and the step loop, wave-3 spec §5.3/§8);
+  // ro.ghost rides the time: line — measured 809, cap 808->812 (the wave's one raise).
+  check("main.js stays a lean browser entry (<=812 lines)",
+    L.length<=812,String(L.length));
   const lastImp=L.reduce((a,l,i)=>/^import[\s{]/.test(l)?i:a,-1);
   const firstDecl=L.findIndex(l=>/^(export\s|const\s|let\s|var\s|function\s|class\s)/.test(l));
   check("main.js keeps every import at the top (no mid-file import sprawl)",
@@ -1333,6 +1336,79 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
       check("R6 the overlay announces MEDAL · IRON CROWN",
         fill.includes("MEDAL · IRON CROWN"),fill.filter(s=>/MEDAL|ROOMS/.test(s)).slice(-4).join("|"));
     }
+  }finally{ delete globalThis.window; }
+}
+
+// ---- R9a: the ghost records only GAME clears, races a retry, and its tick
+// sits BEFORE the step loop (pin 6b: a sim-internal room start records from
+// roomT ~dt, never against the previous room's clock) ----
+{
+  const {ghostKey,decodeGhost,GHOST_KEY}=await import("../src/app/ghost.js");
+  const {readdirSync}=await import("node:fs");
+  const noop=()=>{};
+  const mem={"nb.cabinet.v1":"1"};
+  const ls={getItem:(k)=>(k in mem?mem[k]:null),setItem:(k,v)=>{mem[k]=String(v);}};
+  globalThis.window={addEventListener:noop,removeEventListener:noop,localStorage:ls};
+  const G=()=>JSON.parse(mem[GHOST_KEY]).g;
+  try{
+    {
+      const g=createGame(null,{seed:31});
+      g.app.skip();
+      let t=1000, i=0;
+      while(g.app.screen!==SCREEN.ATTRACT&&i++<IDLE_T*70){ t+=16; g.loop(t); }
+      let held=g.app.screen===SCREEN.ATTRACT;
+      for(let f=0;f<600;f++){ t+=16; g.loop(t); if(g.app.screen!==SCREEN.ATTRACT) held=false; }
+      check("R9a 600 ATTRACT frames leave nb.ghost.v1 absent",held&&!(GHOST_KEY in mem),String(mem[GHOST_KEY]));
+    }
+    {
+      const g=createGame(null,{seed:32});
+      const seen=[];
+      const r=g.renderer, rr=r.render;
+      r.render=(w,dt,o)=>{ seen.push(o&&o.ghost); return rr(w,dt,o); };
+      g.app.skip(); g.app.startRun();
+      let t=1000;
+      const X=(k)=>60+4*k, p=()=>g.world.players[0];
+      const frames=(n)=>{ for(let f=0;f<n;f++){ t+=16; g.loop(t); } };
+      const winOut=()=>{ g.world.enemies.length=0; let n=0;
+        while(g.world.state!=="WIN"&&n++<400){ t+=16; g.loop(t); } t+=16; g.loop(t); };
+      const fireUntil=(st)=>{ g.input.setIntent({fire:true}); let n=0;
+        while(g.world.state===st&&n++<20){ t+=16; g.loop(t); } g.input.setIntent({fire:false}); };
+      /* tag the player's x on every frame of the new room, so a sample names
+         the frame it was taken on: sample 0 must be X(1), the first frame
+         after the sim-internal reload (roomT one dt, <= 1/30). */
+      const tagged=(n)=>{ for(let k=1;k<=n;k++){ p().x=X(k); t+=16; g.loop(t); } };
+      frames(120); winOut();
+      const k1=ghostKey(g.world);
+      check("R9a a staged GAME room clear writes exactly one entry under the run's tuple",
+        GHOST_KEY in mem&&JSON.stringify(Object.keys(G()))===JSON.stringify([k1])&&k1===(32+":1:0:0:1"),
+        JSON.stringify(Object.keys(G())));
+      const d1=G()[k1].d;
+      g.world.state="LOSE"; frames(3);
+      fireUntil("LOSE");
+      const mark=seen.length;
+      tagged(20);
+      check("R9a the sim's LOSE->retry reloads room 1 in PLAY",g.world.state==="PLAY"&&g.world.level===1);
+      check("R9a a LOSE->retry of room 1 races the stored ghost on its first PLAY frames",
+        seen.slice(mark,mark+3).length===3&&seen.slice(mark,mark+3).every((x)=>x&&typeof x.x==="number"),
+        JSON.stringify(seen.slice(mark,mark+3)));
+      winOut();
+      const e1=G()[k1], s1=decodeGhost(e1.s);
+      check("R9a 6b the faster retry clear replaced the slower one",e1.d<d1,e1.d+"<"+d1);
+      check("R9a 6b retry: s.length/5 === d + 1",e1.s.length/5===e1.d+1,e1.s.length/5+"/"+e1.d);
+      check("R9a 6b retry: the first sample is the first PLAY frame's (roomT <= 1/30)",s1[0].x===X(1),s1[0].x);
+      check("R9a 6b retry: sample 1 is not the spawn point",s1[1].x!==60,s1[1].x);
+      fireUntil("WIN");
+      check("R9a WIN -> next room is the sim's own reload",g.world.level===2&&g.world.state==="PLAY");
+      tagged(20); winOut();
+      const e2=G()[ghostKey(g.world)], s2=e2?decodeGhost(e2.s):[];
+      check("R9a 6b next room: s.length/5 === d + 1",!!e2&&e2.s.length/5===e2.d+1,e2&&(e2.s.length/5+"/"+e2.d));
+      check("R9a 6b next room: first sample at roomT <= 1/30, sample 1 off spawn",
+        s2.length>1&&s2[0].x===X(1)&&s2[1].x!==60,s2.slice(0,2).map((s)=>s.x).join());
+    }
+    const core=(d)=>readdirSync(join(ROOT,d),{withFileTypes:true}).flatMap((e)=>
+      e.isDirectory()?core(join(d,e.name)):e.name.endsWith(".js")?[join(d,e.name)]:[]);
+    check("R9a src/core never imports src/app/ghost.js",
+      core("src/core").every((f)=>!/ghost\.js/.test(readFileSync(join(ROOT,f),"utf8"))));
   }finally{ delete globalThis.window; }
 }
 
