@@ -316,8 +316,8 @@ and `runT` is `main.js`'s PLAY-only run clock (`main.js:641`).
 not kept with an honest rewrite (finding 8's first option) and not gated on a
 room-6 start (option b). A room-8 start plus one death would unlock it, which is
 easier than `PLAQUE.CROWN` and fails the R6 "genuinely HARD" test; the room-6
-gate needs two start-room forms and extra pins for a medal that then duplicates
-the 6→8 tier. ALL IN splits into ALL IN (1-5) and ALL OUT (6-8) instead,
+gate needs two start-room forms and extra pins for a medal that is nearly a
+6→8 clear. ALL IN splits into ALL IN (1-5) and ALL OUT (6-8) instead,
 mirroring FLAWLESS/UNSCATHED and OVERDRIVE/REDLINE. Every medal now needs a WIN.
 
 **Deviation, recorded:** the pool yields four kept candidates (FLAWLESS,
@@ -578,8 +578,9 @@ Also: a LOSE at L8 with `t.r` 2, `t.d` 0, pact 15, pace 1, heat 2 and
     absent
   - a staged LOSE writes nothing to `nb.medals.v1`
   - a pause QUIT during a staged 6→8 run writes nothing
-  - a staged 6→8 finale WIN at MAX heat, pact 0, NORM, one life lost (`t.r`
-    3, `t.d` 1) writes exactly bit 128 and the overlay text includes
+  - with `nb.pact.v1 = "1"` pre-seeded (`roomCap(false)` is 5, so a room-6
+    start needs the unlock), a staged 6→8 finale WIN at MAX heat, pact 0, NORM,
+    one life lost (`t.r` 3, `t.d` 1) writes exactly bit 128 and the overlay text includes
     `MEDAL · IRON CROWN`
   - `state()` names `TROPHIES`
 
@@ -989,10 +990,11 @@ case "KeyR":
    `nb.thing` cannot slip past unclassified. The two lists are disjoint, every
    listed key appears in `src/`, and `KEEP_KEYS` is exactly the settings and
    pace keys. A future store therefore fails here until it is classified.
-1b. **Constant-only storage calls.** Every `getItem(` / `setItem(` /
-   `removeItem(` call in `src/app/**/*.js` passes an identifier ending `_KEY`
-   (imported or module-level), never an inline literal. Today's tree already
-   passes both pins.
+1b. **No literal storage keys.** No `getItem(` / `setItem(` / `removeItem(`
+   call in `src/app/**/*.js` takes a string or template literal as its first
+   argument (so `clearCabinet`'s loop variable over `CLEAR_KEYS` passes, and an
+   inline `"nb.x"` key cannot dodge the sweep). Today's tree already passes the
+   literal sweep.
 2. `clearCabinet` on a Map store holding all 14 keys plus `"other.app"` leaves
    exactly the 2 KEEP keys and `"other.app"`. With a throwing `removeItem` it
    does not throw and still removes the rest. A null store is a no-op.
