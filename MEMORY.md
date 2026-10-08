@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-08 — T1: MEDALS and Reset tappable on STATS (shell v161)
+- `menudraw.statsHit` maps taps on the painted `T MEDALS` / `R RESET` / armed `R AGAIN` foot tokens (0.6 em zones, half a separator each side) to `KeyT` / `KeyR` via `app.key`; an off-label tap while armed disarms, idle still backs to MENU. main.js 795→799 (cap 799). Headed 375×812 touch: real token edges sit inside the zones (advance 6.02 px), MEDALS/back/arm/disarm/confirm+reload all landed. CHANGELOG close-out (v161 entry + the v158 "keyboard-only" lines) still pending.
+
 ## 2026-10-08 — C2: fit() seam + phone touch layout (shell v160)
 - `fit()` moved to `src/app/fit.js` (`mountFit`, `fitBox`, `FIT_RES` d 40/48, p 16/250, l 332/16); it writes `body[data-lay]`, which replaces v157's `@media` block, and re-fits on resize + orientationchange. Portrait: pad + bomb below the stage, pill above (60px top pad). Landscape: gutters, pill top of the right gutter. 1440×900 scale 1.385→1.638, 812×375 0.375→0.690. main.js 812→795, cap 799 (T1's +4 next). Headed CDP sweep over 7 viewports ×2D/3D green.
 

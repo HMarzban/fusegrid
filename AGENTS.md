@@ -34,7 +34,7 @@ moves no runtime index — but `tests/headless.test.mjs`'s index-driven MENU
 confirms and `tests/menuapp.test.mjs`'s literals must be renegotiated with any
 reorder. `SCREEN.STATS = 12` is **appended** (`menuapp.js:27`'s own rule:
 appended, never inserted). `SCREEN.TROPHIES = 13` (the MEDALS page) is
-appended too: opened from STATS by `T` (keyboard only), backs out to STATS,
+appended too: opened from STATS by `T` or a tap on its `T MEDALS` label, backs out to STATS,
 never a MENU row. WIN/LOSE run summaries are **not** a SCREEN — they
 live in `drawOverlay`.
 | Sim | PLAY / WIN / LOSE / PAUSE | `src/core/sim.js` |
@@ -191,6 +191,9 @@ not shell screens. Do not add them as `SCREEN` values.
   casts) that `pools.ghost` builds lazily outside the player slot; iso never.
   `reset.js` (no store, wave 3): STATS `R` arms, a second `R` runs
   `clearCabinet` + `location.reload()`, any other key disarms (`_push` too).
+  Touch (T1): `statsHit` maps a tap on the painted `R RESET` / `R AGAIN`
+  label to `KeyR` through `app.key`, so the two-press confirm is the same; an
+  off-label tap while armed disarms and stays on STATS.
   CLEAR = highscores, bests, stats, daily, times, medals, plaques, ghost,
   pact, coach v1/v2, cabinet (12); KEEP = `nb.settings.v1`, `nb.pace.v1`.
   Lists import each store's own `*_KEY`; `tests/reset.test.mjs` fails on any
