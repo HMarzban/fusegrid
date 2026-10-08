@@ -241,6 +241,22 @@ export function menuHit(x, y, L, n) {
   const i = Math.floor((y - g.y0 - g.padY) / g.span + 1e-9);
   return i >= 0 && i < n ? i : -1;
 }
+/* STATS foot taps (T1): token zones over the one painted foot string at the
+   0.6 em mono advance, half a separator wide each side. */
+export function statsHit(x, y, L, arm) {
+  const S = shellBox(L, 480),
+    s = arm ? RESET_FOOT : STATS_FOOT,
+    keys = arm ? ["KeyR"] : ["KeyT", null, "KeyR"];
+  if (y < S.footY - 12 || y > S.y + S.h) return null;
+  const x0 = S.mid - s.length * 3;
+  let a = 0;
+  for (const [i, tok] of s.split(" · ").entries()) {
+    const b = a + tok.length;
+    if (keys[i] && x >= x0 + 6 * (a - 1.5) && x <= x0 + 6 * (b + 1.5)) return keys[i];
+    a = b + 3;
+  }
+  return null;
+}
 export function drawMenu(c, ui, L, t) {
   const cur = (ui && ui.cursor) | 0;
   const items = (ui && ui.items) || [];
@@ -848,6 +864,8 @@ export function drawScores(c, scores, L, t, heat, plaques) {
 }
 
 const RESET_RED = "#ff5d73";
+const STATS_FOOT = "T MEDALS · C COPY MY STATS · R RESET · ESC BACK";
+const RESET_FOOT = "R AGAIN ERASES + RELOADS · ANY OTHER KEY CANCELS · KEEPS OPTIONS + PACE";
 const RESET_NOTES = Object.freeze([
   "ERASES SCORES · BESTS · TIMES · DAILY · MEDALS · PLAQUES · GHOSTS",
   "ERASES STATS + DAYS PLAYED · RELOCKS ROOMS 6-8 · PACTS · TIME ATTACK",
@@ -892,8 +910,8 @@ export function drawStats(c, L, t, ui, arm) {
   c.textAlign = "center";
   for (let i = 0; i < notes.length && i < 2; i++)
     c.fillText(String(notes[i]), S.mid, S.footY - (notes.length - i) * 14 - 2);
-  if (arm) foot(c, S, "R AGAIN ERASES + RELOADS · ANY OTHER KEY CANCELS · KEEPS OPTIONS + PACE", RESET_RED);
-  else foot(c, S, "T MEDALS · C COPY MY STATS · R RESET · ESC BACK");
+  if (arm) foot(c, S, RESET_FOOT, RESET_RED);
+  else foot(c, S, STATS_FOOT);
 }
 
 /* MEDALS (R6, SCREEN.TROPHIES): rows=[name, desc, on] arrive finished from

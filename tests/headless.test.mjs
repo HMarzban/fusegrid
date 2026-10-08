@@ -1025,6 +1025,9 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   // (WIN|LOSE)->PLAY reset lines) — measured 812, against the 812 cap.
   // C2 fit wave: -17 lines (the fit block moved to src/app/fit.js mountFit)
   // — measured 795, cap 812->799 (T1's STATS tap branch is the planned +4).
+  // T1 STATS tap wave: +4 lines (the STATS branch of the canvas pointerdown
+  // chain; statsHit rides the menudraw import line) — measured 799, against
+  // the 799 cap.
   check("main.js stays a lean browser entry (<=799 lines)",
     L.length<=799,String(L.length));
   const lastImp=L.reduce((a,l,i)=>/^import[\s{]/.test(l)?i:a,-1);
@@ -1252,6 +1255,58 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
     check("Reset: R on ATTRACT stays swallowed (screen stays ATTRACT)",
       t.app.screen===SCREEN.ATTRACT&&t.app.resetArm===false&&kept(),String(t.app.screen));
   }finally{ delete globalThis.window; delete globalThis.location; delete navigator.clipboard; }
+}
+
+// T1 (camera spec §4): MEDALS and Reset by TAP on STATS, through the REAL
+// pointer path on a scaled canvas (CSS 300x260 over a 600x520 buffer, k=2).
+// Buffer zone centres at 600x520: T MEDALS (183,478), R RESET (354,478),
+// armed R AGAIN (159,478); (300,300) is off every label.
+{
+  const {CLEAR_KEYS,KEEP_KEYS}=await import("../src/app/reset.js");
+  const noop=()=>{};
+  const mem={};
+  let reloads=0;
+  const fill=()=>{ for(const k of [...CLEAR_KEYS,...KEEP_KEYS]) mem[k]="{}"; };
+  const kept=()=>[...CLEAR_KEYS,...KEEP_KEYS].every((k)=>k in mem);
+  globalThis.window={addEventListener:noop,removeEventListener:noop,
+    localStorage:{getItem:(k)=>(k in mem?mem[k]:null),
+      setItem:(k,v)=>{mem[k]=String(v);},removeItem:(k)=>{delete mem[k];}}};
+  try{
+    const cv=mkCamCanvas(600,520);
+    cv.el.getBoundingClientRect=()=>({left:0,top:0,width:300,height:260});
+    const g=createGame(cv.el,{seed:76});
+    globalThis.location={search:"",reload:()=>{reloads++;}};
+    const tap=(x,y)=>cv.fire("pointerdown",{clientX:x/2,clientY:y/2});
+    const stats=()=>{ g.app.cabinetSeen=true; g.app.screen=SCREEN.MENU; g.app.cursor=6; g.app.confirm(); };
+    fill(); stats();
+    tap(183,478);
+    check("T1 tap: the T MEDALS label on STATS opens the MEDALS page",
+      g.app.screen===SCREEN.TROPHIES,String(g.app.screen));
+    tap(300,300);
+    check("T1 tap: a tap on MEDALS backs out to STATS",g.app.screen===SCREEN.STATS,String(g.app.screen));
+    tap(354,478);
+    check("T1 tap: the R RESET label arms and clears nothing",
+      g.app.screen===SCREEN.STATS&&g.app.resetArm===true&&kept()&&reloads===0,
+      g.app.screen+"/"+g.app.resetArm+"/"+reloads);
+    tap(354,478);
+    check("T1 tap: a second tap where RESET was lands off R AGAIN — disarmed, still STATS, nothing cleared",
+      g.app.screen===SCREEN.STATS&&g.app.resetArm===false&&kept()&&reloads===0,
+      g.app.screen+"/"+g.app.resetArm+"/"+reloads);
+    tap(354,478); tap(300,300);
+    check("T1 tap: RESET then an off-label tap disarms and stays on STATS",
+      g.app.screen===SCREEN.STATS&&g.app.resetArm===false&&kept()&&reloads===0,
+      g.app.screen+"/"+g.app.resetArm);
+    tap(354,478); tap(159,478);
+    check("T1 tap: RESET then R AGAIN clears every CLEAR key",
+      CLEAR_KEYS.every((k)=>!(k in mem)),Object.keys(mem).join(","));
+    check("T1 tap: RESET then R AGAIN keeps both KEEP keys and reloads once",
+      KEEP_KEYS.every((k)=>k in mem)&&reloads===1&&g.app.resetArm===false,
+      Object.keys(mem).join(",")+"/"+reloads);
+    fill(); stats();
+    tap(300,300);
+    check("T1 tap: an idle off-label tap on STATS backs out to MENU",
+      g.app.screen===SCREEN.MENU&&kept()&&reloads===1,String(g.app.screen));
+  }finally{ delete globalThis.window; delete globalThis.location; }
 }
 
 // ---- P1 PAUSE list: every row's wave, and the score semantics they inherit ----

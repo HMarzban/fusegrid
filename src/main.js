@@ -9,7 +9,7 @@ import { createRenderer } from "./render/renderer.js";
 import { copyPayload, isRunEnd, overlayBox, pauseHit } from "./render/scenes.js";
 import { paintBombPad } from "./render/sprites.js";
 import { dims, drawShell, kindSize } from "./render/shellview.js";
-import { menuHit, settingsHit, layout as menuLayout } from "./render/menudraw.js";
+import { menuHit, settingsHit, statsHit, layout as menuLayout } from "./render/menudraw.js";
 import { setFxOpts } from "./render/fx.js";
 import { ITEMS, SCREEN, SOURCE_URL, createMenuApp } from "./app/menuapp.js";
 import { clampHeat } from "./core/heat.js";
@@ -465,6 +465,10 @@ export function createGame(canvas, opts = {}) {
         if (!menu && row < 0) return app.back();
         if (row >= 0) app[menu ? "cursor" : "optRow"] = row;
         app.confirm();
+      } else if (app.screen === SCREEN.STATS) {
+        const r = canvas.getBoundingClientRect(), k = canvas.width / (r.width || canvas.width), { cw, ch } = dims(canvas, curKind);
+        const hit = statsHit((ev.clientX - r.left) * k, (ev.clientY - r.top) * k, menuLayout(cw, ch), app.resetArm);
+        if (hit) app.key(hit); else if (app.resetArm) app.resetArm = false; else app.confirm();
       } else app.confirm();
     });
   }

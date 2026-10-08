@@ -852,6 +852,61 @@ function check(name, cond, detail) {
   }
 }
 
+// 13h) statsHit (T1): the STATS foot tap map rides the foot drawStats paints —
+//      zones are derived from the painted string and its x/y at the 0.6 em
+//      advance, half a separator wide on each side of a token.
+{
+  const md = await import("../src/render/menudraw.js");
+  const paint = (L, arm) => {
+    const texts = [];
+    const c = new Proxy({}, {
+      get: (t, p) => (p === "fillText" ? (s, x, y) => texts.push({ s: String(s), x, y }) : () => {}),
+      set: () => true,
+    });
+    md.drawStats(c, L, 0.4, { rows: [], notes: [] }, arm);
+    return texts[texts.length - 1];
+  };
+  const zones = (f) => {
+    const x0 = f.x - f.s.length * 3, out = [];
+    let a = 0;
+    for (const tok of f.s.split(" · ")) {
+      const b = a + tok.length;
+      out.push([x0 + 6 * (a - 1.5), x0 + 6 * (b + 1.5)]);
+      a = b + 3;
+    }
+    return out;
+  };
+  for (const [W, H] of [
+    [600, 520],
+    [608, 352],
+  ]) {
+    const L = md.layout(W, H);
+    for (const [arm, want] of [
+      [false, ["KeyT", null, "KeyR", null]],
+      [true, ["KeyR", null, null]],
+    ]) {
+      const f = paint(L, arm), z = zones(f), tag = `${arm ? "armed" : "idle"} at ${W}x${H}`;
+      const mid = (i) => (z[i][0] + z[i][1]) / 2;
+      check(`statsHit: the ${tag} foot is the last line painted and splits into ${want.length} tokens`,
+        !!f && z.length === want.length && f.s.startsWith(arm ? "R AGAIN" : "T MEDALS"), f && f.s);
+      check(`statsHit: every ${tag} token centre maps to its key`,
+        want.every((k, i) => md.statsHit(mid(i), f.y, L, arm) === k),
+        JSON.stringify(want.map((k, i) => md.statsHit(mid(i), f.y, L, arm))));
+      check(`statsHit: 1 px outside each live ${tag} zone edge is not that key`,
+        want.every((k, i) => !k || (md.statsHit(z[i][0] - 1, f.y, L, arm) !== k &&
+          md.statsHit(z[i][1] + 1, f.y, L, arm) !== k && md.statsHit(z[i][0] + 1, f.y, L, arm) === k &&
+          md.statsHit(z[i][1] - 1, f.y, L, arm) === k)));
+      check(`statsHit: 1 px above the band (foot y - 12) is null ${tag}`,
+        md.statsHit(mid(0), f.y - 13, L, arm) === null && md.statsHit(mid(0), f.y - 12, L, arm) !== null);
+      check(`statsHit: the band reaches the plate bottom and no further ${tag}`,
+        md.statsHit(mid(0), f.y + 16, L, arm) !== null && md.statsHit(mid(0), f.y + 17, L, arm) === null);
+    }
+  }
+  const L = md.layout(600, 520), f = paint(L, false), z = zones(f);
+  check("statsHit: the 600x520 idle zones are T 150-216 and R 324-384 on the band 464-492 (spec §4.1)",
+    z[0][0] === 150 && z[0][1] === 216 && z[2][0] === 324 && z[2][1] === 384 && f.y === 476, JSON.stringify(z));
+}
+
 // 13d) plaque chips on the SCORES plate: four labels, locked vs unlocked
 //      styling distinct, chips stay inside the plate at both sizes, and
 //      the pre-existing rows/tabs/foot still stay inside the plate too.
