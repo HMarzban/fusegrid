@@ -1221,8 +1221,10 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
     check("R12 600 ATTRACT frames count no day",
       held&&!!g.demo&&g.demo.world.time>0&&a().days===0&&a().day==="",JSON.stringify(a()));
     g.app.key("Enter");
+    const p2=(n)=>(n<10?"0"+n:""+n), d0=new Date();
+    const local=d0.getFullYear()+"-"+p2(d0.getMonth()+1)+"-"+p2(d0.getDate());
     check("R12 one PLAY run counts day 1 on the local date",
-      g.app.screen===SCREEN.GAME&&a().days===1&&/^\d{4}-\d{2}-\d{2}$/.test(a().day),JSON.stringify(a()));
+      g.app.screen===SCREEN.GAME&&a().days===1&&a().day===local,JSON.stringify(a())+"/"+local);
     const retry=()=>{ t+=16; g.loop(t); g.world.state="LOSE"; t+=16; g.loop(t);
       g.world.state="PLAY"; t+=16; g.loop(t); };
     retry();
