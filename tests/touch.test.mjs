@@ -198,6 +198,15 @@ check("hasTouch({ontouchstart:null}) true", hasTouch({ontouchstart:null})===true
       !/[{;\s]top:/.test(rule)&&gap>=0&&spare/2>=44+gap,
       rule+" spare="+spare);
   }
+  {
+    const leak=["tpad","tbomb","tpause"].filter((id)=>{
+      const rule=(html.match(new RegExp("#"+id+"\\{[^}]*\\}"))||[""])[0];
+      return /display:(?!none)/.test(rule)
+        &&!new RegExp("#"+id+"\\[hidden\\]\\{display:none\\}").test(html); });
+    check("a touch control with an author display rule still hides on"
+      +" [hidden] (the UA rule loses to #id{display:flex})",
+      leak.length===0,leak.join()||"none");
+  }
   check("the toolbar and the keyboard legend are gone from index.html",
     !/id="controls"/.test(html)&&!/class="hint"/.test(html)
     &&!/btnPause|btnSound|btnRestart|btnMenu/.test(html),

@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-08 — D4: bomb button hides on PAUSE/WIN/LOSE (v156)
+- `#tbomb{display:flex}` beat the UA `[hidden]{display:none}`, so `bombEl.hidden` did nothing and a bomb-button hold confirmed pause rows / advanced the WIN plate. Added `#tbomb[hidden]{display:none}` (the `#gl` idiom); touch test pins every touch control with an author display rule to a matching `[hidden]` rule. CSS-only, main.js +0.
+
 ## 2026-10-08 — D2: MENU rows are tappable (v155)
 - New `menuGeom`/`menuHit` in `menudraw.js` (drawMenu reads the same geometry); MENU rides main.js's SETTINGS tap branch, a row tap sets the cursor then confirms, an off-row tap still confirms the cursor. main.js +0 (812 = cap). STATS (DAYS PLAYED) is now tap-reachable; MEDALS (`T`) and Reset (`R` twice) are still keyboard-only per AGENTS.md — open for an owner ruling.
 

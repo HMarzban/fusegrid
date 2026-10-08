@@ -70,6 +70,7 @@
     display:flex;align-items:center;justify-content:center;
     right:calc(16px + env(safe-area-inset-right));
     bottom:calc(16px + env(safe-area-inset-bottom))}
+  #tbomb[hidden]{display:none}
   #tbomb canvas{width:40px;height:40px;pointer-events:none}
   /* pause pill: 44px is the minimum comfortable target (#tbomb is 72, #tpad
      128). Two bars via ::before/::after — no canvas. It sits ABOVE the stage,
