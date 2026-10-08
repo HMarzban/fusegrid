@@ -304,8 +304,8 @@ check("hasTouch({ontouchstart:null}) true", hasTouch({ontouchstart:null})===true
   check("pad, bomb and pill never sit on the board: side gutters in touch"
     +" landscape, below/above the stage in touch portrait (env() insets are 0,"
     +" no viewport-fit=cover)",
-    parsed.every(Number.isFinite)&&pTop+pBot===FIT_RES.p[1]&&bad.length===0,
-    bad.join(" | ")||parsed.join());
+    parsed.every(Number.isFinite)&&/left:auto/.test(lay("l","tpad"))&&pTop+pBot===FIT_RES.p[1]&&bad.length===0,
+    bad.join(" | ")||parsed.join()+" "+lay("l","tpad"));
   const rules=["p","l"].flatMap((l)=>["wrap","tpad","tbomb","tpause"].map((id)=>lay(l,id))).join("");
   check("the layout rules carry no display: (the [hidden] guard stays the only one)",
     !/display:/.test(rules),rules);
