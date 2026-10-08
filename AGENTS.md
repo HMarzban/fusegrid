@@ -303,3 +303,7 @@ not covered by Node — play-verify in a browser after render changes.
   unfocused pane freezes the game loop and every screenshot is stale. Drive the
   loop through a `MessageChannel`-backed rAF shim, and assert on
   `window.__GAME__` + a `fillText` recorder rather than on pixels.
+- `localhost:8080` and `127.0.0.1:8080` are separate origins, each with its own
+  service worker and caches; clean both before a headed check. The desktop
+  Browser pane cannot register a service worker at all, so PWA install and
+  offline checks need a real headless Chromium driven over CDP.
