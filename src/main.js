@@ -31,6 +31,7 @@ import { dailySeed, loadDaily, dailyTag, dailyStamp, finishDaily } from "./app/d
 import { decodeChallenge, encodeChallenge } from "./app/code.js";
 import { settleMedals, medalLine, medalRows, loadMedals } from "./app/medals.js";
 import { createGhost, ghostTick, ghostAt } from "./app/ghost.js";
+import { clearCabinet } from "./app/reset.js";
 import {
   loadCoachSeen,
   saveCoachSeen,
@@ -266,6 +267,7 @@ export function createGame(canvas, opts = {}) {
     onSource,
     onStats: () => { setStatsOn(); const sv = loadStats();
       app.stats = { rows: statsRows(sv, loadBests()), notes: statsNotes(sv, dailyRec, todayStr()), trophies: medalRows(loadMedals()) }; },
+    onReset: () => { clearCabinet(); if (typeof location !== "undefined") location.reload(); },
     dailySeed: () => { const d = todayStr(); return { seed: dailySeed(d), date: d }; },
     onPauseCmd: (cmd) => {
       if (cmd === "RESUME") {
@@ -376,7 +378,8 @@ export function createGame(canvas, opts = {}) {
   /* UI key side-channel: ALWAYS routed to the shell; M-in-PAUSE records the
      score then quits to MENU (spec §4 table). Machine self-gates elsewhere. */
   input.onUiKey = (code) => {
-    if (code === "KeyR") {
+    if (code !== "KeyR") app.resetArm = false;
+    if (code === "KeyR" && app.screen !== SCREEN.STATS) {
       if (app.screen === SCREEN.GAME) {
         resetCamera(cam); // §2 reset, GAME only
         resetOrbit(rig); // real3d §4: 3D rig resets too

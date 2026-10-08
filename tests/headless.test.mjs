@@ -974,6 +974,9 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   // ro.ghost rides the time: line — measured 809, cap 808->812 (the wave's one raise).
   // R9b 3D ghost: +0 lines (the 3D path reads the same ro.ghost through
   // wrapper.js's pools.ghost) — measured 809, against the 812 cap.
+  // Reset wave: +3 lines (reset.js import; the onReset opt; the onUiKey
+  // disarm line; the KeyR-not-on-STATS gate rides the existing intercept,
+  // wave-3 spec §7.3/§8) — measured 812, against the 812 cap.
   check("main.js stays a lean browser entry (<=812 lines)",
     L.length<=812,String(L.length));
   const lastImp=L.reduce((a,l,i)=>/^import[\s{]/.test(l)?i:a,-1);
@@ -1139,6 +1142,68 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   check("KeyC on ATTRACT falls through to app.key and starts a CORE run",
     g.app.screen===SCREEN.GAME&&g.world.state==="PLAY"&&(g.world.heat|0)===0,
     g.app.screen+"/"+g.world.state);
+}
+
+// Reset my cabinet (wave-3 §7.3/§7.5): R reaches app.key on STATS only, a
+// second R clears every CLEAR key and reloads once; any other key disarms.
+{
+  const {CLEAR_KEYS,KEEP_KEYS}=await import("../src/app/reset.js");
+  const noop=()=>{};
+  const mem={}, copies=[];
+  let reloads=0;
+  const fill=()=>{ for(const k of [...CLEAR_KEYS,...KEEP_KEYS]) mem[k]=k===KEEP_KEYS[1]?"2":"{}"; };
+  globalThis.window={addEventListener:noop,removeEventListener:noop,
+    localStorage:{getItem:(k)=>(k in mem?mem[k]:null),
+      setItem:(k,v)=>{mem[k]=String(v);},removeItem:(k)=>{delete mem[k];}}};
+  navigator.clipboard={writeText:(t)=>{copies.push(t);return Promise.resolve();}};
+  try{
+    const g=createGame(null,{seed:21});
+    globalThis.location={search:"",reload:()=>{reloads++;}};
+    const stats=()=>{ g.app.cabinetSeen=true; g.app.screen=SCREEN.MENU; g.app.cursor=6; g.app.confirm(); };
+    const kept=()=>[...CLEAR_KEYS,...KEEP_KEYS].every((k)=>k in mem);
+    fill(); stats();
+    g.input._onKey({code:"KeyR"});
+    check("Reset: R on STATS arms and clears nothing",
+      g.app.screen===SCREEN.STATS&&g.app.resetArm===true&&kept()&&reloads===0,
+      g.app.screen+"/"+g.app.resetArm+"/"+reloads);
+    g.input._onKey({code:"KeyC"});
+    check("Reset: C on an armed STATS disarms and still copies the stats",
+      g.app.resetArm===false&&copies.length===1&&kept(),copies.length+"/"+g.app.resetArm);
+    g.input._onKey({code:"KeyR"});
+    check("Reset: R + C + R clears nothing and leaves the arm up again",
+      g.app.resetArm===true&&kept()&&reloads===0,Object.keys(mem).join(","));
+    g.input._onKey({code:"KeyM"});
+    g.input._onKey({code:"KeyR"});
+    check("Reset: R + M + R clears nothing (M is swallowed before app.key)",
+      g.app.resetArm===true&&kept()&&reloads===0&&g.app.screen===SCREEN.STATS);
+    g.input._onKey({code:"ArrowDown",preventDefault:noop});
+    g.input._onKey({code:"KeyR"});
+    check("Reset: an arrow key cancels, so the next R only arms",
+      g.app.resetArm===true&&kept()&&reloads===0);
+    g.input._onKey({code:"KeyR"});
+    check("Reset: STATS + R + R clears every CLEAR key",
+      CLEAR_KEYS.every((k)=>!(k in mem)),Object.keys(mem).join(","));
+    check("Reset: STATS + R + R keeps both KEEP keys and reloads once",
+      KEEP_KEYS.every((k)=>k in mem)&&reloads===1&&g.app.resetArm===false,
+      Object.keys(mem).join(",")+"/"+reloads);
+    fill(); stats();
+    g.input._onKey({code:"KeyR"});
+    g.input._onKey({code:"Escape"});
+    check("Reset: Escape on an armed STATS backs out disarmed, nothing cleared",
+      g.app.screen===SCREEN.MENU&&g.app.resetArm===false&&kept()&&reloads===1);
+    const a=createGame(null,{seed:22,autoplay:true});
+    a.cam.x=40; a.cam.zoom=2;
+    a.input._onKey({code:"KeyR"});
+    a.input._onKey({code:"KeyR"});
+    check("Reset: R in GAME still resets the camera and never arms or clears",
+      a.cam.x===0&&a.cam.zoom===1&&a.app.resetArm===false&&kept()&&reloads===1,
+      JSON.stringify(a.cam)+"/"+a.app.resetArm);
+    const t=createGame(null,{seed:23});
+    t.app.screen=SCREEN.ATTRACT;
+    t.input._onKey({code:"KeyR"});
+    check("Reset: R on ATTRACT stays swallowed (screen stays ATTRACT)",
+      t.app.screen===SCREEN.ATTRACT&&t.app.resetArm===false&&kept(),String(t.app.screen));
+  }finally{ delete globalThis.window; delete globalThis.location; delete navigator.clipboard; }
 }
 
 // ---- P1 PAUSE list: every row's wave, and the score semantics they inherit ----

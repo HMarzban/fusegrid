@@ -94,8 +94,8 @@ function head(c, S, title, kicker) {
   c.font = font(16, "900");
   c.fillText(title, S.mid, S.headY + 7);
 }
-function foot(c, S, s) {
-  c.fillStyle = MUTED;
+function foot(c, S, s, col) {
+  c.fillStyle = col || MUTED;
   c.font = font(10);
   c.textAlign = "center";
   c.textBaseline = "middle";
@@ -836,17 +836,22 @@ export function drawScores(c, scores, L, t, heat, plaques) {
   foot(c, S, "← → HEAT · ESC BACK");
 }
 
+const RESET_RED = "#ff5d73";
+const RESET_NOTES = Object.freeze([
+  "ERASES SCORES · BESTS · TIMES · DAILY · MEDALS · PLAQUES · GHOSTS",
+  "ERASES STATS + DAYS PLAYED · RELOCKS ROOMS 6-8 · PACTS · TIME ATTACK",
+]);
 /* STATS (R5): the drawScores scaffold — one plate, a head, a right-aligned
    value column, a rule, notes and a foot. ui={rows,notes} arrives already
    computed (app/stats.js), the same getter discipline scores and plaques use:
    this file must not import src/app. The rule after row 7 is what separates
    seven lifetime counters from three per-heat bests, so the screen reads as a
    cabinet and not as a debug dump — no JSON is ever painted here. */
-export function drawStats(c, L, t, ui) {
+export function drawStats(c, L, t, ui, arm) {
   const S = shell(c, L, 480);
   head(c, S, "STATS", "YOUR CABINET");
   const rows = (ui && ui.rows) || [];
-  const notes = (ui && ui.notes) || [];
+  const notes = arm ? RESET_NOTES : (ui && ui.notes) || [];
   const top = S.headY + 22,
     bot = S.footY - 42,
     n = rows.length || 10,
@@ -871,12 +876,13 @@ export function drawStats(c, L, t, ui) {
   c.moveTo(S.ix, ry);
   c.lineTo(S.ix + S.iw, ry);
   c.stroke();
-  c.fillStyle = MUTED;
+  c.fillStyle = arm ? RESET_RED : MUTED;
   c.font = font(10);
   c.textAlign = "center";
   for (let i = 0; i < notes.length && i < 2; i++)
     c.fillText(String(notes[i]), S.mid, S.footY - (notes.length - i) * 14 - 2);
-  foot(c, S, "T MEDALS · C COPY MY STATS · ESC BACK");
+  if (arm) foot(c, S, "R AGAIN ERASES + RELOADS · ANY OTHER KEY CANCELS · KEEPS OPTIONS + PACE", RESET_RED);
+  else foot(c, S, "T MEDALS · C COPY MY STATS · R RESET · ESC BACK");
 }
 
 /* MEDALS (R6, SCREEN.TROPHIES): rows=[name, desc, on] arrive finished from

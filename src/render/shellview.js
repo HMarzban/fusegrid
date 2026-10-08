@@ -131,7 +131,7 @@ export function drawShell(c, app, world, canvas, kind, getScores, getPlaques) {
     );
   } else if (s === SCREEN.STATS) {
     menudraw.drawDim(c, 0.72, cw, chh);
-    menudraw.drawStats(c, L, app.subT, app.stats);
+    menudraw.drawStats(c, L, app.subT, app.stats, app.resetArm);
   } else if (s === SCREEN.TROPHIES) {
     menudraw.drawDim(c, 0.72, cw, chh);
     menudraw.drawTrophies(c, L, app.subT, app.stats && app.stats.trophies);

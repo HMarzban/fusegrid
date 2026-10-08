@@ -645,7 +645,7 @@ function check(name, cond, detail) {
         `stats plate paints both notes and the copy foot at ${W}x${H}`,
         all.some((s) => s.indexOf("NOT PLAYED YET") >= 0) &&
           all.some((s) => s.indexOf("BESTS: NO PACT · NORM") >= 0) &&
-          all.includes("T MEDALS · C COPY MY STATS · ESC BACK"),
+          all.includes("T MEDALS · C COPY MY STATS · R RESET · ESC BACK"),
         all.join("|"),
       );
       check(
@@ -726,6 +726,65 @@ function check(name, cond, detail) {
         !e.texts.some((t) => names.includes(t.s)),
       e.texts.map((t) => t.s).join("|"),
     );
+  }
+}
+
+// 13g) Reset (wave-3 §7.4): STATS idle foot names R RESET; armed, two red
+// notes replace the daily/since notes and the foot turns red, all inside S
+{
+  const md = await import("../src/render/menudraw.js");
+  const IDLE = "T MEDALS · C COPY MY STATS · R RESET · ESC BACK";
+  const ARMED = [
+    "ERASES SCORES · BESTS · TIMES · DAILY · MEDALS · PLAQUES · GHOSTS",
+    "ERASES STATS + DAYS PLAYED · RELOCKS ROOMS 6-8 · PACTS · TIME ATTACK",
+    "R AGAIN ERASES + RELOADS · ANY OTHER KEY CANCELS · KEEPS OPTIONS + PACE",
+  ];
+  const rec = () => {
+    const texts = [], rects = [];
+    const c = {
+      fillStyle: "", strokeStyle: "", lineWidth: 1, globalAlpha: 1, font: "",
+      textAlign: "left", textBaseline: "middle",
+      fillRect(x, y, w, h) { rects.push({ x, y, w, h, fill: c.fillStyle }); },
+      strokeRect() {}, beginPath() {}, moveTo() {}, lineTo() {}, stroke() {},
+      fillText(s, x, y) { texts.push({ s: String(s), x, y, fill: c.fillStyle }); },
+    };
+    return { c, texts, rects };
+  };
+  const plateOf = (rects) => rects.find((r) => r.fill === "rgba(8,12,22,0.92)");
+  const ui = { rows: [["RUNS", "1"]], notes: ["DAILY 2026-10-08 · NOT PLAYED YET", "SINCE 2026-10-01 · 3 SESSIONS"] };
+  for (const [W, H] of [
+    [600, 520],
+    [608, 352],
+  ]) {
+    const L = md.layout(W, H);
+    {
+      const { c, texts, rects } = rec();
+      md.drawStats(c, L, 0.4, ui);
+      const p = plateOf(rects), ft = texts.find((t) => t.s === IDLE);
+      check(`Reset: the idle STATS foot names R RESET, muted, inside the plate at ${W}x${H}`,
+        !!p && !!ft && ft.fill === "#7385ad" && ft.y > p.y && ft.y < p.y + p.h &&
+          texts.some((t) => t.s === ui.notes[0]) && !texts.some((t) => ARMED.includes(t.s)),
+        texts.map((t) => t.s).join("|"));
+      check(`Reset: an explicit arm=false draws exactly the idle plate at ${W}x${H}`,
+        (() => { const e = rec(); md.drawStats(e.c, L, 0.4, ui, false);
+          return JSON.stringify(e.texts) === JSON.stringify(texts); })());
+    }
+    {
+      const { c, texts, rects } = rec();
+      md.drawStats(c, L, 0.4, ui, true);
+      const p = plateOf(rects), iw = p ? p.w - 32 : 0;
+      const got = ARMED.map((s) => texts.find((t) => t.s === s));
+      check(`Reset: armed, both notes and the foot paint in #ff5d73 at ${W}x${H}`,
+        got.every((t) => t && t.fill === "#ff5d73"), JSON.stringify(got));
+      check(`Reset: armed lines replace the daily/since notes and the idle foot at ${W}x${H}`,
+        !texts.some((t) => ui.notes.includes(t.s) || t.s === IDLE), texts.map((t) => t.s).join("|"));
+      check(`Reset: armed lines stay inside the plate, notes above the foot at ${W}x${H}`,
+        !!p && got.every((t) => t && t.y > p.y && t.y < p.y + p.h) && got[0].y < got[1].y && got[1].y < got[2].y,
+        JSON.stringify({ p, got }));
+      check(`Reset: every idle and armed string fits S.iw at the 0.6 em advance at ${W}x${H}`,
+        iw > 0 && [IDLE, ...ARMED].every((s) => [...s].length <= 74 && [...s].length * 10 * 0.6 <= iw),
+        String(iw));
+    }
   }
 }
 

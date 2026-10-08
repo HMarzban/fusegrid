@@ -97,6 +97,7 @@ export function createMenuApp(opts = {}) {
     sound: o.sound !== false,
     render3d: !!o.render3d,
     cabinetSeen: !!o.cabinetSeen,
+    resetArm: false,
     inGame: !!o.autoplay,
     subT: 0,
     repT: 0,
@@ -238,6 +239,11 @@ export function createMenuApp(opts = {}) {
           return this.adjustPace(1);
         case "KeyT":
           return this.screen === SCREEN.STATS ? this._push(SCREEN.TROPHIES) : false;
+        case "KeyR":
+          if (this.screen !== SCREEN.STATS) return false;
+          if (this.resetArm) { this.resetArm = false; if (o.onReset) o.onReset(); return true; }
+          this.resetArm = true;
+          return true;
       }
       return false;
     },
@@ -667,6 +673,7 @@ export function createMenuApp(opts = {}) {
     },
     _push(s) {
       this.screen = s;
+      this.resetArm = false;
       this.subT = 0;
       this.repT = 0;
       this.repDir = 0;
