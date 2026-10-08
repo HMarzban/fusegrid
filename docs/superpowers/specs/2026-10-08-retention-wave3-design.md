@@ -288,9 +288,10 @@ and `runT` is `main.js`'s PLAY-only run clock (`main.js:641`).
 | 12/12 powers | Not hard (§1.4) |
 | a 6→8 speed medal | Room 8 has 2 bot clears in 400 boards (§4.4), which is no basis for a threshold |
 
-**Deviation, recorded:** the pool yields four kept candidates. The other four
-are tiers of the same pool axes (L5 vs L8, MAX + room 8). No new mechanic is
-invented to fill the count.
+**Deviation, recorded:** the pool yields five kept candidates (FLAWLESS,
+ALL IN, OVERDRIVE, SPRINT, KNIGHTFALL). The other three (UNSCATHED, REDLINE,
+IRON CROWN) are tiers of the same pool axes (L5 vs L8, MAX + room 8). No new
+mechanic is invented to fill the count.
 
 ### 4.2 The full-run predicate — derived, no new run state
 
@@ -605,14 +606,14 @@ no new hook at any of the four reset sites.
 
 ```
 createGhost()                        -> {grid:null, key:"", s:"", n:0, done:true, race:null}
-ghostTick(g, world, roomT, store)    // once per GAME frame, after the step loop
+ghostTick(g, world, roomT, store)    // once per GAME frame, BEFORE the step loop (§5.3 frame order)
   1 world.grid !== g.grid -> new room: grid, key=ghostKey(world), s="", n=0, done=false,
                              race = decoded entry for key (LRU-touched) or null
   2 state PLAY && !done   -> want = floor(roomT*10)+1; want > GHOST_CAP -> done=true (too long, never saved);
                              else append current player x/y/face until n === want
   3 state WIN  && !done   -> done=true; d = max(1, floor(roomT*10));
                              save {d, s} iff no stored entry or d < stored.d (re-read at save time)
-ghostAt(g, world, roomT)             -> null unless race && state in {PLAY, PAUSE} && roomT*10 <= k-1
+ghostAt(g, world, roomT)             -> null unless world.grid === g.grid && race && state in {PLAY, PAUSE} && roomT*10 <= k-1
                                         (k = race sample count); else {x, y, fx, fy}: x/y lerped between
                                         samples floor(roomT*10) and +1, face from the earlier sample
 ```
@@ -620,8 +621,30 @@ ghostAt(g, world, roomT)             -> null unless race && state in {PLAY, PAUS
 - **PAUSE-proof by construction.** `roomT` only advances in PLAY
   (`main.js:641`), so sample `i` is always room-time `i/10`. A paused ghost
   freezes, because `roomT` freezes.
-- **The WIN frame's `roomT`** is the value R7 records one frame later, since
-  PLAY accumulation is skipped once the state is WIN (`main.js:641,619-622`).
+- **Frame order — why the tick runs BEFORE the step loop.** Two of the four
+  room starts happen inside `step()`: the sim's retry (`sim.js:67-74`) and
+  WIN→next room (`sim.js:54-60`). Their `roomT = 0` reset lands only at the
+  NEXT frame's edge block (`main.js:627-628`).
+  - A tick placed after the step loop would see the new grid in PLAY with the
+    previous room's final `roomT`. It would append `floor(roomT*10)+1` spawn
+    samples, and a later faster clear would save that static trail. A prior
+    `roomT` above 240 s would also mark the new room `done` on its first frame.
+  - **Lock:** `ghostTick` sits on the line directly after the PLAY-only
+    accumulator (`main.js:641`), before `while (acc >= CFG.STEP)`. On all four
+    paths this holds:
+    1. On frame N (the transition step) the tick still sees the OLD grid in
+       WIN/LOSE, so it is a no-op.
+    2. On frame N+1 the new grid arrives with `roomT` already reset and
+       advanced by exactly one `dt`.
+    3. `onStart` and RESTART zero `roomT` synchronously, so they are trivially
+       correct.
+  - The `world.grid === g.grid` check in `ghostAt` stops frame N from drawing
+    the old room's race at a stale time.
+  - Samples are the position after the previous frame's steps, a constant
+    one-frame lag on both the recording and the race, so they cancel.
+- **WIN detection** is one frame after the WIN step, with the same `roomT` R7
+  records on that frame, since PLAY accumulation is skipped once the state is
+  WIN (`main.js:619-622,641`).
 - `ghostTick` only reads `world`. It writes nothing back, emits no events and
   never touches `world.events`. `main.js` never passes it to `step()`.
 - **Attract:** `ghostTick` is called only in the GAME branch with the live
@@ -633,8 +656,9 @@ ghostAt(g, world, roomT)             -> null unless race && state in {PLAY, PAUS
 **`main.js` (+3 lines):**
 - `import { createGhost, ghostTick, ghostAt } from "./app/ghost.js";`
 - `const ghost = createGhost();` beside `let coach2` (`:138`)
-- `ghostTick(ghost, world, roomT);` directly after `feedTally(tally, world);`
-  (`:663`). That is after `step()` and before `renderer.render` drains events.
+- `ghostTick(ghost, world, roomT);` on its own line directly after the PLAY-only
+  accumulator (`:641`), before the step loop (§5.3 frame order). It reads no
+  events, so the drain order does not matter to it.
 - The GAME `ro` literal gains `ghost: ghostAt(ghost, world, roomT),` on the
   `time:` line (`:746`), which is line-neutral.
 - ATTRACT and INTRO `ro` carry no ghost.
@@ -678,7 +702,20 @@ Facts this relies on:
    - Another 2 s in PAUSE (`roomT` frozen) adds 0.
    - A single dt of 0.25 s pads to the correct count.
 6. **Room detection.** A new `grid` object resets the recording and loads the
-   tuple's race. The same grid mutated in place does not.
+   tuple's race. The same grid mutated in place does not. `ghostAt` returns null
+   while `world.grid !== g.grid`.
+6b. **Sim-internal room start (fails if the tick sits after the step loop).**
+   Headless, through `main.js`'s real loop:
+   - stage a room-1 clear
+   - then a LOSE→retry, which is `startGame` inside `step()`
+   - then a faster clear
+
+   Assert:
+   - the saved entry has `s.length/5 === d + 1`
+   - sample 1 is not at the spawn point
+   - the retry's first recorded sample was taken at `roomT <= 1/30`
+
+   Repeat the same check across WIN→next room.
 7. **Cap.** A room run past 240 s of `roomT` sets `done` and never saves.
 8. **Survival.**
    - `getItem` throws: no race.
@@ -989,6 +1026,9 @@ the service worker first.
 7. **R and C/M never reach `app.key`.** Routing and disarm are placed where the
    keys actually flow (§7.3).
 8. **The line budget is 4, not 5.** One raise, stated once (§8).
+9. **The ghost tick runs BEFORE the step loop.** After it, two of the four room
+   starts (the sim's own retry and next-room) would record against the
+   previous room's `roomT` and save a static spawn trail (§5.3, pin 6b).
 
 **Known assumptions:**
 - (a) Width budgets assume the 0.6 em mono advance, as waves 1–2 did, and are
