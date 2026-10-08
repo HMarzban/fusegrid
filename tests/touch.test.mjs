@@ -267,5 +267,38 @@ check("hasTouch({ontouchstart:null}) true", hasTouch({ontouchstart:null})===true
    }finally{ delete globalThis.window; delete globalThis.document; }
 }
 
+// ---- D5: a short landscape stage is too narrow for pad+bomb ----
+{
+  const html=readFileSync(new URL("../index.html", import.meta.url),"utf8");
+  const main=readFileSync(new URL("../src/main.js", import.meta.url),"utf8");
+  const num=(re,s)=>+((s.match(re)||[])[1]);
+  const spareW=num(/innerWidth - (\d+)/,main), spareH=num(/innerHeight - (\d+)/,main);
+  const base=(id)=>(html.match(new RegExp("#"+id+"\\{[^}]*\\}"))||[""])[0];
+  const padW=num(/width:(\d+)px/,base("tpad")), padL=num(/left:calc\((\d+)px/,base("tpad"));
+  const bombW=num(/width:(\d+)px/,base("tbomb")), bombR=num(/right:calc\((\d+)px/,base("tbomb"));
+  const mq=html.match(/@media \(max-height:(\d+)px\) and \(min-aspect-ratio:(\d+)\/(\d+)\)\{([^@]*?\})\s*\}/)||[];
+  const inner=mq[4]||"";
+  const padG=num(/#tpad\{[^}]*right:calc\(100% \+ (\d+)px\)/,inner);
+  const bombG=num(/#tbomb\{[^}]*left:calc\(100% \+ (\d+)px\)/,inner);
+  const hits=(W,H)=>mq.length>0&&H<=+mq[1]&&W*+mq[3]>=H*+mq[2];
+  const bad=[];
+  const probe=(W,H)=>{
+    const s=Math.max(0.3,Math.min((W-spareW)/600,(H-spareH)/520,1.8));
+    const sw=600*s, sh=520*s, gut=(W-sw)/2;
+    const ok=hits(W,H)
+      ?gut-padG-padW>=0&&gut-bombG-bombW>=0&&(H+sh)/2-12-padW>=0
+      :padL+padW+bombW+bombR<=sw;
+    if(!ok&&bad.length<4) bad.push(W+"x"+H+(hits(W,H)?" gutter "+gut.toFixed(1):" stage "+sw.toFixed(1)));
+  };
+  for(let W=560;W<=1400;W+=2) for(let H=280;H<=1000;H+=2) probe(W,H);
+  for(const [W,H] of [[812,375],[667,375],[568,320],[915,412],[932,430],[320,568],[375,667],[390,844],[430,932]]) probe(W,H);
+  check("pad and bomb never overlap or sit on the board in short landscape:"
+    +" they move to the side gutters (env() insets are 0, no viewport-fit=cover)",
+    mq.length>0&&padG>=0&&bombG>=0&&bad.length===0,
+    bad.join(" | ")||"812x375 stage "+(600*(375-spareH)/520).toFixed(1));
+  check("the gutter rules carry no display: (the [hidden] guard stays the only one)",
+    !/display:/.test(inner),inner);
+}
+
 console.log("\n  TOUCH RESULT: "+pass+" PASS / "+fail+" FAIL");
 process.exit(fail?1:0);

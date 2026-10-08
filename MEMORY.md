@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-08 — D5: short-landscape touch controls move to the side gutters (v157)
+- At 812x375 fit() gives a 225px stage but pad+bomb need 12+128+72+16=228, so they overlapped and covered ~half the board. `@media (max-height:500px) and (min-aspect-ratio:4/3)` puts `#tpad` at `right:calc(100% + 12px)` and `#tbomb` at `left:calc(100% + 16px)` (full size, off the board); touch test sweeps W 560–1400 × H 280–1000 against fit()'s math. CSS-only, main.js +0. Open: the PAUSE hint still draws at ~5.6 CSS px there (scales with s).
+
 ## 2026-10-08 — D4: bomb button hides on PAUSE/WIN/LOSE (v156)
 - `#tbomb{display:flex}` beat the UA `[hidden]{display:none}`, so `bombEl.hidden` did nothing and a bomb-button hold confirmed pause rows / advanced the WIN plate. Added `#tbomb[hidden]{display:none}` (the `#gl` idiom); touch test pins every touch control with an author display rule to a matching `[hidden]` rule. CSS-only, main.js +0.
 
