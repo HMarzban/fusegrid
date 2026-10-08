@@ -72,9 +72,11 @@
     bottom:calc(16px + env(safe-area-inset-bottom))}
   #tbomb canvas{width:40px;height:40px;pointer-events:none}
   /* pause pill: 44px is the minimum comfortable target (#tbomb is 72, #tpad
-     128). Two bars via ::before/::after — no canvas. */
+     128). Two bars via ::before/::after — no canvas. It sits ABOVE the stage,
+     right-aligned: inside, a fixed 44px over a ~0.55 phone-scaled canvas lands
+     on the right-aligned HUD score. fit() keeps >=90px clear above the stage. */
   #tpause{width:44px;height:44px;border-radius:50%;
-    top:10px;right:10px}
+    bottom:calc(100% + 8px);right:0}
   #tpause::before,#tpause::after{content:"";position:absolute;top:13px;
     width:4px;height:14px;background:#dfe7f5;border-radius:2px}
   #tpause::before{left:14px}

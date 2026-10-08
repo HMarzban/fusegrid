@@ -188,6 +188,16 @@ check("hasTouch({ontouchstart:null}) true", hasTouch({ontouchstart:null})===true
     &&/border-radius:50%/.test((html.match(/#tpause\{[^}]*\}/)||[""])[0])
     &&/#tpause::before/.test(html)&&/#tpause::after/.test(html),
     (html.match(/#tpause\{[^}]*\}/)||[])[0]);
+  {
+    const rule=(html.match(/#tpause\{[^}]*\}/)||[""])[0];
+    const gap=+((rule.match(/bottom:calc\(100% \+ (\d+)px\)/)||[])[1]);
+    const main=readFileSync(new URL("../src/main.js", import.meta.url),"utf8");
+    const spare=+((main.match(/innerHeight - (\d+)/)||[])[1]);
+    check("#tpause sits above the stage, never over the right-aligned HUD"
+      +" score, and fit() leaves it room on screen",
+      !/[{;\s]top:/.test(rule)&&gap>=0&&spare/2>=44+gap,
+      rule+" spare="+spare);
+  }
   check("the toolbar and the keyboard legend are gone from index.html",
     !/id="controls"/.test(html)&&!/class="hint"/.test(html)
     &&!/btnPause|btnSound|btnRestart|btnMenu/.test(html),
