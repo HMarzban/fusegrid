@@ -84,20 +84,24 @@ These are owner-delegated rulings. They are binding and are not re-argued here.
 
 1. **The report's R12 mechanism is stale.** Report §4 R12 calls for a
    consecutive-day read over `first_seen`/`last_seen`. `stats.js` has neither.
-   It has `a.first`/`a.last` (`stats.js:47`), stamped with the **UTC** `dateStr`
+   It has `a.first`/`a.last` (`stats.js:48`), stamped with the **UTC** `dateStr`
    (`main.js:65,341`). A consecutive read is also banned by AGENTS.md. The R12
    ruling replaces it with a lifetime count keyed to a **local** date (§3).
 2. **Two of the pool's medal candidates are existing plaques.** "MAX heat finale
    clear" is `PLAQUE.MAX`: `heat>=2` and a finale (`plaques.js:31-32`). "Room 8
    clear" is `PLAQUE.CROWN`: `level>=8` at the finale edge (`plaques.js:35`).
    Both fire on the same edge with the same condition. Both are rejected (§4.1).
-3. **KNIGHT kill and 9/9 foes are almost the same moment.** The KNIGHT only
+3. **KNIGHT kill and 9/9 foes are both just "clear room 8".** The KNIGHT only
    spawns in room 8 (`heat.js:59,111`). Room 8's roster at every heat is the L5
    base (walker, chaser, fast, stationary, boomerang, rocket) plus burrow, shade
-   and knight, which is all nine types (`heat.js:22-58,104-113`). A run reaches
-   room 8 only by clearing rooms 6 and 7. Only the knight kill is kept. It needs
-   no mask (`tally.kt.knight`, `bests.js` `feedTally`). **The ruling's seen-foe
-   and seen-power mask fields are therefore NOT added.** `nb.medals.v1` stays
+   and knight, which is all nine types (`heat.js:22-58,104-113`). A room
+   advances only when `w.enemies.length === 0` (`enemies.js:159-166`), so every
+   room-8 clear kills all nine types, and that clear already earns
+   `PLAQUE.CROWN`. After the first CLEAR, LEVEL SELECT lets a run start straight
+   at room 8 (`roomCap(true) === 8`, `config.js:31`; `menuapp.js:82,390`), so
+   neither needs rooms 6 and 7. A knight kill on a LOSE would be strictly
+   easier than CROWN. Both are rejected (§4.1). **The ruling's seen-foe and
+   seen-power mask fields are therefore NOT added.** `nb.medals.v1` stays
    exactly one int.
 4. **12/12 powers is not hard.** A CORE 1→5 run spawns about 60 items:
    `buriedAdd+L` buried plus `floorAdd+L` floor, i.e. 35 + 25 (`world.js:129-133,183-189`).
@@ -147,8 +151,6 @@ These are owner-delegated rulings. They are binding and are not re-argued here.
 - `:67` and `:315` change to the new string.
 - New pin: `[...cue].length*15*0.6 <= overlayBox(k).w - 48` for `k` in
   `"2d"` and `"iso"`.
-- New pin: the string contains no `TOUCH`/`MOBILE` branch. `overlayCue` stays a
-  pure function of `world`: same world, same string.
 
 ### 2.2 sitemap
 
@@ -174,22 +176,29 @@ a date pin would have to move on every refresh; the existence gate
 | `a.days` | int | `cnt()`, 0..1e9. Joins `A_KEYS` (`stats.js:26`) |
 | `a.day` | local date string | `dat()`: `/^\d{4}-\d{2}-\d{2}$/` or `""` |
 
-`stat("room_enter", d, today)` (`stats.js:115-116`) becomes:
+`stat("room_enter", d, today)` (`stats.js:106-107`) becomes:
 
 ```
 } else if (ev === "room_enter") {
   a.last = y;
   const ld = dat(d.ld);
   if (ld && ld > a.day) { a.day = ld; a.days++; }
+  else if (ld && ld < a.day) a.day = ld;
 }
 ```
 
-- **Monotonic.** The `>` compare (ISO dates order lexicographically) means a
-  clock moved backwards, or a timezone hop, never double-counts and never
-  decrements. `"" < any date`, so an upgraded player's first room entry counts
-  **1** with no backfill.
-- `ld` is NOT in the ring whitelist (`stats.js:132`). Ring rows keep their UTC
-  `y` only, so the blob never mixes two clocks per row.
+- **Monotonic.** The count never decrements. The `>` compare (ISO dates order
+  lexicographically) counts each new date once. `"" < any date`, so an upgraded
+  player's first room entry counts **1** with no backfill.
+- **Self-heal.** A date behind `a.day` re-stamps `a.day` without counting. A
+  hostile `day:"9999-12-31"` or one forward clock jump would otherwise freeze
+  the count forever.
+- **Ruling 2026-10-08 (spec review, finding 12):** the cost of the self-heal is
+  that a backward clock or timezone hop that later returns can count one date
+  twice. A frozen count is worse than a rare one-day over-count, so the
+  self-heal is taken and the trade disclosed.
+- `ld` is NOT in the ring whitelist (`stats.js:124-125`). Ring rows keep their
+  UTC `y` only, so the blob never mixes two clocks per row.
 
 ### 3.2 The edge — `room_enter`, decided
 
@@ -208,6 +217,11 @@ line-neutral. `todayStr` is the local helper (`main.js:69`).
 - WIN→PLAY also passes through this edge. That is harmless (idempotent per date),
   and it makes a run crossing local midnight count the new day at its next room,
   a day it really was played on.
+- **Deviation, recorded:** the R12 ruling asks for one run-start edge.
+  `room_enter` is a superset of the run-start edges; its extra WIN→next-room
+  firing is idempotent per local date, so it counts nothing a run start would
+  not. Putting `ld` only on the run-start literals would cost a line for no
+  behavioural difference.
 - The demo world never calls `stat`, so attract never counts.
 
 ### 3.3 Screen and copy
@@ -239,9 +253,12 @@ still four lines.
 1. `clampStats` keeps a good `days`/`day` and zeroes junk (`-1`, `1.5`,
    `"2026-1-1"`).
 2. `room_enter` with `ld:"2026-10-08"` takes `days` from 0 to 1. The same `ld`
-   again stays at 1. `"2026-10-09"` gives 2. `"2026-10-07"` stays at 2.
-   An absent `ld` changes nothing.
+   again stays at 1. `"2026-10-09"` gives 2. `"2026-10-07"` stays at 2 and
+   re-stamps `day` to `"2026-10-07"`. An absent `ld` changes nothing.
 3. An upgraded blob with no `days` field counts 1 on its first `room_enter`.
+3b. **Self-heal.** A blob with `day:"9999-12-31", days:5`: `room_enter` with
+   `ld:"2026-10-08"` leaves `days` 5 and sets `day` to `"2026-10-08"`. The next
+   `ld:"2026-10-09"` gives 6.
 4. Ring rows never carry `ld`.
 5. `statsRows` returns ten pairs with `[6][0] === "DAYS PLAYED"`. The empty
    cabinet gives ten rows. (This moves the `=== 9` pins at `:329,:352,:488`.)
@@ -249,9 +266,15 @@ still four lines.
 
 **`tests/menudraw.test.mjs`:**
 - `:626-629` gains `DAYS PLAYED`.
-- `playY < ruleY < coreY` still holds.
+- `daysY < ruleY < coreY` (the rule sits between the 7 lifetime rows and the 3
+  bests).
 
 **`tests/headless.test.mjs`:**
+- **ATTRACT setup (shared by §3.4, §4.6, §5.5).** A fresh store would run INTRO
+  into a first-visit CORE run (`main.js:690`, `menuapp.js:356-361`). These pins
+  pre-seed `nb.cabinet.v1 = "1"`, go INTRO→MENU, idle past `IDLE_T`
+  (`menuapp.js:69`) into ATTRACT, and only then count their 600 frames,
+  asserting `app.screen === SCREEN.ATTRACT` on every one.
 - A boot left on ATTRACT for 600 frames leaves `a.days === 0`.
 - One PLAY run sets it to 1.
 - A LOSE→PLAY retry on the same date leaves it at 1.
@@ -271,12 +294,12 @@ and `runT` is `main.js`'s PLAY-only run clock (`main.js:641`).
 |---|---|---|---|
 | 1 | `FLAWLESS` | `clear5 && t.d === 0` | Pool "no-hit". Named for what `t.d` counts: **lives lost**. A shielded hit loses none (`sim.js:344-348`, `bests.js` death rule). No plaque reads lives |
 | 2 | `UNSCATHED` | `clear8 && t.d === 0` | The same axis on the 6→8 run (burrow/shade/knight). Pool tiered L5/L8 |
-| 4 | `ALL IN` | `(clear5 \|\| clear8) && clampPact(w.pact) === 15` | Pool "all four pacts". LAST+BARE+THIN+SHRINK together |
-| 8 | `OVERDRIVE` | `clear5 && clampPace(w.pace) === 1` | Pool "HARD pace finale" (PACE_MUL 1.15, `pace.js:3`) |
-| 16 | `REDLINE` | `clear8 && clampPace(w.pace) === 1` | The same axis, 6→8 tier |
-| 32 | `SPRINT` | `clear5 && heat 0 && pact 0 && pace 0 && runT < 180` | Pool "speed clear". Threshold MEASURED (§4.4) |
-| 64 | `KNIGHTFALL` | `(t.kt.knight \| 0) > 0` | Pool "first KNIGHT kill". Needs the first CLEAR, then clearing rooms 6 and 7 in one run. Unlocks at LOSE too: a knight kill is a knight kill |
-| 128 | `IRON CROWN` | `clear8 && clampHeat(w.heat) === 2` | MAX heat AND room 8 in ONE run. The MAX and CROWN plaques can be earned separately |
+| 4 | `ALL IN` | `clear5 && clampPact(w.pact) === 15` | Pool "all four pacts". LAST+BARE+THIN+SHRINK together over rooms 1-5 |
+| 8 | `ALL OUT` | `clear8 && clampPact(w.pact) === 15` | The same axis, 6→8 tier |
+| 16 | `OVERDRIVE` | `clear5 && clampPace(w.pace) === 1` | Pool "HARD pace finale" (PACE_MUL 1.15, `pace.js:3`) |
+| 32 | `REDLINE` | `clear8 && clampPace(w.pace) === 1` | The same axis, 6→8 tier |
+| 64 | `SPRINT` | `clear5 && heat 0 && pact 0 && pace 0 && runT < 180` | Pool "speed clear". Threshold MEASURED (§4.4) |
+| 128 | `IRON CROWN` | `clear8 && clampHeat(w.heat) === 2` | MAX heat across rooms 6-8 in ONE run (`clear8`, `t.r === 3`). That goes beyond `PLAQUE.MAX` + `PLAQUE.CROWN`, which a single MAX-heat room-8 start earns together |
 
 **Rejected from the pool:**
 
@@ -284,13 +307,22 @@ and `runT` is `main.js`'s PLAY-only run clock (`main.js:641`).
 |---|---|
 | MAX-heat finale clear | = `PLAQUE.MAX` (§1.2) |
 | room-8 (FUSE/GRID) clear | = `PLAQUE.CROWN` (§1.2) |
-| 9/9 foes | Coincides with KNIGHTFALL/CROWN by roster arithmetic (§1.3). Needs a mask for no extra difficulty |
+| first KNIGHT kill | Every room-8 clear kills a knight and earns `PLAQUE.CROWN`, and a run may start at room 8; a kill on a LOSE is easier than CROWN (§1.3) |
+| 9/9 foes | Room 8 holds all nine types and every room-8 clear kills them all, so = `PLAQUE.CROWN` (§1.3). Needs a mask for no extra difficulty |
 | 12/12 powers | Not hard (§1.4) |
 | a 6→8 speed medal | Room 8 has 2 bot clears in 400 boards (§4.4), which is no basis for a threshold |
 
-**Deviation, recorded:** the pool yields five kept candidates (FLAWLESS,
-ALL IN, OVERDRIVE, SPRINT, KNIGHTFALL). The other three (UNSCATHED, REDLINE,
-IRON CROWN) are tiers of the same pool axes (L5 vs L8, MAX + room 8). No new
+**Ruling 2026-10-08 (spec review, findings 1 and 8):** KNIGHTFALL is dropped,
+not kept with an honest rewrite (finding 8's first option) and not gated on a
+room-6 start (option b). A room-8 start plus one death would unlock it, which is
+easier than `PLAQUE.CROWN` and fails the R6 "genuinely HARD" test; the room-6
+gate needs two start-room forms and extra pins for a medal that then duplicates
+the 6→8 tier. ALL IN splits into ALL IN (1-5) and ALL OUT (6-8) instead,
+mirroring FLAWLESS/UNSCATHED and OVERDRIVE/REDLINE. Every medal now needs a WIN.
+
+**Deviation, recorded:** the pool yields four kept candidates (FLAWLESS,
+ALL IN, OVERDRIVE, SPRINT). The other four (UNSCATHED, ALL OUT, REDLINE,
+IRON CROWN) are tiers of the same pool axes (L5 vs L8, MAX + rooms 6-8). No new
 mechanic is invented to fill the count.
 
 ### 4.2 The full-run predicate — derived, no new run state
@@ -311,8 +343,8 @@ debug-hook `advance()` (no win event).
 
 ```
 MEDALS_KEY = "nb.medals.v1"
-MEDAL      = Object.freeze({FLAWLESS:1, UNSCATHED:2, ALLIN:4, OVERDRIVE:8,
-                            REDLINE:16, SPRINT:32, KNIGHTFALL:64, IRONCROWN:128})
+MEDAL      = Object.freeze({FLAWLESS:1, UNSCATHED:2, ALLIN:4, ALLOUT:8,
+                            OVERDRIVE:16, REDLINE:32, SPRINT:64, IRONCROWN:128})
 MEDAL_ROWS = Object.freeze([[name, desc], …8])   // index i  <->  bit 1<<i
 SPRINT_S   = 180
 ```
@@ -331,9 +363,10 @@ non-finite gives 0, `& 255` on load and save, try/catch, injectable `store`.
   lie").
 - `medalLine(bits)`:
   - 0 → `""`
-  - 1 bit → `MEDAL · KNIGHTFALL`
+  - 1 bit → `MEDAL · IRON CROWN`
   - 2–3 bits → `MEDALS · A · B · C`, in bit order
-  - ≥4 bits → `N NEW MEDALS · SEE TROPHIES ON STATS`
+  - ≥4 bits → `N NEW MEDALS` (a plain count; no instruction to visit STATS,
+    which a touch player cannot follow)
 - `medalRows(mask)` returns eight `[name, desc, on]` for the trophy page. The
   names live **only** here and reach `render/` as finished strings (the
   `coachTip` precedent, wave-2 §1.5).
@@ -344,11 +377,11 @@ non-finite gives 0, `& 255` on load and save, try/catch, injectable `store`.
 |---|---|
 | FLAWLESS | `ROOMS 1-5 IN ONE RUN · NO LIFE LOST` |
 | UNSCATHED | `ROOMS 6-8 IN ONE RUN · NO LIFE LOST` |
-| ALL IN | `ROOMS 1-5 OR 6-8 IN ONE RUN · ALL FOUR PACTS` |
+| ALL IN | `ROOMS 1-5 IN ONE RUN · ALL FOUR PACTS` |
+| ALL OUT | `ROOMS 6-8 IN ONE RUN · ALL FOUR PACTS` |
 | OVERDRIVE | `ROOMS 1-5 IN ONE RUN ON HARD PACE` |
 | REDLINE | `ROOMS 6-8 IN ONE RUN ON HARD PACE` |
 | SPRINT | `ROOMS 1-5 · CORE · NORM · NO PACT · UNDER 3:00` |
-| KNIGHTFALL | `DEFEAT A KNIGHT` |
 | IRON CROWN | `ROOMS 6-8 IN ONE RUN AT MAX HEAT` |
 
 ### 4.4 The SPRINT threshold — measured, reproducible from this text
@@ -400,8 +433,12 @@ The full-run variant (1→5 chained, N=50, cap 900 s) gave **0 clears** (43 cap,
 `runT < 180.0`: every room at the bot's single luckiest board of 400.
 
 **Biases, disclosed:**
-- **The minima are luckiest boards.** A human run faces five random boards,
-  which is harder.
+- **The minima are luckiest boards, but a human's boards are learnable.** Every
+  seedless run in a session replays `bootSeed`'s boards (`main.js:74,205`), and
+  `?code=` and DAILY let a player pick and repeat a board. The R9 ghost then
+  shows the route. SPRINT is attempted on repeatable boards, which is easier.
+  `SPRINT_S = 180` stays anchored on the bot measurement (re-run in spec review;
+  it reproduced 37.1/28.6/43.3/29.7/43.0, sum 181.7, exactly).
 - **There was no carry.** A human with FLAME/BOMB carry is faster, which is
   easier.
 - **`runT` errs slow.** It keeps counting through the `steps > 6` anti-spiral
@@ -419,8 +456,8 @@ bucket STATS' bests use (`stats.js:160,217`).
 - `endRun` gains one line, after the daily write (`:171`):
   `if (isRunEnd(world)) tally.mn = settleMedals(world, tally, runT);`
   - Quits (RESTART / QUIT / KeyM) reach `endRun` in PAUSE, so they never
-    evaluate. The ruling says ONLY run ends. Disclosed: a knight killed in a run
-    you then quit does not count.
+    evaluate. The ruling says ONLY run ends. Every medal needs a finale WIN, so
+    a LOSE evaluates but can never unlock.
   - The `runEnded` latch (`:166`) makes evaluation happen exactly once per run.
 - `newTally()` (`bests.js`) gains `mn: 0`, so a new run clears the announcement.
 - `ro.run` (`:747`) gains `md: medalLine(tally.mn)`.
@@ -444,14 +481,15 @@ At `dy` 140 the medal stack reaches y=400 in the 600×520 box (`cy 260`), and
 y=328 in iso (`cy 188`, h 352: 16 px clear of the edge after the 7.5 px
 half-glyph).
 
-**Widths at 15 px:** the longest listed form, `MEDALS · KNIGHTFALL · IRON CROWN · UNSCATHED`,
-is 44 chars = 396 px. The count form is 37 chars = 333 px. Both are ≤ 552
-(600 − 48).
+**Widths at 15 px:** the longest reachable form,
+`MEDALS · UNSCATHED · REDLINE · IRON CROWN`, is 41 chars = 369 px. The count
+form `4 NEW MEDALS` is 12 chars = 108 px. Both are ≤ 552 (600 − 48).
 
-The most medals one run can unlock is 5. A 6→8 run at MAX, HARD, all four pacts
-and no life lost unlocks UNSCATHED, ALL IN, REDLINE, KNIGHTFALL and IRON CROWN.
-A 1→5 run can unlock at most 3, because OVERDRIVE and SPRINT exclude each other
-on pace.
+The most medals one run can unlock is 4. A 6→8 run at MAX, HARD, all four pacts
+and no life lost unlocks UNSCATHED, ALL OUT, REDLINE and IRON CROWN, so the
+count form is reachable. A 1→5 run can unlock at most 3 (FLAWLESS, ALL IN,
+OVERDRIVE), because SPRINT needs pact 0 and NORM pace, which excludes ALL IN
+and OVERDRIVE.
 
 The line appears one frame after the WIN/LOSE frame, because the edge is
 evaluated at the top of the next frame (`main.js:619,613`). It is
@@ -470,7 +508,8 @@ indistinguishable on screen and is disclosed, not fixed.
   `drawDim(0.72)` + `menudraw.drawTrophies(c, L, app.subT, app.stats && app.stats.trophies)`.
 - `menudraw.drawTrophies(c, L, t, rows)`:
   - `shell(c, L, 480)`
-  - `head(c, S, "TROPHIES", "MEDALS " + n + "/8")`
+  - `head(c, S, "MEDALS", n + "/8")`. Player copy names the page by what it
+    holds; `SCREEN.TROPHIES` stays the internal name the ruling uses
   - eight rows, from `top = S.headY+22` to `bot = S.footY-18`
   - each row: name left at `S.ix` in `font(11,"900")`, description right-aligned
     at `S.ix+S.iw` in `font(10)`. Unlocked rows use ACCENT/TEXT; locked rows use
@@ -483,11 +522,11 @@ indistinguishable on screen and is disclosed, not fixed.
   - 608×352: (290−94.32)/8 = 24.46
   - Widest row is a 10-char name (66 px) plus a 46-char description (276 px),
     342 of 448 px, leaving a gap of at least 106 px.
-- The STATS foot (`menudraw.js:878`) becomes `T TROPHIES · C COPY MY STATS · ESC BACK`
-  (39 chars = 234 px). Reset extends it in §7.
+- The STATS foot (`menudraw.js:878`) becomes `T MEDALS · C COPY MY STATS · ESC BACK`
+  (37 chars = 222 px). Reset extends it in §7.
 
-**Disclosed:** touch players see the run-end medal line but cannot open
-TROPHIES, because the ruling opens it by a key. A tap on STATS stays
+**Disclosed:** touch players see the run-end medal line but cannot open the
+MEDALS page, because the ruling opens it by a key. A tap on STATS stays
 confirm = back.
 
 ### 4.6 Pins — `tests/medals.test.mjs` (new) + additions
@@ -504,12 +543,15 @@ confirm = back.
 |---|---|---|
 | FLAWLESS | L5 WIN, r 5, d 0 | same with d 1. Also r 1 (a LEVEL SELECT start at 5) |
 | UNSCATHED | L8 WIN, r 3, d 0 | d 1. Also r 1 (a start at 8) |
-| ALL IN | L5 WIN, r 5, pact 15 | pact 14. Also LOSE with pact 15 |
+| ALL IN | L5 WIN, r 5, pact 15 | pact 14. Also LOSE with pact 15. Also L8 WIN, r 3, pact 15 (that is ALL OUT) |
+| ALL OUT | L8 WIN, r 3, pact 15 | pact 14. Also L5 WIN, r 5, pact 15 (that is ALL IN). Also r 1 (a start at 8) |
 | OVERDRIVE | L5 WIN, r 5, pace 1 | pace 0 |
 | REDLINE | L8 WIN, r 3, pace 1 | L5 WIN, r 5, pace 1 (that is OVERDRIVE, not REDLINE) |
 | SPRINT | L5 WIN, r 5, h0/p0/pace0, runT 179.9 | runT 180.0. Also heat 1 at 120 |
-| KNIGHTFALL | LOSE with `kt.knight 1` | LOSE with `kt.shade 3` |
-| IRON CROWN | L8 WIN, r 3, heat 2 | heat 1. Also L5 WIN, r 5, heat 2 (that is `PLAQUE.MAX`) |
+| IRON CROWN | L8 WIN, r 3, heat 2 | heat 1. Also L5 WIN, r 5, heat 2 (that is `PLAQUE.MAX`). Also L8 WIN, r 1, heat 2 (a room-8 start: `PLAQUE.MAX` + `PLAQUE.CROWN` only) |
+
+Also: a LOSE at L8 with `t.r` 2, `t.d` 0, pact 15, pace 1, heat 2 and
+`kt.knight 1` unlocks nothing.
 
 3. `settleMedals`:
    - returns only newly set bits
@@ -526,16 +568,19 @@ confirm = back.
   - KeyT on STATS pushes TROPHIES; KeyT on MENU does nothing
   - `back()`/`confirm()` on TROPHIES go to STATS
   - `ITEMS` is unchanged (8 rows, same order)
-- `menudraw.test`: `drawTrophies` paints the head, all 8 names and the foot
-  inside `S` at both plates. `rows` undefined paints 8 locked placeholders
-  without throwing.
+- `menudraw.test`: `drawTrophies` paints the head `MEDALS`, all 8 names and the
+  foot inside `S` at both plates. `rows` undefined paints 8 locked placeholders
+  without throwing. The STATS foot is `T MEDALS · C COPY MY STATS · ESC BACK`.
 - `scenes`: `summaryLines` adds the gold medal line only when `isRunEnd` and
   `run.md` is non-empty. A mid-room WIN with `md` set prints none.
 - `headless`:
-  - an ATTRACT session of 600 frames leaves `nb.medals.v1` absent
-  - a pause QUIT after a staged knight kill writes nothing
-  - a staged LOSE with a knight kill writes bit 64 and the overlay text
-    includes `MEDAL · KNIGHTFALL`
+  - an ATTRACT session of 600 frames (setup in §3.4) leaves `nb.medals.v1`
+    absent
+  - a staged LOSE writes nothing to `nb.medals.v1`
+  - a pause QUIT during a staged 6→8 run writes nothing
+  - a staged 6→8 finale WIN at MAX heat, pact 0, NORM, one life lost (`t.r`
+    3, `t.d` 1) writes exactly bit 128 and the overlay text includes
+    `MEDAL · IRON CROWN`
   - `state()` names `TROPHIES`
 
 **Commit:** bumps **v148**. SRC gains `src/app/medals.js`.
@@ -568,9 +613,11 @@ KEY_RE = /^\d{1,10}:[1-8]:[0-2]:(?:[0-9]|1[0-5]):[0-2]$/
   - `d` is the clear time in integer tenths `1..2400`. It is `floor(roomT*10)`
     at the WIN frame, the same floor `recordTime` uses (`times.js:87`).
   - `s` is the samples string.
-- **Sample** = 5 chars:
-  - `b36(round(x/2))` padded to 2
-  - `b36(round(y/2))` padded to 2
+- **Sample** = 5 chars, where `b36(n)` is exactly
+  `n.toString(36).toUpperCase().padStart(2,"0")` (`toString(36)` alone emits
+  lowercase, which `clampGhost` would discard):
+  - `b36(round(x/2))`
+  - `b36(round(y/2))`
   - one digit `(sign(fx)+1)*3 + (sign(fy)+1)`, range 0..8. `face` may be
     diagonal or idle; `sim.js:119-122` only writes it while moving.
   - The board is at most 600×520 px, so `x/2 ≤ 300 < 36² = 1296`.
@@ -640,8 +687,12 @@ ghostAt(g, world, roomT)             -> null unless world.grid === g.grid && rac
        correct.
   - The `world.grid === g.grid` check in `ghostAt` stops frame N from drawing
     the old room's race at a stale time.
-  - Samples are the position after the previous frame's steps, a constant
-    one-frame lag on both the recording and the race, so they cancel.
+  - Samples are the pre-step position at `roomT`, drawn against the post-step
+    live player at the same `roomT`, so the ghost trails by a constant one
+    frame (~16 ms), below perception.
+  - `want` is exactly `floor(roomT*10)+1`, the same floor `times.js:87` uses.
+    The recorder never adds an epsilon; the `s.length/5 === d+1` contract
+    depends on the two floors agreeing.
 - **WIN detection** is one frame after the WIN step, with the same `roomT` R7
   records on that frame, since PLAY accumulation is skipped once the state is
   WIN (`main.js:619-622,641`).
@@ -685,7 +736,10 @@ Facts this relies on:
 ### 5.5 Pins — `tests/ghost.test.mjs` (new) + additions
 
 1. **Codec.**
-   - Encode/decode round-trips x/y within 1 px and every face pair in {-1,0,1}².
+   - Samples written by the real recorder and saved through the real encoder,
+     then reloaded through `loadGhost`/`clampGhost`, survive and round-trip
+     x/y within 1 px and every face pair in {-1,0,1}². (A bare decode would
+     pass a lowercase encoder that `clampGhost` then discards.)
    - `ghostKey` matches `KEY_RE`. Pace −1/0/1 maps to segment 0/1/2.
 2. **`clampGhost`.**
    - Drops `v:2`, a bad key, `d:0`, `d:2401`, an `s` of length 7, lowercase `s`.
@@ -698,7 +752,9 @@ Facts this relies on:
    - `d 300` replaces it.
    - `d 412` again leaves it untouched (strict).
 5. **PLAY-only sampling.**
-   - 3 s of PLAY at dt 1/60 gives 31 samples.
+   - 3 s of PLAY at dt 1/64 (exactly representable: `roomT` lands on 3.0)
+     gives 31 samples. (At dt 1/60, 180 additions give 2.9999999999999942,
+     so the count is 30; the recorder must not be "fixed" with an epsilon.)
    - Another 2 s in PAUSE (`roomT` frozen) adds 0.
    - A single dt of 0.25 s pads to the correct count.
 6. **Room detection.** A new `grid` object resets the recording and loads the
@@ -734,7 +790,7 @@ Facts this relies on:
 
 **Additions:**
 - `headless`:
-  - ATTRACT for 600 frames leaves `nb.ghost.v1` absent
+  - ATTRACT for 600 frames (setup in §3.4) leaves `nb.ghost.v1` absent
   - a staged GAME room clear writes exactly one entry under the run's tuple
   - a LOSE→retry of room 1 makes `ro.ghost` non-null on the retry's first PLAY
     frames
@@ -754,6 +810,12 @@ one line-cap raise (§8).
   fins**, with both tips past the body half-width (AGENTS.md MAKO), against
   SHADE's hood. A pass needs that structural read. If it fails, the remedy is
   `GHOST_A` (alpha only, ≤ 0.5), never a re-hue.
+  - Also ask: does the ghost read as *you*, not as a foe? Nothing in the shell
+    explains it. If it fails, record a follow-up only; no copy in this wave.
+- **Beside a `stationary` foe (rooms 1-5):** `stationary`'s `#c58aff` shares
+  MAKO's hue (AGENTS.md discloses it as un-clearable). The ghost must still
+  separate by structure. If it fails, the remedy is alpha or structure, never a
+  re-hue.
 - Stage a VOID race by writing a ghost entry for a `?code=` board.
 - Unregister the service worker first (AGENTS.md).
 
@@ -765,11 +827,27 @@ one line-cap raise (§8).
   returned `ghost(g)`:
   - **g null or absent:** if a mesh exists, set `visible = false`; return.
   - **First g:** build ONE mesh and `group.add` it. The mesh is:
-    - geometry `mergeGeos` of the five player parts, pre-transformed:
-      - the body Lathe
-      - the merged fin Buffer
-      - the face plate, with `applyMatrix4` of its position and the `-0.6` rake
-      - both feet, translated
+    - geometry `mergeGeos` of **clones** of the five player parts
+      (`entities.js:935-972`), pre-transformed:
+
+      ```
+      const m = new THREE.Matrix4().makeRotationX(-0.6).setPosition(0, T*0.53, T*0.2);
+      const parts = [body.geometry.clone(), fins.geometry.clone(),
+        face.geometry.clone().applyMatrix4(m),
+        footGeo.clone().translate(-T*0.17, T*0.08, T*0.06),
+        footGeo.clone().translate(T*0.17, T*0.08, T*0.06)];
+      const geo = mergeGeos(...parts); for (const p of parts) p.dispose();
+      ```
+
+      - Never `translate`/`applyMatrix4` the live geometries: they belong to
+        the live MAKO, and `footGeo` is ONE shared geometry under both feet.
+        Mutating them corrupts the player in place, and the child-order ABI pin
+        would not catch it.
+      - The face matrix is built explicitly from the literal position and rake
+        (the values at `entities.js:962-963`), never read from `face.matrix`,
+        which stays identity until `updateMatrix()` or a GL render. Node tests
+        have no `gl.render`, so a `face.matrix` read would build an unrotated
+        face there and a rotated one in the browser.
     - material `MeshLambertMaterial({color: PLAYER_HULL, transparent: true, opacity: 0.4, depthWrite: false})`
     - `castShadow = receiveShadow = false`, `userData.tag = "ghost"`
   - **Every g:** `visible = true`, position `(g.x - W2, CFG.TILE*0.05, g.y - D2)`,
@@ -800,14 +878,18 @@ one line-cap raise (§8).
   tagged `player`.
 - `pools.player.children.length === 5`, with the child order and geometry types
   unmoved (the `:1050-1060` ABI).
+- Every live player child's `geometry.attributes.position.array` is
+  byte-identical before and after the first ghost build.
 - A render with the ghost and then one without leaves `ghost.visible === false`.
   A level change rebuild leaves no ghost mesh until the next `o.ghost`.
 
 **Commit:** bumps **v150**.
 
-**Headed check:** REAL 3D, room 1 retry and VOID as in §5.5. The plan-view
-chevron must be legible from the frozen rig (`el:0.54`), and the ghost must not
-shadow the board.
+**Headed check:** REAL 3D, room 1 retry, VOID and the `stationary` foe as in
+§5.5. The 3D ghost is one `PLAYER_HULL` Lambert with no teal fins, so the
+`stationary` check matters more here; a fail is fixed by alpha or structure,
+never a re-hue. The plan-view chevron must be legible from the frozen rig
+(`el:0.54`), and the ghost must not shadow the board.
 
 ---
 
@@ -831,6 +913,12 @@ clearCabinet(store) -> removeItem each CLEAR key, each in its own try/catch; nev
 - **Boot behaves as a first visit.** Clearing `nb.cabinet.v1` and `nb.pact.v1`
   makes the next boot a first-visit `bootFromIntro` straight into a CORE run
   (`menuapp.js:356-361`). That is what "a fresh cabinet" means.
+  - **Except with a query string.** `location.reload()` keeps it. A cabinet
+    opened via `?code=` or `?play=1` re-runs `saveCabinetSeen()` at boot
+    (`main.js:345,348`) and starts a run straight away, so the reset lands in a
+    run with the cabinet already marked seen. Disclosed; `location.reload()` is
+    the ruling's named call and is not swapped for `location.replace` without
+    an owner ruling. The headed check runs on a bare URL.
 - **HIGH SCORES shows `DEFAULT_SCORES` again** (`highscores.js:6-19`).
 - **DAYS PLAYED returns to 0.** Reset is the one explicit way it ends (R12's
   "never lost" is about streak mechanics, not about the player's own erase).
@@ -874,13 +962,20 @@ case "KeyR":
 
 | state | where | text | fit (10 px) |
 |---|---|---|---|
-| idle | foot | `T TROPHIES · C COPY MY STATS · R RESET · ESC BACK` | 49 ch = 294 px |
-| armed | note 1 (#ff5d73) | `ERASES SCORES · BESTS · TIMES · DAILY · MEDALS · GHOSTS · STATS` | 63 ch = 378 px |
-| armed | note 2 (#ff5d73) | `KEEPS OPTIONS AND PACE · THE GAME RELOADS` | 41 ch = 246 px |
-| armed | foot (#ff5d73) | `PRESS R AGAIN TO ERASE · ANY OTHER KEY CANCELS` | 46 ch = 276 px |
+| idle | foot | `T MEDALS · C COPY MY STATS · R RESET · ESC BACK` | 47 ch = 282 px |
+| armed | note 1 (#ff5d73) | `ERASES SCORES · BESTS · TIMES · DAILY · MEDALS · PLAQUES · GHOSTS` | 65 ch = 390 px |
+| armed | note 2 (#ff5d73) | `ERASES STATS + DAYS PLAYED · RELOCKS ROOMS 6-8 · PACTS · TIME ATTACK` | 68 ch = 408 px |
+| armed | foot (#ff5d73) | `R AGAIN ERASES + RELOADS · ANY OTHER KEY CANCELS · KEEPS OPTIONS + PACE` | 71 ch = 426 px |
 
+- The biggest irreversible loss is named on screen: clearing `nb.pact.v1`
+  relocks rooms 6-8, all four pacts and TIME ATTACK, and DAYS PLAYED is named
+  beside STATS. Every line is ≤ 74 chars (10 px × 0.6 em against `S.iw` 448).
+- Two note slots exist (`menudraw.js:876-877`, `i < 2`); a third note line
+  would collide with the last stats row at 608×352, so the keep-list rides in
+  the foot.
 - The notes and foot draw where they already do, against `S.iw` 448 at both
-  plates (`S.footY` 476 / 308).
+  plates (`S.footY` 476 / 308). The armed foot has about 11 px of margin each
+  side on the estimated advance; the headed check confirms it does not clip.
 - The armed lines replace the daily/since notes for the arm's duration. Nothing
   else moves.
 - **Keyboard-only, by design and disclosed:** a destructive action with no tap
@@ -888,11 +983,16 @@ case "KeyR":
 
 ### 7.5 Pins — `tests/reset.test.mjs` (new) + additions
 
-1. **The literal sweep.** Every `/["'`](nb\.[a-z0-9]+\.v\d+)["'`]/g` match
-   across `src/**/*.js` must be in `CLEAR_KEYS ∪ KEEP_KEYS`. The two lists are
-   disjoint, every listed key appears in `src/`, and `KEEP_KEYS` is exactly the
-   settings and pace keys. A future store therefore fails here until it is
-   classified.
+1. **The literal sweep.** Every `/["'`](nb\.[^"'`\s]+)["'`]/g` match across
+   `src/**/*.js` must be in `CLEAR_KEYS ∪ KEEP_KEYS`. The pattern is
+   deliberately loose, so `nb.ghostV2.v1`, `nb.foo_bar.v1` or a bare
+   `nb.thing` cannot slip past unclassified. The two lists are disjoint, every
+   listed key appears in `src/`, and `KEEP_KEYS` is exactly the settings and
+   pace keys. A future store therefore fails here until it is classified.
+1b. **Constant-only storage calls.** Every `getItem(` / `setItem(` /
+   `removeItem(` call in `src/app/**/*.js` passes an identifier ending `_KEY`
+   (imported or module-level), never an inline literal. Today's tree already
+   passes both pins.
 2. `clearCabinet` on a Map store holding all 14 keys plus `"other.app"` leaves
    exactly the 2 KEEP keys and `"other.app"`. With a throwing `removeItem` it
    does not throw and still removes the rest. A null store is a no-op.
@@ -909,12 +1009,14 @@ case "KeyR":
    - R in GAME still resets the camera and never arms.
    - R on ATTRACT stays swallowed (screen stays ATTRACT).
 5. **`menudraw`.** The idle foot and the three armed lines paint inside `S` at
-   both plates, in `#ff5d73` when armed.
+   both plates, in `#ff5d73` when armed. Each of the four exact strings in
+   §7.4 is ≤ 74 chars, i.e. `[...s].length*10*0.6 <= S.iw` at both plates.
 
 **Commit:** bumps **v151**. SRC gains `src/app/reset.js`.
 
-**Headed check:** arm, cancel with an arrow key, arm, confirm. The page reloads
-into the first-visit boot. OPTIONS values and pace survive.
+**Headed check (on a bare URL, no query string, §7.1):** arm, cancel with an
+arrow key, arm, confirm. The armed foot does not clip at either plate. The page
+reloads into the first-visit boot. OPTIONS values and pace survive.
 
 ---
 
@@ -932,9 +1034,10 @@ into the first-visit boot. OPTIONS values and pace survive.
 
 **Cap ruling (this spec, the wave's one raise): 808 → 812, taken at R9a.**
 
-Reason: the ghost recorder has to read `world` between `step()` and
-`renderer.render`'s event drain, inside `createGame`'s closure. The reset has to
-call `location.reload()` and gate keys in `onUiKey`. Neither can live in a seam
+Reason: `ghostTick` must sit in `createGame`'s GAME branch between the PLAY-only
+clock line (`:641`) and the step loop, because `roomT` lives there and the
+frame-order argument in §5.3 needs it there. The reset needs
+`location.reload()` and the `onUiKey` gate. Neither can live in a seam
 module. All logic lives in `medals.js`, `ghost.js` and `reset.js`. `main.js`
 gets one import, one state line and one call per feature.
 
@@ -958,7 +1061,7 @@ to the measured length so the gate keeps biting.
 | `OPT_ROWS` / `PAUSE_ITEMS` / `GUIDE_ROWS` | frozen | **unchanged** | — |
 | `debughook.js SCREEN_NAME` | ends `"STATS"` | `+ "TROPHIES"` | R6 |
 | `menudraw` exports | … `drawStats(c,L,t,ui)` | `+ drawTrophies`. `drawStats` gains optional 5th `arm` (absent gives today's draw) | R6, Reset |
-| STATS foot | `C COPY MY STATS · ESC BACK` (`menudraw.test:636`) | R6: `T TROPHIES · C COPY MY STATS · ESC BACK`. Reset: `+ · R RESET` before `ESC BACK` | R6, Reset |
+| STATS foot | `C COPY MY STATS · ESC BACK` (`menudraw.test:636`) | R6: `T MEDALS · C COPY MY STATS · ESC BACK`. Reset: `+ · R RESET` before `ESC BACK` | R6, Reset |
 | `summaryLines` / `ro.run` | stamp, tally, delta/daily | `+ run.md` gold line at run end. `drawOverlay` arity unchanged (9 args) | R6 |
 | `renderer.js` 2D draw order | … blades, enemies, player | `+ drawGhost` between blades and enemies, only with `o.ghost` | R9a |
 | `sprites.js` exports | … `drawPlayerBody`, `drawPlayer` | `+ drawGhost`, `GHOST_A` | R9a |
@@ -1000,9 +1103,9 @@ the service worker first.
 |---|---|
 | R0 | the PAUSE plate at 600×520 and 608×352, hint on one line |
 | R12 | STATS at both plates with 10 rows; `C` payload line 1 shows days |
-| R6 | a LOSE and a finale WIN carrying a staged medal; `T` → TROPHIES → `Esc` → STATS at both plates |
-| R9a | CLASSIC 2D race on a retry; PAUSE freeze; the **VOID fins-vs-SHADE read** |
-| R9b | REAL 3D race, same three checks |
+| R6 | a LOSE (no medal line) and a finale WIN carrying a staged medal; `T` → MEDALS page (`SCREEN.TROPHIES`) → `Esc` → STATS at both plates |
+| R9a | CLASSIC 2D race on a retry; PAUSE freeze; the **VOID fins-vs-SHADE read** (and reads as you, not a foe); beside a `stationary` foe (rooms 1-5) |
+| R9b | REAL 3D race, same four checks |
 | Reset | arm / cancel / confirm, reload into the first-visit boot, options and pace kept |
 
 ---
@@ -1014,9 +1117,10 @@ the service worker first.
    attract-only visits.
 2. **R12 uses a local day beside the UTC stamps.** The two clocks are never mixed
    in one ring row (§3.1–3.2).
-3. **Two pool medals are existing plaques, and two more coincide or are not
-   hard.** They are rejected with the arithmetic, and the mask fields fall away
-   with them (§1, §4.1).
+3. **Two pool medals are existing plaques, and three more (KNIGHT kill, 9/9
+   foes, 12/12 powers) reduce to a room-8 clear or are not hard.** They are
+   rejected with the arithmetic, and the mask fields fall away with them (§1,
+   §4.1). Every kept medal needs a finale WIN.
 4. **`runFromStart` would have excluded every room-8 medal.** The start room is
    derived from `tally.r` instead (§4.2).
 5. **The speed threshold could not come from full runs** (0/50). The per-room
@@ -1029,6 +1133,10 @@ the service worker first.
 9. **The ghost tick runs BEFORE the step loop.** After it, two of the four room
    starts (the sim's own retry and next-room) would record against the
    previous room's `roomT` and save a static spawn trail (§5.3, pin 6b).
+10. **Spec review (2026-10-08) corrections:** a run may start at room 8, so
+    KNIGHTFALL is gone (ALL IN tiers instead); the 3D ghost merges CLONES with
+    an explicit face matrix; the reset copy names the relock; DAYS PLAYED
+    self-heals a future `a.day`; the ghost codec upper-cases base 36.
 
 **Known assumptions:**
 - (a) Width budgets assume the 0.6 em mono advance, as waves 1–2 did, and are
