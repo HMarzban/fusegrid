@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-08 — D1: ghost no longer leads after a load hitch (shell v163)
+- main.js adds `Math.min(dt, 7*CFG.STEP - acc)` to `roomT` (read before `acc += dt`), so a frame past the 7-step cap no longer pushes roomT ahead of the simulated PLAY time; the ghost and TIME ATTACK both read it. coachT/runT still add full dt (left alone). Pinned by times PIN E (3 hitches, RED 1.3 vs 0.98); bests B8 regex updated.
+
 ## 2026-10-08 — D1: intro flythrough lands on the CAMERA preset (shell v162)
 - `introCam(subT,base=BASE_DIST)` and the wrapper passes `rig.dist`, so WIDE/FAR settle at 1671/1827 instead of cutting from 1503 (324 units for FAR) on the INTRO->MENU frame. STANDARD unchanged; S3.C pins a 0-unit handoff for all three presets.
 

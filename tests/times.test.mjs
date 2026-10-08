@@ -521,7 +521,7 @@ const HUD_W = {
       const prevT = t;
       t += ms;
       const dt = Math.min((t - prevT) / 1000, 0.25); // mirrors main.js's own clamp
-      if (g.world.state === "PLAY") expect += dt; // mirrors `if(state==="PLAY") roomT+=dt`
+      if (g.world.state === "PLAY") expect += dt; // mirrors roomT's PLAY-only add (16 ms frames never hit the step cap, so it is the full dt)
       g.loop(t);
     };
     for (let i = 0; i < 30; i++) advance(16);
@@ -557,6 +557,43 @@ const HUD_W = {
       "PIN C control: the stored value is NOT world.time's tenths — roomT and world.time really do disagree here",
       stored !== Math.floor(g.world.time * 10),
       stored + " vs " + Math.floor(g.world.time * 10),
+    );
+  } finally {
+    delete globalThis.window;
+  }
+}
+
+/* ---- PIN E (wave-3 audit D1): roomT counts only the PLAY time the capped
+   step loop actually simulates. A frame past the 7-step cap drops its
+   remainder from the sim; if roomT still adds the full clamped dt, it runs
+   ahead of world.time for the rest of the room, and the ghost (sampled on
+   roomT) leads a player on the same route. No PAUSE here, so world.time is
+   the stepped PLAY clock and the persisted best must match it. ---- */
+{
+  const mem = new Map();
+  const store = {
+    getItem: (k) => (mem.has(k) ? mem.get(k) : null),
+    setItem: (k, v) => mem.set(k, String(v)),
+  };
+  globalThis.window = { localStorage: store, addEventListener() {} };
+  try {
+    const g = createGame(null, { autoplay: true, seed: 53 });
+    let t = 3000;
+    g.loop(t);
+    const wt0 = g.world.time;
+    for (let i = 0; i < 20; i++) g.loop((t += 16));
+    for (let i = 0; i < 3; i++) g.loop((t += 300));
+    for (let i = 0; i < 20; i++) g.loop((t += 16));
+    check("PIN E setup: still PLAY after three hitches", g.world.state === "PLAY", g.world.state);
+    const sim = g.world.time - wt0;
+    const k = timeKey(g.world);
+    g.world.state = "WIN";
+    g.loop((t += 16));
+    const stored = loadTimes(store).b[k];
+    check(
+      "PIN E: a hitch never pushes roomT past the simulated PLAY time",
+      Math.abs(stored / 10 - sim) < 0.1,
+      stored / 10 + " vs sim " + sim.toFixed(3),
     );
   } finally {
     delete globalThis.window;

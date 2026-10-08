@@ -894,7 +894,7 @@ const rec = () => {
   );
   check(
     "B8: the run clock is PLAY-only, on the same line coachT and roomT already are",
-    /if \(world\.state === "PLAY"\) \{ coachT \+= dt; roomT \+= dt; runT \+= dt; \}/.test(src),
+    /if \(world\.state === "PLAY"\) \{ coachT \+= dt; roomT \+= Math\.min\(dt, 7 \* CFG\.STEP - acc\); runT \+= dt; \}/.test(src),
     (src.match(/runT \+= dt[^\n]*/) || [])[0],
   );
   check(

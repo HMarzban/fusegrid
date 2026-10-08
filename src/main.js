@@ -631,8 +631,8 @@ export function createGame(canvas, opts = {}) {
          frame. Placed after noteWorldEdge so the pause branch reads a fresh
          app.worldState. */
       app.update(dt, shellInput);
+      if (world.state === "PLAY") { coachT += dt; roomT += Math.min(dt, 7 * CFG.STEP - acc); runT += dt; }
       acc += dt;
-      if (world.state === "PLAY") { coachT += dt; roomT += dt; runT += dt; }
       ghostTick(ghost, world, roomT);
       let steps = 0;
       while (acc >= CFG.STEP) {
