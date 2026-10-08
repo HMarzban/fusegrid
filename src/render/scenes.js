@@ -44,7 +44,7 @@ export function overlayCue(world) {
   }
   if (world.state === "LOSE") return "SPACE / TAP · new run";
   if (world.state === "PAUSE")
-    return "↑↓ SELECT · ENTER CONFIRM · P RESUME · M QUIT";
+    return "↑↓ SELECT · ENTER / TAP CONFIRM · P RESUME · M QUIT";
   return "";
 }
 export function runStamp(world) {

@@ -64,7 +64,7 @@ check(
 check(
   "overlayCue PAUSE is the pause-list cue, exactly",
   overlayCue({ state: "PAUSE", heat: 1 }) ===
-    "↑↓ SELECT · ENTER CONFIRM · P RESUME · M QUIT",
+    "↑↓ SELECT · ENTER / TAP CONFIRM · P RESUME · M QUIT",
   overlayCue({ state: "PAUSE", heat: 1 }),
 );
 check(
@@ -268,6 +268,15 @@ check(
     bi.w === 608 && bi.h === 352 && bi.cx === 304 && bi.cy === 188,
     JSON.stringify(bi),
   );
+  for (const k of ["2d", "iso"]) {
+    const cue = overlayCue({ state: "PAUSE" }),
+      w = [...cue].length * 15 * 0.6;
+    check(
+      "PAUSE cue fits one line in the " + k + " box with 24px each side",
+      w <= overlayBox(k).w - 48,
+      w + " vs " + (overlayBox(k).w - 48),
+    );
+  }
   for (const B of [b2, bi]) {
     const tag = B.w + "x" + B.h;
     let all = true;
@@ -312,7 +321,7 @@ check(
     "drawOverlay PAUSE defaults to the list at cursor 0",
     texts.includes("PAUSED") &&
       PAUSE_ROWS.every((r) => texts.includes(r)) &&
-      texts.includes("↑↓ SELECT · ENTER CONFIRM · P RESUME · M QUIT"),
+      texts.includes("↑↓ SELECT · ENTER / TAP CONFIRM · P RESUME · M QUIT"),
     texts.join("|"),
   );
   texts.length = 0;
