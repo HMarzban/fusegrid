@@ -6,7 +6,7 @@ version number of its own; each entry is dated and names the PWA shell
 revision (`CACHE_NAME` in `src/pwa/shell.js`) that shipped it, since that is
 what makes an installed copy update.
 
-## [Unreleased] — shell v143 · 2026-09-07 · on local `main`, not yet pushed
+## shell v143 · 2026-09-07 · pushed (`18f9d9d`)
 
 ### Added
 - **Run summary.** GAME OVER and the finale show the run's tally (rooms,

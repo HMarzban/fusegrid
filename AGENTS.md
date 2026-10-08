@@ -205,6 +205,9 @@ not shell screens. Do not add them as `SCREEN` values.
   changes.
   PWA: also stage `manifest.webmanifest`, `sw.js`, `icon-192.png`, `icon-512.png`.
   `serve.js` MIME includes `.webmanifest`.
+- CI: `.github/workflows/pages.yml` runs `npm test` on Node 26 for pull requests
+  and as the required gate before every Pages deploy. Human-facing
+  architecture/tradeoffs live in `docs/architecture.md`.
 
 Flags: `?render=3d|iso`, `?play=1`, `?net=local`, `?orbit=1`, `?debug=1`.
 
