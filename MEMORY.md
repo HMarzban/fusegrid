@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-08 — Wave 3 R0 polish (v146)
+- PAUSE footer now `↑↓ SELECT · ENTER / TAP CONFIRM · P RESUME · M QUIT` (static, closes the loose-ends touch nit), heat pin proves one-line fit in 2d/iso boxes (headed: 460.6px real width); `sitemap.xml` lastmod 2026-10-08 (no bump).
+
 ## 2026-10-08 — Loose-ends wave
 - Rebased onto PR #1 (`ad1a9c4`) + CHANGELOG commit; T2a docs (`db5dfff`); T3 dead DOM HUD cut (v144); browser audits A/B found one minor (touch pause pill over HUD score, fixed v145) and one nit (PAUSE footer hint is keyboard-only on touch, left open).
 - H4 (ATTRACT tap on the DAILY row starts an ordinary run) and D1 (arcade reset vs continue-credit) shipped as status quo — owner's call. Reset-my-cabinet and wave 3 (R6/R9/R12) deferred.
