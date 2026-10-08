@@ -1446,6 +1446,36 @@ export function createPools(biome, atlas) {
     }
   }
 
+  /* R9b ghost: ONE merged PLAYER_HULL Lambert, built lazily on the first race
+     so a scene that never raced stays at fat-world 141. Clones only — the
+     live parts belong to MAKO and footGeo is shared by both feet — and the
+     face matrix comes from the literal pose, since face.matrix stays identity
+     until a GL render. Outside the player slot, never casts. */
+  let ghostMesh = null;
+  function ghost(g) {
+    if (!g) {
+      if (ghostMesh) ghostMesh.visible = false;
+      return;
+    }
+    if (!ghostMesh) {
+      const m = new THREE.Matrix4().makeRotationX(-0.6).setPosition(0, T * 0.53, T * 0.2);
+      const parts = [body.geometry.clone(), fins.geometry.clone(),
+        face.geometry.clone().applyMatrix4(m),
+        footGeo.clone().translate(-T * 0.17, T * 0.08, T * 0.06),
+        footGeo.clone().translate(T * 0.17, T * 0.08, T * 0.06)];
+      const geo = mergeGeos(...parts);
+      for (const p of parts) p.dispose();
+      ghostMesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({
+        color: PLAYER_HULL, transparent: true, opacity: 0.4, depthWrite: false }));
+      ghostMesh.castShadow = ghostMesh.receiveShadow = false;
+      ghostMesh.userData.tag = "ghost";
+      group.add(ghostMesh);
+    }
+    ghostMesh.visible = true;
+    ghostMesh.position.set(g.x - W2, CFG.TILE * 0.05, g.y - D2);
+    ghostMesh.rotation.y = Math.atan2(g.fx, g.fy);
+  }
+
   update({
     players: [],
     enemies: [],
@@ -1465,5 +1495,6 @@ export function createPools(biome, atlas) {
     cores,
     flashes,
     update,
+    ghost,
   };
 }

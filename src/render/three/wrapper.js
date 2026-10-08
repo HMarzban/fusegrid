@@ -119,6 +119,7 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
     brightK=bk;
     if(!sc||sc.update(world))rebuild(world);   // brick rescan / level rebuild
     else if(bChanged&&sc.lights)applyBright(sc.lights,brightK);
+    if(sc)sc.pools.ghost(o&&o.ghost);
     /* S3: INTRO in kind 3d hands the camera to the flythrough keyframes
        (o.intro = app.subT from main; logo/tagline stay on the 2D overlay);
        every other screen keeps the orbit rig + shake. */

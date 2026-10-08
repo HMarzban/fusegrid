@@ -169,7 +169,9 @@ not shell screens. Do not add them as `SCREEN` values.
   `roomT`, faster clears only, never fed to `step()`. `ghostTick` sits between
   the PLAY clock line and the step loop (a new `world.grid` object is the room
   start, so the sim's own retry/next-room record from roomT ~dt); attract
-  never records. CLASSIC 2D draws it under foes at `GHOST_A` 0.4; iso never.
+  never records. CLASSIC 2D draws it under foes at `GHOST_A` 0.4; REAL 3D
+  draws one merged `PLAYER_HULL` Lambert (opacity 0.4, no depthWrite, never
+  casts) that `pools.ghost` builds lazily outside the player slot; iso never.
   Demobot is an intent FSM (plant-and-leave, hunger for combat cubes / corridor
   foes); attract still CORE/pact=0. Highscores use `scoreEntry`; `noteWorldEdge`
   is a boolean edge, not a score writer.
@@ -237,7 +239,7 @@ Node v26, `"type": "module"`. No build step, no bundler.
   Node-testable three **math** stays DOM-free.
 - Frozen `CFG` — mutate world, not config. `BIOMES` elements are shallow.
 - Keep zero **npm** deps. Vendored render libs are OK.
-- 3D draw-call budget is `<=500` (fat-world currently 141). Child-index
+- 3D draw-call budget is `<=500` (fat-world currently 141, 142 while a ghost races). Child-index
   contracts in `three.test.mjs` are ABI — do not "flex" them in a drive-by.
 - No comments unless the file already uses explanatory block comments (its style).
   Match the compact, no-whitespace-after-key style already in the codebase.

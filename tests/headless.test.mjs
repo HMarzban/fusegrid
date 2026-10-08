@@ -972,6 +972,8 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   // R9a ghost wave: +3 lines (ghost.js import; const ghost; the ghostTick line
   // between the PLAY-only clock and the step loop, wave-3 spec §5.3/§8);
   // ro.ghost rides the time: line — measured 809, cap 808->812 (the wave's one raise).
+  // R9b 3D ghost: +0 lines (the 3D path reads the same ro.ghost through
+  // wrapper.js's pools.ghost) — measured 809, against the 812 cap.
   check("main.js stays a lean browser entry (<=812 lines)",
     L.length<=812,String(L.length));
   const lastImp=L.reduce((a,l,i)=>/^import[\s{]/.test(l)?i:a,-1);

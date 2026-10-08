@@ -2155,5 +2155,94 @@ await sec("MG",async()=>{
     [camPreset(-5),camPreset(99),camPreset(undefined)].join());
 }
 
+/* ---- §R9b REAL 3D ghost (wave-3 spec §6): ONE merged PLAYER_HULL Lambert
+   built lazily on the first o.ghost, outside the player slot, no shadow.
+   countDrawCalls counts invisible meshes, so the 141 world never races. ---- */
+await sec("R9b",async()=>{
+  const fat=()=>{ const wf=createWorld(93,1); loadLevel(wf,1,false);
+    wf.enemies=[]; wf.items=[];
+    const types=["walker","chaser","fast","stationary","boomerang","rocket"];
+    for(let i=0;i<16;i++)wf.enemies.push(mkE(types[i%6],60+i*30,80));
+    for(let i=0;i<32;i++)wf.items.push({x:60+i*15,y:120,t:"fire",
+      col:"#ff8a3c",taken:false,pdef:null});
+    for(let i=0;i<Math.min(CFG.MAX_BOMBS,8);i++)wf.bombs.push({x:60+i*40,
+      y:160,tx:i,ty:2,timer:CFG.FUSE,variant:"normal"});
+    wf.blades=[{x:200,y:120,tiles:[{tx:5,ty:3}],t:0,ttl:CFG.BLADE_TTL}];
+    return wf; };
+  const G={x:100,y:100,fx:1,fy:0,t:0};
+  { const r=createRenderer3D(null,null,{audio:null,hud:null});
+    r.render(fat(),1/60);
+    check("R9b.1 fat world with no o.ghost stays at 141 (ghost is lazy)",
+      countDrawCalls(r._dbg.scene)===141, String(countDrawCalls(r._dbg.scene)));
+    check("R9b.1b no ghost mesh exists before the first o.ghost",
+      slotsOf(r._dbg.scene,"ghost").length===0); }
+  { const r=createRenderer3D(null,null,{audio:null,hud:null});
+    const n=(r.render(fat(),1/60,{ghost:G}),countDrawCalls(r._dbg.scene));
+    check("R9b.2 the same world racing a ghost is 142 (one merged draw), <=500",
+      n===142&&n<=500, String(n)); }
+  const pools=createPools(BIOMES[0],null);
+  const before=pools.player.children.map(c=>
+    Array.from(c.geometry.attributes.position.array));
+  const typesBefore=pools.player.children.map(c=>c.geometry.type).join();
+  pools.ghost(G);
+  const gs=slotsOf(pools.group,"ghost");
+  const m=gs[0];
+  check("R9b.3 exactly one ghost mesh: no shadow, transparent 0.4, no depth write",
+    gs.length===1&&m.isMesh&&m.castShadow===false&&m.receiveShadow===false
+    &&m.material.transparent===true&&m.material.opacity===0.4
+    &&m.material.depthWrite===false&&m.material.isMeshLambertMaterial
+    &&"#"+m.material.color.getHexString()===PLAYER_HULL.toLowerCase(),
+    gs.length+"");
+  let anc=m&&m.parent, inPlayer=false;
+  while(anc){ if(anc.userData&&anc.userData.tag==="player")inPlayer=true; anc=anc.parent; }
+  check("R9b.3b the ghost is not inside the player slot (SLOT_MESH unchanged)",
+    !!m&&!inPlayer&&m.parent===pools.group&&SLOT_MESH.player===5);
+  check("R9b.3c ghost sits at the race point, faces fx/fy (player facing rule)",
+    !!m&&m.visible&&m.position.x===100-CFG.COLS*CFG.TILE/2
+    &&m.position.z===100-CFG.ROWS*CFG.TILE/2
+    &&Math.abs(m.position.y-CFG.TILE*0.05)<1e-9
+    &&Math.abs(m.rotation.y-Math.atan2(1,0))<1e-9);
+  check("R9b.4 player still five children, same geometry types in order",
+    pools.player.children.length===5
+    &&pools.player.children.map(c=>c.geometry.type).join()===typesBefore,
+    pools.player.children.map(c=>c.geometry.type).join());
+  check("R9b.4b live player geometries byte-identical after the ghost build"
+      +" (clones only; footGeo is shared by both feet)",
+    pools.player.children.every((c,i)=>{
+      const a=c.geometry.attributes.position.array;
+      return a.length===before[i].length&&before[i].every((v,j)=>v===a[j]); }));
+  { const ok=m.geometry.attributes.position.count===pools.player.children
+      .reduce((a,c)=>a+c.geometry.attributes.position.count,0);
+    check("R9b.4c ghost geometry merges all five player parts", ok,
+      String(m.geometry.attributes.position.count));
+    const pl=pools.player; pl.position.set(0,0,0); pl.rotation.set(0,0,0);
+    pl.updateMatrixWorld(true);
+    const pb=new THREE.Box3().setFromObject(pl,true);
+    m.geometry.computeBoundingBox(); const gb=m.geometry.boundingBox;
+    const near=(a,b)=>Math.abs(a-b)<1e-4;
+    check("R9b.4d ghost parts sit in the posed player's pose (raked face"
+        +" from the literal matrix, feet translated): bounds match exactly",
+      ["x","y","z"].every(k=>near(pb.min[k],gb.min[k])&&near(pb.max[k],gb.max[k])),
+      JSON.stringify([pb.min,pb.max,gb.min,gb.max])); }
+  { const r=createRenderer3D(null,null,{audio:null,hud:null});
+    const w=fat();
+    r.render(w,1/60,{ghost:G});
+    const g1=slotsOf(r._dbg.scene,"ghost")[0];
+    r.render(w,1/60,{});
+    check("R9b.5 a render without o.ghost hides the built ghost",
+      !!g1&&g1.visible===false);
+    r.render(w,1/60,{ghost:{x:140,y:60,fx:0,fy:-1,t:1}});
+    check("R9b.5b the next o.ghost shows the same mesh again",
+      slotsOf(r._dbg.scene,"ghost").length===1&&g1.visible===true);
+    const w2=createWorld(93,2); loadLevel(w2,2,false);
+    r.render(w2,1/60);
+    check("R9b.6 a level-change rebuild leaves no ghost until the next o.ghost",
+      slotsOf(r._dbg.scene,"ghost").length===0);
+    r.render(w2,1/60,{ghost:G});
+    check("R9b.6b the rebuilt scene builds a fresh ghost on demand",
+      slotsOf(r._dbg.scene,"ghost").length===1
+      &&slotsOf(r._dbg.scene,"ghost")[0]!==g1); }
+});
+
 console.log(fail? "THREE FAIL":"THREE OK");
 process.exit(fail?1:0);
