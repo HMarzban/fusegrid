@@ -6,7 +6,7 @@
 import { CFG, isFinale } from "./core/config.js";
 import { createWorld, loadLevel, step } from "./core/sim.js";
 import { createRenderer } from "./render/renderer.js";
-import { copyPayload, overlayBox, pauseHit } from "./render/scenes.js";
+import { copyPayload, isRunEnd, overlayBox, pauseHit } from "./render/scenes.js";
 import { paintBombPad } from "./render/sprites.js";
 import { dims, drawShell, kindSize } from "./render/shellview.js";
 import { settingsHit, layout as menuLayout } from "./render/menudraw.js";
@@ -29,6 +29,7 @@ import { bestKey, loadBests, saveBests, bestOfRun, recordBest, newTally, feedTal
 import { loadStats, setStatsOn, stat, statPlaques, statsRows, statsNotes, statsPayload } from "./app/stats.js";
 import { dailySeed, loadDaily, dailyTag, dailyStamp, finishDaily } from "./app/daily.js";
 import { decodeChallenge, encodeChallenge } from "./app/code.js";
+import { settleMedals, medalLine, medalRows, loadMedals } from "./app/medals.js";
 import {
   loadCoachSeen,
   saveCoachSeen,
@@ -169,6 +170,7 @@ export function createGame(canvas, opts = {}) {
       runFromStart ? (world.level | 0) : 0));
     stat("run_end", { r: world.level | 0, s: world.score | 0, k: tally.k, p: tally.p, b: tally.b, secs: Math.round(runT), kt: tally.kt, pk: tally.pk }, dateStr());
     if (dailyDate) { const f = finishDaily(dailyDate, world.score | 0, world.level | 0, world.pace | 0); dailyRec = f.rec; app.dailyTag = f.tag; }
+    if (isRunEnd(world)) tally.mn = settleMedals(world, tally, runT);
   };
 
   /* USER CAMERA (spec §1): render-side closure state, NEVER in world/snapshot.
@@ -261,7 +263,7 @@ export function createGame(canvas, opts = {}) {
     onStart,
     onSource,
     onStats: () => { setStatsOn(); const sv = loadStats();
-      app.stats = { rows: statsRows(sv, loadBests()), notes: statsNotes(sv, dailyRec, todayStr()) }; },
+      app.stats = { rows: statsRows(sv, loadBests()), notes: statsNotes(sv, dailyRec, todayStr()), trophies: medalRows(loadMedals()) }; },
     dailySeed: () => { const d = todayStr(); return { seed: dailySeed(d), date: d }; },
     onPauseCmd: (cmd) => {
       if (cmd === "RESUME") {
@@ -326,7 +328,7 @@ export function createGame(canvas, opts = {}) {
         sB !== SCREEN.SCORES &&
         sB !== SCREEN.ITEMS &&
         sB !== SCREEN.ENEMIES &&
-        sB !== SCREEN.STATS
+        sB !== SCREEN.STATS && sB !== SCREEN.TROPHIES
       )
         audio.play("uiSel");
       return r;
@@ -744,7 +746,7 @@ export function createGame(canvas, opts = {}) {
               coach2: world.state === "PLAY" ? { a: Math.max(0, 1 - coach2.t / COACH2_DUR), s: coachTip(coach2.kind) } : { a: 0, s: "" },
               pause: { view: app.pauseView | 0, cursor: app.pauseCursor | 0 },
               time: { on: !!app.timeAttack, t: roomT, best: bestPrev },
-              run: { r: tally.r, k: tally.k, p: tally.p, t: runT, best: bestRun, fromStart: runFromStart, daily: dailyDate, tries: dailyRec.played, dbest: dailyRec.best },
+              run: { r: tally.r, k: tally.k, p: tally.p, t: runT, best: bestRun, fromStart: runFromStart, daily: dailyDate, tries: dailyRec.played, dbest: dailyRec.best, md: medalLine(tally.mn) },
             }
           : { hud: false };
     // BRIGHTNESS is 3D only — CLASSIC 2D blits the authored hex unregraded.

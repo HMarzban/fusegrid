@@ -876,7 +876,35 @@ export function drawStats(c, L, t, ui) {
   c.textAlign = "center";
   for (let i = 0; i < notes.length && i < 2; i++)
     c.fillText(String(notes[i]), S.mid, S.footY - (notes.length - i) * 14 - 2);
-  foot(c, S, "C COPY MY STATS · ESC BACK");
+  foot(c, S, "T MEDALS · C COPY MY STATS · ESC BACK");
+}
+
+/* MEDALS (R6, SCREEN.TROPHIES): rows=[name, desc, on] arrive finished from
+   app/medals.js — the names live only there, so a missing list paints eight
+   name-free locked placeholders. Locked descriptions stay SHOWN: the page is
+   the goal list. */
+export function drawTrophies(c, L, t, rows) {
+  const S = shell(c, L, 480);
+  const r = rows || [];
+  head(c, S, "MEDALS", r.filter((x) => x && x[2]).length + "/8");
+  const top = S.headY + 22,
+    rowH = (S.footY - 18 - top) / 8;
+  c.textBaseline = "middle";
+  for (let i = 0; i < 8; i++) {
+    const [name, desc, on] = r[i] || ["—", "", false],
+      y = top + (i + 0.5) * rowH;
+    c.globalAlpha = on ? 1 : 0.45;
+    c.textAlign = "left";
+    c.fillStyle = on ? ACCENT : MUTED;
+    c.font = font(11, "900");
+    c.fillText(String(name), S.ix, y);
+    c.textAlign = "right";
+    c.fillStyle = on ? TEXT : MUTED;
+    c.font = font(10);
+    c.fillText(String(desc), S.ix + S.iw, y);
+  }
+  c.globalAlpha = 1;
+  foot(c, S, "ENTER / ESC BACK TO STATS");
 }
 
 /* OPTIONS (spec §2): nine live knob rows on LEVEL SELECT's adjust model.

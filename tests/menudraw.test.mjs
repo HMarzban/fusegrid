@@ -133,6 +133,8 @@ function check(name, cond, detail) {
       md.drawSettings(stub, L, 0.4, { row: 0, vals: sv, r3d: false, togT: -1, rev: "v0" });
       md.drawSettings(stub, L, 0.4, { row: 8, vals: sv, r3d: true, togT: 0.3, rev: "v0" });
       md.drawSettings(stub, L, 0.4, {});
+      md.drawTrophies(stub, L, 0.4, undefined);
+      md.drawTrophies(stub, L, 0.4, [["A", "B", true]]);
       md.drawDim(stub, 0.62, W, H);
       md.drawFade(stub, 0.5, W, H);
     } catch (e) {
@@ -643,7 +645,7 @@ function check(name, cond, detail) {
         `stats plate paints both notes and the copy foot at ${W}x${H}`,
         all.some((s) => s.indexOf("NOT PLAYED YET") >= 0) &&
           all.some((s) => s.indexOf("BESTS: NO PACT · NORM") >= 0) &&
-          all.includes("C COPY MY STATS · ESC BACK"),
+          all.includes("T MEDALS · C COPY MY STATS · ESC BACK"),
         all.join("|"),
       );
       check(
@@ -658,6 +660,72 @@ function check(name, cond, detail) {
         JSON.stringify({ py: p && p.y, ph: p && p.h, last }),
       );
     }
+  }
+}
+
+// 13f) R6 MEDALS page (SCREEN.TROPHIES): head, eight rows, foot, all inside the plate
+{
+  const md = await import("../src/render/menudraw.js");
+  const { medalRows, MEDAL } = await import("../src/app/medals.js");
+  const rec = () => {
+    const texts = [], rects = [];
+    const c = {
+      fillStyle: "", strokeStyle: "", lineWidth: 1, globalAlpha: 1, font: "",
+      textAlign: "left", textBaseline: "middle",
+      fillRect(x, y, w, h) { rects.push({ x, y, w, h, fill: c.fillStyle }); },
+      strokeRect() {},
+      fillText(s, x, y) {
+        texts.push({ s: String(s), x, y, fill: c.fillStyle, a: c.globalAlpha, align: c.textAlign });
+      },
+    };
+    return { c, texts, rects };
+  };
+  const plateOf = (rects) => rects.find((r) => r.fill === "rgba(8,12,22,0.92)");
+  for (const [W, H] of [
+    [600, 520],
+    [608, 352],
+  ]) {
+    const L = md.layout(W, H);
+    const rows = medalRows(MEDAL.IRONCROWN | MEDAL.FLAWLESS);
+    const { c, texts, rects } = rec();
+    md.drawTrophies(c, L, 0.4, rows);
+    const all = texts.map((t) => t.s);
+    const p = plateOf(rects);
+    check(
+      `R6 MEDALS page paints the head, the 2/8 kicker, all eight names and the foot at ${W}x${H}`,
+      all.includes("MEDALS") && all.includes("2/8") &&
+        rows.every((r) => all.includes(r[0]) && all.includes(r[1])) &&
+        all.includes("ENTER / ESC BACK TO STATS"),
+      all.join("|"),
+    );
+    check(
+      `R6 every MEDALS line stays inside the plate at ${W}x${H}`,
+      !!p && texts.every((t) => t.y > p.y && t.y < p.y + p.h &&
+        (t.align !== "left" || t.x >= p.x) && (t.align !== "right" || t.x <= p.x + p.w)),
+      JSON.stringify({ p, last: texts[texts.length - 1] }),
+    );
+    const on = texts.find((t) => t.s === "IRON CROWN"), off = texts.find((t) => t.s === "SPRINT");
+    check(
+      `R6 unlocked rows read accent at full alpha, locked rows muted at 0.45 at ${W}x${H}`,
+      on && off && on.fill === "#37f0d0" && on.a === 1 && off.fill === "#7385ad" && off.a === 0.45,
+      JSON.stringify({ on, off }),
+    );
+    check(
+      `R6 the page leaves globalAlpha at 1 at ${W}x${H}`,
+      c.globalAlpha === 1,
+      String(c.globalAlpha),
+    );
+    const e = rec();
+    let threw = false;
+    try { md.drawTrophies(e.c, L, 0.4, undefined); } catch (_) { threw = true; }
+    const names = rows.map((r) => r[0]);
+    check(
+      `R6 rows undefined paints 8 locked, name-free placeholders without throwing at ${W}x${H}`,
+      !threw && e.texts.filter((t) => t.a === 0.45).length >= 8 &&
+        e.texts.some((t) => t.s === "0/8") &&
+        !e.texts.some((t) => names.includes(t.s)),
+      e.texts.map((t) => t.s).join("|"),
+    );
   }
 }
 

@@ -21,6 +21,7 @@ const SCREEN_NAME = [
   "SETTINGS",
   "GUIDE",
   "STATS",
+  "TROPHIES",
 ];
 
 export function mountDebugHook(h) {

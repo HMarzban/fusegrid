@@ -167,6 +167,7 @@ export function summaryLines(world, run) {
       const [s, hot] = deltaOf(world || {}, run);
       if (s) out.push([s, hot ? "#37f0d0" : "#9fb3d8"]);
     }
+    if (run.md) out.push([run.md, "#ffd447"]);
   }
   return out;
 }
@@ -241,9 +242,9 @@ export function drawOverlay(
   }
   if (world.state === "WIN") {
     head(winHeadline(world), "#37f0d0");
-    /* R1: one 24px stack (R7's shipped pitch) at dy 20/44/68/92/116 — stamp,
-       tally, delta, R7's time line, cue. cy+116 is 376 inside the 600x520 box
-       and 304 inside the 608x352 iso box. With run and tm both absent this
+    /* R1: one 24px stack (R7's shipped pitch) at dy 20/44/68/92/116/140 —
+       stamp, tally, delta, R6's medal line, R7's time line, cue. cy+140 is 400
+       inside the 600x520 box and 328 inside the 608x352 iso box. With run and tm both absent this
        emits dy 20 then dy 44: today's two lines, at today's positions. */
     let dy = 20;
     sub(runStamp(world), "#9fb3d8", dy);

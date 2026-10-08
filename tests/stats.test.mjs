@@ -250,7 +250,7 @@ const TODAY = "2026-09-07";
   const t = newTally();
   check(
     "newTally now carries kt/pk/dr beside R1's seven fields",
-    Object.keys(t).sort().join(",") === "b,d,dNew,dr,k,kt,lv,p,pk,r",
+    Object.keys(t).sort().join(",") === "b,d,dNew,dr,k,kt,lv,mn,p,pk,r",
     JSON.stringify(Object.keys(t)),
   );
   const w = {

@@ -99,7 +99,7 @@ export function recordBest(v, key, score, room) {
 /* R5 extends this shape in place — kt/pk/dr are filled in the SAME loop, so the
    stats screen adds zero new passes over world.events. */
 export function newTally() {
-  return { r: 0, k: 0, p: 0, b: 0, d: 0, dNew: 0, lv: null, kt: {}, pk: {}, dr: {} };
+  return { r: 0, k: 0, p: 0, b: 0, d: 0, dNew: 0, lv: null, kt: {}, pk: {}, dr: {}, mn: 0 };
 }
 
 export function feedTally(t, world) {

@@ -27,6 +27,7 @@ export const SCREEN = Object.freeze({
   SETTINGS: 10, // appended — inserting shifts every frozen value after it
   GUIDE: 11, // appended — folds HOW TO PLAY/ITEMS/ENEMIES one hop deeper
   STATS: 12, // appended — the opt-in cabinet counters (R5)
+  TROPHIES: 13, // appended — the MEDALS page, opened from STATS by T (R6)
 });
 export const ITEMS = Object.freeze([
   "PLAY",
@@ -235,6 +236,8 @@ export function createMenuApp(opts = {}) {
           return this.adjustPace(-1);
         case "BracketRight":
           return this.adjustPace(1);
+        case "KeyT":
+          return this.screen === SCREEN.STATS ? this._push(SCREEN.TROPHIES) : false;
       }
       return false;
     },
@@ -323,6 +326,7 @@ export function createMenuApp(opts = {}) {
         case SCREEN.ITEMS:
         case SCREEN.ENEMIES:
         case SCREEN.STATS:
+        case SCREEN.TROPHIES:
           return this.back();
       }
       return false;
@@ -334,6 +338,7 @@ export function createMenuApp(opts = {}) {
         this.screen === SCREEN.ENEMIES
       )
         return this._push(SCREEN.GUIDE);
+      if (this.screen === SCREEN.TROPHIES) return this._push(SCREEN.STATS);
       if (
         this.screen === SCREEN.LEVEL ||
         this.screen === SCREEN.SCORES ||

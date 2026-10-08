@@ -235,9 +235,9 @@ function throwStore() {
   const t = newTally();
   check(
     "newTally is the seven-field R1 shape",
-    Object.keys(t).sort().join(",") === "b,d,dNew,dr,k,kt,lv,p,pk,r" &&
+    Object.keys(t).sort().join(",") === "b,d,dNew,dr,k,kt,lv,mn,p,pk,r" &&
       t.r === 0 && t.k === 0 && t.p === 0 && t.b === 0 && t.d === 0 &&
-      t.dNew === 0 && t.lv === null,
+      t.dNew === 0 && t.lv === null && t.mn === 0,
     JSON.stringify(t),
   );
   const w = {
@@ -476,6 +476,25 @@ const rec = () => {
     "the tally line is always the muted sub colour",
     mid[0][1] === "#9fb3d8",
     mid[0][1],
+  );
+  const md = { ...run, md: "MEDAL · IRON CROWN" };
+  const finM = summaryLines({ ...W, level: 8 }, md);
+  const loseM = summaryLines({ ...W, state: "LOSE" }, { ...run, md: "" });
+  check(
+    "R6: a run-end summary appends the medal line last, in gold",
+    finM.length === 3 && finM[2][0] === "MEDAL · IRON CROWN" && finM[2][1] === "#ffd447",
+    JSON.stringify(finM),
+  );
+  check(
+    "R6: an empty md adds no line, and a mid-room WIN with md set prints none",
+    loseM.length === 2 && summaryLines(W, md).length === 1,
+    JSON.stringify([loseM, summaryLines(W, md)]),
+  );
+  const dailyM = summaryLines({ ...W, level: 5 }, { ...md, daily: "2026-10-08", tries: 1, dbest: 0 });
+  check(
+    "R6: on a daily run the medal line still follows the daily line",
+    dailyM.length === 3 && dailyM[1][0].indexOf("DAILY") === 0 && dailyM[2][0] === "MEDAL · IRON CROWN",
+    JSON.stringify(dailyM),
   );
 }
 

@@ -282,6 +282,13 @@ function mkCanvas(){
   g.app.key("Escape");                          // back
   check("I1 GUIDE enter->uiSel then Esc back->uiBack",
     plays.join()==="uiSel,uiBack",JSON.stringify(plays));
+  g.app.screen=SCREEN.STATS; plays.length=0;
+  g.input.onUiKey("KeyT");
+  check("R6 KeyT reaches app.key on STATS, opens TROPHIES and plays no cue",
+    g.app.screen===SCREEN.TROPHIES&&plays.length===0,g.app.screen+"/"+JSON.stringify(plays));
+  g.app.confirm();
+  check("R6 confirm on TROPHIES backs to STATS with ONE uiBack, never uiSel",
+    g.app.screen===SCREEN.STATS&&plays.join()==="uiBack",JSON.stringify(plays));
 }
 {
   const plays=[];
@@ -936,6 +943,9 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   // precisely so this gate keeps biting.
   // R12 days-played wave: +0 lines (ld: todayStr() rides inside the three
   // existing room_enter literals) — measured 804, against the 808 cap.
+  // R6 medals wave: +2 lines (medals.js import; the endRun settleMedals line;
+  // isRunEnd, trophies, ro.run.md and the TROPHIES cue exclusion ride
+  // existing lines) — measured 806, against the 808 cap.
   check("main.js stays a lean browser entry (<=808 lines)",
     L.length<=808,String(L.length));
   const lastImp=L.reduce((a,l,i)=>/^import[\s{]/.test(l)?i:a,-1);
@@ -1052,6 +1062,9 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
     // hardened fallback: a screen index past the end of SCREEN_NAME (a stand-in
     // for a future appended SCREEN the array has not caught up with yet) must
     // still name something, never undefined.
+    g.app.screen=SCREEN.TROPHIES;
+    check("debug hook: state() names TROPHIES (R6)",
+      win.__GAME__.state()==="TROPHIES",String(win.__GAME__.state()));
     g.app.screen=99;
     check("debug hook: state() falls back to the raw index, never undefined, past the end of SCREEN_NAME (Nit-5)",
       win.__GAME__.state()==="99",String(win.__GAME__.state()));
@@ -1235,6 +1248,68 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
     old(); g.input.onPause(); t+=16; g.loop(t); g.app.pauseCursor=1; g.app.confirm();
     check("R12 the pause RESTART edge carries ld",
       a().days===3&&g.world.state==="PLAY",JSON.stringify(a())+"/"+g.world.state);
+  }finally{ delete globalThis.window; }
+}
+
+// ---- R6: medals settle only at a run end, never from ATTRACT, LOSE or a quit ----
+{
+  const noop=()=>{};
+  const mem={"nb.cabinet.v1":"1","nb.pact.v1":"1"};
+  const ls={getItem:(k)=>(k in mem?mem[k]:null),setItem:(k,v)=>{mem[k]=String(v);}};
+  globalThis.window={addEventListener:noop,removeEventListener:noop,innerWidth:2000,innerHeight:1200,localStorage:ls};
+  const K="nb.medals.v1";
+  try{
+    {
+      const g=createGame(null,{seed:23});
+      g.app.skip();
+      let t=1000, i=0;
+      while(g.app.screen!==SCREEN.ATTRACT&&i++<IDLE_T*70){ t+=16; g.loop(t); }
+      let held=g.app.screen===SCREEN.ATTRACT;
+      for(let f=0;f<600;f++){ t+=16; g.loop(t); if(g.app.screen!==SCREEN.ATTRACT) held=false; }
+      check("R6 600 ATTRACT frames leave nb.medals.v1 absent",held&&!(K in mem),String(mem[K]));
+    }
+    {
+      const g=createGame(null,{seed:24});
+      g.app.skip(); g.app.startRun();
+      let t=1000; t+=16; g.loop(t); g.world.state="LOSE"; t+=16; g.loop(t); t+=16; g.loop(t);
+      check("R6 a staged LOSE writes nothing to nb.medals.v1",
+        g.world.state==="LOSE"&&!(K in mem),g.world.state+"/"+mem[K]);
+    }
+    const stage68=(g,t,hurt)=>{
+      g.app.skip(); g.app.level=6; g.app.heat=2; g.app.pact=0; g.app.pace=0; g.app.startRun();
+      for(let lv=6;lv<=8;lv++){
+        t+=16; g.loop(t);
+        if(lv===6&&hurt){ g.world.lives-=1; t+=16; g.loop(t); }
+        g.world.enemies.length=0;
+        let n=0; while(g.world.state!=="WIN"&&n++<400){ t+=16; g.loop(t); }
+        if(lv<8){ t+=16; g.loop(t); loadLevel(g.world,lv+1,true); g.world.state="PLAY"; t+=16; g.loop(t); }
+      }
+      t+=16; g.loop(t);
+      return t;
+    };
+    {
+      const g=createGame(null,{seed:25});
+      g.app.skip(); g.app.level=6; g.app.heat=2; g.app.startRun();
+      let t=1000; t+=16; g.loop(t);
+      g.input.onPause(); t+=16; g.loop(t);
+      g.app.pauseCursor=3; g.app.confirm();
+      check("R6 a pause QUIT during a staged 6->8 run writes nothing",
+        g.app.screen===SCREEN.MENU&&!(K in mem),g.app.screen+"/"+mem[K]);
+    }
+    {
+      const cv=mkCamCanvas(600,520);
+      const g=createGame(cv.el,{seed:26});
+      check("R6 the pre-seeded pact unlock opens a room-6 start",g.app.pactUnlocked===true);
+      stage68(g,1000,true);
+      const fill=cv.calls.filter(c=>c[0]==="fillText").map(c=>String(c[1][0]));
+      check("R6 the staged 6->8 run is a finale WIN at L8, MAX, pact 0, NORM",
+        g.world.state==="WIN"&&g.world.level===8&&g.world.heat===2&&g.world.pact===0&&g.world.pace===0,
+        g.world.state+"/"+g.world.level+"/"+g.world.heat);
+      check("R6 a 6->8 MAX finale WIN with one life lost writes exactly IRON CROWN (bit 128)",
+        mem[K]==="128",String(mem[K]));
+      check("R6 the overlay announces MEDAL · IRON CROWN",
+        fill.includes("MEDAL · IRON CROWN"),fill.filter(s=>/MEDAL|ROOMS/.test(s)).slice(-4).join("|"));
+    }
   }finally{ delete globalThis.window; }
 }
 

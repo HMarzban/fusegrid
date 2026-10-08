@@ -1258,5 +1258,37 @@ check(
   );
 }
 
+// ---- R6: SCREEN.TROPHIES (the MEDALS page) is appended, opened from STATS by T ----
+{
+  check(
+    "R6 TROPHIES appended at 13 — never inserted, STATS stays 12",
+    SCREEN.TROPHIES === 13 && SCREEN.STATS === 12 &&
+      Object.keys(SCREEN).length === 14,
+    JSON.stringify(SCREEN),
+  );
+  check(
+    "R6 ITEMS is unchanged: eight rows, same order, no trophy row",
+    ITEMS.join("|") === "PLAY|LEVEL SELECT|DAILY|OPTIONS|GUIDE|HIGH SCORES|STATS|SOURCE",
+    ITEMS.join("|"),
+  );
+  const a = createMenuApp();
+  a.screen = SCREEN.MENU;
+  check("R6 KeyT on MENU does nothing", a.key("KeyT") === false && a.screen === SCREEN.MENU,
+    String(a.screen));
+  a.screen = SCREEN.STATS;
+  check("R6 KeyT on STATS pushes TROPHIES", a.key("KeyT") === true && a.screen === SCREEN.TROPHIES,
+    String(a.screen));
+  check("R6 KeyT on TROPHIES does nothing", a.key("KeyT") === false && a.screen === SCREEN.TROPHIES,
+    String(a.screen));
+  check("R6 back() on TROPHIES returns to STATS", a.back() === true && a.screen === SCREEN.STATS,
+    String(a.screen));
+  a.key("KeyT");
+  check("R6 confirm() on TROPHIES returns to STATS", a.confirm() === true && a.screen === SCREEN.STATS,
+    String(a.screen));
+  a.key("KeyT");
+  a.key("Escape");
+  check("R6 Escape on TROPHIES returns to STATS", a.screen === SCREEN.STATS, String(a.screen));
+}
+
 console.log("\n  MENUAPP RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);
