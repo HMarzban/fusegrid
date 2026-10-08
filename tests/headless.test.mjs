@@ -1023,8 +1023,10 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   // and ITEMS ride existing import lines) — measured 812, against the 812 cap.
   // C1 camera wave: +0 lines (the zoom reset rides the RESTART and the
   // (WIN|LOSE)->PLAY reset lines) — measured 812, against the 812 cap.
-  check("main.js stays a lean browser entry (<=812 lines)",
-    L.length<=812,String(L.length));
+  // C2 fit wave: -17 lines (the fit block moved to src/app/fit.js mountFit)
+  // — measured 795, cap 812->799 (T1's STATS tap branch is the planned +4).
+  check("main.js stays a lean browser entry (<=799 lines)",
+    L.length<=799,String(L.length));
   const lastImp=L.reduce((a,l,i)=>/^import[\s{]/.test(l)?i:a,-1);
   const firstDecl=L.findIndex(l=>/^(export\s|const\s|let\s|var\s|function\s|class\s)/.test(l));
   check("main.js keeps every import at the top (no mid-file import sprawl)",

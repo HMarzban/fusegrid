@@ -2,6 +2,7 @@ import {readFileSync} from "node:fs";
 import {Input} from "../src/input.js";
 import {hasTouch, PadMapper, mountTouch} from "../src/touch.js";
 import {stampBombIcon} from "../src/render/sprites.js";
+import {FIT_RES, fitBox} from "../src/app/fit.js";
 
 let pass=0, fail=0;
 function check(name, cond, detail){ cond?pass++:fail++;
@@ -189,14 +190,13 @@ check("hasTouch({ontouchstart:null}) true", hasTouch({ontouchstart:null})===true
     &&/#tpause::before/.test(html)&&/#tpause::after/.test(html),
     (html.match(/#tpause\{[^}]*\}/)||[])[0]);
   {
-    const rule=(html.match(/#tpause\{[^}]*\}/)||[""])[0];
+    const rule=(html.match(/\n\s*#tpause\{[^}]*\}/)||[""])[0].trim();
     const gap=+((rule.match(/bottom:calc\(100% \+ (\d+)px\)/)||[])[1]);
-    const main=readFileSync(new URL("../src/main.js", import.meta.url),"utf8");
-    const spare=+((main.match(/innerHeight - (\d+)/)||[])[1]);
-    check("#tpause sits above the stage, never over the right-aligned HUD"
-      +" score, and fit() leaves it room on screen",
-      !/[{;\s]top:/.test(rule)&&gap>=0&&spare/2>=44+gap,
-      rule+" spare="+spare);
+    const wrapP=(html.match(/body\[data-lay=p\] #wrap\{[^}]*padding:(\d+)px/)||[])[1];
+    check("#tpause's base rule sits above the stage (never over the"
+      +" right-aligned HUD score) and the portrait top pad leaves it room",
+      /^#tpause\{/.test(rule)&&!/[{;\s]top:/.test(rule)&&gap>=0&&+wrapP>=44+gap,
+      rule+" wrapTop="+wrapP);
   }
   {
     const leak=["tpad","tbomb","tpause"].filter((id)=>{
@@ -267,37 +267,50 @@ check("hasTouch({ontouchstart:null}) true", hasTouch({ontouchstart:null})===true
    }finally{ delete globalThis.window; delete globalThis.document; }
 }
 
-// ---- D5: a short landscape stage is too narrow for pad+bomb ----
+// ---- D5: pad + bomb + pill sit off the board on every touch layout ----
 {
   const html=readFileSync(new URL("../index.html", import.meta.url),"utf8");
-  const main=readFileSync(new URL("../src/main.js", import.meta.url),"utf8");
   const num=(re,s)=>+((s.match(re)||[])[1]);
-  const spareW=num(/innerWidth - (\d+)/,main), spareH=num(/innerHeight - (\d+)/,main);
-  const base=(id)=>(html.match(new RegExp("#"+id+"\\{[^}]*\\}"))||[""])[0];
-  const padW=num(/width:(\d+)px/,base("tpad")), padL=num(/left:calc\((\d+)px/,base("tpad"));
-  const bombW=num(/width:(\d+)px/,base("tbomb")), bombR=num(/right:calc\((\d+)px/,base("tbomb"));
-  const mq=html.match(/@media \(max-height:(\d+)px\) and \(min-aspect-ratio:(\d+)\/(\d+)\)\{([^@]*?\})\s*\}/)||[];
-  const inner=mq[4]||"";
-  const padG=num(/#tpad\{[^}]*right:calc\(100% \+ (\d+)px\)/,inner);
-  const bombG=num(/#tbomb\{[^}]*left:calc\(100% \+ (\d+)px\)/,inner);
-  const hits=(W,H)=>mq.length>0&&H<=+mq[1]&&W*+mq[3]>=H*+mq[2];
+  const base=(id)=>(html.match(new RegExp("\\n\\s*#"+id+"\\{[^}]*\\}"))||[""])[0];
+  const lay=(l,id)=>(html.match(new RegExp("body\\[data-lay="+l+"\\] #"+id+"\\{[^}]*\\}"))||[""])[0];
+  const padW=num(/width:(\d+)px/,base("tpad")), bombW=num(/width:(\d+)px/,base("tbomb")),
+    pillW=num(/width:(\d+)px/,base("tpause")), pillG=num(/bottom:calc\(100% \+ (\d+)px\)/,base("tpause"));
+  const lPadG=num(/right:calc\(100% \+ (\d+)px\)/,lay("l","tpad")), lPadB=num(/bottom:(\d+)/,lay("l","tpad")),
+    lBombG=num(/left:calc\(100% \+ (\d+)px\)/,lay("l","tbomb")), lBombB=num(/bottom:(\d+)px/,lay("l","tbomb")),
+    lPillG=num(/left:calc\(100% \+ (\d+)px\)/,lay("l","tpause")), lPillT=num(/top:(\d+)/,lay("l","tpause"));
+  const pWrap=lay("p","wrap").match(/padding:(\d+)px (\d+)px (\d+)px/)||[];
+  const pTop=+pWrap[1], pBot=+pWrap[3];
+  const pPadT=num(/top:calc\(100% \+ (\d+)px\)/,lay("p","tpad")), pPadL=num(/left:(\d+)px/,lay("p","tpad")),
+    pBombT=num(/top:calc\(100% \+ (\d+)px\)/,lay("p","tbomb")), pBombR=num(/right:(\d+)px/,lay("p","tbomb"));
+  const parsed=[padW,bombW,pillW,pillG,lPadG,lPadB,lBombG,lBombB,lPillG,lPillT,pTop,pBot,pPadT,pPadL,pBombT,pBombR];
   const bad=[];
   const probe=(W,H)=>{
-    const s=Math.max(0.3,Math.min((W-spareW)/600,(H-spareH)/520,1.8));
-    const sw=600*s, sh=520*s, gut=(W-sw)/2;
-    const ok=hits(W,H)
-      ?gut-padG-padW>=0&&gut-bombG-bombW>=0&&(H+sh)/2-12-padW>=0
-      :padL+padW+bombW+bombR<=sw;
-    if(!ok&&bad.length<4) bad.push(W+"x"+H+(hits(W,H)?" gutter "+gut.toFixed(1):" stage "+sw.toFixed(1)));
+    const {lay:l,s}=fitBox(W,H,true,600,520), sw=600*s, sh=520*s;
+    let ok;
+    if(l==="l"){
+      const gut=(W-sw)/2;
+      ok=gut>=lPadG+padW&&gut>=lBombG+bombW&&gut>=lPillG+pillW
+        &&sh>=lPillT+pillW+lBombB+bombW&&(H+sh)/2-lPadB-padW>=0;
+    }else{
+      const top=(H-sh-pTop-pBot)/2+pTop, below=H-top-sh;
+      ok=top>=pillW+pillG&&below>=pPadT+padW&&below>=pBombT+bombW
+        &&sw>=pPadL+padW+pBombR+bombW;
+    }
+    if(!ok&&bad.length<4) bad.push(W+"x"+H+" "+l+" stage "+sw.toFixed(1)+"x"+sh.toFixed(1));
   };
-  for(let W=560;W<=1400;W+=2) for(let H=280;H<=1000;H+=2) probe(W,H);
-  for(const [W,H] of [[812,375],[667,375],[568,320],[915,412],[932,430],[320,568],[375,667],[390,844],[430,932]]) probe(W,H);
-  check("pad and bomb never overlap or sit on the board in short landscape:"
-    +" they move to the side gutters (env() insets are 0, no viewport-fit=cover)",
-    mq.length>0&&padG>=0&&bombG>=0&&bad.length===0,
-    bad.join(" | ")||"812x375 stage "+(600*(375-spareH)/520).toFixed(1));
-  check("the gutter rules carry no display: (the [hidden] guard stays the only one)",
-    !/display:/.test(inner),inner);
+  for(let W=560;W<=1400;W+=2) for(let H=280;H<W&&H<=1000;H+=2) probe(W,H);
+  for(let W=320;W<=1000;W+=2) for(let H=Math.max(W,480);H<=1400;H+=2) probe(W,H);
+  for(const [W,H] of [[812,375],[667,375],[568,320],[915,412],[932,430],[320,568],[375,667],[390,844],[430,932],[1180,820],[1024,768],[768,1024]]) probe(W,H);
+  check("pad, bomb and pill never sit on the board: side gutters in touch"
+    +" landscape, below/above the stage in touch portrait (env() insets are 0,"
+    +" no viewport-fit=cover)",
+    parsed.every(Number.isFinite)&&pTop+pBot===FIT_RES.p[1]&&bad.length===0,
+    bad.join(" | ")||parsed.join());
+  const rules=["p","l"].flatMap((l)=>["wrap","tpad","tbomb","tpause"].map((id)=>lay(l,id))).join("");
+  check("the layout rules carry no display: (the [hidden] guard stays the only one)",
+    !/display:/.test(rules),rules);
+  check("the layout keys off body[data-lay] written by fit(), not a media query",
+    !/@media \(max-height/.test(html),(html.match(/@media[^{]*/)||["none"])[0]);
   const bodyRule=(html.match(/html,body\{[^}]*\}/)||[""])[0];
   check("body spans the viewport so its overflow:hidden clip holds the side gutters",
     !/overflow:hidden/.test(bodyRule)||/[{;\s]width:100%/.test(bodyRule),bodyRule);

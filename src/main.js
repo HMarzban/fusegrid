@@ -17,6 +17,7 @@ import { clampPact } from "./core/pact.js";
 import { createDemo, stepDemo } from "./app/attract.js";
 import { readFlags, locationSearch } from "./app/flags.js";
 import { mountDebugHook } from "./app/debughook.js";
+import { mountFit } from "./app/fit.js";
 import { introPhase, INTRO_DUR } from "./app/intro.js";
 import { loadScores, recordScore, saveScores, scoreEntry, scoresForHeat, qualifies } from "./app/highscores.js";
 import { loadPactUnlocked, savePactUnlocked } from "./app/pactstore.js";
@@ -83,25 +84,7 @@ export function createGame(canvas, opts = {}) {
   if (canvas) {
     canvas.width = CFG.COLS * CFG.TILE;
     canvas.height = CFG.ROWS * CFG.TILE;
-    fit = () => {
-      if (typeof window === "undefined") return;
-      const maxW = window.innerWidth - 40,
-        maxH = window.innerHeight - 180;
-      const s = Math.max(
-        0.3,
-        Math.min(maxW / canvas.width, maxH / canvas.height, 1.8),
-      );
-      canvas.style.width = canvas.width * s + "px";
-      canvas.style.height = canvas.height * s + "px";
-      const glEl =
-        typeof document !== "undefined" && document.getElementById("gl");
-      if (glEl) {
-        glEl.style.width = canvas.style.width;
-        glEl.style.height = canvas.style.height;
-      }
-    };
-    fit();
-    if (typeof window !== "undefined") window.addEventListener("resize", fit);
+    fit = mountFit(canvas);
   }
 
   const input = new Input(opts.canvasEl || canvas);

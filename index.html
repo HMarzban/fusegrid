@@ -54,10 +54,11 @@
   canvas{image-rendering:pixelated;display:block;border-radius:10px;
     border:1px solid var(--line);box-shadow:0 12px 48px rgba(0,0,0,.6),0 0 0 4px #0a0e18;
     touch-action:none}
-  /* touch controls (§2): stage children, never canvas listeners; fixed px so
-     they overlay the scaled canvas independent of fit(). A short landscape
-     stage is narrower than 12+128+72+16, so there they move out into the
-     side gutters (the @media below). */
+  /* touch controls (§2): stage children, never canvas listeners; fixed px,
+     independent of the canvas scale. fit() (src/app/fit.js) writes
+     body[data-lay] and reserves room so they never sit on the board: touch
+     portrait puts pad + bomb below the stage, touch landscape moves them into
+     the side gutters (the body[data-lay] rules below). */
   #touchpad{position:absolute;inset:0;pointer-events:none;z-index:5;
     -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
   #touchpad>div{position:absolute;pointer-events:auto;background:var(--panel);
@@ -74,20 +75,23 @@
     bottom:calc(16px + env(safe-area-inset-bottom))}
   #tbomb[hidden]{display:none}
   #tbomb canvas{width:40px;height:40px;pointer-events:none}
-  @media (max-height:500px) and (min-aspect-ratio:4/3){
-    #tpad{left:auto;right:calc(100% + 12px)}
-    #tbomb{right:auto;left:calc(100% + 16px)}
-  }
   /* pause pill: 44px is the minimum comfortable target (#tbomb is 72, #tpad
-     128). Two bars via ::before/::after — no canvas. It sits ABOVE the stage,
-     right-aligned: inside, a fixed 44px over a ~0.55 phone-scaled canvas lands
-     on the right-aligned HUD score. fit() keeps >=90px clear above the stage. */
+     128). Two bars via ::before/::after — no canvas. Never inside the stage:
+     a fixed 44px over a phone-scaled canvas lands on the right-aligned HUD
+     score. Portrait keeps it above the stage (60px top pad); landscape moves
+     it to the top of the right gutter, over the bomb. */
   #tpause{width:44px;height:44px;border-radius:50%;
     bottom:calc(100% + 8px);right:0}
   #tpause::before,#tpause::after{content:"";position:absolute;top:13px;
     width:4px;height:14px;background:#dfe7f5;border-radius:2px}
   #tpause::before{left:14px}
   #tpause::after{left:22px}
+  body[data-lay=p] #wrap{padding:60px 8px 190px}
+  body[data-lay=p] #tpad{top:calc(100% + 22px);bottom:auto;left:6px}
+  body[data-lay=p] #tbomb{top:calc(100% + 50px);bottom:auto;right:14px}
+  body[data-lay=l] #tpad{left:auto;right:calc(100% + 22px);bottom:0}
+  body[data-lay=l] #tbomb{right:auto;left:calc(100% + 40px);bottom:10px}
+  body[data-lay=l] #tpause{right:auto;bottom:auto;left:calc(100% + 54px);top:0}
   .muted{opacity:.45}
   .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 </style>
