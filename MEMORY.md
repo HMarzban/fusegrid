@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-08 — Wave-3 R9b: REAL 3D ghost (v152)
+- `createPools` gains `ghost(g)`: ONE lazy merged `PLAYER_HULL` Lambert (clones of the five MAKO parts, face raked by the literal matrix; opacity 0.4, no depthWrite, never casts) outside the player slot; `wrapper.js` feeds `o.ghost` after update/rebuild. Fat-world 141 unmoved, 142 while racing; main.js +0. Headed: retry race, PAUSE freeze, `stationary` and VOID/SHADE reads all pass at 0.4.
+
 ## 2026-10-08 — R9a review: ghost walk bob freezes in PAUSE (v151)
 - `ghostAt` returns `t: roomT` and `drawGhost` walks on `g.t`, not `world.time`, so PAUSE holds the bob. The fin flick stays on `world.time`. Spec §5.4 ruling added; pinned in ghost.test 9b.
 
