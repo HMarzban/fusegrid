@@ -668,8 +668,8 @@ ghostTick(g, world, roomT, store)    // once per GAME frame, BEFORE the step loo
   3 state WIN  && !done   -> done=true; d = max(1, floor(roomT*10));
                              save {d, s} iff no stored entry or d < stored.d (re-read at save time)
 ghostAt(g, world, roomT)             -> null unless world.grid === g.grid && race && state in {PLAY, PAUSE} && roomT*10 <= k-1
-                                        (k = race sample count); else {x, y, fx, fy}: x/y lerped between
-                                        samples floor(roomT*10) and +1, face from the earlier sample
+                                        (k = race sample count); else {x, y, fx, fy, t}: x/y lerped between
+                                        samples floor(roomT*10) and +1, face from the earlier sample, t = roomT
 ```
 
 - **PAUSE-proof by construction.** `roomT` only advances in PLAY
@@ -728,8 +728,16 @@ ghostAt(g, world, roomT)             -> null unless world.grid === g.grid && rac
 
 **`sprites.js`** `drawGhost(c, world, g)`:
 - `save`, then `globalAlpha = GHOST_A` (0.4), then `translate(g.x, g.y)`
-- `drawPlayerBody(c, world, {face:{x:g.fx,y:g.fy}, walk:world.time, iFrames:0, kick:false, shield:false, passing:false})`
+- `drawPlayerBody(c, world, {face:{x:g.fx,y:g.fy}, walk:g.t, iFrames:0, kick:false, shield:false, passing:false})`
 - `restore`
+
+**Ruling 2026-10-08 (R9a review, walk clock):** `walk:world.time` contradicted
+"PAUSE freezes it". `world.time` advances in PAUSE, so the ghost kept its walk
+bob (about ±1.6 px at 2.9 Hz) while its x/y held. `ghostAt` now also returns
+`t: roomT`, and `drawGhost` walks on `g.t`, which freezes in PAUSE the way the
+live `p.walk` does. The fin flick stays on `world.time`, as it does on the live
+player. The ghost still bobs in PLAY while the recorded player stood still,
+because faces are recorded and walk is not. That is accepted.
 
 Facts this relies on:
 - With those flags `drawPlayerBody` sets no absolute `globalAlpha`

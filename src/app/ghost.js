@@ -103,5 +103,5 @@ export function ghostAt(g, world, roomT) {
   const k = r.length, u = roomT * GHOST_HZ;
   if (u > k - 1) return null;
   const i = Math.floor(u), f = u - i, a = r[i], b = r[Math.min(i + 1, k - 1)];
-  return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, fx: a.fx, fy: a.fy };
+  return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, fx: a.fx, fy: a.fy, t: roomT };
 }

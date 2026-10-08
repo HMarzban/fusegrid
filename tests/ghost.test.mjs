@@ -15,7 +15,7 @@ import {
 } from "../src/app/ghost.js";
 import { createWorld, loadLevel } from "../src/core/sim.js";
 import { createRenderer } from "../src/render/renderer.js";
-import { GHOST_A } from "../src/render/sprites.js";
+import { GHOST_A, drawGhost } from "../src/render/sprites.js";
 
 let pass = 0,
   fail = 0;
@@ -229,12 +229,26 @@ check("constants are the spec's", GHOST_KEY === "nb.ghost.v1" && GHOST_V === 1 &
   w.state = "PAUSE";
   const p1 = ghostAt(r, w, 0.5), p2 = ghostAt(r, w, 0.5);
   check("freezes in PAUSE (roomT frozen, same pose)", !!p1 && JSON.stringify(p1) === JSON.stringify(p2) && p1.x === 110);
+  check("carries the PLAY-only clock as t", p1.t === 0.5 && m.t === 0.25, p1.t + "/" + m.t);
   w.state = "WIN";
   const win = ghostAt(r, w, 0.5);
   w.state = "LOSE";
   check("returns null in WIN/LOSE", win === null && ghostAt(r, w, 0.5) === null);
   w.state = "PLAY";
   check("returns null with no race", ghostAt(createGhost(), w, 0.5) === null && ghostAt(null, w, 0.5) === null);
+}
+
+// ---- 9b. drawGhost walks on g.t, not world.time: PAUSE holds the bob ----
+{
+  const w = mk(), g = { x: 100, y: 60, fx: 1, fy: 0, t: 0.5 };
+  w.state = "PAUSE";
+  const at = (time) => { const r = rec(); w.time = time; drawGhost(r.el.getContext(), w, g); return r.ops; };
+  const a = at(3), b = at(3.37);
+  const skip = (o) => o.filter((op) => op[0] !== "rotate");
+  check("two PAUSE frames draw the same ghost but for the fin flick", a.length === b.length &&
+    JSON.stringify(skip(a)) === JSON.stringify(skip(b)) && a.filter((op) => op[0] === "rotate").length === 1);
+  check("the bob is sin(g.t*18)*1.8", a[2][0] === "translate" && a[3][0] === "translate" && a[3][1][1] === Math.sin(0.5 * 18) * 1.8,
+    JSON.stringify(a.slice(0, 4)));
 }
 
 // ---- 10. tuple gate ----

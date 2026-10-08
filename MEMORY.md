@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-08 — R9a review: ghost walk bob freezes in PAUSE (v151)
+- `ghostAt` returns `t: roomT` and `drawGhost` walks on `g.t`, not `world.time`, so PAUSE holds the bob. The fin flick stays on `world.time`. Spec §5.4 ruling added; pinned in ghost.test 9b.
+
 ## 2026-10-08 — Wave 3 R9a ghost store + recorder + CLASSIC 2D ghost (v150)
 - New `src/app/ghost.js` (`nb.ghost.v1`, 5-tuple key, faster-only, LRU 16, 2400-sample cap); `ghostTick` before the step loop (pin 6b fails if moved after it); 2D `drawGhost` at alpha 0.4 between blades and foes; main.js +3 (809, cap 808->812, the wave's one raise). Headed: retry race, PAUSE freeze, VOID-vs-SHADE and `stationary` reads pass. R9b (3D) next.
 

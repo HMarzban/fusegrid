@@ -618,7 +618,7 @@ export function drawGhost(c, world, g) {
   c.save();
   c.globalAlpha = GHOST_A;
   c.translate(g.x, g.y);
-  drawPlayerBody(c, world, { face: { x: g.fx, y: g.fy }, walk: world.time, iFrames: 0, kick: false, shield: false, passing: false });
+  drawPlayerBody(c, world, { face: { x: g.fx, y: g.fy }, walk: g.t, iFrames: 0, kick: false, shield: false, passing: false });
   c.restore();
 }
 export function drawBombBody(c, world, bm) {
