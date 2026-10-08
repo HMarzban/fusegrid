@@ -42,14 +42,19 @@ live in `drawOverlay`.
 The sim ticks only while the shell is GAME. PAUSE/WIN/LOSE are `world.state`,
 not shell screens. Do not add them as `SCREEN` values.
 
-- `src/main.js` — **browser entry only**, pinned `<=812` lines
-  (`tests/headless.test.mjs`; raised 808→812 once in wave 3 for `ro.ghost`). RAF loop, fixed-step accumulator,
+- `src/main.js` — **browser entry only**, pinned `<=799` lines
+  (`tests/headless.test.mjs`; raised 808→812 once in wave 3 for `ro.ghost`,
+  tightened to 799 when C2 moved `fit()` out). RAF loop, fixed-step accumulator,
   renderer cache + kind switch, and the handler wiring that binds them. Never
   imported by sim or renderer. Its seams live beside it and must stay OUT of
   `main.js`: `src/app/flags.js` (URL/opts, pure over a search string),
   `src/app/attract.js` (demo world + `stepDemo`), `src/app/debughook.js`
   (`window.__GAME__`), `src/net/localpair.js` (`?net=local`),
-  `src/render/shellview.js` (`drawShell` + the `kindSize`/`dims` logical box).
+  `src/render/shellview.js` (`drawShell` + the `kindSize`/`dims` logical box),
+  `src/app/fit.js` (`mountFit`: stage scale per layout reserve `FIT_RES`, and
+  `body[data-lay]` = `d` desktop / `p` touch portrait / `l` touch landscape —
+  the ONE predicate `index.html`'s touch layout keys off, never a media
+  query; re-fits on `resize` and `orientationchange`).
 - `src/core/` — deterministic simulation, no DOM, no browser globals.
   - `world.js` — `createWorld`, `loadLevel` (re-exported from `sim.js`).
   - `sim.js` — `step(world, dt, intents)`.
@@ -158,7 +163,7 @@ not shell screens. Do not add them as `SCREEN` values.
     the only render module that may read `src/app/` — screen constants only,
     and scores arrive as a getter so `highscores` stays on the app side.
 - `src/app/` — menu shell, intro beats, demobot, highscores, `pactstore.js`,
-  plus the entry seams above (`flags` / `attract` / `debughook`).
+  plus the entry seams above (`flags` / `attract` / `debughook` / `fit`).
   Not read by `step()`.
   Retention stores (wave 2, 2026-09-07), one key per module, all `Date`-free
   and DOM-free: `bests.js` (`nb.bests.v1`, per-run score/room bests keyed

@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-08 — C2: fit() seam + phone touch layout (shell v160)
+- `fit()` moved to `src/app/fit.js` (`mountFit`, `fitBox`, `FIT_RES` d 40/48, p 16/250, l 332/16); it writes `body[data-lay]`, which replaces v157's `@media` block, and re-fits on resize + orientationchange. Portrait: pad + bomb below the stage, pill above (60px top pad). Landscape: gutters, pill top of the right gutter. 1440×900 scale 1.385→1.638, 812×375 0.375→0.690. main.js 812→795, cap 799 (T1's +4 next). Headed CDP sweep over 7 viewports ×2D/3D green.
+
 ## 2026-10-08 — C1: REAL 3D camera rig C shipped (shell v159)
 - `camrig.js` rig `{el:0.66, dist:1503, target y -17}` at `CAM_FOV` 24 (user's pick C), presets [1503,1671,1827], dolly 892/2529, wheel K 1.04, far 3000, particles 19.5, intro settles into the rig from el 0.74. Dolly now resets to the selected preset at every room start + pause RESTART (two appends, main.js +0). §4b gains side:top >=0.55 and keystone >=0.78 floors. Headed 1440×900 check (JUNGLE/ICE/VOID/CROWN + blast) looked right; C2 (fit seam) and T1 (STATS taps) are next.
 
