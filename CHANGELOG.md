@@ -6,7 +6,7 @@ version number of its own; each entry is dated and names the PWA shell
 revision (`CACHE_NAME` in `src/pwa/shell.js`) that shipped it, since that is
 what makes an installed copy update.
 
-## [Unreleased] — shell v145 · 2026-10-08 · on local `main`, not yet pushed
+## shell v145 · 2026-10-08
 
 ### Fixed
 - **Touch pause button no longer hides your score.** On a portrait phone the
