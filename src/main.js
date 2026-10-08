@@ -216,7 +216,7 @@ export function createGame(canvas, opts = {}) {
     bestPrev = null;
     startRunState((args.level | 0) <= 1);
     if (!coachSeen) stat("coach_shown", { v: "v1" }, dateStr());
-    stat("room_enter", { r: world.level | 0, h: world.heat | 0, pc: world.pact | 0, pa: world.pace | 0 }, dateStr());
+    stat("room_enter", { r: world.level | 0, h: world.heat | 0, pc: world.pact | 0, pa: world.pace | 0, ld: todayStr() }, dateStr());
     resetCamera(cam); // §2: every run starts framed
     resetOrbit(rig);
     rig.dist = camPreset(settings.cam);
@@ -274,7 +274,7 @@ export function createGame(canvas, opts = {}) {
         persistScore();
         startRunState(true);
         loadLevel(world, 1, false);
-        stat("room_enter", { r: world.level | 0, h: world.heat | 0, pc: world.pact | 0, pa: world.pace | 0 }, dateStr());
+        stat("room_enter", { r: world.level | 0, h: world.heat | 0, pc: world.pact | 0, pa: world.pace | 0, ld: todayStr() }, dateStr());
         world.score = 0;
         world.state = "PLAY";
         world.fireEdge = true; // a held fire CONFIRMED the row; never a same-frame plant
@@ -627,7 +627,7 @@ export function createGame(canvas, opts = {}) {
       if ((prevSt === "WIN" || prevSt === "LOSE") && world.state === "PLAY") {
         roomT = 0; bestPrev = null;              // WIN->next room, LOSE->new run
         if (prevSt === "LOSE") startRunState(true); // R1: a retry never calls onStart
-        stat("room_enter", { r: world.level | 0, h: world.heat | 0, pc: world.pact | 0, pa: world.pace | 0 }, dateStr());
+        stat("room_enter", { r: world.level | 0, h: world.heat | 0, pc: world.pact | 0, pa: world.pace | 0, ld: todayStr() }, dateStr());
       }
       prevSt = world.state;
       /* The shell machine runs during GAME too — unconditionally, not only

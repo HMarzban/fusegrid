@@ -839,8 +839,8 @@ export function drawScores(c, scores, L, t, heat, plaques) {
 /* STATS (R5): the drawScores scaffold — one plate, a head, a right-aligned
    value column, a rule, notes and a foot. ui={rows,notes} arrives already
    computed (app/stats.js), the same getter discipline scores and plaques use:
-   this file must not import src/app. The rule after row 6 is what separates
-   six lifetime counters from three per-heat bests, so the screen reads as a
+   this file must not import src/app. The rule after row 7 is what separates
+   seven lifetime counters from three per-heat bests, so the screen reads as a
    cabinet and not as a debug dump — no JSON is ever painted here. */
 export function drawStats(c, L, t, ui) {
   const S = shell(c, L, 480);
@@ -849,7 +849,8 @@ export function drawStats(c, L, t, ui) {
   const notes = (ui && ui.notes) || [];
   const top = S.headY + 22,
     bot = S.footY - 42,
-    rowH = (bot - top) / 9;
+    n = rows.length || 10,
+    rowH = (bot - top) / n;
   const size = rowH < 18 ? 11 : 13;
   c.textBaseline = "middle";
   for (let i = 0; i < rows.length; i++) {
@@ -863,7 +864,7 @@ export function drawStats(c, L, t, ui) {
     c.font = font(size);
     c.fillText(String(rows[i][1]), S.ix + S.iw, y);
   }
-  const ry = top + 6 * rowH;
+  const ry = top + (n - 3) * rowH;
   c.strokeStyle = LINE;
   c.lineWidth = 1;
   c.beginPath();

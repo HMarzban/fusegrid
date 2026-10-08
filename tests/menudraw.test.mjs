@@ -591,7 +591,7 @@ function check(name, cond, detail) {
       md.drawStats(c, L, 0.4, {
         rows: [
           ["RUNS", "118"], ["ROOMS CLEARED", "214"], ["DEATHS", "301"],
-          ["KILLS", "4820"], ["PICKUPS", "913"], ["PLAY TIME", "14h 07m"],
+          ["KILLS", "4820"], ["PICKUPS", "913"], ["PLAY TIME", "14h 07m"], ["DAYS PLAYED", "12"],
           ["CORE BEST", "1840 · R5"], ["PLUS BEST", "—"], ["MAX BEST", "—"],
         ],
         notes: [
@@ -603,28 +603,38 @@ function check(name, cond, detail) {
       const p = plateOf(rects);
       check(
         // Minor-6: the rule (moveTo/lineTo, previously unrecorded) must sit
-        // strictly between the PLAY TIME (row 6) and CORE BEST (row 7)
-        // baselines — that is what separates the six lifetime counters from
-        // the three per-heat bests.
-        `the lifetime/bests rule sits strictly between PLAY TIME and CORE BEST at ${W}x${H}`,
+        // strictly between the DAYS PLAYED (row 7) and CORE BEST (row 8)
+        // baselines — that is what separates the seven lifetime counters from
+        // the three per-heat bests (R12).
+        `the lifetime/bests rule sits strictly between DAYS PLAYED and CORE BEST at ${W}x${H}`,
         (() => {
-          const playY = (texts.find((t) => t.s === "PLAY TIME") || {}).y;
+          const daysY = (texts.find((t) => t.s === "DAYS PLAYED") || {}).y;
           const coreY = (texts.find((t) => t.s === "CORE BEST") || {}).y;
           const ruleY = lines.length ? lines[lines.length - 1].y0 : undefined;
           return (
-            playY != null && coreY != null && ruleY != null &&
-            playY < ruleY && ruleY < coreY
+            daysY != null && coreY != null && ruleY != null &&
+            daysY < ruleY && ruleY < coreY
           );
         })(),
         JSON.stringify({
           lines,
-          playY: (texts.find((t) => t.s === "PLAY TIME") || {}).y,
+          daysY: (texts.find((t) => t.s === "DAYS PLAYED") || {}).y,
           coreY: (texts.find((t) => t.s === "CORE BEST") || {}).y,
         }),
       );
+      {
+        const e = rec();
+        md.drawStats(e.c, L, 0.4, { rows: [], notes: [] });
+        check(
+          `R12: an empty row list draws the rule where ten rows would, never up in the head at ${W}x${H}`,
+          e.lines.length > 0 && lines.length > 0 &&
+            e.lines[e.lines.length - 1].y0 === lines[lines.length - 1].y0,
+          JSON.stringify({ empty: e.lines, ten: lines }),
+        );
+      }
       check(
-        `stats plate paints all nine labels and the head at ${W}x${H}`,
-        ["RUNS", "ROOMS CLEARED", "DEATHS", "KILLS", "PICKUPS", "PLAY TIME",
+        `stats plate paints all ten labels and the head at ${W}x${H}`,
+        ["RUNS", "ROOMS CLEARED", "DEATHS", "KILLS", "PICKUPS", "PLAY TIME", "DAYS PLAYED",
           "CORE BEST", "PLUS BEST", "MAX BEST", "STATS", "YOUR CABINET"]
           .every((s) => all.includes(s)),
         all.join("|"),

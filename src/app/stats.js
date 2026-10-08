@@ -23,7 +23,7 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const FOE_T = new Set(FOES.map((f) => f.t));
 const POW_T = new Set(POWER.map((x) => x.t));
 const KIND = new Set(EVENTS);
-const A_KEYS = ["runs", "rooms", "deaths", "kills", "picks", "bricks", "secs", "sessions"];
+const A_KEYS = ["runs", "rooms", "deaths", "kills", "picks", "bricks", "secs", "sessions", "days"];
 
 const bit = (v) => {
   if (v === undefined || v === null) return 0;
@@ -45,7 +45,7 @@ function mapOf(src, ok) {
 export function clampStats(raw) {
   const o = raw && typeof raw === "object" ? raw : {};
   const ai = o.a && typeof o.a === "object" ? o.a : {};
-  const a = { first: dat(ai.first), last: dat(ai.last) };
+  const a = { first: dat(ai.first), last: dat(ai.last), day: dat(ai.day) };
   for (const k of A_KEYS) a[k] = cnt(ai[k]);
   const e0 = Array.isArray(o.e) ? o.e.filter((x) => x && KIND.has(x.t)) : [];
   return {
@@ -105,6 +105,9 @@ export function stat(ev, data, today, store) {
     a.last = y;
   } else if (ev === "room_enter") {
     a.last = y;
+    const ld = dat(d.ld);
+    if (ld && ld > a.day) { a.day = ld; a.days++; }
+    else if (ld && ld < a.day) a.day = ld;
   } else if (ev === "room_clear") {
     a.rooms++;
   } else if (ev === "death") {
@@ -149,7 +152,7 @@ export function fmtLong(sec) {
   return Math.floor(s / 3600) + "h " + pad2(Math.floor(s / 60) % 60) + "m";
 }
 
-/* Rows 7-9 read the PLAIN bucket "<heat>:0:1" — no pact, NORM pace. Folding an
+/* Rows 8-10 read the PLAIN bucket "<heat>:0:1" — no pact, NORM pace. Folding an
    IRON run into "CORE BEST" would be the same unit error nb.highscores.v1
    makes; note 2 says so on screen. STATS READS nb.bests.v1 and nb.times.v1 and
    copies neither — a second copy of a best is a second thing that can disagree
@@ -167,6 +170,7 @@ export function statsRows(v, bests) {
     ["KILLS", String(s.a.kills)],
     ["PICKUPS", String(s.a.picks)],
     ["PLAY TIME", fmtLong(s.a.secs)],
+    ["DAYS PLAYED", String(s.a.days)],
     ["CORE BEST", best(0)],
     ["PLUS BEST", best(1)],
     ["MAX BEST", best(2)],
@@ -220,7 +224,8 @@ export function statsPayload(v, bests, times, today) {
   const t1 = bestOf(times, "1:0:0:1");
   return (
     "FUSEGRID STATS · " + (a.first || "—") + "→" + (a.last || today || "—") +
-      " · " + a.sessions + (a.sessions === 1 ? " SESSION" : " SESSIONS") + "\n" +
+      " · " + a.sessions + (a.sessions === 1 ? " SESSION" : " SESSIONS") +
+      " · " + a.days + (a.days === 1 ? " DAY PLAYED" : " DAYS PLAYED") + "\n" +
     "RUNS " + a.runs + " · ROOMS " + a.rooms + " · DEATHS " + a.deaths +
       " · KILLS " + a.kills + " · PICKS " + a.picks + " · BRICKS " + a.bricks +
       " · TIME " + fmtLong(a.secs) + "\n" +

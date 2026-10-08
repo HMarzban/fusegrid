@@ -8,6 +8,7 @@ import {SCREEN, IDLE_T} from "../src/app/menuapp.js";
 import {CFG, BIOMES, biomeOf} from "../src/core/config.js";
 import {PROJ} from "../src/render/r3d/camera.js";
 import {loadScores} from "../src/app/highscores.js";
+import {loadStats} from "../src/app/stats.js";
 import {copyPayload} from "../src/render/scenes.js";
 
 const ROOT=dirname(fileURLToPath(import.meta.url))+"/..";
@@ -933,6 +934,8 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   // and coach_dismissed emits; ro.coach2) — measured 797->807, against the
   // wave's 808 cap. The v2 transition itself lives in src/app/coach.js
   // precisely so this gate keeps biting.
+  // R12 days-played wave: +0 lines (ld: todayStr() rides inside the three
+  // existing room_enter literals) — measured 804, against the 808 cap.
   check("main.js stays a lean browser entry (<=808 lines)",
     L.length<=808,String(L.length));
   const lastImp=L.reduce((a,l,i)=>/^import[\s{]/.test(l)?i:a,-1);
@@ -1195,6 +1198,42 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
         g.world.state==="PAUSE",g.world.state);
     }
    }finally{ delete globalThis.window; }
+}
+
+// ---- R12: DAYS PLAYED counts at room_enter, never from ATTRACT ----
+{
+  const noop=()=>{};
+  const mem={"nb.cabinet.v1":"1"};
+  globalThis.window={addEventListener:noop,removeEventListener:noop,
+    localStorage:{getItem:(k)=>(k in mem?mem[k]:null),
+      setItem:(k,v)=>{mem[k]=String(v);}}};
+  const a=()=>loadStats().a;
+  try{
+    const g=createGame(null,{seed:21});
+    check("R12 the pre-seeded cabinet boots seen, and the store is live",
+      g.app.cabinetSeen===true&&a().sessions===1,JSON.stringify(a()));
+    g.app.skip();
+    let t=1000, i=0;
+    while(g.app.screen!==SCREEN.ATTRACT&&i++<IDLE_T*70){ t+=16; g.loop(t); }
+    check("R12 INTRO -> MENU -> idle lands on ATTRACT",g.app.screen===SCREEN.ATTRACT,String(g.app.screen));
+    let held=true;
+    for(let f=0;f<600;f++){ t+=16; g.loop(t); if(g.app.screen!==SCREEN.ATTRACT) held=false; }
+    check("R12 600 ATTRACT frames count no day",
+      held&&!!g.demo&&g.demo.world.time>0&&a().days===0&&a().day==="",JSON.stringify(a()));
+    g.app.key("Enter");
+    check("R12 one PLAY run counts day 1 on the local date",
+      g.app.screen===SCREEN.GAME&&a().days===1&&/^\d{4}-\d{2}-\d{2}$/.test(a().day),JSON.stringify(a()));
+    const retry=()=>{ t+=16; g.loop(t); g.world.state="LOSE"; t+=16; g.loop(t);
+      g.world.state="PLAY"; t+=16; g.loop(t); };
+    retry();
+    check("R12 a LOSE->PLAY retry on the same date stays at 1",a().days===1,JSON.stringify(a()));
+    const old=()=>{ const v=JSON.parse(mem["nb.stats.v1"]); v.a.day="2000-01-01"; mem["nb.stats.v1"]=JSON.stringify(v); };
+    old(); retry();
+    check("R12 the LOSE->PLAY retry edge carries ld",a().days===2,JSON.stringify(a()));
+    old(); g.input.onPause(); t+=16; g.loop(t); g.app.pauseCursor=1; g.app.confirm();
+    check("R12 the pause RESTART edge carries ld",
+      a().days===3&&g.world.state==="PLAY",JSON.stringify(a())+"/"+g.world.state);
+  }finally{ delete globalThis.window; }
 }
 
 console.log(fail? "HEADLESS FAIL":"HEADLESS OK");

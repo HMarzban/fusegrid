@@ -91,6 +91,14 @@ const TODAY = "2026-09-07";
       clampStats({ a: { deaths: -5, secs: -1 } }).a.secs === 0,
     JSON.stringify(clampStats({ a: { deaths: -5, secs: -1 } }).a),
   );
+  check(
+    "R12: clampStats keeps a good days/day and zeroes junk",
+    clampStats({ a: { days: 12, day: TODAY } }).a.days === 12 &&
+      clampStats({ a: { days: 12, day: TODAY } }).a.day === TODAY &&
+      [-1, 1.5, "3"].every((x) => clampStats({ a: { days: x } }).a.days === 0) &&
+      clampStats({ a: { day: "2026-1-1" } }).a.day === "",
+    JSON.stringify(clampStats({ a: { days: -1, day: "2026-1-1" } }).a),
+  );
 }
 
 // ---- 2. session_start ----
@@ -317,39 +325,41 @@ const TODAY = "2026-09-07";
   );
 }
 
-// ---- 10. the nine rows, the two notes, and the plate ----
+// ---- 10. the ten rows, the two notes, and the plate ----
 {
   const v = clampStats({
     a: { runs: 118, rooms: 214, deaths: 301, kills: 4820, picks: 913,
-      bricks: 7702, secs: 50820, sessions: 42, first: "2026-08-30", last: TODAY },
+      bricks: 7702, secs: 50820, sessions: 42, days: 12, first: "2026-08-30", last: TODAY },
   });
   let bests = recordBest(undefined, "0:0:1", 1840, 5);
   bests = recordBest(bests, "1:0:1", 2210, 4);
   const rows = statsRows(v, bests);
-  check("statsRows is exactly nine [label, value] pairs", rows.length === 9, rows.length);
+  check("statsRows is exactly ten [label, value] pairs", rows.length === 10, rows.length);
   check(
-    "the six lifetime counters read the aggregates",
+    "the seven lifetime counters read the aggregates, DAYS PLAYED after PLAY TIME",
     rows[0][0] === "RUNS" && rows[0][1] === "118" &&
       rows[1][0] === "ROOMS CLEARED" && rows[2][0] === "DEATHS" &&
       rows[3][0] === "KILLS" && rows[4][0] === "PICKUPS" &&
-      rows[5][0] === "PLAY TIME" && rows[5][1] === "14h 07m",
-    JSON.stringify(rows.slice(0, 6)),
+      rows[5][0] === "PLAY TIME" && rows[5][1] === "14h 07m" &&
+      rows[6][0] === "DAYS PLAYED" && rows[6][1] === "12",
+    JSON.stringify(rows.slice(0, 7)),
   );
   check(
-    "rows 7-9 read the PLAIN bucket only — an IRON run is not a CORE best",
-    rows[6][0] === "CORE BEST" && rows[6][1] === "1840 · R5" &&
-      rows[7][0] === "PLUS BEST" && rows[7][1] === "2210 · R4" &&
-      rows[8][0] === "MAX BEST" && rows[8][1] === "—",
-    JSON.stringify(rows.slice(6)),
+    "rows 8-10 read the PLAIN bucket only — an IRON run is not a CORE best",
+    rows[7][0] === "CORE BEST" && rows[7][1] === "1840 · R5" &&
+      rows[8][0] === "PLUS BEST" && rows[8][1] === "2210 · R4" &&
+      rows[9][0] === "MAX BEST" && rows[9][1] === "—",
+    JSON.stringify(rows.slice(7)),
   );
   check(
     "an IRON (pact) record never leaks into CORE BEST",
-    statsRows(v, recordBest(undefined, "0:1:1", 99999, 8))[6][1] === "—",
-    statsRows(v, recordBest(undefined, "0:1:1", 99999, 8))[6][1],
+    statsRows(v, recordBest(undefined, "0:1:1", 99999, 8))[7][1] === "—",
+    statsRows(v, recordBest(undefined, "0:1:1", 99999, 8))[7][1],
   );
   check(
-    "statsRows on an empty cabinet is still nine rows, never a hole",
-    statsRows(clampStats(null), undefined).length === 9,
+    "statsRows on an empty cabinet is still ten rows, never a hole",
+    statsRows(clampStats(null), undefined).length === 10 &&
+      statsRows(clampStats(null), undefined)[6][1] === "0",
   );
   const n0 = statsNotes(v, null, null);
   check(
@@ -424,9 +434,16 @@ const TODAY = "2026-09-07";
   const lines = pay.split("\n");
   check("statsPayload is exactly four lines", lines.length === 4, JSON.stringify(lines));
   check(
-    "line 1 is the span and the session count",
-    lines[0] === "FUSEGRID STATS · 2026-08-30→2026-09-07 · 42 SESSIONS",
+    "line 1 is the span, the session count and the days played",
+    lines[0] === "FUSEGRID STATS · 2026-08-30→2026-09-07 · 42 SESSIONS · 0 DAYS PLAYED",
     lines[0],
+  );
+  check(
+    "R12: line 1 ends 12 DAYS PLAYED / 1 DAY PLAYED, still four lines",
+    statsPayload({ ...v, a: { ...v.a, days: 12 } }, bests, times, TODAY).split("\n")[0].endsWith(" · 42 SESSIONS · 12 DAYS PLAYED") &&
+      statsPayload({ ...v, a: { ...v.a, days: 1 } }, bests, times, TODAY).split("\n")[0].endsWith(" · 42 SESSIONS · 1 DAY PLAYED") &&
+      statsPayload({ ...v, a: { ...v.a, days: 1 } }, bests, times, TODAY).split("\n").length === 4,
+    statsPayload({ ...v, a: { ...v.a, days: 1 } }, bests, times, TODAY).split("\n")[0],
   );
   check(
     "line 2 is the lifetime counters, bricks included",
@@ -460,8 +477,8 @@ const TODAY = "2026-09-07";
   check("statsPayload is pure — same inputs, same string, no store read",
     statsPayload(v, bests, times, TODAY) === pay);
   check("statsPayload pluralises SESSION like the on-screen note (1 SESSION, 2 SESSIONS)",
-    statsPayload({ ...v, a: { ...v.a, sessions: 1 } }, bests, times, TODAY).indexOf(" · 1 SESSION\n") > 0 &&
-      statsPayload({ ...v, a: { ...v.a, sessions: 2 } }, bests, times, TODAY).indexOf(" · 2 SESSIONS\n") > 0,
+    statsPayload({ ...v, a: { ...v.a, sessions: 1 } }, bests, times, TODAY).indexOf(" · 1 SESSION · ") > 0 &&
+      statsPayload({ ...v, a: { ...v.a, sessions: 2 } }, bests, times, TODAY).indexOf(" · 2 SESSIONS · ") > 0,
     statsPayload({ ...v, a: { ...v.a, sessions: 1 } }, bests, times, TODAY).split("\n")[0]);
 }
 
@@ -485,7 +502,7 @@ const TODAY = "2026-09-07";
       g.app.screen === SCREEN.STATS && loadStats(ls).on === 1,
       g.app.screen + "/" + loadStats(ls).on);
     check("main built the row snapshot for the plate",
-      !!g.app.stats && g.app.stats.rows.length === 9,
+      !!g.app.stats && g.app.stats.rows.length === 10,
       JSON.stringify(g.app.stats && g.app.stats.rows.length));
     g.input.onUiKey("KeyC");
     check("C on STATS writes the four-line payload once",
@@ -713,6 +730,52 @@ const TODAY = "2026-09-07";
       texts.join("|"),
     );
   }
+}
+
+// ---- 12. R12: lifetime DAYS PLAYED, counted once per LOCAL date at room_enter ----
+{
+  const st = mapStore();
+  const days = () => loadStats(st).a;
+  stat("room_enter", { r: 1, ld: "2026-10-08" }, TODAY, st);
+  check("a first room_enter with ld counts day 1", days().days === 1 && days().day === "2026-10-08",
+    JSON.stringify(days()));
+  stat("room_enter", { r: 1, ld: "2026-10-08" }, TODAY, st);
+  check("the same ld again stays at 1", days().days === 1, JSON.stringify(days()));
+  stat("room_enter", { r: 2, ld: "2026-10-09" }, TODAY, st);
+  check("a later ld counts 2", days().days === 2 && days().day === "2026-10-09", JSON.stringify(days()));
+  stat("room_enter", { r: 1, ld: "2026-10-07" }, TODAY, st);
+  check("an earlier ld stays at 2 and re-stamps day", days().days === 2 && days().day === "2026-10-07",
+    JSON.stringify(days()));
+  stat("room_enter", { r: 1 }, TODAY, st);
+  stat("room_enter", { r: 1, ld: "junk" }, TODAY, st);
+  check("an absent or malformed ld changes nothing", days().days === 2 && days().day === "2026-10-07",
+    JSON.stringify(days()));
+  for (const ev of ["session_start", "room_clear", "run_end", "death"]) stat(ev, { ld: "2026-12-01" }, TODAY, st);
+  check("only room_enter reads ld", days().days === 2 && days().day === "2026-10-07", JSON.stringify(days()));
+}
+{
+  const st = mapStore();
+  st.setItem(STATS_KEY, JSON.stringify({ on: 0, a: { runs: 40, sessions: 9, first: "2026-08-30", last: TODAY } }));
+  stat("room_enter", { r: 1, ld: "2026-10-08" }, TODAY, st);
+  check("an upgraded blob with no days field counts 1 on its first room_enter — no backfill",
+    loadStats(st).a.days === 1 && loadStats(st).a.runs === 40, JSON.stringify(loadStats(st).a));
+}
+{
+  const st = mapStore();
+  st.setItem(STATS_KEY, JSON.stringify({ on: 0, a: { days: 5, day: "9999-12-31" } }));
+  stat("room_enter", { r: 1, ld: "2026-10-08" }, TODAY, st);
+  check("self-heal: a future day re-stamps without counting",
+    loadStats(st).a.days === 5 && loadStats(st).a.day === "2026-10-08", JSON.stringify(loadStats(st).a));
+  stat("room_enter", { r: 1, ld: "2026-10-09" }, TODAY, st);
+  check("self-heal: the next real day counts again", loadStats(st).a.days === 6, JSON.stringify(loadStats(st).a));
+}
+{
+  const st = mapStore();
+  setStatsOn(st);
+  stat("room_enter", { r: 1, h: 0, ld: "2026-10-08" }, TODAY, st);
+  const e = loadStats(st).e;
+  check("ring rows never carry ld — one clock per row, the UTC y",
+    e.length === 1 && !("ld" in e[0]) && e[0].y === TODAY, JSON.stringify(e));
 }
 
 console.log("\n  STATS RESULT: " + pass + " PASS / " + fail + " FAIL");
