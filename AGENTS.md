@@ -302,6 +302,10 @@ Node v26, `"type": "module"`. No build step, no bundler.
   treated as absent, never silently compared. A run that supplies no seed
   plays the session's remembered `bootSeed`, so an ordinary run is
   indistinguishable before and after a daily.
+- **Rulings 2026-10-09 (user).** D1: GAME OVER keeps the arcade restart from
+  room 1 — no continue-credit. H4: a tap on ATTRACT starts an ordinary run even
+  if the MENU cursor sat on DAILY. REAL 3D near border wall is a cutaway
+  (`min(hWall, NEAR_H 22)`), chosen over see-through or leave-it.
 - **The challenge code carries a board, never a claim.** `?code=` is 12 chars
   (`F1` + seed + cfg + checksum), seed/heat/pact/pace only — **no score
   field**, and no `window.prompt` / DOM paste box (entry is through

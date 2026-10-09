@@ -574,8 +574,10 @@ The study was right that `camPreset(settings.cam)` already follows OPTIONS
   54% (62%). This is the price of the lower 3/4 view the user picked from the
   sheet.
 - **(b)** The 3D canvas stays 600×520. A 600×440 canvas would gain 10–18% on
-  height-limited screens, but it ripples every menu fit pin, so it is left for
-  later.
+  height-limited screens (desktop, touch landscape), but it ripples every menu
+  fit pin, so it is left for later. It would not help phone portrait, which is
+  width-limited: 15 tiles span ~359 CSS px at 375 wide and the board already
+  fills ~94% of the canvas width.
 - **(c)** The T1 zones assume the 0.6 em mono advance, as waves 1–3 did, and
   are checked headed.
 - **(d)** A touch laptop (`ontouchstart` present) gets the touch reserves. That

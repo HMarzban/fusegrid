@@ -16,6 +16,10 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-09 — Finish: near-wall cutaway, zoom frame, session count, D1/H4 ruled
+- Close-out docs for v164–v166 (CHANGELOG `shell v166`). User rulings: D1 arcade restart from room 1 stays (no continue-credit); H4 ATTRACT tap starts an ordinary run even on DAILY; near-wall cutaway chosen over see-through/leave-it. Recorded in AGENTS.md + retention report §7.
+- Correction: a shorter 600×440 3D canvas helps only height-limited screens; phone portrait is width-limited (~94% of canvas width already). Camera spec §8(b) now says so. Disclosed: walker 89% at FAR preset behind NEAR_H 22.
+
 ## 2026-10-09 — W3 first visit counts one SESSION (shell v166)
 - Root cause (CDP, fresh profile, real `sw.js`): the first install's `clients.claim` fired `controllerchange`, whose one-shot reload re-booted the page and logged a second `session_start`. `registerSW` now skips the first `controllerchange` when the page loaded with no controller; returning-client update+reload unchanged (verified headed with a byte-bumped `sw.js`). A deploy reload still logs a session, by design. Notes: `.superpowers/sdd/2026-10-09-finish/task-W3.md`.
 

@@ -699,6 +699,8 @@ R1's per-room bests are the mitigation designed for Option A.
 
 ## 7. Open questions for the owner
 
+> 2026-10-09 ruling: D1 closed — GAME OVER keeps the arcade restart from room 1, no continue-credit (owner's decision). H4 closed — a tap on ATTRACT starts an ordinary run even with the MENU cursor parked on DAILY.
+
 1. **Continue-credit or arcade reset?** (D1) Both costed above; Option B is 0.5–1d
    mechanically but reverses end-screen.md:5's named decision. Our recommendation is
    Option A + R1, revisit with data. Only you can overrule the earlier call.

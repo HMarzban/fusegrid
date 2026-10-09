@@ -6,6 +6,18 @@ version number of its own; each entry is dated and names the PWA shell
 revision (`CACHE_NAME` in `src/pwa/shell.js`) that shipped it, since that is
 what makes an installed copy update.
 
+## shell v166 · 2026-10-09
+
+### Changed
+- **REAL 3D near border wall is lower.** The wall along the bottom edge of the
+  board is cut down so you, your bombs and foes on the last row never hide
+  behind it.
+
+### Fixed
+- Zoom now snaps back to your camera preset on the very first frame of a new
+  room, instead of one frame late.
+- Your first visit now counts as one session, not two.
+
 ## shell v163 · 2026-10-08
 
 ### Added
