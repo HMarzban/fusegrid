@@ -649,6 +649,53 @@ function installAC(ac) {
   );
 }
 
+// ---- opening §5: unlocked() is honest and pump() is gated on a running ctx ----
+// A suspended ctx freezes currentTime; scheduling into it replays every step
+// as one chord-blob on the first activating press (§1's third defect).
+{
+  const ac = mkAC();
+  ac.state = "suspended";
+  ac.resume = () => {}; // Escape / touch pointerdown: no activation, no flip
+  installAC(ac);
+  const a = createAudio();
+  a.unlock();
+  check("suspended mkAC: unlocked() false after unlock()", a.unlocked() === false);
+  for (let i = 0; i < 4; i++) a.pump();
+  check("frozen clock: pump() schedules zero oscillators while suspended",
+    ac.starts.length === 0, ac.starts.length);
+  a.duck(true);
+  a.duck(false);
+  check("frozen clock: duck() is still safe while suspended", ac.starts.length === 0);
+  ac.state = "running";
+  check("unlocked() flips true once the ctx runs", a.unlocked() === true);
+  ac.currentTime = 0.4;
+  a.pump();
+  const ref = mkAC();
+  installAC(ref);
+  const b = createAudio();
+  b.unlock();
+  b.pump();
+  const first = (st) => {
+    const t0 = Math.min(...st.map((s) => s.t));
+    return st.filter((s) => s.t === t0).map((s) => s.f).sort((x, y) => x - y).join();
+  };
+  check("first running pump() starts at or after currentTime",
+    ac.starts.length > 0 && ac.starts.every((s) => s.t >= 0.4), ac.starts.map((s) => s.t.toFixed(3)).join());
+  check("first running pump() emits step 0 (same notes as a fresh unlock)",
+    ac.starts.length > 0 && first(ac.starts) === first(ref.starts), first(ac.starts) + " vs " + first(ref.starts));
+}
+{
+  const ac = mkAC();
+  ac.state = "suspended";
+  let p = null;
+  ac.resume = () => (p = Promise.resolve());
+  installAC(ac);
+  const a = createAudio();
+  check("suspended ctx: unlock() returns resume()'s promise", a.unlock() === p && !!p);
+  ac.state = "running";
+  check("running ctx: unlock() returns true", a.unlock() === true);
+}
+
 // ---- mute: single source of truth gates pump AND gain ----
 {
   const ac = mkAC();

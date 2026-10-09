@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-09 — O1 audio unlock: armed until the ctx runs (shell v168)
+- Measured at HEAD (CDP, `--autoplay-policy=document-user-activation-required`; `user-gesture-required` leaves a load-time ctx running and proves nothing): an 800 ms touch long-press and an Escape left MENU silent with `unlocked()` true over a `suspended` ctx (touch pointerdown and Escape carry no activation; the `{once:true}` listener was spent). New `src/app/unlock.js` `armUnlock` (keydown/pointerdown/pointerup/touchend/click, capture) stays armed until the ctx runs, hatch on a second counted press; `unlocked()` now means running and gates `pump()`. After: key/click/60 ms tap/800 ms hold all `running`, Escape stays suspended + armed, 0 oscillators started on a suspended ctx, one jingle. Left for the show task: `onAudioReady`'s INTRO gate + `beginShow()`, `musicCue(INTRO)`. Notes `.superpowers/sdd/2026-10-09-opening/task-O1.md`.
+
 ## 2026-10-09 — Keys pass: Enter on WIN/LOSE, copy note, INTRO any key, key matrix (shell v167)
 - User report "B / Enter don't react after a level". Enter/NumpadEnter on WIN/LOSE now = Space via `Input.pulse()` (one fire tick, never a latch); C/B draw COPIED / BOARD LINK COPIED / COPY FAILED above the headline for 1.5 s (`src/app/endkeys.js`). Also fixed: Space on PAUSE RESUME planted a bomb; any key now skips INTRO (and an arrow that skipped no longer moves the MENU cursor); P/Esc off INTRO/ATTRACT no longer lands in a paused run (Input now pauses before the shell sees the key). New `tests/keys.test.mjs` drives every documented key in every state; notes `.superpowers/sdd/2026-10-09-keys/report.md`.
 

@@ -257,23 +257,25 @@ export function createAudio(opts) {
     stepN = 0;
     if (ctx) nextT = ctx.currentTime + 0.05;
   }
+  /* opening §5: resume()'s promise while suspended (armUnlock waits on it and
+     stays armed until the ctx runs), true when running, false: no WebAudio. */
   function unlock() {
     if (!ensure()) return false;
     try {
-      if (ctx.state === "suspended") ctx.resume();
+      const p = ctx.state === "suspended" ? ctx.resume() : null;
       if (!musicGain) {
         musicGain = ctx.createGain();
         musicGain.gain.value = muted ? MUS_FLOOR : musBase();
         musicGain.connect(ctx.destination);
       }
       nextT = ctx.currentTime + 0.05;
-      return true;
+      return p && typeof p.then === "function" ? p : true;
     } catch (e) {
       return false;
     }
   }
   function unlocked() {
-    return !!ctx && !!musicGain;
+    return !!ctx && !!musicGain && ctx.state === "running";
   }
   function duck(on) {
     on = !!on;
@@ -283,7 +285,7 @@ export function createAudio(opts) {
   }
   function pump() {
     applyTrack();
-    if (!ctx || !musicGain || muted) return;
+    if (!unlocked() || muted) return; // a suspended ctx's frozen clock would chord-blob step 0
     try {
       /* catch-up clamp: RAF pauses on hidden tabs while ctx.currentTime keeps
          running; without this, resume schedules every missed step at past

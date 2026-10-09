@@ -394,6 +394,29 @@ function mkCanvas(){
       plays.length===1,JSON.stringify(plays));
    }finally{ delete globalThis.window; }
 }
+// P1 (opening §5): a gesture whose unlock() leaves the ctx suspended (Escape,
+// a touch pointerdown) fires no jingle and leaves the listener armed; the next
+// press that runs the ctx fires exactly one.
+{
+  const plays=[];
+  const audio={play:n=>plays.push(n),toggle:()=>false,run:false,_u:false,
+    unlock(){this._u=true;if(this.run)this.st="running";return new Promise(()=>{});},
+    unlocked(){return this._u&&this.st==="running";}};
+  const L={};
+  globalThis.window={addEventListener:(ty,fn)=>{(L[ty]=L[ty]||[]).push(fn);}};
+  try{
+    createGame(null,{seed:14,audio});
+    L.keydown.forEach(f=>f({code:"Escape",key:"Escape"}));
+    L.pointerdown.forEach(f=>f({pointerType:"touch"}));
+    check("P1 a failed unlock fires no jingle",plays.length===0,JSON.stringify(plays));
+    audio.run=true;
+    L.pointerup.forEach(f=>f({pointerType:"touch"}));
+    check("P1 the listener stayed armed: the running press fires one jingle",
+      plays.join()==="uiJingle",JSON.stringify(plays));
+    L.touchend.forEach(f=>f({}));L.click.forEach(f=>f({}));
+    check("P1 the same tap's touchend/click never replay it",plays.length===1,JSON.stringify(plays));
+   }finally{ delete globalThis.window; }
+}
 
 // I2: pause exists only inside GAME
 {

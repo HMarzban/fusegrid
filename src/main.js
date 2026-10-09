@@ -23,6 +23,7 @@ import { loadScores, recordScore, saveScores, scoreEntry, scoresForHeat, qualifi
 import { loadPactUnlocked, savePactUnlocked } from "./app/pactstore.js";
 import { loadCabinetSeen, saveCabinetSeen } from "./app/cabinetseen.js";
 import { loadPlaques, savePlaques, unlockPlaques } from "./app/plaques.js";
+import { armUnlock } from "./app/unlock.js";
 import { loadPace, savePace } from "./app/pacestore.js";
 import { loadSettings, saveSettings } from "./app/settings.js";
 import { timeKey, loadTimes, saveTimes, bestOf, recordTime } from "./app/times.js";
@@ -213,8 +214,8 @@ export function createGame(canvas, opts = {}) {
   const audio = opts.audio || null;
   /* P1 (§0.4): the boot jingle must never schedule against a suspended ctx —
      currentTime is frozen there, so all 5 oscillators land on one timestamp
-     and replay as a chord-blob on the first gesture. Fire immediately only if
-     already unlocked; otherwise defer to the unlock handler below. */
+     and replay as a chord-blob on the first gesture. It fires only from the
+     unlock handler below, and only once the ctx is honestly running. */
   let fireJingle = () => {};
   const onSource = () => {
     if (typeof window !== "undefined")
@@ -321,11 +322,10 @@ export function createGame(canvas, opts = {}) {
       return r;
     };
     fireJingle = () => {
-      if (autoplay || fireJingle._done) return;
+      if (autoplay || fireJingle._done || !(audio.unlocked && audio.unlocked())) return;
       fireJingle._done = true;
       audio.play("uiJingle");
     };
-    if (audio.unlocked && audio.unlocked()) fireJingle();
   }
   stat("session_start", null, dateStr());
   // R8: a decodable ?code= wins over ?play=1 — the more specific instruction.
@@ -472,16 +472,9 @@ export function createGame(canvas, opts = {}) {
       });
   }
 
-  /* music unlock (spec §4): first gesture anywhere unlocks the loop.
-     Window-level {once:true} catches canvas AND #stage pad taps alike. */
-  if (typeof window !== "undefined" && audio) {
-    const unlockOnce = () => {
-      audio.unlock();
-      fireJingle();
-    }; // P1: deferred jingle
-    window.addEventListener("keydown", unlockOnce, { once: true });
-    window.addEventListener("pointerdown", unlockOnce, { once: true });
-  }
+  /* music unlock (opening §5): window capture listeners stay armed until the
+     ctx RUNS (Escape / touch pointerdown carry no activation). P1: the jingle rides it. */
+  if (typeof window !== "undefined") armUnlock(window, audio, () => fireJingle());
 
   /* ATTRACT demo world handle (src/app/attract.js): the shell machine only
      flips screens, the loop below creates/steps/discards the demo. */
