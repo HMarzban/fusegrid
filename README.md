@@ -66,7 +66,7 @@ On touch devices during a run, a virtual D-pad and bomb button sit off the board
 | 7 | VOID | Violet dark, tall cliffs *(unlocks after first CLEAR)* |
 | 8 | CROWN | Gold court — **finale after unlock** *(unlocks after first CLEAR)* |
 
-On LEVEL SELECT, `←/→` picks the room, `↑/↓` picks Heat and `[`/`]` picks pace (EASY / NORM / HARD); Enter starts, Esc backs out. Menus use the arrows, Enter and Esc throughout, and any key skips the intro.
+On LEVEL SELECT, `←/→` picks the room, `↑/↓` picks Heat and `[`/`]` picks pace (EASY / NORM / HARD); Enter starts, Esc backs out. Menus use the arrows, Enter and Esc throughout. The title waits for any key or tap, which starts the music and a short opening show; any key skips the show.
 
 ### Heat
 

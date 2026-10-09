@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-09 — O2 opening: title -> press -> 4.384 s show -> MENU; first visit reversal (shell v171)
+- INTRO is now title (silent, never times out, PRESS ANY KEY / TAP TO START by `data-lay`) then a 32-menu-step show (`src/app/intro.js`: zoom/camera sweep, MAKO pop, scripted plant at SHOW_DUR-FUSE, the show bomb's boom flips MENU at PLAY with a logo slam). `musicCue(INTRO)` is `menu`; the press runs the menu track + `uiJingle`; deep links get no sting. Every visit lands on MENU (reverses plan 7 / R4 first-visit Play Now; `nb.cabinet.v1` still written, no longer branches). No-WebAudio unlock now also ignores modifier keys so the Node key matrix matches the browser. CDP (headless shell 153): key/click/60 ms tap/800 ms hold all start the show with ctx running + 1 sting, MENU 4.42-4.43 s after show start (recorder lags one frame), 3D MENU cam = rig C, REDUCE FLASH 0.25x, SHAKE off 0. Notes `.superpowers/sdd/2026-10-09-opening/task-O2.md`.
+
 ## 2026-10-09 — O1 review 2: the hatch fires onReady but stays armed; full Chromium modifier set (shell v170)
 - `armUnlock` splits one-shot `onReady` from disarm: after the hatch, listeners keep calling `unlock()` until the ctx runs (AltGraph x2 used to strand MENU silent until an SFX resumed it by accident); `MODS` now Chromium's modifier set (AltGraph/Fn/NumLock/ScrollLock... measured no activation). Unlock tests un-vacuated (hatch negatives waited 0 ms against a 250 ms timer) and a settles-but-suspended resume() pin added; 7 mutants red. CDP: forced hatch then `a` runs the menu music, 0 osc on a suspended ctx.
 

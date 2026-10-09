@@ -24,7 +24,20 @@ Two state machines:
 
 | Layer | States | Owner |
 |---|---|---|
-| Shell | INTRO → MENU ⇄ LEVEL/SCORES/SETTINGS/GUIDE(→HOWTO/ITEMS/ENEMIES) → GAME; idle → ATTRACT | `src/app/menuapp.js` |
+| Shell | INTRO (title → show) → MENU ⇄ LEVEL/SCORES/SETTINGS/GUIDE(→HOWTO/ITEMS/ENEMIES) → GAME; idle → ATTRACT | `src/app/menuapp.js` |
+
+INTRO is two phases inside one SCREEN (`app.introStage` 0 title / 1 show),
+never a new SCREEN value. The title waits silently for a press; the first
+press that leaves the AudioContext running starts the menu track, the
+`uiJingle` sting and a 32-step (4.384 s) show; the show bomb's `boom` (not the
+clock) lands MENU at cursor 0. Every visit, the first included (ruling
+2026-10-09, reverses first-visit Play Now). Deep links and autoplay bypass it.
+Gestures go through the gated `skipShow()` (no-op on the title and inside the
+0.2 s `SKIP_GUARD`); `skip()` stays the ungated programmatic jump to MENU. The
+show world is its own throwaway (`src/app/intro.js` `createShow`/`stepShow`,
+main's `let show`, never `demo`), backs MENU after the reveal and is dropped
+for good at GAME / ATTRACT. In 3D the title paints an opaque veil until three
+settles (`app.boardReady`, set on resolve or reject).
 
 Heat grades CORE / PLUS / MAX live on LEVEL SELECT (`←/→` room, `↑/↓` heat). CORE is replay baseline v6. Attract is always CORE + pact=0. After a first FUSE/GRID CLEAR, LEVEL SELECT also offers Pact toggles (`1–4`). Knobs live on `world`, not frozen `CFG`. Score × heat is persist-only (CORE ×1 / PLUS ×2 / MAX ×3); live HUD stays raw.
 
@@ -213,6 +226,8 @@ not shell screens. Do not add them as `SCREEN` values.
   off-label tap while armed disarms and stays on STATS.
   CLEAR = highscores, bests, stats, daily, times, medals, plaques, ghost,
   pact, coach v1/v2, cabinet (12); KEEP = `nb.settings.v1`, `nb.pace.v1`.
+  `nb.cabinet.v1` is still written on the first INTRO exit and no longer
+  branches anything (ruling 2026-10-09).
   Lists import each store's own `*_KEY`; `tests/reset.test.mjs` fails on any
   unclassified `nb.*` literal in `src/`, so a new store must join one list.
   Demobot is an intent FSM (plant-and-leave, hunger for combat cubes / corridor
@@ -241,7 +256,9 @@ not shell screens. Do not add them as `SCREEN` values.
   never musicGain). Music is a track table: `AABB` per track, all nine B
   sections hand-authored (no identity B), one theme per biome. `setTrack` +
   `musicCue(screen,level)` from the shell; GAME/ATTRACT follow the room,
-  everything else plays menu. `reveal` is a cue.
+  everything else plays menu, INTRO included (ruling 2026-10-09): the show
+  runs on the menu theme and the `intro` track is dormant, kept and pinned.
+  `reveal` is a cue.
   Unlock is `src/app/unlock.js` `armUnlock`: keydown / pointerdown / pointerup /
   touchend / click (capture), armed until `ctx.state === "running"` (Escape and
   a touch `pointerdown` carry no activation); a second press that is not Escape
@@ -251,6 +268,9 @@ not shell screens. Do not add them as `SCREEN` values.
   it: the listeners keep calling `unlock()` until the ctx runs (or no WebAudio
   / a rejected resume). `unlocked()` means running and gates
   `pump()`; the jingle rides the unlock and never fires on a suspended ctx.
+  `onReady` fires the sting and `beginShow()` only on INTRO, so deep links
+  never get it. No WebAudio (Node): the first gesture that is not Escape or a
+  modifier/lock key, which keeps the Node key matrix equal to the browser's.
 - `src/pwa/` — Node-testable app-shell list + SW register. `src/main.js`
   registers `./sw.js` (module, scope `./`). Precache lives in `shell.js`
   (`fusegrid-shell-vN`). Must include `vendor/three.module.js`. Never cache
@@ -356,6 +376,7 @@ not covered by Node — play-verify in a browser after render changes.
 - This repository is the arcade game only — do not add unrelated demos.
 - Keep a visible path to the public repo: menu SOURCE opens https://github.com/HMarzban/fusegrid.
 - Keep ITEMS, ENEMIES, and HOW TO as in-menu help so pickups and foes are explained in the shell, not only as HUD chips.
+- Opening (2026-10-09): title, then press, then a ~4 s show (camera sweep, MAKO pop-in, fuse, blast reveals MENU), with music from the press. Any key skips the show (the title waits for a press). First visits land on MENU at PLAY, not in a run. The title follows RENDER; the show plays the MENU theme throughout, and the `intro` track is kept unused.
 - Difficulty is Heat on LEVEL SELECT (CORE / PLUS / MAX). Global **pace** (EASY / NORM / HARD) is a separate LEVEL SELECT control (`[`/`]`), persisted in `nb.pace.v1`, scaling player/enemy move speed on `world.pace` — not frozen `CFG`. Pact (`1–4`) and rooms 6–8 unlock after the first FUSE/GRID CLEAR. Score × heat is persist-only; HIGH SCORES fifth column tags pact bitmask (`p`). Music uses WebAudio stereo panning on the oscillator engine (zero npm deps). Mid-run heat, always-on Sudden Death, and internet play stay parked.
 - Foes must read as arcade characters (distinct silhouette, face or lens, shading, facing) in CLASSIC 2D and REAL 3D, not flat colored tokens. `enemybody.js` is the 2D five-beat build; 3D matches via merged hulls in the four-mesh slot. Art only — do not retune AI.
 - Do not commit `.cursor/` or `e2e-artifacts/` (both gitignored).
