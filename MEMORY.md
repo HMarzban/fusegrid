@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-09 — O2 review: off-canvas taps skip the show; the opening's render/ready chain pinned (shell v173)
+- One bubble-phase window `pointerdown` calls `skipShow()` on INTRO (phone portrait: the canvas is ~38% of the screen, so TAP TO SKIP was dead elsewhere); bubble so a canvas tap that lands MENU is never re-read as confirm (CDP portrait/landscape/desktop: off-canvas x2 and canvas taps all -> MENU, never GAME). New pins kill 8 surviving mutants: boardReady boot/settle + the two `.catch().then()` sites, the INTRO veil, show world rendered on INTRO/MENU, ATTRACT drops the show, silent skipped boom, `ro.pop`, the 2D pop scale.
+
 ## 2026-10-09 — O2 fix-up: a skipped show never plants; three-load settle can't strand the title (shell v172)
 - After INTRO the show world walks its script but never fires (`stepShow` mode 2), so a skip before 1.88 s leaves no blast/flash/shake behind MENU and a later skip still walks MAKO clear. Both three-load sites settle via `.catch().then(boardReady=true)`. Headed: 4 s-delayed and 404'd `three.module.js` both leave the title leavable (opaque veil while pending, hung-fetch press -> MENU); rig C on the first MENU frame at all three CAMERA presets; the prompt gained a steady dark keyline for its pulse minimum.
 

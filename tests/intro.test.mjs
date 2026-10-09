@@ -4,6 +4,7 @@ import {SHOW_STEP,SHOW_DUR,SHOW_PLANT,SKIP_GUARD,SHOW_SCRIPT,introPhase,popOf,cr
 import {MUSIC_TRACKS} from "../src/audio/tracks.js";
 import {CFG} from "../src/core/config.js";
 import {SCREEN,createMenuApp} from "../src/app/menuapp.js";
+import {createRenderer} from "../src/render/renderer.js";
 
 let pass=0, fail=0;
 function check(name, cond, detail){ cond?pass++:fail++;
@@ -132,6 +133,22 @@ for(const [skipAt,wantBomb] of [[0.3,false],[1.0,false],[2.0,true],[2.2,true]]){
   check("hitch: the dropped time defers the boom past SHOW_DUR of subT", boomF>0, "boom frame "+boomF);
   check("hitch: MENU opens exactly one frame after the boom, with fromShow", menuF===boomF+1&&app.fromShow===true&&app.cursor===0,
     boomF+" -> "+menuF);
+}
+
+// ---- CLASSIC 2D draws MAKO at o.pop: hidden at 0, scaled about players[0] after ----
+{
+  const at=(pop)=>{
+    const ops=[], ctx=new Proxy({},{get:(t,p)=>typeof p==="symbol"?undefined:p in t?t[p]:(...a)=>{
+      ops.push([p,a]); return /Gradient$/.test(p)?{addColorStop(){}}:p==="measureText"?{width:0}:undefined; },
+      set:(t,p,v)=>{ t[p]=v; return true; }});
+    const w=createShow().world, p=w.players[0];
+    createRenderer({width:600,height:520,getContext:()=>ctx},{kind:"2d"}).render(w,1/60,{pop,hud:false});
+    const i=ops.findIndex((o)=>o[0]==="translate"&&o[1][0]===p.x&&o[1][1]===p.y);
+    return {i, next:i>=0?ops[i+1]:null};
+  };
+  check("pop 0: MAKO is not drawn (no translate to players[0]); no pop draws him", at(0).i<0&&at(undefined).i>=0);
+  const h=at(0.5);
+  check("pop 0.5: MAKO is scaled by pop about players[0]", h.i>=0&&same(h.next,["scale",[0.5,0.5]]), JSON.stringify(h.next));
 }
 
 console.log("\n  INTRO RESULT: "+pass+" PASS / "+fail+" FAIL");

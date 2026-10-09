@@ -227,6 +227,53 @@ function mkCanvas(){
   tick(10);
   check("C1 subscreen does not bounce back", g.app.screen===SCREEN.GUIDE);
 }
+// O2: a tap OFF the canvas skips the show too (phone portrait: the canvas is
+// a third of the screen). One BUBBLE window listener: the canvas handler runs
+// first, so a canvas tap that already landed MENU is never re-read as confirm.
+{
+  const L={}, cap={};
+  globalThis.window={addEventListener:(ty,fn,c)=>{(L[ty]=L[ty]||[]).push(fn);(cap[ty]=cap[ty]||[]).push(!!c);}};
+  try{
+    const cv=mkCanvas();
+    const g=createGame(cv,{seed:16});
+    let T=0; const tick=(n)=>{ for(let i=0;i<n;i++){ T+=16; g.loop(T); } };
+    check("O2 exactly one bubble-phase window pointerdown listener",
+      (cap.pointerdown||[]).filter((c)=>!c).length===1,JSON.stringify(cap.pointerdown));
+    const tap=()=>L.pointerdown.forEach(f=>f({target:{}}));
+    tap(); tick(2);
+    check("O2 an off-canvas title tap starts the show, never skips it",
+      g.app.screen===SCREEN.INTRO&&g.app.introStage===1,g.app.screen+"/"+g.app.introStage);
+    tick(15); tap(); tick(10);
+    check("O2 an off-canvas show tap past SKIP_GUARD lands MENU at PLAY, no run",
+      g.app.screen===SCREEN.MENU&&g.app.cursor===0&&!g.app.inGame,g.app.screen+"/"+g.app.cursor);
+  }finally{ delete globalThis.window; }
+}
+// O2: the 3D ready chain. Three loads async: the title holds an opaque veil
+// (no 2D board) until the load settles, and a failed load settles it too.
+{
+  const loc0=globalThis.location;
+  globalThis.location={search:"?render=3d"};
+  try{
+    const g=createGame(null,{seed:17});
+    check("O2 ?render=3d without three: boardReady false at boot",g.app.boardReady===false);
+    for(let i=0;!g.app.boardReady&&i<300;i++) await new Promise(r=>setTimeout(r,10));
+    check("O2 ?render=3d: boardReady true once the three load settles",g.app.boardReady===true);
+  }finally{ if(loc0===undefined)delete globalThis.location; else globalThis.location=loc0; }
+  const src=readFileSync(join(ROOT,"src/main.js"),"utf8");
+  const settle=/loadRenderer3D\(\)\.then\(\(m\) => \{[^}]*\}\)\.catch\(\(e\) => console\.warn\("3D load failed", e\)\)\.then\(\(\) => \{ app\.boardReady = true; \}\)/g;
+  check("O2 both loadRenderer3D sites catch then settle boardReady (a 404 never strands the title)",
+    (src.match(/loadRenderer3D\(\)/g)||[]).length===2&&(src.match(settle)||[]).length===2);
+  const {drawShell}=await import("../src/render/shellview.js");
+  const veil=(ready,readyT)=>{
+    const fs=[];
+    const c=new Proxy({},{get:(t,p)=>p in t?t[p]:(p==="measureText"?()=>({width:0}):()=>{}),
+      set:(t,p,v)=>{ if(p==="fillStyle")fs.push(v); t[p]=v; return true; }});
+    drawShell(c,{screen:SCREEN.INTRO,introStage:0,subT:0,boardReady:ready,readyT},createWorld(1,1),null,"3d");
+    return fs[0];
+  };
+  check("O2 INTRO with the board not ready paints an opaque veil",veil(false,5)==="rgba(7,10,18,1)",veil(false,5));
+  check("O2 INTRO with the board ready eases to the 0.45 title veil",veil(true,0.4)==="rgba(7,10,18,0.45)",veil(true,0.4));
+}
 
 // S2 REVIEW FIX: SETTINGS tap-to-row pointer glue had zero behavioral
 // coverage (only source-regex checks existed). Drive the REAL handler —

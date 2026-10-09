@@ -478,6 +478,7 @@ export function createGame(canvas, opts = {}) {
      ctx RUNS (Escape / touch pointerdown carry no activation). P1: the sting
      rides it, and only the title's press gets it (deep links never do). */
   if (typeof window !== "undefined") armUnlock(window, audio, () => { if (app.screen === SCREEN.INTRO) { fireJingle(); app.beginShow(); } });
+  if (typeof window !== "undefined") window.addEventListener("pointerdown", () => { if (app.screen === SCREEN.INTRO) app.skipShow(); }); // bubble: an off-canvas tap skips too; the canvas handler runs first
 
   /* ATTRACT demo world handle (src/app/attract.js): the shell machine only
      flips screens, the loop below creates/steps/discards the demo. */

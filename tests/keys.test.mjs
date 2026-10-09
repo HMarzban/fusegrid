@@ -4,7 +4,9 @@
    Expectations come from README "How to play", AGENTS.md and the on-screen
    foot hints in menudraw.js — not from reading the handlers back. */
 import { createGame } from "../src/main.js";
-import { SCREEN, ITEMS, GUIDE_ROWS, PAUSE_ITEMS } from "../src/app/menuapp.js";
+import { SCREEN, ITEMS, GUIDE_ROWS, PAUSE_ITEMS, IDLE_T } from "../src/app/menuapp.js";
+import { SHOW_STEP, SHOW_DUR, popOf } from "../src/app/intro.js";
+import { CFG } from "../src/core/config.js";
 import { dailySeed } from "../src/app/daily.js";
 import { copyPayload, drawOverlay, overlayBox, overlayCue } from "../src/render/scenes.js";
 import { createToast, copyText, toastOf, toastTick, TOAST_T } from "../src/app/endkeys.js";
@@ -39,7 +41,7 @@ function mk(o = {}) {
   g.t = 0;
   g.tick = (n = 1) => { for (let i = 0; i < n; i++) { g.t += 1000 / 60; g.loop(g.t); } };
   const r = g.renderer, r0 = r.render.bind(r);
-  r.render = (w, dt, ro) => { g.ro = ro; return r0(w, dt, ro); };
+  r.render = (w, dt, ro) => { g.ro = ro; g.rw = w; return r0(w, dt, ro); };
   g.tick();
   return g;
 }
@@ -116,6 +118,31 @@ for (const code of ["Enter", "NumpadEnter", "Escape", "Backspace", "ArrowDown", 
   check("INTRO unseen cabinet: the show lands on MENU at PLAY, not a run (ruling 2026-10-09)",
     g.app.screen === SCREEN.MENU && g.app.cursor === 0 && g.app.fromShow && !g.app.inGame, g.app.screen);
   check("INTRO unseen cabinet: nb.cabinet.v1 still written once", mem["nb.cabinet.v1"] === "1", mem["nb.cabinet.v1"]);
+}
+// O2 render pins: the show world backs the title, the show and the revealed
+// MENU; MAKO is hidden on the title and pops in the show; ATTRACT drops it.
+{
+  const g = mk();
+  check("INTRO title renders the show world with MAKO hidden (pop 0)", !!g.show && g.rw === g.show.world && g.ro.pop === 0, g.ro && g.ro.pop);
+  press(g, "KeyA"); g.tick(Math.ceil(4 * SHOW_STEP * 60) + 6);
+  check("INTRO show renders the show world with MAKO at popOf(subT)",
+    g.rw === g.show.world && g.ro.pop > 0 && g.ro.pop === popOf(g.app.subT), g.ro.pop);
+  g.tick(Math.ceil(SHOW_DUR * 60));
+  check("MENU after the reveal still renders the show world", g.app.screen === SCREEN.MENU && g.rw === g.show.world, g.app.screen);
+  g.tick(Math.ceil((IDLE_T + 0.5) * 60));
+  check("MENU idle -> ATTRACT drops the show world", g.app.screen === SCREEN.ATTRACT && g.show === null, g.app.screen);
+}
+/* a skipped show keeps stepping behind MENU (its brick still breaks), but its
+   boom never reaches audio; an unskipped show's boom does. */
+for (const skip of [false, true]) {
+  const plays = [];
+  const g = mk({ audio: { play: (n) => plays.push(n), toggle: () => false, duck: noop, pump: noop, unlocked: () => false } });
+  press(g, "KeyA");
+  while (!g.show.world.bombs.length && g.t < 4000) g.tick();
+  if (skip) press(g, "Enter");
+  g.tick(Math.ceil((CFG.FUSE + 0.5) * 60));
+  check("INTRO " + (skip ? "skipped after the plant: the boom stays silent behind MENU" : "unskipped show: the reveal boom sounds"),
+    g.app.screen === SCREEN.MENU && g.show.world.grid[CFG.COLS + 5] === 0 && plays.includes("boom") === !skip, plays.join());
 }
 
 // ---- MENU: arrows, Enter on every row, Space confirm, idle -> ATTRACT ----
