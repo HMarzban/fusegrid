@@ -268,7 +268,7 @@ A FUSE retune moves the plant, never the reveal.
   - `autoplay` stays excluded, as today.
 - **The blast** uses the existing `bomb` and `boom` SFX from the renderer's
   event drain. `boomOf("menu")` is the default boom.
-- No `tracks.js` edit. No new oscillator recipe. `tests/music.test.mjs`'s
+- No track-table edit. No new oscillator recipe. `tests/music.test.mjs`'s
   Soundtrack v3 rules are untouched. The only change there is the cue pin.
 - **Ruled (Q2, 2026-10-09):** the hand-authored `intro` track (C major
   hexatonic, 32 steps, `MUSIC_TRACKS.intro`) becomes **unreachable**. It is
@@ -296,7 +296,8 @@ export function armUnlock(target, audio, onReady)  // returns disarm()
   unmeasured, and iOS can report `interrupted`, or a `resume()` that never
   settles. Either one would leave every press a no-op and lock the player
   out of the game. So:
-  - Count **physical presses**: a `keydown` that is not `Escape`, or a
+  - Count **physical presses**: a `keydown` that is not `Escape` (and not
+    `ev.repeat`: OS auto-repeat is one press), or a
     `pointerup`. Never count `pointerdown` or `touchstart`, which carry no
     activation on touch.
   - The **second** counted press that still finds the ctx not running
@@ -364,7 +365,7 @@ export function armUnlock(target, audio, onReady)  // returns disarm()
 |---|---|---|---|
 | Any key that unlocks (letters, digits, arrows, Enter, Space, Backspace, R, M, …) | `app.key` / `_tapMove` / confirm / `skipShow` are **no-ops**. `armUnlock` starts the show when the ctx runs. | no-op | `skipShow()` → MENU at cursor 0 |
 | **Escape** | no-op, and **no show** (the ctx stays suspended, the listener stays armed, and Escape never counts toward the §5 hatch) | no-op | skip → MENU (Input's pre-shell pause is a no-op outside GAME) |
-| Any press while `_showPending` (ctx running, 3D board not ready) | `skip()` → MENU at cursor 0 (review 2026-10-09: a hung three fetch must not hold a music-playing title) | — | — |
+| Any press while `_showPending` (ctx running, 3D board not ready) | `skip()` → MENU at cursor 0 once `subT − pressT >= SKIP_GUARD`; before that, a no-op, so the press that started the show never also skips it (review 2026-10-09: a hung three fetch must not hold a music-playing title) | — | — |
 | Mouse click on canvas | main's `pointerdown` now calls `app.skipShow()` (today it calls `app.skip()`, `main.js:438`), a no-op on the title; unlock on `pointerdown` → show | no-op | skip → MENU |
 | Touch tap / **long-press** | no-op; unlock completes on `pointerup` / `touchend` → show | no-op | skip on `pointerdown` → MENU |
 | **Space held** across title → show → MENU | `beginShow()` sets `prevConfirm = true`, so the held fire makes no rising edge | no rising edge | no rising edge until release and press; never starts a run |
@@ -444,7 +445,7 @@ Notes:
   - The show cannot begin before then. `beginShow()` on a not-ready board
     sets `_showPending` instead, and `update()` begins the show on the first
     ready frame. The music is already playing.
-  - Any press while the show is pending goes to MENU (§6). A three fetch
+  - Any press while the show is pending goes to MENU once past the guard (§6). A three fetch
     that hangs, rather than rejecting, can never hold the player on the
     title.
   - `app.boardReady` at construction is `curKind !== "3d" ||
@@ -537,7 +538,8 @@ Notes:
       bypass `_push`.
     - So "show ends → PLAY → PAUSE → M" would land on MENU with `fromShow`
       still true and replay the slam.
-- New `skipShow()`: while `_showPending`, it calls `skip()`. Otherwise it
+- A pending `beginShow()` also sets `pressT = subT`. It does not reset `subT`, so the title drift never jumps.
+- New `skipShow()`: while `_showPending`, it calls `skip()` once `subT − pressT >= SKIP_GUARD`, and is a no-op before that. Otherwise it
   returns `false` on the title, and in the show while `subT < SKIP_GUARD`
   (0.20), and calls `skip()` in every other case. `key()` (`_skipKey()`),
   `confirm()` and the `update()` rising edge call `skipShow()`, never
@@ -576,7 +578,7 @@ raised.
 | `src/app/intro.js` | `SHOW_STEP`, `SHOW_DUR`, `SHOW_PLANT`, `SKIP_GUARD`, `SHOW_SEED`, `SHOW_SCRIPT`; `introPhase(stage,t,pressT)`, `popOf(t)`, `createShow()`, `stepShow(show,dt,app,live)` (steps only when `live`, i.e. not the title; sets `app.showBoom` on the show bomb's `boom`). `INTRO_DUR` / `createIntro` deleted. |
 | `src/app/menuapp.js` | §8 |
 | `src/audio.js` | `unlock()` return value; honest `unlocked()`; `pump()` gated on `unlocked()` |
-| `src/audio/tracks.js` | `musicCue(INTRO)` → `"menu"` (one token) |
+| `src/audio/tracks.js` | `musicCue(INTRO)` → `"menu"` (one line deleted) |
 | `src/main.js` | §9 only |
 | `src/render/three/flythrough.js` | `introCam(stage,t,base,pressT)`; header comment rewritten |
 | `src/render/three/wrapper.js` | `o.intro` object form; player-slot scale from `o.pop` |
@@ -680,7 +682,7 @@ untouched.
     press lands on cursor 0.
   - Natural end, then PLAY, then PAUSE, then M gives MENU with `fromShow`
     false (no replayed slam).
-  - A press while `_showPending` gives MENU.
+  - A press while `_showPending` gives MENU once past `SKIP_GUARD`. The press that set it pending does not.
   - **Unseen cabinet gives MENU (reversal)**, and `markCabinet` is called once.
 - **`tests/cabinetseen.test.mjs`:** the unseen `bootFromIntro` block flips to
   MENU at cursor 0, with the args untouched and `markCabinet` called once.
