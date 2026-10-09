@@ -296,12 +296,15 @@ export function armUnlock(target, audio, onReady)  // returns disarm()
   unmeasured, and iOS can report `interrupted`, or a `resume()` that never
   settles. Either one would leave every press a no-op and lock the player
   out of the game. So:
-  - Count **physical presses**: a `keydown` that is not `Escape` (and not
-    `ev.repeat`: OS auto-repeat is one press), or a
-    `pointerup`. Never count `pointerdown` or `touchstart`, which carry no
-    activation on touch.
+  - Count **physical presses**: a `keydown` that is not `Escape`, not a
+    modifier or lock key (`Shift` / `Control` / `Alt` / `Meta` / `CapsLock`,
+    which carry no activation either: measured, review 2026-10-09), and not
+    `ev.repeat` (OS auto-repeat is one press), or a `pointerup`. Never count
+    `pointerdown` or `touchstart`, which carry no activation on touch.
   - The **second** counted press that still finds the ctx not running
-    finishes anyway. The show runs silent.
+    finishes 250 ms later, never synchronously, so that press's own
+    `resume()` can land first (Shift+A, or two quick presses inside resume
+    latency, then still get the sting). If it does not, the show runs silent.
   - The sting is skipped, because `onAudioReady` gates it on `unlocked()`.
   - The music starts on its own once the ctx ever runs, because `pump()` is
     gated on `unlocked()`.
@@ -602,8 +605,11 @@ untouched.
     on the first gesture except an `Escape` keydown.
   - A rejected `resume()` promise gives one `onReady`.
   - **Hatch:** a ctx that never runs gives no `onReady` after one counted
-    press. A second counted press (a non-Escape keydown or a `pointerup`)
-    gives exactly one `onReady`. Any number of Escapes, `pointerdown`s and
+    press. A second counted press (a keydown that is not Escape or a
+    modifier/lock key, or a `pointerup`) gives exactly one `onReady`, 250 ms
+    later. Two modifier keydowns never trip it. Shift then an activating
+    key, or two activating presses back to back, give one `onReady` with
+    `unlocked()` true. Any number of Escapes, `pointerdown`s and
     `touchstart`s never trips it.
   - `onReady` never fires twice.
 - **`tests/music.test.mjs`:**
@@ -787,8 +793,9 @@ caches.
 - **Audio paragraph.** Replace "`reveal` is a cue" context with: "Unlock is
   `src/app/unlock.js` `armUnlock`: keydown / pointerdown / pointerup /
   touchend / click, armed until `ctx.state === "running"` (Escape and a touch
-  `pointerdown` carry no activation); a second non-Escape press with the ctx
-  still not running starts the show silent. `unlocked()` means running and
+  `pointerdown` carry no activation); a second press that is not Escape or a
+  modifier/lock key, with the ctx still not running 250 ms later, starts the
+  show silent. `unlocked()` means running and
   gates `pump()`. `musicCue(INTRO)` is `menu`; the `intro` track is dormant
   (ruling 2026-10-09)."
 - **`src/app/` retention paragraph.** Amend `nb.cabinet.v1`: "still written

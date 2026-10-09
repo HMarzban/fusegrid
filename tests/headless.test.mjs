@@ -417,6 +417,25 @@ function mkCanvas(){
     check("P1 the same tap's touchend/click never replay it",plays.length===1,JSON.stringify(plays));
    }finally{ delete globalThis.window; }
 }
+// P1 (opening §5): the hatch finishes on a ctx that never runs, and skips
+// the sting — a jingle there would be the frozen-clock chord-blob.
+{
+  const plays=[];
+  const audio={play:n=>plays.push(n),toggle:()=>false,
+    unlock(){return new Promise(()=>{});},unlocked(){return false;}};
+  const L={};
+  globalThis.window={addEventListener:(ty,fn)=>{(L[ty]=L[ty]||[]).push(fn);}};
+  try{
+    createGame(null,{seed:14,audio});
+    L.keydown.forEach(f=>f({code:"F15"}));
+    L.pointerup.forEach(f=>f({}));
+    await new Promise(r=>setTimeout(r,300));
+    check("P1 a hatch finish on a never-running ctx plays no sting",plays.length===0,JSON.stringify(plays));
+    L.keydown.forEach(f=>f({code:"F16"}));
+    await new Promise(r=>setTimeout(r,300));
+    check("P1 a gesture after the hatch still plays nothing",plays.length===0,JSON.stringify(plays));
+   }finally{ delete globalThis.window; }
+}
 
 // I2: pause exists only inside GAME
 {

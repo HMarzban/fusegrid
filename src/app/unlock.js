@@ -2,12 +2,16 @@
    actually running: Escape and a touch pointerdown carry no activation, so
    their resume() leaves the ctx suspended and must not consume the listener.
    unlock() runs synchronously inside the handler (WebKit's rule). Hatch: the
-   second counted press (non-Escape, non-repeat keydown, or pointerup) that
-   still finds the ctx not running finishes anyway, so a ctx that never runs
-   cannot strand the player; onReady's own unlocked() gate skips the sting.
+   second counted press (a non-repeat keydown that is not Escape or a
+   modifier/lock key, or a pointerup) that still finds the ctx not running
+   finishes 250 ms later unless its own resume() lands first, so a ctx that
+   never runs cannot strand the player; onReady's unlocked() gate skips the
+   sting.
    No WebAudio (Node, or unlock() false): the first non-Escape gesture. */
 export const UNLOCK_EV = Object.freeze(["keydown", "pointerdown", "pointerup", "touchend", "click"]);
 const isEsc = (ev) => !!ev && (ev.code === "Escape" || ev.key === "Escape");
+const MODS = ["Shift", "Control", "Alt", "Meta", "CapsLock"];
+const isMod = (ev) => !!ev && MODS.includes(ev.key);
 export function armUnlock(target, audio, onReady) {
   let done = false,
     presses = 0;
@@ -27,8 +31,8 @@ export function armUnlock(target, audio, onReady) {
     const r = audio && audio.unlock ? audio.unlock() : false;
     if (r === false) return esc ? undefined : finish();
     if (audio.unlocked()) return finish();
-    if ((ty === "keydown" && !esc && !(ev && ev.repeat)) || ty === "pointerup") presses++;
-    if (presses >= 2) return finish();
+    if ((ty === "keydown" && !esc && !isMod(ev) && !(ev && ev.repeat)) || ty === "pointerup") presses++;
+    if (presses >= 2) setTimeout(finish, 250);
     Promise.resolve(r).then(() => audio.unlocked() && finish(), finish);
   }
   for (const [ty, fn] of hs) target.addEventListener(ty, fn, true);

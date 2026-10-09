@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-09 — O1 review: hatch counts only activating presses, never finishes synchronously (shell v169)
+- `armUnlock` no longer counts Shift/Control/Alt/Meta/CapsLock keydowns (no activation, measured) and the second counted press finishes via `setTimeout(finish,250)` unless its own resume lands first: Shift+A, Esc x3+Shift+a, rapid a+b, Meta x2 then a all reach `running` with one jingle (CDP). New headless P1 pin: a hatch finish on a never-running ctx plays no sting (red with the `fireJingle` guard removed). Open: the first MENU nav key whose resume is still pending starts its SFX oscillators on a suspended ctx (2 seen after Shift x2 then ArrowDown); pre-existing.
+
 ## 2026-10-09 — O1 audio unlock: armed until the ctx runs (shell v168)
 - Measured at HEAD (CDP, `--autoplay-policy=document-user-activation-required`; `user-gesture-required` leaves a load-time ctx running and proves nothing): an 800 ms touch long-press and an Escape left MENU silent with `unlocked()` true over a `suspended` ctx (touch pointerdown and Escape carry no activation; the `{once:true}` listener was spent). New `src/app/unlock.js` `armUnlock` (keydown/pointerdown/pointerup/touchend/click, capture) stays armed until the ctx runs, hatch on a second counted press; `unlocked()` now means running and gates `pump()`. After: key/click/60 ms tap/800 ms hold all `running`, Escape stays suspended + armed, 0 oscillators started on a suspended ctx, one jingle. Left for the show task: `onAudioReady`'s INTRO gate + `beginShow()`, `musicCue(INTRO)`. Notes `.superpowers/sdd/2026-10-09-opening/task-O1.md`.
 

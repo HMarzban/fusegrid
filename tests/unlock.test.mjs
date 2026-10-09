@@ -14,6 +14,7 @@ function check(name, cond, detail) {
   );
 }
 const flush = () => new Promise((r) => setTimeout(r, 0));
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // a target that records capture listeners and honours capture on removal
 function mkTarget() {
@@ -176,6 +177,8 @@ for (const [label, audio] of [
   await flush();
   check("hatch: one counted press is not enough", n === 0 && t.L.length === 5, n);
   t.fire("pointerup", {});
+  check("hatch: never synchronous inside the second press", n === 0, n);
+  await wait(300);
   check("hatch: the second counted press finishes once", n === 1 && t.L.length === 0, n);
   check("hatch: the ctx is honestly still suspended", a.unlocked() === false);
   t.fire("keydown", { code: "KeyB" });
@@ -187,7 +190,37 @@ for (const [label, audio] of [
   armUnlock(t, a, () => n++);
   t.fire("keydown", { code: "KeyA" });
   t.fire("keydown", { code: "KeyB" });
+  await wait(300);
   check("hatch: two non-Escape keydowns trip it", n === 1, n);
+}
+// ---- hatch counting: modifier / lock keydowns carry no activation ----
+for (const key of ["Shift", "Control", "Alt", "Meta", "CapsLock"]) {
+  const t = mkTarget(), a = mkAudio();
+  let n = 0;
+  armUnlock(t, a, () => n++);
+  gesture(t, a, "keydown", { code: key + "Left", key }, false);
+  gesture(t, a, "keydown", { code: key + "Left", key }, false);
+  await wait(300);
+  check("hatch: two " + key + " keydowns never trip it", n === 0 && t.L.length === 5, n + "/" + t.L.length);
+}
+{
+  const t = mkTarget(), a = mkAudio();
+  let n = 0, at = null;
+  armUnlock(t, a, () => { n++; at = a.unlocked(); });
+  gesture(t, a, "keydown", { code: "ShiftLeft", key: "Shift" }, false);
+  gesture(t, a, "keydown", { code: "KeyA", key: "A" }, true);
+  await wait(300);
+  check("Shift+A (capital letter): one onReady with the ctx running", n === 1 && at === true, n + "/" + at);
+}
+{
+  const t = mkTarget(), a = mkAudio();
+  let n = 0, at = null;
+  armUnlock(t, a, () => { n++; at = a.unlocked(); });
+  gesture(t, a, "keydown", { code: "KeyA", key: "a" }, true);
+  gesture(t, a, "keydown", { code: "KeyB", key: "b" }, true);
+  await wait(300);
+  check("two activating presses inside resume latency: one onReady with the ctx running",
+    n === 1 && at === true, n + "/" + at);
 }
 
 // ---- disarm: removes every listener, no onReady ----
