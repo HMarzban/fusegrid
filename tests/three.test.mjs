@@ -1122,6 +1122,23 @@ await sec("S3.C",async()=>{
     Math.abs(r._dbg.camera.position.x-camA.position.x)<1e-9
     &&Math.abs(r._dbg.camera.position.z-camA.position.z)<1e-9,
     r._dbg.camera.position.x.toFixed(2)+" vs "+camA.position.x.toFixed(2));
+  {
+    const {getShake}=await import("../src/render/fx.js");
+    const realRnd=Math.random; Math.random=()=>0.75;
+    try{
+      const rs=createRenderer3D(null,null,{audio:null,hud:null});
+      const ws=createWorld(43,1); loadLevel(ws,1,false); ws.state="PLAY";
+      ws.events.push({t:"boom",x:300,y:260});
+      rs.render(ws,1/60,{intro:{stage:1,t:2.8,pressT:1.1}});
+      const sh=getShake(), want=new THREE.PerspectiveCamera(), calm=new THREE.PerspectiveCamera();
+      applyOrbit(want,ft.introCam(1,2.8,1503,1.1),sh);
+      applyOrbit(calm,ft.introCam(1,2.8,1503,1.1),{x:0,y:0});
+      const q=rs._dbg.camera.quaternion;
+      check("S3.C wrapper o.intro rides getShake(): the show's boom shakes the intro camera",
+        (sh.x!==0||sh.y!==0)&&q.angleTo(want.quaternion)<1e-9&&q.angleTo(calm.quaternion)>1e-6,
+        sh.x.toFixed(3)+"/"+q.angleTo(calm.quaternion).toExponential(2));
+    } finally{ Math.random=realRnd; }
+  }
   const pre=[];
   for(const d of CAM_PRESET){
     const rg2=createRig(); rg2.dist=d;

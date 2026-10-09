@@ -1725,5 +1725,70 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   }finally{ delete globalThis.window; }
 }
 
+// O2 review 2: the opening's wiring seams, each pinned by a mutant that
+// stayed green. shellview reads body[data-lay] and app.fromShow; menuapp
+// advances readyT; main feeds introPhase/pressT to the 2D transform and ro.intro.
+{
+  const {drawShell}=await import("../src/render/shellview.js");
+  const {layout}=await import("../src/render/menudraw.js");
+  const {introPhase}=await import("../src/app/intro.js");
+  const shot=(app,canvas,kind="2d",world=createWorld(1,1))=>{
+    const r={texts:[],fills:[],scales:[]};
+    const c=new Proxy({},{get:(t,p)=>p in t?t[p]
+        :p==="fillText"?(s)=>r.texts.push(s):p==="scale"?(x)=>r.scales.push(x)
+        :p==="measureText"?()=>({width:0}):()=>{},
+      set:(t,p,v)=>{ if(p==="fillStyle")r.fills.push(v); t[p]=v; return true; }});
+    drawShell(c,app,world,canvas,kind);
+    return r;
+  };
+  const lay=(v)=>({width:600,height:520,ownerDocument:{body:{getAttribute:(k)=>k==="data-lay"?v:null}}});
+  const intro=(st,subT)=>({screen:SCREEN.INTRO,introStage:st,subT,pressT:0,boardReady:true,readyT:1});
+  for(const v of ["p","l"]){
+    check("O2 body[data-lay]="+v+" title paints TAP TO START",shot(intro(0,1),lay(v)).texts.includes("TAP TO START"));
+    check("O2 body[data-lay]="+v+" show paints TAP TO SKIP",shot(intro(1,0.6),lay(v)).texts.includes("TAP TO SKIP"));
+  }
+  check("O2 body[data-lay]=d title paints PRESS ANY KEY",shot(intro(0,1),lay("d")).texts.includes("PRESS ANY KEY"));
+  const L=layout(600,520);
+  const menu=(fromShow)=>shot({screen:SCREEN.MENU,fromShow,subT:0,cursor:0,heat:0,dailyTag:""},lay("d"));
+  const ns=menu(true), sk=menu(false);
+  check("O2 the first MENU frame after a natural end: 0.12 dim, no fade, logo at logoScale*1.35",
+    ns.fills[0]==="rgba(7,10,18,0.12)"&&ns.fills[1]!=="rgba(7,10,18,1)"&&ns.scales.includes(L.logoScale*1.35),
+    ns.fills.slice(0,2)+" / "+ns.scales.slice(0,3));
+  check("O2 the first MENU frame after a skip: 0.62 dim, then the opaque fade, logo at logoScale",
+    sk.fills[0]==="rgba(7,10,18,0.62)"&&sk.fills[1]==="rgba(7,10,18,1)"&&sk.scales.includes(L.logoScale)
+    &&!sk.scales.includes(L.logoScale*1.35), sk.fills.slice(0,2)+" / "+sk.scales.slice(0,3));
+  const g=createGame(null,{seed:18});
+  g.loop(0); g.loop(250); g.loop(500);   // dt caps at 0.25 s
+  const rv=shot(g.app,null,"2d",g.world);
+  check("O2 a ready board 0.5 s after boot: readyT advanced, the title veil is 0.45, not opaque",
+    g.app.readyT>=0.4&&rv.fills[0]==="rgba(7,10,18,0.45)",g.app.readyT+" / "+rv.fills[0]);
+  const tri=(calls,ph)=>calls.some((c,i,a)=>c[0]==="translate"&&c[1][0]===300&&c[1][1]===260
+    &&a[i+1]&&a[i+1][0]==="scale"&&a[i+1][1][0]===ph.zoom
+    &&a[i+2]&&a[i+2][0]==="translate"&&a[i+2][1][0]===-ph.camX*600&&a[i+2][1][1]===-ph.camY*520);
+  const cv=mkCamCanvas(600,520);
+  const g2=createGame(cv.el,{seed:19});
+  let t=0; g2.loop(t);
+  for(let i=0;i<125;i++){ t+=16; g2.loop(t); }
+  const ttl=introPhase(0,g2.app.subT);
+  check("O2 2D title frame: the transform is introPhase(0,subT) at zoom 1.12",
+    g2.app.introStage===0&&ttl.zoom===1.12&&tri(cv.calls,ttl),g2.app.subT);
+  g2.app.beginShow(); cv.calls.length=0;
+  t+=16; g2.loop(t);
+  const sh=introPhase(1,g2.app.subT,g2.app.pressT), at=introPhase(0,g2.app.pressT);
+  check("O2 2D first show frame: introPhase(1,subT,pressT) from the title pose it left (no pop)",
+    g2.app.introStage===1&&g2.app.pressT>1.5&&tri(cv.calls,sh)
+    &&Math.abs(sh.camX-at.camX)<0.002&&Math.abs(sh.zoom-at.zoom)<0.002,g2.app.pressT);
+  const ros=[];
+  const fake={ctx:new Proxy({},{get:(t,p)=>p in t?t[p]:p==="measureText"?()=>({width:0}):()=>{}}),render:(w,dt,ro)=>ros.push(ro),consumeEvents(){},getShake:()=>({x:0,y:0})};
+  const g3=createGame(null,{seed:20,render3d:true,createRenderer3D:()=>fake});
+  t=0; g3.loop(t);
+  for(let i=0;i<60;i++){ t+=16; g3.loop(t); }
+  g3.app.beginShow();
+  for(let i=0;i<5;i++){ t+=16; g3.loop(t); }
+  const ri=ros[ros.length-1].intro;
+  check("O2 3D INTRO: ro.intro carries the stage, subT and the press pose (pressT === app.pressT)",
+    !!ri&&ri.stage===1&&ri.t===g3.app.subT&&g3.app.pressT>0.5&&ri.pressT===g3.app.pressT,JSON.stringify(ri));
+}
+
 console.log(fail? "HEADLESS FAIL":"HEADLESS OK");
 process.exit(fail?1:0);

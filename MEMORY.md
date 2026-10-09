@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-09 — O2 review 2: the opening's wiring seams pinned (tests only, shell stays v173)
+- Headless pins for shellview `layOf` (body[data-lay] p/l -> TAP TO START/SKIP), the MENU slam call site (0.12 dim + logoScale*1.35 vs skip 0.62 + fade), menuapp `readyT` advance (0.45 veil at 0.5 s), main's 2D INTRO transform (title zoom 1.12, first show frame from the press pose) and 3D `ro.intro.pressT`; three.test pins the intro camera riding `getShake()`. All six reviewer mutants now go red.
+
 ## 2026-10-09 — O2 review: off-canvas taps skip the show; the opening's render/ready chain pinned (shell v173)
 - One bubble-phase window `pointerdown` calls `skipShow()` on INTRO (phone portrait: the canvas is ~38% of the screen, so TAP TO SKIP was dead elsewhere); bubble so a canvas tap that lands MENU is never re-read as confirm (CDP portrait/landscape/desktop: off-canvas x2 and canvas taps all -> MENU, never GAME). New pins kill 8 surviving mutants: boardReady boot/settle + the two `.catch().then()` sites, the INTRO veil, show world rendered on INTRO/MENU, ATTRACT drops the show, silent skipped boom, `ro.pop`, the 2D pop scale.
 
