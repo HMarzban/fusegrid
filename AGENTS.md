@@ -380,6 +380,7 @@ not covered by Node — play-verify in a browser after render changes.
 - Difficulty is Heat on LEVEL SELECT (CORE / PLUS / MAX). Global **pace** (EASY / NORM / HARD) is a separate LEVEL SELECT control (`[`/`]`), persisted in `nb.pace.v1`, scaling player/enemy move speed on `world.pace` — not frozen `CFG`. Pact (`1–4`) and rooms 6–8 unlock after the first FUSE/GRID CLEAR. Score × heat is persist-only; HIGH SCORES fifth column tags pact bitmask (`p`). Music uses WebAudio stereo panning on the oscillator engine (zero npm deps). Mid-run heat, always-on Sudden Death, and internet play stay parked.
 - Foes must read as arcade characters (distinct silhouette, face or lens, shading, facing) in CLASSIC 2D and REAL 3D, not flat colored tokens. `enemybody.js` is the 2D five-beat build; 3D matches via merged hulls in the four-mesh slot. Art only — do not retune AI.
 - Do not commit `.cursor/` or `e2e-artifacts/` (both gitignored).
+- A PIXEL (pixel-art sprite) look is **planned only** (`docs/superpowers/plans/2026-10-09-pixel-art-spike-plan.md`). Owner ruling 2026-10-09: no spike, art or build starts until the owner explicitly says so; if it ever ships it is a third RENDER look (CLASSIC 2D → PIXEL → REAL 3D), never a replacement for CLASSIC 2D, judged on laptop and phone, at today's board size (sharp-bilinear, no integer-snap shrink). Until then "Menu RENDER flips 3D ⇄ 2D only" stands.
 
 ## Learned Workspace Facts
 - Surviving a hit leaves live bombs and blades in the world.

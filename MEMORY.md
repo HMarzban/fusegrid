@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-09 — PIXEL sprite look: research, plan, owner rulings (docs only, planning only)
+- Research team (5 lenses + skeptic): a pixel-art sprite look is possible with caveats — no technical blocker; art is the cost (~180–260 frames, 4–8 weeks gated by owner reviews) vs 7–11 engineering days; shortcuts (pixelating 3D / downsampling 2D) are illegible; recommended form is a third RENDER look, not replacing CLASSIC 2D. Plan committed: `docs/superpowers/plans/2026-10-09-pixel-art-spike-plan.md` (style bible, A BOLD / B CLEAN / C LIT directions on a 20-art-px grid, canonical MAKO first, gates G0–G3, RACI). Owner rulings: U1 judge on laptop + phone; U2 keep today's board size via sharp-bilinear (no integer-snap shrink); U3 PLANNING ONLY — nothing starts until the owner says so. A/B/C style illustration (not spike art) in `.superpowers/sdd/2026-10-09-pixel/abc-illustration.png`.
+
 ## 2026-10-09 — A skipped show no longer blows behind MENU (shell v175)
 - A user skip drops the show world (main's `showKept` latch reads `app.fromShow`), so MENU backs onto the live world; only the natural end keeps it. `stepShow` mode 2 and `sfx:!show` removed (the post-boom tail emits no events). Pins: skip at 1/2/3/4 s -> no flash/shake/boom, live world.
 
