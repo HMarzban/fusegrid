@@ -160,13 +160,25 @@ ruling**. It is recorded with its reason, and you may override any of them:
 
 | Gate | Your decision |
 |---|---|
-| G0 | Direction A, B, C, a mix, or "none". Whether MAKO is still MAKO, including MAKO's back view (P-back). The scale policy (P-scale). The blast style (P-blast), only if both styles survive the cut order. |
+| G0 | Direction A, B, C, a mix, or "none". Whether MAKO is still MAKO, including MAKO's back view (P-back). The blast style (P-blast), only if both styles survive the cut order. |
 | G1 | Go or no-go. Full third look or characters only (decided here and only here). The feel picks from play: P-snap, P-speed, P-life, P-ghost, P-pause, P-intro, and the left-facing light flip. The RENDER contract change (§9). Who draws the production art. |
 | G2 | Each wave, at real size. |
 | G3 | Release. |
 
-The only user words this plan rests on are the request in §1.1. No user ruling
-exists yet on any PIXEL question.
+The plan rests on the request in §1.1 and on these user rulings:
+
+- **User ruling 2026-10-09 (U1, review screen):** the pick sheet is judged on
+  **both** a laptop and a phone. Every in-game row is rendered at the laptop
+  scale (k ≈ 2.8) and at the phone scale (k ≈ 3.8).
+- **User ruling 2026-10-09 (U2, scale):** PIXEL keeps **today's board size**.
+  No integer-snap shrink is ever applied. Pixels are drawn with
+  **sharp-bilinear (c)**: integer nearest prescale, then one linear step, so
+  edges may be very slightly soft. This reinstates (c), which an earlier draft
+  dropped, and removes (b) and (d′). P-scale is no longer a G0 question.
+- **User ruling 2026-10-09 (U3, scope):** this document is **planning only**.
+  No spike, art or build starts until the owner explicitly says so. The
+  production-art question (former §9 Q3) is withdrawn and is raised again only
+  when the owner starts a stage.
 
 ### 1.4 Gate names (one vocabulary)
 
@@ -377,7 +389,10 @@ Rules:
   - Node tests (G1): `pxZoom(1,k) === 1` for whole and fractional `k`; `pxZoom`
     composed with `clampAxis` at `MIN_Z` and `MAX_Z`, for odd and even `k` and
     for a fractional `k`; no zoom-out level at K 2.
-- **D4 Scale policy is a G0 pick from rendered strips.** The candidates:
+- **D4 Scale policy — DECIDED by User ruling U2 (2026-10-09): today's board
+  size, sharp-bilinear (c).** (b) and (d′) are withdrawn; (a) remains only as a
+  documented fallback if (c) fails its D5 acceptance. The text below is kept
+  for the record. The original candidates were:
   - **(a)** nearest-neighbour at today's fractional fit;
   - **(b)** integer snap with letterbox (the CSS stage scale is chosen so `k`
     is whole; the backing store stays 600×520);
@@ -386,7 +401,8 @@ Rules:
   Team recommendation: **(d′)**. `fitBox` itself is never changed (`fit.test`
   pins it). A new pure `pxFit` lives in `src/app/fit.js` beside `fitBox`,
   because `src/app/` may not import `src/render/` (`src/app/stats.js:203`).
-  - **Dropped for now: (c) sharp-bilinear** (finalizer, 2026-10-09). It needs a
+  - **Reinstated by User ruling U2: (c) sharp-bilinear** (was dropped by the
+    finalizer, 2026-10-09; its cost below now belongs in the G1 budget). It needs a
     backing store at a whole multiple of the board, but `#c` is 600×520
     (`sizeCanvases` sets `canvas.width` from `kindSize`) and `dims()` returns
     `canvas.width`, so a hi-res `#c` would move the HUD, the overlay, the
@@ -764,14 +780,14 @@ State this risk openly. A 300×260 native frame sits close to a 16-bit console f
 | Ghost | Env: checker-dither silhouette. AD: no dither on characters. `ghost.test` pins `GHOST_A` 0.4. | **0.4 alpha at blit** by default; the dither is shown as a labelled variant only | Keeps the pinned contract. The user may still prefer the variant. |
 | Edge rule | AD: two-ring 85% at 14 ΔE. Env: ΔL* ≥15 on 80%. Character: dL ≥0.12 or ΔE ≥20. Tech Lead: CROWN ring ≥90%. | **Two-ring for actors (G-D); T-edge for tiles; one CROWN rule (G-E)** | The rules have different subjects: actor vs backdrop, and tile vs floor. One rule per subject. The Character and Tech Lead variants are subsumed. |
 | Tile outlines | Env: "ink outline" as a tile axis. AD O3: tiles get value steps only. | **O3** | Ink applies to characters, bombs, blast and pickups in every direction. The tile axis is dropped. |
-| Sharp-bilinear | Tech Lead (c): CSS `image-rendering:auto`. AD: integer nearest prescale, then one linear step. | **Neither, for now: (c) is dropped from P-scale** (finalizer, 2026-10-09) | Plain bilinear softens everything, and the AD's technique needs a separate px canvas the plan had not budgeted (§3.2 D4). It returns only via K1-1. |
+| Sharp-bilinear | Tech Lead (c): CSS `image-rendering:auto`. AD: integer nearest prescale, then one linear step. | **AD's (c) sharp-bilinear — chosen by User ruling U2 (2026-10-09)**; the Tech Lead's plain CSS bilinear stays rejected | Plain bilinear softens everything. The AD's technique needs a separate px canvas, now budgeted at G1 (+1.5–2 days, §3.2 D4). |
 | Mirroring | Animation: mirror the front pass for a 4-frame walk. AD: L1 upper-left key. | **Never mirror inside one facing's cycle; 3/4-left mirrors once, on the turn** (D1, A10) | A mirrored pass swaps the lit flank and catchlights every other step, a shading flicker; and a cell-edge flip moves the centred grin 1 px. |
 | MAKO colour budget | P4 caps (A ≤6) vs the 8 mandatory MAKO slots | **Fin ramp, feet and tooth seam are identity slots outside the cap**, like the face trio | Correct art must be able to pass the gates; S0c proves it with the positive fixture. |
 | Teeth vs M9 | M7 white tooth blocks vs M9 "only the specular is whiter" | **The tooth mask is exempt from M9's clause** | The vector's teeth are `#ffffff`; the anti-fang feature must not fail the value gate. |
 | Specular | AD: knight only. Character: white catchlight in every creature eye. | **Body specular knight only; eye and lens catchlights ≤2 px everywhere** (L4) | They are different elements. The CROWN risk is body specular. |
 | Settings bit | Tech Lead `px`; Producer and research `spr`. | **`px`** (working name) | Matches the short-key style of `nb.settings.v1`. Final at G1. |
 | Spike scope | Producer 33 cells; AD 51; Character 41; Env about 100+; Animation 64. | **23 per direction, 69 plus 3 BEAM plus 1 canonical MAKO = 73 (§4.3)** with a written cut order | Fits the art day and a quarter at 15–30 min per on-model cell with three parallel artists, inside the 2.5–3-day box (§4). Everything else moves to G1 or G2. |
-| G0 scope | Original plan: direction + MAKO + nine small picks. Two reviewers: cut to the essentials. | **Direction, MAKO check with P-back, P-scale, and P-blast only if BEAM survives the cuts.** Six feel picks move to G1 | Feel is judged better in play; one taste decision should not be diluted. P-back stays because it is part of "is MAKO still MAKO" and costs one cell edit. |
+| G0 scope | Original plan: direction + MAKO + nine small picks. Two reviewers: cut to the essentials. | **Direction, MAKO check with P-back, and P-blast only if BEAM survives the cuts** (P-scale decided by U2). Six feel picks move to G1 | Feel is judged better in play; one taste decision should not be diluted. P-back stays because it is part of "is MAKO still MAKO" and costs one cell edit. |
 | Spike rooms | AD: JUNGLE/VOID/CROWN. Env and Character: SAND is the worst room (brick–floor 5 ΔE; burrow on floor0 8.2). | **Three full rooms plus a SAND stress strip** | SAND is where burrow debuts, and both designers flagged it independently. |
 
 ---
@@ -942,7 +958,7 @@ and the G1 sheet shows the alternative as a clip captured from the live probe
 
 | ID | Pick | Shown as |
 |---|---|---|
-| P-scale | Display policy (a) nearest / (b) snap / (d′) hybrid (§3.2 D4; (c) is not offered) | MAKO + walker crop at k 2.39, 2.77 and 3.77, captured at real dpr 2/3 |
+| P-scale | DECIDED by U2: sharp-bilinear (c) at today's size. The sheet still shows a MAKO + walker crop at k 2.77 (laptop) and 3.77 (phone) rendered with (c), as a check, not a question | captured at real dpr 2/3 |
 | P-blast | CELL vs BEAM, **only if the BEAM strip survives the cut order** | blast strip |
 | P-back | MAKO back view with or without the eye bumps, folded into the MAKO question | back cell pair |
 
@@ -1099,7 +1115,7 @@ from the existing JUNGLE capture, as context; it is not a candidate.
 | 4 | SAND stress strip | Wall, brick, floor A/B, bomb, blast-on-brick, burrow, fast. |
 | 5 | Cast line-up at in-game size (§3.2) | MAKO (4 facings, the 3/4-left mirror labelled "team ruling: key flips on the turn"), walker, fast, sentry and burrow, on JUNGLE, VOID, CROWN and SAND floors; FLAME and KICK in their wells. A silhouette panel shows every cell flat on white. |
 | 6 | Motion strips | Per direction, one frame strip: the MAKO front walk cycle, the fuse stages and the four blast ages, at in-game size with each frame's ms. Looping APNGs optional. |
-| 7 | G0 picks | P-scale, P-back, and P-blast only if BEAM survived (§4.4). |
+| 7 | G0 picks | P-back, and P-blast only if BEAM survived (§4.4). P-scale is decided (U2). |
 | 8 | Zoom ×6 craft row | Labelled "zoom — do not judge here". |
 
 Native-size crops anywhere on the sheet are labelled "do not judge".
@@ -1113,7 +1129,7 @@ Printed on the sheet:
 
 1. "Open the page on your laptop and your phone. Looking only at the full boards and the motion strips: which do you prefer, **A, B, C, or CLASSIC 2D as it is**?" (Choosing CLASSIC 2D ends PIXEL.)
 2. "Is MAKO still MAKO in your pick, from the front, the 3/4 view and from behind? Behind: with or without the eye bumps (P-back)? If not, what is wrong?"
-3. "How should the pixels sit on your screen (P-scale)?" and, only if the BEAM strip was drawn, "CELL or BEAM blast (P-blast)?" Either can be answered "no preference", which takes the team default.
+3. Only if the BEAM strip was drawn: "CELL or BEAM blast (P-blast)?" It can be answered "no preference", which takes the team default. (P-scale is no longer asked: User ruling U2.)
 4. "Anything from another column you want carried into your pick?" This allows one half-day mix round, once.
 
 The six feel picks and P-turn are asked at G1, after the user has played.
@@ -1170,12 +1186,12 @@ the user has played the probe.
 | **Owner (A)** | RE. The AD is responsible (R) for the probe art. |
 | **Inputs** | The G0 pick. The frozen `pxRamp` and master palette. The spike grids and the canonical MAKO. |
 | **Probe art (about 81 cells)** | MAKO full set, about 27: 3 facings × (idle 2 + walk 4), plus death 6, win 2, hurt 1. Walker, stationary and fast in full (3 facings × 2 walk + pose each, about 21). **shade, knight and burrow minimal: front idle + 1 step each (6)**, so VOID, CROWN and SAND are judged on drawn actors. The tile template + 4 crumble frames for JUNGLE, VOID and CROWN. Bomb 3 + overlays for 4 variant marks. Blast 3 pieces × 4 ages, in the G0 blast language. Anything still not drawn falls back to the procedural painter, and the G1 sheet lists every fallback actor by name. |
-| **Engineering** | §6.2. G1 is the one home of: the scale policy (`pxFit` + the P-scale pick), draw-site zoom and pan quantization (D3), the shake snap (D2), the hurt and lose one-shots (`src/render/pixel/oneshot.js`) and the delivery path below. |
+| **Engineering** | §6.2. G1 is the one home of: the scale policy (`pxFit` + the sharp-bilinear px world canvas, User ruling U2), draw-site zoom and pan quantization (D3), the shake snap (D2), the hurt and lose one-shots (`src/render/pixel/oneshot.js`) and the delivery path below. |
 | **Delivery to the phone (owner RE)** | The probe lives on branch `px-probe`, Pages deploys only `main`, and `serve.js` binds `127.0.0.1` only (`serve.js:53`; AGENTS.md "Do not rebind serve.js"). Default path: publish the branch's static tree as a **private multi-file claude.ai Artifact** (static ES modules with relative paths, no build step). The artifact runs on its own origin, so the RE first checks that the SW registration fails soft there and that the page boots with empty storage. Fallback, if that fails: G1 is played on desktop only and the phone is covered by headless dpr-3 captures, said plainly on the G1 sheet. Rebinding `serve.js` to the LAN changes an AGENTS.md rule and needs the user's explicit approval; it is not the default. |
 | **Reaching rooms 7 and 8** | A fresh origin has no first FUSE/GRID CLEAR, and `flags.js` has no room parameter. On `px-probe` only: `?room=N` (1–8), honoured **only together with `?debug=1`**, parsed in `flags.js` and applied through `debughook.js`'s existing `loadLevel` path. No store write, no `src/core` change; dropped or re-ruled before any merge. |
 | **Outputs** | Branch `px-probe`; `tests/pixel-art.test.mjs` and `tests/pixel-render.test.mjs`; headed captures; the G1 sheet with the feel-pick clips (§4.4); `MEMORY.md` entry. |
 | **Acceptance** | See below. |
-| **Effort** | Engineering **4–6 days** (re-estimated: renderer, atlas, anim, one-shots, the full G-A…G-L port, two test files, scale policy, zoom quantization, PWA, delivery, headed CDP at three dprs). Art 3.5–5.5 days, in parallel. |
+| **Effort** | Engineering **5.5–8 days** (U2 adds the separate px world canvas for sharp-bilinear, +1.5–2 days, to the earlier 4–6) (re-estimated: renderer, atlas, anim, one-shots, the full G-A…G-L port, two test files, scale policy, zoom quantization, PWA, delivery, headed CDP at three dprs). Art 3.5–5.5 days, in parallel. |
 | **User gate (G1)** | See below. |
 | **Kill** | See below. |
 
@@ -1185,7 +1201,7 @@ the user has played the probe.
 - `main.js` grows by **≤ +2 lines** by split against the spike-start SHA (781 at `2b3df91`; see §6.2 and §6.3a), never past 799.
 - CLASSIC 2D is byte-identical in behaviour, shown by a call-log hash pin.
 - D5 holds **per policy** (§3.2): uniform under (b); the spread is reported under (a).
-- The portrait board loss under the chosen P-scale is measured and reported.
+- Board size is unchanged under U2 (sharp-bilinear); the D5 soft-edge figure is measured and reported.
 - Bake ≤50 ms; px world draw ≤4 ms per frame on the fat world.
 - The headed run is done in real headless Chromium at dpr 1/2/3, after the SW and caches are cleared on both loopback origins. The loop is driven by the MessageChannel rAF shim, with assertions on `window.__GAME__`.
 
@@ -1289,11 +1305,13 @@ A freeze is a logged ruling, not a failure.
   declared exception:** the shared shake line (`renderer.js:51`) gets a
   kind-guarded even-px snap for `"px"` (§3.2 D2); for kind `"2d"` the
   expression and the call-log hash are unchanged.
-- **No box changes.** `kindSize`, `dims`, `overlayBox`, the `cameraCtl` bbox and
-  `sizeCanvases` already treat every non-iso kind as 600×520, so they need no
-  change. This holds because P-scale offers only (a), (b) and (d′), which are
-  CSS stage-scale choices; (c) would break it and is therefore not offered
-  (§3.2 D4).
+- **Box changes (User ruling U2).** `kindSize`, `dims`, `overlayBox`, the
+  `cameraCtl` bbox and the touch hit maps stay on the 600×520 logical box. The
+  sharp-bilinear (c) path adds a separate px world canvas under `#c` (like
+  `#gl`) with its own backing size and `image-rendering`, touching
+  `index.html` CSS, `fit.js` and `sizeCanvases` (about +2–3 `main.js` lines,
+  within the 799 cap or renegotiated once at G1), budgeted at +1.5–2
+  engineering days (§3.2 D4).
 - **Art data format.**
   - Each frame is `{w,h,pal,rows}`, with ≤16 palette entries per sheet including
     the outline.
@@ -1492,7 +1510,7 @@ R = does the work, A = accountable (exactly one per row), C = consulted, I = inf
 | ID | Date | Gate | Artefact (path + sha256) | Options shown | User's verbatim words | Ruling | Kill/freeze status | Rounds used / cap | Next owner + due |
 |---|---|---|---|---|---|---|---|---|---|
 | P-0 | 2026-10-09 | plan | `docs/superpowers/plans/2026-10-09-pixel-art-spike-plan.md` (sha recorded at commit) | — | "for art spike let's create a plan document, run all your team of agents and get help from the art designers in order to have a cohesive and reliable and accountable plan for this new feature" | Plan written, reviewed once and committed; spike starts after the push (T0) | none | — | PQ (orchestrating session): record T0 and the spike-start SHA when the push lands. AD: S0 + S0b at T0, checkpoint T0+1.5 d, **G0 sheet due T0+3 working days** |
-| G0-R1 | | G0 | `spike/out/pick-sheet-r1-*.png`, `spike/sheet.html` | A/B/C/mix/none + P-scale, P-back, P-blast (if drawn) | | | | 1/2 | |
+| G0-R1 | | G0 | `spike/out/pick-sheet-r1-*.png`, `spike/sheet.html` | A/B/C/mix/none + P-back, P-blast (if drawn) | | | | 1/2 | |
 
 Rulings the user did not give in words are marked **"team ruling"**, and are
 listed in each gate report so the user can overturn them.
@@ -1558,7 +1576,7 @@ recorded):**
 |---|---|---|---|---|---|
 | R1 | MAKO off-model or vetoed on taste. Three heroes have been vetoed; both prototypes failed. | High / High | One canonical MAKO before the split (S0b) with IoU ≥ 0.85; M0–M13 gates plus negative and positive fixtures; blind read; three directions; judged at in-game size; budget for at least one rejection | AD | any G-F red, or a G0-R1 rejection |
 | R2 | "Possible but not worth it". CLASSIC 2D already reads as clean tile art. | Med / High | CLASSIC 2D column on every row; a "none" option; the skeptic's worth-it line | PQ | user prefers CLASSIC |
-| R3 | Pixel swim from the fractional fit, intro zoom and pinch zoom | High / Med | D1–D5; P-scale at G0, P-intro at G1; zoom quantization wired at G1; 7–28% snap loss disclosed | RE | D5 fails |
+| R3 | Pixel swim from the fractional fit, intro zoom and pinch zoom | High / Med | D1–D5; P-scale decided (U2: sharp-bilinear, no snap loss), P-intro at G1; zoom quantization wired at G1 | RE | D5 fails |
 | R4 | VOID and CROWN collisions invisible to the existing gates | Med / High | G-C, G-D and G-E on palette data; full VOID and CROWN rooms on the sheet | TE | gate red |
 | R5 | SAND legibility: brick–floor 5 ΔE; burrow on floor0 8.2 | High / Med | ENV-2 structure, T-edge, contact band, the burrow dark ring; SAND strip at the spike | ED | T-edge < 80% |
 | R6 | Brand proximity to the genre classic's 16-bit look | Med / High | B1–B8; BG attestation per sheet; banned-name scan; manual caption check (PNGs are not scanned) | BG | any B flag |
@@ -1624,8 +1642,9 @@ picks at G1). None of them blocks the spike.
    - the **full third look**, about 6–10 weeks with tiles, items and effects;
    - or **characters only**, meaning pixel MAKO and foes on today's tiles, at
      roughly half the art?
-3. **Q3 (worth answering before the spike if you already know). Who draws the
-   production art?**
+3. **Q3 — WITHDRAWN by User ruling U3 (2026-10-09): planning only; raised again
+   only when the owner starts a stage.** Former text: Who draws the
+   production art?
    - Agent artists with your review on every wave.
    - Or a commissioned human pixel artist, roughly $3k–15k (unverified), whose
      work would be converted to the same text-grid format.
