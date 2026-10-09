@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-09 — Opening close-out docs (shell v174)
+- CHANGELOG v174 entry, README opening bullet, AGENTS autoplay-policy test fact. Still open: a skip after the plant leaks the show blast's flash/shake under MENU (audio muted), cold 2D GPU stall, real-GPU hitch check, phone empty band.
+
 ## 2026-10-09 — Opening eye-check fixes: PIERCE reveal T, 2S menu hold, close-up reframed, hitches and grid drag (shell v174)
 - The show bomb is a PIERCE bomb planted on (3,1): a 13-tile T through 7 bricks. MENU holds its plate, rows and dim for 2S under the logo slam. The 3D flame flicker now runs on blast age, so it never lands on the trough. Same-instant `brick` SFX play once (the output peak had been 1.22). The close-up is el 0.55, az -0.1, at a fixed dist of BASE_DIST*0.4 inside the corner. A one-off 3D warm pass prebuilds the pipelines for the pop and the blast. The title stands settled while three loads.
 - Two consequences of a stall are fixed: `stepShow` catches up a whole 0.25 s frame, and `pump` drops missed steps whole for gaps under 1 s. The cold 2D stall itself is the GPU process compiling Skia Graphite pipelines (the main thread is idle), so it is disclosed, not fixed. Still open: the empty band on a portrait phone (the stage is width-bound) and a real-GPU check of the hitches. Notes and captures are in `.superpowers/sdd/2026-10-09-opening/eye-v174/`.

@@ -6,6 +6,23 @@ version number of its own; each entry is dated and names the PWA shell
 revision (`CACHE_NAME` in `src/pwa/shell.js`) that shipped it, since that is
 what makes an installed copy update.
 
+## shell v174 · 2026-10-09
+
+### Added
+- **A new opening.** The game starts on a FUSE/GRID title over a slowly
+  drifting board (2D or 3D, following your RENDER setting). Press any key or
+  tap to start: the music comes in with a sting and a short show plays (the
+  camera sweeps in, MAKO pops up, lights a fuse, and the blast reveals the
+  menu). Any key skips the show.
+
+### Fixed
+- Music now starts reliably on phones, including after a long press.
+- Pressing Escape first no longer leaves the game silent.
+
+### Changed
+- A first visit now goes to the menu after the opening, instead of straight
+  into a run.
+
 ## shell v167 · 2026-10-09
 
 ### Fixed

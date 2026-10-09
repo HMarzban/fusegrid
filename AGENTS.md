@@ -403,3 +403,7 @@ not covered by Node — play-verify in a browser after render changes.
   service worker and caches; clean both before a headed check. The desktop
   Browser pane cannot register a service worker at all, so PWA install and
   offline checks need a real headless Chromium driven over CDP.
+- Headed audio checks: launch Chromium with
+  `--autoplay-policy=document-user-activation-required`. The
+  `user-gesture-required` value does nothing for Web Audio, so it cannot
+  show whether a press really unlocks the AudioContext.

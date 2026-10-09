@@ -10,6 +10,7 @@ Share that URL **with the trailing slash** so chat apps load the preview card (`
 
 ## Features
 
+- **Opening** — a FUSE/GRID title waits for any key or tap, which starts the music and a ~4 s show that blasts open the menu. Any key skips the show.
 - **REAL 3D ⇄ CLASSIC 2D** — **OPTIONS → RENDER** toggles WebGL and classic Canvas; no reload. REAL 3D frames the whole board from one 3/4 camera; wheel or pinch zooms, and zoom resets to your CAMERA preset every room. OPTIONS also holds music and SFX volume, the 3D camera preset, brightness, screen shake, and reduce-flash.
 - **Heat** — CORE / PLUS / MAX on LEVEL SELECT (`↑/↓`). CORE is the baseline run; PLUS and MAX tighten fuse, spawns, and pressure.
 - **Eight rooms** — five biomes on a fresh install (JUNGLE → ARENA), then SAND, VOID, and CROWN after your first clear.
