@@ -206,8 +206,7 @@ export function createGame(canvas, opts = {}) {
     if (!coachSeen) stat("coach_shown", { v: "v1" }, dateStr());
     stat("room_enter", { r: world.level | 0, h: world.heat | 0, pc: world.pact | 0, pa: world.pace | 0, ld: todayStr() }, dateStr());
     resetCamera(cam); // §2: every run starts framed
-    resetOrbit(rig);
-    rig.dist = camPreset(settings.cam);
+    resetOrbit(rig, camPreset(settings.cam));
   };
 
   const audio = opts.audio || null;
@@ -365,8 +364,7 @@ export function createGame(canvas, opts = {}) {
     if (code === "KeyR" && app.screen !== SCREEN.STATS) {
       if (app.screen === SCREEN.GAME) {
         resetCamera(cam); // §2 reset, GAME only
-        resetOrbit(rig); // real3d §4: 3D rig resets too
-        rig.dist = camPreset(settings.cam);
+        resetOrbit(rig, camPreset(settings.cam)); // real3d §4: 3D rig resets too, to the selected preset
       }
       return;
     }
@@ -649,6 +647,7 @@ export function createGame(canvas, opts = {}) {
           break;
         } // hard cap (anti spiral-of-death)
       }
+      if ((prevSt === "WIN" || prevSt === "LOSE") && world.state === "PLAY") rig.dist = camPreset(settings.cam); // step() flipped it: reset before this frame renders
       /* ghost coach (plan 4): latch the first plant BEFORE renderer.render()
          drains world.events below (src/render/ zeroes the array on every
          frame's consumeEvents) — this is the only point in the loop where a

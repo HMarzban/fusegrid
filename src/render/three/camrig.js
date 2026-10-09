@@ -59,8 +59,8 @@ export function dollBy(st,d){
   st.dist=clamp(st.dist+d,DIST_MIN,DIST_MAX);
   return st;
 }
-export function resetOrbit(st){
-  st.az=DEF.az; st.el=DEF.el; st.dist=DEF.dist;
+export function resetOrbit(st,dist=DEF.dist){
+  st.az=DEF.az; st.el=DEF.el; st.dist=dist;
   return st;
 }
 /* position = target + spherical(az,el,dist); lookAt(target + shake*K). */

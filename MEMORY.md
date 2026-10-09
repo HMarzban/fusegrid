@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-09 — W2 zoom reset lands on the new room's first frame (shell v165)
+- `step()` flips WIN/LOSE->PLAY mid-frame, so the dolly reset at the top-of-frame edge block rendered one frame late; one line after the step loop in `main.js` now resets `rig.dist` before render; `resetOrbit(st,dist)` takes the preset so main.js nets 798. Pinned in `three.test.mjs` on the rendered camera; pause RESTART was already same-frame. Notes: `.superpowers/sdd/2026-10-09-finish/task-W2.md`.
+
 ## 2026-10-09 — W1 near-wall cutaway in REAL 3D (shell v164)
 - Near border row (`ROWS-1`, corners included) now tops out at `min(hWall, NEAR_H 22)` via per-instance Y-scale in the wall InstancedMesh (0 new draws, fat-world 141); measured as the tallest height keeping every row-11 actor's eyes and >=90% screen area at rig C. Rim, rig, 2D, iso, sim untouched. Notes: `.superpowers/sdd/2026-10-09-finish/task-W1.md`.
 

@@ -536,6 +536,33 @@ function mkCanvas(){
       check("§CAM WIDE via app.settings: a run start restores 1671",
         g.rig.dist===1671, String(g.rig.dist));
      }
+    /* W2: the reset lands on the new room's FIRST rendered frame. step()
+       itself flips WIN->PLAY / LOSE->PLAY mid-frame, so the camera the
+       wrapper rendered in that same loop() call is what is measured. */
+    const camD=(g)=>{const p=g.renderer._dbg.camera.position,t=g.rig.target;
+      return Math.hypot(p.x-t[0],p.y-t[1],p.z-t[2]);};
+    for(const end of ["WIN","LOSE"]){
+      const {cv,g}=boot(end==="WIN"?89:90);
+      cv.out();
+      g.world.state=end; g.loop(1016);
+      const lv=g.world.level;
+      g.world.fireEdge=false; g.input._onKey({code:"Space",preventDefault(){}});
+      g.loop(1056);
+      check("§CAM "+end+"->PLAY via step(): first rendered frame of the new "
+          +"room sits at the preset",
+        g.world.state==="PLAY"&&(end==="LOSE"||g.world.level===lv+1)
+        &&Math.abs(camD(g)-1503)<1e-6, g.world.state+" L"+g.world.level
+        +" d="+camD(g));
+     }
+    {
+      const {cv,g}=boot(91);
+      cv.out();
+      g.input.onPause(); g.loop(1016);
+      g.app.pauseCursor=1; g.app.confirm();          // RESTART
+      g.loop(1032);
+      check("§CAM pause RESTART: first rendered frame sits at the preset",
+        g.world.state==="PLAY"&&Math.abs(camD(g)-1503)<1e-6, "d="+camD(g));
+     }
    }finally{ delete globalThis.window; }
 }
 

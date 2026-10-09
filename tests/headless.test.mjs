@@ -1028,6 +1028,8 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   // T1 STATS tap wave: +4 lines (the STATS branch of the canvas pointerdown
   // chain; statsHit rides the menudraw import line) — measured 799, against
   // the 799 cap.
+  // W2 first-frame zoom wave: net -1 line (+1 post-step-loop dist reset;
+  // -2 as resetOrbit takes the preset dist) — measured 798, against the 799 cap.
   check("main.js stays a lean browser entry (<=799 lines)",
     L.length<=799,String(L.length));
   const lastImp=L.reduce((a,l,i)=>/^import[\s{]/.test(l)?i:a,-1);
