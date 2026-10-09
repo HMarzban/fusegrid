@@ -22,6 +22,19 @@ const MAT=new THREE.Matrix4();
    DOWN toward bg1 so the frame recedes and the bevel carries the highlight.
    Bevel is inset so total reach stays exactly RIM_W. */
 export const RIM_W=36, RIM_LIP=6, RIM_BEV=2, RIM_IN=4;
+/* Near-wall cutaway (ruling 2026-10-09): at rig C the ICE border row nearest
+   the camera (hWall 36) left a row-11 actor 58-85% of its screen area (MAKO
+   75%) and clipped eye planes. The near row ROWS-1, corners included, tops
+   out at min(hWall, NEAR_H) by per-instance Y-scale in the same InstancedMesh:
+   no new draw call, and both corner tiles drop with it (one height). 22 is the
+   tallest height where MAKO keeps 100% and every foe keeps its eyes and
+   >=90% of its screen area at its WORST bob/spin phase at rig C (23: walker
+   89, shade 88; FAR at 22: walker 89). stationary's flat base sits against
+   row 12 and only climbs 80->88% from 24 down to 18, so it cannot bind. 22 is
+   still above every hBrick (max 20), so WALL out-tops BRICK; only
+   ICE/WATER/VOID/CROWN change. The rim's near lip keeps hWall+LIP: rays
+   from row 11 pass >=27 units over it (ICE), and no sweep ray hit it. */
+export const NEAR_H=22;
 
 function buildRim(biome){
   const oX=W/2+RIM_W-RIM_BEV, oZ=D/2+RIM_W-RIM_BEV;
@@ -74,9 +87,11 @@ export function buildScene(world, atlas, bright){
   const wA=new THREE.Color(biome.wall),
     wH=new THREE.Color(biome.wall).lerp(new THREE.Color(biome.wallHi),0.32);
   let wi=0;
+  const hN=Math.min(biome.hWall,NEAR_H);
   for(let y=0;y<CFG.ROWS;y++)for(let x=0;x<CFG.COLS;x++)
     if(world.grid[y*CFG.COLS+x]===T.WALL){
-      MAT.makeTranslation((x+0.5)*CFG.TILE-W/2,biome.hWall/2,
+      const h=y===CFG.ROWS-1?hN:biome.hWall;
+      MAT.makeScale(1,h/biome.hWall,1).setPosition((x+0.5)*CFG.TILE-W/2,h/2,
         (y+0.5)*CFG.TILE-D/2);
       wall.setMatrixAt(wi,MAT);
       wall.setColorAt(wi++,(x+y)&1?wH:wA);

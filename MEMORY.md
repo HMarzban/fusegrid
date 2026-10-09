@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-09 — W1 near-wall cutaway in REAL 3D (shell v164)
+- Near border row (`ROWS-1`, corners included) now tops out at `min(hWall, NEAR_H 22)` via per-instance Y-scale in the wall InstancedMesh (0 new draws, fat-world 141); measured as the tallest height keeping every row-11 actor's eyes and >=90% screen area at rig C. Rim, rig, 2D, iso, sim untouched. Notes: `.superpowers/sdd/2026-10-09-finish/task-W1.md`.
+
 ## 2026-10-08 — Wave 3 close + 3D camera C
 - Docs close-out through shell v163: CHANGELOG top entry rewritten in place (v158 → v163, covers wave 3 + camera + phone fit + STATS taps + both D1 fixes), README camera/zoom/phone/tap lines. AGENTS rig text already updated by f88b81e/2fa293e/caaf638.
 - Rulings: R12 DAYS PLAYED is lifetime (never a streak); eight medals, finale-WIN only; ghost valid only on the exact seed/room/heat/pact/pace 5-tuple; Reset keeps `nb.settings.v1` + `nb.pace.v1`; camera C (el 0.66, FOV 24, dist 1503, target y -17) picked by the user from a contact sheet; zoom resets per room/run/RESTART; D1/H4 status quo.

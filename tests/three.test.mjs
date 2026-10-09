@@ -27,7 +27,7 @@
 import {createLights, LIGHT_BASE, applyBright} from "../src/render/three/lights.js";
 import {build} from "../src/render/three/materials.js";
 import {buildScene, countDrawCalls, RIM_W, RIM_LIP,
-  RIM_BEV} from "../src/render/three/scene.js";
+  RIM_BEV, NEAR_H} from "../src/render/three/scene.js";
 import {createPools, SLOT_MESH} from "../src/render/three/entities.js";
 import {atlasSources, buildAtlas} from "../src/render/three/textures.js";
 import {PLAYER_HULL} from "../src/render/sprites.js";
@@ -152,6 +152,35 @@ function scan(grid){
     brick.count===sc.bricks-1, brick.count+"/"+(sc.bricks-1));
   check("level change -> update returns true (caller rebuilds)",
     (loadLevel(w,2,false), s.update(w)===true));
+}
+
+/* Near-wall cutaway (ruling 2026-10-09): row ROWS-1, corners included, tops
+   out at min(hWall, NEAR_H) by per-instance Y-scale in the SAME InstancedMesh
+   (no new draw call); every other wall keeps the full biome hWall. */
+{
+  const m=new THREE.Matrix4(), p=new THREE.Vector3(), q=new THREE.Quaternion(),
+    s=new THREE.Vector3(), zN=(CFG.ROWS-0.5)*CFG.TILE-CFG.ROWS*CFG.TILE/2;
+  let ok=true, why="", nNear=0, lowered=0;
+  for(let lv=1;lv<=BIOMES.length;lv++){
+    const w=createWorld(9,lv); loadLevel(w,lv,false);
+    const b=BIOMES[lv-1], sc=buildScene(w),
+      wall=sc.group.children.find(o=>o.userData.tag==="wall");
+    const hN=Math.min(b.hWall,NEAR_H);
+    if(wall.count!==scan(w.grid).walls){ok=false;why=b.name+" count";}
+    for(let i=0;i<wall.count;i++){
+      wall.getMatrixAt(i,m); m.decompose(p,q,s);
+      const top=p.y+s.y*b.hWall/2, near=Math.abs(p.z-zN)<1e-9;
+      const want=near?hN:b.hWall;
+      if(near){ nNear+=lv===2; if(hN<b.hWall)lowered++; }
+      if(Math.abs(top-want)>1e-4||Math.abs(p.y-want/2)>1e-4){   // float32 matrices
+        ok=false; why=b.name+" i"+i+" top "+top.toFixed(2)+" want "+want; }
+     }
+   }
+  check("near row ROWS-1 tops out at min(hWall,NEAR_H) incl. corners; rest full",
+    ok&&nNear===CFG.COLS, why||("near "+nNear));
+  check("NEAR_H 22: clears ICE row 11, stays above every hBrick",
+    NEAR_H===22&&NEAR_H<BIOMES[1].hWall
+    &&BIOMES.every(b=>NEAR_H>b.hBrick)&&lowered>0, String(NEAR_H));
 }
 
 // ---- §4 camrig: fixed full-board rig (camera-research spec §3/§4) ----

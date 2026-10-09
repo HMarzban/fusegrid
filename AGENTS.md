@@ -107,6 +107,21 @@ not shell screens. Do not add them as `SCREEN` values.
     crops WebGL to the bottom-left quarter on dpr=2.
   - The board border is ONE extruded cabinet rim (`tag:"trim"`, `RIM_W 36` /
     `RIM_LIP 6`) with a hole — never four rails, which crossed at the corners.
+  - Near-wall cutaway (ruling 2026-10-09, the user's pick "lower the near
+    wall"): the border row nearest the camera (`ROWS-1`, both corner tiles
+    included) tops out at `min(hWall, NEAR_H)` with `NEAR_H 22`
+    (`scene.js`), by per-instance Y-scale inside the ONE wall InstancedMesh —
+    no new draw call, fat-world stays 141. The other three borders keep full
+    `hWall`. Why: at rig C the ICE near row (36) left a row-11 actor 58–85%
+    of its screen area and clipped eyes; 22 is the tallest height where MAKO
+    keeps 100% and every foe keeps its eyes and >=90% of its screen area at
+    its worst bob/spin phase (23 drops walker to 89 / shade to 88), and it
+    stays above every `hBrick` (max 20). Only ICE / WATER / VOID / CROWN
+    change. The rim stays one extrude at `hWall+RIM_LIP` everywhere: it
+    occludes nothing in row 11 (rays pass >=27 units over the ICE lip).
+    Render only — collision is untouched and CLASSIC 2D / iso have no such
+    occlusion. §4b still fits to full `hWall` at the near corners, now a
+    conservative bound.
   - Enemy bodies: one `ENEMY_3D[type]` row per foe, each exactly FOUR meshes
     (hull + two ref-swapped details + `eye_<type>` face plane), so
     `SLOT_MESH.enemy` stays 4 and fat-world stays 141. Parts are
@@ -337,7 +352,7 @@ not covered by Node — play-verify in a browser after render changes.
 - Rooms 6–8 use SAND / VOID / CROWN palettes, chiptune cues (`sand` / `void` / `crown`), and boom tints (kick 69 / 40 / 82). Those rooms append exclusive BURROW / SHADE / KNIGHT (`ROOM_EXTRA`); do not replace CORE L1–5 spawn lists. Rooms 1–5 stay JUNGLE–ARENA. Ice/water/arena boom numbers stay. Menu/intro use the default boom.
 - Soundtrack Direction v3 (`docs/superpowers/specs/2026-09-05-soundtrack-design.md`), user-approved baseline 2026-09-06: every track sits at its own tempo in the ~96–120 BPM band; leads are `triangle`/`sine`; `sawtooth` is not a music-layer timbre; `square` survives only as a factory hat colour at `v <= 0.035`; per-channel `v` ceilings plus a channel-peak sum `<= 0.20`; no shared motif across tracks; all nine B sections are hand-authored (no identity B); all 19 patterns are pairwise distinct in bass groove and lead contour. Pinned in `tests/music.test.mjs`.
 - Live 3D uses one frozen rig `{az:0, el:0.66, dist:1503, target:[0,-17,0]}` at `CAM_FOV` 24 (52.2° 3/4, ruling 2026-10-08) and one frozen light recipe — warm key `#fff4e2` 1.26 with the only shadow, cool fill `#bcd4ff` 0.54 opposite-and-behind (never casts), hemi 0.72, ambient 0.30. Key:fill 2.3333:1; `PCFSoftShadowMap` ignores `shadow.radius`, so softness is the ratio, not blur. The renderer runs `NoToneMapping` and the scene carries NO fog: ACES at exposure 1 mapped linear 0.02→0.007, capped white at 0.763 and zeroed JUNGLE `floor0`'s red channel, while `Fog(bg1,700,1600)` replaced 43% of the far board corners with `bg1` (89% at the `DIST_MAX` dolly clamp). CLASSIC 2D blits the authored hex, so REAL 3D must not regrade the same palette. Do not add a per-biome camera or light table. VOID staying dark is the look, not a bug — its darkness is albedo, not rig, so one global recipe preserves it. Stale: `el:0.54` / `dist:870` / `target y -48` / FOV 45, `el:0.62` / `dist:960` / `target y -44`, key 1.05 / fill 0.45 / hemi 0.55 / ambient 0.18, ACES tone mapping, and any `scene.fog`.
-- The 3D board sits in a cabinet well: ONE `ExtrudeGeometry` rim with a hole, tinted `wall`→`bg1` so it recedes. Four rails crossed at the corners and stuck out — never go back. Border is 1 draw call, so fat-world is 141.
+- The 3D board sits in a cabinet well: ONE `ExtrudeGeometry` rim with a hole, tinted `wall`→`bg1` so it recedes. Four rails crossed at the corners and stuck out — never go back. Border is 1 draw call, so fat-world is 141. The near border row alone is cut down to `min(hWall, NEAR_H 22)` so row-11 actors stay readable at rig C (ruling 2026-10-09).
 - At `el:0.66` the camera sits 52.2° above the horizon — still past 45°, so it reads more TOP than side. The PLAN-VIEW FOOTPRINT is an enemy's primary cue, and nine distinguishable footprints beat nine distinguishable profiles: three scaled spheres were three circles from up there. Detail below the waist buys grounding and shadow shape, not visibility, and a face plane has to face the RIG (rake it up) rather than the direction of travel.
 - A stale service worker serves pre-change bytes and looks exactly like a render change that did not land. Unregister the SW and delete its caches before trusting any headed 3D screenshot.
 - CROWN's collision is its `brickA` `#ffd447`, which is `fast`'s identity colour exactly. The three golds separate on value and shape, never hue: `knight` is the only bright-specular Phong **foe** plus an unlit pale nasal bar — the player face plate is the cast's one other Phong surface, `fast` carries dark fins over a straight-edged delta, `burrow` is a duller value with an additive plume. Do not restyle the biome to fix this.
