@@ -303,6 +303,7 @@ check(
   );
   if (listeners.controllerchange && listeners.controllerchange[0]) {
     listeners.controllerchange[0]();
+    check("returning client reloads on first change", reloads === 1, reloads);
     listeners.controllerchange[0]();
   }
   check(
