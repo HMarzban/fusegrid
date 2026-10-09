@@ -269,6 +269,7 @@ check(
   let reloads = 0;
   const nav = {
     serviceWorker: {
+      controller: {},
       register() {
         return Promise.resolve({
           update() {
@@ -316,6 +317,31 @@ check(
     updates.length === 1,
     updates.length,
   );
+}
+
+{
+  const listeners = {};
+  let reloads = 0;
+  const nav = {
+    serviceWorker: {
+      controller: null,
+      register() {
+        return Promise.resolve({ update: () => Promise.resolve() });
+      },
+      addEventListener(type, fn) {
+        (listeners[type] ||= []).push(fn);
+      },
+    },
+  };
+  registerSW({
+    navigator: nav,
+    href: "http://127.0.0.1:8080/",
+    location: { reload: () => reloads++ },
+  });
+  listeners.controllerchange[0]();
+  check("first install claim does not reload", reloads === 0, reloads);
+  listeners.controllerchange[0]();
+  check("later update on a first-visit tab reloads once", reloads === 1, reloads);
 }
 
 const spec = readFileSync(

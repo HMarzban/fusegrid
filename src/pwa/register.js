@@ -52,8 +52,13 @@ export function registerSW(env) {
     const url = new URL("./sw.js", href).href;
     const sw = nav.serviceWorker;
     if (typeof sw.addEventListener === "function") {
-      let refreshing = false;
+      let had = !!sw.controller,
+        refreshing = false;
       sw.addEventListener("controllerchange", () => {
+        if (!had) {
+          had = true;
+          return;
+        }
         if (refreshing) return;
         refreshing = true;
         if (loc && typeof loc.reload === "function") loc.reload();

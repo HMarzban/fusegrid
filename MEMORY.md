@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-09 — W3 first visit counts one SESSION (shell v166)
+- Root cause (CDP, fresh profile, real `sw.js`): the first install's `clients.claim` fired `controllerchange`, whose one-shot reload re-booted the page and logged a second `session_start`. `registerSW` now skips the first `controllerchange` when the page loaded with no controller; returning-client update+reload unchanged (verified headed with a byte-bumped `sw.js`). A deploy reload still logs a session, by design. Notes: `.superpowers/sdd/2026-10-09-finish/task-W3.md`.
+
 ## 2026-10-09 — W2 zoom reset lands on the new room's first frame (shell v165)
 - `step()` flips WIN/LOSE->PLAY mid-frame, so the dolly reset at the top-of-frame edge block rendered one frame late; one line after the step loop in `main.js` now resets `rig.dist` before render; `resetOrbit(st,dist)` takes the preset so main.js nets 798. Pinned in `three.test.mjs` on the rendered camera; pause RESTART was already same-frame. Notes: `.superpowers/sdd/2026-10-09-finish/task-W2.md`.
 
