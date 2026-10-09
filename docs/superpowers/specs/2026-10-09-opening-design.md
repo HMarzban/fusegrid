@@ -298,16 +298,23 @@ export function armUnlock(target, audio, onReady)  // returns disarm()
   out of the game. So:
   - Count **physical presses**: a `keydown` that is not `Escape`, not a
     modifier or lock key (`Shift` / `Control` / `Alt` / `Meta` / `CapsLock`,
-    which carry no activation either: measured, review 2026-10-09), and not
+    which carry no activation either: measured, review 2026-10-09; also
+    Chromium's other modifiers `AltGraph` / `Fn` / `FnLock` / `NumLock` /
+    `ScrollLock` / `Symbol` / `SymbolLock` / `Hyper` / `Super`, measured for
+    the first four, O1 review 2), and not
     `ev.repeat` (OS auto-repeat is one press), or a `pointerup`. Never count
     `pointerdown` or `touchstart`, which carry no activation on touch.
   - The **second** counted press that still finds the ctx not running
-    finishes 250 ms later, never synchronously, so that press's own
+    calls `onReady` 250 ms later, never synchronously, so that press's own
     `resume()` can land first (Shift+A, or two quick presses inside resume
     latency, then still get the sting). If it does not, the show runs silent.
   - The sting is skipped, because `onAudioReady` gates it on `unlocked()`.
-  - The music starts on its own once the ctx ever runs, because `pump()` is
-    gated on `unlocked()`.
+  - The hatch does **not** disarm. `onReady` is the one-shot part; the
+    listeners stay armed and every later gesture calls `unlock()` again, and
+    they are removed only once the ctx runs, on `r === false`, or on a
+    rejected `resume()`. So the music starts once a later activating gesture
+    runs the ctx, because `pump()` is gated on `unlocked()` (no sting:
+    `onReady` already fired).
   - Escape still never starts a show.
 - **No WebAudio** (`audio` null or lacking `unlock`, which is Node only:
   `index.html:120` always passes `createAudio()`), or `r === false`: finish
@@ -315,7 +322,8 @@ export function armUnlock(target, audio, onReady)  // returns disarm()
   - That key-code check is a Node-side proxy for "carries no activation",
     which keeps the key matrix identical to the browser. It is not a
     whitelist.
-- **finish()** removes every listener once, then calls `onReady()` once. It
+- **finish()** removes every listener once, then calls `onReady()` unless
+  the hatch already did. It
   tolerates a target with no `removeEventListener`: the P1 pin's fake
   `window` has only `addEventListener`, and the `done` flag already makes the
   handler inert.
@@ -607,7 +615,11 @@ untouched.
   - **Hatch:** a ctx that never runs gives no `onReady` after one counted
     press. A second counted press (a keydown that is not Escape or a
     modifier/lock key, or a `pointerup`) gives exactly one `onReady`, 250 ms
-    later. Two modifier keydowns never trip it. Shift then an activating
+    later, with all 5 listeners still armed; a later activating gesture
+    calls `unlock()`, runs the ctx and only then removes them, with no second
+    `onReady`. Two modifier keydowns (incl. AltGraph / NumLock / ScrollLock /
+    Fn) never trip it. A `resume()` that settles with the ctx still
+    suspended keeps every listener armed. Shift then an activating
     key, or two activating presses back to back, give one `onReady` with
     `unlocked()` true. Any number of Escapes, `pointerdown`s and
     `touchstart`s never trips it.
@@ -770,7 +782,8 @@ caches.
   - When the 3D board is still loading at the press, the music and sting
     start at the press and the show starts later, off the music's grid.
   - The §5 hatch can start a silent show on a device whose ctx never runs.
-    The music joins whenever the ctx does run, off-grid and with no sting.
+    The music joins at the next activating gesture (the listeners stay
+    armed), off-grid and with no sting.
   - A tab hidden mid-show pauses the visuals while the music continues.
   - WebKit/iOS unlock is reasoned from its handler rule, not measured (no
     CDP).

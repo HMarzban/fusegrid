@@ -245,8 +245,11 @@ not shell screens. Do not add them as `SCREEN` values.
   Unlock is `src/app/unlock.js` `armUnlock`: keydown / pointerdown / pointerup /
   touchend / click (capture), armed until `ctx.state === "running"` (Escape and
   a touch `pointerdown` carry no activation); a second press that is not Escape
-  or a modifier/lock key, with the ctx still not running 250 ms later, finishes
-  anyway. `unlocked()` means running and gates
+  or a modifier/lock key (Chromium's modifier set, incl. AltGraph / Fn /
+  NumLock / ScrollLock), with the ctx still not running 250 ms later, calls
+  `onReady` anyway (the hatch). `onReady` is one-shot; disarm is not tied to
+  it: the listeners keep calling `unlock()` until the ctx runs (or no WebAudio
+  / a rejected resume). `unlocked()` means running and gates
   `pump()`; the jingle rides the unlock and never fires on a suspended ctx.
 - `src/pwa/` — Node-testable app-shell list + SW register. `src/main.js`
   registers `./sw.js` (module, scope `./`). Precache lives in `shell.js`

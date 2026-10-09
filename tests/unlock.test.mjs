@@ -42,6 +42,7 @@ function mkAudio(o) {
       if (o && o.none) return false;
       if (a.state === "running") return true;
       if (o && o.reject) return Promise.reject(new Error("closed"));
+      if (o && o.lie && !a._act) return Promise.resolve(); // settles, ctx stays suspended
       if (a._act) {
         return Promise.resolve().then(() => { a.state = "running"; });
       }
@@ -160,6 +161,20 @@ for (const [label, audio] of [
   check("rejected resume(): never twice", n === 1, n);
 }
 
+// ---- a resume() that settles while the ctx stays suspended keeps it armed ----
+{
+  const t = mkTarget(), a = mkAudio({ lie: true });
+  let n = 0;
+  armUnlock(t, a, () => n++);
+  gesture(t, a, "keydown", { code: "Escape", key: "Escape" }, false);
+  gesture(t, a, "pointerdown", { pointerType: "touch" }, false);
+  await flush();
+  check("settled resume(), ctx suspended: no onReady, all five armed", n === 0 && t.L.length === 5, n + "/" + t.L.length);
+  gesture(t, a, "keydown", { code: "KeyA", key: "a" }, true);
+  await flush();
+  check("settled resume(): an activating press gives one onReady", n === 1 && t.L.length === 0, n + "/" + t.L.length);
+}
+
 // ---- hatch: a ctx that never runs finishes on the second counted press ----
 {
   const t = mkTarget(), a = mkAudio();
@@ -171,18 +186,28 @@ for (const [label, audio] of [
     t.fire("touchstart", {});
   }
   t.fire("keydown", { code: "KeyA", repeat: true });
-  await flush();
+  t.fire("keydown", { code: "KeyA", repeat: true });
+  await wait(300);
   check("hatch: Escapes, pointerdowns, touchstarts and auto-repeat never trip it", n === 0 && t.L.length === 5, n);
   t.fire("keydown", { code: "KeyA" });
-  await flush();
+  await wait(300);
   check("hatch: one counted press is not enough", n === 0 && t.L.length === 5, n);
   t.fire("pointerup", {});
   check("hatch: never synchronous inside the second press", n === 0, n);
   await wait(300);
-  check("hatch: the second counted press finishes once", n === 1 && t.L.length === 0, n);
+  check("hatch: the second counted press calls onReady once", n === 1, n);
   check("hatch: the ctx is honestly still suspended", a.unlocked() === false);
+  check("hatch: every listener stays armed while the ctx is not running", t.L.length === 5, t.L.length);
+  const c0 = a.calls;
   t.fire("keydown", { code: "KeyB" });
+  await wait(300);
   check("hatch: never twice", n === 1, n);
+  check("hatch: a later gesture still calls unlock()", a.calls === c0 + 1, a.calls - c0);
+  gesture(t, a, "keydown", { code: "KeyC", key: "c" }, true);
+  await flush();
+  check("hatch: a later activating gesture runs the ctx, then disarms",
+    a.unlocked() && t.L.length === 0, a.state + "/" + t.L.length);
+  check("hatch: onReady still exactly once", n === 1, n);
 }
 {
   const t = mkTarget(), a = mkAudio();
@@ -194,7 +219,7 @@ for (const [label, audio] of [
   check("hatch: two non-Escape keydowns trip it", n === 1, n);
 }
 // ---- hatch counting: modifier / lock keydowns carry no activation ----
-for (const key of ["Shift", "Control", "Alt", "Meta", "CapsLock"]) {
+for (const key of ["Shift", "Control", "Alt", "Meta", "CapsLock", "AltGraph", "NumLock", "ScrollLock", "Fn"]) {
   const t = mkTarget(), a = mkAudio();
   let n = 0;
   armUnlock(t, a, () => n++);

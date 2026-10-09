@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-09 — O1 review 2: the hatch fires onReady but stays armed; full Chromium modifier set (shell v170)
+- `armUnlock` splits one-shot `onReady` from disarm: after the hatch, listeners keep calling `unlock()` until the ctx runs (AltGraph x2 used to strand MENU silent until an SFX resumed it by accident); `MODS` now Chromium's modifier set (AltGraph/Fn/NumLock/ScrollLock... measured no activation). Unlock tests un-vacuated (hatch negatives waited 0 ms against a 250 ms timer) and a settles-but-suspended resume() pin added; 7 mutants red. CDP: forced hatch then `a` runs the menu music, 0 osc on a suspended ctx.
+
 ## 2026-10-09 — O1 review: hatch counts only activating presses, never finishes synchronously (shell v169)
 - `armUnlock` no longer counts Shift/Control/Alt/Meta/CapsLock keydowns (no activation, measured) and the second counted press finishes via `setTimeout(finish,250)` unless its own resume lands first: Shift+A, Esc x3+Shift+a, rapid a+b, Meta x2 then a all reach `running` with one jingle (CDP). New headless P1 pin: a hatch finish on a never-running ctx plays no sting (red with the `fireJingle` guard removed). Open: the first MENU nav key whose resume is still pending starts its SFX oscillators on a suspended ctx (2 seen after Shift x2 then ArrowDown); pre-existing.
 
