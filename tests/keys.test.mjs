@@ -43,38 +43,79 @@ function mk(o = {}) {
   g.tick();
   return g;
 }
-const down = (code, repeat = false) => (L.keydown || []).forEach((f) => f({ code, key: code, repeat, preventDefault: noop }));
+/* key mirrors the browser's for the modifiers armUnlock reads (Shift carries no activation) */
+const keyOf = (code) => (/^Shift/.test(code) ? "Shift" : code);
+const down = (code, repeat = false) => (L.keydown || []).forEach((f) => f({ code, key: keyOf(code), repeat, preventDefault: noop }));
 const up = (code) => (L.keyup || []).forEach((f) => f({ code, key: code, preventDefault: noop }));
 const press = (g, code, hold = 3) => { down(code); g.tick(hold); up(code); g.tick(2); };
-const menu = () => { const g = mk(); g.app.cabinetSeen = true; press(g, "Enter"); return g; };
+/* Real-key path to MENU: a press starts the show (no audio here, so armUnlock's
+   first-gesture rule), tick past the 0.2 s SKIP_GUARD, then Enter skips it. */
+const show = (g, code = "KeyA") => { press(g, code); g.tick(15); return g; };
+const menu = () => { const g = show(mk()); press(g, "Enter"); return g; };
 const toRow = (g, i) => { for (let k = 0; k < i; k++) press(g, "ArrowDown"); };
 const run = (o) => { const g = menu(); if (o && o.unlock) g.app.pactUnlocked = true; press(g, "Enter"); return g; };
 const clearRoom = (g) => { g.world.enemies.forEach((e) => { e.dead = true; }); g.tick(150); };
 const live = (w) => w.bombs.filter((b) => !b.dead).length;
 
-// ---- INTRO: Enter / Escape / arrows / Space / "ANY KEY TO SKIP" ----
-for (const code of ["Enter", "NumpadEnter", "Escape", "Backspace", "ArrowDown", "KeyW", "Space", "KeyJ", "KeyX", "KeyQ", "KeyN", "KeyC", "KeyB", "Digit7", "ShiftLeft", "KeyR", "KeyM", "KeyT", "Digit1", "BracketLeft"]) {
+// ---- INTRO (opening 2026-10-09): the title waits for a press that starts the
+// show; Escape and modifiers never do. In the show, past the 0.2 s guard, any
+// key skips to MENU at PLAY. Every visit, the first included, lands on MENU. ----
+const KEYS = ["Enter", "NumpadEnter", "Backspace", "ArrowDown", "KeyW", "Space", "KeyJ", "KeyX", "KeyQ", "KeyN", "KeyC", "KeyB", "Digit7", "KeyR", "KeyM", "KeyT", "Digit1", "BracketLeft", "KeyP"];
+for (const code of KEYS) {
   const g = mk();
-  g.app.cabinetSeen = true;
   press(g, code);
-  check("INTRO " + code + ": skips to MENU (seen cabinet) and starts nothing",
-    g.app.screen === SCREEN.MENU && g.app.cursor === 0, g.app.screen + "/" + g.app.cursor);
+  check("INTRO title " + code + ": starts the show, stays on INTRO, starts nothing",
+    g.app.screen === SCREEN.INTRO && g.app.introStage === 1 && !g.app.inGame, g.app.screen + "/" + g.app.introStage);
 }
-const fresh = () => { for (const k in mem) delete mem[k]; return mk(); }; // an unseen cabinet
-for (const code of ["Enter", "Escape", "KeyP", "ArrowDown", "KeyQ", "KeyR", "KeyM", "Space"]) {
-  const g = fresh();
-  press(g, code); g.tick(10);
-  check("INTRO " + code + " (unseen cabinet): boots a CORE room-1 run that is PLAYING, not paused, nothing planted",
-    g.app.screen === SCREEN.GAME && g.world.state === "PLAY" && g.world.level === 1 && live(g.world) === 0,
-    g.app.screen + "/" + g.world.state + "/" + live(g.world));
+for (const code of ["Escape", "ShiftLeft"]) {
+  const g = mk();
+  press(g, code); g.tick(30);
+  check("INTRO title " + code + ": no show (carries no activation), still the title",
+    g.app.screen === SCREEN.INTRO && g.app.introStage === 0, g.app.screen + "/" + g.app.introStage);
+  press(g, "KeyA");
+  check("INTRO title " + code + " then A: the next real press starts the show", g.app.introStage === 1);
 }
 {
-  const g = fresh();
-  down("Space"); g.tick(20);
-  check("INTRO Space (unseen cabinet): boots a CORE room-1 run",
-    g.app.screen === SCREEN.GAME && g.world.state === "PLAY" && g.world.level === 1, g.app.screen + "/" + g.world.state);
-  check("INTRO Space held into the run plants nothing", live(g.world) === 0, live(g.world));
+  const g = mk();
+  g.tick(Math.ceil(30 * 60));
+  check("INTRO title never times out (30 s, no key)", g.app.screen === SCREEN.INTRO && g.app.introStage === 0, g.app.screen);
+}
+{
+  const g = mk();
+  down("KeyA"); g.tick(3); up("KeyA");
+  press(g, "KeyS", 1);
+  check("INTRO show: a key inside the 0.2 s guard does not skip", g.app.screen === SCREEN.INTRO && g.app.introStage === 1);
+}
+for (const code of ["Enter", "NumpadEnter", "Escape", "Backspace", "ArrowDown", "KeyW", "Space", "KeyJ", "KeyQ", "KeyC", "KeyR", "KeyM", "KeyT", "Digit1", "BracketLeft", "KeyP"]) {
+  const g = show(mk());
+  press(g, code); g.tick(10);
+  check("INTRO show " + code + ": skips to MENU at PLAY, starts nothing, plants nothing",
+    g.app.screen === SCREEN.MENU && g.app.cursor === 0 && !g.app.inGame && live(g.world) === 0,
+    g.app.screen + "/" + g.app.cursor);
+}
+{
+  const g = mk();
+  down("Space"); g.tick(Math.ceil((4.384 + 0.6) * 60));
+  check("INTRO Space held from the title press through the show's end: MENU at PLAY, no run",
+    g.app.screen === SCREEN.MENU && g.app.cursor === 0 && !g.app.inGame && live(g.world) === 0, g.app.screen);
   up("Space"); g.tick(2);
+  press(g, "Space"); g.tick(3);
+  check("...then a fresh Space confirms PLAY", g.app.screen === SCREEN.GAME && live(g.world) === 0, g.app.screen);
+}
+{
+  const g = mk();
+  down("ArrowDown"); g.tick(Math.ceil((4.384 + 0.2) * 60));
+  check("INTRO ArrowDown held from the title press through the show's end lands on PLAY",
+    g.app.screen === SCREEN.MENU && g.app.cursor === 0, g.app.screen + "/" + g.app.cursor);
+  up("ArrowDown"); g.tick(2);
+}
+{
+  for (const k in mem) delete mem[k]; // an unseen cabinet
+  const g = mk();
+  press(g, "Enter"); g.tick(Math.ceil((4.384 + 0.3) * 60));
+  check("INTRO unseen cabinet: the show lands on MENU at PLAY, not a run (ruling 2026-10-09)",
+    g.app.screen === SCREEN.MENU && g.app.cursor === 0 && g.app.fromShow && !g.app.inGame, g.app.screen);
+  check("INTRO unseen cabinet: nb.cabinet.v1 still written once", mem["nb.cabinet.v1"] === "1", mem["nb.cabinet.v1"]);
 }
 
 // ---- MENU: arrows, Enter on every row, Space confirm, idle -> ATTRACT ----
@@ -112,7 +153,7 @@ for (const code of ["Enter", "Escape", "KeyP", "ArrowDown", "KeyQ", "KeyR", "Key
   const g = menu();
   g.tick(Math.ceil(10.2 * 60));
   check("MENU idle 10 s -> ATTRACT", g.app.screen === SCREEN.ATTRACT, g.app.screen);
-  const r = mk(); r.app.cabinetSeen = true; press(r, "Enter"); r.tick(Math.ceil(10.2 * 60));
+  const r = menu(); r.tick(Math.ceil(10.2 * 60));
   press(r, "Escape");
   check("ATTRACT Escape -> MENU", r.app.screen === SCREEN.MENU, r.app.screen);
   for (const code of ["Enter", "KeyQ", "ArrowLeft", "Space", "KeyP"]) {

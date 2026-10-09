@@ -1,4 +1,4 @@
-// APP SHELL STATE MACHINE — pure logic, no canvas/DOM. Owns BOOT->INTRO->MENU
+// APP SHELL STATE MACHINE — pure logic, no canvas/DOM. Owns BOOT->INTRO(title->show)->MENU
 // <-> subscreens -> GAME routing outside the sim (spec §1). The sim's world is
 // untouched; nothing here is ever read by step().
 //
@@ -13,6 +13,7 @@ import { clampHeat } from "../core/heat.js";
 import { clampPact, PACT, togglePact } from "../core/pact.js";
 import { clampPace } from "../core/pace.js";
 import { clampSettings, DEFAULTS } from "./settings.js";
+import { SHOW_DUR, SKIP_GUARD } from "./intro.js";
 export const SCREEN = Object.freeze({
   BOOT: 0,
   INTRO: 1,
@@ -109,13 +110,26 @@ export function createMenuApp(opts = {}) {
     // change, -1 sentinel otherwise; cleared wherever subT resets
     worldState: null,
     _taps: {},
+    /* Opening (spec 2026-10-09): INTRO is two phases. introStage 0 = title,
+       1 = show; pressT = the title subT at the press (the show starts from that
+       pose); boardReady/readyT are set by main (3D waits on three); showBoom is
+       set by stepShow on the show bomb's boom; fromShow turns on MENU's slam. */
+    introStage: 0,
+    pressT: 0,
+    fromShow: false,
+    boardReady: true,
+    readyT: 0,
+    _showPending: false,
+    showBoom: false,
     /* Advance the shell by dt seconds. Reads held axes + confirmHeld only. */
     update(dt, input) {
+      if (this.screen !== SCREEN.MENU) this.fromShow = false; // startRun/_toMenuInner/enterAttract bypass _push
       const d = Math.max(0, dt || 0);
       const ch = !!(input && input.confirmHeld);
-      const rising = ch && !this.prevConfirm;
+      let rising = ch && !this.prevConfirm;
       this.prevConfirm = ch;
       this.subT += d;
+      if (this.boardReady) this.readyT += d;
       if (this.screen === SCREEN.GAME) {
         if (this.worldState === "PAUSE") {
           const ax = (input && input.input) || {};
@@ -137,6 +151,17 @@ export function createMenuApp(opts = {}) {
         return;
       }
       if (this.screen === SCREEN.ATTRACT) return; // subT already advanced -> hint blink
+      if (this.screen === SCREEN.INTRO) {
+        if (this._showPending && this.boardReady) this._show();
+        /* The boom (not the clock) ends the show; +1 s is the safety net. It
+           runs before the axis read so an arrow held since the press keeps
+           the landing frame on PLAY (the _skipKey taps latch). */
+        const end = this.introStage === 1 && (this.showBoom || this.subT >= SHOW_DUR + 1);
+        if (end || rising) this._skipKey(end);
+        if (end && this.screen === SCREEN.MENU) this.fromShow = true;
+        if (this.screen === SCREEN.INTRO) return void (this._taps = {});
+        rising = false; // the edge that skipped is spent
+      }
       const ax = (input && input.input) || {};
       let dir = 0,
         axis = 0;
@@ -194,7 +219,7 @@ export function createMenuApp(opts = {}) {
         if (code === "Escape" || code === "Backspace") return this.exitAttract();
         return this.playFromAttract();
       }
-      if (this.screen === SCREEN.INTRO) return this._skipKey(); // "ANY KEY TO SKIP"
+      if (this.screen === SCREEN.INTRO) return this._skipKey(); // title: no-op; show: "ANY KEY TO SKIP"
       this.idleT = 0;
       switch (code) {
         case "Enter":
@@ -249,10 +274,12 @@ export function createMenuApp(opts = {}) {
     },
     /* A key spent skipping INTRO is spent: its held axis or fire must not also
        move or confirm on the screen it lands on (taps + prevConfirm are the
-       same guards key() and a held confirm already use). */
-    _skipKey() {
+       same guards key() and a held confirm already use). Gated unless the
+       show ended on its own: the title ignores it (armUnlock starts the
+       show), and so does the show's guard. */
+    _skipKey(ended) {
       this.prevConfirm = true;
-      const r = this.skip();
+      const r = ended ? this.skip() : this.skipShow();
       this._taps = { "-1:0": true, "1:0": true, "-1:1": true, "1:1": true };
       return r;
     },
@@ -293,7 +320,7 @@ export function createMenuApp(opts = {}) {
       this.idleT = 0;
       switch (this.screen) {
         case SCREEN.INTRO:
-          return this.skip();
+          return this.skipShow();
         case SCREEN.GAME:
           return this.worldState === "PAUSE" ? this.confirmPause() : false;
         case SCREEN.MENU: {
@@ -363,21 +390,51 @@ export function createMenuApp(opts = {}) {
         return this._push(SCREEN.MENU);
       return false;
     },
+    /* Direct programmatic jump from either stage (tests, debughook). Never
+       gated: every GESTURE goes through skipShow() instead. */
     skip() {
       return this.screen === SCREEN.INTRO ? this.bootFromIntro() : false;
     },
-    /* First-visit play (plan 7): any INTRO gesture — skip, confirm, an
-       any-key tap, or main's ~5s auto-advance, all of which fall through
-       skip() — boots an unseen cabinet straight into a CORE room-1 run,
-       same handoff as playFromAttract. A returning player (cabinetSeen
-       persisted, or pact already unlocked from an earlier ?play=1/autoplay
-       run that never touched INTRO) still lands on today's MENU. */
+    /* Gesture skip: a no-op on the title and inside the show's SKIP_GUARD, so
+       the press that starts the show never also skips it. A show pending on
+       the 3D board skips once past the guard from that press: a hung three
+       fetch can never hold a music-playing title. */
+    skipShow() {
+      if (this.screen !== SCREEN.INTRO) return false;
+      if (this._showPending) return this.subT - this.pressT >= SKIP_GUARD ? this.skip() : false;
+      return this.introStage === 1 && this.subT >= SKIP_GUARD ? this.skip() : false;
+    },
+    /* The title's press (main's armUnlock onReady). Sets prevConfirm so a held
+       Space makes no rising edge. A board still loading (3D) only marks the
+       show pending; update() begins it on the first ready frame. */
+    beginShow() {
+      if (this.screen !== SCREEN.INTRO || this.introStage !== 0 || this._showPending) return false;
+      this.pressT = this.subT;
+      this.prevConfirm = true;
+      if (!this.boardReady) return (this._showPending = true);
+      return this._show();
+    },
+    _show() {
+      this._showPending = false;
+      this.introStage = 1;
+      this.pressT = this.subT; // re-captured: the show starts from the title pose it leaves
+      this.subT = 0;
+      this.showBoom = false;
+      return true;
+    },
+    /* Every visit, the first included, lands on MENU with PLAY highlighted
+       (ruling 2026-10-09, user pick "Show, then menu": reverses plan 7 / R4's
+       first-visit Play Now). nb.cabinet.v1 is still written on the first
+       exit and no longer branches anything. */
     bootFromIntro() {
       if (this.screen !== SCREEN.INTRO) return false;
-      if (this.cabinetSeen || this.pactUnlocked) return this._push(SCREEN.MENU);
-      this.cabinetSeen = true;
-      if (o.markCabinet) o.markCabinet();
-      return this._playCore({ level: 1, heat: 0, pact: 0, pace: this.pace | 0 });
+      if (!this.cabinetSeen) {
+        this.cabinetSeen = true;
+        if (o.markCabinet) o.markCabinet();
+      }
+      this._showPending = false;
+      this.cursor = 0;
+      return this._push(SCREEN.MENU);
     },
     move(dir, axis) {
       this.idleT = 0;
@@ -640,7 +697,7 @@ export function createMenuApp(opts = {}) {
         seed: c.seed >>> 0,
       });
     },
-    /* Shared CORE handoff for playFromAttract/bootFromIntro (plan 7): reset
+    /* Shared CORE handoff for playFromAttract/startDaily/playChallenge: reset
        the shell into GAME and hand args to main's onStart. Callers gate the
        screen check themselves before reaching here. */
     _playCore(args) {

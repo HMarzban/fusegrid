@@ -142,6 +142,9 @@ for (const [label, audio] of [
   armUnlock(t, audio, () => n++);
   t.fire("keydown", { code: "Escape", key: "Escape" });
   check("no WebAudio (" + label + "): Escape does not finish", n === 0 && t.L.length === 5);
+  for (const key of ["Shift", "Control", "AltGraph", "NumLock"]) t.fire("keydown", { code: key + "Left", key });
+  check("no WebAudio (" + label + "): modifier/lock keys do not finish (the Node key matrix matches the browser)",
+    n === 0 && t.L.length === 5);
   t.fire("pointerdown", {});
   check("no WebAudio (" + label + "): first other gesture finishes once", n === 1 && t.L.length === 0, n);
   t.fire("keydown", { code: "KeyA" });

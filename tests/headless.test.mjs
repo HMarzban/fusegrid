@@ -5,6 +5,8 @@ import {createGame} from "../src/main.js";
 import {createRenderer} from "../src/render/renderer.js";
 import {createWorld, loadLevel} from "../src/core/sim.js";
 import {SCREEN, IDLE_T} from "../src/app/menuapp.js";
+import {SHOW_DUR} from "../src/app/intro.js";
+import {encodeChallenge} from "../src/app/code.js";
 import {CFG, BIOMES, biomeOf} from "../src/core/config.js";
 import {PROJ} from "../src/render/r3d/camera.js";
 import {loadScores} from "../src/app/highscores.js";
@@ -39,24 +41,44 @@ check("null-canvas renderer render() does not throw", ok);
     g.world.state+","+g.world.level);
 }
 
-// ---- plan 7 (first-visit play now): headless boot check ----
-// A fresh cabinet (no nb.cabinet.v1, no pact unlock — the only real defaults
-// under Node, where defaultStore() finds no window.localStorage) skips
-// straight into a CORE room-1 GAME on the very first INTRO gesture. Every
-// OTHER block below only wants a known MENU to test something unrelated, so
-// it stamps g.app.cabinetSeen=true right after construction to keep
-// exercising the returning-player path unchanged.
+// ---- opening (ruling 2026-10-09): every visit, the first included, is
+// title -> press -> show -> MENU at PLAY. This reverses plan 7's first-visit
+// Play Now. The title never auto-advances. Blocks below that only want a
+// known MENU call g.app.skip(), the ungated programmatic jump. ----
+{
+  const L={};
+  globalThis.window={addEventListener:(ty,fn)=>{(L[ty]=L[ty]||[]).push(fn);}};
+  try{
+    const g=createGame(null,{seed:42});
+    check("boots unseen: no cabinet flag, no pact unlock",
+      g.app.cabinetSeen===false&&g.app.pactUnlocked===false);
+    check("boot builds the show world for INTRO", !!g.show&&g.show.world!==g.world);
+    let t=0;
+    for(let i=0;i<480;i++){ t+=250; g.loop(t); }   // 120 s of title at the 0.25 s dt cap
+    check("the title never auto-advances: 120 s of frames, still INTRO stage 0, world not stepped",
+      g.app.screen===SCREEN.INTRO&&g.app.introStage===0&&g.show.n===0&&g.world.time===0,
+      g.app.screen+"/"+g.app.introStage);
+    L.keydown.forEach(f=>f({code:"KeyA",key:"a",preventDefault(){}}));
+    check("a press starts the show (no WebAudio: armUnlock's first-gesture rule)",
+      g.app.screen===SCREEN.INTRO&&g.app.introStage===1&&g.app.subT===0);
+    let f=0;
+    while(g.app.screen===SCREEN.INTRO&&f<600){ t+=16; g.loop(t); f++; }
+    check("first visit: the show lands on MENU at cursor 0 (not a run), ~SHOW_DUR after the press",
+      g.app.screen===SCREEN.MENU&&g.app.cursor===0&&g.app.fromShow===true&&g.world.time===0
+      &&Math.abs(f*0.016-SHOW_DUR)<=2*0.016, g.app.screen+" after "+f+" frames");
+    check("first visit: the first INTRO exit marks the cabinet seen", g.app.cabinetSeen===true);
+    check("the post-blast show world (brick broken by the reveal) still backs MENU",
+      !!g.show&&g.show.world.grid[1*CFG.COLS+5]===0&&g.world.grid[1*CFG.COLS+5]!==undefined);
+    g.app.confirm();
+    t+=16; g.loop(t);
+    check("PLAY drops the show world for good", g.app.screen===SCREEN.GAME&&g.show===null);
+  }finally{ delete globalThis.window; }
+}
 {
   const g=createGame(null,{seed:42});
-  check("boots unseen: no cabinet flag, no pact unlock",
-    g.app.cabinetSeen===false&&g.app.pactUnlocked===false);
   g.app.skip();
-  check("unseen cabinet: app.skip() boots straight to CORE GAME",
-    g.app.screen===SCREEN.GAME&&g.world.state==="PLAY"&&g.world.level===1
-    &&(g.world.heat|0)===0&&(g.world.pact|0)===0,
-    g.app.screen+"/"+g.world.level+"/"+g.world.heat+"/"+g.world.pact);
-  check("unseen cabinet: the first INTRO gesture marks it seen",
-    g.app.cabinetSeen===true);
+  check("unseen cabinet: app.skip() lands on MENU at cursor 0 (reversal)",
+    g.app.screen===SCREEN.MENU&&g.app.cursor===0&&g.app.cabinetSeen===true, g.app.screen);
 }
 {
   const g=createGame(null,{seed:43});
@@ -135,24 +157,14 @@ check("null-canvas renderer render() does not throw", ok);
     "tail "+alphas.slice(-4).map(a=>a.toFixed(2)).join(","));
 }
 
-// ---- fix round 2: INTRO auto-advances at INTRO_DUR (no key) ----
-// plan 7: the ~5s auto-skip is also an INTRO gesture, so an unseen cabinet
-// rides it straight into CORE GAME; a seen cabinet still lands on MENU.
+// ---- the title never times out (opening §2): no auto-advance, seen or not ----
 {
   const g=createGame(null,{seed:3});
+  g.app.cabinetSeen=true;
   let t=0;
-  for(let i=0;i<330;i++){ t+=16; g.loop(t); }   // ~5.28s, zero input
-  check("unseen cabinet: intro auto-advance boots straight to CORE GAME",
-    g.app.screen===SCREEN.GAME&&g.world.state==="PLAY"&&g.world.level===1,
-    "screen "+g.app.screen);
-}
-{
-  const g=createGame(null,{seed:3});
-  g.app.cabinetSeen=true;                       // seen cabinet
-  let t=0;
-  for(let i=0;i<330;i++){ t+=16; g.loop(t); }   // ~5.28s, zero input
-  check("seen cabinet: intro auto-advances to MENU at INTRO_DUR without any key",
-    g.app.screen===SCREEN.MENU, "screen "+g.app.screen);
+  for(let i=0;i<330;i++){ t+=16; g.loop(t); }   // the old 5 s auto-advance window
+  check("seen cabinet: the title waits for a press (no auto-advance)",
+    g.app.screen===SCREEN.INTRO&&g.app.introStage===0, "screen "+g.app.screen);
 }
 
 // ---- FINAL FIX WAVE: C1 pointer single-fire / I1 cue sheet / I2 gated pause ----
@@ -176,18 +188,23 @@ function mkCanvas(){
 {
   const cv=mkCanvas();
   const g=createGame(cv,{seed:11});
-  g.app.cabinetSeen=true;                       // seen cabinet: click -> MENU
-  cv.fire("pointerdown");                       // INTRO click -> skip only
-  check("C1 intro click skips to MENU, no fire latch",
+  g.app.cabinetSeen=true;
+  let T=0; const tick=(n)=>{ for(let i=0;i<n;i++){ T+=16; g.loop(T); } };
+  cv.fire("pointerdown");                       // title click: the unlock starts the show, not the canvas
+  check("C1 title click is a no-op on the shell, no fire latch",
+    g.app.screen===SCREEN.INTRO&&g.app.introStage===0&&g.input._intent.fire===false);
+  g.app.beginShow(); tick(15);                  // past the show's 0.2 s guard
+  cv.fire("pointerdown");                       // show click -> skip only
+  check("C1 show click skips to MENU, no fire latch",
     g.app.screen===SCREEN.MENU&&g.input._intent.fire===false,
     g.app.screen+"/fire="+g.input._intent.fire);
-  for(let i=1;i<=10;i++)g.loop(i*16);
+  tick(10);
   check("C1 click-skip does not auto-start a run",
     g.app.screen===SCREEN.MENU&&g.world.time===0, g.app.screen);
   g.app.cursor=3; cv.fire("pointerdown");       // OPTIONS
   check("C1 OPTIONS click pushes SETTINGS once",
     g.app.screen===SCREEN.SETTINGS&&g.app.optRow===0,String(g.app.screen));
-  for(let i=11;i<=20;i++)g.loop(i*16);
+  tick(10);
   check("C1 push is not re-fired by rising edge next frame",
     g.app.screen===SCREEN.SETTINGS&&g.app.optRow===0);
   g.app.optRow=3; g.app.confirm();              // RENDER row
@@ -197,7 +214,7 @@ function mkCanvas(){
   g.app.key("Escape");
   g.app.cursor=4; cv.fire("pointerdown");       // GUIDE
   check("C1 subscreen click lands once", g.app.screen===SCREEN.GUIDE);
-  for(let i=21;i<=30;i++)g.loop(i*16);
+  tick(10);
   check("C1 subscreen does not bounce back", g.app.screen===SCREEN.GUIDE);
 }
 
@@ -405,17 +422,42 @@ function mkCanvas(){
   const L={};
   globalThis.window={addEventListener:(ty,fn)=>{(L[ty]=L[ty]||[]).push(fn);}};
   try{
-    createGame(null,{seed:14,audio});
-    L.keydown.forEach(f=>f({code:"Escape",key:"Escape"}));
+    const g=createGame(null,{seed:14,audio});
+    L.keydown.forEach(f=>f({code:"Escape",key:"Escape",preventDefault(){}}));
     L.pointerdown.forEach(f=>f({pointerType:"touch"}));
     check("P1 a failed unlock fires no jingle",plays.length===0,JSON.stringify(plays));
+    check("P1 a failed unlock stays on the title (no silent show)",
+      g.app.screen===SCREEN.INTRO&&g.app.introStage===0);
     audio.run=true;
     L.pointerup.forEach(f=>f({pointerType:"touch"}));
     check("P1 the listener stayed armed: the running press fires one jingle",
       plays.join()==="uiJingle",JSON.stringify(plays));
+    check("P1 the running press starts the show", g.app.introStage===1);
     L.touchend.forEach(f=>f({}));L.click.forEach(f=>f({}));
     check("P1 the same tap's touchend/click never replay it",plays.length===1,JSON.stringify(plays));
    }finally{ delete globalThis.window; }
+}
+// P1 (opening §4): deep links (autoplay / a decodable ?code=) bypass the title
+// and never get the sting; their room track just starts on the first gesture.
+for(const mode of ["autoplay","code"]){
+  const plays=[];
+  const audio={play:n=>plays.push(n),toggle:()=>false,_u:false,
+    unlock(){this._u=true;return true;},unlocked(){return !!this._u;}};
+  const L={};
+  globalThis.window={addEventListener:(ty,fn)=>{(L[ty]=L[ty]||[]).push(fn);}};
+  const loc0=globalThis.location;
+  if(mode==="code")globalThis.location={search:"?code="+encodeChallenge({seed:77,heat:0,pact:0,pace:0})};
+  try{
+    const g=createGame(null,{seed:14,audio,autoplay:mode==="autoplay"});
+    L.keydown.forEach(f=>f({code:"F15",preventDefault(){}}));
+    check("P1 a "+mode+" boot lands in GAME with no show world and no sting on its first gesture",
+      g.app.screen===SCREEN.GAME&&g.show===null&&!plays.includes("uiJingle"),JSON.stringify(plays));
+   }finally{ delete globalThis.window; if(loc0===undefined)delete globalThis.location; else globalThis.location=loc0; }
+}
+{
+  const src=readFileSync(join(ROOT,"src/main.js"),"utf8");
+  check("P1 touch controls stay hidden through title and show (the pad is GAME-gated)",
+    /touch\.update\(app\.screen === SCREEN\.GAME,/.test(src));
 }
 // P1 (opening §5): the hatch finishes on a ctx that never runs, and skips
 // the sting — a jingle there would be the frozen-clock chord-blob.
@@ -751,7 +793,7 @@ function mkCanvas(){
   const src=readFileSync(join(ROOT,"src/main.js"),"utf8");
   check("main.js passes {hud:false} on every non-GAME render, closing the"
     +" undefined gap that wrote the frozen backdrop's zeros",
-    /:\s*\{\s*hud:\s*false\s*\}/.test(src)&&!/:\s*undefined;/.test(src),
+    /:\s*\{\s*hud:\s*false\b/.test(src)&&!/:\s*undefined;/.test(src),
     (src.match(/let ro =[\s\S]{0,600}?renderer\.render/)||[])[0]);
   check("toolbar.js is gone and main.js no longer imports it",
     !/toolbar\.js|mountToolbar|setBtn/.test(src));

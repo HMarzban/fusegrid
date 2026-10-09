@@ -99,9 +99,9 @@ function check(name, cond, detail) {
     const L = md.layout(W, H);
     let ok = true;
     try {
-      md.drawIntroChrome(stub, 0.3, W, H); // logo reveal beat
-      md.drawIntroChrome(stub, 2.0, W, H); // mid-flyover
-      md.drawIntroChrome(stub, 4.6, W, H); // settle/tagline beat
+      md.drawIntroChrome(stub, 0, 0.3, W, H, "d"); // title: logo reveal beat
+      md.drawIntroChrome(stub, 0, 2.0, W, H, "p", 0); // title: board not ready
+      md.drawIntroChrome(stub, 1, 2.0, W, H, "l"); // show: mid-sweep
       md.drawMenu(
         stub,
         {
@@ -1154,6 +1154,55 @@ function check(name, cond, detail) {
       /applySettings\(/.test(mainSrc),
     mainSrc.match(/onSettings:[^\n]*\n(?:.*\n){0,3}/)?.[0],
   );
+}
+
+// ---- opening (2026-10-09 §7/§11): title prompt per data-lay, skip hint only
+// past the guard, all four strings fit, opaque veil while the board loads ----
+{
+  const md = await import("../src/render/menudraw.js");
+  const intro = await import("../src/app/intro.js");
+  check("menudraw's SHOW_STEP / SKIP_GUARD copies equal src/app/intro.js",
+    md.SHOW_STEP === intro.SHOW_STEP && md.SKIP_GUARD === intro.SKIP_GUARD);
+  const rec = () => {
+    const texts = [], fills = [];
+    const c = new Proxy({}, {
+      get: (t, p) => p === "fillText" ? (s, x, y) => texts.push({ s: String(s), x, y, a: t.globalAlpha, font: t.font })
+        : p === "fillRect" ? () => fills.push(t.fillStyle)
+        : p in t ? t[p] : () => {},
+      set: (t, p, v) => { t[p] = v; return true; },
+    });
+    c.globalAlpha = 1;
+    return { c, texts, fills };
+  };
+  for (const [W, H] of [[600, 520], [608, 352]]) {
+    for (const lay of ["d", "p", "l"]) {
+      const r = rec();
+      md.drawIntroChrome(r.c, 0, 1.0, W, H, lay);
+      const want = lay === "d" ? "PRESS ANY KEY" : "TAP TO START";
+      const got = r.texts.map((x) => x.s);
+      check(`title ${W}x${H} lay ${lay}: paints ${want}, never PRESS ENTER, no skip hint`,
+        got.includes(want) && !got.includes("PRESS ENTER") && !got.some((x) => /SKIP/.test(x)), got.join("|"));
+    }
+    const pre = rec();
+    md.drawIntroChrome(pre.c, 1, 0.19, W, H, "d");
+    const post = rec();
+    md.drawIntroChrome(post.c, 1, 0.6, W, H, "p");
+    check(`show ${W}x${H}: no skip hint inside SKIP_GUARD, TAP TO SKIP after it on touch`,
+      !pre.texts.some((x) => /SKIP/.test(x.s)) && post.texts.some((x) => x.s === "TAP TO SKIP"),
+      post.texts.map((x) => x.s).join("|"));
+    const fits = [["PRESS ANY KEY", 18], ["TAP TO START", 18], ["ANY KEY TO SKIP", 10], ["TAP TO SKIP", 10]]
+      .every(([str, px]) => str.length * px * 0.6 <= W - 28);
+    check(`all four opening strings fit W-28 at ${W}x${H} (0.6 em mono advance)`, fits);
+    const nr = rec();
+    md.drawIntroChrome(nr.c, 0, 3, W, H, "d", 0);
+    const rd = rec();
+    md.drawIntroChrome(rd.c, 0, 3, W, H, "d", 1);
+    check(`title veil is opaque while the board is not ready, 0.45 once it is (${W}x${H})`,
+      nr.fills[0] === "rgba(7,10,18,1)" && rd.fills[0] === "rgba(7,10,18,0.45)", nr.fills[0] + " / " + rd.fills[0]);
+  }
+  const a = md.slamOf(0), b = md.slamOf(0.12), e = md.slamOf(0.35);
+  check("MENU slam after the show: logo 1.35 -> 1, alpha 0 -> 1 over 0.12 s; dim 0.12 -> 0.62 over 0.35 s",
+    a.s === 1.35 && a.a === 0 && a.dim === 0.12 && b.s === 1 && b.a === 1 && e.dim === 0.62, JSON.stringify([a, b, e]));
 }
 
 console.log("\n  MENUDRAW RESULT: " + pass + " PASS / " + fail + " FAIL");

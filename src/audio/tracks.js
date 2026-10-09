@@ -1283,8 +1283,10 @@ export const MUSIC_TRACKS = Object.freeze({
   void: tr(VOID_A, VOID_B),
   crown: tr(CROWN_A, CROWN_B),
 });
+/* INTRO falls through to "menu" (ruling 2026-10-09, Q2): title and show run
+   on the menu theme, so INTRO -> MENU is a setTrack no-op. The intro track
+   stays in the table, pinned and unused. */
 export function musicCue(screen, level) {
-  if ((screen | 0) === SCREEN.INTRO) return "intro";
   if (screen === SCREEN.GAME || screen === SCREEN.ATTRACT)
     return biomeOf(level).name.toLowerCase();
   return "menu";

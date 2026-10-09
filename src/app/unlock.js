@@ -8,7 +8,8 @@
    that never runs cannot strand the player; onReady's unlocked() gate skips
    the sting. onReady is the one-shot part: the listeners stay armed and keep
    calling unlock() until the ctx runs, so the music still joins.
-   No WebAudio (Node, or unlock() false): the first non-Escape gesture. */
+   No WebAudio (Node, or unlock() false): the first gesture that is not
+   Escape or a modifier/lock key, so the Node key matrix matches the browser. */
 export const UNLOCK_EV = Object.freeze(["keydown", "pointerdown", "pointerup", "touchend", "click"]);
 const isEsc = (ev) => !!ev && (ev.code === "Escape" || ev.key === "Escape");
 const MODS = ["Shift", "Control", "Alt", "AltGraph", "Meta", "CapsLock", "Fn", "FnLock", "NumLock", "ScrollLock", "Symbol", "SymbolLock", "Hyper", "Super"];
@@ -36,7 +37,7 @@ export function armUnlock(target, audio, onReady) {
     if (done) return;
     const esc = ty === "keydown" && isEsc(ev);
     const r = audio && audio.unlock ? audio.unlock() : false;
-    if (r === false) return esc ? undefined : finish();
+    if (r === false) return esc || (ty === "keydown" && isMod(ev)) ? undefined : finish();
     if (audio.unlocked()) return finish();
     if ((ty === "keydown" && !esc && !isMod(ev) && !(ev && ev.repeat)) || ty === "pointerup") presses++;
     if (presses >= 2 && !ready) setTimeout(fire, 250);

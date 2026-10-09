@@ -18,7 +18,7 @@ import { createDemo, stepDemo } from "./app/attract.js";
 import { readFlags, locationSearch } from "./app/flags.js";
 import { mountDebugHook } from "./app/debughook.js";
 import { mountFit } from "./app/fit.js";
-import { introPhase, INTRO_DUR } from "./app/intro.js";
+import { introPhase, popOf, createShow, stepShow } from "./app/intro.js";
 import { loadScores, recordScore, saveScores, scoreEntry, scoresForHeat, qualifies } from "./app/highscores.js";
 import { loadPactUnlocked, savePactUnlocked } from "./app/pactstore.js";
 import { loadCabinetSeen, saveCabinetSeen } from "./app/cabinetseen.js";
@@ -334,10 +334,12 @@ export function createGame(canvas, opts = {}) {
   if (chal) { app.playChallenge(chal); saveCabinetSeen(); }
   if (autoplay && !chal) {
     app.startRun();
-    saveCabinetSeen(); // ?play=1 skips bootFromIntro, whose own markCabinet
-    // never fires; without this a first-timer shared a ?play=1 link gets
-    // boot-from-intro'd again on their next, non-autoplay visit
+    saveCabinetSeen(); // ?play=1 skips bootFromIntro, whose own markCabinet never fires
   }
+  /* Opening show world (src/app/intro.js): its OWN slot, never demo's. Backs
+     INTRO and the MENU it reveals; dropped for good at GAME / ATTRACT. Deep
+     links and autoplay never build it. */
+  let show = app.screen === SCREEN.INTRO ? createShow() : null;
 
   /* app.update() contract adapter over the live Input (held axes + fire) */
   const shellInput = {
@@ -371,7 +373,7 @@ export function createGame(canvas, opts = {}) {
     if (code === "KeyC" && app.screen === SCREEN.STATS) { copyText(statsPayload(loadStats(), loadBests(), loadTimes(), dateStr())); return; }
     // WIN / LOSE: Enter = Space, C / B copy with a note; elsewhere C still reaches app.key (ATTRACT plays)
     if (endKey(code, app, world, input, toast, () => dailyDate ? dailyStamp(dailyDate, world.level | 0, world.score | 0) : copyPayload(world))) return;
-    if (code === "KeyM" && app.screen !== SCREEN.INTRO) { // INTRO: M and R fall through to app.key's any-key skip
+    if (code === "KeyM" && app.screen !== SCREEN.INTRO) { // INTRO: M and R fall through to app.key (show: any-key skip; title: no-op)
       if (app.screen === SCREEN.GAME && app.worldState === "PAUSE") {
         persistScore();
         app.quitToMenu("PAUSE");
@@ -435,7 +437,7 @@ export function createGame(canvas, opts = {}) {
         app.playFromAttract();
         return;
       }
-      if (app.screen === SCREEN.INTRO) app.skip();
+      if (app.screen === SCREEN.INTRO) app.skipShow();
       else if (app.screen === SCREEN.SETTINGS || app.screen === SCREEN.MENU) {
         /* Tap a row = Enter on it; off the rows OPTIONS backs out and MENU
            confirms its cursor. Client px map through the CSS scale of the
@@ -473,8 +475,9 @@ export function createGame(canvas, opts = {}) {
   }
 
   /* music unlock (opening §5): window capture listeners stay armed until the
-     ctx RUNS (Escape / touch pointerdown carry no activation). P1: the jingle rides it. */
-  if (typeof window !== "undefined") armUnlock(window, audio, () => fireJingle());
+     ctx RUNS (Escape / touch pointerdown carry no activation). P1: the sting
+     rides it, and only the title's press gets it (deep links never do). */
+  if (typeof window !== "undefined") armUnlock(window, audio, () => { if (app.screen === SCREEN.INTRO) { fireJingle(); app.beginShow(); } });
 
   /* ATTRACT demo world handle (src/app/attract.js): the shell machine only
      flips screens, the loop below creates/steps/discards the demo. */
@@ -523,7 +526,7 @@ export function createGame(canvas, opts = {}) {
         threeP = loadRenderer3D().then((m) => {
           createRenderer3D = m.createRenderer3D;
           if (effKind() === "3d") renderer = getRenderer("3d");
-        });
+        }, () => {}).then(() => { app.boardReady = true; }); // settles on reject too: never strand the title
       return rcache["2d"] || getRenderer("2d");
     }
     try {
@@ -548,8 +551,9 @@ export function createGame(canvas, opts = {}) {
     loadRenderer3D().then((m) => {
       createRenderer3D = m.createRenderer3D;
       renderer = getRenderer("3d");
-    });
+    }, () => {}).then(() => { app.boardReady = true; });
   let renderer = getRenderer(curKind);
+  app.boardReady = curKind !== "3d" || !!createRenderer3D;
 
   // drawShell getters (plan 5): hoisted once so the RAF loop below allocates
   // no new closures per frame.
@@ -661,10 +665,7 @@ export function createGame(canvas, opts = {}) {
         prevSt = null;
       }
     } else {
-      app.update(dt, shellInput);
-      // §1: INTRO→MENU at t>=INTRO_DUR — same skip() path as a user keypress,
-      // so the 0.25s MENU-entry fade fires identically
-      if (app.screen === SCREEN.INTRO && app.subT >= INTRO_DUR) app.skip();
+      app.update(dt, shellInput); // INTRO -> MENU on the show bomb's boom lives in here now
       acc = 0;
     }
     // ATTRACT: re-read the screen AFTER app.update — the machine may have
@@ -674,6 +675,8 @@ export function createGame(canvas, opts = {}) {
       if (!demo) demo = createDemo();
       stepDemo(demo, dt);
     } else if (demo) demo = null;
+    if (attract || app.screen === SCREEN.GAME) show = null;
+    else if (show) stepShow(show, dt, app, app.screen !== SCREEN.INTRO || app.introStage === 1); // before render drains its events
     // render: INTRO flyover transform wraps the ARENA draw only (zoom>=1 so
     // no edge gaps); camX/camY are canvas fractions. ATTRACT renders the DEMO
     // world with HUD suppressed; every other screen renders the frozen live
@@ -689,7 +692,7 @@ export function createGame(canvas, opts = {}) {
     // real3d §7: INTRO flyover + user camTransform ride ONLY non-3d kinds —
     // in "3d" the orbit rig/flythrough own the WebGL camera (S3).
     if (curKind !== "3d" && app.screen === SCREEN.INTRO) {
-      const ph = introPhase(app.subT);
+      const ph = introPhase(app.introStage, app.subT, app.pressT);
       const { cw, ch } = dims(canvas, curKind);
       c.translate(cw / 2, ch / 2);
       c.scale(ph.zoom, ph.zoom);
@@ -704,8 +707,8 @@ export function createGame(canvas, opts = {}) {
     }
     let ro = attract
       ? { hud: false }
-      : app.screen === SCREEN.INTRO && curKind === "3d"
-        ? { intro: app.subT, hud: false }
+      : app.screen === SCREEN.INTRO
+        ? { intro: curKind === "3d" ? { stage: app.introStage, t: app.subT, pressT: app.pressT } : null, pop: app.introStage === 1 ? popOf(app.subT) : 0, hud: false }
         : app.screen === SCREEN.GAME
           ? {
               hud: true, // S4 overlay HUD chips
@@ -723,10 +726,10 @@ export function createGame(canvas, opts = {}) {
               time: { on: !!app.timeAttack, t: roomT, best: bestPrev }, ghost: ghostAt(ghost, world, roomT),
               run: { r: tally.r, k: tally.k, p: tally.p, t: runT, best: bestRun, fromStart: runFromStart, daily: dailyDate, tries: dailyRec.played, dbest: dailyRec.best, md: medalLine(tally.mn) },
             }
-          : { hud: false };
+          : { hud: false, sfx: !show }; // a skipped show's plant and boom stay silent behind MENU
     // BRIGHTNESS is 3D only — CLASSIC 2D blits the authored hex unregraded.
     if (curKind === "3d") ro = { ...(ro || {}), bright: settings.bri / 100 };
-    renderer.render(attract && demo ? demo.world : world, dt, ro);
+    renderer.render(attract && demo ? demo.world : show ? show.world : world, dt, ro);
     c.restore();
     drawShell(c, app, world, canvas, curKind, getScoresForHeat, getPlaquesFn);
     if (running && typeof requestAnimationFrame !== "undefined")
@@ -768,6 +771,7 @@ export function createGame(canvas, opts = {}) {
     get demo() {
       return demo;
     }, // read-only for tests (spec §5.4)
+    get show() { return show; }, // opening show world (null once a run or ATTRACT starts)
     stop() {
       running = false;
     },

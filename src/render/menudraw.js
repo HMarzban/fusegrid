@@ -26,8 +26,9 @@ const easeOutBack = (t) => {
 };
 const clamp01 = (t) => Math.max(0, Math.min(1, t));
 const seg = (t, a, b) => clamp01((t - a) / (b - a));
-const lerpEnd = (a, b, k) => b + (a - b) * (1 - k);
-const DUR = 5.0; // intro total (matches app/intro)
+/* Local copies of src/app/intro.js beats (pinned equal in menudraw.test). */
+export const SHOW_STEP = 0.137,
+  SKIP_GUARD = 0.2;
 const font = (size, weight) => (weight || "") + " " + size + "px " + MONO;
 const LINE = "#26324a",
   PLATE = "rgba(8,12,22,0.92)";
@@ -128,27 +129,26 @@ export function layout(W, H) {
   });
 }
 
-/* INTRO chrome over the live flyover: veil, logo reveal/exit, tagline, skip.
-   logoP contract: 0..1 reveal (fade + slide 14px down), >1 exit
-   ((p-1)*20px up, alpha 1-(p-1)) — beats identical to app/intro. */
-export function drawIntroChrome(c, t, W, H) {
-  const L = layout(W, H);
-  const s = clamp01(t / DUR) * DUR;
-  const veil =
-    s < 2.8
-      ? lerpEnd(0.55, 0.18, easeInOutCubic(seg(s, 1.4, 2.8)))
-      : s < 4.2
-        ? 0.18
-        : lerpEnd(0.18, 0.62, easeOutCubic(seg(s, 4.2, 5.0)));
-  c.fillStyle = "rgba(7,10,18," + veil + ")";
+/* INTRO chrome (opening spec §3/§7). Title (stage 0): logo reveal (fade +
+   slide 0.9 s) then a +-2 px bob on 16S, and a prompt that fades in from
+   0.6 s and pulses 0.45<->1 on the beat (4S). Show (stage 1): logo and prompt
+   exit up over 0.3 s, the veil drops 0.45 -> 0.12 by 8S, and the skip hint
+   appears only past SKIP_GUARD. lay is body[data-lay] (p/l = touch copy);
+   rk is the board-ready fraction: 0 paints an opaque veil (3D still loading),
+   1 the stage veil. */
+export function drawIntroChrome(c, stage, t, W, H, lay, rk = 1) {
+  const L = layout(W, H),
+    touch = lay === "p" || lay === "l",
+    show = stage === 1;
+  const v0 = show ? 0.45 + (0.12 - 0.45) * easeInOutCubic(seg(t, 0, 8 * SHOW_STEP)) : 0.45;
+  c.fillStyle = "rgba(7,10,18," + (rk >= 1 ? v0 : 1 - clamp01(rk) * (1 - v0)) + ")";
   c.fillRect(0, 0, W, H);
-  const logoP =
-    s < 1.4 ? easeOutCubic(seg(s, 0, 0.9)) : 1 + easeInCubic(seg(s, 1.4, 1.9));
-  const reveal = Math.min(1, logoP),
-    exit = Math.max(0, logoP - 1);
+  const reveal = show ? 1 : easeOutCubic(seg(t, 0, 0.9)),
+    exit = show ? easeInCubic(seg(t, 0, 0.3)) : 0;
   const a = reveal * (1 - exit);
   if (a > 0.01) {
-    const slide = 14 * (1 - reveal) - 20 * exit;
+    const bob = show ? 0 : 2 * Math.sin((2 * Math.PI * t) / (16 * SHOW_STEP));
+    const slide = 14 * (1 - reveal) - 20 * exit + bob;
     c.save();
     c.textAlign = "center";
     c.textBaseline = "middle";
@@ -170,7 +170,7 @@ export function drawIntroChrome(c, t, W, H) {
       adv = size * 0.6 * L.logoScale;
     const x0 = L.cx - (word.length * adv) / 2 + adv / 2;
     for (let i = 0; i < word.length; i++) {
-      const lt = t - i * 0.06;
+      const lt = show ? 1 : t - i * 0.06;
       const ka = easeOutCubic(seg(lt, 0, 0.5));
       if (ka <= 0) continue;
       const ks = 0.92 + 0.08 * easeOutBack(seg(lt, 0, 0.45));
@@ -189,29 +189,32 @@ export function drawIntroChrome(c, t, W, H) {
     }
     c.restore();
   }
-  // tagline: PRESS ENTER at footY, fade-in x 1Hz blink (render-time only)
-  const tagP = easeOutCubic(seg(s, 4.2, 5.0));
-  if (tagP > 0) {
-    const blink = 0.55 + 0.45 * Math.sin(2 * Math.PI * t);
-    c.globalAlpha = tagP * Math.max(0, blink);
+  const pa = show ? 1 - exit : easeOutCubic(seg(t, 0.6, 0.9)) * (0.725 + 0.275 * Math.cos((2 * Math.PI * t) / (4 * SHOW_STEP)));
+  if (pa > 0.01) {
+    c.globalAlpha = pa;
     c.fillStyle = ACCENT;
-    c.font = font(13, "900");
+    c.font = font(18, "900");
     c.textAlign = "center";
     c.textBaseline = "middle";
-    c.fillText("PRESS ENTER", L.cx, L.footY);
+    c.fillText(touch ? "TAP TO START" : "PRESS ANY KEY", L.cx, L.footY);
     c.globalAlpha = 1;
   }
-  // skip hint: bottom-right, appears from t=0.6
-  const ha = easeOutCubic(seg(t, 0.6, 0.9));
+  const ha = show ? easeOutCubic(seg(t, SKIP_GUARD, SKIP_GUARD + 0.3)) : 0;
   if (ha > 0) {
     c.globalAlpha = ha;
     c.fillStyle = MUTED;
     c.font = font(10);
     c.textAlign = "right";
     c.textBaseline = "middle";
-    c.fillText("ANY KEY TO SKIP", W - 14, H - 12);
+    c.fillText(touch ? "TAP TO SKIP" : "ANY KEY TO SKIP", W - 14, H - 12);
     c.globalAlpha = 1;
   }
+}
+/* MENU entered at the show's natural end: the logo slams (1.35 -> 1, alpha
+   0 -> 1, easeOutBack, 0.12 s) and the dim ramps 0.12 -> 0.62 over 0.35 s so
+   the blast reads before the menu settles. No white flash of its own. */
+export function slamOf(t) {
+  return { dim: 0.12 + 0.5 * seg(t, 0, 0.35), s: 1.35 - 0.35 * easeOutBack(seg(t, 0, 0.12)), a: seg(t, 0, 0.12) };
 }
 
 /* MAIN MENU over the dimmed frozen arena. ui={cursor,items,enterT}; item

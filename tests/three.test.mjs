@@ -1071,44 +1071,53 @@ await sec("S3.B",async()=>{
    } finally{ Math.random=realRnd; }
 });
 
-// ---- §S3.C introCam keyframes monotonic + endpoints match introPhase ----
+// ---- §S3.C opening camera (2026-10-09): title drift, press continuity, show
+//        lands on rig C at every CAMERA preset, bounded per-frame motion ----
 await sec("S3.C",async()=>{
   const ft=await import("../src/render/three/flythrough.js");
-  const {introPhase,INTRO_DUR}=await import("../src/app/intro.js");
-  const st0=ft.introCam(0), stE=ft.introCam(INTRO_DUR);
-  check("S3.C start frame matches introPhase zoom start (dist=1503/1.55)",
-    Math.abs(st0.dist-1503/1.55)<1e-4, st0.dist.toFixed(3));
-  check("S3.C start target rides lower-third drift (tz=(camY-.5)*520)",
-    Math.abs(st0.target[2]-83.2)<1e-9, st0.target[2].toFixed(2));
-  check("S3.C end frame == fixed rig defaults, target y included (it used "
-      +"to pop 0 -> -25 on the last frame)",
-    Math.abs(stE.dist-1503)<1e-9&&stE.az===0&&stE.el===0.66
-    &&stE.target[1]===-17&&stE.target[2]===0,
-    stE.az+"/"+stE.el+"/"+stE.dist+"/"+stE.target[1]);
+  const {SHOW_DUR,SHOW_STEP}=await import("../src/app/intro.js");
+  const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
   const rg=createRig();
   check("S3.C handoff constants ARE the rig (BASE_DIST/SETTLE_EL/TARGET_Y"
       +" cannot drift from createRig)",
     ft.BASE_DIST===CAM_PRESET[0]&&ft.SETTLE_EL===rg.el
     &&ft.TARGET_Y===rg.target[1],
     ft.BASE_DIST+"/"+ft.SETTLE_EL+"/"+ft.TARGET_Y);
-  let mono=true;
-  for(let s=0;s<=INTRO_DUR+1e-9;s+=0.25){
-    const a=ft.introCam(s), b=ft.introCam(Math.min(INTRO_DUR,s+0.25));
-    if(b.dist<a.dist-1e-9||b.el>a.el+1e-9)mono=false;  // dist out, el lifts
+  const t0=ft.introCam(0,0), tq=ft.introCam(0,8*SHOW_STEP);
+  check("S3.C title pose: el 0.80 (44.2 deg up), dist base*1.12, board target",
+    t0.el===0.80&&Math.abs(t0.dist-1503*1.12)<1e-9&&same(t0.target,[0,-17,0]),
+    t0.el+"/"+t0.dist.toFixed(2));
+  check("S3.C title drifts azimuth +-0.10 on 32S", t0.az===0&&Math.abs(tq.az-0.10)<1e-9,
+    tq.az.toFixed(4));
+  let cont=true;
+  for(const pT of [0,0.3,1.7,12.9,61.2])
+    for(const d of CAM_PRESET) if(!same(ft.introCam(1,0,d,pT),ft.introCam(0,pT,d)))cont=false;
+  check("S3.C press continuity: introCam(1,0,base,pT) deep-equals introCam(0,pT,base)", cont);
+  const cu=ft.introCam(1,12*SHOW_STEP);
+  check("S3.C close-up holds on MAKO's spawn tile (az -0.35, dist base*0.55)",
+    Math.abs(cu.az+0.35)<1e-9&&Math.abs(cu.dist-1503*0.55)<1e-9
+    &&same(cu.target,[60-300,0,60-260]), cu.az+"/"+cu.dist.toFixed(1)+"/"+cu.target);
+  let land=true;
+  for(const d of CAM_PRESET)for(const t of [SHOW_DUR,SHOW_DUR+0.4]){
+    const e=ft.introCam(1,t,d,3.3);
+    if(!(e.az===0&&e.el===0.66&&e.dist===d&&same(e.target,[0,-17,0])))land=false;
    }
-  check("S3.C keyframes monotonic (dist out, el lifts toward the rig)", mono);
-  let tracks=true;
-  for(let s=0;s<=INTRO_DUR;s+=0.5)
-    if(Math.abs(ft.introCam(s).dist*introPhase(s).zoom-1503)>1e-6)tracks=false;
-  check("S3.C dist tracks introPhase fractions (dist*zoom==1503)", tracks);
-  check("S3.C flyover swings azimuth out mid-beat (cinematic arc)",
-    ft.introCam(2.8).az>0.2&&ft.introCam(0).az===0,
-    ft.introCam(2.8).az.toFixed(3));
+  check("S3.C show end == rig C at every CAMERA preset, held until the boom", land);
+  let maxD=0, maxA=0;   // maxD as a fraction of the preset dist: a pop would be a jump, the 8S push peaks near 3%
+  for(const d of CAM_PRESET)for(let f=0;f<Math.ceil(SHOW_DUR*60)+2;f++){
+    const a=ft.introCam(1,f/60,d,2.1), b=ft.introCam(1,(f+1)/60,d,2.1);
+    const pa=new THREE.PerspectiveCamera(), pb=new THREE.PerspectiveCamera();
+    applyOrbit(pa,a,{x:0,y:0}); applyOrbit(pb,b,{x:0,y:0});
+    maxD=Math.max(maxD,pa.position.distanceTo(pb.position)/d);
+    maxA=Math.max(maxA,Math.abs(b.az-a.az),Math.abs(b.el-a.el));
+   }
+  check("S3.C per-frame camera delta bounded over the whole show at 60 fps (<4% of dist, <0.02 rad)",
+    maxD<0.04&&maxA<0.02, maxD.toFixed(4)+" / "+maxA.toFixed(4));
   const r=createRenderer3D(null,null,{audio:null,hud:null});
   const w=createWorld(43,1); loadLevel(w,1,false); w.state="MENU";
   const camA=new THREE.PerspectiveCamera();
-  applyOrbit(camA,ft.introCam(2.8),{x:0,y:0});
-  r.render(w,1/60,{intro:2.8});
+  applyOrbit(camA,ft.introCam(1,2.8,1503,1.1),{x:0,y:0});
+  r.render(w,1/60,{intro:{stage:1,t:2.8,pressT:1.1}});
   check("S3.C wrapper o.intro drives camera exactly via introCam+applyOrbit",
     Math.abs(r._dbg.camera.position.x-camA.position.x)<1e-9
     &&Math.abs(r._dbg.camera.position.z-camA.position.z)<1e-9,
@@ -1117,15 +1126,25 @@ await sec("S3.C",async()=>{
   for(const d of CAM_PRESET){
     const rg2=createRig(); rg2.dist=d;
     const r2=createRenderer3D(null,null,{audio:null,hud:null,rig:rg2});
-    r2.render(w,1/60,{intro:INTRO_DUR});
+    r2.render(w,1/60,{intro:{stage:1,t:SHOW_DUR,pressT:0.5}});
     const ip=r2._dbg.camera.position.clone();
     r2.render(w,1/60,{});
     pre.push(ip.distanceTo(r2._dbg.camera.position));
    }
-  check("S3.C flythrough lands on the CAMERA preset dist (WIDE/FAR no pop on"
+  check("S3.C show lands on the CAMERA preset dist (WIDE/FAR no pop on"
       +" the INTRO->MENU frame)", pre.every(x=>x<1e-6), pre.join());
+  const wp=createWorld(43,1); loadLevel(wp,1,false); wp.state="PLAY";
+  const rp=createRenderer3D(null,null,{audio:null,hud:null});
+  const pl=()=>slotsOf(rp._dbg.scene,"player")[0];
+  rp.render(wp,1/60,{pop:0}); const v0=pl().visible;
+  rp.render(wp,1/60,{pop:0.5}); const s5=pl().scale.x, v5=pl().visible;
+  rp.render(wp,1/60,{}); const s1=pl().scale.x;
+  check("S3.C o.pop scales the player slot (hidden at 0, never a zero matrix), 1 when absent",
+    v0===false&&pl().scale.x===1&&v5===true&&s5===0.5&&s1===1, v0+"/"+s5+"/"+s1);
+  check("S3.C player slot is still FIVE meshes (no mesh added for the pop)",
+    SLOT_MESH.player===5&&pl().children.length===5, pl().children.length);
   const g=createGame(mkCanvas(),{seed:61,render3d:true,createRenderer3D});
-  g.app.screen=1; g.app.subT=1.0;             // INTRO mid-flyover
+  g.app.screen=1; g.app.beginShow(); g.app.subT=1.0; // INTRO mid-show
   let threw=false; let t=1000;
   try{ for(let i=0;i<5;i++){ t+=16; g.loop(t); } }
   catch(e){ threw=true; console.log(e.message); }

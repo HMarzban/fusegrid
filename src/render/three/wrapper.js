@@ -122,10 +122,14 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
     if(!sc||sc.update(world))rebuild(world);   // brick rescan / level rebuild
     else if(bChanged&&sc.lights)applyBright(sc.lights,brightK);
     if(sc)sc.pools.ghost(o&&o.ghost);
-    /* S3: INTRO in kind 3d hands the camera to the flythrough keyframes
-       (o.intro = app.subT from main; logo/tagline stay on the 2D overlay);
-       every other screen keeps the orbit rig + shake. */
-    if(o&&o.intro!=null)applyOrbit(camera,introCam(o.intro,rig.dist),{x:0,y:0});
+    /* Opening: o.pop scales the player slot group (MAKO's pop-in; hidden at
+       0, never a zero matrix), 1 outside INTRO. No mesh is added. */
+    const pop=o&&o.pop!=null?o.pop:1;
+    if(sc){ if(pop<=0)sc.pools.player.visible=false; sc.pools.player.scale.setScalar(pop>0?pop:1); }
+    /* S3: INTRO in kind 3d hands the camera to the opening keyframes
+       (o.intro = {stage,t,pressT} from main; logo/prompt stay on the 2D
+       overlay); every other screen keeps the orbit rig. Shake rides both. */
+    if(o&&o.intro!=null)applyOrbit(camera,introCam(o.intro.stage,o.intro.t,rig.dist,o.intro.pressT),getShake());
     else applyOrbit(camera,rig,getShake());    // shake = camera-target offset
     fxp.update(getFx());
     if(gl){

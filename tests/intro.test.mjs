@@ -1,127 +1,123 @@
-import {INTRO_DUR,introPhase,createIntro} from "../src/app/intro.js";
+/* OPENING (spec 2026-10-09-opening-design §3/§7/§11): the title + show beat
+   table, MAKO's pop, and the throwaway show world whose boom reveals MENU. */
+import {SHOW_STEP,SHOW_DUR,SHOW_PLANT,SKIP_GUARD,SHOW_SCRIPT,introPhase,popOf,createShow,stepShow} from "../src/app/intro.js";
+import {MUSIC_TRACKS} from "../src/audio/tracks.js";
+import {CFG} from "../src/core/config.js";
+import {SCREEN,createMenuApp} from "../src/app/menuapp.js";
 
 let pass=0, fail=0;
 function check(name, cond, detail){ cond?pass++:fail++;
   console.log((cond?"  PASS ":"  FAIL ")+name+(detail!==undefined?" -> "+detail:"")); }
-const near=(a,b,e=1e-9)=>Math.abs(a-b)<=e;
+const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 
-// ---- duration constant ----
-check("INTRO_DUR === 5.0", INTRO_DUR===5.0, INTRO_DUR);
-check("INTRO_DUR within 4–6 s bound", INTRO_DUR>=4&&INTRO_DUR<=6);
+// ---- the show grid IS the menu track's grid ----
+check("SHOW_STEP === MUSIC_TRACKS.menu.A.STEP", SHOW_STEP===MUSIC_TRACKS.menu.A.STEP, SHOW_STEP);
+check("SHOW_DUR === 32*SHOW_STEP (two bars, 4.384 s)", SHOW_DUR===32*SHOW_STEP&&Math.abs(SHOW_DUR-4.384)<1e-9, SHOW_DUR);
+check("SHOW_PLANT === SHOW_DUR - CFG.FUSE (derived, never authored)", SHOW_PLANT===SHOW_DUR-CFG.FUSE, SHOW_PLANT);
+check("SKIP_GUARD === 0.20", SKIP_GUARD===0.2);
+check("SHOW_SCRIPT is frozen", Object.isFrozen(SHOW_SCRIPT)&&SHOW_SCRIPT.every(Object.isFrozen));
 
-// ---- veil endpoints ----
-check("veil(0) === 0.55", introPhase(0).veil===0.55, introPhase(0).veil);
+// ---- title drift: zoom >= 1, pan inside the no-gap clamp, for 120 s ----
 {
-  const v=introPhase(2.8).veil;
-  check("veil mid-flyover (~2.8s) in 0.18 band", v>=0.17&&v<=0.19, v);
-}
-check("veil(4.2) === 0.18", near(introPhase(4.2).veil,0.18), introPhase(4.2).veil);
-check("veil settles to 0.62", near(introPhase(5.0).veil,0.62)&&near(introPhase(7).veil,0.62),
-  introPhase(5).veil);
-{
-  let mono=true;
-  for(let t=1.4;t<=4.15;t+=0.05)
-    if(introPhase(t+0.05).veil>introPhase(t).veil+1e-9)mono=false;
-  check("veil monotone decreasing through flyover", mono);
-}
-
-// ---- zoom: monotone, single minimum, ends exactly 1.00 ----
-{
-  const N=500;
-  const zs=[];
-  for(let i=0;i<=N;i++)zs.push(introPhase(INTRO_DUR*i/N).zoom);
-  check("zoom starts 1.55", zs[0]===1.55, zs[0]);
-  let minI=0,minV=Infinity;
-  for(let i=0;i<zs.length;i++)if(zs[i]<minV){minV=zs[i];minI=i;}
-  let down=true;
-  for(let i=1;i<zs.length;i++)if(zs[i]>zs[i-1]+1e-12)down=false;
-  check("zoom weakly monotone decreasing (single minimum = endpoint)", down,
-    `minI=${minI}/${N} min=${minV}`);
-  check("flyover lands on 1.18 before settle takes over",
-    Math.abs(introPhase(4.19).zoom-1.18)<1e-3&&introPhase(4.2).zoom===1.18,
-    `${introPhase(4.19).zoom},${introPhase(4.2).zoom}`);
-}
-check("zoom ends EXACTLY 1.00", introPhase(5.0).zoom===1&&introPhase(99).zoom===1,
-  introPhase(5.0).zoom);
-check("zoom static pre-flyover", introPhase(0).zoom===1.55&&introPhase(1.39).zoom===1.55);
-
-// ---- logo / tagline progress ----
-{
-  const p0=introPhase(0),p09=introPhase(0.9),p14=introPhase(1.4),
-    p19=introPhase(1.9),p3=introPhase(3.0);
-  check("logoP reveals 0→1 by 0.90s",
-    p0.logoP===0&&near(p09.logoP,1,1e-9), `${p0.logoP}..${p09.logoP}`);
-  check("logoP exits 1→2 across 1.40–1.90s then holds",
-    p14.logoP===1&&near(p19.logoP,2,1e-9)&&p3.logoP===2,
-    `${p14.logoP},${p19.logoP},${p3.logoP}`);
-}
-{
-  check("tagP hidden until settle, fully in at DUR",
-    introPhase(4.19).tagP===0&&near(introPhase(5).tagP,1,1e-9),
-    `${introPhase(4.19).tagP},${introPhase(5).tagP}`);
-}
-
-// ---- camera drift lower-third → center ----
-{
-  const a=introPhase(1.4),b=introPhase(4.2),c=introPhase(5);
-  check("cam drifts from lower-third to center",
-    near(a.camY,0.66)&&near(b.camY,0.50)&&c.camY===0.5&&a.camX===0.5&&c.camX===0.5,
-    `(${a.camX},${a.camY})→(${b.camX},${b.camY})`);
-}
-
-// ---- done flag & clamping ----
-check("done false below DUR, true at/after DUR",
-  introPhase(0).done===false&&introPhase(4.999).done===false
-    &&introPhase(5.0).done===true&&introPhase(6).done===true);
-
-// ---- continuity: no jumps >0.05 in zoom/veil across beat boundaries ----
-{
-  const bounds=[0,0.9,1.4,1.9,2.8,4.2,5.0];
-  const eps=1e-3;
-  let worstZ=0,worstV=0,worstL=0,worstC=0;
-  for(const b of bounds){
-    for(const t of [Math.max(0,b-eps),b]){
-      const a=introPhase(t),n=introPhase(Math.min(INTRO_DUR,t+eps));
-      worstZ=Math.max(worstZ,Math.abs(n.zoom-a.zoom));
-      worstV=Math.max(worstV,Math.abs(n.veil-a.veil));
-      worstL=Math.max(worstL,Math.abs(n.logoP-a.logoP));
-      worstC=Math.max(worstC,Math.abs(n.camY-a.camY));
-    }
+  let ok=true, minZ=9;
+  for(let t=0;t<=120;t+=1/30){
+    const p=introPhase(0,t), lo=0.5/p.zoom;
+    minZ=Math.min(minZ,p.zoom);
+    if(p.zoom<1||p.camX<lo-1e-12||p.camX>1-lo+1e-12||p.camY<lo-1e-12||p.camY>1-lo+1e-12||p.veil!==0.45)ok=false;
   }
-  check("continuity: zoom/veil/logo/cam jumps ≤0.05 at all beat edges",
-    worstZ<=0.05&&worstV<=0.05&&worstL<=0.05&&worstC<=0.05,
-    `z=${worstZ.toExponential(1)} v=${worstV.toExponential(1)} l=${worstL.toExponential(1)} c=${worstC.toExponential(1)}`);
+  check("title drift keeps zoom >= 1 and the pan inside [0.5/z, 1-0.5/z] over 120 s, veil 0.45", ok, "min zoom "+minZ);
 }
-
-// ---- dense-scan global continuity (no hidden spikes anywhere) ----
 {
-  let ok=true,dz=0;
-  for(let t=0;t<INTRO_DUR;t+=0.02){
-    dz=introPhase(t+0.02).zoom-introPhase(t).zoom;
-    if(Math.abs(dz)>0.05)ok=false;
+  let ok=true;
+  for(let t=0;t<=SHOW_DUR+0.5;t+=1/60){
+    const p=introPhase(1,t,2.3), lo=0.5/p.zoom;
+    if(p.zoom<1||p.camX<lo-1e-12||p.camX>1-lo+1e-12||p.camY<lo-1e-12||p.camY>1-lo+1e-12)ok=false;
   }
-  check("dense scan: no zoom spikes anywhere in timeline", ok, dz);
+  check("show keeps zoom >= 1 and the pan inside the no-gap clamp", ok);
+}
+{
+  let ok=true;
+  for(const pT of [0,0.25,1.9,7.7,99.1]) if(!same(introPhase(1,0,pT),introPhase(0,pT)))ok=false;
+  check("press continuity: introPhase(1,0,pT) deep-equals introPhase(0,pT)", ok);
+}
+{
+  const e=introPhase(1,SHOW_DUR,3.1), f=introPhase(1,SHOW_DUR+2,3.1);
+  check("introPhase(1,SHOW_DUR) is MENU's frame exactly (zoom 1, cam 0.5/0.5)",
+    e.zoom===1&&e.camX===0.5&&e.camY===0.5&&same(e,f), JSON.stringify(e));
+  const c=introPhase(1,12*SHOW_STEP,0);
+  check("show holds the zoom-1.8 close-up on MAKO's spawn corner (clamped)",
+    Math.abs(c.zoom-1.8)<1e-9&&Math.abs(c.camX-0.5/1.8)<1e-9&&Math.abs(c.camY-0.5/1.8)<1e-9,
+    c.zoom+"/"+c.camX.toFixed(4)+"/"+c.camY.toFixed(4));
+  check("show veil 0.45 -> 0.12 by 8S", introPhase(1,0).veil===0.45&&Math.abs(introPhase(1,8*SHOW_STEP).veil-0.12)<1e-12);
+  let worst=0;
+  for(let t=0;t<SHOW_DUR+0.1;t+=1/60){
+    const a=introPhase(1,t,1), b=introPhase(1,t+1/60,1);
+    worst=Math.max(worst,Math.abs(b.zoom-a.zoom),Math.abs(b.camX-a.camX),Math.abs(b.camY-a.camY));
+  }
+  check("dense scan: no zoom/pan jump > 0.04 per 60 fps frame", worst<0.04, worst.toFixed(4));
 }
 
-// ---- createIntro wrapper ----
+// ---- MAKO pop ----
+check("popOf is 0 before 4S", popOf(0)===0&&popOf(4*SHOW_STEP-1e-6)===0);
+check("popOf is exactly 1 from 4S+0.25 on", popOf(4*SHOW_STEP+0.25)===1&&popOf(9)===1);
 {
-  const it=createIntro();
-  check("createIntro starts at t=0", it.t===0);
-  it.update(0.5);it.update(0.25);
-  check("update(dt) advances t", near(it.t,0.75), it.t);
-  check("not done mid-timeline", introPhase(it.t).done===false);
-  it.update(-10);
-  check("negative dt ignored", near(it.t,0.75), it.t);
-  it.update(100);
-  check("update clamps at DUR", it.t===5.0, it.t);
+  let mx=0; for(let t=4*SHOW_STEP;t<4*SHOW_STEP+0.25;t+=0.002)mx=Math.max(mx,popOf(t));
+  check("popOf overshoots ~1.1 (easeOutBack)", mx>1.05&&mx<1.15, mx.toFixed(3));
+}
+
+// ---- the show world ----
+function runShow(){
+  const s=createShow(), app={showBoom:false}, ev=[];
+  const N=Math.round((SHOW_DUR+0.2)/CFG.STEP);
+  for(let i=0;i<N;i++){
+    stepShow(s,CFG.STEP*(1+1e-9),app,true);
+    for(const e of s.world.events)ev.push({t:s.n*CFG.STEP,e:e.t});
+    s.world.events.length=0;
+  }
+  return {s,ev,app};
 }
 {
-  const it=createIntro();
-  it.update(1.234);
-  it.skip();
-  check("skip() sets done immediately",
-    it.t>=INTRO_DUR&&introPhase(it.t).done===true&&introPhase(it.t).veil===0.62,
-    `t=${it.t}`);
+  const {s,ev,app}=runShow();
+  const bombs=ev.filter(x=>x.e==="bomb"), booms=ev.filter(x=>x.e==="boom");
+  check("exactly one bomb, at SHOW_PLANT +- CFG.STEP", bombs.length===1&&Math.abs(bombs[0].t-SHOW_PLANT)<=CFG.STEP+1e-9,
+    bombs.map(x=>x.t.toFixed(4)).join());
+  check("its boom lands within CFG.STEP of SHOW_DUR", booms.length===1&&Math.abs(booms[0].t-SHOW_DUR)<=CFG.STEP+1e-9,
+    booms.map(x=>x.t.toFixed(4)).join());
+  check("stepShow flags the boom on the app", app.showBoom===true);
+  check("MAKO alive, state PLAY", s.world.players[0].alive!==false&&s.world.state==="PLAY", s.world.state);
+  check("no kill / hurt / win event", !ev.some(x=>x.e==="kill"||x.e==="hurt"||x.e==="win"), ev.map(x=>x.e).join());
+  check("every enemy held at speed 0", s.world.enemies.length>0&&s.world.enemies.every(e=>e.speed===0));
+  check("MAKO never blinks in the show (no spawn iFrames)", createShow().world.players[0].iFrames===0);
+  check("CORE room 1: heat 0, pact 0, pace 0", s.world.level===1&&(s.world.heat|0)===0&&(s.world.pact|0)===0&&(s.world.pace|0)===0);
+  const b=runShow();
+  check("deterministic across two runs", same(b.ev,ev)&&b.s.world.players[0].x===s.world.players[0].x
+    &&b.s.world.players[0].y===s.world.players[0].y);
+}
+{
+  const s=createShow(), app={showBoom:false};
+  stepShow(s,1,app,false);
+  check("stepShow does nothing on the title (live false)", s.n===0&&s.world.time===0);
+  stepShow(s,1,app,true);
+  check("stepShow keeps the n > 6 anti-spiral cap", s.n===7&&s.acc===0, s.n);
+}
+
+// ---- hitch pin: MENU opens one frame after the boom, never before ----
+{
+  const app=createMenuApp({cabinetSeen:true}), s=createShow();
+  app.beginShow();
+  const dts=[0.25,0.25,0.25]; let f=0, boomF=-1, menuF=-1;
+  while(f<2000&&menuF<0){
+    const dt=f<dts.length?dts[f]:1/60;
+    app.update(dt,null);
+    if(app.screen===SCREEN.MENU){menuF=f;break;}
+    stepShow(s,dt,app,app.screen!==SCREEN.INTRO||app.introStage===1);
+    if(boomF<0&&s.world.events.some(e=>e.t==="boom"))boomF=f;
+    s.world.events.length=0;
+    f++;
+  }
+  check("hitch: the dropped time defers the boom past SHOW_DUR of subT", boomF>0, "boom frame "+boomF);
+  check("hitch: MENU opens exactly one frame after the boom, with fromShow", menuF===boomF+1&&app.fromShow===true&&app.cursor===0,
+    boomF+" -> "+menuF);
 }
 
 console.log("\n  INTRO RESULT: "+pass+" PASS / "+fail+" FAIL");

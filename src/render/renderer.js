@@ -2,7 +2,7 @@ import {CFG} from "../core/config.js";
 import {sfxOf} from "../audio/item.js";
 import {
   bakeAtlas, drawGrid, drawBiomeBackground, drawBricks,
-  drawItems, drawEnemies, drawPlayer, drawBombs, drawBlades, drawGhost
+  drawItems, drawEnemies, drawPlayer, drawPlayerBody, drawBombs, drawBlades, drawGhost
 } from "./sprites.js";
 import {onEvent, updateFx, drawFx, drawFxOverlay, feedFx, getShake, getFlash, initFx, syncFx} from "./fx.js";
 import {drawOverlay, overlayBox, drawHudChips, drawCoach, drawCoach2} from "./scenes.js";
@@ -63,7 +63,14 @@ export function createRenderer(canvas, opts={}){
       drawBlades(ctx, world);
       if(o&&o.ghost) drawGhost(ctx, world, o.ghost);
       drawEnemies(ctx, world);
-      drawPlayer(ctx, world);
+      /* Opening: o.pop scales players[0] about its centre (MAKO's pop-in),
+         skipped at 0; absent outside INTRO, which means 1. */
+      const p0=world.players[0];
+      if(!(o&&o.pop!=null)) drawPlayer(ctx, world);
+      else if(o.pop>0&&p0&&p0.alive!==false){
+        ctx.save(); ctx.translate(p0.x,p0.y); ctx.scale(o.pop,o.pop);
+        drawPlayerBody(ctx, world, p0); ctx.restore();
+      }
       drawFx(ctx);
     }
     ctx.restore();

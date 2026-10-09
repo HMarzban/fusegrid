@@ -52,7 +52,9 @@ check(
   loadCabinetSeen({}) === false,
 );
 
-// ---- bootFromIntro: unseen cabinet boots straight to CORE room 1 ----
+// ---- bootFromIntro: an unseen cabinet lands on MENU at PLAY (opening ruling
+// 2026-10-09 reverses plan 7's first-visit Play Now); the flag is still
+// written once and no longer branches anything ----
 {
   const started = [];
   let marked = 0;
@@ -65,34 +67,26 @@ check(
   a.level = 4;
   a.heat = 2;
   a.pact = 1;
-  a.pace = 1; // LEVEL SELECT picks must survive the CORE handoff untouched
+  a.pace = 1;
+  a.cursor = 3;
   check(
     "boots unseen by default (no cabinet flag, no pact unlock)",
     a.cabinetSeen === false && a.pactUnlocked === false,
   );
-  const args = a.bootFromIntro();
+  const r = a.bootFromIntro();
   check(
-    "bootFromIntro unseen -> GAME with CORE room-1 args",
-    a.screen === SCREEN.GAME &&
-      a.inGame === true &&
-      args.level === 1 &&
-      args.heat === 0 &&
-      args.pact === 0 &&
-      args.pace === 1,
-    JSON.stringify(args),
+    "bootFromIntro unseen -> MENU at cursor 0, no run",
+    a.screen === SCREEN.MENU && a.cursor === 0 && a.inGame === false && r === true && started.length === 0,
+    String(r),
   );
   check(
-    "LEVEL SELECT picks (level/heat/pact) untouched by the CORE handoff",
-    a.level === 4 && a.heat === 2 && a.pact === 1,
+    "LEVEL SELECT picks (level/heat/pact/pace) untouched",
+    a.level === 4 && a.heat === 2 && a.pact === 1 && a.pace === 1,
   );
   check(
-    "bootFromIntro marks the cabinet seen: app field flips + persist callback fires",
+    "bootFromIntro marks the cabinet seen: app field flips + persist callback fires once",
     a.cabinetSeen === true && marked === 1,
     "cabinetSeen=" + a.cabinetSeen + " marked=" + marked,
-  );
-  check(
-    "onStart received the CORE args exactly once",
-    started.length === 1 && started[0] === args,
   );
 }
 
@@ -136,29 +130,29 @@ check(
   );
 }
 
-// ---- every INTRO gesture funnels through bootFromIntro for an unseen cabinet ----
+// ---- every INTRO exit lands on MENU for an unseen cabinet too ----
 {
   const a = createMenuApp();
   a.skip();
   check(
-    "skip() on an unseen cabinet boots CORE GAME (not MENU)",
-    a.screen === SCREEN.GAME,
+    "skip() on an unseen cabinet lands on MENU (not a run)",
+    a.screen === SCREEN.MENU && a.cabinetSeen === true,
   );
 }
 {
   const a = createMenuApp();
   a.confirm();
+  a.key("ArrowDown");
   check(
-    "confirm() on an unseen cabinet boots CORE GAME (not MENU)",
-    a.screen === SCREEN.GAME,
+    "confirm() and an any-key tap on the title stay on INTRO (the press starts the show)",
+    a.screen === SCREEN.INTRO && a.introStage === 0 && a.cabinetSeen === false,
   );
-}
-{
-  const a = createMenuApp();
-  a.key("ArrowDown"); // any-key tap path (_tapMove -> skip)
+  a.beginShow();
+  a.subT = 0.5;
+  a.key("ArrowDown");
   check(
-    "any-key tap on an unseen cabinet boots CORE GAME (not MENU)",
-    a.screen === SCREEN.GAME,
+    "an any-key tap past the show's guard lands an unseen cabinet on MENU (not a run)",
+    a.screen === SCREEN.MENU && a.cursor === 0 && a.cabinetSeen === true,
   );
 }
 

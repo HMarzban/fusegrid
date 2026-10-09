@@ -185,9 +185,10 @@ check("round-trip", loadCoachSeen(store) === true);
 // landed under spawn AND coachPlanted latched, killing the coach in 2 frames. ----
 {
   const { texts, canvas } = fakeCanvasTexts();
-  const g = createGame(canvas, { seed: 111 }); // unseen cabinet: boots via INTRO
+  const g = createGame(canvas, { seed: 111 }); // unseen cabinet: INTRO lands on MENU (opening ruling 2026-10-09)
   g.input._onKey({ code: "Space", preventDefault() {} }); // fire held from INTRO
-  g.app.bootFromIntro(); // INTRO -> GAME (onStart), fire still held throughout
+  g.app.bootFromIntro(); // INTRO -> MENU
+  g.app.startRun(); // MENU PLAY -> GAME (onStart), fire still held throughout
   let t = 0;
   g.loop(t);
   t += 20; // t=0 alone never crosses CFG.STEP (no step() runs yet); this is

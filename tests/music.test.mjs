@@ -911,6 +911,28 @@ function installAC(ac) {
   );
 }
 
+// ---- opening (2026-10-09): INTRO -> MENU is a setTrack("menu") no-op. A run
+//        that re-cues "menu" mid-stream schedules exactly what one that never
+//        re-cues does: neither stepN nor nextT is touched, so no seam. ----
+{
+  const run = (recue) => {
+    const ac = mkAC();
+    installAC(ac);
+    const a = createAudio();
+    a.setTrack("menu");
+    a.unlock();
+    for (let i = 0; i < 60; i++) {
+      ac.currentTime += 1 / 60;
+      if (recue && i === 30) { a.setTrack("menu"); a.setTrack("menu"); }
+      a.pump();
+    }
+    return ac.starts.map((x) => x.t.toFixed(6) + ":" + x.f).join(",");
+  };
+  const plain = run(false);
+  check("setTrack(\"menu\") twice mid-show leaves the menu stream untouched (INTRO -> MENU seam)",
+    plain.length > 0 && run(true) === plain);
+}
+
 // ---- AABB cycle end-to-end (pump level): B-only bass markers prove the
 //        section order A(0-63) A(64-127) B(128-191) B(192-255) wrap(256+) ----
 {
@@ -1059,8 +1081,8 @@ function installAC(ac) {
     ),
   );
   check(
-    "musicCue INTRO / MENU / subscreens",
-    musicCue(SCREEN.INTRO, 1) === "intro" &&
+    "musicCue INTRO / MENU / subscreens (opening ruling 2026-10-09: INTRO plays menu)",
+    musicCue(SCREEN.INTRO, 1) === "menu" &&
       musicCue(SCREEN.MENU, 3) === "menu" &&
       musicCue(SCREEN.LEVEL, 5) === "menu" &&
       musicCue(SCREEN.HOWTO, 1) === "menu" &&

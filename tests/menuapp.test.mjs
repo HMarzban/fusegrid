@@ -7,6 +7,7 @@ import {
   IDLE_T,
   createMenuApp,
 } from "../src/app/menuapp.js";
+import { SHOW_DUR } from "../src/app/intro.js";
 import { Input } from "../src/input.js";
 import { createAudio } from "../src/audio.js";
 import { readFileSync } from "node:fs";
@@ -163,13 +164,14 @@ check(
   );
 }
 
-// ---- intro skip paths ----
-// plan 7 (first-visit play now): bootFromIntro() branches on cabinetSeen/
-// pactUnlocked. These pins now pass cabinetSeen:true to exercise a RETURNING
-// cabinet's original MENU-bound skip/key/confirmHeld/any-key paths; the
-// matching unseen-cabinet -> CORE GAME paths are pinned in the block right
-// after, and the flag/handoff details (args, marking, pact-unlock OR) live in
-// tests/cabinetseen.test.mjs.
+// ---- opening (spec 2026-10-09 §6/§8): INTRO is title (stage 0) then show
+// (stage 1). The title ignores every gesture (main's armUnlock calls
+// beginShow); the show skips on any gesture past SKIP_GUARD. skip() stays the
+// ungated programmatic jump. Every visit, the first included, lands on MENU
+// at cursor 0 (reverses plan 7's first-visit Play Now). ----
+const ALLKEYS = ["Enter", "NumpadEnter", "Escape", "Backspace", "ArrowUp", "KeyW", "ArrowDown", "KeyS",
+  "ArrowLeft", "KeyA", "ArrowRight", "KeyD", "KeyR", "KeyM", "KeyQ", "KeyT", "Digit1", "BracketLeft", "Space"];
+const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13, DT, null, false); return a; }; // past the 0.2 s guard
 {
   const a = createMenuApp({ cabinetSeen: true });
   a.skip();
@@ -178,105 +180,141 @@ check(
     "skip() outside INTRO is no-op",
     a.skip() === false && a.screen === SCREEN.MENU,
   );
+  const b = createMenuApp();
+  b.beginShow();
+  b.skip();
+  check("skip() from the show is the same direct jump (ungated)", b.screen === SCREEN.MENU && b.cursor === 0);
 }
 {
-  const a = createMenuApp({ cabinetSeen: true });
-  a.key("Enter");
-  check("Enter in INTRO skips (seen cabinet)", a.screen === SCREEN.MENU);
-}
-{
-  const a = createMenuApp({ cabinetSeen: true });
-  a.key("Escape");
-  check("Escape in INTRO skips (seen cabinet)", a.screen === SCREEN.MENU);
-  const b = createMenuApp({ cabinetSeen: true });
-  b.key("Backspace");
-  check("Backspace in INTRO skips (seen cabinet)", b.screen === SCREEN.MENU);
-}
-{
-  const a = createMenuApp({ cabinetSeen: true });
-  frames(a, 3, DT, null, true);
-  check(
-    "confirmHeld rising edge in INTRO skips (seen cabinet)",
-    a.screen === SCREEN.MENU,
-  );
-}
-{
-  const codes = [
-    "ArrowUp",
-    "KeyW",
-    "ArrowDown",
-    "KeyS",
-    "ArrowLeft",
-    "KeyA",
-    "ArrowRight",
-    "KeyD",
-  ];
-  const results = codes.map((c) => {
-    const a = createMenuApp({ cabinetSeen: true });
-    a.key(c);
-    return a.screen;
-  });
-  check(
-    "all 8 direction codes skip INTRO (§4/§9.2 any-key, seen cabinet)",
-    results.every((s) => s === SCREEN.MENU),
-    JSON.stringify(results),
-  );
-}
-
-// ---- plan 7: unseen cabinet — any INTRO gesture boots straight to CORE GAME ----
-{
-  const a = createMenuApp();
-  a.skip();
-  check(
-    "skip(): unseen cabinet -> CORE GAME (not MENU)",
-    a.screen === SCREEN.GAME,
-  );
-}
-{
-  const a = createMenuApp();
-  a.key("Enter");
-  check(
-    "Enter in INTRO: unseen cabinet -> CORE GAME",
-    a.screen === SCREEN.GAME,
-  );
-}
-{
-  const a = createMenuApp();
-  a.key("Escape");
-  check(
-    "Escape in INTRO: unseen cabinet -> CORE GAME",
-    a.screen === SCREEN.GAME,
-  );
-}
-{
-  const a = createMenuApp();
-  frames(a, 3, DT, null, true);
-  check(
-    "confirmHeld rising edge in INTRO: unseen cabinet -> CORE GAME",
-    a.screen === SCREEN.GAME,
-  );
-}
-{
-  const codes = [
-    "ArrowUp",
-    "KeyW",
-    "ArrowDown",
-    "KeyS",
-    "ArrowLeft",
-    "KeyA",
-    "ArrowRight",
-    "KeyD",
-  ];
-  const results = codes.map((c) => {
+  const bad = [];
+  for (const c of ALLKEYS) {
     const a = createMenuApp();
     a.key(c);
-    return a.screen;
-  });
-  check(
-    "all 8 direction codes: unseen cabinet -> CORE GAME (§4/§9.2 any-key)",
-    results.every((s) => s === SCREEN.GAME),
-    JSON.stringify(results),
-  );
+    a._tapMove(1, false);
+    a.confirm();
+    a.skipShow();
+    frames(a, 3, DT, { down: true }, true);
+    if (a.screen !== SCREEN.INTRO || a.introStage !== 0) bad.push(c);
+  }
+  check("title: every key, _tapMove, confirm, skipShow and a rising confirmHeld leave INTRO stage 0", bad.length === 0, bad.join());
+}
+{
+  const a = createMenuApp();
+  a.subT = 1.7;
+  check("beginShow(): stage 1, pressT = title subT, subT 0, prevConfirm true",
+    a.beginShow() === true && a.introStage === 1 && a.pressT === 1.7 && a.subT === 0 && a.prevConfirm === true);
+  check("beginShow() again is a no-op", a.beginShow() === false && a.introStage === 1);
+  const m = createMenuApp({ cabinetSeen: true });
+  m.skip();
+  check("beginShow() outside INTRO is a no-op", m.beginShow() === false && m.screen === SCREEN.MENU);
+}
+{
+  const bad = [];
+  for (const c of ALLKEYS) {
+    const a = createMenuApp();
+    a.beginShow();
+    frames(a, 6, DT, null, false); // 0.1 s: inside the guard
+    a.key(c);
+    a.confirm();
+    a.skipShow();
+    if (a.screen !== SCREEN.INTRO) bad.push(c);
+  }
+  check("show inside SKIP_GUARD: every gesture is a no-op", bad.length === 0, bad.join());
+}
+{
+  const bad = [];
+  for (const c of ALLKEYS) {
+    let n = 0;
+    const a = inShow({ onStart: () => n++ });
+    a.key(c);
+    if (a.screen !== SCREEN.MENU || a.cursor !== 0 || a.inGame || n) bad.push(c);
+  }
+  check("show past the guard: every key skips to MENU at cursor 0, inGame false, no run", bad.length === 0, bad.join());
+}
+{
+  let n = 0;
+  const a = inShow({ onStart: () => n++ });
+  frames(a, 2, DT, null, true); // a rising Space
+  frames(a, 20, DT, null, true); // held on through MENU
+  check("show past the guard: a rising Space skips to MENU and the held press starts nothing",
+    a.screen === SCREEN.MENU && a.cursor === 0 && n === 0, a.screen + "/" + n);
+}
+{
+  let n = 0;
+  const a = createMenuApp({ onStart: () => n++ });
+  frames(a, 5, DT, null, true); // Space held on the title (rising edge consumed)
+  a.beginShow(); // the press that started the show
+  frames(a, Math.ceil((SHOW_DUR + 1.2) * 60), DT, null, true); // held through the natural end
+  frames(a, 20, DT, null, true);
+  check("Space held across title -> show -> MENU never starts a run", a.screen === SCREEN.MENU && n === 0, a.screen + "/" + n);
+  a.update(DT, mkInput(null, false));
+  a.update(DT, mkInput(null, true));
+  check("release + re-press then confirms PLAY normally", n === 1 && a.screen === SCREEN.GAME);
+}
+{
+  const a = createMenuApp();
+  a.beginShow();
+  frames(a, 100, DT, { down: true }, false);
+  a.showBoom = true;
+  frames(a, 1, DT, { down: true }, false);
+  check("natural end (the boom) -> MENU at cursor 0 with fromShow; an arrow held since the press does not move off PLAY",
+    a.screen === SCREEN.MENU && a.cursor === 0 && a.fromShow === true, a.screen + "/" + a.cursor);
+  frames(a, 10, DT, { down: true }, false);
+  check("...and the hold repeats only past REP_FIRST, as on any MENU hold", a.cursor === 0);
+  const b = createMenuApp();
+  b.beginShow();
+  frames(b, Math.ceil(SHOW_DUR * 60) + 2, DT, null, false);
+  check("no boom yet: SHOW_DUR alone does not open MENU (the boom does)", b.screen === SCREEN.INTRO);
+  frames(b, 62, DT, null, false);
+  check("safety net: SHOW_DUR + 1 s opens MENU with fromShow", b.screen === SCREEN.MENU && b.fromShow === true);
+}
+{
+  const a = createMenuApp();
+  a.beginShow();
+  a.showBoom = true;
+  frames(a, 1, DT, null, false);
+  a.startRun();
+  frames(a, 2, DT, null, false);
+  a.noteWorldEdge("PLAY", "PAUSE");
+  a.key("KeyM");
+  frames(a, 1, DT, null, false);
+  check("natural end -> PLAY -> PAUSE -> M lands on MENU with fromShow false (no replayed slam)",
+    a.screen === SCREEN.MENU && a.fromShow === false);
+  const b = inShow();
+  b.key("Enter");
+  check("a skip leaves fromShow false (today's fade)", b.screen === SCREEN.MENU && b.fromShow === false);
+}
+{
+  const a = createMenuApp();
+  a.boardReady = false;
+  a.subT = 2;
+  a.beginShow();
+  check("board not ready: beginShow only marks the show pending", a._showPending === true && a.introStage === 0 && a.pressT === 2);
+  a.key("KeyA");
+  check("the press that set it pending never also skips", a.screen === SCREEN.INTRO);
+  frames(a, 13, DT, null, false);
+  check("pending: the title keeps drifting (subT not reset)", a.introStage === 0 && a.subT > 2.2);
+  a.key("KeyA");
+  check("a press while pending, past the guard, goes to MENU at cursor 0", a.screen === SCREEN.MENU && a.cursor === 0);
+  const b = createMenuApp();
+  b.boardReady = false;
+  b.beginShow();
+  frames(b, 5, DT, null, false);
+  const t0 = b.subT;
+  b.boardReady = true;
+  frames(b, 1, DT, null, false);
+  check("pending show begins on the first ready frame, from the title pose it leaves",
+    b.introStage === 1 && b._showPending === false && Math.abs(b.pressT - (t0 + DT)) < 1e-12 && b.subT === 0, b.pressT);
+}
+{
+  let marked = 0, n = 0;
+  const a = createMenuApp({ markCabinet: () => marked++, onStart: () => n++ });
+  a.beginShow();
+  a.showBoom = true;
+  frames(a, 1, DT, null, false);
+  check("unseen cabinet: the show lands on MENU at cursor 0, not a run (ruling 2026-10-09 reversal)",
+    a.screen === SCREEN.MENU && a.cursor === 0 && n === 0 && a.inGame === false);
+  check("unseen cabinet: markCabinet is still called once", marked === 1 && a.cabinetSeen === true, marked);
 }
 
 // ---- menu cursor: wrap both directions ----
@@ -556,30 +594,6 @@ check(
   frames(a, 10, DT, null, true);
   check("holding confirm 10 frames starts exactly once", n === 1, n);
 }
-{
-  let n = 0;
-  const a = createMenuApp({
-    cabinetSeen: true, // seen cabinet: skip lands on MENU, not a CORE run
-    onStart: () => {
-      n++;
-    },
-  });
-  frames(a, 2, DT, null, true); // skip intro via held confirm
-  frames(a, 10, DT, null, true); // keep holding through MENU
-  check(
-    "Space held through skip does NOT auto-start",
-    n === 0 && a.screen === SCREEN.MENU,
-    `n=${n} screen=${a.screen}`,
-  );
-  a.update(DT, mkInput(null, false));
-  a.update(DT, mkInput(null, true));
-  check(
-    "release+re-press confirms normally",
-    n === 1 && a.screen === SCREEN.GAME,
-  );
-}
-
-
 // ---- back-stack MENU <-> subscreens ----
 {
   const a = createMenuApp();
@@ -814,9 +828,9 @@ check(
     "key('KeyM') outside GAME no-op",
     a.key("KeyM") === false && a.screen === SCREEN.MENU,
   );
-  const b = createMenuApp({ cabinetSeen: true });
+  const b = inShow({ cabinetSeen: true });
   check(
-    "any unmapped key skips INTRO (ANY KEY TO SKIP)",
+    "any unmapped key skips the show (ANY KEY TO SKIP)",
     b.key("KeyQ") === true && b.screen === SCREEN.MENU,
   );
 }

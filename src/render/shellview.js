@@ -26,6 +26,12 @@ export function kindSize(kind) {
    from outside app/world gets its value handed in, not re-derived downstream. */
 const REV = CACHE_NAME.replace("fusegrid-shell-", "");
 
+/* body[data-lay], the one layout predicate fit.js writes (d / p / l); "d" in Node. */
+const layOf = (cv) => {
+  const b = cv && cv.ownerDocument && cv.ownerDocument.body;
+  return (b && b.getAttribute && b.getAttribute("data-lay")) || "d";
+};
+
 export function dims(canvas, kind) {
   const s = kindSize(kind);
   return { cw: canvas ? canvas.width : s.w, ch: canvas ? canvas.height : s.h };
@@ -53,7 +59,8 @@ export function drawShell(c, app, world, canvas, kind, getScores, getPlaques) {
     return;
   }
   const { cw, ch: chh } = dims(canvas, kind);
-  if (s === SCREEN.INTRO) return menudraw.drawIntroChrome(c, app.subT, cw, chh);
+  if (s === SCREEN.INTRO) // board alpha eases the veil from opaque once the board is ready (3D waits on three)
+    return menudraw.drawIntroChrome(c, app.introStage, app.subT, cw, chh, layOf(canvas), app.boardReady ? Math.min(1, app.readyT / 0.4) : 0);
   if (s === SCREEN.ATTRACT) {
     // no dim: the demo IS the show; only the blinking footer hint
     const L = menudraw.layout(cw, chh);
@@ -62,14 +69,16 @@ export function drawShell(c, app, world, canvas, kind, getScores, getPlaques) {
   }
   if (s === SCREEN.MENU) {
     const L = menudraw.layout(cw, chh);
-    menudraw.drawDim(c, 0.62, cw, chh);
-    // 0.25s INTRO→MENU fade-out (skip + natural end): extra veil k ramps
-    // 1→0 over the first 0.25s of MENU entry (spec §1)
-    if (app.subT < 0.25) menudraw.drawFade(c, 1 - app.subT / 0.25, cw, chh);
+    // the show's natural end slams the logo over a ramping dim; any other
+    // MENU entry (a skip included) keeps the 0.25s fade-out (spec §1)
+    const sl = app.fromShow ? menudraw.slamOf(app.subT) : null;
+    menudraw.drawDim(c, sl ? sl.dim : 0.62, cw, chh);
+    if (!sl && app.subT < 0.25) menudraw.drawFade(c, 1 - app.subT / 0.25, cw, chh);
     // logo per spec §2: reuse drawLogo at logoScale via ctx.scale
     c.save();
     c.translate(L.cx, L.logoCy);
-    c.scale(L.logoScale, L.logoScale);
+    c.scale(L.logoScale * (sl ? sl.s : 1), L.logoScale * (sl ? sl.s : 1));
+    if (sl) c.globalAlpha = sl.a;
     drawLogo(c, world.time, 0, 0);
     c.restore();
     menudraw.drawMenu(
