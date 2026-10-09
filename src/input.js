@@ -35,7 +35,13 @@ export class Input {
     const i=this._intent;
     if(["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight","KeyJ","KeyX"].indexOf(e.code)>=0)e.preventDefault();
     if(e.repeat)return;   // OS auto-repeat: one logical press per physical press
+    /* Pause BEFORE the shell sees the key: P / Escape pause the screen they
+       were pressed on, never a run the same key just booted from INTRO or
+       ATTRACT. */
+    const pz=e.code==="KeyP"||e.code==="Escape";
+    if(pz&&this.onPause)this.onPause();
     if(this.onUiKey)this.onUiKey(e.code);
+    if(pz)return;
     switch(e.code){
       case "KeyW":case "ArrowUp":this.input.up=true;break;
       case "KeyS":case "ArrowDown":this.input.down=true;break;
@@ -45,7 +51,6 @@ export class Input {
       case "ShiftLeft":case "ShiftRight":i.shift=true;break;
       case "KeyQ":i.remote=true;break;
       case "KeyK":i.kick=true;break;
-      case "KeyP":case "Escape":this.onPause&&this.onPause();return;
       }
      }
  _onKeyUp(e){
@@ -73,7 +78,7 @@ export class Input {
  _onBlur(){
     this.input.up=this.input.down=this.input.left=this.input.right=false;
     this._intent.fire=false;this._intent.shift=false;this._intent.remote=false;
-    this._intent.firePrev=false;
+    this._intent.firePrev=false;this._pulse=false;
      }
  get input(){ // held-axis state (live)
     if(!this._held)this._held={up:false,down:false,left:false,right:false};
@@ -90,8 +95,13 @@ export class Input {
     i.move.x=mx; i.move.y=my;
     return i;
      }
- /* Advance the fire-edge latch after a tick. */
- advance(){ this._intent.firePrev=this._intent.fire; }
+ /* Advance the fire-edge latch after a tick. A pulse() fire lives for exactly
+    one tick, so step() sees one edge and nothing stays latched behind it. */
+ advance(){ this._intent.firePrev=this._intent.fire;
+   if(this._pulse){this._pulse=false;this._intent.fire=false;} }
+ /* One fire edge with no key held behind it (Enter on WIN / LOSE). A fire
+    already held keeps its own latch and release. */
+ pulse(){ if(this._intent.fire)return; this._intent.fire=true; this._pulse=true; }
  /* Set intent fields programmatically (tests / external control). */
  setIntent(o){
     for(const k in o){

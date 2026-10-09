@@ -544,13 +544,13 @@ const TODAY = "2026-09-07";
     (src.match(/stat\("run_end"[^\n]*/) || [])[0],
   );
   check(
-    "KeyC-on-STATS sits INSIDE the KeyC block, above its GAME check",
+    // keys pass (v167): the GAME-side C moved into src/app/endkeys.js's endKey
+    "KeyC-on-STATS is handled before the WIN / LOSE endKey dispatch",
     (() => {
-      const blk = (src.match(/if \(code === "KeyC"\) \{[\s\S]{0,420}/) || [""])[0];
-      return blk.indexOf("SCREEN.STATS") > 0 &&
-        blk.indexOf("SCREEN.STATS") < blk.indexOf("SCREEN.GAME");
+      const st = src.indexOf('if (code === "KeyC" && app.screen === SCREEN.STATS)');
+      return st > 0 && st < src.indexOf("if (endKey(code,");
     })(),
-    (src.match(/if \(code === "KeyC"\)[\s\S]{0,160}/) || [""])[0],
+    (src.match(/if \(code === "KeyC"[\s\S]{0,160}/) || [""])[0],
   );
 }
 

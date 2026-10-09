@@ -385,6 +385,11 @@ const HUD_W = {
       ovLine.trim(),
     );
     check(
+      f + ": drawOverlay receives o.toast as its tenth arg (copy feedback)",
+      /o\s*&&\s*o\.run\s*,\s*o\s*&&\s*o\.toast\s*\)/.test(ovLine),
+      ovLine.trim(),
+    );
+    check(
       f + ": drawHudChips receives o.time as its third arg",
       /o\s*&&\s*o\.time/.test(chLine),
       chLine.trim(),

@@ -29,7 +29,8 @@ import { timeKey, loadTimes, saveTimes, bestOf, recordTime } from "./app/times.j
 import { bestKey, loadBests, saveBests, bestOfRun, recordBest, newTally, feedTally } from "./app/bests.js";
 import { loadStats, setStatsOn, stat, statPlaques, statsRows, statsNotes, statsPayload } from "./app/stats.js";
 import { dailySeed, loadDaily, dailyTag, dailyStamp, finishDaily } from "./app/daily.js";
-import { decodeChallenge, encodeChallenge } from "./app/code.js";
+import { decodeChallenge } from "./app/code.js";
+import { createToast, copyText, endKey, toastTick, toastOf } from "./app/endkeys.js";
 import { settleMedals, medalLine, medalRows, loadMedals } from "./app/medals.js";
 import { createGhost, ghostTick, ghostAt } from "./app/ghost.js";
 import { clearCabinet } from "./app/reset.js";
@@ -253,7 +254,7 @@ export function createGame(canvas, opts = {}) {
     dailySeed: () => { const d = todayStr(); return { seed: dailySeed(d), date: d }; },
     onPauseCmd: (cmd) => {
       if (cmd === "RESUME") {
-        world.state = "PLAY";
+        world.state = "PLAY"; world.fireEdge = true; // a held fire CONFIRMED the row; never a same-frame plant
         return;
       }
       if (cmd === "RESTART") {
@@ -355,33 +356,22 @@ export function createGame(canvas, opts = {}) {
     if (qualifies(en.s, sc)) stat("score_set", { h: world.heat | 0 }, dateStr());
     saveScores(recordScore(sc, en));
   };
-  const copyText = (s) => { if (typeof navigator !== "undefined" && navigator.clipboard)
-    navigator.clipboard.writeText(s).catch(() => {}); };
+  const toast = createToast(); // C / B feedback on the WIN / LOSE overlay (src/app/endkeys.js)
   /* UI key side-channel: ALWAYS routed to the shell; M-in-PAUSE records the
      score then quits to MENU (spec §4 table). Machine self-gates elsewhere. */
   input.onUiKey = (code) => {
     if (code !== "KeyR") app.resetArm = false;
-    if (code === "KeyR" && app.screen !== SCREEN.STATS) {
+    if (code === "KeyR" && app.screen !== SCREEN.STATS && app.screen !== SCREEN.INTRO) {
       if (app.screen === SCREEN.GAME) {
         resetCamera(cam); // §2 reset, GAME only
         resetOrbit(rig, camPreset(settings.cam)); // real3d §4: 3D rig resets too, to the selected preset
       }
       return;
     }
-    if (code === "KeyC") {
-      if (app.screen === SCREEN.STATS) { copyText(statsPayload(loadStats(), loadBests(), loadTimes(), dateStr())); return; }
-      if (app.screen === SCREEN.GAME) {
-        if (world.state === "WIN" || world.state === "LOSE") copyText(dailyDate ? dailyStamp(dailyDate, world.level | 0, world.score | 0) : copyPayload(world));
-        return;
-      } // outside GAME (e.g. ATTRACT): fall through to app.key so KeyC still plays
-    }
-    if (code === "KeyB" && app.screen === SCREEN.GAME &&
-        (world.state === "WIN" || world.state === "LOSE")) {
-      copyText("https://hmarzban.github.io/fusegrid/?code=" +
-        encodeChallenge({ seed: world.seed, heat: world.heat, pact: world.pact, pace: world.pace }));
-      return;
-    }
-    if (code === "KeyM") {
+    if (code === "KeyC" && app.screen === SCREEN.STATS) { copyText(statsPayload(loadStats(), loadBests(), loadTimes(), dateStr())); return; }
+    // WIN / LOSE: Enter = Space, C / B copy with a note; elsewhere C still reaches app.key (ATTRACT plays)
+    if (endKey(code, app, world, input, toast, () => dailyDate ? dailyStamp(dailyDate, world.level | 0, world.score | 0) : copyPayload(world))) return;
+    if (code === "KeyM" && app.screen !== SCREEN.INTRO) { // INTRO: M and R fall through to app.key's any-key skip
       if (app.screen === SCREEN.GAME && app.worldState === "PAUSE") {
         persistScore();
         app.quitToMenu("PAUSE");
@@ -631,7 +621,7 @@ export function createGame(canvas, opts = {}) {
       app.update(dt, shellInput);
       if (world.state === "PLAY") { coachT += dt; roomT += Math.min(dt, 7 * CFG.STEP - acc); runT += dt; }
       acc += dt;
-      ghostTick(ghost, world, roomT);
+      ghostTick(ghost, world, roomT); toastTick(toast, world, dt);
       let steps = 0;
       while (acc >= CFG.STEP) {
         if (net) net.drive();
@@ -736,7 +726,7 @@ export function createGame(canvas, opts = {}) {
                   ? Math.max(0, 1 - coachT / COACH_DUR)
                   : 0,
               coach2: world.state === "PLAY" ? { a: Math.max(0, 1 - coach2.t / COACH2_DUR), s: coachTip(coach2.kind) } : { a: 0, s: "" },
-              pause: { view: app.pauseView | 0, cursor: app.pauseCursor | 0 },
+              pause: { view: app.pauseView | 0, cursor: app.pauseCursor | 0 }, toast: toastOf(toast),
               time: { on: !!app.timeAttack, t: roomT, best: bestPrev }, ghost: ghostAt(ghost, world, roomT),
               run: { r: tally.r, k: tally.k, p: tally.p, t: runT, best: bestRun, fromStart: runFromStart, daily: dailyDate, tries: dailyRec.played, dbest: dailyRec.best, md: medalLine(tally.mn) },
             }

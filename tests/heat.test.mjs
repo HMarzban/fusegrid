@@ -49,17 +49,17 @@ check(
 check(
   "overlayCue WIN mid",
   overlayCue({ state: "WIN", level: 3, finale: false, score: 10, heat: 0 }) ===
-    "SPACE / TAP · next room",
+    "SPACE / ENTER / TAP · next room",
 );
 check(
   "overlayCue WIN finale",
   overlayCue({ state: "WIN", level: 5, finale: false, score: 10, heat: 1 }) ===
-    "SPACE / TAP · menu",
+    "SPACE / ENTER / TAP · menu",
 );
 check(
   "overlayCue LOSE",
   overlayCue({ state: "LOSE", level: 4, score: 99, heat: 2 }) ===
-    "SPACE / TAP · new run",
+    "SPACE / ENTER / TAP · new run",
 );
 check(
   "overlayCue PAUSE is the pause-list cue, exactly",

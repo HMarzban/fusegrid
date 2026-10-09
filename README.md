@@ -36,14 +36,16 @@ Clear every enemy in the room to advance. Gold **WALL** never breaks; green **BR
 | Input | Action |
 |---|---|
 | WASD / arrows | Move |
-| Space | Place bomb |
+| Space (or J / X) | Place bomb |
 | Shift + Space | Throw *(needs throw power-up)* |
 | Q | Detonate remote *(needs remote power-up)* |
 | K + move | Kick *(needs kick power-up)* |
-| P | Pause (RESUME / RESTART / OPTIONS / QUIT TO MENU) |
-| M / Menu | Quit to menu |
-| C *(end screen or STATS)* | Copy your result or your stats as text |
-| B *(end screen)* | Copy the board's challenge code |
+| R *(in a run)* | Reset the camera and zoom |
+| P / Esc | Pause (RESUME / RESTART / OPTIONS / QUIT TO MENU); ↑↓ + Enter pick a row |
+| M *(paused)* | Quit to menu |
+| Space / Enter *(end screen)* | Next room, back to the menu after the finale, or a new run after GAME OVER |
+| C *(end screen or STATS)* | Copy your result or your stats as text (the end screen says COPIED, or COPY FAILED) |
+| B *(end screen)* | Copy the board's challenge link (the end screen says BOARD LINK COPIED) |
 | T *(STATS)* | Open the MEDALS page |
 | R, R *(STATS)* | Reset my cabinet (two presses; any other key cancels) |
 
@@ -64,7 +66,7 @@ On touch devices during a run, a virtual D-pad and bomb button sit off the board
 | 7 | VOID | Violet dark, tall cliffs *(unlocks after first CLEAR)* |
 | 8 | CROWN | Gold court — **finale after unlock** *(unlocks after first CLEAR)* |
 
-On LEVEL SELECT, `←/→` picks the room and `↑/↓` picks Heat.
+On LEVEL SELECT, `←/→` picks the room, `↑/↓` picks Heat and `[`/`]` picks pace (EASY / NORM / HARD); Enter starts, Esc backs out. Menus use the arrows, Enter and Esc throughout, and any key skips the intro.
 
 ### Heat
 

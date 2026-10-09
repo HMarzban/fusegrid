@@ -334,14 +334,14 @@ function check(name, cond, detail) {
     600, 520, 300, 260);
   check(
     "the WIN cue line now offers both keys",
-    texts.some((s) => s === "SPACE / TAP · next room · C copy · B board"),
+    texts.some((s) => s === "SPACE / ENTER / TAP · next room · C copy · B board"),
     texts.join("|"),
   );
   texts.length = 0;
   drawOverlay(c, { state: "LOSE", level: 3, score: 10, heat: 0 }, 600, 520, 300, 260);
   check(
     "and so does the LOSE cue line",
-    texts.some((s) => s === "SPACE / TAP · new run · C copy · B board"),
+    texts.some((s) => s === "SPACE / ENTER / TAP · new run · C copy · B board"),
     texts.join("|"),
   );
   /* R8 deviation: written by concatenation, not as a literal regex — this
@@ -403,10 +403,12 @@ function check(name, cond, detail) {
     delete globalThis.window;
     delete navigator.clipboard;
   }
-  const src = readFileSync("src/main.js", "utf8");
+  // keys pass (v167): the B handler moved out of main.js into src/app/endkeys.js
+  const src = readFileSync("src/app/endkeys.js", "utf8");
   check(
     "the KeyB payload is the link and nothing else — no stamp, no score",
-    /copyText\("https:\/\/hmarzban\.github\.io\/fusegrid\/\?code=" \+/.test(src) &&
+    /BOARD_URL = "https:\/\/hmarzban\.github\.io\/fusegrid\/\?code=";/.test(src) &&
+      /copyText\(BOARD_URL \+ encodeChallenge\(/.test(src) &&
       !/KeyB[\s\S]{0,300}world\.score/.test(src),
     (src.match(/if \(code === "KeyB"[\s\S]{0,200}/) || [""])[0],
   );

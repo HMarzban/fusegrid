@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-09 — Keys pass: Enter on WIN/LOSE, copy note, INTRO any key, key matrix (shell v167)
+- User report "B / Enter don't react after a level". Enter/NumpadEnter on WIN/LOSE now = Space via `Input.pulse()` (one fire tick, never a latch); C/B draw COPIED / BOARD LINK COPIED / COPY FAILED above the headline for 1.5 s (`src/app/endkeys.js`). Also fixed: Space on PAUSE RESUME planted a bomb; any key now skips INTRO (and an arrow that skipped no longer moves the MENU cursor); P/Esc off INTRO/ATTRACT no longer lands in a paused run (Input now pauses before the shell sees the key). New `tests/keys.test.mjs` drives every documented key in every state; notes `.superpowers/sdd/2026-10-09-keys/report.md`.
+
 ## 2026-10-09 — Finish: near-wall cutaway, zoom frame, session count, D1/H4 ruled
 - Close-out docs for v164–v166 (CHANGELOG `shell v166`). User rulings: D1 arcade restart from room 1 stays (no continue-credit); H4 ATTRACT tap starts an ordinary run even on DAILY; near-wall cutaway chosen over see-through/leave-it. Recorded in AGENTS.md + retention report §7.
 - Correction: a shorter 600×440 3D canvas helps only height-limited screens; phone portrait is width-limited (~94% of canvas width already). Camera spec §8(b) now says so. Disclosed: walker 89% at FAR preset behind NEAR_H 22.

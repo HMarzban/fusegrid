@@ -6,6 +6,22 @@ version number of its own; each entry is dated and names the PWA shell
 revision (`CACHE_NAME` in `src/pwa/shell.js`) that shipped it, since that is
 what makes an installed copy update.
 
+## shell v167 · 2026-10-09
+
+### Fixed
+- **Enter works on the end screen.** After a cleared room, the finale or
+  GAME OVER, Enter (like Space or a tap) moves on: next room, back to the
+  menu, or a new run. The cue now reads `SPACE / ENTER / TAP`.
+- **C and B say what they did.** Copying your result (`C`) or the board
+  link (`B`) on the end screen now shows `COPIED` or `BOARD LINK COPIED`
+  for a moment, and `COPY FAILED` if the browser refused the clipboard.
+- Choosing RESUME on the pause list with Space no longer drops a bomb the
+  moment play resumes.
+- Any key now skips the intro, as its hint says; an arrow key that skips it
+  no longer also moves the menu cursor.
+- Pressing P or Esc to leave the intro or the attract demo now starts the
+  run playing, not paused.
+
 ## shell v166 · 2026-10-09
 
 ### Changed

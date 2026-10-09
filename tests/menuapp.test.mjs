@@ -806,10 +806,18 @@ check(
   );
 }
 {
-  const a = createMenuApp();
+  // keys pass (v167): INTRO now skips on ANY key (its own on-screen hint), so
+  // the outside-GAME M no-op is pinned on MENU instead
+  const a = createMenuApp({ cabinetSeen: true });
+  a.skip();
   check(
     "key('KeyM') outside GAME no-op",
-    a.key("KeyM") === false && a.screen === SCREEN.INTRO,
+    a.key("KeyM") === false && a.screen === SCREEN.MENU,
+  );
+  const b = createMenuApp({ cabinetSeen: true });
+  check(
+    "any unmapped key skips INTRO (ANY KEY TO SKIP)",
+    b.key("KeyQ") === true && b.screen === SCREEN.MENU,
   );
 }
 {

@@ -194,6 +194,7 @@ export function createMenuApp(opts = {}) {
         if (code === "Escape" || code === "Backspace") return this.exitAttract();
         return this.playFromAttract();
       }
+      if (this.screen === SCREEN.INTRO) return this._skipKey(); // "ANY KEY TO SKIP"
       this.idleT = 0;
       switch (code) {
         case "Enter":
@@ -201,7 +202,6 @@ export function createMenuApp(opts = {}) {
           return this.confirm();
         case "Escape":
         case "Backspace":
-          if (this.screen === SCREEN.INTRO) return this.skip();
           if (this.screen === SCREEN.GAME) return false;
           return this.back();
         case "KeyM":
@@ -247,9 +247,17 @@ export function createMenuApp(opts = {}) {
       }
       return false;
     },
+    /* A key spent skipping INTRO is spent: its held axis or fire must not also
+       move or confirm on the screen it lands on (taps + prevConfirm are the
+       same guards key() and a held confirm already use). */
+    _skipKey() {
+      this.prevConfirm = true;
+      const r = this.skip();
+      this._taps = { "-1:0": true, "1:0": true, "-1:1": true, "1:1": true };
+      return r;
+    },
     _tapMove(dir, lat) {
       this.idleT = 0;
-      if (this.screen === SCREEN.INTRO) return this.skip();
       if (
         this.screen === SCREEN.GAME &&
         this.worldState === "PAUSE" &&

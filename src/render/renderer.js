@@ -76,7 +76,7 @@ export function createRenderer(canvas, opts={}){
     }
     if(world.state!=="PLAY"){
       const B=overlayBox(kind==="3d"?"iso":"2d");
-      drawOverlay(ctx, world, B.w, B.h, B.cx, B.cy, o&&o.pause, o&&o.time, o&&o.run);
+      drawOverlay(ctx, world, B.w, B.h, B.cx, B.cy, o&&o.pause, o&&o.time, o&&o.run, o&&o.toast);
       if(world.state==="WIN"||world.state==="LOSE") drawFx(ctx);
     }
     /* S4: overlay HUD chips — explicit opt-in only ({hud:true} during GAME),

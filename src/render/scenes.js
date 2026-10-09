@@ -40,9 +40,9 @@ export function winHeadline(world) {
 export function overlayCue(world) {
   if (world.state === "WIN") {
     const fin = isFinale(world.level) || world.finale;
-    return fin ? "SPACE / TAP · menu" : "SPACE / TAP · next room";
+    return fin ? "SPACE / ENTER / TAP · menu" : "SPACE / ENTER / TAP · next room";
   }
-  if (world.state === "LOSE") return "SPACE / TAP · new run";
+  if (world.state === "LOSE") return "SPACE / ENTER / TAP · new run";
   if (world.state === "PAUSE")
     return "↑↓ SELECT · ENTER / TAP CONFIRM · P RESUME · M QUIT";
   return "";
@@ -221,6 +221,7 @@ export function drawOverlay(
   ui = { view: 0, cursor: 0 },
   tm,
   run,
+  toast,
 ) {
   c.fillStyle = "rgba(6,10,20,0.80)";
   c.fillRect(0, 0, w, h);
@@ -240,6 +241,14 @@ export function drawOverlay(
     c.fillStyle = col || "#c3d2ee";
     c.fillText(txt, cx, cy + dy);
   }
+  /* C / B copy note (main's endkeys toast): above the headline, so it never
+     moves the dy stack below it and never reaches the PAUSE veil. */
+  function note() {
+    if (!toast || !toast.s) return;
+    c.font = "900 15px ui-monospace,monospace";
+    c.fillStyle = toast.ok ? "#37f0d0" : "#ff5d73";
+    c.fillText(toast.s, cx, cy - 60);
+  }
   if (world.state === "WIN") {
     head(winHeadline(world), "#37f0d0");
     /* R1: one 24px stack (R7's shipped pitch) at dy 20/44/68/92/116/140 —
@@ -251,12 +260,14 @@ export function drawOverlay(
     for (const [s, col] of summaryLines(world, run)) sub(s, col, (dy += 24));
     if (tm && tm.on) sub(timeLine(world, tm), "#9fb3d8", (dy += 24));
     sub(overlayCue(world) + COPY_HINT, "#9fb3d8", (dy += 24));
+    note();
   } else if (world.state === "LOSE") {
     head("GAME OVER", "#ff5d73");
     let dy = 20;
     sub(runStamp(world), "#9fb3d8", dy);
     for (const [s, col] of summaryLines(world, run)) sub(s, col, (dy += 24));
     sub(overlayCue(world) + COPY_HINT, "#9fb3d8", (dy += 24));
+    note();
   } else if (world.state === "PAUSE") {
     const u = ui || {};
     /* view 1 = the inline OPTIONS page: veil only, so drawShell's settings

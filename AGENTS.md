@@ -49,7 +49,9 @@ not shell screens. Do not add them as `SCREEN` values.
   imported by sim or renderer. Its seams live beside it and must stay OUT of
   `main.js`: `src/app/flags.js` (URL/opts, pure over a search string),
   `src/app/attract.js` (demo world + `stepDemo`), `src/app/debughook.js`
-  (`window.__GAME__`), `src/net/localpair.js` (`?net=local`),
+  (`window.__GAME__`), `src/app/endkeys.js` (WIN/LOSE keys: Enter =
+  Space through `Input.pulse()`, one fire tick and never a latch; C/B copy
+  plus the COPIED / COPY FAILED overlay note), `src/net/localpair.js` (`?net=local`),
   `src/render/shellview.js` (`drawShell` + the `kindSize`/`dims` logical box),
   `src/app/fit.js` (`mountFit`: stage scale per layout reserve `FIT_RES`, and
   `body[data-lay]` = `d` desktop / `p` touch portrait / `l` touch landscape —
@@ -323,7 +325,9 @@ Node v26, `"type": "module"`. No build step, no bundler.
 
 ## Testing
 
-Tests live in `tests/*.test.mjs` and run under `node --test`. Keep the sim
+Tests live in `tests/*.test.mjs` and run under `node --test`. `tests/keys.test.mjs`
+is the key matrix: every documented key in every shell/world state through the
+real `createGame` keydown/keyup listeners — a new key or screen joins it. Keep the sim
 importable without a DOM. `tests/browser_integration.html` is manual. Visual 3D feel is
 not covered by Node — play-verify in a browser after render changes.
 
