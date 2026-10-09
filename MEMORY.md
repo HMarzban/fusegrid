@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-09 — O2 fix-up: a skipped show never plants; three-load settle can't strand the title (shell v172)
+- After INTRO the show world walks its script but never fires (`stepShow` mode 2), so a skip before 1.88 s leaves no blast/flash/shake behind MENU and a later skip still walks MAKO clear. Both three-load sites settle via `.catch().then(boardReady=true)`. Headed: 4 s-delayed and 404'd `three.module.js` both leave the title leavable (opaque veil while pending, hung-fetch press -> MENU); rig C on the first MENU frame at all three CAMERA presets; the prompt gained a steady dark keyline for its pulse minimum.
+
 ## 2026-10-09 — O2 opening: title -> press -> 4.384 s show -> MENU; first visit reversal (shell v171)
 - INTRO is now title (silent, never times out, PRESS ANY KEY / TAP TO START by `data-lay`) then a 32-menu-step show (`src/app/intro.js`: zoom/camera sweep, MAKO pop, scripted plant at SHOW_DUR-FUSE, the show bomb's boom flips MENU at PLAY with a logo slam). `musicCue(INTRO)` is `menu`; the press runs the menu track + `uiJingle`; deep links get no sting. Every visit lands on MENU (reverses plan 7 / R4 first-visit Play Now; `nb.cabinet.v1` still written, no longer branches). No-WebAudio unlock now also ignores modifier keys so the Node key matrix matches the browser. CDP (headless shell 153): key/click/60 ms tap/800 ms hold all start the show with ctx running + 1 sting, MENU 4.42-4.43 s after show start (recorder lags one frame), 3D MENU cam = rig C, REDUCE FLASH 0.25x, SHAKE off 0. Notes `.superpowers/sdd/2026-10-09-opening/task-O2.md`.
 

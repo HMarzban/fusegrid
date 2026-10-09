@@ -189,14 +189,22 @@ export function drawIntroChrome(c, stage, t, W, H, lay, rk = 1) {
     }
     c.restore();
   }
-  const pa = show ? 1 - exit : easeOutCubic(seg(t, 0.6, 0.9)) * (0.725 + 0.275 * Math.cos((2 * Math.PI * t) / (4 * SHOW_STEP)));
-  if (pa > 0.01) {
-    c.globalAlpha = pa;
-    c.fillStyle = ACCENT;
+  const pin = show ? 1 - exit : easeOutCubic(seg(t, 0.6, 0.9));
+  if (pin > 0.01) {
     c.font = font(18, "900");
     c.textAlign = "center";
     c.textBaseline = "middle";
-    c.fillText(touch ? "TAP TO START" : "PRESS ANY KEY", L.cx, L.footY);
+    const prompt = touch ? "TAP TO START" : "PRESS ANY KEY";
+    // steady dark keyline (the logo's idiom) under a fill that pulses
+    // 0.45<->1 on the beat: legible at the pulse minimum over a bright board
+    c.globalAlpha = pin;
+    c.lineJoin = "round";
+    c.lineWidth = 4;
+    c.strokeStyle = "rgba(7,10,18,0.9)";
+    c.strokeText(prompt, L.cx, L.footY);
+    c.globalAlpha = show ? pin : pin * (0.725 + 0.275 * Math.cos((2 * Math.PI * t) / (4 * SHOW_STEP)));
+    c.fillStyle = ACCENT;
+    c.fillText(prompt, L.cx, L.footY);
     c.globalAlpha = 1;
   }
   const ha = show ? easeOutCubic(seg(t, SKIP_GUARD, SKIP_GUARD + 0.3)) : 0;

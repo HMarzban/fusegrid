@@ -70,7 +70,7 @@ function runShow(){
   const s=createShow(), app={showBoom:false}, ev=[];
   const N=Math.round((SHOW_DUR+0.2)/CFG.STEP);
   for(let i=0;i<N;i++){
-    stepShow(s,CFG.STEP*(1+1e-9),app,true);
+    stepShow(s,CFG.STEP*(1+1e-9),app,1);
     for(const e of s.world.events)ev.push({t:s.n*CFG.STEP,e:e.t});
     s.world.events.length=0;
   }
@@ -95,10 +95,24 @@ function runShow(){
 }
 {
   const s=createShow(), app={showBoom:false};
-  stepShow(s,1,app,false);
-  check("stepShow does nothing on the title (live false)", s.n===0&&s.world.time===0);
-  stepShow(s,1,app,true);
+  stepShow(s,1,app,0);
+  check("stepShow does nothing on the title (mode 0)", s.n===0&&s.world.time===0);
+  stepShow(s,1,app,1);
   check("stepShow keeps the n > 6 anti-spiral cap", s.n===7&&s.acc===0, s.n);
+}
+
+// ---- a skipped show: the walk goes on behind MENU, the fire never does ----
+for(const [skipAt,wantBomb] of [[0.3,false],[1.0,false],[2.0,true],[2.2,true]]){
+  const s=createShow(), app={showBoom:false}, ev=[];
+  for(let i=0;i<Math.round(8/CFG.STEP);i++){
+    stepShow(s,CFG.STEP*(1+1e-9),app,s.n*CFG.STEP<skipAt?1:2);
+    for(const e of s.world.events)ev.push(e.t); s.world.events.length=0;
+  }
+  const bombs=ev.filter(e=>e==="bomb").length;
+  check("skip at "+skipAt+" s: "+(wantBomb?"the planted bomb still blows":"zero bombs, ever")
+    +"; MAKO alive, PLAY, no hurt/kill",
+    bombs===(wantBomb?1:0)&&s.world.players[0].alive!==false&&s.world.state==="PLAY"&&!ev.includes("hurt")&&!ev.includes("kill"),
+    ev.join());
 }
 
 // ---- hitch pin: MENU opens one frame after the boom, never before ----
@@ -110,7 +124,7 @@ function runShow(){
     const dt=f<dts.length?dts[f]:1/60;
     app.update(dt,null);
     if(app.screen===SCREEN.MENU){menuF=f;break;}
-    stepShow(s,dt,app,app.screen!==SCREEN.INTRO||app.introStage===1);
+    stepShow(s,dt,app,app.screen!==SCREEN.INTRO?2:app.introStage);
     if(boomF<0&&s.world.events.some(e=>e.t==="boom"))boomF=f;
     s.world.events.length=0;
     f++;

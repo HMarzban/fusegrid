@@ -526,7 +526,7 @@ export function createGame(canvas, opts = {}) {
         threeP = loadRenderer3D().then((m) => {
           createRenderer3D = m.createRenderer3D;
           if (effKind() === "3d") renderer = getRenderer("3d");
-        }, () => {}).then(() => { app.boardReady = true; }); // settles on reject too: never strand the title
+        }).catch((e) => console.warn("3D load failed", e)).then(() => { app.boardReady = true; }); // never strand the title
       return rcache["2d"] || getRenderer("2d");
     }
     try {
@@ -551,7 +551,7 @@ export function createGame(canvas, opts = {}) {
     loadRenderer3D().then((m) => {
       createRenderer3D = m.createRenderer3D;
       renderer = getRenderer("3d");
-    }, () => {}).then(() => { app.boardReady = true; });
+    }).catch((e) => console.warn("3D load failed", e)).then(() => { app.boardReady = true; });
   let renderer = getRenderer(curKind);
   app.boardReady = curKind !== "3d" || !!createRenderer3D;
 
@@ -676,7 +676,7 @@ export function createGame(canvas, opts = {}) {
       stepDemo(demo, dt);
     } else if (demo) demo = null;
     if (attract || app.screen === SCREEN.GAME) show = null;
-    else if (show) stepShow(show, dt, app, app.screen !== SCREEN.INTRO || app.introStage === 1); // before render drains its events
+    else if (show) stepShow(show, dt, app, app.screen !== SCREEN.INTRO ? 2 : app.introStage); // before render drains its events
     // render: INTRO flyover transform wraps the ARENA draw only (zoom>=1 so
     // no edge gaps); camX/camY are canvas fractions. ATTRACT renders the DEMO
     // world with HUD suppressed; every other screen renders the frozen live

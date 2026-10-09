@@ -67,11 +67,13 @@ export function createShow() {
     it: { move: { x: 0, y: 0 }, fire: false, firePrev: false, shift: false, remote: false, kick: false } };
 }
 
-/* Same accumulator + anti-spiral cap as stepDemo. Steps only when live (the
-   show and after, never the title). Sets app.showBoom on the show bomb's boom
-   before the renderer drains world.events. */
-export function stepShow(show, dt, app, live) {
-  if (!live) return;
+/* Same accumulator + anti-spiral cap as stepDemo. mode 0 = title (no step),
+   1 = the show (scripted), 2 = after INTRO: the walk keeps going but never
+   fires, so a skip before the plant leaves no bomb behind MENU and a skip
+   after it still walks MAKO clear of the blast (never a LOSE overlay). Sets
+   app.showBoom on the show bomb's boom before the renderer drains events. */
+export function stepShow(show, dt, app, mode) {
+  if (!mode) return;
   show.acc += dt;
   let k = 0;
   while (show.acc >= CFG.STEP) {
@@ -80,7 +82,7 @@ export function stepShow(show, dt, app, live) {
     for (const s of SHOW_SCRIPT) if (show.n >= s[0]) r = s;
     show.it.move.x = r[1];
     show.it.move.y = r[2];
-    show.it.fire = !!r[3];
+    show.it.fire = mode === 1 && !!r[3];
     const ev = show.world.events, e0 = ev.length;
     step(show.world, CFG.STEP, { 0: show.it });
     for (let i = e0; i < ev.length; i++) if (ev[i].t === "boom" && app) app.showBoom = true;
