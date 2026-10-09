@@ -31,7 +31,10 @@ network-only so share crawlers never stale-lock the card.
 - `src/pwa/register.js` — `navigator.serviceWorker.register("./sw.js",
   {type:"module", scope:"./"} )` then `registration.update()`. Listens
   for `controllerchange` and `location.reload()` once (in-memory guard)
-  so skipWaiting + claim is not a silent takeover. No-op without
+  so skipWaiting + claim is not a silent takeover; the first
+  `controllerchange` on a page that loaded with no controller (a
+  first-install `clients.claim`) is skipped, and later changes reload
+  once. No-op without
   `navigator`. Called from `src/main.js` only. Never imported by
   `src/core`.
 - `index.html` — relative manifest link + iOS web-app metas. Keep existing
