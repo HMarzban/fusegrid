@@ -72,8 +72,9 @@ function runShow(){
   const N=Math.round((SHOW_DUR+0.2)/CFG.STEP);
   for(let i=0;i<N;i++){
     stepShow(s,CFG.STEP*(1+1e-9),app,1);
-    for(const e of s.world.events)ev.push({t:s.n*CFG.STEP,e:e.t});
+    for(const e of s.world.events)ev.push({t:s.n*CFG.STEP,e:e.t,x:e.x,y:e.y});
     s.world.events.length=0;
+    if(!s.blast&&s.world.blades.length){ const tl=s.world.blades[0].tiles; s.blast=tl.length; s.arms=new Set(tl.map(t=>t.tx+","+t.ty)); }
   }
   return {s,ev,app};
 }
@@ -82,6 +83,12 @@ function runShow(){
   const bombs=ev.filter(x=>x.e==="bomb"), booms=ev.filter(x=>x.e==="boom");
   check("exactly one bomb, at SHOW_PLANT +- CFG.STEP", bombs.length===1&&Math.abs(bombs[0].t-SHOW_PLANT)<=CFG.STEP+1e-9,
     bombs.map(x=>x.t.toFixed(4)).join());
+  check("the show bomb is planted on (3,1) as a PIERCE bomb", same(bombs.map(x=>[x.x,x.y]),[[140,60]])&&s.world.players[0].bombKind==="pierce",
+    JSON.stringify(bombs.map(x=>[x.x,x.y])));
+  check("the reveal blast is a 13-tile T that breaks 7 bricks (the climax, not a 3-tile corner)",
+    s.blast===13&&ev.filter(x=>x.e==="brick").length===7, s.blast+" tiles / "+ev.filter(x=>x.e==="brick").length+" bricks");
+  const p=s.world.players[0];
+  check("MAKO ends on (1,2), off every arm of the blast", p.tx===1&&p.ty===2&&!s.arms.has(p.tx+","+p.ty), p.tx+","+p.ty);
   check("its boom lands within CFG.STEP of SHOW_DUR", booms.length===1&&Math.abs(booms[0].t-SHOW_DUR)<=CFG.STEP+1e-9,
     booms.map(x=>x.t.toFixed(4)).join());
   check("stepShow flags the boom on the app", app.showBoom===true);
@@ -98,8 +105,11 @@ function runShow(){
   const s=createShow(), app={showBoom:false};
   stepShow(s,1,app,0);
   check("stepShow does nothing on the title (mode 0)", s.n===0&&s.world.time===0);
-  stepShow(s,1,app,1);
-  check("stepShow keeps the n > 6 anti-spiral cap", s.n===7&&s.acc===0, s.n);
+  stepShow(s,0.25,app,1);
+  check("stepShow catches up a whole 0.25 s frame (main's dt clamp): no show time dropped",
+    s.n===Math.floor(0.25/CFG.STEP+1e-9)&&s.acc<CFG.STEP, s.n);
+  const t=createShow(); stepShow(t,5,app,1);
+  check("stepShow still caps a runaway frame (no spiral)", t.n<=Math.ceil(0.25/CFG.STEP)+2&&t.acc===0, t.n);
 }
 
 // ---- a skipped show: the walk goes on behind MENU, the fire never does ----
@@ -120,17 +130,18 @@ for(const [skipAt,wantBomb] of [[0.3,false],[1.0,false],[2.0,true],[2.2,true]]){
 {
   const app=createMenuApp({cabinetSeen:true}), s=createShow();
   app.beginShow();
-  const dts=[0.25,0.25,0.25]; let f=0, boomF=-1, menuF=-1;
+  const dts=[0.25,0.25,0.25]; let f=0, boomF=-1, menuF=-1, boomT=-1;
   while(f<2000&&menuF<0){
     const dt=f<dts.length?dts[f]:1/60;
     app.update(dt,null);
     if(app.screen===SCREEN.MENU){menuF=f;break;}
     stepShow(s,dt,app,app.screen!==SCREEN.INTRO?2:app.introStage);
-    if(boomF<0&&s.world.events.some(e=>e.t==="boom"))boomF=f;
+    if(boomF<0&&s.world.events.some(e=>e.t==="boom")){boomF=f; boomT=app.subT;}
     s.world.events.length=0;
     f++;
   }
-  check("hitch: the dropped time defers the boom past SHOW_DUR of subT", boomF>0, "boom frame "+boomF);
+  check("hitch: the boom still lands within one frame of SHOW_DUR of subT (no show time dropped)",
+    boomF>0&&Math.abs(boomT-SHOW_DUR)<=1/60+CFG.STEP, "boom frame "+boomF+" subT "+boomT.toFixed(4));
   check("hitch: MENU opens exactly one frame after the boom, with fromShow", menuF===boomF+1&&app.fromShow===true&&app.cursor===0,
     boomF+" -> "+menuF);
 }

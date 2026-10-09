@@ -131,6 +131,16 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
        overlay); every other screen keeps the orbit rig. Shake rides both. */
     if(o&&o.intro!=null)applyOrbit(camera,introCam(o.intro.stage,o.intro.t,rig.dist,o.intro.pressT),getShake());
     else applyOrbit(camera,rig,getShake());    // shake = camera-target offset
+    /* Warm pass, once per scene: draw it with every pooled mesh shown (an
+       empty instanced pool at one instance) and throw that frame away — the
+       real render below overwrites it in the same task. The GPU then builds
+       MAKO's (hidden on the title), the bomb's and the blast's pipelines
+       here, not on the show's pop and reveal frames. Lights keep their state
+       so no program is compiled for a light count the game never uses. */
+    if(gl&&sc&&!sc.warm){ sc.warm=true; const undo=[];
+      sc.group.traverse(m=>{ if(!m.visible&&!m.isLight){ undo.push([m,"visible",false]); m.visible=true; }
+        if(m.isInstancedMesh&&m.count===0){ undo.push([m,"count",0]); m.count=1; } });
+      gl.render(scene3,camera); for(const [m,k,v] of undo)m[k]=v; }
     fxp.update(getFx());
     if(gl){
       const wantW=Math.floor(W*dprUsed), wantH=Math.floor(H*dprUsed);

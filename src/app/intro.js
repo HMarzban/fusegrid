@@ -10,19 +10,23 @@ export const SHOW_STEP = 0.137; // MUSIC_TRACKS.menu.A.STEP (pinned)
 export const SHOW_DUR = 32 * SHOW_STEP;
 export const SHOW_PLANT = SHOW_DUR - CFG.FUSE; // derived: a FUSE retune moves the plant, never the reveal
 export const SKIP_GUARD = 0.2;
+export const TITLE_IN = 0.9; // the title's logo reveal / prompt fade-in end (menudraw copy pinned)
 export const SHOW_SEED = 20261009;
 const PLANT_N = Math.round(SHOW_PLANT / CFG.STEP);
+const CATCH_UP = Math.ceil(0.25 / CFG.STEP) + 1; // main clamps dt to 0.25: this can never spiral
 /* [show step count reached by this step, move x, move y, fire]. Authored around
-   the plant step: walk right to the brick, plant, step back and down to the
-   diagonal-safe tile, then NOOP so flames and fx finish on MENU. */
+   the plant step: walk right two tiles to (3,1), plant, walk back to the spawn
+   tile and down to (1,2), off both arms, then NOOP so flames and fx finish on
+   MENU. The show bomb is a PIERCE bomb (the throwaway player's own bombKind),
+   so the reveal rakes a T through seven bricks instead of a 3-tile corner. */
 export const SHOW_SCRIPT = Object.freeze([
   [0, 0, 0, 0],
-  [PLANT_N - 65, 1, 0, 0],
-  [PLANT_N - 8, 0, 0, 0],
+  [PLANT_N - 42, 1, 0, 0],
+  [PLANT_N - 7, 0, 0, 0],
   [PLANT_N, 0, 0, 1],
   [PLANT_N + 2, -1, 0, 0],
-  [PLANT_N + 20, 0, 1, 0],
-  [PLANT_N + 50, 0, 0, 0],
+  [PLANT_N + 37, 0, 1, 0],
+  [PLANT_N + 54, 0, 0, 0],
 ].map(Object.freeze));
 
 const easeInOutCubic = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
@@ -63,11 +67,14 @@ export function createShow() {
   w.state = "PLAY";
   for (const e of w.enemies) e.speed = 0; // the throwaway world's own foes, never CFG
   w.players[0].iFrames = 0; // no spawn blink: MAKO pops in once, solid
+  w.players[0].bombKind = "pierce"; // the reveal's blast reaches past the corner
   return { world: w, n: 0, acc: 0,
     it: { move: { x: 0, y: 0 }, fire: false, firePrev: false, shift: false, remote: false, kick: false } };
 }
 
-/* Same accumulator + anti-spiral cap as stepDemo. mode 0 = title (no step),
+/* Same accumulator as stepDemo, but the cap catches up a whole 0.25 s frame
+   (main's dt clamp): the boom, and so MENU, never lags the show clock and the
+   music grid by more than a frame after a stall. mode 0 = title (no step),
    1 = the show (scripted), 2 = after INTRO: the walk keeps going but never
    fires, so a skip before the plant leaves no bomb behind MENU and a skip
    after it still walks MAKO clear of the blast (never a LOSE overlay). Sets
@@ -87,6 +94,6 @@ export function stepShow(show, dt, app, mode) {
     step(show.world, CFG.STEP, { 0: show.it });
     for (let i = e0; i < ev.length; i++) if (ev[i].t === "boom" && app) app.showBoom = true;
     show.acc -= CFG.STEP;
-    if (++k > 6) { show.acc = 0; break; }
+    if (++k > CATCH_UP) { show.acc = 0; break; }
   }
 }

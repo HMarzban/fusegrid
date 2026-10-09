@@ -16,6 +16,10 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-09 — Opening eye-check fixes: PIERCE reveal T, 2S menu hold, close-up reframed, hitches and grid drag (shell v174)
+- The show bomb is a PIERCE bomb planted on (3,1): a 13-tile T through 7 bricks. MENU holds its plate, rows and dim for 2S under the logo slam. The 3D flame flicker now runs on blast age, so it never lands on the trough. Same-instant `brick` SFX play once (the output peak had been 1.22). The close-up is el 0.55, az -0.1, at a fixed dist of BASE_DIST*0.4 inside the corner. A one-off 3D warm pass prebuilds the pipelines for the pop and the blast. The title stands settled while three loads.
+- Two consequences of a stall are fixed: `stepShow` catches up a whole 0.25 s frame, and `pump` drops missed steps whole for gaps under 1 s. The cold 2D stall itself is the GPU process compiling Skia Graphite pipelines (the main thread is idle), so it is disclosed, not fixed. Still open: the empty band on a portrait phone (the stage is width-bound) and a real-GPU check of the hitches. Notes and captures are in `.superpowers/sdd/2026-10-09-opening/eye-v174/`.
+
 ## 2026-10-09 — O2 review 2: the opening's wiring seams pinned (tests only, shell stays v173)
 - Headless pins for shellview `layOf` (body[data-lay] p/l -> TAP TO START/SKIP), the MENU slam call site (0.12 dim + logoScale*1.35 vs skip 0.62 + fade), menuapp `readyT` advance (0.45 veil at 0.5 s), main's 2D INTRO transform (title zoom 1.12, first show frame from the press pose) and 3D `ro.intro.pressT`; three.test pins the intro camera riding `getShake()`. All six reviewer mutants now go red.
 

@@ -1094,9 +1094,32 @@ await sec("S3.C",async()=>{
     for(const d of CAM_PRESET) if(!same(ft.introCam(1,0,d,pT),ft.introCam(0,pT,d)))cont=false;
   check("S3.C press continuity: introCam(1,0,base,pT) deep-equals introCam(0,pT,base)", cont);
   const cu=ft.introCam(1,12*SHOW_STEP);
-  check("S3.C close-up holds on MAKO's spawn tile (az -0.35, dist base*0.55)",
-    Math.abs(cu.az+0.35)<1e-9&&Math.abs(cu.dist-1503*0.55)<1e-9
-    &&same(cu.target,[60-300,0,60-260]), cu.az+"/"+cu.dist.toFixed(1)+"/"+cu.target);
+  check("S3.C close-up holds inside the corner on MAKO's walk (az -0.1, el 0.55, dist BASE_DIST*0.40 at every preset)",
+    Math.abs(cu.az+0.1)<1e-9&&cu.el===0.55&&Math.abs(cu.dist-1503*0.40)<1e-9
+    &&same(cu.target,[110-300,0,110-260])&&ft.introCam(1,12*SHOW_STEP,CAM_PRESET[2]).dist===cu.dist, cu.az+"/"+cu.dist.toFixed(1)+"/"+cu.target);
+  {
+    /* Eye-check 2026-10-09: the close-up was half void beyond the rim with
+       MAKO walking off-centre. Ray-cast a 21x21 NDC grid to the floor: at
+       most 12% may land outside the cabinet's outer rim, and MAKO's whole
+       walk (spawn (1,1), plant (3,1), hide (1,2)) projects inside |ndc| 0.45,
+       for every CAMERA preset. */
+    let worstV=0, worstP=0;
+    for(const d of CAM_PRESET){
+      const cam=new THREE.PerspectiveCamera(CAM_FOV,600/520,1,4000);
+      applyOrbit(cam,ft.introCam(1,12*SHOW_STEP,d),{x:0,y:0}); cam.updateMatrixWorld();
+      const rc=new THREE.Raycaster(), pl=new THREE.Plane(new THREE.Vector3(0,1,0),0), hit=new THREE.Vector3();
+      let out=0,n=0;
+      for(let i=0;i<=20;i++)for(let j=0;j<=20;j++){ rc.setFromCamera(new THREE.Vector2(-1+i/10,-1+j/10),cam); n++;
+        if(!rc.ray.intersectPlane(pl,hit)||Math.abs(hit.x)>300+RIM_W||Math.abs(hit.z)>260+RIM_W)out++; }
+      worstV=Math.max(worstV,out/n);
+      for(const [tx,ty] of [[1,1],[3,1],[1,2]]){
+        const q=new THREE.Vector3((tx+0.5)*40-300,10,(ty+0.5)*40-260).project(cam);
+        worstP=Math.max(worstP,Math.abs(q.x),Math.abs(q.y));
+      }
+    }
+    check("S3.C close-up is board, not void: <=12% of the frame past the rim, MAKO's walk inside |ndc| 0.45",
+      worstV<=0.12&&worstP<=0.45, (worstV*100).toFixed(1)+"% void / |ndc| "+worstP.toFixed(3));
+  }
   let land=true;
   for(const d of CAM_PRESET)for(const t of [SHOW_DUR,SHOW_DUR+0.4]){
     const e=ft.introCam(1,t,d,3.3);
@@ -1217,22 +1240,25 @@ await sec("S3.E",async()=>{
   catch(e){ threw=true; console.log(e.message); }
   check("S3.E draw-call budget <=500 (spec §8; got "+calls+")",
     !threw&&calls>0&&calls<=500, String(calls));
-  // flame-cross opacity curve (§4): sc*(.55+.45*sin(24t)); Lambert/emissive
-  // machinery purged in the elements redesign
-  const w2=createWorld(45,1); loadLevel(w2,1,false); w2.time=0;
+  // flame-cross opacity curve (§4): sc*(.55+.45*cos(24*age)), age = the
+  // freshest blast's own clock, so every blast is born at full opacity. On
+  // the world clock (sin(24*time)) the opening's deterministic boom landed on
+  // the trough (eye-check 2026-10-09: a 0.1-opacity reveal blast in 3D).
+  // Lambert/emissive machinery purged in the elements redesign
+  const w2=createWorld(45,1); loadLevel(w2,1,false); w2.time=3*Math.PI/48; // sin(24*time)==-1
   w2.blades=[{x:200,y:120,tiles:[{tx:5,ty:3}],t:0,ttl:CFG.BLADE_TTL,
     variant:"normal"}];
   const sc2=buildScene(w2); sc2.update(w2);
   const bm=slotsOf(sc2.group,"blade")[0].material;
   const oFresh=bm.opacity;
-  w2.time=Math.PI/48; sc2.update(w2);        // sin(24t)==1 peak
-  const oPeak=bm.opacity;
+  w2.blades[0].t=Math.PI/48; sc2.update(w2);   // cos(24*age)==0
+  const scQ=1-Math.PI/48/CFG.BLADE_TTL, oQuarter=bm.opacity;
   w2.blades[0].t=w2.blades[0].ttl*0.8; w2.time=0; sc2.update(w2);
-  const oOld=bm.opacity;
-  check("S3.E flame opacity: fresh .55 -> flicker peak 1.0 -> aged .11",
-    Math.abs(oFresh-0.55)<1e-9&&Math.abs(oPeak-1.0)<1e-9
-    &&Math.abs(oOld-0.11)<1e-9, oFresh.toFixed(2)+"/"+oPeak.toFixed(2)
-    +"/"+oOld.toFixed(2));
+  const oOld=bm.opacity, want=0.2*(0.55+0.45*Math.cos(24*CFG.BLADE_TTL*0.8));
+  check("S3.E flame opacity: born at 1.0 on any world-clock phase -> .55*sc a quarter flicker on -> aged sc*(.55+.45cos)",
+    Math.abs(oFresh-1.0)<1e-9&&Math.abs(oQuarter-0.55*scQ)<1e-9
+    &&Math.abs(oOld-want)<1e-9, oFresh.toFixed(2)+"/"+oQuarter.toFixed(3)
+    +"/"+oOld.toFixed(3));
   check("S3.E blasts are unlit additive flame quads (emissive purged)",
     bm.isMeshBasicMaterial&&bm.transparent===true&&bm.depthWrite===false
     &&bm.blending===THREE.AdditiveBlending
@@ -1532,6 +1558,14 @@ await sec("S4.C",async()=>{
   const w=createWorld(73,1); loadLevel(w,1,false); w.time=0;
   w.blades=[{x:200,y:120,tiles:[{tx:5,ty:3}],t:0,ttl:CFG.BLADE_TTL,
     variant:"normal"}];
+  {
+    const quiet=createWorld(73,1); loadLevel(quiet,1,false);
+    const sq=buildScene(quiet); sq.update(quiet);
+    const bl=slotsOf(sq.group,"blade")[0];
+    check("S4.C outer blades carry instanceColor from the build, before any blast"
+        +" (the first boom compiles no new USE_INSTANCING_COLOR program: opening hitch)",
+      bl.count===0&&!!bl.instanceColor, String(!!bl.instanceColor));
+  }
   const sc=buildScene(w); sc.update(w);
   const layers=slotsOf(sc.group,"blade");
   check("S4.C blades are TWO layered instanced meshes (outer + core)",

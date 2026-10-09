@@ -911,6 +911,62 @@ function installAC(ac) {
   );
 }
 
+// ---- opening eye-check (2026-10-09): a short main-thread stall in a running
+//        stream keeps the grid — the missed steps drop whole, every later step
+//        still lands on t0 + k*STEP (the show's downbeat never drags) ----
+{
+  const ac = mkAC();
+  installAC(ac);
+  const a = createAudio();
+  a.setTrack("menu");
+  a.unlock();
+  for (let i = 0; i < 30; i++) {
+    ac.currentTime += 1 / 60;
+    a.pump();
+  }
+  ac.currentTime += 0.26; // one 260 ms frame (cold-browser raster stall)
+  for (let i = 0; i < 60; i++) {
+    a.pump();
+    ac.currentTime += 1 / 60;
+  }
+  const S = MUSIC_TRACKS.menu.A.STEP,
+    ts = [...new Set(ac.starts.map((x) => x.t))].sort((x, y) => x - y),
+    t0 = ts[0];
+  const off = ts.map((t) => Math.abs((t - t0) / S - Math.round((t - t0) / S)));
+  check(
+    "short stall (0.26 s) keeps the grid: every step on t0 + k*STEP",
+    ts.length >= 5 && ts[ts.length - 1] > 0.5 + 0.26 && Math.max(...off) < 1e-6,
+    ts.length + " steps, max off-grid " + Math.max(...off).toExponential(2),
+  );
+  check(
+    "short stall drops the missed steps instead of bunching them",
+    ts.every((t, i) => i === 0 || t - ts[i - 1] >= S - 1e-9),
+  );
+}
+
+// ---- opening eye-check (2026-10-09): one blast's bricks all break on one
+//        tick. N "brick" plays at one instant are N coherent copies of one
+//        crack (the show's PIERCE reveal summed 7 to a 1.22 output peak):
+//        the same instant plays it once, a later instant plays it again ----
+{
+  const ac = mkAC();
+  installAC(ac);
+  const a = createAudio();
+  a.unlock();
+  const n0 = ac.starts.length;
+  a.play("brick");
+  const one = ac.starts.length - n0;
+  for (let i = 0; i < 6; i++) a.play("brick");
+  const seven = ac.starts.length - n0;
+  ac.currentTime += 0.2;
+  a.play("brick");
+  check(
+    "seven brick plays at one instant start one crack; a later instant cracks again",
+    one > 0 && seven === one && ac.starts.length - n0 === 2 * one,
+    one + " / " + seven + " / " + (ac.starts.length - n0),
+  );
+}
+
 // ---- opening (2026-10-09): INTRO -> MENU is a setTrack("menu") no-op. A run
 //        that re-cues "menu" mid-stream schedules exactly what one that never
 //        re-cues does: neither stepN nor nextT is touched, so no seam. ----

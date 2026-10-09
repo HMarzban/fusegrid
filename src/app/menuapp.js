@@ -13,7 +13,7 @@ import { clampHeat } from "../core/heat.js";
 import { clampPact, PACT, togglePact } from "../core/pact.js";
 import { clampPace } from "../core/pace.js";
 import { clampSettings, DEFAULTS } from "./settings.js";
-import { SHOW_DUR, SKIP_GUARD } from "./intro.js";
+import { SHOW_DUR, SKIP_GUARD, TITLE_IN } from "./intro.js";
 export const SCREEN = Object.freeze({
   BOOT: 0,
   INTRO: 1,
@@ -153,6 +153,9 @@ export function createMenuApp(opts = {}) {
       if (this.screen === SCREEN.ATTRACT) return; // subT already advanced -> hint blink
       if (this.screen === SCREEN.INTRO) {
         if (this._showPending && this.boardReady) this._show();
+        // a title waiting on the board (3D loading) stands settled, so a load
+        // stall never freezes a half-revealed logo (eye-check 2026-10-09)
+        if (this.introStage === 0 && !this.boardReady) this.subT = Math.max(this.subT, TITLE_IN);
         /* The boom (not the clock) ends the show; +1 s is the safety net. It
            runs before the axis read so an arrow held since the press keeps
            the landing frame on PLAY (the _skipKey taps latch). */

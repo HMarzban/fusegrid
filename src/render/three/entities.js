@@ -1176,6 +1176,7 @@ export function createPools(biome, atlas) {
   blades.castShadow = false;
   blades.receiveShadow = false;
   blades.count = 0;
+  blades.setColorAt(0, BL_W); // instanceColor from frame 1: the first boom compiles no new program variant
   blades.userData.tag = "blade";
   group.add(blades);
   const coreGeo = new THREE.BoxGeometry(CFG.TILE * 0.4, 12, CFG.TILE * 0.4);
@@ -1397,14 +1398,15 @@ export function createPools(biome, atlas) {
     }
 
     let n = 0,
-      maxSc = 0;
+      maxSc = 0,
+      freshT = 0;
     const bls = world.blades || [];
     for (let i = 0; i < bls.length; i++) {
       const bl = bls[i],
         tls = bl.tiles;
       if (!tls) continue;
       const sc = Math.max(0.001, 1 - bl.t / (bl.ttl || 1));
-      if (sc > maxSc) maxSc = sc;
+      if (sc > maxSc) { maxSc = sc; freshT = bl.t; }
       const pop = 1 + 0.6 * Math.max(0, 1 - bl.t / ((bl.ttl || 1) * 0.15));
       for (let j = 0; j < tls.length && n < POOL_CAPS.blades; j++) {
         const tl = tls[j];
@@ -1431,9 +1433,12 @@ export function createPools(biome, atlas) {
     if (blades.instanceColor) blades.instanceColor.needsUpdate = true;
     cores.count = n;
     cores.instanceMatrix.needsUpdate = true;
-    /* flame-cross opacity: sc*(.55+.45*sin24t) freshness flicker; ember off */
+    /* flame-cross opacity: sc*(.55+.45*cos(24*age)) freshness flicker on the
+       freshest blast's own clock, so every blast is born at full opacity
+       (2D parity) and no world-clock phase can land a boom on the trough;
+       ember off */
     bladeMat.opacity =
-      n > 0 ? Math.max(0, maxSc * (0.55 + 0.45 * Math.sin(t * 24))) : 0;
+      n > 0 ? Math.max(0, maxSc * (0.55 + 0.45 * Math.cos(freshT * 24))) : 0;
     /* flash lights: ride the first FLASH_CAP blasts, brightness =
        remaining life; overflow blasts share nothing (pool capped). */
     for (let i = 0; i < FLASH_CAP; i++) {

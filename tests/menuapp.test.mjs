@@ -7,7 +7,7 @@ import {
   IDLE_T,
   createMenuApp,
 } from "../src/app/menuapp.js";
-import { SHOW_DUR } from "../src/app/intro.js";
+import { SHOW_DUR, TITLE_IN } from "../src/app/intro.js";
 import { Input } from "../src/input.js";
 import { createAudio } from "../src/audio.js";
 import { readFileSync } from "node:fs";
@@ -305,6 +305,23 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
   frames(b, 1, DT, null, false);
   check("pending show begins on the first ready frame, from the title pose it leaves",
     b.introStage === 1 && b._showPending === false && Math.abs(b.pressT - (t0 + DT)) < 1e-12 && b.subT === 0, b.pressT);
+}
+{
+  // eye-check 2026-10-09: REAL 3D froze for ~1.7 s on a half-revealed logo
+  // while three loaded. A title waiting on the board stands settled instead.
+  const a = createMenuApp();
+  a.boardReady = false;
+  frames(a, 1, DT, null, false);
+  const s1 = a.subT;
+  frames(a, 3, DT, null, false);
+  const s4 = a.subT;
+  a.boardReady = true;
+  frames(a, 2, DT, null, false);
+  check("a title waiting on the board holds its clock at the settled reveal (TITLE_IN) from the first frame, then runs on, never back",
+    s1 >= TITLE_IN && s4 >= s1 && a.subT > s4 && a.introStage === 0, s1 + " / " + s4 + " / " + a.subT);
+  const r = createMenuApp();
+  frames(r, 1, DT, null, false);
+  check("a ready board (2D) keeps the reveal from 0", r.subT < 0.1, r.subT);
 }
 {
   let marked = 0, n = 0;

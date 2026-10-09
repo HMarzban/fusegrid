@@ -85,7 +85,7 @@ export function drawShell(c, app, world, canvas, kind, getScores, getPlaques) {
       c,
       {
         cursor: app.cursor,
-        enterT: app.subT,
+        enterT: sl ? app.subT - sl.hold : app.subT, // the show's blast plays out before the rows
         items: [
           ITEMS[0] + "|" + heatToken(app.heat),
           ITEMS[1] + "|" + heatToken(app.heat),

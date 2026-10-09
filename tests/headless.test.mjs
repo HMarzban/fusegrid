@@ -1754,6 +1754,9 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   check("O2 the first MENU frame after a natural end: 0.12 dim, no fade, logo at logoScale*1.35",
     ns.fills[0]==="rgba(7,10,18,0.12)"&&ns.fills[1]!=="rgba(7,10,18,1)"&&ns.scales.includes(L.logoScale*1.35),
     ns.fills.slice(0,2)+" / "+ns.scales.slice(0,3));
+  const late=shot({screen:SCREEN.MENU,fromShow:true,subT:0.7,cursor:0,heat:0,dailyTag:""},lay("d"));
+  check("eye-check: after a natural end the blast reads first: no rows on the downbeat frame, PLAY once the 2S hold is over",
+    !ns.texts.includes("PLAY")&&late.texts.includes("PLAY")&&sk.texts.includes("PLAY"), ns.texts.join("|"));
   check("O2 the first MENU frame after a skip: 0.62 dim, then the opaque fade, logo at logoScale",
     sk.fills[0]==="rgba(7,10,18,0.62)"&&sk.fills[1]==="rgba(7,10,18,1)"&&sk.scales.includes(L.logoScale)
     &&!sk.scales.includes(L.logoScale*1.35), sk.fills.slice(0,2)+" / "+sk.scales.slice(0,3));

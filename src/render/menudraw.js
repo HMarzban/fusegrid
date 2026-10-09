@@ -28,7 +28,8 @@ const clamp01 = (t) => Math.max(0, Math.min(1, t));
 const seg = (t, a, b) => clamp01((t - a) / (b - a));
 /* Local copies of src/app/intro.js beats (pinned equal in menudraw.test). */
 export const SHOW_STEP = 0.137,
-  SKIP_GUARD = 0.2;
+  SKIP_GUARD = 0.2,
+  TITLE_IN = 0.9;
 const font = (size, weight) => (weight || "") + " " + size + "px " + MONO;
 const LINE = "#26324a",
   PLATE = "rgba(8,12,22,0.92)";
@@ -143,7 +144,7 @@ export function drawIntroChrome(c, stage, t, W, H, lay, rk = 1) {
   const v0 = show ? 0.45 + (0.12 - 0.45) * easeInOutCubic(seg(t, 0, 8 * SHOW_STEP)) : 0.45;
   c.fillStyle = "rgba(7,10,18," + (rk >= 1 ? v0 : 1 - clamp01(rk) * (1 - v0)) + ")";
   c.fillRect(0, 0, W, H);
-  const reveal = show ? 1 : easeOutCubic(seg(t, 0, 0.9)),
+  const reveal = show ? 1 : easeOutCubic(seg(t, 0, TITLE_IN)),
     exit = show ? easeInCubic(seg(t, 0, 0.3)) : 0;
   const a = reveal * (1 - exit);
   if (a > 0.01) {
@@ -189,19 +190,18 @@ export function drawIntroChrome(c, stage, t, W, H, lay, rk = 1) {
     }
     c.restore();
   }
-  const pin = show ? 1 - exit : easeOutCubic(seg(t, 0.6, 0.9));
+  const pin = show ? 1 - exit : easeOutCubic(seg(t, 0.6, TITLE_IN));
   if (pin > 0.01) {
-    c.font = font(18, "900");
+    // touch copy is phone-sized: the stage scales to ~0.6 on a portrait phone
+    const px = touch ? 26 : 18,
+      prompt = touch ? "TAP TO START" : "PRESS ANY KEY";
+    // a steady dark box (drawAttractHint's idiom) under a fill that pulses
+    // 0.45<->1 on the beat: legible at the pulse minimum over bright bricks
+    c.globalAlpha = pin;
+    backing(c, L.cx, L.footY, prompt.length * px * 0.6 + 24, px + 12);
+    c.font = font(px, "900");
     c.textAlign = "center";
     c.textBaseline = "middle";
-    const prompt = touch ? "TAP TO START" : "PRESS ANY KEY";
-    // steady dark keyline (the logo's idiom) under a fill that pulses
-    // 0.45<->1 on the beat: legible at the pulse minimum over a bright board
-    c.globalAlpha = pin;
-    c.lineJoin = "round";
-    c.lineWidth = 4;
-    c.strokeStyle = "rgba(7,10,18,0.9)";
-    c.strokeText(prompt, L.cx, L.footY);
     c.globalAlpha = show ? pin : pin * (0.725 + 0.275 * Math.cos((2 * Math.PI * t) / (4 * SHOW_STEP)));
     c.fillStyle = ACCENT;
     c.fillText(prompt, L.cx, L.footY);
@@ -209,20 +209,35 @@ export function drawIntroChrome(c, stage, t, W, H, lay, rk = 1) {
   }
   const ha = show ? easeOutCubic(seg(t, SKIP_GUARD, SKIP_GUARD + 0.3)) : 0;
   if (ha > 0) {
+    const px = touch ? 18 : 10,
+      hint = touch ? "TAP TO SKIP" : "ANY KEY TO SKIP",
+      w = hint.length * px * 0.6,
+      y = H - 8 - px / 2;
     c.globalAlpha = ha;
+    backing(c, W - 14 - w / 2, y, w + 16, px + 8);
     c.fillStyle = MUTED;
-    c.font = font(10);
+    c.font = font(px);
     c.textAlign = "right";
     c.textBaseline = "middle";
-    c.fillText(touch ? "TAP TO SKIP" : "ANY KEY TO SKIP", W - 14, H - 12);
+    c.fillText(hint, W - 14, y);
     c.globalAlpha = 1;
   }
 }
-/* MENU entered at the show's natural end: the logo slams (1.35 -> 1, alpha
-   0 -> 1, easeOutBack, 0.12 s) and the dim ramps 0.12 -> 0.62 over 0.35 s so
-   the blast reads before the menu settles. No white flash of its own. */
+function backing(c, cx, cy, w, h) {
+  c.fillStyle = "rgba(7,10,18,0.9)";
+  c.fillRect(cx - w / 2, cy - h / 2, w, h);
+  c.strokeStyle = LINE;
+  c.lineWidth = 1;
+  c.strokeRect(cx - w / 2 + 0.5, cy - h / 2 + 0.5, w - 1, h - 1);
+}
+/* MENU entered at the show's natural end: the logo slams on the downbeat
+   (1.35 -> 1, alpha 0 -> 1, easeOutBack, 0.12 s) while the blast plays
+   unobstructed for 2S (hold): the plate and rows enter after it (enterT =
+   subT - hold) and the dim ramps 0.12 -> 0.62 over the 0.35 s that follow.
+   No white flash of its own. */
 export function slamOf(t) {
-  return { dim: 0.12 + 0.5 * seg(t, 0, 0.35), s: 1.35 - 0.35 * easeOutBack(seg(t, 0, 0.12)), a: seg(t, 0, 0.12) };
+  const hold = 2 * SHOW_STEP;
+  return { dim: 0.12 + 0.5 * seg(t, hold, hold + 0.35), s: 1.35 - 0.35 * easeOutBack(seg(t, 0, 0.12)), a: seg(t, 0, 0.12), hold };
 }
 
 /* MAIN MENU over the dimmed frozen arena. ui={cursor,items,enterT}; item
@@ -275,7 +290,13 @@ export function drawMenu(c, ui, L, t) {
   const n = items.length;
   const { bx, y0, rw, h, span, padY } = menuGeom(L, n);
   const padX = 16;
+  // enterT < 0 holds the menu back (the show's blast reads first): nothing,
+  // then the plate fades in over the last 0.12 s before the rows enter
+  const pa = et < 0 ? clamp01(1 + et / 0.12) : 1;
+  if (pa <= 0) return;
+  c.globalAlpha = pa;
   plate(c, bx, y0, rw, h);
+  c.globalAlpha = pa;
   const size = 13;
   const rh = Math.max(16, span - 4);
   const slotL = bx + padX + 22;
@@ -323,12 +344,14 @@ export function drawMenu(c, ui, L, t) {
     }
     c.globalAlpha = 1;
   }
+  c.globalAlpha = pa;
   c.fillStyle = MUTED;
   c.font = font(10);
   c.textAlign = "center";
   c.fillText("↑↓ MOVE · ENTER SELECT", L.cx, L.footY - 16);
   c.fillStyle = selAccent(items, cur);
   c.fillText("SOURCE  github.com/HMarzban/fusegrid", L.cx, L.footY);
+  c.globalAlpha = 1;
 }
 function selAccent(items, cur) {
   return String(items[cur] || "").indexOf("SOURCE") === 0 ? ACCENT : MUTED;

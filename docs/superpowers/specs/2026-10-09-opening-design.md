@@ -223,8 +223,8 @@ two grids are offset. That offset is disclosed in §13.
 | 0.20 s | — | The skip guard opens: before this, every skip path is a no-op (§6). The skip hint fades in at 10 px, muted, bottom-right: `ANY KEY TO SKIP` / `TAP TO SKIP`. |
 | 0.548 | 4S | **MAKO pops in:** `pop` runs 0 → 1 with `easeOutBack` over 0.25 s, overshooting ~1.1. |
 | 1.096 | 8S | The camera reaches the close-up on MAKO and holds. |
-| 1.884 | 32S − FUSE | **The fuse lights:** the scripted fire edge plants a bomb. The sim's own fuse spark and the `bomb` SFX come from the renderer's event drain. |
-| ~1.9–3.0 | — | MAKO walks plant-and-leave to a diagonal-safe tile. |
+| 1.884 | 32S − FUSE | **The fuse lights:** the scripted fire edge plants a bomb on (3,1). The sim's own fuse spark and the `bomb` SFX come from the renderer's event drain. Eye-check fix 2026-10-09: it is a PIERCE bomb (the throwaway player's `bombKind`), so the reveal is a 13-tile T through 7 bricks, not a 3-tile corner cross. |
+| ~1.9–2.8 | — | MAKO walks plant-and-leave back to the spawn tile and down to (1,2), off both arms. |
 | 2.192 | 16S | The camera pulls back (`easeInOutCubic`). It lands **exactly** on rig C at the selected CAMERA preset at `32S`. |
 | **4.384** | **32S** | **Blast = reveal** (detail below). The sim detonates (`FUSE 2.5`, within one `CFG.STEP` of `32S`, pinned), playing `boom` plus the renderer's own flash and shake. |
 
@@ -240,6 +240,16 @@ table cell broke the markdown):
 - The camera reaches rig C at `subT = 32S` and holds there until the boom, so
   there is no pop.
 - Safety net: `subT >= SHOW_DUR + 1.0` flips to MENU anyway.
+- **Eye-check fix 2026-10-09 (the blast is the climax):** the plate, rows
+  and footer hold back for `2S` (0.274 s) so the blast plays unobstructed
+  under the slamming logo. The plate fades in over the last 0.12 s of the
+  hold, the rows enter at `enterT = subT − 2S`, and the dim ramps 0.12 → 0.62
+  over the 0.35 s after the hold. The 3D flame-cross flicker runs on the
+  freshest blast's own clock (`cos(24·age)`), so every blast is born at full
+  opacity. On the world clock, the show's deterministic boom landed on the
+  trough at 0.1 opacity. Same-instant `brick` SFX play once: seven coherent
+  copies peaked at 1.22 and clipped; the measured peak is now 0.52, against
+  0.49 for the old single-brick boom.
 - **The logo slams** on the bar downbeat: scale 1.35 → 1.0, alpha 0 → 1,
   `easeOutBack`, 0.12 s. The MENU dim ramps 0.12 → 0.62 over 0.35 s, so the
   blast reads before the menu settles. The rows use today's `enterT`
@@ -342,6 +352,10 @@ export function armUnlock(target, audio, onReady)  // returns disarm()
   - **`pump()` returns early unless `unlocked()`** (review 2026-10-09; §1's
     third defect). Before this, `pump()` checked `musicGain`, so a failed
     unlock scheduled step 0 into a frozen clock.
+    - Eye-check fix 2026-10-09: in a running stream (`stepN > 0`), a gap
+      under 1 s drops the missed steps whole, so the grid holds. Step 0 and
+      long gaps still re-anchor. A cold 260 ms raster stall had dragged the
+      grid +0.092 s.
     - With the gate, the first running `pump()` hits the catch-up clamp and
       plays step 0 at or after `currentTime`.
   - The `music.test.mjs` `mkAC` stub already carries `state: "running"`, and
@@ -430,7 +444,12 @@ Notes:
   - `ro.intro = {stage, t, pressT}` drives `introCam` in `wrapper.js:128`.
   - Title pose: `el 0.80`, `dist base·1.12`, `target [0,TARGET_Y,0]`, with the
     az drift from §3.
-  - Close-up: target on MAKO's spawn-tile centre, `dist base·0.55`,
+  - Close-up (eye-check fix 2026-10-09; the old spawn-tile aim at el 0.80,
+    az −0.35, `base·0.55` was half void, with MAKO walking off-centre):
+    target `(2.75, 2.75)` tiles, inside the corner. `el 0.55`, `az −0.1`, and
+    `dist BASE_DIST·0.40`, fixed for every preset. At most 12% of the frame
+    lies past the rim, and the walk (1,1)/(3,1)/(1,2) stays inside
+    |ndc| 0.45 (pinned). Was: target on MAKO's spawn-tile centre, `dist base·0.55`,
     `el 0.80`, `az −0.35`.
   - `introCam(1, 0, base, pT)` must deep-equal `introCam(0, pT, base)`: no
     pop at the press.
@@ -440,6 +459,13 @@ Notes:
 - **iso** (pinned legacy, `?render=iso` only): it rides the same 2D canvas
   transform as today. MAKO's pop is not honoured; he is simply present.
   Accepted.
+- **Eye-check fix 2026-10-09:** a title waiting on the board holds `subT`
+  at or above `TITLE_IN` (0.9), so it is drawn settled. A load stall then
+  freezes a whole logo, not a half-revealed one. The 3D wrapper also runs a
+  one-off warm pass per scene: every pooled mesh is shown, an empty instanced
+  pool gets one instance, and the frame is discarded. The GPU then builds
+  MAKO's and the blast's pipelines on the title, not on the pop and reveal
+  frames. Outer blades carry `instanceColor` from the build.
 - **First paint never waits for three.**
   - The overlay title (logo and prompt) draws from frame 1 on `#c`.
   - While kind is `3d` and the lazy bundle has not arrived, the board under
@@ -464,7 +490,9 @@ Notes:
     which is how Node tests and `three.test` are ready at once.
 - **The show world** (`createShow()` / `stepShow(show, dt, app, live)` in
   `intro.js`, mirroring attract's `createDemo` / `stepDemo` with the same
-  `n > 6` anti-spiral cap; one signature, matching §10):
+  anti-spiral cap raised to a whole 0.25 s frame (main's dt clamp), so a
+  stall never drops show time and the boom stays within a frame of `32S`;
+  eye-check fix 2026-10-09, was `n > 6`; one signature, matching §10):
   - CORE level 1 at fixed `SHOW_SEED`: heat 0, pact 0, pace 0.
   - `state` forced to PLAY.
   - Every enemy is held with `e.speed = 0`, set on the throwaway world's
@@ -513,6 +541,11 @@ Notes:
     import. `menudraw.js` keeps local copies of `SHOW_STEP` and `SKIP_GUARD`,
     as it does today with `DUR` (`menudraw.js:30`). A `menudraw.test` pin
     checks that the copies equal `intro.js`'s values.
+  - Eye-check fix 2026-10-09: the prompt and the skip hint each sit on a dark
+    backing box (`drawAttractHint`'s idiom). The prompt's minimum contrast is
+    now 3.5:1 over JUNGLE bricks, against 1.6:1 before. Touch copy is sized
+    for phones: `TAP TO START` 26 px and `TAP TO SKIP` 18 px, about 15.5 and
+    10.8 CSS px at `p`. Desktop keeps 18 and 10.
   - Strings: `PRESS ANY KEY` and `TAP TO START` (18 px, weight 900);
     `ANY KEY TO SKIP` and `TAP TO SKIP` (10 px).
   - Each must fit inside `W − 28` at 600×520 and 608×352 by the 0.6 em mono

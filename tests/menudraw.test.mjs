@@ -1161,8 +1161,8 @@ function check(name, cond, detail) {
 {
   const md = await import("../src/render/menudraw.js");
   const intro = await import("../src/app/intro.js");
-  check("menudraw's SHOW_STEP / SKIP_GUARD copies equal src/app/intro.js",
-    md.SHOW_STEP === intro.SHOW_STEP && md.SKIP_GUARD === intro.SKIP_GUARD);
+  check("menudraw's SHOW_STEP / SKIP_GUARD / TITLE_IN copies equal src/app/intro.js",
+    md.SHOW_STEP === intro.SHOW_STEP && md.SKIP_GUARD === intro.SKIP_GUARD && md.TITLE_IN === intro.TITLE_IN);
   const rec = () => {
     const texts = [], fills = [];
     const c = new Proxy({}, {
@@ -1190,9 +1190,19 @@ function check(name, cond, detail) {
     check(`show ${W}x${H}: no skip hint inside SKIP_GUARD, TAP TO SKIP after it on touch`,
       !pre.texts.some((x) => /SKIP/.test(x.s)) && post.texts.some((x) => x.s === "TAP TO SKIP"),
       post.texts.map((x) => x.s).join("|"));
-    const fits = [["PRESS ANY KEY", 18], ["TAP TO START", 18], ["ANY KEY TO SKIP", 10], ["TAP TO SKIP", 10]]
+    const fits = [["PRESS ANY KEY", 18], ["TAP TO START", 26], ["ANY KEY TO SKIP", 10], ["TAP TO SKIP", 18]]
       .every(([str, px]) => str.length * px * 0.6 <= W - 28);
-    check(`all four opening strings fit W-28 at ${W}x${H} (0.6 em mono advance)`, fits);
+    check(`all four opening strings fit W-28 at ${W}x${H} (0.6 em mono advance, touch copy at its phone size)`, fits);
+    const px = (r, re) => { const x = r.texts.find((t) => re.test(t.s)); return x ? parseFloat(/(\d+)px/.exec(x.font)[1]) : 0; };
+    const tp = rec(); md.drawIntroChrome(tp.c, 0, 1.0, W, H, "p");
+    const ts = rec(); md.drawIntroChrome(ts.c, 1, 0.6, W, H, "l");
+    const dk = rec(); md.drawIntroChrome(dk.c, 1, 0.6, W, H, "d");
+    check(`touch copy is phone-sized at ${W}x${H}: TAP TO START 26 px, TAP TO SKIP 18 px; desktop keeps 18 / 10`,
+      px(tp, /TAP TO START/) === 26 && px(ts, /TAP TO SKIP/) === 18 && px(rec0(), /PRESS ANY KEY/) === 18 && px(dk, /ANY KEY TO SKIP/) === 10);
+    check(`prompt and skip hint each sit on a dark backing box (contrast over bright bricks) at ${W}x${H}`,
+      tp.fills.filter((f) => f === "rgba(7,10,18,0.9)").length === 1 && ts.fills.filter((f) => f === "rgba(7,10,18,0.9)").length === 1,
+      tp.fills.join("|") + " // " + ts.fills.join("|"));
+    function rec0() { const r = rec(); md.drawIntroChrome(r.c, 0, 1.0, W, H, "d"); return r; }
     const nr = rec();
     md.drawIntroChrome(nr.c, 0, 3, W, H, "d", 0);
     const rd = rec();
@@ -1200,9 +1210,19 @@ function check(name, cond, detail) {
     check(`title veil is opaque while the board is not ready, 0.45 once it is (${W}x${H})`,
       nr.fills[0] === "rgba(7,10,18,1)" && rd.fills[0] === "rgba(7,10,18,0.45)", nr.fills[0] + " / " + rd.fills[0]);
   }
-  const a = md.slamOf(0), b = md.slamOf(0.12), e = md.slamOf(0.35);
-  check("MENU slam after the show: logo 1.35 -> 1, alpha 0 -> 1 over 0.12 s; dim 0.12 -> 0.62 over 0.35 s",
-    a.s === 1.35 && a.a === 0 && a.dim === 0.12 && b.s === 1 && b.a === 1 && e.dim === 0.62, JSON.stringify([a, b, e]));
+  const a = md.slamOf(0), b = md.slamOf(0.12), h = md.slamOf(2 * md.SHOW_STEP), e = md.slamOf(2 * md.SHOW_STEP + 0.35);
+  check("MENU slam after the show: logo 1.35 -> 1, alpha 0 -> 1 over 0.12 s on the downbeat; the dim holds 0.12 for 2S, then 0.62 over 0.35 s",
+    a.s === 1.35 && a.a === 0 && a.dim === 0.12 && b.s === 1 && b.a === 1 && h.dim === 0.12 && e.dim === 0.62 && a.hold === 2 * md.SHOW_STEP,
+    JSON.stringify([a, b, h, e]));
+  {
+    // the blast reads first: with enterT held back the plate and rows are not painted, then fade in
+    const L = md.layout(600, 520), items = ["PLAY|CORE", "LEVEL SELECT|CORE", "DAILY", "OPTIONS", "GUIDE", "HIGH SCORES", "STATS", "SOURCE"];
+    const paint = (et) => { const r = rec(); md.drawMenu(r.c, { cursor: 0, enterT: et, items }, L, 0); return r; };
+    const held = paint(-0.2), mid = paint(-0.06), set = paint(1);
+    check("MENU held behind the blast: enterT < -0.12 paints no plate and no rows; the plate fades in over the last 0.12 s",
+      held.fills.length === 0 && !held.texts.some((t) => t.a > 0) && mid.fills.length > 0 && set.texts.some((t) => t.s === "PLAY" && t.a === 1),
+      held.fills.length + " fills / " + mid.fills.length);
+  }
 }
 
 console.log("\n  MENUDRAW RESULT: " + pass + " PASS / " + fail + " FAIL");

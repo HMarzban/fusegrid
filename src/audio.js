@@ -56,7 +56,8 @@ export function createAudio(opts) {
   let musicGain = null,
     nextT = 0,
     stepN = 0,
-    ducked = false;
+    ducked = false,
+    brickT = -1;
   let curId = "menu",
     wantId = "menu";
   let nbuf = null;
@@ -289,8 +290,14 @@ export function createAudio(opts) {
     try {
       /* catch-up clamp: RAF pauses on hidden tabs while ctx.currentTime keeps
          running; without this, resume schedules every missed step at past
-         timestamps as one burst glitch */
-      if (nextT < ctx.currentTime) nextT = ctx.currentTime + 0.05;
+         timestamps as one burst glitch. A short main-thread stall in a running
+         stream drops the missed steps whole instead, so the grid (the show's
+         downbeat) never drags; a long gap or step 0 re-anchors. */
+      if (nextT < ctx.currentTime) {
+        if (stepN > 0 && ctx.currentTime - nextT < 1)
+          while (nextT < ctx.currentTime) nextT += patOf(stepN++).STEP;
+        else nextT = ctx.currentTime + 0.05;
+      }
       const horizon = ctx.currentTime + LOOKAHEAD;
       while (nextT <= horizon) {
         const P = patOf(stepN);
@@ -375,6 +382,10 @@ export function createAudio(opts) {
           voice("triangle", 311, 196, 0.08, 0.05);
           break;
         case "brick":
+          // one blast breaks its bricks on one tick: N copies at one instant
+          // only sum louder (a PIERCE through 7 clips), so the crack plays once
+          if (ctx && ctx.currentTime === brickT) break;
+          brickT = ctx ? ctx.currentTime : -1;
           noise(0.048, fact ? 0.09 : 0.08, {
             t: "bandpass",
             f0: ice ? 1600 : 1150,
