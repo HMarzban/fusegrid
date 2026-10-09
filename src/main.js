@@ -337,9 +337,9 @@ export function createGame(canvas, opts = {}) {
     saveCabinetSeen(); // ?play=1 skips bootFromIntro, whose own markCabinet never fires
   }
   /* Opening show world (src/app/intro.js): its OWN slot, never demo's. Backs
-     INTRO and the MENU it reveals; dropped for good at GAME / ATTRACT. Deep
+     INTRO and the MENU it reveals; dropped for good on a user skip or at GAME / ATTRACT. Deep
      links and autoplay never build it. */
-  let show = app.screen === SCREEN.INTRO ? createShow() : null;
+  let show = app.screen === SCREEN.INTRO ? createShow() : null, showKept = false;
 
   /* app.update() contract adapter over the live Input (held axes + fire) */
   const shellInput = {
@@ -676,8 +676,11 @@ export function createGame(canvas, opts = {}) {
       if (!demo) demo = createDemo();
       stepDemo(demo, dt);
     } else if (demo) demo = null;
-    if (attract || app.screen === SCREEN.GAME) show = null;
-    else if (show) stepShow(show, dt, app, app.screen !== SCREEN.INTRO ? 2 : app.introStage); // before render drains its events
+    // a USER skip drops the show world (its bomb never blows behind MENU, the
+    // skip's fade hides the swap); only the natural end keeps it as backdrop
+    if (show && !showKept && app.screen !== SCREEN.INTRO) showKept = app.fromShow;
+    if (attract || app.screen === SCREEN.GAME || (show && app.screen !== SCREEN.INTRO && !showKept)) show = null;
+    else if (show) stepShow(show, dt, app, app.screen !== SCREEN.INTRO || app.introStage); // before render drains its events
     // render: INTRO flyover transform wraps the ARENA draw only (zoom>=1 so
     // no edge gaps); camX/camY are canvas fractions. ATTRACT renders the DEMO
     // world with HUD suppressed; every other screen renders the frozen live
@@ -727,7 +730,7 @@ export function createGame(canvas, opts = {}) {
               time: { on: !!app.timeAttack, t: roomT, best: bestPrev }, ghost: ghostAt(ghost, world, roomT),
               run: { r: tally.r, k: tally.k, p: tally.p, t: runT, best: bestRun, fromStart: runFromStart, daily: dailyDate, tries: dailyRec.played, dbest: dailyRec.best, md: medalLine(tally.mn) },
             }
-          : { hud: false, sfx: !show }; // a skipped show's plant and boom stay silent behind MENU
+          : { hud: false };
     // BRIGHTNESS is 3D only — CLASSIC 2D blits the authored hex unregraded.
     if (curKind === "3d") ro = { ...(ro || {}), bright: settings.bri / 100 };
     renderer.render(attract && demo ? demo.world : show ? show.world : world, dt, ro);

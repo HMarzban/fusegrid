@@ -74,13 +74,12 @@ export function createShow() {
 
 /* Same accumulator as stepDemo, but the cap catches up a whole 0.25 s frame
    (main's dt clamp): the boom, and so MENU, never lags the show clock and the
-   music grid by more than a frame after a stall. mode 0 = title (no step),
-   1 = the show (scripted), 2 = after INTRO: the walk keeps going but never
-   fires, so a skip before the plant leaves no bomb behind MENU and a skip
-   after it still walks MAKO clear of the blast (never a LOSE overlay). Sets
+   music grid by more than a frame after a stall. live falsy = title (no step).
+   Only the natural end steps it behind MENU (a skip drops the world in main),
+   and past the boom the script never fires again and emits no event. Sets
    app.showBoom on the show bomb's boom before the renderer drains events. */
-export function stepShow(show, dt, app, mode) {
-  if (!mode) return;
+export function stepShow(show, dt, app, live) {
+  if (!live) return;
   show.acc += dt;
   let k = 0;
   while (show.acc >= CFG.STEP) {
@@ -89,7 +88,7 @@ export function stepShow(show, dt, app, mode) {
     for (const s of SHOW_SCRIPT) if (show.n >= s[0]) r = s;
     show.it.move.x = r[1];
     show.it.move.y = r[2];
-    show.it.fire = mode === 1 && !!r[3];
+    show.it.fire = !!r[3];
     const ev = show.world.events, e0 = ev.length;
     step(show.world, CFG.STEP, { 0: show.it });
     for (let i = e0; i < ev.length; i++) if (ev[i].t === "boom" && app) app.showBoom = true;

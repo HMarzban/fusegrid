@@ -112,18 +112,19 @@ function runShow(){
   check("stepShow still caps a runaway frame (no spiral)", t.n<=Math.ceil(0.25/CFG.STEP)+2&&t.acc===0, t.n);
 }
 
-// ---- a skipped show: the walk goes on behind MENU, the fire never does ----
-for(const [skipAt,wantBomb] of [[0.3,false],[1.0,false],[2.0,true],[2.2,true]]){
-  const s=createShow(), app={showBoom:false}, ev=[];
-  for(let i=0;i<Math.round(8/CFG.STEP);i++){
-    stepShow(s,CFG.STEP*(1+1e-9),app,s.n*CFG.STEP<skipAt?1:2);
-    for(const e of s.world.events)ev.push(e.t); s.world.events.length=0;
+// ---- past the boom the show is silent: a skip drops the world (main), and
+// the natural end's tail behind MENU fires no second bomb and emits no event,
+// so MENU needs no sfx gate ----
+{
+  const s=createShow(), app={showBoom:false}, tail=[];
+  let boom=false;
+  for(let i=0;i<Math.round(60/CFG.STEP);i++){
+    stepShow(s,CFG.STEP*(1+1e-9),app,true);
+    for(const e of s.world.events) if(boom) tail.push(e.t); else if(e.t==="boom") boom=true;
+    s.world.events.length=0;
   }
-  const bombs=ev.filter(e=>e==="bomb").length;
-  check("skip at "+skipAt+" s: "+(wantBomb?"the planted bomb still blows":"zero bombs, ever")
-    +"; MAKO alive, PLAY, no hurt/kill",
-    bombs===(wantBomb?1:0)&&s.world.players[0].alive!==false&&s.world.state==="PLAY"&&!ev.includes("hurt")&&!ev.includes("kill"),
-    ev.join());
+  check("natural end: 60 s past the boom, no event at all (no second bomb, no pickup, no hurt)",
+    boom&&tail.length===0&&s.world.bombs.length===0&&s.world.players[0].alive!==false&&s.world.state==="PLAY", tail.join());
 }
 
 // ---- hitch pin: MENU opens one frame after the boom, never before ----
@@ -135,7 +136,7 @@ for(const [skipAt,wantBomb] of [[0.3,false],[1.0,false],[2.0,true],[2.2,true]]){
     const dt=f<dts.length?dts[f]:1/60;
     app.update(dt,null);
     if(app.screen===SCREEN.MENU){menuF=f;break;}
-    stepShow(s,dt,app,app.screen!==SCREEN.INTRO?2:app.introStage);
+    stepShow(s,dt,app,app.screen!==SCREEN.INTRO||app.introStage);
     if(boomF<0&&s.world.events.some(e=>e.t==="boom")){boomF=f; boomT=app.subT;}
     s.world.events.length=0;
     f++;

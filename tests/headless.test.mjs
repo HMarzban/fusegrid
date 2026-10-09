@@ -81,8 +81,8 @@ check("null-canvas renderer render() does not throw", ok);
   for(let i=0;i<20;i++){ t+=16; g.loop(t); }
   g.app.key("Enter");                          // skip at ~0.3 s, before the plant
   for(let i=0;i<400;i++){ t+=16; g.loop(t); if(g.show&&g.show.world.bombs.length)planted=true; }
-  check("a skip before the plant leaves no bomb behind MENU (the show world never fires after INTRO)",
-    g.app.screen===SCREEN.MENU&&!!g.show&&!planted&&g.show.world.state==="PLAY", String(planted));
+  check("a skip before the plant drops the show world: MENU backs onto the live world, no bomb behind it",
+    g.app.screen===SCREEN.MENU&&g.show===null&&!planted, String(planted));
 }
 {
   const g=createGame(null,{seed:42});

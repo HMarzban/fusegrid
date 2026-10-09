@@ -8,6 +8,7 @@ import { SCREEN, ITEMS, GUIDE_ROWS, PAUSE_ITEMS, IDLE_T } from "../src/app/menua
 import { SHOW_STEP, SHOW_DUR, popOf } from "../src/app/intro.js";
 import { CFG } from "../src/core/config.js";
 import { dailySeed } from "../src/app/daily.js";
+import { getFlash, getShake } from "../src/render/fx.js";
 import { copyPayload, drawOverlay, overlayBox, overlayCue } from "../src/render/scenes.js";
 import { createToast, copyText, toastOf, toastTick, TOAST_T } from "../src/app/endkeys.js";
 
@@ -132,17 +133,34 @@ for (const code of ["Enter", "NumpadEnter", "Escape", "Backspace", "ArrowDown", 
   g.tick(Math.ceil((IDLE_T + 0.5) * 60));
   check("MENU idle -> ATTRACT drops the show world", g.app.screen === SCREEN.ATTRACT && g.show === null, g.app.screen);
 }
-/* a skipped show keeps stepping behind MENU (its brick still breaks), but its
-   boom never reaches audio; an unskipped show's boom does. */
-for (const skip of [false, true]) {
+/* a USER skip drops the show world: the live world backs MENU and the show
+   bomb never goes off behind it (no flash, no shake, no boom); only the
+   natural end keeps the show world, and its reveal boom sounds. */
+for (const at of [1.0, 2.0, 3.0, 4.0]) {
   const plays = [];
   const g = mk({ audio: { play: (n) => plays.push(n), toggle: () => false, duck: noop, pump: noop, unlocked: () => false } });
   press(g, "KeyA");
-  while (!g.show.world.bombs.length && g.t < 4000) g.tick();
-  if (skip) press(g, "Enter");
-  g.tick(Math.ceil((CFG.FUSE + 0.5) * 60));
-  check("INTRO " + (skip ? "skipped after the plant: the boom stays silent behind MENU" : "unskipped show: the reveal boom sounds"),
-    g.app.screen === SCREEN.MENU && g.show.world.grid[CFG.COLS + 5] === 0 && plays.includes("boom") === !skip, plays.join());
+  while (g.app.subT < at && g.t < 20000) g.tick();
+  press(g, "Enter");
+  let fl = 0, sh = 0, rw = true;
+  for (let i = 0; i < Math.ceil((SHOW_DUR + 1.5) * 60); i++) {
+    g.tick();
+    const k = getShake();
+    fl = Math.max(fl, getFlash()); sh = Math.max(sh, Math.abs(k.x), Math.abs(k.y));
+    rw = rw && g.rw === g.world;
+  }
+  check("INTRO skip at " + at + " s: MENU on the live world, no flash, no shake, no boom",
+    g.app.screen === SCREEN.MENU && g.show === null && rw && fl === 0 && sh === 0 && !plays.includes("boom"),
+    g.app.screen + " show " + !!g.show + " live " + rw + " flash " + fl + " shake " + sh + " " + plays.join());
+}
+{
+  const plays = [];
+  const g = mk({ audio: { play: (n) => plays.push(n), toggle: () => false, duck: noop, pump: noop, unlocked: () => false } });
+  press(g, "KeyA");
+  g.tick(Math.ceil((SHOW_DUR + 0.5) * 60));
+  check("INTRO natural end: MENU keeps the show world, its brick broken, and the reveal boom sounds",
+    g.app.screen === SCREEN.MENU && g.app.fromShow && g.rw === g.show.world && g.show.world.grid[CFG.COLS + 5] === 0 && plays.includes("boom"),
+    g.app.screen + " " + plays.join());
 }
 
 // ---- MENU: arrows, Enter on every row, Space confirm, idle -> ATTRACT ----

@@ -6,6 +6,12 @@ version number of its own; each entry is dated and names the PWA shell
 revision (`CACHE_NAME` in `src/pwa/shell.js`) that shipped it, since that is
 what makes an installed copy update.
 
+## shell v175 · 2026-10-09
+
+### Fixed
+- Skipping the opening show after MAKO lights the fuse no longer flashes and
+  shakes the menu a moment later.
+
 ## shell v174 · 2026-10-09
 
 ### Added

@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-09 — A skipped show no longer blows behind MENU (shell v175)
+- A user skip drops the show world (main's `showKept` latch reads `app.fromShow`), so MENU backs onto the live world; only the natural end keeps it. `stepShow` mode 2 and `sfx:!show` removed (the post-boom tail emits no events). Pins: skip at 1/2/3/4 s -> no flash/shake/boom, live world.
+
 ## 2026-10-09 — Opening close-out docs (shell v174)
 - CHANGELOG v174 entry, README opening bullet, AGENTS autoplay-policy test fact. Still open: a skip after the plant leaks the show blast's flash/shake under MENU (audio muted), cold 2D GPU stall, real-GPU hitch check, phone empty band.
 

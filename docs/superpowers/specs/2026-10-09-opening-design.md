@@ -181,6 +181,14 @@ boot ─┬─ ?play=1 / autoplay / decodable ?code= ──► GAME   (no title,
 - MENU entered at the natural end of the show sets `app.fromShow = true`,
   which turns on the logo slam and the dim ramp in §7. A user skip leaves it
   `false` and keeps today's 0.25 s `drawFade`.
+- Fix 2026-10-09 (shell v175): a user skip also **drops the show world**.
+  The live world backs MENU, as before the opening, and the 0.25 s fade hides
+  the swap. Only the natural end keeps the show world as MENU's backdrop.
+  v172-v174 kept stepping it behind MENU (`stepShow` mode 2, `sfx:!show`), so
+  a skip after the plant (`subT >= 1.88`) still blew the bomb 0.4-2.5 s later:
+  muted, but its flash (up to 0.94) and shake (1.6-2.0) leaked onto MENU. Both
+  the mode and the gate are gone: past the boom the script never fires and
+  emits no event (pinned over 60 s), so the natural end's tail is silent.
 
 ## 3. Beats
 
@@ -510,11 +518,12 @@ Notes:
   - `show = createShow()` at boot when the screen is INTRO; `null` for deep
     links and autoplay.
   - It renders `attract && demo ? demo.world : show ? show.world : world`.
-  - `show` stays on MENU and its subscreens, so the post-blast board (broken
-    bricks, MAKO moved) does not pop back to the live world. It is stepped
-    there with NOOP intents.
-  - It is set to `null` the first frame the screen is GAME or ATTRACT, and is
-    never recreated.
+  - After the natural end, `show` stays on MENU and its subscreens, so the
+    post-blast board (broken bricks, MAKO moved) does not pop back to the
+    live world. It is stepped there with NOOP intents.
+  - It is set to `null` the first frame the screen is GAME or ATTRACT, or the
+    first frame past INTRO after a user skip (fix 2026-10-09, shell v175; see
+    §2), and is never recreated.
   - After that, the live world backs MENU, as today.
   - The game handle gains `get show()` for tests.
 - **MAKO pop:** `ro.pop` is in `[0, ~1.1]`.
