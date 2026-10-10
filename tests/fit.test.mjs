@@ -1,4 +1,4 @@
-import { ACT_GEO, FIT_RES, PORT_GAME, PORT_GEO, actGeo, fitBox, mountFit, portraitGeo } from "../src/app/fit.js";
+import { ACT_GEO, FIT_RES, PORT_GAME, PORT_GEO, actGeo, fitBox, mountFit, portraitGeo, pxBox, pxBack } from "../src/app/fit.js";
 
 let pass = 0,
   fail = 0;
@@ -275,6 +275,49 @@ check("scale floors at 0.3 and caps at 1.8",
   const tiny = [[200, 300], [0, 0], [240, 320]].flatMap(([W, H]) => [portraitGeo(W, H, 600, 520), portraitGeo(W, H, 600, 520, true)]);
   check("portraitGeo (MENU and GAME) on a tiny viewport never puts pad/bomb over the board (padTop, bombTop >= gap)",
     tiny.every((g) => g.padTop >= PORT_GEO.gap && g.bombTop >= PORT_GEO.gap), JSON.stringify(tiny));
+}
+
+{
+  const cv = { width: 600, height: 520, style: {} }, fit = mountFit(cv);
+  let threw = false; try { fit.setPxCap(1.5); fit.setPxCap(0); } catch (e) { threw = e; }
+  check("headless: fit.setPxCap exists on the no-op fit and never throws", typeof fit.setPxCap === "function" && !threw && Object.keys(cv.style).length === 0, String(threw));
+  const B = pxBox(829.25, 718.5, 2, 1, 1);
+  check("pxBack: cap >= dpr (or none) is exactly the snapped backing; cap < dpr scales the same CSS content box",
+    JSON.stringify(pxBack(B, 2, 2)) === JSON.stringify({ bw: B.bw, bh: B.bh }) && JSON.stringify(pxBack(B, 2, 3)) === JSON.stringify({ bw: B.bw, bh: B.bh }) &&
+      JSON.stringify(pxBack(B, 2, Infinity)) === JSON.stringify({ bw: B.bw, bh: B.bh }) && JSON.stringify(pxBack(B, 2, 0)) === JSON.stringify({ bw: B.bw, bh: B.bh }) &&
+      JSON.stringify(pxBack(B, 2, 1.5)) === JSON.stringify({ bw: Math.round(B.w * 1.5), bh: Math.round(B.h * 1.5) }) && pxBack(B, 2, 1).bw === Math.round(B.w), JSON.stringify(pxBack(B, 2, 1.5)));
+}
+
+for (const [lay, W, H, touch, dpr] of [["d", 1440, 900, false, 2], ["p", 390, 844, true, 3], ["l", 844, 390, true, 3]]) {
+  const px = { style: {}, dataset: {}, hidden: false, getBoundingClientRect: () => ({ left: 12.37 + parseFloat(px.style.left || 0), top: 40.61 + parseFloat(px.style.top || 0) }) };
+  const win = { innerWidth: W, innerHeight: H, addEventListener() {} };
+  if (touch) win.ontouchstart = null;
+  globalThis.window = win;
+  globalThis.document = { getElementById: (id) => (id === "px" ? px : null), body: { setAttribute() {}, style: { setProperty() {} } } };
+  globalThis.getComputedStyle = () => ({ borderLeftWidth: "1px", borderTopWidth: "1px" });
+  globalThis.devicePixelRatio = dpr;
+  try {
+    const cv = { width: 600, height: 520, style: {} }, fit = mountFit(cv);
+    const snap = () => JSON.stringify([px.style, px.dataset, cv.style]), box = () => JSON.stringify([px.style, cv.style]);
+    const base = snap(), b0 = box(), bw0 = +px.dataset.bw, bh0 = +px.dataset.bh, cssW = parseFloat(px.style.width), cssH = parseFloat(px.style.height);
+    fit.setPxCap(dpr);
+    const same = snap() === base;
+    fit.setPxCap(dpr + 1);
+    const above = snap() === base;
+    fit.setPxCap(1.5);
+    check(lay + " dpr " + dpr + ": pxCap >= dpr is byte-identical to no cap (style, data-bw/bh, #c)", same && above, snap());
+    check(lay + " dpr " + dpr + ": pxCap 1.5 re-fits at once with data-bw/bh = round(CSS content box x 1.5); the CSS box, origin and #c are identical (U2: density only)",
+      box() === b0 && +px.dataset.bw === Math.round(cssW * 1.5) && +px.dataset.bh === Math.round(cssH * 1.5) && +px.dataset.bw < bw0 && +px.dataset.bw <= 1.5 * cssW + 0.5,
+      px.dataset.bw + "x" + px.dataset.bh + " vs " + bw0 + "x" + bh0);
+    fit.setPxCap(1);
+    check(lay + " dpr " + dpr + ": pxCap 1 (RESOLUTION LOW) backs #px at its CSS size", +px.dataset.bw === Math.round(cssW) && box() === b0, px.dataset.bw);
+    fit();
+    check(lay + " dpr " + dpr + ": the cap survives a resize re-fit", +px.dataset.bw === Math.round(cssW), px.dataset.bw);
+    fit.setPxCap(Infinity);
+    check(lay + " dpr " + dpr + ": lifting the cap restores today's backing exactly", snap() === base, snap());
+  } finally {
+    delete globalThis.window; delete globalThis.document; delete globalThis.getComputedStyle; delete globalThis.devicePixelRatio;
+  }
 }
 
 console.log("\n  FIT RESULT: " + pass + " PASS / " + fail + " FAIL");

@@ -14,6 +14,8 @@ import {
   getShake,
   getFx,
   setFxOpts,
+  getFxOpts,
+  fxBusy,
 } from "../src/render/fx.js";
 import { createRenderer } from "../src/render/renderer.js";
 import { createRenderer3D } from "../src/render/three/wrapper.js";
@@ -572,6 +574,81 @@ const chainW = (n, px, py, blades) => {
         .join("|"),
     );
   }
+}
+
+// ---- GRAPHICS P1: dt-scaled motion, EFFECTS partK, fxBusy ----
+{
+  const W = { seed: 9, level: 1 };
+  const snap = () => getFx().map((p) => ({ x: p.x, y: p.y, vx: p.vx, vy: p.vy, t: p.t, c: !!p.confetti }));
+  const seedParts = () => {
+    initFx();
+    onEvent(W, { t: "boom", x: 200, y: 200 }, 0);
+    onEvent(W, { t: "win" }, 0);
+    return snap();
+  };
+  const p0 = seedParts();
+  updateFx(CFG.STEP); updateFx(CFG.STEP);
+  const two = snap();
+  initFx();
+  for (const q of p0) getFx().push({ ...q, vx: q.vx, vy: q.vy, life: 99, confetti: q.c, color: "#fff", size: 1 });
+  updateFx(2 * CFG.STEP);
+  const one = snap();
+  let dc = 0, dd = 0;
+  for (let i = 0; i < two.length; i++) {
+    const e = Math.max(Math.abs(two[i].x - one[i].x), Math.abs(two[i].y - one[i].y), Math.abs(two[i].vx - one[i].vx), Math.abs(two[i].vy - one[i].vy));
+    if (two[i].c) dc = Math.max(dc, e); else dd = Math.max(dd, e);
+  }
+  check("k=2 equals two k=1 steps: confetti (closed form)", two.length === one.length && two.some((q) => q.c) && dc < 1e-9, dc);
+  check("k=2 equals two k=1 steps: damped sparks within 1e-9", two.some((q) => !q.c) && dd < 1e-9, dd);
+  initFx();
+  getFx().push({ x: 10, y: 20, vx: 3, vy: -2, t: 0, life: 9, color: "#fff", size: 1 }, { x: 5, y: 5, vx: 1, vy: 2, t: 0, life: 9, color: "#fff", size: 1, confetti: true });
+  updateFx(CFG.STEP * 1.15);
+  const [a, b] = getFx();
+  check("k=1.15 snaps to the exact per-frame path (a jittered gated frame stays byte-identical)",
+    a.x === 13 && a.y === 18 && a.vx === 3 * 0.92 && a.vy === -2 * 0.92 && b.x === 6 && b.y === 7 && b.vy === 2.05, JSON.stringify([a, b]));
+  initFx();
+  getFx().push({ x: 0, y: 0, vx: 1, vy: 1, t: 0, life: 9, color: "#fff", size: 1 });
+  updateFx(0);
+  check("k=0 moves nothing", getFx()[0].x === 0 && getFx()[0].vx === 1);
+  updateFx(5);
+  check("k clamps to 15 (a stalled frame never flings a particle across the board)",
+    Math.abs(getFx()[0].x - (1 - Math.pow(0.92, 15)) / 0.08) < 1e-9, getFx()[0].x);
+
+  const count = () => getFx().length;
+  initFx();
+  check("partK defaults to 1 and rides getFxOpts", getFxOpts().partK === 1);
+  onEvent(W, { t: "boom", x: 1, y: 1 }, 0);
+  const full = count();
+  initFx();
+  setFxOpts({ partK: 0.5 });
+  onEvent(W, { t: "boom", x: 1, y: 1 }, 0);
+  const half = count();
+  initFx();
+  onEvent(W, { t: "throw", x: 1, y: 1 }, 0);
+  const thr = count();
+  initFx();
+  onEvent(W, { t: "win" }, 0);
+  const conf = count();
+  check("EFFECTS LOW halves the decorative spawns (boom 20 -> 10, confetti 60 -> 30)", full === 20 && half === 10 && conf === 30, full + "/" + half + "/" + conf);
+  check("partK never drops a burst to zero (round half up, floor 1: throw 3+2 -> 2+1)", thr === 3, thr);
+  initFx();
+  check("initFx keeps partK (a user knob, like flashK)", getFxOpts().partK === 0.5);
+  check("partK clamps to [0,1]", setFxOpts({ partK: 7 }).partK === 1 && setFxOpts({ partK: -1 }).partK === 0 && setFxOpts({ partK: 1 }).partK === 1);
+  initFx();
+  onEvent(W, { t: "boom", x: 1, y: 1 }, 0);
+  check("partK 1 restores today's count exactly", count() === 20);
+
+  initFx();
+  check("fxBusy: false on a clean slate", fxBusy() === false);
+  onEvent(W, { t: "brick", x: 1, y: 1 }, 0);
+  check("fxBusy: true while particles live", fxBusy() === true);
+  initFx();
+  onEvent(W, { t: "hurt", x: 1, y: 1 }, 0);
+  getFx().length = 0;
+  check("fxBusy: true while shake decays", fxBusy() === true);
+  for (let i = 0; i < 120; i++) updateFx(CFG.STEP);
+  check("fxBusy: false once everything settles", fxBusy() === false);
+  initFx();
 }
 
 console.log("\n  FX RESULT: " + pass + " PASS / " + fail + " FAIL");

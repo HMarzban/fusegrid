@@ -2,8 +2,9 @@
    classic createRenderer into a recording ctx; every method call and property
    write is logged (numbers at 3 decimals) and FNV-1a hashed. PIXEL must leave
    this value byte-identical. imp(path) imports a repo module, so the same
-   recipe can be pointed at another checkout to re-derive the pin. */
-export async function classicHash(imp) {
+   recipe can be pointed at another checkout to re-derive the pin. arm (a
+   GRAPHICS knob object) arms render-on-change first; raw returns the log. */
+export async function classicHash(imp, arm, raw) {
   const {createWorld, loadLevel} = await imp("src/core/sim.js");
   const {createRenderer} = await imp("src/render/renderer.js");
   const {initFx} = await imp("src/render/fx.js");
@@ -27,6 +28,7 @@ export async function classicHash(imp) {
   try {
     initFx();
     const r = createRenderer(canvas, {kind: "2d"});
+    if (arm) r.setPerf(arm);
     const w = createWorld(4242, 1);
     loadLevel(w, 1);
     w.state = "PLAY";
@@ -42,6 +44,7 @@ export async function classicHash(imp) {
     w.events.push({t: "boom", x: ctr(bx), y: ctr(by)});
     for (let f = 0; f < 3; f++) { w.time += 1 / 60; r.render(w, 1 / 60, f === 2 ? {hud: true, ghost: {x: 100, y: 100, fx: 1, fy: 0, t: 0.2}} : undefined); }
   } finally { Math.random = real; }
+  if (raw) return log;
   let h = 0x811c9dc5;
   const str = log.join("\n");
   for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }

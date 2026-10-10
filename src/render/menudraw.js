@@ -1009,11 +1009,13 @@ export function drawTrophies(c, L, t, rows) {
   foot(c, S, "ENTER / ESC BACK TO STATS");
 }
 
-/* OPTIONS (spec §2): nine live knob rows on LEVEL SELECT's adjust model.
-   ui = {row, vals, r3d, px, togT, rev}; vals is the nb.settings.v1 blob and
-   rev is the build tag shellview derives from CACHE_NAME. Rows NEVER hide or
+/* OPTIONS (spec §2): ten rows on LEVEL SELECT's adjust model — eight live
+   knobs, the GRAPHICS door and RESET DEFAULTS.
+   ui = {row, vals, r3d, px, togT, rev, door, touch}; vals is the nb.settings.v1 blob,
+   rev is the build tag shellview derives from CACHE_NAME and door is the
+   GRAPHICS preset value (`AUTO ›`) the app derives. Rows NEVER hide or
    reflow — the two 3D-only rows dim to 0.45 and read an em dash in CLASSIC 2D
-   and PIXEL, so the list is the same nine lines in every kind. CAM_NAME
+   and PIXEL, so the list is the same ten lines in every kind. CAM_NAME
    mirrors camrig.js's CAM_PRESET order; this file must not import from
    src/render/three (the 2D path never loads three), so the names are
    duplicated here the way PLAQUE_NAME is. */
@@ -1027,10 +1029,15 @@ const OPT_LABEL = [
   "BRIGHTNESS",
   "SCREEN SHAKE",
   "REDUCE FLASH",
+  "GRAPHICS",
   "RESET DEFAULTS",
 ];
-const OPT_3D = [false, false, false, false, true, true, false, false, false];
-export function settingsRows(vals, r3d, px) {
+export const OPT_N = OPT_LABEL.length; // pinned equal to menuapp OPT_ROWS.length
+/* OPTIONS and GRAPHICS share one foot; a touch layout has none of those keys,
+   so it names the tap model both pages use (row = Enter, off the rows = back). */
+export const FOOT_KEYS = "↑↓ ROW · ←→ ADJUST · ENTER CYCLE · ESC BACK", FOOT_TAP = "TAP A ROW TO CHANGE IT · TAP OUTSIDE TO GO BACK";
+const OPT_3D = OPT_LABEL.map((s) => s === "CAMERA" || s === "BRIGHTNESS");
+export function settingsRows(vals, r3d, px, door) {
   const v = vals || {};
   const on = (b) => (b ? "ON" : "OFF");
   return [
@@ -1042,6 +1049,7 @@ export function settingsRows(vals, r3d, px) {
     String(v.bri | 0),
     on(v.shk),
     on(v.flx),
+    door || "›",
     "",
   ];
 }
@@ -1051,7 +1059,7 @@ export function settingsGeom(L) {
   const S = shellBox(L, 520);
   const noteY = S.footY - 30;
   const y0 = S.headY + 22;
-  return { S, noteY, y0, rowH: Math.min(30, (noteY - 10 - y0) / 9) };
+  return { S, noteY, y0, rowH: Math.min(30, (noteY - 10 - y0) / OPT_N) };
 }
 export function settingsHit(x, y, L) {
   const g = settingsGeom(L);
@@ -1060,19 +1068,19 @@ export function settingsHit(x, y, L) {
   // the true multiple (float sum error), which floor() would misread as the
   // row above — full-pitch bands must stay contiguous with no dead gutter.
   const i = Math.floor((y - g.y0) / g.rowH + 1e-9);
-  return i >= 0 && i < 9 ? i : -1;
+  return i >= 0 && i < OPT_N ? i : -1;
 }
 export function drawSettings(c, L, t, ui) {
   const u = ui || {};
   const cur = u.row | 0,
     r3d = !!u.r3d;
-  const vals = settingsRows(u.vals, r3d, !!u.px);
+  const vals = settingsRows(u.vals, r3d, !!u.px, u.door);
   const g = settingsGeom(L);
   const S = shell(c, L, 520);
   head(c, S, "OPTIONS", "BUILD " + (u.rev || ""));
   const fk =
     typeof u.togT === "number" && u.togT >= 0 ? 1 - clamp01((t - u.togT) / 0.12) : 0;
-  for (let i = 0; i < 9; i++) {
+  for (let i = 0; i < OPT_N; i++) {
     const y = g.y0 + i * g.rowH + g.rowH / 2;
     const sel = i === cur,
       dim = OPT_3D[i] && !r3d;
@@ -1119,7 +1127,100 @@ export function drawSettings(c, L, t, ui) {
     S.mid,
     g.noteY + 14,
   );
-  foot(c, S, "↑↓ ROW · ←→ ADJUST · ENTER CYCLE · ESC BACK");
+  foot(c, S, u.touch ? FOOT_TAP : FOOT_KEYS);
+}
+
+/* GRAPHICS (unified spec 2026-10-10 §5): the OPTIONS look with eight rows
+   and a two-line help area in place of CONTROLS. ui = {row, view, togT, chg,
+   touch}; view = {rows:[{label,val,locked,help1,help2}]} arrives finished
+   from the app (gfx.js owns every string — this file must not import
+   src/app). chg is the bitmask of rows the last change touched, so a preset
+   glows on every row it wrote. Locked rows dim to 0.45, read an em dash and
+   stay focusable. touch (body[data-lay] p/l) grows the type 13 -> 15. */
+export const GFX_N = 8; // pinned equal to gfx.js GFX_ROWS.length
+export function graphicsGeom(L) {
+  const S = shellBox(L, 520);
+  const noteY = S.footY - 30;
+  const y0 = S.headY + 22;
+  return { S, noteY, y0, rowH: Math.min(36, (noteY - 10 - y0) / GFX_N) };
+}
+export function graphicsHit(x, y, L) {
+  const g = graphicsGeom(L);
+  if (x < g.S.ix || x > g.S.ix + g.S.iw) return -1;
+  const i = Math.floor((y - g.y0) / g.rowH + 1e-9); // +1e-9: same contiguous-band guard as settingsHit
+  return i >= 0 && i < GFX_N ? i : -1;
+}
+export function drawGraphics(c, L, t, ui) {
+  const u = ui || {},
+    rows = (u.view && u.view.rows) || [],
+    cur = u.row | 0,
+    chg = u.chg | 0,
+    big = !!u.touch;
+  const g = graphicsGeom(L);
+  const S = shell(c, L, 520);
+  head(c, S, "GRAPHICS", "PERFORMANCE · BATTERY");
+  const fk =
+    typeof u.togT === "number" && u.togT >= 0 ? 1 - clamp01((t - u.togT) / 0.12) : 0;
+  for (let i = 0; i < GFX_N; i++) {
+    const r = rows[i] || { label: "", val: "" };
+    const y = g.y0 + i * g.rowH + g.rowH / 2;
+    const sel = i === cur;
+    c.globalAlpha = r.locked ? 0.45 : 1;
+    if (sel) {
+      c.fillStyle = "rgba(55,240,208,0.14)";
+      c.fillRect(S.ix, y - g.rowH / 2 + 2, S.iw, g.rowH - 4);
+      c.fillStyle = ACCENT;
+      c.fillRect(S.ix, y - g.rowH / 2 + 2, 3, g.rowH - 4);
+      caret(c, S.ix + 8, y, g.rowH - 4);
+    }
+    c.textAlign = "left";
+    c.textBaseline = "middle";
+    c.font = font(big ? 15 : 13, sel ? "900" : "");
+    c.fillStyle = sel ? TEXT : MUTED;
+    c.fillText(r.label, S.ix + 22, y);
+    const glow = fk > 0 && (chg >> i) & 1;
+    c.textAlign = "right";
+    c.fillStyle = sel ? ACCENT : TEXT;
+    if (glow) {
+      c.shadowColor = c.fillStyle;
+      c.shadowBlur = 14 * fk;
+    }
+    c.fillText(r.locked ? "—" : String(r.val), S.ix + S.iw, y);
+    if (glow) c.shadowBlur = 0;
+    c.globalAlpha = 1;
+  }
+  const h = rows[cur] || {};
+  c.textAlign = "center";
+  c.fillStyle = MUTED;
+  c.font = font(big ? 11 : 10);
+  c.fillText(h.help1 || "", S.mid, g.noteY);
+  c.fillStyle = ACCENT;
+  c.fillText(h.help2 || "", S.mid, g.noteY + 14);
+  foot(c, S, big ? FOOT_TAP : FOOT_KEYS);
+}
+/* FPS METER chip (GRAPHICS row 7): bottom-right of the box on every screen.
+   info is app.gfx {fps, kind, dpr3d, dprPx, limit} or null before the frame
+   loop has reported; density shows only in REAL 3D and PIXEL. idle tags the
+   screens the gate holds at the idle rate (menus, PAUSE, WIN/LOSE, ATTRACT),
+   so a 30 read beside FRAME RATE 60 explains itself. xOf mirrors
+   gfx.js's one-decimal format (pinned equal in menudraw.test). */
+const xOf = (v) => (Math.round(v * 10) / 10).toFixed(1).replace(/\.0$/, "") + "X";
+export function meterText(info, idle) {
+  const i = info || {},
+    d = i.kind === "3d" ? i.dpr3d : i.kind === "px" ? i.dprPx : 0;
+  return (typeof i.fps === "number" ? String(Math.round(i.fps)) : "--") + " FPS" +
+    (d > 0 ? " · " + xOf(d) : "") + (idle ? " · IDLE" : "") + (i.limit ? " · LIMIT" : "");
+}
+export function drawMeter(c, W, H, info, idle) {
+  const s = meterText(info, idle),
+    w = s.length * 5.4 + 10;
+  c.fillStyle = "rgba(8,12,22,0.78)";
+  c.fillRect(W - 4 - w, H - 18, w, 14);
+  c.fillStyle = MUTED;
+  c.font = font(9, "900");
+  c.textAlign = "right";
+  c.textBaseline = "middle";
+  c.fillText(s, W - 9, H - 11);
 }
 
 /* ATTRACT hint: 1Hz-blink footer over the live demo (spec §5.6). */

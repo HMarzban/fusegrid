@@ -15,6 +15,7 @@ import { clampPace } from "../core/pace.js";
 import { clampSettings, DEFAULTS } from "./settings.js";
 import { renderBits, renderVal } from "./renderkind.js";
 import { SHOW_DUR, SKIP_GUARD, TITLE_IN } from "./intro.js";
+import { GFX_ROWS, GFX_KEYS, VALUES, PRESET_NAMES, DEMO_T, presetOf, applyPreset, locked, gfxView } from "./gfx.js";
 export const SCREEN = Object.freeze({
   BOOT: 0,
   INTRO: 1,
@@ -30,6 +31,7 @@ export const SCREEN = Object.freeze({
   GUIDE: 11, // appended — folds HOW TO PLAY/ITEMS/ENEMIES one hop deeper
   STATS: 12, // appended — the opt-in cabinet counters (R5)
   TROPHIES: 13, // appended — the MEDALS page, opened from STATS by T (R6)
+  GRAPHICS: 14, // appended — the GRAPHICS page, opened from the OPTIONS door row
 });
 export const ITEMS = Object.freeze([
   "PLAY",
@@ -55,6 +57,7 @@ export const OPT_ROWS = Object.freeze([
   "BRIGHTNESS",
   "SCREEN SHAKE",
   "REDUCE FLASH",
+  "GRAPHICS",
   "RESET DEFAULTS",
 ]);
 /* PAUSE list (spec §3). world.state stays PAUSE and the shell stays GAME —
@@ -90,7 +93,12 @@ export function createMenuApp(opts = {}) {
     // survives a round trip through the page
     guideRow: 0, // GUIDE row cursor — its OWN field too, same reason
     pauseCursor: 0,
-    pauseView: 0, // 0 list / 1 inline OPTIONS; both reset on the PLAY->PAUSE edge
+    pauseView: 0, // 0 list / 1 inline OPTIONS / 2 inline GRAPHICS; reset on the PLAY->PAUSE edge
+    gfxRow: 0, // GRAPHICS row cursor — its own field, like guideRow
+    gfxChg: 0, // GRAPHICS rows (bitmask) the last accepted change touched: the togT glow lights them all
+    gfx: null, // live frame info {fps,hz,kind,dpr3d,dprPx,liveAA,pendingAA,limit,gov}, written by main's frame loop
+    attractT: 0, // seconds in this ATTRACT visit (DEMO SHORT ends it at DEMO_T)
+    parked: false, // DEMO SHORT ended ATTRACT: MENU stops counting idle until the next input
     pact: clampPact(o.pact),
     pace: clampPace(o.pace),
     dailyTag: o.dailyTag || "NEW",
@@ -137,7 +145,7 @@ export function createMenuApp(opts = {}) {
           const ax = (input && input.input) || {};
           let dir = 0,
             axis = 1;
-          if (this.pauseView === 1 && (ax.left || ax.right)) {
+          if (this.pauseView >= 1 && (ax.left || ax.right)) {
             dir = ax.left ? -1 : 1;
             axis = 0;
           } else dir = ax.up ? -1 : ax.down ? 1 : 0;
@@ -152,7 +160,11 @@ export function createMenuApp(opts = {}) {
         this._taps = {};
         return;
       }
-      if (this.screen === SCREEN.ATTRACT) return; // subT already advanced -> hint blink
+      if (this.screen === SCREEN.ATTRACT) { // subT already advanced -> hint blink
+        this.attractT += d;
+        if (this.settings.dmo === 1 && this.attractT >= DEMO_T && this.exitAttract()) this.parked = true;
+        return;
+      }
       if (this.screen === SCREEN.INTRO) {
         if (this._showPending && this.boardReady) this._show();
         // a title waiting on the board (3D loading) stands settled, so a load
@@ -172,7 +184,7 @@ export function createMenuApp(opts = {}) {
         axis = 0;
       if (this.screen === SCREEN.MENU || this.screen === SCREEN.GUIDE)
         dir = ax.up ? -1 : ax.down ? 1 : 0;
-      else if (this.screen === SCREEN.LEVEL || this.screen === SCREEN.SETTINGS) {
+      else if (this.screen === SCREEN.LEVEL || this.screen === SCREEN.SETTINGS || this.screen === SCREEN.GRAPHICS) {
         if (ax.left || ax.right) {
           dir = ax.left ? -1 : 1;
           axis = 0;
@@ -184,7 +196,7 @@ export function createMenuApp(opts = {}) {
       this._repeat(d, dir, axis);
       if (rising) this.confirm();
       this._taps = {};
-      if (this.screen === SCREEN.MENU) {
+      if (this.screen === SCREEN.MENU && !this.parked && this.settings.dmo !== 0) {
         this.idleT += d;
         if (this.idleT >= IDLE_T) this.enterAttract();
       } else this.idleT = 0;
@@ -226,6 +238,7 @@ export function createMenuApp(opts = {}) {
       }
       if (this.screen === SCREEN.INTRO) return this._skipKey(); // title: no-op; show: "ANY KEY TO SKIP"
       this.idleT = 0;
+      this.parked = false;
       switch (code) {
         case "Enter":
         case "NumpadEnter":
@@ -290,6 +303,7 @@ export function createMenuApp(opts = {}) {
     },
     _tapMove(dir, lat) {
       this.idleT = 0;
+      this.parked = false;
       if (
         this.screen === SCREEN.GAME &&
         this.worldState === "PAUSE" &&
@@ -310,7 +324,7 @@ export function createMenuApp(opts = {}) {
         this._taps[dir + ":" + (lat ? 0 : 1)] = true;
         return true;
       }
-      if (this.screen === SCREEN.SETTINGS && this.move(dir, lat ? 0 : 1)) {
+      if ((this.screen === SCREEN.SETTINGS || this.screen === SCREEN.GRAPHICS) && this.move(dir, lat ? 0 : 1)) {
         this._taps[dir + ":" + (lat ? 0 : 1)] = true;
         return true;
       }
@@ -323,6 +337,7 @@ export function createMenuApp(opts = {}) {
     confirm() {
       if (this.screen === SCREEN.ATTRACT) return this.playFromAttract();
       this.idleT = 0;
+      this.parked = false;
       switch (this.screen) {
         case SCREEN.INTRO:
           return this.skipShow();
@@ -357,6 +372,8 @@ export function createMenuApp(opts = {}) {
           return this.startRun();
         case SCREEN.SETTINGS:
           return this.optCycle();
+        case SCREEN.GRAPHICS:
+          return this.gfxCycle();
         case SCREEN.GUIDE:
           switch (GUIDE_ROWS[this.guideRow]) {
             case "HOW TO PLAY":
@@ -378,6 +395,11 @@ export function createMenuApp(opts = {}) {
       return false;
     },
     back() {
+      this.parked = false;
+      if (this.screen === SCREEN.GRAPHICS) {
+        this.optRow = OPT_ROWS.indexOf("GRAPHICS");
+        return this._push(SCREEN.SETTINGS);
+      }
       if (
         this.screen === SCREEN.HOWTO ||
         this.screen === SCREEN.ITEMS ||
@@ -443,8 +465,11 @@ export function createMenuApp(opts = {}) {
     },
     move(dir, axis) {
       this.idleT = 0;
+      this.parked = false;
       if (this.screen === SCREEN.GAME) {
         if (this.worldState !== "PAUSE") return false;
+        if (this.pauseView === 2)
+          return (axis | 0) === 1 ? this.gfxMove(dir) : this.gfxAdjust(dir);
         if (this.pauseView === 1)
           return (axis | 0) === 1 ? this.optMove(dir) : this.optAdjust(dir);
         if ((axis | 0) !== 1) return false;
@@ -483,6 +508,8 @@ export function createMenuApp(opts = {}) {
       }
       if (this.screen === SCREEN.SETTINGS)
         return (axis | 0) === 1 ? this.optMove(dir) : this.optAdjust(dir);
+      if (this.screen === SCREEN.GRAPHICS)
+        return (axis | 0) === 1 ? this.gfxMove(dir) : this.gfxAdjust(dir);
       return false;
     },
     adjustPace(dir) {
@@ -575,8 +602,85 @@ export function createMenuApp(opts = {}) {
       if (r === "RENDER") return this._optRender((renderVal(this) + 1) % 3);
       if (r === "SCREEN SHAKE") return this._optSet("shk", this.settings.shk ? 0 : 1);
       if (r === "REDUCE FLASH") return this._optSet("flx", this.settings.flx ? 0 : 1);
+      if (r === "GRAPHICS") return this._gfxOpen();
       if (r === "RESET DEFAULTS") return this.optReset();
       return false;
+    },
+    /* GRAPHICS (unified spec 2026-10-10 §5): the OPTIONS door row opens a
+       SCREEN from the menu and the inline pauseView 2 from PAUSE (the room
+       track keeps playing). Rows, presets, locks and value strings all come
+       from gfx.js; QUALITY is derived from the six governed rows, never
+       stored. ←/→ clamp, Enter cycles; a preset writes all six (locked rows
+       too) and reports through onSettings once. */
+    _gfxOpen() {
+      this.gfxRow = 0;
+      this.gfxChg = 0;
+      if (this.screen !== SCREEN.GAME) return this._push(SCREEN.GRAPHICS);
+      this.pauseView = 2;
+      this.togT = -1;
+      return true;
+    },
+    _gfxKind() {
+      return this.gfx && this.gfx.kind === "iso" ? "iso" : this.render3d ? "3d" : this.pixel ? "px" : "2d"; // the flags flip with RENDER at once; app.gfx lags up to 0.5 s
+    },
+    gfxView() {
+      return gfxView(this.settings, this._gfxKind(), this.gfx);
+    },
+    gfxPreset() {
+      return presetOf(this.settings);
+    },
+    gfxMove(dir) {
+      this.idleT = 0;
+      const n = GFX_ROWS.length;
+      this.gfxRow = (this.gfxRow + (dir < 0 ? -1 : 1) + n) % n;
+      return true;
+    },
+    /* No togT stamp: the frame loop's AA revert lands here, off any input. */
+    setGfx(key, v) {
+      if (this.settings[key] === v) return false;
+      this.settings[key] = v;
+      if (onSettings) onSettings(this.settings, key);
+      return true;
+    },
+    _gfxSet(key, v) {
+      const p0 = presetOf(this.settings);
+      if (!this.setGfx(key, v)) return false;
+      this.gfxChg = (1 << GFX_KEYS.indexOf(key)) | (presetOf(this.settings) !== p0 ? 1 : 0);
+      this.togT = this.subT;
+      return true;
+    },
+    _gfxPreset(name) {
+      const s0 = { ...this.settings };
+      applyPreset(this.settings, name);
+      let m = 0;
+      GFX_KEYS.forEach((k, i) => { if (k && s0[k] !== this.settings[k]) m |= 1 << i; });
+      if (!m) return false;
+      this.gfxChg = m | 1;
+      this.togT = this.subT;
+      if (onSettings) onSettings(this.settings, "gfx");
+      return true;
+    },
+    gfxAdjust(dir) {
+      this.idleT = 0;
+      const key = GFX_KEYS[this.gfxRow],
+        d = dir < 0 ? -1 : 1;
+      if (!key) {
+        const i = PRESET_NAMES.indexOf(presetOf(this.settings));
+        const n = i < 0 ? (d < 0 ? 0 : PRESET_NAMES.length - 1) : Math.min(PRESET_NAMES.length - 1, Math.max(0, i + d));
+        return n === i ? false : this._gfxPreset(PRESET_NAMES[n]);
+      }
+      if (locked(key, this._gfxKind())) return false;
+      return this._gfxSet(key, Math.min(VALUES[key].length - 1, Math.max(0, this.settings[key] + d)));
+    },
+    gfxCycle() {
+      this.idleT = 0;
+      const key = GFX_KEYS[this.gfxRow];
+      if (!key) {
+        const p = presetOf(this.settings);
+        return this._gfxPreset(p === "AUTO" ? "HIGH" : p === "HIGH" ? "BATTERY" : "AUTO");
+      }
+      if (locked(key, this._gfxKind())) return false;
+      return this._gfxSet(key, (this.settings[key] + 1) % VALUES[key].length);
     },
     /* Writes DEFAULTS and re-applies every knob live. Progress data
        (highscores / plaques / pact / pace) lives under other keys and is never
@@ -601,6 +705,7 @@ export function createMenuApp(opts = {}) {
        menu track mid-run, hide the touch pad and falsify every screen===GAME
        guard, for a page the player closes in four seconds. */
     confirmPause() {
+      if (this.pauseView === 2) return this.gfxCycle();
       if (this.pauseView === 1) return this.optCycle();
       const cmd = PAUSE_ITEMS[this.pauseCursor];
       if (cmd === "OPTIONS") {
@@ -613,8 +718,8 @@ export function createMenuApp(opts = {}) {
       return true;
     },
     pauseBack() {
-      if (this.pauseView !== 1) return false;
-      this.pauseView = 0;
+      if (this.pauseView !== 1 && this.pauseView !== 2) return false;
+      this.pauseView--; // 2 -> 1 keeps optRow on the GRAPHICS door
       this.togT = -1;
       return true;
     },
@@ -664,6 +769,7 @@ export function createMenuApp(opts = {}) {
        demo world — main owns that harness; entry/exit only flip state here. */
     enterAttract() {
       this.screen = SCREEN.ATTRACT;
+      this.attractT = 0;
       this.subT = 0;
       this.repT = 0;
       this.repDir = 0;

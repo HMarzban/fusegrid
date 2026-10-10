@@ -2,7 +2,7 @@ import { CFG } from "../src/core/config.js";
 import { POWER } from "../src/core/entities.js";
 import {
   pickupLabel, labelText, labelBox, coachKind, drawPickupFx, getLabels, getPulse, LBL,
-  feedFx, initFx, syncFx, setFxOpts,
+  feedFx, initFx, syncFx, setFxOpts, fxBusy,
 } from "../src/render/fx.js";
 import { coachTip } from "../src/app/coach.js";
 import { createRenderer } from "../src/render/renderer.js";
@@ -365,6 +365,23 @@ const rec = () => {
   const rs = r.ops.filter((o) => o[0] === "strokeRect").map((o) => o[1]);
   const heart = rs.find((a) => a[0] === 3), bomb = rs.find((a) => a[0] === 138);
   check("with lives > 6 the heart pulse box (plus its 4 px stroke) ends before the BOMB chip pulse at 136", heart && bomb && heart[0] + heart[2] + 2 <= bomb[0] - 2, JSON.stringify(rs));
+}
+
+// ---- merge pin: render-on-change sees labels, pulses and fading ability chips as busy ----
+{
+  const w = fresh({ range: 2 });
+  check("fxBusy: false with no label, pulse or strip live", fxBusy() === false);
+  w.players[0].range = 3;
+  feed(w, [pw("fire", 4, 6)]);
+  check("fxBusy: true while a pickup label / chip pulse lives", getLabels().length === 1 && fxBusy() === true);
+  for (let i = 0; i < 120; i++) feed(w);
+  check("fxBusy: false once the label and pulse expire", getLabels().length === 0 && fxBusy() === false);
+  w.players[0].kick = true; feed(w);
+  w.players[0].kick = false; feed(w);
+  check("fxBusy: true while a lost ability chip fades", fxBusy() === true);
+  for (let i = 0; i < 60; i++) feed(w);
+  check("fxBusy: false once the chip fade completes", fxBusy() === false);
+  initFx();
 }
 
 console.log("\n  PICKUP LABEL RESULT: " + pass + " PASS / " + fail + " FAIL");

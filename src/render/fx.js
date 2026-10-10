@@ -19,14 +19,18 @@ let tag=null, tagRng=null;
    render paths and both call sites are covered without touching either draw
    site. NOT reset by initFx(): these are user preference, and every renderer
    construction calls initFx() — a RENDER toggle would otherwise drop them. */
-let flashK=1, shakeK=1;
+let flashK=1, shakeK=1, partK=1;
 const k01=(v,d)=>(typeof v==="number"&&isFinite(v)?Math.max(0,Math.min(1,v)):d);
 export function setFxOpts(o){
   if(o){ if(o.flashK!=null)flashK=k01(o.flashK,flashK);
-    if(o.shakeK!=null)shakeK=k01(o.shakeK,shakeK); }
-  return {flashK,shakeK};
+    if(o.shakeK!=null)shakeK=k01(o.shakeK,shakeK);
+    if(o.partK!=null)partK=k01(o.partK,partK); }
+  return {flashK,shakeK,partK};
 }
-export function getFxOpts(){ return {flashK,shakeK}; }
+export function getFxOpts(){ return {flashK,shakeK,partK}; }
+/* Render-on-change input (GRAPHICS): anything still moving or decaying,
+   pickup labels, chip pulses and fading ability-bar chips included. */
+export function fxBusy(){ const u=fx.pu; return fx.parts.length>0||fx.shakeT>0||fx.flashT>0||fx.lbl.length>0||u.b>0||u.r>0||u.l>0||fx.gone.length>0; }
 
 export function initFx(){
   fx.shakeT=0; fx.shakeX=0; fx.shakeY=0; fx.flashT=0; fx.parts=[];
@@ -175,13 +179,18 @@ export function onEvent(world, ev, time){
     case "win":   addConfetti(60); fx.shakeT=Math.max(fx.shakeT,0.15); break;
   }
 }
+/* EFFECTS LOW (partK<1) thins only these decorative spawns; at partK 1 the
+   count, and so the Math.random sequence, is exactly today's. */
+const thin=(n)=>partK>=1?n:Math.max(1,Math.round(n*partK));
 function addParticles(x, y, n, color){
+  n=thin(n);
   for(let i=0;i<n;i++){
     const a=Math.random()*6.283, s=Math.random()*3+1;
     fx.parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,t:0,life:0.4+Math.random()*0.35,color,size:Math.random()*3+1});
   }
 }
 function addStreaks(x, y, n, color){
+  n=thin(n);
   for(let i=0;i<n;i++){
     const a=Math.random()*6.283, s=2.2+Math.random()*1.6;
     fx.parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,t:0,life:0.16+Math.random()*0.08,color,size:1.2,streak:true});
@@ -189,6 +198,7 @@ function addStreaks(x, y, n, color){
 }
 function addConfetti(n, cols){
   const pal=cols||["#ffd447","#ff5d73","#37f0d0","#7fe0ff"];
+  n=thin(n);
   for(let i=0;i<n;i++){
     fx.parts.push({
       x:Math.random()*CFG.COLS*CFG.TILE, y:-10,
@@ -203,11 +213,26 @@ export function updateFx(dt){
   fx.flashT=Math.max(0,fx.flashT-dt*3.5);
   fx.shakeX=(Math.random()-0.5)*fx.shakeT*18;
   fx.shakeY=(Math.random()-0.5)*fx.shakeT*18;
-  for(const p of fx.parts){
+  /* Frame-rate independence: k frames of the 60 Hz-authored motion per call.
+     k within 0.2 of 1 (Node, 60 Hz, a gated 120 Hz frame with jitter) takes the
+     exact per-frame path, so those frames are byte-identical to before. */
+  let k=dt/CFG.STEP;
+  k=isFinite(k)?Math.max(0,Math.min(15,k)):1;
+  if(Math.abs(k-1)<0.2) k=1;
+  if(k===1) for(const p of fx.parts){
     p.x+=(p.vx||0); p.y+=(p.vy||0);
     if(p.confetti) p.vy+=0.05;
     else { p.vx*=0.92; p.vy*=0.92; }
     p.t+=dt;
+  }
+  else {
+    const g=Math.pow(0.92,k), m=(1-g)/0.08;
+    for(const p of fx.parts){
+      const vx=p.vx||0, vy=p.vy||0;
+      if(p.confetti){ p.x+=vx*k; p.y+=vy*k+0.05*k*(k-1)/2; p.vy=vy+0.05*k; }
+      else { p.x+=vx*m; p.y+=vy*m; p.vx=vx*g; p.vy=vy*g; }
+      p.t+=dt;
+    }
   }
   fx.parts=fx.parts.filter(p=>p.t<p.life && p.y<CFG.ROWS*CFG.TILE+30);
 }

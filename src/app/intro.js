@@ -77,9 +77,13 @@ export function createShow() {
    music grid by more than a frame after a stall. live falsy = title (no step).
    Only the natural end steps it behind MENU (a skip drops the world in main),
    and past the boom the script never fires again and emits no event. Sets
-   app.showBoom on the show bomb's boom before the renderer drains events. */
+   app.showBoom on the show bomb's boom before the renderer drains events.
+   Settle (GRAPHICS ruling 10): 1 s past the last script row with no bomb or
+   blade left, the kept world is done and never steps again, so the board
+   behind MENU stops costing frames. */
+export const SETTLE_N = SHOW_SCRIPT[SHOW_SCRIPT.length - 1][0] + 60;
 export function stepShow(show, dt, app, live) {
-  if (!live) return;
+  if (!live || show.done) return;
   show.acc += dt;
   let k = 0;
   while (show.acc >= CFG.STEP) {
@@ -95,4 +99,5 @@ export function stepShow(show, dt, app, live) {
     show.acc -= CFG.STEP;
     if (++k > CATCH_UP) { show.acc = 0; break; }
   }
+  if (show.n >= SETTLE_N && !show.world.bombs.length && !show.world.blades.length) show.done = true;
 }

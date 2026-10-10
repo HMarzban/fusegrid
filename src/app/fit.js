@@ -29,6 +29,10 @@
    px off #c, e.g. 10 at dpr 2.625). The snapped backing goes on data-bw /
    data-bh, which the px renderer reads instead of a layout per frame, so the
    browser composites #px 1:1 and never runs a second resample over it.
+   fit.setPxCap(c) (GRAPHICS RESOLUTION) re-fits with the backing at
+   min(dpr, c) x the same snapped content box: the CSS box, its snapping and
+   origin still follow the real dpr, so only the density drops, never the
+   board size; at c >= dpr data-bw / data-bh are exactly the snapped values.
    A devicePixelRatio change with no resize (a window dragged between
    monitors) re-fits through a one-shot matchMedia resolution query, re-armed
    at the new ratio. */
@@ -100,12 +104,16 @@ function bdr(el) {
   return cs ? [parseFloat(cs.borderLeftWidth) || 0, parseFloat(cs.borderTopWidth) || 0] : [0, 0];
 }
 
-function fitPx(el, cssW, cssH) {
-  const dpr = (typeof devicePixelRatio !== "undefined" && devicePixelRatio) || 1, [bx, by] = bdr(el), B = pxBox(cssW, cssH, dpr, bx, by);
+export function pxBack(B, dpr, cap) {
+  return cap > 0 && cap < dpr ? { bw: Math.max(1, Math.round(B.w * cap)), bh: Math.max(1, Math.round(B.h * cap)) } : { bw: B.bw, bh: B.bh };
+}
+
+function fitPx(el, cssW, cssH, cap) {
+  const dpr = (typeof devicePixelRatio !== "undefined" && devicePixelRatio) || 1, [bx, by] = bdr(el), B = pxBox(cssW, cssH, dpr, bx, by), K = pxBack(B, dpr, cap);
   el.style.boxSizing = "content-box";
   el.style.width = B.w + "px";
   el.style.height = B.h + "px";
-  if (el.dataset) { el.dataset.bw = B.bw; el.dataset.bh = B.bh; }
+  if (el.dataset) { el.dataset.bw = K.bw; el.dataset.bh = K.bh; }
   snapPxOrigin(el);
 }
 
@@ -120,7 +128,7 @@ function snapPxOrigin(el) {
 }
 
 export function mountFit(canvas) {
-  let was;
+  let was, cap = Infinity;
   const fit = () => {
     if (typeof window === "undefined") return;
     const { lay, s } = fitBox(window.innerWidth, window.innerHeight, hasTouch(window), canvas.width, canvas.height);
@@ -144,8 +152,9 @@ export function mountFit(canvas) {
         for (const [k, v] of [["st", g.top], ["tp", g.pad], ["tb", g.bomb], ["tpt", g.padTop], ["tbt", g.bombTop], ["ta", a.act], ["tthr", a.thr.r], ["ttht", a.thr.t], ["trem", a.rem.r], ["tret", a.rem.t]]) body.style.setProperty("--" + k, v + "px");
       }
     }
-    if (px && px.style) fitPx(px, canvas.width * s, canvas.height * s);
+    if (px && px.style) fitPx(px, canvas.width * s, canvas.height * s, cap);
   };
+  fit.setPxCap = (c) => { const v = c > 0 ? c : Infinity; if (v !== cap) { cap = v; fit(); } };
   fit();
   if (typeof window !== "undefined") {
     window.addEventListener("resize", fit);

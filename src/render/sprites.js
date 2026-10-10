@@ -195,12 +195,18 @@ export function drawBricks(c, world) {
         c.restore();
       }
 }
-export function drawBiomeBackground(c, world) {
-  const b = biomeOf(world.level);
-  const g = c.createLinearGradient(0, 0, 0, CFG.ROWS * CFG.TILE);
-  g.addColorStop(0, b.bg0);
-  g.addColorStop(1, b.bg1);
-  c.fillStyle = g;
+const GRAD = new WeakMap();
+export function drawBiomeBackground(c, world, memo) {
+  let m = memo && GRAD.get(c);
+  if (!m || m.lvl !== world.level) {
+    const b = biomeOf(world.level);
+    const g = c.createLinearGradient(0, 0, 0, CFG.ROWS * CFG.TILE);
+    g.addColorStop(0, b.bg0);
+    g.addColorStop(1, b.bg1);
+    m = { lvl: world.level, g };
+    if (memo) GRAD.set(c, m);
+  }
+  c.fillStyle = m.g;
   c.fillRect(0, 0, CFG.COLS * CFG.TILE, CFG.ROWS * CFG.TILE);
 }
 

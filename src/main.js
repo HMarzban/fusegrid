@@ -10,7 +10,7 @@ import { createPixelRenderer } from "./render/pixel/renderer.js";
 import { copyPayload, isRunEnd, overlayBox, pauseHit } from "./render/scenes.js";
 import { paintBombPad } from "./render/sprites.js";
 import { dims, drawShell, kindSize } from "./render/shellview.js";
-import { menuHit, settingsHit, statsHit, layout as menuLayout } from "./render/menudraw.js";
+import { menuHit, settingsHit, statsHit, graphicsHit, layout as menuLayout } from "./render/menudraw.js";
 import { setFxOpts } from "./render/fx.js";
 import { ITEMS, SCREEN, SOURCE_URL, createMenuApp } from "./app/menuapp.js";
 import { clampHeat } from "./core/heat.js";
@@ -20,6 +20,9 @@ import { readFlags, locationSearch } from "./app/flags.js";
 import { bootRender, kindOf } from "./app/renderkind.js";
 import { mountDebugHook } from "./app/debughook.js";
 import { mountFit } from "./app/fit.js";
+import { mountFrames } from "./app/frameloop.js";
+import { mountRenderers } from "./app/rcache.js";
+import { mountAudioPower } from "./app/audiopower.js";
 import { introPhase, popOf, createShow, stepShow } from "./app/intro.js";
 import { loadScores, recordScore, saveScores, scoreEntry, scoresForHeat, qualifies } from "./app/highscores.js";
 import { loadPactUnlocked, savePactUnlocked } from "./app/pactstore.js";
@@ -226,9 +229,10 @@ export function createGame(canvas, opts = {}) {
   // SETTINGS (nb.settings.v1): loaded once at boot; applySettings is the seam S2's OPTIONS rows call again.
   let settings = loadSettings();
   if (settings.snd === 0 && audio && audio.toggle) audio.toggle();
+  const frames = mountFrames(loop, { running: () => running, idle: () => !(app.screen === SCREEN.GAME && world.state === "PLAY") && !(app.screen === SCREEN.INTRO && app.introStage === 1), kind: () => curKind, rc: () => rc, app: () => app, fit: () => fit, canvas }); // GRAPHICS frame gate (src/app/frameloop.js): every getter is lazy
   const applySettings = (S) => {
     if (audio && audio.setVols) audio.setVols({ mus: S.mus / 100, sfx: S.sfx / 100 });
-    setFxOpts({ flashK: S.flx ? 0.25 : 1, shakeK: S.shk ? 1 : 0 });
+    setFxOpts({ flashK: S.flx ? 0.25 : 1, shakeK: S.shk ? 1 : 0, partK: frames.apply(S).partK });
     rig.dist = camPreset(S.cam);
   };
   applySettings(settings);
@@ -312,7 +316,7 @@ export function createGame(canvas, opts = {}) {
       const sB = app.screen,
         r = c0();
       if (!r) return r;
-      if (sB === SCREEN.SETTINGS) audio.play("uiTog");
+      if (sB === SCREEN.SETTINGS || sB === SCREEN.GRAPHICS) audio.play(app.screen === sB ? "uiTog" : "uiSel");
       else if (
         sB !== SCREEN.HOWTO &&
         sB !== SCREEN.SCORES &&
@@ -390,8 +394,8 @@ export function createGame(canvas, opts = {}) {
   const onPause = () => {
     if (app.screen !== SCREEN.GAME) return; // I2: pause exists only inside GAME;
     // outside it the world is a frozen backdrop and PAUSE would ghost-render
-    if (app.pauseView === 1) {
-      app.pauseBack(); // P/Escape on the inline page backs to the LIST, never to play
+    if (app.pauseView) {
+      app.pauseBack(); // P/Escape on an inline page backs one level (GRAPHICS -> OPTIONS -> LIST), never to play
       return;
     }
     if (world.state === "PLAY") {
@@ -419,11 +423,11 @@ export function createGame(canvas, opts = {}) {
         const px = (ev.clientX - r.left) * k,
           py = (ev.clientY - r.top) * k;
         const B = overlayBox(curKind);
-        if (app.pauseView === 1) {
-          const row = settingsHit(px, py, menuLayout(B.w, B.h));
+        if (app.pauseView) {
+          const row = (app.pauseView === 2 ? graphicsHit : settingsHit)(px, py, menuLayout(B.w, B.h));
           if (row < 0) app.pauseBack();
           else {
-            app.optRow = row;
+            app[app.pauseView === 2 ? "gfxRow" : "optRow"] = row;
             app.confirm();
           }
           return;
@@ -441,22 +445,22 @@ export function createGame(canvas, opts = {}) {
         return;
       }
       if (app.screen === SCREEN.INTRO) app.skipShow();
-      else if (app.screen === SCREEN.SETTINGS || app.screen === SCREEN.MENU) {
+      else if (app.screen === SCREEN.SETTINGS || app.screen === SCREEN.MENU || app.screen === SCREEN.GRAPHICS) {
         /* Tap a row = Enter on it; off the rows OPTIONS backs out and MENU
            confirms its cursor. Client px map through the CSS scale of the
            OVERLAY canvas — never #gl's Retina buffer, which the wrapper owns. */
-        const menu = app.screen === SCREEN.MENU;
+        const menu = app.screen === SCREEN.MENU, gx = app.screen === SCREEN.GRAPHICS;
         const r = canvas.getBoundingClientRect();
         const k = canvas.width / (r.width || canvas.width);
         const { cw, ch } = dims(canvas, curKind);
-        const row = (menu ? menuHit : settingsHit)(
+        const row = (menu ? menuHit : gx ? graphicsHit : settingsHit)(
           (ev.clientX - r.left) * k,
           (ev.clientY - r.top) * k,
           menuLayout(cw, ch),
           ITEMS.length,
         );
         if (!menu && row < 0) return app.back();
-        if (row >= 0) app[menu ? "cursor" : "optRow"] = row;
+        if (row >= 0) app[menu ? "cursor" : gx ? "gfxRow" : "optRow"] = row;
         app.confirm();
       } else if (app.screen === SCREEN.STATS) {
         const r = canvas.getBoundingClientRect(), k = canvas.width / (r.width || canvas.width), { cw, ch } = dims(canvas, curKind);
@@ -482,7 +486,7 @@ export function createGame(canvas, opts = {}) {
   /* music unlock (opening §5): window capture listeners stay armed until the
      ctx RUNS (Escape / touch pointerdown carry no activation). P1: the sting
      rides it, and only the title's press gets it (deep links never do). */
-  if (typeof window !== "undefined") armUnlock(window, audio, () => { if (app.screen === SCREEN.INTRO) { fireJingle(); app.beginShow(); } });
+  if (typeof window !== "undefined") armUnlock(window, audio, () => { if (app.screen === SCREEN.INTRO) { fireJingle(); app.beginShow(); } }), mountAudioPower(window, typeof document !== "undefined" ? document : null, audio, () => settings.snd !== 0);
   if (typeof window !== "undefined") window.addEventListener("pointerdown", () => { if (app.screen === SCREEN.INTRO) app.skipShow(); }); // bubble: an off-canvas tap skips too; the canvas handler runs first
 
   /* ATTRACT demo world handle (src/app/attract.js): the shell machine only
@@ -491,74 +495,16 @@ export function createGame(canvas, opts = {}) {
 
   /* renderer cache per kind, lazily built (app/renderkind.js kindOf): "2d"
      classic (default, byte-identical), "3d" real-3D wrapper (#gl under #c),
-     "px" PIXEL (#px under #c, pixel/renderer.js), "iso" legacy dimetric
-     pinned by ?render=iso (menu RENDER cycles 2d -> px -> 3d only). */
-  const glCanvas =
-    typeof document !== "undefined" && document
-      ? document.getElementById("gl")
-      : null;
-  const pxCanvas = glCanvas && document.getElementById("px");
-  const rcache = {};
+     "px" PIXEL (#px under #c), "iso" legacy dimetric pinned by ?render=iso.
+     src/app/rcache.js owns the cache, canvas sizing, the lazy / eager three
+     load, the AA rebuild and release; frames pushes GRAPHICS knobs through it. */
   function effKind() {
     return kindOf(urlKind, app);
   }
   let curKind = effKind();
-  /* overlay #c keeps the CLASSIC space for 2d/3d; iso needs its projected
-     dims. #gl / #px keep their own drawing buffers (wrapper / px renderer)
-     and are [hidden]-toggled to kind "3d" / "px". */
-  /* #c's 2D context must be alpha-capable: canvas contexts are first-call-
-     wins, and the classic renderer requests {alpha:false}. If IT claims the
-     context first, the 3D overlay later gets that same opaque context and
-     clearRect composites as opaque black over #gl (black-screen bug). */
-  if (canvas && canvas.getContext) canvas.getContext("2d", { alpha: true });
-  function sizeCanvases(kind) {
-    const { w, h } = kindSize(kind);
-    if (canvas) {
-      canvas.width = w;
-      canvas.height = h;
-    }
-    for (const [el, k] of [[glCanvas, "3d"], [pxCanvas, "px"]]) if (el) el.hidden = kind !== k;
-    if (fit) fit();
-  }
-  let createRenderer3D = opts.createRenderer3D || null;
-  let threeP = null;
-  function getRenderer(kind) {
-    sizeCanvases(kind);
-    if (rcache[kind]) return rcache[kind];
-    if (kind === "3d" && !createRenderer3D) {
-      if (!threeP)
-        threeP = loadRenderer3D().then((m) => {
-          createRenderer3D = m.createRenderer3D;
-          if (effKind() === "3d") renderer = getRenderer("3d");
-        }).catch((e) => console.warn("3D load failed", e)).then(() => { app.boardReady = true; }); // never strand the title
-      return rcache["2d"] || getRenderer("2d");
-    }
-    try {
-      rcache[kind] =
-        kind === "3d"
-          ? createRenderer3D(glCanvas, canvas, {
-              audio: opts.audio || null,
-              rig,
-            })
-          : kind === "px" ? createPixelRenderer(pxCanvas, canvas, { audio: opts.audio || null })
-          : createRenderer(canvas, { kind, audio: opts.audio || null });
-    } catch (e) {
-      console.warn("renderer init failed", e);
-      rcache[kind] = {
-        ctx: { save() {}, restore() {}, translate() {}, scale() {} },
-        render() {},
-        consumeEvents() {},
-      };
-    }
-    return rcache[kind];
-  }
-  if ((urlKind === "3d" || opts.render3d) && !createRenderer3D)
-    loadRenderer3D().then((m) => {
-      createRenderer3D = m.createRenderer3D;
-      renderer = getRenderer("3d");
-    }).catch((e) => console.warn("3D load failed", e)).then(() => { app.boardReady = true; });
-  let renderer = getRenderer(curKind);
-  app.boardReady = curKind !== "3d" || !!createRenderer3D;
+  const rc = mountRenderers({ canvas, opts, rig, make: { "2d": createRenderer, px: createPixelRenderer }, size: kindSize, fit: () => fit, kind: effKind, perf: () => frames.knobs(), loadRenderer3D, eager: urlKind === "3d" || !!opts.render3d, onSwap: (r) => { renderer = r; }, onReady: () => { app.boardReady = true; } });
+  let renderer = rc.get(curKind);
+  app.boardReady = curKind !== "3d" || rc.has3d();
 
   // drawShell getters (plan 5): hoisted once so the RAF loop below allocates
   // no new closures per frame.
@@ -576,7 +522,7 @@ export function createGame(canvas, opts = {}) {
     const k = effKind();
     if (k !== curKind) {
       curKind = k;
-      renderer = getRenderer(k); if (renderer.reset) renderer.reset();
+      renderer = rc.get(k); if (renderer.reset) renderer.reset();
     } // live RENDER toggle: cache swap
     touch.update(app.screen === SCREEN.GAME, world.state === "PLAY", world.players[0]);
     // §4 ducking: frame-polled, idempotent, self-heals across transitions
@@ -740,8 +686,6 @@ export function createGame(canvas, opts = {}) {
     renderer.render(attract && demo ? demo.world : show ? show.world : world, dt, ro);
     c.restore();
     drawShell(c, app, world, canvas, curKind, getScoresForHeat, getPlaquesFn);
-    if (running && typeof requestAnimationFrame !== "undefined")
-      requestAnimationFrame(loop);
   }
 
   // debug/test hook (browser only; opt-in via opts.debug or ?debug=1)
@@ -760,7 +704,7 @@ export function createGame(canvas, opts = {}) {
     });
 
   // boot
-  if (typeof requestAnimationFrame !== "undefined") requestAnimationFrame(loop);
+  frames.kick(); // the gated rAF chain (frameloop.js) calls loop; loop never re-requests
   return {
     world,
     input,
@@ -783,10 +727,6 @@ export function createGame(canvas, opts = {}) {
     stop() {
       running = false;
     },
-    start() {
-      running = true;
-      if (typeof requestAnimationFrame !== "undefined")
-        requestAnimationFrame(loop);
-    },
+    start() { running = true; frames.kick(); },
   };
 }

@@ -263,10 +263,12 @@ function mkCanvas(){
     for(let i=0;!g.app.boardReady&&i<300;i++) await new Promise(r=>setTimeout(r,10));
     check("O2 ?render=3d: boardReady true once the three load settles",g.app.boardReady===true);
   }finally{ if(loc0===undefined)delete globalThis.location; else globalThis.location=loc0; }
-  const src=readFileSync(join(ROOT,"src/main.js"),"utf8");
-  const settle=/loadRenderer3D\(\)\.then\(\(m\) => \{[^}]*\}\)\.catch\(\(e\) => console\.warn\("3D load failed", e\)\)\.then\(\(\) => \{ app\.boardReady = true; \}\)/g;
-  check("O2 both loadRenderer3D sites catch then settle boardReady (a 404 never strands the title)",
-    (src.match(/loadRenderer3D\(\)/g)||[]).length===2&&(src.match(settle)||[]).length===2);
+  const src=readFileSync(join(ROOT,"src/main.js"),"utf8"), rcs=readFileSync(join(ROOT,"src/app/rcache.js"),"utf8");
+  const settle=/loadRenderer3D\(\)\.then\(\(m\) => \{[^}]*\}\)\.catch\(\(e\) => console\.warn\("3D load failed", e\)\)\.then\(\(\) => onReady\(\)\)/g;
+  check("O2 both loadRenderer3D sites (src/app/rcache.js since the GRAPHICS swap) catch then settle (a 404 never strands the title)",
+    (rcs.match(/loadRenderer3D\(\)/g)||[]).length===2&&(rcs.match(settle)||[]).length===2);
+  check("O2 main.js settles boardReady through rcache's onReady and calls no loader itself",
+    /onReady: \(\) => \{ app\.boardReady = true; \}/.test(src)&&!/loadRenderer3D\(\)/.test(src));
   const {drawShell}=await import("../src/render/shellview.js");
   const veil=(ready,readyT)=>{
     const fs=[];
@@ -808,6 +810,7 @@ for(const mode of ["autoplay","code"]){
   const g=createGame(null,{seed:23});
   g.app.cabinetSeen=true;                // seen cabinet: skip lands on MENU
   g.app.skip(); g.app.cursor=2;
+  g.app.settings.dmo=2;                  // DEMO ON: an unbounded attract (SHORT parks at 60 s)
   g.app.enterAttract();                  // direct entry for a deterministic run
   const levels=new Set();
   let t=2000;
@@ -1027,8 +1030,9 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   const main=readFileSync(join(ROOT,"src/main.js"),"utf8");
   check("main.js does not statically import three wrapper",
     !/from\s+["']\.\/render\/three\/wrapper\.js["']/.test(main));
-  check("main.js does not stomp #gl drawing buffer (Retina viewport)",
-    !/glCanvas\.width\s*=/.test(main));
+  const rcsrc=readFileSync(join(ROOT,"src/app/rcache.js"),"utf8");
+  check("main.js / rcache.js do not stomp #gl drawing buffer (Retina viewport)",
+    !/glCanvas\.width\s*=/.test(main)&&!/glCanvas\.width\s*=/.test(rcsrc)&&!/el\("gl"\)\.width\s*=/.test(rcsrc));
   const indexHtml=readFileSync(join(ROOT,"index.html"),"utf8");
   check("index.html links a relative favicon (GitHub project Pages)",
     /rel=["']icon["']/.test(indexHtml)&&/href=["']favicon\.svg["']/.test(indexHtml));
@@ -1175,6 +1179,12 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   // the 799 cap.
   // W2 first-frame zoom wave: net -1 line (+1 post-step-loop dist reset;
   // -2 as resetOrbit takes the preset dist) — measured 798, against the 799 cap.
+  // GRAPHICS P1 frame-gate wave: net -3 (+2 imports, +1 mountFrames line; the
+  // loop's own re-request, the boot rAF and start()'s 4 lines fold into
+  // frames.kick()) — measured 790 before the rcache swap, against the 799 cap.
+  // GRAPHICS rcache swap: -57 (the renderer cache, sizeCanvases, both three
+  // loads and the fallback stub moved to src/app/rcache.js mountRenderers;
+  // +1 import) — measured 733, against the 799 cap.
   check("main.js stays a lean browser entry (<=799 lines)",
     L.length<=799,String(L.length));
   const lastImp=L.reduce((a,l,i)=>/^import[\s{]/.test(l)?i:a,-1);
@@ -1182,6 +1192,31 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   check("main.js keeps every import at the top (no mid-file import sprawl)",
     firstDecl<0||lastImp<firstDecl,
     "lastImport@"+(lastImp+1)+" firstDecl@"+(firstDecl+1));
+}
+
+// GRAPHICS P1: main hands the rAF chain to frameloop.js — one chain, gated runs,
+// start() never doubles it, stop() ends it, and loop() itself never re-requests.
+{
+  const main=readFileSync(join(ROOT,"src/main.js"),"utf8");
+  check("P1 main.js never calls requestAnimationFrame itself (frames.kick owns the chain)",
+    !/requestAnimationFrame/.test(main)&&(main.match(/frames\.kick\(\)/g)||[]).length===2);
+  const q=[], raf0=globalThis.requestAnimationFrame;
+  globalThis.requestAnimationFrame=(f)=>{ q.push(f); return q.length; };
+  try{
+    const g=createGame(null,{seed:5});
+    check("P1 boot queues exactly one gated rAF chain",q.length===1,q.length);
+    g.start(); g.start();
+    check("P1 start() twice never doubles the chain",q.length===1,q.length);
+    let t=0;
+    for(let i=0;i<240&&q.length;i++){ t+=1000/120; q.shift()(t); }
+    check("P1 the chain re-requests itself once per callback",q.length===1,q.length);
+    check("P1 the idle title runs 30/s on a 120 Hz panel and publishes app.gfx",
+      !!g.app.gfx&&Math.abs(g.app.gfx.fps-30)<=2&&g.app.gfx.hz===120,JSON.stringify(g.app.gfx));
+    g.stop(); t+=1000/120; q.shift()(t);
+    check("P1 stop() ends the chain at the next callback",q.length===0,q.length);
+    g.start();
+    check("P1 start() after stop() re-kicks one chain",q.length===1,q.length);
+  }finally{ if(raf0===undefined) delete globalThis.requestAnimationFrame; else globalThis.requestAnimationFrame=raf0; }
 }
 
 // URL/opts flag parsing is pure over a search string (no location needed)
@@ -1294,6 +1329,9 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
     g.app.screen=SCREEN.TROPHIES;
     check("debug hook: state() names TROPHIES (R6)",
       win.__GAME__.state()==="TROPHIES",String(win.__GAME__.state()));
+    g.app.screen=SCREEN.GRAPHICS;
+    check("debug hook: state() names GRAPHICS",
+      win.__GAME__.state()==="GRAPHICS",String(win.__GAME__.state()));
     g.app.screen=99;
     check("debug hook: state() falls back to the raw index, never undefined, past the end of SCREEN_NAME (Nit-5)",
       win.__GAME__.state()==="99",String(win.__GAME__.state()));

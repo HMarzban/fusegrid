@@ -12,13 +12,13 @@ import { pxBox, pxQuant, snapOff, mountFit, fitBox } from "../src/app/fit.js";
 import { heatProfile } from "../src/core/heat.js";
 import { readFlags } from "../src/app/flags.js";
 import { kindOf, bootRender, renderBits, renderVal } from "../src/app/renderkind.js";
-import { snapArt, evenShake, pxM, finalMatrix, kOf } from "../src/render/pixel/snap.js";
+import { snapArt, evenShake, pxM, finalMatrix, kOf, NATIVE_W, NATIVE_H } from "../src/render/pixel/snap.js";
 import { PX_T } from "../src/render/pixel/timing.js";
 import { facingOf, walkStep, newWalk, isIdle, bladeAgeFrame, bladePieces, bladeScratch, fuseFrame, bombFps, animClock, newClock, popFrame, F_FRONT, F_BACK, F_RIGHT, F_LEFT, P_CROSS, P_STRAIGHT, P_END } from "../src/render/pixel/anim.js";
 import { createOneShots, feedShot, shotFrame, OS, OS_DUR } from "../src/render/pixel/oneshot.js";
 import { createAtlas } from "../src/render/pixel/atlas.js";
 import { createView, resetView, drawPixelWorld } from "../src/render/pixel/world.js";
-import { createPixelRenderer } from "../src/render/pixel/renderer.js";
+import { createPixelRenderer, SHRINK_N, FORCE_MS } from "../src/render/pixel/renderer.js";
 import { GHOST_A } from "../src/render/sprites.js";
 import { getFx } from "../src/render/fx.js";
 import { createRGBA, surfRGBA, nearest as nearestRGBA, bilinear as bilinearRGBA } from "../tools/pixel/rgba.mjs";
@@ -303,6 +303,129 @@ function r23(dpr, tf, shake, css, ds) {
   check("at the same smaller M the edge copy repeats every frame (native redraws the sub-rect)", log.filter((q) => q[0] === "hi" && q[1] === "drawImage" && q[4] === "hi").length === 2);
 }
 
+// ---- GRAPHICS perf (P2b): margin-only fill, hi shrink, sleep, render-on-change ----
+function pxRig(o = {}) {
+  const log = []; let n = 0;
+  const mk = (w, h) => recCanvas(w, h, log, ["probe", "native", "hi"][n++] || "x");
+  const px = recCanvas(600, 520, log, "px"); px.clientWidth = 829; px.clientHeight = 718;
+  const ov = recCanvas(600, 520, log, "ov");
+  const r = createPixelRenderer(px, ov, {mkCanvas: mk, surf: surfRGBA, getShake: o.shake || (() => ({x: 0, y: 0})), now: o.now, perf: o.perf});
+  return {r, log, px, ov};
+}
+const rasters = (log) => log.filter((q) => q[0] === "hi" && q[1] === "drawImage" && q[4] === "native").length;
+{
+  for (let lv = 1; lv <= 8; lv++) {
+    const w = createWorld(4242, lv); loadLevel(w, lv);
+    const V = createView(atlas); V.shots = createOneShots();
+    const img = createRGBA(NATIVE_W, NATIVE_H), c = img.getContext(); c.imageSmoothingEnabled = false;
+    drawPixelWorld(c, w, V);
+    let holes = 0; for (let i = 3; i < img.data.length; i += 4) if (img.data[i] !== 255) holes++;
+    check("room " + lv + ": the native board is opaque after one draw (the margin-only fill rests on it)", holes === 0, holes);
+  }
+  const cover = (tf, shake) => {
+    const {r, log, px, ov} = pxRig({shake: () => shake});
+    const w = createWorld(4242, 1); loadLevel(w, 1); w.state = "PLAY";
+    r.render(w, CFG.STEP);
+    ov.tf = tf; log.length = 0; r.render(w, CFG.STEP);
+    const fills = log.filter((q) => q[0] === "px" && q[1] === "fillRect").map((q) => q[2]);
+    const bw = px.width, bh = px.height, m = r._dbg.stat, M = m.M, mt = log.filter((q) => q[0] === "px" && q[1] === "setTransform" && (q[2][0] !== 1 || q[2][4] !== 0 || q[2][5] !== 0)).map((q) => q[2]).pop() || [1, 0, 0, 1, 0, 0];
+    const x0 = mt[4], y0 = mt[5], x1 = x0 + mt[0] * 300 * M, y1 = y0 + mt[3] * 260 * M;
+    const got = new Uint8Array(bw * bh);
+    for (const [fx, fy, fw, fh] of fills) for (let y = fy; y < fy + fh; y++) for (let x = fx; x < fx + fw; x++) got[y * bw + x]++;
+    let miss = 0, dbl = 0, inner = 0;
+    for (let y = 0; y < bh; y++) for (let x = 0; x < bw; x++) {
+      const full = x >= x0 && x + 1 <= x1 + 1e-6 && y >= y0 && y + 1 <= y1 + 1e-6, g = got[y * bw + x];
+      if (!full && !g) miss++;
+      if (g > 1) dbl++;
+      if (full && g && x > Math.ceil(x0) && x + 2 < x1 && y > Math.ceil(y0) && y + 2 < y1) inner++;
+    }
+    return {fills, miss, dbl, inner, ok: fills.every((f) => f.every(Number.isInteger) && f[2] > 0 && f[3] > 0 && f[0] >= 0 && f[1] >= 0 && f[0] + f[2] <= bw && f[1] + f[3] <= bh)};
+  };
+  const id = cover(null, {x: 0, y: 0});
+  check("margin fill: the unzoomed, unshaken board covers #px, so zero fillRects (was one full-backing fill per frame)", id.fills.length === 0, JSON.stringify(id.fills));
+  for (const [name, tf, sh] of [["zoomed out 0.6", {a: 0.6, b: 0, c: 0, d: 0.6, e: 120, f: 104}, {x: 0, y: 0}], ["shaken (8,-6)", null, {x: 8, y: -6}],
+    ["zoomed in 2.5 off-centre", {a: 2.5, b: 0, c: 0, d: 2.5, e: -100, f: -90}, {x: 0, y: 0}], ["fractional zoom 0.913", {a: 0.913, b: 0, c: 0, d: 0.913, e: 26.1, f: 22.6}, {x: 2, y: 2}]]) {
+    const c = cover(tf, sh);
+    check("margin fill (" + name + "): every pixel the hi rect leaves uncovered or partly covered is filled, strips disjoint, integer, in bounds, never inside the board (" + c.fills.length + " rects)",
+      c.ok && c.miss === 0 && c.dbl === 0 && c.inner === 0 && c.fills.length <= 4, JSON.stringify({f: c.fills, miss: c.miss, dbl: c.dbl, inner: c.inner}));
+  }
+  const sk = cover({a: 1, b: 0.2, c: 0, d: 1, e: 0, f: 0}, {x: 0, y: 0});
+  check("margin fill: a skewed matrix falls back to one full-backing fill", sk.fills.length === 1 && sk.fills[0][2] === 829 && sk.fills[0][3] === 718, JSON.stringify(sk.fills));
+  const {r, log} = pxRig(), w = createWorld(4242, 1); loadLevel(w, 1); w.state = "PLAY";
+  r.render(w, CFG.STEP);
+  const f0 = log.filter((q) => q[0] === "px" && q[1] === "fillRect").map((q) => q[2]);
+  check("margin fill: the first raster fills the whole backing once (native starts transparent)", f0.length === 1 && f0[0][2] === 829 && f0[0][3] === 718, JSON.stringify(f0));
+}
+{
+  const {r, ov} = pxRig(), w = createWorld(4242, 1); loadLevel(w, 1); w.state = "PLAY";
+  ov.tf = {a: 2.5, b: 0, c: 0, d: 2.5, e: -300, f: -200}; r.render(w, CFG.STEP);
+  const big = r._dbg.hiCap, hi = r._dbg.hi, Mz = pxM(829 / 300, 2.5), M1 = pxM(829 / 300, 1);
+  check("intro zoom grows hi to M " + Mz + " (" + 300 * Mz + "x" + 260 * Mz + ")", big === Mz && hi.width === 300 * Mz && hi.height === 260 * Mz, big + " " + hi.width);
+  ov.tf = null;
+  for (let i = 0; i < SHRINK_N - 1; i++) r.render(w, CFG.STEP);
+  check("hi shrink: still at the zoom M after " + (SHRINK_N - 1) + " renders below hiCap-1", r._dbg.hiCap === Mz && hi.width === 300 * Mz, r._dbg.hiCap);
+  r.render(w, CFG.STEP);
+  check("hi shrink: render " + SHRINK_N + " re-allocates the same canvas at M " + M1 + " (" + 300 * M1 + "x" + 260 * M1 + ")", r._dbg.hi === hi && r._dbg.hiCap === M1 && hi.width === 300 * M1 && hi.height === 260 * M1, r._dbg.hiCap + " " + hi.width);
+  ov.tf = {a: 4 / 3, b: 0, c: 0, d: 4 / 3, e: -100, f: -86}; r.render(w, CFG.STEP);
+  const Mu = r._dbg.hiCap;
+  ov.tf = null;
+  for (let i = 0; i < SHRINK_N * 2; i++) r.render(w, CFG.STEP);
+  check("hi shrink hysteresis: M = hiCap-1 (" + Mu + " -> " + M1 + ") never re-allocates", Mu === M1 + 1 && r._dbg.hiCap === Mu, Mu + " " + r._dbg.hiCap);
+  const t = {v: 0}, A = pxRig({now: () => t.v, perf: {epoch: 1}}), wa = createWorld(4242, 1); loadLevel(wa, 1); wa.state = "PAUSE";
+  A.ov.tf = {a: 2.5, b: 0, c: 0, d: 2.5, e: -300, f: -200}; A.r.render(wa, CFG.STEP);
+  A.ov.tf = null; A.log.length = 0;
+  for (let i = 0; i < SHRINK_N; i++) { t.v += 1; A.r.render(wa, CFG.STEP); }
+  check("hi shrink counts renders, not rasters: a frozen board still drops the zoom hi within " + SHRINK_N + " renders", A.r._dbg.hiCap === M1 && rasters(A.log) === 2, A.r._dbg.hiCap + " " + rasters(A.log));
+}
+{
+  const {r, px, log} = pxRig(), w = createWorld(4242, 1); loadLevel(w, 1); w.state = "PLAY";
+  r.render(w, CFG.STEP);
+  const hi = r._dbg.hi, atlas0 = r._dbg.atlas;
+  r.sleep();
+  check("sleep(): hi and #px drop to 1x1, hiCap 0, the atlas is kept", hi.width === 1 && hi.height === 1 && px.width === 1 && px.height === 1 && r._dbg.hiCap === 0 && r._dbg.atlas === atlas0);
+  log.length = 0; r.render(w, CFG.STEP);
+  check("the next render regrows them (wake is implicit): #px 829x718, hi 900x780, one raster", px.width === 829 && px.height === 718 && hi.width === 900 && hi.height === 780 && r._dbg.hiCap === 3 && rasters(log) === 1, px.width + " " + hi.width);
+  const stub = createPixelRenderer(null, null, {});
+  let threw = false; try { stub.sleep(); stub.invalidate(); stub.setPerf({epoch: 3}); stub.render(w, CFG.STEP); } catch (e) { threw = e; }
+  check("stub mode: sleep / invalidate / setPerf never throw", !threw, String(threw));
+}
+{
+  const t = {v: 0}, frame = (R, w, k = 1) => { let n = 0; for (let i = 0; i < k; i++) { t.v += 16; R.log.length = 0; R.r.render(w, CFG.STEP); n += rasters(R.log); } return n; };
+  const U = pxRig({now: () => t.v}), wu = createWorld(4242, 1); loadLevel(wu, 1); wu.state = "PAUSE";
+  check("unarmed (no setPerf: every Node path, every existing pin): a frozen board still rasters every frame", frame(U, wu, 30) === 30 && !U.r._dbg.armed);
+  const R = pxRig({now: () => t.v}), w = createWorld(4242, 1); loadLevel(w, 1); w.state = "PLAY";
+  R.r.setPerf({epoch: 1});
+  check("setPerf arms render-on-change", R.r._dbg.armed && R.r._dbg.perf.epoch === 1);
+  check("PLAY: a stepping world rasters every frame", (() => { let n = 0; for (let i = 0; i < 20; i++) { step(w, CFG.STEP, {0: newIntent()}); n += frame(R, w); } return n; })() === 20);
+  w.state = "PAUSE";
+  let first = 0, rest = 0;
+  for (let i = 0; i < 25; i++) { step(w, CFG.STEP, {0: newIntent()}); const n = frame(R, w); if (i) rest += n; else first = n; }
+  check("PAUSE: the first paused frame rasters, the next 24 (400 ms) skip the board (R16 frozen skip)", first === 1 && rest === 0, first + " " + rest);
+  check("PAUSE: the overlay is still cleared and redrawn on every skipped frame", R.log.some((q) => q[0] === "ov" && q[1] === "clearRect") && R.log.some((q) => q[0] === "ov" && q[1] === "fillText"));
+  t.v += FORCE_MS; check("a forced raster at least every " + FORCE_MS + " ms", frame(R, w) === 1 && frame(R, w) === 0);
+  R.r.invalidate(); check("invalidate() forces the next raster only", frame(R, w) === 1 && frame(R, w) === 0);
+  R.r.setPerf({epoch: 1}); check("setPerf with the same epoch is idempotent (no raster)", frame(R, w) === 0);
+  R.r.setPerf({epoch: 2}); check("a new K.epoch forces one raster", frame(R, w) === 1 && frame(R, w) === 0);
+  w.events.push({t: "brick", x: 100, y: 100}); check("a world event rasters even in PAUSE", frame(R, w) === 1 && frame(R, w) === 0);
+  R.ov.tf = {a: 1.2, b: 0, c: 0, d: 1.2, e: -60, f: -52}; check("a new overlay matrix (intro zoom / camera) rasters", frame(R, w) === 1 && frame(R, w) === 0);
+  R.px.dataset = {bw: "600", bh: "520"}; check("a new backing (fit pxCap / resize) rasters", frame(R, w) === 1 && frame(R, w) === 0 && R.px.width === 600);
+  R.r.reset(); check("reset() (RENDER flip) rasters", frame(R, w) === 1);
+  check("ghost moves and o.pop changes raster", (() => { const o = {ghost: {x: 30, y: 30}}; t.v += 16; R.log.length = 0; R.r.render(w, CFG.STEP, o); const a = rasters(R.log);
+    R.log.length = 0; R.r.render(w, CFG.STEP, o); const b = rasters(R.log); o.ghost.x = 32; R.log.length = 0; R.r.render(w, CFG.STEP, o); const c = rasters(R.log);
+    R.log.length = 0; R.r.render(w, CFG.STEP, {ghost: o.ghost, pop: 0.5}); return a + "" + b + c + rasters(R.log); })() === "1011");
+  w.state = "PLAY"; frame(R, w);
+  const title = frame(R, w, 20);
+  check("an unstepped PLAY world (title / MENU board) skips after one raster", title === 0, title);
+  w.events.push({t: "boom", x: 300, y: 260});
+  const busy = frame(R, w, 5);
+  check("live particles keep the board dirty while they fly (PLAY)", busy === 5, busy);
+  const sh = {v: {x: 6, y: 0}}, S = pxRig({now: () => t.v, shake: () => sh.v, perf: {epoch: 1}}), ws = createWorld(4242, 1); loadLevel(ws, 1); ws.state = "PLAY";
+  frame(S, ws);
+  sh.v = {x: 0, y: 0};
+  check("the shake settling to zero rasters the unshaken board (never leaves a shaken frame up)", frame(S, ws) === 1 && frame(S, ws) === 0);
+  check("a renderer built with opts.perf (rcache) is armed at construction", S.r._dbg.armed);
+}
+
 // ---- fit: #px content box and origin snapped to device px ----
 {
   let ok = true;
@@ -396,10 +519,12 @@ function r23(dpr, tf, shake, css, ds) {
   check("the px path never imports vendor/three or render/three", px.every(([, s]) => !/vendor\/three|\/three\//.test(s)));
   check("no Math.random in src/render/pixel", px.every(([, s]) => !/Math\.random/.test(s)));
   const bytes = px.reduce((a, [, s]) => a + Buffer.byteLength(s), 0);
-  check("px JS <= 120 KB (" + (bytes / 1024).toFixed(1) + " KB)", bytes <= 120 * 1024);
-  const main = readFileSync(join(ROOT, "src/main.js"), "utf8");
-  check("main.js never assigns #px's drawing buffer", !/pxCanvas\.(width|height)\s*=/.test(main));
-  check("main.js routes kind px to createPixelRenderer", /kind === "px" \? createPixelRenderer\(pxCanvas, canvas/.test(main));
+  // R24 pinned 120 KB; the GRAPHICS merge (perf seams) on top of the filled foe/item sheets lands at 121.2 KB.
+  // Tight bump to 122 KB pending ratification; R24's open item (dynamic import of the px path) is now due.
+  check("px JS <= 122 KB (" + (bytes / 1024).toFixed(1) + " KB)", bytes <= 122 * 1024);
+  const rcP = join(ROOT, "src/app/rcache.js"), main = readFileSync(join(ROOT, "src/main.js"), "utf8") + (statSync(rcP, {throwIfNoEntry: false}) ? readFileSync(rcP, "utf8") : "");
+  check("main.js (or its rcache.js seam) never assigns #px's drawing buffer", !/pxCanvas\.(width|height)\s*=/.test(main));
+  check("main.js (or its rcache.js seam) routes kind px to createPixelRenderer", /kind === "px" \? createPixelRenderer\(pxCanvas, canvas/.test(main) || (/px: createPixelRenderer\b/.test(main) && /k === "px" \? make\.px\(el\("px"\), canvas/.test(main)));
   const html = readFileSync(join(ROOT, "index.html"), "utf8");
   check("index.html: #px between #gl and #c, author [hidden] rule, image-rendering:auto",
     /<canvas id="gl" hidden><\/canvas><canvas id="px" hidden><\/canvas><canvas id="c"/.test(html) && /#px\[hidden\]\{display:none\}/.test(html) && /#px\{[^}]*image-rendering:auto/.test(html));

@@ -9,6 +9,7 @@
    canvas); headless keeps an unmapped PointsMaterial. */
 import * as THREE from "../../../vendor/three.module.js";
 import {CFG} from "../../core/config.js";
+import {live} from "./upload.js";
 
 export const PART_CAP=384;
 const W2=CFG.COLS*CFG.TILE/2, D2=CFG.ROWS*CFG.TILE/2;
@@ -53,8 +54,8 @@ export function createParticles(){
       col[i*3]=_c.r*k; col[i*3+1]=_c.g*k; col[i*3+2]=_c.b*k;
      }
     geo.setDrawRange(0,n);
-    geo.attributes.position.needsUpdate=true;
-    geo.attributes.color.needsUpdate=true;
+    live(geo.attributes.position,n);
+    live(geo.attributes.color,n);
    }
   return {points,update,cap:PART_CAP};
 }
