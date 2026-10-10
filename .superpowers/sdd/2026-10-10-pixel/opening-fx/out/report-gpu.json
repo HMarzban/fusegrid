@@ -1,0 +1,3598 @@
+[
+ {
+  "tag": "2d-laptop",
+  "steps": [
+   {
+    "n": "title",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/2d-laptop-title.png",
+    "stat": {
+     "state": "INTRO",
+     "stage": 0,
+     "subT": 0.351,
+     "level": 1,
+     "pop": null,
+     "M": null,
+     "z": null,
+     "k": null,
+     "ms": null,
+     "draws": null,
+     "bakeMs": null,
+     "pending": null,
+     "shots": null
+    },
+    "lay": {
+     "lay": "d",
+     "dpr": 1,
+     "c": [
+      267.609,
+      24,
+      830.766,
+      720
+     ],
+     "px": null,
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": null,
+     "pxOrgOnDevice": null,
+     "pxOffC": null,
+     "data": [
+      "829",
+      "718"
+     ],
+     "buf": [
+      300,
+      150
+     ]
+    }
+   },
+   {
+    "n": "peak-zoom",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/2d-laptop-show-zoom.png",
+    "stat": {
+     "state": "INTRO",
+     "stage": 1,
+     "subT": 1.112,
+     "level": 1,
+     "pop": null,
+     "M": null,
+     "z": null,
+     "k": null,
+     "ms": null,
+     "draws": null,
+     "bakeMs": null,
+     "pending": null,
+     "shots": null
+    }
+   },
+   {
+    "n": "menu",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/2d-laptop-menu.png",
+    "stat": {
+     "state": "MENU",
+     "stage": 1,
+     "subT": 0.738,
+     "level": 1,
+     "pop": null,
+     "M": null,
+     "z": null,
+     "k": null,
+     "ms": null,
+     "draws": null,
+     "bakeMs": null,
+     "pending": null,
+     "shots": null
+    },
+    "lay": {
+     "lay": "d",
+     "dpr": 1,
+     "c": [
+      267.609,
+      24,
+      830.766,
+      720
+     ],
+     "px": null,
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": null,
+     "pxOrgOnDevice": null,
+     "pxOffC": null,
+     "data": [
+      "829",
+      "718"
+     ],
+     "buf": [
+      300,
+      150
+     ]
+    }
+   },
+   {
+    "n": "game",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/2d-laptop-game.png",
+    "stat": {
+     "state": "PLAY",
+     "stage": 1,
+     "subT": 0.995,
+     "level": 1,
+     "pop": null,
+     "M": null,
+     "z": null,
+     "k": null,
+     "ms": null,
+     "draws": null,
+     "bakeMs": null,
+     "pending": null,
+     "shots": null
+    },
+    "lay": {
+     "lay": "d",
+     "dpr": 1,
+     "c": [
+      267.609,
+      24,
+      830.766,
+      720
+     ],
+     "px": null,
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": null,
+     "pxOrgOnDevice": null,
+     "pxOffC": null,
+     "data": [
+      "829",
+      "718"
+     ],
+     "buf": [
+      300,
+      150
+     ]
+    }
+   },
+   {
+    "n": "win",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/2d-laptop-win.png",
+    "stat": {
+     "state": "WIN",
+     "stage": 1,
+     "subT": 2.856,
+     "level": 1,
+     "pop": null,
+     "M": null,
+     "z": null,
+     "k": null,
+     "ms": null,
+     "draws": null,
+     "bakeMs": null,
+     "pending": null,
+     "shots": null
+    },
+    "lay": {
+     "lay": "d",
+     "dpr": 1,
+     "c": [
+      267.609,
+      24,
+      830.766,
+      720
+     ],
+     "px": null,
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": null,
+     "pxOrgOnDevice": null,
+     "pxOffC": null,
+     "data": [
+      "829",
+      "718"
+     ],
+     "buf": [
+      300,
+      150
+     ]
+    }
+   },
+   {
+    "n": "pause",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/2d-laptop-pause.png",
+    "stat": {
+     "state": "PAUSE",
+     "stage": 1,
+     "subT": 3.661,
+     "level": 2,
+     "pop": null,
+     "M": null,
+     "z": null,
+     "k": null,
+     "ms": null,
+     "draws": null,
+     "bakeMs": null,
+     "pending": null,
+     "shots": null
+    },
+    "lay": {
+     "lay": "d",
+     "dpr": 1,
+     "c": [
+      267.609,
+      24,
+      830.766,
+      720
+     ],
+     "px": null,
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": null,
+     "pxOrgOnDevice": null,
+     "pxOffC": null,
+     "data": [
+      "829",
+      "718"
+     ],
+     "buf": [
+      300,
+      150
+     ]
+    }
+   },
+   {
+    "n": "pause2",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/2d-laptop-pause2.png",
+    "stat": {
+     "state": "PAUSE",
+     "stage": 1,
+     "subT": 4.162,
+     "level": 2,
+     "pop": null,
+     "M": null,
+     "z": null,
+     "k": null,
+     "ms": null,
+     "draws": null,
+     "bakeMs": null,
+     "pending": null,
+     "shots": null
+    },
+    "lay": {
+     "lay": "d",
+     "dpr": 1,
+     "c": [
+      267.609,
+      24,
+      830.766,
+      720
+     ],
+     "px": null,
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": null,
+     "pxOrgOnDevice": null,
+     "pxOffC": null,
+     "data": [
+      "829",
+      "718"
+     ],
+     "buf": [
+      300,
+      150
+     ]
+    }
+   },
+   {
+    "n": "lose",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/2d-laptop-lose.png",
+    "stat": {
+     "state": "LOSE",
+     "stage": 1,
+     "subT": 4.755,
+     "level": 2,
+     "pop": null,
+     "M": null,
+     "z": null,
+     "k": null,
+     "ms": null,
+     "draws": null,
+     "bakeMs": null,
+     "pending": null,
+     "shots": null
+    },
+    "lay": {
+     "lay": "d",
+     "dpr": 1,
+     "c": [
+      267.609,
+      24,
+      830.766,
+      720
+     ],
+     "px": null,
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": null,
+     "pxOrgOnDevice": null,
+     "pxOffC": null,
+     "data": [
+      "829",
+      "718"
+     ],
+     "buf": [
+      300,
+      150
+     ]
+    }
+   }
+  ],
+  "errors": []
+ },
+ {
+  "tag": "px-laptop",
+  "steps": [
+   {
+    "n": "title",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-laptop-title.png",
+    "stat": {
+     "state": "INTRO",
+     "stage": 0,
+     "subT": 0.345,
+     "level": 1,
+     "pop": 0,
+     "M": 4,
+     "z": 1.12,
+     "k": 2.763,
+     "ms": 0.2,
+     "draws": 287,
+     "bakeMs": 11.400000005960464,
+     "pending": 151,
+     "shots": []
+    },
+    "lay": {
+     "lay": "d",
+     "dpr": 1,
+     "c": [
+      267.609,
+      24,
+      830.766,
+      720
+     ],
+     "px": [
+      268,
+      24,
+      831,
+      720
+     ],
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": [
+      269,
+      25
+     ],
+     "pxOrgOnDevice": true,
+     "pxOffC": [
+      0.39,
+      0
+     ],
+     "data": [
+      "829",
+      "718"
+     ],
+     "buf": [
+      829,
+      718
+     ]
+    }
+   },
+   {
+    "n": "pop-f0",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-laptop-pop-f0.png",
+    "stat": {
+     "state": "INTRO",
+     "stage": 1,
+     "subT": 0.551,
+     "level": 1,
+     "pop": 0.04820690556025098,
+     "M": 5,
+     "z": 1.465,
+     "k": 2.763,
+     "ms": 0.2,
+     "draws": 288,
+     "bakeMs": 11.400000005960464,
+     "pending": 151,
+     "shots": []
+    }
+   },
+   {
+    "n": "pop-f1",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-laptop-pop-f1.png",
+    "stat": {
+     "state": "INTRO",
+     "stage": 1,
+     "subT": 0.571,
+     "level": 1,
+     "pop": 0.3746910123774505,
+     "M": 5,
+     "z": 1.5,
+     "k": 2.763,
+     "ms": 0.2,
+     "draws": 288,
+     "bakeMs": 11.400000005960464,
+     "pending": 151,
+     "shots": []
+    }
+   },
+   {
+    "n": "pop-f2",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-laptop-pop-f2.png",
+    "stat": {
+     "state": "INTRO",
+     "stage": 1,
+     "subT": 0.595,
+     "level": 1,
+     "pop": 0.671393650450445,
+     "M": 5,
+     "z": 1.54,
+     "k": 2.763,
+     "ms": 0.2,
+     "draws": 288,
+     "bakeMs": 11.400000005960464,
+     "pending": 151,
+     "shots": []
+    }
+   },
+   {
+    "n": "pop-idle",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-laptop-pop-idle.png",
+    "stat": {
+     "state": "INTRO",
+     "stage": 1,
+     "subT": 0.643,
+     "level": 1,
+     "pop": 1.0086078704231105,
+     "M": 5,
+     "z": 1.607,
+     "k": 2.763,
+     "ms": 0.1,
+     "draws": 288,
+     "bakeMs": 11.400000005960464,
+     "pending": 151,
+     "shots": []
+    }
+   },
+   {
+    "n": "peak-zoom",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-laptop-show-zoom.png",
+    "stat": {
+     "state": "INTRO",
+     "stage": 1,
+     "subT": 1.115,
+     "level": 1,
+     "pop": 1,
+     "M": 5,
+     "z": 1.8,
+     "k": 2.763,
+     "ms": 0.2,
+     "draws": 288,
+     "bakeMs": 11.400000005960464,
+     "pending": 151,
+     "shots": []
+    }
+   },
+   {
+    "n": "menu",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-laptop-menu.png",
+    "stat": {
+     "state": "MENU",
+     "stage": 1,
+     "subT": 0.799,
+     "level": 1,
+     "pop": null,
+     "M": 3,
+     "z": 1,
+     "k": 2.763,
+     "ms": 0.3,
+     "draws": 283,
+     "bakeMs": 11.400000005960464,
+     "pending": 151,
+     "shots": []
+    },
+    "lay": {
+     "lay": "d",
+     "dpr": 1,
+     "c": [
+      267.609,
+      24,
+      830.766,
+      720
+     ],
+     "px": [
+      268,
+      24,
+      831,
+      720
+     ],
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": [
+      269,
+      25
+     ],
+     "pxOrgOnDevice": true,
+     "pxOffC": [
+      0.39,
+      0
+     ],
+     "data": [
+      "829",
+      "718"
+     ],
+     "buf": [
+      829,
+      718
+     ]
+    }
+   },
+   {
+    "n": "game",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-laptop-game.png",
+    "stat": {
+     "state": "PLAY",
+     "stage": 1,
+     "subT": 1.016,
+     "level": 1,
+     "pop": null,
+     "M": 3,
+     "z": 1,
+     "k": 2.763,
+     "ms": 0.2,
+     "draws": 287,
+     "bakeMs": 11.400000005960464,
+     "pending": 151,
+     "shots": []
+    },
+    "lay": {
+     "lay": "d",
+     "dpr": 1,
+     "c": [
+      267.609,
+      24,
+      830.766,
+      720
+     ],
+     "px": [
+      268,
+      24,
+      831,
+      720
+     ],
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": [
+      269,
+      25
+     ],
+     "pxOrgOnDevice": true,
+     "pxOffC": [
+      0.39,
+      0
+     ],
+     "data": [
+      "829",
+      "718"
+     ],
+     "buf": [
+      829,
+      718
+     ]
+    }
+   },
+   {
+    "n": "win",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-laptop-win.png",
+    "stat": {
+     "state": "WIN",
+     "stage": 1,
+     "subT": 2.858,
+     "level": 1,
+     "pop": null,
+     "M": 3,
+     "z": 1,
+     "k": 2.763,
+     "ms": 0.2,
+     "draws": 283,
+     "bakeMs": 11.400000005960464,
+     "pending": 151,
+     "shots": [
+      11
+     ]
+    },
+    "lay": {
+     "lay": "d",
+     "dpr": 1,
+     "c": [
+      267.609,
+      24,
+      830.766,
+      720
+     ],
+     "px": [
+      268,
+      24,
+      831,
+      720
+     ],
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": [
+      269,
+      25
+     ],
+     "pxOrgOnDevice": true,
+     "pxOffC": [
+      0.39,
+      0
+     ],
+     "data": [
+      "829",
+      "718"
+     ],
+     "buf": [
+      829,
+      718
+     ]
+    }
+   },
+   {
+    "n": "pause",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-laptop-pause.png",
+    "stat": {
+     "state": "PAUSE",
+     "stage": 1,
+     "subT": 3.688,
+     "level": 2,
+     "pop": null,
+     "M": 3,
+     "z": 1,
+     "k": 2.763,
+     "ms": 0.2,
+     "draws": 296,
+     "bakeMs": 11.400000005960464,
+     "pending": 153,
+     "shots": []
+    },
+    "lay": {
+     "lay": "d",
+     "dpr": 1,
+     "c": [
+      267.609,
+      24,
+      830.766,
+      720
+     ],
+     "px": [
+      268,
+      24,
+      831,
+      720
+     ],
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": [
+      269,
+      25
+     ],
+     "pxOrgOnDevice": true,
+     "pxOffC": [
+      0.39,
+      0
+     ],
+     "data": [
+      "829",
+      "718"
+     ],
+     "buf": [
+      829,
+      718
+     ]
+    }
+   },
+   {
+    "n": "pause2",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-laptop-pause2.png",
+    "stat": {
+     "state": "PAUSE",
+     "stage": 1,
+     "subT": 4.212,
+     "level": 2,
+     "pop": null,
+     "M": 3,
+     "z": 1,
+     "k": 2.763,
+     "ms": 0.2,
+     "draws": 296,
+     "bakeMs": 11.400000005960464,
+     "pending": 153,
+     "shots": []
+    },
+    "lay": {
+     "lay": "d",
+     "dpr": 1,
+     "c": [
+      267.609,
+      24,
+      830.766,
+      720
+     ],
+     "px": [
+      268,
+      24,
+      831,
+      720
+     ],
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": [
+      269,
+      25
+     ],
+     "pxOrgOnDevice": true,
+     "pxOffC": [
+      0.39,
+      0
+     ],
+     "data": [
+      "829",
+      "718"
+     ],
+     "buf": [
+      829,
+      718
+     ]
+    }
+   },
+   {
+    "n": "lose",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-laptop-lose.png",
+    "stat": {
+     "state": "LOSE",
+     "stage": 1,
+     "subT": 4.795,
+     "level": 2,
+     "pop": null,
+     "M": 3,
+     "z": 1,
+     "k": 2.763,
+     "ms": 0.3,
+     "draws": 298,
+     "bakeMs": 11.400000005960464,
+     "pending": 153,
+     "shots": [
+      5
+     ]
+    },
+    "lay": {
+     "lay": "d",
+     "dpr": 1,
+     "c": [
+      267.609,
+      24,
+      830.766,
+      720
+     ],
+     "px": [
+      268,
+      24,
+      831,
+      720
+     ],
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": [
+      269,
+      25
+     ],
+     "pxOrgOnDevice": true,
+     "pxOffC": [
+      0.39,
+      0
+     ],
+     "data": [
+      "829",
+      "718"
+     ],
+     "buf": [
+      829,
+      718
+     ]
+    }
+   }
+  ],
+  "foes": 13,
+  "perf": [
+   {
+    "z": 1,
+    "median": 1.9,
+    "p90": 2.6,
+    "x10": 0.56,
+    "cpuMs": 0.2,
+    "M": 3,
+    "k": 2.763,
+    "hi": [
+     1500,
+     1300
+    ],
+    "draws": 307,
+    "foes": 13
+   },
+   {
+    "z": 1.8,
+    "median": 1.6,
+    "p90": 1.7,
+    "x10": 0.46,
+    "cpuMs": 0.1,
+    "M": 5,
+    "k": 2.763,
+    "hi": [
+     1500,
+     1300
+    ],
+    "draws": 307,
+    "foes": 13
+   },
+   {
+    "z": 2.5,
+    "median": 1.5,
+    "p90": 1.8,
+    "x10": 0.46,
+    "cpuMs": 0.2,
+    "M": 7,
+    "k": 2.763,
+    "hi": [
+     2100,
+     1820
+    ],
+    "draws": 307,
+    "foes": 13
+   }
+  ],
+  "errors": []
+ },
+ {
+  "tag": "2d-mac",
+  "steps": [
+   {
+    "n": "title",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/2d-mac-title.png",
+    "stat": {
+     "state": "INTRO",
+     "stage": 0,
+     "subT": 0.434,
+     "level": 1,
+     "pop": null,
+     "M": null,
+     "z": null,
+     "k": null,
+     "ms": null,
+     "draws": null,
+     "bakeMs": null,
+     "pending": null,
+     "shots": null
+    },
+    "lay": {
+     "lay": "d",
+     "dpr": 2,
+     "c": [
+      228.469,
+      24,
+      983.063,
+      852
+     ],
+     "px": null,
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": null,
+     "pxOrgOnDevice": null,
+     "pxOffC": null,
+     "data": [
+      "1962",
+      "1700"
+     ],
+     "buf": [
+      300,
+      150
+     ]
+    }
+   },
+   {
+    "n": "peak-zoom",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/2d-mac-show-zoom.png",
+    "stat": {
+     "state": "INTRO",
+     "stage": 1,
+     "subT": 1.115,
+     "level": 1,
+     "pop": null,
+     "M": null,
+     "z": null,
+     "k": null,
+     "ms": null,
+     "draws": null,
+     "bakeMs": null,
+     "pending": null,
+     "shots": null
+    }
+   },
+   {
+    "n": "menu",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/2d-mac-menu.png",
+    "stat": {
+     "state": "MENU",
+     "stage": 1,
+     "subT": 0.869,
+     "level": 1,
+     "pop": null,
+     "M": null,
+     "z": null,
+     "k": null,
+     "ms": null,
+     "draws": null,
+     "bakeMs": null,
+     "pending": null,
+     "shots": null
+    },
+    "lay": {
+     "lay": "d",
+     "dpr": 2,
+     "c": [
+      228.469,
+      24,
+      983.063,
+      852
+     ],
+     "px": null,
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": null,
+     "pxOrgOnDevice": null,
+     "pxOffC": null,
+     "data": [
+      "1962",
+      "1700"
+     ],
+     "buf": [
+      300,
+      150
+     ]
+    }
+   },
+   {
+    "n": "game",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/2d-mac-game.png",
+    "stat": {
+     "state": "PLAY",
+     "stage": 1,
+     "subT": 1.07,
+     "level": 1,
+     "pop": null,
+     "M": null,
+     "z": null,
+     "k": null,
+     "ms": null,
+     "draws": null,
+     "bakeMs": null,
+     "pending": null,
+     "shots": null
+    },
+    "lay": {
+     "lay": "d",
+     "dpr": 2,
+     "c": [
+      228.469,
+      24,
+      983.063,
+      852
+     ],
+     "px": null,
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": null,
+     "pxOrgOnDevice": null,
+     "pxOffC": null,
+     "data": [
+      "1962",
+      "1700"
+     ],
+     "buf": [
+      300,
+      150
+     ]
+    }
+   },
+   {
+    "n": "win",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/2d-mac-win.png",
+    "stat": {
+     "state": "WIN",
+     "stage": 1,
+     "subT": 3.046,
+     "level": 1,
+     "pop": null,
+     "M": null,
+     "z": null,
+     "k": null,
+     "ms": null,
+     "draws": null,
+     "bakeMs": null,
+     "pending": null,
+     "shots": null
+    },
+    "lay": {
+     "lay": "d",
+     "dpr": 2,
+     "c": [
+      228.469,
+      24,
+      983.063,
+      852
+     ],
+     "px": null,
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": null,
+     "pxOrgOnDevice": null,
+     "pxOffC": null,
+     "data": [
+      "1962",
+      "1700"
+     ],
+     "buf": [
+      300,
+      150
+     ]
+    }
+   },
+   {
+    "n": "pause",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/2d-mac-pause.png",
+    "stat": {
+     "state": "PAUSE",
+     "stage": 1,
+     "subT": 3.952,
+     "level": 2,
+     "pop": null,
+     "M": null,
+     "z": null,
+     "k": null,
+     "ms": null,
+     "draws": null,
+     "bakeMs": null,
+     "pending": null,
+     "shots": null
+    },
+    "lay": {
+     "lay": "d",
+     "dpr": 2,
+     "c": [
+      228.469,
+      24,
+      983.063,
+      852
+     ],
+     "px": null,
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": null,
+     "pxOrgOnDevice": null,
+     "pxOffC": null,
+     "data": [
+      "1962",
+      "1700"
+     ],
+     "buf": [
+      300,
+      150
+     ]
+    }
+   },
+   {
+    "n": "pause2",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/2d-mac-pause2.png",
+    "stat": {
+     "state": "PAUSE",
+     "stage": 1,
+     "subT": 4.529,
+     "level": 2,
+     "pop": null,
+     "M": null,
+     "z": null,
+     "k": null,
+     "ms": null,
+     "draws": null,
+     "bakeMs": null,
+     "pending": null,
+     "shots": null
+    },
+    "lay": {
+     "lay": "d",
+     "dpr": 2,
+     "c": [
+      228.469,
+      24,
+      983.063,
+      852
+     ],
+     "px": null,
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": null,
+     "pxOrgOnDevice": null,
+     "pxOffC": null,
+     "data": [
+      "1962",
+      "1700"
+     ],
+     "buf": [
+      300,
+      150
+     ]
+    }
+   },
+   {
+    "n": "lose",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/2d-mac-lose.png",
+    "stat": {
+     "state": "LOSE",
+     "stage": 1,
+     "subT": 5.191,
+     "level": 2,
+     "pop": null,
+     "M": null,
+     "z": null,
+     "k": null,
+     "ms": null,
+     "draws": null,
+     "bakeMs": null,
+     "pending": null,
+     "shots": null
+    },
+    "lay": {
+     "lay": "d",
+     "dpr": 2,
+     "c": [
+      228.469,
+      24,
+      983.063,
+      852
+     ],
+     "px": null,
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": null,
+     "pxOrgOnDevice": null,
+     "pxOffC": null,
+     "data": [
+      "1962",
+      "1700"
+     ],
+     "buf": [
+      300,
+      150
+     ]
+    }
+   }
+  ],
+  "errors": []
+ },
+ {
+  "tag": "px-mac",
+  "steps": [
+   {
+    "n": "title",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-mac-title.png",
+    "stat": {
+     "state": "INTRO",
+     "stage": 0,
+     "subT": 0.431,
+     "level": 1,
+     "pop": 0,
+     "M": 8,
+     "z": 1.12,
+     "k": 6.54,
+     "ms": 0.2,
+     "draws": 287,
+     "bakeMs": 13.299999982118607,
+     "pending": 151,
+     "shots": []
+    },
+    "lay": {
+     "lay": "d",
+     "dpr": 2,
+     "c": [
+      228.469,
+      24,
+      983.063,
+      852
+     ],
+     "px": [
+      228.5,
+      24,
+      983,
+      852
+     ],
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": [
+      459,
+      50
+     ],
+     "pxOrgOnDevice": true,
+     "pxOffC": [
+      0.06,
+      0
+     ],
+     "data": [
+      "1962",
+      "1700"
+     ],
+     "buf": [
+      1962,
+      1700
+     ]
+    }
+   },
+   {
+    "n": "pop-f0",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-mac-pop-f0.png",
+    "stat": {
+     "state": "INTRO",
+     "stage": 1,
+     "subT": 0.55,
+     "level": 1,
+     "pop": 0.0445474430686712,
+     "M": 8,
+     "z": 1.464,
+     "k": 6.54,
+     "ms": 0.2,
+     "draws": 288,
+     "bakeMs": 13.299999982118607,
+     "pending": 151,
+     "shots": []
+    }
+   },
+   {
+    "n": "pop-f1",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-mac-pop-f1.png",
+    "stat": {
+     "state": "INTRO",
+     "stage": 1,
+     "subT": 0.57,
+     "level": 1,
+     "pop": 0.3717992840984494,
+     "M": 8,
+     "z": 1.5,
+     "k": 6.54,
+     "ms": 0.1,
+     "draws": 288,
+     "bakeMs": 13.299999982118607,
+     "pending": 151,
+     "shots": []
+    }
+   },
+   {
+    "n": "pop-f2",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-mac-pop-f2.png",
+    "stat": {
+     "state": "INTRO",
+     "stage": 1,
+     "subT": 0.598,
+     "level": 1,
+     "pop": 0.7097332176213502,
+     "M": 8,
+     "z": 1.545,
+     "k": 6.54,
+     "ms": 0.2,
+     "draws": 288,
+     "bakeMs": 13.299999982118607,
+     "pending": 151,
+     "shots": []
+    }
+   },
+   {
+    "n": "pop-idle",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-mac-pop-idle.png",
+    "stat": {
+     "state": "INTRO",
+     "stage": 1,
+     "subT": 0.642,
+     "level": 1,
+     "pop": 1.0077928070366267,
+     "M": 8,
+     "z": 1.607,
+     "k": 6.54,
+     "ms": 0.2,
+     "draws": 288,
+     "bakeMs": 13.299999982118607,
+     "pending": 151,
+     "shots": []
+    }
+   },
+   {
+    "n": "peak-zoom",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-mac-show-zoom.png",
+    "stat": {
+     "state": "INTRO",
+     "stage": 1,
+     "subT": 1.114,
+     "level": 1,
+     "pop": 1,
+     "M": 8,
+     "z": 1.8,
+     "k": 6.54,
+     "ms": 0.2,
+     "draws": 288,
+     "bakeMs": 13.299999982118607,
+     "pending": 151,
+     "shots": []
+    }
+   },
+   {
+    "n": "menu",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-mac-menu.png",
+    "stat": {
+     "state": "MENU",
+     "stage": 1,
+     "subT": 0.874,
+     "level": 1,
+     "pop": null,
+     "M": 7,
+     "z": 1,
+     "k": 6.54,
+     "ms": 0.3,
+     "draws": 283,
+     "bakeMs": 13.299999982118607,
+     "pending": 151,
+     "shots": []
+    },
+    "lay": {
+     "lay": "d",
+     "dpr": 2,
+     "c": [
+      228.469,
+      24,
+      983.063,
+      852
+     ],
+     "px": [
+      228.5,
+      24,
+      983,
+      852
+     ],
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": [
+      459,
+      50
+     ],
+     "pxOrgOnDevice": true,
+     "pxOffC": [
+      0.06,
+      0
+     ],
+     "data": [
+      "1962",
+      "1700"
+     ],
+     "buf": [
+      1962,
+      1700
+     ]
+    }
+   },
+   {
+    "n": "game",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-mac-game.png",
+    "stat": {
+     "state": "PLAY",
+     "stage": 1,
+     "subT": 1.08,
+     "level": 1,
+     "pop": null,
+     "M": 7,
+     "z": 1,
+     "k": 6.54,
+     "ms": 0.3,
+     "draws": 291,
+     "bakeMs": 13.299999982118607,
+     "pending": 151,
+     "shots": []
+    },
+    "lay": {
+     "lay": "d",
+     "dpr": 2,
+     "c": [
+      228.469,
+      24,
+      983.063,
+      852
+     ],
+     "px": [
+      228.5,
+      24,
+      983,
+      852
+     ],
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": [
+      459,
+      50
+     ],
+     "pxOrgOnDevice": true,
+     "pxOffC": [
+      0.06,
+      0
+     ],
+     "data": [
+      "1962",
+      "1700"
+     ],
+     "buf": [
+      1962,
+      1700
+     ]
+    }
+   },
+   {
+    "n": "win",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-mac-win.png",
+    "stat": {
+     "state": "WIN",
+     "stage": 1,
+     "subT": 2.992,
+     "level": 1,
+     "pop": null,
+     "M": 7,
+     "z": 1,
+     "k": 6.54,
+     "ms": 0.3,
+     "draws": 289,
+     "bakeMs": 13.299999982118607,
+     "pending": 151,
+     "shots": [
+      11
+     ]
+    },
+    "lay": {
+     "lay": "d",
+     "dpr": 2,
+     "c": [
+      228.469,
+      24,
+      983.063,
+      852
+     ],
+     "px": [
+      228.5,
+      24,
+      983,
+      852
+     ],
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": [
+      459,
+      50
+     ],
+     "pxOrgOnDevice": true,
+     "pxOffC": [
+      0.06,
+      0
+     ],
+     "data": [
+      "1962",
+      "1700"
+     ],
+     "buf": [
+      1962,
+      1700
+     ]
+    }
+   },
+   {
+    "n": "pause",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-mac-pause.png",
+    "stat": {
+     "state": "PAUSE",
+     "stage": 1,
+     "subT": 3.898,
+     "level": 2,
+     "pop": null,
+     "M": 7,
+     "z": 1,
+     "k": 6.54,
+     "ms": 0.3,
+     "draws": 307,
+     "bakeMs": 13.299999982118607,
+     "pending": 153,
+     "shots": []
+    },
+    "lay": {
+     "lay": "d",
+     "dpr": 2,
+     "c": [
+      228.469,
+      24,
+      983.063,
+      852
+     ],
+     "px": [
+      228.5,
+      24,
+      983,
+      852
+     ],
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": [
+      459,
+      50
+     ],
+     "pxOrgOnDevice": true,
+     "pxOffC": [
+      0.06,
+      0
+     ],
+     "data": [
+      "1962",
+      "1700"
+     ],
+     "buf": [
+      1962,
+      1700
+     ]
+    }
+   },
+   {
+    "n": "pause2",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-mac-pause2.png",
+    "stat": {
+     "state": "PAUSE",
+     "stage": 1,
+     "subT": 4.47,
+     "level": 2,
+     "pop": null,
+     "M": 7,
+     "z": 1,
+     "k": 6.54,
+     "ms": 0.3,
+     "draws": 307,
+     "bakeMs": 13.299999982118607,
+     "pending": 153,
+     "shots": []
+    },
+    "lay": {
+     "lay": "d",
+     "dpr": 2,
+     "c": [
+      228.469,
+      24,
+      983.063,
+      852
+     ],
+     "px": [
+      228.5,
+      24,
+      983,
+      852
+     ],
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": [
+      459,
+      50
+     ],
+     "pxOrgOnDevice": true,
+     "pxOffC": [
+      0.06,
+      0
+     ],
+     "data": [
+      "1962",
+      "1700"
+     ],
+     "buf": [
+      1962,
+      1700
+     ]
+    }
+   },
+   {
+    "n": "lose",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-mac-lose.png",
+    "stat": {
+     "state": "LOSE",
+     "stage": 1,
+     "subT": 5.12,
+     "level": 2,
+     "pop": null,
+     "M": 7,
+     "z": 1,
+     "k": 6.54,
+     "ms": 0.3,
+     "draws": 309,
+     "bakeMs": 13.299999982118607,
+     "pending": 153,
+     "shots": [
+      5
+     ]
+    },
+    "lay": {
+     "lay": "d",
+     "dpr": 2,
+     "c": [
+      228.469,
+      24,
+      983.063,
+      852
+     ],
+     "px": [
+      228.5,
+      24,
+      983,
+      852
+     ],
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": [
+      459,
+      50
+     ],
+     "pxOrgOnDevice": true,
+     "pxOffC": [
+      0.06,
+      0
+     ],
+     "data": [
+      "1962",
+      "1700"
+     ],
+     "buf": [
+      1962,
+      1700
+     ]
+    }
+   }
+  ],
+  "foes": 4,
+  "perf": [
+   {
+    "z": 1,
+    "median": 4.8,
+    "p90": 5.6,
+    "x10": 1.01,
+    "cpuMs": 0.1,
+    "M": 7,
+    "k": 6.54,
+    "hi": [
+     2400,
+     2080
+    ],
+    "draws": 307,
+    "foes": 4
+   },
+   {
+    "z": 1.8,
+    "median": 4.8,
+    "p90": 5.3,
+    "x10": 0.81,
+    "cpuMs": 0.3,
+    "M": 8,
+    "k": 6.54,
+    "hi": [
+     2400,
+     2080
+    ],
+    "draws": 307,
+    "foes": 4
+   },
+   {
+    "z": 2.5,
+    "median": 5,
+    "p90": 5.3,
+    "x10": 0.79,
+    "cpuMs": 0.1,
+    "M": 8,
+    "k": 6.54,
+    "hi": [
+     2400,
+     2080
+    ],
+    "draws": 307,
+    "foes": 4
+   }
+  ],
+  "errors": []
+ },
+ {
+  "tag": "2d-phone",
+  "steps": [
+   {
+    "n": "title",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/2d-phone-title.png",
+    "stat": {
+     "state": "INTRO",
+     "stage": 0,
+     "subT": 0.377,
+     "level": 1,
+     "pop": null,
+     "M": null,
+     "z": null,
+     "k": null,
+     "ms": null,
+     "draws": null,
+     "bakeMs": null,
+     "pending": null,
+     "shots": null
+    },
+    "lay": {
+     "lay": "p",
+     "dpr": 3,
+     "c": [
+      8,
+      262,
+      377,
+      326.719
+     ],
+     "px": null,
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": null,
+     "pxOrgOnDevice": null,
+     "pxOffC": null,
+     "data": [
+      "1125",
+      "975"
+     ],
+     "buf": [
+      300,
+      150
+     ]
+    }
+   },
+   {
+    "n": "peak-zoom",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/2d-phone-show-zoom.png",
+    "stat": {
+     "state": "INTRO",
+     "stage": 1,
+     "subT": 1.113,
+     "level": 1,
+     "pop": null,
+     "M": null,
+     "z": null,
+     "k": null,
+     "ms": null,
+     "draws": null,
+     "bakeMs": null,
+     "pending": null,
+     "shots": null
+    }
+   },
+   {
+    "n": "menu",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/2d-phone-menu.png",
+    "stat": {
+     "state": "MENU",
+     "stage": 1,
+     "subT": 0.716,
+     "level": 1,
+     "pop": null,
+     "M": null,
+     "z": null,
+     "k": null,
+     "ms": null,
+     "draws": null,
+     "bakeMs": null,
+     "pending": null,
+     "shots": null
+    },
+    "lay": {
+     "lay": "p",
+     "dpr": 3,
+     "c": [
+      8,
+      262,
+      377,
+      326.719
+     ],
+     "px": null,
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": null,
+     "pxOrgOnDevice": null,
+     "pxOffC": null,
+     "data": [
+      "1125",
+      "975"
+     ],
+     "buf": [
+      300,
+      150
+     ]
+    }
+   },
+   {
+    "n": "game",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/2d-phone-game.png",
+    "stat": {
+     "state": "PLAY",
+     "stage": 1,
+     "subT": 1.003,
+     "level": 1,
+     "pop": null,
+     "M": null,
+     "z": null,
+     "k": null,
+     "ms": null,
+     "draws": null,
+     "bakeMs": null,
+     "pending": null,
+     "shots": null
+    },
+    "lay": {
+     "lay": "p",
+     "dpr": 3,
+     "c": [
+      8,
+      72,
+      377,
+      326.719
+     ],
+     "px": null,
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": "tpause",
+     "bomb": "tbomb",
+     "pxOrg": null,
+     "pxOrgOnDevice": null,
+     "pxOffC": null,
+     "data": [
+      "1125",
+      "975"
+     ],
+     "buf": [
+      300,
+      150
+     ]
+    }
+   },
+   {
+    "n": "win",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/2d-phone-win.png",
+    "stat": {
+     "state": "WIN",
+     "stage": 1,
+     "subT": 2.862,
+     "level": 1,
+     "pop": null,
+     "M": null,
+     "z": null,
+     "k": null,
+     "ms": null,
+     "draws": null,
+     "bakeMs": null,
+     "pending": null,
+     "shots": null
+    },
+    "lay": {
+     "lay": "p",
+     "dpr": 3,
+     "c": [
+      8,
+      72,
+      377,
+      326.719
+     ],
+     "px": null,
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": "tpause",
+     "bomb": "wrap",
+     "pxOrg": null,
+     "pxOrgOnDevice": null,
+     "pxOffC": null,
+     "data": [
+      "1125",
+      "975"
+     ],
+     "buf": [
+      300,
+      150
+     ]
+    }
+   },
+   {
+    "n": "pause",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/2d-phone-pause.png",
+    "stat": {
+     "state": "PAUSE",
+     "stage": 1,
+     "subT": 3.694,
+     "level": 2,
+     "pop": null,
+     "M": null,
+     "z": null,
+     "k": null,
+     "ms": null,
+     "draws": null,
+     "bakeMs": null,
+     "pending": null,
+     "shots": null
+    },
+    "lay": {
+     "lay": "p",
+     "dpr": 3,
+     "c": [
+      8,
+      72,
+      377,
+      326.719
+     ],
+     "px": null,
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": "tpause",
+     "bomb": "wrap",
+     "pxOrg": null,
+     "pxOrgOnDevice": null,
+     "pxOffC": null,
+     "data": [
+      "1125",
+      "975"
+     ],
+     "buf": [
+      300,
+      150
+     ]
+    }
+   },
+   {
+    "n": "pause2",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/2d-phone-pause2.png",
+    "stat": {
+     "state": "PAUSE",
+     "stage": 1,
+     "subT": 4.235,
+     "level": 2,
+     "pop": null,
+     "M": null,
+     "z": null,
+     "k": null,
+     "ms": null,
+     "draws": null,
+     "bakeMs": null,
+     "pending": null,
+     "shots": null
+    },
+    "lay": {
+     "lay": "p",
+     "dpr": 3,
+     "c": [
+      8,
+      72,
+      377,
+      326.719
+     ],
+     "px": null,
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": "tpause",
+     "bomb": "wrap",
+     "pxOrg": null,
+     "pxOrgOnDevice": null,
+     "pxOffC": null,
+     "data": [
+      "1125",
+      "975"
+     ],
+     "buf": [
+      300,
+      150
+     ]
+    }
+   },
+   {
+    "n": "lose",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/2d-phone-lose.png",
+    "stat": {
+     "state": "LOSE",
+     "stage": 1,
+     "subT": 4.823,
+     "level": 2,
+     "pop": null,
+     "M": null,
+     "z": null,
+     "k": null,
+     "ms": null,
+     "draws": null,
+     "bakeMs": null,
+     "pending": null,
+     "shots": null
+    },
+    "lay": {
+     "lay": "p",
+     "dpr": 3,
+     "c": [
+      8,
+      72,
+      377,
+      326.719
+     ],
+     "px": null,
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": "tpause",
+     "bomb": "wrap",
+     "pxOrg": null,
+     "pxOrgOnDevice": null,
+     "pxOffC": null,
+     "data": [
+      "1125",
+      "975"
+     ],
+     "buf": [
+      300,
+      150
+     ]
+    }
+   }
+  ],
+  "errors": []
+ },
+ {
+  "tag": "px-phone",
+  "steps": [
+   {
+    "n": "title",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-phone-title.png",
+    "stat": {
+     "state": "INTRO",
+     "stage": 0,
+     "subT": 0.352,
+     "level": 1,
+     "pop": 0,
+     "M": 5,
+     "z": 1.12,
+     "k": 3.75,
+     "ms": 0.3,
+     "draws": 287,
+     "bakeMs": 14.099999994039536,
+     "pending": 151,
+     "shots": []
+    },
+    "lay": {
+     "lay": "p",
+     "dpr": 3,
+     "c": [
+      8,
+      262,
+      377,
+      326.719
+     ],
+     "px": [
+      8,
+      262,
+      377,
+      327
+     ],
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": [
+      27,
+      789
+     ],
+     "pxOrgOnDevice": true,
+     "pxOffC": [
+      0,
+      0
+     ],
+     "data": [
+      "1125",
+      "975"
+     ],
+     "buf": [
+      1125,
+      975
+     ]
+    }
+   },
+   {
+    "n": "pop-f0",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-phone-pop-f0.png",
+    "stat": {
+     "state": "INTRO",
+     "stage": 1,
+     "subT": 0.549,
+     "level": 1,
+     "pop": 0.02056321739681688,
+     "M": 6,
+     "z": 1.462,
+     "k": 3.75,
+     "ms": 0.1,
+     "draws": 288,
+     "bakeMs": 14.099999994039536,
+     "pending": 151,
+     "shots": []
+    }
+   },
+   {
+    "n": "pop-f1",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-phone-pop-f1.png",
+    "stat": {
+     "state": "INTRO",
+     "stage": 1,
+     "subT": 0.569,
+     "level": 1,
+     "pop": 0.35282555972431373,
+     "M": 6,
+     "z": 1.498,
+     "k": 3.75,
+     "ms": 0.2,
+     "draws": 288,
+     "bakeMs": 14.099999994039536,
+     "pending": 151,
+     "shots": []
+    }
+   },
+   {
+    "n": "pop-f2",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-phone-pop-f2.png",
+    "stat": {
+     "state": "INTRO",
+     "stage": 1,
+     "subT": 0.597,
+     "level": 1,
+     "pop": 0.6968679165658953,
+     "M": 6,
+     "z": 1.543,
+     "k": 3.75,
+     "ms": 0.1,
+     "draws": 288,
+     "bakeMs": 14.099999994039536,
+     "pending": 151,
+     "shots": []
+    }
+   },
+   {
+    "n": "pop-idle",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-phone-pop-idle.png",
+    "stat": {
+     "state": "INTRO",
+     "stage": 1,
+     "subT": 0.641,
+     "level": 1,
+     "pop": 1.0023902290220863,
+     "M": 7,
+     "z": 1.606,
+     "k": 3.75,
+     "ms": 0.2,
+     "draws": 288,
+     "bakeMs": 14.099999994039536,
+     "pending": 151,
+     "shots": []
+    }
+   },
+   {
+    "n": "peak-zoom",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-phone-show-zoom.png",
+    "stat": {
+     "state": "INTRO",
+     "stage": 1,
+     "subT": 1.113,
+     "level": 1,
+     "pop": 1,
+     "M": 7,
+     "z": 1.8,
+     "k": 3.75,
+     "ms": 0.1,
+     "draws": 288,
+     "bakeMs": 14.099999994039536,
+     "pending": 151,
+     "shots": []
+    }
+   },
+   {
+    "n": "menu",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-phone-menu.png",
+    "stat": {
+     "state": "MENU",
+     "stage": 1,
+     "subT": 0.739,
+     "level": 1,
+     "pop": null,
+     "M": 4,
+     "z": 1,
+     "k": 3.75,
+     "ms": 0.3,
+     "draws": 282,
+     "bakeMs": 14.099999994039536,
+     "pending": 151,
+     "shots": []
+    },
+    "lay": {
+     "lay": "p",
+     "dpr": 3,
+     "c": [
+      8,
+      262,
+      377,
+      326.719
+     ],
+     "px": [
+      8,
+      262,
+      377,
+      327
+     ],
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": [
+      27,
+      789
+     ],
+     "pxOrgOnDevice": true,
+     "pxOffC": [
+      0,
+      0
+     ],
+     "data": [
+      "1125",
+      "975"
+     ],
+     "buf": [
+      1125,
+      975
+     ]
+    }
+   },
+   {
+    "n": "game",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-phone-game.png",
+    "stat": {
+     "state": "PLAY",
+     "stage": 1,
+     "subT": 1.018,
+     "level": 1,
+     "pop": null,
+     "M": 4,
+     "z": 1,
+     "k": 3.75,
+     "ms": 0.3,
+     "draws": 292,
+     "bakeMs": 14.099999994039536,
+     "pending": 151,
+     "shots": []
+    },
+    "lay": {
+     "lay": "p",
+     "dpr": 3,
+     "c": [
+      8,
+      72,
+      377,
+      326.719
+     ],
+     "px": [
+      8,
+      72,
+      377,
+      327
+     ],
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": "tpause",
+     "bomb": "tbomb",
+     "pxOrg": [
+      27,
+      219
+     ],
+     "pxOrgOnDevice": true,
+     "pxOffC": [
+      0,
+      0
+     ],
+     "data": [
+      "1125",
+      "975"
+     ],
+     "buf": [
+      1125,
+      975
+     ]
+    }
+   },
+   {
+    "n": "win",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-phone-win.png",
+    "stat": {
+     "state": "WIN",
+     "stage": 1,
+     "subT": 2.88,
+     "level": 1,
+     "pop": null,
+     "M": 4,
+     "z": 1,
+     "k": 3.75,
+     "ms": 0.3,
+     "draws": 288,
+     "bakeMs": 14.099999994039536,
+     "pending": 151,
+     "shots": [
+      11
+     ]
+    },
+    "lay": {
+     "lay": "p",
+     "dpr": 3,
+     "c": [
+      8,
+      72,
+      377,
+      326.719
+     ],
+     "px": [
+      8,
+      72,
+      377,
+      327
+     ],
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": "tpause",
+     "bomb": "wrap",
+     "pxOrg": [
+      27,
+      219
+     ],
+     "pxOrgOnDevice": true,
+     "pxOffC": [
+      0,
+      0
+     ],
+     "data": [
+      "1125",
+      "975"
+     ],
+     "buf": [
+      1125,
+      975
+     ]
+    }
+   },
+   {
+    "n": "pause",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-phone-pause.png",
+    "stat": {
+     "state": "PAUSE",
+     "stage": 1,
+     "subT": 3.716,
+     "level": 2,
+     "pop": null,
+     "M": 4,
+     "z": 1,
+     "k": 3.75,
+     "ms": 0.4,
+     "draws": 301,
+     "bakeMs": 14.099999994039536,
+     "pending": 153,
+     "shots": []
+    },
+    "lay": {
+     "lay": "p",
+     "dpr": 3,
+     "c": [
+      8,
+      72,
+      377,
+      326.719
+     ],
+     "px": [
+      8,
+      72,
+      377,
+      327
+     ],
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": "tpause",
+     "bomb": "wrap",
+     "pxOrg": [
+      27,
+      219
+     ],
+     "pxOrgOnDevice": true,
+     "pxOffC": [
+      0,
+      0
+     ],
+     "data": [
+      "1125",
+      "975"
+     ],
+     "buf": [
+      1125,
+      975
+     ]
+    }
+   },
+   {
+    "n": "pause2",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-phone-pause2.png",
+    "stat": {
+     "state": "PAUSE",
+     "stage": 1,
+     "subT": 4.236,
+     "level": 2,
+     "pop": null,
+     "M": 4,
+     "z": 1,
+     "k": 3.75,
+     "ms": 0.3,
+     "draws": 301,
+     "bakeMs": 14.099999994039536,
+     "pending": 153,
+     "shots": []
+    },
+    "lay": {
+     "lay": "p",
+     "dpr": 3,
+     "c": [
+      8,
+      72,
+      377,
+      326.719
+     ],
+     "px": [
+      8,
+      72,
+      377,
+      327
+     ],
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": "tpause",
+     "bomb": "wrap",
+     "pxOrg": [
+      27,
+      219
+     ],
+     "pxOrgOnDevice": true,
+     "pxOffC": [
+      0,
+      0
+     ],
+     "data": [
+      "1125",
+      "975"
+     ],
+     "buf": [
+      1125,
+      975
+     ]
+    }
+   },
+   {
+    "n": "lose",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-phone-lose.png",
+    "stat": {
+     "state": "LOSE",
+     "stage": 1,
+     "subT": 4.84,
+     "level": 2,
+     "pop": null,
+     "M": 4,
+     "z": 1,
+     "k": 3.75,
+     "ms": 0.4,
+     "draws": 304,
+     "bakeMs": 14.099999994039536,
+     "pending": 153,
+     "shots": [
+      5
+     ]
+    },
+    "lay": {
+     "lay": "p",
+     "dpr": 3,
+     "c": [
+      8,
+      72,
+      377,
+      326.719
+     ],
+     "px": [
+      8,
+      72,
+      377,
+      327
+     ],
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": "tpause",
+     "bomb": "wrap",
+     "pxOrg": [
+      27,
+      219
+     ],
+     "pxOrgOnDevice": true,
+     "pxOffC": [
+      0,
+      0
+     ],
+     "data": [
+      "1125",
+      "975"
+     ],
+     "buf": [
+      1125,
+      975
+     ]
+    }
+   }
+  ],
+  "foes": 13,
+  "perf": [
+   {
+    "z": 1,
+    "median": 3,
+    "p90": 3.6,
+    "x10": 0.78,
+    "cpuMs": 0.3,
+    "M": 4,
+    "k": 3.75,
+    "hi": [
+     2100,
+     1820
+    ],
+    "draws": 314,
+    "foes": 13
+   },
+   {
+    "z": 1.8,
+    "median": 2.5,
+    "p90": 3.8,
+    "x10": 0.63,
+    "cpuMs": 0.3,
+    "M": 7,
+    "k": 3.75,
+    "hi": [
+     2100,
+     1820
+    ],
+    "draws": 314,
+    "foes": 13
+   },
+   {
+    "z": 2.5,
+    "median": 2.6,
+    "p90": 3.4,
+    "x10": 0.68,
+    "cpuMs": 0.2,
+    "M": 8,
+    "k": 3.75,
+    "hi": [
+     2400,
+     2080
+    ],
+    "draws": 314,
+    "foes": 13
+   }
+  ],
+  "errors": []
+ },
+ {
+  "tag": "2d-phoneL",
+  "steps": [
+   {
+    "n": "title",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/2d-phoneL-title.png",
+    "stat": {
+     "state": "INTRO",
+     "stage": 0,
+     "subT": 0.417,
+     "level": 1,
+     "pop": null,
+     "M": null,
+     "z": null,
+     "k": null,
+     "ms": null,
+     "draws": null,
+     "bakeMs": null,
+     "pending": null,
+     "shots": null
+    },
+    "lay": {
+     "lay": "l",
+     "dpr": 3,
+     "c": [
+      208.5,
+      8,
+      435,
+      377
+     ],
+     "px": null,
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": null,
+     "pxOrgOnDevice": null,
+     "pxOffC": null,
+     "data": [
+      "1299",
+      "1125"
+     ],
+     "buf": [
+      300,
+      150
+     ]
+    }
+   },
+   {
+    "n": "peak-zoom",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/2d-phoneL-show-zoom.png",
+    "stat": {
+     "state": "INTRO",
+     "stage": 1,
+     "subT": 1.115,
+     "level": 1,
+     "pop": null,
+     "M": null,
+     "z": null,
+     "k": null,
+     "ms": null,
+     "draws": null,
+     "bakeMs": null,
+     "pending": null,
+     "shots": null
+    }
+   },
+   {
+    "n": "menu",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/2d-phoneL-menu.png",
+    "stat": {
+     "state": "MENU",
+     "stage": 1,
+     "subT": 0.814,
+     "level": 1,
+     "pop": null,
+     "M": null,
+     "z": null,
+     "k": null,
+     "ms": null,
+     "draws": null,
+     "bakeMs": null,
+     "pending": null,
+     "shots": null
+    },
+    "lay": {
+     "lay": "l",
+     "dpr": 3,
+     "c": [
+      208.5,
+      8,
+      435,
+      377
+     ],
+     "px": null,
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": null,
+     "pxOrgOnDevice": null,
+     "pxOffC": null,
+     "data": [
+      "1299",
+      "1125"
+     ],
+     "buf": [
+      300,
+      150
+     ]
+    }
+   },
+   {
+    "n": "game",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/2d-phoneL-game.png",
+    "stat": {
+     "state": "PLAY",
+     "stage": 1,
+     "subT": 1.053,
+     "level": 1,
+     "pop": null,
+     "M": null,
+     "z": null,
+     "k": null,
+     "ms": null,
+     "draws": null,
+     "bakeMs": null,
+     "pending": null,
+     "shots": null
+    },
+    "lay": {
+     "lay": "l",
+     "dpr": 3,
+     "c": [
+      208.5,
+      8,
+      435,
+      377
+     ],
+     "px": null,
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": "tpause",
+     "bomb": "tbomb",
+     "pxOrg": null,
+     "pxOrgOnDevice": null,
+     "pxOffC": null,
+     "data": [
+      "1299",
+      "1125"
+     ],
+     "buf": [
+      300,
+      150
+     ]
+    }
+   },
+   {
+    "n": "win",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/2d-phoneL-win.png",
+    "stat": {
+     "state": "WIN",
+     "stage": 1,
+     "subT": 2.943,
+     "level": 1,
+     "pop": null,
+     "M": null,
+     "z": null,
+     "k": null,
+     "ms": null,
+     "draws": null,
+     "bakeMs": null,
+     "pending": null,
+     "shots": null
+    },
+    "lay": {
+     "lay": "l",
+     "dpr": 3,
+     "c": [
+      208.5,
+      8,
+      435,
+      377
+     ],
+     "px": null,
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": "tpause",
+     "bomb": "BODY",
+     "pxOrg": null,
+     "pxOrgOnDevice": null,
+     "pxOffC": null,
+     "data": [
+      "1299",
+      "1125"
+     ],
+     "buf": [
+      300,
+      150
+     ]
+    }
+   },
+   {
+    "n": "pause",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/2d-phoneL-pause.png",
+    "stat": {
+     "state": "PAUSE",
+     "stage": 1,
+     "subT": 3.837,
+     "level": 2,
+     "pop": null,
+     "M": null,
+     "z": null,
+     "k": null,
+     "ms": null,
+     "draws": null,
+     "bakeMs": null,
+     "pending": null,
+     "shots": null
+    },
+    "lay": {
+     "lay": "l",
+     "dpr": 3,
+     "c": [
+      208.5,
+      8,
+      435,
+      377
+     ],
+     "px": null,
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": "tpause",
+     "bomb": "BODY",
+     "pxOrg": null,
+     "pxOrgOnDevice": null,
+     "pxOffC": null,
+     "data": [
+      "1299",
+      "1125"
+     ],
+     "buf": [
+      300,
+      150
+     ]
+    }
+   },
+   {
+    "n": "pause2",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/2d-phoneL-pause2.png",
+    "stat": {
+     "state": "PAUSE",
+     "stage": 1,
+     "subT": 4.403,
+     "level": 2,
+     "pop": null,
+     "M": null,
+     "z": null,
+     "k": null,
+     "ms": null,
+     "draws": null,
+     "bakeMs": null,
+     "pending": null,
+     "shots": null
+    },
+    "lay": {
+     "lay": "l",
+     "dpr": 3,
+     "c": [
+      208.5,
+      8,
+      435,
+      377
+     ],
+     "px": null,
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": "tpause",
+     "bomb": "BODY",
+     "pxOrg": null,
+     "pxOrgOnDevice": null,
+     "pxOffC": null,
+     "data": [
+      "1299",
+      "1125"
+     ],
+     "buf": [
+      300,
+      150
+     ]
+    }
+   },
+   {
+    "n": "lose",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/2d-phoneL-lose.png",
+    "stat": {
+     "state": "LOSE",
+     "stage": 1,
+     "subT": 5.051,
+     "level": 2,
+     "pop": null,
+     "M": null,
+     "z": null,
+     "k": null,
+     "ms": null,
+     "draws": null,
+     "bakeMs": null,
+     "pending": null,
+     "shots": null
+    },
+    "lay": {
+     "lay": "l",
+     "dpr": 3,
+     "c": [
+      208.5,
+      8,
+      435,
+      377
+     ],
+     "px": null,
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": "tpause",
+     "bomb": "BODY",
+     "pxOrg": null,
+     "pxOrgOnDevice": null,
+     "pxOffC": null,
+     "data": [
+      "1299",
+      "1125"
+     ],
+     "buf": [
+      300,
+      150
+     ]
+    }
+   }
+  ],
+  "errors": []
+ },
+ {
+  "tag": "px-phoneL",
+  "steps": [
+   {
+    "n": "title",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-phoneL-title.png",
+    "stat": {
+     "state": "INTRO",
+     "stage": 0,
+     "subT": 0.49,
+     "level": 1,
+     "pop": 0,
+     "M": 5,
+     "z": 1.12,
+     "k": 4.33,
+     "ms": 0.3,
+     "draws": 287,
+     "bakeMs": 15.099999994039536,
+     "pending": 151,
+     "shots": []
+    },
+    "lay": {
+     "lay": "l",
+     "dpr": 3,
+     "c": [
+      208.5,
+      8,
+      435,
+      377
+     ],
+     "px": [
+      209,
+      8,
+      435,
+      377
+     ],
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": [
+      630,
+      27
+     ],
+     "pxOrgOnDevice": true,
+     "pxOffC": [
+      1.5,
+      0
+     ],
+     "data": [
+      "1299",
+      "1125"
+     ],
+     "buf": [
+      1299,
+      1125
+     ]
+    }
+   },
+   {
+    "n": "pop-f0",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-phoneL-pop-f0.png",
+    "stat": {
+     "state": "INTRO",
+     "stage": 1,
+     "subT": 0.55,
+     "level": 1,
+     "pop": 0.02797954978128736,
+     "M": 7,
+     "z": 1.463,
+     "k": 4.33,
+     "ms": 0.2,
+     "draws": 288,
+     "bakeMs": 15.099999994039536,
+     "pending": 151,
+     "shots": []
+    }
+   },
+   {
+    "n": "pop-f1",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-phoneL-pop-f1.png",
+    "stat": {
+     "state": "INTRO",
+     "stage": 1,
+     "subT": 0.57,
+     "level": 1,
+     "pop": 0.35869646480848627,
+     "M": 7,
+     "z": 1.498,
+     "k": 4.33,
+     "ms": 0.2,
+     "draws": 288,
+     "bakeMs": 15.099999994039536,
+     "pending": 151,
+     "shots": []
+    }
+   },
+   {
+    "n": "pop-f2",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-phoneL-pop-f2.png",
+    "stat": {
+     "state": "INTRO",
+     "stage": 1,
+     "subT": 0.598,
+     "level": 1,
+     "pop": 0.7008540783393644,
+     "M": 7,
+     "z": 1.544,
+     "k": 4.33,
+     "ms": 0.3,
+     "draws": 288,
+     "bakeMs": 15.099999994039536,
+     "pending": 151,
+     "shots": []
+    }
+   },
+   {
+    "n": "pop-idle",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-phoneL-pop-idle.png",
+    "stat": {
+     "state": "INTRO",
+     "stage": 1,
+     "subT": 0.642,
+     "level": 1,
+     "pop": 1.004071952165922,
+     "M": 7,
+     "z": 1.606,
+     "k": 4.33,
+     "ms": 0.2,
+     "draws": 288,
+     "bakeMs": 15.099999994039536,
+     "pending": 151,
+     "shots": []
+    }
+   },
+   {
+    "n": "peak-zoom",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-phoneL-show-zoom.png",
+    "stat": {
+     "state": "INTRO",
+     "stage": 1,
+     "subT": 1.114,
+     "level": 1,
+     "pop": 1,
+     "M": 8,
+     "z": 1.8,
+     "k": 4.33,
+     "ms": 0.2,
+     "draws": 288,
+     "bakeMs": 15.099999994039536,
+     "pending": 151,
+     "shots": []
+    }
+   },
+   {
+    "n": "menu",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-phoneL-menu.png",
+    "stat": {
+     "state": "MENU",
+     "stage": 1,
+     "subT": 0.8,
+     "level": 1,
+     "pop": null,
+     "M": 5,
+     "z": 1,
+     "k": 4.33,
+     "ms": 0.4,
+     "draws": 283,
+     "bakeMs": 15.099999994039536,
+     "pending": 151,
+     "shots": []
+    },
+    "lay": {
+     "lay": "l",
+     "dpr": 3,
+     "c": [
+      208.5,
+      8,
+      435,
+      377
+     ],
+     "px": [
+      209,
+      8,
+      435,
+      377
+     ],
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": null,
+     "bomb": null,
+     "pxOrg": [
+      630,
+      27
+     ],
+     "pxOrgOnDevice": true,
+     "pxOffC": [
+      1.5,
+      0
+     ],
+     "data": [
+      "1299",
+      "1125"
+     ],
+     "buf": [
+      1299,
+      1125
+     ]
+    }
+   },
+   {
+    "n": "game",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-phoneL-game.png",
+    "stat": {
+     "state": "PLAY",
+     "stage": 1,
+     "subT": 1.07,
+     "level": 1,
+     "pop": null,
+     "M": 5,
+     "z": 1,
+     "k": 4.33,
+     "ms": 0.3,
+     "draws": 288,
+     "bakeMs": 15.099999994039536,
+     "pending": 151,
+     "shots": []
+    },
+    "lay": {
+     "lay": "l",
+     "dpr": 3,
+     "c": [
+      208.5,
+      8,
+      435,
+      377
+     ],
+     "px": [
+      209,
+      8,
+      435,
+      377
+     ],
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": "tpause",
+     "bomb": "tbomb",
+     "pxOrg": [
+      630,
+      27
+     ],
+     "pxOrgOnDevice": true,
+     "pxOffC": [
+      1.5,
+      0
+     ],
+     "data": [
+      "1299",
+      "1125"
+     ],
+     "buf": [
+      1299,
+      1125
+     ]
+    }
+   },
+   {
+    "n": "win",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-phoneL-win.png",
+    "stat": {
+     "state": "WIN",
+     "stage": 1,
+     "subT": 3.077,
+     "level": 1,
+     "pop": null,
+     "M": 5,
+     "z": 1,
+     "k": 4.33,
+     "ms": 0.3,
+     "draws": 285,
+     "bakeMs": 15.099999994039536,
+     "pending": 151,
+     "shots": [
+      11
+     ]
+    },
+    "lay": {
+     "lay": "l",
+     "dpr": 3,
+     "c": [
+      208.5,
+      8,
+      435,
+      377
+     ],
+     "px": [
+      209,
+      8,
+      435,
+      377
+     ],
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": "tpause",
+     "bomb": "BODY",
+     "pxOrg": [
+      630,
+      27
+     ],
+     "pxOrgOnDevice": true,
+     "pxOffC": [
+      1.5,
+      0
+     ],
+     "data": [
+      "1299",
+      "1125"
+     ],
+     "buf": [
+      1299,
+      1125
+     ]
+    }
+   },
+   {
+    "n": "pause",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-phoneL-pause.png",
+    "stat": {
+     "state": "PAUSE",
+     "stage": 1,
+     "subT": 3.982,
+     "level": 2,
+     "pop": null,
+     "M": 5,
+     "z": 1,
+     "k": 4.33,
+     "ms": 0.3,
+     "draws": 303,
+     "bakeMs": 15.099999994039536,
+     "pending": 153,
+     "shots": []
+    },
+    "lay": {
+     "lay": "l",
+     "dpr": 3,
+     "c": [
+      208.5,
+      8,
+      435,
+      377
+     ],
+     "px": [
+      209,
+      8,
+      435,
+      377
+     ],
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": "tpause",
+     "bomb": "BODY",
+     "pxOrg": [
+      630,
+      27
+     ],
+     "pxOrgOnDevice": true,
+     "pxOffC": [
+      1.5,
+      0
+     ],
+     "data": [
+      "1299",
+      "1125"
+     ],
+     "buf": [
+      1299,
+      1125
+     ]
+    }
+   },
+   {
+    "n": "pause2",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-phoneL-pause2.png",
+    "stat": {
+     "state": "PAUSE",
+     "stage": 1,
+     "subT": 4.555,
+     "level": 2,
+     "pop": null,
+     "M": 5,
+     "z": 1,
+     "k": 4.33,
+     "ms": 0.5,
+     "draws": 303,
+     "bakeMs": 15.099999994039536,
+     "pending": 153,
+     "shots": []
+    },
+    "lay": {
+     "lay": "l",
+     "dpr": 3,
+     "c": [
+      208.5,
+      8,
+      435,
+      377
+     ],
+     "px": [
+      209,
+      8,
+      435,
+      377
+     ],
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": "tpause",
+     "bomb": "BODY",
+     "pxOrg": [
+      630,
+      27
+     ],
+     "pxOrgOnDevice": true,
+     "pxOffC": [
+      1.5,
+      0
+     ],
+     "data": [
+      "1299",
+      "1125"
+     ],
+     "buf": [
+      1299,
+      1125
+     ]
+    }
+   },
+   {
+    "n": "lose",
+    "file": "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-10-pixel/opening-fx/out/px-phoneL-lose.png",
+    "stat": {
+     "state": "LOSE",
+     "stage": 1,
+     "subT": 5.223,
+     "level": 2,
+     "pop": null,
+     "M": 5,
+     "z": 1,
+     "k": 4.33,
+     "ms": 0.3,
+     "draws": 305,
+     "bakeMs": 15.099999994039536,
+     "pending": 153,
+     "shots": [
+      5
+     ]
+    },
+    "lay": {
+     "lay": "l",
+     "dpr": 3,
+     "c": [
+      208.5,
+      8,
+      435,
+      377
+     ],
+     "px": [
+      209,
+      8,
+      435,
+      377
+     ],
+     "gl": null,
+     "center": "c",
+     "corner": "c",
+     "pause": "tpause",
+     "bomb": "BODY",
+     "pxOrg": [
+      630,
+      27
+     ],
+     "pxOrgOnDevice": true,
+     "pxOffC": [
+      1.5,
+      0
+     ],
+     "data": [
+      "1299",
+      "1125"
+     ],
+     "buf": [
+      1299,
+      1125
+     ]
+    }
+   }
+  ],
+  "foes": 13,
+  "perf": [
+   {
+    "z": 1,
+    "median": 3.8,
+    "p90": 6,
+    "x10": 1.04,
+    "cpuMs": 0.2,
+    "M": 5,
+    "k": 4.33,
+    "hi": [
+     2400,
+     2080
+    ],
+    "draws": 313,
+    "foes": 13
+   },
+   {
+    "z": 1.8,
+    "median": 3.7,
+    "p90": 4.4,
+    "x10": 0.76,
+    "cpuMs": 0.2,
+    "M": 8,
+    "k": 4.33,
+    "hi": [
+     2400,
+     2080
+    ],
+    "draws": 313,
+    "foes": 13
+   },
+   {
+    "z": 2.5,
+    "median": 3.5,
+    "p90": 4.3,
+    "x10": 0.84,
+    "cpuMs": 0.2,
+    "M": 8,
+    "k": 4.33,
+    "hi": [
+     2400,
+     2080
+    ],
+    "draws": 313,
+    "foes": 13
+   }
+  ],
+  "errors": []
+ }
+]

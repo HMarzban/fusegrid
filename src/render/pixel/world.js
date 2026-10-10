@@ -97,8 +97,8 @@ function drawBlades(c, V, world) {
 
 function makoFrame(V, set, p, st, world) {
   const t = V.t;
-  if (world.state === "WIN") return set.win[cycle(t, PX_T.WIN_FPS, PX_T.WIN_N)];
   const sh = V.shots;
+  if (world.state === "WIN") { const w = sh && sh.live(OS.WIN); return set.win[w ? shotFrame(w, t) : cycle(t, PX_T.WIN_FPS, PX_T.WIN_N)]; }
   if (sh) {
     const m = sh.live(OS.MAT);
     if (m) return set.mat[shotFrame(m, t)];
