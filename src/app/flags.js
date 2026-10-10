@@ -3,7 +3,7 @@
    location: main.js passes locationSearch(), tests pass a literal. */
 export function readFlags(search, opts = {}) {
   const s = String(search || "");
-  const rm = s.match(/[?&]render=(3d|iso)\b/);
+  const rm = s.match(/[?&]render=(3d|iso|px)\b/);
   const cm = s.match(/[?&]code=([0-9A-Za-z]{12})\b/);
   return {
     urlKind: rm ? rm[1] : null,

@@ -6,6 +6,7 @@
 import { CFG, isFinale } from "./core/config.js";
 import { createWorld, loadLevel, step } from "./core/sim.js";
 import { createRenderer } from "./render/renderer.js";
+import { createPixelRenderer } from "./render/pixel/renderer.js";
 import { copyPayload, isRunEnd, overlayBox, pauseHit } from "./render/scenes.js";
 import { paintBombPad } from "./render/sprites.js";
 import { dims, drawShell, kindSize } from "./render/shellview.js";
@@ -16,6 +17,7 @@ import { clampHeat } from "./core/heat.js";
 import { clampPact } from "./core/pact.js";
 import { createDemo, stepDemo } from "./app/attract.js";
 import { readFlags, locationSearch } from "./app/flags.js";
+import { kindOf } from "./app/renderkind.js";
 import { mountDebugHook } from "./app/debughook.js";
 import { mountFit } from "./app/fit.js";
 import { introPhase, popOf, createShow, stepShow } from "./app/intro.js";
@@ -487,23 +489,23 @@ export function createGame(canvas, opts = {}) {
      flips screens, the loop below creates/steps/discards the demo. */
   let demo = null;
 
-  /* renderer cache per kind, lazily built. Tri-state (real3d §1/§7):
-     "2d" classic (default, byte-identical), "3d" real-3D wrapper on the
-     dual canvas (#gl under #c), "iso" legacy dimetric pinned by ?render=iso
-     (menu toggle flips app.render3d between 3d/2d only). */
+  /* renderer cache per kind, lazily built (app/renderkind.js kindOf): "2d"
+     classic (default, byte-identical), "3d" real-3D wrapper (#gl under #c),
+     "px" PIXEL (#px under #c, pixel/renderer.js; ?render=px), "iso" legacy
+     dimetric pinned by ?render=iso (menu toggle flips 3d/2d only). */
   const glCanvas =
     typeof document !== "undefined" && document
       ? document.getElementById("gl")
       : null;
+  const pxCanvas = glCanvas && document.getElementById("px");
   const rcache = {};
   function effKind() {
-    if (urlKind === "iso") return "iso";
-    return app.render3d ? "3d" : "2d";
+    return kindOf(urlKind, app);
   }
   let curKind = effKind();
   /* overlay #c keeps the CLASSIC space for 2d/3d; iso needs its projected
-     dims. #gl is sized to the logical box (DPR handled in the wrapper) and
-     [hidden]-toggled to kind "3d". */
+     dims. #gl / #px keep their own drawing buffers (wrapper / px renderer)
+     and are [hidden]-toggled to kind "3d" / "px". */
   /* #c's 2D context must be alpha-capable: canvas contexts are first-call-
      wins, and the classic renderer requests {alpha:false}. If IT claims the
      context first, the 3D overlay later gets that same opaque context and
@@ -515,9 +517,7 @@ export function createGame(canvas, opts = {}) {
       canvas.width = w;
       canvas.height = h;
     }
-    if (glCanvas) {
-      glCanvas.hidden = kind !== "3d";
-    }
+    for (const [el, k] of [[glCanvas, "3d"], [pxCanvas, "px"]]) if (el) el.hidden = kind !== k;
     if (fit) fit();
   }
   let createRenderer3D = opts.createRenderer3D || null;
@@ -540,6 +540,7 @@ export function createGame(canvas, opts = {}) {
               audio: opts.audio || null,
               rig,
             })
+          : kind === "px" ? createPixelRenderer(pxCanvas, canvas, { audio: opts.audio || null })
           : createRenderer(canvas, { kind, audio: opts.audio || null });
     } catch (e) {
       console.warn("renderer init failed", e);
@@ -575,7 +576,7 @@ export function createGame(canvas, opts = {}) {
     const k = effKind();
     if (k !== curKind) {
       curKind = k;
-      renderer = getRenderer(k);
+      renderer = getRenderer(k); if (renderer.reset) renderer.reset();
     } // live RENDER toggle: cache swap
     touch.update(app.screen === SCREEN.GAME, world.state === "PLAY");
     // §4 ducking: frame-polled, idempotent, self-heals across transitions

@@ -21,6 +21,7 @@ const SRC = Object.freeze([
   "src/app/pactstore.js",
   "src/app/pacestore.js",
   "src/app/plaques.js",
+  "src/app/renderkind.js",
   "src/app/reset.js",
   "src/app/settings.js",
   "src/app/stats.js",

@@ -50,6 +50,10 @@
      absolute inset:0, touchpad stays above (z-index 5) */
   #gl{position:absolute;inset:0;width:100%;height:100%;z-index:0}
   #gl[hidden]{display:none}
+  /* PIXEL: #px under #c too; its backing store is device px, owned by the px
+     renderer alone (sharp-bilinear), so it opts out of pixelated scaling. */
+  #px{position:absolute;inset:0;width:100%;height:100%;z-index:0;image-rendering:auto}
+  #px[hidden]{display:none}
   #c{position:relative;z-index:1}
   canvas{image-rendering:pixelated;display:block;border-radius:10px;
     border:1px solid var(--line);box-shadow:0 12px 48px rgba(0,0,0,.6),0 0 0 4px #0a0e18;
@@ -107,7 +111,7 @@
 <p class="sr-only">Single-player bomb-grid arcade. Flip REAL 3D and classic 2D. Heat CORE, PLUS, and MAX. Eight rooms. Free — no account.</p>
 <noscript><p>Play Fusegrid in the browser — a single-player bomb-grid arcade. JavaScript is required.</p></noscript>
 <div id="wrap">
-  <div id="stage"><canvas id="gl" hidden></canvas><canvas id="c" aria-label="Fusegrid game board"></canvas>
+  <div id="stage"><canvas id="gl" hidden></canvas><canvas id="px" hidden></canvas><canvas id="c" aria-label="Fusegrid game board"></canvas>
     <div id="touchpad" hidden>
       <div id="tpad" role="group" aria-label="Move pad"></div>
       <div id="tbomb" role="button" aria-label="Bomb"><canvas id="tbomb-icon" width="64" height="64" aria-hidden="true"></canvas></div>

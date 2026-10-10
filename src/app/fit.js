@@ -1,8 +1,9 @@
-/* Stage fit for the browser entry (src/main.js). Scales #c and #gl to the
+/* Stage fit for the browser entry (src/main.js). Scales #c, #gl, #px to the
    viewport minus a per-layout reserve and writes body[data-lay], the one
    predicate index.html keys the touch layout off: d desktop (no touch),
    p touch portrait (pad + bomb below the stage), l touch landscape (side
-   gutters). Never assigns the #gl drawing buffer — the wrapper owns it.
+   gutters). Never assigns the #gl / #px drawing buffers (each renderer
+   owns its own).
    Touch portrait is width-bound, so the slack is vertical: portraitGeo
    centres the stage in it (clamped to the FIT_RES.p split, 60 above for the
    pause pill, 190 below for the controls) and docks the pad + bomb to the
@@ -46,10 +47,11 @@ export function mountFit(canvas) {
     canvas.style.width = canvas.width * s + "px";
     canvas.style.height = canvas.height * s + "px";
     if (typeof document === "undefined") return;
-    const glEl = document.getElementById && document.getElementById("gl");
-    if (glEl) {
-      glEl.style.width = canvas.style.width;
-      glEl.style.height = canvas.style.height;
+    for (const id of ["gl", "px"]) {
+      const el = document.getElementById && document.getElementById(id);
+      if (!el) continue;
+      el.style.width = canvas.style.width;
+      el.style.height = canvas.style.height;
     }
     const body = document.body, tp = document.getElementById && document.getElementById("touchpad");
     const game = !!tp && !tp.hidden, flip = was !== undefined && game !== was;
