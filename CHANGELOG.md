@@ -6,6 +6,21 @@ version number of its own; each entry is dated and names the PWA shell
 revision (`CACHE_NAME` in `src/pwa/shell.js`) that shipped it, since that is
 what makes an installed copy update.
 
+## shell v177 · 2026-10-10
+
+### Changed
+- **Explosions look 3D in REAL 3D.** Blasts are now billowing fireballs with
+  a white-hot core along every arm, a big burst on the bomb tile, and a
+  glowing plate on each deadly tile, so you can see exactly where it hurts.
+  They used to be flat, faint cards.
+- **More room to play on a portrait phone.** During a run the board moves up
+  under the pause button and the D-pad grows a little; the menu stays
+  centred.
+
+### Fixed
+- If you arm Reset on STATS by mistake, you can still tap `C COPY` to copy
+  your stats (it also cancels the reset).
+
 ## shell v176 · 2026-10-10
 
 ### Changed

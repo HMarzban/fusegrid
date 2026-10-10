@@ -50,7 +50,7 @@ Clear every enemy in the room to advance. Gold **WALL** never breaks; green **BR
 | T *(STATS)* | Open the MEDALS page |
 | R, R *(STATS)* | Reset my cabinet (two presses; any other key cancels) |
 
-On touch devices during a run, a virtual D-pad and bomb button sit off the board: docked low in the thumb zone in portrait (the board sits mid-screen), in the side gutters in landscape, with pause above. STATS's MEDALS, Copy and Reset labels are tappable. Power-ups marked with `*` in the in-game HOW TO need their pickup first. Everything the game remembers lives in your browser's local storage; there is no account, server, or leaderboard. See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
+On touch devices during a run, a virtual D-pad and bomb button sit off the board: docked low in the thumb zone in portrait (the board centres on the menus and moves up under pause during a run), in the side gutters in landscape, with pause above. STATS's MEDALS, Copy and Reset labels are tappable. Power-ups marked with `*` in the in-game HOW TO need their pickup first. Everything the game remembers lives in your browser's local storage; there is no account, server, or leaderboard. See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
 
 ## Progression
 

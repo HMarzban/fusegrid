@@ -130,6 +130,14 @@ not shell screens. Do not add them as `SCREEN` values.
     Never assign `#gl.width`/`#gl.height` from `sizeCanvases` — wrapper owns
     the Retina drawing buffer (`setPixelRatio` + `setSize`). Stomping it
     crops WebGL to the bottom-left quarter on dpr=2.
+  - Blasts (v3, 2026-10-10, `src/render/three/blast.js`): exactly TWO
+    instanced draws whatever the blast count — an additive rounded danger
+    plate per deadly tile (2D colour ramp, never shrinks, floor 0.25 bright,
+    so it stays honest while blades are lethal) and lumpy icosahedron
+    fireballs through one unlit ShaderMaterial (white-hot core, orange shell,
+    red rim, per-instance age, noise burn-away after 55% of life). End caps
+    never overflow their tile except the far cap 0.253; REDUCE FLASH scales
+    the <=3 flash lights. Fat-world stays 141. Never crossed quads again.
   - The board border is ONE extruded cabinet rim (`tag:"trim"`, `RIM_W 36` /
     `RIM_LIP 6`) with a hole — never four rails, which crossed at the corners.
   - Near-wall cutaway (ruling 2026-10-09, the user's pick "lower the near
