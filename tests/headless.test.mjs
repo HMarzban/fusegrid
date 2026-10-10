@@ -808,6 +808,7 @@ for(const mode of ["autoplay","code"]){
   const g=createGame(null,{seed:23});
   g.app.cabinetSeen=true;                // seen cabinet: skip lands on MENU
   g.app.skip(); g.app.cursor=2;
+  g.app.settings.dmo=2;                  // DEMO ON: an unbounded attract (SHORT parks at 60 s)
   g.app.enterAttract();                  // direct entry for a deterministic run
   const levels=new Set();
   let t=2000;
@@ -1294,6 +1295,9 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
     g.app.screen=SCREEN.TROPHIES;
     check("debug hook: state() names TROPHIES (R6)",
       win.__GAME__.state()==="TROPHIES",String(win.__GAME__.state()));
+    g.app.screen=SCREEN.GRAPHICS;
+    check("debug hook: state() names GRAPHICS",
+      win.__GAME__.state()==="GRAPHICS",String(win.__GAME__.state()));
     g.app.screen=99;
     check("debug hook: state() falls back to the raw index, never undefined, past the end of SCREEN_NAME (Nit-5)",
       win.__GAME__.state()==="99",String(win.__GAME__.state()));

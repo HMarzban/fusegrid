@@ -4,7 +4,10 @@
    Expectations come from README "How to play", AGENTS.md and the on-screen
    foot hints in menudraw.js — not from reading the handlers back. */
 import { createGame } from "../src/main.js";
-import { SCREEN, ITEMS, GUIDE_ROWS, PAUSE_ITEMS, IDLE_T } from "../src/app/menuapp.js";
+import { SCREEN, ITEMS, GUIDE_ROWS, PAUSE_ITEMS, OPT_ROWS, IDLE_T } from "../src/app/menuapp.js";
+import { GFX_ROWS, DEMO_T } from "../src/app/gfx.js";
+import { graphicsGeom, layout as menuLayout } from "../src/render/menudraw.js";
+import { readFileSync } from "node:fs";
 import { SHOW_STEP, SHOW_DUR, popOf } from "../src/app/intro.js";
 import { CFG } from "../src/core/config.js";
 import { dailySeed } from "../src/app/daily.js";
@@ -297,6 +300,147 @@ for (const at of [1.0, 2.0, 3.0, 4.0]) {
   check("RENDER PIXEL survives a reload: boots pixel, px renderer, blob unchanged", g.app.pixel === true && g.app.render3d === false && !!g.renderer._dbg && g.app.settings.px === 1, v(g));
   if (s0 === undefined) delete mem["nb.settings.v1"]; else mem["nb.settings.v1"] = s0;
 }
+
+// ---- GRAPHICS (unified spec 2026-10-10 §5, UX §10 rows 1-11) ----
+/* main.js's GRAPHICS glue (P/Esc 2 -> 1 in PAUSE, GRAPHICS tap routing, the
+   door / page confirm cues) is the frame-pacing package's edit; until its
+   graphicsHit import lands those rows log as SKIP, never as a silent pass. */
+const WIRED = /graphicsHit/.test(readFileSync(new URL("../src/main.js", import.meta.url), "utf8"));
+const wired = (name, cond, detail) => (WIRED ? check(name, cond, detail) : console.log("  SKIP " + name + " (awaiting main.js GRAPHICS wiring)"));
+const GDOOR = OPT_ROWS.indexOf("GRAPHICS");
+const withSettings = (blob, fn) => {
+  const s0 = mem["nb.settings.v1"];
+  if (blob) mem["nb.settings.v1"] = JSON.stringify(blob); else delete mem["nb.settings.v1"];
+  try { fn(); } finally { if (s0 === undefined) delete mem["nb.settings.v1"]; else mem["nb.settings.v1"] = s0; }
+};
+const gfxPage = (g) => { toRow(g, ITEMS.indexOf("OPTIONS")); press(g, "Enter"); toRow(g, GDOOR); press(g, "Enter"); return g; };
+const six = (s) => [s.fps, s.res, s.shd, s.aa, s.fxq, s.dmo].join("");
+withSettings(null, () => {
+  // 1: the door
+  const g = menu(); toRow(g, ITEMS.indexOf("OPTIONS")); press(g, "Enter"); toRow(g, GDOOR);
+  const s0 = JSON.stringify(g.app.settings);
+  press(g, "ArrowLeft"); press(g, "ArrowRight");
+  check("GRAPHICS door: OPTIONS ↓ x8 lands on it, ←/→ change nothing", g.app.optRow === 8 && OPT_ROWS[8] === "GRAPHICS" && g.app.screen === SCREEN.SETTINGS && JSON.stringify(g.app.settings) === s0, g.app.optRow);
+  press(g, "Enter");
+  check("GRAPHICS door Enter opens SCREEN.GRAPHICS at row 0", g.app.screen === SCREEN.GRAPHICS && g.app.gfxRow === 0, g.app.screen + "/" + g.app.gfxRow);
+  // 2: wrap
+  press(g, "ArrowUp"); const up = g.app.gfxRow; press(g, "ArrowDown");
+  check("GRAPHICS ↑ wraps 0 -> 7, ↓ wraps 7 -> 0", up === GFX_ROWS.length - 1 && g.app.gfxRow === 0, up + "," + g.app.gfxRow);
+  // 3: FRAME RATE clamps, Enter wraps
+  press(g, "ArrowDown"); press(g, "ArrowRight"); press(g, "ArrowRight");
+  const mx = g.app.settings.fps; press(g, "Enter");
+  check("FRAME RATE → clamps at MAX; Enter cycles MAX -> 30", mx === 2 && g.app.settings.fps === 0, mx + "->" + g.app.settings.fps);
+  check("a GRAPHICS change persists inside nb.settings.v1", /"fps":0/.test(mem["nb.settings.v1"] || ""), mem["nb.settings.v1"]);
+  // 5: CUSTOM, then 4: the preset cycle
+  press(g, "ArrowUp");
+  check("a hand edit derives CUSTOM", g.app.gfxPreset() === "CUSTOM");
+  press(g, "Enter");
+  check("from CUSTOM, Enter = AUTO", g.app.gfxPreset() === "AUTO" && six(g.app.settings) === "112111", six(g.app.settings));
+  const cyc = [];
+  for (let i = 0; i < 3; i++) { press(g, "Enter"); cyc.push(g.app.gfxPreset() + ":" + six(g.app.settings)); }
+  check("QUALITY Enter AUTO -> HIGH -> BATTERY -> AUTO writes all six rows", cyc.join() === "HIGH:222212,BATTERY:000000,AUTO:112111", cyc.join());
+  g.app.settings.fxq = 0; press(g, "ArrowLeft");
+  check("from CUSTOM, ← = BATTERY", g.app.gfxPreset() === "BATTERY");
+  g.app.settings.fxq = 1; press(g, "ArrowRight");
+  check("from CUSTOM, → = HIGH", g.app.gfxPreset() === "HIGH");
+  // 7: back path, M and digits
+  const sx = JSON.stringify(g.app.settings);
+  for (const k of ["Digit1", "Digit5", "BracketLeft", "BracketRight", "KeyM", "KeyT"]) press(g, k);
+  check("digits, pace keys, M and T do nothing on GRAPHICS", g.app.screen === SCREEN.GRAPHICS && JSON.stringify(g.app.settings) === sx);
+  press(g, "Escape");
+  check("Escape -> OPTIONS on the GRAPHICS door", g.app.screen === SCREEN.SETTINGS && g.app.optRow === GDOOR, g.app.screen + "/" + g.app.optRow);
+  press(g, "Enter"); press(g, "Backspace");
+  check("Backspace -> OPTIONS on the GRAPHICS door", g.app.screen === SCREEN.SETTINGS && g.app.optRow === GDOOR);
+  press(g, "Escape");
+  check("a second Escape -> MENU", g.app.screen === SCREEN.MENU);
+  // RESET DEFAULTS returns GRAPHICS to AUTO
+  check("MENU kept its cursor on OPTIONS", g.app.cursor === ITEMS.indexOf("OPTIONS"));
+  press(g, "Enter"); toRow(g, OPT_ROWS.indexOf("RESET DEFAULTS")); press(g, "Enter");
+  check("RESET DEFAULTS returns GRAPHICS to AUTO", g.app.gfxPreset() === "AUTO" && /"fps":1,"res":1,"shd":2,"aa":1,"fxq":1,"dmo":1,"fpm":0/.test(mem["nb.settings.v1"] || ""), mem["nb.settings.v1"]);
+});
+// 6: locks per RENDER (presets still write locked rows)
+{
+  const rec = new Proxy(function () {}, { get: (t, p) => (p === Symbol.toPrimitive ? () => "" : () => rec), apply: () => rec, set: () => true });
+  const fake3d = () => ({ ctx: rec, overlay: null, canvas: null, render() {}, consumeEvents() {}, getShake: () => ({ x: 0, y: 0 }) });
+  const probe = (g) => [2, 3, 4].filter((r) => {
+    const k = ["", "", "res", "shd", "aa"][r], v = g.app.settings[k];
+    g.app.gfxRow = r; press(g, "ArrowLeft"); const a = g.app.settings[k]; g.app.settings[k] = v;
+    press(g, "Enter"); const b = g.app.settings[k]; g.app.settings[k] = v;
+    return a === v && b === v;
+  }).join("");
+  for (const [name, blob, want] of [["CLASSIC 2D", {}, "234"], ["PIXEL", { px: 1 }, "34"], ["REAL 3D", { r3d: 1 }, ""]]) withSettings(blob, () => {
+    const g = show(mk({ createRenderer3D: fake3d })); press(g, "Enter"); gfxPage(g);
+    const got = probe(g);
+    check("GRAPHICS locks in " + name + ": rows " + (want || "none") + " ignore ← and Enter", got === want && g.app.screen === SCREEN.GRAPHICS, got);
+    g.app.gfxRow = 0; press(g, "Enter");
+    check("GRAPHICS in " + name + ": QUALITY still writes the locked rows", g.app.gfxPreset() === "HIGH" && g.app.settings.res === 2 && g.app.settings.aa === 2);
+    const dash = g.app.gfxView().rows.filter((r) => r.val === "—").length;
+    check("GRAPHICS in " + name + ": " + want.length + " rows read an em dash", dash === want.length, dash);
+  });
+}
+// 8: idle — GRAPHICS never enters ATTRACT; DEMO OFF never; SHORT parks MENU after DEMO_T
+withSettings(null, () => {
+  const g = gfxPage(menu()); g.tick(60 * (IDLE_T + 2));
+  check("12 s idle on GRAPHICS never enters ATTRACT", g.app.screen === SCREEN.GRAPHICS, g.app.screen);
+  const m = menu(); g.tick(1); m.tick(60 * IDLE_T + 30);
+  check("DEMO SHORT (default): MENU idle still enters ATTRACT", m.app.screen === SCREEN.ATTRACT, m.app.screen);
+  m.tick(60 * DEMO_T + 30);
+  check("DEMO SHORT: after 60 s ATTRACT returns to MENU and parks", m.app.screen === SCREEN.MENU && m.app.parked === true && !m.demo, m.app.screen);
+  m.tick(60 * (IDLE_T + 5));
+  check("DEMO SHORT: parked MENU never re-enters ATTRACT", m.app.screen === SCREEN.MENU);
+  press(m, "ArrowDown");
+  check("DEMO SHORT: the next input unparks", m.app.parked === false && m.app.cursor === 1);
+});
+withSettings({ dmo: 0 }, () => {
+  const m = menu(); m.tick(60 * (IDLE_T + 5));
+  check("DEMO OFF: 15 s idle on MENU never enters ATTRACT", m.app.screen === SCREEN.MENU, m.app.screen);
+});
+// 9: PAUSE -> OPTIONS -> GRAPHICS is the inline pauseView 2
+withSettings(null, () => {
+  const o = run(); press(o, "KeyP"); toRow(o, PAUSE_ITEMS.indexOf("OPTIONS")); press(o, "Enter"); toRow(o, GDOOR); press(o, "Enter");
+  check("PAUSE OPTIONS GRAPHICS door opens inline pauseView 2 (shell GAME, still PAUSE)", o.app.pauseView === 2 && o.app.screen === SCREEN.GAME && o.world.state === "PAUSE" && o.app.gfxRow === 0,
+    o.app.pauseView + "/" + o.app.screen + "/" + o.world.state);
+  press(o, "ArrowDown"); press(o, "ArrowLeft");
+  check("pause view 2: ↓ moves gfxRow, ← adjusts FRAME RATE", o.app.gfxRow === 1 && o.app.settings.fps === 0 && o.app.optRow === GDOOR);
+  press(o, "Enter");
+  check("pause view 2: Enter cycles the row, still PAUSE", o.app.settings.fps === 1 && o.world.state === "PAUSE" && o.app.pauseView === 2);
+  press(o, "KeyP");
+  wired("pause view 2: P backs to OPTIONS on the door, still PAUSE", o.app.pauseView === 1 && o.app.optRow === GDOOR && o.world.state === "PAUSE", o.app.pauseView + "/" + o.world.state);
+  if (WIRED) {
+    press(o, "Enter"); press(o, "Escape");
+    wired("pause view 2: Escape backs to OPTIONS", o.app.pauseView === 1 && o.world.state === "PAUSE", o.app.pauseView);
+    press(o, "Escape");
+    wired("pause OPTIONS: Escape backs to the list", o.app.pauseView === 0 && o.world.state === "PAUSE");
+    press(o, "KeyP");
+    wired("pause list: P resumes", o.world.state === "PLAY");
+  }
+});
+// 10: taps — a row tap = Enter on it, off the rows backs out one level (600x520 buffer, k=1)
+withSettings(null, () => {
+  const mkEl = () => {
+    const PL = {};
+    const ctx = new Proxy(function () {}, { get: (t, p) => (p === Symbol.toPrimitive ? () => "" : () => ctx), apply: () => ctx, set: () => true });
+    const el = { width: 600, height: 520, style: {}, getContext: () => ctx,
+      getBoundingClientRect: () => ({ left: 0, top: 0, width: 600, height: 520 }),
+      addEventListener: (ty, fn) => { (PL[ty] = PL[ty] || []).push(fn); }, removeEventListener: noop };
+    return { el, tap: (g, x, y) => { (PL.pointerdown || []).forEach((f) => f({ clientX: x, clientY: y })); g.tick(); (PL.pointerup || []).forEach((f) => f({ clientX: x, clientY: y })); g.tick(); } };
+  };
+  const G = graphicsGeom(menuLayout(600, 520)), at = (r) => G.y0 + (r + 0.5) * G.rowH;
+  const A = mkEl(), g = gfxPage(menu(A.el));
+  A.tap(g, 300, at(1));
+  wired("GRAPHICS tap on FRAME RATE = Enter on it (60 -> MAX)", g.app.screen === SCREEN.GRAPHICS && g.app.gfxRow === 1 && g.app.settings.fps === 2, g.app.gfxRow + "/" + g.app.settings.fps);
+  A.tap(g, 300, 20);
+  wired("GRAPHICS tap off the rows backs out to OPTIONS on the door", g.app.screen === SCREEN.SETTINGS && g.app.optRow === GDOOR, g.app.screen);
+  const B = mkEl(), o = menu(B.el); press(o, "Enter");
+  press(o, "KeyP"); toRow(o, PAUSE_ITEMS.indexOf("OPTIONS")); press(o, "Enter"); toRow(o, GDOOR); press(o, "Enter");
+  B.tap(o, 300, at(5));
+  wired("pause view 2 tap on EFFECTS = Enter on it (FULL -> LOW), still PAUSE", o.app.pauseView === 2 && o.app.gfxRow === 5 && o.app.settings.fxq === 0 && o.world.state === "PAUSE",
+    o.app.pauseView + "/" + o.app.gfxRow + "/" + o.app.settings.fxq);
+  B.tap(o, 300, 20);
+  wired("pause view 2 tap off the rows backs to OPTIONS (view 1), still PAUSE", o.app.pauseView === 1 && o.world.state === "PAUSE", o.app.pauseView + "/" + o.world.state);
+});
+// 11: the AA deferral (a live context rebuild on leaving the page) needs rAF and
+// a WebGL renderer cache; tests/frameloop.test.mjs pins it with injected rAF.
 
 // ---- GUIDE + HOW TO / ITEMS / ENEMIES ----
 for (let i = 0; i < GUIDE_ROWS.length; i++) {

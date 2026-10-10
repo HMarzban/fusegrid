@@ -270,9 +270,9 @@ export function drawOverlay(
     note();
   } else if (world.state === "PAUSE") {
     const u = ui || {};
-    /* view 1 = the inline OPTIONS page: veil only, so drawShell's settings
-       plate never lands on top of a live PAUSED headline. */
-    if ((u.view | 0) === 1) return;
+    /* view 1 / 2 = the inline OPTIONS / GRAPHICS page: veil only, so
+       drawShell's plate never lands on top of a live PAUSED headline. */
+    if ((u.view | 0) >= 1) return;
     const cur = u.cursor | 0;
     c.font = "900 40px ui-monospace,monospace";
     c.strokeText("PAUSED", cx, cy - 70);

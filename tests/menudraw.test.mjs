@@ -530,7 +530,7 @@ function check(name, cond, detail) {
       const ft = texts.find((t) => t.s.indexOf("ENTER CYCLE") >= 0);
       const kick = texts.find((t) => t.s === "BUILD v99");
       check(
-        `options plate: nine rows, both notes and the foot all inside at ${W}x${H}`,
+        `options plate: ten rows, both notes and the foot all inside at ${W}x${H}`,
         !!p &&
           !!first &&
           !!lastRow &&
@@ -547,7 +547,7 @@ function check(name, cond, detail) {
       );
       check(
         `options row pitch matches the spec budget at ${W}x${H}`,
-        Math.abs(g.rowH - (H === 520 ? 30 : 173.68 / 9)) < 0.01 &&
+        Math.abs(g.rowH - (H === 520 ? 30 : 173.68 / 10)) < 0.01 &&
           Math.abs(g.y0 - (H === 520 ? 121.2 : 94.32)) < 0.01 &&
           Math.abs(g.noteY - (H === 520 ? 446 : 278)) < 0.01,
         [g.y0, g.rowH, g.noteY].join("/"),
@@ -573,7 +573,7 @@ function check(name, cond, detail) {
         texts.map((t) => t.s).join("|"),
       );
       check(
-        `CLASSIC 2D still draws all nine labels — rows never hide at ${W}x${H}`,
+        `CLASSIC 2D still draws all ten labels — rows never hide at ${W}x${H}`,
         [
           "MUSIC",
           "SFX",
@@ -583,6 +583,7 @@ function check(name, cond, detail) {
           "BRIGHTNESS",
           "SCREEN SHAKE",
           "REDUCE FLASH",
+          "GRAPHICS",
           "RESET DEFAULTS",
         ].every((n) => texts.some((t) => t.s === n)),
         texts.map((t) => t.s).join("|"),
@@ -808,7 +809,7 @@ function check(name, cond, detail) {
     const g = md.settingsGeom(L);
     const mid = g.S.ix + g.S.iw / 2;
     let all = true;
-    for (let i = 0; i < 9; i++) {
+    for (let i = 0; i < md.OPT_N; i++) {
       const y = g.y0 + i * g.rowH + g.rowH / 2;
       if (md.settingsHit(mid, y, L) !== i) all = false;
     }
@@ -816,7 +817,7 @@ function check(name, cond, detail) {
     check(`settingsHit above the band is -1 at ${W}x${H}`, md.settingsHit(mid, g.y0 - 1, L) === -1);
     check(
       `settingsHit below the band is -1 at ${W}x${H}`,
-      md.settingsHit(mid, g.y0 + 9 * g.rowH + 1, L) === -1,
+      md.settingsHit(mid, g.y0 + 10 * g.rowH + 1, L) === -1,
     );
     check(`settingsHit left of the plate is -1 at ${W}x${H}`, md.settingsHit(g.S.ix - 2, g.y0 + 2, L) === -1);
     check(
@@ -828,6 +829,127 @@ function check(name, cond, detail) {
       md.settingsHit(mid, g.y0 + g.rowH - 0.001, L) === 0 && md.settingsHit(mid, g.y0 + g.rowH, L) === 1,
       String(md.settingsHit(mid, g.y0 + g.rowH, L)),
     );
+  }
+}
+
+// 13e2) GRAPHICS page (unified spec 2026-10-10 §5): geometry, tap map, rows,
+// locks, preset glow, help lines, the door value and the FPS METER chip
+{
+  const md = await import("../src/render/menudraw.js");
+  const { OPT_ROWS, SCREEN, createMenuApp } = await import("../src/app/menuapp.js");
+  const gfx = await import("../src/app/gfx.js");
+  const { drawShell } = await import("../src/render/shellview.js");
+  const rec = () => {
+    const texts = [], rects = [];
+    const c = {
+      fillStyle: "", strokeStyle: "", lineWidth: 1, globalAlpha: 1, font: "", textAlign: "left", textBaseline: "middle", shadowColor: "", shadowBlur: 0,
+      fillRect(x, y, w, h) { rects.push({ x, y, w, h, fill: c.fillStyle }); },
+      fillText(s, x, y) { const m = /(\d+)px/.exec(c.font); texts.push({ s: String(s), x, y, px: m ? +m[1] : 0, a: c.globalAlpha, blur: c.shadowBlur, fill: c.fillStyle, align: c.textAlign }); },
+      strokeRect() {}, strokeText() {}, beginPath() {}, moveTo() {}, lineTo() {}, closePath() {}, fill() {}, stroke() {}, arc() {}, save() {}, restore() {}, translate() {}, scale() {}, rotate() {}, drawImage() {}, setTransform() {},
+    };
+    return { c, texts, rects };
+  };
+  check("OPT_N === OPT_ROWS.length (10)", md.OPT_N === OPT_ROWS.length && md.OPT_N === 10);
+  check("GFX_N === GFX_ROWS.length (8)", md.GFX_N === gfx.GFX_ROWS.length && md.GFX_N === 8);
+  check("settingsRows carries the door value at the GRAPHICS row", md.settingsRows({}, false, false, "CUSTOM ›")[OPT_ROWS.indexOf("GRAPHICS")] === "CUSTOM ›" && md.settingsRows({}, false, false)[8] === "›");
+  const S = (o) => ({ ...(gfx.PRESETS.AUTO), fpm: 0, ...o });
+  for (const [W, H] of [[600, 520], [608, 352]]) {
+    const L = md.layout(W, H), g = md.graphicsGeom(L), mid = g.S.ix + g.S.iw / 2;
+    check(`graphics row pitch: 36 at 520, (noteY-10-y0)/8 at 352 (${W}x${H})`,
+      Math.abs(g.rowH - (H === 520 ? 36 : (278 - 10 - 94.32) / 8)) < 0.01 && Math.abs(g.noteY - (H === 520 ? 446 : 278)) < 0.01, g.rowH);
+    let all = true;
+    for (let i = 0; i < md.GFX_N; i++) if (md.graphicsHit(mid, g.y0 + (i + 0.5) * g.rowH, L) !== i) all = false;
+    check(`graphicsHit maps every row centre at ${W}x${H}`, all);
+    check(`graphicsHit off the rows is -1 at ${W}x${H}`, md.graphicsHit(mid, g.y0 - 1, L) === -1 && md.graphicsHit(mid, g.y0 + 8 * g.rowH + 1, L) === -1 &&
+      md.graphicsHit(g.S.ix - 2, g.y0 + 2, L) === -1 && md.graphicsHit(g.S.ix + g.S.iw + 2, g.y0 + 2, L) === -1);
+    check(`graphicsHit rows are contiguous at ${W}x${H}`, md.graphicsHit(mid, g.y0 + g.rowH - 0.001, L) === 0 && md.graphicsHit(mid, g.y0 + g.rowH, L) === 1);
+    for (const touch of [false, true]) for (const kind of ["2d", "px", "3d"]) {
+      const { c, texts, rects } = rec();
+      const view = gfx.gfxView(S({ fxq: 0 }), kind, { dpr3d: 1.5, dprPx: 1.5, limit: true, pendingAA: true });
+      md.drawGraphics(c, L, 1, { row: 1, view, togT: 0.95, chg: 0b11, touch });
+      const tag = `${kind}${touch ? " touch" : ""} ${W}x${H}`;
+      const p = rects.find((r) => r.fill === "rgba(8,12,22,0.92)");
+      const labels = gfx.GFX_ROWS.map((n) => texts.find((t) => t.s === n));
+      check(`graphics: eight labels at ${touch ? 15 : 13}px inside the plate (${tag})`, !!p && labels.every((t) => t && t.px === (touch ? 15 : 13) && t.y > p.y + 8 && t.y < p.y + p.h - 8));
+      check(`graphics: head + kicker (${tag})`, texts.some((t) => t.s === "GRAPHICS" && t.px === 16) && texts.some((t) => t.s === "PERFORMANCE · BATTERY"));
+      const h1 = texts.find((t) => t.s === view.rows[1].help1), h2 = texts.find((t) => t.s === view.rows[1].help2);
+      const ft = texts.find((t) => t.s === "↑↓ ROW · ←→ ADJUST · ENTER CYCLE · ESC BACK");
+      check(`graphics: two help lines for the selected row, then the foot (${tag})`, !!h1 && !!h2 && !!ft && h1.px === (touch ? 11 : 10) && h1.fill === "#7385ad" && h2.fill === "#37f0d0" &&
+        labels[7].y < h1.y && h1.y < h2.y && h2.y < ft.y && ft.y < p.y + p.h - 4 && h2.s === gfx.HELP_LIMIT);
+      check(`graphics: help lines fit the plate width (${tag})`, [h1, h2].every((t) => [...t.s].length * t.px * 0.6 <= g.S.iw));
+      const lk = view.rows.filter((r) => r.locked).map((r) => r.label);
+      const dash = texts.filter((t) => t.s === "—");
+      check(`graphics: locked rows read an em dash at alpha 0.45 (${tag})`, dash.length === lk.length && dash.every((t) => t.a === 0.45) && lk.every((n) => texts.find((t) => t.s === n).a === 0.45));
+      const glow = texts.filter((t) => t.blur > 0).map((t) => t.s);
+      check(`graphics: the togT glow lights every changed row (chg mask) (${tag})`, glow.join() === [view.rows[0].val, view.rows[1].val].join(), glow.join());
+    }
+  }
+  {
+    const { c, texts } = rec();
+    md.drawGraphics(c, md.layout(600, 520), 5, { row: 0, view: gfx.gfxView(S({}), "3d", {}), togT: -1, chg: 255 });
+    check("graphics: no glow once togT is spent", texts.every((t) => !t.blur));
+    const r2 = rec();
+    md.drawGraphics(r2.c, md.layout(600, 520), 0, {});
+    check("graphics: a missing view still paints the plate without throwing", r2.texts.some((t) => t.s === "GRAPHICS"));
+  }
+  // FPS METER
+  check("meter: fps, density only in 3D / PIXEL, LIMIT", md.meterText({ fps: 58.4, kind: "3d", dpr3d: 1.5 }) === "58 FPS · 1.5X" &&
+    md.meterText({ fps: 30, kind: "px", dprPx: 2, limit: true }) === "30 FPS · 2X · LIMIT" && md.meterText({ fps: 60, kind: "2d", dpr3d: 2 }) === "60 FPS" &&
+    md.meterText(null) === "-- FPS");
+  check("meter density format matches gfx.xOf", [1, 1.25, 1.5, 1.75, 2, 3].every((v) => md.meterText({ fps: 1, kind: "3d", dpr3d: v }) === "1 FPS · " + gfx.xOf(v)));
+  {
+    const { c, texts, rects } = rec();
+    md.drawMeter(c, 600, 520, { fps: 58, kind: "3d", dpr3d: 1.5 });
+    const t = texts[0], r = rects[0];
+    check("meter: 9px muted chip at the bottom-right, inside the box", texts.length === 1 && t.px === 9 && t.fill === "#7385ad" && t.align === "right" &&
+      r.x > 300 && r.x + r.w <= 600 && r.y + r.h <= 520 && r.x <= t.x - t.s.length * 5.4, JSON.stringify({ t, r }));
+  }
+  // shellview: the GRAPHICS screen, pause view 2, the door value and the meter on every screen
+  {
+    const world = { state: "PLAY", time: 0 };
+    const a = createMenuApp({ settings: {} });
+    const draw = () => { const R = rec(); drawShell(R.c, a, world, null, "2d", () => [], () => 0); return R.texts.map((t) => t.s); };
+    a.screen = SCREEN.SETTINGS;
+    check("shellview: OPTIONS shows the door value AUTO ›", draw().includes("AUTO ›"));
+    a.screen = SCREEN.GRAPHICS; a.gfxRow = 2;
+    let T = draw();
+    check("shellview routes SCREEN.GRAPHICS to drawGraphics with the app's view", T.includes("PERFORMANCE · BATTERY") && T.includes(gfx.LOCK_RES) && !T.some((s) => / FPS/.test(s)));
+    a.settings.fpm = 1; a.gfx = { fps: 30, kind: "2d" };
+    const seen = [];
+    for (const sc of ["MENU", "SETTINGS", "GRAPHICS", "LEVEL", "SCORES", "GUIDE", "STATS", "ATTRACT", "INTRO"]) {
+      a.screen = SCREEN[sc]; if (draw().includes("30 FPS")) seen.push(sc);
+    }
+    check("shellview: FPS METER chip on every shell screen", seen.length === 9, seen.join());
+    a.screen = SCREEN.GAME;
+    check("shellview: FPS METER in GAME PLAY too", draw().includes("30 FPS"));
+    world.state = "PAUSE"; a.pauseView = 2;
+    T = draw();
+    check("shellview: PAUSE view 2 draws the GRAPHICS page against overlayBox", T.includes("PERFORMANCE · BATTERY") && T.includes("30 FPS"));
+    a.pauseView = 1;
+    check("shellview: PAUSE view 1 still draws OPTIONS with the door", draw().includes("AUTO ›"));
+    a.settings.fpm = 0; a.screen = SCREEN.MENU;
+    check("shellview: meter OFF draws no chip", !draw().some((s) => / FPS$/.test(s)));
+    a.screen = SCREEN.BOOT; a.settings.fpm = 1;
+    check("shellview: BOOT draws nothing, meter included", draw().length === 0);
+  }
+  // SCORES memo: the getter runs on entry and on a heat change only
+  {
+    const a = createMenuApp({ settings: {} });
+    let n = 0, pn = 0;
+    const gs = () => { n++; return []; }, gp = () => { pn++; return 0; };
+    const R = rec();
+    a.screen = SCREEN.MENU; drawShell(R.c, a, { state: "PLAY", time: 0 }, null, "2d", gs, gp);
+    a.screen = SCREEN.SCORES;
+    for (let i = 0; i < 5; i++) drawShell(R.c, a, { state: "PLAY", time: 0 }, null, "2d", gs, gp);
+    check("scores memo: five SCORES frames read the store once", n === 1 && pn === 1, n + "/" + pn);
+    a.scoreHeat = 1; drawShell(R.c, a, { state: "PLAY", time: 0 }, null, "2d", gs, gp);
+    check("scores memo: a heat change re-reads", n === 2, n);
+    a.screen = SCREEN.MENU; drawShell(R.c, a, { state: "PLAY", time: 0 }, null, "2d", gs, gp);
+    a.screen = SCREEN.SCORES; drawShell(R.c, a, { state: "PLAY", time: 0 }, null, "2d", gs, gp);
+    check("scores memo: re-entering SCORES re-reads", n === 3 && pn === 2, n + "/" + pn);
+    const fresh = () => { n += 10; return []; };
+    drawShell(R.c, a, { state: "PLAY", time: 0 }, null, "2d", fresh, gp);
+    check("scores memo: a different getter is never served stale data", n === 13, n);
   }
 }
 
@@ -1119,11 +1241,9 @@ function check(name, cond, detail) {
 {
   const shellSrc = readFileSync("src/render/shellview.js", "utf8");
   check(
-    "shellview passes app.scoreHeat into the getter and into drawScores",
-    /getScores\(app\.scoreHeat\)/.test(shellSrc) &&
-      /drawScores\(\s*c,\s*getScores\(app\.scoreHeat\),\s*L,\s*app\.subT,\s*app\.scoreHeat,\s*getPlaques/.test(
-        shellSrc,
-      ),
+    "shellview passes app.scoreHeat into the (memoised) getter and into drawScores",
+    /getScores\(app\.scoreHeat\)/.test(shellSrc) && /getPlaques \? getPlaques\(\)/.test(shellSrc) &&
+      /drawScores\(\s*c,\s*sd\.s,\s*L,\s*app\.subT,\s*app\.scoreHeat,\s*sd\.p\)/.test(shellSrc),
     shellSrc.match(/menudraw\.drawScores\([^;]*\);/s)?.[0],
   );
   const mainSrc = readFileSync("src/main.js", "utf8");

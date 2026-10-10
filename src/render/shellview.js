@@ -37,17 +37,60 @@ export function dims(canvas, kind) {
   return { cw: canvas ? canvas.width : s.w, ch: canvas ? canvas.height : s.h };
 }
 
+/* GRAPHICS page data arrives finished from the app (gfx.js strings via
+   app.gfxView()); this module only hands it on, like app.stats. */
+const doorOf = (app) => (app.gfxPreset ? app.gfxPreset() + " ›" : "");
+const gfxUi = (app, canvas) => ({
+  row: app.gfxRow,
+  view: app.gfxView ? app.gfxView() : null,
+  togT: app.togT,
+  chg: app.gfxChg,
+  touch: layOf(canvas) !== "d",
+});
+
+/* SCORES / plaques memo: nothing writes either store while SCORES is open
+   (a reset reloads the page), so the getters run on entry, on a heat change
+   (scores) and whenever main hands in a different getter — never per frame. */
+let prevScreen = -1,
+  memo = null;
+function scoreData(app, getScores, getPlaques) {
+  const m = memo,
+    stay = !!m && prevScreen === SCREEN.SCORES;
+  memo = {
+    h: app.scoreHeat,
+    gs: getScores,
+    gp: getPlaques,
+    s: stay && m.h === app.scoreHeat && m.gs === getScores ? m.s : getScores(app.scoreHeat),
+    p: stay && m.gp === getPlaques ? m.p : getPlaques ? getPlaques() : 0,
+  };
+  return memo;
+}
+
+/* FPS METER (GRAPHICS row 7) paints after every screen's chrome, GAME
+   included, against the same box that screen measures with. */
 export function drawShell(c, app, world, canvas, kind, getScores, getPlaques) {
+  const s = app.screen;
+  shellBody(c, app, world, canvas, kind, getScores, getPlaques);
+  prevScreen = s;
+  if (s === SCREEN.BOOT || !app.settings || app.settings.fpm !== 1) return;
+  const B = s === SCREEN.GAME ? overlayBox(kind) : null,
+    d = B ? null : dims(canvas, kind);
+  menudraw.drawMeter(c, B ? B.w : d.cw, B ? B.h : d.ch, app.gfx);
+}
+
+function shellBody(c, app, world, canvas, kind, getScores, getPlaques) {
   const s = app.screen;
   if (s === SCREEN.BOOT) return;
   if (s === SCREEN.GAME) {
     /* All shell chrome routing stays in the one module whose job it is. The
-       paused OPTIONS page measures against overlayBox — the SAME box the
-       pause list uses — never dims(canvas, kind), so list and page never
-       disagree by a pixel. */
-    if (world.state === "PAUSE" && app.pauseView === 1) {
+       paused OPTIONS / GRAPHICS pages measure against overlayBox — the SAME
+       box the pause list uses — never dims(canvas, kind), so list and page
+       never disagree by a pixel. */
+    if (world.state === "PAUSE" && app.pauseView >= 1) {
       const B = overlayBox(kind);
       menudraw.drawDim(c, 0.72, B.w, B.h);
+      if (app.pauseView === 2)
+        return menudraw.drawGraphics(c, menudraw.layout(B.w, B.h), app.subT, gfxUi(app, canvas));
       menudraw.drawSettings(c, menudraw.layout(B.w, B.h), app.subT, {
         row: app.optRow,
         vals: app.settings,
@@ -55,6 +98,7 @@ export function drawShell(c, app, world, canvas, kind, getScores, getPlaques) {
         px: app.pixel,
         togT: app.togT,
         rev: REV,
+        door: doorOf(app),
       });
     }
     return;
@@ -131,14 +175,8 @@ export function drawShell(c, app, world, canvas, kind, getScores, getPlaques) {
     menudraw.drawGuide(c, L, app.subT, app.guideRow);
   } else if (s === SCREEN.SCORES) {
     menudraw.drawDim(c, 0.72, cw, chh);
-    menudraw.drawScores(
-      c,
-      getScores(app.scoreHeat),
-      L,
-      app.subT,
-      app.scoreHeat,
-      getPlaques ? getPlaques() : 0,
-    );
+    const sd = scoreData(app, getScores, getPlaques);
+    menudraw.drawScores(c, sd.s, L, app.subT, app.scoreHeat, sd.p);
   } else if (s === SCREEN.STATS) {
     menudraw.drawDim(c, 0.72, cw, chh);
     menudraw.drawStats(c, L, app.subT, app.stats, app.resetArm, app.toast && app.toast.t > 0 ? app.toast : null);
@@ -154,6 +192,10 @@ export function drawShell(c, app, world, canvas, kind, getScores, getPlaques) {
       px: app.pixel,
       togT: app.togT,
       rev: REV,
+      door: doorOf(app),
     });
+  } else if (s === SCREEN.GRAPHICS) {
+    menudraw.drawDim(c, 0.72, cw, chh);
+    menudraw.drawGraphics(c, L, app.subT, gfxUi(app, canvas));
   }
 }
