@@ -40,10 +40,28 @@ const MUS_BASE = 0.5,
   MUS_FLOOR = 0.0001,
   MUS_PAN = Object.freeze({ bass: -0.32, lead: 0.32, hat: 0.1, pad: -0.06 });
 
+/* Device warm-up (real-GPU check 2026-10-10): a browser session's first
+   AudioContext blocks ~80 ms in its constructor (audio device bring-up), and
+   that landed on the opening's press frame. A throwaway built and closed at
+   createAudio pays it at boot, before the first frame; the game's own ctx is
+   still created inside the gesture, so unlock and the jingle are unchanged. */
+export function primeDevice() {
+  try {
+    const AC = typeof window !== "undefined" && window && (window.AudioContext || window.webkitAudioContext);
+    const c = AC ? new AC() : null;
+    const p = c && typeof c.close === "function" ? c.close() : null;
+    if (p && typeof p.catch === "function") p.catch(() => {});
+    return !!c;
+  } catch (e) {
+    return false;
+  }
+}
+
 export function createAudio(opts) {
   let ctx = (opts && opts.ctx) || null,
     muted = false,
     ok = true;
+  if (!ctx) primeDevice();
   /* Settings volumes (nb.settings.v1). Stored as 0..1 scalars and applied by
      SCALING THE VALUE: SFX multiply their one peak-amplitude ramp, music
      multiplies its three gain targets. No sfxGain node — that would re-couple
