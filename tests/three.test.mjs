@@ -1746,19 +1746,19 @@ await sec("BL3",async()=>{
   /* worst on-screen overflow of an end tile's fireballs past that tile's own
      projected footprint, along the arm, over the whole life (1.16 covers the
      +-16% lump wobble), in projected tile lengths. */
-  const reach=(tx,ty,dx,dz)=>{
+  const reach=(tx,ty,dx,dz,set=B.PUFF.end,across=false)=>{
     const X=tx*TL+TL/2-BW/2, Z=ty*TL+TL/2-BH/2;
     const cs=[[-.5,-.5],[.5,-.5],[.5,.5],[-.5,.5]].map(([a,b])=>pr(X+a*TL,0,Z+b*TL));
     const x0=Math.min(...cs.map(c=>c.x)),x1=Math.max(...cs.map(c=>c.x)),
       y0=Math.min(...cs.map(c=>c.y)),y1=Math.max(...cs.map(c=>c.y));
     let worst=0;
     for(let a=0;a<=1.0001;a+=0.02){ const L=B.blastLife(a);
-      for(const q of B.PUFF.end)for(const fl of [1,-1]){ const b=B.puffAt(q,L,false), w=b[1]*fl;
+      for(const q of set)for(const fl of [1,-1]){ const b=B.puffAt(q,L,false), w=b[1]*fl;
         const px=X+(dx*b[0]-dz*w)*TL, pz=Z+(dz*b[0]+dx*w)*TL;
         for(let i=0;i<120;i++){ const th=Math.acos(1-2*(i+.5)/120), ph=i*2.39996;
           const v=pr(px+Math.sin(th)*Math.cos(ph)*b[3]*TL*1.16,b[2]*TL+Math.cos(th)*b[4]*TL*1.16,
             pz+Math.sin(th)*Math.sin(ph)*b[3]*TL*1.16);
-          const o=dz<0?(v.y-y1)/(y1-y0):dz>0?(y0-v.y)/(y1-y0):dx>0?(v.x-x1)/(x1-x0):(x0-v.x)/(x1-x0);
+          const o=across||dz<0?(v.y-y1)/(y1-y0):dz>0?(y0-v.y)/(y1-y0):dx>0?(v.x-x1)/(x1-x0):(x0-v.x)/(x1-x0);
           if(o>worst)worst=o; } } }
     return worst;
   };
@@ -1767,6 +1767,9 @@ await sec("BL3",async()=>{
       +" near / east / west caps stay inside",
     far<1/3&&near<0.02&&east<0.02&&west<0.02,
     [far,near,east,west].map(v=>v.toFixed(3)).join("/"));
+  const side=reach(7,6,1,0,B.PUFF.arm,true);
+  check("BL3 rig C: a mid-arm east-west tile's fireballs paint < 1/3 tile onto the safe row north of it",
+    side<1/3, side.toFixed(3));
   check("BL3 every end fireball stays inside its tile along the arm in plan (u + r*1.16 <= .5)",
     B.PUFF.end.every(q=>q[0]+q[3]*1.16*1.15<=0.5));
   // end-cap detection straight off computeBlast's ordering
@@ -1781,6 +1784,23 @@ await sec("BL3",async()=>{
     Math.abs(ux(3)-(8.5+B.PUFF.arm[1][0]))<1e-6&&Math.abs(ux(5)-(9.5+B.PUFF.end[1][0]))<1e-6
     &&Math.abs(ux(7)-(6.5-B.PUFF.end[1][0]))<1e-6&&Math.abs(uz(9)-(6.5+B.PUFF.end[1][0]))<1e-6
     &&fire.count===10, [3,5,7].map(i=>ux(i).toFixed(2)).join("/")+" z"+uz(9).toFixed(2));
+  // the noise seed is the blast's own, not its array slot: an older blast
+  // expiring must not reshuffle a live one's mottling mid-life
+  const w2=createWorld(92,1); loadLevel(w2,1,false);
+  const old={x:1.5*TL,y:1.5*TL,tiles:[{tx:1,ty:1},{tx:2,ty:1}],t:CFG.BLADE_TTL*0.9,ttl:CFG.BLADE_TTL},
+    live={x:9.5*TL,y:9.5*TL,tiles:[{tx:9,ty:9},{tx:10,ty:9},{tx:9,ty:10}],t:CFG.BLADE_TTL*0.2,ttl:CFG.BLADE_TTL};
+  w2.blades=[old,live];
+  const sc2=buildScene(w2); sc2.update(w2);
+  const f2=slotsOf(sc2.group,"blade")[1], L2=f2.geometry.attributes.aLife;
+  const seeds=()=>{ const o=[]; for(let i=f2.count-6;i<f2.count;i++)o.push(L2.getY(i)); return o; };
+  const before=seeds(); w2.blades=[live]; sc2.update(w2); const after=seeds();
+  check("BL3 a live blast keeps its noise seeds when an older blast expires ahead of it",
+    f2.count===6&&before.every((v,i)=>Math.abs(v-after[i])<1e-6), before.map(v=>v.toFixed(2)).join(","));
+  // a kicked bomb's pixel centre may sit off its tile: the bomb tile is tiles[0]
+  w2.blades=[{x:10.2*TL,y:9.5*TL,tiles:[{tx:9,ty:9},{tx:10,ty:9}],t:CFG.BLADE_TTL*0.3,ttl:CFG.BLADE_TTL}];
+  sc2.update(w2);
+  check("BL3 the centre burst rides tiles[0], not floor(bl.x/T)",
+    Math.abs(matScale(f2,0).s.x-B.PUFF.centre[0][3]*TL)<1e-6, matScale(f2,0).s.x.toFixed(2));
   // REDUCE FLASH (flashK .25) dims the blast point lights with the overlay flash
   w.blades[0].t=0; sc.update(w);
   const full=slotsOf(sc.group,"flash")[0].intensity;

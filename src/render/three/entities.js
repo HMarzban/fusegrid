@@ -82,7 +82,7 @@ function sharedMat(m) {
   m._shared = true;
   return m;
 }
-/* merge N BufferGeometries into ONE draw call (crossedQuads precedent).
+/* merge N BufferGeometries into ONE draw call (first used by the v2 blasts).
    The whole enemy-body budget rides on this: nine silhouettes have to fit
    the fixed 4-mesh slot contract, so parts are pre-transformed and fused
    here instead of added as children. Inputs may be indexed or not —

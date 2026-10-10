@@ -9,9 +9,11 @@
    no light at all (VOID stays dark, the blast does not). Per-instance aLife
    [age, seed] cools the heat (slowly through the first third, white-hot like
    the 2D cream square, then fast) and burns the balls away with noise past 55%, so
-   blasts of different ages never share one opacity. Height is held so a far
-   end cap at rig C stays within a third of a tile of its own footprint
-   (tests/three.test.mjs). Lifecycle math is pure and exported. */
+   blasts of different ages never share one opacity. Height is held so at rig
+   C a far end cap, and an east-west arm's balls over the safe row north of
+   it, paint under a third of a tile past their own footprint (BL3 in
+   tests/three.test.mjs); only the bomb tile's crown climbs higher. Lifecycle
+   math is pure and exported. */
 import * as THREE from "../../../vendor/three.module.js";
 import { CFG } from "../../core/config.js";
 
@@ -55,7 +57,7 @@ export function plateColor(a, out) {
    w lateral, y centre, radius xz, radius y]. Ends taper inside the tile. */
 export const PUFF = Object.freeze({
   centre: [[0, 0, 0.36, 0.5, 0.46], [0, 0, 0.7, 0.3, 0.3]],
-  arm: [[-0.2, 0.05, 0.3, 0.31, 0.33], [0.21, -0.06, 0.33, 0.28, 0.3]],
+  arm: [[-0.2, 0.04, 0.28, 0.31, 0.3], [0.21, -0.05, 0.3, 0.28, 0.27]],
   end: [[-0.2, 0.04, 0.26, 0.29, 0.29], [0.1, -0.04, 0.19, 0.25, 0.22]],
 });
 export const PUFFS_PER_TILE = 2;
@@ -175,7 +177,10 @@ export function createBlast(cap) {
       if (!tls) continue;
       const age = clamp01(bl.t / (bl.ttl || 1)), L = blastLife(age);
       plateColor(age, _c);
-      const cx = Math.floor(bl.x / T), cy = Math.floor(bl.y / T);
+      /* computeBlast puts the bomb tile first; the noise seed comes from the
+         tile pair, never the blast's array slot, so an older blast expiring
+         cannot reshuffle a live one's mottling mid-life */
+      const c0 = tls[0] || { tx: 0, ty: 0 }, cx = c0.tx, cy = c0.ty;
       for (let j = 0; j < tls.length && n < cap; j++) {
         const tl = tls[j], X = tl.tx * T + T / 2 - W2, Z = tl.ty * T + T / 2 - D2;
         _m.compose(_p.set(X, PLATE_Y, Z), _q, _s.set(T, 1, T));
@@ -188,7 +193,7 @@ export function createBlast(cap) {
         const end = d > 0 && (!nx || Math.sign(nx.tx - cx) !== dx || Math.sign(nx.ty - cy) !== dz
           || Math.abs(nx.tx - cx) + Math.abs(nx.ty - cy) !== d + 1);
         const set = d === 0 ? PUFF.centre : end ? PUFF.end : PUFF.arm,
-          flip = (tl.tx + tl.ty) & 1 ? 1 : -1, seed = ((tl.tx * 7 + tl.ty * 13 + i * 5) % 17) / 17;
+          flip = (tl.tx + tl.ty) & 1 ? 1 : -1, seed = ((tl.tx * 7 + tl.ty * 13 + cx * 5 + cy * 3) % 17) / 17;
         for (let k = 0; k < set.length && fn < fcap; k++) {
           const b = puffAt(set[k], L, d === 0 && k === 1), w = b[1] * flip;
           _p.set(X + (dx * b[0] - dz * w) * T, b[2] * T, Z + (dz * b[0] + dx * w) * T);
