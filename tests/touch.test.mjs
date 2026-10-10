@@ -317,7 +317,8 @@ check("hasTouch({ontouchstart:null}) true", hasTouch({ontouchstart:null})===true
     !/@media \(max-height/.test(html),(html.match(/@media[^{]*/)||["none"])[0]);
   check("the GAME lift glides #wrap's padding-top by --sd (JS-written, 0s default) under body[data-lay=p] alone",
     /transition:padding-top var\(--sd,0s\)/.test(lay("p","wrap"))
-      &&(html.match(/transition:/g)||[]).length===1&&!/data-game|\[data-scr/.test(html),lay("p","wrap"));
+      &&!["tpad","tbomb","tpause"].some((id)=>/transition/.test(lay("p",id)))
+      &&!["wrap","tpad","tbomb","tpause"].some((id)=>/transition/.test(lay("l",id)))&&!/data-game|\[data-scr/.test(html),lay("p","wrap"));
   const bodyRule=(html.match(/html,body\{[^}]*\}/)||[""])[0];
   check("body spans the viewport so its overflow:hidden clip holds the side gutters",
     !/overflow:hidden/.test(bodyRule)||/[{;\s]width:100%/.test(bodyRule),bodyRule);
