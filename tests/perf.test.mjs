@@ -30,7 +30,13 @@ function sim(hz, cap, secs, amp = 0.5, gate = createGate()) {
   check("divisor is 1 without an estimate", divisor(0, 60) === 1 && divisor(NaN, 30) === 1);
   check("snapHz snaps within 4% and refuses the rest",
     snapHz(1000 / 119) === 120 && snapHz(1000 / 143) === 144 && snapHz(2) === 0 && snapHz(1000 / 110) === 0 && snapHz(0) === 0);
-  check("snap list is the spec's twelve rates", HZ_SNAP.join() === "30,48,50,60,72,75,90,100,120,144,165,240");
+  check("snap list is the spec's twelve rates plus 180 and 200 (close-out review)", HZ_SNAP.join() === "30,48,50,60,72,75,90,100,120,144,165,180,200,240");
+  for (const hz of [180, 200]) for (const cap of [60, 30]) {
+    const g = createGate(); let t = 0, n = 0;
+    for (let i = 0; i < 120; i++) { t += 1000 / hz; if (g.tick(t, cap)) n++; }
+    const after = n; // 120 vsyncs; the first 8 warm up ungated
+    check(hz + " Hz panel honours FRAME RATE " + cap + " (it never snapped, so the gate ran every vsync)", g.hz === hz && after < 120 && Math.abs(after - (8 + 112 / divisor(hz, cap))) <= 2, after + " of 120, hz " + g.hz);
+  }
 }
 
 // ---- 2. measured run counts over 10 s ----

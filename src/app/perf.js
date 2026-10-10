@@ -1,4 +1,4 @@
-export const HZ_SNAP=Object.freeze([30,48,50,60,72,75,90,100,120,144,165,240]);
+export const HZ_SNAP=Object.freeze([30,48,50,60,72,75,90,100,120,144,165,180,200,240]);
 export const IV_STALL=250, IV_WIN=100, GOV_WIN=2000, GOV_UP=10000;
 const median=(a)=>{ const n=a.length; if(!n) return 0; const s=a.slice().sort((x,y)=>x-y), m=n>>1; return n&1?s[m]:(s[m-1]+s[m])/2; };
 const p90=(a)=>{ if(!a.length) return 0; const s=a.slice().sort((x,y)=>x-y); return s[Math.min(s.length-1,Math.floor(s.length*0.9))]; };
