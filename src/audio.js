@@ -1,6 +1,7 @@
 // Audio layer — WebAudio oscillator SFX + chiptune tracks. Graceful: no-op if
 // unavailable. createAudio() returns { play(name), toggle(), unlock(), duck(on),
-// pump(), unlocked(), setTrack(id), cue(screen,level), track() } plus the pure
+// pump(), unlocked(), sleep(), wake(), wantWake(), setVols(v), setTrack(id),
+// cue(screen,level), track() } plus the pure
 // frozen MUSIC_PATTERN / MUSIC_PATTERN_B / MUSIC_SECTIONS / MUSIC_TRACKS /
 // musicCue / BOOM_DEFAULT / BOOM_TINTS / boomOf / ITEM_CUE / itemOf / sfxOf /
 // FOE_CUE / foeOf exports. Default track is
@@ -75,7 +76,11 @@ export function createAudio(opts) {
     nextT = 0,
     stepN = 0,
     ducked = false,
-    brickT = -1;
+    brickT = -1,
+    slept = false,
+    sgen = 0;
+  const pans = new Map();
+  const silent = () => muted || (musVol <= 0 && sfxVol <= 0);
   let curId = "menu",
     wantId = "menu";
   let nbuf = null;
@@ -119,12 +124,13 @@ export function createAudio(opts) {
   /* SFX on a ctx that is not running are DROPPED, never queued: resume() is
      async, so the activating key's own SFX would start on the frozen clock
      and land late or stacked. The resume() nudge stays: armUnlock disarms
-     for good once the ctx first runs, so this is the only re-resume after. */
+     for good once the ctx first runs, so this is the only re-resume after.
+     A slept ctx is never nudged: wake() owns that resume. */
   function voice(type, f0, f1, dur, vol, spec, when) {
     if (muted || sfxVol <= 0 || !ensure()) return;
     const c = ctx;
     try {
-      if (c.state !== "running" && c.state !== "closed") c.resume();
+      if (c.state !== "running" && c.state !== "closed" && !slept) c.resume();
       if (c.state !== "running") return;
       const t = c.currentTime + (when || 0);
       const o = c.createOscillator(),
@@ -210,7 +216,7 @@ export function createAudio(opts) {
       buf = noiseBuf();
     if (!buf || !c.createBufferSource) return;
     try {
-      if (c.state !== "running" && c.state !== "closed") c.resume();
+      if (c.state !== "running" && c.state !== "closed" && !slept) c.resume();
       if (c.state !== "running") return;
       const t = c.currentTime + (when || 0);
       const s = c.createBufferSource(),
@@ -249,9 +255,13 @@ export function createAudio(opts) {
       let dest = musicGain;
       const pv = n.p;
       if (pv != null && ctx.createStereoPanner) {
-        const pan = ctx.createStereoPanner();
-        pan.pan.value = pv;
-        pan.connect(musicGain);
+        let pan = pans.get(pv);
+        if (!pan) {
+          pan = ctx.createStereoPanner();
+          pan.pan.value = pv;
+          pan.connect(musicGain);
+          pans.set(pv, pan);
+        }
         dest = pan;
       }
       g.connect(dest);
@@ -301,6 +311,40 @@ export function createAudio(opts) {
   }
   function unlocked() {
     return !!ctx && !!musicGain && ctx.state === "running";
+  }
+  /* Power hygiene (graphics spec §4.3): sleep() suspends only a ctx that is
+     running, so a ctx that never ran is never touched; wake() resumes only
+     what sleep() suspended and keeps slept until the state reads running, so
+     a refused resume (iOS outside a gesture) leaves wantWake() true for the
+     next gesture's retry. A sleep while still slept re-queues suspend, so a
+     hide that lands on a pending wake's resume still ends suspended, and the
+     sgen stamp stops that stale resume from clearing slept.
+     Silent = SOUND off or both volumes at 0. */
+  function sleep() {
+    if (!ctx || typeof ctx.suspend !== "function" || ctx.state === "closed" || (ctx.state !== "running" && !slept)) return false;
+    slept = true;
+    sgen++;
+    try {
+      const p = ctx.suspend();
+      if (p && typeof p.catch === "function") p.catch(() => {});
+    } catch (e) {}
+    return true;
+  }
+  function wake() {
+    if (!slept || silent() || !ctx || ctx.state === "closed") return false;
+    const g = sgen;
+    const done = () => {
+      if (g === sgen && ctx.state === "running") slept = false;
+    };
+    try {
+      const p = ctx.resume();
+      if (p && typeof p.then === "function") p.then(done, () => {});
+      else done();
+    } catch (e) {}
+    return true;
+  }
+  function wantWake() {
+    return !!ctx && slept && !silent() && ctx.state !== "running" && ctx.state !== "closed";
   }
   function duck(on) {
     on = !!on;
@@ -507,10 +551,15 @@ export function createAudio(opts) {
           muted ? MUS_FLOOR : ducked ? musDuck() : musBase(),
           muted ? 0.01 : 0.6,
         );
+      if (silent()) sleep();
+      else wake();
       return !muted;
     },
     unlock,
     unlocked,
+    sleep,
+    wake,
+    wantWake,
     duck,
     pump,
     bounceTrack,
@@ -520,6 +569,8 @@ export function createAudio(opts) {
       if (v && v.sfx != null) sfxVol = c(v.sfx);
       if (musicGain)
         rampMusicGain(muted ? MUS_FLOOR : ducked ? musDuck() : musBase(), 0.12);
+      if (silent()) sleep();
+      else wake();
       return { mus: musVol, sfx: sfxVol };
     },
     setTrack(id) {

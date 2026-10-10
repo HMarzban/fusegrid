@@ -3106,5 +3106,130 @@ function installAC(ac) {
   );
 }
 
+// ---- graphics §4.3: persistent panners — one StereoPannerNode per distinct
+// pan value for the instance's life, never one per note ----
+{
+  const ac = mkAC();
+  const pans = [];
+  ac.createStereoPanner = () => {
+    const pn = { pan: { value: 0 }, links: 0, _dst: null, connect(d) { pn.links++; pn._dst = d; return d; } };
+    pans.push(pn);
+    return pn;
+  };
+  const a = createAudio({ ctx: ac });
+  a.unlock();
+  const run = () => {
+    for (const id of Object.keys(MUSIC_TRACKS)) {
+      a.setTrack(id);
+      for (let i = 0; i < 160; i++) {
+        ac.currentTime += 0.1;
+        a.pump();
+      }
+    }
+  };
+  run();
+  const n0 = pans.length,
+    vals = new Set(pans.map((pn) => pn.pan.value)),
+    hit = new Set(ac.starts.map((x) => x.g && x.g._dst && x.g._dst.pan ? x.g._dst.pan.value : null));
+  check("panners: one per distinct pan value (N values -> N nodes)",
+    n0 >= 4 && vals.size === n0 && !hit.has(null) && hit.size === n0, n0 + " nodes / " + vals.size + " values / " + hit.size + " used");
+  check("panners: every node links to musicGain exactly once",
+    pans.every((pn) => pn.links === 1 && pn._dst === pans[0]._dst && pn._dst.gain), pans.map((pn) => pn.links).join());
+  const s0 = ac.starts.length;
+  run();
+  check("panners: a second pass over every track builds no new node",
+    pans.length === n0 && ac.starts.length > s0, pans.length + " vs " + n0);
+}
+// ---- graphics §4.3: sleep / wake / wantWake ----
+{
+  const mk = (refuse) => {
+    const ac = mkAC();
+    ac.sus = 0;
+    ac.res = 0;
+    ac.suspend = () => { ac.sus++; ac.state = "suspended"; return Promise.resolve(); };
+    ac.resume = () => { ac.res++; if (!ac.refuse) ac.state = "running"; return Promise.resolve(); };
+    ac.refuse = !!refuse;
+    return ac;
+  };
+  const cold = mk();
+  cold.state = "suspended";
+  const c = createAudio({ ctx: cold });
+  check("sleep: a ctx that never ran is never suspended", c.sleep() === false && cold.sus === 0);
+  check("wake: nothing to undo -> no resume", c.wake() === false && cold.res === 0 && c.wantWake() === false);
+  const ac = mk();
+  const a = createAudio({ ctx: ac });
+  a.unlock();
+  check("sleep: a running ctx suspends once", a.sleep() === true && ac.sus === 1 && ac.state === "suspended");
+  check("sleep: a second sleep while slept re-queues suspend (a hide over a pending wake)", a.sleep() === true && ac.sus === 2 && ac.state === "suspended");
+  ac.sus = 1;
+  a.pump();
+  a.play("uiMove");
+  check("slept: pump/SFX start nothing and never nudge resume", ac.starts.length === 0 && ac.res === 0, ac.res);
+  check("slept: wantWake while not silent", a.wantWake() === true);
+  check("wake: resumes what sleep suspended", a.wake() === true && ac.res === 1 && ac.state === "running");
+  await new Promise((r) => setTimeout(r, 0));
+  check("wake: slept clears once running (wantWake false, a second wake is a no-op)",
+    a.wantWake() === false && a.wake() === false && ac.res === 1);
+  a.toggle();
+  check("toggle mute: suspends the ctx", ac.sus === 2 && ac.state === "suspended");
+  check("muted: wake and wantWake are no-ops", a.wake() === false && a.wantWake() === false && ac.res === 1);
+  a.toggle();
+  check("toggle unmute: resumes the ctx", ac.res === 2 && ac.state === "running");
+  await new Promise((r) => setTimeout(r, 0));
+  a.setVols({ mus: 0, sfx: 0 });
+  check("both volumes 0: suspends", ac.sus === 3 && ac.state === "suspended");
+  a.setVols({ mus: 0 });
+  check("still 0/0: no resume, stays suspended", ac.res === 2 && ac.state === "suspended");
+  ac.sus = 3;
+  a.setVols({ sfx: 0.5 });
+  check("a volume back above 0: resumes", ac.res === 3 && ac.state === "running");
+  await new Promise((r) => setTimeout(r, 0));
+  a.setVols({ mus: 1, sfx: 1 });
+  check("a volume change on a running ctx never resumes or suspends", ac.res === 3 && ac.sus === 3);
+  const ios = mk();
+  const b = createAudio({ ctx: ios });
+  b.unlock();
+  b.sleep();
+  ios.refuse = true;
+  b.wake();
+  await new Promise((r) => setTimeout(r, 0));
+  check("refused resume: slept holds, wantWake stays true", ios.state === "suspended" && b.wantWake() === true);
+  const pend = mk();
+  const q = [];
+  const tick = () => new Promise((r) => setTimeout(r, 0));
+  const flush = async () => {
+    while (q.length) {
+      const [st, r] = q.shift();
+      pend.state = st;
+      r();
+      await tick();
+    }
+  };
+  const d = createAudio({ ctx: pend });
+  d.unlock();
+  pend.suspend = () => { pend.sus++; return new Promise((r) => q.push(["suspended", r])); };
+  pend.resume = () => { pend.res++; return new Promise((r) => q.push(["running", r])); };
+  d.sleep();
+  d.wake();
+  d.sleep();
+  await flush();
+  check("hide over a pending wake: queued suspend lands after the resume, slept holds",
+    pend.sus === 2 && pend.state === "suspended" && d.wantWake() === true, pend.state + " " + d.wantWake());
+  const w2 = d.wake();
+  await flush();
+  check("hide over a pending wake: the next wake resumes and clears wantWake",
+    w2 === true && pend.state === "running" && d.wantWake() === false, w2 + " " + pend.state);
+  ios.refuse = false;
+  b.wake();
+  await new Promise((r) => setTimeout(r, 0));
+  check("retry after a refusal resumes and clears wantWake", ios.state === "running" && b.wantWake() === false);
+  ios.state = "closed";
+  check("closed ctx: sleep/wake/wantWake inert", b.sleep() === false && b.wake() === false && b.wantWake() === false);
+  const h = createAudio();
+  let threw = false;
+  try { h.sleep(); h.wake(); h.wantWake(); h.toggle(); h.setVols({ mus: 0, sfx: 0 }); h.toggle(); h.setVols({ mus: 1, sfx: 1 }); } catch (e) { threw = true; }
+  check("headless: sleep/wake/wantWake and the silent edges never throw", !threw && h.wantWake() === false);
+}
+
 console.log("\n  MUSIC RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);
