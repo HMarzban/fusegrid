@@ -776,7 +776,10 @@ Run `npm test` green, then a **headed CDP check**:
   captured ctx, not on pixels.
 
 1. Boot shows the title in frame 1, in 2D and in 3D. In 3D, no 2D board
-   appears while three loads. `ctx` is `none` or `suspended`.
+   appears while three loads. The game's own `ctx` is `none` or `suspended`
+   *(2026-10-10: `primeDevice()` builds and closes one throwaway context at
+   boot to warm the audio device, so a harness that records every constructed
+   context sees one `closed` context too; assert on the game's ctx only)*.
 2. Key `a`, mouse click, a 60 ms tap and an 800 ms long-press each give
    `ctx running` and `introStage 1` within 2 frames of the activating event.
    MENU arrives at cursor 0 4.384 s ± 1 frame after the **show start**
