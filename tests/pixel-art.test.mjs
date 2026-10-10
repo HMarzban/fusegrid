@@ -26,10 +26,10 @@ const PENDING = {
   mako: "all",
   foes: "all",
   tiles: "all",
-  bomb: "all",
-  blast: "all",
+  bomb: [],
+  blast: [],
   items: "all",
-  fx: "all",
+  fx: [],
 };
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
