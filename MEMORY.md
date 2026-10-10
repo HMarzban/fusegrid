@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-10 — PIXEL foundation review fixes: D5 on the composited page (no shell bump)
+- `pxM` is now ceil(k·z) (floor only when whole or <1): the plan/brief "ratio in [1,2) ⇒ soft edge ≤1" was wrong maths (an upscale spreads each edge over 2 device px); the smooth step is a downscale in (0.5,1], quality low. `fit.js` snaps `#px` (content-box, whole device px AND whole 1/64 CSS px, origin on a multiple of `pxQuant(dpr)` device px) and hands the backing over on `data-bw/bh`; `shot.mjs` measures D5 from a CDP screenshot: worst soft edge 1 at laptop@1 / mac@2 / phone@3 and @1.25 / 1.5 / 2.625 (fractional dpr may shift `#px` up to q/2 device px off `#c`; above M cap 8 the ratio is >1 again, disclosed). SHADE hem + pickup sparkle (OS.SPARKLE) now drawn. Flushed perf (swiftshader, relative): px 26/74/36 ms vs CLASSIC 161/172/146 ms laptop/mac/phone; absolute 4 ms budget still needs a GPU/headed run.
+
 ## 2026-10-10 — Docs-sync close-out: staff engineer + tech writer + HoE (docs only, shell stays v177)
 - AGENTS, `docs/architecture.md`, spec supersede notes (elements §2.5, camera §3.2/T1), CHANGELOG and README re-synced to v177; stale "signal-runner" comments in `entities.js` / `three.test.mjs` now say MAKO. Checked: 45 test files, main.js 791 (cap 799), fat-world 141, `CACHE_NAME`/REV v177; local main 24 commits ahead of origin/main (ccdf3c1, live v175), push is the owner's.
 - Closes: cold 2D GPU stall + real-GPU hitch check (v176), portrait empty band (v176 layout B, v177 GAME lift), O1 suspended-ctx oscillators (v176), "3D blast reads thin" (v177), v176's armed-foot-no-C + GAME top slack (v177). Open: push; owner: six re-cut Bs, og.png Social preview (hero shows the old flat blast), PIXEL go; device: real phone / iOS standalone home indicator vs docked pad, Firefox/Safari `primeDevice` warning, phone fill-rate of the fire shader, other GPUs.
