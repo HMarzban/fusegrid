@@ -263,7 +263,7 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
     atlas=null; atlasReady=false;
     const pm=fxp.points.material; if(pm.map)pm.map.dispose();
     fxp.points.geometry.dispose(); pm.dispose();
-    if(gl){ const g0=gl; gl=null; g0.dispose(); try{ g0.forceContextLoss(); }catch(e){} }
+    if(gl){ const g0=gl; gl=null; g0.dispose(); if(!lost)try{ g0.forceContextLoss(); }catch(e){} }  // a lost context has no WEBGL_lose_context: three would only warn
    }
 
   const surface={canvas:glCanvas,overlay:overlayCanvas,ctx:ovCtx,render,

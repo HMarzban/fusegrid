@@ -2803,10 +2803,12 @@ await sec("GFX",async()=>{
     h.clk.t+=1;
     check("GFX.9d dead after 3 s without a restore", h.r.dead===true);
     h.r.dispose();
-    check("GFX.9e dispose: gl.dispose + forceContextLoss, listeners off, scene freed",
-      g.disposed===1&&g.lost===1&&(h.cv.L.webglcontextlost||[]).length===0&&h.r.liveAA===null);
+    check("GFX.9e dispose of a dead context: gl.dispose, NO forceContextLoss (three warns on a lost context), listeners off, scene freed",
+      g.disposed===1&&g.lost===0&&(h.cv.L.webglcontextlost||[]).length===0&&h.r.liveAA===null);
     let threw=false; try{ h.r.render(w,1/60); }catch(e){ threw=true; }
-    check("GFX.9f a disposed renderer never throws on a late render", !threw); }
+    check("GFX.9f a disposed renderer never throws on a late render", !threw);
+    const h2=mk(AUTO), g2=h2.g(); h2.r.render(w,1/60); h2.r.dispose();
+    check("GFX.9g dispose of a live context (AA rebuild, 10 s release) still forces the context loss once", g2.disposed===1&&g2.lost===1); }
 
   // draw budget with knobs armed
   { const h=mk(AUTO), w=createWorld(93,1); loadLevel(w,1,false);
