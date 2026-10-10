@@ -391,6 +391,17 @@ for (let i = 0; i < GUIDE_ROWS.length; i++) {
   tap(300, 300);
   check("STATS idle off-label tap still backs out to MENU, copies nothing", g.app.screen === SCREEN.MENU && clip.length === c2 && toastOf(g.app.toast) === null,
     g.app.screen + "/" + clip.length);
+  toStats(); g.tick(Math.ceil(TOAST_T * 60) + 2);
+  const c3 = clip.length, ev = { clientX: 135, clientY: 239, pointerType: "touch" };
+  (PL.pointerdown || []).forEach((f) => f(ev)); g.tick(); await flush();
+  const downCopied = clip.length - c3;
+  (PL.pointerup || []).forEach((f) => f(ev)); await flush(); g.tick();
+  check("STATS touch tap on C copies on pointerup (a touch pointerdown carries no clipboard activation), not on pointerdown",
+    downCopied === 0 && clip.length === c3 + 1 && g.app.toast.s === "COPIED" && toastOf(g.app.toast) && g.app.screen === SCREEN.STATS,
+    downCopied + "/" + (clip.length - c3) + "/" + JSON.stringify(g.app.toast));
+  const c4 = clip.length;
+  (PL.pointerup || []).forEach((f) => f(ev)); await flush(); g.tick();
+  check("STATS a stray touch pointerup with no C pointerdown copies nothing", clip.length === c4, clip.length - c4);
 }
 
 // ---- GAME / PLAY ----

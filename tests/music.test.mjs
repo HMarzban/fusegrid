@@ -710,8 +710,10 @@ function installAC(ac) {
     ac.starts.length === 0, ac.starts.map((s) => s.type).join());
   check("suspended ctx: SFX still nudge resume()", nudges > 1, nudges);
   ac.state = "interrupted";
+  const n0 = nudges;
   a.play("uiMove");
   check("interrupted ctx: SFX dropped too", ac.starts.length === 0, ac.starts.length);
+  check("interrupted ctx: SFX nudge resume() (iOS call/Siri recovery)", nudges > n0, nudges - n0);
   ac.state = "running";
   a.play("uiMove");
   check("running ctx: uiMove starts its two oscillators", ac.starts.length === 2, ac.starts.length);

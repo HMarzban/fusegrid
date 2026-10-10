@@ -124,7 +124,7 @@ export function createAudio(opts) {
     if (muted || sfxVol <= 0 || !ensure()) return;
     const c = ctx;
     try {
-      if (c.state === "suspended") c.resume();
+      if (c.state !== "running" && c.state !== "closed") c.resume();
       if (c.state !== "running") return;
       const t = c.currentTime + (when || 0);
       const o = c.createOscillator(),
@@ -210,7 +210,7 @@ export function createAudio(opts) {
       buf = noiseBuf();
     if (!buf || !c.createBufferSource) return;
     try {
-      if (c.state === "suspended") c.resume();
+      if (c.state !== "running" && c.state !== "closed") c.resume();
       if (c.state !== "running") return;
       const t = c.currentTime + (when || 0);
       const s = c.createBufferSource(),

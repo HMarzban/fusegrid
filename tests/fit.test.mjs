@@ -161,5 +161,11 @@ check("scale floors at 0.3 and caps at 1.8",
   }
 }
 
+{
+  const tiny = [[200, 300], [0, 0], [240, 320]].map(([W, H]) => portraitGeo(W, H, 600, 520));
+  check("portraitGeo on a tiny viewport never puts pad/bomb over the board (padTop, bombTop >= gap)",
+    tiny.every((g) => g.padTop >= PORT_GEO.gap && g.bombTop >= PORT_GEO.gap), JSON.stringify(tiny));
+}
+
 console.log("\n  FIT RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);

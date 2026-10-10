@@ -27,7 +27,7 @@ export function portraitGeo(W, H, cw, ch) {
   const top = Math.floor(Math.max(G.top, Math.min(slack / 2, slack - G.bot)));
   const band = H - top - sh, roomW = (sw - G.side[0] - G.side[1] - G.mid) * 16 / 25;
   const pad = Math.floor(Math.max(G.pad[0], Math.min(G.pad[1], band - G.edge - G.gap, roomW)));
-  const bomb = Math.round(pad * 9 / 16), padTop = Math.floor(band - G.edge - pad);
+  const bomb = Math.round(pad * 9 / 16), padTop = Math.max(G.gap, Math.floor(band - G.edge - pad));
   return { top, pad, bomb, padTop, bombTop: padTop + Math.round((pad - bomb) / 2) };
 }
 

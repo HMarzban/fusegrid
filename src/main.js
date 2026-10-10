@@ -405,6 +405,7 @@ export function createGame(canvas, opts = {}) {
      intent.fire re-enters as a rising-edge confirm on the next frame
      (auto-start after skip, toggles bouncing back, subscreens bouncing). */
   if (canvas) {
+    let statsC = false; // a touch pointerdown carries no activation, so a touch C tap copies on its pointerup
     canvas.addEventListener("pointerdown", (ev) => {
       if (app.screen === SCREEN.GAME) {
         if (world.state !== "PAUSE") return;
@@ -458,9 +459,10 @@ export function createGame(canvas, opts = {}) {
       } else if (app.screen === SCREEN.STATS) {
         const r = canvas.getBoundingClientRect(), k = canvas.width / (r.width || canvas.width), { cw, ch } = dims(canvas, curKind);
         const hit = statsHit((ev.clientX - r.left) * k, (ev.clientY - r.top) * k, menuLayout(cw, ch), app.resetArm);
-        if (hit) input.onUiKey(hit); else if (app.resetArm) app.resetArm = false; else app.confirm(); // a label tap IS its key (C copies + notes)
+        if (hit === "KeyC" && ev.pointerType && ev.pointerType !== "mouse") statsC = true; else if (hit) input.onUiKey(hit); else if (app.resetArm) app.resetArm = false; else app.confirm(); // a label tap IS its key (C copies + notes)
       } else app.confirm();
     });
+    canvas.addEventListener("pointerup", () => { if (statsC && app.screen === SCREEN.STATS) input.onUiKey("KeyC"); statsC = false; });
   }
   /* pad taps bubble to #stage: play from ATTRACT too (spec §4 tap-to-play). */
   {
