@@ -328,12 +328,12 @@ function mkE(type, x, y) {
     "item geos are ITEM_MAKE table, not itemGeoFor if-else",
     !/function itemGeoFor/.test(src) && /ITEM_MAKE/.test(src),
   );
+  const blastSrc = readFileSync("src/render/three/blast.js", "utf8");
   check(
-    "crossedQuads calls mergeGeos (no copied merge)",
-    /function crossedQuads[\s\S]{0,250}mergeGeos\(/.test(src) &&
-      !/function crossedQuads[\s\S]{0,800}setAttribute\(\s*"position"/.test(
-        src,
-      ),
+    "blast v3 builds on three primitives (no copied merge, no crossedQuads left)",
+    !/function crossedQuads/.test(src) &&
+      !/function merge/i.test(blastSrc) &&
+      /IcosahedronGeometry/.test(blastSrc),
   );
 }
 

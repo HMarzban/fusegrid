@@ -8,7 +8,7 @@
    truth, biome-independent); atlas maps merge only when they are real
    THREE.Textures, so headless keeps flat bright fallbacks. v2 silhouettes:
    capsule-box pickups + additive glow rings, glossy Phong bombs with variant
-   base rings, signal-runner player stack, crossed-quad flame blasts. Enemy
+   base rings, signal-runner player stack, fireball blasts (blast.js). Enemy
    identity 2026-08-25: per-type 3D designs translated silhouette-first from
    the TOP-DOWN 2D sprites (blob trio = glossy Phong spheres with baked
    scale + big tilted face planes, stationary square shell + magenta core +
@@ -23,6 +23,8 @@ import { ITEM_FAMILY, ITEM_SHAPE } from "../icons.js";
    lockstep or the two players stop being one character. sprites.js pulls in
    icons.js / config.js / enemybody.js only, so this stays a DAG. */
 import { PLAYER_HULL } from "../sprites.js";
+import { createBlast } from "./blast.js";
+import { getFxOpts } from "../fx.js";
 
 const W2 = (CFG.COLS * CFG.TILE) / 2,
   D2 = (CFG.ROWS * CFG.TILE) / 2;
@@ -60,10 +62,7 @@ const _m = new THREE.Matrix4(),
   _s = new THREE.Vector3(),
   _e = new THREE.Euler(),
   _c = new THREE.Color();
-const BL_W = new THREE.Color("#ffffff"),
-  BL_A = new THREE.Color("#ffb347"),
-  BL_R = new THREE.Color("#ff5d73"),
-  _axisY = new THREE.Vector3(0, 1, 0);
+const _axisY = new THREE.Vector3(0, 1, 0);
 
 /* per-type geometry + material caches (shared across pool slots & rebuilds:
    flagged _shared so disposeGroup never frees them mid-flight). Enemy-
@@ -1148,53 +1147,9 @@ export function createPools(biome, atlas) {
     itemRingIM[pd.t] = ring;
     group.add(ring);
   }
-  /* Blasts v2: crossed flame-gradient quads merged into ONE BufferGeometry
-     per layer — outer amber cross keeps the exact prior ttl-shrink contract,
-     inner white-hot core pops at spawn (overshoot easing settles by 20%
-     ttl). Palette lives in the atlas.fire ramp texture. */
-  function crossedQuads(sz) {
-    const a = new THREE.PlaneGeometry(sz, sz),
-      b = new THREE.PlaneGeometry(sz, sz);
-    b.rotateY(Math.PI / 2);
-    return sharedGeo(mergeGeos(a, b));
-  }
-  const bladeGeo = crossedQuads(CFG.TILE * 0.98);
-  const bladeMat = new THREE.MeshBasicMaterial({
-    transparent: true,
-    opacity: 0.55,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-    blending: THREE.AdditiveBlending,
-  });
-  if (atlas && atlas.fire instanceof THREE.Texture) {
-    bladeMat.map = atlas.fire;
-    bladeMat.color.set("#ffffff");
-  } else bladeMat.color.set("#ffb347");
-  const blades = new THREE.InstancedMesh(bladeGeo, bladeMat, POOL_CAPS.blades);
-  blades.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-  blades.frustumCulled = false; // count varies per frame
-  blades.castShadow = false;
-  blades.receiveShadow = false;
-  blades.count = 0;
-  blades.setColorAt(0, BL_W); // instanceColor from frame 1: the first boom compiles no new program variant
-  blades.userData.tag = "blade";
-  group.add(blades);
-  const coreGeo = new THREE.BoxGeometry(CFG.TILE * 0.4, 12, CFG.TILE * 0.4);
-  const coreMat = new THREE.MeshBasicMaterial({
-    color: "#fff3b0",
-    transparent: true,
-    opacity: 0.95,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending,
-  });
-  const cores = new THREE.InstancedMesh(coreGeo, coreMat, POOL_CAPS.blades);
-  cores.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-  cores.frustumCulled = false;
-  cores.castShadow = false;
-  cores.receiveShadow = false;
-  cores.count = 0;
-  cores.userData.tag = "blade";
-  group.add(cores);
+  const blast = createBlast(POOL_CAPS.blades);
+  const blades = blast.plates, cores = blast.fire;
+  group.add(blades, cores);
   /* flash pool: <=3 concurrent point lights riding the freshest blast
      centers; intensity tracks per-blade freshness, spares stay dark. */
   const flashes = [];
@@ -1397,55 +1352,17 @@ export function createPools(biome, atlas) {
       itemRingIM[pd.t].instanceMatrix.needsUpdate = true;
     }
 
-    let n = 0,
-      maxSc = 0,
-      freshT = 0;
     const bls = world.blades || [];
-    for (let i = 0; i < bls.length; i++) {
-      const bl = bls[i],
-        tls = bl.tiles;
-      if (!tls) continue;
-      const sc = Math.max(0.001, 1 - bl.t / (bl.ttl || 1));
-      if (sc > maxSc) { maxSc = sc; freshT = bl.t; }
-      const pop = 1 + 0.6 * Math.max(0, 1 - bl.t / ((bl.ttl || 1) * 0.15));
-      for (let j = 0; j < tls.length && n < POOL_CAPS.blades; j++) {
-        const tl = tls[j];
-        _p.set(
-          tl.tx * CFG.TILE + CFG.TILE / 2 - W2,
-          5,
-          tl.ty * CFG.TILE + CFG.TILE / 2 - D2,
-        );
-        _s.setScalar(sc);
-        _m.compose(_p, _q, _s);
-        blades.setMatrixAt(n, _m);
-        const age = Math.min(1, bl.t / (bl.ttl || 1));
-        if (age < 0.5) _c.copy(BL_W).lerp(BL_A, age * 2);
-        else _c.copy(BL_A).lerp(BL_R, (age - 0.5) * 2);
-        blades.setColorAt(n, _c);
-        _s.setScalar(sc * 0.55 * pop);
-        _m.compose(_p, _q, _s);
-        cores.setMatrixAt(n, _m);
-        n++;
-      }
-    }
-    blades.count = n;
-    blades.instanceMatrix.needsUpdate = true;
-    if (blades.instanceColor) blades.instanceColor.needsUpdate = true;
-    cores.count = n;
-    cores.instanceMatrix.needsUpdate = true;
-    /* flame-cross opacity: sc*(.55+.45*cos(24*age)) freshness flicker on the
-       freshest blast's own clock, so every blast is born at full opacity
-       (2D parity) and no world-clock phase can land a boom on the trough;
-       ember off */
-    bladeMat.opacity =
-      n > 0 ? Math.max(0, maxSc * (0.55 + 0.45 * Math.cos(freshT * 24))) : 0;
+    blast.update(bls);
     /* flash lights: ride the first FLASH_CAP blasts, brightness =
-       remaining life; overflow blasts share nothing (pool capped). */
+       remaining life x REDUCE FLASH (flashK); overflow blasts share nothing
+       (pool capped). */
+    const fk = getFxOpts().flashK;
     for (let i = 0; i < FLASH_CAP; i++) {
       const L = flashes[i],
         bl = bls[i];
       if (bl && bl.tiles && bl.tiles.length) {
-        L.intensity = 2.4 * Math.max(0, Math.min(1, 1 - bl.t / (bl.ttl || 1)));
+        L.intensity = 2.4 * fk * Math.max(0, Math.min(1, 1 - bl.t / (bl.ttl || 1)));
         L.position.set(bl.x - W2, 26, bl.y - D2);
       } else L.intensity = 0;
     }

@@ -711,21 +711,28 @@ sec("S2.D",()=>{
     bF.scale.x.toFixed(4)+" leak "+leak.toFixed(4));
  });
 
-// ---- §S2.E blade ttl-driven fade (shrink with age) ----
-sec("S2.E",()=>{
+// ---- §S2.E blast v3: the danger plate never shrinks, the fire follows blastLife ----
+await sec("S2.E",async()=>{
+  const B=await import("../src/render/three/blast.js");
   const w=createWorld(25,1); loadLevel(w,1,false);
   w.blades=[{x:200,y:120,tiles:[{tx:5,ty:3},{tx:6,ty:3},{tx:5,ty:4}],t:0,
     ttl:CFG.BLADE_TTL,variant:"normal"}];
   const sc=buildScene(w); sc.update(w);
-  const inst=slotsOf(sc.group,"blade")[0];
-  const s0=matScale(inst,0).s;
-  check("S2 blade tile at age0 scale 1 at arm tile center",
-    Math.abs(s0.x-1)<1e-9&&Math.abs(matScale(inst,0).p.x-(-80))<1e-9
-    &&Math.abs(matScale(inst,0).p.z-(-120))<1e-9&&matScale(inst,0).p.y>0);
-  w.blades[0].t=w.blades[0].ttl*0.5; sc.update(w);
-  const s1=matScale(inst,0).s;
-  check("S2 blade scale shrinks with bl.t/bl.ttl",
-    Math.abs(s1.x-0.5)<1e-9, s1.x.toFixed(3));
+  const [plate,fire]=slotsOf(sc.group,"blade");
+  const p0=matScale(plate,0);
+  check("S2 blast plate 0 sits flat on the bomb tile centre, one full tile wide",
+    Math.abs(p0.s.x-CFG.TILE)<1e-9&&Math.abs(p0.s.z-CFG.TILE)<1e-9
+    &&Math.abs(p0.p.x-(-80))<1e-9&&Math.abs(p0.p.z-(-120))<1e-9&&p0.p.y===B.PLATE_Y);
+  const f0=matScale(fire,0).s.x;
+  check("S2 centre fireball born at blastLife(0).s (0.45) x its authored radius",
+    Math.abs(f0-B.PUFF.centre[0][3]*CFG.TILE*0.45)<1e-6, f0.toFixed(3));
+  w.blades[0].t=w.blades[0].ttl*0.8; sc.update(w);
+  const p1=matScale(plate,0).s.x, f1=matScale(fire,0).s.x;
+  check("S2 aged blast: plate keeps its full tile (danger stays tile-accurate),"
+      +" fire scale = blastLife(.8).s",
+    Math.abs(p1-CFG.TILE)<1e-9
+    &&Math.abs(f1-B.PUFF.centre[0][3]*CFG.TILE*B.blastLife(0.8).s)<1e-6,
+    p1+"/"+f1.toFixed(3));
 });
 
 // ---- §S2.F per-type enemy variants + identity colors from entities.js ----
@@ -940,15 +947,15 @@ await sec("S2.I",()=>{
     &&!es0.material.map
     &&"#"+es0.material.color.getHexString()
       ===protoW.color.toLowerCase());
-  const bmH=scPlain.pools.blades.material;
-  check("R.headless blasts: additive Basic flame fallback #ffb347 on"
-      +" crossed quads (8 verts / 12 idx)",
-    bmH.isMeshBasicMaterial&&!bmH.map
-    &&bmH.blending===THREE.AdditiveBlending&&bmH.side===THREE.DoubleSide
-    &&bmH.depthWrite===false
-    &&"#"+bmH.color.getHexString()==="#ffb347"
-    &&scPlain.pools.blades.geometry.attributes.position.count===8
-    &&scPlain.pools.blades.geometry.index.count===12);
+  const bmH=scPlain.pools.blades.material, fmH=scPlain.pools.cores;
+  check("R.headless blasts: additive vertex-coloured Basic danger plate (7x7"
+      +" grid, flat) + ShaderMaterial fireballs carrying an instanced aLife",
+    bmH.isMeshBasicMaterial&&!bmH.map&&bmH.vertexColors===true
+    &&bmH.blending===THREE.AdditiveBlending&&bmH.depthWrite===false
+    &&scPlain.pools.blades.geometry.attributes.position.count===49
+    &&fmH.material.isShaderMaterial
+    &&fmH.geometry.attributes.aLife.isInstancedBufferAttribute
+    &&fmH.geometry.attributes.aLife.itemSize===2);
   const fireB=scPlain.pools.itemBodies.fire;
   const fireR=scPlain.pools.itemRingIM.fire;
   check("R.headless item pickup = unique geo in POWER color + additive ring",
@@ -1240,29 +1247,37 @@ await sec("S3.E",async()=>{
   catch(e){ threw=true; console.log(e.message); }
   check("S3.E draw-call budget <=500 (spec §8; got "+calls+")",
     !threw&&calls>0&&calls<=500, String(calls));
-  // flame-cross opacity curve (§4): sc*(.55+.45*cos(24*age)), age = the
-  // freshest blast's own clock, so every blast is born at full opacity. On
-  // the world clock (sin(24*time)) the opening's deterministic boom landed on
-  // the trough (eye-check 2026-10-09: a 0.1-opacity reveal blast in 3D).
-  // Lambert/emissive machinery purged in the elements redesign
+  // blast v3: every blast carries its OWN clock (no shared opacity), so a
+  // boom is born at full brightness on any world-clock phase and two blasts
+  // of different ages never dim each other. (On the v2 shared world clock the
+  // opening's deterministic boom landed on the trough: eye-check 2026-10-09.)
+  const B=await import("../src/render/three/blast.js");
   const w2=createWorld(45,1); loadLevel(w2,1,false); w2.time=3*Math.PI/48; // sin(24*time)==-1
-  w2.blades=[{x:200,y:120,tiles:[{tx:5,ty:3}],t:0,ttl:CFG.BLADE_TTL,
-    variant:"normal"}];
+  w2.blades=[{x:200,y:120,tiles:[{tx:5,ty:3}],t:0,ttl:CFG.BLADE_TTL,variant:"normal"},
+    {x:60,y:60,tiles:[{tx:1,ty:1}],t:CFG.BLADE_TTL*0.6,ttl:CFG.BLADE_TTL,variant:"normal"}];
   const sc2=buildScene(w2); sc2.update(w2);
-  const bm=slotsOf(sc2.group,"blade")[0].material;
-  const oFresh=bm.opacity;
-  w2.blades[0].t=Math.PI/48; sc2.update(w2);   // cos(24*age)==0
-  const scQ=1-Math.PI/48/CFG.BLADE_TTL, oQuarter=bm.opacity;
-  w2.blades[0].t=w2.blades[0].ttl*0.8; w2.time=0; sc2.update(w2);
-  const oOld=bm.opacity, want=0.2*(0.55+0.45*Math.cos(24*CFG.BLADE_TTL*0.8));
-  check("S3.E flame opacity: born at 1.0 on any world-clock phase -> .55*sc a quarter flicker on -> aged sc*(.55+.45cos)",
-    Math.abs(oFresh-1.0)<1e-9&&Math.abs(oQuarter-0.55*scQ)<1e-9
-    &&Math.abs(oOld-want)<1e-9, oFresh.toFixed(2)+"/"+oQuarter.toFixed(3)
-    +"/"+oOld.toFixed(3));
-  check("S3.E blasts are unlit additive flame quads (emissive purged)",
-    bm.isMeshBasicMaterial&&bm.transparent===true&&bm.depthWrite===false
-    &&bm.blending===THREE.AdditiveBlending
-    &&bm.side===THREE.DoubleSide);
+  const [pl2,fi2]=slotsOf(sc2.group,"blade");
+  const c0=new THREE.Color(), c1=new THREE.Color();
+  pl2.getColorAt(0,c0); pl2.getColorAt(1,c1);
+  const life=fi2.geometry.attributes.aLife;
+  check("S3.E fresh plate = the 2D birth cream #fff3b0 at full brightness on a trough world clock;"
+      +" the older blast keeps its own dimmer plate",
+    c0.getHexString()==="fff3b0"&&c1.r+c1.g+c1.b<c0.r+c0.g+c0.b,
+    c0.getHexString()+"/"+c1.getHexString());
+  check("S3.E fireball aLife.x = each blast's own age (2 per tile, fresh then aged)",
+    life.getX(0)===0&&life.getX(1)===0
+    &&Math.abs(life.getX(2)-0.6)<1e-6&&Math.abs(life.getX(3)-0.6)<1e-6
+    &&fi2.count===4, [0,1,2,3].map(i=>life.getX(i).toFixed(2)).join("/"));
+  check("S3.E blasts are unlit: additive Basic plate + a light-free ShaderMaterial fire"
+      +" (no lights uniform, no fog, no tone-map hook)",
+    pl2.material.isMeshBasicMaterial&&pl2.material.transparent===true
+    &&pl2.material.depthWrite===false&&pl2.material.blending===THREE.AdditiveBlending
+    &&fi2.material.isShaderMaterial&&fi2.material.lights===false&&fi2.material.fog===false
+    &&!/tonemapping/i.test(fi2.material.fragmentShader));
+  check("S3.E burn-away starts late (plate stays solid while holes open): BURN_AT >= .55,"
+      +" plate >= .25 until the end",
+    B.BURN_AT>=0.55&&B.blastLife(B.BURN_AT).burn===0&&B.blastLife(0.999).plate>=0.25
+    &&B.blastLife(0.5).plate===1);
   // fuse spark: unlit glow + 2D-parity flicker 1+-0.23*sin(t*30)
   w2.time=0.05; w2.bombs=[{x:60,y:60,tx:1,ty:1,timer:CFG.FUSE,
     variant:"normal"}]; sc2.update(w2);
@@ -1553,7 +1568,7 @@ await sec("R.items",async()=>{
 // ---- §S4.C explosion drama: layered core pop + pooled flash lights ----
 await sec("S4.C",async()=>{
   const ent=await import("../src/render/three/entities.js");
-  const {FLASH_CAP}=ent;
+  const {FLASH_CAP}=ent, POOL_CAPS_BLADES=ent.POOL_CAPS.blades;
   check("S4.C FLASH_CAP exported and === 3", FLASH_CAP===3, String(FLASH_CAP));
   const w=createWorld(73,1); loadLevel(w,1,false); w.time=0;
   w.blades=[{x:200,y:120,tiles:[{tx:5,ty:3}],t:0,ttl:CFG.BLADE_TTL,
@@ -1566,36 +1581,34 @@ await sec("S4.C",async()=>{
         +" (the first boom compiles no new USE_INSTANCING_COLOR program: opening hitch)",
       bl.count===0&&!!bl.instanceColor, String(!!bl.instanceColor));
   }
+  const B=await import("../src/render/three/blast.js");
   const sc=buildScene(w); sc.update(w);
   const layers=slotsOf(sc.group,"blade");
-  check("S4.C blades are TWO layered instanced meshes (outer + core)",
+  check("S4.C blasts are TWO instanced meshes (danger plate + fireballs), one draw each",
     layers.length===2&&layers[0].isInstancedMesh&&layers[1].isInstancedMesh,
     layers.length+"");
-  check("S4.C blast outer layer = merged crossed flame quads"
-      +" (8 verts / 12 idx)",
-    layers[0].geometry.type==="BufferGeometry"
-    &&layers[0].geometry.attributes.position.count===8
-    &&layers[0].geometry.index.count===12,
-    layers[0].geometry.attributes.position.count+"/"
-      +(layers[0].geometry.index?layers[0].geometry.index.count:"-"));
+  check("S4.C fire layer = one shared lumpy icosahedron (detail 2), instanced 2 per tile",
+    layers[1].geometry.attributes.position.count===540
+    &&layers[1].instanceMatrix.count===POOL_CAPS_BLADES*B.PUFFS_PER_TILE
+    &&layers[1].count===2,
+    layers[1].geometry.attributes.position.count+"/"+layers[1].count);
   const core=layers[1];
-  check("S4.C core layer is white-hot unlit glow (#fff3b0, TILE*.40)",
-    core.material.isMeshBasicMaterial
-    &&"#"+core.material.color.getHexString()==="#fff3b0"
-    &&core.geometry.parameters.width===CFG.TILE*0.40,
-    "#"+core.material.color.getHexString());
   const sCore0=matScale(core,0).s.x;
-  const sOuter0=matScale(layers[0],0).s.x;
-  check("S4.C scale-pop: core overshoots at t=0 (0.55*1.6=0.88), outer "
-      +"keeps exact sc=1 (prior contract)",
-    Math.abs(sCore0-0.88)<1e-6&&Math.abs(sOuter0-1)<1e-9,
-    "core="+sCore0.toFixed(6)+" outer="+sOuter0.toFixed(6));
-  w.blades[0].t=w.blades[0].ttl*0.2; sc.update(w);
-  const sCore1=matScale(core,0).s.x;
-  const sOuter1=matScale(layers[0],0).s.x;
-  check("S4.C pop settles by 20% ttl: core=0.55*sc=0.44, outer=0.8 exact",
-    Math.abs(sCore1-0.44)<1e-6&&Math.abs(sOuter1-0.8)<1e-6,
-    "core="+sCore1.toFixed(6)+" outer="+sOuter1.toFixed(6));
+  w.blades[0].t=w.blades[0].ttl*0.05; sc.update(w);
+  const sPop=matScale(core,0).s.x;
+  w.blades[0].t=w.blades[0].ttl*0.3; sc.update(w);
+  const sHold=matScale(core,0).s.x, R=B.PUFF.centre[0][3]*CFG.TILE;
+  check("S4.C scale-pop: centre burst born at .45, overshoots past 1.08 by 5% ttl,"
+      +" settles to exactly 1 by the hold",
+    Math.abs(sCore0-0.45*R)<1e-6&&sPop>1.08*R&&Math.abs(sHold-R)<1e-6,
+    (sCore0/R).toFixed(3)+"/"+(sPop/R).toFixed(3)+"/"+(sHold/R).toFixed(3));
+  const crownY=i=>matScale(core,i).p.y;
+  w.blades[0].t=w.blades[0].ttl*0.9; sc.update(w);
+  check("S4.C fire rises off the floor as it dies; the bomb tile's crown climbs fastest",
+    crownY(1)>crownY(0)&&crownY(1)-B.PUFF.centre[1][2]*CFG.TILE*B.blastLife(0.9).s
+      >B.blastLife(0.9).rise*CFG.TILE*1.5,
+    crownY(0).toFixed(1)+"/"+crownY(1).toFixed(1));
+  w.blades[0].t=0; sc.update(w);
   // flash light pool
   const flash=slotsOf(sc.group,"flash");
   check("S4.C exactly FLASH_CAP point lights tagged 'flash'",
@@ -1719,6 +1732,63 @@ await sec("S4.D",async()=>{
   r2d.render(w2,1/60,{hud:true});
   check("S4.E classic renderer o.hud===true draws chips too",
     cr.ops.some(o=>o[0]==="fillText"));
+});
+
+// ---- §BL3 blast v3 at rig C: end caps stay near their tile, ends taper,
+//      REDUCE FLASH dims the blast lights ----
+await sec("BL3",async()=>{
+  const B=await import("../src/render/three/blast.js");
+  const fx=await import("../src/render/fx.js");
+  const TL=CFG.TILE, BW=CFG.COLS*TL, BH=CFG.ROWS*TL;
+  const cam=new THREE.PerspectiveCamera(CAM_FOV,BW/BH,1,3000);
+  applyOrbit(cam,createRig(),{x:0,y:0}); cam.updateMatrixWorld(); cam.updateProjectionMatrix();
+  const pr=(x,y,z)=>new THREE.Vector3(x,y,z).project(cam);
+  /* worst on-screen overflow of an end tile's fireballs past that tile's own
+     projected footprint, along the arm, over the whole life (1.16 covers the
+     +-16% lump wobble), in projected tile lengths. */
+  const reach=(tx,ty,dx,dz)=>{
+    const X=tx*TL+TL/2-BW/2, Z=ty*TL+TL/2-BH/2;
+    const cs=[[-.5,-.5],[.5,-.5],[.5,.5],[-.5,.5]].map(([a,b])=>pr(X+a*TL,0,Z+b*TL));
+    const x0=Math.min(...cs.map(c=>c.x)),x1=Math.max(...cs.map(c=>c.x)),
+      y0=Math.min(...cs.map(c=>c.y)),y1=Math.max(...cs.map(c=>c.y));
+    let worst=0;
+    for(let a=0;a<=1.0001;a+=0.02){ const L=B.blastLife(a);
+      for(const q of B.PUFF.end)for(const fl of [1,-1]){ const b=B.puffAt(q,L,false), w=b[1]*fl;
+        const px=X+(dx*b[0]-dz*w)*TL, pz=Z+(dz*b[0]+dx*w)*TL;
+        for(let i=0;i<120;i++){ const th=Math.acos(1-2*(i+.5)/120), ph=i*2.39996;
+          const v=pr(px+Math.sin(th)*Math.cos(ph)*b[3]*TL*1.16,b[2]*TL+Math.cos(th)*b[4]*TL*1.16,
+            pz+Math.sin(th)*Math.sin(ph)*b[3]*TL*1.16);
+          const o=dz<0?(v.y-y1)/(y1-y0):dz>0?(y0-v.y)/(y1-y0):dx>0?(v.x-x1)/(x1-x0):(x0-v.x)/(x1-x0);
+          if(o>worst)worst=o; } } }
+    return worst;
+  };
+  const far=reach(7,1,0,-1), near=reach(7,11,0,1), east=reach(13,6,1,0), west=reach(1,6,-1,0);
+  check("BL3 rig C: a far (north) end cap paints < 1/3 tile past its own footprint at any age;"
+      +" near / east / west caps stay inside",
+    far<1/3&&near<0.02&&east<0.02&&west<0.02,
+    [far,near,east,west].map(v=>v.toFixed(3)).join("/"));
+  check("BL3 every end fireball stays inside its tile along the arm in plan (u + r*1.16 <= .5)",
+    B.PUFF.end.every(q=>q[0]+q[3]*1.16*1.15<=0.5));
+  // end-cap detection straight off computeBlast's ordering
+  const w=createWorld(91,1); loadLevel(w,1,false);
+  w.blades=[{x:7.5*TL,y:5.5*TL,tiles:[{tx:7,ty:5},{tx:8,ty:5},{tx:9,ty:5},{tx:6,ty:5},
+    {tx:7,ty:6}],t:CFG.BLADE_TTL*0.3,ttl:CFG.BLADE_TTL}];
+  const sc=buildScene(w); sc.update(w);
+  const fire=slotsOf(sc.group,"blade")[1];
+  const ux=i=>(matScale(fire,i).p.x-(-BW/2))/TL, uz=i=>(matScale(fire,i).p.z-(-BH/2))/TL;
+  check("BL3 arm tile (8,5) uses PUFF.arm, the (9,5) east end tapers to PUFF.end, the lone"
+      +" (6,5) and (7,6) tiles are ends too",
+    Math.abs(ux(3)-(8.5+B.PUFF.arm[1][0]))<1e-6&&Math.abs(ux(5)-(9.5+B.PUFF.end[1][0]))<1e-6
+    &&Math.abs(ux(7)-(6.5-B.PUFF.end[1][0]))<1e-6&&Math.abs(uz(9)-(6.5+B.PUFF.end[1][0]))<1e-6
+    &&fire.count===10, [3,5,7].map(i=>ux(i).toFixed(2)).join("/")+" z"+uz(9).toFixed(2));
+  // REDUCE FLASH (flashK .25) dims the blast point lights with the overlay flash
+  w.blades[0].t=0; sc.update(w);
+  const full=slotsOf(sc.group,"flash")[0].intensity;
+  fx.setFxOpts({flashK:0.25}); sc.update(w);
+  const dim=slotsOf(sc.group,"flash")[0].intensity;
+  fx.setFxOpts({flashK:1});
+  check("BL3 REDUCE FLASH scales the blast lights by flashK (2.4 -> 0.6 at birth)",
+    Math.abs(full-2.4)<1e-9&&Math.abs(dim-0.6)<1e-9, full+"/"+dim);
 });
 
 // ---- §S4.E ground polish: checker floor tiles + border trim + call budget ----
