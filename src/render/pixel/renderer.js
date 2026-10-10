@@ -3,21 +3,26 @@
    two-step sharp-bilinear blit; #c stays the 600x520 overlay.
      1. drawPixelWorld paints the NATIVE 300x260 board (1 art px = 1 canvas
         px, integer positions, smoothing off).
-     2. native -> hi, NEAREST, at the integer M = clamp(floor(k*z),1,8)
-        (k = device px per art px, z = the zoom in main's overlay transform).
-     3. hi -> #px once, smoothing ON, carrying the device scale, main's intro
-        and camera transform (read from the overlay ctx, R23) and the shake
-        snapped to even logical px; translation rounded to device px.
-   The linear ratio k*z/M stays in [1,2) below the M cap, so the soft edge is
-   at most 1 device px. Surface contract mirrors the wrapper:
+     2. native -> hi, NEAREST, at the integer M = snap.js pxM: ceil(k*z),
+        clamped 1..8 (k = device px per art px, z = the zoom in main's overlay
+        transform).
+     3. hi -> #px once, smoothing ON (quality low, so no mipmap filter),
+        carrying the device scale, main's intro and camera transform (read
+        from the overlay ctx, R23) and the shake snapped to even logical px;
+        translation rounded to device px.
+   The smooth step is a downscale at k*z/M in (0.5,1] below the M cap, so the
+   soft edge is at most 1 device px. The #px backing comes from fit.js
+   (data-bw / data-bh, the device-px-snapped content box), so the browser
+   composites it 1:1; clientWidth x dpr is only the fallback. The hi canvas
+   only grows: a smaller M draws into its top-left sub-rect (cleared once on
+   the drop). Surface contract mirrors the wrapper:
    {canvas:#px, overlay:#c, ctx:overlay 2D ctx, render, consumeEvents,
     getShake, reset}. Node / no-canvas => stub mode (overlay noop ctx, no
    world draw), so main's shell path never throws. */
-import {CFG} from "../../core/config.js";
-import {biomeOf} from "../../core/config.js";
+import {CFG, biomeOf} from "../../core/config.js";
 import {sfxOf} from "../../audio/item.js";
 import {drawHudChips, drawOverlay, overlayBox, drawCoach, drawCoach2} from "../scenes.js";
-import {onEvent, updateFx, getShake, getFlash, getFx, feedFx, drawFxOverlay, syncFx} from "../fx.js";
+import {onEvent, updateFx, getShake as fxShake, getFlash, getFx, feedFx, drawFxOverlay, syncFx} from "../fx.js";
 import {createAtlas} from "./atlas.js";
 import {createView, resetView, drawPixelWorld, trackGrid} from "./world.js";
 import {createOneShots, feedShot} from "./oneshot.js";
@@ -54,6 +59,7 @@ function canvasSurf(mk) {
 export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
   const ovCtx = makeOverlayCtx(overlayCanvas);
   const audio = opts.audio || null;
+  const getShake = opts.getShake || fxShake;
   const mk = opts.mkCanvas || defaultMk;
   const probe = pxCanvas && typeof pxCanvas.getContext === "function" ? mk(1, 1) : null;
   const live = !!(probe && probe.getContext);
@@ -66,7 +72,7 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
   const clock = newClock();
   const native = live ? mk(NATIVE_W, NATIVE_H) : null;
   const nctx = native ? native.getContext("2d") : null;
-  let hi = null, hctx = null, hiM = 0;
+  let hi = null, hctx = null, hiM = 0, hiCap = 0;
   const pctx = live ? pxCanvas.getContext("2d", {alpha: false}) : null;
   const mat = [1, 0, 0, 1, 0, 0];
   const stat = {k: 0, M: 0, z: 1, bw: 0, bh: 0, draws: 0, ms: 0};
@@ -90,25 +96,29 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
 
   function blitWorld(m) {
     const dpr = (typeof devicePixelRatio !== "undefined" && devicePixelRatio) || 1;
-    const bw = Math.max(1, Math.round((pxCanvas.clientWidth || W) * dpr)), bh = Math.max(1, Math.round((pxCanvas.clientHeight || H) * dpr));
+    const ds = pxCanvas.dataset, fw = ds && +ds.bw, fh = ds && +ds.bh;
+    const bw = fw > 0 ? fw : Math.max(1, Math.round((pxCanvas.clientWidth || W) * dpr)), bh = fh > 0 ? fh : Math.max(1, Math.round((pxCanvas.clientHeight || H) * dpr));
     if (pxCanvas.width !== bw) pxCanvas.width = bw;
     if (pxCanvas.height !== bh) pxCanvas.height = bh;
-    const k = kOf(bw), z = zOf(m.a, m.b), M = pxM(k, z);
-    if (M !== hiM || !hi) {
-      hi = hi || mk(NATIVE_W * M, NATIVE_H * M);
-      hi.width = NATIVE_W * M; hi.height = NATIVE_H * M;
-      hctx = hi.getContext("2d"); hiM = M;
-    }
+    const k = kOf(bw), z = zOf(m.a, m.b), M = pxM(k, z), hw = NATIVE_W * M, hh = NATIVE_H * M;
+    if (!hi || M > hiCap) {
+      hi = hi || mk(hw, hh);
+      hi.width = hw; hi.height = hh;
+      hctx = hi.getContext("2d"); hiCap = M;
+    } else if (M < hiM) hctx.clearRect(0, 0, hi.width, hi.height);
+    hiM = M;
     hctx.imageSmoothingEnabled = false;
-    hctx.drawImage(native, 0, 0, NATIVE_W * M, NATIVE_H * M);
+    hctx.drawImage(native, 0, 0, hw, hh);
     const sh = getShake();
     finalMatrix(mat, bw, bh, m, evenShake(sh.x), evenShake(sh.y), M);
     pctx.setTransform(1, 0, 0, 1, 0, 0);
     pctx.fillStyle = V.bg;
     pctx.fillRect(0, 0, bw, bh);
     pctx.imageSmoothingEnabled = true;
+    pctx.imageSmoothingQuality = "low";
     pctx.setTransform(mat[0], mat[1], mat[2], mat[3], mat[4], mat[5]);
-    pctx.drawImage(hi, 0, 0);
+    if (M === hiCap) pctx.drawImage(hi, 0, 0);
+    else pctx.drawImage(hi, 0, 0, hw, hh, 0, 0, hw, hh);
     pctx.setTransform(1, 0, 0, 1, 0, 0);
     stat.k = k; stat.M = M; stat.z = z; stat.bw = bw; stat.bh = bh;
   }

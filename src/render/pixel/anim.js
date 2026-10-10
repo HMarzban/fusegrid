@@ -60,13 +60,14 @@ export const popFrame = (pop) => { const c = PX_T.POP_CUTS; return pop < c[0] ? 
 export function newClock() { return {t: 0, dt: 0, wt: 0, w: null}; }
 /* Renderer-owned anim clock: advances by the world's own time step while the
    world is in PLAY, WIN or LOSE, and not at all in PAUSE or on a frozen menu
-   backdrop (world.time does not move there). A world swap re-anchors. */
+   backdrop (world.time does not move there). A world swap re-anchors; a long
+   frame is clamped to DT_MAX rather than dropped. */
 export function animClock(clk, world) {
   const wt = world && world.time || 0;
   if (clk.w !== world) { clk.w = world; clk.wt = wt; clk.dt = 0; return clk.t; }
   let d = wt - clk.wt;
   clk.wt = wt;
-  if (!(d > 0) || d > PX_T.DT_MAX) d = 0;
+  d = d > 0 ? Math.min(d, PX_T.DT_MAX) : 0;
   const s = world.state;
   clk.dt = s === "PLAY" || s === "WIN" || s === "LOSE" ? d : 0;
   clk.t += clk.dt;

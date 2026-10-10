@@ -5,7 +5,7 @@
    a run start and a new grid. */
 import {PX_T as T} from "./timing.js";
 
-export const OS = Object.freeze({CRUMBLE: 1, STUN: 2, CORPSE: 3, MAT: 4, DEATH: 5, REVEAL: 6, KICK: 7, THROW: 8, SLAM: 9});
+export const OS = Object.freeze({CRUMBLE: 1, STUN: 2, CORPSE: 3, MAT: 4, DEATH: 5, REVEAL: 6, KICK: 7, THROW: 8, SLAM: 9, SPARKLE: 10});
 export const OS_DUR = Object.freeze([0,
   (T.CRUMBLE_MS * T.CRUMBLE_N) / 1000,
   (T.STUN_MS + T.PUFF_MS * T.PUFF_N) / 1000,
@@ -15,7 +15,8 @@ export const OS_DUR = Object.freeze([0,
   (T.REVEAL_MS * T.REVEAL_N) / 1000,
   T.POSE_MS / 1000,
   T.POSE_MS / 1000,
-  (T.SLAM_MS * T.SLAM_N) / 1000]);
+  (T.SLAM_MS * T.SLAM_N) / 1000,
+  (T.SPARKLE_MS * T.SPARKLE_N) / 1000]);
 
 export function createOneShots(cap = 96) {
   const pool = Array.from({length: cap}, () => ({k: 0, x: 0, y: 0, t0: 0, type: "", col: ""}));
@@ -45,13 +46,15 @@ export function shotFrame(o, t) {
     case OS.DEATH: return cl((e / T.LOSE_MS) * T.LOSE_N, T.LOSE_N);
     case OS.REVEAL: return cl(e / T.REVEAL_MS, T.REVEAL_N);
     case OS.SLAM: return cl(e / T.SLAM_MS, T.SLAM_N);
+    case OS.SPARKLE: return cl(e / T.SPARKLE_MS, T.SPARKLE_N);
     default: return 0;
   }
 }
 
 /* One world event -> one-shots. A hurt that moved the player is a respawn:
    a desaturated corpse where it fell and a materialize at the spawn. A hurt
-   that did not (a shield break, or the hit that ends the run) leaves none. */
+   that did not (a shield break, or the hit that ends the run) leaves none.
+   A pickup grab ("power") leaves a 3-frame sparkle where the item stood. */
 export function feedShot(shots, ev, world, t) {
   const p = world.players && world.players[0];
   switch (ev.t) {
@@ -65,6 +68,7 @@ export function feedShot(shots, ev, world, t) {
       break;
     case "lose": if (p) shots.push(OS.DEATH, p.x, p.y, t); break;
     case "reveal": shots.push(OS.REVEAL, ev.x, ev.y, t); break;
+    case "power": shots.push(OS.SPARKLE, ev.x, ev.y, t, ev.kind, ev.col); break;
     case "kick": if (p) shots.push(OS.KICK, p.x, p.y, t); break;
     case "throw": if (p) shots.push(OS.THROW, p.x, p.y, t); break;
   }

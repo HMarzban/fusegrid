@@ -33,6 +33,8 @@ export const PX_T = Object.freeze({
   POSE_MS: 140,
   SLAM_MS: 70,
   SLAM_N: 3,
+  SPARKLE_MS: 80,
+  SPARKLE_N: 3,
   POP_CUTS: Object.freeze([0.34, 0.67, 0.999]),
   DT_MAX: 0.25,
 });

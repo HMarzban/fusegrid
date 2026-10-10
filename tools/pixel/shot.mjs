@@ -17,6 +17,7 @@ import {mkdtempSync, mkdirSync, writeFileSync, rmSync} from "node:fs";
 import {tmpdir, homedir} from "node:os";
 import {resolve, dirname, join} from "node:path";
 import {fileURLToPath} from "node:url";
+import {unpng} from "./rgba.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const CHROME = process.env.CHROME || join(homedir(), "Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-arm64/chrome-headless-shell");
@@ -89,20 +90,49 @@ export async function openPage(c, a, url) {
   await S("Page.navigate", {url});
   const ev = async (expr) => { const r = await S("Runtime.evaluate", {expression: expr, awaitPromise: true, returnByValue: true}); if (r.exceptionDetails) throw new Error(expr.slice(0, 80) + ": " + JSON.stringify(r.exceptionDetails).slice(0, 300)); return r.result.value; };
   for (let i = 0; i < 100; i++) { await sleep(100); if (await ev("!!(window.__GAME__&&document.readyState==='complete')").catch(() => false)) break; }
-  const shot = async (file) => { const r = await S("Page.captureScreenshot", {format: "png"}); writeFileSync(file, Buffer.from(r.data, "base64")); return file; };
+  const shot = async (file) => { const r = await S("Page.captureScreenshot", {format: "png"}); const b = Buffer.from(r.data, "base64"); if (file) writeFileSync(file, b); return file || b; };
   const key = async (code, k) => { for (const type of ["keyDown", "keyUp"]) await S("Input.dispatchKeyEvent", {type, code, key: k || code, windowsVirtualKeyCode: code === "Enter" ? 13 : code === "Space" ? 32 : 0}); };
   return {S, ev, shot, key, errors};
 }
 
-/* D5: walk one #px device column at zoom 1; for every art-px edge whose two
+/* D5 (plan §3.2, policy c) from the COMPOSITED page, not #px's backing
+   store: #c is hidden for one Page.captureScreenshot, the PNG is decoded in
+   Node, and device columns / rows of the #px content box are walked on the
+   art grid (origin, kx = box w / 300 and ky = box h / 260 from the live rect). For every art-px edge whose two
    art px differ, count the device px between the two art-px centres whose
-   colour is neither plateau (tolerance 3/channel). Pass: <= 1 per edge. */
-const D5 = `(()=>{const c=document.getElementById('px');if(!c||c.hidden)return null;const x=c.getContext('2d');const k=c.width/300;const col=Math.floor(30.5*k);
- const d=x.getImageData(col,0,1,c.height).data;const at=(y)=>{const i=Math.max(0,Math.min(c.height-1,y))*4;return [d[i],d[i+1],d[i+2]];};
- const eq=(a,b)=>Math.abs(a[0]-b[0])<=3&&Math.abs(a[1]-b[1])<=3&&Math.abs(a[2]-b[2])<=3;
- let worst=0,edges=0,hist=[0,0,0,0];for(let j=1;j<260;j++){const ya=Math.floor((j-0.5)*k),yb=Math.floor((j+0.5)*k),A=at(ya),B=at(yb);if(eq(A,B))continue;edges++;
-  let n=0;for(let y=ya+1;y<yb;y++){const P=at(y);if(!eq(P,A)&&!eq(P,B))n++;}worst=Math.max(worst,n);hist[Math.min(3,n)]++;}
- return {k:+k.toFixed(3),column:col,edges,worstSoftEdgePx:worst,hist};})()`;
+   colour is neither plateau (tolerance 3/channel). Pass: <= 1 per edge.
+   GEO also reports whether rect x dpr equals the backing (no second resample). */
+const GEO = `(()=>{const c=document.getElementById('px');if(!c||c.hidden)return null;const r=c.getBoundingClientRect(),cs=getComputedStyle(c),bx=parseFloat(cs.borderLeftWidth)||0,by=parseFloat(cs.borderTopWidth)||0,d=devicePixelRatio;
+ const box=[(r.width-2*bx)*d,(r.height-2*by)*d],org=[(r.left+bx)*d,(r.top+by)*d];
+ return {dpr:d,box,org,backing:[c.width,c.height],data:[c.dataset.bw,c.dataset.bh],boxIsBacking:Math.abs(box[0]-c.width)<0.02&&Math.abs(box[1]-c.height)<0.02,originOnDevicePx:Math.abs(org[0]-Math.round(org[0]))<0.02&&Math.abs(org[1]-Math.round(org[1]))<0.02};})()`;
+export function d5Scan(img, geo, cols = [30.5, 110.5, 190.5], rows = [30.5, 130.5]) {
+  const k = geo.box[0] / 300, ky = geo.box[1] / 260, ox = Math.round(geo.org[0]), oy = Math.round(geo.org[1]), D = img.data, W = img.width;
+  const px = (x, y) => { const i = (Math.max(0, Math.min(img.height - 1, y)) * W + Math.max(0, Math.min(W - 1, x))) * 4; return [D[i], D[i + 1], D[i + 2]]; };
+  const eq = (a, b) => Math.abs(a[0] - b[0]) <= 3 && Math.abs(a[1] - b[1]) <= 3 && Math.abs(a[2] - b[2]) <= 3;
+  let worst = 0, edges = 0;
+  const hist = [0, 0, 0, 0];
+  const walk = (at, n, k) => {
+    for (let j = 1; j < n; j++) {
+      const a = Math.floor((j - 0.5) * k), b = Math.floor((j + 0.5) * k), A = at(a), B = at(b);
+      if (eq(A, B)) continue;
+      edges++;
+      let m = 0;
+      for (let q = a + 1; q < b; q++) { const P = at(q); if (!eq(P, A) && !eq(P, B)) m++; }
+      worst = Math.max(worst, m); hist[Math.min(3, m)]++;
+    }
+  };
+  for (const cx of cols) { const x = ox + Math.floor(cx * k); walk((y) => px(x, oy + y), 260, ky); }
+  for (const ry of rows) { const y = oy + Math.floor(ry * ky); walk((x) => px(ox + x, y), 300, k); }
+  return {k: +k.toFixed(3), ky: +ky.toFixed(3), edges, worstSoftEdgePx: worst, hist, pass: worst <= 1};
+}
+/* Perf with a forced flush: render, then getImageData(0,0,1,1) on the target
+   canvas, so the drawImage raster is inside the timed span (stat.ms alone
+   times only command recording). Run LAST: repeated readbacks can demote a
+   canvas to software. */
+const PERF = `(()=>{const g=window.__GAME__,r=g.renderer,G=g.G,px=document.getElementById('px'),cv=px&&!px.hidden?px:document.getElementById('c'),x=cv.getContext('2d');const ms=[];
+ for(let i=0;i<40;i++){const t=performance.now();r.render(G,0,{hud:true});x.getImageData(0,0,1,1);ms.push(performance.now()-t);}ms.sort((a,b)=>a-b);
+ return {canvas:cv.id,median:+ms[20].toFixed(2),p90:+ms[36].toFixed(2),max:+ms[39].toFixed(2),enemies:G.enemies.length,M:r._dbg&&r._dbg.stat?r._dbg.stat.M:null};})()`;
+const FAT = `Promise.all([import('/src/core/entities.js'),import('/src/core/config.js')]).then(([E,C])=>{const G=window.__GAME__.G;G.state='PLAY';let i=0;for(const f of E.FOES)for(let y=1;y<12&&i<99;y++)for(let x=3;x<14;x++)if(G.grid[C.key(x,y)]===C.T.EMPTY&&(x*3+y*5+i)%9===0){G.enemies.push(E.spawnEnemy(f.t,x,y,G.level,null));i++;y=99;break;}})`;
 const STAT = `(()=>{const g=window.__GAME__,r=g.renderer,d=r&&r._dbg;const px=document.getElementById('px'),gl=document.getElementById('gl');
  return {state:g.state(),level:g.G.level,kind:d&&d.atlas?'px':(gl&&!gl.hidden?'3d':'2d'),pxHidden:px?px.hidden:null,glHidden:gl?gl.hidden:null,
  pxCss:px?[px.clientWidth,px.clientHeight]:null,pxBuf:px?[px.width,px.height]:null,stat:d&&d.stat?{...d.stat}:null,bakeMs:d&&d.bakeMs,
@@ -126,10 +156,14 @@ export async function run(a) {
     await P.ev("window.__GAME__.setKeys({move:{x:1,y:0}})"); await sleep(500); await P.ev("window.__GAME__.setKeys({move:{x:0,y:0},fire:true})"); await sleep(80); await P.ev("window.__GAME__.setKeys({fire:false})"); await sleep(400); await snap("bomb");
     for (const r of a.rooms) { if (r === 1) continue; await P.ev(`import('/src/core/sim.js').then(m=>{m.loadLevel(window.__GAME__.G,${r},true);window.__GAME__.G.state='PLAY';})`); await sleep(700); await snap("room" + r); }
     if (a.render === "px") {
-      await P.ev(`Promise.all([import('/src/core/entities.js'),import('/src/core/config.js')]).then(([E,C])=>{const G=window.__GAME__.G;let i=0;for(const f of E.FOES)for(let y=1;y<12&&i<99;y++)for(let x=3;x<14;x++)if(G.grid[C.key(x,y)]===C.T.EMPTY&&(x*3+y*5+i)%9===0){G.enemies.push(E.spawnEnemy(f.t,x,y,G.level,null));i++;y=99;break;}})`);
-      const ms = []; for (let i = 0; i < 20; i++) { await sleep(50); ms.push(await P.ev("window.__GAME__.renderer._dbg.stat.ms")); }
-      ms.sort((x, y) => x - y); report.perf = {median: ms[10], p90: ms[18], max: ms[19], enemies: await P.ev("window.__GAME__.G.enemies.length"), bakeMs: await P.ev("window.__GAME__.renderer._dbg.bakeMs")};
-      report.d5 = await P.ev(D5);
+      await P.ev(FAT); await sleep(300);
+      const geo = await P.ev(GEO);
+      await P.ev("document.getElementById('c').style.visibility='hidden'"); await sleep(120);
+      const png = await P.shot(null);
+      await P.ev("document.getElementById('c').style.visibility=''");
+      writeFileSync(join(a.out, tag + "-d5.png"), png);
+      report.d5 = {geo, ...d5Scan(unpng(png), geo)};
+      report.bakeMs = await P.ev("window.__GAME__.renderer._dbg.bakeMs");
       for (const [n, z, sx, sy] of [["zoom25", 2.5, 600, 520], ["zoom06", 0.6, 300, 260]]) { await P.ev(`import('/src/render/cameraCtl.js').then(m=>{const c=window.__GAME__.cam;m.resetCamera(c);m.zoomAt(c,${z},${sx},${sy},600,520,'2d');})`); await snap(n); }
       await P.ev("import('/src/render/cameraCtl.js').then(m=>m.resetCamera(window.__GAME__.cam))");
     }
@@ -138,7 +172,15 @@ export async function run(a) {
     await snap("lose");
     await P.ev("window.__pause&&window.__pause()"); await sleep(300); await snap("pause");
     await P.ev("window.__resume&&window.__resume();window.__GAME__.G.state='WIN'"); await sleep(300); await snap("win");
-    report.errors = P.errors;
+    if (a.render === "px") {
+      await P.ev("window.__GAME__.begin()"); await sleep(600); await P.ev(FAT); await sleep(300);
+      const px = await P.ev(PERF);
+      const Q = await openPage(c, a, url.replace("render=px", "render=2d"));
+      await Q.key("Enter"); await sleep(5200); await Q.ev("window.__GAME__.begin()"); await sleep(600); await Q.ev(FAT); await sleep(300);
+      report.perf = {flushed: true, px, classic: await Q.ev(PERF), note: "render + getImageData(0,0,1,1) per sample; swiftshader harness, relative only"};
+      report.errors.push(...Q.errors);
+    }
+    report.errors.push(...P.errors);
     c.close();
   } finally {
     if (chr) { chr.proc.kill("SIGKILL"); if (!a.keep) try { rmSync(chr.dir, {recursive: true, force: true}); } catch {} }
@@ -150,5 +192,5 @@ export async function run(a) {
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const r = await run(parseArgs(process.argv.slice(2)));
-  console.log(JSON.stringify({tag: r.tag, errors: r.errors, stats: r.stats.map((s) => ({n: s.n, state: s.state, level: s.level, kind: s.kind, pxBuf: s.pxBuf, stat: s.stat, pending: s.pending, bakeMs: s.bakeMs && +s.bakeMs.toFixed(1)}))}, null, 1));
+  console.log(JSON.stringify({tag: r.tag, errors: r.errors, d5: r.d5, perf: r.perf, stats: r.stats.map((s) => ({n: s.n, state: s.state, level: s.level, kind: s.kind, pxBuf: s.pxBuf, stat: s.stat, pending: s.pending, bakeMs: s.bakeMs && +s.bakeMs.toFixed(1)}))}, null, 1));
 }

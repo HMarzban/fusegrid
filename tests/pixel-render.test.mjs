@@ -6,18 +6,21 @@ import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { CFG, T, key } from "../src/core/config.js";
 import { createWorld, loadLevel, step, newIntent } from "../src/core/sim.js";
+import { spawnEnemy } from "../src/core/entities.js";
+import { createGame } from "../src/main.js";
+import { pxBox, pxQuant, snapOff, mountFit, fitBox } from "../src/app/fit.js";
 import { heatProfile } from "../src/core/heat.js";
 import { readFlags } from "../src/app/flags.js";
 import { kindOf, bootRender, renderBits, renderVal } from "../src/app/renderkind.js";
-import { snapArt, evenShake, pxM, finalMatrix } from "../src/render/pixel/snap.js";
+import { snapArt, evenShake, pxM, finalMatrix, kOf } from "../src/render/pixel/snap.js";
 import { PX_T } from "../src/render/pixel/timing.js";
 import { facingOf, walkStep, newWalk, isIdle, bladeAgeFrame, bladePieces, bladeScratch, fuseFrame, bombFps, animClock, newClock, popFrame, F_FRONT, F_BACK, F_RIGHT, F_LEFT, P_CROSS, P_STRAIGHT, P_END } from "../src/render/pixel/anim.js";
 import { createOneShots, feedShot, shotFrame, OS, OS_DUR } from "../src/render/pixel/oneshot.js";
 import { createAtlas } from "../src/render/pixel/atlas.js";
-import { createView, drawPixelWorld } from "../src/render/pixel/world.js";
+import { createView, resetView, drawPixelWorld } from "../src/render/pixel/world.js";
 import { createPixelRenderer } from "../src/render/pixel/renderer.js";
 import { GHOST_A } from "../src/render/sprites.js";
-import { createRGBA, surfRGBA } from "../tools/pixel/rgba.mjs";
+import { createRGBA, surfRGBA, nearest as nearestRGBA, bilinear as bilinearRGBA } from "../tools/pixel/rgba.mjs";
 import { stageWorld } from "../tools/pixel/board.mjs";
 import { classicHash } from "./lib/classichash.mjs";
 
@@ -51,10 +54,18 @@ function check(name, cond, detail) {
   check("snapArt maps logical to whole art px", snapArt(20) === 10 && snapArt(41) === 21 && snapArt(-3) === -1);
   const sh = [-7.3, -3, -1, 0, 0.9, 1, 3, 5.5, 8.1].map(evenShake);
   check("shake snaps to even logical px", sh.every((v) => Number.isInteger(v) && v % 2 === 0), sh.join());
-  check("pxM = clamp(floor(k*z),1,8)", pxM(2.77, 1) === 2 && pxM(3.77, 1) === 3 && pxM(6.55, 1) === 6 && pxM(6.55, 2.5) === 8 && pxM(0.4, 1) === 1 && pxM(2.77, 1.12) === 3);
-  let ok = true;
-  for (let kz = 1; kz < 16; kz += 0.037) { const r = kz / pxM(kz, 1); if (!(r >= 1 && r < 2)) ok = false; }
-  check("the linear ratio k*z/M stays in [1,2) below the cap (soft edge <= 1 device px)", ok);
+  check("pxM = clamp(ceil(k*z),1,8), floor only when k*z is whole or below 1",
+    pxM(2.77, 1) === 3 && pxM(3.77, 1) === 4 && pxM(6.55, 1) === 7 && pxM(6.55, 2.5) === 8 && pxM(0.4, 1) === 1 && pxM(2.77, 1.12) === 4
+    && pxM(3, 1) === 3 && pxM(3 + 1e-12, 1) === 3 && pxM(1.5, 2) === 3 && pxM(1, 1) === 1 && pxM(2.76, 0) === 3);
+  let ok = true, worst = 0;
+  for (let kz = 1; kz <= 8; kz += 0.0137) { const r = kz / pxM(kz, 1); worst = Math.max(worst, r); if (!(r > 0.5 && r <= 1 + 1e-12)) ok = false; }
+  check("the smooth step is a DOWNscale: k*z/M in (0.5,1] for k*z in [1,8] (soft edge <= 1 device px)", ok, worst);
+  check("past the cap (k*z > 8) the ratio is above 1 again (disclosed, not gated)", 9 / pxM(9, 1) > 1);
+  const soft = (k, M) => { const img = createRGBA(30, 1); for (let x = 0; x < 30; x++) { const v = x & 1 ? 255 : 0; img.data.set([v, v, v, 255], x * 4); } const h = nearestRGBA(img, M), W = Math.round(30 * k), o = bilinearRGBA(h, W, 1);
+    let worstN = 0; for (let j = 1; j < 30; j++) { const a = Math.floor((j - 0.5) * k), b = Math.floor((j + 0.5) * k); let n = 0; for (let x = a + 1; x < b; x++) { const v = o.data[x * 4]; if (v > 3 && v < 252) n++; } worstN = Math.max(worstN, n); } return worstN; };
+  const ks = [2.39, 2.76, 3.75, 4.35, 5.36, 6.54], sp = ks.map((k) => [soft(k, Math.floor(k)), soft(k, pxM(k, 1))]);
+  check("checker through the chain: floor M softens 2 device px per edge, pxM's ceil M at most 1 (k " + ks.join("/") + ")",
+    sp.every(([, c]) => c <= 1) && sp.some(([f]) => f >= 2), JSON.stringify(sp));
   const m = finalMatrix([0, 0, 0, 0, 0, 0], 829, 718, {a: 1, b: 0, c: 0, d: 1, e: 0.4, f: 0}, 2, -2, 2);
   check("finalMatrix: device scale * 2/M, translation rounded to device px",
     Math.abs(m[0] - 829 / 600) < 1e-9 && m[1] === 0 && Number.isInteger(m[4]) && Number.isInteger(m[5]), m.join());
@@ -99,6 +110,10 @@ function check(name, cond, detail) {
   W.state = "PAUSE";
   for (let i = 0; i < 120; i++) { step(W, CFG.STEP, {0: newIntent()}); animClock(clk, W); }
   check("animClock advances in PLAY and is frozen across 120 PAUSE ticks", Math.abs(tPlay - 0.5) < 1e-6 && clk.t === tPlay, tPlay + " " + clk.t);
+  W.state = "PLAY"; animClock(clk, W); const t1 = clk.t; W.time += 1.5; animClock(clk, W);
+  check("animClock clamps a long frame to DT_MAX instead of dropping it", Math.abs(clk.dt - PX_T.DT_MAX) < 1e-9 && Math.abs(clk.t - t1 - PX_T.DT_MAX) < 1e-9, clk.dt);
+  const V0 = createView({}); V0.pw = newWalk(); V0.pw.init = true; resetView(V0);
+  check("resetView drops MAKO's walk state too (RENDER flip / new grid)", V0.pw === null);
 }
 
 // ---- one-shots ----
@@ -118,6 +133,11 @@ function check(name, cond, detail) {
   check("expired one-shots free their slot", s.count() === 0);
   for (let i = 0; i < 20; i++) feedShot(s, {t: "brick", x: i, y: 0}, w, i);
   check("the pool never grows past its cap (no per-event allocation)", s.pool.length === 8 && s.count() === 8);
+  s.reset();
+  feedShot(s, {t: "power", x: 220, y: 140, kind: "flame", col: "#ff6b3d"}, w, 0);
+  const sp = s.live(OS.SPARKLE);
+  check("a pickup grab leaves a 3-frame sparkle where the item stood",
+    !!sp && sp.x === 220 && sp.y === 140 && shotFrame(sp, 0) === 0 && shotFrame(sp, PX_T.SPARKLE_MS / 1000 + 1e-3) === 1 && shotFrame(sp, 1) === PX_T.SPARKLE_N - 1 && OS_DUR[OS.SPARKLE] === PX_T.SPARKLE_MS * PX_T.SPARKLE_N / 1000);
 }
 
 // ---- native draw through the RGBA shim ----
@@ -156,16 +176,30 @@ function fatWorld() {
   check("REDUCE FLASH: no MAKO one-shot frame is a near-white full-sprite flash", nearWhite === 0, nearWhite);
 }
 
+// ---- delivered means drawn: SHADE hem and the pickup sparkle reach the board ----
+{
+  const w = createWorld(4242, 7); loadLevel(w, 7); w.state = "PLAY";
+  w.enemies.length = 0;
+  w.enemies.push(spawnEnemy("shade", 7, 5, 7, null));
+  const V = createView(atlas); V.shots = createOneShots(); V.t = 0.1;
+  feedShot(V.shots, {t: "power", x: 140, y: 100, kind: "flame", col: "#ff6b3d"}, w, 0);
+  const c = createRGBA(300, 260).getContext(); drawPixelWorld(c, w, V);
+  const srcs = c.calls.filter((q) => q[0] === "drawImage").map((q) => q[5]);
+  const sh = atlas.foe.shade, hemAt = srcs.indexOf(sh.extra.im), floatAt = Math.max(srcs.indexOf(sh.still[0].im), srcs.indexOf(sh.still[1].im));
+  check("SHADE's hem (manifest foes/shade.hem) is blitted, over its float frame", hemAt >= 0 && floatAt >= 0 && hemAt > floatAt, hemAt + " " + floatAt);
+  check("the pickup sparkle (manifest fx/sparkle0-2) is blitted at its frame", srcs.includes(atlas.fx.sparkle[1].im));
+}
+
 // ---- the px renderer: blit chain, overlay, reset ----
 function recCanvas(w, h, log, tag) {
-  const cv = {width: w, height: h, clientWidth: 0, clientHeight: 0};
-  const ctx = {imageSmoothingEnabled: true, globalAlpha: 1, fillStyle: "#000",
-    getTransform: () => ({a: 1, b: 0, c: 0, d: 1, e: 0, f: 0}),
+  const cv = {width: w, height: h, clientWidth: 0, clientHeight: 0, tf: null};
+  const ctx = {imageSmoothingEnabled: true, imageSmoothingQuality: "high", globalAlpha: 1, fillStyle: "#000",
+    getTransform: () => cv.tf || {a: 1, b: 0, c: 0, d: 1, e: 0, f: 0},
     putImageData() {}};
   for (const k of ["save", "restore", "translate", "scale", "rotate", "fillRect", "strokeRect", "clearRect", "beginPath", "closePath", "moveTo", "lineTo", "arc", "arcTo", "bezierCurveTo", "quadraticCurveTo", "fill", "stroke", "ellipse", "transform", "fillText", "strokeText", "setLineDash", "rect", "clip", "measureText"])
     ctx[k] = (...a) => { log.push([tag, k, a, ctx.imageSmoothingEnabled]); return k === "measureText" ? {width: 10} : undefined; };
   ctx.setTransform = (...a) => log.push([tag, "setTransform", a]);
-  ctx.drawImage = (src, ...a) => log.push([tag, "drawImage", a, ctx.imageSmoothingEnabled, src && src.tag]);
+  ctx.drawImage = (src, ...a) => log.push([tag, "drawImage", a, ctx.imageSmoothingEnabled, src && src.tag, ctx.imageSmoothingQuality]);
   ctx.createLinearGradient = () => ({addColorStop() {}});
   ctx.createRadialGradient = () => ({addColorStop() {}});
   cv.getContext = () => ctx;
@@ -186,10 +220,10 @@ function recCanvas(w, h, log, tag) {
   const nat = log.filter((q) => q[0] === "native" && q[1] === "drawImage");
   check("native stage: smoothing off on every blit", nat.length > 100 && nat.every((q) => q[3] === false), nat.length);
   const hi = log.filter((q) => q[0] === "hi" && q[1] === "drawImage");
-  check("hi stage: one NEAREST blit of the native board at integer M=2 (k 2.76)", hi.length === 1 && hi[0][3] === false && hi[0][4] === "native" && hi[0][2][2] === 600 && hi[0][2][3] === 520, JSON.stringify(hi.map((q) => q[2])));
+  check("hi stage: one NEAREST blit of the native board at integer M=3 (k 2.76)", hi.length === 1 && hi[0][3] === false && hi[0][4] === "native" && hi[0][2][2] === 900 && hi[0][2][3] === 780, JSON.stringify(hi.map((q) => q[2])));
   const fin = log.filter((q) => q[0] === "px" && q[1] === "drawImage");
   const st = log.filter((q) => q[0] === "px" && q[1] === "setTransform").map((q) => q[2]);
-  check("final stage: one SMOOTH blit of hi into #px at device px", fin.length === 1 && fin[0][3] === true && fin[0][4] === "hi" && st.some((m) => Math.abs(m[0] - 829 / 600) < 1e-9), JSON.stringify(st));
+  check("final stage: one SMOOTH blit of hi into #px at device px, smoothing quality low (no mipmap filter)", fin.length === 1 && fin[0][3] === true && fin[0][4] === "hi" && fin[0][5] === "low" && st.some((m) => Math.abs(m[0] - (829 / 600) * 2 / 3) < 1e-9), JSON.stringify(st));
   check("#px backing store owned by the px renderer (CSS x dpr)", px.width === 829 && px.height === 718);
   const ovl = log.filter((q) => q[0] === "ov");
   const ci = ovl.findIndex((q) => q[1] === "clearRect");
@@ -214,7 +248,120 @@ function recCanvas(w, h, log, tag) {
   let threw = false;
   try { stub.render(w, CFG.STEP, {hud: true}); stub.reset(); } catch (e) { threw = e; }
   check("Node / no-canvas stub mode renders without throwing", !threw, String(threw));
-  check("bake on first px creation is quick (Node, " + r._dbg.bakeMs.toFixed(1) + " ms)", r._dbg.bakeMs < 250);
+  check("bake on first px creation is within the 50 ms plan budget (Node, " + r._dbg.bakeMs.toFixed(1) + " ms)", r._dbg.bakeMs < 50);
+}
+
+// ---- R23: the composed hi -> device transform (overlay matrix, even shake, dpr) ----
+function r23(dpr, tf, shake, css, ds) {
+  const log = []; let n = 0;
+  const mk = (w, h) => recCanvas(w, h, log, ["probe", "native", "hi"][n++] || "x");
+  const px = recCanvas(600, 520, log, "px"); px.clientWidth = css[0]; px.clientHeight = css[1]; if (ds) px.dataset = ds;
+  const ov = recCanvas(600, 520, log, "ov"); ov.tf = tf;
+  globalThis.devicePixelRatio = dpr;
+  try {
+    const r = createPixelRenderer(px, ov, {mkCanvas: mk, surf: surfRGBA, getShake: () => shake});
+    const w = createWorld(4242, 1); loadLevel(w, 1); w.state = "PLAY";
+    log.length = 0;
+    r.render(w, CFG.STEP);
+    const st = log.filter((q) => q[0] === "px" && q[1] === "setTransform").map((q) => q[2]);
+    const hi = log.find((q) => q[0] === "hi" && q[1] === "drawImage");
+    return {px, st: st.find((m) => m[0] !== 1 || m[4] !== 0), hi: hi && hi[2], stat: r._dbg.stat};
+  } finally { delete globalThis.devicePixelRatio; }
+}
+{
+  const tf = {a: 2.5, b: 0, c: 0, d: 2.5, e: -300, f: -200}, shake = {x: 3, y: -3};
+  for (const [dpr, css] of [[2, [414, 359]], [3, [276, 239]]]) {
+    const R = r23(dpr, tf, shake, css), bw = css[0] * dpr, bh = css[1] * dpr, M = pxM(kOf(bw), 2.5), m = R.st, X = bw / 600, Y = bh / 520;
+    check("R23 dpr " + dpr + ": backing = CSS x dpr (" + bw + "x" + bh + ")", R.px.width === bw && R.px.height === bh, R.px.width + "x" + R.px.height);
+    check("R23 dpr " + dpr + ": hi stage at M = pxM(k, z 2.5) = " + M, M === pxM(bw / 300, 2.5) && R.hi[2] === 300 * M && R.hi[3] === 260 * M && R.stat.M === M, JSON.stringify(R.hi));
+    check("R23 dpr " + dpr + ": final scale = (bw/600) * z * 2/M", Math.abs(m[0] - X * 2.5 * 2 / M) < 1e-9 && Math.abs(m[3] - Y * 2.5 * 2 / M) < 1e-9 && m[1] === 0 && m[2] === 0, m.join());
+    check("R23 dpr " + dpr + ": translation is whole device px", Number.isInteger(m[4]) && Number.isInteger(m[5]), m[4] + "," + m[5]);
+    const sx = evenShake(3), sy = evenShake(-3);
+    check("R23 dpr " + dpr + ": odd shake (3,-3) reaches the matrix as even logical px (" + sx + "," + sy + ") through the overlay matrix",
+      sx % 2 === 0 && sy % 2 === 0 && m[4] === Math.round(X * (2.5 * sx - 300)) && m[5] === Math.round(Y * (2.5 * sy - 200)) && m[4] !== Math.round(X * (2.5 * 3 - 300)), m[4] + "," + m[5]);
+  }
+  const R = r23(3, tf, {x: 0, y: 0}, [999, 999], {bw: "1243", bh: "1077"});
+  check("R23: fit's snapped data-bw/bh wins over clientWidth x dpr (no layout read)", R.px.width === 1243 && R.px.height === 1077 && Math.abs(R.st[0] - (1243 / 600) * 2.5 * 2 / pxM(1243 / 300, 2.5)) < 1e-9, R.px.width + "x" + R.px.height);
+  const log = []; let n = 0;
+  const px = recCanvas(600, 520, log, "px"); px.clientWidth = 828; px.clientHeight = 718;
+  const ov = recCanvas(600, 520, log, "ov");
+  const r = createPixelRenderer(px, ov, {mkCanvas: (w, h) => recCanvas(w, h, log, ["probe", "native", "hi"][n++] || "x"), surf: surfRGBA, getShake: () => ({x: 0, y: 0})});
+  const w = createWorld(4242, 1); loadLevel(w, 1); w.state = "PLAY";
+  r.render(w, CFG.STEP); const big = r._dbg.hi, W0 = big.width;
+  ov.tf = {a: 0.6, b: 0, c: 0, d: 0.6, e: 120, f: 104}; log.length = 0; r.render(w, CFG.STEP);
+  const fin = log.find((q) => q[0] === "px" && q[1] === "drawImage"), M2 = pxM(828 / 300, 0.6);
+  check("hi canvas only grows: a smaller M blits its top-left sub-rect, no realloc", r._dbg.hi === big && big.width === W0 && log.some((q) => q[0] === "hi" && q[1] === "clearRect")
+    && fin[2].length === 8 && fin[2][2] === 300 * M2 && fin[2][3] === 260 * M2, JSON.stringify(fin && fin[2]));
+}
+
+// ---- fit: #px content box and origin snapped to device px ----
+{
+  let ok = true;
+  const bad = [];
+  for (const dpr of [1, 1.25, 1.5, 2, 2.625, 3]) for (const s of [0.598, 0.69, 1.292, 1.381, 1.638]) {
+    const b = dpr >= 1 ? Math.floor(dpr) / dpr : 1, B = pxBox(600 * s, 520 * s, dpr, b, b), q = pxQuant(dpr), l64 = (v) => Math.abs(v * 64 - Math.round(v * 64)) < 1e-6;
+    if (Math.abs(B.w * dpr - B.bw) > 1e-6 || Math.abs(B.h * dpr - B.bh) > 1e-6 || !l64(B.w) || !l64(B.h) || Math.abs(B.w + 2 * b - 600 * s) > (q / 2) / dpr + 1e-9) { ok = false; bad.push([dpr, s, B.w, B.bw]); }
+    const o = 267.61 * s, d = snapOff(o, dpr);
+    const dv = (o + d) * dpr / q;
+    if (Math.abs(dv - Math.round(dv)) > 1e-6 || Math.abs(d) > (q / 2) / dpr + 1e-9) { ok = false; bad.push(["off", dpr, s, d]); }
+  }
+  check("pxQuant: dpr 1/2 -> 1, 1.5/3 -> 3, 1.25 -> 5, 2.625 -> 21", pxQuant(1) === 1 && pxQuant(2) === 1 && pxQuant(3) === 3 && pxQuant(1.5) === 3 && pxQuant(1.25) === 5 && pxQuant(2.625) === 21);
+  check("pxBox: content box x dpr is whole, a whole 1/64 CSS px (layout unit), within q/2 device px of the stage; snapOff lands the origin on a multiple of q device px (so it is a whole 1/64 CSS px too)", ok, JSON.stringify(bad));
+  const hs = {}, wl = {}, gl = {style: {}};
+  let left0 = 267.61, top0 = 10.3;
+  const px = {style: {}, dataset: {}, hidden: false, getBoundingClientRect: () => ({left: left0 + parseFloat(px.style.left || 0), top: top0 + parseFloat(px.style.top || 0)})};
+  const wrap = {addEventListener(t, f) { (wl[t] = wl[t] || []).push(f); }};
+  globalThis.window = {innerWidth: 1440, innerHeight: 900, addEventListener(t, f) { (hs[t] = hs[t] || []).push(f); }};
+  globalThis.document = {getElementById: (id) => ({gl, px, wrap})[id] || null, body: {setAttribute() {}}};
+  globalThis.getComputedStyle = () => ({borderLeftWidth: "1px", borderTopWidth: "1px"});
+  globalThis.devicePixelRatio = 2;
+  try {
+    const cv = {width: 600, height: 520, style: {}};
+    mountFit(cv);
+    const s = fitBox(1440, 900, false, 600, 520).s, onDev = (v) => Math.abs(v * 2 - Math.round(v * 2)) < 1e-6;
+    check("mountFit: #gl keeps exactly #c's CSS box (REAL 3D untouched)", gl.style.width === cv.style.width && gl.style.height === cv.style.height && !("left" in gl.style));
+    check("mountFit: #px goes content-box, data-bw/bh = its content box x dpr, a whole device px",
+      px.style.boxSizing === "content-box" && +px.dataset.bw === Math.round((600 * s - 2) * 2) && +px.dataset.bh === Math.round((520 * s - 2) * 2) && parseFloat(px.style.width) * 2 === +px.dataset.bw, px.style.width + " " + px.dataset.bw);
+    const r = px.getBoundingClientRect();
+    check("mountFit: #px content origin (rect + border) lands on a device px", onDev(r.left + 1) && onDev(r.top + 1), r.left + "," + r.top);
+    top0 = 61.37; (wl.transitionend || []).forEach((f) => f());
+    check("the portrait lift's transitionend re-snaps the #px origin", (wl.transitionend || []).length === 1 && onDev(px.getBoundingClientRect().top + 1), px.style.top);
+    px.hidden = true; px.style.left = "0.3px"; hs.resize.forEach((f) => f());
+    check("a hidden #px still gets its backing size but no origin read", px.style.left === "0.3px" && +px.dataset.bw > 0);
+  } finally { delete globalThis.window; delete globalThis.document; delete globalThis.getComputedStyle; delete globalThis.devicePixelRatio; }
+}
+
+// ---- createGame smoke through the real loop: ?render=px, RENDER flips, the no-#px stub ----
+{
+  const loc0 = globalThis.location;
+  let threw = null;
+  try {
+    globalThis.location = {search: "?render=px"};
+    const g = createGame(null, {seed: 5});
+    let T = 0; const tick = (k) => { for (let i = 0; i < k; i++) { T += 16; g.loop(T); } };
+    check("?render=px boots the px renderer (stub: no #px under Node)", !!(g.renderer._dbg && g.renderer._dbg.atlas));
+    g.app.startRun(); tick(90);
+    check("?render=px: a run steps through the real loop without throwing", g.world.time > 1, g.world.time);
+  } catch (e) { threw = e; } finally { if (loc0 === undefined) delete globalThis.location; else globalThis.location = loc0; }
+  check("?render=px loop raised nothing", !threw, String(threw && threw.stack));
+  threw = null;
+  try {
+    const g = createGame(null, {seed: 6});
+    let T = 0; const tick = (k) => { for (let i = 0; i < k; i++) { T += 16; g.loop(T); } };
+    tick(3);
+    const r2d = g.renderer;
+    g.app.pixel = true; tick(2);
+    const rpx = g.renderer;
+    check("RENDER flip 2d -> px swaps to the px renderer", rpx !== r2d && !!(rpx._dbg && rpx._dbg.atlas));
+    rpx._dbg.view.shots.push(1, 10, 10, rpx._dbg.clock.t);
+    g.app.pixel = false; tick(2);
+    check("RENDER flip px -> 2d returns the cached CLASSIC renderer", g.renderer === r2d);
+    g.app.pixel = true; tick(1);
+    check("px -> 2d -> px reuses the cached px renderer and reset() cleared its one-shots", g.renderer === rpx && rpx._dbg.view.shots.count() === 0, rpx._dbg.view.shots.count());
+    g.app.startRun(); tick(60);
+    check("a run under the flipped px renderer steps without throwing", g.world.time > 0.5, g.world.time);
+  } catch (e) { threw = e; }
+  check("RENDER flip smoke raised nothing", !threw, String(threw && threw.stack));
 }
 
 // ---- CLASSIC 2D unchanged ----

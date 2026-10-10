@@ -1,6 +1,7 @@
 /* drawPixelWorld: the px board, in CLASSIC's draw order (floor + contact band,
-   bricks + crumble, items, bombs, blades, ghost, foes, MAKO, fx particles,
-   one-shots), into the NATIVE 300x260 canvas (1 art px = 2 logical px).
+   bricks + crumble, items, bombs, blades, ghost, foes (SHADE's hem over its
+   float frame, BURROW's plume over its body), MAKO, fx particles, one-shots
+   incl. the pickup sparkle), into the NATIVE 300x260 canvas (1 art px = 2 logical px).
    It needs only a minimal ctx: drawImage(img,x,y) at integer positions,
    fillRect, fillStyle and globalAlpha, so the same code runs in the browser
    and through the Node RGBA shim (tools/pixel/rgba.mjs). Reads world, never
@@ -20,7 +21,7 @@ export function createView(atlas) {
   return {A: atlas, t: 0, dt: 0, walk: new WeakMap(), ghostWalk: newWalk(), pw: null, shots: null, ghost: null, pop: null,
     parts: null, bg: "#000000", blades: bladeScratch(), prev: new Uint8Array(C * R), prevGrid: null, draws: 0};
 }
-export function resetView(V) { V.walk = new WeakMap(); V.ghostWalk = newWalk(); V.prevGrid = null; V.t = 0; V.dt = 0; }
+export function resetView(V) { V.walk = new WeakMap(); V.ghostWalk = newWalk(); V.pw = null; V.prevGrid = null; V.t = 0; V.dt = 0; }
 
 function blit(c, V, f, X, Y) { if (!f) return; c.drawImage(f.im, X - f.ax, Y - f.ay); V.draws++; }
 function stateOf(V, e) { let s = V.walk.get(e); if (!s) { s = newWalk(); V.walk.set(e, s); } return s; }
@@ -125,6 +126,7 @@ function drawFoes(c, V, world) {
     else f = set.still[cycle(t, PX_T.IDLE_FPS, 2)];
     blit(c, V, f, X, Y);
     if (set.layout === "burrow" && set.extra) blit(c, V, set.extra[cycle(t, PX_T.PLUME_FPS, 3)], X, Y);
+    else if (set.layout === "shade" && set.extra) blit(c, V, set.extra, X, Y);
   }
 }
 
@@ -187,6 +189,7 @@ function drawShots(c, V, world) {
     } else if (o.k === OS.CORPSE) blit(c, V, A.mako(null, false).corpse[fr], X, Y);
     else if (o.k === OS.DEATH) blit(c, V, A.mako(world.players[0] && world.players[0].color, false).death[fr], X, Y);
     else if (o.k === OS.REVEAL) blit(c, V, A.fx.reveal[fr], X, Y);
+    else if (o.k === OS.SPARKLE) blit(c, V, A.fx.sparkle[fr], X, Y);
   }
 }
 

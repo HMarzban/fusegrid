@@ -9,8 +9,11 @@
    positions.
    Also: surfRGBA (the atlas surface factory), png(img) (node:zlib),
    nearest(img,M), bilinear(img,W,H), sharpBilinear(img,k), label(img,x,y,s,text,rgb)
-   with a 3x5 bitmap font, and blank/paste helpers for contact sheets. */
-import {deflateSync} from "node:zlib";
+   with a 3x5 bitmap font, and blank/paste helpers for contact sheets.
+   unpng(buf) decodes an 8-bit RGB / RGBA, non-interlaced PNG (a CDP
+   Page.captureScreenshot) back into an RGBA image. */
+import {deflateSync, inflateSync} from "node:zlib";
+import {pxM} from "../../src/render/pixel/snap.js";
 
 export const surfRGBA = (w, h, rgba) => ({width: w, height: h, data: rgba});
 
@@ -70,9 +73,10 @@ export function bilinear(img, W, H) {
   }
   return o;
 }
-/* U2 sharp-bilinear at k device px per art px: nearest at M=floor(k), then
-   one bilinear step to round(w*k). */
-export function sharpBilinear(img, k) { const M = Math.max(1, Math.floor(k)); const n = nearest(img, M); return M === k ? n : bilinear(n, Math.round(img.width * k), Math.round(img.height * k)); }
+/* U2 sharp-bilinear at k device px per art px: nearest at the renderer's own
+   M = pxM(k) (ceil, so the bilinear step is a downscale), then one bilinear
+   step to round(w*k). */
+export function sharpBilinear(img, k) { const M = pxM(k, 1); const n = nearest(img, M); return M === k ? n : bilinear(n, Math.round(img.width * k), Math.round(img.height * k)); }
 
 const FONT = {
   A: "010101111101101", B: "110101110101110", C: "011100100100011", D: "110101101101110", E: "111100110100111", F: "111100110100100",
@@ -103,4 +107,30 @@ export function png(img) {
   const chunk = (t, data) => { const len = Buffer.alloc(4); len.writeUInt32BE(data.length); const td = Buffer.concat([Buffer.from(t), data]); const cc = Buffer.alloc(4); cc.writeUInt32BE(crc(td)); return Buffer.concat([len, td, cc]); };
   const ih = Buffer.alloc(13); ih.writeUInt32BE(w, 0); ih.writeUInt32BE(h, 4); ih[8] = 8; ih[9] = 6;
   return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk("IHDR", ih), chunk("IDAT", deflateSync(raw)), chunk("IEND", Buffer.alloc(0))]);
+}
+
+export function unpng(buf) {
+  let o = 8, w = 0, h = 0, ct = 6;
+  const ids = [];
+  while (o < buf.length) {
+    const len = buf.readUInt32BE(o), t = buf.toString("latin1", o + 4, o + 8), d = buf.subarray(o + 8, o + 8 + len);
+    if (t === "IHDR") { w = d.readUInt32BE(0); h = d.readUInt32BE(4); ct = d[9]; if (d[8] !== 8 || d[12] !== 0 || (ct !== 2 && ct !== 6)) throw new Error("unpng: 8-bit RGB/RGBA, non-interlaced only"); }
+    else if (t === "IDAT") ids.push(d);
+    else if (t === "IEND") break;
+    o += 12 + len;
+  }
+  const bpp = ct === 6 ? 4 : 3, st = w * bpp, raw = inflateSync(Buffer.concat(ids)), cur = Buffer.alloc(st), prev = Buffer.alloc(st), img = createRGBA(w, h);
+  for (let y = 0; y < h; y++) {
+    const f = raw[y * (st + 1)], row = raw.subarray(y * (st + 1) + 1, (y + 1) * (st + 1));
+    for (let i = 0; i < st; i++) {
+      const a = i >= bpp ? cur[i - bpp] : 0, b = prev[i], c = i >= bpp ? prev[i - bpp] : 0;
+      let v = row[i];
+      if (f === 1) v += a; else if (f === 2) v += b; else if (f === 3) v += (a + b) >> 1;
+      else if (f === 4) { const p = a + b - c, pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c); v += pa <= pb && pa <= pc ? a : pb <= pc ? b : c; }
+      cur[i] = v & 255;
+    }
+    for (let x = 0; x < w; x++) { const q = (y * w + x) * 4; img.data[q] = cur[x * bpp]; img.data[q + 1] = cur[x * bpp + 1]; img.data[q + 2] = cur[x * bpp + 2]; img.data[q + 3] = bpp === 4 ? cur[x * bpp + 3] : 255; }
+    cur.copy(prev);
+  }
+  return img;
 }
