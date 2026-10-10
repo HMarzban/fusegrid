@@ -1093,6 +1093,11 @@ four exact-string pins are unmoved.
 
 ## 6. R10 — coach v2: first-use KICK / THROW / REMOTE tips
 
+> **Superseded 2026-10-10 (owner ruling, shipped in shell v178):** eight verbs,
+> not three (adds PASS / LINE / POWER / PIERCE / SHIELD on the same
+> `nb.coach.v2` key); FLAME / BOMB / SPEED / HEART stay label-only. See
+> `AGENTS.md` (Conventions, coach v2).
+
 **Files:** edits to `src/app/coach.js`, `src/render/scenes.js`,
 `src/render/renderer.js`, `src/render/three/wrapper.js`, `src/main.js`,
 `src/pwa/shell.js` + `sw.js`; additions to `tests/coach.test.mjs`. **No new

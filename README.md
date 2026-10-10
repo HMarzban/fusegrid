@@ -11,7 +11,8 @@ Share that URL **with the trailing slash** so chat apps load the preview card (`
 ## Features
 
 - **Opening** — a FUSE/GRID title waits for any key or tap, which starts the music and a ~4 s show that blasts open the menu. Any key skips the show.
-- **REAL 3D ⇄ CLASSIC 2D** — **OPTIONS → RENDER** toggles WebGL and classic Canvas; no reload. REAL 3D frames the whole board from one 3/4 camera; wheel or pinch zooms, and zoom resets to your CAMERA preset every room. OPTIONS also holds music and SFX volume, the 3D camera preset, brightness, screen shake, and reduce-flash.
+- **REAL 3D ⇄ CLASSIC 2D, plus PIXEL** — **OPTIONS → RENDER** cycles three looks with no reload: CLASSIC 2D (Canvas), PIXEL (hand-drawn sprites over the same board) and REAL 3D (WebGL). REAL 3D frames the whole board from one 3/4 camera; wheel or pinch zooms, and zoom resets to your CAMERA preset every room. OPTIONS also holds music and SFX volume, the 3D camera preset, brightness, screen shake, and reduce-flash.
+- **GRAPHICS** — a page under OPTIONS (and in the pause menu) that sets image quality and frame rate together: QUALITY BATTERY / AUTO / HIGH in one press, or tune FRAME RATE (30 / 60 / MAX), RESOLUTION, SHADOWS, ANTI-ALIAS, EFFECTS, DEMO and an FPS METER yourself (CUSTOM). Game speed never changes. Menus and pause idle at 30 fps, and audio sleeps while the tab is hidden.
 - **Heat** — CORE / PLUS / MAX on LEVEL SELECT (`↑/↓`). CORE is the baseline run; PLUS and MAX tighten fuse, spawns, and pressure.
 - **Eight rooms** — five biomes on a fresh install (JUNGLE → ARENA), then SAND, VOID, and CROWN after your first clear.
 - **Pact afterburner** — optional LAST / BARE / THIN / SHRINK toggles (`1`–`4`) unlock with rooms 6–8; CORE with every toggle off matches baseline v6. `5` adds TIME ATTACK: a play-only stopwatch with a per-room best.
@@ -20,9 +21,10 @@ Share that URL **with the trailing slash** so chat apps load the preview card (`
 - **Challenge code** — on the end screen, `B` copies a twelve-character board code (seed, heat, pact, pace — never a score). Open `…/fusegrid/?code=XXXXXXXXXXXX` to play the same board.
 - **STATS** — a cabinet page with lifetime runs, rooms, deaths, kills, pickups, play time, and your CORE / PLUS / MAX bests; `C` (or a tap on `C COPY MY STATS`) copies it as text. Four local plaques on HIGH SCORES. STATS also counts lifetime **DAYS PLAYED**.
 - **Medals** — eight medals for finale clears; `T` (or a tap on `T MEDALS`) on STATS opens the MEDALS page.
-- **Ghost** — after your fastest clear of a room, replaying that exact board (same seed, room, heat, pact, pace) races a translucent copy of your best route, in 2D and 3D.
+- **Ghost** — after your fastest clear of a room, replaying that exact board (same seed, room, heat, pact, pace) races a translucent copy of your best route, in every look.
 - **Reset my cabinet** — on STATS, press `R` twice (or tap `R RESET`, then `R AGAIN`) to wipe progress and reload; settings and pace are kept, anything else cancels (`C`, or a tap on `C COPY`, cancels and copies your stats).
-- **Coach** — a ghost shows the first bomb on a fresh install, then one short tip the first time you pick up KICK, THROW, or REMOTE.
+- **Pickup feedback** — every pickup floats a label with your new value (`FLAME 4`, `MAX`, or `replaces …` on a bomb swap) and pulses its HUD chip; an ability bar along the bottom of the board lists the powers you hold.
+- **Coach** — a ghost shows the first bomb on a fresh install, then one short tip the first time you pick up KICK, THROW, REMOTE, PASS, LINE, POWER, PIERCE, or SHIELD.
 - **Cabinet help** — **GUIDE** (HOW TO, ITEMS, ENEMIES), HIGH SCORES, STATS, and **SOURCE** (opens [github.com/HMarzban/fusegrid](https://github.com/HMarzban/fusegrid)).
 - **Chiptune + boom** — each room has its own theme and blast tint.
 - **PWA** — install from the browser; offline play after the first visit (first load still needs network).
@@ -50,7 +52,7 @@ Clear every enemy in the room to advance. Gold **WALL** never breaks; green **BR
 | T *(STATS)* | Open the MEDALS page |
 | R, R *(STATS)* | Reset my cabinet (two presses; any other key cancels) |
 
-On touch devices during a run, a virtual D-pad and bomb button sit off the board: docked low in the thumb zone in portrait (the board centres on the menus and moves up under pause during a run), in the side gutters in landscape, with pause above. STATS's MEDALS, Copy and Reset labels are tappable. Power-ups marked with `*` in the in-game HOW TO need their pickup first. Everything the game remembers lives in your browser's local storage; there is no account, server, or leaderboard. See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
+On touch devices during a run, a virtual D-pad and bomb button sit off the board: docked low in the thumb zone in portrait (the board centres on the menus and moves up under pause during a run), in the side gutters in landscape, with pause above. While you hold THROW or REMOTE, a matching button appears beside the bomb button (in the right gutter in landscape). STATS's MEDALS, Copy and Reset labels are tappable. Power-ups marked with `*` in the in-game HOW TO need their pickup first. Everything the game remembers lives in your browser's local storage; there is no account, server, or leaderboard. See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
 
 ## Progression
 
@@ -121,6 +123,7 @@ npm test           # node --test
 | Flag | Purpose |
 |---|---|
 | `?render=3d` | Start in REAL 3D |
+| `?render=px` | Start in PIXEL |
 | `?render=iso` | Legacy dimetric renderer |
 | `?play=1` | Skip intro |
 | `?orbit=1` | Orbit camera (3D) |

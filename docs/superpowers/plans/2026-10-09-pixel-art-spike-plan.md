@@ -12,6 +12,10 @@ in reviewed waves where every step has an owner, a test and a way to stop.
 
 **Status:** a plan only, committed by the finalizer after one review round
 (2026-10-09). Nothing in `src/` or `tests/` changes until G0 is a pick.
+**Superseded 2026-10-11:** the owner said GO on 2026-10-10 ("the goal is to
+finish the job and not ask me anything at all"); G0 = Pick A (direction A
+BOLD, adviser panel), and PIXEL shipped as the third RENDER look in shell v178
+(165 authored cells, CLASSIC 2D → PIXEL → REAL 3D).
 
 **Inputs this plan reconciles:**
 - the feasibility study `.superpowers/sdd/2026-10-09-pixel/research.json` (five
@@ -179,6 +183,8 @@ The plan rests on the request in §1.1 and on these user rulings:
   No spike, art or build starts until the owner explicitly says so. The
   production-art question (former §9 Q3) is withdrawn and is raised again only
   when the owner starts a stage.
+  **Superseded 2026-10-10 by the owner's GO** (see Status): agent artists
+  drew the production art under adviser-panel review; shipped in shell v178.
 
 ### 1.4 Gate names (one vocabulary)
 
@@ -1553,6 +1559,12 @@ cell**; `src/app/renderkind.js`'s `bootRender` / `renderBits` / `renderVal`
 are wired at W-INT or removed; a dynamic import of the px tree (R24); keeping
 pinch sharp above the M cap by drawing only the visible sub-rect of native
 when z > 1 (R20).
+**Superseded 2026-10-11:** the G-A…G-L gates live in `tests/pixel-art.test.mjs`
+and every manifest cell is authored (`PENDING` empty); `bootRender` /
+`kindOf` / `renderVal` / `renderBits` are wired (`main.js`, `menuapp.js`);
+R24's 120 KB cap is raised to 122 KB (lead ruling 2026-10-11, after the
+GRAPHICS merge measured 121.2 KB). Still open: the px dynamic import (R24)
+and sharp pinch above the M cap (R20).
 
 **Target dates (relative; the PQ converts them to calendar dates when T0 is
 recorded):**

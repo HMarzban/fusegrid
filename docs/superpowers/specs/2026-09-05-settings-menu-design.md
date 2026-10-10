@@ -81,6 +81,12 @@ and reject adjust while `render3d === false`.
 | 7 | `REDUCE FLASH` | toggle | `OFF` / `ON` | `OFF` | `flx` | live |
 | 8 | `RESET DEFAULTS` | action | — | — | — | live |
 
+**Superseded 2026-10-11 (shell v178):** RENDER is a three-way row, CLASSIC 2D →
+PIXEL → REAL 3D (value 0/1/2, blob `r3d` + `px`, mutually exclusive, written
+together), and a `GRAPHICS` door row now sits before `RESET DEFAULTS` (ten
+rows; it opens `SCREEN.GRAPHICS = 14`, or PAUSE `pauseView 2`). See
+`AGENTS.md` (PIXEL, GRAPHICS + frame pacing) and `src/app/gfx.js`.
+
 Input: `↑/↓` row (wraps, same `REP_FIRST 0.35` / `REP_NEXT 0.11` repeat as every
 other screen). `←/→` decrement/increment, clamped, no wrap. `Enter` cycles the
 row forward one stop **wrapping** (`100 → 0` on a slider, flip on a toggle,
@@ -137,6 +143,11 @@ precedent to measure against, not a new one.
 ```
 {"mus":100,"sfx":100,"snd":1,"r3d":0,"cam":0,"bri":100,"shk":1,"flx":0}
 ```
+
+**Superseded 2026-10-11 (shell v178):** the blob also carries
+`"px":0,"fps":1,"res":1,"shd":2,"aa":1,"fxq":1,"dmo":1,"fpm":0` (PIXEL bit plus
+the GRAPHICS row indices; an invalid index loads the AUTO default).
+`src/app/settings.js` `DEFAULTS` is the source of truth.
 
 Clamp on load and save: `mus`/`sfx` int 0–100 snapped to /10; `bri` int 70–130
 snapped to /10; `cam` int 0–2; `snd`/`r3d`/`shk`/`flx` 0|1. Any parse failure,

@@ -8,8 +8,10 @@ FUSE/GRID; the local folder stays `rollblock`.
 Pure ES modules. **Zero `package.json` runtime dependencies.** The sim is
 framework-free so it runs identically under Node (tests) and the browser.
 
-The product path is **REAL 3D ⇄ CLASSIC 2D**. Three.js r160 is **vendored**
-(`vendor/three.module.js`, MIT, relative import — not an npm dep). The 2026-08-16
+The product path is three RENDER looks, **CLASSIC 2D → PIXEL → REAL 3D**
+(shell v178, 2026-10-11; CLASSIC 2D stays the default). Three.js r160 is **vendored**
+(`vendor/three.module.js`, MIT, relative import — not an npm dep), loaded only
+for REAL 3D, never on the CLASSIC or PIXEL path. The 2026-08-16
 "no Three" lock applies to the **sim** only; the render layer reversed it.
 
 This is a **single-player** game. Lockstep is a local two-world **harness**, not
@@ -24,7 +26,7 @@ Two state machines:
 
 | Layer | States | Owner |
 |---|---|---|
-| Shell | INTRO (title → show) → MENU ⇄ LEVEL/SCORES/SETTINGS/GUIDE(→HOWTO/ITEMS/ENEMIES)/STATS(→TROPHIES) → GAME; idle → ATTRACT | `src/app/menuapp.js` |
+| Shell | INTRO (title → show) → MENU ⇄ LEVEL/SCORES/SETTINGS(→GRAPHICS)/GUIDE(→HOWTO/ITEMS/ENEMIES)/STATS(→TROPHIES) → GAME; idle → ATTRACT | `src/app/menuapp.js` |
 | Sim | PLAY / WIN / LOSE / PAUSE | `src/core/sim.js` |
 
 INTRO is two phases inside one SCREEN (`app.introStage` 0 title / 1 show),
@@ -49,7 +51,11 @@ confirms and `tests/menuapp.test.mjs`'s literals must be renegotiated with any
 reorder. `SCREEN.STATS = 12` is **appended** (the `SCREEN` enum's own rule in
 `menuapp.js`: appended, never inserted). `SCREEN.TROPHIES = 13` (the MEDALS page) is
 appended too: opened from STATS by `T` or a tap on its `T MEDALS` label, backs out to STATS,
-never a MENU row. WIN/LOSE run summaries are **not** a SCREEN — they
+never a MENU row. `SCREEN.GRAPHICS = 14` is appended too: opened by the
+OPTIONS `GRAPHICS` door row (`OPT_ROWS` ten rows, door before RESET
+DEFAULTS), backs out to OPTIONS on the door. From PAUSE the same page is
+inline `pauseView 2` (0 list / 1 OPTIONS / 2 GRAPHICS; Esc steps 2 → 1),
+never a SCREEN. WIN/LOSE run summaries are **not** a SCREEN — they
 live in `drawOverlay`.
 
 The sim ticks only while the shell is GAME. PAUSE/WIN/LOSE are `world.state`,
@@ -57,11 +63,16 @@ not shell screens. Do not add them as `SCREEN` values.
 
 - `src/main.js` — **browser entry only**, pinned `<=799` lines
   (`tests/headless.test.mjs`; raised 808→812 once in wave 3 for `ro.ghost`,
-  tightened to 799 when C2 moved `fit()` out). RAF loop, fixed-step accumulator,
-  renderer cache + kind switch, and the handler wiring that binds them. Never
+  tightened to 799 when C2 moved `fit()` out; 733 by split-length at v178 after
+  GRAPHICS moved the frame gate and renderer cache out). RAF loop, fixed-step
+  accumulator, kind switch, and the handler wiring that binds them. Never
   imported by sim or renderer. Its seams live beside it and must stay OUT of
   `main.js`: `src/app/flags.js` (URL/opts, pure over a search string),
-  `src/app/attract.js` (demo world + `stepDemo`), `src/app/debughook.js`
+  `src/app/attract.js` (demo world + `stepDemo`), `src/app/frameloop.js`
+  (`mountFrames`: the rAF owner, frame gate, knob push), `src/app/rcache.js`
+  (`mountRenderers`: per-kind renderer cache, lazy/eager three, release),
+  `src/app/audiopower.js` (`mountAudioPower`), `src/app/renderkind.js`
+  (`bootRender` / `kindOf` / `renderVal` / `renderBits`), `src/app/debughook.js`
   (`window.__GAME__`), `src/app/endkeys.js` (WIN/LOSE keys: Enter =
   Space through `Input.pulse()`, one fire tick and never a latch; C/B copy.
   Every copy reports COPIED / COPY FAILED through the ONE `app.toast` — on
@@ -97,9 +108,47 @@ not shell screens. Do not add them as `SCREEN` values.
   - kind `"2d"` — classic Canvas (`createRenderer`). Do not statically import
     `vendor/three.module.js` on this path; lazy-load via `src/render/three/load.js`.
   - kind `"3d"` — `createRenderer3D` (`#gl` WebGL under `#c` overlay).
+  - kind `"px"` — PIXEL, `createPixelRenderer` (`src/render/pixel/**`), its
+    own factory modelled on the 3D wrapper, never a branch of `createRenderer`
+    (`renderer.js` stays byte-identical; CLASSIC call-log hash `97480c1c:22630`
+    still pinned). See the PIXEL paragraph below.
   - kind `"iso"` — legacy dimetric (`r3d/`), pinned by `?render=iso` only.
     `createRenderer({kind:"3d"|"iso"})` is the **dimetric** branch. Real 3D
-    never enters that factory. Menu RENDER flips 3D ⇄ 2D only.
+    never enters that factory. Menu RENDER cycles CLASSIC 2D → PIXEL → REAL 3D
+    (row value 0/1/2, `renderkind.js`); iso is never on it.
+  - PIXEL (owner GO 2026-10-10 "finish the job and not ask me anything";
+    adviser-panel rulings: R17 / R20–R25 logged in the PIXEL plan §7.3, the
+    rest (e.g. R16 PAUSE freeze, R19 HUD/GUIDE) in the panel brief;
+    direction A BOLD, G0 pick). Persisted as `nb.settings.v1` `px` (with `r3d`: mutually
+    exclusive, written together through one `onSettings(…,"render")`);
+    boot precedence `?render=3d|px` > persisted `r3d` > `px` (`bootRender`);
+    `?render=3d|px` only seed the boot, iso is pinned for the session.
+    Art: 165 manifest cells (`manifest.js`, derived from FOES / POWER /
+    BIOMES / bomb kinds, so a new foe, pickup or biome without cells falls back
+    visibly and `tests/pixel-art.test.mjs` fails on any silent fallback), all
+    authored as palette-SLOT string grids in `art/*.js` (never hex; every hex
+    is a verbatim repo hex via `palette.js`). Cells are 20×20 bar a few
+    overlays (anchor = foot line), 1 art px = 2 logical px, board native
+    300×260. Baked lazily on first px renderer
+    creation, never at boot (R24: static import, lazy bake). Scale (R20):
+    native → hi NEAREST at `M = clamp(ceil(k·z),1,8)` → `#px` once with
+    smoothing on, so the soft edge is ≤1 device px below the cap (softer
+    above it, disclosed). Camera/intro reach px through the overlay ctx's
+    `getTransform()` (R23), zero main.js lines. `#px` has ONE owner (R25):
+    `fit.js` snaps its CSS box and hands the backing over on `data-bw/bh`;
+    only the px renderer assigns its backing (the `#gl` stomp lesson).
+    Clocks are renderer-owned, PLAY/WIN/LOSE only (`timing.js` is the one
+    ms/fps source); PAUSE freezes the board (R16). One-shots (`oneshot.js`,
+    fixed pool) cover crumble / stun / corpse / materialize / death / win /
+    reveal / slam / kick / throw / pickup sparkle; MAKO's show pop is the 3 materialize
+    frames (R17, no stepped zoom). Ghost = MAKO frames at `GHOST_A` 0.4. HUD
+    chips and GUIDE ITEMS/ENEMIES/HOW TO show the board's own cells
+    (`hudart.js`, x1 in chips, x2 on a GUIDE page only if every cell fits;
+    text stays the vector font). px JS cap **122 KB** uncompressed
+    (`tests/pixel-render.test.mjs`; R24's 120 raised by lead ruling
+    2026-10-11); follow-up: dynamic import of the px tree like
+    `three/load.js`. Never re-hue a hex to separate a sprite; never import
+    `vendor/three.module.js` or `render/three` on the px path.
   - Live 3D default rig (polar `el` from +Y, ruling 2026-10-08, the user's
     pick C): `{az:0, el:0.66, dist:1503, target:[0,-17,0]}` through a
     vertical `CAM_FOV` 24 lens (`camrig.js`, the one lens source) — 52.2°
@@ -217,7 +266,9 @@ not shell screens. Do not add them as `SCREEN` values.
     the only render module that may read `src/app/` — screen constants only,
     and scores arrive as a getter so `highscores` stays on the app side.
 - `src/app/` — menu shell, intro beats, demobot, highscores, `pactstore.js`,
-  plus the entry seams above (`flags` / `attract` / `debughook` / `fit`).
+  plus the entry seams above (`flags` / `attract` / `frameloop` / `rcache` /
+  `audiopower` / `renderkind` / `debughook` / `fit`) and the pure GRAPHICS
+  policy `gfx.js` + `perf.js` (gate, governor, limit hint).
   Not read by `step()`.
   Retention stores (wave 2, 2026-09-07), one key per module, all `Date`-free
   and DOM-free: `bests.js` (`nb.bests.v1`, per-run score/room bests keyed
@@ -242,7 +293,8 @@ not shell screens. Do not add them as `SCREEN` values.
   start, so the sim's own retry/next-room record from roomT ~dt); attract
   never records. CLASSIC 2D draws it under foes at `GHOST_A` 0.4; REAL 3D
   draws one merged `PLAYER_HULL` Lambert (opacity 0.4, no depthWrite, never
-  casts) that `pools.ghost` builds lazily outside the player slot; iso never.
+  casts) that `pools.ghost` builds lazily outside the player slot; PIXEL blits
+  MAKO's own frames at `GHOST_A` 0.4; iso never.
   `reset.js` (no store, wave 3): STATS `R` arms, a second `R` runs
   `clearCabinet` + `location.reload()`, any other key disarms (`_push` too).
   Touch (T1): `statsHit` maps a tap on a painted foot token — idle
@@ -264,6 +316,70 @@ not shell screens. Do not add them as `SCREEN` values.
   Demobot is an intent FSM (plant-and-leave, hunger for combat cubes / corridor
   foes); attract still CORE/pact=0. Highscores use `scoreEntry`; `noteWorldEdge`
   is a boolean edge, not a score writer.
+- GRAPHICS + frame pacing (owner: "a cohesive and unify graphic settings …
+  graphic and FPS power"; unified spec + lead rulings 2026-10-10, shell v178).
+  ONE model: `nb.settings.v1` gains `px fps res shd aa fxq dmo fpm`, each an
+  index into its row's cheap → rich list (invalid/missing loads the AUTO
+  default, never the nearest edge). Policy is pure `src/app/gfx.js`:
+  `resolve(s,dev)` → knobs `K` {fpsCap, idleFps, dpr3d, dprPx, aa, shadow,
+  partK, demo, meter, dyn, epoch}. QUALITY is DERIVED (`presetOf`), never
+  stored: BATTERY / AUTO / HIGH set the six governed rows (FRAME RATE,
+  RESOLUTION, SHADOWS, ANTI-ALIAS, EFFECTS, DEMO), any other mix reads CUSTOM
+  (Enter = AUTO); FPS METER is in no preset, default OFF. AUTO = today's
+  desktop look: AA ON everywhere, SHADOWS SOFT, RESOLUTION AUTO (3D dpr cap 2
+  on `d`, touch `min(1.5, scale·dpr)`; PIXEL backing 2 / 1.5 — density only,
+  board size never changes); FULL 3D may reach 3×. Locks: CLASSIC locks
+  RESOLUTION/SHADOWS/ANTI-ALIAS, PIXEL locks SHADOWS/ANTI-ALIAS, 3D none (a
+  locked row shows `—`). Value strings show resolved truth (`AUTO 1.5X`).
+  FRAME RATE 30 / 60 / MAX is a **vsync divisor** (`perf.js` gate: median rAF
+  interval snapped to `HZ_SNAP`, render every d-th rAF; 120 Hz → 60, 144 →
+  72) — never uneven frame-debt pacing; game speed never changes (fixed-step
+  accumulator). Idle = every screen but GAME PLAY and the INTRO show (ATTRACT,
+  PAUSE, menus are idle) at `max(IDLE_MIN 20, min(MAX ? 60 : 30, cap))`;
+  never below 20 (music-safe); an input pokes the gate. The governor
+  (REAL 3D + RESOLUTION AUTO only) walks dpr down top → 1.75 → 1.5 → 1.25 → 1
+  over 2 s windows and back up after 10 s clean; `limitHint` names a device
+  that holds less than the cap (low power mode). Render-on-change is armed
+  ONLY by `setPerf` (an untuned renderer is byte-identical — `classic-perf` /
+  `gfx-identity` pin it): a still board skips its raster, forced every 500 ms;
+  3D re-renders the shadow map only on a caster change (0/s in menus/PAUSE).
+  PAUSE freezes the board in ALL three looks (no fx step, shake or flash;
+  lead ruling 9). ANTI-ALIAS applies on LEAVING the page (menu or pause view
+  2): one live 3D context rebuild (`rebuild3d`; a failed new context keeps the
+  old renderer and reverts the row); other looks just drop the cached 3D.
+  `rcache.js`: a look unused for `REL_T` 10 s releases — 3D is disposed +
+  `forceContextLoss` (`#gl` replaced), PIXEL `sleep()`s to 1×1 buffers (atlas
+  kept), CLASSIC has no `sleep` and is kept; a lost WebGL
+  context is `dead` after 3 s and rebuilt. Dynamic GPU buffers upload ranged
+  (`three/upload.js` `live`), never a bare `needsUpdate`. EFFECTS LOW halves
+  particles; blasts always draw in full. DEMO OFF / SHORT (default: ATTRACT
+  ends after `DEMO_T` 60 s and MENU parks until input) / ON. FPS METER tags
+  idle-gated screens `· IDLE`. The kept show world stops stepping once its
+  script and blast settle (`SETTLE_N`). Audio: a hidden page / `pagehide`
+  suspends the ctx (`audio.sleep`), visible + SOUND on wakes it; never arms the
+  unlock or fires the jingle/show. Measured (headed Chrome, 120 Hz, AUTO vs
+  pre-branch): title/menus/attract −56…−80 % CPU, PAUSE −59…−67 %, PLAY
+  −27…−36 %. Keys: ←/→ clamp, Enter cycles; `keys.test` covers GRAPHICS and
+  pauseView 2.
+- Pickup feedback (owner: "agree with research team, let's work on all of
+  them", 2026-10-10). All names/copy come from `POWER[].name` / `.help` —
+  never a second source. `fx.js`: one floating label per `power` event showing
+  the value AFTER pickup (`FLAME 3`, muted `MAX` at the cap, `SPEED UP`,
+  `+1 LIFE`, `LINE BOMB` + a `replaces POWER` sub-line on a bomb-kind swap);
+  same kind merges, near ones stack, max 3, 0.9 s, PLAY-only clock, wiped by
+  `clearR2`; suppressed for the live coach v2 kind; pure `labelBox` keeps it
+  off the y46 HUD band, the combo callout and the coach panel (REAL 3D
+  projects through the live camera). HUD pulse: a 600 ms outline on the
+  BOMB/FLAME chip or heart row when the number changes (the first feed after
+  a wipe only seeds, so a room change never pulses). Ability bar
+  (`drawAbilityBar`, `scenes.js`, y 486–514): held SHIELD / KICK / THROW /
+  PASS / bomb kind / REMOTE / SPD n; a chip a hit or spent SHIELD removes dims
+  out over 600 ms (a bomb-kind swap is not a loss); PLAY/PAUSE and `hud:true`
+  only (ATTRACT and iso draw none). Touch `#tthrow` / `#tremote`
+  (`touch.js`): shown only while the player holds that power, a tap is a
+  one-tick `pulseThrow` / `pulseRemote` intent, fixed slots. Every idle
+  frame paints nothing new, so idle HUD call logs are unchanged. All three
+  looks (PIXEL uses its own cells for the icons).
 - `src/ai/enemies.js` — enemy AI on sim state.
 - `src/net/` — `protocol.js`, `lockstep.js`, `transport.js`.
   Default play uses **no** transport. `?net=local` is a 1P pair proof.
@@ -314,7 +430,8 @@ not shell screens. Do not add them as `SCREEN` values.
   modifier/lock key, which keeps the Node key matrix equal to the browser's.
 - `src/pwa/` — Node-testable app-shell list + SW register. `src/main.js`
   registers `./sw.js` (module, scope `./`). Precache lives in `shell.js`
-  (`fusegrid-shell-vN`). Must include `vendor/three.module.js`. Never cache
+  (`fusegrid-shell-vN`). Must include `vendor/three.module.js` and the whole
+  `src/render/pixel/**` tree (art sheets included), or a look breaks offline. Never cache
   `og.png`. Never imported by `src/core`. Bump `CACHE_NAME` and the REV
   token in `sw.js` together when the file list or shipped bytes change.
   Returning clients call `registration.update()` and reload once on
@@ -333,14 +450,15 @@ not shell screens. Do not add them as `SCREEN` values.
   description + topics are live SEO (not in git): lead with play-in-browser +
   REAL 3D ⇄ CLASSIC 2D + Heat, not "deterministic". Keep topics filled. Repo
   Settings → Social preview has no API — upload `og.png` there when the card
-  changes.
+  changes. PIXEL (v178) is not on `og.png` or the About copy yet; adding it
+  is a card/storefront change, not a drive-by.
   PWA: also stage `manifest.webmanifest`, `sw.js`, `icon-192.png`, `icon-512.png`.
   `serve.js` MIME includes `.webmanifest`.
 - CI: `.github/workflows/pages.yml` runs `npm test` on Node 26 for pull requests
   and as the required gate before every Pages deploy. Human-facing
   architecture/tradeoffs live in `docs/architecture.md`.
 
-Flags: `?render=3d|iso`, `?play=1`, `?net=local`, `?orbit=1`, `?debug=1`,
+Flags: `?render=3d|px|iso` (3d/px seed the boot only; iso is pinned), `?play=1`, `?net=local`, `?orbit=1`, `?debug=1`,
 `?code=` (12-char challenge, URL-only — no opts fallback).
 
 Node v26, `"type": "module"`. No build step, no bundler.
@@ -392,21 +510,30 @@ Node v26, `"type": "module"`. No build step, no bundler.
   and executably gated by `tests/banned-name.test.mjs`; `docs/` is exempt
   because the spec names the term to refuse it.
 - Coach v2 (`nb.coach.v2`) shows **one first-use tip per verb**, once ever,
-  for KICK / THROW / REMOTE, on a **PLAY-only** clock that PAUSE cannot burn.
+  for EIGHT verbs (owner ruling 2026-10-10 widened the original three): KICK /
+  THROW / REMOTE / PASS / LINE / POWER / PIERCE / SHIELD, one bit each
+  (`k t r p l w i s`; a three-bit record from before loads byte-stable with
+  the new bits 0). FLAME / BOMB / SPEED / HEART are label-only — the floating
+  pickup label says everything. PLAY-only clock that PAUSE cannot burn.
   Its copy is composed from `POWER[].help` — never write a second source for
-  those three strings. v1's ghost coach wins ties; a new trigger replaces a
-  live tip (dismissed `rn:"replace"` first, so shown/dismissed pair exactly
-  once — except an abandoned run mid-tip, which leaves that tip's
-  `coach_shown` unpaired by design). The latch resets at **every** run-start
-  path.
+  those strings (touch layouts swap a leading key chord for "the X button").
+  v1's ghost coach wins ties; a new trigger replaces a live tip (dismissed
+  `rn:"replace"` first, and the replaced verb is NOT marked seen, so it
+  re-queues). A live tip whose power is lost (a hit) closes `rn:"lost"` with
+  its bit still 0, never for a tip opened or replaced that frame; SHIELD's
+  absorb counts as a use. Shown/dismissed pair exactly once — except an
+  abandoned run mid-tip, which leaves that tip's `coach_shown` unpaired by
+  design. The latch resets at **every** run-start path.
 
 ## Testing
 
 Tests live in `tests/*.test.mjs` and run under `node --test`. `tests/keys.test.mjs`
 is the key matrix: every documented key in every shell/world state through the
 real `createGame` keydown/keyup listeners — a new key or screen joins it. Keep the sim
-importable without a DOM. `tests/browser_integration.html` is manual. Visual 3D feel is
-not covered by Node — play-verify in a browser after render changes.
+importable without a DOM. `tests/browser_integration.html` is manual. Visual 3D and PIXEL
+feel is not covered by Node — play-verify in a browser after render changes
+(PIXEL: `tools/pixel/shot.mjs`, laptop and phone). Frame-pacing / CPU claims
+need headed real-GPU Chrome, never the rAF shim or SwiftShader.
 
 ## Memory
 
@@ -426,9 +553,11 @@ not covered by Node — play-verify in a browser after render changes.
 - Keep ITEMS, ENEMIES, and HOW TO as in-menu help so pickups and foes are explained in the shell, not only as HUD chips.
 - Opening (2026-10-09): title, then press, then a ~4 s show (camera sweep, MAKO pop-in, fuse, blast reveals MENU), with music from the press. Any key skips the show (the title waits for a press). First visits land on MENU at PLAY, not in a run. The title follows RENDER; the show plays the MENU theme throughout, and the `intro` track is kept unused.
 - Difficulty is Heat on LEVEL SELECT (CORE / PLUS / MAX). Global **pace** (EASY / NORM / HARD) is a separate LEVEL SELECT control (`[`/`]`), persisted in `nb.pace.v1`, scaling player/enemy move speed on `world.pace` — not frozen `CFG`. Pact (`1–4`) and rooms 6–8 unlock after the first FUSE/GRID CLEAR. Score × heat is persist-only; HIGH SCORES fifth column tags pact bitmask (`p`). Music uses WebAudio stereo panning on the oscillator engine (zero npm deps). Mid-run heat, always-on Sudden Death, and internet play stay parked.
-- Foes must read as arcade characters (distinct silhouette, face or lens, shading, facing) in CLASSIC 2D and REAL 3D, not flat colored tokens. `enemybody.js` is the 2D five-beat build; 3D matches via merged hulls in the four-mesh slot. Art only — do not retune AI.
+- Foes must read as arcade characters (distinct silhouette, face or lens, shading, facing) in CLASSIC 2D, PIXEL and REAL 3D, not flat colored tokens. `enemybody.js` is the 2D five-beat build; 3D matches via merged hulls in the four-mesh slot. Art only — do not retune AI.
 - Do not commit `.cursor/` or `e2e-artifacts/` (both gitignored).
-- A PIXEL (pixel-art sprite) look is **planned only** (`docs/superpowers/plans/2026-10-09-pixel-art-spike-plan.md`). Owner ruling 2026-10-09: no spike, art or build starts until the owner explicitly says so; if it ever ships it is a third RENDER look (CLASSIC 2D → PIXEL → REAL 3D), never a replacement for CLASSIC 2D, judged on laptop and phone, at today's board size (sharp-bilinear, no integer-snap shrink). Until then "Menu RENDER flips 3D ⇄ 2D only" stands.
+- PIXEL (hand-pixelled sprite look) SHIPPED in shell v178 (owner GO 2026-10-10: "work on the sprit version of the game, we have to let the user to chose between the sprit, 2d and then 3d in the menu … finish the job and not ask me anything at all"; supersedes the 2026-10-09 "planning only" ruling U3). It is the third RENDER look, CLASSIC 2D → PIXEL → REAL 3D, never a replacement — CLASSIC 2D stays the default. Judged on laptop AND phone, at today's board size (sharp-bilinear, no integer-snap shrink). Plan + rulings: `docs/superpowers/plans/2026-10-09-pixel-art-spike-plan.md`.
+- GRAPHICS: one cohesive settings page (QUALITY preset + FRAME RATE / RESOLUTION / SHADOWS / ANTI-ALIAS / EFFECTS / DEMO / FPS METER) so the player picks look vs FPS/power. Defaults keep today's desktop look; departures from the frozen 3D recipe (SHADOWS SHARP/OFF) exist only as opt-in values.
+- When an owner request lists several asks, finish all of them and record each in AGENTS.md, `docs/architecture.md`, `MEMORY.md` and the changelog at the end; housekeeping (servers, headless browsers, scratch) after every round.
 
 ## Learned Workspace Facts
 - Surviving a hit leaves live bombs and blades in the world.
@@ -474,3 +603,28 @@ not covered by Node — play-verify in a browser after render changes.
   `--autoplay-policy=document-user-activation-required`. The
   `user-gesture-required` value does nothing for Web Audio, so it cannot
   show whether a press really unlocks the AudioContext.
+- Workflow agents launched right after an owner side-question all answered
+  that question instead of their task. Always quote the owner's request
+  VERBATIM in every workflow/agent context, and name the side question as
+  already handled.
+- Housekeeping after EVERY round, not only at the end: orphaned headless
+  Chrome and `serve.js` processes once ran 1.5 days. Stop your own by PID,
+  use a fresh `--user-data-dir` per run, and delete scratch profiles.
+  PIXEL captures: `tools/pixel/shot.mjs` wraps CDP over the Playwright
+  `chrome-headless-shell` (`--gpu` = ANGLE Metal) against `PORT=0 node serve.js`.
+- Blender is driven through the blender-mcp add-on socket `127.0.0.1:9876`
+  with a small Python client (`.superpowers/sdd/2026-10-11-bible/blender/bl.py`,
+  local only); the session `mcp__Blender__` tools time out.
+- Known open bug: `sw.js` activate deletes EVERY cache key `!== CACHE_NAME`,
+  which on Pages is the whole `hmarzban.github.io` origin, not just
+  `fusegrid-shell-*`. Fix = filter on the `fusegrid-shell-` prefix (bump
+  `CACHE_NAME` + REV with it).
+- Known gap: the GitHub About description still leads with "deterministic",
+  against the storefront rule above; fix it in repo Settings (not in git).
+- Owner-pending, NOT built (research/design only, 2026-10-11): menu redesign
+  variants A/B/C; story mode "FUSE/GRID: LOW TIDE"; naming (keep FUSE/GRID +
+  subtitle; FUSEBORN is the only clean rename); game bible v2 (new MAKO, sea /
+  mountain / wasteland / jungle worlds, themed foes, narration) — the owner's
+  Claude Design canvas is the game bible. Touch bugs found by the menu
+  research, unfixed: GUIDE traps touch, LEVEL SELECT and HIGH SCORES heat tabs
+  are not touch-usable, an off-row MENU tap starts a run.

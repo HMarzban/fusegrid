@@ -6,6 +6,57 @@ version number of its own; each entry is dated and names the PWA shell
 revision (`CACHE_NAME` in `src/pwa/shell.js`) that shipped it, since that is
 what makes an installed copy update.
 
+## shell v178 · 2026-10-11
+
+### Added
+- **PIXEL, a third look.** OPTIONS → RENDER now cycles CLASSIC 2D → PIXEL →
+  REAL 3D. PIXEL is a hand-drawn sprite version of the whole game: board,
+  MAKO, every foe and pickup, blasts, the HUD and the GUIDE pages, the
+  opening, the end-of-room cheer and your ghost. It switches live with no
+  reload, and the game remembers your pick.
+- **Pickups say what they did.** Grabbing a cube floats a label with your
+  new value (`FLAME 4`, `BOMB 3`, or a dimmed `MAX` once it is capped).
+  Swapping one special bomb for another adds `replaces` and the old name.
+  The matching HUD chip or heart row pulses at the same moment.
+- **Ability bar.** A strip along the bottom of the board lists what you are
+  holding (SHIELD, KICK, THROW, PASS, your bomb type, REMOTE, SPEED). When
+  a hit or a spent shield takes something away, its chip dims and fades.
+- **GRAPHICS settings.** A new GRAPHICS page, opened from OPTIONS or the
+  pause menu. QUALITY sets everything in one press: BATTERY (coolest),
+  AUTO (the default) or HIGH (uncapped). Change any single row and it reads
+  CUSTOM. The rows are FRAME RATE (30 / 60 / MAX), RESOLUTION, SHADOWS
+  (OFF / SHARP / SOFT), ANTI-ALIAS, EFFECTS, DEMO and an FPS METER. Rows
+  that do not apply to your current look are locked. Game speed never
+  changes, whatever you pick.
+- **More first-use tips.** The coach now gives one short tip the first time
+  you pick up each of eight powers: KICK, THROW, REMOTE, PASS, LINE, POWER,
+  PIERCE and SHIELD. Each tip still shows only once.
+
+### Changed
+- **Cooler and quieter when nothing is moving.** Menus and the pause screen
+  redraw at 30 frames a second (never below 20), and the game skips
+  redrawing a picture that has not changed. On a 120 Hz laptop that cut CPU
+  use by more than half on menus and pause, and by about a third during
+  play. Music and sound sleep
+  while the tab is hidden or silent.
+- **Pause freezes the board** in every look, with no shake or flashing.
+- **The attract demo stops after a minute** on the default DEMO SHORT
+  setting. Set DEMO to ON for the old endless demo, or OFF to never start
+  it.
+- Sparks and debris now fly the same distance on 120 Hz and faster screens
+  as they do at 60 Hz.
+
+### Fixed
+- **THROW and REMOTE work on phones.** While you hold either power, a
+  THROW or REMOTE button appears next to the bomb button (portrait) or in
+  the right-hand gutter (landscape). Their tips now name the button.
+- FRAME RATE and BATTERY now take effect on 180 Hz and 200 Hz screens.
+- Switching RENDER back to PIXEL no longer shows a frozen board.
+- REAL 3D no longer loads late and replaces the look you had just picked.
+- REAL 3D recovers cleanly when the browser drops its graphics context.
+- A tip about a power you just lost (THROW after a hit, say) now closes and
+  comes back the next time you pick that power up.
+
 ## shell v177 · 2026-10-10
 
 ### Changed
