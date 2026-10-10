@@ -2,7 +2,7 @@ import {readFileSync} from "node:fs";
 import {Input} from "../src/input.js";
 import {hasTouch, PadMapper, mountTouch} from "../src/touch.js";
 import {stampBombIcon} from "../src/render/sprites.js";
-import {FIT_RES, fitBox, PORT_GEO, portraitGeo} from "../src/app/fit.js";
+import {FIT_RES, fitBox, PORT_GAME, PORT_GEO, portraitGeo} from "../src/app/fit.js";
 
 let pass=0, fail=0;
 function check(name, cond, detail){ cond?pass++:fail++;
@@ -289,20 +289,20 @@ check("hasTouch({ontouchstart:null}) true", hasTouch({ontouchstart:null})===true
       const gut=(W-sw)/2;
       ok=gut>=lPadG+padW&&gut>=lBombG+bombW&&gut>=lPillG+pillW
         &&sh>=lPillT+pillW+lBombB+bombW&&(H+sh)/2-lPadB-padW>=0;
-    }else{
-      const g=portraitGeo(W,H,600,520), below=H-g.top-sh, G=PORT_GEO;
-      ok=g.top>=pillW+pillG&&g.padTop>=G.gap&&g.bombTop>=G.gap
+    }else ok=[false,true].every((game)=>{
+      const g=portraitGeo(W,H,600,520,game), below=H-g.top-sh, G=PORT_GEO;
+      return g.top>=pillW+pillG&&g.padTop>=G.gap&&g.bombTop>=G.gap
         &&below>=g.padTop+g.pad&&below>=g.bombTop+g.bomb
-        &&g.pad>=G.pad[0]&&g.pad<=G.pad[1]&&g.bomb>=bombW
+        &&g.pad>=G.pad[0]&&g.pad<=(game?PORT_GAME.pad:G.pad[1])&&g.bomb>=bombW
         &&sw>=G.side[0]+g.pad+G.side[1]+g.bomb;
-    }
+    });
     if(!ok&&bad.length<4) bad.push(W+"x"+H+" "+l+" stage "+sw.toFixed(1)+"x"+sh.toFixed(1));
   };
   for(let W=560;W<=1400;W+=2) for(let H=280;H<W&&H<=1000;H+=2) probe(W,H);
   for(let W=320;W<=1000;W+=2) for(let H=Math.max(W,480);H<=1400;H+=2) probe(W,H);
   for(const [W,H] of [[812,375],[667,375],[568,320],[915,412],[932,430],[320,568],[375,667],[390,844],[430,932],[1180,820],[1024,768],[768,1024]]) probe(W,H);
   check("pad, bomb and pill never sit on the board: side gutters in touch"
-    +" landscape, below/above the stage in touch portrait (env() insets are 0,"
+    +" landscape, below/above the stage in touch portrait, MENU and GAME geometry (env() insets are 0,"
     +" no viewport-fit=cover)",
     parsed.every(Number.isFinite)&&/left:auto/.test(lay("l","tpad"))&&PORT_GEO.top+PORT_GEO.bot===FIT_RES.p[1]
       &&/padding:var\(--st,/.test(pRules)&&/top:calc\(100% \+ var\(--tpt,/.test(lay("p","tpad"))
@@ -315,6 +315,9 @@ check("hasTouch({ontouchstart:null}) true", hasTouch({ontouchstart:null})===true
     !/display:/.test(rules),rules);
   check("the layout keys off body[data-lay] written by fit(), not a media query",
     !/@media \(max-height/.test(html),(html.match(/@media[^{]*/)||["none"])[0]);
+  check("the GAME lift glides #wrap's padding-top by --sd (JS-written, 0s default) under body[data-lay=p] alone",
+    /transition:padding-top var\(--sd,0s\)/.test(lay("p","wrap"))
+      &&(html.match(/transition:/g)||[]).length===1&&!/data-game|\[data-scr/.test(html),lay("p","wrap"));
   const bodyRule=(html.match(/html,body\{[^}]*\}/)||[""])[0];
   check("body spans the viewport so its overflow:hidden clip holds the side gutters",
     !/overflow:hidden/.test(bodyRule)||/[{;\s]width:100%/.test(bodyRule),bodyRule);
