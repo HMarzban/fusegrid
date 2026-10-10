@@ -725,7 +725,7 @@ const TODAY = "2026-09-07";
     );
     check(
       "shellview hands app.resetArm to drawStats — the armed foot is painted, the idle foot is not",
-      texts.includes("R AGAIN ERASES + RELOADS · ANY OTHER KEY CANCELS · KEEPS OPTIONS + PACE") &&
+      texts.includes("R AGAIN ERASES · ANY OTHER KEY CANCELS · KEEPS OPTIONS + PACE · C COPY") &&
         !texts.includes("T MEDALS · C COPY MY STATS · R RESET · ESC BACK"),
       texts.join("|"),
     );

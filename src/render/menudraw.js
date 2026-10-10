@@ -272,7 +272,7 @@ export function menuHit(x, y, L, n) {
 export function statsHit(x, y, L, arm) {
   const S = shellBox(L, 480),
     s = arm ? RESET_FOOT : STATS_FOOT,
-    keys = arm ? ["KeyR"] : ["KeyT", "KeyC", "KeyR"];
+    keys = arm ? ["KeyR", null, null, "KeyC"] : ["KeyT", "KeyC", "KeyR"];
   if (y < S.footY - 12 || y > S.y + S.h) return null;
   const x0 = S.mid - s.length * 3;
   let a = 0;
@@ -899,7 +899,7 @@ export function drawScores(c, scores, L, t, heat, plaques) {
 
 const RESET_RED = "#ff5d73";
 const STATS_FOOT = "T MEDALS · C COPY MY STATS · R RESET · ESC BACK";
-const RESET_FOOT = "R AGAIN ERASES + RELOADS · ANY OTHER KEY CANCELS · KEEPS OPTIONS + PACE";
+const RESET_FOOT = "R AGAIN ERASES · ANY OTHER KEY CANCELS · KEEPS OPTIONS + PACE · C COPY";
 const RESET_NOTES = Object.freeze([
   "ERASES SCORES · BESTS · TIMES · DAILY · MEDALS · PLAQUES · GHOSTS",
   "ERASES STATS + DAYS PLAYED · RELOCKS ROOMS 6-8 · PACTS · TIME ATTACK",

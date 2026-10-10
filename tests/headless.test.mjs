@@ -1403,7 +1403,7 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
 // T1 (camera spec §4): MEDALS and Reset by TAP on STATS, through the REAL
 // pointer path on a scaled canvas (CSS 300x260 over a 600x520 buffer, k=2).
 // Buffer zone centres at 600x520: T MEDALS (183,478), R RESET (354,478),
-// armed R AGAIN (159,478); (300,300) is off every label.
+// armed R AGAIN (132,478), armed C COPY (492,478); (300,300) is off every label.
 {
   const {CLEAR_KEYS,KEEP_KEYS}=await import("../src/app/reset.js");
   const noop=()=>{};
@@ -1445,7 +1445,13 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
     check("T1 tap: RESET then an off-label tap disarms and stays on STATS",
       g.app.screen===SCREEN.STATS&&g.app.resetArm===false&&kept()&&reloads===0,
       g.app.screen+"/"+g.app.resetArm);
-    tap(354,478); tap(159,478);
+    navigator.clipboard={writeText:(s)=>(wrote.push(s),Promise.resolve())};
+    tap(354,478); tap(492,478); await new Promise((r)=>setImmediate(r));
+    check("T1 tap: RESET then the armed C COPY label disarms, copies, raises COPIED, clears nothing",
+      g.app.screen===SCREEN.STATS&&g.app.resetArm===false&&wrote.length===2&&/FUSEGRID STATS/.test(wrote[1])&&g.app.toast.s==="COPIED"&&kept()&&reloads===0,
+      g.app.resetArm+"/"+wrote.length+"/"+JSON.stringify(g.app.toast)+"/"+reloads);
+    delete navigator.clipboard;
+    tap(354,478); tap(132,478);
     check("T1 tap: RESET then R AGAIN clears every CLEAR key",
       CLEAR_KEYS.every((k)=>!(k in mem)),Object.keys(mem).join(","));
     check("T1 tap: RESET then R AGAIN keeps both KEEP keys and reloads once",

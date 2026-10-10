@@ -737,7 +737,7 @@ function check(name, cond, detail) {
   const ARMED = [
     "ERASES SCORES · BESTS · TIMES · DAILY · MEDALS · PLAQUES · GHOSTS",
     "ERASES STATS + DAYS PLAYED · RELOCKS ROOMS 6-8 · PACTS · TIME ATTACK",
-    "R AGAIN ERASES + RELOADS · ANY OTHER KEY CANCELS · KEEPS OPTIONS + PACE",
+    "R AGAIN ERASES · ANY OTHER KEY CANCELS · KEEPS OPTIONS + PACE · C COPY",
   ];
   const rec = () => {
     const texts = [], rects = [];
@@ -883,7 +883,7 @@ function check(name, cond, detail) {
     const L = md.layout(W, H);
     for (const [arm, want] of [
       [false, ["KeyT", "KeyC", "KeyR", null]],
-      [true, ["KeyR", null, null]],
+      [true, ["KeyR", null, null, "KeyC"]],
     ]) {
       const f = paint(L, arm), z = zones(f), tag = `${arm ? "armed" : "idle"} at ${W}x${H}`;
       const mid = (i) => (z[i][0] + z[i][1]) / 2;
@@ -905,6 +905,11 @@ function check(name, cond, detail) {
   const L = md.layout(600, 520), f = paint(L, false), z = zones(f);
   check("statsHit: the 600x520 idle zones are T 150-216 and R 324-384 on the band 464-492 (spec §4.1)",
     z[0][0] === 150 && z[0][1] === 216 && z[2][0] === 324 && z[2][1] === 384 && f.y === 476, JSON.stringify(z));
+  const fa = paint(L, true), za = zones(fa);
+  check("statsHit: the 600x520 armed zones are R AGAIN 81-183 and C COPY 465-519, both inside the 60-540 plate",
+    za[0][0] === 81 && za[0][1] === 183 && za[3][0] === 465 && za[3][1] === 519 && fa.y === 476, JSON.stringify(za));
+  check("statsHit: armed, no tap on the idle C COPY MY STATS zone (216-324) can land on R AGAIN",
+    za[0][1] < z[1][0] && md.statsHit(z[1][0], f.y, L, true) === null, JSON.stringify([za[0], z[1]]));
 }
 
 // 13d) plaque chips on the SCORES plate: four labels, locked vs unlocked
