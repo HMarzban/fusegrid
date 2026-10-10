@@ -75,8 +75,11 @@ not shell screens. Do not add them as `SCREEN` values.
   query; re-fits on `resize` and `orientationchange`). Portrait (`p`) only:
   pure `portraitGeo(W,H,cw,ch)` (`PORT_GEO`) centres the stage and docks a
   grown pad (128–176) + bomb (9/16 of the pad) 24px above the bottom,
-  written as `--st/--tp/--tb/--tpt/--tbt` on `body.style`; the stage never
-  moves between INTRO/MENU and GAME, and `d` / `l` are untouched.
+  written as `--st/--tp/--tb/--tpt/--tbt` on `body.style`. While `#touchpad`
+  shows (GAME only; a `MutationObserver` on its `hidden`), `portraitGeo(...,
+  true)` lifts the stage to `min(centred top, PORT_GAME.top 72)` under the
+  pill, pad cap 184, and `--sd` 0.2s glides only that edge (0s on resize).
+  INTRO/MENU/ATTRACT keep the centred stage; `d` / `l` are untouched.
 - `src/core/` — deterministic simulation, no DOM, no browser globals.
   - `world.js` — `createWorld`, `loadLevel` (re-exported from `sim.js`).
   - `sim.js` — `step(world, dt, intents)`.
