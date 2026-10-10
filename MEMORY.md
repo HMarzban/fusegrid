@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-11 — Completeness critic: v178 close-out verified
+- All five owner requests checked on local main (59 test files green, headless boot clean in CLASSIC 2D / PIXEL / REAL 3D, RENDER three-way pinned in menuapp/keys/settings tests, docs + CHANGELOG + memories synced). Closed the stale "pending ratification" comment at `tests/pixel-render.test.mjs:522` (R24 ratified). Still open: `sw.js` activate wipes every non-shell cache on the origin, PIXEL lazy-load, og.png/About without PIXEL, push (owner).
+
 ## 2026-10-11 — Docs-sync close-out for shell v178 (staff engineer + tech writer + HoE; docs only)
 - AGENTS (three looks, SCREEN.GRAPHICS=14 + pauseView 2, PIXEL paragraph, GRAPHICS/frame-pacing and pickup-feedback bullets, coach v2 eight verbs, lessons), `docs/architecture.md` ("One simulation, three looks"), Superseded notes (PIXEL plan Status/U3/§7.3, settings-menu spec, coach-v2 plan, retention-wave2 §6), CHANGELOG v178, README re-synced. Checked: 59 test files green, main.js 733 (cap 799), fat-world 141, `CACHE_NAME`/REV v178; local main 41 commits ahead of origin/main `fe101c5` (live v177), push is the owner's. Closes the 2026-10-11 "AGENTS coach v2 still says three verbs" and the 2026-10-10 "renderkind wired at W-INT or removed" (wired). Open: `sw.js:21` activate deletes every cache `!== CACHE_NAME` across the whole `hmarzban.github.io` origin (filter on the shell prefix); `tests/pixel-render.test.mjs:522` comment still says the 122 KB cap is "pending ratification" (ratified R24); PIXEL lazy-load; og.png/About do not show PIXEL; About still leads with "deterministic".
 
