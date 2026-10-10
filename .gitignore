@@ -14,6 +14,9 @@ Gemini_Generated_Image_*.jpeg
 
 # Agent/editor local state — never shipped, never reviewed
 .cursor/
+.claude/worktrees/
+.claude/settings.local.json
+.superpowers/
 
 # Browser-MCP capture scratch: regenerated every session, PNGs stay local
 e2e-artifacts/
