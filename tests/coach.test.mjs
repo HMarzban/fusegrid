@@ -534,6 +534,7 @@ check("round-trip", loadCoachSeen(store) === true);
 
     // pin 5: the timeout path
     texts.length = 0;
+    g.world.players[0].remote = true; // the injected pickup did not run applyPower
     g.world.events.push({ t: "power", kind: "remote", x: 1, y: 1 });
     g.loop((t += 16));
     check("a REMOTE pickup shows the REMOTE tip",
@@ -548,6 +549,7 @@ check("round-trip", loadCoachSeen(store) === true);
 
     // pin 6: PAUSE must not burn the window (the 33668f7 trap)
     texts.length = 0;
+    g.world.players[0].throw = true; // the injected pickup did not run applyPower
     g.world.events.push({ t: "power", kind: "throw", x: 1, y: 1 });
     g.loop((t += 16));
     check("a THROW pickup shows the THROW tip",
@@ -927,7 +929,26 @@ check("round-trip", loadCoachSeen(store) === true);
     const o = coach2Tick(st, W({ bombKind: "power" }, [pick("fire")]), false, 0.016, sto);
     check("a FLAME pickup (also t:power) never closes a live POWER tip", o.length === 0 && st.kind === "power", JSON.stringify(o));
     const o2 = coach2Tick(st, W({ bombKind: "normal" }, [{ t: "bomb" }]), false, 0.016, sto);
-    check("a plain bomb while no longer holding POWER is not a use", o2.length === 0 && st.kind === "power");
+    check("a plain bomb while no longer holding POWER is not a use: the tip closes rn:lost, bit still 0",
+      o2.length === 1 && o2[0][1].v === "power" && o2[0][1].rn === "lost" && st.kind === null && !coach2Seen(loadCoach2(sto), "power"), JSON.stringify(o2));
+  }
+  {
+    const sto = mk(), st = { kind: null, t: 0 };
+    coach2Tick(st, W({ throw: true }, [pick("throw")]), false, 0.016, sto);
+    const o = coach2Tick(st, W({ throw: false }, [{ t: "hurt" }]), false, 0.016, sto);
+    check("lost: a hit that strips THROW closes its live tip at once, one rn:lost row, bit still 0",
+      o.length === 1 && o[0][0] === "coach_dismissed" && o[0][1].v === "throw" && o[0][1].rn === "lost" && st.kind === null && !coach2Seen(loadCoach2(sto), "throw"), JSON.stringify(o));
+    let out = [];
+    for (let i = 0; i < 100; i++) out = out.concat(coach2Tick(st, W({ throw: false }, []), false, 0.05, sto));
+    check("lost: nothing more past COACH2_DUR (never a late timeout that marks it seen)", out.length === 0 && !coach2Seen(loadCoach2(sto), "throw"), JSON.stringify(out));
+    const o2 = coach2Tick(st, W({ throw: true }, [pick("throw")]), false, 0.016, sto);
+    check("lost: its next pickup re-arms it", o2.length === 1 && o2[0][1].v === "throw" && st.kind === "throw");
+  }
+  {
+    const sto = mk(), st = { kind: null, t: 0 };
+    coach2Tick(st, W({ shield: true }, [pick("shield")]), false, 0.016, sto);
+    const o = coach2Tick(st, W({ shield: false }, [{ t: "hurt" }]), false, 0.016, sto);
+    check("lost: SHIELD spent on a hit is a USE, not a loss, and persists", o.length === 1 && o[0][1].rn === "use" && coach2Seen(loadCoach2(sto), "shield"), JSON.stringify(o));
   }
   {
     const sto = mk(), st = { kind: null, t: 0 };

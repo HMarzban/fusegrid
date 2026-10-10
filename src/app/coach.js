@@ -128,8 +128,12 @@ function usedNow(w, ev, k) {
    two-verb blast common): its bit stays 0 and it goes back on st.q, to open
    after the live tip closes if the player still holds that power; a power
    lost meanwhile is dropped from the queue, bit still 0, so its next pickup
-   re-arms it. st.q is created lazily, so main's startRunState literal clears
-   it at every run start. Exception (R10 re-review Finding 2, 2026-09-07):
+   re-arms it. The live tip follows the same rule (verify 2026-10-11): once
+   its power is gone (a hit, a bomb-kind swap to a seen kind) it closes
+   rn:"lost" with its bit still 0, so a THROW tip never names a hidden THROW
+   button; a use or a full window in the same frame still marks it. A tip
+   opened or replaced this frame is never "lost". st.q is created lazily,
+   so main's startRunState literal clears it at every run start. Exception (R10 re-review Finding 2, 2026-09-07):
    abandoning a run mid-tip resets st without this function ever running its
    close branch, so that tip's coach_shown is left unpaired and its bit stays
    0 — truthful and generous by design, not a bug. */
@@ -148,6 +152,7 @@ export function coach2Tick(st, world, v1Open, dt, store) {
       st.kind = null;
     }
   }
+  const live = st.kind;
   for (const e of ev) {
     if (!e || e.t !== "power" || TIPS.indexOf(e.kind) < 0) continue;
     if (coach2Seen(loadCoach2(store), e.kind)) continue;
@@ -161,8 +166,12 @@ export function coach2Tick(st, world, v1Open, dt, store) {
     }
     show(e.kind);
   }
-  if (v1Open || st.kind || w.state !== "PLAY") return out;
   const p = w.players && w.players[0];
+  if (live && st.kind === live && p && !holds(p, live)) {
+    out.push(["coach_dismissed", { v: live, rn: "lost" }]);
+    st.kind = null;
+  }
+  if (v1Open || st.kind || w.state !== "PLAY") return out;
   while (q.length) {
     const k = q.shift();
     if (!coach2Seen(loadCoach2(store), k) && holds(p, k)) { show(k); break; }

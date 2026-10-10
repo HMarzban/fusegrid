@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-11 — Pickup feedback verify (adviser panel): coach v2 tip closes when its power is lost
+- Headless matrix (2d/3d/px x desk 1280x800, phone 390x844, land 844x390; all 12 kinds via real floor items, stacks, FLAME MAX, LINE-replaces-POWER, hit strip, PAUSE, REDUCE FLASH/SHAKE off through settings, empty-store v1 queue, touch THROW/REMOTE taps in all six touch configs, 3D CAMERA 1/2 + dolly): all working; contact sheet + harness in `.superpowers/sdd/2026-10-10-pickup/verify/`. Fixed: a live coach v2 tip outlived its power (a hit left "THROW · the THROW button…" up with the button hidden, then timed out and marked the bit): `coach2Tick` now closes it `rn:"lost"`, bit stays 0, never for a tip opened/replaced that frame; SHIELD's absorb stays a use. Open: ability-bar text ~8 CSS px on phone portrait; with a 3D dolly-in the bar covers the near row; replaced/lost tips can re-show later by design; AGENTS.md coach v2 paragraph still says three verbs.
+
 ## 2026-10-10 — PIXEL review nits: hi edge copy, initFx, dpr refit, shot.mjs --gpu
 - px renderer copies the hi sub-rect's last column/row one px outward when M < hiCap (no cleared-margin bleed after zoom in/out) and calls `initFx()` like the classic factory; `fit.js` re-fits on a dpr change with no resize (one-shot `matchMedia` resolution query, re-armed). `shot.mjs --gpu` (ANGLE Metal) + an x10 throughput figure; PAUSE is now captured from PLAY. Metal x10 on matched fat worlds (12 foes each, px now on its own fresh page, a foe-count mismatch is reported as an error): mac@2 M7 px 1.07 ms/render (CLASSIC 0.72), laptop@1 M3 px 1.03 (CLASSIC 1.19), within 4 ms. Edge copy checked on the mac pause frame (M7 < hiCap 8): last board device px equals the interior, no seam.
 

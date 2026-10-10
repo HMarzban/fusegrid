@@ -1,0 +1,3541 @@
+[
+ {
+  "tag": "2d-desk",
+  "steps": {
+   "first-kick": {
+    "lbl": [
+     "KICK (sup)@0.72"
+    ],
+    "c2": {
+     "a": 0.76,
+     "s": "KICK · walk into a bomb to slide it",
+     "k": "kick"
+    },
+    "bar": [
+     "kick"
+    ],
+    "txt": [
+     "BOMB",
+     "1",
+     "FLAME",
+     "LV",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "50",
+     "KICK",
+     "KICK · walk into a bomb to slide it"
+    ]
+   },
+   "multi3": {
+    "lbl": [
+     "FLAME 2@0.70",
+     "BOMB 2@0.70",
+     "SPEED UP@0.70"
+    ],
+    "c2": {
+     "a": 0,
+     "s": "",
+     "k": null
+    },
+    "bar": [
+     "kick",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "200",
+     "KICK",
+     "SPD 1",
+     "FLAME 2",
+     "BOMB 2",
+     "SPEED UP"
+    ]
+   },
+   "max-swap": {
+    "lbl": [
+     "FLAME MAX@0.58",
+     "LINE BOMB [replaces POWER] (sup)@0.58"
+    ],
+    "c2": {
+     "a": 0.81,
+     "s": "LINE · long blast the way you face",
+     "k": "line"
+    },
+    "bar": [
+     "kick",
+     "line",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "200",
+     "KICK",
+     "SPD 1",
+     "FLAME 2",
+     "BOMB 2",
+     "SPEED UP",
+     "7",
+     "250",
+     "POWER",
+     "POWER · extra-long cross blast",
+     "8",
+     "350",
+     "LINE",
+     "MAX",
+     "LINE · long blast the way you face"
+    ]
+   },
+   "bar": {
+    "lbl": [],
+    "c2": {
+     "a": 0.67,
+     "s": "PIERCE · blast keeps going through bricks",
+     "k": "pierce"
+    },
+    "bar": [
+     "shield",
+     "kick",
+     "throw",
+     "pass",
+     "pierce",
+     "remote",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "350",
+     "KICK",
+     "LINE",
+     "SPD 1",
+     "MAX",
+     "LINE · long blast the way you face",
+     "400",
+     "SHIELD",
+     "SHIELD · survive one hit",
+     "450",
+     "THROW",
+     "THROW · Shift+Space tosses a bomb",
+     "500",
+     "PASS",
+     "PASS · walk through green bricks",
+     "550",
+     "PIERCE",
+     "PIERCE · blast keeps going through bricks",
+     "600",
+     "REMOTE",
+     "REMOTE · Q detonates your bombs",
+     "650",
+     "SPD 2",
+     "SPEED UP"
+    ],
+    "store": "{\"k\":1,\"t\":0,\"r\":1,\"p\":0,\"l\":0,\"w\":0,\"i\":0,\"s\":0}"
+   },
+   "hit-fade": {
+    "lbl": [],
+    "c2": {
+     "a": 0.35,
+     "s": "",
+     "k": null
+    },
+    "bar": [
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "650",
+     "SHIELD",
+     "KICK",
+     "THROW",
+     "PASS",
+     "PIERCE",
+     "REMOTE",
+     "SPD 2",
+     "PIERCE · blast keeps going through bricks",
+     "700",
+     "680"
+    ]
+   },
+   "repeat-kick": {
+    "lbl": [
+     "KICK@0.59"
+    ],
+    "c2": {
+     "a": 0,
+     "s": "",
+     "k": null
+    },
+    "bar": [
+     "kick",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "680",
+     "SPD 2",
+     "730",
+     "KICK"
+    ]
+   },
+   "pause-label": {
+    "lbl": [
+     "+1 LIFE@0.29"
+    ],
+    "c2": {
+     "a": 0,
+     "s": ""
+    },
+    "bar": [
+     "kick",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "730",
+     "KICK",
+     "SPD 2",
+     "780",
+     "+1 LIFE",
+     "PAUSED",
+     "RESUME",
+     "RESTART",
+     "OPTIONS",
+     "QUIT TO MENU",
+     "↑↓ SELECT · ENTER / TAP CONFIRM · P RESUME · M QUIT"
+    ]
+   },
+   "reduce-flash": {
+    "lbl": [],
+    "c2": {
+     "a": 0,
+     "s": "",
+     "k": null
+    },
+    "bar": [
+     "kick",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "780",
+     "KICK",
+     "SPD 2",
+     "+1 LIFE",
+     "830",
+     "BOMB 3"
+    ],
+    "ys": [
+     [
+      "0.09",
+      268,
+      259
+     ],
+     [
+      "0.22",
+      268,
+      251
+     ],
+     [
+      "0.46",
+      268,
+      246
+     ],
+     [
+      "0.57",
+      268,
+      246
+     ],
+     [
+      "0.72",
+      268,
+      246
+     ],
+     [
+      "0.83",
+      268,
+      246
+     ]
+    ]
+   }
+  },
+  "tp": [
+   7,
+   7,
+   1
+  ],
+  "state": "PLAY",
+  "errors": []
+ },
+ {
+  "tag": "2d-phone",
+  "steps": {
+   "first-kick": {
+    "lbl": [
+     "FLAME 2@0.72",
+     "KICK (sup)@0.72"
+    ],
+    "c2": {
+     "a": 0.76,
+     "s": "KICK · walk into a bomb to slide it",
+     "k": "kick"
+    },
+    "bar": [
+     "kick"
+    ],
+    "txt": [
+     "BOMB",
+     "1",
+     "FLAME",
+     "2",
+     "LV",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "100",
+     "KICK",
+     "FLAME 2",
+     "KICK · walk into a bomb to slide it"
+    ]
+   },
+   "multi3": {
+    "lbl": [
+     "FLAME 3@0.68",
+     "BOMB 2@0.68",
+     "SPEED UP@0.68"
+    ],
+    "c2": {
+     "a": 0,
+     "s": "",
+     "k": null
+    },
+    "bar": [
+     "kick",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "3",
+     "LV",
+     "1",
+     "ENEMIES",
+     "· CORE",
+     "250",
+     "KICK",
+     "SPD 1",
+     "FLAME 3",
+     "BOMB 2",
+     "SPEED UP"
+    ]
+   },
+   "max-swap": {
+    "lbl": [
+     "FLAME MAX@0.63",
+     "LINE BOMB [replaces POWER] (sup)@0.63"
+    ],
+    "c2": {
+     "a": 0.79,
+     "s": "LINE · long blast the way you face",
+     "k": "line"
+    },
+    "bar": [
+     "kick",
+     "line",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "3",
+     "LV",
+     "1",
+     "ENEMIES",
+     "· CORE",
+     "250",
+     "KICK",
+     "SPD 1",
+     "FLAME 3",
+     "BOMB 2",
+     "SPEED UP",
+     "7",
+     "300",
+     "POWER",
+     "POWER · extra-long cross blast",
+     "8",
+     "400",
+     "LINE",
+     "MAX",
+     "LINE · long blast the way you face"
+    ]
+   },
+   "bar": {
+    "lbl": [],
+    "c2": {
+     "a": 0.6,
+     "s": "PIERCE · blast keeps going through bricks",
+     "k": "pierce"
+    },
+    "bar": [
+     "shield",
+     "kick",
+     "throw",
+     "pass",
+     "pierce",
+     "remote",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "400",
+     "KICK",
+     "LINE",
+     "SPD 1",
+     "MAX",
+     "LINE · long blast the way you face",
+     "450",
+     "SHIELD",
+     "SHIELD · survive one hit",
+     "500",
+     "THROW",
+     "THROW · the THROW button tosses a bomb",
+     "550",
+     "PASS",
+     "PASS · walk through green bricks",
+     "600",
+     "PIERCE",
+     "PIERCE · blast keeps going through bricks",
+     "650",
+     "REMOTE",
+     "REMOTE · the REMOTE button detonates your bombs",
+     "700",
+     "SPD 2",
+     "SPEED UP"
+    ],
+    "store": "{\"k\":1,\"t\":0,\"r\":1,\"p\":0,\"l\":0,\"w\":0,\"i\":0,\"s\":0}"
+   },
+   "touch-thrown": {
+    "lbl": [],
+    "c2": {
+     "a": 0.72,
+     "s": "PASS · walk through green bricks",
+     "k": "pass"
+    },
+    "bar": [
+     "shield",
+     "kick",
+     "throw",
+     "pass",
+     "pierce",
+     "remote",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "700",
+     "SHIELD",
+     "KICK",
+     "THROW",
+     "PASS",
+     "PIERCE",
+     "REMOTE",
+     "SPD 2",
+     "PASS · walk through green bricks"
+    ],
+    "rect": {
+     "thr": {
+      "h": false,
+      "r": [
+       316,
+       615.125,
+       368,
+       667.125
+      ]
+     },
+     "rem": {
+      "h": false,
+      "r": [
+       256,
+       615.125,
+       308,
+       667.125
+      ]
+     },
+     "bomb": {
+      "h": false,
+      "r": [
+       264,
+       675.125,
+       368,
+       779.125
+      ]
+     }
+    },
+    "b0": 0,
+    "thrown": [
+     [
+      0,
+      40
+     ]
+    ]
+   },
+   "hit-fade": {
+    "lbl": [],
+    "c2": {
+     "a": 0.69,
+     "s": "",
+     "k": null
+    },
+    "bar": [
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "760",
+     "SHIELD",
+     "KICK",
+     "THROW",
+     "PASS",
+     "PIERCE",
+     "REMOTE",
+     "SPD 2",
+     "PASS · walk through green bricks",
+     "810",
+     "THROW · the THROW button tosses a bomb",
+     "790"
+    ]
+   },
+   "repeat-kick": {
+    "lbl": [
+     "KICK@0.73"
+    ],
+    "c2": {
+     "a": 0.04,
+     "s": "",
+     "k": null
+    },
+    "bar": [
+     "kick",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "790",
+     "SPD 2",
+     "840",
+     "KICK"
+    ]
+   },
+   "pause-label": {
+    "lbl": [
+     "+1 LIFE@0.27"
+    ],
+    "c2": {
+     "a": 0,
+     "s": ""
+    },
+    "bar": [
+     "kick",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "840",
+     "KICK",
+     "SPD 2",
+     "890",
+     "+1 LIFE",
+     "PAUSED",
+     "RESUME",
+     "RESTART",
+     "OPTIONS",
+     "QUIT TO MENU",
+     "↑↓ SELECT · ENTER / TAP CONFIRM · P RESUME · M QUIT"
+    ]
+   },
+   "reduce-flash": {
+    "lbl": [],
+    "c2": {
+     "a": 0,
+     "s": "",
+     "k": null
+    },
+    "bar": [
+     "kick",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "890",
+     "KICK",
+     "SPD 2",
+     "+1 LIFE",
+     "940",
+     "BOMB 3"
+    ],
+    "ys": [
+     [
+      "0.08",
+      228,
+      220
+     ],
+     [
+      "0.34",
+      228,
+      208
+     ],
+     [
+      "0.45",
+      228,
+      206
+     ],
+     [
+      "0.58",
+      228,
+      206
+     ],
+     [
+      "0.79",
+      228,
+      206
+     ],
+     [
+      "0.90",
+      228,
+      206
+     ]
+    ]
+   }
+  },
+  "tp": [
+   7,
+   7,
+   1
+  ],
+  "touch": {
+   "rect": {
+    "thr": {
+     "h": false,
+     "r": [
+      316,
+      615.125,
+      368,
+      667.125
+     ]
+    },
+    "rem": {
+     "h": false,
+     "r": [
+      256,
+      615.125,
+      308,
+      667.125
+     ]
+    },
+    "bomb": {
+     "h": false,
+     "r": [
+      264,
+      675.125,
+      368,
+      779.125
+     ]
+    }
+   },
+   "b0": 0,
+   "thrown": [
+    [
+     0,
+     40
+    ]
+   ],
+   "after": 0
+  },
+  "state": "PLAY",
+  "errors": []
+ },
+ {
+  "tag": "2d-land",
+  "steps": {
+   "first-kick": {
+    "lbl": [
+     "KICK (sup)@0.85"
+    ],
+    "c2": {
+     "a": 0.72,
+     "s": "KICK · walk into a bomb to slide it",
+     "k": "kick"
+    },
+    "bar": [
+     "kick"
+    ],
+    "txt": [
+     "BOMB",
+     "1",
+     "FLAME",
+     "LV",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "50",
+     "KICK",
+     "KICK · walk into a bomb to slide it"
+    ]
+   },
+   "multi3": {
+    "lbl": [
+     "FLAME 2@0.76",
+     "BOMB 2@0.76",
+     "SPEED UP@0.76"
+    ],
+    "c2": {
+     "a": 0,
+     "s": "",
+     "k": null
+    },
+    "bar": [
+     "kick",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "200",
+     "KICK",
+     "SPD 1",
+     "FLAME 2",
+     "BOMB 2",
+     "SPEED UP"
+    ]
+   },
+   "max-swap": {
+    "lbl": [
+     "FLAME MAX@0.77",
+     "LINE BOMB [replaces POWER] (sup)@0.77"
+    ],
+    "c2": {
+     "a": 0.74,
+     "s": "LINE · long blast the way you face",
+     "k": "line"
+    },
+    "bar": [
+     "kick",
+     "line",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "200",
+     "KICK",
+     "SPD 1",
+     "FLAME 2",
+     "BOMB 2",
+     "SPEED UP",
+     "7",
+     "250",
+     "POWER",
+     "POWER · extra-long cross blast",
+     "8",
+     "350",
+     "LINE",
+     "MAX",
+     "LINE · long blast the way you face"
+    ]
+   },
+   "bar": {
+    "lbl": [],
+    "c2": {
+     "a": 0.58,
+     "s": "PIERCE · blast keeps going through bricks",
+     "k": "pierce"
+    },
+    "bar": [
+     "shield",
+     "kick",
+     "throw",
+     "pass",
+     "pierce",
+     "remote",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "350",
+     "KICK",
+     "LINE",
+     "SPD 1",
+     "MAX",
+     "LINE · long blast the way you face",
+     "400",
+     "SHIELD",
+     "SHIELD · survive one hit",
+     "450",
+     "THROW",
+     "THROW · the THROW button tosses a bomb",
+     "500",
+     "PASS",
+     "PASS · walk through green bricks",
+     "550",
+     "PIERCE",
+     "PIERCE · blast keeps going through bricks",
+     "600",
+     "REMOTE",
+     "REMOTE · the REMOTE button detonates your bombs",
+     "650",
+     "SPD 2",
+     "SPEED UP"
+    ],
+    "store": "{\"k\":1,\"t\":0,\"r\":1,\"p\":0,\"l\":0,\"w\":0,\"i\":0,\"s\":0}"
+   },
+   "touch-thrown": {
+    "lbl": [],
+    "c2": {
+     "a": 0.69,
+     "s": "PASS · walk through green bricks",
+     "k": "pass"
+    },
+    "bar": [
+     "shield",
+     "kick",
+     "throw",
+     "pass",
+     "pierce",
+     "remote",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "650",
+     "SHIELD",
+     "KICK",
+     "THROW",
+     "PASS",
+     "PIERCE",
+     "REMOTE",
+     "SPD 2",
+     "PIERCE · blast keeps going through bricks",
+     "PASS · walk through green bricks"
+    ],
+    "rect": {
+     "thr": {
+      "h": false,
+      "r": [
+       677.765625,
+       240,
+       729.765625,
+       292
+      ]
+     },
+     "rem": {
+      "h": false,
+      "r": [
+       737.765625,
+       240,
+       789.765625,
+       292
+      ]
+     },
+     "bomb": {
+      "h": false,
+      "r": [
+       677.765625,
+       300,
+       749.765625,
+       372
+      ]
+     }
+    },
+    "b0": 0,
+    "thrown": [
+     [
+      0,
+      40
+     ]
+    ]
+   },
+   "hit-fade": {
+    "lbl": [],
+    "c2": {
+     "a": 0.63,
+     "s": "",
+     "k": null
+    },
+    "bar": [
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "650",
+     "SHIELD",
+     "KICK",
+     "THROW",
+     "PASS",
+     "PIERCE",
+     "REMOTE",
+     "SPD 2",
+     "PASS · walk through green bricks",
+     "820",
+     "THROW · the THROW button tosses a bomb",
+     "870",
+     "850"
+    ]
+   },
+   "repeat-kick": {
+    "lbl": [
+     "KICK@0.75"
+    ],
+    "c2": {
+     "a": 0,
+     "s": "",
+     "k": null
+    },
+    "bar": [
+     "kick",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "850",
+     "SPD 2",
+     "900",
+     "KICK"
+    ]
+   },
+   "pause-label": {
+    "lbl": [
+     "+1 LIFE@0.25"
+    ],
+    "c2": {
+     "a": 0,
+     "s": ""
+    },
+    "bar": [
+     "kick",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "900",
+     "KICK",
+     "SPD 2",
+     "950",
+     "+1 LIFE",
+     "PAUSED",
+     "RESUME",
+     "RESTART",
+     "OPTIONS",
+     "QUIT TO MENU",
+     "↑↓ SELECT · ENTER / TAP CONFIRM · P RESUME · M QUIT"
+    ]
+   },
+   "reduce-flash": {
+    "lbl": [],
+    "c2": {
+     "a": 0,
+     "s": "",
+     "k": null
+    },
+    "bar": [
+     "kick",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "950",
+     "KICK",
+     "SPD 2",
+     "+1 LIFE",
+     "1000",
+     "BOMB 3"
+    ],
+    "ys": [
+     [
+      "0.11",
+      268,
+      258
+     ],
+     [
+      "0.37",
+      268,
+      247
+     ],
+     [
+      "0.48",
+      268,
+      246
+     ],
+     [
+      "0.74",
+      268,
+      246
+     ],
+     [
+      "0.85",
+      268,
+      246
+     ],
+     null
+    ]
+   }
+  },
+  "tp": [
+   9,
+   6,
+   2
+  ],
+  "touch": {
+   "rect": {
+    "thr": {
+     "h": false,
+     "r": [
+      677.765625,
+      240,
+      729.765625,
+      292
+     ]
+    },
+    "rem": {
+     "h": false,
+     "r": [
+      737.765625,
+      240,
+      789.765625,
+      292
+     ]
+    },
+    "bomb": {
+     "h": false,
+     "r": [
+      677.765625,
+      300,
+      749.765625,
+      372
+     ]
+    }
+   },
+   "b0": 0,
+   "thrown": [
+    [
+     0,
+     40
+    ]
+   ],
+   "after": 0
+  },
+  "state": "PLAY",
+  "errors": []
+ },
+ {
+  "tag": "3d-desk",
+  "steps": {
+   "first-kick": {
+    "lbl": [
+     "BOMB 2@0.62",
+     "KICK (sup)@0.62"
+    ],
+    "c2": {
+     "a": 0.79,
+     "s": "KICK · walk into a bomb to slide it",
+     "k": "kick"
+    },
+    "bar": [
+     "kick"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "1",
+     "LV",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "100",
+     "KICK",
+     "BOMB 2",
+     "KICK · walk into a bomb to slide it"
+    ]
+   },
+   "multi3": {
+    "lbl": [
+     "FLAME 2@0.56",
+     "BOMB 3@0.56",
+     "SPEED UP@0.56"
+    ],
+    "c2": {
+     "a": 0,
+     "s": "",
+     "k": null
+    },
+    "bar": [
+     "kick",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "3",
+     "FLAME",
+     "2",
+     "LV",
+     "1",
+     "ENEMIES",
+     "· CORE",
+     "250",
+     "KICK",
+     "SPD 1",
+     "FLAME 2",
+     "BOMB 3",
+     "SPEED UP"
+    ]
+   },
+   "max-swap": {
+    "lbl": [
+     "FLAME MAX@0.53",
+     "LINE BOMB [replaces POWER] (sup)@0.53"
+    ],
+    "c2": {
+     "a": 0.82,
+     "s": "LINE · long blast the way you face",
+     "k": "line"
+    },
+    "bar": [
+     "kick",
+     "line",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "3",
+     "FLAME",
+     "2",
+     "LV",
+     "1",
+     "ENEMIES",
+     "· CORE",
+     "250",
+     "KICK",
+     "SPD 1",
+     "FLAME 2",
+     "BOMB 3",
+     "SPEED UP",
+     "7",
+     "300",
+     "POWER",
+     "POWER · extra-long cross blast",
+     "8",
+     "400",
+     "LINE",
+     "MAX",
+     "LINE · long blast the way you face"
+    ]
+   },
+   "bar": {
+    "lbl": [],
+    "c2": {
+     "a": 0.71,
+     "s": "PIERCE · blast keeps going through bricks",
+     "k": "pierce"
+    },
+    "bar": [
+     "shield",
+     "kick",
+     "throw",
+     "pass",
+     "pierce",
+     "remote",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "3",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "· CORE",
+     "400",
+     "KICK",
+     "LINE",
+     "SPD 1",
+     "MAX",
+     "LINE · long blast the way you face",
+     "450",
+     "SHIELD",
+     "SHIELD · survive one hit",
+     "500",
+     "THROW",
+     "THROW · Shift+Space tosses a bomb",
+     "550",
+     "PASS",
+     "PASS · walk through green bricks",
+     "600",
+     "PIERCE",
+     "PIERCE · blast keeps going through bricks",
+     "650",
+     "REMOTE",
+     "REMOTE · Q detonates your bombs",
+     "700",
+     "SPD 2",
+     "SPEED UP"
+    ],
+    "store": "{\"k\":1,\"t\":0,\"r\":1,\"p\":0,\"l\":0,\"w\":0,\"i\":0,\"s\":0}"
+   },
+   "hit-fade": {
+    "lbl": [
+     "KICK@0.84"
+    ],
+    "c2": {
+     "a": 0.42,
+     "s": "",
+     "k": null
+    },
+    "bar": [
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "3",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "· CORE",
+     "750",
+     "SHIELD",
+     "KICK",
+     "THROW",
+     "PASS",
+     "PIERCE",
+     "REMOTE",
+     "SPD 2",
+     "PIERCE · blast keeps going through bricks",
+     "730"
+    ]
+   },
+   "repeat-kick": {
+    "lbl": [
+     "KICK@0.49"
+    ],
+    "c2": {
+     "a": 0,
+     "s": "",
+     "k": null
+    },
+    "bar": [
+     "kick",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "3",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "· CORE",
+     "730",
+     "SHIELD",
+     "KICK",
+     "THROW",
+     "PASS",
+     "PIERCE",
+     "REMOTE",
+     "SPD 2",
+     "780"
+    ]
+   },
+   "pause-label": {
+    "lbl": [
+     "+1 LIFE@0.25"
+    ],
+    "c2": {
+     "a": 0,
+     "s": ""
+    },
+    "bar": [
+     "kick",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "3",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "· CORE",
+     "780",
+     "KICK",
+     "SPD 2",
+     "830",
+     "+1 LIFE",
+     "PAUSED",
+     "RESUME",
+     "RESTART",
+     "OPTIONS",
+     "QUIT TO MENU",
+     "↑↓ SELECT · ENTER / TAP CONFIRM · P RESUME · M QUIT"
+    ]
+   },
+   "reduce-flash": {
+    "lbl": [],
+    "c2": {
+     "a": 0,
+     "s": "",
+     "k": null
+    },
+    "bar": [
+     "kick",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "3",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "· CORE",
+     "830",
+     "KICK",
+     "SPD 2",
+     "+1 LIFE",
+     "4",
+     "880",
+     "BOMB 4"
+    ],
+    "ys": [
+     [
+      "0.11",
+      148,
+      138
+     ],
+     [
+      "0.24",
+      148,
+      131
+     ],
+     [
+      "0.36",
+      148,
+      127
+     ],
+     [
+      "0.49",
+      148,
+      126
+     ],
+     [
+      "0.60",
+      148,
+      126
+     ],
+     [
+      "0.72",
+      148,
+      126
+     ]
+    ]
+   }
+  },
+  "tp": [
+   7,
+   4,
+   2
+  ],
+  "state": "PLAY",
+  "errors": []
+ },
+ {
+  "tag": "3d-phone",
+  "steps": {
+   "first-kick": {
+    "lbl": [
+     "LINE BOMB@0.78",
+     "KICK (sup)@0.78"
+    ],
+    "c2": {
+     "a": 0.74,
+     "s": "KICK · walk into a bomb to slide it",
+     "k": "kick"
+    },
+    "bar": [
+     "kick",
+     "line"
+    ],
+    "txt": [
+     "BOMB",
+     "1",
+     "FLAME",
+     "LV",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "0",
+     "100",
+     "KICK",
+     "LINE",
+     "LINE BOMB",
+     "KICK · walk into a bomb to slide it"
+    ]
+   },
+   "multi3": {
+    "lbl": [
+     "FLAME 2@0.76",
+     "BOMB 2@0.76",
+     "SPEED UP@0.76"
+    ],
+    "c2": {
+     "a": 0.42,
+     "s": "LINE · long blast the way you face",
+     "k": "line"
+    },
+    "bar": [
+     "kick",
+     "line",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "250",
+     "KICK",
+     "LINE",
+     "SPD 1",
+     "FLAME 2",
+     "BOMB 2",
+     "SPEED UP",
+     "LINE · long blast the way you face"
+    ]
+   },
+   "max-swap": {
+    "lbl": [],
+    "c2": {
+     "a": 0.69,
+     "s": "LINE · long blast the way you face",
+     "k": "line"
+    },
+    "bar": [
+     "kick",
+     "line",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "250",
+     "KICK",
+     "LINE",
+     "SPD 1",
+     "FLAME 2",
+     "BOMB 2",
+     "SPEED UP",
+     "LINE · long blast the way you face",
+     "7",
+     "300",
+     "POWER",
+     "POWER · extra-long cross blast",
+     "8",
+     "400",
+     "MAX"
+    ]
+   },
+   "bar": {
+    "lbl": [],
+    "c2": {
+     "a": 0.62,
+     "s": "PIERCE · blast keeps going through bricks",
+     "k": "pierce"
+    },
+    "bar": [
+     "shield",
+     "kick",
+     "throw",
+     "pass",
+     "pierce",
+     "remote",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "400",
+     "KICK",
+     "LINE",
+     "SPD 1",
+     "LINE · long blast the way you face",
+     "450",
+     "SHIELD",
+     "SHIELD · survive one hit",
+     "500",
+     "THROW",
+     "THROW · the THROW button tosses a bomb",
+     "550",
+     "PASS",
+     "PASS · walk through green bricks",
+     "600",
+     "PIERCE",
+     "PIERCE · blast keeps going through bricks",
+     "650",
+     "REMOTE",
+     "REMOTE · the REMOTE button detonates your bombs",
+     "700",
+     "SPD 2",
+     "SPEED UP"
+    ],
+    "store": "{\"k\":1,\"t\":0,\"r\":1,\"p\":0,\"l\":0,\"w\":0,\"i\":0,\"s\":0}"
+   },
+   "touch-thrown": {
+    "lbl": [],
+    "c2": {
+     "a": 0.34,
+     "s": "PIERCE · blast keeps going through bricks",
+     "k": "pierce"
+    },
+    "bar": [
+     "shield",
+     "kick",
+     "throw",
+     "pass",
+     "pierce",
+     "remote",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "700",
+     "SHIELD",
+     "KICK",
+     "THROW",
+     "PASS",
+     "PIERCE",
+     "REMOTE",
+     "SPD 2",
+     "PIERCE · blast keeps going through bricks"
+    ],
+    "rect": {
+     "thr": {
+      "h": false,
+      "r": [
+       316,
+       615.125,
+       368,
+       667.125
+      ]
+     },
+     "rem": {
+      "h": false,
+      "r": [
+       256,
+       615.125,
+       308,
+       667.125
+      ]
+     },
+     "bomb": {
+      "h": false,
+      "r": [
+       264,
+       675.125,
+       368,
+       779.125
+      ]
+     }
+    },
+    "b0": 0,
+    "thrown": []
+   },
+   "hit-fade": {
+    "lbl": [],
+    "c2": {
+     "a": 0.37,
+     "s": "",
+     "k": null
+    },
+    "bar": [
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "700",
+     "SHIELD",
+     "KICK",
+     "THROW",
+     "PASS",
+     "PIERCE",
+     "REMOTE",
+     "SPD 2",
+     "PIERCE · blast keeps going through bricks",
+     "PASS · walk through green bricks",
+     "750",
+     "730"
+    ]
+   },
+   "repeat-kick": {
+    "lbl": [
+     "KICK@0.82"
+    ],
+    "c2": {
+     "a": 0,
+     "s": "",
+     "k": null
+    },
+    "bar": [
+     "kick",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "730",
+     "SPD 2",
+     "780",
+     "KICK"
+    ]
+   },
+   "pause-label": {
+    "lbl": [
+     "+1 LIFE@0.29"
+    ],
+    "c2": {
+     "a": 0,
+     "s": ""
+    },
+    "bar": [
+     "kick",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "780",
+     "KICK",
+     "SPD 2",
+     "830",
+     "+1 LIFE",
+     "PAUSED",
+     "RESUME",
+     "RESTART",
+     "OPTIONS",
+     "QUIT TO MENU",
+     "↑↓ SELECT · ENTER / TAP CONFIRM · P RESUME · M QUIT"
+    ]
+   },
+   "reduce-flash": {
+    "lbl": [],
+    "c2": {
+     "a": 0,
+     "s": "",
+     "k": null
+    },
+    "bar": [
+     "kick",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "830",
+     "KICK",
+     "SPD 2",
+     "+1 LIFE",
+     "880",
+     "BOMB 3"
+    ],
+    "ys": [
+     [
+      "0.18",
+      268,
+      254
+     ],
+     [
+      "0.33",
+      268,
+      248
+     ],
+     [
+      "0.57",
+      268,
+      246
+     ],
+     [
+      "0.73",
+      268,
+      246
+     ],
+     [
+      "0.88",
+      268,
+      246
+     ],
+     null
+    ]
+   }
+  },
+  "tp": [
+   7,
+   7,
+   1
+  ],
+  "touch": {
+   "rect": {
+    "thr": {
+     "h": false,
+     "r": [
+      316,
+      615.125,
+      368,
+      667.125
+     ]
+    },
+    "rem": {
+     "h": false,
+     "r": [
+      256,
+      615.125,
+      308,
+      667.125
+     ]
+    },
+    "bomb": {
+     "h": false,
+     "r": [
+      264,
+      675.125,
+      368,
+      779.125
+     ]
+    }
+   },
+   "b0": 0,
+   "thrown": [],
+   "after": 0
+  },
+  "state": "PLAY",
+  "errors": []
+ },
+ {
+  "tag": "3d-land",
+  "steps": {
+   "first-kick": {
+    "lbl": [
+     "KICK (sup)@0.85"
+    ],
+    "c2": {
+     "a": 0.72,
+     "s": "KICK · walk into a bomb to slide it",
+     "k": "kick"
+    },
+    "bar": [
+     "kick"
+    ],
+    "txt": [
+     "BOMB",
+     "1",
+     "FLAME",
+     "LV",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "50",
+     "KICK",
+     "KICK · walk into a bomb to slide it"
+    ]
+   },
+   "multi3": {
+    "lbl": [
+     "FLAME 2@0.89",
+     "BOMB 2@0.89",
+     "SPEED UP@0.89"
+    ],
+    "c2": {
+     "a": 0,
+     "s": "",
+     "k": null
+    },
+    "bar": [
+     "kick",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "200",
+     "KICK",
+     "SPD 1",
+     "FLAME 2",
+     "BOMB 2",
+     "SPEED UP"
+    ]
+   },
+   "max-swap": {
+    "lbl": [],
+    "c2": {
+     "a": 0.68,
+     "s": "LINE · long blast the way you face",
+     "k": "line"
+    },
+    "bar": [
+     "kick",
+     "line",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "200",
+     "KICK",
+     "SPD 1",
+     "7",
+     "250",
+     "POWER",
+     "POWER · extra-long cross blast",
+     "8",
+     "350",
+     "LINE",
+     "MAX",
+     "LINE · long blast the way you face"
+    ]
+   },
+   "bar": {
+    "lbl": [],
+    "c2": {
+     "a": 0.6,
+     "s": "PIERCE · blast keeps going through bricks",
+     "k": "pierce"
+    },
+    "bar": [
+     "shield",
+     "kick",
+     "throw",
+     "pass",
+     "pierce",
+     "remote",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "350",
+     "KICK",
+     "LINE",
+     "SPD 1",
+     "LINE · long blast the way you face",
+     "400",
+     "SHIELD",
+     "SHIELD · survive one hit",
+     "450",
+     "THROW",
+     "THROW · the THROW button tosses a bomb",
+     "500",
+     "PASS",
+     "PASS · walk through green bricks",
+     "550",
+     "PIERCE",
+     "PIERCE · blast keeps going through bricks",
+     "600",
+     "REMOTE",
+     "REMOTE · the REMOTE button detonates your bombs",
+     "650",
+     "SPD 2",
+     "SPEED UP"
+    ],
+    "store": "{\"k\":1,\"t\":0,\"r\":1,\"p\":0,\"l\":0,\"w\":0,\"i\":0,\"s\":0}"
+   },
+   "touch-thrown": {
+    "lbl": [],
+    "c2": {
+     "a": 0.23,
+     "s": "PIERCE · blast keeps going through bricks",
+     "k": "pierce"
+    },
+    "bar": [
+     "shield",
+     "kick",
+     "throw",
+     "pass",
+     "pierce",
+     "remote",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "650",
+     "SHIELD",
+     "KICK",
+     "THROW",
+     "PASS",
+     "PIERCE",
+     "REMOTE",
+     "SPD 2",
+     "PIERCE · blast keeps going through bricks"
+    ],
+    "rect": {
+     "thr": {
+      "h": false,
+      "r": [
+       677.765625,
+       240,
+       729.765625,
+       292
+      ]
+     },
+     "rem": {
+      "h": false,
+      "r": [
+       737.765625,
+       240,
+       789.765625,
+       292
+      ]
+     },
+     "bomb": {
+      "h": false,
+      "r": [
+       677.765625,
+       300,
+       749.765625,
+       372
+      ]
+     }
+    },
+    "b0": 0,
+    "thrown": []
+   },
+   "hit-fade": {
+    "lbl": [],
+    "c2": {
+     "a": 0.21,
+     "s": "",
+     "k": null
+    },
+    "bar": [
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "650",
+     "SHIELD",
+     "KICK",
+     "THROW",
+     "PASS",
+     "PIERCE",
+     "REMOTE",
+     "SPD 2",
+     "PIERCE · blast keeps going through bricks",
+     "PASS · walk through green bricks",
+     "700",
+     "680"
+    ]
+   },
+   "repeat-kick": {
+    "lbl": [
+     "KICK@0.77"
+    ],
+    "c2": {
+     "a": 0,
+     "s": "",
+     "k": null
+    },
+    "bar": [
+     "kick",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "680",
+     "SPD 2",
+     "730",
+     "KICK"
+    ]
+   },
+   "pause-label": {
+    "lbl": [
+     "+1 LIFE@0.21"
+    ],
+    "c2": {
+     "a": 0,
+     "s": ""
+    },
+    "bar": [
+     "kick",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "730",
+     "KICK",
+     "SPD 2",
+     "780",
+     "+1 LIFE",
+     "PAUSED",
+     "RESUME",
+     "RESTART",
+     "OPTIONS",
+     "QUIT TO MENU",
+     "↑↓ SELECT · ENTER / TAP CONFIRM · P RESUME · M QUIT"
+    ]
+   },
+   "reduce-flash": {
+    "lbl": [],
+    "c2": {
+     "a": 0,
+     "s": "",
+     "k": null
+    },
+    "bar": [
+     "kick",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "780",
+     "KICK",
+     "SPD 2",
+     "+1 LIFE",
+     "830",
+     "BOMB 3"
+    ],
+    "ys": [
+     [
+      "0.12",
+      268,
+      257
+     ],
+     [
+      "0.30",
+      268,
+      249
+     ],
+     [
+      "0.49",
+      268,
+      246
+     ],
+     [
+      "0.65",
+      268,
+      246
+     ],
+     [
+      "0.80",
+      268,
+      246
+     ],
+     null
+    ]
+   }
+  },
+  "tp": [
+   7,
+   7,
+   1
+  ],
+  "touch": {
+   "rect": {
+    "thr": {
+     "h": false,
+     "r": [
+      677.765625,
+      240,
+      729.765625,
+      292
+     ]
+    },
+    "rem": {
+     "h": false,
+     "r": [
+      737.765625,
+      240,
+      789.765625,
+      292
+     ]
+    },
+    "bomb": {
+     "h": false,
+     "r": [
+      677.765625,
+      300,
+      749.765625,
+      372
+     ]
+    }
+   },
+   "b0": 0,
+   "thrown": [],
+   "after": 0
+  },
+  "state": "PLAY",
+  "errors": []
+ },
+ {
+  "tag": "px-desk",
+  "steps": {
+   "first-kick": {
+    "lbl": [
+     "REMOTE@0.65",
+     "KICK (sup)@0.65"
+    ],
+    "c2": {
+     "a": 0.78,
+     "s": "KICK · walk into a bomb to slide it",
+     "k": "kick"
+    },
+    "bar": [
+     "kick",
+     "remote"
+    ],
+    "txt": [
+     "BOMB",
+     "1",
+     "FLAME",
+     "LV",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "100",
+     "KICK",
+     "REMOTE",
+     "KICK · walk into a bomb to slide it"
+    ]
+   },
+   "multi3": {
+    "lbl": [
+     "FLAME 2@0.62",
+     "BOMB 2@0.62",
+     "SPEED UP@0.62"
+    ],
+    "c2": {
+     "a": 0.5,
+     "s": "REMOTE · Q detonates your bombs",
+     "k": "remote"
+    },
+    "bar": [
+     "kick",
+     "remote",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "250",
+     "KICK",
+     "REMOTE",
+     "SPD 1",
+     "FLAME 2",
+     "BOMB 2",
+     "SPEED UP",
+     "REMOTE · Q detonates your bombs"
+    ]
+   },
+   "max-swap": {
+    "lbl": [
+     "FLAME MAX@0.53",
+     "LINE BOMB [replaces POWER] (sup)@0.53"
+    ],
+    "c2": {
+     "a": 0.82,
+     "s": "LINE · long blast the way you face",
+     "k": "line"
+    },
+    "bar": [
+     "kick",
+     "line",
+     "remote",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "250",
+     "KICK",
+     "REMOTE",
+     "SPD 1",
+     "FLAME 2",
+     "BOMB 2",
+     "SPEED UP",
+     "REMOTE · Q detonates your bombs",
+     "7",
+     "300",
+     "POWER",
+     "POWER · extra-long cross blast",
+     "8",
+     "400",
+     "LINE",
+     "MAX",
+     "LINE · long blast the way you face"
+    ]
+   },
+   "bar": {
+    "lbl": [],
+    "c2": {
+     "a": 0.69,
+     "s": "PIERCE · blast keeps going through bricks",
+     "k": "pierce"
+    },
+    "bar": [
+     "shield",
+     "kick",
+     "throw",
+     "pass",
+     "pierce",
+     "remote",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "400",
+     "KICK",
+     "LINE",
+     "REMOTE",
+     "SPD 1",
+     "MAX",
+     "LINE · long blast the way you face",
+     "450",
+     "SHIELD",
+     "SHIELD · survive one hit",
+     "500",
+     "THROW",
+     "THROW · Shift+Space tosses a bomb",
+     "550",
+     "PASS",
+     "PASS · walk through green bricks",
+     "600",
+     "PIERCE",
+     "PIERCE · blast keeps going through bricks",
+     "650",
+     "REMOTE · Q detonates your bombs",
+     "700",
+     "SPD 2",
+     "SPEED UP"
+    ],
+    "store": "{\"k\":1,\"t\":0,\"r\":1,\"p\":0,\"l\":0,\"w\":0,\"i\":0,\"s\":0}"
+   },
+   "hit-fade": {
+    "lbl": [
+     "KICK@0.68"
+    ],
+    "c2": {
+     "a": 0.46,
+     "s": "",
+     "k": null
+    },
+    "bar": [
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "750",
+     "SHIELD",
+     "KICK",
+     "THROW",
+     "PASS",
+     "PIERCE",
+     "REMOTE",
+     "SPD 2",
+     "PIERCE · blast keeps going through bricks",
+     "730"
+    ]
+   },
+   "repeat-kick": {
+    "lbl": [
+     "KICK@0.42"
+    ],
+    "c2": {
+     "a": 0,
+     "s": "",
+     "k": null
+    },
+    "bar": [
+     "kick",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "730",
+     "SHIELD",
+     "KICK",
+     "THROW",
+     "PASS",
+     "PIERCE",
+     "REMOTE",
+     "SPD 2",
+     "780"
+    ]
+   },
+   "pause-label": {
+    "lbl": [
+     "+1 LIFE@0.25"
+    ],
+    "c2": {
+     "a": 0,
+     "s": ""
+    },
+    "bar": [
+     "kick",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "780",
+     "KICK",
+     "SPD 2",
+     "830",
+     "+1 LIFE",
+     "PAUSED",
+     "RESUME",
+     "RESTART",
+     "OPTIONS",
+     "QUIT TO MENU",
+     "↑↓ SELECT · ENTER / TAP CONFIRM · P RESUME · M QUIT"
+    ]
+   },
+   "reduce-flash": {
+    "lbl": [
+     "BOMB 3@0.83"
+    ],
+    "c2": {
+     "a": 0,
+     "s": "",
+     "k": null
+    },
+    "bar": [
+     "kick",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "830",
+     "KICK",
+     "SPD 2",
+     "+1 LIFE",
+     "880",
+     "BOMB 3"
+    ],
+    "ys": [
+     [
+      "0.12",
+      188,
+      178
+     ],
+     [
+      "0.23",
+      188,
+      171
+     ],
+     [
+      "0.35",
+      188,
+      168
+     ],
+     [
+      "0.48",
+      188,
+      166
+     ],
+     [
+      "0.60",
+      188,
+      166
+     ],
+     [
+      "0.73",
+      188,
+      166
+     ]
+    ]
+   }
+  },
+  "tp": [
+   7,
+   5,
+   1
+  ],
+  "state": "PLAY",
+  "errors": []
+ },
+ {
+  "tag": "px-phone",
+  "steps": {
+   "first-kick": {
+    "lbl": [
+     "KICK (sup)@0.84"
+    ],
+    "c2": {
+     "a": 0.72,
+     "s": "KICK · walk into a bomb to slide it",
+     "k": "kick"
+    },
+    "bar": [
+     "kick"
+    ],
+    "txt": [
+     "BOMB",
+     "1",
+     "FLAME",
+     "LV",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "50",
+     "KICK",
+     "KICK · walk into a bomb to slide it"
+    ]
+   },
+   "multi3": {
+    "lbl": [
+     "FLAME 2@0.70",
+     "BOMB 2@0.70",
+     "SPEED UP@0.70"
+    ],
+    "c2": {
+     "a": 0,
+     "s": "",
+     "k": null
+    },
+    "bar": [
+     "kick",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "200",
+     "KICK",
+     "SPD 1",
+     "FLAME 2",
+     "BOMB 2",
+     "SPEED UP"
+    ]
+   },
+   "max-swap": {
+    "lbl": [
+     "FLAME MAX@0.75",
+     "LINE BOMB [replaces POWER] (sup)@0.75"
+    ],
+    "c2": {
+     "a": 0.75,
+     "s": "LINE · long blast the way you face",
+     "k": "line"
+    },
+    "bar": [
+     "kick",
+     "line",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "200",
+     "KICK",
+     "SPD 1",
+     "FLAME 2",
+     "BOMB 2",
+     "SPEED UP",
+     "7",
+     "250",
+     "POWER",
+     "POWER · extra-long cross blast",
+     "8",
+     "350",
+     "LINE",
+     "MAX",
+     "LINE · long blast the way you face"
+    ]
+   },
+   "bar": {
+    "lbl": [],
+    "c2": {
+     "a": 0.64,
+     "s": "PIERCE · blast keeps going through bricks",
+     "k": "pierce"
+    },
+    "bar": [
+     "shield",
+     "kick",
+     "throw",
+     "pass",
+     "pierce",
+     "remote",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "350",
+     "KICK",
+     "LINE",
+     "SPD 1",
+     "MAX",
+     "LINE · long blast the way you face",
+     "400",
+     "SHIELD",
+     "SHIELD · survive one hit",
+     "450",
+     "THROW",
+     "THROW · the THROW button tosses a bomb",
+     "500",
+     "PASS",
+     "PASS · walk through green bricks",
+     "550",
+     "PIERCE",
+     "PIERCE · blast keeps going through bricks",
+     "600",
+     "REMOTE",
+     "REMOTE · the REMOTE button detonates your bombs",
+     "650",
+     "SPD 2",
+     "SPEED UP"
+    ],
+    "store": "{\"k\":1,\"t\":0,\"r\":1,\"p\":0,\"l\":0,\"w\":0,\"i\":0,\"s\":0}"
+   },
+   "touch-thrown": {
+    "lbl": [],
+    "c2": {
+     "a": 0.37,
+     "s": "PIERCE · blast keeps going through bricks",
+     "k": "pierce"
+    },
+    "bar": [
+     "shield",
+     "kick",
+     "throw",
+     "pass",
+     "pierce",
+     "remote",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "650",
+     "SHIELD",
+     "KICK",
+     "THROW",
+     "PASS",
+     "PIERCE",
+     "REMOTE",
+     "SPD 2",
+     "PIERCE · blast keeps going through bricks"
+    ],
+    "rect": {
+     "thr": {
+      "h": false,
+      "r": [
+       316,
+       615.125,
+       368,
+       667.125
+      ]
+     },
+     "rem": {
+      "h": false,
+      "r": [
+       256,
+       615.125,
+       308,
+       667.125
+      ]
+     },
+     "bomb": {
+      "h": false,
+      "r": [
+       264,
+       675.125,
+       368,
+       779.125
+      ]
+     }
+    },
+    "b0": 0,
+    "thrown": []
+   },
+   "hit-fade": {
+    "lbl": [
+     "KICK@0.86"
+    ],
+    "c2": {
+     "a": 0.45,
+     "s": "",
+     "k": null
+    },
+    "bar": [
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "650",
+     "SHIELD",
+     "KICK",
+     "THROW",
+     "PASS",
+     "PIERCE",
+     "REMOTE",
+     "SPD 2",
+     "PIERCE · blast keeps going through bricks",
+     "PASS · walk through green bricks",
+     "700",
+     "680"
+    ]
+   },
+   "repeat-kick": {
+    "lbl": [
+     "KICK@0.73"
+    ],
+    "c2": {
+     "a": 0,
+     "s": "",
+     "k": null
+    },
+    "bar": [
+     "kick",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "680",
+     "SPD 2",
+     "KICK",
+     "730"
+    ]
+   },
+   "pause-label": {
+    "lbl": [
+     "+1 LIFE@0.25"
+    ],
+    "c2": {
+     "a": 0,
+     "s": ""
+    },
+    "bar": [
+     "kick",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "730",
+     "KICK",
+     "SPD 2",
+     "780",
+     "+1 LIFE",
+     "PAUSED",
+     "RESUME",
+     "RESTART",
+     "OPTIONS",
+     "QUIT TO MENU",
+     "↑↓ SELECT · ENTER / TAP CONFIRM · P RESUME · M QUIT"
+    ]
+   },
+   "reduce-flash": {
+    "lbl": [],
+    "c2": {
+     "a": 0,
+     "s": "",
+     "k": null
+    },
+    "bar": [
+     "kick",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "780",
+     "KICK",
+     "SPD 2",
+     "+1 LIFE",
+     "830",
+     "BOMB 3"
+    ],
+    "ys": [
+     [
+      "0.10",
+      268,
+      259
+     ],
+     [
+      "0.22",
+      268,
+      252
+     ],
+     [
+      "0.40",
+      268,
+      247
+     ],
+     [
+      "0.52",
+      268,
+      246
+     ],
+     [
+      "0.72",
+      268,
+      246
+     ],
+     [
+      "0.83",
+      268,
+      246
+     ]
+    ]
+   }
+  },
+  "tp": [
+   7,
+   7,
+   1
+  ],
+  "touch": {
+   "rect": {
+    "thr": {
+     "h": false,
+     "r": [
+      316,
+      615.125,
+      368,
+      667.125
+     ]
+    },
+    "rem": {
+     "h": false,
+     "r": [
+      256,
+      615.125,
+      308,
+      667.125
+     ]
+    },
+    "bomb": {
+     "h": false,
+     "r": [
+      264,
+      675.125,
+      368,
+      779.125
+     ]
+    }
+   },
+   "b0": 0,
+   "thrown": [],
+   "after": 0
+  },
+  "state": "PLAY",
+  "errors": []
+ },
+ {
+  "tag": "px-land",
+  "steps": {
+   "first-kick": {
+    "lbl": [
+     "KICK (sup)@0.78"
+    ],
+    "c2": {
+     "a": 0.74,
+     "s": "KICK · walk into a bomb to slide it",
+     "k": "kick"
+    },
+    "bar": [
+     "kick"
+    ],
+    "txt": [
+     "BOMB",
+     "1",
+     "FLAME",
+     "LV",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "0",
+     "50",
+     "KICK",
+     "KICK · walk into a bomb to slide it"
+    ]
+   },
+   "multi3": {
+    "lbl": [
+     "FLAME 2@0.82",
+     "BOMB 2@0.82",
+     "SPEED UP@0.82"
+    ],
+    "c2": {
+     "a": 0,
+     "s": "",
+     "k": null
+    },
+    "bar": [
+     "kick",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "1",
+     "FLAME",
+     "LV",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "50",
+     "KICK",
+     "2",
+     "200",
+     "SPD 1",
+     "FLAME 2",
+     "BOMB 2",
+     "SPEED UP"
+    ]
+   },
+   "max-swap": {
+    "lbl": [
+     "FLAME MAX@0.79",
+     "LINE BOMB [replaces POWER] (sup)@0.79"
+    ],
+    "c2": {
+     "a": 0.74,
+     "s": "LINE · long blast the way you face",
+     "k": "line"
+    },
+    "bar": [
+     "kick",
+     "line",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "200",
+     "KICK",
+     "SPD 1",
+     "FLAME 2",
+     "BOMB 2",
+     "SPEED UP",
+     "7",
+     "250",
+     "POWER",
+     "POWER · extra-long cross blast",
+     "8",
+     "350",
+     "LINE",
+     "MAX",
+     "LINE · long blast the way you face"
+    ]
+   },
+   "bar": {
+    "lbl": [],
+    "c2": {
+     "a": 0.61,
+     "s": "PIERCE · blast keeps going through bricks",
+     "k": "pierce"
+    },
+    "bar": [
+     "shield",
+     "kick",
+     "throw",
+     "pass",
+     "pierce",
+     "remote",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "350",
+     "KICK",
+     "LINE",
+     "SPD 1",
+     "MAX",
+     "LINE · long blast the way you face",
+     "400",
+     "SHIELD",
+     "SHIELD · survive one hit",
+     "450",
+     "THROW",
+     "THROW · the THROW button tosses a bomb",
+     "500",
+     "PASS",
+     "PASS · walk through green bricks",
+     "550",
+     "PIERCE",
+     "PIERCE · blast keeps going through bricks",
+     "600",
+     "REMOTE",
+     "REMOTE · the REMOTE button detonates your bombs",
+     "650",
+     "SPD 2",
+     "SPEED UP"
+    ],
+    "store": "{\"k\":1,\"t\":0,\"r\":1,\"p\":0,\"l\":0,\"w\":0,\"i\":0,\"s\":0}"
+   },
+   "touch-thrown": {
+    "lbl": [],
+    "c2": {
+     "a": 0.28,
+     "s": "PIERCE · blast keeps going through bricks",
+     "k": "pierce"
+    },
+    "bar": [
+     "shield",
+     "kick",
+     "throw",
+     "pass",
+     "pierce",
+     "remote",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "650",
+     "SHIELD",
+     "KICK",
+     "THROW",
+     "PASS",
+     "PIERCE",
+     "REMOTE",
+     "SPD 2",
+     "PIERCE · blast keeps going through bricks"
+    ],
+    "rect": {
+     "thr": {
+      "h": false,
+      "r": [
+       677.765625,
+       240,
+       729.765625,
+       292
+      ]
+     },
+     "rem": {
+      "h": false,
+      "r": [
+       737.765625,
+       240,
+       789.765625,
+       292
+      ]
+     },
+     "bomb": {
+      "h": false,
+      "r": [
+       677.765625,
+       300,
+       749.765625,
+       372
+      ]
+     }
+    },
+    "b0": 0,
+    "thrown": []
+   },
+   "hit-fade": {
+    "lbl": [],
+    "c2": {
+     "a": 0.27,
+     "s": "",
+     "k": null
+    },
+    "bar": [
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "650",
+     "SHIELD",
+     "KICK",
+     "THROW",
+     "PASS",
+     "PIERCE",
+     "REMOTE",
+     "SPD 2",
+     "PIERCE · blast keeps going through bricks",
+     "PASS · walk through green bricks",
+     "700",
+     "680"
+    ]
+   },
+   "repeat-kick": {
+    "lbl": [
+     "KICK@0.74"
+    ],
+    "c2": {
+     "a": 0,
+     "s": "",
+     "k": null
+    },
+    "bar": [
+     "kick",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "680",
+     "SPD 2",
+     "730",
+     "KICK"
+    ]
+   },
+   "pause-label": {
+    "lbl": [
+     "+1 LIFE@0.25"
+    ],
+    "c2": {
+     "a": 0,
+     "s": ""
+    },
+    "bar": [
+     "kick",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "730",
+     "KICK",
+     "SPD 2",
+     "780",
+     "+1 LIFE",
+     "PAUSED",
+     "RESUME",
+     "RESTART",
+     "OPTIONS",
+     "QUIT TO MENU",
+     "↑↓ SELECT · ENTER / TAP CONFIRM · P RESUME · M QUIT"
+    ]
+   },
+   "reduce-flash": {
+    "lbl": [],
+    "c2": {
+     "a": 0,
+     "s": "",
+     "k": null
+    },
+    "bar": [
+     "kick",
+     "speed"
+    ],
+    "txt": [
+     "BOMB",
+     "2",
+     "FLAME",
+     "8",
+     "LV",
+     "1",
+     "ENEMIES",
+     "3",
+     "· CORE",
+     "780",
+     "KICK",
+     "SPD 2",
+     "+1 LIFE",
+     "830",
+     "BOMB 3"
+    ],
+    "ys": [
+     [
+      "0.19",
+      228,
+      213
+     ],
+     [
+      "0.30",
+      228,
+      209
+     ],
+     [
+      "0.58",
+      228,
+      206
+     ],
+     [
+      "0.69",
+      228,
+      206
+     ],
+     [
+      "0.90",
+      228,
+      206
+     ],
+     null
+    ]
+   }
+  },
+  "tp": [
+   7,
+   6,
+   0
+  ],
+  "touch": {
+   "rect": {
+    "thr": {
+     "h": false,
+     "r": [
+      677.765625,
+      240,
+      729.765625,
+      292
+     ]
+    },
+    "rem": {
+     "h": false,
+     "r": [
+      737.765625,
+      240,
+      789.765625,
+      292
+     ]
+    },
+    "bomb": {
+     "h": false,
+     "r": [
+      677.765625,
+      300,
+      749.765625,
+      372
+     ]
+    }
+   },
+   "b0": 0,
+   "thrown": [],
+   "after": 0
+  },
+  "state": "PLAY",
+  "errors": []
+ }
+]
