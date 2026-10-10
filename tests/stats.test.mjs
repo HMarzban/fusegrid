@@ -750,6 +750,62 @@ const TODAY = "2026-09-07";
   }
 }
 
+// ---- 11h. STATS C note: shellview paints app.toast (main's ONE endkeys
+// toast) in the kicker slot above the headline, in every render kind, clear
+// of the rows, notes and the tap foot — and only while it is live (t > 0) ----
+{
+  const noop = () => {};
+  const rec = () => {
+    const out = [];
+    const c = {
+      fillStyle: "", strokeStyle: "", lineWidth: 1, globalAlpha: 1, font: "",
+      textAlign: "left", textBaseline: "middle",
+      fillRect: noop, strokeRect: noop, clearRect: noop,
+      fillText(s, x, y) { out.push({ s: String(s), y, fill: this.fillStyle, font: this.font, al: this.textAlign }); },
+      strokeText: noop, beginPath: noop, moveTo: noop, lineTo: noop,
+      closePath: noop, fill: noop, stroke: noop, arc: noop, arcTo: noop,
+      save: noop, restore: noop, translate: noop, scale: noop, rotate: noop,
+      setTransform: noop, transform: noop, drawImage: noop,
+      createLinearGradient: () => ({ addColorStop: noop }),
+      measureText: () => ({ width: 0 }),
+    };
+    return { c, out };
+  };
+  const FOOT = "T MEDALS · C COPY MY STATS · R RESET · ESC BACK";
+  const paint = (kind, toast, arm) => {
+    const { c, out } = rec();
+    drawShell(c, { screen: SCREEN.STATS, subT: 0, stats: { rows: [["RUNS", 3]], notes: ["NOTE A"] }, resetArm: !!arm, toast },
+      {}, null, kind, () => [], () => 0);
+    return out;
+  };
+  for (const kind of ["2d", "3d", "iso"]) {
+    const out = paint(kind, { s: "COPIED", ok: true, t: 1 });
+    const n = out.find((o) => o.s === "COPIED"), h = out.find((o) => o.s === "STATS"),
+      f = out.find((o) => o.s === FOOT), r = out.find((o) => o.s === "RUNS"), nt = out.find((o) => o.s === "NOTE A");
+    check("STATS C note (" + kind + "): COPIED painted in the accent, centred, bold, above the headline",
+      !!n && !!h && n.fill === "#37f0d0" && n.al === "center" && /900/.test(n.font) && /11px/.test(n.font) && n.y < h.y && n.y > 0,
+      JSON.stringify([n, h]));
+    check("STATS C note (" + kind + "): clear of the first row, the notes and the tap foot",
+      !!n && n.y < r.y - 20 && n.y < nt.y && n.y < f.y - 100 && !out.some((o) => o.s === "YOUR CABINET"),
+      JSON.stringify([n, r, nt, f]));
+  }
+  {
+    const out = paint("3d", { s: "COPY FAILED", ok: false, t: 0.5 });
+    const n = out.find((o) => o.s === "COPY FAILED");
+    check("STATS C note: COPY FAILED is painted in the reset red", !!n && n.fill === "#ff5d73", JSON.stringify(n));
+  }
+  {
+    const out = paint("2d", { s: "COPIED", ok: true, t: 0 });
+    check("STATS C note: an expired toast (t 0) paints nothing and the kicker returns",
+      !out.some((o) => o.s === "COPIED") && out.some((o) => o.s === "YOUR CABINET"), out.map((o) => o.s).join("|"));
+  }
+  {
+    const out = paint("2d", { s: "COPIED", ok: true, t: 1 }, true);
+    check("STATS C note rides an armed STATS too, beside the armed foot",
+      out.some((o) => o.s === "COPIED") && out.some((o) => /^R AGAIN/.test(o.s)), out.map((o) => o.s).join("|"));
+  }
+}
+
 // ---- 12. R12: lifetime DAYS PLAYED, counted once per LOCAL date at room_enter ----
 {
   const st = mapStore();

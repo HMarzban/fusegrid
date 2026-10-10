@@ -1395,8 +1395,8 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
     const t=createGame(null,{seed:23});
     t.app.screen=SCREEN.ATTRACT;
     t.input._onKey({code:"KeyR"});
-    check("Reset: R on ATTRACT stays swallowed (screen stays ATTRACT)",
-      t.app.screen===SCREEN.ATTRACT&&t.app.resetArm===false&&kept(),String(t.app.screen));
+    check("Reset: R on ATTRACT leaves like any key (a CORE run), never arms or clears",
+      t.app.screen===SCREEN.GAME&&(t.world.heat|0)===0&&t.app.resetArm===false&&kept()&&reloads===1,String(t.app.screen));
   }finally{ delete globalThis.window; delete globalThis.location; delete navigator.clipboard; }
 }
 

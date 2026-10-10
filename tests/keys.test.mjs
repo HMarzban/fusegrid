@@ -201,12 +201,26 @@ for (const at of [1.0, 2.0, 3.0, 4.0]) {
   const r = menu(); r.tick(Math.ceil(10.2 * 60));
   press(r, "Escape");
   check("ATTRACT Escape -> MENU", r.app.screen === SCREEN.MENU, r.app.screen);
-  for (const code of ["Enter", "KeyQ", "ArrowLeft", "Space", "KeyP"]) {
+  for (const code of ["Enter", "KeyQ", "ArrowLeft", "Space", "KeyP", "KeyR", "KeyM", "KeyC"]) {
     const t = menu(); t.tick(Math.ceil(10.2 * 60));
+    const r0 = reloads, c0 = clip.length;
     press(t, code);
     check("ATTRACT " + code + " -> a CORE room-1 run, playing, no bomb from the press",
       t.app.screen === SCREEN.GAME && t.world.state === "PLAY" && t.world.level === 1 && (t.world.heat | 0) === 0 && live(t.world) === 0,
       t.app.screen + "/" + live(t.world));
+    check("ATTRACT " + code + " arms no reset, reloads nothing, copies nothing, pauses nothing",
+      t.app.resetArm === false && reloads === r0 && clip.length === c0 && t.world.state !== "PAUSE", t.app.resetArm + "/" + reloads);
+  }
+  // H4 (ruling 2026-10-09): a cursor parked on DAILY never turns ATTRACT's exit into the daily
+  const d = new Date(), p2 = (n) => (n < 10 ? "0" + n : "" + n);
+  const today = d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.getDate());
+  for (const code of ["KeyR", "KeyM"]) {
+    const t = menu(); toRow(t, ITEMS.indexOf("DAILY")); t.tick(Math.ceil(10.2 * 60));
+    const at = t.app.screen === SCREEN.ATTRACT && t.app.cursor === ITEMS.indexOf("DAILY");
+    press(t, code);
+    check("ATTRACT " + code + " with the MENU cursor on DAILY -> an ordinary run, not the daily",
+      at && t.app.screen === SCREEN.GAME && !(t.ro.run && t.ro.run.daily) && t.world.seed !== dailySeed(today) >>> 0,
+      at + "/" + t.app.screen + "/" + JSON.stringify(t.ro.run && t.ro.run.daily));
   }
 }
 
@@ -302,6 +316,39 @@ for (let i = 0; i < GUIDE_ROWS.length; i++) {
   check("STATS R, R resets and reloads once", reloads === 1, reloads);
   press(g, "Escape");
   check("STATS Escape -> MENU", g.app.screen === SCREEN.MENU);
+}
+// STATS C reports back through the SAME endkeys toast WIN / LOSE use (app.toast, painted by shellview)
+{
+  const g = menu(); toRow(g, ITEMS.indexOf("STATS")); press(g, "Enter");
+  check("STATS: no copy note before any C", toastOf(g.app.toast) === null, JSON.stringify(g.app.toast));
+  press(g, "KeyC"); await flush(); g.tick();
+  check("STATS C shows COPIED", g.app.screen === SCREEN.STATS && toastOf(g.app.toast) && g.app.toast.s === "COPIED" && g.app.toast.ok === true,
+    JSON.stringify(g.app.toast));
+  const t1 = g.app.toast.t; g.tick(30);
+  check("STATS C note ages on STATS", g.app.toast.t > 0 && g.app.toast.t < t1 - 0.4, t1 + " -> " + g.app.toast.t);
+  g.tick(Math.ceil(TOAST_T * 60) + 2);
+  check("STATS C note clears after ~" + TOAST_T + " s", toastOf(g.app.toast) === null, JSON.stringify(g.app.toast));
+  clipMode = "no";
+  press(g, "KeyC"); await flush(); g.tick();
+  check("STATS C with a refusing clipboard says COPY FAILED, never COPIED",
+    toastOf(g.app.toast) && g.app.toast.s === "COPY FAILED" && g.app.toast.ok === false, JSON.stringify(g.app.toast));
+  clipMode = "ok";
+  delete navigator.clipboard;
+  press(g, "KeyC"); await flush(); g.tick();
+  check("STATS C with no clipboard API says COPY FAILED", toastOf(g.app.toast) && g.app.toast.s === "COPY FAILED", JSON.stringify(g.app.toast));
+  navigator.clipboard = clipStub;
+  g.tick(Math.ceil(TOAST_T * 60) + 2);
+  press(g, "KeyR"); const arm = g.app.resetArm;
+  press(g, "KeyC"); await flush(); g.tick();
+  check("STATS armed R then C: disarms, copies, shows COPIED, reloads nothing",
+    arm === true && g.app.resetArm === false && g.app.toast.s === "COPIED" && toastOf(g.app.toast) && reloads === 1, g.app.resetArm + "/" + reloads);
+  press(g, "Escape");
+  check("STATS C note is dropped the moment STATS closes", g.app.screen === SCREEN.MENU && toastOf(g.app.toast) === null, JSON.stringify(g.app.toast));
+  press(g, "KeyC"); await flush(); g.tick();
+  check("MENU C copies nothing and raises no note", toastOf(g.app.toast) === null, JSON.stringify(g.app.toast));
+  toRow(g, ITEMS.indexOf("STATS")); press(g, "Enter"); press(g, "KeyC"); await flush(); press(g, "Escape");
+  while (g.app.cursor > 0) press(g, "ArrowUp"); press(g, "Enter");
+  check("a STATS note never leaks onto a run", g.app.screen === SCREEN.GAME && g.ro.toast === null, g.app.screen + "/" + JSON.stringify(g.ro.toast));
 }
 
 // ---- GAME / PLAY ----
@@ -458,12 +505,19 @@ for (const code of ["Space", "Enter"]) {
   check("toastTick ages the note while the overlay is up", toastOf(t) && Math.abs(t.t - (TOAST_T - 1)) < 1e-9);
   toastTick(t, { state: "PLAY" }, 0);
   check("toastTick drops the note outside WIN / LOSE", toastOf(t) === null);
+  const at = (screen, state, t0) => { const n = { s: "COPIED", ok: true, t: t0 }; toastTick(n, { state }, 0.5, { screen }); return n.t; };
+  check("toastTick with the shell: STATS ages the note whatever the frozen world says",
+    at(SCREEN.STATS, "PLAY", 1.5) === 1 && at(SCREEN.STATS, "WIN", 1.5) === 1);
+  check("toastTick with the shell: GAME ages it only on WIN / LOSE",
+    at(SCREEN.GAME, "WIN", 1.5) === 1 && at(SCREEN.GAME, "LOSE", 1.5) === 1 && at(SCREEN.GAME, "PLAY", 1.5) === 0 && at(SCREEN.GAME, "PAUSE", 1.5) === 0);
+  check("toastTick with the shell: every other screen drops it",
+    [SCREEN.MENU, SCREEN.TROPHIES, SCREEN.ATTRACT, SCREEN.INTRO, SCREEN.SETTINGS].every((s) => at(s, "WIN", 1.5) === 0));
   const s = createToast();
   navigator.clipboard = { writeText: () => { throw new Error("sync"); } };
   copyText("x", s, "COPIED");
   check("copyText: a synchronous throw says COPY FAILED", s.s === "COPY FAILED" && s.ok === false, JSON.stringify(s));
   copyText("x", null, "COPIED");
-  check("copyText: a null note (STATS) copies without a toast and never throws", true);
+  check("copyText: a null note copies without a toast and never throws", true);
   navigator.clipboard = clipStub;
 }
 

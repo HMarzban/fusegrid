@@ -358,22 +358,22 @@ export function createGame(canvas, opts = {}) {
     if (qualifies(en.s, sc)) stat("score_set", { h: world.heat | 0 }, dateStr());
     saveScores(recordScore(sc, en));
   };
-  const toast = createToast(); // C / B feedback on the WIN / LOSE overlay (src/app/endkeys.js)
+  const toast = app.toast = createToast(); // C / B note on the WIN / LOSE overlay, C on STATS (src/app/endkeys.js)
   /* UI key side-channel: ALWAYS routed to the shell; M-in-PAUSE records the
      score then quits to MENU (spec §4 table). Machine self-gates elsewhere. */
   input.onUiKey = (code) => {
     if (code !== "KeyR") app.resetArm = false;
-    if (code === "KeyR" && app.screen !== SCREEN.STATS && app.screen !== SCREEN.INTRO) {
+    if (code === "KeyR" && app.screen !== SCREEN.STATS && app.screen !== SCREEN.INTRO && app.screen !== SCREEN.ATTRACT) {
       if (app.screen === SCREEN.GAME) {
         resetCamera(cam); // §2 reset, GAME only
         resetOrbit(rig, camPreset(settings.cam)); // real3d §4: 3D rig resets too, to the selected preset
       }
       return;
     }
-    if (code === "KeyC" && app.screen === SCREEN.STATS) { copyText(statsPayload(loadStats(), loadBests(), loadTimes(), dateStr())); return; }
+    if (code === "KeyC" && app.screen === SCREEN.STATS) { copyText(statsPayload(loadStats(), loadBests(), loadTimes(), dateStr()), toast, "COPIED"); return; }
     // WIN / LOSE: Enter = Space, C / B copy with a note; elsewhere C still reaches app.key (ATTRACT plays)
     if (endKey(code, app, world, input, toast, () => dailyDate ? dailyStamp(dailyDate, world.level | 0, world.score | 0) : copyPayload(world))) return;
-    if (code === "KeyM" && app.screen !== SCREEN.INTRO) { // INTRO: M and R fall through to app.key (show: any-key skip; title: no-op)
+    if (code === "KeyM" && app.screen !== SCREEN.INTRO && app.screen !== SCREEN.ATTRACT) { // INTRO / ATTRACT: M and R fall through to app.key (show: skip; title: no-op; ATTRACT: a run)
       if (app.screen === SCREEN.GAME && app.worldState === "PAUSE") {
         persistScore();
         app.quitToMenu("PAUSE");
@@ -619,7 +619,7 @@ export function createGame(canvas, opts = {}) {
       app.update(dt, shellInput);
       if (world.state === "PLAY") { coachT += dt; roomT += Math.min(dt, 7 * CFG.STEP - acc); runT += dt; }
       acc += dt;
-      ghostTick(ghost, world, roomT); toastTick(toast, world, dt);
+      ghostTick(ghost, world, roomT);
       let steps = 0;
       while (acc >= CFG.STEP) {
         if (net) net.drive();
@@ -669,8 +669,8 @@ export function createGame(canvas, opts = {}) {
       app.update(dt, shellInput); // INTRO -> MENU on the show bomb's boom lives in here now
       acc = 0;
     }
-    // ATTRACT: re-read the screen AFTER app.update — the machine may have
-    // entered/exited mid-frame; create/step or discard the demo accordingly
+    toastTick(toast, world, dt, app); // the copy note ages on a WIN / LOSE overlay and on STATS, dropped anywhere else
+    // ATTRACT: re-read the screen AFTER app.update (entered/exited mid-frame?); create/step or discard the demo
     const attract = app.screen === SCREEN.ATTRACT;
     if (attract) {
       if (!demo) demo = createDemo();

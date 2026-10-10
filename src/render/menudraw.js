@@ -909,10 +909,18 @@ const RESET_NOTES = Object.freeze([
    computed (app/stats.js), the same getter discipline scores and plaques use:
    this file must not import src/app. The rule after row 7 is what separates
    seven lifetime counters from three per-heat bests, so the screen reads as a
-   cabinet and not as a debug dump — no JSON is ever painted here. */
-export function drawStats(c, L, t, ui, arm) {
+   cabinet and not as a debug dump — no JSON is ever painted here. A C copy
+   note (endkeys toast {s,ok}) takes the kicker's slot above the headline, the
+   WIN / LOSE overlay's place for it, clear of rows, notes and the tap foot. */
+export function drawStats(c, L, t, ui, arm, toast) {
   const S = shell(c, L, 480);
-  head(c, S, "STATS", "YOUR CABINET");
+  const tn = toast && toast.s;
+  head(c, S, "STATS", tn ? "" : "YOUR CABINET");
+  if (tn) {
+    c.fillStyle = toast.ok ? ACCENT : RESET_RED;
+    c.font = font(11, "900");
+    c.fillText(toast.s, S.mid, S.headY - 9);
+  }
   const rows = (ui && ui.rows) || [];
   const notes = arm ? RESET_NOTES : (ui && ui.notes) || [];
   const top = S.headY + 22,
