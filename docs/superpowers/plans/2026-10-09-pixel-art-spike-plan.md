@@ -362,8 +362,8 @@ Rules:
   - **Superseded 2026-10-10 by team ruling R22 (§7.3).** The px renderer is its own factory, so
     `renderer.js` is byte-identical and this exception no longer exists. The
     even-px shake snap lives in `src/render/pixel/snap.js` `evenShake`, applied
-    inside the px renderer's final blit. The position rule (even logical px,
-    R12) stands.
+    inside the px renderer's final blit. The position rule (P-snap: even
+    logical px, as above) stands.
 - **D3 Intro zoom and pinch zoom are quantized in px mode, wired at G1.**
   - **Superseded 2026-10-10 by team ruling R17 (§7.3): not built.** Under U2's sharp-bilinear
     (R20) every zoom is uniform at the integer prescale, so there is no

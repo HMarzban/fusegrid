@@ -178,11 +178,12 @@ export async function run(a) {
     await snap("lose");
     await P.ev("window.__GAME__.G.state='WIN'"); await sleep(300); await snap("win");
     if (a.render === "px") {
-      await P.ev("window.__GAME__.begin()"); await sleep(600); await P.ev(FAT); await sleep(300);
-      const px = await P.ev(PERF);
-      const Q = await openPage(c, a, url.replace("render=px", "render=2d"));
-      await Q.key("Enter"); await sleep(5200); await Q.ev("window.__GAME__.begin()"); await sleep(600); await Q.ev(FAT); await sleep(300);
-      report.perf = {flushed: true, px, classic: await Q.ev(PERF), gpu: a.gpu, note: "render + getImageData(0,0,1,1) per sample; x10 = ten renders per readback, ms per render; " + (a.gpu ? "Metal GPU: absolute, judge the 4 ms budget on x10" : "swiftshader harness, relative only")};
+      const fresh = async (u) => { const R = await openPage(c, a, u); await R.key("Enter"); await sleep(5200); await R.ev("window.__GAME__.begin()"); await sleep(600); await R.ev(FAT); await sleep(300); return R; };
+      const R = await fresh(url), Q = await fresh(url.replace("render=px", "render=2d"));
+      const px = await R.ev(PERF), classic = await Q.ev(PERF);
+      if (px.enemies !== classic.enemies) report.errors.push("perf worlds differ: px " + px.enemies + " foes vs CLASSIC " + classic.enemies);
+      report.errors.push(...R.errors);
+      report.perf = {flushed: true, px, classic, gpu: a.gpu, note: "render + getImageData(0,0,1,1) per sample; x10 = ten renders per readback, ms per render; " + (a.gpu ? "Metal GPU: absolute, judge the 4 ms budget on x10" : "swiftshader harness, relative only")};
       report.errors.push(...Q.errors);
     }
     report.errors.push(...P.errors);
