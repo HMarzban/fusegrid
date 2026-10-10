@@ -873,7 +873,7 @@ function check(name, cond, detail) {
       check(`graphics: eight labels at ${touch ? 15 : 13}px inside the plate (${tag})`, !!p && labels.every((t) => t && t.px === (touch ? 15 : 13) && t.y > p.y + 8 && t.y < p.y + p.h - 8));
       check(`graphics: head + kicker (${tag})`, texts.some((t) => t.s === "GRAPHICS" && t.px === 16) && texts.some((t) => t.s === "PERFORMANCE · BATTERY"));
       const h1 = texts.find((t) => t.s === view.rows[1].help1), h2 = texts.find((t) => t.s === view.rows[1].help2);
-      const ft = texts.find((t) => t.s === "↑↓ ROW · ←→ ADJUST · ENTER CYCLE · ESC BACK");
+      const ft = texts.find((t) => t.s === (touch ? md.FOOT_TAP : md.FOOT_KEYS));
       check(`graphics: two help lines for the selected row, then the foot (${tag})`, !!h1 && !!h2 && !!ft && h1.px === (touch ? 11 : 10) && h1.fill === "#7385ad" && h2.fill === "#37f0d0" &&
         labels[7].y < h1.y && h1.y < h2.y && h2.y < ft.y && ft.y < p.y + p.h - 4 && h2.s === gfx.HELP_LIMIT);
       check(`graphics: help lines fit the plate width (${tag})`, [h1, h2].every((t) => [...t.s].length * t.px * 0.6 <= g.S.iw));
@@ -896,6 +896,15 @@ function check(name, cond, detail) {
   check("meter: fps, density only in 3D / PIXEL, LIMIT", md.meterText({ fps: 58.4, kind: "3d", dpr3d: 1.5 }) === "58 FPS · 1.5X" &&
     md.meterText({ fps: 30, kind: "px", dprPx: 2, limit: true }) === "30 FPS · 2X · LIMIT" && md.meterText({ fps: 60, kind: "2d", dpr3d: 2 }) === "60 FPS" &&
     md.meterText(null) === "-- FPS");
+  check("meter: IDLE tags the idle-gated screens, before LIMIT", md.meterText({ fps: 30, kind: "3d", dpr3d: 1.5 }, true) === "30 FPS · 1.5X · IDLE" &&
+    md.meterText({ fps: 20, kind: "2d", limit: true }, true) === "20 FPS · IDLE · LIMIT" && md.meterText({ fps: 60, kind: "2d" }, false) === "60 FPS");
+  check("OPTIONS / GRAPHICS foot: keys on desktop, the tap model on touch (one string each, <=60)", md.FOOT_KEYS === "↑↓ ROW · ←→ ADJUST · ENTER CYCLE · ESC BACK" &&
+    md.FOOT_TAP === "TAP A ROW TO CHANGE IT · TAP OUTSIDE TO GO BACK" && [...md.FOOT_TAP].length <= 60);
+  for (const touch of [false, true]) {
+    const { c, texts } = rec();
+    md.drawSettings(c, md.layout(600, 520), 1, { row: 0, vals: {}, touch });
+    check(`OPTIONS foot ${touch ? "touch" : "desktop"}`, texts.some((t) => t.s === (touch ? md.FOOT_TAP : md.FOOT_KEYS)) && !texts.some((t) => t.s === (touch ? md.FOOT_KEYS : md.FOOT_TAP)));
+  }
   check("meter density format matches gfx.xOf", [1, 1.25, 1.5, 1.75, 2, 3].every((v) => md.meterText({ fps: 1, kind: "3d", dpr3d: v }) === "1 FPS · " + gfx.xOf(v)));
   {
     const { c, texts, rects } = rec();
@@ -917,14 +926,16 @@ function check(name, cond, detail) {
     a.settings.fpm = 1; a.gfx = { fps: 30, kind: "2d" };
     const seen = [];
     for (const sc of ["MENU", "SETTINGS", "GRAPHICS", "LEVEL", "SCORES", "GUIDE", "STATS", "ATTRACT", "INTRO"]) {
-      a.screen = SCREEN[sc]; if (draw().includes("30 FPS")) seen.push(sc);
+      a.screen = SCREEN[sc]; if (draw().includes("30 FPS · IDLE")) seen.push(sc);
     }
-    check("shellview: FPS METER chip on every shell screen", seen.length === 9, seen.join());
+    check("shellview: FPS METER chip on every shell screen, tagged IDLE off GAME PLAY", seen.length === 9, seen.join());
+    a.screen = SCREEN.INTRO; a.introStage = 1;
+    check("shellview: the INTRO show runs at the GAME cap, so no IDLE tag", draw().includes("30 FPS")); a.introStage = 0;
     a.screen = SCREEN.GAME;
-    check("shellview: FPS METER in GAME PLAY too", draw().includes("30 FPS"));
+    check("shellview: FPS METER in GAME PLAY too, untagged", draw().includes("30 FPS"));
     world.state = "PAUSE"; a.pauseView = 2;
     T = draw();
-    check("shellview: PAUSE view 2 draws the GRAPHICS page against overlayBox", T.includes("PERFORMANCE · BATTERY") && T.includes("30 FPS"));
+    check("shellview: PAUSE view 2 draws the GRAPHICS page against overlayBox", T.includes("PERFORMANCE · BATTERY") && T.includes("30 FPS · IDLE"));
     a.pauseView = 1;
     check("shellview: PAUSE view 1 still draws OPTIONS with the door", draw().includes("AUTO ›"));
     a.settings.fpm = 0; a.screen = SCREEN.MENU;

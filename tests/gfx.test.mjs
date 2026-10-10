@@ -101,6 +101,8 @@ for (const n of PRESET_NAMES) {
   check("a pending AA change carries a *", pa.rows[4].val === "OFF*" && gfxView(S({ aa: 2 }), "3d", { pendingAA: true }).rows[4].val === "ON*", pa.rows[4].val);
   check("CUSTOM door and help line", (() => { const c = gfxView(S({ fxq: 0 }), "3d", {}); return c.door === "CUSTOM ›" && c.rows[0].val === "CUSTOM" && c.rows[0].help2 === HELP_CUSTOM; })());
   check("FRAME RATE line 2 names a held device rate", gfxView(S({}), "3d", { limit: true }).rows[1].help2 === HELP_LIMIT);
+  check("FRAME RATE line 2 names the rate the device actually holds", gfxView(S({ fps: 0 }), "3d", { limit: true, fps: 19.6 }).rows[1].help2 === "YOUR DEVICE IS HOLDING 20 · LOW POWER MODE?" &&
+    gfxView(S({}), "2d", { limit: true, fps: 30 }).rows[1].help2 === HELP_LIMIT);
   const v2 = gfxView(S({}), "2d", {});
   check("CLASSIC 2D: three locked rows read an em dash", v2.rows.filter((r) => r.locked).map((r) => r.label + "=" + r.val).join() === "RESOLUTION=—,SHADOWS=—,ANTI-ALIAS=—");
   check("locked line 2 names the look that unlocks it", v2.rows[2].help2 === LOCK_RES && v2.rows[3].help2 === LOCK_3D && v2.rows[4].help2 === LOCK_3D);

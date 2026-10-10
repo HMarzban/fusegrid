@@ -56,10 +56,11 @@ const HELP = {
   "ANTI-ALIAS": ["SMOOTHS JAGGED 3D EDGES · AUTO IS ON", "APPLIES WHEN YOU LEAVE THIS PAGE"],
   EFFECTS: ["SPARKS, DEBRIS AND GLOW · BLASTS ALWAYS SHOW IN FULL", "LOW HALVES PARTICLES"],
   DEMO: ["THE SELF-PLAYING DEMO AFTER 10 S ON THE MENU", "SHORT PLAYS ONE MINUTE · OFF NEVER STARTS IT"],
-  "FPS METER": ["SHOWS FRAMES PER SECOND IN THE CORNER", "NOT PART OF ANY PRESET"],
+  "FPS METER": ["SHOWS FRAMES PER SECOND IN THE CORNER", "IDLE MEANS A MENU OR PAUSE · NOT PART OF ANY PRESET"],
 };
 export const HELP_CUSTOM = "CUSTOM · YOU CHANGED A ROW · ENTER = AUTO";
-export const HELP_LIMIT = "YOUR DEVICE IS HOLDING 30 · LOW POWER MODE?";
+export const helpLimit = (n) => "YOUR DEVICE IS HOLDING " + n + " · LOW POWER MODE?";
+export const HELP_LIMIT = helpLimit(30);
 export const HELP_PX_RES = "LOW SAVES MOST · AUTO CAPS THE DENSITY ON PHONES";
 export const LOCK_3D = "REAL 3D ONLY · CHANGE RENDER IN OPTIONS", LOCK_RES = "REAL 3D AND PIXEL ONLY";
 
@@ -75,7 +76,7 @@ export function gfxView(s, kind, info) {
     else if (key === "aa") val = (v.aa === 1 ? "AUTO ON" : VALUES.aa[v.aa]) + (i.pendingAA ? "*" : "");
     else val = VALUES[key][v[key]];
     if (!key && preset === "CUSTOM") help2 = HELP_CUSTOM;
-    if (key === "fps" && i.limit) help2 = HELP_LIMIT;
+    if (key === "fps" && i.limit) help2 = helpLimit(i.fps > 0 ? Math.round(i.fps) : 30);
     if (key === "res" && k === "px") help2 = HELP_PX_RES;
     if (lk) { val = "—"; help2 = key === "res" ? LOCK_RES : LOCK_3D; }
     return { label, val: val === undefined ? "" : val, locked: lk, help1: h[0], help2 };

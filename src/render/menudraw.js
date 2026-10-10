@@ -1011,7 +1011,7 @@ export function drawTrophies(c, L, t, rows) {
 
 /* OPTIONS (spec §2): ten rows on LEVEL SELECT's adjust model — eight live
    knobs, the GRAPHICS door and RESET DEFAULTS.
-   ui = {row, vals, r3d, px, togT, rev, door}; vals is the nb.settings.v1 blob,
+   ui = {row, vals, r3d, px, togT, rev, door, touch}; vals is the nb.settings.v1 blob,
    rev is the build tag shellview derives from CACHE_NAME and door is the
    GRAPHICS preset value (`AUTO ›`) the app derives. Rows NEVER hide or
    reflow — the two 3D-only rows dim to 0.45 and read an em dash in CLASSIC 2D
@@ -1033,6 +1033,9 @@ const OPT_LABEL = [
   "RESET DEFAULTS",
 ];
 export const OPT_N = OPT_LABEL.length; // pinned equal to menuapp OPT_ROWS.length
+/* OPTIONS and GRAPHICS share one foot; a touch layout has none of those keys,
+   so it names the tap model both pages use (row = Enter, off the rows = back). */
+export const FOOT_KEYS = "↑↓ ROW · ←→ ADJUST · ENTER CYCLE · ESC BACK", FOOT_TAP = "TAP A ROW TO CHANGE IT · TAP OUTSIDE TO GO BACK";
 const OPT_3D = OPT_LABEL.map((s) => s === "CAMERA" || s === "BRIGHTNESS");
 export function settingsRows(vals, r3d, px, door) {
   const v = vals || {};
@@ -1124,7 +1127,7 @@ export function drawSettings(c, L, t, ui) {
     S.mid,
     g.noteY + 14,
   );
-  foot(c, S, "↑↓ ROW · ←→ ADJUST · ENTER CYCLE · ESC BACK");
+  foot(c, S, u.touch ? FOOT_TAP : FOOT_KEYS);
 }
 
 /* GRAPHICS (unified spec 2026-10-10 §5): the OPTIONS look with eight rows
@@ -1193,21 +1196,23 @@ export function drawGraphics(c, L, t, ui) {
   c.fillText(h.help1 || "", S.mid, g.noteY);
   c.fillStyle = ACCENT;
   c.fillText(h.help2 || "", S.mid, g.noteY + 14);
-  foot(c, S, "↑↓ ROW · ←→ ADJUST · ENTER CYCLE · ESC BACK");
+  foot(c, S, big ? FOOT_TAP : FOOT_KEYS);
 }
 /* FPS METER chip (GRAPHICS row 7): bottom-right of the box on every screen.
    info is app.gfx {fps, kind, dpr3d, dprPx, limit} or null before the frame
-   loop has reported; density shows only in REAL 3D and PIXEL. xOf mirrors
+   loop has reported; density shows only in REAL 3D and PIXEL. idle tags the
+   screens the gate holds at the idle rate (menus, PAUSE, WIN/LOSE, ATTRACT),
+   so a 30 read beside FRAME RATE 60 explains itself. xOf mirrors
    gfx.js's one-decimal format (pinned equal in menudraw.test). */
 const xOf = (v) => (Math.round(v * 10) / 10).toFixed(1).replace(/\.0$/, "") + "X";
-export function meterText(info) {
+export function meterText(info, idle) {
   const i = info || {},
     d = i.kind === "3d" ? i.dpr3d : i.kind === "px" ? i.dprPx : 0;
   return (typeof i.fps === "number" ? String(Math.round(i.fps)) : "--") + " FPS" +
-    (d > 0 ? " · " + xOf(d) : "") + (i.limit ? " · LIMIT" : "");
+    (d > 0 ? " · " + xOf(d) : "") + (idle ? " · IDLE" : "") + (i.limit ? " · LIMIT" : "");
 }
-export function drawMeter(c, W, H, info) {
-  const s = meterText(info),
+export function drawMeter(c, W, H, info, idle) {
+  const s = meterText(info, idle),
     w = s.length * 5.4 + 10;
   c.fillStyle = "rgba(8,12,22,0.78)";
   c.fillRect(W - 4 - w, H - 18, w, 14);

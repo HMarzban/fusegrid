@@ -75,7 +75,8 @@ export function drawShell(c, app, world, canvas, kind, getScores, getPlaques) {
   if (s === SCREEN.BOOT || !app.settings || app.settings.fpm !== 1) return;
   const B = s === SCREEN.GAME ? overlayBox(kind) : null,
     d = B ? null : dims(canvas, kind);
-  menudraw.drawMeter(c, B ? B.w : d.cw, B ? B.h : d.ch, app.gfx);
+  const idle = s === SCREEN.GAME ? world.state !== "PLAY" : !(s === SCREEN.INTRO && app.introStage === 1); // main's frame-gate idle predicate
+  menudraw.drawMeter(c, B ? B.w : d.cw, B ? B.h : d.ch, app.gfx, idle);
 }
 
 function shellBody(c, app, world, canvas, kind, getScores, getPlaques) {
@@ -99,6 +100,7 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques) {
         togT: app.togT,
         rev: REV,
         door: doorOf(app),
+        touch: layOf(canvas) !== "d",
       });
     }
     return;
@@ -193,6 +195,7 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques) {
       togT: app.togT,
       rev: REV,
       door: doorOf(app),
+      touch: layOf(canvas) !== "d",
     });
   } else if (s === SCREEN.GRAPHICS) {
     menudraw.drawDim(c, 0.72, cw, chh);
