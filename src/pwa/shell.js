@@ -25,6 +25,7 @@ const SRC = Object.freeze([
   "src/app/pacestore.js",
   "src/app/perf.js",
   "src/app/plaques.js",
+  "src/app/rcache.js",
   "src/app/renderkind.js",
   "src/app/reset.js",
   "src/app/settings.js",
@@ -95,6 +96,7 @@ const SRC = Object.freeze([
   "src/render/three/particles.js",
   "src/render/three/scene.js",
   "src/render/three/textures.js",
+  "src/render/three/upload.js",
   "src/render/three/wrapper.js",
   "src/touch.js",
 ]);
