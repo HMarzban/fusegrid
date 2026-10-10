@@ -1,0 +1,3651 @@
+[
+ {
+  "tag": "px-lap",
+  "steps": [
+   {
+    "n": "title",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-lap-title.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "INTRO",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 0,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 2.77
+   },
+   {
+    "n": "show1",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-lap-show1.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "INTRO",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 44,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 2.77
+   },
+   {
+    "n": "show2",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-lap-show2.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "INTRO",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 55,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 2.77
+   },
+   {
+    "n": "show3",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-lap-show3.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "INTRO",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 42,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 2.77
+   },
+   {
+    "n": "menu",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-lap-menu.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "MENU",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 30,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 2.77
+   },
+   {
+    "n": "guide",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-lap-guide.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "GUIDE",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 64,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 2.77
+   },
+   {
+    "n": "howto",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-lap-howto.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "HOWTO",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 64,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 2.77
+   },
+   {
+    "n": "items",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-lap-items.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "ITEMS",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 65,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 2.77
+   },
+   {
+    "n": "enemies",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-lap-enemies.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "ENEMIES",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 64,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 2.77
+   },
+   {
+    "n": "options",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-lap-options.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "SETTINGS",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 65,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 2.77
+   },
+   {
+    "n": "graphics",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-lap-graphics.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "GRAPHICS",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 45,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 2.77
+   },
+   {
+    "n": "game",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-lap-game.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 43,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 2.77
+   },
+   {
+    "n": "room1",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-lap-room1.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 43,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 2.77
+   },
+   {
+    "n": "room2",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-lap-room2.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 2,
+    "kind": "px",
+    "gfx": {
+     "fps": 22,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 2.77
+   },
+   {
+    "n": "room3",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-lap-room3.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 3,
+    "kind": "px",
+    "gfx": {
+     "fps": 35,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 2.77
+   },
+   {
+    "n": "room4",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-lap-room4.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 4,
+    "kind": "px",
+    "gfx": {
+     "fps": 47,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 2.77
+   },
+   {
+    "n": "room5",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-lap-room5.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 5,
+    "kind": "px",
+    "gfx": {
+     "fps": 55,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 2.77
+   },
+   {
+    "n": "room6",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-lap-room6.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 6,
+    "kind": "px",
+    "gfx": {
+     "fps": 63,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 2.77
+   },
+   {
+    "n": "room7",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-lap-room7.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 7,
+    "kind": "px",
+    "gfx": {
+     "fps": 63,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 2.77
+   },
+   {
+    "n": "room8",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-lap-room8.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 8,
+    "kind": "px",
+    "gfx": {
+     "fps": 62,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 2.77
+   },
+   {
+    "n": "fat",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-lap-fat.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 62,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 2.77
+   },
+   {
+    "n": "pickups",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-lap-pickups.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 62,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 2.77
+   },
+   {
+    "n": "label",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-lap-label.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 62,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 2.77
+   },
+   {
+    "n": "bar",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-lap-bar.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 53,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 2.77
+   },
+   {
+    "n": "ghost",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-lap-ghost.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 63,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 2.77
+   },
+   {
+    "n": "pause",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-lap-pause.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PAUSE",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 30,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 2.77
+   },
+   {
+    "n": "lose",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-lap-lose.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "LOSE",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 36,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 2.77
+   },
+   {
+    "n": "win",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-lap-win.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "WIN",
+    "level": 5,
+    "kind": "px",
+    "gfx": {
+     "fps": 36,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 2.77
+   }
+  ],
+  "errors": [],
+  "backAtMenu": "MENU",
+  "fat": [
+   "walker",
+   "walker",
+   "stationary",
+   "walker",
+   "stationary",
+   "fast",
+   "chaser",
+   "boomerang",
+   "rocket",
+   "burrow",
+   "shade",
+   "knight"
+  ],
+  "items": [
+   "fire",
+   "bomb",
+   "speed",
+   "heart",
+   "shield",
+   "kick",
+   "throw",
+   "pass",
+   "line",
+   "power",
+   "pierce",
+   "remote"
+  ],
+  "ghostKey": "749227410:1:0:0:1",
+  "ghostOn": [
+   "749227410:1:0:0:1"
+  ],
+  "perf": {
+   "fps": 62.7,
+   "med": 0.3,
+   "p90": 0.4,
+   "gfx": {
+    "fps": 62,
+    "hz": 60,
+    "d": 1,
+    "kind": "px",
+    "dpr3d": 1,
+    "dprPx": 1,
+    "liveAA": null,
+    "pendingAA": false,
+    "limit": false,
+    "gov": null
+   },
+   "settings": null
+  }
+ },
+ {
+  "tag": "2d-lap",
+  "steps": [
+   {
+    "n": "title",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-lap-title.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "INTRO",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 0,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "show1",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-lap-show1.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "INTRO",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 0,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "show2",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-lap-show2.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "INTRO",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 51,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "show3",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-lap-show3.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "INTRO",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 54,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "menu",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-lap-menu.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "MENU",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 59,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "guide",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-lap-guide.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "GUIDE",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 64,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "howto",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-lap-howto.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "HOWTO",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 64,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "items",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-lap-items.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "ITEMS",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 45,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "enemies",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-lap-enemies.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "ENEMIES",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 51,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "options",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-lap-options.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "SETTINGS",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 64,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "graphics",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-lap-graphics.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "GRAPHICS",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 64,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "game",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-lap-game.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 50,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "room1",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-lap-room1.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 50,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "room2",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-lap-room2.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 2,
+    "kind": "2d",
+    "gfx": {
+     "fps": 50,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "room3",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-lap-room3.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 3,
+    "kind": "2d",
+    "gfx": {
+     "fps": 50,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "room4",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-lap-room4.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 4,
+    "kind": "2d",
+    "gfx": {
+     "fps": 29,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "room5",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-lap-room5.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 5,
+    "kind": "2d",
+    "gfx": {
+     "fps": 33,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "room6",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-lap-room6.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 6,
+    "kind": "2d",
+    "gfx": {
+     "fps": 26,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "room7",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-lap-room7.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 7,
+    "kind": "2d",
+    "gfx": {
+     "fps": 25,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "room8",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-lap-room8.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 8,
+    "kind": "2d",
+    "gfx": {
+     "fps": 39,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "fat",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-lap-fat.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 26,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "pickups",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-lap-pickups.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 33,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "label",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-lap-label.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 47,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "bar",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-lap-bar.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 35,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "ghost",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-lap-ghost.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 37,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "pause",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-lap-pause.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PAUSE",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 37,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "lose",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-lap-lose.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "LOSE",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 37,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "win",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-lap-win.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "WIN",
+    "level": 5,
+    "kind": "2d",
+    "gfx": {
+     "fps": 21,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   }
+  ],
+  "errors": [],
+  "backAtMenu": "MENU",
+  "fat": [
+   "walker",
+   "walker",
+   "stationary",
+   "walker",
+   "stationary",
+   "fast",
+   "chaser",
+   "boomerang",
+   "rocket",
+   "burrow",
+   "shade",
+   "knight"
+  ],
+  "items": [
+   "fire",
+   "bomb",
+   "speed",
+   "heart",
+   "shield",
+   "kick",
+   "throw",
+   "pass",
+   "line",
+   "power",
+   "pierce",
+   "remote"
+  ],
+  "ghostKey": "597843357:1:0:0:1",
+  "ghostOn": [
+   "597843357:1:0:0:1"
+  ],
+  "perf": {
+   "fps": 10.7,
+   "med": 0.2,
+   "p90": 0.3,
+   "gfx": {
+    "fps": 37,
+    "hz": 60,
+    "d": 1,
+    "kind": "2d",
+    "dpr3d": 1,
+    "dprPx": 1,
+    "liveAA": null,
+    "pendingAA": false,
+    "limit": false,
+    "gov": null
+   },
+   "settings": null
+  }
+ },
+ {
+  "tag": "3d-lap",
+  "steps": [
+   {
+    "n": "title",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-lap-title.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "INTRO",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 0,
+     "kind": "3d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "show1",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-lap-show1.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "INTRO",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 60,
+     "kind": "3d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "show2",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-lap-show2.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "INTRO",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 60,
+     "kind": "3d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "show3",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-lap-show3.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "INTRO",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 62,
+     "kind": "3d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "menu",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-lap-menu.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "MENU",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 38,
+     "kind": "3d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "guide",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-lap-guide.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "GUIDE",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 57,
+     "kind": "3d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "howto",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-lap-howto.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "HOWTO",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 64,
+     "kind": "3d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "items",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-lap-items.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "ITEMS",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 55,
+     "kind": "3d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "enemies",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-lap-enemies.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "ENEMIES",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 55,
+     "kind": "3d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "options",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-lap-options.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "SETTINGS",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 34,
+     "kind": "3d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "graphics",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-lap-graphics.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "GRAPHICS",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 57,
+     "kind": "3d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "game",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-lap-game.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 39,
+     "kind": "3d",
+     "limit": false,
+     "gov": 1
+    },
+    "k": null
+   },
+   {
+    "n": "room1",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-lap-room1.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 45,
+     "kind": "3d",
+     "limit": false,
+     "gov": 1
+    },
+    "k": null
+   },
+   {
+    "n": "room2",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-lap-room2.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 2,
+    "kind": "3d",
+    "gfx": {
+     "fps": 45,
+     "kind": "3d",
+     "limit": false,
+     "gov": 1
+    },
+    "k": null
+   },
+   {
+    "n": "room3",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-lap-room3.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 3,
+    "kind": "3d",
+    "gfx": {
+     "fps": 63,
+     "kind": "3d",
+     "limit": false,
+     "gov": 1
+    },
+    "k": null
+   },
+   {
+    "n": "room4",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-lap-room4.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 4,
+    "kind": "3d",
+    "gfx": {
+     "fps": 63,
+     "kind": "3d",
+     "limit": false,
+     "gov": 1
+    },
+    "k": null
+   },
+   {
+    "n": "room5",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-lap-room5.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 5,
+    "kind": "3d",
+    "gfx": {
+     "fps": 58,
+     "kind": "3d",
+     "limit": false,
+     "gov": 1
+    },
+    "k": null
+   },
+   {
+    "n": "room6",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-lap-room6.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 6,
+    "kind": "3d",
+    "gfx": {
+     "fps": 58,
+     "kind": "3d",
+     "limit": false,
+     "gov": 1
+    },
+    "k": null
+   },
+   {
+    "n": "room7",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-lap-room7.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 7,
+    "kind": "3d",
+    "gfx": {
+     "fps": 54,
+     "kind": "3d",
+     "limit": false,
+     "gov": 1
+    },
+    "k": null
+   },
+   {
+    "n": "room8",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-lap-room8.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 8,
+    "kind": "3d",
+    "gfx": {
+     "fps": 63,
+     "kind": "3d",
+     "limit": false,
+     "gov": 1
+    },
+    "k": null
+   },
+   {
+    "n": "fat",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-lap-fat.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 55,
+     "kind": "3d",
+     "limit": false,
+     "gov": 1
+    },
+    "k": null
+   },
+   {
+    "n": "pickups",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-lap-pickups.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 62,
+     "kind": "3d",
+     "limit": false,
+     "gov": 1
+    },
+    "k": null
+   },
+   {
+    "n": "label",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-lap-label.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 17,
+     "kind": "3d",
+     "limit": false,
+     "gov": 1
+    },
+    "k": null
+   },
+   {
+    "n": "bar",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-lap-bar.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 17,
+     "kind": "3d",
+     "limit": false,
+     "gov": 1
+    },
+    "k": null
+   },
+   {
+    "n": "ghost",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-lap-ghost.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 17,
+     "kind": "3d",
+     "limit": false,
+     "gov": 1
+    },
+    "k": null
+   },
+   {
+    "n": "pause",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-lap-pause.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "PAUSE",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 35,
+     "kind": "3d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "lose",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-lap-lose.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "LOSE",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 38,
+     "kind": "3d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "win",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-lap-win.png",
+    "crop": [
+     267.609375,
+     24,
+     830.765625,
+     720
+    ],
+    "state": "WIN",
+    "level": 5,
+    "kind": "3d",
+    "gfx": {
+     "fps": 30,
+     "kind": "3d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   }
+  ],
+  "errors": [],
+  "backAtMenu": "MENU",
+  "fat": [
+   "walker",
+   "walker",
+   "stationary",
+   "walker",
+   "stationary",
+   "fast",
+   "chaser",
+   "boomerang",
+   "rocket",
+   "burrow",
+   "shade",
+   "knight"
+  ],
+  "items": [
+   "fire",
+   "bomb",
+   "speed",
+   "heart",
+   "shield",
+   "kick",
+   "throw",
+   "pass",
+   "line",
+   "power",
+   "pierce",
+   "remote"
+  ],
+  "ghostKey": "22395291:1:0:0:1",
+  "ghostOn": [
+   "22395291:1:0:0:1"
+  ],
+  "perf": {
+   "fps": 24.7,
+   "med": 0.6,
+   "p90": 0.6,
+   "gfx": {
+    "fps": 25,
+    "hz": 60,
+    "d": 1,
+    "kind": "3d",
+    "dpr3d": 1,
+    "dprPx": 1,
+    "liveAA": true,
+    "pendingAA": false,
+    "limit": false,
+    "gov": 1
+   },
+   "settings": null
+  }
+ },
+ {
+  "tag": "px-phone",
+  "steps": [
+   {
+    "n": "title",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-phone-title.png",
+    "crop": null,
+    "state": "INTRO",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 0,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 3.74
+   },
+   {
+    "n": "show1",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-phone-show1.png",
+    "crop": [
+     24,
+     777,
+     1122,
+     972.375
+    ],
+    "state": "INTRO",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 63,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 3.74
+   },
+   {
+    "n": "show2",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-phone-show2.png",
+    "crop": [
+     24,
+     777,
+     1122,
+     972.375
+    ],
+    "state": "INTRO",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 62,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 3.74
+   },
+   {
+    "n": "show3",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-phone-show3.png",
+    "crop": [
+     24,
+     777,
+     1122,
+     972.375
+    ],
+    "state": "INTRO",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 36,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 3.74
+   },
+   {
+    "n": "menu",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-phone-menu.png",
+    "crop": null,
+    "state": "MENU",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 30,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 3.74
+   },
+   {
+    "n": "guide",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-phone-guide.png",
+    "crop": [
+     24,
+     777,
+     1122,
+     972.375
+    ],
+    "state": "GUIDE",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 64,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 3.74
+   },
+   {
+    "n": "howto",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-phone-howto.png",
+    "crop": [
+     24,
+     777,
+     1122,
+     972.375
+    ],
+    "state": "HOWTO",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 64,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 3.74
+   },
+   {
+    "n": "items",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-phone-items.png",
+    "crop": [
+     24,
+     777,
+     1122,
+     972.375
+    ],
+    "state": "ITEMS",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 64,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 3.74
+   },
+   {
+    "n": "enemies",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-phone-enemies.png",
+    "crop": [
+     24,
+     777,
+     1122,
+     972.375
+    ],
+    "state": "ENEMIES",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 64,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 3.74
+   },
+   {
+    "n": "options",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-phone-options.png",
+    "crop": [
+     24,
+     777,
+     1122,
+     972.375
+    ],
+    "state": "SETTINGS",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 64,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 3.74
+   },
+   {
+    "n": "graphics",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-phone-graphics.png",
+    "crop": [
+     24,
+     777,
+     1122,
+     972.375
+    ],
+    "state": "GRAPHICS",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 64,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 3.74
+   },
+   {
+    "n": "game",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-phone-game.png",
+    "crop": null,
+    "state": "PLAY",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 20,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 3.74
+   },
+   {
+    "n": "room1",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-phone-room1.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 20,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 3.74
+   },
+   {
+    "n": "room2",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-phone-room2.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 2,
+    "kind": "px",
+    "gfx": {
+     "fps": 20,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 3.74
+   },
+   {
+    "n": "room3",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-phone-room3.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 3,
+    "kind": "px",
+    "gfx": {
+     "fps": 40,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 3.74
+   },
+   {
+    "n": "room4",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-phone-room4.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 4,
+    "kind": "px",
+    "gfx": {
+     "fps": 16,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 3.74
+   },
+   {
+    "n": "room5",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-phone-room5.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 5,
+    "kind": "px",
+    "gfx": {
+     "fps": 50,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 3.74
+   },
+   {
+    "n": "room6",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-phone-room6.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 6,
+    "kind": "px",
+    "gfx": {
+     "fps": 45,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 3.74
+   },
+   {
+    "n": "room7",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-phone-room7.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 7,
+    "kind": "px",
+    "gfx": {
+     "fps": 56,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 3.74
+   },
+   {
+    "n": "room8",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-phone-room8.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 8,
+    "kind": "px",
+    "gfx": {
+     "fps": 56,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 3.74
+   },
+   {
+    "n": "fat",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-phone-fat.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 63,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 3.74
+   },
+   {
+    "n": "pickups",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-phone-pickups.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 63,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 3.74
+   },
+   {
+    "n": "label",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-phone-label.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 57,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 3.74
+   },
+   {
+    "n": "bar",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-phone-bar.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 47,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 3.74
+   },
+   {
+    "n": "ghost",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-phone-ghost.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 55,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 3.74
+   },
+   {
+    "n": "pause",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-phone-pause.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PAUSE",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 36,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 3.74
+   },
+   {
+    "n": "lose",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-phone-lose.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "LOSE",
+    "level": 1,
+    "kind": "px",
+    "gfx": {
+     "fps": 61,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 3.74
+   },
+   {
+    "n": "win",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/px-phone-win.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "WIN",
+    "level": 5,
+    "kind": "px",
+    "gfx": {
+     "fps": 26,
+     "kind": "px",
+     "limit": false,
+     "gov": null
+    },
+    "k": 3.74
+   }
+  ],
+  "errors": [],
+  "backAtMenu": "MENU",
+  "fat": [
+   "walker",
+   "walker",
+   "stationary",
+   "walker",
+   "stationary",
+   "fast",
+   "chaser",
+   "boomerang",
+   "rocket",
+   "burrow",
+   "shade",
+   "knight"
+  ],
+  "items": [
+   "fire",
+   "bomb",
+   "speed",
+   "heart",
+   "shield",
+   "kick",
+   "throw",
+   "pass",
+   "line",
+   "power",
+   "pierce",
+   "remote"
+  ],
+  "ghostKey": "972727180:1:0:0:1",
+  "ghostOn": [
+   "972727180:1:0:0:1"
+  ],
+  "perf": {
+   "fps": 61.7,
+   "med": 0.3,
+   "p90": 0.4,
+   "gfx": {
+    "fps": 62,
+    "hz": 60,
+    "d": 1,
+    "kind": "px",
+    "dpr3d": 1.5,
+    "dprPx": 1.5,
+    "liveAA": null,
+    "pendingAA": false,
+    "limit": false,
+    "gov": null
+   },
+   "settings": null
+  }
+ },
+ {
+  "tag": "2d-phone",
+  "steps": [
+   {
+    "n": "title",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-phone-title.png",
+    "crop": null,
+    "state": "INTRO",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 0,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "show1",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-phone-show1.png",
+    "crop": [
+     24,
+     777,
+     1122,
+     972.375
+    ],
+    "state": "INTRO",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 0,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "show2",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-phone-show2.png",
+    "crop": [
+     24,
+     777,
+     1122,
+     972.375
+    ],
+    "state": "INTRO",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 49,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "show3",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-phone-show3.png",
+    "crop": [
+     24,
+     777,
+     1122,
+     972.375
+    ],
+    "state": "INTRO",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 43,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "menu",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-phone-menu.png",
+    "crop": null,
+    "state": "MENU",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 64,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "guide",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-phone-guide.png",
+    "crop": [
+     24,
+     777,
+     1122,
+     972.375
+    ],
+    "state": "GUIDE",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 65,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "howto",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-phone-howto.png",
+    "crop": [
+     24,
+     777,
+     1122,
+     972.375
+    ],
+    "state": "HOWTO",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 57,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "items",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-phone-items.png",
+    "crop": [
+     24,
+     777,
+     1122,
+     972.375
+    ],
+    "state": "ITEMS",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 43,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "enemies",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-phone-enemies.png",
+    "crop": [
+     24,
+     777,
+     1122,
+     972.375
+    ],
+    "state": "ENEMIES",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 46,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "options",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-phone-options.png",
+    "crop": [
+     24,
+     777,
+     1122,
+     972.375
+    ],
+    "state": "SETTINGS",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 64,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "graphics",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-phone-graphics.png",
+    "crop": [
+     24,
+     777,
+     1122,
+     972.375
+    ],
+    "state": "GRAPHICS",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 64,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "game",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-phone-game.png",
+    "crop": null,
+    "state": "PLAY",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 39,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "room1",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-phone-room1.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 39,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "room2",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-phone-room2.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 2,
+    "kind": "2d",
+    "gfx": {
+     "fps": 39,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "room3",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-phone-room3.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 3,
+    "kind": "2d",
+    "gfx": {
+     "fps": 23,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "room4",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-phone-room4.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 4,
+    "kind": "2d",
+    "gfx": {
+     "fps": 33,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "room5",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-phone-room5.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 5,
+    "kind": "2d",
+    "gfx": {
+     "fps": 32,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "room6",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-phone-room6.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 6,
+    "kind": "2d",
+    "gfx": {
+     "fps": 46,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "room7",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-phone-room7.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 7,
+    "kind": "2d",
+    "gfx": {
+     "fps": 31,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "room8",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-phone-room8.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 8,
+    "kind": "2d",
+    "gfx": {
+     "fps": 40,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "fat",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-phone-fat.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 41,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "pickups",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-phone-pickups.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 32,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "label",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-phone-label.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 29,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "bar",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-phone-bar.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 29,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "ghost",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-phone-ghost.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 36,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "pause",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-phone-pause.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PAUSE",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 37,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "lose",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-phone-lose.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "LOSE",
+    "level": 1,
+    "kind": "2d",
+    "gfx": {
+     "fps": 30,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "win",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/2d-phone-win.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "WIN",
+    "level": 5,
+    "kind": "2d",
+    "gfx": {
+     "fps": 38,
+     "kind": "2d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   }
+  ],
+  "errors": [],
+  "backAtMenu": "MENU",
+  "fat": [
+   "walker",
+   "walker",
+   "stationary",
+   "walker",
+   "stationary"
+  ],
+  "items": [
+   "fire",
+   "bomb",
+   "speed",
+   "heart",
+   "shield",
+   "kick",
+   "throw",
+   "pass",
+   "line",
+   "power",
+   "pierce",
+   "remote"
+  ],
+  "ghostKey": "996622809:1:0:0:1",
+  "ghostOn": [
+   "996622809:1:0:0:1"
+  ],
+  "perf": {
+   "fps": 13.3,
+   "med": 0.3,
+   "p90": 0.4,
+   "gfx": {
+    "fps": 21,
+    "hz": 0,
+    "d": 1,
+    "kind": "2d",
+    "dpr3d": 1.5,
+    "dprPx": 1.5,
+    "liveAA": null,
+    "pendingAA": false,
+    "limit": false,
+    "gov": null
+   },
+   "settings": null
+  }
+ },
+ {
+  "tag": "3d-phone",
+  "steps": [
+   {
+    "n": "title",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-phone-title.png",
+    "crop": null,
+    "state": "INTRO",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 0,
+     "kind": "3d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "show1",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-phone-show1.png",
+    "crop": [
+     24,
+     777,
+     1122,
+     972.375
+    ],
+    "state": "INTRO",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 44,
+     "kind": "3d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "show2",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-phone-show2.png",
+    "crop": [
+     24,
+     777,
+     1122,
+     972.375
+    ],
+    "state": "INTRO",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 50,
+     "kind": "3d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "show3",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-phone-show3.png",
+    "crop": [
+     24,
+     777,
+     1122,
+     972.375
+    ],
+    "state": "INTRO",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 56,
+     "kind": "3d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "menu",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-phone-menu.png",
+    "crop": null,
+    "state": "MENU",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 30,
+     "kind": "3d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "guide",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-phone-guide.png",
+    "crop": [
+     24,
+     777,
+     1122,
+     972.375
+    ],
+    "state": "GUIDE",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 63,
+     "kind": "3d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "howto",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-phone-howto.png",
+    "crop": [
+     24,
+     777,
+     1122,
+     972.375
+    ],
+    "state": "HOWTO",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 40,
+     "kind": "3d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "items",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-phone-items.png",
+    "crop": [
+     24,
+     777,
+     1122,
+     972.375
+    ],
+    "state": "ITEMS",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 29,
+     "kind": "3d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "enemies",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-phone-enemies.png",
+    "crop": [
+     24,
+     777,
+     1122,
+     972.375
+    ],
+    "state": "ENEMIES",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 25,
+     "kind": "3d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "options",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-phone-options.png",
+    "crop": [
+     24,
+     777,
+     1122,
+     972.375
+    ],
+    "state": "SETTINGS",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 54,
+     "kind": "3d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "graphics",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-phone-graphics.png",
+    "crop": [
+     24,
+     777,
+     1122,
+     972.375
+    ],
+    "state": "GRAPHICS",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 63,
+     "kind": "3d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "game",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-phone-game.png",
+    "crop": null,
+    "state": "PLAY",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 43,
+     "kind": "3d",
+     "limit": false,
+     "gov": 1.5
+    },
+    "k": null
+   },
+   {
+    "n": "room1",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-phone-room1.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 47,
+     "kind": "3d",
+     "limit": false,
+     "gov": 1.25
+    },
+    "k": null
+   },
+   {
+    "n": "room2",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-phone-room2.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 2,
+    "kind": "3d",
+    "gfx": {
+     "fps": 43,
+     "kind": "3d",
+     "limit": false,
+     "gov": 1.25
+    },
+    "k": null
+   },
+   {
+    "n": "room3",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-phone-room3.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 3,
+    "kind": "3d",
+    "gfx": {
+     "fps": 45,
+     "kind": "3d",
+     "limit": false,
+     "gov": 1.25
+    },
+    "k": null
+   },
+   {
+    "n": "room4",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-phone-room4.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 4,
+    "kind": "3d",
+    "gfx": {
+     "fps": 42,
+     "kind": "3d",
+     "limit": false,
+     "gov": 1.25
+    },
+    "k": null
+   },
+   {
+    "n": "room5",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-phone-room5.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 5,
+    "kind": "3d",
+    "gfx": {
+     "fps": 45,
+     "kind": "3d",
+     "limit": false,
+     "gov": 1.25
+    },
+    "k": null
+   },
+   {
+    "n": "room6",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-phone-room6.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 6,
+    "kind": "3d",
+    "gfx": {
+     "fps": 48,
+     "kind": "3d",
+     "limit": false,
+     "gov": 1.25
+    },
+    "k": null
+   },
+   {
+    "n": "room7",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-phone-room7.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 7,
+    "kind": "3d",
+    "gfx": {
+     "fps": 48,
+     "kind": "3d",
+     "limit": false,
+     "gov": 1.25
+    },
+    "k": null
+   },
+   {
+    "n": "room8",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-phone-room8.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 8,
+    "kind": "3d",
+    "gfx": {
+     "fps": 53,
+     "kind": "3d",
+     "limit": false,
+     "gov": 1.25
+    },
+    "k": null
+   },
+   {
+    "n": "fat",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-phone-fat.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 52,
+     "kind": "3d",
+     "limit": false,
+     "gov": 1.25
+    },
+    "k": null
+   },
+   {
+    "n": "pickups",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-phone-pickups.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 53,
+     "kind": "3d",
+     "limit": false,
+     "gov": 1.25
+    },
+    "k": null
+   },
+   {
+    "n": "label",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-phone-label.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 43,
+     "kind": "3d",
+     "limit": false,
+     "gov": 1.25
+    },
+    "k": null
+   },
+   {
+    "n": "bar",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-phone-bar.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 34,
+     "kind": "3d",
+     "limit": false,
+     "gov": 1.25
+    },
+    "k": null
+   },
+   {
+    "n": "ghost",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-phone-ghost.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PLAY",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 49,
+     "kind": "3d",
+     "limit": false,
+     "gov": 1
+    },
+    "k": null
+   },
+   {
+    "n": "pause",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-phone-pause.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "PAUSE",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 41,
+     "kind": "3d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "lose",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-phone-lose.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "LOSE",
+    "level": 1,
+    "kind": "3d",
+    "gfx": {
+     "fps": 29,
+     "kind": "3d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   },
+   {
+    "n": "win",
+    "f": ".superpowers/sdd/2026-10-10-pixel/final/shots/3d-phone-win.png",
+    "crop": [
+     24,
+     216,
+     1122,
+     972.375
+    ],
+    "state": "WIN",
+    "level": 5,
+    "kind": "3d",
+    "gfx": {
+     "fps": 30,
+     "kind": "3d",
+     "limit": false,
+     "gov": null
+    },
+    "k": null
+   }
+  ],
+  "errors": [],
+  "backAtMenu": "MENU",
+  "fat": [
+   "walker",
+   "walker",
+   "stationary",
+   "walker",
+   "stationary",
+   "fast",
+   "chaser",
+   "boomerang",
+   "rocket",
+   "burrow",
+   "shade",
+   "knight"
+  ],
+  "items": [
+   "fire",
+   "bomb",
+   "speed",
+   "heart",
+   "shield",
+   "kick",
+   "throw",
+   "pass",
+   "line",
+   "power",
+   "pierce"
+  ],
+  "ghostKey": "431101149:1:0:0:1",
+  "ghostOn": [
+   "431101149:1:0:0:1"
+  ],
+  "perf": {
+   "fps": 49.7,
+   "med": 0.3,
+   "p90": 0.5,
+   "gfx": {
+    "fps": 49,
+    "hz": 60,
+    "d": 1,
+    "kind": "3d",
+    "dpr3d": 1,
+    "dprPx": 1.5,
+    "liveAA": true,
+    "pendingAA": false,
+    "limit": false,
+    "gov": 1
+   },
+   "settings": null
+  }
+ }
+]
