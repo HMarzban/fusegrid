@@ -29,8 +29,9 @@ const easeOutBack = (k) => 1 + 2.70158 * Math.pow(k - 1, 3) + 1.70158 * Math.pow
    overshoot, settles to 1 by 25%, holds, shrinks to 0.4 from BURN_AT),
    rise = upward drift in tiles, plate = danger-plate brightness (solid to
    50%, never under 0.25 while the blast lives), burn = the shader's discard
-   threshold (0 until BURN_AT, 1 at the end). */
-export function blastLife(a) {
+   threshold (0 until BURN_AT, 1 at the end). `out` lets the per-frame
+   update reuse one scratch. */
+export function blastLife(a, out = {}) {
   a = clamp01(a);
   let s;
   if (a < 0.1) s = 0.45 + 0.63 * easeOutBack(a / 0.1);
@@ -39,18 +40,20 @@ export function blastLife(a) {
   else s = 1 - 0.6 * Math.pow((a - BURN_AT) / (1 - BURN_AT), 1.4);
   const plate = a < 0.5 ? 1 : 1 - 0.75 * Math.pow((a - 0.5) / 0.5, 1.5);
   const burn = a < BURN_AT ? 0 : Math.pow((a - BURN_AT) / (1 - BURN_AT), 1.2);
-  return { s, rise: 0.3 * a * a, plate, burn };
+  out.s = s; out.rise = 0.3 * a * a; out.plate = plate; out.burn = burn;
+  return out;
 }
 
 const P_W = new THREE.Color("#fff3b0"),
   P_A = new THREE.Color("#ffb347"),
   P_R = new THREE.Color("#ff5d73");
 /* plate ramp = the 2D fill ramp (cream -> amber -> rose), x brightness */
-export function plateColor(a, out) {
+export function plateColor(a, out, L) {
   a = clamp01(a);
+  if (!L) L = blastLife(a);
   if (a < 0.35) out.copy(P_W).lerp(P_A, a / 0.35);
   else out.copy(P_A).lerp(P_R, clamp01((a - 0.35) / 0.45));
-  return out.multiplyScalar(blastLife(a).plate);
+  return out.multiplyScalar(L.plate);
 }
 
 /* fireballs per tile, in tiles: [u along the arm (away from the bomb),
@@ -62,9 +65,12 @@ export const PUFF = Object.freeze({
 });
 export const PUFFS_PER_TILE = 2;
 export const CROWN_RISE = 1.8; // the bomb tile's crown climbs faster than the arms
-/* where one fireball sits at life L, in tiles: [u, w, y, rxz, ry] */
-export function puffAt(q, L, crown) {
-  return [q[0], q[1], q[2] * L.s + L.rise * (crown ? CROWN_RISE : 1), q[3] * L.s, q[4] * L.s];
+/* where one fireball sits at life L, in tiles: [u, w, y, rxz, ry]; `out`
+   lets the per-frame update reuse one scratch */
+export function puffAt(q, L, crown, out = new Array(5)) {
+  out[0] = q[0]; out[1] = q[1]; out[2] = q[2] * L.s + L.rise * (crown ? CROWN_RISE : 1);
+  out[3] = q[3] * L.s; out[4] = q[4] * L.s;
+  return out;
 }
 
 const FIRE_V = `attribute vec2 aLife;
@@ -128,30 +134,44 @@ function plateGeo() {
   g.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
   return g;
 }
+export const FIRE_COLORS = Object.freeze({ hot: "#fff4c8", mid: "#ffc23a", rim: "#ff5a14", deep: "#c42a0e", smoke: "#4a1610" });
+/* geometry AND both materials are built once and flagged _shared: rebuild()
+   disposes the old scene before the next room's, so a per-pool material would
+   free and recompile its program on every room change. */
 let GEO = null;
 function geos() {
   if (!GEO) {
-    GEO = { plate: plateGeo(), ball: fireball() };
-    GEO.plate._shared = GEO.ball._shared = true;
+    const u = {};
+    for (const k of ["hot", "mid", "rim", "deep", "smoke"])
+      u["u" + k[0].toUpperCase() + k.slice(1)] = { value: new THREE.Color(FIRE_COLORS[k]) };
+    u.uBurn = { value: BURN_AT };
+    GEO = { plate: plateGeo(), ball: fireball(),
+      plateM: new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }),
+      fireM: new THREE.ShaderMaterial({ uniforms: u, vertexShader: FIRE_V, fragmentShader: FIRE_F }) };
+    GEO.plate._shared = GEO.ball._shared = GEO.plateM._shared = GEO.fireM._shared = true;
   }
   return GEO;
 }
-export const FIRE_COLORS = Object.freeze({ hot: "#fff4c8", mid: "#ffc23a", rim: "#ff5a14", deep: "#c42a0e", smoke: "#4a1610" });
+const _L = {}, _b = new Array(5);
+/* upload only the live head of a dynamic instance buffer; at count 0 upload
+   nothing (a 0-length range or a bare needsUpdate would send the whole array)
+   and let mesh.count hide the stale tail */
+function live(attr, n) {
+  if (!attr || n === 0) return;
+  attr.clearUpdateRanges();
+  attr.addUpdateRange(0, n * attr.itemSize);
+  attr.needsUpdate = true;
+}
 
 export function createBlast(cap) {
   const G = geos();
-  const plates = new THREE.InstancedMesh(G.plate, new THREE.MeshBasicMaterial({
-    vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }), cap);
+  const plates = new THREE.InstancedMesh(G.plate, G.plateM, cap);
   plates.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   plates.frustumCulled = false;
   plates.castShadow = plates.receiveShadow = false;
   plates.count = 0;
   plates.setColorAt(0, P_W); // instanceColor from the build: the first boom compiles no new program
   plates.userData.tag = "blade";
-  const u = {};
-  for (const k of ["hot", "mid", "rim", "deep", "smoke"])
-    u["u" + k[0].toUpperCase() + k.slice(1)] = { value: new THREE.Color(FIRE_COLORS[k]) };
-  u.uBurn = { value: BURN_AT };
   const fcap = cap * PUFFS_PER_TILE;
   /* the ball geometry is shared across rebuilds, so the per-pool aLife lives
      on a thin wrapper that reuses every shared buffer. */
@@ -160,8 +180,7 @@ export function createBlast(cap) {
   const life = new THREE.InstancedBufferAttribute(new Float32Array(fcap * 2), 2);
   life.setUsage(THREE.DynamicDrawUsage);
   geo.setAttribute("aLife", life);
-  const fire = new THREE.InstancedMesh(geo, new THREE.ShaderMaterial({
-    uniforms: u, vertexShader: FIRE_V, fragmentShader: FIRE_F }), fcap);
+  const fire = new THREE.InstancedMesh(geo, G.fireM, fcap);
   fire.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   fire.frustumCulled = false;
   fire.castShadow = fire.receiveShadow = false;
@@ -175,8 +194,8 @@ export function createBlast(cap) {
     for (let i = 0; i < bls.length; i++) {
       const bl = bls[i], tls = bl.tiles;
       if (!tls) continue;
-      const age = clamp01(bl.t / (bl.ttl || 1)), L = blastLife(age);
-      plateColor(age, _c);
+      const age = clamp01(bl.t / (bl.ttl || 1)), L = blastLife(age, _L);
+      plateColor(age, _c, L);
       /* computeBlast puts the bomb tile first; the noise seed comes from the
          tile pair, never the blast's array slot, so an older blast expiring
          cannot reshuffle a live one's mottling mid-life */
@@ -195,7 +214,7 @@ export function createBlast(cap) {
         const set = d === 0 ? PUFF.centre : end ? PUFF.end : PUFF.arm,
           flip = (tl.tx + tl.ty) & 1 ? 1 : -1, seed = ((tl.tx * 7 + tl.ty * 13 + cx * 5 + cy * 3) % 17) / 17;
         for (let k = 0; k < set.length && fn < fcap; k++) {
-          const b = puffAt(set[k], L, d === 0 && k === 1), w = b[1] * flip;
+          const b = puffAt(set[k], L, d === 0 && k === 1, _b), w = b[1] * flip;
           _p.set(X + (dx * b[0] - dz * w) * T, b[2] * T, Z + (dz * b[0] + dx * w) * T);
           _m.compose(_p, _q, _s.set(b[3] * T, b[4] * T, b[3] * T));
           fire.setMatrixAt(fn, _m);
@@ -204,11 +223,11 @@ export function createBlast(cap) {
       }
     }
     plates.count = n;
-    plates.instanceMatrix.needsUpdate = true;
-    if (plates.instanceColor) plates.instanceColor.needsUpdate = true;
+    live(plates.instanceMatrix, n);
+    live(plates.instanceColor, n);
     fire.count = fn;
-    fire.instanceMatrix.needsUpdate = true;
-    life.needsUpdate = true;
+    live(fire.instanceMatrix, fn);
+    live(life, fn);
     return n;
   }
   return { plates, fire, update };

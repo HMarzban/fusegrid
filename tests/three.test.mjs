@@ -27,7 +27,7 @@
 import {createLights, LIGHT_BASE, applyBright} from "../src/render/three/lights.js";
 import {build} from "../src/render/three/materials.js";
 import {buildScene, countDrawCalls, RIM_W, RIM_LIP,
-  RIM_BEV, NEAR_H} from "../src/render/three/scene.js";
+  RIM_BEV, NEAR_H, disposeGroup} from "../src/render/three/scene.js";
 import {createPools, SLOT_MESH} from "../src/render/three/entities.js";
 import {atlasSources, buildAtlas} from "../src/render/three/textures.js";
 import {PLAYER_HULL} from "../src/render/sprites.js";
@@ -851,7 +851,8 @@ await sec("S2.I",()=>{
     &&atlas.item_fire.isTexture===true);
   // Item atlas keys stay paintItemFace (drawIcon on a navy 64²). Unique
   // ITEM_GEO bodies live on the slot; these probes are the face maps only.
-  // Eye strips / face plate / fire ramp stay in the zero-asset pipeline.
+  // Eye strips / face plate stay in the zero-asset pipeline; the fire ramp
+  // died with blast v3 (a ShaderMaterial reads no texture).
   const f2=recFactory();
   const src2=atlasSources(f2.mk);
   const itemKeys=POWER.map(pd=>"item_"+pd.t);
@@ -898,20 +899,15 @@ await sec("S2.I",()=>{
     &&vis._ops.filter(o=>o==="fill").length>=11
     &&vis._ops.includes("set:fillStyle"),
     vis?vis.width+"x"+vis.height:"missing");
-  const fir=src2.fire;
-  check("S2.R fire ramp source: 64x64 vertical gradient",
-    !!fir&&fir.width===64&&fir.height===64
-    &&fir._ops.some(o=>o[0]==="createLinearGradient")
-    &&fir._ops.some(o=>o[0]==="addColorStop")&&fir._ops.includes("fillRect"),
-    fir?"ok":"missing");
+  check("S2.R no dead fire ramp source: blast v3 paints no texture",
+    !("fire" in src2),Object.keys(src2).join(","));
   const atlas2=buildAtlas(f2.mk);
   check("S2.R buildAtlas exposes new keys NearestFilter+sRGB flagged _shared",
     !!atlas2&&atlas2.item_power.isTexture===true
     &&atlas2.eye_fast.magFilter===THREE.NearestFilter
     &&atlas2.face.colorSpace===THREE.SRGBColorSpace
-    &&atlas2.fire.isTexture===true
     &&atlas2.item_heart._shared===true&&atlas2.eye_chaser._shared===true
-    &&atlas2.face._shared===true&&atlas2.fire._shared===true);
+    &&atlas2.face._shared===true&&!("fire" in atlas2));
   // headless pools: every new map falls back to a flat bright color
   const w=createWorld(29,1); loadLevel(w,1,false);
   w.items=[{x:100,y:120,t:"fire",col:"#ff8a3c",taken:false,pdef:null}];
@@ -1635,6 +1631,45 @@ await sec("S4.C",async()=>{
   check("S4.C no blasts -> all flash lights dark",
     slotsOf(sc.group,"flash").every(l=>l.intensity===0));
 });
+
+// ---- §S4.C2 blast pools: shared materials, live-head uploads, no per-frame garbage ----
+await sec("S4.C2",async()=>{
+  const B=await import("../src/render/three/blast.js");
+  const w=createWorld(73,1); loadLevel(w,1,false); w.blades=[];
+  const A=buildScene(w); A.update(w);
+  const [pA,fA]=slotsOf(A.group,"blade");
+  let freed=0; const onD=()=>freed++;
+  fA.material.addEventListener("dispose",onD); pA.material.addEventListener("dispose",onD);
+  disposeGroup(A.group);
+  const Bs=buildScene(w); Bs.update(w);
+  const [pB,fB]=slotsOf(Bs.group,"blade");
+  check("S4.C2 blast materials survive a rebuild: disposeGroup frees neither, the next room reuses the same program-owning materials",
+    freed===0&&fA.material._shared===true&&pA.material._shared===true&&fB.material===fA.material&&pB.material===pA.material,
+    freed+"/"+(fB.material===fA.material)+"/"+(pB.material===pA.material));
+  const bufs=[pB.instanceMatrix,pB.instanceColor,fB.instanceMatrix,fB.geometry.attributes.aLife];
+  const ver=()=>bufs.map(b=>b.version).join(",");
+  const v0=ver(); Bs.update(w); Bs.update(w);
+  check("S4.C2 no live blast uploads nothing: no buffer version bumps across idle frames",ver()===v0,v0+" -> "+ver());
+  w.blades=[{x:200,y:120,tiles:[{tx:5,ty:3},{tx:6,ty:3},{tx:7,ty:3}],t:0,ttl:CFG.BLADE_TTL}];
+  Bs.update(w); Bs.update(w);
+  const rg=b=>JSON.stringify(b.updateRanges), n=pB.count, fn=fB.count;
+  check("S4.C2 a live blast uploads only its live head, one range per buffer (cleared each frame, never piled up)",
+    n===3&&fn===6&&ver()!==v0&&rg(bufs[0])===JSON.stringify([{start:0,count:n*16}])
+    &&rg(bufs[1])===JSON.stringify([{start:0,count:n*3}])&&rg(bufs[2])===JSON.stringify([{start:0,count:fn*16}])
+    &&rg(bufs[3])===JSON.stringify([{start:0,count:fn*2}]),
+    n+"/"+fn+" "+bufs.map(rg).join(" "));
+  w.blades[0].tiles=[{tx:5,ty:3}]; Bs.update(w);
+  check("S4.C2 a shrinking blast: count drops (stale instances never draw), range shrinks with it",
+    pB.count===1&&fB.count===2&&rg(bufs[0])===JSON.stringify([{start:0,count:16}]),pB.count+"/"+fB.count+" "+rg(bufs[0]));
+  const v1=ver(); w.blades=[]; Bs.update(w);
+  check("S4.C2 the blast ending hides by count alone, no upload",pB.count===0&&fB.count===0&&ver()===v1,ver());
+  const o={}, b5=[], L=B.blastLife(0.3,o);
+  const c=B.plateColor(0.2,new THREE.Color(),{plate:0.5}), c1=B.plateColor(0.2,new THREE.Color());
+  check("S4.C2 per-frame scratch: blastLife/puffAt write into a passed out, plateColor uses the passed L",
+    L===o&&B.puffAt(B.PUFF.arm[0],L,false,b5)===b5&&b5[3]===B.PUFF.arm[0][3]*L.s
+    &&Math.abs(c.r-c1.r*0.5)<1e-9&&Math.abs(c.g-c1.g*0.5)<1e-9);
+  disposeGroup(Bs.group);
+ });
 
 // ---- §S4.D overlay HUD chips (hearts / BOMB / FLAME) ----
 function hudRecorder(){

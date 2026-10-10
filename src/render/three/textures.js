@@ -95,16 +95,8 @@ function paintFace(c){
    }
 }
 
-/* ---- §3 blast ramp: vertical fire gradient, alpha fades at the top edge ---- */
-function paintFire(c){
-  const g=c.createLinearGradient(0,64,0,0);
-  g.addColorStop(0,"#fff3b0"); g.addColorStop(0.55,"#ffb347");
-  g.addColorStop(1,"rgba(255,93,46,0)");
-  c.fillStyle=g; c.fillRect(0,0,64,64);
-}
-
 /* Returns {player, enemy_<type>..., bomb, item_<pdef>..., eye_<type>...,
-   face, fire, wall?, brick?, floor?} with canvas|null per key; wall/brick/
+   face, wall?, brick?, floor?} with canvas|null per key; wall/brick/
    floor ride the existing bakedTile atlas when the browser has baked it
    (biome keyed by `level`). */
 export function atlasSources(mk, level=1){
@@ -122,7 +114,6 @@ export function atlasSources(mk, level=1){
     o["eye_"+t]=captureSprite(64,32,(c)=>t==="stationary"?paintSlit(c):
       paintEyes(c,t),mk);
   o.face=captureSprite(128,128,paintFace,mk);
-  o.fire=captureSprite(S,S,paintFire,mk);
   if(typeof document!=="undefined"){
     try{
       bakeAtlas();

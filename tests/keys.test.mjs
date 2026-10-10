@@ -428,6 +428,19 @@ for (let i = 0; i < GUIDE_ROWS.length; i++) {
   check("STATS armed, touch C COPY with a refusing clipboard: disarms, says COPY FAILED, never COPIED",
     g.app.resetArm === false && toastOf(g.app.toast) && g.app.toast.s === "COPY FAILED" && g.app.toast.ok === false, JSON.stringify(g.app.toast));
   clipMode = "ok"; g.tick(Math.ceil(TOAST_T * 60) + 2);
+  for (const end of ["pointercancel", "pointerleave"]) {
+    g.tick(Math.ceil(TOAST_T * 60) + 2);
+    const c8 = clip.length, rt = { clientX: 177, clientY: 239, pointerType: "touch" };
+    (PL.pointerdown || []).forEach((f) => f(ev)); (PL[end] || []).forEach((f) => f(ev)); g.tick(); await flush();
+    (PL.pointerup || []).forEach((f) => f(ev)); await flush(); g.tick();
+    const bare = clip.length - c8;
+    (PL.pointerdown || []).forEach((f) => f(ev)); (PL[end] || []).forEach((f) => f(ev));
+    (PL.pointerdown || []).forEach((f) => f(rt)); (PL.pointerup || []).forEach((f) => f(rt)); await flush(); g.tick();
+    check(`STATS touch C then ${end}: a later pointerup (bare, or a tap on R RESET) copies nothing; R still arms`,
+      bare === 0 && clip.length === c8 && toastOf(g.app.toast) === null && g.app.resetArm === true && g.app.screen === SCREEN.STATS,
+      bare + "/" + (clip.length - c8) + "/" + g.app.resetArm + "/" + JSON.stringify(g.app.toast));
+    tap(300, 300);
+  }
   const r7 = reloads; tap(354, 478); tap(132, 478);
   check("STATS armed, a tap on R AGAIN (132,478) still erases + reloads once", reloads === r7 + 1 && g.app.resetArm === false, reloads - r7);
 }

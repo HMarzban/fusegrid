@@ -463,6 +463,7 @@ export function createGame(canvas, opts = {}) {
       } else app.confirm();
     });
     canvas.addEventListener("pointerup", () => { if (statsC && app.screen === SCREEN.STATS) input.onUiKey("KeyC"); statsC = false; });
+    for (const t of ["pointercancel", "pointerleave"]) canvas.addEventListener(t, () => { statsC = false; }); // a cancelled C touch never copies on a later pointerup
   }
   /* pad taps bubble to #stage: play from ATTRACT too (spec §4 tap-to-play). */
   {
