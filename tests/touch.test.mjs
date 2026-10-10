@@ -2,7 +2,7 @@ import {readFileSync} from "node:fs";
 import {Input} from "../src/input.js";
 import {hasTouch, PadMapper, mountTouch} from "../src/touch.js";
 import {stampBombIcon} from "../src/render/sprites.js";
-import {FIT_RES, fitBox} from "../src/app/fit.js";
+import {FIT_RES, fitBox, PORT_GEO, portraitGeo} from "../src/app/fit.js";
 
 let pass=0, fail=0;
 function check(name, cond, detail){ cond?pass++:fail++;
@@ -192,11 +192,12 @@ check("hasTouch({ontouchstart:null}) true", hasTouch({ontouchstart:null})===true
   {
     const rule=(html.match(/\n\s*#tpause\{[^}]*\}/)||[""])[0].trim();
     const gap=+((rule.match(/bottom:calc\(100% \+ (\d+)px\)/)||[])[1]);
-    const wrapP=(html.match(/body\[data-lay=p\] #wrap\{[^}]*padding:(\d+)px/)||[])[1];
+    const wrapP=(html.match(/body\[data-lay=p\] #wrap\{[^}]*padding:var\(--st,(\d+)px\)/)||[])[1];
     check("#tpause's base rule sits above the stage (never over the"
       +" right-aligned HUD score) and the portrait top pad leaves it room",
-      /^#tpause\{/.test(rule)&&!/[{;\s]top:/.test(rule)&&gap>=0&&+wrapP>=44+gap,
-      rule+" wrapTop="+wrapP);
+      /^#tpause\{/.test(rule)&&!/[{;\s]top:/.test(rule)&&gap>=0&&+wrapP>=44+gap
+        &&PORT_GEO.top>=44+gap,
+      rule+" wrapTop="+wrapP+" geoTop="+PORT_GEO.top);
   }
   {
     const leak=["tpad","tbomb","tpause"].filter((id)=>{
@@ -278,11 +279,8 @@ check("hasTouch({ontouchstart:null}) true", hasTouch({ontouchstart:null})===true
   const lPadG=num(/right:calc\(100% \+ (\d+)px\)/,lay("l","tpad")), lPadB=num(/bottom:(\d+)/,lay("l","tpad")),
     lBombG=num(/left:calc\(100% \+ (\d+)px\)/,lay("l","tbomb")), lBombB=num(/bottom:(\d+)px/,lay("l","tbomb")),
     lPillG=num(/left:calc\(100% \+ (\d+)px\)/,lay("l","tpause")), lPillT=num(/top:(\d+)/,lay("l","tpause"));
-  const pWrap=lay("p","wrap").match(/padding:(\d+)px (\d+)px (\d+)px/)||[];
-  const pTop=+pWrap[1], pBot=+pWrap[3];
-  const pPadT=num(/top:calc\(100% \+ (\d+)px\)/,lay("p","tpad")), pPadL=num(/left:(\d+)px/,lay("p","tpad")),
-    pBombT=num(/top:calc\(100% \+ (\d+)px\)/,lay("p","tbomb")), pBombR=num(/right:(\d+)px/,lay("p","tbomb"));
-  const parsed=[padW,bombW,pillW,pillG,lPadG,lPadB,lBombG,lBombB,lPillG,lPillT,pTop,pBot,pPadT,pPadL,pBombT,pBombR];
+  const pRules=lay("p","wrap")+lay("p","tpad")+lay("p","tbomb");
+  const parsed=[padW,bombW,pillW,pillG,lPadG,lPadB,lBombG,lBombB,lPillG,lPillT];
   const bad=[];
   const probe=(W,H)=>{
     const {lay:l,s}=fitBox(W,H,true,600,520), sw=600*s, sh=520*s;
@@ -292,9 +290,11 @@ check("hasTouch({ontouchstart:null}) true", hasTouch({ontouchstart:null})===true
       ok=gut>=lPadG+padW&&gut>=lBombG+bombW&&gut>=lPillG+pillW
         &&sh>=lPillT+pillW+lBombB+bombW&&(H+sh)/2-lPadB-padW>=0;
     }else{
-      const top=(H-sh-pTop-pBot)/2+pTop, below=H-top-sh;
-      ok=top>=pillW+pillG&&below>=pPadT+padW&&below>=pBombT+bombW
-        &&sw>=pPadL+padW+pBombR+bombW;
+      const g=portraitGeo(W,H,600,520), below=H-g.top-sh, G=PORT_GEO;
+      ok=g.top>=pillW+pillG&&g.padTop>=G.gap&&g.bombTop>=G.gap
+        &&below>=g.padTop+g.pad&&below>=g.bombTop+g.bomb
+        &&g.pad>=G.pad[0]&&g.pad<=G.pad[1]&&g.bomb>=bombW
+        &&sw>=G.side[0]+g.pad+G.side[1]+g.bomb;
     }
     if(!ok&&bad.length<4) bad.push(W+"x"+H+" "+l+" stage "+sw.toFixed(1)+"x"+sh.toFixed(1));
   };
@@ -304,7 +304,11 @@ check("hasTouch({ontouchstart:null}) true", hasTouch({ontouchstart:null})===true
   check("pad, bomb and pill never sit on the board: side gutters in touch"
     +" landscape, below/above the stage in touch portrait (env() insets are 0,"
     +" no viewport-fit=cover)",
-    parsed.every(Number.isFinite)&&/left:auto/.test(lay("l","tpad"))&&pTop+pBot===FIT_RES.p[1]&&bad.length===0,
+    parsed.every(Number.isFinite)&&/left:auto/.test(lay("l","tpad"))&&PORT_GEO.top+PORT_GEO.bot===FIT_RES.p[1]
+      &&/padding:var\(--st,/.test(pRules)&&/top:calc\(100% \+ var\(--tpt,/.test(lay("p","tpad"))
+      &&/width:var\(--tp,/.test(lay("p","tpad"))&&/top:calc\(100% \+ var\(--tbt,/.test(lay("p","tbomb"))
+      &&/width:var\(--tb,/.test(lay("p","tbomb"))&&new RegExp("left:"+PORT_GEO.side[0]+"px").test(lay("p","tpad"))
+      &&new RegExp("right:"+PORT_GEO.side[1]+"px").test(lay("p","tbomb"))&&bad.length===0,
     bad.join(" | ")||parsed.join()+" "+lay("l","tpad"));
   const rules=["p","l"].flatMap((l)=>["wrap","tpad","tbomb","tpause"].map((id)=>lay(l,id))).join("");
   check("the layout rules carry no display: (the [hidden] guard stays the only one)",

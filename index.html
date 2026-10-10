@@ -86,9 +86,13 @@
     width:4px;height:14px;background:#dfe7f5;border-radius:2px}
   #tpause::before{left:14px}
   #tpause::after{left:22px}
-  body[data-lay=p] #wrap{padding:60px 8px 190px}
-  body[data-lay=p] #tpad{top:calc(100% + 22px);bottom:auto;left:6px}
-  body[data-lay=p] #tbomb{top:calc(100% + 50px);bottom:auto;right:14px}
+  /* touch portrait is width-bound: fit() writes --st (stage top, centred in
+     the vertical slack) and docks + grows pad/bomb into the band below
+     (--tp/--tb sizes, --tpt/--tbt offsets under the stage; portraitGeo). */
+  body[data-lay=p] #wrap{align-self:flex-start;padding:var(--st,60px) 8px 0}
+  body[data-lay=p] #tpad{top:calc(100% + var(--tpt,22px));bottom:auto;left:6px;width:var(--tp,128px);height:var(--tp,128px)}
+  body[data-lay=p] #tbomb{top:calc(100% + var(--tbt,50px));bottom:auto;right:14px;width:var(--tb,72px);height:var(--tb,72px)}
+  body[data-lay=p] #tbomb canvas{width:calc(var(--tb,72px)*5/9);height:calc(var(--tb,72px)*5/9)}
   body[data-lay=l] #tpad{left:auto;right:calc(100% + 22px);bottom:0}
   body[data-lay=l] #tbomb{right:auto;left:calc(100% + 40px);bottom:10px}
   body[data-lay=l] #tpause{right:auto;bottom:auto;left:calc(100% + 54px);top:0}
