@@ -25,7 +25,7 @@ import { surfRGBA } from "../tools/pixel/rgba.mjs";
 const PENDING = {
   mako: "all",
   foes: "all",
-  tiles: "all",
+  tiles: [],
   bomb: [],
   blast: [],
   items: "all",
