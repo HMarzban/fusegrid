@@ -587,6 +587,15 @@ function check(name, cond, detail) {
         ].every((n) => texts.some((t) => t.s === n)),
         texts.map((t) => t.s).join("|"),
       );
+      check(`RENDER reads CLASSIC 2D with px unset at ${W}x${H}`, texts.some((t) => t.s === "CLASSIC 2D") && !texts.some((t) => t.s === "PIXEL"));
+    }
+    {
+      const { c, texts } = rec();
+      md.drawSettings(c, L, 1, { row: 3, vals: { mus: 100, sfx: 100, snd: 1, r3d: 0, cam: 2, bri: 130, shk: 1, flx: 0, px: 1 }, r3d: false, px: true, togT: -1, rev: "v99" });
+      check(`RENDER reads PIXEL and the two 3D-only rows dim to an em dash at ${W}x${H}`,
+        texts.some((t) => t.s === "PIXEL") && !texts.some((t) => t.s === "CLASSIC 2D") && texts.filter((t) => t.s === "—").length === 2 && !texts.some((t) => t.s === "FAR"),
+        texts.map((t) => t.s).join("|"));
+      check("settingsRows three-way label, r3d wins", md.settingsRows({}, false, false)[3] === "CLASSIC 2D" && md.settingsRows({}, false, true)[3] === "PIXEL" && md.settingsRows({}, true, true)[3] === "REAL 3D");
     }
     {
       const { c, texts, rects, lines } = rec();

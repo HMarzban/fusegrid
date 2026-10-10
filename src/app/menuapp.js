@@ -13,6 +13,7 @@ import { clampHeat } from "../core/heat.js";
 import { clampPact, PACT, togglePact } from "../core/pact.js";
 import { clampPace } from "../core/pace.js";
 import { clampSettings, DEFAULTS } from "./settings.js";
+import { renderBits, renderVal } from "./renderkind.js";
 import { SHOW_DUR, SKIP_GUARD, TITLE_IN } from "./intro.js";
 export const SCREEN = Object.freeze({
   BOOT: 0,
@@ -97,6 +98,7 @@ export function createMenuApp(opts = {}) {
     pactUnlocked: !!o.pactUnlocked,
     sound: o.sound !== false,
     render3d: !!o.render3d,
+    pixel: !!o.pixel && !o.render3d,
     cabinetSeen: !!o.cabinetSeen,
     resetArm: false,
     inGame: !!o.autoplay,
@@ -523,6 +525,19 @@ export function createMenuApp(opts = {}) {
       if (onSettings) onSettings(this.settings, "snd");
       return true;
     },
+    /* RENDER (R4): 0 CLASSIC 2D, 1 PIXEL, 2 REAL 3D. r3d and px move together
+       and report through onSettings once, never as two half-states. */
+    _optRender(v) {
+      const b = renderBits(v);
+      if (this.settings.r3d === b.r3d && this.settings.px === b.px) return false;
+      this.settings.r3d = b.r3d;
+      this.settings.px = b.px;
+      this.render3d = !!b.r3d;
+      this.pixel = !!b.px;
+      this.togT = this.subT;
+      if (onSettings) onSettings(this.settings, "render");
+      return true;
+    },
     _opt3dLocked(r) {
       return (r === "CAMERA" || r === "BRIGHTNESS") && !this.render3d;
     },
@@ -540,7 +555,7 @@ export function createMenuApp(opts = {}) {
       if (r === "CAMERA")
         return this._optSet("cam", Math.min(2, Math.max(0, this.settings.cam + d)));
       if (r === "SOUND") return this._optSound(d > 0 ? 1 : 0);
-      if (r === "RENDER") return this._optSet("r3d", d > 0 ? 1 : 0);
+      if (r === "RENDER") return this._optRender(renderVal(this) + d);
       if (r === "SCREEN SHAKE") return this._optSet("shk", d > 0 ? 1 : 0);
       if (r === "REDUCE FLASH") return this._optSet("flx", d > 0 ? 1 : 0);
       return false;
@@ -557,7 +572,7 @@ export function createMenuApp(opts = {}) {
         return this._optSet("bri", this.settings.bri >= 130 ? 70 : this.settings.bri + 10);
       if (r === "CAMERA") return this._optSet("cam", (this.settings.cam + 1) % 3);
       if (r === "SOUND") return this._optSound(this.settings.snd ? 0 : 1);
-      if (r === "RENDER") return this._optSet("r3d", this.settings.r3d ? 0 : 1);
+      if (r === "RENDER") return this._optRender((renderVal(this) + 1) % 3);
       if (r === "SCREEN SHAKE") return this._optSet("shk", this.settings.shk ? 0 : 1);
       if (r === "REDUCE FLASH") return this._optSet("flx", this.settings.flx ? 0 : 1);
       if (r === "RESET DEFAULTS") return this.optReset();
@@ -576,6 +591,7 @@ export function createMenuApp(opts = {}) {
       for (const k in d) this.settings[k] = d[k];
       this.settings.snd = this.sound ? 1 : 0;
       this.render3d = !!this.settings.r3d;
+      this.pixel = !this.render3d && !!this.settings.px;
       this.togT = this.subT;
       if (onSettings) onSettings(this.settings, "reset");
       return true;
@@ -757,10 +773,11 @@ export function createMenuApp(opts = {}) {
       return (prevSt === "PLAY" || prevSt === "WIN") && st === "LOSE";
     },
   };
-  /* ?render=3d / opts.render3d win at boot over the persisted r3d, so the blob
+  /* ?render=3d|px / opts.render3d win at boot over the persisted r3d/px, so the blob
      is re-seeded IN MEMORY to whatever actually took effect — display and
      storage never disagree, and a URL override is never written to disk. */
   app.settings.r3d = app.render3d ? 1 : 0;
+  app.settings.px = app.pixel ? 1 : 0;
   app.settings.snd = app.sound ? 1 : 0;
   return app;
 }

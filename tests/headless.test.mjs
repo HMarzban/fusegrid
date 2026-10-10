@@ -219,8 +219,12 @@ function mkCanvas(){
     g.app.screen===SCREEN.SETTINGS&&g.app.optRow===0);
   g.app.optRow=3; g.app.confirm();              // RENDER row
   check("C1 RENDER row toggles exactly once",
-    g.app.render3d===true&&g.app.settings.r3d===1,
-    "render3d="+g.app.render3d);
+    g.app.pixel===true&&g.app.render3d===false&&g.app.settings.px===1&&g.app.settings.r3d===0,
+    "pixel="+g.app.pixel+" render3d="+g.app.render3d);
+  g.app.confirm(); const v2=[g.app.render3d,g.app.pixel,g.app.settings.r3d,g.app.settings.px].join();
+  g.app.confirm();
+  check("C1 RENDER Enter cycles PIXEL -> REAL 3D -> CLASSIC 2D",
+    v2==="true,false,1,0"&&g.app.render3d===false&&g.app.pixel===false&&g.app.settings.r3d===0&&g.app.settings.px===0, v2);
   g.app.key("Escape");
   g.app.cursor=4; cv.fire("pointerdown");       // GUIDE
   check("C1 subscreen click lands once", g.app.screen===SCREEN.GUIDE);

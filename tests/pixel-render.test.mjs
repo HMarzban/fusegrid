@@ -36,9 +36,10 @@ function check(name, cond, detail) {
 {
   check("flags: ?render=px is a URL kind; ?render=4d still null",
     readFlags("?render=px").urlKind === "px" && readFlags("?render=4d").urlKind === null);
-  const M = [["iso", {render3d: true, pixel: true}, "iso"], ["px", {render3d: true}, "px"], [null, {render3d: true, pixel: true}, "3d"],
-    [null, {pixel: true}, "px"], [null, {}, "2d"], ["3d", {render3d: false}, "2d"], ["3d", {render3d: true}, "3d"]];
-  check("kindOf precedence: iso > px (URL pins, staging) > r3d > px > 2d",
+  const M = [["iso", {render3d: true, pixel: true}, "iso"], ["px", {render3d: true}, "3d"], [null, {render3d: true, pixel: true}, "3d"],
+    [null, {pixel: true}, "px"], [null, {}, "2d"], ["3d", {render3d: false}, "2d"], ["3d", {render3d: true}, "3d"],
+    ["px", {pixel: true}, "px"], ["px", {}, "2d"]];
+  check("kindOf precedence: iso (URL pin) > r3d > px > 2d; ?render=px seeds the boot only (W-INT)",
     M.every(([u, a, k]) => kindOf(u, a) === k), M.map(([u, a]) => kindOf(u, a)).join());
   const b = (u, o, s) => JSON.stringify(bootRender(u, o, s));
   check("bootRender: URL 3d|px wins, then r3d over px, old blob unchanged",

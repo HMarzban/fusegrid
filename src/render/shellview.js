@@ -52,6 +52,7 @@ export function drawShell(c, app, world, canvas, kind, getScores, getPlaques) {
         row: app.optRow,
         vals: app.settings,
         r3d: app.render3d,
+        px: app.pixel,
         togT: app.togT,
         rev: REV,
       });
@@ -150,6 +151,7 @@ export function drawShell(c, app, world, canvas, kind, getScores, getPlaques) {
       row: app.optRow,
       vals: app.settings,
       r3d: app.render3d,
+      px: app.pixel,
       togT: app.togT,
       rev: REV,
     });

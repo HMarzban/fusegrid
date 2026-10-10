@@ -985,13 +985,13 @@ export function drawTrophies(c, L, t, rows) {
 }
 
 /* OPTIONS (spec §2): nine live knob rows on LEVEL SELECT's adjust model.
-   ui = {row, vals, r3d, togT, rev}; vals is the nb.settings.v1 blob and rev is
-   the build tag shellview derives from CACHE_NAME. Rows NEVER hide or reflow —
-   the two 3D-only rows dim to 0.45 and read an em dash in CLASSIC 2D, so the
-   list is the same nine lines in both kinds. CAM_NAME mirrors camrig.js's
-   CAM_PRESET order; this file must not import from src/render/three (the 2D
-   path never loads three), so the names are duplicated here the way
-   PLAQUE_NAME is. */
+   ui = {row, vals, r3d, px, togT, rev}; vals is the nb.settings.v1 blob and
+   rev is the build tag shellview derives from CACHE_NAME. Rows NEVER hide or
+   reflow — the two 3D-only rows dim to 0.45 and read an em dash in CLASSIC 2D
+   and PIXEL, so the list is the same nine lines in every kind. CAM_NAME
+   mirrors camrig.js's CAM_PRESET order; this file must not import from
+   src/render/three (the 2D path never loads three), so the names are
+   duplicated here the way PLAQUE_NAME is. */
 const CAM_NAME = ["STANDARD", "WIDE", "FAR"];
 const OPT_LABEL = [
   "MUSIC",
@@ -1005,14 +1005,14 @@ const OPT_LABEL = [
   "RESET DEFAULTS",
 ];
 const OPT_3D = [false, false, false, false, true, true, false, false, false];
-export function settingsRows(vals, r3d) {
+export function settingsRows(vals, r3d, px) {
   const v = vals || {};
   const on = (b) => (b ? "ON" : "OFF");
   return [
     String(v.mus | 0),
     String(v.sfx | 0),
     on(v.snd),
-    r3d ? "REAL 3D" : "CLASSIC 2D",
+    r3d ? "REAL 3D" : px ? "PIXEL" : "CLASSIC 2D",
     CAM_NAME[Math.min(2, Math.max(0, v.cam | 0))],
     String(v.bri | 0),
     on(v.shk),
@@ -1041,7 +1041,7 @@ export function drawSettings(c, L, t, ui) {
   const u = ui || {};
   const cur = u.row | 0,
     r3d = !!u.r3d;
-  const vals = settingsRows(u.vals, r3d);
+  const vals = settingsRows(u.vals, r3d, !!u.px);
   const g = settingsGeom(L);
   const S = shell(c, L, 520);
   head(c, S, "OPTIONS", "BUILD " + (u.rev || ""));

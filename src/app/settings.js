@@ -14,6 +14,7 @@ export const DEFAULTS = Object.freeze({
   bri: 100,
   shk: 1,
   flx: 0,
+  px: 0,
 });
 
 const num = (v, d) => (typeof v === "number" && isFinite(v) ? v : d);
@@ -36,6 +37,7 @@ export function clampSettings(raw) {
     bri: step10(o.bri, 70, 130, DEFAULTS.bri),
     shk: bit(o.shk, DEFAULTS.shk),
     flx: bit(o.flx, DEFAULTS.flx),
+    px: bit(o.px, DEFAULTS.px),
   };
 }
 

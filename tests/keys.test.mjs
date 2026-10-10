@@ -274,6 +274,29 @@ for (const at of [1.0, 2.0, 3.0, 4.0]) {
   press(g, "Escape");
   check("OPTIONS Escape -> MENU", g.app.screen === SCREEN.MENU);
 }
+// ---- OPTIONS RENDER: three values (R4), persisted in nb.settings.v1 (R5) ----
+{
+  const rec = new Proxy(function () {}, { get: (t, p) => (p === Symbol.toPrimitive ? () => "" : () => rec), apply: () => rec, set: () => true });
+  const fake3d = () => ({ ctx: rec, overlay: null, canvas: null, render() {}, consumeEvents() {}, getShake: () => ({ x: 0, y: 0 }) });
+  const s0 = mem["nb.settings.v1"];
+  const v = (g) => (g.app.render3d ? 2 : g.app.pixel ? 1 : 0) + ":" + g.app.settings.r3d + g.app.settings.px;
+  let g = show(mk({ createRenderer3D: fake3d })); press(g, "Enter"); toRow(g, 3); press(g, "Enter"); toRow(g, 3);
+  const at = [v(g)];
+  for (let i = 0; i < 3; i++) { press(g, "Enter"); at.push(v(g)); }
+  check("OPTIONS RENDER Enter cycles CLASSIC 2D -> PIXEL -> REAL 3D -> CLASSIC 2D", at.join() === "0:00,1:01,2:10,0:00", at.join());
+  const lr = [];
+  for (let i = 0; i < 4; i++) { press(g, "ArrowRight"); lr.push(v(g)); }
+  for (let i = 0; i < 4; i++) { press(g, "ArrowLeft"); lr.push(v(g)); }
+  check("OPTIONS RENDER → / ← clamp at REAL 3D and CLASSIC 2D", lr.join() === "1:01,2:10,2:10,2:10,1:01,0:00,0:00,0:00", lr.join());
+  press(g, "ArrowRight");
+  const kinds = [g.app.pixel, g.renderer && g.renderer._dbg ? "px" : "?"].join();
+  press(g, "ArrowDown"); const cam0 = g.app.settings.cam; press(g, "Enter"); press(g, "ArrowRight");
+  check("OPTIONS CAMERA is locked in PIXEL (Enter and → change nothing)", g.app.settings.cam === cam0 && g.app.optRow === 4, g.app.settings.cam);
+  check("OPTIONS RENDER PIXEL swaps the live renderer and saves px:1, r3d:0", kinds === "true,px" && /"r3d":0,.*"px":1\}$/.test(mem["nb.settings.v1"] || ""), kinds + " " + mem["nb.settings.v1"]);
+  g = mk({ createRenderer3D: fake3d });
+  check("RENDER PIXEL survives a reload: boots pixel, px renderer, blob unchanged", g.app.pixel === true && g.app.render3d === false && !!g.renderer._dbg && g.app.settings.px === 1, v(g));
+  if (s0 === undefined) delete mem["nb.settings.v1"]; else mem["nb.settings.v1"] = s0;
+}
 
 // ---- GUIDE + HOW TO / ITEMS / ENEMIES ----
 for (let i = 0; i < GUIDE_ROWS.length; i++) {

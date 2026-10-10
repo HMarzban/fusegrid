@@ -1,9 +1,9 @@
 /* RENDER kind precedence (panel ruling R5), pure: no DOM, no src/render.
    The RENDER row value is 0 CLASSIC 2D, 1 PIXEL, 2 REAL 3D. Boot seeding:
    ?render=3d|px wins, otherwise the persisted r3d bit wins over px. ?render=iso
-   is pinned live for the session. Staging until the settings px bit lands:
-   kindOf also pins ?render=px from the URL alone (no app field, no settings
-   write), so a REAL 3D player's r3d can never be overwritten by a probe. */
+   is pinned live for the session; ?render=3d|px only seed the boot, so the
+   RENDER row still switches live (nb.settings.v1 r3d + px, app render3d +
+   pixel, mutually exclusive in memory). */
 export const RENDER_KINDS = Object.freeze(["2d", "px", "3d"]);
 export const renderVal = (app) => (app && app.render3d ? 2 : app && app.pixel ? 1 : 0);
 export function renderBits(v) {
@@ -17,6 +17,6 @@ export function bootRender(urlKind, opts = {}, settings = {}) {
   return { render3d, pixel: !render3d && settings.px === 1 };
 }
 export function kindOf(urlKind, app) {
-  if (urlKind === "iso" || urlKind === "px") return urlKind;
+  if (urlKind === "iso") return urlKind;
   return app && app.render3d ? "3d" : app && app.pixel ? "px" : "2d";
 }

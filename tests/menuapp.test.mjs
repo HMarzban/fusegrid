@@ -100,6 +100,7 @@ check(
     "level",
     "sound",
     "render3d",
+    "pixel",
     "subT",
     "repT",
     "repDir",
@@ -550,7 +551,15 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
   check("BRIGHTNESS rejects adjust in CLASSIC 2D", a.move(1, 0) === false && a.settings.bri === 100);
   a.optRow = 3;
   a.optCycle();
+  check("RENDER Enter CLASSIC 2D -> PIXEL sets pixel and px together", a.pixel === true && a.render3d === false && a.settings.px === 1 && a.settings.r3d === 0);
+  a.optRow = 4;
+  check("CAMERA rejects Enter in PIXEL", a.optCycle() === false && a.settings.cam === 0);
+  a.optRow = 5;
+  check("BRIGHTNESS rejects adjust in PIXEL", a.move(1, 0) === false && a.settings.bri === 100);
+  a.optRow = 3;
+  a.optCycle();
   check("RENDER flips render3d and r3d together", a.render3d === true && a.settings.r3d === 1);
+  check("RENDER PIXEL -> REAL 3D clears pixel and px", a.pixel === false && a.settings.px === 0);
   a.optRow = 4;
   check("CAMERA cycles STANDARD -> WIDE in REAL 3D", a.optCycle() === true && a.settings.cam === 1);
   a.move(1, 0);
@@ -563,6 +572,30 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
   a.optRow = 3;
   a.optCycle();
   check("RENDER back to CLASSIC 2D re-locks the two 3D rows", a.render3d === false && a.settings.r3d === 0);
+  check("RENDER Enter wraps REAL 3D -> CLASSIC 2D (px stays 0)", a.pixel === false && a.settings.px === 0);
+}
+// ---- R4/R5: RENDER is three-way, ←/→ clamp 0..2, onSettings fires once ----
+{
+  const seen = [];
+  const a = createMenuApp({ onSettings: (s, k) => seen.push(k + ":" + s.r3d + s.px) });
+  a.screen = SCREEN.SETTINGS;
+  a.optRow = 3;
+  const val = () => (a.render3d ? 2 : a.pixel ? 1 : 0);
+  check("RENDER ← at CLASSIC 2D clamps (no change, no report)", a.move(-1, 0) === false && val() === 0 && seen.length === 0);
+  a.move(1, 0);
+  check("RENDER → CLASSIC 2D -> PIXEL, one report with both bits", val() === 1 && seen.join() === "render:01", seen.join());
+  a.move(1, 0);
+  check("RENDER → PIXEL -> REAL 3D", val() === 2 && seen.join() === "render:01,render:10", seen.join());
+  check("RENDER → at REAL 3D clamps", a.move(1, 0) === false && val() === 2 && seen.length === 2);
+  a.move(-1, 0);
+  check("RENDER ← REAL 3D -> PIXEL", val() === 1 && a.settings.px === 1 && a.settings.r3d === 0);
+  a.optRow = 8;
+  a.optCycle();
+  check("RESET DEFAULTS from PIXEL drops pixel live and in the blob", a.pixel === false && a.render3d === false && a.settings.px === 0);
+  const b = createMenuApp({ pixel: true, settings: { px: 1 } });
+  check("opts.pixel boots PIXEL and re-seeds px in memory", b.pixel === true && b.render3d === false && b.settings.px === 1 && b.settings.r3d === 0);
+  const c = createMenuApp({ pixel: true, render3d: true, settings: { px: 1, r3d: 1 } });
+  check("render3d wins over pixel at boot (mutually exclusive)", c.render3d === true && c.pixel === false && c.settings.px === 0 && c.settings.r3d === 1);
 }
 {
   let toggles = 0;

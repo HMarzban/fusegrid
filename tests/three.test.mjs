@@ -408,6 +408,15 @@ function mkCanvas(){
   t+=16; g.loop(t);
   check("RENDER toggle swaps to classic surface (no overlay key)",
     !("overlay"in g.renderer), String(Object.keys(g.renderer)));
+  check("RENDER Enter wraps REAL 3D -> CLASSIC 2D, never via PIXEL",
+    g.app.render3d===false&&g.app.pixel===false&&g.app.settings.r3d===0&&g.app.settings.px===0);
+  const r2d=g.renderer; g.app.confirm(); t+=16; g.loop(t);
+  check("RENDER CLASSIC 2D -> PIXEL swaps to the px renderer",
+    g.app.pixel===true&&g.renderer!==r2d&&!!(g.renderer._dbg&&g.renderer._dbg.atlas));
+  g.app.confirm(); t+=16; g.loop(t);
+  check("RENDER PIXEL -> REAL 3D swaps back to the 3D wrapper",
+    g.app.render3d===true&&Object.keys(g.renderer).sort().join()
+      ===["canvas","consumeEvents","ctx","getShake","overlay","render"].join());
 }
 {
   const g=createGame(mkCanvas(),{seed:78,autoplay:true});

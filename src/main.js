@@ -17,7 +17,7 @@ import { clampHeat } from "./core/heat.js";
 import { clampPact } from "./core/pact.js";
 import { createDemo, stepDemo } from "./app/attract.js";
 import { readFlags, locationSearch } from "./app/flags.js";
-import { kindOf } from "./app/renderkind.js";
+import { bootRender, kindOf } from "./app/renderkind.js";
 import { mountDebugHook } from "./app/debughook.js";
 import { mountFit } from "./app/fit.js";
 import { introPhase, popOf, createShow, stepShow } from "./app/intro.js";
@@ -62,10 +62,10 @@ import { createLocalPair } from "./net/localpair.js";
 
 export function createGame(canvas, opts = {}) {
   registerSW();
-  /* flags parsed ONCE (src/app/flags.js): ?render=3d selects the real-3D
-     path, ?render=iso pins the legacy dimetric path, ?play=1 skips the shell,
-     ?net=local arms the two-peer proof, ?orbit=1 opts into right-drag orbit
-     (wheel/pinch dolly stays always-on), ?debug=1 opens the window hook. */
+  /* flags parsed ONCE (src/app/flags.js): ?render=3d|px seed the boot kind,
+     ?render=iso pins legacy dimetric, ?play=1 skips the shell, ?net=local
+     arms the two-peer proof, ?orbit=1 opts into right-drag orbit (wheel /
+     pinch dolly stays always-on), ?debug=1 opens the window hook. */
   const flags = readFlags(locationSearch(), opts);
   const urlKind = flags.urlKind,
     autoplay = flags.autoplay,
@@ -241,7 +241,7 @@ export function createGame(canvas, opts = {}) {
     onPaceChange: (p) => savePace(p),
     timeAttack: loadTimes().on === 1,
     onTimeAttack: (on) => saveTimes({ ...loadTimes(), on: on ? 1 : 0 }),
-    render3d: urlKind === "3d" || opts.render3d === true || settings.r3d === 1,
+    ...bootRender(urlKind, opts, settings),
     settings,
     onSettings: (s) => {
       saveSettings(s);
@@ -491,8 +491,8 @@ export function createGame(canvas, opts = {}) {
 
   /* renderer cache per kind, lazily built (app/renderkind.js kindOf): "2d"
      classic (default, byte-identical), "3d" real-3D wrapper (#gl under #c),
-     "px" PIXEL (#px under #c, pixel/renderer.js; ?render=px), "iso" legacy
-     dimetric pinned by ?render=iso (menu toggle flips 3d/2d only). */
+     "px" PIXEL (#px under #c, pixel/renderer.js), "iso" legacy dimetric
+     pinned by ?render=iso (menu RENDER cycles 2d -> px -> 3d only). */
   const glCanvas =
     typeof document !== "undefined" && document
       ? document.getElementById("gl")

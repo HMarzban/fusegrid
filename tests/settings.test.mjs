@@ -33,9 +33,9 @@ const mkStore = () => {
     setItem: (k, v) => mem.set(k, String(v)),
   };
 };
-const KEYS = "mus,sfx,snd,r3d,cam,bri,shk,flx";
+const KEYS = "mus,sfx,snd,r3d,cam,bri,shk,flx,px";
 const DEF_JSON =
-  '{"mus":100,"sfx":100,"snd":1,"r3d":0,"cam":0,"bri":100,"shk":1,"flx":0}';
+  '{"mus":100,"sfx":100,"snd":1,"r3d":0,"cam":0,"bri":100,"shk":1,"flx":0,"px":0}';
 
 check("key is nb.settings.v1", SETTINGS_KEY === "nb.settings.v1", SETTINGS_KEY);
 check(
@@ -115,7 +115,7 @@ check(
   check(
     "Map-store round-trip is byte-exact",
     JSON.stringify(loadSettings(st)) ===
-      '{"mus":40,"sfx":0,"snd":0,"r3d":1,"cam":2,"bri":130,"shk":0,"flx":1}',
+      '{"mus":40,"sfx":0,"snd":0,"r3d":1,"cam":2,"bri":130,"shk":0,"flx":1,"px":0}',
     JSON.stringify(loadSettings(st)),
   );
   check(
@@ -195,6 +195,15 @@ check(
     JSON.stringify(getFxOpts()),
   );
   setFxOpts({ flashK: 1, shakeK: 1 });
+}
+// ---- R5: px is appended, bit()-clamped; an old blob (no px) loads unchanged ----
+{
+  check("px 9 -> 1, px 0 stays 0, missing px -> 0", clampSettings({ px: 9 }).px === 1 && clampSettings({ px: 0 }).px === 0 && clampSettings({}).px === 0);
+  const st = mkStore();
+  st.mem.set(SETTINGS_KEY, '{"mus":40,"sfx":0,"snd":0,"r3d":1,"cam":2,"bri":130,"shk":0,"flx":1}');
+  check("a pre-PIXEL blob loads every field unchanged, px 0", JSON.stringify(loadSettings(st)) === '{"mus":40,"sfx":0,"snd":0,"r3d":1,"cam":2,"bri":130,"shk":0,"flx":1,"px":0}', JSON.stringify(loadSettings(st)));
+  saveSettings({ ...loadSettings(st), r3d: 0, px: 1 }, st);
+  check("px round-trips under the same one key", loadSettings(st).px === 1 && loadSettings(st).r3d === 0 && st.mem.size === 1, st.mem.get(SETTINGS_KEY));
 }
 
 console.log("\n  SETTINGS RESULT: " + pass + " PASS / " + fail + " FAIL");
