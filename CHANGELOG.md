@@ -9,32 +9,32 @@ what makes an installed copy update.
 ## shell v177 · 2026-10-10
 
 ### Changed
-- **Explosions look 3D in REAL 3D.** Blasts are now billowing fireballs with
-  a white-hot core along every arm, a big burst on the bomb tile, and a
-  glowing plate on each deadly tile, so you can see exactly where it hurts.
-  They used to be flat, faint cards.
-- **More room to play on a portrait phone.** During a run the board moves up
-  under the pause button and the D-pad grows a little; the menu stays
-  centred.
+- **Explosions look 3D in REAL 3D.** Blasts are now billowing fireballs,
+  with a bigger burst on the bomb tile and a glowing plate on every tile
+  that can hurt you, so the danger zone is easy to read. They used to be
+  flat, faint cards. Reduce flash now also dims the light they throw.
+- **More room for your thumbs on a portrait phone.** During a run the board
+  moves up to just under the pause button, and the D-pad and bomb button
+  grow a little into the space that frees.
 
 ### Fixed
-- If you arm Reset on STATS by mistake, you can still tap `C COPY` to copy
-  your stats (it also cancels the reset).
+- After arming Reset on STATS, you can now tap `C COPY` to copy your stats.
+  Like pressing `C`, it cancels the reset.
 
 ## shell v176 · 2026-10-10
 
 ### Changed
 - **Better use of a portrait phone screen.** The board now sits in the
-  middle of the screen on the title, the opening and the menu, and during a
+  middle of the screen on the title, the opening and the menus. During a
   run the D-pad and bomb button are bigger and sit low, where your thumbs
   are, instead of leaving an empty band at the bottom.
 
 ### Fixed
 - **STATS says when it copied.** Pressing `C` on STATS now shows `COPIED`
-  (or `COPY FAILED`), and on touch you can tap `C COPY MY STATS` to copy.
+  (or `COPY FAILED`). On touch, tap `C COPY MY STATS` to copy.
 - `R` and `M` now leave the attract demo like every other key.
-- Menu sounds no longer pile up and play late if a key is pressed before
-  the browser has finished turning the audio on.
+- Menu sounds no longer play late if you press a key before the browser
+  has finished turning the audio on.
 - The first key press of the opening no longer stutters for a frame on a
   fresh browser start.
 

@@ -305,6 +305,13 @@ body[data-lay=l] #tbomb{right:auto;left:calc(100% + 40px);bottom:10px}
 body[data-lay=l] #tpause{right:auto;bottom:auto;left:calc(100% + 54px);top:0}
 ```
 
+*(Superseded 2026-10-10 for `p`: the three portrait rules now read
+`--st/--tp/--tb/--tpt/--tbt`, which `src/app/fit.js` `portraitGeo` writes —
+the stage is centred in the vertical slack, the pad + bomb grow and dock to
+the thumb band, and in GAME the stage lifts under the pause pill
+(`PORT_GAME`, `--sd` glide). The portrait stage moves; `d` / `l` are
+unchanged.)*
+
 **Portrait.**
 - The padding is 60 + 190 = 250 = `FIT_RES.p` height, and 8 + 8 = 16 = the
   width reserve.
@@ -459,6 +466,13 @@ uses the same overlay-canvas mapping as v154/v155:
 if (hit) app.key(hit); else if (app.resetArm) app.resetArm = false; else app.confirm();
 ```
 
+*(Superseded 2026-10-10: a hit now goes through `input.onUiKey(hit)`, the
+keyboard's own path, so a tapped C copies with the COPIED / COPY FAILED note;
+a non-mouse `KeyC` hit is deferred to `pointerup` (a touch `pointerdown`
+grants no clipboard activation). With the shorter armed foot the 600×520
+armed zones are R AGAIN x 81–183 and C COPY x 465–519, so the table's
+`x 78–240` armed R column is stale.)*
+
 - A tap on MEDALS is KeyT, so it pushes TROPHIES.
 - A tap on RESET is KeyR, so it arms. A tap on the armed `R AGAIN` label
   confirms, which runs `onReset`, `clearCabinet` and the reload.
@@ -558,7 +572,8 @@ if (hit) app.key(hit); else if (app.resetArm) app.resetArm = false; else app.con
    `DIST_MAX`, not 2729.
 5. **`WHEEL_DOLLY_K` is exactly 1.04.** **The dolly-in limit is 1473.54.**
 6. **Portrait `#wrap` is `padding:60px 8px 190px`**, not `padding-bottom:190px`
-   alone (§3.2).
+   alone (§3.2). *(Superseded 2026-10-10: `padding:var(--st,60px) 8px 0`,
+   `--st` from `portraitGeo`; see the §3.2 note.)*
 7. **The landscape `#wrap{padding:8px 166px}` is dropped.** v158's
    `width:100%` already holds the gutters.
 8. **The layout predicate is `body[data-lay]` written by `fit()`**, not a

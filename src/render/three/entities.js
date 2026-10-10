@@ -8,7 +8,7 @@
    truth, biome-independent); atlas maps merge only when they are real
    THREE.Textures, so headless keeps flat bright fallbacks. v2 silhouettes:
    capsule-box pickups + additive glow rings, glossy Phong bombs with variant
-   base rings, signal-runner player stack, fireball blasts (blast.js). Enemy
+   base rings, MAKO five-mesh player stack, fireball blasts (blast.js). Enemy
    identity 2026-08-25: per-type 3D designs translated silhouette-first from
    the TOP-DOWN 2D sprites (blob trio = glossy Phong spheres with baked
    scale + big tilted face planes, stationary square shell + magenta core +

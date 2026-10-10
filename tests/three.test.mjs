@@ -16,7 +16,7 @@
     trim, and the exact post-S4 draw-call count within budget; the 2026-08-25
     elements-redesign wave adds capsule-box pickups + glow rings, glossy Phong
     bombs with variant base rings, enemy eye strips + visor wedge, the
-    signal-runner player stack, crossed-quad flame blasts, and the §3 glyph/eye/
+    MAKO player stack, blast v3 plate + fireballs (blast.js), and the §3 glyph/eye/
     visor/fire texture painters; the 2026-08-25 enemy-identity wave adds the
     silhouette-first per-type redesign checks (§6 EI.*) — nose-up 3-sided
     rocket pyramid, flat-C boomerang torus, baked chaser/fast silhouette

@@ -18,10 +18,10 @@ Share that URL **with the trailing slash** so chat apps load the preview card (`
 - **Run summary** — GAME OVER and the finale show your tally and a delta against your saved best for that heat: NEW BEST, FURTHEST ROOM YET, MATCHED, or how far short you fell. Combo callouts and a close-call flash fire during play (both respect reduce-flash).
 - **DAILY** — one board a day, seeded from the date. Your tries and best for the day are kept on this device only; nobody is ranked.
 - **Challenge code** — on the end screen, `B` copies a twelve-character board code (seed, heat, pact, pace — never a score). Open `…/fusegrid/?code=XXXXXXXXXXXX` to play the same board.
-- **STATS** — a cabinet page with lifetime runs, rooms, deaths, kills, pickups, play time, and your CORE / PLUS / MAX bests; `C` copies it as text. Four local plaques on HIGH SCORES. STATS also counts lifetime **DAYS PLAYED**.
+- **STATS** — a cabinet page with lifetime runs, rooms, deaths, kills, pickups, play time, and your CORE / PLUS / MAX bests; `C` (or a tap on `C COPY MY STATS`) copies it as text. Four local plaques on HIGH SCORES. STATS also counts lifetime **DAYS PLAYED**.
 - **Medals** — eight medals for finale clears; `T` (or a tap on `T MEDALS`) on STATS opens the MEDALS page.
 - **Ghost** — after your fastest clear of a room, replaying that exact board (same seed, room, heat, pact, pace) races a translucent copy of your best route, in 2D and 3D.
-- **Reset my cabinet** — on STATS, press `R` twice (or tap `R RESET`, then `R AGAIN`) to wipe progress and reload; settings and pace are kept, anything else cancels.
+- **Reset my cabinet** — on STATS, press `R` twice (or tap `R RESET`, then `R AGAIN`) to wipe progress and reload; settings and pace are kept, anything else cancels (`C`, or a tap on `C COPY`, cancels and copies your stats).
 - **Coach** — a ghost shows the first bomb on a fresh install, then one short tip the first time you pick up KICK, THROW, or REMOTE.
 - **Cabinet help** — **GUIDE** (HOW TO, ITEMS, ENEMIES), HIGH SCORES, STATS, and **SOURCE** (opens [github.com/HMarzban/fusegrid](https://github.com/HMarzban/fusegrid)).
 - **Chiptune + boom** — each room has its own theme and blast tint.

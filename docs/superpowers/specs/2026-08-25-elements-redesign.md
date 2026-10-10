@@ -42,6 +42,10 @@ and read as blobs at distance; keeps today's matForItem ref-swap (zero new per-f
 - antenna rod y=TILE*0.70 + ball y=TILE*0.82, boots keep. Walk-bob/yaw logic unchanged.
 
 ### 2.5 BLASTS — volumetric flame cross
+*(Superseded 2026-10-10: blast v3, `src/render/three/blast.js` — an additive
+danger plate per deadly tile plus shader-shaded fireballs, still two instanced
+draws. The pre-v3 blade quads, the box cores and `atlas.fire` are gone; the C5 fix
+and the §3 `fire` texture below no longer describe the code.)*
 - blades geometry → crossedQuads(): two PlaneGeometry(TILE*0.98) merged about Y at 0°/90° into ONE BufferGeometry (indexed 8 verts / 12 idx) — still one instance per tile, still exactly 2 draw calls for ALL blasts.
 - blades mat → MeshBasicMaterial{map:atlas.fire, transparent, additive, depthWrite:false, side:DoubleSide}; palette lives in the texture ramp — DELETE Lambert/emissive-intensity machinery. Opacity = sc·(.55+.45·fresh).
 - cores keep (additive #fff3b0, shrink to TILE*0.40); pop overshoot curve + flash pool FLASH_CAP=3 all keep.

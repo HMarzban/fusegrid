@@ -24,7 +24,8 @@ Two state machines:
 
 | Layer | States | Owner |
 |---|---|---|
-| Shell | INTRO (title → show) → MENU ⇄ LEVEL/SCORES/SETTINGS/GUIDE(→HOWTO/ITEMS/ENEMIES) → GAME; idle → ATTRACT | `src/app/menuapp.js` |
+| Shell | INTRO (title → show) → MENU ⇄ LEVEL/SCORES/SETTINGS/GUIDE(→HOWTO/ITEMS/ENEMIES)/STATS(→TROPHIES) → GAME; idle → ATTRACT | `src/app/menuapp.js` |
+| Sim | PLAY / WIN / LOSE / PAUSE | `src/core/sim.js` |
 
 INTRO is two phases inside one SCREEN (`app.introStage` 0 title / 1 show),
 never a new SCREEN value. The title waits silently for a press; the first
@@ -45,12 +46,11 @@ MENU is eight rows in this order: `PLAY, LEVEL SELECT, DAILY, OPTIONS, GUIDE,
 HIGH SCORES, STATS, SOURCE`. `confirm()` dispatches by **label**, so an insert
 moves no runtime index — but `tests/headless.test.mjs`'s index-driven MENU
 confirms and `tests/menuapp.test.mjs`'s literals must be renegotiated with any
-reorder. `SCREEN.STATS = 12` is **appended** (`menuapp.js:27`'s own rule:
-appended, never inserted). `SCREEN.TROPHIES = 13` (the MEDALS page) is
+reorder. `SCREEN.STATS = 12` is **appended** (the `SCREEN` enum's own rule in
+`menuapp.js`: appended, never inserted). `SCREEN.TROPHIES = 13` (the MEDALS page) is
 appended too: opened from STATS by `T` or a tap on its `T MEDALS` label, backs out to STATS,
 never a MENU row. WIN/LOSE run summaries are **not** a SCREEN — they
 live in `drawOverlay`.
-| Sim | PLAY / WIN / LOSE / PAUSE | `src/core/sim.js` |
 
 The sim ticks only while the shell is GAME. PAUSE/WIN/LOSE are `world.state`,
 not shell screens. Do not add them as `SCREEN` values.
@@ -63,22 +63,23 @@ not shell screens. Do not add them as `SCREEN` values.
   `main.js`: `src/app/flags.js` (URL/opts, pure over a search string),
   `src/app/attract.js` (demo world + `stepDemo`), `src/app/debughook.js`
   (`window.__GAME__`), `src/app/endkeys.js` (WIN/LOSE keys: Enter =
-  Space through `Input.pulse()`, one fire tick and never a latch; C/B copy
-  plus the COPIED / COPY FAILED overlay note; STATS C uses the same toast,
-  painted in place of the STATS kicker, and `toastTick(toast,world,dt,app)`
-  ages it only on GAME WIN/LOSE and STATS, dropping it anywhere else),
-  `src/net/localpair.js` (`?net=local`),
+  Space through `Input.pulse()`, one fire tick and never a latch; C/B copy.
+  Every copy reports COPIED / COPY FAILED through the ONE `app.toast` — on
+  the WIN/LOSE overlay, and on STATS in place of the `YOUR CABINET` kicker;
+  `toastTick(toast,world,dt,app)` ages it only there and zeroes it anywhere
+  else), `src/net/localpair.js` (`?net=local`),
   `src/render/shellview.js` (`drawShell` + the `kindSize`/`dims` logical box),
   `src/app/fit.js` (`mountFit`: stage scale per layout reserve `FIT_RES`, and
   `body[data-lay]` = `d` desktop / `p` touch portrait / `l` touch landscape —
   the ONE predicate `index.html`'s touch layout keys off, never a media
   query; re-fits on `resize` and `orientationchange`). Portrait (`p`) only:
-  pure `portraitGeo(W,H,cw,ch)` (`PORT_GEO`) centres the stage and docks a
-  grown pad (128–176) + bomb (9/16 of the pad) 24px above the bottom,
-  written as `--st/--tp/--tb/--tpt/--tbt` on `body.style`. While `#touchpad`
-  shows (GAME only; a `MutationObserver` on its `hidden`), `portraitGeo(...,
-  true)` lifts the stage to `min(centred top, PORT_GAME.top 72)` under the
-  pill, pad cap 184, and `--sd` 0.2s glides only that edge (0s on resize).
+  pure `portraitGeo(W,H,cw,ch,game)` (`PORT_GEO`) centres the stage in the
+  vertical slack (clamped 60 top / 190 bottom) and docks a grown pad
+  (128–176) + bomb (9/16 of the pad) 24px above the bottom, written as
+  `--st/--tp/--tb/--tpt/--tbt` on `body.style`. While `#touchpad` shows
+  (GAME only; a `MutationObserver` on its `hidden`), `game` lifts the stage
+  to `min(centred top, PORT_GAME.top 72)` under the pause pill, pad cap 184,
+  and `--sd` 0.2s glides that edge only (0s on resize / rotation).
   INTRO/MENU/ATTRACT keep the centred stage; `d` / `l` are untouched.
 - `src/core/` — deterministic simulation, no DOM, no browser globals.
   - `world.js` — `createWorld`, `loadLevel` (re-exported from `sim.js`).
@@ -135,9 +136,14 @@ not shell screens. Do not add them as `SCREEN` values.
     plate per deadly tile (2D colour ramp, never shrinks, floor 0.25 bright,
     so it stays honest while blades are lethal) and lumpy icosahedron
     fireballs through one unlit ShaderMaterial (white-hot core, orange shell,
-    red rim, per-instance age, noise burn-away after 55% of life). End caps
-    never overflow their tile except the far cap 0.253; REDUCE FLASH scales
-    the <=3 flash lights. Fat-world stays 141. Never crossed quads again.
+    red rim, per-instance `aLife` [age, seed], noise burn-away past `BURN_AT`
+    0.55). Geometry and both materials are built once and `_shared` (a room
+    rebuild never recompiles); uploads cover only the live instance range.
+    At rig C near/E/W end caps stay inside their tile; the far cap (0.253)
+    and an E-W arm's balls over the safe row north (0.310) stay < 1/3 tile
+    (BL3); only the bomb tile's crown climbs higher. REDUCE FLASH (`flashK`)
+    scales the <=3 flash PointLights. Fat-world stays 141. `atlas.fire` is
+    gone; never crossed quads again.
   - The board border is ONE extruded cabinet rim (`tag:"trim"`, `RIM_W 36` /
     `RIM_LIP 6`) with a hole — never four rails, which crossed at the corners.
   - Near-wall cutaway (ruling 2026-10-09, the user's pick "lower the near
@@ -239,15 +245,16 @@ not shell screens. Do not add them as `SCREEN` values.
   casts) that `pools.ghost` builds lazily outside the player slot; iso never.
   `reset.js` (no store, wave 3): STATS `R` arms, a second `R` runs
   `clearCabinet` + `location.reload()`, any other key disarms (`_push` too).
-  Touch (T1): `statsHit` maps a tap on the painted `R RESET` / `R AGAIN`
-  label to `KeyR` and a tap on `C COPY MY STATS` (idle) or `C COPY` (armed;
-  the armed R AGAIN zone ends before the idle C zone) to `KeyC`, both
-  through `input.onUiKey` (the keyboard's own path; a touch C tap fires on
-  its `pointerup`, since a touch `pointerdown` grants no clipboard
-  activation), so the two-press confirm
-  and the COPIED note are the same; an off-label tap while armed disarms and
-  stays on STATS (the armed foot line has no C token, so a tap there copies
-  nothing).
+  Touch (T1): `statsHit` maps a tap on a painted foot token — idle
+  `T MEDALS` / `C COPY MY STATS` / `R RESET`, armed `R AGAIN ERASES` /
+  `C COPY` — to `KeyT` / `KeyC` / `KeyR` through `input.onUiKey` (the
+  keyboard's own path), so the two-press confirm and the COPIED note are the
+  same. A non-mouse C hit copies on its `pointerup` (`statsC`, cleared on
+  `pointercancel` / `pointerleave`): a touch `pointerdown` grants no
+  clipboard activation. C while armed (key or tap) disarms and copies. An
+  off-label tap while armed disarms and stays on STATS; the idle C spot falls
+  between R AGAIN (81–183) and C COPY (465–519 at 600×520), so it copies
+  nothing.
   CLEAR = highscores, bests, stats, daily, times, medals, plaques, ghost,
   pact, coach v1/v2, cabinet (12); KEEP = `nb.settings.v1`, `nb.pace.v1`.
   `nb.cabinet.v1` is still written on the first INTRO exit and no longer
@@ -277,14 +284,15 @@ not shell screens. Do not add them as `SCREEN` values.
   retune wander / still / chase / phase algorithms.
   `musicCue` uses `biomeOf(level).name`.
   Oscillator SFX stay direct-to-destination (layered voice + noise + filter,
-  never musicGain), and `voice()` / `noise()` DROP (never queue) any SFX
-  while `ctx.state !== "running"`, after nudging `resume()` on any state but
-  `closed` (iOS `interrupted` included) (2026-10-10).
-  `createAudio()` with no injected ctx calls `primeDevice()` once: a
-  throwaway AudioContext built and closed at boot pays the session's first
-  ~80 ms device bring-up before the title paints, so the press frame no
-  longer hitches; the game's own ctx is still born inside the gesture. A
-  harness counting every constructed ctx sees one `closed` one at boot.
+  never musicGain). `voice()` / `noise()` nudge `resume()` on any state but
+  `closed` (iOS `interrupted` included), then DROP (never queue) the SFX
+  unless `ctx.state === "running"` — resume is async, so a queued SFX would
+  start on the frozen clock. `createAudio()` with no injected ctx calls
+  `primeDevice()` once: a throwaway AudioContext built and closed at boot
+  pays the session's first-ctx device bring-up (~70–115 ms) before the title
+  paints, so the press frame no longer hitches; the game's own ctx is still
+  born inside the gesture. A harness counting constructed contexts sees one
+  extra `closed` one — assert on the game's ctx.
   Music is a track table: `AABB` per track, all nine B
   sections hand-authored (no identity B), one theme per biome. `setTrack` +
   `musicCue(screen,level)` from the shell; GAME/ATTRACT follow the room,
@@ -293,10 +301,11 @@ not shell screens. Do not add them as `SCREEN` values.
   `reveal` is a cue.
   Unlock is `src/app/unlock.js` `armUnlock`: keydown / pointerdown / pointerup /
   touchend / click (capture), armed until `ctx.state === "running"` (Escape and
-  a touch `pointerdown` carry no activation); a second press that is not Escape
-  or a modifier/lock key (Chromium's modifier set, incl. AltGraph / Fn /
-  NumLock / ScrollLock), with the ctx still not running 250 ms later, calls
-  `onReady` anyway (the hatch). `onReady` is one-shot; disarm is not tied to
+  a touch `pointerdown` carry no activation); a second counted press (a
+  `pointerup`, or a non-repeat keydown that is not Escape or a modifier/lock
+  key — Chromium's modifier set, incl. AltGraph / Fn / NumLock / ScrollLock),
+  with the ctx still not running 250 ms later, calls `onReady` anyway (the
+  hatch). `onReady` is one-shot; disarm is not tied to
   it: the listeners keep calling `unlock()` until the ctx runs (or no WebAudio
   / a rejected resume). `unlocked()` means running and gates
   `pump()`; the jingle rides the unlock and never fires on a suspended ctx.
@@ -315,6 +324,8 @@ not shell screens. Do not add them as `SCREEN` values.
 
 - `npm test` / `node --test` — run tests (`tests/*.test.mjs`).
 - `npm start` / `node serve.js` — loopback only: `http://127.0.0.1:8080/index.html`.
+  `PORT=0 node serve.js` binds an ephemeral port (printed on boot) — what
+  every parallel agent uses.
 - Public play is **GitHub Pages** (`https://hmarzban.github.io/fusegrid/`).
   Static files only (`.nojekyll`, relative asset hrefs). Do not rebind `serve.js`.
   Social/SEO: keep `og.png` (1200×630), `robots.txt`, and `sitemap.xml` in the
@@ -329,7 +340,8 @@ not shell screens. Do not add them as `SCREEN` values.
   and as the required gate before every Pages deploy. Human-facing
   architecture/tradeoffs live in `docs/architecture.md`.
 
-Flags: `?render=3d|iso`, `?play=1`, `?net=local`, `?orbit=1`, `?debug=1`.
+Flags: `?render=3d|iso`, `?play=1`, `?net=local`, `?orbit=1`, `?debug=1`,
+`?code=` (12-char challenge, URL-only — no opts fallback).
 
 Node v26, `"type": "module"`. No build step, no bundler.
 
@@ -370,8 +382,9 @@ Node v26, `"type": "module"`. No build step, no bundler.
   if the MENU cursor sat on DAILY. REAL 3D near border wall is a cutaway
   (`min(hWall, NEAR_H 22)`), chosen over see-through or leave-it.
   2026-10-10 (lead ruling, owner may veto): every key but Escape/Backspace
-  leaves ATTRACT into an ordinary CORE run — R and M included (R never arms
-  reset or resets the camera there; M has no mute binding, so it only leaves).
+  (those return to MENU) leaves ATTRACT into an ordinary CORE run — R and M
+  included (R never arms reset or resets the camera there; M has no mute
+  binding, so it only leaves).
 - **The challenge code carries a board, never a claim.** `?code=` is 12 chars
   (`F1` + seed + cfg + checksum), seed/heat/pact/pace only — **no score
   field**, and no `window.prompt` / DOM paste box (entry is through
@@ -432,13 +445,31 @@ not covered by Node — play-verify in a browser after render changes.
 - CROWN's collision is its `brickA` `#ffd447`, which is `fast`'s identity colour exactly. The three golds separate on value and shape, never hue: `knight` is the only bright-specular Phong **foe** plus an unlit pale nasal bar — the player face plate is the cast's one other Phong surface, `fast` carries dark fins over a straight-edged delta, `burrow` is a duller value with an additive plume. Do not restyle the biome to fix this.
 - PWA is a versioned app-shell precache (`fusegrid-shell-vN`). Offline after the first visit; first visit still needs network. Relative `./` scope covers Pages `/fusegrid/` and loopback. New `CACHE_NAME`/REV: `register.update` + one-shot `controllerchange` reload. iOS install is Add to Home Screen; module SW wants 16.4+.
 - A hidden browser tab pauses `requestAnimationFrame`, so a headed check on an
-  unfocused pane freezes the game loop and every screenshot is stale. Drive the
-  loop through a `MessageChannel`-backed rAF shim, and assert on
-  `window.__GAME__` + a `fillText` recorder rather than on pixels.
+  unfocused pane freezes the game loop and every screenshot is stale. For
+  STATE checks drive the loop through a `MessageChannel`-backed rAF shim and
+  assert on `window.__GAME__` + a `fillText` recorder rather than on pixels.
+  For FRAME TIMES never use the shim: measure hitches in headed real-GPU
+  Chrome with a plain rAF recorder.
+- macOS: a fresh `--user-data-dir` is NOT a cold GPU shader cache — Metal's
+  per-app cache lives outside the profile
+  (`$(getconf DARWIN_USER_CACHE_DIR)com.google.Chrome.helper/com.apple.metal`).
+  SwiftShader / headless stall numbers (e.g. the old 286 ms 2D Graphite stall)
+  do not carry to a real GPU.
+- A browser session's first `new AudioContext()` blocks ~70–115 ms in its
+  constructor (audio device bring-up); `primeDevice` pays it at boot.
+- A touch `pointerdown` grants no transient activation. Anything that needs
+  one from a tap — a clipboard write, the audio unlock — runs on `pointerup`.
 - `localhost:8080` and `127.0.0.1:8080` are separate origins, each with its own
   service worker and caches; clean both before a headed check. The desktop
-  Browser pane cannot register a service worker at all, so PWA install and
-  offline checks need a real headless Chromium driven over CDP.
+  Browser pane cannot register a service worker at all, and may not deliver
+  key presses to the game (focus / rAF), so PWA install, offline and key-driven
+  checks run in a real Chromium driven over CDP.
+- Parallel worktree agents: each runs `PORT=0 node serve.js` and stops its own
+  server by PID — never `pkill -f "node serve.js"`, which kills other
+  sessions' servers. Headed Chrome steals the user's focus; keep runs short.
+- Taste calls (camera, layout, blast look): render a labelled contact sheet of
+  2–3 candidates, ship the best against stated criteria, and let the owner
+  veto.
 - Headed audio checks: launch Chromium with
   `--autoplay-policy=document-user-activation-required`. The
   `user-gesture-required` value does nothing for Web Audio, so it cannot
