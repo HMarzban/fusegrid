@@ -458,7 +458,7 @@ export function createGame(canvas, opts = {}) {
       } else if (app.screen === SCREEN.STATS) {
         const r = canvas.getBoundingClientRect(), k = canvas.width / (r.width || canvas.width), { cw, ch } = dims(canvas, curKind);
         const hit = statsHit((ev.clientX - r.left) * k, (ev.clientY - r.top) * k, menuLayout(cw, ch), app.resetArm);
-        if (hit) app.key(hit); else if (app.resetArm) app.resetArm = false; else app.confirm();
+        if (hit) input.onUiKey(hit); else if (app.resetArm) app.resetArm = false; else app.confirm(); // a label tap IS its key (C copies + notes)
       } else app.confirm();
     });
   }

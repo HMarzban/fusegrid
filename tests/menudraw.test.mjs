@@ -882,7 +882,7 @@ function check(name, cond, detail) {
   ]) {
     const L = md.layout(W, H);
     for (const [arm, want] of [
-      [false, ["KeyT", null, "KeyR", null]],
+      [false, ["KeyT", "KeyC", "KeyR", null]],
       [true, ["KeyR", null, null]],
     ]) {
       const f = paint(L, arm), z = zones(f), tag = `${arm ? "armed" : "idle"} at ${W}x${H}`;

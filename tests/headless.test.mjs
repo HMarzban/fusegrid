@@ -1427,6 +1427,12 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
       g.app.screen===SCREEN.TROPHIES,String(g.app.screen));
     tap(300,300);
     check("T1 tap: a tap on MEDALS backs out to STATS",g.app.screen===SCREEN.STATS,String(g.app.screen));
+    const wrote=[]; navigator.clipboard={writeText:(s)=>(wrote.push(s),Promise.resolve())};
+    tap(270,478); await new Promise((r)=>setImmediate(r));
+    check("T1 tap: the C COPY MY STATS label copies through the KeyC path and raises COPIED, still STATS",
+      g.app.screen===SCREEN.STATS&&wrote.length===1&&/FUSEGRID STATS/.test(wrote[0])&&g.app.toast.s==="COPIED"&&g.app.toast.t>0&&g.app.resetArm===false,
+      g.app.screen+"/"+wrote.length+"/"+JSON.stringify(g.app.toast));
+    delete navigator.clipboard;
     tap(354,478);
     check("T1 tap: the R RESET label arms and clears nothing",
       g.app.screen===SCREEN.STATS&&g.app.resetArm===true&&kept()&&reloads===0,
