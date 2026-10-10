@@ -229,7 +229,8 @@ not shell screens. Do not add them as `SCREEN` values.
   `reset.js` (no store, wave 3): STATS `R` arms, a second `R` runs
   `clearCabinet` + `location.reload()`, any other key disarms (`_push` too).
   Touch (T1): `statsHit` maps a tap on the painted `R RESET` / `R AGAIN`
-  label to `KeyR` and an idle tap on `C COPY MY STATS` to `KeyC`, both
+  label to `KeyR` and a tap on `C COPY MY STATS` (idle) or `C COPY` (armed;
+  the armed R AGAIN zone ends before the idle C zone) to `KeyC`, both
   through `input.onUiKey` (the keyboard's own path; a touch C tap fires on
   its `pointerup`, since a touch `pointerdown` grants no clipboard
   activation), so the two-press confirm

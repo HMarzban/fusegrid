@@ -982,7 +982,7 @@ case "KeyR":
 | idle | foot | `T MEDALS · C COPY MY STATS · R RESET · ESC BACK` | 47 ch = 282 px |
 | armed | note 1 (#ff5d73) | `ERASES SCORES · BESTS · TIMES · DAILY · MEDALS · PLAQUES · GHOSTS` | 65 ch = 390 px |
 | armed | note 2 (#ff5d73) | `ERASES STATS + DAYS PLAYED · RELOCKS ROOMS 6-8 · PACTS · TIME ATTACK` | 68 ch = 408 px |
-| armed | foot (#ff5d73) | `R AGAIN ERASES + RELOADS · ANY OTHER KEY CANCELS · KEEPS OPTIONS + PACE` | 71 ch = 426 px |
+| armed | foot (#ff5d73) | `R AGAIN ERASES · ANY OTHER KEY CANCELS · KEEPS OPTIONS + PACE · C COPY` (2026-10-10) | 70 ch = 420 px |
 
 - The biggest irreversible loss is named on screen: clearing `nb.pact.v1`
   relocks rooms 6-8, all four pacts and TIME ATTACK, and DAYS PLAYED is named

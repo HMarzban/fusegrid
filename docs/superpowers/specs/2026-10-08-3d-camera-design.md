@@ -421,7 +421,8 @@ That is −17 lines in total. `sizeCanvases` keeps calling `fit()` (`:546`).
 
 - **Hoist** the two foot literals (`:895-896`) into module constants:
   - `STATS_FOOT = "T MEDALS · C COPY MY STATS · R RESET · ESC BACK"`
-  - `RESET_FOOT = "R AGAIN ERASES + RELOADS · ANY OTHER KEY CANCELS · KEEPS OPTIONS + PACE"`
+  - `RESET_FOOT = "R AGAIN ERASES · ANY OTHER KEY CANCELS · KEEPS OPTIONS + PACE · C COPY"`
+    *(2026-10-10: `+ RELOADS` dropped so the R AGAIN zone ends before the idle C zone; `C COPY` added.)*
 - `drawStats` still paints each string with **one** `fillText`. The pins at
   `menudraw.test.mjs:648,736` and `stats.test.mjs:728` do not move.
 - **New `statsHit(x, y, L, arm)`** goes beside `menuHit`. It returns
@@ -436,7 +437,7 @@ That is −17 lines in total. `sizeCanvases` keeps calling `fit()` (`:546`).
     `[x0 + 6(a − 1.5), x0 + 6(b + 1.5)]`, which is half a separator on each
     side.
   - **Idle:** token 0 (`T MEDALS`) → `"KeyT"`, token 2 (`R RESET`) → `"KeyR"`.
-  - **Armed:** token 0 (`R AGAIN ERASES + RELOADS`) → `"KeyR"`.
+  - **Armed:** token 0 (`R AGAIN ERASES`) → `"KeyR"`, token 3 (`C COPY`) → `"KeyC"`.
   - Everything else → `null`.
 
 | Plate | idle T zone | idle R zone | armed R zone | band y |
