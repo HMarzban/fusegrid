@@ -11,7 +11,9 @@ import {
   coach2Mark,
   coachTip,
   coach2Tick,
+  coachLay,
 } from "../src/app/coach.js";
+import { CFG, T, key } from "../src/core/config.js";
 import { drawCoach, drawCoach2 } from "../src/render/scenes.js";
 import { createGame } from "../src/main.js";
 import { SCREEN } from "../src/app/menuapp.js";
@@ -333,8 +335,8 @@ check("round-trip", loadCoachSeen(store) === true);
     setItem: (k, v) => m2.set(k, String(v)),
   };
   check(
-    "an unseen cabinet is all zeros",
-    JSON.stringify(loadCoach2(st)) === '{"k":0,"t":0,"r":0}',
+    "an unseen cabinet is all zeros, k/t/r first then the five 2026-10-10 bits",
+    JSON.stringify(loadCoach2(st)) === '{"k":0,"t":0,"r":0,"p":0,"l":0,"w":0,"i":0,"s":0}',
     JSON.stringify(loadCoach2(st)),
   );
   const a = coach2Mark(loadCoach2(st), "throw");
@@ -361,8 +363,8 @@ check("round-trip", loadCoachSeen(store) === true);
     setItem: (k, v) => junk.set(k, String(v)),
   };
   check(
-    "a junk blob clamps to the three-bit shape",
-    JSON.stringify(loadCoach2(bad)) === '{"k":1,"t":1,"r":0}',
+    "a junk blob clamps to the eight-bit shape",
+    JSON.stringify(loadCoach2(bad)) === '{"k":1,"t":1,"r":0,"p":0,"l":0,"w":0,"i":0,"s":0}',
     JSON.stringify(loadCoach2(bad)),
   );
   let threw = false;
@@ -377,7 +379,7 @@ check("round-trip", loadCoachSeen(store) === true);
   check(
     "a corrupt blob degrades to zeros",
     JSON.stringify(loadCoach2({ getItem: () => "{not json", setItem() {} })) ===
-      '{"k":0,"t":0,"r":0}',
+      '{"k":0,"t":0,"r":0,"p":0,"l":0,"w":0,"i":0,"s":0}',
   );
 }
 
@@ -604,6 +606,8 @@ check("round-trip", loadCoachSeen(store) === true);
     let t = 1000;
     g.loop(t);
     texts.length = 0;
+    g.world.players[0].kick = true; // the injected pickups did not run applyPower
+    g.world.players[0].throw = true;
     g.world.events.push({ t: "power", kind: "kick", x: 1, y: 1 });
     g.world.events.push({ t: "power", kind: "throw", x: 1, y: 1 });
     g.loop((t += 16));
@@ -614,8 +618,8 @@ check("round-trip", loadCoachSeen(store) === true);
       JSON.stringify(shown),
     );
     check(
-      "the replaced verb is marked seen immediately — it never gets a later turn",
-      loadCoach2(ls).k === 1,
+      "the replaced verb is NOT marked seen — it is re-armed, bit 0, and queued (2026-10-10)",
+      loadCoach2(ls).k === 0,
       JSON.stringify(loadCoach2(ls)),
     );
     // Minor-1 fix (review 2026-09-07): the replaced tip is dismissed FIRST,
@@ -632,8 +636,19 @@ check("round-trip", loadCoachSeen(store) === true);
     );
     let guard = 0;
     while (loadCoach2(ls).t === 0 && guard < 500) { t += 16; g.loop(t); guard++; }
+    check("the live THROW tip closes on its own window", loadCoach2(ls).t === 1 && loadCoach2(ls).k === 0,
+      JSON.stringify(loadCoach2(ls)));
+    texts.length = 0;
+    g.loop((t += 16));
     check(
-      "and once the live one closes, both verbs are seen for good",
+      "the replaced KICK tip gets its turn once THROW closes — never lost",
+      texts.includes("KICK · walk into a bomb to slide it"),
+      texts.join("|"),
+    );
+    guard = 0;
+    while (loadCoach2(ls).k === 0 && guard < 500) { t += 16; g.loop(t); guard++; }
+    check(
+      "and once it closes too, both verbs are seen for good",
       loadCoach2(ls).k === 1 && loadCoach2(ls).t === 1,
       JSON.stringify(loadCoach2(ls)),
     );
@@ -668,6 +683,7 @@ check("round-trip", loadCoachSeen(store) === true);
     g.loop(t);
     check("the ghost coach is open", texts.includes("SPACE"), texts.join("|"));
     texts.length = 0;
+    g.world.players[0].kick = true; // the injected pickup did not run applyPower
     g.world.events.push({ t: "power", kind: "kick", x: 1, y: 1 });
     g.loop((t += 16));
     check(
@@ -684,6 +700,15 @@ check("round-trip", loadCoachSeen(store) === true);
       "the ring recorded v1 opening and did NOT record a v2 tip — deferral, proved",
       ringHas("coach_shown", "v1") && !ringHas("coach_shown", "kick"),
       JSON.stringify(loadStats(ls).e.filter((x) => x.t.indexOf("coach") === 0)),
+    );
+    let guard = 0;
+    while (!ringHas("coach_dismissed", "v1") && guard < 500) { t += 16; g.loop(t); guard++; }
+    texts.length = 0;
+    g.loop((t += 16));
+    check(
+      "and once v1 closes the deferred KICK tip opens — deferred, not dropped (2026-10-10)",
+      texts.includes("KICK · walk into a bomb to slide it") && !texts.includes("SPACE") && ringHas("coach_shown", "kick"),
+      texts.join("|"),
     );
   } finally {
     delete globalThis.window;
@@ -744,7 +769,7 @@ check("round-trip", loadCoachSeen(store) === true);
     check("Major-1 setup: quitting mid-tip lands on MENU", g.app.screen === SCREEN.MENU, String(g.app.screen));
     check(
       "Major-1 setup: nb.coach.v2 is still unwritten — the tip was never dismissed",
-      JSON.stringify(loadCoach2(ls)) === '{"k":0,"t":0,"r":0}',
+      JSON.stringify(loadCoach2(ls)) === '{"k":0,"t":0,"r":0,"p":0,"l":0,"w":0,"i":0,"s":0}',
       JSON.stringify(loadCoach2(ls)),
     );
     g.app.cursor = 0; // PLAY
@@ -799,6 +824,165 @@ check("round-trip", loadCoachSeen(store) === true);
     );
   } finally {
     delete globalThis.window;
+  }
+}
+
+// ---- coach-8 (owner ruling 2026-10-10): eight verbs on the same key ----
+{
+  const mk = (raw) => {
+    const m = new Map();
+    if (raw !== undefined) m.set("nb.coach.v2", raw);
+    return { m, getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)) };
+  };
+  const old = mk('{"k":1,"t":0,"r":1}');
+  const v = loadCoach2(old);
+  check(
+    "an old three-bit {k,t,r} record loads with the five new bits at 0",
+    v.k === 1 && v.t === 0 && v.r === 1 && v.p === 0 && v.l === 0 && v.w === 0 && v.i === 0 && v.s === 0,
+    JSON.stringify(v),
+  );
+  saveCoach2(v, old);
+  check(
+    "and saving it back keeps k/t/r first and unchanged",
+    old.m.get("nb.coach.v2") === '{"k":1,"t":0,"r":1,"p":0,"l":0,"w":0,"i":0,"s":0}',
+    old.m.get("nb.coach.v2"),
+  );
+  const verbs = ["kick", "throw", "remote", "pass", "line", "power", "pierce", "shield"];
+  const letters = verbs.map((k) => Object.keys(coach2Mark({}, k)).filter((f) => coach2Mark({}, k)[f])[0]);
+  check("each of the eight verbs owns one distinct letter", new Set(letters).size === 8 && letters.every(Boolean), letters.join(""));
+  check(
+    "every tipped verb round-trips through coach2Seen",
+    verbs.every((k) => coach2Seen(coach2Mark({}, k), k) && verbs.filter((o) => o !== k).every((o) => !coach2Seen(coach2Mark({}, k), o))),
+  );
+  check(
+    "FLAME / BOMB / SPEED / HEART stay label-only: no tip, no bit",
+    ["fire", "bomb", "speed", "heart"].every((k) => coachTip(k) === "" && coachTip(k, "p") === "" && JSON.stringify(coach2Mark({}, k)) === JSON.stringify(loadCoach2(mk()))),
+  );
+  check(
+    "all eight desktop tips are POWER name + help verbatim",
+    verbs.every((k) => { const d = POWER.find((x) => x.t === k); return coachTip(k, "d") === d.name + " · " + d.help; }),
+  );
+  check(
+    "the longest desktop tip is PIERCE's 41 chars",
+    Math.max(...verbs.map((k) => coachTip(k, "d").length)) === 41 && coachTip("pierce", "d").length === 41,
+  );
+  check(
+    "touch wording: THROW and REMOTE name the touch button instead of the key chord",
+    coachTip("throw", "p") === "THROW · the THROW button tosses a bomb" &&
+      coachTip("remote", "l") === "REMOTE · the REMOTE button detonates your bombs",
+    coachTip("throw", "p") + " | " + coachTip("remote", "l"),
+  );
+  check(
+    "the other six verbs read the same on every layout",
+    verbs.filter((k) => k !== "throw" && k !== "remote").every((k) => coachTip(k, "p") === coachTip(k, "d") && coachTip(k, "l") === coachTip(k, "d")),
+  );
+  check(
+    "the touch line keeps the rest of POWER's help verbatim — no second copy",
+    ["throw", "remote"].every((k) => { const d = POWER.find((x) => x.t === k); return coachTip(k, "p").endsWith(d.help.slice(d.help.indexOf(" "))); }),
+  );
+  const tsrc = readFileSync("src/touch.js", "utf8");
+  check(
+    "only helps that open with a key chord change, and each has a touch button labelled with its POWER name",
+    POWER.filter((d) => coachTip(d.t, "p") !== coachTip(d.t, "d")).map((d) => d.t).join() === "throw,remote" &&
+      /\["throw","remote"\]/.test(tsrc) && /lb\.textContent=pw\.name/.test(tsrc),
+  );
+  check("coachLay is d under Node (no document)", coachLay() === "d" && coachTip("throw") === coachTip("throw", "d"));
+  globalThis.document = { body: { getAttribute: (a) => (a === "data-lay" ? "p" : null) } };
+  try {
+    check("coachTip reads body[data-lay] when no layout is passed", coachLay() === "p" && coachTip("throw") === coachTip("throw", "p"));
+    globalThis.document.body.getAttribute = () => "d";
+    check("a desktop data-lay keeps the keyboard copy", coachTip("remote") === "REMOTE · Q detonates your bombs");
+  } finally {
+    delete globalThis.document;
+  }
+
+  const grid = () => { const g = new Array(CFG.COLS * CFG.ROWS).fill(T.EMPTY); g[key(5, 5)] = T.BRICK; return g; };
+  const W = (p, events, state) => ({ state: state || "PLAY", events: events || [], grid: grid(), players: [Object.assign({ tx: 1, ty: 1, bombKind: "normal" }, p || {})] });
+  const pick = (k) => ({ t: "power", kind: k, x: 20, y: 20 });
+  const useOf = {
+    kick: [{}, [{ t: "kick" }]], throw: [{}, [{ t: "throw" }]], remote: [{}, [{ t: "remote" }]],
+    shield: [{ shield: true }, [{ t: "hurt" }]], pass: [{ passing: true, tx: 5, ty: 5 }, []],
+    line: [{ bombKind: "line" }, [{ t: "bomb" }]], power: [{ bombKind: "power" }, [{ t: "bomb" }]], pierce: [{ bombKind: "pierce" }, [{ t: "bomb" }]],
+  };
+  for (const k of verbs) {
+    const sto = mk(), st = { kind: null, t: 0 };
+    const o1 = coach2Tick(st, W(useOf[k][0], [pick(k)]), false, 0.016, sto);
+    const o2 = coach2Tick(st, W(useOf[k][0], useOf[k][1]), false, 0.016, sto);
+    check(
+      k + ": a pickup opens its tip and using the verb closes it early (rn:use) and persists",
+      o1.length === 1 && o1[0][0] === "coach_shown" && o1[0][1].v === k &&
+        o2.length === 1 && o2[0][0] === "coach_dismissed" && o2[0][1].rn === "use" && st.kind === null && coach2Seen(loadCoach2(sto), k),
+      JSON.stringify([o1, o2]),
+    );
+  }
+  {
+    const sto = mk(), st = { kind: null, t: 0 };
+    coach2Tick(st, W({ passing: true }, [pick("pass")]), false, 0.016, sto);
+    const o = coach2Tick(st, W({ passing: true, tx: 4, ty: 5 }, []), false, 0.016, sto);
+    check("pass: walking an empty tile is not a use", o.length === 0 && st.kind === "pass");
+  }
+  {
+    const sto = mk(), st = { kind: null, t: 0 };
+    coach2Tick(st, W({ bombKind: "power" }, [pick("power")]), false, 0.016, sto);
+    const o = coach2Tick(st, W({ bombKind: "power" }, [pick("fire")]), false, 0.016, sto);
+    check("a FLAME pickup (also t:power) never closes a live POWER tip", o.length === 0 && st.kind === "power", JSON.stringify(o));
+    const o2 = coach2Tick(st, W({ bombKind: "normal" }, [{ t: "bomb" }]), false, 0.016, sto);
+    check("a plain bomb while no longer holding POWER is not a use", o2.length === 0 && st.kind === "power");
+  }
+  {
+    const sto = mk(), st = { kind: null, t: 0 };
+    const o1 = coach2Tick(st, W({ kick: true }, [pick("kick")]), true, 0.016, sto);
+    check("v1 open: the trigger is queued, not shown and not dropped", o1.length === 0 && st.kind === null && st.q.join() === "kick", JSON.stringify(st));
+    const o2 = coach2Tick(st, W({ kick: true }, []), true, 0.016, sto);
+    check("still nothing while v1 stays open", o2.length === 0 && st.kind === null);
+    const o3 = coach2Tick(st, W({ kick: true }, []), false, 0.016, sto);
+    check("the frame v1 is closed the deferred tip opens", o3.length === 1 && o3[0][1].v === "kick" && st.kind === "kick" && st.q.length === 0, JSON.stringify(o3));
+  }
+  {
+    const sto = mk(), st = { kind: null, t: 0 };
+    coach2Tick(st, W({ kick: true }, [pick("kick")]), true, 0.016, sto);
+    const o = coach2Tick(st, W({ kick: false }, []), false, 0.016, sto);
+    check("a deferred tip whose power was lost meanwhile is dropped, bit still 0", o.length === 0 && st.kind === null && st.q.length === 0 && !coach2Seen(loadCoach2(sto), "kick"));
+    const o2 = coach2Tick(st, W({ kick: true }, [pick("kick")]), false, 0.016, sto);
+    check("and its next pickup re-arms it", o2.length === 1 && o2[0][1].v === "kick");
+  }
+  {
+    const sto = mk(), st = { kind: null, t: 0 };
+    coach2Tick(st, W({ bombKind: "line" }, [pick("line")]), false, 0.016, sto);
+    const o = coach2Tick(st, W({ bombKind: "pierce" }, [pick("pierce")]), false, 0.016, sto);
+    check(
+      "replace: LINE is dismissed rn:replace BEFORE PIERCE shows, stays unseen, and is queued",
+      o.length === 2 && o[0][0] === "coach_dismissed" && o[0][1].v === "line" && o[0][1].rn === "replace" &&
+        o[1][0] === "coach_shown" && o[1][1].v === "pierce" && !coach2Seen(loadCoach2(sto), "line") && st.q.join() === "line",
+      JSON.stringify(o),
+    );
+    let out = [];
+    for (let i = 0; i < 200 && st.kind; i++) out = out.concat(coach2Tick(st, W({ bombKind: "pierce" }, []), false, 0.05, sto));
+    check(
+      "PIERCE replaced LINE (one bomb kind at a time), so LINE is dropped, never shown stale, and re-armed",
+      out.length === 1 && out[0][1].v === "pierce" && st.kind === null && st.q.length === 0 && !coach2Seen(loadCoach2(sto), "line"),
+      JSON.stringify(out),
+    );
+  }
+  {
+    const sto = mk(), st = { kind: null, t: 0 };
+    coach2Tick(st, W({ kick: true, shield: true }, [pick("kick"), pick("shield")]), false, 0.016, sto);
+    check("two verbs in one batch: one panel, the second live, the first queued", st.kind === "shield" && st.q.join() === "kick");
+    const o = coach2Tick(st, W({ kick: true, shield: true }, []), false, 0.016, sto);
+    check("no dequeue while a tip is live", o.length === 0 && st.q.length === 1);
+    st.t = COACH2_DUR;
+    const o2 = coach2Tick(st, W({ kick: true }, [], "PAUSE"), false, 0.016, sto);
+    check("a queued tip never opens outside PLAY", o2.length === 1 && o2[0][1].rn === "timeout" && st.kind === null && st.q.join() === "kick", JSON.stringify(o2));
+    const o3 = coach2Tick(st, W({ kick: true }, []), false, 0.016, sto);
+    check("and opens on the next PLAY frame", o3.length === 1 && o3[0][1].v === "kick" && st.kind === "kick");
+  }
+  {
+    const sto = mk(), st = { kind: null, t: 0 };
+    coach2Tick(st, W({ pass: true, passing: true }, [pick("pass")]), false, 0.016, sto);
+    for (let i = 0; i < 100; i++) coach2Tick(st, W({ passing: true }, [], "PAUSE"), false, 0.1, sto);
+    check("the v2 clock is PLAY-only: ten seconds of PAUSE burn nothing", st.kind === "pass" && st.t < 0.05, st.t);
+    const o = coach2Tick(st, W({ passing: true }, [pick("pass")]), false, 0.5, sto);
+    check("the same verb picked again while live restarts its window, emitting nothing", o.length === 0 && st.t === 0 && st.kind === "pass");
   }
 }
 

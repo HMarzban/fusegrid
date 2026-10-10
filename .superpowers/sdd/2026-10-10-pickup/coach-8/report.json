@@ -1,0 +1,86 @@
+[
+ {
+  "tag": "2d-desk-throw",
+  "lay": "d",
+  "st": "PLAY",
+  "v2": null,
+  "errors": []
+ },
+ {
+  "tag": "2d-desk-pierce",
+  "lay": "d",
+  "st": "PLAY",
+  "v2": null,
+  "errors": []
+ },
+ {
+  "tag": "2d-phone-throw",
+  "lay": "p",
+  "st": "PLAY",
+  "v2": null,
+  "errors": []
+ },
+ {
+  "tag": "2d-phone-pierce",
+  "lay": "p",
+  "st": "PLAY",
+  "v2": null,
+  "errors": []
+ },
+ {
+  "tag": "3d-desk-throw",
+  "lay": "d",
+  "st": "PLAY",
+  "v2": null,
+  "errors": []
+ },
+ {
+  "tag": "3d-desk-pierce",
+  "lay": "d",
+  "st": "PLAY",
+  "v2": null,
+  "errors": []
+ },
+ {
+  "tag": "3d-phone-throw",
+  "lay": "p",
+  "st": "PLAY",
+  "v2": null,
+  "errors": []
+ },
+ {
+  "tag": "3d-phone-pierce",
+  "lay": "p",
+  "st": "PLAY",
+  "v2": null,
+  "errors": []
+ },
+ {
+  "tag": "px-desk-throw",
+  "lay": "d",
+  "st": "PLAY",
+  "v2": null,
+  "errors": []
+ },
+ {
+  "tag": "px-desk-pierce",
+  "lay": "d",
+  "st": "PLAY",
+  "v2": null,
+  "errors": []
+ },
+ {
+  "tag": "px-phone-throw",
+  "lay": "p",
+  "st": "PLAY",
+  "v2": null,
+  "errors": []
+ },
+ {
+  "tag": "px-phone-pierce",
+  "lay": "p",
+  "st": "PLAY",
+  "v2": null,
+  "errors": []
+ }
+]
