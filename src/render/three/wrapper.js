@@ -17,11 +17,20 @@ import {introCam} from "./flythrough.js";
 import {createParticles} from "./particles.js";
 import {buildAtlas} from "./textures.js";
 import {drawHudChips, drawOverlay, overlayBox, drawCoach, drawCoach2} from "../scenes.js";
-import {onEvent, updateFx, getShake, getFlash, getFx, feedFx, drawFxOverlay, syncFx} from "../fx.js";
+import {onEvent, updateFx, getShake, getFlash, getFx, feedFx, drawFxOverlay, syncFx, initFx} from "../fx.js";
 
 const W=CFG.COLS*CFG.TILE, H=CFG.ROWS*CFG.TILE;
 const noop=()=>{};
-export const DPR_MAX=2;                     // spec §9.9
+export const DPR_MAX=3;                     // RESOLUTION FULL (opt-in); default min(dpr,2)
+/* GRAPHICS 2026-10-10: the probe and three get ONE attribute object. The
+   probe used to pass none, which fixed the context to the browser default
+   before three asked; ATTR0 is exactly that default, so AUTO is today. */
+export const ATTR0=Object.freeze({alpha:true,antialias:true,stencil:false,depth:true,
+  premultipliedAlpha:true,preserveDrawingBuffer:false,powerPreference:"default",
+  failIfMajorPerformanceCaveat:false});
+export const NET_MS=500, DEAD_MS=3000;
+const STILL=Object.freeze({x:0,y:0});
+const clock=()=>typeof performance!=="undefined"&&performance.now?performance.now():0;
 
 function makeOverlayCtx(canvas){
   if(canvas&&canvas.getContext)
@@ -39,6 +48,10 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
   const ovCtx=makeOverlayCtx(overlayCanvas);
   const audio=opts.audio||null;
   const rig=opts.rig||createRig();
+  const K0=opts.perf||null, now=opts.now||clock;
+  const ATTR={...ATTR0,antialias:!K0||K0.aa!==false};
+  let shadow=K0&&K0.shadow||"soft", armed=false, inv=true, lost=false, lostAt=0;
+  let glRenders=0, shadowUpdates=0, shadowNeed=true, lastRaster=-Infinity, pzT=null, lastW=null, lastG=null, wasP=false;
 
   /* GL init guarded three ways: absent canvas (headless), context probe that
      is not a real object (recording-proxy test stubs return functions), and
@@ -46,15 +59,14 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
   let gl=null, dprUsed=1;
   try{
     if(glCanvas&&typeof glCanvas.getContext==="function"){
-      const probe=glCanvas.getContext("webgl2");
+      const probe=glCanvas.getContext("webgl2",ATTR);
       if(probe&&typeof probe==="object"){
-        gl=new THREE.WebGLRenderer({canvas:glCanvas,alpha:true,antialias:true});
+        gl=opts.makeGL?opts.makeGL(glCanvas,ATTR):new THREE.WebGLRenderer({canvas:glCanvas,...ATTR});
         const dpr=(typeof devicePixelRatio!=="undefined"?devicePixelRatio:1)||1;
-        dprUsed=Math.min(dpr,DPR_MAX);
-        gl.setPixelRatio(dprUsed);                // spec §9.9: DPR <= 2
+        dprUsed=K0&&K0.dpr3d>0?Math.min(K0.dpr3d,DPR_MAX):Math.min(dpr,2);
+        gl.setPixelRatio(dprUsed);                // spec §9.9: DPR <= 2 unless FULL
         gl.setSize(W,H,false);                      // logical box; CSS scales
-        gl.shadowMap.enabled=true;
-        gl.shadowMap.type=THREE.PCFSoftShadowMap;   // spec §6
+        setShadow();                                // spec §6: SOFT = PCFSoft
         /* NO tone mapping (2026-09-04 brightness pass). CLASSIC 2D blits the
            authored BIOMES hex literally, so REAL 3D has to as well or the two
            renderers disagree about one palette. ACES at exposure 1 also mapped
@@ -86,10 +98,16 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
     atlas=next; atlasLvl=lvl; atlasReady=true;
     return atlas;
    }
+  function setShadow(){
+    if(!gl)return;
+    gl.shadowMap.enabled=shadow!=="off";
+    gl.shadowMap.type=shadow==="sharp"?THREE.PCFShadowMap:THREE.PCFSoftShadowMap;
+   }
   let sc=null, brightK=1;
   function rebuild(world){
     if(sc){ scene3.remove(sc.group); disposeGroup(sc.group); }
     sc=buildScene(world,getAtlas(world),brightK);
+    setShadow(); shadowNeed=inv=true;
     const biome=biomeOf(world.level);
     scene3.background=new THREE.Color(biome.bg1);
     /* No distance fog. On the rig of the 2026-09-04 pass the far board
@@ -110,46 +128,74 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
       if(audio&&playSfx!==false) audio.play(sfxOf(world.events[i]));
     }
     world.events.length=0;
-    updateFx(dt||CFG.STEP);
+    if(world.state!=="PAUSE")updateFx(dt||CFG.STEP);
   }
+
+  /* Render-on-change (armed by setPerf only): the board signature, the
+     caster subset that re-renders the shadow map, and the 500 ms net
+     (a lost context honours it too, so a frozen board does no scene work). */
+  const sig=new Array(18).fill(undefined), cas=new Array(6).fill(undefined);
+  function d(a,i,v){ if(a[i]===v)return 0; a[i]=v; return 1; }
 
   function render(world, dt, o){
     if(!world)return;
+    const paused=world.state==="PAUSE", ev=world.events.length>0;
+    if(world!==lastW||world.grid!==lastG){ if(wasP)initFx(); lastW=world; lastG=world.grid; }
+    wasP=paused;
+    if(!paused)pzT=null; else if(pzT==null)pzT=world.time;
     consumeEvents(world, dt, !(o&&o.sfx===false));
     const bk=o&&typeof o.bright==="number"&&isFinite(o.bright)?o.bright:brightK;
-    const bChanged=bk!==brightK;
-    brightK=bk;
-    if(!sc||sc.update(world))rebuild(world);   // brick rescan / level rebuild
-    else if(bChanged&&sc.lights)applyBright(sc.lights,brightK);
-    if(sc)sc.pools.ghost(o&&o.ghost);
-    /* Opening: o.pop scales the player slot group (MAKO's pop-in; hidden at
-       0, never a zero matrix), 1 outside INTRO. No mesh is added. */
-    const pop=o&&o.pop!=null?o.pop:1;
-    if(sc){ if(pop<=0)sc.pools.player.visible=false; sc.pools.player.scale.setScalar(pop>0?pop:1); }
-    /* S3: INTRO in kind 3d hands the camera to the opening keyframes
-       (o.intro = {stage,t,pressT} from main; logo/prompt stay on the 2D
-       overlay); every other screen keeps the orbit rig. Shake rides both. */
-    if(o&&o.intro!=null)applyOrbit(camera,introCam(o.intro.stage,o.intro.t,rig.dist,o.intro.pressT),getShake());
-    else applyOrbit(camera,rig,getShake());    // shake = camera-target offset
+    const pop=o&&o.pop!=null?o.pop:1, sh=paused?STILL:getShake();
+    const tB=paused?pzT:world.time, g=o&&o.ghost;
+    const busy=!paused&&(getFx().length>0||sh.x!==0||sh.y!==0);
+    const rt=rig.target, chg=d(sig,0,world)+d(sig,1,tB)+d(sig,2,world.state)+d(sig,3,world.level)+d(sig,4,world.grid)
+      +d(sig,5,ev)+d(sig,6,busy)+d(sig,7,pop)+d(sig,8,g?g.x:null)+d(sig,9,g?g.y:null)+d(sig,10,rig.az)+d(sig,11,rig.el)
+      +d(sig,12,rig.dist)+d(sig,13,rt[0])+d(sig,14,rt[1])+d(sig,15,rt[2])+d(sig,16,bk)+d(sig,17,dprUsed);
+    const tNow=now();
+    const draw=!armed||inv||chg>0||busy||ev||(o&&o.intro!=null)||tNow-lastRaster>=NET_MS;
+    if(draw){
+      const bChanged=bk!==brightK;
+      brightK=bk;
+      /* PAUSE (R16, all three looks): the board holds the time it first saw. */
+      const t0=world.time; if(paused)world.time=pzT;
+      try{
+        if(!sc||sc.update(world))rebuild(world);   // brick rescan / level rebuild
+        else if(bChanged&&sc.lights)applyBright(sc.lights,brightK);
+      }finally{ world.time=t0; }
+      if(sc)sc.pools.ghost(g);
+      /* Opening: o.pop scales the player slot group (MAKO's pop-in; hidden at
+         0, never a zero matrix), 1 outside INTRO. No mesh is added. */
+      if(sc){ if(pop<=0)sc.pools.player.visible=false; sc.pools.player.scale.setScalar(pop>0?pop:1); }
+      /* S3: INTRO in kind 3d hands the camera to the opening keyframes
+         (o.intro = {stage,t,pressT} from main; logo/prompt stay on the 2D
+         overlay); every other screen keeps the orbit rig. Shake rides both. */
+      if(o&&o.intro!=null)applyOrbit(camera,introCam(o.intro.stage,o.intro.t,rig.dist,o.intro.pressT),sh);
+      else applyOrbit(camera,rig,sh);    // shake = camera-target offset
+      if(d(cas,0,world)+d(cas,1,tB)+d(cas,2,world.level)+d(cas,3,world.grid)+d(cas,4,sc?sc.brickV:0)+d(cas,5,pop))shadowNeed=true;
+     }
     /* Warm pass, once per scene: draw it with every pooled mesh shown (an
        empty instanced pool at one instance) and throw that frame away — the
        real render below overwrites it in the same task. The GPU then builds
        MAKO's (hidden on the title), the bomb's and the blast's pipelines
        here, not on the show's pop and reveal frames. Lights keep their state
        so no program is compiled for a light count the game never uses. */
-    if(gl&&sc&&!sc.warm){ sc.warm=true; const undo=[];
+    const live=gl&&!lost;
+    if(live&&draw&&sc&&!sc.warm){ sc.warm=true; shadowNeed=true; if(armed)gl.shadowMap.needsUpdate=true; const undo=[];
       sc.group.traverse(m=>{ if(!m.visible&&!m.isLight){ undo.push([m,"visible",false]); m.visible=true; }
         if(m.isInstancedMesh&&m.count===0){ undo.push([m,"count",0]); m.count=1; } });
       gl.render(scene3,camera); for(const [m,k,v] of undo)m[k]=v; }
-    fxp.update(getFx());
-    if(gl){
+    if(draw)fxp.update(getFx());
+    if(live&&draw){
       const wantW=Math.floor(W*dprUsed), wantH=Math.floor(H*dprUsed);
       if(gl.domElement.width!==wantW||gl.domElement.height!==wantH){
         gl.setSize(W,H,false);
         camera.aspect=W/H; camera.updateProjectionMatrix();
        }
+      if(armed){ gl.shadowMap.needsUpdate=shadowNeed; if(shadowNeed&&gl.shadowMap.enabled)shadowUpdates++; }
       gl.render(scene3,camera);
+      glRenders++; lastRaster=tNow; inv=false; shadowNeed=false;
      }
+    else if(armed&&draw&&!live){ lastRaster=tNow; inv=false; }
     /* S4+S5: WIN/LOSE/PAUSE overlays ride the classic 2D layer exactly like
        kind 2d — drawOverlay's defaults already match this canvas' space
        (600x520, centered); the overlay is cleared first so nothing smears.
@@ -158,7 +204,7 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
     const ov=world.state==="WIN"||world.state==="LOSE"
       ||world.state==="PAUSE";
     ovCtx.clearRect(0,0,W,H);
-    const fl=getFlash();
+    const fl=paused?0:getFlash();
     if(fl>0){
       ovCtx.globalAlpha=fl*0.28;
       ovCtx.fillStyle="#ffe8a8";
@@ -175,13 +221,54 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
      }
    }
 
+  /* GRAPHICS knobs (K from app/gfx.js resolve): DPR live in place, the
+     shadow tier by one material recompile behind the warm pass. The first
+     call arms render-on-change and the caster-only shadow pass. */
+  function setPerf(K){
+    if(!K)return;
+    armed=true; inv=true;
+    if(gl)gl.shadowMap.autoUpdate=false;
+    const d=K.dpr3d>0?Math.min(K.dpr3d,DPR_MAX):dprUsed;
+    if(gl&&d!==dprUsed){ dprUsed=d; gl.setPixelRatio(d); }
+    const sv=K.shadow==="off"||K.shadow==="sharp"?K.shadow:"soft";
+    if(sv!==shadow){ shadow=sv; setShadow(); shadowNeed=true;
+      if(sc){ sc.group.traverse(m=>{ const ms=m.material; if(ms)(Array.isArray(ms)?ms:[ms]).forEach(x=>{ x.needsUpdate=true; }); });
+        sc.warm=false; } }
+   }
+  function onLost(){ lost=true; lostAt=now(); }
+  function onRestored(){ lost=false; inv=shadowNeed=true; if(sc)sc.warm=false;
+    if(atlas)for(const k in atlas){ const tx=atlas[k]; if(tx&&tx.isTexture)tx.needsUpdate=true; } }
+  const hasEv=!!(gl&&glCanvas.addEventListener);
+  if(hasEv){ glCanvas.addEventListener("webglcontextlost",onLost,false);
+    glCanvas.addEventListener("webglcontextrestored",onRestored,false); }
+  function dispose(){
+    if(hasEv){ glCanvas.removeEventListener("webglcontextlost",onLost,false);
+      glCanvas.removeEventListener("webglcontextrestored",onRestored,false); }
+    if(sc){ scene3.remove(sc.group); disposeGroup(sc.group); sc=null; }
+    if(atlas)for(const k in atlas){ const tx=atlas[k]; if(tx&&tx.dispose)tx.dispose(); }
+    atlas=null; atlasReady=false;
+    const pm=fxp.points.material; if(pm.map)pm.map.dispose();
+    fxp.points.geometry.dispose(); pm.dispose();
+    if(gl){ const g0=gl; gl=null; g0.dispose(); try{ g0.forceContextLoss(); }catch(e){} }
+   }
+
   const surface={canvas:glCanvas,overlay:overlayCanvas,ctx:ovCtx,render,
     consumeEvents,getShake};
-  /* Test/perf seam (non-enumerable: Object.keys surface contract unchanged):
-     scene root for the §8 draw-call traverse, camera for shake/flythrough
-     math checks, particles pool + effective DPR for the DPR<=2 gate. */
-  Object.defineProperty(surface,"_dbg",{enumerable:false,value:{
-    get scene(){return scene3;},get camera(){return camera;},
-    get particles(){return fxp;},get dpr(){return dprUsed;}}});
+  /* Non-enumerable (Object.keys surface contract unchanged): the GRAPHICS
+     contract, then the test/perf seam — scene root for the §8 draw-call
+     traverse, camera for shake/flythrough math, particles pool, effective
+     DPR, GL render / shadow-map update counters and the context attributes. */
+  Object.defineProperties(surface,{
+    setPerf:{enumerable:false,value:setPerf},
+    invalidate:{enumerable:false,value:(re)=>{ inv=true; if(re)pzT=null; }},
+    dispose:{enumerable:false,value:dispose},
+    liveAA:{enumerable:false,get:()=>gl?ATTR.antialias:null},
+    dead:{enumerable:false,get:()=>lost&&now()-lostAt>=DEAD_MS},
+    _dbg:{enumerable:false,value:{
+      get scene(){return scene3;},get camera(){return camera;},
+      get particles(){return fxp;},get dpr(){return dprUsed;},
+      get glRenders(){return glRenders;},get shadowUpdates(){return shadowUpdates;},
+      get attr(){return ATTR;},get armed(){return armed;},get shadow(){return shadow;},
+      get gl(){return gl;}}}});
   return surface;
 }

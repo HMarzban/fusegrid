@@ -10,6 +10,7 @@ import {CFG,T,biomeOf} from "../../core/config.js";
 import {build as buildMaterials} from "./materials.js";
 import {createLights} from "./lights.js";
 import {createPools} from "./entities.js";
+import {live} from "./upload.js";
 
 const W=CFG.COLS*CFG.TILE, D=CFG.ROWS*CFG.TILE;
 const MAT=new THREE.Matrix4();
@@ -147,19 +148,27 @@ export function buildScene(world, atlas, bright){
   const pools=createPools(biome,atlas);
   group.add(pools.group);
 
-  const scene={group,level:world.level,brick,pools,lights,
+  const mask=new Uint8Array(CFG.COLS*CFG.ROWS);
+  let fresh=true;
+  const scene={group,level:world.level,brick,pools,lights,brickV:0,
     update(world){
-      let n=0;
-      for(let y=0;y<CFG.ROWS;y++)for(let x=0;x<CFG.COLS;x++)
-        if(world.grid[y*CFG.COLS+x]===T.BRICK){
-          MAT.makeTranslation((x+0.5)*CFG.TILE-W/2,biome.hBrick/2,
-            (y+0.5)*CFG.TILE-D/2);
-          brick.setMatrixAt(n,MAT);
-          brick.setColorAt(n++,((x*3+y*5)%7)===0?bH:((x+y)&1?bB:bA));
-         }
-      brick.count=n;
-      brick.instanceMatrix.needsUpdate=true;
-      if(brick.instanceColor)brick.instanceColor.needsUpdate=true;
+      let diff=fresh;
+      for(let i=0;i<mask.length;i++){ const b=world.grid[i]===T.BRICK?1:0;
+        if(mask[i]!==b){ mask[i]=b; diff=true; } }
+      if(diff){
+        let n=0;
+        for(let y=0;y<CFG.ROWS;y++)for(let x=0;x<CFG.COLS;x++)
+          if(mask[y*CFG.COLS+x]){
+            MAT.makeTranslation((x+0.5)*CFG.TILE-W/2,biome.hBrick/2,
+              (y+0.5)*CFG.TILE-D/2);
+            brick.setMatrixAt(n,MAT);
+            brick.setColorAt(n++,((x*3+y*5)%7)===0?bH:((x+y)&1?bB:bA));
+           }
+        brick.count=n;
+        live(brick.instanceMatrix,n);
+        live(brick.instanceColor,n);
+        fresh=false; scene.brickV++;
+       }
       pools.update(world);
       return world.level!==scene.level;
      }};

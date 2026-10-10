@@ -16,6 +16,7 @@
    math is pure and exported. */
 import * as THREE from "../../../vendor/three.module.js";
 import { CFG } from "../../core/config.js";
+import { live } from "./upload.js";
 
 const T = CFG.TILE,
   W2 = (CFG.COLS * T) / 2,
@@ -153,15 +154,6 @@ function geos() {
   return GEO;
 }
 const _L = {}, _b = new Array(5);
-/* upload only the live head of a dynamic instance buffer; at count 0 upload
-   nothing (a 0-length range or a bare needsUpdate would send the whole array)
-   and let mesh.count hide the stale tail */
-function live(attr, n) {
-  if (!attr || n === 0) return;
-  attr.clearUpdateRanges();
-  attr.addUpdateRange(0, n * attr.itemSize);
-  attr.needsUpdate = true;
-}
 
 export function createBlast(cap) {
   const G = geos();

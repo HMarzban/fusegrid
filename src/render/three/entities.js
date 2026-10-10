@@ -24,6 +24,7 @@ import { ITEM_FAMILY, ITEM_SHAPE } from "../icons.js";
    icons.js / config.js / enemybody.js only, so this stays a DAG. */
 import { PLAYER_HULL } from "../sprites.js";
 import { createBlast } from "./blast.js";
+import { live } from "./upload.js";
 import { getFxOpts } from "../fx.js";
 
 const W2 = (CFG.COLS * CFG.TILE) / 2,
@@ -1347,9 +1348,9 @@ export function createPools(biome, atlas) {
     for (const pd of POWER) {
       const n = counts[pd.t] || 0;
       itemBodies[pd.t].count = n;
-      itemBodies[pd.t].instanceMatrix.needsUpdate = true;
+      live(itemBodies[pd.t].instanceMatrix, n);
       itemRingIM[pd.t].count = n;
-      itemRingIM[pd.t].instanceMatrix.needsUpdate = true;
+      live(itemRingIM[pd.t].instanceMatrix, n);
     }
 
     const bls = world.blades || [];
@@ -1357,7 +1358,8 @@ export function createPools(biome, atlas) {
     /* flash lights: ride the first FLASH_CAP blasts, brightness =
        remaining life x REDUCE FLASH (flashK); overflow blasts share nothing
        (pool capped). */
-    const fk = getFxOpts().flashK;
+    const fo = getFxOpts(),
+      fk = fo.partK < 1 ? 0 : fo.flashK;
     for (let i = 0; i < FLASH_CAP; i++) {
       const L = flashes[i],
         bl = bls[i];

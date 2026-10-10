@@ -1078,8 +1078,8 @@ await sec("S3.B",async()=>{
     applyOrbit(dbg.camera,createRig(),{x:0,y:0});
     check("S3.B end-to-end: shaken lookAt differs from calm lookAt "
         +"(SHAKE_3D_K px->world)", !qWith.equals(dbg.camera.quaternion));
-    check("S3.B DPR clamp <=2 (headless dpr 1)",
-      sj.DPR_MAX===2&&dbg.dpr<=sj.DPR_MAX, "dpr="+dbg.dpr);
+    check("S3.B DPR clamp: default <=2 (headless dpr 1), DPR_MAX 3 is RESOLUTION FULL only",
+      sj.DPR_MAX===3&&dbg.dpr<=2, "dpr="+dbg.dpr);
    } finally{ Math.random=realRnd; }
 });
 
@@ -2624,6 +2624,208 @@ await sec("R9b",async()=>{
     check("R9b.6b the rebuilt scene builds a fresh ghost on demand",
       slotsOf(r._dbg.scene,"ghost").length===1
       &&slotsOf(r._dbg.scene,"ghost")[0]!==g1); }
+});
+
+// ---- GFX (graphics settings 2026-10-10): context attributes, knobs,
+//      render-on-change, caster-only shadow pass, PAUSE hold, ranged
+//      uploads, context loss, dispose ----
+await sec("GFX",async()=>{
+  const sj=await import("../src/render/three/wrapper.js");
+  const fxm=await import("../src/render/fx.js");
+  const {FLASH_CAP}=await import("../src/render/three/entities.js");
+  const mkGL=()=>{ const g={renders:0,ratio:1,shadowRenders:0,disposed:0,lost:0,toneMapping:0,
+      domElement:{width:0,height:0},shadowMap:{enabled:false,type:0,autoUpdate:true,needsUpdate:false},
+      setPixelRatio(d){ g.ratio=d; g.setSize(W0,H0); },
+      setSize(w,h){ g.domElement.width=Math.floor(w*g.ratio); g.domElement.height=Math.floor(h*g.ratio); },
+      render(){ g.renders++; if(g.shadowMap.enabled&&(g.shadowMap.autoUpdate||g.shadowMap.needsUpdate))g.shadowRenders++; g.shadowMap.needsUpdate=false; },
+      dispose(){ g.disposed++; }, forceContextLoss(){ g.lost++; }};
+    return g; };
+  const W0=CFG.COLS*CFG.TILE, H0=CFG.ROWS*CFG.TILE;
+  const mkCv=()=>{ const L={}, calls=[];
+    return {calls,L,width:0,height:0,getContext(n,a){ calls.push([n,a]); return {}; },
+      addEventListener(t,f){ (L[t]=L[t]||[]).push(f); },
+      removeEventListener(t,f){ L[t]=(L[t]||[]).filter(x=>x!==f); },
+      fire(t){ for(const f of (L[t]||[]).slice())f({preventDefault(){}}); }}; };
+  const mk=(K,extra={})=>{ const cv=mkCv(); let g=null; const clk={t:1000};
+    const r=sj.createRenderer3D(cv,null,{audio:null,perf:K,now:()=>clk.t,
+      makeGL:(c,a)=>{ g=mkGL(); g.attr=a; g.cv=c; return g; },...extra});
+    return {r,cv,g:()=>g,clk}; };
+  const sorted=(o)=>JSON.stringify(Object.keys(o).sort().map(k=>[k,o[k]]));
+  const AUTO={aa:true,dpr3d:1,shadow:"soft",partK:1,epoch:1};
+
+  // probe === three's own attribute object (real WebGLRenderer on a stub canvas)
+  { const err0=console.error, log0=console.log; console.error=()=>{}; console.log=()=>{};
+    const cv=mkCv(); cv.setAttribute=()=>{};
+    let r; try{ r=sj.createRenderer3D(cv,null,{audio:null}); }finally{ console.error=err0; console.log=log0; }
+    check("GFX.1 probe passes the SAME attribute object three asks for (AUTO = browser default)",
+      cv.calls.length>=2&&cv.calls[0][0]==="webgl2"&&sorted(cv.calls[0][1])===sorted(cv.calls[1][1]),
+      cv.calls.map(c=>c[0]+":"+sorted(c[1]||{})).join(" | "));
+    check("GFX.1b ATTR0 is the de-facto context: antialias on, stencil off, alpha, default power",
+      sorted(sj.ATTR0)===sorted({alpha:true,antialias:true,stencil:false,depth:true,premultipliedAlpha:true,
+        preserveDrawingBuffer:false,powerPreference:"default",failIfMajorPerformanceCaveat:false}));
+    check("GFX.1c a failed GL init is stub mode with liveAA null", r.liveAA===null&&r._dbg.gl===null);
+    const cv2=mkCv(); cv2.setAttribute=()=>{}; console.error=()=>{}; console.log=()=>{};
+    try{ sj.createRenderer3D(cv2,null,{audio:null,perf:{...AUTO,aa:false}}); }finally{ console.error=err0; console.log=log0; }
+    check("GFX.1d ANTI-ALIAS OFF reaches the probe AND three", cv2.calls[0][1].antialias===false&&cv2.calls[1][1].antialias===false); }
+
+  { const h=mk(AUTO), g=h.g();
+    check("GFX.2 makeGL gets the probe's attribute object; liveAA mirrors it",
+      !!g&&g.attr===h.cv.calls[0][1]&&h.r.liveAA===true&&h.r._dbg.attr.antialias===true);
+    check("GFX.2b the GRAPHICS contract is non-enumerable (surface keys unchanged)",
+      Object.keys(h.r).sort().join()==="canvas,consumeEvents,ctx,getShake,overlay,render"
+      &&typeof h.r.setPerf==="function"&&typeof h.r.invalidate==="function"&&typeof h.r.dispose==="function");
+    check("GFX.2c AUTO construction: SOFT PCFSoft enabled, autoUpdate untouched until setPerf",
+      g.shadowMap.enabled===true&&g.shadowMap.type===THREE.PCFSoftShadowMap&&g.shadowMap.autoUpdate===true);
+    const h2=mk({...AUTO,aa:false});
+    check("GFX.2d aa:false builds an AA-off context", h2.r.liveAA===false&&h2.g().attr.antialias===false);
+    check("GFX.2e headless (no canvas): liveAA null, never rebuilt by frameloop",
+      createRenderer3D(null,null,{audio:null}).liveAA===null); }
+
+  // unarmed: every frame renders (Node pins unchanged)
+  { const h=mk(AUTO), w=createWorld(5,1); loadLevel(w,1,false); w.state="PLAY";
+    for(let i=0;i<4;i++)h.r.render(w,1/60);
+    check("GFX.3 unarmed (no setPerf) renders every frame", h.r._dbg.glRenders===4&&h.r._dbg.armed===false, h.r._dbg.glRenders); }
+
+  // armed: frozen / camera-only / time
+  { const rig=createRig(), h=mk(AUTO,{rig}), g=h.g(), w=createWorld(5,1); loadLevel(w,1,false); w.state="PLAY";
+    h.r.render(w,1/60); h.r.setPerf(AUTO);
+    check("GFX.4 setPerf arms the skip and turns shadow autoUpdate off", h.r._dbg.armed&&g.shadowMap.autoUpdate===false);
+    h.r.render(w,1/60); const n0=h.r._dbg.glRenders, s0=h.r._dbg.shadowUpdates, gs0=g.shadowRenders;
+    for(let i=0;i<20;i++){ h.clk.t+=16; h.r.render(w,1/60); }
+    check("GFX.4b a frozen board (no time, events, fx, camera change) issues 0 gl.render in 320 ms",
+      h.r._dbg.glRenders===n0, h.r._dbg.glRenders-n0);
+    h.clk.t+=200; h.r.render(w,1/60);
+    check("GFX.4c the 500 ms net re-renders once, without a shadow-map update",
+      h.r._dbg.glRenders===n0+1&&h.r._dbg.shadowUpdates===s0&&g.shadowRenders===gs0, (h.r._dbg.glRenders-n0)+"/"+(h.r._dbg.shadowUpdates-s0));
+    rig.az+=0.1; h.r.render(w,1/60);
+    check("GFX.4d camera-only change renders without a shadow-map update",
+      h.r._dbg.glRenders===n0+2&&h.r._dbg.shadowUpdates===s0);
+    w.time+=1/60; h.r.render(w,1/60);
+    check("GFX.4e world.time renders AND re-renders the shadow map",
+      h.r._dbg.glRenders===n0+3&&h.r._dbg.shadowUpdates===s0+1);
+    w.events.push({t:"bomb",x:300,y:260}); h.r.render(w,1/60);
+    check("GFX.4f events still drain (consumeEvents always runs) and render", w.events.length===0&&h.r._dbg.glRenders===n0+4);
+    let k=0; while(fxm.getFx().length&&k<200){ h.clk.t+=16; h.r.render(w,1/60); k++; }
+    const n1=h.r._dbg.glRenders; h.clk.t+=16; h.r.render(w,1/60);
+    check("GFX.4g fx-busy frames render until the last particle is gone, then the skip resumes",
+      k>0&&n1>=n0+4+k&&h.r._dbg.glRenders===n1, k+"/"+(n1-n0)); }
+
+  // PAUSE hold
+  { const h=mk(AUTO), w=createWorld(9,1); loadLevel(w,1,false); w.state="PLAY";
+    h.r.render(w,1/60); h.r.setPerf(AUTO);
+    w.events.push({t:"boom",x:300,y:260}); w.time+=1/60; h.r.render(w,1/60);
+    w.state="PAUSE"; w.time+=1/60;
+    const snapScene=()=>{ const a=[]; h.r._dbg.scene.traverse(o=>{ if(o.visible)a.push(o.position.toArray().concat(o.rotation.toArray().slice(0,3),o.scale.toArray()).map(v=>+(+v).toFixed(6)).join()); });
+      const pts=h.r._dbg.particles.points.geometry.attributes.position.array; return a.join("|")+"#"+Array.from(pts.slice(0,30)).join(); };
+    h.r.render(w,1/60); const s0=snapScene(), pz=fxm.getFx().map(p=>p.x+","+p.y).join(), n0=h.r._dbg.glRenders, sh0=h.r._dbg.shadowUpdates;
+    let same=true;
+    for(let i=0;i<60;i++){ w.time+=1/60; h.clk.t+=16; h.r.render(w,1/60); if(snapScene()!==s0)same=false; }
+    check("GFX.5 PAUSE: the clamped time gives an identical scene over 60 renders", same);
+    check("GFX.5b PAUSE: particles hold still (updateFx skipped)", fxm.getFx().length>0&&fxm.getFx().map(p=>p.x+","+p.y).join()===pz);
+    check("GFX.5c PAUSE: <=2 gl.render (500 ms net only) and 0 shadow updates over 960 ms",
+      h.r._dbg.glRenders-n0<=2&&h.r._dbg.shadowUpdates===sh0, (h.r._dbg.glRenders-n0)+"/"+(h.r._dbg.shadowUpdates-sh0));
+    check("GFX.5d PAUSE: no shake term on the camera", (()=>{ const c=h.r._dbg.camera.clone(); applyOrbit(c,createRig(),{x:0,y:0}); return c.quaternion.equals(h.r._dbg.camera.quaternion); })());
+    check("GFX.5e PAUSE restores world.time after the board (render-side only)", w.time>1);
+    const h2=mk(AUTO), w2=createWorld(9,1); loadLevel(w2,1,false); w2.state="PAUSE"; w2.time=3;
+    h2.r.render(w2,1/60); w2.time=4; h2.r.render(w2,1/60);
+    const A=[],B=[]; h2.r._dbg.scene.traverse(o=>A.push(o.position.y)); w2.time=9; h2.r.render(w2,1/60); h2.r._dbg.scene.traverse(o=>B.push(o.position.y));
+    check("GFX.5f a renderer created mid-PAUSE latches the first time it sees", A.join()===B.join()&&w2.time===9);
+    const ys=()=>{ const a=[]; h2.r._dbg.scene.traverse(o=>a.push(o.position.y)); return a.join(); };
+    h2.r.invalidate(); h2.r.render(w2,1/60);
+    check("GFX.5g a plain invalidate (tab return) keeps the PAUSE latch", ys()===A.join());
+    h2.r.invalidate(true); h2.r.render(w2,1/60); const C=ys(); w2.time=12; h2.r.render(w2,1/60);
+    check("GFX.5h invalidate(true) (cache hit) re-latches PAUSE at the current time", C!==A.join()&&ys()===C); }
+
+  // ranged uploads
+  { const h=mk(AUTO), w=createWorld(11,1); loadLevel(w,1,false); w.state="PLAY"; w.items=[];
+    fxm.initFx(); h.r.render(w,1/60);
+    const sc=h.r._dbg.scene, items=slotsOf(sc,"item").filter(o=>o.isInstancedMesh), brick=slotsOf(sc,"brick")[0];
+    const pos=h.r._dbg.particles.points.geometry.attributes.position;
+    const iv=items.map(o=>o.instanceMatrix.version).join(), bv=brick.instanceMatrix.version, pv=pos.version;
+    w.time+=1/60; h.r.render(w,1/60); w.time+=1/60; h.r.render(w,1/60);
+    check("GFX.6 count-0 items upload nothing", items.map(o=>o.instanceMatrix.version).join()===iv);
+    check("GFX.6b zero particles upload nothing", pos.version===pv);
+    check("GFX.6c unchanged bricks upload nothing", brick.instanceMatrix.version===bv, brick.instanceMatrix.version-bv);
+    const bi=w.grid.indexOf(T.BRICK); w.grid[bi]=T.EMPTY; w.time+=1/60; h.r.render(w,1/60);
+    const ur=brick.instanceMatrix.updateRanges;
+    check("GFX.6d one brick break is one ranged upload of the live head",
+      brick.instanceMatrix.version===bv+1&&ur.length===1&&ur[0].start===0&&ur[0].count===brick.count*16,
+      (brick.instanceMatrix.version-bv)+"/"+JSON.stringify(ur));
+    w.items=[{x:100,y:100,t:"fire",col:"#ff8a3c",taken:false}]; w.time+=1/60; h.r.render(w,1/60);
+    const live=items.filter(o=>o.count>0);
+    check("GFX.6e a live item kind uploads only its head (body + ring)",
+      live.length===2&&live.every(o=>o.instanceMatrix.updateRanges.length===1&&o.instanceMatrix.updateRanges[0].count===16)); }
+
+  // shadow tiers
+  { const h=mk(AUTO), g=h.g(), w=createWorld(13,1); loadLevel(w,1,false); w.state="PLAY";
+    h.r.render(w,1/60); h.r.setPerf(AUTO); h.r.render(w,1/60);
+    const mats=[]; h.r._dbg.scene.traverse(o=>{ if(o.material&&o.parent&&!o.isPoints)mats.push(o.material); });
+    const v0=mats.map(m=>m.version), r0=g.renders;
+    h.r.setPerf({...AUTO,shadow:"sharp",epoch:2});
+    check("GFX.7 SHARP = PCFShadowMap, every scene material flagged for one recompile",
+      g.shadowMap.type===THREE.PCFShadowMap&&g.shadowMap.enabled&&mats.every((m,i)=>m.version>v0[i]));
+    const sr0=g.shadowRenders; h.r.render(w,1/60);
+    check("GFX.7b the swap re-runs the warm pass (2 GL draws), shadow pass in both (programs compile on the page)",
+      g.renders===r0+2&&g.shadowRenders===sr0+2&&h.r._dbg.shadow==="sharp");
+    h.r.setPerf({...AUTO,shadow:"off",epoch:3});
+    check("GFX.7c OFF disables the shadow map", g.shadowMap.enabled===false);
+    let d=null; h.r._dbg.scene.traverse(o=>{ if(o.isDirectionalLight&&o.castShadow)d=o; });
+    check("GFX.7d the frozen light recipe is untouched (key 1.26 still casts, map 1024)",
+      !!d&&d.intensity===1.26&&d.shadow.mapSize.width===1024);
+    const v1=mats.map(m=>m.version); h.r.setPerf({...AUTO,shadow:"off",epoch:4});
+    check("GFX.7e a setPerf with the same tier recompiles nothing", mats.every((m,i)=>m.version===v1[i]));
+    const w2=createWorld(13,2); loadLevel(w2,2,false); h.r.render(w2,1/60);
+    check("GFX.7f the tier survives a level rebuild", g.shadowMap.enabled===false&&h.r._dbg.shadow==="off"); }
+
+  // DPR knob
+  { const h=mk({...AUTO,dpr3d:1.5}), g=h.g();
+    check("GFX.8 construction applies K.dpr3d", g.ratio===1.5&&h.r._dbg.dpr===1.5);
+    h.r.setPerf({...AUTO,dpr3d:2.5});
+    check("GFX.8b setPerf re-sizes in place (no rebuild)", g.ratio===2.5&&g.domElement.width===1500&&g.disposed===0);
+    h.r.setPerf({...AUTO,dpr3d:5});
+    check("GFX.8c FULL is clamped to DPR_MAX 3", g.ratio===3); }
+
+  // context loss
+  { const h=mk(AUTO), g=h.g(), w=createWorld(15,1); loadLevel(w,1,false); w.state="PLAY";
+    h.r.render(w,1/60); h.r.setPerf(AUTO); h.r.render(w,1/60);
+    h.cv.fire("webglcontextlost"); const r0=g.renders;
+    for(let i=0;i<3;i++){ w.time+=1/60; h.r.render(w,1/60); }
+    check("GFX.9 a lost context draws nothing", g.renders===r0&&h.r.dead===false);
+    const fp=h.r._dbg.particles, fu=fp.update; let ups=0; fp.update=(a)=>{ ups++; return fu.call(fp,a); };
+    for(let i=0;i<20;i++){ h.clk.t+=16; h.r.render(w,1/60); }
+    const u0=ups; h.clk.t+=200; h.r.render(w,1/60);
+    check("GFX.9a a lost context honours the 500 ms net (no per-frame scene work on a frozen board)", u0===0&&ups===1, u0+"/"+ups);
+    fp.update=fu;
+    const sr0=g.shadowRenders; h.cv.fire("webglcontextrestored"); h.r.render(w,1/60);
+    check("GFX.9b restore re-runs the warm pass (2 GL draws) with the shadow pass in both", g.renders===r0+2&&g.shadowRenders===sr0+2);
+    h.cv.fire("webglcontextlost"); h.clk.t+=2999;
+    check("GFX.9c not dead before 3 s", h.r.dead===false);
+    h.clk.t+=1;
+    check("GFX.9d dead after 3 s without a restore", h.r.dead===true);
+    h.r.dispose();
+    check("GFX.9e dispose: gl.dispose + forceContextLoss, listeners off, scene freed",
+      g.disposed===1&&g.lost===1&&(h.cv.L.webglcontextlost||[]).length===0&&h.r.liveAA===null);
+    let threw=false; try{ h.r.render(w,1/60); }catch(e){ threw=true; }
+    check("GFX.9f a disposed renderer never throws on a late render", !threw); }
+
+  // draw budget with knobs armed
+  { const h=mk(AUTO), w=createWorld(93,1); loadLevel(w,1,false);
+    h.r.setPerf({...AUTO,shadow:"sharp"}); h.r.render(w,1/60);
+    const r0=createRenderer3D(null,null,{audio:null}); const w0=createWorld(93,1); loadLevel(w0,1,false); r0.render(w0,1/60);
+    check("GFX.10 knobs never change the draw-call count", countDrawCalls(h.r._dbg.scene)===countDrawCalls(r0._dbg.scene)); }
+
+  // EFFECTS LOW: flash lights at 0, never removed
+  { const before=fxm.getFxOpts(); fxm.setFxOpts({partK:0.5});
+    const on=fxm.getFxOpts().partK===0.5;
+    const r=createRenderer3D(null,null,{audio:null}), w=createWorld(17,1); loadLevel(w,1,false); w.state="PLAY";
+    w.blades=[{x:200,y:120,tiles:[{tx:5,ty:3}],t:0,ttl:CFG.BLADE_TTL}]; r.render(w,1/60);
+    const fl=slotsOf(r._dbg.scene,"flash");
+    check("GFX.11 EFFECTS LOW holds the blast flash lights at 0 and keeps all "+FLASH_CAP+(on?"":" (partK not in fx.js yet: lights live)"),
+      fl.length===FLASH_CAP&&(on?fl.every(L=>L.intensity===0):fl[0].intensity>0));
+    fxm.setFxOpts({partK:1});
+    r.render(w,1/60);
+    check("GFX.11b EFFECTS FULL lights the flash again", fl[0].intensity>0);
+    fxm.setFxOpts({flashK:before.flashK,shakeK:before.shakeK}); }
 });
 
 console.log(fail? "THREE FAIL":"THREE OK");
