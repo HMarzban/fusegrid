@@ -522,7 +522,7 @@ const rasters = (log) => log.filter((q) => q[0] === "hi" && q[1] === "drawImage"
   check("px JS <= 120 KB (" + (bytes / 1024).toFixed(1) + " KB)", bytes <= 120 * 1024);
   const rcP = join(ROOT, "src/app/rcache.js"), main = readFileSync(join(ROOT, "src/main.js"), "utf8") + (statSync(rcP, {throwIfNoEntry: false}) ? readFileSync(rcP, "utf8") : "");
   check("main.js (or its rcache.js seam) never assigns #px's drawing buffer", !/pxCanvas\.(width|height)\s*=/.test(main));
-  check("main.js (or its rcache.js seam) routes kind px to createPixelRenderer", /kind === "px" \? createPixelRenderer\(pxCanvas, canvas/.test(main));
+  check("main.js (or its rcache.js seam) routes kind px to createPixelRenderer", /kind === "px" \? createPixelRenderer\(pxCanvas, canvas/.test(main) || (/px: createPixelRenderer\b/.test(main) && /k === "px" \? make\.px\(el\("px"\), canvas/.test(main)));
   const html = readFileSync(join(ROOT, "index.html"), "utf8");
   check("index.html: #px between #gl and #c, author [hidden] rule, image-rendering:auto",
     /<canvas id="gl" hidden><\/canvas><canvas id="px" hidden><\/canvas><canvas id="c"/.test(html) && /#px\[hidden\]\{display:none\}/.test(html) && /#px\{[^}]*image-rendering:auto/.test(html));

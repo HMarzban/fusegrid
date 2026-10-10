@@ -1,6 +1,6 @@
 /* OPENING (spec 2026-10-09-opening-design §3/§7/§11): the title + show beat
    table, MAKO's pop, and the throwaway show world whose boom reveals MENU. */
-import {SHOW_STEP,SHOW_DUR,SHOW_PLANT,SKIP_GUARD,SHOW_SCRIPT,introPhase,popOf,createShow,stepShow} from "../src/app/intro.js";
+import {SHOW_STEP,SHOW_DUR,SHOW_PLANT,SKIP_GUARD,SHOW_SCRIPT,introPhase,popOf,createShow,stepShow,SETTLE_N} from "../src/app/intro.js";
 import {MUSIC_TRACKS} from "../src/audio/tracks.js";
 import {CFG} from "../src/core/config.js";
 import {SCREEN,createMenuApp} from "../src/app/menuapp.js";
@@ -125,6 +125,24 @@ function runShow(){
   }
   check("natural end: 60 s past the boom, no event at all (no second bomb, no pickup, no hurt)",
     boom&&tail.length===0&&s.world.bombs.length===0&&s.world.players[0].alive!==false&&s.world.state==="PLAY", tail.join());
+}
+
+// ---- GRAPHICS ruling 10: the kept show world settles behind MENU ----
+{
+  const s=createShow(), app={showBoom:false};
+  let settledAt=-1;
+  for(let i=0;i<Math.round(20/CFG.STEP);i++){
+    stepShow(s,CFG.STEP*(1+1e-9),app,true); s.world.events.length=0;
+    if(s.done&&settledAt<0) settledAt=s.n;
+  }
+  check("settle: 1 s past the last script row with no bomb or blade, the show is done",
+    settledAt>=SETTLE_N&&SETTLE_N===SHOW_SCRIPT[SHOW_SCRIPT.length-1][0]+60&&s.world.bombs.length===0&&s.world.blades.length===0, settledAt+"/"+SETTLE_N);
+  const n0=s.n, t0=s.world.time, a0=s.acc;
+  for(let i=0;i<120;i++) stepShow(s,1/60,app,true);
+  check("settled: stepShow no-ops (n, world.time and acc fixed)", s.n===n0&&s.world.time===t0&&s.acc===a0, s.n+"/"+s.world.time);
+  const f=createShow();
+  for(let i=0;i<SETTLE_N-5;i++) stepShow(f,CFG.STEP*(1+1e-9),app,true);
+  check("not settled before SETTLE_N", !f.done);
 }
 
 // ---- hitch pin: MENU opens one frame after the boom, never before ----
