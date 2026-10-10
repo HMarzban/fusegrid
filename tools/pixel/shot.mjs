@@ -8,10 +8,12 @@
    Both children are stopped by PID, never by pattern.
 
    node tools/pixel/shot.mjs [--render px|2d|3d] [--dpr 1] [--size 1366x768]
-     [--mobile] [--rooms 1,7,8] [--out DIR] [--name tag] [--keep]
+     [--mobile] [--rooms 1,7,8] [--out DIR] [--name tag] [--keep] [--gpu]
    Presets: --preset laptop (1366x768@1), mac (1440x900@2),
      phone (393x852@3 mobile), phoneL (852x393@3 mobile).
-   $CHROME overrides the browser binary. */
+   $CHROME overrides the browser binary. --gpu runs ANGLE on Metal instead of
+   swiftshader, so the perf section can judge the absolute 4 ms budget; the
+   default swiftshader run is relative only. */
 import {spawn} from "node:child_process";
 import {mkdtempSync, mkdirSync, writeFileSync, rmSync} from "node:fs";
 import {tmpdir, homedir} from "node:os";
@@ -27,13 +29,13 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 export const RAF_SHIM = `(()=>{const ch=new MessageChannel();let q=[],last=0;ch.port1.onmessage=()=>{const t=performance.now();if(t-last<15){setTimeout(()=>ch.port2.postMessage(0),15-(t-last));return;}last=t;const c=q;q=[];for(const f of c)try{f(t);}catch(e){setTimeout(()=>{throw e;});}if(q.length)ch.port2.postMessage(0);};window.requestAnimationFrame=(f)=>{q.push(f);if(q.length===1)ch.port2.postMessage(0);return q.length;};window.cancelAnimationFrame=()=>{};})();`;
 
 export function parseArgs(argv) {
-  const a = {render: "px", w: 1366, h: 768, dpr: 1, mobile: false, rooms: [1, 7, 8], out: join(ROOT, ".superpowers/sdd/2026-10-10-pixel/out/shots"), name: null, keep: false};
+  const a = {render: "px", w: 1366, h: 768, dpr: 1, mobile: false, rooms: [1, 7, 8], out: join(ROOT, ".superpowers/sdd/2026-10-10-pixel/out/shots"), name: null, keep: false, gpu: false};
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i], v = argv[i + 1];
     if (k === "--render") { a.render = v; i++; } else if (k === "--dpr") { a.dpr = +v; i++; }
     else if (k === "--size") { [a.w, a.h] = v.split("x").map(Number); i++; } else if (k === "--mobile") a.mobile = true;
     else if (k === "--rooms") { a.rooms = v.split(",").map(Number); i++; } else if (k === "--out") { a.out = resolve(v); i++; }
-    else if (k === "--name") { a.name = v; i++; } else if (k === "--keep") a.keep = true;
+    else if (k === "--name") { a.name = v; i++; } else if (k === "--keep") a.keep = true; else if (k === "--gpu") a.gpu = true;
     else if (k === "--preset") { const p = PRESET[v]; if (p) [a.w, a.h, a.dpr, a.mobile] = p; a.preset = v; i++; }
   }
   return a;
@@ -47,11 +49,11 @@ export function startServer() {
     p.on("exit", (c) => no(new Error("server exited " + c)));
   });
 }
-export function startChrome() {
+export function startChrome(gpu = false) {
   const dir = mkdtempSync(join(tmpdir(), "fg-px-"));
   return new Promise((ok, no) => {
     const p = spawn(CHROME, ["--headless", "--remote-debugging-port=0", "--user-data-dir=" + dir, "--no-first-run", "--no-default-browser-check",
-      "--hide-scrollbars", "--mute-audio", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "about:blank"], {stdio: ["ignore", "ignore", "pipe"]});
+      "--hide-scrollbars", "--mute-audio", ...(gpu ? ["--use-angle=metal", "--enable-gpu", "--ignore-gpu-blocklist"] : ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"]), "about:blank"], {stdio: ["ignore", "ignore", "pipe"]});
     const t = setTimeout(() => no(new Error("chrome start timeout")), 15000);
     let buf = "";
     p.stderr.on("data", (b) => { buf += b; const m = /DevTools listening on (ws:\/\/\S+)/.exec(buf); if (m) { clearTimeout(t); ok({proc: p, ws: m[1], dir}); } });
@@ -127,11 +129,13 @@ export function d5Scan(img, geo, cols = [30.5, 110.5, 190.5], rows = [30.5, 130.
 }
 /* Perf with a forced flush: render, then getImageData(0,0,1,1) on the target
    canvas, so the drawImage raster is inside the timed span (stat.ms alone
-   times only command recording). Run LAST: repeated readbacks can demote a
-   canvas to software. */
+   times only command recording). x10 renders ten times per readback, so one
+   GPU sync is spread over ten frames: the throughput figure the budget is
+   judged on. Run LAST: repeated readbacks can demote a canvas to software. */
 const PERF = `(()=>{const g=window.__GAME__,r=g.renderer,G=g.G,px=document.getElementById('px'),cv=px&&!px.hidden?px:document.getElementById('c'),x=cv.getContext('2d');const ms=[];
  for(let i=0;i<40;i++){const t=performance.now();r.render(G,0,{hud:true});x.getImageData(0,0,1,1);ms.push(performance.now()-t);}ms.sort((a,b)=>a-b);
- return {canvas:cv.id,median:+ms[20].toFixed(2),p90:+ms[36].toFixed(2),max:+ms[39].toFixed(2),enemies:G.enemies.length,M:r._dbg&&r._dbg.stat?r._dbg.stat.M:null};})()`;
+ const tn=[];for(let j=0;j<9;j++){const t=performance.now();for(let i=0;i<10;i++)r.render(G,0,{hud:true});x.getImageData(0,0,1,1);tn.push((performance.now()-t)/10);}tn.sort((a,b)=>a-b);
+ return {canvas:cv.id,median:+ms[20].toFixed(2),p90:+ms[36].toFixed(2),max:+ms[39].toFixed(2),x10:+tn[4].toFixed(2),enemies:G.enemies.length,M:r._dbg&&r._dbg.stat?r._dbg.stat.M:null};})()`;
 const FAT = `Promise.all([import('/src/core/entities.js'),import('/src/core/config.js')]).then(([E,C])=>{const G=window.__GAME__.G;G.state='PLAY';let i=0;for(const f of E.FOES)for(let y=1;y<12&&i<99;y++)for(let x=3;x<14;x++)if(G.grid[C.key(x,y)]===C.T.EMPTY&&(x*3+y*5+i)%9===0){G.enemies.push(E.spawnEnemy(f.t,x,y,G.level,null));i++;y=99;break;}})`;
 const STAT = `(()=>{const g=window.__GAME__,r=g.renderer,d=r&&r._dbg;const px=document.getElementById('px'),gl=document.getElementById('gl');
  return {state:g.state(),level:g.G.level,kind:d&&d.atlas?'px':(gl&&!gl.hidden?'3d':'2d'),pxHidden:px?px.hidden:null,glHidden:gl?gl.hidden:null,
@@ -145,7 +149,7 @@ export async function run(a) {
   let chr = null;
   const report = {tag, render: a.render, size: [a.w, a.h], dpr: a.dpr, mobile: a.mobile, shots: [], stats: [], errors: []};
   try {
-    chr = await startChrome();
+    chr = await startChrome(a.gpu);
     const c = await cdp(chr.ws);
     const url = "http://127.0.0.1:" + srv.port + "/index.html?render=" + a.render + "&debug=1";
     const P = await openPage(c, a, url);
@@ -167,17 +171,18 @@ export async function run(a) {
       for (const [n, z, sx, sy] of [["zoom25", 2.5, 600, 520], ["zoom06", 0.6, 300, 260]]) { await P.ev(`import('/src/render/cameraCtl.js').then(m=>{const c=window.__GAME__.cam;m.resetCamera(c);m.zoomAt(c,${z},${sx},${sy},600,520,'2d');})`); await snap(n); }
       await P.ev("import('/src/render/cameraCtl.js').then(m=>m.resetCamera(window.__GAME__.cam))");
     }
+    await P.ev("window.__GAME__.G.state='PLAY';window.__pause&&window.__pause()"); await sleep(300); await snap("pause");
+    await P.ev("window.__resume&&window.__resume()"); await sleep(100);
     await P.ev(`(()=>{const G=window.__GAME__.G,p=G.players[0];G.lives=1;p.iFrames=0;p.shield=false;G.bombs.push({x:p.x,y:p.y,tx:Math.floor(p.x/40),ty:Math.floor(p.y/40),timer:0.05,radius:1,variant:'normal',dead:false});})()`);
     for (let i = 0; i < 30 && (await P.ev("window.__GAME__.G.state")) !== "LOSE"; i++) await sleep(50);
     await snap("lose");
-    await P.ev("window.__pause&&window.__pause()"); await sleep(300); await snap("pause");
-    await P.ev("window.__resume&&window.__resume();window.__GAME__.G.state='WIN'"); await sleep(300); await snap("win");
+    await P.ev("window.__GAME__.G.state='WIN'"); await sleep(300); await snap("win");
     if (a.render === "px") {
       await P.ev("window.__GAME__.begin()"); await sleep(600); await P.ev(FAT); await sleep(300);
       const px = await P.ev(PERF);
       const Q = await openPage(c, a, url.replace("render=px", "render=2d"));
       await Q.key("Enter"); await sleep(5200); await Q.ev("window.__GAME__.begin()"); await sleep(600); await Q.ev(FAT); await sleep(300);
-      report.perf = {flushed: true, px, classic: await Q.ev(PERF), note: "render + getImageData(0,0,1,1) per sample; swiftshader harness, relative only"};
+      report.perf = {flushed: true, px, classic: await Q.ev(PERF), gpu: a.gpu, note: "render + getImageData(0,0,1,1) per sample; x10 = ten renders per readback, ms per render; " + (a.gpu ? "Metal GPU: absolute, judge the 4 ms budget on x10" : "swiftshader harness, relative only")};
       report.errors.push(...Q.errors);
     }
     report.errors.push(...P.errors);

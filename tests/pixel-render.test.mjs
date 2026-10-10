@@ -20,6 +20,7 @@ import { createAtlas } from "../src/render/pixel/atlas.js";
 import { createView, resetView, drawPixelWorld } from "../src/render/pixel/world.js";
 import { createPixelRenderer } from "../src/render/pixel/renderer.js";
 import { GHOST_A } from "../src/render/sprites.js";
+import { getFx } from "../src/render/fx.js";
 import { createRGBA, surfRGBA, nearest as nearestRGBA, bilinear as bilinearRGBA } from "../tools/pixel/rgba.mjs";
 import { stageWorld } from "../tools/pixel/board.mjs";
 import { classicHash } from "./lib/classichash.mjs";
@@ -212,7 +213,9 @@ function recCanvas(w, h, log, tag) {
   const mk = (w, h) => recCanvas(w, h, log, ["probe", "native", "hi"][n++] || "x");
   const px = recCanvas(600, 520, log, "px"); px.clientWidth = 829; px.clientHeight = 718;
   const ov = recCanvas(600, 520, log, "ov");
+  const fxBefore = getFx(); fxBefore.push({x: 0, y: 0});
   const r = createPixelRenderer(px, ov, {mkCanvas: mk, surf: surfRGBA});
+  check("construction resets the fx singleton (initFx, as the classic factory)", getFx() !== fxBefore && getFx().length === 0);
   check("surface mirrors the wrapper contract (+ reset)", ["canvas", "overlay", "ctx", "render", "consumeEvents", "getShake", "reset"].every((k) => k in r) && r.canvas === px && r.overlay === ov);
   const w = createWorld(4242, 1); loadLevel(w, 1); w.state = "PLAY";
   log.length = 0;
@@ -292,6 +295,11 @@ function r23(dpr, tf, shake, css, ds) {
   const fin = log.find((q) => q[0] === "px" && q[1] === "drawImage"), M2 = pxM(828 / 300, 0.6);
   check("hi canvas only grows: a smaller M blits its top-left sub-rect, no realloc", r._dbg.hi === big && big.width === W0 && log.some((q) => q[0] === "hi" && q[1] === "clearRect")
     && fin[2].length === 8 && fin[2][2] === 300 * M2 && fin[2][3] === 260 * M2, JSON.stringify(fin && fin[2]));
+  const hw = 300 * M2, hh = 260 * M2, ed = log.filter((q) => q[0] === "hi" && q[1] === "drawImage" && q[4] === "hi").map((q) => JSON.stringify(q[2]));
+  check("a smaller M copies the sub-rect's last column and row one px outward (no bleed of the cleared margin)",
+    ed.includes(JSON.stringify([hw - 1, 0, 1, hh, hw, 0, 1, hh])) && ed.includes(JSON.stringify([0, hh - 1, hw + 1, 1, 0, hh, hw + 1, 1])), ed.join(" "));
+  log.length = 0; r.render(w, CFG.STEP);
+  check("at the same smaller M the edge copy repeats every frame (native redraws the sub-rect)", log.filter((q) => q[0] === "hi" && q[1] === "drawImage" && q[4] === "hi").length === 2);
 }
 
 // ---- fit: #px content box and origin snapped to device px ----
@@ -311,7 +319,9 @@ function r23(dpr, tf, shake, css, ds) {
   let left0 = 267.61, top0 = 10.3;
   const px = {style: {}, dataset: {}, hidden: false, getBoundingClientRect: () => ({left: left0 + parseFloat(px.style.left || 0), top: top0 + parseFloat(px.style.top || 0)})};
   const wrap = {addEventListener(t, f) { (wl[t] = wl[t] || []).push(f); }};
-  globalThis.window = {innerWidth: 1440, innerHeight: 900, addEventListener(t, f) { (hs[t] = hs[t] || []).push(f); }};
+  const mq = [];
+  globalThis.window = {innerWidth: 1440, innerHeight: 900, addEventListener(t, f) { (hs[t] = hs[t] || []).push(f); },
+    matchMedia: (m) => { const e = {m, f: null, once: false, addEventListener(t, f, o) { e.f = f; e.once = !!(o && o.once); }}; mq.push(e); return e; }};
   globalThis.document = {getElementById: (id) => ({gl, px, wrap})[id] || null, body: {setAttribute() {}}};
   globalThis.getComputedStyle = () => ({borderLeftWidth: "1px", borderTopWidth: "1px"});
   globalThis.devicePixelRatio = 2;
@@ -326,6 +336,11 @@ function r23(dpr, tf, shake, css, ds) {
     check("mountFit: #px content origin (rect + border) lands on a device px", onDev(r.left + 1) && onDev(r.top + 1), r.left + "," + r.top);
     top0 = 61.37; (wl.transitionend || []).forEach((f) => f());
     check("the portrait lift's transitionend re-snaps the #px origin", (wl.transitionend || []).length === 1 && onDev(px.getBoundingClientRect().top + 1), px.style.top);
+    const bw2 = +px.dataset.bw;
+    globalThis.devicePixelRatio = 1; mq[0].f();
+    check("a dpr change with no resize re-fits #px (one-shot matchMedia, re-armed at the new ratio)",
+      mq.length === 2 && mq[0].m === "(resolution: 2dppx)" && mq[0].once && mq[1].m === "(resolution: 1dppx)" && mq[1].once && +px.dataset.bw === Math.round(bw2 / 2), mq.map((q) => q.m).join() + " " + bw2 + "->" + px.dataset.bw);
+    globalThis.devicePixelRatio = 2; mq[1].f();
     px.hidden = true; px.style.left = "0.3px"; hs.resize.forEach((f) => f());
     check("a hidden #px still gets its backing size but no origin read", px.style.left === "0.3px" && +px.dataset.bw > 0);
   } finally { delete globalThis.window; delete globalThis.document; delete globalThis.getComputedStyle; delete globalThis.devicePixelRatio; }

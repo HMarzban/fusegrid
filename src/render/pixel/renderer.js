@@ -15,14 +15,16 @@
    (data-bw / data-bh, the device-px-snapped content box), so the browser
    composites it 1:1; clientWidth x dpr is only the fallback. The hi canvas
    only grows: a smaller M draws into its top-left sub-rect (cleared once on
-   the drop). Surface contract mirrors the wrapper:
+   the drop), and its last column and row are copied one px outward so the
+   smooth step samples the edge, never the cleared margin. Construction calls
+   initFx(), as the classic factory does. Surface contract mirrors the wrapper:
    {canvas:#px, overlay:#c, ctx:overlay 2D ctx, render, consumeEvents,
     getShake, reset}. Node / no-canvas => stub mode (overlay noop ctx, no
    world draw), so main's shell path never throws. */
 import {CFG, biomeOf} from "../../core/config.js";
 import {sfxOf} from "../../audio/item.js";
 import {drawHudChips, drawOverlay, overlayBox, drawCoach, drawCoach2} from "../scenes.js";
-import {onEvent, updateFx, getShake as fxShake, getFlash, getFx, feedFx, drawFxOverlay, syncFx} from "../fx.js";
+import {onEvent, updateFx, getShake as fxShake, getFlash, getFx, feedFx, drawFxOverlay, syncFx, initFx} from "../fx.js";
 import {createAtlas} from "./atlas.js";
 import {createView, resetView, drawPixelWorld, trackGrid} from "./world.js";
 import {createOneShots, feedShot} from "./oneshot.js";
@@ -59,6 +61,7 @@ function canvasSurf(mk) {
 export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
   const ovCtx = makeOverlayCtx(overlayCanvas);
   const audio = opts.audio || null;
+  initFx();
   const getShake = opts.getShake || fxShake;
   const mk = opts.mkCanvas || defaultMk;
   const probe = pxCanvas && typeof pxCanvas.getContext === "function" ? mk(1, 1) : null;
@@ -109,6 +112,7 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
     hiM = M;
     hctx.imageSmoothingEnabled = false;
     hctx.drawImage(native, 0, 0, hw, hh);
+    if (M < hiCap) { hctx.drawImage(hi, hw - 1, 0, 1, hh, hw, 0, 1, hh); hctx.drawImage(hi, 0, hh - 1, hw + 1, 1, 0, hh, hw + 1, 1); }
     const sh = getShake();
     finalMatrix(mat, bw, bh, m, evenShake(sh.x), evenShake(sh.y), M);
     pctx.setTransform(1, 0, 0, 1, 0, 0);

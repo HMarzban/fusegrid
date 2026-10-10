@@ -23,7 +23,10 @@
    lift's transition ends; at a fractional dpr #px may sit up to q/2 device
    px off #c, e.g. 10 at dpr 2.625). The snapped backing goes on data-bw /
    data-bh, which the px renderer reads instead of a layout per frame, so the
-   browser composites #px 1:1 and never runs a second resample over it. */
+   browser composites #px 1:1 and never runs a second resample over it.
+   A devicePixelRatio change with no resize (a window dragged between
+   monitors) re-fits through a one-shot matchMedia resolution query, re-armed
+   at the new ratio. */
 import { hasTouch } from "../touch.js";
 
 export const FIT_RES = Object.freeze({ d: [40, 48], p: [16, 250], l: [332, 16] });
@@ -124,6 +127,11 @@ export function mountFit(canvas) {
     if (tp && typeof MutationObserver === "function") new MutationObserver(fit).observe(tp, { attributes: true, attributeFilter: ["hidden"] });
     const wrap = typeof document !== "undefined" && document.getElementById && document.getElementById("wrap");
     if (wrap && wrap.addEventListener) wrap.addEventListener("transitionend", () => snapPxOrigin(document.getElementById("px")));
+    const dpq = () => {
+      const q = typeof window.matchMedia === "function" && typeof devicePixelRatio !== "undefined" ? window.matchMedia("(resolution: " + devicePixelRatio + "dppx)") : null;
+      if (q && q.addEventListener) q.addEventListener("change", () => { fit(); dpq(); }, { once: true });
+    };
+    dpq();
   }
   return fit;
 }

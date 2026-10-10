@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-10 — PIXEL review nits: hi edge copy, initFx, dpr refit, shot.mjs --gpu
+- px renderer copies the hi sub-rect's last column/row one px outward when M < hiCap (no cleared-margin bleed after zoom in/out) and calls `initFx()` like the classic factory; `fit.js` re-fits on a dpr change with no resize (one-shot `matchMedia` resolution query, re-armed). `shot.mjs --gpu` (ANGLE Metal) + an x10 throughput figure; PAUSE is now captured from PLAY. Metal mac@2 M7: px 1.04 ms/render x10 (CLASSIC 0.57), within 4 ms; caveat: the px perf world held 3 foes vs CLASSIC 12 (FAT did not land after WIN→begin), re-check.
+
 ## 2026-10-10 — PIXEL rulings R17, R20–R25 made durable in the plan (§7.3 + Superseded notes)
 - The adviser panel's engineering rulings lived only in the git-ignored brief; now dated team-ruling rows in plan §7.3 with "Superseded 2026-10-10" notes at §3.2 D2/D3, §6.1, §6.2, §6.3/6.3a, §6.4, §6.5, §7.6 R3, §8: R17 no `pxZoom`/`snapZ` (continuous zoom, pop = 3 materialize frames); R20 sharp-bilinear `M = clamp(ceil(k·z),1,8)`, softer above the cap (disclosed); R22 own factory, `renderer.js` byte-identical, no shake-line exception; R23 camera via overlay `getTransform`; R24 static import + lazy bake; R25 single-owner `#px`. Open: G-A…G-L port lands with the first authored cell; renderkind `bootRender`/`renderBits`/`renderVal` wired at W-INT or removed; px dynamic import; sharp pinch above the cap.
 
