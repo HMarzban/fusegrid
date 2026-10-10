@@ -54,7 +54,7 @@ export function mountRenderers(env) {
   if (env.eager && !mk3d)
     loadRenderer3D().then((m) => {
       mk3d = m.createRenderer3D;
-      onSwap(get("3d"));
+      if (kind() === "3d") onSwap(get("3d"));
     }).catch((e) => console.warn("3D load failed", e)).then(() => onReady());
   function drop3d() {
     const r = cache["3d"];

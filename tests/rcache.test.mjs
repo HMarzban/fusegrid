@@ -80,11 +80,19 @@ console.warn = () => {};
   h.done();
 }
 {
-  const h = harness({ eager: true, kind: "2d" });
+  const h = harness({ eager: true, kind: "3d" });
   check("eager (?render=3d) starts the load at mount", h.log.loads === 1);
   h.resolve3d();
   await tickP();
   check("eager resolve swaps the 3D renderer in and settles", h.log.swaps.length === 1 && h.log.swaps[0].tag === "3d" && h.log.ready === 1);
+  h.done();
+}
+{
+  const h = harness({ eager: true, kind: "3d" });
+  h.setKind("px");
+  h.resolve3d();
+  await tickP();
+  check("eager resolve after RENDER left 3D swaps nothing in (main would draw REAL 3D under PIXEL) but still settles and arms 3D", h.log.swaps.length === 0 && h.log.ready === 1 && h.rc.has3d(), h.log.swaps.map((r) => r.tag).join());
   h.done();
 }
 {
