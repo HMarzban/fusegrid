@@ -14,6 +14,7 @@ const SRC = Object.freeze([
   "src/app/endkeys.js",
   "src/app/fit.js",
   "src/app/flags.js",
+  "src/app/gfx.js",
   "src/app/ghost.js",
   "src/app/highscores.js",
   "src/app/intro.js",

@@ -292,7 +292,7 @@ for (const at of [1.0, 2.0, 3.0, 4.0]) {
   const kinds = [g.app.pixel, g.renderer && g.renderer._dbg ? "px" : "?"].join();
   press(g, "ArrowDown"); const cam0 = g.app.settings.cam; press(g, "Enter"); press(g, "ArrowRight");
   check("OPTIONS CAMERA is locked in PIXEL (Enter and → change nothing)", g.app.settings.cam === cam0 && g.app.optRow === 4, g.app.settings.cam);
-  check("OPTIONS RENDER PIXEL swaps the live renderer and saves px:1, r3d:0", kinds === "true,px" && /"r3d":0,.*"px":1\}$/.test(mem["nb.settings.v1"] || ""), kinds + " " + mem["nb.settings.v1"]);
+  check("OPTIONS RENDER PIXEL swaps the live renderer and saves px:1, r3d:0", kinds === "true,px" && /"r3d":0,.*"px":1[,}]/.test(mem["nb.settings.v1"] || ""), kinds + " " + mem["nb.settings.v1"]);
   g = mk({ createRenderer3D: fake3d });
   check("RENDER PIXEL survives a reload: boots pixel, px renderer, blob unchanged", g.app.pixel === true && g.app.render3d === false && !!g.renderer._dbg && g.app.settings.px === 1, v(g));
   if (s0 === undefined) delete mem["nb.settings.v1"]; else mem["nb.settings.v1"] = s0;

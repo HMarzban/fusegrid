@@ -33,9 +33,12 @@ const mkStore = () => {
     setItem: (k, v) => mem.set(k, String(v)),
   };
 };
-const KEYS = "mus,sfx,snd,r3d,cam,bri,shk,flx,px";
+const KEYS = "mus,sfx,snd,r3d,cam,bri,shk,flx,px,fps,res,shd,aa,fxq,dmo,fpm";
+const GFX_AUTO = ',"fps":1,"res":1,"shd":2,"aa":1,"fxq":1,"dmo":1,"fpm":0';
 const DEF_JSON =
-  '{"mus":100,"sfx":100,"snd":1,"r3d":0,"cam":0,"bri":100,"shk":1,"flx":0,"px":0}';
+  '{"mus":100,"sfx":100,"snd":1,"r3d":0,"cam":0,"bri":100,"shk":1,"flx":0,"px":0' + GFX_AUTO + "}";
+/* flashK/shakeK only: fx owns any further knob (partK) and pins it in its own suite. */
+const fk = (o) => JSON.stringify({ flashK: o.flashK, shakeK: o.shakeK });
 
 check("key is nb.settings.v1", SETTINGS_KEY === "nb.settings.v1", SETTINGS_KEY);
 check(
@@ -115,7 +118,7 @@ check(
   check(
     "Map-store round-trip is byte-exact",
     JSON.stringify(loadSettings(st)) ===
-      '{"mus":40,"sfx":0,"snd":0,"r3d":1,"cam":2,"bri":130,"shk":0,"flx":1,"px":0}',
+      '{"mus":40,"sfx":0,"snd":0,"r3d":1,"cam":2,"bri":130,"shk":0,"flx":1,"px":0' + GFX_AUTO + "}",
     JSON.stringify(loadSettings(st)),
   );
   check(
@@ -155,7 +158,7 @@ check(
   setFxOpts({ flashK: 1, shakeK: 1 });
   check(
     "setFxOpts defaults are 1/1",
-    JSON.stringify(getFxOpts()) === '{"flashK":1,"shakeK":1}',
+    fk(getFxOpts()) === '{"flashK":1,"shakeK":1}',
     JSON.stringify(getFxOpts()),
   );
   onEvent({ seed: 1, level: 1 }, { t: "boom", x: 10, y: 10 }, 0);
@@ -185,13 +188,13 @@ check(
   initFx();
   check(
     "initFx() clears fx state but NOT the user knobs (every renderer build calls it)",
-    getFlash() === 0 && JSON.stringify(getFxOpts()) === '{"flashK":0.25,"shakeK":0}',
+    getFlash() === 0 && fk(getFxOpts()) === '{"flashK":0.25,"shakeK":0}',
     JSON.stringify(getFxOpts()),
   );
   check(
     "setFxOpts clamps out of range and ignores missing keys",
-    JSON.stringify(setFxOpts({ flashK: 5 })) === '{"flashK":1,"shakeK":0}' &&
-      JSON.stringify(setFxOpts({ shakeK: -1 })) === '{"flashK":1,"shakeK":0}',
+    fk(setFxOpts({ flashK: 5 })) === '{"flashK":1,"shakeK":0}' &&
+      fk(setFxOpts({ shakeK: -1 })) === '{"flashK":1,"shakeK":0}',
     JSON.stringify(getFxOpts()),
   );
   setFxOpts({ flashK: 1, shakeK: 1 });
@@ -201,9 +204,34 @@ check(
   check("px 9 -> 1, px 0 stays 0, missing px -> 0", clampSettings({ px: 9 }).px === 1 && clampSettings({ px: 0 }).px === 0 && clampSettings({}).px === 0);
   const st = mkStore();
   st.mem.set(SETTINGS_KEY, '{"mus":40,"sfx":0,"snd":0,"r3d":1,"cam":2,"bri":130,"shk":0,"flx":1}');
-  check("a pre-PIXEL blob loads every field unchanged, px 0", JSON.stringify(loadSettings(st)) === '{"mus":40,"sfx":0,"snd":0,"r3d":1,"cam":2,"bri":130,"shk":0,"flx":1,"px":0}', JSON.stringify(loadSettings(st)));
+  check("a pre-PIXEL blob loads every field unchanged, px 0", JSON.stringify(loadSettings(st)) === '{"mus":40,"sfx":0,"snd":0,"r3d":1,"cam":2,"bri":130,"shk":0,"flx":1,"px":0' + GFX_AUTO + "}", JSON.stringify(loadSettings(st)));
   saveSettings({ ...loadSettings(st), r3d: 0, px: 1 }, st);
   check("px round-trips under the same one key", loadSettings(st).px === 1 && loadSettings(st).r3d === 0 && st.mem.size === 1, st.mem.get(SETTINGS_KEY));
+}
+
+// ---- GRAPHICS (2026-10-10): seven appended row indices; anything that is not a
+// valid index loads the AUTO default (never the nearest edge); an old blob loads AUTO ----
+{
+  const auto = { fps: 1, res: 1, shd: 2, aa: 1, fxq: 1, dmo: 1, fpm: 0 };
+  const pick = (c) => JSON.stringify(Object.fromEntries(Object.keys(auto).map((k) => [k, c[k]])));
+  check("GRAPHICS defaults are the AUTO preset, meter off", pick(DEFAULTS) === JSON.stringify(auto), pick(DEFAULTS));
+  const ok = clampSettings({ fps: 0, res: 2, shd: 1, aa: 2, fxq: 0, dmo: 2, fpm: 1 });
+  check("every in-range index survives", pick(ok) === '{"fps":0,"res":2,"shd":1,"aa":2,"fxq":0,"dmo":2,"fpm":1}', pick(ok));
+  check("2.7 truncates to 2 (an index, never rounded up)", clampSettings({ fps: 2.7 }).fps === 2);
+  for (const bad of [9, -1, 3, NaN, Infinity, "1", null, true, [1], {}]) {
+    const c = clampSettings({ fps: bad, res: bad, shd: bad, aa: bad, fxq: bad === 3 ? 2 : bad, dmo: bad });
+    check("GRAPHICS " + String(bad) + " loads AUTO, not an edge", pick({ ...c, fpm: 0 }) === JSON.stringify(auto), pick(c));
+  }
+  check("fxq 2 is out of range (two values) -> FULL", clampSettings({ fxq: 2 }).fxq === 1);
+  check("fpm is a bit: 5 -> 1, 0 stays 0, missing -> 0", clampSettings({ fpm: 5 }).fpm === 1 && clampSettings({ fpm: 0 }).fpm === 0 && clampSettings({}).fpm === 0);
+  const st = mkStore();
+  st.mem.set(SETTINGS_KEY, '{"mus":40,"sfx":0,"snd":0,"r3d":1,"cam":2,"bri":130,"shk":0,"flx":1,"px":0}');
+  const old = loadSettings(st);
+  check("a pre-GRAPHICS nine-key blob keeps its nine and loads all seven at AUTO", JSON.stringify(old) === '{"mus":40,"sfx":0,"snd":0,"r3d":1,"cam":2,"bri":130,"shk":0,"flx":1,"px":0' + GFX_AUTO + "}", JSON.stringify(old));
+  st.mem.set(SETTINGS_KEY, '{"mus":40,"fps":0,"shd":7}');
+  check("a partial blob keeps its valid field and heals the corrupt one", loadSettings(st).fps === 0 && loadSettings(st).shd === 2 && loadSettings(st).res === 1);
+  saveSettings({ ...old, fps: 2, fpm: 1 }, st);
+  check("GRAPHICS round-trips under the same one key", loadSettings(st).fps === 2 && loadSettings(st).fpm === 1 && st.mem.size === 1, st.mem.get(SETTINGS_KEY));
 }
 
 console.log("\n  SETTINGS RESULT: " + pass + " PASS / " + fail + " FAIL");
