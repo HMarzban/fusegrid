@@ -5,7 +5,7 @@ import {
   drawItems, drawEnemies, drawPlayer, drawPlayerBody, drawBombs, drawBlades, drawGhost
 } from "./sprites.js";
 import {onEvent, updateFx, drawFx, drawFxOverlay, drawPickupFx, feedFx, getShake, getFlash, initFx, syncFx} from "./fx.js";
-import {drawOverlay, overlayBox, drawHudChips, drawCoach, drawCoach2} from "./scenes.js";
+import {drawOverlay, overlayBox, drawHudChips, drawAbilityBar, drawCoach, drawCoach2} from "./scenes.js";
 import {draw3dBackground, buildPainters, byDepth} from "./r3d/scene3d.js";
 import {PROJ, project} from "./r3d/camera.js";
 
@@ -92,6 +92,7 @@ export function createRenderer(canvas, opts={}){
     /* S4: overlay HUD chips — explicit opt-in only ({hud:true} during GAME),
        drawn after restore so they never shake with the camera. */
     if(o&&o.hud===true) drawHudChips(ctx, world, o&&o.time);
+    if(o&&o.hud===true&&kind==="2d") drawAbilityBar(ctx, world);
     if(o&&o.hud===true&&world.state==="PLAY") drawFxOverlay(ctx);
     if(o&&o.hud===true&&world.state==="PLAY") drawPickupFx(ctx, kind==="3d"?{coach:o.coach2,proj:isoProj,bw:PROJ.canvasW}:{coach:o.coach2});
     /* ghost coach (plan 4): same opt-in gate as the HUD chips; o.coach is

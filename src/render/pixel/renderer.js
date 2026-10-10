@@ -26,7 +26,7 @@
    mode (overlay noop ctx, no world draw), so main's shell path never throws. */
 import {CFG, biomeOf} from "../../core/config.js";
 import {sfxOf} from "../../audio/item.js";
-import {drawHudChips, drawOverlay, overlayBox, drawCoach, drawCoach2} from "../scenes.js";
+import {drawHudChips, drawAbilityBar, drawOverlay, overlayBox, drawCoach, drawCoach2} from "../scenes.js";
 import {onEvent, updateFx, getShake as fxShake, getFlash, getFx, feedFx, drawFxOverlay, drawPickupFx, syncFx, initFx} from "../fx.js";
 import {createAtlas} from "./atlas.js";
 import {setPixelArt, hudIcon} from "./hudart.js";
@@ -179,6 +179,7 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
       if (world.state === "WIN" || world.state === "LOSE") drawPartsOver(V.parts);
     }
     if (o && o.hud === true) drawHudChips(ovCtx, world, o && o.time, hudIco);
+    if (o && o.hud === true) drawAbilityBar(ovCtx, world, hudIco);
     if (o && o.hud === true && world.state === "PLAY") drawFxOverlay(ovCtx);
     if (o && o.hud === true && world.state === "PLAY") drawPickupFx(ovCtx, {coach: o.coach2, ico: hudIco});
     if (o && o.hud === true) drawCoach(ovCtx, (o && o.coach) || 0);

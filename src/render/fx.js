@@ -13,7 +13,7 @@ import {drawIcon} from "./icons.js";
    SIMULTANEOUSLY would interleave particles/shake in one store; no such
    caller exists and none should be added without refactoring storage out. */
 const fx={shakeT:0,shakeX:0,shakeY:0,flashT:0,parts:[],
-  cmbN:0,cmbT:0,calS:"",calT:0,nmT:0,nmCd:0,lbl:[],pv:null,bk:null,pu:{b:0,r:0,l:0}};
+  cmbN:0,cmbT:0,calS:"",calT:0,nmT:0,nmCd:0,lbl:[],pv:null,bk:null,pu:{b:0,r:0,l:0},ab:null,gone:[]};
 let tag=null, tagRng=null;
 /* Settings damping (nb.settings.v1). Applied INSIDE the two getters so both
    render paths and both call sites are covered without touching either draw
@@ -34,7 +34,7 @@ export function initFx(){
 }
 function clearR2(){
   fx.cmbN=0; fx.cmbT=0; fx.calS=""; fx.calT=0; fx.nmT=0; fx.nmCd=0;
-  fx.lbl=[]; fx.pv=null; fx.bk=null; fx.pu={b:0,r:0,l:0};
+  fx.lbl=[]; fx.pv=null; fx.bk=null; fx.pu={b:0,r:0,l:0}; fx.ab=null; fx.gone=[];
 }
 export function getShake(){ return {x:fx.shakeX*shakeK, y:fx.shakeY*shakeK}; }
 export function getFlash(){ return fx.flashT*flashK; }
@@ -328,12 +328,53 @@ function feedPickup(world, ev, d){
   const u=fx.pu;
   u.b=Math.max(0,u.b-d); u.r=Math.max(0,u.r-d); u.l=Math.max(0,u.l-d);
   const b=p?p.bombs|0:0, r=p?p.range|0:0, lv=world.lives|0, v=fx.pv;
-  if(!v){ fx.pv={b,r,l:lv}; return; }
+  if(!v){ fx.pv={b,r,l:lv}; feedStrip(p, d); return; }
   if(b!==v.b) u.b=LBL.pulse;
   if(r!==v.r) u.r=LBL.pulse;
   if(lv!==v.l) u.l=LBL.pulse;
   v.b=b; v.r=r; v.l=lv;
+  feedStrip(p, d);
 }
+/* Ability bar strip (research D). The bar itself paints straight from player
+   state (drawAbilityBar, scenes.js); the only state it needs is which chips a
+   hit (or a spent SHIELD) just took away, so they can dim and fade over
+   LBL.pulse instead of vanishing. Tracked here on the same PLAY-only clock
+   and wiped with clearR2, so a room change or a new run never fades a chip:
+   the first feed after a wipe only seeds the baseline. A bomb-kind swap is a
+   replacement, not a loss — the label already says "replaces X". */
+const AB=["shield","kick","throw","pass","bk","remote","speed"];
+export const abilityOrd=(k)=>AB.indexOf(BKIND[k]?"bk":k);
+export function abilityList(p){
+  const q=p||{}, o=[];
+  if(q.shield) o.push("shield");
+  if(q.kick) o.push("kick");
+  if(q.throw) o.push("throw");
+  if(q.passing) o.push("pass");
+  if(BKIND[q.bombKind]) o.push(q.bombKind);
+  if(q.remote) o.push("remote");
+  if((q.speed||0)>=CFG.PLAYER_START.speed+CFG.SPEED_UP/2) o.push("speed");
+  return o;
+}
+export function abilityText(k, p){
+  const d=PDEF[k];
+  if(!d) return ["","",""];
+  if(k!=="speed") return [d.name,"",d.col];
+  const v=(p&&p.speed)||0;
+  return v>=CFG.MAX_SPEED?["SPD","MAX",d.col]:["SPD "+Math.round((v-CFG.PLAYER_START.speed)/CFG.SPEED_UP),"",d.col];
+}
+function feedStrip(p, d){
+  const cur=abilityList(p), was=fx.ab, g=fx.gone;
+  let j=0;
+  for(const e of g){ e.t-=d; if(e.t>0&&!cur.includes(e.k)&&!(BKIND[e.k]&&cur.some((c)=>BKIND[c]))) g[j++]=e; }
+  g.length=j;
+  if(was) for(const k of was){
+    if(cur.includes(k)||BKIND[k]&&cur.some((c)=>BKIND[c])) continue;
+    const o=g.find((e)=>e.k===k);
+    if(o) o.t=LBL.pulse; else g.push({k,t:LBL.pulse});
+  }
+  fx.ab=cur;
+}
+export function getStrip(){ return fx.gone; }
 export function getLabels(){ return fx.lbl; }
 export function getPulse(){ return {b:fx.pu.b,r:fx.pu.r,l:fx.pu.l}; }
 const CHAR=10.8, BW0=CFG.COLS*CFG.TILE;

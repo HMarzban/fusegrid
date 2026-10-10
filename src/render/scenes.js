@@ -5,6 +5,7 @@ import { rr } from "./icons.js";
 import { PROJ } from "./r3d/camera.js";
 import { clampPact, pactLabel } from "../core/pact.js";
 import { clampPace, paceToken } from "../core/pace.js";
+import { abilityList, abilityText, abilityOrd, getStrip } from "./fx.js";
 
 /* Scene UI: menu logo, HUD, and the CLEARED / GAME OVER / PAUSED overlays.
    Pure draw; reads world + (optionally) DOM for HUD. */
@@ -380,6 +381,70 @@ export function drawHudChips(c, world, tm, ico) {
   c.fillStyle = HUD_TEXT;
   c.font = "900 13px ui-monospace,monospace";
   c.fillText(String(world.score | 0), scx, 33);
+  c.restore();
+}
+
+/* Ability bar (owner ruling 2026-10-10, research D): the abilities a player
+   holds right now, as icon+word chips in the bottom lane (y 486-514), which
+   is the border wall row in CLASSIC 2D and PIXEL and sits under the near rim
+   at every REAL 3D CAMERA preset (row 11's floor edge projects to y 407.5 at
+   STANDARD). Active entries only, in the order SHIELD, KICK, THROW, PASS,
+   bomb kind, REMOTE, SPD n; a chip a hit took away (fx.js getStrip) stays in
+   its slot, dimmed to ABAR.dim and fading out over ABAR.fade — a static
+   fade, never a flash. PLAY and PAUSE only: the WIN/LOSE summary owns the
+   lower half of the screen. Holding nothing paints nothing at all (not even
+   a save), so every idle call log is unchanged. ico is PIXEL's painter, as
+   in drawHudChips; y moves the lane for a canvas of another height. */
+export const ABAR = Object.freeze({ x: 16, y: 486, h: 28, gap: 5, fade: 0.6, dim: 0.5, ch: 7.8 });
+export function abilityChips(p, gone) {
+  const on = abilityList(p).map((k) => ({ k, a: 1 }));
+  for (const e of gone || [])
+    if (!on.some((o) => o.k === e.k && o.a === 1))
+      on.push({ k: e.k, a: ABAR.dim * Math.max(0, Math.min(1, e.t / ABAR.fade)) });
+  return on.sort((a, b) => abilityOrd(a.k) - abilityOrd(b.k));
+}
+export function drawAbilityBar(c, world, ico, gone, y) {
+  if (!world || (world.state !== "PLAY" && world.state !== "PAUSE")) return;
+  const p = world.players && world.players[0];
+  const L = abilityChips(p, gone === undefined ? getStrip() : gone);
+  if (!L.length) return;
+  const Y = typeof y === "number" ? y : ABAR.y,
+    cy = Y + ABAR.h / 2,
+    mw = (s) => {
+      const m = c.measureText ? c.measureText(s) : null;
+      return m && m.width > 0 ? m.width : s.length * ABAR.ch;
+    };
+  c.save();
+  c.textBaseline = "middle";
+  c.textAlign = "left";
+  c.font = "900 13px ui-monospace,monospace";
+  let x = ABAR.x;
+  for (const e of L) {
+    if (!(e.a > 0)) continue;
+    const [s, m, col] = abilityText(e.k, p);
+    const w = Math.round(mw(m ? s + " " + m : s) + 32);
+    c.globalAlpha = e.a;
+    c.fillStyle = HUD_PANEL;
+    c.fillRect(x, Y, w, ABAR.h);
+    c.strokeStyle = HUD_LINE;
+    c.lineWidth = 1;
+    c.strokeRect(x + 0.5, Y + 0.5, w - 1, ABAR.h - 1);
+    if (ico) ico(c, e.k, col, x + 13, cy);
+    else {
+      c.save();
+      c.translate(x + 13, cy);
+      c.scale(0.6, 0.6);
+      drawIcon(c, e.k, col, 0);
+      c.restore();
+    }
+    c.fillStyle = HUD_TEXT;
+    c.fillText(s, x + 24, cy + 1);
+    if (m) {
+      c.fillStyle = "#9fb3d8";
+      c.fillText(m, x + 24 + mw(s + " "), cy + 1);
+    }
+    x += w + ABAR.gap;
+  }
   c.restore();
 }
 
