@@ -439,6 +439,31 @@ withSettings(null, () => {
   B.tap(o, 300, 20);
   wired("pause view 2 tap off the rows backs to OPTIONS (view 1), still PAUSE", o.app.pauseView === 1 && o.world.state === "PAUSE", o.app.pauseView + "/" + o.world.state);
 });
+// 12 (close-out review): the rest of the documented keys on SCREEN.GRAPHICS and in pauseView 2.
+// Space / J / X are fire = Enter (cycle the row, never a bomb); the play-only and other-screen
+// keys change nothing; in pauseView 2 M is still PAUSE's quit-to-MENU and Backspace is a no-op as in view 1.
+withSettings(null, () => {
+  const gs = (g) => JSON.stringify([g.app.screen, g.app.pauseView, g.world.state, g.app.gfxRow, g.app.settings, live(g.world)]);
+  for (const code of ["Space", "KeyJ", "KeyX"]) {
+    const g = gfxPage(menu()); g.app.gfxRow = 5; const f0 = g.app.settings.fxq; press(g, code);
+    check("GRAPHICS " + code + " = Enter: cycles EFFECTS, stays on the page", g.app.screen === SCREEN.GRAPHICS && g.app.settings.fxq === 1 - f0 && live(g.world) === 0, f0 + "->" + g.app.settings.fxq);
+    const o = run(); press(o, "KeyP"); toRow(o, PAUSE_ITEMS.indexOf("OPTIONS")); press(o, "Enter"); toRow(o, GDOOR); press(o, "Enter");
+    o.app.gfxRow = 5; const q0 = o.app.settings.fxq; press(o, code);
+    check("pause view 2 " + code + " = Enter: cycles EFFECTS, still PAUSE view 2, no bomb", o.app.pauseView === 2 && o.world.state === "PAUSE" && o.app.settings.fxq === 1 - q0 && live(o.world) === 0, q0 + "->" + o.app.settings.fxq);
+  }
+  for (const code of ["KeyQ", "KeyN", "KeyC", "KeyB", "KeyR", "KeyP", "KeyK", "ShiftLeft", "Digit7"]) {
+    const g = gfxPage(menu()); const s0 = gs(g); press(g, code);
+    check("GRAPHICS " + code + " does nothing", gs(g) === s0, gs(g));
+  }
+  for (const code of ["KeyQ", "KeyN", "KeyC", "KeyB", "KeyR", "KeyT", "KeyK", "ShiftLeft", "Digit1", "BracketLeft", "Backspace"]) {
+    const o = run(); press(o, "KeyP"); toRow(o, PAUSE_ITEMS.indexOf("OPTIONS")); press(o, "Enter"); toRow(o, GDOOR); press(o, "Enter");
+    const s0 = gs(o); press(o, code);
+    check("pause view 2 " + code + " does nothing (still PAUSE view 2)", gs(o) === s0, gs(o));
+  }
+  const o = run(); press(o, "KeyP"); toRow(o, PAUSE_ITEMS.indexOf("OPTIONS")); press(o, "Enter"); toRow(o, GDOOR); press(o, "Enter");
+  press(o, "KeyM");
+  check("pause view 2 M quits to MENU like the PAUSE list (score recorded by the same path)", o.app.screen === SCREEN.MENU && !o.app.inGame, o.app.screen);
+});
 // 11: the AA deferral (a live context rebuild on leaving the page) needs rAF and
 // a WebGL renderer cache; tests/frameloop.test.mjs pins it with injected rAF.
 
