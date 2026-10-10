@@ -3,7 +3,8 @@
    for TOAST_T seconds — "COPIED" only once the clipboard actually took it,
    "COPY FAILED" otherwise, so the note can never claim a copy that did not
    happen. Enter rides Input.pulse(): ONE fire edge for step(), never a latch,
-   so the next room never inherits a held fire. */
+   so the next room never inherits a held fire. STATS C rides the same note
+   (main hangs the one toast on app.toast for shellview to paint). */
 import { SCREEN } from "./menuapp.js";
 import { encodeChallenge } from "./code.js";
 
@@ -29,8 +30,9 @@ export function endKey(code, app, world, input, toast, resultLine) {
   }
   return false;
 }
-export function toastTick(toast, world, dt) {
-  toast.t = ended(world) ? Math.max(0, toast.t - dt) : 0;
+export function toastTick(toast, world, dt, app) {
+  const on = app ? (app.screen === SCREEN.GAME && ended(world)) || app.screen === SCREEN.STATS : ended(world);
+  toast.t = on ? Math.max(0, toast.t - dt) : 0;
 }
 export function toastOf(toast) {
   return toast.t > 0 ? { s: toast.s, ok: toast.ok } : null;
