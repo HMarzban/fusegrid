@@ -36,9 +36,9 @@ navigator.clipboard = clipStub;
 
 /* One live game at a time: each mk() drops the previous game's listeners so a
    keydown reaches exactly one Input + main pair. */
-function mk(o = {}) {
+function mk(o = {}, cv = null) {
   for (const k in L) delete L[k];
-  const g = createGame(null, { seed: 42, ...o });
+  const g = createGame(cv, { seed: 42, ...o });
   g.t = 0;
   g.tick = (n = 1) => { for (let i = 0; i < n; i++) { g.t += 1000 / 60; g.loop(g.t); } };
   const r = g.renderer, r0 = r.render.bind(r);
@@ -54,7 +54,7 @@ const press = (g, code, hold = 3) => { down(code); g.tick(hold); up(code); g.tic
 /* Real-key path to MENU: a press starts the show (no audio here, so armUnlock's
    first-gesture rule), tick past the 0.2 s SKIP_GUARD, then Enter skips it. */
 const show = (g, code = "KeyA") => { press(g, code); g.tick(15); return g; };
-const menu = () => { const g = show(mk()); press(g, "Enter"); return g; };
+const menu = (cv) => { const g = show(mk({}, cv)); press(g, "Enter"); return g; };
 const toRow = (g, i) => { for (let k = 0; k < i; k++) press(g, "ArrowDown"); };
 const run = (o) => { const g = menu(); if (o && o.unlock) g.app.pactUnlocked = true; press(g, "Enter"); return g; };
 const clearRoom = (g) => { g.world.enemies.forEach((e) => { e.dead = true; }); g.tick(150); };
@@ -349,6 +349,48 @@ for (let i = 0; i < GUIDE_ROWS.length; i++) {
   toRow(g, ITEMS.indexOf("STATS")); press(g, "Enter"); press(g, "KeyC"); await flush(); press(g, "Escape");
   while (g.app.cursor > 0) press(g, "ArrowUp"); press(g, "Enter");
   check("a STATS note never leaks onto a run", g.app.screen === SCREEN.GAME && g.ro.toast === null, g.app.screen + "/" + JSON.stringify(g.ro.toast));
+}
+// STATS label taps (T1) ride the keyboard's own path: a tap on the painted
+// C COPY MY STATS label IS KeyC — copy plus the same note. 600x520 buffer under
+// a 300x260 CSS box (k=2); buffer label centres T (183,478), C (270,478),
+// R (354,478); (300,300) is off every label.
+{
+  const PL = {};
+  const ctx = new Proxy(function () {}, { get: (t, p) => (p === Symbol.toPrimitive ? () => "" : () => ctx), apply: () => ctx, set: () => true });
+  const el = { width: 600, height: 520, style: {}, getContext: () => ctx,
+    getBoundingClientRect: () => ({ left: 0, top: 0, width: 300, height: 260 }),
+    addEventListener: (ty, fn) => { (PL[ty] = PL[ty] || []).push(fn); }, removeEventListener: noop };
+  const g = menu(el);
+  const tap = (x, y) => { (PL.pointerdown || []).forEach((f) => f({ clientX: x / 2, clientY: y / 2 })); g.tick();
+    (PL.pointerup || []).forEach((f) => f({ clientX: x / 2, clientY: y / 2 })); g.tick(); };
+  const toStats = () => { while (g.app.screen !== SCREEN.MENU) press(g, "Escape"); g.app.cursor = ITEMS.indexOf("STATS"); press(g, "Enter"); };
+  toStats();
+  const c0 = clip.length, r0 = reloads;
+  tap(270, 478); await flush(); g.tick();
+  check("STATS tap on C COPY MY STATS copies the stats text", g.app.screen === SCREEN.STATS && clip.length === c0 + 1 && /FUSEGRID STATS/.test(clip[clip.length - 1]),
+    g.app.screen + "/" + clip[clip.length - 1]);
+  check("STATS tap on C COPY MY STATS shows COPIED", toastOf(g.app.toast) && g.app.toast.s === "COPIED" && g.app.toast.ok === true, JSON.stringify(g.app.toast));
+  clipMode = "no";
+  tap(270, 478); await flush(); g.tick();
+  check("STATS tap on C with a refusing clipboard says COPY FAILED", toastOf(g.app.toast) && g.app.toast.s === "COPY FAILED" && g.app.toast.ok === false,
+    JSON.stringify(g.app.toast));
+  clipMode = "ok";
+  g.tick(Math.ceil(TOAST_T * 60) + 2);
+  tap(354, 478); const arm = g.app.resetArm, c1 = clip.length;
+  tap(270, 478); await flush(); g.tick();
+  check("STATS armed, a tap where C was is off R AGAIN: disarms, copies nothing, no note, stays on STATS",
+    arm === true && g.app.resetArm === false && clip.length === c1 && toastOf(g.app.toast) === null && g.app.screen === SCREEN.STATS && reloads === r0,
+    arm + "/" + g.app.resetArm + "/" + JSON.stringify(g.app.toast));
+  tap(354, 478); press(g, "KeyC"); await flush(); g.tick();
+  check("STATS armed by a tap, then keyboard C: disarms and shows COPIED", g.app.resetArm === false && g.app.toast.s === "COPIED" && toastOf(g.app.toast) && reloads === r0,
+    g.app.resetArm + "/" + JSON.stringify(g.app.toast));
+  tap(183, 478);
+  check("STATS tap on T MEDALS still opens MEDALS (unchanged)", g.app.screen === SCREEN.TROPHIES, g.app.screen);
+  press(g, "Escape"); g.tick(Math.ceil(TOAST_T * 60) + 2);
+  const c2 = clip.length;
+  tap(300, 300);
+  check("STATS idle off-label tap still backs out to MENU, copies nothing", g.app.screen === SCREEN.MENU && clip.length === c2 && toastOf(g.app.toast) === null,
+    g.app.screen + "/" + clip.length);
 }
 
 // ---- GAME / PLAY ----

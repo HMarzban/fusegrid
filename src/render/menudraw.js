@@ -272,7 +272,7 @@ export function menuHit(x, y, L, n) {
 export function statsHit(x, y, L, arm) {
   const S = shellBox(L, 480),
     s = arm ? RESET_FOOT : STATS_FOOT,
-    keys = arm ? ["KeyR"] : ["KeyT", null, "KeyR"];
+    keys = arm ? ["KeyR"] : ["KeyT", "KeyC", "KeyR"];
   if (y < S.footY - 12 || y > S.y + S.h) return null;
   const x0 = S.mid - s.length * 3;
   let a = 0;
