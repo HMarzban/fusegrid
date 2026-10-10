@@ -119,13 +119,13 @@ export function drawShell(c, app, world, canvas, kind, getScores, getPlaques) {
     );
   } else if (s === SCREEN.HOWTO) {
     menudraw.drawDim(c, 0.72, cw, chh);
-    menudraw.drawHowTo(c, L, app.subT);
+    menudraw.drawHowTo(c, L, app.subT, kind);
   } else if (s === SCREEN.ITEMS) {
     menudraw.drawDim(c, 0.72, cw, chh);
-    menudraw.drawItemsHelp(c, L, app.subT);
+    menudraw.drawItemsHelp(c, L, app.subT, kind);
   } else if (s === SCREEN.ENEMIES) {
     menudraw.drawDim(c, 0.72, cw, chh);
-    menudraw.drawEnemiesHelp(c, L, app.subT);
+    menudraw.drawEnemiesHelp(c, L, app.subT, kind);
   } else if (s === SCREEN.GUIDE) {
     menudraw.drawDim(c, 0.72, cw, chh);
     menudraw.drawGuide(c, L, app.subT, app.guideRow);

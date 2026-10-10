@@ -17,15 +17,19 @@
    only grows: a smaller M draws into its top-left sub-rect (cleared once on
    the drop), and its last column and row are copied one px outward so the
    smooth step samples the edge, never the cleared margin. Construction calls
-   initFx(), as the classic factory does. Surface contract mirrors the wrapper:
-   {canvas:#px, overlay:#c, ctx:overlay 2D ctx, render, consumeEvents,
-    getShake, reset}. Node / no-canvas => stub mode (overlay noop ctx, no
-   world draw), so main's shell path never throws. */
+   initFx(), as the classic factory does. PAUSE freezes the whole board (R16):
+   the anim clock stops, updateFx is skipped so particles hold still, and the
+   shake and the flash wash read as zero until PLAY resumes them; a new grid
+   straight out of PAUSE (RESTART, QUIT) drops that held shake and flash.
+   Surface contract mirrors the wrapper: {canvas:#px, overlay:#c, ctx:overlay
+   2D ctx, render, consumeEvents, getShake, reset}. Node / no-canvas => stub
+   mode (overlay noop ctx, no world draw), so main's shell path never throws. */
 import {CFG, biomeOf} from "../../core/config.js";
 import {sfxOf} from "../../audio/item.js";
 import {drawHudChips, drawOverlay, overlayBox, drawCoach, drawCoach2} from "../scenes.js";
 import {onEvent, updateFx, getShake as fxShake, getFlash, getFx, feedFx, drawFxOverlay, syncFx, initFx} from "../fx.js";
 import {createAtlas} from "./atlas.js";
+import {setPixelArt, hudIcon} from "./hudart.js";
 import {createView, resetView, drawPixelWorld, trackGrid} from "./world.js";
 import {createOneShots, feedShot} from "./oneshot.js";
 import {animClock, newClock} from "./anim.js";
@@ -33,7 +37,7 @@ import {NATIVE_W, NATIVE_H, evenShake, kOf, pxM, zOf, finalMatrix} from "./snap.
 
 const W = CFG.COLS * CFG.TILE, H = CFG.ROWS * CFG.TILE;
 const noop = () => {};
-const ID = Object.freeze({a: 1, b: 0, c: 0, d: 1, e: 0, f: 0});
+const ID = Object.freeze({a: 1, b: 0, c: 0, d: 1, e: 0, f: 0}), STILL = Object.freeze({x: 0, y: 0});
 
 function makeOverlayCtx(canvas) {
   if (canvas && canvas.getContext) return canvas.getContext("2d", {alpha: true});
@@ -69,6 +73,8 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
   const surf = opts.surf || (live ? canvasSurf(mk) : (w, h, rgba) => ({width: w, height: h, data: rgba}));
   const t0 = typeof performance !== "undefined" ? performance.now() : 0;
   const atlas = createAtlas(surf);
+  setPixelArt(atlas);
+  const hudIco = hudIcon(atlas);
   const bakeMs = (typeof performance !== "undefined" ? performance.now() : 0) - t0;
   const V = createView(atlas);
   V.shots = createOneShots();
@@ -80,7 +86,7 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
   const mat = [1, 0, 0, 1, 0, 0];
   const stat = {k: 0, M: 0, z: 1, bw: 0, bh: 0, draws: 0, ms: 0};
   const now = () => (typeof performance !== "undefined" ? performance.now() : 0);
-  let lastGrid = null, lastWorld = null;
+  let lastGrid = null, lastWorld = null, wasPaused = false;
 
   function reset() { V.shots.reset(); resetView(V); clock.t = 0; clock.w = null; lastGrid = null; lastWorld = null; }
 
@@ -94,10 +100,10 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
       if (audio && playSfx !== false) audio.play(sfxOf(ev));
     }
     world.events.length = 0;
-    updateFx(dt || CFG.STEP);
+    if (world.state !== "PAUSE") updateFx(dt || CFG.STEP);
   }
 
-  function blitWorld(m) {
+  function blitWorld(m, still) {
     const dpr = (typeof devicePixelRatio !== "undefined" && devicePixelRatio) || 1;
     const ds = pxCanvas.dataset, fw = ds && +ds.bw, fh = ds && +ds.bh;
     const bw = fw > 0 ? fw : Math.max(1, Math.round((pxCanvas.clientWidth || W) * dpr)), bh = fh > 0 ? fh : Math.max(1, Math.round((pxCanvas.clientHeight || H) * dpr));
@@ -113,7 +119,7 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
     hctx.imageSmoothingEnabled = false;
     hctx.drawImage(native, 0, 0, hw, hh);
     if (M < hiCap) { hctx.drawImage(hi, hw - 1, 0, 1, hh, hw, 0, 1, hh); hctx.drawImage(hi, 0, hh - 1, hw + 1, 1, 0, hh, hw + 1, 1); }
-    const sh = getShake();
+    const sh = still ? STILL : getShake();
     finalMatrix(mat, bw, bh, m, evenShake(sh.x), evenShake(sh.y), M);
     pctx.setTransform(1, 0, 0, 1, 0, 0);
     pctx.fillStyle = V.bg;
@@ -139,7 +145,9 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
 
   function render(world, dt, o) {
     if (!world) return;
-    if (world !== lastWorld || world.grid !== lastGrid) { V.shots.reset(); resetView(V); lastWorld = world; lastGrid = world.grid; }
+    const paused = world.state === "PAUSE";
+    if (world !== lastWorld || world.grid !== lastGrid) { V.shots.reset(); resetView(V); if (wasPaused) initFx(); lastWorld = world; lastGrid = world.grid; }
+    wasPaused = paused;
     animClock(clock, world);
     consumeEvents(world, dt, !(o && o.sfx === false));
     V.t = clock.t; V.dt = clock.dt;
@@ -155,10 +163,10 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
       const t1 = now();
       nctx.imageSmoothingEnabled = false;
       stat.draws = drawPixelWorld(nctx, world, V);
-      blitWorld(m);
+      blitWorld(m, paused);
       stat.ms = now() - t1;
     }
-    const fl = getFlash();
+    const fl = paused ? 0 : getFlash();
     if (fl > 0) {
       ovCtx.globalAlpha = fl * 0.28;
       ovCtx.fillStyle = "#ffe8a8";
@@ -170,7 +178,7 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
       drawOverlay(ovCtx, world, B.w, B.h, B.cx, B.cy, o && o.pause, o && o.time, o && o.run, o && o.toast);
       if (world.state === "WIN" || world.state === "LOSE") drawPartsOver(V.parts);
     }
-    if (o && o.hud === true) drawHudChips(ovCtx, world, o && o.time);
+    if (o && o.hud === true) drawHudChips(ovCtx, world, o && o.time, hudIco);
     if (o && o.hud === true && world.state === "PLAY") drawFxOverlay(ovCtx);
     if (o && o.hud === true) drawCoach(ovCtx, (o && o.coach) || 0);
     if (o && o.hud === true) drawCoach2(ovCtx, (o && o.coach2 && o.coach2.a) || 0, (o && o.coach2 && o.coach2.s) || "");

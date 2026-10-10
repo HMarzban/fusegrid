@@ -300,12 +300,14 @@ export function drawOverlay(
    in board space — the sole in-game HUD since the DOM #hud strip was
    removed (GUIDE+HUD plan). Palette and mono type match menudraw.
    Opt-in per frame via o.hud===true so menus/attract keep their authored
-   canvases untouched. */
+   canvases untouched. ico (W5, PIXEL only) paints the heart and chip glyphs
+   as ico(c, type, col, cx, cy) in place of the scaled drawIcon block; absent,
+   the call log is byte-identical to before. */
 const HUD_TEXT = "#dfe7f5",
   HUD_MUTED = "#7385ad",
   HUD_PANEL = "rgba(13,18,32,0.72)",
   HUD_LINE = "#26324a";
-export function drawHudChips(c, world, tm) {
+export function drawHudChips(c, world, tm, ico) {
   const p = world.players[0] || {};
   c.save();
   c.textBaseline = "middle";
@@ -313,6 +315,7 @@ export function drawHudChips(c, world, tm) {
   const lives = Math.max(0, world.lives | 0);
   const n = Math.min(lives, 6);
   for (let i = 0; i < n; i++) {
+    if (ico) { ico(c, "heart", "#ff3b5c", 16 + i * 19, 25); continue; }
     c.save();
     c.translate(16 + i * 19, 25);
     c.scale(0.62, 0.62);
@@ -331,7 +334,10 @@ export function drawHudChips(c, world, tm) {
     c.lineWidth = 1;
     c.strokeRect(x + 0.5, 10.5, w - 1, 29);
     let tx = x + 10;
-    if (icon) {
+    if (icon && ico) {
+      ico(c, icon, col, x + 17, 25);
+      tx = x + 31;
+    } else if (icon) {
       c.save();
       c.translate(x + 17, 25);
       c.scale(0.55, 0.55);

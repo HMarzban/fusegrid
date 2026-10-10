@@ -11,6 +11,7 @@ import { PACE_NAME } from "../core/pace.js";
 import { pactLabel } from "../core/pact.js";
 import { PACT, PACT_COL } from "../core/pact.js";
 import { drawIcon, drawEnemyBody } from "./sprites.js";
+import { pixelArt, itemCell, foeCell, pageScale, blitCell, SLOT_PAD } from "./pixel/hudart.js";
 const ACCENT = "#37f0d0",
   TEXT = "#dfe7f5",
   MUTED = "#7385ad";
@@ -497,8 +498,13 @@ export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked, pace, timeAt
   );
 }
 
+/* GUIDE art in PIXEL (W5, R19): kind "px" swaps only the scaled vector glyph
+   for the atlas cell (pixel/hudart.js) at one integer scale per page; wells,
+   rows and text are the same calls in every kind. */
+const pxArt = (kind) => (kind === "px" ? pixelArt() : null);
+
 /* HOW TO PLAY: control rows mirroring the page .hint, power-gate asterisks. */
-export function drawHowTo(c, L, t) {
+export function drawHowTo(c, L, t, kind) {
   const S = shell(c, L, 520);
   head(c, S, "HOW TO PLAY", "CONTROLS");
   const rows = [
@@ -515,6 +521,9 @@ export function drawHowTo(c, L, t) {
     avail = noteY - 10 - y0;
   const rh = Math.min(40, avail / 3);
   const cw = S.iw / cols;
+  const A = pxArt(kind),
+    pws = Math.min(22, Math.max(14, rh - 14)),
+    ps = A ? pageScale(rows.filter((r) => r[2]).map((r) => itemCell(A, r[2])), pws + SLOT_PAD) : 1;
   for (let i = 0; i < rows.length; i++) {
     const col = i % cols,
       row = (i - col) / cols;
@@ -533,11 +542,14 @@ export function drawHowTo(c, L, t) {
       const ix = x + 10 + ws / 2,
         iy = y + (rh - 6) / 2;
       well(c, ix, iy, ws, p && p.col);
-      c.save();
-      c.translate(ix, iy);
-      c.scale((ws / 28) * 0.72, (ws / 28) * 0.72);
-      drawIcon(c, kind, (p && p.col) || ACCENT, t);
-      c.restore();
+      if (A) blitCell(c, itemCell(A, kind), ix, iy, ps);
+      else {
+        c.save();
+        c.translate(ix, iy);
+        c.scale((ws / 28) * 0.72, (ws / 28) * 0.72);
+        drawIcon(c, kind, (p && p.col) || ACCENT, t);
+        c.restore();
+      }
       tx = x + ws + 16;
     }
     c.textAlign = "left";
@@ -568,7 +580,7 @@ export function drawHowTo(c, L, t) {
 }
 
 /* ITEMS: two-column catalog of every POWER pickup. */
-export function drawItemsHelp(c, L, t) {
+export function drawItemsHelp(c, L, t, kind) {
   const S = shell(c, L, 560);
   head(c, S, "ITEMS", "PICKUPS");
   const n = POWER.length,
@@ -580,6 +592,8 @@ export function drawItemsHelp(c, L, t) {
   const cw = (S.iw - gap) / cols,
     ch = (y1 - y0) / rows - 3;
   const ws = Math.min(28, Math.max(16, ch - 8));
+  const A = pxArt(kind),
+    ps = A ? pageScale(POWER.map((p) => itemCell(A, p.t)), ws + SLOT_PAD) : 1;
   for (let i = 0; i < n; i++) {
     const p = POWER[i],
       col = i % cols,
@@ -594,11 +608,14 @@ export function drawItemsHelp(c, L, t) {
     const ix = x + 10 + ws / 2,
       iy = y + ch / 2;
     well(c, ix, iy, ws, p.col);
-    c.save();
-    c.translate(ix, iy);
-    c.scale((ws / 28) * 0.72, (ws / 28) * 0.72);
-    drawIcon(c, p.t, p.col, t);
-    c.restore();
+    if (A) blitCell(c, itemCell(A, p.t), ix, iy, ps);
+    else {
+      c.save();
+      c.translate(ix, iy);
+      c.scale((ws / 28) * 0.72, (ws / 28) * 0.72);
+      drawIcon(c, p.t, p.col, t);
+      c.restore();
+    }
     c.textAlign = "left";
     c.textBaseline = "middle";
     c.fillStyle = TEXT;
@@ -619,7 +636,7 @@ export function drawItemsHelp(c, L, t) {
 
 /* ENEMIES: 3-col field guide. Short canvas stacks well over name so all
    nine + ESC BACK stay inside the plate (HIGH SCORES inset). */
-export function drawEnemiesHelp(c, L, t) {
+export function drawEnemiesHelp(c, L, t, kind) {
   const S = shell(c, L, 640);
   head(c, S, "ENEMIES", "FIELD GUIDE");
   const n = FOES.length,
@@ -640,6 +657,8 @@ export function drawEnemiesHelp(c, L, t) {
     invuln: false,
   };
   const world = { time: t };
+  const A = pxArt(kind),
+    ps = A ? pageScale(FOES.map((f) => foeCell(A, f.t)), ws + SLOT_PAD) : 1;
   for (let i = 0; i < n; i++) {
     const f = FOES[i],
       col = i % cols,
@@ -657,11 +676,14 @@ export function drawEnemiesHelp(c, L, t) {
       const ix = x + cw / 2,
         iy = y + 6 + ws / 2;
       well(c, ix, iy, ws);
-      c.save();
-      c.translate(ix, iy);
-      c.scale(ws / 30, ws / 30);
-      drawEnemyBody(c, world, dummy);
-      c.restore();
+      if (A) blitCell(c, foeCell(A, f.t), ix, iy, ps);
+      else {
+        c.save();
+        c.translate(ix, iy);
+        c.scale(ws / 30, ws / 30);
+        drawEnemyBody(c, world, dummy);
+        c.restore();
+      }
       c.textAlign = "center";
       c.textBaseline = "middle";
       c.fillStyle = TEXT;
@@ -676,11 +698,14 @@ export function drawEnemiesHelp(c, L, t) {
       const ix = x + 10 + ws / 2,
         iy = y + ch / 2;
       well(c, ix, iy, ws);
-      c.save();
-      c.translate(ix, iy);
-      c.scale(ws / 30, ws / 30);
-      drawEnemyBody(c, world, dummy);
-      c.restore();
+      if (A) blitCell(c, foeCell(A, f.t), ix, iy, ps);
+      else {
+        c.save();
+        c.translate(ix, iy);
+        c.scale(ws / 30, ws / 30);
+        drawEnemyBody(c, world, dummy);
+        c.restore();
+      }
       const tx = x + ws + 18,
         mid = y + ch / 2;
       c.textAlign = "left";
