@@ -69,7 +69,7 @@ export class Input {
  /* Camera §2: non-primary buttons never touch the fire latch (undefined ->
     primary so padFire({})/keyboard stay intact). */
  _onFireDown(e){ if(e&&e.button!==undefined&&e.button!==0)return;
-   this._intent.fire=true; }
+   this._intent.fire=true; this._pulse=false; }
  _onFireUp(e){ if(e&&e.button!==undefined&&e.button!==0)return;
    this._intent.fire=false; }
  /* Virtual-pad fire routing: delegates to the SAME latch handlers the canvas
@@ -78,7 +78,7 @@ export class Input {
  _onBlur(){
     this.input.up=this.input.down=this.input.left=this.input.right=false;
     this._intent.fire=false;this._intent.shift=false;this._intent.remote=false;
-    this._intent.firePrev=false;this._pulse=false;
+    this._intent.firePrev=false;this._pulse=false;this._pShift=false;this._pRemote=false;
      }
  get input(){ // held-axis state (live)
     if(!this._held)this._held={up:false,down:false,left:false,right:false};
@@ -98,10 +98,20 @@ export class Input {
  /* Advance the fire-edge latch after a tick. A pulse() fire lives for exactly
     one tick, so step() sees one edge and nothing stays latched behind it. */
  advance(){ this._intent.firePrev=this._intent.fire;
-   if(this._pulse){this._pulse=false;this._intent.fire=false;} }
+   if(this._pulse){this._pulse=false;this._intent.fire=false;}
+   if(this._pShift){this._pShift=false;this._intent.shift=false;}
+   if(this._pRemote){this._pRemote=false;this._intent.remote=false;} }
  /* One fire edge with no key held behind it (Enter on WIN / LOSE). A fire
     already held keeps its own latch and release. */
  pulse(){ if(this._intent.fire)return; this._intent.fire=true; this._pulse=true; }
+ /* Touch THROW / REMOTE buttons: the keyboard's Shift+Space and Q as one-tick
+    intents on the same advance(), never latches. A fire already held (bomb
+    button, Space) makes THROW a no-op, as Shift pressed mid-hold is on keys. */
+ pulseThrow(){ if(this._intent.fire)return false;
+   if(!this._intent.shift){this._intent.shift=true;this._pShift=true;}
+   this.pulse(); return true; }
+ pulseRemote(){ if(this._intent.remote)return false;
+   this._intent.remote=true; this._pRemote=true; return true; }
  /* Set intent fields programmatically (tests / external control). */
  setIntent(o){
     for(const k in o){

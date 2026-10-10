@@ -149,6 +149,50 @@ check("hasTouch({ontouchstart:null}) true", hasTouch({ontouchstart:null})===true
     si===3&&pf===2, "setIntent="+si+" padFire="+pf);
 }
 
+// ---- THROW / REMOTE: one-tick intents, never latches, no claims ----
+{
+  const RT={left:300,top:40,width:52,height:52,kind:"throw"}, RR={...RT,left:360,kind:"remote"};
+  const inp=new Input(null); const m=new PadMapper(inp);
+  check("THROW tap: this tick carries shift + fire (the keyboard's Shift+Space)",
+    m.down(5,320,60,RT)===true&&inp._intent.fire===true&&inp._intent.shift===true);
+  inp.advance();
+  check("THROW lives one tick: advance() clears fire and shift, nothing latched",
+    inp._intent.fire===false&&inp._intent.shift===false&&inp._intent.firePrev===true);
+  check("THROW holds no claim: a release (or a stale up) is a no-op",
+    m.up(5)===false&&m.padPid===null&&m.bombPid===null);
+  check("a second THROW tap is a fresh edge", m.down(6,320,60,RT)===true&&inp._intent.fire===true);
+  inp.advance(); inp.advance();
+  check("REMOTE tap: this tick carries remote alone (the keyboard's Q)",
+    m.down(7,380,60,RR)===true&&inp._intent.remote===true&&inp._intent.fire===false&&inp._intent.shift===false);
+  inp.advance();
+  check("REMOTE lives one tick, then clears", inp._intent.remote===false&&m.up(7)===false);
+  m.down(8,436,136,RB);
+  check("bomb held + THROW: no-op (a held fire has no edge to throw on), bomb keeps its hold",
+    m.down(9,320,60,RT)===false&&inp._intent.shift===false&&inp._intent.fire===true);
+  inp.advance();
+  check("...and the hold survives the tick", inp._intent.fire===true);
+  m.up(8);
+  check("bomb release still clears fire", inp._intent.fire===false);
+}
+{
+  const inp=new Input(null); const m=new PadMapper(inp);
+  m.down(1,320,60,{left:300,top:40,width:52,height:52,kind:"throw"});
+  m.down(2,436,136,RB);
+  inp.advance();
+  check("THROW then bomb down in the same tick: one throw tick, shift clears, the bomb stays held until its up",
+    inp._intent.fire===true&&inp._intent.shift===false);
+  m.up(2);
+  check("...bomb up releases it", inp._intent.fire===false);
+  const k=new Input(null); k._onKey({code:"ShiftLeft",preventDefault(){}}); k.pulseThrow(); k.advance();
+  check("a keyboard Shift held through a THROW tap is left held", k._intent.shift===true&&k._intent.fire===false);
+  const q=new Input(null); q._onKey({code:"KeyQ",preventDefault(){}});
+  check("REMOTE while Q is held: no-op, Q keeps its latch", q.pulseRemote()===false&&(q.advance(),q._intent.remote===true));
+  const b=new Input(null); b.pulseThrow(); b.pulseRemote(); b._onBlur();
+  check("blur drops a pending THROW / REMOTE tick", !b._intent.fire&&!b._intent.shift&&!b._intent.remote);
+  const e=new Input(null); e.pulse(); e.advance();
+  check("Input.pulse() (WIN/LOSE Enter) is unchanged: one fire tick, shift untouched", e._intent.fire===false&&e._intent.shift===false&&e._intent.firePrev===true);
+}
+
 // ---- §5 headless stub: Node-safe, no-op surface ----
 {
   const inp=new Input(null);
@@ -200,7 +244,7 @@ check("hasTouch({ontouchstart:null}) true", hasTouch({ontouchstart:null})===true
       rule+" wrapTop="+wrapP+" geoTop="+PORT_GEO.top);
   }
   {
-    const leak=["tpad","tbomb","tpause"].filter((id)=>{
+    const leak=["tpad","tbomb","tpause","tthrow","tremote"].filter((id)=>{
       const rule=(html.match(new RegExp("#"+id+"\\{[^}]*\\}"))||[""])[0];
       return /display:(?!none)/.test(rule)
         &&!new RegExp("#"+id+"\\[hidden\\]\\{display:none\\}").test(html); });
@@ -267,6 +311,58 @@ check("hasTouch({ontouchstart:null}) true", hasTouch({ontouchstart:null})===true
       pad.hidden===false&&bomb.hidden===false);
    }finally{ delete globalThis.window; delete globalThis.document; }
 }
+{
+  const els=new Map(), hs=new Map();
+  const mk=(id)=>{ const e={id,hidden:false,style:{},children:[],textContent:"",
+    setAttribute(){}, appendChild(c){ e.children.push(c); },
+    querySelector(sel){ return sel[0]==="#"?(els.get(sel.slice(1))||null):(e.children.find((c)=>c.id==="_"+sel)||null); },
+    addEventListener(t,f){ hs.set(e.id+":"+t,f); }, removeEventListener(t){ hs.delete(e.id+":"+t); },
+    setPointerCapture(){},
+    getBoundingClientRect(){ return {left:0,top:0,width:52,height:52}; },
+    getContext(){ return null; }};
+    els.set(id,e); return e; };
+  const box=mk("touchpad"), stage=mk("stage"), thr=mk("tthrow"), rem=mk("tremote");
+  mk("tpad"); mk("tbomb"); mk("tpause");
+  const noop=()=>{};
+  globalThis.window={ontouchstart:null,addEventListener:noop,removeEventListener:noop};
+  globalThis.document={addEventListener:noop,removeEventListener:noop,
+    getElementById:(id)=>els.get(id)||null, createElement:(tag)=>mk("_"+tag)};
+  try{
+    const inp=new Input(null);
+    const t=mountTouch(inp,stage);
+    const lb=(el)=>(el.children.find((c)=>c.id==="_span")||{}).textContent;
+    check("THROW / REMOTE start hidden and carry their POWER[].name labels",
+      thr.hidden===true&&rem.hidden===true&&lb(thr)==="THROW"&&lb(rem)==="REMOTE",[thr.hidden,rem.hidden,lb(thr),lb(rem)].join());
+    const p={throw:false,remote:false};
+    t.update(true,true,p);
+    check("GAME + PLAY without the powers: both stay hidden",thr.hidden&&rem.hidden);
+    p.throw=true; t.update(true,true,p);
+    check("THROW shows once the player holds THROW (REMOTE stays hidden)",!thr.hidden&&rem.hidden);
+    p.remote=true; t.update(true,true,p);
+    check("both show while both are held",!thr.hidden&&!rem.hidden);
+    t.update(true,false,p);
+    check("PAUSE / WIN / LOSE hide both",thr.hidden&&rem.hidden);
+    t.update(true,true,p); t.update(false,false,p);
+    check("leaving GAME hides both",thr.hidden&&rem.hidden);
+    t.update(true,true,p); p.throw=false; p.remote=false; t.update(true,true,p);
+    check("a hit that strips the powers hides both",thr.hidden&&rem.hidden);
+    t.update(true,true,null);
+    check("no player (the two-arg update) shows neither",thr.hidden&&rem.hidden);
+    p.throw=true; p.remote=true; t.update(true,true,p);
+    hs.get("tthrow:pointerdown")({pointerId:4,clientX:20,clientY:20,preventDefault(){}});
+    check("a pointerdown on THROW sends one shift+fire tick",inp._intent.fire&&inp._intent.shift);
+    inp.advance();
+    hs.get("tremote:pointerdown")({pointerId:5,clientX:20,clientY:20,preventDefault(){}});
+    check("...cleared next tick; a pointerdown on REMOTE sends remote",!inp._intent.shift&&inp._intent.remote);
+    inp.advance(); t.unmount();
+    check("unmount hides both and unbinds their listeners",thr.hidden&&rem.hidden&&!hs.has("tthrow:pointerdown")&&!hs.has("tremote:pointerdown"));
+   }finally{ delete globalThis.window; delete globalThis.document; }
+}
+{
+  const html=readFileSync(new URL("../index.html", import.meta.url),"utf8");
+  check("#touchpad hosts #tthrow / #tremote buttons, hidden at load, labelled THROW / REMOTE",
+    ["throw","remote"].every((k)=>new RegExp('<div id="t'+k+'" role="button" aria-label="'+k[0].toUpperCase()+k.slice(1)+'" hidden><canvas[^>]*></canvas><span>'+k.toUpperCase()+'</span></div>').test(html)));
+}
 
 // ---- D5: pad + bomb + pill sit off the board on every touch layout ----
 {
@@ -280,7 +376,10 @@ check("hasTouch({ontouchstart:null}) true", hasTouch({ontouchstart:null})===true
     lBombG=num(/left:calc\(100% \+ (\d+)px\)/,lay("l","tbomb")), lBombB=num(/bottom:(\d+)px/,lay("l","tbomb")),
     lPillG=num(/left:calc\(100% \+ (\d+)px\)/,lay("l","tpause")), lPillT=num(/top:(\d+)/,lay("l","tpause"));
   const pRules=lay("p","wrap")+lay("p","tpad")+lay("p","tbomb");
-  const parsed=[padW,bombW,pillW,pillG,lPadG,lPadB,lBombG,lBombB,lPillG,lPillT];
+  const actW=num(/width:(\d+)px/,base("tthrow")), lThrG=num(/left:calc\(100% \+ (\d+)px\)/,lay("l","tthrow")),
+    lThrB=num(/bottom:(\d+)px/,lay("l","tthrow")), lRemG=num(/left:calc\(100% \+ (\d+)px\)/,lay("l","tremote")),
+    lRemB=num(/bottom:(\d+)px/,lay("l","tremote"));
+  const parsed=[padW,bombW,pillW,pillG,lPadG,lPadB,lBombG,lBombB,lPillG,lPillT,actW,lThrG,lThrB,lRemG,lRemB];
   const bad=[];
   const probe=(W,H)=>{
     const {lay:l,s}=fitBox(W,H,true,600,520), sw=600*s, sh=520*s;
@@ -288,7 +387,9 @@ check("hasTouch({ontouchstart:null}) true", hasTouch({ontouchstart:null})===true
     if(l==="l"){
       const gut=(W-sw)/2;
       ok=gut>=lPadG+padW&&gut>=lBombG+bombW&&gut>=lPillG+pillW
-        &&sh>=lPillT+pillW+lBombB+bombW&&(H+sh)/2-lPadB-padW>=0;
+        &&sh>=lPillT+pillW+lBombB+bombW&&(H+sh)/2-lPadB-padW>=0
+        &&gut>=lRemG+actW&&lRemG>=lThrG+actW+8&&lThrB===lRemB&&lThrB>=lBombB+bombW+8
+        &&sh-lPillT-pillW-8>=lThrB+actW&&base("tthrow").includes("width:"+actW+"px")&&base("tremote").includes("width:"+actW+"px");
     }else ok=[false,true].every((game)=>{
       const g=portraitGeo(W,H,600,520,game), below=H-g.top-sh, G=PORT_GEO;
       return g.top>=pillW+pillG&&g.padTop>=G.gap&&g.bombTop>=G.gap
@@ -301,7 +402,7 @@ check("hasTouch({ontouchstart:null}) true", hasTouch({ontouchstart:null})===true
   for(let W=560;W<=1400;W+=2) for(let H=280;H<W&&H<=1000;H+=2) probe(W,H);
   for(let W=320;W<=1000;W+=2) for(let H=Math.max(W,480);H<=1400;H+=2) probe(W,H);
   for(const [W,H] of [[812,375],[667,375],[568,320],[915,412],[932,430],[320,568],[375,667],[390,844],[430,932],[1180,820],[1024,768],[768,1024]]) probe(W,H);
-  check("pad, bomb and pill never sit on the board: side gutters in touch"
+  check("pad, bomb, pill and THROW / REMOTE never sit on the board (or each other): side gutters in touch"
     +" landscape, below/above the stage in touch portrait, MENU and GAME geometry (env() insets are 0,"
     +" no viewport-fit=cover)",
     parsed.every(Number.isFinite)&&/left:auto/.test(lay("l","tpad"))&&PORT_GEO.top+PORT_GEO.bot===FIT_RES.p[1]
@@ -310,7 +411,11 @@ check("hasTouch({ontouchstart:null}) true", hasTouch({ontouchstart:null})===true
       &&/width:var\(--tb,/.test(lay("p","tbomb"))&&new RegExp("left:"+PORT_GEO.side[0]+"px").test(lay("p","tpad"))
       &&new RegExp("right:"+PORT_GEO.side[1]+"px").test(lay("p","tbomb"))&&bad.length===0,
     bad.join(" | ")||parsed.join()+" "+lay("l","tpad"));
-  const rules=["p","l"].flatMap((l)=>["wrap","tpad","tbomb","tpause"].map((id)=>lay(l,id))).join("");
+  check("portrait THROW / REMOTE read their slots from actGeo's vars (--ta, --tthr/--ttht, --trem/--tret)",
+    /top:calc\(100% \+ var\(--ttht,/.test(lay("p","tthrow"))&&/right:var\(--tthr,/.test(lay("p","tthrow"))&&/width:var\(--ta,/.test(lay("p","tthrow"))
+      &&/top:calc\(100% \+ var\(--tret,/.test(lay("p","tremote"))&&/right:var\(--trem,/.test(lay("p","tremote"))&&/height:var\(--ta,/.test(lay("p","tremote")),
+    lay("p","tthrow")+lay("p","tremote"));
+  const rules=["p","l"].flatMap((l)=>["wrap","tpad","tbomb","tpause","tthrow","tremote"].map((id)=>lay(l,id))).join("");
   check("the layout rules carry no display: (the [hidden] guard stays the only one)",
     !/display:/.test(rules),rules);
   check("the layout keys off body[data-lay] written by fit(), not a media query",

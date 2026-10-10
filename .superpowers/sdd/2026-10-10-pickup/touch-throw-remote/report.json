@@ -1,0 +1,1992 @@
+[
+ {
+  "tag": "2d-desk",
+  "before": {
+   "lay": "d",
+   "state": "PLAY",
+   "c": {
+    "hidden": false,
+    "r": [
+     206,
+     24,
+     1074,
+     776
+    ]
+   },
+   "tpad": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tbomb": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tpause": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tthrow": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tremote": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   }
+  },
+  "after": {
+   "lay": "d",
+   "state": "PLAY",
+   "c": {
+    "hidden": false,
+    "r": [
+     206,
+     24,
+     1074,
+     776
+    ]
+   },
+   "tpad": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tbomb": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tpause": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tthrow": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tremote": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   }
+  },
+  "errors": [],
+  "final": {
+   "lay": "d",
+   "state": "PLAY",
+   "c": {
+    "hidden": false,
+    "r": [
+     206,
+     24,
+     1074,
+     776
+    ]
+   },
+   "tpad": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tbomb": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tpause": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tthrow": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tremote": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   }
+  }
+ },
+ {
+  "tag": "2d-phone",
+  "before": {
+   "lay": "p",
+   "state": "PLAY",
+   "c": {
+    "hidden": false,
+    "r": [
+     8,
+     72,
+     382,
+     396
+    ]
+   },
+   "tpad": {
+    "hidden": false,
+    "r": [
+     14,
+     635,
+     198,
+     819
+    ]
+   },
+   "tbomb": {
+    "hidden": false,
+    "r": [
+     264,
+     675,
+     368,
+     779
+    ]
+   },
+   "tpause": {
+    "hidden": false,
+    "r": [
+     338,
+     20,
+     382,
+     64
+    ]
+   },
+   "tthrow": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tremote": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   }
+  },
+  "after": {
+   "lay": "p",
+   "state": "PLAY",
+   "c": {
+    "hidden": false,
+    "r": [
+     8,
+     72,
+     382,
+     396
+    ]
+   },
+   "tpad": {
+    "hidden": false,
+    "r": [
+     14,
+     635,
+     198,
+     819
+    ]
+   },
+   "tbomb": {
+    "hidden": false,
+    "r": [
+     264,
+     675,
+     368,
+     779
+    ]
+   },
+   "tpause": {
+    "hidden": false,
+    "r": [
+     338,
+     20,
+     382,
+     64
+    ]
+   },
+   "tthrow": {
+    "hidden": false,
+    "r": [
+     316,
+     615,
+     368,
+     667
+    ]
+   },
+   "tremote": {
+    "hidden": false,
+    "r": [
+     256,
+     615,
+     308,
+     667
+    ]
+   }
+  },
+  "errors": [],
+  "throw": [
+   40
+  ],
+  "remote": 0,
+  "final": {
+   "lay": "p",
+   "state": "PLAY",
+   "c": {
+    "hidden": false,
+    "r": [
+     8,
+     72,
+     382,
+     396
+    ]
+   },
+   "tpad": {
+    "hidden": false,
+    "r": [
+     14,
+     635,
+     198,
+     819
+    ]
+   },
+   "tbomb": {
+    "hidden": false,
+    "r": [
+     264,
+     675,
+     368,
+     779
+    ]
+   },
+   "tpause": {
+    "hidden": false,
+    "r": [
+     338,
+     20,
+     382,
+     64
+    ]
+   },
+   "tthrow": {
+    "hidden": false,
+    "r": [
+     316,
+     615,
+     368,
+     667
+    ]
+   },
+   "tremote": {
+    "hidden": false,
+    "r": [
+     256,
+     615,
+     308,
+     667
+    ]
+   }
+  }
+ },
+ {
+  "tag": "2d-short",
+  "before": {
+   "lay": "p",
+   "state": "PLAY",
+   "c": {
+    "hidden": false,
+    "r": [
+     16,
+     60,
+     359,
+     358
+    ]
+   },
+   "tpad": {
+    "hidden": false,
+    "r": [
+     22,
+     380,
+     166,
+     524
+    ]
+   },
+   "tbomb": {
+    "hidden": false,
+    "r": [
+     264,
+     412,
+     345,
+     493
+    ]
+   },
+   "tpause": {
+    "hidden": false,
+    "r": [
+     315,
+     8,
+     359,
+     52
+    ]
+   },
+   "tthrow": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tremote": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   }
+  },
+  "after": {
+   "lay": "p",
+   "state": "PLAY",
+   "c": {
+    "hidden": false,
+    "r": [
+     16,
+     60,
+     359,
+     358
+    ]
+   },
+   "tpad": {
+    "hidden": false,
+    "r": [
+     22,
+     380,
+     166,
+     524
+    ]
+   },
+   "tbomb": {
+    "hidden": false,
+    "r": [
+     264,
+     412,
+     345,
+     493
+    ]
+   },
+   "tpause": {
+    "hidden": false,
+    "r": [
+     315,
+     8,
+     359,
+     52
+    ]
+   },
+   "tthrow": {
+    "hidden": false,
+    "r": [
+     189,
+     397,
+     241,
+     449
+    ]
+   },
+   "tremote": {
+    "hidden": false,
+    "r": [
+     189,
+     457,
+     241,
+     509
+    ]
+   }
+  },
+  "errors": [],
+  "throw": [
+   40
+  ],
+  "remote": 0,
+  "final": {
+   "lay": "p",
+   "state": "PLAY",
+   "c": {
+    "hidden": false,
+    "r": [
+     16,
+     60,
+     359,
+     358
+    ]
+   },
+   "tpad": {
+    "hidden": false,
+    "r": [
+     22,
+     380,
+     166,
+     524
+    ]
+   },
+   "tbomb": {
+    "hidden": false,
+    "r": [
+     264,
+     412,
+     345,
+     493
+    ]
+   },
+   "tpause": {
+    "hidden": false,
+    "r": [
+     315,
+     8,
+     359,
+     52
+    ]
+   },
+   "tthrow": {
+    "hidden": false,
+    "r": [
+     189,
+     397,
+     241,
+     449
+    ]
+   },
+   "tremote": {
+    "hidden": false,
+    "r": [
+     189,
+     457,
+     241,
+     509
+    ]
+   }
+  }
+ },
+ {
+  "tag": "2d-land",
+  "before": {
+   "lay": "l",
+   "state": "PLAY",
+   "c": {
+    "hidden": false,
+    "r": [
+     206,
+     8,
+     638,
+     382
+    ]
+   },
+   "tpad": {
+    "hidden": false,
+    "r": [
+     56,
+     254,
+     184,
+     382
+    ]
+   },
+   "tbomb": {
+    "hidden": false,
+    "r": [
+     678,
+     300,
+     750,
+     372
+    ]
+   },
+   "tpause": {
+    "hidden": false,
+    "r": [
+     692,
+     8,
+     736,
+     52
+    ]
+   },
+   "tthrow": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tremote": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   }
+  },
+  "after": {
+   "lay": "l",
+   "state": "PLAY",
+   "c": {
+    "hidden": false,
+    "r": [
+     206,
+     8,
+     638,
+     382
+    ]
+   },
+   "tpad": {
+    "hidden": false,
+    "r": [
+     56,
+     254,
+     184,
+     382
+    ]
+   },
+   "tbomb": {
+    "hidden": false,
+    "r": [
+     678,
+     300,
+     750,
+     372
+    ]
+   },
+   "tpause": {
+    "hidden": false,
+    "r": [
+     692,
+     8,
+     736,
+     52
+    ]
+   },
+   "tthrow": {
+    "hidden": false,
+    "r": [
+     678,
+     240,
+     730,
+     292
+    ]
+   },
+   "tremote": {
+    "hidden": false,
+    "r": [
+     738,
+     240,
+     790,
+     292
+    ]
+   }
+  },
+  "errors": [],
+  "throw": [
+   40
+  ],
+  "remote": 0,
+  "final": {
+   "lay": "l",
+   "state": "PLAY",
+   "c": {
+    "hidden": false,
+    "r": [
+     206,
+     8,
+     638,
+     382
+    ]
+   },
+   "tpad": {
+    "hidden": false,
+    "r": [
+     56,
+     254,
+     184,
+     382
+    ]
+   },
+   "tbomb": {
+    "hidden": false,
+    "r": [
+     678,
+     300,
+     750,
+     372
+    ]
+   },
+   "tpause": {
+    "hidden": false,
+    "r": [
+     692,
+     8,
+     736,
+     52
+    ]
+   },
+   "tthrow": {
+    "hidden": false,
+    "r": [
+     678,
+     240,
+     730,
+     292
+    ]
+   },
+   "tremote": {
+    "hidden": false,
+    "r": [
+     738,
+     240,
+     790,
+     292
+    ]
+   }
+  }
+ },
+ {
+  "tag": "3d-desk",
+  "before": {
+   "lay": "d",
+   "state": "PLAY",
+   "c": {
+    "hidden": false,
+    "r": [
+     206,
+     24,
+     1074,
+     776
+    ]
+   },
+   "tpad": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tbomb": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tpause": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tthrow": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tremote": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   }
+  },
+  "after": {
+   "lay": "d",
+   "state": "PLAY",
+   "c": {
+    "hidden": false,
+    "r": [
+     206,
+     24,
+     1074,
+     776
+    ]
+   },
+   "tpad": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tbomb": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tpause": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tthrow": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tremote": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   }
+  },
+  "errors": [],
+  "final": {
+   "lay": "d",
+   "state": "PLAY",
+   "c": {
+    "hidden": false,
+    "r": [
+     206,
+     24,
+     1074,
+     776
+    ]
+   },
+   "tpad": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tbomb": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tpause": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tthrow": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tremote": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   }
+  }
+ },
+ {
+  "tag": "3d-phone",
+  "before": {
+   "lay": "p",
+   "state": "PLAY",
+   "c": {
+    "hidden": false,
+    "r": [
+     8,
+     72,
+     382,
+     396
+    ]
+   },
+   "tpad": {
+    "hidden": false,
+    "r": [
+     14,
+     635,
+     198,
+     819
+    ]
+   },
+   "tbomb": {
+    "hidden": false,
+    "r": [
+     264,
+     675,
+     368,
+     779
+    ]
+   },
+   "tpause": {
+    "hidden": false,
+    "r": [
+     338,
+     20,
+     382,
+     64
+    ]
+   },
+   "tthrow": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tremote": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   }
+  },
+  "after": {
+   "lay": "p",
+   "state": "PLAY",
+   "c": {
+    "hidden": false,
+    "r": [
+     8,
+     72,
+     382,
+     396
+    ]
+   },
+   "tpad": {
+    "hidden": false,
+    "r": [
+     14,
+     635,
+     198,
+     819
+    ]
+   },
+   "tbomb": {
+    "hidden": false,
+    "r": [
+     264,
+     675,
+     368,
+     779
+    ]
+   },
+   "tpause": {
+    "hidden": false,
+    "r": [
+     338,
+     20,
+     382,
+     64
+    ]
+   },
+   "tthrow": {
+    "hidden": false,
+    "r": [
+     316,
+     615,
+     368,
+     667
+    ]
+   },
+   "tremote": {
+    "hidden": false,
+    "r": [
+     256,
+     615,
+     308,
+     667
+    ]
+   }
+  },
+  "errors": [],
+  "throw": [
+   40
+  ],
+  "remote": 0,
+  "final": {
+   "lay": "p",
+   "state": "PLAY",
+   "c": {
+    "hidden": false,
+    "r": [
+     8,
+     72,
+     382,
+     396
+    ]
+   },
+   "tpad": {
+    "hidden": false,
+    "r": [
+     14,
+     635,
+     198,
+     819
+    ]
+   },
+   "tbomb": {
+    "hidden": false,
+    "r": [
+     264,
+     675,
+     368,
+     779
+    ]
+   },
+   "tpause": {
+    "hidden": false,
+    "r": [
+     338,
+     20,
+     382,
+     64
+    ]
+   },
+   "tthrow": {
+    "hidden": false,
+    "r": [
+     316,
+     615,
+     368,
+     667
+    ]
+   },
+   "tremote": {
+    "hidden": false,
+    "r": [
+     256,
+     615,
+     308,
+     667
+    ]
+   }
+  }
+ },
+ {
+  "tag": "3d-land",
+  "before": {
+   "lay": "l",
+   "state": "PLAY",
+   "c": {
+    "hidden": false,
+    "r": [
+     206,
+     8,
+     638,
+     382
+    ]
+   },
+   "tpad": {
+    "hidden": false,
+    "r": [
+     56,
+     254,
+     184,
+     382
+    ]
+   },
+   "tbomb": {
+    "hidden": false,
+    "r": [
+     678,
+     300,
+     750,
+     372
+    ]
+   },
+   "tpause": {
+    "hidden": false,
+    "r": [
+     692,
+     8,
+     736,
+     52
+    ]
+   },
+   "tthrow": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tremote": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   }
+  },
+  "after": {
+   "lay": "l",
+   "state": "PLAY",
+   "c": {
+    "hidden": false,
+    "r": [
+     206,
+     8,
+     638,
+     382
+    ]
+   },
+   "tpad": {
+    "hidden": false,
+    "r": [
+     56,
+     254,
+     184,
+     382
+    ]
+   },
+   "tbomb": {
+    "hidden": false,
+    "r": [
+     678,
+     300,
+     750,
+     372
+    ]
+   },
+   "tpause": {
+    "hidden": false,
+    "r": [
+     692,
+     8,
+     736,
+     52
+    ]
+   },
+   "tthrow": {
+    "hidden": false,
+    "r": [
+     678,
+     240,
+     730,
+     292
+    ]
+   },
+   "tremote": {
+    "hidden": false,
+    "r": [
+     738,
+     240,
+     790,
+     292
+    ]
+   }
+  },
+  "errors": [],
+  "throw": [
+   40
+  ],
+  "remote": 0,
+  "final": {
+   "lay": "l",
+   "state": "PLAY",
+   "c": {
+    "hidden": false,
+    "r": [
+     206,
+     8,
+     638,
+     382
+    ]
+   },
+   "tpad": {
+    "hidden": false,
+    "r": [
+     56,
+     254,
+     184,
+     382
+    ]
+   },
+   "tbomb": {
+    "hidden": false,
+    "r": [
+     678,
+     300,
+     750,
+     372
+    ]
+   },
+   "tpause": {
+    "hidden": false,
+    "r": [
+     692,
+     8,
+     736,
+     52
+    ]
+   },
+   "tthrow": {
+    "hidden": false,
+    "r": [
+     678,
+     240,
+     730,
+     292
+    ]
+   },
+   "tremote": {
+    "hidden": false,
+    "r": [
+     738,
+     240,
+     790,
+     292
+    ]
+   }
+  }
+ },
+ {
+  "tag": "px-desk",
+  "before": {
+   "lay": "d",
+   "state": "PLAY",
+   "c": {
+    "hidden": false,
+    "r": [
+     206,
+     24,
+     1074,
+     776
+    ]
+   },
+   "tpad": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tbomb": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tpause": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tthrow": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tremote": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   }
+  },
+  "after": {
+   "lay": "d",
+   "state": "PLAY",
+   "c": {
+    "hidden": false,
+    "r": [
+     206,
+     24,
+     1074,
+     776
+    ]
+   },
+   "tpad": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tbomb": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tpause": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tthrow": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tremote": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   }
+  },
+  "errors": [],
+  "final": {
+   "lay": "d",
+   "state": "PLAY",
+   "c": {
+    "hidden": false,
+    "r": [
+     206,
+     24,
+     1074,
+     776
+    ]
+   },
+   "tpad": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tbomb": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tpause": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tthrow": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tremote": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   }
+  }
+ },
+ {
+  "tag": "px-phone",
+  "before": {
+   "lay": "p",
+   "state": "PLAY",
+   "c": {
+    "hidden": false,
+    "r": [
+     8,
+     72,
+     382,
+     396
+    ]
+   },
+   "tpad": {
+    "hidden": false,
+    "r": [
+     14,
+     635,
+     198,
+     819
+    ]
+   },
+   "tbomb": {
+    "hidden": false,
+    "r": [
+     264,
+     675,
+     368,
+     779
+    ]
+   },
+   "tpause": {
+    "hidden": false,
+    "r": [
+     338,
+     20,
+     382,
+     64
+    ]
+   },
+   "tthrow": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tremote": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   }
+  },
+  "after": {
+   "lay": "p",
+   "state": "PLAY",
+   "c": {
+    "hidden": false,
+    "r": [
+     8,
+     72,
+     382,
+     396
+    ]
+   },
+   "tpad": {
+    "hidden": false,
+    "r": [
+     14,
+     635,
+     198,
+     819
+    ]
+   },
+   "tbomb": {
+    "hidden": false,
+    "r": [
+     264,
+     675,
+     368,
+     779
+    ]
+   },
+   "tpause": {
+    "hidden": false,
+    "r": [
+     338,
+     20,
+     382,
+     64
+    ]
+   },
+   "tthrow": {
+    "hidden": false,
+    "r": [
+     316,
+     615,
+     368,
+     667
+    ]
+   },
+   "tremote": {
+    "hidden": false,
+    "r": [
+     256,
+     615,
+     308,
+     667
+    ]
+   }
+  },
+  "errors": [],
+  "throw": [
+   40
+  ],
+  "remote": 0,
+  "final": {
+   "lay": "p",
+   "state": "PLAY",
+   "c": {
+    "hidden": false,
+    "r": [
+     8,
+     72,
+     382,
+     396
+    ]
+   },
+   "tpad": {
+    "hidden": false,
+    "r": [
+     14,
+     635,
+     198,
+     819
+    ]
+   },
+   "tbomb": {
+    "hidden": false,
+    "r": [
+     264,
+     675,
+     368,
+     779
+    ]
+   },
+   "tpause": {
+    "hidden": false,
+    "r": [
+     338,
+     20,
+     382,
+     64
+    ]
+   },
+   "tthrow": {
+    "hidden": false,
+    "r": [
+     316,
+     615,
+     368,
+     667
+    ]
+   },
+   "tremote": {
+    "hidden": false,
+    "r": [
+     256,
+     615,
+     308,
+     667
+    ]
+   }
+  }
+ },
+ {
+  "tag": "px-short",
+  "before": {
+   "lay": "p",
+   "state": "PLAY",
+   "c": {
+    "hidden": false,
+    "r": [
+     16,
+     60,
+     359,
+     358
+    ]
+   },
+   "tpad": {
+    "hidden": false,
+    "r": [
+     22,
+     380,
+     166,
+     524
+    ]
+   },
+   "tbomb": {
+    "hidden": false,
+    "r": [
+     264,
+     412,
+     345,
+     493
+    ]
+   },
+   "tpause": {
+    "hidden": false,
+    "r": [
+     315,
+     8,
+     359,
+     52
+    ]
+   },
+   "tthrow": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tremote": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   }
+  },
+  "after": {
+   "lay": "p",
+   "state": "PLAY",
+   "c": {
+    "hidden": false,
+    "r": [
+     16,
+     60,
+     359,
+     358
+    ]
+   },
+   "tpad": {
+    "hidden": false,
+    "r": [
+     22,
+     380,
+     166,
+     524
+    ]
+   },
+   "tbomb": {
+    "hidden": false,
+    "r": [
+     264,
+     412,
+     345,
+     493
+    ]
+   },
+   "tpause": {
+    "hidden": false,
+    "r": [
+     315,
+     8,
+     359,
+     52
+    ]
+   },
+   "tthrow": {
+    "hidden": false,
+    "r": [
+     189,
+     397,
+     241,
+     449
+    ]
+   },
+   "tremote": {
+    "hidden": false,
+    "r": [
+     189,
+     457,
+     241,
+     509
+    ]
+   }
+  },
+  "errors": [],
+  "throw": [
+   40
+  ],
+  "remote": 0,
+  "final": {
+   "lay": "p",
+   "state": "PLAY",
+   "c": {
+    "hidden": false,
+    "r": [
+     16,
+     60,
+     359,
+     358
+    ]
+   },
+   "tpad": {
+    "hidden": false,
+    "r": [
+     22,
+     380,
+     166,
+     524
+    ]
+   },
+   "tbomb": {
+    "hidden": false,
+    "r": [
+     264,
+     412,
+     345,
+     493
+    ]
+   },
+   "tpause": {
+    "hidden": false,
+    "r": [
+     315,
+     8,
+     359,
+     52
+    ]
+   },
+   "tthrow": {
+    "hidden": false,
+    "r": [
+     189,
+     397,
+     241,
+     449
+    ]
+   },
+   "tremote": {
+    "hidden": false,
+    "r": [
+     189,
+     457,
+     241,
+     509
+    ]
+   }
+  }
+ },
+ {
+  "tag": "px-land",
+  "before": {
+   "lay": "l",
+   "state": "PLAY",
+   "c": {
+    "hidden": false,
+    "r": [
+     206,
+     8,
+     638,
+     382
+    ]
+   },
+   "tpad": {
+    "hidden": false,
+    "r": [
+     56,
+     254,
+     184,
+     382
+    ]
+   },
+   "tbomb": {
+    "hidden": false,
+    "r": [
+     678,
+     300,
+     750,
+     372
+    ]
+   },
+   "tpause": {
+    "hidden": false,
+    "r": [
+     692,
+     8,
+     736,
+     52
+    ]
+   },
+   "tthrow": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "tremote": {
+    "hidden": true,
+    "r": [
+     0,
+     0,
+     0,
+     0
+    ]
+   }
+  },
+  "after": {
+   "lay": "l",
+   "state": "PLAY",
+   "c": {
+    "hidden": false,
+    "r": [
+     206,
+     8,
+     638,
+     382
+    ]
+   },
+   "tpad": {
+    "hidden": false,
+    "r": [
+     56,
+     254,
+     184,
+     382
+    ]
+   },
+   "tbomb": {
+    "hidden": false,
+    "r": [
+     678,
+     300,
+     750,
+     372
+    ]
+   },
+   "tpause": {
+    "hidden": false,
+    "r": [
+     692,
+     8,
+     736,
+     52
+    ]
+   },
+   "tthrow": {
+    "hidden": false,
+    "r": [
+     678,
+     240,
+     730,
+     292
+    ]
+   },
+   "tremote": {
+    "hidden": false,
+    "r": [
+     738,
+     240,
+     790,
+     292
+    ]
+   }
+  },
+  "errors": [],
+  "throw": [
+   40
+  ],
+  "remote": 0,
+  "final": {
+   "lay": "l",
+   "state": "PLAY",
+   "c": {
+    "hidden": false,
+    "r": [
+     206,
+     8,
+     638,
+     382
+    ]
+   },
+   "tpad": {
+    "hidden": false,
+    "r": [
+     56,
+     254,
+     184,
+     382
+    ]
+   },
+   "tbomb": {
+    "hidden": false,
+    "r": [
+     678,
+     300,
+     750,
+     372
+    ]
+   },
+   "tpause": {
+    "hidden": false,
+    "r": [
+     692,
+     8,
+     736,
+     52
+    ]
+   },
+   "tthrow": {
+    "hidden": false,
+    "r": [
+     678,
+     240,
+     730,
+     292
+    ]
+   },
+   "tremote": {
+    "hidden": false,
+    "r": [
+     738,
+     240,
+     790,
+     292
+    ]
+   }
+  }
+ }
+]

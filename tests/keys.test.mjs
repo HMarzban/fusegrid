@@ -507,6 +507,27 @@ for (const code of ["Space", "KeyJ", "KeyX"]) {
   q.remote = true; press(r, "Space"); const n = live(r.world); press(r, "KeyQ");
   check("PLAY Q detonates live bombs (remote power)", n === 1 && live(r.world) === 0, n + "->" + live(r.world));
 }
+{
+  const g = run(), p = g.world.players[0];
+  p.throw = true; p.face = { x: 1, y: 0 };
+  g.input.pulseThrow(); g.tick(3);
+  const b = g.world.bombs.filter((x) => !x.dead);
+  check("PLAY touch THROW tap (Input.pulseThrow) throws ahead exactly once, through the real loop",
+    b.length === 1 && Math.abs(b[0].x - p.x) > 20 && !g.input._intent.fire && !g.input._intent.shift, b.length + "/" + (b[0] && b[0].x - p.x));
+  g.tick(30);
+  check("PLAY touch THROW never latches: no second bomb on later ticks", live(g.world) === 1, live(g.world));
+  const r = run(), q = r.world.players[0];
+  r.input.pulseThrow(); r.tick(3);
+  check("PLAY touch THROW without the power plants in place (the sim's Shift+Space rule)",
+    live(r.world) === 1 && Math.abs(r.world.bombs[0].x - q.x) < 1, live(r.world));
+  const d = run(), dq = d.world.players[0];
+  dq.remote = true; press(d, "Space"); const n = live(d.world);
+  d.input.pulseRemote(); d.tick(2);
+  check("PLAY touch REMOTE tap (Input.pulseRemote) detonates live bombs and clears its intent",
+    n === 1 && live(d.world) === 0 && !d.input._intent.remote, n + "->" + live(d.world));
+  press(d, "Space"); d.input.pulseRemote(); d.tick(2);
+  check("PLAY a second touch REMOTE tap is a fresh edge", live(d.world) === 0, live(d.world));
+}
 for (const code of ["KeyP", "Escape"]) {
   const g = run();
   press(g, code);

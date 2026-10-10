@@ -1,4 +1,4 @@
-import { FIT_RES, PORT_GAME, PORT_GEO, fitBox, mountFit, portraitGeo } from "../src/app/fit.js";
+import { ACT_GEO, FIT_RES, PORT_GAME, PORT_GEO, actGeo, fitBox, mountFit, portraitGeo } from "../src/app/fit.js";
 
 let pass = 0,
   fail = 0;
@@ -111,6 +111,40 @@ check("portraitGeo's game flag defaults off: the 4-arg call is the INTRO / MENU 
     worse.length === 0, worse.join(" | ") || "clean");
 }
 
+check("ACT_GEO is frozen: THROW / REMOTE 52px, never under 44 (the touch-target floor), 8px clearances, 44px pill",
+  Object.isFrozen(ACT_GEO) && JSON.stringify(ACT_GEO) === JSON.stringify({ max: 52, min: 44, gap: 8, pill: 44 }), JSON.stringify(ACT_GEO));
+
+for (const [W, H, a] of [
+  [390, 844, { mode: "up", act: 52, thr: { r: 14, t: 219 }, rem: { r: 74, t: 219 } }],
+  [412, 915, { mode: "up", act: 52, thr: { r: 14, t: 271 }, rem: { r: 74, t: 271 } }],
+  [320, 568, { mode: "up", act: 51, thr: { r: 14, t: 20 }, rem: { r: 73, t: 20 } }],
+  [375, 548, { mode: "mid", act: 52, thr: { r: 118, t: 39 }, rem: { r: 118, t: 99 } }],
+  [360, 560, { mode: "mid", act: 52, thr: { r: 118, t: 39 }, rem: { r: 118, t: 99 } }],
+  [600, 700, { mode: "mid", act: 52, thr: { r: 206, t: 39 }, rem: { r: 206, t: 99 } }],
+]) {
+  const got = actGeo(W, H, 600, 520);
+  check(W + "x" + H + " THROW / REMOTE slots " + JSON.stringify(a), JSON.stringify(got) === JSON.stringify(a), JSON.stringify(got));
+}
+
+{
+  const sep = (a, b, m) => a[2] + m <= b[0] + 1e-6 || b[2] + m <= a[0] + 1e-6 || a[3] + m <= b[1] + 1e-6 || b[3] + m <= a[1] + 1e-6;
+  const bad = [], modes = {};
+  for (let W = 300; W <= 1000; W += 3) for (let H = Math.max(W, 460); H <= 1400; H += 3) {
+    const { s } = fitBox(W, H, true, 600, 520), sw = 600 * s, sh = 520 * s, g = portraitGeo(W, H, 600, 520, true), A = actGeo(W, H, 600, 520), a = A.act;
+    const box = (o) => [sw - o.r - a, sh + o.t, sw - o.r, sh + o.t + a], T = box(A.thr), R = box(A.rem);
+    const pad = [PORT_GEO.side[0], sh + g.padTop, PORT_GEO.side[0] + g.pad, sh + g.padTop + g.pad];
+    const bomb = [sw - PORT_GEO.side[1] - g.bomb, sh + g.bombTop, sw - PORT_GEO.side[1], sh + g.bombTop + g.bomb];
+    const pill = [sw - 44, -52, sw, -8], vx = (W - sw) / 2, vp = [-vx, -g.top, sw + vx, H - g.top];
+    const inV = (q) => q[0] >= vp[0] + 4 && q[2] <= vp[2] - 4 && q[1] >= vp[1] + 4 && q[3] <= vp[3] - 4;
+    modes[A.mode] = (modes[A.mode] || 0) + 1;
+    const ok = a >= ACT_GEO.min && a <= ACT_GEO.max && sep(T, R, 8) &&
+      [T, R].every((q) => sep(q, [0, 0, sw, sh], 8) && sep(q, pad, 8) && sep(q, bomb, 8) && sep(q, pill, 8) && inV(q));
+    if (!ok && bad.length < 4) bad.push(W + "x" + H + " " + JSON.stringify(A));
+  }
+  check("every GAME portrait 300..1000 x 460..1400: THROW and REMOTE (>= 44px) clear the board, pad, bomb, pill and each other by 8px, inside the viewport",
+    bad.length === 0 && modes.up > 0 && modes.mid > 0, bad.join(" | ") || JSON.stringify(modes));
+}
+
 check("scale floors at 0.3 and caps at 1.8",
   fitBox(200, 200, true, 600, 520).s === 0.3 &&
     fitBox(5000, 4000, false, 600, 520).s === 1.8);
@@ -179,6 +213,10 @@ check("scale floors at 0.3 and caps at 1.8",
       attrs["data-lay"] === "p" && props["--st"] === g.top + "px" && props["--tp"] === g.pad + "px" &&
         props["--tb"] === g.bomb + "px" && props["--tpt"] === g.padTop + "px" && props["--tbt"] === g.bombTop + "px",
       JSON.stringify(props));
+    const a = actGeo(375, 812, 600, 520);
+    check("touch portrait: mountFit writes the THROW / REMOTE slots --ta/--tthr/--ttht/--trem/--tret from actGeo",
+      props["--ta"] === a.act + "px" && props["--tthr"] === a.thr.r + "px" && props["--ttht"] === a.thr.t + "px" &&
+        props["--trem"] === a.rem.r + "px" && props["--tret"] === a.rem.t + "px", JSON.stringify(props));
     for (const k in props) delete props[k];
     win.innerWidth = 812; win.innerHeight = 375; fit();
     check("touch landscape writes no portrait vars (l / d rules never read them)",

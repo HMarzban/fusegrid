@@ -7,7 +7,12 @@
    Touch portrait is width-bound, so the slack is vertical: portraitGeo
    centres the stage in it (clamped to the FIT_RES.p split, 60 above for the
    pause pill, 190 below for the controls) and docks the pad + bomb to the
-   thumb zone at the bottom, grown into the band. INTRO / MENU / ATTRACT keep
+   thumb zone at the bottom, grown into the band. actGeo docks the touch
+   THROW / REMOTE row (GAME only, shown while the player holds the power) to
+   the bomb: a row above it (THROW over the bomb, REMOTE to its left), else
+   a column in the pad-bomb gap (short phones: THROW over REMOTE), else a
+   row below the bomb, else beside the pause pill above the stage.
+   INTRO / MENU / ATTRACT keep
    that centred stage; while #touchpad shows (GAME only — touch.update flips
    its hidden on the GAME edge) the game geometry lifts the stage to just
    under the pause pill (PORT_GAME.top, never below the centred top) and the
@@ -50,6 +55,27 @@ export function portraitGeo(W, H, cw, ch, game) {
   const pad = Math.floor(Math.max(G.pad[0], Math.min(game ? PORT_GAME.pad : G.pad[1], band - G.edge - G.gap, roomW)));
   const bomb = Math.round(pad * 9 / 16), padTop = Math.max(G.gap, Math.floor(band - G.edge - pad));
   return { top, pad, bomb, padTop, bombTop: padTop + Math.round((pad - bomb) / 2) };
+}
+
+export const ACT_GEO = Object.freeze({ max: 52, min: 44, gap: 8, pill: 44 });
+
+export function actGeo(W, H, cw, ch) {
+  const { s } = fitBox(W, H, true, cw, ch), sw = cw * s, sh = ch * s, g = portraitGeo(W, H, cw, ch, true), A = ACT_GEO, G = PORT_GEO, r = G.side[1];
+  const band = H - g.top - sh, padR = G.side[0] + g.pad + A.gap, out = (mode, a, t0, r0, t1, r1) => ({ mode, act: a, thr: { r: r0, t: t0 }, rem: { r: r1, t: t1 } });
+  for (let a = A.max; a >= A.min; a--) {
+    const t = g.bombTop - A.gap - a;
+    if (t >= A.gap && (sw - r - 2 * a - A.gap >= padR || t + a <= g.padTop - A.gap)) return out("up", a, t, r, t, r + a + A.gap);
+  }
+  for (let a = A.max; a >= A.min; a--) {
+    const mid = sw - r - g.bomb - padR + A.gap, t = Math.max(A.gap, Math.min(band - A.gap - 2 * a - A.gap, g.bombTop + Math.round(g.bomb / 2) - a - A.gap / 2));
+    if (mid >= a + 2 * A.gap && t >= A.gap) { const x = r + g.bomb + Math.floor((mid - a) / 2); return out("mid", a, t, x, t + a + A.gap, x); }
+  }
+  for (let a = A.max; a >= A.min; a--) {
+    const t = g.bombTop + g.bomb + A.gap;
+    if (t + a <= band - A.gap && sw - r - 2 * a - A.gap >= padR) return out("down", a, t, r, t, r + a + A.gap);
+  }
+  const a = A.min, t = -(sh + A.gap + a), x = A.pill + A.gap;
+  return out("top", a, t, x, t, x + a + A.gap);
 }
 
 export function pxQuant(dpr) {
@@ -114,7 +140,8 @@ export function mountFit(canvas) {
       if (lay === "p" && body.style && body.style.setProperty) {
         const g = portraitGeo(window.innerWidth, window.innerHeight, canvas.width, canvas.height, game);
         body.style.setProperty("--sd", flip ? PORT_GAME.sd : "0s");
-        for (const [k, v] of [["st", g.top], ["tp", g.pad], ["tb", g.bomb], ["tpt", g.padTop], ["tbt", g.bombTop]]) body.style.setProperty("--" + k, v + "px");
+        const a = actGeo(window.innerWidth, window.innerHeight, canvas.width, canvas.height);
+        for (const [k, v] of [["st", g.top], ["tp", g.pad], ["tb", g.bomb], ["tpt", g.padTop], ["tbt", g.bombTop], ["ta", a.act], ["tthr", a.thr.r], ["ttht", a.thr.t], ["trem", a.rem.r], ["tret", a.rem.t]]) body.style.setProperty("--" + k, v + "px");
       }
     }
     if (px && px.style) fitPx(px, canvas.width * s, canvas.height * s);

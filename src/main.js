@@ -578,7 +578,7 @@ export function createGame(canvas, opts = {}) {
       curKind = k;
       renderer = getRenderer(k); if (renderer.reset) renderer.reset();
     } // live RENDER toggle: cache swap
-    touch.update(app.screen === SCREEN.GAME, world.state === "PLAY");
+    touch.update(app.screen === SCREEN.GAME, world.state === "PLAY", world.players[0]);
     // §4 ducking: frame-polled, idempotent, self-heals across transitions
     if (audio) {
       audio.duck(app.screen === SCREEN.GAME && audio.unlocked());
