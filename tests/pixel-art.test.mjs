@@ -23,7 +23,7 @@ import { fallbackCell } from "../src/render/pixel/fallback.js";
 import { surfRGBA } from "../tools/pixel/rgba.mjs";
 
 const PENDING = {
-  mako: "all",
+  mako: [],
   foes: "all",
   tiles: [],
   bomb: [],
