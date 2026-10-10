@@ -30,6 +30,7 @@ export function mountRenderers(env) {
     if (k === "3d" && cache["3d"] && cache["3d"].dead) drop3d();
     sizeCanvases(k);
     delete slept[k];
+    delete seen[k];
     if (cache[k]) {
       if (cache[k].invalidate) cache[k].invalidate(true);
       return cache[k];

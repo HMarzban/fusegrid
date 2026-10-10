@@ -231,5 +231,20 @@ function rig(o = {}) {
   check("the governor never runs outside REAL 3D", C.F.knobs().dpr3d === 2);
 }
 
+// ---- close-out review: rc.tick reads the kind AFTER loop(), so a RENDER flip inside loop never sleeps the renderer it just woke ----
+{
+  const q = [], clock = { t: 0 }, ticks = [];
+  let kind = "2d";
+  const tg = () => ({ addEventListener() {} });
+  const F = mountFrames(() => { if (clock.t >= 48) kind = "px"; }, {
+    running: () => true, idle: () => false, kind: () => kind, app: () => ({ screen: SCREEN.GAME, pauseView: 0 }),
+    rc: () => ({ tick: (t, k) => ticks.push(k) }), win: Object.assign(tg(), { devicePixelRatio: 1 }), doc: Object.assign(tg(), { body: { dataset: { lay: "d" } } }),
+    raf: (f) => q.push(f), now: () => clock.t,
+  });
+  F.apply(AUTO()); F.kick();
+  for (let i = 0; i < 4; i++) { clock.t += 16; q.shift()(clock.t); }
+  check("the flip frame hands rc.tick the NEW kind (a stale one slept a just-woken PIXEL to 1x1)", ticks.join() === "2d,2d,px,px", ticks.join());
+}
+
 console.log("\n  FRAMELOOP RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);

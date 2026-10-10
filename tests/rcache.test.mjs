@@ -126,6 +126,9 @@ console.warn = () => {};
   check("sleep is not repeated while it stays unused; the slept renderer stays cached", rp.slept === 1 && h.rc.get("px") === rp);
   const r3b = h.rc.get("3d");
   check("the next get(3d) pays a fresh build", r3b !== r3 && r3b.tag === "3d");
+  h.rc.get("px");
+  h.rc.tick(1000 + 3 * REL_T + 16, "2d");
+  check("a get() re-arms its kind's idle clock: one stale-kind tick right after waking PIXEL never re-sleeps it", rp.slept === 1, rp.slept);
   h.done();
 }
 {

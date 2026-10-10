@@ -79,7 +79,7 @@ export function mountFrames(loop, env = {}) {
     const idle = (wasIdle = !!(env.idle && env.idle()));
     const cap = !K ? Infinity : idle ? K.idleFps : K.fpsCap;
     if (gate.tick(t, cap)) tick(t, a, r, idle, cap);
-    if (r && typeof r.tick === "function") r.tick(now(), lk);
+    if (r && typeof r.tick === "function") r.tick(now(), env.kind ? env.kind() : lk); // re-read: loop() may have just flipped RENDER
     if (infoT == null || iv > IV_STALL || iv < 0) { infoT = t; runs = 0; }
     else if (t - infoT >= 500) { fps = Math.round((runs * 1000) / (t - infoT)); runs = 0; infoT = t; publish(a); }
     const raf = rafOf();
