@@ -388,6 +388,11 @@ function r23(dpr, tf, shake, css, ds) {
   check("index.html: #px between #gl and #c, author [hidden] rule, image-rendering:auto",
     /<canvas id="gl" hidden><\/canvas><canvas id="px" hidden><\/canvas><canvas id="c"/.test(html) && /#px\[hidden\]\{display:none\}/.test(html) && /#px\{[^}]*image-rendering:auto/.test(html));
   check("the px renderer never asks #c for an opaque context", !/getContext\("2d",\s*\{alpha:\s*false\}\)/.test(readFileSync(join(ROOT, "src/render/pixel/renderer.js"), "utf8").split("makeOverlayCtx")[1].split("\n}")[0]));
+  const plan = readFileSync(join(ROOT, "docs/superpowers/plans/2026-10-09-pixel-art-spike-plan.md"), "utf8");
+  const log73 = plan.split("### 7.3")[1].split("### 7.4")[0], sec = (a, b) => plan.split(a)[1].split(b)[0];
+  check("plan §7.3 logs team rulings R17, R20-R25 (dated rows, durable record)", ["R17", "R20", "R22", "R23", "R24", "R25"].every((r) => new RegExp("^\\| " + r + " \\| 2026-10-10 \\|.*team ruling", "m").test(log73)) && /M = clamp\(ceil\(k·z\), 1, 8\)/.test(log73));
+  check("plan text replaced by R17/R22 carries Superseded notes (§3.2 D2, D3, §6.1, §6.2)",
+    /Superseded 2026-10-10 by team ruling R22/.test(sec("- **D2 ", "- **D3 ")) && /Superseded 2026-10-10 by team ruling R17/.test(sec("- **D3 ", "- **D4 ")) && /Superseded 2026-10-10/.test(sec("### 6.1", "### 6.2")) && /R22: not edited/.test(sec("### 6.2", "### 6.3")));
 }
 
 console.log("\n  PIXEL RENDER RESULT: " + pass + " PASS / " + fail + " FAIL");

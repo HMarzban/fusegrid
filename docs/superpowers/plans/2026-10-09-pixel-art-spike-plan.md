@@ -359,7 +359,21 @@ Rules:
   and shimmers. This is the one declared exception to "the classic branch is
   never edited" (§6.1): the line is shared, the guard is kind-scoped, and the
   CLASSIC 2D call-log hash is unchanged.
+  - **Superseded 2026-10-10 by team ruling R22 (§7.3).** The px renderer is its own factory, so
+    `renderer.js` is byte-identical and this exception no longer exists. The
+    even-px shake snap lives in `src/render/pixel/snap.js` `evenShake`, applied
+    inside the px renderer's final blit. The position rule (even logical px,
+    R12) stands.
 - **D3 Intro zoom and pinch zoom are quantized in px mode, wired at G1.**
+  - **Superseded 2026-10-10 by team ruling R17 (§7.3): not built.** Under U2's sharp-bilinear
+    (R20) every zoom is uniform at the integer prescale, so there is no
+    `pxZoom`, no `pxCam` and no `snapZ` hook on `mountCameraCtl`; `cameraCtl`,
+    `introPhase` and their tests are untouched, and zoom stays continuous. The
+    camera reaches the px world through the overlay transform (R23). The pan
+    translation is rounded to whole device px at the final blit. The Node
+    tests below are replaced by the R23 composed-transform and `evenShake`
+    pins in `tests/pixel-render.test.mjs`. The text below is kept for the
+    record.
   - One pure helper, `pxZoom(z,k)`, quantizes against `K = k` when `k` is
     whole (policy (b)) and `K = round(k)` when it is fractional (policy (a)),
     and returns the level `n/K` nearest to `z`, clamped inward to
@@ -1186,7 +1200,7 @@ the user has played the probe.
 | **Owner (A)** | RE. The AD is responsible (R) for the probe art. |
 | **Inputs** | The G0 pick. The frozen `pxRamp` and master palette. The spike grids and the canonical MAKO. |
 | **Probe art (about 81 cells)** | MAKO full set, about 27: 3 facings × (idle 2 + walk 4), plus death 6, win 2, hurt 1. Walker, stationary and fast in full (3 facings × 2 walk + pose each, about 21). **shade, knight and burrow minimal: front idle + 1 step each (6)**, so VOID, CROWN and SAND are judged on drawn actors. The tile template + 4 crumble frames for JUNGLE, VOID and CROWN. Bomb 3 + overlays for 4 variant marks. Blast 3 pieces × 4 ages, in the G0 blast language. Anything still not drawn falls back to the procedural painter, and the G1 sheet lists every fallback actor by name. |
-| **Engineering** | §6.2. G1 is the one home of: the scale policy (`pxFit` + the sharp-bilinear px world canvas, User ruling U2), draw-site zoom and pan quantization (D3), the shake snap (D2), the hurt and lose one-shots (`src/render/pixel/oneshot.js`) and the delivery path below. |
+| **Engineering** | §6.2. G1 is the one home of: the scale policy (`pxFit` + the sharp-bilinear px world canvas, User ruling U2), draw-site zoom and pan quantization (D3; Superseded 2026-10-10 by team ruling R17: not built), the shake snap (D2), the hurt and lose one-shots (`src/render/pixel/oneshot.js`) and the delivery path below. |
 | **Delivery to the phone (owner RE)** | The probe lives on branch `px-probe`, Pages deploys only `main`, and `serve.js` binds `127.0.0.1` only (`serve.js:53`; AGENTS.md "Do not rebind serve.js"). Default path: publish the branch's static tree as a **private multi-file claude.ai Artifact** (static ES modules with relative paths, no build step). The artifact runs on its own origin, so the RE first checks that the SW registration fails soft there and that the page boots with empty storage. Fallback, if that fails: G1 is played on desktop only and the phone is covered by headless dpr-3 captures, said plainly on the G1 sheet. Rebinding `serve.js` to the LAN changes an AGENTS.md rule and needs the user's explicit approval; it is not the default. |
 | **Reaching rooms 7 and 8** | A fresh origin has no first FUSE/GRID CLEAR, and `flags.js` has no room parameter. On `px-probe` only: `?room=N` (1–8), honoured **only together with `?debug=1`**, parsed in `flags.js` and applied through `debughook.js`'s existing `loadLevel` path. No store write, no `src/core` change; dropped or re-ruled before any merge. |
 | **Outputs** | Branch `px-probe`; `tests/pixel-art.test.mjs` and `tests/pixel-render.test.mjs`; headed captures; the G1 sheet with the feel-pick clips (§4.4); `MEMORY.md` entry. |
@@ -1293,6 +1307,15 @@ A freeze is a logged ruling, not a failure.
 
 ### 6.1 Architecture
 
+**Superseded 2026-10-10 by team ruling R22–R25 (§7.3).** The px renderer is its own factory,
+`createPixelRenderer(pxCanvas, overlayCanvas, opts)` in
+`src/render/pixel/renderer.js`, modelled on `three/wrapper.js`, and is **not**
+a `createRenderer` branch: `renderer.js` gets no kind line, no branch, no event
+line and no shake exception, and stays byte-identical. The camera comes from
+the overlay ctx's `getTransform()` (R23); the import is static and the bake
+lazy (R24); `#px` has one owner (R25). The first bullet and the "one declared
+exception" below are kept for the record.
+
 - **Where px code lives.** All px code is in a new `src/render/pixel/` tree. It
   enters through a third kind `"px"` in `createRenderer`, the same seam iso
   uses:
@@ -1335,16 +1358,16 @@ A freeze is a logged ruling, not a failure.
 | `src/render/pixel/anim.js` | pure and DOM-free: `walkFrame`, `facingOf`, `bladeAgeFrame`, `unionAge`, `fuseFrame`, `animClock` |
 | `src/render/pixel/oneshot.js` | kind-scoped one-shot state (hurt and lose at G1; kill, brick and win added in W-INT), with a `reset()` hook |
 | `src/render/pixel/timing.js` | the timing source of truth |
-| `src/render/pixel/snap.js` | pure `pxZoom`, `pxCam` (`pxFit` lives in `src/app/fit.js`, because `src/app/` may not import `src/render/`) |
+| `src/render/pixel/snap.js` | pure `pxZoom`, `pxCam` (`pxFit` lives in `src/app/fit.js`, because `src/app/` may not import `src/render/`). **Superseded 2026-10-10 by team ruling R17/R20/R23:** ships `pxM`, `evenShake`, `finalMatrix`, `kOf`, `zOf`, `snapArt` and the `NATIVE_W/H`, `M_MAX` constants; no `pxZoom`/`pxCam`. `fit.js` ships `pxQuant`, `pxBox`, `snapOff` (the device-px snap of `#px`), not `pxFit`. |
 
 **Edits:**
 
 | File | Change |
 |---|---|
 | `src/app/flags.js` | the regex becomes `(3d\|iso\|px)`. The existing `?render=4d → null` pin still holds. Branch-only: `room` parsed under `debug` (§5 G1). |
-| `src/render/renderer.js` | the kind line, plus one branch and one event line, plus the kind-guarded shake snap on the shared line 51 (§3.2 D2) |
-| `src/render/cameraCtl.js` | an optional `snapZ` hook (identity by default) applied to `cam.zoom` before `clampAxis` / `zoomAnchor`, so pan bounds use the drawn zoom (§3.2 D3). 2D maths and `camera.test` unchanged. |
-| `src/main.js` | **≤ +2 lines** against the spike-start SHA. In place (+0): `effKind`'s iso line (`main.js:493`) becomes `if (urlKind === "iso" \|\| urlKind === "px") return urlKind;`, so `render3d` and the persisted `settings.r3d` are never touched (no AND into the boot expression, so `menuapp.js:703` cannot copy a forced `r3d:0` into memory and a later OPTIONS save cannot write it to disk); `getKind` and every `!== "3d"` check already treat px as 2D; the intro scale (`main.js:695`) and the `camTransform` call (`main.js:703`) take `pxZoom`/`pxCam` in place; `snapZ` rides the existing `mountCameraCtl` options. Counted (≤ +2): the `reset()` call on the px renderer inside the existing `if (k !== curKind)` block (`main.js:568`), and the fit setter call in `sizeCanvases`, if either cannot ride an existing line. |
+| `src/render/renderer.js` | the kind line, plus one branch and one event line, plus the kind-guarded shake snap on the shared line 51 (§3.2 D2). **Superseded 2026-10-10 by team ruling R22: not edited (byte-identical).** |
+| `src/render/cameraCtl.js` | an optional `snapZ` hook (identity by default) applied to `cam.zoom` before `clampAxis` / `zoomAnchor`, so pan bounds use the drawn zoom (§3.2 D3). 2D maths and `camera.test` unchanged. **Superseded 2026-10-10 by team ruling R17: not edited; no `snapZ` hook.** |
+| `src/main.js` | **≤ +2 lines** against the spike-start SHA. In place (+0): `effKind`'s iso line (`main.js:493`) becomes `if (urlKind === "iso" \|\| urlKind === "px") return urlKind;`, so `render3d` and the persisted `settings.r3d` are never touched (no AND into the boot expression, so `menuapp.js:703` cannot copy a forced `r3d:0` into memory and a later OPTIONS save cannot write it to disk); `getKind` and every `!== "3d"` check already treat px as 2D; the intro scale (`main.js:695`) and the `camTransform` call (`main.js:703`) take `pxZoom`/`pxCam` in place; `snapZ` rides the existing `mountCameraCtl` options. Counted (≤ +2): the `reset()` call on the px renderer inside the existing `if (k !== curKind)` block (`main.js:568`), and the fit setter call in `sizeCanvases`, if either cannot ride an existing line. **Superseded 2026-10-10 by team ruling R17/R23:** the intro scale and the `camTransform` call are unchanged (the px renderer reads them back from the overlay transform); main.js grew +1 line (`fe101c5` 792 → 793 by split-length, cap 799), routing kind px to `createPixelRenderer`. |
 | `src/app/fit.js` | pure `pxFit` beside `fitBox` (untouched). The current kind is kept **in the `mountFit` closure**, set through a setter that `sizeCanvases(kind)` calls; `fit` keeps its signature, because `mountFit` registers it directly as the `resize` and `orientationchange` handler and those calls pass an `Event` as the first argument. `mountFit` also exposes the current `k` for `pxZoom`. |
 | `src/pwa/shell.js` | SRC entries for the new files (`pwa.test.mjs:98-102` requires every `src/**/*.js`; its only ordering check is the daily/debughook adjacency). `CACHE_NAME` and the `sw.js` REV are bumped together to the next free `fusegrid-shell-vN`. |
 
@@ -1368,7 +1391,7 @@ probe behaviour.
   - `OPT_ROWS` stays at nine.
   - `_opt3dLocked` dims CAMERA and BRIGHTNESS in PIXEL for free.
 - **`main.js`** grows by at most +3 more lines (`app.pixel`, one import, one spare) over the HEAD at W-INT start, and never past the 799 cap.
-- **Draw sites, scale policy, `pxFit` and the hurt/lose one-shots** were done at G1 (their one home). W-INT only:
+- **Draw sites, scale policy, `pxFit` and the hurt/lose one-shots** were done at G1 (their one home). (Superseded 2026-10-10 by team ruling R17/R20: no draw-site quantization and no `pxFit`; the scale policy is the R20 blit and the `#px` device-px snap in `fit.js`, both shipped in the foundation.) W-INT only:
   - extends `oneshot.js` with kill, brick and win; its `reset()` stays the RENDER-flip detector (`main.js:568`), and it also resets on a run start and a new `world.grid` identity;
   - re-checks the d/p/l layouts, `body[data-lay]`, pad placement and the hit maps (`canvas.width / r.width`) on all 8 biomes;
   - snaps the canvas offset to whole device px.
@@ -1385,7 +1408,7 @@ The opening spec (user rulings 2026-10-09, committed at `3b17dbb`) is partly
 implemented: `2b3df91` landed O1, the audio-unlock fix; the title and the show
 are not yet built. It intersects this plan in three places:
 
-- **Intro zoom.** In px mode its 2D camera passes through `pxZoom`/`pxCam` at
+- **Intro zoom.** (Superseded 2026-10-10 by team ruling R17: zoom stays continuous in PIXEL, and the MAKO pop is the 3 materialize frames keyed off `ro.pop`: `<0.34` f0, `<0.67` f1, `<0.999` f2, then idle.) In px mode its 2D camera passes through `pxZoom`/`pxCam` at
   the same draw sites. The title's slow zoom drift around 1.12 can only move
   between coarse whole-`k·z` levels, so in PIXEL it becomes stepped or
   pan-only. The show's close-up steps between the quantized levels. P-intro is a
@@ -1406,10 +1429,10 @@ are not yet built. It intersects this plan in three places:
 |---|---|
 | `src/core/**`: sim, world, config, heat, pact, board, entities, rng. Replay baseline v6. | Empty diff. |
 | `src/ai/**` | Empty diff. |
-| CLASSIC 2D painters and the classic branch: `sprites.js` painters, `enemybody.js`, `icons.js`, the classic `else` branch of `renderer.js` | The call-log hash pin is unchanged. Declared exception: the kind-guarded shake snap on shared line 51 (§3.2 D2). |
+| CLASSIC 2D painters and the classic branch: `sprites.js` painters, `enemybody.js`, `icons.js`, the classic `else` branch of `renderer.js` | The call-log hash pin is unchanged. Declared exception: the kind-guarded shake snap on shared line 51 (§3.2 D2). **Superseded 2026-10-10 by team ruling R22: no exception; `renderer.js` is byte-identical and the hash is `97480c1c:22630` at `fe101c5` and after.** |
 | REAL 3D: `src/render/three/**`, `vendor/three.module.js`, the rig and lens, the light recipe, `SLOT_MESH`, fat-world 141 (142 with ghost), the draw budget ≤500, `tests/three.test.mjs` | Empty diff (W-INT allows only a RENDER-literal check in `three.test.mjs`). |
 | iso: `src/render/r3d/**` | Empty diff. |
-| `fitBox`, `FIT_RES`, `cameraCtl` and `introPhase` maths | Untouched for kind 2d. Declared px-guarded exception: `cameraCtl`'s optional `snapZ` hook (identity by default) so pan clamps see the drawn zoom (§3.2 D3); `camera.test` and `intro.test` stay green with no edit. |
+| `fitBox`, `FIT_RES`, `cameraCtl` and `introPhase` maths | Untouched for kind 2d. Declared px-guarded exception: `cameraCtl`'s optional `snapZ` hook (identity by default) so pan clamps see the drawn zoom (§3.2 D3) (Superseded 2026-10-10 by team ruling R17: not built, so `cameraCtl` has no exception at all); `camera.test` and `intro.test` stay green with no edit. |
 | The existing art gates: `items-art`, `enemies-art`, `pickups`, `ghost`, the seven-swatch and VOID ΔE pins | Unchanged. PIXEL gets its own tests. |
 | `nb.*` store keys | No new key is added. |
 
@@ -1418,7 +1441,7 @@ are not yet built. It intersects this plan in three places:
 | Test | Stage | What it proves |
 |---|---|---|
 | `tests/pixel-art.test.mjs` | G1 onward (hard) | A port of `spike/gates.mjs`: G-A through G-L on the shipped data. `pxRamp` frozen values. Regression fixtures fail. A **manifest** derived from `ENEMY` types, the 12 `POWER` kinds, 8 `BIOMES`, bomb variants, blast pieces and MAKO states, so a future foe, pickup or biome without px frames fails CI (the parity tax is made loud). |
-| `tests/pixel-render.test.mjs` | G1 onward | A `drawImage` recorder over the fat world that tracks the **composed** transform (translate/scale stack, including shake), so every entity blits at an even integer in canvas space, and `imageSmoothingEnabled===false`. The CLASSIC 2D call-log hash pin. `snap.js`: `pxZoom(1,k) === 1` for every `k`; `pxZoom` composed with `clampAxis` at `MIN_Z` and `MAX_Z` for odd, even and fractional `k`; `pxFit` per policy. `anim.js`: walk frames by distance at 30/60/120 Hz; idle within 6 ticks; diagonal hysteresis; blast ages cover `[0,ttl)` with no gap; the younger blade wins at a crossing; fuse tempo at f=0.85 for every heat; `animClock` frozen across 120 PAUSE ticks; one-shots cleared on a 2D → px → 2D → px flip through the cached renderer's `reset()`, a run start and a new grid; crumble ≤340 ms; REDUCE FLASH. The flags regex. No `src/core` import of `render/pixel`; no `src/app` import of `src/render`. |
+| `tests/pixel-render.test.mjs` | G1 onward | (Superseded 2026-10-10 by team ruling R17/R23: the `pxZoom`/`pxFit` items are replaced by the R23 composed-transform pins at dpr 2 and 3, `evenShake`, `pxM`, the `#px` fit snap and the hi sub-rect pins.) A `drawImage` recorder over the fat world that tracks the **composed** transform (translate/scale stack, including shake), so every entity blits at an even integer in canvas space, and `imageSmoothingEnabled===false`. The CLASSIC 2D call-log hash pin. `snap.js`: `pxZoom(1,k) === 1` for every `k`; `pxZoom` composed with `clampAxis` at `MIN_Z` and `MAX_Z` for odd, even and fractional `k`; `pxFit` per policy. `anim.js`: walk frames by distance at 30/60/120 Hz; idle within 6 ticks; diagonal hysteresis; blast ages cover `[0,ttl)` with no gap; the younger blade wins at a crossing; fuse tempo at f=0.85 for every heat; `animClock` frozen across 120 PAUSE ticks; one-shots cleared on a 2D → px → 2D → px flip through the cached renderer's `reset()`, a run start and a new grid; crumble ≤340 ms; REDUCE FLASH. The flags regex. No `src/core` import of `render/pixel`; no `src/app` import of `src/render`. |
 | Existing suite | every stage | Green with no edits at G1. Append-only pin edits at W-INT. |
 | `pwa.test.mjs` | G1, W-INT | New SRC entries present; `CACHE_NAME === REV`. |
 | `banned-name.test.mjs` | automatic | Scans every tracked text file, so `src/render/pixel/**` and this plan are covered. |
@@ -1509,11 +1532,27 @@ R = does the work, A = accountable (exactly one per row), C = consulted, I = inf
 
 | ID | Date | Gate | Artefact (path + sha256) | Options shown | User's verbatim words | Ruling | Kill/freeze status | Rounds used / cap | Next owner + due |
 |---|---|---|---|---|---|---|---|---|---|
+| R25 | 2026-10-10 | G1 / foundation | `index.html` `#px`, `src/app/fit.js`, `src/render/pixel/renderer.js` (`858d963`, `c0a3927`) | plan §6.1 box changes | team ruling (adviser panel: HoE, staff engineer, game designer, art designer), under the owner's 2026-10-10 GO: "the goal is to finish the job and not ask me anything at all" | **One owner for `#px`.** `<canvas id="px" hidden>` sits in `#stage` after `#gl`, before `#c`; CSS `#px{position:absolute;inset:0;width:100%;height:100%;z-index:0;image-rendering:auto}` plus `#px[hidden]{display:none}` (overrides the global `canvas{image-rendering:pixelated}`). `fit.js` sizes and snaps `#px` CSS (content box a whole number of device px and of 1/64 CSS px, origin on a device px) and hands the backing over on `data-bw`/`data-bh`; **the px renderer alone assigns the backing store**, `sizeCanvases` and main.js never do (the `#gl` stomp lesson). | none | — | RE |
+| R24 | 2026-10-10 | G1 / foundation | `src/main.js`, `src/render/pixel/atlas.js`, `tests/pixel-render.test.mjs` (`858d963`) | static vs dynamic import | team ruling (adviser panel: HoE, staff engineer, game designer, art designer), under the owner's 2026-10-10 GO: "the goal is to finish the job and not ask me anything at all" | **Static import, lazy bake.** main.js imports `createPixelRenderer` statically; the art is baked on first px renderer creation, never at app boot (about 11 ms in Chromium, pinned < 50 ms in Node). px JS ≤ 120 KB uncompressed, pinned by test; `vendor/three.module.js` and `render/three` are never imported on the px path. Open: about 68 KB of px JS is parsed on every CLASSIC / REAL 3D boot; revisit a dynamic import (as `three/load.js`) once the art sheets fill. | none | — | RE |
+| R23 | 2026-10-10 | G1 / foundation | `src/render/pixel/renderer.js`, `src/render/pixel/snap.js` `finalMatrix` (`ec139e1`, `c0a3927`) | plan §3.2 D3 draw-site quantization vs read-back | team ruling (adviser panel: HoE, staff engineer, game designer, art designer), under the owner's 2026-10-10 GO: "the goal is to finish the job and not ask me anything at all" | **The camera reaches the px world through the overlay transform.** main.js applies `introPhase` and `camTransform` to `renderer.ctx` for every kind but 3d; in px that is `#c`'s ctx. The px renderer reads `ovCtx.getTransform()` at render start and uses it for the final hi → `#px` blit (translation rounded to whole device px, shake through `evenShake`); the overlay keeps the same transform, as CLASSIC. Zero main.js lines, no `cameraCtl` change; Node stubs without `getTransform` use identity. `mountCameraCtl`'s `getKind` already maps px to 2d, so pan/zoom clamps are CLASSIC's. Pinned at dpr 2 and 3. | none | — | RE |
+| R22 | 2026-10-10 | G1 / foundation | `src/render/pixel/renderer.js` (`ec139e1`); `src/render/renderer.js` unchanged | plan §6.1/§6.2 `createRenderer` branch vs own factory | team ruling (adviser panel: HoE, staff engineer, game designer, art designer), under the owner's 2026-10-10 GO: "the goal is to finish the job and not ask me anything at all" | **The px renderer is its own factory**, `createPixelRenderer(pxCanvas, overlayCanvas, opts)`, modelled on `three/wrapper.js`, not a branch in `createRenderer`. `renderer.js` stays byte-identical, so the §3.2 D2 / §6.1 shared shake-line exception is gone (the even-px snap is `snap.js` `evenShake`). The world goes to `#px`; `#c` stays the 600×520 overlay, cleared each frame under identity; the overlay block (flash, `drawOverlay` on WIN/LOSE/PAUSE, HUD chips, `drawFxOverlay`, coach, coach2) is copied from the wrapper and drawn under main's transform. CLASSIC call-log hash `97480c1c:22630` unchanged. | none | — | RE |
+| R20 | 2026-10-10 | G1 / foundation | `src/render/pixel/snap.js` `pxM`, `src/render/pixel/renderer.js`, `tools/pixel/shot.mjs` D5 scan (`ec139e1`, `c0a3927`) | U2 (c) build; supersedes §3.2 D3 and §8's "(c) out" row | team ruling (adviser panel: HoE, staff engineer, game designer, art designer), under the owner's 2026-10-10 GO: "the goal is to finish the job and not ask me anything at all" | **Scale policy: U2's sharp-bilinear as a two-step blit.** (1) The world draws at native 300×260 (1 art px = 1 canvas px, integer positions, smoothing off). (2) Native → hi with **nearest** at the integer `M = clamp(ceil(k·z), 1, 8)` (floor only when k·z is whole or below 1). (3) Hi → `#px` once with smoothing on, `imageSmoothingQuality = "low"`, carrying fit, intro, camera and shake. `k` = device px per art px from fit.js's snapped `data-bw`/`data-bh`; `z` = the overlay transform's scale. The smooth step is a **downscale** at k·z/M in (0.5, 1], so the soft edge is ≤ 1 device px (D5), measured from CDP screenshots at laptop @1 (k 2.763, M 3), mac @2 (k 6.54, M 7), phone @3 (k 3.75, M 4) and @1.25 / 1.5 / 2.625. **Disclosed:** above the cap (k·z > 8, e.g. pinch above about 1.22 on a dpr-2 MacBook) the last step is a bilinear upscale and edges soften to about 2 device px at zoom 2.5. Fallback if the panel judges it unacceptable: policy (a). | none | — | RE |
+| R17 | 2026-10-10 | G1 / foundation | `src/render/pixel/anim.js` `popFrame`; no `pxZoom`/`snapZ` anywhere (`ec139e1`) | P-intro: stepped vs continuous zoom | team ruling (adviser panel: HoE, staff engineer, game designer, art designer), under the owner's 2026-10-10 GO: "the goal is to finish the job and not ask me anything at all" | **Continuous zoom, not stepped.** Sharp-bilinear makes any zoom uniform at the prescale (R20), so plan §3.2 D3's `pxZoom`, `pxCam` and the `cameraCtl` `snapZ` hook are **not built**; `cameraCtl`, `introPhase`, `camera.test` and `intro.test` are untouched. MAKO's show pop (`ro.pop`, easeOutBack) becomes the 3 materialize frames keyed off `pop`: `<0.34` f0, `<0.67` f1, `<0.999` f2, then idle — never a cell scale (D1). | none | — | RE |
 | P-0 | 2026-10-09 | plan | `docs/superpowers/plans/2026-10-09-pixel-art-spike-plan.md` (sha recorded at commit) | — | "for art spike let's create a plan document, run all your team of agents and get help from the art designers in order to have a cohesive and reliable and accountable plan for this new feature" | Plan written, reviewed once and committed; spike starts after the push (T0) | none | — | PQ (orchestrating session): record T0 and the spike-start SHA when the push lands. AD: S0 + S0b at T0, checkpoint T0+1.5 d, **G0 sheet due T0+3 working days** |
 | G0-R1 | | G0 | `spike/out/pick-sheet-r1-*.png`, `spike/sheet.html` | A/B/C/mix/none + P-back, P-blast (if drawn) | | | | 1/2 | |
 
 Rulings the user did not give in words are marked **"team ruling"**, and are
 listed in each gate report so the user can overturn them.
+
+The R-numbered rows are the adviser panel's 2026-10-10 ruling numbers (R17,
+R20–R25 replace plan text, so they are logged here in full and the replaced
+text carries a "Superseded 2026-10-10" note); they are not the §7.6 risk IDs.
+Open items carried by these rulings: the G-A…G-L art gates (§4.6/§6.5) port
+into `tests/pixel-art.test.mjs` **in the same commit as the first authored
+cell**; `src/app/renderkind.js`'s `bootRender` / `renderBits` / `renderVal`
+are wired at W-INT or removed; a dynamic import of the px tree (R24); keeping
+pinch sharp above the M cap by drawing only the visible sub-rect of native
+when z > 1 (R20).
 
 **Target dates (relative; the PQ converts them to calendar dates when T0 is
 recorded):**
@@ -1576,7 +1615,7 @@ recorded):**
 |---|---|---|---|---|---|
 | R1 | MAKO off-model or vetoed on taste. Three heroes have been vetoed; both prototypes failed. | High / High | One canonical MAKO before the split (S0b) with IoU ≥ 0.85; M0–M13 gates plus negative and positive fixtures; blind read; three directions; judged at in-game size; budget for at least one rejection | AD | any G-F red, or a G0-R1 rejection |
 | R2 | "Possible but not worth it". CLASSIC 2D already reads as clean tile art. | Med / High | CLASSIC 2D column on every row; a "none" option; the skeptic's worth-it line | PQ | user prefers CLASSIC |
-| R3 | Pixel swim from the fractional fit, intro zoom and pinch zoom | High / Med | D1–D5; P-scale decided (U2: sharp-bilinear, no snap loss), P-intro at G1; zoom quantization wired at G1 | RE | D5 fails |
+| R3 | Pixel swim from the fractional fit, intro zoom and pinch zoom | High / Med | D1–D5; P-scale decided (U2: sharp-bilinear, no snap loss), P-intro at G1; zoom quantization wired at G1 (Superseded 2026-10-10 by team ruling R17: no quantization; R20's ceil-M blit holds D5 at ≤1 device px below the M cap, measured on the composited page) | RE | D5 fails |
 | R4 | VOID and CROWN collisions invisible to the existing gates | Med / High | G-C, G-D and G-E on palette data; full VOID and CROWN rooms on the sheet | TE | gate red |
 | R5 | SAND legibility: brick–floor 5 ΔE; burrow on floor0 8.2 | High / Med | ENV-2 structure, T-edge, contact band, the burrow dark ring; SAND strip at the spike | ED | T-edge < 80% |
 | R6 | Brand proximity to the genre classic's 16-bit look | Med / High | B1–B8; BG attestation per sheet; banned-name scan; manual caption check (PNGs are not scanned) | BG | any B flag |
@@ -1619,7 +1658,7 @@ palette swaps.
 | Per-biome character re-palettes | Out. |
 | A bitmap font, pixel HUD and pixel GUIDE | Out unless Q4 says yes (W5). |
 | 16-px or 24-px grids and a logical-box change | Out. |
-| Sharp-bilinear (c) and its separate px canvas | Out unless K1-1 fires (§3.2 D4). |
+| Sharp-bilinear (c) and its separate px canvas | Out unless K1-1 fires (§3.2 D4). **Superseded: reinstated by User ruling U2 (2026-10-09) and built under team ruling R20/R25 (2026-10-10, §7.3).** |
 | Sim-driven APNG capture at the spike, new VOID/CROWN REAL 3D captures | Out. The live probe at G1 replaces the first; REAL 3D is not a candidate. |
 | A pixel iso path | Out. |
 | 4-frame foe walks, biome-distinct crumble | Out unless the user picks them at a wave kickoff. |

@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-10 — PIXEL rulings R17, R20–R25 made durable in the plan (§7.3 + Superseded notes)
+- The adviser panel's engineering rulings lived only in the git-ignored brief; now dated team-ruling rows in plan §7.3 with "Superseded 2026-10-10" notes at §3.2 D2/D3, §6.1, §6.2, §6.3/6.3a, §6.4, §6.5, §7.6 R3, §8: R17 no `pxZoom`/`snapZ` (continuous zoom, pop = 3 materialize frames); R20 sharp-bilinear `M = clamp(ceil(k·z),1,8)`, softer above the cap (disclosed); R22 own factory, `renderer.js` byte-identical, no shake-line exception; R23 camera via overlay `getTransform`; R24 static import + lazy bake; R25 single-owner `#px`. Open: G-A…G-L port lands with the first authored cell; renderkind `bootRender`/`renderBits`/`renderVal` wired at W-INT or removed; px dynamic import; sharp pinch above the cap.
+
 ## 2026-10-10 — PIXEL foundation review fixes: D5 on the composited page (no shell bump)
 - `pxM` is now ceil(k·z) (floor only when whole or <1): the plan/brief "ratio in [1,2) ⇒ soft edge ≤1" was wrong maths (an upscale spreads each edge over 2 device px); the smooth step is a downscale in (0.5,1], quality low. `fit.js` snaps `#px` (content-box, whole device px AND whole 1/64 CSS px, origin on a multiple of `pxQuant(dpr)` device px) and hands the backing over on `data-bw/bh`; `shot.mjs` measures D5 from a CDP screenshot: worst soft edge 1 at laptop@1 / mac@2 / phone@3 and @1.25 / 1.5 / 2.625 (fractional dpr may shift `#px` up to q/2 device px off `#c`; above M cap 8 the ratio is >1 again, disclosed). SHADE hem + pickup sparkle (OS.SPARKLE) now drawn. Flushed perf (swiftshader, relative): px 26/74/36 ms vs CLASSIC 161/172/146 ms laptop/mac/phone; absolute 4 ms budget still needs a GPU/headed run.
 
