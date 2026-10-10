@@ -1,4 +1,6 @@
 import {CFG} from "../core/config.js";
+import {POWER} from "../core/entities.js";
+import {drawIcon} from "./icons.js";
 
 /* FX layer: particles, screen shake, confetti. Renderer-local; built from
    world.events. All particle storage lives in this module singleton, so the
@@ -11,7 +13,7 @@ import {CFG} from "../core/config.js";
    SIMULTANEOUSLY would interleave particles/shake in one store; no such
    caller exists and none should be added without refactoring storage out. */
 const fx={shakeT:0,shakeX:0,shakeY:0,flashT:0,parts:[],
-  cmbN:0,cmbT:0,calS:"",calT:0,nmT:0,nmCd:0};
+  cmbN:0,cmbT:0,calS:"",calT:0,nmT:0,nmCd:0,lbl:[],pv:null,bk:null,pu:{b:0,r:0,l:0}};
 let tag=null, tagRng=null;
 /* Settings damping (nb.settings.v1). Applied INSIDE the two getters so both
    render paths and both call sites are covered without touching either draw
@@ -32,6 +34,7 @@ export function initFx(){
 }
 function clearR2(){
   fx.cmbN=0; fx.cmbT=0; fx.calS=""; fx.calT=0; fx.nmT=0; fx.nmCd=0;
+  fx.lbl=[]; fx.pv=null; fx.bk=null; fx.pu={b:0,r:0,l:0};
 }
 export function getShake(){ return {x:fx.shakeX*shakeK, y:fx.shakeY*shakeK}; }
 export function getFlash(){ return fx.flashT*flashK; }
@@ -120,6 +123,7 @@ export function feedFx(world, dt){
   if(flashK>=1&&fx.nmCd<=0&&hasBoom(ev)&&nearMissOf(world,ev)){
     fx.nmT=0.18; fx.nmCd=0.60;
   }
+  feedPickup(world, ev, d);
 }
 function hasBoom(ev){
   for(let i=0;i<ev.length;i++) if(ev[i]&&ev[i].t==="boom") return true;
@@ -260,4 +264,182 @@ export function drawFxOverlay(c){
     c.globalAlpha=1;
     c.restore();
   }
+}
+
+/* Pickup feedback (owner ruling 2026-10-10, research A + B). One floating
+   label per `power` event, built in feedFx from the drained batch, so it runs
+   on the same PLAY-only clock (PAUSE freezes it) and dies with clearR2 on a
+   world change. The text is the value AFTER the pickup, never "+1": applyPower
+   has already run by the time the batch reaches the renderer. Names come from
+   POWER[].name — no second copy. The pulse is a 600 ms outline fade on the
+   FLAME / BOMB chip or the heart row when that number changes; the first feed
+   after a wipe only seeds the baseline, so a room change never pulses.
+   drawPickupFx paints in overlay space through an optional proj(bx,by,h)
+   (REAL 3D passes the live camera projection, CLASSIC 2D and PIXEL pass
+   nothing: overlay space is board space there) and paints nothing at all
+   while no label or pulse is live, so every idle call log is unchanged. */
+const PDEF={};
+for(const d of POWER) PDEF[d.t]=d;
+const BKIND={line:1,power:1,pierce:1};
+export const LBL=Object.freeze({life:0.9,rise:22,riseT:0.6,fade:0.35,merge:0.25,near:1.5,max:3,step:20,top:46,pulse:0.6,lift:0,subH:16,subY:17,subDn:25});
+export function pickupLabel(kind, p, prev){
+  const d=PDEF[kind];
+  if(!d) return null;
+  const q=p||{}, cap=(v,m)=>(v>=m?[d.name,"MAX"]:[d.name+" "+(v|0),""]);
+  let s=d.name, m="", sub="";
+  if(kind==="fire") [s,m]=cap(q.range|0,CFG.MAX_RANGE);
+  else if(kind==="bomb") [s,m]=cap(q.bombs|0,CFG.MAX_BOMBS);
+  else if(kind==="speed") [s,m]=(q.speed||0)>=CFG.MAX_SPEED?[d.name,"MAX"]:[d.name+" UP",""];
+  else if(kind==="heart") s="+1 LIFE";
+  else if(BKIND[kind]){
+    s=d.name+" BOMB";
+    if(BKIND[prev]&&prev!==kind) sub="replaces "+PDEF[prev].name;
+  }
+  return {k:kind,s,m,sub,col:d.col};
+}
+export const labelText=(l)=>(l.m?l.s+" "+l.m:l.s);
+function addLabel(e, L){
+  const tx=Math.floor(e.x/CFG.TILE), ty=Math.floor(e.y/CFG.TILE);
+  const o=fx.lbl.find((l)=>l.k===L.k);
+  if(o){ Object.assign(o,L); o.tx=tx; o.ty=ty; o.t=0; o.sup=false; return; }
+  let st=0, sb=false;
+  for(const l of fx.lbl)
+    if(l.t<LBL.merge&&Math.hypot(l.tx-tx,l.ty-ty)<=LBL.near){ st=Math.max(st,l.st+1); sb=sb||!!l.sub; }
+  fx.lbl.push(Object.assign({tx,ty,t:0,st,sb,sup:false},L));
+  while(fx.lbl.length>LBL.max){
+    let i=0;
+    for(let j=1;j<fx.lbl.length;j++) if(fx.lbl[j].t>fx.lbl[i].t) i=j;
+    fx.lbl.splice(i,1);
+  }
+}
+function feedPickup(world, ev, d){
+  const p=world.players&&world.players[0];
+  if(fx.lbl.length){ let j=0; for(const l of fx.lbl){ l.t+=d; if(l.t<LBL.life) fx.lbl[j++]=l; } fx.lbl.length=j; }
+  let prev=fx.bk;
+  for(let i=0;i<ev.length;i++){
+    const e=ev[i];
+    if(!e||e.t!=="power") continue;
+    const L=pickupLabel(e.kind,p,prev);
+    if(!L) continue;
+    addLabel(e,L);
+    if(BKIND[e.kind]) prev=e.kind;
+  }
+  fx.bk=p?p.bombKind||"normal":null;
+  const u=fx.pu;
+  u.b=Math.max(0,u.b-d); u.r=Math.max(0,u.r-d); u.l=Math.max(0,u.l-d);
+  const b=p?p.bombs|0:0, r=p?p.range|0:0, lv=world.lives|0, v=fx.pv;
+  if(!v){ fx.pv={b,r,l:lv}; return; }
+  if(b!==v.b) u.b=LBL.pulse;
+  if(r!==v.r) u.r=LBL.pulse;
+  if(lv!==v.l) u.l=LBL.pulse;
+  v.b=b; v.r=r; v.l=lv;
+}
+export function getLabels(){ return fx.lbl; }
+export function getPulse(){ return {b:fx.pu.b,r:fx.pu.r,l:fx.pu.l}; }
+const CHAR=10.8, BW0=CFG.COLS*CFG.TILE;
+const ease=(t)=>1-Math.pow(1-Math.min(1,Math.max(0,t)),3);
+/* PURE layout over one label: x is the left edge of icon+word, y the text
+   middle, a the alpha. The y46 test uses the FULL rise, so a label never
+   flips sides mid-animation; below the tile it drifts DOWN, away from the
+   tile. The rise scales with the projected tile height (k, 1 in board space)
+   so a far 3D row is not left a row and a half behind. x centres on the
+   mid of the near and far edge, which is the tile centre in every look. An
+   above-side label that meets the combo callout hops over it while that
+   stays clear of y46, else (and for a below-side one) it drops under it.
+   cal is the live combo callout {s,w} or null, cw the live coach v2 panel
+   width (0 when shut), l.tw a measured word width, bw the overlay width (608
+   on the iso canvas; the callout centres on it, the coach panel on 300). A
+   label is 20 px tall, 36 with its "replaces X" sub-line (dn is how far it
+   reaches below its text middle): a stacked label above the tile adds its
+   OWN sub height, one below adds the sub of the label it stacks on (l.sb).
+   Callout and coach panel are one obstacle list: an above-side label hops
+   over every band it meets while that stays clear of y46, else it drops
+   under them. drawPickupFx latches any overlap it still finds (an iso
+   diagonal, two rise phases) into l.st, so a label only ever steps further
+   from its tile and never snaps back. Known per-look difference: a row-1
+   pickup drops below its tile in CLASSIC 2D and PIXEL, but REAL 3D's far rim
+   projects its top clear of y46, so there it stays above. */
+export function labelBox(l, proj, still, cal, bw, cw){
+  const T=CFG.TILE, cx=(l.tx+0.5)*T, BW=bw||BW0;
+  const top=proj?proj(cx,l.ty*T,LBL.lift):{x:cx,y:l.ty*T};
+  const bot=proj?proj(cx,(l.ty+1)*T,0):{x:cx,y:(l.ty+1)*T};
+  const R=LBL.rise*Math.min(1,Math.max(0.5,(bot.y-top.y)/T));
+  const dn=l.sub?LBL.subDn:9, st=l.st*LBL.step, exA=l.st>0&&l.sub?LBL.subH:0;
+  const below=top.y-12-(still?0:R)-st-exA-9<LBL.top;
+  const off=(still?0:R*ease(l.t/LBL.riseT))+st+(below?(l.st>0&&l.sb?LBL.subH:0):exA);
+  const w=18+(l.tw>0?l.tw:labelText(l).length*CHAR);
+  let y=below?bot.y+12+off:top.y-12-off;
+  const x=Math.round(Math.min(BW-4-w,Math.max(4,(top.x+bot.x)/2-w/2)));
+  const ob=[];
+  if(cal&&cal.s){ const k=(cal.w>0?cal.w:cal.s.length*15.6)+8; ob.push([96,BW/2-k/2,BW/2+k/2]); }
+  if(cw>0) ob.push([130,BW0/2-cw/2,BW0/2+cw/2]);
+  if(ob.length){
+    const hit=(v)=>ob.find((q)=>v-11<q[0]+13&&v+dn+2>q[0]-13&&x<q[2]&&x+w>q[1]);
+    let q=hit(y);
+    if(q){
+      let ya=y;
+      for(let i=0;i<3&&!below&&(q=hit(ya));i++) ya=q[0]-13-4-dn-st;
+      if(!below&&!hit(ya)&&ya-9>=LBL.top) y=ya;
+      else for(let i=0;i<3&&(q=hit(y));i++) y=q[0]+13+4+9+st;
+    }
+  }
+  const rem=LBL.life-l.t;
+  return {x,y:Math.round(y),w,dn,a:rem<LBL.fade?Math.max(0,rem/LBL.fade):1,below};
+}
+const PULSE_BOX={b:[140,10,76,30],r:[224,10,82,30]};
+export function coachKind(c2){ return c2&&c2.a>0&&c2.k||null; }
+const mw=(c,s)=>{ const m=c.measureText?c.measureText(s):null; return m&&m.width>0?m.width:0; };
+export function drawPickupFx(c, o){
+  const u=fx.pu;
+  if(!fx.lbl.length&&!(u.b>0||u.r>0||u.l>0)) return;
+  const ico=o&&o.ico, proj=o&&o.proj, bw=o&&o.bw, ck=coachKind(o&&o.coach);
+  const cw=o&&o.coach&&o.coach.a>0&&o.coach.s?String(o.coach.s).length*7.2+24:0;
+  c.save();
+  if(u.b>0||u.r>0||u.l>0){
+    for(const k of ["b","r","l"]){
+      if(!(u[k]>0)) continue;
+      let bx;
+      if(k==="l"){ const n=Math.min(6,fx.pv?fx.pv.l:0); if(!n) continue;
+        let hw=(n-1)*19+22;
+        if(fx.pv.l>6){ c.font="900 12px ui-monospace,monospace"; const s="+"+(fx.pv.l-6); hw=Math.min(126,125+(mw(c,s)||s.length*7.2)); }
+        bx=[5,13,hw,24]; }
+      else bx=PULSE_BOX[k];
+      c.globalAlpha=u[k]/LBL.pulse;
+      c.lineWidth=4; c.strokeStyle="#0a0d14";
+      c.strokeRect(bx[0]-2,bx[1]-2,bx[2]+4,bx[3]+4);
+      c.lineWidth=2; c.strokeStyle=k==="b"?"#ff5d73":k==="r"?"#ff8a3c":"#ff3b5c";
+      c.strokeRect(bx[0]-2,bx[1]-2,bx[2]+4,bx[3]+4);
+    }
+    c.globalAlpha=1;
+  }
+  const still=flashK<1||shakeK<=0;
+  let cal=null;
+  if(fx.calT>0&&fx.calS){ c.font="900 26px ui-monospace,monospace"; cal={s:fx.calS,w:mw(c,fx.calS)}; }
+  c.textBaseline="middle"; c.lineJoin="round";
+  const put=[];
+  for(const l of fx.lbl){
+    if(ck&&l.k===ck) l.sup=true;
+    if(l.sup) continue;
+    c.font="900 18px ui-monospace,monospace"; l.tw=mw(c,labelText(l));
+    let b=labelBox(l,proj,still,cal,bw,cw);
+    if(!(b.a>0)) continue;
+    for(let i=0;i<LBL.max&&put.some((q)=>b.y-10<q.y+q.dn+1&&q.y-10<b.y+b.dn+1&&b.x<q.x+q.w&&b.x+b.w>q.x);i++){
+      l.st++; b=labelBox(l,proj,still,cal,bw,cw);
+    }
+    put.push(b);
+    c.globalAlpha=b.a*0.9; c.fillStyle="#3b4868"; c.strokeStyle="#0a0d14"; c.lineWidth=2;
+    c.beginPath(); c.arc(b.x+7,b.y,10,0,Math.PI*2); c.fill(); c.stroke();
+    c.globalAlpha=b.a;
+    if(ico) ico(c,l.k,l.col,b.x+7,b.y);
+    else { c.save(); c.translate(b.x+7,b.y); c.scale(14/24,14/24); drawIcon(c,l.k,l.col,0); c.restore(); }
+    c.textAlign="left"; c.font="900 18px ui-monospace,monospace";
+    c.lineWidth=4; c.strokeStyle="#0a0d14";
+    c.strokeText(l.s,b.x+18,b.y); c.fillStyle="#eef3ff"; c.fillText(l.s,b.x+18,b.y);
+    if(l.m){ const mx=b.x+18+(mw(c,l.s+" ")||(l.s.length+1)*CHAR);
+      c.strokeText(l.m,mx,b.y); c.fillStyle="#9fb3d8"; c.fillText(l.m,mx,b.y); }
+    if(l.sub){ c.textAlign="center"; c.font="900 13px ui-monospace,monospace"; c.lineWidth=3;
+      c.strokeText(l.sub,b.x+b.w/2,b.y+LBL.subY); c.fillStyle="#9fb3d8"; c.fillText(l.sub,b.x+b.w/2,b.y+LBL.subY); }
+  }
+  c.globalAlpha=1;
+  c.restore();
 }

@@ -729,7 +729,7 @@ export function createGame(canvas, opts = {}) {
                 coachOpen(coachSeen, coachT, coachPlanted)
                   ? Math.max(0, 1 - coachT / COACH_DUR)
                   : 0,
-              coach2: world.state === "PLAY" ? { a: Math.max(0, 1 - coach2.t / COACH2_DUR), s: coachTip(coach2.kind) } : { a: 0, s: "" },
+              coach2: world.state === "PLAY" ? { a: Math.max(0, 1 - coach2.t / COACH2_DUR), s: coachTip(coach2.kind), k: coach2.kind } : { a: 0, s: "" },
               pause: { view: app.pauseView | 0, cursor: app.pauseCursor | 0 }, toast: toastOf(toast),
               time: { on: !!app.timeAttack, t: roomT, best: bestPrev }, ghost: ghostAt(ghost, world, roomT),
               run: { r: tally.r, k: tally.k, p: tally.p, t: runT, best: bestRun, fromStart: runFromStart, daily: dailyDate, tries: dailyRec.played, dbest: dailyRec.best, md: medalLine(tally.mn) },

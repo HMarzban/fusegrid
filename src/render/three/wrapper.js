@@ -17,11 +17,22 @@ import {introCam} from "./flythrough.js";
 import {createParticles} from "./particles.js";
 import {buildAtlas} from "./textures.js";
 import {drawHudChips, drawOverlay, overlayBox, drawCoach, drawCoach2} from "../scenes.js";
-import {onEvent, updateFx, getShake, getFlash, getFx, feedFx, drawFxOverlay, syncFx} from "../fx.js";
+import {onEvent, updateFx, getShake, getFlash, getFx, feedFx, drawFxOverlay, drawPickupFx, syncFx} from "../fx.js";
 
 const W=CFG.COLS*CFG.TILE, H=CFG.ROWS*CFG.TILE;
 const noop=()=>{};
 export const DPR_MAX=2;                     // spec §9.9
+/* Board px (bx,by) at world height h -> overlay px through the LIVE camera,
+   re-read every frame (the wheel dolly and shake move it). Pure over the
+   camera; refreshes matrixWorld itself, since stub mode never runs
+   gl.render, unless held (the pickup labels refresh once per frame and then
+   project every box through the held matrix). */
+const PV=new THREE.Vector3();
+export function projBoard(camera,bx,by,h=0,held){
+  if(!held)camera.updateMatrixWorld();
+  PV.set(bx-W/2,h,by-H/2).project(camera);
+  return {x:(PV.x+1)*W/2,y:(1-PV.y)*H/2};
+}
 
 function makeOverlayCtx(canvas){
   if(canvas&&canvas.getContext)
@@ -39,6 +50,7 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
   const ovCtx=makeOverlayCtx(overlayCanvas);
   const audio=opts.audio||null;
   const rig=opts.rig||createRig();
+  const proj=(bx,by,h)=>projBoard(camera,bx,by,h,1);
 
   /* GL init guarded three ways: absent canvas (headless), context probe that
      is not a real object (recording-proxy test stubs return functions), and
@@ -170,6 +182,7 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
         drawOverlay(ovCtx,world,B.w,B.h,B.cx,B.cy,o&&o.pause,o&&o.time,o&&o.run,o&&o.toast); }
       if(o&&o.hud===true)drawHudChips(ovCtx,world,o&&o.time);
       if(o&&o.hud===true&&world.state==="PLAY")drawFxOverlay(ovCtx);
+      if(o&&o.hud===true&&world.state==="PLAY"){camera.updateMatrixWorld();drawPickupFx(ovCtx,{coach:o.coach2,proj});}
       if(o&&o.hud===true)drawCoach(ovCtx,(o&&o.coach)||0);
       if(o&&o.hud===true)drawCoach2(ovCtx,(o&&o.coach2&&o.coach2.a)||0,(o&&o.coach2&&o.coach2.s)||"");
      }

@@ -4,9 +4,12 @@ import {
   bakeAtlas, drawGrid, drawBiomeBackground, drawBricks,
   drawItems, drawEnemies, drawPlayer, drawPlayerBody, drawBombs, drawBlades, drawGhost
 } from "./sprites.js";
-import {onEvent, updateFx, drawFx, drawFxOverlay, feedFx, getShake, getFlash, initFx, syncFx} from "./fx.js";
+import {onEvent, updateFx, drawFx, drawFxOverlay, drawPickupFx, feedFx, getShake, getFlash, initFx, syncFx} from "./fx.js";
 import {drawOverlay, overlayBox, drawHudChips, drawCoach, drawCoach2} from "./scenes.js";
 import {draw3dBackground, buildPainters, byDepth} from "./r3d/scene3d.js";
+import {PROJ, project} from "./r3d/camera.js";
+
+const isoProj=(bx,by,h)=>{ const q=project(bx/CFG.TILE,by/CFG.TILE); return {x:q.sx,y:q.sy-(h||0)}; };
 
 /* Renderer: owns a 2D context + view. Reads world, never mutates sim state.
    consumeEvents(world,dt) flushes world.events into fx/audio, returns this so
@@ -90,6 +93,7 @@ export function createRenderer(canvas, opts={}){
        drawn after restore so they never shake with the camera. */
     if(o&&o.hud===true) drawHudChips(ctx, world, o&&o.time);
     if(o&&o.hud===true&&world.state==="PLAY") drawFxOverlay(ctx);
+    if(o&&o.hud===true&&world.state==="PLAY") drawPickupFx(ctx, kind==="3d"?{coach:o.coach2,proj:isoProj,bw:PROJ.canvasW}:{coach:o.coach2});
     /* ghost coach (plan 4): same opt-in gate as the HUD chips; o.coach is
        the fade alpha precomputed in main.js from coachOpen(...) + COACH_DUR
        + world.state==="PLAY" (0 when closed), never re-derived here. */

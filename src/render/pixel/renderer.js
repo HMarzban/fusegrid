@@ -27,7 +27,7 @@
 import {CFG, biomeOf} from "../../core/config.js";
 import {sfxOf} from "../../audio/item.js";
 import {drawHudChips, drawOverlay, overlayBox, drawCoach, drawCoach2} from "../scenes.js";
-import {onEvent, updateFx, getShake as fxShake, getFlash, getFx, feedFx, drawFxOverlay, syncFx, initFx} from "../fx.js";
+import {onEvent, updateFx, getShake as fxShake, getFlash, getFx, feedFx, drawFxOverlay, drawPickupFx, syncFx, initFx} from "../fx.js";
 import {createAtlas} from "./atlas.js";
 import {setPixelArt, hudIcon} from "./hudart.js";
 import {createView, resetView, drawPixelWorld, trackGrid} from "./world.js";
@@ -180,6 +180,7 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
     }
     if (o && o.hud === true) drawHudChips(ovCtx, world, o && o.time, hudIco);
     if (o && o.hud === true && world.state === "PLAY") drawFxOverlay(ovCtx);
+    if (o && o.hud === true && world.state === "PLAY") drawPickupFx(ovCtx, {coach: o.coach2, ico: hudIco});
     if (o && o.hud === true) drawCoach(ovCtx, (o && o.coach) || 0);
     if (o && o.hud === true) drawCoach2(ovCtx, (o && o.coach2 && o.coach2.a) || 0, (o && o.coach2 && o.coach2.s) || "");
   }
