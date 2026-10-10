@@ -28,7 +28,7 @@ const PENDING = {
   tiles: [],
   bomb: [],
   blast: [],
-  items: "all",
+  items: [],
   fx: [],
 };
 
