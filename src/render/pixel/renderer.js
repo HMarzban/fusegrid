@@ -13,17 +13,29 @@
    The smooth step is a downscale at k*z/M in (0.5,1] below the M cap, so the
    soft edge is at most 1 device px. The #px backing comes from fit.js
    (data-bw / data-bh, the device-px-snapped content box), so the browser
-   composites it 1:1; clientWidth x dpr is only the fallback. The hi canvas
-   only grows: a smaller M draws into its top-left sub-rect (cleared once on
-   the drop), and its last column and row are copied one px outward so the
-   smooth step samples the edge, never the cleared margin. Construction calls
+   composites it 1:1; clientWidth x dpr is only the fallback (fit's pxCap
+   only lowers that backing density, never the board's CSS size). A smaller
+   M draws into the hi canvas's top-left sub-rect (cleared once on the drop),
+   and its last column and row are copied one px outward so the smooth step
+   samples the edge, never the cleared margin; once M sits below hiCap-1 for
+   SHRINK_N renders the hi canvas is re-allocated at M (the intro zoom no
+   longer pins ~20 MB). #px is filled only in the 0-4 margin strips the
+   transformed hi rect leaves uncovered (the board itself is opaque); a skew,
+   a non-positive scale or a frame with no grid fills the whole backing.
+   setPerf(K) arms render-on-change: the board raster (drawPixelWorld + blit)
+   is skipped while its signature holds (world, grid, state, level, the anim
+   clock, events, live particles, the even shake, the overlay matrix, the
+   backing, pop, ghost, K.epoch), forced every FORCE_MS; events and the
+   overlay still run every frame. sleep() drops hi and #px to 1x1 (atlas
+   kept); the next raster regrows them. Construction calls
    initFx(), as the classic factory does. PAUSE freezes the whole board (R16):
    the anim clock stops, updateFx is skipped so particles hold still, and the
    shake and the flash wash read as zero until PLAY resumes them; a new grid
    straight out of PAUSE (RESTART, QUIT) drops that held shake and flash.
    Surface contract mirrors the wrapper: {canvas:#px, overlay:#c, ctx:overlay
-   2D ctx, render, consumeEvents, getShake, reset}. Node / no-canvas => stub
-   mode (overlay noop ctx, no world draw), so main's shell path never throws. */
+   2D ctx, render, consumeEvents, getShake, reset, setPerf, invalidate,
+   sleep}. Node / no-canvas => stub mode (overlay noop ctx, no world draw),
+   so main's shell path never throws. */
 import {CFG, biomeOf} from "../../core/config.js";
 import {sfxOf} from "../../audio/item.js";
 import {drawHudChips, drawOverlay, overlayBox, drawCoach, drawCoach2} from "../scenes.js";
@@ -38,6 +50,8 @@ import {NATIVE_W, NATIVE_H, evenShake, kOf, pxM, zOf, finalMatrix} from "./snap.
 const W = CFG.COLS * CFG.TILE, H = CFG.ROWS * CFG.TILE;
 const noop = () => {};
 const ID = Object.freeze({a: 1, b: 0, c: 0, d: 1, e: 0, f: 0}), STILL = Object.freeze({x: 0, y: 0});
+export const SHRINK_N = 120, FORCE_MS = 500;
+const EPS = 1e-6;
 
 function makeOverlayCtx(canvas) {
   if (canvas && canvas.getContext) return canvas.getContext("2d", {alpha: true});
@@ -81,14 +95,33 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
   const clock = newClock();
   const native = live ? mk(NATIVE_W, NATIVE_H) : null;
   const nctx = native ? native.getContext("2d") : null;
-  let hi = null, hctx = null, hiM = 0, hiCap = 0;
+  let hi = null, hctx = null, hiM = 0, hiCap = 0, shrinkN = 0;
   const pctx = live ? pxCanvas.getContext("2d", {alpha: false}) : null;
   const mat = [1, 0, 0, 1, 0, 0];
-  const stat = {k: 0, M: 0, z: 1, bw: 0, bh: 0, draws: 0, ms: 0};
-  const now = () => (typeof performance !== "undefined" ? performance.now() : 0);
+  const stat = {k: 0, M: 0, z: 1, bw: 0, bh: 0, draws: 0, ms: 0, rasters: 0, skips: 0, fills: 0};
+  const now = opts.now || (() => (typeof performance !== "undefined" ? performance.now() : 0));
   let lastGrid = null, lastWorld = null, wasPaused = false;
+  let armed = false, perf = null, ep, inv = true, lastR = -Infinity, BW = 0, BH = 0;
+  const sig = [];
 
-  function reset() { V.shots.reset(); resetView(V); clock.t = 0; clock.w = null; lastGrid = null; lastWorld = null; }
+  function reset() { V.shots.reset(); resetView(V); clock.t = 0; clock.w = null; lastGrid = null; lastWorld = null; inv = true; }
+  function setPerf(K) { armed = true; perf = K || perf; const e = K && K.epoch; if (e !== ep) { ep = e; inv = true; } }
+  function invalidate() { inv = true; }
+  function sleep() {
+    if (hi) { hi.width = 1; hi.height = 1; }
+    hiCap = 0; hiM = 0; shrinkN = 0; inv = true;
+    if (live) { pxCanvas.width = 1; pxCanvas.height = 1; }
+  }
+  function backing() {
+    const ds = pxCanvas.dataset, fw = ds && +ds.bw, fh = ds && +ds.bh, dpr = (typeof devicePixelRatio !== "undefined" && devicePixelRatio) || 1;
+    BW = fw > 0 ? fw : Math.max(1, Math.round((pxCanvas.clientWidth || W) * dpr));
+    BH = fh > 0 ? fh : Math.max(1, Math.round((pxCanvas.clientHeight || H) * dpr));
+  }
+  function changed(v) {
+    let d = false;
+    for (let i = 0; i < v.length; i++) if (sig[i] !== v[i]) { sig[i] = v[i]; d = true; }
+    return d;
+  }
 
   function consumeEvents(world, dt, playSfx = true) {
     syncFx(world);
@@ -103,27 +136,36 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
     if (world.state !== "PAUSE") updateFx(dt || CFG.STEP);
   }
 
-  function blitWorld(m, still) {
-    const dpr = (typeof devicePixelRatio !== "undefined" && devicePixelRatio) || 1;
-    const ds = pxCanvas.dataset, fw = ds && +ds.bw, fh = ds && +ds.bh;
-    const bw = fw > 0 ? fw : Math.max(1, Math.round((pxCanvas.clientWidth || W) * dpr)), bh = fh > 0 ? fh : Math.max(1, Math.round((pxCanvas.clientHeight || H) * dpr));
+  function fillBack(bw, bh, hw, hh, full) {
+    pctx.fillStyle = V.bg;
+    if (full || mat[1] || mat[2] || !(mat[0] > 0) || !(mat[3] > 0)) { pctx.fillRect(0, 0, bw, bh); stat.fills = 1; return; }
+    const x1 = mat[4] + mat[0] * hw, y1 = mat[5] + mat[3] * hh;
+    const l = Math.min(bw, Math.max(0, Math.ceil(mat[4]))), t = Math.min(bh, Math.max(0, Math.ceil(mat[5])));
+    const r = Math.max(l, Math.min(bw, x1 >= bw - EPS ? bw : Math.floor(x1))), b = Math.max(t, Math.min(bh, y1 >= bh - EPS ? bh : Math.floor(y1)));
+    let n = 0;
+    if (t > 0) { pctx.fillRect(0, 0, bw, t); n++; }
+    if (b < bh) { pctx.fillRect(0, b, bw, bh - b); n++; }
+    if (l > 0 && b > t) { pctx.fillRect(0, t, l, b - t); n++; }
+    if (r < bw && b > t) { pctx.fillRect(r, t, bw - r, b - t); n++; }
+    stat.fills = n;
+  }
+
+  function blitWorld(m, sx, sy, bw, bh, full) {
     if (pxCanvas.width !== bw) pxCanvas.width = bw;
     if (pxCanvas.height !== bh) pxCanvas.height = bh;
     const k = kOf(bw), z = zOf(m.a, m.b), M = pxM(k, z), hw = NATIVE_W * M, hh = NATIVE_H * M;
-    if (!hi || M > hiCap) {
+    if (!hi || M > hiCap || shrinkN >= SHRINK_N) {
       hi = hi || mk(hw, hh);
       hi.width = hw; hi.height = hh;
-      hctx = hi.getContext("2d"); hiCap = M;
+      hctx = hi.getContext("2d"); hiCap = M; shrinkN = 0;
     } else if (M < hiM) hctx.clearRect(0, 0, hi.width, hi.height);
     hiM = M;
     hctx.imageSmoothingEnabled = false;
     hctx.drawImage(native, 0, 0, hw, hh);
     if (M < hiCap) { hctx.drawImage(hi, hw - 1, 0, 1, hh, hw, 0, 1, hh); hctx.drawImage(hi, 0, hh - 1, hw + 1, 1, 0, hh, hw + 1, 1); }
-    const sh = still ? STILL : getShake();
-    finalMatrix(mat, bw, bh, m, evenShake(sh.x), evenShake(sh.y), M);
+    finalMatrix(mat, bw, bh, m, sx, sy, M);
     pctx.setTransform(1, 0, 0, 1, 0, 0);
-    pctx.fillStyle = V.bg;
-    pctx.fillRect(0, 0, bw, bh);
+    fillBack(bw, bh, hw, hh, full);
     pctx.imageSmoothingEnabled = true;
     pctx.imageSmoothingQuality = "low";
     pctx.setTransform(mat[0], mat[1], mat[2], mat[3], mat[4], mat[5]);
@@ -145,7 +187,7 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
 
   function render(world, dt, o) {
     if (!world) return;
-    const paused = world.state === "PAUSE";
+    const paused = world.state === "PAUSE", ev = world.events.length > 0;
     if (world !== lastWorld || world.grid !== lastGrid) { V.shots.reset(); resetView(V); if (wasPaused) initFx(); lastWorld = world; lastGrid = world.grid; }
     wasPaused = paused;
     animClock(clock, world);
@@ -160,11 +202,19 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
     const m = ovCtx.getTransform ? ovCtx.getTransform() : ID;
     if (ovCtx.setTransform) { ovCtx.save(); ovCtx.setTransform(1, 0, 0, 1, 0, 0); ovCtx.clearRect(0, 0, W, H); ovCtx.restore(); }
     if (nctx) {
-      const t1 = now();
-      nctx.imageSmoothingEnabled = false;
-      stat.draws = drawPixelWorld(nctx, world, V);
-      blitWorld(m, paused);
-      stat.ms = now() - t1;
+      const t1 = now(), sh = paused ? STILL : getShake(), sx = evenShake(sh.x), sy = evenShake(sh.y), g = o && o.ghost;
+      backing();
+      const bw = BW, bh = BH, M = pxM(kOf(bw), zOf(m.a, m.b));
+      shrinkN = hi && M < hiCap - 1 ? shrinkN + 1 : 0;
+      const d = changed([world, world.grid, world.state, world.level, clock.t, V.parts.length, sx, sy, m.a, m.b, m.c, m.d, m.e, m.f, bw, bh, V.pop, g ? g.x : null, g ? g.y : null]);
+      if (!armed || d || inv || ev || shrinkN >= SHRINK_N || (!paused && V.parts.length > 0) || (o && o.intro != null) || t1 - lastR >= FORCE_MS) {
+        const full = !world.grid || !stat.rasters;
+        inv = false; lastR = t1;
+        nctx.imageSmoothingEnabled = false;
+        stat.draws = drawPixelWorld(nctx, world, V);
+        blitWorld(m, sx, sy, bw, bh, full);
+        stat.ms = now() - t1; stat.rasters++;
+      } else stat.skips++;
     }
     const fl = paused ? 0 : getFlash();
     if (fl > 0) {
@@ -184,9 +234,11 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
     if (o && o.hud === true) drawCoach2(ovCtx, (o && o.coach2 && o.coach2.a) || 0, (o && o.coach2 && o.coach2.s) || "");
   }
 
-  const surface = {canvas: pxCanvas, overlay: overlayCanvas, ctx: ovCtx, render, consumeEvents, getShake, reset};
+  if (opts.perf) setPerf(opts.perf);
+  const surface = {canvas: pxCanvas, overlay: overlayCanvas, ctx: ovCtx, render, consumeEvents, getShake, reset, setPerf, invalidate, sleep};
   Object.defineProperty(surface, "_dbg", {enumerable: false, value: {
     get atlas() { return atlas; }, get view() { return V; }, get clock() { return clock; },
-    get stat() { return stat; }, get bakeMs() { return bakeMs; }, get native() { return native; }, get hi() { return hi; }}});
+    get stat() { return stat; }, get bakeMs() { return bakeMs; }, get native() { return native; }, get hi() { return hi; },
+    get hiCap() { return hiCap; }, get armed() { return armed; }, get perf() { return perf; }}});
   return surface;
 }
