@@ -64,12 +64,19 @@ not shell screens. Do not add them as `SCREEN` values.
   `src/app/attract.js` (demo world + `stepDemo`), `src/app/debughook.js`
   (`window.__GAME__`), `src/app/endkeys.js` (WIN/LOSE keys: Enter =
   Space through `Input.pulse()`, one fire tick and never a latch; C/B copy
-  plus the COPIED / COPY FAILED overlay note), `src/net/localpair.js` (`?net=local`),
+  plus the COPIED / COPY FAILED overlay note; STATS C uses the same toast,
+  painted in place of the STATS kicker, and `toastTick(toast,world,dt,app)`
+  ages it only on GAME WIN/LOSE and STATS, dropping it anywhere else),
+  `src/net/localpair.js` (`?net=local`),
   `src/render/shellview.js` (`drawShell` + the `kindSize`/`dims` logical box),
   `src/app/fit.js` (`mountFit`: stage scale per layout reserve `FIT_RES`, and
   `body[data-lay]` = `d` desktop / `p` touch portrait / `l` touch landscape —
   the ONE predicate `index.html`'s touch layout keys off, never a media
-  query; re-fits on `resize` and `orientationchange`).
+  query; re-fits on `resize` and `orientationchange`). Portrait (`p`) only:
+  pure `portraitGeo(W,H,cw,ch)` (`PORT_GEO`) centres the stage and docks a
+  grown pad (128–176) + bomb (9/16 of the pad) 24px above the bottom,
+  written as `--st/--tp/--tb/--tpt/--tbt` on `body.style`; the stage never
+  moves between INTRO/MENU and GAME, and `d` / `l` are untouched.
 - `src/core/` — deterministic simulation, no DOM, no browser globals.
   - `world.js` — `createWorld`, `loadLevel` (re-exported from `sim.js`).
   - `sim.js` — `step(world, dt, intents)`.
@@ -222,8 +229,13 @@ not shell screens. Do not add them as `SCREEN` values.
   `reset.js` (no store, wave 3): STATS `R` arms, a second `R` runs
   `clearCabinet` + `location.reload()`, any other key disarms (`_push` too).
   Touch (T1): `statsHit` maps a tap on the painted `R RESET` / `R AGAIN`
-  label to `KeyR` through `app.key`, so the two-press confirm is the same; an
-  off-label tap while armed disarms and stays on STATS.
+  label to `KeyR` and an idle tap on `C COPY MY STATS` to `KeyC`, both
+  through `input.onUiKey` (the keyboard's own path; a touch C tap fires on
+  its `pointerup`, since a touch `pointerdown` grants no clipboard
+  activation), so the two-press confirm
+  and the COPIED note are the same; an off-label tap while armed disarms and
+  stays on STATS (the armed foot line has no C token, so a tap there copies
+  nothing).
   CLEAR = highscores, bests, stats, daily, times, medals, plaques, ghost,
   pact, coach v1/v2, cabinet (12); KEEP = `nb.settings.v1`, `nb.pace.v1`.
   `nb.cabinet.v1` is still written on the first INTRO exit and no longer
@@ -253,7 +265,15 @@ not shell screens. Do not add them as `SCREEN` values.
   retune wander / still / chase / phase algorithms.
   `musicCue` uses `biomeOf(level).name`.
   Oscillator SFX stay direct-to-destination (layered voice + noise + filter,
-  never musicGain). Music is a track table: `AABB` per track, all nine B
+  never musicGain), and `voice()` / `noise()` DROP (never queue) any SFX
+  while `ctx.state !== "running"`, after nudging `resume()` on any state but
+  `closed` (iOS `interrupted` included) (2026-10-10).
+  `createAudio()` with no injected ctx calls `primeDevice()` once: a
+  throwaway AudioContext built and closed at boot pays the session's first
+  ~80 ms device bring-up before the title paints, so the press frame no
+  longer hitches; the game's own ctx is still born inside the gesture. A
+  harness counting every constructed ctx sees one `closed` one at boot.
+  Music is a track table: `AABB` per track, all nine B
   sections hand-authored (no identity B), one theme per biome. `setTrack` +
   `musicCue(screen,level)` from the shell; GAME/ATTRACT follow the room,
   everything else plays menu, INTRO included (ruling 2026-10-09): the show
@@ -337,6 +357,9 @@ Node v26, `"type": "module"`. No build step, no bundler.
   room 1 — no continue-credit. H4: a tap on ATTRACT starts an ordinary run even
   if the MENU cursor sat on DAILY. REAL 3D near border wall is a cutaway
   (`min(hWall, NEAR_H 22)`), chosen over see-through or leave-it.
+  2026-10-10 (lead ruling, owner may veto): every key but Escape/Backspace
+  leaves ATTRACT into an ordinary CORE run — R and M included (R never arms
+  reset or resets the camera there; M has no mute binding, so it only leaves).
 - **The challenge code carries a board, never a claim.** `?code=` is 12 chars
   (`F1` + seed + cfg + checksum), seed/heat/pact/pace only — **no score
   field**, and no `window.prompt` / DOM paste box (entry is through

@@ -45,12 +45,12 @@ Clear every enemy in the room to advance. Gold **WALL** never breaks; green **BR
 | P / Esc | Pause (RESUME / RESTART / OPTIONS / QUIT TO MENU); ↑↓ + Enter pick a row |
 | M *(paused)* | Quit to menu |
 | Space / Enter *(end screen)* | Next room, back to the menu after the finale, or a new run after GAME OVER |
-| C *(end screen or STATS)* | Copy your result or your stats as text (the end screen says COPIED, or COPY FAILED) |
+| C *(end screen or STATS)* | Copy your result or your stats as text (both say COPIED, or COPY FAILED) |
 | B *(end screen)* | Copy the board's challenge link (the end screen says BOARD LINK COPIED) |
 | T *(STATS)* | Open the MEDALS page |
 | R, R *(STATS)* | Reset my cabinet (two presses; any other key cancels) |
 
-On touch devices during a run, a virtual D-pad and bomb button sit off the board: below it in portrait, in the side gutters in landscape, with pause above. STATS's MEDALS and Reset labels are tappable. Power-ups marked with `*` in the in-game HOW TO need their pickup first. Everything the game remembers lives in your browser's local storage; there is no account, server, or leaderboard. See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
+On touch devices during a run, a virtual D-pad and bomb button sit off the board: docked low in the thumb zone in portrait (the board sits mid-screen), in the side gutters in landscape, with pause above. STATS's MEDALS, Copy and Reset labels are tappable. Power-ups marked with `*` in the in-game HOW TO need their pickup first. Everything the game remembers lives in your browser's local storage; there is no account, server, or leaderboard. See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
 
 ## Progression
 

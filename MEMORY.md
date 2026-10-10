@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-10 — Loose ends 5–10 by four parallel worktree agents (shell v176)
+- Portrait phone: `portraitGeo` centres the stage, docks a grown pad 176 / bomb 99 in the thumb band (candidate B of a contact sheet; C "stage high" is the owner-veto alternative; 200px top slack in GAME remains, emulation only, no real phone yet). STATS C shows COPIED / COPY FAILED and `C COPY MY STATS` is tappable (armed foot has no C token). R/M on ATTRACT now start a run like other keys (lead ruling). SFX drop on a non-running ctx (closes the 2026-10-09 "oscillators on a suspended ctx" note). Real-GPU check (headed Chrome, Metal M5 Max): every show phase <=17.8 ms cold/warm 2D/3D; the one hitch was the session's first `new AudioContext()` on the press frame (66–115 ms) -> `primeDevice()` throwaway ctx at boot fixes it; the cold 2D Graphite stall does not reproduce on Metal (was a SwiftShader artefact) -> disclosed, no warm pass. Notes `.superpowers/sdd/2026-10-10-loose/`.
+
 ## 2026-10-09 — PIXEL sprite look: research, plan, owner rulings (docs only, planning only)
 - Research team (5 lenses + skeptic): a pixel-art sprite look is possible with caveats — no technical blocker; art is the cost (~180–260 frames, 4–8 weeks gated by owner reviews) vs 7–11 engineering days; shortcuts (pixelating 3D / downsampling 2D) are illegible; recommended form is a third RENDER look, not replacing CLASSIC 2D. Plan committed: `docs/superpowers/plans/2026-10-09-pixel-art-spike-plan.md` (style bible, A BOLD / B CLEAN / C LIT directions on a 20-art-px grid, canonical MAKO first, gates G0–G3, RACI). Owner rulings: U1 judge on laptop + phone; U2 keep today's board size via sharp-bilinear (no integer-snap shrink); U3 PLANNING ONLY — nothing starts until the owner says so. A/B/C style illustration (not spike art) in `.superpowers/sdd/2026-10-09-pixel/abc-illustration.png`.
 

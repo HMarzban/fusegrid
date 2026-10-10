@@ -960,7 +960,9 @@ case "KeyR":
 - **R reaches `app.key` on STATS only.** The `KeyR` intercept (`:375`) becomes
   `if (code === "KeyR" && app.screen !== SCREEN.STATS) {`. This is line-neutral.
   R still resets the camera in GAME and is still swallowed everywhere else; in
-  particular it does **not** start a run from ATTRACT.
+  particular it does **not** start a run from ATTRACT. *(Superseded 2026-10-10:
+  R and M on ATTRACT now leave like any key into an ordinary CORE run; R still
+  never arms reset or resets the camera there.)*
 - **Every other key disarms.** A new first line of `onUiKey`:
   `if (code !== "KeyR") app.resetArm = false;` (+1). This also covers the keys
   `onUiKey` consumes before `app.key` (C, M) and those `app.key` ignores.
@@ -1023,7 +1025,8 @@ case "KeyR":
    - R + C + R: nothing cleared and the arm is up again. C copied as before.
    - R + M + R: nothing cleared.
    - R in GAME still resets the camera and never arms.
-   - R on ATTRACT stays swallowed (screen stays ATTRACT).
+   - R on ATTRACT stays swallowed (screen stays ATTRACT). *(Superseded
+     2026-10-10: R on ATTRACT starts an ordinary run, never arms or clears.)*
 5. **`menudraw`.** The idle foot and the three armed lines paint inside `S` at
    both plates, in `#ff5d73` when armed. Each of the four exact strings in
    §7.4 is ≤ 74 chars, i.e. `[...s].length*10*0.6 <= S.iw` at both plates.

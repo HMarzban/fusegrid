@@ -6,6 +6,23 @@ version number of its own; each entry is dated and names the PWA shell
 revision (`CACHE_NAME` in `src/pwa/shell.js`) that shipped it, since that is
 what makes an installed copy update.
 
+## shell v176 · 2026-10-10
+
+### Changed
+- **Better use of a portrait phone screen.** The board now sits in the
+  middle of the screen on the title, the opening and the menu, and during a
+  run the D-pad and bomb button are bigger and sit low, where your thumbs
+  are, instead of leaving an empty band at the bottom.
+
+### Fixed
+- **STATS says when it copied.** Pressing `C` on STATS now shows `COPIED`
+  (or `COPY FAILED`), and on touch you can tap `C COPY MY STATS` to copy.
+- `R` and `M` now leave the attract demo like every other key.
+- Menu sounds no longer pile up and play late if a key is pressed before
+  the browser has finished turning the audio on.
+- The first key press of the opening no longer stutters for a frame on a
+  fresh browser start.
+
 ## shell v175 · 2026-10-09
 
 ### Fixed
