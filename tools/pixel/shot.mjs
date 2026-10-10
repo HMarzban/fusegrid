@@ -94,6 +94,15 @@ export async function openPage(c, a, url) {
   return {S, ev, shot, key, errors};
 }
 
+/* D5: walk one #px device column at zoom 1; for every art-px edge whose two
+   art px differ, count the device px between the two art-px centres whose
+   colour is neither plateau (tolerance 3/channel). Pass: <= 1 per edge. */
+const D5 = `(()=>{const c=document.getElementById('px');if(!c||c.hidden)return null;const x=c.getContext('2d');const k=c.width/300;const col=Math.floor(30.5*k);
+ const d=x.getImageData(col,0,1,c.height).data;const at=(y)=>{const i=Math.max(0,Math.min(c.height-1,y))*4;return [d[i],d[i+1],d[i+2]];};
+ const eq=(a,b)=>Math.abs(a[0]-b[0])<=3&&Math.abs(a[1]-b[1])<=3&&Math.abs(a[2]-b[2])<=3;
+ let worst=0,edges=0,hist=[0,0,0,0];for(let j=1;j<260;j++){const ya=Math.floor((j-0.5)*k),yb=Math.floor((j+0.5)*k),A=at(ya),B=at(yb);if(eq(A,B))continue;edges++;
+  let n=0;for(let y=ya+1;y<yb;y++){const P=at(y);if(!eq(P,A)&&!eq(P,B))n++;}worst=Math.max(worst,n);hist[Math.min(3,n)]++;}
+ return {k:+k.toFixed(3),column:col,edges,worstSoftEdgePx:worst,hist};})()`;
 const STAT = `(()=>{const g=window.__GAME__,r=g.renderer,d=r&&r._dbg;const px=document.getElementById('px'),gl=document.getElementById('gl');
  return {state:g.state(),level:g.G.level,kind:d&&d.atlas?'px':(gl&&!gl.hidden?'3d':'2d'),pxHidden:px?px.hidden:null,glHidden:gl?gl.hidden:null,
  pxCss:px?[px.clientWidth,px.clientHeight]:null,pxBuf:px?[px.width,px.height]:null,stat:d&&d.stat?{...d.stat}:null,bakeMs:d&&d.bakeMs,
@@ -116,6 +125,17 @@ export async function run(a) {
     await P.ev("window.__GAME__.begin()"); await sleep(900); await snap("game");
     await P.ev("window.__GAME__.setKeys({move:{x:1,y:0}})"); await sleep(500); await P.ev("window.__GAME__.setKeys({move:{x:0,y:0},fire:true})"); await sleep(80); await P.ev("window.__GAME__.setKeys({fire:false})"); await sleep(400); await snap("bomb");
     for (const r of a.rooms) { if (r === 1) continue; await P.ev(`import('/src/core/sim.js').then(m=>{m.loadLevel(window.__GAME__.G,${r},true);window.__GAME__.G.state='PLAY';})`); await sleep(700); await snap("room" + r); }
+    if (a.render === "px") {
+      await P.ev(`Promise.all([import('/src/core/entities.js'),import('/src/core/config.js')]).then(([E,C])=>{const G=window.__GAME__.G;let i=0;for(const f of E.FOES)for(let y=1;y<12&&i<99;y++)for(let x=3;x<14;x++)if(G.grid[C.key(x,y)]===C.T.EMPTY&&(x*3+y*5+i)%9===0){G.enemies.push(E.spawnEnemy(f.t,x,y,G.level,null));i++;y=99;break;}})`);
+      const ms = []; for (let i = 0; i < 20; i++) { await sleep(50); ms.push(await P.ev("window.__GAME__.renderer._dbg.stat.ms")); }
+      ms.sort((x, y) => x - y); report.perf = {median: ms[10], p90: ms[18], max: ms[19], enemies: await P.ev("window.__GAME__.G.enemies.length"), bakeMs: await P.ev("window.__GAME__.renderer._dbg.bakeMs")};
+      report.d5 = await P.ev(D5);
+      for (const [n, z, sx, sy] of [["zoom25", 2.5, 600, 520], ["zoom06", 0.6, 300, 260]]) { await P.ev(`import('/src/render/cameraCtl.js').then(m=>{const c=window.__GAME__.cam;m.resetCamera(c);m.zoomAt(c,${z},${sx},${sy},600,520,'2d');})`); await snap(n); }
+      await P.ev("import('/src/render/cameraCtl.js').then(m=>m.resetCamera(window.__GAME__.cam))");
+    }
+    await P.ev(`(()=>{const G=window.__GAME__.G,p=G.players[0];G.lives=1;p.iFrames=0;p.shield=false;G.bombs.push({x:p.x,y:p.y,tx:Math.floor(p.x/40),ty:Math.floor(p.y/40),timer:0.05,radius:1,variant:'normal',dead:false});})()`);
+    for (let i = 0; i < 30 && (await P.ev("window.__GAME__.G.state")) !== "LOSE"; i++) await sleep(50);
+    await snap("lose");
     await P.ev("window.__pause&&window.__pause()"); await sleep(300); await snap("pause");
     await P.ev("window.__resume&&window.__resume();window.__GAME__.G.state='WIN'"); await sleep(300); await snap("win");
     report.errors = P.errors;

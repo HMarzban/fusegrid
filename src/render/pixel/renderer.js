@@ -69,7 +69,8 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
   let hi = null, hctx = null, hiM = 0;
   const pctx = live ? pxCanvas.getContext("2d", {alpha: false}) : null;
   const mat = [1, 0, 0, 1, 0, 0];
-  const stat = {k: 0, M: 0, z: 1, bw: 0, bh: 0, draws: 0};
+  const stat = {k: 0, M: 0, z: 1, bw: 0, bh: 0, draws: 0, ms: 0};
+  const now = () => (typeof performance !== "undefined" ? performance.now() : 0);
   let lastGrid = null, lastWorld = null;
 
   function reset() { V.shots.reset(); resetView(V); clock.t = 0; clock.w = null; lastGrid = null; lastWorld = null; }
@@ -112,6 +113,16 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
     stat.k = k; stat.M = M; stat.z = z; stat.bw = bw; stat.bh = bh;
   }
 
+  /* CLASSIC parity: WIN/LOSE confetti also lands OVER the veil, as whole
+     art px (even logical px), no alpha. */
+  function drawPartsOver(ps) {
+    for (let i = 0; i < ps.length; i++) {
+      const p = ps[i], s = Math.max(1, Math.round((p.size || 2) / 2));
+      ovCtx.fillStyle = p.color;
+      ovCtx.fillRect(2 * (Math.round(p.x / 2) - (s >> 1)), 2 * (Math.round(p.y / 2) - (s >> 1)), 2 * s, 2 * s);
+    }
+  }
+
   function render(world, dt, o) {
     if (!world) return;
     if (world !== lastWorld || world.grid !== lastGrid) { V.shots.reset(); resetView(V); lastWorld = world; lastGrid = world.grid; }
@@ -127,9 +138,11 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
     const m = ovCtx.getTransform ? ovCtx.getTransform() : ID;
     if (ovCtx.setTransform) { ovCtx.save(); ovCtx.setTransform(1, 0, 0, 1, 0, 0); ovCtx.clearRect(0, 0, W, H); ovCtx.restore(); }
     if (nctx) {
+      const t1 = now();
       nctx.imageSmoothingEnabled = false;
       stat.draws = drawPixelWorld(nctx, world, V);
       blitWorld(m);
+      stat.ms = now() - t1;
     }
     const fl = getFlash();
     if (fl > 0) {
@@ -141,6 +154,7 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
     if (world.state !== "PLAY") {
       const B = overlayBox("2d");
       drawOverlay(ovCtx, world, B.w, B.h, B.cx, B.cy, o && o.pause, o && o.time, o && o.run, o && o.toast);
+      if (world.state === "WIN" || world.state === "LOSE") drawPartsOver(V.parts);
     }
     if (o && o.hud === true) drawHudChips(ovCtx, world, o && o.time);
     if (o && o.hud === true && world.state === "PLAY") drawFxOverlay(ovCtx);
