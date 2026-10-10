@@ -695,6 +695,30 @@ function installAC(ac) {
   ac.state = "running";
   check("running ctx: unlock() returns true", a.unlock() === true);
 }
+// ---- SFX drop on a ctx that is not running (item 8: the first MENU nav key
+// whose resume() is still pending started uiMove on the frozen clock) ----
+{
+  const ac = mkAC();
+  ac.state = "suspended";
+  let nudges = 0;
+  ac.resume = () => (nudges++, new Promise(() => {})); // Chromium: pending, state unchanged
+  const a = createAudio({ ctx: ac });
+  a.unlock();
+  for (const n of ["uiMove", "uiSel", "uiBack", "uiTog", "uiDenied", "bomb", "item_fire", "foe_walker"]) a.play(n);
+  await new Promise((r) => setTimeout(r, 90));
+  check("suspended ctx: menu/game SFX start zero sources (dropped, incl. uiSel's deferred half)",
+    ac.starts.length === 0, ac.starts.map((s) => s.type).join());
+  check("suspended ctx: SFX still nudge resume()", nudges > 1, nudges);
+  ac.state = "interrupted";
+  a.play("uiMove");
+  check("interrupted ctx: SFX dropped too", ac.starts.length === 0, ac.starts.length);
+  ac.state = "running";
+  a.play("uiMove");
+  check("running ctx: uiMove starts its two oscillators", ac.starts.length === 2, ac.starts.length);
+  a.play("uiDenied");
+  check("running ctx: uiDenied starts voices + noise", ac.starts.length === 5 && ac.starts.some((s) => s.type === "noise"), ac.starts.length);
+  check("running ctx: SFX stay direct-to-destination", ac.starts.every((s) => sink(s.g) === ac.destination));
+}
 
 // ---- mute: single source of truth gates pump AND gain ----
 {

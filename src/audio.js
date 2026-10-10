@@ -98,11 +98,16 @@ export function createAudio(opts) {
     if (spec.q) f.Q.value = spec.q;
     return f;
   }
+  /* SFX on a ctx that is not running are DROPPED, never queued: resume() is
+     async, so the activating key's own SFX would start on the frozen clock
+     and land late or stacked. The resume() nudge stays: armUnlock disarms
+     for good once the ctx first runs, so this is the only re-resume after. */
   function voice(type, f0, f1, dur, vol, spec, when) {
     if (muted || sfxVol <= 0 || !ensure()) return;
     const c = ctx;
     try {
       if (c.state === "suspended") c.resume();
+      if (c.state !== "running") return;
       const t = c.currentTime + (when || 0);
       const o = c.createOscillator(),
         g = c.createGain();
@@ -188,6 +193,7 @@ export function createAudio(opts) {
     if (!buf || !c.createBufferSource) return;
     try {
       if (c.state === "suspended") c.resume();
+      if (c.state !== "running") return;
       const t = c.currentTime + (when || 0);
       const s = c.createBufferSource(),
         g = c.createGain();
