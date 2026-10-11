@@ -623,8 +623,14 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   against the storefront rule above; fix it in repo Settings (not in git).
 - Owner-pending, NOT built (research/design only, 2026-10-11): menu redesign
   variants A/B/C; story mode "FUSE/GRID: LOW TIDE"; naming (keep FUSE/GRID +
-  subtitle; FUSEBORN is the only clean rename); game bible v2 (new MAKO, sea /
-  mountain / wasteland / jungle worlds, themed foes, narration) — the owner's
-  Claude Design canvas is the game bible. Touch bugs found by the menu
+  subtitle; FUSEBORN is the only clean rename); game bible v2, COMPLETE as
+  design (new MAKO = fuse-fin shark-walker, crimson `#a3203a`, modelled in
+  Blender as a 2,936-tri 5-mesh game model + glb; six worlds W1 Mangrove Coast
+  / W2 Dry Bay / W3 Glacier Stair / W4 Salt Waste / W5 Held Sea / W6 QUILL's
+  Spire with themed foes and bosses MUDGE / RASP / TUSK / SIFT / HOLDFAST /
+  QUILL; NOOK's TIDE LOG narration; story-first cold open; THE CAMP / THE
+  CHART menus; 12 owner decisions D1-D12; sources in the git-ignored
+  `.superpowers/sdd/2026-10-11-bible/`) — the owner's Claude Design canvas is
+  the game bible, and nothing from it is built yet. Touch bugs found by the menu
   research, unfixed: GUIDE traps touch, LEVEL SELECT and HIGH SCORES heat tabs
   are not touch-usable, an off-row MENU tap starts a run.
