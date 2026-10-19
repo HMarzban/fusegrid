@@ -182,8 +182,10 @@ export function createMenuApp(opts = {}) {
       const ax = (input && input.input) || {};
       let dir = 0,
         axis = 0;
-      if (this.screen === SCREEN.MENU || this.screen === SCREEN.GUIDE)
-        dir = ax.up ? -1 : ax.down ? 1 : 0;
+      if (this.screen === SCREEN.MENU || this.screen === SCREEN.GUIDE) {
+        const g = this.screen === SCREEN.GUIDE; // GUIDE's doors sit side by side: ←/→ walk them too
+        dir = ax.up || (g && ax.left) ? -1 : ax.down || (g && ax.right) ? 1 : 0;
+      }
       else if (this.screen === SCREEN.LEVEL || this.screen === SCREEN.SETTINGS || this.screen === SCREEN.GRAPHICS) {
         if (ax.left || ax.right) {
           dir = ax.left ? -1 : 1;
@@ -316,7 +318,7 @@ export function createMenuApp(opts = {}) {
         this._taps[dir + ":0"] = true;
         return true;
       }
-      if (this.screen === SCREEN.GUIDE && !lat && this.move(dir, 0)) {
+      if (this.screen === SCREEN.GUIDE && this.move(dir, 0)) {
         this._taps[dir + ":0"] = true;
         return true;
       }

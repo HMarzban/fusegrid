@@ -1,9 +1,10 @@
 // PIXEL W5 (ruling R19): HUD item chips and GUIDE ITEMS / ENEMIES / HOW TO
 // show the atlas cells in PIXEL at integer logical scale (x1 chip, x2 GUIDE
 // when every cell on the page fits), text stays the shared vector font, and
-// CLASSIC 2D / REAL 3D / iso call logs stay byte-identical (HUD pinned from
-// HEAD f732450, before W5; GUIDE pages re-pinned at the 2026-10-19 menu
-// redesign, whose shared plate/head moved them — px art still never leaks).
+// CLASSIC 2D / REAL 3D / iso call logs never change with px art (HUD pinned
+// from HEAD f732450, before W5; GUIDE pages re-pinned at the 2026-10-19
+// ATLAS menu pages, keyboard and touch, with no px art registered — the
+// px-registered pass must hit the very same pins, so px art never leaks).
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -43,21 +44,23 @@ const HUDS = [[0, null], [3, {on: true, t: 12.3}], [8, null]];
 const PAGES = ["drawHowTo", "drawItemsHelp", "drawEnemiesHelp"], BOXES = [[600, 520], [600, 360]];
 const PIN = {
   hud0: "676af1c5:178", hud3: "ecac4c84:354", hud8: "924118c2:511",
-  drawHowTo520: "2b66b35b:438", drawItemsHelp520: "5ff090f1:1131", drawEnemiesHelp520: "5daf13a1:1119",
-  drawHowTo360: "7c4bf2f7:438", drawItemsHelp360: "29e4d2d6:1131", drawEnemiesHelp360: "5edecbc6:1092",
-  "shell.2d.HOWTO": "a565565a:440", "shell.2d.ITEMS": "67039446:1133", "shell.2d.ENEMIES": "624207d8:1121",
-  "shell.3d.HOWTO": "a565565a:440", "shell.3d.ITEMS": "67039446:1133", "shell.3d.ENEMIES": "624207d8:1121",
-  "shell.iso.HOWTO": "77c7557c:440", "shell.iso.ITEMS": "c7b84bd8:1133", "shell.iso.ENEMIES": "5e33f44a:1094",
+  drawHowTo520: "c790e5ef:457", drawItemsHelp520: "8a7f1cfd:1195", drawEnemiesHelp520: "1c590ad6:1149",
+  drawHowTo360: "e8621249:457", drawItemsHelp360: "b3039a60:1195", drawEnemiesHelp360: "b0a1000c:1149",
+  drawHowTo520T: "aa4c0369:457", drawItemsHelp520T: "2aa3e9c5:1195", drawEnemiesHelp520T: "5682c5e5:1149",
+  drawHowTo360T: "20b0935c:457", drawItemsHelp360T: "9e918ade:1195", drawEnemiesHelp360T: "46aa50d5:1149",
+  "shell.2d.HOWTO": "7b6440d6:459", "shell.2d.ITEMS": "4fc3c574:1197", "shell.2d.ENEMIES": "0cc384f9:1151",
+  "shell.3d.HOWTO": "7b6440d6:459", "shell.3d.ITEMS": "4fc3c574:1197", "shell.3d.ENEMIES": "0cc384f9:1151",
+  "shell.iso.HOWTO": "f81b9d7b:459", "shell.iso.ITEMS": "bc8afea6:1197", "shell.iso.ENEMIES": "9d742abb:1151",
 };
 const hud = (lv, tm, ico) => { const r = rec(); drawHudChips(r.c, HUDW(lv), tm, ico); return r; };
-const page = (f, w, h, kind) => { const r = rec(); md[f](r.c, md.layout(w, h), 1.25, kind); return r; };
+const page = (f, w, h, kind, touch) => { const r = rec(); md[f](r.c, md.layout(w, h), 1.25, kind, touch); return r; };
 const shell = (k, s) => { const r = rec(); drawShell(r.c, {screen: SCREEN[s], subT: 1.25}, {}, null, k, () => [], () => 0); return r; };
 function unchanged(tag) {
   const bad = [];
   for (const [lv, tm] of HUDS) if (H(hud(lv, tm).log) !== PIN["hud" + lv]) bad.push("hud" + lv);
-  for (const [w, h] of BOXES) for (const f of PAGES) for (const k of [undefined, "2d", "3d", "iso"]) if (H(page(f, w, h, k).log) !== PIN[f + h]) bad.push(f + h + ":" + k);
+  for (const [w, h] of BOXES) for (const f of PAGES) for (const t of [false, true]) for (const k of [undefined, "2d", "3d", "iso"]) if (H(page(f, w, h, k, t).log) !== PIN[f + h + (t ? "T" : "")]) bad.push(f + h + (t ? "T" : "") + ":" + k);
   for (const k of ["2d", "3d", "iso"]) for (const s of ["HOWTO", "ITEMS", "ENEMIES"]) if (H(shell(k, s).log) !== PIN["shell." + k + "." + s]) bad.push(k + "." + s);
-  check("CLASSIC 2D / REAL 3D / iso HUD chips and GUIDE pages byte-identical to pre-W5 (" + tag + ")", bad.length === 0, bad.join());
+  check("CLASSIC 2D / REAL 3D / iso HUD chips (pre-W5) and GUIDE pages (ATLAS, keyboard + touch) match their pins (" + tag + ")", bad.length === 0, bad.join());
 }
 const text = (log) => log.filter((l) => /^(fillText|font=|textAlign=|textBaseline=)/.test(l)).join("\n");
 const draws = (r) => r.ops.filter((o) => o[0] === "drawImage");
@@ -142,7 +145,7 @@ unchanged("px art registered: it never leaks into another kind");
   check("scenes.js stays atlas-free (painter arrives as a parameter)", !/pixel\//.test(src("src/render/scenes.js")));
   check("hudart.js imports nothing (no bake at boot, no atlas pull)", !/^import /m.test(src("src/render/pixel/hudart.js")));
   check("hudart.js is in the PWA precache", PRECACHE.includes("./src/render/pixel/hudart.js"));
-  check("shellview passes kind to the three GUIDE pages", ["drawHowTo", "drawItemsHelp", "drawEnemiesHelp"].every((f) => new RegExp("menudraw\\." + f + "\\(c, L, app\\.subT, kind\\)").test(src("src/render/shellview.js"))));
+  check("shellview passes kind (and the touch layout) to the three GUIDE pages", ["drawHowTo", "drawItemsHelp", "drawEnemiesHelp"].every((f) => new RegExp("menudraw\\." + f + "\\(c, L, app\\.subT, kind, touchLay\\(canvas\\)\\)").test(src("src/render/shellview.js"))));
 }
 
 console.log("\n  PIXEL HUD/GUIDE RESULT: " + pass + " PASS / " + fail + " FAIL");

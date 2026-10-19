@@ -195,7 +195,7 @@ export function statsNotes(v, daily, today) {
   out.push(
     "SINCE " + (s.a.first || "—") + " · LAST " + (s.a.last || "—") + " · " +
     s.a.sessions + (s.a.sessions === 1 ? " SESSION" : " SESSIONS") +
-    " · BESTS: NO PACT · NORM",
+    " · BESTS: NO MODES · NORM",
   );
   return out;
 }

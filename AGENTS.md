@@ -64,9 +64,11 @@ data-lay p/l) caps pitch at `PAUSE_ROW_H` 70 / hero 76 / width 380, a keyboard
 screen at the compact `PAUSE_ROW_D` 44 / hero 54 / width 340 (owner: "too
 fat"); `pauseHit` takes the same flag. RESUME hero, RESTART/QUIT danger,
 kicker = room · biome · heat · pace, cue `ESC · P RESUME · … · M QUIT`.
-Touch rule: a tap on a row = Enter on it; MENU and PAUSE bands span the full
-stage width; off the rows a root list (MENU, PAUSE list) does nothing and a
-page (OPTIONS, GRAPHICS, GUIDE, LEVEL SELECT, SCORES) backs out. `guideHit`,
+Touch rule: a tap on a row = Enter on it; keyboard MENU and PAUSE bands span
+the full stage width (the touch MENU hub's tiles own half of each gutter);
+off the rows a root list (MENU, PAUSE list) does nothing; on a page
+(OPTIONS, GRAPHICS, GUIDE, LEVEL SELECT, SCORES) a miss ON the plate is inert
+(hit -2) and only a tap OFF the plate backs out (-1). `guideHit`,
 `levelHit` / `levelGeom` and `scoresHit` share the geometry their pages
 draw. Hints follow `data-lay` (keys vs taps; LEVEL SELECT's touch foot is
 `LEVEL_TAP`). Touch MENU (polish 2026-10-19): the stage is width-bound
@@ -79,7 +81,35 @@ at the bottom edge; `menuList` / `menuGeom` / `menuHit` take the same
 untouched (INTRO and SCORES read its logo fields). LEVEL / HIGH SCORES chip
 taps are ONE call through the cued key path (`app.move` with a delta,
 `app.adjustPace`), so a change plays one `uiMove` and the chip already set is
-silent; `[ ]` pace keys cue too. `SCREEN.STATS = 12` is **appended** (the `SCREEN` enum's own rule in
+silent; `[ ]` pace keys cue too.
+
+Menu pages (owner pick 2026-10-19 round 2, direction B "ATLAS", over the
+CONSOLE PANEL skin; owner: "why all buttons are soo fat", "make the select
+lever more intractive", "put hooks … to see what we deliver"): pick on the
+left, see it on the right. Every plate HUGS its content through `pageBox`
+(band keyboard 73..492 / touch 8..512; pitches are caps, scale only in the
+iso 608x352 guard; `shellBox` is gone, no page divides its band by a row
+count). Pitches: list 26 keyboard / 52 touch, OPTIONS + GRAPHICS 28, hero
+40 / 70. LEVEL SELECT (`levelGeom(L, unlocked, touch)` = draw + tap): a 4x2
+grid of room tiles (biome schematic, finale pip, ✓ when a time is saved at
+this heat/pace/modes; 6–8 dim + locked until the first CLEAR, a locked tap
+returns `{k:"lock"}` and only flashes CLEAR ROOM 5 TO OPEN, never sets
+`app.level`) beside a ROOM CARD pane (world name, schematic, YOU'LL MEET from
+`heatRoster` with FOES names ×n, BEST time or NO TIME YET via the `getCab`
+getter, `LIVES · FUSE · SCORE ×n` from `heatProfile`/`applyPact`, pulsing on a
+heat change); then HEAT | PACE segments, MODES (IRON BARE THIN SHRINK + TIME,
+help says what each does), and a START hero. No start-on-miss: only START or
+Enter starts. MENU keyboard: a 272 list beside a preview pane that follows
+the cursor (one mini-page per row); MENU touch: a tile HUB in the pinned
+reading order (PLAY bar, LEVEL SELECT | DAILY, OPTIONS | GUIDE, HIGH SCORES |
+STATS, SOURCE 50 logical = 32 CSS px) — the one MENU idiom whose bands are
+tiles, not full-width rows; ↑↓ stays the linear walk. One vocabulary: MODES
+(never PACT) on screens and in copy; pact.js and `nb.pact.v1` keep their
+names. Hooks never lie: a score teaser reads only played runs
+(`highscores.isPlaceholder` drops the seeded table; main hands `getCab().top`),
+and DAILY says YOUR TRIES TODAY. Read-only pages (HOW TO / ITEMS / ENEMIES /
+MEDALS) back out on any tap; STATS taps its foot labels. PLAY's tag names the
+world (`FACTORY · MAX · HARD`), the same words as START. `SCREEN.STATS = 12` is **appended** (the `SCREEN` enum's own rule in
 `menuapp.js`: appended, never inserted). `SCREEN.TROPHIES = 13` (the MEDALS page) is
 appended too: opened from STATS by `T` or a tap on its `T MEDALS` label, backs out to STATS,
 never a MENU row. `SCREEN.GRAPHICS = 14` is appended too: opened by the

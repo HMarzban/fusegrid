@@ -41,6 +41,14 @@ rendering separate means a visual change can't change the game's rules, though
 GPU output and visual readability still need checking in a real browser. The
 shell state machine owns the menus; pause, win and loss belong to the world.
 
+The menu pages follow one layout idea, **pick on the left, see it on the
+right**. LEVEL SELECT is a grid of room tiles beside a room card that shows
+the world, the foes you'll meet, your best time and what the heat changes.
+On a keyboard the main menu is a list beside a preview that follows the
+cursor; on a phone it's a hub of tiles. Every panel is only as tall as its
+content, and any teaser built from your record (a top score, a best time)
+reads only runs you played, never placeholders.
+
 Every menu is drawn by one small kit in
 [`menudraw.js`](../src/render/menudraw.js): one panel (`plate`), one title
 (`head`), one hint line (`foot`) and one row painter (`paintRow`), so the

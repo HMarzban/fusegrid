@@ -365,7 +365,7 @@ const TODAY = "2026-09-07";
   check(
     "with no daily record there is ONE note and it is the session line",
     n0.length === 1 &&
-      n0[0] === "SINCE 2026-08-30 · LAST 2026-09-07 · 42 SESSIONS · BESTS: NO PACT · NORM",
+      n0[0] === "SINCE 2026-08-30 · LAST 2026-09-07 · 42 SESSIONS · BESTS: NO MODES · NORM",
     JSON.stringify(n0),
   );
   const n1 = statsNotes(v, { date: TODAY, best: 1840, played: 3 }, TODAY);
@@ -400,7 +400,7 @@ const TODAY = "2026-09-07";
   );
   check(
     "Minor-3: a single session reads 1 SESSION, never 1 SESSIONS",
-    n1s[1] === "SINCE " + TODAY + " · LAST " + TODAY + " · 1 SESSION · BESTS: NO PACT · NORM",
+    n1s[1] === "SINCE " + TODAY + " · LAST " + TODAY + " · 1 SESSION · BESTS: NO MODES · NORM",
     n1s[1],
   );
   const nPlural = statsNotes(v1, { date: TODAY, best: 0, played: 2 }, TODAY);

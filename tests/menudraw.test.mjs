@@ -338,13 +338,21 @@ function check(name, cond, detail) {
       );
     }
     {
+      /* LOCKED (no first CLEAR): no MODES cap, no mode chip, no help line and
+         no mode rects in the shared geometry. The room card's own "NO TIME
+         YET" best-time line is not the rail. */
       const { c, texts } = rec();
       md.drawLevelSelect(c, 3, L, 1, 1);
-      const all = texts.map((t) => t.s).join("|");
+      const all = texts.map((t) => t.s);
+      const G = md.levelGeom(L, false);
       check(
-        `level select LOCKED stays byte-identical at ${W}x${H} — no MODES rail`,
-        !/IRON|TIME|MODES/.test(all),
-        all,
+        `level select LOCKED draws no MODES rail at ${W}x${H}`,
+        !all.includes("MODES") && !all.includes("1–5") &&
+          !all.some((s) => /^\d (IRON|BARE|THIN|SHRINK|TIME)$/.test(s)) &&
+          !all.includes(md.modeHelp(0, false)) && !all.includes(md.modeHelp(0, true)) &&
+          G.mode.length === 0 && G.modeCap === null && G.help === null &&
+          all.includes("5 ROOMS · 3 LOCKED"),
+        all.join("|"),
       );
     }
     {
@@ -352,7 +360,8 @@ function check(name, cond, detail) {
       md.drawLevelSelect(c, 3, L, 1, 1, 0, true, 0, true);
       const all = texts.map((t) => t.s);
       const p = plateOf(rects);
-      const gloss = texts.find((t) => t.s.indexOf("TIME ATTACK") >= 0);
+      const G = md.levelGeom(L, true);
+      const gloss = texts.find((t) => t.s === md.modeHelp(0, true));
       const time = texts.find((t) => t.s === "5 TIME");
       check(
         `level select UNLOCKED shows the five MODES chips at ${W}x${H}`,
@@ -361,25 +370,47 @@ function check(name, cond, detail) {
           all.includes("3 THIN") &&
           all.includes("4 SHRINK") &&
           all.includes("5 TIME") &&
-          !all.includes("1 LAST"),
+          !all.includes("1 LAST") &&
+          G.mode.length === 5,
         all.join("|"),
       );
       check(
-        `modes gloss + head + foot copy at ${W}x${H}`,
+        `modes help + head + cap copy at ${W}x${H}`,
         !!gloss &&
-          gloss.s === "5 TIME ATTACK · stopwatch + per-room best" &&
-          all.some((s) => s.indexOf("ROOM + HEAT + PACE + MODES") >= 0) &&
-          all.some((s) => s.indexOf("1–5 MODES") >= 0),
+          gloss.s === "TIME stopwatch + per-room best" &&
+          all.includes("8 ROOMS · MODES OPEN") &&
+          all.includes("MODES") && all.includes("1–5") &&
+          all.includes("ENTER START · ESC BACK"),
         all.join("|"),
       );
+      const inR = (r, t) => t.x >= r.x && t.x <= r.x + r.w && t.y >= r.y && t.y <= r.y + r.h;
       check(
-        `modes rail + gloss stay inside the plate at ${W}x${H}`,
+        `modes chips + help stay inside the plate, between the mode row and START at ${W}x${H}`,
         !!p && !!time && !!gloss &&
+          inR(G.mode[4], time) &&
           time.y > p.y + 8 &&
           gloss.y > time.y &&
-          gloss.y < p.y + p.h - 8,
-        JSON.stringify({ py: p && p.y, ph: p && p.h, time, gloss }),
+          gloss.y >= G.help.y && gloss.y <= G.help.y + G.help.h + 1 &&
+          gloss.y < G.start.y &&
+          G.start.y + G.start.h < p.y + p.h - 8 &&
+          G.mode.every((r) => r.x >= p.x && r.x + r.w <= p.x + p.w),
+        JSON.stringify({ py: p && p.y, ph: p && p.h, time, gloss, help: G.help, start: G.start }),
       );
+    }
+    /* levelHit is levelGeom's own table: every painted rect's centre maps to
+       its target (rooms past the cap read lock), a blank spot on the plate is
+       inert and only a tap off the plate backs out. */
+    for (const U of [false, true]) for (const T of [false, true]) {
+      const G = md.levelGeom(L, U, T), S = G.S, ctr = (r) => [r.x + r.w / 2, r.y + r.h / 2];
+      const hit = (r) => md.levelHit(...ctr(r), L, U, T);
+      const bad = [];
+      G.room.forEach((r, i) => { const h = hit(r); if (h.k !== (i < G.cap ? "room" : "lock") || h.i !== i) bad.push("room" + i); });
+      for (const k of ["heat", "pace", "mode"]) G[k].forEach((r, i) => { const h = hit(r); if (h.k !== k || h.i !== i) bad.push(k + i); });
+      if (hit(G.start).k !== "start") bad.push("start");
+      if (md.levelHit(S.x + 4, S.y + 4, L, U, T).k !== "none") bad.push("blank");
+      if (md.levelHit(S.x - 2, S.y + S.h / 2, L, U, T).k !== "back" || md.levelHit(S.mid, S.y + S.h + 2, L, U, T).k !== "back") bad.push("back");
+      if (G.mode.length !== (U ? 5 : 0) || G.cap !== (U ? 8 : 5)) bad.push("shape");
+      check(`levelHit round-trips levelGeom (${U ? "unlocked" : "locked"}${T ? " touch" : ""}) at ${W}x${H}`, bad.length === 0, bad.join());
     }
     {
       const { c, texts, rects } = rec();
@@ -548,33 +579,59 @@ function check(name, cond, detail) {
       const note = texts.find((t) => t.s.indexOf("BOMB SPACE") >= 0);
       const T2 = rec();
       md.drawSettings(T2.c, L, 1, { row: 4, vals: { mus: 100, sfx: 100, snd: 1, r3d: 1, cam: 2, bri: 130, shk: 1, flx: 0 }, r3d: true, togT: -1, rev: "v99", touch: true });
-      const touch = T2.texts.find((t) => t.s.indexOf("TAP PAUSE PILL") >= 0);
+      const gT = md.settingsGeom(L, true), pT = plateOf(T2.rects);
+      const ftT = T2.texts.find((t) => t.s === md.FOOT_TAP);
       const ft = texts.find((t) => t.s.indexOf("ENTER CYCLE") >= 0);
       const kick = texts.find((t) => t.s === "BUILD v99");
+      /* Keyboard: ten rows, the one CONTROLS line under them, the foot. Touch
+         drops the CONTROLS line (no key chords on a phone; the rows take the
+         room) and names the tap model in the foot. */
       check(
-        `options plate: ten rows, the device's one controls line and the foot all inside at ${W}x${H}`,
+        `options plate: ten rows, the keyboard's one controls line and the foot all inside at ${W}x${H}`,
         !!p &&
           !!first &&
           !!lastRow &&
           !!note &&
-          !!touch &&
           !!ft &&
           !!kick &&
           first.y > p.y + 8 &&
           lastRow.y < note.y &&
           note.y < ft.y &&
-          !texts.some((t) => t.s.indexOf("TAP PAUSE PILL") >= 0) &&
-          !T2.texts.some((t) => t.s.indexOf("BOMB SPACE") >= 0) &&
-          Math.abs(touch.y - note.y) < 0.01 &&
-          ft.y < p.y + p.h - 8,
-        JSON.stringify({ p, first, lastRow, note, touch, ft }),
+          ft.y < p.y + p.h - 8 &&
+          Math.abs(note.y - (g.noteY + 4)) < 0.01,
+        JSON.stringify({ p, first, lastRow, note, ft }),
       );
       check(
-        `options row pitch matches the spec budget at ${W}x${H}`,
-        Math.abs(g.rowH - (H === 520 ? 30 : 173.68 / 10)) < 0.01 &&
-          Math.abs(g.y0 - (H === 520 ? 121.2 : 94.32)) < 0.01 &&
-          Math.abs(g.noteY - (H === 520 ? 446 : 278)) < 0.01,
-        [g.y0, g.rowH, g.noteY].join("/"),
+        `options touch: no controls line, the tap foot inside the touch plate at ${W}x${H}`,
+        !!pT && !!ftT &&
+          !T2.texts.some((t) => t.s.indexOf("BOMB SPACE") >= 0 || t.s.indexOf("TAP PAUSE PILL") >= 0) &&
+          !T2.texts.some((t) => t.s === md.FOOT_KEYS) &&
+          !texts.some((t) => t.s === md.FOOT_TAP) &&
+          ftT.y > T2.texts.find((t) => t.s === "RESET DEFAULTS").y &&
+          ftT.y < pT.y + pT.h - 8 &&
+          Math.abs(pT.x - gT.S.x) <= 1 && Math.abs(pT.y - gT.S.y) <= 1 && Math.abs(pT.h - gT.S.h) <= 1, // plate() snaps to even px
+        JSON.stringify({ pT, ftT }),
+      );
+      /* The pitch is a cap (28 keyboard / 41 touch, ATLAS "not fat"); a short
+         box scales it by the plate's f. Rows start under the head (S.by), the
+         note line sits 6 under the last row, and the drawn labels sit on the
+         geometry's row centres (draw -> settingsHit share one table). */
+      const pitchOk = (G, pitch, B) =>
+        Math.abs(G.rowH - pitch * G.S.f) < 1e-9 &&
+        (H === 520 ? G.S.f === 1 : G.S.f > 0.5 && G.S.f < 1) &&
+        G.y0 === G.S.by &&
+        Math.abs(G.noteY - (G.y0 + md.OPT_N * G.rowH + 6)) < 1e-9 &&
+        G.S.y >= B.top - 0.5 && G.S.y + G.S.h <= B.bot + 0.5;
+      const firstT = T2.texts.find((t) => t.s === "MUSIC"), lastT = T2.texts.find((t) => t.s === "RESET DEFAULTS");
+      check(
+        `options row pitch: 28 keyboard / 41 touch, scaled only in a short box, plate inside its band at ${W}x${H}`,
+        pitchOk(g, 28, md.bandOf(L, false)) &&
+          pitchOk(gT, 41, md.bandOf(L, true)) &&
+          Math.abs(first.y - (g.y0 + g.rowH / 2)) < 0.01 &&
+          Math.abs(lastRow.y - (g.y0 + 9.5 * g.rowH)) < 0.01 &&
+          Math.abs(firstT.y - (gT.y0 + gT.rowH / 2)) < 0.01 &&
+          Math.abs(lastT.y - (gT.y0 + 9.5 * gT.rowH)) < 0.01,
+        [g.y0, g.rowH, g.noteY, g.S.f, gT.y0, gT.rowH, gT.S.f].join("/"),
       );
       check(
         `3D rows show a real value in REAL 3D at ${W}x${H}`,
@@ -632,28 +689,28 @@ function check(name, cond, detail) {
         ],
         notes: [
           "DAILY 2026-09-07 · NOT PLAYED YET",
-          "SINCE 2026-08-30 · LAST 2026-09-07 · 42 SESSIONS · BESTS: NO PACT · NORM",
+          "SINCE 2026-08-30 · LAST 2026-09-07 · 42 SESSIONS · BESTS: NO MODES · NORM",
         ],
       });
       const all = texts.map((t) => t.s);
       const p = plateOf(rects);
+      /* ATLAS: the BESTS caption replaced the old rule as the line that
+         separates the seven lifetime tiles (+ MEDALS n/8) from the three
+         per-heat best tiles (R12). It must sit strictly below every lifetime
+         label and above every best value, and in the same place for an empty
+         row list (geometry, never data, places it; never up in the head). */
+      const CAP = "BESTS · NO MODES · NORM";
+      const capOf = (tx) => tx.find((t) => t.s === CAP);
       check(
-        // Minor-6: the rule (moveTo/lineTo, previously unrecorded) must sit
-        // strictly between the DAYS PLAYED (row 7) and CORE BEST (row 8)
-        // baselines — that is what separates the seven lifetime counters from
-        // the three per-heat bests (R12).
-        `the lifetime/bests rule sits strictly between DAYS PLAYED and CORE BEST at ${W}x${H}`,
+        `the BESTS caption sits strictly between the lifetime tiles and CORE BEST at ${W}x${H}`,
         (() => {
-          const daysY = (texts.find((t) => t.s === "DAYS PLAYED") || {}).y;
-          const coreY = (texts.find((t) => t.s === "CORE BEST") || {}).y;
-          const ruleY = lines.length ? lines[lines.length - 1].y0 : undefined;
-          return (
-            daysY != null && coreY != null && ruleY != null &&
-            daysY < ruleY && ruleY < coreY
-          );
+          const cap = capOf(texts), core = texts.find((t) => t.s === "1840 · R5");
+          const life = ["RUNS", "ROOMS CLEARED", "DEATHS", "KILLS", "PICKUPS", "PLAY TIME", "DAYS PLAYED", "MEDALS"].map((n) => texts.find((t) => t.s === n));
+          return !!cap && !!core && life.every((t) => t && t.y < cap.y) && cap.y < core.y &&
+            cap.y < (texts.find((t) => t.s === "CORE BEST") || {}).y;
         })(),
         JSON.stringify({
-          lines,
+          cap: capOf(texts),
           daysY: (texts.find((t) => t.s === "DAYS PLAYED") || {}).y,
           coreY: (texts.find((t) => t.s === "CORE BEST") || {}).y,
         }),
@@ -661,11 +718,12 @@ function check(name, cond, detail) {
       {
         const e = rec();
         md.drawStats(e.c, L, 0.4, { rows: [], notes: [] });
+        const S = md.statsGeom(L).S;
         check(
-          `R12: an empty row list draws the rule where ten rows would, never up in the head at ${W}x${H}`,
-          e.lines.length > 0 && lines.length > 0 &&
-            e.lines[e.lines.length - 1].y0 === lines[lines.length - 1].y0,
-          JSON.stringify({ empty: e.lines, ten: lines }),
+          `R12: an empty row list draws the BESTS caption where ten rows would, never up in the head at ${W}x${H}`,
+          !!capOf(e.texts) && !!capOf(texts) && capOf(e.texts).y === capOf(texts).y && capOf(texts).y > S.by &&
+            e.texts.some((t) => t.s === "0/8"),
+          JSON.stringify({ empty: capOf(e.texts), ten: capOf(texts), by: S.by }),
         );
       }
       check(
@@ -678,7 +736,7 @@ function check(name, cond, detail) {
       check(
         `stats plate paints both notes and the copy foot at ${W}x${H}`,
         all.some((s) => s.indexOf("NOT PLAYED YET") >= 0) &&
-          all.some((s) => s.indexOf("BESTS: NO PACT · NORM") >= 0) &&
+          all.some((s) => s.indexOf("BESTS: NO MODES · NORM") >= 0) &&
           all.includes("T MEDALS · C COPY MY STATS · R RESET · ESC BACK"),
         all.join("|"),
       );
@@ -702,18 +760,19 @@ function check(name, cond, detail) {
   const md = await import("../src/render/menudraw.js");
   const { medalRows, MEDAL } = await import("../src/app/medals.js");
   const rec = () => {
-    const texts = [], rects = [];
+    const texts = [], rects = [], rings = [];
     const c = {
       fillStyle: "", strokeStyle: "", lineWidth: 1, globalAlpha: 1, font: "",
       textAlign: "left", textBaseline: "middle",
       fillRect(x, y, w, h) { rects.push({ x, y, w, h, fill: c.fillStyle }); },
       strokeRect() {},
+      stroke() { rings.push(c.strokeStyle); },
       fillText(s, x, y) {
         texts.push({ s: String(s), x, y, fill: c.fillStyle, a: c.globalAlpha, align: c.textAlign });
       },
     };
     pathRects(c, rects);
-    return { c, texts, rects };
+    return { c, texts, rects, rings };
   };
   const plateOf = (rects) => rects.find((r) => r.fill === PLATE_FILL);
   for (const [W, H] of [
@@ -722,16 +781,26 @@ function check(name, cond, detail) {
   ]) {
     const L = md.layout(W, H);
     const rows = medalRows(MEDAL.IRONCROWN | MEDAL.FLAWLESS);
-    const { c, texts, rects } = rec();
+    const { c, texts, rects, rings } = rec();
     md.drawTrophies(c, L, 0.4, rows);
     const all = texts.map((t) => t.s);
     const p = plateOf(rects);
+    /* A goal wraps to at most two lines in its tile: rebuild each one from
+       the lines painted under its name (same x, until the next tile). */
+    const descOf = (name) => {
+      const i = texts.findIndex((t) => t.s === name);
+      if (i < 0) return null;
+      const out = [];
+      for (let j = i + 1; j < texts.length && texts[j].x === texts[i].x && texts[j].y > texts[i].y; j++) out.push(texts[j].s);
+      return out.join(" ");
+    };
     check(
-      `R6 MEDALS page paints the head, the 2/8 kicker, all eight names and the foot at ${W}x${H}`,
+      `R6 MEDALS page paints the head, the 2/8 kicker, all eight names, every whole goal and the foot at ${W}x${H}`,
       all.includes("MEDALS") && all.includes("2/8") &&
-        rows.every((r) => all.includes(r[0]) && all.includes(r[1])) &&
+        rows.every((r) => all.includes(r[0]) && descOf(r[0]) === r[1]) &&
+        !all.some((s) => s.indexOf("…") >= 0) &&
         all.includes("ENTER / ESC BACK TO STATS"),
-      all.join("|"),
+      all.join("|") + " :: " + rows.map((r) => descOf(r[0])).join(" / "),
     );
     check(
       `R6 every MEDALS line stays inside the plate at ${W}x${H}`,
@@ -739,24 +808,45 @@ function check(name, cond, detail) {
         (t.align !== "left" || t.x >= p.x) && (t.align !== "right" || t.x <= p.x + p.w)),
       JSON.stringify({ p, last: texts[texts.length - 1] }),
     );
+    /* ATLAS: the lock lives in the disc, never in a 0.45 alpha. Earned = an
+       accent-filled 22px disc with a dark star, name in TEXT; a goal = a hollow
+       muted ring, name in the soft #b6c2dc. The head bar fills n/8. */
     const on = texts.find((t) => t.s === "IRON CROWN"), off = texts.find((t) => t.s === "SPRINT");
+    const stars = texts.filter((t) => t.s === "★"), discs = rects.filter((r) => r.path && r.fill === "#37f0d0" && Math.abs(r.w - 22) < 0.01 && Math.abs(r.h - 22) < 0.01);
+    const tileOf = (t) => rects.find((r) => r.fill === "rgba(4,7,14,0.55)" && t.x >= r.x && t.x <= r.x + r.w && t.y >= r.y && t.y <= r.y + r.h);
+    const earned = rows.filter((r) => r[2]).map((r) => tileOf(texts.find((t) => t.s === r[0])));
     check(
-      `R6 unlocked rows read accent at full alpha, locked rows muted at 0.45 at ${W}x${H}`,
-      on && off && on.fill === "#37f0d0" && on.a === 1 && off.fill === "#7385ad" && off.a === 0.45,
-      JSON.stringify({ on, off }),
+      `R6 earned medals fill their disc with a star, goals stay a hollow ring, never 0.45 alpha at ${W}x${H}`,
+      on && off && on.fill === "#dfe7f5" && on.a === 1 && off.fill === "#b6c2dc" && off.a === 1 &&
+        stars.length === 2 && stars.every((t) => t.fill === "#0a0e18" && earned.includes(tileOf(t))) &&
+        discs.length === 2 && discs.every((d) => earned.includes(tileOf({ x: d.x + 11, y: d.y + 11 }))) &&
+        rings.filter((k) => k === "#7385ad").length === 6 &&
+        texts.every((t) => t.a === 1) &&
+        rects.some((r) => r.fill === "#37f0d0" && r.h === 3 && r.w === 160 * 2 / 8),
+      JSON.stringify({ on, off, stars: stars.length, discs: discs.length, rings }),
     );
     check(
       `R6 the page leaves globalAlpha at 1 at ${W}x${H}`,
       c.globalAlpha === 1,
       String(c.globalAlpha),
     );
+    if (H === 520) {
+      const lines = texts.filter((t) => t.align === "left");
+      check(
+        `R6 every medal name and goal line sits inside its own tile at ${W}x${H}`,
+        lines.length >= 16 && lines.every((t) => !!tileOf(t)),
+        JSON.stringify(lines.filter((t) => !tileOf(t))),
+      );
+    }
     const e = rec();
     let threw = false;
     try { md.drawTrophies(e.c, L, 0.4, undefined); } catch (_) { threw = true; }
     const names = rows.map((r) => r[0]);
     check(
-      `R6 rows undefined paints 8 locked, name-free placeholders without throwing at ${W}x${H}`,
-      !threw && e.texts.filter((t) => t.a === 0.45).length >= 8 &&
+      `R6 rows undefined paints 8 goal rings with name-free placeholders without throwing at ${W}x${H}`,
+      !threw && e.texts.filter((t) => t.s === "—").length === 8 &&
+        e.rings.filter((k) => k === "#7385ad").length === 8 &&
+        !e.texts.some((t) => t.s === "★") &&
         e.texts.some((t) => t.s === "0/8") &&
         !e.texts.some((t) => names.includes(t.s)),
       e.texts.map((t) => t.s).join("|"),
@@ -771,7 +861,7 @@ function check(name, cond, detail) {
   const IDLE = "T MEDALS · C COPY MY STATS · R RESET · ESC BACK";
   const ARMED = [
     "ERASES SCORES · BESTS · TIMES · DAILY · MEDALS · PLAQUES · GHOSTS",
-    "ERASES STATS + DAYS PLAYED · RELOCKS ROOMS 6-8 · PACTS · TIME ATTACK",
+    "ERASES STATS + DAYS PLAYED · RELOCKS ROOMS 6-8 · MODES · TIME ATTACK",
     "R AGAIN ERASES · ANY OTHER KEY CANCELS · KEEPS OPTIONS + PACE · C COPY",
   ];
   const rec = () => {
@@ -824,7 +914,9 @@ function check(name, cond, detail) {
   }
 }
 
-// 13e) settingsHit: the tap map derived from the same shellBox the page draws
+// 13e) settingsHit: the tap map derived from the same geometry the page draws.
+// ATLAS rule: a row = its index; on the plate but off the rows (head, foot,
+// side margins) = -2, inert; off the plate = -1, main backs out.
 {
   const md = await import("../src/render/menudraw.js");
   for (const [W, H] of [
@@ -832,29 +924,25 @@ function check(name, cond, detail) {
     [608, 352],
   ]) {
     const L = md.layout(W, H);
-    const g = md.settingsGeom(L);
-    const mid = g.S.ix + g.S.iw / 2;
-    let all = true;
-    for (let i = 0; i < md.OPT_N; i++) {
-      const y = g.y0 + i * g.rowH + g.rowH / 2;
-      if (md.settingsHit(mid, y, L) !== i) all = false;
+    for (const touch of [false, true]) {
+      const tag = `${W}x${H}${touch ? " touch" : ""}`;
+      const g = md.settingsGeom(L, touch), S = g.S;
+      const mid = S.ix + S.iw / 2, cy = g.y0 + g.rowH / 2;
+      const hit = (x, y) => md.settingsHit(x, y, L, 0, touch);
+      let all = true;
+      for (let i = 0; i < md.OPT_N; i++) if (hit(mid, g.y0 + i * g.rowH + g.rowH / 2) !== i) all = false;
+      check(`settingsHit maps every row centre at ${tag}`, all);
+      check(`settingsHit on the plate above the rows (head) is -2, inert at ${tag}`, hit(mid, g.y0 - 1) === -2 && hit(mid, S.y + 4) === -2);
+      check(`settingsHit on the plate below the rows (note / foot) is -2, inert at ${tag}`, hit(mid, g.y0 + md.OPT_N * g.rowH + 1) === -2 && hit(mid, S.y + S.h - 4) === -2);
+      check(`settingsHit in the plate's outer margin is -2, inert at ${tag}`, hit(S.x + 4, cy) === -2 && hit(S.x + S.w - 4, cy) === -2);
+      check(`settingsHit off the plate is -1 (back) at ${tag}`,
+        hit(S.x - 2, cy) === -1 && hit(S.x + S.w + 2, cy) === -1 && hit(mid, S.y - 2) === -1 && hit(mid, S.y + S.h + 2) === -1);
+      check(
+        `settingsHit rows are contiguous — no dead gutter at ${tag}`,
+        hit(mid, g.y0 + g.rowH - 0.001) === 0 && hit(mid, g.y0 + g.rowH) === 1,
+        String(hit(mid, g.y0 + g.rowH)),
+      );
     }
-    check(`settingsHit maps every row centre at ${W}x${H}`, all);
-    check(`settingsHit above the band is -1 at ${W}x${H}`, md.settingsHit(mid, g.y0 - 1, L) === -1);
-    check(
-      `settingsHit below the band is -1 at ${W}x${H}`,
-      md.settingsHit(mid, g.y0 + 10 * g.rowH + 1, L) === -1,
-    );
-    check(`settingsHit left of the plate is -1 at ${W}x${H}`, md.settingsHit(g.S.ix - 2, g.y0 + 2, L) === -1);
-    check(
-      `settingsHit right of the plate is -1 at ${W}x${H}`,
-      md.settingsHit(g.S.ix + g.S.iw + 2, g.y0 + 2, L) === -1,
-    );
-    check(
-      `settingsHit rows are contiguous — no dead gutter at ${W}x${H}`,
-      md.settingsHit(mid, g.y0 + g.rowH - 0.001, L) === 0 && md.settingsHit(mid, g.y0 + g.rowH, L) === 1,
-      String(md.settingsHit(mid, g.y0 + g.rowH, L)),
-    );
   }
 }
 
@@ -871,7 +959,7 @@ function check(name, cond, detail) {
       fillStyle: "", strokeStyle: "", lineWidth: 1, globalAlpha: 1, font: "", textAlign: "left", textBaseline: "middle", shadowColor: "", shadowBlur: 0,
       fillRect(x, y, w, h) { rects.push({ x, y, w, h, fill: c.fillStyle }); },
       fillText(s, x, y) { const m = /(\d+)px/.exec(c.font); texts.push({ s: String(s), x, y, px: m ? +m[1] : 0, font: c.font, a: c.globalAlpha, blur: c.shadowBlur, fill: c.fillStyle, align: c.textAlign }); },
-      strokeRect() {}, strokeText() {}, beginPath() {}, moveTo() {}, lineTo() {}, closePath() {}, fill() {}, stroke() {}, arc() {}, save() {}, restore() {}, translate() {}, scale() {}, rotate() {}, drawImage() {}, setTransform() {},
+      strokeRect() {}, strokeText() {}, beginPath() {}, moveTo() {}, lineTo() {}, closePath() {}, fill() {}, stroke() {}, arc() {}, ellipse() {}, bezierCurveTo() {}, save() {}, restore() {}, translate() {}, scale() {}, rotate() {}, drawImage() {}, setTransform() {},
     };
     pathRects(c, rects);
     return { c, texts, rects };
@@ -881,16 +969,24 @@ function check(name, cond, detail) {
   check("settingsRows carries the door value at the GRAPHICS row", md.settingsRows({}, false, false, "CUSTOM ›")[OPT_ROWS.indexOf("GRAPHICS")] === "CUSTOM ›" && md.settingsRows({}, false, false)[8] === "›");
   const S = (o) => ({ ...(gfx.PRESETS.AUTO), fpm: 0, ...o });
   for (const [W, H] of [[600, 520], [608, 352]]) {
-    const L = md.layout(W, H), g = md.graphicsGeom(L), mid = g.S.ix + g.S.iw / 2;
-    check(`graphics row pitch: 36 at 520, (noteY-10-y0)/8 at 352 (${W}x${H})`,
-      Math.abs(g.rowH - (H === 520 ? 36 : (278 - 10 - 94.32) / 8)) < 0.01 && Math.abs(g.noteY - (H === 520 ? 446 : 278)) < 0.01, g.rowH);
-    let all = true;
-    for (let i = 0; i < md.GFX_N; i++) if (md.graphicsHit(mid, g.y0 + (i + 0.5) * g.rowH, L) !== i) all = false;
-    check(`graphicsHit maps every row centre at ${W}x${H}`, all);
-    check(`graphicsHit off the rows is -1 at ${W}x${H}`, md.graphicsHit(mid, g.y0 - 1, L) === -1 && md.graphicsHit(mid, g.y0 + 8 * g.rowH + 1, L) === -1 &&
-      md.graphicsHit(g.S.ix - 2, g.y0 + 2, L) === -1 && md.graphicsHit(g.S.ix + g.S.iw + 2, g.y0 + 2, L) === -1);
-    check(`graphicsHit rows are contiguous at ${W}x${H}`, md.graphicsHit(mid, g.y0 + g.rowH - 0.001, L) === 0 && md.graphicsHit(mid, g.y0 + g.rowH, L) === 1);
+    const L = md.layout(W, H);
+    for (const touch of [false, true]) {
+      const g = md.graphicsGeom(L, touch), S = g.S, mid = S.ix + S.iw / 2, cy = g.y0 + g.rowH / 2, tg = `${W}x${H}${touch ? " touch" : ""}`;
+      const hit = (x, y) => md.graphicsHit(x, y, L, 0, touch), B = md.bandOf(L, touch);
+      /* pitch cap 28 keyboard / 41 touch (ATLAS, "not fat"), scaled by f only in a short box; help sits 6 under row 8 */
+      check(`graphics row pitch: ${touch ? 41 : 28} x f, f = 1 at 520, plate inside its band (${tg})`,
+        Math.abs(g.rowH - (touch ? 41 : 28) * S.f) < 1e-9 && (H === 520 ? S.f === 1 : S.f > 0.5 && S.f < 1) && g.y0 === S.by &&
+          Math.abs(g.noteY - (g.y0 + md.GFX_N * g.rowH + 6)) < 1e-9 && S.y >= B.top - 0.5 && S.y + S.h <= B.bot + 0.5, [g.y0, g.rowH, g.noteY, S.f].join("/"));
+      let all = true;
+      for (let i = 0; i < md.GFX_N; i++) if (hit(mid, g.y0 + (i + 0.5) * g.rowH) !== i) all = false;
+      check(`graphicsHit maps every row centre at ${tg}`, all);
+      check(`graphicsHit on the plate off the rows is -2 (inert), off the plate -1 (back) at ${tg}`,
+        hit(mid, g.y0 - 1) === -2 && hit(mid, g.y0 + md.GFX_N * g.rowH + 1) === -2 && hit(S.x + 4, cy) === -2 && hit(S.x + S.w - 4, cy) === -2 &&
+          hit(S.x - 2, cy) === -1 && hit(S.x + S.w + 2, cy) === -1 && hit(mid, S.y - 2) === -1 && hit(mid, S.y + S.h + 2) === -1);
+      check(`graphicsHit rows are contiguous at ${tg}`, hit(mid, g.y0 + g.rowH - 0.001) === 0 && hit(mid, g.y0 + g.rowH) === 1);
+    }
     for (const touch of [false, true]) for (const kind of ["2d", "px", "3d"]) {
+      const g = md.graphicsGeom(L, touch);
       const { c, texts, rects } = rec();
       const view = gfx.gfxView(S({ fxq: 0 }), kind, { dpr3d: 1.5, dprPx: 1.5, limit: true, pendingAA: true });
       md.drawGraphics(c, L, 1, { row: 1, view, togT: 0.95, chg: 0b11, touch });
@@ -1187,17 +1283,20 @@ function check(name, cond, detail) {
           ),
         JSON.stringify({ py: p && p.y, ph: p && p.h, clear, plus, max, crown }),
       );
+      /* ATLAS: a locked plaque stays legible (muted label, full alpha, never
+         faded); an earned one reads accent with a 0.14 accent fill. */
+      const lit = rects.filter((r) => r.fill === "rgba(55,240,208,0.14)");
       check(
-        `unlocked chips (CLEAR/MAX) read bright/full-alpha, locked chips (PLUS/CROWN) read dim at ${W}x${H}`,
+        `unlocked chips (CLEAR/MAX) read accent + filled, locked chips (PLUS/CROWN) muted but never faded at ${W}x${H}`,
         !!clear &&
           !!max &&
           !!plus &&
           !!crown &&
-          clear.alpha === 1 &&
-          max.alpha === 1 &&
-          plus.alpha < 1 &&
-          crown.alpha < 1,
-        JSON.stringify({ clear, plus, max, crown }),
+          clear.fill === "#37f0d0" && max.fill === "#37f0d0" &&
+          plus.fill === "#7385ad" && crown.fill === "#7385ad" &&
+          [clear, plus, max, crown].every((t) => t.alpha === 1) &&
+          lit.length === 2 && lit.every((r) => Math.abs(r.x + r.w / 2 - clear.x) < 0.01 || Math.abs(r.x + r.w / 2 - max.x) < 0.01),
+        JSON.stringify({ clear, plus, max, crown, lit }),
       );
       check(
         `plaque chips still leave the 10-row table + heat-tabs foot inside the plate at ${W}x${H}`,
@@ -1206,14 +1305,15 @@ function check(name, cond, detail) {
       );
     }
     {
-      // all locked (mask omitted / 0): every chip reads dim
-      const { c, texts } = rec();
+      // all locked (mask omitted / 0): every chip reads muted
+      const { c, texts, rects } = rec();
       md.drawScores(c, DEFAULT_SCORES, L, 1, 0);
       const { clear, plus, max, crown } = chipsOf(texts);
       const chips = [clear, plus, max, crown];
       check(
-        `no mask arg -> all four chips locked/dim at ${W}x${H}`,
-        chips.every((t) => !!t && t.alpha < 1),
+        `no mask arg -> all four chips locked: muted, full alpha, no accent fill at ${W}x${H}`,
+        chips.every((t) => !!t && t.fill === "#7385ad" && t.alpha === 1) &&
+          !rects.some((r) => r.fill === "rgba(55,240,208,0.14)"),
         JSON.stringify(chips),
       );
     }
@@ -1234,19 +1334,16 @@ function check(name, cond, detail) {
       md.drawScores(c, DEFAULT_SCORES, L, 1, 0, 15);
       const plusTab = texts.find((t) => t.s === "PLUS");
       const clear = texts.find((t) => t.s === "CLEAR");
-      if (H === 352) {
-        check(
-          "608x352 plaques sit on the heat-tab row (compact)",
-          !!plusTab && !!clear && Math.abs(clear.y - plusTab.y) < 0.5,
-          JSON.stringify({ plusY: plusTab && plusTab.y, clearY: clear && clear.y }),
-        );
-      } else {
-        check(
-          "600x520 plaques stay on a dedicated row under the heat tabs",
-          !!plusTab && !!clear && clear.y > plusTab.y + 16,
-          JSON.stringify({ plusY: plusTab && plusTab.y, clearY: clear && clear.y }),
-        );
-      }
+      /* ATLAS: one chip row under the heat tabs in every box (scoresGeom.chipY);
+         a short box scales the page (f) instead of folding the plaques onto the
+         tab row. */
+      const g = md.scoresGeom(L), rank = texts.find((t) => t.s === "RANK");
+      check(
+        `${W}x${H} plaques sit on their own row (scoresGeom.chipY) between the heat tabs and the table`,
+        !!plusTab && !!clear && !!rank && Math.abs(clear.y - (g.chipY + 10)) < 0.01 &&
+          clear.y > plusTab.y + 8 && clear.y < rank.y && g.chipY >= g.tabs[0].y + g.tabs[0].h,
+        JSON.stringify({ plusY: plusTab && plusTab.y, clearY: clear && clear.y, rankY: rank && rank.y, chipY: g.chipY }),
+      );
     }
   }
 }
@@ -1285,7 +1382,7 @@ function check(name, cond, detail) {
   check(
     "shellview passes app.scoreHeat into the (memoised) getter and into drawScores",
     /getScores\(app\.scoreHeat\)/.test(shellSrc) && /getPlaques \? getPlaques\(\)/.test(shellSrc) &&
-      /drawScores\(\s*c,\s*sd\.s,\s*L,\s*app\.subT,\s*app\.scoreHeat,\s*sd\.p\)/.test(shellSrc),
+      /drawScores\(\s*c,\s*sd\.s,\s*L,\s*app\.subT,\s*app\.scoreHeat,\s*sd\.p,\s*touchLay\(canvas\)\)/.test(shellSrc),
     shellSrc.match(/menudraw\.drawScores\([^;]*\);/s)?.[0],
   );
   const mainSrc = readFileSync("src/main.js", "utf8");

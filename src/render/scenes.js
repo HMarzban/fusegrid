@@ -225,7 +225,7 @@ export function pauseKicker(world, run) {
   const w = world || {},
     p = clampPact(w.pact);
   return "ROOM " + (w.level | 0) + " · " + biomeOf(w.level | 0).name + " · " + HEAT_NAME[clampHeat(w.heat)] + " · " + paceToken(w.pace) +
-    (p ? " · PACT " + pactLabel(p) : "") + (run && run.daily ? " · DAILY" : "");
+    (p ? " · MODES " + pactLabel(p) : "") + (run && run.daily ? " · DAILY" : "");
 }
 /* body[data-lay] p / l (fit.js) = a touch layout: the one predicate the
    pause draw (through its ctx's canvas) and main's tap map both read. */

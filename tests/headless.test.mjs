@@ -12,10 +12,10 @@ import {PROJ} from "../src/render/r3d/camera.js";
 import {loadScores} from "../src/app/highscores.js";
 import {loadStats} from "../src/app/stats.js";
 import {copyPayload, pauseGeom, overlayBox} from "../src/render/scenes.js";
-import {menuGeom, guideGeom as mdGuideGeom, levelGeom, scoresHit, LEVEL_TAP, layout as menuLayout} from "../src/render/menudraw.js";
+import {menuGeom, guideGeom as mdGuideGeom, levelGeom, scoresHit, settingsGeom, LEVEL_TAP, layout as menuLayout} from "../src/render/menudraw.js";
 import {fitBox} from "../src/app/fit.js";
 // tab centres found through scoresHit itself (the one tap map), scanning the tab row band
-const mdScoreTabs=(L)=>{ for(let y=60;y<200;y++){ const xs=[]; for(let x=0;x<600;x++) if(scoresHit(x,y,L)>=0) xs.push([x,scoresHit(x,y,L)]); if(xs.length) return {y:y+12,x:(i)=>{const r=xs.filter(p=>p[1]===i).map(p=>p[0]);return (r[0]+r[r.length-1])/2;}}; } return null; };
+const mdScoreTabs=(L,t)=>{ for(let y=8;y<200;y++){ const xs=[]; for(let x=0;x<600;x++) if(scoresHit(x,y,L,t)>=0) xs.push([x,scoresHit(x,y,L,t)]); if(xs.length) return {y:y+12,x:(i)=>{const r=xs.filter(p=>p[1]===i).map(p=>p[0]);return (r[0]+r[r.length-1])/2;}}; } return null; };
 // MENU taps land on the painted row (an off-row MENU tap is a no-op since the menu redesign)
 const menuTap=(i,k=1)=>({clientX:300/k,clientY:menuGeom(menuLayout(600,520),8).rows[i].cy/k});
 
@@ -302,7 +302,8 @@ function mkCanvas(){
   check("tap glue: OPTIONS push lands on SETTINGS row 0",
     g.app.screen===SCREEN.SETTINGS&&g.app.optRow===0,
     g.app.screen+"/"+g.app.optRow);
-  cv.fire("pointerdown",{clientX:300,clientY:136});   // row 0 MUSIC band
+  const SG=settingsGeom(menuLayout(600,520));         // ATLAS: the hugging plate moved row 0
+  cv.fire("pointerdown",{clientX:300,clientY:SG.y0+0.5*SG.rowH});   // row 0 MUSIC band
   check("tap glue: row 0 tap sets optRow and cycles MUSIC",
     g.app.optRow===0&&g.app.settings.mus===0,
     "optRow="+g.app.optRow+" mus="+g.app.settings.mus);
@@ -389,7 +390,7 @@ function mkCanvas(){
   cv.fire("pointerdown",{clientX:8,clientY:R[4].cy});        // far left, GUIDE band
   check("M1 a MENU side tap on a row's band opens that row (full-width bands)", g.app.screen===SCREEN.GUIDE&&g.app.cursor===4, g.app.screen+"/"+g.app.cursor);
   const G=mdGuideGeom(L);
-  cv.fire("pointerdown",{clientX:300,clientY:G.y0+2.5*G.rowH});
+  cv.fire("pointerdown",{clientX:G.tiles[2].x+G.tiles[2].w/2,clientY:G.tiles[2].y+G.tiles[2].h/2}); // ATLAS: GUIDE doors are tiles
   check("M1 GUIDE tap on ENEMIES opens ENEMIES (GUIDE no longer traps touch)", g.app.screen===SCREEN.ENEMIES&&g.app.guideRow===2, g.app.screen+"/"+g.app.guideRow);
   g.app.back();
   cv.fire("pointerdown",{clientX:300,clientY:4});
@@ -405,18 +406,18 @@ function mkCanvas(){
   cv.fire("pointerdown",{clientX:2,clientY:2});
   check("M1 LEVEL tap outside the plate backs out", g.app.screen===SCREEN.MENU, g.app.screen);
   cv.calls.length=0; for(let i=1;i<=40;i++)g.loop(100000+i*16);
-  const tagTxt=cv.calls.filter(c=>c[0]==="fillText").map(c=>String(c[1][0])).find(t=>/^L\d+ · /.test(t));
+  const tagTxt=cv.calls.filter(c=>c[0]==="fillText").map(c=>String(c[1][0])).find(t=>/^[A-Z]+ · (CORE|PLUS|MAX) · /.test(t));
   cv.fire("pointerdown",{clientX:300,clientY:R[0].cy}); g.loop(100700);
-  check("M1 the PLAY tag is the run PLAY starts (room, heat, pace)",
-    tagTxt==="L3 · MAX · HARD"&&g.app.screen===SCREEN.GAME&&g.world.level===3&&(g.world.heat|0)===2&&(g.world.pace|0)===1,
+  check("M1 the PLAY tag is the run PLAY starts (room 3 by its world name, heat, pace)",
+    tagTxt==="FACTORY · MAX · HARD"&&g.app.screen===SCREEN.GAME&&g.world.level===3&&(g.world.heat|0)===2&&(g.world.pace|0)===1,
     tagTxt+" -> "+[g.app.screen,g.world.level,g.world.heat,g.world.pace].join());
   g.app.toMenu();
   g.app.cursor=5; g.app.confirm();
   const T=mdScoreTabs(L);
   cv.fire("pointerdown",{clientX:T.x(1),clientY:T.y});
   check("M1 HIGH SCORES heat tab tap shows PLUS and stays", g.app.screen===SCREEN.SCORES&&g.app.scoreHeat===1, g.app.screen+"/"+g.app.scoreHeat);
-  cv.fire("pointerdown",{clientX:300,clientY:300});
-  check("M1 HIGH SCORES tap off the tabs backs out", g.app.screen===SCREEN.MENU, g.app.screen);
+  cv.fire("pointerdown",{clientX:300,clientY:300}); check("M1 HIGH SCORES tap on the table is inert (ATLAS C3)", g.app.screen===SCREEN.SCORES, g.app.screen); cv.fire("pointerdown",{clientX:300,clientY:4});
+  check("M1 HIGH SCORES tap off the plate backs out", g.app.screen===SCREEN.MENU, g.app.screen);
 }
 
 // M1 polish (2026-10-19): on touch (body[data-lay] p/l) the MENU rows take the
@@ -425,18 +426,19 @@ function mkCanvas(){
 // LEVEL / HIGH SCORES chip taps cue one uiMove per change, none on the chip
 // already set.
 {
-  const L=menuLayout(600,520), R=menuGeom(L,8,true).rows, band=Math.min(...R.map(r=>r.b-r.a));
+  const L=menuLayout(600,520), R=menuGeom(L,8,true).rows, band=Math.min(...R.slice(0,7).map(r=>r.b-r.a)), src=R[7].b-R[7].a;
   const sp=fitBox(393,852,true,600,520).s, sl=fitBox(852,393,true,600,520).s;
-  check("M1 touch MENU rows are >= 32 CSS px on a 393x852 phone and in landscape",
-    band*sp>=32&&band*sl>=32&&R[0].y0>=56&&R[7].y1<=504, [band.toFixed(1),(band*sp).toFixed(1),(band*sl).toFixed(1),R[0].y0,R[7].y1].join("|"));
-  check("M1 desktop MENU geometry is untouched by the touch shape", menuGeom(L,8).rows[1].h===33&&menuGeom(L,8,false).rows[1].h===33, menuGeom(L,8).rows[1].h);
+  // ATLAS hub: tiles >= 32 CSS px, the SOURCE foot link (50 logical) too
+  check("M1 touch MENU hub tiles are >= 32 CSS px on a 393x852 phone and in landscape (SOURCE too)",
+    band*sp>=32&&band*sl>=32&&src*sp>=32&&R[0].y0>=56&&R[7].y1<=512, [band.toFixed(1),(band*sp).toFixed(1),(band*sl).toFixed(1),(src*sp).toFixed(1),R[0].y0,R[7].y1].join("|"));
+  check("M1 desktop MENU geometry is untouched by the touch shape (ATLAS pitch 26)", menuGeom(L,8).rows[1].h===26&&menuGeom(L,8,false).rows[1].h===26&&!menuGeom(L,8).hub&&menuGeom(L,8,true).hub, menuGeom(L,8).rows[1].h);
   const cv=mkCamCanvas(600,520,"p");
   const g=createGame(cv.el,{seed:77});
   g.app.cabinetSeen=true; g.app.skip();
   for(let i=1;i<=40;i++)g.loop(i*16);
-  const at=cv.calls.filter(c=>c[0]==="fillText"&&c[1][0]==="STATS").pop(), hint=cv.calls.some(c=>c[0]==="fillText"&&c[1][0]==="TAP TO SELECT");
-  check("M1 touch MENU paints STATS on its touch row and the tap hint",
-    !!at&&hint&&Math.abs(at[1][2]-R[6].cy)<0.01, String(at&&at[1]));
+  const at=cv.calls.filter(c=>c[0]==="fillText"&&c[1][0]==="STATS").pop();
+  check("M1 touch MENU paints STATS inside its hub tile",
+    !!at&&at[1][2]>R[6].y0&&at[1][2]<R[6].y1&&at[1][1]>R[6].x&&at[1][1]<R[6].x+R[6].w, String(at&&at[1]));
   cv.fire("pointerdown",{clientX:at[1][1],clientY:at[1][2]});
   check("M1 touch MENU tap on the painted STATS label opens STATS", g.app.screen===SCREEN.STATS&&g.app.cursor===6, g.app.screen+"/"+g.app.cursor);
   g.app.toMenu(); g.app.cursor=1; g.app.confirm();
@@ -458,13 +460,13 @@ function mkCanvas(){
   const cv=mkCamCanvas(600,520,"p");
   const g=createGame(cv.el,{seed:79,audio:{play:n=>plays.push(n),toggle:()=>false}});
   g.app.cabinetSeen=true; g.app.skip(); g.app.cursor=1; g.app.confirm();
-  const L=menuLayout(600,520), LG=levelGeom(L,g.app.pactUnlocked), c=(r)=>({clientX:r.x+r.w/2,clientY:r.y+r.h/2}), tap=(r)=>{plays.length=0; cv.fire("pointerdown",c(r)); return plays.join();};
+  const L=menuLayout(600,520), LG=levelGeom(L,g.app.pactUnlocked,true), c=(r)=>({clientX:r.x+r.w/2,clientY:r.y+r.h/2}), tap=(r)=>{plays.length=0; cv.fire("pointerdown",c(r)); return plays.join();};
   const a=tap(LG.room[3]), b=tap(LG.heat[2]), d=tap(LG.pace[0]), e=tap(LG.pace[2]), f=tap(LG.room[3]);
   check("M1 LEVEL chip taps cue ONE uiMove each (room 4, heat MAX two steps, pace EASY, pace HARD)",
     a==="uiMove"&&b==="uiMove"&&d==="uiMove"&&e==="uiMove"&&g.app.level===4&&g.app.heat===2&&g.app.pace===1, [a,b,d,e,g.app.level,g.app.heat,g.app.pace].join("|"));
   check("M1 a tap on the chip already set is silent", f==="", f);
   g.app.toMenu(); g.app.cursor=5; g.app.confirm();
-  const T=mdScoreTabs(L);
+  const T=mdScoreTabs(L,true);
   plays.length=0; cv.fire("pointerdown",{clientX:T.x(2),clientY:T.y}); const s1=plays.join();
   plays.length=0; cv.fire("pointerdown",{clientX:T.x(2),clientY:T.y}); const s2=plays.join();
   check("M1 HIGH SCORES tab tap cues one uiMove, the tab already shown is silent",

@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-19 — Menu pages round 2: ATLAS (owner pick) on top of the polish commit
+- Owner asked for slimmer pages, a card-like interactive LEVEL SELECT and hooks that show what the game offers. Round-2 workflow (game + menu designer, lead, 3 prototypes in worktrees r2-A/B/C, reviewer A 7.0 / B 6.5 / C 6.4) + contact sheet; owner picked B ATLAS. main fast-forwarded to 7ccc715 (polish: touch MENU, tap cues, v180) and B applied, plus reviewer fixes: score teaser reads played runs only (isPlaceholder), PLAY tag names the world, phone GUIDE shows touch controls, SOURCE tile 32 CSS (floor restored), plaques legible, PACT->MODES copy, modes-off help says what modes do. Open: read-only pages still back out on any tap (kept, documented); taller portrait logical box (lead idea) not built.
+
 ## 2026-10-19 — CONSOLE PANEL polish: touch MENU rows, LEVEL tap foot, tap cues (CACHE v180)
 - Closed three of the redesign's open items (laptop PAUSE was already done in 191d956). Touch MENU: `menuLogo` halves the logo up top, no group gaps, pitch 52/hero 56 → 32.7 CSS px rows on 393x852 (was ~21), 37.7 landscape; one `touch` flag on menuList/menuGeom/menuHit (main: `touchLay`). LEVEL SELECT touch foot `LEVEL_TAP`. LEVEL/SCORES taps route through `app.move`/`app.adjustPace` (heat/pace now take any delta), adjustPace joins the cue sheet so `[ ]` cue uiMove. CACHE_NAME/REV v180 (shipped bytes after v179). capture.mjs gains a `level` shot; verify.mjs takes `ROOT=` and is touch-aware (menuGeom/pauseGeom flags, LEVEL chip taps). Open: the narrowest phones (360 wide, s 0.57) land at ~30 CSS px.
 

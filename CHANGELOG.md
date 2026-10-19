@@ -16,6 +16,13 @@ Entries are written for players. How a change works lives in
 ## Unreleased
 
 ### Changed
+- **Menu pages, redesigned.** LEVEL SELECT is now a grid of room tiles with
+  a big room card beside it: the world, the foes you'll meet, your best
+  time, and what each heat changes (lives, fuse, score). Locked rooms say
+  what opens them. On a keyboard the main menu shows a preview of whatever
+  you point at; on a phone it's a hub of big tiles. GUIDE, OPTIONS, GRAPHICS,
+  HIGH SCORES and STATS are slimmer and only as tall as they need to be.
+  Pacts are now called MODES everywhere.
 - **New menus.** The main menu and the pause menu are now one system: the
   same quiet panel, the same selected-row look and the same controls, in
   CLASSIC 2D, PIXEL and REAL 3D, on a laptop or a phone. PLAY is the big

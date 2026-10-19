@@ -18,6 +18,11 @@ export const DEFAULT_SCORES = Object.freeze(
   ].map((r) => Object.freeze({ s: r.s, l: r.l, d: "2026-08-23" })),
 );
 
+/* A row that is one of the seeded arcade placeholders, not a played run:
+   anything that teases "your best" must drop these (a delta that cannot lie). */
+export function isPlaceholder(r) {
+  return !!r && DEFAULT_SCORES.some((d) => d.s === r.s && d.l === r.l && d.d === r.d && !r.p);
+}
 function copyDefaults() {
   return DEFAULT_SCORES.map((r) => ({ s: r.s, l: r.l, d: r.d }));
 }

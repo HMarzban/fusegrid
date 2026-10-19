@@ -4,13 +4,14 @@
    nothing here. kindSize/dims are the one source of the logical box every
    screen measures against: a real canvas always wins, otherwise the render
    kind picks the classic box or the projected dimetric one. */
-import { CFG } from "../core/config.js";
+import { CFG, biomeOf } from "../core/config.js";
 import { HEAT_NAME, clampHeat } from "../core/heat.js";
 import { paceToken } from "../core/pace.js";
 import { clampPact, pactLabel } from "../core/pact.js";
+import { clampPace } from "../core/pace.js";
 import { SCREEN, ITEMS } from "../app/menuapp.js";
 import { PROJ } from "./r3d/camera.js";
-import { drawLogo, overlayBox, touchLay } from "./scenes.js";
+import { drawLogo, overlayBox, touchLay, fmtTime } from "./scenes.js";
 import * as menudraw from "./menudraw.js";
 import { CACHE_NAME } from "../pwa/shell.js";
 
@@ -34,10 +35,11 @@ const layOf = (cv) => {
   return (b && b.getAttribute && b.getAttribute("data-lay")) || "d";
 };
 
-/* PLAY's tag is the whole setup it will start: room, heat, pace (+pact). */
+/* PLAY's tag is the whole setup it will start, worded like LEVEL SELECT's
+   START: room (by its world name), heat, pace (+pact). */
 const playTag = (app) => {
   const p = app.pactUnlocked ? clampPact(app.pact) : 0;
-  return "L" + (app.level | 0 || 1) + " · " + HEAT_NAME[clampHeat(app.heat)] + " · " + paceToken(app.pace) + (p ? " · " + pactLabel(p) : "");
+  return biomeOf(app.level | 0 || 1).name + " · " + HEAT_NAME[clampHeat(app.heat)] + " · " + paceToken(app.pace) + (p ? " · " + pactLabel(p) : "");
 };
 export function dims(canvas, kind) {
   const s = kindSize(kind);
@@ -74,11 +76,52 @@ function scoreData(app, getScores, getPlaques) {
   return memo;
 }
 
+/* ATLAS info (MENU pane + hub teasers, LEVEL SELECT card + room ticks).
+   getCab hands main's read-only stores {times, medals, stats, daily}; they
+   are read once per screen entry (nothing writes them while a menu page is
+   open) and formatted here, so menudraw never reads a store. heatT stamps
+   every heat change (the card's heat-line pulse); lockT is honoured only
+   when main stamped it on THIS visit. */
+let cab = null,
+  cabFor = -1,
+  heatSeen = null,
+  heatT = -1,
+  lockSeen = null,
+  top3 = [];
+const bits = (m) => { let n = 0; for (let v = m | 0; v; v &= v - 1) n++; return n; };
+function infoOf(app, kind, getScores, getCab) {
+  if (cabFor !== app.screen) {
+    cabFor = app.screen;
+    cab = (getCab && getCab()) || {};
+    top3 = Array.isArray(cab.top) ? cab.top : []; // played runs only (main drops the seeded placeholders)
+    heatSeen = app.heat;
+    heatT = -1;
+    lockSeen = app.lockT;
+  }
+  if (app.heat !== heatSeen) {
+    heatSeen = app.heat;
+    heatT = app.subT;
+  }
+  const h = clampHeat(app.heat),
+    pact = app.pactUnlocked ? clampPact(app.pact) : 0,
+    pz = clampPace(app.pace) + 1,
+    tb = (cab.times && cab.times.b) || {},
+    a = (cab.stats && cab.stats.a) || {},
+    st = app.settings || {};
+  return {
+    kind, heatT, level: app.level | 0 || 1, heat: h, pact, unlocked: !!app.pactUnlocked,
+    lockR: app.lockR, lockT: app.lockT !== lockSeen ? app.lockT : null,
+    best: Array.from({ length: 8 }, (_, i) => { const d = tb[i + 1 + ":" + h + ":" + pact + ":" + pz]; return d > 0 ? fmtTime(d / 10) : null; }),
+    daily: cab.daily || null, mask: cab.medals | 0, medals: bits(cab.medals), days: a.days | 0, runs: a.runs | 0, rooms: a.rooms | 0, kills: a.kills | 0,
+    top: top3, look: app.render3d ? 2 : app.pixel ? 1 : 0, snd: st.snd !== 0, mus: st.mus, sfx: st.sfx, gfx: app.gfxPreset ? app.gfxPreset() : "",
+  };
+}
+
 /* FPS METER (GRAPHICS row 7) paints after every screen's chrome, GAME
    included, against the same box that screen measures with. */
-export function drawShell(c, app, world, canvas, kind, getScores, getPlaques) {
+export function drawShell(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
   const s = app.screen;
-  shellBody(c, app, world, canvas, kind, getScores, getPlaques);
+  shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab);
   prevScreen = s;
   if (s === SCREEN.BOOT || !app.settings || app.settings.fpm !== 1) return;
   const B = s === SCREEN.GAME ? overlayBox(kind) : null,
@@ -87,7 +130,7 @@ export function drawShell(c, app, world, canvas, kind, getScores, getPlaques) {
   menudraw.drawMeter(c, B ? B.w : d.cw, B ? B.h : d.ch, app.gfx, idle);
 }
 
-function shellBody(c, app, world, canvas, kind, getScores, getPlaques) {
+function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
   const s = app.screen;
   if (s === SCREEN.BOOT) return;
   if (s === SCREEN.GAME) {
@@ -128,7 +171,7 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques) {
   if (s === SCREEN.MENU) {
     const L = menudraw.layout(cw, chh),
       touch = touchLay(canvas), // the predicate main.js taps with
-      lg = menudraw.menuLogo(L, touch); // touch: half-size logo up top, rows take its room
+      lg = menudraw.menuLogo(L); // one logo for both layouts: the touch hub sits under it
     // the show's natural end slams the logo over a ramping dim; any other
     // MENU entry (a skip included) keeps the 0.25s fade-out (spec §1)
     const sl = app.fromShow ? menudraw.slamOf(app.subT) : null;
@@ -158,6 +201,8 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques) {
           ITEMS[7],
         ],
         touch,
+        kind,
+        info: infoOf(app, kind, getScores, getCab),
       },
       L,
       app.subT,
@@ -178,23 +223,24 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques) {
       app.pace,
       app.timeAttack,
       touchLay(canvas),
+      infoOf(app, kind, getScores, getCab),
     );
   } else if (s === SCREEN.HOWTO) {
     menudraw.drawDim(c, 0.72, cw, chh);
-    menudraw.drawHowTo(c, L, app.subT, kind);
+    menudraw.drawHowTo(c, L, app.subT, kind, touchLay(canvas));
   } else if (s === SCREEN.ITEMS) {
     menudraw.drawDim(c, 0.72, cw, chh);
-    menudraw.drawItemsHelp(c, L, app.subT, kind);
+    menudraw.drawItemsHelp(c, L, app.subT, kind, touchLay(canvas));
   } else if (s === SCREEN.ENEMIES) {
     menudraw.drawDim(c, 0.72, cw, chh);
-    menudraw.drawEnemiesHelp(c, L, app.subT, kind);
+    menudraw.drawEnemiesHelp(c, L, app.subT, kind, touchLay(canvas));
   } else if (s === SCREEN.GUIDE) {
     menudraw.drawDim(c, 0.72, cw, chh);
-    menudraw.drawGuide(c, L, app.subT, app.guideRow);
+    menudraw.drawGuide(c, L, app.subT, app.guideRow, kind, touchLay(canvas));
   } else if (s === SCREEN.SCORES) {
     menudraw.drawDim(c, 0.72, cw, chh);
     const sd = scoreData(app, getScores, getPlaques);
-    menudraw.drawScores(c, sd.s, L, app.subT, app.scoreHeat, sd.p);
+    menudraw.drawScores(c, sd.s, L, app.subT, app.scoreHeat, sd.p, touchLay(canvas));
   } else if (s === SCREEN.STATS) {
     menudraw.drawDim(c, 0.72, cw, chh);
     menudraw.drawStats(c, L, app.subT, app.stats, app.resetArm, app.toast && app.toast.t > 0 ? app.toast : null);

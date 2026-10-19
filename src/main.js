@@ -24,7 +24,7 @@ import { mountFrames } from "./app/frameloop.js";
 import { mountRenderers } from "./app/rcache.js";
 import { mountAudioPower } from "./app/audiopower.js";
 import { introPhase, popOf, createShow, stepShow } from "./app/intro.js";
-import { loadScores, recordScore, saveScores, scoreEntry, scoresForHeat, qualifies } from "./app/highscores.js";
+import { loadScores, recordScore, saveScores, scoreEntry, scoresForHeat, qualifies, isPlaceholder } from "./app/highscores.js";
 import { loadPactUnlocked, savePactUnlocked } from "./app/pactstore.js";
 import { loadCabinetSeen, saveCabinetSeen } from "./app/cabinetseen.js";
 import { loadPlaques, savePlaques, unlockPlaques } from "./app/plaques.js";
@@ -430,8 +430,8 @@ export function createGame(canvas, opts = {}) {
           py = (ev.clientY - r.top) * k;
         const B = overlayBox(curKind);
         if (app.pauseView) {
-          const row = (app.pauseView === 2 ? graphicsHit : settingsHit)(px, py, menuLayout(B.w, B.h));
-          if (row < 0) app.pauseBack();
+          const row = (app.pauseView === 2 ? graphicsHit : settingsHit)(px, py, menuLayout(B.w, B.h), 0, touchLay(canvas));
+          if (row < 0) { if (row === -1) app.pauseBack(); } // -2: on the plate, off the rows (inert)
           else {
             app[app.pauseView === 2 ? "gfxRow" : "optRow"] = row;
             app.confirm();
@@ -466,16 +466,16 @@ export function createGame(canvas, opts = {}) {
           ITEMS.length,
           touchLay(canvas),
         );
-        if (row < 0) return menu ? undefined : app.back();
+        if (row < 0) return menu || row < -1 ? undefined : app.back(); // -2: on the plate, off the rows (inert)
         app[menu ? "cursor" : gx ? "gfxRow" : gd ? "guideRow" : "optRow"] = row;
         app.confirm();
       } else if (app.screen === SCREEN.LEVEL || app.screen === SCREEN.SCORES) {
-        /* A chip / tab tap sets it (modes ride their 1–5 keys); LEVEL: the rest of the plate starts, outside backs out. */
+        /* A chip / tab tap sets it (modes ride their 1–5 keys); LEVEL: only START starts, a locked room shows its card, the rest of the plate is inert, outside backs out. */
         const r = canvas.getBoundingClientRect(), k = canvas.width / (r.width || canvas.width), { cw, ch } = dims(canvas, curKind), x = (ev.clientX - r.left) * k, y = (ev.clientY - r.top) * k, L = menuLayout(cw, ch);
         // every chip is ONE call through the cued key path: one uiMove per change, none on the chip already set
-        if (app.screen === SCREEN.SCORES) { const i = scoresHit(x, y, L); return i >= 0 ? void app.move(i - app.scoreHeat, 0) : app.confirm(); }
-        const h = levelHit(x, y, L, app.pactUnlocked);
-        if (h.k === "room") app.move(h.i + 1 - app.level, 0); else if (h.k === "heat") app.move(app.heat - h.i, 1); else if (h.k === "pace") app.adjustPace(h.i - 1 - app.pace); else if (h.k === "mode") input.onUiKey("Digit" + (h.i + 1)); else if (h.k === "back") app.back(); else app.confirm();
+        if (app.screen === SCREEN.SCORES) { const i = scoresHit(x, y, L, touchLay(canvas)); return i >= 0 ? void app.move(i - app.scoreHeat, 0) : i === -1 ? app.confirm() : null; }
+        const h = levelHit(x, y, L, app.pactUnlocked, touchLay(canvas));
+        if (h.k === "room") app.move(h.i + 1 - app.level, 0); else if (h.k === "heat") app.move(app.heat - h.i, 1); else if (h.k === "pace") app.adjustPace(h.i - 1 - app.pace); else if (h.k === "mode") input.onUiKey("Digit" + (h.i + 1)); else if (h.k === "lock") { app.lockR = h.i + 1; app.lockT = app.subT; } else if (h.k === "back") app.back(); else if (h.k === "start") app.confirm();
       } else if (app.screen === SCREEN.STATS) {
         const r = canvas.getBoundingClientRect(), k = canvas.width / (r.width || canvas.width), { cw, ch } = dims(canvas, curKind);
         const hit = statsHit((ev.clientX - r.left) * k, (ev.clientY - r.top) * k, menuLayout(cw, ch), app.resetArm);
@@ -524,6 +524,7 @@ export function createGame(canvas, opts = {}) {
   // no new closures per frame.
   const getScoresForHeat = (heat) => scoresForHeat(loadScores(), heat);
   const getPlaquesFn = () => loadPlaques();
+  const getCab = () => ({ times: loadTimes(), medals: loadMedals(), stats: loadStats(), daily: app.dailyTag === "PLAYED" ? dailyRec : null, top: scoresForHeat(loadScores(), 0).filter((r) => !isPlaceholder(r)).slice(0, 3) }); // ATLAS pane / room card data, read on screen entry
 
   let last = null,
     acc = 0,
@@ -699,7 +700,7 @@ export function createGame(canvas, opts = {}) {
     if (curKind === "3d") ro = { ...(ro || {}), bright: settings.bri / 100 };
     renderer.render(attract && demo ? demo.world : show ? show.world : world, dt, ro);
     c.restore();
-    drawShell(c, app, world, canvas, curKind, getScoresForHeat, getPlaquesFn);
+    drawShell(c, app, world, canvas, curKind, getScoresForHeat, getPlaquesFn, getCab);
   }
 
   // debug/test hook (browser only; opt-in via opts.debug or ?debug=1)
