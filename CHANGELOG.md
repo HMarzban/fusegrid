@@ -15,6 +15,22 @@ Entries are written for players. How a change works lives in
 
 ## Unreleased
 
+## shell v181 · 2026-10-19
+
+### Changed
+- **Phone menus use the whole screen.** On a phone held upright, the main
+  menu and every menu page now fill the screen instead of a strip the size
+  of the board, so rows, tiles and text are about 40% bigger. The board
+  still sits behind the logo. LEVEL SELECT puts the room card under the room
+  grid, HOW TO PLAY stacks its two rules, ENEMIES shows two columns and
+  MEDALS one, so every line reads in full.
+- **LEVEL SELECT doesn't promise a time early.** The room card only says NO
+  TIME YET once TIME mode is open. A best time you already set still shows.
+
+### Fixed
+- In the legacy iso view, MEDALS goals, STATS labels and the HIGH SCORES
+  plaque chips no longer spill out of their boxes.
+
 ## shell v180 · 2026-10-19
 
 ### Changed

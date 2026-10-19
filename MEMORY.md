@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-19 — Shell v181: phone menus on a full-screen box, iso overflow, NO TIME YET (not pushed)
+- Owner GO from a before/after sheet (https://claude.ai/artifact/NB6JbVSgTkDueFSgvYhdfZ): touch-portrait MENU + pages draw on #sh (fit.js shellGeo, ~0.9 vs 0.63), board canvases untouched; narrow re-flows in menudraw. Iso MEDALS/STATS/SCORES fixes gated on f<1; NO TIME YET waits for TIME. npm test green, CDP verify2 129/129; scripts in git-ignored .superpowers/sdd/2026-10-19-polish2/.
+
 ## 2026-10-19 — Release shell v180 pushed (menus, ATLAS, NEW VERSION READY)
 - CHANGELOG Unreleased -> shell v180 · 2026-10-19 (v179 was never deployed, so v180 carries it). The update card is centred over a blurred backdrop (#updbg, tap = LATER). Pushed main to origin; Pages CI runs npm test before deploy.
 

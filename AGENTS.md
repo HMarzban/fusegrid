@@ -71,14 +71,23 @@ off the rows a root list (MENU, PAUSE list) does nothing; on a page
 (hit -2) and only a tap OFF the plate backs out (-1). `guideHit`,
 `levelHit` / `levelGeom` and `scoresHit` share the geometry their pages
 draw. Hints follow `data-lay` (keys vs taps; LEVEL SELECT's touch foot is
-`LEVEL_TAP`). Touch MENU (polish 2026-10-19): the stage is width-bound
-(~0.63 on a 393 px phone), so the rows take the logo's room — `menuLogo(L,
-touch)` (the ONE source for shellview's logo transform and the list top)
-halves the logo against the top edge, the list drops its group gaps and caps
-at `MENU_PITCH_T` 52 / hero 56 (>= 32 CSS px portrait, ~38 landscape), hint
-at the bottom edge; `menuList` / `menuGeom` / `menuHit` take the same
-`touch` flag (main passes `touchLay(canvas)`), and `layout()` stays
-untouched (INTRO and SCORES read its logo fields). LEVEL / HIGH SCORES chip
+`LEVEL_TAP`). Touch-portrait SHELL BOX (owner GO 2026-10-19, shell v181): the board
+stage is width-bound (~0.63 on a 393 px phone), so MENU and every plated page
+(`isShellScreen`, shellview) draw on `#sh`, a fixed canvas over the whole
+viewport at ~0.9 (`fit.js` `shellGeo` / `PORT_SHELL {s 0.9, w [400,600],
+logo 0.27}`; a tablet keeps 600 wide and only grows taller; < 520 box units
+tall = no shell box). INTRO, ATTRACT and GAME (PAUSE, WIN/LOSE) stay on `#c`,
+and `#c` / `#gl` / `#px` never see the box, so no renderer changes.
+`fit.shell(on)` shows + clears `#sh` (device-density backing, cap 3,
+smoothing off) and returns `{ctx, box}`; `box` is the logical canvas
+stand-in (`width/height/logo`, its rect) that `drawShell` measures and the
+one pointer handler (bound on `#c` and `#sh`) maps through, so a tap lands
+where it is drawn. `layout(W,H,lg)`: `lg` = the centred board's 0.27 logo
+line in box units (MENU's logo stays on the board; the hub hangs under it),
+`tall` / `narrow` (< 560) flags; narrow re-flows: `levelNarrow` (card under
+the grid, HEAT / PACE rows, digit-free touch MODES chips, 2-line help), HOW
+TO stacked rules, ENEMIES 2 cols, MEDALS 1 col, SCORES tab width, 11px hub
+teasers; STATS is centred (not floor-pinned) in a tall box. LEVEL / HIGH SCORES chip
 taps are ONE call through the cued key path (`app.move` with a delta,
 `app.adjustPace`), so a change plays one `uiMove` and the chip already set is
 silent; `[ ]` pace keys cue too.
@@ -95,7 +104,7 @@ grid of room tiles (biome schematic, finale pip, ✓ when a time is saved at
 this heat/pace/modes; 6–8 dim + locked until the first CLEAR, a locked tap
 returns `{k:"lock"}` and only flashes CLEAR ROOM 5 TO OPEN, never sets
 `app.level`) beside a ROOM CARD pane (world name, schematic, YOU'LL MEET from
-`heatRoster` with FOES names ×n, BEST time or NO TIME YET via the `getCab`
+`heatRoster` with FOES names ×n, BEST time (NO TIME YET only once TIME is open, `d.open`; never on DAILY) via the `getCab`
 getter, `LIVES · FUSE · SCORE ×n` from `heatProfile`/`applyPact`, pulsing on a
 heat change); then HEAT | PACE segments, MODES (IRON BARE THIN SHRINK + TIME,
 help says what each does), and a START hero. No start-on-miss: only START or
@@ -155,6 +164,7 @@ not shell screens. Do not add them as `SCREEN` values.
   to `min(centred top, PORT_GAME.top 72)` under the pause pill, pad cap 184,
   and `--sd` 0.2s glides that edge only (0s on resize / rotation).
   INTRO/MENU/ATTRACT keep the centred stage; `d` / `l` are untouched.
+  `shellGeo` sizes the touch-portrait shell box `#sh` (see Menu look).
 - `src/core/` — deterministic simulation, no DOM, no browser globals.
   - `world.js` — `createWorld`, `loadLevel` (re-exported from `sim.js`).
   - `sim.js` — `step(world, dt, intents)`.
