@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-19 — Close-out: docs, diary and memory synced through v182
+- Diary gains v181–v182 + launch prep (parallel sessions, SEO kit, listing art, share card C, issue #7) and a precache lesson; README alt text matches card C, features add the ATLAS/hub menus and NEW VERSION READY; AGENTS names the diary and parks launch in #7. GitHub About + 20 topics verified live (no longer leads with "deterministic"). Old media/worktrees kept on purpose (owner).
+
 ## 2026-10-19 — Release shell v182 (install screenshots + share card C), pushed
 - Supervisor pass: merged v181, dev diary/CHANGELOG backfill, SEO kit, listing art (9df402e); storefront session pushed card C (07aca1f). v182 bumps CACHE_NAME/REV so installed clients get the precached manifest screenshots and new share text. Marketing parked as HMarzban/fusegrid#7. Owner said keep old media/worktrees for now (no cleanup); duplicate branch claude/menu-still-recapture (805ac64) stays unmerged.
 

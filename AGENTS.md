@@ -552,7 +552,10 @@ not shell screens. Do not add them as `SCREEN` values.
   architecture/tradeoffs live in `docs/architecture.md`. `docs/README.md` maps
   which doc owns which fact (one owner per fact, others link) and sets the doc
   voice: arcade tone, facts exact; dated `docs/superpowers/` records are never
-  rewritten, only indexed there.
+  rewritten, only indexed there. `docs/diary.md` is the dated story of the
+  build (add an entry per release or big turn; CHANGELOG still owns
+  per-release changes). Launch/promotion is PARKED as GitHub issue
+  HMarzban/fusegrid#7 (owner 2026-10-19: lots to do before publishing).
   `docs/marketing/README.md` owns pitch copy, per-platform tags, the launch
   checklist and the About/topics text (the owner pastes and posts; agents
   never submit). JSON-LD never carries a rating or review; `playMode` is the

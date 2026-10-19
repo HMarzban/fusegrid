@@ -11,7 +11,7 @@ bricks, foes and chiptune.
 [![License: MIT](https://img.shields.io/badge/license-MIT-c39cff.svg)](LICENSE)
 [![Play in the browser](https://img.shields.io/badge/play-in%20the%20browser-ffd447.svg)](https://hmarzban.github.io/fusegrid/)
 
-[![Play Fusegrid in the browser — share card shows the real 3D board mid-blast, Heat chips, and the FUSE/GRID wordmark](og.png)](https://hmarzban.github.io/fusegrid/)
+[![Play Fusegrid in the browser — share card shows the real LEVEL SELECT screen with its eight room tiles, CLASSIC 2D · PIXEL · REAL 3D, the CORE / PLUS / MAX heat chips and the FUSE/GRID wordmark](og.png)](https://hmarzban.github.io/fusegrid/)
 
 ### ▶ PRESS START: [hmarzban.github.io/fusegrid/](https://hmarzban.github.io/fusegrid/)
 
@@ -163,8 +163,16 @@ CORE ×1, PLUS ×2, MAX ×3.
   else cancels (`C`, or a tap on `C COPY`, cancels and copies your stats).
 - **Help on the cabinet.** **GUIDE** (HOW TO, ITEMS, ENEMIES), HIGH SCORES,
   STATS and **SOURCE**, which opens this repository.
+- **Menus built for both hands.** On a keyboard, MENU shows a preview of the
+  row you point at and LEVEL SELECT is a grid of room tiles beside a room
+  card. On a phone, MENU is a hub of big tiles and every menu page fills the
+  screen.
 - **Plays offline.** Install it from the browser as a PWA. After your first
   online visit it runs offline.
+- **Updates on your timing.** When a new version is ready, a **NEW VERSION
+  READY** card offers RELOAD (or `U`) on the menus or after a finished run,
+  never in the middle of one. LATER hides it until your next run ends or
+  the next time you open the game.
 
 Everything the game remembers lives in your browser's local storage. There is
 no account, no server and no global ranking.

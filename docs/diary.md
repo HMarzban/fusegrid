@@ -6,7 +6,7 @@
 
 This is the story of how the game was built: the big turns, the dead ends
 and what each one taught us. It runs from the first commit on 2026-08-16 to
-shell v180 on 2026-10-19: 506 commits in all.
+shell v182 on 2026-10-19: 528 commits in all.
 
 - **What changed in each release** lives in the [CHANGELOG](../CHANGELOG.md).
 - **How the game works today** lives in [architecture.md](architecture.md).
@@ -43,6 +43,7 @@ mention review rounds and contact sheets.
 | 2026-10-10 | 4-3 | 3D blasts with volume; PIXEL gets the GO |
 | 2026-10-11 | 4-4 | Three looks and a cooler cabinet (shell v178) |
 | 2026-10-19 | 5-1 | New menus and NEW VERSION READY (shell v180) |
+| 2026-10-19 | 5-2 | Phone menus fill the screen; launch prep (shell v181–v182) |
 
 ---
 
@@ -454,6 +455,41 @@ lie*. A score teaser reads only runs you played. Shell v179 was never
 deployed on its own, so shell v180 carries both rounds. It went live the
 same day.
 
+### 2026-10-19 · Bigger phone menus, then launch prep
+
+The same afternoon, **shell v181** gave phone menus the whole screen. On a
+phone held upright, MENU and every page now draw on a full-screen box at
+about 0.9 scale instead of 0.63, so hub tiles grew from 41 to 59 CSS px and
+the smallest text from 6.3 to 9 px. Narrow pages re-flow: LEVEL SELECT puts
+the room card under the grid, ENEMIES drops to two columns. The board stays
+put behind them. The same release kept the legacy iso view's MEDALS, STATS
+and HIGH SCORES inside their boxes, and stopped the room card promising NO
+TIME YET before TIME mode is open.
+
+Then the cabinet got ready to meet people. Several sessions ran in
+parallel, each in its own worktree, with one supervising session merging
+their branches:
+
+- **This diary**, plus a CHANGELOG backfilled all the way to the public
+  launch.
+- **An SEO pass and a promotion kit** ([marketing/README.md](marketing/README.md)):
+  a meta description and JSON-LD that lead with play-in-the-browser, the
+  three looks and Heat; a sitemap `lastmod` a test keeps honest; pitch copy,
+  per-platform tags, portal research and a launch checklist.
+- **Fresh listing art**, all real captures: install-dialog screenshots in the
+  web manifest, a PIXEL still, three short silent gameplay clips and a MENU
+  still retaken on v181. Two sessions retook that same still at once; the
+  team kept one and dropped the other.
+- **A new share card.** From a three-way contact sheet the owner picked
+  **C**: the ATLAS LEVEL SELECT in CLASSIC 2D, with all three looks named.
+  The share text, the GitHub About description and its 20 topics now say
+  the same thing, and "deterministic" no longer leads the storefront.
+
+**Shell v182** shipped the install screenshots and the new card the same
+evening. The launch itself waits: the owner parked the whole promotion plan
+as [issue #7](https://github.com/HMarzban/fusegrid/issues/7) ("we have lots
+of todo before we publish it").
+
 ---
 
 ## 🧪 Lessons from the workshop
@@ -503,8 +539,14 @@ every gate as a white egg. Soundtrack v1 and v2 both had clean test sheets
 and both missed. Judge art at its in-game size, and music by listening.
 
 **For a taste call, show two or three candidates side by side.** Camera C,
-blast v3, CONSOLE PANEL and ATLAS were all picked from labelled contact
-sheets, with the owner free to veto.
+blast v3, CONSOLE PANEL, ATLAS and share card C were all picked from
+labelled contact sheets, with the owner free to veto.
+
+**A precached file only reaches installed players with a new shell.** The
+web manifest is in the app-shell cache, so the install screenshots that
+merged after v181 shipped stayed invisible to installed copies until shell
+v182 bumped `CACHE_NAME`. Any change to a precached file needs a release,
+not just a push.
 
 **Parallel agents need fences.** One session's `git stash` once swept up
 another session's work mid-commit (2026-09-06), and agents started right after
