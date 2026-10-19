@@ -208,6 +208,9 @@ control to the new worker and the page reloads once. Copies from before the
 card existed (shell v178 and older) update once on their own, because their
 page can't show it. Cleanup touches only this game's own caches. First-time offline
 loading and syncing progress between devices are outside this design.
+The manifest's install-dialog screenshots (`screenshots/`) ship with the
+site but stay out of the precache. The dialog fetches them online, and the
+worker never stores a file it didn't precache.
 
 ---
 

@@ -29,6 +29,12 @@ preset (`dist` 1503) through the `CAM_FOV` 24 lens, both read from
 `camrig.js` in the page at capture time, never orbited or dollied, with the
 near-wall cutaway. MAKO is the hero in every shot.
 
+> **`still-menu.png` is one menu behind.** Shell v179/v180 rebuilt the menus
+> (the CONSOLE PANEL list beside a preview pane), and this still shows the
+> v178 menu. The board shots (cover, 3D stills, GIF) are still current:
+> v179/v180 changed only the menus and the PAUSE / WIN / LOSE overlays,
+> never the board or the HUD. Recapturing the MENU is open.
+
 **How every capture ran.** Each asset got its own session (the three 3D
 stills share one): its own
 `PORT=0 node serve.js` and its own Playwright `chrome-headless-shell` on
@@ -75,7 +81,9 @@ screenshots).** Same clean start as above: its own `PORT=0 node serve.js`
 and Metal headless-shell per asset, fresh profile, page loaded once, every
 service worker unregistered (one each time) and every cache deleted
 (`fusegrid-shell-v180`), localStorage cleared, SW bypass on, hard reload
-with `ignoreCache`, both processes stopped by PID. Every session logged 0
+with `ignoreCache`, both processes stopped by PID. The page re-registers
+`sw.js` on that reload, but with the bypass on it serves nothing, so every
+byte came from the server. Every session logged 0
 console errors and 0 exceptions. Two things differ from the first pass:
 
 - **The game's own demobot holds the keys.** A normal GAME run starts with

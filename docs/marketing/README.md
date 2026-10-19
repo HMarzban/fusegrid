@@ -202,12 +202,12 @@ on it.
 | Need | Have it? |
 |---|---|
 | itch cover 630×500 | ✅ `media/cover-630x500.png` |
-| 3–5 gameplay stills | ✅ `media/still-*.png`: JUNGLE, ICE, CROWN in REAL 3D, the MENU, and FACTORY in PIXEL |
+| 3–5 gameplay stills | ✅ `media/still-*.png`: JUNGLE, ICE, CROWN in REAL 3D and FACTORY in PIXEL. ⚠️ `still-menu.png` still shows the v178 menu, from before the v179/v180 redesign, so it needs a recapture |
 | Short gameplay GIF | ✅ `media/play.gif` |
 | A PIXEL still | ✅ `media/still-pixel.png` |
 | Silent 15–20 s clip, landscape + portrait | ✅ 18 s each: `media/clip-landscape.mp4` (1920×1080, REAL 3D) and `media/clip-portrait-2x3.mp4` (1080×1620, PIXEL) for CrazyGames, `media/clip-portrait-9x16.mp4` (1080×1920, REAL 3D) for Shorts / TikTok / Reels |
 | Install-dialog screenshots | ✅ `screenshots/wide.png` + `screenshots/narrow.png`, in the manifest |
-| CrazyGames covers 16:9, 2:3, 1:1 | ❌ Each needs the title on a real capture: a wordmark composite, which is storefront art like `og.png`, so it waits for the owner |
+| CrazyGames covers 16:9, 2:3, 1:1 | ❌ Not made yet. The only text a cover may carry is the title, so the HUD has to go: that means REAL 3D or PIXEL with `#c` hidden, never CLASSIC, where `#c` is the board. No borders and no blur, so no upscaling. 1:1 and 2:3 can be cropped from a 1200×1040 (AUTO) or 1800×1560 (RESOLUTION FULL at DPR 3) board capture. 16:9 at 1920×1080 needs a ~1.07× upscale, or the page backdrop around the stage. Adding the title is optional, but a wordmark on the art makes it storefront art like `og.png` (owner) |
 
 CrazyGames also asks that a clip open on the static cover, so the portrait
 and landscape clips will get that first frame once the covers exist.
@@ -409,9 +409,11 @@ Tick these in order. Every box past "Ready the page" is something the
 
 **3. Fill the art gaps**
 
-- [ ] Merge the fresh `media/` recapture.
-- [ ] Capture a PIXEL still and a 15–20 s silent clip (landscape and
+- [x] Merge the fresh `media/` recapture.
+- [x] Capture a PIXEL still and a 15–20 s silent clip (landscape and
       portrait). Real captures only.
+- [ ] Recapture `media/still-menu.png` on the v180 menus.
+- [ ] CrazyGames covers 16:9, 2:3, 1:1 (see the art table).
 
 **4. List it (one a week is plenty)**
 
