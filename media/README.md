@@ -1,5 +1,19 @@
 # Listing art
 
+> **ATTRACT MODE.** The cover, stills and GIF that sell Fusegrid on itch.io,
+> Newgrounds and Game Jolt, plus the recipe for zipping the playable game.
+
+This page owns the listing art, the itch blurb and the upload zip. Everything
+else about the game lives in the [docs map](../docs/README.md).
+
+> ⚠️ **Due for a recapture.** These captures date from 2026-09-06.
+> `still-menu.png` shows the old six-row MENU (DAILY and STATS arrived in
+> shell v143), the REAL 3D shots use the camera from before shell v163, and no
+> asset shows PIXEL (shell v178) yet. They're still real captures of the game
+> as it was then.
+> Adding PIXEL to the listing is a storefront change, so it gets its own pass
+> rather than a drive-by.
+
 Everything in this folder is a **real capture** from the live game (loopback
 `node serve.js`, service worker unregistered and caches cleared first, then a
 hard reload) — nothing here is generated key art. Not part of the shipped
@@ -25,7 +39,7 @@ R2 folding HOW TO PLAY / ITEMS / ENEMIES under GUIDE); this pass only
 recaptures pixels to swap the hero, and did not touch layout. Every still
 below (plus root `og.png`) shows MAKO, not the earlier gunmetal-hulled hero.
 
-## Assets
+## 🖼️ Assets
 
 | File | Use | Provenance |
 |---|---|---|
@@ -54,7 +68,7 @@ per-pixel restore, measured within ~9 RGB units of the original at the
 corner — the text glyphs themselves are byte-identical restorations and the
 board/hero are real renders.
 
-## Rebuilding the zip for itch / Newgrounds / Game Jolt
+## 📦 Rebuilding the zip for itch / Newgrounds / Game Jolt
 
 The shipped game is static files only — no build step. To package a zip for
 an itch/NG/GJ HTML5 upload, include exactly the files GitHub Pages serves and
@@ -84,7 +98,7 @@ from under the canonical Pages origin.
 
 Tags: `arcade`, `singleplayer`, `webgl`, `chiptune`.
 
-## itch blurb
+## 📣 itch blurb
 
 ```
 Play Fusegrid in the browser — a single-player bomb-grid arcade.

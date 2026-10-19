@@ -222,7 +222,11 @@ not shell screens. Do not add them as `SCREEN` values.
     because two tests pin it there; `walker` splits into mirrored halves so
     the alternating stomp keeps two transforms). `shade` is the only foe with
     `castShadow=false`; additive accents never cast.
-  - Player body — **MAKO, the reef critter (2026-09-06, spec §2.7)**. Every
+  - Player body — **MAKO, the reef critter (2026-09-06, spec §2.7)**, still the
+    LIVE hero. Owner ruling 2026-10-11 resets the hero DIRECTION (see the
+    owner-pending note at the end): the next hero has a head, arms and legs, so
+    the "no arms" rule below binds only the live MAKO until a new hero is
+    built. Every
     humanoid hero was vetoed by the user ("the main character also must not be
     like a human, it must be a creative character"), so SIGNAL RUNNER and
     IONVEST are superseded and **2D and 3D share ONE character again, by
@@ -456,7 +460,10 @@ not shell screens. Do not add them as `SCREEN` values.
   `serve.js` MIME includes `.webmanifest`.
 - CI: `.github/workflows/pages.yml` runs `npm test` on Node 26 for pull requests
   and as the required gate before every Pages deploy. Human-facing
-  architecture/tradeoffs live in `docs/architecture.md`.
+  architecture/tradeoffs live in `docs/architecture.md`. `docs/README.md` maps
+  which doc owns which fact (one owner per fact, others link) and sets the doc
+  voice: arcade tone, facts exact; dated `docs/superpowers/` records are never
+  rewritten, only indexed there.
 
 Flags: `?render=3d|px|iso` (3d/px seed the boot only; iso is pinned), `?play=1`, `?net=local`, `?orbit=1`, `?debug=1`,
 `?code=` (12-char challenge, URL-only — no opts fallback).
@@ -624,8 +631,8 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
 - Owner-pending, NOT built (research/design only, 2026-10-11): menu redesign
   variants A/B/C; story mode "FUSE/GRID: LOW TIDE"; naming (keep FUSE/GRID +
   subtitle; FUSEBORN is the only clean rename); game bible v2, COMPLETE as
-  design (new MAKO = fuse-fin shark-walker, crimson `#a3203a`, modelled in
-  Blender as a 2,936-tri 5-mesh game model + glb; six worlds W1 Mangrove Coast
+  design (its fuse-fin shark-walker MAKO is SUPERSEDED as D1 by the hero
+  reset below; six worlds W1 Mangrove Coast
   / W2 Dry Bay / W3 Glacier Stair / W4 Salt Waste / W5 Held Sea / W6 QUILL's
   Spire with themed foes and bosses MUDGE / RASP / TUSK / SIFT / HOLDFAST /
   QUILL; NOOK's TIDE LOG narration; story-first cold open; THE CAMP / THE
@@ -634,3 +641,20 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   the game bible, and nothing from it is built yet. Touch bugs found by the menu
   research, unfixed: GUIDE traps touch, LEVEL SELECT and HIGH SCORES heat tabs
   are not touch-usable, an off-row MENU tap starts a run.
+- Hero direction reset (owner ruling 2026-10-11, concept only, NOT built): a
+  cartoon with a head, arms and legs, "googooli" (appealing yet dignified,
+  smart, stylish), NOT human, space theme — a small being of starlight held in
+  a clean flight suit, dark visor with two glowing almond eyes, crown-flame,
+  jetpack, a bomb gauntlet on one hand. Gold/ember is its LIGHT, never its
+  paint (they are the blast's own FIRE colours; measured). Owner picked
+  concept B (light limbs), asked for it cozy, then supplied their own design
+  pack: SOLIN v1 is the LOCKED identity (cream pebble helmet with brass ear
+  pods, NO head flame, glowing almond eyes + blush, oat scarf, navy quilted
+  vest with heart star + left pocket, light limbs with brass cuffs, right
+  Forge Mitt, cream boots, copper kettle jetpack; never mirror sides). Use
+  the owner's own PNG frames as they are (owner, 2026-10-11: "why you did not
+  use the charechter images I just gave you?"); never redraw or "improve"
+  them, report art problems instead. Working name SOLIN; story
+  fit still deferred; sources in the git-ignored
+  `.superpowers/sdd/2026-10-11-hero/` (`solin-v1/`). Before any build, re-target
+  the one-chromatic-body 2D hero gate in `tests/items-art.test.mjs`.

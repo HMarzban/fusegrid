@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: ▶ Play Fusegrid
+    url: https://hmarzban.github.io/fusegrid/
+    about: Try the live build first; your bug may already be fixed.
+  - name: 🛠 Contributing guide
+    url: https://github.com/HMarzban/fusegrid/blob/main/CONTRIBUTING.md
+    about: Setup, URL flags, tests and how to send a change.

@@ -1,10 +1,24 @@
 # Changelog
 
-All notable player-facing changes to Fusegrid. The format follows
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Fusegrid has no
-version number of its own; each entry is dated and names the PWA shell
-revision (`CACHE_NAME` in `src/pwa/shell.js`) that shipped it, since that is
-what makes an installed copy update.
+> **PATCH NOTES.** Every player-facing change to Fusegrid, newest first.
+> Insert coin, scroll down, see how the cabinet grew.
+
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/):
+each release lists what was **Added**, **Changed**, **Fixed** or **Removed**.
+Fusegrid has no version number of its own. Each release is named after the
+PWA shell revision that shipped it (`CACHE_NAME` in `src/pwa/shell.js`),
+because that's what makes an installed copy update, and it's dated.
+
+Entries are written for players. How a change works lives in
+[docs/architecture.md](docs/architecture.md); how to ship one is in
+[CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
+
+## Unreleased
+
+### Added
+- **Join the build.** A contributing guide, a code of conduct, a security
+  policy, bug and idea templates, and a docs map, for anyone who wants to
+  help build the cabinet. Nothing in the game itself changes.
 
 ## shell v178 · 2026-10-11
 
@@ -272,4 +286,5 @@ what makes an installed copy update.
   HIGH SCORES, a first-visit handoff straight into CORE room 1, and the
   store-listing art.
 
-Earlier history is in `git log` and the repository's `MEMORY.md`.
+**CONTINUE?** Earlier history is in `git log` and the repository's
+[`MEMORY.md`](MEMORY.md).

@@ -1,48 +1,47 @@
-# Fusegrid
+# FUSE/GRID
 
-**FUSE/GRID** is a single-player, deterministic bomb-grid arcade you play in the browser. Flip **REAL 3D ⇄ CLASSIC 2D** from the cabinet menu, pick your Heat on LEVEL SELECT, and clear every enemy to advance.
+> **INSERT COIN.** Light the fuse, clear the room, don't stand in the blast.
+
+**Fusegrid** is a single-player bomb-grid arcade you play right in your browser.
+Flip **REAL 3D ⇄ CLASSIC 2D** (or hand-pixelled **PIXEL**) whenever you like, dial
+the **Heat** to CORE, PLUS or MAX, and blow your way through eight rooms of
+bricks, foes and chiptune.
+
+[![Pages](https://github.com/HMarzban/fusegrid/actions/workflows/pages.yml/badge.svg)](https://github.com/HMarzban/fusegrid/actions/workflows/pages.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-c39cff.svg)](LICENSE)
+[![Play in the browser](https://img.shields.io/badge/play-in%20the%20browser-ffd447.svg)](https://hmarzban.github.io/fusegrid/)
 
 [![Play Fusegrid in the browser — share card shows the real 3D board mid-blast, Heat chips, and the FUSE/GRID wordmark](og.png)](https://hmarzban.github.io/fusegrid/)
 
-**Play now:** [https://hmarzban.github.io/fusegrid/](https://hmarzban.github.io/fusegrid/)
+### ▶ PRESS START: [hmarzban.github.io/fusegrid/](https://hmarzban.github.io/fusegrid/)
 
-Share that URL **with the trailing slash** so chat apps load the preview card (`og.png`, 1200×630). The no-slash redirect drops Open Graph tags.
+No install needed, no account, no server. Just press start.
 
-## Features
+> **Sharing the link?** Keep the **trailing slash**:
+> `https://hmarzban.github.io/fusegrid/`. The no-slash redirect drops the
+> Open Graph tags, so chat apps show no preview card (`og.png`, 1200×630).
 
-- **Opening** — a FUSE/GRID title waits for any key or tap, which starts the music and a ~4 s show that blasts open the menu. Any key skips the show.
-- **REAL 3D ⇄ CLASSIC 2D, plus PIXEL** — **OPTIONS → RENDER** cycles three looks with no reload: CLASSIC 2D (Canvas), PIXEL (hand-drawn sprites over the same board) and REAL 3D (WebGL). REAL 3D frames the whole board from one 3/4 camera; wheel or pinch zooms, and zoom resets to your CAMERA preset every room. OPTIONS also holds music and SFX volume, the 3D camera preset, brightness, screen shake, and reduce-flash.
-- **GRAPHICS** — a page under OPTIONS (and in the pause menu) that sets image quality and frame rate together: QUALITY BATTERY / AUTO / HIGH in one press, or tune FRAME RATE (30 / 60 / MAX), RESOLUTION, SHADOWS, ANTI-ALIAS, EFFECTS, DEMO and an FPS METER yourself (CUSTOM). Game speed never changes. Menus and pause idle at 30 fps, and audio sleeps while the tab is hidden.
-- **Heat** — CORE / PLUS / MAX on LEVEL SELECT (`↑/↓`). CORE is the baseline run; PLUS and MAX tighten fuse, spawns, and pressure.
-- **Eight rooms** — five biomes on a fresh install (JUNGLE → ARENA), then SAND, VOID, and CROWN after your first clear.
-- **Pact afterburner** — optional LAST / BARE / THIN / SHRINK toggles (`1`–`4`) unlock with rooms 6–8; CORE with every toggle off matches baseline v6. `5` adds TIME ATTACK: a play-only stopwatch with a per-room best.
-- **Run summary** — GAME OVER and the finale show your tally and a delta against your saved best for that heat: NEW BEST, FURTHEST ROOM YET, MATCHED, or how far short you fell. Combo callouts and a close-call flash fire during play (both respect reduce-flash).
-- **DAILY** — one board a day, seeded from the date. Your tries and best for the day are kept on this device only; nobody is ranked.
-- **Challenge code** — on the end screen, `B` copies a twelve-character board code (seed, heat, pact, pace — never a score). Open `…/fusegrid/?code=XXXXXXXXXXXX` to play the same board.
-- **STATS** — a cabinet page with lifetime runs, rooms, deaths, kills, pickups, play time, and your CORE / PLUS / MAX bests; `C` (or a tap on `C COPY MY STATS`) copies it as text. Four local plaques on HIGH SCORES. STATS also counts lifetime **DAYS PLAYED**.
-- **Medals** — eight medals for finale clears; `T` (or a tap on `T MEDALS`) on STATS opens the MEDALS page.
-- **Ghost** — after your fastest clear of a room, replaying that exact board (same seed, room, heat, pact, pace) races a translucent copy of your best route, in every look.
-- **Reset my cabinet** — on STATS, press `R` twice (or tap `R RESET`, then `R AGAIN`) to wipe progress and reload; settings and pace are kept, anything else cancels (`C`, or a tap on `C COPY`, cancels and copies your stats).
-- **Pickup feedback** — every pickup floats a label with your new value (`FLAME 4`, `MAX`, or `replaces …` on a bomb swap) and pulses its HUD chip; an ability bar along the bottom of the board lists the powers you hold.
-- **Coach** — a ghost shows the first bomb on a fresh install, then one short tip the first time you pick up KICK, THROW, REMOTE, PASS, LINE, POWER, PIERCE, or SHIELD.
-- **Cabinet help** — **GUIDE** (HOW TO, ITEMS, ENEMIES), HIGH SCORES, STATS, and **SOURCE** (opens [github.com/HMarzban/fusegrid](https://github.com/HMarzban/fusegrid)).
-- **Chiptune + boom** — each room has its own theme and blast tint.
-- **PWA** — install from the browser; offline play after the first visit (first load still needs network).
-- **Pure ES modules** — no bundler, no npm runtime dependencies. Three.js r160 is vendored for 3D only.
+---
 
-This is **single-player** arcade play. Internet multiplayer is not shipped. The sim is deterministic: same inputs, same outcome.
+## 🕹️ How to play
 
-## How to play
+**The one rule:** clear every enemy in the room to advance.
 
-Clear every enemy in the room to advance. Gold **WALL** never breaks; green **BRICK** breaks and stops a normal blast. Collect floor cubes for bombs, flame range, kick, throw, remote, and shield. Surviving a hit leaves live bombs and blades in the world.
+- Gold **WALL** never breaks. Green **BRICK** breaks, and stops a normal blast.
+- Floor cubes lie in the open and hide under bricks: more bombs, longer
+  flames, kick, throw, remote, shield and more. Grab them.
+- Take a hit and you lose a heart, but the room keeps going. Any bombs and
+  blades already lit stay lit, so step lively.
+
+### Controls
 
 | Input | Action |
 |---|---|
 | WASD / arrows | Move |
 | Space (or J / X) | Place bomb |
-| Shift + Space | Throw *(needs throw power-up)* |
-| Q | Detonate remote *(needs remote power-up)* |
-| K + move | Kick *(needs kick power-up)* |
+| Shift + Space | Throw *(needs THROW)* |
+| Q | Detonate remote *(needs REMOTE)* |
+| K + move | Kick *(needs KICK)* |
 | R *(in a run)* | Reset the camera and zoom |
 | P / Esc | Pause (RESUME / RESTART / OPTIONS / QUIT TO MENU); ↑↓ + Enter pick a row |
 | M *(paused)* | Quit to menu |
@@ -52,11 +51,25 @@ Clear every enemy in the room to advance. Gold **WALL** never breaks; green **BR
 | T *(STATS)* | Open the MEDALS page |
 | R, R *(STATS)* | Reset my cabinet (two presses; any other key cancels) |
 
-On touch devices during a run, a virtual D-pad and bomb button sit off the board: docked low in the thumb zone in portrait (the board centres on the menus and moves up under pause during a run), in the side gutters in landscape, with pause above. While you hold THROW or REMOTE, a matching button appears beside the bomb button (in the right gutter in landscape). STATS's MEDALS, Copy and Reset labels are tappable. Power-ups marked with `*` in the in-game HOW TO need their pickup first. Everything the game remembers lives in your browser's local storage; there is no account, server, or leaderboard. See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
+Menus run on the arrows, Enter and Esc. Powers marked `*` in the in-game
+HOW TO need their pickup first.
 
-## Progression
+**On a phone or tablet,** a virtual D-pad and bomb button sit off the board.
+In portrait they dock low in the thumb zone (the board centres on the menus and
+slides up under the pause button during a run). In landscape they sit in the
+side gutters, with pause above. Holding THROW or REMOTE? A matching button pops
+up beside the bomb button (in the right gutter in landscape). STATS's MEDALS,
+Copy and Reset labels are tappable too.
 
-### Rooms
+Want the full cast of pickups and foes? Open **GUIDE → ITEMS / ENEMIES** in the
+game. The cabinet explains itself, and its wording comes straight from the
+game's own item table, so it's never out of date.
+
+---
+
+## 🗺️ The run
+
+### Eight rooms
 
 | Room | Look | Notes |
 |---|---|---|
@@ -64,26 +77,31 @@ On touch devices during a run, a virtual D-pad and bomb button sit off the board
 | 2 | ICE | White cubes, navy cliffs |
 | 3 | FACTORY | Amber crates, steel |
 | 4 | WATER | Teal sewer / ruins |
-| 5 | ARENA | Night court, rose bricks — **finale on first run** |
-| 6 | SAND | Ochre dunes *(unlocks after first CLEAR)* |
-| 7 | VOID | Violet dark, tall cliffs *(unlocks after first CLEAR)* |
-| 8 | CROWN | Gold court — **finale after unlock** *(unlocks after first CLEAR)* |
+| 5 | ARENA | Night court, rose bricks. **Finale on your first run** |
+| 6 | SAND | Ochre dunes *(unlocks after your first CLEAR)* |
+| 7 | VOID | Violet dark, tall cliffs *(unlocks after your first CLEAR)* |
+| 8 | CROWN | Gold court. **Finale after unlock** *(unlocks after your first CLEAR)* |
 
-On LEVEL SELECT, `←/→` picks the room, `↑/↓` picks Heat and `[`/`]` picks pace (EASY / NORM / HARD); Enter starts, Esc backs out. Menus use the arrows, Enter and Esc throughout. The title waits for any key or tap, which starts the music and a short opening show; any key skips the show.
+Every room has its own chiptune theme and its own blast tint. Fresh installs
+show rooms 1–5 only. That's the gate, not a bug: beat room 5 and the map grows.
 
-### Heat
+### Turn up the Heat
 
-| Grade | Effect |
+On LEVEL SELECT, `←/→` picks the room, `↑/↓` picks Heat and `[`/`]` picks pace
+(EASY / NORM / HARD). Enter starts, Esc backs out.
+
+| Heat | What changes |
 |---|---|
-| **CORE** | Baseline v6 — replay reference |
-| **PLUS** | Harder spawns and tighter fuse |
+| **CORE** | The baseline run (baseline v6, the replay reference) |
+| **PLUS** | Harder spawns and a tighter fuse |
 | **MAX** | Highest pressure |
 
-Attract mode always runs CORE with Pact off, regardless of your last selection.
+The attract demo always runs CORE with Pact off, whatever you picked last.
 
-### Unlock: rooms 6–8 and Pact
+### Seal a Pact *(after your first FUSE/GRID CLEAR)*
 
-Beat room 5 (FUSE/GRID CLEAR) once and LEVEL SELECT unlocks rooms 6–8 plus four optional **Pact** toggles. Fresh installs show rooms 1–5 only — that is intentional gating, not a bug.
+Clear room 5 once and LEVEL SELECT also offers four optional **Pact** toggles,
+each a voluntary handicap:
 
 | Key | Pact | Rule |
 |---|---|---|
@@ -92,61 +110,118 @@ Beat room 5 (FUSE/GRID CLEAR) once and LEVEL SELECT unlocks rooms 6–8 plus fou
 | `3` | THIN | One fewer buried cube under breakables |
 | `4` | SHRINK | Arena walls close inward over time |
 
-Toggle with `1`–`4` on LEVEL SELECT. A CORE run with all Pact toggles off stays bit-identical to baseline v6.
+`5` adds **TIME ATTACK**: a play-only stopwatch with a per-room best. A CORE run
+with every Pact off is bit-identical to baseline v6.
 
-### Scoring
+### Score
 
-The live HUD shows raw points during play. **HIGH SCORES** stores Heat-scaled totals only: CORE ×1, PLUS ×2, MAX ×3.
+The live HUD shows raw points. **HIGH SCORES** saves Heat-scaled totals:
+CORE ×1, PLUS ×2, MAX ×3.
 
-## Play online and install
+---
 
-- **Browser:** [https://hmarzban.github.io/fusegrid/](https://hmarzban.github.io/fusegrid/)
-- **Install (PWA):** use Add to Home Screen / Install app in a supporting browser. The app shell precaches on first visit; later sessions work offline. The first visit still needs network.
+## ✨ What's in the cabinet
 
-## Development
+- **The opening.** A FUSE/GRID title waits for any key or tap. That press drops
+  the music and a ~4 s show that blasts the menu open. Any key skips it.
+- **Three looks, one game.** **OPTIONS → RENDER** cycles CLASSIC 2D (Canvas),
+  PIXEL (hand-drawn sprites over the same board) and REAL 3D (WebGL), live, no
+  reload. REAL 3D frames the whole board from one 3/4 camera; wheel or pinch to
+  zoom, and zoom snaps back to your CAMERA preset every room. OPTIONS also
+  holds music and SFX volume, the 3D camera preset, brightness, screen shake
+  and reduce-flash.
+- **GRAPHICS.** One page (under OPTIONS, and in the pause menu) for look versus
+  frame rate: QUALITY BATTERY / AUTO / HIGH in one press, or tune FRAME RATE
+  (30 / 60 / MAX), RESOLUTION, SHADOWS, ANTI-ALIAS, EFFECTS, DEMO and an FPS
+  METER yourself (CUSTOM). Game speed never changes. Menus and pause idle at
+  30 fps, and audio sleeps while the tab is hidden.
+- **Pickups that talk back.** Every pickup floats a label with your new value
+  (`FLAME 4`, `MAX`, or `replaces …` on a bomb swap) and pulses its HUD chip.
+  An ability bar along the bottom of the board lists the powers you hold.
+- **Coach.** A ghost demonstrates your first bomb on a fresh install, then you
+  get one short tip the first time you grab KICK, THROW, REMOTE, PASS, LINE,
+  POWER, PIERCE or SHIELD. Once each, ever.
+- **Run summary.** GAME OVER and the finale show your tally and a delta
+  against your saved best for that Heat: NEW BEST, FURTHEST ROOM YET, MATCHED,
+  or how far short you fell. Combo callouts and a close-call flash fire during
+  play (both respect reduce-flash).
+- **DAILY.** One board a day, seeded from the date. Your tries and your best
+  for the day stay on this device. Nobody is ranked; it's you against you.
+- **Challenge code.** On the end screen, `B` copies a twelve-character board
+  code (seed, Heat, Pact, pace, never a score). Open
+  `…/fusegrid/?code=XXXXXXXXXXXX` to play that same board.
+- **Ghost.** Clear a room faster than ever and replaying that exact board
+  (same seed, room, Heat, Pact, pace) races a translucent copy of your best
+  route, in every look.
+- **STATS.** Lifetime runs, rooms, deaths, kills, pickups, play time, DAYS
+  PLAYED and your CORE / PLUS / MAX bests. `C` (or a tap on `C COPY MY STATS`)
+  copies it as text. HIGH SCORES carries four local plaques.
+- **Medals.** Eight of them, each earned on a finale clear. `T` (or a tap on
+  `T MEDALS`) on STATS opens the MEDALS page.
+- **Reset my cabinet.** On STATS press `R` twice (or tap `R RESET`, then
+  `R AGAIN`) to wipe progress and reload. Settings and pace are kept. Anything
+  else cancels (`C`, or a tap on `C COPY`, cancels and copies your stats).
+- **Help on the cabinet.** **GUIDE** (HOW TO, ITEMS, ENEMIES), HIGH SCORES,
+  STATS and **SOURCE**, which opens this repository.
+- **Plays offline.** Install it from the browser as a PWA. After your first
+  online visit it runs offline.
 
-The public game is **Fusegrid**; this repository folder is **`rollblock`**. Clone, serve locally, and run tests — no build step.
+Everything the game remembers lives in your browser's local storage. There is
+no account, no server and no global ranking.
 
-**Requirements:** Node.js v26 ( `"type": "module"` ).
+---
+
+## 📲 Install
+
+- **Browser:** [hmarzban.github.io/fusegrid/](https://hmarzban.github.io/fusegrid/)
+- **As an app (PWA):** use *Install app* or *Add to Home Screen* in a
+  supporting browser. The first visit precaches the game and needs network;
+  every visit after that works offline. (iOS: Add to Home Screen, 16.4+.)
+
+---
+
+## 🛠️ Build it yourself
+
+No bundler, no build step and zero npm runtime dependencies. It's plain ES
+modules, and Three.js r160 is vendored for REAL 3D only. You need **Node.js 26**.
 
 ```bash
 git clone https://github.com/HMarzban/fusegrid.git rollblock
-cd rollblock
-npm start          # http://127.0.0.1:8080/index.html  (loopback only)
-npm test           # node --test
 ```
 
-`serve.js` binds **127.0.0.1** on purpose. Public play is GitHub Pages (static files), not a rebind of the local server.
+```bash
+npm start
+```
 
-**URL flags** (append to `index.html`):
+Then open `http://127.0.0.1:8080/index.html`. Run the whole test suite with:
 
-| Flag | Purpose |
+```bash
+npm test
+```
+
+Under the hood the simulation is deterministic: same seed, same inputs, same
+outcome, in Node and in the browser. Read on:
+
+| You want to… | Go to |
 |---|---|
-| `?render=3d` | Start in REAL 3D |
-| `?render=px` | Start in PIXEL |
-| `?render=iso` | Legacy dimetric renderer |
-| `?play=1` | Skip intro |
-| `?orbit=1` | Orbit camera (3D) |
-| `?net=local` | Local lockstep harness (1P proof, not multiplayer) |
-| `?debug=1` | Debug overlay |
+| Set up, use URL flags, send a pull request | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| Understand how the game works and why | [docs/architecture.md](docs/architecture.md) |
+| Find any doc (and which one owns which fact) | [docs/README.md](docs/README.md) |
+| See what changed in each release | [CHANGELOG.md](CHANGELOG.md) |
+| Grab store art or zip the game for itch | [media/README.md](media/README.md) (listing art lives in `media/`) |
+| Report a security issue | [SECURITY.md](SECURITY.md) |
 
-**Test Pact locally without clearing room 5:** in devtools console, `localStorage.setItem('nb.pact.v1','1')` then reload LEVEL SELECT.
+Everyone in the arcade follows the [Code of Conduct](CODE_OF_CONDUCT.md).
 
-Read the [architecture and tradeoffs](docs/architecture.md) for the simulation/rendering boundary, replay checks, and multiplayer limits. Contributor conventions and agent notes remain in [`AGENTS.md`](AGENTS.md).
+---
 
-Pull requests run the Node test suite. Pages deployment runs only after those tests pass on the commit being deployed.
+## 📜 License
 
-### Listing art
+MIT. See [`LICENSE`](LICENSE). Three.js r160 is vendored under MIT in
+`vendor/three.module.js`.
 
-Store/listing art (itch.io cover, room stills, and a short gameplay GIF) lives
-in [`media/`](media/), captured from the live game — see
-[`media/README.md`](media/README.md) for what each asset is and the zip
-recipe for an itch/Newgrounds/Game Jolt HTML5 upload.
+**Source:** [github.com/HMarzban/fusegrid](https://github.com/HMarzban/fusegrid).
+The public game is Fusegrid; a local checkout is conventionally named
+`rollblock`.
 
-## License
-
-MIT — see [`LICENSE`](LICENSE). Three.js r160 is vendored under MIT in `vendor/three.module.js`.
-
-## Repository
-
-[https://github.com/HMarzban/fusegrid](https://github.com/HMarzban/fusegrid)
+**GAME OVER?** Press Space. One more run.

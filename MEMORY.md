@@ -16,6 +16,15 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-19 — Docs pass: OSS set + one-owner-per-fact map, arcade voice
+- Rewrote README (player front door, lede now play-in-browser + 3D⇄2D + Heat, dev detail moved out), voice pass on architecture/CHANGELOG (+ Unreleased)/media (recapture note); added CONTRIBUTING (flags table now lives here), CODE_OF_CONDUCT, SECURITY, .github issue/PR templates, docs/README.md (who-owns-what map, doc house style, indexed design history with ⚠️ superseded notes). docs/superpowers bodies untouched. Open: media/ captures stale (6-row MENU, pre-v163 camera, no PIXEL).
+
+## 2026-10-11 — SOLIN v1 identity locked (concept round)
+- Owner picked hero concept B, asked for a cozy pass (story + suit text written), then supplied their own SOLIN design pack (cream helmet, flame-free, scarf, quilted vest, Forge Mitt, kettle jetpack): now the locked identity. Three in-worktree prototypes (PIXEL cells, CLASSIC 2D vector, REAL 3D 5-mesh) are being made to show it at game size before any real build; nothing in main's src/ or tests/ changed.
+
+## 2026-10-11 — Hero direction reset (concept only)
+- Owner ruling + survey: new hero = cartoon with head/arms/legs, googooli (dignified, smart, stylish), not human, space theme; supersedes the bible v2 shark-walker as D1. Description + 3 concepts (A seam-light, B light-limb, C star-crystal; lead recommends A) in `.superpowers/sdd/2026-10-11-hero/`; gold/ember proved unusable as body paint (= blast FIRE), used as the hero's light on a navy suit. Open: owner pick, name, story fit, 2D hero gate re-target. Nothing in src/ or tests/ changed.
+
 ## 2026-10-11 — v178 pushed live; game bible v2 complete (design only)
 - origin/main e1f3b23 = live shell v178 (PIXEL + pickup feedback + GRAPHICS settings); Pages CI green, live sw.js v178. Housekeeping: merged `graphics` worktree + branch removed, no orphan browsers/servers.
 - Game bible v2 finished as design, nothing built: MAKO redesigned (3 directions, panel pick = fuse-fin shark-walker, then a Blender game model 2,936 tris / 5 meshes + hero renders via the blender-mcp socket helper); six worlds with themed foes + bosses, NOOK's TIDE LOG narration, story-first cold open, THE CAMP / THE CHART menus; creative-director review lists 12 owner decisions (D1 MAKO, D2 fuse-pod instead of the black sphere bomb, D3 new maps story-only, D5 REAL 3D floors render ~albedo², D9 story checkpoints...) and a scope of ~134-182 eng-d + 156-210 art-d, recommending a P0 slice first. 11 game-craft skills installed in ~/.claude/skills. Sources: `.superpowers/sdd/2026-10-11-bible/` (git-ignored; story spoilers stay out of public docs).

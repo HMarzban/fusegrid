@@ -1,51 +1,187 @@
 # How Fusegrid works
 
-Fusegrid runs as static ES modules with no build step or npm runtime dependencies. The browser owns input and presentation; the simulation is importable directly in Node.
+> **BEHIND THE CABINET.** Unscrew the back panel: one simulation, three looks,
+> and every trade-off we made to keep it fast, fair and replayable.
 
-## One simulation, three looks
+Fusegrid runs as static ES modules with no build step and no npm runtime
+dependencies. The browser owns input and presentation. The simulation is
+importable directly in Node, so the game's rules can be tested without a
+browser at all.
 
-[`src/main.js`](../src/main.js) collects intents, advances an accumulator in fixed [`CFG.STEP`](../src/core/config.js) increments, and renders the resulting world. [`step`](../src/core/sim.js) changes that world using seeded randomness from [`rng.js`](../src/core/rng.js), with no DOM or wall clock in the core. This makes a recorded seed and input sequence reproducible without starting a browser.
+New here? Start with [CONTRIBUTING.md](../CONTRIBUTING.md) to get it running.
+For the binding rulebook (pinned numbers, test contracts, owner rulings), see
+[AGENTS.md](../AGENTS.md). This page explains *how* and *why*.
 
-Three renderers read the same simulation state, and the OPTIONS RENDER row cycles them: CLASSIC 2D (Canvas 2D, the default), PIXEL (hand-pixelled sprites) and REAL 3D (WebGL). Three.js is vendored and loaded only for REAL 3D. Keeping rendering separate allows a visual change without changing game rules, though GPU output and visual readability still need browser checks. The shell state machine owns menus; pause, win, and loss belong to the world.
+```mermaid
+flowchart LR
+  K[Keys / touch] --> I[input.js<br/>intents]
+  I --> S["step(world, dt, intents)<br/>src/core: fixed steps, seeded rng"]
+  S --> W[(world)]
+  W --> C[CLASSIC 2D<br/>Canvas]
+  W --> P[PIXEL<br/>sprites]
+  W --> D[REAL 3D<br/>WebGL]
+  W --> E[world.events] --> A[audio + fx]
+```
 
-The 3D renderer works to a fixed draw-call budget of 500; the tests' fully populated room draws 141. Repeated things are instanced, so cost does not grow with what is on screen. Every live blast shares two draws in [`blast.js`](../src/render/three/blast.js): an additive danger plate on each deadly tile, which tells the same tile-accurate truth as the 2D square, and one batch of shader-shaded fireballs that adds volume on top of it.
+---
 
-## PIXEL: sprites without a second game
+## 🎮 Level 1: one simulation, three looks
 
-PIXEL is its own renderer factory in [`src/render/pixel/`](../src/render/pixel/), built beside the 3D wrapper rather than as a branch of the classic renderer, so CLASSIC 2D stays byte-for-byte what it was (a call-log hash in the tests pins that). Every sprite is a small text grid whose characters name palette slots, never colours, and every colour a slot resolves to is a hex the repository already uses. A [manifest](../src/render/pixel/manifest.js) derives the list of cells the look needs from the game's own foe, pickup and biome tables, so a new foe without art shows a visible placeholder and a test fails rather than the gap passing silently. The art is baked into images the first time PIXEL is chosen, never at boot.
+[`src/main.js`](../src/main.js) collects intents, advances an accumulator in
+fixed [`CFG.STEP`](../src/core/config.js) increments, and renders the resulting
+world. [`step`](../src/core/sim.js) changes that world using seeded randomness
+from [`rng.js`](../src/core/rng.js), with no DOM and no wall clock in the core.
+That's the whole trick: a recorded seed plus an input sequence replays exactly,
+without ever starting a browser.
 
-The board is drawn at its native 300×260 art pixels, scaled up by nearest-neighbour to a whole multiple, then scaled once more with smoothing to the screen. That two-step "sharp-bilinear" blit keeps the board at the same size as the other looks on any screen while keeping each art-pixel edge within one device pixel of sharp at normal zoom (a strong pinch zoom softens it slightly). The camera and intro zoom reach PIXEL through the overlay canvas's transform, so no extra camera code exists for it. Animation runs on clocks the renderer owns, which stop in PAUSE, so a paused board does not keep walking. HUD item chips and the GUIDE pages show the same cells as the board when PIXEL is on.
+Three renderers read the same simulation state, and the OPTIONS RENDER row
+cycles them: CLASSIC 2D (Canvas 2D, the default), PIXEL (hand-pixelled sprites)
+and REAL 3D (WebGL). Three.js is vendored and loaded only for REAL 3D. Keeping
+rendering separate means a visual change can't change the game's rules, though
+GPU output and visual readability still need checking in a real browser. The
+shell state machine owns the menus; pause, win and loss belong to the world.
 
-The cost is about 120 KB of JavaScript that every boot still parses, even when PIXEL is never chosen. A test caps it, and loading the PIXEL code on demand, the way the 3D library already is, is the planned follow-up.
+The 3D renderer works to a fixed budget of 500 draw calls, and the tests' fully
+populated room draws 141. Anything repeated is instanced, so cost doesn't grow
+with what's on screen. Every live blast shares two draws in
+[`blast.js`](../src/render/three/blast.js): an additive danger plate on each
+deadly tile, which tells the same tile-accurate truth as the 2D square, and one
+batch of shader-shaded fireballs that adds volume on top of it.
 
-## Graphics settings and frame pacing
+## 👾 Level 2: PIXEL, sprites without a second game
 
-The GRAPHICS page (from OPTIONS, or inline from PAUSE) is one model for every look: a QUALITY preset (BATTERY, AUTO, HIGH) over FRAME RATE, RESOLUTION, SHADOWS, ANTI-ALIAS, EFFECTS and the attract DEMO, plus an FPS meter. QUALITY is not stored; it is read back from the six rows, and any other mix shows as CUSTOM. A pure policy module, [`gfx.js`](../src/app/gfx.js), turns the saved rows and the device (layout, pixel ratio) into one set of knobs that each renderer receives. Rows that cannot affect the current look are shown locked rather than hidden. AUTO is the default and keeps the earlier desktop look; the cheaper options, including no shadows, exist only as choices the player makes.
+PIXEL is its own renderer factory in
+[`src/render/pixel/`](../src/render/pixel/), built beside the 3D wrapper rather
+than as a branch of the classic renderer. That keeps CLASSIC 2D byte-for-byte
+what it was (a call-log hash in the tests pins it). Every sprite is a small
+text grid whose characters name palette slots, never colours, and every colour
+a slot resolves to is a hex the repository already uses. A
+[manifest](../src/render/pixel/manifest.js) derives the list of cells the look
+needs from the game's own foe, pickup and biome tables. So a new foe without
+art shows a visible placeholder and a test fails, instead of the gap slipping
+through silently. The art is baked into images the first time PIXEL is chosen,
+never at boot.
 
-[`frameloop.js`](../src/app/frameloop.js) owns `requestAnimationFrame`. It works out the display's refresh rate and renders every n-th frame, so 60 on a 120 Hz panel is an even every-other frame rather than uneven catch-up. The simulation still advances in fixed steps, so the frame rate never changes game speed. Menus, pause and the attract demo are capped lower still (30, never under 20, so music scheduling stays safe), and any input wakes the loop at once. When nothing on the board changes, a renderer reuses its last image instead of redrawing it, with a forced redraw every half second as a safety net; REAL 3D also redraws its shadow map only when something that casts a shadow moves. PAUSE freezes the board in all three looks. On REAL 3D with automatic resolution, a governor lowers the pixel ratio in steps when frames run long and raises it again after ten clean seconds.
+The board is drawn at its native 300×260 art pixels, scaled up by
+nearest-neighbour to a whole multiple, then scaled once more, with smoothing,
+to the screen. That two-step "sharp-bilinear" blit keeps the board the same
+size as in the other looks on any screen, while keeping each art-pixel edge
+within one device pixel of sharp at normal zoom (a strong pinch zoom softens it
+slightly). The camera and the intro zoom reach PIXEL through the overlay
+canvas's transform, so PIXEL needs no camera code of its own. Animation runs on
+clocks the renderer owns, and they stop in PAUSE, so a paused board doesn't
+keep walking. When PIXEL is on, the HUD item chips and the GUIDE pages show the
+same cells as the board.
 
-[`rcache.js`](../src/app/rcache.js) keeps one renderer per look. Ten seconds after the player switches away, an unused REAL 3D renderer is disposed and PIXEL shrinks its canvases to almost nothing; CLASSIC 2D costs little to keep and stays. A lost WebGL context is replaced with a new renderer. Anti-aliasing can only be set when a WebGL context is created, so a change takes effect as one rebuild when the player leaves the page, and the old renderer is kept if the new context fails. [`audiopower.js`](../src/app/audiopower.js) suspends audio while the page is hidden.
+**The cost:** about 120 KB of JavaScript that every boot still parses, even
+when PIXEL is never chosen. A test caps it. The planned follow-up is to load
+the PIXEL code on demand, the way the 3D library already is.
 
-Measured in headed Chrome on a 120 Hz Mac against the build before this work, with default settings, summed browser CPU fell by about 56–80% on the title, menus and demo, 59–67% in PAUSE and 27–36% in play. Phones and other GPUs were sampled only lightly, so treat these as one machine's numbers.
+## ⚙️ Level 3: graphics settings and frame pacing
 
-## Pickup feedback
+The GRAPHICS page (from OPTIONS, or inline from PAUSE) is one model for every
+look: a QUALITY preset (BATTERY, AUTO, HIGH) over FRAME RATE, RESOLUTION,
+SHADOWS, ANTI-ALIAS, EFFECTS and the attract DEMO, plus an FPS meter. QUALITY
+isn't stored. It's read back from the six rows, and any other mix shows as
+CUSTOM. A pure policy module, [`gfx.js`](../src/app/gfx.js), turns the saved
+rows and the device (layout, pixel ratio) into one set of knobs that each
+renderer receives. Rows that can't affect the current look are shown locked
+rather than hidden. AUTO is the default and keeps the earlier desktop look;
+the cheaper options, including no shadows, exist only as choices the player
+makes.
 
-Picking something up says what changed. A short label rises from the tile with the value after the pickup ("FLAME 3", a muted MAX at the cap, or which special bomb a new one replaces), the matching HUD chip pulses, and a bar along the bottom of the board lists the abilities the player is holding. When a hit takes an ability away, its chip fades out rather than vanishing. All of the wording comes from the same item table the ITEMS help page uses, so there is one source for each name and help line. A one-time tip explains each of the eight verbs that need explaining (the four plain stat pickups are covered by the label alone). On touch layouts, THROW and REMOTE get their own buttons, which appear only while the player has that power. These overlays run on the play clock, freeze in PAUSE, and draw nothing at all when idle, so a quiet frame costs the same as before.
+[`frameloop.js`](../src/app/frameloop.js) owns `requestAnimationFrame`. It works
+out the display's refresh rate and renders every n-th frame, so 60 on a 120 Hz
+panel is an even every-other frame, not uneven catch-up. The simulation still
+advances in fixed steps, so the frame rate never changes game speed. Menus,
+pause and the attract demo are capped lower still (30, never under 20, so
+music scheduling stays safe), and any input wakes the loop at once. When
+nothing on the board changes, a renderer reuses its last image instead of
+redrawing it, with a forced redraw every half second as a safety net. REAL 3D
+also redraws its shadow map only when something that casts a shadow moves.
+PAUSE freezes the board in all three looks. On REAL 3D with automatic
+resolution, a governor lowers the pixel ratio in steps when frames run long,
+and raises it again after ten clean seconds.
 
-## Browser edges: audio and touch
+[`rcache.js`](../src/app/rcache.js) keeps one renderer per look. Ten seconds
+after the player switches away, an unused REAL 3D renderer is disposed and
+PIXEL shrinks its canvases to almost nothing; CLASSIC 2D costs little to keep,
+so it stays. A lost WebGL context is replaced with a new renderer.
+Anti-aliasing can only be set when a WebGL context is created, so a change
+takes effect as one rebuild when the player leaves the page, and the old
+renderer is kept if the new context fails. [`audiopower.js`](../src/app/audiopower.js)
+suspends audio while the page is hidden.
 
-Browsers only start sound from a user gesture, so the game's audio context is created inside the first press ([`unlock.js`](../src/app/unlock.js)). Until that context is actually running, sound effects are dropped rather than queued, because a queued sound would play late or stacked once the clock starts. The first audio context a browser session creates also spends tens of milliseconds bringing up the device, so [`audio.js`](../src/audio.js) pays that once at boot with a throwaway context and the first press does not stutter. A touch `pointerdown` does not count as a gesture for these rules, so anything a tap must unlock, such as copying STATS to the clipboard, runs on `pointerup`.
+**The scoreboard:** measured in headed Chrome on a 120 Hz Mac against the
+build before this work, with default settings, summed browser CPU fell by
+about 56–80% on the title, menus and demo, 59–67% in PAUSE and 27–36% in play.
+Phones and other GPUs were sampled only lightly, so treat these as one
+machine's numbers.
 
-One JavaScript predicate picks the layout: [`fit.js`](../src/app/fit.js) writes `body[data-lay]` as desktop, touch portrait, or touch landscape, and the page styles key off that rather than a CSS media query. A portrait phone has spare height, so the stage is centred on menu screens and slides up under the pause button during play, giving the touch controls a larger thumb area below. The geometry is a pure function tested in Node; how it feels in the hand still needs a real phone.
+## ✨ Level 4: pickup feedback
 
-## Evidence and limits
+Picking something up says what changed. A short label rises from the tile with
+the value after the pickup ("FLAME 3", a muted MAX at the cap, or which special
+bomb a new one replaces), the matching HUD chip pulses, and a bar along the
+bottom of the board lists the abilities the player is holding. When a hit
+takes an ability away, its chip fades out rather than vanishing. All of the
+wording comes from the same item table the ITEMS help page uses, so there's
+one source for each name and help line. A one-time tip explains each of the
+eight verbs that need explaining (the four plain stat pickups are covered by
+the label alone). On touch layouts, THROW and REMOTE get their own buttons,
+which appear only while the player has that power. These overlays run on the
+play clock, freeze in PAUSE, and draw nothing at all when idle, so a quiet
+frame costs the same as before.
 
-- [Determinism tests](../tests/determinism.test.mjs) replay mixed input over 1,800 ticks and compare state across worlds and seeds.
-- [Lockstep tests](../tests/net_lockstep.test.mjs) exercise the local synchronization protocol. The [`?net=local` harness](../src/net/localpair.js) drives two worlds, but the simulation still consumes player zero. Internet multiplayer would require actual multiplayer simulation, session ownership, disconnect/rejoin policy, and network testing.
-- The tests in [`tests/`](../tests/) also cover storage, menus, rendering contracts, PIXEL art completeness, frame pacing and graphics policy, and the PWA shell. `npm test` is a deployment gate; it does not establish visual correctness on every browser or GPU.
+## 📱 Level 5: browser edges, audio and touch
 
-## Persistence and offline play
+Browsers only start sound from a user gesture, so the game's audio context is
+created inside the first press ([`unlock.js`](../src/app/unlock.js)). Until that
+context is actually running, sound effects are dropped rather than queued,
+because a queued sound would play late, or stacked, once the clock starts. The
+first audio context a browser session creates also spends tens of milliseconds
+bringing up the device, so [`audio.js`](../src/audio.js) pays that once at boot
+with a throwaway context, and the first press doesn't stutter. A touch
+`pointerdown` doesn't count as a gesture for these rules, so anything a tap
+must unlock, such as copying STATS to the clipboard, runs on `pointerup`.
 
-Progress and personal records live in browser local storage. They are local to that browser and can be cleared; there is no account or server record. Daily boards and challenge codes reproduce a board, not a verified score. When STATS or a run summary copies text, the screen says COPIED or COPY FAILED only after the clipboard has accepted or refused it.
+One JavaScript predicate picks the layout: [`fit.js`](../src/app/fit.js) writes
+`body[data-lay]` as desktop, touch portrait or touch landscape, and the page
+styles key off that rather than a CSS media query. A portrait phone has spare
+height, so the stage is centred on menu screens and slides up under the pause
+button during play, giving the touch controls a bigger thumb area below. The
+geometry is a pure function tested in Node; how it feels in the hand still
+needs a real phone.
 
-The [service worker](../sw.js) precaches the versioned [app shell](../src/pwa/shell.js), including the vendored 3D library. A successful online first visit is needed before offline use. Cache updates use a new version and reload after the new worker takes control. First-time offline loading and synchronizing progress between devices are outside this design.
+## 🧪 Boss fight: evidence and limits
+
+- [Determinism tests](../tests/determinism.test.mjs) replay mixed input over
+  1,800 ticks and compare state across worlds and seeds.
+- [Lockstep tests](../tests/net_lockstep.test.mjs) exercise the local
+  synchronization protocol. The [`?net=local` harness](../src/net/localpair.js)
+  drives two worlds, but the simulation still consumes player zero. Internet
+  multiplayer would need real multiplayer simulation, session ownership,
+  a disconnect/rejoin policy and network testing.
+- The tests in [`tests/`](../tests/) also cover storage, menus, rendering
+  contracts, PIXEL art completeness, frame pacing and graphics policy, and the
+  PWA shell. `npm test` is a deployment gate; it doesn't establish visual
+  correctness on every browser or GPU.
+
+## 💾 Save game: persistence and offline play
+
+Progress and personal records live in browser local storage. They're local to
+that browser and can be cleared; there's no account and no server record.
+Daily boards and challenge codes reproduce a board, not a verified score. When
+STATS or a run summary copies text, the screen says COPIED or COPY FAILED only
+after the clipboard has accepted or refused it.
+
+The [service worker](../sw.js) precaches the versioned
+[app shell](../src/pwa/shell.js), including the vendored 3D library. A
+successful online first visit is needed before offline use. Cache updates use a
+new version and reload once the new worker takes control. First-time offline
+loading and syncing progress between devices are outside this design.
+
+---
+
+**STAGE CLEAR.** Want the *why* behind a specific call? The dated records in
+the [docs map](README.md#-design-history) go all the way back to day one.
