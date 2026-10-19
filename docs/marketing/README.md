@@ -215,10 +215,15 @@ Every asset is a real capture of the live game, never generated key art (see
 
 ## 🏷️ GitHub About and topics
 
-GitHub has no API for the About box's social preview, and the owner edits the
-description and topics by hand under **Settings → General** (description) and
-the ⚙️ next to **About** on the repo page (topics). Nothing here has been
-changed on GitHub.
+The owner edits the description, website and topics in the ⚙️ dialog next
+to **About** on the repo page. Only **Settings → Social preview** (the card
+image) has no API. Nothing here has been changed on GitHub.
+
+Prefer the terminal? The owner can run this once, after checking the text:
+
+```bash
+gh repo edit HMarzban/fusegrid --homepage "https://hmarzban.github.io/fusegrid/" --description "Play Fusegrid in your browser: a free single-player bomb-grid arcade. Flip REAL 3D ⇄ CLASSIC 2D (or PIXEL) live, dial the Heat to CORE, PLUS or MAX. No install, no account, plays offline." --add-topic html5-game,arcade-game,arcade,indie-game,single-player,bomb,pixel-art,chiptune,offline-first,es-modules,no-build,zero-dependencies,open-source-game
+```
 
 > **One text, not two.** The storefront refresh pass owns the final About
 > copy and `og.png`. If its text differs from the draft below, paste its text
@@ -279,7 +284,7 @@ Leave out the classic franchise's name and any "-like" topic built on it.
    (a verification *file* would also need adding to the `pages.yml` copy
    line). Then submit `sitemap.xml` and request indexing in URL Inspection.
 2. **Bing Webmaster Tools.** Use **Import from Google Search Console**, which
-   verifies for you. That also covers DuckDuckGo and Yahoo results.
+   verifies for you. Bing's index also feeds other search engines.
 3. **Optional, owner's call:** a root `HMarzban/hmarzban.github.io` site whose
    `robots.txt` lists `https://hmarzban.github.io/fusegrid/sitemap.xml`. It
    makes the root a live site, so only do it on purpose.
