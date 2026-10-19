@@ -541,6 +541,13 @@ not shell screens. Do not add them as `SCREEN` values.
   which doc owns which fact (one owner per fact, others link) and sets the doc
   voice: arcade tone, facts exact; dated `docs/superpowers/` records are never
   rewritten, only indexed there.
+  `docs/marketing/README.md` owns pitch copy, per-platform tags, the launch
+  checklist and the About/topics text (the owner pastes and posts; agents
+  never submit). JSON-LD never carries a rating or review; `playMode` is the
+  schema.org enum URL. `sitemap.xml` `lastmod` must be >= the newest
+  CHANGELOG release date (`headless.test`), set at every release.
+  `/fusegrid/robots.txt` is inert (crawlers read only the host root), so the
+  sitemap reaches Google through Search Console.
 
 Flags: `?render=3d|px|iso` (3d/px seed the boot only; iso is pinned), `?play=1`, `?net=local`, `?orbit=1`, `?debug=1`,
 `?code=` (12-char challenge, URL-only — no opts fallback).

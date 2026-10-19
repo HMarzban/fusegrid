@@ -20,6 +20,7 @@ something another doc owns, that's a bug. Replace the copy with a link.
 | The binding rulebook: pinned numbers, test contracts, owner rulings | [AGENTS.md](../AGENTS.md) | Maintainers and coding agents |
 | What each work session did, decided or left open | [MEMORY.md](../MEMORY.md) | Maintainers and coding agents |
 | Store art, the itch blurb and the upload zip recipe | [media/README.md](../media/README.md) | Whoever lists the game |
+| Pitch copy, platform tags, launch checklist, GitHub About text and topics | [marketing/README.md](marketing/README.md) | Whoever promotes the game |
 | How we treat each other | [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md) | Everyone |
 | How to report a vulnerability | [SECURITY.md](../SECURITY.md) | Everyone |
 | Why a past decision was made | [Design history](#-design-history) below | Anyone digging |

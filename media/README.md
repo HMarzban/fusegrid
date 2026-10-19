@@ -96,7 +96,9 @@ If the host embeds the zip in an iframe, that's fine as shipped:
 so an embedded copy never registers a service worker or claims a cache out
 from under the canonical Pages origin.
 
-Tags: `arcade`, `singleplayer`, `webgl`, `chiptune`.
+Tags: `arcade`, `singleplayer`, `webgl`, `chiptune` (the core four every
+listing carries). The full set for each platform lives in the
+[promotion kit](../docs/marketing/README.md#tags-per-platform).
 
 ## 📣 itch blurb
 

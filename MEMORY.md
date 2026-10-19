@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-19 — SEO + promotion kit (docs/marketing/README.md)
+- index.html meta/JSON-LD (MODES not Pact, PIXEL, playMode enum, numberOfPlayers, no fake screenshot/rating), manifest description + categories, sitemap lastmod 2026-10-19 pinned >= newest release by a headless test, README Pact->MODES/IRON fix; kit = positioning, copy, per-platform tags, portal/community research dated 2026-10-19, launch checklist, About+topics draft. Not done: no CACHE_NAME bump (next release), manifest screenshots, PIXEL still, Search Console, every external post (owner).
+
 ## 2026-10-19 — Release shell v180 pushed (menus, ATLAS, NEW VERSION READY)
 - CHANGELOG Unreleased -> shell v180 · 2026-10-19 (v179 was never deployed, so v180 carries it). The update card is centred over a blurred backdrop (#updbg, tap = LATER). Pushed main to origin; Pages CI runs npm test before deploy.
 

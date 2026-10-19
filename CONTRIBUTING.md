@@ -161,7 +161,10 @@ update.
    `src/pwa/shell.js`, or that look breaks offline.
 3. Rename the changelog's **Unreleased** section to `## shell vN · YYYY-MM-DD`
    and start a fresh, empty **Unreleased** above it.
-4. Merging to `main` runs the tests, then deploys GitHub Pages.
+4. Set `<lastmod>` in `sitemap.xml` to the same date. Search engines only
+   trust a `lastmod` that's accurate, and a test fails if it's older than the
+   newest release.
+5. Merging to `main` runs the tests, then deploys GitHub Pages.
 
 ---
 

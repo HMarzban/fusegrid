@@ -1179,6 +1179,10 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   check("social preview PNG exists", existsSync(join(ROOT,"og.png")));
   check("robots.txt and sitemap.xml exist",
     existsSync(join(ROOT,"robots.txt"))&&existsSync(join(ROOT,"sitemap.xml")));
+  const lastmod=(readFileSync(join(ROOT,"sitemap.xml"),"utf8").match(/<lastmod>(\d{4}-\d{2}-\d{2})<\/lastmod>/)||[])[1];
+  const shipped=(readFileSync(join(ROOT,"CHANGELOG.md"),"utf8").match(/^## shell v\d+ · (\d{4}-\d{2}-\d{2})/m)||[])[1];
+  check("sitemap lastmod is no older than the newest release",
+    !!lastmod&&!!shipped&&lastmod>=shipped,lastmod+" vs "+shipped);
   const pagesYml=readFileSync(join(ROOT,".github/workflows/pages.yml"),"utf8");
   check("Pages workflow stages og.png and robots.txt",
     /og\.png/.test(pagesYml)&&/robots\.txt/.test(pagesYml));
