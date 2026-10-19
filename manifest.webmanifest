@@ -2,14 +2,14 @@
   "id": "./",
   "name": "Fusegrid",
   "short_name": "FUSE/GRID",
-  "description": "Play Fusegrid in the browser. Single-player bomb-grid arcade. REAL 3D or classic 2D. Offline after the first visit.",
+  "description": "Play Fusegrid in the browser. Single-player bomb-grid arcade: flip REAL 3D, CLASSIC 2D or PIXEL, dial the Heat to CORE, PLUS or MAX. Offline after the first visit.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#070a12",
   "theme_color": "#070a12",
   "lang": "en",
-  "categories": ["games"],
+  "categories": ["games", "entertainment"],
   "icons": [
     {
       "src": "./icon-192.png",

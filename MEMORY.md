@@ -22,6 +22,9 @@ append an entry when it makes a non-trivial change.
 ## 2026-10-19 — Dev diary + CHANGELOG backfill (docs only, no shell bump)
 - Owner asked for updated changelogs plus "a story of the game development, a diary of the changes". New `docs/diary.md` (dated entries 2026-08-16 → v180, lessons, explored-not-built list without lore), linked from docs/README who-owns-what (one row) and README "Go to". CHANGELOG: v180's two `### Added` merged + "v179 never deployed" line; new sections shell v31 (pushed `569bc0a`, arcade loop + v2–v31), shell v1 (Heat/Pact/rooms 6–8/offline, commits dated 09-03) and 2026-09-01 public launch; Unreleased untouched. Open: SIGNAL RUNNER/IONVEST only in the diary (never public).
 
+## 2026-10-19 — SEO + promotion kit (docs/marketing/README.md)
+- index.html meta/JSON-LD (MODES not Pact, PIXEL, playMode enum, numberOfPlayers, no fake screenshot/rating), manifest description + categories, sitemap lastmod 2026-10-19 pinned >= newest release by a headless test, README Pact->MODES/IRON fix; kit = positioning, copy, per-platform tags, portal/community research dated 2026-10-19, launch checklist, About+topics draft. Not done: no CACHE_NAME bump (next release), manifest screenshots, PIXEL still, Search Console, every external post (owner).
+
 ## 2026-10-19 — Release shell v180 pushed (menus, ATLAS, NEW VERSION READY)
 - CHANGELOG Unreleased -> shell v180 · 2026-10-19 (v179 was never deployed, so v180 carries it). The update card is centred over a blurred backdrop (#updbg, tap = LATER). Pushed main to origin; Pages CI runs npm test before deploy.
 
