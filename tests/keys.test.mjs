@@ -63,10 +63,22 @@ const run = (o) => { const g = menu(); if (o && o.unlock) g.app.pactUnlocked = t
 const clearRoom = (g) => { g.world.enemies.forEach((e) => { e.dead = true; }); g.tick(150); };
 const live = (w) => w.bombs.filter((b) => !b.dead).length;
 
+// ---- U (NEW VERSION READY, src/app/update.js): the reload key lives on the
+// update card's own document listener, live only while the card shows; with
+// no update pending (always, under Node) it is inert in MENU, PLAY and PAUSE. ----
+{
+  const g = menu();
+  press(g, "KeyU");
+  check("U in MENU with no update pending: nothing happens", g.app.screen === SCREEN.MENU && g.app.cursor === 0, g.app.screen);
+  press(g, "Enter"); press(g, "KeyU");
+  check("U in PLAY: nothing happens, the run keeps going", g.app.screen === SCREEN.GAME && g.world.state === "PLAY", g.world.state);
+  press(g, "Escape"); press(g, "KeyU");
+  check("U in PAUSE: nothing happens", g.world.state === "PAUSE" && g.app.pauseCursor === 0, g.world.state);
+}
 // ---- INTRO (opening 2026-10-09): the title waits for a press that starts the
 // show; Escape and modifiers never do. In the show, past the 0.2 s guard, any
 // key skips to MENU at PLAY. Every visit, the first included, lands on MENU. ----
-const KEYS = ["Enter", "NumpadEnter", "Backspace", "ArrowDown", "KeyW", "Space", "KeyJ", "KeyX", "KeyQ", "KeyN", "KeyC", "KeyB", "Digit7", "KeyR", "KeyM", "KeyT", "Digit1", "BracketLeft", "KeyP"];
+const KEYS = ["Enter", "NumpadEnter", "Backspace", "ArrowDown", "KeyW", "Space", "KeyJ", "KeyX", "KeyQ", "KeyN", "KeyC", "KeyB", "Digit7", "KeyR", "KeyM", "KeyT", "Digit1", "BracketLeft", "KeyP", "KeyU"];
 for (const code of KEYS) {
   const g = mk();
   press(g, code);
@@ -831,7 +843,7 @@ for (const code of ["Space", "Enter"]) {
 // ---- overlay: cue copy, toast placement and fit ----
 {
   const rec = () => { const rows = [];
-    const c = { fillRect: noop, strokeText: noop, fillText: (s, x, y) => rows.push([String(s), y, c.fillStyle]) };
+    const c = { fillRect: noop, strokeText: noop, beginPath: noop, moveTo: noop, lineTo: noop, arcTo: noop, quadraticCurveTo: noop, closePath: noop, fill: noop, stroke: noop, fillText: (s, x, y) => rows.push([String(s), y, c.fillStyle]) }; // path ops: the pause plate is a rounded rect
     return { c, rows }; };
   for (const B of [overlayBox("2d"), overlayBox("iso")]) {
     const tag = B.w + "x" + B.h;

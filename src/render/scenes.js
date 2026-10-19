@@ -6,6 +6,7 @@ import { PROJ } from "./r3d/camera.js";
 import { clampPact, pactLabel } from "../core/pact.js";
 import { clampPace, paceToken } from "../core/pace.js";
 import { abilityList, abilityText, abilityOrd, getStrip } from "./fx.js";
+import { layout, listGeom, listHit, drawList, plate, head as plateHead, foot as plateFoot } from "./menudraw.js";
 
 /* Scene UI: menu logo, HUD, and the CLEARED / GAME OVER / PAUSED overlays.
    Pure draw; reads world + (optionally) DOM for HUD. */
@@ -38,14 +39,14 @@ export function winHeadline(world) {
     ? "FUSE/GRID CLEAR"
     : "LEVEL " + world.level + " CLEARED";
 }
-export function overlayCue(world) {
+export function overlayCue(world, touch) {
   if (world.state === "WIN") {
     const fin = isFinale(world.level) || world.finale;
     return fin ? "SPACE / ENTER / TAP · menu" : "SPACE / ENTER / TAP · next room";
   }
   if (world.state === "LOSE") return "SPACE / ENTER / TAP · new run";
   if (world.state === "PAUSE")
-    return "↑↓ SELECT · ENTER / TAP CONFIRM · P RESUME · M QUIT";
+    return touch ? "TAP A ROW · PAUSE PILL RESUMES" : "ESC · P RESUME · ↑↓ MOVE · ENTER SELECT · M QUIT";
   return "";
 }
 export function runStamp(world) {
@@ -194,7 +195,14 @@ export const PAUSE_ROWS = Object.freeze([
   "OPTIONS",
   "QUIT TO MENU",
 ]);
-export const PAUSE_ROW_H = 26;
+/* PAUSE is the MENU's own plate (menudraw listGeom/drawList): RESUME is the
+   hero row, RESTART / QUIT select in red. Pitch caps follow the layout: touch
+   (data-lay p/l) gets PAUSE_ROW_H 70 (~46 CSS px on a phone), a keyboard
+   screen the compact PAUSE_ROW_D 44; a short box (iso 352) scales both down
+   to fit. Hit bands run the full stage width, so no side tap falls through. */
+export const PAUSE_ROW_H = 70,
+  PAUSE_ROW_D = 44;
+const PAUSE_SHAPE = Object.freeze(PAUSE_ROWS.map((label, i) => ({ label, hero: i === 0, danger: i === 1 || i === 3, door: i === 2 })));
 /* The ONE named coordinate space for pause chrome: it feeds both drawOverlay
    call sites and both hit tests, so the list, the inline OPTIONS page and the
    tap map can never disagree by a pixel. */
@@ -205,13 +213,28 @@ export function overlayBox(kind) {
     h = CFG.ROWS * CFG.TILE;
   return { w, h, cx: w / 2, cy: h / 2 };
 }
-export function pauseHit(x, y, box) {
-  const B = box || overlayBox("2d");
-  if (Math.abs(x - B.cx) > 130) return -1;
-  for (let i = 0; i < PAUSE_ROWS.length; i++)
-    if (Math.abs(y - (B.cy - 30 + i * PAUSE_ROW_H)) <= 13) return i;
-  return -1;
+export function pauseGeom(B, touch) {
+  const top = Math.round(B.h * 0.115);
+  return listGeom(layout(B.w, B.h), PAUSE_SHAPE, { top, bot: B.h - Math.round(top * 0.67), w: touch ? 380 : 340, pitch: touch ? PAUSE_ROW_H : PAUSE_ROW_D, hero: touch ? 76 : 54, pad: 10, head: 46, foot: 28 });
 }
+export function pauseHit(x, y, box, touch) {
+  return listHit(x, y, pauseGeom(box || overlayBox("2d"), touch), true);
+}
+/* Run context for the PAUSE kicker: room, biome, heat, pace (+pact, +DAILY). */
+export function pauseKicker(world, run) {
+  const w = world || {},
+    p = clampPact(w.pact);
+  return "ROOM " + (w.level | 0) + " · " + biomeOf(w.level | 0).name + " · " + HEAT_NAME[clampHeat(w.heat)] + " · " + paceToken(w.pace) +
+    (p ? " · PACT " + pactLabel(p) : "") + (run && run.daily ? " · DAILY" : "");
+}
+/* body[data-lay] p / l (fit.js) = a touch layout: the one predicate the
+   pause draw (through its ctx's canvas) and main's tap map both read. */
+export const touchLay = (el) => {
+  const d = el && el.ownerDocument,
+    l = d && d.body && d.body.getAttribute && d.body.getAttribute("data-lay");
+  return l === "p" || l === "l";
+};
+const touchOf = (c) => touchLay(c && c.canvas);
 export function drawOverlay(
   c,
   world,
@@ -224,7 +247,7 @@ export function drawOverlay(
   run,
   toast,
 ) {
-  c.fillStyle = "rgba(6,10,20,0.80)";
+  c.fillStyle = world.state === "PAUSE" ? "rgba(7,10,18,0.72)" : "rgba(6,10,20,0.80)";
   c.fillRect(0, 0, w, h);
   c.textAlign = "center";
   c.textBaseline = "middle";
@@ -274,25 +297,13 @@ export function drawOverlay(
     /* view 1 / 2 = the inline OPTIONS / GRAPHICS page: veil only, so
        drawShell's plate never lands on top of a live PAUSED headline. */
     if ((u.view | 0) >= 1) return;
-    const cur = u.cursor | 0;
-    c.font = "900 40px ui-monospace,monospace";
-    c.strokeText("PAUSED", cx, cy - 70);
-    c.fillStyle = "#ffd447";
-    c.fillText("PAUSED", cx, cy - 70);
-    for (let i = 0; i < PAUSE_ROWS.length; i++) {
-      const y = cy - 30 + i * PAUSE_ROW_H,
-        on = i === cur;
-      if (on) {
-        c.fillStyle = "rgba(55,240,208,0.14)";
-        c.fillRect(cx - 130, y - 13, 260, 26);
-        c.fillStyle = "#37f0d0";
-        c.fillRect(cx - 130, y - 13, 3, 26);
-      }
-      c.font = "900 " + (on ? 16 : 15) + "px ui-monospace,monospace";
-      c.fillStyle = on ? "#dfe7f5" : "#7385ad";
-      c.fillText(PAUSE_ROWS[i], cx, y);
-    }
-    sub(overlayCue(world), "#9fb3d8", 86);
+    /* Static (R16: PAUSE freezes everything) — no entry timer. */
+    const touch = u.touch == null ? touchOf(c) : !!u.touch,
+      g = pauseGeom({ w, h }, touch);
+    plate(c, g.x, g.y, g.w, g.h);
+    plateHead(c, g, "PAUSED", pauseKicker(world, run));
+    drawList(c, g, PAUSE_SHAPE, u.cursor | 0, 0, { touch });
+    plateFoot(c, g, overlayCue(world, touch));
   }
 }
 

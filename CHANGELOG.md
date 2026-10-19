@@ -15,6 +15,33 @@ Entries are written for players. How a change works lives in
 
 ## Unreleased
 
+### Changed
+- **New menus.** The main menu and the pause menu are now one system: the
+  same quiet panel, the same selected-row look and the same controls, in
+  CLASSIC 2D, PIXEL and REAL 3D, on a laptop or a phone. PLAY is the big
+  top row and shows the run it will start (room, heat, pace). The pause menu
+  says where you are (room, world, heat, pace), RESUME is the big row, and
+  RESTART and QUIT turn red when selected. On a keyboard the pause panel is
+  compact; on a phone its rows grow to thumb size. OPTIONS, GRAPHICS and GUIDE wear
+  the same panel. Hints at the bottom match your device: keys on a
+  keyboard, taps on a touch screen.
+
+### Added
+- **NEW VERSION READY.** When a new build of the cabinet is out, a card says
+  so on the menus or after a finished run (never mid-run) with a RELOAD
+  button (or press `U`). Your scores stay. LATER hides it until you're back
+  from your next run.
+
+### Fixed
+- **Stuck on an old version.** The installed game could keep serving an old
+  build. Updates now download with fresh files and wait for your RELOAD.
+  Updating also no longer clears other sites' offline data on the same host.
+- **Phone taps in the menus.** A tap just above or below the main menu no
+  longer starts a run. Tapping a row anywhere across the screen picks that
+  row. GUIDE rows are tappable, and a tap off them goes back. LEVEL SELECT
+  rooms, heat, pace and modes, and the HIGH SCORES heat tabs, all work by
+  touch now. Pause rows are taller on a phone, so they're easier to hit.
+
 ### Added
 - **Join the build.** A contributing guide, a code of conduct, a security
   policy, bug and idea templates, and a docs map, for anyone who wants to

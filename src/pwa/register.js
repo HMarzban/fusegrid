@@ -64,14 +64,52 @@ export function registerSW(env) {
         if (loc && typeof loc.reload === "function") loc.reload();
       });
     }
+    /* NEW VERSION READY: a worker that installed while a controller already
+       runs this page WAITS (sw.js); env.onUpdate(reg) shows the prompt. A
+       plain reload never activates a waiting worker, so the prompt survives
+       reloads until the player takes it. updateViaCache "none": the update
+       check never reads sw.js or its imports from the HTTP cache. */
+    const onUpdate = env && typeof env.onUpdate === "function" ? env.onUpdate : null;
+    const waiting = (reg) => {
+      if (onUpdate && reg && reg.waiting && sw.controller) onUpdate(reg);
+    };
     sw
-      .register(url, { type: "module", scope: "./" })
+      .register(url, { type: "module", scope: "./", updateViaCache: "none" })
       .then((reg) => {
-        if (reg && typeof reg.update === "function") return reg.update();
+        if (!reg) return;
+        waiting(reg);
+        if (typeof reg.addEventListener === "function")
+          reg.addEventListener("updatefound", () => {
+            const w = reg.installing;
+            if (w && typeof w.addEventListener === "function")
+              w.addEventListener("statechange", () => { if (w.state === "installed") waiting(reg); });
+          });
+        /* a home-screen app that is never reloaded still finds new builds:
+           re-check when the page comes back into view, at most every 10 min */
+        const doc = env && env.document !== undefined ? env.document : typeof document !== "undefined" ? document : null;
+        let last = 0;
+        const check = () => {
+          const t = Date.now();
+          if (t - last < 600000 || typeof reg.update !== "function") return;
+          last = t;
+          Promise.resolve(reg.update()).catch(() => {});
+        };
+        if (doc && typeof doc.addEventListener === "function")
+          doc.addEventListener("visibilitychange", () => { if (doc.visibilityState === "visible") check(); });
+        if (typeof reg.update === "function") { last = Date.now(); return reg.update(); }
       })
       .catch(() => {});
     return true;
   } catch {
     return false;
   }
+}
+
+/* The player pressed RELOAD: the waiting worker takes over and registerSW's
+   one controllerchange listener reloads the page once. */
+export function applyUpdate(reg) {
+  const w = reg && reg.waiting;
+  if (!w || typeof w.postMessage !== "function") return false;
+  w.postMessage({ type: "SKIP_WAITING" });
+  return true;
 }

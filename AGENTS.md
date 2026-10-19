@@ -48,7 +48,27 @@ MENU is eight rows in this order: `PLAY, LEVEL SELECT, DAILY, OPTIONS, GUIDE,
 HIGH SCORES, STATS, SOURCE`. `confirm()` dispatches by **label**, so an insert
 moves no runtime index — but `tests/headless.test.mjs`'s index-driven MENU
 confirms and `tests/menuapp.test.mjs`'s literals must be renegotiated with any
-reorder. `SCREEN.STATS = 12` is **appended** (the `SCREEN` enum's own rule in
+reorder.
+
+Menu look (owner pick 2026-10-19, direction A "CONSOLE PANEL"): MENU, the
+PAUSE list and every plated page share ONE kit in `menudraw.js` — `plate`
+(one 0.94 fill, one `#2a3550` border, radius 6, even-px snapped), `head`
+(sans title, muted spaced kicker), `foot`, and `paintRow` (selected = 0.12
+band + 3px notch + caret; `danger` rows select red). Labels are system-ui
+sans (OS-dependent, owner-accepted), values / tags / hints mono. Lists go
+through `listGeom` / `listHit` (pitches are caps that scale down in a short
+box); MENU has a PLAY hero row whose tag is the run it starts and group gaps
+before OPTIONS / HIGH SCORES / SOURCE; the SOURCE URL shows only on its
+selected row. PAUSE draws `pauseGeom(overlayBox, touch)`: touch (`touchLay`,
+data-lay p/l) caps pitch at `PAUSE_ROW_H` 70 / hero 76 / width 380, a keyboard
+screen at the compact `PAUSE_ROW_D` 44 / hero 54 / width 340 (owner: "too
+fat"); `pauseHit` takes the same flag. RESUME hero, RESTART/QUIT danger,
+kicker = room · biome · heat · pace, cue `ESC · P RESUME · … · M QUIT`.
+Touch rule: a tap on a row = Enter on it; MENU and PAUSE bands span the full
+stage width; off the rows a root list (MENU, PAUSE list) does nothing and a
+page (OPTIONS, GRAPHICS, GUIDE, LEVEL SELECT, SCORES) backs out. `guideHit`,
+`levelHit` / `levelGeom` and `scoresHit` share the geometry their pages
+draw. Hints follow `data-lay` (keys vs taps). `SCREEN.STATS = 12` is **appended** (the `SCREEN` enum's own rule in
 `menuapp.js`: appended, never inserted). `SCREEN.TROPHIES = 13` (the MEDALS page) is
 appended too: opened from STATS by `T` or a tap on its `T MEDALS` label, backs out to STATS,
 never a MENU row. `SCREEN.GRAPHICS = 14` is appended too: opened by the
@@ -80,6 +100,8 @@ not shell screens. Do not add them as `SCREEN` values.
   `toastTick(toast,world,dt,app)` ages it only there and zeroes it anywhere
   else), `src/net/localpair.js` (`?net=local`),
   `src/render/shellview.js` (`drawShell` + the `kindSize`/`dims` logical box),
+  `src/app/update.js` (`mountUpdate`: registers the SW and owns the NEW
+  VERSION READY card; `U` is its key, live only while the card shows),
   `src/app/fit.js` (`mountFit`: stage scale per layout reserve `FIT_RES`, and
   `body[data-lay]` = `d` desktop / `p` touch portrait / `l` touch landscape —
   the ONE predicate `index.html`'s touch layout keys off, never a media
@@ -438,8 +460,19 @@ not shell screens. Do not add them as `SCREEN` values.
   `src/render/pixel/**` tree (art sheets included), or a look breaks offline. Never cache
   `og.png`. Never imported by `src/core`. Bump `CACHE_NAME` and the REV
   token in `sw.js` together when the file list or shipped bytes change.
-  Returning clients call `registration.update()` and reload once on
-  `controllerchange` (skipWaiting + claim already in `sw.js`).
+  NEW VERSION READY (owner 2026-10-19, shell v179): a new worker installs
+  (precache with `cache:"reload"`, register with `updateViaCache:"none"`) and
+  WAITS; `register.js` hands a waiting registration (controller present, never
+  a first install) to `src/app/update.js`, a DOM card `#upd` styled as the
+  CONSOLE PANEL plate. It shows only where a reload costs nothing: MENU, every
+  sub-page, and WIN/LOSE when `isRunEnd` (pure `updVisible`); never INTRO,
+  ATTRACT, live PLAY, PAUSE or a mid-run WIN. RELOAD (tap, `pointerup`) or `U`
+  posts `SKIP_WAITING`; the one `controllerchange` listener reloads once.
+  LATER snoozes until the next run returns to the menus or the next boot; no
+  store. Updates are re-checked at boot and on `visibilitychange` (<= every
+  10 min). Bridge: replacing a pre-v179 shell (`PROMPT_FROM 179`) still skips
+  waiting, because those pages cannot prompt; that is their one last silent
+  reload. Activate deletes only `fusegrid-shell-v*` keys.
 
 ## Commands
 
@@ -622,14 +655,17 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
 - Blender is driven through the blender-mcp add-on socket `127.0.0.1:9876`
   with a small Python client (`.superpowers/sdd/2026-10-11-bible/blender/bl.py`,
   local only); the session `mcp__Blender__` tools time out.
-- Known open bug: `sw.js` activate deletes EVERY cache key `!== CACHE_NAME`,
-  which on Pages is the whole `hmarzban.github.io` origin, not just
-  `fusegrid-shell-*`. Fix = filter on the `fusegrid-shell-` prefix (bump
-  `CACHE_NAME` + REV with it).
+- Fixed 2026-10-19 (v179): `sw.js` activate used to delete EVERY cache key
+  `!== CACHE_NAME` (the whole shared `hmarzban.github.io` origin); it now
+  filters on the `fusegrid-shell-v` prefix.
+- An unbumped `CACHE_NAME` means the worker serves old bytes forever (cache
+  first), which looks exactly like a change that did not land. Local headed
+  checks after a code change: clear site data, or test in a fresh profile.
 - Known gap: the GitHub About description still leads with "deterministic",
   against the storefront rule above; fix it in repo Settings (not in git).
-- Owner-pending, NOT built (research/design only, 2026-10-11): menu redesign
-  variants A/B/C; story mode "FUSE/GRID: LOW TIDE"; naming (keep FUSE/GRID +
+- Owner-pending, NOT built (research/design only, 2026-10-11): the 2026-10-11
+  menu redesign variants A/B/C (separate from the 2026-10-19 CONSOLE PANEL
+  menu that shipped); story mode "FUSE/GRID: LOW TIDE"; naming (keep FUSE/GRID +
   subtitle; FUSEBORN is the only clean rename); game bible v2, COMPLETE as
   design (its fuse-fin shark-walker MAKO is SUPERSEDED as D1 by the hero
   reset below; six worlds W1 Mangrove Coast
@@ -639,8 +675,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   CHART menus; 12 owner decisions D1-D12; sources in the git-ignored
   `.superpowers/sdd/2026-10-11-bible/`) — the owner's Claude Design canvas is
   the game bible, and nothing from it is built yet. Touch bugs found by the menu
-  research, unfixed: GUIDE traps touch, LEVEL SELECT and HIGH SCORES heat tabs
-  are not touch-usable, an off-row MENU tap starts a run.
+  research: all three fixed 2026-10-19 with the menu redesign.
 - Hero direction reset (owner ruling 2026-10-11, concept only, NOT built): a
   cartoon with a head, arms and legs, "googooli" (appealing yet dignified,
   smart, stylish), NOT human, space theme — a small being of starlight held in

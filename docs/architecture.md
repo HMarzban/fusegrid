@@ -41,6 +41,17 @@ rendering separate means a visual change can't change the game's rules, though
 GPU output and visual readability still need checking in a real browser. The
 shell state machine owns the menus; pause, win and loss belong to the world.
 
+Every menu is drawn by one small kit in
+[`menudraw.js`](../src/render/menudraw.js): one panel (`plate`), one title
+(`head`), one hint line (`foot`) and one row painter (`paintRow`), so the
+selected row is the same object on the main menu, the pause menu, OPTIONS,
+GRAPHICS and GUIDE. A list is laid out by `listGeom` and tapped through
+`listHit` from that same table, so a tap always lands on the row it looks
+like. The pause menu borrows the kit from [`scenes.js`](../src/render/scenes.js)
+instead of keeping its own look. Touch follows one rule everywhere: a tap on a
+row is Enter on it, and a tap off the rows does nothing on the main menu or
+the pause list and backs out of any other page.
+
 The 3D renderer works to a fixed budget of 500 draw calls, and the tests' fully
 populated room draws 141. Anything repeated is instanced, so cost doesn't grow
 with what's on screen. Every live blast shares two draws in
@@ -177,8 +188,13 @@ after the clipboard has accepted or refused it.
 
 The [service worker](../sw.js) precaches the versioned
 [app shell](../src/pwa/shell.js), including the vendored 3D library. A
-successful online first visit is needed before offline use. Cache updates use a
-new version and reload once the new worker takes control. First-time offline
+successful online first visit is needed before offline use. A new release
+installs in the background and waits; a **NEW VERSION READY** card
+([`update.js`](../src/app/update.js)) offers RELOAD (or `U`), but only on the
+menus or after a finished run, never in the middle of one. Pressing it hands
+control to the new worker and the page reloads once. Copies from before the
+card existed (shell v178 and older) update once on their own, because their
+page can't show it. Cleanup touches only this game's own caches. First-time offline
 loading and syncing progress between devices are outside this design.
 
 ---

@@ -5,7 +5,9 @@
    screen measures against: a real canvas always wins, otherwise the render
    kind picks the classic box or the projected dimetric one. */
 import { CFG } from "../core/config.js";
-import { heatToken } from "../core/heat.js";
+import { HEAT_NAME, clampHeat } from "../core/heat.js";
+import { paceToken } from "../core/pace.js";
+import { clampPact, pactLabel } from "../core/pact.js";
 import { SCREEN, ITEMS } from "../app/menuapp.js";
 import { PROJ } from "./r3d/camera.js";
 import { drawLogo, overlayBox } from "./scenes.js";
@@ -32,6 +34,11 @@ const layOf = (cv) => {
   return (b && b.getAttribute && b.getAttribute("data-lay")) || "d";
 };
 
+/* PLAY's tag is the whole setup it will start: room, heat, pace (+pact). */
+const playTag = (app) => {
+  const p = app.pactUnlocked ? clampPact(app.pact) : 0;
+  return "L" + (app.level | 0 || 1) + " · " + HEAT_NAME[clampHeat(app.heat)] + " · " + paceToken(app.pace) + (p ? " · " + pactLabel(p) : "");
+};
 export function dims(canvas, kind) {
   const s = kindSize(kind);
   return { cw: canvas ? canvas.width : s.w, ch: canvas ? canvas.height : s.h };
@@ -40,7 +47,8 @@ export function dims(canvas, kind) {
 /* GRAPHICS page data arrives finished from the app (gfx.js strings via
    app.gfxView()); this module only hands it on, like app.stats. */
 const doorOf = (app) => (app.gfxPreset ? app.gfxPreset() + " ›" : "");
-const gfxUi = (app, canvas) => ({
+const gfxUi = (app, canvas, kicker) => ({
+  kicker,
   row: app.gfxRow,
   view: app.gfxView ? app.gfxView() : null,
   togT: app.togT,
@@ -88,11 +96,14 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques) {
        box the pause list uses — never dims(canvas, kind), so list and page
        never disagree by a pixel. */
     if (world.state === "PAUSE" && app.pauseView >= 1) {
-      const B = overlayBox(kind);
-      menudraw.drawDim(c, 0.72, B.w, B.h);
+      // no second dim: drawOverlay's 0.72 PAUSE veil is the one wash, so the
+      // HUD stays lit as run context on every pause view
+      const B = overlayBox(kind),
+        kicker = "PAUSED · ROOM " + (world.level | 0);
       if (app.pauseView === 2)
-        return menudraw.drawGraphics(c, menudraw.layout(B.w, B.h), app.subT, gfxUi(app, canvas));
+        return menudraw.drawGraphics(c, menudraw.layout(B.w, B.h), app.subT, gfxUi(app, canvas, kicker));
       menudraw.drawSettings(c, menudraw.layout(B.w, B.h), app.subT, {
+        kicker,
         row: app.optRow,
         vals: app.settings,
         r3d: app.render3d,
@@ -134,8 +145,8 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques) {
         cursor: app.cursor,
         enterT: sl ? app.subT - sl.hold : app.subT, // the show's blast plays out before the rows
         items: [
-          ITEMS[0] + "|" + heatToken(app.heat),
-          ITEMS[1] + "|" + heatToken(app.heat),
+          ITEMS[0] + "|" + playTag(app),
+          ITEMS[1],
           ITEMS[2] + "|" + app.dailyTag,
           ITEMS[3],
           ITEMS[4],
@@ -143,6 +154,7 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques) {
           ITEMS[6],
           ITEMS[7],
         ],
+        touch: layOf(canvas) !== "d",
       },
       L,
       app.subT,

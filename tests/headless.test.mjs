@@ -11,7 +11,12 @@ import {CFG, BIOMES, biomeOf} from "../src/core/config.js";
 import {PROJ} from "../src/render/r3d/camera.js";
 import {loadScores} from "../src/app/highscores.js";
 import {loadStats} from "../src/app/stats.js";
-import {copyPayload} from "../src/render/scenes.js";
+import {copyPayload, pauseGeom, overlayBox} from "../src/render/scenes.js";
+import {menuGeom, guideGeom as mdGuideGeom, levelGeom, scoresHit, layout as menuLayout} from "../src/render/menudraw.js";
+// tab centres found through scoresHit itself (the one tap map), scanning the tab row band
+const mdScoreTabs=(L)=>{ for(let y=60;y<200;y++){ const xs=[]; for(let x=0;x<600;x++) if(scoresHit(x,y,L)>=0) xs.push([x,scoresHit(x,y,L)]); if(xs.length) return {y:y+12,x:(i)=>{const r=xs.filter(p=>p[1]===i).map(p=>p[0]);return (r[0]+r[r.length-1])/2;}}; } return null; };
+// MENU taps land on the painted row (an off-row MENU tap is a no-op since the menu redesign)
+const menuTap=(i,k=1)=>({clientX:300/k,clientY:menuGeom(menuLayout(600,520),8).rows[i].cy/k});
 
 const ROOT=dirname(fileURLToPath(import.meta.url))+"/..";
 
@@ -211,7 +216,7 @@ function mkCanvas(){
   tick(10);
   check("C1 click-skip does not auto-start a run",
     g.app.screen===SCREEN.MENU&&g.world.time===0, g.app.screen);
-  g.app.cursor=3; cv.fire("pointerdown");       // OPTIONS
+  cv.fire("pointerdown",menuTap(3));            // OPTIONS
   check("C1 OPTIONS click pushes SETTINGS once",
     g.app.screen===SCREEN.SETTINGS&&g.app.optRow===0,String(g.app.screen));
   tick(10);
@@ -226,7 +231,7 @@ function mkCanvas(){
   check("C1 RENDER Enter cycles PIXEL -> REAL 3D -> CLASSIC 2D",
     v2==="true,false,1,0"&&g.app.render3d===false&&g.app.pixel===false&&g.app.settings.r3d===0&&g.app.settings.px===0, v2);
   g.app.key("Escape");
-  g.app.cursor=4; cv.fire("pointerdown");       // GUIDE
+  cv.fire("pointerdown",menuTap(4));            // GUIDE
   check("C1 subscreen click lands once", g.app.screen===SCREEN.GUIDE);
   tick(10);
   check("C1 subscreen does not bounce back", g.app.screen===SCREEN.GUIDE);
@@ -292,7 +297,7 @@ function mkCanvas(){
   g.app.cabinetSeen=true;                       // seen cabinet: skip -> MENU
   g.app.skip();
   g.app.cursor=3;                               // OPTIONS
-  cv.fire("pointerdown",{clientX:1,clientY:1}); // MENU tap: off SETTINGS, coords unused
+  cv.fire("pointerdown",menuTap(3));            // MENU tap on the OPTIONS row
   check("tap glue: OPTIONS push lands on SETTINGS row 0",
     g.app.screen===SCREEN.SETTINGS&&g.app.optRow===0,
     g.app.screen+"/"+g.app.optRow);
@@ -333,7 +338,7 @@ function mkCanvas(){
   cv.el.getBoundingClientRect=()=>({left:0,top:0,width:300,height:260});
   const g=createGame(cv.el,{autoplay:true,seed:73});
   g.input.onPause(); g.loop(16);
-  cv.fire("pointerdown",{clientX:150,clientY:141});   // OPTIONS row (buf 300,282)
+  cv.fire("pointerdown",{clientX:150,clientY:pauseGeom(overlayBox("2d")).rows[2].cy/2}); // OPTIONS row (keyboard layout: no data-lay in Node)
   check("D1 scaled tap: pause OPTIONS row opens the inline page",
     g.app.pauseCursor===2&&g.app.pauseView===1,
     g.app.pauseCursor+"/"+g.app.pauseView);
@@ -345,7 +350,7 @@ function mkCanvas(){
   cs.el.getBoundingClientRect=()=>({left:0,top:0,width:300,height:260});
   const h=createGame(cs.el,{seed:74});
   h.app.cabinetSeen=true; h.app.skip(); h.app.cursor=3;
-  cs.fire("pointerdown",{clientX:1,clientY:1});
+  cs.fire("pointerdown",menuTap(3,2));
   cs.fire("pointerdown",{clientX:150,clientY:158});   // row 6 (buf 300,316)
   check("D1 scaled tap: SETTINGS row 6 toggles SCREEN SHAKE",
     h.app.screen===SCREEN.SETTINGS&&h.app.optRow===6&&h.app.settings.shk===0,
@@ -366,6 +371,51 @@ function mkCanvas(){
   check("D2 MENU tap on the STATS row opens STATS, not a PLAY run",
     g.app.screen===SCREEN.STATS&&g.app.cursor===6,
     g.app.screen+"/"+g.app.cursor);
+}
+
+// M1 (menu redesign 2026-10-19): one tap rule for every list — a tap on a row
+// is Enter on it; off the rows a ROOT list (MENU) does nothing and a page backs
+// out. GUIDE, LEVEL SELECT chips and HIGH SCORES heat tabs are touch-usable.
+{
+  const cv=mkCamCanvas(600,520);
+  const g=createGame(cv.el,{seed:76});
+  g.app.cabinetSeen=true; g.app.skip(); g.app.cursor=0;
+  const L=menuLayout(600,520), R=menuGeom(L,8).rows;
+  cv.fire("pointerdown",{clientX:300,clientY:R[0].y0-6});
+  cv.fire("pointerdown",{clientX:300,clientY:R[7].y1+6});
+  check("M1 a MENU tap above / below the rows starts nothing",
+    g.app.screen===SCREEN.MENU&&g.world.time===0&&g.app.cursor===0, g.app.screen);
+  cv.fire("pointerdown",{clientX:8,clientY:R[4].cy});        // far left, GUIDE band
+  check("M1 a MENU side tap on a row's band opens that row (full-width bands)", g.app.screen===SCREEN.GUIDE&&g.app.cursor===4, g.app.screen+"/"+g.app.cursor);
+  const G=mdGuideGeom(L);
+  cv.fire("pointerdown",{clientX:300,clientY:G.y0+2.5*G.rowH});
+  check("M1 GUIDE tap on ENEMIES opens ENEMIES (GUIDE no longer traps touch)", g.app.screen===SCREEN.ENEMIES&&g.app.guideRow===2, g.app.screen+"/"+g.app.guideRow);
+  g.app.back();
+  cv.fire("pointerdown",{clientX:300,clientY:4});
+  check("M1 GUIDE tap off the rows backs out to MENU", g.app.screen===SCREEN.MENU, g.app.screen);
+  cv.fire("pointerdown",{clientX:300,clientY:R[1].cy});
+  check("M1 LEVEL SELECT opens from its row", g.app.screen===SCREEN.LEVEL, g.app.screen);
+  const LG=levelGeom(L,g.app.pactUnlocked), c=(r)=>({clientX:r.x+r.w/2,clientY:r.y+r.h/2});
+  cv.fire("pointerdown",c(LG.room[2])); cv.fire("pointerdown",c(LG.heat[2])); cv.fire("pointerdown",c(LG.pace[0]));
+  check("M1 LEVEL chip taps set room 3, heat MAX, pace EASY and start nothing",
+    g.app.screen===SCREEN.LEVEL&&g.app.level===3&&g.app.heat===2&&g.app.pace===-1, [g.app.screen,g.app.level,g.app.heat,g.app.pace].join());
+  cv.fire("pointerdown",c(LG.pace[2]));
+  check("M1 LEVEL pace tap walks EASY -> HARD", g.app.pace===1, g.app.pace);
+  cv.fire("pointerdown",{clientX:2,clientY:2});
+  check("M1 LEVEL tap outside the plate backs out", g.app.screen===SCREEN.MENU, g.app.screen);
+  cv.calls.length=0; for(let i=1;i<=40;i++)g.loop(100000+i*16);
+  const tagTxt=cv.calls.filter(c=>c[0]==="fillText").map(c=>String(c[1][0])).find(t=>/^L\d+ · /.test(t));
+  cv.fire("pointerdown",{clientX:300,clientY:R[0].cy}); g.loop(100700);
+  check("M1 the PLAY tag is the run PLAY starts (room, heat, pace)",
+    tagTxt==="L3 · MAX · HARD"&&g.app.screen===SCREEN.GAME&&g.world.level===3&&(g.world.heat|0)===2&&(g.world.pace|0)===1,
+    tagTxt+" -> "+[g.app.screen,g.world.level,g.world.heat,g.world.pace].join());
+  g.app.toMenu();
+  g.app.cursor=5; g.app.confirm();
+  const T=mdScoreTabs(L);
+  cv.fire("pointerdown",{clientX:T.x(1),clientY:T.y});
+  check("M1 HIGH SCORES heat tab tap shows PLUS and stays", g.app.screen===SCREEN.SCORES&&g.app.scoreHeat===1, g.app.screen+"/"+g.app.scoreHeat);
+  cv.fire("pointerdown",{clientX:300,clientY:300});
+  check("M1 HIGH SCORES tap off the tabs backs out", g.app.screen===SCREEN.MENU, g.app.screen);
 }
 
 // I1: ui* cue sheet live from the app layer (main.js wrappers)

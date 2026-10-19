@@ -11,6 +11,7 @@ import { PACE_NAME } from "../core/pace.js";
 import { pactLabel } from "../core/pact.js";
 import { PACT, PACT_COL } from "../core/pact.js";
 import { drawIcon, drawEnemyBody } from "./sprites.js";
+import { rr } from "./icons.js";
 import { pixelArt, itemCell, foeCell, pageScale, blitCell, SLOT_PAD } from "./pixel/hudart.js";
 const ACCENT = "#37f0d0",
   TEXT = "#dfe7f5",
@@ -32,20 +33,31 @@ export const SHOW_STEP = 0.137,
   SKIP_GUARD = 0.2,
   TITLE_IN = 0.9;
 const font = (size, weight) => (weight || "") + " " + size + "px " + MONO;
+/* CONSOLE PANEL (direction A): labels and titles in the system sans stack (no
+   font file; disclosed: system-ui varies by OS), values / tags / foot stay
+   mono. One plate, one border, one selection idiom (paintRow) everywhere. */
+const SANS = "system-ui,-apple-system,'Segoe UI',Roboto,sans-serif";
+const sans = (size, weight) => (weight || "") + " " + size + "px " + SANS;
+const DANGER = "#ff5d73";
 const LINE = "#26324a",
-  PLATE = "rgba(8,12,22,0.92)";
-function plate(c, x, y, w, h) {
+  EDGE = "#2a3550";
+export const PLATE = "rgba(10,14,24,0.94)";
+const even = (v) => 2 * Math.round(v / 2); // even logical px: crisp at x0.5 / x1 / x1.5 and on PIXEL's 2px art grid
+export function plate(c, x, y, w, h) {
+  x = even(x);
+  y = even(y);
+  w = even(w);
+  h = even(h);
+  c.fillStyle = "rgba(0,0,0,0.35)";
+  rr(c, x, y + 4, w, h, 6);
+  c.fill();
   c.fillStyle = PLATE;
-  c.fillRect(x, y, w, h);
-  c.strokeStyle = LINE;
+  rr(c, x, y, w, h, 6);
+  c.fill();
+  c.strokeStyle = EDGE;
   c.lineWidth = 1;
-  c.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
-  c.strokeStyle = "rgba(55,240,208,0.20)";
-  c.strokeRect(x + 2.5, y + 2.5, w - 5, h - 5);
-  c.fillStyle = ACCENT;
-  c.globalAlpha = 0.5;
-  c.fillRect(x + 12, y + 2, w - 24, 1.5);
-  c.globalAlpha = 1;
+  rr(c, x + 0.5, y + 0.5, w - 1, h - 1, 6);
+  c.stroke();
 }
 function well(c, x, y, s, col) {
   c.fillStyle = "rgba(4,7,14,0.95)";
@@ -85,34 +97,137 @@ function shell(c, L, maxW) {
   plate(c, S.x, S.y, S.w, S.h);
   return S;
 }
-function head(c, S, title, kicker) {
+const spaced = (c, on) => {
+  if ("letterSpacing" in c) c.letterSpacing = on ? "0.12em" : "0px";
+};
+export function head(c, S, title, kicker) {
   c.textAlign = "center";
   c.textBaseline = "middle";
   if (kicker) {
-    c.fillStyle = ACCENT;
-    c.font = font(8, "900");
+    c.fillStyle = MUTED;
+    c.font = sans(10, "600");
+    spaced(c, true);
     c.fillText(kicker, S.mid, S.headY - 9);
+    spaced(c, false);
   }
   c.fillStyle = TEXT;
-  c.font = font(16, "900");
-  c.fillText(title, S.mid, S.headY + 7);
+  c.font = sans(18, "700");
+  c.fillText(title, S.mid, S.headY + 8);
 }
-function foot(c, S, s, col) {
+export function foot(c, S, s, col) {
   c.fillStyle = col || MUTED;
   c.font = font(10);
   c.textAlign = "center";
   c.textBaseline = "middle";
   c.fillText(s, S.mid, S.footY);
 }
-function caret(c, x, y, h) {
-  const hh = Math.max(6, Math.min(9, h * 0.38));
-  c.fillStyle = ACCENT;
+function caret(c, x, y, h, col) {
+  const hh = Math.max(5, Math.min(7, h * 0.22));
+  c.fillStyle = col || ACCENT;
   c.beginPath();
   c.moveTo(x, y - hh);
-  c.lineTo(x + 8, y);
+  c.lineTo(x + hh * 1.1, y);
   c.lineTo(x, y + hh);
   c.closePath();
   c.fill();
+}
+/* THE row: every list in the shell (MENU, PAUSE, OPTIONS, GRAPHICS, GUIDE)
+   paints its rows here, so the selected row is the same object on every
+   page. o = {hero, danger, door, ext, touch, vc, glow}. Selection = a
+   full-width 0.12 band, a 3px notch and the caret; label weight and size never
+   jitter. danger rows (RESTART / QUIT) select in red, keeping the shape. */
+export function paintRow(c, x, y, w, h, label, val, sel, o) {
+  const p = o || {},
+    col = p.danger ? DANGER : ACCENT,
+    cy = y + h / 2;
+  if (sel) {
+    c.fillStyle = p.danger ? "rgba(255,93,115,0.12)" : "rgba(55,240,208,0.12)";
+    c.fillRect(x, y, w, h);
+    c.fillStyle = col;
+    c.fillRect(x, y, 3, h);
+    caret(c, x + 11, cy, h, col);
+  }
+  const size = Math.max(10, Math.min(p.hero ? (p.touch ? 22 : 20) : p.touch ? 17 : 15, Math.round(h * (p.hero ? 0.5 : 0.62))));
+  c.textBaseline = "middle";
+  c.textAlign = "left";
+  c.font = sans(size, p.hero ? "800" : "600");
+  c.fillStyle = sel ? TEXT : MUTED;
+  c.fillText(label, x + 26, cy);
+  const mark = p.ext ? "↗" : p.door ? "›" : "",
+    v = val ? String(val) : "";
+  c.textAlign = "right";
+  if (mark) {
+    c.font = sans(p.ext ? 14 : 18, "600");
+    c.fillStyle = sel ? TEXT : MUTED;
+    c.fillText(mark, x + w - 12, cy);
+  }
+  if (v) {
+    const vx = x + w - 12 - (mark ? 18 : 0);
+    c.font = font(12);
+    c.fillStyle = p.vc || (sel ? TEXT : MUTED);
+    if (p.glow > 0) {
+      c.shadowColor = c.fillStyle;
+      c.shadowBlur = 14 * p.glow;
+    }
+    c.fillText(v, vx, cy);
+    if (p.glow > 0) c.shadowBlur = 0;
+  }
+}
+/* Pure list geometry. rows=[{hero,gapBefore}] (label etc. ignored); o =
+   {top, bot, w, pitch, hero, gap, pad, head, foot}. Pitches are CAPS: a band
+   too short for them scales pitch / hero / gap down together. Hit bands are
+   contiguous: each row owns half of any group gap beside it. */
+export function listGeom(L, rows, o) {
+  const p = o || {},
+    n = rows.length,
+    pad = p.pad == null ? 10 : p.pad,
+    hd = p.head | 0,
+    ft = p.foot | 0;
+  let sum = 0,
+    gaps = 0;
+  for (let i = 0; i < n; i++) {
+    sum += rows[i].hero ? p.hero || p.pitch : p.pitch;
+    if (i && rows[i].gapBefore) gaps += p.gap | 0;
+  }
+  const room = p.bot - p.top - pad * 2 - hd - ft;
+  const f = sum + gaps > 0 ? Math.min(1, room / (sum + gaps)) : 1;
+  const h = Math.round(pad * 2 + hd + ft + (sum + gaps) * f);
+  const w = Math.min(L.cx * 2 - 40, p.w || 380);
+  const x = Math.round(L.cx - w / 2),
+    y = Math.round(p.top + Math.max(0, (p.bot - p.top - h) / 2));
+  const out = [];
+  let yy = y + pad + hd;
+  for (let i = 0; i < n; i++) {
+    if (i && rows[i].gapBefore) yy += (p.gap | 0) * f;
+    const rh = (rows[i].hero ? p.hero || p.pitch : p.pitch) * f;
+    out.push({ y0: yy, y1: yy + rh, h: rh, cy: yy + rh / 2 });
+    yy += rh;
+  }
+  for (let i = 0; i < n; i++) {
+    out[i].a = i ? (out[i - 1].y1 + out[i].y0) / 2 : out[i].y0;
+    out[i].b = i < n - 1 ? (out[i].y1 + out[i + 1].y0) / 2 : out[i].y1;
+  }
+  return { x, y, w, h, f, pad, rows: out, mid: x + w / 2, headY: y + 26, footY: y + h - 16, ix: x + 16, iw: w - 32, span: p.pitch * f };
+}
+export function listHit(x, y, g, full) {
+  if (!full && (x < g.x || x > g.x + g.w)) return -1;
+  const r = g.rows;
+  for (let i = 0; i < r.length; i++) if (y >= r[i].a && (y < r[i].b || (i === r.length - 1 && y <= r[i].b))) return i;
+  return -1;
+}
+/* drawList: the plate's rows only (plate / head / foot are the caller's).
+   o.et (MENU only) staggers the entrance; PAUSE passes none and stays still. */
+export function drawList(c, g, rows, cur, t, o) {
+  const p = o || {},
+    et = typeof p.et === "number" ? p.et : null;
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i],
+      G = g.rows[i],
+      k = et == null ? 1 : easeOutCubic(clamp01((et - i * 0.03) / 0.22));
+    c.globalAlpha = k * (p.alpha == null ? 1 : p.alpha);
+    paintRow(c, g.x + 8, G.y0 + 2 + 6 * (1 - k), g.w - 16, G.h - 4, r.label, r.val, i === cur, { ...r, touch: p.touch });
+  }
+  c.globalAlpha = 1;
 }
 
 export function layout(W, H) {
@@ -241,32 +356,28 @@ export function slamOf(t) {
   return { dim: 0.12 + 0.5 * seg(t, hold, hold + 0.35), s: 1.35 - 0.35 * easeOutBack(seg(t, 0, 0.12)), a: seg(t, 0, 0.12), hold };
 }
 
-/* MAIN MENU over the dimmed frozen arena. ui={cursor,items,enterT}; item
-   entries may carry a value token ("PLAY|CORE") drawn in accent. The 120ms
-   toggle-flash moved to drawSettings with the toggles themselves (§2), so
-   ui.togT is gone rather than passed here as a permanent -1.
-   List plate sits under the logo with a small inset; rows stay inside the
-   plate so the highlight never kisses the border. */
-export function menuGeom(L, n) {
-  const hintBand = 34;
+/* MAIN MENU over the dimmed frozen arena. ui={cursor,items,enterT,touch};
+   item entries may carry a value token ("PLAY|L1 · CORE · NORM"). The row
+   SHAPE (PLAY hero, group gaps before OPTIONS / HIGH SCORES / SOURCE) is a
+   constant here, never read from items: main.js hit-tests with only n, so the
+   painted and tapped rows come from the same table. Pitch 33 / hero 50 are
+   caps; a short box (608x352) scales them down to the band. */
+const MENU_DOOR = ["LEVEL SELECT", "OPTIONS", "GUIDE", "HIGH SCORES", "STATS"];
+const menuShape = (n) => Array.from({ length: n }, (_, i) => ({ hero: i === 0, gapBefore: n === 8 && (i === 3 || i === 5 || i === 7) }));
+export const MENU_PITCH = 33;
+export function menuList(L, n) {
   const logoBot = L.logoCy + 10 * L.logoScale;
-  const bandTop = Math.max(logoBot + 8, 8);
-  const bandBot = L.footY - hintBand;
-  const padY = 12;
-  const inner = Math.max(1, bandBot - bandTop - padY * 2);
-  const span = n ? Math.min(L.itemH, Math.max(18, inner / n)) : L.itemH;
-  const h = n * span + padY * 2;
-  const y0 = bandTop + Math.max(0, (bandBot - bandTop - h) / 2);
-  const rw = Math.min(L.cx * 2 - 56, 340);
-  return { bx: L.cx - rw / 2, y0, rw, h, span, padY };
+  return listGeom(L, menuShape(n), { top: Math.max(logoBot + 8, 8), bot: L.footY - 14, w: 380, pitch: MENU_PITCH, hero: 50, gap: 8, pad: 10 });
 }
-/* Settled rows only (no entrance slide); same +1e-9 floor guard as
-   settingsHit so full-pitch bands stay contiguous. */
+export function menuGeom(L, n) {
+  const g = menuList(L, n);
+  return { bx: g.x, y0: g.y, rw: g.w, h: g.h, span: g.span, padY: g.pad, rows: g.rows };
+}
+/* Settled rows only (no entrance slide): contiguous bands, half a group gap
+   each side, full stage width, so no tap between or beside two rows falls
+   through; above / below the list is -1 and main does nothing with it. */
 export function menuHit(x, y, L, n) {
-  const g = menuGeom(L, n);
-  if (x < g.bx || x > g.bx + g.rw) return -1;
-  const i = Math.floor((y - g.y0 - g.padY) / g.span + 1e-9);
-  return i >= 0 && i < n ? i : -1;
+  return listHit(x, y, menuList(L, n), true);
 }
 /* STATS foot taps (T1): token zones over the one painted foot string at the
    0.6 em mono advance, half a separator wide each side. */
@@ -288,74 +399,39 @@ export function drawMenu(c, ui, L, t) {
   const cur = (ui && ui.cursor) | 0;
   const items = (ui && ui.items) || [];
   const et = ui && typeof ui.enterT === "number" ? ui.enterT : t;
+  const touch = !!(ui && ui.touch);
   const n = items.length;
-  const { bx, y0, rw, h, span, padY } = menuGeom(L, n);
-  const padX = 16;
+  const g = menuList(L, n),
+    shape = menuShape(n);
   // enterT < 0 holds the menu back (the show's blast reads first): nothing,
   // then the plate fades in over the last 0.12 s before the rows enter
   const pa = et < 0 ? clamp01(1 + et / 0.12) : 1;
   if (pa <= 0) return;
   c.globalAlpha = pa;
-  plate(c, bx, y0, rw, h);
-  c.globalAlpha = pa;
-  const size = 13;
-  const rh = Math.max(16, span - 4);
-  const slotL = bx + padX + 22;
-  const slotR = bx + rw - padX;
-  c.textBaseline = "middle";
-  for (let i = 0; i < n; i++) {
-    const str = String(items[i]);
-    const pipe = str.indexOf("|");
-    let label, val, hasVal;
-    if (pipe > 0) {
-      label = str.slice(0, pipe);
-      val = str.slice(pipe + 1);
-      hasVal = true;
-    } else {
-      label = str;
-      val = "";
-      hasVal = false;
-    }
-    const k = easeOutCubic(clamp01((et - i * 0.03) / 0.22));
-    const y = y0 + padY + i * span + span / 2 + 6 * (1 - k);
-    const sel = i === cur;
-    c.globalAlpha = k;
-    if (sel) {
-      c.fillStyle = "rgba(55,240,208,0.14)";
-      c.fillRect(bx + 8, y - rh / 2, rw - 16, rh);
-      c.fillStyle = "rgba(55,240,208,0.40)";
-      c.fillRect(bx + 8, y - rh / 2, rw - 16, 1);
-      c.fillStyle = ACCENT;
-      c.fillRect(bx + 8, y - rh / 2, 3, rh);
-      caret(c, bx + 16, y, rh);
-    }
-    c.font = font(size, sel ? "900" : "");
-    c.textAlign = "left";
-    c.fillStyle = sel ? TEXT : MUTED;
-    c.fillText(label, slotL, y);
-    if (val) {
-      c.textAlign = "right";
-      c.fillStyle =
-        val.indexOf("MAX") >= 0
-          ? "#ff5d73"
-          : val.indexOf("CORE") >= 0
-            ? MUTED
-            : ACCENT;
-      c.fillText(val, slotR, y);
-    }
-    c.globalAlpha = 1;
-  }
+  plate(c, g.x, g.y, g.w, g.h);
+  const rows = items.map((it, i) => {
+    const str = String(it),
+      pipe = str.indexOf("|"),
+      label = pipe > 0 ? str.slice(0, pipe) : str,
+      val = pipe > 0 ? str.slice(pipe + 1) : "",
+      ext = label === "SOURCE";
+    return {
+      label,
+      val: ext && i === cur ? "github.com/HMarzban/fusegrid" : val,
+      hero: shape[i].hero,
+      door: MENU_DOOR.indexOf(label) >= 0,
+      ext,
+      vc: label === "DAILY" && val === "NEW" ? ACCENT : null,
+    };
+  });
+  drawList(c, g, rows, cur, t, { et, touch, alpha: pa });
   c.globalAlpha = pa;
   c.fillStyle = MUTED;
   c.font = font(10);
   c.textAlign = "center";
-  c.fillText("↑↓ MOVE · ENTER SELECT", L.cx, L.footY - 16);
-  c.fillStyle = selAccent(items, cur);
-  c.fillText("SOURCE  github.com/HMarzban/fusegrid", L.cx, L.footY);
+  c.textBaseline = "middle";
+  c.fillText(touch ? "TAP TO SELECT" : "↑↓ MOVE · ENTER SELECT", L.cx, L.footY);
   c.globalAlpha = 1;
-}
-function selAccent(items, cur) {
-  return String(items[cur] || "").indexOf("SOURCE") === 0 ? ACCENT : MUTED;
 }
 
 /* MODES is a PRESENTATION relabel of the four Pact bits, so these names live
@@ -369,6 +445,41 @@ function selAccent(items, cur) {
 const MODE_NAME = ["IRON", "BARE", "THIN", "SHRINK"];
 const TIME_COL = "#ff8a3c";
 
+/* LEVEL SELECT chip rows, ONE table for draw and tap (levelHit): room chips
+   (34 tall), heat tabs (26), pace tabs (22), then the four modes + TIME (22)
+   once unlocked. */
+export function levelGeom(L, unlocked) {
+  const S = shellBox(L, 400),
+    showPact = !!unlocked,
+    rooms = roomCap(showPact),
+    chipW = showPact ? 34 : L.chipW,
+    chipGap = showPact ? 8 : L.chipGap,
+    sx = S.mid - (rooms * chipW + (rooms - 1) * chipGap) / 2,
+    cy = Math.round((S.headY + 28 + S.footY - 22) / 2 - (showPact ? 58 : 48)),
+    hy = cy + 46,
+    pzy = hy + 34,
+    row = (n, w, g, y, h, gapAt) => Array.from({ length: n }, (_, i) => ({ x: S.mid - (n * w + (n - 1) * g + (gapAt ? 16 - g : 0)) / 2 + i * (w + g) + (gapAt && i >= gapAt ? 16 - g : 0), y, w, h }));
+  return {
+    S, chipW, cy, hy, pzy,
+    room: row(rooms, chipW, chipGap, cy, 34),
+    heat: row(3, 72, 10, hy, 26),
+    pace: row(3, 60, 10, pzy, 22),
+    mode: showPact ? row(5, 64, 6, pzy + 34, 22, 4) : [],
+    sx,
+  };
+}
+/* A tap on a LEVEL SELECT chip: {k:"room"|"heat"|"pace"|"mode", i}; any other
+   tap inside the plate is {k:"start"}, outside it {k:"back"}. */
+export function levelHit(x, y, L, unlocked) {
+  const g = levelGeom(L, unlocked);
+  for (const k of ["room", "heat", "pace", "mode"])
+    for (let i = 0; i < g[k].length; i++) {
+      const r = g[k][i];
+      if (x >= r.x - 4 && x <= r.x + r.w + 4 && y >= r.y - 4 && y <= r.y + r.h + 4) return { k, i };
+    }
+  const S = g.S;
+  return x >= S.x && x <= S.x + S.w && y >= S.y && y <= S.y + S.h ? { k: "start" } : { k: "back" };
+}
 /* LEVEL SELECT: five chips 44x34 gap 14; sel in 1..5. */
 export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked, pace, timeAttack) {
   const S = shell(c, L, 400);
@@ -378,15 +489,12 @@ export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked, pace, timeAt
   else if (p > 1) p = 1;
   const showPact = !!unlocked;
   head(c, S, "SELECT LEVEL", showPact ? "ROOM + HEAT + PACE + MODES" : "ROOM + HEAT + PACE");
-  const rooms = roomCap(showPact);
-  const chipW = showPact ? 34 : L.chipW;
-  const chipGap = showPact ? 8 : L.chipGap;
-  const total = rooms * chipW + (rooms - 1) * chipGap;
-  const sx = S.mid - total / 2;
-  const mid = (S.headY + 28 + S.footY - 22) / 2;
-  const cy = Math.round(mid - (showPact ? 58 : 48));
+  const G = levelGeom(L, showPact);
+  const rooms = G.room.length;
+  const chipW = G.chipW;
+  const cy = G.cy;
   for (let i = 0; i < rooms; i++) {
-    const x = sx + i * (chipW + chipGap),
+    const x = G.room[i].x,
       on = i + 1 === sel;
     if (on) {
       c.fillStyle = "rgba(55,240,208,0.16)";
@@ -402,12 +510,9 @@ export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked, pace, timeAt
     c.fillText(String(i + 1), x + chipW / 2, cy + 17);
   }
   const hw = 72,
-    hg = 10,
-    htot = 3 * hw + 2 * hg,
-    hx0 = S.mid - htot / 2,
-    hy = cy + 46;
+    hy = G.hy;
   for (let i = 0; i < 3; i++) {
-    const x = hx0 + i * (hw + hg),
+    const x = G.heat[i].x,
       on = i === h,
       col = HEAT_COL[i];
     if (on) {
@@ -424,12 +529,9 @@ export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked, pace, timeAt
     c.fillText(HEAT_MARK[i] + " " + HEAT_NAME[i], x + hw / 2, hy + 13);
   }
   const pw2 = 60,
-    pg2 = 10,
-    ptot2 = 3 * pw2 + 2 * pg2,
-    px2 = S.mid - ptot2 / 2,
-    pzy = hy + 34;
+    pzy = G.pzy;
   for (let i = 0; i < 3; i++) {
-    const x = px2 + i * (pw2 + pg2),
+    const x = G.pace[i].x,
       on = i === p + 1,
       col = on ? ACCENT : MUTED;
     if (on) {
@@ -448,14 +550,10 @@ export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked, pace, timeAt
   if (showPact) {
     const bits = [PACT.LAST, PACT.BARE, PACT.THIN, PACT.SHRINK];
     const pw = 64,
-      pg = 6,
-      pgap = 16,
-      ptot = 5 * pw + 3 * pg + pgap,
-      px0 = S.mid - ptot / 2,
       py = pzy + 34;
     const mask = pact | 0;
     for (let i = 0; i < 4; i++) {
-      const x = px0 + i * (pw + pg),
+      const x = G.mode[i].x,
         on = (mask & bits[i]) !== 0,
         col = PACT_COL[i];
       if (on) {
@@ -471,7 +569,7 @@ export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked, pace, timeAt
       c.textBaseline = "middle";
       c.fillText(i + 1 + " " + MODE_NAME[i], x + pw / 2, py + 11);
     }
-    const tx = px0 + 4 * pw + 3 * pg + pgap,
+    const tx = G.mode[4].x,
       ton = !!timeAttack;
     if (ton) {
       c.fillStyle = "rgba(55,240,208,0.12)";
@@ -730,13 +828,18 @@ export function drawEnemiesHelp(c, L, t, kind) {
    3-row list navigated exactly like MENU — own cursor, wraps both ways, tap
    confirms the row under the cursor. Not the SETTINGS knob model: these
    rows are doors to open, not values to adjust, so there is no value
-   column and no dedicated hit-test (spec §2 — MENU has none either). */
+   column. guideHit maps a tap the way menuHit does (full-width bands). */
 const GUIDE_LABEL = ["HOW TO PLAY", "ITEMS", "ENEMIES"];
 export function guideGeom(L) {
   const S = shellBox(L, 480);
   const y0 = S.headY + 26,
     y1 = S.footY - 14;
   return { S, y0, rowH: (y1 - y0) / 3 };
+}
+export function guideHit(x, y, L) {
+  const g = guideGeom(L),
+    i = Math.floor((y - g.y0) / g.rowH + 1e-9);
+  return i >= 0 && i < 3 ? i : -1;
 }
 export function drawGuide(c, L, t, cursor) {
   const cur = cursor | 0;
@@ -745,19 +848,8 @@ export function drawGuide(c, L, t, cursor) {
   const g = guideGeom(L);
   for (let i = 0; i < 3; i++) {
     const y = g.y0 + i * g.rowH + g.rowH / 2;
-    const sel = i === cur;
-    if (sel) {
-      c.fillStyle = "rgba(55,240,208,0.14)";
-      c.fillRect(S.ix, y - g.rowH / 2 + 2, S.iw, g.rowH - 4);
-      c.fillStyle = ACCENT;
-      c.fillRect(S.ix, y - g.rowH / 2 + 2, 3, g.rowH - 4);
-      caret(c, S.ix + 8, y, g.rowH - 4);
-    }
-    c.textAlign = "left";
-    c.textBaseline = "middle";
-    c.font = font(14, sel ? "900" : "");
-    c.fillStyle = sel ? TEXT : MUTED;
-    c.fillText(GUIDE_LABEL[i], S.ix + 22, y);
+    const bh = Math.min(g.rowH - 4, 48);
+    paintRow(c, S.ix, y - bh / 2, S.iw, bh, GUIDE_LABEL[i], "", i === cur, { door: true });
   }
   foot(c, S, "↑↓ ROW · ENTER OPEN · ESC BACK");
 }
@@ -777,16 +869,19 @@ const PLAQUE_NAME = ["CLEAR", "PLUS", "MAX", "CROWN"];
    highlight and the empty-tab label. `plaques` is the unlocked bitmask
    (src/app/plaques.js), reaching this draw through the same shell-router
    path as scores/heat — see shellview.js's getPlaques. */
+const scoreTabs = (S) => ({ tabW: 64, tabGap: 8, tabH: 18, tabX0: S.mid - (3 * 64 + 2 * 8) / 2, tabY: S.headY + 18 });
+/* HIGH SCORES heat tab under a tap (padded to a thumb), or -1. */
+export function scoresHit(x, y, L) {
+  const T = scoreTabs(shellBox(L, 480));
+  if (y < T.tabY - 10 || y > T.tabY + T.tabH + 10) return -1;
+  const i = Math.floor((x - T.tabX0 + T.tabGap / 2) / (T.tabW + T.tabGap));
+  return i >= 0 && i < 3 ? i : -1;
+}
 export function drawScores(c, scores, L, t, heat, plaques) {
   const S = shell(c, L, 480);
   const h = clampHeat(heat);
   head(c, S, "HIGH SCORES", "BEST RUNS");
-  const tabW = 64,
-    tabGap = 8,
-    tabH = 18,
-    tabTot = 3 * tabW + 2 * tabGap,
-    tabX0 = S.mid - tabTot / 2,
-    tabY = S.headY + 18;
+  const { tabW, tabGap, tabH, tabX0, tabY } = scoreTabs(S);
   for (let i = 0; i < 3; i++) {
     const x = tabX0 + i * (tabW + tabGap),
       on = i === h,
@@ -816,7 +911,7 @@ export function drawScores(c, scores, L, t, heat, plaques) {
     chipY = tabY;
     chipH = tabH;
     const cGap = 4,
-      cX0 = tabX0 + tabTot + 10,
+      cX0 = tabX0 + 3 * tabW + 2 * tabGap + 10,
       cW = Math.max(16, (S.ix + S.iw - cX0 - 3 * cGap) / 4);
     for (let i = 0; i < 4; i++) {
       const x = cX0 + i * (cW + cGap),
@@ -1077,55 +1172,27 @@ export function drawSettings(c, L, t, ui) {
   const vals = settingsRows(u.vals, r3d, !!u.px, u.door);
   const g = settingsGeom(L);
   const S = shell(c, L, 520);
-  head(c, S, "OPTIONS", "BUILD " + (u.rev || ""));
+  head(c, S, "OPTIONS", u.kicker || "BUILD " + (u.rev || ""));
   const fk =
     typeof u.togT === "number" && u.togT >= 0 ? 1 - clamp01((t - u.togT) / 0.12) : 0;
   for (let i = 0; i < OPT_N; i++) {
-    const y = g.y0 + i * g.rowH + g.rowH / 2;
     const sel = i === cur,
       dim = OPT_3D[i] && !r3d;
     c.globalAlpha = dim ? 0.45 : 1;
-    if (sel) {
-      c.fillStyle = "rgba(55,240,208,0.14)";
-      c.fillRect(S.ix, y - g.rowH / 2 + 2, S.iw, g.rowH - 4);
-      c.fillStyle = ACCENT;
-      c.fillRect(S.ix, y - g.rowH / 2 + 2, 3, g.rowH - 4);
-      caret(c, S.ix + 8, y, g.rowH - 4);
-    }
-    c.textAlign = "left";
-    c.textBaseline = "middle";
-    c.font = font(g.rowH < 24 ? 10 : 12, sel ? "900" : "");
-    c.fillStyle = sel ? TEXT : MUTED;
-    c.fillText(OPT_LABEL[i], S.ix + 22, y);
-    const val = dim ? "—" : vals[i];
-    if (val) {
-      c.textAlign = "right";
-      c.fillStyle = sel ? ACCENT : TEXT;
-      if (sel && fk > 0) {
-        c.shadowColor = c.fillStyle;
-        c.shadowBlur = 14 * fk;
-      }
-      c.fillText(val, S.ix + S.iw, y);
-      if (sel && fk > 0) c.shadowBlur = 0;
-    }
+    paintRow(c, S.ix, g.y0 + i * g.rowH + 1, S.iw, g.rowH - 2, OPT_LABEL[i], dim ? "—" : vals[i], sel, { touch: u.touch, vc: TEXT, glow: sel ? fk : 0 });
     c.globalAlpha = 1;
   }
-  /* CONTROLS: display-only bindings plus the touch note. Always drawn, never
-     device-gated — HOW TO PLAY keeps the long form with icons. */
+  /* CONTROLS: one line, for the device in hand — HOW TO PLAY keeps the long
+     form with icons. */
   c.textAlign = "center";
   c.fillStyle = MUTED;
   c.font = font(9);
   c.fillText(
-    "MOVE WASD/ARROWS · BOMB SPACE · THROW SHIFT+SPACE · REMOTE Q · KICK K+MOVE · PAUSE P",
+    u.touch
+      ? "TOUCH · LEFT PAD MOVES · RIGHT BUTTON BOMBS · TAP PAUSE PILL"
+      : "MOVE WASD/ARROWS · BOMB SPACE · THROW SHIFT+SPACE · REMOTE Q · KICK K+MOVE · PAUSE P",
     S.mid,
-    g.noteY,
-  );
-  c.fillStyle = ACCENT;
-  c.font = font(10);
-  c.fillText(
-    "TOUCH · LEFT PAD MOVES · RIGHT BUTTON BOMBS · TAP PAUSE PILL",
-    S.mid,
-    g.noteY + 14,
+    g.noteY + 7,
   );
   foot(c, S, u.touch ? FOOT_TAP : FOOT_KEYS);
 }
@@ -1158,35 +1225,13 @@ export function drawGraphics(c, L, t, ui) {
     big = !!u.touch;
   const g = graphicsGeom(L);
   const S = shell(c, L, 520);
-  head(c, S, "GRAPHICS", "PERFORMANCE · BATTERY");
+  head(c, S, "GRAPHICS", u.kicker || "PERFORMANCE · BATTERY");
   const fk =
     typeof u.togT === "number" && u.togT >= 0 ? 1 - clamp01((t - u.togT) / 0.12) : 0;
   for (let i = 0; i < GFX_N; i++) {
     const r = rows[i] || { label: "", val: "" };
-    const y = g.y0 + i * g.rowH + g.rowH / 2;
-    const sel = i === cur;
     c.globalAlpha = r.locked ? 0.45 : 1;
-    if (sel) {
-      c.fillStyle = "rgba(55,240,208,0.14)";
-      c.fillRect(S.ix, y - g.rowH / 2 + 2, S.iw, g.rowH - 4);
-      c.fillStyle = ACCENT;
-      c.fillRect(S.ix, y - g.rowH / 2 + 2, 3, g.rowH - 4);
-      caret(c, S.ix + 8, y, g.rowH - 4);
-    }
-    c.textAlign = "left";
-    c.textBaseline = "middle";
-    c.font = font(big ? 15 : 13, sel ? "900" : "");
-    c.fillStyle = sel ? TEXT : MUTED;
-    c.fillText(r.label, S.ix + 22, y);
-    const glow = fk > 0 && (chg >> i) & 1;
-    c.textAlign = "right";
-    c.fillStyle = sel ? ACCENT : TEXT;
-    if (glow) {
-      c.shadowColor = c.fillStyle;
-      c.shadowBlur = 14 * fk;
-    }
-    c.fillText(r.locked ? "—" : String(r.val), S.ix + S.iw, y);
-    if (glow) c.shadowBlur = 0;
+    paintRow(c, S.ix, g.y0 + i * g.rowH + 1, S.iw, g.rowH - 2, r.label, r.locked ? "—" : String(r.val), i === cur, { touch: big, vc: TEXT, glow: fk > 0 && (chg >> i) & 1 ? fk : 0 });
     c.globalAlpha = 1;
   }
   const h = rows[cur] || {};
@@ -1194,7 +1239,7 @@ export function drawGraphics(c, L, t, ui) {
   c.fillStyle = MUTED;
   c.font = font(big ? 11 : 10);
   c.fillText(h.help1 || "", S.mid, g.noteY);
-  c.fillStyle = ACCENT;
+  c.fillStyle = TEXT;
   c.fillText(h.help2 || "", S.mid, g.noteY + 14);
   foot(c, S, big ? FOOT_TAP : FOOT_KEYS);
 }

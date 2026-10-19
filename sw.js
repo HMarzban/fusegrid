@@ -1,15 +1,29 @@
 import { CACHE_NAME, PRECACHE, fetchPolicy } from "./src/pwa/shell.js";
 
-const REV = "fusegrid-shell-v178";
+const REV = "fusegrid-shell-v179";
 if (REV !== CACHE_NAME) throw new Error("PWA REV drift");
+const PREFIX = "fusegrid-shell-v";
+/* Shells before v179 have no NEW VERSION READY card, so a page they run can
+   never prompt: replacing one of those still skips waiting (its page reloads
+   once on controllerchange, as it always did). From v179 on, a new worker
+   WAITS until the player presses RELOAD (SKIP_WAITING). */
+const PROMPT_FROM = 179;
+const legacyShell = (keys) =>
+  keys.some((k) => k.startsWith(PREFIX) && k !== CACHE_NAME && +k.slice(PREFIX.length) < PROMPT_FROM);
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
       .open(CACHE_NAME)
-      .then((cache) => cache.addAll(PRECACHE))
-      .then(() => self.skipWaiting()),
+      // cache: "reload" — precache the server's bytes, never a stale HTTP-cache copy
+      .then((cache) => cache.addAll(PRECACHE.map((u) => new Request(u, { cache: "reload" }))))
+      .then(() => caches.keys())
+      .then((keys) => (legacyShell(keys) ? self.skipWaiting() : undefined)),
   );
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
@@ -18,7 +32,8 @@ self.addEventListener("activate", (event) => {
       .keys()
       .then((keys) =>
         Promise.all(
-          keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)),
+          // only this game's old shells: on Pages the origin is shared
+          keys.filter((k) => k.startsWith(PREFIX) && k !== CACHE_NAME).map((k) => caches.delete(k)),
         ),
       )
       .then(() => self.clients.claim()),

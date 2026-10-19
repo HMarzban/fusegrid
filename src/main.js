@@ -7,10 +7,10 @@ import { CFG, isFinale } from "./core/config.js";
 import { createWorld, loadLevel, step } from "./core/sim.js";
 import { createRenderer } from "./render/renderer.js";
 import { createPixelRenderer } from "./render/pixel/renderer.js";
-import { copyPayload, isRunEnd, overlayBox, pauseHit } from "./render/scenes.js";
+import { copyPayload, isRunEnd, overlayBox, pauseHit, touchLay } from "./render/scenes.js";
 import { paintBombPad } from "./render/sprites.js";
 import { dims, drawShell, kindSize } from "./render/shellview.js";
-import { menuHit, settingsHit, statsHit, graphicsHit, layout as menuLayout } from "./render/menudraw.js";
+import { menuHit, settingsHit, statsHit, graphicsHit, guideHit, levelHit, scoresHit, layout as menuLayout } from "./render/menudraw.js";
 import { setFxOpts } from "./render/fx.js";
 import { ITEMS, SCREEN, SOURCE_URL, createMenuApp } from "./app/menuapp.js";
 import { clampHeat } from "./core/heat.js";
@@ -50,7 +50,7 @@ import {
   coachTip,
 } from "./app/coach.js";
 import { clampPace } from "./core/pace.js";
-import { registerSW } from "./pwa/register.js";
+import { mountUpdate } from "./app/update.js";
 import { Input } from "./input.js";
 import { mountTouch } from "./touch.js";
 import {
@@ -64,7 +64,7 @@ import { loadRenderer3D } from "./render/three/load.js";
 import { createLocalPair } from "./net/localpair.js";
 
 export function createGame(canvas, opts = {}) {
-  registerSW();
+  mountUpdate(() => ({ app, world, isRunEnd, SCREEN })); // registers the SW; NEW VERSION READY card (src/app/update.js)
   /* flags parsed ONCE (src/app/flags.js): ?render=3d|px seed the boot kind,
      ?render=iso pins legacy dimetric, ?play=1 skips the shell, ?net=local
      arms the two-peer proof, ?orbit=1 opts into right-drag orbit (wheel /
@@ -432,7 +432,7 @@ export function createGame(canvas, opts = {}) {
           }
           return;
         }
-        const row = pauseHit(px, py, B);
+        const row = pauseHit(px, py, B, touchLay(canvas));
         if (row >= 0) {
           app.pauseCursor = row;
           app.confirm();
@@ -445,23 +445,29 @@ export function createGame(canvas, opts = {}) {
         return;
       }
       if (app.screen === SCREEN.INTRO) app.skipShow();
-      else if (app.screen === SCREEN.SETTINGS || app.screen === SCREEN.MENU || app.screen === SCREEN.GRAPHICS) {
-        /* Tap a row = Enter on it; off the rows OPTIONS backs out and MENU
-           confirms its cursor. Client px map through the CSS scale of the
-           OVERLAY canvas — never #gl's Retina buffer, which the wrapper owns. */
-        const menu = app.screen === SCREEN.MENU, gx = app.screen === SCREEN.GRAPHICS;
+      else if (app.screen === SCREEN.SETTINGS || app.screen === SCREEN.MENU || app.screen === SCREEN.GRAPHICS || app.screen === SCREEN.GUIDE) {
+        /* One rule with PAUSE: tap a row = Enter on it; off the rows a page
+           backs out and a root list (MENU, the PAUSE list) does nothing. Client px map through
+           the CSS scale of the OVERLAY canvas — never #gl's Retina buffer. */
+        const menu = app.screen === SCREEN.MENU, gx = app.screen === SCREEN.GRAPHICS, gd = app.screen === SCREEN.GUIDE;
         const r = canvas.getBoundingClientRect();
         const k = canvas.width / (r.width || canvas.width);
         const { cw, ch } = dims(canvas, curKind);
-        const row = (menu ? menuHit : gx ? graphicsHit : settingsHit)(
+        const row = (menu ? menuHit : gx ? graphicsHit : gd ? guideHit : settingsHit)(
           (ev.clientX - r.left) * k,
           (ev.clientY - r.top) * k,
           menuLayout(cw, ch),
           ITEMS.length,
         );
-        if (!menu && row < 0) return app.back();
-        if (row >= 0) app[menu ? "cursor" : gx ? "gfxRow" : "optRow"] = row;
+        if (row < 0) return menu ? undefined : app.back();
+        app[menu ? "cursor" : gx ? "gfxRow" : gd ? "guideRow" : "optRow"] = row;
         app.confirm();
+      } else if (app.screen === SCREEN.LEVEL || app.screen === SCREEN.SCORES) {
+        /* A chip / tab tap sets it (modes ride their 1–5 keys); LEVEL: the rest of the plate starts, outside backs out. */
+        const r = canvas.getBoundingClientRect(), k = canvas.width / (r.width || canvas.width), { cw, ch } = dims(canvas, curKind), x = (ev.clientX - r.left) * k, y = (ev.clientY - r.top) * k, L = menuLayout(cw, ch);
+        if (app.screen === SCREEN.SCORES) { const i = scoresHit(x, y, L); return i >= 0 ? void (app.scoreHeat = i) : app.confirm(); }
+        const h = levelHit(x, y, L, app.pactUnlocked);
+        if (h.k === "room") app.level = h.i + 1; else if (h.k === "heat") app.heat = h.i; else if (h.k === "pace") { while (app.pace !== h.i - 1 && app.adjustPace(h.i - 1 - app.pace)); } else if (h.k === "mode") input.onUiKey("Digit" + (h.i + 1)); else if (h.k === "back") app.back(); else app.confirm();
       } else if (app.screen === SCREEN.STATS) {
         const r = canvas.getBoundingClientRect(), k = canvas.width / (r.width || canvas.width), { cw, ch } = dims(canvas, curKind);
         const hit = statsHit((ev.clientX - r.left) * k, (ev.clientY - r.top) * k, menuLayout(cw, ch), app.resetArm);

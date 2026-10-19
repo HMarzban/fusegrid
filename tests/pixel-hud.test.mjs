@@ -1,8 +1,9 @@
 // PIXEL W5 (ruling R19): HUD item chips and GUIDE ITEMS / ENEMIES / HOW TO
 // show the atlas cells in PIXEL at integer logical scale (x1 chip, x2 GUIDE
 // when every cell on the page fits), text stays the shared vector font, and
-// CLASSIC 2D / REAL 3D / iso call logs stay byte-identical (pinned below
-// from HEAD f732450, before W5).
+// CLASSIC 2D / REAL 3D / iso call logs stay byte-identical (HUD pinned from
+// HEAD f732450, before W5; GUIDE pages re-pinned at the 2026-10-19 menu
+// redesign, whose shared plate/head moved them — px art still never leaks).
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -42,11 +43,11 @@ const HUDS = [[0, null], [3, {on: true, t: 12.3}], [8, null]];
 const PAGES = ["drawHowTo", "drawItemsHelp", "drawEnemiesHelp"], BOXES = [[600, 520], [600, 360]];
 const PIN = {
   hud0: "676af1c5:178", hud3: "ecac4c84:354", hud8: "924118c2:511",
-  drawHowTo520: "3a825b38:421", drawItemsHelp520: "1318ab07:1114", drawEnemiesHelp520: "f7de903b:1102",
-  drawHowTo360: "49bc3035:421", drawItemsHelp360: "70807ad9:1114", drawEnemiesHelp360: "58ac34bd:1075",
-  "shell.2d.HOWTO": "894f45e1:423", "shell.2d.ITEMS": "c9565dec:1116", "shell.2d.ENEMIES": "e1eafef2:1104",
-  "shell.3d.HOWTO": "894f45e1:423", "shell.3d.ITEMS": "c9565dec:1116", "shell.3d.ENEMIES": "e1eafef2:1104",
-  "shell.iso.HOWTO": "acc0e7f8:423", "shell.iso.ITEMS": "5a41d587:1116", "shell.iso.ENEMIES": "aa0764c7:1077",
+  drawHowTo520: "2b66b35b:438", drawItemsHelp520: "5ff090f1:1131", drawEnemiesHelp520: "5daf13a1:1119",
+  drawHowTo360: "7c4bf2f7:438", drawItemsHelp360: "29e4d2d6:1131", drawEnemiesHelp360: "5edecbc6:1092",
+  "shell.2d.HOWTO": "a565565a:440", "shell.2d.ITEMS": "67039446:1133", "shell.2d.ENEMIES": "624207d8:1121",
+  "shell.3d.HOWTO": "a565565a:440", "shell.3d.ITEMS": "67039446:1133", "shell.3d.ENEMIES": "624207d8:1121",
+  "shell.iso.HOWTO": "77c7557c:440", "shell.iso.ITEMS": "c7b84bd8:1133", "shell.iso.ENEMIES": "5e33f44a:1094",
 };
 const hud = (lv, tm, ico) => { const r = rec(); drawHudChips(r.c, HUDW(lv), tm, ico); return r; };
 const page = (f, w, h, kind) => { const r = rec(); md[f](r.c, md.layout(w, h), 1.25, kind); return r; };

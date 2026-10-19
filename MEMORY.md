@@ -16,6 +16,12 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-19 — NEW VERSION READY prompt + SW fixes (shell v179); compact PAUSE on keyboard
+- Owner hit a stale SW copy (v167) while testing and asked for an in-game "new version" prompt that reaches every player. sw.js now waits (SKIP_WAITING on RELOAD/U), precaches with cache:"reload", registers with updateViaCache:"none", deletes only fusegrid-shell-v* (known origin-wide delete bug fixed); pre-v179 shells still skip once (PROMPT_FROM 179), since their pages can't prompt. Card = DOM #upd in CONSOLE PANEL style via src/app/update.js (menus + run-end only). Live CDP: 20/20 (v179->v180 prompt, LATER, U, phone tap, v178->v179 bridge). PAUSE on keyboard went compact (PAUSE_ROW_D 44, width 340) after owner said "too fat". CACHE_NAME is bumped to v179; the CHANGELOG still reads Unreleased.
+
+## 2026-10-19 — Menu redesign: MENU + PAUSE one system (direction A, CONSOLE PANEL)
+- Owner asked for a cohesive, mature MENU + PAUSE. Designer workflow (game designer + menu/UI designer + lead + 3 worktree prototypes + reviewer) made a contact sheet (A 7.5 / C 6 / B 5.5); owner picked A and kept its sans labels + dropped SOURCE URL line. Shipped: shared plate/head/foot/paintRow/listGeom/listHit, PAUSE on the menu plate (pitch 70, RESUME hero, red RESTART/QUIT, run kicker), full-width tap bands, off-row MENU tap no-op, GUIDE/LEVEL/SCORES touch maps. Tests renegotiated (headless taps, heat/three pause round trips, menudraw pins, pixel-hud GUIDE hashes re-pinned); 93/93 live CDP checks (keys, clicks, touch, pause pill, P/M/Esc as the cue claims) over 3 looks x laptop/phone. Open: phone MENU rows ~22 CSS (8 rows under the logo), LEVEL SELECT foot still says keys on touch, LEVEL/SCORES taps set fields silently (no uiMove cue), laptop PAUSE reads airy; CACHE_NAME/REV bump at release. Sources + social before/after: `.superpowers/sdd/2026-10-19-menu/`.
+
 ## 2026-10-19 — Docs pass: OSS set + one-owner-per-fact map, arcade voice
 - Rewrote README (player front door, lede now play-in-browser + 3D⇄2D + Heat, dev detail moved out), voice pass on architecture/CHANGELOG (+ Unreleased)/media (recapture note); added CONTRIBUTING (flags table now lives here), CODE_OF_CONDUCT, SECURITY, .github issue/PR templates, docs/README.md (who-owns-what map, doc house style, indexed design history with ⚠️ superseded notes). docs/superpowers bodies untouched. Open: media/ captures stale (6-row MENU, pre-v163 camera, no PIXEL).
 

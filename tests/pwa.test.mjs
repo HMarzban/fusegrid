@@ -378,11 +378,45 @@ check("index.html has no banned franchise name", !html.toLowerCase().includes(ba
 check("index.html has no root-absolute hrefs", !/href=["']\//.test(html));
 
 const main = readFileSync(join(ROOT, "src/main.js"), "utf8");
+const updSrc = readFileSync(join(ROOT, "src/app/update.js"), "utf8");
 check(
-  "main.js registers SW",
-  /from\s+["']\.\/pwa\/register\.js["']/.test(main) &&
-    /registerSW\s*\(/.test(main),
+  "main.js registers SW (through src/app/update.js mountUpdate -> registerSW)",
+  /from\s+["']\.\/app\/update\.js["']/.test(main) && /mountUpdate\s*\(/.test(main) &&
+    /from\s+["']\.\.\/pwa\/register\.js["']/.test(updSrc) && /registerSW\s*\(/.test(updSrc),
 );
+
+// ---- NEW VERSION READY (2026-10-19): wait + prompt instead of a silent skip ----
+{
+  const { updVisible } = await import("../src/app/update.js");
+  const { applyUpdate } = await import("../src/pwa/register.js");
+  const { SCREEN } = await import("../src/app/menuapp.js");
+  check("update card: never on INTRO / ATTRACT / BOOT",
+    !updVisible(SCREEN.INTRO, "PLAY", false, SCREEN) && !updVisible(SCREEN.ATTRACT, "PLAY", false, SCREEN) && !updVisible(SCREEN.BOOT, "PLAY", false, SCREEN));
+  check("update card: never in live PLAY or PAUSE, nor a mid-run WIN",
+    !updVisible(SCREEN.GAME, "PLAY", false, SCREEN) && !updVisible(SCREEN.GAME, "PAUSE", false, SCREEN) && !updVisible(SCREEN.GAME, "WIN", false, SCREEN));
+  check("update card: on MENU, every sub-page and a finished run's WIN / LOSE",
+    ["MENU", "LEVEL", "SCORES", "SETTINGS", "GRAPHICS", "GUIDE", "STATS", "TROPHIES", "HOWTO", "ITEMS", "ENEMIES"].every((k) => updVisible(SCREEN[k], "PLAY", false, SCREEN)) &&
+      updVisible(SCREEN.GAME, "WIN", true, SCREEN) && updVisible(SCREEN.GAME, "LOSE", true, SCREEN));
+  const posted = [];
+  check("applyUpdate posts SKIP_WAITING to the waiting worker only",
+    applyUpdate({ waiting: { postMessage: (m) => posted.push(m) } }) === true && posted.length === 1 && posted[0].type === "SKIP_WAITING" &&
+      applyUpdate({ waiting: null }) === false);
+  const seen = [];
+  const reg = { waiting: {}, update: () => Promise.resolve(), addEventListener() {} };
+  registerSW({ navigator: { serviceWorker: { controller: {}, register: () => Promise.resolve(reg), addEventListener() {} } }, href: "http://127.0.0.1:8080/", onUpdate: (r) => seen.push(r) });
+  const fresh = [];
+  registerSW({ navigator: { serviceWorker: { controller: null, register: () => Promise.resolve(reg), addEventListener() {} } }, href: "http://127.0.0.1:8080/", onUpdate: (r) => fresh.push(r) });
+  await Promise.resolve(); await Promise.resolve();
+  check("registerSW reports a waiting worker to onUpdate (returning client)", seen.length === 1 && seen[0] === reg, seen.length);
+  check("registerSW never prompts on a first install (no controller)", fresh.length === 0, fresh.length);
+  const sw2 = readFileSync(join(ROOT, "sw.js"), "utf8");
+  check("sw.js waits for SKIP_WAITING from v179 on (skips only over a pre-prompt shell)",
+    /SKIP_WAITING/.test(sw2) && /PROMPT_FROM = 179/.test(sw2) && !/\.then\(\(\) => self\.skipWaiting\(\)\)/.test(sw2));
+  check("sw.js activate deletes only this game's old shells (fusegrid-shell- prefix)",
+    /k\.startsWith\(PREFIX\) && k !== CACHE_NAME/.test(sw2.slice(sw2.indexOf('"activate"'))));
+  check("sw.js precaches with cache: reload", /cache: "reload"/.test(sw2));
+  check("register.js update check bypasses the HTTP cache", /updateViaCache: "none"/.test(readFileSync(join(ROOT, "src/pwa/register.js"), "utf8")));
+}
 
 for (const f of walkJs(join(ROOT, "src/core"))) {
   const t = readFileSync(f, "utf8");

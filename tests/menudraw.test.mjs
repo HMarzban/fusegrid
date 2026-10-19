@@ -1,5 +1,24 @@
 import { initFx } from "../src/render/fx.js";
 import { readFileSync } from "node:fs";
+/* The console-panel plate is a rounded path (icons.js rr): a filled path that
+   used arcTo is recorded as its bbox rect, so the plate checks keep reading
+   rects. Carets and glyphs (no arcTo) are not recorded. */
+const PLATE_FILL = "rgba(10,14,24,0.94)";
+const pathRects = (c, rects) => {
+  let pts = [], arc = false;
+  const wrap = (k, f) => { const o = c[k]; c[k] = (...a) => { f(a); return o ? o.apply(c, a) : undefined; }; };
+  wrap("beginPath", () => { pts = []; arc = false; });
+  wrap("moveTo", (a) => pts.push(a));
+  wrap("lineTo", (a) => pts.push(a));
+  wrap("arcTo", (a) => { arc = true; pts.push([a[0], a[1]], [a[2], a[3]]); });
+  wrap("fill", () => {
+    if (!arc || !pts.length) return;
+    const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]), x = Math.min(...xs), y = Math.min(...ys);
+    rects.push({ x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y, fill: c.fillStyle, path: true });
+  });
+  for (const k of ["closePath", "stroke", "quadraticCurveTo"]) if (!c[k]) c[k] = () => {};
+  return c;
+};
 
 let pass = 0,
   fail = 0;
@@ -260,9 +279,10 @@ function check(name, cond, detail) {
       scale() {},
       rotate() {},
     };
+    pathRects(c, rects);
     return { c, texts, rects, lines, get quads() { return quads; } };
   };
-  const plateOf = (rects) => rects.find((r) => r.fill === "rgba(8,12,22,0.92)");
+  const plateOf = (rects) => rects.find((r) => r.fill === PLATE_FILL);
   const last = (arr) => arr[arr.length - 1];
   for (const [W, H] of [
     [600, 520],
@@ -526,11 +546,13 @@ function check(name, cond, detail) {
       const first = texts.find((t) => t.s === "MUSIC");
       const lastRow = texts.find((t) => t.s === "RESET DEFAULTS");
       const note = texts.find((t) => t.s.indexOf("BOMB SPACE") >= 0);
-      const touch = texts.find((t) => t.s.indexOf("TAP PAUSE PILL") >= 0);
+      const T2 = rec();
+      md.drawSettings(T2.c, L, 1, { row: 4, vals: { mus: 100, sfx: 100, snd: 1, r3d: 1, cam: 2, bri: 130, shk: 1, flx: 0 }, r3d: true, togT: -1, rev: "v99", touch: true });
+      const touch = T2.texts.find((t) => t.s.indexOf("TAP PAUSE PILL") >= 0);
       const ft = texts.find((t) => t.s.indexOf("ENTER CYCLE") >= 0);
       const kick = texts.find((t) => t.s === "BUILD v99");
       check(
-        `options plate: ten rows, both notes and the foot all inside at ${W}x${H}`,
+        `options plate: ten rows, the device's one controls line and the foot all inside at ${W}x${H}`,
         !!p &&
           !!first &&
           !!lastRow &&
@@ -540,8 +562,10 @@ function check(name, cond, detail) {
           !!kick &&
           first.y > p.y + 8 &&
           lastRow.y < note.y &&
-          note.y < touch.y &&
-          touch.y < ft.y &&
+          note.y < ft.y &&
+          !texts.some((t) => t.s.indexOf("TAP PAUSE PILL") >= 0) &&
+          !T2.texts.some((t) => t.s.indexOf("BOMB SPACE") >= 0) &&
+          Math.abs(touch.y - note.y) < 0.01 &&
           ft.y < p.y + p.h - 8,
         JSON.stringify({ p, first, lastRow, note, touch, ft }),
       );
@@ -688,9 +712,10 @@ function check(name, cond, detail) {
         texts.push({ s: String(s), x, y, fill: c.fillStyle, a: c.globalAlpha, align: c.textAlign });
       },
     };
+    pathRects(c, rects);
     return { c, texts, rects };
   };
-  const plateOf = (rects) => rects.find((r) => r.fill === "rgba(8,12,22,0.92)");
+  const plateOf = (rects) => rects.find((r) => r.fill === PLATE_FILL);
   for (const [W, H] of [
     [600, 520],
     [608, 352],
@@ -758,9 +783,10 @@ function check(name, cond, detail) {
       strokeRect() {}, beginPath() {}, moveTo() {}, lineTo() {}, stroke() {},
       fillText(s, x, y) { texts.push({ s: String(s), x, y, fill: c.fillStyle }); },
     };
+    pathRects(c, rects);
     return { c, texts, rects };
   };
-  const plateOf = (rects) => rects.find((r) => r.fill === "rgba(8,12,22,0.92)");
+  const plateOf = (rects) => rects.find((r) => r.fill === PLATE_FILL);
   const ui = { rows: [["RUNS", "1"]], notes: ["DAILY 2026-10-08 · NOT PLAYED YET", "SINCE 2026-10-01 · 3 SESSIONS"] };
   for (const [W, H] of [
     [600, 520],
@@ -844,9 +870,10 @@ function check(name, cond, detail) {
     const c = {
       fillStyle: "", strokeStyle: "", lineWidth: 1, globalAlpha: 1, font: "", textAlign: "left", textBaseline: "middle", shadowColor: "", shadowBlur: 0,
       fillRect(x, y, w, h) { rects.push({ x, y, w, h, fill: c.fillStyle }); },
-      fillText(s, x, y) { const m = /(\d+)px/.exec(c.font); texts.push({ s: String(s), x, y, px: m ? +m[1] : 0, a: c.globalAlpha, blur: c.shadowBlur, fill: c.fillStyle, align: c.textAlign }); },
+      fillText(s, x, y) { const m = /(\d+)px/.exec(c.font); texts.push({ s: String(s), x, y, px: m ? +m[1] : 0, font: c.font, a: c.globalAlpha, blur: c.shadowBlur, fill: c.fillStyle, align: c.textAlign }); },
       strokeRect() {}, strokeText() {}, beginPath() {}, moveTo() {}, lineTo() {}, closePath() {}, fill() {}, stroke() {}, arc() {}, save() {}, restore() {}, translate() {}, scale() {}, rotate() {}, drawImage() {}, setTransform() {},
     };
+    pathRects(c, rects);
     return { c, texts, rects };
   };
   check("OPT_N === OPT_ROWS.length (10)", md.OPT_N === OPT_ROWS.length && md.OPT_N === 10);
@@ -868,13 +895,15 @@ function check(name, cond, detail) {
       const view = gfx.gfxView(S({ fxq: 0 }), kind, { dpr3d: 1.5, dprPx: 1.5, limit: true, pendingAA: true });
       md.drawGraphics(c, L, 1, { row: 1, view, togT: 0.95, chg: 0b11, touch });
       const tag = `${kind}${touch ? " touch" : ""} ${W}x${H}`;
-      const p = rects.find((r) => r.fill === "rgba(8,12,22,0.92)");
+      const p = rects.find((r) => r.fill === PLATE_FILL);
       const labels = gfx.GFX_ROWS.map((n) => texts.find((t) => t.s === n));
-      check(`graphics: eight labels at ${touch ? 15 : 13}px inside the plate (${tag})`, !!p && labels.every((t) => t && t.px === (touch ? 15 : 13) && t.y > p.y + 8 && t.y < p.y + p.h - 8));
-      check(`graphics: head + kicker (${tag})`, texts.some((t) => t.s === "GRAPHICS" && t.px === 16) && texts.some((t) => t.s === "PERFORMANCE · BATTERY"));
+      /* paintRow: sans labels, 15px (17 touch) capped by 0.62 x the row band, never under 10 */
+      const lpx = Math.max(10, Math.min(touch ? 17 : 15, Math.round((g.rowH - 2) * 0.62)));
+      check(`graphics: eight sans labels at ${lpx}px inside the plate (${tag})`, !!p && labels.every((t) => t && t.px === lpx && /system-ui/.test(t.font) && t.y > p.y + 8 && t.y < p.y + p.h - 8));
+      check(`graphics: head + kicker (${tag})`, texts.some((t) => t.s === "GRAPHICS" && t.px === 18) && texts.some((t) => t.s === "PERFORMANCE · BATTERY"));
       const h1 = texts.find((t) => t.s === view.rows[1].help1), h2 = texts.find((t) => t.s === view.rows[1].help2);
       const ft = texts.find((t) => t.s === (touch ? md.FOOT_TAP : md.FOOT_KEYS));
-      check(`graphics: two help lines for the selected row, then the foot (${tag})`, !!h1 && !!h2 && !!ft && h1.px === (touch ? 11 : 10) && h1.fill === "#7385ad" && h2.fill === "#37f0d0" &&
+      check(`graphics: two help lines for the selected row, then the foot (${tag})`, !!h1 && !!h2 && !!ft && h1.px === (touch ? 11 : 10) && h1.fill === "#7385ad" && h2.fill === "#dfe7f5" &&
         labels[7].y < h1.y && h1.y < h2.y && h2.y < ft.y && ft.y < p.y + p.h - 4 && h2.s === gfx.HELP_LIMIT);
       check(`graphics: help lines fit the plate width (${tag})`, [h1, h2].every((t) => [...t.s].length * t.px * 0.6 <= g.S.iw));
       const lk = view.rows.filter((r) => r.locked).map((r) => r.label);
@@ -935,7 +964,7 @@ function check(name, cond, detail) {
     check("shellview: FPS METER in GAME PLAY too, untagged", draw().includes("30 FPS"));
     world.state = "PAUSE"; a.pauseView = 2;
     T = draw();
-    check("shellview: PAUSE view 2 draws the GRAPHICS page against overlayBox", T.includes("PERFORMANCE · BATTERY") && T.includes("30 FPS · IDLE"));
+    check("shellview: PAUSE view 2 draws the GRAPHICS page against overlayBox, kicked as the pause", T.includes("GRAPHICS") && T.some((s) => /^PAUSED · ROOM \d+$/.test(s)) && T.includes("30 FPS · IDLE"));
     a.pauseView = 1;
     check("shellview: PAUSE view 1 still draws OPTIONS with the door", draw().includes("AUTO ›"));
     a.settings.fpm = 0; a.screen = SCREEN.MENU;
@@ -983,14 +1012,15 @@ function check(name, cond, detail) {
     md.drawMenu(rc, { cursor: 0, items, enterT: 9 }, L, 9);
     check(`menuHit maps every painted label to its row at ${W}x${H}`,
       items.every((s, i) => at[s] && md.menuHit(at[s][0], at[s][1], L, n) === i), JSON.stringify(at));
-    const g = md.menuGeom(L, n);
-    const mid = g.bx + g.rw / 2, top = g.y0 + g.padY;
-    check(`menuHit above the rows is -1 at ${W}x${H}`, md.menuHit(mid, top - 1, L, n) === -1);
-    check(`menuHit below the rows is -1 at ${W}x${H}`, md.menuHit(mid, top + n * g.span + 1, L, n) === -1);
-    check(`menuHit left of the plate is -1 at ${W}x${H}`, md.menuHit(g.bx - 2, top + 2, L, n) === -1);
-    check(`menuHit right of the plate is -1 at ${W}x${H}`, md.menuHit(g.bx + g.rw + 2, top + 2, L, n) === -1);
-    check(`menuHit rows are contiguous — no dead gutter at ${W}x${H}`,
-      md.menuHit(mid, top + g.span - 0.001, L, n) === 0 && md.menuHit(mid, top + g.span, L, n) === 1);
+    const g = md.menuGeom(L, n), R = g.rows;
+    const mid = g.bx + g.rw / 2;
+    check(`menuHit above the rows is -1 at ${W}x${H}`, md.menuHit(mid, R[0].y0 - 1, L, n) === -1);
+    check(`menuHit below the rows is -1 at ${W}x${H}`, md.menuHit(mid, R[n - 1].y1 + 1, L, n) === -1);
+    check(`menuHit bands run the full stage width (a side tap is its row) at ${W}x${H}`,
+      md.menuHit(2, R[0].cy, L, n) === 0 && md.menuHit(W - 2, R[n - 1].cy, L, n) === n - 1);
+    check(`menuHit rows are contiguous across group gaps — no dead gutter at ${W}x${H}`,
+      R.slice(0, -1).every((r, i) => md.menuHit(mid, r.b - 0.001, L, n) === i && md.menuHit(mid, r.b, L, n) === i + 1));
+    check(`menu hero row (PLAY) is taller than the rest at ${W}x${H}`, R[0].h > R[1].h);
   }
 }
 
@@ -1101,9 +1131,10 @@ function check(name, cond, detail) {
       translate() {},
       scale() {},
     };
+    pathRects(c, rects);
     return { c, texts, rects };
   };
-  const plateOf = (rects) => rects.find((r) => r.fill === "rgba(8,12,22,0.92)");
+  const plateOf = (rects) => rects.find((r) => r.fill === PLATE_FILL);
   const PLAQUE = { CLEAR: 1, PLUS: 2, MAX: 4, CROWN: 8 };
   // "PLUS"/"MAX" also name the HEAT tabs drawn above the chip row, so
   // disambiguate every chip by the unique "CLEAR" text's row-y, not by

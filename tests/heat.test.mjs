@@ -3,7 +3,7 @@ import { HEAT, heatRoster, heatProfile, heatScore } from "../src/core/heat.js";
 import { PACT, applyPact } from "../src/core/pact.js";
 import { CFG, T, key, ROOM_LOCK, ROOM_MAX, isFinale, roomCap } from "../src/core/config.js";
 import { winHeadline, overlayCue, runStamp, copyPayload, drawOverlay,
-  overlayBox, pauseHit, PAUSE_ROWS, PAUSE_ROW_H } from "../src/render/scenes.js";
+  overlayBox, pauseHit, pauseGeom, PAUSE_ROWS, PAUSE_ROW_H, PAUSE_ROW_D } from "../src/render/scenes.js";
 import { scoreEntry } from "../src/app/highscores.js";
 import { PACT_KEY, loadPactUnlocked, savePactUnlocked } from "../src/app/pactstore.js";
 import { readFileSync } from "node:fs";
@@ -62,9 +62,9 @@ check(
     "SPACE / ENTER / TAP · new run",
 );
 check(
-  "overlayCue PAUSE is the pause-list cue, exactly",
-  overlayCue({ state: "PAUSE", heat: 1 }) ===
-    "↑↓ SELECT · ENTER / TAP CONFIRM · P RESUME · M QUIT",
+  "overlayCue PAUSE is the pause-list cue, exactly (keys / touch)",
+  overlayCue({ state: "PAUSE", heat: 1 }) === "ESC · P RESUME · ↑↓ MOVE · ENTER SELECT · M QUIT" &&
+    overlayCue({ state: "PAUSE", heat: 1 }, true) === "TAP A ROW · PAUSE PILL RESUMES",
   overlayCue({ state: "PAUSE", heat: 1 }),
 );
 check(
@@ -248,10 +248,10 @@ check(
 // ---- pause chrome: one named box feeds both draws and both hit tests ----
 {
   check(
-    "PAUSE_ROWS is the four-verb list, frozen, pitch 26",
+    "PAUSE_ROWS is the four-verb list, frozen, pitch cap 70",
     Object.isFrozen(PAUSE_ROWS) &&
       PAUSE_ROWS.join("|") === "RESUME|RESTART|OPTIONS|QUIT TO MENU" &&
-      PAUSE_ROW_H === 26,
+      PAUSE_ROW_H === 70,
     PAUSE_ROWS.join("|"),
   );
   const b2 = overlayBox("2d"),
@@ -270,36 +270,54 @@ check(
   );
   for (const k of ["2d", "iso"]) {
     const cue = overlayCue({ state: "PAUSE" }),
-      w = [...cue].length * 15 * 0.6;
+      w = [...cue].length * 10 * 0.6;
     check(
-      "PAUSE cue fits one line in the " + k + " box with 24px each side",
-      w <= overlayBox(k).w - 48,
-      w + " vs " + (overlayBox(k).w - 48),
+      "PAUSE cue fits the plate foot in the " + k + " box",
+      w <= pauseGeom(overlayBox(k)).w - 32,
+      w + " vs " + (pauseGeom(overlayBox(k)).w - 32),
     );
   }
+  /* Draw -> hit round trip: pauseGeom is the one table drawOverlay paints and
+     pauseHit reads, so every painted row centre and edge maps to its row. */
   for (const B of [b2, bi]) {
-    const tag = B.w + "x" + B.h;
+    const tag = B.w + "x" + B.h,
+      g = pauseGeom(B);
     let all = true;
     for (let i = 0; i < 4; i++)
-      if (pauseHit(B.cx, B.cy - 30 + i * PAUSE_ROW_H, B) !== i) all = false;
-    check("pauseHit maps every row centre in " + tag, all);
+      if (pauseHit(B.cx, g.rows[i].cy, B) !== i || pauseHit(B.cx, g.rows[i].y0 + 1, B) !== i) all = false;
+    check("pauseHit maps every painted row in " + tag, all);
     check(
-      "pauseHit vertical band is +-13 in " + tag,
-      pauseHit(B.cx, B.cy - 30 + 13, B) === 0 && pauseHit(B.cx, B.cy - 30 - 14, B) === -1,
+      "pauseHit bands are contiguous: no tap between two rows falls through in " + tag,
+      [0, 1, 2].every((i) => pauseHit(B.cx, g.rows[i].y1, B) >= 0),
     );
     check(
-      "pauseHit horizontal band is +-130 in " + tag,
-      pauseHit(B.cx + 130, B.cy - 30, B) === 0 && pauseHit(B.cx + 131, B.cy - 30, B) === -1,
+      "pauseHit spans the full stage width (no side gutter) in " + tag,
+      pauseHit(2, g.rows[0].cy, B) === 0 && pauseHit(B.w - 2, g.rows[3].cy, B) === 3,
     );
     check(
-      "pauseHit off the rows is -1 in " + tag,
-      pauseHit(B.cx, B.cy + 86, B) === -1 && pauseHit(B.cx, B.cy - 70, B) === -1,
+      "pauseHit above / below the rows is -1 in " + tag,
+      pauseHit(B.cx, g.rows[0].y0 - 2, B) === -1 && pauseHit(B.cx, g.rows[3].y1 + 2, B) === -1,
     );
     check(
-      "the whole list (cy-70 .. cy+86) clears the " + tag + " box",
-      B.cy - 70 > 0 && B.cy + 86 < B.h,
-      B.cy - 70 + ".." + (B.cy + 86),
+      "the whole pause plate clears the " + tag + " box",
+      g.y > 0 && g.y + g.h < B.h,
+      g.y + ".." + (g.y + g.h),
     );
+  }
+  check(
+    "touch pause rows are a phone-sized pitch (>= 66 logical px, ~44 CSS on a 393px phone) in 600x520",
+    pauseGeom(b2, true).rows.every((r) => r.h >= 66),
+    pauseGeom(b2, true).rows.map((r) => r.h).join(),
+  );
+  check(
+    "keyboard pause rows are compact (pitch PAUSE_ROW_D 44, hero 54) and the plate stays short (<= 280 of 520)",
+    PAUSE_ROW_D === 44 && pauseGeom(b2).rows.slice(1).every((r) => r.h === 44) && pauseGeom(b2).rows[0].h === 54 && pauseGeom(b2).h <= 280,
+    pauseGeom(b2).rows.map((r) => r.h).join() + " / " + pauseGeom(b2).h,
+  );
+  for (const B of [b2, bi]) {
+    const g = pauseGeom(B, true);
+    check("touch pause geometry round-trips through pauseHit(…, true) in " + B.w + "x" + B.h,
+      g.rows.every((r, i) => pauseHit(B.cx, r.cy, B, true) === i) && g.y > 0 && g.y + g.h < B.h);
   }
 }
 {
@@ -321,7 +339,7 @@ check(
     "drawOverlay PAUSE defaults to the list at cursor 0",
     texts.includes("PAUSED") &&
       PAUSE_ROWS.every((r) => texts.includes(r)) &&
-      texts.includes("↑↓ SELECT · ENTER / TAP CONFIRM · P RESUME · M QUIT"),
+      texts.includes("ESC · P RESUME · ↑↓ MOVE · ENTER SELECT · M QUIT"),
     texts.join("|"),
   );
   texts.length = 0;

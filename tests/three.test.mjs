@@ -36,7 +36,7 @@ import {createRig, orbitBy, dollBy, resetOrbit, applyOrbit,
   CAM_PRESET, CAM_NAME, camPreset} from "../src/render/three/camrig.js";
 import {createRenderer3D} from "../src/render/three/wrapper.js";
 import {createRenderer} from "../src/render/renderer.js";
-import {overlayBox, pauseHit, PAUSE_ROWS} from "../src/render/scenes.js";
+import {overlayBox, pauseHit, pauseGeom, PAUSE_ROWS} from "../src/render/scenes.js";
 import {createWorld, loadLevel, step} from "../src/core/sim.js";
 import {CFG, T, BIOMES} from "../src/core/config.js";
 import {spawnEnemy, POWER} from "../src/core/entities.js";
@@ -369,9 +369,9 @@ function scan(grid){
     return op&&op[1][2];
   };
   const y0=rowY(0);
-  check("iso pause overlay: RESUME draws at overlayBox('iso') row-0 y "
-      +"(not the CFG box's y230)",
-    y0===B.cy-30, "y0="+y0+" B.cy-30="+(B.cy-30));
+  check("iso pause overlay: RESUME draws at pauseGeom(overlayBox('iso')) row-0 y "
+      +"(not the CFG box's)",
+    Math.abs(y0-pauseGeom(B).rows[0].cy)<0.01, "y0="+y0+" row0="+pauseGeom(B).rows[0].cy);
   check("iso pause overlay: drawn row-0 y maps back to pauseHit row 0 "
       +"against overlayBox('iso')",
     pauseHit(B.cx, y0, B)===0, "y0="+y0);
