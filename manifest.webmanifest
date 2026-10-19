@@ -29,5 +29,21 @@
       "type": "image/png",
       "purpose": "maskable"
     }
+  ],
+  "screenshots": [
+    {
+      "src": "./screenshots/wide.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "REAL 3D: MAKO beside a live blast in the JUNGLE room"
+    },
+    {
+      "src": "./screenshots/narrow.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "CLASSIC 2D on a phone: the board above the touch pad and bomb button"
+    }
   ]
 }

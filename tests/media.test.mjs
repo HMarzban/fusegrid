@@ -36,6 +36,7 @@ for (const name of [
   "still-ice.png",
   "still-crown.png",
   "still-menu.png",
+  "still-pixel.png",
 ]) {
   const p = join(MEDIA, name);
   check("media/" + name + " exists", existsSync(p));
@@ -62,6 +63,26 @@ if (existsSync(gif)) {
   );
   const sizeMB = statSync(gif).size / (1024 * 1024);
   check("play.gif is <= 3 MB", sizeMB <= 3, sizeMB.toFixed(2) + "MB");
+}
+
+// silent gameplay clips (CrazyGames landscape 16:9 + portrait 2:3, Shorts 9:16)
+for (const name of [
+  "clip-landscape.mp4",
+  "clip-portrait-2x3.mp4",
+  "clip-portrait-9x16.mp4",
+]) {
+  const p = join(MEDIA, name);
+  check("media/" + name + " exists", existsSync(p));
+  if (existsSync(p)) {
+    const b = readFileSync(p);
+    check(name + " is an MP4 (ftyp box)", b.slice(4, 8).toString("ascii") === "ftyp");
+    // every track's handler type sits 8 bytes past its "hdlr" tag
+    const handlers = [];
+    for (let i = b.indexOf("hdlr"); i >= 0; i = b.indexOf("hdlr", i + 4)) handlers.push(b.slice(i + 12, i + 16).toString("ascii"));
+    check(name + " has a video track and no audio track", handlers.includes("vide") && !handlers.includes("soun"), handlers.join(","));
+    const sizeMB = b.length / (1024 * 1024);
+    check(name + " is <= 6 MB", sizeMB <= 6, sizeMB.toFixed(2) + "MB");
+  }
 }
 
 const mediaReadme = join(MEDIA, "README.md");

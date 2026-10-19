@@ -15,6 +15,11 @@ Entries are written for players. How a change works lives in
 
 ## Unreleased
 
+### Added
+- **Screenshots in the install dialog.** Installing Fusegrid from Chrome
+  now shows two real shots of the game (REAL 3D on a laptop, CLASSIC 2D on
+  a phone) instead of a bare name and icon.
+
 ## shell v180 · 2026-10-19
 
 ### Changed

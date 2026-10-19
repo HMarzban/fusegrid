@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-19 — Listing art gaps filled: manifest screenshots, PIXEL still, silent clips
+- Merged the promo kit (inspiring-moser) + media recapture (modest-haslett) branches, then captured on a virtual clock (performance.now stepped 2x1/60 s per frame, so 1080p is real-speed with no dropped frames) with the game's own demobot on the real Input: screenshots/wide.png (3D 1920x1080) + narrow.png (CLASSIC phone 1080x1920) in manifest `screenshots`, staged by pages.yml, NOT precached (pwa.test pins it); media/still-pixel.png (FACTORY); 18 s silent clips: landscape 16:9 3D, portrait 2:3 PIXEL (CrazyGames), 9:16 3D (Shorts). Open: manifest is precached, so CACHE_NAME/REV bump at the next release; CrazyGames covers need a title composite (owner/storefront). Capture scripts: shared notes folder.
+
 ## 2026-10-19 — SEO + promotion kit (docs/marketing/README.md)
 - index.html meta/JSON-LD (MODES not Pact, PIXEL, playMode enum, numberOfPlayers, no fake screenshot/rating), manifest description + categories, sitemap lastmod 2026-10-19 pinned >= newest release by a headless test, README Pact->MODES/IRON fix; kit = positioning, copy, per-platform tags, portal/community research dated 2026-10-19, launch checklist, About+topics draft. Not done: no CACHE_NAME bump (next release), manifest screenshots, PIXEL still, Search Console, every external post (owner).
 

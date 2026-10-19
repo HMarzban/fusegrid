@@ -533,7 +533,9 @@ not shell screens. Do not add them as `SCREEN` values.
   Settings → Social preview has no API — upload `og.png` there when the card
   changes. PIXEL (v178) is not on `og.png` or the About copy yet; adding it
   is a card/storefront change, not a drive-by.
-  PWA: also stage `manifest.webmanifest`, `sw.js`, `icon-192.png`, `icon-512.png`.
+  PWA: also stage `manifest.webmanifest`, `sw.js`, `icon-192.png`, `icon-512.png`,
+  and `screenshots/` (the manifest's install-dialog captures: staged, never
+  precached; `tests/pwa.test.mjs` pins sizes, ratio and staging).
   `serve.js` MIME includes `.webmanifest`.
 - CI: `.github/workflows/pages.yml` runs `npm test` on Node 26 for pull requests
   and as the required gate before every Pages deploy. Human-facing

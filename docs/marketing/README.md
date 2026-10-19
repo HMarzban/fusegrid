@@ -202,11 +202,15 @@ on it.
 | Need | Have it? |
 |---|---|
 | itch cover 630×500 | ✅ `media/cover-630x500.png` |
-| 3–5 gameplay stills | ✅ `media/still-*.png` (a fresh recapture is pending on its own branch) |
+| 3–5 gameplay stills | ✅ `media/still-*.png`: JUNGLE, ICE, CROWN in REAL 3D, the MENU, and FACTORY in PIXEL |
 | Short gameplay GIF | ✅ `media/play.gif` |
-| A PIXEL still | ❌ Not captured yet |
-| Silent 15–20 s clip, landscape + portrait | ❌ Needed for CrazyGames and for Shorts / TikTok |
-| CrazyGames covers 16:9, 2:3, 1:1 | ❌ Real captures only, title the only text |
+| A PIXEL still | ✅ `media/still-pixel.png` |
+| Silent 15–20 s clip, landscape + portrait | ✅ 18 s each: `media/clip-landscape.mp4` (1920×1080, REAL 3D) and `media/clip-portrait-2x3.mp4` (1080×1620, PIXEL) for CrazyGames, `media/clip-portrait-9x16.mp4` (1080×1920, REAL 3D) for Shorts / TikTok / Reels |
+| Install-dialog screenshots | ✅ `screenshots/wide.png` + `screenshots/narrow.png`, in the manifest |
+| CrazyGames covers 16:9, 2:3, 1:1 | ❌ Each needs the title on a real capture: a wordmark composite, which is storefront art like `og.png`, so it waits for the owner |
+
+CrazyGames also asks that a clip open on the static cover, so the portrait
+and landscape clips will get that first frame once the covers exist.
 
 Every asset is a real capture of the live game, never generated key art (see
 [media/README.md](../../media/README.md)).
@@ -292,11 +296,11 @@ Leave out the classic franchise's name and any "-like" topic built on it.
 
 **Next search wins (follow-ups, not done here):**
 
-- **Manifest screenshots.** One `wide` and one `narrow` real capture (PNG,
-  320–3840 px a side, long side ≤ 2.3× short) unlock Chrome's richer install
-  dialog. They must be added to the `pages.yml` copy line, or Pages serves a
-  404. Wait for the fresh `media/` recapture, and capture a portrait phone
-  shot for `narrow`.
+- ~~**Manifest screenshots.**~~ Done 2026-10-19: `screenshots/wide.png`
+  (REAL 3D, 1920×1080) and `screenshots/narrow.png` (CLASSIC 2D on a phone,
+  1080×1920) are in the manifest and staged by `pages.yml`. They reach
+  installed players at the next release's `CACHE_NAME` bump, since the
+  manifest itself is precached.
 - **A second indexable page.** The whole site is one canvas page. A small
   static `how-to-play.html` built from the in-game GUIDE copy, with real
   screenshots, would give search engines honest text and a second URL.

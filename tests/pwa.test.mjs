@@ -62,6 +62,29 @@ check(
   manifest.description,
 );
 
+// install-dialog screenshots: real captures, staged for Pages, never precached
+{
+  const shots = manifest.screenshots || [];
+  const stage = readFileSync(join(ROOT, ".github/workflows/pages.yml"), "utf8");
+  const staged = (rel) => new RegExp("\\b" + rel.split("/")[0].replace(".", "\\.") + "\\b").test(stage.match(/^\s*cp .*$/gm).join("\n"));
+  for (const f of ["wide", "narrow"]) check("manifest has a " + f + " screenshot", shots.some((s) => s.form_factor === f));
+  const ratio = {};
+  for (const s of shots) {
+    const rel = String(s.src).replace(/^\.\//, ""), fp = join(ROOT, rel);
+    check("screenshot exists " + rel, existsSync(fp));
+    check("screenshot " + rel + " is png with form_factor and label", s.type === "image/png" && /^(wide|narrow)$/.test(s.form_factor) && !!s.label);
+    if (!existsSync(fp)) continue;
+    const { w, h } = pngWH(fp), lo = Math.min(w, h), hi = Math.max(w, h);
+    check("screenshot " + rel + " sizes match pixels", s.sizes === w + "x" + h, s.sizes + " vs " + w + "x" + h);
+    check("screenshot " + rel + " sides 320-3840, long <= 2.3x short", lo >= 320 && hi <= 3840 && hi <= 2.3 * lo, w + "x" + h);
+    check("screenshot " + rel + " orientation fits " + s.form_factor, s.form_factor === "wide" ? w > h : h > w);
+    (ratio[s.form_factor] ||= new Set()).add((w / h).toFixed(4));
+    check("Pages stages " + rel, staged(rel));
+    check("PRECACHE excludes " + rel, !PRECACHE.some((p) => p.includes(rel)));
+  }
+  for (const f in ratio) check("one aspect ratio per form factor " + f, ratio[f].size === 1, [...ratio[f]].join(","));
+}
+
 const icon192 = (manifest.icons || []).find((i) => i.sizes === "192x192");
 const icon512 = (manifest.icons || []).find((i) => i.sizes === "512x512");
 check("manifest lists 192 icon", !!icon192 && existsSync(join(ROOT, icon192.src.replace(/^\.\//, ""))));
