@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-19 — Release shell v182 (install screenshots + share card C), pushed
+- Supervisor pass: merged v181, dev diary/CHANGELOG backfill, SEO kit, listing art (9df402e); storefront session pushed card C (07aca1f). v182 bumps CACHE_NAME/REV so installed clients get the precached manifest screenshots and new share text. Marketing parked as HMarzban/fusegrid#7. Owner said keep old media/worktrees for now (no cleanup); duplicate branch claude/menu-still-recapture (805ac64) stays unmerged.
+
 ## 2026-10-19 — Storefront: new og.png (owner pick C, ATLAS LEVEL SELECT) for v180
 - I built three real-capture cards (A: three looks side by side, B: today's card plus PIXEL insets, C: ATLAS LEVEL SELECT) on a contact sheet at full and preview size, and the owner picked C. `og.png` now sells CLASSIC 2D · PIXEL · REAL 3D plus CORE / PLUS / MAX over a fresh-profile LEVEL SELECT. og/twitter `image:alt` are updated; AGENTS storefront rules and the media/README og paragraph are re-synced. It needs no CACHE bump, because og.png is network-bypassed.
 - Owner uploaded the card to Social preview and set the About description (live, checked with gh). I added 13 topics with `gh repo edit --add-topic`, keeping the old seven, which makes 20 (the cap). The seo-marketing branch owns og:description and JSON-LD. Capture recipe: a black/white difference matte for the transparent 3D board, and CAMERA WIDE fits the whole cabinet.

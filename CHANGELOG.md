@@ -17,10 +17,19 @@ Entries are written for players. How a change works lives in
 
 ## Unreleased
 
+Nothing in the next shell yet. Your patch could be first.
+
+## shell v182 · 2026-10-19
+
 ### Added
 - **Screenshots in the install dialog.** Installing Fusegrid from Chrome
   now shows two real shots of the game (REAL 3D on a laptop, CLASSIC 2D on
   a phone) instead of a bare name and icon.
+
+### Changed
+- **A new share card.** Links to Fusegrid in chat apps and social posts now
+  preview a fresh card that shows all three looks: CLASSIC 2D, PIXEL and
+  REAL 3D. Some apps keep showing the old preview for a while.
 
 ## shell v181 · 2026-10-19
 
