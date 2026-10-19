@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-19 — Dev diary + CHANGELOG backfill (docs only, no shell bump)
+- Owner asked for updated changelogs plus "a story of the game development, a diary of the changes". New `docs/diary.md` (dated entries 2026-08-16 → v180, lessons, explored-not-built list without lore), linked from docs/README who-owns-what (one row) and README "Go to". CHANGELOG: v180's two `### Added` merged + "v179 never deployed" line; new sections shell v31 (pushed `569bc0a`, arcade loop + v2–v31), shell v1 (Heat/Pact/rooms 6–8/offline, commits dated 09-03) and 2026-09-01 public launch; Unreleased untouched. Open: SIGNAL RUNNER/IONVEST only in the diary (never public).
+
 ## 2026-10-19 — Release shell v180 pushed (menus, ATLAS, NEW VERSION READY)
 - CHANGELOG Unreleased -> shell v180 · 2026-10-19 (v179 was never deployed, so v180 carries it). The update card is centred over a blurred backdrop (#updbg, tap = LATER). Pushed main to origin; Pages CI runs npm test before deploy.
 
