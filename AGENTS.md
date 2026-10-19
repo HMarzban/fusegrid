@@ -68,7 +68,18 @@ Touch rule: a tap on a row = Enter on it; MENU and PAUSE bands span the full
 stage width; off the rows a root list (MENU, PAUSE list) does nothing and a
 page (OPTIONS, GRAPHICS, GUIDE, LEVEL SELECT, SCORES) backs out. `guideHit`,
 `levelHit` / `levelGeom` and `scoresHit` share the geometry their pages
-draw. Hints follow `data-lay` (keys vs taps). `SCREEN.STATS = 12` is **appended** (the `SCREEN` enum's own rule in
+draw. Hints follow `data-lay` (keys vs taps; LEVEL SELECT's touch foot is
+`LEVEL_TAP`). Touch MENU (polish 2026-10-19): the stage is width-bound
+(~0.63 on a 393 px phone), so the rows take the logo's room — `menuLogo(L,
+touch)` (the ONE source for shellview's logo transform and the list top)
+halves the logo against the top edge, the list drops its group gaps and caps
+at `MENU_PITCH_T` 52 / hero 56 (>= 32 CSS px portrait, ~38 landscape), hint
+at the bottom edge; `menuList` / `menuGeom` / `menuHit` take the same
+`touch` flag (main passes `touchLay(canvas)`), and `layout()` stays
+untouched (INTRO and SCORES read its logo fields). LEVEL / HIGH SCORES chip
+taps are ONE call through the cued key path (`app.move` with a delta,
+`app.adjustPace`), so a change plays one `uiMove` and the chip already set is
+silent; `[ ]` pace keys cue too. `SCREEN.STATS = 12` is **appended** (the `SCREEN` enum's own rule in
 `menuapp.js`: appended, never inserted). `SCREEN.TROPHIES = 13` (the MEDALS page) is
 appended too: opened from STATS by `T` or a tap on its `T MEDALS` label, backs out to STATS,
 never a MENU row. `SCREEN.GRAPHICS = 14` is appended too: opened by the

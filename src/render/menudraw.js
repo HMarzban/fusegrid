@@ -361,23 +361,36 @@ export function slamOf(t) {
    SHAPE (PLAY hero, group gaps before OPTIONS / HIGH SCORES / SOURCE) is a
    constant here, never read from items: main.js hit-tests with only n, so the
    painted and tapped rows come from the same table. Pitch 33 / hero 50 are
-   caps; a short box (608x352) scales them down to the band. */
+   caps; a short box (608x352) scales them down to the band.
+   touch (body[data-lay] p/l): the stage is width-bound at ~0.63, so the rows
+   take the logo's room instead — logo at half size against the top edge, no
+   group gaps, pitch 52 / hero 56 (>= 32 CSS px on a 393 px phone), hint at
+   the bottom edge. menuLogo is the one source for shellview's logo and the
+   list top, so the painted and tapped rows still come from one table. */
 const MENU_DOOR = ["LEVEL SELECT", "OPTIONS", "GUIDE", "HIGH SCORES", "STATS"];
-const menuShape = (n) => Array.from({ length: n }, (_, i) => ({ hero: i === 0, gapBefore: n === 8 && (i === 3 || i === 5 || i === 7) }));
-export const MENU_PITCH = 33;
-export function menuList(L, n) {
-  const logoBot = L.logoCy + 10 * L.logoScale;
-  return listGeom(L, menuShape(n), { top: Math.max(logoBot + 8, 8), bot: L.footY - 14, w: 380, pitch: MENU_PITCH, hero: 50, gap: 8, pad: 10 });
+const menuShape = (n, touch) => Array.from({ length: n }, (_, i) => ({ hero: i === 0, gapBefore: !touch && n === 8 && (i === 3 || i === 5 || i === 7) }));
+export const MENU_PITCH = 33, MENU_PITCH_T = 52;
+export function menuLogo(L, touch) {
+  if (!touch) return { cy: L.logoCy, s: L.logoScale };
+  const s = L.logoScale / 2;
+  return { cy: 8 + 83 * s, s };
 }
-export function menuGeom(L, n) {
-  const g = menuList(L, n);
+export function menuList(L, n, touch) {
+  const lg = menuLogo(L, touch),
+    logoBot = lg.cy + 10 * lg.s;
+  return touch
+    ? listGeom(L, menuShape(n, true), { top: Math.max(logoBot + 6, 8), bot: L.footY + 2, w: 380, pitch: MENU_PITCH_T, hero: 56, pad: 8 })
+    : listGeom(L, menuShape(n), { top: Math.max(logoBot + 8, 8), bot: L.footY - 14, w: 380, pitch: MENU_PITCH, hero: 50, gap: 8, pad: 10 });
+}
+export function menuGeom(L, n, touch) {
+  const g = menuList(L, n, touch);
   return { bx: g.x, y0: g.y, rw: g.w, h: g.h, span: g.span, padY: g.pad, rows: g.rows };
 }
 /* Settled rows only (no entrance slide): contiguous bands, half a group gap
    each side, full stage width, so no tap between or beside two rows falls
    through; above / below the list is -1 and main does nothing with it. */
-export function menuHit(x, y, L, n) {
-  return listHit(x, y, menuList(L, n), true);
+export function menuHit(x, y, L, n, touch) {
+  return listHit(x, y, menuList(L, n, touch), true);
 }
 /* STATS foot taps (T1): token zones over the one painted foot string at the
    0.6 em mono advance, half a separator wide each side. */
@@ -401,8 +414,8 @@ export function drawMenu(c, ui, L, t) {
   const et = ui && typeof ui.enterT === "number" ? ui.enterT : t;
   const touch = !!(ui && ui.touch);
   const n = items.length;
-  const g = menuList(L, n),
-    shape = menuShape(n);
+  const g = menuList(L, n, touch),
+    shape = menuShape(n, touch);
   // enterT < 0 holds the menu back (the show's blast reads first): nothing,
   // then the plate fades in over the last 0.12 s before the rows enter
   const pa = et < 0 ? clamp01(1 + et / 0.12) : 1;
@@ -430,7 +443,7 @@ export function drawMenu(c, ui, L, t) {
   c.font = font(10);
   c.textAlign = "center";
   c.textBaseline = "middle";
-  c.fillText(touch ? "TAP TO SELECT" : "↑↓ MOVE · ENTER SELECT", L.cx, L.footY);
+  c.fillText(touch ? "TAP TO SELECT" : "↑↓ MOVE · ENTER SELECT", L.cx, touch ? L.footY + 12 : L.footY);
   c.globalAlpha = 1;
 }
 
@@ -480,8 +493,10 @@ export function levelHit(x, y, L, unlocked) {
   const S = g.S;
   return x >= S.x && x <= S.x + S.w && y >= S.y && y <= S.y + S.h ? { k: "start" } : { k: "back" };
 }
-/* LEVEL SELECT: five chips 44x34 gap 14; sel in 1..5. */
-export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked, pace, timeAttack) {
+/* LEVEL SELECT: five chips 44x34 gap 14; sel in 1..5. touch swaps the key
+   foot for the tap rule levelHit implements (main.js). */
+export const LEVEL_TAP = "TAP A CHIP TO SET IT · THE PANEL TO START · OUTSIDE TO GO BACK";
+export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked, pace, timeAttack, touch) {
   const S = shell(c, L, 400);
   const h = heat | 0;
   let p = pace | 0;
@@ -590,7 +605,9 @@ export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked, pace, timeAt
   foot(
     c,
     S,
-    showPact
+    touch
+      ? LEVEL_TAP
+      : showPact
       ? "ENTER START · ←/→ ROOM · ↑/↓ HEAT · [ ] PACE · 1–5 MODES · ESC"
       : "ENTER START · ←/→ ROOM · ↑/↓ HEAT · [ ] PACE · ESC BACK",
   );

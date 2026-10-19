@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-19 — CONSOLE PANEL polish: touch MENU rows, LEVEL tap foot, tap cues (CACHE v180)
+- Closed three of the redesign's open items (laptop PAUSE was already done in 191d956). Touch MENU: `menuLogo` halves the logo up top, no group gaps, pitch 52/hero 56 → 32.7 CSS px rows on 393x852 (was ~21), 37.7 landscape; one `touch` flag on menuList/menuGeom/menuHit (main: `touchLay`). LEVEL SELECT touch foot `LEVEL_TAP`. LEVEL/SCORES taps route through `app.move`/`app.adjustPace` (heat/pace now take any delta), adjustPace joins the cue sheet so `[ ]` cue uiMove. CACHE_NAME/REV v180 (shipped bytes after v179). capture.mjs gains a `level` shot; verify.mjs takes `ROOT=` and is touch-aware (menuGeom/pauseGeom flags, LEVEL chip taps). Open: the narrowest phones (360 wide, s 0.57) land at ~30 CSS px.
+
 ## 2026-10-19 — NEW VERSION READY prompt + SW fixes (shell v179); compact PAUSE on keyboard
 - Owner hit a stale SW copy (v167) while testing and asked for an in-game "new version" prompt that reaches every player. sw.js now waits (SKIP_WAITING on RELOAD/U), precaches with cache:"reload", registers with updateViaCache:"none", deletes only fusegrid-shell-v* (known origin-wide delete bug fixed); pre-v179 shells still skip once (PROMPT_FROM 179), since their pages can't prompt. Card = DOM #upd in CONSOLE PANEL style via src/app/update.js (menus + run-end only). Live CDP: 20/20 (v179->v180 prompt, LATER, U, phone tap, v178->v179 bridge). PAUSE on keyboard went compact (PAUSE_ROW_D 44, width 340) after owner said "too fat". CACHE_NAME is bumped to v179; the CHANGELOG still reads Unreleased.
 

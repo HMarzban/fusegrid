@@ -307,6 +307,12 @@ export function createGame(canvas, opts = {}) {
       if (r) audio.play("uiMove");
       return r;
     };
+    const p0 = app.adjustPace.bind(app);
+    app.adjustPace = (d) => {
+      const r = p0(d);
+      if (r) audio.play("uiMove");
+      return r;
+    };
     app.back = () => {
       const r = b0();
       if (r) audio.play("uiBack");
@@ -458,6 +464,7 @@ export function createGame(canvas, opts = {}) {
           (ev.clientY - r.top) * k,
           menuLayout(cw, ch),
           ITEMS.length,
+          touchLay(canvas),
         );
         if (row < 0) return menu ? undefined : app.back();
         app[menu ? "cursor" : gx ? "gfxRow" : gd ? "guideRow" : "optRow"] = row;
@@ -465,9 +472,10 @@ export function createGame(canvas, opts = {}) {
       } else if (app.screen === SCREEN.LEVEL || app.screen === SCREEN.SCORES) {
         /* A chip / tab tap sets it (modes ride their 1–5 keys); LEVEL: the rest of the plate starts, outside backs out. */
         const r = canvas.getBoundingClientRect(), k = canvas.width / (r.width || canvas.width), { cw, ch } = dims(canvas, curKind), x = (ev.clientX - r.left) * k, y = (ev.clientY - r.top) * k, L = menuLayout(cw, ch);
-        if (app.screen === SCREEN.SCORES) { const i = scoresHit(x, y, L); return i >= 0 ? void (app.scoreHeat = i) : app.confirm(); }
+        // every chip is ONE call through the cued key path: one uiMove per change, none on the chip already set
+        if (app.screen === SCREEN.SCORES) { const i = scoresHit(x, y, L); return i >= 0 ? void app.move(i - app.scoreHeat, 0) : app.confirm(); }
         const h = levelHit(x, y, L, app.pactUnlocked);
-        if (h.k === "room") app.level = h.i + 1; else if (h.k === "heat") app.heat = h.i; else if (h.k === "pace") { while (app.pace !== h.i - 1 && app.adjustPace(h.i - 1 - app.pace)); } else if (h.k === "mode") input.onUiKey("Digit" + (h.i + 1)); else if (h.k === "back") app.back(); else app.confirm();
+        if (h.k === "room") app.move(h.i + 1 - app.level, 0); else if (h.k === "heat") app.move(app.heat - h.i, 1); else if (h.k === "pace") app.adjustPace(h.i - 1 - app.pace); else if (h.k === "mode") input.onUiKey("Digit" + (h.i + 1)); else if (h.k === "back") app.back(); else app.confirm();
       } else if (app.screen === SCREEN.STATS) {
         const r = canvas.getBoundingClientRect(), k = canvas.width / (r.width || canvas.width), { cw, ch } = dims(canvas, curKind);
         const hit = statsHit((ev.clientX - r.left) * k, (ev.clientY - r.top) * k, menuLayout(cw, ch), app.resetArm);

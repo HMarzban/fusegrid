@@ -239,6 +239,22 @@ for (const at of [1.0, 2.0, 3.0, 4.0]) {
   }
 }
 
+// ---- LEVEL SELECT cues (polish 2026-10-19): ←/→, ↑/↓ and [ ] each play ONE
+// uiMove per change through the real keydown path, and none at a clamp edge
+// (pace used to change silently). ----
+{
+  const plays = [];
+  const g = mk({ audio: { play: (n) => plays.push(n), toggle: () => false, duck: noop, pump: noop, unlocked: () => false } });
+  g.app.skip(); g.app.cursor = 1; g.app.confirm(); g.tick(2);
+  const lv0 = g.app.screen === SCREEN.LEVEL;
+  plays.length = 0; press(g, "ArrowRight"); const a = plays.join();
+  plays.length = 0; press(g, "ArrowUp"); const b = plays.join();
+  plays.length = 0; press(g, "BracketRight"); const c = plays.join();
+  plays.length = 0; press(g, "BracketRight"); const d = plays.join();
+  check("LEVEL → / ↑ / ] each cue exactly one uiMove",
+    lv0 && a === "uiMove" && b === "uiMove" && c === "uiMove" && g.app.level === 2 && g.app.heat === 1 && g.app.pace === 1, [lv0, a, b, c, g.app.level, g.app.heat, g.app.pace].join("|"));
+  check("LEVEL ] at HARD clamps silently", d === "" && g.app.pace === 1, d);
+}
 // ---- LEVEL SELECT: ←/→ room, ↑/↓ heat, [ ] pace, 1–5 when unlocked, Enter, Esc ----
 {
   const g = menu(); toRow(g, 1); press(g, "Enter");

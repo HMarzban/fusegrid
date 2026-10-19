@@ -41,6 +41,15 @@ Entries are written for players. How a change works lives in
   row. GUIDE rows are tappable, and a tap off them goes back. LEVEL SELECT
   rooms, heat, pace and modes, and the HIGH SCORES heat tabs, all work by
   touch now. Pause rows are taller on a phone, so they're easier to hit.
+- **Bigger menu rows on phones.** On a touch screen the main menu tucks the
+  FUSE/GRID logo up top at half size so all eight rows grow to thumb size
+  (about 50% taller on a phone).
+- **LEVEL SELECT speaks touch.** On a phone its bottom hint explains the
+  taps (tap a chip to set it, the panel to start, outside to go back)
+  instead of listing keys.
+- **Taps click like keys.** Tapping a room, heat, pace or HIGH SCORES tab
+  plays the same menu blip as the arrow keys, and the `[` `]` pace keys
+  blip now too. Tapping the chip that's already set stays quiet.
 
 ### Added
 - **Join the build.** A contributing guide, a code of conduct, a security

@@ -10,7 +10,7 @@ import { paceToken } from "../core/pace.js";
 import { clampPact, pactLabel } from "../core/pact.js";
 import { SCREEN, ITEMS } from "../app/menuapp.js";
 import { PROJ } from "./r3d/camera.js";
-import { drawLogo, overlayBox } from "./scenes.js";
+import { drawLogo, overlayBox, touchLay } from "./scenes.js";
 import * as menudraw from "./menudraw.js";
 import { CACHE_NAME } from "../pwa/shell.js";
 
@@ -126,7 +126,9 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques) {
     return;
   }
   if (s === SCREEN.MENU) {
-    const L = menudraw.layout(cw, chh);
+    const L = menudraw.layout(cw, chh),
+      touch = touchLay(canvas), // the predicate main.js taps with
+      lg = menudraw.menuLogo(L, touch); // touch: half-size logo up top, rows take its room
     // the show's natural end slams the logo over a ramping dim; any other
     // MENU entry (a skip included) keeps the 0.25s fade-out (spec §1)
     const sl = app.fromShow ? menudraw.slamOf(app.subT) : null;
@@ -134,8 +136,9 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques) {
     if (!sl && app.subT < 0.25) menudraw.drawFade(c, 1 - app.subT / 0.25, cw, chh);
     // logo per spec §2: reuse drawLogo at logoScale via ctx.scale
     c.save();
-    c.translate(L.cx, L.logoCy);
-    c.scale(L.logoScale * (sl ? sl.s : 1), L.logoScale * (sl ? sl.s : 1));
+    const ls = lg.s * (sl ? sl.s : 1);
+    c.translate(L.cx, touch ? Math.max(lg.cy, 4 + 83 * ls) : lg.cy); // the slam's 1.35x never clips the touch logo off the top
+    c.scale(ls, ls);
     if (sl) c.globalAlpha = sl.a;
     drawLogo(c, world.time, 0, 0);
     c.restore();
@@ -154,7 +157,7 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques) {
           ITEMS[6],
           ITEMS[7],
         ],
-        touch: layOf(canvas) !== "d",
+        touch,
       },
       L,
       app.subT,
@@ -174,6 +177,7 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques) {
       app.pactUnlocked,
       app.pace,
       app.timeAttack,
+      touchLay(canvas),
     );
   } else if (s === SCREEN.HOWTO) {
     menudraw.drawDim(c, 0.72, cw, chh);

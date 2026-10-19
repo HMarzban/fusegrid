@@ -488,7 +488,7 @@ export function createMenuApp(opts = {}) {
       }
       if (this.screen === SCREEN.LEVEL) {
         if ((axis | 0) === 1) {
-          const nh = clampHeat(this.heat + (dir < 0 ? 1 : -1));
+          const nh = clampHeat(this.heat - dir); // up (dir -1) heats; any delta, so a chip tap is one move
           if (nh === this.heat) return false;
           this.heat = nh;
           return true;
@@ -515,7 +515,7 @@ export function createMenuApp(opts = {}) {
     adjustPace(dir) {
       this.idleT = 0;
       if (this.screen !== SCREEN.LEVEL) return false;
-      const np = clampPace(this.pace + (dir < 0 ? -1 : 1));
+      const np = clampPace(this.pace + dir);
       if (np === this.pace) return false;
       this.pace = np;
       if (o.onPaceChange) o.onPaceChange(np);
