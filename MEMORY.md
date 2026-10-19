@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-19 — Listing art gaps filled: manifest screenshots, PIXEL still, silent clips
+- Merged the promo kit (inspiring-moser) + media recapture (modest-haslett) branches, then captured on a virtual clock (performance.now stepped 2x1/60 s per frame, so 1080p is real-speed with no dropped frames) with the game's own demobot on the real Input: screenshots/wide.png (3D 1920x1080) + narrow.png (CLASSIC phone 1080x1920) in manifest `screenshots`, staged by pages.yml, NOT precached (pwa.test pins it); media/still-pixel.png (FACTORY); 18 s silent clips: landscape 16:9 3D, portrait 2:3 PIXEL (CrazyGames), 9:16 3D (Shorts). Merged main (v181) after; still-menu.png recaptured on v181 (CONSOLE PANEL list + preview pane). Open: manifest is precached, so it needs a shell bump to reach installs (v181, still unpushed, covers it only if this merges first; else v182); CrazyGames covers need a title composite (owner/storefront). Capture scripts: shared notes folder.
+
 ## 2026-10-19 — Shell v181: phone menus on a full-screen box, iso overflow, NO TIME YET (not pushed)
 - Owner GO from a before/after sheet (https://claude.ai/artifact/NB6JbVSgTkDueFSgvYhdfZ): touch-portrait MENU + pages draw on #sh (fit.js shellGeo, ~0.9 vs 0.63), board canvases untouched; narrow re-flows in menudraw. Iso MEDALS/STATS/SCORES fixes gated on f<1; NO TIME YET waits for TIME. npm test green, CDP verify2 129/129; scripts in git-ignored .superpowers/sdd/2026-10-19-polish2/.
 

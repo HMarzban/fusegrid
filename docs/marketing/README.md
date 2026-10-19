@@ -202,11 +202,15 @@ on it.
 | Need | Have it? |
 |---|---|
 | itch cover 630×500 | ✅ `media/cover-630x500.png` |
-| 3–5 gameplay stills | ✅ `media/still-*.png` (a fresh recapture is pending on its own branch) |
+| 3–5 gameplay stills | ✅ `media/still-*.png`: JUNGLE, ICE, CROWN in REAL 3D, FACTORY in PIXEL, and the MENU (recaptured on v181) |
 | Short gameplay GIF | ✅ `media/play.gif` |
-| A PIXEL still | ❌ Not captured yet |
-| Silent 15–20 s clip, landscape + portrait | ❌ Needed for CrazyGames and for Shorts / TikTok |
-| CrazyGames covers 16:9, 2:3, 1:1 | ❌ Real captures only, title the only text |
+| A PIXEL still | ✅ `media/still-pixel.png` |
+| Silent 15–20 s clip, landscape + portrait | ✅ 18 s each: `media/clip-landscape.mp4` (1920×1080, REAL 3D) and `media/clip-portrait-2x3.mp4` (1080×1620, PIXEL) for CrazyGames, `media/clip-portrait-9x16.mp4` (1080×1920, REAL 3D) for Shorts / TikTok / Reels |
+| Install-dialog screenshots | ✅ `screenshots/wide.png` + `screenshots/narrow.png`, in the manifest |
+| CrazyGames covers 16:9, 2:3, 1:1 | ❌ Not made yet. The only text a cover may carry is the title, so the HUD has to go: that means REAL 3D or PIXEL with `#c` hidden, never CLASSIC, where `#c` is the board. No borders and no blur, so no upscaling. 1:1 and 2:3 can be cropped from a 1200×1040 (AUTO) or 1800×1560 (RESOLUTION FULL at DPR 3) board capture. 16:9 at 1920×1080 needs a ~1.07× upscale, or the page backdrop around the stage. Adding the title is optional, but a wordmark on the art makes it storefront art like `og.png` (owner) |
+
+CrazyGames also asks that a clip open on the static cover, so the portrait
+and landscape clips will get that first frame once the covers exist.
 
 Every asset is a real capture of the live game, never generated key art (see
 [media/README.md](../../media/README.md)).
@@ -292,11 +296,11 @@ Leave out the classic franchise's name and any "-like" topic built on it.
 
 **Next search wins (follow-ups, not done here):**
 
-- **Manifest screenshots.** One `wide` and one `narrow` real capture (PNG,
-  320–3840 px a side, long side ≤ 2.3× short) unlock Chrome's richer install
-  dialog. They must be added to the `pages.yml` copy line, or Pages serves a
-  404. Wait for the fresh `media/` recapture, and capture a portrait phone
-  shot for `narrow`.
+- ~~**Manifest screenshots.**~~ Done 2026-10-19: `screenshots/wide.png`
+  (REAL 3D, 1920×1080) and `screenshots/narrow.png` (CLASSIC 2D on a phone,
+  1080×1920) are in the manifest and staged by `pages.yml`. The manifest
+  itself is precached, so they reach installed players with the first shell
+  bump after they merge.
 - **A second indexable page.** The whole site is one canvas page. A small
   static `how-to-play.html` built from the in-game GUIDE copy, with real
   screenshots, would give search engines honest text and a second URL.
@@ -405,9 +409,11 @@ Tick these in order. Every box past "Ready the page" is something the
 
 **3. Fill the art gaps**
 
-- [ ] Merge the fresh `media/` recapture.
-- [ ] Capture a PIXEL still and a 15–20 s silent clip (landscape and
+- [x] Merge the fresh `media/` recapture.
+- [x] Capture a PIXEL still and a 15–20 s silent clip (landscape and
       portrait). Real captures only.
+- [x] Recapture `media/still-menu.png` on the current menus (v181).
+- [ ] CrazyGames covers 16:9, 2:3, 1:1 (see the art table).
 
 **4. List it (one a week is plenty)**
 
