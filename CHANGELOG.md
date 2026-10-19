@@ -15,6 +15,8 @@ Entries are written for players. How a change works lives in
 
 ## Unreleased
 
+## shell v180 · 2026-10-19
+
 ### Changed
 - **Menu pages, redesigned.** LEVEL SELECT is now a grid of room tiles with
   a big room card beside it: the world, the foes you'll meet, your best

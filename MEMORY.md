@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-19 — Release shell v180 pushed (menus, ATLAS, NEW VERSION READY)
+- CHANGELOG Unreleased -> shell v180 · 2026-10-19 (v179 was never deployed, so v180 carries it). The update card is centred over a blurred backdrop (#updbg, tap = LATER). Pushed main to origin; Pages CI runs npm test before deploy.
+
 ## 2026-10-19 — Menu pages round 2: ATLAS (owner pick) on top of the polish commit
 - Owner asked for slimmer pages, a card-like interactive LEVEL SELECT and hooks that show what the game offers. Round-2 workflow (game + menu designer, lead, 3 prototypes in worktrees r2-A/B/C, reviewer A 7.0 / B 6.5 / C 6.4) + contact sheet; owner picked B ATLAS. main fast-forwarded to 7ccc715 (polish: touch MENU, tap cues, v180) and B applied, plus reviewer fixes: score teaser reads played runs only (isPlaceholder), PLAY tag names the world, phone GUIDE shows touch controls, SOURCE tile 32 CSS (floor restored), plaques legible, PACT->MODES copy, modes-off help says what modes do. Open: read-only pages still back out on any tap (kept, documented); taller portrait logical box (lead idea) not built.
 
