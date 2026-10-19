@@ -706,9 +706,8 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   first), which looks exactly like a change that did not land. Local headed
   checks after a code change: clear site data, or test in a fresh profile.
 - Storefront live 2026-10-19: the About description leads with play-in-browser
-  + three looks + Heat, and the Social preview carries the v180 card. Topics
-  still list only the original seven; the 20-topic draft is in
-  `.superpowers/sdd/2026-10-19-storefront/about.md`.
+  + three looks + Heat, the Social preview carries the v180 card, and the
+  repo has 20 topics (GitHub's cap), so adding one means dropping one.
 - Owner-pending, NOT built (research/design only, 2026-10-11): the 2026-10-11
   menu redesign variants A/B/C (separate from the 2026-10-19 CONSOLE PANEL
   menu that shipped); story mode "FUSE/GRID: LOW TIDE"; naming (keep FUSE/GRID +
