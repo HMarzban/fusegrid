@@ -529,10 +529,10 @@ not shell screens. Do not add them as `SCREEN` values.
   Social/SEO: keep `og.png` (1200×630), `robots.txt`, and `sitemap.xml` in the
   Pages stage set. `og:image` must stay an absolute Pages URL. GitHub About
   description + topics are live SEO (not in git): lead with play-in-browser +
-  REAL 3D ⇄ CLASSIC 2D + Heat, not "deterministic". Keep topics filled. Repo
-  Settings → Social preview has no API — upload `og.png` there when the card
-  changes. PIXEL (v178) is not on `og.png` or the About copy yet; adding it
-  is a card/storefront change, not a drive-by.
+  the three looks (CLASSIC 2D · PIXEL · REAL 3D) + Heat, not "deterministic".
+  Keep topics filled. Repo Settings → Social preview has no API — the owner
+  re-uploads `og.png` there by hand every time the card changes (the v180 card,
+  2026-10-19, still needs that upload).
   PWA: also stage `manifest.webmanifest`, `sw.js`, `icon-192.png`, `icon-512.png`.
   `serve.js` MIME includes `.webmanifest`.
 - CI: `.github/workflows/pages.yml` runs `npm test` on Node 26 for pull requests
@@ -645,7 +645,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
 
 ## Learned Workspace Facts
 - Surviving a hit leaves live bombs and blades in the world.
-- Share the play URL with a trailing slash (`https://hmarzban.github.io/fusegrid/`); the no-slash GitHub Pages 301 has no Open Graph tags, so link previews fail. Share card is root `og.png` (1200×630); `og:image` stays the absolute Pages URL. The hero is a REAL screenshot of the live 3D board (JUNGLE, transparent clear via `scene.background=null`, blast mid-detonation) — never generated key art, which drifts from the game. Card sells REAL 3D ⇄ CLASSIC 2D plus CORE / PLUS / MAX; the PLAY IN THE BROWSER pill spans that chip row (left = CORE left, right = MAX right) and type keeps a 10% inset. Never the reference game's name on the image or tags. Public About/meta copy leads with play-in-browser + REAL 3D ⇄ CLASSIC 2D + Heat; "deterministic" stays a contributor word, not the storefront lead.
+- Share the play URL with a trailing slash (`https://hmarzban.github.io/fusegrid/`); the no-slash GitHub Pages 301 has no Open Graph tags, so link previews fail. Share card is root `og.png` (1200×630); `og:image` stays the absolute Pages URL. The hero is a REAL capture of the live game, never generated key art, which drifts from the game. Since v180 (owner pick C, 2026-10-19) it is the ATLAS LEVEL SELECT page in CLASSIC 2D from a fresh profile (rooms 6–8 locked, NO TIME YET, no seeded records); the 2026-09 card was the transparent-clear 3D JUNGLE board. Card sells CLASSIC 2D · PIXEL · REAL 3D plus CORE / PLUS / MAX; the PLAY IN THE BROWSER pill spans that chip row (left = CORE left, right = MAX right) and type keeps a 10% inset. Sources, composer and the rejected A/B: git-ignored `.superpowers/sdd/2026-10-19-storefront/`. Never the reference game's name on the image or tags. Public About/meta copy leads with play-in-browser + the three looks + Heat; "deterministic" stays a contributor word, not the storefront lead.
 - A just-planted bomb is not solid while the bomber still occupies that tile; after leaving, re-entry is blocked (plant-and-leave / R16).
 - FLAME is blast length in tiles (starts at 1, caps at 8, persists across death and rooms); BOMB is how many bombs can be live at once.
 - Gold WALL never breaks; green BRICK breaks and stops a normal blast.
@@ -706,7 +706,9 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   first), which looks exactly like a change that did not land. Local headed
   checks after a code change: clear site data, or test in a fresh profile.
 - Known gap: the GitHub About description still leads with "deterministic",
-  against the storefront rule above; fix it in repo Settings (not in git).
+  against the storefront rule above; the owner sets the 2026-10-19 draft
+  (`.superpowers/sdd/2026-10-19-storefront/about.md`) in repo Settings, not in
+  git, and re-uploads `og.png` under Settings → Social preview.
 - Owner-pending, NOT built (research/design only, 2026-10-11): the 2026-10-11
   menu redesign variants A/B/C (separate from the 2026-10-19 CONSOLE PANEL
   menu that shipped); story mode "FUSE/GRID: LOW TIDE"; naming (keep FUSE/GRID +

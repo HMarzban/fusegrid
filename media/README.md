@@ -37,7 +37,7 @@ superseded, and 2D and 3D once again share one character (`PLAYER_HULL` ===
 menu/GUIDE chrome changed (P1–P4 pickups, S1–S3 OPTIONS/pause/chrome-removal,
 R2 folding HOW TO PLAY / ITEMS / ENEMIES under GUIDE); this pass only
 recaptures pixels to swap the hero, and did not touch layout. Every still
-below (plus root `og.png`) shows MAKO, not the earlier gunmetal-hulled hero.
+below shows MAKO, not the earlier gunmetal-hulled hero.
 
 ## 🖼️ Assets
 
@@ -50,23 +50,20 @@ below (plus root `og.png`) shows MAKO, not the earlier gunmetal-hulled hero.
 | `still-menu.png` | Screenshot — MENU screen | Classic 2D canvas (`#c`) on the MENU screen (page loaded without `?render=3d`, so `#gl` stays hidden), captured after two `requestAnimationFrame` waits so the menu's entrance animation settles onto the full six-row list before the shot (`app.toMenu()` resets `idleT`, but this session's RAF loop kept running in the background the whole time, so any longer real-time wait risks the 10s MENU→ATTRACT idle timeout firing mid-capture). Shows the post-R2 six-row MENU (PLAY / LEVEL SELECT / OPTIONS / GUIDE / HIGH SCORES / SOURCE) over the frozen board, with MAKO visible on it. |
 | `play.gif` | Animated preview — a JUNGLE run | Live 3D run (`?render=3d&debug=1`) driven by real held-key intents (`window.__GAME__.setKeys`) through the normal RAF-driven sim loop — not manual `step(n)` teleporting, so the walk cycle is the real animation, not a cued pose. Staged for reliability: a short brick corridor was carved directly in `w.grid` (one BRICK left standing as the target), the level's enemies were relocated (not deleted — emptying `w.enemies` trips the sim's instant-WIN branch) off to one side, and the bomb's fuse was shortened (`w.fuse=0.6`) so the walk/plant/retreat/blast/advance beat fits in ~3.5s. The player retreated a full tile past the blast radius before the fuse ran out — confirmed 3 hearts intact end to end, not a staged near-miss. 42 frames, 12 fps (~3.5s), 630px wide (ffmpeg `palettegen`/`paletteuse` with `dither=bayer`, scaled down from the native 1200×1040 capture, never upscaled). 0.60 MB, under the 3 MB gate. |
 
-`og.png` (project root, 1200×630) was recaptured the same session: a fresh
-JUNGLE hero (MAKO, mid-blast, retreated off the blast tiles, `p.iFrames`
-forced 0) was rendered with `scene.background=null` and alpha-scrubbed
-(measured this session: a clean 0/255 bimodal split plus a thin AA fringe —
-no uniform haze this time, unlike the 2026-09-05 P5 note, so the scrub
-threshold was set from the actual histogram, not assumed). It replaces only
-the board pixels of the locked card: the wordmark, the REAL 3D ⇄ CLASSIC 2D
-row, the CORE/PLUS/MAX chips and the PLAY IN THE BROWSER pill are the
-original, unmodified pixels (restored per-pixel from the previous `og.png`
-inside their row bands after a full repaint, so no trace of the old
-humanoid-era board bleeds through the gaps around the text). Card stays
-fully opaque (0 pixels below alpha 255). Disclosed: the dark background
-outside the text glyphs (card chrome, not game pixels) is a calibrated
-radial-gradient approximation of the previous card's background rather than a
-per-pixel restore, measured within ~9 RGB units of the original at the
-corner — the text glyphs themselves are byte-identical restorations and the
-board/hero are real renders.
+`og.png` (project root, 1200×630) was rebuilt on **2026-10-19** for shell
+v180 (owner pick C of three candidates; sources, composer and the rejected
+A/B live in the git-ignored `.superpowers/sdd/2026-10-19-storefront/`). The
+right half is a real capture of the ATLAS LEVEL SELECT page in CLASSIC 2D:
+loopback `PORT=0 node serve.js`, chrome-headless-shell with a fresh profile
+(no service worker, no stores), 1366×768 at dpr 2, opened with the debug
+hook's `app._push` after the INTRO show. Nothing seeded, so it shows the
+honest first-visit state: rooms 6–8 locked, NO TIME YET, CORE · NORM. It is
+cropped to the plate and downscaled only. The left column (FUSE/GRID
+wordmark, the CLASSIC 2D · PIXEL · REAL 3D row, CORE/PLUS/MAX chips and the
+PLAY IN THE BROWSER pill spanning them) is card chrome set in SF Mono over
+the card's radial background, not game pixels. Card is fully opaque. After
+every card change the owner re-uploads it under repo Settings → Social
+preview (no API).
 
 ## 📦 Rebuilding the zip for itch / Newgrounds / Game Jolt
 
