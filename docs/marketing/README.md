@@ -222,12 +222,13 @@ image) has no API. Nothing here has been changed on GitHub.
 Prefer the terminal? The owner can run this once, after checking the text:
 
 ```bash
-gh repo edit HMarzban/fusegrid --homepage "https://hmarzban.github.io/fusegrid/" --description "Play Fusegrid in your browser: a free single-player bomb-grid arcade. Flip REAL 3D ⇄ CLASSIC 2D (or PIXEL) live, dial the Heat to CORE, PLUS or MAX. No install, no account, plays offline." --add-topic html5-game,arcade-game,arcade,indie-game,single-player,bomb,pixel-art,chiptune,offline-first,es-modules,no-build,zero-dependencies,open-source-game
+gh repo edit HMarzban/fusegrid --homepage "https://hmarzban.github.io/fusegrid/" --description "Play FUSE/GRID free in your browser: a single-player bomb-grid arcade in three looks (CLASSIC 2D, PIXEL, REAL 3D) with Heat CORE / PLUS / MAX. Eight rooms, a chiptune soundtrack, installable as a PWA." --add-topic web-game,html5-game,game,arcade,arcade-game,retro-game,single-player,pixel-art,chiptune,indie-game,offline-first,zero-dependencies,open-source-game
 ```
 
-> **One text, not two.** The storefront refresh pass owns the final About
-> copy and `og.png`. If its text differs from the draft below, paste its text
-> and update this section to match.
+> **One text, not two.** The storefront refresh pass owns the About copy and
+> `og.png`. The description below is its draft (2026-10-19), still waiting on
+> the owner's OK. The topics are its sixteen plus four from this kit. If the
+> owner changes either, update this section to match.
 
 Today (read 2026-10-19 with `gh api`, read-only) the description reads
 "A browser arcade game with a deterministic simulation, replay tests, and
@@ -239,7 +240,7 @@ thirteen.
 **Description (draft, ≤ 350):**
 
 ```
-Play Fusegrid in your browser: a free single-player bomb-grid arcade. Flip REAL 3D ⇄ CLASSIC 2D (or PIXEL) live, dial the Heat to CORE, PLUS or MAX. No install, no account, plays offline.
+Play FUSE/GRID free in your browser: a single-player bomb-grid arcade in three looks (CLASSIC 2D, PIXEL, REAL 3D) with Heat CORE / PLUS / MAX. Eight rooms, a chiptune soundtrack, installable as a PWA.
 ```
 
 **Website:** `https://hmarzban.github.io/fusegrid/` (trailing slash).
@@ -247,7 +248,7 @@ Play Fusegrid in your browser: a free single-player bomb-grid arcade. Flip REAL 
 **Topics (20, GitHub's cap):**
 
 ```
-browser-game html5-game arcade-game arcade indie-game single-player bomb webgl threejs canvas pixel-art chiptune pwa offline-first javascript es-modules no-build zero-dependencies deterministic-simulation open-source-game
+browser-game web-game html5-game game arcade arcade-game retro-game single-player pixel-art chiptune javascript canvas webgl threejs pwa deterministic-simulation indie-game offline-first zero-dependencies open-source-game
 ```
 
 Leave out the classic franchise's name and any "-like" topic built on it.
