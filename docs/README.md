@@ -15,6 +15,7 @@ something another doc owns, that's a bug. Replace the copy with a link.
 |---|---|---|
 | What the game is, how to play, controls, rooms, Heat, Pact, scoring | [README.md](../README.md) | Players |
 | What changed in each release | [CHANGELOG.md](../CHANGELOG.md) | Players |
+| The story of how it was built | [diary.md](diary.md) | Players and contributors |
 | Setup, URL flags, tests, sending a change, shipping a release | [CONTRIBUTING.md](../CONTRIBUTING.md) | Contributors |
 | How the game works, and the trade-offs behind it | [architecture.md](architecture.md) | Contributors |
 | The binding rulebook: pinned numbers, test contracts, owner rulings | [AGENTS.md](../AGENTS.md) | Maintainers and coding agents |

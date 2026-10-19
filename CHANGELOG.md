@@ -7,7 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/):
 each release lists what was **Added**, **Changed**, **Fixed** or **Removed**.
 Fusegrid has no version number of its own. Each release is named after the
 PWA shell revision that shipped it (`CACHE_NAME` in `src/pwa/shell.js`),
-because that's what makes an installed copy update, and it's dated.
+because that's what makes an installed copy update, and it's dated. The
+public launch came two days before the first shell, so that one is named
+by its date.
 
 Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
@@ -20,7 +22,25 @@ Entries are written for players. How a change works lives in
   now shows two real shots of the game (REAL 3D on a laptop, CLASSIC 2D on
   a phone) instead of a bare name and icon.
 
+## shell v181 · 2026-10-19
+
+### Changed
+- **Phone menus use the whole screen.** On a phone held upright, the main
+  menu and every menu page now fill the screen instead of a strip the size
+  of the board, so rows, tiles and text are about 40% bigger. The board
+  still sits behind the logo. LEVEL SELECT puts the room card under the room
+  grid, HOW TO PLAY stacks its two rules, ENEMIES shows two columns and
+  MEDALS one, so every line reads in full.
+- **LEVEL SELECT doesn't promise a time early.** The room card only says NO
+  TIME YET once TIME mode is open. A best time you already set still shows.
+
+### Fixed
+- In the legacy iso view, MEDALS goals, STATS labels and the HIGH SCORES
+  plaque chips no longer spill out of their boxes.
+
 ## shell v180 · 2026-10-19
+
+Shell v179 was built the same day but never deployed, so v180 carries it.
 
 ### Changed
 - **Menu pages, redesigned.** LEVEL SELECT is now a grid of room tiles with
@@ -45,6 +65,9 @@ Entries are written for players. How a change works lives in
   the middle of the screen, over a blurred backdrop, says so on the menus or after a finished run (never mid-run) with a RELOAD
   button (or press `U`). Your scores stay. LATER hides it until you're back
   from your next run.
+- **Join the build.** A contributing guide, a code of conduct, a security
+  policy, bug and idea templates, and a docs map, for anyone who wants to
+  help build the cabinet. Nothing in the game itself changes.
 
 ### Fixed
 - **Stuck on an old version.** The installed game could keep serving an old
@@ -64,11 +87,6 @@ Entries are written for players. How a change works lives in
 - **Taps click like keys.** Tapping a room, heat, pace or HIGH SCORES tab
   plays the same menu blip as the arrow keys, and the `[` `]` pace keys
   blip now too. Tapping the chip that's already set stays quiet.
-
-### Added
-- **Join the build.** A contributing guide, a code of conduct, a security
-  policy, bug and idea templates, and a docs map, for anyone who wants to
-  help build the cabinet. Nothing in the game itself changes.
 
 ## shell v178 · 2026-10-11
 
@@ -323,18 +341,101 @@ Entries are written for players. How a change works lives in
   timbres, no shared motif.
 - A tree-wide test that keeps a private reference name out of every
   committed file.
+- **A touch pause button.** While the game isn't playing, the pad and the
+  bomb button hide so they don't cover the pause rows.
+- The canvas HUD shows the room number and the foes left as chips.
+- OPTIONS shows the shell revision, so you can tell if you're on an old
+  build.
+
+### Fixed
+- RESTART from the pause menu saves your score before it resets the run.
 
 ### Removed
 - The HTML toolbar, legend and HUD strip below the canvas. The canvas HUD
   is the only HUD.
 
-## 2026-09-04 · arcade loop
+## shell v31 · 2026-09-05 · pushed (`569bc0a`)
+
+The arcade loop, plus everything built since shell v1.
 
 ### Added
-- Attract mode that starts a run on any input, an honest end screen, scores
-  kept per heat, a ghost coach for the first bomb, four local plaques on
-  HIGH SCORES, a first-visit handoff straight into CORE room 1, and the
-  store-listing art.
+- **The arcade loop.** The attract demo starts a run on any input, an
+  honest end screen speaks SPACE / TAP, `C` copies your run, HIGH SCORES
+  gets CORE / PLUS / MAX tabs, a ghost coach shows WASD / SPACE on your
+  first run, four local plaques light up on HIGH SCORES, a first visit goes
+  straight into CORE room 1, and the store-listing art is in `media/`.
+- **Pace.** EASY / NORM / HARD on LEVEL SELECT (`[` `]`) scales how fast
+  you and the foes move, and the game remembers it.
+- **Stereo music.** The chiptune now pans its voices left and right.
+- HIGH SCORES gains a column for the Pact toggles a run used.
+- **Each pickup has its own glyph and grab chime**, in CLASSIC 2D and on the
+  REAL 3D cubes, and walking onto one throws a coloured burst. HOW TO, the
+  HUD chips and planted bombs use the same glyphs.
 
-**CONTINUE?** Earlier history is in `git log` and the repository's
-[`MEMORY.md`](MEMORY.md).
+### Changed
+- **Foes are characters now.** Every foe has its own silhouette, a face or
+  a lens, shading, and a pose that turns with where it's heading, in
+  CLASSIC 2D and REAL 3D. Each one dies with its own sound. Rooms 6–8 add
+  three foes of their own: BURROW, SHADE and KNIGHT.
+- **REAL 3D looks brighter and bigger.** The camera sits lower, the board
+  fills more of the screen, the fog that hid the far half of the board is
+  gone, and the four crossing border rails are one cabinet rim.
+
+### Fixed
+- An installed copy now reloads itself when a new version is out, instead
+  of staying on the old one until you clear site data.
+- Embedded listings (an iframe or `?embed=1`) no longer install the offline
+  cabinet, so they can't take over the main site's copy.
+- Holding Space through the start of a run no longer drops a bomb on the
+  first frame, and a long pause no longer uses up the first-run coach.
+
+## shell v1 · 2026-09-03
+
+### Added
+- **Heat.** LEVEL SELECT gets CORE / PLUS / MAX. PLUS and MAX bring the
+  next foe sooner and tighten the fuse, the floor cubes and the chase.
+  HIGH SCORES stores score × heat (CORE ×1, PLUS ×2, MAX ×3); the live HUD
+  shows your raw score.
+- **Pact and rooms 6–8.** Clear room 5 once and LEVEL SELECT opens four
+  Pact toggles on `1`–`4` (LAST, BARE, THIN, SHRINK) and three new rooms:
+  SAND, VOID and CROWN, each with its own look, theme tune and boom. Room 8
+  is a second finale.
+- **ITEMS and ENEMIES pages** in the menu explain every pickup and foe.
+- **A tune for every room**, and layered sound effects instead of single
+  beeps: kills rise, hurts fall, and the boom follows the room.
+- **Play offline.** Fusegrid installs as an app and plays offline after
+  your first visit.
+- Solid pillars inside the board, pickups lying on the floor to walk up, a
+  staged foe roster and a room-5 finale.
+
+### Changed
+- The attract demo plays like a person: it plants and leaves, goes for
+  pickups and stays out of its own blasts.
+
+### Fixed
+- Planting a bomb in a one-tile corridor no longer traps you; holding the
+  direction slides you clear.
+
+## 2026-09-01 · Fusegrid goes public
+
+### Added
+- **Fusegrid is live** at <https://hmarzban.github.io/fusegrid/>, MIT
+  licensed, with the FUSE/GRID wordmark and a share card for link
+  previews. Already in the cabinet: CLASSIC 2D and REAL 3D, a title and
+  menus, an attract demo, chiptune music, a touch pad and high scores.
+- **Five looks.** Rooms 1–5 are JUNGLE, ICE, FACTORY, WATER and ARENA,
+  each with its own palette.
+- A SOURCE row in the menu opens the code on GitHub (2026-09-02).
+
+### Changed
+- Foes wander in four directions.
+- REAL 3D frames the whole board.
+
+### Fixed
+- Surviving a hit no longer wipes the bombs and blasts already on the
+  board.
+- REAL 3D no longer crops to the bottom-left quarter on Retina screens.
+
+**CONTINUE?** How the game got here, from the first commit, is in
+[the dev diary](docs/diary.md). Every change is in `git log` and the
+repository's [`MEMORY.md`](MEMORY.md).

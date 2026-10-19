@@ -208,6 +208,7 @@ outcome, in Node and in the browser. Read on:
 | Understand how the game works and why | [docs/architecture.md](docs/architecture.md) |
 | Find any doc (and which one owns which fact) | [docs/README.md](docs/README.md) |
 | See what changed in each release | [CHANGELOG.md](CHANGELOG.md) |
+| Read the story of how it was built | [docs/diary.md](docs/diary.md) |
 | Grab store art or zip the game for itch | [media/README.md](media/README.md) (listing art lives in `media/`) |
 | Report a security issue | [SECURITY.md](SECURITY.md) |
 

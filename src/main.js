@@ -9,7 +9,7 @@ import { createRenderer } from "./render/renderer.js";
 import { createPixelRenderer } from "./render/pixel/renderer.js";
 import { copyPayload, isRunEnd, overlayBox, pauseHit, touchLay } from "./render/scenes.js";
 import { paintBombPad } from "./render/sprites.js";
-import { dims, drawShell, kindSize } from "./render/shellview.js";
+import { dims, drawShell, isShellScreen, kindSize } from "./render/shellview.js";
 import { menuHit, settingsHit, statsHit, graphicsHit, guideHit, levelHit, scoresHit, layout as menuLayout } from "./render/menudraw.js";
 import { setFxOpts } from "./render/fx.js";
 import { ITEMS, SCREEN, SOURCE_URL, createMenuApp } from "./app/menuapp.js";
@@ -418,7 +418,7 @@ export function createGame(canvas, opts = {}) {
      (auto-start after skip, toggles bouncing back, subscreens bouncing). */
   if (canvas) {
     let statsC = false; // a touch pointerdown carries no activation, so a touch C tap copies on its pointerup
-    canvas.addEventListener("pointerdown", (ev) => {
+    const onDown = (ev) => {
       if (app.screen === SCREEN.GAME) {
         if (world.state !== "PAUSE") return;
         input._intent.fire = false;
@@ -446,6 +446,7 @@ export function createGame(canvas, opts = {}) {
         return;
       }
       input._intent.fire = false;
+      const cv = (ev.currentTarget !== canvas && fit && fit.box()) || canvas; // a touch-portrait shell page is drawn (and so tapped) on #sh's box
       if (app.screen === SCREEN.ATTRACT) {
         app.playFromAttract();
         return;
@@ -456,34 +457,37 @@ export function createGame(canvas, opts = {}) {
            backs out and a root list (MENU, the PAUSE list) does nothing. Client px map through
            the CSS scale of the OVERLAY canvas — never #gl's Retina buffer. */
         const menu = app.screen === SCREEN.MENU, gx = app.screen === SCREEN.GRAPHICS, gd = app.screen === SCREEN.GUIDE;
-        const r = canvas.getBoundingClientRect();
-        const k = canvas.width / (r.width || canvas.width);
-        const { cw, ch } = dims(canvas, curKind);
+        const r = cv.getBoundingClientRect();
+        const k = cv.width / (r.width || cv.width);
+        const { cw, ch, lg } = dims(cv, curKind);
         const row = (menu ? menuHit : gx ? graphicsHit : gd ? guideHit : settingsHit)(
           (ev.clientX - r.left) * k,
           (ev.clientY - r.top) * k,
-          menuLayout(cw, ch),
+          menuLayout(cw, ch, lg),
           ITEMS.length,
-          touchLay(canvas),
+          touchLay(cv),
         );
         if (row < 0) return menu || row < -1 ? undefined : app.back(); // -2: on the plate, off the rows (inert)
         app[menu ? "cursor" : gx ? "gfxRow" : gd ? "guideRow" : "optRow"] = row;
         app.confirm();
       } else if (app.screen === SCREEN.LEVEL || app.screen === SCREEN.SCORES) {
         /* A chip / tab tap sets it (modes ride their 1–5 keys); LEVEL: only START starts, a locked room shows its card, the rest of the plate is inert, outside backs out. */
-        const r = canvas.getBoundingClientRect(), k = canvas.width / (r.width || canvas.width), { cw, ch } = dims(canvas, curKind), x = (ev.clientX - r.left) * k, y = (ev.clientY - r.top) * k, L = menuLayout(cw, ch);
+        const r = cv.getBoundingClientRect(), k = cv.width / (r.width || cv.width), { cw, ch } = dims(cv, curKind), x = (ev.clientX - r.left) * k, y = (ev.clientY - r.top) * k, L = menuLayout(cw, ch);
         // every chip is ONE call through the cued key path: one uiMove per change, none on the chip already set
-        if (app.screen === SCREEN.SCORES) { const i = scoresHit(x, y, L, touchLay(canvas)); return i >= 0 ? void app.move(i - app.scoreHeat, 0) : i === -1 ? app.confirm() : null; }
-        const h = levelHit(x, y, L, app.pactUnlocked, touchLay(canvas));
+        if (app.screen === SCREEN.SCORES) { const i = scoresHit(x, y, L, touchLay(cv)); return i >= 0 ? void app.move(i - app.scoreHeat, 0) : i === -1 ? app.confirm() : null; }
+        const h = levelHit(x, y, L, app.pactUnlocked, touchLay(cv));
         if (h.k === "room") app.move(h.i + 1 - app.level, 0); else if (h.k === "heat") app.move(app.heat - h.i, 1); else if (h.k === "pace") app.adjustPace(h.i - 1 - app.pace); else if (h.k === "mode") input.onUiKey("Digit" + (h.i + 1)); else if (h.k === "lock") { app.lockR = h.i + 1; app.lockT = app.subT; } else if (h.k === "back") app.back(); else if (h.k === "start") app.confirm();
       } else if (app.screen === SCREEN.STATS) {
-        const r = canvas.getBoundingClientRect(), k = canvas.width / (r.width || canvas.width), { cw, ch } = dims(canvas, curKind);
+        const r = cv.getBoundingClientRect(), k = cv.width / (r.width || cv.width), { cw, ch } = dims(cv, curKind);
         const hit = statsHit((ev.clientX - r.left) * k, (ev.clientY - r.top) * k, menuLayout(cw, ch), app.resetArm);
         if (hit === "KeyC" && ev.pointerType && ev.pointerType !== "mouse") statsC = true; else if (hit) input.onUiKey(hit); else if (app.resetArm) app.resetArm = false; else app.confirm(); // a label tap IS its key (C copies + notes)
       } else app.confirm();
-    });
-    canvas.addEventListener("pointerup", () => { if (statsC && app.screen === SCREEN.STATS) input.onUiKey("KeyC"); statsC = false; });
-    for (const t of ["pointercancel", "pointerleave"]) canvas.addEventListener(t, () => { statsC = false; }); // a cancelled C touch never copies on a later pointerup
+    };
+    for (const el of [canvas, fit && fit.sh]) if (el) {
+      el.addEventListener("pointerdown", onDown);
+      el.addEventListener("pointerup", () => { if (statsC && app.screen === SCREEN.STATS) input.onUiKey("KeyC"); statsC = false; });
+      for (const t of ["pointercancel", "pointerleave"]) el.addEventListener(t, () => { statsC = false; }); // a cancelled C touch never copies on a later pointerup
+    }
   }
   /* pad taps bubble to #stage: play from ATTRACT too (spec §4 tap-to-play). */
   {
@@ -700,7 +704,8 @@ export function createGame(canvas, opts = {}) {
     if (curKind === "3d") ro = { ...(ro || {}), bright: settings.bri / 100 };
     renderer.render(attract && demo ? demo.world : show ? show.world : world, dt, ro);
     c.restore();
-    drawShell(c, app, world, canvas, curKind, getScoresForHeat, getPlaquesFn, getCab);
+    const sh = fit && fit.shell(isShellScreen(app.screen)); // touch portrait: MENU + plated pages on #sh's own box
+    drawShell(sh ? sh.ctx : c, app, world, sh ? sh.box : canvas, curKind, getScoresForHeat, getPlaquesFn, getCab);
   }
 
   // debug/test hook (browser only; opt-in via opts.debug or ?debug=1)

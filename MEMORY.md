@@ -19,6 +19,12 @@ append an entry when it makes a non-trivial change.
 ## 2026-10-19 — Listing art gaps filled: manifest screenshots, PIXEL still, silent clips
 - Merged the promo kit (inspiring-moser) + media recapture (modest-haslett) branches, then captured on a virtual clock (performance.now stepped 2x1/60 s per frame, so 1080p is real-speed with no dropped frames) with the game's own demobot on the real Input: screenshots/wide.png (3D 1920x1080) + narrow.png (CLASSIC phone 1080x1920) in manifest `screenshots`, staged by pages.yml, NOT precached (pwa.test pins it); media/still-pixel.png (FACTORY); 18 s silent clips: landscape 16:9 3D, portrait 2:3 PIXEL (CrazyGames), 9:16 3D (Shorts). Open: manifest is precached, so CACHE_NAME/REV bump at the next release; CrazyGames covers need a title composite (owner/storefront). Capture scripts: shared notes folder.
 
+## 2026-10-19 — Shell v181: phone menus on a full-screen box, iso overflow, NO TIME YET (not pushed)
+- Owner GO from a before/after sheet (https://claude.ai/artifact/NB6JbVSgTkDueFSgvYhdfZ): touch-portrait MENU + pages draw on #sh (fit.js shellGeo, ~0.9 vs 0.63), board canvases untouched; narrow re-flows in menudraw. Iso MEDALS/STATS/SCORES fixes gated on f<1; NO TIME YET waits for TIME. npm test green, CDP verify2 129/129; scripts in git-ignored .superpowers/sdd/2026-10-19-polish2/.
+
+## 2026-10-19 — Dev diary + CHANGELOG backfill (docs only, no shell bump)
+- Owner asked for updated changelogs plus "a story of the game development, a diary of the changes". New `docs/diary.md` (dated entries 2026-08-16 → v180, lessons, explored-not-built list without lore), linked from docs/README who-owns-what (one row) and README "Go to". CHANGELOG: v180's two `### Added` merged + "v179 never deployed" line; new sections shell v31 (pushed `569bc0a`, arcade loop + v2–v31), shell v1 (Heat/Pact/rooms 6–8/offline, commits dated 09-03) and 2026-09-01 public launch; Unreleased untouched. Open: SIGNAL RUNNER/IONVEST only in the diary (never public).
+
 ## 2026-10-19 — SEO + promotion kit (docs/marketing/README.md)
 - index.html meta/JSON-LD (MODES not Pact, PIXEL, playMode enum, numberOfPlayers, no fake screenshot/rating), manifest description + categories, sitemap lastmod 2026-10-19 pinned >= newest release by a headless test, README Pact->MODES/IRON fix; kit = positioning, copy, per-platform tags, portal/community research dated 2026-10-19, launch checklist, About+topics draft. Not done: no CACHE_NAME bump (next release), manifest screenshots, PIXEL still, Search Console, every external post (owner).
 

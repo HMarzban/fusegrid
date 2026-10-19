@@ -58,11 +58,21 @@ GRAPHICS and GUIDE. A list is laid out by `listGeom` and tapped through
 like. The pause menu borrows the kit from [`scenes.js`](../src/render/scenes.js)
 instead of keeping its own look. Touch follows one rule everywhere: a tap on a
 row is Enter on it, and a tap off the rows does nothing on the main menu or
-the pause list and backs out of any other page. On a touch screen the stage is
-sized by the phone's width, so the main menu shrinks the logo and gives its
-room to the rows (`menuLogo`, one source for the logo and the list), and a
-chip tap on LEVEL SELECT or HIGH SCORES goes through the same app call as its
-arrow key, so it sounds the same.
+the pause list and backs out of any other page. A chip tap on LEVEL SELECT or
+HIGH SCORES goes through the same app call as its arrow key, so it sounds the
+same.
+
+A portrait phone sizes the board by its width, which left the menus at about
+0.63 scale in a third of the screen. So on a portrait phone the main menu and
+every menu page draw on their own canvas, `#sh`, laid over the whole viewport
+at about 0.9 scale ([`fit.js`](../src/app/fit.js) `shellGeo`). The board
+canvases never see that box: they keep their own size and position, so no
+renderer changes and the board still sits behind the menu with the logo on
+it. The box is narrower than 600, so pages re-flow there (LEVEL SELECT stacks
+its room card under the grid, MEDALS goes to one column). `fit.shell` hands
+the drawing code and the tap handler the same logical box, so a tap still
+lands where it is drawn. The intro, attract mode, play and the pause menu stay
+on the board canvas.
 
 The 3D renderer works to a fixed budget of 500 draw calls, and the tests' fully
 populated room draws 141. Anything repeated is instanced, so cost doesn't grow

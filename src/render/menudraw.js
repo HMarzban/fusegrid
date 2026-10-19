@@ -413,7 +413,8 @@ function roomCard(c, P, d, touch, A, t) {
   c.textAlign = "left";
   c.font = font(touch ? 13 : 11, "700");
   c.fillStyle = d.locked ? MUTED : d.best ? ACCENT : MUTED;
-  c.fillText(d.locked ? "LOCKED" : d.best ? "✓ BEST " + d.best : "NO TIME YET", x0, ty + th + (touch ? 14 : 12));
+  const bl = d.locked ? "LOCKED" : d.best ? "✓ BEST " + d.best : d.open ? "NO TIME YET" : ""; // the empty-time line waits for TIME (MODES open); a saved best is a real record and always shows
+  if (bl) c.fillText(bl, x0, ty + th + (touch ? 14 : 12));
   const k = d.k || 0;
   c.fillStyle = k > 0 ? ACCENT : TEXT;
   if (k > 0) {
@@ -448,7 +449,7 @@ function paintTile(c, r, label, sub, sel, o) {
     c.fillText(mark, r.x + r.w - 10, cy);
   }
   if (sub) {
-    c.font = font(p.touch ? 13 : 11, "700");
+    c.font = font(p.touch && r.w >= 220 ? 13 : 11, "700"); // a narrow-box hub tile (~185) keeps its teaser whole
     c.fillStyle = p.subCol || (sel ? TEXT : MUTED);
     if (two) {
       c.textAlign = "left";
@@ -461,7 +462,7 @@ function paintTile(c, r, label, sub, sel, o) {
 }
 /* Segmented control: one outer frame, abutting segments, the selected one
    banded and stroked in its colour. */
-function segs(c, rs, labels, on, cols, touch) {
+function segs(c, rs, labels, on, cols, touch, fs) {
   for (let i = 0; i < rs.length; i++) {
     const r = rs[i],
       s = i === on,
@@ -472,7 +473,7 @@ function segs(c, rs, labels, on, cols, touch) {
     c.lineWidth = s ? 2 : 1;
     c.strokeRect(r.x + (s ? 1 : 0.5), r.y + (s ? 1 : 0.5), r.w - (s ? 2 : 1), r.h - (s ? 2 : 1));
     c.fillStyle = s ? col : MUTED;
-    c.font = font(touch ? 14 : 11, s ? "900" : "700");
+    c.font = font(fs || (touch ? 14 : 11), s ? "900" : "700");
     c.textAlign = "center";
     c.textBaseline = "middle";
     c.fillText(labels[i], r.x + r.w / 2, r.y + r.h / 2 + 1);
@@ -496,11 +497,18 @@ function capCell(c, r, name, keyStr, touch) {
   c.fillText(keyStr, r.x + r.w / 2, r.y + r.h / 2 + 6);
 }
 
-export function layout(W, H) {
+/* lg: the touch-portrait shell box's logo line (fit.js shellGeo, the board's
+   own 0.27 in #sh units); tall marks that box (MENU's hub then hangs under the
+   logo instead of centring in the band) and narrow any box under 560 wide
+   (pages re-flow: LEVEL SELECT stacks its card under the grid, MEDALS goes to
+   one column). Neither ever holds at 600x520 or 608x352. */
+export function layout(W, H, lg) {
   return Object.freeze({
     cx: W / 2,
+    tall: H > W * 1.3,
+    narrow: W < 560,
     top: H * 0.16,
-    logoCy: H * 0.27,
+    logoCy: typeof lg === "number" ? lg : H * 0.27,
     logoScale: Math.max(0.72, Math.min(1.0, (H / 520) * 1.0)),
     itemsY: H * 0.45,
     itemH: Math.max(24, Math.min(34, Math.round(H * 0.062))),
@@ -651,7 +659,7 @@ function hubGeom(L, top) {
     body = HUB.reduce((a, b) => a + b, 0) + g * 4,
     f = Math.min(1, (bot - top - pad * 2) / body),
     h = Math.round(pad * 2 + body * f),
-    y = Math.round(top + Math.max(0, (bot - top - h) / 2)),
+    y = Math.round(L.tall ? top : top + Math.max(0, (bot - top - h) / 2)),
     iw = w - pad * 2,
     cw = (iw - g) / 2,
     cells = [];
@@ -789,7 +797,7 @@ function menuPane(c, P, row, I, kind, t) {
     a0 = c.globalAlpha;
   if (lab === "PLAY" || lab === "DAILY") {
     const d = lab === "DAILY";
-    roomCard(c, { x: P.x, y: P.y, w: P.w, h: 172 }, d ? { room: 1, heat: 0, pact: 0, title: "TODAY'S BOARD" } : { room: I.level || 1, heat: I.heat | 0, pact: I.pact | 0, best: I.best && I.best[(I.level || 1) - 1] }, false, A, t);
+    roomCard(c, { x: P.x, y: P.y, w: P.w, h: 172 }, d ? { room: 1, heat: 0, pact: 0, title: "TODAY'S BOARD" } : { room: I.level || 1, heat: I.heat | 0, pact: I.pact | 0, best: I.best && I.best[(I.level || 1) - 1], open: !!I.unlocked }, false, A, t);
     const y = P.y + 190;
     if (d) {
       const D = I.daily || {},
@@ -977,6 +985,7 @@ export function modeHelp(pact, time) {
    separate rect arrays (the headless taps read them). Keyboard: top 168,
    rows 30, hero 40, gaps 6; touch: 180 / 52 / 70. */
 export function levelGeom(L, unlocked, touch) {
+  if (L.narrow) return levelNarrow(L, !!unlocked, !!touch);
   const T = !!touch,
     U = !!unlocked,
     top = T ? 180 : 168,
@@ -1015,6 +1024,37 @@ export function levelGeom(L, unlocked, touch) {
   }
   const start = { x: S.ix - 8, y, w: S.iw + 16, h: heroH * f };
   return { S, f, grid, pane, room, heatCap, heat, paceCap, pace, modeCap, mode, help, start, capY: by + (capH * f) / 2, cap: roomCap(U) };
+}
+/* The narrow box (touch-portrait shell, < 560 wide): the same rects
+   stacked — the room grid across the plate, the ROOM CARD under it, HEAT and
+   PACE on their own rows, MODES (5 chips, cap cell kept), help, START. */
+function levelNarrow(L, U, T) {
+  const capH = T ? 18 : 14, th = T ? 70 : 56, tg = 4, cardH = T ? 172 : 150, segH = T ? 52 : 30, heroH = T ? 70 : 40, gap = 6, helpH = U ? 32 : 0, capW = 60,
+    body = capH + 2 * th + tg + gap + cardH + gap + segH + gap + segH + (U ? gap + segH + helpH : 0) + gap + heroH,
+    S = pageBox(L, 560, body, T),
+    f = S.f,
+    by = S.by,
+    tw = (S.iw - 3 * tg) / 4,
+    room = Array.from({ length: 8 }, (_, i) => ({ x: S.ix + (i % 4) * (tw + tg), y: by + capH * f + (i >> 2) * (th + tg) * f, w: tw, h: th * f })),
+    grid = { x: S.ix, y: by, w: S.iw, h: (capH + 2 * th + tg) * f };
+  let y = grid.y + grid.h + gap * f;
+  const pane = { x: S.ix, y, w: S.iw, h: cardH * f },
+    sh = segH * f,
+    row = (n, yy) => { const w = (S.iw - capW - 4 - (n - 1) * 4) / n; return Array.from({ length: n }, (_, i) => ({ x: S.ix + capW + 4 + i * (w + 4), y: yy, w, h: sh })); };
+  y += (cardH + gap) * f;
+  const heatCap = { x: S.ix, y, w: capW, h: sh }, heat = row(3, y);
+  y += (segH + gap) * f;
+  const paceCap = { x: S.ix, y, w: capW, h: sh }, pace = row(3, y);
+  y += (segH + gap) * f;
+  let mode = [], modeCap = null, help = null;
+  if (U) {
+    modeCap = { x: S.ix, y, w: capW, h: sh };
+    mode = row(5, y);
+    help = { x: S.ix, y: y + sh, w: S.iw, h: helpH * f };
+    y += (segH + helpH + gap) * f;
+  }
+  const start = { x: S.ix - 8, y, w: S.iw + 16, h: heroH * f };
+  return { S, f, grid, pane, room, heatCap, heat, paceCap, pace, modeCap, mode, help, start, capY: by + (capH * f) / 2, cap: roomCap(U), narrow: true };
 }
 /* A tap on LEVEL SELECT: {k:"room"|"heat"|"pace"|"mode", i}, {k:"lock", i}
    on a locked room (main shows its card, never sets app.level), {k:"start"}
@@ -1093,7 +1133,7 @@ export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked, pace, timeAt
   }
   const peek = I.lockR && typeof I.lockT === "number" && t - I.lockT >= 0 && t - I.lockT < 1.8 ? I.lockR : 0,
     hk = typeof I.heatT === "number" && t - I.heatT >= 0 ? 1 - clamp01((t - I.heatT) / 0.45) : 0;
-  roomCard(c, G.pane, peek ? { room: peek, heat: h, pact: mask, locked: true } : { room: sel, heat: h, pact: mask, best: best[sel - 1], k: hk }, T, A, t);
+  roomCard(c, G.pane, peek ? { room: peek, heat: h, pact: mask, locked: true } : { room: sel, heat: h, pact: mask, best: best[sel - 1], k: hk, open: U }, T, A, t);
   capCell(c, G.heatCap, "HEAT", "↑↓", T);
   segs(c, G.heat, HEAT_NAME, h, HEAT_COL.map((x, i) => (i ? x : TEXT)), T);
   capCell(c, G.paceCap, "PACE", "[ ]", T);
@@ -1103,12 +1143,18 @@ export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked, pace, timeAt
     for (let i = 0; i < 5; i++) {
       const r = G.mode[i],
         on = i < 4 ? (mask & MODE_BIT[i]) !== 0 : !!timeAttack;
-      segs(c, [r], [i + 1 + " " + (i < 4 ? MODE_NAME[i] : "TIME")], on ? 0 : -1, [i < 4 ? PACT_COL[i] : TIME_COL], T);
+      segs(c, [r], [(G.narrow && T ? "" : i + 1 + " ") + (i < 4 ? MODE_NAME[i] : "TIME")], on ? 0 : -1, [i < 4 ? PACT_COL[i] : TIME_COL], T, G.narrow ? 12 : 0); // a narrow touch chip drops the key digit
     }
     c.textAlign = "center";
     c.fillStyle = MUTED;
-    c.font = font(T ? 13 : 10, "700");
-    c.fillText(clip(c, modeHelp(mask, timeAttack), S.iw), S.mid, G.help.y + G.help.h / 2 + 1);
+    if (G.narrow) {
+      c.font = font(11, "700");
+      const hl = wrap(c, modeHelp(mask, timeAttack), S.iw, 2);
+      hl.forEach((l, i) => c.fillText(l, S.mid, G.help.y + G.help.h / 2 + 1 + (i - (hl.length - 1) / 2) * 13));
+    } else {
+      c.font = font(T ? 13 : 10, "700");
+      c.fillText(clip(c, modeHelp(mask, timeAttack), S.iw), S.mid, G.help.y + G.help.h / 2 + 1);
+    }
   }
   const st = G.start,
     tag = BIOMES[sel - 1].name + " · " + HEAT_NAME[h] + " · " + PACE_NAME[p + 1] + (mask ? " · " + MODE_NAME.filter((_, i) => mask & MODE_BIT[i]).join("+") : "") + (U && timeAttack ? " · TIME" : "");
@@ -1137,13 +1183,15 @@ export function drawHowTo(c, L, t, kind, touch) {
     rule = T ? 44 : 34,
     rh = T ? 52 : 40,
     note = T ? 20 : 16,
-    S = pageBox(L, 520, rule + 8 + 3 * rh + 6 + note, T),
+    nr = L.narrow ? 2 : 1, // the narrow box stacks the two rules
+    rules = nr * rule + (nr - 1) * 6,
+    S = pageBox(L, 520, rules + 8 + 3 * rh + 6 + note, T),
     f = S.f;
   boxPlate(c, S);
   head(c, S, "HOW TO PLAY", "TWO RULES · SIX CONTROLS");
-  const rw = (S.iw - 8) / 2;
+  const rw = nr === 2 ? S.iw : (S.iw - 8) / 2;
   ["CLEAR EVERY ENEMY", "GOLD WALL NEVER BREAKS"].forEach((s, i) => {
-    const r = { x: S.ix + i * (rw + 8), y: S.by, w: rw, h: rule * f };
+    const r = nr === 2 ? { x: S.ix, y: S.by + i * (rule + 6) * f, w: rw, h: rule * f } : { x: S.ix + i * (rw + 8), y: S.by, w: rw, h: rule * f };
     cell(c, r, 0.5);
     c.fillStyle = i ? "#ffd447" : ACCENT;
     c.fillRect(r.x, r.y, 3, r.h);
@@ -1152,7 +1200,7 @@ export function drawHowTo(c, L, t, kind, touch) {
     c.font = sans(T ? 15 : 13, "800");
     c.fillText(s, r.x + r.w / 2, r.y + r.h / 2);
   });
-  const y0 = S.by + (rule + 8) * f,
+  const y0 = S.by + (rules + 8) * f,
     cw = (S.iw - 8) / 2,
     ws = T ? 26 : 22,
     A = pxArt(kind);
@@ -1232,11 +1280,12 @@ export function drawItemsHelp(c, L, t, kind, touch) {
 export function drawEnemiesHelp(c, L, t, kind, touch) {
   const T = !!touch,
     n = FOES.length,
-    rows = Math.ceil(n / 3),
+    nc = L.narrow ? 2 : 3, // the narrow box: two columns, so names and help read whole
+    rows = Math.ceil(n / nc),
     rh = T ? 86 : 64,
     S = pageBox(L, 560, rows * rh + (rows - 1) * 6, T),
     f = S.f,
-    cw = (S.iw - 12) / 3,
+    cw = (S.iw - 6 * (nc - 1)) / nc,
     ws = T ? 34 : 32,
     A = pxArt(kind),
     ps = A ? pageScale(FOES.map((e) => foeCell(A, e.t)), ws + SLOT_PAD) : 1;
@@ -1244,7 +1293,7 @@ export function drawEnemiesHelp(c, L, t, kind, touch) {
   head(c, S, "ENEMIES", "FIELD GUIDE · " + n + " FOES");
   for (let i = 0; i < n; i++) {
     const e = FOES[i],
-      r = { x: S.ix + (i % 3) * (cw + 6), y: S.by + Math.floor(i / 3) * (rh + 6) * f, w: cw, h: rh * f },
+      r = { x: S.ix + (i % nc) * (cw + 6), y: S.by + Math.floor(i / nc) * (rh + 6) * f, w: cw, h: rh * f },
       tx = r.x + ws + 16,
       tw = r.x + r.w - 6 - tx;
     cell(c, r);
@@ -1370,7 +1419,7 @@ export function scoresGeom(L, touch) {
     rh = T ? 26 : 22,
     S = pageBox(L, 480, tabH + 6 + 18 + 8 + 11 * rh, T),
     f = S.f,
-    tw = T ? 130 : 100,
+    tw = Math.min(T ? 130 : 100, S.iw / 3),
     tabs = [0, 1, 2].map((i) => ({ x: S.mid - (3 * tw) / 2 + i * tw, y: S.by, w: tw, h: tabH * f }));
   return { S, f, tabs, chipY: S.by + (tabH + 6) * f, bodyTop: S.by + (tabH + 6 + 18 + 8) * f, rh: rh * f, T };
 }
@@ -1391,6 +1440,7 @@ export function drawScores(c, scores, L, t, heat, plaques, touch) {
   head(c, S, "HIGH SCORES", "BEST RUNS");
   segs(c, g.tabs, HEAT_NAME, h, HEAT_COL.map((x, i) => (i ? x : TEXT)), T);
   const pmask = plaques | 0,
+    chH = g.f < 1 ? Math.max(12, Math.floor((18 + 8) * g.f) - 4) : 18, // iso: the chip never reaches bodyTop
     chipW = 74,
     chipX0 = S.mid - (4 * chipW + 24) / 2;
   for (let i = 0; i < 4; i++) {
@@ -1398,16 +1448,16 @@ export function drawScores(c, scores, L, t, heat, plaques, touch) {
       on = (pmask & (1 << i)) !== 0;
     if (on) {
       c.fillStyle = "rgba(55,240,208,0.14)";
-      c.fillRect(x, g.chipY, chipW, 18);
+      c.fillRect(x, g.chipY, chipW, chH);
     }
     c.strokeStyle = on ? ACCENT : EDGE; // locked plaques stay legible: muted, never faded out
     c.lineWidth = 1;
-    c.strokeRect(x + 0.5, g.chipY + 0.5, chipW - 1, 17);
+    c.strokeRect(x + 0.5, g.chipY + 0.5, chipW - 1, chH - 1);
     c.fillStyle = on ? ACCENT : MUTED;
     c.font = font(9, on ? "900" : "");
     c.textAlign = "center";
     c.textBaseline = "middle";
-    c.fillText(PLAQUE_NAME[i], x + chipW / 2, g.chipY + 10);
+    c.fillText(PLAQUE_NAME[i], x + chipW / 2, g.chipY + chH / 2 + 1);
   }
   const list = Array.isArray(scores) ? scores : [],
     nShow = Math.min(10, list.length),
@@ -1479,7 +1529,7 @@ const RESET_NOTES = Object.freeze([
    plate is pinned to the keyboard band floor so the foot tap band (statsHit)
    stays 464-492 at 600x520. A C copy note takes the kicker's slot. */
 export function statsGeom(L) {
-  return { S: pageBox(L, 480, 4 * 46 + 3 * 6 + 8 + 14 + 46 + 8 + 28, false, { bottom: true }) };
+  return { S: pageBox(L, 480, 4 * 46 + 3 * 6 + 8 + 14 + 46 + 8 + 28, false, { bottom: !L.tall }) }; // the tall shell box centres it like every page
 }
 /* STATS foot taps (T1): token zones over the one painted foot string at the
    0.6 em mono advance, half a separator wide each side. */
@@ -1500,6 +1550,7 @@ export function statsHit(x, y, L, arm) {
 export function drawStats(c, L, t, ui, arm, toast) {
   const S = statsGeom(L).S,
     f = S.f,
+    sq = f < 1, // the iso 608x352 guard: a 28px tile takes a smaller value + label pair
     tn = toast && toast.s,
     rows = (ui && ui.rows) || [],
     tro = (ui && ui.trophies) || [],
@@ -1521,11 +1572,11 @@ export function drawStats(c, L, t, ui, arm, toast) {
     cell(c, r, 0.55);
     c.textAlign = "left";
     c.fillStyle = i === 7 ? ACCENT : TEXT;
-    c.font = font(18, "900");
-    c.fillText(String(v[1]), r.x + 12, r.y + r.h / 2 - 6);
+    c.font = font(sq ? 14 : 18, "900");
+    c.fillText(String(v[1]), r.x + 12, r.y + r.h / 2 - (sq ? 5 : 6));
     c.fillStyle = MUTED;
-    c.font = font(10, "700");
-    c.fillText(String(v[0]), r.x + 12, r.y + r.h / 2 + 12);
+    c.font = font(sq ? 9 : 10, "700");
+    c.fillText(String(v[0]), r.x + 12, r.y + r.h / 2 + (sq ? 8 : 12));
   }
   let y = S.by + (4 * 46 + 3 * 6 + 8) * f;
   c.fillStyle = MUTED;
@@ -1540,12 +1591,12 @@ export function drawStats(c, L, t, ui, arm, toast) {
     c.fillStyle = i ? HEAT_COL[i] : TEXT;
     c.fillRect(r.x, r.y, 3, r.h);
     c.textAlign = "left";
-    c.font = font(15, "900");
+    c.font = font(sq ? 13 : 15, "900");
     c.fillStyle = TEXT;
-    c.fillText(clip(c, String(v[1]), r.w - 20), r.x + 12, r.y + r.h / 2 - 6);
+    c.fillText(clip(c, String(v[1]), r.w - 20), r.x + 12, r.y + r.h / 2 - (sq ? 5 : 6));
     c.fillStyle = i ? HEAT_COL[i] : MUTED;
-    c.font = font(10, "700");
-    c.fillText(String(v[0]), r.x + 12, r.y + r.h / 2 + 12);
+    c.font = font(sq ? 9 : 10, "700");
+    c.fillText(String(v[0]), r.x + 12, r.y + r.h / 2 + (sq ? 8 : 12));
   }
   c.fillStyle = arm ? RESET_RED : MUTED;
   c.font = font(10);
@@ -1561,10 +1612,12 @@ export function drawStats(c, L, t, ui, arm, toast) {
    missing list paints eight name-free placeholders. n/8 is a head bar. */
 export function drawTrophies(c, L, t, rows) {
   const r0 = rows || [],
-    S = pageBox(L, 552, 4 * 60 + 3 * 6, false),
+    nc = L.narrow ? 1 : 2, // the narrow box: one column, so every goal reads whole
+    nr = 8 / nc,
+    S = pageBox(L, 552, nr * 60 + (nr - 1) * 6, false),
     f = S.f,
     n = r0.filter((x) => x && x[2]).length,
-    tw = (S.iw - 8) / 2;
+    tw = (S.iw - 8 * (nc - 1)) / nc;
   boxPlate(c, S);
   head(c, S, "MEDALS", n + "/8");
   c.fillStyle = LINE;
@@ -1573,7 +1626,7 @@ export function drawTrophies(c, L, t, rows) {
   c.fillRect(S.mid - 80, S.y + 48, (160 * n) / 8, 3);
   for (let i = 0; i < 8; i++) {
     const [name, desc, on] = r0[i] || ["—", "", false],
-      r = { x: S.ix + (i % 2) * (tw + 8), y: S.by + 4 + (i >> 1) * (60 + 6) * f, w: tw, h: 60 * f },
+      r = { x: S.ix + (i % nc) * (tw + 8), y: S.by + 4 + Math.floor(i / nc) * (60 + 6) * f, w: tw, h: 60 * f },
       dx = r.x + 22,
       cy = r.y + r.h / 2;
     cell(c, r, 0.55);
@@ -1597,12 +1650,13 @@ export function drawTrophies(c, L, t, rows) {
     }
     c.textAlign = "left";
     c.textBaseline = "middle";
+    const sq = f < 1; // the iso 608x352 guard: a 44px tile packs name + two goal lines inside it
     c.fillStyle = on ? TEXT : "#b6c2dc";
     c.font = sans(13, "800");
-    c.fillText(String(name), r.x + 42, r.y + 15);
+    c.fillText(String(name), r.x + 42, sq ? cy - 13 : r.y + 15);
     c.fillStyle = MUTED;
     c.font = font(10, "700");
-    wrap(c, String(desc), r.w - 52, 2).forEach((l, j) => c.fillText(l, r.x + 42, r.y + 32 + j * 12));
+    wrap(c, String(desc), r.w - 52, 2).forEach((l, j) => c.fillText(l, r.x + 42, sq ? cy + 1 + j * 11 : r.y + 32 + j * 12));
   }
   foot(c, S, "ENTER / ESC BACK TO STATS");
 }
@@ -1736,7 +1790,7 @@ export function drawGraphics(c, L, t, ui) {
   c.textAlign = "center";
   c.textBaseline = "middle";
   c.fillStyle = MUTED;
-  c.font = font(big ? 11 : 10);
+  c.font = font(big && !L.narrow ? 11 : 10);
   c.fillText(clip(c, h.help1 || "", S.iw), S.mid, g.noteY + 6);
   c.fillStyle = TEXT;
   c.fillText(clip(c, h.help2 || "", S.iw), S.mid, g.noteY + 20);

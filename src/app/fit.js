@@ -35,7 +35,24 @@
    board size; at c >= dpr data-bw / data-bh are exactly the snapped values.
    A devicePixelRatio change with no resize (a window dragged between
    monitors) re-fits through a one-shot matchMedia resolution query, re-armed
-   at the new ratio. */
+   at the new ratio.
+   Shell box (touch portrait only): the menus are width-bound at the board's
+   600 too, so a 393 px phone shows them at ~0.63 in a third of the screen.
+   shellGeo gives MENU and the plated pages their own logical box on #sh, a
+   fixed overlay canvas over the whole viewport: its scale is the one that
+   fits a PORT_SHELL.w-clamped width into the stage's width (~0.9 on a phone,
+   so every size grows ~1.4x; a tablet keeps 600 and only grows taller) and
+   the box is the viewport at that scale (never under 520 tall, else no shell
+   box). logo is the board's own logo line (0.27 of the centred stage) in box
+   units, so MENU's logo still sits on the board behind it. The board
+   canvases never see it:
+   #c / #gl / #px keep the board box and their own fit. #sh's backing is the
+   box at device density (q = s x dpr, cap 3, smoothing off for the PIXEL
+   cells) under a q transform, so its text is crisp where #c's is upscaled.
+   fit.shell(on) shows #sh, clears it and hands back {ctx, box}; box is the
+   logical canvas stand-in ({width, height} = the box, its rect and document)
+   that drawShell and the tap map both measure, so a tap lands where it is
+   drawn. Off (or no shell box) hides #sh and returns null. */
 import { hasTouch } from "../touch.js";
 
 export const FIT_RES = Object.freeze({ d: [40, 48], p: [16, 250], l: [332, 16] });
@@ -59,6 +76,14 @@ export function portraitGeo(W, H, cw, ch, game) {
   const pad = Math.floor(Math.max(G.pad[0], Math.min(game ? PORT_GAME.pad : G.pad[1], band - G.edge - G.gap, roomW)));
   const bomb = Math.round(pad * 9 / 16), padTop = Math.max(G.gap, Math.floor(band - G.edge - pad));
   return { top, pad, bomb, padTop, bombTop: padTop + Math.round((pad - bomb) / 2) };
+}
+
+export const PORT_SHELL = Object.freeze({ s: 0.9, w: [400, 600], logo: 0.27 });
+
+export function shellGeo(W, H, cw = 600, ch = 520) {
+  const P = PORT_SHELL, aw = W - FIT_RES.p[0], s = Math.min(1.8, aw / Math.round(Math.max(P.w[0], Math.min(P.w[1], aw / P.s)))), w = Math.floor(W / s), h = Math.floor(H / s);
+  const b = fitBox(W, H, true, cw, ch).s, top = portraitGeo(W, H, cw, ch, false).top;
+  return h < 520 ? null : { w, h, s, left: 0, top: 0, logo: (top + 1 + P.logo * ch * b) / s };
 }
 
 export const ACT_GEO = Object.freeze({ max: 52, min: 44, gap: 8, pill: 44 });
@@ -128,7 +153,8 @@ function snapPxOrigin(el) {
 }
 
 export function mountFit(canvas) {
-  let was, cap = Infinity;
+  let was, cap = Infinity, shG = null;
+  const shEl = () => (typeof document !== "undefined" && document.getElementById && document.getElementById("sh")) || null;
   const fit = () => {
     if (typeof window === "undefined") return;
     const { lay, s } = fitBox(window.innerWidth, window.innerHeight, hasTouch(window), canvas.width, canvas.height);
@@ -145,6 +171,14 @@ export function mountFit(canvas) {
     was = game;
     if (body) {
       body.setAttribute("data-lay", lay);
+      const sh = shEl();
+      shG = lay === "p" && sh ? shellGeo(window.innerWidth, window.innerHeight, canvas.width, canvas.height) : null;
+      if (shG) {
+        const q = Math.min(3, shG.s * ((typeof devicePixelRatio !== "undefined" && devicePixelRatio) || 1)), bw = Math.round(shG.w * q), bh = Math.round(shG.h * q);
+        if (sh.width !== bw) sh.width = bw;
+        if (sh.height !== bh) sh.height = bh;
+        for (const [k, v] of [["left", shG.left], ["top", shG.top], ["width", shG.w * shG.s], ["height", shG.h * shG.s]]) sh.style[k] = v + "px";
+      } else if (sh && !sh.hidden) sh.hidden = true;
       if (lay === "p" && body.style && body.style.setProperty) {
         const g = portraitGeo(window.innerWidth, window.innerHeight, canvas.width, canvas.height, game);
         body.style.setProperty("--sd", flip ? PORT_GAME.sd : "0s");
@@ -153,6 +187,20 @@ export function mountFit(canvas) {
       }
     }
     if (px && px.style) fitPx(px, canvas.width * s, canvas.height * s, cap);
+  };
+  fit.sh = shEl();
+  fit.box = () => { const sh = shG && shEl(); return sh && !sh.hidden ? { width: shG.w, height: shG.h, logo: shG.logo, ownerDocument: sh.ownerDocument, getBoundingClientRect: () => sh.getBoundingClientRect() } : null; };
+  fit.shell = (on) => {
+    const sh = shG && shEl();
+    if (!sh) return null;
+    if (!on) { if (!sh.hidden) sh.hidden = true; return null; }
+    if (sh.hidden) sh.hidden = false;
+    const ctx = sh.getContext("2d");
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, sh.width, sh.height);
+    ctx.setTransform(sh.width / shG.w, 0, 0, sh.height / shG.h, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    return { ctx, box: fit.box(), el: sh };
   };
   fit.setPxCap = (c) => { const v = c > 0 ? c : Infinity; if (v !== cap) { cap = v; fit(); } };
   fit();
