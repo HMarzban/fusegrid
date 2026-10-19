@@ -96,22 +96,22 @@ On LEVEL SELECT, `←/→` picks the room, `↑/↓` picks Heat and `[`/`]` pick
 | **PLUS** | Harder spawns and a tighter fuse |
 | **MAX** | Highest pressure |
 
-The attract demo always runs CORE with Pact off, whatever you picked last.
+The attract demo always runs CORE with every MODE off, whatever you picked last.
 
-### Seal a Pact *(after your first FUSE/GRID CLEAR)*
+### Stack the MODES *(after your first FUSE/GRID CLEAR)*
 
-Clear room 5 once and LEVEL SELECT also offers four optional **Pact** toggles,
+Clear room 5 once and LEVEL SELECT also offers four optional **MODES**,
 each a voluntary handicap:
 
-| Key | Pact | Rule |
+| Key | Mode | Rule |
 |---|---|---|
-| `1` | LAST | Start with one life |
+| `1` | IRON | Start with one life |
 | `2` | BARE | No walkable floor cubes |
 | `3` | THIN | One fewer buried cube under breakables |
 | `4` | SHRINK | Arena walls close inward over time |
 
-`5` adds **TIME ATTACK**: a play-only stopwatch with a per-room best. A CORE run
-with every Pact off is bit-identical to baseline v6.
+`5` adds **TIME**: a play-only stopwatch with a per-room best. A CORE run
+with every MODE off is bit-identical to baseline v6.
 
 ### Score
 
@@ -148,10 +148,10 @@ CORE ×1, PLUS ×2, MAX ×3.
 - **DAILY.** One board a day, seeded from the date. Your tries and your best
   for the day stay on this device. Nobody is ranked; it's you against you.
 - **Challenge code.** On the end screen, `B` copies a twelve-character board
-  code (seed, Heat, Pact, pace, never a score). Open
+  code (seed, Heat, MODES, pace, never a score). Open
   `…/fusegrid/?code=XXXXXXXXXXXX` to play that same board.
 - **Ghost.** Clear a room faster than ever and replaying that exact board
-  (same seed, room, Heat, Pact, pace) races a translucent copy of your best
+  (same seed, room, Heat, MODES, pace) races a translucent copy of your best
   route, in every look.
 - **STATS.** Lifetime runs, rooms, deaths, kills, pickups, play time, DAYS
   PLAYED and your CORE / PLUS / MAX bests. `C` (or a tap on `C COPY MY STATS`)
@@ -208,6 +208,7 @@ outcome, in Node and in the browser. Read on:
 | Understand how the game works and why | [docs/architecture.md](docs/architecture.md) |
 | Find any doc (and which one owns which fact) | [docs/README.md](docs/README.md) |
 | See what changed in each release | [CHANGELOG.md](CHANGELOG.md) |
+| Read the story of how it was built | [docs/diary.md](docs/diary.md) |
 | Grab store art or zip the game for itch | [media/README.md](media/README.md) (listing art lives in `media/`) |
 | Report a security issue | [SECURITY.md](SECURITY.md) |
 

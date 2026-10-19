@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FUSE/GRID — play the bomb-grid arcade in the browser</title>
-<meta name="description" content="Play Fusegrid in the browser — a single-player bomb-grid arcade. Flip REAL 3D ⇄ CLASSIC 2D. Heat CORE / PLUS / MAX. Pact and rooms 6–8 after CLEAR.">
+<meta name="description" content="Play Fusegrid free in the browser — a single-player bomb-grid arcade. Flip REAL 3D ⇄ CLASSIC 2D or PIXEL, dial the Heat to CORE / PLUS / MAX. Eight rooms, no install.">
 <meta name="author" content="Hossein Marzban">
 <meta name="theme-color" content="#070a12">
 <meta name="mobile-web-app-capable" content="yes">
@@ -33,7 +33,7 @@
 <meta name="twitter:image" content="https://hmarzban.github.io/fusegrid/og.png">
 <meta name="twitter:image:alt" content="FUSE/GRID wordmark beside the real LEVEL SELECT screen — eight room tiles, the JUNGLE room card and its HEAT and PACE picks — with CLASSIC 2D · PIXEL · REAL 3D, CORE / PLUS / MAX heat chips and a PLAY IN THE BROWSER button.">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":["VideoGame","WebApplication"],"name":"Fusegrid","alternateName":"FUSE/GRID","url":"https://hmarzban.github.io/fusegrid/","sameAs":"https://github.com/HMarzban/fusegrid","description":"Play Fusegrid in the browser — a single-player bomb-grid arcade. Flip REAL 3D ⇄ CLASSIC 2D. Heat CORE / PLUS / MAX. Pact and rooms 6–8 after the first CLEAR.","genre":["Arcade","Action"],"playMode":"SinglePlayer","applicationCategory":"GameApplication","operatingSystem":"Web Browser","gamePlatform":"Web Browser","inLanguage":"en","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"image":"https://hmarzban.github.io/fusegrid/og.png","screenshot":"https://hmarzban.github.io/fusegrid/og.png","author":{"@type":"Person","name":"Hossein Marzban","url":"https://github.com/HMarzban"}}
+{"@context":"https://schema.org","@type":["VideoGame","WebApplication"],"name":"Fusegrid","alternateName":"FUSE/GRID","url":"https://hmarzban.github.io/fusegrid/","sameAs":"https://github.com/HMarzban/fusegrid","description":"Play Fusegrid free in the browser — a single-player bomb-grid arcade. Flip REAL 3D ⇄ CLASSIC 2D or PIXEL. Heat CORE / PLUS / MAX. Rooms 6–8 and MODES open after the first CLEAR.","genre":["Arcade","Action"],"playMode":"https://schema.org/SinglePlayer","numberOfPlayers":{"@type":"QuantitativeValue","minValue":1,"maxValue":1},"applicationCategory":"GameApplication","operatingSystem":"Web Browser","gamePlatform":"Web Browser","browserRequirements":"Requires JavaScript. REAL 3D needs WebGL.","inLanguage":"en","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"image":"https://hmarzban.github.io/fusegrid/og.png","license":"https://opensource.org/licenses/MIT","author":{"@type":"Person","name":"Hossein Marzban","url":"https://github.com/HMarzban"}}
 </script>
 <style>
   :root{
@@ -55,6 +55,10 @@
   #px{position:absolute;inset:0;width:100%;height:100%;z-index:0;image-rendering:auto}
   #px[hidden]{display:none}
   #c{position:relative;z-index:1}
+  /* touch portrait shell box (fit.js shellGeo): MENU and the plated pages draw
+     on #sh, a fixed overlay over the viewport slack; the board stays on #c. */
+  #sh{position:fixed;z-index:6;border:0;border-radius:0;box-shadow:none;image-rendering:auto}
+  #sh[hidden]{display:none}
   canvas{image-rendering:pixelated;display:block;border-radius:10px;
     border:1px solid var(--line);box-shadow:0 12px 48px rgba(0,0,0,.6),0 0 0 4px #0a0e18;
     touch-action:none}
@@ -152,7 +156,7 @@
 </head>
 <body>
 <h1 class="sr-only">Fusegrid — bomb-grid arcade you play in the browser</h1>
-<p class="sr-only">Single-player bomb-grid arcade. Flip REAL 3D and classic 2D. Heat CORE, PLUS, and MAX. Eight rooms. Free — no account.</p>
+<p class="sr-only">Single-player bomb-grid arcade. Flip REAL 3D, classic 2D and PIXEL. Heat CORE, PLUS, and MAX. Eight rooms, eight chiptune themes, a DAILY board. Free — no install, no account, plays offline.</p>
 <noscript><p>Play Fusegrid in the browser — a single-player bomb-grid arcade. JavaScript is required.</p></noscript>
 <div id="wrap">
   <div id="stage"><canvas id="gl" hidden></canvas><canvas id="px" hidden></canvas><canvas id="c" aria-label="Fusegrid game board"></canvas>
@@ -165,6 +169,7 @@
     </div>
   </div>
 </div>
+<canvas id="sh" hidden aria-label="Fusegrid menu"></canvas>
 
 <!-- Entry point. Single browser thread: input → sim → render.
      The authoritative sim lives in src/core/sim.js (Node-testable, no DOM).

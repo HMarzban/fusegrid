@@ -2,14 +2,14 @@
   "id": "./",
   "name": "Fusegrid",
   "short_name": "FUSE/GRID",
-  "description": "Play Fusegrid in the browser. Single-player bomb-grid arcade. REAL 3D or classic 2D. Offline after the first visit.",
+  "description": "Play Fusegrid in the browser. Single-player bomb-grid arcade: flip REAL 3D, CLASSIC 2D or PIXEL, dial the Heat to CORE, PLUS or MAX. Offline after the first visit.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#070a12",
   "theme_color": "#070a12",
   "lang": "en",
-  "categories": ["games"],
+  "categories": ["games", "entertainment"],
   "icons": [
     {
       "src": "./icon-192.png",
@@ -28,6 +28,22 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "./screenshots/wide.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "REAL 3D: MAKO beside a live blast in the JUNGLE room"
+    },
+    {
+      "src": "./screenshots/narrow.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "CLASSIC 2D on a phone: the board above the touch pad and bomb button"
     }
   ]
 }

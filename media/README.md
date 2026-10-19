@@ -6,49 +6,113 @@
 This page owns the listing art, the itch blurb and the upload zip. Everything
 else about the game lives in the [docs map](../docs/README.md).
 
-> ⚠️ **Due for a recapture.** These captures date from 2026-09-06.
-> `still-menu.png` shows the old six-row MENU (DAILY and STATS arrived in
-> shell v143), the REAL 3D shots use the camera from before shell v163, and no
-> asset shows PIXEL (shell v178) yet. They're still real captures of the game
-> as it was then.
-> Adding PIXEL to the listing is a storefront change, so it gets its own pass
-> rather than a drive-by.
+> **PIXEL has a still and a clip now, but no listing slot yet.**
+> `still-pixel.png` and `clip-portrait-2x3.mp4` show the PIXEL look.
+> `og.png` names all three looks since 2026-10-19 (owner pick C, below).
+> Putting PIXEL on the cover, the blurb or the tags is a storefront change,
+> so it waits for the owner.
 
 Everything in this folder is a **real capture** from the live game (loopback
-`node serve.js`, service worker unregistered and caches cleared first, then a
-hard reload) — nothing here is generated key art. Not part of the shipped
-app: `media/` is never staged for GitHub Pages and never added to the PWA
-precache (`src/pwa/shell.js` / `sw.js`).
+`PORT=0 node serve.js`, service worker unregistered and caches cleared first,
+then a hard reload) — nothing here is generated key art. Not part of the
+shipped app: `media/` is never staged for GitHub Pages and never added to the
+PWA precache (`src/pwa/shell.js` / `sw.js`).
 
 "Real capture" means every pixel is the shipped renderer drawing the shipped
-meshes/sprites — it does not mean untouched natural play. RAF is paused while
-the capture tab is backgrounded, so every shot here is driven by hand through
-`window.__GAME__` (the `?debug=1` hook): forcing a render after `step(n)`,
-and, where noted below, staging world state directly (moving the player,
-planting a bomb with a shortened fuse, carving a brick corridor, relocating
-enemies) so the moment on screen is reachable in one script instead of
-minutes of RNG-dependent natural play. Each row below says which of those it
-used.
+meshes/sprites — it does not mean untouched natural play. Each row below says
+which moments were staged through `window.__GAME__` (the `?debug=1` hook) or
+by writing world state directly, so a shot is reachable in one script instead
+of minutes of RNG-dependent play.
 
-Last recaptured **2026-09-06**, after MAKO (the reef-critter mascot, spec
-§2.7) replaced every prior humanoid hero — SIGNAL RUNNER and IONVEST are both
-superseded, and 2D and 3D once again share one character (`PLAYER_HULL` ===
-`PLAYER_SUIT` === `#c39cff`). The 2026-09-05 pass is still the last time
-menu/GUIDE chrome changed (P1–P4 pickups, S1–S3 OPTIONS/pause/chrome-removal,
-R2 folding HOW TO PLAY / ITEMS / ENEMIES under GUIDE); this pass only
-recaptures pixels to swap the hero, and did not touch layout. Every still
-below shows MAKO, not the earlier gunmetal-hulled hero.
+The first pass ran **2026-10-19** on shell v178 (precache `fusegrid-shell-v178`)
+and covers the cover, the three 3D stills and the GIF. Shells v179–v181
+changed only the menus and the PAUSE / WIN / LOSE overlays, never the board
+or the HUD, so those shots are current. `still-menu.png` was recaptured on
+v181 (its row below says how). The board shots show the live REAL 3D rig: the STANDARD
+preset (`dist` 1503) through the `CAM_FOV` 24 lens, both read from
+`camrig.js` in the page at capture time, never orbited or dollied, with the
+near-wall cutaway. MAKO is the hero in every shot.
+
+**How every capture ran.** Each asset got its own session (the three 3D
+stills share one): its own
+`PORT=0 node serve.js` and its own Playwright `chrome-headless-shell` on
+ANGLE Metal (real GPU, not SwiftShader) with a fresh `--user-data-dir`,
+driven over CDP with the `tools/pixel/shot.mjs` helpers. Both were stopped
+by PID afterwards. The page loaded once. Then every
+service worker was unregistered (one was registered each time), every cache
+deleted (`fusegrid-shell-v178`), localStorage cleared,
+`Network.setBypassServiceWorker` turned on so the re-registered `sw.js`
+served nothing, and the page hard-reloaded with `ignoreCache`. The viewport
+is 640×568 at DPR 2, so the stage fits at scale 1: 600×520 CSS, `#gl`
+backing 1200×1040 with `dpr3d` 2. The stills session read `dpr3d` 2 with
+the governor at 2, and a verification run on the same harness (capture
+stylesheet on, rooms 1 and 8) measured `#gl` at 1200×1040 behind a 600×520
+stage, so no 3D shot is upscaled. A MessageChannel rAF shim keeps the
+real game loop running in real time while headless. A capture-only
+stylesheet strips the canvas border, radius and drop shadow (page chrome,
+not game pixels) so shots run edge to edge. 3D shots come from
+`Page.captureScreenshot` clipped to the stage, which composites `#gl` under
+the `#c` HUD overlay exactly as the page shows them. (An in-page
+`drawImage(#gl)` readback is unsafe since v178: render-on-change can skip
+the raster on a still board.) For the 3D sessions `nb.coach.v1` was seeded
+as seen, so the first-room ghost-coach panel doesn't cover the board. No
+coach v2 tip fired in any shot. Every session logged 0 console errors and 0
+exceptions.
 
 ## 🖼️ Assets
 
 | File | Use | Provenance |
 |---|---|---|
-| `cover-630x500.png` | itch.io game cover (630×500) | Dedicated live capture (not a crop of `og.png`, whose 1200-wide hero has no 630×500 crop that clears its own text without cutting it): real 3D (`?render=3d&debug=1`), JUNGLE room 1. Staged, not natural play: the player was retreated to a diagonal tile clear of the blast arms and a bomb object pushed directly onto `w.bombs` with an already-expired timer so the detonation is reachable in a single `step()` call instead of the real 2.5s fuse; `p.iFrames` forced to 0 each render so spawn/hit invulnerability never blinks the hero out. Caught the instant the blast opens a BRICK. `#gl` + `#c` composited onto an offscreen canvas at native 2×-DPR resolution (1200×1040), then downscaled-only (0.525×, no upscale) to a 630×546 letterbox and cropped to 630×500 (23px trimmed off top and bottom evenly). No HUD chips (the debug hook's render call omits `{hud:true}`), so there is no text at all — nothing to cut off. Shows MAKO (violet body, teal ear-fins, cream eyes) mid-blast. |
-| `still-jungle.png` | Screenshot — room 1 JUNGLE | Live 3D capture, natural `loadLevel` roster (enemies/items untouched, spawn position): `#gl` (WebGL board) composited with `#c` (HUD overlay, the in-canvas chip row) onto an offscreen canvas filled with the opaque JUNGLE `bg1` first, read synchronously right after a forced render (`p.iFrames` forced to 0). Full-image alpha scan: 0 pixels below alpha 250 (border opaque `rgb(6,36,22)`). Shows MAKO at spawn next to a WALKER and a revealed pickup. |
-| `still-ice.png` | Screenshot — room 2 ICE | Same technique, room 2 (reached via the debug hook's `advance()`), natural roster. Border opaque `rgb(10,32,72)`, 0 pixels below alpha 250. |
-| `still-crown.png` | Screenshot — room 8 CROWN | Same technique, room 8 (the finale look, normally gated behind the first FUSE/GRID CLEAR; the debug hook's `advance()` walked level 2→8 directly for capture, not through a save-scummed unlock). Natural roster — nine enemies is what that room actually spawns. Border opaque `rgb(20,8,8)`, 0 pixels below alpha 250. |
-| `still-menu.png` | Screenshot — MENU screen | Classic 2D canvas (`#c`) on the MENU screen (page loaded without `?render=3d`, so `#gl` stays hidden), captured after two `requestAnimationFrame` waits so the menu's entrance animation settles onto the full six-row list before the shot (`app.toMenu()` resets `idleT`, but this session's RAF loop kept running in the background the whole time, so any longer real-time wait risks the 10s MENU→ATTRACT idle timeout firing mid-capture). Shows the post-R2 six-row MENU (PLAY / LEVEL SELECT / OPTIONS / GUIDE / HIGH SCORES / SOURCE) over the frozen board, with MAKO visible on it. |
-| `play.gif` | Animated preview — a JUNGLE run | Live 3D run (`?render=3d&debug=1`) driven by real held-key intents (`window.__GAME__.setKeys`) through the normal RAF-driven sim loop — not manual `step(n)` teleporting, so the walk cycle is the real animation, not a cued pose. Staged for reliability: a short brick corridor was carved directly in `w.grid` (one BRICK left standing as the target), the level's enemies were relocated (not deleted — emptying `w.enemies` trips the sim's instant-WIN branch) off to one side, and the bomb's fuse was shortened (`w.fuse=0.6`) so the walk/plant/retreat/blast/advance beat fits in ~3.5s. The player retreated a full tile past the blast radius before the fuse ran out — confirmed 3 hearts intact end to end, not a staged near-miss. 42 frames, 12 fps (~3.5s), 630px wide (ffmpeg `palettegen`/`paletteuse` with `dither=bayer`, scaled down from the native 1200×1040 capture, never upscaled). 0.60 MB, under the 3 MB gate. |
+| `cover-630x500.png` | itch.io game cover (630×500) | Dedicated live capture (not a crop of `og.png`, whose 1200-wide hero has no 630×500 crop that clears its own text without cutting it): REAL 3D (`?render=3d&debug=1`), JUNGLE room 1 on that session's own board. Staged, not natural play: 1.6 s after the run started, MAKO was moved to an open tile three tiles west of the bomb spot, behind a BRICK the blast breaks, and a bomb object was pushed straight onto `w.bombs` with a 0.35 s timer and radius 2 (a FLAME 2 bomb; the player was still FLAME 1) on the open tile whose arms hit the most BRICKs (four). `p.iFrames` held at 0 throughout; `nb.coach.v1` seeded as seen. `#c` hidden (`visibility:hidden`), so there is no HUD and no text at all — nothing to cut off. A 26-shot burst caught the blast; frame 5 (0.4–0.47 s after the push: full cross, danger plates lit, fireballs at their peak, four BRICKs breaking) was picked. Downscaled only, 1200×1040 → 630×546 (lanczos, 0.525×), then 23 px cropped off the top and bottom. 0 pixels below alpha 250; border `rgb(6,36,22)`. Shows MAKO beside the blast. |
+| `still-jungle.png` | Screenshot — room 1 JUNGLE | Live REAL 3D capture with the HUD chip row, room 1 straight from `__GAME__.begin()`, natural roster (two WALKERs and a STATIONARY, eight pickups placed by the room's own generator). Shot 1.6 s into real play, so foes have wandered naturally and MAKO is near spawn; `p.iFrames` set to 0 one frame before the shot so the spawn blink can't hide the hero; `nb.coach.v1` seeded as seen. 1200×1040, 0 pixels below alpha 250, border `rgb(6,36,22)`. |
+| `still-ice.png` | Screenshot — room 2 ICE | Same session and technique, room 2 entered with `loadLevel(G,2,true)` (carry kept, state set to PLAY) and shot 1.6 s later, `p.iFrames` 0, `nb.coach.v1` seeded as seen. Natural roster (four foes). Shows the near-wall cutaway: ICE's tall border is cut down only on the row nearest the camera. 0 pixels below alpha 250, border `rgb(10,32,72)`. |
+| `still-crown.png` | Screenshot — room 8 CROWN | Same session and technique, room 8 entered with `loadLevel(G,8,true)` straight from room 2 (the finale look is normally gated behind the first FUSE/GRID CLEAR; this jumps the gate for capture, not through a save-scummed unlock). Natural roster — nine foes is what that room spawns. `p.iFrames` 0, `nb.coach.v1` seeded as seen. 0 pixels below alpha 250, border `rgb(20,8,8)`. |
+| `still-menu.png` | Screenshot — MENU screen | Recaptured on **shell v181** (precache `fusegrid-shell-v181`), with the second-pass clean start but the ordinary real-time rAF shim, since the opening show runs on the clock. CLASSIC 2D (`?debug=1`, fresh settings, so CLASSIC is the look), keyboard layout (`data-lay d`, 640×568 at DPR 2, capture stylesheet), reached the way a player does: one Enter on the title, then the whole opening show ran until its bomb's boom landed MENU at PLAY (4.4 s after the press). Shot 1.2 s later (`idleT` 1.2 s, far from the 10 s ATTRACT timeout) as `#c.toDataURL()` at the canvas's native 600×520 backing, so nothing is resampled. Shows the v180/v181 menu: the eight rows (PLAY / LEVEL SELECT / DAILY / OPTIONS / GUIDE / HIGH SCORES / STATS / SOURCE) beside the preview pane for PLAY (JUNGLE, room 1, the foes you'll meet, LIVES · FUSE · SCORE). DAILY reads NEW because the profile is fresh. The backdrop is the kept show world, not a room board. |
+| `play.gif` | Animated preview — a JUNGLE run | Live REAL 3D run (`?render=3d&debug=1`) driven by real held-key intents (`window.__GAME__.setKeys`) through the normal rAF-driven loop, so the walk is the real animation. The route was planned by a BFS over that session's live grid: walk from spawn to the open tile beside a BRICK, plant, retreat straight west along the same row to two tiles from the bomb (in line with the blast, one tile past the end of the FLAME 1 arm), let the blast open the BRICK, walk back and grab the FLAME the room's own generator had buried there. The pickup fires the floating `FLAME 2` label and the HUD FLAME chip pulse. The only world staging is the fuse (`w.fuse=1.2` instead of CORE's 2.5 s) so the beat fits in 6 s; `nb.coach.v1` was seeded as seen. Nothing else was touched: no grid carved, no foe moved (none came within four tiles of the route), no pickup placed. 3 hearts intact end to end. Recorded as a burst of 83 stage-clipped `Page.captureScreenshot` frames at 1200×1040 over 5.9 s with wall-clock timestamps, retimed through an ffmpeg concat list to 12 fps (72 frames, 6.0 s), scaled down to 630×546 (lanczos, never upscaled), `palettegen=stats_mode=diff` / `paletteuse=dither=bayer:bayer_scale=4`. 0.58 MB, under the 3 MB gate. |
+| `still-pixel.png` | Screenshot — room 3 FACTORY in PIXEL | PIXEL (`?render=px&debug=1`), second-pass method, 640×568 at DPR 2 with the capture stylesheet, clipped to the stage at 1200×1040, the same frame as the other stills. `#px` backing is 1200×1040 (`dprPx` 2), so nothing is upscaled. Room 3 was entered with `loadLevel(G,3,true)` straight after `begin()`, which jumps the room order for the capture; its roster (four foes) and floor pickups are the room's own. Picked from 22 candidates taken every 0.5 s: 3.5 s into the room, the demobot's first bomb has just gone off (full cross on the open floor), MAKO stands beside its second bomb, and four foes and five floor pickups (a HEART among them) are on the board. 3 hearts. |
+| `clip-landscape.mp4` | Silent clip, 16:9 (CrazyGames landscape) | REAL 3D, second-pass method, 960×540 at DPR 2: the desktop layout (`data-lay d`) at 1920×1080. The whole viewport, so the stage sits on the page backdrop the way it does in a 16:9 browser window. `#gl` backing 1200×1040 for a 1135-px stage (no upscale). JUNGLE room 1, 18.0 s cut from 3.9–21.9 s of a 50 s take: five blasts, bricks broken, a POWER BOMB uncovered and grabbed (floating label + ability chip), score 10 → 200, 3 hearts throughout. 540 frames, 30 fps. |
+| `clip-portrait-2x3.mp4` | Silent clip, 2:3 (CrazyGames portrait) | PIXEL, second-pass method, 480×720 at DPR 2.25 with touch emulation: the phone portrait layout (`data-lay p`, `#touchpad` shown) at 1080×1620. The whole viewport. `#px` backing 696×600 for a 1048-px stage, which is what RESOLUTION AUTO gives PIXEL on a phone (`dprPx` 1.5). JUNGLE room 1, 18.0 s cut from 20.0–38.0 s of a 90 s take. The window was set by hand, 3 s later than the picker's, so the kill isn't on the last frame: five blasts, a foe caught in one (score 90 → 250, three foes → two), 3 hearts throughout. An earlier 50 s take never reached a foe and was dropped. |
+| `clip-portrait-9x16.mp4` | Silent clip, 9:16 (Shorts / TikTok / Reels) | REAL 3D, second-pass method, 405×720 at DPR 2.667 with touch emulation: the phone portrait layout (`data-lay p`, `#touchpad` shown) at 1080×1920. The whole viewport, pause pill, pad and bomb button included. `#gl` backing 900×780 for a 1037-px stage, which is exactly what RESOLUTION AUTO gives a phone (`dpr3d` 1.5). JUNGLE room 1, 18.0 s cut from 1.6–19.6 s of a 50 s take: five blasts, a POWER BOMB grabbed, score 10 → 140, 3 hearts throughout. |
+
+**How the second pass ran (2026-10-19, PIXEL still, clips, install
+screenshots).** Same clean start as above: its own `PORT=0 node serve.js`
+and Metal headless-shell per asset, fresh profile, page loaded once, every
+service worker unregistered (one each time) and every cache deleted
+(`fusegrid-shell-v180`), localStorage cleared, SW bypass on, hard reload
+with `ignoreCache`, both processes stopped by PID. The page re-registers
+`sw.js` on that reload, but with the bypass on it serves nothing, so every
+byte came from the server. Every session logged 0
+console errors and 0 exceptions. Two things differ from the first pass:
+
+- **The game's own demobot holds the keys.** A normal GAME run starts with
+  `__GAME__.begin()`. Then, on every sim tick, the attract demobot
+  (`createDemobot` in `src/app/demobot.js`) reads the live world and sets
+  its move and fire on the real `Input` object through `setIntent`, right
+  before the game's loop builds that tick's intent. Nothing in the world is
+  staged: no grid carved, no foe moved, no pickup placed, no fuse
+  shortened. The bot plants, walks, breaks bricks and grabs whatever it
+  uncovers, and it is not a great player, which is why each clip is a cut
+  (below).
+- **A virtual clock, not a wall clock.** A 1080p screenshot takes ~75 ms in
+  headless, too slow for real-time video. So `performance.now()` (the one
+  clock every game loop and renderer reads) is replaced by a clock that
+  moves only when the capture script says so. Per video frame it moves
+  2 × 1/60 s, running two ordinary rAF frames (the fixed-step sim at its
+  normal 60 Hz, the frame gate reading 60 Hz, the RESOLUTION AUTO governor
+  holding its top step), then takes one full-viewport `Page.captureScreenshot`
+  at device pixels. Every frame is the shipped renderer drawing the live
+  world at its true game time, so the clips play at real speed with no
+  dropped, doubled or synthesised frames. The first 1.5 s of each run is
+  skipped, while the GPU warms up.
+
+Every clip was recorded as one take of 50–90 s of play, then cut to one
+contiguous 18 s window. The window is the one with all three hearts intact
+(and no life lost for 0.5 s after it) and the most blasts, kills and score.
+Frames are JPEG q95 out of CDP, encoded at 30 fps with libx264 (`-preset
+slow -crf 20`), full-range to TV-range BT.709 yuv420p, `+faststart`, no
+audio track. Nothing is sped up or slowed down. `nb.coach.v1` and
+`nb.coach.v2` are seeded as seen, as for a returning player, so no tip
+panel covers the board.
 
 `og.png` (project root, 1200×630) was rebuilt on **2026-10-19** for shell
 v180 (owner pick C of three candidates; sources, composer and the rejected
@@ -65,6 +129,23 @@ the card's radial background, not game pixels. Card is fully opaque. After
 every card change the owner re-uploads it under repo Settings → Social
 preview (no API).
 
+## 📲 Install-dialog screenshots
+
+`screenshots/wide.png` and `screenshots/narrow.png` (repo root) are the
+`screenshots` in `manifest.webmanifest`, which give Chrome its richer
+install dialog. Unlike `media/`, they **are** staged for GitHub Pages (the
+manifest points at them), but they are never precached: the dialog fetches
+them online, and the service worker never stores a file it didn't
+precache. `tests/pwa.test.mjs` pins their sizes, the 2.3:1 limit, one ratio
+per form factor, the staging and the precache exclusion. Both are
+second-pass captures of the whole viewport, with no capture stylesheet, so
+they look exactly like the page:
+
+| File | Provenance |
+|---|---|
+| `screenshots/wide.png` | REAL 3D, desktop layout (`data-lay d`), 960×540 at DPR 2 = 1920×1080. JUNGLE room 1, the demobot playing. Picked from 25 candidates (4–16 s, every 0.5 s): 11.5 s in, a blast is live, MAKO stands clear of it, three foes are up, 3 hearts. `#gl` backing 1200×1040 for a 1135-px stage, governor at 2. |
+| `screenshots/narrow.png` | CLASSIC 2D (the default look), phone portrait layout (`data-lay p`, touch emulation, `#touchpad` shown, so the stage sits under the pause pill above the pad and bomb button), 405×720 at DPR 2.667 = 1080×1920. JUNGLE room 1, the demobot playing. Picked from 25 candidates: 7.0 s in, one foe is just down (sparks), a bomb is ticking beside MAKO, and three uncovered pickups are on the floor. CLASSIC's canvas is a fixed 600×520 at any size, so on a phone it is shown 1.73× larger, as it always is. |
+
 ## 📦 Rebuilding the zip for itch / Newgrounds / Game Jolt
 
 The shipped game is static files only — no build step. To package a zip for
@@ -77,7 +158,7 @@ zip -r fusegrid.zip \
   src/ \
   vendor/ \
   favicon.svg apple-touch-icon.png icon-192.png icon-512.png \
-  sw.js manifest.webmanifest \
+  sw.js manifest.webmanifest screenshots/ \
   robots.txt sitemap.xml .nojekyll
 ```
 
@@ -93,7 +174,9 @@ If the host embeds the zip in an iframe, that's fine as shipped:
 so an embedded copy never registers a service worker or claims a cache out
 from under the canonical Pages origin.
 
-Tags: `arcade`, `singleplayer`, `webgl`, `chiptune`.
+Tags: `arcade`, `singleplayer`, `webgl`, `chiptune` (the core four every
+listing carries). The full set for each platform lives in the
+[promotion kit](../docs/marketing/README.md#tags-per-platform).
 
 ## 📣 itch blurb
 

@@ -1340,7 +1340,7 @@ function check(name, cond, detail) {
       const g = md.scoresGeom(L), rank = texts.find((t) => t.s === "RANK");
       check(
         `${W}x${H} plaques sit on their own row (scoresGeom.chipY) between the heat tabs and the table`,
-        !!plusTab && !!clear && !!rank && Math.abs(clear.y - (g.chipY + 10)) < 0.01 &&
+        !!plusTab && !!clear && !!rank && Math.abs(clear.y - (g.chipY + (g.f < 1 ? 7 : 10))) < 0.01 && // iso: the chip shrinks to 12 so it ends above bodyTop
           clear.y > plusTab.y + 8 && clear.y < rank.y && g.chipY >= g.tabs[0].y + g.tabs[0].h,
         JSON.stringify({ plusY: plusTab && plusTab.y, clearY: clear && clear.y, rankY: rank && rank.y, chipY: g.chipY }),
       );
@@ -1495,6 +1495,91 @@ function check(name, cond, detail) {
     check("MENU held behind the blast: enterT < -0.12 paints no plate and no rows; the plate fades in over the last 0.12 s",
       held.fills.length === 0 && !held.texts.some((t) => t.a > 0) && mid.fills.length > 0 && set.texts.some((t) => t.s === "PLAY" && t.a === 1),
       held.fills.length + " fills / " + mid.fills.length);
+  }
+}
+
+// iso 608x352 guard (polish 2026-10-19): every MEDALS / STATS tile text stays
+// inside its tile (y ± px/2), the HIGH SCORES plaque chips end above bodyTop,
+// and the 600x520 box keeps its exact text positions; NO TIME YET waits for
+// TIME (MODES open) and never shows on the DAILY card.
+{
+  const md = await import("../src/render/menudraw.js");
+  const rec = () => {
+    const texts = [], cells = [], strokes = [];
+    const c = new Proxy({ fillStyle: "", font: "", globalAlpha: 1, textAlign: "left", textBaseline: "middle", shadowBlur: 0, measureText: (s) => ({ width: String(s).length * 6 }) }, {
+      get: (t, k) => k in t ? t[k] : k === "fillText" ? (s, x, y) => { const m = /(\d+)px/.exec(t.font); texts.push({ s: String(s), x, y, px: m ? +m[1] : 0 }); }
+        : k === "fillRect" ? (x, y, w, h) => { if (/^rgba\(4,7,14/.test(t.fillStyle)) cells.push({ x, y, w, h }); }
+        : k === "strokeRect" ? (x, y, w, h) => strokes.push({ x, y, w, h }) : () => {},
+      set: (t, k, v) => ((t[k] = v), true),
+    });
+    return { c, texts, cells, strokes };
+  };
+  const inside = (r, recd) => recd.texts.filter((t) => t.x > r.x && t.x < r.x + r.w && t.y > r.y && t.y < r.y + r.h).every((t) => t.y - t.px / 2 >= r.y - 0.5 && t.y + t.px / 2 <= r.y + r.h + 0.5);
+  const rows = Array.from({ length: 8 }, (_, i) => ["MEDAL " + i, "ROOMS 1-5 IN ONE RUN · NO LIFE LOST · ALL FOUR MODES", i < 2]);
+  const stats = { rows: Array.from({ length: 10 }, (_, i) => ["DAYS PLAYED", "1234"]), notes: ["N1", "N2"], trophies: rows };
+  const pos = {};
+  for (const [W, H] of [[600, 520], [608, 352]]) {
+    const L = md.layout(W, H), tg = `${W}x${H}`;
+    const m = rec();
+    md.drawTrophies(m.c, L, 1, rows);
+    check(`MEDALS: name + both goal lines inside each tile at ${tg}`, m.cells.length === 8 && m.cells.every((r) => inside(r, m)));
+    const st = rec();
+    md.drawStats(st.c, L, 1, stats, false, null);
+    check(`STATS: value + label inside each of the 11 tiles at ${tg}`, st.cells.length === 11 && st.cells.every((r) => inside(r, st)));
+    const sc = rec(), g = md.scoresGeom(L, false);
+    md.drawScores(sc.c, [], L, 1, 0, 0b11, false);
+    const chips = sc.strokes.filter((r) => Math.abs(r.y - (g.chipY + 0.5)) < 1e-9);
+    check(`SCORES: four plaque chips end above bodyTop at ${tg}`, chips.length === 4 && chips.every((r) => r.y + r.h + 0.5 <= g.bodyTop), chips.map((r) => r.y + r.h).join(",") + " vs " + g.bodyTop);
+    pos[tg] = [m, st].map((r) => r.texts.map((t) => t.s + "@" + t.y + "/" + t.px).join("|"));
+  }
+  check("MEDALS / STATS text at 600x520 is the pre-guard layout (name at tile+15, goals +32/+44; value 18px at -6, label 10px at +12)",
+    /MEDAL 0@\d+(\.\d+)?\/13/.test(pos["600x520"][0]) && (() => { const r = rec(); md.drawTrophies(r.c, md.layout(600, 520), 1, rows); const c0 = r.cells[0], n = r.texts.find((t) => t.s === "MEDAL 0"), d = r.texts.filter((t) => t.x === n.x && t.y > n.y); return n.y === c0.y + 15 && d[0].y === c0.y + 32 && d[1].y === c0.y + 44; })()
+      && (() => { const r = rec(); md.drawStats(r.c, md.layout(600, 520), 1, stats, false, null); const c0 = r.cells[0], v = r.texts.find((t) => t.s === "1234"), l = r.texts.find((t) => t.s === "DAYS PLAYED"); return v.px === 18 && v.y === c0.y + c0.h / 2 - 6 && l.px === 10 && l.y === c0.y + c0.h / 2 + 12; })());
+  const L = md.layout(600, 520), lv = (U, best) => { const r = rec(); md.drawLevelSelect(r.c, 2, L, 1, 0, 0, U, 0, false, false, { best: best ? [null, "0:38.9"] : [] }); return r.texts.map((t) => t.s); };
+  check("LEVEL SELECT: no NO TIME YET before MODES / TIME open; it shows once open; a saved best shows either way",
+    !lv(false).includes("NO TIME YET") && lv(true).includes("NO TIME YET") && lv(false, true).includes("✓ BEST 0:38.9") && lv(true, true).includes("✓ BEST 0:38.9"));
+  const mn = (row, U) => { const r = rec(); md.drawMenu(r.c, { cursor: row, items: ["PLAY|X", "LEVEL SELECT", "DAILY|NEW", "OPTIONS", "GUIDE", "HIGH SCORES", "STATS", "SOURCE"], info: { level: 1, unlocked: U, best: [] } }, L, 1); return r.texts.map((t) => t.s); };
+  check("MENU pane: PLAY card follows the same rule, DAILY never says NO TIME YET",
+    !mn(0, false).includes("NO TIME YET") && mn(0, true).includes("NO TIME YET") && !mn(2, true).includes("NO TIME YET") && !mn(2, false).includes("NO TIME YET"));
+}
+
+// touch-portrait shell box (polish 2026-10-19, fit.js shellGeo): at the phone
+// boxes every page fits its plate inside the box, the narrow re-flows keep
+// every rect inside the plate, and each drawn rect's centre taps back to it
+// through the same hit function main.js calls (a tap lands where it is drawn)
+{
+  const md = await import("../src/render/menudraw.js");
+  const { shellGeo } = await import("../src/app/fit.js");
+  for (const [VW, VH] of [[393, 852], [360, 640], [430, 932]]) {
+    const g = shellGeo(VW, VH, 600, 520), L = md.layout(g.w, g.h, g.logo), tg = `${VW}x${VH} box ${g.w}x${g.h}`;
+    const inBox = (S) => S.x >= 0 && S.y >= 0 && S.x + S.w <= g.w && S.y + S.h <= g.h && S.f === 1;
+    const inPlate = (r, S) => r.x >= S.x && r.y >= S.y && r.x + r.w <= S.x + S.w + 0.01 && r.y + r.h <= S.y + S.h + 0.01;
+    const ctr = (r) => [r.x + r.w / 2, r.y + r.h / 2];
+    check(`shell layout is tall + narrow, logo on the board line (${tg})`, L.tall && L.narrow && L.logoCy === g.logo);
+    const hub = md.menuGeom(L, 8, true);
+    const lg = md.menuLogo(L);
+    check(`MENU hub hangs under the logo, inside the box, every tile taps to itself (${tg})`,
+      hub.hub && hub.h === 362 && Math.abs(hub.y0 - Math.round(lg.cy + 10 * lg.s + 8)) <= 1 && hub.y0 + hub.h <= g.h &&
+        hub.rows.every((r, i) => md.menuHit(r.x + r.w / 2, r.cy, L, 8, true) === i), hub.y0 + "+" + hub.h);
+    for (const U of [false, true]) {
+      const G = md.levelGeom(L, U, true), S = G.S, rects = [...G.room, G.pane, G.heatCap, ...G.heat, G.paceCap, ...G.pace, ...(U ? [G.modeCap, ...G.mode, G.help] : []), G.start];
+      check(`LEVEL SELECT narrow${U ? " (modes open)" : ""}: plate in the box, every rect in the plate (${tg})`, G.narrow && inBox(S) && rects.every((r) => inPlate(r, { ...S, x: S.x - 1, w: S.w + 2 })));
+      const hits = [...G.room.map((r, i) => [r, i < G.cap ? "room" : "lock", i]), ...G.heat.map((r, i) => [r, "heat", i]), ...G.pace.map((r, i) => [r, "pace", i]), ...G.mode.map((r, i) => [r, "mode", i]), [G.start, "start"]];
+      check(`LEVEL SELECT narrow${U ? " (modes open)" : ""}: every chip / tile / START taps to itself, card inert, off-plate backs (${tg})`,
+        hits.every(([r, k, i]) => { const h = md.levelHit(...ctr(r), L, U, true); return h.k === k && (i == null || h.i === i); }) &&
+          md.levelHit(...ctr(G.pane), L, U, true).k === "none" && md.levelHit(4, 4, L, U, true).k === "back");
+    }
+    const sc = md.scoresGeom(L, true);
+    check(`HIGH SCORES: tabs inside the plate, each taps to itself (${tg})`, inBox(sc.S) && sc.tabs.every((r, i) => inPlate(r, sc.S) && md.scoresHit(...ctr(r), L, true) === i));
+    for (const [nm, geo, hit, n] of [["OPTIONS", md.settingsGeom, md.settingsHit, md.OPT_N], ["GRAPHICS", md.graphicsGeom, md.graphicsHit, md.GFX_N]]) {
+      const q = geo(L, true);
+      check(`${nm}: rows inside the box, each taps to itself (${tg})`, inBox(q.S) && Array.from({ length: n }, (_, i) => hit(q.S.mid, q.y0 + (i + 0.5) * q.rowH, L, 0, true) === i).every(Boolean));
+    }
+    const gd = md.guideGeom(L, true);
+    check(`GUIDE: doors inside the box, each taps to itself (${tg})`, inBox(gd.S) && gd.tiles.every((r, i) => md.guideHit(...ctr(r), L, 0, true) === i));
+    const st = md.statsGeom(L).S;
+    check(`STATS: centred in the tall box (not pinned to its floor), foot T taps KeyT (${tg})`,
+      inBox(st) && st.y + st.h < g.h - 20 && md.statsHit(st.mid - 47 * 3 + 24, st.footY, L, false) === "KeyT");
   }
 }
 

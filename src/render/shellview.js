@@ -41,9 +41,14 @@ const playTag = (app) => {
   const p = app.pactUnlocked ? clampPact(app.pact) : 0;
   return biomeOf(app.level | 0 || 1).name + " · " + HEAT_NAME[clampHeat(app.heat)] + " · " + paceToken(app.pace) + (p ? " · " + pactLabel(p) : "");
 };
+/* The screens a touch-portrait phone draws on #sh's own box (fit.js
+   shellGeo): MENU and every plated page. INTRO, ATTRACT and GAME (PAUSE and
+   WIN/LOSE included) stay on the board canvas and its box. */
+const SHELL_ON = new Set([SCREEN.MENU, SCREEN.LEVEL, SCREEN.HOWTO, SCREEN.SCORES, SCREEN.ITEMS, SCREEN.ENEMIES, SCREEN.SETTINGS, SCREEN.GUIDE, SCREEN.STATS, SCREEN.TROPHIES, SCREEN.GRAPHICS]);
+export const isShellScreen = (s) => SHELL_ON.has(s);
 export function dims(canvas, kind) {
   const s = kindSize(kind);
-  return { cw: canvas ? canvas.width : s.w, ch: canvas ? canvas.height : s.h };
+  return { cw: canvas ? canvas.width : s.w, ch: canvas ? canvas.height : s.h, lg: canvas ? canvas.logo : undefined }; // lg: #sh's logo line (fit.js shellGeo)
 }
 
 /* GRAPHICS page data arrives finished from the app (gfx.js strings via
@@ -159,17 +164,17 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
     }
     return;
   }
-  const { cw, ch: chh } = dims(canvas, kind);
+  const { cw, ch: chh, lg: logoY } = dims(canvas, kind);
   if (s === SCREEN.INTRO) // board alpha eases the veil from opaque once the board is ready (3D waits on three)
     return menudraw.drawIntroChrome(c, app.introStage, app.subT, cw, chh, layOf(canvas), app.boardReady ? Math.min(1, app.readyT / 0.4) : 0);
   if (s === SCREEN.ATTRACT) {
     // no dim: the demo IS the show; only the blinking footer hint
-    const L = menudraw.layout(cw, chh);
+    const L = menudraw.layout(cw, chh, logoY);
     menudraw.drawAttractHint(c, L, app.subT);
     return;
   }
   if (s === SCREEN.MENU) {
-    const L = menudraw.layout(cw, chh),
+    const L = menudraw.layout(cw, chh, logoY),
       touch = touchLay(canvas), // the predicate main.js taps with
       lg = menudraw.menuLogo(L); // one logo for both layouts: the touch hub sits under it
     // the show's natural end slams the logo over a ramping dim; any other
@@ -209,7 +214,7 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
     );
     return;
   }
-  const L = menudraw.layout(cw, chh);
+  const L = menudraw.layout(cw, chh, logoY);
   if (s === SCREEN.LEVEL) {
     menudraw.drawDim(c, 0.72, cw, chh);
     menudraw.drawLevelSelect(

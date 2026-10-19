@@ -1,4 +1,4 @@
-import { ACT_GEO, FIT_RES, PORT_GAME, PORT_GEO, actGeo, fitBox, mountFit, portraitGeo, pxBox, pxBack } from "../src/app/fit.js";
+import { ACT_GEO, FIT_RES, PORT_GAME, PORT_GEO, PORT_SHELL, actGeo, shellGeo, fitBox, mountFit, portraitGeo, pxBox, pxBack } from "../src/app/fit.js";
 
 let pass = 0,
   fail = 0;
@@ -319,6 +319,21 @@ for (const [lay, W, H, touch, dpr] of [["d", 1440, 900, false, 2], ["p", 390, 84
     delete globalThis.window; delete globalThis.document; delete globalThis.getComputedStyle; delete globalThis.devicePixelRatio;
   }
 }
+
+// shell box (polish 2026-10-19): touch portrait MENU + plated pages get their
+// own logical box on #sh — the whole viewport at a scale that fits a
+// 400..600-wide box into the stage's width, so a phone reads ~1.4x bigger;
+// the logo line is the centred board's own 0.27; too short a viewport has none
+check("PORT_SHELL is frozen: target scale 0.9, width clamp 400..600, logo 0.27 of the board",
+  Object.isFrozen(PORT_SHELL) && JSON.stringify(PORT_SHELL) === JSON.stringify({ s: 0.9, w: [400, 600], logo: 0.27 }));
+for (const [W, H, s, w] of [[393, 852, 0.9, 436], [390, 844, 0.9, 433], [360, 640, 0.86, 418], [430, 932, 0.9, 477], [768, 1024, 1.2533, 612]]) {
+  const g = shellGeo(W, H, 600, 520), b = fitBox(W, H, true, 600, 520).s, top = portraitGeo(W, H, 600, 520).top;
+  check(`shellGeo ${W}x${H}: scale ${s}, box ${w} wide, full viewport, logo on the centred board's 0.27 line`,
+    !!g && Math.abs(g.s - s) < 0.002 && g.w === w && g.h === Math.floor(H / g.s) && g.left === 0 && g.top === 0 &&
+      g.w * g.s <= W + 1e-9 && g.h * g.s <= H + 1e-9 && Math.abs(g.logo * g.s - (top + 1 + 0.27 * 520 * b)) < 1e-6 && g.s >= b - 1e-9, // a tablet keeps the board scale and only grows taller
+    JSON.stringify(g));
+}
+check("shellGeo: no shell box when the viewport is under 520 box units tall", shellGeo(400, 420, 600, 520) === null && !!shellGeo(400, 470, 600, 520));
 
 console.log("\n  FIT RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);
