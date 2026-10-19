@@ -505,7 +505,10 @@ not shell screens. Do not add them as `SCREEN` values.
   (precache with `cache:"reload"`, register with `updateViaCache:"none"`) and
   WAITS; `register.js` hands a waiting registration (controller present, never
   a first install) to `src/app/update.js`, a DOM card `#upd` styled as the
-  CONSOLE PANEL plate. It shows only where a reload costs nothing: MENU, every
+  CONSOLE PANEL plate, CENTRED on the screen over a blurred, dimmed backdrop
+  `#updbg` on every layout (owner: "must appear in center of the page", "a
+  blure background"); a tap on the backdrop is LATER and never reaches the
+  canvas. It shows only where a reload costs nothing: MENU, every
   sub-page, and WIN/LOSE when `isRunEnd` (pure `updVisible`); never INTRO,
   ATTRACT, live PLAY, PAUSE or a mid-run WIN. RELOAD (tap, `pointerup`) or `U`
   posts `SKIP_WAITING`; the one `controllerchange` listener reloads once.

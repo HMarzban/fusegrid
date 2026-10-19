@@ -34,8 +34,8 @@ Entries are written for players. How a change works lives in
   keyboard, taps on a touch screen.
 
 ### Added
-- **NEW VERSION READY.** When a new build of the cabinet is out, a card says
-  so on the menus or after a finished run (never mid-run) with a RELOAD
+- **NEW VERSION READY.** When a new build of the cabinet is out, a card in
+  the middle of the screen, over a blurred backdrop, says so on the menus or after a finished run (never mid-run) with a RELOAD
   button (or press `U`). Your scores stay. LATER hides it until you're back
   from your next run.
 

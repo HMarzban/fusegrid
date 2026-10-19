@@ -19,9 +19,20 @@ export function mountUpdate(get, env) {
   let reg = null,
     snoozed = false,
     wasGame = false,
-    card = null;
+    card = null,
+    bg = null;
   const go = () => reg && applyUpdate(reg);
+  const later = () => { snoozed = true; card.hidden = bg.hidden = true; };
   const build = () => {
+    /* the blurred backdrop: the game stays visible but steps back; a tap on
+       it is LATER (an off-plate tap backs out, as on every page) and never
+       reaches the canvas */
+    bg = doc.createElement("div");
+    bg.id = "updbg";
+    bg.hidden = true;
+    bg.addEventListener("pointerdown", (e) => e.stopPropagation());
+    bg.addEventListener("pointerup", (e) => { e.stopPropagation(); later(); });
+    doc.body.appendChild(bg);
     card = doc.createElement("div");
     card.id = "upd";
     card.hidden = true;
@@ -36,7 +47,7 @@ export function mountUpdate(get, env) {
       el.addEventListener("pointerup", (e) => { e.stopPropagation(); fn(); });
     };
     tap(".go", go);
-    tap(".later", () => { snoozed = true; card.hidden = true; });
+    tap(".later", later);
     doc.body.appendChild(card);
     doc.addEventListener("keydown", (e) => { if (e.code === "KeyU" && !e.repeat && card && !card.hidden) go(); });
   };
@@ -49,7 +60,7 @@ export function mountUpdate(get, env) {
     wasGame = inGame;
     const show = !!reg && !snoozed && updVisible(app.screen, world.state, isRunEnd(world), SCREEN);
     card.dataset.ctx = inGame ? "end" : "menu";
-    if (card.hidden === show) card.hidden = !show;
+    if (card.hidden === show) card.hidden = bg.hidden = !show;
   };
   const ok = registerSW({ ...(env || {}), onUpdate: (r) => { reg = r; if (doc && !card) build(); tick(); } });
   if (ok && doc) setInterval(tick, 250);
