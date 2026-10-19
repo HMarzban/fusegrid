@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-19 — media/ listing art recaptured on v178 (uncommitted, awaiting owner)
+- Recaptured cover, still-jungle/ice/crown, still-menu (eight-row MENU) and play.gif from live v178: REAL 3D on the live rig (STANDARD 1503, FOV 24), Metal headless-shell over CDP, SW unregistered + caches cleared + SW bypass + hard reload, PORT=0 server stopped by PID. play.gif is a real held-key run that grabs a naturally buried FLAME (only the fuse staged), 0.58 MB. media/README provenance rows rewritten and the recapture note removed. Open, owner call: PIXEL in the listing set, and og.png (still the 2026-09-06 card on the pre-v163 rig).
+
 ## 2026-10-19 — Docs pass: OSS set + one-owner-per-fact map, arcade voice
 - Rewrote README (player front door, lede now play-in-browser + 3D⇄2D + Heat, dev detail moved out), voice pass on architecture/CHANGELOG (+ Unreleased)/media (recapture note); added CONTRIBUTING (flags table now lives here), CODE_OF_CONDUCT, SECURITY, .github issue/PR templates, docs/README.md (who-owns-what map, doc house style, indexed design history with ⚠️ superseded notes). docs/superpowers bodies untouched. Open: media/ captures stale (6-row MENU, pre-v163 camera, no PIXEL).
 
