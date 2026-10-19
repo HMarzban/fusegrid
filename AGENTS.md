@@ -531,8 +531,8 @@ not shell screens. Do not add them as `SCREEN` values.
   description + topics are live SEO (not in git): lead with play-in-browser +
   the three looks (CLASSIC 2D · PIXEL · REAL 3D) + Heat, not "deterministic".
   Keep topics filled. Repo Settings → Social preview has no API — the owner
-  re-uploads `og.png` there by hand every time the card changes (the v180 card,
-  2026-10-19, still needs that upload).
+  re-uploads `og.png` there by hand every time the card changes (the v180 card
+  was uploaded 2026-10-19).
   PWA: also stage `manifest.webmanifest`, `sw.js`, `icon-192.png`, `icon-512.png`.
   `serve.js` MIME includes `.webmanifest`.
 - CI: `.github/workflows/pages.yml` runs `npm test` on Node 26 for pull requests
@@ -705,10 +705,10 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
 - An unbumped `CACHE_NAME` means the worker serves old bytes forever (cache
   first), which looks exactly like a change that did not land. Local headed
   checks after a code change: clear site data, or test in a fresh profile.
-- Known gap: the GitHub About description still leads with "deterministic",
-  against the storefront rule above; the owner sets the 2026-10-19 draft
-  (`.superpowers/sdd/2026-10-19-storefront/about.md`) in repo Settings, not in
-  git, and re-uploads `og.png` under Settings → Social preview.
+- Storefront live 2026-10-19: the About description leads with play-in-browser
+  + three looks + Heat, and the Social preview carries the v180 card. Topics
+  still list only the original seven; the 20-topic draft is in
+  `.superpowers/sdd/2026-10-19-storefront/about.md`.
 - Owner-pending, NOT built (research/design only, 2026-10-11): the 2026-10-11
   menu redesign variants A/B/C (separate from the 2026-10-19 CONSOLE PANEL
   menu that shipped); story mode "FUSE/GRID: LOW TIDE"; naming (keep FUSE/GRID +

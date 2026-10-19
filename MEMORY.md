@@ -18,7 +18,7 @@ append an entry when it makes a non-trivial change.
 
 ## 2026-10-19 — Storefront: new og.png (owner pick C, ATLAS LEVEL SELECT) for v180
 - I built three real-capture cards (A: three looks side by side, B: today's card plus PIXEL insets, C: ATLAS LEVEL SELECT) on a contact sheet at full and preview size, and the owner picked C. `og.png` now sells CLASSIC 2D · PIXEL · REAL 3D plus CORE / PLUS / MAX over a fresh-profile LEVEL SELECT. og/twitter `image:alt` are updated; AGENTS storefront rules and the media/README og paragraph are re-synced. It needs no CACHE bump, because og.png is network-bypassed.
-- Open (owner): re-upload `og.png` in Settings → Social preview, and set the About draft (`.superpowers/sdd/2026-10-19-storefront/about.md`) in repo Settings. The seo-marketing branch owns og:description and JSON-LD. Capture recipe: a black/white difference matte for the transparent 3D board, and CAMERA WIDE fits the whole cabinet.
+- Owner uploaded the card to Social preview and set the About description (live, checked with gh). Still open: topics are the old seven; the 20-topic draft is in `.superpowers/sdd/2026-10-19-storefront/about.md`. The seo-marketing branch owns og:description and JSON-LD. Capture recipe: a black/white difference matte for the transparent 3D board, and CAMERA WIDE fits the whole cabinet.
 
 ## 2026-10-19 — Release shell v180 pushed (menus, ATLAS, NEW VERSION READY)
 - CHANGELOG Unreleased -> shell v180 · 2026-10-19 (v179 was never deployed, so v180 carries it). The update card is centred over a blurred backdrop (#updbg, tap = LATER). Pushed main to origin; Pages CI runs npm test before deploy.
