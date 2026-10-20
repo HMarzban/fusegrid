@@ -362,6 +362,10 @@ export function skeleton2(seed, level, attempt = 0) {
   }
   POCKET.forEach((k) => (out[k] = E));
   DOORS.forEach((k) => (out[k] = B));
+  if (RULE2.seal) for (const k of POCKET) for (const [dx, dy] of D4) {
+    const n = key((k % C) + dx, ((k / C) | 0) + dy);
+    if (!POCKET.includes(n) && out[n] !== W) out[n] = B;
+  }
   FAR.forEach((k) => { if (out[k] !== W) out[k] = E; });
   return { m: out, tpl: tp.n, sym: tp.sym, biome, flip, edits, fails: structFails(out) };
 }
@@ -403,7 +407,13 @@ export function fill2(sk, seed, level, heat, attempt = 0) {
 /* gen-2 foe eligibility (critic §2a.3): every foe >= 7 EMPTY steps or no
    EMPTY path; hunters >= 8; phasers also >= 5 bomb-path steps */
 const HUNT = new Set(["fast", "chaser", "knight"]), PHASE = new Set(["boomerang", "rocket", "shade"]);
+/* FAIR START (2026-10-20): seal = every exit of the spawn pocket is a brick
+   door; mode "path" = every foe starts >= dAll bomb-path steps (bricks count
+   as passable: the real route once the doors are open), hunters >= dHunt.
+   mode "empty" = the previous bold rule, kept for the A/B sweep. */
+export const RULE2 = { seal: true, mode: "path", dAll: 10, dHunt: 12 };
 export function foeOk2(type, e, b) {
+  if (RULE2.mode === "path") return b < 0 || b >= (HUNT.has(type) ? RULE2.dHunt : RULE2.dAll);
   if (e >= 0 && e < (HUNT.has(type) ? 8 : 7)) return false;
   if (PHASE.has(type) && b >= 0 && b < 5) return false;
   return true;
