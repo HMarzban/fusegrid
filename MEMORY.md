@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-20 — Research: every room is the same maze (issue #8), no code changed
+- Owner report valid: 128/195 tiles fixed in every room of every seed, 1 wall layout ever, 0/17 spawn-near tiles vary, and bootSeed makes room N byte-identical all session. Five lenses + critic (notes, prototypes, art contact sheet in git-ignored `.superpowers/sdd/2026-10-20-levels/`) recommend versioned gen 2 (authored biome skeletons + seeded flips/edits, heat = bricks only) + fairness validator, F2 codes, a fresh seed per run with a G SAME BOARD key, and gen-keyed records. Filed as HMarzban/fusegrid#8 with 13 owner rulings pending; nothing gets built until the owner rules.
+
 ## 2026-10-19 — Close-out: docs, diary and memory synced through v182
 - Diary gains v181–v182 + launch prep (parallel sessions, SEO kit, listing art, share card C, issue #7) and a precache lesson; README alt text matches card C, features add the ATLAS/hub menus and NEW VERSION READY; AGENTS names the diary and parks launch in #7. GitHub About + 20 topics verified live (no longer leads with "deterministic"). Old media/worktrees kept on purpose (owner).
 
