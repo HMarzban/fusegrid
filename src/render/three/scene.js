@@ -150,7 +150,7 @@ export function buildScene(world, atlas, bright){
 
   const mask=new Uint8Array(CFG.COLS*CFG.ROWS);
   let fresh=true;
-  const scene={group,level:world.level,brick,pools,lights,brickV:0,
+  const scene={group,level:world.level,grid:world.grid,brick,pools,lights,brickV:0,
     update(world){
       let diff=fresh;
       for(let i=0;i<mask.length;i++){ const b=world.grid[i]===T.BRICK?1:0;
@@ -170,7 +170,7 @@ export function buildScene(world, atlas, bright){
         fresh=false; scene.brickV++;
        }
       pools.update(world);
-      return world.level!==scene.level;
+      return world.level!==scene.level||world.grid!==scene.grid;
      }};
   scene.update(world);          // initial brick fill
   return scene;
