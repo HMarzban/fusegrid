@@ -424,6 +424,7 @@ export function genBoard2(seed, level, heat = 0) {
       if (!playFails(fl.grid, level, heat).length)
         return { grid: fl.grid, layout: { name: sk.biome + " · " + sk.tpl.toUpperCase(), tpl: sk.tpl, flip: sk.flip, edits: sk.edits, skAttempt: a, fillAttempt: m, fallback: false } };
     }
+    break;
   }
   return { grid: genBoard(seed, level, CARVE1[heat]), layout: { name: "v1 LATTICE (fallback)", tpl: "lattice", flip: 0, edits: [], fallback: true } };
 }
