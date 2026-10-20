@@ -568,6 +568,13 @@ Design work that stayed on the drawing board. None of it is in the game.
 - A larger game-design bible with new worlds and bosses (2026-10-11).
 - A new hero direction with a head, arms and legs (2026-10-11). MAKO is
   still the hero.
+- Level variety (2026-10-20). A player-eye report said every room is the same
+  maze, and the numbers agreed: 128 of 195 tiles never change, and one session
+  replays the same board. Five research lenses and a critic produced the
+  plan, and real-renderer mockups showed it. The plan is a random board every
+  run, 14 bold biome mazes behind a fairness check, and new BELT / GLIDE /
+  CURRENT tiles. It's tracked in issue #8;
+  [design record](superpowers/specs/2026-10-20-level-variety-design.md).
 
 ---
 

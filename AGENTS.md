@@ -743,6 +743,23 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   `.superpowers/sdd/2026-10-11-bible/`) — the owner's Claude Design canvas is
   the game bible, and nothing from it is built yet. Touch bugs found by the menu
   research: all three fixed 2026-10-19 with the menu redesign.
+- Level variety (owner rulings 2026-10-20, designed, NOT built; issue
+  HMarzban/fusegrid#8, tasks #10 #11 #12 #13 #15 #16 #17; record
+  `docs/superpowers/specs/2026-10-20-level-variety-design.md`). Today 128 of
+  195 tiles never change and one session replays the same board.
+  - **Random board every run** (`mix(bootSeed, runIndex)`), with NO new UI:
+    no board code, no NEW/SAME BOARD label, no new key (owner: "just a random
+    board"). Losing a life keeps the board; DAILY and `?code=` keep theirs.
+  - Bests stay keyed by difficulty + room ("not related to the shuffle board").
+  - Gen 2 sits behind `world.gen` (default 1). F1 codes, past dailies,
+    ATTRACT and the intro show stay on gen 1 forever. New codes use F2; the
+    daily switches on release day; the ghost key gains `gen`.
+  - 14 BOLD layouts: one per biome, but 3 each for WATER / ARENA / CROWN.
+    Heat changes only bricks.
+  - A fairness check gates every board, including a sealed start and a
+    walking-distance foe floor.
+  - New tiles: BELT first, then GLIDE and CURRENT, on a `world.feat` layer.
+    PIXEL work waits for the dynamic import (#15).
 - Hero direction reset (owner ruling 2026-10-11, concept only, NOT built): a
   cartoon with a head, arms and legs, "googooli" (appealing yet dignified,
   smart, stylish), NOT human, space theme — a small being of starlight held in

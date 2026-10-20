@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-20 — Level variety designed: bold biome mazes + fair start (docs only)
+- The owner picked 3 layouts each for WATER / ARENA / CROWN (14 total), all BOLD, plus a fair start: brick-door spawn pocket, and foes ≥10 walking steps away (hunters ≥12). Bot test vs today: first-5 s hits 280 → 171, losses 34% → 52% (still harder after the corner opens). Every step is recorded in `docs/superpowers/specs/2026-10-20-level-variety-design.md`, indexed in the docs map and diary, with an AGENTS rulings note. Issues #8/#11/#12 updated. Mockup code lives on worktree `worktree-agent-ac4f113e8ef46ecff` (never merge). Open: BELT look A/B and tile ship order; human play-test of bold difficulty.
+
 ## 2026-10-20 — Research: every room is the same maze (issue #8), no code changed
 - Owner report valid: 128/195 tiles fixed in every room of every seed, 1 wall layout ever, 0/17 spawn-near tiles vary, and bootSeed makes room N byte-identical all session. Five lenses + critic (notes, prototypes, art contact sheet in git-ignored `.superpowers/sdd/2026-10-20-levels/`) recommend versioned gen 2 (authored biome skeletons + seeded flips/edits, heat = bricks only) + fairness validator, F2 codes, a fresh seed per run with a G SAME BOARD key, and gen-keyed records. Filed as HMarzban/fusegrid#8; task issues #9–#17. The owner then simplified it to "just a random board": no board code or NEW/SAME UI (#9 and #14 closed). Open tasks: #10 #11 #12 #13 #15 #16 #17. Mockups (real-render captures) are in `mockups/`, and the preview artifact is published. Picks still pending: BELT look A or B, and ship order. Nothing is built yet.
 
