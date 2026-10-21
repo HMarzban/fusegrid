@@ -204,3 +204,59 @@ Umbrella #16 (under #8). Its sub-tasks:
 | #25 | Balance test: tile-aware bot, four arms, targets |
 | #26 | Wave 2: CURRENT, DUNE, GATE |
 | #27 | Wave 3: RIFT |
+
+---
+
+## Addendum (2026-10-21, evening): wave-1 prototype results
+
+The four wave-1 tiles ran in a throwaway build: the bold gen-2 boards plus
+every section 3 number, art approach C in CLASSIC 2D and REAL 3D (measured at
+142 draws), and 64/64 tests passing. Gen 1 and the control rooms stayed
+byte-identical (1800 of 1800 rows).
+
+**Bot test:** 3000 paired seeds per cell, a tile-aware bot, Δ = with tiles
+minus without, as a 95% interval.
+
+| Tile | CORE Δ lose | MAX Δ lose | Notes |
+|---|---|---|---|
+| BLOOM | +0.3 pp | −1.0 pp | Barely fires (0.02 relay kills per run); traps 7 / 51 / 117 |
+| GLIDE | +0.9 pp | +1.2 pp | Clean at CORE and PLUS; 22 traps at MAX |
+| BELT | +0.8 pp | +0.9 pp | Clear times unresolved; first-5 s hits 63 → 100 at MAX |
+| PLATE | −20.9 pp | −20.4 pp | Foes set plates off and kill themselves (1.8–2.3 per room) |
+
+**Verdict: the dial does not work yet.**
+
+- No tile reaches the +3 to +10 point MAX target.
+- PLATE makes every heat about 20 points easier.
+- The pooled MAX early-hit ceiling fails: 152 → 183 against 177, driven by
+  foes riding belts toward the player. V17 did not close it.
+- The tile-trap gate (= 0) fails for BLOOM, BELT at PLUS and MAX, PLATE, and
+  GLIDE at MAX.
+- The bot rarely clears a room, so run-level joy is unresolved, and most
+  results rest on a weak bot.
+
+**What the next design pass must fix before any build:**
+
+- **PLATE:** arm only near the player, or make foes avoid plates. Arming near
+  the player alone still leaves MAX 5.5 points easier.
+- **BELT:** never point a chain's downstream end toward the start corner or
+  the player's lane at MAX, and add a V17-style check for belt-ridden foes.
+- **BLOOM:** placement must put blooms on real blast lanes, or it adds
+  nothing.
+- **Traps:** close V14 and V18–V20 as static checks.
+- **The dial:** it needs a stronger MAX lever, such as more tiles or tighter
+  numbers at MAX. Owner ruling R5 (tiles fixed across heats) limits the
+  lever, so the owner may need to revisit it.
+- **Play-test:** human play-testing decides joy.
+
+**Deviations from section 3** in the prototype:
+
+- straight belts only;
+- GLIDE as rings around a pillar;
+- V18–V20 not run as static checks;
+- pickups can sit on plates (a V14 gap);
+- no coach tip or FLOOR line.
+
+Prototype notes, captures and the patch are in the git-ignored
+`.superpowers/sdd/2026-10-21-tiles/proto/`, and the code is on the local branch
+`worktree-agent-a9489bfefcc2ae31f`, never to be merged.

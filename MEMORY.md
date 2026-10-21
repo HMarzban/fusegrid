@@ -16,6 +16,14 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-21 — Tile wave-1 prototype: the dial does not work yet
+- BELT, GLIDE, BLOOM and PLATE ran in a throwaway build (142 draws, 64/64 tests). Bot test, 3000 paired seeds:
+  - No tile reaches the +3–10 point MAX lose target.
+  - PLATE is about 20 points easier at every heat (foes kill themselves).
+  - BELT lets foes ride in early at MAX.
+  - BLOOM barely fires.
+- The next design pass must come before any build. Results are in the tiles record's addendum; captures are on the preview page.
+
 ## 2026-10-21 — Docs close-out for v183
 - AGENTS (3D walls follow the grid; build tag examples now v183), architecture, diary (v183 entry) and README (Know your build) are synced. v183 = SHRINK REAL 3D fix + MENU build tag, merged locally, not pushed.
 
