@@ -31,9 +31,12 @@ export function slot2d(b, s) {
 const R = (x, y, w, h, c) => ({r: [x, y, w, h], c});
 const P = (p, c) => ({p, c});
 const S = (s, w, c) => ({s, w, c});
+/* 2D-only highlight: a 1-art-px core samples as a dotted line in PIXEL */
+const np = (x) => ({...x, npx: true});
 const OCT = (k, d) => [[k, d], [TS - k, d], [TS - d, k], [TS - d, TS - k], [TS - k, TS - d], [k, TS - d], [d, TS - k], [d, k]];
 const meander = (x0, x1, ya, yb, st) => { const o = []; let up = true; for (let x = x0; x <= x1; x += st) { o.push([x, up ? ya : yb], [Math.min(x + st, x1), up ? ya : yb]); up = !up; } return o; };
-const lip = (pts, dy) => pts.map(([x, y]) => [x, y + dy]);
+/* Catmull-Rom through the points: roots are smooth tubes, never a jagged crack */
+const curve = (p, n = 6) => { const o = []; for (let i = 0; i < p.length - 1; i++) { const a = p[Math.max(0, i - 1)], b = p[i], c = p[i + 1], d = p[Math.min(p.length - 1, i + 2)]; for (let k = 0; k < n; k++) { const t = k / n, t2 = t * t, t3 = t2 * t; o.push([0, 1].map((j) => 0.5 * (2 * b[j] + (c[j] - a[j]) * t + (2 * a[j] - 5 * b[j] + 4 * c[j] - d[j]) * t2 + (3 * b[j] - a[j] - 3 * c[j] + d[j]) * t3))); } } o.push(p[p.length - 1]); return o; };
 
 /* Each family: base mark, v1, v2, acc (one per room), plus bmark (the mark
    the rampart border repeats; a facet polygon would repeat as a sawtooth).
@@ -42,14 +45,14 @@ const lip = (pts, dy) => pts.map(([x, y]) => [x, y + dy]);
 export const FAM = {
   JUNGLE: {name: "TEMPLE STONE", px: {"wallHi.shadow": "wall"},
     base: () => [S([[6, 11], [34, 11]], 1, "wallHi.shadow")],
-    v1: (g) => { const a = [[3, 9], [9, 7], [15, 8], [21, 10], [27, 9], [33, 7], [36, 8]], d = [[36, 8], [37, 14], [35, 19], [36, g.y0 + 3], [35, 36]]; return [S(a, 2, "wall.outline"), S(lip(a, -1.6), 1, "wallHi.light"), S(d, 2, "wall.outline"), S([[21, 10], [22, 14]], 1.2, "wall.outline")]; },
+    v1: (g) => { const a = curve([[2, 12], [9, 9], [16, 10], [23, 14], [29, 19], [33, g.y0 + 3], [36, 37]]); return [S(a, 4.4, "wall.outline"), np(S(a, 2, "wall"))]; },
     v2: (g) => [S(meander(5, 35, g.y0 + 3, g.y0 + g.f - 4, 5), 1.4, "wall.outline")],
-    acc: (g) => [S([[9, 3], [10, 9], [9, 15], [10, g.y0 + 2], [9, 37]], 2.6, "wall.outline"), S([[28, 3], [27, 9], [28, 15], [27, g.y0 + 4], [28, 37]], 2.6, "wall.outline"), S([[10, 9], [16, 12]], 1.2, "wall.outline"), S([[27, 9], [21, 6]], 1.2, "wall.outline"), S([[7.4, 3], [8.4, 9], [7.4, 15]], 0.9, "wallHi.light"), S([[26.4, 3], [25.4, 9], [26.4, 15]], 0.9, "wallHi.light")],
+    acc: (g) => { const a = curve([[9, 3], [11, 10], [8, 17], [11, g.y0 + 2], [9, 37]]), b = curve([[29, 3], [26, 9], [29, 16], [26, g.y0 + 4], [29, 37]]), t = curve([[11, 10], [15, 12], [19, 12]]); return [S(a, 4.6, "wall.outline"), S(b, 4.6, "wall.outline"), S(t, 3, "wall.outline"), np(S(a, 2, "wall")), np(S(b, 2, "wall")), np(S(t, 1, "wall"))]; },
     names: ["root wrap", "fret band", "root-bound"]},
   ICE: {name: "GLACIER BLOCK", lit: "wallHi",
     base: () => [P([[38, 6], [38, 17], [14, 17]], "wallHi.shadow")], bmark: () => [],
-    v1: (g) => [S([[9, g.y0 + 3], [9, g.y0 + 14]], 1.4, "wallHi"), S([[9, g.y0 + 4], [14, g.y0 + 2]], 1.2, "wallHi"), S([[9, g.y0 + 8], [14, g.y0 + 6]], 1.2, "wallHi"),
-      S([[28, g.y0 + 3], [28, g.y0 + 14]], 1.4, "wallHi"), S([[28, g.y0 + 3], [32, g.y0 + 7]], 1.2, "wallHi")],
+    v1: (g) => [R(8, g.y0 + 3, 2, 12, "wallHi"), S([[9, g.y0 + 5], [14, g.y0 + 3]], 2, "wallHi"), S([[9, g.y0 + 9], [14, g.y0 + 7]], 2, "wallHi"),
+      R(26, g.y0 + 3, 2, 12, "wallHi"), S([[27, g.y0 + 4], [32, g.y0 + 9]], 2, "wallHi")],
     v2: (g) => [[7, 9], [15, 12], [24, 7], [32, 10]].flatMap(([x, l]) => [P([[x - 2, g.y0], [x, g.y0], [x, g.y0 + l]], "wallHi"), P([[x, g.y0], [x + 2, g.y0], [x, g.y0 + l]], "wall.outline")]),
     acc: (g) => [P([[2, g.y0], [38, g.y0], [38, g.y0 + 2], [35, g.y0 + 11], [32, g.y0 + 2], [27, g.y0 + 7], [23, g.y0 + 2], [18, g.y0 + 14], [14, g.y0 + 2], [9, g.y0 + 8], [6, g.y0 + 2], [2, g.y0 + 4]], "wallHi.shadow"),
       ...[[35, 11], [27, 7], [18, 14], [9, 8]].map(([x, l]) => P([[x, g.y0 + 2], [x + 2, g.y0 + 2], [x, g.y0 + l]], "wall.outline")),
@@ -69,20 +72,20 @@ export const FAM = {
     names: ["barnacles", "algae drips", "mooring cleat"]},
   ARENA: {name: "COLOSSEUM STONE", px: {"wallHi.shadow": "wallHi", "wall.outline": "wall.shadow"}, pxCapFull: true,
     base: (g) => [R(2, g.y0 + 4, 36, 1, "wall.outline")],
-    v1: () => [11, 14, 17, 20].map((x) => S([[x, 7], [x, 15]], 1.2, "wall.outline")).concat([S([[8, 14], [23, 8]], 1.2, "wall.outline")]),
+    v1: () => [10, 14, 18, 22].map((x) => R(x, 7, 2, 9, "wall.outline")).concat([S([[8, 14], [25, 8]], 2, "wall.outline")]),
     v2: () => [R(13, 5, 14, 2, "wall.shadow"), R(14, 14, 12, 2, "wall.shadow"), R(16, 7, 2, 7, "wall.shadow"), R(22, 7, 2, 7, "wall.shadow"), R(13, 7, 14, 1, "wallHi.light")],
-    acc: () => [S([[7, 11], [33, 11]], 1.2, "wallHi.shadow"), ...[[9, -1, 1], [16, 1, 0.8], [22, -1, 0.9], [28, 1, 1.1]].map(([x, d, k]) => P([[x, 11 + d], [x + 3 * k, 11 + 4 * d * k], [x + 6 * k, 11 + 4.5 * d * k], [x + 3 * k, 11 + 1.5 * d]], "wallHi.light"))],
+    acc: () => [R(6, 10, 28, 2, "wall.shadow"), ...[[9, -1], [15, 1], [21, -1], [27, 1]].map(([x, d]) => P([[x, 11 + 3.5 * d], [x + 3, 11 + 2 * d], [x + 6, 11 + 3.5 * d], [x + 3, 11 + 5.5 * d]], "wall.shadow"))],
     names: ["tally marks", "carved column", "laurel"]},
   SAND: {name: "SANDSTONE",
     base: () => [S([[3, 8], [12, 7], [22, 9], [37, 8]], 1.2, "wallHi.shadow"), S([[3, 9.4], [12, 8.4], [22, 10.4], [37, 9.4]], 1, "wallHi.light"), S([[3, 14], [14, 15], [26, 13], [37, 14]], 1.2, "wallHi.shadow"), S([[3, 15.4], [14, 16.4], [26, 14.4], [37, 15.4]], 1, "wallHi.light")],
     v1: (g) => [P([[2, 38], [2, g.y0 - 1], [9, g.y0 - 2], [17, g.y0 + 2], [24, 38]], "wallHi.light")],
-    v2: (g) => [7, 18, 29].flatMap((x) => [R(x, g.y0 + 1, 4, 4, "wallHi.shadow"), R(x, g.y0 + 1, 4, 1, "wallHi.light"), R(x, g.y0 + 5, 4, 1, "wall.outline")]),
+    v2: (g) => [6, 17, 28].flatMap((x) => [R(x, g.y0 + 1, 6, 4, "wallHi.shadow"), R(x, g.y0 + 1, 6, 1, "wallHi.light"), R(x, g.y0 + 5, 6, 2, "wall.outline")]),
     acc: () => [S([[8, 18], [8, 15], [12, 15], [12, 12], [16, 12], [16, 9], [24, 9]], 1.3, "wallHi.shadow"), S([[24, 9], [24, 12], [28, 12], [28, 15], [32, 15], [32, 18]], 1.3, "wallHi.light"), S([[9, 18], [31, 18]], 1, "wallHi.light")],
     names: ["sand drift", "beam ends", "step relief"]},
   VOID: {name: "OBSIDIAN MONOLITH", lit: "wallHi", px: {"wallHi.shadow": "wallHi"},
     base: () => [P([[22, 5], [36, 5], [36, 17], [16, 17]], "wallHi.shadow")], bmark: () => [],
     v1: (g) => [S([[5, g.y0 + 5], [15, g.y0 + 5], [19, g.y0 + 9], [35, g.y0 + 9]], 1.5, "wallHi")],
-    v2: (g) => [P([[2, 5], [9, 5], [6, 17], [2, 17]], "wallHi.shadow"), P([[20, g.y0 + 3], [24, g.y0 + 7], [20, g.y0 + 11], [16, g.y0 + 7]], "wallHi")],
+    v2: (g) => [P([[2, 5], [9, 5], [6, 17], [2, 17]], "wallHi.shadow"), P([[21, g.y0 + 2.5], [27.5, g.y0 + 9], [21, g.y0 + 15.5], [14.5, g.y0 + 9]], "wallHi")],
     acc: (g) => [S([[20, g.y0 + 2], [20, g.y0 + 13]], 2, "wallHi"), S([[20, g.y0 + 5], [25, g.y0 + 2]], 1.5, "wallHi"), S([[20, g.y0 + 9], [15, g.y0 + 12]], 1.5, "wallHi")],
     names: ["crystal inlay", "faceted cap", "rune slit"]},
   CROWN: {name: "ROYAL MASONRY", panel: "wall.light", lit: "wallHi",

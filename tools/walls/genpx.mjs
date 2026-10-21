@@ -24,7 +24,7 @@ function hit(s, x, y) {
 }
 const SI = (i) => (i === 0 ? 0 : i === 19 ? N - 1 : i * 4 + 1);
 export function pxRows(b, code) {
-  const F = FAM[b.name], sh = wallShapes(b, code, true), map = F.px || {};
+  const F = FAM[b.name], sh = wallShapes(b, code, true).filter((s) => !s.npx), map = F.px || {};
   const res = (s) => { if (s === "edge") s = edgeSlot(b); return map[s] || s; };
   const rows = [];
   for (let j = 0; j < 20; j++) {
