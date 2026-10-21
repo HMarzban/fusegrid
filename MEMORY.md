@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-21 — v183 pushed; session close-out
+- The owner pushed main at `c6ee713`; Pages CI is green, so v183 is LIVE (SHRINK REAL 3D walls, the MENU build tag, the level-variety and tiles docs, issues #8–#30 resolvable). The #6 kick-hint fix is a separate v184 committed locally by another session, not pushed. Three leftover headless-Chrome temp profiles were deleted. Next: owner decisions O1–O12 on #8, then a GO on the build order.
+
 ## 2026-10-21 — Issue #6: no hint says K + MOVE to kick
 - HOW TO's KICK row key now reads `WALK INTO BOMB` (agrees with `POWER[].help`); the OPTIONS keyboard key line drops `KICK K+MOVE` (kick has no key); README and the marketing kit match. Ships as shell v184 (v183 was already live, so the changed `menudraw.js` needed a cache bump). HOW TO pins re-hashed in `pixel-hud.test`; `menudraw.test` now fails on any `K + MOVE`. Left open (owner call): the dead `KeyK` → `intent.kick` latch, with #3.
 
