@@ -16,8 +16,8 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
-## 2026-10-21 — REAL 3D: SHRINK walls now render (wall InstancedMesh follows the grid)
-- `scene.js` built the wall InstancedMesh once per level, so SHRINK rings (and a future new board on the same room, issue #10) never drew in REAL 3D while collision blocked. Walls now sit at capacity COLS*ROWS and `update()` refills them from a wall mask (NEAR_H cutaway, checker colours, ranged `live` upload; `brickV` bumps so the shadow map re-renders). Still one draw call, fat-world 141; CLASSIC 2D/PIXEL already redraw from the grid. Shipped bytes changed: the `CACHE_NAME`/REV bump is left to the next release.
+## 2026-10-21 — shell v183: REAL 3D SHRINK walls now render (wall InstancedMesh follows the grid)
+- `scene.js` built the wall InstancedMesh once per level, so SHRINK rings (and a future new board on the same room, issue #10) never drew in REAL 3D while collision blocked. Walls now sit at capacity COLS*ROWS and `update()` refills them from a wall mask (NEAR_H cutaway, checker colours, ranged `live` upload; `brickV` bumps so the shadow map re-renders). Still one draw call, fat-world 141; CLASSIC 2D/PIXEL already redraw from the grid. Released as shell v183 (owner: "Bump now"); headless Metal capture of a SHRINK gen 3 room shows 171 grid walls = 171 drawn.
 
 ## 2026-10-21 — Level variety: next steps recorded; difficulty-scaled tile round started
 - Next steps, in order:

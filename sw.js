@@ -1,6 +1,6 @@
 import { CACHE_NAME, PRECACHE, fetchPolicy } from "./src/pwa/shell.js";
 
-const REV = "fusegrid-shell-v182";
+const REV = "fusegrid-shell-v183";
 if (REV !== CACHE_NAME) throw new Error("PWA REV drift");
 const PREFIX = "fusegrid-shell-v";
 /* Shells before v179 have no NEW VERSION READY card, so a page they run can
