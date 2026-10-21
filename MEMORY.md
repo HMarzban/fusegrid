@@ -16,6 +16,13 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-21 — Level variety: next steps recorded; difficulty-scaled tile round started
+- Next steps, in order:
+  1. Tile round. Owner: tiles give "more joy" on easy and "more challenge" on hard.
+  2. Human play-test of bold rooms 7–8.
+  3. Close the prototype gaps: ICE / FACTORY / ARENA under 200 layouts per 1000 seeds, COURT bricks, CROWN dais height-24 occlusion, 3D/PIXEL shots predating the fair start.
+  4. Build order on GO: #11 → #10 (+3D wall rebuild) → #15 → #12+#13 → #16 → #17.
+
 ## 2026-10-20 — Level variety designed: bold biome mazes + fair start (docs only)
 - The owner picked 3 layouts each for WATER / ARENA / CROWN (14 total), all BOLD, plus a fair start: brick-door spawn pocket, and foes ≥10 walking steps away (hunters ≥12). Bot test vs today: first-5 s hits 280 → 171, losses 34% → 52% (still harder after the corner opens). Every step is recorded in `docs/superpowers/specs/2026-10-20-level-variety-design.md`, indexed in the docs map and diary, with an AGENTS rulings note. Issues #8/#11/#12 updated. Mockup code lives on worktree `worktree-agent-ac4f113e8ef46ecff` (never merge). Open: BELT look A/B and tile ship order; human play-test of bold difficulty.
 
