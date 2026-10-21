@@ -9,7 +9,7 @@ import {BIOMES} from "../../core/config.js";
 import {POWER, FOES} from "../../core/entities.js";
 import {ITEM_FAMILY} from "../icons.js";
 import {HEX} from "./palette.js";
-import {anchorOf, cellRGBA, flipX, rot90, swapCell} from "./grid.js";
+import {anchorOf, cellRGBA, flipX, rot90, swapCell, overlayCell} from "./grid.js";
 import {fallbackCell} from "./fallback.js";
 import {ART} from "./art/index.js";
 import {MAKO_FACES, MAKO_CYCLE, layoutOf, BOMB_MARKS, BLAST_PIECES, BLAST_AGES} from "./manifest.js";
@@ -21,6 +21,12 @@ function composeFace(top, face, fh) {
   while (rows.length < top.h) rows.push(rows[rows.length - 1]);
   return {...top, rows, pal: {...(top.pal || {}), ...(face.pal || {})}};
 }
+
+/* wall code -> [cell, mirrored] (wallvar.js WALL_VARS order); every wall
+   frame is pre-composed over floor0 / floor1 so the chamfer corners show the
+   board, still one drawImage per wall */
+const WALL_SRC = [["base"], ["v1"], ["v2"], ["acc"], ["h"], ["vl"], ["vl", 1], ["ctl"], ["ctl", 1], ["cbl"], ["cbl", 1]];
+const mirrorCell = (c) => ({...c, rows: c.rows.map((r) => [...r].reverse().join(""))});
 
 export function createAtlas(surf, art = ART) {
   const pending = new Set(), used = new Set();
@@ -127,6 +133,7 @@ export function createAtlas(surf, art = ART) {
       crumble: [0, 1, 2, 3].map((k) => fr(composeFace(T("crumble" + k), bFace, fhB))),
       slam: [0, 1, 2].map((k) => fr(T("slam" + k))),
       motif: [fr(T("motif." + b.name + ".0")), fr(T("motif." + b.name + ".1"))],
+      wallV: [f0, f1].map((f) => WALL_SRC.map(([n, m]) => { const w = cellOf("walls", b.name + "." + n); return fr(overlayCell(f, m ? mirrorCell(w) : w)); })),
     };
     return tileSets[i];
   }

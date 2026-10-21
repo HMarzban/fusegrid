@@ -208,5 +208,6 @@ export function fallbackCell(group, name) {
   if (group === "blast") return blastCell(name);
   if (group === "items") return itemCell(name);
   if (group === "fx") return fxCell(name);
+  if (group === "walls") return {w: 20, h: 20, rows: paintCell(20, 20, (x, y) => (x === y || x === 19 - y ? "X" : y > 13 ? "W" : "w")), pal: TP};
   return {w: 1, h: 1, rows: ["."], pal: {}};
 }
