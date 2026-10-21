@@ -49,7 +49,7 @@ cursor; on a phone it's a hub of tiles. Every panel is only as tall as its
 content, and any teaser built from your record (a top score, a best time)
 reads only runs you played, never placeholders.
 
-The build you're running is named on the main menu (`v183` today): in the
+The build you're running is named on the main menu (`v184` today): in the
 keyboard foot hint, under the phone hub, or on the SOURCE tile where a
 landscape touch screen has no room below the hub. OPTIONS shows it as its
 `BUILD` kicker and the NEW VERSION READY card says which build you're on.

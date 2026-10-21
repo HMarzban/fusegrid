@@ -17,7 +17,7 @@ append an entry when it makes a non-trivial change.
 ## Log
 
 ## 2026-10-21 — Issue #6: no hint says K + MOVE to kick
-- HOW TO's KICK row key now reads `WALK INTO BOMB` (agrees with `POWER[].help`); the OPTIONS keyboard key line drops `KICK K+MOVE` (kick has no key); README and the marketing kit match. Rides unpushed v183, no cache bump. HOW TO pins re-hashed in `pixel-hud.test`; `menudraw.test` now fails on any `K + MOVE`. Left open (owner call): the dead `KeyK` → `intent.kick` latch, with #3.
+- HOW TO's KICK row key now reads `WALK INTO BOMB` (agrees with `POWER[].help`); the OPTIONS keyboard key line drops `KICK K+MOVE` (kick has no key); README and the marketing kit match. Ships as shell v184 (v183 was already live, so the changed `menudraw.js` needed a cache bump). HOW TO pins re-hashed in `pixel-hud.test`; `menudraw.test` now fails on any `K + MOVE`. Left open (owner call): the dead `KeyK` → `intent.kick` latch, with #3.
 
 ## 2026-10-21 — Prototypes kept local, indexed for agents
 - The owner said to keep the prototype code local. The two worktrees with loose changes were committed on their own branches, and all four prototype worktrees are `git worktree lock`ed. Index: `.superpowers/sdd/PROTOTYPES-2026-10.md`; there is an AGENTS.md pointer under Level variety.
