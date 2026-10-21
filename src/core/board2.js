@@ -9,6 +9,9 @@ import { CFG, T, key } from "./config.js";
 import { createRng } from "./rng.js";
 import { genBoard } from "./board.js";
 import { heatProfile, heatRoster } from "./heat.js";
+import { placeFeat } from "./feat.js";
+/* TILE PROTO (2026-10-21): FEAT.on=false builds the board exactly as before the tile round */
+export const FEAT = { on: true };
 
 const C = CFG.COLS, R = CFG.ROWS, N = C * R;
 const D4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -470,12 +473,14 @@ export function genBoard2(seed, level, heat = 0) {
   for (let a = 0; a < 8; a++) {
     const sk = skeleton2(seed, level, a);
     if (sk.fails.length) continue;
+    const pf = FEAT.on ? placeFeat(sk.m, seed, level, sk.biome) : null;
+    if (pf && pf.feat) for (const k of pf.force) sk.m[k] = E;
     for (let m = 0; m < 8; m++) {
       const fl = fill2(sk, seed, level, heat, m);
       if (!playFails(fl.grid, level, heat).length)
-        return { grid: fl.grid, layout: { name: sk.biome + " · " + sk.tpl.toUpperCase(), tpl: sk.tpl, flip: sk.flip, edits: sk.edits, skAttempt: a, fillAttempt: m, fallback: false } };
+        return { grid: fl.grid, feat: pf && pf.feat, layout: { name: sk.biome + " · " + sk.tpl.toUpperCase(), tpl: sk.tpl, flip: sk.flip, edits: sk.edits, skAttempt: a, fillAttempt: m, fallback: false, featKind: pf ? pf.kind : null, featFallback: !!(pf && pf.fallback) } };
     }
     break;
   }
-  return { grid: genBoard(seed, level, CARVE1[heat]), layout: { name: "v1 LATTICE (fallback)", tpl: "lattice", flip: 0, edits: [], fallback: true } };
+  return { grid: genBoard(seed, level, CARVE1[heat]), feat: null, layout: { name: "v1 LATTICE (fallback)", tpl: "lattice", flip: 0, edits: [], fallback: true } };
 }

@@ -201,6 +201,7 @@ export function hurtPlayer(world, emit) {
   p.x = 1.5 * CFG.TILE;
   p.y = 1.5 * CFG.TILE;
   p.iFrames = CFG.IFRAMES * 1.6;
+  if (p.gl) p.gl = null;
   return false;
 }
 

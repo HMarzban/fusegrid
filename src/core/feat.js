@@ -1,0 +1,217 @@
+/* THROWAWAY PROTOTYPE (2026-10-21 tile round, wave 1): the floor-feature
+   layer world.feat. Codes: 1..4 BELT E/S/W/N, 5 GLIDE, 6 BLOOM, 7 PLATE.
+   Tables follow 04-synthesis §7.2 exactly; `tier` is heat (or an arm
+   override, world.featTier). Placement is keyed (seed, room) only and runs
+   on the gen-2 skeleton after stamps and flip, so heat never moves a tile.
+   Never merges. */
+import { CFG, key } from "./config.js";
+import { createRng } from "./rng.js";
+
+const C = CFG.COLS, R = CFG.ROWS, N = C * R;
+const D4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+export const F = Object.freeze({ NONE: 0, BELT_E: 1, BELT_S: 2, BELT_W: 3, BELT_N: 4, GLIDE: 5, BLOOM: 6, PLATE: 7 });
+export const FDIR = Object.freeze([[1, 0], [0, 1], [-1, 0], [0, -1]]);
+export const isBelt = (v) => v >= 1 && v <= 4;
+export const beltDir = (v) => FDIR[v - 1];
+export const HOME = Object.freeze({ FACTORY: "BELT", ICE: "GLIDE", JUNGLE: "BLOOM", ARENA: "PLATE" });
+
+export const FEAT_PROFILE = Object.freeze([
+  Object.freeze({ belt: { actors: false, v: 1.0 }, glide: { boost: 1.25, coast: 0, turn: 0.35 }, bloom: { fwd: 2, side: 0, delay: 0, cd: 1.0 }, plate: { wind: 0.5, r: 1, cd: 3, inert: 2 } }),
+  Object.freeze({ belt: { actors: true, v: 1.0 }, glide: { boost: 1.25, coast: 1, turn: 0.2 }, bloom: { fwd: 2, side: 1, delay: 0.15, cd: 1.0 }, plate: { wind: 0.8, r: 2, cd: 4, inert: 2 } }),
+  Object.freeze({ belt: { actors: true, v: 1.2 }, glide: { boost: 1.25, coast: 3, turn: 0.1 }, bloom: { fwd: 2, side: 2, delay: 0.3, cd: 1.0 }, plate: { wind: 1.0, r: 3, cd: 3, inert: 2 } }),
+]);
+export const TILE_HELP = Object.freeze({
+  BELT: ["CARRIES BOMBS", "CARRIES BOMBS, YOU, FOES", "CARRIES ALL, FAST"],
+  GLIDE: ["FAST ICE, STOP ANY TIME", "FAST ICE, SLIDES A STEP", "FAST ICE, NO STOPPING"],
+  BLOOM: ["THROWS YOUR BLAST ON", "BLAST LEAKS SIDEWAYS", "BLAST TURNS CORNERS LATE"],
+  PLATE: ["FOES SET IT OFF · SHORT", "FOES SET IT OFF · LONG", "FOES SET IT OFF · HUGE"],
+});
+export function featTier(w) {
+  const t = w.featTier != null ? w.featTier : w.heat;
+  return t < 0 ? 0 : t > 2 ? 2 : t | 0;
+}
+export function featProfile(w) { return FEAT_PROFILE[featTier(w)]; }
+export function featKindOf(v) { return isBelt(v) ? "BELT" : v === 5 ? "GLIDE" : v === 6 ? "BLOOM" : v === 7 ? "PLATE" : null; }
+
+/* ---- placement (V13-V27 subset, see notes.md) ---- */
+function fmix(h) {
+  h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b) >>> 0;
+  h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35) >>> 0;
+  return (h ^ (h >>> 16)) >>> 0;
+}
+const POCKET = [[1,1],[2,1],[1,2],[3,1],[4,1],[3,2],[1,3],[1,4],[2,3]];
+const DOORS = [[5,1],[1,5]];
+const open = (m, x, y) => x > 0 && y > 0 && x < C - 1 && y < R - 1 && m[key(x, y)] !== 0;
+function bfs(m, sx, sy) {
+  const d = new Int16Array(N).fill(-1), q = [key(sx, sy)];
+  d[q[0]] = 0;
+  for (let h = 0; h < q.length; h++) {
+    const k = q[h], x = k % C, y = (k / C) | 0;
+    for (const [dx, dy] of D4) {
+      const nx = x + dx, ny = y + dy;
+      if (!open(m, nx, ny)) continue;
+      const nk = key(nx, ny);
+      if (d[nk] >= 0) continue;
+      d[nk] = d[k] + 1; q.push(nk);
+    }
+  }
+  return d;
+}
+/* m: skeleton class map (0 wall, else open; bricks count as passable, the
+   real route once the doors are open). Returns {feat, force, fails} or null. */
+export function placeFeat(m, seed, level, biome) {
+  const kind = HOME[biome];
+  if (!kind) return null;
+  const rng = createRng(fmix((seed ^ Math.imul(level + 1, 0x9e3779b1) ^ 0x7ea7) >>> 0));
+  const dS = bfs(m, 1, 1), dD = DOORS.map(([x, y]) => bfs(m, x, y));
+  const near = (x, y) => { const k = key(x, y); return dS[k] >= 0 && dS[k] <= 4 || DOORS.some(([a, b]) => a === x && b === y); };
+  for (let tries = 0; tries < 40; tries++) {
+    const f = new Uint8Array(N), force = [];
+    let ok = false;
+    if (kind === "BELT") ok = belt(m, f, rng, near, dD);
+    else if (kind === "GLIDE") ok = glide(m, f, rng, dS);
+    else if (kind === "BLOOM") ok = bloom(m, f, rng, force);
+    else ok = plate(m, f, rng, dS, force);
+    if (ok) return { feat: f, force, kind, tries };
+  }
+  return { feat: null, force: [], kind, tries: 40, fallback: true };
+}
+/* V15 + V17: straight acyclic chains on odd lanes, 4-9 tiles, total <= 16;
+   entry and landing tiles open with >= 2 open neighbours; a step-off within
+   2 tiles downstream; the landing tile >= 10 walking steps from both doors */
+function belt(m, f, rng, near, dD) {
+  const runs = [];
+  for (let y = 1; y < R - 1; y += 2) {
+    let x = 1;
+    while (x < C - 1) { if (!open(m, x, y)) { x++; continue; } const s = x; while (open(m, x, y)) x++; if (x - s >= 6) runs.push({ h: true, a: s, b: x - 1, l: y }); }
+  }
+  for (let x = 1; x < C - 1; x += 2) {
+    let y = 1;
+    while (y < R - 1) { if (!open(m, x, y)) { y++; continue; } const s = y; while (open(m, x, y)) y++; if (y - s >= 6) runs.push({ h: false, a: s, b: y - 1, l: x }); }
+  }
+  if (!runs.length) return false;
+  const want = rng.int(1, 2);
+  let total = 0, made = 0;
+  const order = runs.map((r) => [rng.next(), r]).sort((p, q) => p[0] - q[0]).map((p) => p[1]);
+  for (const r of order) {
+    if (made >= want) break;
+    for (let t = 0; t < 12; t++) {
+      const L = rng.int(4, Math.min(9, r.b - r.a - 1, 16 - total));
+      if (L < 4) break;
+      const s = rng.int(r.a + 1, r.b - L);
+      const dir = rng.int(0, 1) ? 1 : -1;
+      const at = (i) => (r.h ? [s + i, r.l] : [r.l, s + i]);
+      const cells = []; for (let i = 0; i < L; i++) cells.push(at(i));
+      if (dir < 0) cells.reverse();
+      const [ex, ey] = r.h ? [cells[0][0] - dir, r.l] : [r.l, cells[0][1] - dir];
+      const [lx, ly] = r.h ? [cells[L - 1][0] + dir, r.l] : [r.l, cells[L - 1][1] + dir];
+      if (!open(m, ex, ey) || !open(m, lx, ly)) continue;
+      const nOpen = (x, y) => D4.filter(([dx, dy]) => open(m, x + dx, y + dy)).length;
+      if (nOpen(ex, ey) < 2 || nOpen(lx, ly) < 2) continue;
+      if (cells.some(([x, y]) => near(x, y) || f[key(x, y)] || D4.some(([dx, dy]) => f[key(x + dx, y + dy)]))) continue;
+      if (f[key(lx, ly)] || f[key(ex, ey)]) continue;
+      if (dD.some((d) => { const v = d[key(lx, ly)]; return v >= 0 && v < 10; })) continue;
+      const perp = (x, y) => (r.h ? open(m, x, y - 1) || open(m, x, y + 1) : open(m, x - 1, y) || open(m, x + 1, y));
+      let stepOk = true;
+      for (let i = 0; i < L && stepOk; i++) {
+        let any = false;
+        for (let j = i; j <= Math.min(L, i + 2); j++) { const [x, y] = j < L ? cells[j] : [lx, ly]; if (j === L || perp(x, y)) { any = true; break; } }
+        stepOk = any;
+      }
+      if (!stepOk) continue;
+      const code = r.h ? (dir > 0 ? 1 : 3) : (dir > 0 ? 2 : 4);
+      for (const [x, y] of cells) f[key(x, y)] = code;
+      total += L; made++;
+      break;
+    }
+  }
+  return made > 0;
+}
+/* V24: rings of 8 around one pillar (runs of 3 at most), 1-2 rings, never
+   within 4 walking steps of spawn; rings never share or touch a run */
+function glide(m, f, rng, dS) {
+  const want = rng.int(1, 2), cand = [];
+  for (let y = 2; y < R - 2; y += 2) for (let x = 2; x < C - 2; x += 2) {
+    if (m[key(x, y)] !== 0) continue;
+    let ok = true;
+    for (let dy = -1; dy <= 1 && ok; dy++) for (let dx = -1; dx <= 1 && ok; dx++) {
+      if (!dx && !dy) continue;
+      const k = key(x + dx, y + dy);
+      if (!open(m, x + dx, y + dy) || dS[k] < 0 || dS[k] <= 4) ok = false;
+    }
+    if (ok) cand.push([x, y]);
+  }
+  if (!cand.length) return false;
+  for (let i = cand.length - 1; i > 0; i--) { const j = rng.int(0, i); [cand[i], cand[j]] = [cand[j], cand[i]]; }
+  const used = [];
+  for (const [x, y] of cand) {
+    if (used.length >= want) break;
+    if (used.some(([a, b]) => Math.abs(a - x) < 4 && Math.abs(b - y) < 4)) continue;
+    used.push([x, y]);
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (dx || dy) f[key(x + dx, y + dy)] = 5;
+  }
+  return used.length > 0 && runsOk(f);
+}
+function runsOk(f) {
+  for (let y = 0; y < R; y++) { let n = 0; for (let x = 0; x < C; x++) { n = f[key(x, y)] === 5 ? n + 1 : 0; if (n > 3) return false; } }
+  for (let x = 0; x < C; x++) { let n = 0; for (let y = 0; y < R; y++) { n = f[key(x, y)] === 5 ? n + 1 : 0; if (n > 3) return false; } }
+  return true;
+}
+const farPocket = (x, y, d) => POCKET.concat(DOORS).every(([a, b]) => Math.abs(a - x) + Math.abs(b - y) >= d);
+/* V25: 2-4 on (odd,odd), >= 4 Manhattan from the pocket and doors, no two
+   within 3 in a row or column, forced floor (never under a fill brick) */
+function bloom(m, f, rng, force) {
+  const want = rng.int(2, 4), cand = [];
+  for (let y = 1; y < R - 1; y += 2) for (let x = 1; x < C - 1; x += 2) if (open(m, x, y) && farPocket(x, y, 4)) cand.push([x, y]);
+  for (let i = cand.length - 1; i > 0; i--) { const j = rng.int(0, i); [cand[i], cand[j]] = [cand[j], cand[i]]; }
+  const used = [];
+  for (const [x, y] of cand) {
+    if (used.length >= want) break;
+    if (used.some(([a, b]) => (a === x && Math.abs(b - y) <= 3) || (b === y && Math.abs(a - x) <= 3))) continue;
+    used.push([x, y]);
+  }
+  if (used.length < 2) return false;
+  for (const [x, y] of used) { f[key(x, y)] = 6; force.push(key(x, y)); }
+  return true;
+}
+/* V26 + V27: 3-5 on (odd,odd), >= 6 walking steps from spawn, no two on
+   neighbouring intersections, forced floor; every tile on its r=3 arms has
+   a perpendicular open neighbour within 1 tile along the arm */
+function plate(m, f, rng, dS, force) {
+  const want = rng.int(3, 5), cand = [];
+  for (let y = 1; y < R - 1; y += 2) for (let x = 1; x < C - 1; x += 2) {
+    const k = key(x, y);
+    if (!open(m, x, y) || dS[k] < 6 || !sideExit(m, x, y)) continue;
+    cand.push([x, y]);
+  }
+  for (let i = cand.length - 1; i > 0; i--) { const j = rng.int(0, i); [cand[i], cand[j]] = [cand[j], cand[i]]; }
+  const used = [];
+  for (const [x, y] of cand) {
+    if (used.length >= want) break;
+    if (used.some(([a, b]) => Math.abs(a - x) + Math.abs(b - y) <= 2)) continue;
+    used.push([x, y]);
+  }
+  if (used.length < 3) return false;
+  for (const [x, y] of used) { f[key(x, y)] = 7; force.push(key(x, y)); }
+  return true;
+}
+export function sideExit(m, x, y) {
+  const perpOpen = (px, py, dx, dy) => open(m, px + dy, py + dx) || open(m, px - dy, py - dx);
+  for (const [dx, dy] of D4) {
+    const arm = [[x, y]];
+    for (let i = 1; i <= 3; i++) { if (!open(m, x + dx * i, y + dy * i)) break; arm.push([x + dx * i, y + dy * i]); }
+    for (let i = 1; i < arm.length; i++) {
+      let ok = false;
+      for (let j = Math.max(0, i - 1); j <= Math.min(arm.length - 1, i + 1); j++) if (perpOpen(arm[j][0], arm[j][1], dx, dy)) { ok = true; break; }
+      if (!ok) return false;
+    }
+  }
+  return true;
+}
+/* spawner exclusion: no foe on a feature tile, none within 1 of a PLATE */
+export function spawnBlocked(feat, x, y) {
+  if (!feat) return false;
+  if (feat[key(x, y)]) return true;
+  for (const [dx, dy] of D4) if (feat[key(x + dx, y + dy)] === 7) return true;
+  return false;
+}

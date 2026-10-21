@@ -1,6 +1,7 @@
 import { CFG, T, key, clamp } from "./config.js";
 import { genBoard, isBrick } from "./board.js";
 import { genBoard2, dists2, foeOk2 } from "./board2.js";
+import { spawnBlocked } from "./feat.js";
 import { createRng } from "./rng.js";
 import { POWER, createPlayer, spawnEnemy } from "./entities.js";
 import { clampHeat, heatProfile, heatRoster } from "./heat.js";
@@ -79,9 +80,12 @@ export function loadLevel(world, level, keepProgress = false) {
     const b2 = genBoard2(w.seed, level, heat);
     w.grid = b2.grid;
     w.layout = b2.layout;
+    w.feat = b2.feat || null;
+    if (w.feat) { w.featS = new Float32Array(CFG.COLS * CFG.ROWS); w.featM = new Uint8Array(CFG.COLS * CFG.ROWS); w.featT = 0; w.featPend = []; }
   } else {
     w.grid = genBoard(w.seed, level, P.carve);
     w.layout = null;
+    if (w.feat) w.feat = null;
   }
   w.bombs = [];
   w.blades = [];
@@ -189,7 +193,7 @@ export function loadLevel(world, level, keepProgress = false) {
     const { e, b } = dists2(w.grid);
     const used = new Set(), pick = [];
     for (const t of roster) {
-      const j = free.findIndex(([x, y], j) => !used.has(j) && foeOk2(t, e[key(x, y)], b[key(x, y)]));
+      const j = free.findIndex(([x, y], j) => !used.has(j) && foeOk2(t, e[key(x, y)], b[key(x, y)]) && !spawnBlocked(w.feat, x, y));
       if (j < 0) continue;
       used.add(j);
       pick.push([t, free[j]]);
