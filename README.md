@@ -173,6 +173,8 @@ CORE ×1, PLUS ×2, MAX ×3.
   READY** card offers RELOAD (or `U`) on the menus or after a finished run,
   never in the middle of one. LATER hides it until your next run ends or
   the next time you open the game.
+- **Know your build.** The main menu shows which version you're running
+  (for example `v183`), so you can tell when an update has landed.
 
 Everything the game remembers lives in your browser's local storage. There is
 no account, no server and no global ranking.

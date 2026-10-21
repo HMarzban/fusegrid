@@ -490,6 +490,15 @@ evening. The launch itself waits: the owner parked the whole promotion plan
 as [issue #7](https://github.com/HMarzban/fusegrid/issues/7) ("we have lots
 of todo before we publish it").
 
+### 2026-10-21 · Walls you can see, and a version you can read
+
+While designing new levels, the team noticed that REAL 3D built its walls
+once per room. SHRINK's closing rings were solid but invisible in 3D: a
+brick vanished, and a wall you couldn't see blocked you. **Shell v183**
+makes the 3D walls follow the grid. The owner also asked to see which
+version is running, so the main menu now shows the build tag (`v183`),
+read from the same cache name that makes installed copies update.
+
 ---
 
 ## 🧪 Lessons from the workshop

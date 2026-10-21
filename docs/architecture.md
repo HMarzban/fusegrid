@@ -49,7 +49,7 @@ cursor; on a phone it's a hub of tiles. Every panel is only as tall as its
 content, and any teaser built from your record (a top score, a best time)
 reads only runs you played, never placeholders.
 
-The build you're running is named on the main menu (`v182`): in the
+The build you're running is named on the main menu (`v183` today): in the
 keyboard foot hint, under the phone hub, or on the SOURCE tile where a
 landscape touch screen has no room below the hub. OPTIONS shows it as its
 `BUILD` kicker and the NEW VERSION READY card says which build you're on.
@@ -143,6 +143,10 @@ also redraws its shadow map only when something that casts a shadow moves.
 PAUSE freezes the board in all three looks. On REAL 3D with automatic
 resolution, a governor lowers the pixel ratio in steps when frames run long,
 and raises it again after ten clean seconds.
+
+REAL 3D draws every wall tile through one instanced mesh. It watches the
+wall set as well as the bricks, so walls that appear mid-room (SHRINK
+rings, since shell v183) are drawn at once, still in that one draw call.
 
 [`rcache.js`](../src/app/rcache.js) keeps one renderer per look. Ten seconds
 after the player switches away, an unused REAL 3D renderer is disposed and

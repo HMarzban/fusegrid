@@ -60,13 +60,13 @@ through `listGeom` / `listHit` (pitches are caps that scale down in a short
 box); MENU has a PLAY hero row whose tag is the run it starts and group gaps
 before OPTIONS / HIGH SCORES / SOURCE; the SOURCE URL shows only on its
 selected row. Build tag (owner 2026-10-21: "a game version in some where in
-the display or menue"): `v182` = `CACHE_NAME` minus `fusegrid-shell-`,
+the display or menue"): `v183` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
 derived ONLY in `shellview.js` (`REV`, handed to `drawMenu` / `drawSettings`
-as `rev`) and `update.js` (the card's "You are on v182", the running build,
+as `rev`) and `update.js` (the card's "You are on v183", the running build,
 never a guessed next one) — never a second literal. Keyboard MENU appends
 it to the foot hint; the touch hub hangs it under the plate when the box has
 >= 10 units below it (`#sh`), else on the SOURCE tile's teaser (landscape on
-the board canvas); OPTIONS keeps its `BUILD v182` kicker. Never on the HUD.
+the board canvas); OPTIONS keeps its `BUILD v183` kicker. Never on the HUD.
 PAUSE draws `pauseGeom(overlayBox, touch)`: touch (`touchLay`,
 data-lay p/l) caps pitch at `PAUSE_ROW_H` 70 / hero 76 / width 380, a keyboard
 screen at the compact `PAUSE_ROW_D` 44 / hero 54 / width 340 (owner: "too
@@ -276,6 +276,11 @@ not shell screens. Do not add them as `SCREEN` values.
     gone; never crossed quads again.
   - The board border is ONE extruded cabinet rim (`tag:"trim"`, `RIM_W 36` /
     `RIM_LIP 6`) with a hole — never four rails, which crossed at the corners.
+  - Walls follow the grid (shell v183, 2026-10-21): `scene.js` keeps a WALL
+    mask beside the brick mask and refreshes the ONE wall InstancedMesh when
+    the WALL set changes, so SHRINK rings draw in REAL 3D mid-room. Before
+    v183 they were invisible while collision still blocked. A new board on
+    the same room also redraws. Still one draw call; fat-world stays 141.
   - Near-wall cutaway (ruling 2026-10-09, the user's pick "lower the near
     wall"): the border row nearest the camera (`ROWS-1`, both corner tiles
     included) tops out at `min(hWall, NEAR_H)` with `NEAR_H 22`

@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-21 — Docs close-out for v183
+- AGENTS (3D walls follow the grid; build tag examples now v183), architecture, diary (v183 entry) and README (Know your build) are synced. v183 = SHRINK REAL 3D fix + MENU build tag, merged locally, not pushed.
+
 ## 2026-10-21 — Build tag on MENU (branch `claude/version-label`)
 - Owner asked for the game version on screen. MENU shows the build tag (now `v183`) from `CACHE_NAME` (keyboard foot hint / under the phone hub / SOURCE tile on touch landscape), and the update card names the running build. No `CACHE_NAME` bump here: it rides the v183 bump on `claude/quirky-payne-4c6c2a`, and if it lands after v183 ships it needs its own bump.
 
