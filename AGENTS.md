@@ -760,9 +760,18 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   HMarzban/fusegrid#8, tasks #10 #11 #12 #13 #15 #16 #17; record
   `docs/superpowers/specs/2026-10-20-level-variety-design.md`). Today 128 of
   195 tiles never change and one session replays the same board.
-  - **Random board every run** (`mix(bootSeed, runIndex)`), with NO new UI:
+  - **Random board every run** (`runSeed(bootSeed, i)`, #10), with NO new UI:
     no board code, no NEW/SAME BOARD label, no new key (owner: "just a random
-    board"). Losing a life keeps the board; DAILY and `?code=` keep theirs.
+    board"). Every ordinary run start is random, PAUSE RESTART and the GAME
+    OVER restart included, which supersedes ruling 3. Losing a life keeps the
+    board. DAILY and `?code=` runs keep their board, restarts included.
+  - Issues #8–#30 were reviewed and rewritten for cold execution on
+    2026-10-21 (HoE rulings H1–H29). Owner decisions O1–O12 are listed on #8.
+    The layout templates are in
+    `docs/superpowers/specs/2026-10-20-level-variety-layouts.md`.
+  - Tiles #19–#22 are NOT build-ready. Design pass 2 (#28) comes first,
+    because the wave-1 prototype showed the dial not working. Then the
+    verdict (#30). Tooling: #29.
   - Bests stay keyed by difficulty + room ("not related to the shuffle board").
   - Gen 2 sits behind `world.gen` (default 1). F1 codes, past dailies,
     ATTRACT and the intro show stay on gen 1 forever. New codes use F2; the

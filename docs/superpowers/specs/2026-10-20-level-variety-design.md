@@ -179,6 +179,8 @@ tries, then a fall back to today's board. It must pass on every board:
 
 ### 4.5 New tiles (ruling 13)
 
+> **Superseded (2026-10-21):** the tile rules, numbers, look and costs below are replaced by [difficulty tiles](2026-10-21-difficulty-tiles-design.md) (§2–§5 and its addendum); the 14 layout templates are in [the layouts appendix](2026-10-20-level-variety-layouts.md).
+
 Tiles live on a separate per-tile layer, `world.feat`, not a new `T` value.
 Collision, BFS, blasts, spawning and AI are unchanged; gen 1 gets `null`.
 

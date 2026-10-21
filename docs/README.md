@@ -128,6 +128,7 @@ decision was later replaced. The note says by what.
 | 2026-09-03 | [Score × Pact](superpowers/specs/2026-09-03-score-pact-design.md) | |
 | 2026-09-04 | [HIGH SCORES by Heat](superpowers/plans/2026-09-04-scores-by-heat.md) | |
 | 2026-10-20 | [Level variety: random boards, bold biome mazes](superpowers/specs/2026-10-20-level-variety-design.md) | ⚠️ Designed, not built (issue #8); its tile section is replaced by the 2026-10-21 tiles record |
+| 2026-10-20 | [Level variety: the 14 bold layouts](superpowers/specs/2026-10-20-level-variety-layouts.md) | The ASCII templates, edit grammar and fair-start pocket for #12 |
 | 2026-10-21 | [Difficulty tiles: fun on easy, tough on hard](superpowers/specs/2026-10-21-difficulty-tiles-design.md) | ⚠️ Designed, wave 1 in prototype (issue #16) |
 
 ### 🎵 Sound
@@ -166,7 +167,7 @@ decision was later replaced. The note says by what.
 | 2026-09-06 | [Retention wave 1](superpowers/specs/2026-09-06-retention-wave1-design.md) · [program index](superpowers/plans/2026-09-06-retention-wave1.md) | |
 | 2026-09-06 | [Combo callouts](superpowers/plans/2026-09-06-combo-callouts.md) · [First-play verify](superpowers/plans/2026-09-06-first-play-verify.md) · [Stopwatch and MODES](superpowers/plans/2026-09-06-stopwatch-modes.md) | |
 | 2026-09-07 | [Retention wave 2](superpowers/specs/2026-09-07-retention-wave2-design.md) · [program index](superpowers/plans/2026-09-07-retention-wave2.md) | |
-| 2026-09-07 | [Run summary](superpowers/plans/2026-09-07-run-summary.md) · [STATS](superpowers/plans/2026-09-07-stats-screen.md) · [DAILY](superpowers/plans/2026-09-07-daily-seed.md) · [Challenge code](superpowers/plans/2026-09-07-challenge-code.md) · [Coach v2](superpowers/plans/2026-09-07-coach-v2.md) | |
+| 2026-09-07 | [Run summary](superpowers/plans/2026-09-07-run-summary.md) · [STATS](superpowers/plans/2026-09-07-stats-screen.md) · [DAILY](superpowers/plans/2026-09-07-daily-seed.md) · [Challenge code](superpowers/plans/2026-09-07-challenge-code.md) · [Coach v2](superpowers/plans/2026-09-07-coach-v2.md) || ⚠️ Its rule that a seedless run replays the session's `bootSeed` is set to be replaced by a random board every run (#10) |
 | 2026-10-08 | [Retention wave 3](superpowers/specs/2026-10-08-retention-wave3-design.md) | Medals, ghost, DAYS PLAYED, reset |
 
 ### 🌐 Platform
