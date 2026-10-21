@@ -19,9 +19,10 @@ Entries are written for players. How a change works lives in
 
 ### Added
 - **See which version you're playing.** The main menu now shows the build
-  number (like `v182`): next to the key hints on a laptop, under the tiles
-  on a phone, and on the SOURCE tile on a sideways phone. The NEW VERSION
-  READY card also tells you which build you're on before you reload.
+  number, the same shell number these notes are named by: next to the key
+  hints on a laptop, under the tiles on a phone, and on the SOURCE tile on a
+  sideways phone. The NEW VERSION READY card also tells you which build
+  you're on before you reload.
 
 ## shell v182 · 2026-10-19
 
