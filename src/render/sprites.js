@@ -1,6 +1,8 @@
 import { CFG, T, key, biomeOf, BIOMES } from "../core/config.js";
 import { drawIcon, rr, RIM, ITEM_FAMILY, dk, lt, poly, seal } from "./icons.js";
 import { drawEnemyBody } from "./enemybody.js";
+import { wallCodes, WALL_VARS } from "./wallvar.js";
+import { wallShapes, paintShapes } from "./wallart.js";
 export { drawIcon, drawEnemyBody };
 
 /* RENDER LAYER — reads world, never mutates it. Every draw fn takes a 2D
@@ -41,7 +43,14 @@ export function captureSprite(w, h, paint, mk) {
 }
 
 /* ---- one-time sprite atlas (per biome) ---- */
-const BAKED = { floorA: {}, floorB: {}, wall: {}, brick: {}, ready: false };
+const BAKED = { floorA: {}, floorB: {}, wall: {}, wallV: {}, brick: {}, ready: false };
+/* one wall painter (wall round prototype): the bake calls it at 0,0, the
+   vector fallback at px,py, so Node and the browser draw the same families */
+export function paintWall(c, b, code, px, py) {
+  c.save();
+  paintShapes(c, b, wallShapes(b, code), px, py);
+  c.restore();
+}
 export function bakeAtlas() {
   if (BAKED.ready || !canMakeCanvas()) return;
   const make = (w, h) => {
@@ -69,21 +78,12 @@ export function bakeAtlas() {
     bb.globalAlpha = 0.25;
     bb.strokeRect(1, 1, CFG.TILE - 2, CFG.TILE - 2);
     BAKED.floorB[i] = fB;
-    const w = make(CFG.TILE, CFG.TILE),
-      wc = w.getContext("2d");
-    wc.fillStyle = b.wall;
-    rr(wc, 0, 0, CFG.TILE, CFG.TILE, 4);
-    wc.fill();
-    wc.fillStyle = b.wallHi;
-    wc.fillRect(3, 3, CFG.TILE - 6, CFG.TILE * 0.4);
-    wc.fillStyle = "rgba(0,0,0,0.35)";
-    wc.fillRect(3, CFG.TILE * 0.5 + 2, CFG.TILE - 6, CFG.TILE * 0.44);
-    wc.fillStyle = "rgba(255,255,255,0.15)";
-    wc.fillRect(5, 5, 3, 3);
-    wc.fillRect(CFG.TILE - 8, 5, 3, 3);
-    wc.fillRect(5, CFG.TILE - 8, 3, 3);
-    wc.fillRect(CFG.TILE - 8, CFG.TILE - 8, 3, 3);
-    BAKED.wall[i] = w;
+    BAKED.wallV[i] = WALL_VARS.map((_, v) => {
+      const w = make(CFG.TILE, CFG.TILE);
+      paintWall(w.getContext("2d"), b, v, 0, 0);
+      return w;
+    });
+    BAKED.wall[i] = BAKED.wallV[i][0];
     const bk = make(CFG.TILE, CFG.TILE),
       bc = bk.getContext("2d");
     bc.fillStyle = b.brickB;
@@ -113,6 +113,11 @@ export function bakedTile(bi, type) {
   return s || null;
 }
 
+/* every wall code's baked tile for biome bi (the REAL 3D strip source) */
+export function wallTiles(bi) {
+  return (BAKED.ready && BAKED.wallV[bi]) || null;
+}
+
 function biomeIndex(level) {
   return (Math.max(1, level) - 1) % BIOMES.length;
 }
@@ -123,34 +128,17 @@ export function drawGrid(c, world) {
     b = biomeOf(world.level);
   const fA = BAKED.floorA[bi],
     fB = BAKED.floorB[bi],
-    wTile = BAKED.wall[bi];
+    wV = BAKED.wallV[bi],
+    WC = wallCodes(world);
   for (let y = 0; y < CFG.ROWS; y++)
     for (let x = 0; x < CFG.COLS; x++) {
       const t = world.grid[key(x, y)],
         px = x * CFG.TILE,
         py = y * CFG.TILE;
       if (t === T.WALL) {
-        if (wTile) {
-          c.drawImage(wTile, px, py);
-          continue;
-        }
-        c.fillStyle = b.wall;
-        rr(c, px, py, CFG.TILE, CFG.TILE, 4);
-        c.fill();
-        c.fillStyle = b.wallHi;
-        c.fillRect(px + 3, py + 3, CFG.TILE - 6, CFG.TILE * 0.4);
-        c.fillStyle = "rgba(0,0,0,0.35)";
-        c.fillRect(
-          px + 3,
-          py + CFG.TILE * 0.5 + 2,
-          CFG.TILE - 6,
-          CFG.TILE * 0.44,
-        );
-        c.fillStyle = "rgba(255,255,255,0.15)";
-        c.fillRect(px + 5, py + 5, 3, 3);
-        c.fillRect(px + CFG.TILE - 8, py + 5, 3, 3);
-        c.fillRect(px + 5, py + CFG.TILE - 8, 3, 3);
-        c.fillRect(px + CFG.TILE - 8, py + CFG.TILE - 8, 3, 3);
+        const v = WC[y * CFG.COLS + x];
+        if (wV) c.drawImage(wV[v], px, py);
+        else paintWall(c, b, v, px, py);
       } else if (fA) {
         c.drawImage((x + y) & 1 ? fB : fA, px, py);
       } else {
