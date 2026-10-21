@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-21 — Prototypes kept local, indexed for agents
+- The owner said to keep the prototype code local. The two worktrees with loose changes were committed on their own branches, and all four prototype worktrees are `git worktree lock`ed. Index: `.superpowers/sdd/PROTOTYPES-2026-10.md`; there is an AGENTS.md pointer under Level variety.
+
 ## 2026-10-21 — Issues #8–#30 reviewed and rewritten for cold execution
 - Two staff engineers, a game designer and an art designer reviewed; the HoE consolidated (rulings H1–H29, owner decisions O1–O12). All 18 open bodies were rewritten to one template; #28 (tiles design pass 2), #29 (`shot.mjs` tooling) and #30 (tiles verdict) were created; 7 stale comments were marked superseded.
 - Added the layouts appendix plus 5 reference PNGs under `docs/superpowers/specs/assets/2026-10-21/`. Issue links resolve only after the owner pushes.

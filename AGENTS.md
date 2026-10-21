@@ -769,6 +769,19 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
     2026-10-21 (HoE rulings H1–H29). Owner decisions O1–O12 are listed on #8.
     The layout templates are in
     `docs/superpowers/specs/2026-10-20-level-variety-layouts.md`.
+  - **Local prototypes** (owner 2026-10-21: keep local). They are throwaway
+    reference code on the owner's machine: never merge, never push, never
+    delete. The worktrees are `git worktree lock`ed. Index:
+    `.superpowers/sdd/PROTOTYPES-2026-10.md`.
+    - `worktree-agent-ac4f113e8ef46ecff`: the gen-2 bold generator and the
+      fair start.
+    - `worktree-agent-a9489bfefcc2ae31f`: the wave-1 tiles and the
+      tile-aware bot.
+    - `worktree-agent-aa5098b8c6fb866ea`: the first tile mockup.
+    - `worktree-agent-a2e5be46a8acb12a0`: the dropped board-code screens.
+
+    Build from the committed specs and read the prototypes only for
+    reference.
   - Tiles #19–#22 are NOT build-ready. Design pass 2 (#28) comes first,
     because the wave-1 prototype showed the dial not working. Then the
     verdict (#30). Tooling: #29.
