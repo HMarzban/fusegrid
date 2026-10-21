@@ -575,6 +575,12 @@ Design work that stayed on the drawing board. None of it is in the game.
   run, 14 bold biome mazes behind a fairness check, and new BELT / GLIDE /
   CURRENT tiles. It's tracked in issue #8;
   [design record](superpowers/specs/2026-10-20-level-variety-design.md).
+- Difficulty tiles (2026-10-21). The owner asked for tiles that give "more
+  joy" on easy and "more challenge" on hard. Three designers and a critic
+  landed on eight floor tiles: BLOOM, GLIDE, BELT, CURRENT, PLATE, DUNE, RIFT
+  and GATE, one per biome. Heat turns each tile's dial, shown by edge and
+  marks rather than colour. It's tracked in issue #16;
+  [design record](superpowers/specs/2026-10-21-difficulty-tiles-design.md).
 
 ---
 

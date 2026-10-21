@@ -16,6 +16,11 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-21 — Difficulty tiles designed (docs + issues), wave 1 in prototype
+- Three designers plus a critic produced eight tiles (BLOOM GLIDE BELT CURRENT PLATE DUNE RIFT GATE). Heat turns each tile's dial (CORE joy → MAX challenge), and tiles never start damage. The record is `docs/superpowers/specs/2026-10-21-difficulty-tiles-design.md`, indexed in the docs map, diary and AGENTS.
+- #16 is now the umbrella, with sub-tasks #18–#27. Owner questions Q1–Q5 are open (Q1: Heat or Pace).
+- The wave-1 prototype runs in a throwaway worktree. Notes are in `.superpowers/sdd/2026-10-21-tiles/`, and the preview artifact shows the concept art.
+
 ## 2026-10-21 — Level variety: next steps recorded; difficulty-scaled tile round started
 - Next steps, in order:
   1. Tile round. Owner: tiles give "more joy" on easy and "more challenge" on hard.

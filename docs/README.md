@@ -127,7 +127,8 @@ decision was later replaced. The note says by what.
 | 2026-09-03 | [Global pace](superpowers/specs/2026-09-03-pace-design.md) | |
 | 2026-09-03 | [Score × Pact](superpowers/specs/2026-09-03-score-pact-design.md) | |
 | 2026-09-04 | [HIGH SCORES by Heat](superpowers/plans/2026-09-04-scores-by-heat.md) | |
-| 2026-10-20 | [Level variety: random boards, bold biome mazes](superpowers/specs/2026-10-20-level-variety-design.md) | ⚠️ Designed, not built (issue #8) |
+| 2026-10-20 | [Level variety: random boards, bold biome mazes](superpowers/specs/2026-10-20-level-variety-design.md) | ⚠️ Designed, not built (issue #8); its tile section is replaced by the 2026-10-21 tiles record |
+| 2026-10-21 | [Difficulty tiles: fun on easy, tough on hard](superpowers/specs/2026-10-21-difficulty-tiles-design.md) | ⚠️ Designed, wave 1 in prototype (issue #16) |
 
 ### 🎵 Sound
 

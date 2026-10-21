@@ -758,8 +758,18 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
     Heat changes only bricks.
   - A fairness check gates every board, including a sealed start and a
     walking-distance foe floor.
-  - New tiles: BELT first, then GLIDE and CURRENT, on a `world.feat` layer.
-    PIXEL work waits for the dynamic import (#15).
+  - Tiles (2026-10-21, issue #16, tasks #18–#27; record
+    `docs/superpowers/specs/2026-10-21-difficulty-tiles-design.md`): eight
+    floor tiles on a `world.feat` layer, one per biome: BLOOM, GLIDE, BELT,
+    CURRENT, PLATE, DUNE, RIFT, GATE.
+    - HEAT turns each tile's dial: CORE gives joy, MAX gives challenge. Pace
+      scales tile speeds only (owner Q1 still open).
+    - A tile never starts damage on its own.
+    - Tiles sit in the same places at every heat.
+    - Heat is shown by edge, mark count and tip shape, never colour.
+    - Wave 1 is BELT, GLIDE, BLOOM and PLATE.
+    - PIXEL tile art waits for #15. GATE waits for the REAL 3D mid-room wall
+      redraw.
 - Hero direction reset (owner ruling 2026-10-11, concept only, NOT built): a
   cartoon with a head, arms and legs, "googooli" (appealing yet dignified,
   smart, stylish), NOT human, space theme — a small being of starlight held in
