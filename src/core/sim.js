@@ -632,6 +632,7 @@ function featTick(w, dt, emit) {
     if (e.dead) continue;
     const k = key(e.tx, e.ty);
     if (w.feat[k] !== 7 || w.grid[k] !== T.EMPTY || w.featM[k] !== 0) continue;
+    if (pc.near != null) { const p = w.players[0]; if (!p.alive || Math.abs(tileOf(p.x) - e.tx) + Math.abs(tileOf(p.y) - e.ty) > pc.near) continue; }
     w.featM[k] = 1;
     w.featS[k] = pc.wind;
     w.featPend.push({ k, kind: "plate", by: e.type });

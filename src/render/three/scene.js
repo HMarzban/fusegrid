@@ -11,6 +11,7 @@ import {build as buildMaterials} from "./materials.js";
 import {createLights} from "./lights.js";
 import {createPools} from "./entities.js";
 import {live} from "./upload.js";
+import {buildFeat} from "./featmesh.js";
 
 const W=CFG.COLS*CFG.TILE, D=CFG.ROWS*CFG.TILE;
 const MAT=new THREE.Matrix4();
@@ -136,6 +137,8 @@ export function buildScene(world, atlas, bright){
    }
   checker.receiveShadow=true; checker.userData.tag="checker";
   group.add(checker);
+  const feat=world.feat?buildFeat(world,biome):null;
+  if(feat)group.add(feat.mesh);
 
   group.add(buildRim(biome));
 
@@ -170,6 +173,7 @@ export function buildScene(world, atlas, bright){
         fresh=false; scene.brickV++;
        }
       pools.update(world);
+      if(feat)feat.update(world);
       return world.level!==scene.level||world.grid!==scene.grid;
      }};
   scene.update(world);          // initial brick fill

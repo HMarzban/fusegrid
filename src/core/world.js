@@ -1,7 +1,7 @@
 import { CFG, T, key, clamp } from "./config.js";
 import { genBoard, isBrick } from "./board.js";
 import { genBoard2, dists2, foeOk2 } from "./board2.js";
-import { spawnBlocked } from "./feat.js";
+import { spawnBlocked, beltDist, FEAT_PROFILE, isBelt } from "./feat.js";
 import { createRng } from "./rng.js";
 import { POWER, createPlayer, spawnEnemy } from "./entities.js";
 import { clampHeat, heatProfile, heatRoster } from "./heat.js";
@@ -190,7 +190,9 @@ export function loadLevel(world, level, keepProgress = false) {
     [free[i], free[j]] = [free[j], free[i]];
   }
   if (w.gen === 2) {
-    const { e, b } = dists2(w.grid);
+    const { e, b: b0 } = dists2(w.grid);
+    const fb = w.feat && w.feat.some(isBelt) ? FEAT_PROFILE[heat].belt : null;
+    const b = fb && fb.actors ? Array.from(beltDist(w.grid, w.feat, fb.v, CFG.ENEMY_BASE_SPEED + level * P.curve), (v, i) => (b0[i] < 0 ? -1 : Math.floor(v))) : b0;
     const used = new Set(), pick = [];
     for (const t of roster) {
       const j = free.findIndex(([x, y], j) => !used.has(j) && foeOk2(t, e[key(x, y)], b[key(x, y)]) && !spawnBlocked(w.feat, x, y));

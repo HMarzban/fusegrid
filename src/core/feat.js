@@ -215,3 +215,26 @@ export function spawnBlocked(feat, x, y) {
   for (const [dx, dy] of D4) if (feat[key(x + dx, y + dy)] === 7) return true;
   return false;
 }
+/* V17 time-weighted foe distance: bomb-path steps from the spawn where a
+   foe crossing a BELT tile at actor-riding heats pays vf/(vf+-v) steps per
+   tile (vf = the slowest moving foe, the conservative case). */
+export function beltDist(grid, feat, v, vf, sx = 1, sy = 1) {
+  const d = new Float32Array(N).fill(Infinity), done = new Uint8Array(N);
+  d[key(sx, sy)] = 0;
+  for (;;) {
+    let k = -1, best = Infinity;
+    for (let i = 0; i < N; i++) if (!done[i] && d[i] < best) { best = d[i]; k = i; }
+    if (k < 0) break;
+    done[k] = 1;
+    const x = k % C, y = (k / C) | 0;
+    for (const [dx, dy] of D4) {
+      const nx = x + dx, ny = y + dy, nk = key(nx, ny);
+      if (nx < 0 || ny < 0 || nx >= C || ny >= R || grid[nk] === 2 || done[nk]) continue;
+      const f = feat[nk];
+      let c = 1;
+      if (isBelt(f)) { const [bx, by] = beltDir(f); c = bx === -dx && by === -dy ? vf / (vf + v) : bx === dx && by === dy ? vf / Math.max(0.1, vf - v) : 1; }
+      if (d[k] + c < d[nk]) d[nk] = d[k] + c;
+    }
+  }
+  return d;
+}
