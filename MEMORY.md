@@ -16,6 +16,16 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-21 — Tiles renamed to common names; Floor tiles page
+- Owner rename: BELT→CONVEYOR, GLIDE→ICE PATCH, BLOOM→BOOSTER, CURRENT→STREAM, PLATE→TRAP, DUNE→QUICKSAND, RIFT→PORTAL, GATE stays. Difficulty is written "CORE (easy) / PLUS (normal) / MAX (hard)". The fairness term "tile-forced trap" is now "no-escape spot", so it can't collide with TRAP.
+- Applied to: issues #16 and #18–#30 (titles and bodies, plus a rename note on #16), AGENTS, the diary, and a tiles-record addendum.
+- The Floor tiles page (https://claude.ai/artifact/X4pcFrvWsE5dVPyQqQM9LG) has:
+  - today's tiles, real live-game crops of all 8 rooms in 3 looks;
+  - the suggested tiles, plus the wave-1 prototype strips;
+  - before/after (prototype, tiles off vs on);
+  - storyboards: prototype frames for wave 1, concept panels for wave 2/3.
+- This session cannot write to the owner's Claude Design canvas (publish refused). 61 images were uploaded to that canvas's asset store but nothing references them yet.
+
 ## 2026-10-21 — v183 pushed; session close-out
 - The owner pushed main at `c6ee713`; Pages CI is green, so v183 is LIVE (SHRINK REAL 3D walls, the MENU build tag, the level-variety and tiles docs, issues #8–#30 resolvable). The #6 kick-hint fix is a separate v184 committed locally by another session, not pushed. Three leftover headless-Chrome temp profiles were deleted. Next: owner decisions O1–O12 on #8, then a GO on the build order.
 

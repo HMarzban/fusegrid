@@ -260,3 +260,31 @@ minus without, as a 95% interval.
 Prototype notes, captures and the patch are in the git-ignored
 `.superpowers/sdd/2026-10-21-tiles/proto/`, and the code is on the local branch
 `worktree-agent-a9489bfefcc2ae31f`, never to be merged.
+
+---
+
+## Addendum (2026-10-21, late): owner rename
+
+> Owner: *"the naming is not intiutive and most people can confiuse ha? let's
+> use moste commone naming in there if it is possible."*
+
+| Old (used above in this record) | New | Biome |
+|---|---|---|
+| BELT | **CONVEYOR** | FACTORY |
+| GLIDE | **ICE PATCH** | ICE |
+| BLOOM | **BOOSTER** | JUNGLE |
+| CURRENT | **STREAM** | WATER |
+| PLATE | **TRAP** | ARENA |
+| DUNE | **QUICKSAND** | SAND |
+| RIFT | **PORTAL** | VOID |
+| GATE | GATE (unchanged) | CROWN |
+
+- **Difficulty labels:** written `CORE (easy) / PLUS (normal) / MAX (hard)`
+  on tile pages and issues.
+- **"Tile-forced trap" is now a no-escape spot.** The fairness term was
+  renamed so it never collides with the TRAP tile.
+- **Rules unchanged:** the rules and numbers above are the same; only the
+  names changed.
+- **Where the new names are:** issues #16–#30 carry them.
+- **Where the old names stay:** this record keeps its original text as a dated
+  record, and older comments, images and prototype code keep the old names too.

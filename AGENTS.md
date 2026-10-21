@@ -796,14 +796,21 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
     walking-distance foe floor.
   - Tiles (2026-10-21, issue #16, tasks #18–#27; record
     `docs/superpowers/specs/2026-10-21-difficulty-tiles-design.md`): eight
-    floor tiles on a `world.feat` layer, one per biome: BLOOM, GLIDE, BELT,
-    CURRENT, PLATE, DUNE, RIFT, GATE.
+    floor tiles on a `world.feat` layer, one per biome: BOOSTER (JUNGLE),
+    ICE PATCH (ICE), CONVEYOR (FACTORY), STREAM (WATER), TRAP (ARENA),
+    QUICKSAND (SAND), PORTAL (VOID), GATE (CROWN).
+    - Owner rename 2026-10-21, "the most common naming": these names replace
+      BLOOM / GLIDE / BELT / CURRENT / PLATE / DUNE / RIFT, which survive only
+      in dated records, old comments, images and prototype code.
+    - Difficulty is written "CORE (easy) / PLUS (normal) / MAX (hard)".
+    - The fairness term "tile-forced trap" is now a **no-escape spot**, so it
+      never collides with the TRAP tile.
     - HEAT turns each tile's dial: CORE gives joy, MAX gives challenge. Pace
       scales tile speeds only (owner Q1 still open).
     - A tile never starts damage on its own.
     - Tiles sit in the same places at every heat.
     - Heat is shown by edge, mark count and tip shape, never colour.
-    - Wave 1 is BELT, GLIDE, BLOOM and PLATE.
+    - Wave 1 is CONVEYOR, ICE PATCH, BOOSTER and TRAP.
     - PIXEL tile art waits for #15. GATE waits for the REAL 3D mid-room wall
       redraw.
 - Hero direction reset (owner ruling 2026-10-11, concept only, NOT built): a
