@@ -12,6 +12,7 @@ import {build as buildMaterials} from "./materials.js";
 import {createLights} from "./lights.js";
 import {createPools} from "./entities.js";
 import {live} from "./upload.js";
+import {wallCodes} from "../wallvar.js";
 
 const W=CFG.COLS*CFG.TILE, D=CFG.ROWS*CFG.TILE;
 const MAT=new THREE.Matrix4();
@@ -85,8 +86,9 @@ export function buildScene(world, atlas, bright){
   const wallGeo=new THREE.BoxGeometry(CFG.TILE,biome.hWall,CFG.TILE);
   const wall=new THREE.InstancedMesh(wallGeo,mats.wall,CFG.COLS*CFG.ROWS);
   wall.material.color.set("#ffffff");
-  const wA=new THREE.Color(biome.wall),
-    wH=new THREE.Color(biome.wall).lerp(new THREE.Color(biome.wallHi),0.32);
+  const aWv=new THREE.InstancedBufferAttribute(new Float32Array(CFG.COLS*CFG.ROWS),1);
+  wallGeo.setAttribute("aWv",aWv);
+  const wA=new THREE.Color("#ffffff");
   const hN=Math.min(biome.hWall,NEAR_H);
   wall.castShadow=true; wall.receiveShadow=true;
   wall.userData.tag="wall";
@@ -138,27 +140,30 @@ export function buildScene(world, atlas, bright){
 
   const mask=new Uint8Array(CFG.COLS*CFG.ROWS),
     wMask=new Uint8Array(CFG.COLS*CFG.ROWS);
-  let fresh=true;
+  let fresh=true, lastG=null, lastS=-1;
   const scene={group,level:world.level,brick,pools,lights,brickV:0,
     update(world){
-      let diff=fresh, wDiff=fresh;
+      let diff=fresh, wDiff=fresh||world.grid!==lastG||(world.seed>>>0)!==lastS;
+      lastG=world.grid; lastS=world.seed>>>0;
       for(let i=0;i<mask.length;i++){ const t=world.grid[i],
         b=t===T.BRICK?1:0, v=t===T.WALL?1:0;
         if(mask[i]!==b){ mask[i]=b; diff=true; }
         if(wMask[i]!==v){ wMask[i]=v; wDiff=true; } }
       if(wDiff){
-        let n=0;
+        let n=0; const WC=wallCodes(world);
         for(let y=0;y<CFG.ROWS;y++)for(let x=0;x<CFG.COLS;x++)
           if(wMask[y*CFG.COLS+x]){
+            aWv.array[n]=WC[y*CFG.COLS+x];
             const h=y===CFG.ROWS-1?hN:biome.hWall;
             MAT.makeScale(1,h/biome.hWall,1).setPosition((x+0.5)*CFG.TILE-W/2,
               h/2,(y+0.5)*CFG.TILE-D/2);
             wall.setMatrixAt(n,MAT);
-            wall.setColorAt(n++,(x+y)&1?wH:wA);
+            wall.setColorAt(n++,wA);
            }
         wall.count=n;
         live(wall.instanceMatrix,n);
         live(wall.instanceColor,n);
+        live(aWv,n);
         wall.boundingSphere=null;
         if(!diff)scene.brickV++;      // shadow map re-renders for EMPTY->WALL
        }

@@ -11,7 +11,8 @@ import * as THREE from "../../../vendor/three.module.js";
 import {CFG, biomeOf, BIOMES} from "../../core/config.js";
 import {POWER} from "../../core/entities.js";
 import {captureSprite, drawPlayerBody, drawEnemyBody, drawBombBody,
-  bakeAtlas, bakedTile, paintItemFace, PLAYER_SUIT} from "../sprites.js";
+  bakeAtlas, bakedTile, wallTiles, paintItemFace, PLAYER_SUIT} from "../sprites.js";
+import {topRows, sideRows} from "../wallart.js";
 import {dk} from "../icons.js";
 import {ENEMY_TYPES, ENEMY_COLORS} from "./entities.js";
 
@@ -119,6 +120,13 @@ export function atlasSources(mk, level=1){
       bakeAtlas();
       const bi=BIOMES.indexOf(biomeOf(level));
       o.wall=bakedTile(bi,"wall");
+      const V=wallTiles(bi), B=BIOMES[bi], TL=CFG.TILE;
+      if(V)o.wallStrip=captureSprite(V.length*TL,TL*2,(c)=>{
+        c.fillStyle=B.wall; c.fillRect(0,0,V.length*TL,TL*2);
+        V.forEach((t,k)=>{ const [a,b]=topRows(B,k), [s0,s1]=sideRows(B);
+          c.drawImage(t,0,a,TL,b-a,k*TL,0,TL,TL);
+          c.drawImage(b-a===TL?V[0]:t,0,s0,TL,s1-s0,k*TL,TL,TL,TL); });
+       },mk);
       o.brick=bakedTile(bi,"brick");
       o.floor=bakedTile(bi,"floorA");
      }catch(_){ /* stay asset-free */ }
