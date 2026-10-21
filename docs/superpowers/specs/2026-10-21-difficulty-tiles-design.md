@@ -288,3 +288,33 @@ Prototype notes, captures and the patch are in the git-ignored
 - **Where the new names are:** issues #16–#30 carry them.
 - **Where the old names stay:** this record keeps its original text as a dated
   record, and older comments, images and prototype code keep the old names too.
+
+---
+
+## Addendum (2026-10-21, late): visual references
+
+Three reference sheets, under `assets/2026-10-21/` beside this record:
+
+- **`tiles-before-after.png`** (prototype): the four wave-1 tiles at MAX
+  (hard), same seed and room. Each row shows the tile layer off, the tile
+  layer on, and REAL 3D.
+- **`tiles-storyboards-wave1.png`** (prototype, staged): CONVEYOR, ICE PATCH,
+  BOOSTER and TRAP, with one 4-frame beat at CORE (easy) and one at MAX
+  (hard). Every frame is the real sim stepped by scripted keys.
+- **`tiles-storyboards-wave2-3.png`** (concept drawings): STREAM, QUICKSAND,
+  PORTAL and GATE, with one beat at CORE (easy) and one at MAX (hard).
+
+What the storyboards showed, for design pass 2 (#28):
+
+- **CONVEYOR at MAX (hard).** The conveyor pushed MAKO off-centre, so a wall
+  corner caught the step-off. MAKO rode on into its own blast and lost a
+  life, while the conveyor carried the foe clear. A conveyor that carries the
+  player needs a forgiving step-off (corner assist), or MAX reads as unfair
+  rather than hard.
+- **TRAP.** Its 2 s inert window had to be skipped to film the beat, and a
+  walking foe had to be slowed to 0.01 tiles/s to ride the conveyor. Both are
+  staging only, not rule changes.
+- **Concept assumptions the spec does not settle yet** (#26, #27):
+  - PORTAL's 3-tile exit guard counts Manhattan tiles.
+  - A guarded foe waits on the entry portal.
+  - A blast arm keeps its leftover reach after passing through a portal.
