@@ -16,6 +16,12 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-21 — Tile issues updated with visuals
+- Committed three reference sheets in `docs/superpowers/specs/assets/2026-10-21/`: `tiles-before-after.png`, `tiles-storyboards-wave1.png`, `tiles-storyboards-wave2-3.png`. Added a tiles-record addendum.
+- Appended "Visual references" sections to #16, #19–#23, #26–#28 and #30. #16 embeds the before/after sheet, which renders after the push.
+- New findings went to #19 and #28: a carrying CONVEYOR at MAX needs a forgiving step-off (MAKO rode into its own blast).
+- PORTAL concept assumptions went to #27 for a ruling.
+
 ## 2026-10-21 — Tiles renamed to common names; Floor tiles page
 - Owner rename: BELT→CONVEYOR, GLIDE→ICE PATCH, BLOOM→BOOSTER, CURRENT→STREAM, PLATE→TRAP, DUNE→QUICKSAND, RIFT→PORTAL, GATE stays. Difficulty is written "CORE (easy) / PLUS (normal) / MAX (hard)". The fairness term "tile-forced trap" is now "no-escape spot", so it can't collide with TRAP.
 - Applied to: issues #16 and #18–#30 (titles and bodies, plus a rename note on #16), AGENTS, the diary, and a tiles-record addendum.
