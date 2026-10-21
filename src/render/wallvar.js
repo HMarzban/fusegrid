@@ -33,9 +33,10 @@ export function borderCode(x, y) {
 let OVR = null;
 /* debug/staging only: f(x, y, code) -> code, applied on the next new grid */
 export function setWallOverride(f) { OVR = f || null; }
-const MEMO = new WeakMap();
+const MEMO = new WeakMap(), EMPTY = new Uint8Array(C * R);
 export function wallCodes(world) {
   const g = world.grid, s = world.seed >>> 0, l = world.level | 0;
+  if (!g) return EMPTY;
   const m = MEMO.get(g);
   if (m && m.s === s && m.l === l) return m.out;
   const out = new Uint8Array(C * R);
