@@ -597,6 +597,12 @@ Design work that stayed on the drawing board. None of it is in the game.
   one per biome. Heat turns each tile's dial, shown by edge and
   marks rather than colour. It's tracked in issue #16;
   [design record](superpowers/specs/2026-10-21-difficulty-tiles-design.md).
+- Living walls (2026-10-21). The owner asked for better walls in all three
+  looks, with variants that make each world feel alive. Every world gets its
+  own wall material, with built detail only so nothing looks breakable, and
+  REAL 3D walls get brighter. A prototype held 141 draws. It's tracked in
+  #17 (CLASSIC 2D + REAL 3D, on today's boards) and #31 (PIXEL);
+  [design record](superpowers/specs/2026-10-21-wall-art-design.md).
 
 ---
 

@@ -16,6 +16,18 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-21 — Wall round: living-world wall families (designed and prototyped)
+- Owner rulings W1–W6:
+  - ship soon on today's boards, visual only;
+  - direction B Living world, without cracks;
+  - brighter REAL 3D walls (the colour was applied twice);
+  - CROWN gilt frame; plain border; SHRINK walls = base block.
+- Art director and render engineer designed it, then a prototype captured all 8 rooms in 3 looks. Results: 141 draws held; CLASSIC per-frame cost +4%; PIXEL 18 KB over its cap (waits for #15). 4 expected re-pins, e.g. CLASSIC hash → `186c1c19:27916`.
+- Record `docs/superpowers/specs/2026-10-21-wall-art-design.md` plus 4 sheets in `assets/2026-10-21/walls-*`.
+- #17 rewritten (CLASSIC 2D + REAL 3D, v185); #31 created (PIXEL, after #15); #8 and #15 updated.
+- Prototype worktree `agent-a531a182f96a26f7e` is locked.
+- Watch: in 3D the border can read as a pale frame in ICE and FACTORY.
+
 ## 2026-10-21 — Tile issues updated with visuals
 - Committed three reference sheets in `docs/superpowers/specs/assets/2026-10-21/`: `tiles-before-after.png`, `tiles-storyboards-wave1.png`, `tiles-storyboards-wave2-3.png`. Added a tiles-record addendum.
 - Appended "Visual references" sections to #16, #19–#23, #26–#28 and #30. #16 embeds the before/after sheet, which renders after the push.

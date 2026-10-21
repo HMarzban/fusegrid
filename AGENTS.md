@@ -813,6 +813,23 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
     - Wave 1 is CONVEYOR, ICE PATCH, BOOSTER and TRAP.
     - PIXEL tile art waits for #15. GATE waits for the REAL 3D mid-room wall
       redraw.
+- Walls (owner rulings 2026-10-21, designed and prototyped, NOT built; issues
+  #17 for CLASSIC 2D + REAL 3D and #31 for PIXEL after #15; record
+  `docs/superpowers/specs/2026-10-21-wall-art-design.md`).
+  - **W1:** ships SOON on today's gen-1 boards; the CLASSIC hash is re-pinned
+    by ruling.
+  - **W2:** visual only; walls never break.
+  - **W3:** direction B, Living world, without cracks: a material family per
+    world, every variant built detail, never damage.
+  - **W4:** brighter REAL 3D walls via a white per-instance colour; the wall
+    colour was applied twice before.
+  - **W5:** CROWN gets a gilt frame.
+  - **W6:** the border is a plain rampart and SHRINK walls are the base block.
+  - The variant pick is a render-side `wallHash(seed, level, x, y)`, never
+    `world.rng`, with one accent per room.
+  - REAL 3D stays at 141 draws (a per-instance cell index on the one wall
+    mesh).
+  - Local prototype: `worktree-agent-a531a182f96a26f7e` (locked).
 - Hero direction reset (owner ruling 2026-10-11, concept only, NOT built): a
   cartoon with a head, arms and legs, "googooli" (appealing yet dignified,
   smart, stylish), NOT human, space theme — a small being of starlight held in
