@@ -7,6 +7,11 @@
    controllerchange listener does the single reload. LATER snoozes until the
    next return to the menus from a run (or the next boot). No store. */
 import { registerSW, applyUpdate } from "../pwa/register.js";
+import { CACHE_NAME } from "../pwa/shell.js";
+
+/* The running build, as MENU and OPTIONS print it. The waiting worker's
+   number is never known here, so the card names only this one. */
+const REV = CACHE_NAME.replace("fusegrid-shell-", "");
 
 /* Pure: may the card show on this frame? */
 export function updVisible(screen, state, runEnd, S) {
@@ -38,7 +43,7 @@ export function mountUpdate(get, env) {
     card.hidden = true;
     card.setAttribute("role", "status");
     card.setAttribute("aria-live", "polite");
-    card.innerHTML = '<b>NEW VERSION READY</b><i>Reload to play the latest build. Your scores stay.</i>' +
+    card.innerHTML = '<b>NEW VERSION READY</b><i>You are on ' + REV + '. Reload to play the latest build. Your scores stay.</i>' +
       '<span class="go" role="button" tabindex="-1" aria-label="Reload to update"><kbd>U</kbd>RELOAD</span>' +
       '<span class="later" role="button" tabindex="-1" aria-label="Later">LATER</span>';
     const tap = (sel, fn) => {

@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-21 — Build tag on MENU (branch `claude/version-label`)
+- Owner asked for the game version on screen. MENU shows `v182` from `CACHE_NAME` (keyboard foot hint / under the phone hub / SOURCE tile on touch landscape), and the update card names the running build. No `CACHE_NAME` bump here: it rides the v183 bump on `claude/quirky-payne-4c6c2a`, and if it lands after v183 ships it needs its own bump.
+
 ## 2026-10-21 — Difficulty tiles designed (docs + issues), wave 1 in prototype
 - Three designers plus a critic produced eight tiles (BLOOM GLIDE BELT CURRENT PLATE DUNE RIFT GATE). Heat turns each tile's dial (CORE joy → MAX challenge), and tiles never start damage. The record is `docs/superpowers/specs/2026-10-21-difficulty-tiles-design.md`, indexed in the docs map, diary and AGENTS.
 - #16 is now the umbrella, with sub-tasks #18–#27. Owner questions Q1–Q5 are open (Q1: Heat or Pace).

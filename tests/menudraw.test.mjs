@@ -1087,6 +1087,39 @@ function check(name, cond, detail) {
     drawShell(R.c, a, { state: "PLAY", time: 0 }, null, "2d", fresh, gp);
     check("scores memo: a different getter is never served stale data", n === 13, n);
   }
+  // build tag on MENU (owner 2026-10-21: "a game version in some where in the display or menue"):
+  // painted once, inside the box, off every tile / row, under the plate's fade
+  {
+    const { CACHE_NAME } = await import("../src/pwa/shell.js");
+    const { shellGeo } = await import("../src/app/fit.js");
+    const want = "v" + CACHE_NAME.match(/(\d+)$/)[1];
+    const items = ["PLAY|X", "LEVEL SELECT", "DAILY|NEW", "OPTIONS", "GUIDE", "HIGH SCORES", "STATS", "SOURCE"];
+    const sg = shellGeo(393, 852);
+    for (const [nm, W, H, touch, lg] of [["600x520 d", 600, 520, false], ["608x352 d", 608, 352, false], ["600x520 l", 600, 520, true], ["608x352 l", 608, 352, true], ["phone #sh p", sg.w, sg.h, true, sg.logo]]) {
+      const L = md.layout(W, H, lg), g = md.menuList(L, 8, touch);
+      const paint = (rev, et = 9) => { const R = rec(); md.drawMenu(R.c, { cursor: 0, enterT: et, items, touch, rev, info: { level: 1, best: [] } }, L, 9); return R; };
+      const R = paint("v99"), hit = R.texts.filter((t) => t.s.indexOf("v99") >= 0), t = hit[0] || {};
+      const src = g.rows[7], inSource = touch && t.s === "v99 · github.com/HMarzban/fusegrid" && t.y > src.y && t.y < src.y + src.h && t.x - t.s.length * t.px * 0.6 > src.x + 24 + 80; // clear of the SOURCE label
+      check(`MENU build tag painted once, inside the box, never on a row (${nm})`,
+        hit.length === 1 && t.x > 0 && t.x < W && t.y > 0 && t.y < H - 18 &&
+          (inSource || t.y > g.y + g.h || t.y < g.y) &&
+          (touch ? true : t.s === "↑↓ MOVE · ENTER SELECT · v99"),
+        JSON.stringify({ t, plate: [g.y, g.y + g.h] }));
+      check(`MENU without rev paints no build tag (${nm})`, !paint("").texts.some((x) => /\bv\d+\b/.test(x.s)));
+      check(`MENU build tag waits for the plate (enterT < -0.12 paints nothing) (${nm})`, paint("v99", -0.5).texts.length === 0);
+    }
+    const Lp = md.layout(sg.w, sg.h, sg.logo), gp2 = md.menuList(Lp, 8, true);
+    const Rp = rec(); md.drawMenu(Rp.c, { cursor: 0, enterT: 9, items, touch: true, rev: "v99" }, Lp, 9);
+    const tp = Rp.texts.find((x) => x.s === "v99");
+    check("phone #sh: the tag hangs under the hub on its own line, the SOURCE tile keeps the bare URL",
+      !!tp && tp.y > gp2.y + gp2.h && tp.y < Lp.footY && Rp.texts.some((x) => x.s === "github.com/HMarzban/fusegrid"));
+    const Rl = rec(); md.drawMenu(Rl.c, { cursor: 0, enterT: 9, items, touch: true, rev: "v99" }, md.layout(600, 520), 9);
+    check("touch landscape (no room under the hub): the tag rides the SOURCE tile", Rl.texts.some((x) => x.s === "v99 · github.com/HMarzban/fusegrid"));
+    const a = createMenuApp({ settings: {} });
+    a.screen = SCREEN.MENU;
+    const Rs = rec(); drawShell(Rs.c, a, { state: "PLAY", time: 0 }, null, "2d", () => [], () => 0);
+    check("shellview: MENU foot carries the CACHE_NAME build tag end to end", Rs.texts.some((x) => x.s === "↑↓ MOVE · ENTER SELECT · " + want), want);
+  }
 }
 
 // 13f) menuHit: the MENU tap map shares drawMenu's geometry — every painted
