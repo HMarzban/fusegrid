@@ -23,7 +23,7 @@ export function kindSize(kind) {
   };
 }
 
-/* Build kicker for the OPTIONS head. CACHE_NAME is the only build identifier
+/* Build tag for the OPTIONS head kicker and the MENU foot. CACHE_NAME is the only build identifier
    in the repo, and the PWA rule already forces it to change whenever shipped
    bytes do — same precedent as scores arriving through a getter: a screen fed
    from outside app/world gets its value handed in, not re-derived downstream. */
@@ -207,6 +207,7 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
         ],
         touch,
         kind,
+        rev: REV,
         info: infoOf(app, kind, getScores, getCab),
       },
       L,

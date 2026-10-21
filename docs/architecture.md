@@ -49,6 +49,14 @@ cursor; on a phone it's a hub of tiles. Every panel is only as tall as its
 content, and any teaser built from your record (a top score, a best time)
 reads only runs you played, never placeholders.
 
+The build you're running is named on the main menu (`v182`): in the
+keyboard foot hint, under the phone hub, or on the SOURCE tile where a
+landscape touch screen has no room below the hub. OPTIONS shows it as its
+`BUILD` kicker and the NEW VERSION READY card says which build you're on.
+There is one source for it: `shellview.js` and `update.js` both derive it
+from `CACHE_NAME` in [`shell.js`](../src/pwa/shell.js), so a release bump
+renames it everywhere at once.
+
 Every menu is drawn by one small kit in
 [`menudraw.js`](../src/render/menudraw.js): one panel (`plate`), one title
 (`head`), one hint line (`foot`) and one row painter (`paintRow`), so the

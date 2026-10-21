@@ -59,7 +59,15 @@ sans (OS-dependent, owner-accepted), values / tags / hints mono. Lists go
 through `listGeom` / `listHit` (pitches are caps that scale down in a short
 box); MENU has a PLAY hero row whose tag is the run it starts and group gaps
 before OPTIONS / HIGH SCORES / SOURCE; the SOURCE URL shows only on its
-selected row. PAUSE draws `pauseGeom(overlayBox, touch)`: touch (`touchLay`,
+selected row. Build tag (owner 2026-10-21: "a game version in some where in
+the display or menue"): `v182` = `CACHE_NAME` minus `fusegrid-shell-`,
+derived ONLY in `shellview.js` (`REV`, handed to `drawMenu` / `drawSettings`
+as `rev`) and `update.js` (the card's "You are on v182", the running build,
+never a guessed next one) — never a second literal. Keyboard MENU appends
+it to the foot hint; the touch hub hangs it under the plate when the box has
+>= 10 units below it (`#sh`), else on the SOURCE tile's teaser (landscape on
+the board canvas); OPTIONS keeps its `BUILD v182` kicker. Never on the HUD.
+PAUSE draws `pauseGeom(overlayBox, touch)`: touch (`touchLay`,
 data-lay p/l) caps pitch at `PAUSE_ROW_H` 70 / hero 76 / width 380, a keyboard
 screen at the compact `PAUSE_ROW_D` 44 / hero 54 / width 340 (owner: "too
 fat"); `pauseHit` takes the same flag. RESUME hero, RESTART/QUIT danger,

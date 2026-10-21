@@ -642,7 +642,9 @@ export function slamOf(t) {
    PLAY bar, LEVEL SELECT | DAILY, OPTIONS | GUIDE, HIGH SCORES | STATS, the
    SOURCE foot link — so ↑↓ stays the linear walk and every index the
    headless confirms use still names the same row. menuLogo is the one source
-   for shellview's logo and the list top. */
+   for shellview's logo and the list top. ui.rev is the build tag shellview
+   derives from CACHE_NAME: keyboard prints it in the foot hint; touch hangs it
+   under the hub where the box has room (#sh), else on the SOURCE tile. */
 const MENU_DOOR = ["LEVEL SELECT", "OPTIONS", "GUIDE", "HIGH SCORES", "STATS"];
 const menuShape = (n, touch) => Array.from({ length: n }, (_, i) => ({ hero: i === 0, gapBefore: !touch && n === 8 && (i === 3 || i === 5 || i === 7) }));
 export const MENU_PITCH = 26, MENU_PITCH_T = 66;
@@ -739,15 +741,22 @@ export function drawMenu(c, ui, L, t) {
       ext = label === "SOURCE";
     return { label, val, hero: shape[i].hero, door: MENU_DOOR.indexOf(label) >= 0, ext, vc: label === "DAILY" && val === "NEW" ? ACCENT : null };
   });
+  const rev = (ui && ui.rev) || "";
   if (g.hub) {
+    const under = !!rev && L.footY - (g.y + g.h) >= 10; // off every tile: a root list ignores an off-plate tap
     plate(c, g.x, g.y, g.w, g.h);
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i],
-        k = easeOutCubic(clamp01((et - i * 0.03) / 0.12));
+        k = easeOutCubic(clamp01((et - i * 0.03) / 0.12)),
+        sub = teaser(r.label, r.val, I);
       c.globalAlpha = pa * k;
       const q = g.rows[i],
         rr2 = { x: q.x, y: q.y + 6 * (1 - k), w: q.w, h: q.h };
-      paintTile(c, rr2, r.label, teaser(r.label, r.val, I), i === cur, { hero: r.hero, ext: r.ext, door: r.door, touch, flat: i === 7, subCol: r.vc });
+      paintTile(c, rr2, r.label, r.ext && rev && !under ? rev + " · " + sub : sub, i === cur, { hero: r.hero, ext: r.ext, door: r.door, touch, flat: i === 7, subCol: r.vc });
+    }
+    if (under) {
+      c.globalAlpha = pa;
+      footTag(c, L.cx, g.y + g.h + 16, rev);
     }
     c.globalAlpha = 1;
     return;
@@ -758,16 +767,19 @@ export function drawMenu(c, ui, L, t) {
   c.globalAlpha = pa * pk;
   menuPane(c, { ...g.pane, y: g.pane.y + 6 * (1 - pk) }, rows[cur] || rows[0], I, ui.kind, t);
   c.globalAlpha = pa;
-  const hint = "↑↓ MOVE · ENTER SELECT";
-  const bw = hint.length * 6 + 24; // the hint sits below the plate: give it the plate's own ground, never bare board
+  footTag(c, L.cx, L.footY, "↑↓ MOVE · ENTER SELECT" + (rev ? " · " + rev : ""));
+  c.globalAlpha = 1;
+}
+/* A muted line below a plate: give it the plate's own ground, never bare board. */
+function footTag(c, x, y, s) {
+  const bw = s.length * 6 + 24;
   c.fillStyle = PLATE;
-  c.fillRect(Math.round(L.cx - bw / 2), Math.round(L.footY - 11), Math.round(bw), 22);
+  c.fillRect(Math.round(x - bw / 2), Math.round(y - 11), Math.round(bw), 22);
   c.fillStyle = MUTED;
   c.font = font(10);
   c.textAlign = "center";
   c.textBaseline = "middle";
-  c.fillText(hint, L.cx, L.footY);
-  c.globalAlpha = 1;
+  c.fillText(s, x, y);
 }
 /* The preview pane: what the cursor row holds, from read-only info
    (shellview's getters; this file never imports src/app). */

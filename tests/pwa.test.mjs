@@ -407,6 +407,11 @@ check(
   /from\s+["']\.\/app\/update\.js["']/.test(main) && /mountUpdate\s*\(/.test(main) &&
     /from\s+["']\.\.\/pwa\/register\.js["']/.test(updSrc) && /registerSW\s*\(/.test(updSrc),
 );
+check(
+  "update card names only the RUNNING build, derived from CACHE_NAME (never a guessed next number)",
+  /import\s*\{\s*CACHE_NAME\s*\}\s*from\s*["']\.\.\/pwa\/shell\.js["']/.test(updSrc) &&
+    /CACHE_NAME\.replace\("fusegrid-shell-",\s*""\)/.test(updSrc) && /You are on ' \+ REV \+ '\./.test(updSrc) && !/v\d{3}/.test(updSrc),
+);
 
 // ---- NEW VERSION READY (2026-10-19): wait + prompt instead of a silent skip ----
 {

@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-21 — Build tag on MENU (branch `claude/version-label`)
+- Owner asked for the game version on screen. MENU shows the build tag (now `v183`) from `CACHE_NAME` (keyboard foot hint / under the phone hub / SOURCE tile on touch landscape), and the update card names the running build. No `CACHE_NAME` bump here: it rides the v183 bump on `claude/quirky-payne-4c6c2a`, and if it lands after v183 ships it needs its own bump.
+
 ## 2026-10-21 — shell v183: REAL 3D SHRINK walls now render (wall InstancedMesh follows the grid)
 - `scene.js` built the wall InstancedMesh once per level, so SHRINK rings (and a future new board on the same room, issue #10) never drew in REAL 3D while collision blocked. Walls now sit at capacity COLS*ROWS and `update()` refills them from a wall mask (NEAR_H cutaway, checker colours, ranged `live` upload; `brickV` bumps so the shadow map re-renders). Still one draw call, fat-world 141; CLASSIC 2D/PIXEL already redraw from the grid. Released as shell v183 (owner: "Bump now"); headless Metal capture of a SHRINK gen 3 room shows 171 grid walls = 171 drawn.
 
