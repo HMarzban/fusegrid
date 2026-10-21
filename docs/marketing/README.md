@@ -108,7 +108,7 @@ device: no account, no server, no ads.
 
 CONTROLS
 WASD / arrows move · Space bomb · P pause
-Shift+Space throw · Q remote · K+move kick (need pickups)
+Shift+Space throw · Q remote · walk into a bomb to kick (need pickups)
 Phones and tablets get a touch D-pad and bomb button.
 
 Free and open source (MIT): https://github.com/HMarzban/fusegrid

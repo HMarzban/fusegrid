@@ -32,6 +32,9 @@ Nothing in the next shell yet. Your patch could be first.
 - **SHRINK walls show up in REAL 3D.** With the SHRINK mode on, the walls
   that close in on the room now appear in REAL 3D too. Before, a brick on
   the closing ring just vanished and an invisible wall blocked you.
+- **The kick hint tells the truth.** HOW TO PLAY and OPTIONS used to say
+  K + MOVE kicks a bomb, but K never did anything. With the KICK power you
+  just walk into a bomb and it slides, and that's what HOW TO PLAY says now.
 
 ## shell v182 · 2026-10-19
 

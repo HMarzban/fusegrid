@@ -41,7 +41,7 @@ No install needed, no account, no server. Just press start.
 | Space (or J / X) | Place bomb |
 | Shift + Space | Throw *(needs THROW)* |
 | Q | Detonate remote *(needs REMOTE)* |
-| K + move | Kick *(needs KICK)* |
+| Walk into a bomb | Kick it so it slides *(needs KICK)* |
 | R *(in a run)* | Reset the camera and zoom |
 | P / Esc | Pause (RESUME / RESTART / OPTIONS / QUIT TO MENU); ↑↓ + Enter pick a row |
 | M *(paused)* | Quit to menu |

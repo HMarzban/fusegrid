@@ -4,7 +4,8 @@
 // CLASSIC 2D / REAL 3D / iso call logs never change with px art (HUD pinned
 // from HEAD f732450, before W5; GUIDE pages re-pinned at the 2026-10-19
 // ATLAS menu pages, keyboard and touch, with no px art registered — the
-// px-registered pass must hit the very same pins, so px art never leaks).
+// px-registered pass must hit the very same pins, so px art never leaks;
+// HOW TO re-pinned 2026-10-21 for issue #6: its KICK key reads WALK INTO BOMB).
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -44,13 +45,13 @@ const HUDS = [[0, null], [3, {on: true, t: 12.3}], [8, null]];
 const PAGES = ["drawHowTo", "drawItemsHelp", "drawEnemiesHelp"], BOXES = [[600, 520], [600, 360]];
 const PIN = {
   hud0: "676af1c5:178", hud3: "ecac4c84:354", hud8: "924118c2:511",
-  drawHowTo520: "c790e5ef:457", drawItemsHelp520: "8a7f1cfd:1195", drawEnemiesHelp520: "1c590ad6:1149",
-  drawHowTo360: "e8621249:457", drawItemsHelp360: "b3039a60:1195", drawEnemiesHelp360: "b0a1000c:1149",
-  drawHowTo520T: "aa4c0369:457", drawItemsHelp520T: "2aa3e9c5:1195", drawEnemiesHelp520T: "5682c5e5:1149",
-  drawHowTo360T: "20b0935c:457", drawItemsHelp360T: "9e918ade:1195", drawEnemiesHelp360T: "46aa50d5:1149",
-  "shell.2d.HOWTO": "7b6440d6:459", "shell.2d.ITEMS": "4fc3c574:1197", "shell.2d.ENEMIES": "0cc384f9:1151",
-  "shell.3d.HOWTO": "7b6440d6:459", "shell.3d.ITEMS": "4fc3c574:1197", "shell.3d.ENEMIES": "0cc384f9:1151",
-  "shell.iso.HOWTO": "f81b9d7b:459", "shell.iso.ITEMS": "bc8afea6:1197", "shell.iso.ENEMIES": "9d742abb:1151",
+  drawHowTo520: "5687af4d:457", drawItemsHelp520: "8a7f1cfd:1195", drawEnemiesHelp520: "1c590ad6:1149",
+  drawHowTo360: "1938cac7:457", drawItemsHelp360: "b3039a60:1195", drawEnemiesHelp360: "b0a1000c:1149",
+  drawHowTo520T: "e582bb4f:457", drawItemsHelp520T: "2aa3e9c5:1195", drawEnemiesHelp520T: "5682c5e5:1149",
+  drawHowTo360T: "7a30cea6:457", drawItemsHelp360T: "9e918ade:1195", drawEnemiesHelp360T: "46aa50d5:1149",
+  "shell.2d.HOWTO": "7107614c:459", "shell.2d.ITEMS": "4fc3c574:1197", "shell.2d.ENEMIES": "0cc384f9:1151",
+  "shell.3d.HOWTO": "7107614c:459", "shell.3d.ITEMS": "4fc3c574:1197", "shell.3d.ENEMIES": "0cc384f9:1151",
+  "shell.iso.HOWTO": "3851fddd:459", "shell.iso.ITEMS": "bc8afea6:1197", "shell.iso.ENEMIES": "9d742abb:1151",
 };
 const hud = (lv, tm, ico) => { const r = rec(); drawHudChips(r.c, HUDW(lv), tm, ico); return r; };
 const page = (f, w, h, kind, touch) => { const r = rec(); md[f](r.c, md.layout(w, h), 1.25, kind, touch); return r; };

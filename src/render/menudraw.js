@@ -1187,7 +1187,7 @@ const HOW_ROWS = [
   ["SPACE", "BOMB", "bomb"],
   ["SHIFT + SPACE", "THROW *", "throw"],
   ["Q", "REMOTE *", "remote"],
-  ["K + MOVE", "KICK *", "kick"],
+  ["WALK INTO BOMB", "KICK *", "kick"],
   ["P", "PAUSE", null],
 ];
 export function drawHowTo(c, L, t, kind, touch) {
@@ -1768,7 +1768,7 @@ export function drawSettings(c, L, t, ui) {
     c.textBaseline = "middle";
     c.fillStyle = MUTED;
     c.font = font(9);
-    c.fillText(clip(c, "MOVE WASD/ARROWS · BOMB SPACE · THROW SHIFT+SPACE · REMOTE Q · KICK K+MOVE · PAUSE P", S.iw), S.mid, g.noteY + 4);
+    c.fillText(clip(c, "MOVE WASD/ARROWS · BOMB SPACE · THROW SHIFT+SPACE · REMOTE Q · PAUSE P", S.iw), S.mid, g.noteY + 4);
   }
   foot(c, S, u.touch ? FOOT_TAP : FOOT_KEYS);
 }

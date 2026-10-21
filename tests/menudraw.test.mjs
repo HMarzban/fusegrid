@@ -1616,5 +1616,42 @@ function check(name, cond, detail) {
   }
 }
 
+// issue #6: KICK is walk-into (POWER[].help); no page may say K + MOVE.
+// HOW TO is one draw in every look (PIXEL swaps only the glyph).
+{
+  const md = await import("../src/render/menudraw.js");
+  const { POWER } = await import("../src/core/entities.js");
+  const { shellGeo } = await import("../src/app/fit.js");
+  const rec = () => {
+    const texts = [];
+    const o = {
+      font: "10px x", textAlign: "left",
+      fillText(s, x) { texts.push({ s: String(s), x, w: o.measureText(s).width, align: o.textAlign }); },
+      measureText(s) { const m = /(\d+(?:\.\d+)?)px/.exec(o.font); return { width: String(s).length * 0.6 * (m ? +m[1] : 10) }; },
+      createLinearGradient: () => ({ addColorStop() {} }),
+      createRadialGradient: () => ({ addColorStop() {} }),
+    };
+    return { texts, c: new Proxy(o, { get: (t, p) => (p in t ? t[p] : () => {}), set: (t, p, v) => ((t[p] = v), true) }) };
+  };
+  const K = /\bK\s*\+\s*MOVE\b/i;
+  check("KICK's own help says walk-into", POWER.find((p) => p.t === "kick").help === "walk into a bomb to slide it");
+  const g = shellGeo(393, 852, 600, 520);
+  for (const [tg, L] of [["600x520", md.layout(600, 520)], ["608x352", md.layout(608, 352)], ["narrow " + g.w + "x" + g.h, md.layout(g.w, g.h, g.logo)]]) {
+    for (const touch of [false, true]) {
+      const h = rec();
+      md.drawHowTo(h.c, L, 1, "2d", touch);
+      const walk = h.texts.find((t) => t.s === "WALK INTO BOMB"), pk = h.texts.find((t) => t.s === "P");
+      check(`HOW TO says WALK INTO BOMB beside KICK *, never K + MOVE, and the key fits its cell (${tg}${touch ? " touch" : ""})`,
+        !!walk && !!pk && h.texts.some((t) => t.s === "KICK *") && !h.texts.some((t) => K.test(t.s)) && walk.x + walk.w < pk.x - 8,
+        walk && pk && walk.x + walk.w + " < " + pk.x);
+      const o = rec();
+      md.drawSettings(o.c, L, 1, { touch, rev: "v0" });
+      const line = o.texts.find((t) => t.s.indexOf("MOVE WASD") === 0);
+      check(`OPTIONS never says K+MOVE; the keyboard key line fits unclipped (${tg}${touch ? " touch" : ""})`,
+        !o.texts.some((t) => K.test(t.s)) && (touch ? !line : !!line && (L.narrow || /PAUSE P$/.test(line.s))), line && line.s);
+    }
+  }
+}
+
 console.log("\n  MENUDRAW RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);
