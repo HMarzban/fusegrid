@@ -24,6 +24,7 @@ const over = (hi, lo, a) => "#" + hx2(hi).map((v, i) => Math.round(a * v + (1 - 
 export function edgeSlot(b) { return EDGE[b.name] || "wall"; }
 export function slot2d(b, s) {
   if (s === "edge") s = edgeSlot(b);
+  if (s.includes("|")) s = s.split("|")[0];
   const o = OV[s];
   return o ? over(o[0], b[o[1]], o[2]) : b[s];
 }
@@ -72,9 +73,9 @@ export const FAM = {
     names: ["barnacles", "algae drips", "mooring cleat"]},
   ARENA: {name: "COLOSSEUM STONE", px: {"wallHi.shadow": "wallHi", "wall.outline": "wall.shadow"}, pxCapFull: true,
     base: (g) => [R(2, g.y0 + 4, 36, 1, "wall.outline")],
-    v1: () => [10, 14, 18, 22].map((x) => R(x, 7, 2, 9, "wall.outline")).concat([S([[8, 14], [25, 8]], 2, "wall.outline")]),
-    v2: () => [R(13, 5, 14, 2, "wall.shadow"), R(14, 14, 12, 2, "wall.shadow"), R(16, 7, 2, 7, "wall.shadow"), R(22, 7, 2, 7, "wall.shadow"), R(13, 7, 14, 1, "wallHi.light")],
-    acc: () => [R(6, 10, 28, 2, "wall.shadow"), ...[[9, -1], [15, 1], [21, -1], [27, 1]].map(([x, d]) => P([[x, 11 + 3.5 * d], [x + 3, 11 + 2 * d], [x + 6, 11 + 3.5 * d], [x + 3, 11 + 5.5 * d]], "wall.shadow"))],
+    v1: () => [10, 14, 18, 22].flatMap((x) => [np(R(x + 2, 8, 1, 9, "wall.shadow")), R(x, 7, 2, 9, "wallHi.light|wall.light")]).concat([np(S([[8, 15.4], [25, 9.4]], 1, "wall.shadow")), S([[8, 14], [25, 8]], 2, "wallHi.light|wall.light")]),
+    v2: () => [np(R(14, 7, 14, 1, "wall.shadow")), np(R(15, 16, 12, 1, "wall.shadow")), np(R(18, 8, 1, 6, "wall.shadow")), np(R(24, 8, 1, 6, "wall.shadow")), R(13, 5, 14, 2, "wallHi.light|wall.light"), R(14, 14, 12, 2, "wallHi.light|wall.light"), R(16, 7, 2, 7, "wallHi.light|wall.light"), R(22, 7, 2, 7, "wallHi.light|wall.light")],
+    acc: () => [np(R(6, 12, 28, 1, "wall.shadow")), R(6, 10, 28, 2, "wallHi.light|wall.light"), ...[[9, -1], [15, 1], [21, -1], [27, 1]].flatMap(([x, d]) => [np(P([[x + 1, 12 + 3.5 * d], [x + 4, 12 + 2 * d], [x + 7, 12 + 3.5 * d], [x + 4, 12 + 5.5 * d]], "wall.shadow")), P([[x, 11 + 3.5 * d], [x + 3, 11 + 2 * d], [x + 6, 11 + 3.5 * d], [x + 3, 11 + 5.5 * d]], "wallHi.light|wall.light")])],
     names: ["tally marks", "carved column", "laurel"]},
   SAND: {name: "SANDSTONE",
     base: () => [S([[3, 8], [12, 7], [22, 9], [37, 8]], 1.2, "wallHi.shadow"), S([[3, 9.4], [12, 8.4], [22, 10.4], [37, 9.4]], 1, "wallHi.light"), S([[3, 14], [14, 15], [26, 13], [37, 14]], 1.2, "wallHi.shadow"), S([[3, 15.4], [14, 16.4], [26, 14.4], [37, 15.4]], 1, "wallHi.light")],
