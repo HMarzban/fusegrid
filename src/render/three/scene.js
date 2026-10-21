@@ -1,10 +1,11 @@
 /* buildScene (real3d spec §2) — pure world->THREE mapping, Node-testable:
    only THREE objects + world reads; no DOM/canvas/time. World->scene coords
    X=x-300, Y=up, Z=y-260 (board centered on origin). Static-once: floor plane,
-   permanent WALL InstancedMesh, lights, biome materials. Bricks: fixed-capacity
-   InstancedMesh rescanned in place by update() — never add/remove meshes.
-   Rebuild rule: update() returns true when world.level changed => caller
-   discards group and calls buildScene again. */
+   lights, biome materials. WALL and BRICK: fixed-capacity InstancedMeshes
+   rescanned in place by update() — never add/remove meshes. Walls follow the
+   grid too: SHRINK seals rings mid-room and a new board may reuse a room
+   number (fix 2026-10-21). Rebuild rule: update() returns true when
+   world.level changed => caller discards group and calls buildScene again. */
 import * as THREE from "../../../vendor/three.module.js";
 import {CFG,T,biomeOf} from "../../core/config.js";
 import {build as buildMaterials} from "./materials.js";
@@ -79,27 +80,14 @@ export function buildScene(world, atlas, bright){
   floor.userData.tag="floor";
   group.add(floor);
 
-  // static walls: one matrix per T.WALL tile, built once per level
-  let nWalls=0;
-  for(let i=0;i<world.grid.length;i++)if(world.grid[i]===T.WALL)nWalls++;
+  // walls: capacity COLS*ROWS forever; one matrix per T.WALL tile, refilled
+  // by update() whenever the wall set changes (SHRINK, a new board)
   const wallGeo=new THREE.BoxGeometry(CFG.TILE,biome.hWall,CFG.TILE);
-  const wall=new THREE.InstancedMesh(wallGeo,mats.wall,nWalls);
+  const wall=new THREE.InstancedMesh(wallGeo,mats.wall,CFG.COLS*CFG.ROWS);
   wall.material.color.set("#ffffff");
   const wA=new THREE.Color(biome.wall),
     wH=new THREE.Color(biome.wall).lerp(new THREE.Color(biome.wallHi),0.32);
-  let wi=0;
   const hN=Math.min(biome.hWall,NEAR_H);
-  for(let y=0;y<CFG.ROWS;y++)for(let x=0;x<CFG.COLS;x++)
-    if(world.grid[y*CFG.COLS+x]===T.WALL){
-      const h=y===CFG.ROWS-1?hN:biome.hWall;
-      MAT.makeScale(1,h/biome.hWall,1).setPosition((x+0.5)*CFG.TILE-W/2,h/2,
-        (y+0.5)*CFG.TILE-D/2);
-      wall.setMatrixAt(wi,MAT);
-      wall.setColorAt(wi++,(x+y)&1?wH:wA);
-     }
-  wall.count=nWalls;
-  wall.instanceMatrix.needsUpdate=true;
-  if(wall.instanceColor)wall.instanceColor.needsUpdate=true;
   wall.castShadow=true; wall.receiveShadow=true;
   wall.userData.tag="wall";
   group.add(wall);
@@ -148,13 +136,32 @@ export function buildScene(world, atlas, bright){
   const pools=createPools(biome,atlas);
   group.add(pools.group);
 
-  const mask=new Uint8Array(CFG.COLS*CFG.ROWS);
+  const mask=new Uint8Array(CFG.COLS*CFG.ROWS),
+    wMask=new Uint8Array(CFG.COLS*CFG.ROWS);
   let fresh=true;
   const scene={group,level:world.level,brick,pools,lights,brickV:0,
     update(world){
-      let diff=fresh;
-      for(let i=0;i<mask.length;i++){ const b=world.grid[i]===T.BRICK?1:0;
-        if(mask[i]!==b){ mask[i]=b; diff=true; } }
+      let diff=fresh, wDiff=fresh;
+      for(let i=0;i<mask.length;i++){ const t=world.grid[i],
+        b=t===T.BRICK?1:0, v=t===T.WALL?1:0;
+        if(mask[i]!==b){ mask[i]=b; diff=true; }
+        if(wMask[i]!==v){ wMask[i]=v; wDiff=true; } }
+      if(wDiff){
+        let n=0;
+        for(let y=0;y<CFG.ROWS;y++)for(let x=0;x<CFG.COLS;x++)
+          if(wMask[y*CFG.COLS+x]){
+            const h=y===CFG.ROWS-1?hN:biome.hWall;
+            MAT.makeScale(1,h/biome.hWall,1).setPosition((x+0.5)*CFG.TILE-W/2,
+              h/2,(y+0.5)*CFG.TILE-D/2);
+            wall.setMatrixAt(n,MAT);
+            wall.setColorAt(n++,(x+y)&1?wH:wA);
+           }
+        wall.count=n;
+        live(wall.instanceMatrix,n);
+        live(wall.instanceColor,n);
+        wall.boundingSphere=null;
+        if(!diff)scene.brickV++;      // shadow map re-renders for EMPTY->WALL
+       }
       if(diff){
         let n=0;
         for(let y=0;y<CFG.ROWS;y++)for(let x=0;x<CFG.COLS;x++)
@@ -172,7 +179,7 @@ export function buildScene(world, atlas, bright){
       pools.update(world);
       return world.level!==scene.level;
      }};
-  scene.update(world);          // initial brick fill
+  scene.update(world);          // initial wall + brick fill
   return scene;
 }
 

@@ -19,6 +19,13 @@ Entries are written for players. How a change works lives in
 
 Nothing in the next shell yet. Your patch could be first.
 
+## shell v183 · 2026-10-21
+
+### Fixed
+- **SHRINK walls show up in REAL 3D.** With the SHRINK mode on, the walls
+  that close in on the room now appear in REAL 3D too. Before, a brick on
+  the closing ring just vanished and an invisible wall blocked you.
+
 ## shell v182 · 2026-10-19
 
 ### Added

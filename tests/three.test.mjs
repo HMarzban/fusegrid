@@ -39,6 +39,7 @@ import {createRenderer} from "../src/render/renderer.js";
 import {overlayBox, pauseHit, pauseGeom, PAUSE_ROWS} from "../src/render/scenes.js";
 import {createWorld, loadLevel, step} from "../src/core/sim.js";
 import {CFG, T, BIOMES} from "../src/core/config.js";
+import {PACT} from "../src/core/pact.js";
 import {spawnEnemy, POWER} from "../src/core/entities.js";
 import {createGame} from "../src/main.js";
 import * as THREE from "../vendor/three.module.js";
@@ -152,6 +153,82 @@ function scan(grid){
     brick.count===sc.bricks-1, brick.count+"/"+(sc.bricks-1));
   check("level change -> update returns true (caller rebuilds)",
     (loadLevel(w,2,false), s.update(w)===true));
+}
+
+/* Walls follow the grid (fix 2026-10-21): SHRINK turns rings to T.WALL
+   mid-room and a new board may land on the same room number. The ONE wall
+   InstancedMesh refreshes in place (capacity COLS*ROWS, no new draw call);
+   brickV bumps so the shadow map re-renders even for EMPTY->WALL tiles. */
+{
+  const m=new THREE.Matrix4(), p=new THREE.Vector3(), q=new THREE.Quaternion(),
+    sv=new THREE.Vector3();
+  const follows=(sc,w)=>{
+    const wall=sc.group.children.find(o=>o.userData.tag==="wall"),
+      b=BIOMES[w.level-1], hN=Math.min(b.hWall,NEAR_H);
+    let i=0, ok=wall.count===scan(w.grid).walls;
+    for(let y=0;y<CFG.ROWS&&ok;y++)for(let x=0;x<CFG.COLS&&ok;x++){
+      if(w.grid[y*CFG.COLS+x]!==T.WALL)continue;
+      wall.getMatrixAt(i++,m); m.decompose(p,q,sv);
+      const h=y===CFG.ROWS-1?hN:b.hWall;
+      ok=Math.abs(p.x-((x+0.5)*CFG.TILE-300))<1e-4
+        &&Math.abs(p.z-((y+0.5)*CFG.TILE-260))<1e-4&&Math.abs(p.y-h/2)<1e-4;
+     }
+    return {ok,wall};
+   };
+  const w=createWorld(123,1); loadLevel(w,1,false);
+  const sc=buildScene(w), w0=scan(w.grid).walls;
+  const cap=sc.group.children.find(o=>o.userData.tag==="wall");
+  check("wall capacity COLS*ROWS (refresh never reallocates)",
+    cap.instanceMatrix.count>=CFG.COLS*CFG.ROWS);
+  let e=-1, b=-1;
+  for(let i=0;i<w.grid.length;i++){
+    if(e<0&&w.grid[i]===T.EMPTY)e=i;
+    if(b<0&&w.grid[i]===T.BRICK)b=i;
+   }
+  const v0=sc.brickV;
+  w.grid[e]=T.WALL; w.grid[b]=T.WALL;
+  const r1=sc.update(w), f1=follows(sc,w);
+  check("WALL edit in place -> update false, walls follow (count+matrices)",
+    r1===false&&f1.ok&&f1.wall===cap&&f1.wall.count===w0+2,
+    f1.wall.count+"/"+(w0+2));
+  const v1=sc.brickV;
+  check("WALL edit bumps brickV (shadow map re-renders)", v1>v0);
+  const c=new THREE.Color();
+  const bi=BIOMES[0], wA=new THREE.Color(bi.wall),
+    wH=new THREE.Color(bi.wall).lerp(new THREE.Color(bi.wallHi),0.32);
+  let colOk=true;
+  for(let y=0,i=0;y<CFG.ROWS;y++)for(let x=0;x<CFG.COLS;x++)
+    if(w.grid[y*CFG.COLS+x]===T.WALL){ cap.getColorAt(i++,c);
+      const k=(x+y)&1?wH:wA;
+      if(Math.abs(c.r-k.r)+Math.abs(c.g-k.g)+Math.abs(c.b-k.b)>1e-5)colOk=false; }
+  check("refreshed walls keep the per-instance checker colours", colOk);
+  w.grid[e]=T.EMPTY; sc.update(w);
+  check("EMPTY tile back -> wall count follows down", follows(sc,w).ok
+    &&cap.count===w0+1);
+  const v2=sc.brickV; w.grid[e]=T.WALL; sc.update(w);
+  check("EMPTY->WALL alone (no brick change) still bumps brickV",
+    sc.brickV===v2+1&&cap.count===w0+2, v2+"->"+sc.brickV);
+
+  // the real sim: SHRINK seals ring 1 mid-room
+  const ws=createWorld(77,1); ws.pact=PACT.SHRINK; loadLevel(ws,1,false);
+  ws.state="PLAY";
+  const ss=buildScene(ws), sw0=scan(ws.grid).walls;
+  ws.shrinkT=CFG.STEP/2; step(ws,CFG.STEP,[{}]);
+  const rs=ss.update(ws), fs=follows(ss,ws);
+  check("SHRINK ring -> new walls render in REAL 3D (no rebuild needed)",
+    ws.shrinkGen===1&&rs===false&&fs.ok&&fs.wall.count>sw0,
+    "gen "+ws.shrinkGen+" walls "+sw0+"->"+fs.wall.count);
+
+  // a new board on the same room number (issue #10): a NEW grid object whose
+  // wall set differs must not keep showing the old walls
+  const wn=createWorld(9001,1); loadLevel(wn,1,false);
+  const sn=buildScene(wn), g1=wn.grid.slice();
+  for(let x=2;x<CFG.COLS-2;x++)g1[3*CFG.COLS+x]=T.WALL;
+  for(let x=2;x<CFG.COLS-2;x++)if(g1[9*CFG.COLS+x]===T.WALL)g1[9*CFG.COLS+x]=T.EMPTY;
+  wn.grid=g1;
+  const rn=sn.update(wn), fn=follows(sn,wn);
+  check("new grid, same level -> walls follow the new board",
+    rn===false&&fn.ok, fn.wall.count+"/"+scan(g1).walls);
 }
 
 /* Near-wall cutaway (ruling 2026-10-09): row ROWS-1, corners included, tops
