@@ -39,23 +39,35 @@ export function pxRows(b, code) {
   }
   return rows;
 }
-function lit(rows) {
-  const parts = [];
-  for (let i = 0; i < rows.length;) { let j = i; while (j + 1 < rows.length && rows[j + 1] === rows[i]) j++; parts.push(j > i ? `...R("${rows[i]}", ${j - i + 1})` : `"${rows[i]}"`); i = j + 1; }
-  return `c([${parts.join(", ")}])`;
+/* round 3: runs of one row collapse to R(row, n), and a row string used in
+   two or more places across the sheet is written once in the shared row
+   table Q and referenced as Q[i] (the cells are still plain slot strings
+   at runtime; this only stops 64 cells repeating the same rim rows) */
+function runs(rows) {
+  const o = [];
+  for (let i = 0; i < rows.length;) { let j = i; while (j + 1 < rows.length && rows[j + 1] === rows[i]) j++; o.push([rows[i], j - i + 1]); i = j + 1; }
+  return o;
+}
+function lit(rows, Q) {
+  const ref = (r) => (Q.has(r) ? `Q[${Q.get(r)}]` : `"${r}"`);
+  return `c([${runs(rows).map(([r, n]) => (n > 1 ? `...R(${ref(r)}, ${n})` : ref(r))).join(", ")}])`;
 }
 if (process.argv[1] && process.argv[1].endsWith("genpx.mjs")) {
-  const cells = [];
-  for (const b of BIOMES) for (const [n, code] of PX_WALL_CELLS) cells.push(`    "${b.name}.${n}": ${lit(pxRows(b, code))},`);
+  const all = [], freq = new Map(), Q = new Map();
+  for (const b of BIOMES) for (const [n, code] of PX_WALL_CELLS) { const rows = pxRows(b, code); all.push([b.name + "." + n, rows]); for (const [r] of runs(rows)) freq.set(r, (freq.get(r) || 0) + 1); }
+  for (const [r, k] of [...freq].sort((a, b) => b[1] - a[1])) if (k > 1) Q.set(r, Q.size);
+  const cells = all.map(([k, rows]) => `    "${k}": ${lit(rows, Q)},`);
   const src = `/* PIXEL wall families (wall round 2026-10-21, THROWAWAY prototype). GENERATED
    by tools/walls/genpx.mjs from the shared shape lists in ../../wallart.js:
    do not hand-edit, re-run the generator. One full 20x20 cell per biome and
    wall code (the face band is already faceRows(hWall)*2 tall, so no
    composeFace); vr / ctr / cbr are mirrored from vl / ctl / cbl at bake.
+   Q is the shared row table (a row used in two or more places).
    Wall SLOTS only (never a brick slot, never hex). */
 const A = "art-walls";
 const c = (rows) => ({w: rows[0].length, h: rows.length, author: A, rows});
 const R = (row, n) => Array(n).fill(row);
+const Q = [${[...Q.keys()].map((r) => `"${r}"`).join(", ")}];
 
 export const SHEET = Object.freeze({
   id: "walls",
