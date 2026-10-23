@@ -152,7 +152,7 @@ export function atlasSources(mk, level=1){
    blur6(L)) per 80x80 cell (no bleed across cells or rows), then a 3x3
    soften; L = the colour strip's luminance. Pure canvas math, once per room
    build. null when there is no readable canvas (tests, headless). */
-function surfStrip(col,gl,C,shin,mk){
+export function surfStrip(col,gl,C,shin,mk){
   let a,g;
   try{ a=col.getContext("2d").getImageData(0,0,col.width,col.height).data; g=gl.getContext("2d").getImageData(0,0,gl.width,gl.height).data; }catch(_){ return null; }
   const Wd=col.width, Ht=col.height, L=new Float32Array(Wd*Ht);

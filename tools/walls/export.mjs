@@ -28,7 +28,7 @@ try {
     for (let i = 0; i < 100 && !o; i++) { await new Promise((r) => setTimeout(r, 150)); o = await pg.ev("window.__OUT||null").catch(() => null); }
     if (!o) throw new Error(tree + ": no output " + pg.errors.join(" | "));
     if (pg.errors.length) console.error(tree, "page errors:", pg.errors.join(" | "));
-    console.error(tree, "bakeAtlas ms", o.__bakeMs && o.__bakeMs.toFixed(1), "| wall bake ms per world:", o.__bakeWorld || "-"); delete o.__bakeMs; delete o.__bakeWorld;
+    console.error(tree, "bakeAtlas ms", o.__bakeMs && o.__bakeMs.toFixed(1), "| wall bake ms per world:", o.__bakeWorld || "-"); if (o.__surf) console.error(tree, "surface strip ms per room:", o.__surf); delete o.__bakeMs; delete o.__bakeWorld; delete o.__surf;
     for (const [k, url] of Object.entries(o)) { const f = k + ".png"; mkdirSync(join(OUT, k.split("/")[0]), {recursive: true}); writeFileSync(join(OUT, f), Buffer.from(url.split(",")[1], "base64")); files.push(f); }
   }
   c.close();

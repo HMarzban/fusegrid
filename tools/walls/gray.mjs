@@ -90,4 +90,4 @@ for (const b of BIOMES) {
   }
 }
 if (process.argv.includes("--json")) console.log(JSON.stringify(out));
-else console.log(`lint: ${lint} sub-2-texel shapes (gate 0) · marks > 30%: ${overMarks} pieces (gate 0) · T = ${T} L*`);
+else console.log(`lint: ${lint} rects or strokes under 1 px = 2 texels (gate 0; polygons not checked) · marks > 30%: ${overMarks} pieces (gate 0) · T = ${T} L*`);

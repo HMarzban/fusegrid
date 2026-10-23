@@ -68,7 +68,7 @@ export const FAM = {
   JUNGLE: {name: "TEMPLE STONE", px: {"wallHi.shadow": "wall"}, face: "wall.shadow|wall.outline", ov: {"wall.shadow": ["#000000", "wall", 0.5]}, shade: "cap.warm|wallHi.shadow", det: {polish: 1},
     base: () => [],
     v1: (g) => { const a = curve([[2, 12], [9, 9], [16, 10], [23, 14], [29, 19], [33, g.y0 + 3], [36, 37]]); return [S(a, 4.4, "wall.outline|wall.shadow"), np(S(a, 2, "wall")), np(S(sh1(a), 1, "wall.light"))]; },
-    v2: (g) => [S(meander(5, 35, g.y0 + 2, g.y0 + 5, 5), 1.4, "wall.outline|wall")],
+    v2: (g) => [S(meander(5, 35, g.y0 + 2, g.y0 + 5, 5), 1.4, "wall.pit|wall")],
     acc: (g) => { const a = curve([[9, 3], [11, 10], [8, 17], [11, g.y0 + 2], [9, 37]]), b = curve([[29, 3], [26, 9], [29, 16], [26, g.y0 + 4], [29, 37]]), t = curve([[11, 10], [15, 12], [19, 12]]); return [S(a, 4.6, "wall.outline|wall.shadow"), S(b, 4.6, "wall.outline|wall.shadow"), S(t, 3, "wall.outline|wall.shadow"), np(S(a, 2, "wall")), np(S(b, 2, "wall")), np(S(t, 1, "wall")), np(S(sh1(a), 1, "wall.light")), np(S(sh1(b), 1, "wall.light"))]; },
     names: ["root wrap", "fret band", "root-bound"]},
   ICE: {name: "GLACIER BLOCK", lit: "wallHi", shade: "wallHi.shadow|wall.light", pxCap: "wallHi.shadow", pxNoAO: true, det: {polish: 1},
