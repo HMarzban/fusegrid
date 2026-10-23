@@ -374,10 +374,30 @@ export function wallShapes(b, code, px = false, opts = {}) {
 export function topRows(b, code) { return code === WV.VL || code === WV.VR || code === WV.CTL || code === WV.CTR ? [0, TS] : [0, faceY(b)]; }
 export function sideRows(b) { return [faceY(b), 38]; }
 
-/* canvas painter shared by the bake (at 0,0) and the vector fallback */
-export function paintShapes(c, b, shapes, px0, py0) {
+/* REAL 3D surface response (round 3): how much each slot catches the key
+   as a highlight (gloss 0..255) and how tight that highlight is (shin
+   0..255 -> exponent 4..64), per world. A material table painted into the
+   wall surface strip, never a per-biome light: the frozen lights are
+   untouched. cap = the wallHi family (frame, film, frost, bevel), dim = the
+   dimmed cap body, face = the wall family. Matte stone (JUNGLE ARENA SAND)
+   takes none. VOID stays low: nothing on a VOID wall may read brighter than
+   its wallHi. */
+const GLOSS = {ICE: {cap: 150, dim: 70, face: 60, shin: 120}, VOID: {cap: 60, dim: 45, face: 70, shin: 200}, FACTORY: {cap: 80, dim: 80, face: 55, shin: 30},
+  CROWN: {cap: 150, dim: 110, face: 0, shin: 70}, WATER: {cap: 110, dim: 45, face: 30, shin: 110}};
+export function glossOf(b, s) {
+  const G = GLOSS[b.name];
+  if (!G) return 0;
+  if (s.includes("|")) s = s.split("|")[0];
+  if (s.startsWith("panel") || s === "wall.light" && b.name === "CROWN") return 0;
+  return s === "wallHi.dim" ? G.dim : s.startsWith("wallHi") || s.startsWith("cap.") ? G.cap : G.face;
+}
+export const shinOf = (b) => (GLOSS[b.name] ? GLOSS[b.name].shin : 0);
+
+/* canvas painter shared by the bake (at 0,0) and the vector fallback; col =
+   the slot resolver (the REAL 3D surface strip paints gloss with it) */
+export function paintShapes(c, b, shapes, px0, py0, col0 = slot2d) {
   for (const s of shapes) {
-    const col = slot2d(b, s.c);
+    const col = col0(b, s.c);
     if (s.r) { c.fillStyle = col; c.fillRect(px0 + s.r[0], py0 + s.r[1], s.r[2], s.r[3]); continue; }
     c.beginPath();
     const pts = s.p || s.s;
