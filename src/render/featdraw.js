@@ -253,7 +253,8 @@ function plate(c, b, t, s, o) {
 /* ---- STREAM (WATER): a flowing channel. Shallows toward the banks, a
    deep centre, short flow-aligned ripple dashes (they translate with the
    flow and add direction), dash + arrowhead rows (1 / 2 / 3), banks = the
-   two side edges. Local E = downstream. */
+   two side edges, which alone carry the lip (a run end has none, so the
+   3D scroll never drags a lip down the channel). Local E = downstream. */
 const ARROWS = [[20], [13, 27], [10, 20, 30]];
 const RIPROWS = ARROWS.map((a) => [6, 10, 14, 17, 23, 26, 30, 34].filter((y) => a.every((v) => Math.abs(v - y) >= 4)));
 function ripple(c, v, x, y, l) {
@@ -283,7 +284,7 @@ function stream(c, b, t, s, o) {
   });
   c.restore();
   const banks = [L2B(s.dir, "N"), L2B(s.dir, "S")].filter((sd) => !s.outer || s.outer.includes(sd));
-  if (!m) lip(c, t, s.outer || banks);
+  if (!m) lip(c, t, banks);
   for (const sd of banks) edge(c, t, h, sd, null, o);
 }
 

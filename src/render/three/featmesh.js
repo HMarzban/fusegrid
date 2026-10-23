@@ -41,7 +41,7 @@ function variants(w, x, y) {
 const FRAG = `vec3 fxGlow=vec3(0.0);
 #ifdef USE_MAP
   vec2 l=vL,c0=vL-0.5;
-  float kd=vFx.x,hh=vFx.y,pr=vFx.z,r=length(c0);
+  float kd=floor(vFx.x+0.5),hh=floor(vFx.y+0.5),pr=floor(vFx.z+0.5),r=length(c0);
   if(kd==2.0&&hh<0.5){float bw=smoothstep(0.42,0.28,r);l=0.5+c0*(1.0-0.035*bw*sin(uTime*1.3+vFx.w*6.2832));}
   float along=dot(l-0.5,vScr.xy)+0.5;
   float across=abs(dot(l-0.5,vec2(-vScr.y,vScr.x)));
@@ -68,10 +68,10 @@ const FRAG = `vec3 fxGlow=vec3(0.0);
     col=mix(col,uHi,0.08*s*s*step(abs(dot(c0,vec2(-vScr.y,vScr.x))),0.375));
   } else if(kd==5.0){
     float sp=0.5+0.5*sin(-(hh+1.0)*atan(c0.y,c0.x)+26.0*r+uTime*1.8);
-    col*=1.0-0.26*sp*smoothstep(0.37,0.2,r)*smoothstep(0.03,0.09,r);
+    col*=1.0-min(0.6,0.4*uFxK)*sp*smoothstep(0.37,0.2,r)*smoothstep(0.03,0.09,r);
   } else if(kd==6.0){
     float bx=max(abs(c0.x),abs(c0.y));
-    col=mix(col,uHi,0.45*(0.5+0.5*sin(uTime*1.7+vFx.w*6.2832))*smoothstep(0.24,0.06,bx));
+    col=mix(col,uHi,min(1.0,0.45*uFxK)*(0.5+0.5*sin(uTime*1.7+vFx.w*6.2832))*smoothstep(0.24,0.06,bx));
     float on=floor(mod(uTime*1.2+vFx.w*3.0,pr+1.0));
     for(int i=0;i<3;i++){
       if(float(i)>=pr) break;
@@ -112,12 +112,12 @@ export function buildFeat(world, biome) {
   const aFx = new THREE.InstancedBufferAttribute(new Float32Array(tiles.length * 4), 4);
   geo.setAttribute("aCell", aCell); geo.setAttribute("aScr", aScr); geo.setAttribute("aFx", aFx);
   const mat = new THREE.MeshLambertMaterial({color: "#ffffff", map: tex});
-  const h0 = tierOf(world), uT = {value: 0}, uSt = {value: 0}, uTime = {value: 0}, uBand = {value: [0.2, 0.35, 0.3][h0]}, uHi = {value: new THREE.Color(biome.wallHi)};
+  const h0 = tierOf(world), uT = {value: 0}, uSt = {value: 0}, uTime = {value: 0}, uBand = {value: [0.2, 0.35, 0.3][h0]}, uHi = {value: new THREE.Color(biome.wallHi)}, uFxK = {value: 1};
   mat.onBeforeCompile = (sh) => {
-    Object.assign(sh.uniforms, {uT, uSt, uTime, uBand, uHi});
+    Object.assign(sh.uniforms, {uT, uSt, uTime, uBand, uHi, uFxK});
     sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nattribute vec2 aCell;\nattribute vec3 aScr;\nattribute vec4 aFx;\nvarying vec2 vCell;\nvarying vec3 vScr;\nvarying vec4 vFx;\nvarying vec2 vL;\nvarying vec2 vW;")
       .replace("#include <uv_vertex>", "#include <uv_vertex>\nvCell=aCell;vScr=aScr;vFx=aFx;vL=uv;vW=(modelMatrix*instanceMatrix*vec4(position,1.0)).xz;");
-    sh.fragmentShader = sh.fragmentShader.replace("#include <common>", `#include <common>\nuniform float uT;\nuniform float uSt;\nuniform float uTime;\nuniform float uBand;\nuniform vec3 uHi;\nvarying vec2 vCell;\nvarying vec3 vScr;\nvarying vec4 vFx;\nvarying vec2 vL;\nvarying vec2 vW;\n#define E_ ${E.toFixed(6)}`)
+    sh.fragmentShader = sh.fragmentShader.replace("#include <common>", `#include <common>\nuniform float uT;\nuniform float uSt;\nuniform float uTime;\nuniform float uBand;\nuniform vec3 uHi;\nuniform float uFxK;\nvarying vec2 vCell;\nvarying vec3 vScr;\nvarying vec4 vFx;\nvarying vec2 vL;\nvarying vec2 vW;\n#define E_ ${E.toFixed(6)}`)
       .replace("#include <map_fragment>", FRAG)
       .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\ntotalEmissiveRadiance+=fxGlow;");
   };
@@ -137,7 +137,7 @@ export function buildFeat(world, biome) {
   mesh.instanceMatrix.needsUpdate = true;
   mesh.castShadow = false; mesh.receiveShadow = true;
   mesh.userData.tag = "feat";
-  return {mesh, update(w) {
+  return {mesh, fxK: uFxK, update(w) {
     if (!w.feat) return;
     const h = tierOf(w), t = w.featT || 0, pm = PM[Math.max(-1, Math.min(1, w.pace | 0)) + 1];
     uT.value = t * FEAT_PROFILE[h].belt.v * pm; uSt.value = t * FLOAT[h] * pm; uTime.value = t;
