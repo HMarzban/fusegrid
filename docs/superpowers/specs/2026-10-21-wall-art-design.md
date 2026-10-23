@@ -133,3 +133,46 @@ Throwaway branch `worktree-agent-a531a182f96a26f7e`, based on v184, local only:
 
 Total effort is about 3.5–4.5 days. If the owner wants all three looks at
 once, the fallback is a one-time PIXEL cap raise.
+
+## Addendum (2026-10-23): art round 3, maturity pass
+
+Owner: *"make the visual look better, more mature and add tinny details that
+are matter in game and for gamers"*, then *"the real 3D need more effort to
+make it better in visual effects and details"*.
+
+An art-director review judged the detail pass at true size (40 px, grayscale)
+and found two faults: wall faces carried brick-style courses and mortar
+(the genre's "this breaks" cue on a block that never breaks), and causeless
+speckle read as dirt. Round 3 is the art target for #17 and #31:
+
+- **WALL never reads as BRICK, by shape.** Wall faces are monolithic (dressed
+  blocks, tooling, one plinth or tide line at most); no horizontal stripe
+  rhythm finer than half a tile and no perpend joints that echo the brick.
+  BRICK keeps its courses (PIXEL) or pillow gloss (CLASSIC 2D, REAL 3D). The
+  new `tools/walls/gray.mjs` counts stripes and perpends per face.
+- **Every mark has a cause.** Stain under the cap lip, wet film on the WATER
+  cap edge, damp below the tide line, a rust run under FACTORY bolts, a frost
+  rim on ICE, sand drift at the SAND foot. Grain only on SAND. No dither
+  wedges. Marks at least 2 texels in the 3D strip (388 → 0 below that).
+- **One key from the top-left.** A crisp one-step cap bevel, warm bevel
+  shadows on gold and sand (no grey or green `pxRamp` shadow).
+- **No letters.** ICE v1 is one frost-filled crystal; the ARENA PIXEL tally
+  is four bars and a slash.
+- **REAL 3D effects in the one wall material:** a bump strip from the same
+  shape lists (the key light rakes bevels and carvings), per-world gloss
+  (ICE, WATER, FACTORY, CROWN glossy; VOID low; JUNGLE, ARENA, SAND matte)
+  and contact AO toward the floor. 141 draws, triangles unchanged; wall
+  texture memory 563 KB → 1.13 MB per room; the strip build costs 6–7.5 ms
+  per room start on the laptop (phone and frame time unmeasured; needs
+  headed real-GPU Chrome). Picked candidate C (relief 3, gloss 0.6, AO 0.2)
+  for the lowest shimmer at play distance.
+- **Costs:** PIXEL `art/walls.js` 17,640 B (prototype) → 12,824 B; the px
+  tree is still over its cap until #15. CLASSIC bake 0.3–0.6 ms per world.
+  Readability: no pair under 20 drops more than 0.5 (six CVD pairs dip by
+  0.1–0.5, ARENA PIXEL wall vs brick protan 6.4 → 5.9 the largest).
+
+Reference sheets under `assets/2026-10-23/`: `walls-round3-2d-px.png` and
+`walls-round3-2d-px-gray.png` (every world's base, v1, v2, accent, border
+and its BRICK, CLASSIC 2D and PIXEL), `walls-round3-3d-rooms.png` (rooms 1–8
+at rig C) and `walls-round3-3d-candidates.png` (the 3D candidates).
+Throwaway branch: `worktree-agent-ab0dfcf6e3434b2c3` (local, locked).

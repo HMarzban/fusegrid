@@ -830,6 +830,14 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   - REAL 3D stays at 141 draws (a per-instance cell index on the one wall
     mesh).
   - Local prototype: `worktree-agent-a531a182f96a26f7e` (locked).
+  - Art round 3 (2026-10-23, record addendum) is the art target: a WALL face
+    never echoes the BRICK's courses or mortar (shape, checked by
+    `tools/walls/gray.mjs`), every mark has a cause, REAL 3D adds relief +
+    per-world gloss + contact AO in the one wall material at 141 draws.
+    Floor tiles got the same pass (converging QUICKSAND, PORTAL pips, GATE
+    whole-side timer, slow PLAY-clock 3D effects at 142 draws). Prototypes:
+    `worktree-agent-ab0dfcf6e3434b2c3` (walls) and
+    `worktree-agent-a3057d0a51e6a8d96` (floor), both locked.
 - Hero direction reset (owner ruling 2026-10-11, concept only, NOT built): a
   cartoon with a head, arms and legs, "googooli" (appealing yet dignified,
   smart, stylish), NOT human, space theme — a small being of starlight held in

@@ -318,3 +318,47 @@ What the storyboards showed, for design pass 2 (#28):
   - PORTAL's 3-tile exit guard counts Manhattan tiles.
   - A guarded foe waits on the entry portal.
   - A blast arm keeps its leftover reach after passing through a portal.
+
+## Addendum (2026-10-23): art round 3, maturity pass
+
+Owner: *"make the visual look better, more mature and add tinny details that
+are matter in game and for gamers"*, then *"put more efferts for floor
+tiles"*. An art-director review at true size (40 px, grayscale) drove the
+changes; this is the art target for #23 and each tile issue:
+
+- **Gameplay reads first.**
+  - QUICKSAND: one dark diamond dimple with 1 / 2 / 3 spiral arms that
+    converge (the parallel arcs read as STREAM).
+  - STREAM: tapered flow ripples replace the caustic web (it read as a
+    cracked tile); the CORE arrow is one value step up.
+  - PORTAL: pair pips 1 / 2 / 3 (2.8 units, 2×2 px in PIXEL) in the
+    top-left bracket.
+  - GATE: each kerb side is one whole timer segment (gilt lit, dark slot
+    unlit).
+  - TRAP: CORE chevrons lifted (dL 18.3 → 24.4), reach ticks cross the rim.
+- **Heat tells at a glance.** Heavier PLUS dashes on ICE PATCH; MAX on ICE
+  PATCH wears frost teeth, never a hatch parallel to its streaks; TRAP PLUS
+  ticks are notches across the dashed rim.
+- **Causeless marks deleted:** the BOOSTER vein network, leaf flecks, ICE
+  scratches and frost specks, the PIXEL checker dithers and flecks, the
+  PORTAL core notch.
+- **REAL 3D effects** in the one tile InstancedMesh (142 draws), on the
+  PLAY-only clock (PAUSE freezes them), `wallHi` or black tints only,
+  nothing flashes: relief lit from the top-left (all), a specular sweep (ICE
+  PATCH), breathing leaves (BOOSTER CORE), a band value pulse (TRAP MAX), bed
+  scroll + soft shimmer (STREAM), an inward dark drift (QUICKSAND), a core
+  breathe capped at `wallHi` with pips counting up (PORTAL), lit kerb strokes
+  (GATE).
+- **Gates:** coverage ≤ 30% every tile and heat, CORE dL ≥ 20, QUICKSAND bed
+  vs `brickB` 17.6–18.8, no new hex, VOID marks capped at `wallHi` (PIXEL
+  MAX had broken the dim rule), all 24 PIXEL cells pass `validateCell`,
+  `featpx.js` 16,260 → 13,110 B.
+- **Open:** the 1.2-unit minimum mark is 1.92 atlas texels (widening pushes
+  three tiles past 30%); PIXEL heats share a mark value on VOID, CROWN and
+  SAND (edge, count and tip still separate them).
+
+Reference sheets under `assets/2026-10-23/`: `tiles-round3-2d-a.png` /
+`-2d-b.png` and `tiles-round3-px-a.png` / `-px-b.png` (runs at CORE, PLUS,
+MAX with a grayscale copy), `tiles-round3-3d.png` (all 8 tiles × 3 heats in
+REAL 3D), and six-frame strips `tiles-round3-3d-anim-{portal,quicksand,icepatch}.png`.
+Throwaway branch: `worktree-agent-a3057d0a51e6a8d96` (local, locked).

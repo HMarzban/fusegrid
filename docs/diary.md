@@ -603,6 +603,13 @@ Design work that stayed on the drawing board. None of it is in the game.
   REAL 3D walls get brighter. A prototype held 141 draws. It's tracked in
   #17 (CLASSIC 2D + REAL 3D, on today's boards) and #31 (PIXEL);
   [design record](superpowers/specs/2026-10-21-wall-art-design.md).
+- Art round 3 (2026-10-23). The owner asked for a look that is "more mature",
+  with tiny details that matter to players, and more effort on REAL 3D. An
+  art-director review at true size found the walls drawn like breakable
+  masonry and covered in causeless speckle. The fix: wall faces that can
+  never read as brick, marks with a cause, converging QUICKSAND and
+  readable PORTAL pips, plus slow REAL 3D tile effects and lit wall relief
+  at the same draw count. It's an addendum to both records above.
 
 ---
 

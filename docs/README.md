@@ -129,8 +129,8 @@ decision was later replaced. The note says by what.
 | 2026-09-04 | [HIGH SCORES by Heat](superpowers/plans/2026-09-04-scores-by-heat.md) | |
 | 2026-10-20 | [Level variety: random boards, bold biome mazes](superpowers/specs/2026-10-20-level-variety-design.md) | ⚠️ Designed, not built (issue #8); its tile section is replaced by the 2026-10-21 tiles record |
 | 2026-10-20 | [Level variety: the 14 bold layouts](superpowers/specs/2026-10-20-level-variety-layouts.md) | The ASCII templates, edit grammar and fair-start pocket for #12 |
-| 2026-10-21 | [Difficulty tiles: fun on easy, tough on hard](superpowers/specs/2026-10-21-difficulty-tiles-design.md) | ⚠️ Designed, wave 1 in prototype (issue #16) |
-| 2026-10-21 | [Walls: a living wall family for every world](superpowers/specs/2026-10-21-wall-art-design.md) | ⚠️ Designed and prototyped, not built (issues #17, #31) |
+| 2026-10-21 | [Difficulty tiles: fun on easy, tough on hard](superpowers/specs/2026-10-21-difficulty-tiles-design.md) | ⚠️ Designed, wave 1 in prototype; art round 3 addendum 2026-10-23 (issue #16) |
+| 2026-10-21 | [Walls: a living wall family for every world](superpowers/specs/2026-10-21-wall-art-design.md) | ⚠️ Designed and prototyped, not built; art round 3 addendum 2026-10-23 (issues #17, #31) |
 
 ### 🎵 Sound
 
