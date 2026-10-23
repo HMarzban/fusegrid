@@ -3,8 +3,9 @@
    bakes every cell this room can show into a 512^2 atlas (8x8 cells of 64
    px); per-instance aCell picks the cell, aScr = (belt dir in uv, exit
    flag) scrolls the belt bed in the shader at the true belt speed (uT, fed
-   from world.featT, so PAUSE freezes it); the exit tile's downstream cap
-   never scrolls. Bloom / plate state cells are swapped in update(). Built
+   from world.featT, so PAUSE freezes it); only the band |across| < uBand
+   (the rubber between the rails, per heat) scrolls, so rails and rivets
+   stay put as in 2D; the exit tile's downstream cap never scrolls. Bloom / plate state cells are swapped in update(). Built
    only when world.feat is set, so gen 1 and non-tile rooms stay at 141. */
 import * as THREE from "../../../vendor/three.module.js";
 import {CFG, biomeOf} from "../../core/config.js";
@@ -16,16 +17,16 @@ const MAT = new THREE.Matrix4();
 const PM = [0.85, 1, 1.15];
 function variants(w, x, y) {
   const s = cellSpec(w, x, y);
-  if (s.kind === "BELT") { s.phase = 0; return [s]; }
-  if (s.kind === "GLIDE") return [s];
+  if (s.kind === "BELT" || s.kind === "STREAM") { s.phase = 0; return [s]; }
   if (s.kind === "BLOOM") return [0, 1, 2].map((st) => ({...s, state: st}));
-  return [{...s, state: 0}, ...[1, 2, 3, 4].map((l) => ({...s, state: 1, lit: l})), {...s, state: 2, lit: 0}];
+  if (s.kind === "PLATE") return [{...s, state: 0}, ...[1, 2, 3, 4].map((l) => ({...s, state: 1, lit: l})), {...s, state: 2, lit: 0}];
+  return [s];
 }
 export function buildFeat(world, biome) {
   const f = world.feat, C = CFG.COLS, tiles = [];
   for (let k = 0; k < f.length; k++) if (f[k]) tiles.push(k);
   const cells = new Map(), list = [];
-  const cellOf = (s) => { const kk = specKey({...s, phase: s.kind === "BELT" ? 0 : s.phase}); if (!cells.has(kk)) { cells.set(kk, list.length); list.push(s); } return cells.get(kk); };
+  const cellOf = (s) => { const kk = specKey({...s, phase: s.kind === "BELT" || s.kind === "STREAM" ? 0 : s.phase}); if (!cells.has(kk)) { cells.set(kk, list.length); list.push(s); } return cells.get(kk); };
   for (const k of tiles) for (const s of variants(world, k % C, (k / C) | 0)) cellOf(s);
   let tex;
   if (typeof document !== "undefined" && document.createElement) {
@@ -43,16 +44,17 @@ export function buildFeat(world, biome) {
   const aScr = new THREE.InstancedBufferAttribute(new Float32Array(tiles.length * 3), 3);
   geo.setAttribute("aCell", aCell); geo.setAttribute("aScr", aScr);
   const mat = new THREE.MeshLambertMaterial({color: "#ffffff", map: tex});
-  const uT = {value: 0};
+  const uT = {value: 0}, uBand = {value: [0.2, 0.35, 0.3][tierOf(world)]};
   mat.onBeforeCompile = (sh) => {
-    sh.uniforms.uT = uT;
+    sh.uniforms.uT = uT; sh.uniforms.uBand = uBand;
     sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nattribute vec2 aCell;\nattribute vec3 aScr;\nvarying vec2 vCell;\nvarying vec3 vScr;\nvarying vec2 vL;")
       .replace("#include <uv_vertex>", "#include <uv_vertex>\nvCell=aCell;vScr=aScr;vL=uv;");
-    sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nuniform float uT;\nvarying vec2 vCell;\nvarying vec3 vScr;\nvarying vec2 vL;")
+    sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nuniform float uT;\nuniform float uBand;\nvarying vec2 vCell;\nvarying vec3 vScr;\nvarying vec2 vL;")
       .replace("#include <map_fragment>", `#ifdef USE_MAP
   vec2 l=vL;
   float along=dot(l-0.5,vScr.xy)+0.5;
-  if(!(vScr.z>0.5&&along>0.875)) l=fract(l-vScr.xy*uT);
+  float across=abs(dot(l-0.5,vec2(-vScr.y,vScr.x)));
+  if(!(vScr.z>0.5&&along>0.875)&&across<uBand) l=fract(l-vScr.xy*uT);
   l=l*(1.0-2.0*${E.toFixed(6)})+${E.toFixed(6)};
   vec4 sampledDiffuseColor=texture2D(map,vCell+l/${N.toFixed(1)});
   diffuseColor*=sampledDiffuseColor;
@@ -65,7 +67,7 @@ export function buildFeat(world, biome) {
     const x = k % C, y = (k / C) | 0, s = cellSpec(world, x, y);
     MAT.makeTranslation((x + 0.5) * CFG.TILE - W / 2, 0.7, (y + 0.5) * CFG.TILE - D / 2);
     mesh.setMatrixAt(i, MAT);
-    if (s.kind === "BELT") { const [dx, dy] = [[1, 0], [0, 1], [-1, 0], [0, -1]][s.dir]; aScr.setXYZ(i, dx, -dy, s.exit ? 1 : 0); }
+    if (s.kind === "BELT" || s.kind === "STREAM") { const [dx, dy] = [[1, 0], [0, 1], [-1, 0], [0, -1]][s.dir]; aScr.setXYZ(i, dx, -dy, s.exit ? 1 : 0); }
     const ci = cellOf(s); setCell(i, ci); last[i] = ci;
   });
   mesh.count = tiles.length;

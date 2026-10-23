@@ -46,3 +46,14 @@ test("REAL 3D: a tile room adds exactly ONE draw (141 -> 142 in the fat-world fo
   let feats = 0; buildScene(w1, null).group.traverse((o) => { if (o.userData.tag === "feat") feats++; });
   assert.equal(feats, 0);
 });
+test("tile art pass: every PIXEL tile cell is palette slots only and valid (8 tiles x 3 heats)", async () => {
+  const { featPxCell } = await import("../src/render/featpx.js");
+  const { validateCell } = await import("../src/render/pixel/grid.js");
+  const K = [["JUNGLE", { kind: "BLOOM" }], ["ICE", { kind: "GLIDE", gx: 1, gy: 2 }], ["FACTORY", { kind: "BELT", dir: 1, exit: true }], ["WATER", { kind: "STREAM", dir: 2 }],
+    ["ARENA", { kind: "PLATE" }], ["SAND", { kind: "QUICK" }], ["VOID", { kind: "PORTAL", pair: 2 }], ["CROWN", { kind: "GATE", lit: 3 }]];
+  for (const [b, s] of K) for (let h = 0; h < 3; h++) {
+    const c = featPxCell(b, { ...s, h });
+    assert.deepEqual(validateCell(c, c.pal), [], b + " " + h);
+    for (const v of Object.values(c.pal)) assert.ok(/^tile\./.test(v), v);
+  }
+});
