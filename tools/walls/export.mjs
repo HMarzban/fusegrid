@@ -15,26 +15,25 @@ const serve = (cwd) => new Promise((ok, no) => {
   p.stdout.on("data", (b) => { const m = /127\.0\.0\.1:(\d+)/.exec(String(b)); if (m) ok({proc: p, port: +m[1]}); });
   p.on("exit", (c) => no(new Error("server exited " + c)));
 });
-mkdirSync(join(MAIN, "tools/walls"), {recursive: true});
-copyFileSync(join(HERE, "tools/walls/export.html"), join(MAIN, "tools/walls/export.html"));
-const A = await serve(HERE), B = await serve(MAIN);
+if (MAIN) { mkdirSync(join(MAIN, "tools/walls"), {recursive: true}); copyFileSync(join(HERE, "tools/walls/export.html"), join(MAIN, "tools/walls/export.html")); }
+const A = await serve(HERE), B = MAIN ? await serve(MAIN) : null;
 let chr = null;
 const files = [];
 try {
   chr = await startChrome(true);
   const c = await cdp(chr.ws);
-  for (const [tree, port] of [["new", A.port], ["today", B.port]]) {
+  for (const [tree, port] of [["new", A.port], ...(B ? [["today", B.port]] : [])]) {
     const pg = await openPage(c, {w: 400, h: 400, dpr: 1, mobile: false}, `http://127.0.0.1:${port}/tools/walls/export.html?tree=${tree}`);
     let o = null;
     for (let i = 0; i < 100 && !o; i++) { await new Promise((r) => setTimeout(r, 150)); o = await pg.ev("window.__OUT||null").catch(() => null); }
     if (!o) throw new Error(tree + ": no output " + pg.errors.join(" | "));
     if (pg.errors.length) console.error(tree, "page errors:", pg.errors.join(" | "));
-    console.error(tree, "bakeAtlas ms", o.__bakeMs && o.__bakeMs.toFixed(1)); delete o.__bakeMs;
+    console.error(tree, "bakeAtlas ms", o.__bakeMs && o.__bakeMs.toFixed(1), "| wall bake ms per world:", o.__bakeWorld || "-"); delete o.__bakeMs; delete o.__bakeWorld;
     for (const [k, url] of Object.entries(o)) { const f = k + ".png"; mkdirSync(join(OUT, k.split("/")[0]), {recursive: true}); writeFileSync(join(OUT, f), Buffer.from(url.split(",")[1], "base64")); files.push(f); }
   }
   c.close();
 } finally {
   if (chr) { chr.proc.kill("SIGTERM"); await new Promise((r) => setTimeout(r, 400)); try { rmSync(chr.dir, {recursive: true, force: true}); } catch (_) {} }
-  A.proc.kill("SIGTERM"); B.proc.kill("SIGTERM");
+  A.proc.kill("SIGTERM"); if (B) B.proc.kill("SIGTERM");
 }
 console.log(JSON.stringify(files));

@@ -18,7 +18,7 @@ try {
   await P.key("Enter"); await sleep(5200);
   await P.ev("window.__GAME__.begin()"); await sleep(800);
   const sheet = blank(4 * 600 + 5 * 12, 2 * 520 + 3 * 12 + 30, "#05070d");
-  label(sheet, 12, 8, 2, "CLASSIC 2D IN-GAME QA - DETAIL PASS WALLS - ROOMS 1-8 (SEED 4242, FOES FROZEN)", [255, 220, 120]);
+  label(sheet, 12, 8, 2, "CLASSIC 2D IN-GAME QA - ROUND 3 WALLS - ROOMS 1-8 (SEED 4242, FOES FROZEN)", [255, 220, 120]);
   for (let r = 1; r <= 8; r++) {
     await P.ev(`import('/src/core/sim.js').then(m=>{const G=window.__GAME__.G;G.seed=4242;m.loadLevel(G,${r},true);G.state='PLAY';for(const e of G.enemies)e.speed=0;})`);
     await sleep(700);

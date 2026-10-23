@@ -1,21 +1,21 @@
 #!/usr/bin/env node
-/* Detail pass (throwaway): manifest.json for the isolated wall tiles.
+/* Detail pass / round 3 (throwaway): manifest.json for the isolated wall tiles.
    node tools/walls/manifest.mjs <wallsDir> */
 import {readdirSync, writeFileSync, existsSync} from "node:fs";
 import {join} from "node:path";
 const D = process.argv[2];
 const WORLD = {jungle: "JUNGLE temple stone", ice: "ICE glacier block", factory: "FACTORY plate steel", water: "WATER pier stone", arena: "ARENA colosseum stone", sand: "SAND sandstone", void: "VOID obsidian monolith", crown: "CROWN royal masonry"};
 const PIECE = {
-  jungle: {base: "carved groove, grain, coursed face with moss tufts", v1: "root wrap (lit tube)", v2: "fret band carved in the face", acc: "root-bound, one per room", border: "plain rampart border"},
-  ice: {base: "frost-rimmed cap, refraction streaks, lower-right facet", v1: "carved runes", v2: "icicles", acc: "frozen fringe, one per room", border: "plain rampart border"},
-  factory: {base: "brushed steel, four lit bolts", v1: "weld seam", v2: "bolted strap", acc: "pipe run, one per room", border: "plain rampart border"},
-  water: {base: "porous pier stone, wet film, damp below the tide line", v1: "barnacles", v2: "algae drips", acc: "mooring cleat, one per room", border: "plain rampart border"},
-  arena: {base: "claw-chisel tooling, ashlar courses", v1: "tally marks (raised relief)", v2: "carved column", acc: "laurel, one per room", border: "plain rampart border"},
-  sand: {base: "sandstone strata, fine sand grain", v1: "sand drift", v2: "beam ends", acc: "step relief, one per room", border: "plain rampart border"},
-  void: {base: "polished obsidian sheen, crystal glint", v1: "crystal inlay", v2: "faceted cap with gem", acc: "rune slit, one per room", border: "plain rampart border"},
-  crown: {base: "gilt frame with sheen around an inset stone panel", v1: "gilt corners", v2: "gilt studs", acc: "keystone, one per room", border: "plain rampart border"},
+  jungle: {base: "clean cap with a warm bevel and edge wear; deep face of two dressed blocks with one joint, gold moss at the foot", v1: "root wrap (lit tube)", v2: "fret band inlaid in the face", acc: "root-bound, one per room", border: "plain rampart border"},
+  ice: {base: "cap with two refraction streaks and the lower-right facet; navy face with two light refraction lines", v1: "one frost-filled ice-crystal inlay (no letters)", v2: "icicles", acc: "frozen fringe, frost rim crowding the cap's front edge", border: "plain rampart border"},
+  factory: {base: "brushed steel, four lit bolts, a rust run under each lower bolt", v1: "weld seam", v2: "bolted strap", acc: "pipe run, one per room", border: "plain rampart border"},
+  water: {base: "wet film on the cap's front edge; dry face down to one tide line, damp below (no courses)", v1: "barnacles", v2: "algae drips", acc: "mooring cleat, one per room", border: "plain rampart border"},
+  arena: {base: "claw-chisel tooling on the cap, plain face, lit plinth ledge, one rain stain", v1: "tally marks: four bars and one slash", v2: "carved column", acc: "laurel, one per room", border: "plain rampart border"},
+  sand: {base: "sparse sand grain, warm bevel, two long strata on the side, deep face", v1: "sand drift", v2: "beam ends", acc: "step relief, one per room", border: "plain rampart border"},
+  void: {base: "polished obsidian sheen, crystal glint (unchanged: keep)", v1: "crystal inlay", v2: "faceted cap with gem", acc: "rune slit, one per room", border: "plain rampart border"},
+  crown: {base: "gilt frame around ONE stone panel (no joint), warm bevel, plain deep face", v1: "gilt corners", v2: "gilt studs", acc: "keystone, one per room", border: "plain rampart border"},
 };
-const LOOK = {"2d": "CLASSIC 2D (the real 40 px bake, NEAREST to 192)", px: "PIXEL (the 20x20 slot cell via cellRGBA, NEAREST to 192)", "3d": "REAL 3D (one block: game material, frozen lights, rig-C angle, 256 px)"};
+const LOOK = {"2d": "CLASSIC 2D (the real 40 px bake, NEAREST to 192)", px: "PIXEL (the 20x20 slot cell via cellRGBA, NEAREST to 192)", "3d": "REAL 3D (one block: game material incl. the round-3 relief / gloss / contact AO, frozen lights, rig-C angle, 256 px)"};
 const files = [];
 for (const look of ["2d", "px", "3d"]) {
   const dir = join(D, look);
@@ -26,5 +26,5 @@ for (const look of ["2d", "px", "3d"]) {
     files.push({file: "walls/" + look + "/" + f, set: "walls", look, world: w, piece: state === "today" ? "wall" : piece, state, caption: cap + " · " + LOOK[look]});
   }
 }
-writeFileSync(join(D, "manifest.json"), JSON.stringify({set: "walls", date: "2026-10-23", note: "today = live main; new = detail pass over the wall prototype (worktree branch, never merged). Tiles alone: no board, no neighbours, no HUD.", files}, null, 1));
+writeFileSync(join(D, "manifest.json"), JSON.stringify({set: "walls", date: "2026-10-23", note: "Round 3 (maturity pass). today = live main; new = round 3 over the detail pass (worktree branch, never merged). Tiles alone: no board, no neighbours, no HUD. Paths are relative to tile-art/round3/.", files}, null, 1));
 console.log(files.length, "files");

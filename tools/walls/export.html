@@ -22,6 +22,8 @@ const OUT = {};
 const PIECES = [["base", 0], ["v1", 1], ["v2", 2], ["acc", 3], ["border", 4]];
 const up = (src, n) => { const c = document.createElement("canvas"); c.width = c.height = n; const x = c.getContext("2d"); x.imageSmoothingEnabled = false; x.drawImage(src, 0, 0, n, n); return c.toDataURL("image/png"); };
 const t0 = performance.now(); SP.bakeAtlas(); OUT.__bakeMs = performance.now() - t0;
+/* round 3: the wall bake per world (11 canvases through paintWall, median of 7) */
+if (SP.paintWall) OUT.__bakeWorld = BIOMES.map((b) => { const ts = []; for (let r = 0; r < 7; r++) { const t = performance.now(); for (let v = 0; v < 11; v++) { const c = document.createElement("canvas"); c.width = c.height = 40; SP.paintWall(c.getContext("2d"), b, v, 0, 0); } ts.push(performance.now() - t); } ts.sort((x, y) => x - y); return b.name + " " + ts[3].toFixed(2); }).join(", ");
 BIOMES.forEach((b, i) => {
   const w = b.name.toLowerCase();
   if (tree === "today") OUT["2d/" + w + "-wall-today"] = up(SP.bakedTile(i, "wall"), 192);
