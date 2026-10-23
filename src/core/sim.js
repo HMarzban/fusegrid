@@ -5,6 +5,7 @@ import { applyPower, hurtPlayer } from "./entities.js";
 import { updateEnemies } from "../ai/enemies.js";
 import { hasPact, PACT } from "./pact.js";
 import { paceMul } from "./pace.js";
+import { isBelt, beltDir, featProfile } from "./feat.js";
 
 /* A clean intent for one player for this tick. This is exactly what a network
    client would send the server: move vector + edge-triggered fire/remote. */
@@ -78,9 +79,15 @@ export function step(world, dt, inputs) {
 
   // ---- PLAY ----
   if (hasPact(world.pact, PACT.SHRINK)) advanceShrink(world, dt);
+  if (world.feat) world.featT += dt;
   updatePlayer(world, dt, inputs[0] || emptyInputs[0], emit);
+  if (world.feat) beltActors(world, dt, true);
   updateBombs(world, dt, emit);
   const adv = updateEnemies(world, dt, inputs, emit);
+  if (world.feat) {
+    beltActors(world, dt, false);
+    featTick(world, dt, emit);
+  }
   if (adv && adv.advance) {
     world.events.push({ t: "win" });
     world.state = "WIN";
@@ -121,8 +128,9 @@ function updatePlayer(world, dt, inp, emit) {
     p.face.x = dx;
     p.face.y = dy;
   }
+  const glided = w.feat && !p.passing ? glideMove(w, p, dx, dy, dt) : false;
   const sp = p.speed * CFG.TILE * dt * paceMul(w.pace);
-  if (dx || dy) {
+  if ((dx || dy) && !glided) {
     p.tx = tileOf(p.x);
     p.ty = tileOf(p.y);
     const ptx = p.tx,
@@ -249,14 +257,15 @@ function updateBombs(world, dt, emit) {
   const w = world;
   for (const b of w.bombs) {
     if (b.dead) continue;
-    if (b.slide) advanceSlider(w, b, dt);
+    if (b.slide && !b.carry) advanceSlider(w, b, dt);
+    else if (w.feat) carryBomb(w, b, dt);
     b.timer -= dt;
     if (b.timer <= 0) detonate(w, b, emit);
   }
   w.bombs = w.bombs.filter((b) => !b.dead);
   for (const bl of w.blades) bl.t += dt;
   w.blades = w.blades.filter((bl) => bl.t < bl.ttl);
-  for (const bl of w.blades) if (bl.tiles) applyBlastHits(w, bl.tiles, emit);
+  for (const bl of w.blades) if (bl.tiles) applyBlastHits(w, bl.tiles, emit, bl);
 }
 
 /* Single source of truth for a cross blast. */
@@ -330,12 +339,12 @@ function placeBomb(w, px, py, emit, thrown) {
   return true;
 }
 
-function applyBlastHits(w, tiles, emit) {
+function applyBlastHits(w, tiles, emit, bl) {
   const p = w.players[0];
   for (const t of tiles) {
     for (const e of w.enemies)
       if (!e.dead && !e.invuln && aabb(w.grid, t.tx, t.ty, e.x, e.y, e.r))
-        killEnemy(w, e, emit);
+        killEnemy(w, e, emit, bl);
     if (
       p.alive &&
       p.iFrames <= 0 &&
@@ -362,20 +371,26 @@ function detonate(w, bomb, emit) {
     bomb.line,
     bomb.dir,
   );
-  w.blades.push({
+  const blade = {
     x: bomb.x,
     y: bomb.y,
     tiles,
     t: 0,
     ttl: CFG.BLADE_TTL,
     variant: bomb.variant,
-  });
+  };
+  if (w.feat) {
+    if (bomb.rode) blade.rode = true;
+    if (bomb.chainSrc) blade.early = bomb.chainSrc;
+  }
+  w.blades.push(blade);
   for (const t of tiles) if (t.brick) breakBrick(w, t.tx, t.ty, emit);
-  applyBlastHits(w, tiles, emit);
+  applyBlastHits(w, tiles, emit, blade);
   emit({ t: "boom", x: bomb.x, y: bomb.y });
   const covered = new Set(tiles.map((t) => key(t.tx, t.ty)));
   for (const b of w.bombs.slice())
     if (!b.dead && covered.has(key(b.tx, b.ty))) detonate(w, b, emit);
+  if (w.feat) relayCheck(w, tiles, bomb.tx, bomb.ty, emit);
 }
 
 function breakBrick(w, tx, ty, emit) {
@@ -396,7 +411,7 @@ function revealItem(w, tx, ty, emit) {
     }
 }
 
-function killEnemy(w, e, emit) {
+function killEnemy(w, e, emit, bl) {
   if (e.dead) return;
   e.dead = true;
   w.score +=
@@ -409,8 +424,222 @@ function killEnemy(w, e, emit) {
           : e.type === "burrow"
             ? 150
             : 100;
-  emit({ t: "kill", x: e.x, y: e.y, color: e.color, type: e.type });
+  const ev = { t: "kill", x: e.x, y: e.y, color: e.color, type: e.type };
+  if (bl && w.feat) {
+    if (bl.src) ev.src = bl.src;
+    if (bl.rode) ev.rode = true;
+    if (bl.early) ev.early = bl.early;
+  }
+  emit(ev);
 }
+
+/* ---- TILE PROTO (2026-10-21, wave 1): BELT / GLIDE / BLOOM / PLATE.
+   Every path below runs only when world.feat is set (gen 2 tile rooms). ---- */
+const FT = CFG.TILE;
+function keepDir(e, f) {
+  const d = e.dir ? { x: e.dir.x, y: e.dir.y } : null;
+  f();
+  if (d) { e.dir.x = d.x; e.dir.y = d.y; }
+}
+/* PLUS/MAX: actors on a BELT tile ride at v (pace-scaled); e.dir is masked
+   so the AI never sees the push; a WALL one step downstream halts it */
+function beltActors(w, dt, player) {
+  const pb = featProfile(w).belt;
+  if (!pb.actors) return;
+  const v = pb.v * FT * dt * paceMul(w.pace);
+  const push = (e, pass, bombs) => {
+    const tx = tileOf(e.x), ty = tileOf(e.y), k = key(tx, ty), f = w.feat[k];
+    if (!isBelt(f) || w.grid[k] !== T.EMPTY) return;
+    const [dx, dy] = beltDir(f);
+    if (isWall(w.grid, tx + dx, ty + dy)) return;
+    keepDir(e, () => moveEntity(e, w.grid, dx * v, dy * v, pass, bombs));
+    e.beltT = w.featT;
+  };
+  if (player) {
+    const p = w.players[0];
+    if (p.alive) push(p, p.passing, p.passing ? undefined : w.bombs);
+    return;
+  }
+  for (const e of w.enemies) if (!e.dead && e.speed > 0) push(e, e.pass, e.pass ? undefined : w.bombs);
+}
+function carryStop(w, b, tx, ty) {
+  if (sliderStopAt(w, b, tx, ty)) return true;
+  const p = w.players[0];
+  if (p.alive && tileOf(p.x) === tx && tileOf(p.y) === ty) {
+    const bx = (b.tx + 0.5) * FT, by = (b.ty + 0.5) * FT;
+    const riding = Math.max(Math.abs(p.x - bx), Math.abs(p.y - by)) < FT / 2 + p.r * 0.9;
+    if (!riding) return true;
+  }
+  return false;
+}
+/* BELT carry: a resting bomb on a belt rides at v tile to tile; it re-reads
+   the layer on arrival (a new belt turns it, plain floor stops it) and
+   stops short of anything a kick stops for, plus the player's tile */
+function carryBomb(w, b, dt) {
+  const snap = () => { b.prog = 0; b.slide = null; b.carry = false; b.x = (b.tx + 0.5) * FT; b.y = (b.ty + 0.5) * FT; };
+  if (!b.slide) {
+    const k = key(b.tx, b.ty), f = w.feat[k];
+    if (!isBelt(f) || w.grid[k] !== T.EMPTY) return;
+    const [dx, dy] = beltDir(f);
+    if (carryStop(w, b, b.tx + dx, b.ty + dy)) return;
+    b.slide = { x: dx, y: dy };
+    b.carry = true;
+    b.prog = 0;
+  }
+  let travel = b.prog + featProfile(w).belt.v * paceMul(w.pace) * dt;
+  while (travel >= 1) {
+    const nx = b.tx + b.slide.x, ny = b.ty + b.slide.y;
+    if (carryStop(w, b, nx, ny)) return snap();
+    b.tx = nx;
+    b.ty = ny;
+    b.rode = true;
+    travel -= 1;
+    const f = w.feat[key(nx, ny)];
+    if (isBelt(f) && w.grid[key(nx, ny)] === T.EMPTY) {
+      const [dx, dy] = beltDir(f);
+      b.slide = { x: dx, y: dy };
+    } else return snap();
+  }
+  b.prog = travel;
+  b.x = (b.tx + 0.5 + b.slide.x * travel) * FT;
+  b.y = (b.ty + 0.5 + b.slide.y * travel) * FT;
+}
+/* GLIDE (player only): x1.25; CORE stops on release (corner assist 0.35),
+   PLUS coasts to the next centre, MAX coasts until a block or off the
+   sheet; a new direction is buffered and taken at a centre (window turn) */
+function glideFree(w, tx, ty) {
+  const v = w.grid[key(tx, ty)];
+  if (v !== T.EMPTY) return false;
+  return !w.bombs.some((b) => !b.dead && b.tx === tx && b.ty === ty);
+}
+function glideMove(w, p, dx, dy, dt) {
+  const tx = tileOf(p.x), ty = tileOf(p.y), k = key(tx, ty);
+  const onIce = w.feat[k] === 5 && w.grid[k] === T.EMPTY;
+  let ix = 0, iy = 0;
+  if (dx || dy) { if (Math.abs(dx) >= Math.abs(dy)) ix = Math.sign(dx); else iy = Math.sign(dy); }
+  if (!onIce && (!p.gl || ix || iy)) { p.gl = null; p.glBuf = null; return false; }
+  const g = featProfile(w).glide;
+  let sp = Math.min(p.speed * g.boost, CFG.MAX_SPEED) * FT * dt * paceMul(w.pace);
+  const mv = (mx, my) => { const ox = p.x, oy = p.y; keepDir(p, () => moveEntity(p, w.grid, mx, my, false, w.bombs)); return Math.abs(p.x - ox) + Math.abs(p.y - oy); };
+  if (g.coast === 0) {
+    p.gl = null;
+    if (!ix && !iy) return true;
+    if (ix) { const ly = (ty + 0.5) * FT, o = ly - p.y; if (Math.abs(o) <= g.turn * FT) p.y += Math.sign(o) * Math.min(Math.abs(o), sp); }
+    else { const lx = (tx + 0.5) * FT, o = lx - p.x; if (Math.abs(o) <= g.turn * FT) p.x += Math.sign(o) * Math.min(Math.abs(o), sp); }
+    mv(ix * sp, iy * sp);
+    p.tx = tileOf(p.x); p.ty = tileOf(p.y);
+    return true;
+  }
+  let cur = p.gl;
+  if (!cur) {
+    if (!ix && !iy) return true;
+    cur = { x: ix, y: iy };
+  }
+  if (ix || iy) p.glBuf = ix === cur.x && iy === cur.y ? null : { x: ix, y: iy };
+  const coasting = !ix && !iy;
+  const cx = (tx + 0.5) * FT, cy = (ty + 0.5) * FT;
+  if (p.glBuf && Math.abs(cur.x ? p.x - cx : p.y - cy) <= g.turn * FT && glideFree(w, tx + p.glBuf.x, ty + p.glBuf.y)) {
+    p.x = cx; p.y = cy; cur = p.glBuf; p.glBuf = null;
+  }
+  for (let guard = 0; guard < 3 && sp > 1e-6; guard++) {
+    const a = cur.x ? p.x : p.y, s = cur.x || cur.y, t0 = a / FT - 0.5;
+    const nc = s > 0 ? Math.floor(t0 + 1e-6) + 1 : Math.ceil(t0 - 1e-6) - 1;
+    const d = Math.abs((nc + 0.5) * FT - a);
+    if (d > sp) { if (mv(cur.x * sp, cur.y * sp) < sp * 0.5) { p.gl = null; p.glBuf = null; return true; } break; }
+    if (mv(cur.x * d, cur.y * d) < d * 0.5) { p.gl = null; p.glBuf = null; return true; }
+    sp -= d;
+    const qx = tileOf(p.x), qy = tileOf(p.y), q = key(qx, qy), ice = w.feat[q] === 5 && w.grid[q] === T.EMPTY;
+    p.x = (qx + 0.5) * FT; p.y = (qy + 0.5) * FT;
+    if (p.glBuf && glideFree(w, qx + p.glBuf.x, qy + p.glBuf.y)) { cur = p.glBuf; p.glBuf = null; continue; }
+    if (!ice) { p.gl = null; p.glBuf = null; p.tx = qx; p.ty = qy; return true; }
+    if (coasting && (g.coast === 1 || !glideFree(w, qx + cur.x, qy + cur.y))) { p.gl = null; p.tx = qx; p.ty = qy; return true; }
+  }
+  p.gl = cur;
+  p.face.x = cur.x; p.face.y = cur.y;
+  p.tx = tileOf(p.x); p.ty = tileOf(p.y);
+  return true;
+}
+/* one emitted blast (BLOOM relay / PLATE lure): the real blade, bricks,
+   hits, bomb chains and further relays; never inherits PIERCE / POWER */
+function fireBlast(w, cx, cy, arms, src, emit) {
+  const tiles = [{ tx: cx, ty: cy, brick: false }];
+  for (const [dx, dy, len] of arms)
+    for (let i = 1; i <= len; i++) {
+      const tx = cx + dx * i, ty = cy + dy * i;
+      if (isWall(w.grid, tx, ty)) break;
+      const brick = w.grid[key(tx, ty)] === T.BRICK;
+      tiles.push({ tx, ty, brick });
+      if (brick) break;
+    }
+  const x = (cx + 0.5) * FT, y = (cy + 0.5) * FT;
+  const blade = { x, y, tiles, t: 0, ttl: CFG.BLADE_TTL, variant: "normal", src };
+  w.blades.push(blade);
+  for (const t of tiles) if (t.brick) breakBrick(w, t.tx, t.ty, emit);
+  applyBlastHits(w, tiles, emit, blade);
+  emit({ t: "boom", x, y, src });
+  const covered = new Set(tiles.map((t) => key(t.tx, t.ty)));
+  for (const b of w.bombs.slice())
+    if (!b.dead && covered.has(key(b.tx, b.ty))) { b.chainSrc = src; detonate(w, b, emit); }
+  relayCheck(w, tiles, cx, cy, emit);
+}
+function fireBloom(w, k, dx, dy) {
+  const bc = featProfile(w).bloom, cx = k % CFG.COLS, cy = (k / CFG.COLS) | 0;
+  w.featM[k] = 2;
+  w.featS[k] = bc.cd;
+  const arms = [[dx, dy, bc.fwd]];
+  if (bc.side) arms.push([dy, dx, bc.side], [-dy, -dx, bc.side]);
+  fireBlast(w, cx, cy, arms, "relay", (e) => w.events.push(e));
+}
+/* BLOOM: an arm arriving from a neighbouring tile arms an idle bloom */
+function relayCheck(w, tiles, cx, cy, emit) {
+  const bc = featProfile(w).bloom;
+  for (const t of tiles) {
+    if (t.tx === cx && t.ty === cy) continue;
+    const k = key(t.tx, t.ty);
+    if (w.feat[k] !== 6 || w.grid[k] !== T.EMPTY || w.featM[k] !== 0) continue;
+    const dx = Math.sign(t.tx - cx), dy = Math.sign(t.ty - cy);
+    emit({ t: "bloom", x: (t.tx + 0.5) * FT, y: (t.ty + 0.5) * FT });
+    if (bc.delay <= 0) fireBloom(w, k, dx, dy);
+    else {
+      w.featM[k] = 1;
+      w.featS[k] = bc.delay;
+      w.featPend.push({ k, kind: "bloom", dx, dy });
+    }
+  }
+}
+/* per tick: pending bloom flares / plate wind-ups, cooldowns, and PLATE
+   triggers by a foe's centre (after the inert window) */
+function featTick(w, dt, emit) {
+  const pc = featProfile(w).plate;
+  for (let k = 0; k < w.featM.length; k++) {
+    if (!w.featM[k]) continue;
+    w.featS[k] -= dt;
+    if (w.featS[k] > 0) continue;
+    if (w.featM[k] === 2) { w.featM[k] = 0; w.featS[k] = 0; continue; }
+    const i = w.featPend.findIndex((q) => q.k === k);
+    if (i < 0) { w.featM[k] = 0; continue; }
+    const q = w.featPend.splice(i, 1)[0];
+    if (q.kind === "bloom") fireBloom(w, k, q.dx, q.dy);
+    else {
+      w.featM[k] = 2;
+      w.featS[k] = pc.cd;
+      const cx = k % CFG.COLS, cy = (k / CFG.COLS) | 0;
+      fireBlast(w, cx, cy, [[1, 0, pc.r], [-1, 0, pc.r], [0, 1, pc.r], [0, -1, pc.r]], "plate", emit);
+    }
+  }
+  if (w.featT < pc.inert) return;
+  for (const e of w.enemies) {
+    if (e.dead) continue;
+    const k = key(e.tx, e.ty);
+    if (w.feat[k] !== 7 || w.grid[k] !== T.EMPTY || w.featM[k] !== 0) continue;
+    if (pc.near != null) { const p = w.players[0]; if (!p.alive || Math.abs(tileOf(p.x) - e.tx) + Math.abs(tileOf(p.y) - e.ty) > pc.near) continue; }
+    w.featM[k] = 1;
+    w.featS[k] = pc.wind;
+    w.featPend.push({ k, kind: "plate", by: e.type });
+    emit({ t: "plate", x: (e.tx + 0.5) * FT, y: (e.ty + 0.5) * FT });
+  }
+}
+
 
 /* Renderer consumes world.events for audio/particle fx. The sim never writes
    visual-only state, so single-player and future multiplayer stay identical. */

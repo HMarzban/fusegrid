@@ -1,6 +1,7 @@
 import { CFG, T, key, biomeOf, BIOMES } from "../core/config.js";
 import { drawIcon, rr, RIM, ITEM_FAMILY, dk, lt, poly, seal } from "./icons.js";
 import { drawEnemyBody } from "./enemybody.js";
+import { drawFeat } from "./featdraw.js";
 export { drawIcon, drawEnemyBody };
 
 /* RENDER LAYER — reads world, never mutates it. Every draw fn takes a 2D
@@ -151,6 +152,8 @@ export function drawGrid(c, world) {
         c.fillRect(px + CFG.TILE - 8, py + 5, 3, 3);
         c.fillRect(px + 5, py + CFG.TILE - 8, 3, 3);
         c.fillRect(px + CFG.TILE - 8, py + CFG.TILE - 8, 3, 3);
+      } else if (world.feat && world.feat[key(x, y)]) {
+        drawFeat(c, world, x, y, px, py);
       } else if (fA) {
         c.drawImage((x + y) & 1 ? fB : fA, px, py);
       } else {

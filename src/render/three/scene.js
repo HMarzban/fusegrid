@@ -12,6 +12,7 @@ import {build as buildMaterials} from "./materials.js";
 import {createLights} from "./lights.js";
 import {createPools} from "./entities.js";
 import {live} from "./upload.js";
+import {buildFeat} from "./featmesh.js";
 
 const W=CFG.COLS*CFG.TILE, D=CFG.ROWS*CFG.TILE;
 const MAT=new THREE.Matrix4();
@@ -124,6 +125,8 @@ export function buildScene(world, atlas, bright){
    }
   checker.receiveShadow=true; checker.userData.tag="checker";
   group.add(checker);
+  const feat=world.feat?buildFeat(world,biome):null;
+  if(feat)group.add(feat.mesh);
 
   group.add(buildRim(biome));
 
@@ -139,7 +142,7 @@ export function buildScene(world, atlas, bright){
   const mask=new Uint8Array(CFG.COLS*CFG.ROWS),
     wMask=new Uint8Array(CFG.COLS*CFG.ROWS);
   let fresh=true;
-  const scene={group,level:world.level,brick,pools,lights,brickV:0,
+  const scene={group,level:world.level,grid:world.grid,brick,pools,lights,brickV:0,
     update(world){
       let diff=fresh, wDiff=fresh;
       for(let i=0;i<mask.length;i++){ const t=world.grid[i],
@@ -177,7 +180,8 @@ export function buildScene(world, atlas, bright){
         fresh=false; scene.brickV++;
        }
       pools.update(world);
-      return world.level!==scene.level;
+      if(feat)feat.update(world);
+      return world.level!==scene.level||world.grid!==scene.grid;
      }};
   scene.update(world);          // initial wall + brick fill
   return scene;
