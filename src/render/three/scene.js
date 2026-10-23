@@ -142,7 +142,7 @@ export function buildScene(world, atlas, bright){
   const mask=new Uint8Array(CFG.COLS*CFG.ROWS),
     wMask=new Uint8Array(CFG.COLS*CFG.ROWS);
   let fresh=true;
-  const scene={group,level:world.level,grid:world.grid,brick,pools,lights,brickV:0,
+  const scene={group,level:world.level,featRef:world.feat||null,brick,pools,lights,brickV:0,
     update(world){
       let diff=fresh, wDiff=fresh;
       for(let i=0;i<mask.length;i++){ const t=world.grid[i],
@@ -181,7 +181,7 @@ export function buildScene(world, atlas, bright){
        }
       pools.update(world);
       if(feat)feat.update(world);
-      return world.level!==scene.level||world.grid!==scene.grid;
+      return world.level!==scene.level||(world.feat||null)!==scene.featRef;
      }};
   scene.update(world);          // initial wall + brick fill
   return scene;
