@@ -49,6 +49,7 @@ under Node tests and in the browser.
 | MODES, IRON | Pact, LAST | The game says MODES since shell v180 |
 | MAKO, the reef critter | any other hero | MAKO is the live hero; nothing else is built |
 | REAL 3D ⇄ CLASSIC 2D | "deterministic" in a player headline | That's a contributor word |
+| I'm making… (first person) | we're making…, internal round names | Posts are the owner's own game-log (owner, 2026-10-23) |
 
 Only describe what's live today. Story mode, new worlds, bosses and the next
 hero are design work, not features. They stay out of every listing.
