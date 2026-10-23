@@ -2,8 +2,10 @@
    REAL 3D (ONE tile: a 40x40 plane at floor +0.7 like featmesh, the same
    MeshLambertMaterial over a 64-px CanvasTexture cell painted by the same
    painter = the in-game atlas cell resolution, LinearFilter, no mipmaps,
-   sRGB; the frozen createLights recipe; NoToneMapping; CAM_FOV 24 at the
-   rig-C polar el 0.66, az 0, dollied in to frame one tile; bg #0b0f1a;
+   sRGB; the frozen createLights recipe; NoToneMapping; the rig-C camera at
+   its real dist 1503, el 0.66, az 0, with the lens narrowed to frame one
+   tile (an exact enlargement of the in-game view; CAM_FOV 24 would show the
+   whole board); bg #0b0f1a;
    256x256). PIXEL is pxexport.mjs (Node only). */
 import {writeFileSync} from "node:fs";
 import {withPage, b64png, OUT, TILES} from "./harness.mjs";
@@ -12,7 +14,7 @@ await withPage(async (P) => {
     const out={},H=['core','plus','max'];
     const gl=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true,alpha:false});gl.setPixelRatio(1);gl.setSize(256,256);
     gl.toneMapping=THREE.NoToneMapping;gl.outputColorSpace=THREE.SRGBColorSpace;gl.setClearColor('#0b0f1a',1);
-    const cam=new THREE.PerspectiveCamera(CR.CAM_FOV,1,1,4000),el=0.66,dist=122;
+    const el=0.66,dist=1503,cam=new THREE.PerspectiveCamera(2*Math.atan(30/dist)*180/Math.PI,1,10,4000);
     cam.position.set(0,dist*Math.cos(el),dist*Math.sin(el));cam.lookAt(0,0,0);
     let draws=0;
     for(const [w,p,bn,s] of ${JSON.stringify(TILES)})for(let h=0;h<3;h++){

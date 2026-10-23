@@ -22,7 +22,7 @@ export function palFor(biome, h) {
   const d = DARK[biome], m = d ? "tile." + d : "tile.wallHi", st = d ? STEP_D : STEP_L;
   const sheet = biome === "SAND" ? "tile.floor1.shadow" : "tile.floor1";
   return {M: m + st[h], Q: d ? m + ".light" : m + ".outline", F: m + (d ? ".shadow" : ".light"), B: d ? "tile.floor0" : "tile.bg1",
-    a: sheet, A: biome === "SAND" ? "tile.floor1" : "tile.floor1.light", s: biome === "SAND" ? "tile.bg0" : "tile.floor1.shadow",
+    a: sheet, A: biome === "SAND" ? "tile.wall.shadow" : "tile.floor1.light", s: biome === "SAND" ? "tile.bg0" : "tile.floor1.shadow",
     o: "tile.floor1.outline", k: "tile.bg1", f: "tile.floor0", g: "tile.floor0.light",
     h: "tile.wall", w: "tile.wall.shadow", W: "tile.wall.outline", H: "tile.wall.light", l: "tile.wallHi", L: "tile.wallHi.light", q: "tile.wallHi.outline", u: "tile.wallHi.shadow", d: "tile.bg0"};
 }
@@ -173,7 +173,7 @@ export function featPxCell(biome, s) {
   } else if (s.kind === "QUICK") {
     rows = bedQuick();
     const ys = [[11], [6, 12], [4, 9, 14]][h];
-    for (const y of ys.slice(0, h + 1)) { const spr = WAVE[h]; stamp(rows, spr.map((r) => r.replace(/M/g, "g")), h === 2 ? 4 : 2, y - 2 + 1); stamp(rows, spr, h === 2 ? 4 : 2, y - 2); }
+    for (const y of ys.slice(0, h + 1)) { const spr = WAVE[h]; stamp(rows, spr.map((r) => r.replace(/M/g, "A")), h === 2 ? 4 : 2, y - 2 + 1); stamp(rows, spr, h === 2 ? 4 : 2, y - 2); }
   } else if (s.kind === "PORTAL") {
     rows = PORTAL_BED.slice(); pal = PORTAL_PAL;
     const sq = [[[7, "M"]], [[5, "q"], [7, "M"]], [[5, "q"], [7, "q"], [8, "M"]]][h];
