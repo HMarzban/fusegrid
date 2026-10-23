@@ -16,6 +16,11 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-23 — Art round 3: maturity pass on walls + floor tiles (local prototypes)
+- Owner: "find the best skills and agents for art design and make the visual look better, more mature and add tinny details that are matter in game and for gamers", then "the real 3D need more effort … and also put more efferts for floor tiles". Installed (owner-approved, reviewed first): skills `~/.claude/skills/pixel-art` (omer-metin) and `~/.claude/skills/pxl-pixel-art` (crsolver/claude-pxl, runs from source, no npm install); agents `.claude/agents/art-director.md` + `technical-artist.md` (Donchitos, local, `.git/info/exclude`). The agents ask before writing, so they serve as read-only critics; pixel-art `validations.md` contradicts R20 / the Linear 3D atlas — treat it as craft knowledge, not repo rules.
+- Art-director critique (`.superpowers/sdd/2026-10-23-tile-art/round3-critique.md`): the detail pass drew unbreakable WALL faces as masonry (brick's "this breaks" cue) and added causeless speckle. Round 3 fixed both. Walls `worktree-agent-ab0dfcf6e3434b2c3`: monolithic faces, caused marks only, warm bevels, REAL 3D relief + gloss + contact AO at 141 draws, PIXEL `art/walls.js` 25.1 → 12.8 KB (px tree still 13 KB over cap; #15). Floor `worktree-agent-a3057d0a51e6a8d96`: QUICKSAND spiral, STREAM ripples, PORTAL pips, GATE whole-side timer, 8 REAL 3D shader effects on the PLAY clock, 142 draws, 65/65 tests. Both locked, local only, indexed in `PROTOTYPES-2026-10.md`. Page v2: https://claude.ai/artifact/47wrvBBwmuzqiUrwKDn6A9 (actual-size toggle, moving 3D tiles).
+- Open: six CVD pairs dip ≤ 0.5 (within the brief's rule; owner may veto), the 3D wall strip build costs 6–7.5 ms per room on a laptop (phone unmeasured), 3D frame time needs headed real-GPU Chrome, and #17 / #23 / #31 issue bodies are not updated with round 3 yet.
+
 ## 2026-10-23 — Tile art detail pass + clean tiles-only page
 - The owner asked for a page with only the tiles (no boards) and for better graphics. Two art leads did detail passes in all 3 looks:
   - walls: material texture plus top-left light, bevel, inner and contact shadow;
