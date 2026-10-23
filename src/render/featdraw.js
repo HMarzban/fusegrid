@@ -418,6 +418,8 @@ export function cellSpec(w, x, y) {
     s.dir = v - 8; s.phase = 0;
   } else if (k === "GATE") {
     s.lit = w.featM ? w.featM[key(x, y)] : 0;
+  } else if (k === "PORTAL") {
+    s.pair = (w.featPair && w.featPair[key(x, y)]) || 1;
   } else if (k === "GLIDE") {
     s.gx = x; s.gy = y;
   } else if (k === "BLOOM" || k === "PLATE") {
