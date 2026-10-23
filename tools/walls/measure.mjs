@@ -41,8 +41,9 @@ for (const b of BIOMES) {
   const np = ["base", "v1", "v2", "acc"].map((n) => meanOf(pxGrid(b, ART.walls.cells[b.name + "." + n].rows, ART.walls.pal)));
   r.px = {todayVsBrick: dEs(tp, bkp), todayVsFloor: dEs(tp, fl), newVsBrick: SIM.map((_, k) => Math.min(...np.map((m) => dEs(m, bkp)[k]))), newVsFloor: SIM.map((_, k) => Math.min(...np.map((m) => dEs(m, fl)[k])))};
   /* VOID cap share (PIXEL: wallHi chars over the cell) */
-  if (process.argv.includes("--var")) console.log(b.name, "2D per variant vs brick:", n2.map((m, i) => ["base", "v1", "v2", "acc"][i] + " " + f1(dEs(m, bk2))).join(" | "));
+  if (process.argv.includes("--var")) console.log(b.name, "2D per variant vs brick:", n2.map((m, i) => ["base", "v1", "v2", "acc"][i] + " " + m + " L" + labOf(m)[0].toFixed(1) + " " + f1(dEs(m, bk2))).join(" | "), "| brick", bk2, "L", labOf(bk2)[0].toFixed(1), "floor L", labOf(fl)[0].toFixed(1));
   if (process.argv.includes("--var")) console.log(b.name, "PX per variant vs brick:", np.map((m, i) => ["base", "v1", "v2", "acc"][i] + " " + m + " L" + labOf(m)[0].toFixed(1) + " " + f1(dEs(m, bkp))).join(" | "), "| brick L", labOf(bkp)[0].toFixed(1), "today L", labOf(tp)[0].toFixed(1));
+  if (process.argv.includes("--floor")) console.log(b.name, "PX vs floor", np.map((m, i) => ["base", "v1", "v2", "acc"][i] + " " + m + " L" + labOf(m)[0].toFixed(1) + " " + f1(dEs(m, fl))).join(" | "), "2D", n2.map((m) => m + " L" + labOf(m)[0].toFixed(1) + " " + f1(dEs(m, fl))).join(" | "), "floor", fl, "L", labOf(fl)[0].toFixed(1));
   r.pxCapShare = ["base", "v1", "v2", "acc"].map((n) => ART.walls.cells[b.name + "." + n].rows.join("").split("").filter((c) => c === "h" || c === "H" || c === "s").length / 400);
   out[b.name] = r;
   console.log(b.name.padEnd(8), "2D wall~brick today", f1(r.c2d.todayVsBrick), "-> min", f1(r.c2d.newVsBrick), "| wall~floor today", f1(r.c2d.todayVsFloor), "-> min", f1(r.c2d.newVsFloor));

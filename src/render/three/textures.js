@@ -11,8 +11,9 @@ import * as THREE from "../../../vendor/three.module.js";
 import {CFG, biomeOf, BIOMES} from "../../core/config.js";
 import {POWER} from "../../core/entities.js";
 import {captureSprite, drawPlayerBody, drawEnemyBody, drawBombBody,
-  bakeAtlas, bakedTile, wallTiles, paintItemFace, PLAYER_SUIT} from "../sprites.js";
-import {topRows, sideRows} from "../wallart.js";
+  bakeAtlas, bakedTile, paintItemFace, PLAYER_SUIT} from "../sprites.js";
+import {topRows, sideRows, wallShapes, paintShapes} from "../wallart.js";
+import {WV_N} from "../wallvar.js";
 import {dk} from "../icons.js";
 import {ENEMY_TYPES, ENEMY_COLORS} from "./entities.js";
 
@@ -120,12 +121,17 @@ export function atlasSources(mk, level=1){
       bakeAtlas();
       const bi=BIOMES.indexOf(biomeOf(level));
       o.wall=bakedTile(bi,"wall");
-      const V=wallTiles(bi), B=BIOMES[bi], TL=CFG.TILE;
-      if(V)o.wallStrip=captureSprite(V.length*TL,TL*2,(c)=>{
-        c.fillStyle=B.wall; c.fillRect(0,0,V.length*TL,TL*2);
-        V.forEach((t,k)=>{ const [a,b]=topRows(B,k), [s0,s1]=sideRows(B);
-          c.drawImage(t,0,a,TL,b-a,k*TL,0,TL,TL);
-          c.drawImage(b-a===TL?V[0]:t,0,s0,TL,s1-s0,k*TL,TL,TL,TL); });
+      /* wall strip painted from the shared shape lists at WS x (detail
+         pass 2026-10-23): the micro-texture stays crisp under the
+         NearestFilter instead of resampling the 40 px bakes */
+      const B=BIOMES[bi], TL=CFG.TILE, WS=2, C=TL*WS;
+      o.wallStrip=captureSprite(WV_N*C,C*2,(c)=>{
+        c.fillStyle=B.wall; c.fillRect(0,0,WV_N*C,C*2);
+        const cell=(k,code,a,b,row)=>{ c.save(); c.beginPath(); c.rect(k*C,row*C,C,C); c.clip();
+          c.translate(k*C,row*C); c.scale(WS,C/(b-a)); c.translate(0,-a);
+          paintShapes(c,B,wallShapes(B,code),0,0); c.restore(); };
+        for(let k=0;k<WV_N;k++){ const [a,b]=topRows(B,k), [s0,s1]=sideRows(B);
+          cell(k,k,a,b,0); cell(k,b-a===TL?0:k,s0,s1,1); }
        },mk);
       o.brick=bakedTile(bi,"brick");
       o.floor=bakedTile(bi,"floorA");
