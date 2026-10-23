@@ -21,7 +21,7 @@ const tree = new URLSearchParams(location.search).get("tree") || "new";
 const OUT = {};
 const PIECES = [["base", 0], ["v1", 1], ["v2", 2], ["acc", 3], ["border", 4]];
 const up = (src, n) => { const c = document.createElement("canvas"); c.width = c.height = n; const x = c.getContext("2d"); x.imageSmoothingEnabled = false; x.drawImage(src, 0, 0, n, n); return c.toDataURL("image/png"); };
-SP.bakeAtlas();
+const t0 = performance.now(); SP.bakeAtlas(); OUT.__bakeMs = performance.now() - t0;
 BIOMES.forEach((b, i) => {
   const w = b.name.toLowerCase();
   if (tree === "today") OUT["2d/" + w + "-wall-today"] = up(SP.bakedTile(i, "wall"), 192);

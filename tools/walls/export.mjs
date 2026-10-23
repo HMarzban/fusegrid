@@ -29,6 +29,7 @@ try {
     for (let i = 0; i < 100 && !o; i++) { await new Promise((r) => setTimeout(r, 150)); o = await pg.ev("window.__OUT||null").catch(() => null); }
     if (!o) throw new Error(tree + ": no output " + pg.errors.join(" | "));
     if (pg.errors.length) console.error(tree, "page errors:", pg.errors.join(" | "));
+    console.error(tree, "bakeAtlas ms", o.__bakeMs && o.__bakeMs.toFixed(1)); delete o.__bakeMs;
     for (const [k, url] of Object.entries(o)) { const f = k + ".png"; mkdirSync(join(OUT, k.split("/")[0]), {recursive: true}); writeFileSync(join(OUT, f), Buffer.from(url.split(",")[1], "base64")); files.push(f); }
   }
   c.close();

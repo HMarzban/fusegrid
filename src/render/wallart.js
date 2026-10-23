@@ -93,7 +93,7 @@ export const FAM = {
     v2: (g) => [6, 17, 28].flatMap((x) => [R(x, g.y0 + 1, 6, 4, "wallHi.shadow"), R(x, g.y0 + 1, 6, 1, "wallHi.light"), R(x, g.y0 + 5, 6, 2, "wall.outline")]),
     acc: () => [S([[8, 18], [8, 15], [12, 15], [12, 12], [16, 12], [16, 9], [24, 9]], 1.3, "wallHi.shadow"), S([[24, 9], [24, 12], [28, 12], [28, 15], [32, 15], [32, 18]], 1.3, "wallHi.light"), S([[9, 18], [31, 18]], 1, "wallHi.light")],
     names: ["sand drift", "beam ends", "step relief"]},
-  VOID: {name: "OBSIDIAN MONOLITH", lit: "wallHi", px: {"wallHi.shadow": "wallHi"},
+  VOID: {name: "OBSIDIAN MONOLITH", lit: "wallHi", pxNoAO: true, px: {"wallHi.shadow": "wallHi"},
     base: () => [P([[22, 5], [36, 5], [36, 17], [16, 17]], "wallHi.shadow")], bmark: () => [],
     v1: (g) => [S([[5, g.y0 + 5], [15, g.y0 + 5], [19, g.y0 + 9], [35, g.y0 + 9]], 1.5, "wallHi")],
     v2: (g) => [P([[2, 5], [9, 5], [6, 17], [2, 17]], "wallHi.shadow"), P([[21, g.y0 + 2.5], [27.5, g.y0 + 9], [21, g.y0 + 15.5], [14.5, g.y0 + 9]], "wallHi")],
@@ -275,7 +275,7 @@ const MAT = {
     : [...speck(g.cap, 0.04, "wallHi.pit", s, px), ...speck(g.cap, 0.06, "wallHi.grain", s + 1, px), ...strata(g.body, px, s), ...strata(g.face, px, s + 1)],
   /* polished obsidian: no grain; a broad diagonal sheen on the cap, one
      crystal glint, a faint vertical sheen in the face */
-  VOID: (g, px, s) => px ? [...glint(g.cap, px), ...(g.face ? [0, 2, 4].map((k) => R(g.face[0] + 6 + k, snap(g.face[1] + g.face[3] - 4 - k * 2, true), 2, 2, "wall")).concat([R(g.face[0] + 14, snap(g.face[1] + 2, true), 2, 2, "wall")]) : [])]
+  VOID: (g, px, s) => px ? [...glint(g.cap, px), ...(g.face ? [0, 1, 2, 3].map((k) => R(g.face[0] + 6 + k * 2, snap(g.face[1] + g.face[3] - 2 - k * 2, true), 2, 2, "wall")) : [])]
     : [...sheen(g.cap), ...glint(g.cap, px), ...(g.face ? [P([[g.face[0] + 4, g.face[1] + g.face[3]], [g.face[0] + 8, g.face[1] + g.face[3]], [g.face[0] + 13, g.face[1]], [g.face[0] + 9, g.face[1]]], "face.grain"), P([[g.face[0] + 10, g.face[1] + g.face[3]], [g.face[0] + 11, g.face[1] + g.face[3]], [g.face[0] + 16, g.face[1]], [g.face[0] + 15, g.face[1]]], "face.grain")] : [])],
   /* royal masonry: grained stone panel with a joint, gilt sheen on the
      frame (lit top, dimmed body, diagonal glints), coursed face */
@@ -313,7 +313,7 @@ function block(b, px, salt) {
    light as the pillars */
 function lightH(b, px, x0, w, g) {
   const dim = !!FAM[b.name].lit;
-  if (px) return [R(x0, 36, w, 2, "wall.outline"), ...(FAM[b.name].pxNoWedge ? [] : dith([x0, 16, w, 2], "wallHi.shadow", 1))];
+  if (px) return [...(FAM[b.name].pxNoAO ? [] : [R(x0, 36, w, 2, "wall.outline")]), ...(FAM[b.name].pxNoWedge ? [] : dith([x0, 16, w, 2], "wallHi.shadow", 1))];
   return [R(x0, 19, w, 1, "wall.pit"), R(x0, g.y0, w, 1, "face.pit"), R(x0, 36, w, 2, "face.ao"), ...(dim ? [] : [R(x0, 3, w, 1, "wallHi.spec")])];
 }
 function borderH(b, px, salt) {
