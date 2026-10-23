@@ -19,7 +19,7 @@ export const WALL_SLOTS = Object.freeze(["wall", "wall.outline", "wall.shadow", 
    slot (or over a step of one), so every hex stays in the wall family. PIXEL
    never sees these: its detail is authored on the art grid (px branches). */
 const OV = {"wall.outline": ["#000000", "wall", 0.6], "wall.shadow": ["#000000", "wall", 0.35], "wall.light": ["#ffffff", "wall", 0.15], "wallHi.light": ["#ffffff", "wallHi", 0.3], "wallHi.shadow": ["#000000", "wallHi", 0.2],
-  "wallHi.spec": ["#ffffff", "wallHi", 0.55], "wallHi.glint": ["#ffffff", "wallHi", 0.4], "wallHi.grain": ["#ffffff", "wallHi", 0.14], "wallHi.dim": ["#000000", "wallHi", 0.08], "wallHi.pit": ["#000000", "wallHi", 0.14],
+  "wallHi.spec": ["#ffffff", "wallHi", 0.55], "wallHi.grain": ["#ffffff", "wallHi", 0.14], "wallHi.dim": ["#000000", "wallHi", 0.08], "wallHi.pit": ["#000000", "wallHi", 0.14],
   "wall.pit": ["#000000", "wall", 0.2], "wall.grain": ["#ffffff", "wall", 0.09],
   "face.grain": ["#ffffff", "wall.shadow", 0.1], "face.pit": ["#000000", "wall.shadow", 0.28], "face.ao": ["#000000", "wall.shadow", 0.34],
   "panel.pit": ["#000000", "wall.light", 0.13], "panel.grain": ["#ffffff", "wall.light", 0.12]};
@@ -233,7 +233,7 @@ function sheen(rc) {
 function glint(rc, px) {
   if (!rc) return [];
   const cx = rc[0] + 15, cy = rc[1] + 3;
-  return px ? [R(snap(cx, true), snap(cy, true), 2, 2, "wallHi.light")] : [R(cx - 2, cy, 5, 1, "wallHi"), R(cx, cy - 2, 1, 5, "wallHi"), R(cx, cy, 1, 1, "wallHi.glint")];
+  return px ? [] : [R(cx - 2, cy, 5, 1, "wallHi"), R(cx, cy - 2, 1, 5, "wallHi")];
 }
 /* a stone panel set INTO the gilt frame: shadow on its top / left inner
    edge, light on its bottom / right, one joint, sparse grain */
@@ -245,7 +245,7 @@ function inset(rc, s) {
 function gilt(rc) {
   if (!rc) return [];
   const [x, y, w, h] = rc;
-  return [R(x, y + h - 5, w, 3, "wallHi.dim"), S([[x + 3, y + h - 2], [x + 6, y + h - 5]], 1, "wallHi"), S([[x + w - 9, y + h - 2], [x + w - 6, y + h - 5]], 1, "wallHi"), R(x + 1, y + 1, 1, 1, "wallHi.glint")];
+  return [R(x, y + h - 5, w, 3, "wallHi.dim"), S([[x + 3, y + h - 2], [x + 6, y + h - 5]], 1, "wallHi"), S([[x + w - 9, y + h - 2], [x + w - 6, y + h - 5]], 1, "wallHi")];
 }
 
 /* per-world material: rg = {cap, body, face, panel} rects in the piece's
@@ -274,7 +274,8 @@ const MAT = {
   SAND: (g, px, s) => px ? [...speck(g.cap, 0.05, "wallHi.shadow", s, px), ...strata(g.body, px, s), ...strata(g.face, px, s + 1)]
     : [...speck(g.cap, 0.04, "wallHi.pit", s, px), ...speck(g.cap, 0.06, "wallHi.grain", s + 1, px), ...strata(g.body, px, s), ...strata(g.face, px, s + 1)],
   /* polished obsidian: no grain; a broad diagonal sheen on the cap, one
-     crystal glint, a faint vertical sheen in the face */
+     crystal-star glint in plain wallHi (never wallHi.light: the MAKO
+     collision), a faint diagonal sheen in the face */
   VOID: (g, px, s) => px ? [...glint(g.cap, px), ...(g.face ? [0, 1, 2, 3].map((k) => R(g.face[0] + 6 + k * 2, snap(g.face[1] + g.face[3] - 2 - k * 2, true), 2, 2, "wall")) : [])]
     : [...sheen(g.cap), ...glint(g.cap, px), ...(g.face ? [P([[g.face[0] + 4, g.face[1] + g.face[3]], [g.face[0] + 8, g.face[1] + g.face[3]], [g.face[0] + 13, g.face[1]], [g.face[0] + 9, g.face[1]]], "face.grain"), P([[g.face[0] + 10, g.face[1] + g.face[3]], [g.face[0] + 11, g.face[1] + g.face[3]], [g.face[0] + 16, g.face[1]], [g.face[0] + 15, g.face[1]]], "face.grain")] : [])],
   /* royal masonry: grained stone panel with a joint, gilt sheen on the
@@ -305,7 +306,7 @@ function block(b, px, salt) {
     sh.push(R(2, g.y0, 36, 1, "face.pit"), R(2, g.y0 + 1, 2, g.f - 3, "face.grain"), R(36, g.y0 + 1, 2, g.f - 3, "face.pit"), R(2, 36, 36, 2, "face.ao"));
   }
   sh.push(R(cx, 3, cw, 2, lit), R(2, 3, 2, 16, lit), R(2, 17, full ? 38 : 36, 2, "wallHi.shadow"), R(36, 5, 2, 12, "wallHi.shadow"));
-  if (!px) sh.push(...(dim ? [R(2, 3, 1, 1, "wallHi.glint")] : [R(2, 3, 20, 1, "wallHi.spec"), R(2, 3, 1, 9, "wallHi.spec"), R(3, 4, 1, 1, "wallHi.spec")]));
+  if (!px && !dim) sh.push(R(2, 3, 20, 1, "wallHi.spec"), R(2, 3, 1, 9, "wallHi.spec"), R(3, 4, 1, 1, "wallHi.spec"));
   return sh;
 }
 /* rampart pieces: the cap runs edge to edge so the frame reads as ONE
