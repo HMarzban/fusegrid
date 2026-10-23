@@ -5,7 +5,7 @@ import {rmSync} from "node:fs";
 import {resolve, dirname} from "node:path";
 import {fileURLToPath} from "node:url";
 export const WT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-export const OUT = "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-23-tile-art/floor/";
+export const OUT = process.env.TILEART_OUT || "/Users/macbook/workspace/rollblock/.superpowers/sdd/2026-10-23-tile-art/round3/floor/";
 process.env.CHROME = process.env.CHROME || process.env.HOME + "/Library/Caches/ms-playwright/chromium_headless_shell-1248/chrome-headless-shell-mac-arm64/chrome-headless-shell";
 const {startServer, startChrome, cdp, openPage, parseArgs} = await import(WT + "/tools/pixel/shot.mjs");
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

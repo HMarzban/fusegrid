@@ -1,33 +1,38 @@
-/* THROWAWAY PROTOTYPE (tile art detail pass, 2026-10-23): PIXEL cells for
-   the eight floor tiles. Palette-SLOT grids only (../pixel/grid.js format,
-   never hex): every char maps to "tile.<BIOMES field>[.step]" through the
-   pinned pxRamp, so each biome bakes its own ramp. 20x20 art px, 1 art px =
-   2 logical px. Kept OUT of src/render/pixel/** on purpose: the px tree has
-   771 B under its 122 KB cap, so wiring waits for the dynamic import (#15);
-   nothing in the game imports this yet (export tool + tests only).
-   Build order per cell: material bed (hand-placed detail, ordered dither
-   for the ramps) -> inlay lip (AO on N/W, lit sliver on S/E, outer sides
-   only) -> marks (hand-authored sprites with a 1-px drop shade) -> heat
-   edge strip (keyline / 3-on-2-off dash / 2-of-5 hatch / 4-px teeth).
-   Heat never changes a hue: the mark slot steps .shadow -> base -> .light
-   (dark polarity: .light -> base -> .shadow), density 1/2/3, tip shape. */
+/* THROWAWAY PROTOTYPE (tile art detail pass + round-3 maturity pass,
+   2026-10-23): PIXEL cells for the eight floor tiles. Palette-SLOT grids
+   only (../pixel/grid.js format, never hex): every char maps to
+   "tile.<BIOMES field>[.step]" through the pinned pxRamp, so each biome
+   bakes its own ramp. 20x20 art px, 1 art px = 2 logical px. Kept OUT of
+   src/render/pixel/** on purpose: the px tree has 771 B under its 122 KB
+   cap, so wiring waits for the dynamic import (#15); nothing in the game
+   imports this yet (export tool + tests only).
+   Build order per cell: material bed (flat runs, rings built around the
+   centre 9.5; no dither, no random flecks) -> inlay lip (AO on N/W, lit
+   sliver on S/E, outer sides only) -> marks (hand-authored sprites, 1-px
+   drop shade) -> heat edge strip (keyline / 2x2 dash every 5 px / 2-of-5
+   hatch / 4-px teeth). Heat never changes a hue: the mark slot steps
+   .shadow -> base -> .light (dark polarity: .light -> base -> .shadow);
+   VOID caps at base (nothing brighter than wallHi), so PLUS and MAX share
+   a value there and differ by edge, count and tip; CROWN starts at base
+   (its .shadow step is pxRamp's olive), so CORE and PLUS share one. */
 import {paintCell, overlayCell, rot90} from "./pixel/grid.js";
 
 const DARK = {ICE: "wall", SAND: "bg1"};
-const NATURAL = new Set(["JUNGLE", "WATER", "SAND"]);
+const NATURAL = new Set(["JUNGLE", "ICE", "WATER", "SAND"]);
 const SIDES = ["N", "E", "S", "W"];
-const STEP_L = [".shadow", "", ".light"], STEP_D = [".light", "", ".shadow"];
+const STEP = {L: [".shadow", "", ".light"], D: [".light", "", ".shadow"], VOID: [".shadow", "", ""], CROWN: ["", "", ".light"], SAND: ["", "", ".shadow"]};
+/* the CORE keyline: a warm or in-family step, never pxRamp's olive outline */
+const KEYQ = {CROWN: "tile.wall.light", JUNGLE: "tile.wallHi.shadow", VOID: "tile.wallHi.shadow"};
 /* the shared slot map; family beds add their own chars */
 export function palFor(biome, h) {
-  const d = DARK[biome], m = d ? "tile." + d : "tile.wallHi", st = d ? STEP_D : STEP_L;
-  const sheet = biome === "SAND" ? "tile.floor1.shadow" : "tile.floor1";
-  return {M: m + st[h], Q: d ? m + ".light" : m + ".outline", F: m + (d ? ".shadow" : ".light"), B: d ? "tile.floor0" : "tile.bg1",
-    a: sheet, A: biome === "SAND" ? "tile.wall.shadow" : "tile.floor1.light", s: biome === "SAND" ? "tile.bg0" : "tile.floor1.shadow",
+  const d = DARK[biome], m = d ? "tile." + d : "tile.wallHi", st = STEP[biome] || STEP[d ? "D" : "L"];
+  return {M: m + st[h], Q: KEYQ[biome] || m + (d ? ".light" : ".outline"), F: m + (d ? ".shadow" : ".light"), P: "tile.wallHi", B: d ? "tile.floor0" : "tile.bg1",
+    a: biome === "SAND" ? "tile.floor1.shadow" : "tile.floor1", A: biome === "SAND" ? "tile.wall.shadow" : "tile.floor1.light", s: biome === "SAND" ? "tile.bg0" : "tile.floor1.shadow",
     o: "tile.floor1.outline", k: "tile.bg1", f: "tile.floor0", g: "tile.floor0.light",
-    h: "tile.wall", w: "tile.wall.shadow", W: "tile.wall.outline", H: "tile.wall.light", l: "tile.wallHi", L: "tile.wallHi.light", q: "tile.wallHi.outline", u: "tile.wallHi.shadow", d: "tile.bg0"};
+    h: "tile.wall", w: "tile.wall.shadow", W: "tile.wall.outline", H: "tile.wall.light", l: "tile.wallHi", u: "tile.wallHi.shadow", q: "tile.wallHi.outline", d: "tile.bg0"};
 }
+const fill = (n, ch) => ch.repeat(n);
 const R = (row, n) => Array(n).fill(row);
-const cell = (rows) => ({w: rows[0].length, h: rows.length, rows});
 const at = (rows, x, y, ch) => { if (y < 0 || y >= rows.length || x < 0 || x >= rows[y].length) return; rows[y] = rows[y].slice(0, x) + ch + rows[y].slice(x + 1); };
 const put = (rows, pts, ch) => { for (const [x, y] of pts) at(rows, x, y, ch); };
 /* a sprite with an optional 1-px drop shade (down-right, away from the key) */
@@ -36,102 +41,90 @@ function stamp(rows, spr, dx, dy, shade) {
   if (shade) each((x, y) => at(rows, dx + x + 1, dy + y + 1, shade));
   each((x, y, ch) => at(rows, dx + x, dy + y, ch));
 }
-const hsh = (a, b, c) => { let v = (a * 374761393 + b * 668265263 + c * 2147483647) >>> 0; v = Math.imul(v ^ (v >>> 13), 1274126177) >>> 0; return ((v ^ (v >>> 16)) >>> 0) / 4294967296; };
+/* ring distance from the cell centre (9.5, 9.5): 0 = the centre 2x2 */
+const ring = (x, y) => Math.max(Math.abs(x - 9.5), Math.abs(y - 9.5)) - 0.5;
+const ringCell = (fn) => paintCell(20, 20, (x, y) => fn(ring(x, y), x, y));
+const square = (rows, d, ch) => { for (let i = 9 - d; i <= 10 + d; i++) put(rows, [[i, 9 - d], [i, 10 + d], [9 - d, i], [10 + d, i]], ch); };
 
 /* ---- beds ---- */
-const RIB = "kRrrkRrrkRrrkRrrkRrr";
-const RIBS = ["kRrrkRrrkRrrkRrrkRrr", "kRrrkRrdkRrrkRrrkRrr", "kRrrkRrrkRrrkRdrkRrr", "kRdrkRrrkRrrkRrrkRrr", "kRrrkRrrkRrrkRrrkRrd", "kRrrkRrrkRdrkRrrkRrr"];
-const RAIL = "wwvwwwwvwwwwvwwwwvww";
+const RIB = fill(5, "kRrr"), RAIL = fill(4, "wwvww"), K20 = fill(20, "k");
 const BELT = [
-  /* CORE: brushed deck, 2-row riveted rails hugging an 8-row groove */
-  ["aaaaaaaaaaaaaaaaaaaa", "aaaAaaaaaaaaAaaaaaaa", "aaaaaaaaaaaaaaaaaaaa", "ssssssssssssssssssss", "hhhhhhhhhhhhhhhhhhhh", RAIL, "kkkkkkkkkkkkkkkkkkkk",
-    RIBS[0], RIBS[1], RIBS[2], RIBS[3], RIBS[4], RIBS[5], "kkkkkkkkkkkkkkkkkkkk", "hhhhhhhhhhhhhhhhhhhh", RAIL, "WWWWWWWWWWWWWWWWWWWW", "aaaaaaaaaaaaaaaaaaaa", "aaaaaaaAaaaaaaaaaAaa", "aaaaaaaaaaaaaaaaaaaa"],
+  /* CORE: plain deck, riveted rails hugging an 8-row groove */
+  [...R(fill(20, "a"), 3), fill(20, "s"), fill(20, "h"), RAIL, K20, ...R(RIB, 6), K20, fill(20, "h"), RAIL, fill(20, "W"), ...R(fill(20, "a"), 3)],
   /* PLUS: full bed between 3-row rails */
-  ["hhhhhhhhhhhhhhhhhhhh", RAIL, "WWWWWWWWWWWWWWWWWWWW", "kkkkkkkkkkkkkkkkkkkk", ...RIBS, ...RIBS, "kkkkkkkkkkkkkkkkkkkk", "hhhhhhhhhhhhhhhhhhhh", RAIL, "WWWWWWWWWWWWWWWWWWWW"],
+  [fill(20, "h"), RAIL, fill(20, "W"), K20, ...R(RIB, 12), K20, fill(20, "h"), RAIL, fill(20, "W")],
   /* MAX: band rows 0-2 / 17-19 (edge strip), thin rails, bed between */
-  [...R("kkkkkkkkkkkkkkkkkkkk", 3), "hhhhhhhhhhhhhhhhhhhh", RAIL, "kkkkkkkkkkkkkkkkkkkk", ...RIBS, RIBS[0], RIBS[3], "kkkkkkkkkkkkkkkkkkkk", "hhhhhhhhhhhhhhhhhhhh", RAIL, ...R("kkkkkkkkkkkkkkkkkkkk", 3)],
+  [...R(K20, 3), fill(20, "h"), RAIL, K20, ...R(RIB, 8), K20, fill(20, "h"), RAIL, ...R(K20, 3)],
 ];
-const BELT_PAL = {r: "tile.floor1.shadow", R: "tile.floor1", k: "tile.bg1", v: "tile.wall", d: "tile.floor0", h: "tile.wall.shadow", w: "tile.wall.outline", W: "tile.bg1"};
-function bedGlide(gx, gy) {
-  const rows = paintCell(20, 20, (x, y) => { const d = (x + y + gx * 20 + gy * 20) % 40; return d >= 11 && d <= 16 ? "A" : (d === 9 || d === 18) && (x + y) % 2 === 0 ? "A" : (d === 10 || d === 17) && x % 2 === 0 ? "A" : "a"; });
-  put(rows, [[3, 6], [4, 5], [5, 4], [6, 3]], "l");
-  for (let i = 0; i < 3; i++) { const x = 4 + ((hsh(gx, gy, i) * 11) | 0), y = 4 + ((hsh(gy, i, gx) * 11) | 0); put(rows, [[x, y], [x + 1, y + 1], [x + 2, y + 2]], "A"); }
-  put(rows, [[17, 3], [3, 16]], "l");
-  return rows;
-}
-const BLOOM_BED = [
-  "aaaaaaafaaaaaaaaaaaa", "aaafaaaaakaaaaaafaaa", "aaaaaaaaaakaaaaaaaaa", "afaaaaaaaaakaaaaaaga", "aaaaafaaaaakaaafaaaa",
-  "aaaaaaaaaaaaaaaaaaaa", "aakaaaaaaaaaaaaaaaaa", "aaakkaaaaaaaaaaakkaa", "gaaaakaaaaaaaaakaaaa", "aaaaaakaaaaaaaaaaaaf",
-  "aaaaaaaaaaaaaaaaaaaa", "aaafaaaaaaaaaakaaaaa", "aaaaakaaaaaaaaakaaaa", "aaaakaaaaaaaaaaakkaa", "aaakaaaaaaaaaaaaaaka",
-  "afaaaaaaaaaaaaaaaaaa", "aaaaaaaakaaaaaaagaaa", "aaaaafaaakaaaaaaaaaa", "aaaaaaaaaakaaaafaaaa", "aaaaaaaaaaakaaaaaaaa"];
-const PLATE_BED = [
-  "aaaaaaaaaaaaaaaaaaaa", "aaaaaaaaaaaaaaaaaaaa", "aaaaaaaaaaaaaaaaaaaa", "aaaooooooooooooooaaa",
-  "aaaoWWWWWWWWWWWWhaaa", "aaaoWuwwwwwwwwuwhaaa", "aaaoWwWWWWWWWWwwhaaa", "aaaoWwWwwwwwwhwwhaaa",
-  "aaaoWwWwwwwwwhwwhaaa", "aaaoWwWwwwwwwhwwhaaa", "aaaoWwWwwwwwwhwwhaaa", "aaaoWwWwwwwwwhwwhaaa",
-  "aaaoWwWwwwwwwhwwhaaa", "aaaoWwWhhhhhhhwwhaaa", "aaaoWuwwwwwwwwuwhaaa", "aaaoWhhhhhhhhhhhhaaa",
-  "aaaahhhhhhhhhhhhhaaa", "aaaaaaaaaaaaaaaaaaaa", "aaaaaaaaaaaaaaaaaaaa", "aaaaaaaaaaaaaaaaaaaa"];
+const BELT_PAL = {r: "tile.floor1.shadow", R: "tile.floor1", k: "tile.bg1", v: "tile.wall", h: "tile.wall.shadow", w: "tile.wall.outline", W: "tile.bg1"};
+const bedGlide = (gx, gy) => { const rows = paintCell(20, 20, (x, y) => { const d = (x + y + gx * 20 + gy * 20) % 40; return d >= 11 && d <= 16 ? "A" : "a"; }); put(rows, [[3, 6], [4, 5], [5, 4], [6, 3]], "l"); return rows; };
+/* flat moss; plate inlay; stream = banks / channel / deep runs */
 const PLATE_PAL = {w: "tile.wall.shadow", W: "tile.wall.outline", h: "tile.wall", u: "tile.wall.light"};
-function bedStream() {
-  const rows = paintCell(20, 20, (x, y) => { const e = Math.min(y, 19 - y); return e <= 1 ? "f" : e === 2 ? (x % 2 ? "f" : "a") : e === 7 ? (x % 2 === y % 2 ? "s" : "a") : e >= 8 ? "s" : "a"; });
-  put(rows, [[0, 5], [1, 5], [2, 4], [3, 4], [4, 4], [5, 5], [6, 6], [7, 6], [8, 5], [9, 5], [10, 6], [11, 6], [12, 7], [13, 7], [14, 6], [15, 6], [16, 5], [17, 5], [18, 5], [19, 5],
-    [1, 13], [2, 13], [3, 12], [4, 12], [5, 12], [6, 13], [7, 14], [8, 14], [9, 13], [10, 13], [11, 12], [12, 12], [13, 13], [14, 14], [15, 14], [16, 13], [17, 13], [18, 12], [19, 12], [0, 12],
-    [5, 6], [5, 7], [5, 8], [12, 8], [12, 9], [13, 10], [13, 11], [7, 15], [9, 9], [9, 10], [9, 11], [17, 6], [17, 7], [16, 8]], "u");
-  put(rows, [[3, 9], [4, 9], [14, 15], [15, 15], [11, 3], [12, 3], [16, 10], [17, 10]], "l");
+function bedPlate() {
+  const rows = paintCell(20, 20, (x, y) => (x < 3 || x > 16 || y < 3 || y > 16 ? "a" : y === 3 || x === 3 ? "o" : y === 16 || x === 16 ? "h" : y === 4 || x === 4 ? "W" : "w"));
+  put(rows, [[5, 5], [14, 5], [5, 14], [14, 14]], "u");
   return rows;
 }
 const STREAM_PAL = {u: "tile.floor0.light"};
-function bedQuick() {
-  const rows = paintCell(20, 20, (x, y) => { const w = (y + Math.round(1.2 * Math.sin((x + y * 0.4) / 3.2))) % 5; return w === 0 ? ((x + y) % 3 ? "A" : "a") : "a"; });
-  for (let i = 0; i < 22; i++) at(rows, (hsh(i, 3, 1) * 20) | 0, (hsh(i, 4, 1) * 20) | 0, i % 3 ? "d" : "g");
-  for (let y = 6; y <= 13; y++) for (let x = 6; x <= 13; x++) if ((x + y) % 2 === 0 && rows[y][x] === "a") at(rows, x, y, "d");
+const RIPS = [[4, 7, 13, 15], [3, 9, 16], []];
+function bedStream(h) {
+  const rows = paintCell(20, 20, (x, y) => { const e = Math.min(y, 19 - y); return e <= 1 ? "f" : e >= 7 ? "s" : "a"; });
+  RIPS[h].forEach((y, j) => { for (const x of [(j * 7 + 2) % 20, (j * 7 + 12) % 20]) put(rows, [[x, y], [x + 1, y], [x + 2, y]], "u"); });
   return rows;
 }
-const PORTAL_BED = [
-  "aaaaaaaaaaaaaaaaaaaa", "aaaaaaaaaaaaaaaaaaaa", "aaaaaaaaaaaaaaaaaaaa", "aaaHHHHHHHHHHHHHHaaa",
-  "aaaHwwwwwkwwwwwwkaaa", "aaaHwkkkkkkkkkkhkaaa", "aaaHwkoooooooooHkaaa", "aaaHwkoqqqqqqqoHkaaa",
-  "aaaHkkoqquuuuqoHkaaa", "aaaHwkoquuLLuqoHkaaa", "aaaHwkoquuLLuqoHkaaa", "aaaHwkoqquuuuqoHkaaa",
-  "aaaHwkoqqqqqqqoHkaaa", "aaaHwkoooooooooHwkaa", "aaaHwkHHHHHHHHHHwkaa", "aaaHwwwwwwkwwwwwwkaa",
-  "aaaakkkkkkkkkkkkkkaa", "aaaaaaaaaaaaaaaaaaaa", "aaaaaaaaaaaaaaaaaaaa", "aaaaaaaaaaaaaaaaaaaa"];
-const PORTAL_PAL = {w: "tile.wall", H: "tile.wall.light", o: "tile.bg1", q: "tile.wallHi.outline", u: "tile.wallHi.shadow", L: "tile.wallHi.light"};
-const GATE_BED = [
-  "aaaaaaaaaaaaaaaaaaaa", "aaaaaaaaaaaaaaaaaaaa", "aaaaaaaaaaaaaaaaaaaa", "aaahhhhhhhhhhhhhhaaa",
-  "aaahwwwwwwWwwwwwwkaa", "aaahwkkkkkkkkkkwwkaa", "aaahwkIikkIikkIiwkaa", "aaahwkIikkIikkIiwkaa",
-  "aaahWkIikkIikkIiwkaa", "aaahwkIikkIikkIiwkaa", "aaahwkIikkIikkIiWkaa", "aaahwkIikkIikkIiwkaa",
-  "aaahwkIikkIikkIiwkaa", "aaahwkIikkIikkIiwkaa", "aaahwkkkkkkkkkkwwkaa", "aaahwwwwwWwwwwwwwkaa",
-  "aaaakkkkkkkkkkkkkkaa", "aaaaaaaaaaaaaaaaaaaa", "aaaaaaaaaaaaaaaaaaaa", "aaaaaaaaaaaaaaaaaaaa"];
+/* quicksand: flat settled sand, six grains, a stepped DIAMOND dimple */
+function bedQuick() {
+  const rows = paintCell(20, 20, (x, y) => { const m = Math.abs(x - 9.5) + Math.abs(y - 9.5); return m <= 1 ? "k" : m <= 3 ? "s" : "a"; });
+  put(rows, [[4, 15], [15, 4], [13, 16], [5, 7], [16, 12], [8, 4]], "d");
+  return rows;
+}
+const PORTAL_PAL = {w: "tile.wall", H: "tile.wall.light"};
+const PORTAL_BED = ringCell((d, x, y) => (d >= 7 ? "a" : d === 6 ? (x + y < 19 && (x === 3 || y === 3) ? "H" : "k") : d === 5 ? "w" : d >= 3 ? "k" : d === 2 ? "q" : d === 1 ? "u" : "l"));
 const GATE_PAL = {h: "tile.wall", w: "tile.wall.shadow", W: "tile.bg1", I: "tile.wall.shadow", i: "tile.wall.outline"};
+const GATE_BED = ringCell((d, x, y) => (d >= 7 ? "a" : d === 6 ? "h" : d === 5 ? "w" : y >= 5 && y <= 14 && [6, 9, 12].includes(x) ? "I" : y >= 5 && y <= 14 && [7, 10, 13].includes(x) ? "i" : "k"));
 
 /* ---- marks (hand-authored; "M" = this heat's mark slot) ---- */
-const CHEV = [["MM...", ".MM..", "..MM.", "...MM", "...MM", "..MM.", ".MM..", "MM..."], ["MM...", ".MM..", "..MM.", "...MM", "..MM.", ".MM..", "MM..."], ["M...", "MM..", ".MM.", "..MM", ".MM.", "MM..", "M..."]];
+const CHEV = [["M....", "MM...", "MMM..", "MMMM.", "MMMM.", "MMM..", "MM...", "M...."], ["MM...", ".MM..", "..MM.", "...MM", "..MM.", ".MM..", "MM..."], ["M...", "MM..", ".MM.", "..MM", ".MM.", "MM..", "M..."]];
+const CHEV_X = [[8], [3, 13], [3, 9, 15]];
 const ARROW = [["....MM.", "MMMMMMM", "....MM."], [".....M.", "MMMMMMM", ".....M."], ["....M..", ".....M.", "MMMMMMM", ".....M.", "....M.."]];
-const WAVE = [["..MMMM..........", ".M....M.........", "M......M.......M", "........M.....M.", ".........MMMMM.."],
-  ["..MMMM..........", ".M....M.........", "M......M.......M", "........M.....M.", ".........MMMMM.."],
-  ["..MMM.......", ".M...M......", "M.....M....M", ".......MMMM."]];
-/* booster: the top-left quadrant (centre = its bottom-right corner); "f" =
-   leaf body (floor0.light), "M" = midrib; mirrored into all four diagonals */
-/* each leaf: [tip i, base i, half-widths from tip to base]; i runs along
-   the diagonal toward the centre pore at (9,9); "f" body, "M" midrib */
-const LEAVES = [[[2, 8, [0, 1, 1, 2, 2, 1, 0]]], [[1, 4, [0, 1, 1, 0]], [6, 8, [0, 1, 0]]], [[1, 2, [0, 1]], [4, 5, [0, 1]], [7, 8, [0, 1]]]];
-const LEAF = LEAVES.map((ls) => {
+/* booster: a stem (midrib "M") from the pore out along each diagonal, with
+   1 / 2 / 3 SOLID leaf bodies ("f") on it: [first, last] index per leaf,
+   mirrored into all four diagonals (an x, never a +) */
+const LEAVES = [[[3, 7]], [[3, 4], [6, 7]], [[3, 3], [5, 5], [7, 7]]];
+const STEM0 = [2, 2, 3];
+const LEAF = LEAVES.map((ls, h) => {
   const q = R("..........", 10);
-  for (const [t, b, wd] of ls) for (let i = t; i <= b; i++) { const w = wd[i - t] || 0; for (let d = 1; d <= w; d++) { at(q, i + d, i, "f"); at(q, i, i + d, "f"); } at(q, i, i, "M"); }
+  for (const [a, b] of ls) for (let i = a; i <= b; i++) { at(q, i + 1, i, "f"); at(q, i, i + 1, "f"); }
+  for (let i = STEM0[h]; i <= 8; i++) at(q, i, i, "M");
   return q;
 });
+/* quicksand: 1 / 2 / 3 spiral arms converging on the dimple */
+const SPIRAL = [0, 1, 2].map((h) => {
+  const n = h + 1, pts = new Map();
+  for (let k = 0; k < n; k++) for (let j = 0; j <= 60; j++) {
+    const u = j / 60, th = (k * 2 * Math.PI) / n - 0.6 + u * (n === 1 ? 3.4 : 2.3), r = 6.6 - 3.9 * u;
+    const x = Math.round(9.5 + Math.cos(th) * r - 0.5 + 0.5), y = Math.round(9.5 + Math.sin(th) * r - 0.5 + 0.5);
+    pts.set(x + "," + y, [x, y]);
+  }
+  return [...pts.values()];
+});
+const PIPS = [[5, 5], [8, 5], [5, 8]].map(([x, y]) => [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]]);
+const KERB = [[0, 3, 1, 0], [16, 0, 0, 1], [0, 16, 1, 0], [3, 0, 0, 1]];
 
 /* ---- edges + lip ---- */
 function edgeRows(rows, h, side, natural, force) {
   const hh = force != null ? force : h;
   const pts = (fn) => { for (let i = 0; i < 20; i++) for (let j = 0; j < 3; j++) { const ch = fn(i, j); if (!ch) continue; const [x, y] = side === "N" ? [i, j] : side === "S" ? [i, 19 - j] : side === "W" ? [j, i] : [19 - j, i]; at(rows, x, y, ch); } };
   if (hh === 0) return pts((i, j) => (j === 0 ? "Q" : null));
-  if (hh === 1) return pts((i, j) => (j === 0 ? (i % 5 < 3 ? "M" : null) : j === 1 && i % 5 < 3 ? "o" : null));
+  if (hh === 1) return pts((i, j) => (j < 2 && i % 5 < 2 ? "M" : null));
   if (natural) return pts((i, j) => (j === 0 ? (i % 4 < 3 ? "M" : "B") : j === 1 ? (i % 4 === 1 ? "M" : "B") : "B"));
   const bx = (i, j) => (side === "N" ? [i, j] : side === "S" ? [i, 19 - j] : side === "W" ? [j, i] : [19 - j, i]);
   return pts((i, j) => { const [x, y] = bx(i, j); return ((x - y) % 5 + 5) % 5 < 2 ? "M" : "B"; });
 }
 function lip(rows, sides) {
   for (const sd of sides) for (let i = 0; i < 20; i++) {
-    if (sd === "N") { at(rows, i, 0, "o"); if (rows[1][i] !== "o") at(rows, i, 1, "s"); if (i % 2 === 0) at(rows, i, 2, "s"); }
-    if (sd === "W") { at(rows, 0, i, "o"); at(rows, 1, i, "s"); if (i % 2) at(rows, 2, i, "s"); }
+    if (sd === "N") { at(rows, i, 0, "o"); if (rows[1][i] !== "o") at(rows, i, 1, "s"); }
+    if (sd === "W") { at(rows, 0, i, "o"); at(rows, 1, i, "s"); }
     if (sd === "S") at(rows, i, 19, "A");
     if (sd === "E") at(rows, 19, i, "A");
   }
@@ -144,43 +137,36 @@ export function featPxCell(biome, s) {
   let rows, pal = {}, rot = 0;
   if (s.kind === "BELT") {
     rows = BELT[h].slice(); pal = BELT_PAL; rot = s.dir || 0;
-    const n = h + 1, sp = 20 / n;
-    for (let i = 0; i < n; i++) stamp(rows, CHEV[h], Math.round(sp * (i + 0.5) - 2.5), 6, "k");
+    for (const x of CHEV_X[h]) stamp(rows, CHEV[h], x, 6, "k");
   } else if (s.kind === "STREAM") {
-    rows = bedStream(); pal = STREAM_PAL; rot = s.dir || 0;
-    const ys = [[10], [6, 13], [4, 9, 14]][h];
-    ys.forEach((y, j) => { const x0 = (3 + j * 6) % 20; for (const x of h === 2 ? [x0 - 10, x0] : [x0]) stamp(rows, ARROW[h], x, y - (h === 2 ? 2 : 1), "k"); });
+    rows = bedStream(h); pal = STREAM_PAL; rot = s.dir || 0;
+    [[10], [6, 13], [4, 9, 14]][h].forEach((y, j) => { const x0 = (3 + j * 6) % 20; for (const x of h === 2 ? [x0 - 10, x0] : [x0]) stamp(rows, ARROW[h], x, y - (h === 2 ? 2 : 1), "k"); });
   } else if (s.kind === "GLIDE") {
     rows = bedGlide(s.gx || 0, s.gy || 0);
-    const sp = [20, 10, 7][h];
+    const sp = [20, 10, 10][h];
     for (let y = 0; y < 20; y++) for (let x = 0; x < 20; x++) {
       const d = ((x + y + (s.gx || 0) * 20 + (s.gy || 0) * 20) % sp + sp) % sp, run = ((x - y + (s.gx || 0) * 7 + 40) % 10);
       if (d === 0 && run < 6) at(rows, x, y, "M"); else if (d === 1 && run < 6) at(rows, x, y, "A");
     }
   } else if (s.kind === "BLOOM") {
-    rows = BLOOM_BED.slice(); pal = {f: "tile.floor0.light"};
+    rows = R(fill(20, "a"), 20); pal = {f: "tile.floor0.light"};
     const q = LEAF[h];
     for (let y = 0; y < 10; y++) for (let x = 0; x < 10; x++) { const ch = q[y][x]; if (ch === ".") continue; for (const [X, Y] of [[x, y], [19 - x, y], [x, 19 - y], [19 - x, 19 - y]]) at(rows, X, Y, ch); }
-    put(rows, [[9, 9], [10, 9], [9, 10], [10, 10]], "k"); at(rows, 9, 9, "M");
+    put(rows, [[9, 9], [10, 9], [9, 10], [10, 10]], "k");
   } else if (s.kind === "PLATE") {
-    rows = PLATE_BED.slice(); pal = PLATE_PAL;
-    stamp(rows, ["M..", ".M.", "..M", "..M", ".M.", "M.."], 6, 7, "W");
-    stamp(rows, ["..M", ".M.", "M..", "M..", ".M.", "..M"], 11, 7, "W");
-    if (h === 0) { for (let i = 3; i <= 16; i++) { at(rows, i, 3, "Q"); at(rows, i, 16, "Q"); at(rows, 3, i, "Q"); at(rows, 16, i, "Q"); } }
-    if (h === 1) for (let i = 3; i <= 16; i++) if ((i - 3) % 5 < 3) { at(rows, i, 3, "M"); at(rows, i, 16, "M"); at(rows, 3, i, "M"); at(rows, 16, i, "M"); }
-    const tk = [[9.5], [8, 11], [7, 9.5, 12]][h];
-    for (const v of tk) { const a = Math.floor(v), b = Math.ceil(v); void b; put(rows, [[a, 4], [a, 15], [4, a], [15, a]], "M"); }
+    rows = bedPlate(); pal = PLATE_PAL;
+    stamp(rows, ["M..", ".M.", "..M", ".M.", "M.."], 6, 7, "W");
+    stamp(rows, ["..M", ".M.", "M..", ".M.", "..M"], 11, 7, "W");
+    if (h < 2) for (let i = 3; i <= 16; i++) if (h === 0 || (i - 3) % 5 < 3) put(rows, [[i, 3], [i, 16], [3, i], [16, i]], h ? "M" : "Q");
+    for (const a of [[9], [8, 11], [7, 9, 12]][h]) put(rows, [[a, 5], [a, 14], [5, a], [14, a]], "M");
   } else if (s.kind === "QUICK") {
-    rows = bedQuick();
-    const ys = [[11], [6, 12], [4, 9, 14]][h];
-    for (const y of ys.slice(0, h + 1)) { const spr = WAVE[h]; stamp(rows, spr.map((r) => r.replace(/M/g, "A")), h === 2 ? 4 : 2, y - 2 + 1); stamp(rows, spr, h === 2 ? 4 : 2, y - 2); }
+    rows = bedQuick(); put(rows, SPIRAL[h], "M");
   } else if (s.kind === "PORTAL") {
     rows = PORTAL_BED.slice(); pal = PORTAL_PAL;
-    const sq = [[[7, "M"]], [[5, "q"], [7, "M"]], [[5, "q"], [7, "q"], [8, "M"]]][h];
-    for (const [d, ch] of sq) for (let i = d; i <= 19 - d; i++) { at(rows, i, d, ch); at(rows, i, 19 - d, ch); at(rows, d, i, ch); at(rows, 19 - d, i, ch); }
+    for (const [d, ch] of [[[2, "M"]], [[4, "q"], [2, "M"]], [[4, "q"], [2, "q"], [1, "M"]]][h]) square(rows, d, ch);
   } else if (s.kind === "GATE") {
     rows = GATE_BED.slice(); pal = GATE_PAL;
-    for (const y of [[9], [7, 11], [6, 9, 12]][h]) for (let x = 5; x <= 14; x++) { at(rows, x, y, "M"); at(rows, x, y + 1, "i"); }
+    for (const y of [[9], [7, 11], [6, 9, 12]][h]) for (let x = 5; x <= 14; x++) if (x % 3) { at(rows, x, y, "M"); at(rows, x, y + 1, "i"); }
   }
   let c = {w: 20, h: 20, rows};
   if (rot) c = rot90(c, rot);
@@ -198,14 +184,10 @@ export function featPxCell(biome, s) {
     lip(rows, outer); for (const sd of SIDES) edgeRows(rows, h, sd, nat);
   } else { lip(rows, outer); for (const sd of outer) edgeRows(rows, h, sd, nat); }
   if (s.kind === "PORTAL") {
-    put(rows, [[2, 2], [3, 2], [4, 2], [2, 3], [2, 4], [17, 2], [16, 2], [15, 2], [17, 3], [17, 4], [2, 17], [3, 17], [4, 17], [2, 16], [2, 15], [17, 17], [16, 17], [15, 17], [17, 16], [17, 15]], "M");
-    for (let i = 0; i < (s.pair || 1); i++) put(rows, [[9 + i * 2, h === 2 ? 3 : 1]], "M");
+    for (const [x, y, dx, dy] of [[2, 2, 1, 1], [17, 2, -1, 1], [2, 17, 1, -1], [17, 17, -1, -1]]) put(rows, [[x, y], [x + dx, y], [x, y + dy]], "M");
+    for (const p of PIPS.slice(0, s.pair || 1)) put(rows, p, "P");
   }
-  if (s.kind === "GATE") {
-    const seg = h === 2 ? [[[8, 3], [9, 3], [10, 3], [11, 3]], [[16, 8], [16, 9], [16, 10], [16, 11]], [[8, 16], [9, 16], [10, 16], [11, 16]], [[3, 8], [3, 9], [3, 10], [3, 11]]]
-      : [[[8, 1], [9, 1], [10, 1], [11, 1]], [[18, 8], [18, 9], [18, 10], [18, 11]], [[8, 18], [9, 18], [10, 18], [11, 18]], [[1, 8], [1, 9], [1, 10], [1, 11]]];
-    seg.forEach((p, i) => put(rows, p, i < (s.lit || 0) ? "F" : "q"));
-  }
+  if (s.kind === "GATE") KERB.forEach(([x, y, dx, dy], i) => { for (let k = 8; k <= 11; k++) at(rows, x + dx * k, y + dy * k, i < (s.lit || 0) ? "F" : "W"); });
   return {w: 20, h: 20, rows, pal: {...P, ...pal}};
 }
 export { overlayCell };

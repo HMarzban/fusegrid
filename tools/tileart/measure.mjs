@@ -3,13 +3,13 @@
            coverage, worst case (belt exit cap on)
    covT  = full-render pixels within dE76 10 of a mark tone (mk / full)
    bed   = mean colour of the non-mark pixels in the centre 8..32 box; dE vs floor0 / brickB / wall
-   dL    = mark L* - bed L* (abs); tex = bed L* spread (p95-p5)
+   dL    = mean L* of the opaque mark px (o.m alpha > 0.85) in the centre box - bed L* (abs); tex = bed L* spread (p95-p5)
    cvd   = min over protan/deutan/tritan of dE(mark, bed) (audit matrices)
    Same labOf / dE as tests/items-art.test.mjs. Prints JSON. */
 import {writeFileSync} from "node:fs";
 import {withPage, TILES} from "./harness.mjs";
-const mod = process.argv[2] || "/src/render/featdraw.js", out = process.argv[3];
-const T = TILES.map(([w, p, bn, s]) => [w, p, bn, s.kind === "BELT" ? {...s, exit: true} : s]);
+const mod = process.argv[2] || "/src/render/featdraw.js", out = process.argv[3], LIT = +(process.argv[4] || 0);
+const T = TILES.map(([w, p, bn, s]) => [w, p, bn, s.kind === "BELT" ? {...s, exit: true} : s.kind === "GATE" && LIT ? {...s, lit: LIT} : s]);
 await withPage(async (P) => {
   const res = await P.ev(`Promise.all([import('${mod}'),import('/src/core/config.js')]).then(([F,C])=>{
     const rgb=(h)=>{const n=parseInt(h.slice(1),16);return[(n>>16)&255,(n>>8)&255,n&255]};
@@ -24,9 +24,9 @@ await withPage(async (P) => {
       const cv=document.createElement('canvas');cv.width=cv.height=S;const g=cv.getContext('2d');g.scale(4,4);F.paintCell(g,b,sp,{m:true});
       const a=g.getImageData(0,0,S,S).data;let on=0;for(let i=3;i<a.length;i+=4)on+=a[i]/255;
       const cf=document.createElement('canvas');cf.width=cf.height=S;const gf=cf.getContext('2d');gf.scale(4,4);F.paintCell(gf,b,sp);
-      const d=gf.getImageData(0,0,S,S).data,mks=[t.mk,t.full].map(rgb);let mt=0,bed=[0,0,0],nb=0;const Ls=[];
-      for(let i=0;i<d.length;i+=4){const c=[d[i],d[i+1],d[i+2]],mark=a[i+3]>128;if(mks.some(m=>dE(c,m)<10))mt++;const px=(i/4)%S,py=((i/4)/S)|0;if(!mark&&px>=32&&px<128&&py>=32&&py<128){bed[0]+=c[0];bed[1]+=c[1];bed[2]+=c[2];nb++;Ls.push(lab(c)[0]);}}
-      bed=bed.map(v=>v/nb);Ls.sort((x,y)=>x-y);const mk=rgb(t.mk);
+      const d=gf.getImageData(0,0,S,S).data,mks=[t.mk,t.full].map(rgb);let mt=0,bed=[0,0,0],nb=0,mc=[0,0,0],nm=0;const Ls=[];
+      for(let i=0;i<d.length;i+=4){const c=[d[i],d[i+1],d[i+2]],mark=a[i+3]>128;if(mks.some(m=>dE(c,m)<10))mt++;const px=(i/4)%S,py=((i/4)/S)|0;if(a[i+3]>217&&px>=32&&px<128&&py>=32&&py<128){mc[0]+=c[0];mc[1]+=c[1];mc[2]+=c[2];nm++;}if(!mark&&px>=32&&px<128&&py>=32&&py<128){bed[0]+=c[0];bed[1]+=c[1];bed[2]+=c[2];nb++;Ls.push(lab(c)[0]);}}
+      bed=bed.map(v=>v/nb);Ls.sort((x,y)=>x-y);const mk=nm?mc.map(v=>v/nm):rgb(t.mk);
       const r1=v=>Math.round(v*10)/10;
       res.push({tile:w+'-'+p,heat:['core','plus','max'][h],cov:r1(100*on/(S*S)),covT:r1(100*mt/(S*S)),
         bed:'#'+bed.map(v=>Math.round(v).toString(16).padStart(2,'0')).join(''),
