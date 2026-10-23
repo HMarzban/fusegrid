@@ -16,6 +16,15 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-23 — Tile art detail pass + clean tiles-only page
+- The owner asked for a page with only the tiles (no boards) and for better graphics. Two art leads did detail passes in all 3 looks:
+  - walls: material texture plus top-left light, bevel, inner and contact shadow;
+  - the 8 floor tiles: STREAM, QUICKSAND, PORTAL and GATE painted for the first time.
+- Isolated exports are in `.superpowers/sdd/2026-10-23-tile-art/`. The clean page is https://claude.ai/artifact/47wrvBBwmuzqiUrwKDn6A9 (Claude Design is not writable from this session).
+- Costs: PIXEL walls 150,329 B (over the cap, waits for #15); 2D wall bake 10–14 ms; 3D 141 draws (142 with tiles).
+- Open: ICE PIXEL walls read as dark dashes in play.
+- New worktrees `af63096…` and `a7bf1298…` are locked.
+
 ## 2026-10-21 — Wall round: living-world wall families (designed and prototyped)
 - Owner rulings W1–W6:
   - ship soon on today's boards, visual only;
