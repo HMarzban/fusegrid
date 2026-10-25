@@ -15,6 +15,7 @@ import {captureSprite, drawPlayerBody, drawEnemyBody, drawBombBody,
 import {topRows, sideRows, wallShapes, paintShapes, glossOf, shinOf} from "../wallart.js";
 import {WV_N} from "../wallvar.js";
 import {dk} from "../icons.js";
+import {paintFloor} from "../floorart.js";
 import {ENEMY_TYPES, ENEMY_COLORS} from "./entities.js";
 
 const S=64, K=S/(CFG.TILE*2.05);
@@ -142,7 +143,10 @@ export function atlasSources(mk, level=1){
       const gl=strip("#000",(b,s)=>{ const g=glossOf(b,s); return "rgb("+g+","+g+","+g+")"; });
       o.wallSurf=surfStrip(o.wallStrip,gl,C,shinOf(B),mk);
       o.brick=bakedTile(bi,"brick");
-      o.floor=bakedTile(bi,"floorA");
+      /* base floor (integration 2026-10-25): one slab painted at 2x from the
+         shared floor painter, floor0 bed (the instance colour carries the
+         parity); the map is minified ~2x at rig C, so it gets mipmaps */
+      o.floor=captureSprite(CFG.TILE*2,CFG.TILE*2,(c)=>{ c.scale(2,2); paintFloor(c,B,0,0,2); },mk);
      }catch(_){ /* stay asset-free */ }
    }
   return o;
@@ -190,6 +194,7 @@ export function buildAtlas(mk, level=1){
     /* the surface strip is data (relief / gloss), never colour: linear, and
        filtered so its slopes stay smooth under the bump derivatives */
     if(k==="wallSurf"){ tx.colorSpace=THREE.NoColorSpace; tx.magFilter=THREE.LinearFilter; tx.minFilter=THREE.LinearFilter; }
+    if(k==="floor"){ tx.magFilter=THREE.LinearFilter; tx.minFilter=THREE.LinearMipmapLinearFilter; tx.generateMipmaps=true; }
     tx._shared=true;
     atlas[k]=tx; n++;
    }

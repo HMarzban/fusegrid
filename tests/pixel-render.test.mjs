@@ -506,7 +506,7 @@ const rasters = (log) => log.filter((q) => q[0] === "hi" && q[1] === "drawImage"
 // ---- CLASSIC 2D unchanged ----
 {
   const h = await classicHash((p) => import(pathToFileURL(join(ROOT, p)).href));
-  check("CLASSIC 2D call-log hash unchanged (pinned from fe101c5)", h === "f43abc61:32596", h);
+  check("CLASSIC 2D call-log hash unchanged (pinned from fe101c5)", h === "d5c09b1b:52162", h);
 }
 
 // ---- hygiene ----

@@ -4,6 +4,7 @@ import { drawEnemyBody } from "./enemybody.js";
 import { drawFeat } from "./featdraw.js";
 import { wallCodes, WALL_VARS } from "./wallvar.js";
 import { wallShapes, paintShapes } from "./wallart.js";
+import { paintFloor, floorVar, FLOOR_V } from "./floorart.js";
 export { drawIcon, drawEnemyBody };
 
 /* RENDER LAYER — reads world, never mutates it. Every draw fn takes a 2D
@@ -44,7 +45,7 @@ export function captureSprite(w, h, paint, mk) {
 }
 
 /* ---- one-time sprite atlas (per biome) ---- */
-const BAKED = { floorA: {}, floorB: {}, wall: {}, wallV: {}, brick: {}, ready: false };
+const BAKED = { floorA: {}, floorB: {}, floorV: {}, wall: {}, wallV: {}, brick: {}, ready: false };
 /* one wall painter (wall round prototype): the bake calls it at 0,0, the
    vector fallback at px,py, so Node and the browser draw the same families */
 export function paintWall(c, b, code, px, py) {
@@ -63,22 +64,15 @@ export function bakeAtlas() {
   biomeOf(1); // touch
   for (let i = 0; i < BIOMES.length; i++) {
     const b = biomeOf(i + 1);
-    const fA = make(CFG.TILE, CFG.TILE),
-      a = fA.getContext("2d");
-    a.fillStyle = b.floor0;
-    a.fillRect(0, 0, CFG.TILE, CFG.TILE);
-    a.strokeStyle = b.floor1;
-    a.globalAlpha = 0.25;
-    a.strokeRect(1, 1, CFG.TILE - 2, CFG.TILE - 2);
-    BAKED.floorA[i] = fA;
-    const fB = make(CFG.TILE, CFG.TILE),
-      bb = fB.getContext("2d");
-    bb.fillStyle = b.floor1;
-    bb.fillRect(0, 0, CFG.TILE, CFG.TILE);
-    bb.strokeStyle = b.floor0;
-    bb.globalAlpha = 0.25;
-    bb.strokeRect(1, 1, CFG.TILE - 2, CFG.TILE - 2);
-    BAKED.floorB[i] = fB;
+    BAKED.floorV[i] = [0, 1].map((par) =>
+      Array.from({ length: FLOOR_V }, (_, v) => {
+        const f = make(CFG.TILE, CFG.TILE);
+        paintFloor(f.getContext("2d"), b, par, v);
+        return f;
+      }),
+    );
+    BAKED.floorA[i] = BAKED.floorV[i][0][0];
+    BAKED.floorB[i] = BAKED.floorV[i][1][0];
     BAKED.wallV[i] = WALL_VARS.map((_, v) => {
       const w = make(CFG.TILE, CFG.TILE);
       paintWall(w.getContext("2d"), b, v, 0, 0);
@@ -127,8 +121,7 @@ function biomeIndex(level) {
 export function drawGrid(c, world) {
   const bi = biomeIndex(world.level),
     b = biomeOf(world.level);
-  const fA = BAKED.floorA[bi],
-    fB = BAKED.floorB[bi],
+  const fV = BAKED.floorV[bi],
     wV = BAKED.wallV[bi],
     WC = wallCodes(world);
   for (let y = 0; y < CFG.ROWS; y++)
@@ -142,14 +135,13 @@ export function drawGrid(c, world) {
         else paintWall(c, b, v, px, py);
       } else if (world.feat && world.feat[key(x, y)]) {
         drawFeat(c, world, x, y, px, py);
-      } else if (fA) {
-        c.drawImage((x + y) & 1 ? fB : fA, px, py);
+      } else if (fV) {
+        c.drawImage(fV[(x + y) & 1][floorVar(x, y, world.level)], px, py);
       } else {
-        c.fillStyle = (x + y) & 1 ? b.floor1 : b.floor0;
-        c.fillRect(px, py, CFG.TILE, CFG.TILE);
-        c.strokeStyle = "rgba(120,160,220,0.05)";
-        c.lineWidth = 1;
-        c.strokeRect(px + 0.5, py + 0.5, CFG.TILE - 1, CFG.TILE - 1);
+        c.save();
+        c.translate(px, py);
+        paintFloor(c, b, (x + y) & 1, floorVar(x, y, world.level));
+        c.restore();
       }
     }
 }
