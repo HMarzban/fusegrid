@@ -15,10 +15,11 @@ import {applyBright} from "./lights.js";
 import {createRig, applyOrbit, CAM_FOV} from "./camrig.js";
 import {introCam} from "./flythrough.js";
 import {createParticles} from "./particles.js";
+import {ambientClock} from "../ambient.js";
 import {buildAtlas} from "./textures.js";
 import {stageGlow, stageBack, hudPlate3} from "../frame.js";
 import {drawHudChips, drawAbilityBar, drawOverlay, overlayBox, drawCoach, drawCoach2} from "../scenes.js";
-import {onEvent, updateFx, getShake, getFlash, getFx, feedFx, drawFxOverlay, drawPickupFx, syncFx, initFx} from "../fx.js";
+import {onEvent, updateFx, getFxOpts, getShake, getFlash, getFx, feedFx, drawFxOverlay, drawPickupFx, syncFx, initFx} from "../fx.js";
 
 const W=CFG.COLS*CFG.TILE, H=CFG.ROWS*CFG.TILE;
 /* the board sits VIEW_DY px lower in the canvas (a view-offset shift, rig and lens untouched): the plate takes the top 40, so the slack was all below */
@@ -120,6 +121,7 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
     gl.shadowMap.type=shadow==="sharp"?THREE.PCFShadowMap:THREE.PCFSoftShadowMap;
    }
   let sc=null, brightK=1;
+  const aclock=ambientClock();
   function rebuild(world){
     if(sc){ scene3.remove(sc.group); disposeGroup(sc.group); }
     sc=buildScene(world,getAtlas(world),brightK);
@@ -161,6 +163,7 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
     wasP=paused;
     if(!paused)pzT=null; else if(pzT==null)pzT=world.time;
     consumeEvents(world, dt, !(o&&o.sfx===false));
+    const ambOn=!!(o&&o.hud===true); if(ambOn)aclock.tick(world,dt||0);
     const bk=o&&typeof o.bright==="number"&&isFinite(o.bright)?o.bright:brightK;
     const pop=o&&o.pop!=null?o.pop:1, sh=paused?STILL:getShake();
     const tB=paused?pzT:world.time, g=o&&o.ghost;
@@ -180,6 +183,7 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
         else if(bChanged&&sc.lights)applyBright(sc.lights,brightK);
       }finally{ world.time=t0; }
       if(sc)sc.pools.ghost(g);
+      if(sc&&sc.amb)sc.amb.update(aclock.t,ambOn,getFxOpts().partK,dprUsed);
       /* Opening: o.pop scales the player slot group (MAKO's pop-in; hidden at
          0, never a zero matrix), 1 outside INTRO. No mesh is added. */
       if(sc){ if(pop<=0)sc.pools.player.visible=false; sc.pools.player.scale.setScalar(pop>0?pop:1); }

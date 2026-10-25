@@ -11,6 +11,7 @@ import {wallCodes} from "../wallvar.js";
 import {cellSpec} from "../featdraw.js";
 import {floorVar} from "../floorart.js";
 import {drawShadows} from "../featpxcells.js";
+import {drawAmbient} from "./ambient.js";
 import {ITEM_FAMILY} from "../icons.js";
 import {GHOST_A} from "../sprites.js";
 import {PX_T} from "./timing.js";
@@ -205,6 +206,7 @@ export function drawPixelWorld(c, world, V) {
   if (!world || !world.grid) return 0;
   c.globalAlpha = 1;
   drawTiles(c, V, world);
+  drawAmbient(c, V, world, "under");
   drawShadows(c, V, world, blit, snapArt);
   drawItems(c, V, world);
   drawBombs(c, V, world);
@@ -212,6 +214,7 @@ export function drawPixelWorld(c, world, V) {
   drawGhost(c, V, world);
   drawFoes(c, V, world);
   drawMako(c, V, world);
+  drawAmbient(c, V, world, "over");
   drawParts(c, V);
   drawShots(c, V, world);
   c.globalAlpha = 1;

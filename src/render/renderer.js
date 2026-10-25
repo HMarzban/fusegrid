@@ -10,6 +10,7 @@ import {draw3dBackground, buildPainters, byDepth} from "./r3d/scene3d.js";
 import {PROJ, project} from "./r3d/camera.js";
 import {wellBoard, hudPlate, stageGlow} from "./frame.js";
 import {drawDepth} from "./depth2d.js";
+import {createAmbient2d} from "./ambient2d.js";
 
 const isoProj=(bx,by,h)=>{ const q=project(bx/CFG.TILE,by/CFG.TILE); return {x:q.sx,y:q.sy-(h||0)}; };
 
@@ -43,6 +44,7 @@ export function createRenderer(canvas, opts={}){
        drawImage:noop,fillText:noop,strokeText:noop,setTransform:noop};
   if(ctx.imageSmoothingEnabled!==undefined) ctx.imageSmoothingEnabled=false;
   const audio = opts.audio || null;
+  const amb = createAmbient2d();
   initFx();
   /* GRAPHICS 2026-10-10. Render-on-change is armed by setPerf only, so a
      renderer nobody tunes is byte-identical to before: when the board
@@ -80,6 +82,7 @@ export function createRenderer(canvas, opts={}){
     wasP=paused;
     if(!paused) pzT=null; else if(pzT==null) pzT=world.time;
     consumeEvents(world, dt, !(o&&o.sfx===false));
+    if(kind==="2d"&&o&&o.hud===true) amb.tick(world, dt);
     if(kind==="2d") stageGlow(canvas, world.level);
     const shake=paused?STILL:getShake();
     const g=o&&o.ghost, busy=!paused&&(getFx().length>0||shake.x!==0||shake.y!==0);
@@ -111,6 +114,7 @@ export function createRenderer(canvas, opts={}){
       drawBiomeBackground(ctx, world, armed);
       drawGrid(ctx, world);
       drawDepth(ctx, world);
+      if(o&&o.hud===true) amb.draw(ctx, world, "under");
       wellBoard(ctx, world.level);
       drawBricks(ctx, world);
       drawItems(ctx, world);
@@ -126,6 +130,7 @@ export function createRenderer(canvas, opts={}){
         ctx.save(); ctx.translate(p0.x,p0.y); ctx.scale(o.pop,o.pop);
         drawPlayerBody(ctx, world, p0); ctx.restore();
       }
+      if(o&&o.hud===true) amb.draw(ctx, world, "over");
       drawFx(ctx);
     }
     ctx.restore();

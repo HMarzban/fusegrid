@@ -220,10 +220,11 @@ function mkE(type, x, y) {
     nb * SLOT_MESH.bomb +
     POWER.length * SLOT_MESH.item +
     2 +
-    1;
+    1 +
+    1; // ambient Points (2026-10-25)
   check(
-    "fat-world draw calls stay 141",
-    calls === want && want === 141 && calls <= 500,
+    "fat-world draw calls stay 142",
+    calls === want && want === 142 && calls <= 500,
     String(calls),
   );
   const im = [];

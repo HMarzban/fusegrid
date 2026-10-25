@@ -15,6 +15,7 @@ import {live} from "./upload.js";
 import {buildFeat} from "./featmesh.js";
 import {wallCodes} from "../wallvar.js";
 import {RIM_TEX, nearX, NEAR_Z} from "./rimart.js";
+import {createAmbient} from "./ambientfx.js";
 import {rimFX, floorFX, featAO, createAO} from "./wellfx.js";
 
 const W=CFG.COLS*CFG.TILE, D=CFG.ROWS*CFG.TILE;
@@ -178,12 +179,14 @@ export function buildScene(world, atlas, bright){
   // entity pools (S2): fixed slots, visibility-toggled, synced every update
   const pools=createPools(biome,atlas);
   group.add(pools.group);
+  const amb=createAmbient(biome);
+  group.add(amb.points);
 
   const mask=new Uint8Array(CFG.COLS*CFG.ROWS),
     wMask=new Uint8Array(CFG.COLS*CFG.ROWS);
   let fresh=true, lastG=null, lastS=-1;
   group.userData.ao=ao;
-  const scene={group,level:world.level,featRef:world.feat||null,brick,pools,lights,brickV:0,
+  const scene={group,amb,level:world.level,featRef:world.feat||null,brick,pools,lights,brickV:0,
     update(world){
       let diff=fresh, wDiff=fresh||world.grid!==lastG||(world.seed>>>0)!==lastS;
       lastG=world.grid; lastS=world.seed>>>0;

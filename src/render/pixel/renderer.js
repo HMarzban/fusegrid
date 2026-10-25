@@ -45,6 +45,7 @@ import {setPixelArt, hudIcon} from "../hudart.js";
 import {createView, resetView, drawPixelWorld, trackGrid} from "./world.js";
 import {createOneShots, feedShot} from "./oneshot.js";
 import {animClock, newClock} from "./anim.js";
+import {armAmbient} from "./ambient.js";
 import {hudPlate, stageGlow} from "../frame.js";
 import {NATIVE_W, NATIVE_H, evenShake, kOf, pxM, zOf, finalMatrix} from "./snap.js";
 
@@ -195,6 +196,7 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
     stageGlow(overlayCanvas, world.level);
     consumeEvents(world, dt, !(o && o.sfx === false));
     V.t = clock.t; V.dt = clock.dt;
+    armAmbient(V, world, o, dt);
     V.shots.expire(V.t);
     trackGrid(V, world);
     V.ghost = (o && o.ghost) || null;
