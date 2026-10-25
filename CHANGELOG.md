@@ -32,6 +32,12 @@ it will be named shell v185. What it adds, for the record:
   recessed well with a glow, replacing the plain border.
 - **Depth.** Walls, bricks, pickups, bombs and foes cast soft shadows, bricks
   are calmer so pickups stand out, and REAL 3D gains relief and gloss.
+- **Enemies and pickups come alive.** Every foe blinks, breathes and bobs, pops
+  in when it spawns, squashes and flashes once when it dies, and hunters narrow
+  their eyes and lean toward you. Pickups hover on a soft shadow with a glint,
+  and each kind bursts its own way when you collect it (rings, spark fans,
+  streaks, rising diamonds). All three looks share one timing table, REAL 3D
+  pickups are now glyph badges, and PIXEL foes got a 4-phase walk.
 - **Ambient motion.** Pollen, snow, steam, ripples, dust, sand, wisps and gold
   dust drift on the play clock. It freezes on pause, halves on EFFECTS LOW and
   turns off if your device asks for reduced motion.

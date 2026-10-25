@@ -204,7 +204,7 @@ not shell screens. Do not add them as `SCREEN` values.
     exclusive, written together through one `onSettings(…,"render")`);
     boot precedence `?render=3d|px` > persisted `r3d` > `px` (`bootRender`);
     `?render=3d|px` only seed the boot, iso is pinned for the session.
-    Art: 165 manifest cells (`manifest.js`, derived from FOES / POWER /
+    Art (255 cells since the foe/item round; was 165): manifest cells (`manifest.js`, derived from FOES / POWER /
     BIOMES / bomb kinds, so a new foe, pickup or biome without cells falls back
     visibly and `tests/pixel-art.test.mjs` fails on any silent fallback), all
     authored as palette-SLOT string grids in `art/*.js` (never hex; every hex
@@ -850,8 +850,13 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
       renderer-owned PLAY-only clock (`ambientClock`; `world.time` keeps ticking in
       PAUSE, so never use it), EFFECTS LOW halves the count,
       prefers-reduced-motion turns it off, nothing cycles faster than 2.4 s.
-      Menus, title and ATTRACT draw none. CLASSIC hash `c7b4c843:71320`; px cap
-      152 KB (the px tree is a lazy import since #15).
+      Menus, title and ATTRACT draw none. FOES AND ITEMS (owner 2026-10-25): the shared
+      timing spec is `src/render/motion.js` + `entityfx.js` (`fxOf(world, look)` turns
+      `kill` / `power` into ghosts and bursts on each look's PLAY-frozen clock);
+      REAL 3D fat-world is now 156 draws (158 worst case; budget 160); the 2D foe
+      silhouettes are canon for all three looks; pickups never change shape or
+      colour. CLASSIC hash `127e8b05:72409`; px cap 152 KB (the px tree is a lazy
+      import since #15, about 146 KB).
 - Walls (owner rulings 2026-10-21, designed and prototyped, NOT built; issues
   #17 for CLASSIC 2D + REAL 3D and #31 for PIXEL after #15; record
   `docs/superpowers/specs/2026-10-21-wall-art-design.md`).

@@ -629,7 +629,12 @@ Design work that stayed on the drawing board. None of it is in the game.
   shadow, calmer bricks and 3D relief, and last came slow ambient motion
   (pollen, snow, steam, ripples, dust, sand, wisps, gold dust) on the play
   clock. About a dozen agents worked in parallel lanes, one file area each.
-  Still on a local branch;
+  Then the foes and pickups got their turn: a critic read the code and the
+  strips, a technical artist wrote one shared timing table for all three
+  looks, and four lanes (2D foes, 2D items, REAL 3D, PIXEL) gave every foe a
+  blink, a spawn pop, a death squash and a hunter cue, and every pickup a hover,
+  a glint and its own collect burst. The 3D pickups had been floating
+  primitives and became glyph badges. Still on a local branch;
   [record](superpowers/specs/2026-10-25-board-look-depth-ambient-design.md).
 
 ---

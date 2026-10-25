@@ -1,4 +1,4 @@
-# The board look: outline, depth and ambient motion (2026-10-25)
+# The board look: outline, depth, ambient motion, foes and items (2026-10-25)
 
 Owner asks, in order: "let's do the refactor correctly and refactor all with
 the new wall and floor, I do not see a new look or changes a lot at all";
@@ -7,7 +7,7 @@ and C side by side in parallel before building"; "Go with A and B together:
 world bezel plus the recessed well"; "can we work on the depth of the
 graphics and work on the details more? can you improve it?"; "Do the ambient
 motion round next: motes, glints, steam, drift on the PLAY clock in all three
-looks, in parallel lanes."
+looks, in parallel lanes"; "now can you work on the enemies and the Items also in order to improve the details and animations like what we have done for floor and walls? run team of agents and run the related skills and also agents".
 
 This record owns the integrated board look. Tile look: [direction D
 record](2026-10-25-floor-tiles-direction-d-design.md). Wall family:
@@ -31,6 +31,7 @@ the live game (shell v184).** Play it with `PORT=8091 node serve.js` in
 | Board outline | option A world bezel + option B recessed well | `frame.js`, `frameart.js`, `three/rimart.js`, `three/wellfx.js` |
 | Depth | shadows, AO, contact shadows, brick value down, floor detail, 3D relief | `depth2d.js`, `three/groundfx.js`, `three/materials.js`, `three/textures.js` |
 | Ambient motion | one spec, three painters | `ambient.js`, `ambient2d.js`, `three/ambientfx.js`, `pixel/ambient.js` |
+| Foes and items | one shared motion spec, four lanes | `motion.js`, `entityfx.js`, `enemybody.js`, `itemdraw.js`, `fx.js`, `three/entities.js`, `three/entityanim.js`, `three/burstfx.js`, `pixel/entities.js`, `pixel/foegen.js` |
 
 A real page plays gen-2 boards (the ones that carry floor tiles) by default.
 `?gen=1` or `?code=` keep today's boards. Node worlds stay gen 1 (the page
@@ -55,8 +56,8 @@ accident.
   is frozen.
 - **px JS cap 152 KB** (was 122, then 140, 145): the px tree is a lazy import,
   so CLASSIC visitors no longer pay for it; the cap stays as a growth tripwire.
-- **CLASSIC call-log hash pin** `c7b4c843:71320` (was `97480c1c:22630`;
-  re-pinned for walls, floor, bezel, well, depth and ambient, each time with
+- **CLASSIC call-log hash pin** `127e8b05:72409` (was `97480c1c:22630`;
+  re-pinned for walls, floor, bezel, well, depth, ambient and the foe/item round, each time with
   the diff proven to be the intended art).
 - **Gates:** the old "marks <= 30 %" gate became edge-energy busyness <= 1.6x
   round 3, plus heat separation >= 4 at 40 px, bed vs BRICK dE >= 14, slot hull,
@@ -84,6 +85,49 @@ Rules: alpha <= 0.34 (dots 3 px or less, big shapes fainter), nothing cycles
 faster than 2.4 s, EFFECTS LOW halves the count, prefers-reduced-motion turns it
 off, 2D costs at most about 27 cheap fills per frame, REAL 3D adds one draw
 (142, 143 in a tile room, 144 with a ghost), PIXEL steps at 8 Hz.
+
+## Foes and items (animation and detail)
+
+`src/render/motion.js` is the one timing spec for all three looks (pure, frozen
+tables, hash-based, no `Math.random`, never `world.time`): `FOE_M[type]` (bob,
+idle, breathe, blink, lean, sway), `phaseOf` (from the foe's spawn home, never
+an array index), `blinkAt`, `spawnK` (pop 0.4 to 1.1 to 1 over 0.25 s plus a
+floor ring, then a slow breathe, alpha continuous), `deathK` (0.35 s: squash
+wide and low, one flash frame, shrink; the flash is a tint under REDUCE FLASH),
+`hitK`, `leanAt`, `itemIdle` (hover +-2 px, a ground shadow that tightens at
+the apex, a glint sweep every 2.8 s) and `COLLECT[kind]` / `collectParticle`
+(per-kind bursts: ring for shield / pass / remote, fan for fire / bomb / throw /
+power, trail for speed / line / pierce, rising diamonds for heart, pop for
+kick; never plus shapes). `entityfx.js` (`fxOf(world, look)`) turns the sim's
+`kill` and `power` events into short render-side ghosts and bursts on each look's
+own PLAY-frozen clock. Nothing in the sim changed: no entity id, spawn event or
+hunter windup exists, so everything is derived from `home`, `invulnT`, `hunt`
+and the existing events.
+
+- **CLASSIC 2D:** foes blink, breathe and bob from the spec, with a rim light and
+  one surface detail each; spawn pop, death squash, a visible hunter cue (narrowed
+  eyes, brow furrow, a slow halo and floor ring). Pickups hover on a soft shadow
+  with a glint; the old whole-disc scale (which blurred the outline) moved to the
+  ring; four families read apart by ring pattern in grayscale; per-kind bursts
+  (round 3 px dots with a dark rim, 2 px rings).
+- **REAL 3D:** foes move by transforms only (the four-mesh child ABI is intact):
+  blink on the eye plane, personality, smoothed facing, hunter lean, spawn pop,
+  death through a pool of 3 ghost bodies. Pickups are glyph badges (the same
+  glyph as 2D on a raked face plate, one ring, family sets the silhouette).
+  Collect bursts are one extra `Points` draw tinted to the kind. Fat-world
+  draw count is **156** (158 worst case), under the 160 cap.
+- **PIXEL:** a 4-phase walk for walker, chaser, knight, burrow and fast, idle
+  breath and blink frames, hem and flame frames, a stepped spawn ring, a wide-low
+  death frame, 1 px contour on the small foes, diagonal glints on the bomb /
+  throw / kick / line pickups (no plus shapes), kind-specific bursts drawn
+  straight onto the board so they never evict kill puffs. The px tree is about
+  146 KB of the 152 KB cap. The 2D silhouettes are canon for all three looks.
+- **Loose ends of this round:** hunter windup needs a sim field (out of scope);
+  3D cannot fade a single foe (shared materials), so spawn is scale plus a ring;
+  PIXEL surface detail for chaser, burrow, boomerang, rocket and fast is thin; a
+  3D death or burst can end early after a PAUSE resume because `world.time`
+  keeps ticking; the ENEMIES guide page shows the static pose; no real-GPU frame
+  time for the new motion.
 
 ## Loose ends (what is NOT done)
 
