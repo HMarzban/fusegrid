@@ -76,9 +76,9 @@ check(
   JSON.stringify(SCREEN),
 );
 check(
-  "GUIDE_ROWS frozen, the three folded rows in order",
+  "GUIDE_ROWS frozen, the four folded rows in order",
   Object.isFrozen(GUIDE_ROWS) &&
-    GUIDE_ROWS.join("|") === "HOW TO PLAY|ITEMS|ENEMIES",
+    GUIDE_ROWS.join("|") === "HOW TO PLAY|ITEMS|ENEMIES|FLOOR",
   GUIDE_ROWS.join("|"),
 );
 check(
@@ -455,7 +455,7 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
   a.screen = SCREEN.GUIDE;
   a.guideRow = 0;
   a.move(-1);
-  check("GUIDE cursor wraps UP past top", a.guideRow === 2, a.guideRow);
+  check("GUIDE cursor wraps UP past top", a.guideRow === 3, a.guideRow);
   a.move(1);
   a.move(1);
   check("GUIDE cursor wraps DOWN past bottom", a.guideRow === 1, a.guideRow);
@@ -1333,9 +1333,9 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
 // ---- R6: SCREEN.TROPHIES (the MEDALS page) is appended, opened from STATS by T ----
 {
   check(
-    "R6 TROPHIES appended at 13 — never inserted, STATS stays 12 (GRAPHICS 14 after it)",
-    SCREEN.TROPHIES === 13 && SCREEN.STATS === 12 && SCREEN.GRAPHICS === 14 &&
-      Object.keys(SCREEN).length === 15,
+    "R6 TROPHIES appended at 13 — never inserted, STATS stays 12 (GRAPHICS 14, FLOOR 15 after it)",
+    SCREEN.TROPHIES === 13 && SCREEN.STATS === 12 && SCREEN.GRAPHICS === 14 && SCREEN.FLOOR === 15 &&
+      Object.keys(SCREEN).length === 16,
     JSON.stringify(SCREEN),
   );
   check(

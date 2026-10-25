@@ -329,6 +329,7 @@ export function createGame(canvas, opts = {}) {
         sB !== SCREEN.SCORES &&
         sB !== SCREEN.ITEMS &&
         sB !== SCREEN.ENEMIES &&
+        sB !== SCREEN.FLOOR &&
         sB !== SCREEN.STATS && sB !== SCREEN.TROPHIES
       )
         audio.play("uiSel");

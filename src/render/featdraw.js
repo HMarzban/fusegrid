@@ -84,10 +84,11 @@ export function specKey(s) {
   return [s.kind, s.h, s.par | 0, s.dir, s.exit ? 1 : 0, s.phase, s.outer && s.outer.join(""), s.state, s.lit, s.pair, s.kind === "GLIDE" ? s.gx + "," + s.gy : ""].join("|");
 }
 const BAKE = new Map();
-export function drawFeat(c, w, x, y, px, py) {
-  const s = cellSpec(w, x, y), b = biomeOf(w.level);
+/* one baked 40x40 frame per (biome, spec); the GUIDE FLOOR page draws the same frames at any size */
+export function drawSpec(c, b, s, px, py, size = TL) {
+  if (typeof Path2D === "undefined") return;
   if (typeof document === "undefined" || !document.createElement) {
-    c.save(); c.translate(px, py); paintCell(c, b, s); c.restore(); return;
+    c.save(); c.translate(px, py); if (size !== TL) c.scale(size / TL, size / TL); paintCell(c, b, s); c.restore(); return;
   }
   const k = b.name + "|" + specKey(s);
   let cv = BAKE.get(k);
@@ -97,5 +98,8 @@ export function drawFeat(c, w, x, y, px, py) {
     if (BAKE.size > 600) BAKE.clear();
     BAKE.set(k, cv);
   }
-  c.drawImage(cv, px, py, TL, TL);
+  c.drawImage(cv, px, py, size, size);
+}
+export function drawFeat(c, w, x, y, px, py) {
+  drawSpec(c, biomeOf(w.level), cellSpec(w, x, y), px, py);
 }

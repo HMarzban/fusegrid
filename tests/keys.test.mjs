@@ -496,11 +496,11 @@ withSettings(null, () => {
 // 11: the AA deferral (a live context rebuild on leaving the page) needs rAF and
 // a WebGL renderer cache; tests/frameloop.test.mjs pins it with injected rAF.
 
-// ---- GUIDE + HOW TO / ITEMS / ENEMIES ----
+// ---- GUIDE + HOW TO / ITEMS / ENEMIES / FLOOR ----
 for (let i = 0; i < GUIDE_ROWS.length; i++) {
   const g = menu(); toRow(g, 4); press(g, "Enter");
   toRow(g, i); press(g, "Enter");
-  const want = [SCREEN.HOWTO, SCREEN.ITEMS, SCREEN.ENEMIES][i];
+  const want = [SCREEN.HOWTO, SCREEN.ITEMS, SCREEN.ENEMIES, SCREEN.FLOOR][i];
   const opened = g.app.screen === want;
   press(g, "Escape"); const esc = g.app.screen;
   press(g, "Enter"); press(g, "Enter");

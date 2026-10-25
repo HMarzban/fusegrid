@@ -23,6 +23,7 @@ const SCREEN_NAME = [
   "STATS",
   "TROPHIES",
   "GRAPHICS",
+  "FLOOR",
 ];
 
 export function mountDebugHook(h) {

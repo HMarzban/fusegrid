@@ -39,14 +39,40 @@ export function pageScale(cells, slot) {
   return GUIDE_S;
 }
 
-export function blitCell(c, fs, cx, cy, s) {
+export function blitCell(c, fs, cx, cy, s, ref) {
   if (!fs.length) return;
-  const f0 = fs[0], b = opaqueBox(f0);
+  const f0 = ref || fs[0], b = opaqueBox(f0);
   const X = Math.round(cx - (b.x + b.w / 2) * s), Y = Math.round(cy - (b.y + b.h / 2) * s);
   c.save();
   c.imageSmoothingEnabled = false;
   for (const f of fs) c.drawImage(f.im, X + (f0.ax - f.ax) * s, Y + (f0.ay - f.ay) * s, f.w * s, f.h * s);
   c.restore();
+}
+
+/* The GUIDE pages are alive in PIXEL: the same frames the board plays (idle breath + hashed blink, rocket flame, sentry pulse, spin, shade hem, burrow plume,
+   pickup ring flip + hover), picked by a pure function of the page clock. {fs, ref}: blitCell centres on ref (the still frame), so no frame shifts the cell. */
+const SEQ3 = [0, 1, 0, 2], PULSE = [0, 1, 2, 1], tick = (t, fps, n) => Math.floor(Math.max(0, t) * fps + 1e-9) % n;
+const seedOf = (k) => { let h = 0; for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) | 0; return (h & 255) / 255; };
+const blinking = (k, t) => { const p = 3.4 + seedOf(k) * 1.6, u = (t + seedOf(k + "b") * p) % p; return u < 0.12; };
+export function foeAnim(A, t, time) {
+  const s = A.foe[t] || A.foe.walker, ref = foeCell(A, t)[0], T = time || 0, L = s.layout;
+  let f, fs;
+  if (s.walk) { f = s.idle[0][tick(T + seedOf(t), 2, 2)]; fs = [f.blink && blinking(t, T) ? f.blink : f]; if (L === "burrow" && s.extra) fs.push(s.extra[tick(T, 6, 3)]); }
+  else if (L === "rocket") fs = [s.face[0][SEQ3[tick(T + seedOf(t), 10, 4)]]];
+  else if (L === "still") { f = s.still[PULSE[tick(T + seedOf(t), 1.5, 4)]]; fs = [f.blink && blinking(t, T) ? f.blink : f]; }
+  else if (L === "spin") fs = [s.still[tick(T, 12.7, 8)]];
+  else if (s.still) { f = s.still[SEQ3[tick(T + seedOf(t), 4, 4)]]; fs = [f.blink && blinking(t, T) ? f.blink : f]; if (s.extra) fs.push(s.extra); }
+  else fs = foeCell(A, t);
+  return { fs, ref };
+}
+export function itemAnim(A, t, time) {
+  const g = A.items.glyph[t], r = A.items.ring && A.items.ring[t], T = time || 0;
+  if (!g) return { fs: [], ref: null };
+  const hov = Math.round(Math.sin(2.4 * T + seedOf(t) * 6.28));
+  return { fs: r ? [r[tick(T + seedOf(t), 2, 2)], g] : [g], ref: g, dy: hov };
+}
+export function blitAnim(c, a, cx, cy, s) {
+  if (a.fs.length) blitCell(c, a.fs, cx, cy + (a.dy || 0) * s * 0.5, s, a.ref);
 }
 
 export function hudIcon(A) {

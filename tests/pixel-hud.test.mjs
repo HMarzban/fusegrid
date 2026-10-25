@@ -16,7 +16,7 @@ import { SCREEN } from "../src/app/menuapp.js";
 import { POWER, FOES } from "../src/core/entities.js";
 import { createAtlas } from "../src/render/pixel/atlas.js";
 import { createPixelRenderer } from "../src/render/pixel/renderer.js";
-import { setPixelArt, pixelArt, hudIcon, opaqueBox, itemCell, foeCell, pageScale, HUD_S, GUIDE_S, SLOT_PAD } from "../src/render/hudart.js";
+import { setPixelArt, pixelArt, hudIcon, opaqueBox, itemCell, foeCell, foeAnim, itemAnim, pageScale, HUD_S, GUIDE_S, SLOT_PAD } from "../src/render/hudart.js";
 import { surfRGBA } from "../tools/pixel/rgba.mjs";
 import { PRECACHE } from "../src/pwa/shell.js";
 
@@ -104,14 +104,25 @@ unchanged("px art registered: it never leaks into another kind");
   check("HUD px heart centred on the CLASSIC heart centre (16,25) by its opaque box", d[0][1][1] === Math.round(16 - (b.x + b.w / 2) * 2) && d[0][1][2] === Math.round(25 - (b.y + b.h / 2) * 2));
 }
 
+// ---- GUIDE cells move in PIXEL (pure function of the page clock) ----
+{
+  let moving = 0;
+  for (const f of FOES) {
+    if (foeAnim(A, f.t, 0.4).fs.some((x, j) => x !== foeAnim(A, f.t, 0.4 + 0.5).fs[j]) || foeAnim(A, f.t, 0.4).fs.length !== foeAnim(A, f.t, 0.9).fs.length) moving++;
+  }
+  check("PIXEL guide foes animate: most frames change within 0.5 s", moving >= FOES.length - 2, moving + "/" + FOES.length);
+  check("PIXEL guide foes and pickups are deterministic (same time, same frames)", FOES.every((f) => foeAnim(A, f.t, 1.37).fs.every((x, j) => x === foeAnim(A, f.t, 1.37).fs[j])) && POWER.every((p) => itemAnim(A, p.t, 2.2).fs.every((x, j) => x === itemAnim(A, p.t, 2.2).fs[j])));
+  check("PIXEL guide pickups carry ring + glyph and hover at most one art px", POWER.every((p) => { const a = itemAnim(A, p.t, 0.7); return a.fs.length === 2 && a.fs[1] === A.items.glyph[p.t] && Math.abs(a.dy) <= 1; }));
+}
 // ---- GUIDE pages in PIXEL ----
 {
   const cellsOf = {drawHowTo: () => ["bomb", "throw", "remote", "kick"].map((t) => itemCell(A, t)), drawItemsHelp: () => POWER.map((p) => itemCell(A, p.t)), drawEnemiesHelp: () => FOES.map((f) => foeCell(A, f.t))};
-  const N = {drawHowTo: 4, drawItemsHelp: POWER.length, drawEnemiesHelp: FOES.length + FOES.filter((f) => f.t === "shade").length};
+  const N = {drawHowTo: 8, drawItemsHelp: POWER.length * 2, drawEnemiesHelp: FOES.length + FOES.filter((f) => f.t === "shade" || f.t === "burrow").length};
+  const imsOf = (o, out = new Set(), seen = new Set()) => { if (!o || typeof o !== "object" || seen.has(o)) return out; seen.add(o); if (o.im) out.add(o.im); for (const k in o) imsOf(o[k], out, seen); return out; };
   const seen = {};
   for (const [w, h] of BOXES) for (const f of PAGES) {
     const px = page(f, w, h, "px"), v = page(f, w, h, "2d"), d = draws(px);
-    const allowed = new Set(cellsOf[f]().flat().map((x) => x.im));
+    const allowed = imsOf(f === "drawEnemiesHelp" ? A.foe : A.items);
     const scales = new Set(d.map((o) => o[1][3] / o[1][0].width));
     seen[f + h] = [...scales].join();
     check(f + "@" + h + " px: every cell drawn from the live atlas (" + d.length + ")", d.length === N[f] && d.every((o) => allowed.has(o[1][0])), d.length + "/" + N[f]);
