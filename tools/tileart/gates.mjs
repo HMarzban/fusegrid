@@ -1,6 +1,8 @@
 /* Direction D pixel gates (2026-10-25). Real painters rendered at 4x (160 px) in headless Chrome; the checks are pure functions over RGBA arrays (exported, Node-testable).
    node tools/tileart/gates.mjs <built|living|all> */
+import {readFileSync, existsSync} from "node:fs";
 import {withPage, TILES} from "./harness.mjs";
+import {unpng} from "../pixel/rgba.mjs";
 import {litSkew, seam, channelLight, figure, heatSep, slotOnly, maxLum, lum, dE, rgbOf, edgeEnergy} from "./gatefns.mjs";
 const PAGE = `(async()=>{
   const [F,C]=await Promise.all([import('/src/render/featdraw.js'),import('/src/core/config.js')]);
@@ -71,5 +73,8 @@ await withPage(async (P) => {
     console.log(JSON.stringify(rows).replace(/},{/g, "},\n{"));
   }
 });
+/* REAL 3D stills (node tools/tileart/export.mjs first, TILEART_OUT=<dir>): the lit, relief-shaded PORTAL never passes wallHi's luma */
+const dir3 = process.argv[3];
+if (dir3) for (const h of ["core", "plus", "max"]) { const f = dir3 + "/3d/void-portal-" + h + ".png"; if (!existsSync(f)) continue; const m = maxLum(unpng(readFileSync(f)).data), cap = lum(...rgbOf("#8a70b0")); ok(m <= cap + 1.5, `REAL 3D PORTAL ${h} max luma ${m.toFixed(1)} <= wallHi ${cap.toFixed(1)}`); }
 if (fails.length) { console.log(fails.length + " FAILED"); process.exit(1); }
 console.log("all gates pass (" + which + ")");
