@@ -4,13 +4,14 @@
    accent #37f0d0, text #dfe7f5, muted #7385ad, veils rgba(7,10,18,a).
    Easing helpers duplicated from the intro beat table (spec §3) — this file
    must not import from src/app. */
-import { roomCap, BIOMES, isFinale } from "../core/config.js";
+import { CFG, roomCap, BIOMES, isFinale } from "../core/config.js";
 import { POWER, FOES } from "../core/entities.js";
 import { HEAT_COL, HEAT_MARK, HEAT_NAME, clampHeat, heatRoster, heatProfile } from "../core/heat.js";
 import { PACE_NAME } from "../core/pace.js";
 import { pactLabel } from "../core/pact.js";
 import { PACT, PACT_COL, applyPact } from "../core/pact.js";
-import { drawIcon, drawEnemyBody } from "./sprites.js";
+import { drawEnemyBody } from "./sprites.js";
+import { drawItemBody } from "./itemdraw.js";
 import { rr } from "./icons.js";
 import { pixelArt, itemCell, foeCell, pageScale, blitCell, SLOT_PAD } from "./hudart.js";
 const ACCENT = "#37f0d0",
@@ -306,23 +307,40 @@ function lockGlyph(c, x, y, s, col) {
 }
 const DUMMY = { type: "walker", color: "#8affc1", r: 14, home: { x: 0, y: 0 }, invuln: false };
 const FOE_OF = Object.fromEntries(FOES.map((f) => [f.t, f]));
+const GX = { a: 1, gl: 0, fl: 0, bl: null };
+const GW = { time: 0 };
+const seedOf = (k) => {
+  let h = 0;
+  for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) | 0;
+  return (h & 255) * 9;
+};
 function foeAt(c, A, t, cx, cy, s, time, ps) {
   const f = FOE_OF[t] || FOES[0];
   if (A) return blitCell(c, foeCell(A, f.t), cx, cy, ps || (s >= 36 ? 2 : 1));
   DUMMY.type = f.t;
   DUMMY.color = f.col;
+  DUMMY.home.x = seedOf(f.t);
+  DUMMY.home.y = seedOf(f.t + "y");
+  GW.time = time;
   c.save();
   c.translate(cx, cy);
   c.scale(s / 30, s / 30);
-  drawEnemyBody(c, { time }, DUMMY);
+  drawEnemyBody(c, GW, DUMMY, GX);
   c.restore();
 }
+const ITEM = { t: "", col: "#fff", x: 0, y: 0 };
 function itemAt(c, A, p, cx, cy, s, time, ps) {
   if (A) return blitCell(c, itemCell(A, p.t), cx, cy, ps || (s >= 36 ? 2 : 1));
+  ITEM.t = p.t;
+  ITEM.col = p.col;
+  ITEM.x = seedOf(p.t);
+  ITEM.y = seedOf(p.t + "y");
+  GW.time = time;
   c.save();
   c.translate(cx, cy);
-  c.scale(s / 28, s / 28);
-  drawIcon(c, p.t, p.col, time);
+  const k = (s * 1.43) / CFG.TILE;
+  c.scale(k, k);
+  drawItemBody(c, GW, ITEM, 1, null);
   c.restore();
 }
 /* heatRoster deduped to [{t, n}] in first-seen order. */
