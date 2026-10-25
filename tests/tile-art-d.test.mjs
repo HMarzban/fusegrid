@@ -56,8 +56,9 @@ test("painters draw only palette colours: black, white, rgba black/white, or a h
     const b = biome(BIOME_OF[n]), slots = [b.bg0, b.bg1, b.floor0, b.floor1, b.wall, b.wallHi].map(rgb), lo = [0, 1, 2].map((i) => Math.min(...slots.map((s) => s[i]))), hi = [0, 1, 2].map((i) => Math.max(...slots.map((s) => s[i])));
     for (const col of colours(run(T[n], kk(n, { h, lit: 2, state: 1, on: 1 })))) {
       if (/^#(000|fff)$/i.test(col) || /^rgba\((0,0,0|255,255,255),[\d.]+\)$/.test(col)) continue;
-      assert.ok(/^#[0-9a-f]{6}$/i.test(col), n + " " + col);
-      const c = rgb(col);
+      const m = /^rgba\((\d+),(\d+),(\d+),[\d.]+\)$/.exec(col);
+      assert.ok(m || /^#[0-9a-f]{6}$/i.test(col), n + " " + col);
+      const c = m ? [+m[1], +m[2], +m[3]] : rgb(col);
       for (let i = 0; i < 3; i++) assert.ok(c[i] >= lo[i] - 1 && c[i] <= hi[i] + 1, `${n} h${h} ${col} channel ${i} outside ${b.name} slots`);
     }
   }
@@ -84,4 +85,19 @@ test("paintCell routes BELT, GLIDE, PLATE, PORTAL and GATE to the D painters", (
     assert.ok(log.length > 20, n + " drew");
     assert.ok(!log.some((e) => e.op === "setLineDash"), n + " no round-3 dash edge");
   }
+});
+
+test("living painters never throw: every kind x heat x state x neighbours x dir", () => {
+  for (const n of kinds(LIVING)) for (let h = 0; h < 3; h++) for (const nb of nbs()) for (const dir of n === "STREAM" ? [0, 1, 2, 3] : [0]) for (const state of [0, 1, 2]) {
+    assert.doesNotThrow(() => run(LIVING[n], kk(n, { h, nb, dir, state, on: state === 1 ? 1 : 0, phase: 9 })), n);
+  }
+});
+test("STREAM ripple phase wraps at the tile period", () => {
+  for (let h = 0; h < 3; h++) assert.deepEqual(run(LIVING.STREAM, kk("STREAM", { h, phase: 0 })), run(LIVING.STREAM, kk("STREAM", { h, phase: 40 })));
+});
+test("QUICKSAND: 2/3/4 terraces, the same intact outer rim at every heat, throat centre follows the last terrace", async () => {
+  const { GEO } = await import("../src/render/featart/geo.js");
+  assert.deepEqual(GEO.QUICK.radii.map((r) => r.length), [2, 3, 4]);
+  assert.deepEqual(GEO.QUICK.radii.map((r) => r[0]), [17.8, 17.8, 17.8]);
+  GEO.QUICK.radii.forEach((r, h) => { for (let i = 1; i < r.length; i++) assert.ok(r[i] < r[i - 1]); assert.deepEqual(GEO.QUICK.c[h], [20 + 0.6 * (r.length - 1), 20 + 0.9 * (r.length - 1)]); });
 });

@@ -35,7 +35,20 @@ const PAGE = `(async()=>{
     out.seam.push({kind:'GLIDE',h,axis:'x',a:mid('GLIDE','ICE',{}),b:mid('GLIDE','ICE',{par:0})});
     out.seam.push({kind:'GLIDE',h,axis:'y',a:px(bio('ICE'),{kind:'GLIDE',h,outer:['E','W'],gx:2,gy:1,par:1}),b:px(bio('ICE'),{kind:'GLIDE',h,outer:['E','W'],gx:2,gy:2,par:0})});
   }
+  out.str=[];out.sseam=[];out.mouth=[];
+  const HW=[12.5,11.5,9.5];
+  for(let h=0;h<3;h++){for(let dir=0;dir<4;dir++){const horiz=dir%2===0;out.str.push({h,dir,a:px(bio('WATER'),{kind:'STREAM',h,dir,outer:horiz?['N','S']:['E','W'],phase:0,par:1})});}
+    const m=(o)=>px(bio('WATER'),{kind:'STREAM',h,dir:0,outer:['N','S'],phase:0,par:1,...o});
+    out.sseam.push({h,axis:'x',a:m({}),b:m({})});
+    out.sseam.push({h,axis:'y',a:px(bio('WATER'),{kind:'STREAM',h,dir:1,outer:['E','W'],phase:0,par:1}),b:px(bio('WATER'),{kind:'STREAM',h,dir:1,outer:['E','W'],phase:0,par:1})});
+    out.mouth.push({h,end:m({outer:['N','S','W']}),mid:m({}),endE:m({outer:['N','S','E']})});}
+  out.hw=HW;
   return out;})()`;
+/* channel light: the sunk channel's NW inner band must be darker than its SE inner band (mean L over 3-unit bands) */
+export function channelLight(a, S, hw, dir) {
+  const U = S / 40, band = (lo, hi) => { let t = 0, n = 0; for (let y = 0; y < S; y++) for (let x = 8 * U; x < 32 * U; x++) { const u = dir % 2 === 0 ? y : x, v = dir % 2 === 0 ? x : y; if (u >= lo * U && u < hi * U && v >= 8 * U && v < 32 * U) { const i = (y * S + x) * 4; t += L(a[i], a[i + 1], a[i + 2]); n++; } } return t / n; };
+  return band(20 + hw - 3, 20 + hw) - band(20 - hw, 20 - hw + 3);
+}
 const fails = [];
 const ok = (c, m) => { if (!c) fails.push(m); console.log((c ? "PASS " : "FAIL ") + m); };
 const which = process.argv[2] || "built";
@@ -43,6 +56,9 @@ await withPage(async (P) => {
   const r = await P.ev(PAGE);
   for (const t of r.lit) { const s = litSkew(t.a, 160); ok(s.dSkew > 2, `BELT lit pass keeps the key top-left h${t.h} dir${t.dir} (skew ${s.dSkew.toFixed(1)})`); }
   for (const t of r.seam) { const d = seam(t.a, t.b, 160, t.axis); ok(d <= 6, `${t.kind} h${t.h} seam ${t.axis} (${d.toFixed(2)} <= 6)`); }
+  for (const t of r.str) { const d = channelLight(t.a, 160, r.hw[t.h], t.dir); ok(d > 0, `STREAM light stays top-left h${t.h} dir${t.dir} (SE band - NW band = ${d.toFixed(1)} > 0)`); }
+  for (const t of r.sseam) { const d = seam(t.a, t.b, 160, t.axis); ok(d <= 6, `STREAM h${t.h} seam ${t.axis} (${d.toFixed(2)} <= 6)`); }
+  for (const t of r.mouth) { const e = seam(t.end, t.mid, 160, "x"), m = seam(t.mid, t.endE, 160, "x"); ok(e <= 6 && m <= 6, `STREAM h${t.h} run ends meet the middle (${e.toFixed(2)}, ${m.toFixed(2)} <= 6)`); }
 });
 if (fails.length) { console.log(fails.length + " FAILED"); process.exit(1); }
 console.log("all gates pass (" + which + ")");
