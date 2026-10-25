@@ -1,166 +1,117 @@
-/* PIXEL cells for the eight floor tiles (tile art, direction D 2026-10-25; polish pass 2026-10-25). Palette-SLOT grids only (./pixel/grid.js format, never hex): every
-   char maps to "tile.<BIOMES field>[.step]" through the pinned pxRamp (DPAL in featpxcells.js: A-D bg0, E-H bg1, I-L floor0, M-P floor1, Q-T wall, U-X wallHi, each
-   outline / shadow / base / light), so each biome bakes its own ramp. 20x20 art px, 1 art px = 2 logical px, light from the top-left: raised parts lit top-left,
-   wells and beds shadowed top-left and lit bottom-right. Baked by pixel/atlas.js (feat), whose cache key is ph|biome|kind|h|dir|outer|state|lit|pair, so a builder
-   never reads gx / gy / par. Open floor around a fixture keeps the base floor's slab shadow (slab), so a tile cell seams like a floor cell. Marks are flat runs,
-   clean 1:1 or 2:1 stairs and 2 px minimums; the lone pixels left are deliberate (stair outlines, chevron shadows, bar tips, lamp gaps). Heat never changes a hue: it lives in structure, count, size and tips. VOID never goes past wallHi. */
+/* PIXEL cells for the eight floor tiles (direction D; hand-pixelled 2026-10-25). The art is pixel/art/feat.js: one hand drawing per tile per heat (BOOSTER,
+   TRAP, QUICKSAND, PORTAL, ICE PATCH, GATE) or hand parts in flow x across space (CONVEYOR rails / rollers / chevrons, STREAM banks / water / ripples). This
+   file only lays small explicit deltas over it: a slot swap (BOOSTER flare, TRAP armed), lamp / notch patches (TRAP lit 1..4, PORTAL pair), the GATE bars drawn
+   shorter, the rim on outer sides of the tiles that join (ICE PATCH, GATE), the ICE sheen on a patch's NW cell, and the CONVEYOR / STREAM phase. Palette-SLOT
+   grids only (DPAL in featpxcells.js), never hex; 20x20 art px, 1 art px = 2 logical px, light from the top-left. Baked by pixel/atlas.js (feat), whose cache
+   key is ph|biome|kind|h|dir|outer|state|lit|pair, so nothing here reads gx / gy / par or the biome. Heat never changes a hue; VOID never goes past wallHi. */
 import {DPAL} from "./featpxcells.js";
-import {GEO} from "./featart/geo.js";
+import {FEAT_ART} from "./pixel/art/feat.js";
 
 const SIDES = ["N", "E", "S", "W"];
 const mk = (f) => Array.from({length: 20}, (_, y) => { let o = ""; for (let x = 0; x < 20; x++) o += f(x, y); return o; });
 const at = (rows, x, y, ch) => { if (y < 0 || y >= rows.length || x < 0 || x >= rows[y].length) return; rows[y] = rows[y].slice(0, x) + ch + rows[y].slice(x + 1); };
 const clampI = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
-const edge = (outer, x, y) => { const d = [["N", y], ["S", 19 - y], ["W", x], ["E", 19 - x]].filter(([s]) => outer.includes(s)).sort((a, b) => a[1] - b[1])[0]; return d || ["", 99]; };
-/* despeckle (QUICK's ring stairs): a pixel with no 4-neighbour of its own char takes the char 3 of its 4 neighbours share; keep = chars that are drawn as stairs */
-function clean(rows, keep) {
-  const q = (x, y) => (rows[y] || "")[x];
-  return rows.map((r, y) => [...r].map((ch, x) => { const nb = [q(x - 1, y), q(x + 1, y), q(x, y - 1), q(x, y + 1)]; return keep.includes(ch) || nb.includes(ch) ? ch : nb.find((c) => c && nb.filter((d) => d === c).length >= 3) || ch; }).join(""));
-}
-/* the floorPxCell slab's shadow side (bottom / right) on the tile's own border, only where the open floor shows; the lit top / left run is left out on purpose,
-   because a feature cell never takes the floor's cast-shadow strip and a lit line under a brick or wall would read as light leaking under it */
+/* the floorPxCell slab's shadow side (bottom / right) on the tile's own border where open floor shows (a feature cell never takes the lit top / left run) */
 const SL = {O: "N", K: "J"};
 function slab(rows, b) {
   const s = SL[b], put = (x, y) => { if (rows[y][x] === b) at(rows, x, y, s); };
   for (let i = 1; i < 20; i++) { put(i, 19); put(19, i); }
   return rows;
 }
-/* ICE PATCH: a glass pane in a steel frame on the outer sides; heat = 1 / 2 / 3 glazing bars, the glass a step darker each heat (P / O / N); one sheen glint
-   top-left, on the patch's NW corner cell only (outer is in the atlas key), so a long patch never repeats it as a grid */
-const BARS = [[10], [7, 13], [6, 10, 14]], GL = [["P", "K", "O"], ["O", "K", "N"], ["N", "J", "S"]];
-function glideRows(h, outer) {
-  const gl = outer.includes("N") && outer.includes("W");
-  return mk((x, y) => {
-    const [s, k] = edge(outer, x, y);
-    if (k < 2) return s === "N" || s === "W" ? "RT"[k] : "RS"[k];
-    const [bs, sh, dk] = GL[h];
-    if (k === 2) return s === "N" || s === "W" ? dk : sh;
-    if (BARS[h].includes(y)) return dk;
-    if (BARS[h].includes(y - 1)) return sh;
-    return gl && (x + y === 10 || x + y === 11) && x > 3 && x < 9 ? sh : bs;
-  });
+const HAND = (k, h) => (FEAT_ART[k] && FEAT_ART[k][h] ? FEAT_ART[k][h].slice() : null);
+const swap = (rows, m) => rows.map((r) => r.replace(/./g, (c) => m[c] || c));
+const FLARE = {L: "X", K: "L"};
+function bloomHand(h, flare) { const r = HAND("BLOOM", h); return r && flare ? swap(r, FLARE) : r; }
+/* TRAP armed: the cleats dim one step and four 2 px lamps light in the south rim, left to right (lit 1..4) */
+const ARMED = {W: "V", V: "R"}, LAMP = [[16], [15, 16], [15, 16]];
+function plateHand(h, on, lit) {
+  const r = HAND("PLATE", h);
+  if (!r || !on) return r;
+  const o = swap(r, ARMED);
+  for (const y of LAMP[h]) [4, 7, 10, 13].forEach((x, i) => { at(o, x, y, i < lit ? "W" : "Q"); at(o, x + 1, y, i < lit ? "W" : "Q"); });
+  return o;
 }
-/* CONVEYOR: rails (low side lit), rollers across the flow (gap, lit edge, body; tighter and darker-gapped each heat), chevrons that point the way (1 / 2 / 3 by
-   heat, a cast shadow under / right of each), end caps on the outer ends; built in screen space so the light stays top-left. Roller periods 5 / 5 / 4 match the
-   atlas phase loop. */
-const ROLL = ["RTSSS", "KTSSR", "KTSR"], CH = [[8], [4, 12], [2, 8, 14]], CHV = [[0, 1], [1, 2], [2, 3], [1, 2], [0, 1]];
-function beltRows(h, d, outer, ph) {
-  const hz = d % 2 === 0, s = d < 2 ? 1 : -1, lo = outer.includes(hz ? "W" : "N"), hi = outer.includes(hz ? "E" : "S"), P = ROLL[h].length;
-  const cv = (a, c) => CH[h].some((a0) => c >= 7 && c < 12 && CHV[c - 7].some((j) => a === a0 + (s > 0 ? j : 3 - j)));
-  return mk((X, Y) => {
-    const a = hz ? X : Y, c = hz ? Y : X;
-    if (c < 3) return "QTS"[c];
-    if (c > 16) return "SRQ"[c - 17];
-    if (lo && a < 3) return "QTS"[a];
-    if (hi && a > 16) return "SRQ"[a - 17];
-    if (cv(a, c)) return "W";
-    if (cv(a, c - 1)) return "R";
-    return ROLL[h][((a - ph * s) % P + P) % P];
-  });
+/* tiles that join their neighbours (ICE PATCH, GATE) are drawn as a lone patch; a side that is not outer takes the first interior strip (index k) copied out over
+   its k rim strips, so the field runs on into the next cell and the rim stays only where the patch ends */
+function join(rows, outer, k, n = k, s = 19 - k) {
+  const o = rows.map((r) => [...r]);
+  if (!outer.includes("N")) for (let y = 0; y < k; y++) o[y] = o[n].slice();
+  if (!outer.includes("S")) for (let y = 20 - k; y < 20; y++) o[y] = o[s].slice();
+  for (const r of o) { if (!outer.includes("W")) r.fill(r[k], 0, k); if (!outer.includes("E")) r.fill(r[19 - k], 20 - k); }
+  return o.map((r) => r.join(""));
 }
-/* STREAM: a channel across the tile, sunk between stone banks (dark lip north, lit lip south), tapering to a mouth on an outer end; ripple dashes (2 tail + head)
-   point downstream; the loop is 20 px so the 10 phases of 2 px wrap clean */
-const CHN = [[3, 16], [4, 15], [5, 14]], RIP = [[[3, 6], [12, 12]], [[2, 6], [9, 9], [15, 12]], [[1, 6], [7, 8], [12, 10], [16, 12]]];
-function streamRows(h, d, outer, ph) {
-  const hz = d % 2 === 0, s = d < 2 ? 1 : -1, lo = outer.includes(hz ? "W" : "N"), hi = outer.includes(hz ? "E" : "S"), [c0, c1] = CHN[h], rm = [4, 3, 3][h];
-  const rr = (a) => Math.max(lo ? clampI(rm - (a >> 1), 0, rm) : 0, hi ? clampI(rm - ((19 - a) >> 1), 0, rm) : 0);
-  const dash = {}, DL = [5, 4, 4][h];
-  for (const [a0, c] of RIP[h]) for (let i = 0; i < DL; i++) { const k = s > 0 ? i : DL - 1 - i, q = ((a0 + i + 2 * ph * s) % 20 + 20) % 20; dash[(hz ? q : c) + "," + (hz ? c : q)] = k < 2 ? "L" : "V"; }
-  return slab(mk((X, Y) => {
-    const a = hz ? X : Y, c = hz ? Y : X, r = rr(a), n0 = c0 + r, n1 = c1 - r, end = (lo && a === 0) || (hi && a === 19);
-    if (c >= n0 && c <= n1) return end ? "R" : (c > n0 && c < n1 && dash[X + "," + Y]) || (c === n0 ? "J" : c === n1 ? "L" : "K");
-    if (c === n0 - 1) return "R";
-    if (c === n1 + 1) return "T";
-    if (c === n0 - 2 || c === n1 + 2) return "S";
-    return "O";
-  }), "O");
+const SHEEN = [[3, 7], [4, 6], [5, 5], [6, 4], [7, 3], [4, 7], [5, 6], [6, 5], [7, 4]];
+function glideHand(h, outer) {
+  const r = HAND("GLIDE", h);
+  if (!r) return r;
+  const o = join(r, outer, 3);
+  if (outer.includes("N") && outer.includes("W")) for (const [x, y] of SHEEN) at(o, x, y, "L");
+  return o;
 }
-/* BOOSTER: a fern frond pointing East out of a sunk loam bed (shadowed top-left, lit lip bottom-right): a 3-row blade lit on its top edge, tip one px; heat grows
-   the bed and adds 0 / 1 / 2 pairs of leaflets swept back (">", so the frond reads as an arrow); flare lifts the frond one step */
-const BED = [[3, 16, 4, 15, 4], [2, 17, 3, 16, 4], [1, 18, 2, 17, 5]], LEAF = [[5, 15], [5, 16], [4, 17]], FL = [[], [9], [8, 12]];
-const inR = (x, y, x0, x1, y0, y1, c) => x >= x0 && x <= x1 && y >= y0 && y <= y1 && Math.min(x - x0, x1 - x) + Math.min(y - y0, y1 - y) >= c;
-function bloomRows(h, flare) {
-  const [x0, x1, y0, y1, c] = BED[h], bed = (x, y) => inR(x, y, x0, x1, y0, y1, c);
-  const rows = mk((x, y) => !bed(x, y) ? "O" : !bed(x - 1, y) || !bed(x, y - 1) ? "F" : !bed(x + 1, y) || !bed(x, y + 1) ? "H" : "G");
-  const lit = flare ? "X" : "L", mid = flare ? "L" : "K", [a, b] = LEAF[h];
-  for (let x = a; x <= b; x++) { if (x > a && x < b - 2) at(rows, x, 8, lit); at(rows, x, 9, mid); if (x > a && x < b - 1) at(rows, x, 10, "J"); }
-  for (const t of FL[h]) for (let i = 0; i < 3; i++) { at(rows, t - i, 7 - i, lit); at(rows, t - i + 1, 7 - i, mid); at(rows, t - i, 11 + i, mid); at(rows, t - i + 1, 11 + i, "J"); }
-  return slab(rows, "O");
+/* GATE: the hand frame is the shut portcullis (bars rows 4..15); open (4) and half (7) keep each bar's body and pull its last two rows (the tip) up under it.
+   N joins carry the bar tops on, S joins the sill */
+function gateHand(h, st, outer) {
+  const r = HAND("GATE", h);
+  if (!r) return r;
+  const len = [4, 7, 12][st], o = r.slice();
+  if (len < 12) for (let x = 2; x < 18; x++) if (r[8][x] !== "B") for (let t = 0; t < 12; t++) at(o, x, 4 + t, t >= len ? "B" : r[4 + t + (t >= len - 2 ? 12 - len : 0)][x]);
+  return join(o, outer, 2, 4, 17);
 }
-/* TRAP: a plate sunk in a lipped well (lip lit north / west, plate lit bottom-right); heat thickens the lip (2 / 3 / 4, GEO.PLATE.lip) and adds vent bars (1 / 2
-   / 3: lit top, shade, cast shadow) on a plate a step darker each heat; armed (state 1) dims the bars one step and shows 4 lamps in the south lip */
-const PB = [[9], [7, 11], [7, 9, 11]], PC = [["L", "K", "P"], ["K", "J", "L"], ["J", "I", "K"]], LIP = [["QT", "QR"], ["QTS", "QRS"], ["QTTS", "QRRS"]];
-function plateRows(h, on, lit) {
-  const w = h + 2, i0 = 2 + w, i1 = 17 - w, bh = h > 1 ? 1 : 2;
-  return slab(mk((x, y) => {
-    const k = Math.min(x - 2, y - 2, 17 - x, 17 - y);
-    if (k < 0) return "O";
-    if (on && k < w && y >= 15 && y <= 16 && [4, 7, 10, 13].some((x0) => x === x0 || x === x0 + 1)) return [4, 7, 10, 13].findIndex((x0) => x >= x0 && x <= x0 + 1) < lit ? "W" : "Q";
-    if (k < w) return LIP[h][+(Math.min(x - 2, y - 2) > Math.min(17 - x, 17 - y))][k];
-    if (y === i0 || x === i0) return PC[h][1];
-    if (y === i1 || x === i1) return PC[h][2];
-    if (x > i0 && x < i1) for (const b of PB[h]) { const r = y - b; if (r >= 0 && r < bh) return (on ? "VR" : "WV")[r]; if (r === bh) return on ? "Q" : "R"; }
-    return PC[h][0];
-  }), "O");
+/* CONVEYOR from its hand parts (pixel/art/feat.js BELT) in flow x across space, turned to the dir; the rollers scroll with ph, rails, bolts, caps and chevrons hold */
+function beltHand(h, d, outer, ph) {
+  const A = FEAT_ART.BELT;
+  if (!A) return null;
+  const hz = d % 2 === 0, s = d < 2 ? 1 : -1, lo = outer.includes(hz ? "W" : "N"), hi = outer.includes(hz ? "E" : "S"), R = A.roll[h], P = R.length;
+  const chev = (a, c) => c >= 7 && c < 12 && A.chevAt[h].some((a0) => { const i = s > 0 ? a - a0 : 3 - (a - a0); return i >= 0 && i < 4 && A.chev[c - 7][i] === "W"; });
+  const g = Array.from({length: 20}, (_, c) => Array.from({length: 20}, (_, a) => {
+    if (A.rail[c] !== ".") return A.rail[c];
+    if (lo && a < 3) return A.capW[a];
+    if (hi && a > 16) return A.capE[a - 17];
+    if (chev(a, c)) return "W";
+    if (chev(a, c - 1)) return "R";
+    const r = R[((a - ph * s) % P + P) % P];
+    return c === 3 ? A.shade[r] || r : r;
+  }));
+  for (const [a, c, ch] of A.bolt) if (!(lo && a < 3) && !(hi && a > 16)) g[c][a] = ch;
+  return mk((X, Y) => (hz ? g[Y][X] : g[X][Y]));
 }
-/* QUICKSAND: a funnel of eccentric octagon rings sinking toward the lower right (2 / 3 / 4 rings, every SE band at least 1 px so no stair breaks); every slope is cut in facets, the N / W
-   / NW faces in shadow, the S / E / SE faces lit, the outer crest lit NW, a dark pit; the floor outside stays K so it never reads as brick */
-const QR = [[8.5, 5.5], [8.5, 6.5, 4.5], [8.5, 7, 5.5, 4.5]], QP = [2.5, 3, 3], QD = ["K", "N", "I", "I"], QS = ["L", "K", "N", "I"];
-const oct = (dx, dy) => { const a = Math.abs(dx), b = Math.abs(dy), d = (a + b) * 0.75; return d > a && d > b ? [d, dx + dy < 0 ? 0 : dx + dy > 0 ? 2 : 1] : a > b ? [a, dx < 0 ? 0 : 2] : [b, dy < 0 ? 0 : 2]; };
-function quickRows(h) {
-  const R = QR[h], n = R.length;
-  return slab(clean(mk((x, y) => {
-    let out = "K";
-    for (let i = 0; i <= n; i++) {
-      const c = 9.5 + 0.5 * i, [r, f] = oct(x - c, y - c);
-      if (r > (i < n ? R[i] : QP[h])) break;
-      out = i === n ? "M" : i === 0 && f === 0 && r > R[0] - 1 ? "T" : f === 2 ? QS[i] : QD[i];
-    }
-    return out;
-  }), "T"), "K");
+/* STREAM from its hand parts (pixel/art/feat.js STREAM), built in flow (a) x across (c) space and turned to the dir, so wells stay shaded on their top / left
+   at every dir; ripples step 2 px a phase over a 20 px loop (10 phases) */
+function streamHand(h, d, outer, ph) {
+  const A = FEAT_ART.STREAM;
+  if (!A) return null;
+  const hz = d % 2 === 0, s = d < 2 ? 1 : -1, lo = outer.includes(hz ? "W" : "N"), hi = outer.includes(hz ? "E" : "S"), [c0, c1] = A.c[h], [wb, wd, dd] = A.wat[h];
+  const g = Array.from({length: 20}, () => Array(20).fill("O"));
+  for (let a = 0; a < 20; a++) {
+    const m = (lo && a < 3) || (hi && a > 16) ? 1 : 0, n0 = c0 + Math.max(m, +A.top[h][a]), n1 = c1 - Math.max(m, +A.bot[h][a]);
+    g[n0 - 2][a] = "S"; g[n0 - 1][a] = "R"; g[n1 + 1][a] = "T"; g[n1 + 2][a] = "S";
+    for (let c = n0; c <= n1; c++) g[c][a] = c === n0 ? "J" : c === n1 ? "L" : Math.min(c - c0, c1 - c) >= dd ? wd : wb;
+    const cap = lo && a < 3 ? A.mouthW[a] : hi && a > 16 ? A.mouthE[a - 17] : null;
+    if (cap) for (let c = n0; c <= n1; c++) g[c][a] = cap;
+  }
+  const G = A.rip[h], L = G[0].length;
+  for (const [a0, c] of A.lanes[h]) for (let j = 0; j < G.length; j++) for (let i = 0; i < L; i++) {
+    const ch = G[j][s > 0 ? i : L - 1 - i], a = ((a0 + i + 2 * ph * s) % 20 + 20) % 20, cc = c + j;
+    if (ch !== "." && !((lo && a < 3) || (hi && a > 16)) && "KJB".includes(g[cc][a]) && g[cc - 1][a] !== "R" && g[cc + 1][a] !== "T") g[cc][a] = ch;
+  }
+  return slab(mk((X, Y) => (hz ? g[Y][X] : g[X][Y])), "O");
 }
-/* PORTAL: a stepped square well, every step shadowed NW and lit SE (the bezel lip lit, never past W), down to a dark pit with a dim core; heat adds steps (2 / 3 / 6) and narrows
-   the pit (10 / 8 / 2 px), and at MAX the light falls in on the pit's SE half; the pair ticks are dark notches cut in the lit south bezel */
-const RG = ["wvppppc", "wvwpppc", "wvwvwvq"], RC = {w: ["V", "W"], v: ["U", "V"], p: ["E", "E"], c: ["S", "U"], q: ["E", "V"]};
-function portalRows(h, pair) {
-  const n = clampI(pair || 1, 1, 3), x0 = 10 - (3 * n - 1) / 2;
-  return slab(mk((x, y) => {
-    const dx = x - 9.5, dy = y - 9.5, d = Math.max(Math.abs(dx), Math.abs(dy)) - 0.5;
-    if (d > 6 || (d === 6 && Math.abs(dx) === Math.abs(dy))) return "O";
-    if (y >= 15 && y <= 16 && Math.abs(dx) <= 6.5 && Math.abs(dy) > Math.abs(dx) - 1.5) { for (let i = 0; i < n; i++) if (x >= x0 + 3 * i && x < x0 + 3 * i + 2) return "U"; }
-    const c = RG[h][6 - d];
-    return RC[c][+(c === "q" ? dx + dy > 0 : Math.abs(dx) >= Math.abs(dy) ? dx > 0 : dy > 0)];
-  }), "O");
-}
-/* GATE: a portcullis in a gold frame over a dark well; bars (3 / 4 / 5 by heat) hang from the lintel, chamfered tips, each over its own socket in the lit sill:
-   open = short stubs, half = half height, shut = full */
-const GAPS = [[2, 3, 3, 2], [1, 2, 2, 2, 1], [1, 1, 1, 1, 1, 1]];
-function gateRows(h, st, outer) {
-  const n = GEO.GATE.n[h], gaps = GAPS[h], xs = [];
-  let x = 2 + gaps[0];
-  for (let i = 0; i < n; i++) { xs.push(x); x += 2 + gaps[i + 1]; }
-  const len = [4, 7, 12][st];
-  return mk((X, Y) => {
-    const [s, k] = edge(outer, X, Y);
-    if (k < 2) return s === "N" || s === "W" ? "QW"[k] : "QS"[k];
-    const b = xs.findIndex((x0) => X >= x0 && X < x0 + 2);
-    if (Y === 2 || Y === 3) return Y === 2 ? "T" : "R";
-    if (Y === 16) return b >= 0 ? "A" : "T";
-    if (Y === 17) return "S";
-    if (b >= 0 && Y - 4 < len) return Y - 4 === len - 1 ? (X === xs[b] ? "S" : "B") : X === xs[b] ? "W" : "S";
-    return "B";
-  });
+/* PORTAL pair id: 1 / 2 / 3 dark 2 px notches cut in the lit south bezel, centred */
+function portalHand(h, pair) {
+  const r = HAND("PORTAL", h), n = clampI(pair || 1, 1, 3), x0 = 10 - (3 * n - 1) / 2;
+  if (r) for (let i = 0; i < n; i++) for (const y of [15, 16]) { at(r, x0 + 3 * i, y, "U"); at(r, x0 + 3 * i + 1, y, "U"); }
+  return r;
 }
 export function featPxCell(biome, s) {
   const h = s.h, outer = s.outer || SIDES, d = s.dir || 0;
   let rows;
-  if (s.kind === "GLIDE") rows = glideRows(h, outer);
-  else if (s.kind === "BELT") rows = beltRows(h, d, outer, s.ph | 0);
-  else if (s.kind === "STREAM") rows = streamRows(h, d, outer, s.ph | 0);
-  else if (s.kind === "BLOOM") rows = bloomRows(s.state === 2 ? Math.max(0, h - 1) : h, s.state === 1);
-  else if (s.kind === "PLATE") rows = plateRows(h, s.state === 1, s.lit | 0);
-  else if (s.kind === "QUICK") rows = quickRows(h);
-  else if (s.kind === "PORTAL") rows = portalRows(h, s.pair);
-  else if (s.kind === "GATE") { const l = s.lit | 0; rows = gateRows(h, s.state === 1 || l >= 3 ? 2 : l === 2 ? 1 : 0, outer); }
-  return {w: 20, h: 20, rows: rows.slice(), pal: {...DPAL}};
+  if (s.kind === "BLOOM") rows = bloomHand(s.state === 2 ? Math.max(0, h - 1) : h, s.state === 1);
+  else if (s.kind === "PLATE") rows = plateHand(h, s.state === 1, s.lit | 0);
+  else if (s.kind === "QUICK") rows = HAND("QUICK", h);
+  else if (s.kind === "PORTAL") rows = portalHand(h, s.pair);
+  else if (s.kind === "GLIDE") rows = glideHand(h, outer);
+  else if (s.kind === "STREAM") rows = streamHand(h, d, outer, s.ph | 0);
+  else if (s.kind === "BELT") rows = beltHand(h, d, outer, s.ph | 0);
+  else if (s.kind === "GATE") { const l = s.lit | 0; rows = gateHand(h, s.state === 1 || l >= 3 ? 2 : l === 2 ? 1 : 0, outer); }
+  return {w: 20, h: 20, rows: (rows || mk(() => "O")).slice(), pal: {...DPAL}};
 }

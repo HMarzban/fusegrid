@@ -516,7 +516,7 @@ const rasters = (log) => log.filter((q) => q[0] === "hi" && q[1] === "drawImage"
   check("no Math.random in src/render/pixel", px.every(([, s]) => !/Math\.random/.test(s)));
   const bytes = px.reduce((a, [, s]) => a + Buffer.byteLength(s), 0);
   // R24 pinned 120 KB, then 122 KB (lead 2026-10-11). #15 landed the dynamic import (pixel/load.js), so CLASSIC no longer pays for the tree and the cap holds at 140 KB for the wall sheet + tile cells.
-  check("px JS <= 152 KB (" + (bytes / 1024).toFixed(1) + " KB)", bytes <= 152 * 1024); // frame A: +3 cells per world (vr ctr cbr) -> 142 KB
+  check("px JS <= 160 KB (" + (bytes / 1024).toFixed(1) + " KB)", bytes <= 160 * 1024); // frame A: +3 cells per world (vr ctr cbr) -> 142 KB; hand-pixelled floor tiles (art/feat.js, 2026-10-25) -> 159 KB
   const rcP = join(ROOT, "src/app/rcache.js"), main = readFileSync(join(ROOT, "src/main.js"), "utf8") + (statSync(rcP, {throwIfNoEntry: false}) ? readFileSync(rcP, "utf8") : "");
   check("main.js (or its rcache.js seam) never assigns #px's drawing buffer", !/pxCanvas\.(width|height)\s*=/.test(main));
   check("rcache.js routes kind px to the injected opts.createPixelRenderer (main.js hands it the lazy loadRendererPx)", /k === "px" \? mk\.px\(el\("px"\), canvas/.test(main) && /loadRendererPx/.test(main) && /createPixelRenderer/.test(main));
