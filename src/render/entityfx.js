@@ -19,3 +19,10 @@ export function createEntityFx(cap = 24) {
     clear() { G.length = 0; B.length = 0; },
   };
 }
+
+/* one state per (world, look): "2d" | "px" | "3d", so two looks never feed the same lists with different clocks */
+const BY = new WeakMap();
+export function fxOf(world, look) {
+  let m = BY.get(world); if (!m) { m = {}; BY.set(world, m); }
+  return m[look] || (m[look] = createEntityFx());
+}

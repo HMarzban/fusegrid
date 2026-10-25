@@ -57,7 +57,7 @@ test("no Math.random / Date / world.time in motion.js", () => {
   assert.ok(!/Math\.random\(|Date\.now\(|new Date\(|world\.time/.test(s));
 });
 
-import { createEntityFx } from "../src/render/entityfx.js";
+import { createEntityFx, fxOf } from "../src/render/entityfx.js";
 test("entity fx: kill and power events live for their durations on the caller's clock, capacity is fixed, empty feed is a no-op", () => {
   const f = createEntityFx(3);
   f.feed([{ t: "kill", x: 10, y: 20, color: "#fff", type: "walker" }, { t: "power", x: 5, y: 6, col: "#f00", kind: "heart" }, { t: "boom" }], 2);
@@ -67,4 +67,9 @@ test("entity fx: kill and power events live for their durations on the caller's 
   for (let i = 0; i < 9; i++) f.feed([{ t: "kill", x: i, y: 0, color: "#fff", type: "fast" }], 5);
   assert.equal(f.ghosts(5).length, 3);
   f.feed(null, 6); f.feed([], 6); f.clear(); assert.equal(f.ghosts(5).length, 0);
+});
+
+test("fxOf keeps one state per (world, look)", () => {
+  const w = {}, a = fxOf(w, "2d");
+  assert.equal(fxOf(w, "2d"), a); assert.notEqual(fxOf(w, "px"), a); assert.notEqual(fxOf({}, "2d"), a);
 });
