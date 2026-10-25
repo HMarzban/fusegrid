@@ -26,7 +26,7 @@ function composeFace(top, face, fh) {
 /* wall code -> [cell, mirrored] (wallvar.js WALL_VARS order); every wall
    frame is pre-composed over floor0 / floor1 so the chamfer corners show the
    board, still one drawImage per wall */
-const WALL_SRC = [["base"], ["v1"], ["v2"], ["acc"], ["h"], ["vl"], ["vl", 1], ["ctl"], ["ctl", 1], ["cbl"], ["cbl", 1]];
+const WALL_SRC = [["base"], ["v1"], ["v2"], ["acc"], ["h"], ["vl"], ["vr"], ["ctl"], ["ctr"], ["cbl"], ["cbr"]];
 const mirrorCell = (c) => ({...c, rows: c.rows.map((r) => [...r].reverse().join(""))});
 
 export function createAtlas(surf, art = ART) {

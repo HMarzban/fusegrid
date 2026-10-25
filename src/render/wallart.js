@@ -11,6 +11,7 @@
    "a|b" names the CLASSIC slot a and the PIXEL slot b. Pure data: no DOM, no
    hex but the biome's. */
 import {WV} from "./wallvar.js";
+import {railOf, bossOf} from "./frameart.js";
 
 export const TS = 40;
 export const faceRows = (h) => Math.max(2, Math.min(10, Math.round((h || 0) / 4)));
@@ -321,30 +322,33 @@ function lightH(b, px, x0, w, g) {
   return [R(x0, 19, w, 1, "wall.pit"), R(x0, g.y0, w, 1, "face.pit"), R(x0, 36, w, 2, "face.ao"), ...(dim ? [] : [R(x0, 3, w, 1, "wallHi.spec")])];
 }
 function borderH(b, px, salt) {
-  const F = FAM[b.name], g = geo(b), lit = F.lit || "wallHi.light", shade = F.shade || "wallHi.shadow", bm = F.bmark ? F.bmark(g) : F.base(g), cb = capOf(F, px), body = g.y0 > 20 ? [0, 20, TS, g.y0 - 20] : null;
+  const F = FAM[b.name], g = geo(b), lit = F.lit || "wallHi.light", shade = F.shade || "wallHi.shadow", cb = capOf(F, px), body = g.y0 > 20 ? [0, 20, TS, g.y0 - 20] : null;
   return [R(0, 0, TS, TS, "wall"), R(0, g.y0, TS, g.f, F.face || "wall.shadow"), R(0, 3, TS, 16, cb), ...(F.panel ? [R(3, 7, 34, 8, F.panel)] : []),
     ...MAT[b.name]({cap: [0, 5, TS, 12], body, face: [0, g.y0 + 1, TS, g.f - 3], panel: F.panel ? [3, 8, 34, 6] : null}, px, salt, WV.H),
-    R(0, 3, TS, 2, lit), R(0, 17, TS, 2, shade), ...lightH(b, px, 0, TS, g), ...details(F, g, px, 0, TS, body), R(39, 3, 1, 35, "wall.shadow"), R(0, 39, TS, 1, "edge"), ...(F.panel ? [] : bm)];
+    R(0, 3, TS, 2, lit), R(0, 17, TS, 2, shade), ...lightH(b, px, 0, TS, g), ...details(F, g, px, 0, TS, body), R(0, 39, TS, 1, "edge"), ...railOf(b, "h")];
 }
-function borderV(b, px, salt) {
-  const F = FAM[b.name], lit = F.lit || "wallHi.light", shade = F.shade || "wallHi.shadow", cb = capOf(F, px);
+/* rt = the right-hand piece: built as the left piece, then mirrored by
+   wallShapes, with the two vertical bevels swapped so the lit lip stays on
+   the top-left and the shade on the bottom-right of the whole frame */
+function borderV(b, px, salt, rt) {
+  const F = FAM[b.name], lit = F.lit || "wallHi.light", shade = F.shade || "wallHi.shadow", cb = capOf(F, px), lv = rt ? shade : lit, sv = rt ? lit : shade;
   return [R(0, 0, TS, TS, "wall"), R(3, 0, 31, TS, cb), ...(F.panel ? [R(8, 0, 21, TS, F.panel)] : []),
     ...MAT[b.name]({cap: [6, 0, 25, TS], body: null, face: null, panel: F.panel ? [9, 0, 19, TS] : null}, px, salt, WV.VL),
-    R(3, 0, 2, TS, lit), ...(px || F.lit ? [] : [R(3, 0, 1, TS, "wallHi.spec")]), R(32, 0, 2, TS, shade), R(35, 0, 5, TS, "wall.shadow"), ...(px ? [] : [R(35, 0, 1, TS, "face.pit"), R(38, 0, 1, TS, "face.ao")]),
-    R(3, 39, 31, 1, "wall.shadow"), R(39, 0, 1, TS, "edge")];
+    R(3, 0, 2, TS, lv), ...(px || F.lit || rt ? [] : [R(3, 0, 1, TS, "wallHi.spec")]), R(32, 0, 2, TS, sv), R(35, 0, 5, TS, "wall.shadow"), ...(px ? [] : [R(35, 0, 1, TS, "face.pit"), R(38, 0, 1, TS, "face.ao")]),
+    R(39, 0, 1, TS, "edge"), ...railOf(b, "v")];
 }
-function cornerT(b, px, salt) {
-  const F = FAM[b.name], lit = F.lit || "wallHi.light", shade = F.shade || "wallHi.shadow", cb = capOf(F, px);
+function cornerT(b, px, salt, rt) {
+  const F = FAM[b.name], lit = F.lit || "wallHi.light", shade = F.shade || "wallHi.shadow", cb = capOf(F, px), lv = rt ? shade : lit;
   return [R(0, 0, TS, TS, "wall"), R(3, 3, 37, 16, cb), R(3, 3, 31, 37, cb), ...(F.panel ? [R(8, 8, 32, 6, F.panel), R(8, 8, 21, 32, F.panel)] : []),
     ...MAT[b.name]({cap: [6, 6, 26, 32], body: null, face: null, panel: null}, px, salt, WV.CTL),
-    R(3, 3, 37, 2, lit), R(3, 3, 2, 37, lit), ...(px || F.lit ? [] : [R(3, 3, 37, 1, "wallHi.spec"), R(3, 3, 1, 37, "wallHi.spec")]), R(34, 19, 6, 21, "wall.shadow"), R(34, 17, 6, 2, shade), R(39, 19, 1, 21, "edge")];
+    R(3, 3, 37, 2, lit), R(3, 3, 2, 37, lv), ...(px || F.lit || rt ? [] : [R(3, 3, 37, 1, "wallHi.spec"), R(3, 3, 1, 37, "wallHi.spec")]), R(34, 19, 6, 21, "wall.shadow"), R(34, 17, 6, 2, shade), R(39, 19, 1, 21, "edge"), ...bossOf(b)];
 }
-function cornerB(b, px, salt) {
-  const F = FAM[b.name], g = geo(b), lit = F.lit || "wallHi.light", shade = F.shade || "wallHi.shadow", cb = capOf(F, px);
+function cornerB(b, px, salt, rt) {
+  const F = FAM[b.name], g = geo(b), lit = F.lit || "wallHi.light", shade = F.shade || "wallHi.shadow", cb = capOf(F, px), lv = rt ? shade : lit;
   return [R(0, 0, TS, TS, "wall"), R(3, g.y0, 37, g.f, F.face || "wall.shadow"), R(35, 0, 5, 3, "wall.shadow"), R(3, 0, 31, 19, cb), R(3, 3, 37, 16, cb),
     ...(F.panel ? [R(8, 0, 21, 14, F.panel), R(8, 7, 32, 8, F.panel)] : []),
     ...MAT[b.name]({cap: [6, 0, 26, 17], body: g.y0 > 20 ? [5, 20, 35, g.y0 - 20] : null, face: [5, g.y0 + 1, 35, g.f - 3], panel: null}, px, salt, WV.CBL),
-    R(3, 0, 2, 19, lit), R(34, 3, 6, 2, lit), R(3, 17, 37, 2, shade), R(32, 0, 2, 3, shade), ...lightH(b, px, 3, 37, g), R(3, 39, 37, 1, "edge")];
+    R(3, 0, 2, 19, lv), R(34, 3, 6, 2, lit), R(3, 17, 37, 2, shade), R(32, 0, 2, 3, shade), ...lightH(b, px, 3, 37, g), R(3, 39, 37, 1, "edge"), ...bossOf(b)];
 }
 const mirror = (sh) => sh.map((s) => s.r ? {...s, r: [TS - s.r[0] - s.r[2], s.r[1], s.r[2], s.r[3]]} : s.p ? {...s, p: s.p.map(([x, y]) => [TS - x, y])} : {...s, s: s.s.map(([x, y]) => [TS - x, y])});
 
@@ -361,11 +365,11 @@ export function wallShapes(b, code, px = false, opts = {}) {
     case WV.ACC: return keep(block(b, px, salt, code).concat(F.base(g), F.acc(g)));
     case WV.H: return keep(borderH(b, px, salt));
     case WV.VL: return keep(borderV(b, px, salt));
-    case WV.VR: return keep(mirror(borderV(b, px, salt)));
+    case WV.VR: return keep(mirror(borderV(b, px, salt, true)));
     case WV.CTL: return keep(cornerT(b, px, salt));
-    case WV.CTR: return keep(mirror(cornerT(b, px, salt)));
+    case WV.CTR: return keep(mirror(cornerT(b, px, salt, true)));
     case WV.CBL: return keep(cornerB(b, px, salt));
-    case WV.CBR: return keep(mirror(cornerB(b, px, salt)));
+    case WV.CBR: return keep(mirror(cornerB(b, px, salt, true)));
     default: return keep(block(b, px, salt, code).concat(F.base(g)));
   }
 }
