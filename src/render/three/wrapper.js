@@ -10,16 +10,18 @@ import * as THREE from "../../../vendor/three.module.js";
 import {CFG} from "../../core/config.js";
 import {biomeOf} from "../../core/config.js";
 import {sfxOf} from "../../audio/item.js";
-import {buildScene, disposeGroup} from "./scene.js";
+import {buildScene, disposeGroup, RIM_W, RIM_LIP} from "./scene.js";
 import {applyBright} from "./lights.js";
 import {createRig, applyOrbit, CAM_FOV} from "./camrig.js";
 import {introCam} from "./flythrough.js";
 import {createParticles} from "./particles.js";
 import {buildAtlas} from "./textures.js";
+import {stageGlow, stageBack, hudPlate3} from "../frame.js";
 import {drawHudChips, drawAbilityBar, drawOverlay, overlayBox, drawCoach, drawCoach2} from "../scenes.js";
 import {onEvent, updateFx, getShake, getFlash, getFx, feedFx, drawFxOverlay, drawPickupFx, syncFx, initFx} from "../fx.js";
 
 const W=CFG.COLS*CFG.TILE, H=CFG.ROWS*CFG.TILE;
+const RIM_OX=W/2+RIM_W-2, RIM_OZ=H/2+RIM_W-2;     // the rim's outer reach (scene.js buildRim)
 const noop=()=>{};
 export const DPR_MAX=3;                     // RESOLUTION FULL (opt-in); default min(dpr,2)
 /* GRAPHICS 2026-10-10: the probe and three get ONE attribute object. The
@@ -121,7 +123,8 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
     sc=buildScene(world,getAtlas(world),brightK);
     setShadow(); shadowNeed=inv=true;
     const biome=biomeOf(world.level);
-    scene3.background=new THREE.Color(biome.bg1);
+    scene3.background=gl?null:new THREE.Color(biome.bg1);
+    stageBack(glCanvas,world.level); stageGlow(overlayCanvas,world.level);
     /* No distance fog. On the rig of the 2026-09-04 pass the far board
        corners sat at d 963, and Fog(bg1,700,1600) was replacing 43% of them
        with the darkest colour in the biome — 89% out at the DIST_MAX dolly
@@ -226,6 +229,8 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
     if(ov||(o&&o.hud===true)){
       if(ov){ const B=overlayBox("3d");
         drawOverlay(ovCtx,world,B.w,B.h,B.cx,B.cy,o&&o.pause,o&&o.time,o&&o.run,o&&o.toast); }
+      if(o&&o.hud===true){ const q=biomeOf(world.level),t=q.hWall+RIM_LIP,a=projBoard(camera,W/2-RIM_OX,H/2-RIM_OZ,t),b=projBoard(camera,W/2+RIM_OX,H/2-RIM_OZ,t);
+        hudPlate3(ovCtx,world.level,Math.max(8,a.x),Math.min(W-8,b.x),Math.min(a.y,b.y)); }
       if(o&&o.hud===true)drawHudChips(ovCtx,world,o&&o.time);
       if(o&&o.hud===true)drawAbilityBar(ovCtx,world);
       if(o&&o.hud===true&&world.state==="PLAY")drawFxOverlay(ovCtx);

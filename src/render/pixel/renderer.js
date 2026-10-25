@@ -45,6 +45,7 @@ import {setPixelArt, hudIcon} from "../hudart.js";
 import {createView, resetView, drawPixelWorld, trackGrid} from "./world.js";
 import {createOneShots, feedShot} from "./oneshot.js";
 import {animClock, newClock} from "./anim.js";
+import {hudPlate, stageGlow} from "../frame.js";
 import {NATIVE_W, NATIVE_H, evenShake, kOf, pxM, zOf, finalMatrix} from "./snap.js";
 
 const W = CFG.COLS * CFG.TILE, H = CFG.ROWS * CFG.TILE;
@@ -191,6 +192,7 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
     if (world !== lastWorld || world.grid !== lastGrid) { V.shots.reset(); resetView(V); if (wasPaused) initFx(); lastWorld = world; lastGrid = world.grid; }
     wasPaused = paused;
     animClock(clock, world);
+    stageGlow(overlayCanvas, world.level);
     consumeEvents(world, dt, !(o && o.sfx === false));
     V.t = clock.t; V.dt = clock.dt;
     V.shots.expire(V.t);
@@ -228,6 +230,7 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
       drawOverlay(ovCtx, world, B.w, B.h, B.cx, B.cy, o && o.pause, o && o.time, o && o.run, o && o.toast);
       if (world.state === "WIN" || world.state === "LOSE") drawPartsOver(V.parts);
     }
+    if (o && o.hud === true) hudPlate(ovCtx, true, world.level);
     if (o && o.hud === true) drawHudChips(ovCtx, world, o && o.time, hudIco);
     if (o && o.hud === true) drawAbilityBar(ovCtx, world, hudIco);
     if (o && o.hud === true && world.state === "PLAY") drawFxOverlay(ovCtx);

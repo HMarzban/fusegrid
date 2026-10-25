@@ -14,6 +14,7 @@ import {createPools} from "./entities.js";
 import {live} from "./upload.js";
 import {buildFeat} from "./featmesh.js";
 import {wallCodes} from "../wallvar.js";
+import {rimFX, floorFX} from "./wellfx.js";
 
 const W=CFG.COLS*CFG.TILE, D=CFG.ROWS*CFG.TILE;
 const MAT=new THREE.Matrix4();
@@ -55,7 +56,7 @@ function buildRim(biome){
     bevelThickness:RIM_BEV,bevelSize:RIM_BEV,bevelSegments:1,curveSegments:1});
   geo.rotateX(-Math.PI/2);              // extrude runs +Z -> lay it flat
   const col=new THREE.Color(biome.wall).lerp(new THREE.Color(biome.bg1),0.35);
-  const rim=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({color:col}));
+  const rim=new THREE.Mesh(geo,rimFX(new THREE.MeshLambertMaterial({color:col}),biome.hWall));
   rim.castShadow=false; rim.receiveShadow=true;
   rim.userData.tag="trim";
   return rim;
@@ -112,7 +113,7 @@ export function buildScene(world, atlas, bright){
   const chkGeo=new THREE.PlaneGeometry(CFG.TILE,CFG.TILE);
   chkGeo.rotateX(-Math.PI/2);
   const checker=new THREE.InstancedMesh(chkGeo,
-    new THREE.MeshLambertMaterial({color:"#ffffff"}),CFG.COLS*CFG.ROWS);
+    floorFX(new THREE.MeshLambertMaterial({color:"#ffffff"})),CFG.COLS*CFG.ROWS);
   if(atlas&&atlas.floor)checker.material.map=atlas.floor;
   {
     const cA=new THREE.Color(biome.floor0), cB=new THREE.Color(biome.floor1);
