@@ -326,6 +326,18 @@ export function drawHudChips(c, world, tm, ico) {
   c.textAlign = "left";
   const lives = Math.max(0, world.lives | 0);
   const n = Math.min(lives, 6);
+  /* one band behind the whole row, so the hearts, the chips and the score
+     read on the same ground; each chip is an outline on it */
+  const panel = (x, w, fill) => {
+    if (fill) {
+      c.fillStyle = HUD_PANEL;
+      c.fillRect(x, 10, w, 30);
+    }
+    c.strokeStyle = HUD_LINE;
+    c.lineWidth = 1;
+    c.strokeRect(x + 0.5, 10.5, w - 1, 29);
+  };
+  panel(10, CFG.COLS * CFG.TILE - 22, true);
   for (let i = 0; i < n; i++) {
     if (ico) { ico(c, "heart", "#ff3b5c", 16 + i * 19, 25); continue; }
     c.save();
@@ -340,11 +352,7 @@ export function drawHudChips(c, world, tm, ico) {
     c.fillText("+" + (lives - n), 16 + 6 * 19, 25);
   }
   const chip = (x, w, label, count, col, icon) => {
-    c.fillStyle = HUD_PANEL;
-    c.fillRect(x, 10, w, 30);
-    c.strokeStyle = HUD_LINE;
-    c.lineWidth = 1;
-    c.strokeRect(x + 0.5, 10.5, w - 1, 29);
+    panel(x, w);
     let tx = x + 10;
     if (icon && ico) {
       ico(c, icon, col, x + 17, 25);
@@ -383,7 +391,7 @@ export function drawHudChips(c, world, tm, ico) {
     null,
   );
   if (ta) chip(458, 72, "TIME", fmtTime(tm.t), null, null);
-  const scx = CFG.COLS * CFG.TILE - 12;
+  const scx = CFG.COLS * CFG.TILE - 18;
   c.textAlign = "right";
   const hk = world.heat | 0;
   c.fillStyle = HEAT_COL[hk] || HUD_MUTED;
@@ -480,33 +488,24 @@ export function drawCoach(c, alpha) {
   c.textBaseline = "middle";
   c.lineWidth = 1;
   c.strokeStyle = COACH_LINE;
-  const ox = CFG.TILE * 2.4,
-    oy = CFG.TILE * 1.3,
-    ks = 22,
-    gap = 4;
-  const cap = (dx, dy, label) => {
+  /* the bottom lane (y 486-514, the border row), right end: never on a board
+     tile, clear of the ability bar that grows from the left */
+  const ks = 22,
+    gap = 4,
+    pw = 54,
+    ox = CFG.COLS * CFG.TILE - 20 - (ks * 4 + gap * 3 + 10 + pw),
+    oy = ABAR.y + (ABAR.h - ks) / 2;
+  const cap = (x, w, label, size) => {
     c.fillStyle = COACH_PANEL;
-    rr(c, ox + dx, oy + dy, ks, ks, 5);
+    rr(c, x, oy, w, ks, 5);
     c.fill();
     c.stroke();
     c.fillStyle = COACH_TEXT;
-    c.font = "900 12px ui-monospace,monospace";
-    c.fillText(label, ox + dx + ks / 2, oy + dy + ks / 2 + 1);
+    c.font = "900 " + size + "px ui-monospace,monospace";
+    c.fillText(label, x + w / 2, oy + ks / 2 + 1);
   };
-  cap(ks + gap, 0, "W");
-  cap(0, ks + gap, "A");
-  cap(ks + gap, ks + gap, "S");
-  cap((ks + gap) * 2, ks + gap, "D");
-  const pw = (ks + gap) * 3 - gap,
-    ph = 18,
-    py = oy + (ks + gap) * 2 + 6;
-  c.fillStyle = COACH_PANEL;
-  rr(c, ox, py, pw, ph, 8);
-  c.fill();
-  c.stroke();
-  c.fillStyle = COACH_TEXT;
-  c.font = "900 10px ui-monospace,monospace";
-  c.fillText("SPACE", ox + pw / 2, py + ph / 2 + 1);
+  ["W", "A", "S", "D"].forEach((k, i) => cap(ox + i * (ks + gap), ks, k, 12));
+  cap(ox + 4 * (ks + gap) + 6, pw, "SPACE", 10);
   c.restore();
 }
 

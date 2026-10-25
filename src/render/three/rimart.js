@@ -12,6 +12,14 @@ export const RIM_TEX = {rx: 336, rz: 296, S: 2, strip: 64};
 export const rimSize = () => [RIM_TEX.rx * 2 * RIM_TEX.S, (RIM_TEX.rz * 2 + RIM_TEX.strip) * RIM_TEX.S];
 
 const QUIET = 0.4;
+/* the rim's near-corner reach: at rig C the near half of the outer E / W edge
+   projects past the canvas (|ndc| 1.075 at 336), so the ring tapers to the x
+   that lands at 0.995 (ndc is linear in the wall-top height over the 8 worlds) */
+export const NEAR_Z = 100;
+export const nearX = (hWall) => Math.min(RIM_TEX.rx, (RIM_TEX.rx * 0.995) / (1.0594 + (hWall + 6 - 20) * 0.000691));
+/* per world value ramp across the band (white alpha at the outer edge, black
+   alpha at the inner) and a diagonal sheen, never a new hex */
+const RAMP = {ICE: [0.12, 0.2, 0.08], VOID: [0.05, 0.14, 0.05], CROWN: [0.1, 0.18, 0.07], FACTORY: [0.08, 0.2, 0.06], WATER: [0.08, 0.2, 0.06], JUNGLE: [0.05, 0.16, 0], ARENA: [0.05, 0.16, 0], SAND: [0.06, 0.14, 0]};
 const R = (x, y, w, h, c) => ({r: [x, y, w, h], c});
 /* world-specific side-face detail: hh = face height; v = 0 at the top of the strip */
 const SIDE = {
@@ -37,6 +45,12 @@ function band(c, B, res, len, lo) {
   c.restore();
   /* one step quieter than the walls: the rail is veiled toward the body */
   c.save(); c.globalAlpha = QUIET; c.fillStyle = slot2d(B, "wall"); c.fillRect(0, 7, len, 24); c.restore();
+  const [hi, lo2, sh] = RAMP[B.name] || [0.05, 0.15, 0];
+  c.save();
+  const g = c.createLinearGradient ? c.createLinearGradient(0, 3, 0, 35) : null;
+  if (g) { g.addColorStop(0, "rgba(255,255,255," + hi + ")"); g.addColorStop(0.45, "rgba(255,255,255,0)"); g.addColorStop(1, "rgba(0,0,0," + lo2 + ")"); c.fillStyle = g; c.fillRect(0, 3, len, 32); }
+  if (sh) { c.fillStyle = "rgba(255,255,255," + sh + ")"; for (let u = 24; u < len; u += 120) { c.beginPath(); c.moveTo(u, 35); c.lineTo(u + 7, 35); c.lineTo(u + 21, 3); c.lineTo(u + 14, 3); c.closePath(); c.fill(); } }
+  c.restore();
 }
 function corner(c, B, res, lx, ly) {
   const lit = "wall.light", shade = "wall.shadow", fill = (sl, x, y, w, h) => paintShapes(c, B, [R(x, y, w, h, sl)], 0, 0, res);
@@ -62,8 +76,9 @@ export function paintRim(c, B, res = slot2d, hWall = B.hWall, lip = 6) {
   at(rx, z0, () => { c.transform(0, 1, -1, 0, 0, 0); band(c, B, res, 520, false); });
   at(-rx, -rz, () => corner(c, B, res, 1, 1));
   at(rx - 38, -rz, () => corner(c, B, res, -1, 1));
-  at(-rx, rz - 38, () => corner(c, B, res, 1, -1));
-  at(rx - 38, rz - 38, () => corner(c, B, res, -1, -1));
+  const nx = nearX(hWall);
+  at(-nx, rz - 38, () => corner(c, B, res, 1, -1));
+  at(nx - 38, rz - 38, () => corner(c, B, res, -1, -1));
   c.restore();
   /* side face strip under the ring picture: v 0 = height strip, 64 units tall */
   const H = Math.min(strip, hWall + lip), y0 = strip - H, lit = "wall.light", fill = (sl, x, y, w, h) => paintShapes(c, B, [R(x, y, w, h, sl)], 0, 0, res);

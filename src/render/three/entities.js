@@ -26,6 +26,7 @@ import { PLAYER_HULL } from "../sprites.js";
 import { createBlast } from "./blast.js";
 import { live } from "./upload.js";
 import { getFxOpts } from "../fx.js";
+import { feedContact } from "./groundfx.js";
 
 const W2 = (CFG.COLS * CFG.TILE) / 2,
   D2 = (CFG.ROWS * CFG.TILE) / 2;
@@ -1064,6 +1065,7 @@ export function createPools(biome, atlas) {
   const ITEM_RING_GEO = (() => {
     const T = CFG.TILE,
       flat = (g) => {
+        g.scale(1.3, 1.3, 1);   /* depth round: bigger rings; the instance scale still encodes blast reach */
         g.rotateX(-Math.PI / 2);
         return g;
       };
@@ -1091,7 +1093,7 @@ export function createPools(biome, atlas) {
       bls: sharedGeo(flat(mergeGeos(...bls))),
     };
   })();
-  const RING_SCALE = { line: 0.86, pierce: 1.0, power: 1.16 };
+  const RING_SCALE = { line: 0.86, pierce: 1.0, power: 1.16 }, RING_LIFT = 0.16;
   const itemMats = {},
     itemRings = {};
   function matForItem(t, col) {
@@ -1163,6 +1165,7 @@ export function createPools(biome, atlas) {
   group.add(player);
 
   function update(world) {
+    feedContact(world);
     const t = world.time || 0;
     const p = world.players && world.players[0];
     if (
@@ -1331,7 +1334,7 @@ export function createPools(biome, atlas) {
         if (kind === "power") ry = 1.8 * t + ph;
         op = 0.3 + 0.3 * Math.sin(9 * t);
       }
-      itemRingIM[kind].material.opacity = op;
+      itemRingIM[kind].material.opacity = op + RING_LIFT;
       _p.set(it.x - W2, hy, it.y - D2);
       _e.set(0, ry, rz);
       _q.setFromEuler(_e);

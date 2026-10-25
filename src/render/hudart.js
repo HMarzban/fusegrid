@@ -3,7 +3,7 @@
    read LIVE from the atlas the px renderer registered (setPixelArt), so
    finished art replaces a placeholder with no copy and no second bake. A cell
    lands on whole logical px at an integer scale, centred on its opaque box,
-   smoothing off: x1 in a HUD chip; on a GUIDE page x2 only when EVERY cell on
+   smoothing off: x1 in a HUD chip (the life hearts, in the y 25 row, x2: 2D hearts are about 22 px); on a GUIDE page x2 only when EVERY cell on
    that page fits the slot at x2 (pageScale), else x1 for the whole page, so
    one grid never mixes sizes. The slot is the vector well plus 4 px a side.
    Nothing registered => null, and the caller paints vector. Text stays the
@@ -51,5 +51,5 @@ export function blitCell(c, fs, cx, cy, s) {
 
 export function hudIcon(A) {
   const memo = {};
-  return (c, type, col, x, y) => blitCell(c, memo[type] || (memo[type] = itemCell(A, type)), x, y, HUD_S);
+  return (c, type, col, x, y) => blitCell(c, memo[type] || (memo[type] = itemCell(A, type)), x, y, type === "heart" && y === 25 ? 2 : HUD_S);
 }

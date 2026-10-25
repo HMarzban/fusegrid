@@ -14,7 +14,7 @@ import {createPools} from "./entities.js";
 import {live} from "./upload.js";
 import {buildFeat} from "./featmesh.js";
 import {wallCodes} from "../wallvar.js";
-import {RIM_TEX} from "./rimart.js";
+import {RIM_TEX, nearX, NEAR_Z} from "./rimart.js";
 import {rimFX, floorFX, featAO, createAO} from "./wellfx.js";
 
 const W=CFG.COLS*CFG.TILE, D=CFG.ROWS*CFG.TILE;
@@ -65,12 +65,20 @@ function rimUV(geo,biome){
 
 /* the pale worlds sit lower still: the rim must stay quieter than walls and tiles */
 const RIM_TINT={ICE:0.3,SAND:0.28,ARENA:0.26,FACTORY:0.26,WATER:0.22,JUNGLE:0.2,CROWN:0.2,VOID:0.1};
+/* gentle gloss per world (specular grey, shininess): the polished worlds catch
+   the key on the bevel; stone / timber / sand stay matte. VOID is capped so
+   nothing on it reads above wallHi. */
+const RIM_GLOSS={ICE:[0.22,60],CROWN:[0.16,40],FACTORY:[0.14,34],WATER:[0.14,46],VOID:[0.06,50]};
 function buildRim(biome,atlas){
   const oX=W/2+RIM_W-RIM_BEV, oZ=D/2+RIM_W-RIM_BEV;
   const iX=W/2-RIM_IN+RIM_BEV, iZ=D/2-RIM_IN+RIM_BEV;
   const shape=new THREE.Shape();
-  shape.moveTo(-oX,-oZ); shape.lineTo(oX,-oZ); shape.lineTo(oX,oZ);
-  shape.lineTo(-oX,oZ); shape.closePath();
+  /* frame round: shape y = -world z, so the NEAR edge is y = -oZ. From
+     z = NEAR_Z the outer E / W edge leans in to nearX so the rim stays inside
+     the canvas at the near corners (tests: reach, symmetry, hole unchanged) */
+  const nX=nearX(biome.hWall)-RIM_BEV;
+  shape.moveTo(-nX,-oZ); shape.lineTo(nX,-oZ); shape.lineTo(oX,-NEAR_Z);
+  shape.lineTo(oX,oZ); shape.lineTo(-oX,oZ); shape.lineTo(-oX,-NEAR_Z); shape.closePath();
   const hole=new THREE.Path();          // reverse winding => real hole
   hole.moveTo(-iX,-iZ); hole.lineTo(-iX,iZ); hole.lineTo(iX,iZ);
   hole.lineTo(iX,-iZ); hole.closePath();
@@ -80,7 +88,8 @@ function buildRim(biome,atlas){
     bevelThickness:RIM_BEV,bevelSize:RIM_BEV,bevelSegments:1,curveSegments:1});
   geo.rotateX(-Math.PI/2);              // extrude runs +Z -> lay it flat
   const col=new THREE.Color(biome.wall).lerp(new THREE.Color(biome.bg1),0.35);
-  const mat=new THREE.MeshLambertMaterial({color:col});
+  const gl=RIM_GLOSS[biome.name];
+  const mat=gl?new THREE.MeshPhongMaterial({color:col,specular:new THREE.Color(gl[0],gl[0],gl[0]),shininess:gl[1]}):new THREE.MeshLambertMaterial({color:col});
   if(atlas&&atlas.rim){ rimUV(geo,biome); mat.color.set("#ffffff").lerp(new THREE.Color(biome.bg1),RIM_TINT[biome.name]||0.2); mat.map=atlas.rim; }
   const rim=new THREE.Mesh(geo,rimFX(mat,biome.hWall,!!(atlas&&atlas.rim),biome.name));
   rim.castShadow=false; rim.receiveShadow=true;

@@ -44,7 +44,7 @@ const HUDW = (lives) => ({players: [{bombs: 2, range: 3}], lives, level: 4, enem
 const HUDS = [[0, null], [3, {on: true, t: 12.3}], [8, null]];
 const PAGES = ["drawHowTo", "drawItemsHelp", "drawEnemiesHelp"], BOXES = [[600, 520], [600, 360]];
 const PIN = {
-  hud0: "676af1c5:178", hud3: "ecac4c84:354", hud8: "924118c2:511",
+  hud0: "7c298753:175", hud3: "60b2bf24:349", hud8: "2aa8d78c:508",
   drawHowTo520: "5687af4d:457", drawItemsHelp520: "8a7f1cfd:1195", drawEnemiesHelp520: "1c590ad6:1149",
   drawHowTo360: "1938cac7:457", drawItemsHelp360: "b3039a60:1195", drawEnemiesHelp360: "b0a1000c:1149",
   drawHowTo520T: "e582bb4f:457", drawItemsHelp520T: "2aa3e9c5:1195", drawEnemiesHelp520T: "5682c5e5:1149",
@@ -97,11 +97,11 @@ unchanged("px art registered: it never leaks into another kind");
     const want = Math.min(lv, 6) + 2;
     const ims = d.map((o) => o[1][0]), exp = [...Array(Math.min(lv, 6)).fill(A.items.glyph.heart.im), A.items.glyph.bomb.im, A.items.glyph.fire.im];
     check("HUD px lives " + lv + ": hearts + BOMB + FLAME glyphs are the atlas frames, by identity", d.length === want && ims.every((im, i) => im === exp[i]), d.length + "/" + want);
-    check("HUD px lives " + lv + ": x1, whole logical px, smoothing off", d.every((o) => integral(o) && o[1][3] === o[1][0].width * HUD_S && o[1][4] === o[1][0].height * HUD_S && o[2] === false));
+    check("HUD px lives " + lv + ": hearts x2, chips x1, whole logical px, smoothing off", d.every((o, i) => { const m = i < Math.min(lv, 6) ? 2 : HUD_S; return integral(o) && o[1][3] === o[1][0].width * m && o[1][4] === o[1][0].height * m && o[2] === false; }));
     check("HUD px lives " + lv + ": text identical to CLASSIC (shared vector font)", text(px.log) === text(v.log));
   }
   const d = draws(hud(1, null, ico)), f = A.items.glyph.heart, b = opaqueBox(f);
-  check("HUD px heart centred on the CLASSIC heart centre (16,25) by its opaque box", d[0][1][1] === Math.round(16 - b.x - b.w / 2) && d[0][1][2] === Math.round(25 - b.y - b.h / 2));
+  check("HUD px heart centred on the CLASSIC heart centre (16,25) by its opaque box", d[0][1][1] === Math.round(16 - (b.x + b.w / 2) * 2) && d[0][1][2] === Math.round(25 - (b.y + b.h / 2) * 2));
 }
 
 // ---- GUIDE pages in PIXEL ----

@@ -1639,9 +1639,10 @@ await sec("R.items",async()=>{
     "#"+fire.material.color.getHexString()==="#ff8a3c"&&!fire.material.map);
   drive(Math.PI/10);                         // sin(5t)==1 -> pulse peak
   const pulse=matScale(fireR,0);
-  check("R.items ring pulses opacity .30+.10sin(5t), scale fixed at"
+  /* depth round 2026-10-25 (lane B): rings are brighter, +.16 opacity (bigger through the geometry, scale untouched) */
+  check("R.items ring pulses opacity .46+.10sin(5t), scale fixed at"
       +" RING_SCALE (1, fire carries no blast reach)",
-    Math.abs(fireR.material.opacity-0.40)<1e-6
+    Math.abs(fireR.material.opacity-0.56)<1e-6
     &&Math.abs(pulse.s.x-1)<1e-6,
     fireR.material.opacity.toFixed(3)+"/"+pulse.s.x.toFixed(2));
  });

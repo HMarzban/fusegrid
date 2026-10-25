@@ -9,6 +9,7 @@ import {drawOverlay, overlayBox, drawHudChips, drawAbilityBar, drawCoach, drawCo
 import {draw3dBackground, buildPainters, byDepth} from "./r3d/scene3d.js";
 import {PROJ, project} from "./r3d/camera.js";
 import {wellBoard, hudPlate, stageGlow} from "./frame.js";
+import {drawDepth} from "./depth2d.js";
 
 const isoProj=(bx,by,h)=>{ const q=project(bx/CFG.TILE,by/CFG.TILE); return {x:q.sx,y:q.sy-(h||0)}; };
 
@@ -109,6 +110,7 @@ export function createRenderer(canvas, opts={}){
     } else {
       drawBiomeBackground(ctx, world, armed);
       drawGrid(ctx, world);
+      drawDepth(ctx, world);
       wellBoard(ctx, world.level);
       drawBricks(ctx, world);
       drawItems(ctx, world);

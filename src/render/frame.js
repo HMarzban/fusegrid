@@ -13,6 +13,8 @@
    Colours are the biome's own slots plus black alpha: lip = wallHi, glow =
    brickA (ICE bg0). Light is top-left everywhere. */
 import {CFG, BIOMES} from "../core/config.js";
+import {slot2d, paintShapes} from "./wallart.js";
+import {bossOf} from "./frameart.js";
 
 const W = CFG.COLS * CFG.TILE, H = CFG.ROWS * CFG.TILE, T = CFG.TILE, S = 2;
 const bio = (level) => BIOMES[(Math.max(1, level | 0) - 1) % BIOMES.length];
@@ -95,6 +97,31 @@ export function wellPx(c, level) {
   c.globalAlpha = 1;
 }
 
+/* Corner studs: the HUD plate covers the two top corner cells, so the corner
+   pieces are drawn ON it, in the 14 px square above the hearts and the CORE
+   column (y < 15, never over a HUD item). 2D: the world's own corner boss,
+   mirrored for the right corner; PIXEL: whole-px stepped studs in the biome's
+   slots (a vector polygon would soften the pixel grid). */
+function studs(c, px, b) {
+  const Ws = W, mir = (sh) => sh.map((s) => (s.r ? {...s, r: [Ws - s.r[0] - s.r[2], s.r[1], s.r[2], s.r[3]]} : s.p ? {...s, p: s.p.map(([x, y]) => [Ws - x, y])} : {...s, s: s.s.map(([x, y]) => [Ws - x, y])}));
+  if (px) {
+    c.globalAlpha = 1;
+    for (const x of [1, W - 15]) {
+      c.fillStyle = "#000000"; c.fillRect(x, 1, 14, 14);
+      c.fillStyle = b.wall; c.fillRect(x + 1, 1, 12, 13);
+      c.fillStyle = b.wallHi; c.fillRect(x + 1, 1, 12, 2); c.fillRect(x + 1, 1, 2, 13);
+      c.fillStyle = "#000000"; c.globalAlpha = 0.5; c.fillRect(x + 11, 3, 2, 11); c.fillRect(x + 3, 12, 10, 2);
+      c.globalAlpha = 1; c.fillStyle = b.wallHi; c.fillRect(x + 6, 6, 3, 3);
+      c.fillStyle = "#000000"; c.fillRect(x + 7, 7, 1, 1);
+    }
+    return;
+  }
+  const L = bossOf(b, 0.8, 7.5);
+  c.globalAlpha = 1;
+  paintShapes(c, b, L, 0, 0, slot2d);
+  paintShapes(c, b, mir(L), 0, 0, slot2d);
+}
+
 /* HUD plate: a dark panel cut into the top rampart, flush with the well edge.
    px = stepped corners in whole art px; else rounded. Overlay layer only. */
 export function hudPlate(c, px, level, bare) {
@@ -109,31 +136,30 @@ export function hudPlate(c, px, level, bare) {
   c.globalAlpha = 0.25; c.fillRect(x + 6, y + 2, w - 12, 2);
   c.globalAlpha = 0.5; c.fillStyle = b.wallHi; if (!bare) c.fillRect(x, y + h - 1, w, 1);
   if (bare) { c.restore(); return; }
-  c.globalAlpha = 0.7; c.fillRect(7, 7, 12, 3); c.fillRect(7, 7, 3, 10); c.fillRect(W - 19, 7, 12, 3);
-  c.globalAlpha = 0.55; c.fillStyle = "#000000"; c.fillRect(W - 10, 7, 3, 10);
   c.globalAlpha = 1;
+  studs(c, px, b);
   c.restore();
 }
 
 /* REAL 3D: the HUD floats on the stage, so ONE plate is cut from the rim's
-   colour: a header band across the top and a leg at each end that drops into
-   the rim's far corners (a, b = the projected outer far corners), with the
-   same lit lip (top and left edges wallHi, shade bottom and right). Slots
-   only; wallHi is the brightest it ever gets. */
-export function hudPlate3(c, level, a, b) {
-  const bi = bio(level), x = 8, y = 6, w = W - 16, hb = T - 6, lw = 32, ya = Math.max(a.y, b.y) + 6;
-  const lx = Math.max(x, a.x - 4), rx = Math.min(x + w, b.x + 4);
+   colour: a header band across the top with the same lit lip (top and left
+   edges wallHi, shade bottom and right) and the two corner studs. No legs:
+   the plate hangs from the top edge only (a, b are unused, kept for the call
+   shape). Slots only; wallHi is the brightest it ever gets. */
+export function hudPlate3(c, level) {
+  const bi = bio(level), x = 8, y = 6, w = W - 16, hb = T - 6;
   c.save();
   c.fillStyle = bi.wall; c.globalAlpha = 0.96;
-  c.fillRect(x, y, w, hb); c.fillRect(lx, y + hb, lw, ya - y - hb); c.fillRect(rx - lw, y + hb, lw, ya - y - hb);
+  c.fillRect(x, y, w, hb);
   c.fillStyle = bi.bg1; c.globalAlpha = 0.42;
   c.fillRect(x + 2, y + 2, w - 4, hb - 4);
   c.fillStyle = bi.wallHi; c.globalAlpha = 0.55;
-  c.fillRect(x, y, w, 2); c.fillRect(x, y, 2, hb); c.fillRect(lx, y + hb, 2, ya - y - hb); c.fillRect(rx - lw, y + hb, 2, ya - y - hb);
+  c.fillRect(x, y, w, 2); c.fillRect(x, y, 2, hb);
   c.globalAlpha = 0.28; c.fillRect(x, y + 2, w, 1);
   c.fillStyle = "#000000"; c.globalAlpha = 0.5;
-  c.fillRect(x, y + hb - 2, lx - x, 2); c.fillRect(lx + lw, y + hb - 2, rx - lw - lx - lw, 2); c.fillRect(rx, y + hb - 2, x + w - rx, 2);
-  c.fillRect(x + w - 2, y, 2, hb); c.fillRect(lx + lw - 2, y + hb, 2, ya - y - hb); c.fillRect(rx - 2, y + hb, 2, ya - y - hb);
+  c.fillRect(x, y + hb - 2, w, 2); c.fillRect(x + w - 2, y, 2, hb);
+  c.globalAlpha = 1;
+  studs(c, false, bi);
   c.restore();
 }
 

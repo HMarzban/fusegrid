@@ -1,5 +1,5 @@
 import { BIOMES } from "../src/core/config.js";
-import { paintFloor, FLOOR_V, floorVar, bedOf } from "../src/render/floorart.js";
+import { paintFloor, paintGround, FLOOR_V, floorVar, bedOf } from "../src/render/floorart.js";
 import { dE, rgbOf, lum } from "../tools/tileart/gatefns.mjs";
 
 let pass = 0,
@@ -79,6 +79,24 @@ for (const b of BIOMES) {
   const seen = new Set();
   for (let x = 0; x < 15; x++) for (let y = 0; y < 13; y++) seen.add(floorVar(x, y, 1));
   check("a room uses every variant", seen.size === FLOOR_V, seen.size);
+}
+
+{
+  const real = Math.random;
+  Math.random = () => { throw new Error("Math.random in the ground painter"); };
+  const g = (b, x, y, lv) => { const r = rec(); paintGround(r.ctx, b, x, y, lv); return r; };
+  let det = true;
+  try { for (const b of BIOMES) for (let x = 0; x < 15; x++) for (let y = 0; y < 13; y++) if (g(b, x, y, 2).log.join("|") !== g(b, x, y, 2).log.join("|")) det = false; } catch (e) { det = false; }
+  Math.random = real;
+  check("ground tone is deterministic per (biome, cell, room), no Math.random", det);
+  for (const b of BIOMES) {
+    const bgs = rgbOf(b.bg1).join(","), ok = ["0,0,0", "255,255,255", bgs, rgbOf(b.brickB).join(","), rgbOf(b.wall).join(","), rgbOf(b.wallHi).join(",")];
+    let bad = [], hiA = 0, marks = new Set();
+    for (let x = 0; x < 15; x++) for (let y = 0; y < 13; y++) { const r = g(b, x, y, 1); marks.add(r.log.join("|")); for (const f of r.fills) { const c = parse(f); if (!ok.includes(c.rgb.join(","))) bad.push(f); hiA = Math.max(hiA, c.a); } }
+    check(b.name + " ground tone uses only slots and black / white alpha", !bad.length, bad.join(" "));
+    check(b.name + " ground tone stays a quiet tint (alpha <= 0.25)", hiA <= 0.25, hiA);
+    check(b.name + " ground tone varies across the room", marks.size >= 6, marks.size);
+  }
 }
 
 console.log("\n  FLOOR ART RESULT: " + pass + " PASS / " + fail + " FAIL");

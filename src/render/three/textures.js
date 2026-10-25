@@ -146,10 +146,10 @@ export function atlasSources(mk, level=1){
       /* frame A: the rim's own strip (ring picture + side face), one canvas */
       { const [rw,rh]=rimSize(); o.rim=captureSprite(rw,rh,(c)=>paintRim(c,B,(b,sl)=>slot2d(b,sl)),mk); }
       o.brick=bakedTile(bi,"brick");
-      /* base floor (integration 2026-10-25): one slab painted at 2x from the
-         shared floor painter, floor0 bed (the instance colour carries the
+      /* base floor (integration 2026-10-25): a 2x2 atlas of four slab variants painted at 2x from the
+         shared floor painter (groundfx.js picks one per cell by hash), floor0 bed (the instance colour carries the
          parity); the map is minified ~2x at rig C, so it gets mipmaps */
-      o.floor=captureSprite(CFG.TILE*2,CFG.TILE*2,(c)=>{ c.scale(2,2); paintFloor(c,B,0,0,2); },mk);
+      o.floor=captureSprite(CFG.TILE*4,CFG.TILE*4,(c)=>{ for(let v=0;v<4;v++){ c.save(); c.translate((v&1)*CFG.TILE*2,(v>>1)*CFG.TILE*2); c.scale(2,2); paintFloor(c,B,0,v,2); c.restore(); } },mk);
      }catch(_){ /* stay asset-free */ }
    }
   return o;

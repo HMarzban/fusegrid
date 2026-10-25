@@ -58,14 +58,15 @@ check("PORT_GAME is frozen: GAME lifts the stage to 72 (44 pill + 8 gap + 20 air
     PORT_GAME.top >= 44 + 8 && PORT_GAME.top >= PORT_GEO.top && PORT_GAME.pad >= PORT_GEO.pad[1],
   JSON.stringify(PORT_GAME));
 
+// frame round 2026-10-25: GAME centres the stage between the pause pill and the docked pad (was: lifted to 72, a ~240 px dead gap above the pad)
 for (const [W, H, g] of [
-  [375, 812, { top: 72, pad: 184, bomb: 104, padTop: 220, bombTop: 260 }],
-  [390, 844, { top: 72, pad: 184, bomb: 104, padTop: 239, bombTop: 279 }],
-  [412, 915, { top: 72, pad: 184, bomb: 104, padTop: 291, bombTop: 331 }],
-  [375, 667, { top: 72, pad: 184, bomb: 104, padTop: 75, bombTop: 115 }],
-  [320, 568, { top: 72, pad: 166, bomb: 93, padTop: 42, bombTop: 79 }],
+  [375, 812, { top: 182, pad: 184, bomb: 104, padTop: 110, bombTop: 150 }],
+  [390, 844, { top: 191, pad: 184, bomb: 104, padTop: 120, bombTop: 160 }],
+  [412, 915, { top: 217, pad: 184, bomb: 104, padTop: 146, bombTop: 186 }],
+  [375, 667, { top: 109, pad: 184, bomb: 104, padTop: 38, bombTop: 78 }],
+  [320, 568, { top: 93, pad: 165, bomb: 93, padTop: 22, bombTop: 58 }],
   [600, 700, { top: 60, pad: 144, bomb: 81, padTop: 22, bombTop: 54 }],
-  [768, 1024, { top: 72, pad: 184, bomb: 104, padTop: 92, bombTop: 132 }],
+  [768, 1024, { top: 118, pad: 184, bomb: 104, padTop: 46, bombTop: 86 }],
 ]) {
   const got = portraitGeo(W, H, 600, 520, true);
   check(W + "x" + H + " GAME geometry " + JSON.stringify(g), JSON.stringify(got) === JSON.stringify(g), JSON.stringify(got));
@@ -115,9 +116,9 @@ check("ACT_GEO is frozen: THROW / REMOTE 52px, never under 44 (the touch-target 
   Object.isFrozen(ACT_GEO) && JSON.stringify(ACT_GEO) === JSON.stringify({ max: 52, min: 44, gap: 8, pill: 44 }), JSON.stringify(ACT_GEO));
 
 for (const [W, H, a] of [
-  [390, 844, { mode: "up", act: 52, thr: { r: 14, t: 219 }, rem: { r: 74, t: 219 } }],
-  [412, 915, { mode: "up", act: 52, thr: { r: 14, t: 271 }, rem: { r: 74, t: 271 } }],
-  [320, 568, { mode: "up", act: 51, thr: { r: 14, t: 20 }, rem: { r: 73, t: 20 } }],
+  [390, 844, { mode: "up", act: 52, thr: { r: 14, t: 100 }, rem: { r: 74, t: 100 } }],
+  [412, 915, { mode: "up", act: 52, thr: { r: 14, t: 126 }, rem: { r: 74, t: 126 } }],
+  [320, 568, { mode: "down", act: 44, thr: { r: 14, t: 159 }, rem: { r: 66, t: 159 } }],
   [375, 548, { mode: "mid", act: 52, thr: { r: 118, t: 39 }, rem: { r: 118, t: 99 } }],
   [360, 560, { mode: "mid", act: 52, thr: { r: 118, t: 39 }, rem: { r: 118, t: 99 } }],
   [600, 700, { mode: "mid", act: 52, thr: { r: 206, t: 39 }, rem: { r: 206, t: 99 } }],

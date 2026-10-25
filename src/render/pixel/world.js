@@ -9,6 +9,8 @@
 import {CFG, T, BIOMES} from "../../core/config.js";
 import {wallCodes} from "../wallvar.js";
 import {cellSpec} from "../featdraw.js";
+import {floorVar} from "../floorart.js";
+import {drawShadows} from "../featpxcells.js";
 import {ITEM_FAMILY} from "../icons.js";
 import {GHOST_A} from "../sprites.js";
 import {PX_T} from "./timing.js";
@@ -40,15 +42,15 @@ export function trackGrid(V, world) {
 
 function drawTiles(c, V, world) {
   const g = world.grid, level = world.level | 0, bi = (Math.max(1, level) - 1) % BIOMES.length, TS = V.A.tiles(bi), WC = wallCodes(world), fe = world.feat;
+  if (V.fvL !== level) { V.fvL = level; V.fv = new Uint8Array(C * R); for (let k = 0; k < C * R; k++) V.fv[k] = floorVar(k % C, (k / C) | 0, level); }
+  const oc = (i) => (g[i] === T.WALL ? 1 : g[i] === T.BRICK ? 2 : 0);
   for (let y = 0; y < R; y++) for (let x = 0; x < C; x++) {
     const k = y * C + x, t = g[k], X = x * 20, Y = y * 20, alt = (x + y) & 1;
     if (t === T.WALL) { c.drawImage(TS.wallV[alt][WC[k]].im, X, Y); V.draws++; continue; }
-    if (fe && fe[k]) { const sp = cellSpec(world, x, y); if (sp.kind) { c.drawImage(V.A.feat(bi, sp).im, X, Y); V.draws++; continue; } }
-    const under = y > 0 && g[k - C] !== T.EMPTY;
-    c.drawImage((under ? TS.floorC : TS.floor)[alt].im, X, Y); V.draws++;
-    if (t === T.EMPTY && (x * 7 + y * 13 + level * 3) % 5 === 0) { c.drawImage(TS.motif[alt].im, X, Y); V.draws++; }
+    if (fe && fe[k]) { const sp = cellSpec(world, x, y); if (sp.kind) { c.drawImage(V.A.feat(bi, sp, world.featT).im, X, Y); V.draws++; continue; } }
+    const n = y ? oc(k - C) : 0, w = x ? oc(k - 1) : 0, nw = x && y ? oc(k - C - 1) : 0;
+    c.drawImage(TS.floor(alt, V.fv[k], n, w, nw).im, X, Y); V.draws++;
   }
-  wellPx(c, level);
   for (let k = 0; k < g.length; k++) if (g[k] === T.BRICK) { c.drawImage(TS.brick.im, (k % C) * 20, ((k / C) | 0) * 20); V.draws++; }
   const pool = V.shots ? V.shots.pool : null;
   if (pool) for (let i = 0; i < pool.length; i++) {
@@ -203,6 +205,7 @@ export function drawPixelWorld(c, world, V) {
   if (!world || !world.grid) return 0;
   c.globalAlpha = 1;
   drawTiles(c, V, world);
+  drawShadows(c, V, world, blit, snapArt);
   drawItems(c, V, world);
   drawBombs(c, V, world);
   drawBlades(c, V, world);

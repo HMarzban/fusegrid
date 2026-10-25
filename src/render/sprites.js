@@ -5,6 +5,8 @@ import { drawFeat } from "./featdraw.js";
 import { wallCodes, WALL_VARS } from "./wallvar.js";
 import { wallShapes, paintShapes } from "./wallart.js";
 import { paintFloor, floorVar, FLOOR_V } from "./floorart.js";
+import { mix } from "./featart/kit.js";
+import { contact } from "./depth2d.js";
 export { drawIcon, drawEnemyBody };
 
 /* RENDER LAYER — reads world, never mutates it. Every draw fn takes a 2D
@@ -45,7 +47,31 @@ export function captureSprite(w, h, paint, mk) {
 }
 
 /* ---- one-time sprite atlas (per biome) ---- */
-const BAKED = { floorA: {}, floorB: {}, floorV: {}, wall: {}, wallV: {}, brick: {}, ready: false };
+const BAKED = { floorA: {}, floorB: {}, floorV: {}, wall: {}, wallV: {}, brick: {}, brick2: {}, ready: false };
+/* depth round 2026-10-25: the CLASSIC brick face steps down toward the biome's own bg1 (share below: 11-12 L* of the sprite mean in every world, 8 in VOID whose brick is already
+   the darkest); the top highlight and the hue stay.
+   The REAL 3D map keeps the original bake (BAKED.brick) */
+export const BRICK_U = { JUNGLE: 0.25, ICE: 0.16, FACTORY: 0.24, WATER: 0.26, ARENA: 0.26, SAND: 0.26, VOID: 0.34, CROWN: 0.19 };
+export function paintBrick(c, B, u = BRICK_U[B.name] || 0) {
+  const TL = CFG.TILE, A = mix(B.bg1, B.brickA, u), D = mix(B.bg1, B.brickB, u);
+  c.fillStyle = D;
+  rr(c, 1, 1, TL - 2, TL - 2, 4);
+  c.fill();
+  c.fillStyle = A;
+  rr(c, 2, 2, TL - 4, TL * 0.46, 4);
+  c.fill();
+  c.fillStyle = "rgba(0,0,0,0.2)";
+  c.fillRect(4, TL - 6, TL - 8, 3);
+  c.fillStyle = B.brickHi;
+  c.globalAlpha = 0.55;
+  rr(c, 3, 3, TL - 6, TL * 0.2, 3);
+  c.fill();
+  c.globalAlpha = 1;
+  c.strokeStyle = "rgba(0,0,0,0.4)";
+  c.lineWidth = 1.5;
+  rr(c, 1, 1, TL - 2, TL - 2, 4);
+  c.stroke();
+}
 /* one wall painter (wall round prototype): the bake calls it at 0,0, the
    vector fallback at px,py, so Node and the browser draw the same families */
 export function paintWall(c, b, code, px, py) {
@@ -97,6 +123,9 @@ export function bakeAtlas() {
     rr(bc, 1, 1, CFG.TILE - 2, CFG.TILE - 2, 4);
     bc.stroke();
     BAKED.brick[i] = bk;
+    const b2 = make(CFG.TILE, CFG.TILE);
+    paintBrick(b2.getContext("2d"), b);
+    BAKED.brick2[i] = b2;
   }
   BAKED.ready = true;
 }
@@ -147,7 +176,7 @@ export function drawGrid(c, world) {
 }
 export function drawBricks(c, world) {
   const bi = biomeIndex(world.level),
-    b = BAKED.brick[bi],
+    b = BAKED.brick2[bi],
     B = biomeOf(world.level);
   for (let y = 0; y < CFG.ROWS; y++)
     for (let x = 0; x < CFG.COLS; x++)
@@ -160,21 +189,7 @@ export function drawBricks(c, world) {
         }
         c.save();
         c.translate(px, py);
-        c.fillStyle = B.brickB;
-        rr(c, 1, 1, CFG.TILE - 2, CFG.TILE - 2, 4);
-        c.fill();
-        c.fillStyle = B.brickA;
-        rr(c, 2, 2, CFG.TILE - 4, CFG.TILE * 0.46, 4);
-        c.fill();
-        c.fillStyle = B.brickHi;
-        c.globalAlpha = 0.55;
-        rr(c, 3, 3, CFG.TILE - 6, CFG.TILE * 0.2, 3);
-        c.fill();
-        c.globalAlpha = 1;
-        c.strokeStyle = "rgba(0,0,0,0.4)";
-        c.lineWidth = 1.5;
-        rr(c, 1, 1, CFG.TILE - 2, CFG.TILE - 2, 4);
-        c.stroke();
+        paintBrick(c, B);
         c.restore();
       }
 }
@@ -284,6 +299,7 @@ export function drawItems(c, world) {
     if (it.taken || it.buried) continue;
     c.save();
     c.translate(it.x, it.y);
+    contact(c, CFG.TILE * 0.3, CFG.TILE * 0.09, 1.6, CFG.TILE * 0.31);
     drawItemBody(c, world, it);
     c.restore();
   }
@@ -297,6 +313,7 @@ export function drawEnemies(c, world) {
     if (e.dead) continue;
     c.save();
     c.translate(e.x, e.y);
+    contact(c, (e.r || 14) * 0.95, (e.r || 14) * 0.26, 1.8, (e.r || 14) * 0.86);
     const bob =
       e.type === "stationary"
         ? Math.sin(world.time * 3) * 1.5
@@ -598,6 +615,7 @@ export function drawPlayer(c, world) {
     if (p.alive === false) continue;
     c.save();
     c.translate(p.x, p.y);
+    contact(c, CFG.TILE * 0.36 * 0.86, CFG.TILE * 0.36 * 0.24, 1.8, CFG.TILE * 0.36 * 0.96);
     drawPlayerBody(c, world, p);
     c.restore();
   }
@@ -686,6 +704,7 @@ export function drawBombs(c, world) {
   for (const bm of world.bombs) {
     c.save();
     c.translate(bm.x, bm.y);
+    contact(c, CFG.TILE * 0.3 * 0.9, CFG.TILE * 0.3 * 0.28, 1.6, CFG.TILE * 0.3 * 0.98);
     drawBombBody(c, world, bm);
     c.restore();
   }

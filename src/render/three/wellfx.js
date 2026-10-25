@@ -9,7 +9,6 @@
              (concave corners multiply), lighter on the near side because that
              wall is cut to NEAR_H.
    World position comes from the instance matrix, never the scene graph. */
-import * as THREE from "../../../vendor/three.module.js";
 import {CFG} from "../../core/config.js";
 import {RIM_W, RIM_IN, RIM_BEV, RIM_LIP} from "./scene.js";
 
@@ -59,53 +58,4 @@ export function rimFX(mat, hWall, painted = false, name = "") {
   return mat;
 }
 
-/* Contact AO as a floor bake: an 8 px/tile coverage texture computed from the
-   WALL mask (border and interior blocks), rebuilt by scene.update when the
-   wall set changes, sampled by the checker and the tile mesh. No mesh, no
-   light; the near row weighs less because that wall is cut to NEAR_H. */
-const K = 8, AW = CFG.COLS * K, AH = CFG.ROWS * K;
-export function createAO(hWall) {
-  const data = new Uint8Array(AW * AH).fill(255), s0 = 0.28 + 0.14 * Math.min(1, hWall / 32);
-  const tex = new THREE.DataTexture(data, AW, AH, THREE.RedFormat, THREE.UnsignedByteType);
-  tex.magFilter = tex.minFilter = THREE.LinearFilter; tex.generateMipmaps = false; tex.needsUpdate = true;
-  const C = CFG.COLS, R = CFG.ROWS, q = T / K;
-  return {tex, bake(wMask) {
-    for (let j = 0; j < AH; j++) for (let i = 0; i < AW; i++) {
-      const ux = (i + 0.5) * q, uz = (j + 0.5) * q, cx0 = Math.floor(ux / T), cy0 = Math.floor(uz / T);
-      let acc = 1;
-      for (let cy = Math.max(0, cy0 - 2); cy <= Math.min(R - 1, cy0 + 2); cy++) for (let cx = Math.max(0, cx0 - 2); cx <= Math.min(C - 1, cx0 + 2); cx++) {
-        if (!wMask[cy * C + cx]) continue;
-        const dx = Math.max(Math.abs(ux - (cx + 0.5) * T) - T / 2, 0), dz = Math.max(Math.abs(uz - (cy + 0.5) * T) - T / 2, 0), d = Math.hypot(dx, dz);
-        acc *= 1 - s0 * (cy === R - 1 ? 0.6 : 1) * Math.exp(-d / 13);
-      }
-      data[j * AW + i] = Math.round(255 * acc);
-    }
-    tex.needsUpdate = true;
-  }, dispose() { tex.dispose(); }};
-}
-
-export function floorFX(mat, ao) {
-  mat.onBeforeCompile = (sh) => {
-    sh.uniforms.wellAO = {value: ao.tex};
-    sh.vertexShader = VS(sh.vertexShader);
-    sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nuniform sampler2D wellAO;\nvarying vec3 vWq;\nvarying float vTop;")
-      .replace("#include <map_fragment>", `#include <map_fragment>
-diffuseColor.rgb*=texture2D(wellAO,(vWq.xz+vec2(${f(W / 2)},${f(D / 2)}))/vec2(${f(W)},${f(D)})).r;`);
-  };
-  mat.customProgramCacheKey = () => "wellfloor2";
-  return mat;
-}
-
-/* the same AO on the tile mesh (featmesh.js leaves its own shader alone: this
-   chains after it and reads its vW world-xz varying) */
-export function featAO(mat, ao) {
-  const prev = mat.onBeforeCompile;
-  mat.onBeforeCompile = (sh, r) => {
-    prev(sh, r);
-    sh.uniforms.wellAO = {value: ao.tex};
-    sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nuniform sampler2D wellAO;")
-      .replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>
-diffuseColor.rgb*=texture2D(wellAO,(vW+vec2(${f(W / 2)},${f(D / 2)}))/vec2(${f(W)},${f(D)})).r;`);
-  };
-  return mat;
-}
+export {createAO, floorFX, featAO} from "./groundfx.js";

@@ -110,3 +110,64 @@ export function paintFloor(c, b, par, v = 0, mode = 0) {
 
 /* the variant a board cell takes: stable per (x, y, room), render-side only */
 export const floorVar = (x, y, level) => Math.floor(hsh(x + 1, y + 1, level | 0) * FLOOR_V);
+
+/* Ground tone (depth round 2026-10-25): slab-to-slab variation in one room, each biome with a physical cause, painted per cell over the finished floor by
+   depth2d.js (baked with the room's shadow layer). Hash-seeded value noise, a whole-cell tint at alpha <= 0.12 plus one sparse mark, so it stays below the
+   direction D tiles and the pickups. Slots and black / white alpha only. (c at the cell origin; x, y the cell, level the room.) */
+const vn = (u, v, s) => {
+  const x0 = Math.floor(u), y0 = Math.floor(v), fx = u - x0, fy = v - y0, sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+  const a = hsh(x0, y0, s), b = hsh(x0 + 1, y0, s), c = hsh(x0, y0 + 1, s), d = hsh(x0 + 1, y0 + 1, s);
+  return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
+};
+const GROUND = {
+  JUNGLE(c, b, x, y, k, o) {
+    const m = vn(x / 2.6, y / 2.6, 41 + k);
+    if (m > 0.58) o.tint(rg(b.brickB, Math.min(0.07, 0.025 + (m - 0.58) * 0.2)));
+    else if (m < 0.3) o.tint(W(0.02 + (0.3 - m) * 0.08));
+    if (o.h(3) > 0.76) { const lx = 6 + Math.floor(o.h(4) * 24), ly = 6 + Math.floor(o.h(5) * 24); for (let i = 0; i < 3; i++) o.R(lx + Math.floor(o.h(6 + i) * 8) - 4, ly + Math.floor(o.h(9 + i) * 8) - 4, 3, 2, rg(b.wall, 0.2)); }
+  },
+  ICE(c, b, x, y, k, o) {
+    const m = vn(x / 3, y / 3, 51 + k);
+    if (m > 0.6) o.tint(W(0.045)); else if (m < 0.3) o.tint(rg(b.bg1, 0.05));
+    if (o.h(3) > 0.84) { const sx = 8 + Math.floor(o.h(4) * 14), sy = 8 + Math.floor(o.h(5) * 14); o.ln([[sx, sy], [sx + 10, sy + 6 + Math.floor(o.h(6) * 5)]], 1, W(0.1)); }
+  },
+  FACTORY(c, b, x, y, k, o) {
+    const m = vn(x / 5, y / 1.4, 61 + k);
+    if (m > 0.62) o.tint(rg(b.bg1, Math.min(0.12, 0.04 + (m - 0.62) * 0.35)));
+    if (o.h(3) > 0.82) { const dx = 8 + Math.floor(o.h(4) * 22), dy = 8 + Math.floor(o.h(5) * 22); o.R(dx, dy + 1, 5, 3, rg(b.bg1, 0.16)); o.R(dx + 1, dy, 3, 1, rg(b.bg1, 0.1)); o.R(dx + 1, dy + 1, 1, 1, W(0.1)); }
+  },
+  WATER(c, b, x, y, k, o) {
+    const m = vn(x / 2.4, y / 2.4, 71 + k);
+    if (m > 0.55) o.tint(rg(b.bg1, Math.min(0.1, 0.03 + (m - 0.55) * 0.2)));
+    if (o.h(3) > 0.8) { const px = 14 + Math.floor(o.h(4) * 12), py = 14 + Math.floor(o.h(5) * 12); c.strokeStyle = W(0.08); c.lineWidth = 1; c.beginPath(); c.ellipse(px, py, 9, 4, 0, 0, 7); c.stroke(); c.fillStyle = rg(b.bg1, 0.06); c.beginPath(); c.ellipse(px, py, 8.5, 3.5, 0, 0, 7); c.fill(); }
+  },
+  ARENA(c, b, x, y, k, o) {
+    const d = Math.hypot((x - 7) / 7, (y - 6) / 6), m = vn(x / 2.8, y / 2.8, 91 + k);
+    const wear = Math.max(0, 1 - d) * (0.045 + m * 0.03);
+    if (wear > 0.006) o.tint(W(wear)); else if (m < 0.28) o.tint(rg(b.bg1, 0.06));
+    if (o.h(3) > 0.88) { c.strokeStyle = W(0.07); c.lineWidth = 1; c.beginPath(); c.arc(16 + o.h(4) * 8, 22, 8, Math.PI * 1.15, Math.PI * 1.7); c.stroke(); }
+  },
+  SAND(c, b, x, y, k, o) {
+    const s = Math.sin((x * 0.75 + y * 1.05) * 0.9 + vn(x / 3, y / 3, 81 + k) * 2.2);
+    if (s > 0.5) o.tint(W(0.028)); else if (s < -0.5) o.tint(rg(b.bg1, 0.04));
+    if (o.h(3) > 0.85) { o.R(8 + Math.floor(o.h(4) * 24), 8 + Math.floor(o.h(5) * 24), 2, 1, rg(b.bg1, 0.2)); }
+  },
+  VOID(c, b, x, y, k, o) {
+    const pos = (((x - y * 0.8 + k * 3) % 9) + 9) % 9;
+    if (pos < 2) o.tint(W(0.022));
+    if (vn(x / 3, y / 3, 101 + k) > 0.64) o.tint(W(0.018));
+    if (o.h(3) > 0.9) { const gx = 10 + Math.floor(o.h(4) * 20), gy = 10 + Math.floor(o.h(5) * 20); o.R(gx - 1, gy, 3, 1, W(0.12)); o.R(gx, gy - 1, 1, 3, W(0.12)); }
+  },
+  CROWN(c, b, x, y, k, o) {
+    const dx = Math.abs(x - 7), m = vn(x / 2.5, y / 2.5, 111 + k);
+    if (dx <= 1) o.tint(W(0.045 - dx * 0.015)); else if (m < 0.3) o.tint(rg(b.bg1, 0.07));
+    if (o.h(3) > 0.85) { for (let i = 0; i < 4; i++) o.R(8 + Math.floor(o.h(4 + i) * 24), 8 + Math.floor(o.h(8 + i) * 24), 1, 1, rg(b.wallHi, 0.14)); }
+  },
+};
+export function paintGround(c, b, x, y, level) {
+  const f = GROUND[b.name]; if (!f) return;
+  const k = (level | 0) % 5, h = (i) => hsh(x * 31 + SEED[b.name], y * 17 + k, i);
+  const R = (rx, ry, w, hh, col) => { c.fillStyle = col; c.fillRect(rx, ry, w, hh); };
+  const ln = (p, w, col) => { c.strokeStyle = col; c.lineWidth = w; c.beginPath(); p.forEach(([px, py], i) => (i ? c.lineTo(px, py) : c.moveTo(px, py))); c.stroke(); };
+  f(c, b, x, y, k, {h, R, ln, tint: (col) => R(0, 0, 40, 40, col)});
+}

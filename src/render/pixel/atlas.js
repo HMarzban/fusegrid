@@ -13,6 +13,7 @@ import {anchorOf, cellRGBA, flipX, rot90, swapCell, overlayCell} from "./grid.js
 import {fallbackCell} from "./fallback.js";
 import {ART} from "./art/index.js";
 import {featPxCell} from "../featpx.js";
+import {floorPxCell, SHADOW_CELLS, brickPal} from "../featpxcells.js";
 import {MAKO_FACES, MAKO_CYCLE, layoutOf, BOMB_MARKS, BLAST_PIECES, BLAST_AGES} from "./manifest.js";
 
 export const faceRows = (h) => Math.max(2, Math.min(10, Math.round((h || 0) / 4)));
@@ -118,29 +119,30 @@ export function createAtlas(surf, art = ART) {
   const X = (n) => frame(cellOf("fx", n), {body: HEX.spark});
   const fx = {reveal: [X("reveal0"), X("reveal1")], sparkle: [X("sparkle0"), X("sparkle1"), X("sparkle2")], glint: [X("glint0"), X("glint1"), X("glint2")], puff};
 
+  const shadow = Object.fromEntries(Object.entries(SHADOW_CELLS).map(([k, c]) => [k, frame(c, {})]));
+
   const tileSets = new Array(BIOMES.length).fill(null);
   function tiles(bi) {
     const i = ((bi | 0) % BIOMES.length + BIOMES.length) % BIOMES.length;
     if (tileSets[i]) return tileSets[i];
     const b = BIOMES[i], ctx = {biome: b}, T = (n) => cellOf("tiles", n), fr = (c) => frame(c, ctx);
-    const f0 = T("floor0"), f1 = T("floor1"), band = (c, s) => ({...c, rows: c.rows.map((r, y) => (y < 3 ? r.replace(/[^.]/g, "§") : r)), pal: {...c.pal, "§": s}});
     const wTop = T("wallTop"), wFace = T("wallFace"), bTop = T("brickTop"), bFace = T("brickFace");
-    const fhW = faceRows(b.hWall), fhB = faceRows(b.hBrick);
+    const fhW = faceRows(b.hWall), fhB = faceRows(b.hBrick), BP = brickPal(b.name), bk = (c) => ({...c, pal: {...c.pal, ...BP}}), fl = new Map(), f0 = floorPxCell(b.name, 0, 0), f1 = floorPxCell(b.name, 1, 0);
     tileSets[i] = {
-      floor: [fr(f0), fr(f1)],
-      floorC: [fr(band(f0, "tile.floor0.shadow")), fr(band(f1, "tile.floor1.shadow"))],
+      floor: (alt, v, n, w, nw) => { const k = (((alt * 4 + v) * 3 + n) * 3 + w) * 3 + nw; let f = fl.get(k); if (!f) fl.set(k, f = fr(floorPxCell(b.name, alt, v, n, w, nw))); return f; },
       wall: fr(composeFace(wTop, wFace, fhW)),
-      brick: fr(composeFace(bTop, bFace, fhB)),
-      crumble: [0, 1, 2, 3].map((k) => fr(composeFace(T("crumble" + k), bFace, fhB))),
+      brick: fr(composeFace(bk(bTop), bk(bFace), fhB)),
+      crumble: [0, 1, 2, 3].map((k) => fr(composeFace(bk(T("crumble" + k)), bk(bFace), fhB))),
       slam: [0, 1, 2].map((k) => fr(T("slam" + k))),
-      motif: [fr(T("motif." + b.name + ".0")), fr(T("motif." + b.name + ".1"))],
+      motif: [T("motif." + b.name + ".0"), T("motif." + b.name + ".1")],
       wallV: [f0, f1].map((f) => WALL_SRC.map(([n, m]) => { const w = cellOf("walls", b.name + "." + n); return fr(overlayCell(f, m ? mirrorCell(w) : w)); })),
     };
     return tileSets[i];
   }
   const featSet = new Map(), FEAT_MAX = 400;
-  function feat(bi, s) {
-    const i = ((bi | 0) % BIOMES.length + BIOMES.length) % BIOMES.length, k = i + "|" + s.kind + "|" + s.h + "|" + (s.dir | 0) + "|" + (s.outer ? s.outer.join("") : "NESW") + "|" + (s.state | 0) + "|" + (s.lit | 0) + "|" + (s.pair | 0);
+  function feat(bi, s0, ft) {
+    const s = s0.kind === "BELT" ? {...s0, ph: (s0.phase >> 1) % (s0.h > 1 ? 4 : 5)} : s0.kind === "STREAM" ? {...s0, ph: Math.floor((ft || 0) * 5) % 10} : s0;
+    const i = ((bi | 0) % BIOMES.length + BIOMES.length) % BIOMES.length, k = (s.ph | 0) + "|" + i + "|" + s.kind + "|" + s.h + "|" + (s.dir | 0) + "|" + (s.outer ? s.outer.join("") : "NESW") + "|" + (s.state | 0) + "|" + (s.lit | 0) + "|" + (s.pair | 0);
     let f = featSet.get(k);
     if (!f) {
       f = frame(featPxCell(BIOMES[i], s), {biome: BIOMES[i]});
@@ -152,6 +154,6 @@ export function createAtlas(surf, art = ART) {
   tiles(0);
   mako(HEX.fin, false);
 
-  return {mako, foe, bomb, blast, items, fx, tiles, feat, pending, used,
+  return {mako, foe, bomb, blast, items, fx, tiles, feat, shadow, pending, used,
     bakeAll() { for (let i = 0; i < BIOMES.length; i++) tiles(i); mako(HEX.fin, true); return pending; }};
 }

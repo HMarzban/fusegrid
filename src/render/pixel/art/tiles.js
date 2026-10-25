@@ -24,9 +24,9 @@ export const SHEET = Object.freeze({
     wallTop: c(["HHHHHHHHHHHHHHHHHHHH", ...R("hhhhhhhhhhhhhhhhhhhh", 7), ...R("wwwwwwwwwwwwwwwwwwww", 12)]),
     wallFace: c(["WWWWWWWWWWWWWWWWWWWW", "WWWhWWWWWWWWWWWWhWWW", "WWWwWWWWWWWWWWWWwWWW", ...R("WWWWWWWWWWWWWWWWWWWW", 7)]),
     brickTop: c([
-      "jjjjjjjjjjjjjjjjjjjj", ...R("jbbbbbbbbbBbbbbbbbbj", 5),
-      "jBBBBBBBBBBBBBBBBBBj", ...R("jbbbbBbbbbbbbbBbbbbj", 5),
-      "jBBBBBBBBBBBBBBBBBBj", ...R("jbbbbbbbbbBbbbbbbbbj", 7),
+      "jjjjjjjjjjjjjjjjjjjj", ...R("jbbbbbbbbbBbbbbbbbbB", 5),
+      "jBBBBBBBBBBBBBBBBBBB", ...R("jbbbbBbbbbbbbbBbbbbB", 5),
+      "jBBBBBBBBBBBBBBBBBBB", ...R("jbbbbbbbbbBbbbbbbbbB", 7),
     ]),
     brickFace: c([...R("jjbBBBBBBBBBBBBBBbjj", 10)]),
     crumble0: c([
@@ -131,9 +131,6 @@ export const SHEET = Object.freeze({
       ...R(E, 12), "H..................H", E, "..h..............h..",
       E, "h..................h", E, "..H..............H..", E,
     ]),
-    "motif.JUNGLE.0": BLANK, "motif.JUNGLE.1": BLANK, "motif.ICE.0": BLANK, "motif.ICE.1": BLANK,
-    "motif.FACTORY.0": BLANK, "motif.FACTORY.1": BLANK, "motif.WATER.0": BLANK, "motif.WATER.1": BLANK,
-    "motif.ARENA.0": BLANK, "motif.ARENA.1": BLANK, "motif.SAND.0": BLANK, "motif.SAND.1": BLANK,
-    "motif.VOID.0": BLANK, "motif.VOID.1": BLANK, "motif.CROWN.0": BLANK, "motif.CROWN.1": BLANK,
+    ...Object.fromEntries(["JUNGLE", "ICE", "FACTORY", "WATER", "ARENA", "SAND", "VOID", "CROWN"].flatMap((n) => [["motif." + n + ".0", BLANK], ["motif." + n + ".1", BLANK]])),
   }),
 });

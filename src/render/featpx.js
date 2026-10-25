@@ -27,7 +27,7 @@ function glideRows(h, outer) {
 }
 /* CONVEYOR: rails (low side lit), rollers across the flow, chevrons that point the way (1 / 2 / 3 by heat), end caps on the outer ends; built in screen space so the light stays top-left */
 const ROLL = ["KKSRL", "KSRLK", "KSRL"], CH = [[8], [4, 12], [2, 8, 14]], CHV = [[0, 1], [1, 2], [2, 3], [1, 2], [0, 1]];
-function beltRows(h, d, outer) {
+function beltRows(h, d, outer, ph) {
   const hz = d % 2 === 0, s = d < 2 ? 1 : -1, lo = outer.includes(hz ? "W" : "N"), hi = outer.includes(hz ? "E" : "S"), P = ROLL[h].length;
   return mk((X, Y) => {
     const a = hz ? X : Y, c = hz ? Y : X;
@@ -36,16 +36,16 @@ function beltRows(h, d, outer) {
     if (lo && a < 3) return "QTS"[a];
     if (hi && a > 16) return "SRQ"[a - 17];
     for (const a0 of CH[h]) for (let r = 0; r < 5; r++) if (c === 7 + r) for (const j of CHV[r]) if (a === a0 + (s > 0 ? j : 3 - j)) return "W";
-    return ROLL[h][a % P];
+    return ROLL[h][((a - ph * s) % P + P) % P];
   });
 }
 /* STREAM: a channel across the tile, sunk between stone banks (dark lip north, lit lip south), tapering to a mouth on an outer end; ripple dashes fade tail to head so they point downstream */
 const CHN = [[3, 16], [4, 15], [5, 14]], RIP = [[[3, 6], [11, 12]], [[2, 5], [9, 8], [14, 11]], [[1, 6], [7, 8], [11, 10], [15, 6]]];
-function streamRows(h, d, outer) {
+function streamRows(h, d, outer, ph) {
   const hz = d % 2 === 0, s = d < 2 ? 1 : -1, lo = outer.includes(hz ? "W" : "N"), hi = outer.includes(hz ? "E" : "S"), [c0, c1] = CHN[h], rm = [4, 3, 3][h];
   const rr = (a) => Math.max(lo ? clampI(rm - (a >> 1), 0, rm) : 0, hi ? clampI(rm - ((19 - a) >> 1), 0, rm) : 0);
   const dash = {}, DL = [5, 4, 3][h], dc = ["L", "L", "V", "V", "V"];
-  for (const [a0, c] of RIP[h]) for (let i = 0; i < DL; i++) for (let j = 0; j < 2; j++) if (!j || i < DL - 2) { const k = s > 0 ? i : DL - 1 - i, q = a0 + i; dash[(hz ? q : c + j) + "," + (hz ? c + j : q)] = j ? "L" : dc[Math.min(4, k + (5 - DL))]; }
+  for (const [a0, c] of RIP[h]) for (let i = 0; i < DL; i++) for (let j = 0; j < 2; j++) if (!j || i < DL - 2) { const k = s > 0 ? i : DL - 1 - i, q = ((a0 + i + 2 * ph * s) % 20 + 20) % 20; dash[(hz ? q : c + j) + "," + (hz ? c + j : q)] = j ? "L" : dc[Math.min(4, k + (5 - DL))]; }
   return mk((X, Y) => {
     const a = hz ? X : Y, c = hz ? Y : X, r = rr(a), n0 = c0 + r, n1 = c1 - r, end = (lo && a === 0) || (hi && a === 19);
     if (c >= n0 && c <= n1) return end ? "R" : dash[X + "," + Y] || (c === n0 ? "J" : c === n1 ? "L" : "K");
@@ -132,8 +132,8 @@ export function featPxCell(biome, s) {
   const h = s.h, outer = s.outer || SIDES, d = s.dir || 0;
   let rows;
   if (s.kind === "GLIDE") rows = glideRows(h, outer);
-  else if (s.kind === "BELT") rows = beltRows(h, d, outer);
-  else if (s.kind === "STREAM") rows = streamRows(h, d, outer);
+  else if (s.kind === "BELT") rows = beltRows(h, d, outer, s.ph | 0);
+  else if (s.kind === "STREAM") rows = streamRows(h, d, outer, s.ph | 0);
   else if (s.kind === "BLOOM") rows = bloomRows(s.state === 2 ? Math.max(0, h - 1) : h, s.state === 1);
   else if (s.kind === "PLATE") rows = plateRows(h, s.state === 1, s.lit | 0);
   else if (s.kind === "QUICK") rows = quickRows(h);
