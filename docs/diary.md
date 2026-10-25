@@ -6,7 +6,7 @@
 
 This is the story of how the game was built: the big turns, the dead ends
 and what each one taught us. It runs from the first commit on 2026-08-16 to
-shell v182 on 2026-10-19: 528 commits in all.
+the new board look merged into local `main` on 2026-10-25 (631 commits by then; the live game is shell v184).
 
 - **What changed in each release** lives in the [CHANGELOG](../CHANGELOG.md).
 - **How the game works today** lives in [architecture.md](architecture.md).
@@ -44,6 +44,8 @@ mention review rounds and contact sheets.
 | 2026-10-11 | 4-4 | Three looks and a cooler cabinet (shell v178) |
 | 2026-10-19 | 5-1 | New menus and NEW VERSION READY (shell v180) |
 | 2026-10-19 | 5-2 | Phone menus fill the screen; launch prep (shell v181–v182) |
+| 2026-10-21 | 5-3 | 3D walls follow the grid; a readable build tag (shell v183–v184) |
+| 2026-10-25 | 6-1 | A whole new board look, merged into local `main` (not live yet) |
 
 ---
 
@@ -507,6 +509,37 @@ nothing caught the lie.
 
 ---
 
+## 🧱 World 6: The board grows up
+
+### 2026-10-25 · A new board, one afternoon at a time
+
+The owner asked for floor tiles that look like "a real, mature game". After
+four directions drawn side by side, they picked a mix: hardware sunk into the
+floor for the built worlds and the ground itself changed for the living ones.
+Then they played it and said they could not see a new look, so the work went
+wide. The round-3 walls came in, the plain floor got a material per world,
+PIXEL gained its tiles and became an on-demand download, and three outline
+options were built as real code. The owner took the world bezel plus the
+recessed well. Shadows, ambient shadow, calmer bricks and 3D relief followed,
+then slow ambient motion on the play clock, then a pass that gave every foe a
+blink, a spawn pop, a death squash and a hunter cue and every pickup a hover,
+a glint and its own collect burst.
+
+The guide caught up last: its pages animate in CLASSIC 2D and PIXEL, and a
+fourth door, FLOOR, lists the eight tiles at every heat. It says plainly that
+four of them have no rule yet. A last round thickened five PIXEL foes, made the
+REAL 3D effects survive a pause, lifted the ICE rim and let the ATTRACT demo
+show the ambient motion. The gameplay that is still missing went into GitHub
+issues #32 to #35.
+
+The owner merged it all into their local `main` to test by hand. It is not
+pushed: going live needs shell v185 and a decision on the tile boards, which
+this build turns on in a browser before the random-board work (#10 to #13)
+exists. The story of each step is in
+[the board-look record](superpowers/specs/2026-10-25-board-look-depth-ambient-design.md).
+
+---
+
 ## 🧪 Lessons from the workshop
 
 The bugs and habits worth passing on. Each one cost a real afternoon.
@@ -563,6 +596,15 @@ merged after v181 shipped stayed invisible to installed copies until shell
 v182 bumped `CACHE_NAME`. Any change to a precached file needs a release,
 not just a push.
 
+**The world clock keeps running in PAUSE.** `step()` adds time before it
+checks the state, so every animation that must freeze on pause keeps its own
+clock. REAL 3D effects once ended early after a long pause because they read
+the world clock (2026-10-25).
+
+**"Is this a real page?" is a `location.href` check.** Node test fakes define
+`location` without `href`, so the browser-only default (the tile boards) keys
+off `typeof location.href === "string"`, and the test suite never sees it.
+
 **Parallel agents need fences.** One session's `git stash` once swept up
 another session's work mid-commit (2026-09-06), and agents started right after
 a side question once all answered the side question. Now every brief quotes
@@ -616,7 +658,7 @@ Design work that stayed on the drawing board. None of it is in the game.
   floor for the built worlds (ICE PATCH, CONVEYOR, TRAP, PORTAL, GATE) and the
   ground itself changed for the living ones (BOOSTER, STREAM, QUICKSAND). It
   was then built in all three looks on a local branch, checked by numeric
-  gates and an art-director review at true size. Still not in the game;
+  gates and an art-director review at true size. Now on local `main`, not live yet;
   [design record](superpowers/specs/2026-10-25-floor-tiles-direction-d-design.md).
 - The whole board, one afternoon (2026-10-25). The owner played it and said
   they could not see a new look, so the work went wide: the round-3 walls were
@@ -634,7 +676,7 @@ Design work that stayed on the drawing board. None of it is in the game.
   looks, and four lanes (2D foes, 2D items, REAL 3D, PIXEL) gave every foe a
   blink, a spawn pop, a death squash and a hunter cue, and every pickup a hover,
   a glint and its own collect burst. The 3D pickups had been floating
-  primitives and became glyph badges. Still on a local branch;
+  primitives and became glyph badges. Merged into local `main` the same day (World 6);
   [record](superpowers/specs/2026-10-25-board-look-depth-ambient-design.md).
 
 ---

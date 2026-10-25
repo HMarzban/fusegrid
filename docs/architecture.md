@@ -198,16 +198,48 @@ button during play, giving the touch controls a bigger thumb area below. The
 geometry is a pure function tested in Node; how it feels in the hand still
 needs a real phone.
 
-## 🚧 Next look (local branch, not live)
+## 🚧 Next look (on local main, not live yet)
 
-A full new board look (floor tiles in all eight worlds, new walls and floor,
-a world bezel and recessed well, shadows and depth, ambient motion) is built on
-the local branch `tiles-d` and is **not in the live game**. How it is put
-together, its rulings and what is still open live in
+A full new board look is merged into the owner's **local** `main` (2026-10-25)
+and is **not in the live game** until it is pushed with a version bump. It adds,
+in all three looks:
+
+- **New walls** per world and a quiet **base floor** under everything
+  ([`wallart.js`](../src/render/wallart.js), [`floorart.js`](../src/render/floorart.js)).
+- **Eight floor tiles**, one per world: hardware sunk into the floor in the built
+  worlds, the ground itself changed in the living ones
+  ([`featdraw.js`](../src/render/featdraw.js) and its painters in
+  [`featart/`](../src/render/featart/); REAL 3D reads the same geometry table in
+  one shader, [`three/featmesh.js`](../src/render/three/featmesh.js)). Only
+  CONVEYOR, ICE PATCH, BOOSTER and TRAP have rules
+  ([`core/feat.js`](../src/core/feat.js)); STREAM, QUICKSAND, PORTAL and GATE are
+  art for now. Tiles appear on the gen-2 boards, which a browser page plays by
+  default in this build; `?gen=1` and challenge codes keep today's boards.
+- **A world bezel and a recessed well** around the board
+  ([`frameart.js`](../src/render/frameart.js), [`frame.js`](../src/render/frame.js)).
+- **Depth**: cast and contact shadows, ambient occlusion, lower-value bricks
+  ([`depth2d.js`](../src/render/depth2d.js), [`three/groundfx.js`](../src/render/three/groundfx.js)).
+- **Ambient motion** per world (motes, glints, steam, drift) from one
+  deterministic spec, [`ambient.js`](../src/render/ambient.js), on a PLAY-only
+  clock; ATTRACT shows it too, menus never.
+- **Foe and pickup animation** from one timing spec,
+  [`motion.js`](../src/render/motion.js), with
+  [`entityfx.js`](../src/render/entityfx.js) turning kill and pickup events into
+  death ghosts and collect bursts. Every clock freezes in PAUSE; REAL 3D uses a
+  pause-corrected clock so a pause never cuts an effect short.
+- **The PIXEL tree loads lazily** ([`pixel/load.js`](../src/render/pixel/load.js)),
+  so CLASSIC visitors never download it.
+- **GUIDE grows a FLOOR page** and its pages animate.
+
+Budgets after the round: REAL 3D fat-world 156 draw calls (158 worst case),
+PIXEL lazy tree about 146 KB of a 152 KB cap, CLASSIC call log re-pinned as
+`127e8b05:72409`. Frame times on a real GPU are not measured yet (issue #34).
+How it is put together, the rulings and what is still open live in
 [one record](superpowers/specs/2026-10-25-board-look-depth-ambient-design.md);
 the tile look is in the
-[direction D record](superpowers/specs/2026-10-25-floor-tiles-direction-d-design.md).
-This page describes shell v184 until it ships.
+[direction D record](superpowers/specs/2026-10-25-floor-tiles-direction-d-design.md);
+the gameplay gaps are tracked in issue #35. The rest of this page describes
+shell v184 until it ships.
 
 ## 🧪 Boss fight: evidence and limits
 

@@ -125,13 +125,21 @@ tiles, not full-width rows; ↑↓ stays the linear walk. One vocabulary: MODES
 names. Hooks never lie: a score teaser reads only played runs
 (`highscores.isPlaceholder` drops the seeded table; main hands `getCab().top`),
 and DAILY says YOUR TRIES TODAY. Read-only pages (HOW TO / ITEMS / ENEMIES /
-MEDALS) back out on any tap; STATS taps its foot labels. PLAY's tag names the
+FLOOR / MEDALS) back out on any tap; STATS taps its foot labels. PLAY's tag names the
 world (`FACTORY · MAX · HARD`), the same words as START. `SCREEN.STATS = 12` is **appended** (the `SCREEN` enum's own rule in
 `menuapp.js`: appended, never inserted). `SCREEN.TROPHIES = 13` (the MEDALS page) is
 appended too: opened from STATS by `T` or a tap on its `T MEDALS` label, backs out to STATS,
 never a MENU row. `SCREEN.GRAPHICS = 14` is appended too: opened by the
 OPTIONS `GRAPHICS` door row (`OPT_ROWS` ten rows, door before RESET
-DEFAULTS), backs out to OPTIONS on the door. From PAUSE the same page is
+DEFAULTS), backs out to OPTIONS on the door. `SCREEN.FLOOR = 15` is appended too
+(2026-10-25): the fourth GUIDE door (`GUIDE_ROWS` HOW TO PLAY, ITEMS, ENEMIES,
+FLOOR; keyboard GUIDE is a 2x2 of doors, touch four stacked rows), backs out to
+GUIDE. `drawFloorHelp` lists the eight floor tiles at CORE / PLUS / MAX in the
+current look (`featdraw.drawSpec`, PIXEL `atlas.feat`), and only the four tiles
+with rules (`TILE_HELP`) get a rule line; the others read LOOK ONLY FOR NOW.
+The GUIDE pages and the MENU preview draw the live foe and pickup animation
+(CLASSIC: `drawEnemyBody` / `drawItemBody`; PIXEL: `hudart.js` `foeAnim` /
+`itemAnim`, a pure function of the page clock). From PAUSE the same page is
 inline `pauseView 2` (0 list / 1 OPTIONS / 2 GRAPHICS; Esc steps 2 → 1),
 never a SCREEN. WIN/LOSE run summaries are **not** a SCREEN — they
 live in `drawOverlay`.
@@ -191,8 +199,10 @@ not shell screens. Do not add them as `SCREEN` values.
   - kind `"3d"` — `createRenderer3D` (`#gl` WebGL under `#c` overlay).
   - kind `"px"` — PIXEL, `createPixelRenderer` (`src/render/pixel/**`), its
     own factory modelled on the 3D wrapper, never a branch of `createRenderer`
-    (`renderer.js` stays byte-identical; CLASSIC call-log hash `97480c1c:22630`
-    still pinned). See the PIXEL paragraph below.
+    (the CLASSIC call-log hash is pinned in `tests/classic-perf.test.mjs` and
+    `tests/pixel-render.test.mjs`, now `127e8b05:72409`: re-pinned by ruling
+    for each 2026-10-21..25 art round, the diff proven to be the intended art;
+    `97480c1c:22630` is the stale pre-round value). See the PIXEL paragraph below.
   - kind `"iso"` — legacy dimetric (`r3d/`), pinned by `?render=iso` only.
     `createRenderer({kind:"3d"|"iso"})` is the **dimetric** branch. Real 3D
     never enters that factory. Menu RENDER cycles CLASSIC 2D → PIXEL → REAL 3D
@@ -223,12 +233,15 @@ not shell screens. Do not add them as `SCREEN` values.
     fixed pool) cover crumble / stun / corpse / materialize / death / win /
     reveal / slam / kick / throw / pickup sparkle; MAKO's show pop is the 3 materialize
     frames (R17, no stepped zoom). Ghost = MAKO frames at `GHOST_A` 0.4. HUD
-    chips and GUIDE ITEMS/ENEMIES/HOW TO show the board's own cells
+    chips and GUIDE ITEMS/ENEMIES/HOW TO/FLOOR show the board's own cells
     (`hudart.js`, x1 in chips, x2 on a GUIDE page only if every cell fits;
-    text stays the vector font). px JS cap **122 KB** uncompressed
-    (`tests/pixel-render.test.mjs`; R24's 120 raised by lead ruling
-    2026-10-11); follow-up: dynamic import of the px tree like
-    `three/load.js`. Never re-hue a hex to separate a sprite; never import
+    text stays the vector font). px JS cap **152 KB** uncompressed for the
+    lazy tree (`tests/pixel-render.test.mjs`; R24's 120, then 122 on
+    2026-10-11; the tree is about 146 KB). Since #15 (2026-10-25) the px tree
+    is a dynamic import (`src/render/pixel/load.js`, `rcache.js` `load(k)`;
+    `hudart.js` lives in `src/render/` and imports nothing), so CLASSIC
+    visitors never fetch it; `tests/pixel-lazy.test.mjs` walks the boot
+    graph. Never re-hue a hex to separate a sprite; never import
     `vendor/three.module.js` or `render/three` on the px path.
   - Live 3D default rig (polar `el` from +Y, ruling 2026-10-08, the user's
     pick C): `{az:0, el:0.66, dist:1503, target:[0,-17,0]}` through a
@@ -355,6 +368,25 @@ not shell screens. Do not add them as `SCREEN` values.
     wins, otherwise kind picks the classic box or the projected one). It is
     the only render module that may read `src/app/` — screen constants only,
     and scores arrive as a getter so `highscores` stays on the app side.
+  - Board look modules (2026-10-25, record
+    `docs/superpowers/specs/2026-10-25-board-look-depth-ambient-design.md`):
+    walls `wallart.js` / `wallvar.js` (`wallHash`, render-side) + PIXEL
+    `pixel/art/walls.js`; base floor `floorart.js` (`paintFloor`, 4 variants x
+    2 parities); floor tiles `featdraw.js` (`cellSpec`, `drawSpec`, painters in
+    `featart/{built,living,geo,kit}.js`), PIXEL `featpx.js` + `featpxcells.js`,
+    REAL 3D `three/featmesh.js` (`fragSource(GEO)`); outline `frameart.js`
+    (world bezel) + `frame.js` (recessed well, HUD plate), REAL 3D
+    `three/rimart.js` + `three/wellfx.js`; depth `depth2d.js`,
+    `three/groundfx.js`; ambient `ambient.js` (spec) -> `ambient2d.js`,
+    `three/ambientfx.js`, `pixel/ambient.js`; foes and items `motion.js`
+    (spec) + `entityfx.js` (`fxOf(world, look)`), `itemdraw.js`,
+    `enemybody.js`, `three/entityanim.js`, `three/burstfx.js`,
+    `pixel/entities.js`, `pixel/foegen.js`. REAL 3D animations run on a
+    pause-corrected clock (`three/wrapper.js`; `tests/render3d-pauseclock`).
+    Sim side: `core/feat.js` (the `world.feat` layer; rules only for codes
+    1..7 = CONVEYOR, ICE PATCH, BOOSTER, TRAP; 8..14 are art only) and
+    `core/board2.js` (the gen-2 skeleton, prototype). Art gates:
+    `tools/tileart/gates.mjs all`, `tools/walls/`.
 - `src/app/` — menu shell, intro beats, demobot, highscores, `pactstore.js`,
   plus the entry seams above (`flags` / `attract` / `frameloop` / `rcache` /
   `audiopower` / `renderkind` / `debughook` / `fit`) and the pure GRAPHICS
@@ -592,7 +624,11 @@ Node v26, `"type": "module"`. No build step, no bundler.
   Node-testable three **math** stays DOM-free.
 - Frozen `CFG` — mutate world, not config. `BIOMES` elements are shallow.
 - Keep zero **npm** deps. Vendored render libs are OK.
-- 3D draw-call budget is `<=500` (fat-world currently 141, 142 while a ghost races). Child-index
+- 3D draw-call budget is `<=500`; fat-world is currently **156** (158 worst
+  case, a 160 lane cap in `tests/three.test.mjs`) after the 2026-10-25 board
+  look (rim, well, floor tiles, ambient `Points`, foe death ghosts, pickup
+  badges, burst `Points`). The "stays 141" lines in dated paragraphs above say
+  what that change kept at its time. Child-index
   contracts in `three.test.mjs` are ABI — do not "flex" them in a drive-by.
 - No comments unless the file already uses explanatory block comments (its style).
   Match the compact, no-whitespace-after-key style already in the codebase.
@@ -822,8 +858,8 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
       on a tile (slabs are WALLS). Record
       `docs/superpowers/specs/2026-10-25-floor-tiles-direction-d-design.md`,
       plan `docs/superpowers/plans/2026-10-25-floor-tiles-direction-d.md`.
-      BUILT on the local branch `tiles-d` (worktree `.claude/worktrees/tiles-d`,
-      from the round-3 floor branch; never pushed, not in the game): painters
+      BUILT on branch `tiles-d` and merged into LOCAL `main` 2026-10-25
+      (`64662c3`; not pushed, not in the live game): painters
       `src/render/featart/{built,living,geo,kit}.js`, PIXEL `featpx.js`, REAL 3D
       `three/featmesh.js` (`fragSource(GEO)`: the shader reads the painters'
       geometry table, 142 draws). Gates: `tools/tileart/gates.mjs all`
@@ -841,7 +877,8 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
       W6 "plain border") + option B (recessed well, `frame.js`,
       `three/wellfx.js`; 3D stage background is CSS on `#gl`). A real page plays
       gen-2 boards by default (`?gen=1` or `?code=` keep today's); Node worlds stay
-      gen 1. CLASSIC hash pin `6ec1e0a5:65648`, px cap 145 KB. Never pushed.
+      gen 1. (Pins at that step: CLASSIC `6ec1e0a5:65648`, px cap 145 KB; current
+      values are below.)
       Option C (stage set) sits unmerged on branch `frame-c`.
       Depth round (shadows, AO, brick value down, floor detail, 3D relief,
       PIXEL floor, stage fixes) and AMBIENT MOTION (owner 2026-10-25) are in:
@@ -852,7 +889,8 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
       renderer-owned PLAY-only clock (`ambientClock`; `world.time` keeps ticking in
       PAUSE, so never use it), EFFECTS LOW halves the count,
       prefers-reduced-motion turns it off, nothing cycles faster than 2.4 s.
-      Menus, title and ATTRACT draw none. FOES AND ITEMS (owner 2026-10-25): the shared
+      Menus and the title draw none; ATTRACT draws it (`main.js` hands
+      `{hud:false, amb:true}`, every renderer reads `o.amb`). FOES AND ITEMS (owner 2026-10-25): the shared
       timing spec is `src/render/motion.js` + `entityfx.js` (`fxOf(world, look)` turns
       `kill` / `power` into ghosts and bursts on each look's PLAY-frozen clock);
       REAL 3D fat-world is now 156 draws (158 worst case; budget 160); the 2D foe
@@ -906,12 +944,14 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   Node test fakes define `globalThis.location` WITHOUT `href`, so "is this a
   real page" means `typeof location.href === "string"` (the gen-2 page default
   in `src/app/flags.js` depends on it).
-- Local build state (2026-10-25): branches `tiles-d` (integrated look, worktree
-  `.claude/worktrees/tiles-d`, unlocked), `frame-a` / `frame-b` (merged into
-  it), `frame-c` (stage set, unmerged). The look is recorded in
+- Local build state (2026-10-25): `tiles-d` (integrated look) is merged into
+  LOCAL `main` (`64662c3`), not pushed; the owner tests locally and pushes by
+  hand. `frame-a` / `frame-b` are deleted (merged); `frame-c` (stage set) stays
+  unmerged. Before a push: `CACHE_NAME` / `REV` to v185, release docs, and a
+  decision on the page-level gen-2 default (#13: the ghost key has no `gen`). The look is recorded in
   `docs/superpowers/specs/2026-10-25-board-look-depth-ambient-design.md`,
-  including the loose ends. Loopback dev server for it: `PORT=8091 node
-  serve.js` inside that worktree. The hash pin, px cap and draw counts live in
+  including the loose ends. Loopback dev server: `PORT=8091 node
+  serve.js` in the main checkout (clear site data first: v184 SW). The hash pin, px cap and draw counts live in
   that record, not here.
 - Parallel art agents on one worktree work best as one lane per file area with
   the lead committing: agents never commit, never edit the CLASSIC hash pins,

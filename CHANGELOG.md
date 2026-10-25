@@ -17,9 +17,9 @@ Entries are written for players. How a change works lives in
 
 ## Unreleased
 
-Nothing is on `main` yet. A full new look is **built and playable on a local
-branch (`tiles-d`, never pushed)** and waits for the owner's go: when it ships
-it will be named shell v185. What it adds, for the record:
+A full new look is **merged into the owner's local `main` (2026-10-25) and not
+pushed**. It goes live when the owner pushes it with the version bump: it will be
+named shell v185. What it adds, for the record:
 
 ### Added
 - **Floor tiles in every world.** Eight tiles, one per world, in all three
@@ -32,7 +32,6 @@ it will be named shell v185. What it adds, for the record:
   MAX as each look draws them, with a rule line only for the four tiles that have
   one (the other four say LOOK ONLY FOR NOW). GUIDE is now a 2x2 of doors on a
   keyboard screen and four stacked rows on touch.
-- **Foes and pickups got a last pass.** PIXEL chaser, burrow, boomerang, rocket and fast have richer surface detail; in REAL 3D a pause no longer cuts a death or collect effect short, the JUNGLE and ARENA motes read, and the ICE rim lifted; the ATTRACT demo now shows the ambient motion too.
 - **The guide pages are alive.** ITEMS, ENEMIES, HOW TO and the MENU preview now
   show the foes blinking and bobbing and the pickups with their rings and glint,
   in CLASSIC 2D and in PIXEL (the PIXEL pages play the board's own frames).
@@ -46,14 +45,28 @@ it will be named shell v185. What it adds, for the record:
   and each kind bursts its own way when you collect it (rings, spark fans,
   streaks, rising diamonds). All three looks share one timing table, REAL 3D
   pickups are now glyph badges, and PIXEL foes got a 4-phase walk.
+- **Foes and pickups got a last pass.** PIXEL chaser, burrow, boomerang, rocket
+  and fast have richer surface detail. In REAL 3D a pause no longer cuts a death
+  or collect effect short, the JUNGLE and ARENA motes read, and the ICE rim is
+  lighter.
 - **Ambient motion.** Pollen, snow, steam, ripples, dust, sand, wisps and gold
   dust drift on the play clock. It freezes on pause, halves on EFFECTS LOW and
-  turns off if your device asks for reduced motion.
+  turns off if your device asks for reduced motion. The ATTRACT demo shows it
+  too; menus never do.
 
 ### Changed
 - PIXEL loads on demand, so CLASSIC 2D never downloads it.
 - On a phone held upright the board sits better between the pause pill and the
   controls.
+
+### Not yet
+- STREAM, QUICKSAND, PORTAL and GATE have no rules, and the heat dial for tiles
+  is still open (issues #26–#28). No coach tip or room-card line teaches tiles
+  yet (#24).
+- Tile boards are the default only because this build switches a browser page
+  to the gen-2 skeleton; random boards, fairness and new codes are #10–#13.
+- Frame times on a real GPU are not measured (#34), and the new tiles have no
+  colour-vision gate yet (#33). The gaps are tracked in #35.
 
 Details: [docs/superpowers/specs/2026-10-25-board-look-depth-ambient-design.md](docs/superpowers/specs/2026-10-25-board-look-depth-ambient-design.md).
 

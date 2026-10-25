@@ -6,8 +6,10 @@
 
 This appendix makes the approved layouts rebuildable from the repo. The grids
 and rules below are transcribed from the throwaway prototype
-`src/core/board2.js`, which was never merged (local branch
-`worktree-agent-ac4f113e8ef46ecff`, commit `f8a21cf`, "fair start"). They are
+`src/core/board2.js` (local branch `worktree-agent-ac4f113e8ef46ecff`, commit
+`f8a21cf`, "fair start"; update 2026-10-25: it reached the owner's local `main`
+inside the `tiles-d` merge, still as prototype code, so #12 still rebuilds it
+from this page). They are
 the boards the owner approved in the contact sheets below. A builder
 reimplements them from this page; the prototype code is not in the repo.
 

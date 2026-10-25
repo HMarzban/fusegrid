@@ -14,10 +14,12 @@ record](2026-10-25-floor-tiles-direction-d-design.md). Wall family:
 [wall art record](2026-10-21-wall-art-design.md). Tile sim and dials:
 [difficulty tiles record](2026-10-21-difficulty-tiles-design.md).
 
-**Status: built and playable on the local branch `tiles-d`; never pushed, not in
-the live game (shell v184).** Play it with `PORT=8091 node serve.js` in
-`.claude/worktrees/tiles-d`, then `http://127.0.0.1:8091/index.html?play=1`
-(`&render=3d`, `&render=px`).
+**Status: built on branch `tiles-d` and merged into the owner's LOCAL `main`
+(2026-10-25, `64662c3`); not pushed, not in the live game (shell v184).** Play it
+with `PORT=8091 node serve.js` in the main checkout, then
+`http://127.0.0.1:8091/index.html?play=1` (`&render=3d`, `&render=px`; clear
+site data first, the v184 service worker caches old bytes). Shipping needs the
+owner's push with `CACHE_NAME` / `REV` v185 and the release docs.
 
 ## What the branch holds
 

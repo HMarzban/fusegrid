@@ -179,7 +179,9 @@ Throwaway branch: `worktree-agent-ab0dfcf6e3434b2c3` (local, locked).
 
 ## Addendum (2026-10-25): merged into the local build
 
-The round-3 wall prototype is merged into the local branch `tiles-d` together
+(Update, same day: `tiles-d` itself was then merged into the owner's local
+`main`, `64662c3`, not pushed.) The round-3 wall prototype is merged into the
+local branch `tiles-d` together
 with the floor, so walls now show in all three looks next to the new floor.
 Rulings applied: W1 (the CLASSIC call-log hash is re-pinned), W4 (REAL 3D walls
 use a white instance colour, so the wall colour lives in the material only; the
