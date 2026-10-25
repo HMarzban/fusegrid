@@ -9,7 +9,7 @@ const RG = [0, 1, 2, 3].map((r) => { const d = Math.round(r * 0.7); return r ? [
 const pts = (sh, q) => (sh === "diamond" ? (q.p > 0.3 && q.p < 0.7 ? DIA : D) : sh === "puff" ? (q.p < 0.5 ? P2 : P3) : sh === "ring" ? RG[Math.min(3, Math.round(q.s / 4))] : D);
 
 export function armAmbient(V, world, o, dt) {
-  V.amb = o && o.hud === true && !reduceMotion() ? (V.ac || (V.ac = ambientClock())).tick(world, dt) : null;
+  V.amb = o && (o.hud === true || o.amb === true) && !reduceMotion() ? (V.ac || (V.ac = ambientClock())).tick(world, dt) : null;
 }
 
 export function drawAmbient(c, V, world, layer) {

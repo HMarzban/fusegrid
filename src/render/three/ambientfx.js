@@ -17,6 +17,8 @@ import {CAM_FOV} from "./camrig.js";
 const W2=CFG.COLS*CFG.TILE/2, D2=CFG.ROWS*CFG.TILE/2, H=CFG.ROWS*CFG.TILE;
 const SHAPE={dot:0,diamond:1,puff:2,ring:3,streak:4,flake:5};
 const GAIN=1.9;                 // small sprites are tiny at rig C: lift the spec alpha a little
+/* JUNGLE and ARENA motes sit pale-on-mid-dark at 1.3-1.6 px: alpha gain g and sprite size s, per world and per round shape only (the spec in ../ambient.js is untouched; the 0.62 cap below still holds) */
+const MOTE={JUNGLE:{g:2,s:1.75},ARENA:{g:1.9,s:1.65}}, ROUND={dot:1,diamond:1};
 
 const VS=`attribute vec4 aCol;
 attribute vec2 aSS;
@@ -46,7 +48,7 @@ void main(){
 }`;
 
 export function createAmbient(biome){
-  const specs=biomeSpecs(biome.name), cols=specs.map(s=>new THREE.Color(ambientColor(biome,s)));
+  const specs=biomeSpecs(biome.name), mote=MOTE[biome.name]||null, cols=specs.map(s=>new THREE.Color(ambientColor(biome,s)));
   const cap=Math.max(1,specs.reduce((n,s)=>n+s.n,0));
   const pos=new Float32Array(cap*3), col=new Float32Array(cap*4), ss=new Float32Array(cap*2);
   const geo=new THREE.BufferGeometry();
@@ -72,14 +74,15 @@ export function createAmbient(biome){
           const q=particleAt(sp,g,i,t);
           if(!q)continue;
           const hz=hsh(i,g*131+7,9), o=n*3;
-          let y=8+30*hz, d=Math.max(7.5,q.s*4.2);
+          const mk=mote&&ROUND[sp.shape]?mote:null;
+          let y=8+30*hz, d=Math.max(7.5,q.s*4.2)*(mk?mk.s:1);
           if(sh===2){ y=6+38*q.p; d=q.s*3.2; }
           else if(sh===3){ y=1.5; d=q.s*2.6; }
           else if(sh===4){ y=10+10*hz; d=q.s*2.2; }
           else if(sh===5){ y=Math.max(8,40-32*q.p); }
           else if(sp.dy<0) y=8+26*q.p;
           pos[o]=q.x-W2; pos[o+1]=y; pos[o+2]=q.y-D2;
-          col[n*4]=c.r; col[n*4+1]=c.g; col[n*4+2]=c.b; col[n*4+3]=Math.min(0.62,sp.alpha*q.a*GAIN);
+          col[n*4]=c.r; col[n*4+1]=c.g; col[n*4+2]=c.b; col[n*4+3]=Math.min(0.6199,sp.alpha*q.a*GAIN*(mk?mk.g:1));
           ss[n*2]=d; ss[n*2+1]=sh;
           n++;
         }

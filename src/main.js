@@ -681,7 +681,7 @@ export function createGame(canvas, opts = {}) {
       camTransform(c, cw, ch, cam);
     }
     let ro = attract
-      ? { hud: false }
+      ? { hud: false, amb: true }
       : app.screen === SCREEN.INTRO
         ? { intro: curKind === "3d" ? { stage: app.introStage, t: app.subT, pressT: app.pressT } : null, pop: app.introStage === 1 ? popOf(app.subT) : 0, hud: false }
         : app.screen === SCREEN.GAME

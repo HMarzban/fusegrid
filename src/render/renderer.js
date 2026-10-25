@@ -84,7 +84,7 @@ export function createRenderer(canvas, opts={}){
     wasP=paused;
     if(!paused) pzT=null; else if(pzT==null) pzT=world.time;
     consumeEvents(world, dt, !(o&&o.sfx===false));
-    if(kind==="2d"&&o&&o.hud===true) amb.tick(world, dt);
+    if(kind==="2d"&&o&&(o.hud===true||o.amb===true)) amb.tick(world, dt);
     if(kind==="2d") stageGlow(canvas, world.level);
     const shake=paused?STILL:getShake();
     const g=o&&o.ghost, busy=!paused&&(getFx().length>0||shake.x!==0||shake.y!==0);
@@ -116,7 +116,7 @@ export function createRenderer(canvas, opts={}){
       drawBiomeBackground(ctx, world, armed);
       drawGrid(ctx, world);
       drawDepth(ctx, world);
-      if(o&&o.hud===true) amb.draw(ctx, world, "under");
+      if(o&&(o.hud===true||o.amb===true)) amb.draw(ctx, world, "under");
       wellBoard(ctx, world.level);
       drawBricks(ctx, world);
       drawItems(ctx, world);
@@ -133,7 +133,7 @@ export function createRenderer(canvas, opts={}){
         ctx.save(); ctx.translate(p0.x,p0.y); ctx.scale(o.pop,o.pop);
         drawPlayerBody(ctx, world, p0); ctx.restore();
       }
-      if(o&&o.hud===true) amb.draw(ctx, world, "over");
+      if(o&&(o.hud===true||o.amb===true)) amb.draw(ctx, world, "over");
       drawFx(ctx);
     }
     ctx.restore();

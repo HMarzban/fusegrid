@@ -65,7 +65,9 @@ function rimUV(geo,biome){
 }
 
 /* the pale worlds sit lower still: the rim must stay quieter than walls and tiles */
-const RIM_TINT={ICE:0.3,SAND:0.28,ARENA:0.26,FACTORY:0.26,WATER:0.22,JUNGLE:0.2,CROWN:0.2,VOID:0.1};
+const RIM_TINT={ICE:0.04,SAND:0.14,ARENA:0.26,FACTORY:0.26,WATER:0.22,JUNGLE:0.2,CROWN:0.2,VOID:0.1};
+/* value lift on the painted rim (colour multiplies the map): ICE's wall slot is a dark steel blue and read as a black frame round a pale room */
+const RIM_LIFT={ICE:1.55,SAND:1.12};
 /* gentle gloss per world (specular grey, shininess): the polished worlds catch
    the key on the bevel; stone / timber / sand stay matte. VOID is capped so
    nothing on it reads above wallHi. */
@@ -91,7 +93,7 @@ function buildRim(biome,atlas){
   const col=new THREE.Color(biome.wall).lerp(new THREE.Color(biome.bg1),0.35);
   const gl=RIM_GLOSS[biome.name];
   const mat=gl?new THREE.MeshPhongMaterial({color:col,specular:new THREE.Color(gl[0],gl[0],gl[0]),shininess:gl[1]}):new THREE.MeshLambertMaterial({color:col});
-  if(atlas&&atlas.rim){ rimUV(geo,biome); mat.color.set("#ffffff").lerp(new THREE.Color(biome.bg1),RIM_TINT[biome.name]||0.2); mat.map=atlas.rim; }
+  if(atlas&&atlas.rim){ rimUV(geo,biome); mat.color.set("#ffffff").lerp(new THREE.Color(biome.bg1),RIM_TINT[biome.name]||0.2).multiplyScalar(RIM_LIFT[biome.name]||1); mat.map=atlas.rim; }
   const rim=new THREE.Mesh(geo,rimFX(mat,biome.hWall,!!(atlas&&atlas.rim),biome.name));
   rim.castShadow=false; rim.receiveShadow=true;
   rim.userData.tag="trim";

@@ -67,7 +67,7 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
   const K0=opts.perf||null, now=opts.now||clock;
   const ATTR={...ATTR0,antialias:!K0||K0.aa!==false};
   let shadow=K0&&K0.shadow||"soft", armed=false, inv=true, lost=false, lostAt=0;
-  let glRenders=0, shadowUpdates=0, shadowNeed=true, lastRaster=-Infinity, pzT=null, lastW=null, lastG=null, wasP=false;
+  let glRenders=0, shadowUpdates=0, shadowNeed=true, lastRaster=-Infinity, pzT=null, pzL=0, skew=0, wT=0, lastW=null, lastG=null, wasP=false;
 
   /* GL init guarded three ways: absent canvas (headless), context probe that
      is not a real object (recording-proxy test stubs return functions), and
@@ -159,14 +159,22 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
   function render(world, dt, o){
     if(!world)return;
     const paused=world.state==="PAUSE", ev=world.events.length>0;
+    if(world!==lastW||world.time<wT-1e-9){ skew=0; pzT=null; }
+    wT=world.time;
     if(world!==lastW||world.grid!==lastG){ if(wasP)initFx(); lastW=world; lastG=world.grid; }
     wasP=paused;
-    if(!paused)pzT=null; else if(pzT==null)pzT=world.time;
+    /* The renderer clock is world.time minus every second spent in PAUSE
+       (the sim keeps ticking it there): frozen while paused, and on resume it
+       picks up exactly where it stopped, so a death, burst or spawn that was
+       mid-flight plays out its REST instead of finding it long over. */
+    if(paused){ if(pzT==null)pzT=world.time-skew; pzL=world.time; }
+    else if(pzT!=null){ skew+=pzL-(pzT+skew); pzT=null; }
+    const tc=paused?pzT:world.time-skew;
     consumeEvents(world, dt, !(o&&o.sfx===false));
-    const ambOn=!!(o&&o.hud===true); if(ambOn)aclock.tick(world,dt||0);
+    const ambOn=!!(o&&(o.hud===true||o.amb===true)); if(ambOn)aclock.tick(world,dt||0);
     const bk=o&&typeof o.bright==="number"&&isFinite(o.bright)?o.bright:brightK;
     const pop=o&&o.pop!=null?o.pop:1, sh=paused?STILL:getShake();
-    const tB=paused?pzT:world.time, g=o&&o.ghost;
+    const tB=tc, g=o&&o.ghost;
     const busy=!paused&&(getFx().length>0||sh.x!==0||sh.y!==0);
     const rt=rig.target, chg=d(sig,0,world)+d(sig,1,tB)+d(sig,2,world.state)+d(sig,3,world.level)+d(sig,4,world.grid)
       +d(sig,5,ev)+d(sig,6,busy)+d(sig,7,pop)+d(sig,8,g?g.x:null)+d(sig,9,g?g.y:null)+d(sig,10,rig.az)+d(sig,11,rig.el)
@@ -177,7 +185,7 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
       const bChanged=bk!==brightK;
       brightK=bk;
       /* PAUSE (R16, all three looks): the board holds the time it first saw. */
-      const t0=world.time; if(paused)world.time=pzT;
+      const t0=world.time; world.time=tc;
       try{
         if(!sc||sc.update(world))rebuild(world);   // brick rescan / level rebuild
         else if(bChanged&&sc.lights)applyBright(sc.lights,brightK);
