@@ -1990,10 +1990,10 @@ await sec("S4.E",async()=>{
   catch(e){ console.log(e.message); }
   const wantCalls=5                       /* plane+checker+wall+brick+rim1 */
     +SLOT_MESH.player+16*SLOT_MESH.enemy+nb*SLOT_MESH.bomb
-    +POWER.length*SLOT_MESH.item+2+1;     /* instanced item kinds + blades + fx */
+    +POWER.length*SLOT_MESH.item+2+1+2;   /* instanced item kinds + blades + fx + STAGE SET ground + props */
   check("S4.E fat-world draw calls === "+wantCalls+" (one-rim border,"
       +" <=500 gate)",
-    calls===wantCalls&&wantCalls===141&&calls<=500, String(calls));
+    calls===wantCalls&&wantCalls===143&&calls<=160, String(calls));
 });
 
 // ---- §S5 state overlays: WIN/LOSE/PAUSE paint the classic 2D layer in
@@ -2226,9 +2226,9 @@ await sec("EI",async()=>{
     const r=createRenderer3D(null,null,{audio:null,hud:null});
     r.render(wf,1/60);
     const calls=countDrawCalls(r._dbg.scene);
-    check("EI.10 fat-world draw calls pinned at 141 (≤500 gate,"
+    check("EI.10 fat-world draw calls pinned at 143 (≤500 gate,"
         +" 6-type mix)",
-      calls===141&&calls<=500,String(calls)); }
+      calls===143&&calls<=160,String(calls)); }
  });
 
 /* ---- §EB enemy 3D bodies (spec 2026-09-04-enemy-3d-bodies "Per foe"):
@@ -2630,14 +2630,14 @@ await sec("R9b",async()=>{
   const G={x:100,y:100,fx:1,fy:0,t:0};
   { const r=createRenderer3D(null,null,{audio:null,hud:null});
     r.render(fat(),1/60);
-    check("R9b.1 fat world with no o.ghost stays at 141 (ghost is lazy)",
-      countDrawCalls(r._dbg.scene)===141, String(countDrawCalls(r._dbg.scene)));
+    check("R9b.1 fat world with no o.ghost stays at 143 (ghost is lazy; STAGE SET +2)",
+      countDrawCalls(r._dbg.scene)===143, String(countDrawCalls(r._dbg.scene)));
     check("R9b.1b no ghost mesh exists before the first o.ghost",
       slotsOf(r._dbg.scene,"ghost").length===0); }
   { const r=createRenderer3D(null,null,{audio:null,hud:null});
     const n=(r.render(fat(),1/60,{ghost:G}),countDrawCalls(r._dbg.scene));
-    check("R9b.2 the same world racing a ghost is 142 (one merged draw), <=500",
-      n===142&&n<=500, String(n)); }
+    check("R9b.2 the same world racing a ghost is 144 (one merged draw), <=500",
+      n===144&&n<=500, String(n)); }
   const pools=createPools(BIOMES[0],null);
   const before=pools.player.children.map(c=>
     Array.from(c.geometry.attributes.position.array));

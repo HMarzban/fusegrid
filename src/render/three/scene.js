@@ -14,6 +14,7 @@ import {createPools} from "./entities.js";
 import {live} from "./upload.js";
 import {buildFeat} from "./featmesh.js";
 import {wallCodes} from "../wallvar.js";
+import {buildStage} from "./stageprops.js";
 
 const W=CFG.COLS*CFG.TILE, D=CFG.ROWS*CFG.TILE;
 const MAT=new THREE.Matrix4();
@@ -140,6 +141,7 @@ export function buildScene(world, atlas, bright){
   // entity pools (S2): fixed slots, visibility-toggled, synced every update
   const pools=createPools(biome,atlas);
   group.add(pools.group);
+  group.add(buildStage(biome,(world.level|0)-1));   // STAGE SET (stageprops.js): ground + props outside the rim, 2 draws
 
   const mask=new Uint8Array(CFG.COLS*CFG.ROWS),
     wMask=new Uint8Array(CFG.COLS*CFG.ROWS);

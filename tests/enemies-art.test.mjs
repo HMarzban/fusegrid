@@ -459,7 +459,7 @@ function mkE(type, x, y) {
     console.log(e.message);
   }
   // 141 since the player stack dropped from seven meshes to five
-  check("fat-world draw calls stay 141", calls === 141, String(calls));
+  check("fat-world draw calls stay 143 (141 + STAGE SET ground + props)", calls === 143, String(calls));
 }
 
 {

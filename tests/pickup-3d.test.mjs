@@ -220,10 +220,11 @@ function mkE(type, x, y) {
     nb * SLOT_MESH.bomb +
     POWER.length * SLOT_MESH.item +
     2 +
-    1;
+    1 +
+    2; /* STAGE SET ground + props */
   check(
-    "fat-world draw calls stay 141",
-    calls === want && want === 141 && calls <= 500,
+    "fat-world draw calls stay 143",
+    calls === want && want === 143 && calls <= 160,
     String(calls),
   );
   const im = [];

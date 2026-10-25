@@ -20,6 +20,7 @@ import { readFlags, locationSearch } from "./app/flags.js";
 import { bootRender, kindOf } from "./app/renderkind.js";
 import { mountDebugHook } from "./app/debughook.js";
 import { mountFit } from "./app/fit.js";
+import { mountStageSet } from "./render/stageset.js";
 import { mountFrames } from "./app/frameloop.js";
 import { mountRenderers } from "./app/rcache.js";
 import { mountAudioPower } from "./app/audiopower.js";
@@ -94,6 +95,7 @@ export function createGame(canvas, opts = {}) {
     canvas.height = CFG.ROWS * CFG.TILE;
     fit = mountFit(canvas);
   }
+  const stageSet = mountStageSet(typeof document !== "undefined" ? document.getElementById("set") : null, canvas); // STAGE SET (src/render/stageset.js): per-world backdrop, repainted only on room / look / stage move
 
   const input = new Input(opts.canvasEl || canvas);
   /* C1 seam guard: the anti-double-fire pointerdown swallow below registers
@@ -557,6 +559,7 @@ export function createGame(canvas, opts = {}) {
       }
       audio.pump();
     }
+    stageSet(app.screen === SCREEN.ATTRACT && demo && demo.world ? demo.world.level : world.level, curKind);
     if (app.screen === SCREEN.GAME) {
       // §1 score-record edge, frame-polled (main latches prev world state) —
       // persistScore owns both the write AND the score_set edge (Minor-2)
