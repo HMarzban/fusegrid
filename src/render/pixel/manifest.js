@@ -32,8 +32,8 @@ export const BLAST_PIECES = Object.freeze(["cross", "straight", "end"]);
 export const BLAST_AGES = Object.freeze(["grow", "full", "thin"]);
 export const ITEM_TYPES = Object.freeze(POWER.map((p) => p.t));
 export const ITEM_CHROME = Object.freeze(["well", "ring.cap", "ring.vit", "ring.utl", "ring.bls", "ring.utl1", "ring.bls1"]);
-/* wall families (wall round prototype): vr / ctr / cbr mirror vl / ctl / cbl */
-export const WALL_CELLS = Object.freeze(["base", "v1", "v2", "acc", "h", "vl", "ctl", "cbl"]);
+/* wall families (wall round prototype): vr / ctr / cbr are their own cells (frame A: lit lip top-left, shade bottom-right) */
+export const WALL_CELLS = Object.freeze(["base", "v1", "v2", "acc", "h", "vl", "vr", "ctl", "ctr", "cbl", "cbr"]);
 export const FX_CELLS = Object.freeze(["reveal0", "reveal1", "sparkle0", "sparkle1", "sparkle2", "glint0", "glint1", "glint2", "puff0", "puff1", "puff2", "puff3"]);
 
 export const MANIFEST = Object.freeze([

@@ -14,6 +14,7 @@ import {createPools} from "./entities.js";
 import {live} from "./upload.js";
 import {buildFeat} from "./featmesh.js";
 import {wallCodes} from "../wallvar.js";
+import {RIM_TEX} from "./rimart.js";
 
 const W=CFG.COLS*CFG.TILE, D=CFG.ROWS*CFG.TILE;
 const MAT=new THREE.Matrix4();
@@ -40,7 +41,28 @@ export const RIM_W=36, RIM_LIP=6, RIM_BEV=2, RIM_IN=4;
    from row 11 pass >=27 units over it (ICE), and no sweep ray hit it. */
 export const NEAR_H=22;
 
-function buildRim(biome){
+/* frame A: the rim's own UVs. Top caps (and bevels) read the ring picture by
+   world (x, z); side faces read the strip under it by (x or z, height). One
+   geometry, one material, so the rim is still one draw. */
+function rimUV(geo,biome){
+  const {rx,rz,S,strip}=RIM_TEX, P=geo.attributes.position, N=geo.attributes.normal,
+    Wc=rx*2*S, Hc=(rz*2+strip)*S, uv=new Float32Array(P.count*2);
+  for(let i=0;i<P.count;i++){
+    const x=P.getX(i), y=P.getY(i), z=P.getZ(i);
+    let px, py;
+    if(Math.abs(N.getY(i))>0.3){ px=(x+rx)*S; py=(z+rz)*S; }
+    else{
+      const ns=Math.abs(N.getZ(i))>Math.abs(N.getX(i));
+      px=(ns?(x+rx)/(rx*2):(z+rz)/(rz*2))*Wc;
+      py=(rz*2+Math.max(0,Math.min(strip,strip-y)))*S;
+     }
+    uv[i*2]=Math.max(0.0005,Math.min(0.9995,px/Wc));
+    uv[i*2+1]=1-Math.max(0.0005,Math.min(0.9995,py/Hc));
+   }
+  geo.setAttribute("uv",new THREE.BufferAttribute(uv,2));
+}
+
+function buildRim(biome,atlas){
   const oX=W/2+RIM_W-RIM_BEV, oZ=D/2+RIM_W-RIM_BEV;
   const iX=W/2-RIM_IN+RIM_BEV, iZ=D/2-RIM_IN+RIM_BEV;
   const shape=new THREE.Shape();
@@ -55,7 +77,9 @@ function buildRim(biome){
     bevelThickness:RIM_BEV,bevelSize:RIM_BEV,bevelSegments:1,curveSegments:1});
   geo.rotateX(-Math.PI/2);              // extrude runs +Z -> lay it flat
   const col=new THREE.Color(biome.wall).lerp(new THREE.Color(biome.bg1),0.35);
-  const rim=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({color:col}));
+  const mat=new THREE.MeshLambertMaterial({color:col});
+  if(atlas&&atlas.rim){ rimUV(geo,biome); mat.color.set("#ffffff").lerp(new THREE.Color(biome.bg1),0.12); mat.map=atlas.rim; }
+  const rim=new THREE.Mesh(geo,mat);
   rim.castShadow=false; rim.receiveShadow=true;
   rim.userData.tag="trim";
   return rim;
@@ -130,7 +154,7 @@ export function buildScene(world, atlas, bright){
   const feat=world.feat?buildFeat(world,biome):null;
   if(feat)group.add(feat.mesh);
 
-  group.add(buildRim(biome));
+  group.add(buildRim(biome,atlas));
 
   const lights=createLights(biome,bright);
   group.add(lights.hemi,lights.dir,lights.fill,lights.amb);

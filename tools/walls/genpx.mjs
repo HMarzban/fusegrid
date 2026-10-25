@@ -11,7 +11,7 @@ import {BIOMES} from "../../src/core/config.js";
 import {WV} from "../../src/render/wallvar.js";
 import {FAM, wallShapes, edgeSlot} from "../../src/render/wallart.js";
 
-export const PX_WALL_CELLS = [["base", WV.BASE], ["v1", WV.V1], ["v2", WV.V2], ["acc", WV.ACC], ["h", WV.H], ["vl", WV.VL], ["ctl", WV.CTL], ["cbl", WV.CBL]];
+export const PX_WALL_CELLS = [["base", WV.BASE], ["v1", WV.V1], ["v2", WV.V2], ["acc", WV.ACC], ["h", WV.H], ["vl", WV.VL], ["vr", WV.VR], ["ctl", WV.CTL], ["ctr", WV.CTR], ["cbl", WV.CBL], ["cbr", WV.CBR]];
 const CH = {"wall": "w", "wall.outline": "X", "wall.shadow": "W", "wall.light": "L", "wallHi": "h", "wallHi.light": "H", "wallHi.shadow": "s"};
 const N = 80;
 const inPoly = (x, y, p) => { let c = false; for (let i = 0, j = p.length - 1; i < p.length; j = i++) { const [xi, yi] = p[i], [xj, yj] = p[j]; if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c; } return c; };

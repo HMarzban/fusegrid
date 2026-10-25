@@ -12,8 +12,9 @@ import {CFG, biomeOf, BIOMES} from "../../core/config.js";
 import {POWER} from "../../core/entities.js";
 import {captureSprite, drawPlayerBody, drawEnemyBody, drawBombBody,
   bakeAtlas, bakedTile, paintItemFace, PLAYER_SUIT} from "../sprites.js";
-import {topRows, sideRows, wallShapes, paintShapes, glossOf, shinOf} from "../wallart.js";
+import {topRows, sideRows, wallShapes, paintShapes, glossOf, shinOf, slot2d} from "../wallart.js";
 import {WV_N} from "../wallvar.js";
+import {paintRim,rimSize} from "./rimart.js";
 import {dk} from "../icons.js";
 import {paintFloor} from "../floorart.js";
 import {ENEMY_TYPES, ENEMY_COLORS} from "./entities.js";
@@ -142,6 +143,8 @@ export function atlasSources(mk, level=1){
          B = highlight tightness, both painted from the same shape lists */
       const gl=strip("#000",(b,s)=>{ const g=glossOf(b,s); return "rgb("+g+","+g+","+g+")"; });
       o.wallSurf=surfStrip(o.wallStrip,gl,C,shinOf(B),mk);
+      /* frame A: the rim's own strip (ring picture + side face), one canvas */
+      { const [rw,rh]=rimSize(); o.rim=captureSprite(rw,rh,(c)=>paintRim(c,B,(b,sl)=>slot2d(b,sl)),mk); }
       o.brick=bakedTile(bi,"brick");
       /* base floor (integration 2026-10-25): one slab painted at 2x from the
          shared floor painter, floor0 bed (the instance colour carries the
