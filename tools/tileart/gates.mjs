@@ -46,8 +46,8 @@ await withPage(async (P) => {
   for (const t of r.lit) { const s = litSkew(t.a, 160); ok(s.dSkew > 2, `BELT lit pass keeps the key top-left h${t.h} dir${t.dir} (skew ${s.dSkew.toFixed(1)})`); }
   for (const t of r.seam) { const d = seam(t.a, t.b, 160, t.axis); ok(d <= 6, `${t.kind} h${t.h} seam ${t.axis} (${d.toFixed(2)} <= 6)`); }
   for (const t of r.str) { const d = channelLight(t.a, 160, r.hw[t.h], t.dir); ok(d > 0, `STREAM light stays top-left h${t.h} dir${t.dir} (SE band - NW band = ${d.toFixed(1)} > 0)`); }
-  for (const t of r.sseam) { const d = seam(t.a, t.b, 160, t.axis); ok(d <= 6, `STREAM h${t.h} seam ${t.axis} (${d.toFixed(2)} <= 6)`); }
-  for (const t of r.mouth) { const e = seam(t.end, t.mid, 160, "x"), m = seam(t.mid, t.endE, 160, "x"); ok(e <= 6 && m <= 6, `STREAM h${t.h} run ends meet the middle (${e.toFixed(2)}, ${m.toFixed(2)} <= 6)`); }
+  for (const t of r.sseam) { const d = seam(t.a, t.b, 160, t.axis, 20 - r.hw[t.h], 20 + r.hw[t.h]); ok(d <= 6, `STREAM h${t.h} seam ${t.axis} (${d.toFixed(2)} <= 6)`); }
+  for (const t of r.mouth) { const e = seam(t.end, t.mid, 160, "x", 20 - r.hw[t.h], 20 + r.hw[t.h]), m = seam(t.mid, t.endE, 160, "x", 20 - r.hw[t.h], 20 + r.hw[t.h]); ok(e <= 6 && m <= 6, `STREAM h${t.h} run ends meet the middle (${e.toFixed(2)}, ${m.toFixed(2)} <= 6)`); }
   }
   if (which === "all" || which === "read") {
     const R = await P.ev(PAGE2), BIO = await P.ev(`import('/src/core/config.js').then(C=>C.BIOMES)`);

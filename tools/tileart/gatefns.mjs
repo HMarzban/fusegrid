@@ -10,14 +10,14 @@ export function litSkew(a, S) {
   }
   return {white: w, black: bk, dSkew: bk && w ? bx / bk - wx / w : 0};
 }
-/* mean abs RGB difference between two edge columns/rows of S-px tiles */
-export function seam(a, b, S, axis) {
-  let d = 0;
-  for (let t = 0; t < S; t++) for (let c = 0; c < 3; c++) {
+/* mean abs RGB difference between two edge columns/rows of S-px tiles; lo/hi (units, default the whole edge) limit it to a band, so a tile's own slab lip beside a channel is not a "seam" */
+export function seam(a, b, S, axis, lo = 0, hi = 40) {
+  let d = 0, n = 0; const U = S / 40;
+  for (let t = Math.round(lo * U); t < Math.round(hi * U); t++) for (let c = 0; c < 3; c++) {
     const ia = axis === "x" ? (t * S + S - 1) * 4 + c : ((S - 1) * S + t) * 4 + c, ib = axis === "x" ? (t * S) * 4 + c : t * 4 + c;
-    d += Math.abs(a[ia] - b[ib]);
+    d += Math.abs(a[ia] - b[ib]); n++;
   }
-  return d / (S * 3);
+  return d / n;
 }
 /* channel light: the sunk channel's NW inner band must be darker than its SE inner band (mean L over 3-unit bands) */
 export function channelLight(a, S, hw, dir) {

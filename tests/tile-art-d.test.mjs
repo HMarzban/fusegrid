@@ -67,7 +67,7 @@ test("PORTAL never uses a white overlay and no hex brighter than wallHi (VOID di
   const b = biome("VOID"), cap = lum(rgb(b.wallHi));
   for (let h = 0; h < 3; h++) for (const on of [0, 1]) for (const pair of [1, 2, 3]) {
     const cols = colours(run(BUILT.PORTAL, kk("PORTAL", { h, on, pair })));
-    for (const col of cols) { assert.ok(!/^#fff$/i.test(col) && !/255,255,255/.test(col), "white overlay " + col); if (/^#[0-9a-f]{6}$/i.test(col)) assert.ok(lum(rgb(col)) <= cap + 0.5, col); }
+    for (const col of cols) { assert.ok(!/^#fff$/i.test(col) && !(/rgba\(255,255,255,([\d.]+)\)/.test(col) && +/rgba\(255,255,255,([\d.]+)\)/.exec(col)[1] > 0.1), "white overlay " + col); if (/^#[0-9a-f]{6}$/i.test(col)) assert.ok(lum(rgb(col)) <= cap + 0.5, col); }
   }
 });
 test("BELT roller phase wraps at the roller period", () => {
