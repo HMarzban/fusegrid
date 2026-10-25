@@ -841,6 +841,17 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
       gen-2 boards by default (`?gen=1` or `?code=` keep today's); Node worlds stay
       gen 1. CLASSIC hash pin `6ec1e0a5:65648`, px cap 145 KB. Never pushed.
       Option C (stage set) sits unmerged on branch `frame-c`.
+      Depth round (shadows, AO, brick value down, floor detail, 3D relief,
+      PIXEL floor, stage fixes) and AMBIENT MOTION (owner 2026-10-25) are in:
+      `src/render/ambient.js` is the one deterministic spec (`particleAt`,
+      per-world motes / glints / steam / drift) read by `ambient2d.js`,
+      `three/ambientfx.js` (one `Points`, +1 draw: 142 / 143 in a tile room /
+      144 with a ghost) and `pixel/ambient.js` (stepped 8 Hz). It runs on a
+      renderer-owned PLAY-only clock (`ambientClock`; `world.time` keeps ticking in
+      PAUSE, so never use it), EFFECTS LOW halves the count,
+      prefers-reduced-motion turns it off, nothing cycles faster than 2.4 s.
+      Menus, title and ATTRACT draw none. CLASSIC hash `c7b4c843:71320`; px cap
+      152 KB (the px tree is a lazy import since #15).
 - Walls (owner rulings 2026-10-21, designed and prototyped, NOT built; issues
   #17 for CLASSIC 2D + REAL 3D and #31 for PIXEL after #15; record
   `docs/superpowers/specs/2026-10-21-wall-art-design.md`).
