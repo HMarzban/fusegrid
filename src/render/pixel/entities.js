@@ -56,7 +56,12 @@ export function drawFoes(c, V, world) {
       ga = k.a < 0.6 ? 0.5 : k.a < 0.88 ? 0.75 : 1;
     }
     if (ga < 1) c.globalAlpha = ga;
-    if (moving && e.type === "fast" && e.dir && ga === 1) { c.globalAlpha = 0.3; blit(c, V, f, X - 3 * e.dir.x, Y + dy - 3 * e.dir.y); c.globalAlpha = 1; }
+    if (moving && set.streak && e.dir && ga === 1 && (e.dir.x || e.dir.y)) {
+      const h = Math.abs(e.dir.x) >= Math.abs(e.dir.y);
+      c.globalAlpha = 0.85;
+      blit(c, V, set.streak[h ? 0 : 1], h ? X + (e.dir.x > 0 ? -8 : 6) : X - 1, h ? Y + dy - 1 : Y + dy + (e.dir.y > 0 ? -8 : 5));
+      c.globalAlpha = 1;
+    }
     blit(c, V, f, X, Y + dy);
     if (L === "burrow" && set.extra) blit(c, V, set.extra[pf], X, Y + dy);
     else if (L === "shade" && set.extra) blit(c, V, set.extra, X + hx, Y + dy);
@@ -87,16 +92,16 @@ export function drawItems(c, V, world) {
 /* rise = hollow diamonds (5x5 -> 3x3 -> a dot, three lanes), trails are five staggered dashes, nothing is a plus */
 const DIA = [[[0, -2], [-1, -1], [1, -1], [-2, 0], [2, 0], [-1, 1], [1, 1], [0, 2]], [[0, -1], [-1, 0], [1, 0], [0, 1]]];
 function mark(c, style, x, y, p, u, i) {
-  if (style === "ring") { const r = Math.max(1, Math.round(p.s / 2)); ringPts(c, x, y, r, r); return; }
-  if (style === "trail") { if (i & 1) return; const L = ((i >> 1) % 5) - 2; c.fillRect(x + (L & 1 ? 2 : 0), y + L, Math.max(1, Math.round(p.streak / 2)), 1); return; }
+  if (style === "ring") { const r = Math.max(2, Math.round(p.s / 2)); ringPts(c, x, y, r, r); ringPts(c, x, y, r - 1, r - 1); return; }
+  if (style === "trail") { if (i & 1) return; const L = ((i >> 1) % 3) - 1; c.fillRect(x + (L & 1 ? 2 : 0), y + L * 3, Math.max(3, Math.round(p.streak / 2)), 2); return; }
   if (style === "rise") {
     if (i % 3) return;
     const h = x + ((i / 3 | 0) - 1) * 5 - Math.round(p.x / 2), D = u < 0.45 ? DIA[0] : u < 0.75 ? DIA[1] : null;
-    if (!D) c.fillRect(h, y, 1, 1); else for (let j = 0; j < D.length; j++) c.fillRect(h + D[j][0], y + D[j][1], 1, 1);
+    if (!D) c.fillRect(h, y, 2, 2); else for (let j = 0; j < D.length; j++) c.fillRect(h + D[j][0], y + D[j][1], 2, 1);
     return;
   }
-  const s = style === "pop" ? Math.round(p.s / 2) : u < 0.25 ? 2 : 1;
-  c.fillRect(x, y, Math.max(1, s), Math.max(1, s));
+  const s = style === "pop" ? Math.max(2, Math.round(p.s / 2)) : u < 0.6 ? 3 : 2;
+  c.fillRect(x, y, s, s);
 }
 export function drawBursts(c, V, world) {
   const bs = fxOf(world, "px").bursts(V.t);
@@ -106,9 +111,9 @@ export function drawBursts(c, V, world) {
     for (let i = 0; i < m.n; i++) {
       if (n >= BURST_CAP) return;
       const p = collectParticle(B.kind, i, B.age);
-      if (!p || p.a < 0.1 || (B.age < 0.02 && m.style !== "ring")) continue;
+      if (!p || u > 0.9 || (B.age < 0.02 && m.style !== "ring")) continue;
       n++;
-      c.fillStyle = p.a > 0.66 ? R.light : p.a > 0.33 ? R.base : R.shadow;
+      c.fillStyle = u < 0.5 ? R.light : u < 0.75 ? R.base : R.shadow;
       mark(c, m.style, X + Math.round(p.x / 2), Y + Math.round(p.y / 2), p, u, i);
     }
   }

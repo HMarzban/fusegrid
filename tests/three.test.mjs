@@ -838,7 +838,7 @@ sec("S2.F",()=>{
     if(es[i].geometry.type!==wantGeo[types[i]])geoOk=false;
     const proto=spawnEnemy(types[i],0,0,1,null);
     const have="#"+es[i].material.color.getHexString();
-    const want=types[i]==="stationary"?"#2a1030":proto.color;
+    const want=types[i]==="stationary"?"#"+new THREE.Color(proto.color).multiplyScalar(0.8).getHexString():proto.color;   // round 2: the 2D violet, lit down .8
     if(have.toLowerCase()!==want.toLowerCase()){colOk=false;det.push(
       types[i]+":"+have+"!="+want);}
    }
@@ -1042,7 +1042,7 @@ await sec("S2.I",()=>{
   const fireB=scPlain.pools.itemBodies.fire;
   const fireR=scPlain.pools.itemRingIM.fire;
   check("R.headless item pickup = unique geo in POWER color + additive ring",
-    fireB.isInstancedMesh&&fireB.geometry.type==="LatheGeometry"
+    fireB.isInstancedMesh&&fireB.geometry.type==="BufferGeometry"&&!!fireB.geometry.attributes.aF   /* entities round 2: a badge (rim + front plate), not a lathe */
     &&fireB.material.isMeshLambertMaterial
     &&!fireB.material.map
     &&"#"+fireB.material.color.getHexString()==="#ff8a3c"
@@ -1507,8 +1507,9 @@ await sec("S4.A",async()=>{
     "dx="+cdx.toFixed(2)+" dz="+cdz.toFixed(2)+" top="+cbb.max.y.toFixed(2));
   const stShell=es[3];
   const stCore=stShell.children[0];
-  check("S4.A stationary shell #2a1030 keeps magenta core accent (#c58aff)",
-    "#"+stShell.material.color.getHexString()==="#2a1030"
+  /* entities round 2 2026-10-25: the shell is the 2D sentry violet (identity colour x .8), no longer a near-black #2a1030 */
+  check("S4.A stationary shell is the 2D violet and keeps its magenta core accent (#c58aff)",
+    "#"+stShell.material.color.getHexString()==="#"+new THREE.Color(spawnEnemy("stationary",0,0,1,null).color).multiplyScalar(0.8).getHexString()
     &&stCore.material.isMeshBasicMaterial
     &&"#"+stCore.material.color.getHexString()
       ===spawnEnemy("stationary",0,0,1,null).color.toLowerCase());
@@ -1596,9 +1597,9 @@ await sec("R.items",async()=>{
     &&fireR.isInstancedMesh&&pierceR.isInstancedMesh
     &&fire.count===1&&pierce.count===1&&!sc.pools.items,
     (fire?fire.count:"-")+"/"+(pierce?pierce.count:"-"));
-  check("R.items fire body is a low-seg lathe spike casting a shadow",
-    fire.geometry.type==="LatheGeometry"
-    &&fire.geometry.parameters.segments===3
+  check("R.items fire body is a raked glyph badge (rim + front plate, aF face flag) casting a shadow",
+    fire.geometry.type==="BufferGeometry"
+    &&fire.geometry.attributes.aF.count===fire.geometry.attributes.position.count
     &&fire.castShadow===true&&fire.material.isMeshLambertMaterial
     &&"#"+fire.material.color.getHexString()==="#ff8a3c");
   const rpos=fireR.geometry.attributes.position.array;
@@ -1625,16 +1626,16 @@ await sec("R.items",async()=>{
   const upY=new THREE.Vector3(0,1,0);
   drive(0);
   const q0=matScale(fire,0).q;
-  const wantQ0=new THREE.Quaternion().setFromAxisAngle(upY,ph);
+  const wantQ0=new THREE.Quaternion().setFromAxisAngle(upY,0.22*Math.sin(ph));
   const t1=(Math.PI/2-ph)/2.4;               // sin(2.4t+ph)==1 -> top of hover (itemIdle)
   drive(t1);
   const bob=matScale(fire,0);
-  const wantQ=new THREE.Quaternion().setFromAxisAngle(upY,2.2*t1+ph);
+  const wantQ=new THREE.Quaternion().setFromAxisAngle(upY,0.22*Math.sin(1.7*t1+ph));
   // quaternion sign is a double cover (q === -q as a rotation), so compare
   // via angleTo rather than raw components once ph pushes the half-angle
   // past +-pi/2.
-  /* entities round 2026-10-25: hover is the shared itemIdle (2 px at 2.4 rad/s, lifted x2.2 to the 3D body), spin is unchanged */
-  check("R.items hover +-4.4 about TILE*.66 @sin(2.4t+ph), spin advances 2.2t+ph",
+  /* entities round 2026-10-25: hover is the shared itemIdle (2 px at 2.4 rad/s, lifted x2.2 to the 3D body); round 2: the badge sways +-.22 rad instead of spinning so its glyph stays readable */
+  check("R.items hover +-4.4 about TILE*.66 @sin(2.4t+ph), yaw sways .22sin(1.7t+ph)",
     Math.abs(bob.p.y-(CFG.TILE*0.66+4.4))<1e-6
     &&bob.q.angleTo(wantQ)<1e-6&&q0.angleTo(wantQ0)<1e-6,
     bob.p.y.toFixed(2));
@@ -2346,9 +2347,10 @@ await sec("EB",async()=>{
 
   // --- burrow: the only body far longer than it is tall
   { const d=dim(ENEMY_3D.burrow.geo);
-    check("EB.7 burrow hull is a LOW SEGMENTED grub: fore-aft length > 2.2x"
+    /* entities round 2: re-matched to the 2D grub (a chunky head + two trailing segments, not a log): 1.7x */
+    check("EB.7 burrow hull is a LOW SEGMENTED grub: fore-aft length > 1.7x"
         +" its height, and it hugs the floor",
-      d.z/d.y>2.2&&EH.e_burrow+d.b.min.y<R("burrow")*0.1,
+      d.z/d.y>1.7&&EH.e_burrow+d.b.min.y<R("burrow")*0.1,
       "z/y="+(d.z/d.y).toFixed(2)); }
 
   // --- shade: no feet, no shadow, a floor glow instead

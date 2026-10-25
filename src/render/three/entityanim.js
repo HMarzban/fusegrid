@@ -18,7 +18,7 @@ export const IT_BASE={cap:0.66,vit:0.62,utl:0.64,bls:0.66};   // hover height, i
 const RING_BASE={cap:[0.3,0.08],vit:[0.26,0.08],utl:[0.34,0.06],bls:[0.3,0.18]};   // [mid, amp] of the ring pulse (2.6 rad/s, per-instance phase)
 export const RING_LIFT=0.16;
 
-export const faceYaw=(e)=>Math.atan2(e.dir?e.dir.x:0,e.dir?e.dir.y:1);
+export const faceYaw=(e)=>e.type==="stationary"?0:Math.atan2(e.dir?e.dir.x:0,e.dir?e.dir.y:1);   // a bunker has no travel: its lens always faces the rig
 export function turn(cur,tgt,dt){
   let d=(tgt-cur)%TAU;
   if(d>Math.PI)d-=TAU; else if(d<-Math.PI)d+=TAU;
@@ -43,8 +43,7 @@ export function stepFoe(S,e,t,dt,pl){
   S.by=(bobAt(type,ph,t,true)*S.mv+bobAt(type,ph,t,false)*(1-S.mv))*VZ;
   const p=e.invuln?1-(e.invulnT||0)/MOTION.SPAWN_T:1, sk=spawnK(p,t);
   S.sc=breatheAt(type,ph,t)*sk.s;
-  if(sk.ring){ S.ringR=sk.ring.r; S.ringA=sk.ring.a; }
-  else if(e.invuln){ S.ringR=20; S.ringA=0.11+0.04*Math.sin(2.4*t+w); }
+  if(sk.ring&&p>=0){ S.ringR=sk.ring.r; S.ringA=sk.ring.a*0.9; }   // only while the pop runs (<= 0.25 s), then nothing: the spawn ring never outshouts a pickup ring
   else { S.ringR=0; S.ringA=0; }
   S.eyeY=1-0.92*blinkAt(type,ph,t);
   S.stomp=Math.sin(12*t+w)*S.mv;
@@ -77,7 +76,7 @@ export function itemPose(P,fam,kind,it,t,born){
   const T=CFG.TILE, ph=(it.x*0.7+it.y*1.3)/T, id=itemIdle(fam,ph,t), age=t-born;
   const pop=age<MOTION.POP_T?spawnK(age/MOTION.SPAWN_T,t):null;
   P.hy=T*(IT_BASE[fam]||0.66)+id.dy*HOVER_K;
-  P.ry=fam==="cap"?2.2*t+ph:kind==="power"?1.8*t+ph:0;
+  P.ry=0.22*Math.sin(1.7*t+ph);   // a gentle sway, never a spin: the badge glyph stays readable
   P.rz=id.rot*1.6;
   P.sc=id.sc*(pop?pop.s:1);
   P.glint=id.glint==null?-1:id.glint;

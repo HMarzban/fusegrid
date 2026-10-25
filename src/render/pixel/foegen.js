@@ -82,3 +82,8 @@ export function ringCell(rx) {
   for (let j = 0; j < n; j++) { const a = (j / n) * 6.2832; g[ry + Math.round(ry * Math.sin(a))][rx + Math.round(rx * Math.cos(a))] = "r"; }
   return {w: 2 * rx + 1, h: 2 * ry + 1, axis: rx, anchor: [rx, ry], rows: g.map((r) => r.join("")), pal: {r: "body.light"}};
 }
+/* a 1 px ink contour one step outside the sprite (4-neighbour), so a foe lifts off the busy brick floor; plume and hem overlays are not outlined */
+export function rim(c) {
+  const at = (x, y) => (y >= 0 && y < c.h && x >= 0 && x < c.w ? c.rows[y][x] : ".");
+  return {...c, rows: c.rows.map((r, y) => [...r].map((ch, x) => (ch === "." && (at(x - 1, y) !== "." || at(x + 1, y) !== "." || at(x, y - 1) !== "." || at(x, y + 1) !== ".") ? "k" : ch)).join(""))};
+}

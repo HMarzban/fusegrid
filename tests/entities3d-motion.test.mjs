@@ -152,10 +152,10 @@ test("collect: a power event bursts through ONE Points for COLLECT_T, then it is
   }
 });
 
-test("burst Points: preallocated, additive, depthWrite off, never casts, EFFECTS LOW halves the sparks", () => {
+test("burst Points: preallocated, alpha-blended, depthWrite off, never casts, EFFECTS LOW halves the sparks", () => {
   const b = createBurstFx(), m = b.points.material;
   assert.equal(b.points.geometry.attributes.position.count, BURST_CAP);
-  assert.ok(m.transparent && m.depthWrite === false && m.blending === THREE.AdditiveBlending);
+  assert.ok(m.transparent && m.depthWrite === false && m.blending === THREE.NormalBlending, "alpha-blended so the kind colour never clumps to white");
   assert.equal(b.points.castShadow, false); assert.equal(b.points.receiveShadow, false);
   const list = [{ kind: "fire", x: 100, y: 100, col: "#ff8a3c", age: 0.1 }];
   const full = b.update(list, 1, 1), half = b.update(list, 1, 0.5);
@@ -276,4 +276,44 @@ test("cost: pools.update over the fat world (16 foes, 32 pickups, 8 bombs)", () 
   const ms = (performance.now() - t0) / N;
   console.log("pools.update fat world: " + ms.toFixed(4) + " ms");
   assert.ok(ms < 1.0, ms + " ms");
+});
+
+test("round 2: ONE white frame on death (never a second), spawn ring thin and gone by 0.35 s, burst in the kind colour", () => {
+  const pools = createPools(BIOMES[0], null), e = mkE("walker", 200, 200, { color: "#8affc1" });
+  const w = world({ enemies: [e] }); w.time = 1; pools.update(w);
+  e.dead = true; w.enemies = [];
+  w.time = 1.01; pools.update(w);
+  const g = pools.deadSlots.find((s) => s.visible);
+  assert.ok(g.material.isMeshBasicMaterial && g.material.color.r > 0.99, "first frame is white");
+  pools.update(w);
+  assert.ok(g.material.isMeshBasicMaterial && g.material.color.r > 0.99, "a repeat render of the same clock keeps it");
+  w.time = 1.03; pools.update(w);
+  assert.ok(!g.material.isMeshBasicMaterial, "the next frame is the real body again");
+  const sp = createPools(BIOMES[0], null), f = mkE("chaser", 200, 200, { invuln: true, invulnT: MOTION.SPAWN_T });
+  const ww = world({ enemies: [f] }); ww.time = 0; sp.update(ww);
+  assert.equal(sp.spawnRing.count, 1);
+  const rp = sp.spawnRing.geometry.parameters; assert.ok(rp.innerRadius >= 0.88 && rp.outerRadius === 1, "thin ring");
+  ww.time = 0.36; f.invulnT = MOTION.SPAWN_T - 0.36; sp.update(ww);
+  assert.equal(sp.spawnRing.count, 0, "no ring after the pop");
+  const bf = createBurstFx(); bf.update([{ kind: "fire", x: 100, y: 100, col: "#ff8a3c", age: 0.1 }], 1, 1);
+  const c = new THREE.Color("#ff8a3c"), a = bf.points.geometry.attributes.aCol.array;
+  assert.ok(Math.abs(a[0] - c.r) < 1e-6 && Math.abs(a[1] - c.g) < 1e-6 && Math.abs(a[2] - c.b) < 1e-6, "kind colour, not whitened");
+});
+
+test("round 2: pickups are glyph badges with ONE ring; stationary is the 2D violet with a raked lens; chaser is a drop pointing along travel", async () => {
+  const ent = await import("../src/render/three/entities.js");
+  for (const pd of POWER) {
+    const g = ent.ITEM_GEO[pd.t]; assert.ok(g.attributes.aF && g.attributes.uv, pd.t);
+  }
+  const pools = createPools(BIOMES[0], null);
+  assert.equal(new Set(POWER.map((p) => pools.itemRingIM[p.t].geometry.uuid)).size, 1, "one ring geometry");
+  const w = world({ items: [mkI("heart", 100, 100)] });
+  let ymax = 0;
+  for (let k = 0; k < 300; k++) { w.time = k / 30; pools.update(w); const m = pools.itemBodies.heart.instanceMatrix.array; ymax = Math.max(ymax, Math.abs(Math.atan2(m[8], m[0]))); }
+  assert.ok(ymax > 0.1 && ymax < 0.3, "sways, never spins: " + ymax);
+  const st = ent.ENEMY_3D.stationary;
+  const col = st.mat.color; assert.ok(0.2126 * col.r + 0.7152 * col.g + 0.0722 * col.b > 0.2, "not a near-black obelisk");
+  assert.ok(st.face.rot[0] < -0.3, "lens plane raked toward the rig");
+  const ch = ent.ENEMY_3D.chaser.geo; ch.computeBoundingBox();
+  assert.ok(ch.boundingBox.max.z > Math.abs(ch.boundingBox.min.z) * 1.2, "the point leads, the round end trails");
 });

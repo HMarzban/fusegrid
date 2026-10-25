@@ -55,14 +55,20 @@ function paintEyes(c,t){
   c.fillRect(3,7,58,4);
 }
 
-/* ---- stationary visor SLIT (identity §2: NOT eyes — the square reads via
-   a dark seam with a faint magenta rim glow) ---- */
+/* ---- stationary LENS (entities round 2: the 2D sentry carries one big
+   lens, not a slit): a dark visor bar, a round socket, the violet iris with a
+   soft hot core and one specular, on the 64x32 face strip ---- */
 function paintSlit(c){
-  c.globalAlpha=0.55; c.strokeStyle="#c58aff"; c.lineWidth=3;
-  c.strokeRect(3,8,58,16);
-  c.globalAlpha=1; c.fillStyle="#150a1c"; c.fillRect(6,11,52,10);
-  c.globalAlpha=0.35; c.fillStyle="#c58aff"; c.fillRect(9,14,46,4);
-  c.globalAlpha=1;
+  c.fillStyle="#150a1c"; c.fillRect(3,5,58,22);
+  c.globalAlpha=0.5; c.strokeStyle="#c58aff"; c.lineWidth=2; c.strokeRect(3,5,58,22);
+  c.globalAlpha=1; c.fillStyle="#05070c";
+  c.beginPath(); c.arc(32,16,12.5,0,Math.PI*2); c.fill();
+  c.fillStyle="#c58aff";
+  c.beginPath(); c.arc(32,16,9,0,Math.PI*2); c.fill();
+  c.globalAlpha=0.75; c.fillStyle="#ffffff";
+  c.beginPath(); c.arc(32,16,4.2,0,Math.PI*2); c.fill();
+  c.globalAlpha=1; c.fillStyle="#ffffff";
+  c.beginPath(); c.arc(28.6,12.4,2,0,Math.PI*2); c.fill();
 }
 
 /* ---- §2.7 MAKO face: the 2D face beats, so both renderers show the ONE
@@ -197,6 +203,7 @@ export function buildAtlas(mk, level=1){
     /* the surface strip is data (relief / gloss), never colour: linear, and
        filtered so its slopes stay smooth under the bump derivatives */
     if(k==="wallSurf"){ tx.colorSpace=THREE.NoColorSpace; tx.magFilter=THREE.LinearFilter; tx.minFilter=THREE.LinearFilter; }
+    if(k.startsWith("item_")){ tx.magFilter=THREE.LinearFilter; tx.minFilter=THREE.LinearFilter; }   // the pickup badge face is read at ~half its 64px, so no nearest shimmer
     if(k==="floor"){ tx.magFilter=THREE.LinearFilter; tx.minFilter=THREE.LinearMipmapLinearFilter; tx.generateMipmaps=true; }
     tx._shared=true;
     atlas[k]=tx; n++;

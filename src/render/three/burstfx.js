@@ -1,4 +1,4 @@
-/* REAL 3D pickup collect bursts (entities round 2026-10-25): every live burst from entityfx (fxOf(world,"3d").bursts(t)) is drawn as soft additive sprites
+/* REAL 3D pickup collect bursts (entities round 2026-10-25): every live burst from entityfx (fxOf(world,"3d").bursts(t)) is drawn as soft alpha-blended sprites in the pickup's own kind colour (additive overlap clumped to white)
    through ONE THREE.Points (+1 draw call). The per-kind style, count, radius and hashed placement come from collectParticle in ../motion.js (the same numbers
    CLASSIC and PIXEL read); this file only maps the spec's px offsets onto the board: fan and pop spray over the floor plane rising a little, a ring lies
    flat and widens, a trail streaks backwards, hearts rise. Preallocated attribute arrays, ranged upload, never lit, depthWrite false, never casts. */
@@ -11,7 +11,7 @@ import {CAM_FOV} from "./camrig.js";
 const W2=CFG.COLS*CFG.TILE/2, D2=CFG.ROWS*CFG.TILE/2, H=CFG.ROWS*CFG.TILE;
 export const BURST_CAP=24*14;
 const SHAPE={dot:0,diamond:1,ring:3,streak:4};
-const H0=18, GAIN=1.5;
+const H0=18, GAIN=1.2;
 const VS=`attribute vec4 aCol;
 attribute vec2 aSS;
 uniform float uK;
@@ -36,9 +36,8 @@ void main(){
   gl_FragColor=vec4(vC.rgb,vC.a*a);
   #include <colorspace_fragment>
 }`;
-const _w=new THREE.Color("#ffffff");
 const CCACHE=new Map();
-const colOf=(hex)=>{ let c=CCACHE.get(hex); if(!c){ c=new THREE.Color(hex||"#ffffff").lerp(_w,0.3); if(CCACHE.size<64)CCACHE.set(hex,c); } return c; };
+const colOf=(hex)=>{ let c=CCACHE.get(hex); if(!c){ c=new THREE.Color(hex||"#ffffff"); if(CCACHE.size<64)CCACHE.set(hex,c); } return c; };
 
 export function createBurstFx(){
   const pos=new Float32Array(BURST_CAP*3), col=new Float32Array(BURST_CAP*4), ss=new Float32Array(BURST_CAP*2);
@@ -49,7 +48,7 @@ export function createBurstFx(){
   geo.setDrawRange(0,0);
   const uK={value:1};
   const mat=new THREE.ShaderMaterial({uniforms:{uK},vertexShader:VS,fragmentShader:FS,transparent:true,depthWrite:false,depthTest:true,
-    blending:THREE.AdditiveBlending,toneMapped:false});
+    blending:THREE.NormalBlending,toneMapped:false});
   const points=new THREE.Points(geo,mat);
   points.frustumCulled=false; points.castShadow=false; points.receiveShadow=false;
   points.userData.tag="burst";

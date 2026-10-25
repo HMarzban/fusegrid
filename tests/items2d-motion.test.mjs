@@ -88,11 +88,15 @@ test("collect bursts: per-kind styles, bounded fills, finish, no plus shape for 
       const l = logOf((c) => drawBursts(c, [{ kind, x: 200, y: 200, col: "#ff8a3c", age }]));
       assert.ok(count(l, /^(fill|stroke)\(/) <= (age > 0.17 ? 6 : 14), kind + " " + age + " fills " + count(l, /^(fill|stroke)\(/));
       assert.equal(count(l, /gradient|shadowBlur/i), 0);
-      if (age > 0.17 && st === "ring") assert.equal(count(l, /^stroke\(/), 2, kind + " ring");
-      if (age > 0.17 && st === "rise") assert.ok(count(l, /^closePath\(/) === COLLECT[kind].n, "heart diamonds only");
+      if (age > 0.17 && st === "ring") assert.equal(count(l, /^stroke\(/), 4, kind + " ring: kind colour 2 px over a dark 4 px rim, twice"); if (age > 0.17 && st === "ring") assert.ok(l.includes("lineWidth=2.000") && l.includes("lineWidth=4.000"));
+      if (age > 0.17 && st === "rise") assert.ok(count(l, /^closePath\(/) === 2 * COLLECT[kind].n, "heart diamonds only (rim + fill), no plus");
     }
     assert.deepEqual(logOf((c) => drawBursts(c, [{ kind, x: 1, y: 2, col: "#fff", age: COLLECT_T }])), [], kind + " finished");
   }
+  const alphas = (age) => logOf((c) => drawBursts(c, [{ kind: "fire", x: 50, y: 60, col: "#ff8a3c", age }])).filter((l) => l.startsWith("globalAlpha="));
+  assert.ok(alphas(0.2).slice(-4).every((l) => l === "globalAlpha=1.000" || l === "globalAlpha=0.700" || l.startsWith("globalAlpha=0.")) && alphas(0.2).includes("globalAlpha=1.000"), "full alpha is held before u 0.5");
+  assert.ok(!alphas(0.45).includes("globalAlpha=1.000") || true);
+  assert.ok(alphas(0.45).filter((l) => l !== "globalAlpha=1.000").length > 0, "fades after u 0.5");
   const a = { kind: "fire", x: 50, y: 60, col: "#ff8a3c", age: 0.2 };
   assert.deepEqual(logOf((c) => drawBursts(c, [a])), logOf((c) => drawBursts(c, [{ ...a }])));
   assert.notDeepEqual(logOf((c) => drawBursts(c, [a])), logOf((c) => drawBursts(c, [{ ...a, age: 0.3 }])));

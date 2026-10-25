@@ -261,8 +261,9 @@ export function drawFx(c){
 
 /* COLLECT BURSTS (CLASSIC): the per-kind burst of motion.js collectParticle, drawn from fxOf(world,"2d").bursts(t) on the same frozen-in-PAUSE clock. The
    taken glyph first lifts and dissolves out of its disc (0.16 s), then ring (shield / pass / remote), fan (fire / bomb / throw / power), trail (speed / line /
-   pierce), rising diamonds (heart, never a plus) or pop (kick) plays over COLLECT_T. One path and one fill per layer, at most the two newest bursts, no
-   gradients: about 8 fills for a burst. EFFECTS LOW (partK) draws every other particle. No flash: alpha only fades. */
+   pierce), rising diamonds (heart, never a plus) or pop (kick) plays over COLLECT_T. Round dots (r 3.2) and diamonds carry a 1 px dark rim (an under-fill),
+   rings are 2 px in the kind colour over a dark 4 px under-stroke, and alpha holds at 1 until u 0.5 before it fades. One path and one fill per layer, at most
+   the two newest bursts, no gradients: about 11 fills for a burst. EFFECTS LOW (partK) draws every other particle. No flash: alpha only fades. */
 const LIFT_T=0.16;
 const quad=(c,x,y,w,h)=>{ c.moveTo(x,y); c.lineTo(x+w,y); c.lineTo(x+w,y+h); c.lineTo(x,y+h); c.closePath(); };
 export function drawBursts(c, list){
@@ -280,36 +281,43 @@ export function drawBursts(c, list){
       drawIcon(c,b.kind,col,0);
       c.restore();
     }
+    const hold=u<0.5?1:Math.max(0,1-(u-0.5)*2), RIM="rgba(8,12,24,0.6)";
     if(m.style==="ring"){
       const p=collectParticle(b.kind,0,b.age); if(!p) continue;
-      c.strokeStyle=col; c.globalAlpha=p.a; c.lineWidth=1+3*(1-u);
-      c.beginPath(); c.arc(b.x,b.y,p.s,0,7); c.stroke();
-      c.strokeStyle="#fff8d8"; c.globalAlpha=p.a*0.5; c.lineWidth=1.5;
-      c.beginPath(); c.arc(b.x,b.y,p.s*0.6,0,7); c.stroke();
+      for(let q=0;q<2;q++){
+        const r=q?p.s*0.6:p.s;
+        c.globalAlpha=hold*(q?0.7:1); c.strokeStyle=RIM; c.lineWidth=4;
+        c.beginPath(); c.arc(b.x,b.y,r,0,7); c.stroke();
+        c.strokeStyle=col; c.lineWidth=2;
+        c.beginPath(); c.arc(b.x,b.y,r,0,7); c.stroke();
+      }
       continue;
     }
     c.globalAlpha=0.3*(1-u)*(1-u); c.fillStyle=col; c.beginPath(); c.arc(b.x,b.y,m.r*(0.3+0.5*u),0,7); c.fill();
-    const z=m.style==="rise"?2.4:m.style==="pop"?1.7:m.style==="trail"?1:1.9;
-    const zx=m.style==="rise"?2.4:m.style==="trail"?1.9:1, zy=m.style==="trail"?2.6:1;
-    let a=0, any=false;
-    c.beginPath();
-    for(let i=0;i<m.n;i+=step){
-      const p=collectParticle(b.kind,i,b.age); if(!p) continue;
-      a=p.a; any=true;
-      const x=b.x+p.x*zx, y=b.y+p.y*zy, s=p.s*z;
-      if(m.style==="rise"){ c.moveTo(x,y-s); c.lineTo(x+s*0.75,y); c.lineTo(x,y+s); c.lineTo(x-s*0.75,y); c.closePath(); }
-      else if(m.style==="trail") quad(c,x,y-1.1,p.streak*1.6+4,2.2);
-      else quad(c,x-s,y-s,s*2,s*2);
+    const rise=m.style==="rise", trail=m.style==="trail", zx=rise?2.4:trail?1.9:1, zy=trail?2.6:1;
+    let any=false;
+    for(let pass=0;pass<2;pass++){
+      c.beginPath();
+      const g=pass?0:1;
+      for(let i=0;i<m.n;i+=step){
+        const p=collectParticle(b.kind,i,b.age); if(!p) continue;
+        any=true;
+        const x=b.x+p.x*zx, y=b.y+p.y*zy;
+        if(rise){ const s=p.s*2.4+g; c.moveTo(x,y-s); c.lineTo(x+s*0.75,y); c.lineTo(x,y+s); c.lineTo(x-s*0.75,y); c.closePath(); }
+        else if(trail){ const w=p.streak*1.6+4; quad(c,x-g,y-1.25-g,w+2*g,2.5+2*g); }
+        else { const r=(m.style==="pop"?3.8*(1-0.4*u):3.2)+g; c.moveTo(x+r,y); c.arc(x,y,r,0,7); }
+      }
+      if(!any) break;
+      c.globalAlpha=hold*(pass?1:0.7); c.fillStyle=pass?col:RIM; c.fill();
     }
-    if(any){ c.globalAlpha=a; c.fillStyle=col; c.fill(); }
-    if(any&&m.style!=="rise"){
+    if(any&&!rise){
       c.beginPath();
       for(let i=0;i<m.n;i+=3){
         const p=collectParticle(b.kind,i,b.age); if(!p) continue;
-        const x=b.x+p.x*zx, y=b.y+p.y*zy, s=p.s*z*0.5;
-        if(m.style==="trail") quad(c,x+p.streak*0.8,y-0.6,p.streak*0.8+2,1.2); else quad(c,x-s,y-s,s*2,s*2);
+        const x=b.x+p.x*zx, y=b.y+p.y*zy;
+        if(trail) quad(c,x+p.streak*0.8,y-0.6,p.streak*0.8+2,1.2); else { c.moveTo(x+1.4,y); c.arc(x,y,1.4,0,7); }
       }
-      c.globalAlpha=a; c.fillStyle="#fff8d8"; c.fill();
+      c.globalAlpha=hold; c.fillStyle="#fff8d8"; c.fill();
     }
   }
   if(drew) c.globalAlpha=1;

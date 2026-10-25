@@ -45,13 +45,13 @@ const HUDS = [[0, null], [3, {on: true, t: 12.3}], [8, null]];
 const PAGES = ["drawHowTo", "drawItemsHelp", "drawEnemiesHelp"], BOXES = [[600, 520], [600, 360]];
 const PIN = {
   hud0: "7c298753:175", hud3: "60b2bf24:349", hud8: "2aa8d78c:508",
-  drawHowTo520: "5687af4d:457", drawItemsHelp520: "8a7f1cfd:1195", drawEnemiesHelp520: "7c5e467f:1391",
-  drawHowTo360: "1938cac7:457", drawItemsHelp360: "b3039a60:1195", drawEnemiesHelp360: "945f68e5:1391",
-  drawHowTo520T: "e582bb4f:457", drawItemsHelp520T: "2aa3e9c5:1195", drawEnemiesHelp520T: "fc0580a8:1391",
-  drawHowTo360T: "7a30cea6:457", drawItemsHelp360T: "9e918ade:1195", drawEnemiesHelp360T: "8d76db10:1391",
-  "shell.2d.HOWTO": "7107614c:459", "shell.2d.ITEMS": "4fc3c574:1197", "shell.2d.ENEMIES": "208da372:1393",
-  "shell.3d.HOWTO": "7107614c:459", "shell.3d.ITEMS": "4fc3c574:1197", "shell.3d.ENEMIES": "208da372:1393",
-  "shell.iso.HOWTO": "3851fddd:459", "shell.iso.ITEMS": "bc8afea6:1197", "shell.iso.ENEMIES": "43dcb1b8:1393",
+  drawHowTo520: "5687af4d:457", drawItemsHelp520: "8a7f1cfd:1195", drawEnemiesHelp520: "6dadcc5b:1387",
+  drawHowTo360: "1938cac7:457", drawItemsHelp360: "b3039a60:1195", drawEnemiesHelp360: "9636ab61:1387",
+  drawHowTo520T: "e582bb4f:457", drawItemsHelp520T: "2aa3e9c5:1195", drawEnemiesHelp520T: "f709dae8:1387",
+  drawHowTo360T: "7a30cea6:457", drawItemsHelp360T: "9e918ade:1195", drawEnemiesHelp360T: "bd96c82c:1387",
+  "shell.2d.HOWTO": "7107614c:459", "shell.2d.ITEMS": "4fc3c574:1197", "shell.2d.ENEMIES": "1b73a248:1389",
+  "shell.3d.HOWTO": "7107614c:459", "shell.3d.ITEMS": "4fc3c574:1197", "shell.3d.ENEMIES": "1b73a248:1389",
+  "shell.iso.HOWTO": "3851fddd:459", "shell.iso.ITEMS": "bc8afea6:1197", "shell.iso.ENEMIES": "0b8d1ede:1389",
 };
 const hud = (lv, tm, ico) => { const r = rec(); drawHudChips(r.c, HUDW(lv), tm, ico); return r; };
 const page = (f, w, h, kind, touch) => { const r = rec(); md[f](r.c, md.layout(w, h), 1.25, kind, touch); return r; };

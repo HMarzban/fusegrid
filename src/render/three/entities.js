@@ -23,7 +23,7 @@
 import * as THREE from "../../../vendor/three.module.js";
 import { CFG } from "../../core/config.js";
 import { POWER, spawnEnemy } from "../../core/entities.js";
-import { ITEM_FAMILY, ITEM_SHAPE } from "../icons.js";
+import { ITEM_FAMILY } from "../icons.js";
 /* One hull hex for both renderers — R1's mid-value armour has to move in
    lockstep or the two players stop being one character. sprites.js pulls in
    icons.js / config.js / enemybody.js only, so this stays a DAG. */
@@ -172,96 +172,73 @@ function fitUV(g) {
   return g;
 }
 
-/* Items (items-player-art 2026-09-05) for the FROZEN rig: at 52.2 deg the
-   PLAN-VIEW FOOTPRINT is the primary read, and a solid of revolution is a
-   circle in plan view by definition — which is why six of the old twelve
-   were the same disc at different radii. Upright families are low-seg
-   lathes (seg IS the identity axis: 3/4/6/8); flat families are an outer
-   shelf fused with an inner mesa, whose 0.205r riser is the lit facet that
-   gives a single flat Lambert its two-tone. The flat outlines are
-   ITEM_SHAPE, the same table drawIcon draws, so the notch/point count a
-   kind shows in 2D is the count it shows in 3D. */
-function mesa(out, ins, r) {
-  /* ExtrudeGeometry's cap normals follow the shape's signed area, and the
-     twelve authored outlines do not share a winding — so half the flat
-     bodies would face their lit cap at the floor. Same class of trap as the
-     lathe bottom -> top rule; normalised here so ITEM_SHAPE stays one table
-     byte-identical for both renderers. */
-  const cw = (p) => {
-    let a = 0;
-    for (let i = 0; i < p.length; i++) {
-      const q = p[(i + 1) % p.length];
-      a += p[i][0] * q[1] - q[0] * p[i][1];
-    }
-    return a < 0 ? p.slice().reverse() : p;
-  };
-  const parts = [plate(cw(out), 0.55, r).rotateX(-Math.PI / 2)];
-  for (const p of ins)
-    parts.push(
-      plate(cw(p), 0.4, r)
-        .rotateX(-Math.PI / 2)
-        .translate(0, 0.28 * r, 0),
-    );
-  return mergeGeos(...parts);
-}
-/* Mesas track the P1.5 semantic outlines: each one is the lit facet on the
-   feature that names the object — the boot's toe, the thrown orb, the gap
-   the wall was breached at, the detonator's button plate, the beam's core,
-   the blast's heart, the arrowhead's forward spine. */
-/* Both of these sit UNDER a quadratic edge, so they were derived by
-   evaluating the curve, not by eyeballing the vertex list. kick's instep
-   bows down to y=0.00 at x=0.53 and only reaches y=-0.18 at its x=0.92
-   endpoint; throw's orb is the circle centred (0.14, 0.36) r 0.52, which is
-   nowhere near the nub at y=-0.56. A mesa poking outside its shelf merges
-   as a floating shelf, which reads as a rendering bug. */
-const M_KICK = [[0.48, 0.1], [0.86, -0.04], [0.94, 0.2], [0.52, 0.34]];
-const M_THROW = [[0.06, 0], [0.34, 0.28], [0.06, 0.56], [-0.22, 0.28]];
-const M_PASS = [[-0.9, 0.24], [0.9, 0.24], [0.9, 0.56], [-0.9, 0.56]];
-const M_PASS_L = [[-0.68, -0.5], [-0.4, -0.5], [-0.4, 0.06], [-0.68, 0.06]];
-const M_PASS_R = [[0.4, -0.5], [0.68, -0.5], [0.68, 0.06], [0.4, 0.06]];
-const M_REMOTE = [[-0.3, 0.1], [0.3, 0.1], [0.3, 0.6], [-0.3, 0.6]];
-const M_LINE = [
-  [-0.86, -0.07], [0.3, -0.07], [0.3, -0.28],
-  [0.88, 0], [0.3, 0.28], [0.3, 0.07], [-0.86, 0.07],
-];
-const M_POWER = [
-  [0, -0.56], [0.17, -0.17], [0.56, 0], [0.17, 0.17],
-  [0, 0.56], [-0.17, 0.17], [-0.56, 0], [-0.17, -0.17],
-];
-const M_PIERCE = [[0, -0.92], [0.22, -0.4], [0, -0.52], [-0.22, -0.4]];
+/* Items (entities round 2 2026-10-25, replaces the 2026-09-05 floating
+   primitives): every pickup is a raked BADGE, the same glyph identity as 2D
+   and PIXEL. One merged geometry per kind = a thin rim plate in the kind
+   colour + a front plate whose face is the atlas cell item_<t> (the 2D glyph
+   on its navy tile, painted by paintItemFace), raked toward the rig so the
+   glyph reads undistorted. The family only picks the silhouette (cap circle,
+   vit hexagon, utl rounded square, bls diamond); the glyph is the semantic.
+   Per-vertex aF marks the front face (1) for the body material's shader. */
 const IT = CFG.TILE;
-const ITEM_MAKE = {
-  fire: () =>
-    lathe([[0.62, 0], [0.92, 0.3], [0.7, 0.66], [0.34, 1.26], [0, 2.0]], 3, IT * 0.22),
-  bomb: () =>
-    lathe(
-      [[0.74, 0], [1.0, 0.26], [0.8, 0.52], [1.0, 0.8], [0.78, 1.06], [0.4, 1.44], [0, 1.62]],
-      4,
-      IT * 0.24,
-    ),
-  speed: () =>
-    lathe([[0.55, 0], [0.86, 0.34], [0.6, 0.78], [0.26, 1.5], [0, 2.3]], 3, IT * 0.2).scale(
-      1.9,
-      1,
-      0.5,
-    ),
-  heart: () => {
-    const D = lathe([[0.86, 0], [1.0, 0.22], [0.84, 0.52], [0.5, 0.82], [0, 1.0]], 6, IT * 0.16);
-    return mergeGeos(
-      D.clone().translate(-IT * 0.12, 0, 0),
-      D.clone().translate(IT * 0.12, 0, 0),
-    );
-  },
-  shield: () =>
-    lathe([[1.0, 0], [1.06, 0.18], [0.96, 0.4], [0.66, 0.72], [0, 0.92]], 8, IT * 0.21),
-  kick: () => mesa(ITEM_SHAPE.kick, [M_KICK], IT * 0.24),
-  throw: () => mesa(ITEM_SHAPE.throw, [M_THROW], IT * 0.23),
-  pass: () => mesa(ITEM_SHAPE.pass, [M_PASS, M_PASS_L, M_PASS_R], IT * 0.24),
-  remote: () => mesa(ITEM_SHAPE.remote, [M_REMOTE], IT * 0.24),
-  line: () => mesa(ITEM_SHAPE.line, [M_LINE], IT * 0.26),
-  power: () => mesa(ITEM_SHAPE.power, [M_POWER], IT * 0.23),
-  pierce: () => mesa(ITEM_SHAPE.pierce, [M_PIERCE], IT * 0.24),
+const BADGE_R = IT * 0.3,
+  BADGE_RAKE = 0.8;
+const ring = (n, f) => Array.from({ length: n }, (_, i) => f((i / n) * Math.PI * 2));
+const OUTLINE = {
+  cap: ring(24, (a) => [Math.cos(a), Math.sin(a)]),
+  vit: ring(6, (a) => [Math.cos(a + Math.PI / 6), Math.sin(a + Math.PI / 6)]),
+  utl: ring(16, (a) => {
+    const c = Math.cos(a),
+      s = Math.sin(a),
+      k = 0.82 / Math.max(Math.abs(c), Math.abs(s));
+    return [c * Math.min(1, k * 1.2), s * Math.min(1, k * 1.2)];
+  }),
+  bls: ring(16, (a) => {
+    const c = Math.cos(a),
+      s = Math.sin(a),
+      k = 1.08 / (Math.abs(c) + Math.abs(s));
+    return [c * k, s * k];
+  }),
 };
+const cwOutline = (p) => {
+  let a = 0;
+  for (let i = 0; i < p.length; i++) {
+    const q = p[(i + 1) % p.length];
+    a += p[i][0] * q[1] - q[0] * p[i][1];
+  }
+  return a < 0 ? p.slice().reverse() : p;
+};
+function badge(fam) {
+  const o = cwOutline(OUTLINE[fam] || OUTLINE.cap);
+  const rim = plate(o, 0.2, BADGE_R * 1.16);
+  const front = plate(o, 0.1, BADGE_R);
+  front.translate(0, 0, BADGE_R * 0.1);
+  const flag = (g, v, uvFace) => {
+    const n = g.attributes.position.count,
+      nor = g.attributes.normal,
+      pos = g.attributes.position,
+      uv = g.attributes.uv,
+      f = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      f[i] = v && nor.getZ(i) > 0.9 ? 1 : 0;
+      if (uvFace) uv.setXY(i, (pos.getX(i) / BADGE_R + 1) / 2, (pos.getY(i) / BADGE_R + 1) / 2);
+    }
+    return f;
+  };
+  const fr = flag(rim, false, false),
+    ff = flag(front, true, true);
+  const g = mergeGeos(rim, front);
+  const aF = new Float32Array(fr.length + ff.length);
+  aF.set(fr);
+  aF.set(ff, fr.length);
+  g.setAttribute("aF", new THREE.BufferAttribute(aF, 1));
+  g.rotateX(-BADGE_RAKE);
+  rim.dispose();
+  front.dispose();
+  return g;
+}
+const ITEM_MAKE = {};
+for (const pd of POWER) ITEM_MAKE[pd.t] = () => badge(ITEM_FAMILY[pd.t] || "cap");
 export const ITEM_GEO = {};
 for (const pd of POWER) ITEM_GEO[pd.t] = sharedGeo(ITEM_MAKE[pd.t]());
 
@@ -344,9 +321,9 @@ function lambertMat(color) {
       { geo: side(1), mat: DARK, pos: [0, 0, 0], rot: [0, 0, 0] },
     ],
     face: {
-      geo: sharedGeo(new THREE.PlaneGeometry(r * 1.3, r * 0.6)),
-      pos: [0, r * 0.16, r * 0.92],
-      rot: [-0.3, 0, 0],
+      geo: sharedGeo(new THREE.PlaneGeometry(r * 1.6, r * 0.8)),
+      pos: [0, r * 0.2, r * 0.9],
+      rot: [-0.55, 0, 0],
     },
     bob: [1.8, 12],
   });
@@ -387,7 +364,7 @@ function lambertMat(color) {
   skirt.translate(0, -r * 1.02, 0);
   putEnemy("stationary", {
     geo: sharedGeo(mergeGeos(cell, emb)),
-    mat: lambertMat("#2a1030"),
+    mat: lambertMat(new THREE.Color(PROTO.stationary.color).multiplyScalar(0.8)),   /* the 2D sentry violet, lit down a notch (entities round 2: was a near-black #2a1030 obelisk) */
     h: r * 1.15,
     details: [
       {
@@ -404,9 +381,9 @@ function lambertMat(color) {
       },
     ],
     face: {
-      geo: sharedGeo(new THREE.PlaneGeometry(r * 1.2, r * 0.42)),
-      pos: [0, r * 0.34, r * 1.16],
-      rot: [0, 0, 0],
+      geo: sharedGeo(new THREE.PlaneGeometry(r * 1.5, r * 0.75)),
+      pos: [0, r * 0.3, r * 1.16],
+      rot: [-0.5, 0, 0],
     },
     bob: [1.5, 3],
   });
@@ -486,9 +463,11 @@ function lambertMat(color) {
      (raked crest + down-angled brow), B the skids that ground it. */
   const chest = new THREE.SphereGeometry(r, 14, 10);
   chest.scale(0.74, 1.26, 0.9);
-  const tail = new THREE.ConeGeometry(r * 0.5, r * 0.95, 10);
-  tail.rotateX(-Math.PI / 2);
-  tail.translate(0, 0, -r * 0.85);
+  /* the 2D chaser is a DROP: a round rear and a point toward travel (not a
+     fish with a tail behind) */
+  const tail = new THREE.ConeGeometry(r * 0.52, r * 0.95, 10);
+  tail.rotateX(Math.PI / 2);
+  tail.translate(0, -r * 0.1, r * 0.82);
   const hull = mergeGeos(chest, tail);
   hull.rotateX(0.2);
   const crest = new THREE.ConeGeometry(r * 0.5, r * 0.95, 4);
@@ -522,9 +501,9 @@ function lambertMat(color) {
       },
     ],
     face: {
-      geo: sharedGeo(new THREE.PlaneGeometry(r * 1.1, r * 0.5)),
-      pos: [0, -r * 0.05, r * 0.95],
-      rot: [-0.25, 0, 0],
+      geo: sharedGeo(new THREE.PlaneGeometry(r * 1.2, r * 0.6)),
+      pos: [0, r * 0.3, r * 0.74],
+      rot: [-0.5, 0, 0],
     },
     bob: [1.2, 9],
   });
@@ -662,15 +641,15 @@ function lambertMat(color) {
     const c = new THREE.ConeGeometry(r * 0.2, r * 0.46, 3);
     c.rotateX(Math.PI / 2);
     c.rotateY(-s * 0.42);
-    c.translate(s * r * 0.4, -r * 0.1, r * 1.14);
+    c.translate(s * r * 0.4, -r * 0.1, r * 1.22);
     return c;
   };
   const cbrow = new THREE.BoxGeometry(r * 1.02, r * 0.14, r * 0.3);
   cbrow.rotateX(-0.3);
-  cbrow.translate(0, r * 0.3, r * 0.88);
+  cbrow.translate(0, r * 0.34, r * 1.0);
   const puff = [];
   const PS = [0.24, 0.2, 0.15],
-    PZ = [-1.4, -1.58, -1.72],
+    PZ = [-1.3, -1.46, -1.6],
     PY = [0.2, 0.28, 0.34];
   for (let i = 0; i < 3; i++) {
     const g = new THREE.SphereGeometry(r * PS[i], 8, 6);
@@ -689,9 +668,9 @@ function lambertMat(color) {
   putEnemy("burrow", {
     geo: sharedGeo(
       mergeGeos(
-        seg(0.86, 0.9, 0.66, 0.02, 0.52, 14, 8),
-        seg(0.74, 0.94, 0.62, -0.04, -0.3, 12, 8),
-        seg(0.56, 0.96, 0.56, -0.1, -1, 12, 6),
+        seg(1.0, 0.98, 0.7, 0.04, 0.42, 14, 8),
+        seg(0.82, 0.96, 0.66, -0.04, -0.3, 12, 8),
+        seg(0.54, 0.9, 0.54, -0.1, -0.86, 12, 6),
       ),
     ),
     mat: phongMat(PROTO.burrow.color, 40),
@@ -711,9 +690,9 @@ function lambertMat(color) {
       },
     ],
     face: {
-      geo: sharedGeo(new THREE.PlaneGeometry(r * 1.05, r * 0.44)),
-      pos: [0, r * 0.1, r * 1.04],
-      rot: [-0.3, 0, 0],
+      geo: sharedGeo(new THREE.PlaneGeometry(r * 1.5, r * 0.75)),
+      pos: [0, r * 0.2, r * 1.0],
+      rot: [-0.55, 0, 0],
     },
     bob: [1.1, 8],
   });
@@ -776,9 +755,9 @@ function lambertMat(color) {
       },
     ],
     face: {
-      geo: sharedGeo(new THREE.PlaneGeometry(r * 0.8, r * 0.38)),
-      pos: [0, r * 0.3, r * 0.62],
-      rot: [-0.9, 0, 0],
+      geo: sharedGeo(new THREE.PlaneGeometry(r * 1.2, r * 0.6)),
+      pos: [0, r * 0.3, r * 0.6],
+      rot: [-0.8, 0, 0],
     },
     bob: [2.2, 6],
   });
@@ -1064,7 +1043,7 @@ export function createPools(biome, atlas) {
   const spawnRing = new THREE.InstancedMesh(
     sharedGeo(
       (() => {
-        const g = new THREE.RingGeometry(0.78, 1, 28);
+        const g = new THREE.RingGeometry(0.9, 1, 28);
         g.rotateX(-Math.PI / 2);
         return g;
       })(),
@@ -1142,63 +1121,48 @@ export function createPools(biome, atlas) {
      the body already states. It now carries FAMILY — the one accent
      channel an item gets. Four geometries, still twelve InstancedMeshes:
      geometry count is not draw count. */
-  const ITEM_RING_GEO = (() => {
-    const T = CFG.TILE,
-      flat = (g) => {
-        g.scale(1.3, 1.3, 1);   /* depth round: bigger rings; the instance scale still encodes blast reach */
-        g.rotateX(-Math.PI / 2);
-        return g;
-      };
-    const utl = [],
-      bls = [new THREE.RingGeometry(T * 0.3, T * 0.36, 24)];
-    for (let i = 0; i < 6; i++)
-      utl.push(
-        new THREE.RingGeometry(T * 0.32, T * 0.44, 3, 1, (i * Math.PI) / 3, (Math.PI / 3) * 0.62),
-      );
-    for (let i = 0; i < 8; i++)
-      bls.push(
-        new THREE.RingGeometry(T * 0.36, T * 0.48, 2, 1, (i * Math.PI) / 4 - 0.1, 0.2),
-      );
-    return {
-      cap: sharedGeo(flat(new THREE.RingGeometry(T * 0.36, T * 0.41, 24))),
-      vit: sharedGeo(
-        flat(
-          mergeGeos(
-            new THREE.RingGeometry(T * 0.28, T * 0.32, 24),
-            new THREE.RingGeometry(T * 0.42, T * 0.46, 24),
-          ),
-        ),
-      ),
-      utl: sharedGeo(flat(mergeGeos(...utl))),
-      bls: sharedGeo(flat(mergeGeos(...bls))),
-    };
-  })();
+  /* ONE thin ring under every pickup (kind colour, additive); the badge
+     silhouette carries the family, so the old second ring / tick marks are gone. */
+  const ITEM_RING = sharedGeo(
+    (() => {
+      const g = new THREE.RingGeometry(CFG.TILE * 0.36, CFG.TILE * 0.41, 28);
+      g.scale(1.3, 1.3, 1);
+      g.rotateX(-Math.PI / 2);
+      return g;
+    })(),
+  );
   const RING_SCALE = { line: 0.86, pierce: 1.0, power: 1.16 };
   const itemMats = {},
     itemRings = {};
-  /* GLINT: a bright band sweeps across the body now and then (itemIdle's
-     glint 0..1, -1 = none). Per-instance, so it rides the body mesh's own
-     instanceColor.r (the tint is neutralised in the shader) and is added as
-     emissive along the body's local diagonal, scaled by its bounding radius.
-     One shared program (same cache key) for all twelve bodies. */
+  /* BODY SHADER (badge): aF = 1 on the front plate, whose face is the atlas
+     cell item_<t> drawn UNLIT (the 2D glyph reads at its authored colours);
+     the rim and edges stay the kind-colour Lambert. GLINT: a bright band
+     sweeps across the badge now and then (itemIdle's glint 0..1, -1 = none),
+     per-instance through the body mesh's own instanceColor.r (the tint is
+     neutralised in the shader), along the badge's local diagonal scaled by
+     its bounding radius. One program per (face texture | none). */
   function matForItem(t, col) {
     let m = itemMats[t];
     if (!m) {
       m = sharedMat(new THREE.MeshLambertMaterial());
       m.color.set(col || "#ffffff");
-      const ext = { value: 1 };
+      const ext = { value: 1 },
+        tex = atlas && atlas["item_" + t] instanceof THREE.Texture ? atlas["item_" + t] : null,
+        uFace = { value: tex };
       ITEM_GEO[t].computeBoundingSphere();
       ext.value = Math.max(1, ITEM_GEO[t].boundingSphere.radius);
       m.onBeforeCompile = (sh) => {
         sh.uniforms.uExt = ext;
+        if (tex) sh.uniforms.uFace = uFace;
         sh.vertexShader = sh.vertexShader
-          .replace("#include <common>", "#include <common>\nvarying float vGl;\nvarying vec3 vGP;")
-          .replace("#include <color_vertex>", "#include <color_vertex>\nvGl=instanceColor.r; vColor=vec3(1.0); vGP=position;");
+          .replace("#include <common>", "#include <common>\nattribute float aF;\nvarying float vGl;\nvarying vec3 vGP;\nvarying float vF;\nvarying vec2 vFu;")
+          .replace("#include <color_vertex>", "#include <color_vertex>\nvGl=instanceColor.r; vColor=vec3(1.0); vGP=position; vF=aF; vFu=uv;");
         sh.fragmentShader = sh.fragmentShader
-          .replace("#include <common>", "#include <common>\nvarying float vGl;\nvarying vec3 vGP;\nuniform float uExt;")
-          .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\nif(vGl>=0.0){ float gs=dot(vGP,vec3(0.55,0.5,0.55))/uExt; float gb=1.0-smoothstep(0.0,0.3,abs(gs-mix(-1.3,1.3,vGl))); totalEmissiveRadiance+=vec3(1.0,0.97,0.88)*gb*0.5; }");
+          .replace("#include <common>", "#include <common>\nvarying float vGl;\nvarying vec3 vGP;\nvarying float vF;\nvarying vec2 vFu;\nuniform float uExt;" + (tex ? "\nuniform sampler2D uFace;" : ""))
+          .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\nvec3 gAdd=vec3(0.0);\nif(vGl>=0.0){ float gs=dot(vGP,vec3(0.55,0.5,0.55))/uExt; float gb=1.0-smoothstep(0.0,0.3,abs(gs-mix(-1.3,1.3,vGl))); gAdd=vec3(1.0,0.97,0.88)*gb*0.45; }")
+          .replace("#include <opaque_fragment>", (tex ? "if(vF>0.5) outgoingLight=texture2D(uFace,vFu).rgb;\n" : "") + "outgoingLight+=gAdd;\n#include <opaque_fragment>");
       };
-      m.customProgramCacheKey = () => "itemglint";
+      m.customProgramCacheKey = () => "itembadge" + (tex ? 1 : 0);
       itemMats[t] = m;
     }
     return m;
@@ -1238,7 +1202,7 @@ export function createPools(biome, atlas) {
     itemBodies[pd.t] = body;
     group.add(body);
     const ring = new THREE.InstancedMesh(
-      ITEM_RING_GEO[ITEM_FAMILY[pd.t] || "cap"],
+      ITEM_RING,
       ringForItem(pd.t, pd.col),
       POOL_CAPS.items,
     );
@@ -1441,7 +1405,7 @@ export function createPools(biome, atlas) {
         _m.compose(_p, _q, _s);
         spawnRing.setMatrixAt(ri, _m);
         _c.set(e.color || ENEMY_COLORS[e.type] || "#ffffff");
-        const ra = Math.min(1, S.ringA * 1.6);
+        const ra = Math.min(1, S.ringA * 1.1);
         ringCol[ri * 3] = _c.r * ra;
         ringCol[ri * 3 + 1] = _c.g * ra;
         ringCol[ri * 3 + 2] = _c.b * ra;
@@ -1497,7 +1461,14 @@ export function createPools(biome, atlas) {
         s.position.set(g.x - W2, EH[kk] * _gp.sy, g.y - D2);
         s.rotation.set(0, yaw, 0);
         s.scale.set(_gp.sx, _gp.sy, _gp.sx);
-        const on = _gp.flash > 0,
+        /* ONE white frame: the flash shows only at the clock time this
+           ghost was first drawn (a repeat render of the same t keeps it) */
+        const gk = g.x * 1009 + g.y * 31 + g.type.length;
+        if (s.userData.gk !== gk) {
+          s.userData.gk = gk;
+          s.userData.fT = t;
+        }
+        const on = _gp.flash > 0 && t === s.userData.fT,
           ch = s.children;
         if (on) {
           flashMat.color.set(g.col || ENEMY_COLORS[g.type] || "#ffffff").lerp(WHITE, _gp.flash);

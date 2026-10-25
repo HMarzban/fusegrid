@@ -44,18 +44,28 @@ function contact(c, r, w) {
    lit body lifted off the floor so the leftover crescent below is the form
    shadow, pass 3 a tilted sheen pinned upper-left to agree with the frozen
    3D warm key. */
-function shell(c, r, col, shape, sx, sy, sw) {
+let HALO = 0;
+function shell(c, r, col, shape, sx, sy, sw, lf) {
+  const lift = lf || 0;
+  if (HALO > 0.02) {
+    const ga = c.globalAlpha;
+    shape(c, r, 1.13, 0, 0);
+    c.globalAlpha = ga * HALO * 0.8;
+    c.fillStyle = lt(col, 0.45);
+    c.fill();
+    c.globalAlpha = ga;
+  }
   shape(c, r, 1, 0, 0);
-  c.fillStyle = dk(col, 0.56);
+  c.fillStyle = dk(col, 0.56 - lift * 0.5);
   c.fill();
   seal(c);
   shape(c, r, 0.8, -r * 0.075, -r * 0.155);
-  c.fillStyle = lt(col, 0.5);
+  c.fillStyle = lt(col, 0.5 + lift * 1.5);
   c.fill();
   shape(c, r, 0.8, 0, -r * 0.09);
-  c.fillStyle = col;
+  c.fillStyle = lift ? lt(col, lift) : col;
   c.fill();
-  c.fillStyle = lt(col, 0.4);
+  c.fillStyle = lt(col, 0.4 + lift * 1.2);
   c.beginPath();
   c.ellipse(r * sx, r * sy, r * sw, r * sw * 0.5, -0.6, 0, 7);
   c.fill();
@@ -111,7 +121,7 @@ function eye(c, x, y, rad, col, gx, bl) {
   if (o < 1) c.ellipse(x + gx, y + rad * 0.08, rad * 0.21, rad * 0.21 * o, 0, 0, 7);
   else c.arc(x + gx, y + rad * 0.08, rad * 0.21, 0, 7);
   c.fill();
-  if (o < 0.6) return;
+  if (o < 0.45) return;
   c.fillStyle = "#ffffff";
   c.beginPath();
   c.arc(x - rad * 0.3, y - rad * 0.32, rad * 0.17, 0, 7);
@@ -338,12 +348,8 @@ const BODY = {
       c.closePath();
       c.fill();
     }
-    c.globalAlpha = a * 0.3;
-    c.beginPath();
-    c.ellipse(0, r * 0.72, r * 0.62, r * 0.16, 0, 0, 7);
-    c.fill();
     c.globalAlpha = a;
-    shell(c, r, col, S_FAST, -0.3, -0.14, 0.26);
+    shell(c, r, col, S_FAST, -0.3, -0.14, 0.26, 0.06);
     c.fillStyle = dk(col, 0.7);
     for (const s of [-1, 1]) {
       c.beginPath();
@@ -388,7 +394,7 @@ const BODY = {
     } else {
       halo(c, fx, r * 0.2, r * 0.36, col, gl, a);
       eye(c, fx, r * 0.2, r * 0.36, col, fx * 0.6, bl);
-      const f = live ? Math.min(1, 0.18 + gl * 0.6 + fl * 0.5) : 0;
+      const f = live ? Math.min(1, 0.18 + gl * 0.85 + fl * 0.4) : 0;
       c.fillStyle = dk(col, 0.7);
       c.beginPath();
       c.moveTo(-r * 0.56, -r * 0.3);
@@ -532,7 +538,7 @@ const BODY = {
       seal(c);
       n++;
     }
-    shell(c, r, col, S_GRUB, -0.32, 0.1, 0.3);
+    shell(c, r, col, S_GRUB, -0.32, 0.1, 0.3, 0.2);
     c.strokeStyle = dk(col, 0.3);
     c.lineWidth = 1;
     for (const sc of [
@@ -559,11 +565,11 @@ const BODY = {
       c.fillStyle = ROCK;
       c.fillRect(-r * 0.3, r * 0.2, r * 0.6, r * 0.14);
     } else {
-      eye(c, fx - r * 0.26, r * 0.3, r * 0.17, col, fx * 0.4, bl);
-      eye(c, fx + r * 0.26, r * 0.3, r * 0.17, col, fx * 0.4, bl);
       c.fillStyle = dk(col, 0.74);
-      rr(c, -r * 0.58, r * 0.02, r * 1.16, r * 0.18, 4);
+      rr(c, -r * 0.6, -r * 0.04, r * 1.2, r * 0.14, 4);
       c.fill();
+      eye(c, fx - r * 0.31, r * 0.3, r * 0.235, col, fx * 0.5, bl);
+      eye(c, fx + r * 0.31, r * 0.3, r * 0.235, col, fx * 0.5, bl);
     }
   },
   shade(c, P) {
@@ -682,6 +688,7 @@ export function drawEnemyBody(c, world, e, X) {
     ph = live ? phaseOf(e.type, e.home) : 0;
   const a = live && X.a != null ? X.a : !live && e.invuln && Math.floor(t * 12) % 2 ? 0.5 : 1;
   c.globalAlpha = a;
+  HALO = live ? X.gl * (0.55 + 0.45 * Math.sin(1.9 * t + ph * 6.283)) : 0;
   (BODY[e.type] || BODY.walker)(c, {
     r: e.r,
     col: e.color,
@@ -693,7 +700,7 @@ export function drawEnemyBody(c, world, e, X) {
     live,
     mv: e.speed == null || e.speed > 0,
     wp: m.bobW * t + ph * 6.283,
-    bl: live ? (X.bl != null ? X.bl : blinkAt(e.type, ph, t)) : 0,
+    bl: live ? (X.bl != null ? X.bl : Math.max(blinkAt(e.type, ph, t), X.gl * 0.55)) : 0,
     gl: live ? X.gl : 0,
     fl: live ? X.fl : 0,
   });
@@ -741,7 +748,8 @@ export function drawFoes(c, world) {
     s.near = !!ln;
     let fl = 0;
     if (t - s.f0 < FLICK_T && t >= s.f0) fl = Math.sin(((t - s.f0) / FLICK_T) * Math.PI);
-    const sc = sp ? sp.s : 1,
+    const cue = ln ? clamp01(ln.glow * 3) : 0,
+      sc = (sp ? sp.s : 1) * (type === "fast" ? 1.12 : 1),
       wp = m.bobW * t + ph * 6.283,
       sw = mv && (type === "walker" || type === "knight" || type === "chaser") ? Math.sin(wp) : 0;
     let ox = (ln ? ln.ox : 0) - sw * 1,
@@ -777,6 +785,15 @@ export function drawFoes(c, world) {
       c.stroke();
       c.globalAlpha = 1;
     }
+    if (cue > 0.04) {
+      c.globalAlpha = cue * (0.38 + 0.3 * (0.5 + 0.5 * Math.sin(1.9 * t + ph * 6.283)));
+      c.strokeStyle = lt(e.color, 0.35);
+      c.lineWidth = 2.5;
+      c.beginPath();
+      c.ellipse(0, r * 0.86, r * 1.35, r * 0.52, 0, 0, 7);
+      c.stroke();
+      c.globalAlpha = 1;
+    }
     const fy = r * 0.86,
       br = type === "stationary" ? 1 : breatheAt(type, ph, t);
     c.translate(ox, oy + fy);
@@ -784,7 +801,7 @@ export function drawFoes(c, world) {
     if (sc !== 1 || br !== 1) c.scale(sc * (2 - br), sc * br);
     c.translate(0, -fy);
     XS.a = sa;
-    XS.gl = ln ? ln.glow : 0;
+    XS.gl = cue;
     XS.fl = fl;
     XS.bl = null;
     drawEnemyBody(c, world, e, XS);

@@ -67,20 +67,20 @@ const walkerSide0 = c(3, [
   ".............kkk",
 ]);
 const stationaryIdle0 = c(0, [
-  "..........o",
-  ".........oso",
-  "........ooooo",
-  ".......ollbbso",
-  "......olbbbbbso",
+  "",
+  ".........ooo",
+  ".........obo",
+  "......ooooooooo",
+  "......ollbbbbso",
   "......obkkkkkso",
-  "......okklllkko",
+  ".....obkklllkkso",
   ".....obklmmmlkso",
   ".....obklmemlkso",
-  ".....obklmmmlkso",
-  ".....obkklllkkso",
-  ".....obbkkkkkbso",
-  "....olbbbbbbbbbso",
-  "....obsbsbsbsbsso",
+  "....obbklmmmlkbso",
+  "....obbkklllkkbso",
+  "....obbbkkkkkbbso",
+  "...olbbbbbbbbbbbso",
+  "...obsbsbsbsbsbsso",
   "...ooooooooooooooo",
   "..obblbbbblbbbblbso",
   "..ossssssssssssssso",
@@ -132,11 +132,11 @@ const chaserFront0 = c(1, [
   ".....obbkkkkkbso",
   ".....obbkeeeebso",
   ".....obbeekeebso",
-  ".....obbbsssbbso",
-  ".....ossssssssso",
-  "......ooooooooo",
-  ".......kk...kk",
-  ".............kk",
+  "......obbsssbso",
+  "......ossssssso",
+  ".......ooooooo",
+  "........kk.kk",
+  "...........kk",
 ]);
 const chaserBack0 = c(1, [
   "..........o",
@@ -151,11 +151,11 @@ const chaserBack0 = c(1, [
   ".....obbbbsbbbso",
   ".....obbbbbbbbso",
   ".....obbbbbbbbso",
-  ".....obbbbbbbsso",
-  ".....ossssssssso",
-  "......ooooooooo",
-  ".......kk...kk",
-  ".............kk",
+  "......obbbbbsso",
+  "......ossssssso",
+  ".......ooooooo",
+  "........kk.kk",
+  "...........kk",
 ]);
 const chaserSide0 = c(1, [
   "..........o",
@@ -170,49 +170,28 @@ const chaserSide0 = c(1, [
   ".....obbbkkkkkso",
   ".....obbbkeeeeso",
   ".....obbbeekeeso",
-  ".....obbbbsssbso",
-  ".....ossssssssso",
-  "......ooooooooo",
-  "........kk...kk",
-  "..............kk",
+  "......obbsssbso",
+  "......ossssssso",
+  ".......ooooooo",
+  ".........kk.kk",
+  "............kk",
 ]);
-const boomerangSpin0 = c(1, [
-  ".....oo",
-  "....olo",
-  "...ollloooooo",
-  "...olllllllbbo",
-  "...olllllbbbbso",
-  "....ollboooobbso",
-  "oooollbo....ooooo",
-  "olkkkko",
-  ".okeeko",
-  ".olkkbo",
-  "..obbbo",
-  "...obbbo....ooooo",
-  ".oobbbbsoooossso",
-  ".obbbbbssssssso",
-  "..obbbosssssso",
-  "...ooo.oooooo",
-]);
-const boomerangSpin1 = c(0, [
-  "...........oo",
-  ".....oo..oolo",
-  "....olo.olllo",
-  "...olllollllo",
-  "...olllllllbbo",
-  "...olllllbbbbso",
-  "....ollboooobbso",
-  "oooollbo....obsso",
-  "olkkkko......obso",
-  ".okeeko......obso",
-  ".olkkbo......osso",
-  "..obbbo......oooo",
-  "...obbbo",
-  "....obbsooo",
-  ".....obssso",
-  "......osssso",
-  ".......ooooo",
-]);
+/* BOOMERANG is the 2D spiked ring: an open arc (99 deg gap), three light teeth on its outer edge, a dark hub whose eye sits in the middle. Generated per
+   angle (rot) so the shading stays rotation-invariant; spin0 = 0 deg, spin1 = 45 deg, the atlas turns both by 90 deg steps for the 8-frame spin. */
+const boom = (rot, stun) => {
+  const body = (x, y) => {
+    const X = x - 9.5, Y = y - 9.5, r = Math.hypot(X, Y);
+    let t = (Math.atan2(Y, X) - rot) % 6.2832;
+    if (t < 0) t += 6.2832;
+    if (r < 2.5) return x >= 9 && x <= 10 && y >= 9 && y <= 10 && !stun ? "e" : "k";
+    if (r < 3.4) return "l";
+    for (let i = 0; i < 3; i++) if (r >= 6.4 && r < 8.3 && Math.abs(t - 0.55 - i * 0.5) * r < (8.3 - r) * 0.95 + 0.4) return "l";
+    return r >= 4.8 && r < 7 && t < 4.55 ? (r < 5.9 ? (stun ? "o" : "s") : stun ? "s" : "b") : ".";
+  };
+  const g = Array.from({length: 20}, (_, y) => Array.from({length: 20}, (_, x) => body(x, y)));
+  return c(0, g.map((r, y) => r.map((ch, x) => (ch !== "." ? ch : [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([u, v]) => (g[y + v] || [])[x + u] && g[y + v][x + u] !== ".") ? "o" : ".")).join("")));
+};
+const boomerangSpin0 = boom(0), boomerangSpin1 = boom(0.7854);
 const rocketUp0 = c(0, [
   "..........o",
   ".........olo",
@@ -379,9 +358,9 @@ export const SHEET = Object.freeze({
     "walker.side1": d(walkerSide0, {17: ".......kkk"}),
     "walker.stunned": d(walkerFront0, {8: "....obbkekkkekbso", 9: "....obbkkkekkkbso", 10: "....obbbekkkebsso", 17: "......kkk...kkk"}),
     "stationary.idle0": stationaryIdle0,
-    "stationary.idle1": d(stationaryIdle0, {6: "......okkmmmkko", 7: ".....obkmlllmkso", 8: ".....obkmlelmkso", 9: ".....obkmlllmkso", 10: ".....obkkmmmkkso"}),
-    "stationary.idle2": d(stationaryIdle0, {5: "......obkmmmkso", 6: "......okmmmmmko", 7: ".....obkmlllmkso", 8: ".....obkmeeemkso", 9: ".....obkmlllmkso", 10: ".....obkmmmmmkso", 11: ".....obbkmmmkbso"}),
-    "stationary.stunned": d(stationaryIdle0, {6: "......okkssskko", 7: ".....obkskkkskso", 8: ".....obkskkkskso", 9: ".....obkskkkskso", 10: ".....obkkssskkso"}),
+    "stationary.idle1": d(stationaryIdle0, {6: ".....obkkmmmkkso", 7: ".....obkmlllmkso", 8: ".....obkmlelmkso", 9: "....obbkmlllmkbso", 10: "....obbkkmmmkkbso"}),
+    "stationary.idle2": d(stationaryIdle0, {5: "......obkmmmkso", 6: ".....obkmmmmmkso", 7: ".....obkmlllmkso", 8: ".....obkmeeemkso", 9: "....obbkmlllmkbso", 10: "....obbkmmmmmkbso", 11: "....obbbkmmmkbbso"}),
+    "stationary.stunned": d(stationaryIdle0, {6: ".....obkkssskkso", 7: ".....obkskkkskso", 8: ".....obkskkkskso", 9: "....obbkskkkskbso", 10: "....obbkkssskkbso"}),
     "fast.front0": fastFront0,
     "fast.front1": u(fastFront0),
     "fast.back0": fastBack0,
@@ -390,15 +369,15 @@ export const SHEET = Object.freeze({
     "fast.side1": u(fastSide0),
     "fast.stunned": d(fastFront0, {9: ".....okkksskkko"}),
     "chaser.front0": chaserFront0,
-    "chaser.front1": d(chaserFront0, {17: ".......kk"}),
+    "chaser.front1": d(chaserFront0, {17: "........kk"}),
     "chaser.back0": chaserBack0,
-    "chaser.back1": d(chaserBack0, {17: ".......kk"}),
+    "chaser.back1": d(chaserBack0, {17: "........kk"}),
     "chaser.side0": chaserSide0,
-    "chaser.side1": d(chaserSide0, {17: "........kk"}),
-    "chaser.stunned": d(chaserFront0, {11: ".....obbbkbkbbso", 12: ".....obbbbkbbbso", 13: ".....obbbkbkbsso", 17: ".............kk"}),
+    "chaser.side1": d(chaserSide0, {17: ".........kk"}),
+    "chaser.stunned": d(chaserFront0, {11: ".....obbbkbkbbso", 12: ".....obbbbkbbbso", 13: "......obbkbkbso", 17: "...........kk"}),
     "boomerang.spin0": boomerangSpin0,
     "boomerang.spin1": boomerangSpin1,
-    "boomerang.stunned": d(boomerangSpin0, {8: "olekeko", 9: ".okekko", 10: ".oekebo"}),
+    "boomerang.stunned": boom(0, true),
     "rocket.up0": rocketUp0,
     "rocket.up1": d(rocketUp0, {15: "........ffyff", 16: ".........fyf", 17: ".........fyf", 18: "..........f"}),
     "rocket.up2": d(rocketUp0, {15: ".........fyf", 16: "..........f", 17: ""}),
