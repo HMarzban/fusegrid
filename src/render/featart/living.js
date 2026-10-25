@@ -44,10 +44,10 @@ const leaf = (c, x, y, a, len, w, pt, lit, mid, dk) => {
 
 const BOOSTER = (c, k) => {
   const b = k.bio, h = k.h, on = k.on, hs = k.state === 2 ? Math.max(0, h - 1) : h; floorTile(c, b, k.par);
-  const loam = mix(b.bg1, b.floor1, .5);
-  const st = [7, 4, 2][h], sp = [.2, .09, .025][h], al = [.22, .42, .92][h], R = [15, 15.5, 15][h], jg = [.06, .14, .24][h];
+  const loam = mix(b.bg1, b.floor1, [.8, .3, 0][h]);
+  const st = [7, 4, 2][h], sp = [.2, .09, .025][h], al = [.07, .68, .97][h], R = [15, 15.3, 15.6][h], jg = [.06, .14, .24][h];
   const LP = (sc) => blobP(0, 0, R, jg, 11 + h, sc, 40, h == 2);
-  c.save(); c.translate(21, 20); c.scale(1.15, .72);
+  c.save(); c.translate(21, 20); c.scale(1.15, [.72, .82, .94][h]);
   for (let i = 0; i < st; i++) { const sc = 1 + sp * (st - 1 - i) / Math.max(1, st - 1); c.fillStyle = rg(loam, al); c.fill(LP(sc)); }
   if (h > 0) bevP(c, LP(1), 2.2, W0(.08), K0(.3));
   c.restore();
@@ -60,7 +60,7 @@ const BOOSTER = (c, k) => {
   }
   c.fillStyle = rad(c, 9, 19, 5, [[0, mix(b.floor0, b.bg0, .5)], [1, mix(b.bg1, b.floor1, .5)]]);
   c.beginPath(); c.arc(10, 20, 3.8, 0, T2); c.fill(); c.strokeStyle = W0(.18); c.lineWidth = 1; c.beginPath(); c.arc(10, 20, 3.8, PI * 1.05, PI * 1.55); c.stroke();
-  const lit = mix(b.wallHi, b.floor0, on ? .42 : .3), mid = b.floor0, dk = mix(b.floor1, b.bg0, .45), pt = [0, .6, 1][h], f = on ? 1.12 : 1;
+  const lm = [-.04, .08, .5][h], lit = mix(b.wallHi, b.floor0, (on ? .42 : .3) + lm), mid = mix(b.wallHi, b.floor0, .06 * h), dk = mix(b.floor1, b.bg0, .45 + .1 * h), pt = [0, .6, 1][h], f = on ? 1.12 : 1;
   const sh = [[], [[13, 20, 1.15, 12, 3.2], [13, 20, -1.15, 12, 3.2]], [[12.5, 20, 1.2, 13, 3], [12.5, 20, -1.2, 13, 3], [19, 20, .7, 12.5, 2.8], [19, 20, -.7, 12.5, 2.8]]][hs];
   sh.forEach(([x, y, a, len, w]) => leaf(c, x, y, a, len * f, w, Math.max(pt, .6), lit, mid, dk));
   const len = [23, 24.5, 26][h] * f, w = [5.4, 5, 4.4][h] * f;
@@ -106,19 +106,20 @@ const STREAM = (c, k) => {
   c.restore();
   c.restore();
 };
+const TER = [.3, .12, .3, .5], TER0 = .5;
 const QUICKSAND = (c, k) => {
   const b = k.bio, h = k.h; floorTile(c, b, k.par);
   const jg = [.04, .06, .08][h], alt = 0, R0 = 17.8;
-  if (h == 0) [1.12, 1.06, 1.02].forEach((s) => { c.fillStyle = rg(mix(b.wallHi, b.floor0, .35), .1); c.fill(blobP(20, 20, R0, jg, 21, s, 40, alt)); });
+  if (h == 0) [1.07].forEach((s) => { c.fillStyle = rg(mix(b.wallHi, b.floor0, .35), .1); c.fill(blobP(20, 20, R0, jg, 21, s, 40, alt)); });
   else if (h == 1) { c.fillStyle = rg(mix(b.wallHi, b.floor0, .35), .12); c.fill(blobP(20, 20, R0, jg, 21, 1.05, 40, alt)); }
   const rs = GEO.QUICK.radii[h], ps = [];
   rs.forEach((r, i) => {
     const ox = .6 * i, oy = .9 * i, P = blobP(20, 20, r, jg, 21 + i, 1, 40, alt, ox, oy); ps.push([r, ox, oy]);
-    c.fillStyle = (i ? mix(b.floor1, b.bg1, .92 - .12 * i) : mix(b.floor0, b.floor1, .55)); c.fill(P);
-    bevP(c, P, 2 + h * .7, K0(.22 + h * .1), rg(b.wallHi, .45 + h * .08));
+    c.fillStyle = i ? mix(b.bg0, b.bg1, h == 0 ? TER0 : TER[i]) : mix(b.floor1, b.bg0, TER[0]); c.fill(P);
+    bevP(c, P, 2 + h * .7, K0(.12 + h * .16), rg(b.wallHi, .18 + h * .18));
   });
   const lastR = rs[rs.length - 1], pr = [5.2, 5.6, 6.2][h], oi = rs.length - 1;
-  const ns = [5, 7, 9][h];
+  const ns = [2, 7, 9][h];
   c.save(); c.clip(blobP(20, 20, R0, jg, 21, 1, 40, alt));
   for (let i = 0; i < ns; i++) {
     const a = (i + .5) * T2 / ns + PI / 8, r1 = 17, r2 = lastR > 9 ? pr + 3 : pr + 4, cx = 20 + .6 * oi, cy = 20 + .9 * oi;
@@ -130,7 +131,7 @@ const QUICKSAND = (c, k) => {
   c.restore();
   const Pp = blobP(20, 20, pr, .1 + jg, 33, 1, 24, 0, .6 * oi, .9 * oi);
   c.fillStyle = rad(c, 20 + .6 * oi, 20 + .9 * oi, pr * 1.2, [[0, mix(b.bg1, b.floor1, .35)], [1, mix(b.bg1, b.floor1, .6)]]); c.fill(Pp);
-  bevP(c, Pp, 1.6, K0(.5), rg(b.wallHi, .4));
+  bevP(c, Pp, 1.6, K0(h ? .5 : .32), rg(b.wallHi, h ? .4 : .26));
 };
 
 
