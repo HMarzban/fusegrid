@@ -898,8 +898,8 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
       `kill` / `power` into ghosts and bursts on each look's PLAY-frozen clock);
       REAL 3D fat-world is now 156 draws (158 worst case; budget 160); the 2D foe
       silhouettes are canon for all three looks; pickups never change shape or
-      colour. CLASSIC hash `9fb48f0a:72431`; px cap 152 KB (the px tree is a lazy
-      import since #15, about 146 KB).
+      colour. CLASSIC hash `9fb48f0a:72431`; px cap 160 KB (the px tree is a lazy
+      import since #15, about 158.8 KB with the hand-drawn tiles).
 - Walls (owner rulings 2026-10-21, designed and prototyped, NOT built; issues
   #17 for CLASSIC 2D + REAL 3D and #31 for PIXEL after #15; record
   `docs/superpowers/specs/2026-10-21-wall-art-design.md`).
