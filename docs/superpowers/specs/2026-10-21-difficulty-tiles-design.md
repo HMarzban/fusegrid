@@ -362,3 +362,15 @@ Reference sheets under `assets/2026-10-23/`: `tiles-round3-2d-a.png` /
 MAX with a grayscale copy), `tiles-round3-3d.png` (all 8 tiles × 3 heats in
 REAL 3D), and six-frame strips `tiles-round3-3d-anim-{portal,quicksand,icepatch}.png`.
 Throwaway branch: `worktree-agent-a3057d0a51e6a8d96` (local, locked).
+
+## Addendum (2026-10-25): direction D
+
+Owner ruling: "Go with D, the A+B mix." The round-3 emblem-in-a-frame look
+(art approach C, section 5 above, and the round-3 addendum) is superseded by
+hardware sunk into the floor for ICE PATCH, CONVEYOR, TRAP, PORTAL and GATE
+and the ground itself changed for BOOSTER, STREAM and QUICKSAND. Sim rules,
+dials and fairness checks are unchanged. The look, the per-tile picks and the
+rules that still bind are in
+[2026-10-25-floor-tiles-direction-d-design.md](2026-10-25-floor-tiles-direction-d-design.md);
+the build plan is
+[../plans/2026-10-25-floor-tiles-direction-d.md](../plans/2026-10-25-floor-tiles-direction-d.md).

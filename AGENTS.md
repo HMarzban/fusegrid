@@ -813,6 +813,22 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
     - Wave 1 is CONVEYOR, ICE PATCH, BOOSTER and TRAP.
     - PIXEL tile art waits for #15. GATE waits for the REAL 3D mid-room wall
       redraw.
+    - **Direction D (owner ruling 2026-10-25, "Go with D, the A+B mix"):**
+      the round-3 emblem-in-a-frame look is superseded. Built worlds (ICE,
+      FACTORY, ARENA, VOID, CROWN) get hardware sunk into the floor; JUNGLE,
+      WATER and SAND get the ground itself changed. No raised chamfered slab
+      on a tile (slabs are WALLS). Record
+      `docs/superpowers/specs/2026-10-25-floor-tiles-direction-d-design.md`,
+      plan `docs/superpowers/plans/2026-10-25-floor-tiles-direction-d.md`.
+      BUILT on the local branch `tiles-d` (worktree `.claude/worktrees/tiles-d`,
+      from the round-3 floor branch; never pushed, not in the game): painters
+      `src/render/featart/{built,living,geo,kit}.js`, PIXEL `featpx.js`, REAL 3D
+      `three/featmesh.js` (`fragSource(GEO)`: the shader reads the painters'
+      geometry table, 142 draws). Gates: `tools/tileart/gates.mjs all`
+      (heat separation >= 4 at 40 px, busyness <= 1.6x round 3, bed vs BRICK
+      dE >= 14, slot hull, VOID dim in 2D/PIXEL/3D, seams, key light); the old
+      "marks <= 30 %" gate was replaced because the D painters have no marks-only
+      pass. Option sources: `.superpowers/sdd/2026-10-25-tile-art-d/source/`.
 - Walls (owner rulings 2026-10-21, designed and prototyped, NOT built; issues
   #17 for CLASSIC 2D + REAL 3D and #31 for PIXEL after #15; record
   `docs/superpowers/specs/2026-10-21-wall-art-design.md`).

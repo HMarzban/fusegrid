@@ -610,6 +610,14 @@ Design work that stayed on the drawing board. None of it is in the game.
   never read as brick, marks with a cause, converging QUICKSAND and
   readable PORTAL pips, plus slow REAL 3D tile effects and lit wall relief
   at the same draw count. It's an addendum to both records above.
+- Floor tiles, direction D (2026-10-25). The owner called round 3 sticker-like
+  and asked for tiles that look like "a real, mature game". Four directions
+  were drawn side by side; the owner picked a mix: hardware sunk into the
+  floor for the built worlds (ICE PATCH, CONVEYOR, TRAP, PORTAL, GATE) and the
+  ground itself changed for the living ones (BOOSTER, STREAM, QUICKSAND). It
+  was then built in all three looks on a local branch, checked by numeric
+  gates and an art-director review at true size. Still not in the game;
+  [design record](superpowers/specs/2026-10-25-floor-tiles-direction-d-design.md).
 
 ---
 
