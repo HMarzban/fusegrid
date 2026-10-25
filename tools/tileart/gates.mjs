@@ -25,7 +25,7 @@ const PAGE = `(async()=>{
   const [F,C]=await Promise.all([import('/src/render/featdraw.js'),import('/src/core/config.js')]);
   const S=160,bio=n=>C.BIOMES.find(x=>x.name===n);
   const px=(b,spec,pass)=>{const cv=document.createElement('canvas');cv.width=cv.height=S;const g=cv.getContext('2d');g.scale(4,4);
-    if(pass==='lit'){const P=F.BUILT_FOR_TESTS[spec.kind];P.lit(g,F.kOf(b,spec));}else F.paintCell(g,b,spec);return Array.from(g.getImageData(0,0,S,S).data);};
+    if(pass==='lit'){const P=F.PAINTERS[spec.kind];P.lit(g,F.kOf(b,spec));}else F.paintCell(g,b,spec);return Array.from(g.getImageData(0,0,S,S).data);};
   const out={lit:[],seam:[]};
   for(let h=0;h<3;h++)for(let dir=0;dir<4;dir++){const sp={kind:'BELT',h,dir,outer:['N','S','E','W'].filter(s=>false),pair:1};
     out.lit.push({h,dir,a:px(bio('FACTORY'),{kind:'BELT',h,dir,outer:['N','S'],phase:0},'lit')});}

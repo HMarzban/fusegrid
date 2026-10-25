@@ -89,12 +89,18 @@ const FRAG = `vec3 fxGlow=vec3(0.0);
   diffuseColor.rgb*=col;
   diffuseColor.a*=sampledDiffuseColor.a;
 #endif`;
+const cellKey = (s) => specKey({...s, phase: s.kind === "BELT" || s.kind === "STREAM" ? 0 : s.phase});
+/* every distinct atlas cell this room can show (all state variants), in first-seen order */
+export function atlasSpecs(world) {
+  const f = world.feat, C = CFG.COLS, seen = new Set(), list = [];
+  for (let k = 0; k < f.length; k++) if (f[k]) for (const s of variants(world, k % C, (k / C) | 0)) { const kk = cellKey(s); if (!seen.has(kk)) { seen.add(kk); list.push(s); } }
+  return list;
+}
 export function buildFeat(world, biome) {
   const f = world.feat, C = CFG.COLS, tiles = [];
   for (let k = 0; k < f.length; k++) if (f[k]) tiles.push(k);
-  const cells = new Map(), list = [];
-  const cellOf = (s) => { const kk = specKey({...s, phase: s.kind === "BELT" || s.kind === "STREAM" ? 0 : s.phase}); if (!cells.has(kk)) { cells.set(kk, list.length); list.push(s); } return cells.get(kk); };
-  for (const k of tiles) for (const s of variants(world, k % C, (k / C) | 0)) cellOf(s);
+  const list = atlasSpecs(world), cells = new Map(list.map((s, i) => [cellKey(s), i]));
+  const cellOf = (s) => { const kk = cellKey(s); if (!cells.has(kk)) { cells.set(kk, list.length); list.push(s); } return cells.get(kk); };
   let tex;
   if (typeof document !== "undefined" && document.createElement) {
     const cv = document.createElement("canvas"); cv.width = cv.height = N * PX;

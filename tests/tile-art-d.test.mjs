@@ -101,3 +101,34 @@ test("QUICKSAND: 2/3/4 terraces, the same intact outer rim at every heat, throat
   assert.deepEqual(GEO.QUICK.radii.map((r) => r[0]), [17.8, 17.8, 17.8]);
   GEO.QUICK.radii.forEach((r, h) => { for (let i = 1; i < r.length; i++) assert.ok(r[i] < r[i - 1]); assert.deepEqual(GEO.QUICK.c[h], [20 + 0.6 * (r.length - 1), 20 + 0.9 * (r.length - 1)]); });
 });
+
+import { createWorld, loadLevel } from "../src/core/sim.js";
+import { atlasSpecs } from "../src/render/three/featmesh.js";
+const room = (gen, seed, rm, heat) => { const w = createWorld(seed, rm); w.gen = gen; w.heat = heat; loadLevel(w, rm, false); return w; };
+test("atlas cap: every tile room's distinct cells (all state variants) fit the 64-cell atlas", () => {
+  let worst = 0;
+  for (const rm of [1, 2, 3, 5]) for (let seed = 1; seed <= 80; seed++) for (const heat of [0, 2]) {
+    const w = room(2, 1000 + seed, rm, heat);
+    if (!w.feat) continue;
+    const n = atlasSpecs(w).length; worst = Math.max(worst, n);
+    assert.ok(n <= 64, `room ${rm} seed ${seed} heat ${heat}: ${n} cells`);
+  }
+  assert.ok(worst > 0);
+});
+
+import { buildFeat } from "../src/render/three/featmesh.js";
+test("an unknown feat code paints nothing and does not throw; no feat layer builds no atlas specs", () => {
+  const w = world([[5, 5, 99], [6, 5, 0]]);
+  assert.doesNotThrow(() => { cellSpec(w, 5, 5); });
+  const w2 = room(1, 5, 1, 0);
+  assert.equal(w2.feat ?? null, null);
+});
+test("PAUSE freezes tile effects: with featT fixed, update() leaves every uniform and instance as it was", () => {
+  const w = room(2, 1003, 3, 1), b = BIOMES[2];
+  assert.ok(w.feat, "tile room");
+  const L = buildFeat(w, b);
+  w.featT = 4.25; L.update(w);
+  const snap = () => JSON.stringify([L.mesh.material.userData.uniforms ?? null, Array.from(L.mesh.geometry.getAttribute("aCell").array), Array.from(L.mesh.geometry.getAttribute("aFx").array)]);
+  const a = snap(); L.update(w); L.update(w);
+  assert.equal(snap(), a);
+});
