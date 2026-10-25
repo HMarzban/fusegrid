@@ -8,6 +8,7 @@ import {onEvent, updateFx, drawFx, drawFxOverlay, drawPickupFx, feedFx, getShake
 import {drawOverlay, overlayBox, drawHudChips, drawAbilityBar, drawCoach, drawCoach2} from "./scenes.js";
 import {draw3dBackground, buildPainters, byDepth} from "./r3d/scene3d.js";
 import {PROJ, project} from "./r3d/camera.js";
+import {wellBoard, hudPlate, stageGlow} from "./frame.js";
 
 const isoProj=(bx,by,h)=>{ const q=project(bx/CFG.TILE,by/CFG.TILE); return {x:q.sx,y:q.sy-(h||0)}; };
 
@@ -78,6 +79,7 @@ export function createRenderer(canvas, opts={}){
     wasP=paused;
     if(!paused) pzT=null; else if(pzT==null) pzT=world.time;
     consumeEvents(world, dt, !(o&&o.sfx===false));
+    if(kind==="2d") stageGlow(canvas, world.level);
     const shake=paused?STILL:getShake();
     const g=o&&o.ghost, busy=!paused&&(getFx().length>0||shake.x!==0||shake.y!==0);
     const chg=d(0,world)+d(1,paused?pzT:world.time)+d(2,world.state)+d(3,world.level)+d(4,world.grid)+d(5,ev)+d(6,busy)
@@ -107,6 +109,7 @@ export function createRenderer(canvas, opts={}){
     } else {
       drawBiomeBackground(ctx, world, armed);
       drawGrid(ctx, world);
+      wellBoard(ctx, world.level);
       drawBricks(ctx, world);
       drawItems(ctx, world);
       drawBombs(ctx, world);
@@ -149,6 +152,7 @@ export function createRenderer(canvas, opts={}){
     }
     /* S4: overlay HUD chips — explicit opt-in only ({hud:true} during GAME),
        drawn after restore so they never shake with the camera. */
+    if(o&&o.hud===true&&kind==="2d") hudPlate(ctx, false, world.level);
     if(o&&o.hud===true) drawHudChips(ctx, world, o&&o.time);
     if(o&&o.hud===true&&kind==="2d") drawAbilityBar(ctx, world);
     if(o&&o.hud===true&&world.state==="PLAY") drawFxOverlay(ctx);

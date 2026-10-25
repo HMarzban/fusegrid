@@ -12,6 +12,7 @@ import {cellSpec} from "../featdraw.js";
 import {ITEM_FAMILY} from "../icons.js";
 import {GHOST_A} from "../sprites.js";
 import {PX_T} from "./timing.js";
+import {wellPx} from "../frame.js";
 import {snapArt} from "./snap.js";
 import {OS, shotFrame} from "./oneshot.js";
 import {F_FRONT, P_CROSS, P_STRAIGHT, facingOf, walkStep, newWalk, isIdle, cycle, bladeAgeFrame, bladePieces, bladeScratch, fuseFrame, swellFrame, popFrame} from "./anim.js";
@@ -47,6 +48,7 @@ function drawTiles(c, V, world) {
     c.drawImage((under ? TS.floorC : TS.floor)[alt].im, X, Y); V.draws++;
     if (t === T.EMPTY && (x * 7 + y * 13 + level * 3) % 5 === 0) { c.drawImage(TS.motif[alt].im, X, Y); V.draws++; }
   }
+  wellPx(c, level);
   for (let k = 0; k < g.length; k++) if (g[k] === T.BRICK) { c.drawImage(TS.brick.im, (k % C) * 20, ((k / C) | 0) * 20); V.draws++; }
   const pool = V.shots ? V.shots.pool : null;
   if (pool) for (let i = 0; i < pool.length; i++) {

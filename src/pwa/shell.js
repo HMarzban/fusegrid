@@ -97,6 +97,7 @@ const SRC = Object.freeze([
   "src/render/featdraw.js",
   "src/render/floorart.js",
   "src/render/frameart.js",
+  "src/render/frame.js",
   "src/render/wallart.js",
   "src/render/wallvar.js",
   "src/render/featpx.js",
@@ -115,6 +116,7 @@ const SRC = Object.freeze([
   "src/render/three/scene.js",
   "src/render/three/textures.js",
   "src/render/three/upload.js",
+  "src/render/three/wellfx.js",
   "src/render/three/wrapper.js",
   "src/touch.js",
 ]);

@@ -37,7 +37,7 @@ const after = (log, from, mark) => { const i = log.indexOf(mark, from); return i
 
 {
   const h = await classicHash((p) => import(pathToFileURL(join(ROOT, p)).href));
-  check("CLASSIC 2D call-log hash unchanged (unarmed renderer)", h === "c030801a:65380", h);
+  check("CLASSIC 2D call-log hash unchanged (unarmed renderer)", h === "e32e7a18:65648", h);
 }
 
 {

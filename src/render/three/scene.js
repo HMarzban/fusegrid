@@ -15,6 +15,7 @@ import {live} from "./upload.js";
 import {buildFeat} from "./featmesh.js";
 import {wallCodes} from "../wallvar.js";
 import {RIM_TEX} from "./rimart.js";
+import {rimFX, floorFX} from "./wellfx.js";
 
 const W=CFG.COLS*CFG.TILE, D=CFG.ROWS*CFG.TILE;
 const MAT=new THREE.Matrix4();
@@ -79,7 +80,7 @@ function buildRim(biome,atlas){
   const col=new THREE.Color(biome.wall).lerp(new THREE.Color(biome.bg1),0.35);
   const mat=new THREE.MeshLambertMaterial({color:col});
   if(atlas&&atlas.rim){ rimUV(geo,biome); mat.color.set("#ffffff").lerp(new THREE.Color(biome.bg1),0.12); mat.map=atlas.rim; }
-  const rim=new THREE.Mesh(geo,mat);
+  const rim=new THREE.Mesh(geo,rimFX(mat,biome.hWall));
   rim.castShadow=false; rim.receiveShadow=true;
   rim.userData.tag="trim";
   return rim;
@@ -136,7 +137,7 @@ export function buildScene(world, atlas, bright){
   const chkGeo=new THREE.PlaneGeometry(CFG.TILE,CFG.TILE);
   chkGeo.rotateX(-Math.PI/2);
   const checker=new THREE.InstancedMesh(chkGeo,
-    new THREE.MeshLambertMaterial({color:"#ffffff"}),CFG.COLS*CFG.ROWS);
+    floorFX(new THREE.MeshLambertMaterial({color:"#ffffff"})),CFG.COLS*CFG.ROWS);
   if(atlas&&atlas.floor)checker.material.map=atlas.floor;
   {
     const cA=new THREE.Color(biome.floor0), cB=new THREE.Color(biome.floor1);
