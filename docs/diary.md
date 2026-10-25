@@ -6,7 +6,7 @@
 
 This is the story of how the game was built: the big turns, the dead ends
 and what each one taught us. It runs from the first commit on 2026-08-16 to
-the new board look merged into local `main` on 2026-10-25 (631 commits by then; the live game is shell v184).
+shell v185 on 2026-10-25 (631 commits by then).
 
 - **What changed in each release** lives in the [CHANGELOG](../CHANGELOG.md).
 - **How the game works today** lives in [architecture.md](architecture.md).
@@ -45,7 +45,7 @@ mention review rounds and contact sheets.
 | 2026-10-19 | 5-1 | New menus and NEW VERSION READY (shell v180) |
 | 2026-10-19 | 5-2 | Phone menus fill the screen; launch prep (shell v181–v182) |
 | 2026-10-21 | 5-3 | 3D walls follow the grid; a readable build tag (shell v183–v184) |
-| 2026-10-25 | 6-1 | A whole new board look, merged into local `main` (not live yet) |
+| 2026-10-25 | 6-1 | A whole new board look (shell v185) |
 
 ---
 
@@ -532,10 +532,12 @@ REAL 3D effects survive a pause, lifted the ICE rim and let the ATTRACT demo
 show the ambient motion. The gameplay that is still missing went into GitHub
 issues #32 to #35.
 
-The owner merged it all into their local `main` to test by hand. It is not
-pushed: going live needs shell v185 and a decision on the tile boards, which
-this build turns on in a browser before the random-board work (#10 to #13)
-exists. The story of each step is in
+The owner merged it all into their local `main` to test by hand, then the
+release was cut as **shell v185**. One last call: the tile boards stay a test
+build behind `?gen=2`. A shared challenge code and a ghost race don't yet record
+which generator made their board, so on tile boards they would replay the wrong
+one, and the tile rules still need their balance pass. So v185 ships the new
+look on today's boards, and the GUIDE's FLOOR page is marked PREVIEW. The story of each step is in
 [the board-look record](superpowers/specs/2026-10-25-board-look-depth-ambient-design.md).
 
 ---

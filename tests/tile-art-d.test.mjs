@@ -201,12 +201,13 @@ test("PAUSE freezes: buildFeat exposes its clock uniforms and update() with a fi
 });
 
 import { readFlags } from "../src/app/flags.js";
-test("prototype: gen-2 boards (the tile layer) are the default; ?gen=1 and ?code= keep today's boards", () => {
+test("v185: today's boards are the default; ?gen=2 opts into the tile boards, ?code= never plays them", () => {
   const P = { page: true };
-  assert.equal(readFlags("", P).gen2, true);
-  assert.equal(readFlags("?gen=2", P).gen2, true);
-  assert.equal(readFlags("?render=3d&play=1", P).gen2, true);
+  assert.equal(readFlags("", P).gen2, false);
+  assert.equal(readFlags("?render=3d&play=1", P).gen2, false);
   assert.equal(readFlags("?gen=1", P).gen2, false);
-  assert.equal(readFlags("?code=F1ABCDEFGHJK", P).gen2, false);
+  assert.equal(readFlags("?gen=2", P).gen2, true);
+  assert.equal(readFlags("?gen=2&render=px", P).gen2, true);
+  assert.equal(readFlags("?gen=2&code=F1ABCDEFGHJK", P).gen2, false);
   assert.equal(readFlags("").gen2, false, "headless Node worlds stay gen 1");
 });

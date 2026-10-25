@@ -60,13 +60,13 @@ through `listGeom` / `listHit` (pitches are caps that scale down in a short
 box); MENU has a PLAY hero row whose tag is the run it starts and group gaps
 before OPTIONS / HIGH SCORES / SOURCE; the SOURCE URL shows only on its
 selected row. Build tag (owner 2026-10-21: "a game version in some where in
-the display or menue"): `v184` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
+the display or menue"): `v185` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
 derived ONLY in `shellview.js` (`REV`, handed to `drawMenu` / `drawSettings`
-as `rev`) and `update.js` (the card's "You are on v184", the running build,
+as `rev`) and `update.js` (the card's "You are on v185", the running build,
 never a guessed next one) — never a second literal. Keyboard MENU appends
 it to the foot hint; the touch hub hangs it under the plate when the box has
 >= 10 units below it (`#sh`), else on the SOURCE tile's teaser (landscape on
-the board canvas); OPTIONS keeps its `BUILD v184` kicker. Never on the HUD.
+the board canvas); OPTIONS keeps its `BUILD v185` kicker. Never on the HUD.
 PAUSE draws `pauseGeom(overlayBox, touch)`: touch (`touchLay`,
 data-lay p/l) caps pitch at `PAUSE_ROW_H` 70 / hero 76 / width 380, a keyboard
 screen at the compact `PAUSE_ROW_D` 44 / hero 54 / width 340 (owner: "too
@@ -878,9 +878,10 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
       QUICKSAND / PORTAL / GATE on gen-2 rooms 4 / 6 / 7 / 8 + board outline
       option A (world bezel, `frameart.js`, `three/rimart.js`; SUPERSEDES ruling
       W6 "plain border") + option B (recessed well, `frame.js`,
-      `three/wellfx.js`; 3D stage background is CSS on `#gl`). A real page plays
-      gen-2 boards by default (`?gen=1` or `?code=` keep today's); Node worlds stay
-      gen 1. (Pins at that step: CLASSIC `6ec1e0a5:65648`, px cap 145 KB; current
+      `three/wellfx.js`; 3D stage background is CSS on `#gl`). A real page played
+      gen-2 boards by default on the branch; v185 (owner ruling 2026-10-25,
+      "Today's boards") makes gen 1 the default everywhere and `?gen=2` the only
+      way to the tile boards (`flags.js`; a `?code=` never plays them). (Pins at that step: CLASSIC `6ec1e0a5:65648`, px cap 145 KB; current
       values are below.)
       Option C (stage set) sits unmerged on branch `frame-c`.
       Depth round (shadows, AO, brick value down, floor detail, 3D relief,
@@ -945,16 +946,18 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
 - `world.time` keeps ticking in PAUSE (`step()` adds dt before the state check), so
   any "PLAY-only" animation needs its own clock (`ambientClock`, `world.featT`).
   Node test fakes define `globalThis.location` WITHOUT `href`, so "is this a
-  real page" means `typeof location.href === "string"` (the gen-2 page default
-  in `src/app/flags.js` depends on it).
-- Local build state (2026-10-25): `tiles-d` (integrated look) is merged into
-  LOCAL `main` (`64662c3`), not pushed; the owner tests locally and pushes by
-  hand. `frame-a` / `frame-b` are deleted (merged); `frame-c` (stage set) stays
-  unmerged. Before a push: `CACHE_NAME` / `REV` to v185, release docs, and a
-  decision on the page-level gen-2 default (#13: the ghost key has no `gen`). The look is recorded in
+  real page" means `typeof location.href === "string"` (the branch's gen-2 page
+  default depended on it; since v185 gen 2 is `?gen=2` only).
+- Release state (2026-10-25): shell **v185** is prepared on LOCAL `main` (the
+  board look, `CACHE_NAME` / `REV` bumped, CHANGELOG + sitemap dated), not
+  pushed: the owner pushes by hand. Boards: today's (gen 1) by default, the
+  floor-tile boards only with `?gen=2` (owner ruling "Today's boards": the ghost
+  key and the F1 code carry no `gen`, #13, and the tile dial is #28), so the
+  GUIDE FLOOR page is a PREVIEW. Branches `tiles-d`, `frame-a`, `frame-b` are
+  deleted (merged); `frame-c` (stage set) stays unmerged. The look is recorded in
   `docs/superpowers/specs/2026-10-25-board-look-depth-ambient-design.md`,
   including the loose ends. Loopback dev server: `PORT=8091 node
-  serve.js` in the main checkout (clear site data first: v184 SW). The hash pin, px cap and draw counts live in
+  serve.js` in the main checkout (clear site data first, or the old SW serves old bytes). The hash pin, px cap and draw counts live in
   that record, not here.
 - Parallel art agents on one worktree work best as one lane per file area with
   the lead committing: agents never commit, never edit the CLASSIC hash pins,

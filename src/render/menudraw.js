@@ -1382,7 +1382,7 @@ function keyCap(c, x, y, s, T) {
   c.fillText(s, x + w / 2, y + 1);
   return w;
 }
-/* FLOOR: the eight tiles, one per world (core/feat.js HOME), painted by the look's own painter at CORE / PLUS / MAX. Only four have rules yet. */
+/* FLOOR: the eight tiles, one per world (core/feat.js HOME), painted by the look's own painter at CORE / PLUS / MAX. A PREVIEW since v185: today's boards carry no tiles (?gen=2 plays them), and only four have rules yet. */
 const FLOOR_ROWS = [
   { k: "BLOOM", name: "BOOSTER", room: 1 },
   { k: "GLIDE", name: "ICE PATCH", room: 2 },
@@ -1412,7 +1412,7 @@ export function drawFloorHelp(c, L, t, kind, touch) {
     gx = S.ix + 8,
     tx = gx + 3 * sw + 2 * 4 + 14;
   boxPlate(c, S);
-  head(c, S, "FLOOR", "ONE TILE PER WORLD · " + n + " TILES");
+  head(c, S, "FLOOR", "PREVIEW · " + n + " TILES · NOT IN PLAY YET");
   c.textAlign = "center";
   c.textBaseline = "middle";
   c.fillStyle = MUTED;
@@ -1459,7 +1459,7 @@ export function drawGuide(c, L, t, cursor, kind, touch) {
     A = pxArt(kind);
   boxPlate(c, S);
   head(c, S, "GUIDE", "HOW TO · ITEMS · ENEMIES · FLOOR");
-  const subs = T ? ["2 RULES · 6 CONTROLS", POWER.length + " PICKUPS", FOES.length + " FOES", FLOOR_ROWS.length + " TILES · ONE PER WORLD"] : ["2 RULES · 6 KEYS", POWER.length + " PICKUPS", FOES.length + " FOES", FLOOR_ROWS.length + " TILES"];
+  const subs = T ? ["2 RULES · 6 CONTROLS", POWER.length + " PICKUPS", FOES.length + " FOES", FLOOR_ROWS.length + " TILES · PREVIEW"] : ["2 RULES · 6 KEYS", POWER.length + " PICKUPS", FOES.length + " FOES", FLOOR_ROWS.length + " TILES · PREVIEW"];
   for (let i = 0; i < 4; i++) {
     const r = g.tiles[i],
       sel = i === cur;

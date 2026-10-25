@@ -15,22 +15,22 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
-## Unreleased
+## shell v185 · 2026-10-25
 
-A full new look is **merged into the owner's local `main` (2026-10-25) and not
-pushed**. It goes live when the owner pushes it with the version bump: it will be
-named shell v185. What it adds, for the record:
+The board gets a whole new look in all three looks (CLASSIC 2D, PIXEL, REAL 3D):
+walls, floor, outline, depth, motion, foes and pickups. The boards themselves are
+today's boards, so challenge codes, dailies and ghost races work exactly as
+before.
 
 ### Added
-- **Floor tiles in every world.** Eight tiles, one per world, in all three
-  looks: BOOSTER, ICE PATCH, CONVEYOR, STREAM, TRAP, QUICKSAND, PORTAL and GATE.
-  Built worlds get hardware sunk into the floor, living worlds get the ground
-  itself changed. Heat shows in structure, count and tips, never colour. Only
-  four have rules so far; the other four are art.
+- **A preview of floor tiles.** Eight tiles, one per world, are drawn in all
+  three looks: BOOSTER, ICE PATCH, CONVEYOR, STREAM, TRAP, QUICKSAND, PORTAL and
+  GATE. They are not on today's boards yet; they arrive with the new boards.
+  The GUIDE's FLOOR page shows them now, marked PREVIEW.
 - **New walls** in every world, and a **new floor** under everything.
-- **GUIDE grows a fourth door, FLOOR.** It lists the eight tiles at CORE, PLUS and
-  MAX as each look draws them, with a rule line only for the four tiles that have
-  one (the other four say LOOK ONLY FOR NOW). GUIDE is now a 2x2 of doors on a
+- **GUIDE grows a fourth door, FLOOR.** It previews the eight tiles at CORE,
+  PLUS and MAX as each look draws them, with a rule line only for the four tiles
+  that have one (the other four say LOOK ONLY FOR NOW). GUIDE is now a 2x2 of doors on a
   keyboard screen and four stacked rows on touch.
 - **The guide pages are alive.** ITEMS, ENEMIES, HOW TO and the MENU preview now
   show the foes blinking and bobbing and the pickups with their rings and glint,
@@ -52,9 +52,7 @@ named shell v185. What it adds, for the record:
 - **PIXEL tiles polished.** All eight tiles were cleaned up at every heat, so
   CORE, PLUS and MAX read apart more clearly, and FAST got a fuller body and a
   real side view.
-- **PIXEL tiles are hand-drawn now.** Every tile at every heat is drawn pixel by
-  pixel; QUICKSAND sinks deeper, STREAM has real banks and ripples, PORTAL MAX
-  is a ring stack.
+- **The PIXEL tiles are hand-drawn**, every tile at every heat.
 - **Finished top corners.** The HUD bar now ends in caps at the top of the board
   outline, with the corner piece just below it, instead of covering it.
 - **Ambient motion.** Pollen, snow, steam, ripples, dust, sand, wisps and gold
@@ -68,12 +66,11 @@ named shell v185. What it adds, for the record:
   controls.
 
 ### Not yet
-- STREAM, QUICKSAND, PORTAL and GATE have no rules, and the heat dial for tiles
-  is still open (issues #26–#28). No coach tip or room-card line teaches tiles
-  yet (#24).
-- Tile boards are the default only because this build switches a browser page
-  to the gen-2 skeleton; random boards, fairness and new codes are #10–#13.
-- Frame times on a real GPU are not measured (#34), and the new tiles have no
+- The tile boards are a test build: add `?gen=2` to the URL to play them. They
+  become the default with the new boards (random board every run, fairness,
+  new codes: #10–#13) and the tile balance pass (#28). STREAM, QUICKSAND,
+  PORTAL and GATE have no rules yet (#26, #27), and no tip teaches tiles (#24).
+- Frame times on a real GPU are not measured (#34), and the tiles have no
   colour-vision gate yet (#33). The gaps are tracked in #35.
 
 Details: [docs/superpowers/specs/2026-10-25-board-look-depth-ambient-design.md](docs/superpowers/specs/2026-10-25-board-look-depth-ambient-design.md).

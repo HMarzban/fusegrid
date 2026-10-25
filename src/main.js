@@ -84,7 +84,7 @@ export function createGame(canvas, opts = {}) {
   // Minor-1 (review 2026-09-07, owner ruling): bootSeed is remembered once so a seedless run's onStart falls back to it.
   const bootSeed = (opts.seed != null ? opts.seed : Math.random() * 1e9) >>> 0;
   const world = createWorld(bootSeed, 1);
-  if (flags.gen2) world.gen = 2; // PROTOTYPE (tiles-d): gen-2 boards (the floor tile layer) by default; ?gen=1 or ?code= keep today's boards
+  if (flags.gen2) world.gen = 2; // ?gen=2 only: the gen-2 boards with the floor tile layer (prototype); every other run plays today's boards
   loadLevel(world, 1, false);
   world.state = "PLAY";
 

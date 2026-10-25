@@ -14,8 +14,8 @@ record](2026-10-25-floor-tiles-direction-d-design.md). Wall family:
 [wall art record](2026-10-21-wall-art-design.md). Tile sim and dials:
 [difficulty tiles record](2026-10-21-difficulty-tiles-design.md).
 
-**Status: built on branch `tiles-d` and merged into the owner's LOCAL `main`
-(2026-10-25, `64662c3`); not pushed, not in the live game (shell v184).** Play it
+**Status: released as shell v185 on the owner's LOCAL `main` (2026-10-25); the
+owner pushes it by hand.** Play it
 with `PORT=8091 node serve.js` in the main checkout, then
 `http://127.0.0.1:8091/index.html?play=1` (`&render=3d`, `&render=px`; clear
 site data first, the v184 service worker caches old bytes). Shipping needs the
@@ -35,8 +35,11 @@ owner's push with `CACHE_NAME` / `REV` v185 and the release docs.
 | Ambient motion | one spec, three painters | `ambient.js`, `ambient2d.js`, `three/ambientfx.js`, `pixel/ambient.js` |
 | Foes and items | one shared motion spec, four lanes | `motion.js`, `entityfx.js`, `enemybody.js`, `itemdraw.js`, `fx.js`, `three/entities.js`, `three/entityanim.js`, `three/burstfx.js`, `pixel/entities.js`, `pixel/foegen.js` |
 
-A real page plays gen-2 boards (the ones that carry floor tiles) by default.
-`?gen=1` or `?code=` keep today's boards. Node worlds stay gen 1 (the page
+On the branch a real page played gen-2 boards (the ones that carry floor
+tiles) by default. **v185 ruling (owner, 2026-10-25, "Today's boards"):** gen 1
+is the default everywhere and `?gen=2` is the only way to the tile boards, because
+the ghost key and the F1 code carry no `gen` (#13) and the tile dial is #28; the
+GUIDE FLOOR page says PREVIEW. Node worlds stay gen 1 (the page
 check is `location.href`), so the test suite and the sim never see gen 2 by
 accident.
 

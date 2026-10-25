@@ -49,7 +49,7 @@ cursor; on a phone it's a hub of tiles. Every panel is only as tall as its
 content, and any teaser built from your record (a top score, a best time)
 reads only runs you played, never placeholders.
 
-The build you're running is named on the main menu (`v184` today): in the
+The build you're running is named on the main menu (`v185` today): in the
 keyboard foot hint, under the phone hub, or on the SOURCE tile where a
 landscape touch screen has no room below the hub. OPTIONS shows it as its
 `BUILD` kicker and the NEW VERSION READY card says which build you're on.
@@ -198,11 +198,9 @@ button during play, giving the touch controls a bigger thumb area below. The
 geometry is a pure function tested in Node; how it feels in the hand still
 needs a real phone.
 
-## 🚧 Next look (on local main, not live yet)
+## 🧱 The board look (shell v185)
 
-A full new board look is merged into the owner's **local** `main` (2026-10-25)
-and is **not in the live game** until it is pushed with a version bump. It adds,
-in all three looks:
+Shell v185 (2026-10-25) gives the board a new look in all three looks. It adds:
 
 - **New walls** per world and a quiet **base floor** under everything
   ([`wallart.js`](../src/render/wallart.js), [`floorart.js`](../src/render/floorart.js)).
@@ -213,8 +211,9 @@ in all three looks:
   one shader, [`three/featmesh.js`](../src/render/three/featmesh.js)). Only
   CONVEYOR, ICE PATCH, BOOSTER and TRAP have rules
   ([`core/feat.js`](../src/core/feat.js)); STREAM, QUICKSAND, PORTAL and GATE are
-  art for now. Tiles appear on the gen-2 boards, which a browser page plays by
-  default in this build; `?gen=1` and challenge codes keep today's boards.
+  art for now. Tiles appear only on the gen-2 boards, a test build reached with
+  `?gen=2`; every normal run, challenge code and daily plays today's boards,
+  and the GUIDE's FLOOR page marks the tiles PREVIEW.
 - **A world bezel and a recessed well** around the board
   ([`frameart.js`](../src/render/frameart.js), [`frame.js`](../src/render/frame.js)).
 - **Depth**: cast and contact shadows, ambient occlusion, lower-value bricks
@@ -238,8 +237,7 @@ How it is put together, the rulings and what is still open live in
 [one record](superpowers/specs/2026-10-25-board-look-depth-ambient-design.md);
 the tile look is in the
 [direction D record](superpowers/specs/2026-10-25-floor-tiles-direction-d-design.md);
-the gameplay gaps are tracked in issue #35. The rest of this page describes
-shell v184 until it ships.
+the gameplay gaps are tracked in issue #35. 
 
 ## 🧪 Boss fight: evidence and limits
 
