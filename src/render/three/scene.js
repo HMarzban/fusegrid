@@ -15,7 +15,7 @@ import {live} from "./upload.js";
 import {buildFeat} from "./featmesh.js";
 import {wallCodes} from "../wallvar.js";
 import {RIM_TEX} from "./rimart.js";
-import {rimFX, floorFX} from "./wellfx.js";
+import {rimFX, floorFX, featAO, createAO} from "./wellfx.js";
 
 const W=CFG.COLS*CFG.TILE, D=CFG.ROWS*CFG.TILE;
 const MAT=new THREE.Matrix4();
@@ -63,6 +63,8 @@ function rimUV(geo,biome){
   geo.setAttribute("uv",new THREE.BufferAttribute(uv,2));
 }
 
+/* the pale worlds sit lower still: the rim must stay quieter than walls and tiles */
+const RIM_TINT={ICE:0.3,SAND:0.28,ARENA:0.26,FACTORY:0.26,WATER:0.22,JUNGLE:0.2,CROWN:0.2,VOID:0.1};
 function buildRim(biome,atlas){
   const oX=W/2+RIM_W-RIM_BEV, oZ=D/2+RIM_W-RIM_BEV;
   const iX=W/2-RIM_IN+RIM_BEV, iZ=D/2-RIM_IN+RIM_BEV;
@@ -79,8 +81,8 @@ function buildRim(biome,atlas){
   geo.rotateX(-Math.PI/2);              // extrude runs +Z -> lay it flat
   const col=new THREE.Color(biome.wall).lerp(new THREE.Color(biome.bg1),0.35);
   const mat=new THREE.MeshLambertMaterial({color:col});
-  if(atlas&&atlas.rim){ rimUV(geo,biome); mat.color.set("#ffffff").lerp(new THREE.Color(biome.bg1),0.12); mat.map=atlas.rim; }
-  const rim=new THREE.Mesh(geo,rimFX(mat,biome.hWall));
+  if(atlas&&atlas.rim){ rimUV(geo,biome); mat.color.set("#ffffff").lerp(new THREE.Color(biome.bg1),RIM_TINT[biome.name]||0.2); mat.map=atlas.rim; }
+  const rim=new THREE.Mesh(geo,rimFX(mat,biome.hWall,!!(atlas&&atlas.rim),biome.name));
   rim.castShadow=false; rim.receiveShadow=true;
   rim.userData.tag="trim";
   return rim;
@@ -88,6 +90,7 @@ function buildRim(biome,atlas){
 
 function disposeGroup(group){
   const mats=new Set();
+  if(group.userData.ao)group.userData.ao.dispose();
   group.traverse(o=>{
     if(o.geometry&&!o.geometry._shared)o.geometry.dispose();
     const m=o.material;
@@ -134,10 +137,11 @@ export function buildScene(world, atlas, bright){
   // S4 checker tint: instanced quads hovering just above the base plane,
   // per-instance colors alternate biome.floor0/floor1 (zero-asset polish;
   // atlas.floor map, when present, multiplies on top)
+  const ao=createAO(biome.hWall);
   const chkGeo=new THREE.PlaneGeometry(CFG.TILE,CFG.TILE);
   chkGeo.rotateX(-Math.PI/2);
   const checker=new THREE.InstancedMesh(chkGeo,
-    floorFX(new THREE.MeshLambertMaterial({color:"#ffffff"})),CFG.COLS*CFG.ROWS);
+    floorFX(new THREE.MeshLambertMaterial({color:"#ffffff"}),ao),CFG.COLS*CFG.ROWS);
   if(atlas&&atlas.floor)checker.material.map=atlas.floor;
   {
     const cA=new THREE.Color(biome.floor0), cB=new THREE.Color(biome.floor1);
@@ -153,7 +157,7 @@ export function buildScene(world, atlas, bright){
   checker.receiveShadow=true; checker.userData.tag="checker";
   group.add(checker);
   const feat=world.feat?buildFeat(world,biome):null;
-  if(feat)group.add(feat.mesh);
+  if(feat){ featAO(feat.mesh.material,ao); group.add(feat.mesh); }
 
   group.add(buildRim(biome,atlas));
 
@@ -169,6 +173,7 @@ export function buildScene(world, atlas, bright){
   const mask=new Uint8Array(CFG.COLS*CFG.ROWS),
     wMask=new Uint8Array(CFG.COLS*CFG.ROWS);
   let fresh=true, lastG=null, lastS=-1;
+  group.userData.ao=ao;
   const scene={group,level:world.level,featRef:world.feat||null,brick,pools,lights,brickV:0,
     update(world){
       let diff=fresh, wDiff=fresh||world.grid!==lastG||(world.seed>>>0)!==lastS;
@@ -193,6 +198,7 @@ export function buildScene(world, atlas, bright){
         live(wall.instanceColor,n);
         live(aWv,n);
         wall.boundingSphere=null;
+        ao.bake(wMask);
         if(!diff)scene.brickV++;      // shadow map re-renders for EMPTY->WALL
        }
       if(diff){

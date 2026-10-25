@@ -230,7 +230,7 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
       if(ov){ const B=overlayBox("3d");
         drawOverlay(ovCtx,world,B.w,B.h,B.cx,B.cy,o&&o.pause,o&&o.time,o&&o.run,o&&o.toast); }
       if(o&&o.hud===true){ const q=biomeOf(world.level),t=q.hWall+RIM_LIP,a=projBoard(camera,W/2-RIM_OX,H/2-RIM_OZ,t),b=projBoard(camera,W/2+RIM_OX,H/2-RIM_OZ,t);
-        hudPlate3(ovCtx,world.level,Math.max(8,a.x),Math.min(W-8,b.x),Math.min(a.y,b.y)); }
+        hudPlate3(ovCtx,world.level,a,b); }
       if(o&&o.hud===true)drawHudChips(ovCtx,world,o&&o.time);
       if(o&&o.hud===true)drawAbilityBar(ovCtx,world);
       if(o&&o.hud===true&&world.state==="PLAY")drawFxOverlay(ovCtx);

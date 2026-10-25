@@ -115,17 +115,26 @@ export function hudPlate(c, px, level, bare) {
   c.restore();
 }
 
-/* REAL 3D: the HUD floats on the stage, so the plate is a header bar plus a
-   neck down to the rim's far edge (xl..xr at yr, projected by the caller). */
-export function hudPlate3(c, level, xl, xr, yr) {
-  const b = bio(level);
+/* REAL 3D: the HUD floats on the stage, so ONE plate is cut from the rim's
+   colour: a header band across the top and a leg at each end that drops into
+   the rim's far corners (a, b = the projected outer far corners), with the
+   same lit lip (top and left edges wallHi, shade bottom and right). Slots
+   only; wallHi is the brightest it ever gets. */
+export function hudPlate3(c, level, a, b) {
+  const bi = bio(level), x = 8, y = 6, w = W - 16, hb = T - 6, lw = 32, ya = Math.max(a.y, b.y) + 6;
+  const lx = Math.max(x, a.x - 4), rx = Math.min(x + w, b.x + 4);
   c.save();
+  c.fillStyle = bi.wall; c.globalAlpha = 0.96;
+  c.fillRect(x, y, w, hb); c.fillRect(lx, y + hb, lw, ya - y - hb); c.fillRect(rx - lw, y + hb, lw, ya - y - hb);
+  c.fillStyle = bi.bg1; c.globalAlpha = 0.42;
+  c.fillRect(x + 2, y + 2, w - 4, hb - 4);
+  c.fillStyle = bi.wallHi; c.globalAlpha = 0.55;
+  c.fillRect(x, y, w, 2); c.fillRect(x, y, 2, hb); c.fillRect(lx, y + hb, 2, ya - y - hb); c.fillRect(rx - lw, y + hb, 2, ya - y - hb);
+  c.globalAlpha = 0.28; c.fillRect(x, y + 2, w, 1);
   c.fillStyle = "#000000"; c.globalAlpha = 0.5;
-  c.fillRect(xl, 38, xr - xl, Math.max(0, yr - 38));
-  c.globalAlpha = 0.4; c.fillStyle = b.wallHi;
-  c.fillRect(xl, 38, 1, Math.max(0, yr - 38)); c.fillRect(xr - 1, 38, 1, Math.max(0, yr - 38));
+  c.fillRect(x, y + hb - 2, lx - x, 2); c.fillRect(lx + lw, y + hb - 2, rx - lw - lx - lw, 2); c.fillRect(rx, y + hb - 2, x + w - rx, 2);
+  c.fillRect(x + w - 2, y, 2, hb); c.fillRect(lx + lw - 2, y + hb, 2, ya - y - hb); c.fillRect(rx - 2, y + hb, 2, ya - y - hb);
   c.restore();
-  hudPlate(c, false, level, true);
 }
 
 /* the glow: written on change only, never without a style */

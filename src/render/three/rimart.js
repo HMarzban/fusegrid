@@ -11,6 +11,7 @@ import {railOf, bossOf} from "../frameart.js";
 export const RIM_TEX = {rx: 336, rz: 296, S: 2, strip: 64};
 export const rimSize = () => [RIM_TEX.rx * 2 * RIM_TEX.S, (RIM_TEX.rz * 2 + RIM_TEX.strip) * RIM_TEX.S];
 
+const QUIET = 0.4;
 const R = (x, y, w, h, c) => ({r: [x, y, w, h], c});
 /* world-specific side-face detail: hh = face height; v = 0 at the top of the strip */
 const SIDE = {
@@ -28,22 +29,25 @@ const SIDE = {
    from the OUTER edge (0) to the inner edge (38); lo = the lit lip is on the
    outer edge (north / west), else on the inner edge (south / east) */
 function band(c, B, res, len, lo) {
-  const F = FAM[B.name], lit = F.lit || "wallHi.light", shade = F.shade || "wallHi.shadow", fill = (sl, x, y, w, h) => paintShapes(c, B, [R(x, y, w, h, sl)], 0, 0, res);
+  const F = FAM[B.name], lit = "wall.light", shade = "wall.shadow", fill = (sl, x, y, w, h) => paintShapes(c, B, [R(x, y, w, h, sl)], 0, 0, res);
   fill("wall", 0, 0, len, 38);
   fill("wall.outline", 0, 0, len, 1); fill(lo ? lit : shade, 0, 1, len, 2); fill(lo ? shade : lit, 0, 35, len, 2); fill("wall.shadow", 0, 37, len, 1);
   c.save(); c.translate(0, 18 - 11);
   for (let k = 0; k * 40 < len; k++) { c.save(); c.translate(k * 40, 0); paintShapes(c, B, railOf(B, "h"), 0, 0, res); c.restore(); }
   c.restore();
+  /* one step quieter than the walls: the rail is veiled toward the body */
+  c.save(); c.globalAlpha = QUIET; c.fillStyle = slot2d(B, "wall"); c.fillRect(0, 7, len, 24); c.restore();
 }
 function corner(c, B, res, lx, ly) {
-  const F = FAM[B.name], lit = F.lit || "wallHi.light", shade = F.shade || "wallHi.shadow", fill = (sl, x, y, w, h) => paintShapes(c, B, [R(x, y, w, h, sl)], 0, 0, res);
+  const lit = "wall.light", shade = "wall.shadow", fill = (sl, x, y, w, h) => paintShapes(c, B, [R(x, y, w, h, sl)], 0, 0, res);
   /* lx / ly = +1 when the outer edge on that axis is a lit one (west / north) */
   fill("wall", 0, 0, 38, 38);
   const ox = lx > 0 ? 0 : 37, oy = ly > 0 ? 0 : 37, ix = lx > 0 ? 35 : 1, iy = ly > 0 ? 35 : 1;
   fill("wall.outline", ox, 0, 1, 38); fill("wall.outline", 0, oy, 38, 1);
   fill(lx > 0 ? lit : shade, lx > 0 ? 1 : 35, 0, 2, 38); fill(ly > 0 ? lit : shade, 0, ly > 0 ? 1 : 35, 38, 2);
   fill(lx > 0 ? shade : lit, ix, 0, 2, 38); fill(ly > 0 ? shade : lit, 0, iy, 38, 2);
-  paintShapes(c, B, bossOf(B, 1.55, 19), 0, 0, res);
+  paintShapes(c, B, bossOf(B, 1.45, 19), 0, 0, res);
+  c.save(); c.globalAlpha = QUIET * 0.8; c.fillStyle = slot2d(B, "wall"); c.fillRect(4, 4, 30, 30); c.restore();
 }
 
 /* paint the whole strip onto c (S px per unit); res = the slot resolver */
@@ -62,7 +66,7 @@ export function paintRim(c, B, res = slot2d, hWall = B.hWall, lip = 6) {
   at(rx - 38, rz - 38, () => corner(c, B, res, -1, -1));
   c.restore();
   /* side face strip under the ring picture: v 0 = height strip, 64 units tall */
-  const H = Math.min(strip, hWall + lip), y0 = strip - H, lit = F.lit || "wallHi.light", fill = (sl, x, y, w, h) => paintShapes(c, B, [R(x, y, w, h, sl)], 0, 0, res);
+  const H = Math.min(strip, hWall + lip), y0 = strip - H, lit = "wall.light", fill = (sl, x, y, w, h) => paintShapes(c, B, [R(x, y, w, h, sl)], 0, 0, res);
   c.save(); c.translate(0, rz * 2 * S); c.scale(S, S);
   fill(F.face || "wall.shadow", 0, 0, rx * 2, strip);
   for (let k = 0; k * 40 < rx * 2; k++) {

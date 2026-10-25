@@ -348,7 +348,7 @@ function cornerB(b, px, salt, rt) {
   return [R(0, 0, TS, TS, "wall"), R(3, g.y0, 37, g.f, F.face || "wall.shadow"), R(35, 0, 5, 3, "wall.shadow"), R(3, 0, 31, 19, cb), R(3, 3, 37, 16, cb),
     ...(F.panel ? [R(8, 0, 21, 14, F.panel), R(8, 7, 32, 8, F.panel)] : []),
     ...MAT[b.name]({cap: [6, 0, 26, 17], body: g.y0 > 20 ? [5, 20, 35, g.y0 - 20] : null, face: [5, g.y0 + 1, 35, g.f - 3], panel: null}, px, salt, WV.CBL),
-    R(3, 0, 2, 19, lv), R(34, 3, 6, 2, lit), R(3, 17, 37, 2, shade), R(32, 0, 2, 3, shade), ...lightH(b, px, 3, 37, g), R(3, 39, 37, 1, "edge"), ...bossOf(b)];
+    R(3, 0, 2, 19, lv), R(34, 3, 6, 2, lit), R(3, 17, 37, 2, shade), R(32, 0, 2, 3, shade), ...lightH(b, px, 3, 37, g), R(3, 39, 37, 1, "edge"), ...bossOf(b, 1.4, 14)];
 }
 const mirror = (sh) => sh.map((s) => s.r ? {...s, r: [TS - s.r[0] - s.r[2], s.r[1], s.r[2], s.r[3]]} : s.p ? {...s, p: s.p.map(([x, y]) => [TS - x, y])} : {...s, s: s.s.map(([x, y]) => [TS - x, y])});
 
