@@ -1,4 +1,4 @@
-/* geometry the painters AND the REAL 3D shader both read (units in a 40x40 tile); round-3 values until Tasks 3-4 fix the D art */
+/* geometry the REAL 3D shader (fragSource) reads, in units of a 40x40 tile; built.js and living.js read the entries they share (BELT, PORTAL.tick, GATE, PLATE, STREAM, QUICK.radii) */
 export const GEO = {
   PORTAL: {tick: {w: 2.2, g: 1.8, y: 32.7, h: 2.6}, core: {c: [20, 18.4], half: [3.8, 2.8, 2.6]}},
   GATE: {n: [3, 4, 5], bw: 3.4, x0: 8.6, x1: 31.4, y0: 7.6, y1: 28.6},

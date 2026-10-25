@@ -105,16 +105,17 @@ export function fragSource(G) {
 #endif`;
 }
 const FRAG = fragSource(GEO);
+const kindOk = (v) => (v >= 1 && v <= 14);
 const cellKey = (s) => specKey({...s, phase: s.kind === "BELT" || s.kind === "STREAM" ? 0 : s.phase});
 /* every distinct atlas cell this room can show (all state variants), in first-seen order */
 export function atlasSpecs(world) {
   const f = world.feat, C = CFG.COLS, seen = new Set(), list = [];
-  for (let k = 0; k < f.length; k++) if (f[k]) for (const s of variants(world, k % C, (k / C) | 0)) { const kk = cellKey(s); if (!seen.has(kk)) { seen.add(kk); list.push(s); } }
+  for (let k = 0; k < f.length; k++) if (f[k] && kindOk(f[k])) for (const s of variants(world, k % C, (k / C) | 0)) { const kk = cellKey(s); if (!seen.has(kk)) { seen.add(kk); list.push(s); } }
   return list;
 }
 export function buildFeat(world, biome) {
   const f = world.feat, C = CFG.COLS, tiles = [];
-  for (let k = 0; k < f.length; k++) if (f[k]) tiles.push(k);
+  for (let k = 0; k < f.length; k++) if (f[k] && kindOk(f[k])) tiles.push(k);
   const list = atlasSpecs(world), cells = new Map(list.map((s, i) => [cellKey(s), i]));
   const cellOf = (s) => { const kk = cellKey(s); if (!cells.has(kk)) { cells.set(kk, list.length); list.push(s); } return cells.get(kk); };
   let tex;
@@ -159,7 +160,7 @@ export function buildFeat(world, biome) {
   mesh.instanceMatrix.needsUpdate = true;
   mesh.castShadow = false; mesh.receiveShadow = true;
   mesh.userData.tag = "feat";
-  return {mesh, fxK: uFxK, update(w) {
+  return {mesh, fxK: uFxK, uniforms: {uT, uSt, uTime}, update(w) {
     if (!w.feat) return;
     const h = tierOf(w), t = w.featT || 0, pm = PM[Math.max(-1, Math.min(1, w.pace | 0)) + 1];
     uT.value = t * FEAT_PROFILE[h].belt.v * pm; uSt.value = t * FLOAT[h] * pm; uTime.value = t;

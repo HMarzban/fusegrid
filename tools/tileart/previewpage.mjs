@@ -34,14 +34,14 @@ let tr=false,gr=false,td=true;
 const el=(t,a,...k)=>{const e=document.createElement(t);for(const x in a||{})e.setAttribute(x,a[x]);for(const c of k.flat())e.append(c);return e};
 const imgs=(n,k,w)=>{const r=el("div",{class:"three"});H.forEach((h,i)=>{const s=D[n(h)][k];if(s){const m=el("img",{src:s,width:w,alt:n(h)});r.append(m)}});return r};
 function draw(){const o=document.getElementById("o");o.textContent="";
- for(const [w,p,name,bio] of T){const card=el("div",{class:"card"+(gr?" gray":"")});card.append(el("h3",{},name+" · "+bio));
+ for(const [w,p,name,bio] of T){const card=el("div",{class:"card"+(gr?" gray":"")});card.append(el("h3",{},name+" \\u00b7 "+bio));
   const n=(h)=>w+"-"+p+"-"+h,row=el("div",{class:"row"});
   const add=(lab,k,wd,cls)=>{const c=el("div",{class:"cell "+(cls||"")});c.append(el("div",{class:"cap"},lab),imgs(n,k,wd));row.append(c)};
   add("CLASSIC 2D","d2",tr?40:120);if(td)add("today","o2",tr?40:120);
   add("PIXEL","px",tr?60:120,"px");if(td)add("today","op",tr?60:120,"px");
   add("REAL 3D","d3",tr?60:140);if(td)add("today","o3",tr?60:140);
   card.append(row);const an=H.map(h=>D[n(h)].an).filter(Boolean);
-  if(an.length&&!tr){const r2=el("div",{class:"row"});H.forEach(h=>{const s=D[n(h)].an;if(s){const c=el("div",{class:"cell"});c.append(el("div",{class:"cap"},"REAL 3D motion · "+h),el("img",{src:s,width:380,alt:"motion "+h}));r2.append(c)}});card.append(r2)}
+  if(an.length&&!tr){const r2=el("div",{class:"row"});H.forEach(h=>{const s=D[n(h)].an;if(s){const c=el("div",{class:"cell"});c.append(el("div",{class:"cap"},"REAL 3D motion \\u00b7 "+h),el("img",{src:s,width:380,alt:"motion "+h}));r2.append(c)}});card.append(r2)}
   o.append(card)}}
 for(const [id,f] of [["b1",()=>tr=!tr],["b2",()=>gr=!gr],["b3",()=>td=!td]]){const b=document.getElementById(id);b.onclick=()=>{f();b.setAttribute("aria-pressed",String(id==="b1"?tr:id==="b2"?gr:td));draw()}}
 draw();

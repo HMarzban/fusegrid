@@ -183,3 +183,19 @@ test("gate functions: identical renders have zero heat separation and busyness; 
   assert.equal(maxLum(solid(0, 0, 0)), 0);
   assert.equal(litSkew(solid(0, 0, 0), 8).dSkew, 0);
 });
+
+test("specKey: two ICE tiles of one patch that paint differently get different atlas/bake keys (gx and gy both)", () => {
+  const w = world([2, 3, 4, 5, 6, 7, 8].map((x) => [x, 5, 5]));
+  assert.notEqual(specKey(cellSpec(w, 4, 5)), specKey(cellSpec(w, 6, 5)));
+  const b = BIOMES.find((x) => x.name === "ICE"), a = rec(), c = rec();
+  paintCell(a.ctx, b, cellSpec(w, 4, 5)); paintCell(c.ctx, b, cellSpec(w, 6, 5));
+  assert.notDeepEqual(a.log, c.log, "painters differ, so the keys must");
+});
+test("PAUSE freezes: buildFeat exposes its clock uniforms and update() with a fixed featT leaves them unchanged", () => {
+  const w = room(2, 1003, 3, 1), L = buildFeat(w, BIOMES[2]);
+  w.featT = 4.25; L.update(w);
+  const a = JSON.stringify([L.uniforms.uT.value, L.uniforms.uSt.value, L.uniforms.uTime.value]);
+  L.update(w); L.update(w);
+  assert.equal(JSON.stringify([L.uniforms.uT.value, L.uniforms.uSt.value, L.uniforms.uTime.value]), a);
+  assert.equal(L.uniforms.uTime.value, 4.25);
+});

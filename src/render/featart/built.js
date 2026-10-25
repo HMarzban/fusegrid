@@ -118,7 +118,7 @@ export const BUILT = {
     const X = 1.5, S = 37, hiC = b.wallHi, t0 = 2.4, floorW = mix(b.wallHi, b.wall, [0, 0.12, 0.27][h]), T = GEO.PORTAL.tick;
     pit(c, X, X, S, S, 0.01, t0, floorW, 0.9, 0.9, hiC);
     const tt = ids * T.w + (ids - 1) * T.g, tx = 20 - tt / 2;
-    if (k.ticks !== false) for (let i = 0; i < ids; i++) { rect(c, BK, tx + i * (T.w + T.g) + 0.5, T.y + 0.5, T.w, T.h, 0.5); rect(c, mix(b.wallHi, b.wall, 0.78), tx + i * (T.w + T.g), T.y, T.w, T.h); rect(c, hiC, tx + i * (T.w + T.g), T.y, T.w, 0.8, 0.5); }
+    for (let i = 0; i < ids; i++) { rect(c, BK, tx + i * (T.w + T.g) + 0.5, T.y + 0.5, T.w, T.h, 0.5); rect(c, mix(b.wallHi, b.wall, 0.78), tx + i * (T.w + T.g), T.y, T.w, T.h); rect(c, hiC, tx + i * (T.w + T.g), T.y, T.w, 0.8, 0.5); }
     const n = [2, 3, 4][h], st = [3.4, 2.6, 2][h], rim = [0.3, 0.5, 0.74][h], stp = [0.1, 0.1, 0.11][h], ha = [0.5, 0.8, 1.1][h], la = [0.9, 0.8, 0.7][h];
     let x = 7, w = 26, cc = 3.4;
     fillP(c, mix(b.bg1, b.floor1, 0.4), oct(x, 5.4, w, w, cc));

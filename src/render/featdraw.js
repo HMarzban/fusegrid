@@ -80,7 +80,7 @@ export function cellSpec(w, x, y) {
   return s;
 }
 export function specKey(s) {
-  return [s.kind, s.h, s.par | 0, s.dir, s.exit ? 1 : 0, s.phase, s.outer && s.outer.join(""), s.state, s.lit, s.pair, s.kind === "GLIDE" ? s.gy : ""].join("|");
+  return [s.kind, s.h, s.par | 0, s.dir, s.exit ? 1 : 0, s.phase, s.outer && s.outer.join(""), s.state, s.lit, s.pair, s.kind === "GLIDE" ? s.gx + "," + s.gy : ""].join("|");
 }
 const BAKE = new Map();
 export function drawFeat(c, w, x, y, px, py) {

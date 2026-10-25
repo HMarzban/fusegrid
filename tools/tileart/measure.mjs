@@ -1,3 +1,4 @@
+/* ROUND-3 baseline measure (marks-only pass, tones()): works on the round-3 painter snapshots only (default tools/tileart/featdraw_r3.js). The direction D gates are tools/tileart/gates.mjs. */
 /* Readability numbers for notes.md. Per tile x heat, rendered at 4x (160 px):
    cov   = marks-only pass (o.m: bed, texture, light and band base off) alpha
            coverage, worst case (belt exit cap on)
@@ -8,7 +9,7 @@
    Same labOf / dE as tests/items-art.test.mjs. Prints JSON. */
 import {writeFileSync} from "node:fs";
 import {withPage, TILES} from "./harness.mjs";
-const mod = process.argv[2] || "/src/render/featdraw.js", out = process.argv[3], LIT = +(process.argv[4] || 0);
+const mod = process.argv[2] || "/tools/tileart/featdraw_r3.js", out = process.argv[3], LIT = +(process.argv[4] || 0);
 const T = TILES.map(([w, p, bn, s]) => [w, p, bn, s.kind === "BELT" ? {...s, exit: true} : s.kind === "GATE" && LIT ? {...s, lit: LIT} : s]);
 await withPage(async (P) => {
   const res = await P.ev(`Promise.all([import('${mod}'),import('/src/core/config.js')]).then(([F,C])=>{
