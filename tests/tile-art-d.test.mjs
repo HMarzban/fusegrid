@@ -199,3 +199,11 @@ test("PAUSE freezes: buildFeat exposes its clock uniforms and update() with a fi
   assert.equal(JSON.stringify([L.uniforms.uT.value, L.uniforms.uSt.value, L.uniforms.uTime.value]), a);
   assert.equal(L.uniforms.uTime.value, 4.25);
 });
+
+import { readFlags } from "../src/app/flags.js";
+test("?gen=2 is the prototype switch that plays the tile boards", () => {
+  assert.equal(readFlags("?gen=2").gen2, true);
+  assert.equal(readFlags("?render=3d&gen=2&play=1").gen2, true);
+  assert.equal(readFlags("").gen2, false);
+  assert.equal(readFlags("?gen=1").gen2, false);
+});
