@@ -28,6 +28,13 @@ it will be named shell v185. What it adds, for the record:
   itself changed. Heat shows in structure, count and tips, never colour. Only
   four have rules so far; the other four are art.
 - **New walls** in every world, and a **new floor** under everything.
+- **GUIDE grows a fourth door, FLOOR.** It lists the eight tiles at CORE, PLUS and
+  MAX as each look draws them, with a rule line only for the four tiles that have
+  one (the other four say LOOK ONLY FOR NOW). GUIDE is now a 2x2 of doors on a
+  keyboard screen and four stacked rows on touch.
+- **The guide pages are alive.** ITEMS, ENEMIES, HOW TO and the MENU preview now
+  show the foes blinking and bobbing and the pickups with their rings and glint,
+  in CLASSIC 2D and in PIXEL (the PIXEL pages play the board's own frames).
 - **A board outline per world** (a continuous rail with corner pieces) set in a
   recessed well with a glow, replacing the plain border.
 - **Depth.** Walls, bricks, pickups, bombs and foes cast soft shadows, bricks

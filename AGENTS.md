@@ -26,7 +26,7 @@ Two state machines:
 
 | Layer | States | Owner |
 |---|---|---|
-| Shell | INTRO (title → show) → MENU ⇄ LEVEL/SCORES/SETTINGS(→GRAPHICS)/GUIDE(→HOWTO/ITEMS/ENEMIES)/STATS(→TROPHIES) → GAME; idle → ATTRACT | `src/app/menuapp.js` |
+| Shell | INTRO (title → show) → MENU ⇄ LEVEL/SCORES/SETTINGS(→GRAPHICS)/GUIDE(→HOWTO/ITEMS/ENEMIES/FLOOR)/STATS(→TROPHIES) → GAME; idle → ATTRACT | `src/app/menuapp.js` |
 | Sim | PLAY / WIN / LOSE / PAUSE | `src/core/sim.js` |
 
 INTRO is two phases inside one SCREEN (`app.introStage` 0 title / 1 show),

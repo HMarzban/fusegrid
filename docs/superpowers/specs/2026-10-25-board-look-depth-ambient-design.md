@@ -126,7 +126,7 @@ and the existing events.
   3D cannot fade a single foe (shared materials), so spawn is scale plus a ring;
   PIXEL surface detail for chaser, burrow, boomerang, rocket and fast is thin; a
   3D death or burst can end early after a PAUSE resume because `world.time`
-  keeps ticking; the ENEMIES guide page shows the static pose; no real-GPU frame
+  keeps ticking; PIXEL guide frames are a pure function of the page clock, not the sim, so they match the board only by sharing its frame tables; no real-GPU frame
   time for the new motion.
 
 ## Loose ends (what is NOT done)
@@ -137,7 +137,7 @@ and the existing events.
    run, the daily, F2 codes, fairness): only a page-level default exists here.
 3. **Sim:** only BOOSTER, ICE PATCH, CONVEYOR and TRAP have rules. STREAM,
    QUICKSAND, PORTAL and GATE are art only. The heat dial is issue #28.
-4. **Teaching:** no coach tip, FLOOR line on the room card or GUIDE page for tiles.
+4. **Teaching:** the GUIDE has a FLOOR page (the fourth door, `SCREEN.FLOOR` 15, 2026-10-25) and says honestly which tiles have no rule yet; still no coach tip and no FLOOR line on the room card.
 5. **PIXEL tile cells are code-built** (drafted from the painters, then
    rebuilt by hand-written builders), not frame-by-frame art.
 6. **Performance** is unmeasured on a headed real GPU (floor texture, rim
