@@ -48,7 +48,12 @@ named shell v185. What it adds, for the record:
 - **Foes and pickups got a last pass.** PIXEL chaser, burrow, boomerang, rocket
   and fast have richer surface detail. In REAL 3D a pause no longer cuts a death
   or collect effect short, the JUNGLE and ARENA motes read, and the ICE rim is
-  lighter.
+  lighter. Foes now fade in and out in REAL 3D instead of popping.
+- **PIXEL tiles polished.** All eight tiles were cleaned up at every heat, so
+  CORE, PLUS and MAX read apart more clearly, and FAST got a fuller body and a
+  real side view.
+- **Finished top corners.** The HUD bar now ends in caps at the top of the board
+  outline, with the corner piece just below it, instead of covering it.
 - **Ambient motion.** Pollen, snow, steam, ripples, dust, sand, wisps and gold
   dust drift on the play clock. It freezes on pause, halves on EFFECTS LOW and
   turns off if your device asks for reduced motion. The ATTRACT demo shows it

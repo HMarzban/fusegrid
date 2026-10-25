@@ -200,7 +200,7 @@ not shell screens. Do not add them as `SCREEN` values.
   - kind `"px"` — PIXEL, `createPixelRenderer` (`src/render/pixel/**`), its
     own factory modelled on the 3D wrapper, never a branch of `createRenderer`
     (the CLASSIC call-log hash is pinned in `tests/classic-perf.test.mjs` and
-    `tests/pixel-render.test.mjs`, now `127e8b05:72409`: re-pinned by ruling
+    `tests/pixel-render.test.mjs`, now `9fb48f0a:72431`: re-pinned by ruling
     for each 2026-10-21..25 art round, the diff proven to be the intended art;
     `97480c1c:22630` is the stale pre-round value). See the PIXEL paragraph below.
   - kind `"iso"` — legacy dimetric (`r3d/`), pinned by `?render=iso` only.
@@ -895,7 +895,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
       `kill` / `power` into ghosts and bursts on each look's PLAY-frozen clock);
       REAL 3D fat-world is now 156 draws (158 worst case; budget 160); the 2D foe
       silhouettes are canon for all three looks; pickups never change shape or
-      colour. CLASSIC hash `127e8b05:72409`; px cap 152 KB (the px tree is a lazy
+      colour. CLASSIC hash `9fb48f0a:72431`; px cap 152 KB (the px tree is a lazy
       import since #15, about 146 KB).
 - Walls (owner rulings 2026-10-21, designed and prototyped, NOT built; issues
   #17 for CLASSIC 2D + REAL 3D and #31 for PIXEL after #15; record

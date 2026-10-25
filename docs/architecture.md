@@ -233,7 +233,7 @@ in all three looks:
 
 Budgets after the round: REAL 3D fat-world 156 draw calls (158 worst case),
 PIXEL lazy tree about 146 KB of a 152 KB cap, CLASSIC call log re-pinned as
-`127e8b05:72409`. Frame times on a real GPU are not measured yet (issue #34).
+`9fb48f0a:72431`. Frame times on a real GPU are not measured yet (issue #34).
 How it is put together, the rulings and what is still open live in
 [one record](superpowers/specs/2026-10-25-board-look-depth-ambient-design.md);
 the tile look is in the

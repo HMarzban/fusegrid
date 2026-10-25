@@ -58,7 +58,7 @@ accident.
   is frozen.
 - **px JS cap 152 KB** (was 122, then 140, 145): the px tree is a lazy import,
   so CLASSIC visitors no longer pay for it; the cap stays as a growth tripwire.
-- **CLASSIC call-log hash pin** `127e8b05:72409` (was `97480c1c:22630`;
+- **CLASSIC call-log hash pin** `9fb48f0a:72431` (was `97480c1c:22630`;
   re-pinned for walls, floor, bezel, well, depth, ambient and the foe/item round, each time with
   the diff proven to be the intended art).
 - **Gates:** the old "marks <= 30 %" gate became edge-energy busyness <= 1.6x
@@ -125,7 +125,7 @@ and the existing events.
   straight onto the board so they never evict kill puffs. The px tree is about
   146 KB of the 152 KB cap. The 2D silhouettes are canon for all three looks.
 - **Loose ends of this round:** hunter windup needs a sim field (out of scope);
-  3D cannot fade a single foe (shared materials; a fade needs per-slot clones and a transparent pass), so spawn is scale plus a ring;
+  REAL 3D spawn and death now fade on per-slot transparent material clones (closed 2026-10-25, `tests/foefade3d.test.mjs`);
   (closed 2026-10-25: PIXEL detail for chaser, burrow, boomerang, rocket and fast was thickened, and REAL 3D death / burst now run on a pause-corrected clock, `tests/render3d-pauseclock.test.mjs`); PIXEL guide frames are a pure function of the page clock, not the sim, so they match the board only by sharing its frame tables; no real-GPU frame
   time for the new motion.
 
@@ -139,14 +139,15 @@ and the existing events.
    QUICKSAND, PORTAL and GATE are art only. The heat dial is issue #28.
 4. **Teaching:** the GUIDE has a FLOOR page (the fourth door, `SCREEN.FLOOR` 15, 2026-10-25) and says honestly which tiles have no rule yet; still no coach tip and no FLOOR line on the room card.
 5. **PIXEL tile cells are code-built** (drafted from the painters, then
-   rebuilt by hand-written builders), not frame-by-frame art.
+   rebuilt by hand-written builders), not frame-by-frame art. A polish pass
+   (2026-10-25) cleaned every tile at every heat (PIXEL heat-separation
+   failures 13 -> 0); hand-drawn frames remain an owner call.
 6. **Performance** is unmeasured on a headed real GPU (floor texture, rim
    shaders, contact AO, ambient Points).
 7. **Colourblind check for the new tiles** was dropped with the old marks gate
    and needs a version that fits full-bleed fixtures.
 8. **Closed 2026-10-25:** ATTRACT now shows ambient (`main.js` hands `{hud:false, amb:true}`, all three renderers read `o.amb`); 3D JUNGLE and ARENA motes got a per-world gain; ICE and SAND rims were lifted (`RIM_LIFT` in `three/scene.js`).
-9. **Top corner bosses** are mostly hidden by the HUD plate; phone portrait is
-   checked in screenshots only.
+9. **Closed 2026-10-25:** the HUD plate now ends in a cap at each top corner and the top corner boss sits just below it on the side rail (CLASSIC and PIXEL, `frame.js`, `tests/frame-corners.test.mjs`; REAL 3D already cleared the plate). Phone portrait is still checked in screenshots only.
 10. **Tracking:** the gameplay gaps are issue #35 (hunter windup #32, colour-vision gate #33, real-GPU frame times #34, plus #10-#13, #24, #26-#28, #30). Progress comments are on #8, #15, #16, #17, #23, #24, #26, #27, #31.
 11. **Housekeeping:** branches `frame-a`, `frame-b` (merged), `frame-c` (not
     merged) and their worktrees; the automated security review of the commits
