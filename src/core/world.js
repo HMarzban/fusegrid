@@ -1,5 +1,7 @@
 import { CFG, T, key, clamp } from "./config.js";
 import { genBoard, isBrick } from "./board.js";
+import { genBoard2, dists2, foeOk2 } from "./board2.js";
+import { spawnBlocked, beltDist, FEAT_PROFILE, isBelt } from "./feat.js";
 import { createRng } from "./rng.js";
 import { POWER, createPlayer, spawnEnemy } from "./entities.js";
 import { clampHeat, heatProfile, heatRoster } from "./heat.js";
@@ -36,6 +38,8 @@ export function createWorld(seed = 1, level = 1) {
     shrinkT: 0,
     shrinkGen: 0,
     pace: 0,
+    gen: 1,
+    layout: null,
   };
 }
 
@@ -72,7 +76,19 @@ export function loadLevel(world, level, keepProgress = false) {
   w.level = level;
   w.state = "MENU";
   w.rng = createRng((w.seed ^ (level * 40503)) >>> 0);
-  w.grid = genBoard(w.seed, level, P.carve);
+  if (w.gen === 2) {
+    const b2 = genBoard2(w.seed, level, heat);
+    w.grid = b2.grid;
+    w.layout = b2.layout;
+    w.feat = b2.feat || null;
+    w.featPair = b2.featPair || null;
+    if (w.feat) { w.featS = new Float32Array(CFG.COLS * CFG.ROWS); w.featM = new Uint8Array(CFG.COLS * CFG.ROWS); w.featT = 0; w.featPend = []; }
+  } else {
+    w.grid = genBoard(w.seed, level, P.carve);
+    w.layout = null;
+    if (w.feat) w.feat = null;
+    if (w.featPair) w.featPair = null;
+  }
   w.bombs = [];
   w.blades = [];
   w.enemies = [];
@@ -175,6 +191,22 @@ export function loadLevel(world, level, keepProgress = false) {
     const j = rng.int(0, i);
     [free[i], free[j]] = [free[j], free[i]];
   }
+  if (w.gen === 2) {
+    const { e, b: b0 } = dists2(w.grid);
+    const fb = w.feat && w.feat.some(isBelt) ? FEAT_PROFILE[heat].belt : null;
+    const b = fb && fb.actors ? Array.from(beltDist(w.grid, w.feat, fb.v, CFG.ENEMY_BASE_SPEED + level * P.curve), (v, i) => (b0[i] < 0 ? -1 : Math.floor(v))) : b0;
+    const used = new Set(), pick = [];
+    for (const t of roster) {
+      const j = free.findIndex(([x, y], j) => !used.has(j) && foeOk2(t, e[key(x, y)], b[key(x, y)]) && !spawnBlocked(w.feat, x, y));
+      if (j < 0) continue;
+      used.add(j);
+      pick.push([t, free[j]]);
+    }
+    const rest = free.filter((_, j) => !used.has(j));
+    free.length = 0;
+    free.push(...pick.map((p) => p[1]), ...rest);
+    for (const [t, c] of pick) w.enemies.push(spawnEnemy(t, c[0], c[1], level, rng, spawnOpts));
+  } else
   for (let i = 0; i < nE && i < free.length; i++)
     w.enemies.push(
       spawnEnemy(roster[i], free[i][0], free[i][1], level, rng, spawnOpts),

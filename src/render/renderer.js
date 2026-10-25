@@ -4,10 +4,14 @@ import {
   bakeAtlas, drawGrid, drawBiomeBackground, drawBricks,
   drawItems, drawEnemies, drawPlayer, drawPlayerBody, drawBombs, drawBlades, drawGhost
 } from "./sprites.js";
-import {onEvent, updateFx, drawFx, drawFxOverlay, drawPickupFx, feedFx, getShake, getFlash, getFx, initFx, syncFx} from "./fx.js";
+import {onEvent, updateFx, drawFx, drawBursts, drawFxOverlay, drawPickupFx, feedFx, getShake, getFlash, getFx, initFx, syncFx} from "./fx.js";
 import {drawOverlay, overlayBox, drawHudChips, drawAbilityBar, drawCoach, drawCoach2} from "./scenes.js";
 import {draw3dBackground, buildPainters, byDepth} from "./r3d/scene3d.js";
 import {PROJ, project} from "./r3d/camera.js";
+import {wellBoard, hudPlate, stageGlow} from "./frame.js";
+import {drawDepth} from "./depth2d.js";
+import {createAmbient2d} from "./ambient2d.js";
+import {fxOf} from "./entityfx.js";
 
 const isoProj=(bx,by,h)=>{ const q=project(bx/CFG.TILE,by/CFG.TILE); return {x:q.sx,y:q.sy-(h||0)}; };
 
@@ -41,6 +45,7 @@ export function createRenderer(canvas, opts={}){
        drawImage:noop,fillText:noop,strokeText:noop,setTransform:noop};
   if(ctx.imageSmoothingEnabled!==undefined) ctx.imageSmoothingEnabled=false;
   const audio = opts.audio || null;
+  const amb = createAmbient2d();
   initFx();
   /* GRAPHICS 2026-10-10. Render-on-change is armed by setPerf only, so a
      renderer nobody tunes is byte-identical to before: when the board
@@ -61,8 +66,9 @@ export function createRenderer(canvas, opts={}){
   function consumeEvents(world, dt, playSfx=true){
     syncFx(world);
     feedFx(world, dt||CFG.STEP);
+    fxOf(world,"2d").feed(world.events, pzT!=null?pzT:world.time);
     for(let i=0;i<world.events.length;i++){
-      onEvent(world, world.events[i], world.time);
+      onEvent(world, world.events[i], world.time, "2d");
       if(audio&&playSfx!==false) audio.play(sfxOf(world.events[i]));
     }
     world.events.length=0;
@@ -74,10 +80,12 @@ export function createRenderer(canvas, opts={}){
   function render(world, dt, o){
     if(!world) return;
     const paused=world.state==="PAUSE", ev=world.events.length>0;
-    if(world!==lastW||world.grid!==lastG){ if(wasP) initFx(); lastW=world; lastG=world.grid; }
+    if(world!==lastW||world.grid!==lastG){ if(wasP) initFx(); if(world===lastW) fxOf(world,"2d").clear(); lastW=world; lastG=world.grid; }
     wasP=paused;
     if(!paused) pzT=null; else if(pzT==null) pzT=world.time;
     consumeEvents(world, dt, !(o&&o.sfx===false));
+    if(kind==="2d"&&o&&(o.hud===true||o.amb===true)) amb.tick(world, dt);
+    if(kind==="2d") stageGlow(canvas, world.level);
     const shake=paused?STILL:getShake();
     const g=o&&o.ghost, busy=!paused&&(getFx().length>0||shake.x!==0||shake.y!==0);
     const chg=d(0,world)+d(1,paused?pzT:world.time)+d(2,world.state)+d(3,world.level)+d(4,world.grid)+d(5,ev)+d(6,busy)
@@ -107,12 +115,16 @@ export function createRenderer(canvas, opts={}){
     } else {
       drawBiomeBackground(ctx, world, armed);
       drawGrid(ctx, world);
+      drawDepth(ctx, world);
+      if(o&&(o.hud===true||o.amb===true)) amb.draw(ctx, world, "under");
+      wellBoard(ctx, world.level);
       drawBricks(ctx, world);
       drawItems(ctx, world);
       drawBombs(ctx, world);
       drawBlades(ctx, world);
       if(o&&o.ghost) drawGhost(ctx, world, o.ghost);
       drawEnemies(ctx, world);
+      drawBursts(ctx, fxOf(world,"2d").bursts(world.time));
       /* Opening: o.pop scales players[0] about its centre (MAKO's pop-in),
          skipped at 0; absent outside INTRO, which means 1. */
       const p0=world.players[0];
@@ -121,6 +133,7 @@ export function createRenderer(canvas, opts={}){
         ctx.save(); ctx.translate(p0.x,p0.y); ctx.scale(o.pop,o.pop);
         drawPlayerBody(ctx, world, p0); ctx.restore();
       }
+      if(o&&(o.hud===true||o.amb===true)) amb.draw(ctx, world, "over");
       drawFx(ctx);
     }
     ctx.restore();
@@ -149,6 +162,7 @@ export function createRenderer(canvas, opts={}){
     }
     /* S4: overlay HUD chips — explicit opt-in only ({hud:true} during GAME),
        drawn after restore so they never shake with the camera. */
+    if(o&&o.hud===true&&kind==="2d") hudPlate(ctx, false, world.level);
     if(o&&o.hud===true) drawHudChips(ctx, world, o&&o.time);
     if(o&&o.hud===true&&kind==="2d") drawAbilityBar(ctx, world);
     if(o&&o.hud===true&&world.state==="PLAY") drawFxOverlay(ctx);

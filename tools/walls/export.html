@@ -1,0 +1,71 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>wall tile export</title>
+<body style="margin:0;background:#0b0f1a">
+<script type="module">
+/* Detail pass 2026-10-23 (throwaway): isolated wall tiles rendered by the
+   game's own code. ?tree=new (this worktree: wallShapes / wallTiles / the
+   wall strip + aWv) or ?tree=today (a git archive of main afb983f: the one
+   baked wall tile, the 3D box with that tile on six faces x biome.wall).
+   CLASSIC: the real 40 px bake, NEAREST to 192. REAL 3D: one block, the
+   game's materials.build + createLights, rig-C angle (polar 0.66, az 0,
+   CAM_FOV 24), 256 px on #0b0f1a. PIXEL is exported in Node (export-px.mjs). */
+import * as THREE from "../../vendor/three.module.js";
+import {CFG, BIOMES} from "../../src/core/config.js";
+import * as SP from "../../src/render/sprites.js";
+import * as TX from "../../src/render/three/textures.js";
+const {buildAtlas} = TX;
+import {build} from "../../src/render/three/materials.js";
+import {createLights} from "../../src/render/three/lights.js";
+import {CAM_FOV} from "../../src/render/three/camrig.js";
+const tree = new URLSearchParams(location.search).get("tree") || "new";
+const OUT = {};
+const PIECES = [["base", 0], ["v1", 1], ["v2", 2], ["acc", 3], ["border", 4]];
+const up = (src, n) => { const c = document.createElement("canvas"); c.width = c.height = n; const x = c.getContext("2d"); x.imageSmoothingEnabled = false; x.drawImage(src, 0, 0, n, n); return c.toDataURL("image/png"); };
+const t0 = performance.now(); SP.bakeAtlas(); OUT.__bakeMs = performance.now() - t0;
+/* round 3: the wall bake per world (11 canvases through paintWall, median of 7) */
+if (SP.paintWall) OUT.__bakeWorld = BIOMES.map((b) => { const ts = []; for (let r = 0; r < 7; r++) { const t = performance.now(); for (let v = 0; v < 11; v++) { const c = document.createElement("canvas"); c.width = c.height = 40; SP.paintWall(c.getContext("2d"), b, v, 0, 0); } ts.push(performance.now() - t); } ts.sort((x, y) => x - y); return b.name + " " + ts[3].toFixed(2); }).join(", ");
+BIOMES.forEach((b, i) => {
+  const w = b.name.toLowerCase();
+  if (tree === "today") OUT["2d/" + w + "-wall-today"] = up(SP.bakedTile(i, "wall"), 192);
+  else { const V = SP.wallTiles(i); for (const [n, k] of PIECES) OUT["2d/" + w + "-" + n + "-new"] = up(V[k], 192); }
+});
+/* round 3: cost of the REAL 3D surface strip per room build (readback +
+   two box blurs on 880x160), median of 5, on the room's colour strip */
+if (TX.surfStrip) OUT.__surf = BIOMES.map((b, i) => { const at = TX.atlasSources(undefined, i + 1); const ts = []; for (let r = 0; r < 5; r++) { const t = performance.now(); TX.surfStrip(at.wallStrip, at.wallStrip, 80, 0); ts.push(performance.now() - t); } ts.sort((x, y) => x - y); return b.name + " " + ts[2].toFixed(1); }).join(", ");
+/* REAL 3D */
+const cv = document.createElement("canvas");
+const gl = new THREE.WebGLRenderer({canvas: cv, antialias: true, preserveDrawingBuffer: true, alpha: false});
+gl.setPixelRatio(1); gl.setSize(256, 256, false);
+gl.toneMapping = THREE.NoToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace;
+gl.shadowMap.enabled = true; gl.shadowMap.type = THREE.PCFSoftShadowMap;
+gl.setClearColor("#0b0f1a", 1);
+const EL = 0.66, DIST = 150;
+function shot3d(b, level, code) {
+  const scene = new THREE.Scene(), atlas = buildAtlas(null, level), mats = build(b, atlas);
+  const geo = new THREE.BoxGeometry(CFG.TILE, b.hWall, CFG.TILE);
+  if (tree === "new") geo.setAttribute("aWv", new THREE.InstancedBufferAttribute(new Float32Array([code]), 1));
+  const m = new THREE.InstancedMesh(geo, mats.wall, 1);
+  m.material.color.set("#ffffff");
+  m.setMatrixAt(0, new THREE.Matrix4().makeTranslation(0, b.hWall / 2, 0));
+  m.setColorAt(0, new THREE.Color(tree === "new" ? "#ffffff" : b.wall));
+  m.castShadow = true; m.receiveShadow = true;
+  scene.add(m);
+  const L = createLights(b, 1);
+  scene.add(L.hemi, L.dir, L.dir.target, L.fill, L.amb);
+  const catcher = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.ShadowMaterial({opacity: 0.35}));
+  catcher.rotation.x = -Math.PI / 2; catcher.receiveShadow = true; scene.add(catcher);
+  const cam = new THREE.PerspectiveCamera(CAM_FOV, 1, 1, 4000), ty = b.hWall * 0.42;
+  cam.position.set(0, ty + Math.cos(EL) * DIST, Math.sin(EL) * DIST); cam.lookAt(0, ty, 0);
+  gl.render(scene, cam);
+  const url = cv.toDataURL("image/png");
+  geo.dispose();
+  return url;
+}
+BIOMES.forEach((b, i) => {
+  const w = b.name.toLowerCase();
+  if (tree === "today") OUT["3d/" + w + "-wall-today"] = shot3d(b, i + 1, 0);
+  else for (const [n, k] of PIECES) OUT["3d/" + w + "-" + n + "-new"] = shot3d(b, i + 1, k);
+});
+window.__OUT = OUT;
+</script>

@@ -1,0 +1,42 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>wall families (prototype)</title>
+<style>body{margin:0;background:#0b0f18}canvas{display:block}</style>
+<canvas id="s"></canvas>
+<script type="module">
+/* Throwaway iteration sheet: every biome x every wall code, CLASSIC 2D
+   (the real paintWall over the real floor tile) and the PIXEL cell (the real
+   art sheet resolved through palette.js), at 3x. */
+import {BIOMES} from "../../src/core/config.js";
+import {paintWall, bakeAtlas, bakedTile} from "../../src/render/sprites.js";
+import {WALL_VARS} from "../../src/render/wallvar.js";
+import {ART} from "../../src/render/pixel/art/index.js";
+import {cellRGBA} from "../../src/render/pixel/grid.js";
+const K = 3, T = 40, cols = WALL_VARS.length, cw = T * K + 8;
+const cv = document.getElementById("s"), c = cv.getContext("2d");
+cv.width = 120 + cols * cw * 2 + 30; cv.height = 40 + BIOMES.length * (T * K + 14);
+c.fillStyle = "#0b0f18"; c.fillRect(0, 0, cv.width, cv.height);
+c.imageSmoothingEnabled = false;
+bakeAtlas();
+const PXN = ["base", "v1", "v2", "acc", "h", "vl", "vl*", "ctl", "ctl*", "cbl", "cbl*"];
+c.font = "12px monospace"; c.fillStyle = "#ffd88a";
+WALL_VARS.forEach((n, i) => { c.fillText(n, 120 + i * cw, 20); c.fillText(n, 120 + cols * cw + 30 + i * cw, 20); });
+BIOMES.forEach((b, r) => {
+  const Y = 30 + r * (T * K + 14);
+  c.fillStyle = "#fff"; c.fillText(b.name, 8, Y + 20);
+  WALL_VARS.forEach((_, v) => {
+    const t = document.createElement("canvas"); t.width = T; t.height = T; const x = t.getContext("2d");
+    x.drawImage(bakedTile(r, "floorA"), 0, 0); paintWall(x, b, v, 0, 0);
+    c.drawImage(t, 120 + v * cw, Y, T * K, T * K);
+    const nm = PXN[v], m = nm.endsWith("*"), cell = ART.walls.cells[b.name + "." + nm.replace("*", "")];
+    const rows = m ? cell.rows.map((q) => [...q].reverse().join("")) : cell.rows;
+    const rgba = cellRGBA({...cell, rows}, ART.walls.pal, {biome: b});
+    const p = document.createElement("canvas"); p.width = 20; p.height = 20; const px = p.getContext("2d");
+    px.fillStyle = b.floor0; px.fillRect(0, 0, 20, 20);
+    const q = document.createElement("canvas"); q.width = 20; q.height = 20; q.getContext("2d").putImageData(new ImageData(rgba, 20, 20), 0, 0);
+    px.drawImage(q, 0, 0);
+    c.drawImage(p, 120 + cols * cw + 30 + v * cw, Y, T * K, T * K);
+  });
+});
+window.__done = true;
+</script>

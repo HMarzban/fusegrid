@@ -270,11 +270,11 @@ function mkCanvas(){
     check("O2 ?render=3d: boardReady true once the three load settles",g.app.boardReady===true);
   }finally{ if(loc0===undefined)delete globalThis.location; else globalThis.location=loc0; }
   const src=readFileSync(join(ROOT,"src/main.js"),"utf8"), rcs=readFileSync(join(ROOT,"src/app/rcache.js"),"utf8");
-  const settle=/loadRenderer3D\(\)\.then\(\(m\) => \{[^}]*\}\)\.catch\(\(e\) => console\.warn\("3D load failed", e\)\)\.then\(\(\) => onReady\(\)\)/g;
-  check("O2 both loadRenderer3D sites (src/app/rcache.js since the GRAPHICS swap) catch then settle (a 404 never strands the title)",
-    (rcs.match(/loadRenderer3D\(\)/g)||[]).length===2&&(rcs.match(settle)||[]).length===2);
+  const settle=/ld\(\)\.then\(\(m\) => \{[^}]*\}\)\.catch\(\(e\) => \{[^}]*\}\)\.then\(\(\) => \{ if \(k === "3d" \|\| kind\(\) !== "3d"\) onReady\(\); \}\)/g;
+  check("O2 the one rcache load site (3D and PIXEL since #15) catches then settles (a 404 never strands the title)",
+    (rcs.match(/\bld\(\)/g)||[]).length===1&&(rcs.match(settle)||[]).length===1);
   check("O2 main.js settles boardReady through rcache's onReady and calls no loader itself",
-    /onReady: \(\) => \{ app\.boardReady = true; \}/.test(src)&&!/loadRenderer3D\(\)/.test(src));
+    /onReady: \(\) => \{ app\.boardReady = true; \}/.test(src)&&!/loadRenderer3D\(\)/.test(src)&&!/loadRendererPx\(\)/.test(src)&&!/import\(/.test(src));
   const {drawShell}=await import("../src/render/shellview.js");
   const veil=(ready,readyT)=>{
     const fs=[];

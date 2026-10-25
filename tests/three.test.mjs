@@ -36,6 +36,7 @@ import {createRig, orbitBy, dollBy, resetOrbit, applyOrbit,
   CAM_PRESET, CAM_NAME, camPreset} from "../src/render/three/camrig.js";
 import {createRenderer3D} from "../src/render/three/wrapper.js";
 import {createRenderer} from "../src/render/renderer.js";
+import {createPixelRenderer} from "../src/render/pixel/renderer.js";
 import {overlayBox, pauseHit, pauseGeom, PAUSE_ROWS} from "../src/render/scenes.js";
 import {createWorld, loadLevel, step} from "../src/core/sim.js";
 import {CFG, T, BIOMES} from "../src/core/config.js";
@@ -194,14 +195,12 @@ function scan(grid){
   const v1=sc.brickV;
   check("WALL edit bumps brickV (shadow map re-renders)", v1>v0);
   const c=new THREE.Color();
-  const bi=BIOMES[0], wA=new THREE.Color(bi.wall),
-    wH=new THREE.Color(bi.wall).lerp(new THREE.Color(bi.wallHi),0.32);
+  const white=new THREE.Color("#ffffff");
   let colOk=true;
   for(let y=0,i=0;y<CFG.ROWS;y++)for(let x=0;x<CFG.COLS;x++)
     if(w.grid[y*CFG.COLS+x]===T.WALL){ cap.getColorAt(i++,c);
-      const k=(x+y)&1?wH:wA;
-      if(Math.abs(c.r-k.r)+Math.abs(c.g-k.g)+Math.abs(c.b-k.b)>1e-5)colOk=false; }
-  check("refreshed walls keep the per-instance checker colours", colOk);
+      if(Math.abs(c.r-white.r)+Math.abs(c.g-white.g)+Math.abs(c.b-white.b)>1e-5)colOk=false; }
+  check("refreshed walls keep the white per-instance colour (ruling W4: the wall colour lives in the material only)", colOk);
   w.grid[e]=T.EMPTY; sc.update(w);
   check("EMPTY tile back -> wall count follows down", follows(sc,w).ok
     &&cap.count===w0+1);
@@ -467,7 +466,7 @@ function mkCanvas(){
     addEventListener(){},removeEventListener(){}};
 }
 {
-  const g=createGame(mkCanvas(),{seed:77,autoplay:true,render3d:true,createRenderer3D});
+  const g=createGame(mkCanvas(),{seed:77,autoplay:true,render3d:true,createRenderer3D,createPixelRenderer});
   check("opts.render3d boots the 3D wrapper surface",
     !!g.renderer&&"overlay"in g.renderer&&typeof g.renderer.getShake
       ==="function"
@@ -839,7 +838,7 @@ sec("S2.F",()=>{
     if(es[i].geometry.type!==wantGeo[types[i]])geoOk=false;
     const proto=spawnEnemy(types[i],0,0,1,null);
     const have="#"+es[i].material.color.getHexString();
-    const want=types[i]==="stationary"?"#2a1030":proto.color;
+    const want=types[i]==="stationary"?"#"+new THREE.Color(proto.color).multiplyScalar(0.8).getHexString():proto.color;   // round 2: the 2D violet, lit down .8
     if(have.toLowerCase()!==want.toLowerCase()){colOk=false;det.push(
       types[i]+":"+have+"!="+want);}
    }
@@ -856,21 +855,23 @@ sec("S2.F",()=>{
     stCore.material.type);
 });
 
-// ---- §S2.G invuln flicker (visibility toggles) ----
+// ---- §S2.G invuln: spawn pop replaces the 12 Hz blink (entities round 2026-10-25) ----
 sec("S2.G",()=>{
   const w=createWorld(27,1); loadLevel(w,1,false);
-  w.enemies=[mkE("walker",100,80,{invuln:true})];
+  w.enemies=[mkE("walker",100,80,{invuln:true,invulnT:1.2})];
   const sc=buildScene(w); const g=sc.group;
   w.players[0].iFrames=0.09;               // floor(.09*12)%2 === 1 -> hidden
-  w.time=0.05;                             // enemy phase even -> visible
+  w.time=0.05;
   sc.update(w);
+  const s0=slotsOf(g,"enemy")[0].scale.x;
   check("S2 player iFrames flicker hides on odd phase",
     visOf(g,"player")===0&&visOf(g,"enemy")===1);
   w.players[0].iFrames=0.17;               // even phase -> visible
-  w.time=0.09;                             // enemy odd phase -> hidden
+  w.time=0.09; w.enemies[0].invulnT=0.4;
   sc.update(w);
-  check("S2 enemy invuln flicker mirrors 2D parity (time*12)",
-    visOf(g,"player")===1&&visOf(g,"enemy")===0);
+  check("S2 invulnerable foe never blinks: it pops in (scale < 1 at spawn, 1 once solid)",
+    visOf(g,"player")===1&&visOf(g,"enemy")===1&&s0<0.8
+    &&slotsOf(g,"enemy")[0].scale.x>0.95, s0.toFixed(3)+"->"+slotsOf(g,"enemy")[0].scale.x.toFixed(3));
 });
 
 // ---- §S2.H pool caps hold under overflow ----
@@ -1041,7 +1042,7 @@ await sec("S2.I",()=>{
   const fireB=scPlain.pools.itemBodies.fire;
   const fireR=scPlain.pools.itemRingIM.fire;
   check("R.headless item pickup = unique geo in POWER color + additive ring",
-    fireB.isInstancedMesh&&fireB.geometry.type==="LatheGeometry"
+    fireB.isInstancedMesh&&fireB.geometry.type==="BufferGeometry"&&!!fireB.geometry.attributes.aF   /* entities round 2: a badge (rim + front plate), not a lathe */
     &&fireB.material.isMeshLambertMaterial
     &&!fireB.material.map
     &&"#"+fireB.material.color.getHexString()==="#ff8a3c"
@@ -1506,8 +1507,9 @@ await sec("S4.A",async()=>{
     "dx="+cdx.toFixed(2)+" dz="+cdz.toFixed(2)+" top="+cbb.max.y.toFixed(2));
   const stShell=es[3];
   const stCore=stShell.children[0];
-  check("S4.A stationary shell #2a1030 keeps magenta core accent (#c58aff)",
-    "#"+stShell.material.color.getHexString()==="#2a1030"
+  /* entities round 2 2026-10-25: the shell is the 2D sentry violet (identity colour x .8), no longer a near-black #2a1030 */
+  check("S4.A stationary shell is the 2D violet and keeps its magenta core accent (#c58aff)",
+    "#"+stShell.material.color.getHexString()==="#"+new THREE.Color(spawnEnemy("stationary",0,0,1,null).color).multiplyScalar(0.8).getHexString()
     &&stCore.material.isMeshBasicMaterial
     &&"#"+stCore.material.color.getHexString()
       ===spawnEnemy("stationary",0,0,1,null).color.toLowerCase());
@@ -1595,9 +1597,9 @@ await sec("R.items",async()=>{
     &&fireR.isInstancedMesh&&pierceR.isInstancedMesh
     &&fire.count===1&&pierce.count===1&&!sc.pools.items,
     (fire?fire.count:"-")+"/"+(pierce?pierce.count:"-"));
-  check("R.items fire body is a low-seg lathe spike casting a shadow",
-    fire.geometry.type==="LatheGeometry"
-    &&fire.geometry.parameters.segments===3
+  check("R.items fire body is a raked glyph badge (rim + front plate, aF face flag) casting a shadow",
+    fire.geometry.type==="BufferGeometry"
+    &&fire.geometry.attributes.aF.count===fire.geometry.attributes.position.count
     &&fire.castShadow===true&&fire.material.isMeshLambertMaterial
     &&"#"+fire.material.color.getHexString()==="#ff8a3c");
   const rpos=fireR.geometry.attributes.position.array;
@@ -1624,27 +1626,30 @@ await sec("R.items",async()=>{
   const upY=new THREE.Vector3(0,1,0);
   drive(0);
   const q0=matScale(fire,0).q;
-  const wantQ0=new THREE.Quaternion().setFromAxisAngle(upY,ph);
-  const t1=(Math.PI/2-ph)/3;                 // sin(3t+ph)==1 -> top of bob
+  const wantQ0=new THREE.Quaternion().setFromAxisAngle(upY,0.22*Math.sin(ph));
+  const t1=(Math.PI/2-ph)/2.4;               // sin(2.4t+ph)==1 -> top of hover (itemIdle)
   drive(t1);
   const bob=matScale(fire,0);
-  const wantQ=new THREE.Quaternion().setFromAxisAngle(upY,2.2*t1+ph);
+  const wantQ=new THREE.Quaternion().setFromAxisAngle(upY,0.22*Math.sin(1.7*t1+ph));
   // quaternion sign is a double cover (q === -q as a rotation), so compare
   // via angleTo rather than raw components once ph pushes the half-angle
   // past +-pi/2.
-  check("R.items bob +-4 about TILE*.66 @sin(3t+ph), spin advances 2.2t+ph",
-    Math.abs(bob.p.y-(CFG.TILE*0.66+4))<1e-6
+  /* entities round 2026-10-25: hover is the shared itemIdle (2 px at 2.4 rad/s, lifted x2.2 to the 3D body); round 2: the badge sways +-.22 rad instead of spinning so its glyph stays readable */
+  check("R.items hover +-4.4 about TILE*.66 @sin(2.4t+ph), yaw sways .22sin(1.7t+ph)",
+    Math.abs(bob.p.y-(CFG.TILE*0.66+4.4))<1e-6
     &&bob.q.angleTo(wantQ)<1e-6&&q0.angleTo(wantQ0)<1e-6,
     bob.p.y.toFixed(2));
   check("R.items pickup stays POWER-bright Lambert (never dark plate)",
     "#"+fire.material.color.getHexString()==="#ff8a3c"&&!fire.material.map);
-  drive(Math.PI/10);                         // sin(5t)==1 -> pulse peak
+  drive(1.3);
   const pulse=matScale(fireR,0);
-  check("R.items ring pulses opacity .30+.10sin(5t), scale fixed at"
-      +" RING_SCALE (1, fire carries no blast reach)",
-    Math.abs(fireR.material.opacity-0.40)<1e-6
+  /* depth round 2026-10-25 (lane B): rings are brighter, +.16 opacity (bigger through the geometry, scale untouched) */
+  const rk=fireR.instanceColor.array[0];
+  check("R.items ring pulse rides a per-instance brightness (instanceColor), opacity fixed .66,"
+      +" scale fixed at RING_SCALE (1, fire carries no blast reach)",
+    Math.abs(fireR.material.opacity-0.66)<1e-6&&rk>0.3&&rk<=1
     &&Math.abs(pulse.s.x-1)<1e-6,
-    fireR.material.opacity.toFixed(3)+"/"+pulse.s.x.toFixed(2));
+    fireR.material.opacity.toFixed(3)+"/"+rk.toFixed(3)+"/"+pulse.s.x.toFixed(2));
  });
 
 // ---- §S4.C explosion drama: layered core pop + pooled flash lights ----
@@ -1991,10 +1996,11 @@ await sec("S4.E",async()=>{
   catch(e){ console.log(e.message); }
   const wantCalls=5                       /* plane+checker+wall+brick+rim1 */
     +SLOT_MESH.player+16*SLOT_MESH.enemy+nb*SLOT_MESH.bomb
-    +POWER.length*SLOT_MESH.item+2+1;     /* instanced item kinds + blades + fx */
+    +POWER.length*SLOT_MESH.item+2+1+1   /* instanced item kinds + blades + fx + ambient Points (2026-10-25) */
+    +3*SLOT_MESH.enemy+1+1;               /* entities round: 3 death-squash slots + spawn ring + burst Points */
   check("S4.E fat-world draw calls === "+wantCalls+" (one-rim border,"
       +" <=500 gate)",
-    calls===wantCalls&&wantCalls===141&&calls<=500, String(calls));
+    calls===wantCalls&&wantCalls===156&&calls<=160, String(calls));
 });
 
 // ---- §S5 state overlays: WIN/LOSE/PAUSE paint the classic 2D layer in
@@ -2189,16 +2195,18 @@ await sec("EI",async()=>{
       Math.abs(rot-want)<1e-9&&Math.abs(rot-Math.PI/2)>1e-3,
       rot.toFixed(3)+" want "+want.toFixed(3)+" (atan2 would be "
         +(Math.PI/2).toFixed(3)+")"); }
-  // §6.8 rocket flame material alternates across floor(t*10)%2
+  // §6.8 rocket flame: entities round 2026-10-25 replaces the binary 10 Hz swap with a smooth lerp #ffde7a <-> #ff7a3a
   { const wr=createWorld(92,1); loadLevel(wr,1,false);
     wr.enemies=[mkE("rocket",100,80)];
     const scr=buildScene(wr); const sr=slotsOf(scr.group,"enemy")[0];
     wr.time=0.04; scr.update(wr);
-    const a="#"+sr.children[1].material.color.getHexString();
-    wr.time=0.11; scr.update(wr);
-    const b="#"+sr.children[1].material.color.getHexString();
-    check("EI.8 rocket flame mat swaps #ffde7a⇄#ff7a3a on floor(t*10)%2",
-      a==="#ffde7a"&&b==="#ff7a3a",a+"->"+b); }
+    const a=sr.children[1].material.color.clone();
+    wr.time=0.33; scr.update(wr);
+    const b=sr.children[1].material.color.clone();
+    const inside=(c)=>c.g<=0.87+1e-6&&c.g>=0.24-1e-6;   // linear g of #ff7a3a..#ffde7a spans ~[0.19,0.73]
+    check("EI.8 rocket flame colour is a smooth lerp between #ffde7a and #ff7a3a (no 10 Hz step)",
+      !a.equals(b)&&a.r>0.99&&b.r>0.99&&a.g<0.8&&b.g<0.8&&a.g>0.15&&b.g>0.15,
+      "#"+a.getHexString()+"->#"+b.getHexString()); }
   // §6.9 headless fallback colors bright, zero DOM
   { const pools=createPools(BIOMES[0],null);
     const drive=(t,en)=>pools.update({players:[],enemies:en,bombs:[],
@@ -2227,9 +2235,11 @@ await sec("EI",async()=>{
     const r=createRenderer3D(null,null,{audio:null,hud:null});
     r.render(wf,1/60);
     const calls=countDrawCalls(r._dbg.scene);
-    check("EI.10 fat-world draw calls pinned at 141 (≤500 gate,"
+    /* ambient round 2026-10-25: +1 draw, the ambient Points */
+    /* entities round 2026-10-25: +14 = 3 death slots x 4 + spawn ring + burst Points */
+    check("EI.10 fat-world draw calls pinned at 156 (≤160 gate,"
         +" 6-type mix)",
-      calls===141&&calls<=500,String(calls)); }
+      calls===156&&calls<=160,String(calls)); }
  });
 
 /* ---- §EB enemy 3D bodies (spec 2026-09-04-enemy-3d-bodies "Per foe"):
@@ -2337,9 +2347,10 @@ await sec("EB",async()=>{
 
   // --- burrow: the only body far longer than it is tall
   { const d=dim(ENEMY_3D.burrow.geo);
-    check("EB.7 burrow hull is a LOW SEGMENTED grub: fore-aft length > 2.2x"
+    /* entities round 2: re-matched to the 2D grub (a chunky head + two trailing segments, not a log): 1.7x */
+    check("EB.7 burrow hull is a LOW SEGMENTED grub: fore-aft length > 1.7x"
         +" its height, and it hugs the floor",
-      d.z/d.y>2.2&&EH.e_burrow+d.b.min.y<R("burrow")*0.1,
+      d.z/d.y>1.7&&EH.e_burrow+d.b.min.y<R("burrow")*0.1,
       "z/y="+(d.z/d.y).toFixed(2)); }
 
   // --- shade: no feet, no shadow, a floor glow instead
@@ -2431,8 +2442,7 @@ await sec("EB",async()=>{
     check("EB.12 boomerang socket eye COUNTER-SPINS the slot: the hem turns"
         +" at t*10 but the eye holds a fixed world orientation",
       Math.abs(s.rotation.y-(0.37*10)%(Math.PI*2))<1e-9
-      &&Math.abs(face.rotation.z+s.rotation.y)<1e-9
-      &&world.angleTo(flat)<1e-5,
+      &&world.angleTo(flat)<1e-5,   /* entities round: the eye takes the inverse of spin AND sway, so only the world orientation is pinned */
       "slot="+s.rotation.y.toFixed(3)+" face.z="+face.rotation.z.toFixed(3)
         +" worldErr="+world.angleTo(flat).toExponential(1)); }
 
@@ -2443,10 +2453,12 @@ await sec("EB",async()=>{
     ws.time=0; scs.update(ws);
     const lens=slotsOf(scs.group,"enemy")[0].children[0];
     const s0=lens.scale.x;
-    ws.time=Math.PI/6; scs.update(ws);       // sin(3t)==1 peak
-    check("EB.13 stationary hex lens PULSES on sin(3t) (2D lens-core parity)",
-      Math.abs(s0-1)<1e-9&&lens.scale.x>1.02,
-      s0.toFixed(3)+"->"+lens.scale.x.toFixed(3)); }
+    let lo=9, hi=0;
+    for(let k=0;k<45;k++){ ws.time=k*0.05; scs.update(ws); lo=Math.min(lo,lens.scale.x); hi=Math.max(hi,lens.scale.x); }
+    /* entities round: the pulse is 1+.12 sin(3t+phase) (phase from e.home), so pin the swing, not the phase */
+    check("EB.13 stationary hex lens PULSES on sin(3t+phase) (2D lens-core parity)",
+      hi>1.1&&lo<0.9&&hi<=1.12+1e-9&&lo>=0.88-1e-9,
+      s0.toFixed(3)+" range "+lo.toFixed(3)+".."+hi.toFixed(3)); }
  });
 
 // ---- §MG mergeGeos is variadic and index-tolerant --------------------------
@@ -2631,14 +2643,14 @@ await sec("R9b",async()=>{
   const G={x:100,y:100,fx:1,fy:0,t:0};
   { const r=createRenderer3D(null,null,{audio:null,hud:null});
     r.render(fat(),1/60);
-    check("R9b.1 fat world with no o.ghost stays at 141 (ghost is lazy)",
-      countDrawCalls(r._dbg.scene)===141, String(countDrawCalls(r._dbg.scene)));
+    check("R9b.1 fat world with no o.ghost stays at 156 (ghost is lazy; +1 ambient Points, +14 entity pools)",
+      countDrawCalls(r._dbg.scene)===156, String(countDrawCalls(r._dbg.scene)));
     check("R9b.1b no ghost mesh exists before the first o.ghost",
       slotsOf(r._dbg.scene,"ghost").length===0); }
   { const r=createRenderer3D(null,null,{audio:null,hud:null});
     const n=(r.render(fat(),1/60,{ghost:G}),countDrawCalls(r._dbg.scene));
-    check("R9b.2 the same world racing a ghost is 142 (one merged draw), <=500",
-      n===142&&n<=500, String(n)); }
+    check("R9b.2 the same world racing a ghost is 157 (one merged draw), <=160",
+      n===157&&n<=160, String(n)); }
   const pools=createPools(BIOMES[0],null);
   const before=pools.player.children.map(c=>
     Array.from(c.geometry.attributes.position.array));

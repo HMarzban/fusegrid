@@ -1653,5 +1653,39 @@ function check(name, cond, detail) {
   }
 }
 
+// FLOOR page + the fourth GUIDE door: every tile named once, only the four tiles with rules claim a rule, the doors tile the plate without overlap, taps hit them
+{
+  const md = await import("../src/render/menudraw.js"), { shellGeo } = await import("../src/app/fit.js"), { TILE_HELP } = await import("../src/core/feat.js");
+  const rec = () => {
+    const texts = [], o = {
+      font: "10px x", textAlign: "left",
+      fillText(s) { texts.push({ s: String(s) }); },
+      measureText(s) { const m = /(\d+(?:\.\d+)?)px/.exec(o.font); return { width: String(s).length * 0.6 * (m ? +m[1] : 10) }; },
+      createLinearGradient: () => ({ addColorStop() {} }),
+      createRadialGradient: () => ({ addColorStop() {} }),
+    };
+    return { texts, c: new Proxy(o, { get: (t, p) => (p in t ? t[p] : () => {}), set: (t, p, v) => ((t[p] = v), true) }) };
+  };
+  const g = shellGeo(393, 852, 600, 520), NAMES = ["BOOSTER", "ICE PATCH", "CONVEYOR", "STREAM", "TRAP", "QUICKSAND", "PORTAL", "GATE"];
+  for (const [tg, L] of [["600x520", md.layout(600, 520)], ["608x352", md.layout(608, 352)], ["narrow", md.layout(g.w, g.h, g.logo)]]) {
+    for (const touch of [false, true]) {
+      const h = rec();
+      md.drawFloorHelp(h.c, L, 1.25, "2d", touch);
+      const ts = h.texts.map((t) => t.s), tag = `${tg}${touch ? " touch" : ""}`;
+      check(`FLOOR names all eight tiles once (${tag})`, NAMES.every((n) => ts.filter((x) => x === n).length === 1), ts.length);
+      check(`FLOOR claims a rule only for the ${Object.keys(TILE_HELP).length} tiles that have one (${tag})`,
+        ts.filter((x) => /^CORE · /.test(x)).length === Object.keys(TILE_HELP).length && ts.filter((x) => /^LOOK ONLY/.test(x)).length === NAMES.length - Object.keys(TILE_HELP).length);
+      const gd = md.guideGeom(L, touch), T = gd.tiles;
+      const inside = T.every((r) => r.x >= gd.S.x && r.x + r.w <= gd.S.x + gd.S.w && r.y >= gd.S.y && r.y + r.h <= gd.S.y + gd.S.h);
+      const apart = T.every((a, i) => T.every((b, j) => i >= j || a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y));
+      check(`GUIDE has four doors inside the plate that never overlap (${tag})`, T.length === 4 && inside && apart);
+      check(`GUIDE taps hit each door, off it backs out (${tag})`, T.every((r, i) => md.guideHit(r.x + r.w / 2, r.y + r.h / 2, L, 8, touch) === i) && md.guideHit(1, 1, L, 8, touch) === -1);
+      const d = rec();
+      md.drawGuide(d.c, L, 1.25, 3, "2d", touch);
+      check(`GUIDE draws the FLOOR door and its label (${tag})`, d.texts.some((t) => t.s === "FLOOR") && d.texts.some((t) => /^8/.test(t.s)));
+    }
+  }
+}
+
 console.log("\n  MENUDRAW RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);

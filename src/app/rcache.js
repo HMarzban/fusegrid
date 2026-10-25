@@ -3,12 +3,13 @@ export const REL_T = 10000;
 const STUB = () => ({ ctx: { save() {}, restore() {}, translate() {}, scale() {} }, render() {}, consumeEvents() {} });
 
 export function mountRenderers(env) {
-  const { canvas, rig, make, size, kind, onSwap, onReady, loadRenderer3D } = env;
+  const { canvas, rig, make, size, kind, onSwap, onReady, onFail, loadRenderer3D, loadRendererPx } = env;
   const opts = env.opts || {};
   const perf = () => (env.perf ? env.perf() : null);
   const el = (id) => (typeof document !== "undefined" && document && document.getElementById ? document.getElementById(id) : null);
   const cache = {}, seen = {}, slept = {};
-  let mk3d = opts.createRenderer3D || null, threeP = null, lastK = null;
+  const mk = { "3d": opts.createRenderer3D || null, px: opts.createPixelRenderer || null }, LD = { "3d": [loadRenderer3D, "createRenderer3D"], px: [loadRendererPx, "createPixelRenderer"] }, loading = {};
+  let lastK = null;
   if (canvas && canvas.getContext) canvas.getContext("2d", { alpha: true });
   function sizeCanvases(k) {
     const { w, h } = size(k);
@@ -22,9 +23,20 @@ export function mountRenderers(env) {
   }
   function build(k, glEl, K) {
     const o = { audio: opts.audio || null, perf: K };
-    const r = k === "3d" ? mk3d(glEl, canvas, { ...o, rig }) : k === "px" ? make.px(el("px"), canvas, o) : make["2d"](canvas, { kind: k, ...o });
+    const r = k === "3d" ? mk["3d"](glEl, canvas, { ...o, rig }) : k === "px" ? mk.px(el("px"), canvas, o) : make["2d"](canvas, { kind: k, ...o });
     if (lastK && r && r.setPerf) r.setPerf(K || lastK);
     return r;
+  }
+  function load(k) {
+    if (loading[k]) return loading[k];
+    const [ld, fn] = LD[k];
+    return (loading[k] = ld().then((m) => {
+      mk[k] = m[fn];
+      if (kind() === k) onSwap(get(k));
+    }).catch((e) => {
+      console.warn(k === "px" ? "PIXEL load failed" : "3D load failed", e);
+      if (k === "px" && onFail) onFail(k);
+    }).then(() => { if (k === "3d" || kind() !== "3d") onReady(); }));
   }
   function get(k) {
     if (k === "3d" && cache["3d"] && cache["3d"].dead) drop3d();
@@ -35,12 +47,8 @@ export function mountRenderers(env) {
       if (cache[k].invalidate) cache[k].invalidate(true);
       return cache[k];
     }
-    if (k === "3d" && !mk3d) {
-      if (!threeP)
-        threeP = loadRenderer3D().then((m) => {
-          mk3d = m.createRenderer3D;
-          if (kind() === "3d") onSwap(get("3d"));
-        }).catch((e) => console.warn("3D load failed", e)).then(() => onReady());
+    if ((k === "3d" || k === "px") && !mk[k]) {
+      load(k);
       return cache["2d"] || get("2d");
     }
     try {
@@ -51,11 +59,8 @@ export function mountRenderers(env) {
     }
     return cache[k];
   }
-  if (env.eager && !mk3d)
-    loadRenderer3D().then((m) => {
-      mk3d = m.createRenderer3D;
-      if (kind() === "3d") onSwap(get("3d"));
-    }).catch((e) => console.warn("3D load failed", e)).then(() => onReady());
+  if (env.eager && !mk["3d"]) load("3d");
+  if (env.eagerPx && !mk.px) load("px");
   function drop3d() {
     const r = cache["3d"];
     if (!r) return;
@@ -67,7 +72,7 @@ export function mountRenderers(env) {
   }
   function rebuild3d(K) {
     const old = cache["3d"], oe = el("gl");
-    if (!old || !oe || !mk3d || !oe.cloneNode || !oe.parentNode) return false;
+    if (!old || !oe || !mk["3d"] || !oe.cloneNode || !oe.parentNode) return false;
     const fresh = oe.cloneNode(false);
     if (fresh.removeAttribute) fresh.removeAttribute("id");
     fresh.hidden = true;
@@ -125,6 +130,7 @@ export function mountRenderers(env) {
       for (const c in cache) if (cache[c].invalidate) cache[c].invalidate();
     },
     tick,
-    has3d: () => !!mk3d,
+    has3d: () => !!mk["3d"],
+    hasPx: () => !!mk.px,
   };
 }

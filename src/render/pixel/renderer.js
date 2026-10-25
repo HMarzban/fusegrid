@@ -41,10 +41,13 @@ import {sfxOf} from "../../audio/item.js";
 import {drawHudChips, drawAbilityBar, drawOverlay, overlayBox, drawCoach, drawCoach2} from "../scenes.js";
 import {onEvent, updateFx, getShake as fxShake, getFlash, getFx, feedFx, drawFxOverlay, drawPickupFx, syncFx, initFx} from "../fx.js";
 import {createAtlas} from "./atlas.js";
-import {setPixelArt, hudIcon} from "./hudart.js";
+import {setPixelArt, hudIcon} from "../hudart.js";
 import {createView, resetView, drawPixelWorld, trackGrid} from "./world.js";
 import {createOneShots, feedShot} from "./oneshot.js";
 import {animClock, newClock} from "./anim.js";
+import {armAmbient} from "./ambient.js";
+import {fxOf} from "../entityfx.js";
+import {hudPlate, stageGlow} from "../frame.js";
 import {NATIVE_W, NATIVE_H, evenShake, kOf, pxM, zOf, finalMatrix} from "./snap.js";
 
 const W = CFG.COLS * CFG.TILE, H = CFG.ROWS * CFG.TILE;
@@ -104,7 +107,7 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
   let armed = false, perf = null, ep, inv = true, lastR = -Infinity, BW = 0, BH = 0;
   const sig = [];
 
-  function reset() { V.shots.reset(); resetView(V); clock.t = 0; clock.w = null; lastGrid = null; lastWorld = null; inv = true; }
+  function reset() { V.shots.reset(); if (lastWorld) fxOf(lastWorld, "px").clear(); resetView(V); clock.t = 0; clock.w = null; lastGrid = null; lastWorld = null; inv = true; }
   function setPerf(K) { armed = true; perf = K || perf; const e = K && K.epoch; if (e !== ep) { ep = e; inv = true; } }
   function invalidate() { inv = true; }
   function sleep() {
@@ -126,6 +129,7 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
   function consumeEvents(world, dt, playSfx = true) {
     syncFx(world);
     feedFx(world, dt || CFG.STEP);
+    fxOf(world, "px").feed(world.events, clock.t);
     for (let i = 0; i < world.events.length; i++) {
       const ev = world.events[i];
       onEvent(world, ev, world.time);
@@ -188,11 +192,13 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
   function render(world, dt, o) {
     if (!world) return;
     const paused = world.state === "PAUSE", ev = world.events.length > 0;
-    if (world !== lastWorld || world.grid !== lastGrid) { V.shots.reset(); resetView(V); if (wasPaused) initFx(); lastWorld = world; lastGrid = world.grid; }
+    if (world !== lastWorld || world.grid !== lastGrid) { V.shots.reset(); if (world === lastWorld) fxOf(world, "px").clear(); resetView(V); if (wasPaused) initFx(); lastWorld = world; lastGrid = world.grid; }
     wasPaused = paused;
     animClock(clock, world);
+    stageGlow(overlayCanvas, world.level);
     consumeEvents(world, dt, !(o && o.sfx === false));
     V.t = clock.t; V.dt = clock.dt;
+    armAmbient(V, world, o, dt);
     V.shots.expire(V.t);
     trackGrid(V, world);
     V.ghost = (o && o.ghost) || null;
@@ -228,6 +234,7 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
       drawOverlay(ovCtx, world, B.w, B.h, B.cx, B.cy, o && o.pause, o && o.time, o && o.run, o && o.toast);
       if (world.state === "WIN" || world.state === "LOSE") drawPartsOver(V.parts);
     }
+    if (o && o.hud === true) hudPlate(ovCtx, true, world.level);
     if (o && o.hud === true) drawHudChips(ovCtx, world, o && o.time, hudIco);
     if (o && o.hud === true) drawAbilityBar(ovCtx, world, hudIco);
     if (o && o.hud === true && world.state === "PLAY") drawFxOverlay(ovCtx);

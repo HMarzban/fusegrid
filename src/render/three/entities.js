@@ -14,11 +14,16 @@
    scale + big tilted face planes, stationary square shell + magenta core +
    visor slit, boomerang flat C-torus with hub/bead spinning at t*10,
    rocket upright 3-sided pyramid on a pad with flickering flame). Idle
-   bob/stomp/spin/breathe are render-side only (never touch sim state). */
+   bob/stomp/spin/breathe are render-side only (never touch sim state).
+   Entities round 2026-10-25: foes and pickups move from the shared spec in
+   ../motion.js through entityanim.js (transforms only, the four-mesh slot ABI
+   is untouched): bob/idle/breathe/blink/sway/hunter lean, smoothed facing, a
+   spawn pop + floor ring, a pooled death squash (entityfx ghosts), per-instance
+   pickup phase, a glint sweep and collect bursts (burstfx.js). */
 import * as THREE from "../../../vendor/three.module.js";
 import { CFG } from "../../core/config.js";
 import { POWER, spawnEnemy } from "../../core/entities.js";
-import { ITEM_FAMILY, ITEM_SHAPE } from "../icons.js";
+import { ITEM_FAMILY } from "../icons.js";
 /* One hull hex for both renderers — R1's mid-value armour has to move in
    lockstep or the two players stop being one character. sprites.js pulls in
    icons.js / config.js / enemybody.js only, so this stays a DAG. */
@@ -26,6 +31,11 @@ import { PLAYER_HULL } from "../sprites.js";
 import { createBlast } from "./blast.js";
 import { live } from "./upload.js";
 import { getFxOpts } from "../fx.js";
+import { feedContact, CONTACT } from "./groundfx.js";
+import { fxOf } from "../entityfx.js";
+import { MOTION } from "../motion.js";
+import { makeFoe, stepFoe, itemPose, ghostPose, faceYaw, RING_OP } from "./entityanim.js";
+import { createBurstFx } from "./burstfx.js";
 
 const W2 = (CFG.COLS * CFG.TILE) / 2,
   D2 = (CFG.ROWS * CFG.TILE) / 2;
@@ -162,96 +172,73 @@ function fitUV(g) {
   return g;
 }
 
-/* Items (items-player-art 2026-09-05) for the FROZEN rig: at 52.2 deg the
-   PLAN-VIEW FOOTPRINT is the primary read, and a solid of revolution is a
-   circle in plan view by definition — which is why six of the old twelve
-   were the same disc at different radii. Upright families are low-seg
-   lathes (seg IS the identity axis: 3/4/6/8); flat families are an outer
-   shelf fused with an inner mesa, whose 0.205r riser is the lit facet that
-   gives a single flat Lambert its two-tone. The flat outlines are
-   ITEM_SHAPE, the same table drawIcon draws, so the notch/point count a
-   kind shows in 2D is the count it shows in 3D. */
-function mesa(out, ins, r) {
-  /* ExtrudeGeometry's cap normals follow the shape's signed area, and the
-     twelve authored outlines do not share a winding — so half the flat
-     bodies would face their lit cap at the floor. Same class of trap as the
-     lathe bottom -> top rule; normalised here so ITEM_SHAPE stays one table
-     byte-identical for both renderers. */
-  const cw = (p) => {
-    let a = 0;
-    for (let i = 0; i < p.length; i++) {
-      const q = p[(i + 1) % p.length];
-      a += p[i][0] * q[1] - q[0] * p[i][1];
-    }
-    return a < 0 ? p.slice().reverse() : p;
-  };
-  const parts = [plate(cw(out), 0.55, r).rotateX(-Math.PI / 2)];
-  for (const p of ins)
-    parts.push(
-      plate(cw(p), 0.4, r)
-        .rotateX(-Math.PI / 2)
-        .translate(0, 0.28 * r, 0),
-    );
-  return mergeGeos(...parts);
-}
-/* Mesas track the P1.5 semantic outlines: each one is the lit facet on the
-   feature that names the object — the boot's toe, the thrown orb, the gap
-   the wall was breached at, the detonator's button plate, the beam's core,
-   the blast's heart, the arrowhead's forward spine. */
-/* Both of these sit UNDER a quadratic edge, so they were derived by
-   evaluating the curve, not by eyeballing the vertex list. kick's instep
-   bows down to y=0.00 at x=0.53 and only reaches y=-0.18 at its x=0.92
-   endpoint; throw's orb is the circle centred (0.14, 0.36) r 0.52, which is
-   nowhere near the nub at y=-0.56. A mesa poking outside its shelf merges
-   as a floating shelf, which reads as a rendering bug. */
-const M_KICK = [[0.48, 0.1], [0.86, -0.04], [0.94, 0.2], [0.52, 0.34]];
-const M_THROW = [[0.06, 0], [0.34, 0.28], [0.06, 0.56], [-0.22, 0.28]];
-const M_PASS = [[-0.9, 0.24], [0.9, 0.24], [0.9, 0.56], [-0.9, 0.56]];
-const M_PASS_L = [[-0.68, -0.5], [-0.4, -0.5], [-0.4, 0.06], [-0.68, 0.06]];
-const M_PASS_R = [[0.4, -0.5], [0.68, -0.5], [0.68, 0.06], [0.4, 0.06]];
-const M_REMOTE = [[-0.3, 0.1], [0.3, 0.1], [0.3, 0.6], [-0.3, 0.6]];
-const M_LINE = [
-  [-0.86, -0.07], [0.3, -0.07], [0.3, -0.28],
-  [0.88, 0], [0.3, 0.28], [0.3, 0.07], [-0.86, 0.07],
-];
-const M_POWER = [
-  [0, -0.56], [0.17, -0.17], [0.56, 0], [0.17, 0.17],
-  [0, 0.56], [-0.17, 0.17], [-0.56, 0], [-0.17, -0.17],
-];
-const M_PIERCE = [[0, -0.92], [0.22, -0.4], [0, -0.52], [-0.22, -0.4]];
+/* Items (entities round 2 2026-10-25, replaces the 2026-09-05 floating
+   primitives): every pickup is a raked BADGE, the same glyph identity as 2D
+   and PIXEL. One merged geometry per kind = a thin rim plate in the kind
+   colour + a front plate whose face is the atlas cell item_<t> (the 2D glyph
+   on its navy tile, painted by paintItemFace), raked toward the rig so the
+   glyph reads undistorted. The family only picks the silhouette (cap circle,
+   vit hexagon, utl rounded square, bls diamond); the glyph is the semantic.
+   Per-vertex aF marks the front face (1) for the body material's shader. */
 const IT = CFG.TILE;
-const ITEM_MAKE = {
-  fire: () =>
-    lathe([[0.62, 0], [0.92, 0.3], [0.7, 0.66], [0.34, 1.26], [0, 2.0]], 3, IT * 0.22),
-  bomb: () =>
-    lathe(
-      [[0.74, 0], [1.0, 0.26], [0.8, 0.52], [1.0, 0.8], [0.78, 1.06], [0.4, 1.44], [0, 1.62]],
-      4,
-      IT * 0.24,
-    ),
-  speed: () =>
-    lathe([[0.55, 0], [0.86, 0.34], [0.6, 0.78], [0.26, 1.5], [0, 2.3]], 3, IT * 0.2).scale(
-      1.9,
-      1,
-      0.5,
-    ),
-  heart: () => {
-    const D = lathe([[0.86, 0], [1.0, 0.22], [0.84, 0.52], [0.5, 0.82], [0, 1.0]], 6, IT * 0.16);
-    return mergeGeos(
-      D.clone().translate(-IT * 0.12, 0, 0),
-      D.clone().translate(IT * 0.12, 0, 0),
-    );
-  },
-  shield: () =>
-    lathe([[1.0, 0], [1.06, 0.18], [0.96, 0.4], [0.66, 0.72], [0, 0.92]], 8, IT * 0.21),
-  kick: () => mesa(ITEM_SHAPE.kick, [M_KICK], IT * 0.24),
-  throw: () => mesa(ITEM_SHAPE.throw, [M_THROW], IT * 0.23),
-  pass: () => mesa(ITEM_SHAPE.pass, [M_PASS, M_PASS_L, M_PASS_R], IT * 0.24),
-  remote: () => mesa(ITEM_SHAPE.remote, [M_REMOTE], IT * 0.24),
-  line: () => mesa(ITEM_SHAPE.line, [M_LINE], IT * 0.26),
-  power: () => mesa(ITEM_SHAPE.power, [M_POWER], IT * 0.23),
-  pierce: () => mesa(ITEM_SHAPE.pierce, [M_PIERCE], IT * 0.24),
+const BADGE_R = IT * 0.3,
+  BADGE_RAKE = 0.8;
+const ring = (n, f) => Array.from({ length: n }, (_, i) => f((i / n) * Math.PI * 2));
+const OUTLINE = {
+  cap: ring(24, (a) => [Math.cos(a), Math.sin(a)]),
+  vit: ring(6, (a) => [Math.cos(a + Math.PI / 6), Math.sin(a + Math.PI / 6)]),
+  utl: ring(16, (a) => {
+    const c = Math.cos(a),
+      s = Math.sin(a),
+      k = 0.82 / Math.max(Math.abs(c), Math.abs(s));
+    return [c * Math.min(1, k * 1.2), s * Math.min(1, k * 1.2)];
+  }),
+  bls: ring(16, (a) => {
+    const c = Math.cos(a),
+      s = Math.sin(a),
+      k = 1.08 / (Math.abs(c) + Math.abs(s));
+    return [c * k, s * k];
+  }),
 };
+const cwOutline = (p) => {
+  let a = 0;
+  for (let i = 0; i < p.length; i++) {
+    const q = p[(i + 1) % p.length];
+    a += p[i][0] * q[1] - q[0] * p[i][1];
+  }
+  return a < 0 ? p.slice().reverse() : p;
+};
+function badge(fam) {
+  const o = cwOutline(OUTLINE[fam] || OUTLINE.cap);
+  const rim = plate(o, 0.2, BADGE_R * 1.16);
+  const front = plate(o, 0.1, BADGE_R);
+  front.translate(0, 0, BADGE_R * 0.1);
+  const flag = (g, v, uvFace) => {
+    const n = g.attributes.position.count,
+      nor = g.attributes.normal,
+      pos = g.attributes.position,
+      uv = g.attributes.uv,
+      f = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      f[i] = v && nor.getZ(i) > 0.9 ? 1 : 0;
+      if (uvFace) uv.setXY(i, (pos.getX(i) / BADGE_R + 1) / 2, (pos.getY(i) / BADGE_R + 1) / 2);
+    }
+    return f;
+  };
+  const fr = flag(rim, false, false),
+    ff = flag(front, true, true);
+  const g = mergeGeos(rim, front);
+  const aF = new Float32Array(fr.length + ff.length);
+  aF.set(fr);
+  aF.set(ff, fr.length);
+  g.setAttribute("aF", new THREE.BufferAttribute(aF, 1));
+  g.rotateX(-BADGE_RAKE);
+  rim.dispose();
+  front.dispose();
+  return g;
+}
+const ITEM_MAKE = {};
+for (const pd of POWER) ITEM_MAKE[pd.t] = () => badge(ITEM_FAMILY[pd.t] || "cap");
 export const ITEM_GEO = {};
 for (const pd of POWER) ITEM_GEO[pd.t] = sharedGeo(ITEM_MAKE[pd.t]());
 
@@ -334,9 +321,9 @@ function lambertMat(color) {
       { geo: side(1), mat: DARK, pos: [0, 0, 0], rot: [0, 0, 0] },
     ],
     face: {
-      geo: sharedGeo(new THREE.PlaneGeometry(r * 1.3, r * 0.6)),
-      pos: [0, r * 0.16, r * 0.92],
-      rot: [-0.3, 0, 0],
+      geo: sharedGeo(new THREE.PlaneGeometry(r * 1.6, r * 0.8)),
+      pos: [0, r * 0.2, r * 0.9],
+      rot: [-0.55, 0, 0],
     },
     bob: [1.8, 12],
   });
@@ -377,7 +364,7 @@ function lambertMat(color) {
   skirt.translate(0, -r * 1.02, 0);
   putEnemy("stationary", {
     geo: sharedGeo(mergeGeos(cell, emb)),
-    mat: lambertMat("#2a1030"),
+    mat: lambertMat(new THREE.Color(PROTO.stationary.color).multiplyScalar(0.8)),   /* the 2D sentry violet, lit down a notch (entities round 2: was a near-black #2a1030 obelisk) */
     h: r * 1.15,
     details: [
       {
@@ -394,9 +381,9 @@ function lambertMat(color) {
       },
     ],
     face: {
-      geo: sharedGeo(new THREE.PlaneGeometry(r * 1.2, r * 0.42)),
-      pos: [0, r * 0.34, r * 1.16],
-      rot: [0, 0, 0],
+      geo: sharedGeo(new THREE.PlaneGeometry(r * 1.5, r * 0.75)),
+      pos: [0, r * 0.3, r * 1.16],
+      rot: [-0.5, 0, 0],
     },
     bob: [1.5, 3],
   });
@@ -476,9 +463,11 @@ function lambertMat(color) {
      (raked crest + down-angled brow), B the skids that ground it. */
   const chest = new THREE.SphereGeometry(r, 14, 10);
   chest.scale(0.74, 1.26, 0.9);
-  const tail = new THREE.ConeGeometry(r * 0.5, r * 0.95, 10);
-  tail.rotateX(-Math.PI / 2);
-  tail.translate(0, 0, -r * 0.85);
+  /* the 2D chaser is a DROP: a round rear and a point toward travel (not a
+     fish with a tail behind) */
+  const tail = new THREE.ConeGeometry(r * 0.52, r * 0.95, 10);
+  tail.rotateX(Math.PI / 2);
+  tail.translate(0, -r * 0.1, r * 0.82);
   const hull = mergeGeos(chest, tail);
   hull.rotateX(0.2);
   const crest = new THREE.ConeGeometry(r * 0.5, r * 0.95, 4);
@@ -512,9 +501,9 @@ function lambertMat(color) {
       },
     ],
     face: {
-      geo: sharedGeo(new THREE.PlaneGeometry(r * 1.1, r * 0.5)),
-      pos: [0, -r * 0.05, r * 0.95],
-      rot: [-0.25, 0, 0],
+      geo: sharedGeo(new THREE.PlaneGeometry(r * 1.2, r * 0.6)),
+      pos: [0, r * 0.3, r * 0.74],
+      rot: [-0.5, 0, 0],
     },
     bob: [1.2, 9],
   });
@@ -652,15 +641,15 @@ function lambertMat(color) {
     const c = new THREE.ConeGeometry(r * 0.2, r * 0.46, 3);
     c.rotateX(Math.PI / 2);
     c.rotateY(-s * 0.42);
-    c.translate(s * r * 0.4, -r * 0.1, r * 1.14);
+    c.translate(s * r * 0.4, -r * 0.1, r * 1.22);
     return c;
   };
   const cbrow = new THREE.BoxGeometry(r * 1.02, r * 0.14, r * 0.3);
   cbrow.rotateX(-0.3);
-  cbrow.translate(0, r * 0.3, r * 0.88);
+  cbrow.translate(0, r * 0.34, r * 1.0);
   const puff = [];
   const PS = [0.24, 0.2, 0.15],
-    PZ = [-1.4, -1.58, -1.72],
+    PZ = [-1.3, -1.46, -1.6],
     PY = [0.2, 0.28, 0.34];
   for (let i = 0; i < 3; i++) {
     const g = new THREE.SphereGeometry(r * PS[i], 8, 6);
@@ -679,9 +668,9 @@ function lambertMat(color) {
   putEnemy("burrow", {
     geo: sharedGeo(
       mergeGeos(
-        seg(0.86, 0.9, 0.66, 0.02, 0.52, 14, 8),
-        seg(0.74, 0.94, 0.62, -0.04, -0.3, 12, 8),
-        seg(0.56, 0.96, 0.56, -0.1, -1, 12, 6),
+        seg(1.0, 0.98, 0.7, 0.04, 0.42, 14, 8),
+        seg(0.82, 0.96, 0.66, -0.04, -0.3, 12, 8),
+        seg(0.54, 0.9, 0.54, -0.1, -0.86, 12, 6),
       ),
     ),
     mat: phongMat(PROTO.burrow.color, 40),
@@ -701,9 +690,9 @@ function lambertMat(color) {
       },
     ],
     face: {
-      geo: sharedGeo(new THREE.PlaneGeometry(r * 1.05, r * 0.44)),
-      pos: [0, r * 0.1, r * 1.04],
-      rot: [-0.3, 0, 0],
+      geo: sharedGeo(new THREE.PlaneGeometry(r * 1.5, r * 0.75)),
+      pos: [0, r * 0.2, r * 1.0],
+      rot: [-0.55, 0, 0],
     },
     bob: [1.1, 8],
   });
@@ -766,9 +755,9 @@ function lambertMat(color) {
       },
     ],
     face: {
-      geo: sharedGeo(new THREE.PlaneGeometry(r * 0.8, r * 0.38)),
-      pos: [0, r * 0.3, r * 0.62],
-      rot: [-0.9, 0, 0],
+      geo: sharedGeo(new THREE.PlaneGeometry(r * 1.2, r * 0.6)),
+      pos: [0, r * 0.3, r * 0.6],
+      rot: [-0.8, 0, 0],
     },
     bob: [2.2, 6],
   });
@@ -986,10 +975,11 @@ export function createPools(biome, atlas) {
     }
     return m;
   }
-  for (let i = 0; i < POOL_CAPS.enemies; i++) {
+  function makeSlot(tag) {
     const s = new THREE.Mesh(GEO.e_walker, MATE.e_walker);
-    s.userData.tag = "enemy";
+    if (tag) s.userData.tag = tag;
     s.userData.k = "e_walker";
+    s.rotation.order = "YXZ";
     s.castShadow = true;
     s.receiveShadow = true;
     s.visible = false;
@@ -1004,9 +994,79 @@ export function createPools(biome, atlas) {
     ey.position.set(...EYT.e_walker);
     ey.rotation.set(...EYR.e_walker);
     s.add(ey);
+    return s;
+  }
+  /* type swap by reference on a type edge: hull, both details and the face
+     plane follow, and every child transform returns to its authored pose
+     (the per-frame animation below only ever writes transforms) */
+  function skin(s, kk) {
+    s.userData.k = kk;
+    s.geometry = GEO[kk];
+    s.material = MATE[kk];
+    /* shade alone casts nothing — its additive floor glow IS its ground
+       contact, exactly as in 2D. Additive accents (trail, plume,
+       exhaust, glow) never cast either: a hard shadow under a glow reads
+       as a bug. Both ride the type edge, so the per-frame path stays
+       allocation- and branch-free. */
+    const cast = kk !== "e_shade";
+    s.castShadow = cast;
+    const d = s.children;
+    for (let j = 0; j < 2; j++) {
+      d[j].geometry = GD[kk][j];
+      d[j].material = MD[kk][j];
+      d[j].castShadow = cast && MD[kk][j].blending !== THREE.AdditiveBlending;
+      d[j].position.set(GT[kk][j][0], GT[kk][j][1], GT[kk][j][2]);
+      d[j].rotation.set(GR[kk][j][0], GR[kk][j][1], GR[kk][j][2]);
+      d[j].scale.setScalar(1);
+    }
+    d[2].geometry = GF[kk];
+    d[2].material = eyeFor(kk.slice(2));
+    d[2].position.set(EYT[kk][0], EYT[kk][1], EYT[kk][2]);
+    d[2].rotation.set(EYR[kk][0], EYR[kk][1], EYR[kk][2]);
+    d[2].scale.setScalar(1);
+  }
+  for (let i = 0; i < POOL_CAPS.enemies; i++) {
+    const s = makeSlot("enemy");
     enemies.push(s);
     group.add(s);
   }
+  /* DEATH: three more slots (entityfx ghosts, squashed by deathK), a spawn
+     ring InstancedMesh and the collect-burst Points. All hidden / empty when
+     unused: +12 +1 +1 draw calls in the fat-world count, none while idle. */
+  const GHOSTS = 3, deadSlots = [];
+  const flashMat = sharedMat(new THREE.MeshBasicMaterial({ color: "#ffffff" }));
+  for (let i = 0; i < GHOSTS; i++) {
+    const s = makeSlot("deathfoe");
+    deadSlots.push(s);
+    group.add(s);
+  }
+  const spawnRing = new THREE.InstancedMesh(
+    sharedGeo(
+      (() => {
+        const g = new THREE.RingGeometry(0.9, 1, 28);
+        g.rotateX(-Math.PI / 2);
+        return g;
+      })(),
+    ),
+    sharedMat(
+      new THREE.MeshBasicMaterial({
+        color: "#ffffff",
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      }),
+    ),
+    POOL_CAPS.enemies,
+  );
+  spawnRing.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  spawnRing.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(POOL_CAPS.enemies * 3), 3);
+  spawnRing.instanceColor.setUsage(THREE.DynamicDrawUsage);
+  spawnRing.frustumCulled = false;
+  spawnRing.count = 0;
+  spawnRing.userData.tag = "spawnring";
+  group.add(spawnRing);
+  const burst = createBurstFx();
+  group.add(burst.points);
   /* Bombs v2: glossy black sphere + thin tilted fuse rod + variant base ring
      + metal cap (children[0] body / [2] spark contract kept). */
   const bombBodyGeo = sharedGeo(
@@ -1061,44 +1121,48 @@ export function createPools(biome, atlas) {
      the body already states. It now carries FAMILY — the one accent
      channel an item gets. Four geometries, still twelve InstancedMeshes:
      geometry count is not draw count. */
-  const ITEM_RING_GEO = (() => {
-    const T = CFG.TILE,
-      flat = (g) => {
-        g.rotateX(-Math.PI / 2);
-        return g;
-      };
-    const utl = [],
-      bls = [new THREE.RingGeometry(T * 0.3, T * 0.36, 24)];
-    for (let i = 0; i < 6; i++)
-      utl.push(
-        new THREE.RingGeometry(T * 0.32, T * 0.44, 3, 1, (i * Math.PI) / 3, (Math.PI / 3) * 0.62),
-      );
-    for (let i = 0; i < 8; i++)
-      bls.push(
-        new THREE.RingGeometry(T * 0.36, T * 0.48, 2, 1, (i * Math.PI) / 4 - 0.1, 0.2),
-      );
-    return {
-      cap: sharedGeo(flat(new THREE.RingGeometry(T * 0.36, T * 0.41, 24))),
-      vit: sharedGeo(
-        flat(
-          mergeGeos(
-            new THREE.RingGeometry(T * 0.28, T * 0.32, 24),
-            new THREE.RingGeometry(T * 0.42, T * 0.46, 24),
-          ),
-        ),
-      ),
-      utl: sharedGeo(flat(mergeGeos(...utl))),
-      bls: sharedGeo(flat(mergeGeos(...bls))),
-    };
-  })();
+  /* ONE thin ring under every pickup (kind colour, additive); the badge
+     silhouette carries the family, so the old second ring / tick marks are gone. */
+  const ITEM_RING = sharedGeo(
+    (() => {
+      const g = new THREE.RingGeometry(CFG.TILE * 0.36, CFG.TILE * 0.41, 28);
+      g.scale(1.3, 1.3, 1);
+      g.rotateX(-Math.PI / 2);
+      return g;
+    })(),
+  );
   const RING_SCALE = { line: 0.86, pierce: 1.0, power: 1.16 };
   const itemMats = {},
     itemRings = {};
+  /* BODY SHADER (badge): aF = 1 on the front plate, whose face is the atlas
+     cell item_<t> drawn UNLIT (the 2D glyph reads at its authored colours);
+     the rim and edges stay the kind-colour Lambert. GLINT: a bright band
+     sweeps across the badge now and then (itemIdle's glint 0..1, -1 = none),
+     per-instance through the body mesh's own instanceColor.r (the tint is
+     neutralised in the shader), along the badge's local diagonal scaled by
+     its bounding radius. One program per (face texture | none). */
   function matForItem(t, col) {
     let m = itemMats[t];
     if (!m) {
       m = sharedMat(new THREE.MeshLambertMaterial());
       m.color.set(col || "#ffffff");
+      const ext = { value: 1 },
+        tex = atlas && atlas["item_" + t] instanceof THREE.Texture ? atlas["item_" + t] : null,
+        uFace = { value: tex };
+      ITEM_GEO[t].computeBoundingSphere();
+      ext.value = Math.max(1, ITEM_GEO[t].boundingSphere.radius);
+      m.onBeforeCompile = (sh) => {
+        sh.uniforms.uExt = ext;
+        if (tex) sh.uniforms.uFace = uFace;
+        sh.vertexShader = sh.vertexShader
+          .replace("#include <common>", "#include <common>\nattribute float aF;\nvarying float vGl;\nvarying vec3 vGP;\nvarying float vF;\nvarying vec2 vFu;")
+          .replace("#include <color_vertex>", "#include <color_vertex>\nvGl=instanceColor.r; vColor=vec3(1.0); vGP=position; vF=aF; vFu=uv;");
+        sh.fragmentShader = sh.fragmentShader
+          .replace("#include <common>", "#include <common>\nvarying float vGl;\nvarying vec3 vGP;\nvarying float vF;\nvarying vec2 vFu;\nuniform float uExt;" + (tex ? "\nuniform sampler2D uFace;" : ""))
+          .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\nvec3 gAdd=vec3(0.0);\nif(vGl>=0.0){ float gs=dot(vGP,vec3(0.55,0.5,0.55))/uExt; float gb=1.0-smoothstep(0.0,0.3,abs(gs-mix(-1.3,1.3,vGl))); gAdd=vec3(1.0,0.97,0.88)*gb*0.45; }")
+          .replace("#include <opaque_fragment>", (tex ? "if(vF>0.5) outgoingLight=texture2D(uFace,vFu).rgb;\n" : "") + "outgoingLight+=gAdd;\n#include <opaque_fragment>");
+      };
+      m.customProgramCacheKey = () => "itembadge" + (tex ? 1 : 0);
       itemMats[t] = m;
     }
     return m;
@@ -1109,7 +1173,7 @@ export function createPools(biome, atlas) {
       m = sharedMat(
         new THREE.MeshBasicMaterial({
           transparent: true,
-          opacity: 0.4,
+          opacity: RING_OP,
           depthWrite: false,
           blending: THREE.AdditiveBlending,
         }),
@@ -1128,6 +1192,8 @@ export function createPools(biome, atlas) {
       POOL_CAPS.items,
     );
     body.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    body.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(POOL_CAPS.items * 3).fill(-1), 3);
+    body.instanceColor.setUsage(THREE.DynamicDrawUsage);
     body.frustumCulled = false;
     body.castShadow = true;
     body.count = 0;
@@ -1136,11 +1202,13 @@ export function createPools(biome, atlas) {
     itemBodies[pd.t] = body;
     group.add(body);
     const ring = new THREE.InstancedMesh(
-      ITEM_RING_GEO[ITEM_FAMILY[pd.t] || "cap"],
+      ITEM_RING,
       ringForItem(pd.t, pd.col),
       POOL_CAPS.items,
     );
     ring.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    ring.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(POOL_CAPS.items * 3).fill(1), 3);
+    ring.instanceColor.setUsage(THREE.DynamicDrawUsage);
     ring.frustumCulled = false;
     ring.count = 0;
     ring.userData.tag = "item";
@@ -1162,9 +1230,73 @@ export function createPools(biome, atlas) {
   }
   group.add(player);
 
+  /* ENTITY MOTION state. t is the PAUSE-frozen clock (wrapper.js swaps pzT
+     into world.time around this call), so every pose below freezes in PAUSE;
+     dt is its delta (0 when the clock did not advance). Foe state keys on the
+     enemy OBJECT, item birth on the item object: never a slot index. */
+  const FS = new WeakMap(),
+    IB = new WeakMap();
+  const FLAME_M = sharedMat(new THREE.MeshBasicMaterial({ color: "#ffde7a" }));
+  const FC_A = new THREE.Color("#ffde7a"),
+    FC_B = new THREE.Color("#ff7a3a"),
+    WHITE = new THREE.Color("#ffffff");
+  const _ip = { hy: 0, ry: 0, rz: 0, sc: 1, glint: -1, ringK: 1, ringS: 1, shadow: 1 };
+  const _gp = { sx: 1, sy: 1, flash: 0 };
+  const Q_FLAT = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+  let lastT = 0,
+    lastWorld = null,
+    lastGrid = null,
+    gUntil = -1,
+    bUntil = -1,
+    fid = 0,
+    prevE = [],
+    curE = [],
+    prevI = [],
+    curI = [],
+    dyi = 0;
+  const TAU = Math.PI * 2,
+    NO_BURSTS = [],
+    fresh = [],
+    DY = [0, 1, 2, 3, 4, 5, 6, 7].map(() => ({ x: 0, y: 0, type: "", yaw: 0 }));
+  let dprHint = typeof devicePixelRatio !== "undefined" && devicePixelRatio > 0 ? Math.min(devicePixelRatio, 2) : 1;
+  /* The sim drains world.events before this update runs (wrapper
+     consumeEvents) and its AI filters dead foes out of world.enemies inside
+     the step, so kills and pickups are read as EDGES on the objects we
+     already track: a foe drawn last frame that is gone or dead now was
+     killed, a pickup drawn last frame that is now taken was collected. The
+     synthetic kill / power events go through entityfx on this frame's clock.
+     A new room (world, grid or a clock that went backwards) resets, so a
+     room change never fires a burst. */
+  function feed(world, dpr) {
+    if (dpr > 0) dprHint = dpr;
+  }
+  function ground(o, r, k) {
+    const a = CONTACT.v.value;
+    a[o + 2] *= r;
+    a[o + 3] *= k;
+  }
+
   function update(world) {
+    feedContact(world);
     const t = world.time || 0;
+    const fxw = fxOf(world, "3d");
+    const reset = world !== lastWorld || world.grid !== lastGrid || t < lastT - 1e-9;
+    if (reset) {
+      fxw.clear();
+      gUntil = bUntil = -1;
+      prevE.length = prevI.length = 0;
+    }
+    fid++;
+    fresh.length = 0;
+    const dt = Math.max(0, Math.min(0.05, t - lastT));
+    lastT = t;
+    lastWorld = world;
+    lastGrid = world.grid;
     const p = world.players && world.players[0];
+    const pl = p && p.alive !== false ? p : null;
+    const CV = CONTACT.v.value;
+    let cn = 0;
+    for (const q of world.players || []) if (q && q.alive !== false) cn++;
     if (
       p &&
       p.alive !== false &&
@@ -1207,68 +1339,169 @@ export function createPools(biome, atlas) {
       if (p.passing) bodyMat.color.lerp(_c.set("#77ff99"), 0.38);
     } else player.visible = false;
 
-    let ei = 0;
+    let ei = 0,
+      ri = 0;
     const ens = world.enemies || [];
-    for (let i = 0; i < ens.length && ei < POOL_CAPS.enemies; i++) {
+    const ringCol = spawnRing.instanceColor.array;
+    let ek = 0;
+    for (let i = 0; i < ens.length; i++) {
       const e = ens[i];
       if (e.dead) continue;
+      const cOff = (cn + ek++) * 4;
+      if (ei >= POOL_CAPS.enemies) continue;
       const s = enemies[ei++];
-      s.visible = !(e.invuln && Math.floor(t * 12) % 2 === 1);
+      let S = FS.get(e);
+      if (!S) FS.set(e, (S = makeFoe()));
+      stepFoe(S, e, t, dt, pl);
+      S.mk = fid;
+      curE.push(e);
+      s.visible = true;
       const kk = GEO["e_" + e.type] ? "e_" + e.type : "e_walker";
-      if (s.userData.k !== kk) {
-        s.userData.k = kk;
-        s.geometry = GEO[kk];
-        s.material = MATE[kk];
-        /* shade alone casts nothing — its additive floor glow IS its ground
-           contact, exactly as in 2D. Additive accents (trail, plume,
-           exhaust, glow) never cast either: a hard shadow under a glow reads
-           as a bug. Both ride the type edge, so the per-frame path stays
-           allocation- and branch-free. */
-        const cast = kk !== "e_shade";
-        s.castShadow = cast;
-        const d = s.children;
-        for (let j = 0; j < 2; j++) {
-          d[j].geometry = GD[kk][j];
-          d[j].material = MD[kk][j];
-          d[j].castShadow =
-            cast && MD[kk][j].blending !== THREE.AdditiveBlending;
-          d[j].position.set(GT[kk][j][0], GT[kk][j][1], GT[kk][j][2]);
-          d[j].rotation.set(GR[kk][j][0], GR[kk][j][1], GR[kk][j][2]);
-        }
-        d[2].geometry = GF[kk];
-        d[2].material = eyeFor(kk.slice(2));
-        d[2].position.set(EYT[kk][0], EYT[kk][1], EYT[kk][2]);
-        d[2].rotation.set(EYR[kk][0], EYR[kk][1], EYR[kk][2]);
-      }
-      const bb = BOB[kk];
-      s.position.set(
-        e.x - W2,
-        EH[kk] + bb[0] * Math.sin(t * bb[1] + (e.home ? e.home.x * 0.7 : 0)),
-        e.y - D2,
-      );
-      /* identity §4: boomerang spin overrides facing yaw; stationary
-         breathes 1+.04sin(3t); walker feet stomp alternately; rocket flame
-         swaps on the 10Hz parity. All render-side, zero-alloc. */
+      if (s.userData.k !== kk) skin(s, kk);
+      const sc = S.sc,
+        w = S.ph * TAU,
+        ch = s.children;
+      s.position.set(e.x - W2, EH[kk] * sc + S.by, e.y - D2);
+      /* identity §4: boomerang spin overrides facing yaw; its socket eye must
+         NOT spin (2D parity): its plane lies flat and takes the inverse of
+         the slot's rotation (spin AND sway), so it holds a fixed world
+         orientation. Every other foe
+         turns toward e.dir at YAW_W (smoothed, shortest arc). */
       if (kk === "e_boomerang") {
-        s.rotation.y = (t * 10) % (Math.PI * 2);
-        /* the socket eye must NOT spin (2D parity). Its plane lies flat
-           (rot.x = -pi/2), so an in-plane rot.z cancels the parent yaw about
-           world Y and the eye holds a fixed world orientation. */
-        s.children[2].rotation.z = -s.rotation.y;
-      } else
-        s.rotation.y = Math.atan2(e.dir ? e.dir.x : 0, e.dir ? e.dir.y : 1);
-      s.scale.setScalar(kk === "e_stationary" ? 1 + 0.04 * Math.sin(t * 3) : 1);
+        s.rotation.set(S.pit, (t * 10) % TAU, S.rol);
+        ch[2].quaternion.copy(s.quaternion).invert().multiply(Q_FLAT);
+      } else s.rotation.set(S.pit, S.yaw, S.rol);
+      s.scale.setScalar(sc);
+      /* per-foe personality, transforms only (children keep their authored
+         pose from skin() and are overwritten only where animated) */
       if (kk === "e_walker") {
-        const st = Math.sin(t * 12),
-          fr = PROTO.walker.r * 0.16;
-        s.children[0].position.y = GT.e_walker[0][1] + Math.max(0, st) * fr;
-        s.children[1].position.y = GT.e_walker[1][1] + Math.max(0, -st) * fr;
-      } else if (kk === "e_rocket")
-        s.children[1].material = Math.floor(t * 10) % 2 ? FLAME_B : FLAME_A;
-      else if (kk === "e_stationary")
-        s.children[0].scale.setScalar(1 + 0.1 * Math.sin(t * 3));
+        const fr = PROTO.walker.r * 0.16;
+        ch[0].position.y = GT.e_walker[0][1] + Math.max(0, S.stomp) * fr;
+        ch[1].position.y = GT.e_walker[1][1] + Math.max(0, -S.stomp) * fr;
+      } else if (kk === "e_stationary") ch[0].scale.setScalar(1 + 0.12 * Math.sin(3 * t + w));
+      else if (kk === "e_fast") ch[1].scale.z = 1 + (0.1 + 0.25 * S.mv) * Math.sin(16 * t + w);
+      else if (kk === "e_chaser") ch[0].rotation.x = 0.1 * S.glow;
+      else if (kk === "e_boomerang") ch[0].scale.setScalar(1 + 0.05 * Math.sin(5 * t + w));
+      else if (kk === "e_rocket") {
+        const f = 0.5 + 0.25 * (Math.sin(21 * t + w) + Math.sin(13.7 * t + 2 * w));
+        ch[1].material = FLAME_M;
+        ch[1].scale.set(1 + 0.12 * f, 1 + 0.1 * f, 1 + 0.12 * f);
+      } else if (kk === "e_burrow") {
+        const cw = 0.03 * Math.sin(9 * t + w) * S.mv;
+        s.scale.set(sc * (1 - cw), sc, sc * (1 + 1.6 * cw));
+        ch[1].scale.set(1 + 0.08 * Math.cos(9 * t + w), 1, 1 + 0.18 * Math.sin(9 * t + w));
+      } else if (kk === "e_shade") {
+        const a = 0.035 * Math.sin(3.2 * t + w);
+        s.scale.set(sc * (1 + a), sc * (1 - 0.5 * a), sc * (1 - a));
+        ch[1].scale.set(1 + 0.1 * Math.sin(2.4 * t + w), 1, 1 + 0.1 * Math.sin(2.4 * t + w));
+      } else if (kk === "e_knight") ch[0].position.y = GT.e_knight[0][1] + 0.5 * Math.sin(2.6 * t + w + 1);
+      /* blink + hunter glow on the face plane (boomerang's socket never blinks) */
+      const gz = 1 + 0.15 * S.glow;
+      ch[2].scale.set(gz, S.eyeY * gz, gz);
+      if (S.ringA > 0.004 && ri < POOL_CAPS.enemies) {
+        _p.set(e.x - W2, 1.2, e.y - D2);
+        _q.identity();
+        _s.set(S.ringR, 1, S.ringR);
+        _m.compose(_p, _q, _s);
+        spawnRing.setMatrixAt(ri, _m);
+        _c.set(e.color || ENEMY_COLORS[e.type] || "#ffffff");
+        const ra = Math.min(1, S.ringA * 1.1);
+        ringCol[ri * 3] = _c.r * ra;
+        ringCol[ri * 3 + 1] = _c.g * ra;
+        ringCol[ri * 3 + 2] = _c.b * ra;
+        ri++;
+      }
+      if (cOff < 32 * 4 && Math.abs(CV[cOff] - (e.x - W2 + 3)) < 1e-4 && sc < 1) ground(cOff, sc, Math.min(1, sc));
     }
     for (; ei < POOL_CAPS.enemies; ei++) enemies[ei].visible = false;
+    for (let i = 0; i < prevE.length; i++) {
+      const e = prevE[i],
+        S = FS.get(e);
+      if (!S || S.mk === fid) continue;
+      fresh.push({ t: "kill", type: e.type, x: e.x, y: e.y, color: e.color });
+      const d = DY[dyi++ & 7];
+      d.x = e.x;
+      d.y = e.y;
+      d.type = e.type;
+      d.yaw = S.yaw;
+    }
+    {
+      const sw = prevE;
+      prevE = curE;
+      curE = sw;
+      curE.length = 0;
+    }
+    if (fresh.length) {
+      gUntil = t + MOTION.DEATH_T + 0.05;
+      fxw.feed(fresh, t);
+      fresh.length = 0;
+    }
+    spawnRing.visible = ri > 0;
+    spawnRing.count = ri;
+    live(spawnRing.instanceMatrix, ri);
+    live(spawnRing.instanceColor, ri);
+    FLAME_M.color.lerpColors(FC_A, FC_B, 0.5 + 0.5 * Math.sin(2.4 * t));
+
+    /* DEATH: entityfx ghosts (foes that just died), newest three, squashed in
+       place from their last yaw. REDUCE FLASH turns the one white frame into
+       a tint. A ghost's contact shadow is appended after the live ones. */
+    let gi = 0;
+    if (t < gUntil) {
+      const gs = fxw.ghosts(t),
+        fk = getFxOpts().flashK;
+      for (let i = gs.length - 1; i >= 0 && gi < GHOSTS; i--) {
+        const g = gs[i];
+        if (!ghostPose(_gp, g, fk)) continue;
+        const kk = GEO["e_" + g.type] ? "e_" + g.type : "e_walker",
+          s = deadSlots[gi++];
+        if (s.userData.k !== kk) skin(s, kk);
+        let yaw = 0;
+        for (let j = 0; j < 8; j++) if (DY[j].x === g.x && DY[j].y === g.y && DY[j].type === g.type) yaw = DY[j].yaw;
+        s.visible = true;
+        s.position.set(g.x - W2, EH[kk] * _gp.sy, g.y - D2);
+        s.rotation.set(0, yaw, 0);
+        s.scale.set(_gp.sx, _gp.sy, _gp.sx);
+        /* ONE white frame: the flash shows only at the clock time this
+           ghost was first drawn (a repeat render of the same t keeps it) */
+        const gk = g.x * 1009 + g.y * 31 + g.type.length;
+        if (s.userData.gk !== gk) {
+          s.userData.gk = gk;
+          s.userData.fT = t;
+        }
+        const on = _gp.flash > 0 && t === s.userData.fT,
+          ch = s.children;
+        if (on) {
+          flashMat.color.set(g.col || ENEMY_COLORS[g.type] || "#ffffff").lerp(WHITE, _gp.flash);
+          s.material = ch[0].material = ch[1].material = flashMat;
+        } else if (s.material === flashMat) {
+          s.material = MATE[kk];
+          ch[0].material = MD[kk][0];
+          ch[1].material = MD[kk][1];
+        }
+        const idx = CONTACT.n.value;
+        if (idx < 32) {
+          const o = idx * 4;
+          CV[o] = g.x - W2 + 3;
+          CV[o + 1] = g.y - D2 - 2;
+          CV[o + 2] = (PROTO[g.type] ? PROTO[g.type].r : 14) * 1.5 * _gp.sx;
+          CV[o + 3] = 0.4 * (1 - g.age / MOTION.DEATH_T);
+          CONTACT.n.value = idx + 1;
+        }
+      }
+    }
+    for (; gi < GHOSTS; gi++) {
+      const s = deadSlots[gi];
+      if (s.visible) {
+        s.visible = false;
+        if (s.material === flashMat) {
+          const kk = s.userData.k;
+          s.material = MATE[kk];
+          s.children[0].material = MD[kk][0];
+          s.children[1].material = MD[kk][1];
+        }
+      }
+    }
+
 
     let bi = 0;
     const bs = world.bombs || [];
@@ -1299,59 +1532,71 @@ export function createPools(biome, atlas) {
 
     const counts = {};
     for (const pd of POWER) counts[pd.t] = 0;
-    let nLive = 0;
+    let nLive = 0,
+      ik = cn + ek;
+    for (const b of bs) if (b && !b.dead) ik++;
     const its = world.items || [];
     for (let i = 0; i < its.length && nLive < POOL_CAPS.items; i++) {
       const it = its[i];
       if (it.taken || it.buried) continue;
       nLive++;
+      curI.push(it);
       const kind = ITEM_GEO[it.t] ? it.t : "fire";
       const slot = counts[kind]++;
       const fam = ITEM_FAMILY[kind] || "cap";
       /* slot is a compaction index: collecting one pickup re-indexes its
-         neighbours and their animation jumps. Grid phase is stable, zero
-         alloc, and identical to the number drawItemBody uses. Non-spinning
-         kinds hold rot.y = 0 so the authored plan outline is what the
-         player always sees; ph phases the rhythm, never the yaw. */
-      const ph = (it.x * 0.7 + it.y * 1.3) / CFG.TILE;
-      let hy, ry = 0, rz = 0, op;
-      if (fam === "cap") {
-        hy = CFG.TILE * 0.66 + 4 * Math.sin(3 * t + ph);
-        ry = 2.2 * t + ph;
-        op = 0.3 + 0.1 * Math.sin(5 * t);
-      } else if (fam === "vit") {
-        hy = CFG.TILE * 0.62 + 5 * Math.sin(2.4 * t + ph);
-        op = 0.26 + 0.08 * Math.sin(2.4 * t);
-      } else if (fam === "utl") {
-        hy = CFG.TILE * 0.64 + 3 * Math.sin(3.4 * t + ph);
-        rz = 0.16 * Math.sin(7 * t + ph);
-        op = 0.34 + 0.06 * Math.sin(7 * t);
-      } else {
-        hy = CFG.TILE * 0.66 + 4 * Math.sin(3 * t + ph);
-        if (kind === "power") ry = 1.8 * t + ph;
-        op = 0.3 + 0.3 * Math.sin(9 * t);
-      }
-      itemRingIM[kind].material.opacity = op;
-      _p.set(it.x - W2, hy, it.y - D2);
-      _e.set(0, ry, rz);
+         neighbours and their animation jumps. Phase comes from the grid
+         position (itemPose), the first-seen time from the item object; items
+         already on the board when the scene (or a retry) starts do not pop. */
+      let born = IB.get(it);
+      if (born === undefined) IB.set(it, (born = reset ? -Infinity : t));
+      itemPose(_ip, fam, kind, it, t, born);
+      _p.set(it.x - W2, _ip.hy, it.y - D2);
+      _e.set(0, _ip.ry, _ip.rz);
       _q.setFromEuler(_e);
-      _s.set(1, 1, 1);
+      _s.setScalar(_ip.sc);
       _m.compose(_p, _q, _s);
-      itemBodies[kind].setMatrixAt(slot, _m);
-      const rs = RING_SCALE[kind] || 1;
+      const body = itemBodies[kind],
+        ring = itemRingIM[kind];
+      body.setMatrixAt(slot, _m);
+      body.instanceColor.array[slot * 3] = _ip.glint;
+      const rs = (RING_SCALE[kind] || 1) * _ip.ringS;
       _p.set(it.x - W2, 1.5, it.y - D2);
       _q.identity();
       _s.set(rs, rs, rs);
       _m.compose(_p, _q, _s);
-      itemRingIM[kind].setMatrixAt(slot, _m);
+      ring.setMatrixAt(slot, _m);
+      const rc = ring.instanceColor.array;
+      rc[slot * 3] = rc[slot * 3 + 1] = rc[slot * 3 + 2] = _ip.ringK;
+      const co = ik++ * 4;
+      if (co < 32 * 4 && Math.abs(CV[co] - (it.x - W2 + 3)) < 1e-4) ground(co, _ip.shadow, _ip.shadow);
     }
     for (const pd of POWER) {
       const n = counts[pd.t] || 0;
       itemBodies[pd.t].count = n;
       live(itemBodies[pd.t].instanceMatrix, n);
+      live(itemBodies[pd.t].instanceColor, n);
       itemRingIM[pd.t].count = n;
       live(itemRingIM[pd.t].instanceMatrix, n);
+      live(itemRingIM[pd.t].instanceColor, n);
     }
+    for (let i = 0; i < prevI.length; i++) {
+      const it = prevI[i];
+      if (it.taken) fresh.push({ t: "power", kind: ITEM_GEO[it.t] ? it.t : "fire", x: it.x, y: it.y, col: it.col || (it.pdef && it.pdef.col) });
+    }
+    {
+      const sw = prevI;
+      prevI = curI;
+      curI = sw;
+      curI.length = 0;
+    }
+    if (fresh.length) {
+      bUntil = t + 0.55;
+      fxw.feed(fresh, t);
+      fresh.length = 0;
+    }
+    /* collect bursts: entityfx bursts (pickups just taken), one Points */
+    burst.update(t < bUntil ? fxw.bursts(t) : NO_BURSTS, dprHint, getFxOpts().partK);
 
     const bls = world.blades || [];
     blast.update(bls);
@@ -1408,7 +1653,7 @@ export function createPools(biome, atlas) {
     blades: [],
     time: 0,
   });
-  return {
+  const api = {
     group,
     player,
     enemies,
@@ -1420,5 +1665,11 @@ export function createPools(biome, atlas) {
     flashes,
     update,
     ghost,
+    feed,
+    burst,
+    deadSlots,
+    spawnRing,
   };
+  group.userData.pools = api;
+  return api;
 }

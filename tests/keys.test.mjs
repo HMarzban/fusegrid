@@ -4,6 +4,7 @@
    Expectations come from README "How to play", AGENTS.md and the on-screen
    foot hints in menudraw.js — not from reading the handlers back. */
 import { createGame } from "../src/main.js";
+import { createPixelRenderer } from "../src/render/pixel/renderer.js";
 import { SCREEN, ITEMS, GUIDE_ROWS, PAUSE_ITEMS, OPT_ROWS, IDLE_T } from "../src/app/menuapp.js";
 import { GFX_ROWS, DEMO_T } from "../src/app/gfx.js";
 import { graphicsGeom, layout as menuLayout } from "../src/render/menudraw.js";
@@ -41,7 +42,7 @@ navigator.clipboard = clipStub;
    keydown reaches exactly one Input + main pair. */
 function mk(o = {}, cv = null) {
   for (const k in L) delete L[k];
-  const g = createGame(cv, { seed: 42, ...o });
+  const g = createGame(cv, { seed: 42, createPixelRenderer, ...o });
   g.t = 0;
   g.tick = (n = 1) => { for (let i = 0; i < n; i++) { g.t += 1000 / 60; g.loop(g.t); } };
   const r = g.renderer, r0 = r.render.bind(r);
@@ -495,11 +496,11 @@ withSettings(null, () => {
 // 11: the AA deferral (a live context rebuild on leaving the page) needs rAF and
 // a WebGL renderer cache; tests/frameloop.test.mjs pins it with injected rAF.
 
-// ---- GUIDE + HOW TO / ITEMS / ENEMIES ----
+// ---- GUIDE + HOW TO / ITEMS / ENEMIES / FLOOR ----
 for (let i = 0; i < GUIDE_ROWS.length; i++) {
   const g = menu(); toRow(g, 4); press(g, "Enter");
   toRow(g, i); press(g, "Enter");
-  const want = [SCREEN.HOWTO, SCREEN.ITEMS, SCREEN.ENEMIES][i];
+  const want = [SCREEN.HOWTO, SCREEN.ITEMS, SCREEN.ENEMIES, SCREEN.FLOOR][i];
   const opened = g.app.screen === want;
   press(g, "Escape"); const esc = g.app.screen;
   press(g, "Enter"); press(g, "Enter");

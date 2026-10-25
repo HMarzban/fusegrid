@@ -44,7 +44,7 @@ const playTag = (app) => {
 /* The screens a touch-portrait phone draws on #sh's own box (fit.js
    shellGeo): MENU and every plated page. INTRO, ATTRACT and GAME (PAUSE and
    WIN/LOSE included) stay on the board canvas and its box. */
-const SHELL_ON = new Set([SCREEN.MENU, SCREEN.LEVEL, SCREEN.HOWTO, SCREEN.SCORES, SCREEN.ITEMS, SCREEN.ENEMIES, SCREEN.SETTINGS, SCREEN.GUIDE, SCREEN.STATS, SCREEN.TROPHIES, SCREEN.GRAPHICS]);
+const SHELL_ON = new Set([SCREEN.MENU, SCREEN.LEVEL, SCREEN.HOWTO, SCREEN.SCORES, SCREEN.ITEMS, SCREEN.ENEMIES, SCREEN.SETTINGS, SCREEN.GUIDE, SCREEN.STATS, SCREEN.TROPHIES, SCREEN.GRAPHICS, SCREEN.FLOOR]);
 export const isShellScreen = (s) => SHELL_ON.has(s);
 export function dims(canvas, kind) {
   const s = kindSize(kind);
@@ -240,6 +240,9 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
   } else if (s === SCREEN.ENEMIES) {
     menudraw.drawDim(c, 0.72, cw, chh);
     menudraw.drawEnemiesHelp(c, L, app.subT, kind, touchLay(canvas));
+  } else if (s === SCREEN.FLOOR) {
+    menudraw.drawDim(c, 0.72, cw, chh);
+    menudraw.drawFloorHelp(c, L, app.subT, kind, touchLay(canvas));
   } else if (s === SCREEN.GUIDE) {
     menudraw.drawDim(c, 0.72, cw, chh);
     menudraw.drawGuide(c, L, app.subT, app.guideRow, kind, touchLay(canvas));

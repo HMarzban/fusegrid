@@ -77,6 +77,16 @@ export const ITEM_FAMILY = {
   pierce: "bls",
 };
 
+/* Family chrome, one row per family (radii in TILE units, widths in px), read by itemdraw.drawItemChrome. The four read apart in GRAYSCALE at 40 px by ink
+   pattern alone: cap = ONE thin solid ring, vit = TWO thin rings, utl = SIX fat dashes (no ring), bls = a thin ring plus EIGHT spokes. breath / bw: radius
+   breathing (fraction, rad/s); spin: dash / spoke turn in rad/s. Body motion only: nothing here changes luminance. */
+export const ITEM_RING = Object.freeze({
+  cap: Object.freeze({ rings: Object.freeze([0.36]), w: 1.5, breath: 0.05, bw: 3, dash: 0, ticks: 0, spin: 0 }),
+  vit: Object.freeze({ rings: Object.freeze([0.29, 0.43]), w: 1.5, breath: 0.025, bw: 2, dash: 0, ticks: 0, spin: 0 }),
+  utl: Object.freeze({ rings: Object.freeze([]), w: 0, breath: 0, bw: 1, dash: 6, dw: 3, dr: 0.39, span: Math.PI / 4, ticks: 0, spin: 0.7 }),
+  bls: Object.freeze({ rings: Object.freeze([0.31]), w: 1.5, breath: 0, bw: 1, dash: 0, ticks: 8, tw: 2, t0: 0.36, t1: 0.5, spin: 1.1 }),
+});
+
 /* ---- items / power-up icons (cabinet glyphs, readable at 40px) ----
    Semantic-first (P1.5): every outline is a real object a player can name in
    one second at the 16px well, not an abstract silhouette chosen for

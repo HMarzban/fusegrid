@@ -1,6 +1,12 @@
 import { CFG, T, key, biomeOf, BIOMES } from "../core/config.js";
 import { drawIcon, rr, RIM, ITEM_FAMILY, dk, lt, poly, seal } from "./icons.js";
-import { drawEnemyBody } from "./enemybody.js";
+import { drawEnemyBody, drawFoes } from "./enemybody.js";
+import { drawFeat } from "./featdraw.js";
+import { wallCodes, WALL_VARS } from "./wallvar.js";
+import { wallShapes, paintShapes } from "./wallart.js";
+import { paintFloor, floorVar, FLOOR_V } from "./floorart.js";
+import { mix } from "./featart/kit.js";
+import { contact } from "./depth2d.js";
 export { drawIcon, drawEnemyBody };
 
 /* RENDER LAYER — reads world, never mutates it. Every draw fn takes a 2D
@@ -41,7 +47,38 @@ export function captureSprite(w, h, paint, mk) {
 }
 
 /* ---- one-time sprite atlas (per biome) ---- */
-const BAKED = { floorA: {}, floorB: {}, wall: {}, brick: {}, ready: false };
+const BAKED = { floorA: {}, floorB: {}, floorV: {}, wall: {}, wallV: {}, brick: {}, brick2: {}, ready: false };
+/* depth round 2026-10-25: the CLASSIC brick face steps down toward the biome's own bg1 (share below: 11-12 L* of the sprite mean in every world, 8 in VOID whose brick is already
+   the darkest); the top highlight and the hue stay.
+   The REAL 3D map keeps the original bake (BAKED.brick) */
+export const BRICK_U = { JUNGLE: 0.25, ICE: 0.16, FACTORY: 0.24, WATER: 0.26, ARENA: 0.26, SAND: 0.26, VOID: 0.34, CROWN: 0.19 };
+export function paintBrick(c, B, u = BRICK_U[B.name] || 0) {
+  const TL = CFG.TILE, A = mix(B.bg1, B.brickA, u), D = mix(B.bg1, B.brickB, u);
+  c.fillStyle = D;
+  rr(c, 1, 1, TL - 2, TL - 2, 4);
+  c.fill();
+  c.fillStyle = A;
+  rr(c, 2, 2, TL - 4, TL * 0.46, 4);
+  c.fill();
+  c.fillStyle = "rgba(0,0,0,0.2)";
+  c.fillRect(4, TL - 6, TL - 8, 3);
+  c.fillStyle = B.brickHi;
+  c.globalAlpha = 0.55;
+  rr(c, 3, 3, TL - 6, TL * 0.2, 3);
+  c.fill();
+  c.globalAlpha = 1;
+  c.strokeStyle = "rgba(0,0,0,0.4)";
+  c.lineWidth = 1.5;
+  rr(c, 1, 1, TL - 2, TL - 2, 4);
+  c.stroke();
+}
+/* one wall painter (wall round prototype): the bake calls it at 0,0, the
+   vector fallback at px,py, so Node and the browser draw the same families */
+export function paintWall(c, b, code, px, py) {
+  c.save();
+  paintShapes(c, b, wallShapes(b, code), px, py);
+  c.restore();
+}
 export function bakeAtlas() {
   if (BAKED.ready || !canMakeCanvas()) return;
   const make = (w, h) => {
@@ -53,37 +90,21 @@ export function bakeAtlas() {
   biomeOf(1); // touch
   for (let i = 0; i < BIOMES.length; i++) {
     const b = biomeOf(i + 1);
-    const fA = make(CFG.TILE, CFG.TILE),
-      a = fA.getContext("2d");
-    a.fillStyle = b.floor0;
-    a.fillRect(0, 0, CFG.TILE, CFG.TILE);
-    a.strokeStyle = b.floor1;
-    a.globalAlpha = 0.25;
-    a.strokeRect(1, 1, CFG.TILE - 2, CFG.TILE - 2);
-    BAKED.floorA[i] = fA;
-    const fB = make(CFG.TILE, CFG.TILE),
-      bb = fB.getContext("2d");
-    bb.fillStyle = b.floor1;
-    bb.fillRect(0, 0, CFG.TILE, CFG.TILE);
-    bb.strokeStyle = b.floor0;
-    bb.globalAlpha = 0.25;
-    bb.strokeRect(1, 1, CFG.TILE - 2, CFG.TILE - 2);
-    BAKED.floorB[i] = fB;
-    const w = make(CFG.TILE, CFG.TILE),
-      wc = w.getContext("2d");
-    wc.fillStyle = b.wall;
-    rr(wc, 0, 0, CFG.TILE, CFG.TILE, 4);
-    wc.fill();
-    wc.fillStyle = b.wallHi;
-    wc.fillRect(3, 3, CFG.TILE - 6, CFG.TILE * 0.4);
-    wc.fillStyle = "rgba(0,0,0,0.35)";
-    wc.fillRect(3, CFG.TILE * 0.5 + 2, CFG.TILE - 6, CFG.TILE * 0.44);
-    wc.fillStyle = "rgba(255,255,255,0.15)";
-    wc.fillRect(5, 5, 3, 3);
-    wc.fillRect(CFG.TILE - 8, 5, 3, 3);
-    wc.fillRect(5, CFG.TILE - 8, 3, 3);
-    wc.fillRect(CFG.TILE - 8, CFG.TILE - 8, 3, 3);
-    BAKED.wall[i] = w;
+    BAKED.floorV[i] = [0, 1].map((par) =>
+      Array.from({ length: FLOOR_V }, (_, v) => {
+        const f = make(CFG.TILE, CFG.TILE);
+        paintFloor(f.getContext("2d"), b, par, v);
+        return f;
+      }),
+    );
+    BAKED.floorA[i] = BAKED.floorV[i][0][0];
+    BAKED.floorB[i] = BAKED.floorV[i][1][0];
+    BAKED.wallV[i] = WALL_VARS.map((_, v) => {
+      const w = make(CFG.TILE, CFG.TILE);
+      paintWall(w.getContext("2d"), b, v, 0, 0);
+      return w;
+    });
+    BAKED.wall[i] = BAKED.wallV[i][0];
     const bk = make(CFG.TILE, CFG.TILE),
       bc = bk.getContext("2d");
     bc.fillStyle = b.brickB;
@@ -102,6 +123,9 @@ export function bakeAtlas() {
     rr(bc, 1, 1, CFG.TILE - 2, CFG.TILE - 2, 4);
     bc.stroke();
     BAKED.brick[i] = bk;
+    const b2 = make(CFG.TILE, CFG.TILE);
+    paintBrick(b2.getContext("2d"), b);
+    BAKED.brick2[i] = b2;
   }
   BAKED.ready = true;
 }
@@ -113,6 +137,11 @@ export function bakedTile(bi, type) {
   return s || null;
 }
 
+/* every wall code's baked tile for biome bi (the REAL 3D strip source) */
+export function wallTiles(bi) {
+  return (BAKED.ready && BAKED.wallV[bi]) || null;
+}
+
 function biomeIndex(level) {
   return (Math.max(1, level) - 1) % BIOMES.length;
 }
@@ -121,50 +150,33 @@ function biomeIndex(level) {
 export function drawGrid(c, world) {
   const bi = biomeIndex(world.level),
     b = biomeOf(world.level);
-  const fA = BAKED.floorA[bi],
-    fB = BAKED.floorB[bi],
-    wTile = BAKED.wall[bi];
+  const fV = BAKED.floorV[bi],
+    wV = BAKED.wallV[bi],
+    WC = wallCodes(world);
   for (let y = 0; y < CFG.ROWS; y++)
     for (let x = 0; x < CFG.COLS; x++) {
       const t = world.grid[key(x, y)],
         px = x * CFG.TILE,
         py = y * CFG.TILE;
       if (t === T.WALL) {
-        if (wTile) {
-          c.drawImage(wTile, px, py);
-          continue;
-        }
-        c.fillStyle = b.wall;
-        rr(c, px, py, CFG.TILE, CFG.TILE, 4);
-        c.fill();
-        c.fillStyle = b.wallHi;
-        c.fillRect(px + 3, py + 3, CFG.TILE - 6, CFG.TILE * 0.4);
-        c.fillStyle = "rgba(0,0,0,0.35)";
-        c.fillRect(
-          px + 3,
-          py + CFG.TILE * 0.5 + 2,
-          CFG.TILE - 6,
-          CFG.TILE * 0.44,
-        );
-        c.fillStyle = "rgba(255,255,255,0.15)";
-        c.fillRect(px + 5, py + 5, 3, 3);
-        c.fillRect(px + CFG.TILE - 8, py + 5, 3, 3);
-        c.fillRect(px + 5, py + CFG.TILE - 8, 3, 3);
-        c.fillRect(px + CFG.TILE - 8, py + CFG.TILE - 8, 3, 3);
-      } else if (fA) {
-        c.drawImage((x + y) & 1 ? fB : fA, px, py);
+        const v = WC[y * CFG.COLS + x];
+        if (wV) c.drawImage(wV[v], px, py);
+        else paintWall(c, b, v, px, py);
+      } else if (world.feat && world.feat[key(x, y)]) {
+        drawFeat(c, world, x, y, px, py);
+      } else if (fV) {
+        c.drawImage(fV[(x + y) & 1][floorVar(x, y, world.level)], px, py);
       } else {
-        c.fillStyle = (x + y) & 1 ? b.floor1 : b.floor0;
-        c.fillRect(px, py, CFG.TILE, CFG.TILE);
-        c.strokeStyle = "rgba(120,160,220,0.05)";
-        c.lineWidth = 1;
-        c.strokeRect(px + 0.5, py + 0.5, CFG.TILE - 1, CFG.TILE - 1);
+        c.save();
+        c.translate(px, py);
+        paintFloor(c, b, (x + y) & 1, floorVar(x, y, world.level));
+        c.restore();
       }
     }
 }
 export function drawBricks(c, world) {
   const bi = biomeIndex(world.level),
-    b = BAKED.brick[bi],
+    b = BAKED.brick2[bi],
     B = biomeOf(world.level);
   for (let y = 0; y < CFG.ROWS; y++)
     for (let x = 0; x < CFG.COLS; x++)
@@ -177,21 +189,7 @@ export function drawBricks(c, world) {
         }
         c.save();
         c.translate(px, py);
-        c.fillStyle = B.brickB;
-        rr(c, 1, 1, CFG.TILE - 2, CFG.TILE - 2, 4);
-        c.fill();
-        c.fillStyle = B.brickA;
-        rr(c, 2, 2, CFG.TILE - 4, CFG.TILE * 0.46, 4);
-        c.fill();
-        c.fillStyle = B.brickHi;
-        c.globalAlpha = 0.55;
-        rr(c, 3, 3, CFG.TILE - 6, CFG.TILE * 0.2, 3);
-        c.fill();
-        c.globalAlpha = 1;
-        c.strokeStyle = "rgba(0,0,0,0.4)";
-        c.lineWidth = 1.5;
-        rr(c, 1, 1, CFG.TILE - 2, CFG.TILE - 2, 4);
-        c.stroke();
+        paintBrick(c, B);
         c.restore();
       }
 }
@@ -210,120 +208,13 @@ export function drawBiomeBackground(c, world, memo) {
   c.fillRect(0, 0, CFG.COLS * CFG.TILE, CFG.ROWS * CFG.TILE);
 }
 
-/* 64² REAL 3D cube face: navy plate + cabinet glyph. Atlas key item_<t>. */
-export function paintItemFace(c, type, col) {
-  c.fillStyle = "#0b1020";
-  c.fillRect(0, 0, 64, 64);
-  c.save();
-  c.translate(32, 32);
-  c.scale(2.35, 2.35);
-  drawIcon(c, type, col, 0);
-  c.restore();
-  c.strokeStyle = "rgba(255,255,255,0.16)";
-  c.lineWidth = 2;
-  c.beginPath();
-  c.rect(2, 2, 60, 60);
-  c.stroke();
-  c.beginPath();
-  c.stroke();
-}
-/* The ring language a player learns in REAL 3D has to be recognisable in
-   CLASSIC 2D, which has no additive ring at all — so the old double it.col
-   ring (which only restated the hue the body already states) becomes the
-   family echo. Dashes are arcs: the headless stub has no setLineDash. */
-export function drawItemChrome(c, fam, t, ph) {
-  const T = CFG.TILE;
-  if (fam === "cap") {
-    c.lineWidth = 1.5;
-    c.beginPath();
-    c.arc(0, 0, T * 0.36, 0, 7);
-    c.stroke();
-    return;
-  }
-  if (fam === "vit") {
-    c.lineWidth = 1.5;
-    c.beginPath();
-    c.arc(0, 0, T * 0.3, 0, 7);
-    c.stroke();
-    c.beginPath();
-    c.arc(0, 0, T * 0.42, 0, 7);
-    c.stroke();
-    return;
-  }
-  if (fam === "utl") {
-    c.lineWidth = 2.5;
-    for (let i = 0; i < 6; i++) {
-      const a = (i * Math.PI) / 3;
-      c.beginPath();
-      c.arc(0, 0, T * 0.38, a, a + Math.PI / 5);
-      c.stroke();
-    }
-    return;
-  }
-  c.globalAlpha = 0.5 + 0.4 * Math.abs(Math.sin(9 * t + ph));
-  c.lineWidth = 1.5;
-  c.beginPath();
-  c.arc(0, 0, T * 0.33, 0, 7);
-  c.stroke();
-  for (let i = 0; i < 8; i++) {
-    const a = (i * Math.PI) / 4;
-    c.beginPath();
-    c.moveTo(Math.cos(a) * T * 0.36, Math.sin(a) * T * 0.36);
-    c.lineTo(Math.cos(a) * T * 0.46, Math.sin(a) * T * 0.46);
-    c.stroke();
-  }
-}
-export function drawItemBody(c, world, it) {
-  const T = CFG.TILE,
-    t = world.time || 0,
-    fam = ITEM_FAMILY[it.t] || "cap";
-  /* slot is a compaction index, so collecting one pickup re-indexes its
-     neighbours and their animation jumps. Grid phase is stable and is the
-     same number the 3D update() writes. */
-  const ph = (it.x * 0.7 + it.y * 1.3) / T;
-  if (fam === "cap") {
-    const k = 1 + 0.07 * Math.sin(3 * t + ph);
-    c.scale(k, k);
-  } else if (fam === "vit") c.translate(0, 1.8 * Math.sin(2.4 * t + ph));
-  else if (fam === "utl") c.rotate(0.1 * Math.sin(7 * t + ph));
-  c.fillStyle = "rgba(8,12,24,0.92)";
-  c.beginPath();
-  c.arc(0, 0, T * 0.34, 0, 7);
-  c.fill();
-  c.strokeStyle = it.col || "rgba(255,255,255,0.25)";
-  c.globalAlpha = 0.85;
-  drawItemChrome(c, fam, t, ph);
-  c.globalAlpha = 1;
-  drawIcon(c, it.t, it.col, t);
-}
-export function drawItems(c, world) {
-  for (const it of world.items) {
-    if (it.taken || it.buried) continue;
-    c.save();
-    c.translate(it.x, it.y);
-    drawItemBody(c, world, it);
-    c.restore();
-  }
-}
+export { paintItemFace, drawItemChrome, drawItemBody, drawItems } from "./itemdraw.js";
 
 /* ---- entities ---- */
-/* drawEnemyBody draws one enemy at origin; the render bob stays in the
-   drawEnemies wrapper (positioning concern) so bodies stay translate-free. */
+/* drawEnemyBody draws one enemy at origin; bob, lean, spawn pop and death
+   (motion.js timing) live in enemybody.js drawFoes, the live pass. */
 export function drawEnemies(c, world) {
-  for (const e of world.enemies) {
-    if (e.dead) continue;
-    c.save();
-    c.translate(e.x, e.y);
-    const bob =
-      e.type === "stationary"
-        ? Math.sin(world.time * 3) * 1.5
-        : e.speed > 0
-          ? Math.sin(world.time * 12 + e.home.x * 0.7) * 1.6
-          : 0;
-    c.translate(0, bob);
-    drawEnemyBody(c, world, e);
-    c.restore();
-  }
+  drawFoes(c, world);
 }
 /* MAKO — the reef critter. 2026-09-06, on the user's veto of every humanoid
    hero ("the main character also must not be like a human, it must be a
@@ -615,6 +506,7 @@ export function drawPlayer(c, world) {
     if (p.alive === false) continue;
     c.save();
     c.translate(p.x, p.y);
+    contact(c, CFG.TILE * 0.36 * 0.86, CFG.TILE * 0.36 * 0.24, 1.8, CFG.TILE * 0.36 * 0.96);
     drawPlayerBody(c, world, p);
     c.restore();
   }
@@ -703,6 +595,7 @@ export function drawBombs(c, world) {
   for (const bm of world.bombs) {
     c.save();
     c.translate(bm.x, bm.y);
+    contact(c, CFG.TILE * 0.3 * 0.9, CFG.TILE * 0.3 * 0.28, 1.6, CFG.TILE * 0.3 * 0.98);
     drawBombBody(c, world, bm);
     c.restore();
   }

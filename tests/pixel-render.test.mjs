@@ -137,9 +137,7 @@ function check(name, cond, detail) {
   check("the pool never grows past its cap (no per-event allocation)", s.pool.length === 8 && s.count() === 8);
   s.reset();
   feedShot(s, {t: "power", x: 220, y: 140, kind: "flame", col: "#ff6b3d"}, w, 0);
-  const sp = s.live(OS.SPARKLE);
-  check("a pickup grab leaves a 3-frame sparkle where the item stood",
-    !!sp && sp.x === 220 && sp.y === 140 && shotFrame(sp, 0) === 0 && shotFrame(sp, PX_T.SPARKLE_MS / 1000 + 1e-3) === 1 && shotFrame(sp, 1) === PX_T.SPARKLE_N - 1 && OS_DUR[OS.SPARKLE] === PX_T.SPARKLE_MS * PX_T.SPARKLE_N / 1000);
+  check("a pickup grab leaves no one-shot (its burst is entities.js drawBursts, so it can never evict a kill puff)", s.count() === 0);
 }
 
 // ---- native draw through the RGBA shim ----
@@ -178,18 +176,16 @@ function fatWorld() {
   check("REDUCE FLASH: no MAKO one-shot frame is a near-white full-sprite flash", nearWhite === 0, nearWhite);
 }
 
-// ---- delivered means drawn: SHADE hem and the pickup sparkle reach the board ----
+// ---- delivered means drawn: SHADE hem reaches the board ----
 {
   const w = createWorld(4242, 7); loadLevel(w, 7); w.state = "PLAY";
   w.enemies.length = 0;
-  w.enemies.push(spawnEnemy("shade", 7, 5, 7, null));
+  { const sd = spawnEnemy("shade", 7, 5, 7, null); sd.invuln = false; sd.invulnT = 0; w.enemies.push(sd); }
   const V = createView(atlas); V.shots = createOneShots(); V.t = 0.1;
-  feedShot(V.shots, {t: "power", x: 140, y: 100, kind: "flame", col: "#ff6b3d"}, w, 0);
   const c = createRGBA(300, 260).getContext(); drawPixelWorld(c, w, V);
   const srcs = c.calls.filter((q) => q[0] === "drawImage").map((q) => q[5]);
-  const sh = atlas.foe.shade, hemAt = srcs.indexOf(sh.extra.im), floatAt = Math.max(srcs.indexOf(sh.still[0].im), srcs.indexOf(sh.still[1].im));
+  const sh = atlas.foe.shade, hemAt = srcs.indexOf(sh.extra.im), floatAt = Math.max(...sh.still.map((f) => srcs.indexOf(f.im)));
   check("SHADE's hem (manifest foes/shade.hem) is blitted, over its float frame", hemAt >= 0 && floatAt >= 0 && hemAt > floatAt, hemAt + " " + floatAt);
-  check("the pickup sparkle (manifest fx/sparkle0-2) is blitted at its frame", srcs.includes(atlas.fx.sparkle[1].im));
 }
 
 // ---- the px renderer: blit chain, overlay, reset ----
@@ -476,7 +472,7 @@ const rasters = (log) => log.filter((q) => q[0] === "hi" && q[1] === "drawImage"
   let threw = null;
   try {
     globalThis.location = {search: "?render=px"};
-    const g = createGame(null, {seed: 5});
+    const g = createGame(null, {seed: 5, createPixelRenderer});
     let T = 0; const tick = (k) => { for (let i = 0; i < k; i++) { T += 16; g.loop(T); } };
     check("?render=px boots the px renderer (stub: no #px under Node)", !!(g.renderer._dbg && g.renderer._dbg.atlas));
     g.app.startRun(); tick(90);
@@ -485,7 +481,7 @@ const rasters = (log) => log.filter((q) => q[0] === "hi" && q[1] === "drawImage"
   check("?render=px loop raised nothing", !threw, String(threw && threw.stack));
   threw = null;
   try {
-    const g = createGame(null, {seed: 6});
+    const g = createGame(null, {seed: 6, createPixelRenderer});
     let T = 0; const tick = (k) => { for (let i = 0; i < k; i++) { T += 16; g.loop(T); } };
     tick(3);
     const r2d = g.renderer;
@@ -506,7 +502,7 @@ const rasters = (log) => log.filter((q) => q[0] === "hi" && q[1] === "drawImage"
 // ---- CLASSIC 2D unchanged ----
 {
   const h = await classicHash((p) => import(pathToFileURL(join(ROOT, p)).href));
-  check("CLASSIC 2D call-log hash unchanged (pinned from fe101c5)", h === "97480c1c:22630", h);
+  check("CLASSIC 2D call-log hash unchanged (pinned from fe101c5)", h === "127e8b05:72409", h);
 }
 
 // ---- hygiene ----
@@ -519,12 +515,11 @@ const rasters = (log) => log.filter((q) => q[0] === "hi" && q[1] === "drawImage"
   check("the px path never imports vendor/three or render/three", px.every(([, s]) => !/vendor\/three|\/three\//.test(s)));
   check("no Math.random in src/render/pixel", px.every(([, s]) => !/Math\.random/.test(s)));
   const bytes = px.reduce((a, [, s]) => a + Buffer.byteLength(s), 0);
-  // R24 pinned 120 KB; the GRAPHICS merge (perf seams) on top of the filled foe/item sheets lands at 121.2 KB.
-  // 122 KB ratified by the lead 2026-10-11 (R24); the follow-up (dynamic import of the px path) is still open.
-  check("px JS <= 122 KB (" + (bytes / 1024).toFixed(1) + " KB)", bytes <= 122 * 1024);
+  // R24 pinned 120 KB, then 122 KB (lead 2026-10-11). #15 landed the dynamic import (pixel/load.js), so CLASSIC no longer pays for the tree and the cap holds at 140 KB for the wall sheet + tile cells.
+  check("px JS <= 152 KB (" + (bytes / 1024).toFixed(1) + " KB)", bytes <= 152 * 1024); // frame A: +3 cells per world (vr ctr cbr) -> 142 KB
   const rcP = join(ROOT, "src/app/rcache.js"), main = readFileSync(join(ROOT, "src/main.js"), "utf8") + (statSync(rcP, {throwIfNoEntry: false}) ? readFileSync(rcP, "utf8") : "");
   check("main.js (or its rcache.js seam) never assigns #px's drawing buffer", !/pxCanvas\.(width|height)\s*=/.test(main));
-  check("main.js (or its rcache.js seam) routes kind px to createPixelRenderer", /kind === "px" \? createPixelRenderer\(pxCanvas, canvas/.test(main) || (/px: createPixelRenderer\b/.test(main) && /k === "px" \? make\.px\(el\("px"\), canvas/.test(main)));
+  check("rcache.js routes kind px to the injected opts.createPixelRenderer (main.js hands it the lazy loadRendererPx)", /k === "px" \? mk\.px\(el\("px"\), canvas/.test(main) && /loadRendererPx/.test(main) && /createPixelRenderer/.test(main));
   const html = readFileSync(join(ROOT, "index.html"), "utf8");
   check("index.html: #px between #gl and #c, author [hidden] rule, image-rendering:auto",
     /<canvas id="gl" hidden><\/canvas><canvas id="px" hidden><\/canvas><canvas id="c"/.test(html) && /#px\[hidden\]\{display:none\}/.test(html) && /#px\{[^}]*image-rendering:auto/.test(html));

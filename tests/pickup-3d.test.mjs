@@ -220,10 +220,12 @@ function mkE(type, x, y) {
     nb * SLOT_MESH.bomb +
     POWER.length * SLOT_MESH.item +
     2 +
-    1;
+    1 +
+    1 + // ambient Points (2026-10-25)
+    3 * SLOT_MESH.enemy + 1 + 1; // entities round: 3 death-squash slots + spawn ring + burst Points
   check(
-    "fat-world draw calls stay 141",
-    calls === want && want === 141 && calls <= 500,
+    "fat-world draw calls stay 156",
+    calls === want && want === 156 && calls <= 160,
     String(calls),
   );
   const im = [];
@@ -233,7 +235,7 @@ function mkE(type, x, y) {
     });
   } catch (e) {}
   const fire = im.find(
-    (o) => o.userData.kind === "fire" && o.geometry.type === "LatheGeometry",
+    (o) => o.userData.kind === "fire" && !!o.geometry.attributes.aF,   // round 2: badge bodies
   );
   check(
     "item draws are 12 kinds × body+ring InstancedMesh",
@@ -354,49 +356,29 @@ function mkE(type, x, y) {
     pairs[pd.t] =
       Math.round(((x1 - x0) / (z1 - z0)) * 10) / 10 + "/" + Math.round(maxR);
   }
+  /* entities round 2 2026-10-25: pickups are glyph badges. The 2D glyph is the semantic; the silhouette only carries the FAMILY */
+  const famPairs = new Set(POWER.map((pd) => ITEM_FAMILY[pd.t] + ":" + pairs[pd.t]));
   check(
-    "plan-view footprints are pairwise distinct (w/d, maxR)",
-    new Set(Object.values(pairs)).size === 12,
+    "badge silhouettes: one footprint per family, four families distinct",
+    new Set(Object.values(ITEM_FAMILY)).size === 4 && new Set(POWER.map((pd) => pairs[pd.t])).size >= 2 && famPairs.size >= 4,
     POWER.map((pd) => pd.t + " " + pairs[pd.t]).join("  "),
   );
-  const LATHE = ["fire", "bomb", "speed", "shield"];
-  const wrong = POWER.filter((pd) =>
-    LATHE.includes(pd.t)
-      ? ITEM_GEO[pd.t].type !== "LatheGeometry"
-      : ITEM_GEO[pd.t].type !== "BufferGeometry",
-  ).map((pd) => pd.t + ":" + ITEM_GEO[pd.t].type);
-  check(
-    "build split: fire/bomb/speed/shield lathe, the other eight merged",
-    !wrong.length,
-    wrong.join(" ") || "ok",
-  );
-  const roundy = POWER.filter((pd) =>
-    /Cone|Cylinder|Sphere|Torus|Octahedron|Box/.test(ITEM_GEO[pd.t].type),
-  ).map((pd) => pd.t);
-  check(
-    "no pickup is a solid of revolution or a leftover primitive",
-    !roundy.length,
-    roundy.join(" ") || "ok",
-  );
-  const wrongUp = POWER.filter((pd) => !LATHE.includes(pd.t)).filter((pd) => {
-    const nor = ITEM_GEO[pd.t].attributes.normal;
-    let up = 0;
-    for (let i = 0; i < nor.count; i++) if (nor.getY(i) > 0.9) up++;
-    return up === 0;
+  const bad = POWER.filter((pd) => {
+    const g = ITEM_GEO[pd.t], aF = g.attributes.aF, nor = g.attributes.normal;
+    if (g.type !== "BufferGeometry" || !aF || aF.count !== nor.count) return true;
+    let n = 0;
+    for (let i = 0; i < aF.count; i++) if (aF.getX(i) > 0.5) { n++; if (!(nor.getY(i) > 0.5 && nor.getZ(i) > 0.3)) return true; }
+    return n < 12;
   }).map((pd) => pd.t);
-  check(
-    "every flat body has upward-facing cap normals",
-    !wrongUp.length,
-    wrongUp.join(" ") || "ok",
-  );
+  check("every pickup is a BufferGeometry badge whose front face (aF=1) is raked up toward the rig", !bad.length, bad.join(" ") || "ok");
 }
 
 {
   const pools = createPools(BIOMES[0], null);
   const geos = POWER.map((pd) => pools.itemRingIM[pd.t].geometry.uuid);
   check(
-    "exactly 4 distinct ring geometries across the 12 ring meshes",
-    new Set(geos).size === 4,
+    "ONE shared ring geometry across the 12 ring meshes (round 2: the second ring is gone)",
+    new Set(geos).size === 1,
     String(new Set(geos).size),
   );
   const byFam = {};

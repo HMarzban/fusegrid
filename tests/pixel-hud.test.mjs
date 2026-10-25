@@ -16,7 +16,7 @@ import { SCREEN } from "../src/app/menuapp.js";
 import { POWER, FOES } from "../src/core/entities.js";
 import { createAtlas } from "../src/render/pixel/atlas.js";
 import { createPixelRenderer } from "../src/render/pixel/renderer.js";
-import { setPixelArt, pixelArt, hudIcon, opaqueBox, itemCell, foeCell, pageScale, HUD_S, GUIDE_S, SLOT_PAD } from "../src/render/pixel/hudart.js";
+import { setPixelArt, pixelArt, hudIcon, opaqueBox, itemCell, foeCell, foeAnim, itemAnim, pageScale, HUD_S, GUIDE_S, SLOT_PAD } from "../src/render/hudart.js";
 import { surfRGBA } from "../tools/pixel/rgba.mjs";
 import { PRECACHE } from "../src/pwa/shell.js";
 
@@ -44,14 +44,14 @@ const HUDW = (lives) => ({players: [{bombs: 2, range: 3}], lives, level: 4, enem
 const HUDS = [[0, null], [3, {on: true, t: 12.3}], [8, null]];
 const PAGES = ["drawHowTo", "drawItemsHelp", "drawEnemiesHelp"], BOXES = [[600, 520], [600, 360]];
 const PIN = {
-  hud0: "676af1c5:178", hud3: "ecac4c84:354", hud8: "924118c2:511",
-  drawHowTo520: "5687af4d:457", drawItemsHelp520: "8a7f1cfd:1195", drawEnemiesHelp520: "1c590ad6:1149",
-  drawHowTo360: "1938cac7:457", drawItemsHelp360: "b3039a60:1195", drawEnemiesHelp360: "b0a1000c:1149",
-  drawHowTo520T: "e582bb4f:457", drawItemsHelp520T: "2aa3e9c5:1195", drawEnemiesHelp520T: "5682c5e5:1149",
-  drawHowTo360T: "7a30cea6:457", drawItemsHelp360T: "9e918ade:1195", drawEnemiesHelp360T: "46aa50d5:1149",
-  "shell.2d.HOWTO": "7107614c:459", "shell.2d.ITEMS": "4fc3c574:1197", "shell.2d.ENEMIES": "0cc384f9:1151",
-  "shell.3d.HOWTO": "7107614c:459", "shell.3d.ITEMS": "4fc3c574:1197", "shell.3d.ENEMIES": "0cc384f9:1151",
-  "shell.iso.HOWTO": "3851fddd:459", "shell.iso.ITEMS": "bc8afea6:1197", "shell.iso.ENEMIES": "9d742abb:1151",
+  hud0: "7c298753:175", hud3: "60b2bf24:349", hud8: "2aa8d78c:508",
+  drawHowTo520: "5d502d72:556", drawItemsHelp520: "155ea896:1484", drawEnemiesHelp520: "d16dbce4:1387",
+  drawHowTo360: "1bf1f410:556", drawItemsHelp360: "d35d5ec9:1484", drawEnemiesHelp360: "dfb64e9a:1387",
+  drawHowTo520T: "90d59026:556", drawItemsHelp520T: "ffcd540a:1484", drawEnemiesHelp520T: "32d9dc43:1387",
+  drawHowTo360T: "d3557029:556", drawItemsHelp360T: "ff4e83bf:1484", drawEnemiesHelp360T: "d0de70fb:1387",
+  "shell.2d.HOWTO": "cc1477a9:558", "shell.2d.ITEMS": "b43cc0f3:1486", "shell.2d.ENEMIES": "d24ca817:1389",
+  "shell.3d.HOWTO": "cc1477a9:558", "shell.3d.ITEMS": "b43cc0f3:1486", "shell.3d.ENEMIES": "d24ca817:1389",
+  "shell.iso.HOWTO": "db2dcd7a:558", "shell.iso.ITEMS": "38bd30ad:1486", "shell.iso.ENEMIES": "fd63d5c7:1389",
 };
 const hud = (lv, tm, ico) => { const r = rec(); drawHudChips(r.c, HUDW(lv), tm, ico); return r; };
 const page = (f, w, h, kind, touch) => { const r = rec(); md[f](r.c, md.layout(w, h), 1.25, kind, touch); return r; };
@@ -97,21 +97,32 @@ unchanged("px art registered: it never leaks into another kind");
     const want = Math.min(lv, 6) + 2;
     const ims = d.map((o) => o[1][0]), exp = [...Array(Math.min(lv, 6)).fill(A.items.glyph.heart.im), A.items.glyph.bomb.im, A.items.glyph.fire.im];
     check("HUD px lives " + lv + ": hearts + BOMB + FLAME glyphs are the atlas frames, by identity", d.length === want && ims.every((im, i) => im === exp[i]), d.length + "/" + want);
-    check("HUD px lives " + lv + ": x1, whole logical px, smoothing off", d.every((o) => integral(o) && o[1][3] === o[1][0].width * HUD_S && o[1][4] === o[1][0].height * HUD_S && o[2] === false));
+    check("HUD px lives " + lv + ": hearts x2, chips x1, whole logical px, smoothing off", d.every((o, i) => { const m = i < Math.min(lv, 6) ? 2 : HUD_S; return integral(o) && o[1][3] === o[1][0].width * m && o[1][4] === o[1][0].height * m && o[2] === false; }));
     check("HUD px lives " + lv + ": text identical to CLASSIC (shared vector font)", text(px.log) === text(v.log));
   }
   const d = draws(hud(1, null, ico)), f = A.items.glyph.heart, b = opaqueBox(f);
-  check("HUD px heart centred on the CLASSIC heart centre (16,25) by its opaque box", d[0][1][1] === Math.round(16 - b.x - b.w / 2) && d[0][1][2] === Math.round(25 - b.y - b.h / 2));
+  check("HUD px heart centred on the CLASSIC heart centre (16,25) by its opaque box", d[0][1][1] === Math.round(16 - (b.x + b.w / 2) * 2) && d[0][1][2] === Math.round(25 - (b.y + b.h / 2) * 2));
 }
 
+// ---- GUIDE cells move in PIXEL (pure function of the page clock) ----
+{
+  let moving = 0;
+  for (const f of FOES) {
+    if (foeAnim(A, f.t, 0.4).fs.some((x, j) => x !== foeAnim(A, f.t, 0.4 + 0.5).fs[j]) || foeAnim(A, f.t, 0.4).fs.length !== foeAnim(A, f.t, 0.9).fs.length) moving++;
+  }
+  check("PIXEL guide foes animate: most frames change within 0.5 s", moving >= FOES.length - 2, moving + "/" + FOES.length);
+  check("PIXEL guide foes and pickups are deterministic (same time, same frames)", FOES.every((f) => foeAnim(A, f.t, 1.37).fs.every((x, j) => x === foeAnim(A, f.t, 1.37).fs[j])) && POWER.every((p) => itemAnim(A, p.t, 2.2).fs.every((x, j) => x === itemAnim(A, p.t, 2.2).fs[j])));
+  check("PIXEL guide pickups carry ring + glyph and hover at most one art px", POWER.every((p) => { const a = itemAnim(A, p.t, 0.7); return a.fs.length === 2 && a.fs[1] === A.items.glyph[p.t] && Math.abs(a.dy) <= 1; }));
+}
 // ---- GUIDE pages in PIXEL ----
 {
   const cellsOf = {drawHowTo: () => ["bomb", "throw", "remote", "kick"].map((t) => itemCell(A, t)), drawItemsHelp: () => POWER.map((p) => itemCell(A, p.t)), drawEnemiesHelp: () => FOES.map((f) => foeCell(A, f.t))};
-  const N = {drawHowTo: 4, drawItemsHelp: POWER.length, drawEnemiesHelp: FOES.length + FOES.filter((f) => f.t === "shade").length};
+  const N = {drawHowTo: 8, drawItemsHelp: POWER.length * 2, drawEnemiesHelp: FOES.length + FOES.filter((f) => f.t === "shade" || f.t === "burrow").length};
+  const imsOf = (o, out = new Set(), seen = new Set()) => { if (!o || typeof o !== "object" || seen.has(o)) return out; seen.add(o); if (o.im) out.add(o.im); for (const k in o) imsOf(o[k], out, seen); return out; };
   const seen = {};
   for (const [w, h] of BOXES) for (const f of PAGES) {
     const px = page(f, w, h, "px"), v = page(f, w, h, "2d"), d = draws(px);
-    const allowed = new Set(cellsOf[f]().flat().map((x) => x.im));
+    const allowed = imsOf(f === "drawEnemiesHelp" ? A.foe : A.items);
     const scales = new Set(d.map((o) => o[1][3] / o[1][0].width));
     seen[f + h] = [...scales].join();
     check(f + "@" + h + " px: every cell drawn from the live atlas (" + d.length + ")", d.length === N[f] && d.every((o) => allowed.has(o[1][0])), d.length + "/" + N[f]);
@@ -144,8 +155,8 @@ unchanged("px art registered: it never leaks into another kind");
 {
   const src = (p) => readFileSync(join(ROOT, p), "utf8");
   check("scenes.js stays atlas-free (painter arrives as a parameter)", !/pixel\//.test(src("src/render/scenes.js")));
-  check("hudart.js imports nothing (no bake at boot, no atlas pull)", !/^import /m.test(src("src/render/pixel/hudart.js")));
-  check("hudart.js is in the PWA precache", PRECACHE.includes("./src/render/pixel/hudart.js"));
+  check("hudart.js imports nothing (no bake at boot, no atlas pull)", !/^import /m.test(src("src/render/hudart.js")));
+  check("hudart.js is in the PWA precache", PRECACHE.includes("./src/render/hudart.js"));
   check("shellview passes kind (and the touch layout) to the three GUIDE pages", ["drawHowTo", "drawItemsHelp", "drawEnemiesHelp"].every((f) => new RegExp("menudraw\\." + f + "\\(c, L, app\\.subT, kind, touchLay\\(canvas\\)\\)").test(src("src/render/shellview.js"))));
 }
 

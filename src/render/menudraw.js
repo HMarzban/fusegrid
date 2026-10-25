@@ -4,15 +4,18 @@
    accent #37f0d0, text #dfe7f5, muted #7385ad, veils rgba(7,10,18,a).
    Easing helpers duplicated from the intro beat table (spec §3) — this file
    must not import from src/app. */
-import { roomCap, BIOMES, isFinale } from "../core/config.js";
+import { CFG, roomCap, BIOMES, isFinale } from "../core/config.js";
 import { POWER, FOES } from "../core/entities.js";
 import { HEAT_COL, HEAT_MARK, HEAT_NAME, clampHeat, heatRoster, heatProfile } from "../core/heat.js";
 import { PACE_NAME } from "../core/pace.js";
 import { pactLabel } from "../core/pact.js";
 import { PACT, PACT_COL, applyPact } from "../core/pact.js";
-import { drawIcon, drawEnemyBody } from "./sprites.js";
+import { drawEnemyBody } from "./sprites.js";
+import { drawItemBody } from "./itemdraw.js";
+import { TILE_HELP } from "../core/feat.js";
+import { drawSpec } from "./featdraw.js";
 import { rr } from "./icons.js";
-import { pixelArt, itemCell, foeCell, pageScale, blitCell, SLOT_PAD } from "./pixel/hudart.js";
+import { pixelArt, itemCell, foeCell, pageScale, blitAnim, blitCell, foeAnim, itemAnim, SLOT_PAD } from "./hudart.js";
 const ACCENT = "#37f0d0",
   TEXT = "#dfe7f5",
   MUTED = "#7385ad";
@@ -306,23 +309,40 @@ function lockGlyph(c, x, y, s, col) {
 }
 const DUMMY = { type: "walker", color: "#8affc1", r: 14, home: { x: 0, y: 0 }, invuln: false };
 const FOE_OF = Object.fromEntries(FOES.map((f) => [f.t, f]));
+const GX = { a: 1, gl: 0, fl: 0, bl: null };
+const GW = { time: 0 };
+const seedOf = (k) => {
+  let h = 0;
+  for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) | 0;
+  return (h & 255) * 9;
+};
 function foeAt(c, A, t, cx, cy, s, time, ps) {
   const f = FOE_OF[t] || FOES[0];
-  if (A) return blitCell(c, foeCell(A, f.t), cx, cy, ps || (s >= 36 ? 2 : 1));
+  if (A) return blitAnim(c, foeAnim(A, f.t, time), cx, cy, ps || (s >= 36 ? 2 : 1));
   DUMMY.type = f.t;
   DUMMY.color = f.col;
+  DUMMY.home.x = seedOf(f.t);
+  DUMMY.home.y = seedOf(f.t + "y");
+  GW.time = time;
   c.save();
   c.translate(cx, cy);
   c.scale(s / 30, s / 30);
-  drawEnemyBody(c, { time }, DUMMY);
+  drawEnemyBody(c, GW, DUMMY, GX);
   c.restore();
 }
+const ITEM = { t: "", col: "#fff", x: 0, y: 0 };
 function itemAt(c, A, p, cx, cy, s, time, ps) {
-  if (A) return blitCell(c, itemCell(A, p.t), cx, cy, ps || (s >= 36 ? 2 : 1));
+  if (A) return blitAnim(c, itemAnim(A, p.t, time), cx, cy, ps || (s >= 36 ? 2 : 1));
+  ITEM.t = p.t;
+  ITEM.col = p.col;
+  ITEM.x = seedOf(p.t);
+  ITEM.y = seedOf(p.t + "y");
+  GW.time = time;
   c.save();
   c.translate(cx, cy);
-  c.scale(s / 28, s / 28);
-  drawIcon(c, p.t, p.col, time);
+  const k = (s * 1.43) / CFG.TILE;
+  c.scale(k, k);
+  drawItemBody(c, GW, ITEM, 1, null);
   c.restore();
 }
 /* heatRoster deduped to [{t, n}] in first-seen order. */
@@ -1175,7 +1195,7 @@ export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked, pace, timeAt
 }
 
 /* GUIDE art in PIXEL (W5, R19): kind "px" swaps only the scaled vector glyph
-   for the atlas cell (pixel/hudart.js); wells, rows and text are the same
+   for the atlas cell (hudart.js); wells, rows and text are the same
    calls in every kind. */
 const pxArt = (kind) => (kind === "px" ? pixelArt() : null);
 const BACK_TAP = "TAP OUTSIDE TO GO BACK";
@@ -1326,23 +1346,23 @@ export function drawEnemiesHelp(c, L, t, kind, touch) {
   foot(c, S, T ? BACK_TAP : "ESC BACK");
 }
 
-/* GUIDE (ATLAS): three door tiles side by side on keyboard (←/→ or ↑/↓
-   walk them), stacked 70-tall rows with the strip inline on touch. Each door
+/* GUIDE (ATLAS): four door tiles in a 2x2 on keyboard (←/→ or ↑/↓
+   walk them in order), stacked 70-tall rows with the strip inline on touch. Each door
    shows what is behind it. guideHit shares guideGeom; a tile owns half of
    each gutter, the rest of the plate is inert (-2), off it backs out (-1). */
-const GUIDE_LABEL = ["HOW TO PLAY", "ITEMS", "ENEMIES"];
+const GUIDE_LABEL = ["HOW TO PLAY", "ITEMS", "ENEMIES", "FLOOR"];
 export function guideGeom(L, touch) {
   const T = !!touch,
-    S = pageBox(L, T ? 520 : 552, T ? 3 * 70 + 12 : 120, T),
+    S = pageBox(L, T ? 520 : 552, T ? 4 * 70 + 18 : 2 * 64 + 8, T),
     f = S.f,
-    tw = T ? S.iw : (S.iw - 16) / 3;
-  const tiles = [0, 1, 2].map((i) => (T ? { x: S.ix, y: S.by + i * 76 * f, w: tw, h: 70 * f } : { x: S.ix + i * (tw + 8), y: S.by, w: tw, h: 120 * f }));
+    tw = T ? S.iw : (S.iw - 8) / 2;
+  const tiles = [0, 1, 2, 3].map((i) => (T ? { x: S.ix, y: S.by + i * 76 * f, w: tw, h: 70 * f } : { x: S.ix + (i & 1) * (tw + 8), y: S.by + (i >> 1) * 72 * f, w: tw, h: 64 * f }));
   return { S, tiles, T };
 }
 export function guideHit(x, y, L, _n, touch) {
   const g = guideGeom(L, touch),
     p = g.T ? 3 : 4;
-  for (let i = 0; i < 3; i++) if (inR(g.tiles[i], x, y, p)) return i;
+  for (let i = 0; i < 4; i++) if (inR(g.tiles[i], x, y, p)) return i;
   const S = g.S;
   return x >= S.x && x <= S.x + S.w && y >= S.y && y <= S.y + S.h ? -2 : -1;
 }
@@ -1361,6 +1381,75 @@ function keyCap(c, x, y, s, T) {
   c.fillText(s, x + w / 2, y + 1);
   return w;
 }
+/* FLOOR: the eight tiles, one per world (core/feat.js HOME), painted by the look's own painter at CORE / PLUS / MAX. Only four have rules yet. */
+const FLOOR_ROWS = [
+  { k: "BLOOM", name: "BOOSTER", room: 1 },
+  { k: "GLIDE", name: "ICE PATCH", room: 2 },
+  { k: "BELT", name: "CONVEYOR", room: 3 },
+  { k: "STREAM", name: "STREAM", room: 4 },
+  { k: "PLATE", name: "TRAP", room: 5 },
+  { k: "QUICK", name: "QUICKSAND", room: 6 },
+  { k: "PORTAL", name: "PORTAL", room: 7 },
+  { k: "GATE", name: "GATE", room: 8 },
+];
+const SIDES4 = ["N", "E", "S", "W"];
+const floorSpec = (k, h, t) => ({ kind: k, h, par: 0, dir: 0, outer: SIDES4, exit: true, entry: true, phase: ((Math.floor(t * 28) % 8) * 5) | 0, state: 0, lit: 0, pair: 1, gx: 3, gy: 4 });
+function floorAt(c, A, row, h, cx, cy, size, t) {
+  const sp = floorSpec(row.k, h, t || 0), bi = row.room - 1;
+  if (A && A.feat) return blitCell(c, [A.feat(bi, sp, t || 0)], cx, cy, size >= 40 ? 2 : 1);
+  drawSpec(c, BIOMES[bi % BIOMES.length], sp, Math.round(cx - size / 2), Math.round(cy - size / 2), size);
+}
+export function drawFloorHelp(c, L, t, kind, touch) {
+  const T = !!touch,
+    n = FLOOR_ROWS.length,
+    rh = T ? 54 : 44,
+    hd = T ? 16 : 14,
+    sw = L.narrow ? 28 : 40,
+    S = pageBox(L, 560, hd + n * rh + (n - 1) * 4, T),
+    f = S.f,
+    A = pxArt(kind),
+    gx = S.ix + 8,
+    tx = gx + 3 * sw + 2 * 4 + 14;
+  boxPlate(c, S);
+  head(c, S, "FLOOR", "ONE TILE PER WORLD · " + n + " TILES");
+  c.textAlign = "center";
+  c.textBaseline = "middle";
+  c.fillStyle = MUTED;
+  c.font = font(T ? 10 : 8, "900");
+  for (let j = 0; j < 3; j++) c.fillText(HEAT_NAME[j], gx + j * (sw + 4) + sw / 2, S.by + hd / 2 - 1);
+  for (let i = 0; i < n; i++) {
+    const row = FLOOR_ROWS[i],
+      r = { x: S.ix, y: S.by + (hd + i * (rh + 4)) * f, w: S.iw, h: rh * f },
+      cy = r.y + r.h / 2,
+      tw = r.x + r.w - 8 - tx,
+      rules = !!TILE_HELP[row.k];
+    cell(c, r);
+    for (let j = 0; j < 3; j++) floorAt(c, A, row, j, gx + j * (sw + 4) + sw / 2, cy, sw, t);
+    c.textAlign = "left";
+    c.textBaseline = "middle";
+    c.fillStyle = TEXT;
+    c.font = sans(T ? 15 : 12, "800");
+    c.fillText(row.name, tx, cy - (T ? 14 : 11));
+    const nw = mw(c, row.name);
+    c.fillStyle = ACCENT;
+    c.font = font(T ? 10 : 8, "900");
+    c.fillText(clip(c, "ROOM " + row.room + " · " + BIOMES[row.room - 1].name, tw - nw - 10), tx + nw + 10, cy - (T ? 14 : 11));
+    c.fillStyle = MUTED;
+    c.font = font(T ? 11 : 9);
+    const l1 = rules ? "CORE · " + TILE_HELP[row.k][0] : "LOOK ONLY FOR NOW",
+      l2 = rules ? "MAX · " + TILE_HELP[row.k][2] : "ITS RULE COMES LATER";
+    c.fillText(clip(c, l1, tw), tx, cy + (T ? 4 : 3));
+    c.fillText(clip(c, l2, tw), tx, cy + (T ? 19 : 14));
+    if (rules) {
+      c.fillStyle = ACCENT;
+      c.globalAlpha = 0.7;
+      c.fillRect(r.x + r.w - 3, r.y + 4, 2, r.h - 8);
+      c.globalAlpha = 1;
+    }
+  }
+  foot(c, S, T ? BACK_TAP : "ESC BACK");
+}
+
 export function drawGuide(c, L, t, cursor, kind, touch) {
   const cur = cursor | 0,
     g = guideGeom(L, touch),
@@ -1368,9 +1457,9 @@ export function drawGuide(c, L, t, cursor, kind, touch) {
     T = g.T,
     A = pxArt(kind);
   boxPlate(c, S);
-  head(c, S, "GUIDE", "HOW TO · ITEMS · ENEMIES");
-  const subs = ["2 RULES · 6 CONTROLS", POWER.length + " PICKUPS", FOES.length + " FOES"];
-  for (let i = 0; i < 3; i++) {
+  head(c, S, "GUIDE", "HOW TO · ITEMS · ENEMIES · FLOOR");
+  const subs = T ? ["2 RULES · 6 CONTROLS", POWER.length + " PICKUPS", FOES.length + " FOES", FLOOR_ROWS.length + " TILES · ONE PER WORLD"] : ["2 RULES · 6 KEYS", POWER.length + " PICKUPS", FOES.length + " FOES", FLOOR_ROWS.length + " TILES"];
+  for (let i = 0; i < 4; i++) {
     const r = g.tiles[i],
       sel = i === cur;
     cell(c, r, 0.5);
@@ -1383,13 +1472,13 @@ export function drawGuide(c, L, t, cursor, kind, touch) {
     c.fillText(GUIDE_LABEL[i], lx, T ? r.y + r.h / 2 - 10 : r.y + 20);
     c.fillStyle = sel ? TEXT : MUTED;
     c.font = font(T ? 13 : 10, "700");
-    c.fillText(clip(c, subs[i], r.x + r.w - 10 - lx), lx, T ? r.y + r.h / 2 + 12 : r.y + r.h - 16);
+    c.fillText(clip(c, subs[i], (T ? r.x + r.w - 150 : r.x + r.w - 128) - lx), lx, T ? r.y + r.h / 2 + 12 : r.y + r.h - 16);
     c.textAlign = "right";
     c.font = sans(18, "600");
     c.fillText("›", r.x + r.w - 10, T ? r.y + r.h / 2 : r.y + 20);
     if (sel) caret(c, r.x + 11, T ? r.y + r.h / 2 : r.y + 20, 30);
-    const sy = T ? r.y + r.h / 2 : r.y + r.h / 2 + 4,
-      sx = T ? r.x + r.w - 40 : r.x + 24;
+    const sy = T ? r.y + r.h / 2 : r.y + r.h / 2 + 2,
+      sx = T ? r.x + r.w - 40 : r.x + r.w - 124;
     if (i === 0) {
       if (T) {
         c.font = font(12, "900");
@@ -1402,10 +1491,12 @@ export function drawGuide(c, L, t, cursor, kind, touch) {
         for (const k of ["K", "Q", "P"]) x += keyCap(c, x, sy + 10, k, T) + 4;
       }
     } else {
-      const list = i === 1 ? POWER.slice(0, 4) : [FOES[0], FOES[3], FOES[4]],
-        s = T ? 30 : 30;
+      const list = i === 1 ? POWER.slice(0, T ? 4 : 3) : i === 2 ? [FOES[0], FOES[3], FOES[4]] : [FLOOR_ROWS[2], FLOOR_ROWS[1], FLOOR_ROWS[0]],
+        s = 30,
+        x0 = sx;
       list.forEach((e, j) => {
-        const cx = T ? sx - (list.length - 1 - j) * (s + 4) - s / 2 : sx + s / 2 + j * (s + 4);
+        const cx = T ? x0 - (list.length - 1 - j) * (s + 4) - s / 2 : x0 + s / 2 + j * (s + 4);
+        if (i === 3) return floorAt(c, A, e, 1, cx, sy, s, t);
         well(c, cx, sy, s, i === 1 ? e.col : null);
         if (i === 1) itemAt(c, A, e, cx, sy, s * 0.72, t);
         else foeAt(c, A, e.t, cx, sy, s * 0.82, t);

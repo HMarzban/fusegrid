@@ -17,11 +17,11 @@ export const FOE_LAYOUT = Object.freeze({
 });
 export const LAYOUT_CELLS = Object.freeze({
   step: Object.freeze(STEP7),
-  still: Object.freeze(["idle0", "idle1", "stunned"]),
+  still: Object.freeze(["idle0", "idle1", "idle2", "stunned"]),
   spin: Object.freeze(["spin0", "spin1", "stunned"]),
-  rocket: Object.freeze(["up0", "up1", "down0", "down1", "side0", "side1", "stunned"]),
+  rocket: Object.freeze(["up0", "up1", "up2", "down0", "down1", "down2", "side0", "side1", "side2", "stunned"]),
   burrow: Object.freeze(STEP7.concat(["plume0", "plume1", "plume2"])),
-  shade: Object.freeze(["float0", "float1", "stunned", "hem"]),
+  shade: Object.freeze(["float0", "float1", "float2", "stunned", "hem"]),
 });
 export const FOE_TYPES = Object.freeze(FOES.map((f) => f.t));
 export const layoutOf = (type) => FOE_LAYOUT[type] || "step";
@@ -32,7 +32,9 @@ export const BLAST_PIECES = Object.freeze(["cross", "straight", "end"]);
 export const BLAST_AGES = Object.freeze(["grow", "full", "thin"]);
 export const ITEM_TYPES = Object.freeze(POWER.map((p) => p.t));
 export const ITEM_CHROME = Object.freeze(["well", "ring.cap", "ring.vit", "ring.utl", "ring.bls", "ring.utl1", "ring.bls1"]);
-export const FX_CELLS = Object.freeze(["reveal0", "reveal1", "sparkle0", "sparkle1", "sparkle2", "glint0", "glint1", "glint2", "puff0", "puff1", "puff2", "puff3"]);
+/* wall families (wall round prototype): vr / ctr / cbr are their own cells (frame A: lit lip top-left, shade bottom-right) */
+export const WALL_CELLS = Object.freeze(["base", "v1", "v2", "acc", "h", "vl", "vr", "ctl", "ctr", "cbl", "cbr"]);
+export const FX_CELLS = Object.freeze(["reveal0", "reveal1", "glint0", "glint1", "glint2", "puff0", "puff1", "puff2", "puff3"]);
 
 export const MANIFEST = Object.freeze([
   ...MAKO_FACES.flatMap((f) => MAKO_CYCLE.map((c) => "mako/" + f + "." + c)),
@@ -46,6 +48,7 @@ export const MANIFEST = Object.freeze([
   ...ITEM_TYPES.map((t) => "items/" + t),
   ...ITEM_CHROME.map((n) => "items/" + n),
   ...FX_CELLS.map((n) => "fx/" + n),
+  ...BIOMES.flatMap((b) => WALL_CELLS.map((n) => "walls/" + b.name + "." + n)),
 ]);
 /* Manifest keys an art set does not draw yet (served by fallback.js). */
 export function pendingOf(art) {

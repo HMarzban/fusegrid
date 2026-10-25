@@ -12,7 +12,11 @@ import {CFG, biomeOf, BIOMES} from "../../core/config.js";
 import {POWER} from "../../core/entities.js";
 import {captureSprite, drawPlayerBody, drawEnemyBody, drawBombBody,
   bakeAtlas, bakedTile, paintItemFace, PLAYER_SUIT} from "../sprites.js";
+import {topRows, sideRows, wallShapes, paintShapes, glossOf, shinOf, slot2d} from "../wallart.js";
+import {WV_N} from "../wallvar.js";
+import {paintRim,rimSize} from "./rimart.js";
 import {dk} from "../icons.js";
+import {paintFloor} from "../floorart.js";
 import {ENEMY_TYPES, ENEMY_COLORS} from "./entities.js";
 
 const S=64, K=S/(CFG.TILE*2.05);
@@ -51,14 +55,20 @@ function paintEyes(c,t){
   c.fillRect(3,7,58,4);
 }
 
-/* ---- stationary visor SLIT (identity §2: NOT eyes — the square reads via
-   a dark seam with a faint magenta rim glow) ---- */
+/* ---- stationary LENS (entities round 2: the 2D sentry carries one big
+   lens, not a slit): a dark visor bar, a round socket, the violet iris with a
+   soft hot core and one specular, on the 64x32 face strip ---- */
 function paintSlit(c){
-  c.globalAlpha=0.55; c.strokeStyle="#c58aff"; c.lineWidth=3;
-  c.strokeRect(3,8,58,16);
-  c.globalAlpha=1; c.fillStyle="#150a1c"; c.fillRect(6,11,52,10);
-  c.globalAlpha=0.35; c.fillStyle="#c58aff"; c.fillRect(9,14,46,4);
-  c.globalAlpha=1;
+  c.fillStyle="#150a1c"; c.fillRect(3,5,58,22);
+  c.globalAlpha=0.5; c.strokeStyle="#c58aff"; c.lineWidth=2; c.strokeRect(3,5,58,22);
+  c.globalAlpha=1; c.fillStyle="#05070c";
+  c.beginPath(); c.arc(32,16,12.5,0,Math.PI*2); c.fill();
+  c.fillStyle="#c58aff";
+  c.beginPath(); c.arc(32,16,9,0,Math.PI*2); c.fill();
+  c.globalAlpha=0.75; c.fillStyle="#ffffff";
+  c.beginPath(); c.arc(32,16,4.2,0,Math.PI*2); c.fill();
+  c.globalAlpha=1; c.fillStyle="#ffffff";
+  c.beginPath(); c.arc(28.6,12.4,2,0,Math.PI*2); c.fill();
 }
 
 /* ---- §2.7 MAKO face: the 2D face beats, so both renderers show the ONE
@@ -119,11 +129,61 @@ export function atlasSources(mk, level=1){
       bakeAtlas();
       const bi=BIOMES.indexOf(biomeOf(level));
       o.wall=bakedTile(bi,"wall");
+      /* wall strip painted from the shared shape lists at WS x (detail
+         pass 2026-10-23): the micro-texture stays crisp under the
+         NearestFilter instead of resampling the 40 px bakes */
+      const B=BIOMES[bi], TL=CFG.TILE, WS=2, C=TL*WS;
+      const strip=(bg,res)=>captureSprite(WV_N*C,C*2,(c)=>{
+        c.fillStyle=bg; c.fillRect(0,0,WV_N*C,C*2);
+        const cell=(k,code,a,b,row)=>{ c.save(); c.beginPath(); c.rect(k*C,row*C,C,C); c.clip();
+          c.translate(k*C,row*C); c.scale(WS,C/(b-a)); c.translate(0,-a);
+          paintShapes(c,B,wallShapes(B,code),0,0,res); c.restore(); };
+        for(let k=0;k<WV_N;k++){ const [a,b]=topRows(B,k), [s0,s1]=sideRows(B);
+          cell(k,k,a,b,0); cell(k,b-a===TL?0:k,s0,s1,1); }
+       },mk);
+      o.wallStrip=strip(B.wall);
+      /* round 3: the surface strip the ONE wall material samples beside its
+         colour strip, same layout: R = relief (the colour strip's own local
+         contrast, so a carved groove sits low and a raised mark high, then
+         softened so the bump never aliases at play distance), G = gloss,
+         B = highlight tightness, both painted from the same shape lists */
+      const gl=strip("#000",(b,s)=>{ const g=glossOf(b,s); return "rgb("+g+","+g+","+g+")"; });
+      o.wallSurf=surfStrip(o.wallStrip,gl,C,shinOf(B),mk);
+      /* frame A: the rim's own strip (ring picture + side face), one canvas */
+      { const [rw,rh]=rimSize(); o.rim=captureSprite(rw,rh,(c)=>paintRim(c,B,(b,sl)=>slot2d(b,sl)),mk); }
       o.brick=bakedTile(bi,"brick");
-      o.floor=bakedTile(bi,"floorA");
+      /* base floor (integration 2026-10-25): a 2x2 atlas of four slab variants painted at 2x from the
+         shared floor painter (groundfx.js picks one per cell by hash), floor0 bed (the instance colour carries the
+         parity); the map is minified ~2x at rig C, so it gets mipmaps */
+      o.floor=captureSprite(CFG.TILE*4,CFG.TILE*4,(c)=>{ for(let v=0;v<4;v++){ c.save(); c.translate((v&1)*CFG.TILE*2,(v>>1)*CFG.TILE*2); c.scale(2,2); paintFloor(c,B,0,v,2); c.restore(); } },mk);
      }catch(_){ /* stay asset-free */ }
    }
   return o;
+}
+
+/* relief + gloss for the wall strip (round 3). Height = 0.5 + k * (L -
+   blur6(L)) per 80x80 cell (no bleed across cells or rows), then a 3x3
+   soften; L = the colour strip's luminance. Pure canvas math, once per room
+   build. null when there is no readable canvas (tests, headless). */
+export function surfStrip(col,gl,C,shin,mk){
+  let a,g;
+  try{ a=col.getContext("2d").getImageData(0,0,col.width,col.height).data; g=gl.getContext("2d").getImageData(0,0,gl.width,gl.height).data; }catch(_){ return null; }
+  const Wd=col.width, Ht=col.height, L=new Float32Array(Wd*Ht);
+  for(let i=0;i<Wd*Ht;i++) L[i]=(0.2126*a[i*4]+0.7152*a[i*4+1]+0.0722*a[i*4+2])/255;
+  const box=(src,r)=>{ const t=new Float32Array(src.length), o=new Float32Array(src.length);
+    for(let y=0;y<Ht;y++) for(let x=0;x<Wd;x++){ const x0=Math.floor(x/C)*C; let s=0,n=0;
+      for(let d=-r;d<=r;d++){ const xx=x+d; if(xx>=x0&&xx<x0+C){ s+=src[y*Wd+xx]; n++; } } t[y*Wd+x]=s/n; }
+    for(let x=0;x<Wd;x++) for(let y=0;y<Ht;y++){ const y0=Math.floor(y/C)*C; let s=0,n=0;
+      for(let d=-r;d<=r;d++){ const yy=y+d; if(yy>=y0&&yy<y0+C){ s+=t[yy*Wd+x]; n++; } } o[y*Wd+x]=s/n; }
+    return o; };
+  const base=box(L,6), H=new Float32Array(L.length);
+  for(let i=0;i<L.length;i++) H[i]=Math.max(0,Math.min(1,0.5+1.6*(L[i]-base[i])));
+  const Hs=box(H,1);
+  return captureSprite(Wd,Ht,(c)=>{
+    const im=c.createImageData(Wd,Ht), d=im.data;
+    for(let i=0;i<L.length;i++){ d[i*4]=Math.round(Hs[i]*255); d[i*4+1]=g[i*4]; d[i*4+2]=shin; d[i*4+3]=255; }
+    c.putImageData(im,0,0);
+   },mk);
 }
 
 /* CanvasTexture atlas or null (headless / nothing painted). Textures are
@@ -140,6 +200,11 @@ export function buildAtlas(mk, level=1){
     try{ tx=new THREE.CanvasTexture(cv); }catch(_){ continue; }
     tx.magFilter=THREE.NearestFilter; tx.minFilter=THREE.NearestFilter;
     tx.generateMipmaps=false; tx.colorSpace=THREE.SRGBColorSpace;
+    /* the surface strip is data (relief / gloss), never colour: linear, and
+       filtered so its slopes stay smooth under the bump derivatives */
+    if(k==="wallSurf"){ tx.colorSpace=THREE.NoColorSpace; tx.magFilter=THREE.LinearFilter; tx.minFilter=THREE.LinearFilter; }
+    if(k.startsWith("item_")){ tx.magFilter=THREE.LinearFilter; tx.minFilter=THREE.LinearFilter; }   // the pickup badge face is read at ~half its 64px, so no nearest shimmer
+    if(k==="floor"){ tx.magFilter=THREE.LinearFilter; tx.minFilter=THREE.LinearMipmapLinearFilter; tx.generateMipmaps=true; }
     tx._shared=true;
     atlas[k]=tx; n++;
    }

@@ -71,9 +71,14 @@ export function portraitGeo(W, H, cw, ch, game) {
   const { s } = fitBox(W, H, true, cw, ch), G = PORT_GEO;
   const sw = cw * s, sh = ch * s, slack = H - sh;
   const mid = Math.floor(Math.max(G.top, Math.min(slack / 2, slack - G.bot)));
-  const top = game ? Math.min(mid, PORT_GAME.top) : mid;
-  const band = H - top - sh, roomW = (sw - G.side[0] - G.side[1] - G.mid) * 16 / 25;
-  const pad = Math.floor(Math.max(G.pad[0], Math.min(game ? PORT_GAME.pad : G.pad[1], band - G.edge - G.gap, roomW)));
+  const roomW = (sw - G.side[0] - G.side[1] - G.mid) * 16 / 25;
+  const fitPad = (top) => Math.floor(Math.max(G.pad[0], Math.min(game ? PORT_GAME.pad : G.pad[1], H - top - sh - G.edge - G.gap, roomW)));
+  let top = game ? Math.min(mid, PORT_GAME.top) : mid;
+  /* GAME: the stage sits centred between the pause pill and the docked pad
+     (never above the lift, never below the MENU position), so a tall phone
+     no longer leaves the board stranded in the top third over a dead gap */
+  if (game) top = Math.max(top, Math.min(mid, Math.floor((top + (H - G.edge - fitPad(top)) - sh) / 2)));
+  const band = H - top - sh, pad = fitPad(top);
   const bomb = Math.round(pad * 9 / 16), padTop = Math.max(G.gap, Math.floor(band - G.edge - pad));
   return { top, pad, bomb, padTop, bombTop: padTop + Math.round((pad - bomb) / 2) };
 }

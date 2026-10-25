@@ -56,7 +56,7 @@ export function shotFrame(o, t) {
 /* One world event -> one-shots. A hurt that moved the player is a respawn:
    a desaturated corpse where it fell and a materialize at the spawn. A hurt
    that did not (a shield break, or the hit that ends the run) leaves none.
-   A pickup grab ("power") leaves a 3-frame sparkle where the item stood.
+   A pickup grab ("power") is drawn by entities.js drawBursts from entityfx; OS.SPARKLE is a reserved code (never fed, WIN keeps 11).
    A room clear ("win") anchors MAKO's 2-frame cheer, so it starts on f0;
    it lives until reset() (the next grid), world.state WIN gating the draw. */
 export function feedShot(shots, ev, world, t) {
@@ -72,7 +72,6 @@ export function feedShot(shots, ev, world, t) {
       break;
     case "lose": if (p) shots.push(OS.DEATH, p.x, p.y, t); break;
     case "reveal": shots.push(OS.REVEAL, ev.x, ev.y, t); break;
-    case "power": shots.push(OS.SPARKLE, ev.x, ev.y, t, ev.kind, ev.col); break;
     case "win": if (p) shots.push(OS.WIN, p.x, p.y, t); break;
     case "kick": if (p) shots.push(OS.KICK, p.x, p.y, t); break;
     case "throw": if (p) shots.push(OS.THROW, p.x, p.y, t); break;

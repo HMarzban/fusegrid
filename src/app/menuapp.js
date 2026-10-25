@@ -32,6 +32,7 @@ export const SCREEN = Object.freeze({
   STATS: 12, // appended — the opt-in cabinet counters (R5)
   TROPHIES: 13, // appended — the MEDALS page, opened from STATS by T (R6)
   GRAPHICS: 14, // appended — the GRAPHICS page, opened from the OPTIONS door row
+  FLOOR: 15, // appended — the floor-tile page, the fourth GUIDE door
 });
 export const ITEMS = Object.freeze([
   "PLAY",
@@ -45,7 +46,7 @@ export const ITEMS = Object.freeze([
 ]);
 /* GUIDE rows, frozen and index-addressed: guideRow, drawGuide and confirm's
    GUIDE dispatch all count this array. */
-export const GUIDE_ROWS = Object.freeze(["HOW TO PLAY", "ITEMS", "ENEMIES"]);
+export const GUIDE_ROWS = Object.freeze(["HOW TO PLAY", "ITEMS", "ENEMIES", "FLOOR"]);
 /* OPTIONS rows, frozen and index-addressed: optRow, drawSettings and
    settingsHit all agree because they all count this array. */
 export const OPT_ROWS = Object.freeze([
@@ -384,12 +385,15 @@ export function createMenuApp(opts = {}) {
               return this._push(SCREEN.ITEMS);
             case "ENEMIES":
               return this._push(SCREEN.ENEMIES);
+            case "FLOOR":
+              return this._push(SCREEN.FLOOR);
           }
           return false;
         case SCREEN.HOWTO:
         case SCREEN.SCORES:
         case SCREEN.ITEMS:
         case SCREEN.ENEMIES:
+        case SCREEN.FLOOR:
         case SCREEN.STATS:
         case SCREEN.TROPHIES:
           return this.back();
@@ -405,7 +409,8 @@ export function createMenuApp(opts = {}) {
       if (
         this.screen === SCREEN.HOWTO ||
         this.screen === SCREEN.ITEMS ||
-        this.screen === SCREEN.ENEMIES
+        this.screen === SCREEN.ENEMIES ||
+        this.screen === SCREEN.FLOOR
       )
         return this._push(SCREEN.GUIDE);
       if (this.screen === SCREEN.TROPHIES) return this._push(SCREEN.STATS);

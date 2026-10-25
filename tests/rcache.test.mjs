@@ -30,7 +30,7 @@ function mkDoc() {
 
 function harness(o = {}) {
   const doc = mkDoc();
-  const log = { swaps: [], ready: 0, loads: 0, built: [] };
+  const log = { swaps: [], ready: 0, loads: 0, pxLoads: 0, fails: [], built: [] };
   let k = o.kind || "2d";
   const mk = (tag) => (a, b, c) => {
     const opts = tag === "2d" ? b : c;
@@ -40,19 +40,21 @@ function harness(o = {}) {
     log.built.push(r);
     return r;
   };
-  let resolve3d, reject3d;
+  let resolve3d, reject3d, resolvePx, rejectPx;
   const env = {
-    canvas: { width: 0, height: 0 }, rig: {}, opts: { audio: null, createRenderer3D: o.pre3d ? mk("3d") : null },
-    make: { "2d": o.throw2d ? () => { throw new Error("boom"); } : mk("2d"), px: mk("px") },
+    canvas: { width: 0, height: 0 }, rig: {}, opts: { audio: null, createRenderer3D: o.pre3d ? mk("3d") : null, createPixelRenderer: o.lazyPx ? null : mk("px") },
+    make: { "2d": o.throw2d ? () => { throw new Error("boom"); } : mk("2d") },
     size: () => ({ w: 600, h: 520 }), kind: () => k, perf: () => o.K || null,
     onSwap: (r) => log.swaps.push(r), onReady: () => log.ready++,
     loadRenderer3D: () => { log.loads++; return new Promise((res, rej) => { resolve3d = () => res({ createRenderer3D: mk("3d") }); reject3d = () => rej(new Error("404")); }); },
-    fit: () => null, eager: !!o.eager,
+    loadRendererPx: () => { log.pxLoads++; return new Promise((res, rej) => { resolvePx = () => res({ createPixelRenderer: mk("px") }); rejectPx = () => rej(new Error("404")); }); },
+    onFail: (k) => log.fails.push(k),
+    fit: () => null, eager: !!o.eager, eagerPx: !!o.eagerPx,
   };
   const g0 = globalThis.document;
   globalThis.document = doc;
   const rc = mountRenderers(env);
-  return { rc, doc, log, env, setKind: (v) => { k = v; }, resolve3d: () => resolve3d(), reject3d: () => reject3d(), done: () => { if (g0 === undefined) delete globalThis.document; else globalThis.document = g0; } };
+  return { rc, doc, log, env, setKind: (v) => { k = v; }, resolve3d: () => resolve3d(), reject3d: () => reject3d(), resolvePx: () => resolvePx(), rejectPx: () => rejectPx(), done: () => { if (g0 === undefined) delete globalThis.document; else globalThis.document = g0; } };
 }
 const tickP = () => new Promise((r) => setTimeout(r, 0));
 const warn0 = console.warn;
@@ -93,6 +95,64 @@ console.warn = () => {};
   h.resolve3d();
   await tickP();
   check("eager resolve after RENDER left 3D swaps nothing in (main would draw REAL 3D under PIXEL) but still settles and arms 3D", h.log.swaps.length === 0 && h.log.ready === 1 && h.rc.has3d(), h.log.swaps.map((r) => r.tag).join());
+  h.done();
+}
+{
+  const h = harness({ kind: "px", lazyPx: true });
+  const r = h.rc.get("px");
+  check("lazy PIXEL: get(px) before the tree loads returns the classic renderer and starts ONE load", r.tag === "2d" && h.log.pxLoads === 1 && !h.rc.hasPx() && h.log.loads === 0, r.tag + "/" + h.log.pxLoads);
+  h.rc.get("px");
+  check("a second get(px) while loading starts no second load", h.log.pxLoads === 1);
+  check("#px is shown while it loads (the classic board keeps drawing under it)", h.doc.getElementById("px").hidden === false);
+  h.resolvePx();
+  await tickP();
+  check("load resolve swaps the PIXEL renderer in when the kind is still px", h.log.swaps.length === 1 && h.log.swaps[0].tag === "px" && h.rc.hasPx() && h.rc.get("px") === h.log.swaps[0]);
+  check("the PIXEL factory gets #px", h.log.swaps[0].el === h.doc.getElementById("px"));
+  check("load settle calls onReady once and never onFail", h.log.ready === 1 && h.log.fails.length === 0);
+  h.done();
+}
+{
+  const K = { aa: false, epoch: 1 };
+  const h = harness({ kind: "px", lazyPx: true, K });
+  h.rc.setKnobs(K);
+  h.rc.get("px");
+  h.resolvePx();
+  await tickP();
+  check("a lazily built PIXEL renderer is armed with the current K", h.log.swaps[0].perfs.length === 1 && h.log.swaps[0].perfs[0] === K && h.log.swaps[0].opts.perf === K);
+  h.done();
+}
+{
+  const h = harness({ kind: "px", lazyPx: true, eagerPx: true });
+  check("eagerPx (?render=px) starts the load at mount, once even after get(px)", h.log.pxLoads === 1 && (h.rc.get("px"), h.log.pxLoads === 1));
+  h.resolvePx();
+  await tickP();
+  check("eagerPx resolve swaps PIXEL in and settles", h.log.swaps.length === 1 && h.log.swaps[0].tag === "px" && h.log.ready === 1);
+  h.done();
+}
+{
+  const h = harness({ kind: "px", lazyPx: true });
+  h.rc.get("px");
+  h.setKind("2d");
+  h.resolvePx();
+  await tickP();
+  check("PIXEL resolve after RENDER left px swaps nothing in but arms px for the next flip", h.log.swaps.length === 0 && h.rc.hasPx());
+  h.done();
+}
+{
+  const h = harness({ kind: "px", lazyPx: true });
+  h.rc.get("px");
+  h.setKind("3d");
+  h.resolvePx();
+  await tickP();
+  check("a PIXEL settle while REAL 3D is still loading does not lift the board veil early", h.log.ready === 0);
+  h.done();
+}
+{
+  const h = harness({ kind: "px", lazyPx: true });
+  const r2 = h.rc.get("px");
+  h.rejectPx();
+  await tickP();
+  check("a failed PIXEL load warns, calls onFail(px) once, settles, and keeps the classic renderer", h.log.fails.join() === "px" && h.log.ready === 1 && h.log.swaps.length === 0 && !h.rc.hasPx() && h.rc.get("px") === r2 && h.log.pxLoads === 1);
   h.done();
 }
 {
@@ -167,9 +227,10 @@ console.warn = () => {};
 {
   const src = readFileSync(new URL("../src/app/rcache.js", import.meta.url), "utf8");
   check("rcache.js imports nothing from src/render (factories are injected)", !/from\s+["']\.\.\/render\//.test(src));
-  const sites = src.match(/loadRenderer3D\(\)/g) || [];
-  const settle = src.match(/loadRenderer3D\(\)\.then\(\(m\) => \{[^}]*\}\)\.catch\(\(e\) => console\.warn\("3D load failed", e\)\)\.then\(\(\) => onReady\(\)\)/g) || [];
-  check("both loadRenderer3D sites catch then settle onReady", sites.length === 2 && settle.length === 2, sites.length + "/" + settle.length);
+  const sites = src.match(/\bld\(\)/g) || [];
+  const settle = src.match(/ld\(\)\.then\(\(m\) => \{[^}]*\}\)\.catch\(\(e\) => \{[^}]*\}\)\.then\(\(\) => \{ if \(k === "3d" \|\| kind\(\) !== "3d"\) onReady\(\); \}\)/g) || [];
+  check("the one lazy-load site (3D and PIXEL) catches then settles onReady", sites.length === 1 && settle.length === 1, sites.length + "/" + settle.length);
+  check("rcache.js has no import statement at all (both loaders and factories are injected)", !/import\s/.test(src));
   check("rcache never assigns the #gl drawing buffer", !/\.width\s*=\s*[^;]*dpr/i.test(src) && !/glCanvas\.width\s*=/.test(src));
 }
 

@@ -15,11 +15,15 @@ import {applyBright} from "./lights.js";
 import {createRig, applyOrbit, CAM_FOV} from "./camrig.js";
 import {introCam} from "./flythrough.js";
 import {createParticles} from "./particles.js";
+import {ambientClock} from "../ambient.js";
 import {buildAtlas} from "./textures.js";
+import {stageGlow, stageBack, hudPlate3} from "../frame.js";
 import {drawHudChips, drawAbilityBar, drawOverlay, overlayBox, drawCoach, drawCoach2} from "../scenes.js";
-import {onEvent, updateFx, getShake, getFlash, getFx, feedFx, drawFxOverlay, drawPickupFx, syncFx, initFx} from "../fx.js";
+import {onEvent, updateFx, getFxOpts, getShake, getFlash, getFx, feedFx, drawFxOverlay, drawPickupFx, syncFx, initFx} from "../fx.js";
 
 const W=CFG.COLS*CFG.TILE, H=CFG.ROWS*CFG.TILE;
+/* the board sits VIEW_DY px lower in the canvas (a view-offset shift, rig and lens untouched): the plate takes the top 40, so the slack was all below */
+export const VIEW_DY=16;
 const noop=()=>{};
 export const DPR_MAX=3;                     // RESOLUTION FULL (opt-in); default min(dpr,2)
 /* GRAPHICS 2026-10-10: the probe and three get ONE attribute object. The
@@ -63,7 +67,7 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
   const K0=opts.perf||null, now=opts.now||clock;
   const ATTR={...ATTR0,antialias:!K0||K0.aa!==false};
   let shadow=K0&&K0.shadow||"soft", armed=false, inv=true, lost=false, lostAt=0;
-  let glRenders=0, shadowUpdates=0, shadowNeed=true, lastRaster=-Infinity, pzT=null, lastW=null, lastG=null, wasP=false;
+  let glRenders=0, shadowUpdates=0, shadowNeed=true, lastRaster=-Infinity, pzT=null, pzL=0, skew=0, wT=0, lastW=null, lastG=null, wasP=false;
 
   /* GL init guarded three ways: absent canvas (headless), context probe that
      is not a real object (recording-proxy test stubs return functions), and
@@ -92,6 +96,7 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
 
   const scene3=new THREE.Scene();
   const camera=new THREE.PerspectiveCamera(CAM_FOV,W/H,1,3000);
+  camera.setViewOffset(W,H,0,-VIEW_DY,W,H);
   /* S3: fx-store particles ride the scene ROOT (not sc.group) so level
      rebuilds never orphan live bursts; syncFx wipes them on world change. */
   const fxp=createParticles();
@@ -116,12 +121,14 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
     gl.shadowMap.type=shadow==="sharp"?THREE.PCFShadowMap:THREE.PCFSoftShadowMap;
    }
   let sc=null, brightK=1;
+  const aclock=ambientClock();
   function rebuild(world){
     if(sc){ scene3.remove(sc.group); disposeGroup(sc.group); }
     sc=buildScene(world,getAtlas(world),brightK);
     setShadow(); shadowNeed=inv=true;
     const biome=biomeOf(world.level);
-    scene3.background=new THREE.Color(biome.bg1);
+    scene3.background=gl?null:new THREE.Color(biome.bg1);
+    stageBack(glCanvas,world.level); stageGlow(overlayCanvas,world.level);
     /* No distance fog. On the rig of the 2026-09-04 pass the far board
        corners sat at d 963, and Fog(bg1,700,1600) was replacing 43% of them
        with the darkest colour in the biome — 89% out at the DIST_MAX dolly
@@ -152,13 +159,22 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
   function render(world, dt, o){
     if(!world)return;
     const paused=world.state==="PAUSE", ev=world.events.length>0;
+    if(world!==lastW||world.time<wT-1e-9){ skew=0; pzT=null; }
+    wT=world.time;
     if(world!==lastW||world.grid!==lastG){ if(wasP)initFx(); lastW=world; lastG=world.grid; }
     wasP=paused;
-    if(!paused)pzT=null; else if(pzT==null)pzT=world.time;
+    /* The renderer clock is world.time minus every second spent in PAUSE
+       (the sim keeps ticking it there): frozen while paused, and on resume it
+       picks up exactly where it stopped, so a death, burst or spawn that was
+       mid-flight plays out its REST instead of finding it long over. */
+    if(paused){ if(pzT==null)pzT=world.time-skew; pzL=world.time; }
+    else if(pzT!=null){ skew+=pzL-(pzT+skew); pzT=null; }
+    const tc=paused?pzT:world.time-skew;
     consumeEvents(world, dt, !(o&&o.sfx===false));
+    const ambOn=!!(o&&(o.hud===true||o.amb===true)); if(ambOn)aclock.tick(world,dt||0);
     const bk=o&&typeof o.bright==="number"&&isFinite(o.bright)?o.bright:brightK;
     const pop=o&&o.pop!=null?o.pop:1, sh=paused?STILL:getShake();
-    const tB=paused?pzT:world.time, g=o&&o.ghost;
+    const tB=tc, g=o&&o.ghost;
     const busy=!paused&&(getFx().length>0||sh.x!==0||sh.y!==0);
     const rt=rig.target, chg=d(sig,0,world)+d(sig,1,tB)+d(sig,2,world.state)+d(sig,3,world.level)+d(sig,4,world.grid)
       +d(sig,5,ev)+d(sig,6,busy)+d(sig,7,pop)+d(sig,8,g?g.x:null)+d(sig,9,g?g.y:null)+d(sig,10,rig.az)+d(sig,11,rig.el)
@@ -169,12 +185,13 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
       const bChanged=bk!==brightK;
       brightK=bk;
       /* PAUSE (R16, all three looks): the board holds the time it first saw. */
-      const t0=world.time; if(paused)world.time=pzT;
+      const t0=world.time; world.time=tc;
       try{
         if(!sc||sc.update(world))rebuild(world);   // brick rescan / level rebuild
         else if(bChanged&&sc.lights)applyBright(sc.lights,brightK);
       }finally{ world.time=t0; }
       if(sc)sc.pools.ghost(g);
+      if(sc&&sc.amb)sc.amb.update(aclock.t,ambOn,getFxOpts().partK,dprUsed);
       /* Opening: o.pop scales the player slot group (MAKO's pop-in; hidden at
          0, never a zero matrix), 1 outside INTRO. No mesh is added. */
       if(sc){ if(pop<=0)sc.pools.player.visible=false; sc.pools.player.scale.setScalar(pop>0?pop:1); }
@@ -226,6 +243,7 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
     if(ov||(o&&o.hud===true)){
       if(ov){ const B=overlayBox("3d");
         drawOverlay(ovCtx,world,B.w,B.h,B.cx,B.cy,o&&o.pause,o&&o.time,o&&o.run,o&&o.toast); }
+      if(o&&o.hud===true)hudPlate3(ovCtx,world.level);
       if(o&&o.hud===true)drawHudChips(ovCtx,world,o&&o.time);
       if(o&&o.hud===true)drawAbilityBar(ovCtx,world);
       if(o&&o.hud===true&&world.state==="PLAY")drawFxOverlay(ovCtx);
