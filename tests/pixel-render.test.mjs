@@ -476,7 +476,7 @@ const rasters = (log) => log.filter((q) => q[0] === "hi" && q[1] === "drawImage"
   let threw = null;
   try {
     globalThis.location = {search: "?render=px"};
-    const g = createGame(null, {seed: 5});
+    const g = createGame(null, {seed: 5, createPixelRenderer});
     let T = 0; const tick = (k) => { for (let i = 0; i < k; i++) { T += 16; g.loop(T); } };
     check("?render=px boots the px renderer (stub: no #px under Node)", !!(g.renderer._dbg && g.renderer._dbg.atlas));
     g.app.startRun(); tick(90);
@@ -485,7 +485,7 @@ const rasters = (log) => log.filter((q) => q[0] === "hi" && q[1] === "drawImage"
   check("?render=px loop raised nothing", !threw, String(threw && threw.stack));
   threw = null;
   try {
-    const g = createGame(null, {seed: 6});
+    const g = createGame(null, {seed: 6, createPixelRenderer});
     let T = 0; const tick = (k) => { for (let i = 0; i < k; i++) { T += 16; g.loop(T); } };
     tick(3);
     const r2d = g.renderer;
@@ -519,12 +519,11 @@ const rasters = (log) => log.filter((q) => q[0] === "hi" && q[1] === "drawImage"
   check("the px path never imports vendor/three or render/three", px.every(([, s]) => !/vendor\/three|\/three\//.test(s)));
   check("no Math.random in src/render/pixel", px.every(([, s]) => !/Math\.random/.test(s)));
   const bytes = px.reduce((a, [, s]) => a + Buffer.byteLength(s), 0);
-  // R24 pinned 120 KB; the GRAPHICS merge (perf seams) on top of the filled foe/item sheets lands at 121.2 KB.
-  // 122 KB ratified by the lead 2026-10-11 (R24); the follow-up (dynamic import of the px path) is still open.
+  // R24 pinned 120 KB, then 122 KB (lead 2026-10-11). #15 landed the dynamic import (pixel/load.js), so CLASSIC no longer pays for the tree and the cap holds at 140 KB for the wall sheet + tile cells.
   check("px JS <= 140 KB (" + (bytes / 1024).toFixed(1) + " KB)", bytes <= 140 * 1024);
   const rcP = join(ROOT, "src/app/rcache.js"), main = readFileSync(join(ROOT, "src/main.js"), "utf8") + (statSync(rcP, {throwIfNoEntry: false}) ? readFileSync(rcP, "utf8") : "");
   check("main.js (or its rcache.js seam) never assigns #px's drawing buffer", !/pxCanvas\.(width|height)\s*=/.test(main));
-  check("main.js (or its rcache.js seam) routes kind px to createPixelRenderer", /kind === "px" \? createPixelRenderer\(pxCanvas, canvas/.test(main) || (/px: createPixelRenderer\b/.test(main) && /k === "px" \? make\.px\(el\("px"\), canvas/.test(main)));
+  check("rcache.js routes kind px to the injected opts.createPixelRenderer (main.js hands it the lazy loadRendererPx)", /k === "px" \? mk\.px\(el\("px"\), canvas/.test(main) && /loadRendererPx/.test(main) && /createPixelRenderer/.test(main));
   const html = readFileSync(join(ROOT, "index.html"), "utf8");
   check("index.html: #px between #gl and #c, author [hidden] rule, image-rendering:auto",
     /<canvas id="gl" hidden><\/canvas><canvas id="px" hidden><\/canvas><canvas id="c"/.test(html) && /#px\[hidden\]\{display:none\}/.test(html) && /#px\{[^}]*image-rendering:auto/.test(html));

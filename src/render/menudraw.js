@@ -12,7 +12,7 @@ import { pactLabel } from "../core/pact.js";
 import { PACT, PACT_COL, applyPact } from "../core/pact.js";
 import { drawIcon, drawEnemyBody } from "./sprites.js";
 import { rr } from "./icons.js";
-import { pixelArt, itemCell, foeCell, pageScale, blitCell, SLOT_PAD } from "./pixel/hudart.js";
+import { pixelArt, itemCell, foeCell, pageScale, blitCell, SLOT_PAD } from "./hudart.js";
 const ACCENT = "#37f0d0",
   TEXT = "#dfe7f5",
   MUTED = "#7385ad";
@@ -1175,7 +1175,7 @@ export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked, pace, timeAt
 }
 
 /* GUIDE art in PIXEL (W5, R19): kind "px" swaps only the scaled vector glyph
-   for the atlas cell (pixel/hudart.js); wells, rows and text are the same
+   for the atlas cell (hudart.js); wells, rows and text are the same
    calls in every kind. */
 const pxArt = (kind) => (kind === "px" ? pixelArt() : null);
 const BACK_TAP = "TAP OUTSIDE TO GO BACK";

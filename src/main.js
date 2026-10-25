@@ -6,7 +6,7 @@
 import { CFG, isFinale } from "./core/config.js";
 import { createWorld, loadLevel, step } from "./core/sim.js";
 import { createRenderer } from "./render/renderer.js";
-import { createPixelRenderer } from "./render/pixel/renderer.js";
+import { loadRendererPx } from "./render/pixel/load.js";
 import { copyPayload, isRunEnd, overlayBox, pauseHit, touchLay } from "./render/scenes.js";
 import { paintBombPad } from "./render/sprites.js";
 import { dims, drawShell, isShellScreen, kindSize } from "./render/shellview.js";
@@ -84,7 +84,7 @@ export function createGame(canvas, opts = {}) {
   // Minor-1 (review 2026-09-07, owner ruling): bootSeed is remembered once so a seedless run's onStart falls back to it.
   const bootSeed = (opts.seed != null ? opts.seed : Math.random() * 1e9) >>> 0;
   const world = createWorld(bootSeed, 1);
-  if (flags.gen2) world.gen = 2; // PROTOTYPE (tiles-d): ?gen=2 plays the gen-2 boards that carry floor tiles
+  if (flags.gen2) world.gen = 2; // PROTOTYPE (tiles-d): gen-2 boards (the floor tile layer) by default; ?gen=1 or ?code= keep today's boards
   loadLevel(world, 1, false);
   world.state = "PLAY";
 
@@ -516,14 +516,14 @@ export function createGame(canvas, opts = {}) {
      classic (default, byte-identical), "3d" real-3D wrapper (#gl under #c),
      "px" PIXEL (#px under #c), "iso" legacy dimetric pinned by ?render=iso.
      src/app/rcache.js owns the cache, canvas sizing, the lazy / eager three
-     load, the AA rebuild and release; frames pushes GRAPHICS knobs through it. */
+     and px loads (a failed px load clears the RENDER row), the AA rebuild and release; frames pushes GRAPHICS knobs through it. */
   function effKind() {
     return kindOf(urlKind, app);
   }
   let curKind = effKind();
-  const rc = mountRenderers({ canvas, opts, rig, make: { "2d": createRenderer, px: createPixelRenderer }, size: kindSize, fit: () => fit, kind: effKind, perf: () => frames.knobs(), loadRenderer3D, eager: urlKind === "3d" || !!opts.render3d, onSwap: (r) => { renderer = r; }, onReady: () => { app.boardReady = true; } });
+  const rc = mountRenderers({ canvas, opts, rig, make: { "2d": createRenderer }, size: kindSize, fit: () => fit, kind: effKind, perf: () => frames.knobs(), loadRenderer3D, loadRendererPx, eager: urlKind === "3d" || !!opts.render3d, eagerPx: urlKind === "px" || !!opts.pixel, onSwap: (r) => { renderer = r; }, onReady: () => { app.boardReady = true; }, onFail: () => { if (app.pixel) app._optRender(0); } });
   let renderer = rc.get(curKind);
-  app.boardReady = curKind !== "3d" || rc.has3d();
+  app.boardReady = curKind === "3d" ? rc.has3d() : curKind === "px" ? rc.hasPx() : true;
 
   // drawShell getters (plan 5): hoisted once so the RAF loop below allocates
   // no new closures per frame.

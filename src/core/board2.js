@@ -473,12 +473,16 @@ export function genBoard2(seed, level, heat = 0) {
   for (let a = 0; a < 8; a++) {
     const sk = skeleton2(seed, level, a);
     if (sk.fails.length) continue;
-    const pf = FEAT.on ? placeFeat(sk.m, seed, level, sk.biome) : null;
-    if (pf && pf.feat) for (const k of pf.force) sk.m[k] = E;
-    for (let m = 0; m < 8; m++) {
-      const fl = fill2(sk, seed, level, heat, m);
-      if (!playFails(fl.grid, level, heat).length)
-        return { grid: fl.grid, feat: pf && pf.feat, layout: { name: sk.biome + " · " + sk.tpl.toUpperCase(), tpl: sk.tpl, flip: sk.flip, edits: sk.edits, skAttempt: a, fillAttempt: m, fallback: false, featKind: pf ? pf.kind : null, featFallback: !!(pf && pf.fallback) } };
+    for (let pa = 0; pa < 4; pa++) {
+      const pf = FEAT.on ? placeFeat(sk.m, seed, level, sk.biome, pa) : null, sp = pf && pf.feat ? { ...sk, m: sk.m.slice() } : sk;
+      if (pf && pf.feat) for (const k of pf.force) sp.m[k] = E;
+      const holds = (h) => { for (let m = 0; m < 8; m++) if (!playFails(fill2(sp, seed, level, h, m).grid, level, h).length) return true; return false; };
+      for (let m = 0; m < 8; m++) {
+        const fl = fill2(sp, seed, level, heat, m);
+        if (!playFails(fl.grid, level, heat).length && (!(pf && pf.feat) || [0, 1, 2].every((h) => h === heat || holds(h))))
+          return { grid: fl.grid, feat: pf && pf.feat, featPair: pf && pf.pair || null, layout: { name: sk.biome + " · " + sk.tpl.toUpperCase(), tpl: sk.tpl, flip: sk.flip, edits: sk.edits, skAttempt: a, fillAttempt: m, fallback: false, featKind: pf ? pf.kind : null, featFallback: !!(pf && pf.fallback) } };
+      }
+      if (!(pf && pf.feat)) break;
     }
     break;
   }

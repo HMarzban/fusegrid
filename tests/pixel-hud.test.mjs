@@ -16,7 +16,7 @@ import { SCREEN } from "../src/app/menuapp.js";
 import { POWER, FOES } from "../src/core/entities.js";
 import { createAtlas } from "../src/render/pixel/atlas.js";
 import { createPixelRenderer } from "../src/render/pixel/renderer.js";
-import { setPixelArt, pixelArt, hudIcon, opaqueBox, itemCell, foeCell, pageScale, HUD_S, GUIDE_S, SLOT_PAD } from "../src/render/pixel/hudart.js";
+import { setPixelArt, pixelArt, hudIcon, opaqueBox, itemCell, foeCell, pageScale, HUD_S, GUIDE_S, SLOT_PAD } from "../src/render/hudart.js";
 import { surfRGBA } from "../tools/pixel/rgba.mjs";
 import { PRECACHE } from "../src/pwa/shell.js";
 
@@ -144,8 +144,8 @@ unchanged("px art registered: it never leaks into another kind");
 {
   const src = (p) => readFileSync(join(ROOT, p), "utf8");
   check("scenes.js stays atlas-free (painter arrives as a parameter)", !/pixel\//.test(src("src/render/scenes.js")));
-  check("hudart.js imports nothing (no bake at boot, no atlas pull)", !/^import /m.test(src("src/render/pixel/hudart.js")));
-  check("hudart.js is in the PWA precache", PRECACHE.includes("./src/render/pixel/hudart.js"));
+  check("hudart.js imports nothing (no bake at boot, no atlas pull)", !/^import /m.test(src("src/render/hudart.js")));
+  check("hudart.js is in the PWA precache", PRECACHE.includes("./src/render/hudart.js"));
   check("shellview passes kind (and the touch layout) to the three GUIDE pages", ["drawHowTo", "drawItemsHelp", "drawEnemiesHelp"].every((f) => new RegExp("menudraw\\." + f + "\\(c, L, app\\.subT, kind, touchLay\\(canvas\\)\\)").test(src("src/render/shellview.js"))));
 }
 

@@ -81,11 +81,13 @@ export function loadLevel(world, level, keepProgress = false) {
     w.grid = b2.grid;
     w.layout = b2.layout;
     w.feat = b2.feat || null;
+    w.featPair = b2.featPair || null;
     if (w.feat) { w.featS = new Float32Array(CFG.COLS * CFG.ROWS); w.featM = new Uint8Array(CFG.COLS * CFG.ROWS); w.featT = 0; w.featPend = []; }
   } else {
     w.grid = genBoard(w.seed, level, P.carve);
     w.layout = null;
     if (w.feat) w.feat = null;
+    if (w.featPair) w.featPair = null;
   }
   w.bombs = [];
   w.blades = [];

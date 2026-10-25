@@ -3,17 +3,23 @@
    Tables follow 04-synthesis §7.2 exactly; `tier` is heat (or an arm
    override, world.featTier). Placement is keyed (seed, room) only and runs
    on the gen-2 skeleton after stamps and flip, so heat never moves a tile.
-   Never merges. */
+   Never merges.
+   ART-ONLY CODES 8..14 (2026-10-25 integration): 8..11 STREAM E/S/W/N, 12 QUICK,
+   13 PORTAL (pair id 1/2 in world.featPair), 14 GATE (lit in world.featM, always
+   0 = open). The sim never reads them (it tests only 1..7), so a WATER / SAND /
+   VOID / CROWN gen-2 room is placed for its look and plays exactly as without the
+   layer until the sim rules land (#19-#22). HOME is the one room-biome -> tile
+   table. */
 import { CFG, key } from "./config.js";
 import { createRng } from "./rng.js";
 
 const C = CFG.COLS, R = CFG.ROWS, N = C * R;
 const D4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
-export const F = Object.freeze({ NONE: 0, BELT_E: 1, BELT_S: 2, BELT_W: 3, BELT_N: 4, GLIDE: 5, BLOOM: 6, PLATE: 7 });
+export const F = Object.freeze({ NONE: 0, BELT_E: 1, BELT_S: 2, BELT_W: 3, BELT_N: 4, GLIDE: 5, BLOOM: 6, PLATE: 7, STREAM_E: 8, STREAM_S: 9, STREAM_W: 10, STREAM_N: 11, QUICK: 12, PORTAL: 13, GATE: 14 });
 export const FDIR = Object.freeze([[1, 0], [0, 1], [-1, 0], [0, -1]]);
 export const isBelt = (v) => v >= 1 && v <= 4;
 export const beltDir = (v) => FDIR[v - 1];
-export const HOME = Object.freeze({ FACTORY: "BELT", ICE: "GLIDE", JUNGLE: "BLOOM", ARENA: "PLATE" });
+export const HOME = Object.freeze({ FACTORY: "BELT", ICE: "GLIDE", JUNGLE: "BLOOM", ARENA: "PLATE", WATER: "STREAM", SAND: "QUICK", VOID: "PORTAL", CROWN: "GATE" });
 
 export const FEAT_PROFILE = Object.freeze([
   Object.freeze({ belt: { actors: false, v: 1.0 }, glide: { boost: 1.25, coast: 0, turn: 0.35 }, bloom: { fwd: 2, side: 0, delay: 0, cd: 1.0 }, plate: { wind: 0.5, r: 1, cd: 3, inert: 2 } }),
@@ -31,7 +37,7 @@ export function featTier(w) {
   return t < 0 ? 0 : t > 2 ? 2 : t | 0;
 }
 export function featProfile(w) { return FEAT_PROFILE[featTier(w)]; }
-export function featKindOf(v) { return isBelt(v) ? "BELT" : v === 5 ? "GLIDE" : v === 6 ? "BLOOM" : v === 7 ? "PLATE" : null; }
+export function featKindOf(v) { return isBelt(v) ? "BELT" : v === 5 ? "GLIDE" : v === 6 ? "BLOOM" : v === 7 ? "PLATE" : v >= 8 && v <= 11 ? "STREAM" : v === 12 ? "QUICK" : v === 13 ? "PORTAL" : v === 14 ? "GATE" : null; }
 
 /* ---- placement (V13-V27 subset, see notes.md) ---- */
 function fmix(h) {
@@ -59,20 +65,26 @@ function bfs(m, sx, sy) {
 }
 /* m: skeleton class map (0 wall, else open; bricks count as passable, the
    real route once the doors are open). Returns {feat, force, fails} or null. */
-export function placeFeat(m, seed, level, biome) {
+export function placeFeat(m, seed, level, biome, salt = 0) {
   const kind = HOME[biome];
   if (!kind) return null;
-  const rng = createRng(fmix((seed ^ Math.imul(level + 1, 0x9e3779b1) ^ 0x7ea7) >>> 0));
+  const rng = createRng(fmix((seed ^ Math.imul(level + 1, 0x9e3779b1) ^ 0x7ea7 ^ Math.imul(salt, 0x27d4eb2f)) >>> 0));
   const dS = bfs(m, 1, 1), dD = DOORS.map(([x, y]) => bfs(m, x, y));
   const near = (x, y) => { const k = key(x, y); return dS[k] >= 0 && dS[k] <= 4 || DOORS.some(([a, b]) => a === x && b === y); };
+  const far = (x, y) => open(m, x, y) && dS[key(x, y)] > 4 && !DOORS.some(([a, b]) => a === x && b === y);
   for (let tries = 0; tries < 40; tries++) {
     const f = new Uint8Array(N), force = [];
     let ok = false;
+    let pair = null;
     if (kind === "BELT") ok = belt(m, f, rng, near, dD);
     else if (kind === "GLIDE") ok = glide(m, f, rng, dS);
     else if (kind === "BLOOM") ok = bloom(m, f, rng, force);
+    else if (kind === "STREAM") ok = stream(m, f, rng, far, force);
+    else if (kind === "QUICK") ok = quick(m, f, rng, far, force);
+    else if (kind === "PORTAL") { pair = new Uint8Array(N); ok = portal(m, f, rng, far, force, pair); }
+    else if (kind === "GATE") ok = gate(m, f, rng, far, force);
     else ok = plate(m, f, rng, dS, force);
-    if (ok) return { feat: f, force, kind, tries };
+    if (ok) return pair ? { feat: f, force, kind, tries, pair } : { feat: f, force, kind, tries };
   }
   return { feat: null, force: [], kind, tries: 40, fallback: true };
 }
@@ -193,6 +205,101 @@ function plate(m, f, rng, dS, force) {
   }
   if (used.length < 3) return false;
   for (const [x, y] of used) { f[key(x, y)] = 7; force.push(key(x, y)); }
+  return true;
+}
+const shuf = (a, rng) => { for (let i = a.length - 1; i > 0; i--) { const j = rng.int(0, i); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const manh = (a, b) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]);
+const clearOf = (f, x, y) => !f[key(x, y)] && D4.every(([dx, dy]) => !f[key(x + dx, y + dy)]);
+/* art-only STREAM: 1-2 runs of 3-6 straight tiles in an open lane, one direction
+   per run, every tile with a step-off (a side exit, or the open tile past the
+   run) within 2 tiles downstream; never within 4 steps of spawn or on a door */
+function stream(m, f, rng, far, force) {
+  const lanes = [];
+  for (let y = 1; y < R - 1; y++) { let x = 1; while (x < C - 1) { if (!far(x, y)) { x++; continue; } const s = x; while (far(x, y)) x++; if (x - s >= 3) lanes.push({ h: true, a: s, b: x - 1, l: y }); } }
+  for (let x = 1; x < C - 1; x++) { let y = 1; while (y < R - 1) { if (!far(x, y)) { y++; continue; } const s = y; while (far(x, y)) y++; if (y - s >= 3) lanes.push({ h: false, a: s, b: y - 1, l: x }); } }
+  if (!lanes.length) return false;
+  const want = rng.int(1, 2);
+  let made = 0;
+  for (const r of shuf(lanes, rng)) {
+    if (made >= want) break;
+    for (let t = 0; t < 8; t++) {
+      const L = rng.int(3, Math.min(6, r.b - r.a + 1)), s = rng.int(r.a, r.b - L + 1), dir = rng.int(0, 1) ? 1 : -1;
+      const cells = []; for (let i = 0; i < L; i++) cells.push(r.h ? [s + i, r.l] : [r.l, s + i]);
+      if (dir < 0) cells.reverse();
+      if (!cells.every(([x, y]) => clearOf(f, x, y))) continue;
+      const [lx, ly] = r.h ? [cells[L - 1][0] + dir, r.l] : [r.l, cells[L - 1][1] + dir];
+      const perp = (x, y) => (r.h ? open(m, x, y - 1) || open(m, x, y + 1) : open(m, x - 1, y) || open(m, x + 1, y));
+      let ok = true;
+      for (let i = 0; i < L && ok; i++) {
+        let any = false;
+        for (let j = i; j <= Math.min(L, i + 2); j++) if (j === L ? open(m, lx, ly) : perp(cells[j][0], cells[j][1])) { any = true; break; }
+        ok = any;
+      }
+      if (!ok) continue;
+      const code = r.h ? (dir > 0 ? 8 : 10) : (dir > 0 ? 9 : 11);
+      for (const [x, y] of cells) { f[key(x, y)] = code; force.push(key(x, y)); }
+      made++;
+      break;
+    }
+  }
+  return made > 0;
+}
+/* art-only QUICK: 3-5 singles, no two within 4 Manhattan, none within 4 steps of spawn */
+function quick(m, f, rng, far, force) {
+  const want = rng.int(3, 5), cand = [], used = [];
+  for (let y = 1; y < R - 1; y++) for (let x = 1; x < C - 1; x++) if (far(x, y)) cand.push([x, y]);
+  for (const c of shuf(cand, rng)) {
+    if (used.length >= want) break;
+    if (used.some((u) => manh(u, c) < 4)) continue;
+    used.push(c);
+  }
+  if (used.length < 3) return false;
+  for (const [x, y] of used) { f[key(x, y)] = 12; force.push(key(x, y)); }
+  return true;
+}
+/* art-only PORTAL: 1-2 pairs (pair id 1, 2 in `pair`), each pair >= 8 walking steps
+   and >= 8 Manhattan apart, no two tiles within 3 of each other */
+function portal(m, f, rng, far, force, pair) {
+  const cand = [], used = [];
+  for (let y = 1; y < R - 1; y++) for (let x = 1; x < C - 1; x++) if (far(x, y)) cand.push([x, y]);
+  shuf(cand, rng);
+  const want = rng.int(1, 2);
+  let made = 0;
+  for (let id = 1; id <= want; id++) {
+    let got = false;
+    for (let i = 0; i < cand.length && !got; i++) {
+      const a = cand[i];
+      if (used.some((u) => manh(u, a) < 3)) continue;
+      const d = bfs(m, a[0], a[1]);
+      for (let j = 0; j < cand.length; j++) {
+        const b = cand[j];
+        if (j === i || manh(a, b) < 8 || d[key(b[0], b[1])] < 8 || used.some((u) => manh(u, b) < 3)) continue;
+        used.push(a, b);
+        for (const [x, y] of [a, b]) { f[key(x, y)] = 13; pair[key(x, y)] = id; force.push(key(x, y)); }
+        got = true; made++;
+        break;
+      }
+    }
+  }
+  return made > 0;
+}
+/* art-only GATE: 2-3 singles on straight corridor tiles (two opposite open
+   neighbours, nothing else), no two within 4 Manhattan; featM stays 0 = open */
+function gate(m, f, rng, far, force) {
+  const want = rng.int(2, 3), cand = [], used = [];
+  const o = (x, y) => open(m, x, y);
+  for (let y = 1; y < R - 1; y++) for (let x = 1; x < C - 1; x++) {
+    if (!far(x, y)) continue;
+    const h = o(x - 1, y) && o(x + 1, y) && !o(x, y - 1) && !o(x, y + 1), v = o(x, y - 1) && o(x, y + 1) && !o(x - 1, y) && !o(x + 1, y);
+    if (h || v) cand.push([x, y]);
+  }
+  for (const c of shuf(cand, rng)) {
+    if (used.length >= want) break;
+    if (used.some((u) => manh(u, c) < 4)) continue;
+    used.push(c);
+  }
+  if (used.length < 2) return false;
+  for (const [x, y] of used) { f[key(x, y)] = 14; force.push(key(x, y)); }
   return true;
 }
 export function sideExit(m, x, y) {

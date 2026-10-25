@@ -8,6 +8,7 @@
    writes it; per-entity anim state lives in V (the renderer's view state). */
 import {CFG, T, BIOMES} from "../../core/config.js";
 import {wallCodes} from "../wallvar.js";
+import {cellSpec} from "../featdraw.js";
 import {ITEM_FAMILY} from "../icons.js";
 import {GHOST_A} from "../sprites.js";
 import {PX_T} from "./timing.js";
@@ -37,10 +38,11 @@ export function trackGrid(V, world) {
 }
 
 function drawTiles(c, V, world) {
-  const g = world.grid, level = world.level | 0, TS = V.A.tiles((Math.max(1, level) - 1) % BIOMES.length), WC = wallCodes(world);
+  const g = world.grid, level = world.level | 0, bi = (Math.max(1, level) - 1) % BIOMES.length, TS = V.A.tiles(bi), WC = wallCodes(world), fe = world.feat;
   for (let y = 0; y < R; y++) for (let x = 0; x < C; x++) {
     const k = y * C + x, t = g[k], X = x * 20, Y = y * 20, alt = (x + y) & 1;
     if (t === T.WALL) { c.drawImage(TS.wallV[alt][WC[k]].im, X, Y); V.draws++; continue; }
+    if (fe && fe[k]) { const sp = cellSpec(world, x, y); if (sp.kind) { c.drawImage(V.A.feat(bi, sp).im, X, Y); V.draws++; continue; } }
     const under = y > 0 && g[k - C] !== T.EMPTY;
     c.drawImage((under ? TS.floorC : TS.floor)[alt].im, X, Y); V.draws++;
     if (t === T.EMPTY && (x * 7 + y * 13 + level * 3) % 5 === 0) { c.drawImage(TS.motif[alt].im, X, Y); V.draws++; }

@@ -14,6 +14,7 @@ const ROT = (c, d) => { c.translate(20, 20); c.rotate((d * Math.PI) / 2); c.tran
 export const PAINTERS = { ...BUILT, ...LIVING };
 /* spec: {kind, h, dir 0..3, exit, phase, outer:[sides], state, lit, gx, gy, pair, par} */
 export function paintCell(c, b, s) {
+  if (!c.rect) return;
   c.save();
   c.beginPath(); c.rect(0, 0, 40, 40); c.clip();
   if (PAINTERS[s.kind]) runPainter(PAINTERS[s.kind], c, kOf(b, s));

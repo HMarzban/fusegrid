@@ -12,6 +12,7 @@ import {HEX} from "./palette.js";
 import {anchorOf, cellRGBA, flipX, rot90, swapCell, overlayCell} from "./grid.js";
 import {fallbackCell} from "./fallback.js";
 import {ART} from "./art/index.js";
+import {featPxCell} from "../featpx.js";
 import {MAKO_FACES, MAKO_CYCLE, layoutOf, BOMB_MARKS, BLAST_PIECES, BLAST_AGES} from "./manifest.js";
 
 export const faceRows = (h) => Math.max(2, Math.min(10, Math.round((h || 0) / 4)));
@@ -137,9 +138,20 @@ export function createAtlas(surf, art = ART) {
     };
     return tileSets[i];
   }
+  const featSet = new Map(), FEAT_MAX = 400;
+  function feat(bi, s) {
+    const i = ((bi | 0) % BIOMES.length + BIOMES.length) % BIOMES.length, k = i + "|" + s.kind + "|" + s.h + "|" + (s.dir | 0) + "|" + (s.outer ? s.outer.join("") : "NESW") + "|" + (s.state | 0) + "|" + (s.lit | 0) + "|" + (s.pair | 0);
+    let f = featSet.get(k);
+    if (!f) {
+      f = frame(featPxCell(BIOMES[i], s), {biome: BIOMES[i]});
+      if (featSet.size >= FEAT_MAX) featSet.clear();
+      featSet.set(k, f);
+    }
+    return f;
+  }
   tiles(0);
   mako(HEX.fin, false);
 
-  return {mako, foe, bomb, blast, items, fx, tiles, pending, used,
+  return {mako, foe, bomb, blast, items, fx, tiles, feat, pending, used,
     bakeAll() { for (let i = 0; i < BIOMES.length; i++) tiles(i); mako(HEX.fin, true); return pending; }};
 }
