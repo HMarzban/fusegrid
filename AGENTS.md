@@ -772,7 +772,9 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
     `docs/superpowers/specs/2026-10-20-level-variety-layouts.md`.
   - **Local prototypes** (owner 2026-10-21: keep local). They are throwaway
     reference code on the owner's machine: never merge, never push, never
-    delete. The worktrees are `git worktree lock`ed. Index:
+    delete. The worktrees are `git worktree lock`ed. (2026-10-25: the owner merged `tiles-d`, which is built on
+    ac4f113e, a9489bfe, a531a182, ab0dfcf6 and a3057d0a, into local main, so
+    those five are now in main's history; the rule still binds the other two.) Index:
     `.superpowers/sdd/PROTOTYPES-2026-10.md`.
     - `worktree-agent-ac4f113e8ef46ecff`: the gen-2 bold generator and the
       fair start.
