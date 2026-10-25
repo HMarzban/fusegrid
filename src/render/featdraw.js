@@ -402,6 +402,7 @@ export function paintCell(c, b, s, o = {}) {
 }
 const nbOf = (outer) => ({ N: !outer.includes("N"), E: !outer.includes("E"), S: !outer.includes("S"), W: !outer.includes("W") });
 /* the painter's view of a cell spec (featart/ contract): outer = sides with no same-kind neighbour */
+export const BUILT_FOR_TESTS = BUILT;
 export function kOf(b, s) {
   return { bio: b, h: s.h, nb: nbOf(s.outer || SIDES), par: s.par | 0, on: s.state === 1 ? 1 : 0, dir: s.dir | 0, phase: s.phase | 0, state: s.state | 0, lit: s.lit | 0, pair: s.pair || 1, gx: s.gx | 0, gy: s.gy | 0 };
 }
