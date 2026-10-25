@@ -56,7 +56,7 @@ accident.
 - **Light:** upper-left everywhere. 2D and PIXEL cast shadows fall lower-right;
   REAL 3D shadows fall right and away from the camera because the light recipe
   is frozen.
-- **px JS cap 152 KB** (was 122, then 140, 145): the px tree is a lazy import,
+- **px JS cap 160 KB** (was 122, then 140, 145, 152; 160 for the hand-drawn tiles): the px tree is a lazy import,
   so CLASSIC visitors no longer pay for it; the cap stays as a growth tripwire.
 - **CLASSIC call-log hash pin** `9fb48f0a:72431` (was `97480c1c:22630`;
   re-pinned for walls, floor, bezel, well, depth, ambient and the foe/item round, each time with
@@ -138,16 +138,17 @@ and the existing events.
 3. **Sim:** only BOOSTER, ICE PATCH, CONVEYOR and TRAP have rules. STREAM,
    QUICKSAND, PORTAL and GATE are art only. The heat dial is issue #28.
 4. **Teaching:** the GUIDE has a FLOOR page (the fourth door, `SCREEN.FLOOR` 15, 2026-10-25) and says honestly which tiles have no rule yet; still no coach tip and no FLOOR line on the room card.
-5. **PIXEL tile cells are code-built** (drafted from the painters, then
-   rebuilt by hand-written builders), not frame-by-frame art. A polish pass
-   (2026-10-25) cleaned every tile at every heat (PIXEL heat-separation
-   failures 13 -> 0); hand-drawn frames remain an owner call.
+5. **Closed 2026-10-25:** PIXEL tile cells are hand-drawn palette-slot frames
+   (`pixel/art/feat.js`; CONVEYOR and STREAM are hand-drawn parts assembled in
+   code), after a polish pass took PIXEL heat-separation failures from 13 to 0.
+   ICE PATCH, GATE and CONVEYOR stayed close to the builder look. px lazy-tree
+   cap 160 KB (158.8 KB).
 6. **Performance** is unmeasured on a headed real GPU (floor texture, rim
    shaders, contact AO, ambient Points).
 7. **Colourblind check for the new tiles** was dropped with the old marks gate
    and needs a version that fits full-bleed fixtures.
 8. **Closed 2026-10-25:** ATTRACT now shows ambient (`main.js` hands `{hud:false, amb:true}`, all three renderers read `o.amb`); 3D JUNGLE and ARENA motes got a per-world gain; ICE and SAND rims were lifted (`RIM_LIFT` in `three/scene.js`).
-9. **Closed 2026-10-25:** the HUD plate now ends in a cap at each top corner and the top corner boss sits just below it on the side rail (CLASSIC and PIXEL, `frame.js`, `tests/frame-corners.test.mjs`; REAL 3D already cleared the plate). Phone portrait is still checked in screenshots only.
+9. **Closed 2026-10-25:** the HUD plate now ends in a cap at each top corner and the top corner boss sits just below it on the side rail (CLASSIC and PIXEL, `frame.js`, `tests/frame-corners.test.mjs`; REAL 3D already cleared the plate). Phone: checked in iOS Safari on an iPhone 17 simulator (all three looks, menus, GUIDE FLOOR, touch, audio); the title pan was trimmed so the bezel crops evenly. A physical device is still untested.
 10. **Tracking:** the gameplay gaps are issue #35 (hunter windup #32, colour-vision gate #33, real-GPU frame times #34, plus #10-#13, #24, #26-#28, #30). Progress comments are on #8, #15, #16, #17, #23, #24, #26, #27, #31.
 11. **Housekeeping:** branches `frame-a`, `frame-b` (merged), `frame-c` (not
     merged) and their worktrees; the automated security review of the commits

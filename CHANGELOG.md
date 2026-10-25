@@ -52,6 +52,9 @@ named shell v185. What it adds, for the record:
 - **PIXEL tiles polished.** All eight tiles were cleaned up at every heat, so
   CORE, PLUS and MAX read apart more clearly, and FAST got a fuller body and a
   real side view.
+- **PIXEL tiles are hand-drawn now.** Every tile at every heat is drawn pixel by
+  pixel; QUICKSAND sinks deeper, STREAM has real banks and ripples, PORTAL MAX
+  is a ring stack.
 - **Finished top corners.** The HUD bar now ends in caps at the top of the board
   outline, with the corner piece just below it, instead of covering it.
 - **Ambient motion.** Pollen, snow, steam, ripples, dust, sand, wisps and gold

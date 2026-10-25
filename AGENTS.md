@@ -235,9 +235,12 @@ not shell screens. Do not add them as `SCREEN` values.
     frames (R17, no stepped zoom). Ghost = MAKO frames at `GHOST_A` 0.4. HUD
     chips and GUIDE ITEMS/ENEMIES/HOW TO/FLOOR show the board's own cells
     (`hudart.js`, x1 in chips, x2 on a GUIDE page only if every cell fits;
-    text stays the vector font). px JS cap **152 KB** uncompressed for the
+    text stays the vector font). px JS cap **160 KB** uncompressed for the
     lazy tree (`tests/pixel-render.test.mjs`; R24's 120, then 122 on
-    2026-10-11; the tree is about 146 KB). Since #15 (2026-10-25) the px tree
+    2026-10-11, 152 for the board look, 160 for the hand-drawn tiles; the tree
+    is about 158.8 KB). Floor-tile cells are hand-drawn palette-slot frames in
+    `pixel/art/feat.js` (CONVEYOR and STREAM assembled from hand-drawn parts),
+    read by `featpx.js`. Since #15 (2026-10-25) the px tree
     is a dynamic import (`src/render/pixel/load.js`, `rcache.js` `load(k)`;
     `hudart.js` lives in `src/render/` and imports nothing), so CLASSIC
     visitors never fetch it; `tests/pixel-lazy.test.mjs` walks the boot
