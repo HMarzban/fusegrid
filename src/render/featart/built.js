@@ -91,7 +91,7 @@ export const BUILT = {
   PLATE(c, k) {
     const b = k.bio, h = k.h, on = k.on, cool = k.state === 2;
     floorTile(c, b, k.par);
-    const t = [2.6, 3.4, 4.4][h] + (on ? 1.6 : 0), [X, , S] = GEO.PLATE.well, plate0 = mix(b.wall, b.floor0, on ? 0.2 : [0.4, 0.34, 0.28][h]), plate = cool ? mix(plate0, b.bg1, 0.7) : plate0;
+    const t = GEO.PLATE.lip[h] + (on ? 1.6 : 0), [X, , S] = GEO.PLATE.well, plate0 = mix(b.wall, b.floor0, on ? 0.2 : [0.4, 0.34, 0.28][h]), plate = cool ? mix(plate0, b.bg1, 0.7) : plate0;
     pit(c, X, X, S, S, 0.01, t, plate, 0.5, 0.95, b.wallHi);
     const ix = X + t, iw = S - 2 * t;
     c.save(); c.beginPath(); c.rect(ix, ix, iw, iw); c.clip();
@@ -149,7 +149,7 @@ export const BUILT = {
     [[X + 3.2, X + 3.2], [X + S - 3.2, X + 3.2]].forEach(p => { rect(c, BK, p[0] - 1, p[1] - 1, 2, 2, 0.4); rect(c, WH, p[0] - 1, p[1] + 0.2, 2, 0.8, 0.25); });
     pit(c, ix, iy, iw, ih, 0.01, 1.8, mix(b.bg1, b.floor1, 0.35), 0.4, 0.65);
     c.save(); c.beginPath(); c.rect(ix, iy, iw, ih); c.clip();
-    const nb = [3, 4, 5][h], bw = 3.4, left = ix + 2.2, right = ix + iw - 2.2, pitch = (right - left - bw) / (nb - 1);
+    const G = GEO.GATE, nb = G.n[h], bw = G.bw, left = G.x0, right = G.x1, pitch = (right - left - bw) / (nb - 1);
     if (f === 0) {
       for (let i = 0; i < nb; i++) { const x = left + i * pitch, slit = [x, iy + 3.2, bw, ih - 6.4]; rect(c, BK, slit[0], slit[1], slit[2], slit[3], 0.88); rect(c, WH, slit[0], slit[1] + slit[3] - 1, slit[2], 1, 0.3); rect(c, mix(b.wallHi, b.wall, 0.4), slit[0] + 0.2, slit[1] + 1.8, bw - 0.4, 1.2, 0.35); }
       rect(c, BK, ix + 1.8, iy + ih / 2 - 0.5, iw - 3.6, 1.3, 0.28);

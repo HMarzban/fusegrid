@@ -16,7 +16,7 @@ export const PAINTERS = { ...BUILT, ...LIVING };
 export function paintCell(c, b, s) {
   c.save();
   c.beginPath(); c.rect(0, 0, 40, 40); c.clip();
-  runPainter(PAINTERS[s.kind], c, kOf(b, s));
+  if (PAINTERS[s.kind]) runPainter(PAINTERS[s.kind], c, kOf(b, s));
   c.restore();
 }
 const nbOf = (outer) => ({ N: !outer.includes("N"), E: !outer.includes("E"), S: !outer.includes("S"), W: !outer.includes("W") });
@@ -37,6 +37,13 @@ const kindOf = (v) => (isBeltV(v) ? "BELT" : v === 5 ? "GLIDE" : v === 6 ? "BLOO
 export function tierOf(w) { const t = w.featTier != null ? w.featTier : w.heat; return t < 0 ? 0 : t > 2 ? 2 : t | 0; }
 const PM = [0.85, 1, 1.15];
 const D4 = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+/* a run's flow ends are outer sides even when a different-direction tile of the same kind sits there */
+function endSides(s, dir, exit, entry) {
+  const ahead = SIDES[[1, 2, 3, 0][dir]], behind = SIDES[[3, 0, 1, 2][dir]];
+  if (exit && !s.outer.includes(ahead)) s.outer.push(ahead);
+  if (entry && !s.outer.includes(behind)) s.outer.push(behind);
+  s.nb = nbOf(s.outer);
+}
 /* the spec of one feature tile in this frame (shared by 2D and 3D) */
 export function cellSpec(w, x, y) {
   const v = w.feat[key(x, y)], k = kindOf(v), h = tierOf(w);
@@ -47,10 +54,15 @@ export function cellSpec(w, x, y) {
     s.dir = v - 1;
     const [dx, dy] = [[1, 0], [0, 1], [-1, 0], [0, -1]][s.dir];
     s.exit = featAt(w, x + dx, y + dy) !== v;
+    s.entry = featAt(w, x - dx, y - dy) !== v;
+    endSides(s, s.dir, s.exit, s.entry);
     const vv = FEAT_PROFILE[h].belt.v * PM[Math.max(-1, Math.min(1, w.pace | 0)) + 1];
     s.phase = Math.floor(((w.featT || 0) * vv * TL) % 40);
   } else if (k === "STREAM") {
     s.dir = v - 8; s.phase = 0;
+    const [dx, dy] = [[1, 0], [0, 1], [-1, 0], [0, -1]][s.dir];
+    s.exit = featAt(w, x + dx, y + dy) !== v; s.entry = featAt(w, x - dx, y - dy) !== v;
+    endSides(s, s.dir, s.exit, s.entry);
   } else if (k === "GATE") {
     s.lit = w.featM ? w.featM[key(x, y)] : 0;
   } else if (k === "PORTAL") {
@@ -68,7 +80,7 @@ export function cellSpec(w, x, y) {
   return s;
 }
 export function specKey(s) {
-  return [s.kind, s.h, s.par | 0, s.dir, s.exit ? 1 : 0, s.phase, s.outer && s.outer.join(""), s.state, s.lit, s.pair, s.kind === "GLIDE" ? s.gx + "," + s.gy : ""].join("|");
+  return [s.kind, s.h, s.par | 0, s.dir, s.exit ? 1 : 0, s.phase, s.outer && s.outer.join(""), s.state, s.lit, s.pair, s.kind === "GLIDE" ? s.gy : ""].join("|");
 }
 const BAKE = new Map();
 export function drawFeat(c, w, x, y, px, py) {

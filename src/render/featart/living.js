@@ -78,7 +78,7 @@ const STREAM = (c, k) => {
   const [lx, ly] = LV[k.dir], lv = [lx, ly], b = k.bio, h = k.h, nb = { W: k.nb[BS[k.dir][0]], E: k.nb[BS[k.dir][1]] }, ph = ((k.phase % 40) + 40) % 40;
   c.save(); c.translate(20, 20); c.rotate(k.dir * PI / 2); c.translate(-20, -20);
   floorTile(c, b, k.par);
-  const cy = 20, hw = [12.5, 11.5, 9.5][h], amp = [1.6, 1.2, .8][h], bw = [4.5, 4.2, 3.6][h];
+  const cy = 20, hw = GEO.STREAM.half[h], amp = [1.6, 1.2, .8][h], bw = GEO.STREAM.bank[h];
   const tooth = (x) => h == 2 ? (hsh(((Math.floor(x / 5) % 8) + 8) % 8, 4, 9) * 1.8) : 0;
   const top = (x) => cy - hw + amp * Math.sin(T2 * x / 40 + 1) + tooth(x), bot = (x) => cy + hw + amp * Math.sin(T2 * x / 20 + 2) - tooth(x + 10);
   const lo = nb.W ? -6 : -3, hi = nb.E ? 46 : 43, CAP = 15, sm = (t) => t * t * (3 - 2 * t);
@@ -96,7 +96,7 @@ const STREAM = (c, k) => {
   const L = [17, 12, 9][h], t = [1.7, 1.5, 1.4][h];
   wrap(c, () => rows.forEach(([dy, x0]) => {
     const x = x0 + ph;
-    const y = cy + dy * (hw / 13.5 > .8 ? 1 : .78);
+    const y = cy + dy * (hw - GEO.STREAM.rowsInset) / Math.max(...rows.map((r) => Math.abs(r[0])));
     c.beginPath(); c.moveTo(x, y); c.bezierCurveTo(x + L * .3, y - t, x + L * .7, y - t * .35, x + L, y); c.bezierCurveTo(x + L * .7, y + t * .5, x + L * .3, y + t * 1.1, x, y);
     c.fillStyle = rg(mix(b.wallHi, b.floor0, .5), h == 0 ? .7 : .8); c.fill();
     c.save(); c.translate(0, 2 * ly); c.beginPath(); c.moveTo(x + 1, y); c.bezierCurveTo(x + L * .3, y - t * .6, x + L * .6, y - t * .2, x + L * .8, y); c.strokeStyle = K0(.22); c.lineWidth = 1.2; c.stroke(); c.restore();

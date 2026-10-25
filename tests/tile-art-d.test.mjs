@@ -132,3 +132,20 @@ test("PAUSE freezes tile effects: with featT fixed, update() leaves every unifor
   const a = snap(); L.update(w); L.update(w);
   assert.equal(snap(), a);
 });
+
+import { fragSource } from "../src/render/three/featmesh.js";
+import { GEO } from "../src/render/featart/geo.js";
+test("fragSource carries every geometry number the painters use (art and shader cannot drift)", () => {
+  const f = fragSource(GEO), n = (v) => (+v).toFixed(4);
+  for (const v of [GEO.PORTAL.tick.w, GEO.PORTAL.tick.g, GEO.PORTAL.tick.y, GEO.PORTAL.tick.h, GEO.GATE.x0, GEO.GATE.x1, GEO.GATE.bw, GEO.GATE.y0, GEO.GATE.y1 - GEO.GATE.y0, ...GEO.GATE.n]) assert.ok(f.includes(n(v)), "missing " + n(v));
+  for (const v of [...GEO.PORTAL.core.half, ...GEO.STREAM.half.map((h) => h - GEO.STREAM.scrollInset), ...GEO.QUICK.rIn].map((x) => x / CFG.TILE)) assert.ok(f.includes(n(v)), "missing " + n(v));
+  for (const c of GEO.QUICK.c) assert.ok(f.includes(n(c[0] / CFG.TILE)), "missing quick centre");
+  assert.ok(!/NaN|undefined/.test(f));
+});
+test("REAL 3D tile room still adds exactly ONE draw with the D layer", async () => {
+  const { buildScene, countDrawCalls } = await import("../src/render/three/scene.js");
+  for (const rm of [1, 2, 3, 5]) {
+    const w = room(2, 93, rm, 0), w0 = room(2, 93, rm, 0); w0.feat = null;
+    assert.equal(countDrawCalls(buildScene(w, null).group) - countDrawCalls(buildScene(w0, null).group), 1, "room " + rm);
+  }
+});
