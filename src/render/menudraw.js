@@ -1468,18 +1468,20 @@ export function drawGuide(c, L, t, cursor, kind, touch) {
     c.textBaseline = "middle";
     c.textAlign = "left";
     c.fillStyle = sel ? TEXT : "#b6c2dc";
-    c.font = sans(T ? 17 : 15, "800");
-    const lx = r.x + 24;
-    c.fillText(GUIDE_LABEL[i], lx, T ? r.y + r.h / 2 - 10 : r.y + 20);
+    c.font = sans(T ? 17 : 14, "800");
+    const lx = r.x + 24,
+      strip = T || r.w >= 230, // a narrow keyboard door (2x2 in a < 560 box) drops the preview strip so its words stay whole
+      sx = T ? r.x + r.w - 40 : strip ? r.x + r.w - 118 : r.x + r.w - 18; // the strip ends left of the chevron; label and sub stop 8 px before it
+    c.fillText(clip(c, GUIDE_LABEL[i], T ? r.w : sx - 8 - lx), lx, T ? r.y + r.h / 2 - 10 : r.y + 20);
     c.fillStyle = sel ? TEXT : MUTED;
     c.font = font(T ? 13 : 10, "700");
-    c.fillText(clip(c, subs[i], (T ? r.x + r.w - 150 : r.x + r.w - 128) - lx), lx, T ? r.y + r.h / 2 + 12 : r.y + r.h - 16);
+    c.fillText(clip(c, subs[i], (T ? r.x + r.w - 150 : sx - 8) - lx), lx, T ? r.y + r.h / 2 + 12 : r.y + r.h - 16);
     c.textAlign = "right";
     c.font = sans(18, "600");
     c.fillText("›", r.x + r.w - 10, T ? r.y + r.h / 2 : r.y + 20);
     if (sel) caret(c, r.x + 11, T ? r.y + r.h / 2 : r.y + 20, 30);
-    const sy = T ? r.y + r.h / 2 : r.y + r.h / 2 + 2,
-      sx = T ? r.x + r.w - 40 : r.x + r.w - 124;
+    const sy = T ? r.y + r.h / 2 : r.y + r.h / 2 + 2;
+    if (!strip) continue;
     if (i === 0) {
       if (T) {
         c.font = font(12, "900");
@@ -1493,7 +1495,7 @@ export function drawGuide(c, L, t, cursor, kind, touch) {
       }
     } else {
       const list = i === 1 ? POWER.slice(0, T ? 4 : 3) : i === 2 ? [FOES[0], FOES[3], FOES[4]] : [FLOOR_ROWS[2], FLOOR_ROWS[1], FLOOR_ROWS[0]],
-        s = 30,
+        s = T ? 30 : 28,
         x0 = sx;
       list.forEach((e, j) => {
         const cx = T ? x0 - (list.length - 1 - j) * (s + 4) - s / 2 : x0 + s / 2 + j * (s + 4);

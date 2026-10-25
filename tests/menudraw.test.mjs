@@ -1659,7 +1659,7 @@ function check(name, cond, detail) {
   const rec = () => {
     const texts = [], o = {
       font: "10px x", textAlign: "left",
-      fillText(s) { texts.push({ s: String(s) }); },
+      fillText(s, x, y) { texts.push({ s: String(s), x, y, w: o.measureText(s).width, align: o.textAlign }); },
       measureText(s) { const m = /(\d+(?:\.\d+)?)px/.exec(o.font); return { width: String(s).length * 0.6 * (m ? +m[1] : 10) }; },
       createLinearGradient: () => ({ addColorStop() {} }),
       createRadialGradient: () => ({ addColorStop() {} }),
@@ -1682,6 +1682,10 @@ function check(name, cond, detail) {
       check(`GUIDE taps hit each door, off it backs out (${tag})`, T.every((r, i) => md.guideHit(r.x + r.w / 2, r.y + r.h / 2, L, 8, touch) === i) && md.guideHit(1, 1, L, 8, touch) === -1);
       const d = rec();
       md.drawGuide(d.c, L, 1.25, 3, "2d", touch);
+      if (!touch && !L.narrow) {
+        const left = d.texts.filter((t) => t.align !== "right" && t.align !== "center" && t.s !== "›");
+        check(`GUIDE keyboard door words stop before the preview strip (${tag})`, T.every((r) => left.filter((t) => t.x >= r.x && t.x < r.x + r.w && t.y >= r.y && t.y <= r.y + r.h).every((t) => t.x + t.w <= r.x + r.w - 118 - 4)));
+      }
       check(`GUIDE draws the FLOOR door and its label (${tag})`, d.texts.some((t) => t.s === "FLOOR") && d.texts.some((t) => /^8/.test(t.s)));
     }
   }
