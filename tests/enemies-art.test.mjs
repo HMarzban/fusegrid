@@ -460,7 +460,8 @@ function mkE(type, x, y) {
   }
   // 141 since the player stack dropped from seven meshes to five
   // +1 since the ambient Points (2026-10-25)
-  check("fat-world draw calls stay 142", calls === 142, String(calls));
+  // +14 since the entities round (3 death-squash slots x 4 + spawn ring + burst Points)
+  check("fat-world draw calls stay 156", calls === 156, String(calls));
 }
 
 {

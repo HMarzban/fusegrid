@@ -221,10 +221,11 @@ function mkE(type, x, y) {
     POWER.length * SLOT_MESH.item +
     2 +
     1 +
-    1; // ambient Points (2026-10-25)
+    1 + // ambient Points (2026-10-25)
+    3 * SLOT_MESH.enemy + 1 + 1; // entities round: 3 death-squash slots + spawn ring + burst Points
   check(
-    "fat-world draw calls stay 142",
-    calls === want && want === 142 && calls <= 500,
+    "fat-world draw calls stay 156",
+    calls === want && want === 156 && calls <= 160,
     String(calls),
   );
   const im = [];

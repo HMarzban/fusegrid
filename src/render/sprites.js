@@ -1,6 +1,6 @@
 import { CFG, T, key, biomeOf, BIOMES } from "../core/config.js";
 import { drawIcon, rr, RIM, ITEM_FAMILY, dk, lt, poly, seal } from "./icons.js";
-import { drawEnemyBody } from "./enemybody.js";
+import { drawEnemyBody, drawFoes } from "./enemybody.js";
 import { drawFeat } from "./featdraw.js";
 import { wallCodes, WALL_VARS } from "./wallvar.js";
 import { wallShapes, paintShapes } from "./wallart.js";
@@ -211,24 +211,10 @@ export function drawBiomeBackground(c, world, memo) {
 export { paintItemFace, drawItemChrome, drawItemBody, drawItems } from "./itemdraw.js";
 
 /* ---- entities ---- */
-/* drawEnemyBody draws one enemy at origin; the render bob stays in the
-   drawEnemies wrapper (positioning concern) so bodies stay translate-free. */
+/* drawEnemyBody draws one enemy at origin; bob, lean, spawn pop and death
+   (motion.js timing) live in enemybody.js drawFoes, the live pass. */
 export function drawEnemies(c, world) {
-  for (const e of world.enemies) {
-    if (e.dead) continue;
-    c.save();
-    c.translate(e.x, e.y);
-    contact(c, (e.r || 14) * 0.95, (e.r || 14) * 0.26, 1.8, (e.r || 14) * 0.86);
-    const bob =
-      e.type === "stationary"
-        ? Math.sin(world.time * 3) * 1.5
-        : e.speed > 0
-          ? Math.sin(world.time * 12 + e.home.x * 0.7) * 1.6
-          : 0;
-    c.translate(0, bob);
-    drawEnemyBody(c, world, e);
-    c.restore();
-  }
+  drawFoes(c, world);
 }
 /* MAKO — the reef critter. 2026-09-06, on the user's veto of every humanoid
    hero ("the main character also must not be like a human, it must be a

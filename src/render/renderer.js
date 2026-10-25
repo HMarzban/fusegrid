@@ -4,13 +4,14 @@ import {
   bakeAtlas, drawGrid, drawBiomeBackground, drawBricks,
   drawItems, drawEnemies, drawPlayer, drawPlayerBody, drawBombs, drawBlades, drawGhost
 } from "./sprites.js";
-import {onEvent, updateFx, drawFx, drawFxOverlay, drawPickupFx, feedFx, getShake, getFlash, getFx, initFx, syncFx} from "./fx.js";
+import {onEvent, updateFx, drawFx, drawBursts, drawFxOverlay, drawPickupFx, feedFx, getShake, getFlash, getFx, initFx, syncFx} from "./fx.js";
 import {drawOverlay, overlayBox, drawHudChips, drawAbilityBar, drawCoach, drawCoach2} from "./scenes.js";
 import {draw3dBackground, buildPainters, byDepth} from "./r3d/scene3d.js";
 import {PROJ, project} from "./r3d/camera.js";
 import {wellBoard, hudPlate, stageGlow} from "./frame.js";
 import {drawDepth} from "./depth2d.js";
 import {createAmbient2d} from "./ambient2d.js";
+import {fxOf} from "./entityfx.js";
 
 const isoProj=(bx,by,h)=>{ const q=project(bx/CFG.TILE,by/CFG.TILE); return {x:q.sx,y:q.sy-(h||0)}; };
 
@@ -65,8 +66,9 @@ export function createRenderer(canvas, opts={}){
   function consumeEvents(world, dt, playSfx=true){
     syncFx(world);
     feedFx(world, dt||CFG.STEP);
+    fxOf(world,"2d").feed(world.events, pzT!=null?pzT:world.time);
     for(let i=0;i<world.events.length;i++){
-      onEvent(world, world.events[i], world.time);
+      onEvent(world, world.events[i], world.time, "2d");
       if(audio&&playSfx!==false) audio.play(sfxOf(world.events[i]));
     }
     world.events.length=0;
@@ -78,7 +80,7 @@ export function createRenderer(canvas, opts={}){
   function render(world, dt, o){
     if(!world) return;
     const paused=world.state==="PAUSE", ev=world.events.length>0;
-    if(world!==lastW||world.grid!==lastG){ if(wasP) initFx(); lastW=world; lastG=world.grid; }
+    if(world!==lastW||world.grid!==lastG){ if(wasP) initFx(); if(world===lastW) fxOf(world,"2d").clear(); lastW=world; lastG=world.grid; }
     wasP=paused;
     if(!paused) pzT=null; else if(pzT==null) pzT=world.time;
     consumeEvents(world, dt, !(o&&o.sfx===false));
@@ -122,6 +124,7 @@ export function createRenderer(canvas, opts={}){
       drawBlades(ctx, world);
       if(o&&o.ghost) drawGhost(ctx, world, o.ghost);
       drawEnemies(ctx, world);
+      drawBursts(ctx, fxOf(world,"2d").bursts(world.time));
       /* Opening: o.pop scales players[0] about its centre (MAKO's pop-in),
          skipped at 0; absent outside INTRO, which means 1. */
       const p0=world.players[0];

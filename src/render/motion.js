@@ -37,7 +37,8 @@ export function blinkAt(type, ph, t) {
 export function spawnK(p, t) {
   const u = clamp01(p * MOTION.SPAWN_T / MOTION.POP_T);
   const s = u < 0.7 ? 0.4 + 0.7 * eo(u / 0.7) : 1.1 - 0.1 * eo((u - 0.7) / 0.3);
-  const a = u < 1 ? 0.35 + 0.65 * u : 0.7 + 0.3 * (0.5 + 0.5 * Math.sin(2.4 * t));
+  const el = p * MOTION.SPAWN_T, ramp = clamp01(Math.min((el - MOTION.POP_T) / 0.25, (MOTION.SPAWN_T - el) / 0.2));
+  const a = u < 1 ? 0.35 + 0.65 * u : 1 - 0.3 * ramp * (0.5 - 0.5 * Math.sin(2.4 * t));
   return { s: p >= 1 ? 1 : s, a: p >= 1 ? 1 : a, ring: u < 1 ? { r: 6 + 16 * eo(u), a: 0.5 * (1 - u) } : null };
 }
 /* death over MOTION.DEATH_T from the `kill` event: squash wide and low, one flash frame, then shrink away; null once finished */

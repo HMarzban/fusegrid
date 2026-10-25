@@ -14,8 +14,11 @@ import {fallbackCell} from "./fallback.js";
 import {ART} from "./art/index.js";
 import {featPxCell} from "../featpx.js";
 import {floorPxCell, SHADOW_CELLS, brickPal} from "../featpxcells.js";
+import {ringCell, shine, passOf, squeeze, stretch, squash, silhouette, blinkOf, blob, scaled, wings, up1} from "./foegen.js";
 import {MAKO_FACES, MAKO_CYCLE, layoutOf, BOMB_MARKS, BLAST_PIECES, BLAST_AGES} from "./manifest.js";
 
+/* the body row each foe drops for its idle breath (found by eye on the x8 sheet) */
+const BREATH = {walker: null, chaser: null, knight: null, burrow: null, fast: null};
 export const faceRows = (h) => Math.max(2, Math.min(10, Math.round((h || 0) / 4)));
 
 function composeFace(top, face, fh) {
@@ -71,19 +74,30 @@ export function createAtlas(surf, art = ART) {
   }
 
   const foe = {}, puff = {};
+  const bake = (cl, fr, to) => { const f = fr(cl), b = blinkOf(cl, to); f.blink = b ? fr(b) : null; return f; };
+  const lift = (f) => ({...f, ay: f.ay + 1, blink: f.blink && {...f.blink, ay: f.blink.ay + 1}});
   for (const f of FOES) {
-    const t = f.t, L = layoutOf(t), ctx = {body: f.col}, c = (n) => cellOf("foes", t + "." + n), fr = (cl) => frame(cl, ctx);
-    const set = {layout: L, stun: fr(c("stunned")), face: null, still: null, extra: null};
+    const t = f.t, L = layoutOf(t), ctx = {body: f.col}, c = (n) => shine(cellOf("foes", t + "." + n)), fr = (cl) => frame(cl, ctx), bk = (cl) => bake(cl, fr, t === "stationary" ? "m" : t === "chaser" ? "s" : "k");
+    const st = c("stunned"), set = {layout: L, stun: fr(st), face: null, still: null, extra: null, walk: null, idle: null, flash: fr(silhouette(st, "w")), tint: fr(silhouette(st, "l")), squash: fr(squash(st)), mat: null};
+    let base = null;
     if (L === "step" || L === "burrow") {
-      const fs = [c("front0"), c("front1")], bs = [c("back0"), c("back1")], ss = [c("side0"), c("side1")];
+      const fs = [c("front0"), c("front1")], bs = [c("back0"), c("back1")], ss = [c("side0"), c("side1")], fast = t === "fast";
       set.face = [fs.map(fr), bs.map(fr), ss.map(fr), ss.map((x) => fr(flipX(x)))];
+      const kit = (p, fl) => { const [a, b] = fl ? p.map(flipX) : p; return fast ? {w: [a, wings(a) || up1(a), b, wings(b) || up1(b)].map(bk), i: [a, b].map(bk)} : {w: [a, passOf(a), b, passOf(b)].map((x, i) => (i & 1 ? lift(bk(x)) : bk(x))), i: [bk(a), bk(squeeze(a, BREATH[t]))]}; };
+      const K = [kit(fs), kit(bs), kit(ss), kit(ss, true)];
+      set.walk = K.map((k) => k.w); set.idle = K.map((k) => k.i);
       if (L === "burrow") set.extra = [0, 1, 2].map((i) => fr(c("plume" + i)));
+      base = fs[0];
     } else if (L === "rocket") {
-      const ss = [c("side0"), c("side1")];
-      set.face = [[fr(c("down0")), fr(c("down1"))], [fr(c("up0")), fr(c("up1"))], ss.map(fr), ss.map((x) => fr(flipX(x)))];
-    } else if (L === "still") set.still = [fr(c("idle0")), fr(c("idle1"))];
-    else if (L === "spin") { const a = c("spin0"), b = c("spin1"); set.still = [0, 1, 2, 3].flatMap((r) => [fr(rot90(a, r)), fr(rot90(b, r))]); }
-    else if (L === "shade") { set.still = [fr(c("float0")), fr(c("float1"))]; set.extra = fr(c("hem")); }
+      const tr = (n) => [c(n + "0"), c(n + "1"), c(n + "2")], dn = tr("down"), up = tr("up"), ss = tr("side");
+      set.face = [dn.map(fr), up.map(fr), ss.map(fr), ss.map((x) => fr(flipX(x)))];
+      base = up[0];
+    } else if (L === "still") { const cs = [c("idle0"), c("idle1"), c("idle2")]; set.still = cs.map(bk); base = cs[0]; }
+    else if (L === "spin") { const a = c("spin0"), b = c("spin1"); set.still = [0, 1, 2, 3].flatMap((r) => [fr(rot90(a, r)), fr(rot90(b, r))]); base = a; }
+    else if (L === "shade") { const cs = [c("float0"), c("float1"), c("float2")]; set.still = cs.map(bk); set.extra = fr(c("hem")); base = cs[0]; }
+    set.mat = [blob(base, 0.5), scaled(base, 0.75), stretch(base)].map(fr);
+    const rings = new Map();
+    set.ring = (r) => rings.get(r) || (rings.set(r, fr(ringCell(r))), rings.get(r));
     foe[t] = set;
     puff[t] = [0, 1, 2, 3].map((i) => frame(cellOf("fx", "puff" + i), ctx));
   }
@@ -117,7 +131,7 @@ export function createAtlas(surf, art = ART) {
   for (const n of ["ring.cap", "ring.vit", "ring.utl", "ring.bls", "ring.utl1", "ring.bls1"]) cellOf("items", n);
 
   const X = (n) => frame(cellOf("fx", n), {body: HEX.spark});
-  const fx = {reveal: [X("reveal0"), X("reveal1")], sparkle: [X("sparkle0"), X("sparkle1"), X("sparkle2")], glint: [X("glint0"), X("glint1"), X("glint2")], puff};
+  const fx = {reveal: [X("reveal0"), X("reveal1")], glint: [X("glint0"), X("glint1"), X("glint2")], puff};
 
   const shadow = Object.fromEntries(Object.entries(SHADOW_CELLS).map(([k, c]) => [k, frame(c, {})]));
 

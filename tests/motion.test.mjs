@@ -33,6 +33,9 @@ test("spawn pops then settles; death squashes, flashes one frame, finishes; hit 
   assert.ok(flashes <= 3 && flashes >= 1); assert.equal(deathK(MOTION.DEATH_T), null); assert.equal(deathK(-1), null);
   assert.ok(hitK(0.06).sx > 1 && hitK(0.06).sy < 1); assert.equal(hitK(MOTION.HIT_T), null);
 });
+test("spawn alpha is continuous across the whole invulnerable window (no pop-end or window-end jump)", () => {
+  let prev = null; for (let el = 0; el <= MOTION.SPAWN_T; el += 1 / 120) { const k = spawnK(el / MOTION.SPAWN_T, 3 + el); if (prev !== null) assert.ok(Math.abs(k.a - prev) < 0.06, "jump at " + el); prev = k.a; }
+});
 test("hunter lean only when hunting and within 3 tiles", () => {
   assert.equal(leanAt("walker", false, 20, 0, 40), null); assert.equal(leanAt("walker", true, 200, 0, 40), null); assert.equal(leanAt("stationary", true, 20, 0, 40), null);
   const k = leanAt("chaser", true, 40, 0, 40); assert.ok(k.ox > 0 && k.glow > 0 && k.glow < 1);

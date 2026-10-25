@@ -46,6 +46,7 @@ import {createView, resetView, drawPixelWorld, trackGrid} from "./world.js";
 import {createOneShots, feedShot} from "./oneshot.js";
 import {animClock, newClock} from "./anim.js";
 import {armAmbient} from "./ambient.js";
+import {fxOf} from "../entityfx.js";
 import {hudPlate, stageGlow} from "../frame.js";
 import {NATIVE_W, NATIVE_H, evenShake, kOf, pxM, zOf, finalMatrix} from "./snap.js";
 
@@ -106,7 +107,7 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
   let armed = false, perf = null, ep, inv = true, lastR = -Infinity, BW = 0, BH = 0;
   const sig = [];
 
-  function reset() { V.shots.reset(); resetView(V); clock.t = 0; clock.w = null; lastGrid = null; lastWorld = null; inv = true; }
+  function reset() { V.shots.reset(); if (lastWorld) fxOf(lastWorld, "px").clear(); resetView(V); clock.t = 0; clock.w = null; lastGrid = null; lastWorld = null; inv = true; }
   function setPerf(K) { armed = true; perf = K || perf; const e = K && K.epoch; if (e !== ep) { ep = e; inv = true; } }
   function invalidate() { inv = true; }
   function sleep() {
@@ -128,6 +129,7 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
   function consumeEvents(world, dt, playSfx = true) {
     syncFx(world);
     feedFx(world, dt || CFG.STEP);
+    fxOf(world, "px").feed(world.events, clock.t);
     for (let i = 0; i < world.events.length; i++) {
       const ev = world.events[i];
       onEvent(world, ev, world.time);
@@ -190,7 +192,7 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
   function render(world, dt, o) {
     if (!world) return;
     const paused = world.state === "PAUSE", ev = world.events.length > 0;
-    if (world !== lastWorld || world.grid !== lastGrid) { V.shots.reset(); resetView(V); if (wasPaused) initFx(); lastWorld = world; lastGrid = world.grid; }
+    if (world !== lastWorld || world.grid !== lastGrid) { V.shots.reset(); if (world === lastWorld) fxOf(world, "px").clear(); resetView(V); if (wasPaused) initFx(); lastWorld = world; lastGrid = world.grid; }
     wasPaused = paused;
     animClock(clock, world);
     stageGlow(overlayCanvas, world.level);

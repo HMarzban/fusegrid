@@ -137,9 +137,7 @@ function check(name, cond, detail) {
   check("the pool never grows past its cap (no per-event allocation)", s.pool.length === 8 && s.count() === 8);
   s.reset();
   feedShot(s, {t: "power", x: 220, y: 140, kind: "flame", col: "#ff6b3d"}, w, 0);
-  const sp = s.live(OS.SPARKLE);
-  check("a pickup grab leaves a 3-frame sparkle where the item stood",
-    !!sp && sp.x === 220 && sp.y === 140 && shotFrame(sp, 0) === 0 && shotFrame(sp, PX_T.SPARKLE_MS / 1000 + 1e-3) === 1 && shotFrame(sp, 1) === PX_T.SPARKLE_N - 1 && OS_DUR[OS.SPARKLE] === PX_T.SPARKLE_MS * PX_T.SPARKLE_N / 1000);
+  check("a pickup grab leaves no one-shot (its burst is entities.js drawBursts, so it can never evict a kill puff)", s.count() === 0);
 }
 
 // ---- native draw through the RGBA shim ----
@@ -178,18 +176,16 @@ function fatWorld() {
   check("REDUCE FLASH: no MAKO one-shot frame is a near-white full-sprite flash", nearWhite === 0, nearWhite);
 }
 
-// ---- delivered means drawn: SHADE hem and the pickup sparkle reach the board ----
+// ---- delivered means drawn: SHADE hem reaches the board ----
 {
   const w = createWorld(4242, 7); loadLevel(w, 7); w.state = "PLAY";
   w.enemies.length = 0;
-  w.enemies.push(spawnEnemy("shade", 7, 5, 7, null));
+  { const sd = spawnEnemy("shade", 7, 5, 7, null); sd.invuln = false; sd.invulnT = 0; w.enemies.push(sd); }
   const V = createView(atlas); V.shots = createOneShots(); V.t = 0.1;
-  feedShot(V.shots, {t: "power", x: 140, y: 100, kind: "flame", col: "#ff6b3d"}, w, 0);
   const c = createRGBA(300, 260).getContext(); drawPixelWorld(c, w, V);
   const srcs = c.calls.filter((q) => q[0] === "drawImage").map((q) => q[5]);
-  const sh = atlas.foe.shade, hemAt = srcs.indexOf(sh.extra.im), floatAt = Math.max(srcs.indexOf(sh.still[0].im), srcs.indexOf(sh.still[1].im));
+  const sh = atlas.foe.shade, hemAt = srcs.indexOf(sh.extra.im), floatAt = Math.max(...sh.still.map((f) => srcs.indexOf(f.im)));
   check("SHADE's hem (manifest foes/shade.hem) is blitted, over its float frame", hemAt >= 0 && floatAt >= 0 && hemAt > floatAt, hemAt + " " + floatAt);
-  check("the pickup sparkle (manifest fx/sparkle0-2) is blitted at its frame", srcs.includes(atlas.fx.sparkle[1].im));
 }
 
 // ---- the px renderer: blit chain, overlay, reset ----
@@ -506,7 +502,7 @@ const rasters = (log) => log.filter((q) => q[0] === "hi" && q[1] === "drawImage"
 // ---- CLASSIC 2D unchanged ----
 {
   const h = await classicHash((p) => import(pathToFileURL(join(ROOT, p)).href));
-  check("CLASSIC 2D call-log hash unchanged (pinned from fe101c5)", h === "c7b4c843:71320", h);
+  check("CLASSIC 2D call-log hash unchanged (pinned from fe101c5)", h === "d3a74b39:72421", h);
 }
 
 // ---- hygiene ----
