@@ -170,3 +170,16 @@ test("PIXEL cell files stay under the byte cap (outside the px tree until #15)",
   const n = readFileSync(new URL("../src/render/featpx.js", import.meta.url)).length + readFileSync(new URL("../src/render/featpxcells.js", import.meta.url)).length;
   assert.ok(n <= 26000, n + " bytes");
 });
+
+import { heatSep, edgeEnergy, hullDist, litSkew, maxLum } from "../tools/tileart/gatefns.mjs";
+const solid = (r, g, b, S = 8) => { const a = new Uint8ClampedArray(S * S * 4); for (let i = 0; i < a.length; i += 4) { a[i] = r; a[i + 1] = g; a[i + 2] = b; a[i + 3] = 255; } return a; };
+test("gate functions: identical renders have zero heat separation and busyness; a red pixel is off the VOID slot hull", () => {
+  assert.equal(heatSep(solid(40, 40, 40), solid(40, 40, 40), 8), 0);
+  assert.ok(heatSep(solid(40, 40, 40), solid(120, 120, 120), 8) > 20);
+  assert.equal(edgeEnergy(solid(9, 9, 9, 16), 16), 0);
+  const b = BIOMES.find((x) => x.name === "VOID"), V = [b.bg0, b.bg1, b.floor0, b.floor1, b.wall, b.wallHi].map(rgb).concat([[0, 0, 0], [255, 255, 255]]);
+  assert.ok(hullDist(rgb(b.wallHi), V) < 2);
+  assert.ok(hullDist([255, 0, 0], V) > 30);
+  assert.equal(maxLum(solid(0, 0, 0)), 0);
+  assert.equal(litSkew(solid(0, 0, 0), 8).dSkew, 0);
+});
