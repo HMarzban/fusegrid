@@ -1,5 +1,5 @@
 /* TILE ART direction D, built worlds (from option A "FIXTURE"): hardware sunk into the floor. Light top-left: wells shadowed top/left, lips lit bottom/right. Painters take (c, k) (see featdraw kOf); BELT is {mech, lit}. */
-import { mix, floorTile } from "./kit.js";
+import { mix, floorTile, hsh } from "./kit.js";
 import { GEO } from "./geo.js";
 const WH = "#fff", BK = "#000";
 const fillP = (c, col, pts, a) => { c.save(); if (a != null) c.globalAlpha = a; c.fillStyle = col; c.beginPath(); pts.forEach((p, i) => i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1])); c.closePath(); c.fill(); c.restore(); };
@@ -39,14 +39,13 @@ export const BUILT = {
   GLIDE(c, k) {
     const b = k.bio, h = k.h, nb = k.nb;
     floorTile(c, b, k.par);
-    const steel = [mix(b.wallHi, b.wall, 0.3), mix(b.wallHi, b.wall, 0.14), b.wall][h], plate = mix(b.wallHi, b.floor0, [0.14, 0.45, 0.58][h]);
+    const steel = [mix(b.wallHi, b.wall, 0.3), mix(b.wallHi, b.wall, 0.14), b.wall][h], plate = mix(b.wallHi, b.floor0, [0.1, 0.36, 0.48][h]);
     const R = 7, y0 = nb.N ? 0 : R, y1 = nb.S ? 40 : 40 - R, sk = -((k.gy * 7) % 40);
     rect(c, plate, 0, y0, 40, y1 - y0);
     c.save(); c.beginPath(); c.rect(0, y0, 40, y1 - y0); c.clip();
-    [10, 24].forEach((x, bi) => [-40, 0, 40].forEach(o => fillP(c, WH, [[x + o + sk, y0], [x + o + sk + (bi ? 3 : 7), y0], [x + o + sk + (bi ? 3 : 7) - 7, y1], [x + o + sk - 7, y1]], (bi ? 0.1 : 0.16) * [0.45, 1, 1][h])));
+    [-40, 0, 40].forEach(o => fillP(c, WH, [[16 + o + sk, y0], [16 + o + sk + 7, y0], [16 + o + sk, y1], [16 + o + sk - 7, y1]], 0.16 * [0.6, 1, 1][h]));
     fillG(c, vgrad(c, y0, y1, [[0, nb.N ? "rgba(0,0,0,0)" : `rgba(0,0,0,${[0.2, 0.42, 0.42][h]})`], [0.22, "rgba(0,0,0,0)"], [0.82, "rgba(255,255,255,0)"], [1, nb.S ? "rgba(255,255,255,0)" : `rgba(255,255,255,${[0.12, 0.28, 0.28][h]})`]]), 0, y0, 40, y1 - y0);
-    const ys = [[20], [16.5, 23.5], [14, 20, 26]][h];
-    ys.forEach(y => { line(c, BK, [[0, y], [40, y]], 1.3, 0.42 * [0.3, 1, 1][h]); line(c, WH, [[0, y + 1.3], [40, y + 1.3]], 1.1, 0.5 * [0.3, 1, 1][h]); });
+    [[11, 14, 7], [22, 24, 7], [14, 29, 6]].slice(0, h + 1).forEach(([x, y, l], i) => { const sx = x + hsh(k.gx, k.gy, i) * 5, sy = y + (hsh(k.gy, k.gx, i + 3) - 0.5) * 4; line(c, BK, [[sx, sy], [sx + l, sy + l * 0.28]], 1, 0.4 * [0.7, 1, 1][h]); line(c, WH, [[sx, sy + 1], [sx + l, sy + 1 + l * 0.28]], 0.9, 0.55 * [0.7, 1, 1][h]); });
     c.restore();
     const t = [1.2, 1.7, 2.4][h];
     if (!nb.N) { rect(c, steel, 0, 0, 40, R); rect(c, WH, 0, 0, 40, 1.2, 0.5); rect(c, BK, 0, R - t, 40, t, [0.35, 0.55, 0.55][h]); if (h) [10, 30].forEach(x => stud(c, x, R / 2, 2.6, steel)); }
@@ -61,7 +60,7 @@ export const BUILT = {
       const b = k.bio, h = k.h, [wl, el] = BS[k.dir], nbW = k.nb[wl], nbE = k.nb[el], fx = k.dir >= 2, fy = k.dir === 1 || k.dir === 2;
       floorTile(c, b, k.par);
       const R = R_BELT, y0 = R, y1 = 40 - R, per = [10, 8, 5][h], rw = [7, 5.6, 3.6][h], ph = ((k.phase % per) + per) % per, gk = [0.5, 1, 1][h];
-      const metal = [mix(b.wallHi, b.wall, 0.78), mix(b.wallHi, b.wall, 0.5), mix(b.wallHi, b.wall, 0.22)][h], rail = mix(b.wall, b.floor1, [0.8, 0.6, 0.42][h]);
+      const metal = [mix(b.wallHi, b.wall, 0.64), mix(b.wallHi, b.wall, 0.4), mix(b.wallHi, b.wall, 0.16)][h], rail = mix(b.wall, b.floor1, [0.8, 0.6, 0.42][h]);
       rect(c, h ? b.bg1 : mix(b.wall, b.bg1, 0.45), 0, y0, 40, y1 - y0);
       c.save(); c.beginPath(); c.rect(0, y0, 40, y1 - y0); c.clip();
       for (let x = -per; x < 40 + per; x += per) {
@@ -74,7 +73,7 @@ export const BUILT = {
       fillG(c, vgrad(c, fy ? y1 : y0, fy ? y0 : y1, [[0, "rgba(0,0,0,.55)"], [0.2, "rgba(0,0,0,.05)"], [0.85, "rgba(0,0,0,0)"], [1, "rgba(255,255,255,.1)"]]), 0, y0, 40, y1 - y0);
       c.restore();
       rect(c, rail, 0, 0, 40, R); rect(c, rail, 0, 40 - R, 40, R);
-      [R / 2, 40 - R / 2].forEach(y => { line(c, BK, [[18.2, y - 1.8], [21.4, y], [18.2, y + 1.8]], 1.7, 0.5); line(c, WH, [[17.6, y - 1.8], [20.8, y], [17.6, y + 1.8]], 1.2, 0.5); });
+      [R / 2, 40 - R / 2].forEach(y => { line(c, BK, [[17.8, y - 2.5], [21.6, y], [17.8, y + 2.5]], 2, 0.5); line(c, WH, [[17.2, y - 2.5], [21, y], [17.2, y + 2.5]], 1.4, 0.4); });
       if (!nbW) rect(c, rail, 0, 0, 3.4, 40);
       if (!nbE) rect(c, rail, 36.6, 0, 3.4, 40);
     },
@@ -99,11 +98,11 @@ export const BUILT = {
     fillG(c, hgrad(c, ix, ix + iw, [[0, "rgba(0,0,0,.35)"], [0.3, "rgba(0,0,0,0)"]]), 0, 0, 40, 40);
     if (on) rect(c, BK, ix, ix, iw, iw, [0.08, 0.2, 0.38][h]);
     [[ix + 1.8, ix + 1.8], [ix + iw - 1.8, ix + 1.8], [ix + 1.8, ix + iw - 1.8], [ix + iw - 1.8, ix + iw - 1.8]].forEach(p => { rect(c, BK, p[0] - 1.1, p[1] - 1.1, 2.2, 2.2, 0.4); rect(c, WH, p[0] - 1.1, p[1] + 0.3, 2.2, 0.8, 0.22); });
-    const n = h + 1, bh = 3.2, gap = 2.8, tot = n * bh + (n - 1) * gap, by = 20 - tot / 2 - (on ? 1.2 : 0), bx = ix + 3.4, bw = iw - 6.8;
+    const n = h + 1, bh = [3.6, 3.2, 2.8][h], td = 2, gap = [3.6, 2.6, 1.8][h], tot = n * (bh + td) + (n - 1) * gap, by = 20 - tot / 2 - (on ? 1.2 : 0), bw = iw * 0.72, bx = ix + (iw - bw) / 2 + 0.4, nt = 6, tw = bw / nt;
     for (let i = 0; i < n; i++) {
-      const yy = by + i * (bh + gap);
-      if (!on) { rect(c, BK, bx + 0.6, yy + 1.2, bw, bh, 0.42); rect(c, mix(plate, b.wallHi, 0.62), bx, yy, bw, bh); rect(c, WH, bx, yy, bw, 1, 0.4); rect(c, BK, bx, yy + bh - 0.9, bw, 0.9, 0.3); }
-      else { rect(c, BK, bx, yy, bw, bh, 0.4); rect(c, WH, bx, yy + bh - 0.8, bw, 0.8, 0.14); }
+      const yy = by + i * (bh + td + gap), bl = (dx, dy) => { const q = [[bx + dx, yy + dy], [bx + bw + dx, yy + dy], [bx + bw + dx, yy + bh + dy]]; for (let t = nt; t >= 1; t--) q.push([bx + (t - 1) * tw + tw * 0.2 + dx, yy + bh + td + dy], [bx + (t - 1) * tw + dx, yy + bh + dy]); return q; };
+      if (!on) { fillP(c, BK, bl(0.7, 1.1), 0.45); fillP(c, mix(plate, b.wallHi, 0.62), bl(0, 0)); rect(c, WH, bx, yy, bw, 1, 0.4); rect(c, BK, bx, yy + bh - 0.9, bw, 0.9, 0.3); }
+      else { fillP(c, BK, bl(0, 0), 0.42); rect(c, WH, bx, yy + bh - 0.6, bw, 0.6, 0.12); }
     }
     if (on) {
       const nw = (iw - 8) / 4 - 1, ny = ix + iw - 3.4;
@@ -120,7 +119,7 @@ export const BUILT = {
     pit(c, X, X, S, S, 0.01, t0, floorW, 0.9, 0.9, hiC);
     const tt = ids * T.w + (ids - 1) * T.g, tx = 20 - tt / 2;
     if (k.ticks !== false) for (let i = 0; i < ids; i++) { rect(c, BK, tx + i * (T.w + T.g) + 0.5, T.y + 0.5, T.w, T.h, 0.5); rect(c, mix(b.wallHi, b.wall, 0.78), tx + i * (T.w + T.g), T.y, T.w, T.h); rect(c, hiC, tx + i * (T.w + T.g), T.y, T.w, 0.8, 0.5); }
-    const n = [2, 3, 4][h], st = [3.4, 2.6, 2][h];
+    const n = [2, 3, 4][h], st = [3.4, 2.6, 2][h], rim = [0.3, 0.5, 0.74][h], stp = [0.1, 0.1, 0.11][h], ha = [0.5, 0.8, 1.1][h], la = [0.9, 0.8, 0.7][h];
     let x = 7, w = 26, cc = 3.4;
     fillP(c, mix(b.bg1, b.floor1, 0.4), oct(x, 5.4, w, w, cc));
     bevel(c, oct(x, 5.4, w, w, cc), octIn(x, 5.4, w, w, cc, 1.8), false, 0.4, 0.8, hiC);
@@ -128,26 +127,23 @@ export const BUILT = {
     let y = 7.8;
     for (let i = 0; i < n; i++) {
       const oo = oct(x, y, w, w, cc), ii = octIn(x, y, w, w, cc, 1.9);
-      ao(c, x, y, w, w, cc, 2, 0.5);
-      fillP(c, mix(b.wallHi, b.wall, [0.03, 0.26, 0.52][h] + 0.12 * i + (on ? 0.1 : 0)), oo); bevel(c, oo, ii, true, [0.3, 0.9, 1.4][h], [1, 0.75, 0.45][h], hiC);
-      line(c, hiC, [oo[7], oo[0], oo[1]], 1.2, [0.35, 0.5, 0.65, 0.8][i] * (on ? 1 : 0.85));
+      fillP(c, mix(b.wallHi, b.wall, rim - stp * i + (on ? 0.08 : 0)), oo); bevel(c, oo, ii, false, ha, la, hiC);
       x += st; y += st; w -= 2 * st; cc = Math.max(0.01, cc - 0.586 * st);
     }
     const core = oct(x, y, w, w, cc);
-    fillP(c, on ? mix(b.wallHi, b.wall, 0.45) : b.bg1, core);
+    fillP(c, on ? mix(b.wallHi, b.wall, 0.2) : b.bg1, core);
     bevel(c, core, octIn(x, y, w, w, cc, Math.min(1.6, w / 4)), false, 0.35, 0.7, hiC);
-    if (on) fillP(c, BK, core, 0.1);
   },
 
   /* CROWN GATE: a portcullis in a gilt inlay. `lit` 0..4 is the closing progress: 0 open (bars sunk in slits), 1..3 bars rising, 4 or on = shut. The bottom strip is the dial (shut cells raised, open cells sunk), the heat tell */
   GATE(c, k) {
     const b = k.bio, h = k.h, f = k.on ? 1 : Math.max(0, Math.min(4, k.lit)) / 4;
     floorTile(c, b, k.par);
-    const gilt = mix(b.wallHi, b.wall, [0.68, 0.54, 0.4][h]), X = 2, S = 36, tt = 4.4, tb = 8.2;
+    const gilt = mix(b.wallHi, b.wall, [0.5, 0.4, 0.3][h]), barC = mix(b.wallHi, b.wall, [0.82, 0.7, 0.58][h]), X = 2, S = 36, tt = 3, tb = 8.2;
     pit(c, X, X, S, S, 0.01, 2, gilt, 0.8, 0.9, b.wallHi);
     const ix = X + tt, iy = X + tt, iw = S - 2 * tt, ih = S - tt - tb;
-    [[X + 3.2, X + 3.2], [X + S - 3.2, X + 3.2]].forEach(p => { rect(c, BK, p[0] - 1, p[1] - 1, 2, 2, 0.4); rect(c, WH, p[0] - 1, p[1] + 0.2, 2, 0.8, 0.25); });
-    pit(c, ix, iy, iw, ih, 0.01, 1.8, mix(b.bg1, b.floor1, 0.35), 0.4, 0.65);
+    
+    pit(c, ix, iy, iw, ih, 0.01, 2.2, mix(b.bg1, b.floor1, 0.35), 0.4, 0.8); rect(c, BK, ix, iy, iw, ih, 0.5);
     c.save(); c.beginPath(); c.rect(ix, iy, iw, ih); c.clip();
     const G = GEO.GATE, nb = G.n[h], bw = G.bw, left = G.x0, right = G.x1, pitch = (right - left - bw) / (nb - 1);
     if (f === 0) {
@@ -159,9 +155,9 @@ export const BUILT = {
       rect(c, BK, ix, iy + ih / 2 + 2.8, iw, 2.6, 0.38);
       for (let i = 0; i < nb; i++) {
         const x = left + i * pitch, tipH = [2.4, 3.6, 5][h] * f;
-        rect(c, gilt, x, top + tipH, bw, bot - top - tipH);
+        rect(c, barC, x, top + tipH, bw, bot - top - tipH);
         const tip = h === 0 ? [[x, top + tipH], [x, top + 0.4], [x + bw, top + 0.4], [x + bw, top + tipH]] : h === 1 ? [[x, top + tipH], [x + 0.5, top + 0.8], [x + bw - 0.5, top + 0.8], [x + bw, top + tipH]] : [[x, top + tipH], [x + bw / 2, top - 0.6], [x + bw, top + tipH]];
-        fillP(c, gilt, tip);
+        fillP(c, barC, tip);
         fillG(c, hgrad(c, x, x + bw, [[0, "rgba(255,255,255,.55)"], [0.45, "rgba(255,255,255,.08)"], [1, "rgba(0,0,0,.5)"]]), x, top, bw, bot - top);
       }
       rect(c, gilt, ix, iy + ih / 2 - 1.8, iw, 3.4); rect(c, WH, ix, iy + ih / 2 - 1.8, iw, 1.1, 0.5); rect(c, BK, ix, iy + ih / 2 + 0.7, iw, 0.9, 0.5);
