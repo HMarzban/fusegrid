@@ -149,3 +149,24 @@ test("REAL 3D tile room still adds exactly ONE draw with the D layer", async () 
     assert.equal(countDrawCalls(buildScene(w, null).group) - countDrawCalls(buildScene(w0, null).group), 1, "room " + rm);
   }
 });
+
+import { readFileSync } from "node:fs";
+import { featPxCell } from "../src/render/featpx.js";
+import { validateCell } from "../src/render/pixel/grid.js";
+test("PIXEL: every direction D cell is palette slots only and valid (kind x heat x state x outer x dir)", () => {
+  const KS = [["GLIDE"], ["BELT"], ["STREAM"], ["BLOOM"], ["PLATE"], ["QUICK"], ["PORTAL"], ["GATE"]];
+  const outers = [[], ["N", "S"], ["E", "W"], ["N", "E", "S", "W"], ["W"], ["E"]];
+  for (const [kind] of KS) for (let h = 0; h < 3; h++) for (const outer of outers) for (const dir of [0, 1, 2, 3]) for (const state of [0, 1, 2]) for (const lit of [0, 2, 4]) for (const pair of [1, 2, 3]) {
+    const c = featPxCell("X", { kind, h, outer, dir, state, lit, pair });
+    assert.deepEqual(validateCell(c, c.pal), [], `${kind} h${h}`);
+    assert.equal(c.rows.length, 20); for (const r of c.rows) assert.equal(r.length, 20);
+    for (const v of Object.values(c.pal)) assert.ok(/^tile\.(bg0|bg1|floor0|floor1|wall|wallHi)(\.(outline|shadow|light))?$/.test(v), v);
+  }
+});
+test("PIXEL PORTAL never uses wallHi.light (VOID dim rule) at any heat or pair", () => {
+  for (let h = 0; h < 3; h++) for (const pair of [1, 2, 3]) { const c = featPxCell("VOID", { kind: "PORTAL", h, pair }); assert.ok(!c.rows.join("").includes("X"), `h${h} pair${pair}`); }
+});
+test("PIXEL cell files stay under the byte cap (outside the px tree until #15)", () => {
+  const n = readFileSync(new URL("../src/render/featpx.js", import.meta.url)).length + readFileSync(new URL("../src/render/featpxcells.js", import.meta.url)).length;
+  assert.ok(n <= 26000, n + " bytes");
+});
