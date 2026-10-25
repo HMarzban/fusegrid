@@ -1008,13 +1008,12 @@ export function createPools(biome, atlas) {
        exhaust, glow) never cast either: a hard shadow under a glow reads
        as a bug. Both ride the type edge, so the per-frame path stays
        allocation- and branch-free. */
-    const cast = kk !== "e_shade";
-    s.castShadow = cast;
     const d = s.children;
+    s.userData.fd = 0;
+    castRule(s, kk);
     for (let j = 0; j < 2; j++) {
       d[j].geometry = GD[kk][j];
       d[j].material = MD[kk][j];
-      d[j].castShadow = cast && MD[kk][j].blending !== THREE.AdditiveBlending;
       d[j].position.set(GT[kk][j][0], GT[kk][j][1], GT[kk][j][2]);
       d[j].rotation.set(GR[kk][j][0], GR[kk][j][1], GR[kk][j][2]);
       d[j].scale.setScalar(1);
@@ -1024,6 +1023,63 @@ export function createPools(biome, atlas) {
     d[2].position.set(EYT[kk][0], EYT[kk][1], EYT[kk][2]);
     d[2].rotation.set(EYR[kk][0], EYR[kk][1], EYR[kk][2]);
     d[2].scale.setScalar(1);
+  }
+  function castRule(s, kk) {
+    const cast = kk !== "e_shade";
+    s.castShadow = cast;
+    for (let j = 0; j < 2; j++) s.children[j].castShadow = cast && MD[kk][j].blending !== THREE.AdditiveBlending;
+  }
+  /* SPAWN FADE (2026-10-25 loose end): the foe materials are shared per type
+     and three uploads a material's uniforms once per program switch, so one
+     foe cannot fade on its own. While a slot's alpha is below 1 (spawnK's pop
+     and breathe, or a death ghost's tail) its four meshes swap to that slot's
+     own transparent clones, built once per (slot, type) and kept for the
+     scene's life (_shared, so disposeGroup leaves the atlas eye maps alone;
+     dispose() frees them). Opacity is a uniform: no needsUpdate, no compile
+     per frame. depthWrite off and no shadow while faded. The frame alpha
+     reaches 1 the slot is back on the shared materials, so a settled board
+     renders exactly as before. Material swaps only: the child ABI holds. */
+  const FADE_A = 0.999,
+    fadeMats = [];
+  const baseOf = (kk, j) =>
+    j === 0 ? MATE[kk] : j === 3 ? eyeFor(kk.slice(2)) : j === 2 && kk === "e_rocket" ? FLAME_M : MD[kk][j - 1];
+  function unfade(s, kk) {
+    const ch = s.children;
+    s.material = MATE[kk];
+    ch[0].material = MD[kk][0];
+    ch[1].material = baseOf(kk, 2);
+    ch[2].material = eyeFor(kk.slice(2));
+    castRule(s, kk);
+    s.userData.fd = 0;
+  }
+  function fadeSlot(s, kk, a) {
+    if (!(a < FADE_A)) {
+      if (s.userData.fd) unfade(s, kk);
+      return;
+    }
+    const P = s.userData.fp || (s.userData.fp = {});
+    let C = P[kk];
+    if (!C) {
+      C = P[kk] = [0, 1, 2, 3].map((j) => {
+        const c = sharedMat(baseOf(kk, j).clone());
+        c.transparent = true;
+        c.depthWrite = false;
+        c.forceSinglePass = true;
+        fadeMats.push(c);
+        return c;
+      });
+    }
+    const ch = s.children;
+    for (let j = 0; j < 4; j++) {
+      const b = baseOf(kk, j),
+        c = C[j],
+        m = j ? ch[j - 1] : s;
+      c.opacity = b.opacity * a;
+      if (b.color) c.color.copy(b.color);
+      m.material = c;
+      m.castShadow = false;
+    }
+    s.userData.fd = 1;
   }
   for (let i = 0; i < POOL_CAPS.enemies; i++) {
     const s = makeSlot("enemy");
@@ -1241,7 +1297,7 @@ export function createPools(biome, atlas) {
     FC_B = new THREE.Color("#ff7a3a"),
     WHITE = new THREE.Color("#ffffff");
   const _ip = { hy: 0, ry: 0, rz: 0, sc: 1, glint: -1, ringK: 1, ringS: 1, shadow: 1 };
-  const _gp = { sx: 1, sy: 1, flash: 0 };
+  const _gp = { sx: 1, sy: 1, a: 1, flash: 0 };
   const Q_FLAT = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
   let lastT = 0,
     lastWorld = null,
@@ -1343,6 +1399,7 @@ export function createPools(biome, atlas) {
       ri = 0;
     const ens = world.enemies || [];
     const ringCol = spawnRing.instanceColor.array;
+    FLAME_M.color.lerpColors(FC_A, FC_B, 0.5 + 0.5 * Math.sin(2.4 * t));
     let ek = 0;
     for (let i = 0; i < ens.length; i++) {
       const e = ens[i];
@@ -1411,9 +1468,15 @@ export function createPools(biome, atlas) {
         ringCol[ri * 3 + 2] = _c.b * ra;
         ri++;
       }
-      if (cOff < 32 * 4 && Math.abs(CV[cOff] - (e.x - W2 + 3)) < 1e-4 && sc < 1) ground(cOff, sc, Math.min(1, sc));
+      fadeSlot(s, kk, S.a);
+      if (cOff < 32 * 4 && Math.abs(CV[cOff] - (e.x - W2 + 3)) < 1e-4 && (sc < 1 || S.a < FADE_A))
+        ground(cOff, Math.min(1, sc), Math.min(1, sc) * Math.min(1, S.a));
     }
-    for (; ei < POOL_CAPS.enemies; ei++) enemies[ei].visible = false;
+    for (; ei < POOL_CAPS.enemies; ei++) {
+      const s = enemies[ei];
+      s.visible = false;
+      if (s.userData.fd) unfade(s, s.userData.k);
+    }
     for (let i = 0; i < prevE.length; i++) {
       const e = prevE[i],
         S = FS.get(e);
@@ -1440,7 +1503,6 @@ export function createPools(biome, atlas) {
     spawnRing.count = ri;
     live(spawnRing.instanceMatrix, ri);
     live(spawnRing.instanceColor, ri);
-    FLAME_M.color.lerpColors(FC_A, FC_B, 0.5 + 0.5 * Math.sin(2.4 * t));
 
     /* DEATH: entityfx ghosts (foes that just died), newest three, squashed in
        place from their last yaw. REDUCE FLASH turns the one white frame into
@@ -1470,6 +1532,7 @@ export function createPools(biome, atlas) {
         }
         const on = _gp.flash > 0 && t === s.userData.fT,
           ch = s.children;
+        fadeSlot(s, kk, on ? 1 : _gp.a);
         if (on) {
           flashMat.color.set(g.col || ENEMY_COLORS[g.type] || "#ffffff").lerp(WHITE, _gp.flash);
           s.material = ch[0].material = ch[1].material = flashMat;
@@ -1493,6 +1556,7 @@ export function createPools(biome, atlas) {
       const s = deadSlots[gi];
       if (s.visible) {
         s.visible = false;
+        if (s.userData.fd) unfade(s, s.userData.k);
         if (s.material === flashMat) {
           const kk = s.userData.k;
           s.material = MATE[kk];
@@ -1654,6 +1718,11 @@ export function createPools(biome, atlas) {
     time: 0,
   });
   const api = {
+    dispose() {
+      for (const m of fadeMats) m.dispose();
+      fadeMats.length = 0;
+    },
+    fadeMats,
     group,
     player,
     enemies,

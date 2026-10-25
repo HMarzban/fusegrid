@@ -26,10 +26,10 @@ export function turn(cur,tgt,dt){
 }
 
 export function makeFoe(){
-  return {seen:0,type:"",x:0,y:0,yaw:0,mv:0,ph:0,by:0,sc:1,pit:0,rol:0,eyeY:1,glow:0,stomp:0,ringR:0,ringA:0,t0:0};
+  return {seen:0,type:"",x:0,y:0,yaw:0,mv:0,ph:0,by:0,sc:1,a:1,pit:0,rol:0,eyeY:1,glow:0,stomp:0,ringR:0,ringA:0,t0:0};
 }
 /* advance one foe's pose to clock t. pl: the live player (lean target) or null. Writes S.by (y bob), S.sc (breathe x spawn pop), S.yaw, S.pit / S.rol (sway
-   + hunter lean, in the slot's own frame), S.eyeY (blink: the face plane's y scale), S.glow (hunter), S.stomp (walker feet), S.ringR / S.ringA (spawn ring). */
+   + hunter lean, in the slot's own frame), S.a (spawn alpha: spawnK's 0.35 -> 1 pop, then the 0.7..1 breathe; exactly 1 once invuln ends), S.eyeY (blink: the face plane's y scale), S.glow (hunter), S.stomp (walker feet), S.ringR / S.ringA (spawn ring). */
 export function stepFoe(S,e,t,dt,pl){
   const type=e.type, m=foeM(type);
   if(!S.seen||S.type!==type){ const keep=S.seen; S.seen=1; S.type=type; S.ph=phaseOf(type,e.home); if(!keep){ S.x=e.x; S.y=e.y; S.yaw=faceYaw(e); S.mv=0; } }
@@ -43,6 +43,7 @@ export function stepFoe(S,e,t,dt,pl){
   S.by=(bobAt(type,ph,t,true)*S.mv+bobAt(type,ph,t,false)*(1-S.mv))*VZ;
   const p=e.invuln?1-(e.invulnT||0)/MOTION.SPAWN_T:1, sk=spawnK(p,t);
   S.sc=breatheAt(type,ph,t)*sk.s;
+  S.a=e.invuln?sk.a:1;
   if(sk.ring&&p>=0){ S.ringR=sk.ring.r; S.ringA=sk.ring.a*0.9; }   // only while the pop runs (<= 0.25 s), then nothing: the spawn ring never outshouts a pickup ring
   else { S.ringR=0; S.ringA=0; }
   S.eyeY=1-0.92*blinkAt(type,ph,t);
@@ -67,7 +68,7 @@ export function stepFoe(S,e,t,dt,pl){
 /* a dying foe (entityfx ghost): squash wide and low, then shrink; null when finished. flashK 0..1 is REDUCE FLASH: the one white frame becomes a tint */
 export function ghostPose(P,g,flashK){
   const k=deathK(g.age); if(!k)return null;
-  P.sx=k.sx; P.sy=k.sy; P.flash=k.flash?0.2+0.8*flashK:0;
+  P.sx=k.sx; P.sy=k.sy; P.a=k.a; P.flash=k.flash?0.2+0.8*flashK:0;
   return P;
 }
 

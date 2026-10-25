@@ -15,7 +15,8 @@ import { drawItemBody } from "./itemdraw.js";
 import { TILE_HELP } from "../core/feat.js";
 import { drawSpec } from "./featdraw.js";
 import { rr } from "./icons.js";
-import { pixelArt, itemCell, foeCell, pageScale, blitAnim, blitCell, foeAnim, itemAnim, SLOT_PAD } from "./hudart.js";
+import { pixelArt, itemCell, foeCell, pageScale, blitAnim, blitCell, foeAnim, itemAnim, seedOf as pxSeed, SLOT_PAD } from "./hudart.js";
+import { foeM, blinkAt } from "./motion.js";
 const ACCENT = "#37f0d0",
   TEXT = "#dfe7f5",
   MUTED = "#7385ad";
@@ -318,7 +319,7 @@ const seedOf = (k) => {
 };
 function foeAt(c, A, t, cx, cy, s, time, ps) {
   const f = FOE_OF[t] || FOES[0];
-  if (A) return blitAnim(c, foeAnim(A, f.t, time), cx, cy, ps || (s >= 36 ? 2 : 1));
+  if (A) return blitAnim(c, foeAnim(A, f.t, time, { idleW: foeM(f.t).idleW, blink: blinkAt(f.t, pxSeed(f.t), time || 0) > 0.5 }), cx, cy, ps || (s >= 36 ? 2 : 1));
   DUMMY.type = f.t;
   DUMMY.color = f.col;
   DUMMY.home.x = seedOf(f.t);

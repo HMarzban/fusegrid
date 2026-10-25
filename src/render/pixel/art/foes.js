@@ -86,8 +86,9 @@ const stationaryIdle0 = c(0, [
   "..ossssssssssssssso",
   "...ooooooooooooooo",
 ]);
-const fastFront0 = c(5, [
-  "...oooooo..oooooo",
+const fastFront0 = c(4, [
+  "..ooooooo..ooooooo",
+  "..olbbbko..okbbbso",
   "...olbkko..okkbso",
   "....obbko..okbso",
   "....oblbkookbsso",
@@ -97,7 +98,7 @@ const fastFront0 = c(5, [
   "........olso",
   ".........oo",
 ]);
-const fastBack0 = c(5, [
+const fastBack0 = c(4, [
   ".........oo",
   "........olbo",
   ".......olbbso",
@@ -106,18 +107,20 @@ const fastBack0 = c(5, [
   "....oblbkookbsso",
   "....obbko..okbso",
   "...obbkko..okkbso",
-  "...oooooo..oooooo",
+  "..obbbbko..okbbbso",
+  "..ooooooo..ooooooo",
 ]);
-const fastSide0 = c(5, [
-  "......ooo",
-  "......olboo",
-  ".......oklbooo",
-  "........okblkboo",
-  ".........obbkeeeo",
-  "........oksskeoo",
-  ".......okssooo",
-  "......ossoo",
-  "......ooo",
+const fastSide0 = c(4, [
+  "....ooo",
+  "....olko",
+  "....okkko",
+  "....okkkkoooooo",
+  "....ollllllllbboo",
+  "....okkkkkkkkkkeeo",
+  "....obkkkkkkkkkeeo",
+  ".....osssssssskoo",
+  "......oooooooooo",
+  ".........oooo",
 ]);
 const chaserFront0 = c(1, [
   "..........o",

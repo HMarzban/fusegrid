@@ -49,27 +49,30 @@ export function blitCell(c, fs, cx, cy, s, ref) {
   c.restore();
 }
 
-/* The GUIDE pages are alive in PIXEL: the same frames the board plays (idle breath + hashed blink, rocket flame, sentry pulse, spin, shade hem, burrow plume,
-   pickup ring flip + hover), picked by a pure function of the page clock. {fs, ref}: blitCell centres on ref (the still frame), so no frame shifts the cell. */
+/* The GUIDE pages are alive in PIXEL: the same frames the board plays (idle breath + blink, rocket flame, sentry pulse, spin, shade hem, burrow plume,
+   pickup ring flip + hover), picked by a pure function of the page clock at the board's own rates (A.timing = pixel/timing.js PX_T, registered with the
+   atlas, so this file imports nothing). o = {idleW, blink} from motion.js (menudraw passes foeM(type).idleW and blinkAt > 0.5), the same inputs the board
+   uses. {fs, ref}: blitCell centres on ref (the still frame), so no frame shifts the cell. */
 const SEQ3 = [0, 1, 0, 2], PULSE = [0, 1, 2, 1], tick = (t, fps, n) => Math.floor(Math.max(0, t) * fps + 1e-9) % n;
-const seedOf = (k) => { let h = 0; for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) | 0; return (h & 255) / 255; };
-const blinking = (k, t) => { const p = 3.4 + seedOf(k) * 1.6, u = (t + seedOf(k + "b") * p) % p; return u < 0.12; };
-export function foeAnim(A, t, time) {
-  const s = A.foe[t] || A.foe.walker, ref = foeCell(A, t)[0], T = time || 0, L = s.layout;
+const DEF_T = { FLAME_FPS: 10, PULSE_FPS: 1.5, SPIN_FPS: 12.7, HEM_FPS: 4, PLUME_FPS: 6, RING_FPS: 2 };
+export const seedOf = (k) => { let h = 0; for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) | 0; return (h & 255) / 255; };
+export function foeAnim(A, t, time, o) {
+  const s = A.foe[t] || A.foe.walker, ref = foeCell(A, t)[0], T = time || 0, L = s.layout, X = A.timing || DEF_T, ph = seedOf(t), bl = !!(o && o.blink);
+  const iw = o && o.idleW ? o.idleW : 3.1416;
   let f, fs;
-  if (s.walk) { f = s.idle[0][tick(T + seedOf(t), 2, 2)]; fs = [f.blink && blinking(t, T) ? f.blink : f]; if (L === "burrow" && s.extra) fs.push(s.extra[tick(T, 6, 3)]); }
-  else if (L === "rocket") fs = [s.face[0][SEQ3[tick(T + seedOf(t), 10, 4)]]];
-  else if (L === "still") { f = s.still[PULSE[tick(T + seedOf(t), 1.5, 4)]]; fs = [f.blink && blinking(t, T) ? f.blink : f]; }
-  else if (L === "spin") fs = [s.still[tick(T, 12.7, 8)]];
-  else if (s.still) { f = s.still[SEQ3[tick(T + seedOf(t), 4, 4)]]; fs = [f.blink && blinking(t, T) ? f.blink : f]; if (s.extra) fs.push(s.extra); }
+  if (s.walk) { f = s.idle[0][((T * iw / 6.2832 + ph) % 1) < 0.62 ? 0 : 1]; fs = [f.blink && bl ? f.blink : f]; if (L === "burrow" && s.extra) fs.push(s.extra[tick(T, X.PLUME_FPS, 3)]); }
+  else if (L === "rocket") fs = [s.face[0][SEQ3[tick(T + ph, X.FLAME_FPS, 4)]]];
+  else if (L === "still") { f = s.still[PULSE[tick(T + ph, X.PULSE_FPS, 4)]]; fs = [f.blink && bl ? f.blink : f]; }
+  else if (L === "spin") fs = [s.still[tick(T, X.SPIN_FPS, 8)]];
+  else if (s.still) { f = s.still[SEQ3[tick(T + ph, X.HEM_FPS, 4)]]; fs = [f.blink && bl ? f.blink : f]; if (s.extra) fs.push(s.extra); }
   else fs = foeCell(A, t);
   return { fs, ref };
 }
 export function itemAnim(A, t, time) {
-  const g = A.items.glyph[t], r = A.items.ring && A.items.ring[t], T = time || 0;
+  const g = A.items.glyph[t], r = A.items.ring && A.items.ring[t], T = time || 0, X = A.timing || DEF_T;
   if (!g) return { fs: [], ref: null };
   const hov = Math.round(Math.sin(2.4 * T + seedOf(t) * 6.28));
-  return { fs: r ? [r[tick(T + seedOf(t), 2, 2)], g] : [g], ref: g, dy: hov };
+  return { fs: r ? [r[tick(T + seedOf(t), X.RING_FPS, 2)], g] : [g], ref: g, dy: hov };
 }
 export function blitAnim(c, a, cx, cy, s) {
   if (a.fs.length) blitCell(c, a.fs, cx, cy + (a.dy || 0) * s * 0.5, s, a.ref);

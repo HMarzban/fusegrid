@@ -104,6 +104,7 @@ function disposeGroup(group){
   const mats=new Set();
   if(group.userData.ao)group.userData.ao.dispose();
   group.traverse(o=>{
+    if(o.userData.pools&&o.userData.pools.dispose)o.userData.pools.dispose();   // the foe fade clones (_shared, so their atlas eye maps survive)
     if(o.geometry&&!o.geometry._shared)o.geometry.dispose();
     const m=o.material;
     if(m)(Array.isArray(m)?m:[m]).forEach(x=>{ if(!x._shared)mats.add(x); });

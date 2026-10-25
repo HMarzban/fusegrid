@@ -13,6 +13,7 @@ import {anchorOf, cellRGBA, flipX, rot90, swapCell, overlayCell} from "./grid.js
 import {fallbackCell} from "./fallback.js";
 import {ART} from "./art/index.js";
 import {featPxCell} from "../featpx.js";
+import {PX_T} from "./timing.js";
 import {floorPxCell, SHADOW_CELLS, brickPal} from "../featpxcells.js";
 import {rim, ringCell, shine, passOf, squeeze, stretch, squash, silhouette, blinkOf, blob, scaled, wings, up1} from "./foegen.js";
 import {MAKO_FACES, MAKO_CYCLE, layoutOf, BOMB_MARKS, BLAST_PIECES, BLAST_AGES} from "./manifest.js";
@@ -169,6 +170,6 @@ export function createAtlas(surf, art = ART) {
   tiles(0);
   mako(HEX.fin, false);
 
-  return {mako, foe, bomb, blast, items, fx, tiles, feat, shadow, pending, used,
+  return {timing: PX_T, mako, foe, bomb, blast, items, fx, tiles, feat, shadow, pending, used,
     bakeAll() { for (let i = 0; i < BIOMES.length; i++) tiles(i); mako(HEX.fin, true); return pending; }};
 }

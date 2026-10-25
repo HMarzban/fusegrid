@@ -112,6 +112,8 @@ unchanged("px art registered: it never leaks into another kind");
   }
   check("PIXEL guide foes animate: most frames change within 0.5 s", moving >= FOES.length - 2, moving + "/" + FOES.length);
   check("PIXEL guide foes and pickups are deterministic (same time, same frames)", FOES.every((f) => foeAnim(A, f.t, 1.37).fs.every((x, j) => x === foeAnim(A, f.t, 1.37).fs[j])) && POWER.every((p) => itemAnim(A, p.t, 2.2).fs.every((x, j) => x === itemAnim(A, p.t, 2.2).fs[j])));
+  check("PIXEL guide reads the board's own rates (the atlas carries pixel/timing.js PX_T)", A.timing && A.timing.FLAME_FPS === 10 && A.timing.RING_FPS === 2);
+  check("PIXEL guide blink follows the motion spec input (o.blink picks the blink twin)", FOES.some((f) => { const a = foeAnim(A, f.t, 0.3, { idleW: 3, blink: true }).fs[0], b = foeAnim(A, f.t, 0.3, { idleW: 3, blink: false }).fs[0]; return a !== b && b.blink === a; }));
   check("PIXEL guide pickups carry ring + glyph and hover at most one art px", POWER.every((p) => { const a = itemAnim(A, p.t, 0.7); return a.fs.length === 2 && a.fs[1] === A.items.glyph[p.t] && Math.abs(a.dy) <= 1; }));
 }
 // ---- GUIDE pages in PIXEL ----

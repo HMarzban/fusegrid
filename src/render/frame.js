@@ -13,7 +13,7 @@
    Colours are the biome's own slots plus black alpha: lip = wallHi, glow =
    brickA (ICE bg0). Light is top-left everywhere. */
 import {CFG, BIOMES} from "../core/config.js";
-import {slot2d, paintShapes} from "./wallart.js";
+import {slot2d, paintShapes, FAM} from "./wallart.js";
 import {bossOf} from "./frameart.js";
 
 const W = CFG.COLS * CFG.TILE, H = CFG.ROWS * CFG.TILE, T = CFG.TILE, S = 2;
@@ -97,29 +97,79 @@ export function wellPx(c, level) {
   c.globalAlpha = 1;
 }
 
-/* Corner studs: the HUD plate covers the two top corner cells, so the corner
-   pieces are drawn ON it, in the 14 px square above the hearts and the CORE
-   column (y < 15, never over a HUD item). 2D: the world's own corner boss,
-   mirrored for the right corner; PIXEL: whole-px stepped studs in the biome's
-   slots (a vector polygon would soften the pixel grid). */
-function studs(c, px, b) {
-  const Ws = W, mir = (sh) => sh.map((s) => (s.r ? {...s, r: [Ws - s.r[0] - s.r[2], s.r[1], s.r[2], s.r[3]]} : s.p ? {...s, p: s.p.map(([x, y]) => [Ws - x, y])} : {...s, s: s.s.map(([x, y]) => [Ws - x, y])}));
-  if (px) {
-    c.globalAlpha = 1;
-    for (const x of [1, W - 15]) {
-      c.fillStyle = "#000000"; c.fillRect(x, 1, 14, 14);
-      c.fillStyle = b.wall; c.fillRect(x + 1, 1, 12, 13);
-      c.fillStyle = b.wallHi; c.fillRect(x + 1, 1, 12, 2); c.fillRect(x + 1, 1, 2, 13);
-      c.fillStyle = "#000000"; c.globalAlpha = 0.5; c.fillRect(x + 11, 3, 2, 11); c.fillRect(x + 3, 12, 10, 2);
-      c.globalAlpha = 1; c.fillStyle = b.wallHi; c.fillRect(x + 6, 6, 3, 3);
-      c.fillStyle = "#000000"; c.fillRect(x + 7, 7, 1, 1);
-    }
-    return;
-  }
+const mir = (sh) => sh.map((s) => (s.r ? {...s, r: [W - s.r[0] - s.r[2], s.r[1], s.r[2], s.r[3]]} : s.p ? {...s, p: s.p.map(([x, y]) => [W - x, y])} : {...s, s: s.s.map(([x, y]) => [W - x, y])}));
+/* REAL 3D plate studs: the world's corner boss, small, in the plate's corners */
+function studs(c, b) {
   const L = bossOf(b, 0.8, 7.5);
   c.globalAlpha = 1;
   paintShapes(c, b, L, 0, 0, slot2d);
   paintShapes(c, b, mir(L), 0, 0, slot2d);
+}
+/* Top corner pieces (CLASSIC + PIXEL): the HUD band (chip panel x 10-588,
+   y 10-40, the first heart, the score column) owns both top corner cells and
+   the canvas rounds its corners (10 CSS px, about 16 logical on a phone), so
+   the corner boss sits where it can show whole: at the plate's foot, on the
+   side rail it caps, the bottom corners' own size (bossOf k 1.4, the same
+   inset 14 from the outer edge), mirrored right. Its box (x 1-27, y >= 40)
+   stays out of the band and off the playfield; the plate rests on it, so
+   plate, boss and rail read as one piece. PIXEL samples the same shapes once
+   per world into whole art px (2 logical), the walls' own sampler and slot
+   remaps, as runs (dyPx keeps the grid even). */
+export const TOP_BOSS = Object.freeze({k: 1.4, c: 14, dy: 39, dyPx: 38});
+const topBoss = (b) => bossOf(b, TOP_BOSS.k, TOP_BOSS.c);
+const inPoly = (x, y, p) => { let c = false; for (let i = 0, j = p.length - 1; i < p.length; j = i++) { const [xi, yi] = p[i], [xj, yj] = p[j]; if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c; } return c; };
+const segD = (x, y, a, q) => { const dx = q[0] - a[0], dy = q[1] - a[1], t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (y - a[1]) * dy) / (dx * dx + dy * dy || 1))); return Math.hypot(x - a[0] - t * dx, y - a[1] - t * dy); };
+const hit = (s, x, y) => s.r ? x >= s.r[0] && y >= s.r[1] && x < s.r[0] + s.r[2] && y < s.r[1] + s.r[3] : s.p ? inPoly(x, y, s.p) : s.s.some((q, i) => i > 0 && segD(x, y, s.s[i - 1], q) <= s.w / 2);
+const RUNS = new Map();
+function bossRuns(b) {
+  let o = RUNS.get(b.name);
+  if (o) return o;
+  const sh = topBoss(b).filter((s) => !s.npx), map = (FAM[b.name] && FAM[b.name].px) || {};
+  const res = (s) => { if (s.includes("|")) s = s.split("|")[1]; return slot2d(b, map[s] || s); };
+  o = [];
+  for (let y = 0; y < 28; y += 2) {
+    let run = null;
+    for (let x = 0; x < 28; x += 2) {
+      let col = null;
+      for (const s of sh) if (hit(s, x + 1, y + 1)) col = res(s.c);
+      if (run && run[3] === col) { run[2] += 2; continue; }
+      if (run && run[3]) o.push(run);
+      run = [x, y, 2, col];
+    }
+    if (run && run[3]) o.push(run);
+  }
+  RUNS.set(b.name, o);
+  return o;
+}
+/* the plate's end caps: an L of the world's wall slot over each top corner
+   cell's outer margin (x 2-6 down to the plate's foot, clear of the first
+   heart's widest PIXEL x2 cell at x 6; y 2-6 along the plate's top) that also
+   hides the buried corner cell's boss scraps; lit top / left and shaded
+   right / bottom on both sides (light is top-left), running into the boss.
+   Painted before the plate, so its round corner seats in the cap (the seat
+   squares above the first heart). Even logical px, so PIXEL stays on its art grid. */
+export const CAPS = Object.freeze([[2, 2, 4, 38], [2, 2, 16, 4], [6, 6, 6, 4], [6, 10, 2, 6], [W - 6, 2, 4, 38], [W - 18, 2, 16, 4], [W - 12, 6, 6, 4], [W - 8, 10, 2, 6]]);
+function caps(c, px, b) {
+  const t = px ? 2 : 1;
+  c.globalAlpha = 1; c.fillStyle = b.wall;
+  for (const [x, y, w, h] of CAPS) c.fillRect(x, y, w, h);
+  c.fillStyle = b.wallHi; c.globalAlpha = 0.8;
+  for (const x0 of [2, W - 18]) c.fillRect(x0, 2, 16, t);
+  for (const x0 of [2, W - 6]) c.fillRect(x0, 2, t, 38);
+  c.fillStyle = "#000000"; c.globalAlpha = 0.5;
+  for (const x0 of [2, W - 6]) c.fillRect(x0 + 4 - t, 2 + t, t, 38 - t);
+  c.fillRect(6, 6 - t, 12, t); c.fillRect(W - 18, 6 - t, 12, t);
+  c.globalAlpha = 1;
+}
+function topBosses(c, px, b) {
+  c.globalAlpha = 1;
+  if (px) {
+    for (const [x, y, w, col] of bossRuns(b)) { c.fillStyle = col; c.fillRect(x, y + TOP_BOSS.dyPx, w, 2); c.fillRect(W - x - w, y + TOP_BOSS.dyPx, w, 2); }
+    return;
+  }
+  const L = topBoss(b);
+  paintShapes(c, b, L, 0, TOP_BOSS.dy, slot2d);
+  paintShapes(c, b, mir(L), 0, TOP_BOSS.dy, slot2d);
 }
 
 /* HUD plate: a dark panel cut into the top rampart, flush with the well edge.
@@ -127,6 +177,7 @@ function studs(c, px, b) {
 export function hudPlate(c, px, level, bare) {
   const x = 8, y = 6, w = W - 16, h = T - 6, b = bio(level);
   c.save();
+  if (!bare) caps(c, px, b);
   c.fillStyle = b.bg1; c.globalAlpha = 0.9;
   if (px) { c.fillRect(x + 4, y, w - 8, h); c.fillRect(x + 2, y + 2, w - 4, h - 2); c.fillRect(x, y + 4, w, h - 4); }
   else if (c.arcTo) { c.beginPath(); c.moveTo(x, y + h); c.lineTo(x, y + 6); c.arcTo(x, y, x + 6, y, 6); c.lineTo(x + w - 6, y); c.arcTo(x + w, y, x + w, y + 6, 6); c.lineTo(x + w, y + h); c.closePath(); c.fill(); }
@@ -136,8 +187,7 @@ export function hudPlate(c, px, level, bare) {
   c.globalAlpha = 0.25; c.fillRect(x + 6, y + 2, w - 12, 2);
   c.globalAlpha = 0.5; c.fillStyle = b.wallHi; if (!bare) c.fillRect(x, y + h - 1, w, 1);
   if (bare) { c.restore(); return; }
-  c.globalAlpha = 1;
-  studs(c, px, b);
+  topBosses(c, px, b);
   c.restore();
 }
 
@@ -159,7 +209,7 @@ export function hudPlate3(c, level) {
   c.fillStyle = "#000000"; c.globalAlpha = 0.5;
   c.fillRect(x, y + hb - 2, w, 2); c.fillRect(x + w - 2, y, 2, hb);
   c.globalAlpha = 1;
-  studs(c, false, bi);
+  studs(c, bi);
   c.restore();
 }
 
