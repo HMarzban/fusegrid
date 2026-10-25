@@ -32,6 +32,7 @@ it will be named shell v185. What it adds, for the record:
   MAX as each look draws them, with a rule line only for the four tiles that have
   one (the other four say LOOK ONLY FOR NOW). GUIDE is now a 2x2 of doors on a
   keyboard screen and four stacked rows on touch.
+- **Foes and pickups got a last pass.** PIXEL chaser, burrow, boomerang, rocket and fast have richer surface detail; in REAL 3D a pause no longer cuts a death or collect effect short, the JUNGLE and ARENA motes read, and the ICE rim lifted; the ATTRACT demo now shows the ambient motion too.
 - **The guide pages are alive.** ITEMS, ENEMIES, HOW TO and the MENU preview now
   show the foes blinking and bobbing and the pickups with their rings and glint,
   in CLASSIC 2D and in PIXEL (the PIXEL pages play the board's own frames).

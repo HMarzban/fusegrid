@@ -123,10 +123,8 @@ and the existing events.
   straight onto the board so they never evict kill puffs. The px tree is about
   146 KB of the 152 KB cap. The 2D silhouettes are canon for all three looks.
 - **Loose ends of this round:** hunter windup needs a sim field (out of scope);
-  3D cannot fade a single foe (shared materials), so spawn is scale plus a ring;
-  PIXEL surface detail for chaser, burrow, boomerang, rocket and fast is thin; a
-  3D death or burst can end early after a PAUSE resume because `world.time`
-  keeps ticking; PIXEL guide frames are a pure function of the page clock, not the sim, so they match the board only by sharing its frame tables; no real-GPU frame
+  3D cannot fade a single foe (shared materials; a fade needs per-slot clones and a transparent pass), so spawn is scale plus a ring;
+  (closed 2026-10-25: PIXEL detail for chaser, burrow, boomerang, rocket and fast was thickened, and REAL 3D death / burst now run on a pause-corrected clock, `tests/render3d-pauseclock.test.mjs`); PIXEL guide frames are a pure function of the page clock, not the sim, so they match the board only by sharing its frame tables; no real-GPU frame
   time for the new motion.
 
 ## Loose ends (what is NOT done)
@@ -144,11 +142,10 @@ and the existing events.
    shaders, contact AO, ambient Points).
 7. **Colourblind check for the new tiles** was dropped with the old marks gate
    and needs a version that fits full-bleed fixtures.
-8. **ATTRACT shows no ambient** (the renderer cannot tell it from menus without a
-   flag from `main.js`); 3D JUNGLE and ARENA motes are very faint; ICE and SAND
-   rims may read dark (one table in `three/scene.js`).
+8. **Closed 2026-10-25:** ATTRACT now shows ambient (`main.js` hands `{hud:false, amb:true}`, all three renderers read `o.amb`); 3D JUNGLE and ARENA motes got a per-world gain; ICE and SAND rims were lifted (`RIM_LIFT` in `three/scene.js`).
 9. **Top corner bosses** are mostly hidden by the HUD plate; phone portrait is
    checked in screenshots only.
-10. **Housekeeping:** branches `frame-a`, `frame-b` (merged), `frame-c` (not
+10. **Tracking:** the gameplay gaps are issue #35 (hunter windup #32, colour-vision gate #33, real-GPU frame times #34, plus #10-#13, #24, #26-#28, #30). Progress comments are on #8, #15, #16, #17, #23, #24, #26, #27, #31.
+11. **Housekeeping:** branches `frame-a`, `frame-b` (merged), `frame-c` (not
     merged) and their worktrees; the automated security review of the commits
     could not run (credentials rejected).
