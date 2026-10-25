@@ -829,6 +829,18 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
       dE >= 14, slot hull, VOID dim in 2D/PIXEL/3D, seams, key light); the old
       "marks <= 30 %" gate was replaced because the D painters have no marks-only
       pass. Option sources: `.superpowers/sdd/2026-10-25-tile-art-d/source/`.
+    - **Integrated prototype build (owner 2026-10-25: "refactor all with the new
+      wall and floor", "A and B together"):** branch `tiles-d` = walls round 3
+      + direction D tiles (all 8, PIXEL included) + base floor restyle
+      (`src/render/floorart.js`) + PIXEL tree as a lazy import (#15,
+      `pixel/load.js`; `hudart.js` lives in `src/render/`) + art-only STREAM /
+      QUICKSAND / PORTAL / GATE on gen-2 rooms 4 / 6 / 7 / 8 + board outline
+      option A (world bezel, `frameart.js`, `three/rimart.js`; SUPERSEDES ruling
+      W6 "plain border") + option B (recessed well, `frame.js`,
+      `three/wellfx.js`; 3D stage background is CSS on `#gl`). A real page plays
+      gen-2 boards by default (`?gen=1` or `?code=` keep today's); Node worlds stay
+      gen 1. CLASSIC hash pin `6ec1e0a5:65648`, px cap 145 KB. Never pushed.
+      Option C (stage set) sits unmerged on branch `frame-c`.
 - Walls (owner rulings 2026-10-21, designed and prototyped, NOT built; issues
   #17 for CLASSIC 2D + REAL 3D and #31 for PIXEL after #15; record
   `docs/superpowers/specs/2026-10-21-wall-art-design.md`).
