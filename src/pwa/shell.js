@@ -94,6 +94,7 @@ const SRC = Object.freeze([
   "src/render/featart/built.js",
   "src/render/ambient.js",
   "src/render/itemdraw.js",
+  "src/render/entityfx.js",
   "src/render/motion.js",
   "src/render/ambient2d.js",
   "src/render/depth2d.js",

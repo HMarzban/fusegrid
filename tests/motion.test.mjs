@@ -56,3 +56,15 @@ test("no Math.random / Date / world.time in motion.js", () => {
   const s = readFileSync(new URL("../src/render/motion.js", import.meta.url), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
   assert.ok(!/Math\.random\(|Date\.now\(|new Date\(|world\.time/.test(s));
 });
+
+import { createEntityFx } from "../src/render/entityfx.js";
+test("entity fx: kill and power events live for their durations on the caller's clock, capacity is fixed, empty feed is a no-op", () => {
+  const f = createEntityFx(3);
+  f.feed([{ t: "kill", x: 10, y: 20, color: "#fff", type: "walker" }, { t: "power", x: 5, y: 6, col: "#f00", kind: "heart" }, { t: "boom" }], 2);
+  assert.equal(f.ghosts(2.1).length, 1); assert.equal(f.bursts(2.1).length, 1);
+  assert.ok(Math.abs(f.ghosts(2.2)[0].age - 0.2) < 1e-9);
+  assert.equal(f.ghosts(2 + MOTION.DEATH_T).length, 0); assert.equal(f.bursts(2 + COLLECT_T).length, 0);
+  for (let i = 0; i < 9; i++) f.feed([{ t: "kill", x: i, y: 0, color: "#fff", type: "fast" }], 5);
+  assert.equal(f.ghosts(5).length, 3);
+  f.feed(null, 6); f.feed([], 6); f.clear(); assert.equal(f.ghosts(5).length, 0);
+});
