@@ -32,6 +32,8 @@ export const BLAST_PIECES = Object.freeze(["cross", "straight", "end"]);
 export const BLAST_AGES = Object.freeze(["grow", "full", "thin"]);
 export const ITEM_TYPES = Object.freeze(POWER.map((p) => p.t));
 export const ITEM_CHROME = Object.freeze(["well", "ring.cap", "ring.vit", "ring.utl", "ring.bls", "ring.utl1", "ring.bls1"]);
+/* wall families (wall round prototype): vr / ctr / cbr mirror vl / ctl / cbl */
+export const WALL_CELLS = Object.freeze(["base", "v1", "v2", "acc", "h", "vl", "ctl", "cbl"]);
 export const FX_CELLS = Object.freeze(["reveal0", "reveal1", "sparkle0", "sparkle1", "sparkle2", "glint0", "glint1", "glint2", "puff0", "puff1", "puff2", "puff3"]);
 
 export const MANIFEST = Object.freeze([
@@ -46,6 +48,7 @@ export const MANIFEST = Object.freeze([
   ...ITEM_TYPES.map((t) => "items/" + t),
   ...ITEM_CHROME.map((n) => "items/" + n),
   ...FX_CELLS.map((n) => "fx/" + n),
+  ...BIOMES.flatMap((b) => WALL_CELLS.map((n) => "walls/" + b.name + "." + n)),
 ]);
 /* Manifest keys an art set does not draw yet (served by fallback.js). */
 export function pendingOf(art) {

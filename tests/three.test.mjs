@@ -194,14 +194,12 @@ function scan(grid){
   const v1=sc.brickV;
   check("WALL edit bumps brickV (shadow map re-renders)", v1>v0);
   const c=new THREE.Color();
-  const bi=BIOMES[0], wA=new THREE.Color(bi.wall),
-    wH=new THREE.Color(bi.wall).lerp(new THREE.Color(bi.wallHi),0.32);
+  const white=new THREE.Color("#ffffff");
   let colOk=true;
   for(let y=0,i=0;y<CFG.ROWS;y++)for(let x=0;x<CFG.COLS;x++)
     if(w.grid[y*CFG.COLS+x]===T.WALL){ cap.getColorAt(i++,c);
-      const k=(x+y)&1?wH:wA;
-      if(Math.abs(c.r-k.r)+Math.abs(c.g-k.g)+Math.abs(c.b-k.b)>1e-5)colOk=false; }
-  check("refreshed walls keep the per-instance checker colours", colOk);
+      if(Math.abs(c.r-white.r)+Math.abs(c.g-white.g)+Math.abs(c.b-white.b)>1e-5)colOk=false; }
+  check("refreshed walls keep the white per-instance colour (ruling W4: the wall colour lives in the material only)", colOk);
   w.grid[e]=T.EMPTY; sc.update(w);
   check("EMPTY tile back -> wall count follows down", follows(sc,w).ok
     &&cap.count===w0+1);

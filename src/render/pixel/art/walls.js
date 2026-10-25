@@ -1,0 +1,82 @@
+/* PIXEL wall families (wall round 2026-10-21, THROWAWAY prototype). GENERATED
+   by tools/walls/genpx.mjs from the shared shape lists in ../../wallart.js:
+   do not hand-edit, re-run the generator. One full 20x20 cell per biome and
+   wall code (the face band is already faceRows(hWall)*2 tall, so no
+   composeFace); vr / ctr / cbr are mirrored from vl / ctl / cbl at bake.
+   Q is the shared row table (a row used in two or more places).
+   Wall SLOTS only (never a brick slot, never hex). */
+const A = "art-walls";
+const c = (rows) => ({w: rows[0].length, h: rows.length, author: A, rows});
+const R = (row, n) => Array(n).fill(row);
+const Q = ["wwwwwwwwwwwwwwwwwwww", ".wwwwwwwwwwwwwwwwww.", "wwwwwwwwwwwwwwwwwww.", "wWWWWWWWWWWWWWWWWWWw", "wXXXXXXXXXXXXXXXXXXw", "whhhhhhhhhhhhhhhhhhw", "wwwwwwwwwwwwwwwwwwwW", "hhhhhhhhhhhhhhhhhhhW", "wssssssssssssssssssw", "wwhhhhhhhhhhhhhhhhhh", "hhhhhhhhhhhhhhhhhhhh", "XXXXXXXXXXXXXXXXXXXX", "wwwwwwWwwwwwwwwwwwww", ".XXXXXXXXXXXXXXXXXX.", ".hhhhhhhhhhhhhhhhhh.", "whhhhhhhhhhhhhhhhhww", "XXXXXXXXXXXXXXXXXXXW", "wwHhhhhhhhhhhhhhhhhh", "WWWWWWWWWWWWWWWWWWWW", "wwWWWWWWWWWWWWWWWWWW", "XwwwwwwwwwwwwwwwwwwX", "hWWWWWWWWWWWWWWWWWWh", "wHHHHHHHHHHHHHHHHHHw", "wwWWWWWWWWWWWWWWWwWw", "wwXXXXXXXXXXXXXXXXXX", "XHHHHHHHHHHHHHHHHHLX", "wwHHHHHHHHHHHHHHHHHH", "hHhhhhhhhhhhhhhhhhhh", "whhhLLLLLLLLLLLLLhww", "HHHHHHHHHHHHHHHHHHHW", "wwHhhhhhhhhhhhhhhWWw", "whssssssssssssssssLw", "wwHhhhhhhhhhhhhhswWw", "whhhhhhhhhhhhhhhhhsw", "HHHHHHHHHHHHHHHHHHHH", "Xwwwwwwwwwwwwwwwwww.", "XHHHHHHHHHHHHHHHHHHX", "XLLLLLLLLLLLLLLLLLLX", "XwwwwwWwwwwwwwwwwwwX", "XhhhhhhhhhhhhhhhhhhX", "hwwwwwwwwwwwwwwwwww.", "hwwwwwwwwwwwwwwwwwwh", "wLLLLLLLLLLLLLLLLLLw", "sssssssssssssssssssW", "wHhXhhhhhhhhhhhhXhsw", "wWXXXXXXXXXXXXXXXXWw", "wwwwwWwwwwwwwwwwwwwW", "hWWWWWWWWWhWWWWWWWWh", "wHhhhhhhhhhhhhhhhhww", "wXXXwXXXXXXXXXXXXXXw", "wXXwwXXXXXXXXwXXXXXw", "wwHhhhhhhhhhhhhhhHHH", "wWWWWWWWWhsWWWWWWWWw", "wWWWWWWWhhssWWWWWWWw", "LLLLLLLLLLLLLLLLLLLW", "wwhsssssssssssssssss", "wwLLLLLLLLLLLLLLLLLL", "wHhWhhhhhhhhhhhhWhsw", "wWWWWWWWWWWWwwwwWWWw", "wwssssssssssssssssss", "hWWWWwWWWWWWWWWWWWWh", "hWWWwWWWWWWWWWWWWWWh", "wwhhLLLLLLLLLLLLLLLL", "wwhhLLLLLLLLLLLhhhhh"];
+
+export const SHEET = Object.freeze({
+  id: "walls",
+  pal: Object.freeze({w: "tile.wall", X: "tile.wall.outline", W: "tile.wall.shadow", L: "tile.wall.light", h: "tile.wallHi", H: "tile.wallHi.light", s: "tile.wallHi.shadow"}),
+  cells: Object.freeze({
+    "JUNGLE.base": c([Q[1], Q[2], Q[22], ...R(Q[48], 6), ...R(Q[0], 4), ...R(Q[4], 4), Q[49], Q[50], Q[1]]),
+    "JUNGLE.v1": c([Q[1], Q[2], Q[22], "wHhhhWhhhhhhhhhhhhww", "wHWWWWWWWhhhhhhhhhww", "WWWWWWWWWWWhhhhhhhww", "WWWhhhhhhWWWWhhhhhww", "wHhhhhhhhhWWWWhhhhww", "wHhhhhhhhhhhWWWhhhww", "wwwwwwwwwwwwwWWWwwww", "wwwwwwwwwwwwwwWWwwww", "wwwwwwwwwwwwwwWWWwww", "wwwwwwwwwwwwwwwWWwww", "wXXXXXXXXXXXXXXWWXXw", "wXXXXXXXXXXXXXXWWWXw", "wXXXXXXXXXXXXXXXWWXw", "wXXXXXXXXXXXXXXXWWWw", "wXXXwXXXXXXXXXXXXWWw", "wXXwwXXXXXXXXwXXXWWw", Q[1]]),
+    "JUNGLE.v2": c([Q[1], Q[2], Q[22], ...R(Q[48], 6), ...R(Q[0], 4), Q[4], "wXXXXXXwXXXXwXXXXwXw", "wXXXXwwwXXwwwXXwwwXw", Q[4], Q[49], Q[50], Q[1]]),
+    "JUNGLE.acc": c([Q[1], "wwwWWWwwwwwwwWWWwww.", "wHHHWWHHHHHHHWWHHHHw", "wHhhWWWhhhhhWWWhhhww", "wHhhWWWhhhhhWWhhhhww", "wHhhWWWWWWhhWWWhhhww", "wHhhWWhWWWhhhWWhhhww", "wHhWWWhhhhhhhWWWhhww", "wHhWWhhhhhhhhWWWhhww", "wwwWWwwwwwwwwWWWwwww", "wwwWWWwwwwwwwWWwwwww", "wwwwWWwwwwwwwWWwwwww", "wwwwWWwwwwwwWWWwwwww", "wXXXWWWXXXXXWWWXXXXw", ...R("wXXXWWWXXXXXWWXXXXXw", 2), "wXXXWWXXXXXXWWWXXXXw", "wXXXWWXXXXXXXWWXXXXw", "wXXWWWXXXXXXXWWWXXXw", Q[1]]),
+    "JUNGLE.h": c([...R(Q[0], 2), Q[29], ...R(Q[7], 6), ...R(Q[6], 4), ...R(Q[16], 4), "XXXwXXXXXXXXXXXXXXXW", Q[16], Q[0]]),
+    "JUNGLE.vl": c([...R("wwHhhhhhhhhhhhhhwwWw", 19), Q[23]]),
+    "JUNGLE.ctl": c([...R(Q[0], 2), Q[26], ...R(Q[17], 6), "wwHhhhhhhhhhhhhhhwww", ...R(Q[30], 10)]),
+    "JUNGLE.cbl": c([...R("wwHhhhhhhhhhhhhhwwWW", 2), Q[51], ...R(Q[17], 6), ...R(Q[0], 4), ...R(Q[24], 4), "wwXXXXwXXXXXXXXXXXXX", Q[24], Q[0]]),
+    "ICE.base": c([Q[1], Q[2], Q[5], ...R(Q[31], 6), Q[42], ...R(Q[3], 9), Q[1]]),
+    "ICE.v1": c([Q[1], Q[2], Q[5], ...R(Q[31], 6), Q[42], Q[3], Q[52], Q[53], ...R("wWWWWWWhhhsssWWWWWWw", 3), Q[53], Q[52], Q[3], Q[1]]),
+    "ICE.v2": c([Q[1], Q[2], Q[5], ...R(Q[31], 6), Q[42], "wWWhXWWhXWWhXWWhXWWw", "wWWhWWWhWWWWXWWhXWWw", "wWWhWWWhWWWWWWWWXWWw", "wWWhWWWhWWWWWWWWWWWw", "wWWWWWWhWWWWWWWWWWWw", ...R(Q[3], 4), Q[1]]),
+    "ICE.acc": c([Q[1], Q[2], Q[5], ...R(Q[31], 6), "wLLLhLLLLhLLLLhLLLLw", Q[8], "wsWssssssXsWssssssXw", "wWWWssWWsXsWWssWWssw", "wWWWsWWWsXsWWWWWWsWw", "wWWWWWWWsXWWWWWWWsWw", "wWWWWWWWWsWWWWWWWWWw", ...R(Q[3], 3), Q[1]]),
+    "ICE.h": c([...R(Q[0], 2), Q[7], ...R(Q[43], 6), Q[54], ...R(Q[18], 9), Q[0]]),
+    "ICE.vl": c([...R("wwhsssssssssssssLwWw", 19), Q[23]]),
+    "ICE.ctl": c([...R(Q[0], 2), Q[9], ...R(Q[55], 6), "wwhssssssssssssssLLL", ...R("wwhssssssssssssssWWw", 10)]),
+    "ICE.cbl": c([...R("wwhsssssssssssssLwWW", 2), "wwhsssssssssssssshhh", ...R(Q[55], 6), Q[56], ...R(Q[19], 9), Q[0]]),
+    "FACTORY.base": c([Q[1], Q[2], Q[22], Q[44], "wHhhssssshhhhhhhhhsw", "wHhhhhhhhhhhhhhhhhsw", "wHhhssshhhhhhhhhhhsw", Q[44], Q[57], Q[8], ...R(Q[0], 5), Q[3], Q[58], "wWWWWWWWwwwWWWWWWWWw", Q[45], Q[1]]),
+    "FACTORY.v1": c([Q[1], Q[2], "wHHHHHHHHHsHHHHHHHHw", "wHhXhhhhhhshhhssXhsw", ...R("wHhhhhhhhhshhhhhhhsw", 2), "wHhhhhhsssshhhhhhhsw", "wHhXhhhhssssshhhXhsw", "wHhWhhhhhhshhhhhWhsw", Q[8], ...R(Q[0], 5), Q[3], "wWWWWWWWWWWwwwwWWWWw", "wWWWWWWWwwwwwWWWWWWw", Q[45], Q[1]]),
+    "FACTORY.v2": c([Q[1], Q[2], Q[22], "wHhXhhhhhhhhhhssXhsw", "wHhsshhhhhhhhhhhhhsw", "wHhhhsXssssssXshhhsw", "wHhhhsssssssssshhhsw", "wHhXhhhsssshhhhhXhsw", Q[57], Q[8], ...R(Q[0], 5), Q[3], "wWWWWWWWWWWWWWWwwwww", Q[58], Q[45], Q[1]]),
+    "FACTORY.acc": c([Q[1], Q[2], Q[22], Q[44], "wHhhhhhhhhsssXXXXhsw", "wHhhhhhhhhhhhssshhsw", "wHhhhhhhhhhhhhsshhsw", "wHhXhhhhsssshhssXhsw", "wHhWhhhhhhhhhhssWhsw", Q[8], ...R("wwwwwwwwwwwwwwsswwww", 5), "wWWWWXWWWWWWWWssWWWw", ...R("wssssXsssssssssssssw", 2), Q[4], Q[1]]),
+    "FACTORY.h": c([...R(Q[0], 2), Q[29], "hhhXhhhhsssshhhhXhhW", "hhhhhhhhhssssshhhhhW", ...R(Q[7], 2), "hhhXhhhhhhhhhsssXhhW", "hhhWhhhhhhhhhhhhWhhW", Q[43], ...R(Q[6], 5), Q[18], "WWWWWWWWWWWWWwwwWWWW", "WWWWWWWWWWWWWWWwwwwW", Q[16], Q[0]]),
+    "FACTORY.vl": c([...R(Q[32], 2), "wwHhhhhhhsssshhhswWw", ...R(Q[32], 4), "wwHhhhhhhhhssshhswWw", ...R(Q[32], 8), "wwHhhsssshhhhhhhswWw", ...R(Q[32], 2), Q[23]]),
+    "FACTORY.ctl": c([...R(Q[0], 2), Q[26], ...R(Q[17], 3), "wwHhhsssshhhhhhhhhhh", ...R(Q[17], 2), "wwHhhhhhhhhhhhhhhsss", ...R(Q[30], 2), "wwHhhhhhhsssshhhhWWw", ...R(Q[30], 7)]),
+    "FACTORY.cbl": c(["wwHhhhhhhhhhhhhhswWW", "wwHhhhhhhhhsssshswWW", "wwHhhhsssshhhhhhhHHH", "wwHhhhhhhssssshhhhhh", ...R(Q[17], 5), Q[59], ...R(Q[0], 5), Q[19], "wwWWWWWWWWWWWWwwwwWW", "wwWWWWWWWWWWWWwwWWWW", Q[24], Q[0]]),
+    "WATER.base": c([Q[1], Q[2], Q[5], ...R(Q[33], 6), Q[8], ...R(Q[0], 2), Q[3], "wWWWXXWWWWWWWWWWWWWw", ...R(Q[4], 5), Q[1]]),
+    "WATER.v1": c([Q[1], Q[2], Q[5], ...R(Q[33], 2), "whhhhhhhhhhhhhhshhsw", "whhhhhhhhhhhhssshssw", "whhhhhhhhhhhhshssssw", "whhhhhhhhhhhshhshhsw", Q[8], ...R(Q[0], 2), Q[3], "wWWWXXsWWWWWWWWWWWWw", "wXXssssXXXXXXXXXXXXw", ...R(Q[4], 4), Q[1]]),
+    "WATER.v2": c([Q[1], Q[2], Q[5], ...R(Q[33], 6), Q[8], ...R("wwwwXwwwwXwwwwXwwwww", 2), "wWWWXWWWWXWWWWXWWWWw", "wWWWXXWWWXWWWWWWWWWw", ...R(Q[4], 5), Q[1]]),
+    "WATER.acc": c([Q[1], Q[2], Q[5], ...R(Q[33], 6), Q[8], ...R(Q[0], 2), Q[3], "wWWWXLLLLLLLLLLLXWWw", ...R("wXXXXXXXXLLXXXXXXXXw", 2), ...R(Q[4], 3), Q[1]]),
+    "WATER.h": c([...R(Q[0], 2), ...R(Q[7], 7), Q[43], ...R(Q[6], 2), Q[18], "WWWXXWWWWWWWWWWWWWWW", ...R(Q[16], 5), Q[0]]),
+    "WATER.vl": c([...R("wwhhhhhhhhhhhhhhswWw", 19), Q[23]]),
+    "WATER.ctl": c([...R(Q[0], 2), ...R(Q[9], 7), "wwhhhhhhhhhhhhhhhsss", ...R("wwhhhhhhhhhhhhhhhWWw", 10)]),
+    "WATER.cbl": c([...R("wwhhhhhhhhhhhhhhswWW", 2), ...R(Q[9], 7), Q[59], ...R(Q[0], 2), Q[19], "wwWWWWXXWWWWWWWWWWWW", ...R("wwWXXXXXXXXXXXXXXXXX", 4), Q[24], Q[0]]),
+    "ARENA.base": c([Q[1], Q[2], Q[34], ...R(Q[27], 6), Q[10], Q[12], ...R(Q[0], 3), ...R(Q[3], 2), Q[0], ...R(Q[3], 2), Q[1]]),
+    "ARENA.v1": c([Q[1], Q[2], Q[34], "hHhhhhLhLhLhLHhhhhhh", "hHhhhhLhLhLHHhhhhhhh", "hHhhhhLhLHHhLhhhhhhh", "hHhhhhLhHhLhLhhhhhhh", "hHhhhhHHLhLhLhhhhhhh", "hHhhhHLhLhLhLhhhhhhh", Q[10], Q[12], ...R(Q[0], 3), ...R(Q[3], 2), Q[0], ...R(Q[3], 2), Q[1]]),
+    "ARENA.v2": c([Q[1], Q[2], Q[34], "hHhhhhhLLLLLLLhhhhhh", ...R("hHhhhhhhLhhLhhhhhhhh", 3), "hHhhhhhLLLLLLhhhhhhh", Q[27], Q[10], Q[12], ...R(Q[0], 3), ...R(Q[3], 2), Q[0], ...R(Q[3], 2), Q[1]]),
+    "ARENA.acc": c([Q[1], Q[2], Q[34], "hHhhhLLhhhhLLhhhhhhh", Q[27], "hHhLLLLLLLLLLLLLLhhh", Q[27], "hHhhhhhhLLhhhhLLhhhh", Q[27], Q[10], Q[12], ...R(Q[0], 3), ...R(Q[3], 2), Q[0], ...R(Q[3], 2), Q[1]]),
+    "ARENA.h": c([...R(Q[0], 2), Q[29], ...R(Q[7], 7), Q[46], ...R(Q[6], 3), ...R(Q[18], 2), Q[6], ...R(Q[18], 2), Q[0]]),
+    "ARENA.vl": c([...R("wwHhhhhhhhhhhhhhhwWw", 19), Q[23]]),
+    "ARENA.ctl": c([...R(Q[0], 2), Q[26], ...R(Q[17], 7), ...R(Q[30], 10)]),
+    "ARENA.cbl": c([...R("wwHhhhhhhhhhhhhhhwWW", 2), Q[51], ...R(Q[17], 6), Q[9], ...R(Q[0], 4), ...R(Q[19], 2), "wwWwwwwwwwwwwwwwwwww", ...R(Q[19], 2), Q[0]]),
+    "SAND.base": c([Q[13], Q[35], Q[36], ...R(Q[25], 6), Q[37], Q[38], Q[39], Q[20], Q[11], Q[20], ...R(Q[11], 4), Q[13]]),
+    "SAND.v1": c([Q[13], Q[35], Q[36], ...R(Q[25], 6), Q[37], Q[38], Q[39], Q[20], Q[11], "XwHHHwwwwwwwwwwwwwwX", "XHHHHHHXXXXXXXXXXXXX", "XHHHHHHHHXXXXXXXXXXX", "XHHHHHHHHHXXXXXXXXXX", "XHHHHHHHHHHXXXXXXXXX", Q[13]]),
+    "SAND.v2": c([Q[13], Q[35], Q[36], ...R(Q[25], 6), Q[37], Q[38], Q[39], Q[20], Q[11], Q[20], Q[11], ...R("XXXLLLXXXLLLXXLLLXXX", 2), Q[11], Q[13]]),
+    "SAND.acc": c([Q[13], Q[35], Q[36], Q[25], "XHHHHHHHLLLLHHHHHHLX", ...R(Q[25], 2), "XHHHLLHHHHHHHHHHHHLX", Q[25], Q[37], Q[38], Q[39], Q[20], Q[11], Q[20], ...R(Q[11], 4), Q[13]]),
+    "SAND.h": c([...R(Q[0], 2), ...R(Q[29], 7), Q[54], Q[46], Q[7], Q[6], Q[16], Q[6], ...R(Q[16], 4), Q[11]]),
+    "SAND.vl": c([...R("wwHHHHHHHHHHHHHHLwWX", 19), "wwWWWWWWWWWWWWWWWwWX"]),
+    "SAND.ctl": c([...R(Q[0], 2), ...R(Q[26], 7), "wwHHHHHHHHHHHHHHHLLL", ...R("wwHHHHHHHHHHHHHHHWWX", 10)]),
+    "SAND.cbl": c([...R("wwHHHHHHHHHHHHHHLwWW", 2), ...R(Q[26], 7), Q[56], Q[0], "wwwhhhhhhhhhhhhhhhhh", Q[0], "wwwXXXXXXXXXXXXXXXXX", Q[0], ...R(Q[24], 5)]),
+    "VOID.base": c([Q[14], Q[40], ...R(Q[10], 8), Q[41], ...R(Q[21], 3), "hWWWWWWwWWWWWWWWWWWh", "hWWWWWwWWWWWWWWWWWWh", Q[60], Q[61], Q[21], Q[14]]),
+    "VOID.v1": c([Q[14], Q[40], ...R(Q[10], 8), Q[41], ...R(Q[21], 2), "hWhhhhhhWWWWWWWWWWWh", "hWWWWWWwhWWWWWWWWWWh", "hWWWWWwWWhhhhhhhhhWh", Q[60], Q[61], Q[21], Q[14]]),
+    "VOID.v2": c([Q[14], Q[40], ...R(Q[10], 8), Q[41], Q[21], Q[47], "hWWWWWWWWhhhWWWWWWWh", "hWWWWWWwhhhhhWWWWWWh", "hWWWWWwhhhhhhhWWWWWh", "hWWWWwWWhhhhhWWWWWWh", "hWWWwWWWWhhhWWWWWWWh", Q[47], Q[14]]),
+    "VOID.acc": c([Q[14], Q[40], ...R(Q[10], 8), Q[41], Q[21], "hWWWWWWWWWhhhWWWWWWh", Q[47], "hWWWWWWwWWhWWWWWWWWh", "hWWWWWwWWWhWWWWWWWWh", "hWWWWwWWhWhWWWWWWWWh", "hWWWwWWWWWhWWWWWWWWh", Q[21], Q[14]]),
+    "VOID.h": c([...R(Q[0], 2), ...R(Q[7], 8), Q[6], ...R(Q[18], 3), "WWWWWWwWWWWWWWWWWWWW", "WWWWWwWWWWWWWWWWWWWW", "WWWWwWWWWWWWWWWWWWWW", "WWWwWWWWWWWWWWWWWWWW", Q[18], Q[10]]),
+    "VOID.vl": c([...R("wwhhhhhhhhhhhhhhhwWh", 19), "wwWWWWWWWWWWWWWWWwWh"]),
+    "VOID.ctl": c([...R(Q[0], 2), ...R(Q[9], 8), ...R("wwhhhhhhhhhhhhhhhWWh", 10)]),
+    "VOID.cbl": c([...R("wwhhhhhhhhhhhhhhhwWW", 2), ...R(Q[9], 8), Q[0], ...R(Q[19], 3), "wwWWWWWWWwWWWWWWWWWW", "wwWWWWWWwWWWWWWWWWWW", "wwWWWWWwWWWWWWWWWWWW", "wwWWWWwWWWWWWWWWWWWW", Q[19], Q[9]]),
+    "CROWN.base": c([Q[1], Q[2], Q[5], Q[15], ...R(Q[28], 4), Q[15], Q[0], Q[12], ...R(Q[0], 2), ...R(Q[4], 6), Q[1]]),
+    "CROWN.v1": c([Q[1], Q[2], Q[5], Q[15], Q[28], ...R("whhhLLLLLLLLLLLhLhww", 2), Q[28], Q[15], Q[0], Q[12], ...R(Q[0], 2), Q[4], "wXXXXXXXXXhXXXXXXXXw", ...R(Q[4], 4), Q[1]]),
+    "CROWN.v2": c([Q[1], Q[2], Q[5], Q[15], ...R(Q[28], 4), Q[15], Q[0], Q[12], ...R(Q[0], 2), ...R(Q[4], 3), ...R("wXXXhhXXhXXhhXXhXXXw", 2), Q[4], Q[1]]),
+    "CROWN.acc": c([Q[1], Q[2], Q[5], Q[15], ...R(Q[28], 4), Q[15], Q[0], Q[12], ...R(Q[0], 2), "wXXXXXXhhhhhhXXXXXXw", "wXXXXXXhLLLLLXXXXXXw", ...R("wXXXXXXhLLLLhXXXXXXw", 2), ...R("wXXXXXXXLLLLhXXXXXXw", 2), Q[1]]),
+    "CROWN.h": c([...R(Q[0], 2), ...R(Q[7], 2), ...R("hhLLLLLLLLLLLLLLLLLW", 4), Q[7], Q[6], Q[46], ...R(Q[6], 2), ...R(Q[16], 6), Q[0]]),
+    "CROWN.vl": c([...R("wwhhLLLLLLLLLLLhwwWw", 19), Q[23]]),
+    "CROWN.ctl": c([...R(Q[0], 2), ...R(Q[9], 2), ...R(Q[62], 3), ...R(Q[63], 2), "wwhhLLLLLLLLLLLhhwww", ...R("wwhhLLLLLLLLLLLhhWWw", 10)]),
+    "CROWN.cbl": c([...R("wwhhLLLLLLLLLLLhwwWW", 2), ...R(Q[63], 2), ...R(Q[62], 4), Q[9], ...R(Q[0], 4), ...R(Q[24], 6), Q[0]]),
+  }),
+});
