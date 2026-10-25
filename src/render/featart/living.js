@@ -28,7 +28,7 @@ const blobP = (cx, cy, R, jag, seed, sc, n, alt, ox, oy) => {
 const stk = (c, col, w, f) => { c.strokeStyle = col; c.lineWidth = w; f(); c.stroke(); };
 
 /* ---------- BOOSTER : JUNGLE, a moss tuft bursting out of the loam ---------- */
-const leaf = (c, x, y, a, len, w, pt, lit, mid, dk) => {
+const leaf = (c, x, y, a, len, w, pt, lit, mid, dk, ol) => {
   const path = (dx, dy) => {
     c.save(); c.translate(x + dx, y + dy); c.rotate(a); c.beginPath(); c.moveTo(0, 0);
     c.bezierCurveTo(len * .25, -w, len * .7, -w * (1 - .45 * pt), len, pt ? 0 : -w * .3);
@@ -38,6 +38,7 @@ const leaf = (c, x, y, a, len, w, pt, lit, mid, dk) => {
   path(1.1, 1.6); c.fillStyle = K0(.3); c.fill();
   path(0, 0); const mx = x + Math.cos(a) * len * .5, my = y + Math.sin(a) * len * .5;
   c.fillStyle = lin(c, mx - w, my - w, mx + w, my + w, [[0, lit], [.5, mid], [1, dk]]); c.fill();
+  if (ol) { c.strokeStyle = ol; c.lineWidth = 1.1; c.stroke(); }
   c.save(); c.translate(x, y); c.rotate(a); c.beginPath(); c.moveTo(len * .12, 0); c.lineTo(len * .82, 0); c.restore();
   c.strokeStyle = K0(.28); c.lineWidth = 1.1; c.stroke();
 };
@@ -45,11 +46,16 @@ const leaf = (c, x, y, a, len, w, pt, lit, mid, dk) => {
 const BOOSTER = (c, k) => {
   const b = k.bio, h = k.h, on = k.on, hs = k.state === 2 ? Math.max(0, h - 1) : h; floorTile(c, b, k.par);
   const loam = mix(b.bg1, b.floor1, [.8, .3, 0][h]);
-  const st = [7, 4, 2][h], sp = [.2, .09, .025][h], al = [.07, .68, .97][h], R = [15, 15.3, 15.6][h], jg = [.06, .14, .24][h];
-  const LP = (sc) => blobP(0, 0, R, jg, 11 + h, sc, 40, h == 2);
-  c.save(); c.translate(21, 20); c.scale(1.15, [.72, .82, .94][h]);
-  for (let i = 0; i < st; i++) { const sc = 1 + sp * (st - 1 - i) / Math.max(1, st - 1); c.fillStyle = rg(loam, al); c.fill(LP(sc)); }
-  if (h > 0) bevP(c, LP(1), 2.2, W0(.08), K0(.3));
+  const st = [7, 4, 1][h], sp = [.2, .09, .025][h], al = [.04, .68, 1][h], R = [15, 15.3, 15.6][h], jg = [.06, .14, .24][h];
+  const LP = (sc) => blobP(0, 0, R, jg, 11 + h, sc, 40, 0);
+  c.save(); c.translate(21, 20); c.scale(1.1, [.72, .82, .94][h]);
+  if (h < 2) { for (let i = 0; i < st; i++) { const sc = 1 + sp * (st - 1 - i) / Math.max(1, st - 1); c.fillStyle = rg(loam, al); c.fill(LP(sc)); } if (h > 0) bevP(c, LP(1), 2.2, W0(.08), K0(.3)); }
+  else {
+    const nl = 11, lp = [];
+    for (let i = 0; i < nl; i++) { const t = i / nl * T2 + .2, rr = 10.8 + (hsh(i, 5, 2) - .5) * 1.4, r2 = 5.3 + hsh(i, 6, 2) * 1.1; lp.push([Math.cos(t) * rr, Math.sin(t) * rr, r2]); }
+    c.fillStyle = rg(loam, al); lp.forEach(([x, y, r2]) => { c.beginPath(); c.arc(x, y, r2, 0, T2); c.fill(); }); c.beginPath(); c.arc(0, 0, 12, 0, T2); c.fill();
+    c.lineWidth = .9 / 1.1; c.strokeStyle = rg(mix(b.floor1, b.floor0, .5), .55); lp.forEach(([x, y, r2]) => { c.beginPath(); c.arc(x, y, r2, PI * 1.05, PI * 1.75); c.stroke(); });
+  }
   c.restore();
   const rn = [3, 4, 5][h]; c.lineCap = "round";
   for (let i = 0; i < rn; i++) {
@@ -60,11 +66,12 @@ const BOOSTER = (c, k) => {
   }
   c.fillStyle = rad(c, 9, 19, 5, [[0, mix(b.floor0, b.bg0, .5)], [1, mix(b.bg1, b.floor1, .5)]]);
   c.beginPath(); c.arc(10, 20, 3.8, 0, T2); c.fill(); c.strokeStyle = W0(.18); c.lineWidth = 1; c.beginPath(); c.arc(10, 20, 3.8, PI * 1.05, PI * 1.55); c.stroke();
-  const lm = [-.04, .08, .5][h], lit = mix(b.wallHi, b.floor0, (on ? .42 : .3) + lm), mid = mix(b.wallHi, b.floor0, .06 * h), dk = mix(b.floor1, b.bg0, .45 + .1 * h), pt = [0, .6, 1][h], f = on ? 1.12 : 1;
-  const sh = [[], [[13, 20, 1.15, 12, 3.2], [13, 20, -1.15, 12, 3.2]], [[12.5, 20, 1.2, 13, 3], [12.5, 20, -1.2, 13, 3], [19, 20, .7, 12.5, 2.8], [19, 20, -.7, 12.5, 2.8]]][hs];
+  const lm = [-.1, .08, .66][h], lit = mix(b.wallHi, b.floor0, Math.min(.96, (on ? .42 : .3) + lm)), mid = mix(b.wallHi, b.floor0, .06 * h), dk = mix(b.floor1, b.bg0, .45 + .15 * h), pt = [0, .6, 1][h], f = on ? 1.12 : 1;
+  const sh = [[], [[13, 20, 1.15, 9.5, 3], [13, 20, -1.15, 9.5, 3]], [[12.5, 20, 1.2, 14, 3.3], [12.5, 20, -1.2, 14, 3.3], [18, 20, .62, 14.5, 3.1], [18, 20, -.62, 14.5, 3.1]]][hs];
   sh.forEach(([x, y, a, len, w]) => leaf(c, x, y, a, len * f, w, Math.max(pt, .6), lit, mid, dk));
+  const ol = h ? 0 : rg(mix(b.wallHi, b.floor0, .5), .6);
   const len = [23, 24.5, 26][h] * f, w = [5.4, 5, 4.4][h] * f;
-  leaf(c, 10, 20, 0, len, w, pt, lit, mid, dk);
+  leaf(c, 10, 20, 0, len, w, pt, lit, mid, dk, ol);
   const nv = [3, 4, 5][h];
   for (let i = 0; i < nv; i++) {
     const t = .22 + .56 * (i / (nv - 1)), px = 10 + len * t, hw = w * .75 * 4 * t * (1 - t) * .9;
@@ -97,41 +104,30 @@ const STREAM = (c, k) => {
   wrap(c, () => rows.forEach(([dy, x0]) => {
     const x = x0 + ph;
     const y = cy + dy * (hw - GEO.STREAM.rowsInset) / Math.max(...rows.map((r) => Math.abs(r[0])));
-    c.beginPath(); c.moveTo(x, y); c.bezierCurveTo(x + L * .3, y - t, x + L * .7, y - t * .35, x + L, y); c.bezierCurveTo(x + L * .7, y + t * .5, x + L * .3, y + t * 1.1, x, y);
+    const hd = x + L * .86, tt = t * 1.05; c.beginPath(); c.moveTo(x, y); c.bezierCurveTo(x + L * .4, y - tt * .1, x + L * .62, y - tt, hd, y - tt); c.bezierCurveTo(hd + L * .2, y - tt, hd + L * .2, y + tt, hd, y + tt); c.bezierCurveTo(x + L * .62, y + tt, x + L * .4, y + tt * .1, x, y);
     c.fillStyle = rg(mix(b.wallHi, b.floor0, .5), h == 0 ? .7 : .8); c.fill();
-    c.save(); c.translate(0, 2 * ly); c.beginPath(); c.moveTo(x + 1, y); c.bezierCurveTo(x + L * .3, y - t * .6, x + L * .6, y - t * .2, x + L * .8, y); c.strokeStyle = K0(.22); c.lineWidth = 1.2; c.stroke(); c.restore();
+    c.save(); c.translate(0, 2 * ly); c.beginPath(); c.moveTo(x + L * .2, y); c.bezierCurveTo(x + L * .45, y - t * .3, x + L * .62, y - t * .7, x + L * .86, y - t * .7); c.strokeStyle = K0(.22); c.lineWidth = 1.2; c.stroke(); c.restore();
   }));
   if (!nb.W) { c.fillStyle = lin(c, 0, 0, 10, 0, [[0, K0(.5)], [1, K0(0)]]); c.fillRect(0, 0, 10, 40); }
   if (!nb.E) { c.fillStyle = lin(c, 40, 0, 30, 0, [[0, K0(.5)], [1, K0(0)]]); c.fillRect(30, 0, 10, 40); }
   c.restore();
   c.restore();
 };
-const TER = [.3, .12, .3, .5], TER0 = .5;
+const TER = [.34, .24, .18], DK = [0, .1, .2], WH = (b) => mix(b.wallHi, b.floor0, .5);
 const QUICKSAND = (c, k) => {
   const b = k.bio, h = k.h; floorTile(c, b, k.par);
   const jg = [.04, .06, .08][h], alt = 0, R0 = 17.8;
-  if (h == 0) [1.07].forEach((s) => { c.fillStyle = rg(mix(b.wallHi, b.floor0, .35), .1); c.fill(blobP(20, 20, R0, jg, 21, s, 40, alt)); });
-  else if (h == 1) { c.fillStyle = rg(mix(b.wallHi, b.floor0, .35), .12); c.fill(blobP(20, 20, R0, jg, 21, 1.05, 40, alt)); }
+  c.fillStyle = h ? K0([0, .12, .24][h]) : rg(mix(b.wallHi, b.floor0, .35), .1); c.fill(blobP(20, 20, R0, jg, 21, [1.07, 1.07, 1.1][h], 40, alt));
   const rs = GEO.QUICK.radii[h], ps = [];
   rs.forEach((r, i) => {
     const ox = .6 * i, oy = .9 * i, P = blobP(20, 20, r, jg, 21 + i, 1, 40, alt, ox, oy); ps.push([r, ox, oy]);
-    c.fillStyle = i ? mix(b.bg0, b.bg1, h == 0 ? TER0 : TER[i]) : mix(b.floor1, b.bg0, TER[0]); c.fill(P);
-    bevP(c, P, 2 + h * .7, K0(.12 + h * .16), rg(b.wallHi, .18 + h * .18));
+    c.fillStyle = mix(b.bg1, mix(b.floor1, b.bg0, Math.max(0, TER[h] - [.03, .05, .05][h] * i)), DK[h] + .03 * i * h); c.fill(P);
+    bevP(c, P, 1.5, K0(.1 + h * .03), rg(WH(b), .16 + h * .08));
   });
-  const lastR = rs[rs.length - 1], pr = [5.2, 5.6, 6.2][h], oi = rs.length - 1;
-  const ns = [2, 7, 9][h];
-  c.save(); c.clip(blobP(20, 20, R0, jg, 21, 1, 40, alt));
-  for (let i = 0; i < ns; i++) {
-    const a = (i + .5) * T2 / ns + PI / 8, r1 = 17, r2 = lastR > 9 ? pr + 3 : pr + 4, cx = 20 + .6 * oi, cy = 20 + .9 * oi;
-    const ca = Math.cos(a), sa = Math.sin(a), px = -sa, py = ca, w1 = 1.5, w2 = .65;
-    c.fillStyle = rg(b.bg1, h == 0 ? .3 : .42); c.beginPath();
-    c.moveTo(cx + ca * r1 + px * w1, cy + sa * r1 + py * w1); c.lineTo(cx + ca * r2 + px * w2, cy + sa * r2 + py * w2);
-    c.lineTo(cx + ca * r2 - px * w2, cy + sa * r2 - py * w2); c.lineTo(cx + ca * r1 - px * w1, cy + sa * r1 - py * w1); c.fill();
-        }
-  c.restore();
+  const pr = [5.2, 5.6, 6.2][h], oi = rs.length - 1;
   const Pp = blobP(20, 20, pr, .1 + jg, 33, 1, 24, 0, .6 * oi, .9 * oi);
-  c.fillStyle = rad(c, 20 + .6 * oi, 20 + .9 * oi, pr * 1.2, [[0, mix(b.bg1, b.floor1, .35)], [1, mix(b.bg1, b.floor1, .6)]]); c.fill(Pp);
-  bevP(c, Pp, 1.6, K0(h ? .5 : .32), rg(b.wallHi, h ? .4 : .26));
+  c.fillStyle = rad(c, 20 + .6 * oi, 20 + .9 * oi, pr * 1.2, [[0, mix(b.floor1, b.bg0, .04)], [1, mix(b.floor1, b.bg0, .12)]]); c.fill(Pp);
+  bevP(c, Pp, 1.6, K0(.3), rg(WH(b), .3));
 };
 
 
