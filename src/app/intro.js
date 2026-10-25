@@ -36,11 +36,12 @@ const seg = (t, a, b) => clamp((t - a) / (b - a), 0, 1);
 const TAU = 2 * Math.PI;
 
 /* CLASSIC 2D canvas transform. Title: zoom 1.12 drifting on incommensurate
-   periods; show: push to 1.8 on MAKO's spawn corner by 8S, hold, pull back to
+   periods, a few px only, so the world bezel crops evenly on both sides (a 4 %
+   drift cut one side rail off and left the other); show: push to 1.8 on MAKO's spawn corner by 8S, hold, pull back to
    MENU's untransformed frame exactly at SHOW_DUR. Pan is clamped so no edge
    gap ever shows. introPhase(1,0,pT) equals introPhase(0,pT): no pop. */
-const title = (t) => ({ zoom: 1.12, camX: 0.5 + 0.04 * Math.sin((TAU * t) / (32 * SHOW_STEP)),
-  camY: 0.5 + 0.03 * Math.sin((TAU * t) / (24 * SHOW_STEP)) });
+const title = (t) => ({ zoom: 1.12, camX: 0.5 + 0.006 * Math.sin((TAU * t) / (32 * SHOW_STEP)),
+  camY: 0.5 + 0.005 * Math.sin((TAU * t) / (24 * SHOW_STEP)) });
 const CLOSE = { zoom: 1.8, camX: (1.5 * CFG.TILE) / (CFG.COLS * CFG.TILE), camY: (1.5 * CFG.TILE) / (CFG.ROWS * CFG.TILE) };
 export function introPhase(stage, t, pressT = 0) {
   if (stage !== 1) return { ...title(t), veil: 0.45 };
