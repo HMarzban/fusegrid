@@ -13,6 +13,8 @@
    paints the same vectors in place. o.m = marks only (coverage count). */
 import { CFG, key, biomeOf } from "../core/config.js";
 import { FEAT_PROFILE } from "../core/feat.js";
+import { BUILT } from "./featart/built.js";
+import { LIVING } from "./featart/living.js";
 
 const TL = CFG.TILE, C = CFG.COLS, R = CFG.ROWS;
 const DARK = { ICE: "wall", SAND: "bg1" };
@@ -394,8 +396,20 @@ export function paintCell(c, b, s, o = {}) {
   const t = tones(b, s.h);
   c.save();
   c.beginPath(); c.rect(0, 0, 40, 40); c.clip();
-  PAINT[s.kind](c, b, t, s, o);
+  const P = BUILT[s.kind] || LIVING[s.kind];
+  if (P) runPainter(P, c, kOf(b, s)); else PAINT[s.kind](c, b, t, s, o);
   c.restore();
+}
+const nbOf = (outer) => ({ N: !outer.includes("N"), E: !outer.includes("E"), S: !outer.includes("S"), W: !outer.includes("W") });
+/* the painter's view of a cell spec (featart/ contract): outer = sides with no same-kind neighbour */
+export function kOf(b, s) {
+  return { bio: b, h: s.h, nb: nbOf(s.outer || SIDES), par: s.par | 0, on: s.state === 1 ? 1 : 0, dir: s.dir | 0, phase: s.phase | 0, state: s.state | 0, lit: s.lit | 0, pair: s.pair || 1, gx: s.gx | 0, gy: s.gy | 0 };
+}
+/* a painter is a function (c,k) or {mech,lit}: mech in the rotated frame (flow = East), lit in the board frame */
+function runPainter(P, c, k) {
+  if (typeof P === "function") { P(c, k); return; }
+  c.save(); ROT(c, k.dir); P.mech(c, k); c.restore();
+  P.lit(c, k);
 }
 const featAt = (w, x, y) => (x < 0 || y < 0 || x >= C || y >= R ? 0 : w.feat[key(x, y)]);
 const isBeltV = (v) => v >= 1 && v <= 4;
@@ -407,8 +421,9 @@ const D4 = [[0, -1], [1, 0], [0, 1], [-1, 0]];
 /* the spec of one feature tile in this frame (shared by 2D and 3D) */
 export function cellSpec(w, x, y) {
   const v = w.feat[key(x, y)], k = kindOf(v), h = tierOf(w);
-  const s = { kind: k, h };
+  const s = { kind: k, h, par: (x + y) & 1 };
   s.outer = SIDES.filter((sd, i) => kindOf(featAt(w, x + D4[i][0], y + D4[i][1])) !== k);
+  s.nb = nbOf(s.outer);
   if (k === "BELT") {
     s.dir = v - 1;
     const [dx, dy] = [[1, 0], [0, 1], [-1, 0], [0, -1]][s.dir];
@@ -434,7 +449,7 @@ export function cellSpec(w, x, y) {
   return s;
 }
 export function specKey(s) {
-  return [s.kind, s.h, s.dir, s.exit ? 1 : 0, s.phase, s.outer && s.outer.join(""), s.state, s.lit, s.pair, s.kind === "GLIDE" ? s.gx + "," + s.gy : ""].join("|");
+  return [s.kind, s.h, s.par | 0, s.dir, s.exit ? 1 : 0, s.phase, s.outer && s.outer.join(""), s.state, s.lit, s.pair, s.kind === "GLIDE" ? s.gx + "," + s.gy : ""].join("|");
 }
 const BAKE = new Map();
 export function drawFeat(c, w, x, y, px, py) {
