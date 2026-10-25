@@ -1,5 +1,7 @@
 # Floor Tiles, Direction D Implementation Plan
 
+> **Status 2026-10-25: executed** on the local branch `tiles-d` (inline, then parallel lanes at the owner's ask). Rulings made on the way are in the board look record: `docs/superpowers/specs/2026-10-25-board-look-depth-ambient-design.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace the round-3 emblem-in-a-frame floor tiles with direction D (hardware sunk into the floor for ICE / FACTORY / ARENA / VOID / CROWN, changed ground for JUNGLE / WATER / SAND) in CLASSIC 2D, PIXEL and REAL 3D, all 8 tiles, 3 heats.

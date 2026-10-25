@@ -198,6 +198,17 @@ button during play, giving the touch controls a bigger thumb area below. The
 geometry is a pure function tested in Node; how it feels in the hand still
 needs a real phone.
 
+## 🚧 Next look (local branch, not live)
+
+A full new board look (floor tiles in all eight worlds, new walls and floor,
+a world bezel and recessed well, shadows and depth, ambient motion) is built on
+the local branch `tiles-d` and is **not in the live game**. How it is put
+together, its rulings and what is still open live in
+[one record](superpowers/specs/2026-10-25-board-look-depth-ambient-design.md);
+the tile look is in the
+[direction D record](superpowers/specs/2026-10-25-floor-tiles-direction-d-design.md).
+This page describes shell v184 until it ships.
+
 ## 🧪 Boss fight: evidence and limits
 
 - [Determinism tests](../tests/determinism.test.mjs) replay mixed input over

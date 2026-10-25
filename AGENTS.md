@@ -894,3 +894,18 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   fit still deferred; sources in the git-ignored
   `.superpowers/sdd/2026-10-11-hero/` (`solin-v1/`). Before any build, re-target
   the one-chromatic-body 2D hero gate in `tests/items-art.test.mjs`.
+- `world.time` keeps ticking in PAUSE (`step()` adds dt before the state check), so
+  any "PLAY-only" animation needs its own clock (`ambientClock`, `world.featT`).
+  Node test fakes define `globalThis.location` WITHOUT `href`, so "is this a
+  real page" means `typeof location.href === "string"` (the gen-2 page default
+  in `src/app/flags.js` depends on it).
+- Local build state (2026-10-25): branches `tiles-d` (integrated look, worktree
+  `.claude/worktrees/tiles-d`, unlocked), `frame-a` / `frame-b` (merged into
+  it), `frame-c` (stage set, unmerged). The look is recorded in
+  `docs/superpowers/specs/2026-10-25-board-look-depth-ambient-design.md`,
+  including the loose ends. Loopback dev server for it: `PORT=8091 node
+  serve.js` inside that worktree. The hash pin, px cap and draw counts live in
+  that record, not here.
+- Parallel art agents on one worktree work best as one lane per file area with
+  the lead committing: agents never commit, never edit the CLASSIC hash pins,
+  and report; the lead re-pins once at the end.

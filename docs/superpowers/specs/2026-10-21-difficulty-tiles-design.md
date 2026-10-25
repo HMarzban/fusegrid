@@ -374,3 +374,8 @@ rules that still bind are in
 [2026-10-25-floor-tiles-direction-d-design.md](2026-10-25-floor-tiles-direction-d-design.md);
 the build plan is
 [../plans/2026-10-25-floor-tiles-direction-d.md](../plans/2026-10-25-floor-tiles-direction-d.md).
+
+Status (2026-10-25): all eight tiles are built in the three looks on the local
+branch `tiles-d`. STREAM, QUICKSAND, PORTAL and GATE appear on gen-2 rooms
+4 / 6 / 7 / 8 as **art-only** placements (codes 8..14, no sim effect) so every
+world shows its look; their rules wait for #19 to #22 and the dial for #28.

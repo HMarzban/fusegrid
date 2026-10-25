@@ -618,6 +618,19 @@ Design work that stayed on the drawing board. None of it is in the game.
   was then built in all three looks on a local branch, checked by numeric
   gates and an art-director review at true size. Still not in the game;
   [design record](superpowers/specs/2026-10-25-floor-tiles-direction-d-design.md).
+- The whole board, one afternoon (2026-10-25). The owner played it and said
+  they could not see a new look, so the work went wide: the round-3 walls were
+  merged in, the plain floor got a material per world, PIXEL gained its tiles
+  and became an on-demand download, and four more tiles got art-only
+  placements. The outline was the next complaint, so three options were built
+  as real code (a world bezel, a recessed well, a stage set) and compared
+  side by side; the owner took the bezel plus the well. A critic then said the
+  board still read as stickers on a flat floor, which led to shadows, ambient
+  shadow, calmer bricks and 3D relief, and last came slow ambient motion
+  (pollen, snow, steam, ripples, dust, sand, wisps, gold dust) on the play
+  clock. About a dozen agents worked in parallel lanes, one file area each.
+  Still on a local branch;
+  [record](superpowers/specs/2026-10-25-board-look-depth-ambient-design.md).
 
 ---
 

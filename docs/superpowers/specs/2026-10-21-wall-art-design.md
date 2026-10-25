@@ -176,3 +176,14 @@ Reference sheets under `assets/2026-10-23/`: `walls-round3-2d-px.png` and
 and its BRICK, CLASSIC 2D and PIXEL), `walls-round3-3d-rooms.png` (rooms 1–8
 at rig C) and `walls-round3-3d-candidates.png` (the 3D candidates).
 Throwaway branch: `worktree-agent-ab0dfcf6e3434b2c3` (local, locked).
+
+## Addendum (2026-10-25): merged into the local build
+
+The round-3 wall prototype is merged into the local branch `tiles-d` together
+with the floor, so walls now show in all three looks next to the new floor.
+Rulings applied: W1 (the CLASSIC call-log hash is re-pinned), W4 (REAL 3D walls
+use a white instance colour, so the wall colour lives in the material only; the
+old checker-colour test is replaced). **W6 ("the border is a plain rampart") is
+superseded for the board outline** by the world bezel (option A); SHRINK walls
+stay the base block. Walls also get cast shadows and ambient shadow in the depth
+round. See the [board look record](2026-10-25-board-look-depth-ambient-design.md).

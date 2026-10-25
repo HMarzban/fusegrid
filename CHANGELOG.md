@@ -17,7 +17,31 @@ Entries are written for players. How a change works lives in
 
 ## Unreleased
 
-Nothing in the next shell yet. Your patch could be first.
+Nothing is on `main` yet. A full new look is **built and playable on a local
+branch (`tiles-d`, never pushed)** and waits for the owner's go: when it ships
+it will be named shell v185. What it adds, for the record:
+
+### Added
+- **Floor tiles in every world.** Eight tiles, one per world, in all three
+  looks: BOOSTER, ICE PATCH, CONVEYOR, STREAM, TRAP, QUICKSAND, PORTAL and GATE.
+  Built worlds get hardware sunk into the floor, living worlds get the ground
+  itself changed. Heat shows in structure, count and tips, never colour. Only
+  four have rules so far; the other four are art.
+- **New walls** in every world, and a **new floor** under everything.
+- **A board outline per world** (a continuous rail with corner pieces) set in a
+  recessed well with a glow, replacing the plain border.
+- **Depth.** Walls, bricks, pickups, bombs and foes cast soft shadows, bricks
+  are calmer so pickups stand out, and REAL 3D gains relief and gloss.
+- **Ambient motion.** Pollen, snow, steam, ripples, dust, sand, wisps and gold
+  dust drift on the play clock. It freezes on pause, halves on EFFECTS LOW and
+  turns off if your device asks for reduced motion.
+
+### Changed
+- PIXEL loads on demand, so CLASSIC 2D never downloads it.
+- On a phone held upright the board sits better between the pause pill and the
+  controls.
+
+Details: [docs/superpowers/specs/2026-10-25-board-look-depth-ambient-design.md](docs/superpowers/specs/2026-10-25-board-look-depth-ambient-design.md).
 
 ## shell v184 · 2026-10-21
 
