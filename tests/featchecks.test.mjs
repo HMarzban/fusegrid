@@ -12,6 +12,8 @@ import { F, FEAT_PROFILE } from "../src/core/feat.js";
 import { featChecks, skippedChecks, tableChecks, FEAT_RULES } from "../tools/balance/featchecks.mjs";
 
 const C = CFG.COLS, R = CFG.ROWS, N = C * R, P = FEAT_PROFILE;
+/* the 2026-10-21 PLUS conveyor (foes ride, no wallStop): pass 2 (#28) keeps the checks for it */
+const RIDE = { ...P[1], belt: { actors: true, v: 1.0 } };
 const lattice = () => { const g = new Int8Array(N); for (let y = 0; y < R; y++) for (let x = 0; x < C; x++) g[key(x, y)] = x === 0 || y === 0 || x === C - 1 || y === R - 1 || (x % 2 === 0 && y % 2 === 0) ? T.WALL : T.EMPTY; return g; };
 const blank = () => new Int8Array(N).fill(T.WALL);
 /* b({level, heat, g, open, walls, bricks, tiles:[[x,y,code]], items, foes}) */
@@ -74,8 +76,10 @@ test("V16 speed bound: a belt keeps >= 40% of the slowest moving foe and >= 50% 
 });
 test("V17 time-weighted foe distance, chain landings off the door ring, MAX never carries toward the start", () => {
   const free = { limits: { doorRing: 0 } }, foe = [{ type: "walker", tx: 11, ty: 1 }];
-  assert.ok(!fails(b({ foes: foe, tiles: E([6, 7, 8, 9], 1, F.BELT_E) }), P[1], "V17", free), "10 plain steps, belt against it");
-  assert.ok(fails(b({ foes: foe, tiles: E([6, 7, 8, 9], 1, F.BELT_W) }), P[1], "V17", free), "a belt toward the pocket shortens 10 steps in time");
+  assert.ok(!fails(b({ foes: foe, tiles: E([6, 7, 8, 9], 1, F.BELT_E) }), RIDE, "V17", free), "10 plain steps, belt against it");
+  assert.ok(fails(b({ foes: foe, tiles: E([6, 7, 8, 9], 1, F.BELT_W) }), RIDE, "V17", free), "a belt toward the pocket shortens 10 steps in time");
+  assert.ok(fails(b({ foes: foe, tiles: E([6, 7, 8, 9], 1, F.BELT_W) }), P[2], "V17", free), "MAX carries foes");
+  assert.ok(!fails(b({ foes: foe, tiles: E([6, 7, 8, 9], 1, F.BELT_W) }), P[1], "V17", free), "pass 2: PLUS carries no foe");
   assert.ok(!fails(b({ foes: foe, tiles: E([6, 7, 8, 9], 1, F.BELT_W) }), P[0], "V17", free), "CORE belts carry no foe");
   const west = b({ tiles: E([9, 10, 11, 12], 5, F.BELT_W) });
   assert.ok(fails(west, P[1], "V17"), "lands 7 steps from door (1,5)");
@@ -142,10 +146,11 @@ test("V19 TRAP: the MAX reach beats a straight flee in a corridor; CORE's does n
 test("V20 SHRINK rings: a riding chain needs a step-off at the new wall, traps keep side exits, ice is never sealed", () => {
   const bd = b({ tiles: E([9, 10, 11, 12], 5, F.BELT_E) });
   assert.ok(!fails(bd, P[1], "V15"));
-  assert.ok(fails(bd, P[1], "V20"), "ring 1 walls (13,5): (12,5) has only pillars beside it");
+  assert.ok(fails(bd, RIDE, "V20"), "ring 1 walls (13,5): (12,5) has only pillars beside it");
+  assert.ok(!fails(bd, P[1], "V20"), "pass 2 wallStop: a chain that runs into a new wall carries no one");
   assert.ok(!fails({ ...bd, heat: 0 }, P[0], "V20"), "CORE carries no rider");
   assert.ok(!fails(b({ tiles: [3, 4, 5, 6].map((y) => [7, y, F.BELT_S]) }), P[1], "V20"), "a chain whose ends hold through ring 4");
-  assert.ok(fails(b({ tiles: E([6, 7, 8, 9], 5, F.BELT_E) }), P[1], "V20"), "ring 3 leaves (10,5) a dead end");
+  assert.ok(fails(b({ tiles: E([6, 7, 8, 9], 5, F.BELT_E) }), RIDE, "V20"), "ring 3 leaves (10,5) a dead end");
   const g = blank(); for (let y = 3; y <= 9; y++) { g[key(1, y)] = T.EMPTY; g[key(2, y)] = T.EMPTY; }
   const tr = b({ level: 5, g, tiles: [[2, 6, F.PLATE]] });
   assert.ok(!fails(tr, P[2], "V27"));

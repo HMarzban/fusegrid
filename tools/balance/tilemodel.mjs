@@ -37,9 +37,8 @@ export function ruleKind(w) {
 }
 export const onIce = (w, k) => w.feat[k] === 5 && w.grid[k] === T.EMPTY;
 export const onBelt = (w, k) => isBelt(w.feat[k]) && w.grid[k] === T.EMPTY;
-/* #28: does a CONVEYOR carry a standing player right now (actors ride, the
-   player rides, no walk-only rule, past any room clock)? */
-export const carries = (w) => { const pb = prof(w).belt; return !!pb.actors && pb.v > 0 && pb.player !== false && !pb.walk && !(pb.clock && w.featT < pb.clock); };
+/* #28: does a CONVEYOR carry a standing player (actors ride at v > 0)? */
+export const carries = (w) => { const pb = prof(w).belt; return !!pb.actors && pb.v > 0; };
 
 /* a cross footprint on grid g: centre plus arms [dx, dy, len]; the edge and
    WALL block, a BRICK is hit and stops the arm unless `pass` */
@@ -72,7 +71,6 @@ export const plateArms = (pc) => BD.map(([dx, dy]) => [dx, dy, pc.r]);
 export function beltPath(w, b, horizon) {
   const path = [[b.tx, b.ty, 0]];
   if (b.slide && !b.carry) return path;
-  if (prof(w).belt.bombs === false) return path;
   const v = beltV(w);
   if (v <= 0) return path;
   let x = b.tx, y = b.ty, t = -((b.carry ? b.prog : 0) || 0) / v;
@@ -172,10 +170,10 @@ export function moveSpeed(w, p, k, dx, dy, tiles, beltOnly) {
   if (!tiles) return vp;
   if (!beltOnly && onIce(w, k)) return Math.min(p.speed * prof(w).glide.boost, CFG.MAX_SPEED) * paceMul(w.pace);
   const pb = prof(w).belt;
-  if (pb.actors && pb.player !== false && !(pb.clock && w.featT < pb.clock) && onBelt(w, k)) {
+  if (pb.actors && onBelt(w, k)) {
     const [bx, by] = beltDir(w.feat[k]), bv = pb.v * paceMul(w.pace);
     if (bx === dx && by === dy) return vp + bv;
-    if (bx === -dx && by === -dy && !pb.walk) return vp - bv;
+    if (bx === -dx && by === -dy) return vp - bv;
   }
   return vp;
 }

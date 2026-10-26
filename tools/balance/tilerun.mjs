@@ -17,13 +17,11 @@ import { CFG, T, key } from "../../src/core/config.js";
 import { tileOf } from "../../src/core/board.js";
 import { createWorld, loadLevel, step } from "../../src/core/sim.js";
 import { createDemobot } from "../../src/app/demobot.js";
-import { FEAT_PROFILE, isBelt, BELT_PLACE } from "../../src/core/feat.js";
+import { FEAT_PROFILE, isBelt } from "../../src/core/feat.js";
 import { createTileBot } from "./demobot-tiles.mjs";
 import { rulesOn, ruleKind, prof } from "./tilemodel.mjs";
 import { probe } from "./escape.mjs";
 
-/* #28 CONVEYOR placement variants: BELT_OPT='{"away":1,...}' (feat.js BELT_PLACE) */
-if (process.env.BELT_OPT) Object.assign(BELT_PLACE, JSON.parse(process.env.BELT_OPT));
 export const CAP = 120, STEPS = Math.round(CAP / CFG.STEP);
 export const ARMS = Object.freeze(["A0", "A1", "A2", "A3"]);
 export const fmix = (h) => { h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b) >>> 0; h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35) >>> 0; return (h ^ (h >>> 16)) >>> 0; };
@@ -51,7 +49,6 @@ export function armWorld(w, c) {
 export function makeWorld(c, s) {
   const seed = seedOf(s), w = createWorld(seed, c.room);
   w.gen = 3; w.heat = c.heat; w.pact = 0; w.pace = c.pace || 0;
-  BELT_PLACE.prof = process.env.BELT_SPAWN_STOCK ? null : mergeProf(c.prof);
   loadLevel(w, c.room, false);
   armWorld(w, c);
   w.state = "PLAY";

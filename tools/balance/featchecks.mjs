@@ -109,13 +109,13 @@ export function lethalMap(g, feat, prof, blasts, useTiles = true) {
 function env(n, g, o = {}) {
   const prof = n.prof, t = !!(o.tiles && n.feat);
   return { g, feat: n.feat, prof, pm: n.pm, cap: n.lim.escSteps, tiles: t, mvTiles: t && o.move !== false, stopOnBrick: o.stopOnBrick !== false, plantBlock: o.plantBlock !== false, open: o.open ?? -1,
-    vp: VP * n.pm, vIce: Math.min(VP * prof.glide.boost, CFG.MAX_SPEED) * n.pm, vb: prof.belt.v * n.pm, actors: !!prof.belt.actors && prof.belt.player !== false, walk: !!prof.belt.walk, endHalt: !!prof.belt.endHalt, nostop: prof.glide.coast >= 2 };
+    vp: VP * n.pm, vIce: Math.min(VP * prof.glide.boost, CFG.MAX_SPEED) * n.pm, vb: prof.belt.v * n.pm, actors: !!prof.belt.actors, endHalt: !!prof.belt.endHalt, nostop: prof.glide.coast >= 2 };
 }
 const isIce = (E, k) => E.mvTiles && E.feat[k] === F.GLIDE && E.g[k] === T.EMPTY;
 const isRide = (E, k) => E.mvTiles && E.actors && isBelt(E.feat[k]) && E.g[k] === T.EMPTY;
 function spd(E, k, d) {
   if (isIce(E, k)) return E.vIce;
-  if (isRide(E, k)) { const [ux, uy] = beltDir(E.feat[k]), u = ux * D4[d][0] + uy * D4[d][1]; return E.vp + E.vb * (E.walk ? Math.max(0, u) : u); }
+  if (isRide(E, k)) { const [ux, uy] = beltDir(E.feat[k]); return E.vp + E.vb * (ux * D4[d][0] + uy * D4[d][1]); }
   return E.vp;
 }
 const passable = (E, k, plant) => k >= 0 && k !== plant && (E.g[k] === T.EMPTY || k === E.open);
@@ -127,7 +127,7 @@ function blockAt(E, k, t, L, plant) {
 function hide(E, k, d, t, L, plant) {
   if (L[k] !== INF) return false;
   if (isIce(E, k) && E.nostop && d < 4) return blockAt(E, nbr(k, d), t, L, plant);
-  if (isRide(E, k) && !E.walk) {
+  if (isRide(E, k)) {
     const [ux, uy] = beltDir(E.feat[k]), dn = nbr(k, dirOf(ux, uy));
     if (dn < 0 || E.g[dn] === T.WALL || (E.stopOnBrick && E.g[dn] === T.BRICK && L[dn] === INF)) return true;
     /* #28 endHalt: a rider is carried to the chain's last cell and stays there */
@@ -179,7 +179,7 @@ function bombMap(n, g, c, r, live, blast = null) {
     extra.push({ t: n.prof.plate.wind, k: p, arms: cross(n.prof.plate.r), through: false });
   }
   let at = [c];
-  if (n.prof.belt.thru && n.prof.belt.bombs !== false && isBelt(n.feat[c]) && g[c] === T.EMPTY) {
+  if (n.prof.belt.thru && isBelt(n.feat[c]) && g[c] === T.EMPTY) {
     /* #28 pass-through carry: only WALL / BRICK / a bomb stops a ridden bomb, so
        its cell at the fuse is known for each pace (the cells it passes are safe) */
     const path = [c];
@@ -190,7 +190,7 @@ function bombMap(n, g, c, r, live, blast = null) {
       if (path.length > N) break;
     }
     at = [...new Set(PACE_MUL.map((pm) => path[Math.min(path.length - 1, Math.floor(n.prof.belt.v * pm * n.fuse + 1e-9))]))];
-  } else if (n.prof.belt.bombs !== false && isBelt(n.feat[c]) && g[c] === T.EMPTY) {
+  } else if (isBelt(n.feat[c]) && g[c] === T.EMPTY) {
     let k = c, steps = Math.ceil(n.prof.belt.v * n.pmRide * n.fuse - 1e-9);
     while (steps-- > 0 && isBelt(n.feat[k]) && g[k] === T.EMPTY) {
       const [ux, uy] = beltDir(n.feat[k]), nk = nbr(k, dirOf(ux, uy));
@@ -345,7 +345,7 @@ function v17(n) {
   const vb = prof.belt.v, goal = key(1, 1);
   for (const f of n.foes) {
     if (!(f.speed > 0)) continue;
-    const t = new Float64Array(N).fill(INF), done = new Uint8Array(N), cost = (k, d) => { if (!isBelt(feat[k])) return 0.5 / f.speed; const [ux, uy] = beltDir(feat[k]), s = f.speed + vb * (prof.belt.walk ? Math.max(0, ux * D4[d][0] + uy * D4[d][1]) : ux * D4[d][0] + uy * D4[d][1]); return s > 0 ? 0.5 / s : INF; };
+    const t = new Float64Array(N).fill(INF), done = new Uint8Array(N), cost = (k, d) => { if (!isBelt(feat[k])) return 0.5 / f.speed; const [ux, uy] = beltDir(feat[k]), s = f.speed + vb * (ux * D4[d][0] + uy * D4[d][1]); return s > 0 ? 0.5 / s : INF; };
     t[f.k] = 0;
     for (;;) {
       let a = -1;
@@ -374,7 +374,7 @@ function v20(n) {
       if (ch.land < 0) continue;
       const atWall = !notWall(g, ch.land);
       if (!atWall && openN(g, ch.land) < lim.exitOpen) return { why: "ring " + ring + ": landing not open", at: xy(ch.land) };
-      if (atWall && (!prof.belt.actors || prof.belt.walk || prof.belt.wallStop)) continue;
+      if (atWall && (!prof.belt.actors || prof.belt.wallStop)) continue;
       const s = stepOffs(g, feat, ch, lim, !atWall);
       if (s >= 0) return { why: "ring " + ring + ": no step-off" + (atWall ? " at the new wall" : ""), at: xy(s) };
     }
