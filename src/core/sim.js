@@ -81,7 +81,7 @@ export function step(world, dt, inputs) {
   if (hasPact(world.pact, PACT.SHRINK)) advanceShrink(world, dt);
   if (world.feat) world.featT += dt;
   updatePlayer(world, dt, inputs[0] || emptyInputs[0], emit);
-  if (world.feat) beltActors(world, dt, true);
+  if (world.feat) beltActors(world, dt, true, inputs[0] || emptyInputs[0]);
   updateBombs(world, dt, emit);
   const adv = updateEnemies(world, dt, inputs, emit);
   if (world.feat) {
@@ -444,27 +444,59 @@ function keepDir(e, f) {
 }
 /* PLUS/MAX: actors on a BELT tile ride at v (pace-scaled); e.dir is masked
    so the AI never sees the push; a WALL one step downstream halts it */
-function beltActors(w, dt, player) {
+function beltActors(w, dt, player, inp) {
   const pb = featProfile(w).belt;
-  if (!pb.actors) return;
+  if (!pb.actors || (pb.clock && w.featT < pb.clock)) return;
+  if (player ? pb.player === false : pb.foes === false) return;
   const v = pb.v * FT * dt * paceMul(w.pace);
-  const push = (e, pass, bombs) => {
+  const push = (e, pass, bombs, mx, my) => {
     const tx = tileOf(e.x), ty = tileOf(e.y), k = key(tx, ty), f = w.feat[k];
     if (!isBelt(f) || w.grid[k] !== T.EMPTY) return;
     const [dx, dy] = beltDir(f);
     if (isWall(w.grid, tx + dx, ty + dy)) return;
-    keepDir(e, () => moveEntity(e, w.grid, dx * v, dy * v, pass, bombs));
+    if (pb.wallStop) {
+      let x = tx, y = ty;
+      for (let n = 0; n < 16 && isBelt(w.feat[key(x, y)]) && w.grid[key(x, y)] === T.EMPTY; n++) { const [ux, uy] = beltDir(w.feat[key(x, y)]); x += ux; y += uy; }
+      if (isWall(w.grid, x, y)) return;
+    }
+    if (pb.walk && !(mx === dx && my === dy)) return;
+    if (pb.snap && (dx ? my : mx)) return;
+    let vv = v;
+    if (pb.endHalt) {
+      const nk = key(tx + dx, ty + dy);
+      if (!(isBelt(w.feat[nk]) && w.grid[nk] === T.EMPTY)) {
+        const rem = dx ? ((tx + 0.5) * FT - e.x) * dx : ((ty + 0.5) * FT - e.y) * dy;
+        if (rem <= 0) return;
+        vv = Math.min(v, rem);
+      }
+    }
+    if (pb.snap) {
+      const ox = e.x, oy = e.y;
+      keepDir(e, () => moveEntity(e, w.grid, dx * vv, dy * vv, pass, bombs));
+      if (dx ? e.y !== oy : e.x !== ox) { e.x = ox; e.y = oy; e.tx = tileOf(ox); e.ty = tileOf(oy); return; }
+    } else keepDir(e, () => moveEntity(e, w.grid, dx * vv, dy * vv, pass, bombs));
     e.beltT = w.featT;
   };
   if (player) {
-    const p = w.players[0];
-    if (p.alive) push(p, p.passing, p.passing ? undefined : w.bombs);
+    const p = w.players[0], m = inp && inp.move;
+    if (p.alive) push(p, p.passing, p.passing ? undefined : w.bombs, m ? Math.sign(m.x) : 0, m ? Math.sign(m.y) : 0);
     return;
   }
-  for (const e of w.enemies) if (!e.dead && e.speed > 0) push(e, e.pass, e.pass ? undefined : w.bombs);
+  for (const e of w.enemies) if (!e.dead && e.speed > 0) push(e, e.pass, e.pass ? undefined : w.bombs, e.dir ? Math.sign(e.dir.x) : 0, e.dir ? Math.sign(e.dir.y) : 0);
 }
 function carryStop(w, b, tx, ty) {
-  if (sliderStopAt(w, b, tx, ty)) return true;
+  const th = featProfile(w).belt.thru;
+  if (th === true) {
+    const v = w.grid[key(tx, ty)];
+    return v === undefined || v === T.WALL || v === T.BRICK || w.bombs.some((o) => o !== b && !o.dead && o.tx === tx && o.ty === ty);
+  }
+  if (th === "foes") {
+    const v = w.grid[key(tx, ty)];
+    if (v === undefined || v === T.WALL || v === T.BRICK || w.bombs.some((o) => o !== b && !o.dead && o.tx === tx && o.ty === ty)) return true;
+  } else if (th === "you") {
+    if (sliderStopAt(w, b, tx, ty)) return true;
+    return false;
+  } else if (sliderStopAt(w, b, tx, ty)) return true;
   const p = w.players[0];
   if (p.alive && tileOf(p.x) === tx && tileOf(p.y) === ty) {
     const bx = (b.tx + 0.5) * FT, by = (b.ty + 0.5) * FT;
@@ -479,6 +511,7 @@ function carryStop(w, b, tx, ty) {
 function carryBomb(w, b, dt) {
   const snap = () => { b.prog = 0; b.slide = null; b.carry = false; b.x = (b.tx + 0.5) * FT; b.y = (b.ty + 0.5) * FT; };
   if (!b.slide) {
+    if (featProfile(w).belt.bombs === false) return;
     const k = key(b.tx, b.ty), f = w.feat[k];
     if (!isBelt(f) || w.grid[k] !== T.EMPTY) return;
     const [dx, dy] = beltDir(f);

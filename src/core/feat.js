@@ -78,7 +78,7 @@ export function placeFeat(m, seed, level, biome, salt = 0) {
     const f = new Uint8Array(N), force = [];
     let ok = false;
     let pair = null;
-    if (kind === "BELT") ok = belt(m, f, rng, near, dD);
+    if (kind === "BELT") ok = belt(m, f, rng, near, dD, dS, force);
     else if (kind === "GLIDE") ok = glide(m, f, rng, dS);
     else if (kind === "BLOOM") ok = bloom(m, f, rng, force);
     else if (kind === "STREAM") ok = stream(m, f, rng, far, force);
@@ -90,10 +90,15 @@ export function placeFeat(m, seed, level, biome, salt = 0) {
   }
   return { feat: null, force: [], kind, tries: 40, fallback: true };
 }
+/* design pass 2 (#28) placement knobs, mutable for the offline harness only
+   (tools/balance reads BELT_OPT from the environment); 0 = the 2026-10-21 rule */
+export const BELT_PLACE = { prof: null, away: 0, rings: 0, force: 0, len: 9, total: 16, want: 0, spawn: 4, every: 0, floor: 0, dist: 0 };
 /* V15 + V17: straight acyclic chains on odd lanes, 4-9 tiles, total <= 16;
    entry and landing tiles open with >= 2 open neighbours; a step-off within
    2 tiles downstream; the landing tile >= 10 walking steps from both doors */
-function belt(m, f, rng, near, dD) {
+function belt(m, f, rng, near, dD, dS, force) {
+  const P = BELT_PLACE;
+  if (P.away || P.rings || P.force || P.len !== 9 || P.total !== 16 || P.want || P.spawn !== 4 || P.every || P.floor) return belt2(m, f, rng, dD, dS, force, P);
   const runs = [];
   for (let y = 1; y < R - 1; y += 2) {
     let x = 1;
@@ -135,6 +140,80 @@ function belt(m, f, rng, near, dD) {
       if (!stepOk) continue;
       const code = r.h ? (dir > 0 ? 1 : 3) : (dir > 0 ? 2 : 4);
       for (const [x, y] of cells) f[key(x, y)] = code;
+      total += L; made++;
+      break;
+    }
+  }
+  return made > 0;
+}
+/* pass-2 chains: as belt(), plus (knobs) carry away from the start (landing
+   farther in walking steps than the head), V20's SHRINK rings 1-4 (every
+   surviving segment keeps a step-off and an open landing), the belt, its
+   entry and landing forced to floor, and a step-off on the side only */
+const rimOf = (x, y) => Math.min(x, C - 1 - x, y, R - 1 - y);
+function belt2(m, f, rng, dD, dS, force, P) {
+  const runs = [];
+  for (let y = 1; y < R - 1; y += 2) {
+    let x = 1;
+    while (x < C - 1) { if (!open(m, x, y)) { x++; continue; } const s = x; while (open(m, x, y)) x++; if (x - s >= 6) runs.push({ h: true, a: s, b: x - 1, l: y }); }
+  }
+  for (let x = 1; x < C - 1; x += 2) {
+    let y = 1;
+    while (y < R - 1) { if (!open(m, x, y)) { y++; continue; } const s = y; while (open(m, x, y)) y++; if (y - s >= 6) runs.push({ h: false, a: s, b: y - 1, l: x }); }
+  }
+  if (!runs.length) return false;
+  const want = P.want || rng.int(1, 2);
+  let total = 0, made = 0;
+  const order = runs.map((r) => [rng.next(), r]).sort((p, q) => p[0] - q[0]).map((p) => p[1]);
+  const nOpen = (ok, x, y) => D4.filter(([dx, dy]) => ok(x + dx, y + dy)).length;
+  const isDoor = (x, y) => DOORS.some(([a, b]) => a === x && b === y);
+  for (const r of order) {
+    if (made >= want) break;
+    for (let t = 0; t < 12; t++) {
+      const L = rng.int(4, Math.min(P.len, r.b - r.a - 1, P.total - total));
+      if (L < 4) break;
+      const s = rng.int(r.a + 1, r.b - L);
+      let dir = rng.int(0, 1) ? 1 : -1;
+      const at = (i) => (r.h ? [s + i, r.l] : [r.l, s + i]);
+      const fwd = []; for (let i = 0; i < L; i++) fwd.push(at(i));
+      const ends = (d) => { const c = d > 0 ? fwd : fwd.slice().reverse(); const [hx, hy] = c[0], [tx, ty] = c[L - 1]; return { c, e: r.h ? [hx - d, hy] : [hx, hy - d], l: r.h ? [tx + d, ty] : [tx, ty + d] }; };
+      if (P.away) {
+        const dl = (d) => { const q = ends(d); return dS[key(q.l[0], q.l[1])] - dS[key(q.c[0][0], q.c[0][1])]; };
+        if (dl(dir) < 0) dir = -dir;
+        if (dl(dir) < 0) continue;
+      }
+      const { c: cells, e: [ex, ey], l: [lx, ly] } = ends(dir);
+      if (!open(m, ex, ey) || !open(m, lx, ly)) continue;
+      const o0 = (x, y) => open(m, x, y);
+      if (nOpen(o0, ex, ey) < 2 || nOpen(o0, lx, ly) < 2) continue;
+      if (P.floor && (cells.some(([x, y]) => m[key(x, y)] !== 1) || (P.floor > 1 && (m[key(ex, ey)] !== 1 || m[key(lx, ly)] !== 1)))) continue;
+      if (cells.some(([x, y]) => { const k = key(x, y); return dS[k] >= 0 && dS[k] <= P.spawn || isDoor(x, y) || f[k] || D4.some(([dx, dy]) => f[key(x + dx, y + dy)]); })) continue;
+      if (f[key(lx, ly)] || f[key(ex, ey)]) continue;
+      if (dD.some((d) => { const v = d[key(lx, ly)]; return v >= 0 && v < 10; })) continue;
+      const mine = new Set(cells.map(([x, y]) => key(x, y)));
+      const side = (ok, x, y) => (r.h ? [[x, y - 1], [x, y + 1]] : [[x - 1, y], [x + 1, y]]).some(([a, b]) => ok(a, b) && !f[key(a, b)] && !mine.has(key(a, b)));
+      const steps = (ok, cs, landOk) => {
+        for (let i = 0; i < cs.length; i++) {
+          let any = false;
+          for (let j = i; j <= Math.min(cs.length, i + 2) && !any; j++) any = j === cs.length ? landOk : side(ok, cs[j][0], cs[j][1]);
+          if (!any) return false;
+        }
+        return true;
+      };
+      if (!steps(o0, cells, !P.every)) continue;
+      let ringOk = true;
+      if (P.rings) for (let ring = 1; ring <= 4 && ringOk; ring++) {
+        const ok = (x, y) => open(m, x, y) && (rimOf(x, y) > ring || (x === 1 && y === 1));
+        const alive = cells.filter(([x, y]) => ok(x, y));
+        if (!alive.length) continue;
+        const [ax, ay] = alive[alive.length - 1], nl = r.h ? [ax + dir, ay] : [ax, ay + dir], atWall = !ok(nl[0], nl[1]);
+        if (!atWall && nOpen(ok, nl[0], nl[1]) < 2) ringOk = false;
+        else if (!(atWall && P.rings === 2) && !steps(ok, alive, !atWall && !P.every)) ringOk = false;
+      }
+      if (!ringOk) continue;
+      const code = r.h ? (dir > 0 ? 1 : 3) : (dir > 0 ? 2 : 4);
+      for (const [x, y] of cells) f[key(x, y)] = code;
+      if (P.force) for (const [x, y] of [[ex, ey], ...cells, [lx, ly]]) { const k = key(x, y); if (!force.includes(k)) force.push(k); }
       total += L; made++;
       break;
     }
@@ -327,7 +406,7 @@ export function spawnBlocked(feat, x, y) {
 /* V17 time-weighted foe distance: bomb-path steps from the spawn where a
    foe crossing a BELT tile at actor-riding heats pays vf/(vf+-v) steps per
    tile (vf = the slowest moving foe, the conservative case). */
-export function beltDist(grid, feat, v, vf, sx = 1, sy = 1) {
+export function beltDist(grid, feat, v, vf, sx = 1, sy = 1, walk = false, vmax = vf) {
   const d = new Float32Array(N).fill(Infinity), done = new Uint8Array(N);
   d[key(sx, sy)] = 0;
   for (;;) {
@@ -341,7 +420,10 @@ export function beltDist(grid, feat, v, vf, sx = 1, sy = 1) {
       if (nx < 0 || ny < 0 || nx >= C || ny >= R || grid[nk] === 2 || done[nk]) continue;
       const f = feat[nk];
       let c = 1;
-      if (isBelt(f)) { const [bx, by] = beltDir(f); c = bx === -dx && by === -dy ? vf / (vf + v) : bx === dx && by === dy ? vf / Math.max(0.1, vf - v) : 1; }
+      if (BELT_PLACE.dist) {
+        const h = (q) => { if (!isBelt(feat[q])) return 0.5; const [bx, by] = beltDir(feat[q]), u = -(bx * dx + by * dy), f = u > 0 ? vf : vmax, s = f + v * (walk ? Math.max(0, u) : u); return s > 0 ? 0.5 * f / s : Infinity; };
+        c = h(k) + h(nk);
+      } else if (isBelt(f)) { const [bx, by] = beltDir(f); c = bx === -dx && by === -dy ? vf / (vf + v) : bx === dx && by === dy ? vf / Math.max(0.1, vf - v) : 1; }
       if (d[k] + c < d[nk]) d[nk] = d[k] + c;
     }
   }

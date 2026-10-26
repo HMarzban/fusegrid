@@ -2,7 +2,7 @@ import { CFG, T, key, clamp } from "./config.js";
 import { genBoard, isBrick } from "./board.js";
 import { genBoard2 } from "./board2.js";
 import { walk, placeFoes } from "./fair.js";
-import { spawnBlocked, beltDist, FEAT_PROFILE, isBelt } from "./feat.js";
+import { spawnBlocked, beltDist, FEAT_PROFILE, isBelt, BELT_PLACE } from "./feat.js";
 import { createRng } from "./rng.js";
 import { POWER, createPlayer, spawnEnemy } from "./entities.js";
 import { clampHeat, heatProfile, heatRoster } from "./heat.js";
@@ -195,8 +195,9 @@ export function loadLevel(world, level, keepProgress = false) {
   }
   if (w.gen >= 2) {
     const b0 = walk(w.grid);
-    const fb = w.feat && w.feat.some(isBelt) ? FEAT_PROFILE[heat].belt : null;
-    const b = fb && fb.actors ? Array.from(beltDist(w.grid, w.feat, fb.v, CFG.ENEMY_BASE_SPEED + level * P.curve), (v, i) => (b0[i] < 0 ? -1 : Math.floor(v))) : b0;
+    const fb = w.feat && w.feat.some(isBelt) ? (BELT_PLACE.prof || FEAT_PROFILE)[heat].belt : null;
+    const sp = fb ? roster.map((t) => spawnEnemy(t, 0, 0, level, null, spawnOpts).speed).filter((v) => v > 0) : [];
+    const b = fb && fb.actors && fb.foes !== false ? Array.from(beltDist(w.grid, w.feat, fb.v, sp.length ? Math.min(...sp) : CFG.ENEMY_BASE_SPEED + level * P.curve, 1, 1, !!fb.walk, sp.length ? Math.max(...sp) : 0), (v, i) => (b0[i] < 0 ? -1 : Math.floor(v))) : b0;
     const { pick, rest } = placeFoes(free, roster, b, (x, y) => spawnBlocked(w.feat, x, y));
     free.length = 0;
     free.push(...pick.map((p) => p[1]), ...rest);
