@@ -259,6 +259,91 @@ function scan(grid){
     &&BIOMES.every(b=>NEAR_H>b.hBrick)&&lowered>0, String(NEAR_H));
 }
 
+/* V10 occlusion probe (#12, HoE ruling H3) at rig C (createRig, CAM_FOV 24):
+   rasterise the actor (MAKO or a foe, every mesh) and the ONE wall
+   InstancedMesh by projected vertices into depth buffers; an actor pixel is
+   visible when no wall is nearer. Worst of 8 bob/spin phases. Calibration:
+   the shipped near-row cutaway (ICE row 12 at NEAR_H) keeps MAKO 100% and
+   walker / shade >= 90% (the 2026-10-09 numbers). An INTERIOR E-W lane wall
+   capped at the same 22 is viewed flatter (farther from the camera) and
+   hides part of MAKO on the tile north of it, so the probe fails there and
+   CROWN THRONE / COURT were re-authored N-S like VAULT (TPL_EDITS): no gen-2
+   board in a biome taller than EW_WALL_H_MAX has an interior E-W lane wall,
+   and REAL 3D keeps one height rule (only row ROWS-1 is cut down). */
+{
+  const W5=CFG.COLS*CFG.TILE, D5=CFG.ROWS*CFG.TILE, PW=1200, PH=1040;
+  const cam=new THREE.PerspectiveCamera(CAM_FOV,W5/D5,1,3000);
+  applyOrbit(cam,createRig(),{x:0,y:0}); cam.updateMatrixWorld(true);
+  const v=new THREE.Vector3(), M=new THREE.Matrix4();
+  const raster=(tris,buf,bb)=>{
+    for(let i=0;i<tris.length;i+=9){
+      const x0=(tris[i]+1)/2*PW,y0=(1-tris[i+1])/2*PH,z0=tris[i+2],x1=(tris[i+3]+1)/2*PW,y1=(1-tris[i+4])/2*PH,z1=tris[i+5],
+        x2=(tris[i+6]+1)/2*PW,y2=(1-tris[i+7])/2*PH,z2=tris[i+8], a=(x1-x0)*(y2-y0)-(x2-x0)*(y1-y0);
+      if(Math.abs(a)<1e-9)continue;
+      const mx=Math.max(bb[0],Math.floor(Math.min(x0,x1,x2))), Mx=Math.min(bb[2],Math.ceil(Math.max(x0,x1,x2))),
+        my=Math.max(bb[1],Math.floor(Math.min(y0,y1,y2))), My=Math.min(bb[3],Math.ceil(Math.max(y0,y1,y2)));
+      for(let py=my;py<=My;py++)for(let px=mx;px<=Mx;px++){
+        const cx=px+0.5, cy=py+0.5, w0=((x1-cx)*(y2-cy)-(x2-cx)*(y1-cy))/a, w1=((x2-cx)*(y0-cy)-(x0-cx)*(y2-cy))/a, w2=1-w0-w1;
+        if(w0<0||w1<0||w2<0)continue;
+        const z=w0*z0+w1*z1+w2*z2, k=py*PW+px; if(z<buf[k])buf[k]=z; } } };
+  const tris=(mesh,inst)=>{ const g=mesh.geometry, P=g.attributes.position, I=g.index, n=I?I.count:P.count, out=[];
+    const mats=inst?Array.from({length:mesh.count},(_,i)=>(mesh.getMatrixAt(i,M),new THREE.Matrix4().multiplyMatrices(mesh.matrixWorld,M))):[mesh.matrixWorld];
+    for(const mw of mats)for(let j=0;j<n;j++){ v.fromBufferAttribute(P,I?I.getX(j):j).applyMatrix4(mw).project(cam); out.push(v.x,v.y,v.z); }
+    return out; };
+  const shown=(o)=>{ for(let p=o;p;p=p.parent)if(!p.visible)return false; return true; };
+  const probe=(w,ax,ay,actor,edit)=>{
+    let worst=1;
+    for(let ph=0;ph<8;ph++){
+      w.enemies=[]; w.bombs=[]; w.items=[]; w.blades=[];
+      const p=w.players[0];
+      if(actor==="mako"){ p.x=(ax+0.5)*CFG.TILE; p.y=(ay+0.5)*CFG.TILE; p.alive=true; p.iFrames=0; p.face={x:0,y:1}; }
+      else{ p.alive=false; w.enemies=[{type:actor,x:(ax+0.5)*CFG.TILE,y:(ay+0.5)*CFG.TILE,tx:ax,ty:ay,dir:{x:0,y:1},speed:0,
+        color:"#ffffff",r:CFG.TILE*0.34,pass:false,dead:false,invuln:false,invulnT:0,cd:4,home:{x:1,y:1}}]; }
+      w.time=0.37+ph*0.25;
+      const sc=buildScene(w); sc.update(w); w.time+=1/60; sc.update(w);
+      const wall=sc.group.children.find(o=>o.userData.tag==="wall");
+      if(edit)edit(wall); sc.group.updateMatrixWorld(true);
+      let slot=null; sc.group.traverse(o=>{ if(!slot&&o.userData.tag===(actor==="mako"?"player":"enemy")&&o.visible)slot=o; });
+      const A=new Float32Array(PW*PH).fill(9), Wb=new Float32Array(PW*PH).fill(9);
+      slot.traverse(o=>{ if(o.isMesh&&shown(o))raster(tris(o,false),A,[0,0,PW-1,PH-1]); });
+      let b0=PW,b1=PH,b2=0,b3=0;
+      for(let k=0;k<A.length;k++)if(A[k]<9){ const x=k%PW,y=(k/PW)|0; b0=Math.min(b0,x); b1=Math.min(b1,y); b2=Math.max(b2,x); b3=Math.max(b3,y); }
+      raster(tris(wall,true),Wb,[b0,b1,b2,b3]);
+      let n=0, vis=0;
+      for(let y=b1;y<=b3;y++)for(let x=b0;x<=b2;x++){ const k=y*PW+x; if(A[k]>=9)continue; n++; if(A[k]<=Wb[k])vis++; }
+      worst=Math.min(worst,vis/n);
+     }
+    return worst; };
+  const ice=createWorld(9,2); loadLevel(ice,2,false); ice.state="PLAY";
+  const near={}; for(const a of ["mako","walker","shade","fast","knight","stationary","burrow"])near[a]=probe(ice,7,11,a);
+  check("V10 probe calibration: the near-row cutaway (ICE row 12 at NEAR_H) keeps MAKO 100% at rig C, walker / shade >= 90%",
+    near.mako===1&&near.walker>=0.9&&near.shade>=0.9,
+    Object.entries(near).map(([k,x])=>k+" "+(100*x).toFixed(1)).join(" / ")+" (stationary / burrow are reported, not gated)");
+  const cr=createWorld(9,8); loadLevel(cr,8,false); cr.state="PLAY"; cr.grid[5+4*CFG.COLS]=T.WALL;
+  const at=(w,x,y)=>{ let i=0; for(let k=0;k<x+y*CFG.COLS;k++)if(w.grid[k]===T.WALL)i++; return i; };
+  const cap=(wall)=>{ const i=at(cr,5,4), hW=BIOMES[7].hWall, h=Math.min(hW,NEAR_H);
+    M.makeScale(1,h/hW,1).setPosition(5.5*CFG.TILE-W5/2,h/2,4.5*CFG.TILE-D5/2); wall.setMatrixAt(i,M); };
+  const inner=probe(cr,5,3,"mako",cap);
+  check("V10 probe: an interior CROWN E-W lane wall capped at NEAR_H still hides MAKO on the tile north of it (why THRONE / COURT are N-S)",
+    inner<1, "MAKO "+(100*inner).toFixed(1)+"%");
+  let ew=0, rows=true, draws=true, why="";
+  for(let s=0;s<6;s++)for(let lv=1;lv<=8;lv++){
+    const w2=createWorld(4000+s,lv); w2.gen=2; w2.heat=s%3; loadLevel(w2,lv,false);
+    const w1=createWorld(4000+s,lv); w1.heat=s%3; loadLevel(w1,lv,false);
+    const b=BIOMES[lv-1], hN=Math.min(b.hWall,NEAR_H);
+    if(b.hWall>NEAR_H)for(let y=2;y<CFG.ROWS-1;y+=2)for(let x=1;x<CFG.COLS-1;x+=2)if(w2.grid[x+y*CFG.COLS]===T.WALL)ew++;
+    const s2=buildScene(w2), s1=buildScene(w1);
+    if(countDrawCalls(s2.group)!==countDrawCalls(s1.group)){ draws=false; why="room "+lv; }
+    const wall=s2.group.children.find(o=>o.userData.tag==="wall"), p=new THREE.Vector3(), q=new THREE.Quaternion(), sv=new THREE.Vector3();
+    for(let y=0,i=0;y<CFG.ROWS;y++)for(let x=0;x<CFG.COLS;x++)if(w2.grid[x+y*CFG.COLS]===T.WALL){
+      wall.getMatrixAt(i++,M); M.decompose(p,q,sv);
+      if(Math.abs(p.y+sv.y*b.hWall/2-(y===CFG.ROWS-1?hN:b.hWall))>1e-4)rows=false; }
+   }
+  check("V10: no gen-2 board in a biome taller than NEAR_H has an interior E-W lane wall", ew===0, String(ew));
+  check("V10: on gen-2 boards only row ROWS-1 is cut down; every other wall keeps the full hWall", rows);
+  check("gen-2 boards draw exactly as many calls as gen 1 in every room (no new mesh)", draws, why);
+}
+
 // ---- §4 camrig: fixed full-board rig (camera-research spec §3/§4) ----
 {
   const st=createRig();
