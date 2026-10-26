@@ -7,7 +7,7 @@
    scripted set for one fuse: stand still; hold one of 4 directions for t then
    turn to any direction (t 0.1 .. 1.2 s); stand still for t then hold one
    direction. An episode is ESCAPABLE when any branch ends the window with no
-   blast hit; else FORCED (bounded search: one turn, 0.1 s grid; disclosed).
+   blast hit (iFrames cleared at the episode tick, so a hit always counts); else FORCED (bounded search: one turn, 0.1 s grid; disclosed).
    Classes: S = strict onset (no tile escape since the danger began, no fresh
    own plant), P = at a fresh own plant (< 0.05 s old), L = lost (the tile
    model had an escape earlier in the danger stretch).
@@ -35,7 +35,7 @@ function episodes(c, s) {
     const pr = probe(w);
     if (pr && pr.forced && !trapped) {
       const fresh = w.bombs.some((b) => !b.dead && b.timer > (w.fuse ?? CFG.FUSE) - 0.05);
-      out.push({ i, cls: had1 ? "L" : fresh ? "P" : "S", win: Math.max(0, ...w.bombs.filter((b) => !b.dead).map((b) => b.timer), ...(w.featPend || []).map((q) => w.featS[q.k])) + CFG.BLADE_TTL + 0.1 });
+      out.push({ inv: w.players[0].iFrames > 0, i, cls: had1 ? "L" : fresh ? "P" : "S", win: Math.max(0, ...w.bombs.filter((b) => !b.dead).map((b) => b.timer), ...(w.featPend || []).map((q) => w.featS[q.k])) + CFG.BLADE_TTL + 0.1 });
     }
     trapped = !!(pr && pr.forced);
     if (!pr) had1 = false; else if (pr.e1) had1 = true;
@@ -65,6 +65,7 @@ function at(c, s, i) {
 const mv = (d) => ({ move: { x: D[d][0], y: D[d][1] }, fire: false, firePrev: false, shift: false, remote: false, kick: false });
 function survives(w0, ep, plan) {
   const w = clone(w0), T = Math.ceil(ep.win / ST);
+  w.players[0].iFrames = 0;
   for (let j = 0; j < T && w.state === "PLAY"; j++) {
     const t = j * ST, d = t < plan.t ? plan.a : plan.b;
     step(w, ST, { 0: mv(d) });
@@ -84,6 +85,7 @@ for (let d = 1; d < 5; d++) PLANS.push({ t: 99, a: d, b: d });
 function botHit(c, s, ep) {
   const { w, seed } = makeWorld(c, s), bot = createTileBot(seed), T = ep.i + Math.ceil(ep.win / ST);
   for (let j = 0; j < T && w.state === "PLAY"; j++) {
+    if (j === ep.i) w.players[0].iFrames = 0;
     step(w, ST, { 0: bot.intent(w) });
     if (j >= ep.i) for (const e of w.events) if (e.t === "hurt") { const hx = tileOf(e.x), hy = tileOf(e.y); if (w.blades.some((b) => b.tiles && b.tiles.some((q) => q.tx === hx && q.ty === hy))) return true; }
     w.events.length = 0;
@@ -96,9 +98,10 @@ for (const heat of heats) {
   for (let s = from; s < from + n; s++) for (const ep of episodes(c, s)) {
     const w0 = at(c, s, ep.i), ok = PLANS.some((p) => survives(w0, ep, p));
     const k = heat + ":" + ep.cls;
-    (tally[k] ||= { n: 0, esc: 0, bot: 0, forced: [] }).n++;
+    (tally[k] ||= { n: 0, esc: 0, bot: 0, inv: 0, forced: [] }).n++;
+    if (ep.inv) tally[k].inv++;
     if (botHit(c, s, ep)) tally[k].bot++;
     if (ok) tally[k].esc++; else tally[k].forced.push(s + "@" + (ep.i * ST).toFixed(2));
   }
 }
-for (const [k, v] of Object.entries(tally).sort()) console.log(`heat ${k.split(":")[0]} class ${k.split(":")[1]}: ${v.n} flagged, ${v.esc} escapable in the real sim, ${v.n - v.esc} forced; the bot's own line was blast-hit in ${v.bot}${v.forced.length ? " (" + v.forced.slice(0, 8).join(", ") + ")" : ""}`);
+for (const [k, v] of Object.entries(tally).sort()) console.log(`heat ${k.split(":")[0]} class ${k.split(":")[1]}: ${v.n} flagged, ${v.esc} escapable in the real sim, ${v.n - v.esc} forced; the bot's own line was blast-hit in ${v.bot}; ${v.inv} began in iFrames (cleared for every branch)${v.forced.length ? " (" + v.forced.slice(0, 8).join(", ") + ")" : ""}`);
