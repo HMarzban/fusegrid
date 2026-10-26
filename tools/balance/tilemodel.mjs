@@ -92,9 +92,10 @@ export function cellAt(path, t) {
 
 /* ---- bot danger (sets, no timing): what the fork must never stand in ---- */
 /* relay cover of every idle BOOSTER an arm of `tiles` (a blast centred cx, cy) reaches, recursively */
-export function relaySet(w, g, tiles, cx, cy, out, seen, depth = 0) {
+export function relaySet(w, g, tiles, cx, cy, out, seen, depth = 0, gain = false) {
   if (depth > 4) return out;
   const bc = prof(w).bloom;
+  if (bc.safe && !gain) return out;
   for (const k of tiles) {
     const x = k % C, y = (k / C) | 0;
     if ((x === cx && y === cy) || w.feat[k] !== 6 || w.grid[k] !== T.EMPTY || w.featM[k] !== 0 || seen.has(k)) continue;
@@ -102,19 +103,20 @@ export function relaySet(w, g, tiles, cx, cy, out, seen, depth = 0) {
     seen.add(k);
     const s = cross(g, x, y, relayArms(bc, Math.sign(x - cx), Math.sign(y - cy)), false, new Set());
     for (const q of s) out.add(q);
-    relaySet(w, g, s, x, y, out, seen, depth + 1);
+    relaySet(w, g, s, x, y, out, seen, depth + 1, gain);
   }
   return out;
 }
 /* a bomb's tile-extended cover: its cross at every CONVEYOR cell it can reach
    before the fuse (stops are uncertain, so all of them) plus BOOSTER relays */
-export function bombCover(w, b, timer, out) {
+/* gain: also the cover of BOOSTER relays that cannot hurt the player (bloom.safe), for "what does it hit" */
+export function bombCover(w, b, timer, out, gain = false) {
   const cells = timer != null ? beltPath(w, b, timer) : [[b.tx, b.ty, 0]];
   const arms = bombArms(b), pass = bombPass(b);
   for (const [x, y] of cells) {
     const s = cross(w.grid, x, y, arms, pass, new Set());
     for (const k of s) out.add(k);
-    relaySet(w, w.grid, s, x, y, out, new Set());
+    relaySet(w, w.grid, s, x, y, out, new Set(), 0, gain);
   }
   return out;
 }
@@ -126,6 +128,7 @@ export function tileDanger(w, danger) {
   const P = prof(w), pc = P.plate;
   for (const q of w.featPend) {
     const x = q.k % C, y = (q.k / C) | 0;
+    if (q.kind !== "plate" && P.bloom.safe) continue;
     const s = q.kind === "plate" ? cross(w.grid, x, y, plateArms(pc), false, new Set()) : cross(w.grid, x, y, relayArms(P.bloom, q.dx, q.dy), false, new Set());
     for (const k of s) danger.add(k);
     relaySet(w, w.grid, s, x, y, danger, new Set());

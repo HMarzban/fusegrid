@@ -366,7 +366,7 @@ export function genBoard2(seed, level, heat = 0, opts = {}) {
    only if, with it and every booster kept so far forced open, V18 and V19
    find no spot on the grid of ALL three heats (so every heat keeps the same
    layer, R5 / V21); stops at `want`, fails below BLOOM_PLACE.min */
-export const BLOOM_GATE = { on: true, only: ["V18", "V19"], min: 2 };
+export const BLOOM_GATE = { on: true, only: ["V18", "V19"], min: 3 };
 function bloomGate(base, level, lay) {
   return (cand, want, sp) => {
     const used = [], uk = [];

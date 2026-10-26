@@ -81,8 +81,8 @@ export function lethalMap(g, feat, prof, blasts, useTiles = true) {
   while (q.length) {
     let i = 0;
     for (let j = 1; j < q.length; j++) if (q[j].t < q[i].t) i = j;
-    const { t, k, arms, through } = q.splice(i, 1)[0], [cx, cy] = xy(k), tiles = armTiles(grid, cx, cy, arms, through);
-    for (const c of tiles) if (t < L[c]) L[c] = t;
+    const { t, k, arms, through, safe } = q.splice(i, 1)[0], [cx, cy] = xy(k), tiles = armTiles(grid, cx, cy, arms, through);
+    if (!safe) for (const c of tiles) if (t < L[c]) L[c] = t;
     for (const c of tiles) if (grid[c] === T.BRICK) grid[c] = T.EMPTY;
     if (!bl) continue;
     for (const c of tiles) {
@@ -90,7 +90,7 @@ export function lethalMap(g, feat, prof, blasts, useTiles = true) {
       fired[c] = 1; relay = true;
       const [x, y] = xy(c), dx = Math.sign(x - cx), dy = Math.sign(y - cy), a = [[dx, dy, bl.fwd]];
       if (bl.side) a.push([dy, dx, bl.side], [-dy, -dx, bl.side]);
-      q.push({ t: t + (bl.delay || 0), k: c, arms: a, through: false });
+      q.push({ t: t + (bl.delay || 0), k: c, arms: a, through: false, safe: !!bl.safe });
     }
   }
   L.relay = relay;

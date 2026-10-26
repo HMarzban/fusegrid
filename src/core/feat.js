@@ -29,7 +29,7 @@ export const FEAT_PROFILE = Object.freeze([
 export const TILE_HELP = Object.freeze({
   BELT: ["CARRIES BOMBS", "CARRIES BOMBS, YOU, FOES", "CARRIES ALL, FAST"],
   GLIDE: ["FAST ICE, STOP ANY TIME", "FAST ICE, SLIDES A STEP", "FAST ICE, NO STOPPING"],
-  BLOOM: ["THROWS YOUR BLAST ON", "BLAST LEAKS SIDEWAYS", "BLAST TURNS CORNERS LATE"],
+  BLOOM: ["BLAST GOES 2 FURTHER", "2 FURTHER + 1 EACH SIDE", "2 FURTHER + 2 SIDES LATE"],
   PLATE: ["FOES SET IT OFF · SHORT", "FOES SET IT OFF · LONG", "FOES SET IT OFF · HUGE"],
 });
 export function featTier(w) {
@@ -200,7 +200,7 @@ function bloom(m, f, rng, force, dS, out) {
 /* #28 BOOSTER placement knobs (pass-2 lane): count min..max, Manhattan from
    the pocket and doors, line gap, and `near` (0 = shuffled order as 2026-10-21;
    > 0 = sort by walking steps from spawn plus up to `near` steps of noise) */
-export const BLOOM_PLACE = { min: 2, max: 4, pocket: 4, gap: 3, near: 0 };
+export const BLOOM_PLACE = { min: 3, max: 5, pocket: 2, gap: 3, near: 4 };
 /* V26 + V27: 3-5 on (odd,odd), >= 6 walking steps from spawn, no two on
    neighbouring intersections, forced floor; every tile on its r=3 arms has
    a perpendicular open neighbour within 1 tile along the arm */

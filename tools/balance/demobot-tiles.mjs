@@ -255,8 +255,10 @@ export function createTileBot(seed){
       if(v===T.BRICK)break;
      }
     const ext=blastAt(w,ptx,pty,p.range);
+    const hit=prof(w).bloom.safe?bombCover(w,{tx:ptx,ty:pty,radius:p.range,pierce:false,line:false,dir:null},
+      w.fuse==null?CFG.FUSE:w.fuse,new Set(ext),true):ext;
     let gain=false;
-    for(const k of ext){
+    for(const k of hit){
       if(plain.has(k))continue;
       if(w.grid[k]===T.BRICK||w.enemies.some(e=>!e.dead&&key(e.tx,e.ty)===k)){gain=true;break;}
      }
