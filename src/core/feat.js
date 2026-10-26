@@ -194,23 +194,39 @@ function bloom(m, f, rng, force) {
   for (const [x, y] of used) { f[key(x, y)] = 6; force.push(key(x, y)); }
   return true;
 }
-/* V26 + V27: 3-5 on (odd,odd), >= 6 walking steps from spawn, no two on
+/* the skeleton after SHRINK rings 1-4 (pact SHRINK walls rim 1.. inward, (1,1) kept) */
+function shrinkMaps(m) {
+  const out = [];
+  for (let ring = 1; ring <= 4; ring++) {
+    const g = m.slice();
+    for (let y = 0; y < R; y++) for (let x = 0; x < C; x++) { const rim = Math.min(x, C - 1 - x, y, R - 1 - y); if (rim >= 1 && rim <= ring && !(x === 1 && y === 1)) g[key(x, y)] = 0; }
+    out.push(g);
+  }
+  return out;
+}
+/* V26 + V27 + V20: 3-5 on (odd,odd), >= 6 walking steps from spawn, no two on
    neighbouring intersections, forced floor; every tile on its r=3 arms has
-   a perpendicular open neighbour within 1 tile along the arm */
+   a perpendicular open neighbour within 1 tile along the arm; only spots that
+   keep it after each SHRINK ring 1-4 (V20), unless fewer than 3 do: then the
+   board tops up to 3 from the rest */
 function plate(m, f, rng, dS, force) {
-  const want = rng.int(3, 5), cand = [];
+  const want = rng.int(3, 5), cand = [], rings = shrinkMaps(m);
   for (let y = 1; y < R - 1; y += 2) for (let x = 1; x < C - 1; x += 2) {
     const k = key(x, y);
     if (!open(m, x, y) || dS[k] < 6 || !sideExit(m, x, y)) continue;
     cand.push([x, y]);
   }
   for (let i = cand.length - 1; i > 0; i--) { const j = rng.int(0, i); [cand[i], cand[j]] = [cand[j], cand[i]]; }
-  const used = [];
-  for (const [x, y] of cand) {
-    if (used.length >= want) break;
-    if (used.some(([a, b]) => Math.abs(a - x) + Math.abs(b - y) <= 2)) continue;
-    used.push([x, y]);
-  }
+  const ringOk = ([x, y]) => rings.every((g) => !open(g, x, y) || sideExit(g, x, y)), used = [];
+  const pick = (list, n) => {
+    for (const [x, y] of list) {
+      if (used.length >= n) break;
+      if (used.some(([a, b]) => Math.abs(a - x) + Math.abs(b - y) <= 2)) continue;
+      used.push([x, y]);
+    }
+  };
+  pick(cand.filter(ringOk), want);
+  if (used.length < 3) pick(cand.filter((c) => !ringOk(c)), 3);
   if (used.length < 3) return false;
   for (const [x, y] of used) { f[key(x, y)] = 7; force.push(key(x, y)); }
   return true;

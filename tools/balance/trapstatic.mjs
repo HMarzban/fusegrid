@@ -24,9 +24,10 @@ for (let s = 0; s < NS; s++) {
     if (!w.feat) c.drop++; else c.traps += w.feat.reduce((a, v) => a + (v === 7), 0);
     for (const r of featChecks({ ...w, featByHeat, pairByHeat, rebuild: { feat: re.feat, featPair: re.featPair } }, P[h], {})) {
       c.fails[r.id] = (c.fails[r.id] || 0) + 1;
+      if (r.id !== "V19") { const why = r.id + " " + String(r.why).replace(/\d+(\.\d+)?/g, "#"); c.why = c.why || {}; c.why[why] = (c.why[why] || 0) + 1; }
       if (r.id === "V19") { c.spots += r.spots; c.time += r.time; c.cap += r.cap; c.exact += r.trapExact || 0; for (const [k, v] of Object.entries(r.cause)) c.cause[k] = (c.cause[k] || 0) + v; }
     }
   }
 }
 console.log(`room ${LV}, n ${NS}${pf ? ", prof " + pf : ""}`);
-for (let h = 0; h < 3; h++) { const c = cell[h]; console.log(`${H[h]}: traps/board ${(c.traps / (NS - c.drop)).toFixed(2)} drops ${c.drop} | fails ${JSON.stringify(c.fails)} | V19 spots ${c.spots} (time ${c.time}, cap ${c.cap}) causes ${JSON.stringify(c.cause)} exact ${c.exact}`); }
+for (let h = 0; h < 3; h++) { const c = cell[h]; console.log(`${H[h]}: traps/board ${(c.traps / (NS - c.drop)).toFixed(2)} drops ${c.drop} | fails ${JSON.stringify(c.fails)} | V19 spots ${c.spots} (time ${c.time}, cap ${c.cap}) causes ${JSON.stringify(c.cause)} exact ${c.exact}`); if (c.why) console.log("  " + Object.entries(c.why).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, v]) => k + " x" + v).join("; ")); }
