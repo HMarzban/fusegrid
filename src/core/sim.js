@@ -443,11 +443,17 @@ function keepDir(e, f) {
   if (d) { e.dir.x = d.x; e.dir.y = d.y; }
 }
 /* PLUS/MAX: actors on a BELT tile ride at v (pace-scaled); e.dir is masked
-   so the AI never sees the push; a WALL one step downstream halts it */
+   so the AI never sees the push; a WALL one step downstream halts it.
+   Pass 2 (#28), each a profile flag so the 2026-10-21 rule stays readable:
+   foes:false (PLUS) carries you but not foes; snap = the forgiving step-off,
+   no push while you hold a direction across the belt, and a push never
+   slides you sideways (moveEntity's corner slide) - if it would, it waits;
+   endHalt = riders are carried to the chain's last cell and stop there, never
+   shoved off the end; wallStop = a chain whose downstream end is a WALL (a
+   SHRINK ring) carries no one */
 function beltActors(w, dt, player, inp) {
   const pb = featProfile(w).belt;
-  if (!pb.actors || (pb.clock && w.featT < pb.clock)) return;
-  if (player ? pb.player === false : pb.foes === false) return;
+  if (!pb.actors || (!player && pb.foes === false)) return;
   const v = pb.v * FT * dt * paceMul(w.pace);
   const push = (e, pass, bombs, mx, my) => {
     const tx = tileOf(e.x), ty = tileOf(e.y), k = key(tx, ty), f = w.feat[k];
@@ -459,7 +465,6 @@ function beltActors(w, dt, player, inp) {
       for (let n = 0; n < 16 && isBelt(w.feat[key(x, y)]) && w.grid[key(x, y)] === T.EMPTY; n++) { const [ux, uy] = beltDir(w.feat[key(x, y)]); x += ux; y += uy; }
       if (isWall(w.grid, x, y)) return;
     }
-    if (pb.walk && !(mx === dx && my === dy)) return;
     if (pb.snap && (dx ? my : mx)) return;
     let vv = v;
     if (pb.endHalt) {
@@ -470,11 +475,9 @@ function beltActors(w, dt, player, inp) {
         vv = Math.min(v, rem);
       }
     }
-    if (pb.snap) {
-      const ox = e.x, oy = e.y;
-      keepDir(e, () => moveEntity(e, w.grid, dx * vv, dy * vv, pass, bombs));
-      if (dx ? e.y !== oy : e.x !== ox) { e.x = ox; e.y = oy; e.tx = tileOf(ox); e.ty = tileOf(oy); return; }
-    } else keepDir(e, () => moveEntity(e, w.grid, dx * vv, dy * vv, pass, bombs));
+    const ox = e.x, oy = e.y;
+    keepDir(e, () => moveEntity(e, w.grid, dx * vv, dy * vv, pass, bombs));
+    if (pb.snap && (dx ? e.y !== oy : e.x !== ox)) { e.x = ox; e.y = oy; e.tx = tileOf(ox); e.ty = tileOf(oy); return; }
     e.beltT = w.featT;
   };
   if (player) {
@@ -484,19 +487,15 @@ function beltActors(w, dt, player, inp) {
   }
   for (const e of w.enemies) if (!e.dead && e.speed > 0) push(e, e.pass, e.pass ? undefined : w.bombs, e.dir ? Math.sign(e.dir.x) : 0, e.dir ? Math.sign(e.dir.y) : 0);
 }
+/* where a carried bomb stops: anything a kick stops for, plus the player's
+   tile; pass 2 thru: only a WALL, a BRICK or another bomb, so a bomb rides
+   under walkers and its cell at the fuse is known from the board alone */
 function carryStop(w, b, tx, ty) {
-  const th = featProfile(w).belt.thru;
-  if (th === true) {
+  if (featProfile(w).belt.thru) {
     const v = w.grid[key(tx, ty)];
     return v === undefined || v === T.WALL || v === T.BRICK || w.bombs.some((o) => o !== b && !o.dead && o.tx === tx && o.ty === ty);
   }
-  if (th === "foes") {
-    const v = w.grid[key(tx, ty)];
-    if (v === undefined || v === T.WALL || v === T.BRICK || w.bombs.some((o) => o !== b && !o.dead && o.tx === tx && o.ty === ty)) return true;
-  } else if (th === "you") {
-    if (sliderStopAt(w, b, tx, ty)) return true;
-    return false;
-  } else if (sliderStopAt(w, b, tx, ty)) return true;
+  if (sliderStopAt(w, b, tx, ty)) return true;
   const p = w.players[0];
   if (p.alive && tileOf(p.x) === tx && tileOf(p.y) === ty) {
     const bx = (b.tx + 0.5) * FT, by = (b.ty + 0.5) * FT;
@@ -511,7 +510,6 @@ function carryStop(w, b, tx, ty) {
 function carryBomb(w, b, dt) {
   const snap = () => { b.prog = 0; b.slide = null; b.carry = false; b.x = (b.tx + 0.5) * FT; b.y = (b.ty + 0.5) * FT; };
   if (!b.slide) {
-    if (featProfile(w).belt.bombs === false) return;
     const k = key(b.tx, b.ty), f = w.feat[k];
     if (!isBelt(f) || w.grid[k] !== T.EMPTY) return;
     const [dx, dy] = beltDir(f);
