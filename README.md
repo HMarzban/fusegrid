@@ -124,6 +124,11 @@ CORE ×1, PLUS ×2, MAX ×3.
 
 - **The opening.** A FUSE/GRID title waits for any key or tap. That press drops
   the music and a ~4 s show that blasts the menu open. Any key skips it.
+- **A new board every run.** Every PLAY, restart and GAME OVER retry deals a
+  fresh board; losing a life keeps the one you're on. Each world has its own
+  bold room shape (fourteen in all), and you start sealed in a brick corner
+  with every foe at least 10 steps away. Every board passes a fairness check
+  before you see it.
 - **Three looks, one game.** **OPTIONS → RENDER** cycles CLASSIC 2D (Canvas),
   PIXEL (hand-drawn sprites over the same board) and REAL 3D (WebGL), live, no
   reload. REAL 3D frames the whole board from one 3/4 camera; wheel or pinch to
@@ -148,10 +153,12 @@ CORE ×1, PLUS ×2, MAX ×3.
 - **DAILY.** One board a day, seeded from the date. Your tries and your best
   for the day stay on this device. Nobody is ranked; it's you against you.
 - **Challenge code.** On the end screen, `B` copies a twelve-character board
-  code (seed, Heat, MODES, pace, never a score). Open
+  code (seed, Heat, MODES, pace and which board maker built it, never a score;
+  `F2` codes are the new mazes, `F1` codes keep the original boards). Open
   `…/fusegrid/?code=XXXXXXXXXXXX` to play that same board.
-- **Ghost.** Clear a room faster than ever and replaying that exact board
-  (same seed, room, Heat, MODES, pace) races a translucent copy of your best
+- **Ghost.** On a DAILY or challenge board (the boards you can play twice),
+  clear a room faster than ever and replaying that exact board (same seed,
+  room, Heat, MODES, pace) races a translucent copy of your best
   route, in every look.
 - **STATS.** Lifetime runs, rooms, deaths, kills, pickups, play time, DAYS
   PLAYED and your CORE / PLUS / MAX bests. `C` (or a tap on `C COPY MY STATS`)

@@ -210,12 +210,12 @@ not shell screens. Do not add them as `SCREEN` values.
     byte for byte except CROWN THRONE / COURT (`TPL_EDITS`): the V10
     occlusion probe at rig C failed even with interior E-W walls capped at
     `NEAR_H` (MAKO 89.9%), so their E-W walls were re-authored N-S like VAULT
-    (THRONE is now a walled hall; owner may veto from the contact sheet) and
+    (THRONE is now a walled hall; owner accepted it from the contact sheet, 2026-10-26) and
     `EW_CAPPED` is empty. Gen-2 foes: `fair.js` `placeFoes` gives each roster
     entry the first free tile (loadLevel's shuffled list, `SPAWN_CLEAR` kept)
     at walking distance >= 10 with bricks passable, >= 12 for hunters (FAST /
     CHASER / KNIGHT) **and brick-passers** (PHANTOM / ROCKET / SHADE; lead
-    ruling 2026-10-26, owner may veto: they walk through the seal bricks).
+    ruling 2026-10-26, owner accepted: they walk through the seal bricks).
   - `fair.js` — pure `validateBoard(grid, level, heat, opts)` (#11) returning
     failed rule IDs: V1 reach, V2 safe first bomb (reach 1–10, PIERCE, LINE x4,
     slowest pace vs shortest fuse), V3 room fit, V4 foe distance, V5 bricks
@@ -1056,8 +1056,9 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   real page" means `typeof location.href === "string"` (the branch's gen-2 page
   default depended on it; since v188 the tile boards are `?gen=3` only).
 - Release state (2026-10-26): shell **v188** (level variety: a random bold,
-  fair board every run, F2 codes, daily on gen 2) is committed on local main;
-  LIVE is **v187**. Shell **v185** (the board look + opt-in GA4) went
+  fair board every run, F2 codes, daily on gen 2) is LIVE, pushed on the
+  owner's word, and tagged as GitHub release **v2.2.0** (shell v178 → v188;
+  v2.1.0 covered v103 → v177). Shell **v185** (the board look + opt-in GA4) went
   LIVE 2026-10-26; **v187** turns the consent ask into a corner card; **v186** is its hotfix (`#upd[hidden],#ana[hidden]`: an
   author `display:flex` beats the UA `[hidden]` rule, so neither card ever hid;
   `tests/hidden-css.test.mjs` now gates every `#id` display rule). The owner
