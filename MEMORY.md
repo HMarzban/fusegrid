@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-26 — v191: PIXEL cap 192 KB
+- Owner, after a 176 vs 192 comparison (cap = code budget, no visual change; full 192 = ~56 KB gzip vs ~51 KB at 176, PIXEL pickers only): "Raise the PIXEL limit to 192 KB now and ship it as v191". Test cap, AGENTS.md, architecture, CHANGELOG.
+
 ## 2026-10-26 — v190: PIXEL SAND floor fix, PIXEL cap 176 KB
 - Owner: "I agree raise the limit" (px lazy-tree cap 160 -> 176 KB; v189 left 18 B) and fix PIXEL SAND parity-B floor vs BRICK-B (4.9 -> 16.8 ΔE via `floor1.shadow` base in `featpxcells.js`, BED.SAND twin). v189 pushed and LIVE (`92f4bc2`); #32 #33 closed, #35 #28 updated.
 

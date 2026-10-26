@@ -15,6 +15,15 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
+## shell v191 · 2026-10-26
+
+### Changed
+
+- **Room for more PIXEL art.** The PIXEL look's size budget grows from 176 KB
+  to 192 KB, so new sprites, walls or a new hero can land without trimming old
+  ones. Nothing changes on screen today, and the PIXEL download is the same
+  (about 47 KB compressed, fetched only when you pick PIXEL).
+
 ## shell v190 · 2026-10-26
 
 ### Fixed
