@@ -10,7 +10,7 @@ import { createGame } from "../src/main.js";
 import { createWorld, loadLevel, step } from "../src/core/sim.js";
 import { runSeed } from "../src/core/rng.js";
 import { CFG, T, key } from "../src/core/config.js";
-import { SCREEN, ITEMS } from "../src/app/menuapp.js";
+import { SCREEN, ITEMS, IDLE_T } from "../src/app/menuapp.js";
 import { dailySeed } from "../src/app/daily.js";
 import { encodeChallenge, decodeChallenge } from "../src/app/code.js";
 
@@ -219,6 +219,16 @@ try {
       k0.seed === runSeed(42, 0) && k1.seed === runSeed(42, 1) && dl.seed === dailySeed(local) &&
         k2.seed === runSeed(42, 2) && k3.seed === runSeed(42, 3) && g.app.screen === SCREEN.GAME,
       [k0.seed, k1.seed, dl.seed, k2.seed, k3.seed].join(" -> "));
+  }
+  {
+    const g = menu();
+    play(g); quit(g);
+    let n = 0; while (g.app.screen !== SCREEN.ATTRACT && n++ < IDLE_T * 70) g.tick();
+    const att = g.app.screen === SCREEN.ATTRACT;
+    press(g, "KeyA");
+    check("a run started from ATTRACT is an ordinary start: the next run seed, the one after armed",
+      att && g.app.screen === SCREEN.GAME && g.world.seed === runSeed(42, 1) && g.world.nextSeed === runSeed(42, 2),
+      att + "/" + g.app.screen + "/" + g.world.seed);
   }
 } finally {
   delete globalThis.window;

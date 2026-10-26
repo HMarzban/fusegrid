@@ -1889,7 +1889,7 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
          ghost even one stored under its own key, records none on a clear, and
          its GAME OVER restart deals a new board and races nothing. */
       for(const k of Object.keys(mem)) if(k!=="nb.cabinet.v1") delete mem[k];
-      mem[GHOST_KEY]=JSON.stringify({v:1,g:{"33:1:0:0:1":{d:5,s:"1E1E41E1E41E1E41E1E41E1E41E1E4"}}});
+      mem[GHOST_KEY]=JSON.stringify({v:1,g:{"33:1:0:0:1":{d:2400,s:"1E1E41E1E41E1E41E1E41E1E41E1E4"}}});
       const g=createGame(null,{seed:33});
       const seen=[];
       const r=g.renderer, rr=r.render;
