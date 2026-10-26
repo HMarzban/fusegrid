@@ -15,7 +15,7 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
-## shell v185 · 2026-10-25
+## shell v185 · 2026-10-26
 
 The board gets a whole new look in all three looks (CLASSIC 2D, PIXEL, REAL 3D):
 walls, floor, outline, depth, motion, foes and pickups. The boards themselves are

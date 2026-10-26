@@ -200,7 +200,7 @@ needs a real phone.
 
 ## 🧱 The board look (shell v185)
 
-Shell v185 (2026-10-25) gives the board a new look in all three looks. It adds:
+Shell v185 (2026-10-26) gives the board a new look in all three looks. It adds:
 
 - **New walls** per world and a quiet **base floor** under everything
   ([`wallart.js`](../src/render/wallart.js), [`floorart.js`](../src/render/floorart.js)).

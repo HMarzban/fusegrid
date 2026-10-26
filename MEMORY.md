@@ -18,6 +18,7 @@ append an entry when it makes a non-trivial change.
 
 ## 2026-10-26 — Opt-in Google Analytics (GA4) built, ID G-C3MW30HPQ0 in
 - Owner asked for a tracker (opens + who stays), picked GA4 with "ask once, with an OPTIONS switch". `src/app/analytics.js` (consent card `#ana`, `nb.analytics.v1` KEEP, OPTIONS ANALYTICS row 8, run_start/run_end + days bucket), `docs/privacy.md`, plan `docs/superpowers/plans/2026-10-26-google-analytics.md`; marketing kit's "no analytics, by design" line rewritten. Folded into unpushed v185 (no CACHE bump).
+- v185 re-dated to its ship day 2026-10-26 (CHANGELOG, sitemap lastmod, diary, architecture, docs map); housekeeping: six merged `claude/*` branches deleted, dirty 2026-10-11/10-19 worktrees left for the owner.
 - `GA_ID` = `G-C3MW30HPQ0` (owner's web stream). Open: owner registers custom definitions (mode, room, result, heat, pace, days_played, look); real sending is unverified until it is live on Pages (check GA Realtime/DebugView).
 
 ## 2026-10-25 — Enemies and items round (committed on tiles-d, not shipped)
