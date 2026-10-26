@@ -29,8 +29,9 @@ for (const [x, y] of [[C - 2, 1], [1, R - 2], [C - 2, R - 2]]) for (const [dx, d
 }
 export const CORNERS = Object.freeze(corners);
 export const HUNT = Object.freeze(["fast", "chaser", "knight"]);
+export const PASSER = Object.freeze(["boomerang", "rocket", "shade"]);
 export const D_FOE = 10, D_HUNT = 12, ESC_STEPS = 4, BRICK_MIN = 40, BRICK_MAX = 90, BRICKS_PER_ITEM = 3, DEAD_MAX = 4, DEAD_DEEP = 3, SHRINK_RINGS = 4, TRIES = 8, REACH_MAX = 10;
-export const foeMin = (type) => (HUNT.includes(type) ? D_HUNT : D_FOE);
+export const foeMin = (type) => (HUNT.includes(type) || PASSER.includes(type) ? D_HUNT : D_FOE);
 export const foeFar = (type, d) => d < 0 || d >= foeMin(type);
 const FUSE_MIN = Math.min(heatProfile(0).fuse, heatProfile(1).fuse, heatProfile(2).fuse);
 const PACE_MIN = Math.min(...PACE_MUL);

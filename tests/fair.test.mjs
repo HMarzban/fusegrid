@@ -9,7 +9,7 @@ import { CFG, T, key, EW_WALL_H_MAX } from "../src/core/config.js";
 import { createWorld, loadLevel } from "../src/core/sim.js";
 import { genBoard } from "../src/core/board.js";
 import { FOES, spawnEnemy } from "../src/core/entities.js";
-import { RULES, HUNT, validateBoard, walk, openLane, sealed, stampStart, placeFoes, freeTiles } from "../src/core/fair.js";
+import { RULES, HUNT, PASSER, validateBoard, walk, openLane, sealed, stampStart, placeFoes, freeTiles } from "../src/core/fair.js";
 import { NEAR_H } from "../src/render/three/scene.js";
 
 const C = CFG.COLS;
@@ -63,19 +63,21 @@ test("V3 room fit: a board too full of bricks to hold the roster plus floor item
   const rows = BASE.map((r, y) => (y >= 5 ? r.replace(/\./g, "b") : r));
   assert.ok(fails(grid(rows), 8, 0).includes("V3"));
 });
-test("V4 foe distance: >= 10 walking steps (hunters >= 12), bricks passable; no route passes", () => {
+test("V4 foe distance: >= 10 walking steps (hunters and brick-passers >= 12), bricks passable; no route passes", () => {
   const b = walk(grid(BASE));
   const at = (d) => { for (let i = 0; i < b.length; i++) if (b[i] === d && grid(BASE)[i] === T.EMPTY) return { tx: i % C, ty: (i / C) | 0 }; };
   const g = grid(BASE);
   assert.ok(fails(g, 3, 0, { foes: [{ type: "walker", ...at(9) }] }).includes("V4"));
   assert.deepEqual(fails(g, 3, 0, { foes: [{ type: "walker", ...at(10) }] }), []);
   assert.ok(fails(g, 3, 0, { foes: [{ type: "chaser", ...at(11) }] }).includes("V4"));
-  assert.deepEqual(fails(g, 3, 0, { foes: [{ type: "knight", ...at(12) }, { type: "shade", ...at(10) }] }), []);
+  assert.ok(fails(g, 3, 0, { foes: [{ type: "shade", ...at(11) }] }).includes("V4"));
+  assert.deepEqual(fails(g, 3, 0, { foes: [{ type: "knight", ...at(12) }, { type: "shade", ...at(12) }, { type: "burrow", ...at(10) }] }), []);
   const walled = edit([[12, 11, T.WALL], [13, 10, T.WALL]]);
   assert.ok(!fails(walled, 3, 0, { foes: [{ type: "fast", tx: 13, ty: 11 }] }).includes("V4"), "a tile with no route passes");
 });
-test("HUNT matches the sim's own e.hunt flag for every foe type; BURROW is not a brick-passer", () => {
+test("HUNT and PASSER match the sim's own e.hunt and e.pass flags for every foe type; BURROW is not a brick-passer", () => {
   for (const f of FOES) assert.equal(HUNT.includes(f.type), spawnEnemy(f.type, 3, 3, 1, null).hunt, f.type);
+  for (const f of FOES) assert.equal(PASSER.includes(f.type), spawnEnemy(f.type, 3, 3, 1, null).pass, f.type);
   assert.equal(spawnEnemy("burrow", 3, 3, 1, null).pass, false);
 });
 test("V5 bricks: 40-90 and >= 3 per buried item", () => {
@@ -150,7 +152,7 @@ test("placeFoes: roster order, first unused tile at the walking floor, picks fir
   const { pick, rest } = placeFoes(free, roster, d);
   assert.equal(pick.length, roster.length);
   assert.equal(pick.length + rest.length, free.length);
-  pick.forEach(([t, [x, y]]) => assert.ok(d[key(x, y)] >= (HUNT.includes(t) ? 12 : 10), t));
+  pick.forEach(([t, [x, y]]) => assert.ok(d[key(x, y)] >= (HUNT.includes(t) || PASSER.includes(t) ? 12 : 10), t));
   assert.deepEqual(placeFoes(free, roster, d, () => true).pick, [], "a blocked tile is never picked");
 });
 
@@ -172,5 +174,5 @@ test("gen-1 diagnostic: open 5-step lanes, hunters under 8 walking steps, valida
   console.log(`gen-1 open lanes ${lanes.map((v) => (v / 16).toFixed(1) + "%").join(" / ")}; hunters < 8 steps ${near} / ${hunters}; fails ${JSON.stringify(f)}`);
   assert.deepEqual(lanes, [267, 222, 175]);
   assert.deepEqual([near, hunters], [66, 9600]);
-  assert.deepEqual(f, { V4: 4282, SEAL: 1294, V3: 7 });
+  assert.deepEqual(f, { V4: 4372, SEAL: 1294, V3: 7 });
 });

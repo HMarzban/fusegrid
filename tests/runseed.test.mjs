@@ -121,7 +121,7 @@ try {
     const b = play(g);
     check("with opts.seed set, run 0 plays opts.seed", a.seed === 42, a.seed);
     check("two consecutive PLAY runs of room 1 deal different bricks", a.b !== b.b && b.seed === runSeed(42, 1), a.seed + " -> " + b.seed);
-    check("gen 1 walls never change between runs", a.w === b.w);
+    check("an ordinary run deals a gen-2 board, so its walls change too (#12)", g.world.gen === 2 && a.w !== b.w);
     check("the next GAME OVER restart is already armed while the run plays", g.world.nextSeed === runSeed(42, 2), g.world.nextSeed);
   }
   {
