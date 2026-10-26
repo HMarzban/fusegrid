@@ -156,7 +156,7 @@ test("placeFoes: roster order, first unused tile at the walking floor, picks fir
 
 /* gen-1 diagnostic (report-only GOLDEN numbers; gen 1 must stay byte-identical).
    Seeds fmix(s*7919+13); CI sample 200 seeds x 8 rooms x 3 heats. The full
-   1000-seed sweep (tools/levels/fair-sweep.mjs) reproduces the issue's
+   1000-seed sweep (tools/levels/fairsweep.mjs) reproduces the issue's
    16.9 / 13.3 / 10.0 % exactly and measures 368 / 48 000 hunter starts under
    8 EMPTY steps (the issue's 371 used a definition not on record). */
 test("gen-1 diagnostic: open 5-step lanes, hunters under 8 walking steps, validator failures", () => {

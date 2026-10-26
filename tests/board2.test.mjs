@@ -1,5 +1,5 @@
 /* #12: the gen-2 generator (src/core/board2.js). Templates byte for byte from
-   the appendix, the CI structural sample through the #11 validator, the forced
+   the appendix (THRONE / COURT = the appendix + TPL_EDITS), the CI structural sample through the #11 validator, the forced
    fair fallback, golden grids per layout, the brick budget, world.gen through
    every room / run transition, and gen 1 byte-identical. */
 import test from "node:test";
