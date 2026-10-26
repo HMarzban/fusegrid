@@ -23,3 +23,6 @@ e2e-artifacts/
 
 # Offline music bounces: regenerated on demand, never shipped, never reviewed
 tools/bounce/out/
+
+# Offline level sweeps (tools/levels): regenerated on demand, never shipped
+tools/levels/out/

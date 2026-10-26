@@ -1,7 +1,7 @@
 /* TILE ART PLACEMENT (2026-10-25): STREAM / QUICK / PORTAL / GATE are placed by the gen-2 generator for their look only; the sim ignores codes 8..14. */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { CFG, key, T } from "../src/core/config.js";
+import { CFG, key, T, EW_CAPPED } from "../src/core/config.js";
 import { createWorld, loadLevel, step } from "../src/core/sim.js";
 import { genBoard2 } from "../src/core/board2.js";
 import { validateBoard, walk } from "../src/core/fair.js";
@@ -25,7 +25,7 @@ test("200 seeds per room: tiles placed, same at every heat, never near spawn or 
     for (const b of B) assert.ok(b.feat && !b.layout.fallback, tag);
     const hx = B.map((b) => Buffer.from(b.feat).toString("hex") + "|" + (b.featPair ? Buffer.from(b.featPair).toString("hex") : "-"));
     assert.equal(hx[0], hx[1], tag); assert.equal(hx[1], hx[2], tag);
-    for (let h = 0; h < 3; h++) assert.deepEqual(validateBoard(B[h].grid, room, h, { capped: ["CROWN"], sym: B[h].layout.sym, flip: B[h].layout.flip, ignore: B[h].layout.ignore }), [], tag + " heat " + h);
+    for (let h = 0; h < 3; h++) assert.deepEqual(validateBoard(B[h].grid, room, h, { capped: EW_CAPPED, sym: B[h].layout.sym, flip: B[h].layout.flip, ignore: B[h].layout.ignore }), [], tag + " heat " + h);
     const steps = walk(B[2].grid);
     for (const [x, y, v] of cellsOf(B[0].feat)) {
       assert.ok(CODES[ROOMS[room]].includes(v), tag + " code " + v);
