@@ -1,9 +1,10 @@
 /* Direction D pixel gates (2026-10-25). Real painters rendered at 4x (160 px) in headless Chrome; the checks are pure functions over RGBA arrays (exported, Node-testable).
-   node tools/tileart/gates.mjs <built|living|all> */
+   node tools/tileart/gates.mjs <built|living|read|cvd|all>; cvd = the colour-vision gate (#33): CLASSIC 2D in Chrome here, PIXEL in pure Node (also tests/tile-cvd.test.mjs) */
 import {readFileSync, existsSync} from "node:fs";
 import {withPage, TILES} from "./harness.mjs";
 import {unpng} from "../pixel/rgba.mjs";
-import {litSkew, seam, channelLight, figure, heatSep, slotOnly, maxLum, lum, dE, rgbOf, edgeEnergy} from "./gatefns.mjs";
+import {litSkew, seam, channelLight, figure, heatSep, slotOnly, maxLum, lum, dE, rgbOf, edgeEnergy, cvdSep, CVD_PIN} from "./gatefns.mjs";
+import {CVD_ENT, RULED, pxSets} from "./cvdsets.mjs";
 const PAGE = `(async()=>{
   const [F,C]=await Promise.all([import('/src/render/featdraw.js'),import('/src/core/config.js')]);
   const S=160,bio=n=>C.BIOMES.find(x=>x.name===n);
@@ -37,6 +38,16 @@ const PAGE2 = `(async()=>{
   for(const [w,p,bn,s] of ${JSON.stringify(ENT)}){const b=C.BIOMES.find(x=>x.name===bn);
     out.push({id:w+'-'+p,bn,heats:[0,1,2].map(h=>({d:px(F,b,{...s,h}),r:px(R3,b,{...s,h})}))});}
   return out;})()`;
+/* CLASSIC 2D colour-vision inputs: the same CVD_ENT tiles x heat, the base floor (2 parities x FLOOR_V), the interior wall codes 0..3 and the brick over both floors */
+const PAGE3 = `(async()=>{
+  const [F,FL,SP,C]=await Promise.all([import('/src/render/featdraw.js'),import('/src/render/floorart.js'),import('/src/render/sprites.js'),import('/src/core/config.js')]);
+  const S=160,out=[],refs={};
+  const cvs=(fn)=>{const cv=document.createElement('canvas');cv.width=cv.height=S;const g=cv.getContext('2d');g.scale(4,4);fn(g);return Array.from(g.getImageData(0,0,S,S).data);};
+  for(const [id,bn,s] of ${JSON.stringify(CVD_ENT)}){const b=C.BIOMES.find(x=>x.name===bn),V=[...Array(FL.FLOOR_V).keys()];
+    refs[bn]=refs[bn]||{floor:[0,1].flatMap(p=>V.map(v=>cvs(g=>FL.paintFloor(g,b,p,v)))),wall:[0,1].flatMap(p=>[0,1,2,3].map(c=>cvs(g=>{FL.paintFloor(g,b,p,0);SP.paintWall(g,b,c,0,0);}))),
+      brick:[0,1].map(p=>cvs(g=>{FL.paintFloor(g,b,p,0);SP.paintBrick(g,b);})),brickHex:[b.brickA,b.brickB]};
+    out.push({id,bn,heats:[0,1,2].map(h=>cvs(g=>F.paintCell(g,b,{...s,h}))),ref:bn});}
+  return {out,refs};})()`;
 const fails = [];
 const ok = (c, m) => { if (!c) fails.push(m); console.log((c ? "PASS " : "FAIL ") + m); };
 const which = process.argv[2] || "built";
@@ -72,7 +83,26 @@ await withPage(async (P) => {
     }
     console.log(JSON.stringify(rows).replace(/},{/g, "},\n{"));
   }
+  if (which === "all" || which === "cvd") {
+    const {out, refs} = await P.ev(PAGE3), U = (L) => L.map((a) => Uint8ClampedArray.from(a)), R = {};
+    for (const [bn, f] of Object.entries(refs)) R[bn] = {floor: U(f.floor), wall: U(f.wall), brick: U(f.brick), brickHex: f.brickHex};
+    cvdGate("CLASSIC", out.map((e) => ({id: e.id, bn: e.bn, heats: U(e.heats), ...R[e.ref]})), true);
+  }
 });
+/* colour-vision gate: per tile (rules first), the worst simulated value of each pin over protan / deutan / tritan x CORE / PLUS / MAX */
+function cvdGate(look, sets, bed) {
+  const H = ["CORE", "PLUS", "MAX"], keys = ["floorL", "floorE", "wallL", "wallE", "brickL", "brickE", "bedBrick"];
+  for (const s of [...sets].sort((a, b) => RULED.has(b.id) - RULED.has(a.id))) {
+    const r = cvdSep(s, 160, ["none", "protan", "deutan", "tritan"]), sim = r.rows.filter((x) => x.cvd !== "none"), tag = `${look} ${s.bn} ${s.id}${RULED.has(s.id) ? " (rules)" : ""}`;
+    for (const k of keys) {
+      const w = sim.reduce((a, x) => (x[k] < a[k] ? x : a)), n = r.rows.find((x) => x.cvd === "none" && x.h === w.h)[k], msg = `${tag} CVD ${k} ${w[k].toFixed(1)} (${H[w.h]} ${w.cvd}; normal ${n.toFixed(1)})`;
+      if (k === "bedBrick" && !bed) console.log("INFO " + msg + " (not gated in this look)"); else ok(w[k] >= CVD_PIN[k], msg + " >= " + CVD_PIN[k]);
+    }
+    const hw = r.heat.filter((x) => x.cvd !== "none").reduce((a, x) => (x.d < a.d ? x : a));
+    ok(hw.d >= CVD_PIN.heat, `${tag} CVD heat separation ${hw.d.toFixed(2)} (${H[hw.a]}-${H[hw.c]} ${hw.cvd}) >= ${CVD_PIN.heat}`);
+  }
+}
+if (which === "all" || which === "cvd") cvdGate("PIXEL", pxSets(), false);
 /* REAL 3D stills (node tools/tileart/export.mjs first, TILEART_OUT=<dir>): the lit, relief-shaded PORTAL never passes wallHi's luma */
 const dir3 = process.argv[3];
 if (dir3) for (const h of ["core", "plus", "max"]) { const f = dir3 + "/3d/void-portal-" + h + ".png"; if (!existsSync(f)) continue; const m = maxLum(unpng(readFileSync(f)).data), cap = lum(...rgbOf("#8a70b0")); ok(m <= cap + 1.5, `REAL 3D PORTAL ${h} max luma ${m.toFixed(1)} <= wallHi ${cap.toFixed(1)}`); }
