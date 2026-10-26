@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-26 — v189: hunter lock-on tell (#32), tile CVD gate (#33), #35 leftovers
+- Owner picked "Lock-on tell" for #32 (read-only, no sim field): `src/render/lockon.js` + `motion.js` `lockK`, chevrons under pickups in all looks, N 4 (>= 0.51 s worst case); sim/replays byte-identical, CLASSIC hash and 3D draws unchanged. #33: `gates.mjs cvd` (Machado 2009), all tiles pass; waiver `CVD_WAIVE` for the CLASSIC open GATE heat separation (2.14 for everyone, a #28 job); PIXEL SAND parity-B floor vs BRICK-B 4.9 ΔE disclosed. #35: tile-world CLASSIC pin `a4693824:71581`; phone check at full res OK; tile contact sheet https://claude.ai/artifact/VnowPKoD2NVMKp758a4aep (owner: "the current tile art are great").
+
 ## 2026-10-26 — v188: level variety built (#10 #11 #12 #13 #29)
 - Shipped: the owner accepted both rulings and said push; v188 pushed and released as GitHub release v2.2.0 (shell v178 → v188). #8 #10 #11 #12 #13 #29 closed once the live `sw.js` read v188.
 - Owner: "Level variety… ensure we will finish them and close the issues". Owner picks: O2 tiles = gen 3 / F3 later (`?gen=3`), O4 ghosts only on DAILY / code boards, owner pushes then the lead closes the issues. #10 `runSeed(bootSeed, i)` + `world.nextSeed`; #11 `src/core/fair.js` `validateBoard` + gen-1 golden diagnostic; #12 `board2.js` rebuilt on the gate (14 layouts, fair fallback, `placeFoes`), gen 2 for ordinary runs and the daily; #13 F1/F2 codes, daily `g` stamp (`DAILY_GEN` 2), ghost key + gen (`GHOST_V` 2); #29 `shot.mjs` finds Chrome, `--seed/--heat/--pace/--gen/--pause`, byte-identical captures. 263 tests. CACHE_NAME/REV v188, not pushed.

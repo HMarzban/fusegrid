@@ -15,6 +15,20 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
+## shell v189 · 2026-10-26
+
+### Added
+
+- **Hunters warn you before they charge.** When a FAST, CHASER or KNIGHT has a
+  clear straight lane to you within 4 tiles and is heading your way, it crouches
+  and lays chevrons on the floor down that lane, in all three looks. Even the
+  fastest hunter gives you about half a second. The warning is steady (no
+  flashing) and never covers a pickup; hunters themselves move and decide
+  exactly as before.
+- **Floor tiles pass a colour-blind check.** Every tile, at every heat, now has
+  to stay readable against the floor, the walls and the bricks under protan,
+  deutan and tritan vision before it can ship. Today's tiles all pass.
+
 ## shell v188 · 2026-10-26
 
 ### Added

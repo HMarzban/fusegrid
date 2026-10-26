@@ -6,7 +6,7 @@
 
 This is the story of how the game was built: the big turns, the dead ends
 and what each one taught us. It runs from the first commit on 2026-08-16 to
-shell v188 on 2026-10-26 (660 commits by then).
+shell v189 on 2026-10-26 (668 commits by then).
 
 - **What changed in each release** lives in the [CHANGELOG](../CHANGELOG.md).
 - **How the game works today** lives in [architecture.md](architecture.md).
@@ -563,6 +563,17 @@ room lost its east-west walls along the way, because in REAL 3D they hid MAKO.
 Codes, the daily and ghosts learned which generator made their board, and the
 release went out as **shell v188**. The rules and numbers are in
 [architecture.md](architecture.md#-a-new-board-every-run-shell-v188).
+
+### 2026-10-26 · Hunters show their hand (shell v189)
+
+The hunters had a steady "I'm hunting" look but no warning before a charge,
+because they never wind up: they re-plan toward you about four times a second.
+So the warning reads the board instead of the brain. When a hunter has a clear
+straight lane to you within four tiles and is facing you, it crouches and lays
+chevrons down the lane. Even the fastest hunter on the hardest setting gives
+you half a second. The same afternoon the floor tiles got a colour-blind
+check, and every one passed. The one weak spot was not colour at all: the open
+CROWN GATE looks too alike at its three heats, a job for the tile design pass.
 
 ---
 

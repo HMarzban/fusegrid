@@ -237,7 +237,10 @@ not shell screens. Do not add them as `SCREEN` values.
     (the CLASSIC call-log hash is pinned in `tests/classic-perf.test.mjs` and
     `tests/pixel-render.test.mjs`, now `9fb48f0a:72431`: re-pinned by ruling
     for each 2026-10-21..25 art round, the diff proven to be the intended art;
-    `97480c1c:22630` is the stale pre-round value). See the PIXEL paragraph below.
+    `97480c1c:22630` is the stale pre-round value). Beside it, `classic-perf`
+    pins a named tile world through `classicHash`'s `opt` (gen 3, seed 4242,
+    room 3 FACTORY CONVEYOR, CORE: `a4693824:71581`, #35) and checks that
+    nulling the tile layer moves it. See the PIXEL paragraph below.
   - kind `"iso"` — legacy dimetric (`r3d/`), pinned by `?render=iso` only.
     `createRenderer({kind:"3d"|"iso"})` is the **dimetric** branch. Real 3D
     never enters that factory. Menu RENDER cycles CLASSIC 2D → PIXEL → REAL 3D
@@ -273,7 +276,8 @@ not shell screens. Do not add them as `SCREEN` values.
     text stays the vector font). px JS cap **160 KB** uncompressed for the
     lazy tree (`tests/pixel-render.test.mjs`; R24's 120, then 122 on
     2026-10-11, 152 for the board look, 160 for the hand-drawn tiles; the tree
-    is about 158.8 KB). Floor-tile cells are hand-drawn palette-slot frames in
+    is about 160 KB since the v189 lock-on chevrons: 163 822 of 163 840 bytes,
+    18 bytes left, so the next PIXEL change needs a cap ruling). Floor-tile cells are hand-drawn palette-slot frames in
     `pixel/art/feat.js` (CONVEYOR and STREAM assembled from hand-drawn parts),
     read by `featpx.js`. Since #15 (2026-10-25) the px tree
     is a dynamic import (`src/render/pixel/load.js`, `rcache.js` `load(k)`;
@@ -419,12 +423,39 @@ not shell screens. Do not add them as `SCREEN` values.
     `three/ambientfx.js`, `pixel/ambient.js`; foes and items `motion.js`
     (spec) + `entityfx.js` (`fxOf(world, look)`), `itemdraw.js`,
     `enemybody.js`, `three/entityanim.js`, `three/burstfx.js`,
-    `pixel/entities.js`, `pixel/foegen.js`. REAL 3D animations run on a
+    `pixel/entities.js`, `pixel/foegen.js`. Hunter lock-on tell (#32, owner
+    ruling 2026-10-26 "Lock-on tell", shell v189): read-only, NO sim field;
+    `src/render/lockon.js` `lockOn(world, e)` is the one rule (an `e.hunt` foe,
+    player in its row/column 1..4 tiles away, `sign(e.dir)` down that lane, the
+    lane open by `bfsNext`'s own blocking: WALL always, BRICK / live bomb unless
+    `e.pass`, the player's tile included); `motion.js` `LOCK` / `lockK` is the
+    one ramp (in 0.1 s, out 0.18 s, each look's PLAY-frozen clock). N = 4 leaves
+    >= 0.51 s at the fastest hunter (FAST, room 8, MAX, HARD); the tell can start
+    up to `chaseCd` late because `e.dir` changes only on a re-plan. Floor
+    chevrons down the lane (static, so REDUCE FLASH keeps them) drawn UNDER
+    pickups in every look, plus a crouch/lunge: CLASSIC `enemybody.js`
+    `laneMarks`, PIXEL `pixel/entities.js` `lane` (foe ramp slots, no new hex),
+    REAL 3D `groundfx.js` `LANES` uniforms (`LN_N` 4 lanes, 0 new draws; a fifth
+    locked hunter gets the crouch only) + `entityanim.js` crouch. Iso has none;
+    ATTRACT shows it. REAL 3D animations run on a
     pause-corrected clock (`three/wrapper.js`; `tests/render3d-pauseclock`).
     Sim side: `core/feat.js` (the `world.feat` layer; rules only for codes
     1..7 = CONVEYOR, ICE PATCH, BOOSTER, TRAP; 8..14 are art only) and
     `core/board2.js` (the gen-2 generator; tiles ride it as gen 3). Art gates:
-    `tools/tileart/gates.mjs all`, `tools/walls/`.
+    `tools/tileart/gates.mjs all`, `tools/walls/`. Colour-vision gate (#33,
+    shell v189): `gates.mjs cvd|all`, Machado 2009 severity-1.0 protan /
+    deutan / tritan in linear sRGB (`gatefns.mjs` `simCVD` / `simRGB`, the one
+    CVD source), tile set in `cvdsets.mjs` (14 entries incl. the open GATE and
+    run ends); every tile at CORE / PLUS / MAX against the base floor, the
+    rendered WALL and BRICK cells and (CLASSIC) the brick hexes, plus heat
+    separation on the simulated images. `CVD_PIN` sits ~10 % under the measured
+    worst case (a regression floor, not a perceptual proof); one named waiver
+    `CVD_WAIVE` "CLASSIC gate-open heat" (pin 2, normal vision 2.14 < 4: the
+    open GATE's CORE / PLUS / MAX differ too little in CLASSIC for everyone; a
+    structural fix belongs to #28). CLASSIC runs in Chrome via `gates.mjs`;
+    `tests/tile-cvd.test.mjs` runs the PIXEL half under `npm test`; REAL 3D has
+    no CVD gate. Disclosed: PIXEL SAND's parity-B base floor `#a07828` is 4.9
+    ΔE from BRICK-B `#a07020` (CLASSIC fixed it in `floorart.js` `BED.SAND`).
 - `src/app/` — menu shell, intro beats, demobot, highscores, `pactstore.js`,
   plus the entry seams above (`flags` / `attract` / `frameloop` / `rcache` /
   `audiopower` / `renderkind` / `debughook` / `fit`) and the pure GRAPHICS
@@ -1007,7 +1038,8 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
       REAL 3D fat-world is now 156 draws (158 worst case; budget 160); the 2D foe
       silhouettes are canon for all three looks; pickups never change shape or
       colour. CLASSIC hash `9fb48f0a:72431`; px cap 160 KB (the px tree is a lazy
-      import since #15, about 158.8 KB with the hand-drawn tiles).
+      import since #15, about 158.8 KB with the hand-drawn tiles; 18 bytes under the
+      cap since v189).
 - Walls (owner rulings 2026-10-21, designed and prototyped, NOT built; issues
   #17 for CLASSIC 2D + REAL 3D and #31 for PIXEL after #15; record
   `docs/superpowers/specs/2026-10-21-wall-art-design.md`).
@@ -1055,10 +1087,11 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   Node test fakes define `globalThis.location` WITHOUT `href`, so "is this a
   real page" means `typeof location.href === "string"` (the branch's gen-2 page
   default depended on it; since v188 the tile boards are `?gen=3` only).
-- Release state (2026-10-26): shell **v188** (level variety: a random bold,
-  fair board every run, F2 codes, daily on gen 2) is LIVE, pushed on the
-  owner's word, and tagged as GitHub release **v2.2.0** (shell v178 → v188;
-  v2.1.0 covered v103 → v177). Shell **v185** (the board look + opt-in GA4) went
+- Release state (2026-10-26): shell **v189** (hunter lock-on tell #32, tile
+  colour-vision gate #33, the #35 tile-world pin) is LIVE on the owner's word.
+  Shell **v188** (level variety: a random bold, fair board every run, F2 codes,
+  daily on gen 2) is GitHub release **v2.2.0** (shell v178 → v188; v2.1.0
+  covered v103 → v177). Shell **v185** (the board look + opt-in GA4) went
   LIVE 2026-10-26; **v187** turns the consent ask into a corner card; **v186** is its hotfix (`#upd[hidden],#ana[hidden]`: an
   author `display:flex` beats the UA `[hidden]` rule, so neither card ever hid;
   `tests/hidden-css.test.mjs` now gates every `#id` display rule). The owner

@@ -232,13 +232,31 @@ Shell v185 (2026-10-26) gives the board a new look in all three looks. It adds:
 - **GUIDE grows a FLOOR page** and its pages animate.
 
 Budgets after the round: REAL 3D fat-world 156 draw calls (158 worst case),
-PIXEL lazy tree about 159 KB of a 160 KB cap, CLASSIC call log re-pinned as
+PIXEL lazy tree about 159 KB of a 160 KB cap (18 bytes left after v189), CLASSIC call log re-pinned as
 `9fb48f0a:72431`. Frame times on a real GPU are not measured yet (issue #34).
 How it is put together, the rulings and what is still open live in
 [one record](superpowers/specs/2026-10-25-board-look-depth-ambient-design.md);
 the tile look is in the
 [direction D record](superpowers/specs/2026-10-25-floor-tiles-direction-d-design.md);
 the gameplay gaps are tracked in issue #35. 
+
+**Shell v189 adds two checks and one tell:**
+- **Hunter lock-on tell (#32).** Hunters have no windup in the sim: they
+  re-plan a path to you every `chaseCd` (0.35 / 0.28 / 0.22 s) and always chase.
+  So the tell is read-only. [`lockon.js`](../src/render/lockon.js) `lockOn`
+  fires when a hunter shares your row or column, 1–4 tiles away, faces you, and
+  the lane is open by the AI's own blocking rules. Every look then crouches the
+  hunter and lays static chevrons on the floor down that lane, under any
+  pickups. Four tiles leave at least 0.51 s even against FAST in room 8 at MAX
+  and HARD. The sim, replays and difficulty are unchanged, and REAL 3D draws
+  the chevrons in the existing floor shader at 0 extra draw calls.
+- **Colour-vision gate (#33).** `tools/tileart/gates.mjs cvd` simulates protan,
+  deutan and tritan vision (Machado 2009) on every tile at every heat and holds
+  it apart from the floor, walls and bricks. Every tile passes. One named
+  waiver covers the open CROWN GATE in CLASSIC 2D, whose three heats are too
+  close for everyone; the structural fix belongs to the tile design pass (#28).
+- **Tile-world pin (#35).** The CLASSIC call-log test now also pins a gen-3
+  FACTORY world with its conveyor tiles (`a4693824:71581`).
 
 ## 🎲 A new board every run (shell v188)
 
