@@ -129,7 +129,7 @@ function updatePlayer(world, dt, inp, emit) {
     p.face.x = dx;
     p.face.y = dy;
   }
-  const glided = w.feat && !p.passing ? glideMove(w, p, dx, dy, dt) : false;
+  const glided = w.feat && !p.passing ? glideMove(w, p, dx, dy, dt, emit) : false;
   const sp = p.speed * CFG.TILE * dt * paceMul(w.pace);
   if ((dx || dy) && !glided) {
     p.tx = tileOf(p.x);
@@ -505,15 +505,31 @@ function carryBomb(w, b, dt) {
   b.x = (b.tx + 0.5 + b.slide.x * travel) * FT;
   b.y = (b.ty + 0.5 + b.slide.y * travel) * FT;
 }
-/* GLIDE (player only): x1.25; CORE stops on release (corner assist 0.35),
-   PLUS coasts to the next centre, MAX coasts until a block or off the
-   sheet; a new direction is buffered and taken at a centre (window turn) */
+/* GLIDE = ICE PATCH (player only; design pass 2, #28): speed x boost (CORE
+   1.1 / PLUS 1.25 / MAX 1.5, capped at MAX_SPEED); CORE stops on release
+   (corner assist 0.35), PLUS coasts to the next centre, MAX coasts until a
+   block or off the sheet. A new direction is buffered and taken at a centre
+   (window turn). glide.stop "brake" (MAX): the opposite press is a brake, not
+   a reverse: it stops you at the next centre (at once inside the turn window),
+   and holding it walks you back from rest. KICK kicks on ice as on floor. */
 function glideFree(w, tx, ty) {
   const v = w.grid[key(tx, ty)];
   if (v !== T.EMPTY) return false;
   return !w.bombs.some((b) => !b.dead && b.tx === tx && b.ty === ty);
 }
-function glideMove(w, p, dx, dy, dt) {
+function glideMove(w, p, dx, dy, dt, emit) {
+  const tx = tileOf(p.x), ty = tileOf(p.y), gl = p.gl, r = glideStep(w, p, dx, dy, dt);
+  if (r && p.kick) {
+    let sx = 0, sy = 0;
+    if (dx) sx = dx > 0 ? 1 : -1;
+    else if (dy) sy = dy > 0 ? 1 : -1;
+    else if (gl) { sx = gl.x; sy = gl.y; }
+    const b = (sx || sy) && w.bombs.find((bb) => !bb.dead && !bb.slide && bb.tx === tx + sx && bb.ty === ty + sy);
+    if (b && launchSlider(w, b, sx, sy)) emit({ t: "kick", x: b.x, y: b.y });
+  }
+  return r;
+}
+function glideStep(w, p, dx, dy, dt) {
   const tx = tileOf(p.x), ty = tileOf(p.y), k = key(tx, ty);
   const onIce = w.feat[k] === 5 && w.grid[k] === T.EMPTY;
   let ix = 0, iy = 0;
@@ -539,8 +555,11 @@ function glideMove(w, p, dx, dy, dt) {
   if (ix || iy) p.glBuf = ix === cur.x && iy === cur.y ? null : { x: ix, y: iy };
   const coasting = !ix && !iy;
   const cx = (tx + 0.5) * FT, cy = (ty + 0.5) * FT;
-  if (p.glBuf && Math.abs(cur.x ? p.x - cx : p.y - cy) <= g.turn * FT && glideFree(w, tx + p.glBuf.x, ty + p.glBuf.y)) {
-    p.x = cx; p.y = cy; cur = p.glBuf; p.glBuf = null;
+  const brake = (b) => g.stop === "brake" && b && b.x === -cur.x && b.y === -cur.y;
+  if (p.glBuf && Math.abs(cur.x ? p.x - cx : p.y - cy) <= g.turn * FT && (brake(p.glBuf) || glideFree(w, tx + p.glBuf.x, ty + p.glBuf.y))) {
+    p.x = cx; p.y = cy;
+    if (brake(p.glBuf)) { p.gl = null; p.glBuf = null; p.tx = tx; p.ty = ty; return true; }
+    cur = p.glBuf; p.glBuf = null;
   }
   for (let guard = 0; guard < 3 && sp > 1e-6; guard++) {
     const a = cur.x ? p.x : p.y, s = cur.x || cur.y, t0 = a / FT - 0.5;
@@ -551,6 +570,7 @@ function glideMove(w, p, dx, dy, dt) {
     sp -= d;
     const qx = tileOf(p.x), qy = tileOf(p.y), q = key(qx, qy), ice = w.feat[q] === 5 && w.grid[q] === T.EMPTY;
     p.x = (qx + 0.5) * FT; p.y = (qy + 0.5) * FT;
+    if (brake(p.glBuf)) { p.gl = null; p.glBuf = null; p.tx = qx; p.ty = qy; return true; }
     if (p.glBuf && glideFree(w, qx + p.glBuf.x, qy + p.glBuf.y)) { cur = p.glBuf; p.glBuf = null; continue; }
     if (!ice) { p.gl = null; p.glBuf = null; p.tx = qx; p.ty = qy; return true; }
     if (coasting && (g.coast === 1 || !glideFree(w, qx + cur.x, qy + cur.y))) { p.gl = null; p.tx = qx; p.ty = qy; return true; }

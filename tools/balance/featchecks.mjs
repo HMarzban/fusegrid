@@ -109,7 +109,7 @@ export function lethalMap(g, feat, prof, blasts, useTiles = true) {
 function env(n, g, o = {}) {
   const prof = n.prof, t = !!(o.tiles && n.feat);
   return { g, feat: n.feat, prof, pm: n.pm, cap: n.lim.escSteps, tiles: t, mvTiles: t && o.move !== false, stopOnBrick: o.stopOnBrick !== false, plantBlock: o.plantBlock !== false, open: o.open ?? -1,
-    vp: VP * n.pm, vIce: Math.min(VP * prof.glide.boost, CFG.MAX_SPEED) * n.pm, vb: prof.belt.v * n.pm, actors: !!prof.belt.actors, nostop: prof.glide.coast >= 2 };
+    vp: VP * n.pm, vIce: Math.min(VP * prof.glide.boost, CFG.MAX_SPEED) * n.pm, vb: prof.belt.v * n.pm, actors: !!prof.belt.actors, nostop: prof.glide.coast >= 2, stop: prof.glide.stop };
 }
 const isIce = (E, k) => E.mvTiles && E.feat[k] === F.GLIDE && E.g[k] === T.EMPTY;
 const isRide = (E, k) => E.mvTiles && E.actors && isBelt(E.feat[k]) && E.g[k] === T.EMPTY;
@@ -126,7 +126,7 @@ function blockAt(E, k, t, L, plant) {
 }
 function hide(E, k, d, t, L, plant) {
   if (L[k] !== INF) return false;
-  if (isIce(E, k) && E.nostop && d < 4) return blockAt(E, nbr(k, d), t, L, plant);
+  if (isIce(E, k) && E.nostop && d < 4) return E.stop === "brake" || blockAt(E, nbr(k, d), t, L, plant);
   if (isRide(E, k)) {
     const [ux, uy] = beltDir(E.feat[k]), dn = nbr(k, dirOf(ux, uy));
     return dn < 0 || E.g[dn] === T.WALL || (E.stopOnBrick && E.g[dn] === T.BRICK && L[dn] === INF);
@@ -424,7 +424,7 @@ const CHECK = {
       if (w[k] >= 0 && w[k] <= lim.spawnSteps) hit("spawn", "tile " + w[k] + " steps from spawn", xy(k));
       else if (DOORS.includes(k) || POCKET.includes(k)) hit("door", "tile on the pocket / a door", xy(k));
     }
-    for (const e of n.foes) if (feat[e.k]) hit(e.type === "stationary" ? "sentry" : "foe", (e.type === "stationary" ? "SENTRY" : e.type) + " spawns on a tile", xy(e.k));
+    for (const e of n.foes) if (feat[e.k] && (feat[e.k] !== F.GLIDE || e.type === "stationary")) hit(e.type === "stationary" ? "sentry" : "foe", (e.type === "stationary" ? "SENTRY" : e.type) + " spawns on a tile", xy(e.k));
     for (const it of n.items) if (feat[it.k]) hit(it.buried ? "buried" : "floor", (it.buried ? "buried" : "floor") + " item on a tile", xy(it.k));
     return first.length ? { ...first[0], causes: c } : null;
   },

@@ -9,7 +9,8 @@
    the sim's featProfile(w):
    - danger: CONVEYOR edge costs in the flee search and every cell a carried
      bomb reaches before its fuse; ICE PATCH flee destinations (no wait tile
-     at MAX, coast endpoints); BOOSTER relay cover at the tier; TRAP pending
+     at MAX, coast endpoints; with glide.stop "brake" every ice tile, since
+     the fork brakes any coast it did not ask for); BOOSTER relay cover at the tier; TRAP pending
      wind-ups at full r and an idle TRAP a foe stands next to;
    - joy: plant when the tile-extended blast (delivery / relay) holds a foe
      or brick the plain blast does not; wander toward a CONVEYOR when idle;
@@ -33,6 +34,7 @@ import {createRng} from "../../src/core/rng.js";
 import {isBelt} from "../../src/core/feat.js";
 import {rulesOn,prof,tileDanger,bombCover,iceDestOk,moveSpeed} from "./tilemodel.mjs";
 
+const BRAKE=!(globalThis.process&&globalThis.process.env&&globalThis.process.env.FG_BOTBRAKE==="0");
 export const NOOP=Object.freeze({move:{x:0,y:0},fire:false,firePrev:false,
   shift:false,remote:false,kick:false});
 
@@ -392,6 +394,14 @@ export function createTileBot(seed){
       if(reenter||foeAt(world,nx,ny))out.move={x:0,y:0};
       else if(!inPocket&&!onBomb&&danger.has(key(nx,ny)))out.move={x:0,y:0};
       else if(deep&&world.bombs.length&&hugging(nx,ny,danger))out.move={x:0,y:0};
+     }
+
+    /* ICE PATCH brake (glide.stop "brake"): a coast the bot did not ask
+       for is braked with the opposite press (FG_BOTBRAKE=0: a player who
+       never brakes) */
+    if(!out.move.x&&!out.move.y&&p.gl&&BRAKE&&rulesOn(world)){
+      const g=prof(world).glide;
+      if(g.coast>=2&&g.stop==="brake")out.move={x:-p.gl.x,y:-p.gl.y};
      }
 
     const prev=latch;

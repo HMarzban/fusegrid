@@ -20,11 +20,14 @@
    never worse and the search is exact for the model (the 2026-10-21 first
    counter allowed entry after a blade window and stored Float32 times, and
    produced false spots). Success = reaching a tile that never turns lethal
-   (with tiles: not an ICE PATCH tile at coast >= 2, no wait tile). Tile
+   (with tiles at coast >= 2: an ICE PATCH tile only where the sim ends a
+   coast, by (tile, arrival dir) state: a block ahead that still stands at
+   arrival, or anywhere under glide.stop "brake"; a player at rest on ice may
+   stay; #28 pass 2, before it no ice tile ever counted). Tile
    speeds: ICE PATCH boost leaving a sheet tile, CONVEYOR push with / against. */
 import { CFG, T, key } from "../../src/core/config.js";
 import { tileOf } from "../../src/core/board.js";
-import { C, N, BD, prof, rulesOn, onIce, cross, bombArms, bombPass, relayArms, plateArms, beltPath, cellAt, moveSpeed } from "./tilemodel.mjs";
+import { C, N, BD, prof, rulesOn, onIce, iceStop, cross, bombArms, bombPass, relayArms, plateArms, beltPath, cellAt, moveSpeed } from "./tilemodel.mjs";
 
 export const MARGIN = CFG.STEP;
 const HR = 0.3;
@@ -73,32 +76,37 @@ export function escape(w, tiles, L) {
   tiles = !!tiles && rulesOn(w);
   if (!L) L = lethalMap(w, tiles);
   const p = w.players[0], sx = tileOf(p.x), sy = tileOf(p.y), s0 = key(sx, sy);
-  const glideStop = !(tiles && prof(w).glide.coast >= 2);
-  const terminal = (k) => L[k] === Infinity && (glideStop || !onIce(w, k));
-  if (terminal(s0)) return true;
-  const best = new Float64Array(N).fill(Infinity), done = new Uint8Array(N);
+  /* ICE PATCH at MAX (coast >= 2): an ice state is (tile, arrival dir) and
+     ends a search only where the sim ends a coast (iceStop); a player at rest
+     on ice (p.gl null) may stay put */
+  const nostop = tiles && prof(w).glide.coast >= 2, ice = (k) => nostop && onIce(w, k);
   const bombAt = new Uint8Array(N);
   for (const b of w.bombs) if (!b.dead) bombAt[key(b.tx, b.ty)] = 1;
+  const d0 = ice(s0) && p.gl ? BD.findIndex(([a, b]) => a === p.gl.x && b === p.gl.y) : 4;
+  const terminal = (k, d, t) => L[k] === Infinity && (d === 4 || !ice(k) || iceStop(w, k, d, t, L, bombAt));
+  if (terminal(s0, d0, 0)) return true;
+  const S = N * 5, best = new Float64Array(S).fill(Infinity), done = new Uint8Array(S);
   bombAt[s0] = 0;
-  best[s0] = 0;
+  best[s0 * 5 + d0] = 0;
   const ox = p.x / CFG.TILE - (sx + 0.5), oy = p.y / CFG.TILE - (sy + 0.5);
   for (;;) {
-    let k = -1, t = Infinity;
-    for (let i = 0; i < N; i++) if (!done[i] && best[i] < t) { t = best[i]; k = i; }
-    if (k < 0) return false;
-    done[k] = 1;
-    if (k !== s0 && terminal(k)) return true;
+    let id = -1, t = Infinity;
+    for (let i = 0; i < S; i++) if (!done[i] && best[i] < t) { t = best[i]; id = i; }
+    if (id < 0) return false;
+    done[id] = 1;
+    const k = (id / 5) | 0;
+    if (k !== s0 && terminal(k, id % 5, t)) return true;
     const x = k % C, y = (k / C) | 0;
-    for (const [dx, dy] of BD) {
-      const nk = key(x + dx, y + dy);
-      if (done[nk] || w.grid[nk] !== T.EMPTY || bombAt[nk]) continue;
+    for (let di = 0; di < 4; di++) {
+      const [dx, dy] = BD[di], nk = key(x + dx, y + dy), nid = nk * 5 + (ice(nk) ? di : 4);
+      if (done[nid] || w.grid[nk] !== T.EMPTY || bombAt[nk]) continue;
       const v = moveSpeed(w, p, k, dx, dy, tiles);
       if (v <= 0.05) continue;
       let o = 0, q = 0;
       if (k === s0) { o = dx ? ox * dx : oy * dy; q = Math.abs(dx ? oy : ox); }
       const leave = t + (0.5 + HR - o + q) / v, enter = t + Math.max(0, 0.5 - HR - o + q) / v, arrive = t + (1 - o + q) / v;
       if (leave + MARGIN >= L[k] || enter + MARGIN >= L[nk]) continue;
-      if (arrive < best[nk]) best[nk] = arrive;
+      if (arrive < best[nid]) best[nid] = arrive;
     }
   }
 }

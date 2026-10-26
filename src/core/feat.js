@@ -22,13 +22,13 @@ export const beltDir = (v) => FDIR[v - 1];
 export const HOME = Object.freeze({ FACTORY: "BELT", ICE: "GLIDE", JUNGLE: "BLOOM", ARENA: "PLATE", WATER: "STREAM", SAND: "QUICK", VOID: "PORTAL", CROWN: "GATE" });
 
 export const FEAT_PROFILE = Object.freeze([
-  Object.freeze({ belt: { actors: false, v: 1.0 }, glide: { boost: 1.25, coast: 0, turn: 0.35 }, bloom: { fwd: 2, side: 0, delay: 0, cd: 1.0 }, plate: { wind: 0.5, r: 1, cd: 3, inert: 2 } }),
+  Object.freeze({ belt: { actors: false, v: 1.0 }, glide: { boost: 1.1, coast: 0, turn: 0.35 }, bloom: { fwd: 2, side: 0, delay: 0, cd: 1.0 }, plate: { wind: 0.5, r: 1, cd: 3, inert: 2 } }),
   Object.freeze({ belt: { actors: true, v: 1.0 }, glide: { boost: 1.25, coast: 1, turn: 0.2 }, bloom: { fwd: 2, side: 1, delay: 0.15, cd: 1.0 }, plate: { wind: 0.8, r: 2, cd: 4, inert: 2 } }),
-  Object.freeze({ belt: { actors: true, v: 1.2 }, glide: { boost: 1.25, coast: 3, turn: 0.1 }, bloom: { fwd: 2, side: 2, delay: 0.3, cd: 1.0 }, plate: { wind: 1.0, r: 3, cd: 3, inert: 2 } }),
+  Object.freeze({ belt: { actors: true, v: 1.2 }, glide: { boost: 1.5, coast: 3, turn: 0.1, stop: "brake" }, bloom: { fwd: 2, side: 2, delay: 0.3, cd: 1.0 }, plate: { wind: 1.0, r: 3, cd: 3, inert: 2 } }),
 ]);
 export const TILE_HELP = Object.freeze({
   BELT: ["CARRIES BOMBS", "CARRIES BOMBS, YOU, FOES", "CARRIES ALL, FAST"],
-  GLIDE: ["FAST ICE, STOP ANY TIME", "FAST ICE, SLIDES A STEP", "FAST ICE, NO STOPPING"],
+  GLIDE: ["QUICK ICE, STOP ANY TIME", "FAST ICE, SLIDES A STEP", "SLIDES ON · BACK TO STOP"],
   BLOOM: ["THROWS YOUR BLAST ON", "BLAST LEAKS SIDEWAYS", "BLAST TURNS CORNERS LATE"],
   PLATE: ["FOES SET IT OFF · SHORT", "FOES SET IT OFF · LONG", "FOES SET IT OFF · HUGE"],
 });
@@ -141,25 +141,30 @@ function belt(m, f, rng, near, dD) {
   }
   return made > 0;
 }
-/* V24: rings of 8 around one pillar (runs of 3 at most), 1-2 rings, never
-   within 4 walking steps of spawn; rings never share or touch a run */
+/* V24 (design pass 2, #28): two rings of 8 around a pillar (runs of 3 at
+   most), never within 4 walking steps of spawn, rings never share or touch a
+   run; the pillars whose rings hold the most always-open floor (the skeleton's
+   E cells: ICE's open lane band, where the foes walk) are taken first, ties in
+   a seeded shuffle. Heat never moves a tile (R5). */
 function glide(m, f, rng, dS) {
-  const want = rng.int(1, 2), cand = [];
+  const cand = [];
   for (let y = 2; y < R - 2; y += 2) for (let x = 2; x < C - 2; x += 2) {
     if (m[key(x, y)] !== 0) continue;
-    let ok = true;
+    let ok = true, e = 0;
     for (let dy = -1; dy <= 1 && ok; dy++) for (let dx = -1; dx <= 1 && ok; dx++) {
       if (!dx && !dy) continue;
       const k = key(x + dx, y + dy);
       if (!open(m, x + dx, y + dy) || dS[k] < 0 || dS[k] <= 4) ok = false;
+      else if (m[k] === 1) e++;
     }
-    if (ok) cand.push([x, y]);
+    if (ok) cand.push([x, y, e]);
   }
   if (!cand.length) return false;
   for (let i = cand.length - 1; i > 0; i--) { const j = rng.int(0, i); [cand[i], cand[j]] = [cand[j], cand[i]]; }
+  cand.sort((a, b) => b[2] - a[2]);
   const used = [];
   for (const [x, y] of cand) {
-    if (used.length >= want) break;
+    if (used.length >= 2) break;
     if (used.some(([a, b]) => Math.abs(a - x) < 4 && Math.abs(b - y) < 4)) continue;
     used.push([x, y]);
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (dx || dy) f[key(x + dx, y + dy)] = 5;
@@ -317,10 +322,13 @@ export function sideExit(m, x, y) {
   }
   return true;
 }
-/* spawner exclusion: no foe on a feature tile, none within 1 of a PLATE */
-export function spawnBlocked(feat, x, y) {
+/* spawner exclusion: no foe on a feature tile, none within 1 of a PLATE;
+   ICE PATCH is player-only, so only a SENTRY may not start on it (V24) */
+export function spawnBlocked(feat, x, y, t) {
   if (!feat) return false;
-  if (feat[key(x, y)]) return true;
+  const v = feat[key(x, y)];
+  if (v === 5) return t === "stationary";
+  if (v) return true;
   for (const [dx, dy] of D4) if (feat[key(x + dx, y + dy)] === 7) return true;
   return false;
 }

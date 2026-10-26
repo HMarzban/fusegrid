@@ -35,7 +35,19 @@ export function ruleKind(w) {
   for (const v of w.feat) { if (isBelt(v)) return "BELT"; if (v === 5) return "GLIDE"; if (v === 6) return "BLOOM"; if (v === 7) return "PLATE"; }
   return null;
 }
+export const BOT_BRAKE = !(globalThis.process && globalThis.process.env && globalThis.process.env.FG_BOTBRAKE === "0");
 export const onIce = (w, k) => w.feat[k] === 5 && w.grid[k] === T.EMPTY;
+/* ICE PATCH at MAX (coast >= 2): does a coast arriving on ice tile k moving
+   BD[d] at time t stop there? A WALL ahead, or a BRICK / bomb still standing
+   at arrival (t < its first lethal time in L); with glide.stop "brake"
+   anywhere (an opposite press before the centre) */
+export function iceStop(w, k, d, t, L, bombAt) {
+  const st = prof(w).glide.stop;
+  if (st === "brake") return true;
+  const nk = key((k % C) + BD[d][0], ((k / C) | 0) + BD[d][1]), v = w.grid[nk];
+  if (v === undefined || v === T.WALL) return true;
+  return (v === T.BRICK || !!bombAt[nk]) && t < L[nk];
+}
 export const onBelt = (w, k) => isBelt(w.feat[k]) && w.grid[k] === T.EMPTY;
 
 /* a cross footprint on grid g: centre plus arms [dx, dy, len]; the edge and
@@ -149,7 +161,7 @@ export function iceDestOk(w, x, y, nx, ny, danger) {
   const k = key(nx, ny);
   if (!onIce(w, k)) return true;
   const c = prof(w).glide.coast;
-  if (c === 0) return true;
+  if (c === 0 || (c >= 2 && prof(w).glide.stop === "brake" && BOT_BRAKE)) return true;
   const dx = nx - x, dy = ny - y;
   if (c === 1) { const ak = key(nx + dx, ny + dy); return !(w.grid[ak] === T.EMPTY && danger.has(ak)); }
   let ex = nx, ey = ny;
