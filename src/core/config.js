@@ -26,7 +26,7 @@ export const BIOMES = Object.freeze([
 ]);
 export const biomeOf = lvl => BIOMES[(Math.max(1,lvl)-1)%BIOMES.length];
 export const EW_WALL_H_MAX=22;
-export const EW_CAPPED=Object.freeze(["CROWN"]);
+export const EW_CAPPED=Object.freeze([]);
 export const ROOM_LOCK=5;
 export const ROOM_MAX=8;
 export function isFinale(level){ const n=level|0; return n===ROOM_LOCK||n>=ROOM_MAX; }

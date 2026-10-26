@@ -5,13 +5,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { CFG, T, key, isFinale, EW_CAPPED } from "../src/core/config.js";
+import { CFG, T, key, isFinale, BIOMES, EW_CAPPED, EW_WALL_H_MAX } from "../src/core/config.js";
 import { createWorld, loadLevel, step } from "../src/core/sim.js";
 import { genBoard } from "../src/core/board.js";
 import { heatProfile, heatRoster } from "../src/core/heat.js";
 import { createRng } from "../src/core/rng.js";
 import { hurtPlayer } from "../src/core/entities.js";
-import { TPL, genBoard2, layout2, fill2, fallback2 } from "../src/core/board2.js";
+import { TPL, TPL_EDITS, genBoard2, layout2, fill2, fallback2 } from "../src/core/board2.js";
 import { validateBoard, walk, sealed, stampStart, placeFoes, freeTiles, foeMin, TRIES } from "../src/core/fair.js";
 import { DEMO_SEED, newDemoWorld } from "../src/app/attract.js";
 import { SHOW_SEED, createShow } from "../src/app/intro.js";
@@ -26,32 +26,39 @@ const ROOM = { JUNGLE: 1, ICE: 2, FACTORY: 3, WATER: 4, ARENA: 5, SAND: 6, VOID:
 const mk = (seed, lv, h, gen = 2) => { const w = createWorld(seed, lv); w.gen = gen; w.heat = h; loadLevel(w, lv, false); return w; };
 const full = (w) => ({ capped: EW_CAPPED, sym: w.layout.sym, flip: w.layout.flip, tries: w.layout.tries, fallback: w.layout.fallback, foes: w.enemies, items: w.items });
 
-test("all 14 templates are the appendix grids byte for byte: 15x13, legend chars only, closed border, one/three per biome", () => {
+test("templates: 12 are the appendix grids byte for byte, THRONE / COURT are the appendix plus the pinned N-S edits (V10 probe); 15x13, legend chars only, closed border", () => {
   const md = readFileSync(new URL("../docs/superpowers/specs/2026-10-20-level-variety-layouts.md", import.meta.url), "utf8");
   const re = /#### (\w+) · (\w+) \(room (\d)\)\n\nTemplate symmetry: `(\w+)`[^\n]*?Interior E-W lane walls \(odd x, even y\): ([^\n]*)\n\n```\n  x  012345678901234\n((?:y +\d+ [^\n]+\n){13})```/g;
   const doc = [...md.matchAll(re)];
   assert.equal(doc.length, 14);
-  const ours = Object.entries(TPL).flatMap(([b, ts]) => ts.map((t) => [b, t]));
-  assert.equal(ours.length, 14);
+  assert.equal(Object.values(TPL).flat().length, 14);
   assert.deepEqual(Object.fromEntries(Object.entries(TPL).map(([b, ts]) => [b, ts.length])), { JUNGLE: 1, ICE: 1, FACTORY: 1, WATER: 3, ARENA: 3, SAND: 1, VOID: 1, CROWN: 3 });
+  assert.deepEqual(Object.keys(TPL_EDITS), ["CROWN/throne", "CROWN/court"]);
+  const lanesOf = (rows) => { const o = []; for (let y = 2; y < R - 1; y += 2) for (let x = 1; x < C - 1; x += 2) if (rows[y][x] === "#" || rows[y][x] === "x") o.push(`(${x},${y})`); return o.length ? o.join(" ") + "." : "none."; };
+  let same = 0;
   for (const m of doc) {
-    const [, biome, name, room, sym, ew, body] = m, rows = body.trim().split("\n").map((r) => r.replace(/^y +\d+ /, ""));
+    const [, biome, name, room, sym, ew, body] = m, k = biome + "/" + name.toLowerCase(), rows = body.trim().split("\n").map((r) => r.replace(/^y +\d+ /, ""));
     const t = TPL[biome].find((q) => q.n === name.toLowerCase());
-    assert.ok(t, biome + "/" + name);
+    assert.ok(t, k);
     assert.equal(ROOM[biome], +room);
     assert.equal(t.sym, sym);
-    assert.equal(t.t.trim(), rows.join("\n"), biome + "/" + name + " byte for byte");
-    assert.equal(rows.length, R);
-    for (const [y, r] of rows.entries()) {
+    assert.equal(lanesOf(rows), ew.split(". ")[0].replace(/\.$/, "") + ".", k + " appendix E-W lane list");
+    const want = rows.map((r) => r.split(""));
+    for (const [x, y, from, to] of TPL_EDITS[k] || []) { assert.equal(want[y][x], from, k + " edit source"); want[y][x] = to; }
+    const ours = t.t.trim().split("\n");
+    assert.equal(ours.join("\n"), want.map((r) => r.join("")).join("\n"), k + " byte for byte");
+    if (!TPL_EDITS[k]) same++;
+    if (BIOMES[ROOM[biome] - 1].hWall > EW_WALL_H_MAX) assert.equal(lanesOf(ours), "none.", k + ": no E-W lane wall in a tall biome (V10)");
+    assert.equal(ours.length, R);
+    for (const [y, r] of ours.entries()) {
       assert.equal(r.length, C);
       assert.ok(/^[#xo.b?s]+$/.test(r), "legend chars only");
       for (let x = 0; x < C; x++) if (x === 0 || y === 0 || x === C - 1 || y === R - 1) assert.equal(r[x], "#");
       for (let x = 1; x < C - 1; x++) if (x % 2 && y % 2) assert.notEqual(r[x], "#", "V9 in the template");
+      if (isFinale(ROOM[biome])) for (let x = 0; x < C; x++) assert.equal(r[x], r[C - 1 - x], k + " finale templates are h-symmetric (V12)");
     }
-    const lanes = [];
-    for (let y = 2; y < R - 1; y += 2) for (let x = 1; x < C - 1; x += 2) if (rows[y][x] === "#" || rows[y][x] === "x") lanes.push(`(${x},${y})`);
-    assert.equal(lanes.length ? lanes.join(" ") + "." : "none.", ew.split(". ")[0].replace(/\.$/, "") + ".", biome + "/" + name + " E-W lane walls");
   }
+  assert.equal(same, 12);
 });
 
 test("CI sample (200 seeds x 8 rooms x 3 heats): every board passes validateBoard; 0 fallbacks / rosters cut / leaks / (odd,odd) walls / heat-dependent walls; foes >= 10, hunters >= 12", () => {
@@ -131,7 +138,7 @@ test("golden grids: one fixed seed per layout (the first fmix seed that deals it
     "WATER/islands": [2062676342, "b17e73ce"], "WATER/river": [3821583642, "7b5f1db1"], "WATER/atoll": [2512092562, "f122824e"],
     "ARENA/ring": [2512092562, "7f951a89"], "ARENA/pit": [1841444569, "3b4c68f0"], "ARENA/gauntlet": [2140575931, "f82c9f2f"],
     "SAND/ruins": [2512092562, "f94c0058"], "VOID/drift": [2512092562, "66022b7b"],
-    "CROWN/throne": [2193589889, "3d025fba"], "CROWN/court": [3821583642, "711d4619"], "CROWN/vault": [2512092562, "f4f9c4fa"] };
+    "CROWN/throne": [2193589889, "a3aa2a39"], "CROWN/court": [3821583642, "a2c332a2"], "CROWN/vault": [2512092562, "f4f9c4fa"] };
   assert.equal(Object.keys(G).length, 14);
   for (const [k, [seed, h]] of Object.entries(G)) {
     const [b, n] = k.split("/"), r = genBoard2(seed, ROOM[b], 0);

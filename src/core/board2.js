@@ -10,7 +10,10 @@
    plus the world.feat tile layer, whose placement may force EMPTY tiles; gen 2
    itself never carries a tile.
    Templates: # wall  x pillar that may ruin  o lane slot that may join
-   . reserved floor  b reserved brick  ? fill  s sparse fill. */
+   . reserved floor  b reserved brick  ? fill  s sparse fill. The appendix
+   grids, except THRONE / COURT (V10 occlusion probe, tests/three.test.mjs):
+   their E-W lane walls hid the row behind at rig C even capped at NEAR_H, so
+   they are re-authored N-S like VAULT (TPL_EDITS). */
 import { CFG, T, key, biomeOf, isFinale, EW_CAPPED } from "./config.js";
 import { createRng } from "./rng.js";
 import { genBoard } from "./board.js";
@@ -173,20 +176,20 @@ VOID:[{n:"drift",sym:"h",t:`
 CROWN:[{n:"throne",sym:"h",t:`
 ###############
 #?????...?????#
-#?#?#?###?#?#?#
-#?????...?????#
-#?#?###.###?#?#
+#?#?#?#b#?#?#?#
 #?????...?????#
 #?#?#?#.#?#?#?#
-#?????...?????#
-#?#?###.###?#?#
+#???#?...?#???#
+#?#?#?#.#?#?#?#
+#???#?...?#???#
+#?#?#?#.#?#?#?#
 #?????...?????#
 #?#?#?#.#?#?#?#
 #?????...?????#
 ###############`},{n:"court",sym:"h",t:`
 ###############
 #?????s.s?????#
-#?#?#?###?#?#?#
+#?#?#?#b#?#?#?#
 #??.........??#
 #?#.#.#.#.#.#?#
 #??.........??#
@@ -211,6 +214,10 @@ CROWN:[{n:"throne",sym:"h",t:`
 #?????...?????#
 ###############`}],
 };
+export const TPL_EDITS = Object.freeze({
+  "CROWN/throne": Object.freeze([[7, 2, "#", "b"], [5, 4, "#", "?"], [9, 4, "#", "?"], [5, 8, "#", "?"], [9, 8, "#", "?"], [4, 5, "?", "#"], [10, 5, "?", "#"], [4, 7, "?", "#"], [10, 7, "?", "#"]]),
+  "CROWN/court": Object.freeze([[7, 2, "#", "b"]]),
+});
 for (const b in TPL) for (const t of TPL[b]) t.g = t.t.trim().split("\n").join("");
 const W = 0, E = 1, B = 2, F = 3, S = 4;
 const STAMPS = {JUNGLE:[["RUIN",0,2],["PLAZA",0,1]],ICE:[["JOINV",1,3],["RUIN",0,2]],FACTORY:[["JOINH",1,3],["RUIN",0,1]],
