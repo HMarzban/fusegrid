@@ -50,9 +50,32 @@ under Node tests and in the browser.
 | MAKO, the reef critter | any other hero | MAKO is the live hero; nothing else is built |
 | REAL 3D ⇄ CLASSIC 2D | "deterministic" in a player headline | That's a contributor word |
 | I'm making… (first person) | we're making…, internal round names | Posts are the owner's own game-log (owner, 2026-10-23) |
+| AI-assisted concept art (on the card and in the post) | concept art with no note | Owner, 2026-10-26: AI-made concept art is labelled |
+| IDEA · NOT IN THE GAME YET, PREVIEW | "coming soon", a date, "new in the game" for a design | Ideas and previews are badged; only built things are "live" |
 
 Only describe what's live today. Story mode, new worlds, bosses and the next
 hero are design work, not features. They stay out of every listing.
+
+**Devlog posts are the one exception, and only with a badge.** The owner's X
+game-log may show ideas (a new hero concept, a story map, new boards, floor
+tiles) when every card carries an IDEA / IN DESIGN / PREVIEW badge and the
+post says plainly that it is not in the game yet.
+
+### Prepared post series
+
+Prepared by agents, posted by the owner by hand. The cards and copy are git-ignored
+(they live under `.superpowers/sdd/`); each folder has the copy file with
+script-counted texts (X weighted count, a URL = 23), alt text and a posting order.
+
+| Folder | What | Notes |
+|---|---|---|
+| `2026-10-21-post-x/` | First progress post | Posted by the owner |
+| `2026-10-23-post-x/` | Board devlog, IN THE WORKS | Posted by the owner |
+| `2026-10-25-post-x/` | Three posts × 4 cards, v184 BEFORE vs v185 NOW | Post only after v185 is live (OPTIONS reads `BUILD v185`) |
+| `2026-10-26-social/` | Eight standalone 16:9 cards: four dev stories, four ideas | Ideas badged; SOLIN card says "AI-assisted concept art"; boss names may change |
+
+Every picture is a real capture of the game or the owner's own design work,
+never generated key art for the game itself.
 
 ---
 

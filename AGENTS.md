@@ -707,6 +707,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
 ## Learned User Preferences
 - Public name and wordmark are Fusegrid / FUSE/GRID; keep the local checkout as `rollblock`. Never write the name of the private reference game (the well-known grid-bomb franchise this project is measured against) into any committed file (specs, comments, commit messages, docs, alt text, tags) — it is a private quality reference only; `docs/` is public.
 - This repository is the arcade game only — do not add unrelated demos.
+- Social posts (owner 2026-10-23 / 2026-10-26): first person, no internal round names, ideas and previews badged "not in the game yet", AI-made concept art labelled "AI-assisted concept art" on the card and in the post; agents prepare, the owner posts. Prepared series are indexed in `docs/marketing/README.md`.
 - Keep a visible path to the public repo: menu SOURCE opens https://github.com/HMarzban/fusegrid.
 - Keep ITEMS, ENEMIES, and HOW TO as in-menu help so pickups and foes are explained in the shell, not only as HUD chips.
 - Opening (2026-10-09): title, then press, then a ~4 s show (camera sweep, MAKO pop-in, fuse, blast reveals MENU), with music from the press. Any key skips the show (the title waits for a press). First visits land on MENU at PLAY, not in a run. The title follows RENDER; the show plays the MENU theme throughout, and the `intro` track is kept unused.
