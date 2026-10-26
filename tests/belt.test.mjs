@@ -1,5 +1,5 @@
 /* CONVEYOR design pass 2 (#28, reference rules for #19): the forgiving
-   step-off (snap), the ride to the chain's end (endHalt), a chain into a wall
+   step-off (snap: no push while you hold toward an open side cell), the ride to the chain's end (endHalt), a chain into a wall
    carries no one (wallStop), bombs ride under walkers (thru), PLUS carries
    no foe, and the static model's known fuse cell equals the sim's. Built on
    a real gen-3 world with a hand-made corridor. */
@@ -57,12 +57,6 @@ test("snap: at MAX + HARD, holding UP across a carrying belt at any phase leaves
     if (tileOf(w.players[0].y) === 5 && tileOf(w.players[0].x) > 7) lost++;
   }
   assert.ok(lost > 0, "without snap a late phase is carried past the exit");
-});
-test("snap: a held direction across the belt stops the push even where no exit is", () => {
-  const w = world(2, [3, 4, 5, 6, 7, 8], F.BELT_E);
-  put(w, 4.5, 5.5);
-  run(w, 1.0, mv(0, -1));
-  assert.equal(tileOf(w.players[0].x), 4);
 });
 test("endHalt: a standing rider is carried to the chain's last cell and stays on it, at PLUS and MAX", () => {
   for (const heat of [1, 2]) {

@@ -446,7 +446,7 @@ function keepDir(e, f) {
    so the AI never sees the push; a WALL one step downstream halts it.
    Pass 2 (#28), each a profile flag so the 2026-10-21 rule stays readable:
    foes:false (PLUS) carries you but not foes; snap = the forgiving step-off,
-   no push while you hold a direction across the belt, and a push never
+   no push while you hold toward an open side cell, and a push never
    slides you sideways (moveEntity's corner slide) - if it would, it waits;
    endHalt = riders are carried to the chain's last cell and stop there, never
    shoved off the end; wallStop = a chain whose downstream end is a WALL (a
@@ -465,7 +465,7 @@ function beltActors(w, dt, player, inp) {
       for (let n = 0; n < 16 && isBelt(w.feat[key(x, y)]) && w.grid[key(x, y)] === T.EMPTY; n++) { const [ux, uy] = beltDir(w.feat[key(x, y)]); x += ux; y += uy; }
       if (isWall(w.grid, x, y)) return;
     }
-    if (pb.snap && (dx ? my : mx)) return;
+    if (pb.snap && (dx ? my : mx) && w.grid[key(tx + (dx ? 0 : mx), ty + (dx ? my : 0))] === T.EMPTY) return;
     let vv = v;
     if (pb.endHalt) {
       const nk = key(tx + dx, ty + dy);
