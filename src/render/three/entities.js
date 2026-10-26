@@ -1436,6 +1436,7 @@ export function createPools(biome, atlas) {
       /* lock-on (issue #32): a forward crouch (stepFoe's pitch) squashed low and wide, and the lane chevrons on the floor through groundfx LANES */
       if (S.lk > 0.001) {
         s.scale.set(sc * (1 + 0.06 * S.lk), sc * (1 - 0.1 * S.lk), sc * (1 + 0.06 * S.lk));
+        s.position.y -= 0.1 * S.lk * EH[kk] * sc;   // the squash is about the slot centre: keep the feet on the floor
         if (nl < LN_N) {
           const o = nl++ * 12,
             k = S.lk;
