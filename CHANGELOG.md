@@ -15,6 +15,15 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
+## shell v187 · 2026-10-26
+
+### Changed
+- **The play-stats question no longer stops the game.** It's now a small card
+  in the bottom-right corner (along the bottom on a phone), with no dimmed
+  background, so you can keep playing and answer whenever you like. During a
+  run it shows only when it fits beside the board, and never over the controls
+  on a phone; otherwise it waits for the menus.
+
 ## shell v186 · 2026-10-26
 
 ### Fixed

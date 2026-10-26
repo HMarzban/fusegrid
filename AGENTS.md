@@ -60,13 +60,13 @@ through `listGeom` / `listHit` (pitches are caps that scale down in a short
 box); MENU has a PLAY hero row whose tag is the run it starts and group gaps
 before OPTIONS / HIGH SCORES / SOURCE; the SOURCE URL shows only on its
 selected row. Build tag (owner 2026-10-21: "a game version in some where in
-the display or menue"): `v186` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
+the display or menue"): `v187` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
 derived ONLY in `shellview.js` (`REV`, handed to `drawMenu` / `drawSettings`
-as `rev`) and `update.js` (the card's "You are on v186", the running build,
+as `rev`) and `update.js` (the card's "You are on v187", the running build,
 never a guessed next one) — never a second literal. Keyboard MENU appends
 it to the foot hint; the touch hub hangs it under the plate when the box has
 >= 10 units below it (`#sh`), else on the SOURCE tile's teaser (landscape on
-the board canvas); OPTIONS keeps its `BUILD v186` kicker. Never on the HUD.
+the board canvas); OPTIONS keeps its `BUILD v187` kicker. Never on the HUD.
 PAUSE draws `pauseGeom(overlayBox, touch)`: touch (`touchLay`,
 data-lay p/l) caps pitch at `PAUSE_ROW_H` 70 / hero 76 / width 380, a keyboard
 screen at the compact `PAUSE_ROW_D` 44 / hero 54 / width 340 (owner: "too
@@ -564,11 +564,15 @@ not shell screens. Do not add them as `SCREEN` values.
   `?debug=1` elsewhere is DRY (`__GAME__.ga.log`, never the network). Consent
   `nb.analytics.v1` (`"1"`/`"0"`, absent = ask; KEEP list) is its own store,
   never a `nb.settings.v1` key, so RESET DEFAULTS leaves it. The card `#ana`
-  reuses the `#upd` plate with ALLOW (`Y`) and NO THANKS (`N`) at EQUAL weight
-  (never a big yes and a muted no); Escape or a backdrop tap hides it until the
-  next boot and records nothing. While it shows it owns the keyboard (a window
-  capture listener ahead of `input.js`). It shows on MENU and its pages only,
-  never INTRO / ATTRACT / GAME, and waits while NEW VERSION READY is up.
+  is a NON-BLOCKING corner card (owner 2026-10-26, v187: "let user to play and
+  if they like it they can then answer"): the CONSOLE PANEL plate docked 16px
+  bottom-right (touch portrait: across the bottom), no backdrop, never grabs
+  the keyboard; ALLOW (`Y`) and NO THANKS (`N`) at EQUAL weight (never a big
+  yes and a muted no), and only Y / N are taken while it shows. It shows on
+  MENU and its pages, and in GAME only on a keyboard layout when
+  `cardClears` (it sits beside or under the `#c` stage); never INTRO /
+  ATTRACT, never a touch run (the bomb button's corner); it waits while NEW
+  VERSION READY is up. It stays until answered (no snooze).
   OPTIONS `ANALYTICS` ON/OFF sits after REDUCE FLASH (row 8; OPTIONS touch
   pitch 37 so eleven rows fit unscaled); OFF sets `ga-disable-<ID>`, denies
   consent and expires the `_ga*` cookies. Cookies live on the game's own path
@@ -976,7 +980,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   real page" means `typeof location.href === "string"` (the branch's gen-2 page
   default depended on it; since v185 gen 2 is `?gen=2` only).
 - Release state (2026-10-26): shell **v185** (the board look + opt-in GA4) went
-  LIVE 2026-10-26; **v186** is its hotfix (`#upd[hidden],#ana[hidden]`: an
+  LIVE 2026-10-26; **v187** turns the consent ask into a corner card; **v186** is its hotfix (`#upd[hidden],#ana[hidden]`: an
   author `display:flex` beats the UA `[hidden]` rule, so neither card ever hid;
   `tests/hidden-css.test.mjs` now gates every `#id` display rule). The owner
   pushes, or says "push". Boards: today's (gen 1) by default, the

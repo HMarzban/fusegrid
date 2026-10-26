@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-26 — v187: consent ask is a corner card
+- Owner: the centred card "frize everythings"; wants it bottom-right so players can play and answer later. `#ana` docks bottom-right (phone: across the bottom), no backdrop, only Y/N keys; in a run it shows only on a keyboard layout when `cardClears` (beside/under `#c`), never on a touch run. Escape/backdrop snooze removed. CACHE_NAME/REV v187.
+
 ## 2026-10-26 — v186 hotfix: the consent and NEW VERSION cards never hid
 - Users reported ALLOW leaves the card up. Cause: `#upd,#ana{display:flex}` beats the UA `[hidden]{display:none}`, so `el.hidden = true` did nothing (NEW VERSION card too, since v179). My v185 check read `card.hidden` and never looked at the screen after the click. Fix: `#upd[hidden],#ana[hidden]{display:none}` + `tests/hidden-css.test.mjs`; CACHE_NAME/REV v186, CHANGELOG. v185 itself was pushed and went live today.
 

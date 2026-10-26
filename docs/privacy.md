@@ -7,8 +7,9 @@ stay in your own browser's local storage.
 
 ## Play stats (Google Analytics), only if you allow it
 
-The first time you reach the main menu, the game asks whether you want to share
-play stats. Until you press **ALLOW**, nothing is sent. The game loads
+The first time you reach the main menu, a small card in the corner asks whether
+you want to share play stats. It doesn't stop the game: play first and answer
+whenever you like. Until you press **ALLOW**, nothing is sent. The game loads
 no Google script and sets no cookie.
 
 If you allow it, the game uses Google Analytics 4 to count:

@@ -272,8 +272,9 @@ card existed (shell v178 and older) update once on their own, because their
 page can't show it. Cleanup touches only this game's own caches. First-time offline
 loading and syncing progress between devices are outside this design.
 Play stats are opt-in Google Analytics 4 ([`analytics.js`](../src/app/analytics.js),
-[privacy](privacy.md)). A consent card on the menus asks once, and OPTIONS →
-ANALYTICS changes the answer. Nothing loads before ALLOW. Then `gtag.js` arrives
+[privacy](privacy.md)). A small corner card asks once without stopping the game
+(no backdrop, no keyboard grab; in a run only when it fits beside the board),
+and OPTIONS → ANALYTICS changes the answer. Nothing loads before ALLOW. Then `gtag.js` arrives
 as a plain script tag (still zero npm deps), its cookies are scoped to the
 game's own path on the shared `github.io` origin, and every ad signal is denied.
 It runs only on the Pages host with a real Measurement ID; `?debug=1` elsewhere

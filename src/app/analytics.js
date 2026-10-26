@@ -1,6 +1,8 @@
 /* Google Analytics (GA4), opt-in (owner 2026-10-26: "we need a tracker in
    order to see how many people stay in game or open the game"; consent pick
-   "ask once, with an OPTIONS switch"). Nothing reaches Google before ALLOW:
+   "ask once, with an OPTIONS switch"). The ask is a corner card that never
+   blocks play (owner: "let user to play and if they like it they can then
+   answer"): no backdrop, no keyboard grab, Y / N only while it shows. Nothing reaches Google before ALLOW:
    no gtag.js request, no cookie, no event. NO THANKS or no answer sends
    nothing. Live only on the public Pages host with a real Measurement ID;
    ?debug=1 anywhere else is DRY (the card and the row work, every gtag call
@@ -43,9 +45,22 @@ export function daysBucket(n) {
 
 export const gaLive = (id, host) => /^G-[A-Z0-9]{4,}$/.test(id || "") && id !== GA_PLACEHOLDER && host === GA_HOST;
 
-/* Pure: may the consent card show on this frame? MENU and its pages only. */
-export function cardVisible(screen, S) {
-  return screen !== S.BOOT && screen !== S.INTRO && screen !== S.ATTRACT && screen !== S.GAME;
+/* Pure: may the consent card show on this frame? MENU, its pages and, on a
+   keyboard screen, the run itself when the card clears the board (`roomy`).
+   Never INTRO or ATTRACT (any key leaves them), and never a touch run, whose
+   bomb button owns that corner. */
+export function cardVisible(screen, S, touch, roomy) {
+  if (screen === S.GAME) return !touch && roomy !== false;
+  return screen !== S.BOOT && screen !== S.INTRO && screen !== S.ATTRACT;
+}
+/* Pure: does the card (CARD_W wide, ch tall, docked 16px from the
+   bottom-right corner of a vw x vh viewport) clear the stage rect r, beside
+   it or under it? ch is the card's last measured height. */
+export const CARD_W = 330, CARD_H = 160;
+export function cardClears(r, vw, vh, ch) {
+  if (!r) return true;
+  const x = vw - 16 - Math.min(CARD_W, vw - 32), y = vh - 16 - (ch || CARD_H);
+  return r.right + 8 <= x || r.bottom + 8 <= y;
 }
 
 /* The game's own directory, so the _ga cookies never cover the rest of the
@@ -65,9 +80,7 @@ export function mountAnalytics(env) {
     log = [];
   let consent = loadConsent(e.store),
     booted = false,
-    snoozed = false,
-    card = null,
-    bg = null;
+    card = null;
   function gtag() {
     if (dry) log.push(Array.prototype.slice.call(arguments));
     else win.dataLayer.push(arguments); // gtag.js reads Arguments objects, never plain arrays
@@ -104,7 +117,7 @@ export function mountAnalytics(env) {
     gtag("consent", "update", { analytics_storage: "denied" });
     dropCookies();
   };
-  const hide = () => { if (card) card.hidden = bg.hidden = true; };
+  const hide = () => { if (card) card.hidden = true; };
   const set = (v) => {
     consent = v ? 1 : 0;
     saveConsent(consent, e.store);
@@ -113,23 +126,15 @@ export function mountAnalytics(env) {
     else off();
     if (e.onChange) e.onChange(!!consent);
   };
-  const later = () => { snoozed = true; hide(); };
   const shown = () => !!card && !card.hidden;
   const build = () => {
-    bg = doc.createElement("div");
-    bg.id = "anabg";
-    bg.hidden = true;
-    bg.addEventListener("pointerdown", (ev) => ev.stopPropagation());
-    bg.addEventListener("pointerup", (ev) => { ev.stopPropagation(); later(); });
-    doc.body.appendChild(bg);
     card = doc.createElement("div");
     card.id = "ana";
     card.hidden = true;
-    card.setAttribute("role", "dialog");
+    card.setAttribute("role", "region");
     card.setAttribute("aria-label", "Share play stats");
-    card.innerHTML = "<b>HELP TUNE FUSE/GRID?</b><i>Share play stats with Google Analytics: when you open the game, " +
-      'the runs you start and the room you reach. It sets a cookie that recognises you when you come back. ' +
-      'Change it any time in OPTIONS. <a href="' + PRIVACY_URL +
+    card.innerHTML = "<b>HELP TUNE FUSE/GRID?</b><i>Share play stats with Google Analytics: opens, runs and the room " +
+      'you reach. It sets a cookie that recognises you when you come back. Change it any time in OPTIONS. <a href="' + PRIVACY_URL +
       '" target="_blank" rel="noopener noreferrer">Privacy</a></i>' +
       '<span class="yes" role="button" tabindex="-1"><kbd>Y</kbd>ALLOW</span>' +
       '<span class="no" role="button" tabindex="-1"><kbd>N</kbd>NO THANKS</span>';
@@ -143,23 +148,22 @@ export function mountAnalytics(env) {
     card.addEventListener("pointerdown", (ev) => ev.stopPropagation());
     card.addEventListener("pointerup", (ev) => ev.stopPropagation());
     doc.body.appendChild(card);
-    /* capture on window runs before input.js's window listener: while the
-       card shows it owns the keyboard, so Enter cannot start a run behind it */
+    /* Y / N answer while it shows; every other key goes on to the game */
     win.addEventListener("keydown", (ev) => {
-      if (!shown()) return;
+      if (!shown() || ev.repeat || (ev.code !== "KeyY" && ev.code !== "KeyN")) return;
       ev.stopImmediatePropagation();
-      if (ev.repeat) return;
-      if (ev.code === "KeyY") set(1);
-      else if (ev.code === "KeyN") set(0);
-      else if (ev.code === "Escape") later();
+      set(ev.code === "KeyY" ? 1 : 0);
     }, true);
   };
   const tick = () => {
     if (!card) return;
     const g = e.get && e.get();
     if (!g || !g.app) return;
-    const show = consent === -1 && !snoozed && !(g.busy && g.busy()) && cardVisible(g.app.screen, g.SCREEN);
-    if (card.hidden === show) card.hidden = bg.hidden = !show;
+    const lay = doc.body && doc.body.dataset ? doc.body.dataset.lay : "d",
+      stage = g.app.screen === g.SCREEN.GAME && doc.getElementById ? doc.getElementById("c") : null,
+      roomy = !stage || !win.innerWidth || cardClears(stage.getBoundingClientRect(), win.innerWidth, win.innerHeight, card.offsetHeight),
+      show = consent === -1 && !(g.busy && g.busy()) && cardVisible(g.app.screen, g.SCREEN, lay === "p" || lay === "l", roomy);
+    if (card.hidden === show) card.hidden = !show;
   };
   if (consent === 1) boot();
   if ((live || dry) && consent === -1 && doc && win) {

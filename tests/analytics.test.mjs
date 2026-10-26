@@ -8,6 +8,7 @@ import {
   daysBucket,
   gaLive,
   cardVisible,
+  cardClears,
   cookiePath,
   mountAnalytics,
 } from "../src/app/analytics.js";
@@ -40,10 +41,10 @@ const mkEl = (tag) => {
     fire(t, ev) { (L[t] || []).forEach((f) => f(ev)); },
   };
 };
-const mkDom = (cookie) => {
+const mkDom = (cookie, lay) => {
   const body = [], head = [], writes = [], WL = [];
   const doc = {
-    body: { appendChild: (el) => body.push(el) },
+    body: { appendChild: (el) => body.push(el), dataset: { lay: lay || "d" } },
     head: { appendChild: (el) => head.push(el) },
     createElement: mkEl,
     get cookie() { return cookie || ""; },
@@ -55,7 +56,7 @@ const mkDom = (cookie) => {
     WL.filter((l) => l.t === "keydown" && l.cap === true).forEach((l) => l.f(ev));
     return ev;
   };
-  return { doc, win, body, head, writes, key, card: () => body.find((e) => e.id === "ana"), bg: () => body.find((e) => e.id === "anabg") };
+  return { doc, win, body, head, writes, key, card: () => body.find((e) => e.id === "ana") };
 };
 const ptr = () => ({ stopPropagation() {} });
 const LOC = { hostname: GA_HOST, pathname: "/fusegrid/index.html" };
@@ -85,9 +86,16 @@ check("daysBucket: junk reads 0", daysBucket(undefined) === "0" && daysBucket(Na
 check("gaLive: the placeholder ID never runs, even on the Pages host", !gaLive(GA_PLACEHOLDER, GA_HOST));
 check("gaLive: a real ID runs only on the Pages host",
   gaLive(ID, GA_HOST) && !gaLive(ID, "127.0.0.1") && !gaLive(ID, "localhost") && !gaLive(ID, "someone.github.io") && !gaLive("UA-1", GA_HOST));
-check("cardVisible: MENU and its pages, never BOOT / INTRO / ATTRACT / GAME",
+check("cardVisible: MENU and its pages, never BOOT / INTRO / ATTRACT",
   cardVisible(SCREEN.MENU, SCREEN) && cardVisible(SCREEN.SETTINGS, SCREEN) && cardVisible(SCREEN.STATS, SCREEN) &&
-  !cardVisible(SCREEN.BOOT, SCREEN) && !cardVisible(SCREEN.INTRO, SCREEN) && !cardVisible(SCREEN.ATTRACT, SCREEN) && !cardVisible(SCREEN.GAME, SCREEN));
+  !cardVisible(SCREEN.BOOT, SCREEN) && !cardVisible(SCREEN.INTRO, SCREEN) && !cardVisible(SCREEN.ATTRACT, SCREEN));
+check("cardClears: beside or under the stage clears; a stage reaching the corner does not",
+  cardClears({ right: 600, bottom: 760 }, 1440, 900) && cardClears({ right: 1000, bottom: 600 }, 1024, 900) &&
+  !cardClears({ right: 1000, bottom: 760 }, 1024, 768) && cardClears(null, 800, 600));
+check("cardVisible: a keyboard run that leaves no room for the card waits for the menus",
+  !cardVisible(SCREEN.GAME, SCREEN, false, false) && cardVisible(SCREEN.MENU, SCREEN, false, false));
+check("cardVisible: a keyboard run keeps the card; a touch run (bomb button corner) hides it",
+  cardVisible(SCREEN.GAME, SCREEN, false) && !cardVisible(SCREEN.GAME, SCREEN, true) && cardVisible(SCREEN.MENU, SCREEN, true));
 check("cookiePath keeps the cookies on the game's own directory",
   cookiePath("/fusegrid/index.html") === "/fusegrid/" && cookiePath("/fusegrid/") === "/fusegrid/" && cookiePath(undefined) === "/" && cookiePath("") === "/");
 
@@ -114,7 +122,7 @@ check("cookiePath keeps the cookies on the game's own directory",
   const ga = mountAnalytics({ id: ID, store: st, win: D.win, doc: D.doc, loc: LOC, now: () => "NOW", days: 5, look: () => "px",
     get: () => ({ app: { screen }, SCREEN, busy: () => busy }), onChange: (v) => seen.push(v) });
   check("live + never asked: the card is built hidden, nothing loads",
-    ga.live && !!D.card() && D.card().hidden && D.bg().hidden && D.head.length === 0 && D.win.dataLayer === undefined);
+    ga.live && !!D.card() && D.card().hidden && D.head.length === 0 && D.win.dataLayer === undefined);
   check("the card names Google Analytics, the cookie and OPTIONS",
     /Google Analytics/.test(D.card().innerHTML) && /cookie/.test(D.card().innerHTML) && /OPTIONS/.test(D.card().innerHTML));
   ga.event("run_start", { room: 1 });
@@ -122,14 +130,15 @@ check("cookiePath keeps the cookies on the game's own directory",
   ga.tick();
   check("INTRO: the card stays hidden", D.card().hidden);
   screen = SCREEN.MENU; ga.tick();
-  check("MENU: the card shows with its backdrop", !D.card().hidden && !D.bg().hidden && ga.shown);
+  check("MENU: the card shows, with no backdrop built at all", !D.card().hidden && ga.shown && D.body.length === 1);
   busy = true; ga.tick();
   check("the NEW VERSION card up: the consent card waits", D.card().hidden);
   busy = false; screen = SCREEN.GAME; ga.tick();
-  check("GAME: hidden", D.card().hidden);
+  check("GAME on a keyboard screen: the card stays up in its corner while you play", !D.card().hidden);
+  const ent = D.key("Enter"), esc = D.key("Escape"), sp = D.key("Space");
+  check("it never takes the keyboard: Enter, Escape and Space reach the game, nothing recorded",
+    !ent.stopped && !esc.stopped && !sp.stopped && ga.consent === -1 && !D.card().hidden);
   screen = SCREEN.MENU; ga.tick();
-  const ent = D.key("Enter");
-  check("while it shows, the card owns the keyboard (Enter never reaches the game)", ent.stopped && ga.consent === -1);
   const y = D.key("KeyY");
   check("Y = ALLOW: saved, card gone, onChange(true)", y.stopped && st.m.get(ANALYTICS_KEY) === "1" && ga.consent === 1 && D.card().hidden && seen.join() === "true");
   const s = D.head[0];
@@ -159,16 +168,20 @@ check("cookiePath keeps the cookies on the game's own directory",
   check("N = NO THANKS: saved 0, no script, no dataLayer, events dropped",
     st.m.get(ANALYTICS_KEY) === "0" && D.head.length === 0 && D.win.dataLayer === undefined && D.card().hidden);
 }
-// ---- Escape / backdrop: hide until the next boot, record nothing ----
+// ---- touch: the card waits out a run (the bomb button owns that corner) ----
 {
-  const D = mkDom(), st = mkStore();
-  const ga = mountAnalytics({ id: ID, store: st, win: D.win, doc: D.doc, loc: LOC, ...atMenu(SCREEN.MENU) });
-  ga.tick(); D.key("Escape"); ga.tick();
-  check("Escape hides the card for this boot and records nothing", D.card().hidden && !st.m.has(ANALYTICS_KEY) && ga.consent === -1);
-  const D2 = mkDom(), st2 = mkStore();
-  const ga2 = mountAnalytics({ id: ID, store: st2, win: D2.win, doc: D2.doc, loc: LOC, ...atMenu(SCREEN.MENU) });
-  ga2.tick(); D2.bg().fire("pointerup", ptr()); ga2.tick();
-  check("a tap on the backdrop does the same", D2.card().hidden && !st2.m.has(ANALYTICS_KEY));
+  const D = mkDom("", "p"), st = mkStore();
+  let screen = SCREEN.MENU;
+  const ga = mountAnalytics({ id: ID, store: st, win: D.win, doc: D.doc, loc: LOC, get: () => ({ app: { screen }, SCREEN }) });
+  ga.tick();
+  check("touch MENU: the card shows", !D.card().hidden);
+  screen = SCREEN.GAME; ga.tick();
+  check("touch run: hidden, nothing recorded", D.card().hidden && !st.m.has(ANALYTICS_KEY));
+  screen = SCREEN.MENU; ga.tick();
+  check("back on the touch menus: it shows again", !D.card().hidden);
+}
+// ---- taps ----
+{
   const D3 = mkDom(), st3 = mkStore();
   const ga3 = mountAnalytics({ id: ID, store: st3, win: D3.win, doc: D3.doc, loc: LOC, ...atMenu(SCREEN.MENU) });
   ga3.tick(); D3.card().querySelector(".yes").fire("pointerup", ptr());
