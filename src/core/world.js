@@ -13,6 +13,7 @@ import { clampPact, applyPact } from "./pact.js";
 export function createWorld(seed = 1, level = 1) {
   return {
     seed: seed >>> 0,
+    nextSeed: null, // armed by main for an ordinary run; startGame consumes it
     level,
     rng: createRng((seed ^ (level * 40503)) >>> 0),
     grid: null,

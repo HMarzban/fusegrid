@@ -1818,7 +1818,9 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
 
 // ---- R9a: the ghost records only GAME clears, races a retry, and its tick
 // sits BEFORE the step loop (pin 6b: a sim-internal room start records from
-// roomT ~dt, never against the previous room's clock) ----
+// roomT ~dt, never against the previous room's clock). O4 (owner 2026-10-26):
+// only a fixed board (a ?code= or DAILY run) records or races; an ordinary
+// run deals a new board every start, so it records none and races none. ----
 {
   const {ghostKey,decodeGhost,GHOST_KEY}=await import("../src/app/ghost.js");
   const {readdirSync}=await import("node:fs");
@@ -1842,7 +1844,7 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
       const seen=[];
       const r=g.renderer, rr=r.render;
       r.render=(w,dt,o)=>{ seen.push(o&&o.ghost); return rr(w,dt,o); };
-      g.app.skip(); g.app.startRun();
+      g.app.skip(); g.app.playChallenge({seed:32,heat:0,pact:0,pace:0}); // a code run: the board is fixed
       let t=1000;
       const X=(k)=>60+4*k, p=()=>g.world.players[0];
       const frames=(n)=>{ for(let f=0;f<n;f++){ t+=16; g.loop(t); } };
@@ -1864,8 +1866,8 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
       fireUntil("LOSE");
       const mark=seen.length;
       tagged(20);
-      check("R9a the sim's LOSE->retry reloads room 1 in PLAY",g.world.state==="PLAY"&&g.world.level===1);
-      check("R9a a LOSE->retry of room 1 races the stored ghost on its first PLAY frames",
+      check("R9a the sim's LOSE->retry of a code run reloads the SAME room 1 board in PLAY",g.world.state==="PLAY"&&g.world.level===1&&g.world.seed===32);
+      check("R9a a code run's LOSE->retry of room 1 races the stored ghost on its first PLAY frames",
         seen.slice(mark,mark+3).length===3&&seen.slice(mark,mark+3).every((x)=>x&&typeof x.x==="number"),
         JSON.stringify(seen.slice(mark,mark+3)));
       winOut();
@@ -1881,6 +1883,47 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
       check("R9a 6b next room: s.length/5 === d + 1",!!e2&&e2.s.length/5===e2.d+1,e2&&(e2.s.length/5+"/"+e2.d));
       check("R9a 6b next room: first sample at roomT <= 1/30, sample 1 off spawn",
         s2.length>1&&s2[0].x===X(1)&&s2[1].x!==60,s2.slice(0,2).map((s)=>s.x).join());
+    }
+    {
+      /* O4 negative: an ordinary run (seed 33 => run 0 is board 33) races no
+         ghost even one stored under its own key, records none on a clear, and
+         its GAME OVER restart deals a new board and races nothing. */
+      for(const k of Object.keys(mem)) if(k!=="nb.cabinet.v1") delete mem[k];
+      mem[GHOST_KEY]=JSON.stringify({v:1,g:{"33:1:0:0:1":{d:5,s:"1E1E41E1E41E1E41E1E41E1E41E1E4"}}});
+      const g=createGame(null,{seed:33});
+      const seen=[];
+      const r=g.renderer, rr=r.render;
+      r.render=(w,dt,o)=>{ seen.push(o&&o.ghost); return rr(w,dt,o); };
+      g.app.skip(); g.app.startRun();
+      let t=1000;
+      const frames=(n)=>{ for(let f=0;f<n;f++){ t+=16; g.loop(t); } };
+      frames(3);
+      check("R9a O4 an ordinary run 0 (board = boot seed 33) races no stored ghost, even one under its own key",
+        g.world.seed===33&&seen.length>0&&seen.every((x)=>x==null),JSON.stringify(seen.slice(0,3)));
+      const before=mem[GHOST_KEY];
+      g.world.enemies.length=0; let n=0;
+      while(g.world.state!=="WIN"&&n++<400){ t+=16; g.loop(t); } frames(2);
+      check("R9a O4 an ordinary run's room clear writes no ghost",g.world.state==="WIN"&&mem[GHOST_KEY]===before,String(mem[GHOST_KEY]));
+      g.world.state="LOSE"; frames(3);
+      g.input.setIntent({fire:true}); n=0; while(g.world.state==="LOSE"&&n++<20){ t+=16; g.loop(t); } g.input.setIntent({fire:false});
+      const mark=seen.length; frames(5);
+      check("R9a O4 an ordinary GAME OVER restart deals a new board and races nothing",
+        g.world.state==="PLAY"&&g.world.seed!==33&&seen.slice(mark).every((x)=>x==null),g.world.seed+"/"+JSON.stringify(seen.slice(mark)));
+    }
+    {
+      const {dailySeed}=await import("../src/app/daily.js");
+      for(const k of Object.keys(mem)) if(k!=="nb.cabinet.v1") delete mem[k];
+      const p2=(n)=>(n<10?"0"+n:""+n), d0=new Date();
+      const local=d0.getFullYear()+"-"+p2(d0.getMonth()+1)+"-"+p2(d0.getDate());
+      const g=createGame(null,{seed:34});
+      g.app.skip(); g.app.startDaily();
+      let t=1000;
+      const frames=(n)=>{ for(let f=0;f<n;f++){ t+=16; g.loop(t); } };
+      frames(30); g.world.enemies.length=0; let n=0;
+      while(g.world.state!=="WIN"&&n++<400){ t+=16; g.loop(t); } frames(2);
+      const kd=dailySeed(local)+":1:0:0:1";
+      check("R9a O4 a DAILY room clear records its ghost under the daily board's key",
+        GHOST_KEY in mem&&JSON.stringify(Object.keys(G()))===JSON.stringify([kd]),String(mem[GHOST_KEY]));
     }
     const core=(d)=>readdirSync(join(ROOT,d),{withFileTypes:true}).flatMap((e)=>
       e.isDirectory()?core(join(d,e.name)):e.name.endsWith(".js")?[join(d,e.name)]:[]);

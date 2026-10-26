@@ -9,6 +9,7 @@ import {
   dailyStamp,
   finishDaily,
 } from "../src/app/daily.js";
+import { runSeed } from "../src/core/rng.js";
 
 let pass = 0,
   fail = 0;
@@ -487,8 +488,8 @@ import { createGame } from "../src/main.js";
     "the seed is applied BEFORE loadLevel, which reads it for both createRng and genBoard",
     (() => {
       const blk = (src.match(/const onStart = \(args\) => \{[\s\S]{0,1400}/) || [""])[0];
-      return blk.indexOf("world.seed = args") > 0 &&
-        blk.indexOf("world.seed = args") < blk.indexOf("loadLevel(world, args.level");
+      return blk.indexOf("world.seed = runFixed") > 0 &&
+        blk.indexOf("world.seed = runFixed") < blk.indexOf("loadLevel(world, args.level");
     })(),
     (src.match(/world\.seed = [^\n]*/) || [])[0],
   );
@@ -497,15 +498,24 @@ import { createGame } from "../src/main.js";
     !/startRunState[\s\S]{0,200}dailyDate = null/.test(src),
     (src.match(/dailyDate = [^\n]*/g) || []).join(" | "),
   );
+  /* #10 renegotiated: main writes world.seed at its two run starts (onStart,
+     PAUSE RESTART) and arms world.nextSeed; src/core's one seed write is
+     startGame consuming that armed seed (the GAME OVER / finale restart). */
+  const sim = readFileSync("src/core/sim.js", "utf8");
   check(
-    "src/core is untouched: the seed reaches the sim only through world.seed",
-    (src.match(/world\.seed = /g) || []).length === 1,
+    "the seed reaches the sim only through world.seed and the armed world.nextSeed",
+    (src.match(/world\.seed = /g) || []).length === 2 &&
+      (sim.match(/world\.seed = /g) || []).length === 1 &&
+      /if \(world\.nextSeed != null\) \{ world\.seed = world\.nextSeed >>> 0; world\.nextSeed = null; \}\n  loadLevel\(world, 1, false\);/.test(sim),
     (src.match(/world\.seed = [^\n]*/g) || []).join(" | "),
   );
   check(
-    "Minor-1 (owner ruling): a seedless run falls back to the REMEMBERED boot seed, not a fresh draw",
-    /world\.seed = args && args\.seed != null \? args\.seed >>> 0 : bootSeed;/.test(src),
-    (src.match(/world\.seed = args[^\n]*/) || [])[0],
+    "#10: an ordinary run plays runSeed(bootSeed, runI) and arms the next; a seeded (DAILY / code) run is fixed and arms nothing",
+    /world\.seed = runFixed \? args\.seed >>> 0 : runSeed\(bootSeed, runI\);/.test(src) &&
+      /world\.nextSeed = runFixed \? null : runSeed\(bootSeed, \+\+runI\);/.test(src) &&
+      /if \(!runFixed\) \{ world\.seed = runSeed\(bootSeed, runI\); world\.nextSeed = runSeed\(bootSeed, \+\+runI\); \}/.test(src) &&
+      /if \(!runFixed && world\.nextSeed == null\) world\.nextSeed = runSeed\(bootSeed, \+\+runI\);/.test(src),
+    (src.match(/world\.(?:next)?[sS]eed = [^\n]*/g) || []).join(" | "),
   );
   check(
     "Minor-4 (owner ruling): endRun's write is keyed on dailyDate — the run's START date — never today's date",
@@ -514,10 +524,11 @@ import { createGame } from "../src/main.js";
   );
 }
 
-// ---- 9c. Minor-1 (review 2026-09-07, owner ruling): "a run that supplies no
-// seed plays the seed the session booted with" — two ordinary runs (and a
-// LEVEL SELECT run) bracketing a daily all share ONE seed, and it is the
-// boot seed, never the daily's. ----
+// ---- 9c. #10 (supersedes the 2026-09-07 Minor-1 boot-seed rule): ordinary
+// run i of a page load plays runSeed(bootSeed, i), and a DAILY neither uses nor
+// advances i — so the runs bracketing a daily (PLAY and LEVEL SELECT alike) get
+// consecutive run seeds, and an ordinary run is the same with or without a
+// daily played. ----
 {
   const mem = new Map();
   const ls = { getItem: (k) => (mem.has(k) ? mem.get(k) : null),
@@ -548,9 +559,9 @@ import { createGame } from "../src/main.js";
     g.app.confirm(); // -> startRun()
     const lvlAfter = g.world.seed;
     check(
-      "two ordinary runs bracketing a daily share a seed, and it is the boot seed",
-      boot === 777 && ordBefore === 777 && daily === dailySeed(local) &&
-        ordAfter === 777 && lvlAfter === 777,
+      "the daily does not advance the run index: the runs bracketing it get runSeed(boot, 0), (boot, 1), (boot, 2)",
+      boot === 777 && ordBefore === runSeed(777, 0) && daily === dailySeed(local) &&
+        ordAfter === runSeed(777, 1) && lvlAfter === runSeed(777, 2) && ordAfter !== ordBefore,
       [boot, ordBefore, daily, ordAfter, lvlAfter].join(" -> "),
     );
   } finally {

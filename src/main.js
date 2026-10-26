@@ -5,6 +5,7 @@
    chrome (src/render/shellview.js). The sim never sees any of this. */
 import { CFG, isFinale } from "./core/config.js";
 import { createWorld, loadLevel, step } from "./core/sim.js";
+import { runSeed } from "./core/rng.js";
 import { createRenderer } from "./render/renderer.js";
 import { loadRendererPx } from "./render/pixel/load.js";
 import { copyPayload, isRunEnd, overlayBox, pauseHit, touchLay } from "./render/scenes.js";
@@ -82,8 +83,9 @@ export function createGame(canvas, opts = {}) {
 
   // frozen backdrop world: created exactly as today but NEVER forced to
   // "MENU" — it simply is not stepped until a run starts (spec §7 edit 1)
-  // Minor-1 (review 2026-09-07, owner ruling): bootSeed is remembered once so a seedless run's onStart falls back to it.
+  // #10 (owner 2026-10-20, "just a random board"): bootSeed is drawn once; ordinary run i plays runSeed(bootSeed, i) (run 0 = bootSeed). A DAILY / ?code= run (runFixed) keeps its board on every restart and never uses or advances runI.
   const bootSeed = (opts.seed != null ? opts.seed : Math.random() * 1e9) >>> 0;
+  let runI = 0, runFixed = false;
   const world = createWorld(bootSeed, 1);
   if (flags.gen2) world.gen = 2; // ?gen=2 only: the gen-2 boards with the floor tile layer (prototype); every other run plays today's boards
   loadLevel(world, 1, false);
@@ -201,7 +203,9 @@ export function createGame(canvas, opts = {}) {
     world.heat = clampHeat(args && args.heat);
     world.pact = clampPact(args && args.pact);
     world.pace = clampPace(args && args.pace);
-    world.seed = args && args.seed != null ? args.seed >>> 0 : bootSeed;
+    runFixed = !!args && args.seed != null;
+    world.seed = runFixed ? args.seed >>> 0 : runSeed(bootSeed, runI);
+    world.nextSeed = runFixed ? null : runSeed(bootSeed, ++runI); // armed for the sim's GAME OVER / finale restart
     dailyDate = (args && args.daily) || null; // unconditional: an ordinary run clears any prior daily
     runMode = dailyDate ? "daily" : chal && args.seed != null && args.seed >>> 0 === chal.seed >>> 0 ? "code" : "run"; // chal is set before any run can start
     loadLevel(world, args.level, false);
@@ -277,6 +281,7 @@ export function createGame(canvas, opts = {}) {
         // not have different score semantics
         persistScore();
         startRunState(true);
+        if (!runFixed) { world.seed = runSeed(bootSeed, runI); world.nextSeed = runSeed(bootSeed, ++runI); } // a new board; DAILY / code replay theirs
         loadLevel(world, 1, false);
         stat("room_enter", { r: world.level | 0, h: world.heat | 0, pc: world.pact | 0, pa: world.pace | 0, ld: todayStr() }, dateStr());
         world.score = 0;
@@ -587,6 +592,7 @@ export function createGame(canvas, opts = {}) {
         if (prevSt === "LOSE") startRunState(true); // R1: a retry never calls onStart
         stat("room_enter", { r: world.level | 0, h: world.heat | 0, pc: world.pact | 0, pa: world.pace | 0, ld: todayStr() }, dateStr());
       }
+      if (!runFixed && world.nextSeed == null) world.nextSeed = runSeed(bootSeed, ++runI); // the sim's startGame (GAME OVER / finale restart) dealt the armed seed: re-arm
       prevSt = world.state;
       /* The shell machine runs during GAME too — unconditionally, not only
          while paused. prevConfirm is only written inside update(), so skipping
@@ -597,7 +603,7 @@ export function createGame(canvas, opts = {}) {
       app.update(dt, shellInput);
       if (world.state === "PLAY") { coachT += dt; roomT += Math.min(dt, 7 * CFG.STEP - acc); runT += dt; }
       acc += dt;
-      ghostTick(ghost, world, roomT);
+      if (runFixed) ghostTick(ghost, world, roomT); // O4: only a DAILY / ?code= board records or races a ghost
       let steps = 0;
       while (acc >= CFG.STEP) {
         if (net) net.drive();

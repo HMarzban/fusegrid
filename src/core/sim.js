@@ -112,6 +112,7 @@ function advanceShrink(world, dt) {
 }
 
 function startGame(world) {
+  if (world.nextSeed != null) { world.seed = world.nextSeed >>> 0; world.nextSeed = null; }
   loadLevel(world, 1, false);
   world.state = "PLAY";
   world.score = 0;
