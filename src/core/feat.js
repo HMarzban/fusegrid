@@ -67,7 +67,7 @@ function bfs(m, sx, sy) {
 }
 /* m: skeleton class map (0 wall, else open; bricks count as passable, the
    real route once the doors are open). Returns {feat, force, fails} or null. */
-export function placeFeat(m, seed, level, biome, salt = 0) {
+export function placeFeat(m, seed, level, biome, salt = 0, bgate = null) {
   const kind = HOME[biome];
   if (!kind) return null;
   const rng = createRng(fmix((seed ^ Math.imul(level + 1, 0x9e3779b1) ^ 0x7ea7 ^ Math.imul(salt, 0x27d4eb2f)) >>> 0));
@@ -80,13 +80,15 @@ export function placeFeat(m, seed, level, biome, salt = 0) {
     let pair = null;
     if (kind === "BELT") ok = belt(m, f, rng, near, dD);
     else if (kind === "GLIDE") ok = glide(m, f, rng, dS);
-    else if (kind === "BLOOM") ok = bloom(m, f, rng, force);
+    else if (kind === "BLOOM" && bgate) { const o = {}; if (bloom(m, f, rng, force, dS, o)) { const used = bgate(o.cand, o.want, o.sp); if (used) { for (const k of used) { f[k] = 6; force.push(k); } ok = true; } } }
+    else if (kind === "BLOOM") ok = bloom(m, f, rng, force, dS);
     else if (kind === "STREAM") ok = stream(m, f, rng, far, force);
     else if (kind === "QUICK") ok = quick(m, f, rng, far, force);
     else if (kind === "PORTAL") { pair = new Uint8Array(N); ok = portal(m, f, rng, far, force, pair); }
     else if (kind === "GATE") ok = gate(m, f, rng, far, force);
     else ok = plate(m, f, rng, dS, force);
     if (ok) return pair ? { feat: f, force, kind, tries, pair } : { feat: f, force, kind, tries };
+    if (bgate && kind === "BLOOM") break;
   }
   return { feat: null, force: [], kind, tries: 40, fallback: true };
 }
@@ -174,20 +176,31 @@ function runsOk(f) {
 const farPocket = (x, y, d) => POCKET.concat(DOORS).every(([a, b]) => Math.abs(a - x) + Math.abs(b - y) >= d);
 /* V25: 2-4 on (odd,odd), >= 4 Manhattan from the pocket and doors, no two
    within 3 in a row or column, forced floor (never under a fill brick) */
-function bloom(m, f, rng, force) {
-  const want = rng.int(2, 4), cand = [];
-  for (let y = 1; y < R - 1; y += 2) for (let x = 1; x < C - 1; x += 2) if (open(m, x, y) && farPocket(x, y, 4)) cand.push([x, y]);
+function bloom(m, f, rng, force, dS, out) {
+  const P = BLOOM_PLACE;
+  const want = rng.int(P.min, P.max), cand = [];
+  for (let y = 1; y < R - 1; y += 2) for (let x = 1; x < C - 1; x += 2) if (open(m, x, y) && farPocket(x, y, P.pocket) && dS[key(x, y)] > 4) cand.push([x, y]);
   for (let i = cand.length - 1; i > 0; i--) { const j = rng.int(0, i); [cand[i], cand[j]] = [cand[j], cand[i]]; }
+  if (P.near) {
+    const sc = new Map(cand.map(([x, y]) => [key(x, y), dS[key(x, y)] + rng.next() * P.near]));
+    cand.sort((a, b) => sc.get(key(a[0], a[1])) - sc.get(key(b[0], b[1])));
+  }
+  const sp = (u, x, y) => u.some(([a, b]) => (a === x && Math.abs(b - y) <= P.gap) || (b === y && Math.abs(a - x) <= P.gap));
+  if (out) { out.cand = cand; out.want = want; out.sp = sp; return cand.length >= P.min; }
   const used = [];
   for (const [x, y] of cand) {
     if (used.length >= want) break;
-    if (used.some(([a, b]) => (a === x && Math.abs(b - y) <= 3) || (b === y && Math.abs(a - x) <= 3))) continue;
+    if (sp(used, x, y)) continue;
     used.push([x, y]);
   }
-  if (used.length < 2) return false;
+  if (used.length < P.min) return false;
   for (const [x, y] of used) { f[key(x, y)] = 6; force.push(key(x, y)); }
   return true;
 }
+/* #28 BOOSTER placement knobs (pass-2 lane): count min..max, Manhattan from
+   the pocket and doors, line gap, and `near` (0 = shuffled order as 2026-10-21;
+   > 0 = sort by walking steps from spawn plus up to `near` steps of noise) */
+export const BLOOM_PLACE = { min: 2, max: 4, pocket: 4, gap: 3, near: 0 };
 /* V26 + V27: 3-5 on (odd,odd), >= 6 walking steps from spawn, no two on
    neighbouring intersections, forced floor; every tile on its r=3 arms has
    a perpendicular open neighbour within 1 tile along the arm */

@@ -18,7 +18,10 @@ import { CFG, T, key, biomeOf, isFinale, EW_CAPPED } from "./config.js";
 import { createRng } from "./rng.js";
 import { genBoard } from "./board.js";
 import { heatProfile } from "./heat.js";
-import { placeFeat } from "./feat.js";
+import { placeFeat, FEAT_PROFILE } from "./feat.js";
+/* EXPERIMENT (#28 BOOSTER lane): the static V18 / V19 checks gate BOOSTER placement;
+   #18 moves featchecks.mjs into src/core unchanged (only the import path changes) */
+import { featChecks } from "../../tools/balance/featchecks.mjs";
 import { validateBoard, stampStart, STRUCT, TRIES, POCKET, DOORS, CORNERS } from "./fair.js";
 
 const C = CFG.COLS, R = CFG.ROWS, N = C * R;
@@ -359,12 +362,38 @@ export function genBoard2(seed, level, heat = 0, opts = {}) {
    layer, placed on the layout (so heat never moves a tile). The tiles it
    forces open are the only grid change; a salt is kept only when all three
    heats still pass the gate, else the plain gen-2 board ships. */
+/* #28: BOOSTER spot gate. Candidates come in placement order; each one is kept
+   only if, with it and every booster kept so far forced open, V18 and V19
+   find no spot on the grid of ALL three heats (so every heat keeps the same
+   layer, R5 / V21); stops at `want`, fails below BLOOM_PLACE.min */
+export const BLOOM_GATE = { on: true, only: ["V18", "V19"], min: 2 };
+function bloomGate(base, level, lay) {
+  return (cand, want, sp) => {
+    const used = [], uk = [];
+    for (const [x, y] of cand) {
+      if (used.length >= want) break;
+      if (sp(used, x, y)) continue;
+      const ks = [...uk, key(x, y)], f = new Uint8Array(N);
+      for (const k of ks) f[k] = 6;
+      let ok = true;
+      for (let h = 0; h < 3 && ok; h++) {
+        const g = base[h].grid.slice();
+        for (const k of ks) g[k] = T.EMPTY;
+        ok = !featChecks({ grid: g, feat: f, level, heat: h, items: [], enemies: [] }, FEAT_PROFILE[h], { only: BLOOM_GATE.only }).length;
+      }
+      if (ok) { used.push([x, y]); uk.push(key(x, y)); }
+    }
+    return used.length >= BLOOM_GATE.min ? uk : null;
+  };
+}
 export function genBoard3(seed, level, heat = 0) {
   const base = [0, 1, 2].map((h) => genBoard2(seed, level, h));
   if (base[heat].layout.fallback) return base[heat];
   const L = base[heat].layout, lay = layout2(seed, level, L.tries[0]);
+  const gate = BLOOM_GATE.on && lay.biome === "JUNGLE" ? bloomGate(base, level, lay) : null;
   for (let pa = 0; pa < 4; pa++) {
-    const pf = placeFeat(lay.m, seed, level, lay.biome, pa);
+    const pf = placeFeat(lay.m, seed, level, lay.biome, pa, gate);
+    if (gate && pf && !pf.feat) continue;
     if (!pf || !pf.feat) break;
     const open = base.map((b) => { const g = b.grid.slice(); for (const k of pf.force) g[k] = T.EMPTY; return g; });
     if ([0, 1, 2].every((h) => !base[h].layout.fallback && !validateBoard(open[h], level, h, gateOpts(lay, ...base[h].layout.tries, pf.force)).length))
