@@ -232,7 +232,7 @@ Shell v185 (2026-10-26) gives the board a new look in all three looks. It adds:
 - **GUIDE grows a FLOOR page** and its pages animate.
 
 Budgets after the round: REAL 3D fat-world 156 draw calls (158 worst case),
-PIXEL lazy tree about 159 KB of a 160 KB cap (18 bytes left after v189), CLASSIC call log re-pinned as
+PIXEL lazy tree about 160 KB, under a cap the owner raised to 176 KB in v190, CLASSIC call log re-pinned as
 `9fb48f0a:72431`. Frame times on a real GPU are not measured yet (issue #34).
 How it is put together, the rulings and what is still open live in
 [one record](superpowers/specs/2026-10-25-board-look-depth-ambient-design.md);

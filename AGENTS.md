@@ -276,8 +276,8 @@ not shell screens. Do not add them as `SCREEN` values.
     text stays the vector font). px JS cap **160 KB** uncompressed for the
     lazy tree (`tests/pixel-render.test.mjs`; R24's 120, then 122 on
     2026-10-11, 152 for the board look, 160 for the hand-drawn tiles; the tree
-    is about 160 KB since the v189 lock-on chevrons: 163 822 of 163 840 bytes,
-    18 bytes left, so the next PIXEL change needs a cap ruling). Floor-tile cells are hand-drawn palette-slot frames in
+    is about 160 KB since the v189 lock-on chevrons; the owner raised the cap
+    to **176 KB** on 2026-10-26, shell v190, when 18 bytes were left). Floor-tile cells are hand-drawn palette-slot frames in
     `pixel/art/feat.js` (CONVEYOR and STREAM assembled from hand-drawn parts),
     read by `featpx.js`. Since #15 (2026-10-25) the px tree
     is a dynamic import (`src/render/pixel/load.js`, `rcache.js` `load(k)`;
@@ -454,8 +454,10 @@ not shell screens. Do not add them as `SCREEN` values.
     open GATE's CORE / PLUS / MAX differ too little in CLASSIC for everyone; a
     structural fix belongs to #28). CLASSIC runs in Chrome via `gates.mjs`;
     `tests/tile-cvd.test.mjs` runs the PIXEL half under `npm test`; REAL 3D has
-    no CVD gate. Disclosed: PIXEL SAND's parity-B base floor `#a07828` is 4.9
-    ΔE from BRICK-B `#a07020` (CLASSIC fixed it in `floorart.js` `BED.SAND`).
+    no CVD gate. Fixed in v190: PIXEL SAND's parity-B base floor was raw
+    `floor1` `#a07828`, 4.9 ΔE from BRICK-B `#a07020`; `featpxcells.js`
+    `floorPxCell` now builds that slab one step down (`floor1.shadow` base,
+    16.8 ΔE), the PIXEL twin of CLASSIC's `floorart.js` `BED.SAND`.
 - `src/app/` — menu shell, intro beats, demobot, highscores, `pactstore.js`,
   plus the entry seams above (`flags` / `attract` / `frameloop` / `rcache` /
   `audiopower` / `renderkind` / `debughook` / `fit`) and the pure GRAPHICS
@@ -1038,8 +1040,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
       REAL 3D fat-world is now 156 draws (158 worst case; budget 160); the 2D foe
       silhouettes are canon for all three looks; pickups never change shape or
       colour. CLASSIC hash `9fb48f0a:72431`; px cap 160 KB (the px tree is a lazy
-      import since #15, about 158.8 KB with the hand-drawn tiles; 18 bytes under the
-      cap since v189).
+      import since #15, about 160 KB after the v189 chevrons; cap 176 KB since v190).
 - Walls (owner rulings 2026-10-21, designed and prototyped, NOT built; issues
   #17 for CLASSIC 2D + REAL 3D and #31 for PIXEL after #15; record
   `docs/superpowers/specs/2026-10-21-wall-art-design.md`).
@@ -1087,8 +1088,9 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   Node test fakes define `globalThis.location` WITHOUT `href`, so "is this a
   real page" means `typeof location.href === "string"` (the branch's gen-2 page
   default depended on it; since v188 the tile boards are `?gen=3` only).
-- Release state (2026-10-26): shell **v189** (hunter lock-on tell #32, tile
-  colour-vision gate #33, the #35 tile-world pin) is LIVE on the owner's word.
+- Release state (2026-10-26): shell **v190** (PIXEL SAND floor vs brick fix,
+  PIXEL cap 176 KB) is committed on local main. Shell **v189** (hunter lock-on
+  tell #32, tile colour-vision gate #33, the #35 tile-world pin) is LIVE.
   Shell **v188** (level variety: a random bold, fair board every run, F2 codes,
   daily on gen 2) is GitHub release **v2.2.0** (shell v178 → v188; v2.1.0
   covered v103 → v177). Shell **v185** (the board look + opt-in GA4) went

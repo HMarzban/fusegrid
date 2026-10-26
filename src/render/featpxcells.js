@@ -4,10 +4,11 @@ export const DPAL = {"A":"tile.bg0.outline","B":"tile.bg0.shadow","C":"tile.bg0"
 /* PIXEL base floor (depth round 2026-10-25): one 20x20 slab per (biome, parity, variant v 0..3 = floorart.js FLOOR_V) in the same cause-per-mark language as floorart.js:
    lit top-left edge, AO bottom-right, a few floor-step marks hash-seeded per cell, never a checker dither. n / w / nw (0 none, 1 wall, 2 brick) = the caster N / W / NW of
    the cell: light is upper-left, so the cell below a caster takes a shadow strip along its top (brick 4 rows, its front line two deep), the cell east one down its left side
-   (wall 3 cols, brick 2) and the diagonal one a corner. Shadow = the floor's shadow step, contact line = its outline step. Pure; the atlas bakes and memoises each one. */
+   (wall 3 cols, brick 2) and the diagonal one a corner. Shadow = the floor's shadow step, contact line = its outline step. Pure; the atlas bakes and memoises each one.
+   SAND's parity-B slab sits one step down (floor1.shadow base, ΔE 16.8 from BRICK-B where raw floor1 was 4.9), the PIXEL twin of floorart.js BED.SAND. */
 const FSEED = {JUNGLE: 3, ICE: 5, FACTORY: 7, WATER: 11, ARENA: 13, SAND: 17, VOID: 19, CROWN: 23};
 export function floorPxCell(name, par, v, n = 0, w = 0, nw = 0) {
-  const [o, s, b, l] = par ? "MNOP" : "IJKL", h = (i) => hsh((FSEED[name] || 1) * 31 + par, v + 1, i), r = (i, lo, hi) => lo + Math.floor(h(i) * (hi - lo + 1));
+  const [o, s, b, l] = par ? (name === "SAND" ? "MMNO" : "MNOP") : "IJKL", h = (i) => hsh((FSEED[name] || 1) * 31 + par, v + 1, i), r = (i, lo, hi) => lo + Math.floor(h(i) * (hi - lo + 1));
   const g = Array.from({length: 20}, () => Array(20).fill(b));
   const px = (x, y, ch) => { if (x >= 0 && x < 20 && y >= 0 && y < 20) g[y][x] = ch; };
   const run = (x, y, len, ch, dy = 0) => { for (let i = 0; i < len; i++) px(x + i, y + (dy ? i * dy : 0), ch); };

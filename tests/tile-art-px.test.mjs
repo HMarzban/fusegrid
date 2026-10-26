@@ -86,13 +86,27 @@ test("floor cells: per biome, 2 parities x FLOOR_V variants differ, each a lit-t
       const c = floorPxCell(b.name, par, v);
       assert.deepEqual(validateCell(c, c.pal), [], b.name);
       seen.add(c.rows.join());
-      assert.equal(c.rows[0][5], par ? "P" : "L", "lit top edge");
-      assert.equal(c.rows[5][0], par ? "P" : "L", "lit left edge");
-      assert.equal(c.rows[19][5], par ? "N" : "J", "AO bottom edge");
-      assert.equal(c.rows[5][19], par ? "N" : "J", "AO right edge");
+      const sand = par && b.name === "SAND", lit = sand ? "O" : par ? "P" : "L", ao = sand ? "M" : par ? "N" : "J"; // SAND's B slab is one step down (BED.SAND twin)
+      assert.equal(c.rows[0][5], lit, "lit top edge");
+      assert.equal(c.rows[5][0], lit, "lit left edge");
+      assert.equal(c.rows[19][5], ao, "AO bottom edge");
+      assert.equal(c.rows[5][19], ao, "AO right edge");
     }
     assert.equal(seen.size, FLOOR_V, b.name + " variants differ");
   }
+});
+test("PIXEL SAND: the parity-B floor slab stays clear of BRICK-B (the BED.SAND twin)", () => {
+  const sand = BIOMES.find((b) => b.name === "SAND"), base = floorPxCell("SAND", 1, 0).pal.N;
+  assert.equal(base, "tile.floor1.shadow");
+  const c = floorPxCell("SAND", 1, 0), mid = c.rows.slice(4, 16).map((r) => r.slice(4, 16)).join("");
+  assert.ok((mid.match(/N/g) || []).length > mid.length / 2, "the slab body is floor1.shadow");
+  assert.ok(!/P/.test(c.rows.join("")), "no raw floor1.light on the SAND B slab");
+  const lab = (h) => { const n = parseInt(h.slice(1), 16), [r, g, bl] = [n >> 16 & 255, n >> 8 & 255, n & 255].map((v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });
+    const f = (t) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116), X = f((r * 0.4124 + g * 0.3576 + bl * 0.1805) / 0.95047), Y = f(r * 0.2126 + g * 0.7152 + bl * 0.0722), Z = f((r * 0.0193 + g * 0.1192 + bl * 0.9505) / 1.08883);
+    return [116 * Y - 16, 500 * (X - Y), 200 * (Y - Z)]; };
+  const dE = (a, b) => Math.hypot(...lab(a).map((v, i) => v - lab(b)[i]));
+  assert.ok(dE(pxRamp(sand.floor1).shadow, sand.brickB) >= 14, "SAND B slab vs BRICK-B >= 14 (CLASSIC's bed rule)");
+  assert.ok(dE(sand.floor1, sand.brickB) < 6, "and raw floor1 really was the collision");
 });
 
 test("cast shadow: a wall or brick shades the cell below and to its right by one solid step, brick deeper, never dither", () => {

@@ -15,6 +15,15 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
+## shell v190 · 2026-10-26
+
+### Fixed
+
+- **PIXEL SAND floors no longer look like bricks.** Every other floor slab in
+  SAND was almost the same orange as the bricks, so a path and a wall of
+  bricks were hard to tell apart in PIXEL. Those slabs now sit one shade
+  darker, the same fix CLASSIC 2D got earlier.
+
 ## shell v189 · 2026-10-26
 
 ### Added

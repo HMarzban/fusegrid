@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-26 — v190: PIXEL SAND floor fix, PIXEL cap 176 KB
+- Owner: "I agree raise the limit" (px lazy-tree cap 160 -> 176 KB; v189 left 18 B) and fix PIXEL SAND parity-B floor vs BRICK-B (4.9 -> 16.8 ΔE via `floor1.shadow` base in `featpxcells.js`, BED.SAND twin). v189 pushed and LIVE (`92f4bc2`); #32 #33 closed, #35 #28 updated.
+
 ## 2026-10-26 — v189: hunter lock-on tell (#32), tile CVD gate (#33), #35 leftovers
 - Owner picked "Lock-on tell" for #32 (read-only, no sim field): `src/render/lockon.js` + `motion.js` `lockK`, chevrons under pickups in all looks, N 4 (>= 0.51 s worst case); sim/replays byte-identical, CLASSIC hash and 3D draws unchanged. #33: `gates.mjs cvd` (Machado 2009), all tiles pass; waiver `CVD_WAIVE` for the CLASSIC open GATE heat separation (2.14 for everyone, a #28 job); PIXEL SAND parity-B floor vs BRICK-B 4.9 ΔE disclosed. #35: tile-world CLASSIC pin `a4693824:71581`; phone check at full res OK; tile contact sheet https://claude.ai/artifact/VnowPKoD2NVMKp758a4aep (owner: "the current tile art are great").
 
