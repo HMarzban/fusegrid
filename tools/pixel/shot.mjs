@@ -156,7 +156,8 @@ export async function stopChrome(chr, c, keep = false) {
   if (c) { try { await within(c.send("Browser.close"), 2000); } catch {} try { c.close(); } catch {} }
   await within(new Promise((r) => (gone(chr.proc) ? r() : chr.proc.once("exit", r))), 3000);
   await stop(chr.proc, "SIGTERM", 5000);
-  if (!keep) { try { rmSync(chr.dir, {recursive: true, force: true, maxRetries: 5, retryDelay: 200}); } catch {} dirs.delete(chr.dir); }
+  if (!keep) try { rmSync(chr.dir, {recursive: true, force: true, maxRetries: 5, retryDelay: 200}); } catch {}
+  dirs.delete(chr.dir);
 }
 export async function cdp(wsUrl) {
   const ws = new WebSocket(wsUrl);
