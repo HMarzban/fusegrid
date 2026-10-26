@@ -85,20 +85,20 @@ export function escape(w, tiles, L) {
   const d0 = ice(s0) && p.gl ? BD.findIndex(([a, b]) => a === p.gl.x && b === p.gl.y) : 4;
   const terminal = (k, d, t) => L[k] === Infinity && (d === 4 || !ice(k) || iceStop(w, k, d, t, L, bombAt));
   if (terminal(s0, d0, 0)) return true;
-  const S = N * 5, best = new Float64Array(S).fill(Infinity), done = new Uint8Array(S);
+  const Z = nostop ? 5 : 1, S = N * Z, sid = (k, d) => (nostop ? k * 5 + d : k), best = new Float64Array(S).fill(Infinity), done = new Uint8Array(S);
   bombAt[s0] = 0;
-  best[s0 * 5 + d0] = 0;
+  best[sid(s0, d0)] = 0;
   const ox = p.x / CFG.TILE - (sx + 0.5), oy = p.y / CFG.TILE - (sy + 0.5);
   for (;;) {
     let id = -1, t = Infinity;
     for (let i = 0; i < S; i++) if (!done[i] && best[i] < t) { t = best[i]; id = i; }
     if (id < 0) return false;
     done[id] = 1;
-    const k = (id / 5) | 0;
-    if (k !== s0 && terminal(k, id % 5, t)) return true;
+    const k = nostop ? (id / 5) | 0 : id;
+    if (k !== s0 && terminal(k, nostop ? id % 5 : 4, t)) return true;
     const x = k % C, y = (k / C) | 0;
     for (let di = 0; di < 4; di++) {
-      const [dx, dy] = BD[di], nk = key(x + dx, y + dy), nid = nk * 5 + (ice(nk) ? di : 4);
+      const [dx, dy] = BD[di], nk = key(x + dx, y + dy), nid = sid(nk, ice(nk) ? di : 4);
       if (done[nid] || w.grid[nk] !== T.EMPTY || bombAt[nk]) continue;
       const v = moveSpeed(w, p, k, dx, dy, tiles);
       if (v <= 0.05) continue;

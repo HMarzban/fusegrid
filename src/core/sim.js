@@ -506,7 +506,7 @@ function carryBomb(w, b, dt) {
   b.y = (b.ty + 0.5 + b.slide.y * travel) * FT;
 }
 /* GLIDE = ICE PATCH (player only; design pass 2, #28): speed x boost (CORE
-   1.1 / PLUS 1.25 / MAX 1.5, capped at MAX_SPEED); CORE stops on release
+   1.0 / PLUS 1.25 / MAX 1.5, capped at MAX_SPEED); CORE stops on release
    (corner assist 0.35), PLUS coasts to the next centre, MAX coasts until a
    block or off the sheet. A new direction is buffered and taken at a centre
    (window turn). glide.stop "brake" (MAX): the opposite press is a brake, not

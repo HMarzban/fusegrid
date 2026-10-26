@@ -41,8 +41,8 @@ const run = (w, inp, n) => { for (let i = 0; i < n; i++) { step(w, CFG.STEP, { 0
   const x0 = p.x;
   run(w, NOOP, 20);
   check("CORE: letting go on ice stops at once", p.x === x0 && !p.gl, `${x0} -> ${p.x}`);
-  const want = CFG.PLAYER_START.speed * 1.1 * FT * CFG.STEP * 6;
-  check("CORE: the ice is quicker (x1.1)", Math.abs(x0 - (x + 0.5) * FT - want) < 1e-6, `${(x0 - (x + 0.5) * FT).toFixed(3)} vs ${want.toFixed(3)}`);
+  const want = CFG.PLAYER_START.speed * 1.0 * FT * CFG.STEP * 6;
+  check("CORE: ice keeps your speed (x1.0)", Math.abs(x0 - (x + 0.5) * FT - want) < 1e-6, `${(x0 - (x + 0.5) * FT).toFixed(3)} vs ${want.toFixed(3)}`);
 }
 {
   const { w, p } = rink(2);
@@ -69,6 +69,15 @@ const run = (w, inp, n) => { for (let i = 0; i < n; i++) { step(w, CFG.STEP, { 0
   let kicked = false;
   for (let i = 0; i < 60 && !kicked; i++) { step(w, CFG.STEP, { 0: hold(1, 0) }); kicked = w.events.some((e) => e.t === "kick"); w.events.length = 0; }
   check("KICK: walking into a bomb on ice kicks it, as on floor", kicked && !!w.bombs[0].slide);
+}
+{
+  const { w, p, x, y } = rink(2);
+  p.kick = true;
+  w.bombs.push({ x: (x + 2.5) * FT, y: (y + 0.5) * FT, tx: x + 2, ty: y, timer: 2, radius: 1, owner: 0, dead: false, slide: null, prog: 0 });
+  run(w, hold(1, 0), 2);
+  let kicked = false;
+  for (let i = 0; i < 60 && !kicked; i++) { step(w, CFG.STEP, { 0: NOOP }); kicked = w.events.some((e) => e.t === "kick"); w.events.length = 0; }
+  check("KICK: a MAX coast (keys released) into a bomb kicks it", kicked && !!w.bombs[0].slide);
 }
 {
   const { w, p } = rink(2);

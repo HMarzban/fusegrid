@@ -22,13 +22,13 @@ export const beltDir = (v) => FDIR[v - 1];
 export const HOME = Object.freeze({ FACTORY: "BELT", ICE: "GLIDE", JUNGLE: "BLOOM", ARENA: "PLATE", WATER: "STREAM", SAND: "QUICK", VOID: "PORTAL", CROWN: "GATE" });
 
 export const FEAT_PROFILE = Object.freeze([
-  Object.freeze({ belt: { actors: false, v: 1.0 }, glide: { boost: 1.1, coast: 0, turn: 0.35 }, bloom: { fwd: 2, side: 0, delay: 0, cd: 1.0 }, plate: { wind: 0.5, r: 1, cd: 3, inert: 2 } }),
+  Object.freeze({ belt: { actors: false, v: 1.0 }, glide: { boost: 1.0, coast: 0, turn: 0.35 }, bloom: { fwd: 2, side: 0, delay: 0, cd: 1.0 }, plate: { wind: 0.5, r: 1, cd: 3, inert: 2 } }),
   Object.freeze({ belt: { actors: true, v: 1.0 }, glide: { boost: 1.25, coast: 1, turn: 0.2 }, bloom: { fwd: 2, side: 1, delay: 0.15, cd: 1.0 }, plate: { wind: 0.8, r: 2, cd: 4, inert: 2 } }),
   Object.freeze({ belt: { actors: true, v: 1.2 }, glide: { boost: 1.5, coast: 3, turn: 0.1, stop: "brake" }, bloom: { fwd: 2, side: 2, delay: 0.3, cd: 1.0 }, plate: { wind: 1.0, r: 3, cd: 3, inert: 2 } }),
 ]);
 export const TILE_HELP = Object.freeze({
   BELT: ["CARRIES BOMBS", "CARRIES BOMBS, YOU, FOES", "CARRIES ALL, FAST"],
-  GLIDE: ["QUICK ICE, STOP ANY TIME", "FAST ICE, SLIDES A STEP", "SLIDES ON · BACK TO STOP"],
+  GLIDE: ["SMOOTH ICE, STOP ANY TIME", "FAST ICE, SLIDES A STEP", "SLIDES ON · BACK TO STOP"],
   BLOOM: ["THROWS YOUR BLAST ON", "BLAST LEAKS SIDEWAYS", "BLAST TURNS CORNERS LATE"],
   PLATE: ["FOES SET IT OFF · SHORT", "FOES SET IT OFF · LONG", "FOES SET IT OFF · HUGE"],
 });
