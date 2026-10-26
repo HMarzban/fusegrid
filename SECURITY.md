@@ -10,7 +10,9 @@ The parts worth a look are:
 - the **service worker** (`sw.js`) and its app-shell cache,
 - the **URL flags** that boot a board, especially `?code=`,
 - the **local dev server** (`serve.js`, loopback only),
-- the **clipboard** copy on STATS and the end screen.
+- the **clipboard** copy on STATS and the end screen,
+- the **opt-in Google Analytics** loader (`src/app/analytics.js`): nothing loads
+  before ALLOW, and only on the Pages site ([privacy](docs/privacy.md)).
 
 ## 🎯 Supported version
 

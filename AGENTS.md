@@ -130,7 +130,7 @@ world (`FACTORY · MAX · HARD`), the same words as START. `SCREEN.STATS = 12` i
 `menuapp.js`: appended, never inserted). `SCREEN.TROPHIES = 13` (the MEDALS page) is
 appended too: opened from STATS by `T` or a tap on its `T MEDALS` label, backs out to STATS,
 never a MENU row. `SCREEN.GRAPHICS = 14` is appended too: opened by the
-OPTIONS `GRAPHICS` door row (`OPT_ROWS` ten rows, door before RESET
+OPTIONS `GRAPHICS` door row (`OPT_ROWS` eleven rows, ANALYTICS then the door before RESET
 DEFAULTS), backs out to OPTIONS on the door. `SCREEN.FLOOR = 15` is appended too
 (2026-10-25): the fourth GUIDE door (`GUIDE_ROWS` HOW TO PLAY, ITEMS, ENEMIES,
 FLOOR; keyboard GUIDE is a 2x2 of doors, touch four stacked rows), backs out to
@@ -433,7 +433,8 @@ not shell screens. Do not add them as `SCREEN` values.
   between R AGAIN (81–183) and C COPY (465–519 at 600×520), so it copies
   nothing.
   CLEAR = highscores, bests, stats, daily, times, medals, plaques, ghost,
-  pact, coach v1/v2, cabinet (12); KEEP = `nb.settings.v1`, `nb.pace.v1`.
+  pact, coach v1/v2, cabinet (12); KEEP = `nb.settings.v1`, `nb.pace.v1`,
+  `nb.analytics.v1` (the GA consent).
   `nb.cabinet.v1` is still written on the first INTRO exit and no longer
   branches anything (ruling 2026-10-09).
   Lists import each store's own `*_KEY`; `tests/reset.test.mjs` fails on any
@@ -553,6 +554,31 @@ not shell screens. Do not add them as `SCREEN` values.
   `onReady` fires the sting and `beginShow()` only on INTRO, so deep links
   never get it. No WebAudio (Node): the first gesture that is not Escape or a
   modifier/lock key, which keeps the Node key matrix equal to the browser's.
+- Analytics (owner 2026-10-26: "we need a tracker in order to see how many
+  people stay in game or open the game", then "let's work on the Google
+  Analytics"; consent pick "ask once, with an OPTIONS switch"). GA4, OPT-IN,
+  `src/app/analytics.js`; plan `docs/superpowers/plans/2026-10-26-google-analytics.md`,
+  player copy `docs/privacy.md`. Nothing reaches Google before ALLOW: no
+  `gtag.js`, no cookie, no event. Live ONLY when `GA_ID` is a real `G-…` (today
+  `G-C3MW30HPQ0`; the `G-XXXXXXXXXX` placeholder is inert) AND the host is `hmarzban.github.io`;
+  `?debug=1` elsewhere is DRY (`__GAME__.ga.log`, never the network). Consent
+  `nb.analytics.v1` (`"1"`/`"0"`, absent = ask; KEEP list) is its own store,
+  never a `nb.settings.v1` key, so RESET DEFAULTS leaves it. The card `#ana`
+  reuses the `#upd` plate with ALLOW (`Y`) and NO THANKS (`N`) at EQUAL weight
+  (never a big yes and a muted no); Escape or a backdrop tap hides it until the
+  next boot and records nothing. While it shows it owns the keyboard (a window
+  capture listener ahead of `input.js`). It shows on MENU and its pages only,
+  never INTRO / ATTRACT / GAME, and waits while NEW VERSION READY is up.
+  OPTIONS `ANALYTICS` ON/OFF sits after REDUCE FLASH (row 8; OPTIONS touch
+  pitch 37 so eleven rows fit unscaled); OFF sets `ga-disable-<ID>`, denies
+  consent and expires the `_ga*` cookies. Cookies live on the game's own path
+  (`cookie_path`, shared `github.io` origin); every ad signal is denied. Events:
+  GA's page_view = an open; `run_start` from `startRunState` and `run_end` from
+  `endRun` (main's world only, never attract or the show), `mode`
+  run/daily/code, `result` win/lose/quit via `isRunEnd`; user properties
+  `days_played` (STATS `a.days` bucket at boot) and `look`. `src/app` never
+  calls `Date`: main injects `now`. GA reports need the params registered as
+  custom definitions (owner step).
 - `src/pwa/` — Node-testable app-shell list + SW register. `src/main.js`
   registers `./sw.js` (module, scope `./`). Precache lives in `shell.js`
   (`fusegrid-shell-vN`). Must include `vendor/three.module.js` and the whole

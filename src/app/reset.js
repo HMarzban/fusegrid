@@ -11,11 +11,12 @@ import { COACH_KEY, COACH2_KEY } from "./coach.js";
 import { CABINET_KEY } from "./cabinetseen.js";
 import { SETTINGS_KEY } from "./settings.js";
 import { PACE_KEY } from "./pacestore.js";
+import { ANALYTICS_KEY } from "./analytics.js";
 import { defaultStore } from "./store.js";
 
 export const CLEAR_KEYS = Object.freeze([HS_KEY, BESTS_KEY, STATS_KEY, DAILY_KEY, TIMES_KEY, MEDALS_KEY,
   PLAQUES_KEY, GHOST_KEY, PACT_KEY, COACH_KEY, COACH2_KEY, CABINET_KEY]);
-export const KEEP_KEYS = Object.freeze([SETTINGS_KEY, PACE_KEY]);
+export const KEEP_KEYS = Object.freeze([SETTINGS_KEY, PACE_KEY, ANALYTICS_KEY]);
 
 export function clearCabinet(store) {
   let st = null;

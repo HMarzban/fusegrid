@@ -69,5 +69,5 @@ export function mountUpdate(get, env) {
   };
   const ok = registerSW({ ...(env || {}), onUpdate: (r) => { reg = r; if (doc && !card) build(); tick(); } });
   if (ok && doc) setInterval(tick, 250);
-  return { tick, get ready() { return !!reg; } };
+  return { tick, get ready() { return !!reg; }, get shown() { return !!card && !card.hidden; } };
 }

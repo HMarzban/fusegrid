@@ -271,6 +271,17 @@ control to the new worker and the page reloads once. Copies from before the
 card existed (shell v178 and older) update once on their own, because their
 page can't show it. Cleanup touches only this game's own caches. First-time offline
 loading and syncing progress between devices are outside this design.
+Play stats are opt-in Google Analytics 4 ([`analytics.js`](../src/app/analytics.js),
+[privacy](privacy.md)). A consent card on the menus asks once, and OPTIONS →
+ANALYTICS changes the answer. Nothing loads before ALLOW. Then `gtag.js` arrives
+as a plain script tag (still zero npm deps), its cookies are scoped to the
+game's own path on the shared `github.io` origin, and every ad signal is denied.
+It runs only on the Pages host with a real Measurement ID; `?debug=1` elsewhere
+logs the calls to `__GAME__.ga.log` instead. The opens are GA's page views;
+the game adds `run_start` / `run_end` from its own world's run edges (never
+attract or the intro show) and a days-played bucket from STATS. Opens are
+undercounted by design: a visitor who leaves at the title, or declines, is
+never counted.
 The manifest's install-dialog screenshots (`screenshots/`) ship with the
 site but stay out of the precache. The dialog fetches them online, and the
 worker never stores a file it didn't precache.

@@ -58,6 +58,7 @@ export const OPT_ROWS = Object.freeze([
   "BRIGHTNESS",
   "SCREEN SHAKE",
   "REDUCE FLASH",
+  "ANALYTICS",
   "GRAPHICS",
   "RESET DEFAULTS",
 ]);
@@ -90,6 +91,7 @@ export function createMenuApp(opts = {}) {
     heat: clampHeat(o.heat),
     scoreHeat: 0,
     settings: clampSettings(o.settings),
+    analytics: !!o.analytics, // OPTIONS ANALYTICS: its truth lives in nb.analytics.v1 (src/app/analytics.js), like SOUND's in audio
     optRow: 0, // OPTIONS row cursor — its OWN field, so the MENU cursor
     // survives a round trip through the page
     guideRow: 0, // GUIDE row cursor — its OWN field too, same reason
@@ -559,6 +561,15 @@ export function createMenuApp(opts = {}) {
       if (onSettings) onSettings(this.settings, "snd");
       return true;
     },
+    /* ANALYTICS: the consent store is main's (o.onAnalytics); RESET DEFAULTS
+       never touches it, because it is a choice, not a setting. */
+    _optAna(v) {
+      if (this.analytics === !!v) return false;
+      this.analytics = !!v;
+      this.togT = this.subT;
+      if (o.onAnalytics) o.onAnalytics(this.analytics);
+      return true;
+    },
     /* RENDER (R4): 0 CLASSIC 2D, 1 PIXEL, 2 REAL 3D. r3d and px move together
        and report through onSettings once, never as two half-states. */
     _optRender(v) {
@@ -592,6 +603,7 @@ export function createMenuApp(opts = {}) {
       if (r === "RENDER") return this._optRender(renderVal(this) + d);
       if (r === "SCREEN SHAKE") return this._optSet("shk", d > 0 ? 1 : 0);
       if (r === "REDUCE FLASH") return this._optSet("flx", d > 0 ? 1 : 0);
+      if (r === "ANALYTICS") return this._optAna(d > 0);
       return false;
     },
     optCycle() {
@@ -609,6 +621,7 @@ export function createMenuApp(opts = {}) {
       if (r === "RENDER") return this._optRender((renderVal(this) + 1) % 3);
       if (r === "SCREEN SHAKE") return this._optSet("shk", this.settings.shk ? 0 : 1);
       if (r === "REDUCE FLASH") return this._optSet("flx", this.settings.flx ? 0 : 1);
+      if (r === "ANALYTICS") return this._optAna(!this.analytics);
       if (r === "GRAPHICS") return this._gfxOpen();
       if (r === "RESET DEFAULTS") return this.optReset();
       return false;

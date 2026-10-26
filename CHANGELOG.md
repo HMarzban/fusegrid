@@ -59,6 +59,12 @@ before.
   dust drift on the play clock. It freezes on pause, halves on EFFECTS LOW and
   turns off if your device asks for reduced motion. The ATTRACT demo shows it
   too; menus never do.
+- **Opt-in play stats.** The first time you reach the menu, the game asks
+  whether to share play stats through Google Analytics: opens, the
+  runs you start and the room you reach. Nothing is sent unless you press
+  ALLOW, and **OPTIONS → ANALYTICS** switches it off again (it also deletes the
+  cookies). Only the official site sends anything. Details:
+  [docs/privacy.md](docs/privacy.md).
 
 ### Changed
 - PIXEL loads on demand, so CLASSIC 2D never downloads it.

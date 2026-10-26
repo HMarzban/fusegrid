@@ -51,6 +51,7 @@ import {
 } from "./app/coach.js";
 import { clampPace } from "./core/pace.js";
 import { mountUpdate } from "./app/update.js";
+import { mountAnalytics } from "./app/analytics.js";
 import { Input } from "./input.js";
 import { mountTouch } from "./touch.js";
 import {
@@ -64,7 +65,7 @@ import { loadRenderer3D } from "./render/three/load.js";
 import { createLocalPair } from "./net/localpair.js";
 
 export function createGame(canvas, opts = {}) {
-  mountUpdate(() => ({ app, world, isRunEnd, SCREEN })); // registers the SW; NEW VERSION READY card (src/app/update.js)
+  const upd = mountUpdate(() => ({ app, world, isRunEnd, SCREEN })); // registers the SW; NEW VERSION READY card (src/app/update.js)
   /* flags parsed ONCE (src/app/flags.js): ?render=3d|px seed the boot kind,
      ?render=iso pins legacy dimetric, ?play=1 skips the shell, ?net=local
      arms the two-peer proof, ?orbit=1 opts into right-drag orbit (wheel /
@@ -152,10 +153,11 @@ export function createGame(canvas, opts = {}) {
      for a run that BEGINS at room 1 (the sim's retry after LOSE and RESTART
      both reload room 1, so only onStart can begin above it) — endRun
      withholds the room from recordBest otherwise; the score still records. */
-  let tally = newTally(), runT = 0, bestRun = null, runEnded = true, runFromStart = true;
+  let tally = newTally(), runT = 0, bestRun = null, runEnded = true, runFromStart = true, runMode = "run";
   const startRunState = (fromStart) => {
     tally = newTally(); runT = 0; runEnded = false; runFromStart = fromStart; coach2 = { kind: null, t: 0 };
     bestRun = bestOfRun(loadBests(), bestKey(world));
+    ga.event("run_start", { mode: runMode, room: fromStart ? 1 : world.level | 0, heat: world.heat | 0, pact: world.pact | 0, pace: world.pace | 0 });
   };
   const endRun = () => {
     if (runEnded) return;
@@ -164,6 +166,7 @@ export function createGame(canvas, opts = {}) {
       runFromStart ? (world.level | 0) : 0));
     stat("run_end", { r: world.level | 0, s: world.score | 0, k: tally.k, p: tally.p, b: tally.b, secs: Math.round(runT), kt: tally.kt, pk: tally.pk }, dateStr());
     if (dailyDate) { const f = finishDaily(dailyDate, world.score | 0, world.level | 0, world.pace | 0); dailyRec = f.rec; app.dailyTag = f.tag; }
+    ga.event("run_end", { mode: runMode, room: world.level | 0, result: !isRunEnd(world) ? "quit" : world.state === "WIN" ? "win" : "lose", heat: world.heat | 0, pace: world.pace | 0, score: world.score | 0, secs: Math.round(runT) });
     if (isRunEnd(world)) tally.mn = settleMedals(world, tally, runT);
   };
 
@@ -200,6 +203,7 @@ export function createGame(canvas, opts = {}) {
     world.pace = clampPace(args && args.pace);
     world.seed = args && args.seed != null ? args.seed >>> 0 : bootSeed;
     dailyDate = (args && args.daily) || null; // unconditional: an ordinary run clears any prior daily
+    runMode = dailyDate ? "daily" : chal && args.seed != null && args.seed >>> 0 === chal.seed >>> 0 ? "code" : "run"; // chal is set before any run can start
     loadLevel(world, args.level, false);
     world.score = 0;
     world.state = "PLAY";
@@ -237,6 +241,8 @@ export function createGame(canvas, opts = {}) {
     rig.dist = camPreset(S.cam);
   };
   applySettings(settings);
+  /* GA4, opt-in (src/app/analytics.js): nothing is sent before ALLOW; opens are its page_view */
+  const ga = mountAnalytics({ get: () => ({ app, SCREEN, busy: () => upd.shown }), dry: flags.debug, now: () => new Date(), days: loadStats().a.days, look: () => urlKind || (settings.r3d ? "3d" : settings.px ? "px" : "2d"), onChange: (v) => { app.analytics = v; } });
   const app = createMenuApp({
     level: 1,
     sound: settings.snd !== 0,
@@ -248,6 +254,7 @@ export function createGame(canvas, opts = {}) {
     onTimeAttack: (on) => saveTimes({ ...loadTimes(), on: on ? 1 : 0 }),
     ...bootRender(urlKind, opts, settings),
     settings,
+    analytics: ga.consent === 1, onAnalytics: (v) => ga.set(v),
     onSettings: (s) => {
       saveSettings(s);
       applySettings(s);
@@ -723,6 +730,7 @@ export function createGame(canvas, opts = {}) {
       onPause,
       renderer: () => renderer,
       demo: () => demo,
+      ga,
     });
 
   // boot

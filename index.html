@@ -128,27 +128,34 @@
      of the page") over a blurred, dimmed backdrop (#updbg; a tap on it = LATER),
      every layout. Headline + sub-line, then a
      wide RELOAD and a LATER; touch grows the buttons to 44px. */
-  #upd{position:fixed;z-index:20;left:50%;top:50%;translate:-50% -50%;width:min(420px,calc(100vw - 32px));
+  #upd,#ana{position:fixed;z-index:20;left:50%;top:50%;translate:-50% -50%;width:min(420px,calc(100vw - 32px));
     box-sizing:border-box;display:flex;flex-wrap:wrap;align-items:center;gap:12px 10px;padding:18px 18px 16px 22px;
     background:rgba(10,14,24,.97);border:1px solid #2a3550;border-radius:6px;
     box-shadow:0 4px 0 rgba(0,0,0,.35),inset 3px 0 0 #37f0d0;color:#dfe7f5;
     font:700 16px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.12em;
     animation:updIn .16s steps(4) both;user-select:none;-webkit-user-select:none}
-  #updbg{position:fixed;inset:0;z-index:19;background:rgba(4,7,14,.45);
+  #updbg,#anabg{position:fixed;inset:0;z-index:19;background:rgba(4,7,14,.45);
     -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);animation:updFade .16s linear both}
-  #upd b{flex-basis:100%}
-  #upd i{flex-basis:100%;margin-top:-6px;font:400 12px ui-monospace,monospace;font-style:normal;color:#7385ad;letter-spacing:0}
+  #upd b,#ana b{flex-basis:100%}
+  #upd i,#ana i{flex-basis:100%;margin-top:-6px;font:400 12px ui-monospace,monospace;font-style:normal;color:#7385ad;letter-spacing:0}
   #upd .go{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 14px;border:1px solid #37f0d0;
     border-radius:4px;background:rgba(55,240,208,.14);color:#37f0d0;font-size:14px;letter-spacing:.1em;cursor:pointer}
-  #upd kbd{font:900 11px ui-monospace,monospace;padding:2px 6px;background:rgba(4,7,14,.95);border:1px solid #26324a;
+  #upd kbd,#ana kbd{font:900 11px ui-monospace,monospace;padding:2px 6px;background:rgba(4,7,14,.95);border:1px solid #26324a;
     border-radius:3px;color:#dfe7f5;letter-spacing:0}
   #upd .later{font:12px ui-monospace,monospace;color:#7385ad;letter-spacing:.06em;padding:0 12px;line-height:40px;cursor:pointer}
   #upd .go:hover{background:rgba(55,240,208,.22)}#upd .later:hover{color:#dfe7f5}
+  /* consent card (src/app/analytics.js): the same plate, and ALLOW and NO
+     THANKS carry equal weight — one size, one border, one fill. */
+  #ana .yes,#ana .no{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 10px;border:1px solid #37f0d0;
+    border-radius:4px;background:rgba(55,240,208,.14);color:#37f0d0;font-size:14px;letter-spacing:.1em;cursor:pointer;white-space:nowrap}
+  #ana .yes:hover,#ana .no:hover{background:rgba(55,240,208,.22)}
+  #ana a{color:#dfe7f5}
   @keyframes updIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-  @media (prefers-reduced-motion:reduce){#upd{animation:updFade .12s linear both}}
+  @media (prefers-reduced-motion:reduce){#upd,#ana{animation:updFade .12s linear both}}
   @keyframes updFade{from{opacity:0}to{opacity:1}}
-  body[data-lay=p] #upd kbd,body[data-lay=l] #upd kbd{display:none}
+  body[data-lay=p] #upd kbd,body[data-lay=l] #upd kbd,body[data-lay=p] #ana kbd,body[data-lay=l] #ana kbd{display:none}
   body[data-lay=p] #upd .go,body[data-lay=l] #upd .go{height:48px}
+  body[data-lay=p] #ana .yes,body[data-lay=l] #ana .yes,body[data-lay=p] #ana .no,body[data-lay=l] #ana .no{height:48px}
   body[data-lay=p] #upd .later,body[data-lay=l] #upd .later{line-height:48px}
   .muted{opacity:.45}
   .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}

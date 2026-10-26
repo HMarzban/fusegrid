@@ -38,6 +38,7 @@ export function mountDebugHook(h) {
     app,
     audio: h.audio,
     net: h.net,
+    ga: h.ga,
     cam: h.cam,
     get demo() {
       return h.demo();

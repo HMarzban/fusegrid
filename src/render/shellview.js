@@ -159,6 +159,7 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
         togT: app.togT,
         rev: REV,
         door: doorOf(app),
+        ana: app.analytics,
         touch: layOf(canvas) !== "d",
       });
     }
@@ -266,6 +267,7 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
       togT: app.togT,
       rev: REV,
       door: doorOf(app),
+      ana: app.analytics,
       touch: layOf(canvas) !== "d",
     });
   } else if (s === SCREEN.GRAPHICS) {

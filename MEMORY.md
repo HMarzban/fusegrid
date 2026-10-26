@@ -16,6 +16,10 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-26 — Opt-in Google Analytics (GA4) built, ID G-C3MW30HPQ0 in
+- Owner asked for a tracker (opens + who stays), picked GA4 with "ask once, with an OPTIONS switch". `src/app/analytics.js` (consent card `#ana`, `nb.analytics.v1` KEEP, OPTIONS ANALYTICS row 8, run_start/run_end + days bucket), `docs/privacy.md`, plan `docs/superpowers/plans/2026-10-26-google-analytics.md`; marketing kit's "no analytics, by design" line rewritten. Folded into unpushed v185 (no CACHE bump).
+- `GA_ID` = `G-C3MW30HPQ0` (owner's web stream). Open: owner registers custom definitions (mode, room, result, heat, pace, days_played, look); real sending is unverified until it is live on Pages (check GA Realtime/DebugView).
+
 ## 2026-10-25 — Enemies and items round (committed on tiles-d, not shipped)
 - Owner: "work on the enemies and the Items ... improve the details and animations like what we have done for floor and walls? run team of agents and run the related skills and also agents". Process: art-director + technical-artist critiques (read-only) -> shared spec `src/render/motion.js` + `entityfx.js` -> four lanes (2D foes `enemybody.js`, 2D items `itemdraw.js`/`icons.js`/`fx.js`/`renderer.js`, REAL 3D `three/entities.js`+`entityanim.js`+`burstfx.js`, PIXEL `pixel/entities.js`+`foegen.js`) -> independent art review -> round 2 fixes. Commits `6ce8047`, `5488c65`; 195 tests; CLASSIC hash `127e8b05:72409`; 3D fat-world 156 draws (cap 160); px tree ~146 KB of 152.
 - Loose ends: no real-GPU frame time for the new motion; hunter windup needs a sim field; 3D spawn is scale + ring (shared materials); PIXEL surface detail thin on chaser/burrow/boomerang/rocket/fast; ENEMIES guide page shows the static pose; docs record: `docs/superpowers/specs/2026-10-25-board-look-depth-ambient-design.md` (Foes and items section).

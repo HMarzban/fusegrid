@@ -82,10 +82,10 @@ check(
   GUIDE_ROWS.join("|"),
 );
 check(
-  "OPT_ROWS frozen, the ten spec rows in order (GRAPHICS door above RESET)",
+  "OPT_ROWS frozen, the eleven spec rows in order (ANALYTICS before the GRAPHICS door, door above RESET)",
   Object.isFrozen(OPT_ROWS) &&
     OPT_ROWS.join("|") ===
-      "MUSIC|SFX|SOUND|RENDER|CAMERA|BRIGHTNESS|SCREEN SHAKE|REDUCE FLASH|GRAPHICS|RESET DEFAULTS",
+      "MUSIC|SFX|SOUND|RENDER|CAMERA|BRIGHTNESS|SCREEN SHAKE|REDUCE FLASH|ANALYTICS|GRAPHICS|RESET DEFAULTS",
   OPT_ROWS.join("|"),
 );
 check(
@@ -620,11 +620,11 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
 {
   const a = createMenuApp();
   a.screen = SCREEN.SETTINGS;
-  a.optRow = 9;
+  a.optRow = 10;
   a.optMove(1);
-  check("optMove wraps 9 -> 0", a.optRow === 0, a.optRow);
+  check("optMove wraps 10 -> 0", a.optRow === 0, a.optRow);
   a.optMove(-1);
-  check("optMove wraps 0 -> 9", a.optRow === 9 && OPT_ROWS[9] === "RESET DEFAULTS", a.optRow);
+  check("optMove wraps 0 -> 10", a.optRow === 10 && OPT_ROWS[10] === "RESET DEFAULTS", a.optRow);
   a.optRow = 0;
   a.key("ArrowDown");
   check("ArrowDown tap moves the row (axis 1)", a.optRow === 1, a.optRow);
@@ -1368,11 +1368,11 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
   const a = createMenuApp({ settings: {}, onSettings: (s, k) => seen.push(k) });
   a.screen = SCREEN.MENU; a.cursor = ITEMS.indexOf("OPTIONS"); a.confirm();
   a.optRow = OPT_ROWS.indexOf("GRAPHICS");
-  check("GRAPHICS door sits at optRow 8, right above RESET", a.optRow === 8 && OPT_ROWS[9] === "RESET DEFAULTS");
+  check("GRAPHICS door sits at optRow 9, right above RESET", a.optRow === 9 && OPT_ROWS[10] === "RESET DEFAULTS");
   const s0 = JSON.stringify(a.settings);
   check("door ←/→ do nothing", a.move(-1, 0) === false && a.move(1, 0) === false && JSON.stringify(a.settings) === s0);
   a.gfxRow = 5;
-  check("door Enter opens SCREEN.GRAPHICS at row 0, optRow kept", a.confirm() === true && a.screen === SCREEN.GRAPHICS && a.gfxRow === 0 && a.optRow === 8 && a.togT === -1);
+  check("door Enter opens SCREEN.GRAPHICS at row 0, optRow kept", a.confirm() === true && a.screen === SCREEN.GRAPHICS && a.gfxRow === 0 && a.optRow === 9 && a.togT === -1);
   check("door value is the preset: AUTO ›", a.gfxView().door === "AUTO ›" && a.gfxPreset() === "AUTO");
   a.move(-1, 1);
   check("↑ wraps 0 -> 7", a.gfxRow === 7);
@@ -1405,14 +1405,14 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
   a.gfxRow = 0; a.confirm();
   check("a preset never writes the meter", a.settings.fpm === 1 && a.gfxPreset() === "BATTERY");
   a.key("Escape");
-  check("Esc -> OPTIONS on the GRAPHICS door", a.screen === SCREEN.SETTINGS && a.optRow === 8);
+  check("Esc -> OPTIONS on the GRAPHICS door", a.screen === SCREEN.SETTINGS && a.optRow === 9);
   a.key("Escape");
   check("second Esc -> MENU", a.screen === SCREEN.MENU);
-  a.screen = SCREEN.SETTINGS; a.optRow = 8; a.confirm(); a.key("Backspace");
-  check("Backspace backs out like Esc", a.screen === SCREEN.SETTINGS && a.optRow === 8);
+  a.screen = SCREEN.SETTINGS; a.optRow = 9; a.confirm(); a.key("Backspace");
+  check("Backspace backs out like Esc", a.screen === SCREEN.SETTINGS && a.optRow === 9);
   a.optRow = OPT_ROWS.indexOf("RESET DEFAULTS"); a.confirm();
   check("RESET DEFAULTS returns GRAPHICS to AUTO, meter off", a.gfxPreset() === "AUTO" && a.settings.fpm === 0);
-  a.optRow = 8; a.confirm();
+  a.optRow = 9; a.confirm();
   check("digits and pace keys do nothing on GRAPHICS", ["Digit1", "Digit5", "BracketLeft", "BracketRight", "KeyT", "KeyR"].every((k) => a.key(k) === false) && a.screen === SCREEN.GRAPHICS);
   a.gfxRow = 1;
   a.update(1 / 60, mkInput({ right: true }));
@@ -1456,15 +1456,15 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
   const a = createMenuApp({ settings: {} });
   a.screen = SCREEN.GAME; a.worldState = "PAUSE"; a.enterPause();
   a.pauseCursor = 2; a.confirm();
-  a.optRow = 8;
+  a.optRow = 9;
   check("PAUSE OPTIONS door opens inline pauseView 2, shell stays GAME", a.confirm() === true && a.pauseView === 2 && a.screen === SCREEN.GAME && a.gfxRow === 0);
   a.move(1, 1);
-  check("pause view 2: ↓ moves gfxRow, never optRow", a.gfxRow === 1 && a.optRow === 8);
+  check("pause view 2: ↓ moves gfxRow, never optRow", a.gfxRow === 1 && a.optRow === 9);
   a.update(1 / 60, mkInput({ left: true }));
   check("pause view 2: held ← adjusts FRAME RATE", a.settings.fps === 0, a.settings.fps);
   a.confirm();
   check("pause view 2: Enter cycles the row", a.settings.fps === 1);
-  check("pauseBack 2 -> 1 keeps optRow on the door", a.pauseBack() === true && a.pauseView === 1 && a.optRow === 8);
+  check("pauseBack 2 -> 1 keeps optRow on the door", a.pauseBack() === true && a.pauseView === 1 && a.optRow === 9);
   check("pauseBack 1 -> 0", a.pauseBack() === true && a.pauseView === 0);
   check("pauseBack on the list is false", a.pauseBack() === false);
   a.pauseView = 2; a.enterPause();

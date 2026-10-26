@@ -1767,13 +1767,14 @@ export function drawTrophies(c, L, t, rows) {
   foot(c, S, "ENTER / ESC BACK TO STATS");
 }
 
-/* OPTIONS (spec §2): ten rows on LEVEL SELECT's adjust model — eight live
-   knobs, the GRAPHICS door and RESET DEFAULTS.
-   ui = {row, vals, r3d, px, togT, rev, door, touch}; vals is the nb.settings.v1 blob,
+/* OPTIONS (spec §2): eleven rows on LEVEL SELECT's adjust model — eight live
+   knobs, ANALYTICS (the GA consent, its own store), the GRAPHICS door and
+   RESET DEFAULTS.
+   ui = {row, vals, r3d, px, togT, rev, door, ana, touch}; vals is the nb.settings.v1 blob,
    rev is the build tag shellview derives from CACHE_NAME and door is the
    GRAPHICS preset value (`AUTO ›`) the app derives. Rows NEVER hide or
    reflow — the two 3D-only rows dim to 0.45 and read an em dash in CLASSIC 2D
-   and PIXEL, so the list is the same ten lines in every kind. CAM_NAME
+   and PIXEL, so the list is the same eleven lines in every kind. CAM_NAME
    mirrors camrig.js's CAM_PRESET order; this file must not import from
    src/render/three (the 2D path never loads three), so the names are
    duplicated here the way PLAQUE_NAME is. */
@@ -1787,6 +1788,7 @@ const OPT_LABEL = [
   "BRIGHTNESS",
   "SCREEN SHAKE",
   "REDUCE FLASH",
+  "ANALYTICS",
   "GRAPHICS",
   "RESET DEFAULTS",
 ];
@@ -1795,7 +1797,7 @@ export const OPT_N = OPT_LABEL.length; // pinned equal to menuapp OPT_ROWS.lengt
    so it names the tap model both pages use (row = Enter, off the plate = back). */
 export const FOOT_KEYS = "↑↓ ROW · ←→ ADJUST · ENTER CYCLE · ESC BACK", FOOT_TAP = "TAP A ROW TO CHANGE IT · TAP OUTSIDE TO GO BACK";
 const OPT_3D = OPT_LABEL.map((s) => s === "CAMERA" || s === "BRIGHTNESS");
-export function settingsRows(vals, r3d, px, door) {
+export function settingsRows(vals, r3d, px, door, ana) {
   const v = vals || {};
   const on = (b) => (b ? "ON" : "OFF");
   return [
@@ -1807,22 +1809,23 @@ export function settingsRows(vals, r3d, px, door) {
     String(v.bri | 0),
     on(v.shk),
     on(v.flx),
+    on(ana),
     door || "›",
     "",
   ];
 }
 /* One source for the layout budget (a hugging plate, pitch 28 keyboard / 41
-   touch): the page draws it and settingsHit / graphicsHit read it, so a tap
+   touch; OPTIONS touch is 37 so its eleven rows fit the 520 band unscaled): the page draws it and settingsHit / graphicsHit read it, so a tap
    can never land on a row the plate did not paint. note = the line under the
    rows (CONTROLS on keyboard, dropped on touch; GRAPHICS' two-line help). */
-function rowsGeom(L, n, note, touch) {
+function rowsGeom(L, n, note, touch, tp) {
   const T = !!touch,
-    pitch = T ? 41 : 28,
+    pitch = T ? tp || 41 : 28,
     S = pageBox(L, 500, n * pitch + note, T),
     rowH = pitch * S.f;
   return { S, y0: S.by, rowH, noteY: S.by + n * rowH + 6, n };
 }
-export const settingsGeom = (L, touch) => rowsGeom(L, OPT_N, touch ? 0 : 18, touch);
+export const settingsGeom = (L, touch) => rowsGeom(L, OPT_N, touch ? 0 : 18, touch, 37);
 export const graphicsGeom = (L, touch) => rowsGeom(L, GFX_N, 32, touch);
 /* Row index under a tap; -2 = on the plate but off the rows (inert), -1 =
    off the plate (main backs out). Bands are contiguous: +1e-9 keeps a
@@ -1841,7 +1844,7 @@ export function drawSettings(c, L, t, ui) {
   const u = ui || {};
   const cur = u.row | 0,
     r3d = !!u.r3d;
-  const vals = settingsRows(u.vals, r3d, !!u.px, u.door);
+  const vals = settingsRows(u.vals, r3d, !!u.px, u.door, u.ana);
   const g = settingsGeom(L, u.touch),
     S = g.S;
   boxPlate(c, S);

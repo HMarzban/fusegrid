@@ -167,9 +167,11 @@ tags, so chat apps show no preview card.
 A board code carries the board, never a score. Share it as "try this board",
 not "beat my score".
 
-There is no analytics, by design. Don't add tracking tags or UTM-tagged links
-to measure a launch. Watch the GitHub stars, the platform dashboards and the
-replies instead.
+Analytics is opt-in Google Analytics 4 on the Pages site only (owner
+2026-10-26; what it sends: [privacy.md](../privacy.md)). Players who press NO
+THANKS, and every portal copy, send nothing. Don't add other tracking tags or
+UTM-tagged links to measure a launch. Watch GA, the GitHub stars, the platform
+dashboards and the replies.
 
 ---
 

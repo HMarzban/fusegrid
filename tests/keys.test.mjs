@@ -76,6 +76,18 @@ const live = (w) => w.bombs.filter((b) => !b.dead).length;
   press(g, "Escape"); press(g, "KeyU");
   check("U in PAUSE: nothing happens", g.world.state === "PAUSE" && g.app.pauseCursor === 0, g.world.state);
 }
+// ---- Y / N (GA consent card, src/app/analytics.js): the card's own window
+// capture listener owns them, live only while the card shows; under Node no
+// card ever mounts, so they are inert in MENU, PLAY and PAUSE. ----
+for (const code of ["KeyY", "KeyN"]) {
+  const g = menu();
+  press(g, code);
+  check(code + " in MENU with no consent card: nothing happens", g.app.screen === SCREEN.MENU && g.app.cursor === 0 && g.app.analytics === false, g.app.screen);
+  press(g, "Enter"); press(g, code);
+  check(code + " in PLAY: nothing happens, the run keeps going", g.app.screen === SCREEN.GAME && g.world.state === "PLAY", g.world.state);
+  press(g, "Escape"); press(g, code);
+  check(code + " in PAUSE: nothing happens", g.world.state === "PAUSE" && g.app.pauseCursor === 0, g.world.state);
+}
 // ---- INTRO (opening 2026-10-09): the title waits for a press that starts the
 // show; Escape and modifiers never do. In the show, past the 0.2 s guard, any
 // key skips to MENU at PLAY. Every visit, the first included, lands on MENU. ----
@@ -349,7 +361,7 @@ withSettings(null, () => {
   const g = menu(); toRow(g, ITEMS.indexOf("OPTIONS")); press(g, "Enter"); toRow(g, GDOOR);
   const s0 = JSON.stringify(g.app.settings);
   press(g, "ArrowLeft"); press(g, "ArrowRight");
-  check("GRAPHICS door: OPTIONS ↓ x8 lands on it, ←/→ change nothing", g.app.optRow === 8 && OPT_ROWS[8] === "GRAPHICS" && g.app.screen === SCREEN.SETTINGS && JSON.stringify(g.app.settings) === s0, g.app.optRow);
+  check("GRAPHICS door: OPTIONS ↓ x9 lands on it, ←/→ change nothing", g.app.optRow === 9 && OPT_ROWS[9] === "GRAPHICS" && g.app.screen === SCREEN.SETTINGS && JSON.stringify(g.app.settings) === s0, g.app.optRow);
   press(g, "Enter");
   check("GRAPHICS door Enter opens SCREEN.GRAPHICS at row 0", g.app.screen === SCREEN.GRAPHICS && g.app.gfxRow === 0, g.app.screen + "/" + g.app.gfxRow);
   // 2: wrap

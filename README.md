@@ -177,7 +177,10 @@ CORE ×1, PLUS ×2, MAX ×3.
   (for example `v183`), so you can tell when an update has landed.
 
 Everything the game remembers lives in your browser's local storage. There is
-no account, no server and no global ranking.
+no account, no server and no global ranking. The game asks once whether to
+share play stats through Google Analytics; nothing is sent unless you
+allow it, and **OPTIONS → ANALYTICS** changes your mind
+([privacy](docs/privacy.md)).
 
 ---
 

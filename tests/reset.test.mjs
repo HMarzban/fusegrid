@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { CLEAR_KEYS, KEEP_KEYS, clearCabinet } from "../src/app/reset.js";
 import { SETTINGS_KEY } from "../src/app/settings.js";
 import { PACE_KEY } from "../src/app/pacestore.js";
+import { ANALYTICS_KEY } from "../src/app/analytics.js";
 import { createMenuApp, SCREEN } from "../src/app/menuapp.js";
 
 let pass = 0,
@@ -37,8 +38,8 @@ const appFiles = walk(join(ROOT, "src/app"));
   check("CLEAR_KEYS and KEEP_KEYS are disjoint", CLEAR_KEYS.every((k) => !KEEP_KEYS.includes(k)));
   const missing = [...all].filter((k) => !found.has(k));
   check("every listed key appears in src/", missing.length === 0, missing.join(","));
-  check("KEEP_KEYS is exactly the settings and pace keys",
-    KEEP_KEYS.length === 2 && KEEP_KEYS.includes(SETTINGS_KEY) && KEEP_KEYS.includes(PACE_KEY),
+  check("KEEP_KEYS is exactly the settings, pace and analytics-consent keys",
+    KEEP_KEYS.length === 3 && KEEP_KEYS.includes(SETTINGS_KEY) && KEEP_KEYS.includes(PACE_KEY) && KEEP_KEYS.includes(ANALYTICS_KEY),
     KEEP_KEYS.join(","));
   check("CLEAR_KEYS holds 12 distinct keys", CLEAR_KEYS.length === 12 && new Set(CLEAR_KEYS).size === 12,
     CLEAR_KEYS.join(","));
@@ -71,10 +72,10 @@ function mapStore(throwOn) {
 {
   const st = mapStore();
   for (const k of [...CLEAR_KEYS, ...KEEP_KEYS, "other.app"]) st.setItem(k, "1");
-  check("fixture holds all 14 keys plus other.app", st.m.size === 15);
+  check("fixture holds all 15 keys plus other.app", st.m.size === 16);
   clearCabinet(st);
-  check("clearCabinet leaves exactly the 2 KEEP keys and other.app",
-    st.m.size === 3 && KEEP_KEYS.every((k) => st.m.has(k)) && st.m.has("other.app"),
+  check("clearCabinet leaves exactly the 3 KEEP keys and other.app",
+    st.m.size === 4 && KEEP_KEYS.every((k) => st.m.has(k)) && st.m.has("other.app"),
     [...st.m.keys()].join(","));
 }
 {
@@ -84,7 +85,7 @@ function mapStore(throwOn) {
   try { clearCabinet(st); } catch (_) { threw = true; }
   check("a throwing removeItem never throws out of clearCabinet", !threw);
   check("a throwing removeItem still removes every other CLEAR key",
-    st.m.size === 3 && st.m.has(CLEAR_KEYS[3]) && KEEP_KEYS.every((k) => st.m.has(k)),
+    st.m.size === 4 && st.m.has(CLEAR_KEYS[3]) && KEEP_KEYS.every((k) => st.m.has(k)),
     [...st.m.keys()].join(","));
 }
 {

@@ -612,7 +612,7 @@ function check(name, cond, detail) {
           Math.abs(pT.x - gT.S.x) <= 1 && Math.abs(pT.y - gT.S.y) <= 1 && Math.abs(pT.h - gT.S.h) <= 1, // plate() snaps to even px
         JSON.stringify({ pT, ftT }),
       );
-      /* The pitch is a cap (28 keyboard / 41 touch, ATLAS "not fat"); a short
+      /* The pitch is a cap (28 keyboard / 37 touch, ATLAS "not fat"); a short
          box scales it by the plate's f. Rows start under the head (S.by), the
          note line sits 6 under the last row, and the drawn labels sit on the
          geometry's row centres (draw -> settingsHit share one table). */
@@ -624,13 +624,13 @@ function check(name, cond, detail) {
         G.S.y >= B.top - 0.5 && G.S.y + G.S.h <= B.bot + 0.5;
       const firstT = T2.texts.find((t) => t.s === "MUSIC"), lastT = T2.texts.find((t) => t.s === "RESET DEFAULTS");
       check(
-        `options row pitch: 28 keyboard / 41 touch, scaled only in a short box, plate inside its band at ${W}x${H}`,
+        `options row pitch: 28 keyboard / 37 touch, scaled only in a short box, plate inside its band at ${W}x${H}`,
         pitchOk(g, 28, md.bandOf(L, false)) &&
-          pitchOk(gT, 41, md.bandOf(L, true)) &&
+          pitchOk(gT, 37, md.bandOf(L, true)) &&
           Math.abs(first.y - (g.y0 + g.rowH / 2)) < 0.01 &&
-          Math.abs(lastRow.y - (g.y0 + 9.5 * g.rowH)) < 0.01 &&
+          Math.abs(lastRow.y - (g.y0 + 10.5 * g.rowH)) < 0.01 &&
           Math.abs(firstT.y - (gT.y0 + gT.rowH / 2)) < 0.01 &&
-          Math.abs(lastT.y - (gT.y0 + 9.5 * gT.rowH)) < 0.01,
+          Math.abs(lastT.y - (gT.y0 + 10.5 * gT.rowH)) < 0.01,
         [g.y0, g.rowH, g.noteY, g.S.f, gT.y0, gT.rowH, gT.S.f].join("/"),
       );
       check(
@@ -964,9 +964,10 @@ function check(name, cond, detail) {
     pathRects(c, rects);
     return { c, texts, rects };
   };
-  check("OPT_N === OPT_ROWS.length (10)", md.OPT_N === OPT_ROWS.length && md.OPT_N === 10);
+  check("OPT_N === OPT_ROWS.length (11)", md.OPT_N === OPT_ROWS.length && md.OPT_N === 11);
   check("GFX_N === GFX_ROWS.length (8)", md.GFX_N === gfx.GFX_ROWS.length && md.GFX_N === 8);
-  check("settingsRows carries the door value at the GRAPHICS row", md.settingsRows({}, false, false, "CUSTOM ›")[OPT_ROWS.indexOf("GRAPHICS")] === "CUSTOM ›" && md.settingsRows({}, false, false)[8] === "›");
+  check("settingsRows carries the door value at the GRAPHICS row", md.settingsRows({}, false, false, "CUSTOM ›")[OPT_ROWS.indexOf("GRAPHICS")] === "CUSTOM ›" && md.settingsRows({}, false, false)[9] === "›");
+  check("settingsRows shows ANALYTICS ON/OFF from its own flag", md.settingsRows({}, false, false, "", true)[OPT_ROWS.indexOf("ANALYTICS")] === "ON" && md.settingsRows({}, false, false)[8] === "OFF");
   const S = (o) => ({ ...(gfx.PRESETS.AUTO), fpm: 0, ...o });
   for (const [W, H] of [[600, 520], [608, 352]]) {
     const L = md.layout(W, H);
