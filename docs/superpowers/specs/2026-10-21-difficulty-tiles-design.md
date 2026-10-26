@@ -440,8 +440,8 @@ not deleted.
 
 ### Final specs (reference patches on local branches, not merged)
 
-The tuned rule and placement code lives on four local branches, one per
-build issue: `pass2-trap` (#22), `pass2-ice` (#20), `pass2-conveyor` (#19),
+The tuned rule and placement code lives on four branches (pushed to GitHub
+2026-10-26, never merged as is), one per build issue: `pass2-trap` (#22), `pass2-ice` (#20), `pass2-conveyor` (#19),
 `pass2-booster` (#21). Each also edits the shared harness models for its own
 rule; #18 integrates them. Help strings below replace the `TILE_HELP`
 placeholders.

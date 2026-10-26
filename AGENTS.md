@@ -969,8 +969,8 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
     +5.9), ICE PATCH (+4.6) and CONVEYOR (+5.4), all with 0 static no-escape
     spots; BOOSTER is an assist tile (owner B1). Owner picks O1/O3/O7/O8/O9
     and T1/I1/B1/C1, the per-heat specs and the lead gate rulings are in the
-    tiles record's "design pass 2" addendum. Tuned code waits on local
-    branches `pass2-trap` (#22), `pass2-ice` (#20), `pass2-conveyor` (#19),
+    tiles record's "design pass 2" addendum. Tuned code waits on branches
+    (pushed to GitHub, never merged as is) `pass2-trap` (#22), `pass2-ice` (#20), `pass2-conveyor` (#19),
     `pass2-booster` (#21), never merged as is: #18 integrates them (move
     `featchecks` into `src/core` first; fix V14 items-on-tiles in
     `loadLevel`; then re-confirm, since A0 moves). Measuring: `tools/balance/`
