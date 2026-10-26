@@ -742,6 +742,22 @@ function laneMarks(c, s, k, col) {
   c.globalAlpha = 1;
 }
 
+/* the lane pass, on the FLOOR before drawItems so a pickup is never covered (lead ruling 2026-10-26). It owns the ramp: lockK runs here once per frame per
+   foe on the same clock as drawFoes (world.time, the PAUSE time swapped in), and drawFoes reuses s.lk when s.lt is already this frame's t. */
+const lockOf = (world, e, s, t) => (s.lt === t ? s.lk : lockK(s, lockOn(world, e), t));
+export function drawLanes(c, world) {
+  const t = world.time || 0;
+  for (const e of world.enemies || []) {
+    if (e.dead || !e.hunt) continue;
+    const s = fstate(e), lk = lockOf(world, e, s, t);
+    if (!(lk > 0.01)) continue;
+    c.save();
+    c.translate(e.x, e.y);
+    laneMarks(c, s, lk, e.color);
+    c.restore();
+  }
+}
+
 export function drawFoes(c, world) {
   const t = world.time || 0,
     TL = CFG.TILE,
@@ -766,7 +782,7 @@ export function drawFoes(c, world) {
       if (e.invulnT < 0.15) sa = 1 + (sa - 1) * (e.invulnT / 0.15);
     }
     const ln = pl && e.hunt && !e.invuln ? leanAt(type, e.hunt, pl.x - e.x, pl.y - e.y, TL) : null,
-      lk = e.hunt ? lockK(s, lockOn(world, e), t) : 0;
+      lk = e.hunt ? lockOf(world, e, s, t) : 0;
     if (ln && !s.near) s.f0 = t;
     s.near = !!ln;
     let fl = 0;
@@ -808,7 +824,6 @@ export function drawFoes(c, world) {
       c.stroke();
       c.globalAlpha = 1;
     }
-    if (lk > 0.01) laneMarks(c, s, lk, e.color);
     if (cue > 0.04) {
       c.globalAlpha = cue * (0.38 + 0.3 * (0.5 + 0.5 * Math.sin(1.9 * t + ph * 6.283)));
       c.strokeStyle = lt(e.color, 0.35);

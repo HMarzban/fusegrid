@@ -37,6 +37,11 @@ function lane(c, s, X, Y, a, R) {
   }
   c.globalAlpha = 1;
 }
+/* floor pass before drawItems (never over a pickup); one lockK a frame, drawFoes reuses it */
+const lockOf = (w, e, s, t) => (s.lt === t ? s.lk : lockK(s, lockOn(w, e), t));
+export function drawLanes(c, V, world) {
+  for (const e of world.enemies) if (e.hunt && !e.dead) { const s = foeState(V, e), k = lockOf(world, e, s, V.t); if (k > 0.34) lane(c, s, snapArt(e.x), snapArt(e.y), k < 0.67 ? 0.5 : 0.9, pxRamp(e.color)); }
+}
 export function drawFoes(c, V, world) {
   const es = world.enemies, t = V.t, F = V.A.foe, p0 = world.players && world.players[0];
   for (let i = 0; i < es.length; i++) {
@@ -48,8 +53,7 @@ export function drawFoes(c, V, world) {
     const moving = e.speed > 0 && !isIdle(st);
     let X = snapArt(e.x), Y = snapArt(e.y), dy = 0, f, hx = 0, pf = 0;
     if (e.hunt && p0 && p0.alive !== false) { const ln = leanAt(e.type, true, p0.x - e.x, p0.y - e.y, CFG.TILE); if (ln) { X += Math.round(ln.ox / 2); Y += Math.round(ln.oy / 2); } }
-    const lk = e.hunt ? lockK(st, lockOn(world, e), t) : 0;
-    if (lk > 0.34) { lane(c, st, X, Y, lk < 0.67 ? 0.5 : 0.9, pxRamp(e.color)); X += st.ldx; Y += st.ldy; }
+    if (e.hunt && lockOf(world, e, st, t) > 0.34) { X += st.ldx; Y += st.ldy; }
     if (FLYER[e.type]) dy = Math.round(bobAt(e.type, ph, t, moving) / 2);
     if (set.walk) {
       const idle = ((t * foeM(e.type).idleW / 6.2832 + ph) % 1) < 0.62 ? 0 : 1;

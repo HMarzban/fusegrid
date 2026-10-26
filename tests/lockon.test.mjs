@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { CFG, T, key } from "../src/core/config.js";
 import { createWorld, loadLevel, step, newIntent } from "../src/core/sim.js";
-import { spawnEnemy } from "../src/core/entities.js";
+import { spawnEnemy, POWER } from "../src/core/entities.js";
 import { bfsNext } from "../src/core/board.js";
 import { createRng } from "../src/core/rng.js";
 import { lockOn, LOCK_N } from "../src/render/lockon.js";
@@ -267,4 +267,34 @@ test("REAL 3D: stepFoe crouches the locked hunter down the lane and holds the ra
   assert.equal(L[5], 1, "PAUSE holds the lane even though the board under it changed");
   w.state = "PLAY"; tick(30);
   assert.equal(LANES.n.value, 0, "a closed lane clears once the ramp out ends");
+});
+
+/* lead ruling 2026-10-26: pickups are never covered. A pickup lying in the lane marks the log when drawItems reads it; the lane must be painted before. */
+const spyItem = (w, x, y, mark) => { const pd = POWER.find((p) => p.t === "fire"), it = { x: ctr(x), y: ctr(y), t: "fire", col: pd.col, buried: false, pdef: pd }; Object.defineProperty(it, "taken", { get() { mark(); return false; } }); w.items.push(it); };
+
+test("CLASSIC 2D: the lane chevrons are a floor pass under the pickups; the foe still lunges and the ramp is read once a frame", () => {
+  initFx(); setFxOpts({ flashK: 1 });
+  const R2 = recCtx(), r = createRenderer({ width: 600, height: 520, getContext: () => R2.ctx }, { kind: "2d" });
+  const w = room(7, 5); hunter(w, "chaser", 3, 5, R(1, 0));
+  spyItem(w, 5, 5, () => R2.log.push("@item"));
+  for (let i = 0; i < 12; i++) { R2.log.length = 0; w.time += 1 / 60; r.render(w, 1 / 60); }
+  const L = R2.log, lastLane = L.lastIndexOf("strokeStyle=#0b0e16"), lastItem = L.lastIndexOf("@item");
+  assert.ok(lastLane > 0 && lastItem > lastLane, "lane " + lastLane + " < item " + lastItem);
+  assert.equal(laneA(L), 0.495, "full lock, the same value the foe pass reads");
+});
+
+test("PIXEL: the lane chevrons are a floor pass under the pickups", () => {
+  const V = createView(createAtlas(surfRGBA)); V.shots = createOneShots(); V.parts = [];
+  const w = room(7, 5), e = hunter(w, "chaser", 3, 5, R(1, 0)), RP = pxRamp(e.color);
+  let log = [];
+  spyItem(w, 5, 5, () => log.push("@item"));
+  const draw = (t) => {
+    V.t = t; V.dt = 1 / 60; log = [];
+    const c = createRGBA(300, 260, "#101018").getContext(), f0 = c.fillRect;
+    c.fillRect = function (x, y, w2, h2) { log.push(this.fillStyle); return f0.call(this, x, y, w2, h2); };
+    drawPixelWorld(c, w, V);
+  };
+  for (let i = 0; i < 12; i++) draw(1 + i / 60);
+  const lastLane = log.lastIndexOf(RP.light), lastItem = log.lastIndexOf("@item");
+  assert.ok(lastLane > 0 && lastItem > lastLane, "lane " + lastLane + " < item " + lastItem);
 });

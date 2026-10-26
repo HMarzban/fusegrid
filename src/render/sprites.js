@@ -216,6 +216,7 @@ export { paintItemFace, drawItemChrome, drawItemBody, drawItems } from "./itemdr
 export function drawEnemies(c, world) {
   drawFoes(c, world);
 }
+export { drawLanes } from "./enemybody.js";
 /* MAKO — the reef critter. 2026-09-06, on the user's veto of every humanoid
    hero ("the main character also must not be like a human, it must be a
    creative character like [the genre classic]"). An art-direction round put

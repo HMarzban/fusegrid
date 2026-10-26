@@ -2,7 +2,7 @@ import {CFG} from "../core/config.js";
 import {sfxOf} from "../audio/item.js";
 import {
   bakeAtlas, drawGrid, drawBiomeBackground, drawBricks,
-  drawItems, drawEnemies, drawPlayer, drawPlayerBody, drawBombs, drawBlades, drawGhost
+  drawItems, drawEnemies, drawPlayer, drawPlayerBody, drawBombs, drawBlades, drawGhost, drawLanes
 } from "./sprites.js";
 import {onEvent, updateFx, drawFx, drawBursts, drawFxOverlay, drawPickupFx, feedFx, getShake, getFlash, getFx, initFx, syncFx} from "./fx.js";
 import {drawOverlay, overlayBox, drawHudChips, drawAbilityBar, drawCoach, drawCoach2} from "./scenes.js";
@@ -119,6 +119,7 @@ export function createRenderer(canvas, opts={}){
       if(o&&(o.hud===true||o.amb===true)) amb.draw(ctx, world, "under");
       wellBoard(ctx, world.level);
       drawBricks(ctx, world);
+      drawLanes(ctx, world);
       drawItems(ctx, world);
       drawBombs(ctx, world);
       drawBlades(ctx, world);

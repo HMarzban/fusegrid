@@ -18,7 +18,7 @@ import {PX_T} from "./timing.js";
 import {wellPx} from "../frame.js";
 import {snapArt} from "./snap.js";
 import {OS, shotFrame} from "./oneshot.js";
-import {blit, drawFoes, drawItems, drawBursts} from "./entities.js";
+import {blit, drawFoes, drawItems, drawBursts, drawLanes} from "./entities.js";
 import {deathK} from "../motion.js";
 import {getFxOpts} from "../fx.js";
 import {F_FRONT, P_CROSS, P_STRAIGHT, facingOf, walkStep, newWalk, isIdle, cycle, bladeAgeFrame, bladePieces, bladeScratch, fuseFrame, swellFrame, popFrame} from "./anim.js";
@@ -173,6 +173,7 @@ export function drawPixelWorld(c, world, V) {
   drawTiles(c, V, world);
   drawAmbient(c, V, world, "under");
   drawShadows(c, V, world, blit, snapArt);
+  drawLanes(c, V, world);
   drawItems(c, V, world);
   drawBombs(c, V, world);
   drawBlades(c, V, world);
