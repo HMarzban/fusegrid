@@ -49,7 +49,7 @@ cursor; on a phone it's a hub of tiles. Every panel is only as tall as its
 content, and any teaser built from your record (a top score, a best time)
 reads only runs you played, never placeholders.
 
-The build you're running is named on the main menu (`v185` today): in the
+The build you're running is named on the main menu (`v188` today): in the
 keyboard foot hint, under the phone hub, or on the SOURCE tile where a
 landscape touch screen has no room below the hub. OPTIONS shows it as its
 `BUILD` kicker and the NEW VERSION READY card says which build you're on.
@@ -211,9 +211,10 @@ Shell v185 (2026-10-26) gives the board a new look in all three looks. It adds:
   one shader, [`three/featmesh.js`](../src/render/three/featmesh.js)). Only
   CONVEYOR, ICE PATCH, BOOSTER and TRAP have rules
   ([`core/feat.js`](../src/core/feat.js)); STREAM, QUICKSAND, PORTAL and GATE are
-  art for now. Tiles appear only on the gen-2 boards, a test build reached with
-  `?gen=2`; every normal run, challenge code and daily plays today's boards,
-  and the GUIDE's FLOOR page marks the tiles PREVIEW.
+  art for now. In v185 the tiles appeared only on a test build reached with
+  `?gen=2`; since v188 that preview is `?gen=3` (the gen-2 board plus the
+  tile layer, see below), and the GUIDE's FLOOR page still marks the tiles
+  PREVIEW.
 - **A world bezel and a recessed well** around the board
   ([`frameart.js`](../src/render/frameart.js), [`frame.js`](../src/render/frame.js)).
 - **Depth**: cast and contact shadows, ambient occlusion, lower-value bricks
@@ -239,13 +240,64 @@ the tile look is in the
 [direction D record](superpowers/specs/2026-10-25-floor-tiles-direction-d-design.md);
 the gameplay gaps are tracked in issue #35. 
 
+## 🎲 A new board every run (shell v188)
+
+Before v188 every room shared one wall lattice, and a whole session replayed
+the same board. Now every ordinary run deals a fresh one.
+
+- **The seed.** `bootSeed` is drawn once per page load; ordinary run *i* plays
+  [`runSeed(bootSeed, i)`](../src/core/rng.js) (run 0 is `bootSeed`, so a
+  seeded test keeps its first board). PLAY, LEVEL SELECT, a run from the demo,
+  PAUSE RESTART and the GAME OVER restart all deal the next seed; main arms
+  `world.nextSeed` and the sim's `startGame` consumes it. Losing a life keeps
+  the board. DAILY and `?code=` runs are fixed: they never touch the index, and
+  every retry replays their board.
+- **The generations.** `world.gen` names the generator, and `loadLevel` never
+  resets it. **Gen 1** is the original lattice ([`board.js`](../src/core/board.js)),
+  kept forever for F1 codes, past dailies, the demo and the intro show.
+  **Gen 2** is the bold mazes ([`board2.js`](../src/core/board2.js)), played by
+  every ordinary run and the DAILY: 14 layouts (one per world, three each for
+  WATER, ARENA and CROWN), a layout stage keyed by seed and room, and a fill
+  stage that changes bricks only, so heat never moves a wall. **Gen 3** is gen 2
+  plus the floor tiles, only behind `?gen=3`, so an F2 code is always tile-free.
+- **The fairness gate.** [`fair.js`](../src/core/fair.js) is one pure
+  `validateBoard` with thirteen rules (reach, a safe first bomb, room fit, foe
+  distance, brick count, room 1's FLAME and BOMB, SHRINK connectivity, dead
+  ends, wall slots, tall E-W walls, the re-roll budget, finale mirroring and a
+  sealed start). A gen-2 board is generated, validated and re-rolled (8 layouts,
+  8 fills); if it still fails, it falls back to the gen-1 grid with the start
+  sealed, never the raw old board. The start pocket opens through brick doors,
+  every foe starts at least 10 walking steps away (bricks passable), and hunters
+  and brick-passers at least 12.
+- **Codes, daily, ghosts.** A challenge code's second letter is the generation
+  ([`code.js`](../src/app/code.js): F1 or F2); an older client refuses an F2
+  link and boots normally. The daily record is stamped with the generation, so a
+  pre-v188 try never shows as today's. Ghost keys carry it too, and ghosts
+  record and race only on fixed boards, because an ordinary board never comes
+  back. Bests and times carry neither seed nor generation by design: they're
+  about the difficulty and the room, not the shuffle.
+
+Evidence: over 1000 seeds x 8 rooms x 3 heats every gen-2 board passes on its
+first try, with 0 fallbacks and no foe cut from a roster
+([`tools/levels/fairsweep.mjs`](../tools/levels/fairsweep.mjs)). The demo bot
+([`tools/levels/botsweep.mjs`](../tools/levels/botsweep.mjs)) gets hit in the
+first 5 seconds less often in every room and heat (pooled 272 -> 142 of 4800
+runs), and loses more (32% -> 51%): bold rooms are harder by design. They also
+clear faster and hold about 17 fewer bricks, so old score bests get harder to
+beat. The full record is the
+[level-variety design](superpowers/specs/2026-10-20-level-variety-design.md);
+CROWN's THRONE and COURT differ from its layouts appendix (their east-west
+walls became north-south, because REAL 3D hid MAKO behind them).
+
 ## 🧪 Boss fight: evidence and limits
 
 - [Determinism tests](../tests/determinism.test.mjs) replay mixed input over
   1,800 ticks and compare state across worlds and seeds.
 - [Lockstep tests](../tests/net_lockstep.test.mjs) exercise the local
   synchronization protocol. The [`?net=local` harness](../src/net/localpair.js)
-  drives two worlds, but the simulation still consumes player zero. Internet
+  drives two worlds, but the simulation still consumes player zero. Its mirror
+  world is built once at boot from the boot seed, so it mirrors run 0 only:
+  a later run, restart or gen-2 board on the main world is never loaded there. Internet
   multiplayer would need real multiplayer simulation, session ownership,
   a disconnect/rejoin policy and network testing.
 - The tests in [`tests/`](../tests/) also cover storage, menus, rendering

@@ -192,7 +192,42 @@ not shell screens. Do not add them as `SCREEN` values.
     predicate.
   - `heat.js` / `pact.js` — heat tables + bitmask/`applyPact`. Persist is
     `src/app/pactstore.js`, not `src/core`.
-  - `board.js`, `entities.js`, `rng.js` — sim support.
+  - `board.js`, `entities.js`, `rng.js` — sim support. `rng.js` also owns
+    `runSeed(bootSeed, i)` (#10, pure fmix32; run 0 = `bootSeed`).
+  - Boards by generation (`world.gen`, set by main, never reset by
+    `loadLevel`): **1** = `board.js` `genBoard` (the original lattice; F1
+    codes, ATTRACT, the intro show, Node worlds by default), **2** =
+    `board2.js` `genBoard2` (the 14 BOLD layouts, #12: every ordinary run and
+    the DAILY since v188), **3** = gen 2 + the `world.feat` floor-tile layer
+    (`genBoard2(…, {feat:true})`, `?gen=3` only, a preview; O2 2026-10-26:
+    tiles become gen 3 / F3 so an F2 code is always tile-free). Gen 2: a layout
+    keyed `(seed, room, attempt)` (template, stamps, flip; CROWN V or 180
+    only) and a fill keyed `(seed, room, heat, attempt)` that moves bricks
+    only, on a ceiling of the gen-1 brick count minus 17 (JUNGLE minus 6);
+    then `fair.js` `validateBoard` gates it: 8 layouts, the first valid one
+    gets 8 fills, then the FAIR fallback (`stampStart(genBoard(…))`, sealed,
+    counted), never the raw gen-1 board. Templates are the layouts appendix
+    byte for byte except CROWN THRONE / COURT (`TPL_EDITS`): the V10
+    occlusion probe at rig C failed even with interior E-W walls capped at
+    `NEAR_H` (MAKO 89.9%), so their E-W walls were re-authored N-S like VAULT
+    (THRONE is now a walled hall; owner may veto from the contact sheet) and
+    `EW_CAPPED` is empty. Gen-2 foes: `fair.js` `placeFoes` gives each roster
+    entry the first free tile (loadLevel's shuffled list, `SPAWN_CLEAR` kept)
+    at walking distance >= 10 with bricks passable, >= 12 for hunters (FAST /
+    CHASER / KNIGHT) **and brick-passers** (PHANTOM / ROCKET / SHADE; lead
+    ruling 2026-10-26, owner may veto: they walk through the seal bricks).
+  - `fair.js` — pure `validateBoard(grid, level, heat, opts)` (#11) returning
+    failed rule IDs: V1 reach, V2 safe first bomb (reach 1–10, PIERCE, LINE x4,
+    slowest pace vs shortest fuse), V3 room fit, V4 foe distance, V5 bricks
+    40–90 and >= 3 per buried item, V6 room 1 FLAME + BOMB, V7 4 SHRINK rings,
+    V8 dead ends, V9 no (odd, odd) wall, V10 tall E-W walls (`EW_WALL_H_MAX`
+    22 = `NEAR_H`, `EW_CAPPED` per biome), V11 re-roll budget / fair
+    fallback, V12 finale mirroring, SEAL (the 9-tile spawn pocket leaks no
+    EMPTY path; doors (5,1) and (1,5) are BRICK). Gen 1 fails SEAL and V4 by
+    design; `tests/fair.test.mjs` pins its rates as golden numbers, never as
+    gates. Offline: `tools/levels/fairsweep.mjs` (1000 x 8 x 3 per-rule
+    table, variety floors) and `tools/levels/botsweep.mjs` (demobot, rooms 1–8
+    x CORE/MAX, gen 1 vs gen 2); output in git-ignored `tools/levels/out/`.
 - `src/render/` — reads world; drains `world.events` into fx/audio.
   - kind `"2d"` — classic Canvas (`createRenderer`). Do not statically import
     `vendor/three.module.js` on this path; lazy-load via `src/render/three/load.js`.
@@ -388,7 +423,7 @@ not shell screens. Do not add them as `SCREEN` values.
     pause-corrected clock (`three/wrapper.js`; `tests/render3d-pauseclock`).
     Sim side: `core/feat.js` (the `world.feat` layer; rules only for codes
     1..7 = CONVEYOR, ICE PATCH, BOOSTER, TRAP; 8..14 are art only) and
-    `core/board2.js` (the gen-2 skeleton, prototype). Art gates:
+    `core/board2.js` (the gen-2 generator; tiles ride it as gen 3). Art gates:
     `tools/tileart/gates.mjs all`, `tools/walls/`.
 - `src/app/` — menu shell, intro beats, demobot, highscores, `pactstore.js`,
   plus the entry seams above (`flags` / `attract` / `frameloop` / `rcache` /
@@ -402,8 +437,13 @@ not shell screens. Do not add them as `SCREEN` values.
   once; STATS is ten rows — seven lifetime incl. `DAYS PLAYED` (`a.days`, one
   per new LOCAL `ld` at `room_enter`, monotonic, self-heals a future `a.day`,
   never a streak) + three bests) · `daily.js` (`nb.daily.v1`, one board a day from a **date string**,
-  pure FNV-1a `dailySeed`) · `code.js` (no store; a 12-char `F1` challenge code
-  with a checksum). Every date is a string computed in `main.js` (`todayStr`
+  pure FNV-1a `dailySeed`; the record is stamped `g`, the board generation:
+  `DAILY_GEN` 2 since v188, a record with no `g` is gen 1 and reads ABSENT for
+  today's daily, so no PLAYED / YOUR TRIES TODAY / comparison across
+  generations) · `code.js` (no store; a 12-char `F1` / `F2` challenge code
+  with a checksum; the digit is the generation, `?code=F1…` boots gen 1
+  forever, older clients refuse F2 at `CODE_RE` and boot normally, any other
+  prefix fails closed). Every date is a string computed in `main.js` (`todayStr`
   local, `dateStr` UTC) and passed in — `src/app/` never calls `Date`.
   `nb.times.v1` stays the one best-TIMES store; STATS **reads** both and
   copies neither. `medals.js` (`nb.medals.v1`, wave 3, one int `& 255`, never
@@ -411,8 +451,11 @@ not shell screens. Do not add them as `SCREEN` values.
   ONLY at `isRunEnd` in `endRun` from the run tally (`clear5` = L5 WIN with
   `t.r` 5, `clear8` = L8 WIN with `t.r` 3) plus `runT`; the summary's gold
   medal line prints only bits `settleMedals` read back as newly persisted.
-  `ghost.js` (`nb.ghost.v1`, wave 3, version-stamped, LRU 16): one ghost per
-  `{seed, level, heat, pact, pace}` room — a 10/s position log on the PLAY-only
+  `ghost.js` (`nb.ghost.v1`, wave 3, version-stamped, LRU 16; `GHOST_V` 2 since
+  v188, so v1 data loads empty): one ghost per
+  `{seed, level, heat, pact, pace, gen}` room, recorded and raced ONLY on a
+  fixed board (DAILY / `?code=`; owner O4 2026-10-26: an ordinary run's board
+  never repeats, so it records none and races none) — a 10/s position log on the PLAY-only
   `roomT`, faster clears only, never fed to `step()`. `ghostTick` sits between
   the PLAY clock line and the step loop (a new `world.grid` object is the room
   start, so the sim's own retry/next-room record from roomT ~dt); attract
@@ -643,7 +686,8 @@ not shell screens. Do not add them as `SCREEN` values.
   sitemap reaches Google through Search Console.
 
 Flags: `?render=3d|px|iso` (3d/px seed the boot only; iso is pinned), `?play=1`, `?net=local`, `?orbit=1`, `?debug=1`,
-`?code=` (12-char challenge, URL-only — no opts fallback).
+`?code=` (12-char challenge, URL-only — no opts fallback), `?gen=3` (the floor-tile
+preview boards; ignored beside a `?code=`; `?gen=2` does nothing since v188).
 
 Node v26, `"type": "module"`. No build step, no bundler.
 
@@ -674,15 +718,24 @@ Node v26, `"type": "module"`. No build step, no bundler.
   writes no room record and prints no FURTHEST form. A first-ever run on a
   bucket that scores exactly 0 prints **no delta line at all** (Ruling
   2026-09-07, Nit-6) — a zero-point run set no record worth naming.
+  Bests and times deliberately span boards and generators (owner ruling 6,
+  2026-10-20: "base on the dificulity of game and the level"): `nb.bests.v1`
+  and `nb.times.v1` keys carry no seed and no gen.
 - **The daily is honour-system and single-device.** No enforcement, no
   consecutive-day read, no streak/at-risk/welcome-back copy, never framed as
   competing with anyone — the only claim is *your own attempts are comparable
   to each other*. STATS `DAYS PLAYED` is a lifetime count and does not
   break this ban: it never reads consecutive days. Its config is pinned `{level:1, heat:0, pact:0, pace:0}`
   **and stamped**: a record whose stamped pace differs from this run's is
-  treated as absent, never silently compared. A run that supplies no seed
-  plays the session's remembered `bootSeed`, so an ordinary run is
-  indistinguishable before and after a daily.
+  treated as absent, never silently compared; so is one stamped with another
+  board generation (`g`, #13). Ordinary run i of a page load plays
+  `runSeed(bootSeed, i)` (#10; run 0 = `bootSeed`, so `opts.seed` tests keep
+  their first board). Every ordinary start deals the next one: `onStart`
+  (PLAY, LEVEL SELECT, ATTRACT), PAUSE RESTART, and the sim's GAME OVER /
+  finale restart through `world.nextSeed`, which main arms and `startGame`
+  consumes. A daily or code run (`runFixed`) never uses or advances the index,
+  and its restarts replay its board. Losing a life keeps the board. This
+  supersedes the 2026-09-07 "remembered `bootSeed`" rule.
 - **Rulings 2026-10-09 (user).** D1: GAME OVER keeps the arcade restart from
   room 1 — no continue-credit. H4: a tap on ATTRACT starts an ordinary run even
   if the MENU cursor sat on DAILY. REAL 3D near border wall is a cutaway
@@ -692,7 +745,8 @@ Node v26, `"type": "module"`. No build step, no bundler.
   included (R never arms reset or resets the camera there; M has no mute
   binding, so it only leaves).
 - **The challenge code carries a board, never a claim.** `?code=` is 12 chars
-  (`F1` + seed + cfg + checksum), seed/heat/pact/pace only — **no score
+  (`F1` / `F2` + seed + cfg + checksum; a gen-3 preview run's B copies no
+  link and says NO LINK FOR PREVIEW BOARDS until F3 exists), seed/heat/pact/pace only — **no score
   field**, and no `window.prompt` / DOM paste box (entry is through
   `flags.js` alone). The word `leaderboard` is refused in `src/` and `tests/`
   and executably gated by `tests/banned-name.test.mjs`; `docs/` is exempt
@@ -802,6 +856,15 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   use a fresh `--user-data-dir` per run, and delete scratch profiles.
   PIXEL captures: `tools/pixel/shot.mjs` wraps CDP over the Playwright
   `chrome-headless-shell` (`--gpu` = ANGLE Metal) against `PORT=0 node serve.js`.
+  It finds the newest installed `chromium_headless_shell-*` by itself (`CHROME=`
+  only overrides). `--seed --heat --pace --gen` set those `world` fields before
+  every room load, room 1 included, and `--pause` adds a PAUSE still per room.
+  Time is virtual (held rAF, exact 1/60 s steps) and `Math.random` is seeded,
+  so the same flags give byte-identical CLASSIC PNGs. The JSON report records
+  the seed / heat / pace / gen read back and wall / brick hashes per shot.
+  Every child is stopped by PID, also on a crash or Ctrl-C, and the `fg-px-*`
+  profile is deleted after Chrome exits; the header documents every flag
+  (`tests/shot-tool.test.mjs`).
 - Blender is driven through the blender-mcp add-on socket `127.0.0.1:9876`
   with a small Python client (`.superpowers/sdd/2026-10-11-bible/blender/bl.py`,
   local only); the session `mcp__Blender__` tools time out.
@@ -827,10 +890,21 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   `.superpowers/sdd/2026-10-11-bible/`) — the owner's Claude Design canvas is
   the game bible, and nothing from it is built yet. Touch bugs found by the menu
   research: all three fixed 2026-10-19 with the menu redesign.
-- Level variety (owner rulings 2026-10-20, designed, NOT built; issue
-  HMarzban/fusegrid#8, tasks #10 #11 #12 #13 #15 #16 #17; record
-  `docs/superpowers/specs/2026-10-20-level-variety-design.md`). Today 128 of
-  195 tiles never change and one session replays the same board.
+- Level variety (owner rulings 2026-10-20; issue HMarzban/fusegrid#8; record
+  `docs/superpowers/specs/2026-10-20-level-variety-design.md`). BUILT in shell
+  v188 (2026-10-26): #10 random board every run, #11 `fair.js`, #12 gen 2,
+  #13 F2 / daily `g` / ghost gen, #29 capture flags (see the `src/core/`
+  board paragraph above). Before it, 128 of 195 tiles never changed and one
+  session replayed the same board. Measured on v188 (1000 seeds x 8 rooms x 3
+  heats): 24 000 / 24 000 gen-2 boards pass `validateBoard` on their first
+  layout and fill, 0 fallbacks, 0 rosters cut, 0 pocket leaks, foe minima
+  10 / 12; distinct wall layouts per 1000 seeds 211 / 68 / 70 / 555 / 85 /
+  999 / 949 / 281 (floors 200 / 60 / 60 / 500 / 80 / 900 / 900 / 250).
+  Demobot (n 300, real `step()`): runs hit in the first 5 s fall in every
+  cell, pooled 272 -> 142; lose % rises 32 -> 51 (reported, not gated: bold
+  rooms are harder by design). Disclosed drift: rooms clear faster (bot
+  room 3 CORE 68 -> 43 s), about 17 fewer bricks a room (JUNGLE about 6), so
+  less brick score and old score bests get harder to beat.
   - **Random board every run** (`runSeed(bootSeed, i)`, #10), with NO new UI:
     no board code, no NEW/SAME BOARD label, no new key (owner: "just a random
     board"). Every ordinary run start is random, PAUSE RESTART and the GAME
@@ -859,9 +933,9 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
     because the wave-1 prototype showed the dial not working. Then the
     verdict (#30). Tooling: #29.
   - Bests stay keyed by difficulty + room ("not related to the shuffle board").
-  - Gen 2 sits behind `world.gen` (default 1). F1 codes, past dailies,
-    ATTRACT and the intro show stay on gen 1 forever. New codes use F2; the
-    daily switches on release day; the ghost key gains `gen`.
+  - `world.gen` defaults to 1 (Node worlds). F1 codes, past dailies,
+    ATTRACT and the intro show stay on gen 1 forever. Gen-2 boards copy F2
+    codes; the daily switched to gen 2 with v188; the ghost key carries `gen`.
   - 14 BOLD layouts: one per biome, but 3 each for WATER / ARENA / CROWN.
     Heat changes only bricks.
   - A fairness check gates every board, including a sealed start and a
@@ -912,7 +986,9 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
       `three/wellfx.js`; 3D stage background is CSS on `#gl`). A real page played
       gen-2 boards by default on the branch; v185 (owner ruling 2026-10-25,
       "Today's boards") makes gen 1 the default everywhere and `?gen=2` the only
-      way to the tile boards (`flags.js`; a `?code=` never plays them). (Pins at that step: CLASSIC `6ec1e0a5:65648`, px cap 145 KB; current
+      way to the tile boards (`flags.js`; a `?code=` never plays them). v188
+      (O2) moves the tile boards to `?gen=3` and makes tile-free gen 2 the
+      default for ordinary runs and the daily. (Pins at that step: CLASSIC `6ec1e0a5:65648`, px cap 145 KB; current
       values are below.)
       Option C (stage set) sits unmerged on branch `frame-c`.
       Depth round (shadows, AO, brick value down, floor detail, 3D relief,
@@ -978,15 +1054,17 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   any "PLAY-only" animation needs its own clock (`ambientClock`, `world.featT`).
   Node test fakes define `globalThis.location` WITHOUT `href`, so "is this a
   real page" means `typeof location.href === "string"` (the branch's gen-2 page
-  default depended on it; since v185 gen 2 is `?gen=2` only).
-- Release state (2026-10-26): shell **v185** (the board look + opt-in GA4) went
+  default depended on it; since v188 the tile boards are `?gen=3` only).
+- Release state (2026-10-26): shell **v188** (level variety: a random bold,
+  fair board every run, F2 codes, daily on gen 2) is committed on local main;
+  LIVE is **v187**. Shell **v185** (the board look + opt-in GA4) went
   LIVE 2026-10-26; **v187** turns the consent ask into a corner card; **v186** is its hotfix (`#upd[hidden],#ana[hidden]`: an
   author `display:flex` beats the UA `[hidden]` rule, so neither card ever hid;
   `tests/hidden-css.test.mjs` now gates every `#id` display rule). The owner
-  pushes, or says "push". Boards: today's (gen 1) by default, the
-  floor-tile boards only with `?gen=2` (owner ruling "Today's boards": the ghost
-  key and the F1 code carry no `gen`, #13, and the tile dial is #28), so the
-  GUIDE FLOOR page is a PREVIEW. Branches `tiles-d`, `frame-a`, `frame-b` are
+  pushes, or says "push". Boards since v188: gen 2 (bold mazes, no tiles) for
+  every ordinary run and the daily, gen 1 for F1 codes / ATTRACT / the intro,
+  the floor-tile boards only with `?gen=3` (the tile dial is #28), so the
+  GUIDE FLOOR page is still a PREVIEW. 263 tests. Branches `tiles-d`, `frame-a`, `frame-b` are
   deleted (merged); `frame-c` (stage set) stays unmerged. The look is recorded in
   `docs/superpowers/specs/2026-10-25-board-look-depth-ambient-design.md`,
   including the loose ends. Loopback dev server: `PORT=8091 node

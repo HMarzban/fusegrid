@@ -6,7 +6,7 @@
 
 This is the story of how the game was built: the big turns, the dead ends
 and what each one taught us. It runs from the first commit on 2026-08-16 to
-shell v185 on 2026-10-26 (643 commits by then).
+shell v188 on 2026-10-26 (659 commits by then).
 
 - **What changed in each release** lives in the [CHANGELOG](../CHANGELOG.md).
 - **How the game works today** lives in [architecture.md](architecture.md).
@@ -46,6 +46,7 @@ mention review rounds and contact sheets.
 | 2026-10-19 | 5-2 | Phone menus fill the screen; launch prep (shell v181–v182) |
 | 2026-10-21 | 5-3 | 3D walls follow the grid; a readable build tag (shell v183–v184) |
 | 2026-10-25 | 6-1 | A whole new board look (shell v185) |
+| 2026-10-26 | 6-2 | A new board every run: bold mazes, a fair start (shell v188) |
 
 ---
 
@@ -539,6 +540,29 @@ which generator made their board, so on tile boards they would replay the wrong
 one, and the tile rules still need their balance pass. So v185 ships the new
 look on today's boards, and the GUIDE's FLOOR page is marked PREVIEW. The story of each step is in
 [the board-look record](superpowers/specs/2026-10-25-board-look-depth-ambient-design.md).
+
+### 2026-10-26 · A new maze every time you press PLAY
+
+The oldest complaint on the board finally got its fix. Back on 2026-10-20 the
+owner had written that every level was the same maze, and the numbers agreed:
+128 of 195 tiles never moved, and a session replayed one board. Six days
+later the owner said "let's work on this now", and asked for it done and closed.
+
+Two calls came first. The floor tiles would wait for their own generation
+(gen 3, `?gen=3`), so the new mazes could ship clean and a shared F2 link
+would always mean one board. And ghosts would race only on DAILY and
+challenge boards, because an ordinary board now never comes back.
+
+Then three lanes ran side by side: a fresh seed for every run, retries and
+restarts included; a fairness check plus the 14 bold layouts; and a capture
+tool that can pin any seed, heat and generation. The bot found one weak spot.
+Phantoms, rockets and shades walk straight through the bricks that seal the
+start corner, so they now start as far away as the hunters do. After that, the
+bot got hit in the first 5 seconds less often in every room. CROWN's throne
+room lost its east-west walls along the way, because in REAL 3D they hid MAKO.
+Codes, the daily and ghosts learned which generator made their board, and the
+release went out as **shell v188**. The rules and numbers are in
+[architecture.md](architecture.md#-a-new-board-every-run-shell-v188).
 
 ---
 

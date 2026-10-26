@@ -15,6 +15,36 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
+## shell v188 · 2026-10-26
+
+### Added
+
+- **A new board every run.** PLAY, LEVEL SELECT, a run from the demo, PAUSE
+  RESTART and the GAME OVER restart each deal a fresh board. Losing a life keeps
+  the one you're on. No new screens and no new keys.
+- **Bold mazes.** Every world has its own room shape now, fourteen in all
+  (three each for WATER, ARENA and CROWN), readable from the first second.
+  Heat changes only the bricks; the walls belong to the world.
+- **A fair start.** You begin in a corner sealed by bricks and bomb your way
+  out. Every foe starts at least 10 steps away, and hunters, phantoms, rockets
+  and shades at least 12. Every board is checked for fairness before you see it.
+
+### Changed
+
+- **DAILY plays the new mazes from today.** A try from before this update counts
+  as a different board, so today's daily starts fresh at TRY 1.
+- **Challenge links are F2 codes on the new mazes.** F1 links still open the
+  original boards, forever. An older copy of the game can't read an F2 link and
+  just starts normally; updating fixes it.
+- **Ghost races run only on DAILY and challenge boards**, the boards you can
+  play twice. Ghosts saved before this update are cleared once.
+- **Rooms play differently.** About 17 fewer bricks a room (about 6 in JUNGLE)
+  means faster clears and less brick score, so older score bests get harder to
+  beat and older best times fall. Bests and times still count by difficulty and
+  room, whatever the board.
+- **The floor-tile preview moved to `?gen=3`.** Its boards are the new mazes plus
+  the tiles; B on those boards copies no link yet.
+
 ## shell v187 · 2026-10-26
 
 ### Changed
