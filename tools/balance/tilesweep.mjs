@@ -29,10 +29,13 @@
    OUTPUT (git-ignored tools/balance/out/): <name>.jsonl (one row per run,
    sorted by cell then seed; rows hold no clock, so the same seeds give the
    same file), <name>.cpu.json (wall and CPU time), <name>.md (the summary).
-   TIME (M-series, 16 workers): pilot about 2-3 min wall; main at n 3000
-   about 15x the pilot. A run row costs 10-40 ms (the no-escape probe
-   dominates). Workers are child processes, stopped by PID at the end or on
-   SIGINT / SIGTERM. */
+   TIME (measured 2026-10-26, 18-core Apple silicon, 16 workers, n 200):
+   pilot with --a23 0,1,2 (9600 rows) 15.1 s wall / 3.94 CPU-min; pace
+   7.6 s / 1.95; controls 4.7 s / 1.24; run 1.8 s / 0.46; pin (9600 runs,
+   47.9M ticks) 11.1 s / 2.76. A room row costs about 25 ms CPU (the
+   no-escape probe dominates). Main at n 3000 scales linearly: an ESTIMATE of
+   about 4 min wall / 60 CPU-min for the pilot cells. Workers are child
+   processes, stopped by PID at the end or on SIGINT / SIGTERM. */
 import { fork } from "node:child_process";
 import { mkdirSync, writeFileSync, readFileSync } from "node:fs";
 import { cpus } from "node:os";

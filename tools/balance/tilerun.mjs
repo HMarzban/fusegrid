@@ -63,7 +63,7 @@ export function runRoom(c, s) {
   const tm = rulesOn(w), kind = ruleKind(w);
   const r = { room: c.room, heat: c.heat, pace: c.pace || 0, arm: c.arm, prof: c.profName || "", s, seed, tpl: w.layout ? w.layout.tpl : "", kind: kind || "", rules: tm ? 1 : 0,
     st: "TIMEOUT", t: CAP, hits: 0, absorbs: 0, firstHit: -1, hit5: 0, hit15: 0, hBlast: 0, hContact: 0, hTile: 0, ownRelay: 0, chainEarly: 0, nearMiss: 0,
-    kills: 0, tileKills: 0, relayKills: 0, trapKills: 0, selfClears: 0, rideKills: 0, deliveries: 0,
+    kills: 0, tileKills: 0, relayKills: 0, trapKills: 0, selfClears: 0, selfClearsArm: 0, rideKills: 0, deliveries: 0,
     noEsc: 0, noEscHit: 0, noEscRide: 0, noEscIce: 0, dangerT: 0 };
   const nm = new Map(), armD = new Map(), seenBl = new WeakSet(), cutoff = c.metrics === false;
   let trapped = false, lastEsc = -99, pendHit = 0;
@@ -125,8 +125,9 @@ export function runRoom(c, s) {
       if (e.src === "plate") {
         r.trapKills++;
         const ex = tileOf(e.x), ey = tileOf(e.y);
+        if (man(ptx, pty, ex, ey) > 4) r.selfClears++;
         const src = w.blades.filter((b) => b.src === "plate" && !seenBl.has(b) && b.tiles.some((q) => q.tx === ex && q.ty === ey));
-        if (src.some((b) => (armD.get(key(tileOf(b.x), tileOf(b.y))) ?? 99) > 4)) r.selfClears++;
+        if (src.some((b) => (armD.get(key(tileOf(b.x), tileOf(b.y))) ?? 99) > 4)) r.selfClearsArm++;
       }
     }
     for (const bl of w.blades) {
