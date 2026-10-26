@@ -36,7 +36,9 @@ export function featTier(w) {
   const t = w.featTier != null ? w.featTier : w.heat;
   return t < 0 ? 0 : t > 2 ? 2 : t | 0;
 }
-export function featProfile(w) { return FEAT_PROFILE[featTier(w)]; }
+/* w.featProf: an optional 3-tier knob table set by the offline balance harness
+   (tools/balance) after loadLevel; unset everywhere in the game */
+export function featProfile(w) { return (w.featProf || FEAT_PROFILE)[featTier(w)]; }
 export function featKindOf(v) { return isBelt(v) ? "BELT" : v === 5 ? "GLIDE" : v === 6 ? "BLOOM" : v === 7 ? "PLATE" : v >= 8 && v <= 11 ? "STREAM" : v === 12 ? "QUICK" : v === 13 ? "PORTAL" : v === 14 ? "GATE" : null; }
 
 /* ---- placement (V13-V27 subset, see notes.md) ---- */

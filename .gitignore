@@ -26,3 +26,5 @@ tools/bounce/out/
 
 # Offline level sweeps (tools/levels): regenerated on demand, never shipped
 tools/levels/out/
+# Offline tile balance sweeps (tools/balance): regenerated on demand, never shipped
+tools/balance/out/
