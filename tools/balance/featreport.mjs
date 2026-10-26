@@ -19,7 +19,7 @@ const NS = +arg("--n", 1000), OUT = arg("--out", null), H = ["CORE", "PLUS", "MA
 const RULE_ROOMS = [1, 2, 3, 5], ART_ROOMS = [4, 6, 7, 8], LAYER = ["V13", "V14", "V21", "V22", "V23"];
 const fmix = (h) => { h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b) >>> 0; h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35) >>> 0; return (h ^ (h >>> 16)) >>> 0; };
 const t0 = performance.now(), cell = {};
-const get = (lv, h) => (cell[lv + ":" + h] ||= { boards: 0, fails: Object.fromEntries(FEAT_RULES.map((r) => [r, 0])), spots: 0, cause: {}, why: {}, v14: {} });
+const get = (lv, h) => (cell[lv + ":" + h] ||= { boards: 0, fails: Object.fromEntries(FEAT_RULES.map((r) => [r, 0])), spots: 0, time: 0, cap: 0, trapExact: 0, cause: {}, why: {}, v14: {} });
 for (let s = 0; s < NS; s++) {
   const seed = fmix(s * 7919 + 13);
   for (let lv = 1; lv <= 8; lv++) {
@@ -36,7 +36,7 @@ for (let s = 0; s < NS; s++) {
         const why = r.id + " " + r.why.replace(/\d+(\.\d+)?/g, "#");
         c.why[why] = (c.why[why] || 0) + 1;
         if (r.id === "V14") for (const k of Object.keys(r.causes)) c.v14[k] = (c.v14[k] || 0) + 1;
-        if (r.id === "V19") { c.spots += r.spots; for (const [k, v] of Object.entries(r.cause)) c.cause[k] = (c.cause[k] || 0) + v; }
+        if (r.id === "V19") { c.spots += r.spots; c.time += r.time; c.cap += r.cap; c.trapExact += r.trapExact || 0; for (const [k, v] of Object.entries(r.cause)) c.cause[k] = (c.cause[k] || 0) + v; }
       }
     }
   }
@@ -51,8 +51,8 @@ const table = (rooms, rules, title) => {
 };
 table(RULE_ROOMS, FEAT_RULES, "Rule rooms (every check)");
 table(ART_ROOMS, LAYER, "Art-only rooms (layer checks; V15-V20, V24-V27 n/a)");
-lines.push("## V19 no-escape spots (sum over boards; distinct cells per board, by cause)", "", "| room · tile | heat | boards | spots | per failing board | causes |", "|---|---|---|---|---|---|");
-for (const lv of RULE_ROOMS) for (let h = 0; h < 3; h++) { const c = get(lv, h), b = c.fails.V19; lines.push(`| ${name(lv)} | ${H[h]} | ${b} | ${c.spots} | ${b ? (c.spots / b).toFixed(1) : "-"} | ${Object.entries(c.cause).map(([k, v]) => k + " " + v).join(", ") || "-"} |`); }
+lines.push("## V19 no-escape spots", "", "Sums over boards of distinct cells per board. time = no exit in any number of moves (12); cap = an exit in time exists but only past the V2 4-step budget. Causes overlap (one cell can count under two), so they may sum past spots. trap exact = trap-blast spots in the as-loaded brick state alone (arms stop at bricks).", "", "| room · tile | heat | boards | spots | time | cap | causes | trap exact |", "|---|---|---|---|---|---|---|---|");
+for (const lv of RULE_ROOMS) for (let h = 0; h < 3; h++) { const c = get(lv, h), b = c.fails.V19; lines.push(`| ${name(lv)} | ${H[h]} | ${b} | ${c.spots} | ${c.time} | ${c.cap} | ${Object.entries(c.cause).map(([k, v]) => k + " " + v).join(", ") || "-"} | ${lv === 5 ? c.trapExact : "-"} |`); }
 const V14K = ["spawn", "door", "foe", "sentry", "floor", "buried"];
 lines.push("", "## V14 breaches (boards with each breach; one board can carry several)", "", "| room · tile | heat | " + V14K.join(" | ") + " |", "|---|---|" + V14K.map(() => "---").join("|") + "|");
 for (const lv of [...RULE_ROOMS, ...ART_ROOMS]) for (let h = 0; h < 3; h++) { const c = get(lv, h); lines.push(`| ${name(lv)} | ${H[h]} | ` + V14K.map((k) => c.v14[k] || 0).join(" | ") + " |"); }

@@ -34,7 +34,7 @@ export const TILE_NAME = Object.freeze({ BELT: "CONVEYOR", GLIDE: "ICE PATCH", B
 export const LIMITS = Object.freeze({
   spawnSteps: 4, chainMin: 4, chainMax: 9, chainTotal: 16, stepOff: 2, exitOpen: 2, foeKeep: 0.4, playerKeep: 0.5,
   doorRing: 10, sheetMin: 3, sheetMax: 9, runMax: 3, iceSteps: 3, boostMin: 2, boostMax: 4, boostPocket: 4, boostGap: 3,
-  trapMin: 3, trapMax: 5, trapSteps: 6, trapFoe: 2, trapGap: 2, sideR: 3, escSteps: ESC_STEPS, radius: 8, rings: 4,
+  trapMin: 3, trapMax: 5, trapSteps: 6, trapFoe: 2, trapGap: 2, sideR: 3, escSteps: ESC_STEPS, escFree: 12, radius: 8, rings: 4,
 });
 const inB = (x, y) => x >= 0 && y >= 0 && x < C && y < R;
 const xy = (k) => [k % C, (k / C) | 0];
@@ -211,15 +211,22 @@ function v18(n) {
 
 /* V19 no-escape spots the tile adds (counterfactual, per heat):
    A) own bomb at every EMPTY cell, r 1..LIMITS.radius, on two brick states
-      (as loaded / every brick broken): base escape (tile ignored) holds but
-      the tile-live escape does not. r stops once base fails (monotone).
+      (as loaded / every brick broken): base escape (tile ignored, the V2
+      step cap) holds but the tile-live escape does not. r stops once base
+      fails (monotone).
    B) TRAP: a foe arms a trap with the player anywhere on its reach (within
       plate.near if set): arms see through bricks, movement only through
       cells EMPTY now (plus the start), stops only at WALLs - sound over
       every brick state reachable from the loaded one. No base hazard exists,
-      so every failure is tile-forced. */
+      so every failure is tile-forced. `trapExact` is the same count in the
+      loaded state alone (arms stop at bricks).
+   A spot is `time` when even an uncapped (escFree moves) escape fails, else
+   `cap` (only the escSteps budget fails it). Causes overlap: one cell may
+   count under two. */
 function v19(n) {
-  const spots = new Map(), by = {}, add = (k, cause, ex) => { if (!spots.has(k)) spots.set(k, ex); (by[cause] ||= new Set()).add(k); };
+  const spots = new Map(), by = {}, kind = { time: new Set(), cap: new Set() }, exact = new Set();
+  const add = (k, cause, ex, timed) => { if (!spots.has(k)) spots.set(k, ex); (by[cause] ||= new Set()).add(k); kind[timed ? "time" : "cap"].add(k); };
+  const free = (E) => ({ ...E, cap: n.lim.escFree });
   const cleared = n.g.map((v) => (v === T.BRICK ? T.EMPTY : v)), rad = n.lim.escSteps + 1;
   for (const [st, g] of [["loaded", n.g], ["cleared", cleared]]) {
     const Eb = env(n, g, { tiles: false }), Et = env(n, g, { tiles: true }), Em = env(n, g, { tiles: true, move: false });
@@ -232,22 +239,29 @@ function v19(n) {
         if (sameIn(Lb, Lt, c, rad) && !moveTileNear(n, Et, c, rad)) continue;
         if (timedEscape(Et, Lt, c, plant).ok) continue;
         const cause = Lt.cause && !timedEscape(Em, Lt, c, plant).ok ? Lt.cause : n.kind === "GLIDE" ? "coast" : n.kind === "BELT" ? "ride" : Lt.cause || "tile";
-        add(c, cause, { at: xy(c), r, state: st, cause });
+        const timed = !timedEscape(free(Et), Lt, c, plant).ok;
+        add(c, cause, { at: xy(c), r, state: st, cause, kind: timed ? "time" : "cap" }, timed);
         break;
       }
     }
   }
   const pr = n.prof.plate;
-  for (const p of plates(n)) {
-    const foot = trapTiles(n.g, p, pr.r, true), L = new Float64Array(N).fill(INF);
+  for (const p of plates(n)) for (const through of [true, false]) {
+    const foot = trapTiles(n.g, p, pr.r, through), L = new Float64Array(N).fill(INF);
     for (const k of foot) L[k] = pr.wind;
     for (const q of foot) {
-      if (q === p || (pr.near != null && manh(p, q) > pr.near)) continue;
-      const E = env(n, n.g, { tiles: true, stopOnBrick: false, plantBlock: false, open: q });
-      if (!timedEscape(E, L, q, p).ok) add(q, "trap-blast", { at: xy(q), trap: xy(p), cause: "trap-blast" });
+      if (q === p || (pr.near != null && manh(p, q) > pr.near) || (!through && n.g[q] !== T.EMPTY)) continue;
+      const E = through ? env(n, n.g, { tiles: true, stopOnBrick: false, plantBlock: false, open: q }) : env(n, n.g, { tiles: true, plantBlock: false });
+      if (timedEscape(E, L, q, p).ok) continue;
+      if (!through) { exact.add(q); continue; }
+      const timed = !timedEscape(free(E), L, q, p).ok;
+      add(q, "trap-blast", { at: xy(q), trap: xy(p), cause: "trap-blast", kind: timed ? "time" : "cap" }, timed);
     }
   }
-  return spots.size ? { why: spots.size + " no-escape spot(s)", spots: spots.size, cause: Object.fromEntries(Object.entries(by).map(([c, s]) => [c, s.size])), first: spots.values().next().value } : null;
+  if (!spots.size) return null;
+  const out = { why: spots.size + " no-escape spot(s)", spots: spots.size, time: kind.time.size, cap: [...kind.cap].filter((k) => !kind.time.has(k)).length, cause: Object.fromEntries(Object.entries(by).map(([c, s]) => [c, s.size])), first: spots.values().next().value };
+  if (n.kind === "PLATE") out.trapExact = exact.size;
+  return out;
 }
 
 /* ---- CONVEYOR chains: heads are belt cells nothing feeds; cells no head

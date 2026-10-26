@@ -109,21 +109,23 @@ test("V18 is V2 exactly with the layer off (same fuse, same pace)", () => {
 const spots = (bd, prof) => { const r = run(bd, prof, "V19"); return r.length ? r[0] : { spots: 0, cause: {} }; };
 test("V19 BOOSTER: the +2 relay overtakes a straight flee; a booster in a niche adds nothing", () => {
   const s = spots(b({ level: 1, g: corridor(3, 13), tiles: [[5, 5, F.BLOOM]] }), P[0]);
-  assert.ok(s.spots > 0 && s.cause.relay > 0, JSON.stringify(s));
+  assert.ok(s.spots > 0 && s.cause.relay > 0 && s.cap > 0, JSON.stringify(s));
+  const dead = spots(b({ level: 1, g: corridor(3, 7), tiles: [[5, 5, F.BLOOM]] }), P[0]);
+  assert.ok(dead.time > 0, "the relay fills a dead end: no exit in any number of steps " + JSON.stringify(dead));
   const g = corridor(3, 13); g[key(8, 4)] = T.EMPTY;
   assert.equal(spots(b({ level: 1, g, tiles: [[8, 4, F.BLOOM]] }), P[2]).spots, 0);
 });
 test("V19 ICE PATCH: MAX allows no stop mid-sheet; CORE and PLUS never add a spot", () => {
   const bd = b({ level: 2, g: corridor(3, 9), tiles: E([5, 6, 7], 5, F.GLIDE) });
   const s = spots({ ...bd, heat: 2 }, P[2]);
-  assert.ok(s.spots > 0 && s.cause.coast > 0, JSON.stringify(s));
+  assert.ok(s.spots > 0 && s.cause.coast > 0 && s.cap > 0, "the coast to (8,5) is in time, past the 4-step budget " + JSON.stringify(s));
   assert.equal(spots({ ...bd, heat: 1 }, P[1]).spots, 0);
   assert.equal(spots({ ...bd, heat: 0 }, P[0]).spots, 0);
 });
 test("V19 CONVEYOR: a riding player cannot hide on a belt (PLUS); a CORE bomb rides into the only exit", () => {
   const up = b({ g: corridor(3, 9), tiles: E([5, 6, 7], 5, F.BELT_W) });
   const s = spots({ ...up, heat: 1 }, P[1]);
-  assert.ok(s.spots > 0 && s.cause.ride > 0, JSON.stringify(s));
+  assert.ok(s.spots > 0 && s.cause.ride > 0 && s.cap > 0, JSON.stringify(s));
   assert.ok(!spots({ ...up, heat: 0 }, P[0]).cause.ride, "CORE carries no rider");
   const ride = spots({ ...b({ g: corridor(4, 13), tiles: E([5, 6, 7, 8], 5, F.BELT_E) }), heat: 0 }, P[0]);
   assert.ok(ride.cause["bomb-ride"] > 0, JSON.stringify(ride));
@@ -131,7 +133,7 @@ test("V19 CONVEYOR: a riding player cannot hide on a belt (PLUS); a CORE bomb ri
 test("V19 TRAP: the MAX reach beats a straight flee in a corridor; CORE's does not, but its 0.5 s chain does", () => {
   const bd = b({ level: 5, g: corridor(3, 13), tiles: [[5, 5, F.PLATE]] });
   const mx = spots({ ...bd, heat: 2 }, P[2]);
-  assert.ok(mx.cause["trap-blast"] > 0, JSON.stringify(mx));
+  assert.ok(mx.cause["trap-blast"] > 0 && mx.time > 0 && mx.trapExact > 0, JSON.stringify(mx));
   const co = spots({ ...bd, heat: 0 }, P[0]);
   assert.ok(!co.cause["trap-blast"], JSON.stringify(co));
   assert.ok(co.cause["trap-chain"] > 0, "a bomb on a CORE trap arm can go off at 0.5 s");
