@@ -39,7 +39,7 @@ export function lethalMap(w, tiles) {
   if (tiles)
     for (const q of w.featPend) {
       const x = q.k % C, y = (q.k / C) | 0;
-      ev.push({ t: Math.max(0, w.featS[q.k]), x, y, arms: q.kind === "plate" ? plateArms(P.plate) : relayArms(bc, q.dx, q.dy), pass: false });
+      ev.push({ t: Math.max(0, w.featS[q.k]), x, y, arms: q.kind === "plate" ? plateArms(P.plate) : relayArms(bc, q.dx, q.dy), pass: false, plate: q.kind === "plate" });
     }
   const fired = new Set();
   const cellOf = (o, t) => (o.path ? cellAt(o.path, t) : [o.b.tx, o.b.ty]);
@@ -49,15 +49,16 @@ export function lethalMap(w, tiles) {
     let ei = -1, et = Infinity;
     for (let i = 0; i < ev.length; i++) if (ev[i].t < et) { et = ev[i].t; ei = i; }
     if (bi < 0 && ei < 0) break;
-    let x, y, arms, pass, t;
-    if (ei >= 0 && et <= bt) { const e = ev.splice(ei, 1)[0]; x = e.x; y = e.y; arms = e.arms; pass = e.pass; t = e.t; }
+    let x, y, arms, pass, t, plate = false;
+    if (ei >= 0 && et <= bt) { const e = ev.splice(ei, 1)[0]; x = e.x; y = e.y; arms = e.arms; pass = e.pass; t = e.t; plate = !!e.plate; }
     else { const o = bombs[bi]; o.done = true; [x, y] = cellOf(o, o.te); arms = bombArms(o.b); pass = bombPass(o.b); t = o.te; }
     const s = cross(g, x, y, arms, pass, new Set());
     for (const k of s) {
       if (t < L[k]) L[k] = t;
       if (g[k] === T.BRICK) g[k] = T.EMPTY;
     }
-    for (const o of bombs) if (!o.done && o.te > t) { const [bx, by] = cellOf(o, t); if (s.has(key(bx, by))) o.te = t; }
+    const ch = plate ? P.plate.chain : undefined, fz = w.fuse == null ? CFG.FUSE : w.fuse;
+    if (ch !== false) for (const o of bombs) if (!o.done && o.te > t) { const [bx, by] = cellOf(o, t); if (s.has(key(bx, by))) o.te = typeof ch === "number" ? Math.min(o.te, Math.max(t, ch - (fz - o.b.timer))) : t; }
     if (tiles)
       for (const k of s) {
         const kx = k % C, ky = (k / C) | 0;

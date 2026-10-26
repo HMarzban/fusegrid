@@ -344,7 +344,7 @@ function applyBlastHits(w, tiles, emit, bl) {
   const p = w.players[0];
   for (const t of tiles) {
     for (const e of w.enemies)
-      if (!e.dead && !e.invuln && aabb(w.grid, t.tx, t.ty, e.x, e.y, e.r))
+      if (!e.dead && !e.invuln && !(bl && bl.spare != null && (bl.spare < 0 || e.plateK === bl.spare)) && aabb(w.grid, t.tx, t.ty, e.x, e.y, e.r))
         killEnemy(w, e, emit, bl);
     if (
       p.alive &&
@@ -562,7 +562,7 @@ function glideMove(w, p, dx, dy, dt) {
 }
 /* one emitted blast (BLOOM relay / PLATE lure): the real blade, bricks,
    hits, bomb chains and further relays; never inherits PIERCE / POWER */
-function fireBlast(w, cx, cy, arms, src, emit) {
+function fireBlast(w, cx, cy, arms, src, emit, pc, id) {
   const tiles = [{ tx: cx, ty: cy, brick: false }];
   for (const [dx, dy, len] of arms)
     for (let i = 1; i <= len; i++) {
@@ -574,13 +574,19 @@ function fireBlast(w, cx, cy, arms, src, emit) {
     }
   const x = (cx + 0.5) * FT, y = (cy + 0.5) * FT;
   const blade = { x, y, tiles, t: 0, ttl: CFG.BLADE_TTL, variant: "normal", src };
+  if (pc && pc.kill === false) blade.spare = -1;
+  else if (pc && pc.spare && id) blade.spare = id;
   w.blades.push(blade);
   for (const t of tiles) if (t.brick) breakBrick(w, t.tx, t.ty, emit);
   applyBlastHits(w, tiles, emit, blade);
   emit({ t: "boom", x, y, src });
   const covered = new Set(tiles.map((t) => key(t.tx, t.ty)));
-  for (const b of w.bombs.slice())
-    if (!b.dead && covered.has(key(b.tx, b.ty))) { b.chainSrc = src; detonate(w, b, emit); }
+  const fz = w.fuse == null ? CFG.FUSE : w.fuse, ch = pc ? pc.chain : undefined;
+  for (const b of w.bombs.slice()) {
+    if (b.dead || !covered.has(key(b.tx, b.ty)) || ch === false) continue;
+    if (typeof ch === "number" && fz - b.timer < ch) { b.timer = Math.min(b.timer, ch - fz + b.timer); b.chainSrc = src; continue; }
+    b.chainSrc = src; detonate(w, b, emit);
+  }
   relayCheck(w, tiles, cx, cy, emit);
 }
 function fireBloom(w, k, dx, dy) {
@@ -625,7 +631,7 @@ function featTick(w, dt, emit) {
       w.featM[k] = 2;
       w.featS[k] = pc.cd;
       const cx = k % CFG.COLS, cy = (k / CFG.COLS) | 0;
-      fireBlast(w, cx, cy, [[1, 0, pc.r], [-1, 0, pc.r], [0, 1, pc.r], [0, -1, pc.r]], "plate", emit);
+      fireBlast(w, cx, cy, [[1, 0, pc.r], [-1, 0, pc.r], [0, 1, pc.r], [0, -1, pc.r]], "plate", emit, pc, q.id);
     }
   }
   if (w.featT < pc.inert) return;
@@ -634,9 +640,16 @@ function featTick(w, dt, emit) {
     const k = key(e.tx, e.ty);
     if (w.feat[k] !== 7 || w.grid[k] !== T.EMPTY || w.featM[k] !== 0) continue;
     if (pc.near != null) { const p = w.players[0]; if (!p.alive || Math.abs(tileOf(p.x) - e.tx) + Math.abs(tileOf(p.y) - e.ty) > pc.near) continue; }
+    if (pc.hold && w.bombs.length) {
+      const foot = new Set(computeBlast(w, e.tx, e.ty, pc.r, false, false).map((t) => key(t.tx, t.ty)));
+      if (w.bombs.some((b) => !b.dead && computeBlast(w, b.tx, b.ty, b.radius, b.pierce, b.line, b.dir).some((t) => foot.has(key(t.tx, t.ty))))) continue;
+    }
+    if (pc.off != null && pc.off !== false) { const p = w.players[0], rad = CFG.TILE * (0.3 + (pc.off === true ? 0 : pc.off)); if (p.alive && computeBlast(w, e.tx, e.ty, pc.r, false, false).some((t) => aabb(w.grid, t.tx, t.ty, p.x, p.y, rad))) continue; }
     w.featM[k] = 1;
     w.featS[k] = pc.wind;
-    w.featPend.push({ k, kind: "plate", by: e.type });
+    const id = pc.spare ? (w.featN = (w.featN | 0) + 1) : 0;
+    if (id) e.plateK = id;
+    w.featPend.push(id ? { k, kind: "plate", by: e.type, id } : { k, kind: "plate", by: e.type });
     emit({ t: "plate", x: (e.tx + 0.5) * FT, y: (e.ty + 0.5) * FT });
   }
 }

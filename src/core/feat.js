@@ -22,20 +22,26 @@ export const beltDir = (v) => FDIR[v - 1];
 export const HOME = Object.freeze({ FACTORY: "BELT", ICE: "GLIDE", JUNGLE: "BLOOM", ARENA: "PLATE", WATER: "STREAM", SAND: "QUICK", VOID: "PORTAL", CROWN: "GATE" });
 
 export const FEAT_PROFILE = Object.freeze([
-  Object.freeze({ belt: { actors: false, v: 1.0 }, glide: { boost: 1.25, coast: 0, turn: 0.35 }, bloom: { fwd: 2, side: 0, delay: 0, cd: 1.0 }, plate: { wind: 0.5, r: 1, cd: 3, inert: 2 } }),
-  Object.freeze({ belt: { actors: true, v: 1.0 }, glide: { boost: 1.25, coast: 1, turn: 0.2 }, bloom: { fwd: 2, side: 1, delay: 0.15, cd: 1.0 }, plate: { wind: 0.8, r: 2, cd: 4, inert: 2 } }),
-  Object.freeze({ belt: { actors: true, v: 1.2 }, glide: { boost: 1.25, coast: 3, turn: 0.1 }, bloom: { fwd: 2, side: 2, delay: 0.3, cd: 1.0 }, plate: { wind: 1.0, r: 3, cd: 3, inert: 2 } }),
+  Object.freeze({ belt: { actors: false, v: 1.0 }, glide: { boost: 1.25, coast: 0, turn: 0.35 }, bloom: { fwd: 2, side: 0, delay: 0, cd: 1.0 }, plate: { wind: 0.5, r: 1, cd: 3, inert: 2, near: 4, off: 1, hold: true, chain: false } }),
+  Object.freeze({ belt: { actors: true, v: 1.0 }, glide: { boost: 1.25, coast: 1, turn: 0.2 }, bloom: { fwd: 2, side: 1, delay: 0.15, cd: 1.0 }, plate: { wind: 0.8, r: 2, cd: 4, inert: 2, near: 4, off: 1, hold: true, chain: false, spare: true } }),
+  Object.freeze({ belt: { actors: true, v: 1.2 }, glide: { boost: 1.25, coast: 3, turn: 0.1 }, bloom: { fwd: 2, side: 2, delay: 0.3, cd: 1.0 }, plate: { wind: 1.0, r: 3, cd: 3, inert: 6, off: 1, hold: true, chain: false, kill: false } }),
 ]);
 export const TILE_HELP = Object.freeze({
   BELT: ["CARRIES BOMBS", "CARRIES BOMBS, YOU, FOES", "CARRIES ALL, FAST"],
   GLIDE: ["FAST ICE, STOP ANY TIME", "FAST ICE, SLIDES A STEP", "FAST ICE, NO STOPPING"],
   BLOOM: ["THROWS YOUR BLAST ON", "BLAST LEAKS SIDEWAYS", "BLAST TURNS CORNERS LATE"],
-  PLATE: ["FOES SET IT OFF · SHORT", "FOES SET IT OFF · LONG", "FOES SET IT OFF · HUGE"],
+  PLATE: ["LURE FOES ON · SHORT", "TRIGGER FOE LIVES · LONG", "FOES IMMUNE · HUGE"],
 });
 export function featTier(w) {
   const t = w.featTier != null ? w.featTier : w.heat;
   return t < 0 ? 0 : t > 2 ? 2 : t | 0;
 }
+/* PLATE knobs (#28 design pass 2): near = arms only with the player within
+   that many tiles (Manhattan; absent = anywhere); off = never arms while the
+   player is on or within that many tiles of its lines; hold = never arms while
+   a lit bomb's blast reaches its lines; chain false = its blast sets off no
+   bomb (a number = no bomb younger than that many s); spare = the foe that
+   armed it is immune to that blast; kill false = its blast kills no foe */
 /* w.featProf: an optional 3-tier knob table set by the offline balance harness
    (tools/balance) after loadLevel; unset everywhere in the game */
 export function featProfile(w) { return (w.featProf || FEAT_PROFILE)[featTier(w)]; }
