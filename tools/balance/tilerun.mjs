@@ -17,11 +17,13 @@ import { CFG, T, key } from "../../src/core/config.js";
 import { tileOf } from "../../src/core/board.js";
 import { createWorld, loadLevel, step } from "../../src/core/sim.js";
 import { createDemobot } from "../../src/app/demobot.js";
-import { FEAT_PROFILE, isBelt } from "../../src/core/feat.js";
+import { FEAT_PROFILE, isBelt, BELT_PLACE } from "../../src/core/feat.js";
 import { createTileBot } from "./demobot-tiles.mjs";
 import { rulesOn, ruleKind, prof } from "./tilemodel.mjs";
 import { probe } from "./escape.mjs";
 
+/* #28 CONVEYOR placement variants: BELT_OPT='{"away":1,...}' (feat.js BELT_PLACE) */
+if (process.env.BELT_OPT) Object.assign(BELT_PLACE, JSON.parse(process.env.BELT_OPT));
 export const CAP = 120, STEPS = Math.round(CAP / CFG.STEP);
 export const ARMS = Object.freeze(["A0", "A1", "A2", "A3"]);
 export const fmix = (h) => { h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b) >>> 0; h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35) >>> 0; return (h ^ (h >>> 16)) >>> 0; };
@@ -49,6 +51,7 @@ export function armWorld(w, c) {
 export function makeWorld(c, s) {
   const seed = seedOf(s), w = createWorld(seed, c.room);
   w.gen = 3; w.heat = c.heat; w.pact = 0; w.pace = c.pace || 0;
+  BELT_PLACE.prof = process.env.BELT_SPAWN_STOCK ? null : mergeProf(c.prof);
   loadLevel(w, c.room, false);
   armWorld(w, c);
   w.state = "PLAY";
@@ -64,9 +67,9 @@ export function runRoom(c, s) {
   const r = { room: c.room, heat: c.heat, pace: c.pace || 0, arm: c.arm, prof: c.profName || "", s, seed, tpl: w.layout ? w.layout.tpl : "", kind: kind || "", rules: tm ? 1 : 0,
     st: "TIMEOUT", t: CAP, hits: 0, absorbs: 0, firstHit: -1, hit5: 0, hit15: 0, hBlast: 0, hContact: 0, hTile: 0, ownRelay: 0, chainEarly: 0, nearMiss: 0,
     kills: 0, tileKills: 0, relayKills: 0, trapKills: 0, selfClears: 0, selfClearsArm: 0, rideKills: 0, deliveries: 0,
-    noEsc: 0, noEscHit: 0, noEscRide: 0, noEscIce: 0, dangerT: 0 };
+    noEsc: 0, noEscOn: 0, noEscPlant: 0, noEscHit: 0, noEscRide: 0, noEscIce: 0, dangerT: 0 };
   const nm = new Map(), armD = new Map(), seenBl = new WeakSet(), cutoff = c.metrics === false;
-  let trapped = false, lastEsc = -99, pendHit = 0;
+  let trapped = false, lastEsc = -99, pendHit = 0, had1 = false;
   const coreBelt = tm && kind === "BELT" && !prof(w).belt.actors;
   for (let i = 0; i < STEPS; i++) {
     const p0 = w.players[0], pk0 = key(tileOf(p0.x), tileOf(p0.y)), tNow = i * CFG.STEP;
@@ -81,11 +84,13 @@ export function runRoom(c, s) {
         r.dangerT += CFG.STEP;
         if (pr.forced && !trapped) {
           r.noEsc++; lastEsc = tNow; pendHit = 1;
+          if (!had1) { if (w.bombs.some((b) => !b.dead && b.timer > (w.fuse ?? CFG.FUSE) - 0.05)) r.noEscPlant++; else r.noEscOn++; }
           if (isBelt(w.feat[pk0])) r.noEscRide++;
           if (w.feat[pk0] === 5) r.noEscIce++;
         }
         trapped = pr.forced;
-      } else trapped = false;
+        if (pr.e1) had1 = true;
+      } else { trapped = false; had1 = false; }
     }
     const lives0 = w.lives, shield0 = w.players[0].shield;
     step(w, CFG.STEP, { 0: bot.intent(w) });

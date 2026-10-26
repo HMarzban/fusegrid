@@ -24,7 +24,8 @@
    speeds: ICE PATCH boost leaving a sheet tile, CONVEYOR push with / against. */
 import { CFG, T, key } from "../../src/core/config.js";
 import { tileOf } from "../../src/core/board.js";
-import { C, N, BD, prof, rulesOn, onIce, cross, bombArms, bombPass, relayArms, plateArms, beltPath, cellAt, moveSpeed } from "./tilemodel.mjs";
+import { beltDir } from "../../src/core/feat.js";
+import { C, N, BD, prof, rulesOn, onIce, onBelt, carries, cross, bombArms, bombPass, relayArms, plateArms, beltPath, cellAt, moveSpeed } from "./tilemodel.mjs";
 
 export const MARGIN = CFG.STEP;
 const HR = 0.3;
@@ -74,7 +75,22 @@ export function escape(w, tiles, L) {
   if (!L) L = lethalMap(w, tiles);
   const p = w.players[0], sx = tileOf(p.x), sy = tileOf(p.y), s0 = key(sx, sy);
   const glideStop = !(tiles && prof(w).glide.coast >= 2);
-  const terminal = (k) => L[k] === Infinity && (glideStop || !onIce(w, k));
+  const carry = tiles && carries(w);
+  /* a standing rider is carried down the chain: safe when every belt cell to
+     the end is never lethal and the push then halts (a block, the chain end
+     under endHalt) or drops it on a never-lethal landing */
+  const endHalt = carry && !!prof(w).belt.endHalt;
+  const rideSafe = (k) => {
+    for (let q = k, n = 0; n < N; n++) {
+      if (L[q] !== Infinity) return false;
+      const [bx, by] = beltDir(w.feat[q]), x = (q % C) + bx, y = ((q / C) | 0) + by, nq = key(x, y), g = w.grid[nq];
+      if (g === undefined || g === T.WALL || (g === T.BRICK && L[nq] === Infinity) || w.bombs.some((b) => !b.dead && b.tx === x && b.ty === y)) return true;
+      if (!onBelt(w, nq)) return endHalt || L[nq] === Infinity;
+      q = nq;
+    }
+    return false;
+  };
+  const terminal = (k) => L[k] === Infinity && (glideStop || !onIce(w, k)) && !(carry && onBelt(w, k) && !rideSafe(k));
   if (terminal(s0)) return true;
   const best = new Float64Array(N).fill(Infinity), done = new Uint8Array(N);
   const bombAt = new Uint8Array(N);
@@ -112,7 +128,7 @@ export function probe(w) {
   if (!p.alive) return null;
   const k = key(tileOf(p.x), tileOf(p.y));
   const L0 = lethalMap(w, false), L1 = tiles ? lethalMap(w, true) : L0;
-  if (L0[k] === Infinity && L1[k] === Infinity) return null;
+  if (L0[k] === Infinity && L1[k] === Infinity && !(tiles && carries(w) && onBelt(w, k) && w.bombs.length)) return null;
   const e0 = escape(w, false, L0), e1 = tiles ? escape(w, true, L1) : e0;
   return { e0, e1, forced: e0 && !e1 };
 }
