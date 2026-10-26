@@ -1101,8 +1101,9 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   Node test fakes define `globalThis.location` WITHOUT `href`, so "is this a
   real page" means `typeof location.href === "string"` (the branch's gen-2 page
   default depended on it; since v188 the tile boards are `?gen=3` only).
-- Release state (2026-10-26): shell **v191** (PIXEL cap 192 KB) is LIVE on
-  the owner's word; v190 fixed PIXEL SAND's floor vs bricks and raised the cap
+- Release state (2026-10-26): shell **v192** (tiles design pass 2 docs, the
+  #25 harness and static checks, the harness-only `w.featProf` seam; no player
+  change) is LIVE on the owner's word; v191 raised the PIXEL cap to 192 KB; v190 fixed PIXEL SAND's floor vs bricks and raised the cap
   to 176 KB; v189 added the hunter lock-on tell (#32), the tile colour-vision
   gate (#33) and the #35 tile-world pin.
   Shell **v188** (level variety: a random bold, fair board every run, F2 codes,

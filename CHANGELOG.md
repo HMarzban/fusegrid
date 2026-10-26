@@ -15,6 +15,16 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
+## shell v192 · 2026-10-26
+
+### Changed
+
+- **Behind the scenes: the floor tiles got their difficulty dial.** Nothing
+  changes in a normal run. The tile preview boards (`?gen=3`) play as before;
+  the game only gained a small hook that the new balance tools use to test tile
+  settings, and the design for making tiles fun on CORE and tougher on MAX is
+  finished. The tiles themselves come in a later update.
+
 ## shell v191 · 2026-10-26
 
 ### Changed

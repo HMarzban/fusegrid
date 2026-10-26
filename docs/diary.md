@@ -6,7 +6,7 @@
 
 This is the story of how the game was built: the big turns, the dead ends
 and what each one taught us. It runs from the first commit on 2026-08-16 to
-shell v191 on 2026-10-26 (670 commits by then).
+shell v192 on 2026-10-26 (676 commits by then).
 
 - **What changed in each release** lives in the [CHANGELOG](../CHANGELOG.md).
 - **How the game works today** lives in [architecture.md](architecture.md).
@@ -574,6 +574,18 @@ chevrons down the lane. Even the fastest hunter on the hardest setting gives
 you half a second. The same afternoon the floor tiles got a colour-blind
 check, and every one passed. The one weak spot was not colour at all: the open
 CROWN GATE looks too alike at its three heats, a job for the tile design pass.
+
+### 2026-10-26 · The tile dial finally turns (shell v192)
+
+The floor tiles had one problem since October 21: hard mode wasn't harder. A
+new tile-aware bot, checked tick for tick against the stock one, re-measured
+every tile on today's boards, and four lanes tuned them side by side. Traps now
+lure foes on CORE and become a pure hazard on MAX. Ice gets a brake on MAX.
+Conveyors only carry bombs on CORE and everything on MAX. On MAX, those three
+now cost 4.6 to 5.9 points more lost runs, and no tile can trap you. BOOSTER
+turned out to be a helper at every heat, so it stays the friendly room-1 tile.
+The tiles themselves land in a later build; this release ships the design and
+the tools that measured it.
 
 ---
 
