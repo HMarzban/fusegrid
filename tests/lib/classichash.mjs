@@ -3,8 +3,10 @@
    write is logged (numbers at 3 decimals) and FNV-1a hashed. PIXEL must leave
    this value byte-identical. imp(path) imports a repo module, so the same
    recipe can be pointed at another checkout to re-derive the pin. arm (a
-   GRAPHICS knob object) arms render-on-change first; raw returns the log. */
-export async function classicHash(imp, arm, raw) {
+   GRAPHICS knob object) arms render-on-change first; raw returns the log.
+   opt picks the world: {gen, level, heat} (default gen 1, room 1, CORE), so a
+   named tile world (gen 3) can be pinned beside the gen-1 scene. */
+export async function classicHash(imp, arm, raw, opt = {}) {
   const {createWorld, loadLevel} = await imp("src/core/sim.js");
   const {createRenderer} = await imp("src/render/renderer.js");
   const {initFx} = await imp("src/render/fx.js");
@@ -29,8 +31,11 @@ export async function classicHash(imp, arm, raw) {
     initFx();
     const r = createRenderer(canvas, {kind: "2d"});
     if (arm) r.setPerf(arm);
-    const w = createWorld(4242, 1);
-    loadLevel(w, 1);
+    const lv = opt.level || 1;
+    const w = createWorld(4242, lv);
+    if (opt.gen) w.gen = opt.gen;
+    if (opt.heat) w.heat = opt.heat;
+    loadLevel(w, lv);
     w.state = "PLAY";
     const free = [];
     for (let y = 1; y < CFG.ROWS - 1; y++) for (let x = 1; x < CFG.COLS - 1; x++) if (w.grid[key(x, y)] !== T.WALL && (x > 2 || y > 2)) free.push([x, y]);

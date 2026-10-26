@@ -38,6 +38,15 @@ const after = (log, from, mark) => { const i = log.indexOf(mark, from); return i
 {
   const h = await classicHash((p) => import(pathToFileURL(join(ROOT, p)).href));
   check("CLASSIC 2D call-log hash unchanged (unarmed renderer)", h === "9fb48f0a:72431", h);
+  /* #35 (carried over from #23): a named tile world, gen 3 = the gen-2 board
+     plus the floor tiles, seed 4242, room 3 FACTORY (a CONVEYOR), CORE. The
+     second hash proves the pin covers the tiles: nulling the tile layer moves it. */
+  const imp = (p) => import(pathToFileURL(join(ROOT, p)).href);
+  const t3 = await classicHash(imp, undefined, false, { gen: 3, level: 3 });
+  check("CLASSIC 2D call-log hash of the gen-3 FACTORY tile world (seed 4242, room 3, CORE)", t3 === "a4693824:71581", t3);
+  const sim = await imp("src/core/sim.js");
+  const bare = await classicHash((p) => (p === "src/core/sim.js" ? { ...sim, loadLevel: (w, l, k) => { sim.loadLevel(w, l, k); w.feat = null; w.featPair = null; } } : imp(p)), undefined, false, { gen: 3, level: 3 });
+  check("and the tile pin covers the tiles (the same world without its tile layer hashes differently)", bare !== t3, bare);
 }
 
 {
