@@ -1,5 +1,6 @@
 import {
   DAILY_KEY,
+  DAILY_GEN,
   dailySeed,
   clampDaily,
   loadDaily,
@@ -10,6 +11,7 @@ import {
   finishDaily,
 } from "../src/app/daily.js";
 import { runSeed } from "../src/core/rng.js";
+import { statsNotes } from "../src/app/stats.js";
 
 let pass = 0,
   fail = 0;
@@ -164,7 +166,7 @@ const TODAY = "2026-09-07";
 // ---- 4b. Minor-2 (review 2026-09-07, owner ruling): a stamp mismatch is
 // ABSENT, refused rather than silently compared ----
 {
-  const same = recordDaily({ date: TODAY, best: 500, played: 2, room: 2, pace: 1 }, TODAY, 300, 1, 0);
+  const same = recordDaily({ date: TODAY, best: 500, played: 2, room: 2, pace: 1, g: 2 }, TODAY, 300, 1, 0);
   check(
     "MATCH path: same date, same stamped pace — accumulates normally",
     same.played === 3 && same.best === 500 && same.pace === 1,
@@ -224,8 +226,17 @@ const TODAY = "2026-09-07";
   check("played:0 today is NEW", dailyTag({ date: TODAY, played: 0 }, TODAY) === "NEW");
   check(
     "today with at least one try is PLAYED",
-    dailyTag({ date: TODAY, played: 1 }, TODAY) === "PLAYED",
+    dailyTag({ date: TODAY, played: 1, g: 2 }, TODAY) === "PLAYED",
   );
+  // #13: the daily moved to gen 2 on release day; a record with no g (a pre-#13 gen-1 try) is another board
+  check("#13: DAILY_GEN is 2 and an empty record is stamped with it", DAILY_GEN === 2 && clampDaily(null).g === 2);
+  check("#13: a record with no g reads as gen 1", clampDaily({ date: TODAY, played: 1 }).g === 1);
+  check("#13: today's gen-1 record is NEW for the gen-2 daily (no PLAYED)", dailyTag({ date: TODAY, played: 4 }, TODAY) === "NEW");
+  const g1 = recordDaily({ date: TODAY, best: 9999, played: 4, room: 6, pace: 1 }, TODAY, 120, 1, 0);
+  check("#13: a gen-mismatched record is ABSENT: TRY 1, this run's best, stamped g 2", g1.played === 1 && g1.best === 120 && g1.g === 2, JSON.stringify(g1));
+  const g2 = recordDaily({ date: TODAY, best: 500, played: 2, room: 2, pace: 1, g: 2 }, TODAY, 100, 1, 0);
+  check("#13: a gen-matched record accumulates", g2.played === 3 && g2.best === 500 && g2.g === 2, JSON.stringify(g2));
+  check("#13: statsNotes reads a gen-1 record as NOT PLAYED YET", statsNotes(null, { date: TODAY, best: 9, played: 3 }, TODAY)[0] === "DAILY " + TODAY + " · NOT PLAYED YET");
   check("dailyTag never throws", dailyTag(null, TODAY) === "NEW" && dailyTag({}, null) === "NEW");
 }
 
@@ -586,7 +597,7 @@ import { createGame } from "../src/main.js";
   // pre-seed a standing record so this run's TRY/BEST are a genuine
   // accumulation (3/1840), never a fresh day's 1/score — the numbers a
   // mutated ro.run.tries/dbest (M9/M21) could otherwise fake by accident.
-  ls.setItem(DAILY_KEY, JSON.stringify({ date: local, best: 900, played: 2, room: 3, pace: 1 }));
+  ls.setItem(DAILY_KEY, JSON.stringify({ date: local, best: 900, played: 2, room: 3, pace: 1, g: 2 }));
   const texts = [];
   const rec = new Proxy(function () {}, {
     get: (t, p) => {
@@ -654,7 +665,7 @@ import { createGame } from "../src/main.js";
   const mem2 = new Map();
   const ls2 = { getItem: (k) => (mem2.has(k) ? mem2.get(k) : null),
     setItem: (k, v) => mem2.set(k, String(v)) };
-  ls2.setItem(DAILY_KEY, JSON.stringify({ date: local, best: 4200, played: 3, room: 5, pace: 1 }));
+  ls2.setItem(DAILY_KEY, JSON.stringify({ date: local, best: 4200, played: 3, room: 5, pace: 1, g: 2 }));
   globalThis.window = { localStorage: ls2, addEventListener() {} };
   try {
     const g2 = createGame(null, { seed: 777 });

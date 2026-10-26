@@ -25,7 +25,8 @@ export function endKey(code, app, world, input, toast, resultLine) {
   if (code === "Enter" || code === "NumpadEnter") { input.pulse(); return true; }
   if (code === "KeyC") { copyText(resultLine(), toast, "COPIED"); return true; }
   if (code === "KeyB") {
-    copyText(BOARD_URL + encodeChallenge({ seed: world.seed, heat: world.heat, pact: world.pact, pace: world.pace }), toast, "BOARD LINK COPIED");
+    if ((world.gen | 0) > 2) { if (toast) { toast.s = "NO LINK FOR PREVIEW BOARDS"; toast.ok = false; toast.t = TOAST_T; } return true; } // gen 3 (?gen=3) has no code yet (O2: F3 comes with the tiles)
+    copyText(BOARD_URL + encodeChallenge({ seed: world.seed, heat: world.heat, pact: world.pact, pace: world.pace, gen: world.gen }), toast, "BOARD LINK COPIED");
     return true;
   }
   return false;

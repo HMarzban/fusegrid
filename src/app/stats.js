@@ -2,6 +2,7 @@ import { FOES, POWER } from "../core/entities.js";
 import { defaultStore } from "./store.js";
 import { bestOfRun } from "./bests.js";
 import { bestOf } from "./times.js";
+import { dailyLive } from "./daily.js";
 
 export const STATS_KEY = "nb.stats.v1";
 export const RING_MAX = 200;
@@ -179,13 +180,14 @@ export function statsRows(v, bests) {
 /* `today` is used for one thing only: deciding whether the stored daily record
    is today's. It is therefore the DAILY's day (main.js's local todayStr once R3
    lands), never the UTC dateStr that stamps the aggregates. Before R3, `daily`
-   is null and note 1 is omitted entirely rather than faked. */
+   is null and note 1 is omitted entirely rather than faked. A record of another
+   board generation (`g`, #13) is not today's daily and reads NOT PLAYED YET. */
 export function statsNotes(v, daily, today) {
   const s = clampStats(v);
   const out = [];
   if (daily && typeof daily === "object") {
     out.push(
-      daily.date && daily.date === today && (daily.played | 0) > 0
+      dailyLive(daily, today)
         ? "DAILY " + today + " · BEST " + (daily.best | 0) + " · " +
           (daily.played | 0) + ((daily.played | 0) === 1 ? " TRY" : " TRIES") +
           " · YOUR OWN ATTEMPTS ONLY"

@@ -58,11 +58,14 @@ function clear(st, w, d, x) {
 }
 
 // ---- constants + key ----
-check("constants are the spec's", GHOST_KEY === "nb.ghost.v1" && GHOST_V === 1 &&
+check("constants are the spec's", GHOST_KEY === "nb.ghost.v1" && GHOST_V === 2 &&
   GHOST_MAX === 16 && GHOST_HZ === 10 && GHOST_CAP === 2400);
 {
   const k = ghostKey(mk({ seed: 4294967295, level: 8, heat: 2, pact: 15, pace: 1 }));
-  check("ghostKey is the full 5-tuple and matches KEY_RE", k === "4294967295:8:2:15:2" && KEY_RE.test(k), k);
+  check("ghostKey is the full 5-tuple plus the board generation and matches KEY_RE", k === "4294967295:8:2:15:2:1" && KEY_RE.test(k), k);
+  const k2 = ghostKey(mk({ seed: 7, gen: 2 }));
+  check("#13: a gen-2 board keys apart from the same seed on gen 1", k2.endsWith(":2") && k2 !== ghostKey(mk({ seed: 7 })) && KEY_RE.test(k2), k2);
+  check("#13: a pre-#13 5-segment key fails KEY_RE", !KEY_RE.test("7:1:0:0:1"));
   check("pace -1/0/1 maps to segment 0/1/2",
     [-1, 0, 1].map((p) => ghostKey(mk({ pace: p })).split(":")[4]).join() === "0,1,2");
 }
@@ -93,19 +96,20 @@ check("constants are the spec's", GHOST_KEY === "nb.ghost.v1" && GHOST_V === 1 &
 // ---- 2. clampGhost ----
 {
   const ok = { d: 10, s: "0U0U4".repeat(11) };
-  check("v:2 reads as empty", JSON.stringify(clampGhost({ v: 2, g: { "7:1:0:0:1": ok } })) === '{"v":1,"g":{}}');
-  check("junk reads as empty", JSON.stringify(clampGhost(null)) === '{"v":1,"g":{}}');
-  const c = clampGhost({ v: 1, g: {
-    "7:1:0:0:1": ok, "7:9:0:0:1": ok, "7:1:0:0:3": ok, "x:1:0:0:1": ok,
-    "8:1:0:0:1": { d: 0, s: ok.s }, "9:1:0:0:1": { d: 2401, s: ok.s },
-    "10:1:0:0:1": { d: 10, s: "0U0U40U" }, "11:1:0:0:1": { d: 10, s: "0u0u4" },
-    "12:1:0:0:1": { d: 1.5, s: ok.s }, "13:1:0:0:1": "x" } });
-  check("drops a bad key, d 0, d 2401, s of length 7, lower-case s", JSON.stringify(Object.keys(c.g)) === '["7:1:0:0:1"]',
+  check("#13: old v:1 data reads as empty without throwing", JSON.stringify(clampGhost({ v: 2, g: { "7:1:0:0:1": ok } })) === '{"v":2,"g":{}}');
+  check("v:3 reads as empty", JSON.stringify(clampGhost({ v: 3, g: { "7:1:0:0:1:1": ok } })) === '{"v":2,"g":{}}');
+  check("junk reads as empty", JSON.stringify(clampGhost(null)) === '{"v":2,"g":{}}');
+  const c = clampGhost({ v: 2, g: {
+    "7:1:0:0:1:1": ok, "7:9:0:0:1:1": ok, "7:1:0:0:3:1": ok, "x:1:0:0:1:1": ok,
+    "8:1:0:0:1:1": { d: 0, s: ok.s }, "9:1:0:0:1:1": { d: 2401, s: ok.s },
+    "10:1:0:0:1:1": { d: 10, s: "0U0U40U" }, "11:1:0:0:1:1": { d: 10, s: "0u0u4" },
+    "12:1:0:0:1:1": { d: 1.5, s: ok.s }, "13:1:0:0:1:1": "x" } });
+  check("drops a bad key, d 0, d 2401, s of length 7, lower-case s", JSON.stringify(Object.keys(c.g)) === '["7:1:0:0:1:1"]',
     JSON.stringify(Object.keys(c.g)));
   const g20 = {};
-  for (let i = 1; i <= 20; i++) g20[i + ":1:0:0:1"] = ok;
-  const k16 = Object.keys(clampGhost({ v: 1, g: g20 }).g);
-  check("keeps the LAST 16 of 20", k16.length === 16 && k16[0] === "5:1:0:0:1" && k16[15] === "20:1:0:0:1", k16.join());
+  for (let i = 1; i <= 20; i++) g20[i + ":1:0:0:1:1"] = ok;
+  const k16 = Object.keys(clampGhost({ v: 2, g: g20 }).g);
+  check("keeps the LAST 16 of 20", k16.length === 16 && k16[0] === "5:1:0:0:1:1" && k16[15] === "20:1:0:0:1:1", k16.join());
 }
 
 // ---- 3. LRU ----
@@ -118,15 +122,15 @@ check("constants are the spec's", GHOST_KEY === "nb.ghost.v1" && GHOST_V === 1 &
   const a = fill();
   const g = createGhost();
   ghostTick(g, mk({ seed: 1 }), 0, a);
-  check("a race-load touches the oldest key to the end", Object.keys(blob(a).g).pop() === "1:1:0:0:1" && !!g.race);
+  check("a race-load touches the oldest key to the end", Object.keys(blob(a).g).pop() === "1:1:0:0:1:1" && !!g.race);
   clear(a, mk({ seed: 17 }), 20);
   const ka = Object.keys(blob(a).g);
-  check("a race-loaded oldest key survives the next insert", ka.length === 16 && ka.includes("1:1:0:0:1") &&
-    !ka.includes("2:1:0:0:1"), ka.join());
+  check("a race-loaded oldest key survives the next insert", ka.length === 16 && ka.includes("1:1:0:0:1:1") &&
+    !ka.includes("2:1:0:0:1:1"), ka.join());
   const b = fill();
   clear(b, mk({ seed: 17 }), 20);
   const kb = Object.keys(blob(b).g);
-  check("an un-touched oldest key is evicted", kb.length === 16 && !kb.includes("1:1:0:0:1"), kb.join());
+  check("an un-touched oldest key is evicted", kb.length === 16 && !kb.includes("1:1:0:0:1:1"), kb.join());
 }
 
 // ---- 4. faster-only ----

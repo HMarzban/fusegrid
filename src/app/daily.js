@@ -2,6 +2,11 @@ import { clampPace } from "../core/pace.js";
 import { defaultStore } from "./store.js";
 
 export const DAILY_KEY = "nb.daily.v1";
+/* The board generation every daily on this build deals (#13: the daily moved to
+   the gen-2 bold mazes on release day). A record stamps it as `g` (missing = 1,
+   a pre-#13 record), and one stamped with another generation is a different
+   board: treated as absent, never compared. */
+export const DAILY_GEN = 2;
 /* FNV-1a 32-bit plus the standard 32-bit avalanche. The avalanche is not
    decoration: world.js:15 seeds the rng with seed ^ (level*40503), so a hash
    whose low bits barely move between consecutive dates would hand two
@@ -29,13 +34,14 @@ const cl = (v, lo, hi) => {
 export function clampDaily(raw) {
   const o = raw && typeof raw === "object" ? raw : {};
   const date = typeof o.date === "string" && DATE_RE.test(o.date) ? o.date : "";
-  if (!date) return { date: "", best: 0, played: 0, room: 1, pace: 1 };
+  if (!date) return { date: "", best: 0, played: 0, room: 1, pace: 1, g: DAILY_GEN };
   return {
     date,
     best: cl(o.best, 0, 9999999),
     played: cl(o.played, 0, 999),
     room: cl(o.room, 1, 8),
     pace: cl(o.pace, 0, 2),
+    g: o.g == null ? 1 : cl(o.g, 1, 9),
   };
 }
 
@@ -65,27 +71,30 @@ export function saveDaily(v, store) {
    new stamp (fresh day: played 1, best is this run's own score, no silent
    comparison to a best made under a different pin). Minor-2 (review
    2026-09-07, owner ruling): a record made under a future different pin is
-   refused rather than silently compared. */
-export function recordDaily(v, today, score, room, pace) {
+   refused rather than silently compared. The generation stamp `g` works the
+   same way (#13). */
+export function recordDaily(v, today, score, room, pace, gen = DAILY_GEN) {
   const cur = clampDaily(v);
   const s = cl(score, 0, 9999999),
     r = cl(room, 1, 8),
-    p = clampPace(pace) + 1;
+    p = clampPace(pace) + 1,
+    g = cl(gen, 1, 9);
   if (!DATE_RE.test(String(today || ""))) return cur;
-  if (cur.date !== today || cur.pace !== p)
-    return { date: today, best: s, played: 1, room: r, pace: p };
+  if (cur.date !== today || cur.pace !== p || cur.g !== g)
+    return { date: today, best: s, played: 1, room: r, pace: p, g };
   return {
     date: today,
     best: s > cur.best ? s : cur.best,
     played: cl(cur.played + 1, 0, 999),
     room: r > cur.room ? r : cur.room,
     pace: p,
+    g,
   };
 }
 
-export function dailyTag(v, today) {
-  const c = clampDaily(v);
-  return c.date && c.date === today && c.played > 0 ? "PLAYED" : "NEW";
+export const dailyLive = (v, today, gen = DAILY_GEN) => !!v && v.date === today && (v.g == null ? 1 : v.g) === gen && (v.played | 0) > 0;
+export function dailyTag(v, today, gen = DAILY_GEN) {
+  return dailyLive(clampDaily(v), today, gen) ? "PLAYED" : "NEW";
 }
 
 /* No code is appended: the board is derivable from the date by anyone who
@@ -106,8 +115,8 @@ export function dailyStamp(date, level, score) {
    two call sites could drift apart on. The row's tag for the ACTUAL current
    day is a separate concern main.js re-derives at boot via
    dailyTag(dailyRec, todayStr()) — not this function's job. */
-export function finishDaily(today, score, room, pace, store) {
-  const rec = recordDaily(loadDaily(store), today, score, room, pace);
+export function finishDaily(today, score, room, pace, store, gen = DAILY_GEN) {
+  const rec = recordDaily(loadDaily(store), today, score, room, pace, gen);
   saveDaily(rec, store);
-  return { rec, tag: dailyTag(rec, today) };
+  return { rec, tag: dailyTag(rec, today, gen) };
 }

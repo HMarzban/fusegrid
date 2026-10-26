@@ -1,10 +1,13 @@
 export const CODE_V = "F1";
+export const CODE_GENS = Object.freeze([1, 2]);
 /* A challenge is a BOARD, not a claim: seed plus the three knobs that change
    what generates on it. No score field — unverifiable without a server, and
    this game has none by design. No level field either: the tuple is the
    five-tuple minus level, because the level is where you are, not what the
    board is.
-   Twelve chars: "F1" + a 7-char base36 seed (b36(2^32-1) is "1Z141Z3") + a
+   Twelve chars: "F" + the board generation (F1 = the original boards, F2 =
+   the bold mazes since #13; an older client refuses F2 at CODE_RE and boots
+   normally) + a 7-char base36 seed (b36(2^32-1) is "1Z141Z3") + a
    2-char base36 config (b36(143) is "3Z") + one base36 checksum. The checksum
    catches 98-99% of one-keystroke typos in a pasted link, so a mistyped code is
    refused rather than played as a different board — a recipient who thinks they
@@ -13,7 +16,7 @@ export const CODE_V = "F1";
    unchanged, and tests/code.test.mjs measures the real rate. */
 const B36 = 36;
 const b36 = (n) => n.toString(B36).toUpperCase();
-const CODE_RE = /^F1[0-9A-Z]{10}$/;
+const CODE_RE = /^F[12][0-9A-Z]{10}$/;
 const cl = (v, lo, hi) => {
   const n = v | 0;
   return n < lo ? lo : n > hi ? hi : n;
@@ -28,7 +31,7 @@ export function encodeChallenge(t) {
   const c = t || {};
   const seed = (c.seed >>> 0) || 0;
   const cfg = cl(c.heat, 0, 2) * 48 + cl(c.pact, 0, 15) * 3 + (cl(c.pace, -1, 1) + 1);
-  const body = CODE_V + b36(seed).padStart(7, "0") + b36(cfg).padStart(2, "0");
+  const body = "F" + (c.gen === 2 ? 2 : 1) + b36(seed).padStart(7, "0") + b36(cfg).padStart(2, "0");
   return body + b36(sumOf(body));
 }
 
@@ -46,5 +49,6 @@ export function decodeChallenge(s) {
     heat: Math.floor(cfg / 48),
     pact: Math.floor((cfg % 48) / 3),
     pace: (cfg % 3) - 1,
+    gen: code.charCodeAt(1) - 48,
   };
 }

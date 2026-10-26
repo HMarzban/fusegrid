@@ -822,7 +822,7 @@ export function createMenuApp(opts = {}) {
       const d = o.dailySeed ? o.dailySeed() : null;
       if (!d) return false;
       return this._playCore({ level: 1, heat: 0, pact: 0, pace: 0,
-                              seed: d.seed, daily: d.date });
+                              seed: d.seed, daily: d.date, gen: d.gen });
     },
     /* A challenge run honours the DECODED pact bits even when pactUnlocked is
        false, and never writes nb.pact.v1. That gate governs what a player may
@@ -840,6 +840,7 @@ export function createMenuApp(opts = {}) {
         pact: clampPact(c.pact),
         pace: clampPace(c.pace),
         seed: c.seed >>> 0,
+        gen: c.gen === 2 ? 2 : 1,
       });
     },
     /* Shared CORE handoff for playFromAttract/startDaily/playChallenge: reset

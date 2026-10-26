@@ -76,8 +76,13 @@ test("V4 foe distance: >= 10 walking steps (hunters and brick-passers >= 12), br
   assert.ok(!fails(walled, 3, 0, { foes: [{ type: "fast", tx: 13, ty: 11 }] }).includes("V4"), "a tile with no route passes");
 });
 test("HUNT and PASSER match the sim's own e.hunt and e.pass flags for every foe type; BURROW is not a brick-passer", () => {
-  for (const f of FOES) assert.equal(HUNT.includes(f.type), spawnEnemy(f.type, 3, 3, 1, null).hunt, f.type);
-  for (const f of FOES) assert.equal(PASSER.includes(f.type), spawnEnemy(f.type, 3, 3, 1, null).pass, f.type);
+  assert.equal(FOES.length, 9);
+  for (const { t } of FOES) {
+    const e = spawnEnemy(t, 3, 3, 1, null);
+    assert.equal(e.type, t);
+    assert.equal(HUNT.includes(t), !!e.hunt, t);
+    assert.equal(PASSER.includes(t), !!e.pass, t);
+  }
   assert.equal(spawnEnemy("burrow", 3, 3, 1, null).pass, false);
 });
 test("V5 bricks: 40-90 and >= 3 per buried item", () => {

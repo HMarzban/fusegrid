@@ -800,7 +800,7 @@ for (const code of ["Space", "Enter", "NumpadEnter"]) {
   check("WIN C copies the result line", clip.length === c0 + 1 && clip[clip.length - 1] === copyPayload(g.world), clip[clip.length - 1]);
   check("WIN C shows COPIED on the overlay", !!g.ro.toast && g.ro.toast.s === "COPIED" && g.ro.toast.ok === true, JSON.stringify(g.ro.toast));
   press(g, "KeyB"); await flush(); g.tick();
-  check("WIN B copies the board link", /^https:\/\/hmarzban\.github\.io\/fusegrid\/\?code=F1/.test(clip[clip.length - 1]), clip[clip.length - 1]);
+  check("WIN B copies the board link (an ordinary run is gen 2: F2, #13)", /^https:\/\/hmarzban\.github\.io\/fusegrid\/\?code=F2/.test(clip[clip.length - 1]), clip[clip.length - 1]);
   check("WIN B shows BOARD LINK COPIED", !!g.ro.toast && g.ro.toast.s === "BOARD LINK COPIED", JSON.stringify(g.ro.toast));
   g.tick(Math.ceil(TOAST_T * 60) + 2);
   check("the copy note clears after ~" + TOAST_T + " s", g.ro.toast === null, JSON.stringify(g.ro.toast));
@@ -839,7 +839,7 @@ for (const code of ["Space", "Enter"]) {
   press(g, "KeyC"); await flush(); g.tick();
   check("LOSE C copies and shows COPIED", clip[clip.length - 1] === copyPayload(g.world) && g.ro.toast && g.ro.toast.s === "COPIED", JSON.stringify(g.ro.toast));
   press(g, "KeyB"); await flush(); g.tick();
-  check("LOSE B copies the board link and says so", /\?code=F1/.test(clip[clip.length - 1]) && g.ro.toast && g.ro.toast.s === "BOARD LINK COPIED", JSON.stringify(g.ro.toast));
+  check("LOSE B copies the board link and says so", /\?code=F2/.test(clip[clip.length - 1]) && g.ro.toast && g.ro.toast.s === "BOARD LINK COPIED", JSON.stringify(g.ro.toast));
   press(g, "KeyP");
   check("LOSE P does not pause a finished run", g.world.state === "LOSE", g.world.state);
 }

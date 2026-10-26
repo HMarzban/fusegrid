@@ -131,9 +131,24 @@ function check(name, cond, detail) {
     rates.map((r) => (100 * r).toFixed(1) + "%").join(" "),
   );
   check(
-    "a mutated version prefix is always refused, whatever the checksum says",
+    "a mutated version prefix is refused unless its checksum also moves (F1 -> F2 shifts the sum)",
     decodeChallenge("F2021I3V93H8") === null && decodeChallenge("G1021I3V93H8") === null,
   );
+  /* #13: only F1 and F2 exist. A prefix outside them is refused even when its
+     checksum is VALID (computed here the code.js way), so it is CODE_RE, not
+     the checksum, that fails closed on an unknown generation. */
+  const sum = (b) => { let n = 0; for (let i = 0; i < b.length; i++) n += b.charCodeAt(i); return (n % 36).toString(36).toUpperCase(); };
+  const withChk = (b) => b + sum(b);
+  check("#13: F3 / F0 / F9 / G2 with a valid checksum are refused (unknown generation fails closed)",
+    ["F3021I3V93H", "F0021I3V93H", "F9021I3V93H", "G2021I3V93H"].every((b) => decodeChallenge(withChk(b)) === null));
+  const f2 = encodeChallenge({ seed: 123456789, heat: 2, pact: 9, pace: 1, gen: 2 });
+  check("#13: a gen-2 board encodes an F2 code that round-trips to the same board and gen", /^F2[0-9A-Z]{10}$/.test(f2) &&
+    JSON.stringify(decodeChallenge(f2)) === JSON.stringify({ seed: 123456789, heat: 2, pact: 9, pace: 1, gen: 2 }), f2);
+  check("#13: F2 differs from F1 only in the prefix and checksum", f2.slice(2, 11) === "F1021I3V93H8".slice(2, 11));
+  check("#13: no gen and gen 1 both encode F1 (an old caller keeps today's board)",
+    ["F1021I3V93H8"].every((c) => encodeChallenge({ seed: 123456789, heat: 2, pact: 9, pace: 1 }) === c &&
+      encodeChallenge({ seed: 123456789, heat: 2, pact: 9, pace: 1, gen: 1 }) === c));
+  check("#13: an F1 code decodes as gen 1", decodeChallenge("F1021I3V93H8").gen === 1);
 }
 
 // ---- 3. case and whitespace tolerance on the reader side ----
@@ -281,11 +296,24 @@ function check(name, cond, detail) {
       check(
         "a real ?code= boot drives the first PLAY frame's world to the decoded seed/heat/pact/pace, lands on GAME/PLAY, and starts no daily",
         g.world.seed === 123456789 && g.world.heat === 2 && g.world.pact === 9 &&
-          g.world.pace === 1 && g.app.screen === SCREEN.GAME && g.world.state === "PLAY" &&
+          g.world.pace === 1 && g.world.gen === 1 && g.app.screen === SCREEN.GAME && g.world.state === "PLAY" &&
           ls2.getItem("nb.daily.v1") === null,
         JSON.stringify({ seed: g.world.seed, heat: g.world.heat, pact: g.world.pact,
           pace: g.world.pace, screen: g.app.screen, state: g.world.state }),
       );
+    } finally {
+      delete globalThis.window;
+      delete globalThis.location;
+    }
+  }
+  {
+    globalThis.window = { localStorage: { getItem: () => null, setItem() {} }, addEventListener() {} };
+    const f2 = encodeChallenge({ seed: 123456789, heat: 2, pact: 9, pace: 1, gen: 2 });
+    globalThis.location = { search: "?code=" + f2 };
+    try {
+      const g = createGame(null, {});
+      check("#13: a real ?code=F2 boot plays the gen-2 board", g.world.gen === 2 && g.world.seed === 123456789 && g.world.state === "PLAY",
+        JSON.stringify({ gen: g.world.gen, seed: g.world.seed }));
     } finally {
       delete globalThis.window;
       delete globalThis.location;
@@ -377,7 +405,7 @@ function check(name, cond, detail) {
       wrote.length === 1 &&
         wrote[0] === "https://hmarzban.github.io/fusegrid/?code=" +
           encodeChallenge({ seed: g.world.seed, heat: g.world.heat,
-            pact: g.world.pact, pace: g.world.pace }),
+            pact: g.world.pact, pace: g.world.pace, gen: g.world.gen }),
       JSON.stringify(wrote),
     );
     check(
@@ -390,10 +418,16 @@ function check(name, cond, detail) {
       (() => {
         const d = decodeChallenge(wrote[0].split("?code=")[1]);
         return d && d.seed === (g.world.seed >>> 0) && d.heat === (g.world.heat | 0) &&
-          d.pact === (g.world.pact | 0) && d.pace === (g.world.pace | 0);
+          d.pact === (g.world.pact | 0) && d.pace === (g.world.pace | 0) && d.gen === g.world.gen;
       })(),
       wrote[0],
     );
+    check("#13: an ordinary run is gen 2, so B copies an F2 link", g.world.gen === 2 && /\?code=F2/.test(wrote[0]), wrote[0]);
+    wrote.length = 0;
+    g.world.gen = 3;
+    g.input.onUiKey("KeyB");
+    check("#13: a gen-3 preview board copies no link (F3 does not exist yet)", wrote.length === 0, JSON.stringify(wrote));
+    g.world.gen = 2;
     wrote.length = 0;
     g.app.toMenu();
     g.input.onUiKey("KeyB");

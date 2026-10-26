@@ -35,7 +35,7 @@ import { loadSettings, saveSettings } from "./app/settings.js";
 import { timeKey, loadTimes, saveTimes, bestOf, recordTime } from "./app/times.js";
 import { bestKey, loadBests, saveBests, bestOfRun, recordBest, newTally, feedTally } from "./app/bests.js";
 import { loadStats, setStatsOn, stat, statPlaques, statsRows, statsNotes, statsPayload } from "./app/stats.js";
-import { dailySeed, loadDaily, dailyTag, dailyStamp, finishDaily } from "./app/daily.js";
+import { DAILY_GEN, dailySeed, loadDaily, dailyTag, dailyStamp, finishDaily } from "./app/daily.js";
 import { decodeChallenge } from "./app/code.js";
 import { createToast, copyText, endKey, toastTick, toastOf } from "./app/endkeys.js";
 import { settleMedals, medalLine, medalRows, loadMedals } from "./app/medals.js";
@@ -167,7 +167,7 @@ export function createGame(canvas, opts = {}) {
     saveBests(recordBest(loadBests(), bestKey(world), world.score | 0,
       runFromStart ? (world.level | 0) : 0));
     stat("run_end", { r: world.level | 0, s: world.score | 0, k: tally.k, p: tally.p, b: tally.b, secs: Math.round(runT), kt: tally.kt, pk: tally.pk }, dateStr());
-    if (dailyDate) { const f = finishDaily(dailyDate, world.score | 0, world.level | 0, world.pace | 0); dailyRec = f.rec; app.dailyTag = f.tag; }
+    if (dailyDate) { const f = finishDaily(dailyDate, world.score | 0, world.level | 0, world.pace | 0, undefined, world.gen); dailyRec = f.rec; app.dailyTag = f.tag; }
     ga.event("run_end", { mode: runMode, room: world.level | 0, result: !isRunEnd(world) ? "quit" : world.state === "WIN" ? "win" : "lose", heat: world.heat | 0, pace: world.pace | 0, score: world.score | 0, secs: Math.round(runT) });
     if (isRunEnd(world)) tally.mn = settleMedals(world, tally, runT);
   };
@@ -200,7 +200,7 @@ export function createGame(canvas, opts = {}) {
 
   /* run handoff (menu START / LEVEL select): fresh board, score reset */
   const onStart = (args) => {
-    world.gen = args && args.seed != null ? 1 : flags.gen3 ? 3 : 2; // #12: ordinary runs deal gen-2 boards; DAILY / ?code= stay gen 1 until #13
+    world.gen = args && args.seed != null ? (args.gen === 2 ? 2 : 1) : flags.gen3 ? 3 : 2; // ordinary runs deal gen-2 boards (#12); a DAILY / ?code= run plays the generation it names (#13)
     world.heat = clampHeat(args && args.heat);
     world.pact = clampPact(args && args.pact);
     world.pace = clampPace(args && args.pace);
@@ -271,7 +271,7 @@ export function createGame(canvas, opts = {}) {
     onStats: () => { setStatsOn(); const sv = loadStats();
       app.stats = { rows: statsRows(sv, loadBests()), notes: statsNotes(sv, dailyRec, todayStr()), trophies: medalRows(loadMedals()) }; },
     onReset: () => { clearCabinet(); if (typeof location !== "undefined") location.reload(); },
-    dailySeed: () => { const d = todayStr(); return { seed: dailySeed(d), date: d }; },
+    dailySeed: () => { const d = todayStr(); return { seed: dailySeed(d), date: d, gen: DAILY_GEN }; },
     onPauseCmd: (cmd) => {
       if (cmd === "RESUME") {
         world.state = "PLAY"; world.fireEdge = true; // a held fire CONFIRMED the row; never a same-frame plant

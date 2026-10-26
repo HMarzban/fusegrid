@@ -1859,7 +1859,7 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
       frames(120); winOut();
       const k1=ghostKey(g.world);
       check("R9a a staged GAME room clear writes exactly one entry under the run's tuple",
-        GHOST_KEY in mem&&JSON.stringify(Object.keys(G()))===JSON.stringify([k1])&&k1===(32+":1:0:0:1"),
+        GHOST_KEY in mem&&JSON.stringify(Object.keys(G()))===JSON.stringify([k1])&&k1===(32+":1:0:0:1:1"),
         JSON.stringify(Object.keys(G())));
       const d1=G()[k1].d;
       g.world.state="LOSE"; frames(3);
@@ -1889,7 +1889,7 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
          ghost even one stored under its own key, records none on a clear, and
          its GAME OVER restart deals a new board and races nothing. */
       for(const k of Object.keys(mem)) if(k!=="nb.cabinet.v1") delete mem[k];
-      mem[GHOST_KEY]=JSON.stringify({v:1,g:{"33:1:0:0:1":{d:2400,s:"1E1E41E1E41E1E41E1E41E1E41E1E4"}}});
+      mem[GHOST_KEY]=JSON.stringify({v:2,g:{"33:1:0:0:1:2":{d:2400,s:"1E1E41E1E41E1E41E1E41E1E41E1E4"}}});
       const g=createGame(null,{seed:33});
       const seen=[];
       const r=g.renderer, rr=r.render;
@@ -1921,7 +1921,7 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
       const frames=(n)=>{ for(let f=0;f<n;f++){ t+=16; g.loop(t); } };
       frames(30); g.world.enemies.length=0; let n=0;
       while(g.world.state!=="WIN"&&n++<400){ t+=16; g.loop(t); } frames(2);
-      const kd=dailySeed(local)+":1:0:0:1";
+      const kd=dailySeed(local)+":1:0:0:1:2"; // #13: the daily is a gen-2 board
       check("R9a O4 a DAILY room clear records its ghost under the daily board's key",
         GHOST_KEY in mem&&JSON.stringify(Object.keys(G()))===JSON.stringify([kd]),String(mem[GHOST_KEY]));
     }

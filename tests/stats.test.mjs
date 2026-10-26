@@ -368,7 +368,7 @@ const TODAY = "2026-09-07";
       n0[0] === "SINCE 2026-08-30 · LAST 2026-09-07 · 42 SESSIONS · BESTS: NO MODES · NORM",
     JSON.stringify(n0),
   );
-  const n1 = statsNotes(v, { date: TODAY, best: 1840, played: 3 }, TODAY);
+  const n1 = statsNotes(v, { date: TODAY, best: 1840, played: 3, g: 2 }, TODAY);
   check(
     "today's daily note carries the honesty clause",
     n1.length === 2 &&
@@ -392,7 +392,7 @@ const TODAY = "2026-09-07";
     a: { runs: 1, rooms: 0, deaths: 0, kills: 0, picks: 0, bricks: 0, secs: 0,
       sessions: 1, first: TODAY, last: TODAY },
   });
-  const n1s = statsNotes(v1, { date: TODAY, best: 0, played: 1 }, TODAY);
+  const n1s = statsNotes(v1, { date: TODAY, best: 0, played: 1, g: 2 }, TODAY);
   check(
     "Minor-3: a single try reads 1 TRY, never 1 TRIES",
     n1s[0] === "DAILY " + TODAY + " · BEST 0 · 1 TRY · YOUR OWN ATTEMPTS ONLY",
@@ -403,7 +403,7 @@ const TODAY = "2026-09-07";
     n1s[1] === "SINCE " + TODAY + " · LAST " + TODAY + " · 1 SESSION · BESTS: NO MODES · NORM",
     n1s[1],
   );
-  const nPlural = statsNotes(v1, { date: TODAY, best: 0, played: 2 }, TODAY);
+  const nPlural = statsNotes(v1, { date: TODAY, best: 0, played: 2, g: 2 }, TODAY);
   check(
     "Minor-3: two tries still pluralises TRIES",
     nPlural[0] === "DAILY " + TODAY + " · BEST 0 · 2 TRIES · YOUR OWN ATTEMPTS ONLY",

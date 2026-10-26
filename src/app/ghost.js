@@ -4,20 +4,21 @@ import { clampPace } from "../core/pace.js";
 import { defaultStore } from "./store.js";
 
 export const GHOST_KEY = "nb.ghost.v1";
-export const GHOST_V = 1;
+export const GHOST_V = 2;
 export const GHOST_MAX = 16;
 export const GHOST_HZ = 10;
 export const GHOST_CAP = 2400;
 /* One key, the times.js template: the key is the FULL 5-tuple, seed included,
    because a ghost is a route and a route is only valid on the board it was run
-   on. Insertion order is recency (non-integer-like keys keep it): a write and
+   on, and the board generation with it (#13, v2: a gen-1 ghost never races
+   through gen-2 walls; v1 data loads empty). Insertion order is recency (non-integer-like keys keep it): a write and
    a race-load both re-insert their key at the end, and overflow drops the
    first. A sample is 5 base-36 chars — x/2, y/2, one face digit 0..8. */
-export const KEY_RE = /^\d{1,10}:[1-8]:[0-2]:(?:[0-9]|1[0-5]):[0-2]$/;
+export const KEY_RE = /^\d{1,10}:[1-8]:[0-2]:(?:[0-9]|1[0-5]):[0-2]:[1-9]$/;
 
 export function ghostKey(world) {
   const w = world || {};
-  return `${w.seed >>> 0}:${w.level | 0}:${clampHeat(w.heat)}:${clampPact(w.pact)}:${clampPace(w.pace) + 1}`;
+  return `${w.seed >>> 0}:${w.level | 0}:${clampHeat(w.heat)}:${clampPact(w.pact)}:${clampPace(w.pace) + 1}:${(w.gen | 0) || 1}`;
 }
 
 const okD = (v) => typeof v === "number" && (v | 0) === v && v >= 1 && v <= GHOST_CAP;
