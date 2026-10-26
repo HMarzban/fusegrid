@@ -3,7 +3,7 @@
 import {readFileSync, existsSync} from "node:fs";
 import {withPage, TILES} from "./harness.mjs";
 import {unpng} from "../pixel/rgba.mjs";
-import {litSkew, seam, channelLight, figure, heatSep, slotOnly, maxLum, lum, dE, rgbOf, edgeEnergy, cvdSep, CVD_PIN} from "./gatefns.mjs";
+import {litSkew, seam, channelLight, figure, heatSep, slotOnly, maxLum, lum, dE, rgbOf, edgeEnergy, cvdSep, CVD_PIN, CVD_WAIVE} from "./gatefns.mjs";
 import {CVD_ENT, RULED, pxSets} from "./cvdsets.mjs";
 const PAGE = `(async()=>{
   const [F,C]=await Promise.all([import('/src/render/featdraw.js'),import('/src/core/config.js')]);
@@ -99,7 +99,8 @@ function cvdGate(look, sets, bed) {
       if (k === "bedBrick" && !bed) console.log("INFO " + msg + " (not gated in this look)"); else ok(w[k] >= CVD_PIN[k], msg + " >= " + CVD_PIN[k]);
     }
     const hw = r.heat.filter((x) => x.cvd !== "none").reduce((a, x) => (x.d < a.d ? x : a));
-    ok(hw.d >= CVD_PIN.heat, `${tag} CVD heat separation ${hw.d.toFixed(2)} (${H[hw.a]}-${H[hw.c]} ${hw.cvd}) >= ${CVD_PIN.heat}`);
+    const wv = CVD_WAIVE[`${look} ${s.id} heat`], hp = wv ? wv.pin : CVD_PIN.heat, hm = `${tag} CVD heat separation ${hw.d.toFixed(2)} (${H[hw.a]}-${H[hw.c]} ${hw.cvd}) >= ${hp}`;
+    ok(hw.d >= hp, hm + (wv ? ` WAIVED from ${CVD_PIN.heat} (normal vision ${wv.normal}; ${wv.issue})` : ""));
   }
 }
 if (which === "all" || which === "cvd") cvdGate("PIXEL", pxSets(), false);

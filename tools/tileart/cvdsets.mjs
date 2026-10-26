@@ -8,11 +8,14 @@ import {cellRGBA} from "../../src/render/pixel/grid.js";
 import {createAtlas} from "../../src/render/pixel/atlas.js";
 import {FLOOR_V} from "../../src/render/floorart.js";
 const ALL = ["N", "E", "S", "W"];
-/* [id, biome, spec]: the readability set of gates.mjs (idle + worst states); tiles with rules first */
+/* [id, biome, spec]: the readability set of gates.mjs (idle + worst states) plus GATE open (lit 0) and the run ends (cellSpec turns a BELT / STREAM exit into an
+   outer side); tiles with rules first */
 export const CVD_ENT = [["booster", "JUNGLE", {kind: "BLOOM"}], ["ice-patch", "ICE", {kind: "GLIDE", gx: 3, gy: 4}], ["conveyor", "FACTORY", {kind: "BELT", dir: 0, outer: ["N", "S"]}], ["trap", "ARENA", {kind: "PLATE"}],
   ["stream", "WATER", {kind: "STREAM", dir: 0, outer: ["N", "S"]}], ["quicksand", "SAND", {kind: "QUICK"}], ["portal", "VOID", {kind: "PORTAL", pair: 1}], ["gate", "CROWN", {kind: "GATE", lit: 2}],
-  ["booster-flare", "JUNGLE", {kind: "BLOOM", state: 1}], ["trap-wind", "ARENA", {kind: "PLATE", state: 1, lit: 4}], ["portal-3", "VOID", {kind: "PORTAL", pair: 3}], ["gate-shut", "CROWN", {kind: "GATE", lit: 4}]].map(([id, bn, s]) => [id, bn, {outer: ALL, ...s}]);
-export const RULED = new Set(["booster", "ice-patch", "conveyor", "trap", "booster-flare", "trap-wind"]);
+  ["booster-flare", "JUNGLE", {kind: "BLOOM", state: 1}], ["trap-wind", "ARENA", {kind: "PLATE", state: 1, lit: 4}], ["portal-3", "VOID", {kind: "PORTAL", pair: 3}], ["gate-shut", "CROWN", {kind: "GATE", lit: 4}],
+  ["gate-open", "CROWN", {kind: "GATE", lit: 0}], ["conveyor-end", "FACTORY", {kind: "BELT", dir: 0, outer: ["N", "S", "E"]}],
+  ["stream-end", "WATER", {kind: "STREAM", dir: 0, outer: ["N", "S", "E"]}]].map(([id, bn, s]) => [id, bn, {outer: ALL, ...s}]);
+export const RULED = new Set(["booster", "ice-patch", "conveyor", "trap", "booster-flare", "trap-wind", "conveyor-end"]);
 const K = 8, S = 20 * K;
 const up = (a) => { const o = new Uint8ClampedArray(S * S * 4); for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) for (let i = 0; i < 4; i++) o[(y * S + x) * 4 + i] = a[((y / K | 0) * 20 + (x / K | 0)) * 4 + i]; return o; };
 const over = (top, base) => { const o = Uint8ClampedArray.from(base); for (let i = 0; i < o.length; i += 4) if (top[i + 3] > 127) for (let k = 0; k < 4; k++) o[i + k] = top[i + k]; return o; };

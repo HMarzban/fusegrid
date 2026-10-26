@@ -105,6 +105,10 @@ export const CVD_KINDS = ["protan", "deutan", "tritan"];
    normal-vision pin of 4. bedBrick binds CLASSIC 2D only (the CVD twin of its normal-vision bed gate, 14): a PIXEL bed is one slot's pixel and PIXEL's own SAND
    B floor already sits 4.9 dE off BRICK-B, so PIXEL is held to the rendered BRICK cell instead */
 export const CVD_PIN = {floorL: 3.5, floorE: 4, wallL: 19.5, wallE: 20, brickL: 12.5, brickE: 15, bedBrick: 10.5, heat: 4};
+/* named waivers, each a lower pin for one look / tile / check (still gated, printed WAIVED). CLASSIC GATE open (lit 0, the only GATE state the game draws: featM
+   stays 0) separates CORE / PLUS / MAX by 2.14 L* in NORMAL vision (2.10 protan); the normal-vision heat gate only sampled lit 2 / 4. Owner approved the current art
+   (2026-10-26), so the open-state heat tell is the owner's / #28's call, not a drive-by fix */
+export const CVD_WAIVE = {"CLASSIC gate-open heat": {pin: 2, normal: 2.14, issue: "#28"}};
 const medRGB = (a) => [0, 1, 2].map((c) => { const v = []; for (let i = c; i < a.length; i += 4) v.push(a[i]); v.sort((x, y) => x - y); return v[v.length >> 1]; });
 /* L*a*b* of every 4x4 block mean (the 40-px view), once per image */
 function blocks(a, S) {
