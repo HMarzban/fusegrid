@@ -93,8 +93,9 @@ export const LANES = {v: {value: new Float32Array(LN_N * 12)}, n: {value: 0}};
 const LANE = (xz) => `
 for(int i=0;i<${LN_N};i++){ if(float(i)>=wellLnN)break; vec4 la=wellLn[i*3]; vec4 lb=wellLn[i*3+1]; vec4 lc=wellLn[i*3+2];
  vec2 lr=${xz}-la.xy; float lu=dot(lr,la.zw), lv=abs(dot(lr,vec2(-la.w,la.z)));
- if(lu<${f(0.38 * T)}||lu>lb.x+${f(0.12 * T)}||lv>${f(0.3 * T)})continue;
+ if(lu<${f(0.38 * T)}||lv>${f(0.3 * T)})continue;
  float ls=mod(lu-${f(0.35 * T)},${f(0.5 * T)})-${f(0.25 * T)}, ld=abs(ls-${f(0.1 * T)}+1.06*lv)*0.686, lw=step(lv,${f(0.19 * T)});
+ if(lu-ls>lb.x+1.0)continue;
  float lf=1.0-0.07*floor((lu-${f(0.35 * T)})/${f(0.5 * T)});
  diffuseColor.rgb*=1.0-0.55*lb.y*lw*(1.0-smoothstep(${f(0.07 * T)},${f(0.1 * T)},ld));
  totalEmissiveRadiance+=lc.rgb*lw*lf*(1.0-smoothstep(${f(0.035 * T)},${f(0.055 * T)},ld));

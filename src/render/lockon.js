@@ -12,7 +12,8 @@ import { tileOf } from "../core/board.js";
 
 export const LOCK_N = 4;
 
-/* {dx, dy, n}: the unit lane direction from the foe toward the player and the tile distance, or null when not locked on */
+/* {dx, dy, n, d}: the unit lane direction from the foe toward the player, the tile distance and the live distance in px along the lane (the art ends
+   its chevrons just short of the player, wherever both bodies are inside their tiles), or null when not locked on */
 export function lockOn(world, e) {
   if (!e || !e.hunt || e.dead || !(e.speed > 0) || !e.dir) return null;
   const p = world.players && world.players[0], g = world.grid;
@@ -33,5 +34,5 @@ export function lockOn(world, e) {
     if (v === T.BRICK) return null;
     for (let j = 0; j < bs.length; j++) if (!bs[j].dead && bs[j].tx === x && bs[j].ty === y) return null;
   }
-  return { dx, dy, n };
+  return { dx, dy, n, d: (p.x - e.x) * dx + (p.y - e.y) * dy };
 }

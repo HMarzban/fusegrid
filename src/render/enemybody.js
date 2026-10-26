@@ -724,7 +724,7 @@ const fstate = (e) => {
 /* LOCK-ON (issue #32): chevrons on the floor from the foe down its lane to the player, fading with distance, over a dark under-stroke so they hold on
    every floor; static (no march, no pulse) so REDUCE FLASH and reduced motion keep the same steady mark. k is lockK's ramp; nothing is drawn at k = 0. */
 function laneMarks(c, s, k, col) {
-  const T = CFG.TILE, fx = s.ldx || 0, fy = s.ldy || 0, end = Math.max(0.6, (s.ln || 1) - 0.4) * T, hi = lt(col, 0.45);
+  const T = CFG.TILE, fx = s.ldx || 0, fy = s.ldy || 0, end = Math.max(0.6 * T, (s.ld || T) - 0.55 * T), hi = lt(col, 0.45);
   for (let d = 0.6 * T, i = 0; d <= end + 0.01 && i < 7; d += 0.5 * T, i++) {
     const a = k * (0.9 - 0.07 * i), P = (f, q) => [fx * (d + f * T) - fy * q * T, fy * (d + f * T) + fx * q * T];
     const A = P(-0.08, -0.17), B = P(0.1, 0), C = P(-0.08, 0.17);

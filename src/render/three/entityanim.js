@@ -27,7 +27,7 @@ export function turn(cur,tgt,dt){
 }
 
 export function makeFoe(){
-  return {seen:0,type:"",x:0,y:0,yaw:0,mv:0,ph:0,by:0,sc:1,a:1,pit:0,rol:0,eyeY:1,glow:0,stomp:0,ringR:0,ringA:0,t0:0,lk:0,lt:null,ldx:0,ldy:0,ln:0};
+  return {seen:0,type:"",x:0,y:0,yaw:0,mv:0,ph:0,by:0,sc:1,a:1,pit:0,rol:0,eyeY:1,glow:0,stomp:0,ringR:0,ringA:0,t0:0,lk:0,lt:null,ldx:0,ldy:0,ln:0,ld:0};
 }
 /* advance one foe's pose to clock t. pl: the live player (lean target) or null. Writes S.by (y bob), S.sc (breathe x spawn pop), S.yaw, S.pit / S.rol (sway
    + hunter lean, in the slot's own frame), S.a (spawn alpha: spawnK's 0.35 -> 1 pop, then the 0.7..1 breathe; exactly 1 once invuln ends), S.eyeY (blink: the face plane's y scale), S.glow (hunter), S.stomp (walker feet), S.ringR / S.ringA (spawn ring), S.lk / S.ldx / S.ldy / S.ln (lock-on ramp and lane). */

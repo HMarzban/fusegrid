@@ -29,7 +29,7 @@ function ringPts(c, cx, cy, rx, ry) {
 
 /* lock-on (lockon.js, issue #32): 1 art px chevrons from the foe down its lane to MAKO, outline drop then light, stepped alpha, never pulsing */
 function lane(c, s, X, Y, a, R) {
-  const fx = s.ldx, fy = s.ldy, end = Math.max(12, s.ln * 20 - 8), w = fx ? 2 : 1, h = fy ? 2 : 1;
+  const fx = s.ldx, fy = s.ldy, end = Math.max(12, s.ld / 2 - 11), w = fx ? 2 : 1, h = fy ? 2 : 1;
   c.globalAlpha = a;
   for (let d = 12; d <= end; d += 10) for (let q = -2; q < 3; q++) {
     const f = d + 2 - Math.abs(q), x = X + fx * f - fy * q - (fx < 0), y = Y + fy * f + fx * q - (fy < 0);

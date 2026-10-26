@@ -37,10 +37,12 @@ test("rule: an open lane, facing the player, 1..LOCK_N tiles away, locks on (row
   assert.equal(LOCK_N, 4);
   for (const type of ["fast", "chaser", "knight"]) {
     const w = room(7, 5);
-    assert.deepEqual(lockOn(w, hunter(w, type, 3, 5, R(1, 0))), { dx: 1, dy: 0, n: 4 }, type + " east");
-    assert.deepEqual(lockOn(w, hunter(w, type, 9, 5, R(-1, 0))), { dx: -1, dy: 0, n: 2 }, type + " west");
-    assert.deepEqual(lockOn(w, hunter(w, type, 7, 1, R(0, 1))), { dx: 0, dy: 1, n: 4 }, type + " south");
-    assert.deepEqual(lockOn(w, hunter(w, type, 7, 6, R(0, -1))), { dx: 0, dy: -1, n: 1 }, type + " north, adjacent");
+    assert.deepEqual(lockOn(w, hunter(w, type, 3, 5, R(1, 0))), { dx: 1, dy: 0, n: 4, d: 4 * TL }, type + " east");
+    assert.deepEqual(lockOn(w, hunter(w, type, 9, 5, R(-1, 0))), { dx: -1, dy: 0, n: 2, d: 2 * TL }, type + " west");
+    assert.deepEqual(lockOn(w, hunter(w, type, 7, 1, R(0, 1))), { dx: 0, dy: 1, n: 4, d: 4 * TL }, type + " south");
+    assert.deepEqual(lockOn(w, hunter(w, type, 7, 6, R(0, -1))), { dx: 0, dy: -1, n: 1, d: 1 * TL }, type + " north, adjacent");
+    const e = hunter(w, type, 3, 5, R(1, 0)); e.x += 15;
+    assert.equal(lockOn(w, e).d, 4 * TL - 15, type + ": d is the live distance, so the chevrons stop short of the player as the foe closes in");
   }
 });
 
@@ -108,7 +110,7 @@ test("lockOn is pure: a deep-frozen world gives the same answer twice, and the m
   const fw = freeze({ grid: Int8Array.from(w.grid), bombs: w.bombs, players: w.players, enemies: w.enemies });
   const before = JSON.stringify(fw);
   const a = lockOn(fw, e), b = lockOn(fw, e);
-  assert.deepEqual(a, { dx: 1, dy: 0, n: 3 });
+  assert.deepEqual(a, { dx: 1, dy: 0, n: 3, d: 3 * TL });
   assert.deepEqual(a, b);
   assert.equal(JSON.stringify(fw), before);
   const src = readFileSync(new URL("../src/render/lockon.js", import.meta.url), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
@@ -116,7 +118,7 @@ test("lockOn is pure: a deep-frozen world gives the same answer twice, and the m
 });
 
 test("lockK ramps in over LOCK.IN and out over LOCK.OUT on the caller's clock; the same t or a frozen clock holds it; a clock reset never jumps", () => {
-  const s = {}, on = { dx: 1, dy: 0, n: 3 };
+  const s = {}, on = { dx: 1, dy: 0, n: 3, d: 3 * TL };
   assert.equal(lockK(s, on, 10), 0, "first sight starts at 0");
   assert.ok(Math.abs(lockK(s, on, 10 + LOCK.IN / 2) - 0.5) < 1e-9);
   assert.ok(Math.abs(lockK(s, on, 10 + LOCK.IN / 2) - 0.5) < 1e-9, "a repeat render at the same t holds");
@@ -234,7 +236,7 @@ test("PIXEL: lane chevrons in the foe's own pxRamp slots, stepped alpha, frozen 
   draw(1);
   assert.equal(lanePx(draw(1 + 1 / 60)), 0, "below the first step nothing is drawn");
   const half = draw(1 + 4 / 60);
-  assert.equal(lanePx(half), 7 * 5, "seven chevrons of five marks for a 4-tile lane");
+  assert.equal(lanePx(half), 6 * 5, "six chevrons of five marks for a 4-tile lane (they stop 0.55 tile short of MAKO)");
   const a0 = alphaOf(half);
   assert.ok(a0 === 0.5 || a0 === 0.9, "stepped alpha " + a0);
   for (let i = 0; i < 5; i++) assert.equal(alphaOf(draw(1 + 4 / 60)), a0, "a frozen px clock (PAUSE) holds the step");
@@ -258,7 +260,7 @@ test("REAL 3D: stepFoe crouches the locked hunter down the lane and holds the ra
   tick(12);
   assert.equal(LANES.n.value, 1);
   const L = LANES.v.value;
-  assert.deepEqual([L[0], L[1], L[2], L[3], L[4]], [e.x - (CFG.COLS * TL) / 2, e.y - (CFG.ROWS * TL) / 2, 1, 0, 3.6 * TL]);
+  assert.deepEqual([L[0], L[1], L[2], L[3], L[4]], [e.x - (CFG.COLS * TL) / 2, e.y - (CFG.ROWS * TL) / 2, 1, 0, 3.45 * TL]);
   assert.equal(L[5], 1);
   w.state = "PAUSE"; tick(1);
   w.grid[key(5, 5)] = T.BRICK; tick(30);

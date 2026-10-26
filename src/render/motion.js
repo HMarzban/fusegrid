@@ -56,12 +56,12 @@ export function leanAt(type, hunt, dx, dy, tile) {
 }
 /* hunter LOCK-ON ramp (issue #32; the rule is lockon.js lockOn): s is the look's own per-foe state, on the lockOn result, t that look's PLAY-frozen clock.
    k eases in over LOCK.IN and out over LOCK.OUT; dt = t - s.lt clamped to 0..0.05, so a repeat render at the same t and a PAUSE (frozen t) both hold k, and a
-   clock reset never jumps it. Returns k 0..1 and keeps the last lane on s (s.ldx, s.ldy, s.ln) so the ramp out still points somewhere. */
+   clock reset never jumps it. Returns k 0..1 and keeps the last lane on s (s.ldx, s.ldy, s.ln) so the ramp out still points somewhere; s.ld is the lane length in px. */
 export const LOCK = Object.freeze({ IN: 0.1, OUT: 0.18 });
 export function lockK(s, on, t) {
   const dt = s.lt == null ? 0 : Math.max(0, Math.min(0.05, t - s.lt));
   s.lt = t;
-  if (on) { s.ldx = on.dx; s.ldy = on.dy; s.ln = on.n; }
+  if (on) { s.ldx = on.dx; s.ldy = on.dy; s.ln = on.n; s.ld = on.d; }
   return (s.lk = clamp01((s.lk || 0) + (on ? dt / LOCK.IN : -dt / LOCK.OUT)));
 }
 /* pickups: hover dy px, scale and tilt per family, a soft ground shadow that tightens at the apex, and a glint sweep 0..1 every GLINT_EVERY (null outside it) */

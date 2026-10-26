@@ -1444,7 +1444,7 @@ export function createPools(biome, atlas) {
           LV[o + 1] = e.y - D2;
           LV[o + 2] = S.ldx;
           LV[o + 3] = S.ldy;
-          LV[o + 4] = Math.max(0.6, S.ln - 0.4) * CFG.TILE;
+          LV[o + 4] = Math.max(0.6 * CFG.TILE, S.ld - 0.55 * CFG.TILE);
           LV[o + 5] = k;
           LV[o + 8] = _c.r * 0.9 * k;
           LV[o + 9] = _c.g * 0.9 * k;
