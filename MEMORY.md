@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-26 — v186 hotfix: the consent and NEW VERSION cards never hid
+- Users reported ALLOW leaves the card up. Cause: `#upd,#ana{display:flex}` beats the UA `[hidden]{display:none}`, so `el.hidden = true` did nothing (NEW VERSION card too, since v179). My v185 check read `card.hidden` and never looked at the screen after the click. Fix: `#upd[hidden],#ana[hidden]{display:none}` + `tests/hidden-css.test.mjs`; CACHE_NAME/REV v186, CHANGELOG. v185 itself was pushed and went live today.
+
 ## 2026-10-26 — Opt-in Google Analytics (GA4) built, ID G-C3MW30HPQ0 in
 - Owner asked for a tracker (opens + who stays), picked GA4 with "ask once, with an OPTIONS switch". `src/app/analytics.js` (consent card `#ana`, `nb.analytics.v1` KEEP, OPTIONS ANALYTICS row 8, run_start/run_end + days bucket), `docs/privacy.md`, plan `docs/superpowers/plans/2026-10-26-google-analytics.md`; marketing kit's "no analytics, by design" line rewritten. Folded into unpushed v185 (no CACHE bump).
 - v185 re-dated to its ship day 2026-10-26 (CHANGELOG, sitemap lastmod, diary, architecture, docs map); housekeeping: six merged `claude/*` branches deleted, dirty 2026-10-11/10-19 worktrees left for the owner.

@@ -60,13 +60,13 @@ through `listGeom` / `listHit` (pitches are caps that scale down in a short
 box); MENU has a PLAY hero row whose tag is the run it starts and group gaps
 before OPTIONS / HIGH SCORES / SOURCE; the SOURCE URL shows only on its
 selected row. Build tag (owner 2026-10-21: "a game version in some where in
-the display or menue"): `v185` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
+the display or menue"): `v186` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
 derived ONLY in `shellview.js` (`REV`, handed to `drawMenu` / `drawSettings`
-as `rev`) and `update.js` (the card's "You are on v185", the running build,
+as `rev`) and `update.js` (the card's "You are on v186", the running build,
 never a guessed next one) — never a second literal. Keyboard MENU appends
 it to the foot hint; the touch hub hangs it under the plate when the box has
 >= 10 units below it (`#sh`), else on the SOURCE tile's teaser (landscape on
-the board canvas); OPTIONS keeps its `BUILD v185` kicker. Never on the HUD.
+the board canvas); OPTIONS keeps its `BUILD v186` kicker. Never on the HUD.
 PAUSE draws `pauseGeom(overlayBox, touch)`: touch (`touchLay`,
 data-lay p/l) caps pitch at `PAUSE_ROW_H` 70 / hero 76 / width 380, a keyboard
 screen at the compact `PAUSE_ROW_D` 44 / hero 54 / width 340 (owner: "too
@@ -975,9 +975,11 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   Node test fakes define `globalThis.location` WITHOUT `href`, so "is this a
   real page" means `typeof location.href === "string"` (the branch's gen-2 page
   default depended on it; since v185 gen 2 is `?gen=2` only).
-- Release state (2026-10-25): shell **v185** is prepared on LOCAL `main` (the
-  board look, `CACHE_NAME` / `REV` bumped, CHANGELOG + sitemap dated), not
-  pushed: the owner pushes by hand. Boards: today's (gen 1) by default, the
+- Release state (2026-10-26): shell **v185** (the board look + opt-in GA4) went
+  LIVE 2026-10-26; **v186** is its hotfix (`#upd[hidden],#ana[hidden]`: an
+  author `display:flex` beats the UA `[hidden]` rule, so neither card ever hid;
+  `tests/hidden-css.test.mjs` now gates every `#id` display rule). The owner
+  pushes, or says "push". Boards: today's (gen 1) by default, the
   floor-tile boards only with `?gen=2` (owner ruling "Today's boards": the ghost
   key and the F1 code carry no `gen`, #13, and the tile dial is #28), so the
   GUIDE FLOOR page is a PREVIEW. Branches `tiles-d`, `frame-a`, `frame-b` are

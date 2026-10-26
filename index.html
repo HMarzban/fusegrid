@@ -150,6 +150,9 @@
     border-radius:4px;background:rgba(55,240,208,.14);color:#37f0d0;font-size:14px;letter-spacing:.1em;cursor:pointer;white-space:nowrap}
   #ana .yes:hover,#ana .no:hover{background:rgba(55,240,208,.22)}
   #ana a{color:#dfe7f5}
+  /* an author display:flex beats the UA [hidden] rule, so each card needs its own:
+     without it the NEW VERSION card and the consent card never hide */
+  #upd[hidden],#ana[hidden]{display:none}
   @keyframes updIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
   @media (prefers-reduced-motion:reduce){#upd,#ana{animation:updFade .12s linear both}}
   @keyframes updFade{from{opacity:0}to{opacity:1}}

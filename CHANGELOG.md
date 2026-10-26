@@ -15,6 +15,16 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
+## shell v186 · 2026-10-26
+
+### Fixed
+- **The play-stats card now goes away.** ALLOW and NO THANKS saved your choice
+  but left the card on screen, and it also showed on the title screen. It now
+  closes the moment you answer, and appears only on the menus.
+- **The NEW VERSION READY card now goes away too.** LATER didn't hide it, and it
+  could stay up during a run. If you're updating from v185 or older, press
+  RELOAD on it once and the fixed version takes over.
+
 ## shell v185 · 2026-10-26
 
 The board gets a whole new look in all three looks (CLASSIC 2D, PIXEL, REAL 3D):
