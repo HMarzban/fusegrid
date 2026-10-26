@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-10-26 — tiles design pass 2 (#28) done, harness #25 built
+- Owner picks O1 Heat, O3 superset only if needed (unused), O7 no AI retune, O8 capped, O9 BOOSTER room 1; then T1 TRAP rules (no chain, off/hold, PLUS spares trigger foe, MAX kills no foe), I1 ICE CORE x1.0 + MAX brake, B1 BOOSTER = assist tile (MAX not easier), C1 CONVEYOR EASY accepted. Confirmed MAX Δ lose: TRAP +5.9, ICE +4.6, CONVEYOR +5.4; static V19 = 0 for all four. `tools/balance/` harness + featchecks on main; tuned code on branches pass2-trap/ice/conveyor/booster for #18–#22. Addendum in the tiles record.
+
 ## 2026-10-26 — v191: PIXEL cap 192 KB
 - Owner, after a 176 vs 192 comparison (cap = code budget, no visual change; full 192 = ~56 KB gzip vs ~51 KB at 176, PIXEL pickers only): "Raise the PIXEL limit to 192 KB now and ship it as v191". Test cap, AGENTS.md, architecture, CHANGELOG.
 

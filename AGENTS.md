@@ -965,9 +965,19 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
 
     Build from the committed specs and read the prototypes only for
     reference.
-  - Tiles #19–#22 are NOT build-ready. Design pass 2 (#28) comes first,
-    because the wave-1 prototype showed the dial not working. Then the
-    verdict (#30). Tooling: #29.
+  - Design pass 2 (#28) is DONE (2026-10-26): the dial works for TRAP (MAX
+    +5.9), ICE PATCH (+4.6) and CONVEYOR (+5.4), all with 0 static no-escape
+    spots; BOOSTER is an assist tile (owner B1). Owner picks O1/O3/O7/O8/O9
+    and T1/I1/B1/C1, the per-heat specs and the lead gate rulings are in the
+    tiles record's "design pass 2" addendum. Tuned code waits on local
+    branches `pass2-trap` (#22), `pass2-ice` (#20), `pass2-conveyor` (#19),
+    `pass2-booster` (#21), never merged as is: #18 integrates them (move
+    `featchecks` into `src/core` first; fix V14 items-on-tiles in
+    `loadLevel`; then re-confirm, since A0 moves). Measuring: `tools/balance/`
+    (#25 harness: `tilesweep.mjs`, tick-for-tick parity with the stock bot;
+    static checks V13–V27 `featchecks.mjs` + `featreport.mjs`), dev-only,
+    never imported by `src/`; `w.featProf` is a harness-only knob seam. Then
+    the verdict and human playtest (#30).
   - Bests stay keyed by difficulty + room ("not related to the shuffle board").
   - `world.gen` defaults to 1 (Node worlds). F1 codes, past dailies,
     ATTRACT and the intro show stay on gen 1 forever. Gen-2 boards copy F2

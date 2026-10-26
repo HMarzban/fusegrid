@@ -380,3 +380,163 @@ branch `tiles-d`, merged into the owner's local `main` the same day (not
 pushed); the GUIDE FLOOR page lists them. STREAM, QUICKSAND, PORTAL and GATE appear on gen-2 rooms
 4 / 6 / 7 / 8 as **art-only** placements (codes 8..14, no sim effect) so every
 world shows its look; their rules wait for #19 to #22 and the dial for #28.
+
+---
+
+## Addendum (2026-10-26): design pass 2, the dial works (issue #28)
+
+The wave-1 dial did not work in the 2026-10-21 prototype. This pass re-measured
+it on today's boards and fixed it tile by tile, as four parallel lanes. Owner
+rulings R1–R7 above stay readable; lines this pass supersedes are named below,
+not deleted.
+
+### How it was measured
+
+- **Tools (on `main`):** the #25 harness `tools/balance/` (a tile-aware fork of
+  the demobot, proven tick-for-tick equal to the stock bot on tile-free boards:
+  9600 runs, 0 divergent) and the static checks V13–V27
+  `tools/balance/featchecks.mjs` + `featreport.mjs` (no bot). `w.featProf` is a
+  harness-only knob seam in `featProfile`; unset, every pin is byte-identical.
+- **A0 is re-baselined on today's code** (gen-3 boards = the bold gen-2 board
+  with ~17 fewer bricks, the `fair.js` gate, brick-passers at 12 steps). The
+  2026-10-21 table above ran on the older mockup and is not comparable.
+- **Arms share one world:** A0 is the same gen-3 world with the tile layer
+  nulled after `loadLevel`; A1 the dial; A2 / A3 CORE / MAX knobs at every
+  heat. Never gen 2 vs gen 3 (gen 3 forces tile cells open).
+- Paired bootstrap 95% CIs; confirm runs on held-out seeds never used for
+  tuning; NORM pace unless named.
+
+### Owner decisions (2026-10-26)
+
+| # | Ruling |
+|---|---|
+| O1 | **Heat** turns the dial; pace scales tile speeds only. |
+| O3 | MAX-only extra tiles only if knobs + placement + rules all miss MAX +3 pp. **Not used by any tile.** |
+| O7 | **No AI retune** (foes do not learn to avoid traps). |
+| O8 | Foes may trigger traps and relays if trap self-clears stay ≤ 1 per room. |
+| O9 | BOOSTER stays in room 1. |
+| T1 | **TRAP rule changes accepted** (below): no chain, `off` / `hold` arming, PLUS spares the trigger foe, MAX kills no foe. Supersedes R2's "any blast it makes is the real blast" for PLUS / MAX and #22's "it chains bombs on its arms". |
+| I1 | **ICE PATCH:** CORE ×1.0 (no speed boost; ×1.1 failed the CORE gate) and a MAX **brake**. |
+| B1 | **BOOSTER is an assist tile at every heat:** its MAX gate is *not easier than A0* (CI lower bound ≥ −3 pp), not +3 to +10. |
+| C1 | **CONVEYOR at EASY pace** may add no MAX difficulty (−0.1 pp); accepted, the #30 playtest may revisit. |
+
+### Results (confirm runs, Δ lose = with tiles − A0, pp, 95% CI)
+
+| Tile (room) | n / cell | CORE | PLUS | MAX | Static V19 spots | Verdict |
+|---|---|---|---|---|---|---|
+| TRAP (5) | 6000 | −4.1 [−4.8, −3.5] | +0.3 [−0.4, 0.9] | **+5.9 [5.1, 6.8]** | 0 / 0 / 0 (was 1000 boards each) | dial works |
+| ICE PATCH (2) | 6000 | +0.1 [−0.5, 0.8] | +1.1 [0.0, 2.1] | **+4.6 [3.7, 5.5]** | 0 / 0 / 0 (MAX was 616 boards) | dial works |
+| CONVEYOR (3) | 3700 | −1.1 [−2.4, 0.2] | +2.4 [0.8, 3.9] | **+5.4 [3.6, 7.2]** | 0 / 1 cap / 0 (V17, V20 also 0) | dial works; A3 − A2 = +8.9 … +13.8 (was ≤ 3) |
+| BOOSTER (1) | 2000 | −0.2 [−1.2, 0.9] | −0.1 [−1.4, 1.3] | −0.9 [−3.0, 1.3] | 0 / 0 / 0 (was 101 / 391 / 449 boards) | assist tile (B1); useful relays/run 0.63 / 1.07 / 1.61 (×3) |
+
+- Order checks pass: CORE < PLUS < MAX lose, and A2 ≤ A1 ≤ A3, for TRAP,
+  ICE PATCH and CONVEYOR. Trap self-clears 0.19 / 0.13 / 0.00 per room (O8 ≤ 1).
+- Pace: TRAP MAX +5.5 EASY / +5.8 HARD; ICE PATCH MAX +5.6 HARD; CONVEYOR
+  MAX +6.9 HARD, −0.1 EASY (C1).
+- First-5 s hits stay under the pooled ceiling in every confirmed cell; hits
+  under 15 s are the usable early-hit signal at the fair start.
+- **Clear time ("CORE 10% faster") is unresolved for every tile:** the bot wins
+  too few rooms. The #30 human playtest decides joy.
+
+### Final specs (reference patches on local branches, not merged)
+
+The tuned rule and placement code lives on four local branches, one per
+build issue: `pass2-trap` (#22), `pass2-ice` (#20), `pass2-conveyor` (#19),
+`pass2-booster` (#21). Each also edits the shared harness models for its own
+rule; #18 integrates them. Help strings below replace the `TILE_HELP`
+placeholders.
+
+**TRAP (ARENA, room 5).** Placement: 3–5 traps (V26), SHRINK-safe spots first
+(V20 463 → 81 boards). All heats: `chain:false` (a trap blast sets off no bomb),
+`off 1` (never arms while you are on or within 1 tile of its lines), `hold`
+(never arms while a lit bomb's blast covers its lines).
+
+| | wind / r / cd | inert | arms when | foes |
+|---|---|---|---|---|
+| CORE | 0.5 / 1 / 3 | 2 s | you within 4 | blast kills all (the lure) |
+| PLUS | 0.8 / 2 / 4 | 2 s | you within 4 | spares the foe that set it off |
+| MAX | 1.0 / 3 / 3 | 6 s | anywhere | kills no foe (pure hazard) |
+
+Help: `LURE FOES ON · SHORT` / `TRIGGER FOE LIVES · LONG` / `FOES IMMUNE · HUGE`.
+
+**ICE PATCH (ICE, room 2).** Placement: two rings of 8 around the pillars
+whose rings hold the most open floor, in the open lane band (~16 tiles, ~14
+open at start); V24 unchanged; foes may start on ice, SENTRY never.
+
+| | speed on ice | on release | turns | opposite press |
+|---|---|---|---|---|
+| CORE | ×1.0 | stop | corner assist 0.35 | — |
+| PLUS | ×1.25 | coast to next centre | buffered 0.20 | — |
+| MAX | ×1.5 | coast to a block or off the sheet | buffered 0.10 | **brake** (stop at the next centre) |
+
+Edge cases (#20): a coast into a bomb stops; a plant while coasting drops on
+the tile being crossed; KICK works on ice at every heat; the glide state clears
+on a hit and on a room load. Help: `SMOOTH ICE, STOP ANY TIME` /
+`FAST ICE, SLIDES A STEP` / `SLIDES ON · BACK TO STOP`. The brake must be taught
+(coach tip / FLOOR line, #24): a player who never brakes takes more first-5 s
+hits at MAX.
+
+**CONVEYOR (FACTORY, room 3).** Placement: two chains on always-open floor
+only, landing never nearer the start than the head, SHRINK-safe rings 1–4
+built in (V20 974 → 0), V15 shape rules kept; `beltDist` uses the half-cell V17
+model per edge.
+
+| | who rides | speed (× pace) |
+|---|---|---|
+| CORE | your bombs | 0.6 |
+| PLUS | your bombs and you | 1.0 |
+| MAX | bombs, you and foes | 1.2 |
+
+Rule flags: `thru` (a ridden bomb stops only at a WALL, BRICK or bomb, so its
+blow cell is readable from the board), `snap` (holding toward an open side cell
+steps you off without a sideways shove; this is the forgiving step-off),
+`endHalt` (riders stop at the chain's end), `wallStop` (a chain ending at a
+SHRINK wall carries no one). Help: `CARRIES YOUR BOMBS` /
+`CARRIES BOMBS AND YOU` / `CARRIES ALL, FOES TOO`.
+
+**BOOSTER (JUNGLE, room 1).** Knobs unchanged from section 3 (CORE +2
+forward; PLUS +2 and 1 each side, 0.15 s; MAX +2 and 2 each side, 0.30 s
+flare; cooldown 1.0 s; relays stay real). Placement: 3–5 boosters on (odd, odd),
+≥ 2 Manhattan from the pocket and doors (was 4), no two within 3 in a line,
+nearer the start; each booster kept only if V18 and V19 pass on all three
+heats' grids (same layer at every heat). V25 becomes 3–5 with pocket gap 2.
+Help: `THROWS YOUR BLAST 2 ON` / `2 ON + 1 EACH SIDE` / `2 ON + 2 EACH SIDE, LATE`.
+Art candidate (#23): the flare lights the relay's reach along each arm during
+the delay. Optional rule `bloom.safe` (a CORE relay cannot hurt you) is wired
+and **off**: the bot played greedier with it (+1.5 pp).
+
+### Lead rulings on the gates
+
+- **Tile-hit gate:** "hit while standing on a tile" over-counts once tiles sit
+  on main corridors (ICE PATCH 29 % at CORE with ice adding 0 hits vs A0). The
+  gate becomes **hits the tile causes**: the paired Δ hits vs A0.
+- **No-escape:** the gate of record is **static V19 = 0**, met by all four
+  tiles. The live harness counter is pessimistic (CONVEYOR's real-sim oracle
+  `tools/balance/oracle.mjs` found all 886 flagged episodes escapable) and
+  still flags residuals (BOOSTER 15 / 84 / 164 per 2000 runs, mostly the bot
+  planting while its own blade or a flare is live). #25 / #30 replay them
+  through the oracle and either exempt own fresh plants or give the bot a
+  timed pre-plant escape check.
+- **Art "marks ≤ 30 %"** is superseded by direction D (owner: "the current
+  tile art are great"); the TRAP MAX band fix is moot.
+- **The open CROWN GATE heat tell** (#33's finding) is a wave-2 item (#26).
+
+### Open items for the build
+
+- **V14:** floor and buried items land on tiles on 26–92 % of boards; the fix
+  is `loadLevel`'s free list and the brick fill (#18). Every result above must
+  be re-confirmed after it, because A0 changes too.
+- **Merge blocker (BOOSTER):** `pass2-booster` imports
+  `tools/balance/featchecks.mjs` from `src/core/board2.js`; #18 moves the
+  checks into `src/core` first (and limits the room-1 check to cells near each
+  booster: ~78 ms per load today).
+- **Shared harness edits** on the four branches overlap (`tilemodel.mjs`,
+  `escape.mjs`, `featchecks.mjs`, `tilerun.mjs`); #18 merges them once.
+- Copy and art follow-ups: CONVEYOR CORE / PLUS no longer carry foes or you
+  (#19 copy, #23 art); TRAP MAX is a hazard, not a lure (#22 copy); the coach
+  tip and FLOOR line teach the ICE brake and the trap rules (#24).
+- MAX near misses do not rise for any tile (the counter sees plain bomb
+  footprints only); PLUS / MAX tile-assisted kills fall under the old 10 % gate
+  for TRAP by design (T1).
+- Human playtest (#30): joy on CORE, the ICE brake, and whether MAX feels
+  harder by the margins measured here.
