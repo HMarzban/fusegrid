@@ -321,7 +321,7 @@ export function fill2(lay, seed, level, heat, attempt = 0) {
   const open = elig - Math.max(0, Math.min(elig, target - fixed));
   reps.sort((a, b) => a.k - b.k);
   for (let i = 0, carved = 0; i < reps.length && carved < open; i++) { reps[i].orb.forEach((q) => (g[q] = T.EMPTY)); carved += reps[i].orb.length; }
-  return { grid: g, target };
+  return { grid: g, target, cap: fixed + elig };
 }
 
 /* the fair fallback (V11): the gen-1 grid with the fair-start stamp; gen-2 foe placement follows in loadLevel */

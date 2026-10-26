@@ -1,7 +1,7 @@
 import { CFG, T, key, clamp } from "./config.js";
 import { genBoard, isBrick } from "./board.js";
 import { genBoard2 } from "./board2.js";
-import { walk, foeFar } from "./fair.js";
+import { walk, placeFoes } from "./fair.js";
 import { spawnBlocked, beltDist, FEAT_PROFILE, isBelt } from "./feat.js";
 import { createRng } from "./rng.js";
 import { POWER, createPlayer, spawnEnemy } from "./entities.js";
@@ -197,14 +197,7 @@ export function loadLevel(world, level, keepProgress = false) {
     const b0 = walk(w.grid);
     const fb = w.feat && w.feat.some(isBelt) ? FEAT_PROFILE[heat].belt : null;
     const b = fb && fb.actors ? Array.from(beltDist(w.grid, w.feat, fb.v, CFG.ENEMY_BASE_SPEED + level * P.curve), (v, i) => (b0[i] < 0 ? -1 : Math.floor(v))) : b0;
-    const used = new Set(), pick = [];
-    for (const t of roster) {
-      const j = free.findIndex(([x, y], j) => !used.has(j) && foeFar(t, b[key(x, y)]) && !spawnBlocked(w.feat, x, y));
-      if (j < 0) continue;
-      used.add(j);
-      pick.push([t, free[j]]);
-    }
-    const rest = free.filter((_, j) => !used.has(j));
+    const { pick, rest } = placeFoes(free, roster, b, (x, y) => spawnBlocked(w.feat, x, y));
     free.length = 0;
     free.push(...pick.map((p) => p[1]), ...rest);
     for (const [t, c] of pick) w.enemies.push(spawnEnemy(t, c[0], c[1], level, rng, spawnOpts));

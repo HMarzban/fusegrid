@@ -63,6 +63,19 @@ export function freeTiles(g) {
   }
   return out;
 }
+/* gen-2 foe placement (#12): each roster entry, in order, takes the first unused
+   free tile (loadLevel's shuffled list) at walking distance >= foeMin; the picks
+   go first and the unused tiles follow, so floor items take the rest */
+export function placeFoes(free, roster, d, blocked) {
+  const used = new Uint8Array(free.length), pick = [];
+  for (const t of roster) {
+    const j = free.findIndex(([x, y], i) => !used[i] && foeFar(t, d[key(x, y)]) && !(blocked && blocked(x, y)));
+    if (j < 0) continue;
+    used[j] = 1;
+    pick.push([t, free[j]]);
+  }
+  return { pick, rest: free.filter((_, i) => !used[i]) };
+}
 /* gen-1 diagnostic: some foe start is <= n EMPTY steps from the spawn */
 export function openLane(g, n = 5) {
   const e = walk(g, false);
