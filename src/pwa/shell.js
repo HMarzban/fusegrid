@@ -42,6 +42,7 @@ const SRC = Object.freeze([
   "src/audio/tracks.js",
   "src/core/board.js",
   "src/core/board2.js",
+  "src/core/fair.js",
   "src/core/config.js",
   "src/core/entities.js",
   "src/core/feat.js",
