@@ -87,7 +87,7 @@ export function createGame(canvas, opts = {}) {
   const bootSeed = (opts.seed != null ? opts.seed : Math.random() * 1e9) >>> 0;
   let runI = 0, runFixed = false;
   const world = createWorld(bootSeed, 1);
-  if (flags.gen2) world.gen = 2; // ?gen=2 only: the gen-2 boards with the floor tile layer (prototype); every other run plays today's boards
+  if (flags.gen3) world.gen = 3; // ?gen=3 only: the gen-2 board plus the floor tile layer (prototype preview)
   loadLevel(world, 1, false);
   world.state = "PLAY";
 
@@ -200,6 +200,7 @@ export function createGame(canvas, opts = {}) {
 
   /* run handoff (menu START / LEVEL select): fresh board, score reset */
   const onStart = (args) => {
+    world.gen = args && args.seed != null ? 1 : flags.gen3 ? 3 : 2; // #12: ordinary runs deal gen-2 boards; DAILY / ?code= stay gen 1 until #13
     world.heat = clampHeat(args && args.heat);
     world.pact = clampPact(args && args.pact);
     world.pace = clampPace(args && args.pace);

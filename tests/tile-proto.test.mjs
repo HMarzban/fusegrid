@@ -10,14 +10,15 @@ import { buildScene, countDrawCalls } from "../src/render/three/scene.js";
 
 const mk = (gen, seed, room, heat) => { const w = createWorld(seed, room); w.gen = gen; w.heat = heat; loadLevel(w, room, false); w.state = "PLAY"; return w; };
 
-test("gen 1 carries no feat layer; every gen-2 room carries one (rooms 4, 6, 7, 8 art-only)", () => {
+test("gen 1 and gen 2 carry no feat layer; every gen-3 room carries one (rooms 4, 6, 7, 8 art-only)", () => {
   for (let room = 1; room <= 8; room++) assert.equal(mk(1, 77, room, 0).feat ?? null, null);
-  for (let room = 1; room <= 8; room++) assert.ok(mk(2, 77, room, 2).feat, "room " + room);
+  for (let room = 1; room <= 8; room++) assert.equal(mk(2, 77, room, 2).feat ?? null, null);
+  for (let room = 1; room <= 8; room++) assert.ok(mk(3, 77, room, 2).feat, "room " + room);
 });
 test("the layer is heat-invariant and home-biome only (V13, V21)", () => {
   const want = { 1: [6], 2: [5], 3: [1, 2, 3, 4], 4: [8, 9, 10, 11], 5: [7], 6: [12], 7: [13], 8: [14] };
   for (const room of [1, 2, 3, 4, 5, 6, 7, 8]) for (let s = 0; s < 40; s++) {
-    const b = [0, 1, 2].map((h) => genBoard2(1000 + s, room, h));
+    const b = [0, 1, 2].map((h) => genBoard2(1000 + s, room, h, { feat: true }));
     const hx = b.map((x) => (x.feat ? Buffer.from(x.feat).toString("hex") : "-"));
     assert.equal(hx[0], hx[1]); assert.equal(hx[1], hx[2]);
     if (b[0].feat) for (const v of b[0].feat) if (v) assert.ok(want[room].includes(v), `room ${room} code ${v}`);
@@ -25,7 +26,7 @@ test("the layer is heat-invariant and home-biome only (V13, V21)", () => {
 });
 test("tile rooms replay deterministically", () => {
   for (const room of [1, 2, 3, 5]) {
-    const run = () => { const w = mk(2, 4242, room, 2), bot = createDemobot(9); for (let i = 0; i < 1800; i++) { step(w, CFG.STEP, { 0: bot.intent(w) }); w.events.length = 0; } return JSON.stringify([w.players[0].x, w.players[0].y, w.enemies.map((e) => [e.x, e.y]), w.score, Array.from(w.featS)]); };
+    const run = () => { const w = mk(3, 4242, room, 2), bot = createDemobot(9); for (let i = 0; i < 1800; i++) { step(w, CFG.STEP, { 0: bot.intent(w) }); w.events.length = 0; } return JSON.stringify([w.players[0].x, w.players[0].y, w.enemies.map((e) => [e.x, e.y]), w.score, Array.from(w.featS)]); };
     assert.equal(run(), run());
   }
 });
@@ -37,7 +38,7 @@ test("no Math.random / Date in src/core", () => {
 });
 test("REAL 3D: a tile room adds exactly ONE draw (141 -> 142 in the fat-world formula); no feat = no mesh", () => {
   for (const room of [1, 2, 3, 5]) {
-    const w = mk(2, 93, room, 0), w0 = mk(2, 93, room, 0);
+    const w = mk(3, 93, room, 0), w0 = mk(3, 93, room, 0);
     w0.feat = null;
     assert.ok(w.feat, "room " + room + " has tiles");
     assert.equal(countDrawCalls(buildScene(w, null).group) - countDrawCalls(buildScene(w0, null).group), 1, "room " + room);

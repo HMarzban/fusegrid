@@ -108,7 +108,7 @@ const room = (gen, seed, rm, heat) => { const w = createWorld(seed, rm); w.gen =
 test("atlas cap: every tile room's distinct cells (all state variants) fit the 64-cell atlas", () => {
   let worst = 0;
   for (const rm of [1, 2, 3, 5]) for (let seed = 1; seed <= 80; seed++) for (const heat of [0, 2]) {
-    const w = room(2, 1000 + seed, rm, heat);
+    const w = room(3, 1000 + seed, rm, heat);
     if (!w.feat) continue;
     const n = atlasSpecs(w).length; worst = Math.max(worst, n);
     assert.ok(n <= 64, `room ${rm} seed ${seed} heat ${heat}: ${n} cells`);
@@ -124,7 +124,7 @@ test("an unknown feat code paints nothing and does not throw; no feat layer buil
   assert.equal(w2.feat ?? null, null);
 });
 test("PAUSE freezes tile effects: with featT fixed, update() leaves every uniform and instance as it was", () => {
-  const w = room(2, 1003, 3, 1), b = BIOMES[2];
+  const w = room(3, 1003, 3, 1), b = BIOMES[2];
   assert.ok(w.feat, "tile room");
   const L = buildFeat(w, b);
   w.featT = 4.25; L.update(w);
@@ -145,7 +145,7 @@ test("fragSource carries every geometry number the painters use (art and shader 
 test("REAL 3D tile room still adds exactly ONE draw with the D layer", async () => {
   const { buildScene, countDrawCalls } = await import("../src/render/three/scene.js");
   for (const rm of [1, 2, 3, 5]) {
-    const w = room(2, 93, rm, 0), w0 = room(2, 93, rm, 0); w0.feat = null;
+    const w = room(3, 93, rm, 0), w0 = room(3, 93, rm, 0); w0.feat = null;
     assert.equal(countDrawCalls(buildScene(w, null).group) - countDrawCalls(buildScene(w0, null).group), 1, "room " + rm);
   }
 });
@@ -192,7 +192,7 @@ test("specKey: two ICE tiles of one patch that paint differently get different a
   assert.notDeepEqual(a.log, c.log, "painters differ, so the keys must");
 });
 test("PAUSE freezes: buildFeat exposes its clock uniforms and update() with a fixed featT leaves them unchanged", () => {
-  const w = room(2, 1003, 3, 1), L = buildFeat(w, BIOMES[2]);
+  const w = room(3, 1003, 3, 1), L = buildFeat(w, BIOMES[2]);
   w.featT = 4.25; L.update(w);
   const a = JSON.stringify([L.uniforms.uT.value, L.uniforms.uSt.value, L.uniforms.uTime.value]);
   L.update(w); L.update(w);
@@ -201,13 +201,14 @@ test("PAUSE freezes: buildFeat exposes its clock uniforms and update() with a fi
 });
 
 import { readFlags } from "../src/app/flags.js";
-test("v185: today's boards are the default; ?gen=2 opts into the tile boards, ?code= never plays them", () => {
+test("O2: today's boards are the boot default; ?gen=3 opts into the tile boards (gen 2 + the tile layer), ?code= never plays them", () => {
   const P = { page: true };
-  assert.equal(readFlags("", P).gen2, false);
-  assert.equal(readFlags("?render=3d&play=1", P).gen2, false);
-  assert.equal(readFlags("?gen=1", P).gen2, false);
-  assert.equal(readFlags("?gen=2", P).gen2, true);
-  assert.equal(readFlags("?gen=2&render=px", P).gen2, true);
-  assert.equal(readFlags("?gen=2&code=F1ABCDEFGHJK", P).gen2, false);
-  assert.equal(readFlags("").gen2, false, "headless Node worlds stay gen 1");
+  assert.equal(readFlags("", P).gen3, false);
+  assert.equal(readFlags("?render=3d&play=1", P).gen3, false);
+  assert.equal(readFlags("?gen=1", P).gen3, false);
+  assert.equal(readFlags("?gen=2", P).gen3, false);
+  assert.equal(readFlags("?gen=3", P).gen3, true);
+  assert.equal(readFlags("?gen=3&render=px", P).gen3, true);
+  assert.equal(readFlags("?gen=3&code=F1ABCDEFGHJK", P).gen3, false);
+  assert.equal(readFlags("").gen3, false, "headless Node worlds stay gen 1");
 });

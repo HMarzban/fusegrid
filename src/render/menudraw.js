@@ -1382,7 +1382,7 @@ function keyCap(c, x, y, s, T) {
   c.fillText(s, x + w / 2, y + 1);
   return w;
 }
-/* FLOOR: the eight tiles, one per world (core/feat.js HOME), painted by the look's own painter at CORE / PLUS / MAX. A PREVIEW since v185: today's boards carry no tiles (?gen=2 plays them), and only four have rules yet. */
+/* FLOOR: the eight tiles, one per world (core/feat.js HOME), painted by the look's own painter at CORE / PLUS / MAX. A PREVIEW since v185: today's and the gen-2 boards carry no tiles (?gen=3 plays them), and only four have rules yet. */
 const FLOOR_ROWS = [
   { k: "BLOOM", name: "BOOSTER", room: 1 },
   { k: "GLIDE", name: "ICE PATCH", room: 2 },

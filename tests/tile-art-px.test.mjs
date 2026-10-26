@@ -12,7 +12,7 @@ import { createRGBA, surfRGBA } from "../tools/pixel/rgba.mjs";
 
 const atlas = createAtlas(surfRGBA);
 const C = CFG.COLS, R = CFG.ROWS;
-const room = (L, gen = 2) => { const w = createWorld(1, L); w.gen = gen; loadLevel(w, L); w.state = "PLAY"; return w; };
+const room = (L, gen = 3) => { const w = createWorld(1, L); w.gen = gen; loadLevel(w, L); w.state = "PLAY"; return w; };
 const draw = (w) => { const img = createRGBA(300, 260), c = img.getContext(); c.imageSmoothingEnabled = false; const V = createView(atlas); V.t = 0.5; const n = drawPixelWorld(c, w, V); return { img, n }; };
 const patch = (img, x, y) => { const o = []; for (let j = 0; j < 20; j++) for (let i = 0; i < 20; i++) { const k = ((y * 20 + j) * img.width + x * 20 + i) * 4; o.push(img.data[k], img.data[k + 1], img.data[k + 2], img.data[k + 3]); } return o; };
 const same = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
@@ -40,7 +40,7 @@ test("the baked frame is cached by what the cell shows, not by phase or gx", () 
   assert.notEqual(atlas.feat(2, s), atlas.feat(2, { ...s, h: 2 }));
 });
 
-test("rooms 1, 2, 3 and 5 of a gen-2 board paint the tile cell where world.feat is set", () => {
+test("rooms 1, 2, 3 and 5 of a gen-3 board paint the tile cell where world.feat is set", () => {
   for (const L of [1, 2, 3, 5]) {
     const w = room(L), bi = L - 1, cells = [];
     w.items.length = 0; w.enemies.length = 0; w.bombs.length = 0; w.players[0].alive = false;

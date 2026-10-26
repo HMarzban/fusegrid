@@ -3,7 +3,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { CFG, key, T } from "../src/core/config.js";
 import { createWorld, loadLevel, step } from "../src/core/sim.js";
-import { genBoard2, playFails, dists2, FEAT } from "../src/core/board2.js";
+import { genBoard2 } from "../src/core/board2.js";
+import { validateBoard, walk } from "../src/core/fair.js";
 import { heatRoster } from "../src/core/heat.js";
 import { HOME } from "../src/core/feat.js";
 import { createDemobot } from "../src/app/demobot.js";
@@ -13,22 +14,22 @@ const ROOMS = { 4: "STREAM", 6: "QUICK", 7: "PORTAL", 8: "GATE" };
 const CODES = { STREAM: [8, 9, 10, 11], QUICK: [12], PORTAL: [13], GATE: [14] };
 const cellsOf = (f) => { const o = []; for (let i = 0; i < f.length; i++) if (f[i]) o.push([i % C, (i / C) | 0, f[i]]); return o; };
 const manh = (a, b) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]);
-const mk = (seed, room, heat) => { const w = createWorld(seed, room); w.gen = 2; w.heat = heat; loadLevel(w, room, false); w.state = "PLAY"; return w; };
+const mk = (seed, room, heat) => { const w = createWorld(seed, room); w.gen = 3; w.heat = heat; loadLevel(w, room, false); w.state = "PLAY"; return w; };
 
 test("one table maps each biome to its tile", () => {
   assert.deepEqual([HOME.WATER, HOME.SAND, HOME.VOID, HOME.CROWN], ["STREAM", "QUICK", "PORTAL", "GATE"]);
 });
 test("200 seeds per room: tiles placed, same at every heat, never near spawn or a door, on floor, board still fair", () => {
   for (const room of [4, 6, 7, 8]) for (let s = 0; s < 200; s++) {
-    const seed = 9000 + s, B = [0, 1, 2].map((h) => genBoard2(seed, room, h)), tag = `room ${room} seed ${seed}`;
+    const seed = 9000 + s, B = [0, 1, 2].map((h) => genBoard2(seed, room, h, { feat: true })), tag = `room ${room} seed ${seed}`;
     for (const b of B) assert.ok(b.feat && !b.layout.fallback, tag);
     const hx = B.map((b) => Buffer.from(b.feat).toString("hex") + "|" + (b.featPair ? Buffer.from(b.featPair).toString("hex") : "-"));
     assert.equal(hx[0], hx[1], tag); assert.equal(hx[1], hx[2], tag);
-    for (let h = 0; h < 3; h++) assert.deepEqual(playFails(B[h].grid, room, h), [], tag + " heat " + h);
-    const { b: walk } = dists2(B[2].grid);
+    for (let h = 0; h < 3; h++) assert.deepEqual(validateBoard(B[h].grid, room, h, { capped: ["CROWN"], sym: B[h].layout.sym, flip: B[h].layout.flip, ignore: B[h].layout.ignore }), [], tag + " heat " + h);
+    const steps = walk(B[2].grid);
     for (const [x, y, v] of cellsOf(B[0].feat)) {
       assert.ok(CODES[ROOMS[room]].includes(v), tag + " code " + v);
-      assert.ok(walk[key(x, y)] > 4, tag + " near spawn");
+      assert.ok(steps[key(x, y)] > 4, tag + " near spawn");
       assert.ok(!(x === 5 && y === 1) && !(x === 1 && y === 5), tag + " on a door");
       for (const b of B) assert.equal(b.grid[key(x, y)], T.EMPTY, tag + " not on floor");
     }
@@ -36,7 +37,7 @@ test("200 seeds per room: tiles placed, same at every heat, never near spawn or 
 });
 test("STREAM: 1-2 straight runs of 3-6, one direction each", () => {
   for (let s = 0; s < 200; s++) {
-    const f = genBoard2(100 + s, 4, 0).feat, seen = new Set();
+    const f = genBoard2(100 + s, 4, 0, { feat: true }).feat, seen = new Set();
     let runs = 0;
     for (const [x, y, v] of cellsOf(f)) {
       if (seen.has(key(x, y))) continue;
@@ -53,14 +54,14 @@ test("STREAM: 1-2 straight runs of 3-6, one direction each", () => {
 });
 test("QUICK 3-5 spaced singles; GATE 2-3 corridor singles, lit 0; PORTAL pairs share an id 1/2 and sit far apart", () => {
   for (let s = 0; s < 200; s++) {
-    const q = cellsOf(genBoard2(300 + s, 6, 1).feat);
+    const q = cellsOf(genBoard2(300 + s, 6, 1, { feat: true }).feat);
     assert.ok(q.length >= 3 && q.length <= 5);
     for (let i = 0; i < q.length; i++) for (let j = i + 1; j < q.length; j++) assert.ok(manh(q[i], q[j]) >= 4);
     const w8 = mk(300 + s, 8, 1), g = cellsOf(w8.feat);
     assert.ok(g.length >= 2 && g.length <= 3);
     assert.ok(w8.featM.every((v) => v === 0));
     for (const [x, y] of g) { const o = (a, b) => w8.grid[key(a, b)] !== T.WALL; assert.ok((o(x - 1, y) && o(x + 1, y) && !o(x, y - 1) && !o(x, y + 1)) || (o(x, y - 1) && o(x, y + 1) && !o(x - 1, y) && !o(x + 1, y)), "corridor"); }
-    const b7 = genBoard2(300 + s, 7, 2), p = cellsOf(b7.feat), ids = {};
+    const b7 = genBoard2(300 + s, 7, 2, { feat: true }), p = cellsOf(b7.feat), ids = {};
     assert.ok(b7.featPair);
     for (const [x, y] of p) (ids[b7.featPair[key(x, y)]] ||= []).push([x, y]);
     const keys = Object.keys(ids).map(Number);
@@ -90,8 +91,7 @@ test("the art layer is ignored by step(): a replay is identical with and without
     assert.equal(snap(a), snap(b), `room ${room} seed ${seed} end`);
   }
 });
-test("gen 1 and FEAT off place nothing in these rooms", () => {
+test("gen 1 and gen 2 place nothing in these rooms", () => {
   for (const room of [4, 6, 7, 8]) { const w = createWorld(55, room); loadLevel(w, room, false); assert.equal(w.feat ?? null, null); }
-  FEAT.on = false;
-  try { for (const room of [4, 6, 7, 8]) assert.equal(genBoard2(55, room, 0).feat, null); } finally { FEAT.on = true; }
+  for (const room of [4, 6, 7, 8]) { const w = createWorld(55, room); w.gen = 2; loadLevel(w, room, false); assert.equal(w.feat ?? null, null); assert.equal(genBoard2(55, room, 0).feat, null); }
 });

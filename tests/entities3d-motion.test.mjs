@@ -255,7 +255,7 @@ test("a new room never fires a burst or a death: resetting the grid drops everyt
 });
 
 test("worst-case draw count: a tile room (floor-tile mesh) with 16 foes, 32 pickups, a blast and a racing ghost stays <= 160", () => {
-  const wf = createWorld(1003, 3); wf.gen = 2; wf.heat = 1; loadLevel(wf, 3, false);
+  const wf = createWorld(1003, 3); wf.gen = 3; wf.heat = 1; loadLevel(wf, 3, false);
   assert.ok(wf.feat, "tile room");
   wf.enemies = []; wf.items = [];
   for (let i = 0; i < 16; i++) wf.enemies.push(mkE(ENEMY_TYPES[i % 9], 60 + i * 30, 80));
