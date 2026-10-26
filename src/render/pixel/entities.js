@@ -7,7 +7,8 @@
    no one-shot slots, so they can never evict a kill puff; capped at BURST_CAP marks a frame. Everything is hashed or clocked, nothing is random. */
 import {CFG} from "../../core/config.js";
 import {ITEM_FAMILY} from "../icons.js";
-import {MOTION, COLLECT_T, phaseOf, blinkAt, foeM, bobAt, leanAt, spawnK, itemIdle, collectM, collectParticle} from "../motion.js";
+import {MOTION, COLLECT_T, phaseOf, blinkAt, foeM, bobAt, leanAt, lockK, spawnK, itemIdle, collectM, collectParticle} from "../motion.js";
+import {lockOn} from "../lockon.js";
 import {fxOf} from "../entityfx.js";
 import {getFxOpts} from "../fx.js";
 import {PX_T} from "./timing.js";
@@ -26,6 +27,16 @@ function ringPts(c, cx, cy, rx, ry) {
   for (let j = 0; j < n; j++) { const a = (j / n) * 6.2832; c.fillRect(Math.round(cx + rx * Math.cos(a)), Math.round(cy + ry * Math.sin(a)), 1, 1); }
 }
 
+/* lock-on (lockon.js, issue #32): 1 art px chevrons from the foe down its lane to MAKO, outline drop then light, stepped alpha, never pulsing */
+function lane(c, s, X, Y, a, R) {
+  const fx = s.ldx, fy = s.ldy, end = Math.max(12, s.ln * 20 - 8), w = fx ? 2 : 1, h = fy ? 2 : 1;
+  c.globalAlpha = a;
+  for (let d = 12; d <= end; d += 10) for (let q = -2; q < 3; q++) {
+    const f = d + 2 - Math.abs(q), x = X + fx * f - fy * q - (fx < 0), y = Y + fy * f + fx * q - (fy < 0);
+    c.fillStyle = R.outline; c.fillRect(x, y + 1, w, h); c.fillStyle = R.light; c.fillRect(x, y, w, h);
+  }
+  c.globalAlpha = 1;
+}
 export function drawFoes(c, V, world) {
   const es = world.enemies, t = V.t, F = V.A.foe, p0 = world.players && world.players[0];
   for (let i = 0; i < es.length; i++) {
@@ -37,6 +48,8 @@ export function drawFoes(c, V, world) {
     const moving = e.speed > 0 && !isIdle(st);
     let X = snapArt(e.x), Y = snapArt(e.y), dy = 0, f, hx = 0, pf = 0;
     if (e.hunt && p0 && p0.alive !== false) { const ln = leanAt(e.type, true, p0.x - e.x, p0.y - e.y, CFG.TILE); if (ln) { X += Math.round(ln.ox / 2); Y += Math.round(ln.oy / 2); } }
+    const lk = e.hunt ? lockK(st, lockOn(world, e), t) : 0;
+    if (lk > 0.34) { lane(c, st, X, Y, lk < 0.67 ? 0.5 : 0.9, pxRamp(e.color)); X += st.ldx; Y += st.ldy; }
     if (FLYER[e.type]) dy = Math.round(bobAt(e.type, ph, t, moving) / 2);
     if (set.walk) {
       const idle = ((t * foeM(e.type).idleW / 6.2832 + ph) % 1) < 0.62 ? 0 : 1;

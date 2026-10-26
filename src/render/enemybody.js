@@ -1,6 +1,7 @@
 import { rr, RIM, tone, dk, lt, poly, oval, seal } from "./icons.js";
 import { CFG } from "../core/config.js";
-import { MOTION, foeM, phaseOf, bobAt, breatheAt, blinkAt, spawnK, deathK, leanAt } from "./motion.js";
+import { MOTION, foeM, phaseOf, bobAt, breatheAt, blinkAt, spawnK, deathK, leanAt, lockK } from "./motion.js";
+import { lockOn } from "./lockon.js";
 import { fxOf } from "./entityfx.js";
 import { contact as floorContact } from "./depth2d.js";
 import { getFxOpts } from "./fx.js";
@@ -720,6 +721,27 @@ const fstate = (e) => {
   return s;
 };
 
+/* LOCK-ON (issue #32): chevrons on the floor from the foe down its lane to the player, fading with distance, over a dark under-stroke so they hold on
+   every floor; static (no march, no pulse) so REDUCE FLASH and reduced motion keep the same steady mark. k is lockK's ramp; nothing is drawn at k = 0. */
+function laneMarks(c, s, k, col) {
+  const T = CFG.TILE, fx = s.ldx || 0, fy = s.ldy || 0, end = Math.max(0.6, (s.ln || 1) - 0.4) * T, hi = lt(col, 0.45);
+  for (let d = 0.6 * T, i = 0; d <= end + 0.01 && i < 7; d += 0.5 * T, i++) {
+    const a = k * (0.9 - 0.07 * i), P = (f, q) => [fx * (d + f * T) - fy * q * T, fy * (d + f * T) + fx * q * T];
+    const A = P(-0.08, -0.17), B = P(0.1, 0), C = P(-0.08, 0.17);
+    for (let pass = 0; pass < 2; pass++) {
+      c.globalAlpha = pass ? a : a * 0.55;
+      c.strokeStyle = pass ? hi : ROCK;
+      c.lineWidth = pass ? 2.5 : 5;
+      c.beginPath();
+      c.moveTo(A[0], A[1]);
+      c.lineTo(B[0], B[1]);
+      c.lineTo(C[0], C[1]);
+      c.stroke();
+    }
+  }
+  c.globalAlpha = 1;
+}
+
 export function drawFoes(c, world) {
   const t = world.time || 0,
     TL = CFG.TILE,
@@ -743,7 +765,8 @@ export function drawFoes(c, world) {
       sa = u > 0.999 && u < 1.4 ? 1 + (sp.a - 1) * ((u - 1) / 0.4) : sp.a;
       if (e.invulnT < 0.15) sa = 1 + (sa - 1) * (e.invulnT / 0.15);
     }
-    const ln = pl && e.hunt && !e.invuln ? leanAt(type, e.hunt, pl.x - e.x, pl.y - e.y, TL) : null;
+    const ln = pl && e.hunt && !e.invuln ? leanAt(type, e.hunt, pl.x - e.x, pl.y - e.y, TL) : null,
+      lk = e.hunt ? lockK(s, lockOn(world, e), t) : 0;
     if (ln && !s.near) s.f0 = t;
     s.near = !!ln;
     let fl = 0;
@@ -752,8 +775,8 @@ export function drawFoes(c, world) {
       sc = (sp ? sp.s : 1) * (type === "fast" ? 1.12 : 1),
       wp = m.bobW * t + ph * 6.283,
       sw = mv && (type === "walker" || type === "knight" || type === "chaser") ? Math.sin(wp) : 0;
-    let ox = (ln ? ln.ox : 0) - sw * 1,
-      oy = (ln ? ln.oy : 0) + bobAt(type, ph, t, mv),
+    let ox = (ln ? ln.ox : 0) - sw * 1 + (lk ? s.ldx * 1.8 * lk : 0),
+      oy = (ln ? ln.oy : 0) + bobAt(type, ph, t, mv) + (lk ? s.ldy * 1.8 * lk : 0),
       rot = -sw * 0.035;
     if (type === "boomerang") {
       const d = e.dir || s;
@@ -785,6 +808,7 @@ export function drawFoes(c, world) {
       c.stroke();
       c.globalAlpha = 1;
     }
+    if (lk > 0.01) laneMarks(c, s, lk, e.color);
     if (cue > 0.04) {
       c.globalAlpha = cue * (0.38 + 0.3 * (0.5 + 0.5 * Math.sin(1.9 * t + ph * 6.283)));
       c.strokeStyle = lt(e.color, 0.35);
@@ -798,7 +822,7 @@ export function drawFoes(c, world) {
       br = type === "stationary" ? 1 : breatheAt(type, ph, t);
     c.translate(ox, oy + fy);
     if (rot) c.rotate(rot);
-    if (sc !== 1 || br !== 1) c.scale(sc * (2 - br), sc * br);
+    if (sc !== 1 || br !== 1 || lk) c.scale(sc * (2 - br) * (1 + 0.06 * lk), sc * br * (1 - 0.09 * lk));
     c.translate(0, -fy);
     XS.a = sa;
     XS.gl = cue;

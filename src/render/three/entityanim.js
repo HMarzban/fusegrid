@@ -3,7 +3,7 @@
    are compaction indices), phases come from e.home (phaseOf), item phases from the grid position. t is the 3D PAUSE-frozen clock (wrapper.js swaps pzT into
    world.time around the update), so every pose here freezes in PAUSE; dt is the clock delta clamped to 0.05 s and is 0 when the clock did not advance, which
    also freezes the smoothed facing. Nothing here is random (hashed phases only) and nothing reads world.time. */
-import {foeM, phaseOf, bobAt, breatheAt, blinkAt, spawnK, deathK, leanAt, itemIdle, MOTION} from "../motion.js";
+import {foeM, phaseOf, bobAt, breatheAt, blinkAt, spawnK, deathK, leanAt, lockK, itemIdle, MOTION} from "../motion.js";
 import {CFG} from "../../core/config.js";
 
 const TAU=Math.PI*2;
@@ -12,6 +12,7 @@ export const VZ=1.6;
 export const YAW_W=14;                 // facing turns at about this rate (1/s) instead of snapping
 export const MOVE_V=6;                 // px/s above which a foe counts as walking
 export const LEAN_K=0.07;              // rad of hunter tilt per px of leanAt
+export const LOCK_PIT=0.2;             // rad of forward crouch down the lane at full lock-on (issue #32)
 export const HOVER_K=2.2;              // item hover: itemIdle's +-2 px lifted to the 3D body scale
 export const RING_OP=0.66;             // the item ring material's fixed opacity; per-instance brightness rides instanceColor
 export const IT_BASE={cap:0.66,vit:0.62,utl:0.64,bls:0.66};   // hover height, in tiles
@@ -26,11 +27,11 @@ export function turn(cur,tgt,dt){
 }
 
 export function makeFoe(){
-  return {seen:0,type:"",x:0,y:0,yaw:0,mv:0,ph:0,by:0,sc:1,a:1,pit:0,rol:0,eyeY:1,glow:0,stomp:0,ringR:0,ringA:0,t0:0};
+  return {seen:0,type:"",x:0,y:0,yaw:0,mv:0,ph:0,by:0,sc:1,a:1,pit:0,rol:0,eyeY:1,glow:0,stomp:0,ringR:0,ringA:0,t0:0,lk:0,lt:null,ldx:0,ldy:0,ln:0};
 }
 /* advance one foe's pose to clock t. pl: the live player (lean target) or null. Writes S.by (y bob), S.sc (breathe x spawn pop), S.yaw, S.pit / S.rol (sway
-   + hunter lean, in the slot's own frame), S.a (spawn alpha: spawnK's 0.35 -> 1 pop, then the 0.7..1 breathe; exactly 1 once invuln ends), S.eyeY (blink: the face plane's y scale), S.glow (hunter), S.stomp (walker feet), S.ringR / S.ringA (spawn ring). */
-export function stepFoe(S,e,t,dt,pl){
+   + hunter lean, in the slot's own frame), S.a (spawn alpha: spawnK's 0.35 -> 1 pop, then the 0.7..1 breathe; exactly 1 once invuln ends), S.eyeY (blink: the face plane's y scale), S.glow (hunter), S.stomp (walker feet), S.ringR / S.ringA (spawn ring), S.lk / S.ldx / S.ldy / S.ln (lock-on ramp and lane). */
+export function stepFoe(S,e,t,dt,pl,lo){
   const type=e.type, m=foeM(type);
   if(!S.seen||S.type!==type){ const keep=S.seen; S.seen=1; S.type=type; S.ph=phaseOf(type,e.home); if(!keep){ S.x=e.x; S.y=e.y; S.yaw=faceYaw(e); S.mv=0; } }
   if(dt>0.004){
@@ -61,6 +62,12 @@ export function stepFoe(S,e,t,dt,pl){
     pit+=(g.ox*sy+g.oy*cy)*LEAN_K; rol-=(g.ox*cy-g.oy*sy)*LEAN_K;
     S.glow=g.glow;
   } else S.glow=0;
+  /* lock-on (issue #32): lo is lockon.js lockOn(world,e), computed by the caller so this stays world-free; S.lk is lockK's ramp on this same clock, and
+     the body crouches forward down the lane by LOCK_PIT*lk (the floor chevrons are groundfx LANES) */
+  if(e.hunt||S.lk){
+    S.lk=lockK(S,lo||null,t);
+    if(S.lk){ const sy=Math.sin(S.yaw), cy=Math.cos(S.yaw), k=LOCK_PIT*S.lk; pit+=(S.ldx*sy+S.ldy*cy)*k; rol-=(S.ldx*cy-S.ldy*sy)*k; }
+  }
   S.pit=pit; S.rol=rol;
   return S;
 }

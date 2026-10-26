@@ -31,7 +31,8 @@ import { PLAYER_HULL } from "../sprites.js";
 import { createBlast } from "./blast.js";
 import { live } from "./upload.js";
 import { getFxOpts } from "../fx.js";
-import { feedContact, CONTACT } from "./groundfx.js";
+import { feedContact, CONTACT, LANES, LN_N } from "./groundfx.js";
+import { lockOn } from "../lockon.js";
 import { fxOf } from "../entityfx.js";
 import { MOTION } from "../motion.js";
 import { makeFoe, stepFoe, itemPose, ghostPose, faceYaw, RING_OP } from "./entityanim.js";
@@ -72,7 +73,8 @@ const _m = new THREE.Matrix4(),
   _q = new THREE.Quaternion(),
   _s = new THREE.Vector3(),
   _e = new THREE.Euler(),
-  _c = new THREE.Color();
+  _c = new THREE.Color(),
+  LANE_W = new THREE.Color("#ffffff");
 const _axisY = new THREE.Vector3(0, 1, 0);
 
 /* per-type geometry + material caches (shared across pool slots & rebuilds:
@@ -1400,7 +1402,9 @@ export function createPools(biome, atlas) {
     const ens = world.enemies || [];
     const ringCol = spawnRing.instanceColor.array;
     FLAME_M.color.lerpColors(FC_A, FC_B, 0.5 + 0.5 * Math.sin(2.4 * t));
-    let ek = 0;
+    let ek = 0,
+      nl = 0;
+    const LV = LANES.v.value;
     for (let i = 0; i < ens.length; i++) {
       const e = ens[i];
       if (e.dead) continue;
@@ -1409,7 +1413,7 @@ export function createPools(biome, atlas) {
       const s = enemies[ei++];
       let S = FS.get(e);
       if (!S) FS.set(e, (S = makeFoe()));
-      stepFoe(S, e, t, dt, pl);
+      stepFoe(S, e, t, dt, pl, e.hunt ? lockOn(world, e) : null);
       S.mk = fid;
       curE.push(e);
       s.visible = true;
@@ -1429,6 +1433,24 @@ export function createPools(biome, atlas) {
         ch[2].quaternion.copy(s.quaternion).invert().multiply(Q_FLAT);
       } else s.rotation.set(S.pit, S.yaw, S.rol);
       s.scale.setScalar(sc);
+      /* lock-on (issue #32): a forward crouch (stepFoe's pitch) squashed low and wide, and the lane chevrons on the floor through groundfx LANES */
+      if (S.lk > 0.001) {
+        s.scale.set(sc * (1 + 0.06 * S.lk), sc * (1 - 0.1 * S.lk), sc * (1 + 0.06 * S.lk));
+        if (nl < LN_N) {
+          const o = nl++ * 12,
+            k = S.lk;
+          _c.set(e.color || ENEMY_COLORS[e.type] || "#ffffff").lerp(LANE_W, 0.45);
+          LV[o] = e.x - W2;
+          LV[o + 1] = e.y - D2;
+          LV[o + 2] = S.ldx;
+          LV[o + 3] = S.ldy;
+          LV[o + 4] = Math.max(0.6, S.ln - 0.4) * CFG.TILE;
+          LV[o + 5] = k;
+          LV[o + 8] = _c.r * 0.9 * k;
+          LV[o + 9] = _c.g * 0.9 * k;
+          LV[o + 10] = _c.b * 0.9 * k;
+        }
+      }
       /* per-foe personality, transforms only (children keep their authored
          pose from skin() and are overwritten only where animated) */
       if (kk === "e_walker") {
@@ -1453,7 +1475,7 @@ export function createPools(biome, atlas) {
         ch[1].scale.set(1 + 0.1 * Math.sin(2.4 * t + w), 1, 1 + 0.1 * Math.sin(2.4 * t + w));
       } else if (kk === "e_knight") ch[0].position.y = GT.e_knight[0][1] + 0.5 * Math.sin(2.6 * t + w + 1);
       /* blink + hunter glow on the face plane (boomerang's socket never blinks) */
-      const gz = 1 + 0.15 * S.glow;
+      const gz = 1 + 0.15 * S.glow + 0.12 * S.lk;
       ch[2].scale.set(gz, S.eyeY * gz, gz);
       if (S.ringA > 0.004 && ri < POOL_CAPS.enemies) {
         _p.set(e.x - W2, 1.2, e.y - D2);
@@ -1499,6 +1521,7 @@ export function createPools(biome, atlas) {
       fxw.feed(fresh, t);
       fresh.length = 0;
     }
+    LANES.n.value = nl;
     spawnRing.visible = ri > 0;
     spawnRing.count = ri;
     live(spawnRing.instanceMatrix, ri);

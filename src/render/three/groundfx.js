@@ -84,6 +84,23 @@ export function feedContact(world) {
   if (CUR && world.grid) CUR.bakeBricks(world.grid);
 }
 
+/* ---- hunter lock-on lanes (issue #32): up to LN_N lanes of floor chevrons, written once a frame by entities.update from lockon.js lockOn + the
+   motion.js lockK ramp, read by the same floor / tile shaders as CONTACT, so nothing is drawn. Per lane three vec4: [x0, z0, dx, dz] (foe centre, unit
+   lane), [len, k, 0, 0] (reach in world units, ramp 0..1), [r, g, b, 0] (the foe's light colour x k). Chevrons every half tile from 0.6 tile out to
+   len, a dark under-stroke in the diffuse and the light stroke as emissive, so they read in VOID too; static, never pulsing. */
+export const LN_N = 4;
+export const LANES = {v: {value: new Float32Array(LN_N * 12)}, n: {value: 0}};
+const LANE = (xz) => `
+for(int i=0;i<${LN_N};i++){ if(float(i)>=wellLnN)break; vec4 la=wellLn[i*3]; vec4 lb=wellLn[i*3+1]; vec4 lc=wellLn[i*3+2];
+ vec2 lr=${xz}-la.xy; float lu=dot(lr,la.zw), lv=abs(dot(lr,vec2(-la.w,la.z)));
+ if(lu<${f(0.38 * T)}||lu>lb.x+${f(0.12 * T)}||lv>${f(0.3 * T)})continue;
+ float ls=mod(lu-${f(0.35 * T)},${f(0.5 * T)})-${f(0.25 * T)}, ld=abs(ls-${f(0.1 * T)}+1.06*lv)*0.686, lw=step(lv,${f(0.19 * T)});
+ float lf=1.0-0.07*floor((lu-${f(0.35 * T)})/${f(0.5 * T)});
+ diffuseColor.rgb*=1.0-0.55*lb.y*lw*(1.0-smoothstep(${f(0.07 * T)},${f(0.1 * T)},ld));
+ totalEmissiveRadiance+=lc.rgb*lw*lf*(1.0-smoothstep(${f(0.035 * T)},${f(0.055 * T)},ld));
+}`;
+const LUNI = "\nuniform vec4 wellLn[" + LN_N * 3 + "];\nuniform float wellLnN;";
+
 /* ---- shader pieces ---- */
 const SHADOW_RE = /directLight\.color \*= (\( directLight\.visible && receiveShadow \) \? getShadow\( directionalShadowMap\[ i \][^;]*;)/;
 export function shadowLift(sh) {
@@ -100,13 +117,13 @@ const GROUND = (uv, xz) => `
   occ*=1.0-c.w*(1.0-smoothstep(0.1,1.0,length(d))); }
  diffuseColor.rgb*=occ;
 }`;
-const UNI = "\nuniform sampler2D wellAO;\nuniform vec4 wellCS[" + CS_N + "];\nuniform float wellCSn;";
+const UNI = "\nuniform sampler2D wellAO;\nuniform vec4 wellCS[" + CS_N + "];\nuniform float wellCSn;" + LUNI;
 const AOUV = `(vWq.xz+vec2(${f(W / 2)},${f(D / 2)}))/vec2(${f(W)},${f(D)})`;
 
 export function floorFX(mat, ao) {
   const fx = FLOOR_FX[ao.biome.name] || {g: 1, c: 0.05};
   mat.onBeforeCompile = (sh) => {
-    sh.uniforms.wellAO = {value: ao.tex}; sh.uniforms.wellCS = CONTACT.v; sh.uniforms.wellCSn = CONTACT.n;
+    sh.uniforms.wellAO = {value: ao.tex}; sh.uniforms.wellCS = CONTACT.v; sh.uniforms.wellCSn = CONTACT.n; sh.uniforms.wellLn = LANES.v; sh.uniforms.wellLnN = LANES.n;
     sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vWq;")
       .replace("#include <begin_vertex>", "#include <begin_vertex>\n#ifdef USE_INSTANCING\nvWq=(modelMatrix*instanceMatrix*vec4(transformed,1.0)).xyz;\n#else\nvWq=(modelMatrix*vec4(transformed,1.0)).xyz;\n#endif");
     sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec3 vWq;" + UNI);
@@ -120,7 +137,7 @@ export function floorFX(mat, ao) {
  diffuseColor*=texture2D(map,(clamp(vMapUv,0.006,0.994)+vo)*0.5);
 #endif
  diffuseColor.rgb*=${f(fx.g)}*(1.0+${f(fx.c)}*(1.0-2.0*mod(floor((vWq.x+${f(W / 2)})/${f(T)})+floor((vWq.z+${f(D / 2)})/${f(T)}),2.0)));
-` + GROUND(AOUV, "vWq.xz"));
+` + GROUND(AOUV, "vWq.xz")).replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>" + LANE("vWq.xz"));
     shadowLift(sh);
   };
   mat.customProgramCacheKey = () => "groundfx" + ao.biome.name;
@@ -133,9 +150,9 @@ export function featAO(mat, ao) {
   const prev = mat.onBeforeCompile;
   mat.onBeforeCompile = (sh, r) => {
     prev(sh, r);
-    sh.uniforms.wellAO = {value: ao.tex}; sh.uniforms.wellCS = CONTACT.v; sh.uniforms.wellCSn = CONTACT.n;
+    sh.uniforms.wellAO = {value: ao.tex}; sh.uniforms.wellCS = CONTACT.v; sh.uniforms.wellCSn = CONTACT.n; sh.uniforms.wellLn = LANES.v; sh.uniforms.wellLnN = LANES.n;
     sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>" + UNI)
-      .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>" + GROUND(`(vW+vec2(${f(W / 2)},${f(D / 2)}))/vec2(${f(W)},${f(D)})`, "vW"));
+      .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>" + GROUND(`(vW+vec2(${f(W / 2)},${f(D / 2)}))/vec2(${f(W)},${f(D)})`, "vW") + LANE("vW"));
     shadowLift(sh);
   };
   return mat;
