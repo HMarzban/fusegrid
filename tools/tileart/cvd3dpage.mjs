@@ -37,8 +37,11 @@ function fixture(room, h, L) {
   for (let y = 0; y < R; y++) for (let x = 0; x < C; x++) g[key(x, y)] = x === 0 || y === 0 || x === C - 1 || y === R - 1 ? T.WALL : T.EMPTY;
   for (const [x, y] of WALLS) g[key(x, y)] = T.WALL;
   for (const [x, y] of BRICKS) g[key(x, y)] = T.BRICK;
+  /* a portal with no twin draws dim (a dead pair), so each measured one gets a twin on a free cell off the measured row */
+  const fe = Uint8Array.from(L.feat), pa = Uint8Array.from(L.P);
+  for (let k = 0, q = 0; k < N; k++) if (pa[k] && !pa.some((v, i) => v === pa[k] && i !== k)) { while (g[q] !== T.EMPTY || fe[q] || ((q / C) | 0) === Y) q++; fe[q] = CODE.PORTAL; pa[q] = pa[k]; }
   /* fresh arrays: a new world.feat object is what rebuilds the tile layer at this heat */
-  w.grid = g; w.feat = Uint8Array.from(L.feat); w.featM = Uint8Array.from(L.M); w.featS = new Float32Array(N); w.featPair = Uint8Array.from(L.P); w.featT = 0; w.featPend = [];
+  w.grid = g; w.feat = fe; w.featM = Uint8Array.from(L.M); w.featS = new Float32Array(N); w.featPair = pa; w.featT = 0; w.featPend = [];
   return w;
 }
 /* the device-px map of a cell's top face at height hgt, cached (the camera never moves) */
