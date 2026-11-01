@@ -128,6 +128,18 @@ const QUICKSAND = (c, k) => {
   const Pp = blobP(20, 20, pr, .1 + jg, 33, 1, 24, 0, .6 * oi, .9 * oi);
   c.fillStyle = rad(c, 20 + .6 * oi, 20 + .9 * oi, pr * 1.2, [[0, mix(b.floor1, b.bg0, .04)], [1, mix(b.floor1, b.bg0, .12)]]); c.fill(Pp);
   bevP(c, Pp, 1.6, K0(.3), rg(WH(b), .3));
+  if (k.lit) ripple(c, k, rs, pr);
+};
+/* growth (k.lit 1..4 over 1.5 s): 1 / 2 / 3 OPEN arcs in bg1 by heat, thickening frame by frame; two gaps per arc, never a closed ring (pickup grammar) */
+const ripple = (c, k, rs, pr) => {
+  const [cx, cy] = GEO.QUICK.c[k.h], n = k.h + 1;
+  c.save();
+  c.strokeStyle = k.bio.bg1; c.lineCap = "butt"; c.lineWidth = 0.9 + 0.7 * k.lit;
+  for (let i = 0; i < n; i++) {
+    const r = Math.max(pr + 1.5, rs[i] - 1 - (k.h ? 0 : 3)), a = 0.6 + i * 1.1;
+    for (const s of [0, Math.PI]) { c.beginPath(); c.arc(cx, cy, r, a + s, a + s + 2.2); c.stroke(); }
+  }
+  c.restore();
 };
 
 

@@ -38,6 +38,7 @@ function variants(w, x, y) {
   if (s.kind === "BLOOM") return [0, 1, 2].map((st) => ({...s, state: st}));
   if (s.kind === "PLATE") return [{...s, state: 0}, ...[1, 2, 3, 4].map((l) => ({...s, state: 1, lit: l})), {...s, state: 2, lit: 0}];
   if (s.kind === "GATE") return [0, 1, 2, 3, 4].map((l) => ({...s, lit: l}));
+  if (s.kind === "QUICK") { const {lit, ...r} = s; return [r, ...[1, 2, 3, 4].map((l) => ({...r, lit: l}))]; }
   return [s];
 }
 const f4 = (n) => (+n).toFixed(4);
@@ -167,6 +168,7 @@ export function buildFeat(world, biome) {
     let dirty = false, fx = false;
     tiles.forEach((k, i) => {
       const v = w.feat[k];
+      if (v === 12) { const ci = cellOf(cellSpec(w, k % C, (k / C) | 0)); if (ci !== last[i]) { last[i] = ci; setCell(i, ci); dirty = true; } return; }
       if (v !== 6 && v !== 7 && v !== 14) return;
       const s = cellSpec(w, k % C, (k / C) | 0), ci = cellOf(s);
       if (ci !== last[i]) { last[i] = ci; setCell(i, ci); dirty = true; }

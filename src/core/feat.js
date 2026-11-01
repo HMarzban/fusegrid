@@ -366,17 +366,66 @@ function stream(m, f, rng, far, force, bgate, dS) {
   }
   return made > 0;
 }
-/* art-only QUICK: 3-5 singles, no two within 4 Manhattan, none within 4 steps of spawn */
-function quick(m, f, rng, far, force, bgate, dS) {
-  const want = rng.int(3, 5), cand = [], used = [];
-  for (let y = 1; y < R - 1; y++) for (let x = 1; x < C - 1; x++) if (far(x, y)) cand.push([x, y]);
+/* V30 helpers over any open(x, y). quickSeals: mounds at the cells ks part two cells a
+   walker could otherwise join. quickDetour: blocking k, the extra steps between its two
+   worst-placed open neighbours (a tile in an open field scores 2; a neighbour cut off
+   scores Infinity). */
+function floodFrom(ok, k, blocked, label, id) {
+  const q = [k];
+  label[k] = id;
+  for (let h = 0; h < q.length; h++) {
+    const a = q[h], x = a % C, y = (a / C) | 0;
+    for (const [dx, dy] of D4) {
+      const b = key(x + dx, y + dy);
+      if (ok(x + dx, y + dy) && label[b] < 0 && !blocked.has(b)) { label[b] = id; q.push(b); }
+    }
+  }
+  return q;
+}
+export function quickSeals(ok, ks) {
+  const blocked = new Set(ks), label = new Int16Array(N).fill(-1), part = new Int16Array(N).fill(-1), none = new Set();
+  let id = 0, jd = 0;
+  for (let k = 0; k < N; k++) if (ok(k % C, (k / C) | 0) && !blocked.has(k) && label[k] < 0) floodFrom(ok, k, blocked, label, id++);
+  for (let k = 0; k < N; k++) {
+    if (!ok(k % C, (k / C) | 0) || part[k] >= 0) continue;
+    const cells = floodFrom(ok, k, none, part, jd++).filter((c) => !blocked.has(c));
+    if (cells.some((c) => label[c] !== label[cells[0]])) return true;
+  }
+  return false;
+}
+export function quickDetour(ok, k) {
+  const x = k % C, y = (k / C) | 0, nb = D4.map(([dx, dy]) => [x + dx, y + dy]).filter(([a, b]) => ok(a, b));
+  let worst = 0;
+  for (let i = 0; i < nb.length - 1; i++) {
+    const d = new Int16Array(N).fill(-1), q = [key(nb[i][0], nb[i][1])];
+    d[q[0]] = 0;
+    for (let h = 0; h < q.length; h++) {
+      const a = q[h], ax = a % C, ay = (a / C) | 0;
+      for (const [dx, dy] of D4) { const b = key(ax + dx, ay + dy); if (ok(ax + dx, ay + dy) && b !== k && d[b] < 0) { d[b] = d[a] + 1; q.push(b); } }
+    }
+    for (let j = i + 1; j < nb.length; j++) { const v = d[key(nb[j][0], nb[j][1])]; if (v < 0) return Infinity; if (v - 2 > worst) worst = v - 2; }
+  }
+  return worst;
+}
+export const QUICK_PLACE = Object.freeze({ min: 3, max: 5, gap: 4, nbrs: 2, detour: 2 });
+/* V30: 3-5 singles at least 4 Manhattan apart, more than 4 steps from the start, off the
+   doors, at least 2 open neighbours, a detour of at least 2, and on the brick-free map
+   (also after each SHRINK ring) all of them grown never part it. bgate re-checks the
+   finished set against the grids of all three heats (V30 + V31). */
+function quick(m, f, rng, far, force, bgate) {
+  const P = QUICK_PLACE, want = rng.int(P.min, P.max), cand = [], used = [], ok = (x, y) => open(m, x, y), rings = shrinkMaps(m).map((g) => (x, y) => open(g, x, y));
+  for (let y = 1; y < R - 1; y++) for (let x = 1; x < C - 1; x++) if (far(x, y) && D4.filter(([dx, dy]) => ok(x + dx, y + dy)).length >= P.nbrs) cand.push([x, y]);
   for (const c of shuf(cand, rng)) {
     if (used.length >= want) break;
-    if (used.some((u) => manh(u, c) < 4)) continue;
+    if (used.some((u) => manh(u, c) < P.gap)) continue;
+    const k = key(c[0], c[1]), ks = [...used.map(([x, y]) => key(x, y)), k];
+    if (quickDetour(ok, k) < P.detour || quickSeals(ok, ks) || rings.some((o) => quickSeals(o, ks))) continue;
     used.push(c);
   }
-  if (used.length < 3) return false;
-  for (const [x, y] of used) { f[key(x, y)] = 12; force.push(key(x, y)); }
+  if (used.length < P.min) return false;
+  const ks = used.map(([x, y]) => key(x, y));
+  if (bgate && !bgate(ks)) return false;
+  for (const k of ks) { f[k] = 12; force.push(k); }
   return true;
 }
 /* art-only PORTAL: 1-2 pairs (pair id 1, 2 in `pair`), each pair >= 8 walking steps

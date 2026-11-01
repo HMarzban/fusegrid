@@ -392,7 +392,20 @@ function bloomGate(base, level, lay) {
 /* wave 2 / 3 placement gates: a biome's function checks candidates against the
    grids of all three heats, the same contract as bloomGate's closure. */
 function tileGate(base, level, lay) {
+  if (lay.biome === "SAND") return quickGate(base, level);
   return null;
+}
+/* QUICKSAND: the finished set, on every heat's grid with its tiles forced open */
+function quickGate(base, level) {
+  return (ks) => {
+    const f = new Uint8Array(N);
+    for (const k of ks) f[k] = 12;
+    return [0, 1, 2].every((h) => {
+      const g = base[h].grid.slice();
+      for (const k of ks) g[k] = T.EMPTY;
+      return !featChecks({ grid: g, feat: f, level, heat: h, items: [], enemies: [] }, FEAT_PROFILE[h], { only: ["V30", "V31"] }).length;
+    });
+  };
 }
 function place3(base, seed, level, heat) {
   const L = base[heat].layout, lay = layout2(seed, level, L.tries[0]);

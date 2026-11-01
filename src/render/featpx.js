@@ -102,12 +102,27 @@ function portalHand(h, pair) {
   if (r) for (let i = 0; i < n; i++) for (const y of [15, 16]) { at(r, x0 + 3 * i, y, "U"); at(r, x0 + 3 * i + 1, y, "U"); }
   return r;
 }
+/* QUICKSAND growth (lit 1..4): 1 / 2 / 3 open dark arcs by heat over the hand drawing, thickening frame by frame, two gaps each; never a closed ring */
+const ARC_R = [7.6, 5.4, 3.2];
+function quickHand(h, lit) {
+  const r = HAND("QUICK", h);
+  if (!r || !lit) return r;
+  const wd = 0.3 + 0.2 * lit;
+  for (let y = 1; y < 19; y++) for (let x = 1; x < 19; x++) {
+    const dx = x - 10.2, dy = y - 10.2, d = Math.hypot(dx, dy), t = Math.atan2(dy, dx);
+    for (let i = 0; i <= h; i++) {
+      const u = ((t - 0.6 - i * 1.1) % Math.PI + Math.PI) % Math.PI;
+      if (Math.abs(d - ARC_R[i]) <= wd && u <= 2.2) at(r, x, y, "G");
+    }
+  }
+  return r;
+}
 export function featPxCell(biome, s) {
   const h = s.h, outer = s.outer || SIDES, d = s.dir || 0;
   let rows;
   if (s.kind === "BLOOM") rows = bloomHand(s.state === 2 ? Math.max(0, h - 1) : h, s.state === 1);
   else if (s.kind === "PLATE") rows = plateHand(h, s.state === 1, s.lit | 0);
-  else if (s.kind === "QUICK") rows = HAND("QUICK", h);
+  else if (s.kind === "QUICK") rows = quickHand(h, s.lit | 0);
   else if (s.kind === "PORTAL") rows = portalHand(h, s.pair);
   else if (s.kind === "GLIDE") rows = glideHand(h, outer);
   else if (s.kind === "STREAM") rows = streamHand(h, d, outer, s.ph | 0);

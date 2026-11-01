@@ -5,7 +5,7 @@ import { applyPower, hurtPlayer } from "./entities.js";
 import { updateEnemies } from "../ai/enemies.js";
 import { hasPact, PACT } from "./pact.js";
 import { paceMul } from "./pace.js";
-import { isBelt, beltDir, featProfile } from "./feat.js";
+import { isBelt, beltDir, featProfile, F } from "./feat.js";
 import { tileTick, featSpeed } from "./tiles2.js";
 
 /* A clean intent for one player for this tick. This is exactly what a network
@@ -400,6 +400,8 @@ function breakBrick(w, tx, ty, emit) {
     py = ty * CFG.TILE + CFG.TILE / 2;
   if (w.grid[key(tx, ty)] !== T.BRICK) return;
   w.grid[key(tx, ty)] = T.EMPTY;
+  /* O6: a brick on a QUICKSAND tile is always a grown mound (placement forces the tile open) */
+  if (w.feat && w.feat[key(tx, ty)] === F.QUICK) { w.events.push({ t: "brick", x: px, y: py, mound: true }); return; }
   revealItem(w, tx, ty, emit);
   w.events.push({ t: "brick", x: px, y: py });
   w.score += CFG.BRICK_SCORE;

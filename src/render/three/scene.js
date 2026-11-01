@@ -8,6 +8,8 @@
    world.level changed => caller discards group and calls buildScene again. */
 import * as THREE from "../../../vendor/three.module.js";
 import {CFG,T,biomeOf} from "../../core/config.js";
+import {F} from "../../core/feat.js";
+import {quickStep} from "../../core/tilequick.js";
 import {build as buildMaterials} from "./materials.js";
 import {createLights} from "./lights.js";
 import {createPools} from "./entities.js";
@@ -20,6 +22,7 @@ import {rimFX, floorFX, featAO, createAO} from "./wellfx.js";
 
 const W=CFG.COLS*CFG.TILE, D=CFG.ROWS*CFG.TILE;
 const MAT=new THREE.Matrix4();
+const F_QUICK=F.QUICK, MOUND_LOW=0.28, MOUND_RISE=0.2;
 /* Cabinet rim (2026-09-04 cam-light-frame): the border used to be four
    wallHi rails at one height, and the N/S pair spanned W+TILE, so they
    crossed the E/W pair and stuck out past every corner. One extruded ring
@@ -188,6 +191,20 @@ export function buildScene(world, atlas, bright){
   const mask=new Uint8Array(CFG.COLS*CFG.ROWS),
     wMask=new Uint8Array(CFG.COLS*CFG.ROWS);
   let fresh=true, lastG=null, lastS=-1;
+  const qK=world.feat?[...world.feat.keys()].filter(k=>world.feat[k]===F_QUICK):[],
+    qY=qK.length?new Float32Array(CFG.COLS*CFG.ROWS):null, qUp=new Map();
+  const qMound=(w)=>{
+    let ch=false;
+    for(const k of qK){
+      let v=0;
+      if(mask[k]){
+        if(!qUp.has(k))qUp.set(k,w.featT);
+        v=Math.min(1,MOUND_LOW+(1-MOUND_LOW)*Math.ceil((w.featT-qUp.get(k))/MOUND_RISE*4)/4);
+      }else{ qUp.delete(k); v=quickStep(w,k)*MOUND_LOW/4; }
+      if(qY[k]!==v){ qY[k]=v; ch=true; }
+    }
+    return ch;
+  };
   group.userData.ao=ao;
   const scene={group,amb,level:world.level,featRef:world.feat||null,brick,pools,lights,brickV:0,
     update(world){
@@ -216,11 +233,17 @@ export function buildScene(world, atlas, bright){
         ao.bake(wMask);
         if(!diff)scene.brickV++;      // shadow map re-renders for EMPTY->WALL
        }
+      // QUICKSAND: per-instance Y-scale in the ONE brick mesh, a low heap while
+      // it grows (still passable), then a short rise once it is a real BRICK
+      if(qY&&qMound(world))diff=true;
       if(diff){
         let n=0;
         for(let y=0;y<CFG.ROWS;y++)for(let x=0;x<CFG.COLS;x++)
-          if(mask[y*CFG.COLS+x]){
-            MAT.makeTranslation((x+0.5)*CFG.TILE-W/2,biome.hBrick/2,
+          if(mask[y*CFG.COLS+x]||(qY&&qY[y*CFG.COLS+x]>0)){
+            const qy=qY?qY[y*CFG.COLS+x]:0;
+            if(qy>0&&qy<1)MAT.makeScale(1,qy,1).setPosition((x+0.5)*CFG.TILE-W/2,
+              biome.hBrick*qy/2,(y+0.5)*CFG.TILE-D/2);
+            else MAT.makeTranslation((x+0.5)*CFG.TILE-W/2,biome.hBrick/2,
               (y+0.5)*CFG.TILE-D/2);
             brick.setMatrixAt(n,MAT);
             brick.setColorAt(n++,((x*3+y*5)%7)===0?bH:((x+y)&1?bB:bA));
