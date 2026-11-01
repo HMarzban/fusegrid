@@ -49,6 +49,8 @@ export function iceStop(w, k, d, t, L, bombAt) {
   return (v === T.BRICK || !!bombAt[nk]) && t < L[nk];
 }
 export const onBelt = (w, k) => isBelt(w.feat[k]) && w.grid[k] === T.EMPTY;
+/* #28: does a CONVEYOR carry a standing player (actors ride at v > 0)? */
+export const carries = (w) => { const pb = prof(w).belt; return !!pb.actors && pb.v > 0; };
 
 /* a cross footprint on grid g: centre plus arms [dx, dy, len]; the edge and
    WALL block, a BRICK is hit and stops the arm unless `pass` */

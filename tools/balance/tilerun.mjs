@@ -64,9 +64,9 @@ export function runRoom(c, s) {
   const r = { room: c.room, heat: c.heat, pace: c.pace || 0, arm: c.arm, prof: c.profName || "", s, seed, tpl: w.layout ? w.layout.tpl : "", kind: kind || "", rules: tm ? 1 : 0,
     st: "TIMEOUT", t: CAP, hits: 0, absorbs: 0, firstHit: -1, hit5: 0, hit15: 0, hBlast: 0, hContact: 0, hTile: 0, ownRelay: 0, chainEarly: 0, nearMiss: 0,
     kills: 0, tileKills: 0, relayKills: 0, trapKills: 0, selfClears: 0, selfClearsArm: 0, rideKills: 0, deliveries: 0,
-    noEsc: 0, noEscArm: 0, noEscHit: 0, noEscRide: 0, noEscIce: 0, dangerT: 0 };
+    noEsc: 0, noEscOn: 0, noEscPlant: 0, noEscArm: 0, noEscHit: 0, noEscRide: 0, noEscIce: 0, dangerT: 0 };
   const nm = new Map(), armD = new Map(), seenBl = new WeakSet(), cutoff = c.metrics === false;
-  let trapped = false, lastEsc = -99, pendHit = 0;
+  let trapped = false, lastEsc = -99, pendHit = 0, had1 = false;
   const coreBelt = tm && kind === "BELT" && !prof(w).belt.actors;
   for (let i = 0; i < STEPS; i++) {
     const p0 = w.players[0], pk0 = key(tileOf(p0.x), tileOf(p0.y)), tNow = i * CFG.STEP;
@@ -82,11 +82,13 @@ export function runRoom(c, s) {
         if (pr.forced && !trapped) {
           r.noEsc++; lastEsc = tNow; pendHit = 1;
           if (w.featPend.some((q) => q.kind === "plate" && w.featS[q.k] >= prof(w).plate.wind - 1.5 * CFG.STEP)) r.noEscArm++;
+          if (!had1) { if (w.bombs.some((b) => !b.dead && b.timer > (w.fuse ?? CFG.FUSE) - 0.05)) r.noEscPlant++; else r.noEscOn++; }
           if (isBelt(w.feat[pk0])) r.noEscRide++;
           if (w.feat[pk0] === 5) r.noEscIce++;
         }
         trapped = pr.forced;
-      } else trapped = false;
+        if (pr.e1) had1 = true;
+      } else { trapped = false; had1 = false; }
     }
     const lives0 = w.lives, shield0 = w.players[0].shield;
     step(w, CFG.STEP, { 0: bot.intent(w) });

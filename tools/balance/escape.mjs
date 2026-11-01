@@ -27,7 +27,8 @@
    speeds: ICE PATCH boost leaving a sheet tile, CONVEYOR push with / against. */
 import { CFG, T, key } from "../../src/core/config.js";
 import { tileOf } from "../../src/core/board.js";
-import { C, N, BD, prof, rulesOn, onIce, iceStop, cross, bombArms, bombPass, relayArms, plateArms, beltPath, cellAt, moveSpeed } from "./tilemodel.mjs";
+import { beltDir } from "../../src/core/feat.js";
+import { C, N, BD, prof, rulesOn, onIce, onBelt, carries, iceStop, cross, bombArms, bombPass, relayArms, plateArms, beltPath, cellAt, moveSpeed } from "./tilemodel.mjs";
 
 export const MARGIN = CFG.STEP;
 const HR = 0.3;
@@ -81,10 +82,25 @@ export function escape(w, tiles, L) {
      ends a search only where the sim ends a coast (iceStop); a player at rest
      on ice (p.gl null) may stay put */
   const nostop = tiles && prof(w).glide.coast >= 2, ice = (k) => nostop && onIce(w, k);
+  const carry = tiles && carries(w);
+  /* a standing rider is carried down the chain: safe when every belt cell to
+     the end is never lethal and the push then halts (a block, the chain end
+     under endHalt) or drops it on a never-lethal landing */
+  const endHalt = carry && !!prof(w).belt.endHalt;
+  const rideSafe = (k) => {
+    for (let q = k, n = 0; n < N; n++) {
+      if (L[q] !== Infinity) return false;
+      const [bx, by] = beltDir(w.feat[q]), x = (q % C) + bx, y = ((q / C) | 0) + by, nq = key(x, y), g = w.grid[nq];
+      if (g === undefined || g === T.WALL || (g === T.BRICK && L[nq] === Infinity) || w.bombs.some((b) => !b.dead && b.tx === x && b.ty === y)) return true;
+      if (!onBelt(w, nq)) return endHalt || L[nq] === Infinity;
+      q = nq;
+    }
+    return false;
+  };
   const bombAt = new Uint8Array(N);
   for (const b of w.bombs) if (!b.dead) bombAt[key(b.tx, b.ty)] = 1;
   const d0 = ice(s0) && p.gl ? BD.findIndex(([a, b]) => a === p.gl.x && b === p.gl.y) : 4;
-  const terminal = (k, d, t) => L[k] === Infinity && (d === 4 || !ice(k) || iceStop(w, k, d, t, L, bombAt));
+  const terminal = (k, d, t) => L[k] === Infinity && (d === 4 || !ice(k) || iceStop(w, k, d, t, L, bombAt)) && !(carry && onBelt(w, k) && !rideSafe(k));
   if (terminal(s0, d0, 0)) return true;
   const Z = nostop ? 5 : 1, S = N * Z, sid = (k, d) => (nostop ? k * 5 + d : k), best = new Float64Array(S).fill(Infinity), done = new Uint8Array(S);
   bombAt[s0] = 0;
@@ -121,7 +137,7 @@ export function probe(w) {
   if (!p.alive) return null;
   const k = key(tileOf(p.x), tileOf(p.y));
   const L0 = lethalMap(w, false), L1 = tiles ? lethalMap(w, true) : L0;
-  if (L0[k] === Infinity && L1[k] === Infinity) return null;
+  if (L0[k] === Infinity && L1[k] === Infinity && !(tiles && carries(w) && onBelt(w, k) && w.bombs.length)) return null;
   const e0 = escape(w, false, L0), e1 = tiles ? escape(w, true, L1) : e0;
   return { e0, e1, forced: e0 && !e1 };
 }

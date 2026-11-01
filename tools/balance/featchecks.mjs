@@ -109,7 +109,7 @@ export function lethalMap(g, feat, prof, blasts, useTiles = true) {
 function env(n, g, o = {}) {
   const prof = n.prof, t = !!(o.tiles && n.feat);
   return { g, feat: n.feat, prof, pm: n.pm, cap: n.lim.escSteps, tiles: t, mvTiles: t && o.move !== false, stopOnBrick: o.stopOnBrick !== false, plantBlock: o.plantBlock !== false, open: o.open ?? -1,
-    vp: VP * n.pm, vIce: Math.min(VP * prof.glide.boost, CFG.MAX_SPEED) * n.pm, vb: prof.belt.v * n.pm, actors: !!prof.belt.actors, nostop: prof.glide.coast >= 2, stop: prof.glide.stop };
+    vp: VP * n.pm, vIce: Math.min(VP * prof.glide.boost, CFG.MAX_SPEED) * n.pm, vb: prof.belt.v * n.pm, actors: !!prof.belt.actors, endHalt: !!prof.belt.endHalt, nostop: prof.glide.coast >= 2, stop: prof.glide.stop };
 }
 const isIce = (E, k) => E.mvTiles && E.feat[k] === F.GLIDE && E.g[k] === T.EMPTY;
 const isRide = (E, k) => E.mvTiles && E.actors && isBelt(E.feat[k]) && E.g[k] === T.EMPTY;
@@ -129,7 +129,9 @@ function hide(E, k, d, t, L, plant) {
   if (isIce(E, k) && E.nostop && d < 4) return E.stop === "brake" || blockAt(E, nbr(k, d), t, L, plant);
   if (isRide(E, k)) {
     const [ux, uy] = beltDir(E.feat[k]), dn = nbr(k, dirOf(ux, uy));
-    return dn < 0 || E.g[dn] === T.WALL || (E.stopOnBrick && E.g[dn] === T.BRICK && L[dn] === INF);
+    if (dn < 0 || E.g[dn] === T.WALL || (E.stopOnBrick && E.g[dn] === T.BRICK && L[dn] === INF)) return true;
+    /* #28 endHalt: a rider is carried to the chain's last cell and stays there */
+    return E.endHalt && (isRide(E, dn) ? hide(E, dn, d, t, L, plant) : E.g[dn] !== T.WALL);
   }
   return true;
 }
@@ -177,8 +179,19 @@ function bombMap(n, g, c, r, live, blast = null) {
     if (ch !== false) { chain = true; tb = Math.min(tb, typeof ch === "number" ? Math.max(n.prof.plate.wind, ch) : n.prof.plate.wind); }
     extra.push({ t: n.prof.plate.wind, k: p, arms: cross(n.prof.plate.r), through: false });
   }
-  const at = [c];
-  if (isBelt(n.feat[c]) && g[c] === T.EMPTY) {
+  let at = [c];
+  if (n.prof.belt.thru && isBelt(n.feat[c]) && g[c] === T.EMPTY) {
+    /* #28 pass-through carry: only WALL / BRICK / a bomb stops a ridden bomb, so
+       its cell at the fuse is known for each pace (the cells it passes are safe) */
+    const path = [c];
+    for (let k = c; isBelt(n.feat[k]) && g[k] === T.EMPTY;) {
+      const [ux, uy] = beltDir(n.feat[k]), nk = nbr(k, dirOf(ux, uy));
+      if (nk < 0 || g[nk] !== T.EMPTY) break;
+      k = nk; path.push(k);
+      if (path.length > N) break;
+    }
+    at = [...new Set(PACE_MUL.map((pm) => path[Math.min(path.length - 1, Math.floor(n.prof.belt.v * pm * n.fuse + 1e-9))]))];
+  } else if (isBelt(n.feat[c]) && g[c] === T.EMPTY) {
     let k = c, steps = Math.ceil(n.prof.belt.v * n.pmRide * n.fuse - 1e-9);
     while (steps-- > 0 && isBelt(n.feat[k]) && g[k] === T.EMPTY) {
       const [ux, uy] = beltDir(n.feat[k]), nk = nbr(k, dirOf(ux, uy));
@@ -192,8 +205,8 @@ function bombMap(n, g, c, r, live, blast = null) {
     relay ||= M.relay;
     if (!L) L = M; else for (let i = 0; i < N; i++) if (M[i] < L[i]) L[i] = M[i];
   }
-  L.cause = chain ? "trap-chain" : at.length > 1 ? "bomb-ride" : relay ? "relay" : null;
-  L.moved = at.length > 1;
+  L.cause = chain ? "trap-chain" : at.length > 1 || at[0] !== c ? "bomb-ride" : relay ? "relay" : null;
+  L.moved = at.length > 1 || at[0] !== c;
   return L;
 }
 const sameIn = (A, B, c, rad) => { const [cx, cy] = xy(c); for (let y = Math.max(0, cy - rad); y <= Math.min(R - 1, cy + rad); y++) for (let x = Math.max(0, cx - rad); x <= Math.min(C - 1, cx + rad); x++) { if (Math.abs(x - cx) + Math.abs(y - cy) > rad) continue; const k = key(x, y); if (A[k] !== B[k]) return false; } return true; };
@@ -329,7 +342,7 @@ function v17(n) {
     for (const d of DOORS) { const dd = walk(g, true, d % C, (d / C) | 0)[ch.land]; if (dd >= 0 && dd < lim.doorRing) return { why: "chain lands " + dd + " steps from a door", at: xy(ch.land) }; }
     if (n.tier >= 2 && w[ch.land] >= 0 && w[ch.land] < w[ch.cells[0]]) return { why: "chain carries toward the start", at: xy(ch.cells[0]) };
   }
-  if (!prof.belt.actors) return null;
+  if (!prof.belt.actors || prof.belt.foes === false) return null;
   const vb = prof.belt.v, goal = key(1, 1);
   for (const f of n.foes) {
     if (!(f.speed > 0)) continue;
@@ -362,7 +375,7 @@ function v20(n) {
       if (ch.land < 0) continue;
       const atWall = !notWall(g, ch.land);
       if (!atWall && openN(g, ch.land) < lim.exitOpen) return { why: "ring " + ring + ": landing not open", at: xy(ch.land) };
-      if (atWall && !prof.belt.actors) continue;
+      if (atWall && (!prof.belt.actors || prof.belt.wallStop)) continue;
       const s = stepOffs(g, feat, ch, lim, !atWall);
       if (s >= 0) return { why: "ring " + ring + ": no step-off" + (atWall ? " at the new wall" : ""), at: xy(s) };
     }
