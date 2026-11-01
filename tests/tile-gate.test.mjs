@@ -14,6 +14,8 @@ import { trackGrid, createView } from "../src/render/pixel/world.js";
 import { featPxCell } from "../src/render/featpx.js";
 import { BIOMES } from "../src/core/config.js";
 import { countDrawCalls, buildScene } from "../src/render/three/scene.js";
+import { createRenderer3D } from "../src/render/three/wrapper.js";
+import { createDemobot } from "../src/app/demobot.js";
 
 const TL = CFG.TILE, C = CFG.COLS;
 const fmix = (h) => { h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b) >>> 0; h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35) >>> 0; return (h ^ (h >>> 16)) >>> 0; };
@@ -217,6 +219,45 @@ test("REAL 3D: one more draw in a gate room, gate tiles never in the wall mesh u
   w.featM[gs[0]] = GATE_DEAD;
   sc.update(w);
   assert.equal(wall.count, w0 + 1, "a ring-dead gate joins the wall mesh");
+});
+
+test("REAL 3D fat-world in a gate room: 158 draws (156 + the tile mesh + the bars), 159 racing a ghost, inside the 160 lane", () => {
+  const fat = () => {
+    const w = room(1);
+    w.enemies = []; w.items = [];
+    for (let i = 0; i < 16; i++) { const e = spawnEnemy("walker", 60 + i * 30, 80, 8, w.rng); w.enemies.push(e); }
+    for (let i = 0; i < 32; i++) w.items.push({ x: 60 + i * 15, y: 120, t: "fire", col: "#ff8a3c", taken: false, pdef: null });
+    for (let i = 0; i < Math.min(CFG.MAX_BOMBS, 8); i++) w.bombs.push({ x: 60 + i * 40, y: 160, tx: i, ty: 2, timer: CFG.FUSE, variant: "normal" });
+    w.blades = [{ x: 200, y: 120, tiles: [{ tx: 5, ty: 3 }], t: 0, ttl: CFG.BLADE_TTL }];
+    return w;
+  };
+  const r = createRenderer3D(null, null, { audio: null, hud: null });
+  r.render(fat(), 1 / 60);
+  assert.equal(countDrawCalls(r._dbg.scene), 158);
+  const r2 = createRenderer3D(null, null, { audio: null, hud: null });
+  r2.render(fat(), 1 / 60, { ghost: { x: 100, y: 100, fx: 1, fy: 0, t: 0 } });
+  assert.equal(countDrawCalls(r2._dbg.scene), 159);
+});
+
+test("never crushes: over real bot runs at every heat no walker sits in a shut bar (the collision radius) and no bomb on one", () => {
+  let shutTicks = 0;
+  for (const heat of [0, 1, 2]) for (const seed of [11, 4242, 90210]) {
+    const w = createWorld(seed, 8), bot = createDemobot(seed);
+    w.gen = 3; w.heat = heat; loadLevel(w, 8, false); w.state = "PLAY";
+    const gs = gatesOf(w);
+    for (let i = 0; i < 3600 && w.state === "PLAY"; i++) {
+      step(w, CFG.STEP, { 0: bot.intent(w) }); w.events.length = 0;
+      for (const k of gs) {
+        if (w.featM[k] !== GATE_SHUT) { if (w.featM[k] !== GATE_DEAD) assert.equal(w.grid[k], T.EMPTY); continue; }
+        shutTicks++;
+        assert.equal(w.grid[k], T.WALL);
+        const x = k % C, y = (k / C) | 0, deep = (e) => { const dx = e.x - Math.max(x * TL, Math.min(e.x, (x + 1) * TL)), dy = e.y - Math.max(y * TL, Math.min(e.y, (y + 1) * TL)), r = e.r * 0.9; return dx * dx + dy * dy < r * r * 0.99; };
+        for (const e of [...w.players, ...w.enemies]) if (!e.dead && e.alive !== false) assert.equal(deep(e), false, `${e.type || "player"} in a bar: seed ${seed} heat ${heat} tick ${i}`);
+        for (const b of w.bombs) assert.ok(b.dead || b.tx !== x || b.ty !== y, "a bomb in a bar");
+      }
+    }
+  }
+  assert.ok(shutTicks > 500, "the gates did shut: " + shutTicks);
 });
 
 test("gen 1 and gen 2 carry no gate state", () => {

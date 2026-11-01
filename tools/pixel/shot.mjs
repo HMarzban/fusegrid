@@ -24,6 +24,8 @@
                          tiles) before every room load; a page whose world
                          has no gen field warns in the report and ignores it
      --pause             also capture a PAUSE still per room (roomN-pause)
+     --evals JS;;JS      after each room shot, run each page script (G is the
+                         world) and capture a still (roomN-e0, roomN-e1, ...)
      --out DIR           output dir (default .superpowers/sdd/2026-10-10-pixel/
                          out/shots, git-ignored)
      --name TAG          file prefix (default <render>-<preset|WxH>-d<dpr>)
@@ -117,6 +119,7 @@ export function parseArgs(argv) {
     else if (k === "--seed") { a.seed = ONE(k, v, /^\d{1,10}$/, "a uint32"); if (a.seed > 4294967295) throw new Error("--seed wants a uint32, got " + v); i++; }
     else if (k === "--heat") { a.heat = ONE(k, v, /^[012]$/, "0|1|2"); i++; }
     else if (k === "--pace") { a.pace = ONE(k, v, /^(-1|0|1)$/, "-1|0|1"); i++; }
+    else if (k === "--evals") { if (!v) throw new Error("--evals wants page scripts split by ;;"); a.evals = v.split(";;"); i++; }
     else if (k === "--gen") { a.gen = ONE(k, v, /^[1-9]$/, "a generation 1..9"); i++; }
     else throw new Error("unknown flag " + k + " (see the header of tools/pixel/shot.mjs)");
   }
@@ -284,6 +287,7 @@ export async function run(a) {
     await P.ev("window.__GAME__.setKeys({move:{x:1,y:0}})"); await P.adv(500); await P.ev("window.__GAME__.setKeys({move:{x:0,y:0},fire:true})"); await P.adv(80); await P.ev("window.__GAME__.setKeys({fire:false})"); await P.adv(400); await snap("bomb");
     for (const r of a.rooms) {
       await load(r); await P.adv(700); await snap("room" + r);
+      for (const [i, js] of (a.evals || []).entries()) { await P.ev("(()=>{const G=window.__GAME__.G;" + js + "})()"); await snap("room" + r + "-e" + i); }
       if (a.pause) { await P.ev("window.__pause&&window.__pause()"); await P.adv(300); await snap("room" + r + "-pause"); await P.ev("window.__resume&&window.__resume()"); }
     }
     if (a.render === "px") {
