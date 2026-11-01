@@ -60,7 +60,8 @@ export function cellSpec(w, x, y) {
     const vv = FEAT_PROFILE[h].belt.v * PM[Math.max(-1, Math.min(1, w.pace | 0)) + 1];
     s.phase = Math.floor(((w.featT || 0) * vv * TL) % 40);
   } else if (k === "STREAM") {
-    s.dir = v - 8; s.phase = 0;
+    s.dir = v - 8;
+    s.phase = Math.floor(((w.featT || 0) * FEAT_PROFILE[h].stream.v * PM[Math.max(-1, Math.min(1, w.pace | 0)) + 1] * TL) % 40);
     const [dx, dy] = [[1, 0], [0, 1], [-1, 0], [0, -1]][s.dir];
     s.exit = featAt(w, x + dx, y + dy) !== v; s.entry = featAt(w, x - dx, y - dy) !== v;
     endSides(s, s.dir, s.exit, s.entry);

@@ -12,6 +12,7 @@ import { paceMul } from "../src/core/pace.js";
 import { streamSpeed } from "../src/core/tilestream.js";
 import { featSpeed } from "../src/core/tiles2.js";
 import { layout2 } from "../src/core/board2.js";
+import { cellSpec } from "../src/render/featdraw.js";
 
 const C = CFG.COLS, R = CFG.ROWS, N = C * R, TL = CFG.TILE, DT = CFG.STEP;
 const IDLE = { 0: { move: { x: 0, y: 0 }, fire: false, firePrev: false, shift: false, remote: false, kick: false } };
@@ -212,6 +213,14 @@ test("V20 SHRINK: a run cut by a ring floats to the wall and stops; a ring tile 
     const w2 = createWorld(70000 + s, 4); w2.gen = 3; w2.heat = 2; loadLevel(w2, 4, false);
     if (w2.feat) assert.deepEqual(ids(featChecks(w2, P[2], { only: ["V20"] })), []);
   }
+});
+test("CLASSIC water scrolls down the run at the float speed, on the PLAY clock", () => {
+  const w = room(2);
+  w.featT = 0;
+  assert.equal(cellSpec(w, 4, 3).phase, 0);
+  assert.equal(cellSpec(w, 4, 3).dir, 0);
+  w.featT = 0.25;
+  assert.equal(cellSpec(w, 4, 3).phase, Math.floor(0.25 * P[2].stream.v * TL));
 });
 test("gen 1 and gen 2 room 4 carry no layer and no water rule", () => {
   for (const gen of [1, 2]) { const w = createWorld(55, 4); w.gen = gen; loadLevel(w, 4, false); assert.equal(w.feat ?? null, null); }

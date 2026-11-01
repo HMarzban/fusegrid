@@ -30,7 +30,7 @@ import {GEO} from "../featart/geo.js";
 
 const W = CFG.COLS * CFG.TILE, D = CFG.ROWS * CFG.TILE, N = 8, PX = 64, E = 0.5 / PX;
 const MAT = new THREE.Matrix4();
-const PM = [0.85, 1, 1.15], FLOAT = [0.8, 1, 1.2];
+const PM = [0.85, 1, 1.15];
 const KIND = {BELT: 0, GLIDE: 1, BLOOM: 2, PLATE: 3, STREAM: 4, QUICK: 5, PORTAL: 6, GATE: 7};
 function variants(w, x, y) {
   const s = cellSpec(w, x, y);
@@ -163,7 +163,7 @@ export function buildFeat(world, biome) {
   return {mesh, fxK: uFxK, uniforms: {uT, uSt, uTime}, update(w) {
     if (!w.feat) return;
     const h = tierOf(w), t = w.featT || 0, pm = PM[Math.max(-1, Math.min(1, w.pace | 0)) + 1];
-    uT.value = t * FEAT_PROFILE[h].belt.v * pm; uSt.value = t * FLOAT[h] * pm; uTime.value = t;
+    uT.value = t * FEAT_PROFILE[h].belt.v * pm; uSt.value = t * FEAT_PROFILE[h].stream.v * pm; uTime.value = t;
     let dirty = false, fx = false;
     tiles.forEach((k, i) => {
       const v = w.feat[k];
