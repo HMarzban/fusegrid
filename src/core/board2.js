@@ -394,6 +394,7 @@ function bloomGate(base, level, lay) {
 function tileGate(base, level, lay) {
   if (lay.biome === "CROWN") return gatePlace(base, level);
   if (lay.biome === "SAND") return quickGate(base, level);
+  if (lay.biome === "WATER") return streamGate(base, level);
   return null;
 }
 /* V32 + V33: a gate stays only if, with every kept gate shut for good, the map
@@ -419,6 +420,23 @@ function quickGate(base, level) {
       for (const k of ks) g[k] = T.EMPTY;
       return !featChecks({ grid: g, feat: f, level, heat: h, items: [], enemies: [] }, FEAT_PROFILE[h], { only: ["V30", "V31"] }).length;
     });
+  };
+}
+/* STREAM: a run is kept only if, with it and the runs kept so far forced open, the
+   float and the wade add no spot at any heat (V18, V19) */
+function streamGate(base, level) {
+  return (kept, ks, code) => {
+    const f = kept.slice(), all = [];
+    for (const k of ks) f[k] = code;
+    for (let k = 0; k < N; k++) if (f[k]) all.push(k);
+    for (let h = 2; h >= 0; h--) {
+      const g = base[h].grid.slice();
+      for (const k of all) g[k] = T.EMPTY;
+      const b = { grid: g, feat: f, level, heat: h, items: [], enemies: [] }, P = FEAT_PROFILE[h];
+      if (featChecks(b, P, { only: ["V29"], around: all, aroundR: 0 }).length) return false;
+      if (featChecks(b, P, { only: ["V18", "V19"], around: all, aroundR: P.stream.wade < 1 ? undefined : 0 }).length) return false;
+    }
+    return true;
   };
 }
 function place3(base, seed, level, heat) {

@@ -7,17 +7,17 @@
    model exactly as it reaches step(). Never imported by src/. */
 import { CFG, T, key } from "../../src/core/config.js";
 import { tileOf } from "../../src/core/board.js";
-import { featProfile, isBelt, beltDir } from "../../src/core/feat.js";
+import { featProfile, isBelt, isStream, isFlow, flowDir } from "../../src/core/feat.js";
 import { paceMul } from "../../src/core/pace.js";
 
 export const C = CFG.COLS, R = CFG.ROWS, N = C * R;
 export const BD = [[1, 0], [0, 1], [-1, 0], [0, -1]];
-export const NAME = Object.freeze({ BELT: "CONVEYOR", GLIDE: "ICE PATCH", BLOOM: "BOOSTER", PLATE: "TRAP" });
+export const NAME = Object.freeze({ BELT: "CONVEYOR", GLIDE: "ICE PATCH", BLOOM: "BOOSTER", PLATE: "TRAP", STREAM: "STREAM" });
 export const prof = (w) => featProfile(w);
 export const beltV = (w) => prof(w).belt.v * paceMul(w.pace);
 
-/* the tile model runs only when the room carries a RULE code (1..7); art-only
-   codes 8..14 (STREAM / QUICKSAND / PORTAL / GATE) play as plain floor */
+/* the tile model runs only when the room carries a RULE code (1..11, STREAM is
+   8..11); art-only codes 12..14 (QUICKSAND / PORTAL / GATE) play as plain floor */
 const memo = new WeakMap();
 export function rulesOn(w) {
   const f = w.feat;
@@ -25,14 +25,14 @@ export function rulesOn(w) {
   let v = memo.get(f);
   if (v === undefined) {
     v = false;
-    for (let i = 0; i < f.length; i++) if (f[i] >= 1 && f[i] <= 7) { v = true; break; }
+    for (let i = 0; i < f.length; i++) if ((f[i] >= 1 && f[i] <= 7) || isStream(f[i])) { v = true; break; }
     memo.set(f, v);
   }
   return v;
 }
 export function ruleKind(w) {
   if (!w.feat) return null;
-  for (const v of w.feat) { if (isBelt(v)) return "BELT"; if (v === 5) return "GLIDE"; if (v === 6) return "BLOOM"; if (v === 7) return "PLATE"; }
+  for (const v of w.feat) { if (isBelt(v)) return "BELT"; if (v === 5) return "GLIDE"; if (v === 6) return "BLOOM"; if (v === 7) return "PLATE"; if (isStream(v)) return "STREAM"; }
   return null;
 }
 export const BOT_BRAKE = !(globalThis.process && globalThis.process.env && globalThis.process.env.FG_BOTBRAKE === "0");
@@ -49,6 +49,8 @@ export function iceStop(w, k, d, t, L, bombAt) {
   return (v === T.BRICK || !!bombAt[nk]) && t < L[nk];
 }
 export const onBelt = (w, k) => isBelt(w.feat[k]) && w.grid[k] === T.EMPTY;
+export const onFlow = (w, k) => isFlow(w.feat[k]) && w.grid[k] === T.EMPTY;
+export const onWater = (w, k) => isStream(w.feat[k]) && w.grid[k] === T.EMPTY;
 /* #28: does a CONVEYOR carry a standing player (actors ride at v > 0)? */
 export const carries = (w) => { const pb = prof(w).belt; return !!pb.actors && pb.v > 0; };
 
@@ -83,13 +85,13 @@ export const plateArms = (pc) => BD.map(([dx, dy]) => [dx, dy, pc.r]);
 export function beltPath(w, b, horizon) {
   const path = [[b.tx, b.ty, 0]];
   if (b.slide && !b.carry) return path;
-  const v = beltV(w);
+  const v = isStream(w.feat[key(b.tx, b.ty)]) ? prof(w).stream.v * paceMul(w.pace) : beltV(w);
   if (v <= 0) return path;
   let x = b.tx, y = b.ty, t = -((b.carry ? b.prog : 0) || 0) / v;
   for (let n = 0; n < N; n++) {
     const k = key(x, y);
-    if (!onBelt(w, k)) break;
-    const [dx, dy] = beltDir(w.feat[k]), nx = x + dx, ny = y + dy, nk = key(nx, ny);
+    if (!onFlow(w, k)) break;
+    const [dx, dy] = flowDir(w.feat[k]), nx = x + dx, ny = y + dy, nk = key(nx, ny);
     if (w.grid[nk] !== T.EMPTY || w.bombs.some((o) => o !== b && !o.dead && o.tx === nx && o.ty === ny)) break;
     t += 1 / v;
     if (t > horizon) break;
@@ -185,10 +187,11 @@ export function iceDestOk(w, x, y, nx, ny, danger) {
 export function moveSpeed(w, p, k, dx, dy, tiles, beltOnly) {
   const vp = p.speed * paceMul(w.pace);
   if (!tiles) return vp;
+  if (onWater(w, k)) return vp * prof(w).stream.wade;
   if (!beltOnly && onIce(w, k)) return Math.min(p.speed * prof(w).glide.boost, CFG.MAX_SPEED) * paceMul(w.pace);
   const pb = prof(w).belt;
   if (pb.actors && onBelt(w, k)) {
-    const [bx, by] = beltDir(w.feat[k]), bv = pb.v * paceMul(w.pace);
+    const [bx, by] = flowDir(w.feat[k]), bv = pb.v * paceMul(w.pace);
     if (bx === dx && by === dy) return vp + bv;
     if (bx === -dx && by === -dy) return vp - bv;
   }

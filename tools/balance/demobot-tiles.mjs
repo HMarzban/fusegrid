@@ -33,7 +33,7 @@
 import {CFG,T,key,DIRS4} from "../../src/core/config.js";
 import {bfsNext} from "../../src/core/board.js";
 import {createRng} from "../../src/core/rng.js";
-import {isBelt} from "../../src/core/feat.js";
+import {isFlow} from "../../src/core/feat.js";
 import {rulesOn,prof,tileDanger,bombCover,iceDestOk,moveSpeed} from "./tilemodel.mjs";
 import {escape} from "./escape.mjs";
 
@@ -305,7 +305,7 @@ export function createTileBot(seed){
      belt within 6 won over the foe: the bot paced the belts and stopped hunting */
   function beltAim(w,p,ptx,pty,danger){
     if(LURE==="off"||w.bombs.length>=p.bombs)return null;
-    return nearestFeat(w,ptx,pty,(v,k)=>isBelt(v)&&!danger.has(k)&&(LURE==="any"||tileGain(w,p,k%CFG.COLS,(k/CFG.COLS)|0)),6);
+    return nearestFeat(w,ptx,pty,(v,k)=>isFlow(v)&&!danger.has(k)&&(LURE==="any"||tileGain(w,p,k%CFG.COLS,(k/CFG.COLS)|0)),6);
    }
   function nearestFeat(w,ptx,pty,pred,maxd){
     let best=null,bd=maxd+1;

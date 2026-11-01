@@ -22,7 +22,7 @@
    Ride lengths take the HARD pace (the longest ride); speeds take EASY. */
 import { CFG, T, key, biomeOf } from "./config.js";
 import { walk, POCKET, DOORS, ESC_STEPS, REACH_MAX, foeMin } from "./fair.js";
-import { F, HOME, FEAT_PROFILE, TILE_NAME, isBelt, beltDir, featKindOf, QUICK_PLACE, quickSeals, quickDetour } from "./feat.js";
+import { F, HOME, FEAT_PROFILE, TILE_NAME, isBelt, beltDir, isStream, isFlow, flowDir, featKindOf, QUICK_PLACE, quickSeals, quickDetour } from "./feat.js";
 import { HOLD_MIN, holdReach } from "./tilequick.js";
 import { heatProfile, heatRoster, clampHeat } from "./heat.js";
 import { applyPact } from "./pact.js";
@@ -40,6 +40,7 @@ export const LIMITS = Object.freeze({
   doorRing: 10, sheetMin: 3, sheetMax: 9, runMax: 3, iceSteps: 3, boostMin: 3, boostMax: 5, boostPocket: 2, boostGap: 3,
   trapMin: 3, trapMax: 5, trapSteps: 6, trapFoe: 2, trapGap: 2, sideR: 3, escSteps: ESC_STEPS, escFree: 12, radius: 8, rings: 4,
   gateMin: 2, gateMax: 3, gateGap: 4,
+  streamRuns: 2, streamMin: 4, streamMax: 6, streamTotal: 12,
 });
 const inB = (x, y) => x >= 0 && y >= 0 && x < C && y < R;
 const xy = (k) => [k % C, (k / C) | 0];
@@ -66,6 +67,14 @@ function inLine(g, near, reach) {
   }
   return m;
 }
+/* opts.around: a STREAM-only speed-up. A bomb floats only from a run cell, and a
+   wade changes an escape only within the step budget of a run cell (aroundR, 0
+   when the row does not slow walkers), so no other cell can change the answer. */
+function aroundMask(cells, rad) {
+  const m = new Uint8Array(N);
+  for (let c = 0; c < N; c++) if (cells.some((k) => manh(k, c) <= rad)) m[c] = 1;
+  return m;
+}
 function norm(b, profile, opts) {
   const level = b.level | 0, heat = clampHeat(b.heat), pact = b.pact | 0, P = applyPact(heatProfile(heat), pact);
   const lim = opts.limits ? { ...LIMITS, ...opts.limits } : LIMITS;
@@ -75,7 +84,7 @@ function norm(b, profile, opts) {
   const pace = opts.pace ?? -1, pm = paceMul(pace);
   return { ...b, g: b.grid, feat: b.feat || null, level, heat, pact, P, lim, kind, items, foes, prof: profile || FEAT_PROFILE[heat], tier: opts.tier ?? heat,
     fuse: opts.fuse ?? P.fuse, pm, pmRide: Math.max(...PACE_MUL), biome: biomeOf(level).name,
-    mask: opts.near ? inLine(b.grid, opts.near, Math.max(lim.radius, REACH_MAX)) : null };
+    mask: opts.near ? inLine(b.grid, opts.near, Math.max(lim.radius, REACH_MAX)) : opts.around ? aroundMask(opts.around, opts.aroundR ?? lim.escSteps) : null };
 }
 function kindOfLayer(f) { for (const v of f) if (v) return featKindOf(v); return null; }
 export function foeSpeed(type, level, curve) { return spawnEnemy(type, 0, 0, level, null, { curve }).speed; }
@@ -133,12 +142,14 @@ export function lethalMap(g, feat, prof, blasts, useTiles = true) {
 function env(n, g, o = {}) {
   const prof = n.prof, t = !!(o.tiles && n.feat);
   return { g, feat: n.feat, prof, pm: n.pm, cap: n.lim.escSteps, tiles: t, mvTiles: t && o.move !== false, stopOnBrick: o.stopOnBrick !== false, plantBlock: o.plantBlock !== false, open: o.open ?? -1,
-    vp: VP * n.pm, vIce: Math.min(VP * prof.glide.boost, CFG.MAX_SPEED) * n.pm, vb: prof.belt.v * n.pm, actors: !!prof.belt.actors, endHalt: !!prof.belt.endHalt, nostop: prof.glide.coast >= 2, stop: prof.glide.stop };
+    vp: VP * n.pm, vIce: Math.min(VP * prof.glide.boost, CFG.MAX_SPEED) * n.pm, vb: prof.belt.v * n.pm, actors: !!prof.belt.actors, endHalt: !!prof.belt.endHalt, nostop: prof.glide.coast >= 2, stop: prof.glide.stop, wade: prof.stream ? prof.stream.wade : 1 };
 }
 const isIce = (E, k) => E.mvTiles && E.feat[k] === F.GLIDE && E.g[k] === T.EMPTY;
 const isRide = (E, k) => E.mvTiles && E.actors && isBelt(E.feat[k]) && E.g[k] === T.EMPTY;
+const isWade = (E, k) => E.mvTiles && E.wade < 1 && isStream(E.feat[k]) && E.g[k] === T.EMPTY;
 function spd(E, k, d) {
   if (isIce(E, k)) return E.vIce;
+  if (isWade(E, k)) return E.vp * E.wade;
   if (isRide(E, k)) { const [ux, uy] = beltDir(E.feat[k]); return E.vp + E.vb * (ux * D4[d][0] + uy * D4[d][1]); }
   return E.vp;
 }
@@ -204,17 +215,18 @@ function bombMap(n, g, c, r, live, blast = null) {
     extra.push({ t: n.prof.plate.wind, k: p, arms: cross(n.prof.plate.r), through: false });
   }
   let at = [c];
-  if (n.prof.belt.thru && isBelt(n.feat[c]) && g[c] === T.EMPTY) {
+  if ((n.prof.belt.thru || isStream(n.feat[c])) && isFlow(n.feat[c]) && g[c] === T.EMPTY) {
     /* #28 pass-through carry: only WALL / BRICK / a bomb stops a ridden bomb, so
-       its cell at the fuse is known for each pace (the cells it passes are safe) */
-    const path = [c];
-    for (let k = c; isBelt(n.feat[k]) && g[k] === T.EMPTY;) {
-      const [ux, uy] = beltDir(n.feat[k]), nk = nbr(k, dirOf(ux, uy));
+       its cell at the fuse is known for each pace (the cells it passes are safe);
+       a STREAM float is the same walk at stream.v */
+    const path = [c], v = isStream(n.feat[c]) ? n.prof.stream.v : n.prof.belt.v;
+    for (let k = c; isFlow(n.feat[k]) && g[k] === T.EMPTY;) {
+      const [ux, uy] = flowDir(n.feat[k]), nk = nbr(k, dirOf(ux, uy));
       if (nk < 0 || g[nk] !== T.EMPTY) break;
       k = nk; path.push(k);
       if (path.length > N) break;
     }
-    at = [...new Set(PACE_MUL.map((pm) => path[Math.min(path.length - 1, Math.floor(n.prof.belt.v * pm * n.fuse + 1e-9))]))];
+    at = [...new Set(PACE_MUL.map((pm) => path[Math.min(path.length - 1, Math.floor(v * pm * n.fuse + 1e-9))]))];
   } else if (isBelt(n.feat[c]) && g[c] === T.EMPTY) {
     let k = c, steps = Math.ceil(n.prof.belt.v * n.pmRide * n.fuse - 1e-9);
     while (steps-- > 0 && isBelt(n.feat[k]) && g[k] === T.EMPTY) {
@@ -231,10 +243,11 @@ function bombMap(n, g, c, r, live, blast = null) {
   }
   L.cause = chain ? "trap-chain" : at.length > 1 || at[0] !== c ? "bomb-ride" : relay ? "relay" : null;
   L.moved = at.length > 1 || at[0] !== c;
+  L.at = at;
   return L;
 }
 const sameIn = (A, B, c, rad) => { const [cx, cy] = xy(c); for (let y = Math.max(0, cy - rad); y <= Math.min(R - 1, cy + rad); y++) for (let x = Math.max(0, cx - rad); x <= Math.min(C - 1, cx + rad); x++) { if (Math.abs(x - cx) + Math.abs(y - cy) > rad) continue; const k = key(x, y); if (A[k] !== B[k]) return false; } return true; };
-function moveTileNear(n, E, c, rad) { const [cx, cy] = xy(c); for (let y = Math.max(0, cy - rad); y <= Math.min(R - 1, cy + rad); y++) for (let x = Math.max(0, cx - rad); x <= Math.min(C - 1, cx + rad); x++) { if (Math.abs(x - cx) + Math.abs(y - cy) > rad) continue; const k = key(x, y); if (isIce(E, k) || isRide(E, k)) return true; } return false; }
+function moveTileNear(n, E, c, rad) { const [cx, cy] = xy(c); for (let y = Math.max(0, cy - rad); y <= Math.min(R - 1, cy + rad); y++) for (let x = Math.max(0, cx - rad); x <= Math.min(C - 1, cx + rad); x++) { if (Math.abs(x - cx) + Math.abs(y - cy) > rad) continue; const k = key(x, y); if (isIce(E, k) || isRide(E, k) || isWade(E, k)) return true; } return false; }
 
 /* V18: V2 re-run with the tile live, this heat's fuse (opts.fuse overrides),
    the EASY pace; bomb at (1,1), r 1..REACH_MAX, normal / pierce / line x4 */
@@ -271,13 +284,17 @@ function v19(n) {
     const Eb = env(n, g, { tiles: false }), Et = env(n, g, { tiles: true }), Em = env(n, g, { tiles: true, move: false });
     for (let c = 0; c < N; c++) {
       if (g[c] !== T.EMPTY || (n.mask && !n.mask[c])) continue;
+      let at = [c];
       for (let r = 1; r <= n.lim.radius; r++) {
+        /* a radius whose arms reach no further from any cell the bomb can blow at gives the same maps as the last one */
+        if (r > 1 && at.every((k) => { const [x, y] = xy(k); return armTiles(g, x, y, cross(r), false).length === armTiles(g, x, y, cross(r - 1), false).length; })) break;
+        const Lt = bombMap(n, g, c, r, true), plant = Lt.moved ? -1 : c;
+        if (Lt.at) at = [c, ...Lt.at];
+        if (timedEscape(Et, Lt, c, plant).ok) continue;
         const Lb = bombMap(n, g, c, r, false);
         if (!timedEscape(Eb, Lb, c, c).ok) break;
-        const Lt = bombMap(n, g, c, r, true), plant = Lt.moved ? -1 : c;
         if (sameIn(Lb, Lt, c, rad) && !moveTileNear(n, Et, c, rad)) continue;
-        if (timedEscape(Et, Lt, c, plant).ok) continue;
-        const cause = Lt.cause && !timedEscape(Em, Lt, c, plant).ok ? Lt.cause : n.kind === "GLIDE" ? "coast" : n.kind === "BELT" ? "ride" : Lt.cause || "tile";
+        const cause = Lt.cause && !timedEscape(Em, Lt, c, plant).ok ? Lt.cause : n.kind === "GLIDE" ? "coast" : n.kind === "BELT" ? "ride" : n.kind === "STREAM" ? "wade" : Lt.cause || "tile";
         const timed = !timedEscape(free(Et), Lt, c, plant).ok;
         add(c, cause, { at: xy(c), r, state: st, cause, kind: timed ? "time" : "cap" }, timed);
         break;
@@ -410,6 +427,12 @@ function v20(n) {
       for (let h = 0; h < q.length; h++) for (let d = 0; d < 4; d++) { const m = nbr(q[h], d); if (m >= 0 && alive(m) && !ok[m]) { ok[m] = 1; q.push(m); } }
       for (let k = 0; k < N; k++) if (feat[k] === F.GLIDE && alive(k) && !ok[k]) return { why: "ring " + ring + ": ice sealed", at: xy(k) };
     }
+    if (n.kind === "STREAM") {
+      const ok = new Uint8Array(N), q = [];
+      for (let k = 0; k < N; k++) if (alive(k) && !isStream(feat[k])) { ok[k] = 1; q.push(k); }
+      for (let h = 0; h < q.length; h++) for (let d = 0; d < 4; d++) { const m = nbr(q[h], d); if (m >= 0 && alive(m) && !ok[m]) { ok[m] = 1; q.push(m); } }
+      for (let k = 0; k < N; k++) if (isStream(feat[k]) && alive(k) && !ok[k]) return { why: "ring " + ring + ": water sealed", at: xy(k) };
+    }
     if (n.kind === "PLATE") for (const p of plates({ ...n, g })) { const s = sideExit(g, p, Math.max(lim.sideR, prof.plate.r)); if (s) return { why: "ring " + ring + ": " + s.why, at: s.at }; }
   }
   return null;
@@ -532,6 +555,51 @@ export function gateSpot(b, profile, gs, near = null) {
   return null;
 }
 
+/* V28: the STREAM placement rule on the finished board, see feat.js stream() */
+function streamRuns(feat) {
+  const out = [];
+  for (let k = 0; k < N; k++) {
+    if (!isStream(feat[k])) continue;
+    const [ux, uy] = flowDir(feat[k]), up = nbr(k, dirOf(-ux, -uy));
+    if (up >= 0 && feat[up] === feat[k]) continue;
+    const cells = [];
+    let q = k;
+    while (q >= 0 && feat[q] === feat[k]) { cells.push(q); q = nbr(q, dirOf(ux, uy)); }
+    out.push({ cells, past: q });
+  }
+  return out;
+}
+function v28(n) {
+  const { g, feat, lim } = n, runs = streamRuns(feat), w = walk(g, true);
+  if (runs.length !== lim.streamRuns) return { why: runs.length + " runs" };
+  let total = 0;
+  for (const r of runs) {
+    const L = r.cells.length, head = r.cells[0];
+    total += L;
+    if (L < lim.streamMin || L > lim.streamMax) return { why: "run of " + L, at: xy(head) };
+    for (const k of r.cells) {
+      if (g[k] !== T.EMPTY) return { why: "water under a block", at: xy(k) };
+      if (DOORS.includes(k) || w[k] < 0 || w[k] <= lim.spawnSteps) return { why: "water near the start", at: xy(k) };
+      for (let d = 0; d < 4; d++) { const m = nbr(k, d); if (m >= 0 && isStream(feat[m]) && !r.cells.includes(m)) return { why: "runs touch", at: xy(k) }; }
+    }
+    if (!notWall(g, r.past)) return { why: "run ends at a WALL", at: xy(head) };
+    if (w[r.past] < w[head]) return { why: "run carries toward the start", at: xy(head) };
+  }
+  if (total > lim.streamTotal) return { why: "water tiles " + total };
+  return null;
+}
+/* V29: the V19 counterfactual with the float and the wade after each SHRINK ring
+   (V19 proves the open board; a run cut by a ring floats to the wall and stops) */
+function v29(n) {
+  for (let ring = 1; ring <= n.lim.rings; ring++) {
+    const g = n.g.slice();
+    for (let y = 0; y < R; y++) for (let x = 0; x < C; x++) { const rim = Math.min(x, C - 1 - x, y, R - 1 - y); if (rim >= 1 && rim <= ring && !(x === 1 && y === 1)) g[key(x, y)] = T.WALL; }
+    const f = v19({ ...n, g });
+    if (f) return { ...f, why: "ring " + ring + ": " + f.why, ring };
+  }
+  return null;
+}
+
 const CHECK = {
   V13(n) {
     const f = n.feat;
@@ -642,8 +710,8 @@ const CHECK = {
     return null;
   },
   /* STREAM */
-  V28() { return null; },
-  V29() { return null; },
+  V28(n) { return n.kind === "STREAM" ? v28(n) : null; },
+  V29(n) { return n.kind === "STREAM" ? v29(n) : null; },
   /* QUICKSAND */
   V30(n) { return n.kind === "QUICK" ? v30(n) : null; },
   V31(n) { return n.kind === "QUICK" ? v31(n) : null; },

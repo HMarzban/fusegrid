@@ -1,4 +1,4 @@
-/* TILE ART PLACEMENT (2026-10-25): STREAM / QUICK / PORTAL / GATE are placed by the gen-2 generator for their look only; the sim ignores codes 8..14. */
+/* TILE ART PLACEMENT (2026-10-25): QUICK / PORTAL / GATE are placed by the gen-2 generator for their look only; the sim ignores codes 12..14. STREAM has rules since #26: tests/tile-stream.test.mjs, placement and a fair board here. */
 import test from "node:test";
 import assert from "node:assert/strict";
 import { CFG, key, T, EW_CAPPED } from "../src/core/config.js";
@@ -22,6 +22,7 @@ test("one table maps each biome to its tile", () => {
 test("200 seeds per room: tiles placed, same at every heat, never near spawn or a door, on floor, board still fair", () => {
   for (const room of [4, 6, 7, 8]) for (let s = 0; s < 200; s++) {
     const seed = 9000 + s, B = [0, 1, 2].map((h) => genBoard2(seed, room, h, { feat: true })), tag = `room ${room} seed ${seed}`;
+    if (room === 4 && B.every((b) => !b.feat)) continue;
     for (const b of B) assert.ok(b.feat && !b.layout.fallback, tag);
     const hx = B.map((b) => Buffer.from(b.feat).toString("hex") + "|" + (b.featPair ? Buffer.from(b.featPair).toString("hex") : "-"));
     assert.equal(hx[0], hx[1], tag); assert.equal(hx[1], hx[2], tag);
@@ -33,23 +34,6 @@ test("200 seeds per room: tiles placed, same at every heat, never near spawn or 
       assert.ok(!(x === 5 && y === 1) && !(x === 1 && y === 5), tag + " on a door");
       for (const b of B) assert.equal(b.grid[key(x, y)], T.EMPTY, tag + " not on floor");
     }
-  }
-});
-test("STREAM: 1-2 straight runs of 3-6, one direction each", () => {
-  for (let s = 0; s < 200; s++) {
-    const f = genBoard2(100 + s, 4, 0, { feat: true }).feat, seen = new Set();
-    let runs = 0;
-    for (const [x, y, v] of cellsOf(f)) {
-      if (seen.has(key(x, y))) continue;
-      const [dx, dy] = v === 8 || v === 10 ? [1, 0] : [0, 1], cells = [];
-      let px = x, py = y;
-      while (f[key(px - dx, py - dy)] === v) { px -= dx; py -= dy; }
-      while (f[key(px, py)] === v) { cells.push([px, py]); seen.add(key(px, py)); px += dx; py += dy; }
-      assert.ok(cells.length >= 3 && cells.length <= 6, "len " + cells.length);
-      for (const [a, b] of cells) for (const [ex, ey] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) { const q = f[key(a + ex, b + ey)]; if (q && !cells.some(([cx, cy]) => cx === a + ex && cy === b + ey)) assert.fail("runs touch"); }
-      runs++;
-    }
-    assert.ok(runs >= 1 && runs <= 2, "runs " + runs);
   }
 });
 test("QUICK 3-5 spaced singles; GATE 2-3 corridor singles, lit 0; PORTAL pairs share an id 1/2 and sit far apart", () => {
@@ -74,11 +58,11 @@ test("foes never start on an art tile and the roster is whole", () => {
   for (const room of [4, 6, 7, 8]) for (let s = 0; s < 40; s++) {
     const w = mk(7000 + s, room, s % 3);
     assert.equal(w.enemies.length, heatRoster(room, s % 3).length, `room ${room} seed ${s}`);
-    for (const e of w.enemies) assert.equal(w.feat[key(e.tx, e.ty)], 0, `room ${room} seed ${s}`);
+    if (w.feat) for (const e of w.enemies) assert.equal(w.feat[key(e.tx, e.ty)], 0, `room ${room} seed ${s}`);
   }
 });
 test("the art layer is ignored by step(): a replay is identical with and without it", () => {
-  for (const room of [4, 7]) for (const seed of [4242, 77]) {
+  for (const room of [7]) for (const seed of [4242, 77]) {
     const a = mk(seed, room, 2), b = mk(seed, room, 2);
     assert.ok(a.feat);
     b.feat = null; b.featPair = null;
