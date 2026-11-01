@@ -21,6 +21,9 @@ export const F = Object.freeze({ NONE: 0, BELT_E: 1, BELT_S: 2, BELT_W: 3, BELT_
 export const FDIR = Object.freeze([[1, 0], [0, 1], [-1, 0], [0, -1]]);
 export const isBelt = (v) => v >= 1 && v <= 4;
 export const beltDir = (v) => FDIR[v - 1];
+export const isStream = (v) => v >= 8 && v <= 11;
+export const isFlow = (v) => isBelt(v) || isStream(v);
+export const flowDir = (v) => FDIR[isStream(v) ? v - 8 : v - 1];
 export const HOME = Object.freeze({ FACTORY: "BELT", ICE: "GLIDE", JUNGLE: "BLOOM", ARENA: "PLATE", WATER: "STREAM", SAND: "QUICK", VOID: "PORTAL", CROWN: "GATE" });
 
 export const FEAT_PROFILE = Object.freeze([
@@ -133,7 +136,7 @@ export function placeFeat(m, seed, level, biome, salt = 0, bgate = null, tpl = "
     else if (kind === "GATE") ok = gate(m, f, rng, far, force, bgate, dS);
     else ok = plate(m, f, rng, dS, force, tpl);
     if (ok) return pair ? { feat: f, force, kind, tries, pair } : { feat: f, force, kind, tries };
-    if (bgate && kind === "BLOOM") break;
+    if (bgate && (kind === "BLOOM" || kind === "STREAM")) break;
   }
   return { feat: null, force: [], kind, tries: 40, fallback: true };
 }
@@ -332,39 +335,55 @@ function plate(m, f, rng, dS, force, tpl) {
 const shuf = (a, rng) => { for (let i = a.length - 1; i > 0; i--) { const j = rng.int(0, i); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const manh = (a, b) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]);
 const clearOf = (f, x, y) => !f[key(x, y)] && D4.every(([dx, dy]) => !f[key(x + dx, y + dy)]);
-/* art-only STREAM: 1-2 runs of 3-6 straight tiles in an open lane, one direction
-   per run, every tile with a step-off (a side exit, or the open tile past the
-   run) within 2 tiles downstream; never within 4 steps of spawn or on a door */
+/* V28 STREAM (#26): 2 straight runs of 4-6 tiles, 12 at most, in one direction
+   each, never touching; every tile > 4 steps from spawn and off the doors; the
+   tile past the run is no WALL and no nearer the spawn in walking steps than the
+   run's head, so no float carries a bomb toward the start corner. After SHRINK
+   rings 1-4 a surviving tile still reaches plain floor (V20). bgate, when set,
+   refuses a run that adds a no-escape spot (V29), at most GATE_N asks per call. */
+const GATE_N = 8;
 function stream(m, f, rng, far, force, bgate, dS) {
   const lanes = [];
-  for (let y = 1; y < R - 1; y++) { let x = 1; while (x < C - 1) { if (!far(x, y)) { x++; continue; } const s = x; while (far(x, y)) x++; if (x - s >= 3) lanes.push({ h: true, a: s, b: x - 1, l: y }); } }
-  for (let x = 1; x < C - 1; x++) { let y = 1; while (y < R - 1) { if (!far(x, y)) { y++; continue; } const s = y; while (far(x, y)) y++; if (y - s >= 3) lanes.push({ h: false, a: s, b: y - 1, l: x }); } }
+  for (let y = 1; y < R - 1; y++) { let x = 1; while (x < C - 1) { if (!far(x, y)) { x++; continue; } const s = x; while (far(x, y)) x++; if (x - s >= 4) lanes.push({ h: true, a: s, b: x - 1, l: y }); } }
+  for (let x = 1; x < C - 1; x++) { let y = 1; while (y < R - 1) { if (!far(x, y)) { y++; continue; } const s = y; while (far(x, y)) y++; if (y - s >= 4) lanes.push({ h: false, a: s, b: y - 1, l: x }); } }
   if (!lanes.length) return false;
-  const want = rng.int(1, 2);
-  let made = 0;
+  const rings = shrinkMaps(m);
+  let made = 0, total = 0, asks = 0;
   for (const r of shuf(lanes, rng)) {
-    if (made >= want) break;
-    for (let t = 0; t < 8; t++) {
-      const L = rng.int(3, Math.min(6, r.b - r.a + 1)), s = rng.int(r.a, r.b - L + 1), dir = rng.int(0, 1) ? 1 : -1;
-      const cells = []; for (let i = 0; i < L; i++) cells.push(r.h ? [s + i, r.l] : [r.l, s + i]);
-      if (dir < 0) cells.reverse();
-      if (!cells.every(([x, y]) => clearOf(f, x, y))) continue;
-      const [lx, ly] = r.h ? [cells[L - 1][0] + dir, r.l] : [r.l, cells[L - 1][1] + dir];
-      const perp = (x, y) => (r.h ? open(m, x, y - 1) || open(m, x, y + 1) : open(m, x - 1, y) || open(m, x + 1, y));
-      let ok = true;
-      for (let i = 0; i < L && ok; i++) {
-        let any = false;
-        for (let j = i; j <= Math.min(L, i + 2); j++) if (j === L ? open(m, lx, ly) : perp(cells[j][0], cells[j][1])) { any = true; break; }
-        ok = any;
-      }
-      if (!ok) continue;
+    if (made >= 2 || asks >= GATE_N) break;
+    for (let t = 0; t < 8 && asks < GATE_N; t++) {
+      const L = rng.int(4, Math.min(6, r.b - r.a + 1, 12 - total));
+      if (L < 4) break;
+      const s = rng.int(r.a, r.b - L + 1);
+      let dir = rng.int(0, 1) ? 1 : -1;
+      const fwd = []; for (let i = 0; i < L; i++) fwd.push(r.h ? [s + i, r.l] : [r.l, s + i]);
+      const past = (d) => { const e = d > 0 ? fwd[L - 1] : fwd[0]; return r.h ? [e[0] + d, e[1]] : [e[0], e[1] + d]; };
+      const gain = (d) => { const p = past(d), h = d > 0 ? fwd[0] : fwd[L - 1]; return open(m, p[0], p[1]) && dS[key(p[0], p[1])] >= dS[key(h[0], h[1])]; };
+      if (!gain(dir)) dir = -dir;
+      if (!gain(dir)) continue;
+      if (!fwd.every(([x, y]) => clearOf(f, x, y))) continue;
+      const mine = new Set(fwd.map(([x, y]) => key(x, y)));
+      if (!rings.every((g) => fwd.every(([x, y]) => !open(g, x, y) || floorOut(g, mine, x, y)))) continue;
+      const cells = dir > 0 ? fwd : fwd.slice().reverse(), ks = cells.map(([x, y]) => key(x, y));
       const code = r.h ? (dir > 0 ? 8 : 10) : (dir > 0 ? 9 : 11);
-      for (const [x, y] of cells) { f[key(x, y)] = code; force.push(key(x, y)); }
-      made++;
+      if (bgate) { asks++; if (!bgate(f, ks, code)) continue; }
+      for (const k of ks) { f[k] = code; force.push(k); }
+      made++; total += L;
       break;
     }
   }
-  return made > 0;
+  return made === 2;
+}
+/* from a run tile, along the run's own tiles, to a tile that is plain floor */
+function floorOut(g, mine, x, y) {
+  const seen = new Set([key(x, y)]), q = [[x, y]];
+  for (let h = 0; h < q.length; h++) for (const [dx, dy] of D4) {
+    const a = q[h][0] + dx, b = q[h][1] + dy, k = key(a, b);
+    if (!open(g, a, b) || seen.has(k)) continue;
+    if (!mine.has(k)) return true;
+    seen.add(k); q.push([a, b]);
+  }
+  return false;
 }
 /* art-only QUICK: 3-5 singles, no two within 4 Manhattan, none within 4 steps of spawn */
 function quick(m, f, rng, far, force, bgate, dS) {

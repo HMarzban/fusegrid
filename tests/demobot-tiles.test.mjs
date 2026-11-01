@@ -65,15 +65,15 @@ function parity(w, seed, ticks) {
 /* ---- controls ---- */
 {
   let bad = [], rows = 0;
-  for (const room of [4, 6, 7, 8]) for (const heat of [0, 1, 2]) for (const s of [0, 1]) {
+  for (const room of [6, 7, 8]) for (const heat of [0, 1, 2]) for (const s of [0, 1]) {
     const a = runRoom({ room, heat, arm: "A0" }, s), b = runRoom({ room, heat, arm: "A1" }, s);
     rows++;
     if (b.rules) bad.push(`r${room} carries rule tiles`);
     if (JSON.stringify({ ...a, arm: "" }) !== JSON.stringify({ ...b, arm: "" })) bad.push(`r${room}h${heat}s${s}`);
   }
-  check(`controls: A0 row == A1 row, rooms 4/6/7/8 x 3 heats x 2 seeds (${rows} pairs)`, !bad.length, bad.slice(0, 4).join(" "));
+  check(`controls: A0 row == A1 row, rooms 6/7/8 x 3 heats x 2 seeds (${rows} pairs)`, !bad.length, bad.slice(0, 4).join(" "));
   bad = [];
-  for (const room of [4, 6, 7, 8]) {
+  for (const room of [6, 7, 8]) {
     const A = makeWorld({ room, heat: 2, arm: "A0" }, 3), B = makeWorld({ room, heat: 2, arm: "A1" }, 3);
     if (!B.w.feat) { bad.push(`r${room} no art layer`); continue; }
     const ba = createTileBot(A.seed), bb = createTileBot(B.seed);

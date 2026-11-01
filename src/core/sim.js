@@ -5,7 +5,7 @@ import { applyPower, hurtPlayer } from "./entities.js";
 import { updateEnemies } from "../ai/enemies.js";
 import { hasPact, PACT } from "./pact.js";
 import { paceMul } from "./pace.js";
-import { isBelt, beltDir, featProfile } from "./feat.js";
+import { isBelt, beltDir, featProfile, isStream, isFlow, flowDir } from "./feat.js";
 import { tileTick, featSpeed } from "./tiles2.js";
 
 /* A clean intent for one player for this tick. This is exactly what a network
@@ -492,7 +492,7 @@ function beltActors(w, dt, player, inp) {
    tile; pass 2 thru: only a WALL, a BRICK or another bomb, so a bomb rides
    under walkers and its cell at the fuse is known from the board alone */
 function carryStop(w, b, tx, ty) {
-  if (featProfile(w).belt.thru) {
+  if (featProfile(w).belt.thru || isStream(w.feat[key(b.tx, b.ty)])) {
     const v = w.grid[key(tx, ty)];
     return v === undefined || v === T.WALL || v === T.BRICK || w.bombs.some((o) => o !== b && !o.dead && o.tx === tx && o.ty === ty);
   }
@@ -512,14 +512,14 @@ function carryBomb(w, b, dt) {
   const snap = () => { b.prog = 0; b.slide = null; b.carry = false; b.x = (b.tx + 0.5) * FT; b.y = (b.ty + 0.5) * FT; };
   if (!b.slide) {
     const k = key(b.tx, b.ty), f = w.feat[k];
-    if (!isBelt(f) || w.grid[k] !== T.EMPTY) return;
-    const [dx, dy] = beltDir(f);
+    if (!isFlow(f) || w.grid[k] !== T.EMPTY) return;
+    const [dx, dy] = flowDir(f);
     if (carryStop(w, b, b.tx + dx, b.ty + dy)) return;
     b.slide = { x: dx, y: dy };
     b.carry = true;
     b.prog = 0;
   }
-  let travel = b.prog + featProfile(w).belt.v * paceMul(w.pace) * dt;
+  let travel = b.prog + (isStream(w.feat[key(b.tx, b.ty)]) ? featProfile(w).stream.v : featProfile(w).belt.v) * paceMul(w.pace) * dt;
   while (travel >= 1) {
     const nx = b.tx + b.slide.x, ny = b.ty + b.slide.y;
     if (carryStop(w, b, nx, ny)) return snap();
@@ -528,8 +528,8 @@ function carryBomb(w, b, dt) {
     b.rode = true;
     travel -= 1;
     const f = w.feat[key(nx, ny)];
-    if (isBelt(f) && w.grid[key(nx, ny)] === T.EMPTY) {
-      const [dx, dy] = beltDir(f);
+    if (isFlow(f) && w.grid[key(nx, ny)] === T.EMPTY) {
+      const [dx, dy] = flowDir(f);
       b.slide = { x: dx, y: dy };
     } else return snap();
   }
