@@ -51,6 +51,7 @@ export function makeWorld(c, s) {
   w.gen = 3; w.heat = c.heat; w.pact = 0; w.pace = c.pace || 0;
   loadLevel(w, c.room, false);
   armWorld(w, c);
+  if (c.speed) w.players[0].speed = c.speed;
   w.state = "PLAY";
   return { w, seed };
 }

@@ -19,6 +19,7 @@
    set as w.featProf after loadLevel (placement and spawns keep the stock
    profile, so A0 is the same for every table). --a23 0,1,2 picks the heats
    that get the A2 / A3 arms (default 1 = PLUS). --workers N (default cpus-2).
+   --speed V (with --rooms) starts the player at that speed, a carried SPEED pickup.
    Plans: pilot = tile rooms 1 BOOSTER / 2 ICE PATCH / 3 CONVEYOR / 5 TRAP x
    CORE / PLUS / MAX x A0, A1 (+ A2, A3 at --a23), NORM; main = the same at
    --n; pace = EASY on rooms 1, 3, 5 and HARD on room 2, A0 / A1; controls =
@@ -86,7 +87,7 @@ async function main() {
   if (custom) {
     cells = [];
     for (const room of list(arg("--rooms"))) for (const heat of list(arg("--heats", "0,1,2"))) for (const arm of list(arg("--arms", "A0,A1")))
-      cells.push({ room, heat, pace: +arg("--pace", 0), arm, prof, profName });
+      cells.push({ room, heat, pace: +arg("--pace", 0), arm, prof, profName, ...(argv.includes("--speed") ? { speed: +arg("--speed") } : {}) });
   } else cells = plan(name, a23, prof, profName);
   const out = arg("--out", join(HERE, "out", (profName || name || "custom") + (from ? "-" + from : "")));
   const W = Math.max(1, Math.min(+arg("--workers", cpus().length - 2), 64));
