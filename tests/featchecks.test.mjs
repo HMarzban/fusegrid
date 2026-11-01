@@ -115,10 +115,12 @@ test("V19 BOOSTER: the +2 relay overtakes a straight flee; a booster in a niche 
   const g = corridor(3, 13); g[key(8, 4)] = T.EMPTY;
   assert.equal(spots(b({ level: 1, g, tiles: [[8, 4, F.BLOOM]] }), P[2]).spots, 0);
 });
-test("V19 ICE PATCH: MAX allows no stop mid-sheet; CORE and PLUS never add a spot", () => {
+test("V19 ICE PATCH: a MAX with no stop mid-sheet adds spots, the pass-2 brake closes them; CORE and PLUS never add a spot", () => {
   const bd = b({ level: 2, g: corridor(3, 9), tiles: E([5, 6, 7], 5, F.GLIDE) });
-  const s = spots({ ...bd, heat: 2 }, P[2]);
+  const s = spots({ ...bd, heat: 2 }, { ...P[2], glide: { ...P[2].glide, stop: undefined } });
   assert.ok(s.spots > 0 && s.cause.coast > 0 && s.cap > 0, "the coast to (8,5) is in time, past the 4-step budget " + JSON.stringify(s));
+  assert.equal(P[2].glide.stop, "brake");
+  assert.equal(spots({ ...bd, heat: 2 }, P[2]).spots, 0, "an opposite press stops the coast at any centre");
   assert.equal(spots({ ...bd, heat: 1 }, P[1]).spots, 0);
   assert.equal(spots({ ...bd, heat: 0 }, P[0]).spots, 0);
 });

@@ -70,7 +70,7 @@ export function freeTiles(g) {
 export function placeFoes(free, roster, d, blocked) {
   const used = new Uint8Array(free.length), pick = [];
   for (const t of roster) {
-    const j = free.findIndex(([x, y], i) => !used[i] && foeFar(t, d[key(x, y)]) && !(blocked && blocked(x, y)));
+    const j = free.findIndex(([x, y], i) => !used[i] && foeFar(t, d[key(x, y)]) && !(blocked && blocked(x, y, t)));
     if (j < 0) continue;
     used[j] = 1;
     pick.push([t, free[j]]);

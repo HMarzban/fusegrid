@@ -117,6 +117,8 @@ export function loadLevel(world, level, keepProgress = false) {
     p.bombKind = "normal";
     p.iFrames = P.iFrames;
     p.alive = true;
+    if (p.gl) p.gl = null;
+    if (p.glBuf) p.glBuf = null;
     p.color = p.color || "#37f0d0";
     if (carry) {
       p.bombs = carry.bombs;
@@ -197,7 +199,7 @@ export function loadLevel(world, level, keepProgress = false) {
     const b0 = walk(w.grid);
     const fb = w.feat && w.feat.some(isBelt) ? FEAT_PROFILE[heat].belt : null;
     const b = fb && fb.actors ? Array.from(beltDist(w.grid, w.feat, fb.v, CFG.ENEMY_BASE_SPEED + level * P.curve), (v, i) => (b0[i] < 0 ? -1 : Math.floor(v))) : b0;
-    const { pick, rest } = placeFoes(free, roster, b, (x, y) => spawnBlocked(w.feat, x, y));
+    const { pick, rest } = placeFoes(free, roster, b, (x, y, t) => spawnBlocked(w.feat, x, y, t));
     free.length = 0;
     free.push(...pick.map((p) => p[1]), ...rest);
     for (const [t, c] of pick) w.enemies.push(spawnEnemy(t, c[0], c[1], level, rng, spawnOpts));
