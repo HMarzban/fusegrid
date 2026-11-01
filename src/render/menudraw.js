@@ -371,10 +371,11 @@ export function floorLine(room, heat) {
   return help ? "FLOOR " + TILE_NAME[k] + " · " + help[clampHeat(heat)] : "";
 }
 /* The ROOM CARD: what a room is, read-only, in a pane P. d = {room, heat,
-   pact, best, k (heat pulse 0..1), locked, floor}. One card for LEVEL SELECT's
+   pact, best, k (heat pulse 0..1), locked, floor, tiles}. One card for LEVEL SELECT's
    pane and MENU's PLAY / LEVEL SELECT pane. d.floor (LEVEL SELECT, tile boards
    only) makes its room inside the card, never by moving a tap rect: keyboard
-   gives the row by one schematic scale step, touch by a tighter foe list. */
+   gives the row by one schematic scale step (d.tiles, the page's flag, so the
+   schematic keeps one size room to room), touch by a tighter foe list. */
 function roomCard(c, P, d, touch, A, t) {
   const b = BIOMES[(d.room - 1) % BIOMES.length],
     fin = isFinale(d.room),
@@ -390,7 +391,7 @@ function roomCard(c, P, d, touch, A, t) {
   c.font = font(touch ? 12 : 10, "700");
   c.fillStyle = fin ? DANGER : MUTED;
   c.fillText("ROOM " + d.room + (fin ? " · FINALE" : ""), P.x + P.w - 10, hy);
-  const ts = touch ? 6 : d.floor ? 7 : 8,
+  const ts = touch ? 6 : d.tiles ? 7 : 8,
     ty = P.y + (touch ? 32 : 28),
     tw = 15 * ts,
     th = 13 * ts;
@@ -406,7 +407,8 @@ function roomCard(c, P, d, touch, A, t) {
     fp = touch ? 13 : 12,
     flFont = font(touch ? 11 : 9, "700");
   if (d.floor) c.font = flFont;
-  const fl = d.floor ? wrap(c, d.floor, P.w - 20, 2) : [],
+  const fcut = d.floor ? d.floor.indexOf(" · ") : -1,
+    fl = !d.floor ? [] : mw(c, d.floor) <= P.w - 20 ? [d.floor] : [d.floor.slice(0, fcut), d.floor.slice(fcut + 3)], // too long for one row: the name, then its whole help string
     fy = hy2 - fl.length * fp;
   c.textAlign = "left";
   if (d.locked) {
@@ -1187,7 +1189,7 @@ export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked, pace, timeAt
   }
   const peek = I.lockR && typeof I.lockT === "number" && t - I.lockT >= 0 && t - I.lockT < 1.8 ? I.lockR : 0,
     hk = typeof I.heatT === "number" && t - I.heatT >= 0 ? 1 - clamp01((t - I.heatT) / 0.45) : 0;
-  roomCard(c, G.pane, peek ? { room: peek, heat: h, pact: mask, locked: true } : { room: sel, heat: h, pact: mask, best: best[sel - 1], k: hk, open: U, floor: I.tiles ? floorLine(sel, h) : "" }, T, A, t);
+  roomCard(c, G.pane, peek ? { room: peek, heat: h, pact: mask, locked: true, tiles: !!I.tiles } : { room: sel, heat: h, pact: mask, best: best[sel - 1], k: hk, open: U, tiles: !!I.tiles, floor: I.tiles ? floorLine(sel, h) : "" }, T, A, t);
   capCell(c, G.heatCap, "HEAT", "↑↓", T);
   segs(c, G.heat, HEAT_NAME, h, HEAT_COL.map((x, i) => (i ? x : TEXT)), T);
   capCell(c, G.paceCap, "PACE", "[ ]", T);

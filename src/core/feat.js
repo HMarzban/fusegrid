@@ -36,7 +36,7 @@ export const TILE_HELP = Object.freeze({
 });
 export const TILE_NAME = Object.freeze({ BLOOM: "BOOSTER", GLIDE: "ICE PATCH", BELT: "CONVEYOR", STREAM: "STREAM", PLATE: "TRAP", QUICK: "QUICKSAND", PORTAL: "PORTAL", GATE: "GATE" });
 /* The first-contact coach tip (#24): TILE_HELP's short line says what a tile is,
-   this says what to do about it, one panel line (<= 78 chars, the 600 board) and
+   this says what to do about it, one panel line (<= 80 chars, the 600 board) and
    no key names, so every layout reads the same. Facts come from the live
    profile row, so a retuned knob cannot leave the copy behind. */
 const REACH = ["", "SHORT", "LONG", "HUGE"];
@@ -58,7 +58,7 @@ export function tileTip(kind, pr) {
   }
   if (kind === "PLATE") {
     const p = pr.plate, reach = REACH[p.r] || "BIG", chain = p.chain === false ? " · NO BOMB CHAIN" : "";
-    if (p.kill === false) return n + "FOES SET IT OFF · " + reach + ", HURTS ONLY YOU · FIRST " + p.inert + " S SAFE" + chain;
+    if (p.kill === false) return n + "FOES SET IT OFF · HURTS ONLY YOU · ROOM'S FIRST " + p.inert + " S SAFE" + chain;
     if (p.spare) return n + "THE FOE THAT SETS IT OFF LIVES · " + reach + " BLAST HURTS YOU" + chain;
     return n + "LURE A FOE ON · " + reach + " BLAST KILLS IT, CAN HURT YOU" + chain;
   }

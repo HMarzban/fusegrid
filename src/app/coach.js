@@ -29,8 +29,9 @@ export function coachOpen(seen, time, planted) {
 }
 
 export const COACH2_KEY = "nb.coach.v2";
-/* Same duration as v1 on purpose: one timing rule for both panels, so a change
-   to how long a nudge lingers is a change in one place. */
+/* Same duration as v1 on purpose: one timing rule for both verb panels, so a
+   change to how long a nudge lingers is a change in one place. A tile tip reads
+   a whole rule, not one verb, and has its own window (COACH_TILE_DUR below). */
 export const COACH2_DUR = COACH_DUR;
 /* Eight verbs, one bit each, once ever (owner ruling 2026-10-10 widened the
    original three). FLAME / BOMB / SPEED / HEART are label-only: the floating

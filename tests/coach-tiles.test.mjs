@@ -348,8 +348,9 @@ for (const [name, W, H, T] of LAYOUTS) {
     const kind = { 1: "BLOOM", 2: "GLIDE", 3: "BELT", 5: "PLATE" }[rm];
     check(`${name} room ${rm} heat ${h}: the line is its name and its one help string`, want === "FLOOR " + TILE_NAME[kind] + " · " + TILE_HELP[kind][h], want);
     const fl = texts.filter((x) => x.y >= P.y + 30 && x.y <= P.y + P.h && x.x === P.x + 10 && want.includes(x.s) && !/^(LIVES|✓|NO TIME)/.test(x.s) && x.s !== "");
-    const joined = fl.map((x) => x.s).join(" ");
+    const joined = fl.map((x) => x.s).join(" · ");
     check(`${name} room ${rm} heat ${h}: drawn whole, never clipped`, joined === want && !fl.some((x) => x.s.includes("…")), joined);
+    if (fl.length > 1) check(`${name} room ${rm} heat ${h}: two rows break between the name and its whole help string`, fl.length === 2 && fl[0].s === "FLOOR " + TILE_NAME[kind] && fl[1].s === TILE_HELP[kind][h], joined);
     for (const x of fl) {
       const px = +/(\d+)px/.exec(x.font)[1];
       check(`${name} room ${rm} heat ${h}: inside the pane`, x.x + x.s.length * px * 0.6 <= P.x + P.w - 8, x.s);
@@ -363,7 +364,8 @@ for (const [name, W, H, T] of LAYOUTS) {
   }
   for (const rm of [4, 6, 7, 8]) {
     const on = drawn(W, H, T, rm, 2, true), off = drawn(W, H, T, rm, 2, false);
-    check(`${name} room ${rm}: no rule, no FLOOR line, the card byte-identical`, on.log.join() === off.log.join() && !on.texts.some((x) => x.s.startsWith("FLOOR ")));
+    check(`${name} room ${rm}: no rule, no FLOOR line`, !on.texts.some((x) => x.s.startsWith("FLOOR ")));
+    if (T) check(`${name} room ${rm}: the touch card byte-identical`, on.log.join() === off.log.join());
   }
   for (const rm of [1, 2, 3, 5]) {
     const off = drawn(W, H, T, rm, 0, false), none = drawn(W, H, T, rm, 0, undefined);
@@ -378,6 +380,8 @@ for (const [name, W, H, T] of LAYOUTS) {
   const hot = pulse.texts.find((x) => x.s.startsWith("FLOOR ")), cold = still.texts.find((x) => x.s.startsWith("FLOOR "));
   check("the FLOOR line pulses on a heat change, like the heat line", hot.blur > 0 && cold.blur === 0, hot.blur);
   const help = Object.values(TILE_HELP).flat();
+  const sch = (rm) => drawn(600, 520, false, rm, 0, true).log.find((l) => l.startsWith("strokeRect(") && l.includes(",106,92)")) || "";
+  check("keyboard: the schematic keeps one size across a tile page's rooms", !!sch(3) && !!sch(4), sch(3) + " / " + sch(4));
   check("every help string stays <= 28 chars (the card's budget)", help.every((s) => s.length <= 28), Math.max(...help.map((s) => s.length)));
 }
 {
