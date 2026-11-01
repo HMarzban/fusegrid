@@ -110,13 +110,11 @@ export const CVD_PIN = {floorL: 3.5, floorE: 4, wallL: 19.5, wallE: 20, brickL: 
    down to 0.5; lower than the flat looks' pins because the lit, multiplied scene compresses value. bedBrick is reported, not gated: a lit bed is not a hex. The heat bar stays 4 */
 export const CVD_PIN3 = {floorL: 2, floorE: 2.5, wallL: 9, wallE: 11, brickL: 11, brickE: 12, bedBrick: 0, heat: 4};
 export const CVD_WAIVE = {};
-/* PROPOSED, not approved: these REAL 3D tiles measure UNDER the heat bar of 4, most of them in normal vision too (a value gap of the lit scene, not a colour-vision one). Each
-   pin is a regression floor about 10 % under the measured worst so a further drop fails; the gate prints every one as a known gap. Accepting them or changing the art is the
-   owner's call. normal = the worst heat separation in normal vision */
-export const CVD_HEAT3_PROPOSED = {booster: {pin: 2.5, normal: 2.89}, "booster-flare": {pin: 2.6, normal: 3.02}, "ice-patch": {pin: 1.8, normal: 2.16}, trap: {pin: 3, normal: 3.41}, "trap-wind": {pin: 2.3, normal: 2.66},
-  quicksand: {pin: 3.1, normal: 3.6}, portal: {pin: 2.2, normal: 2.5}, "portal-3": {pin: 2.2, normal: 2.47}, "gate-open": {pin: 3.5, normal: 4}};
-/* a tile's heat pin in a look, after any waiver or proposed floor: gates.mjs and the golden test read the same answer */
-export const cvdHeatPin = (look, id, pin = CVD_PIN) => { const w = CVD_WAIVE[look + " " + id + " heat"] || (look === "REAL 3D" && CVD_HEAT3_PROPOSED[id]); return w ? w.pin : pin.heat; };
+/* REAL 3D heat (2026-11-01): every tile clears the bar of 4 since the look's own heat layer (three/featmesh.js HEAT3, three/gatebars.js posts), at dpr 1.5, 2 and 3, so no known gap and no proposed floor is
+   left. A tile with room above the bar keeps a regression floor about 10 % under its worst simulated value over those three densities, rounded down to 0.5 and never under the bar */
+export const CVD_HEAT3 = {conveyor: 11, "conveyor-end": 10.5, trap: 4.5, gate: 7};
+/* a tile's heat pin in a look, after any waiver or REAL 3D floor: gates.mjs and the golden test read the same answer */
+export const cvdHeatPin = (look, id, pin = CVD_PIN) => { const w = CVD_WAIVE[look + " " + id + " heat"]; return w ? w.pin : look === "REAL 3D" ? Math.max(pin.heat, CVD_HEAT3[id] || 0) : pin.heat; };
 const medRGB = (a) => [0, 1, 2].map((c) => { const v = []; for (let i = c; i < a.length; i += 4) v.push(a[i]); v.sort((x, y) => x - y); return v[v.length >> 1]; });
 /* L*a*b* of every 4x4 block mean (the 40-px view), once per image */
 function blocks(a, S) {
