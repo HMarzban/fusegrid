@@ -110,7 +110,7 @@ async function main() {
         if (done % Math.max(1, Math.round(jobs.length / 10)) === 0) process.stdout.write(`  ${done}/${jobs.length} jobs, ${((Date.now() - t0) / 1000).toFixed(0)} s\n`);
         feed();
       });
-      k.on("exit", (code) => { kids.delete(k); live--; if (code) { stop(); reject(new Error("worker " + k.pid + " exit " + code)); } else if (!live) resolve(); });
+      k.on("exit", (code, sig) => { kids.delete(k); live--; if (code || sig) { stop(); reject(new Error("worker " + k.pid + " exit " + (code || sig))); } else if (!live) resolve(); });
     }
   });
   const wall = (Date.now() - t0) / 1000;

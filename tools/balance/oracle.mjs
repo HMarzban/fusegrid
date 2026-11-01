@@ -28,7 +28,15 @@
                means the TILE took the escape away (tile-caused);
      realI     still hit with the player's real iFrames left in place;
      lastEsc   walking back: the last tick with an escape, and what changed
-               on the step after it (own plant, trap armed, ...).
+               on the step after it (own plant, trap armed, ...);
+     age       the YOUNGEST live threat's age at lastEsc (-1: none yet). Grade
+               of a tile-caused, real-iFrames episode: plant = the plant itself
+               closed the last escape; warned = every threat had been on the
+               board >= 0.25 s at the last chance; NOWARN = the rest, read by
+               hand (youngest, so an old killer beside a new bomb lands here:
+               it can only over-report);
+     capped    the strict search hit its layer cap (a foe keeps arming traps,
+               the key has foe tiles in it); the loose 0.05 s result stands.
    Reaction margin of an escapable episode: the longest of 0.1 / 0.2 / 0.3 /
    0.5 s of keeping the bot's last input that still leaves an escape; "0" = the
    escape must start now.
@@ -46,11 +54,12 @@ import { CFG } from "../../src/core/config.js";
 import { tileOf } from "../../src/core/board.js";
 import { step } from "../../src/core/sim.js";
 import { createRng } from "../../src/core/rng.js";
+import { featProfile } from "../../src/core/feat.js";
 import { makeWorld, STEPS, seedOf } from "./tilerun.mjs";
 import { createTileBot } from "./demobot-tiles.mjs";
 import { probe } from "./escape.mjs";
 
-const ST = CFG.STEP, D = [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]], CAP_T = Math.ceil(8 / ST);
+const ST = CFG.STEP, D = [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]], CAP_T = Math.ceil(8 / ST), CAP_LAYER = 1500, WARN = 0.25;
 const HEAT = ["CORE", "PLUS", "MAX"], TILE_OF = { 1: "BOOSTER", 2: "ICE PATCH", 3: "CONVEYOR", 5: "TRAP" };
 
 /* frozen tables and functions are shared, the rng is rebuilt from its state */
@@ -123,7 +132,8 @@ const sig = (w, strict) => {
   return s;
 };
 /* reachable-set BFS over the real step(): true when some input sequence on an
-   H-tick grid reaches a quiet world (or a room end) with no hurt */
+   H-tick grid reaches a quiet world (or a room end) with no hurt; null when a
+   strict search outgrows CAP_LAYER */
 export function search(w0, { H = 6, noContact = false, info = null, strict = false, keepI = false } = {}) {
   let layer = [branch(w0, noContact, keepI)];
   if (over(layer[0])) return true;
@@ -153,6 +163,7 @@ export function search(w0, { H = 6, noContact = false, info = null, strict = fal
       }
     }
     if (!next.length) { if (info) info.nodes = nodes; return false; }
+    if (strict && next.length > CAP_LAYER) return null;
     layer = next;
   }
   /* still danger at the cap (foes keep triggering traps): nobody was hit */
@@ -196,14 +207,19 @@ export function runOracle(c, s, { margins = true } = {}) {
       else if (search(w) || search(w, { H: 3 })) ep.stage = "search";
       else {
         const info = {}, p = w.players[0];
-        search(w, { H: 3, info, strict: true });
-        if (search(w, { H: 3, strict: true })) ep.stage = "search";
+        search(w, { H: 3, info });
+        const clean = search(w, { H: 3, strict: true });
+        if (clean) ep.stage = "search";
         else {
-          ep.stage = search(w, { H: 3, noContact: true, strict: true }) ? "blast" : "forced";
+          if (clean === null) ep.capped = true;
+          const bl = search(w, { H: 3, noContact: true, strict: true });
+          ep.stage = (bl === null ? search(w, { H: 3, noContact: true }) : bl) ? "blast" : "forced";
           ep.cause = info.cause || "?"; ep.hitIn = info.t; ep.remote = !!p.remote; ep.kick = !!p.kick;
-          ep.plainEsc = hasEscape(tilesOff(clone(w)), { H: 3, strict: true });
-          ep.realI = !search(w, { H: 3, strict: true, keepI: true });
+          ep.plainEsc = !!hasEscape(tilesOff(clone(w)), { H: 3 });
+          const kept = search(w, { H: 3, keepI: true });
+          ep.realI = !kept;
           Object.assign(ep, walkBack(c, s, i));
+          ep.grade = !ep.realI ? "iFrames" : !ep.plainEsc ? "plain" : (ep.onStep || "").split(",").includes("bomb") && ep.gapPlant ? "plant" : ep.age >= WARN ? "warned" : "NOWARN";
         }
       }
       if (ep.stage !== "forced" && ep.stage !== "blast" && margins) ep.margin = reaction(w, last);
@@ -233,23 +249,26 @@ function walkBack(c, s, i) {
   if (i - j >= 240 || (j === 0 && !has(0))) return { lastEsc: -1 };
   let a = j, b = Math.min(i, j + 6);
   for (let q = a + 1; q < b; q++) { if (has(q)) a = q; else { b = q; break; } }
-  const w = atTick(c, s, a + 1);
-  return { lastEsc: a, noReturn: +((i - a) * ST).toFixed(3), onStep: [...new Set(w.events.map((e) => e.t))].join(",") };
+  const w0 = atTick(c, s, a), w = atTick(c, s, a + 1), n0 = w0.bombs.filter((b) => !b.dead).length, fz = w0.fuse ?? CFG.FUSE;
+  const P = w0.feat ? featProfile(w0) : null, ages = w0.bombs.filter((b) => !b.dead).map((b) => fz - b.timer);
+  for (const q of w0.featPend || []) ages.push((q.kind === "plate" ? P.plate.wind : P.bloom.delay) - w0.featS[q.k]);
+  for (const bl of w0.blades) ages.push(bl.t);
+  return { lastEsc: a, noReturn: +((i - a) * ST).toFixed(3), onStep: [...new Set(w.events.map((e) => e.t))].join(","), gapPlant: w.bombs.filter((b) => !b.dead).length > n0, age: ages.length ? +Math.min(...ages).toFixed(3) : -1 };
 }
 
 export function table(rows, meta = {}) {
   const L = [];
-  L.push("| tile · heat | flagged | S / P / L | escape: bot line | one-turn plan | full search | forced, foe in the lane (blast-clean) | FORCED | of the last two, tile-caused | margin < 0.1 s / 0.1 / 0.2 / >= 0.3 s (escapable) |", "|" + "---|".repeat(10));
+  L.push("| tile · heat | flagged | S / P / L | escape: bot line | one-turn plan | full search | forced, foe in the lane (blast-clean) | FORCED | real and tile-caused: plant / warned / NOWARN | not real or not the tile: iFrames / plain | margin < 0.1 s / 0.1 / 0.2 / >= 0.3 s (escapable) |", "|" + "---|".repeat(11));
   const rms = meta.rooms || [...new Set(rows.map((r) => r.room))], hts = meta.heats || [0, 1, 2];
   for (const room of rms) for (const heat of hts) {
     const g = rows.filter((r) => r.room === room && r.heat === heat), n = (f) => g.filter(f).length;
     const f = g.filter((r) => r.stage === "forced"), e = g.filter((r) => r.stage !== "forced" && r.stage !== "blast");
-    L.push(`| ${TILE_OF[room] || room} · ${HEAT[heat]} | ${g.length} | ${n((r) => r.cls === "S")} / ${n((r) => r.cls === "P")} / ${n((r) => r.cls === "L")} | ${n((r) => r.stage === "bot")} | ${n((r) => r.stage === "plan")} | ${n((r) => r.stage === "search")} | ${n((r) => r.stage === "blast")} | ${f.length} | ${g.filter((r) => (r.stage === "forced" || r.stage === "blast") && r.plainEsc).length} | ${e.filter((r) => r.margin < 0.1).length} / ${e.filter((r) => r.margin === 0.1).length} / ${e.filter((r) => r.margin === 0.2).length} / ${e.filter((r) => r.margin >= 0.3).length} |`);
+    L.push(`| ${TILE_OF[room] || room} · ${HEAT[heat]} | ${g.length} | ${n((r) => r.cls === "S")} / ${n((r) => r.cls === "P")} / ${n((r) => r.cls === "L")} | ${n((r) => r.stage === "bot")} | ${n((r) => r.stage === "plan")} | ${n((r) => r.stage === "search")} | ${n((r) => r.stage === "blast")} | ${f.length} | ${n((r) => r.grade === "plant")} / ${n((r) => r.grade === "warned")} / ${n((r) => r.grade === "NOWARN")} | ${n((r) => r.grade === "iFrames")} / ${n((r) => r.grade === "plain")} | ${e.filter((r) => r.margin < 0.1).length} / ${e.filter((r) => r.margin === 0.1).length} / ${e.filter((r) => r.margin === 0.2).length} / ${e.filter((r) => r.margin >= 0.3).length} |`);
   }
-  const fo = rows.filter((r) => r.stage === "forced" || r.stage === "blast");
+  const fo = rows.filter((r) => r.grade === "NOWARN" || r.grade === "plant");
   if (fo.length) {
-    L.push("", "Forced episodes (first 40; blast = forced with a foe in the lane):", "", "| tile · heat | stage | s (seed) | tick (t s) | class | began in iFrames | hit even with real iFrames | cause | hit in s | tile-caused | REMOTE / KICK held | last escape tick | gap s | on the step after |", "|" + "---|".repeat(14));
-    for (const r of fo.slice(0, 40)) L.push(`| ${TILE_OF[r.room] || r.room} · ${HEAT[r.heat]} | ${r.stage} | ${r.s} (${r.seed}) | ${r.tick} (${r.t}) | ${r.cls} | ${r.inv ? "yes" : "no"} | ${r.realI ? "yes" : "no"} | ${r.cause} | ${r.hitIn} | ${r.plainEsc ? "YES" : "no"} | ${r.remote ? "R" : "–"} / ${r.kick ? "K" : "–"} | ${r.lastEsc} | ${r.noReturn ?? "–"} | ${r.onStep ?? "–"} |`);
+    L.push("", "Forced, real and tile-caused, NOWARN and plant (first 60; blast = forced with a foe in the lane):", "", "| tile · heat | grade · stage | threat age s | s (seed) | tick (t s) | class | began in iFrames | hit even with real iFrames | cause | hit in s | tile-caused | REMOTE / KICK held | last escape tick | gap s | on the step after |", "|" + "---|".repeat(15));
+    for (const r of fo.slice(0, 60)) L.push(`| ${TILE_OF[r.room] || r.room} · ${HEAT[r.heat]} | ${r.grade} · ${r.stage} | ${r.age} | ${r.s} (${r.seed}) | ${r.tick} (${r.t}) | ${r.cls} | ${r.inv ? "yes" : "no"} | ${r.realI ? "yes" : "no"} | ${r.cause} | ${(+r.hitIn).toFixed(2)} | ${r.plainEsc ? "YES" : "no"} | ${r.remote ? "R" : "–"} / ${r.kick ? "K" : "–"} | ${r.lastEsc} | ${r.noReturn ?? "–"} | ${r.onStep ?? "–"} |`);
   }
   return L.join("\n");
 }
@@ -287,7 +306,7 @@ if (isMain && argv[0] === "--worker") {
         if (done % Math.max(1, Math.round(jobs.length / 10)) === 0) console.log(`  ${done}/${jobs.length} jobs, ${((Date.now() - t0) / 1000).toFixed(0)} s`);
         feed();
       });
-      k.on("exit", (code) => { kids.delete(k); live--; if (code) { stop(); reject(new Error("worker " + k.pid + " exit " + code)); } else if (!live) resolve(); });
+      k.on("exit", (code, sig) => { kids.delete(k); live--; if (code || sig) { stop(); reject(new Error("worker " + k.pid + " exit " + (code || sig))); } else if (!live) resolve(); });
     }
   });
   const rows = res.sort((a, b) => a.id - b.id).flatMap((m) => m.rows);
