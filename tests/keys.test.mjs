@@ -268,6 +268,18 @@ for (const at of [1.0, 2.0, 3.0, 4.0]) {
     lv0 && a === "uiMove" && b === "uiMove" && c === "uiMove" && g.app.level === 2 && g.app.heat === 1 && g.app.pace === 1, [lv0, a, b, c, g.app.level, g.app.heat, g.app.pace].join("|"));
   check("LEVEL ] at HARD clamps silently", d === "" && g.app.pace === 1, d);
 }
+// ---- LEVEL SELECT on a ?gen=3 page: the FLOOR line adds no key and moves none (#24) ----
+{
+  const g = show(mk({ gen3: true })); press(g, "Enter"); toRow(g, 1); press(g, "Enter");
+  const scr = g.app.screen === SCREEN.LEVEL;
+  press(g, "ArrowRight"); press(g, "ArrowRight"); press(g, "ArrowUp"); press(g, "ArrowUp");
+  press(g, "KeyF"); press(g, "KeyT");
+  check("gen3 LEVEL: ←/→ and ↑/↓ as ever, F and T are not bound", scr && g.app.screen === SCREEN.LEVEL && g.app.level === 3 && g.app.heat === 2, g.app.level + "/" + g.app.heat);
+  press(g, "Enter");
+  check("gen3 LEVEL Enter starts that room on a tile board", g.app.screen === SCREEN.GAME && g.world.level === 3 && g.world.heat === 2 && g.world.gen === 3 && !!g.world.feat, g.world.gen);
+  const e = show(mk({ gen3: true })); press(e, "Enter"); toRow(e, 1); press(e, "Enter"); press(e, "Escape");
+  check("gen3 LEVEL Escape -> MENU", e.app.screen === SCREEN.MENU);
+}
 // ---- LEVEL SELECT: ←/→ room, ↑/↓ heat, [ ] pace, 1–5 when unlocked, Enter, Esc ----
 {
   const g = menu(); toRow(g, 1); press(g, "Enter");

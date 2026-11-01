@@ -34,6 +34,36 @@ export const TILE_HELP = Object.freeze({
   BLOOM: ["THROWS YOUR BLAST 2 ON", "2 ON + 1 EACH SIDE", "2 ON + 2 EACH SIDE, LATE"],
   PLATE: ["LURE FOES ON · SHORT", "TRIGGER FOE LIVES · LONG", "FOES IMMUNE · HUGE"],
 });
+export const TILE_NAME = Object.freeze({ BLOOM: "BOOSTER", GLIDE: "ICE PATCH", BELT: "CONVEYOR", STREAM: "STREAM", PLATE: "TRAP", QUICK: "QUICKSAND", PORTAL: "PORTAL", GATE: "GATE" });
+/* The first-contact coach tip (#24): TILE_HELP's short line says what a tile is,
+   this says what to do about it, one panel line (<= 78 chars, the 600 board) and
+   no key names, so every layout reads the same. Facts come from the live
+   profile row, so a retuned knob cannot leave the copy behind. */
+const REACH = ["", "SHORT", "LONG", "HUGE"];
+export function tileTip(kind, pr) {
+  const n = TILE_NAME[kind] + " · ";
+  if (kind === "BLOOM") {
+    const b = pr.bloom;
+    return n + "THROWS YOUR BLAST " + b.fwd + " FURTHER" + (b.side ? ", " + b.side + " EACH SIDE" : "") + (b.delay ? ", LATE" : "") + (b.safe ? "" : " · CAN HURT YOU");
+  }
+  if (kind === "GLIDE") {
+    const g = pr.glide;
+    if (!g.coast) return n + TILE_HELP.GLIDE[0];
+    if (g.coast === 1) return n + "FAST ICE · LET GO AND YOU SLIDE A STEP";
+    return n + "FAST ICE, YOU SLIDE ON · " + (g.stop === "brake" ? "PRESS THE OPPOSITE WAY TO STOP" : "ONLY A BLOCK STOPS YOU");
+  }
+  if (kind === "BELT") {
+    const b = pr.belt;
+    return n + "CARRIES " + (!b.actors ? "YOUR BOMBS, NOT YOU" : b.foes === false ? "BOMBS AND YOU, NOT FOES" : "BOMBS, YOU AND FOES") + (b.actors && b.snap ? " · HOLD A SIDE TO STEP OFF" : "");
+  }
+  if (kind === "PLATE") {
+    const p = pr.plate, reach = REACH[p.r] || "BIG", chain = p.chain === false ? " · NO BOMB CHAIN" : "";
+    if (p.kill === false) return n + "FOES SET IT OFF · " + reach + ", HURTS ONLY YOU · FIRST " + p.inert + " S SAFE" + chain;
+    if (p.spare) return n + "THE FOE THAT SETS IT OFF LIVES · " + reach + " BLAST HURTS YOU" + chain;
+    return n + "LURE A FOE ON · " + reach + " BLAST KILLS IT, CAN HURT YOU" + chain;
+  }
+  return "";
+}
 export function featTier(w) {
   const t = w.featTier != null ? w.featTier : w.heat;
   return t < 0 ? 0 : t > 2 ? 2 : t | 0;

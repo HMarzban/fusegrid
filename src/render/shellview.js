@@ -114,7 +114,7 @@ function infoOf(app, kind, getScores, getCab) {
     a = (cab.stats && cab.stats.a) || {},
     st = app.settings || {};
   return {
-    kind, heatT, level: app.level | 0 || 1, heat: h, pact, unlocked: !!app.pactUnlocked,
+    kind, heatT, tiles: !!cab.tiles, level: app.level | 0 || 1, heat: h, pact, unlocked: !!app.pactUnlocked,
     lockR: app.lockR, lockT: app.lockT !== lockSeen ? app.lockT : null,
     best: Array.from({ length: 8 }, (_, i) => { const d = tb[i + 1 + ":" + h + ":" + pact + ":" + pz]; return d > 0 ? fmtTime(d / 10) : null; }),
     daily: cab.daily || null, mask: cab.medals | 0, medals: bits(cab.medals), days: a.days | 0, runs: a.runs | 0, rooms: a.rooms | 0, kills: a.kills | 0,

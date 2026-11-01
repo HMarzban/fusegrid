@@ -46,9 +46,9 @@ import {
   saveCoachSeen,
   coachOpen,
   COACH_DUR,
-  COACH2_DUR,
   coach2Tick,
   coachTip,
+  coachAlpha,
 } from "./app/coach.js";
 import { clampPace } from "./core/pace.js";
 import { mountUpdate } from "./app/update.js";
@@ -543,7 +543,7 @@ export function createGame(canvas, opts = {}) {
   // no new closures per frame.
   const getScoresForHeat = (heat) => scoresForHeat(loadScores(), heat);
   const getPlaquesFn = () => loadPlaques();
-  const getCab = () => ({ times: loadTimes(), medals: loadMedals(), stats: loadStats(), daily: app.dailyTag === "PLAYED" ? dailyRec : null, top: scoresForHeat(loadScores(), 0).filter((r) => !isPlaceholder(r)).slice(0, 3) }); // ATLAS pane / room card data, read on screen entry
+  const getCab = () => ({ tiles: flags.gen3, times: loadTimes(), medals: loadMedals(), stats: loadStats(), daily: app.dailyTag === "PLAYED" ? dailyRec : null, top: scoresForHeat(loadScores(), 0).filter((r) => !isPlaceholder(r)).slice(0, 3) }); // ATLAS pane / room card data, read on screen entry
 
   let last = null,
     acc = 0,
@@ -710,7 +710,7 @@ export function createGame(canvas, opts = {}) {
                 coachOpen(coachSeen, coachT, coachPlanted)
                   ? Math.max(0, 1 - coachT / COACH_DUR)
                   : 0,
-              coach2: world.state === "PLAY" ? { a: Math.max(0, 1 - coach2.t / COACH2_DUR), s: coachTip(coach2.kind), k: coach2.kind } : { a: 0, s: "" },
+              coach2: world.state === "PLAY" ? { a: coachAlpha(coach2), s: coachTip(coach2.kind, undefined, world), k: coach2.kind } : { a: 0, s: "" },
               pause: { view: app.pauseView | 0, cursor: app.pauseCursor | 0 }, toast: toastOf(toast),
               time: { on: !!app.timeAttack, t: roomT, best: bestPrev }, ghost: ghostAt(ghost, world, roomT),
               run: { r: tally.r, k: tally.k, p: tally.p, t: runT, best: bestRun, fromStart: runFromStart, daily: dailyDate, tries: dailyRec.played, dbest: dailyRec.best, md: medalLine(tally.mn) },

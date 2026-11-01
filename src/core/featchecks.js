@@ -22,7 +22,7 @@
    Ride lengths take the HARD pace (the longest ride); speeds take EASY. */
 import { CFG, T, key, biomeOf } from "./config.js";
 import { walk, POCKET, DOORS, ESC_STEPS, REACH_MAX, foeMin } from "./fair.js";
-import { F, HOME, FEAT_PROFILE, isBelt, beltDir, featKindOf } from "./feat.js";
+import { F, HOME, FEAT_PROFILE, TILE_NAME, isBelt, beltDir, featKindOf } from "./feat.js";
 import { heatProfile, heatRoster, clampHeat } from "./heat.js";
 import { applyPact } from "./pact.js";
 import { PACE_MUL, paceMul } from "./pace.js";
@@ -33,7 +33,7 @@ const D4 = [[1, 0], [0, 1], [-1, 0], [0, -1]];
 const VP = CFG.PLAYER_START.speed;
 export const FEAT_RULES = Object.freeze(["V13", "V14", "V15", "V16", "V17", "V18", "V19", "V20", "V21", "V22", "V23", "V24", "V25", "V26", "V27"]);
 export const RULE_TILES = Object.freeze(["BLOOM", "GLIDE", "BELT", "PLATE"]);
-export const TILE_NAME = Object.freeze({ BELT: "CONVEYOR", GLIDE: "ICE PATCH", BLOOM: "BOOSTER", PLATE: "TRAP", STREAM: "STREAM", QUICK: "QUICKSAND", PORTAL: "PORTAL", GATE: "GATE" });
+export { TILE_NAME };
 export const LIMITS = Object.freeze({
   spawnSteps: 4, chainMin: 4, chainMax: 9, chainTotal: 16, stepOff: 2, exitOpen: 2, foeKeep: 0.4, playerKeep: 0.5,
   doorRing: 10, sheetMin: 3, sheetMax: 9, runMax: 3, iceSteps: 3, boostMin: 3, boostMax: 5, boostPocket: 2, boostGap: 3,

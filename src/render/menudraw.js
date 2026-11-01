@@ -12,7 +12,7 @@ import { pactLabel } from "../core/pact.js";
 import { PACT, PACT_COL, applyPact } from "../core/pact.js";
 import { drawEnemyBody } from "./sprites.js";
 import { drawItemBody } from "./itemdraw.js";
-import { TILE_HELP } from "../core/feat.js";
+import { HOME, TILE_HELP, TILE_NAME } from "../core/feat.js";
 import { drawSpec } from "./featdraw.js";
 import { rr } from "./icons.js";
 import { pixelArt, itemCell, foeCell, pageScale, blitAnim, blitCell, foeAnim, itemAnim, seedOf as pxSeed, SLOT_PAD } from "./hudart.js";
@@ -362,9 +362,19 @@ export function heatLine(heat, pact) {
     p = applyPact(heatProfile(h), pact | 0);
   return "LIVES " + p.lives + " · FUSE " + p.fuse + "s · SCORE ×" + (h + 1);
 }
+/* The FLOOR line (#24): the room's tile at this heat from the one copy source,
+   "" in a room whose tile has no rule yet. Worded as the room's floor: a board
+   may rarely drop its tile (V23). */
+export function floorLine(room, heat) {
+  const k = HOME[BIOMES[(room - 1) % BIOMES.length].name],
+    help = TILE_HELP[k];
+  return help ? "FLOOR " + TILE_NAME[k] + " · " + help[clampHeat(heat)] : "";
+}
 /* The ROOM CARD: what a room is, read-only, in a pane P. d = {room, heat,
-   pact, best, k (heat pulse 0..1), locked}. One card for LEVEL SELECT's pane
-   and MENU's PLAY / LEVEL SELECT pane. */
+   pact, best, k (heat pulse 0..1), locked, floor}. One card for LEVEL SELECT's
+   pane and MENU's PLAY / LEVEL SELECT pane. d.floor (LEVEL SELECT, tile boards
+   only) makes its room inside the card, never by moving a tap rect: keyboard
+   gives the row by one schematic scale step, touch by a tighter foe list. */
 function roomCard(c, P, d, touch, A, t) {
   const b = BIOMES[(d.room - 1) % BIOMES.length],
     fin = isFinale(d.room),
@@ -380,7 +390,7 @@ function roomCard(c, P, d, touch, A, t) {
   c.font = font(touch ? 12 : 10, "700");
   c.fillStyle = fin ? DANGER : MUTED;
   c.fillText("ROOM " + d.room + (fin ? " · FINALE" : ""), P.x + P.w - 10, hy);
-  const ts = touch ? 6 : 8,
+  const ts = touch ? 6 : d.floor ? 7 : 8,
     ty = P.y + (touch ? 32 : 28),
     tw = 15 * ts,
     th = 13 * ts;
@@ -391,7 +401,13 @@ function roomCard(c, P, d, touch, A, t) {
   c.lineWidth = 1;
   c.strokeRect(x0 - 0.5, ty - 0.5, tw + 1, th + 1);
   const rx = x0 + tw + 10,
-    rw = P.x + P.w - 10 - rx;
+    rw = P.x + P.w - 10 - rx,
+    hy2 = P.y + P.h - (touch ? 12 : 10),
+    fp = touch ? 13 : 12,
+    flFont = font(touch ? 11 : 9, "700");
+  if (d.floor) c.font = flFont;
+  const fl = d.floor ? wrap(c, d.floor, P.w - 20, 2) : [],
+    fy = hy2 - fl.length * fp;
   c.textAlign = "left";
   if (d.locked) {
     lockGlyph(c, x0 + tw / 2, ty + th / 2, touch ? 22 : 20, TEXT);
@@ -405,14 +421,15 @@ function roomCard(c, P, d, touch, A, t) {
   } else {
     const ros = rosterOf(d.room, d.heat),
       cap = 5,
-      lh = touch ? 22 : 19,
-      show = ros.length > cap ? ros.slice(0, cap - 1) : ros;
+      show = ros.length > cap ? ros.slice(0, cap - 1) : ros,
+      y0 = ty + (touch ? 26 : 22),
+      lh = Math.min(touch ? 22 : 19, fl.length ? (fy - 12 - y0) / Math.max(1, show.length - (show.length < ros.length ? 0 : 1)) : 99);
     c.fillStyle = MUTED;
     c.font = font(touch ? 11 : 9, "700");
     c.fillText("YOU'LL MEET", rx, ty + 5);
-    let yy = ty + (touch ? 26 : 22);
+    let yy = y0;
     for (const e of show) {
-      foeAt(c, A, e.t, rx + 8, yy, touch ? 20 : 17, t);
+      foeAt(c, A, e.t, rx + 8, yy, Math.min(touch ? 20 : 17, lh), t);
       c.textAlign = "left";
       c.textBaseline = "middle";
       c.fillStyle = TEXT;
@@ -442,8 +459,12 @@ function roomCard(c, P, d, touch, A, t) {
     c.shadowColor = ACCENT;
     c.shadowBlur = 12 * k;
   }
+  if (fl.length) {
+    c.font = flFont;
+    fl.forEach((l, i) => c.fillText(l, x0, fy + i * fp));
+  }
   c.font = font(touch ? 13 : 10, "700");
-  c.fillText(clip(c, heatLine(d.heat, d.pact), P.w - 20), x0, P.y + P.h - (touch ? 12 : 10));
+  c.fillText(clip(c, heatLine(d.heat, d.pact), P.w - 20), x0, hy2);
   c.shadowBlur = 0;
 }
 /* A two-line tile (GUIDE doors, the touch MENU hub): label + sub, the kit's
@@ -1166,7 +1187,7 @@ export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked, pace, timeAt
   }
   const peek = I.lockR && typeof I.lockT === "number" && t - I.lockT >= 0 && t - I.lockT < 1.8 ? I.lockR : 0,
     hk = typeof I.heatT === "number" && t - I.heatT >= 0 ? 1 - clamp01((t - I.heatT) / 0.45) : 0;
-  roomCard(c, G.pane, peek ? { room: peek, heat: h, pact: mask, locked: true } : { room: sel, heat: h, pact: mask, best: best[sel - 1], k: hk, open: U }, T, A, t);
+  roomCard(c, G.pane, peek ? { room: peek, heat: h, pact: mask, locked: true } : { room: sel, heat: h, pact: mask, best: best[sel - 1], k: hk, open: U, floor: I.tiles ? floorLine(sel, h) : "" }, T, A, t);
   capCell(c, G.heatCap, "HEAT", "↑↓", T);
   segs(c, G.heat, HEAT_NAME, h, HEAT_COL.map((x, i) => (i ? x : TEXT)), T);
   capCell(c, G.paceCap, "PACE", "[ ]", T);
@@ -1384,14 +1405,14 @@ function keyCap(c, x, y, s, T) {
 }
 /* FLOOR: the eight tiles, one per world (core/feat.js HOME), painted by the look's own painter at CORE / PLUS / MAX. A PREVIEW since v185: today's and the gen-2 boards carry no tiles (?gen=3 plays them), and only four have rules yet. */
 const FLOOR_ROWS = [
-  { k: "BLOOM", name: "BOOSTER", room: 1 },
-  { k: "GLIDE", name: "ICE PATCH", room: 2 },
-  { k: "BELT", name: "CONVEYOR", room: 3 },
-  { k: "STREAM", name: "STREAM", room: 4 },
-  { k: "PLATE", name: "TRAP", room: 5 },
-  { k: "QUICK", name: "QUICKSAND", room: 6 },
-  { k: "PORTAL", name: "PORTAL", room: 7 },
-  { k: "GATE", name: "GATE", room: 8 },
+  { k: "BLOOM", name: TILE_NAME.BLOOM, room: 1 },
+  { k: "GLIDE", name: TILE_NAME.GLIDE, room: 2 },
+  { k: "BELT", name: TILE_NAME.BELT, room: 3 },
+  { k: "STREAM", name: TILE_NAME.STREAM, room: 4 },
+  { k: "PLATE", name: TILE_NAME.PLATE, room: 5 },
+  { k: "QUICK", name: TILE_NAME.QUICK, room: 6 },
+  { k: "PORTAL", name: TILE_NAME.PORTAL, room: 7 },
+  { k: "GATE", name: TILE_NAME.GATE, room: 8 },
 ];
 const SIDES4 = ["N", "E", "S", "W"];
 const floorSpec = (k, h, t) => ({ kind: k, h, par: 0, dir: 0, outer: SIDES4, exit: true, entry: true, phase: ((Math.floor(t * 28) % 8) * 5) | 0, state: 0, lit: 0, pair: 1, gx: 3, gy: 4 });

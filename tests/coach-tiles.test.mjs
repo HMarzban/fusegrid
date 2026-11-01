@@ -1,0 +1,408 @@
+/* #24: the first-contact tile tips (coach v2 bits b g c x) and the FLOOR line on
+   the LEVEL SELECT room card. Gen 3 only: a normal run must see neither. */
+import { COACH2_DUR, COACH2_KEY, COACH_TILE_DUR, coach2Mark, coach2Seen, coach2Tick, coachAlpha, coachTip, loadCoach2 } from "../src/app/coach.js";
+import { FEAT_PROFILE, TILE_HELP, TILE_NAME, featKindOf, isBelt, tileTip } from "../src/core/feat.js";
+import { createWorld, loadLevel } from "../src/core/sim.js";
+import { CFG, T, key } from "../src/core/config.js";
+import { createGame } from "../src/main.js";
+import { SCREEN } from "../src/app/menuapp.js";
+import * as md from "../src/render/menudraw.js";
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
+
+let pass = 0, fail = 0;
+function check(n, c, d) { c ? pass++ : fail++; console.log((c ? "  PASS " : "  FAIL ") + n + (d !== undefined ? " -> " + d : "")); }
+
+const memStore = (init) => {
+  const m = new Map(init);
+  return { m, getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)) };
+};
+const ROOM = { BLOOM: 1, GLIDE: 2, BELT: 3, PLATE: 5 };
+const KINDS = Object.keys(ROOM);
+const room = (gen, seed, rm, heat) => { const w = createWorld(seed, rm); w.gen = gen; w.heat = heat; loadLevel(w, rm, false); w.state = "PLAY"; w.events = []; return w; };
+const tileCell = (w, kind) => { for (let k = 0; k < w.feat.length; k++) if (featKindOf(w.feat[k]) === kind && w.grid[k] === T.EMPTY) return k; return -1; };
+const stand = (w, k) => { const p = w.players[0]; p.tx = k % CFG.COLS; p.ty = (k / CFG.COLS) | 0; };
+const clear = (w) => { const p = w.players[0]; p.tx = 1; p.ty = 1; w.events = []; };
+const tick = (st, w, s, dt = 0.016, v1 = false) => coach2Tick(st, w, v1, dt, s);
+const worldOn = (kind, heat = 0, seed = 4242) => { const w = room(3, seed, ROOM[kind], heat); const k = tileCell(w, kind); if (k >= 0) stand(w, k); return w; };
+
+// ---- the copy: one source, right at each heat, one panel line, every layout ----
+{
+  const tips = {};
+  for (const k of KINDS) tips[k] = FEAT_PROFILE.map((pr) => tileTip(k, pr));
+  console.log(JSON.stringify(tips, null, 1));
+  for (const k of KINDS) tips[k].forEach((s, h) => {
+    check(`${k} heat ${h} starts with its name`, s.startsWith(TILE_NAME[k] + " · "), s);
+    check(`${k} heat ${h} fits the 600 board panel (12px mono)`, s.length * 7.2 + 24 <= 600, s.length);
+    check(`${k} heat ${h} names no key`, !/\b(SPACE|SHIFT|WASD|ARROW|ENTER|TAP)\b/.test(s), s);
+  });
+  check("ICE PATCH teaches the brake at MAX only", /OPPOSITE WAY TO STOP/.test(tips.GLIDE[2]) && !/OPPOSITE/.test(tips.GLIDE[0] + tips.GLIDE[1]));
+  check("TRAP never says lure above CORE", /LURE/.test(tips.PLATE[0]) && !/LURE/.test(tips.PLATE[1] + tips.PLATE[2]));
+  check("TRAP at MAX: hurts only you, the 6 s window, no chain", /HURTS ONLY YOU/.test(tips.PLATE[2]) && /FIRST 6 S SAFE/.test(tips.PLATE[2]) && /NO BOMB CHAIN/.test(tips.PLATE[2]), tips.PLATE[2]);
+  check("every TRAP tip says it sets off no bomb", tips.PLATE.every((s) => /NO BOMB CHAIN/.test(s)));
+  check("PLUS TRAP spares the foe that sets it off", /SETS IT OFF LIVES/.test(tips.PLATE[1]));
+  check("CONVEYOR says who rides at each heat", /NOT YOU/.test(tips.BELT[0]) && /YOU, NOT FOES/.test(tips.BELT[1]) && /BOMBS, YOU AND FOES/.test(tips.BELT[2]), tips.BELT.join(" | "));
+  check("CONVEYOR teaches the step-off only when it carries you", !/STEP OFF/.test(tips.BELT[0]) && /HOLD A SIDE TO STEP OFF/.test(tips.BELT[1]) && /HOLD A SIDE TO STEP OFF/.test(tips.BELT[2]));
+  check("BOOSTER spreads sideways at PLUS / MAX only, and warns at every heat", !/EACH SIDE/.test(tips.BLOOM[0]) && /1 EACH SIDE/.test(tips.BLOOM[1]) && /2 EACH SIDE/.test(tips.BLOOM[2]) && tips.BLOOM.every((s) => /CAN HURT YOU/.test(s)));
+  // facts follow the profile, so a parallel retune cannot strand the copy
+  const prof = FEAT_PROFILE.map((r) => ({ ...r, plate: { ...r.plate, inert: 5 } }));
+  check("a retuned profile moves the tip's number", /FIRST 5 S SAFE/.test(tileTip("PLATE", prof[2])));
+  const w = worldOn("PLATE", 2);
+  w.featProf = prof;
+  check("coachTip reads the run's own profile", /FIRST 5 S SAFE/.test(coachTip("PLATE", "d", w)));
+  for (const k of KINDS) for (const h of [0, 1, 2]) {
+    const wk = worldOn(k, h);
+    check(`${k} heat ${h}: touch and keyboard read the same line`, coachTip(k, "p", wk) === coachTip(k, "d", wk) && coachTip(k, "l", wk) === tips[k][h]);
+  }
+  check("no world, no tip: a tile line is never guessed", coachTip("BELT", "d") === "");
+  // one source: the copy literals live in feat.js alone
+  const walk = (d) => readdirSync(d).flatMap((f) => { const p = join(d, f); return statSync(p).isDirectory() ? walk(p) : /\.js$/.test(f) ? [p] : []; });
+  const lits = Object.values(TILE_HELP).flat().concat(["HURTS ONLY YOU", "OPPOSITE WAY TO STOP", "HOLD A SIDE TO STEP OFF", "NO BOMB CHAIN", '"ICE PATCH"', '"CONVEYOR"']);
+  const strays = [];
+  for (const f of walk("src")) {
+    if (f === join("src", "core", "feat.js")) continue;
+    const s = readFileSync(f, "utf8");
+    for (const l of lits) if (s.includes(l)) strays.push(f + ": " + l);
+  }
+  check("no second literal of any tile copy in src/", strays.length === 0, strays.join("; "));
+}
+
+// ---- the record: twelve bits, an old eight-bit record loads byte-stable ----
+{
+  const s = memStore([[COACH2_KEY, '{"k":1,"t":0,"r":1,"p":0,"l":0,"w":1,"i":0,"s":1}']]);
+  const v = loadCoach2(s);
+  check("an old eight-bit record keeps its bits and leads the record, the four new bits at 0",
+    JSON.stringify(v) === '{"k":1,"t":0,"r":1,"p":0,"l":0,"w":1,"i":0,"s":1,"b":0,"g":0,"c":0,"x":0}', JSON.stringify(v));
+  const once = coach2Mark(coach2Mark(coach2Mark(coach2Mark(v, "BLOOM"), "GLIDE"), "BELT"), "PLATE");
+  check("each tile has its own bit", once.b === 1 && once.g === 1 && once.c === 1 && once.x === 1 && KINDS.every((k) => coach2Seen(once, k)));
+  check("the verbs' bits did not move", once.k === 1 && once.t === 0 && once.s === 1);
+}
+
+// ---- first contact: opens, times out on the PLAY clock, once ever, pairs ----
+for (const k of KINDS) {
+  const s = memStore(), w = worldOn(k), st = { kind: null, t: 0 };
+  if (tileCell(w, k) < 0) { check(`seed 4242 has a ${k} (a fixture check)`, false); continue; }
+  let o = tick(st, w, s);
+  check(`${k}: first contact opens the tip`, st.kind === k && o.length === 1 && o[0][0] === "coach_shown" && o[0][1].v === k, JSON.stringify(o));
+  check(`${k}: not marked until it closes`, !coach2Seen(loadCoach2(s), k));
+  const seen = [];
+  for (let i = 0; i < 500 && st.kind; i++) seen.push(...tick(st, w, s, 1 / 60));
+  check(`${k}: standing on it does not hold the clock, it closes rn:timeout`, !st.kind && seen.length === 1 && seen[0][0] === "coach_dismissed" && seen[0][1].rn === "timeout", JSON.stringify(seen));
+  check(`${k}: marked seen, once ever`, coach2Seen(loadCoach2(s), k));
+  const again = [];
+  for (let i = 0; i < 10; i++) again.push(...tick(st, w, s));
+  const fresh = { kind: null, t: 0 };
+  again.push(...tick(fresh, worldOn(k, 2), s));
+  check(`${k}: never again, this run or the next, at any heat`, again.length === 0 && !st.kind && !fresh.kind, JSON.stringify(again));
+}
+{
+  // the fade: full for most of the window, a verb's rule unchanged
+  check("a tile tip holds full, then fades out by its own window", coachAlpha({ kind: "BELT", t: 2 }) === 1 && coachAlpha({ kind: "BELT", t: COACH_TILE_DUR - 0.75 }) === 0.5 && coachAlpha({ kind: "BELT", t: COACH_TILE_DUR }) === 0);
+  check("a verb tip keeps the linear fade", coachAlpha({ kind: "kick", t: COACH2_DUR / 2 }) === 0.5 && coachAlpha({ kind: null, t: 0 }) === 1);
+  // PAUSE cannot burn the clock
+  const s = memStore(), w = worldOn("GLIDE"), st = { kind: null, t: 0 };
+  tick(st, w, s);
+  const t0 = st.t;
+  w.state = "PAUSE";
+  for (let i = 0; i < 600; i++) tick(st, w, s, 1 / 60);
+  check("PAUSE burns no tile tip", st.kind === "GLIDE" && st.t === t0, st.t);
+  w.state = "PLAY";
+  // contact does not open outside PLAY
+  const w2 = worldOn("BELT"), st2 = { kind: null, t: 0 };
+  w2.state = "PAUSE";
+  tick(st2, w2, s);
+  check("no contact outside PLAY", !st2.kind);
+}
+{
+  // other contacts: a bomb on a belt, a booster / trap going off; never a covered tile
+  const s = memStore(), w = room(3, 4242, 3, 0), st = { kind: null, t: 0 }, k = tileCell(w, "BELT");
+  clear(w);
+  w.bombs = [{ tx: k % CFG.COLS, ty: (k / CFG.COLS) | 0, dead: false }];
+  tick(st, w, s);
+  check("a bomb riding a CONVEYOR opens its tip", st.kind === "BELT" && isBelt(w.feat[k]));
+  const b = room(3, 4242, 1, 0), sb = { kind: null, t: 0 };
+  clear(b);
+  b.events = [{ t: "bloom", x: 1, y: 1 }];
+  tick(sb, b, s);
+  check("a booster going off opens its tip", sb.kind === "BLOOM");
+  const p = room(3, 4242, 5, 2), sp = { kind: null, t: 0 };
+  clear(p);
+  p.events = [{ t: "plate", x: 1, y: 1 }];
+  tick(sp, p, s);
+  check("a trap arming opens its tip", sp.kind === "PLATE");
+  const c = worldOn("GLIDE"), sc = { kind: null, t: 0 };
+  c.grid[key(c.players[0].tx, c.players[0].ty)] = T.BRICK;
+  tick(sc, c, s);
+  check("a tile under a brick is no contact (the sim's own test)", !sc.kind);
+  const d = worldOn("GLIDE"), sd = { kind: null, t: 0 };
+  d.players[0].alive = false;
+  tick(sd, d, s);
+  check("a dead player meets nothing", !sd.kind);
+}
+{
+  // art-only tiles (rooms 4, 6-8) teach nothing: no rule, no tip
+  const s = memStore();
+  for (const rm of [4, 6, 7, 8]) {
+    const w = room(3, 4242, rm, 0), st = { kind: null, t: 0 }, out = [];
+    for (let k = 0; k < w.feat.length; k++) { if (!w.feat[k]) continue; stand(w, k); out.push(...tick(st, w, s)); }
+    check(`room ${rm}: its art-only tile opens no tip`, out.length === 0 && !st.kind, JSON.stringify(out));
+  }
+}
+
+// ---- gen 1 and gen 2 never: no feat layer, no tip, whatever the world does ----
+for (const gen of [1, 2]) for (const rm of [1, 2, 3, 5]) {
+  const s = memStore(), w = room(gen, 4242, rm, 2), st = { kind: null, t: 0 }, out = [];
+  check(`gen ${gen} room ${rm} has no tile layer`, !w.feat);
+  for (let y = 1; y < CFG.ROWS - 1; y++) for (let x = 1; x < CFG.COLS - 1; x++) { w.players[0].tx = x; w.players[0].ty = y; w.events = [{ t: "bloom" }, { t: "plate" }]; out.push(...tick(st, w, s)); }
+  check(`gen ${gen} room ${rm}: no tile tip anywhere on the board`, out.length === 0 && !st.kind, JSON.stringify(out));
+  check(`gen ${gen} room ${rm}: no store write`, s.m.size === 0);
+}
+
+// ---- the pair rules: v1 wins ties, replace re-queues both ways, no ping-pong ----
+{
+  const s = memStore(), w = worldOn("GLIDE"), st = { kind: null, t: 0 };
+  let o = tick(st, w, s, 0.016, true);
+  check("v1 open: contact queues, no second panel", !st.kind && st.q.join() === "GLIDE" && o.length === 0, JSON.stringify(st.q));
+  for (let i = 0; i < 5; i++) tick(st, w, s, 0.016, true);
+  check("a held contact queues once", st.q.length === 1);
+  o = tick(st, w, s, 0.016, false);
+  check("v1 closed: the queued tile tip opens", st.kind === "GLIDE" && st.q.length === 0 && o.length === 1, JSON.stringify(o));
+}
+{
+  const s = memStore(), w = worldOn("GLIDE"), st = { kind: null, t: 0 };
+  w.players[0].kick = true;
+  tick(st, w, s);
+  w.events = [{ t: "power", kind: "kick" }];
+  let o = tick(st, w, s);
+  check("a pickup replaces a live tile tip: dismissed first, tile re-queued, bit 0",
+    st.kind === "kick" && st.q.join() === "GLIDE" && o[0][0] === "coach_dismissed" && o[0][1].v === "GLIDE" && o[0][1].rn === "replace" && o[1][0] === "coach_shown" && o[1][1].v === "kick" && !coach2Seen(loadCoach2(s), "GLIDE"), JSON.stringify(o));
+  w.events = [];
+  o = [];
+  for (let i = 0; i < 30; i++) o.push(...tick(st, w, s));
+  check("still on the tile: no ping-pong back to the tile tip", st.kind === "kick" && o.length === 0, JSON.stringify(o));
+  o = [];
+  for (let i = 0; i < 200 && st.kind === "kick"; i++) o.push(...tick(st, w, s, 1 / 60));
+  check("the verb closes and the tile tip reopens", st.kind === "GLIDE" && o.at(-1)[0] === "coach_shown" && o.at(-1)[1].v === "GLIDE", JSON.stringify(o));
+}
+{
+  const s = memStore(), w = room(3, 4242, 2, 0), st = { kind: null, t: 0 };
+  clear(w);
+  w.players[0].kick = true;
+  w.events = [{ t: "power", kind: "kick" }];
+  tick(st, w, s);
+  stand(w, tileCell(w, "GLIDE"));
+  w.events = [];
+  const o = tick(st, w, s);
+  check("contact replaces a live verb tip under the same rule, the verb re-queued, bit 0",
+    st.kind === "GLIDE" && st.q.join() === "kick" && o[0][1].rn === "replace" && o[1][1].v === "GLIDE" && !coach2Seen(loadCoach2(s), "kick"), JSON.stringify(o));
+}
+{
+  // leaving the room: never names a tile this room lacks
+  const s = memStore(), w = worldOn("GLIDE"), st = { kind: null, t: 0 };
+  tick(st, w, s);
+  const next = room(3, 4242, 3, 0);
+  clear(next);
+  const o = tick(st, next, s);
+  check("a live tile tip closes rn:room on a room change, bit still 0, and 'lost' never applies",
+    !st.kind && o.length === 1 && o[0][1].v === "GLIDE" && o[0][1].rn === "room" && !coach2Seen(loadCoach2(s), "GLIDE"), JSON.stringify(o));
+  const s2 = memStore(), a = worldOn("GLIDE"), st2 = { kind: null, t: 0 };
+  tick(st2, a, s2, 0.016, true);
+  const b = room(3, 4242, 3, 0);
+  clear(b);
+  const o2 = tick(st2, b, s2);
+  check("a queued tile tip is dropped in a room without that tile", !st2.kind && st2.q.length === 0 && o2.length === 0, JSON.stringify(o2));
+  const s3 = memStore(), c = worldOn("GLIDE"), st3 = { kind: null, t: 0 };
+  tick(st3, c, s3);
+  c.players[0].kick = false;
+  c.players[0].alive = false;
+  const o3 = tick(st3, c, s3);
+  check("a hit never closes a tile tip", st3.kind === "GLIDE" && o3.length === 0, JSON.stringify(o3));
+}
+
+// ---- through the real loop: gen 3 shows the tip, the latch resets on every run start ----
+function fakeCanvasTexts() {
+  const texts = [];
+  const rec = new Proxy(function () {}, {
+    get: (t, p) => {
+      if (p === Symbol.toPrimitive) return () => "";
+      return (...a) => { if (p === "fillText") texts.push(String(a[0])); return rec; };
+    },
+    apply: () => rec,
+    set: () => true,
+  });
+  return { texts, canvas: { getContext: () => rec, addEventListener() {}, style: {} } };
+}
+{
+  const ls = memStore([["nb.coach.v1", "1"]]);
+  globalThis.window = { localStorage: ls, addEventListener() {} };
+  try {
+    const { texts, canvas } = fakeCanvasTexts();
+    const g = createGame(canvas, { autoplay: true, seed: 4242, gen3: true });
+    let t = 1000;
+    g.loop(t);
+    check("gen3 page: a run deals gen 3 with a tile layer", g.world.gen === 3 && !!g.world.feat, g.world.gen);
+    const put = () => { const k = tileCell(g.world, "BLOOM"), p = g.world.players[0]; p.x = ((k % CFG.COLS) + 0.5) * CFG.TILE; p.y = (((k / CFG.COLS) | 0) + 0.5) * CFG.TILE; p.tx = k % CFG.COLS; p.ty = (k / CFG.COLS) | 0; };
+    const seeTip = () => { put(); texts.length = 0; g.loop((t += 16)); g.loop((t += 16)); return texts.some((s) => s.startsWith("BOOSTER · ")); };
+    check("the tip paints through the real loop", seeTip(), texts.filter((s) => s.includes("·")).join("|"));
+    // PAUSE RESTART
+    g.world.state = "PAUSE"; g.loop((t += 16));
+    g.app.pauseCursor = 1;
+    g.app.pauseView = 0;
+    g.app.confirm();
+    g.loop((t += 16));
+    check("PAUSE RESTART is a run start, world back in PLAY", g.world.state === "PLAY");
+    check("mid-tip restart: bit still 0", !coach2Seen(loadCoach2(ls), "BLOOM"));
+    texts.length = 0;
+    g.loop((t += 16));
+    check("the latch reset on PAUSE RESTART: no carried panel", !texts.some((s) => s.startsWith("BOOSTER · ")), texts.join("|"));
+    check("and contact opens it again", seeTip());
+    // onStart
+    g.app.startRun();
+    g.loop((t += 16));
+    texts.length = 0;
+    const p = g.world.players[0];
+    p.tx = 1; p.ty = 1; p.x = 1.5 * CFG.TILE; p.y = 1.5 * CFG.TILE;
+    g.loop((t += 16));
+    check("the latch reset on MENU START (onStart)", !texts.some((s) => s.startsWith("BOOSTER · ")), texts.join("|"));
+    // the sim's LOSE retry, which never calls onStart
+    check("contact before a LOSE retry", seeTip());
+    g.world.state = "LOSE";
+    g.loop((t += 16));
+    g.world.state = "PLAY";
+    { const q = g.world.players[0]; q.tx = 1; q.ty = 1; q.x = 1.5 * CFG.TILE; q.y = 1.5 * CFG.TILE; }
+    texts.length = 0;
+    g.loop((t += 16));
+    check("the latch reset on a LOSE retry", !texts.some((s) => s.startsWith("BOOSTER · ")), texts.join("|"));
+    // the window closes through the real loop and marks the bit
+    check("contact after a retry reopens", seeTip());
+    for (let i = 0; i < 480 && !coach2Seen(loadCoach2(ls), "BLOOM"); i++) g.loop((t += 16));
+    check("the real loop marks it seen after the window", coach2Seen(loadCoach2(ls), "BLOOM"));
+    check("the store round-trips twelve fields", Object.keys(JSON.parse(ls.getItem(COACH2_KEY))).length === 12, ls.getItem(COACH2_KEY));
+    g.stop && g.stop();
+  } finally {
+    delete globalThis.window;
+  }
+}
+{
+  const ls = memStore([["nb.coach.v1", "1"]]);
+  globalThis.window = { localStorage: ls, addEventListener() {} };
+  try {
+    const { texts, canvas } = fakeCanvasTexts();
+    const g = createGame(canvas, { autoplay: true, seed: 4242 });
+    let t = 1000;
+    g.loop(t);
+    g.world.events.push({ t: "bloom", x: 1, y: 1 }, { t: "plate", x: 1, y: 1 });
+    texts.length = 0;
+    for (let i = 0; i < 5; i++) g.loop((t += 16));
+    check("a normal run: gen 2, no tile layer, no tile tip", g.world.gen === 2 && !g.world.feat && !texts.some((s) => Object.values(TILE_NAME).some((n) => s.startsWith(n + " · "))), texts.join("|"));
+    check("a normal run's coach record gained no bit", Object.values(loadCoach2(ls)).every((v) => v === 0));
+    g.stop && g.stop();
+  } finally {
+    delete globalThis.window;
+  }
+}
+{
+  // the DAILY on a ?gen=3 page is still its gen-2 board: no tile, no tip
+  const ls = memStore([["nb.coach.v1", "1"]]);
+  globalThis.window = { localStorage: ls, addEventListener() {} };
+  try {
+    const { texts, canvas } = fakeCanvasTexts();
+    const g = createGame(canvas, { seed: 4242, gen3: true });
+    let t = 1000;
+    g.app.skip();
+    g.loop(t);
+    g.app.cursor = 2; // DAILY
+    g.app.confirm();
+    g.world.events.push({ t: "bloom", x: 1, y: 1 });
+    texts.length = 0;
+    g.loop((t += 16));
+    check("a DAILY from a gen3 page: gen 2, no tile layer, no tile tip", g.world.gen === 2 && !g.world.feat && !texts.some((s) => s.startsWith("BOOSTER · ")), g.world.gen);
+    g.stop && g.stop();
+  } finally {
+    delete globalThis.window;
+  }
+}
+
+// ---- the FLOOR line on the ROOM CARD ----
+function rec() {
+  const log = [], texts = [], st = { font: "10px x", textAlign: "left", textBaseline: "middle", fillStyle: "#000", globalAlpha: 1, shadowBlur: 0 };
+  const c = new Proxy({}, {
+    get: (_, p) => {
+      if (p === "measureText") return (s) => { const m = /(\d+)px/.exec(st.font); return { width: String(s).length * (m ? +m[1] : 10) * 0.6 }; };
+      if (p in st) return st[p];
+      return (...a) => {
+        log.push(String(p) + "(" + a.map((x) => (typeof x === "object" ? "o" : String(x))).join(",") + ")");
+        if (p === "fillText") texts.push({ s: String(a[0]), x: a[1], y: a[2], font: st.font, blur: st.shadowBlur });
+        return { addColorStop() {} };
+      };
+    },
+    set: (_, p, v) => { st[p] = v; log.push(String(p) + "=" + v); return true; },
+  });
+  return { c, log, texts };
+}
+const LAYOUTS = [["keyboard", 600, 520, false], ["touch", 600, 520, true], ["phone 393 box", 400, 760, true], ["phone wide box", 420, 760, true]];
+const drawn = (W, H, T, rm, h, tiles, extra) => { const r = rec(); const L = md.layout(W, H, 140); md.drawLevelSelect(r.c, rm, L, 1.5, h, 0, true, 0, false, T, { kind: "2d", best: [], ...(tiles === undefined ? {} : { tiles }), ...extra }); return { ...r, L, G: md.levelGeom(L, true, T) }; };
+for (const [name, W, H, T] of LAYOUTS) {
+  for (const rm of [1, 2, 3, 5]) for (const h of [0, 1, 2]) {
+    const { texts, G } = drawn(W, H, T, rm, h, true), P = G.pane, want = md.floorLine(rm, h);
+    const kind = { 1: "BLOOM", 2: "GLIDE", 3: "BELT", 5: "PLATE" }[rm];
+    check(`${name} room ${rm} heat ${h}: the line is its name and its one help string`, want === "FLOOR " + TILE_NAME[kind] + " · " + TILE_HELP[kind][h], want);
+    const fl = texts.filter((x) => x.y >= P.y + 30 && x.y <= P.y + P.h && x.x === P.x + 10 && want.includes(x.s) && !/^(LIVES|✓|NO TIME)/.test(x.s) && x.s !== "");
+    const joined = fl.map((x) => x.s).join(" ");
+    check(`${name} room ${rm} heat ${h}: drawn whole, never clipped`, joined === want && !fl.some((x) => x.s.includes("…")), joined);
+    for (const x of fl) {
+      const px = +/(\d+)px/.exec(x.font)[1];
+      check(`${name} room ${rm} heat ${h}: inside the pane`, x.x + x.s.length * px * 0.6 <= P.x + P.w - 8, x.s);
+    }
+    const heatY = texts.find((x) => x.s.startsWith("LIVES ")).y;
+    const fTop = Math.min(...fl.map((x) => x.y));
+    check(`${name} room ${rm} heat ${h}: sits above the heat line`, Math.max(...fl.map((x) => x.y)) <= heatY - 10);
+    const others = texts.filter((x) => x.y > P.y + 30 && x.y < fTop && x.x >= P.x && x.x < P.x + P.w);
+    check(`${name} room ${rm} heat ${h}: nothing crowds it from above`, others.every((x) => x.y <= fTop - 8), others.filter((x) => x.y > fTop - 8).map((x) => x.s + "@" + x.y).join());
+    check(`${name} room ${rm} heat ${h}: the MODES / START rows are untouched (one geometry)`, JSON.stringify(G) === JSON.stringify(md.levelGeom(md.layout(W, H, 140), true, T)));
+  }
+  for (const rm of [4, 6, 7, 8]) {
+    const on = drawn(W, H, T, rm, 2, true), off = drawn(W, H, T, rm, 2, false);
+    check(`${name} room ${rm}: no rule, no FLOOR line, the card byte-identical`, on.log.join() === off.log.join() && !on.texts.some((x) => x.s.startsWith("FLOOR ")));
+  }
+  for (const rm of [1, 2, 3, 5]) {
+    const off = drawn(W, H, T, rm, 0, false), none = drawn(W, H, T, rm, 0, undefined);
+    check(`${name} room ${rm}: tiles off draws no FLOOR line`, !off.texts.some((x) => /^FLOOR /.test(x.s)));
+    check(`${name} room ${rm}: tiles off equals the old call (no field)`, off.log.join() === none.log.join());
+  }
+  const lock = drawn(W, H, T, 2, 1, true, { lockR: 7, lockT: 1.4 });
+  check(`${name}: the locked peek card shows no FLOOR line`, !lock.texts.some((x) => x.s.startsWith("FLOOR ")));
+}
+{
+  const pulse = drawn(600, 520, false, 3, 2, true, { heatT: 1.4 }), still = drawn(600, 520, false, 3, 2, true);
+  const hot = pulse.texts.find((x) => x.s.startsWith("FLOOR ")), cold = still.texts.find((x) => x.s.startsWith("FLOOR "));
+  check("the FLOOR line pulses on a heat change, like the heat line", hot.blur > 0 && cold.blur === 0, hot.blur);
+  const help = Object.values(TILE_HELP).flat();
+  check("every help string stays <= 28 chars (the card's budget)", help.every((s) => s.length <= 28), Math.max(...help.map((s) => s.length)));
+}
+{
+  // the real page: the flag reaches the card; the normal page never promises a tile
+  for (const [gen3, want] of [[true, true], [false, false]]) {
+    const ls = memStore();
+    globalThis.window = { localStorage: ls, addEventListener() {} };
+    try {
+      const { texts, canvas } = fakeCanvasTexts();
+      canvas.width = 600; canvas.height = 520;
+      const g = createGame(canvas, { seed: 4242, ...(gen3 ? { gen3 } : {}) });
+      let t = 1000;
+      g.app.skip();
+      g.loop(t); g.loop((t += 16)); // shellview re-reads its cabinet on a screen entry, so enter LEVEL from MENU
+      g.app.screen = SCREEN.LEVEL;
+      g.loop((t += 16));
+      texts.length = 0;
+      g.loop((t += 16));
+      check(`${gen3 ? "?gen=3" : "a normal page"}: LEVEL SELECT ${want ? "shows" : "never shows"} a FLOOR line`, texts.some((s) => s.startsWith("FLOOR ")) === want, texts.filter((s) => s.startsWith("FLOOR ")).join("|"));
+      g.stop && g.stop();
+    } finally {
+      delete globalThis.window;
+    }
+  }
+}
+
+console.log(`\ncoach-tiles: ${pass} passed, ${fail} failed`);
+if (fail) process.exit(1);
