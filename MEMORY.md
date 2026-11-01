@@ -16,10 +16,10 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
-## 2026-11-01 — v195 local: #19 #20 #21 #22 #24 built in parallel, time-boxed
+## 2026-11-01 — v195 LIVE: #19 #20 #21 #22 #24 built in parallel, time-boxed
 - #19: the CONVEYOR failure was the fork's belt lure (`beltAim` now; no game change). #20: ICE MAX +3.96 braking, +5.15 not; V19 = 0 assumes the brake. #21: `relaytell.js`, 2.4 s notice. #22: forced seeds readable, `PLATE_TPL` PIT +9.9. #24: `tileTip`, 12-bit coach, FLOOR line. Combined MAX: BOOSTER −1.2, ICE +3.3, CONVEYOR +9.0, TRAP +4.7; first-5 s passes. All agents finished under their limits. Next: owner playtest (#30).
 
-## 2026-11-01 — Listing art: CLASSIC 2D and PIXEL only (v194, not pushed)
+## 2026-11-01 — Listing art: CLASSIC 2D and PIXEL only (v194, live with v195)
 - Owner: "let's focus on the 2d and pixel only not 3d", read as the listing art; the game keeps REAL 3D. Cover, stills, GIF, clips and the wide install screenshot recaptured without REAL 3D; the manifest label changed, so shell v194. Open: the pitch copy still leads with REAL 3D, pending the owner.
 
 ## 2026-11-01 — v193 LIVE: #18 + #22 merged, #34 and #30 bot-side measured

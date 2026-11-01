@@ -1134,8 +1134,8 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   default depended on it; since v188 the tile boards are `?gen=3` only).
 - Release state (2026-11-01): shell **v195** (BOOSTER warning, tile tips, FLOOR
   line, PIT placement, all on `?gen=3`; no change in a normal run) and **v194**
-  (install screenshot label, listing art in CLASSIC 2D and PIXEL) are LOCAL until
-  the owner pushes. Shell **v193** (tuned tiles on `?gen=3`, `KeyK`
+  (install screenshot label, listing art in CLASSIC 2D and PIXEL) are LIVE on the
+  owner's word. Shell **v193** (tuned tiles on `?gen=3`, `KeyK`
   unbound, `?net=local` follows every run; no change in a normal run) is LIVE on
   the owner's word. **v192** (tiles design pass 2 docs, the
   #25 harness and static checks, the harness-only `w.featProf` seam; no player
