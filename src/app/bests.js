@@ -115,7 +115,7 @@ export function feedTally(t, world) {
     if (!e) continue;
     if (e.t === "kill") { t.k++; if (e.type) t.kt[e.type] = (t.kt[e.type] | 0) + 1; }
     else if (e.t === "power") { t.p++; if (e.kind) t.pk[e.kind] = (t.pk[e.kind] | 0) + 1; if (e.kind === "heart") h++; }
-    else if (e.t === "brick") t.b++;
+    else if (e.t === "brick") { if (!e.mound) t.b++; }
     else if (e.t === "win") t.r++;
   }
   const lv = w.lives | 0;

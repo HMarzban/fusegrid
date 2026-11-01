@@ -22,7 +22,8 @@
    Ride lengths take the HARD pace (the longest ride); speeds take EASY. */
 import { CFG, T, key, biomeOf } from "./config.js";
 import { walk, POCKET, DOORS, ESC_STEPS, REACH_MAX, foeMin } from "./fair.js";
-import { F, HOME, FEAT_PROFILE, TILE_NAME, isBelt, beltDir, featKindOf } from "./feat.js";
+import { F, HOME, FEAT_PROFILE, TILE_NAME, isBelt, beltDir, featKindOf, QUICK_PLACE, quickSeals, quickDetour } from "./feat.js";
+import { HOLD_MIN, holdReach } from "./tilequick.js";
 import { heatProfile, heatRoster, clampHeat } from "./heat.js";
 import { applyPact } from "./pact.js";
 import { PACE_MUL, paceMul } from "./pace.js";
@@ -429,6 +430,55 @@ function sideExit(g, p, r) {
   }
   return null;
 }
+/* V30 QUICKSAND placement on the brick-free map (walls only), feat.js quick()'s rule on the finished board */
+function v30(n) {
+  const { g, feat } = n, P = QUICK_PLACE, qs = [], w = walk(g, true), ok = (x, y) => notWall(g, inB(x, y) ? key(x, y) : -1);
+  for (let k = 0; k < N; k++) if (feat[k] === F.QUICK) qs.push(k);
+  if (qs.length < P.min || qs.length > P.max) return { why: qs.length + " quicksand tiles" };
+  for (const k of qs) {
+    if (qs.some((o) => o !== k && manh(o, k) < P.gap)) return { why: "tiles within " + P.gap, at: xy(k) };
+    if (w[k] >= 0 && w[k] <= n.lim.spawnSteps) return { why: "tile near the start", at: xy(k) };
+    if (DOORS.includes(k)) return { why: "tile on a door", at: xy(k) };
+    if (openN(g, k) < P.nbrs) return { why: "fewer than " + P.nbrs + " open neighbours", at: xy(k) };
+    if (quickDetour(ok, k) < P.detour) return { why: "no detour", at: xy(k) };
+  }
+  if (quickSeals(ok, qs)) return { why: "mounds part the map" };
+  for (let ring = 1; ring <= n.lim.rings; ring++) {
+    const okR = (x, y) => ok(x, y) && (Math.min(x, C - 1 - x, y, R - 1 - y) > ring || (x === 1 && y === 1));
+    if (quickSeals(okR, qs)) return { why: "ring " + ring + ": mounds part the map" };
+  }
+  return null;
+}
+/* V31: V19's counterfactual with mounds as WALL beyond the hold reach. An escape of at
+   most escSteps only touches cells that near, and inside the reach a mound cannot grow
+   or finish, so a cell is only tested if a mound lies past the reach yet within the cap;
+   with hold 4 and escSteps 4 no such cell exists, a proof rather than a measurement.
+   limits.quickHold moves the minimum; below 0 there is no hold at all (tests prove the
+   check bites). */
+function v31(n) {
+  const { feat, lim } = n, qs = [], hold = lim.quickHold ?? HOLD_MIN, spots = new Map();
+  for (let k = 0; k < N; k++) if (feat[k] === F.QUICK) qs.push(k);
+  const cleared = n.g.map((v) => (v === T.BRICK ? T.EMPTY : v));
+  for (const [st, g] of [["loaded", n.g], ["cleared", cleared]]) {
+    const Eb = env(n, g, { tiles: false });
+    for (let c = 0; c < N; c++) {
+      if (g[c] !== T.EMPTY || spots.has(c)) continue;
+      const near = qs.filter((q) => g[q] === T.EMPTY && manh(q, c) <= lim.escSteps && manh(q, c) > hold);
+      if (!near.length) continue;
+      for (let r = 1; r <= lim.radius; r++) {
+        if (!timedEscape(Eb, bombMap(n, g, c, r, false), c, c).ok) break;
+        const walls = near.filter((q) => manh(q, c) > (hold < 0 ? hold : holdReach(r, hold)));
+        if (!walls.length) break;
+        const m = g.slice();
+        for (const q of walls) m[q] = T.WALL;
+        if (timedEscape(env(n, m, { tiles: false }), bombMap(n, m, c, r, false), c, c).ok) continue;
+        spots.set(c, { at: xy(c), r, state: st });
+        break;
+      }
+    }
+  }
+  return spots.size ? { why: spots.size + " no-escape spot(s)", spots: spots.size, first: spots.values().next().value } : null;
+}
 
 /* ---- GATE: V32 + V33. All gates shut for good proves every phase of the clock:
    movement reads the shut grid (no phase blocks more), the blast reads the open
@@ -595,8 +645,8 @@ const CHECK = {
   V28() { return null; },
   V29() { return null; },
   /* QUICKSAND */
-  V30() { return null; },
-  V31() { return null; },
+  V30(n) { return n.kind === "QUICK" ? v30(n) : null; },
+  V31(n) { return n.kind === "QUICK" ? v31(n) : null; },
   /* GATE */
   V32(n) {
     if (n.kind !== "GATE") return null;

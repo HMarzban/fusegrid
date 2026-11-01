@@ -393,6 +393,7 @@ function bloomGate(base, level, lay) {
    grids of all three heats, the same contract as bloomGate's closure. */
 function tileGate(base, level, lay) {
   if (lay.biome === "CROWN") return gatePlace(base, level);
+  if (lay.biome === "SAND") return quickGate(base, level);
   return null;
 }
 /* V32 + V33: a gate stays only if, with every kept gate shut for good, the map
@@ -406,6 +407,18 @@ function gatePlace(base, level) {
     const ok = !gateSplit(base[0].grid, ks) && [0, 1, 2].every((h) => !gateSpot({ grid: base[h].grid, level, heat: h }, FEAT_PROFILE[h], ks, c));
     if (!ok && !used.length) bad.add(c);
     return ok;
+  };
+}
+/* QUICKSAND: the finished set, on every heat's grid with its tiles forced open */
+function quickGate(base, level) {
+  return (ks) => {
+    const f = new Uint8Array(N);
+    for (const k of ks) f[k] = 12;
+    return [0, 1, 2].every((h) => {
+      const g = base[h].grid.slice();
+      for (const k of ks) g[k] = T.EMPTY;
+      return !featChecks({ grid: g, feat: f, level, heat: h, items: [], enemies: [] }, FEAT_PROFILE[h], { only: ["V30", "V31"] }).length;
+    });
   };
 }
 function place3(base, seed, level, heat) {

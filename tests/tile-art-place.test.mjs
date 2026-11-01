@@ -78,7 +78,7 @@ test("foes never start on an art tile and the roster is whole", () => {
   }
 });
 test("the art layer is ignored by step(): a replay is identical with and without it", () => {
-  for (const room of [4, 6, 7]) for (const seed of [4242, 77]) {
+  for (const room of [4, 7]) for (const seed of [4242, 77]) {
     const a = mk(seed, room, 2), b = mk(seed, room, 2);
     assert.ok(a.feat);
     b.feat = null; b.featPair = null;

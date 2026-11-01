@@ -4,6 +4,7 @@
    the floor drawImage with one baked 40x40 frame (0 extra draws); without a DOM it paints the same vectors in place. */
 import { CFG, key, biomeOf } from "../core/config.js";
 import { FEAT_PROFILE } from "../core/feat.js";
+import { quickStep } from "../core/tilequick.js";
 import { BUILT } from "./featart/built.js";
 import { LIVING } from "./featart/living.js";
 export { mix } from "./featart/kit.js";
@@ -66,6 +67,9 @@ export function cellSpec(w, x, y) {
     endSides(s, s.dir, s.exit, s.entry);
   } else if (k === "GATE") {
     s.lit = w.featM ? Math.min(4, w.featM[key(x, y)]) : 0;
+  } else if (k === "QUICK") {
+    const g = quickStep(w, key(x, y));
+    if (g) s.lit = g;
   } else if (k === "PORTAL") {
     s.pair = (w.featPair && w.featPair[key(x, y)]) || 1;
   } else if (k === "GLIDE") {
