@@ -60,13 +60,13 @@ through `listGeom` / `listHit` (pitches are caps that scale down in a short
 box); MENU has a PLAY hero row whose tag is the run it starts and group gaps
 before OPTIONS / HIGH SCORES / SOURCE; the SOURCE URL shows only on its
 selected row. Build tag (owner 2026-10-21: "a game version in some where in
-the display or menue"): `v195` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
+the display or menue"): `v196` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
 derived ONLY in `shellview.js` (`REV`, handed to `drawMenu` / `drawSettings`
-as `rev`) and `update.js` (the card's "You are on v195", the running build,
+as `rev`) and `update.js` (the card's "You are on v196", the running build,
 never a guessed next one) — never a second literal. Keyboard MENU appends
 it to the foot hint; the touch hub hangs it under the plate when the box has
 >= 10 units below it (`#sh`), else on the SOURCE tile's teaser (landscape on
-the board canvas); OPTIONS keeps its `BUILD v195` kicker. Never on the HUD.
+the board canvas); OPTIONS keeps its `BUILD v196` kicker. Never on the HUD.
 PAUSE draws `pauseGeom(overlayBox, touch)`: touch (`touchLay`,
 data-lay p/l) caps pitch at `PAUSE_ROW_H` 70 / hero 76 / width 380, a keyboard
 screen at the compact `PAUSE_ROW_D` 44 / hero 54 / width 340 (owner: "too
@@ -135,8 +135,8 @@ DEFAULTS), backs out to OPTIONS on the door. `SCREEN.FLOOR = 15` is appended too
 (2026-10-25): the fourth GUIDE door (`GUIDE_ROWS` HOW TO PLAY, ITEMS, ENEMIES,
 FLOOR; keyboard GUIDE is a 2x2 of doors, touch four stacked rows), backs out to
 GUIDE. `drawFloorHelp` lists the eight floor tiles at CORE / PLUS / MAX in the
-current look (`featdraw.drawSpec`, PIXEL `atlas.feat`), and only the four tiles
-with rules (`TILE_HELP`) get a rule line; the others read LOOK ONLY FOR NOW.
+current look (`featdraw.drawSpec`, PIXEL `atlas.feat`), each with its rule line
+(`TILE_HELP`).
 The GUIDE pages and the MENU preview draw the live foe and pickup animation
 (CLASSIC: `drawEnemyBody` / `drawItemBody`; PIXEL: `hudart.js` `foeAnim` /
 `itemAnim`, a pure function of the page clock). From PAUSE the same page is
@@ -219,7 +219,7 @@ not shell screens. Do not add them as `SCREEN` values.
     CHASER / KNIGHT) **and brick-passers** (PHANTOM / ROCKET / SHADE; lead
     ruling 2026-10-26, owner accepted: they walk through the seal bricks).
   - `featchecks.js` — the static tile checks V13–V27 (#18, moved from
-    `tools/balance/`, which re-exports it; 33 KB in everyone's boot graph because
+    `tools/balance/`, which re-exports it; 48 KB since v196, in everyone's boot graph because
     `genBoard3` is synchronous, though only `?gen=3` runs it). V14 is fixed in
     `loadLevel`, gen 3 only (no item on a tile).
   - `fair.js` — pure `validateBoard(grid, level, heat, opts)` (#11) returning
@@ -448,8 +448,10 @@ not shell screens. Do not add them as `SCREEN` values.
     locked hunter gets the crouch only) + `entityanim.js` crouch. Iso has none;
     ATTRACT shows it. REAL 3D animations run on a
     pause-corrected clock (`three/wrapper.js`; `tests/render3d-pauseclock`).
-    Sim side: `core/feat.js` (the `world.feat` layer; rules only for codes
-    1..7 = CONVEYOR, ICE PATCH, BOOSTER, TRAP; 8..14 are art only) and
+    Sim side: `core/feat.js` (the `world.feat` layer; codes 1..7 = CONVEYOR, ICE
+    PATCH, BOOSTER, TRAP, 8..14 = STREAM, QUICKSAND, PORTAL, GATE, whose rules are
+    `core/tilestream.js`, `tilequick.js`, `tileportal.js`, `tilegate.js` behind the
+    `tiles2.js` seam) and
     `core/board2.js` (the gen-2 generator; tiles ride it as gen 3). Art gates:
     `tools/tileart/gates.mjs all`, `tools/walls/`. Colour-vision gate (#33,
     shell v189): `gates.mjs cvd|all`, Machado 2009 severity-1.0 protan /
@@ -458,10 +460,8 @@ not shell screens. Do not add them as `SCREEN` values.
     run ends); every tile at CORE / PLUS / MAX against the base floor, the
     rendered WALL and BRICK cells and (CLASSIC) the brick hexes, plus heat
     separation on the simulated images. `CVD_PIN` sits ~10 % under the measured
-    worst case (a regression floor, not a perceptual proof); one named waiver
-    `CVD_WAIVE` "CLASSIC gate-open heat" (pin 2, normal vision 2.14 < 4: the
-    open GATE's CORE / PLUS / MAX differ too little in CLASSIC for everyone; a
-    structural fix belongs to wave 2, #26). CLASSIC runs in Chrome via `gates.mjs`;
+    worst case (a regression floor, not a perceptual proof); `CVD_WAIVE` is empty since v196: the open GATE's jamb posts (1 / 2 / 3)
+    lifted CLASSIC's heat separation from 2.14 to 4.43. CLASSIC runs in Chrome via `gates.mjs`;
     under `npm test`, `tests/tile-cvd.test.mjs` runs the PIXEL half live and holds
     CLASSIC through `cvdgold.json`: Chrome numbers stamped with an FNV of the
     painter call stream, tile list and measuring code, so a painter change fails
@@ -809,8 +809,8 @@ Node v26, `"type": "module"`. No build step, no bundler.
   `flags.js` alone). The word `leaderboard` is refused in `src/` and `tests/`
   and executably gated by `tests/banned-name.test.mjs`; `docs/` is exempt
   because the spec names the term to refuse it.
-- Coach v2 (`nb.coach.v2`) also carries four tile bits (`b g c x`, gen 3 only,
-  12 bits in all; copy `feat.js` `tileTip`, 6 s, a tip whose room is left closes
+- Coach v2 (`nb.coach.v2`) also carries eight tile bits (`b g c x f q y o`, gen 3 only,
+  16 bits in all; copy `feat.js` `tileTip`, 6 s, a tip whose room is left closes
   `rn:"room"`). It shows **one first-use tip per verb**, once ever,
   for EIGHT verbs (owner ruling 2026-10-10 widened the original three): KICK /
   THROW / REMOTE / PASS / LINE / POWER / PIERCE / SHIELD, one bit each
@@ -995,9 +995,10 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
     of record). `src/render/relaytell.js` is BOOSTER's read-only warning;
     `tileTip` and the FLOOR line teach; `PLATE_TPL` shapes PIT. OPEN before tiles
     go default: the owner's playtest (#30), foe-in-lane forced moments, TRAP's
-    wind-up shows on its own tile only, F3 / `g:3`. Wave 2 / 3 rules (STREAM, QUICKSAND,
-    GATE, PORTAL, V28–V35) are DESIGN ONLY, built only after #30 (owner 2026-11-01):
-    `docs/superpowers/specs/2026-11-01-tiles-wave-2-3-design.md`. Oracle: `tools/balance/oracle.mjs`;
+    wind-up shows on its own tile only, F3 / `g:3`. Wave 2 / 3 (STREAM, QUICKSAND, GATE,
+    PORTAL, V28–V35) are BUILT on `?gen=3` too (v196): rules, numbers and what the bot cannot
+    see in `docs/superpowers/specs/2026-11-01-tiles-wave-2-3-design.md`; no new tile reaches
+    the MAX target for the bot, so the playtest decides. Oracle: `tools/balance/oracle.mjs`;
     fork switches `FG_BOTPLANT`, `FG_BOTBRAKE`, `FG_BOTLURE`, `FG_BOTJOY`.
   - Design pass 2 (#28) is DONE (2026-10-26): the dial works for TRAP (MAX
     +5.9), ICE PATCH (+4.6) and CONVEYOR (+5.4), all with 0 static no-escape
@@ -1134,7 +1135,9 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   Node test fakes define `globalThis.location` WITHOUT `href`, so "is this a
   real page" means `typeof location.href === "string"` (the branch's gen-2 page
   default depended on it; since v188 the tile boards are `?gen=3` only).
-- Release state (2026-11-01): shell **v195** (BOOSTER warning, tile tips, FLOOR
+- Release state (2026-11-01): shell **v196** (rules for STREAM, QUICKSAND, GATE, PORTAL, all on
+  `?gen=3`; no change in a normal run) is on branch `tiles-wave-2-3`, not on main, not pushed.
+  Shell **v195** (BOOSTER warning, tile tips, FLOOR
   line, PIT placement, all on `?gen=3`; no change in a normal run) and **v194**
   (install screenshot label, listing art in CLASSIC 2D and PIXEL) are LIVE on the
   owner's word. Shell **v193** (tuned tiles on `?gen=3`, `KeyK`
@@ -1153,7 +1156,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   pushes, or says "push". Boards since v188: gen 2 (bold mazes, no tiles) for
   every ordinary run and the daily, gen 1 for F1 codes / ATTRACT / the intro,
   the floor-tile boards only with `?gen=3` (design pass 2 done, the build is
-  #18–#22), so the GUIDE FLOOR page is still a PREVIEW. 355 tests. Branches `tiles-d`, `frame-a`, `frame-b` are
+  #18–#22), so the GUIDE FLOOR page is still a PREVIEW. 430 tests. Branches `tiles-d`, `frame-a`, `frame-b` are
   deleted (merged); `frame-c` (stage set) stays unmerged. The look is recorded in
   `docs/superpowers/specs/2026-10-25-board-look-depth-ambient-design.md`,
   including the loose ends. Loopback dev server: `PORT=8091 node

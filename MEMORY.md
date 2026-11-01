@@ -16,8 +16,8 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
-## 2026-11-01 — Tiles wave 2 and 3: design written, nothing built
-Rules, placement and V28–V35 for STREAM, QUICKSAND, GATE, PORTAL (#26, #27) in `docs/superpowers/specs/2026-11-01-tiles-wave-2-3-design.md`; static own-bomb numbers only. Owner: build after the #30 playtest. Open: vetoes, PORTAL's both-ways escape not measured.
+## 2026-11-01 — v196 on branch tiles-wave-2-3: STREAM, QUICKSAND, GATE, PORTAL have rules (#26, #27)
+Owner: "finish them all", in parallel, ahead of the #30 playtest. `?gen=3` only, 430 tests. Review found and fixed a GATE + SHRINK no-escape, a mound boxing you in, dim pairs. Open: no new tile reaches MAX +3 for the bot, which cannot use gates or mounds; nobody has played them; not merged, not pushed.
 
 ## 2026-11-01 — v195 LIVE: #19 #20 #21 #22 #24 built in parallel, time-boxed
 - #19: the CONVEYOR failure was the fork's belt lure (`beltAim` now; no game change). #20: ICE MAX +3.96 braking, +5.15 not; V19 = 0 assumes the brake. #21: `relaytell.js`, 2.4 s notice. #22: forced seeds readable, `PLATE_TPL` PIT +9.9. #24: `tileTip`, 12-bit coach, FLOOR line. Combined MAX: BOOSTER −1.2, ICE +3.3, CONVEYOR +9.0, TRAP +4.7; first-5 s passes. All agents finished under their limits. Next: owner playtest (#30).

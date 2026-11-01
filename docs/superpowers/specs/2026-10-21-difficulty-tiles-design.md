@@ -684,4 +684,5 @@ the MAX brake tip.
 ## Addendum (2026-11-01, wave 2 and 3 design)
 
 The rules, placement and fairness checks V28–V35 for STREAM, QUICKSAND, GATE and PORTAL
-are in [their own record](2026-11-01-tiles-wave-2-3-design.md). Design only, nothing built.
+are in [their own record](2026-11-01-tiles-wave-2-3-design.md). Built in shell v196 on `?gen=3`.
+That record also holds the numbers: no new tile reaches the MAX target for the bot.

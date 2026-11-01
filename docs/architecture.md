@@ -273,6 +273,15 @@ static checks moved to `src/core/featchecks.js`, no item lands on a tile, and
 room 5 re-rolls a layout that cannot hold three SHRINK-safe traps. Results and
 the open items are in the record's 2026-11-01 addendum.
 
+**Shell v196: the last four tiles get rules, preview only (#26, #27).** One module per
+tile (`tilestream.js`, `tilequick.js`, `tilegate.js`, `tileportal.js`) behind the
+`tiles2.js` seam the sim calls, inert with no tile layer. Fairness comes from placement for
+STREAM, GATE and PORTAL, and from a rule for QUICKSAND, whose growth waits near a lit bomb
+and whenever a mound would box you in. Checks V28–V35 in `featchecks.js`; a shut gate writes
+`T.WALL`; a blast arm continues through a portal in `computeBlast`, and `relaytell.js` marks
+it. No new tile makes MAX harder for the test bot, which cannot use gates or mounds: see the
+[record](superpowers/specs/2026-11-01-tiles-wave-2-3-design.md).
+
 **Shell v195: the tiles learn to warn and teach, preview only (#19–#22, #24).**
 [`relaytell.js`](../src/render/relaytell.js) marks every tile a BOOSTER relay will
 reach, read-only, about 2.4 s ahead in all three looks. One first-contact tip per

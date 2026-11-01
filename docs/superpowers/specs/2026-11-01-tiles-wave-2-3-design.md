@@ -1,7 +1,7 @@
 # Floor tiles, waves 2 and 3: STREAM, QUICKSAND, GATE, PORTAL
 
 Date: 2026-11-01. Issues: #26 (STREAM, QUICKSAND, GATE), #27 (PORTAL). Umbrella: #16.
-Status: **design only, nothing built.** It extends
+Status: **built in shell v196, `?gen=3` only; the "As built" section at the end overrides this text where they differ.** It extends
 [the tiles record](2026-10-21-difficulty-tiles-design.md), whose rulings still hold
 (R1–R7, O1–O9). The owner skipped the design questions ("skip"), so every rule not
 already in that record or the two issues is the writer's call, listed in section 8.
@@ -306,11 +306,68 @@ Veto any of these. The first four change the game most.
     the checks everyone downloads grow past today's 33 KB. A lazy load for `?gen=3` is
     its own job, and the 33 KB is already an open owner pick.
 
-**Owner ruling 2026-11-01: build after the #30 playtest ("After my playtest").** #26
-lists #30 as a dependency because wave 1's verdict may move these numbers, so re-read this
-design against that verdict before starting. Foes are not in the static checks, and wave
+**Owner ruling 2026-11-01, first "After my playtest", then "let's work on the tiles and
+wave and finish them all" and "boostup and work on all of them in parallel": built before
+the #30 playtest.** #26 listed #30 as a dependency because wave 1's verdict may move these
+numbers, so expect to re-measure after it. Foes are not in the static checks, and wave
 1's foe-in-lane moments are still open; gates and mounds add the same kind of closing-lane
 risk, so that is the first thing to watch. The calls above stay open to veto until then.
 
 **Left to the builder:** field names, coach letters, event names, the exact dim look
 for a blocked portal, the bar mesh, how `relayTell` walks portal arms, test layout.
+
+## As built (shell v196, 2026-11-01)
+
+Built by four parallel lanes, merged on `tiles-wave-2-3`, then one independent review.
+
+**Changes from the sections above:**
+
+- **STREAM:** MAX float is 1.4, not 1.2 (the one tuning round, chosen statically; the
+  player still outruns it, 2.17 against 1.61 tiles/s). V29 is the V19 check on each SHRINK
+  ring. CLASSIC water now scrolls. 2 runs of 4–6 tiles, mean 9.4 tiles.
+- **QUICKSAND:** placement detour is at least 3, since an open-field tile scores 2. New rule
+  from review: **growth also waits while a mound would box the player in**, that is, the
+  floor you can walk touches the tile but has no cell off the line beside it. REAL 3D shows
+  a low heap on the still-passable tile; CLASSIC and PIXEL show arcs only.
+- **GATE:** placement wants 3, minimum 2. The fairness check moves on the shut grid and
+  blasts on the open grid, **on the open board and after each SHRINK ring**, a hole the
+  review found and replayed in the real sim. Draws are 158 in a gate room, 159 with a ghost,
+  and ghosts cannot reach a gen-3 board today. `CVD_WAIVE` is gone: CLASSIC open-gate heat
+  4.43, PIXEL 8.32, REAL 3D 3.93 (still a known gap against 4).
+- **PORTAL:** **no foe warps in a MAX room's first 6 s** (`portal.inert`: foes warped at
+  0.1 s and raised first-5 s hits). A pair is blocked by a foe on the twin or a *moving* foe
+  orthogonally beside it, not a sentry or a diagonal, and **no foe spawns beside a portal**:
+  the first rule left pairs dim 34–38 % of the time, now 14–22 %. Dim is per tile and is the
+  truth for a walker. A slide stops short of a blocked portal, so a held kick cannot jitter.
+  Added a `warp` sound. V35 both-ways holds with 299 of 300 seeds keeping 2 pairs, 1 keeping 1.
+
+**Numbers of record** (n 2000 per cell, A0 against A1, seeds 900000+; rooms 7 and 8 after
+the review fixes, rooms 4 and 6 before them, and QUICKSAND's guard and detour came after its
+run; Δ lose in points, 95 % CI):
+
+| Tile | CORE | PLUS | MAX |
+|---|---|---|---|
+| STREAM | −0.4 [−2.1, 1.6] | +1.2 [−1.4, 3.9] | −2.1 [−4.3, 0.2] |
+| QUICKSAND | −0.2 [−2.2, 1.9] | −0.9 [−2.1, 0.4] | −1.5 [−2.8, −0.1] |
+| PORTAL | −1.6 [−3.0, −0.2] | −1.1 [−2.3, 0.1] | −2.5 [−4.0, −1.1] |
+| GATE | +0.8 [−0.1, 1.7] | +1.6 [−0.3, 3.5] | −2.6 [−4.2, −1.1] |
+
+- **Passing:** static V13–V35 at 0 on all eight rooms, except STREAM V23 at 1.0 % of boards,
+  on the "under 1 %" line. Gen 1, gen 2 and wave-1 gen-3 boards are byte-identical to main.
+- **First-5 s hits:** at or under the no-tile count, except STREAM CORE, 19 → 23, under #30's
+  ceiling of 27.7. Lead ruling: the ceiling is the gate, as in wave 1.
+- **Missed, reported:** **no tile reaches MAX +3 to +10.** All four read as neutral or
+  easier for this bot. It cannot use a gate or play around a mound, and the harness cannot
+  see QUICKSAND or GATE (`rulesOn` covers neither, so `noEsc` and "fallback" mean nothing
+  there, and `hTile` reads 0 in rooms 6–8). CORE faster clears are unresolved everywhere,
+  with too few wins. These are open questions for the playtest, not passes.
+- **STREAM no-escape:** 66 flagged moments at PLUS and MAX, 0 forced by the sim alone, 53
+  escapable, 13 with a foe in the lane, 2 of those caused by the tile (a floating bomb).
+- **Load (Node):** STREAM mean 22 ms, p95 47, worst 88–103. PORTAL 17, 25, 55. GATE about 5,
+  QUICKSAND 1. Lead ruling: p95 is the gate on the preview; revisit before tiles go default.
+  The tile checks and rules add about 37 KB uncompressed to everyone's boot graph, which
+  feeds the open size pick.
+
+**Not verified:** no human has played any of this. No real-GPU run. REAL 3D gate posts and
+portal ticks on a phone, the 3D heap's read, and PIXEL MAX sand arcs at phone size are weak
+or unconfirmed.

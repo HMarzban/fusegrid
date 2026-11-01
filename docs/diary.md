@@ -6,7 +6,7 @@
 
 This is the story of how the game was built: the big turns, the dead ends
 and what each one taught us. It runs from the first commit on 2026-08-16 to
-shell v195 on 2026-11-01 (727 commits by then).
+shell v196 on 2026-11-01.
 
 - **What changed in each release** lives in the [CHANGELOG](../CHANGELOG.md).
 - **How the game works today** lives in [architecture.md](architecture.md).
@@ -608,6 +608,15 @@ one short tip, and ice holds up on MAX whether you brake or not. Next comes the
 one test no bot can run: a person playing it.
 
 ---
+
+### 2026-11-01 · Four tiles in one sitting, and an honest miss (shell v196)
+
+STREAM, QUICKSAND, GATE and PORTAL got their rules at once, one builder each. Measuring
+first paid off: today's placement could trap you against your own bomb on most boards, and
+each tile needed its own cure. A review then replayed the hole the checks had missed: under
+SHRINK, a gate could shut your only way out. None of the four makes MAX harder for the bot,
+which can't use a gate or dodge a mound, so the verdict waits for a human.
+[Record](superpowers/specs/2026-11-01-tiles-wave-2-3-design.md).
 
 ## 🧪 Lessons from the workshop
 

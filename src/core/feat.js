@@ -6,11 +6,9 @@
    override, world.featTier). Placement is keyed (seed, room) only and runs
    on the gen-2 skeleton after stamps and flip, so heat never moves a tile.
    Never merges.
-   ART-ONLY CODES 8..14 (2026-10-25 integration): 8..11 STREAM E/S/W/N, 12 QUICK,
-   13 PORTAL (pair id 1/2 in world.featPair), 14 GATE (its rule is tilegate.js). The sim never reads them (it tests only 1..7), so a WATER / SAND /
-   VOID / CROWN gen-2 room is placed for its look and plays exactly as without the
-   layer until the sim rules land (#19-#22). HOME is the one room-biome -> tile
-   table. */
+   CODES 8..14 (rules 2026-11-01, #26 #27): 8..11 STREAM E/S/W/N (tilestream.js), 12 QUICK
+   (tilequick.js), 13 PORTAL (pair id 1/2 in world.featPair, tileportal.js), 14 GATE
+   (tilegate.js). HOME is the one room-biome -> tile table. */
 import { CFG, key } from "./config.js";
 import { createRng } from "./rng.js";
 

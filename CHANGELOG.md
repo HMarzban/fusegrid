@@ -15,7 +15,24 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
-## shell v195 · 2026-11-01
+## shell v196 · 2026-11-01
+
+Nothing changes in a normal run. All eight floor tiles now have rules, on the preview only
+(`?gen=3`).
+
+### Added
+
+- **STREAM (room 4).** Water floats your bombs and slows everyone wading in it.
+- **QUICKSAND (room 6).** Bricks grow back on open sand behind a visible ripple, never next
+  to your lit bomb and never boxing you in. Grown bricks score nothing. At CORE, foes sink
+  slowly on sand.
+- **GATE (room 8).** Bars shut behind you at CORE and on a room clock at PLUS and MAX. They
+  warn first and never crush you. New posts on the frame show the heat.
+- **PORTAL (room 7).** You and moving bombs jump to the twin. At PLUS blasts jump too, marked
+  ahead of time, and at MAX so do foes, after the room's first 6 s and never right beside you.
+- A first-contact tip and a GUIDE line for each of the four.
+
+
 
 Nothing changes in a normal run. Tiles are still a preview.
 
