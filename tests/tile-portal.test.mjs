@@ -18,7 +18,7 @@ function room(heat, pairs = [[A, B]]) {
   w.feat.fill(0); w.featPair = new Uint8Array(N);
   pairs.forEach(([a, b], i) => { for (const [x, y] of [a, b]) { w.feat[key(x, y)] = 13; w.featPair[key(x, y)] = i + 1; } });
   w.enemies.length = 0; w.items.length = 0; w.bombs.length = 0; w.blades.length = 0; w.events.length = 0;
-  place(w.players[0], 1, 1); w.players[0].iFrames = 1e9;
+  place(w.players[0], 1, 1); w.players[0].iFrames = 1e9; w.featT = 10;
   return w;
 }
 const place = (e, x, y) => { e.x = ctr(x); e.y = ctr(y); e.tx = x; e.ty = y; };
@@ -175,6 +175,13 @@ test("foes warp only at MAX, only by walking on; CORE and PLUS walk over", () =>
   while (tile(e)[1] === 3 && n++ < 200) step(w, DT, idle());
   assert.deepEqual(tile(e), B);
   assert.ok(w.events.some((v) => v.t === "warp" && v.who === "foe") || n > 0);
+});
+test("MAX: no foe warps in the room's first 6 s, so one spawned beside a portal keeps the fair start", () => {
+  const w = room(2); w.featT = 0;
+  const e = foe(w, 2, 3); keep(w);
+  run(w, 1);
+  assert.ok(!w.events.some((v) => v.t === "warp"));
+  assert.ok(tile(e)[1] === 3);
 });
 test("MAX exit guard: Manhattan < 3 of the twin holds the foe on the entry tile, 2 s at most, then it walks on", () => {
   const w = room(2);

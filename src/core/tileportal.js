@@ -83,13 +83,15 @@ function warpBombs(w, emit) {
    tile as floor). Exit guard: it waits on the entry tile while you are within
    guard - 1 Manhattan of the twin, at most `hold` s, then walks on without warping.
    The wait pins the body from here, so the AI's own tick keeps running. A bomb or
-   blade on the twin means plain floor. */
+   blade on the twin means plain floor. No foe warps in the room's first `inert` s,
+   so a foe spawned beside a portal cannot shortcut the fair start. */
 function warpFoes(w, dt, pr, emit) {
   const p = w.players[0], px = tileOf(p.x), py = tileOf(p.y);
   const near = (tw) => p.alive && Math.abs(tw % C - px) + Math.abs(((tw / C) | 0) - py) < pr.guard;
   for (const e of w.enemies) {
     if (e.dead || !(e.speed > 0)) continue;
     const k = key(tileOf(e.x), tileOf(e.y));
+    if (w.featT < pr.inert) { e.warpK = k; continue; }
     if (e.warpHold > 0) {
       const tw = twinOf(w, e.warpFrom);
       e.warpHold -= dt;
