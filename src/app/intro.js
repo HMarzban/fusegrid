@@ -70,7 +70,7 @@ export function createShow() {
   w.players[0].iFrames = 0; // no spawn blink: MAKO pops in once, solid
   w.players[0].bombKind = "pierce"; // the reveal's blast reaches past the corner
   return { world: w, n: 0, acc: 0,
-    it: { move: { x: 0, y: 0 }, fire: false, firePrev: false, shift: false, remote: false, kick: false } };
+    it: { move: { x: 0, y: 0 }, fire: false, firePrev: false, shift: false, remote: false } };
 }
 
 /* Same accumulator as stepDemo, but the cap catches up a whole 0.25 s frame

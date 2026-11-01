@@ -25,11 +25,13 @@ export function isKnownType(msg){
 
 /* A per-player input. This is exactly what a client SENDS the server:
    intent only (move vector + edges), never coordinates the server decides.
-   Lockstep v1 adds `tick`: the buffer tick this intent applies at. */
+   Lockstep v1 adds `tick`: the buffer tick this intent applies at.
+   `kick` is a reserved wire slot, always false: KICK is passive and no intent
+   carries it, but the shape and validateInput's boolean gate stay. */
 export function makeInput(seq, pid, input, tick){
   const m={type:MSG.INPUT, seq, pid,
     move:{x:input.move?input.move.x:0, y:input.move?input.move.y:0},
-    fire:!!input.fire, shift:!!input.shift, remote:!!input.remote, kick:!!input.kick};
+    fire:!!input.fire, shift:!!input.shift, remote:!!input.remote, kick:false};
   if(tick!==undefined)m.tick=tick;
   return m;
 }

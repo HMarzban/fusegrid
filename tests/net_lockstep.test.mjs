@@ -35,6 +35,15 @@ check("welcome/rpc/error round-trip through encode/decode",
 check("isKnownType rejects unknown, accepts known",
   isKnownType({type:"input"})&&!isKnownType({type:"zap"})&&!isKnownType({}));
 
+// INPUT's wire bytes are pinned: kick stays a reserved slot, in place and false
+check("INPUT wire shape: keys, order and the reserved kick slot",
+  encode(makeInput(7,1,{move:{x:0,y:1},fire:true},123))
+    ==='{"type":"input","seq":7,"pid":1,"move":{"x":0,"y":1},"fire":true,"shift":false,"remote":false,"kick":false,"tick":123}',
+  encode(makeInput(7,1,{move:{x:0,y:1},fire:true},123)));
+check("an INPUT with no kick slot still fails closed",
+  (()=>{const m=makeInput(0,1,{move:{x:0,y:0}},1); delete m.kick;
+    return validateInput(m,null,0).ok===false;})());
+
 const VI=(over,last,now)=>validateInput(Object.assign(
   makeInput(last+1,1,{move:{x:1,y:0},fire:false},now+1),over),last,now);
 
@@ -138,12 +147,12 @@ function sameWorld(x,y){                    // replica of determinism comparator
 function script(i){
   const m=[{x:1,y:0},{x:0,y:1},{x:-1,y:0},{x:0,y:-1}][i%4];
   return {move:m, fire:(i%23===0), shift:(i%31===0),
-    remote:false, kick:(i%17===0)};
+    remote:false};
 }
 function script2(i){
   const m=[{x:0,y:-1},{x:-1,y:0},{x:0,y:1},{x:1,y:0}][i%4];
   return {move:m, fire:(i%19===0), shift:(i%41===0),
-    remote:(i%97===0), kick:false};
+    remote:(i%97===0)};
 }
 function makeHarness(seed){
   const mk=()=>{const w=createWorld(seed,1); loadLevel(w,1,false);

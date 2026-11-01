@@ -23,7 +23,7 @@ function snap(w){
     it:w.items.map(i=>i.taken)});
 }
 const iser=i=>JSON.stringify([i.move.x,i.move.y,i.fire,i.firePrev,
-  i.shift,i.remote,i.kick]);
+  i.shift,i.remote]);
 const ARMS=[{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];
 function blastSet(w){
   const d=new Set();

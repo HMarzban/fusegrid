@@ -15,10 +15,9 @@ import {loadLevel, step} from "../core/sim.js";
 export const HOST_PID=0;
 const RPC_KINDS=[MSG.PAUSE,MSG.RESUME,MSG.RESTART,MSG.MENU];
 const neutralIntent=Object.freeze({move:{x:0,y:0},fire:false,shift:false,
-  remote:false,kick:false});
+  remote:false});
 const normIntent=(i)=>({move:{x:i&&i.move?i.move.x:0,y:i&&i.move?i.move.y:0},
-  fire:!!(i&&i.fire), shift:!!(i&&i.shift), remote:!!(i&&i.remote),
-  kick:!!(i&&i.kick)});
+  fire:!!(i&&i.fire), shift:!!(i&&i.shift), remote:!!(i&&i.remote)});
 const isInt=v=>typeof v==="number"&&Number.isInteger(v);
 
 export function createLockstep(opts){

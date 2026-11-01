@@ -690,7 +690,7 @@ for (let i = 0; i < GUIDE_ROWS.length; i++) {
   const p = g.world.players[0], x0 = p.x, y0 = p.y;
   down("KeyD"); g.tick(20); up("KeyD"); down("KeyS"); g.tick(20); up("KeyS"); g.tick();
   check("PLAY D then S walk the player off the spawn tile", p.x > x0 && p.y > y0, x0 + "," + y0 + " -> " + p.x + "," + p.y);
-  for (const [code, f] of [["ShiftLeft", "shift"], ["ShiftRight", "shift"], ["KeyQ", "remote"], ["KeyK", "kick"]]) {
+  for (const [code, f] of [["ShiftLeft", "shift"], ["ShiftRight", "shift"], ["KeyQ", "remote"]]) {
     down(code); const on = g.input._intent[f]; up(code);
     check("PLAY " + code + " holds " + f + " and releases it", on === true && g.input._intent[f] === false);
   }
@@ -896,6 +896,47 @@ for (const code of ["Space", "Enter"]) {
     const fr = F.rows.find(([t]) => t === "COPY FAILED");
     check(tag + ": COPY FAILED is drawn in the warning red", !!fr && fr[2] === "#ff5d73", fr && fr[2]);
   }
+}
+
+// ---- K is an ordinary unbound key (KICK is passive: walk into a bomb). In every
+// shell and world state it does exactly what Z, bound to nothing anywhere, does. ----
+{
+  const at = (scr) => (g) => { g.app.screen = scr; };
+  const pauseOn = (view) => (g) => { press(g, "Enter"); press(g, "KeyP"); if (view) { toRow(g, PAUSE_ITEMS.indexOf("OPTIONS")); press(g, "Enter"); } if (view === 2) { toRow(g, OPT_ROWS.indexOf("GRAPHICS")); press(g, "Enter"); } };
+  const STATES = {
+    "INTRO title": { boot: mk },
+    "INTRO show": { boot: () => show(mk()) },
+    ATTRACT: { boot: menu, go: (g) => g.app.enterAttract() },
+    MENU: { boot: menu },
+    "LEVEL SELECT": { boot: menu, go: at(SCREEN.LEVEL) },
+    "HIGH SCORES": { boot: menu, go: at(SCREEN.SCORES) },
+    OPTIONS: { boot: menu, go: at(SCREEN.SETTINGS) },
+    GRAPHICS: { boot: menu, go: at(SCREEN.GRAPHICS) },
+    GUIDE: { boot: menu, go: at(SCREEN.GUIDE) },
+    "HOW TO": { boot: menu, go: at(SCREEN.HOWTO) },
+    ITEMS: { boot: menu, go: at(SCREEN.ITEMS) },
+    ENEMIES: { boot: menu, go: at(SCREEN.ENEMIES) },
+    FLOOR: { boot: menu, go: at(SCREEN.FLOOR) },
+    STATS: { boot: menu, go: at(SCREEN.STATS) },
+    MEDALS: { boot: menu, go: at(SCREEN.TROPHIES) },
+    PLAY: { boot: run },
+    "PAUSE list": { boot: menu, go: pauseOn(0) },
+    "PAUSE OPTIONS": { boot: menu, go: pauseOn(1) },
+    "PAUSE GRAPHICS": { boot: menu, go: pauseOn(2) },
+    WIN: { boot: run, go: clearRoom },
+    LOSE: { boot: run, go: (g) => { g.world.state = "LOSE"; } },
+  };
+  const sig = (g) => { const a = g.app, w = g.world; return JSON.stringify([a.screen, a.introStage, a.cursor, a.pauseCursor, a.pauseView, a.optRow, a.gfxRow, a.level, a.heat, a.pace, a.settings, w.state, w.level, w.seed, w.score, w.lives, live(w), g.input._intent]); };
+  for (const [name, s] of Object.entries(STATES)) {
+    const after = (code) => { const g = s.boot(); if (s.go) s.go(g); g.tick();
+      if (code === "KeyK" && name.startsWith("PAUSE")) check(name + " is really reached", g.world.state === "PAUSE" && g.app.pauseView === ["list", "OPTIONS", "GRAPHICS"].indexOf(name.slice(6)), g.app.pauseView);
+      press(g, code); return sig(g); };
+    const k = after("KeyK"), z = after("KeyZ");
+    check("K = an unbound key on " + name, k === z, k === z ? undefined : k + " vs " + z);
+  }
+  const g = run(); down("KeyK");
+  check("K held in PLAY latches nothing: the intent has no kick field", !("kick" in g.input._intent) && !("kick" in g.input.intent()), JSON.stringify(g.input._intent));
+  up("KeyK");
 }
 
 delete globalThis.window; delete globalThis.location; delete navigator.clipboard;

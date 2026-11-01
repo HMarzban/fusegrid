@@ -4,7 +4,7 @@
 export class Input {
   constructor(el){
     this._intent={move:{x:0,y:0}, fire:false, firePrev:false,
-      shift:false, remote:false, kick:false};
+      shift:false, remote:false};
     this.onUiKey=null;
     this.el=el;
     this._onKey=this._onKey.bind(this);
@@ -50,7 +50,6 @@ export class Input {
       case "Space":case "KeyJ":case "KeyX":i.fire=true;break;
       case "ShiftLeft":case "ShiftRight":i.shift=true;break;
       case "KeyQ":i.remote=true;break;
-      case "KeyK":i.kick=true;break;
       }
      }
  _onKeyUp(e){
@@ -63,7 +62,6 @@ export class Input {
       case "Space":case "KeyJ":case "KeyX":i.fire=false;i.remote=false;break;
       case "ShiftLeft":case "ShiftRight":i.shift=false;break;
       case "KeyQ":i.remote=false;break;
-      case "KeyK":i.kick=false;break;
       }
     }
  /* Camera §2: non-primary buttons never touch the fire latch (undefined ->

@@ -14,7 +14,7 @@ import {bfsNext} from "../core/board.js";
 import {createRng} from "../core/rng.js";
 
 export const NOOP=Object.freeze({move:{x:0,y:0},fire:false,firePrev:false,
-  shift:false,remote:false,kick:false});
+  shift:false,remote:false});
 
 export function createDemobot(seed){
   let rng=createRng(seed>>>0),latch=false;
@@ -217,7 +217,7 @@ export function createDemobot(seed){
     for(const b of world.bombs)
       if(!(b.tx===ptx&&b.ty===pty))blocked.add(key(b.tx,b.ty));
     const out={move:{x:0,y:0},fire:false,firePrev:latch,
-      shift:false,remote:false,kick:false};
+      shift:false,remote:false};
     let want=false;
 
     if(inPocket||(esc&&(onBomb||hug))){
