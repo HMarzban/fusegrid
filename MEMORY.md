@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-01 — known gaps: colour-vision gate for REAL 3D, CLASSIC under npm test
+- `cvd3dpage.mjs` + `CVD_PIN3`, stamped `cvdgold.json`. Finding: 10 of 15 REAL 3D tile states miss the heat bar of 4 (a value gap from the lit scene, normal vision too); held as `CVD_HEAT3_PROPOSED` KNOWN GAP floors, owner decision pending. No art changed. Left: CLASSIC / PIXEL measure parity 0 only.
+
 ## 2026-11-01 — known gaps: net=local follows every run, KeyK removed
 - `localpair.js` mirror follows every run start and restart (`tests/net-local.test.mjs`, 37 checks); `KeyK` unbound, `kick` kept as a reserved false wire slot (no replay shape moved). Left: `newIntent()` in `sim.js` still carries `kick:false`, a two-line tidy after #18; `__GAME__.advance` under `?debug=1&net=local` diverges (debug only).
 

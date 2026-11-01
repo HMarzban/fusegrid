@@ -456,8 +456,17 @@ not shell screens. Do not add them as `SCREEN` values.
     `CVD_WAIVE` "CLASSIC gate-open heat" (pin 2, normal vision 2.14 < 4: the
     open GATE's CORE / PLUS / MAX differ too little in CLASSIC for everyone; a
     structural fix belongs to wave 2, #26). CLASSIC runs in Chrome via `gates.mjs`;
-    `tests/tile-cvd.test.mjs` runs the PIXEL half under `npm test`; REAL 3D has
-    no CVD gate. Fixed in v190: PIXEL SAND's parity-B base floor was raw
+    under `npm test`, `tests/tile-cvd.test.mjs` runs the PIXEL half live and holds
+    CLASSIC through `cvdgold.json`: Chrome numbers stamped with an FNV of the
+    painter call stream, tile list and measuring code, so a painter change fails
+    and asks for `node tools/tileart/gates.mjs cvd --golden` (it proves today's
+    calls were measured, not that CI re-rasterizes). REAL 3D (2026-11-01):
+    `cvd3dpage.mjs` measures the real renderer at rig C, dpr 2, offline in
+    `gates.mjs` (`CVD_PIN3`, top faces only, a clean lit fixture). 10 of its 15
+    tile states miss the heat bar of 4 (9 in normal vision too: lighting
+    compresses value, not a colour problem); `CVD_HEAT3_PROPOSED` holds them as
+    printed KNOWN GAP floors pending the owner, worst CROWN open GATE 1.62, ICE
+    PATCH 2.11, VOID PORTAL 2.46. Fixed in v190: PIXEL SAND's parity-B base floor was raw
     `floor1` `#a07828`, 4.9 ΔE from BRICK-B `#a07020`; `featpxcells.js`
     `floorPxCell` now builds that slab one step down (`floor1.shadow` base,
     16.8 ΔE), the PIXEL twin of CLASSIC's `floorart.js` `BED.SAND`.
