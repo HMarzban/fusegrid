@@ -5,10 +5,11 @@
    flash -> squash -> puff and lives in drawShots (world.js). Pickups hover +-1 art px, keep the ring flip, pop in when revealed and wink with a glint
    that walks the ring. Collect bursts are procedural 1-2 px marks from collectParticle (ring / fan / trail / rise / pop) drawn straight on the board:
    no one-shot slots, so they can never evict a kill puff; capped at BURST_CAP marks a frame. Everything is hashed or clocked, nothing is random. */
-import {CFG} from "../../core/config.js";
+import {CFG, biomeOf} from "../../core/config.js";
 import {ITEM_FAMILY} from "../icons.js";
 import {MOTION, COLLECT_T, phaseOf, blinkAt, foeM, bobAt, leanAt, lockK, spawnK, itemIdle, collectM, collectParticle} from "../motion.js";
 import {lockOn} from "../lockon.js";
+import {relayTell} from "../relaytell.js";
 import {fxOf} from "../entityfx.js";
 import {getFxOpts} from "../fx.js";
 import {PX_T} from "./timing.js";
@@ -41,6 +42,28 @@ function lane(c, s, X, Y, a, R) {
 const lockOf = (w, e, s, t) => (s.lt === t ? s.lk : lockK(s, lockOn(w, e), t));
 export function drawLanes(c, V, world) {
   for (const e of world.enemies) if (e.hunt && !e.dead) { const s = foeState(V, e), k = lockOf(world, e, s, V.t); if (k > 0.34) lane(c, s, snapArt(e.x), snapArt(e.y), k < 0.67 ? 0.5 : 0.9, pxRamp(e.color)); }
+}
+/* relay tell (relaytell.js, issue #21): 4 art px corner brackets on every tile a relay will reach, outline drop then light, in the world's own wallHi ramp, stepped alpha,
+   never pulsing; the flare adds a flat wash scaled by REDUCE FLASH. No tell = no ctx call. */
+export function drawRelayTell(c, V, world) {
+  const cells = relayTell(world);
+  if (!cells.length) return;
+  const R = pxRamp(biomeOf(world.level).wallHi), S = CFG.TILE / 2;
+  for (const e of cells) {
+    if (e.k <= 0.34) continue;
+    const x0 = e.x * S + 2, y0 = e.y * S + 2, n = S - 4;
+    if (e.hot && V.flashK > 0) { c.globalAlpha = 0.25 * V.flashK; c.fillStyle = R.base; c.fillRect(x0, y0, n, n); }
+    c.globalAlpha = e.k < 0.67 ? 0.5 : 1;
+    for (let pass = 0; pass < 2; pass++) {
+      c.fillStyle = pass ? R.light : R.outline;
+      const d = pass ? 0 : 1;
+      for (const [hx, vy, sx, sy] of [[x0, y0, 1, 1], [x0 + n - 4, y0, -1, 1], [x0, y0 + n - 1, 1, -1], [x0 + n - 4, y0 + n - 1, -1, -1]]) {
+        c.fillRect(hx, vy + d, 4, 1);
+        c.fillRect(sx > 0 ? hx : hx + 3, sy > 0 ? vy + d : vy - 3 + d, 1, 4);
+      }
+    }
+  }
+  c.globalAlpha = 1;
 }
 export function drawFoes(c, V, world) {
   const es = world.enemies, t = V.t, F = V.A.foe, p0 = world.players && world.players[0];

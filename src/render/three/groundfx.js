@@ -17,7 +17,9 @@
                 then AO, contact shadows and the shadow lift.
    Light stays the frozen key at upper left: shadows fall right and away. */
 import * as THREE from "../../../vendor/three.module.js";
-import {CFG, T as TT, BIOMES} from "../../core/config.js";
+import {CFG, T as TT, BIOMES, biomeOf as biomeAt} from "../../core/config.js";
+import {relayTell} from "../relaytell.js";
+import {getFxOpts} from "../fx.js";
 
 const W = CFG.COLS * CFG.TILE, D = CFG.ROWS * CFG.TILE, T = CFG.TILE, C = CFG.COLS, R = CFG.ROWS;
 const f = (v) => (+v).toFixed(3);
@@ -82,7 +84,35 @@ export function feedContact(world) {
   for (const it of world.items || []) if (it && !it.taken && !it.buried) put(it.x, it.y, 19, 0.3);
   CONTACT.n.value = n;
   if (CUR && world.grid) CUR.bakeBricks(world.grid);
+  feedTell(world);
 }
+
+/* ---- BOOSTER relay tell (relaytell.js, issue #21): one small board-sized texture read by the same floor / tile shaders as CONTACT, so nothing is drawn. R = the
+   cell's fade k, G = the flare wash (scaled by REDUCE FLASH); uploaded only when a byte changes, all zero in a room with no tile layer. Corner brackets in the world's
+   wallHi (emissive, so they hold in shade) over a dark under-stroke in the diffuse; static, never pulsing. */
+const TD = new Uint8Array(C * R * 4), TN = new Uint8Array(C * R * 4);
+const TELLT = new THREE.DataTexture(TD, C, R, THREE.RGBAFormat, THREE.UnsignedByteType);
+TELLT.magFilter = TELLT.minFilter = THREE.NearestFilter; TELLT.generateMipmaps = false; TELLT.needsUpdate = true;
+export const TELL = {tex: {value: TELLT}, col: {value: new THREE.Color(0xffffff)}, n: {value: 0}, data: TD};
+export function feedTell(world) {
+  const cells = relayTell(world), fk = getFxOpts().flashK;
+  TN.fill(0);
+  for (const e of cells) { const o = (e.y * C + e.x) * 4; TN[o] = Math.round(255 * e.k); TN[o + 1] = e.hot ? Math.round(255 * Math.min(1, fk) * e.k) : 0; TN[o + 3] = 255; }
+  let diff = false;
+  for (let i = 0; i < TD.length; i++) if (TD[i] !== TN[i]) { TD[i] = TN[i]; diff = true; }
+  if (diff) TELLT.needsUpdate = true;
+  TELL.n.value = cells.length;
+  if (cells.length) TELL.col.value.set(biomeAt(world.level).wallHi);
+}
+const TELLS = (uv) => `
+if(wellRtN>0.5){ vec4 rt=texture2D(wellRt,${uv}); if(rt.r>0.004){
+ vec2 rq=abs(fract((${uv})*vec2(${f(C)},${f(R)}))-0.5); float ro=max(rq.x,rq.y), ri=min(rq.x,rq.y);
+ float rb=step(0.17,ri), ru=rb*step(0.29,ro)*step(ro,0.40), rs=rb*smoothstep(0.32,0.335,ro)*(1.0-smoothstep(0.365,0.38,ro));
+ diffuseColor.rgb*=1.0-0.55*rt.r*ru;
+ totalEmissiveRadiance+=wellRtC*(rt.r*0.8*rs+rt.g*0.16*step(ro,0.38));
+}}`;
+const TUNI = "\nuniform sampler2D wellRt;\nuniform vec3 wellRtC;\nuniform float wellRtN;";
+const tellU = (sh) => { sh.uniforms.wellRt = TELL.tex; sh.uniforms.wellRtC = TELL.col; sh.uniforms.wellRtN = TELL.n; };
 
 /* ---- hunter lock-on lanes (issue #32): up to LN_N lanes of floor chevrons, written once a frame by entities.update from lockon.js lockOn + the
    motion.js lockK ramp, read by the same floor / tile shaders as CONTACT, so nothing is drawn. Per lane three vec4: [x0, z0, dx, dz] (foe centre, unit
@@ -118,13 +148,13 @@ const GROUND = (uv, xz) => `
   occ*=1.0-c.w*(1.0-smoothstep(0.1,1.0,length(d))); }
  diffuseColor.rgb*=occ;
 }`;
-const UNI = "\nuniform sampler2D wellAO;\nuniform vec4 wellCS[" + CS_N + "];\nuniform float wellCSn;" + LUNI;
+const UNI = "\nuniform sampler2D wellAO;\nuniform vec4 wellCS[" + CS_N + "];\nuniform float wellCSn;" + LUNI + TUNI;
 const AOUV = `(vWq.xz+vec2(${f(W / 2)},${f(D / 2)}))/vec2(${f(W)},${f(D)})`;
 
 export function floorFX(mat, ao) {
   const fx = FLOOR_FX[ao.biome.name] || {g: 1, c: 0.05};
   mat.onBeforeCompile = (sh) => {
-    sh.uniforms.wellAO = {value: ao.tex}; sh.uniforms.wellCS = CONTACT.v; sh.uniforms.wellCSn = CONTACT.n; sh.uniforms.wellLn = LANES.v; sh.uniforms.wellLnN = LANES.n;
+    sh.uniforms.wellAO = {value: ao.tex}; sh.uniforms.wellCS = CONTACT.v; sh.uniforms.wellCSn = CONTACT.n; sh.uniforms.wellLn = LANES.v; sh.uniforms.wellLnN = LANES.n; tellU(sh);
     sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vWq;")
       .replace("#include <begin_vertex>", "#include <begin_vertex>\n#ifdef USE_INSTANCING\nvWq=(modelMatrix*instanceMatrix*vec4(transformed,1.0)).xyz;\n#else\nvWq=(modelMatrix*vec4(transformed,1.0)).xyz;\n#endif");
     sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec3 vWq;" + UNI);
@@ -138,7 +168,7 @@ export function floorFX(mat, ao) {
  diffuseColor*=texture2D(map,(clamp(vMapUv,0.006,0.994)+vo)*0.5);
 #endif
  diffuseColor.rgb*=${f(fx.g)}*(1.0+${f(fx.c)}*(1.0-2.0*mod(floor((vWq.x+${f(W / 2)})/${f(T)})+floor((vWq.z+${f(D / 2)})/${f(T)}),2.0)));
-` + GROUND(AOUV, "vWq.xz")).replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>" + LANE("vWq.xz"));
+` + GROUND(AOUV, "vWq.xz")).replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>" + LANE("vWq.xz") + TELLS(AOUV));
     shadowLift(sh);
   };
   mat.customProgramCacheKey = () => "groundfx" + ao.biome.name;
@@ -151,9 +181,9 @@ export function featAO(mat, ao) {
   const prev = mat.onBeforeCompile;
   mat.onBeforeCompile = (sh, r) => {
     prev(sh, r);
-    sh.uniforms.wellAO = {value: ao.tex}; sh.uniforms.wellCS = CONTACT.v; sh.uniforms.wellCSn = CONTACT.n; sh.uniforms.wellLn = LANES.v; sh.uniforms.wellLnN = LANES.n;
+    sh.uniforms.wellAO = {value: ao.tex}; sh.uniforms.wellCS = CONTACT.v; sh.uniforms.wellCSn = CONTACT.n; sh.uniforms.wellLn = LANES.v; sh.uniforms.wellLnN = LANES.n; tellU(sh);
     sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>" + UNI)
-      .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>" + GROUND(`(vW+vec2(${f(W / 2)},${f(D / 2)}))/vec2(${f(W)},${f(D)})`, "vW") + LANE("vW"));
+      .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>" + GROUND(`(vW+vec2(${f(W / 2)},${f(D / 2)}))/vec2(${f(W)},${f(D)})`, "vW") + LANE("vW") + TELLS(`(vW+vec2(${f(W / 2)},${f(D / 2)}))/vec2(${f(W)},${f(D)})`));
     shadowLift(sh);
   };
   return mat;

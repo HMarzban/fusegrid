@@ -4,7 +4,7 @@ import {
   bakeAtlas, drawGrid, drawBiomeBackground, drawBricks,
   drawItems, drawEnemies, drawPlayer, drawPlayerBody, drawBombs, drawBlades, drawGhost, drawLanes
 } from "./sprites.js";
-import {onEvent, updateFx, drawFx, drawBursts, drawFxOverlay, drawPickupFx, feedFx, getShake, getFlash, getFx, initFx, syncFx} from "./fx.js";
+import {onEvent, updateFx, drawFx, drawBursts, drawFxOverlay, drawPickupFx, feedFx, getShake, getFlash, getFx, getFxOpts, initFx, syncFx} from "./fx.js";
 import {drawOverlay, overlayBox, drawHudChips, drawAbilityBar, drawCoach, drawCoach2} from "./scenes.js";
 import {draw3dBackground, buildPainters, byDepth} from "./r3d/scene3d.js";
 import {PROJ, project} from "./r3d/camera.js";
@@ -12,6 +12,7 @@ import {wellBoard, hudPlate, stageGlow} from "./frame.js";
 import {drawDepth} from "./depth2d.js";
 import {createAmbient2d} from "./ambient2d.js";
 import {fxOf} from "./entityfx.js";
+import {drawRelayTell} from "./relaytell.js";
 
 const isoProj=(bx,by,h)=>{ const q=project(bx/CFG.TILE,by/CFG.TILE); return {x:q.sx,y:q.sy-(h||0)}; };
 
@@ -120,6 +121,7 @@ export function createRenderer(canvas, opts={}){
       wellBoard(ctx, world.level);
       drawBricks(ctx, world);
       drawLanes(ctx, world);
+      if(world.feat) drawRelayTell(ctx, world, getFxOpts().flashK);
       drawItems(ctx, world);
       drawBombs(ctx, world);
       drawBlades(ctx, world);
