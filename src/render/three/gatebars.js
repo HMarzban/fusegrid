@@ -3,7 +3,7 @@
    with featM's closing steps to min(hWall, NEAR_H) (ruling 2026-10-09: nothing
    taller beside a row-11 actor), casting a real shadow. While a gate is passable
    the heat tell stands on its two jambs: 1 / 2 / 3 raised posts, the same spots as
-   the painter's. A ring-dead gate has no bars, the wall mesh owns it. */
+   the painter's, sized here so the count survives the rig (slim and short at MAX, or three posts merge into one bar). A ring-dead gate has no bars, the wall mesh owns it. */
 import * as THREE from "../../../vendor/three.module.js";
 import {CFG} from "../../core/config.js";
 import {F, featTier} from "../../core/feat.js";
@@ -11,7 +11,7 @@ import {gateBar, GATE_SHUT} from "../../core/tilegate.js";
 import {GEO} from "../featart/geo.js";
 import {live} from "./upload.js";
 
-const TL = CFG.TILE, C = CFG.COLS, W = C * TL, D = CFG.ROWS * TL, S = TL / 40, POST_H = 9;
+const TL = CFG.TILE, C = CFG.COLS, W = C * TL, D = CFG.ROWS * TL, S = TL / 40, POST_H = [9, 9, 8], POST_W = 4.8, POST_D = 3.2;
 const MAT = new THREE.Matrix4();
 export const hasGates = (world) => !!world.feat && world.feat.includes(F.GATE);
 export function createGateBars(world, biome, nearH) {
@@ -36,7 +36,7 @@ export function createGateBars(world, biome, nearH) {
       const l = last[i];
       if (l < 0) return;
       if (l > 0) for (let b = 0; b < nb; b++) put(n++, k, G.x0 + b * pitch + G.bw / 2, (G.y0 + G.y1) / 2, G.bw, cap * l / GATE_SHUT, G.y1 - G.y0, cBar);
-      if (l < GATE_SHUT) for (const p of posts) for (const px of [3.6, 36.4]) put(n++, k, px, p, 3.4, POST_H, 4.4, cPost);
+      if (l < GATE_SHUT) for (const p of posts) for (const px of [3.6, 36.4]) put(n++, k, px, p, POST_W, POST_H[h], POST_D, cPost);
     });
     mesh.count = n;
     live(mesh.instanceMatrix, n);

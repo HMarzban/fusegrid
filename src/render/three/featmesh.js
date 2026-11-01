@@ -42,7 +42,47 @@ function variants(w, x, y) {
   return [s];
 }
 const f4 = (n) => (+n).toFixed(4);
+const u40 = (v) => f4(v / 40);
 const pick3 = (a) => `(hh<0.5?${f4(a[0])}:hh<1.5?${f4(a[1])}:${f4(a[2])})`;
+/* REAL 3D heat layer (2026-11-01): the lit scene compresses value, so the look's own shader widens what the shared painters already say, and CLASSIC / PIXEL never see it. Static (no uTime, no uFxK: PAUSE
+   and EFFECTS LOW keep the tell); only a scalar multiply or a mix toward wallHi (no re-hue, no new hex); uv fractions of a tile. Edge + mark count: ICE score lines 0 / 2 / 3 in board space (a patch's inner
+   tiles carry them too, plate value CORE and MAX apart from PLUS), BOOSTER MAX's fan of fronds (east half, roots stay clear), TRAP 0 / 1 / 2 corner clamps, PORTAL's lip + bar + well ladder (never past wallHi,
+   VOID's dim look; the PLUS lip goes deep, not MAX, MAX is already nearest the BRICK), QUICKSAND a deeper pit. Numbers sized by tools/tileart/gates.mjs cvd, pinned in gatefns.mjs CVD_HEAT3 */
+export const HEAT3 = {
+  ICE: {plate: [0.93, 1, 0.75], score: [0, 2, 3], w: 0.1, k: 0.66, lo: 0.3, hi: 0.36},
+  BOOSTER: {bed: [1, 0.72, 1], rays: 6, len: 0.47, k: 0.36, lo: 0.1, hi: 0.2},
+  TRAP: {rings: [[], [0.28], [0.28, 0.226]], w: 0.04, k: [0, 0.55, 0.9], gap: 0.1},
+  QUICK: {bowl: [0, 0.22, 0.58]},
+  PORTAL: {well: [0.54, 0.74, 1], bar: 0.366, w: 0.034, up: [0, 0.36, 0.65], tick: 0.2, lip: [0.4025, 0.0575], deep: [1, 0.55, 1]},
+};
+export function heatLayer() {
+  const H = HEAT3, ring = (a, w) => `(smoothstep(${f4(a - 0.005)},${f4(a + 0.005)},sq)*(1.0-smoothstep(${f4(a + w - 0.005)},${f4(a + w + 0.005)},sq)))`, rings = (L, w) => (L.length ? L.map((a) => ring(a, w)).join("+") : "0.0");
+  const q0 = `vL-(hh<0.5?vec2(${u40(GEO.QUICK.c[0][0])},${f4(1 - GEO.QUICK.c[0][1] / 40)}):hh<1.5?vec2(${u40(GEO.QUICK.c[1][0])},${f4(1 - GEO.QUICK.c[1][1] / 40)}):vec2(${u40(GEO.QUICK.c[2][0])},${f4(1 - GEO.QUICK.c[2][1] / 40)}))`;
+  const bc = GEO.BLOOM.c;
+  return `  float sq=max(abs(c0.x),abs(c0.y)),sb=min(abs(c0.x),abs(c0.y));
+  if(kd==6.0&&sq<0.32) col*=${pick3(H.PORTAL.well)};
+  if(kd==1.0) col*=mix(1.0,${pick3(H.ICE.plate)},smoothstep(${f4(H.ICE.lo)},${f4(H.ICE.hi)},h0));
+  if(hh>0.5){
+    if(kd==1.0){
+      float pm=smoothstep(${f4(H.ICE.lo)},${f4(H.ICE.hi)},h0),sn=${pick3(H.ICE.score)},df=fract((vW.x+vW.y)/${f4(CFG.TILE)}*sn);
+      col*=mix(1.0,1.0-(1.0-${f4(H.ICE.k)})*(1.0-smoothstep(${f4(H.ICE.w)},${f4(H.ICE.w + 0.04)},df)),pm);
+    } else if(kd==2.0){
+      vec2 rd=vL-vec2(${u40(bc[0])},${f4(1 - bc[1] / 40)});
+      float bm=1.0-smoothstep(${f4(H.BOOSTER.lo)},${f4(H.BOOSTER.hi)},h0),rr=length(rd),rl=${f4(H.BOOSTER.len)};
+      col*=mix(1.0,mix(1.0,${pick3(H.BOOSTER.bed)},1.0-smoothstep(0.36,0.48,rr)),bm);
+      if(hh>1.5){float ra=abs(fract(atan(rd.y,rd.x)/6.2832*${f4(H.BOOSTER.rays)})-0.5)*2.0,tw=0.6*(1.0-rr/rl);col=mix(col,uHi,${f4(H.BOOSTER.k)}*bm*smoothstep(0.1,0.14,rr)*(1.0-smoothstep(rl-0.04,rl,rr))*(1.0-smoothstep(tw,tw+0.1,ra))*smoothstep(-0.08,-0.02,rd.x));}
+    } else if(kd==3.0){
+      float rg=hh<1.5?${rings(H.TRAP.rings[1], H.TRAP.w)}:${rings(H.TRAP.rings[2], H.TRAP.w)};
+      col=mix(col,uHi,${pick3(H.TRAP.k)}*rg*step(${f4(H.TRAP.gap)},sb));
+    } else if(kd==5.0){
+      col*=1.0-${pick3(H.QUICK.bowl)}*(1.0-smoothstep(0.16,0.5,length(${q0})));
+    } else if(kd==6.0){
+      float low=step(abs(c0.x),abs(c0.y))*step(vL.y,0.5)*(1.0-step(${f4(H.PORTAL.tick)},sb));
+      float bar=${ring(H.PORTAL.bar, H.PORTAL.w)}*(1.0-low);
+      col=mix(col,uHi,${pick3(H.PORTAL.up)}*bar)*mix(1.0,${pick3(H.PORTAL.deep)},${ring(H.PORTAL.lip[0], H.PORTAL.lip[1])});
+    }
+  }`;
+}
 /* the fragment effects, with every art-dependent number read from the geometry table the painters use */
 export function fragSource(G) {
   const T = CFG.TILE, u = (v) => f4(v / T), bc = G.BLOOM.c, bandHalf = (T - 2 * G.BELT.R) / 2 / T, tk = G.PORTAL.tick, pc = G.PORTAL.core, wl = G.PLATE.well;
@@ -101,6 +141,7 @@ export function fragSource(G) {
       fxGlow+=uHi*(0.2+0.06*sin(uTime*2.0))*exp(-dot(d,d)*0.8)*(pr/4.0);
     }
   }
+${heatLayer()}
   diffuseColor.rgb*=col;
   diffuseColor.a*=sampledDiffuseColor.a;
 #endif`;

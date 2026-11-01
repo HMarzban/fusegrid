@@ -5,7 +5,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { BIOMES } from "../src/core/config.js";
-import { simCVD, simRGB, dE, cvdSep, cvdFails, cvdHeatPin, CVD_KINDS, CVD_PIN } from "../tools/tileart/gatefns.mjs";
+import { simCVD, simRGB, dE, cvdSep, cvdFails, cvdHeatPin, CVD_KINDS, CVD_PIN, CVD_PIN3, CVD_HEAT3 } from "../tools/tileart/gatefns.mjs";
 import { pxSets, CVD_ENT, RULED } from "../tools/tileart/cvdsets.mjs";
 import { cvdStamp } from "../tools/tileart/cvdstamp.mjs";
 
@@ -69,4 +69,13 @@ test("the stamp bites: a biome hex, an edit inside a Path2D and a gradient stop 
   const stampOf = (w, stop) => cvdStamp({ ENT, F: { paintCell(g) { const p = new Path2D(); p.rect(0, 0, w, 4); g.fill(p, "evenodd"); g.createLinearGradient(0, 0, 1, 1).addColorStop(stop, "#000"); } } });
   assert.notEqual(stampOf(4, 0), stampOf(5, 0));
   assert.notEqual(stampOf(4, 0), stampOf(4, 0.5));
+});
+
+/* REAL 3D is measured only by gates.mjs in Chrome; here the pins themselves are held: no state may sit under the bar of 4, no proposed floor may come back */
+test("REAL 3D heat pins: the bar stays 4 and no tile's pin sits under it", () => {
+  assert.equal(CVD_PIN3.heat, 4);
+  for (const [id] of CVD_ENT) assert.ok(cvdHeatPin("REAL 3D", id, CVD_PIN3) >= 4, id);
+  for (const [id, v] of Object.entries(CVD_HEAT3)) assert.equal(cvdHeatPin("REAL 3D", id, CVD_PIN3), v, id);
+  assert.ok(!cvdFails("x", { rows: [], heat: [{ cvd: "protan", a: 0, c: 1, d: 4 }] }, { pin: CVD_PIN3, look: "REAL 3D" }).length);
+  assert.ok(cvdFails("trap", { rows: [], heat: [{ cvd: "protan", a: 0, c: 1, d: 4.4 }] }, { pin: CVD_PIN3, look: "REAL 3D" }).length, "a floor above the bar bites");
 });

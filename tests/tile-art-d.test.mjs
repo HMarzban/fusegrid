@@ -142,6 +142,18 @@ test("fragSource carries every geometry number the painters use (art and shader 
   for (const c of GEO.QUICK.c) assert.ok(f.includes(n(c[0] / CFG.TILE)), "missing quick centre");
   assert.ok(!/NaN|undefined/.test(f));
 });
+test("REAL 3D heat layer: in the shader, static, no re-hue; marks and counts step with heat", async () => {
+  const { heatLayer, HEAT3 } = await import("../src/render/three/featmesh.js");
+  const f = heatLayer();
+  assert.ok(fragSource(GEO).includes(f), "fragSource carries it");
+  assert.ok(!/uTime|uFxK/.test(f), "PAUSE and EFFECTS LOW keep the tell");
+  assert.ok(!/vec3\(\s*[\d.]/.test(f), "no colour literal: multiply or wallHi only");
+  assert.deepEqual(HEAT3.ICE.score, [0, 2, 3]);
+  assert.deepEqual(HEAT3.TRAP.rings.map((r) => r.length), [0, 1, 2]);
+  assert.ok(HEAT3.QUICK.bowl[0] === 0 && HEAT3.QUICK.bowl[1] < HEAT3.QUICK.bowl[2]);
+  assert.equal(HEAT3.PORTAL.well[2], 1, "the VOID dim rule: PORTAL's well only ever darkens");
+  assert.ok(HEAT3.PORTAL.up.every((k) => k < 1), "a PORTAL bar stays under wallHi");
+});
 test("REAL 3D tile room still adds exactly ONE draw with the D layer", async () => {
   const { buildScene, countDrawCalls } = await import("../src/render/three/scene.js");
   for (const rm of [1, 2, 3, 5]) {
