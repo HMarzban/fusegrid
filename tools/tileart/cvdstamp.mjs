@@ -1,6 +1,6 @@
 /* What the committed CLASSIC 2D colour-vision golden (cvdgold.json) was measured from: an FNV-1a hash of the whole painter call stream of the Chrome recipe (cvdpaint.mjs),
    recorded in Node with every argument and property write (a biome hex edit moves it), Path2D / DOMMatrix contents inlined (an edit inside a path moves it), gradient stops
-   included, plus the tile list, the scale and the measuring code (simCVD, cvdSep, the matrices). Numbers are rounded to 3 decimals, also inside rgba() strings, so a last-bit
+   included, plus the tile list, the scale and the measuring code (cvdCode, cvdSep). Numbers are rounded to 3 decimals, also inside rgba() strings, so a last-bit
    float difference between Node builds cannot move it. Any canvas method the painters start to use is logged by name, so it moves the stamp too. */
 import {BIOMES} from "../../src/core/config.js";
 import * as F from "../../src/render/featdraw.js";
@@ -8,7 +8,7 @@ import * as FL from "../../src/render/floorart.js";
 import * as SP from "../../src/render/sprites.js";
 import {cvdRecipe} from "./cvdpaint.mjs";
 import {CVD_ENT} from "./cvdsets.mjs";
-import {CVD, simCVD, cvdSep} from "./gatefns.mjs";
+import {cvdCode, cvdSep} from "./gatefns.mjs";
 
 const num = (v) => v.toFixed(3);
 class RecPath { constructor(p) { this.log = p instanceof RecPath ? [...p.log] : p != null ? ["svg:" + p] : []; } }
@@ -43,7 +43,7 @@ export function cvdStamp(mods = {}) {
   try {
     cvdRecipe(M, mods.ENT || CVD_ENT, (fn) => { log.push("cell"); const g = recorder(log); g.scale(4, 4); fn(g); return null; });
   } finally { globalThis.Path2D = P0; globalThis.DOMMatrix = D0; Math.random = R0; }
-  log.push(JSON.stringify(mods.ENT || CVD_ENT), JSON.stringify(CVD), String(simCVD), String(cvdSep));
+  log.push(JSON.stringify(mods.ENT || CVD_ENT), cvdCode(), String(cvdSep));
   const s = log.join("\n");
   return fnv(s) + ":" + log.length;
 }

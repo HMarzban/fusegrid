@@ -2,7 +2,7 @@
    VIEW_DY, atlas maps, floor / wall / brick / tile shaders and the frozen light recipe), on a fixed fixture world per biome x heat: the same CVD_ENT tiles, on both
    floor parities, with EMPTY round them; 18 floor cells; WALL tops (codes 0..3) and BRICK tops (A, B, Hi) on row 9. No tile or floor cell has a wall inside the AO's
    2-cell reach or under a cast shadow, so this is the lit tile against the lit floor: no foes, pickups, player or ambient motes. Each cell's top face is resampled
-   through the live camera (bilinear, from a dpr 3 buffer: a tile covers about 100 device px) to a 160 px square, which is what cvdSep's 40-px view reads. The tile
+   through the live camera (bilinear, from a dpr 2 buffer, desktop AUTO's own, where a tile covers about 70 device px; the pins also hold at 1.5 and 3) to a 160 px square, which is what cvdSep's 40-px view reads. The tile
    shaders run on world.featT, so every tile is measured at six PLAY-clock phases (anim.mjs) and the caller keeps the worst. */
 import {createRenderer3D, projBoard} from "../../src/render/three/wrapper.js";
 import {createWorld, loadLevel} from "../../src/core/sim.js";
@@ -10,7 +10,7 @@ import {CFG, T, BIOMES, key} from "../../src/core/config.js";
 import {setWallOverride} from "../../src/render/wallvar.js";
 import {cvdSep} from "./gatefns.mjs";
 
-const S = 160, TL = CFG.TILE, C = CFG.COLS, R = CFG.ROWS, N = C * R, DPR = 3;
+const S = 160, TL = CFG.TILE, C = CFG.COLS, R = CFG.ROWS, N = C * R;
 const CODE = {BELT: 1, GLIDE: 5, BLOOM: 6, PLATE: 7, STREAM: 8, QUICK: 12, PORTAL: 13, GATE: 14}, COLS = [3, 6, 9], Y = 4;
 const FLOORS = [5, 6].flatMap((y) => [3, 4, 5, 6, 7, 8, 9, 10, 11].map((x) => [x, y]));
 const WALLS = [[2, 9, 0], [4, 9, 1], [6, 9, 2], [8, 9, 3]], BRICKS = [[11, 9], [10, 9], [13, 9]];
@@ -42,7 +42,7 @@ function fixture(room, h, L) {
   return w;
 }
 /* the device-px map of a cell's top face at height hgt, cached (the camera never moves) */
-function mapper(r) {
+function mapper(r, DPR) {
   const cam = r._dbg.camera, MAPS = new Map();
   return (x, y, hgt) => {
     const k = x + "," + y + "," + hgt;
@@ -65,11 +65,11 @@ const flipRead = (gl, W, H) => { const a = new Uint8Array(W * H * 4), o = new Ui
 const peak = (u, c) => { let m = 0; for (let i = 0; i < u.length; i += 4) m = Math.max(m, Math.abs(u[i] - c[i]), Math.abs(u[i + 1] - c[i + 1]), Math.abs(u[i + 2] - c[i + 2])); return m; };
 /* ents: CVD_ENT. Returns one row per tile x parity x phase, the bite probe (a tile cell left as bare floor), the largest channel drift of the references across heats (they
    must not move), and with dump the sampled cells of phase 0 as RGBA arrays for a contact sheet */
-export function measure3D(ents, ANIM, {dump = false} = {}) {
+export function measure3D(ents, ANIM, {dump = false, dpr: DPR = 2} = {}) {
   const gc = document.createElement("canvas"), ov = document.createElement("canvas"); ov.width = 600; ov.height = 520;
   const r = createRenderer3D(gc, ov, {perf: {dpr3d: DPR, aa: true, shadow: "soft"}}), gl = r._dbg.gl;
   if (!gl) throw new Error("no WebGL");
-  const ctx = gl.getContext(), mp = mapper(r), out = [], sheet = [], drift = {};
+  const ctx = gl.getContext(), mp = mapper(r, DPR), out = [], sheet = [], drift = {};
   setWallOverride((x, y, k) => (OVR.has(key(x, y)) ? OVR.get(key(x, y)) : k));
   const shot = (w, t) => { w.featT = t; r.render(w, 0, {pop: 0, sfx: false}); return flipRead(ctx, gc.width, gc.height); };
   const refsOf = (px, b) => {

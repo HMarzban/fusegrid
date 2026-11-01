@@ -108,17 +108,17 @@ export const CVD_PIN = {floorL: 3.5, floorE: 4, wallL: 19.5, wallE: 20, brickL: 
 /* named waivers, each a lower pin for one look / tile / check (still gated, printed WAIVED). CLASSIC GATE open (lit 0, the only GATE state the game draws: featM
    stays 0) separates CORE / PLUS / MAX by 2.14 L* in NORMAL vision (2.10 protan); the normal-vision heat gate only sampled lit 2 / 4. Owner approved the current art
    (2026-10-26), so the open-state heat tell is the owner's / #28's call, not a drive-by fix */
-/* REAL 3D (2026-11-01, tools/tileart/cvd3dpage.mjs): the same rule, about 10 % under the worst simulated value measured through the real renderer, rounded down to 0.5;
-   lower than the flat looks' pins because the lit, multiplied scene compresses value. bedBrick is reported, not gated: a lit bed is not a hex. The heat bar stays 4 */
-export const CVD_PIN3 = {floorL: 2.5, floorE: 2.5, wallL: 9, wallE: 11, brickL: 11, brickE: 12, bedBrick: 0, heat: 4};
-export const CVD_WAIVE = {"CLASSIC gate-open heat": {pin: 2, normal: 2.14, issue: "#28"},
-  /* REAL 3D measures these under the heat bar in NORMAL vision too (a value gap of the lit scene, not a colour-vision one), so each is a regression floor about 10 % under
-     its measured worst, not a pass; the art is the owner's call (2026-10-26 "the current tile art are great"), see #28 */
-  "REAL 3D booster heat": {pin: 2.6, normal: 2.98, issue: "#28"}, "REAL 3D booster-flare heat": {pin: 2.7, normal: 3.09, issue: "#28"}, "REAL 3D ice-patch heat": {pin: 1.9, normal: 2.24, issue: "#28"},
-  "REAL 3D trap heat": {pin: 3.1, normal: 3.53, issue: "#28"}, "REAL 3D trap-wind heat": {pin: 2.3, normal: 2.62, issue: "#28"}, "REAL 3D quicksand heat": {pin: 3.1, normal: 3.69, issue: "#28"},
-  "REAL 3D portal heat": {pin: 2.2, normal: 2.52, issue: "#28"}, "REAL 3D portal-3 heat": {pin: 2.2, normal: 2.49, issue: "#28"}, "REAL 3D gate-open heat": {pin: 1.4, normal: 1.64, issue: "#28"}};
-/* a tile's heat pin in a look, after any waiver: gates.mjs and the golden test read the same answer */
-export const cvdHeatPin = (look, id, pin = CVD_PIN) => { const w = CVD_WAIVE[look + " " + id + " heat"]; return w ? w.pin : pin.heat; };
+/* REAL 3D (2026-11-01, tools/tileart/cvd3dpage.mjs, AUTO's dpr 2): the same rule, about 10 % under the worst simulated value measured through the real renderer, rounded
+   down to 0.5; lower than the flat looks' pins because the lit, multiplied scene compresses value. bedBrick is reported, not gated: a lit bed is not a hex. The heat bar stays 4 */
+export const CVD_PIN3 = {floorL: 2, floorE: 2.5, wallL: 9, wallE: 11, brickL: 11, brickE: 12, bedBrick: 0, heat: 4};
+export const CVD_WAIVE = {"CLASSIC gate-open heat": {pin: 2, normal: 2.14, issue: "#28"}};
+/* PROPOSED, not approved: these REAL 3D tiles measure UNDER the heat bar of 4, most of them in normal vision too (a value gap of the lit scene, not a colour-vision one). Each
+   pin is a regression floor about 10 % under the measured worst so a further drop fails; the gate prints every one as a known gap. Accepting them or changing the art is the
+   owner's call. normal = the worst heat separation in normal vision */
+export const CVD_HEAT3_PROPOSED = {booster: {pin: 2.5, normal: 2.89}, "booster-flare": {pin: 2.6, normal: 3.02}, "ice-patch": {pin: 1.8, normal: 2.16}, trap: {pin: 3, normal: 3.41}, "trap-wind": {pin: 2.3, normal: 2.66},
+  quicksand: {pin: 3.1, normal: 3.6}, portal: {pin: 2.2, normal: 2.5}, "portal-3": {pin: 2.2, normal: 2.47}, gate: {pin: 3.5, normal: 4.01}, "gate-open": {pin: 1.4, normal: 1.65}};
+/* a tile's heat pin in a look, after any waiver or proposed floor: gates.mjs and the golden test read the same answer */
+export const cvdHeatPin = (look, id, pin = CVD_PIN) => { const w = CVD_WAIVE[look + " " + id + " heat"] || (look === "REAL 3D" && CVD_HEAT3_PROPOSED[id]); return w ? w.pin : pin.heat; };
 const medRGB = (a) => [0, 1, 2].map((c) => { const v = []; for (let i = c; i < a.length; i += 4) v.push(a[i]); v.sort((x, y) => x - y); return v[v.length >> 1]; });
 /* L*a*b* of every 4x4 block mean (the 40-px view), once per image */
 function blocks(a, S) {
@@ -128,6 +128,8 @@ function blocks(a, S) {
 }
 const bL = (A, B) => { let t = 0; for (let i = 0; i < A.length; i += 3) t += Math.abs(A[i] - B[i]); return t / (A.length / 3); };
 const bE = (A, B) => { let t = 0; for (let i = 0; i < A.length; i += 3) t += Math.hypot(A[i] - B[i], A[i + 1] - B[i + 1], A[i + 2] - B[i + 2]); return t / (A.length / 3); };
+/* the measuring code, as text: the golden's stamp folds it in, so an edit to any of it demands a re-measure (pins are applied live, so they stay out) */
+export const cvdCode = () => [lin, lab, dE, gam, sim, simCVD, medRGB, blocks, bL, bE].map(String).join("\n") + JSON.stringify(CVD);
 const BC = new WeakMap();
 export function cvdSep(set, S, kinds = CVD_KINDS) {
   const rows = [], heat = [];

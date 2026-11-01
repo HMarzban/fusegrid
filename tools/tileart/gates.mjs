@@ -4,7 +4,7 @@
 import {readFileSync, writeFileSync, existsSync} from "node:fs";
 import {withPage, TILES} from "./harness.mjs";
 import {unpng} from "../pixel/rgba.mjs";
-import {litSkew, seam, channelLight, figure, heatSep, slotOnly, maxLum, lum, dE, rgbOf, edgeEnergy, cvdSep, cvdFails, cvdHeatPin, CVD_PIN, CVD_PIN3, CVD_WAIVE, CVD_KINDS} from "./gatefns.mjs";
+import {litSkew, seam, channelLight, figure, heatSep, slotOnly, maxLum, lum, dE, rgbOf, edgeEnergy, cvdSep, cvdFails, cvdHeatPin, CVD_PIN, CVD_PIN3, CVD_WAIVE, CVD_HEAT3_PROPOSED, CVD_KINDS} from "./gatefns.mjs";
 import {CVD_ENT, RULED, pxSets} from "./cvdsets.mjs";
 import {cvdStamp} from "./cvdstamp.mjs";
 import {ANIM} from "./anim.mjs";
@@ -106,7 +106,7 @@ function writeGold(res, chrome) {
 /* colour-vision gate: per tile (rules first), the worst simulated value of each pin over protan / deutan / tritan x CORE / PLUS / MAX (and, in REAL 3D, floor parity and
    PLAY-clock phase, tagged p / t); then per world x heat, the worst of every pin and each heat pair's separation */
 function cvdGate(look, res, bed, pin) {
-  const H = ["CORE", "PLUS", "MAX"], keys = ["floorL", "floorE", "wallL", "wallE", "brickL", "brickE", "bedBrick"], where = (x) => (x.t == null ? "" : ` p${x.par} t${x.t}`);
+  const H = ["CORE", "PLUS", "MAX"], keys = ["floorL", "floorE", "wallL", "wallE", "brickL", "brickE", "bedBrick"], where = (x) => (x.t == null ? "" : ` p${x.par} t${x.t}`), gaps = [];
   for (const r of [...res].sort((a, b) => RULED.has(b.id) - RULED.has(a.id))) {
     const sim = r.rows.filter((x) => x.cvd !== "none"), tag = `${look} ${r.bn} ${r.id}${RULED.has(r.id) ? " (rules)" : ""}`;
     for (const k of keys) {
@@ -115,8 +115,11 @@ function cvdGate(look, res, bed, pin) {
     }
     const hw = r.heat.filter((x) => x.cvd !== "none").reduce((a, x) => (x.d < a.d ? x : a));
     const wv = CVD_WAIVE[`${look} ${r.id} heat`], hp = cvdHeatPin(look, r.id, pin), hm = `${tag} CVD heat separation ${hw.d.toFixed(2)} (${H[hw.a]}-${H[hw.c]} ${hw.cvd}${where(hw)}) >= ${hp}`;
-    ok(hw.d >= hp, hm + (wv ? ` WAIVED from ${pin.heat} (normal vision ${wv.normal}; ${wv.issue})` : ""));
+    const pr = look === "REAL 3D" && CVD_HEAT3_PROPOSED[r.id];
+    ok(hw.d >= hp, hm + (wv ? ` WAIVED from ${pin.heat} (normal vision ${wv.normal}; ${wv.issue})` : pr ? ` KNOWN GAP: under the bar of ${pin.heat}, PROPOSED floor pending the owner (normal vision ${pr.normal})` : ""));
+    if (pr) gaps.push(`${r.bn} ${r.id} ${hw.d.toFixed(2)}`);
   }
+  if (gaps.length) console.log(`GAP ${look}: ${gaps.length} of ${res.length} tiles are under the heat bar of ${pin.heat}, held only by proposed floors: ${gaps.join(", ")}`);
   const worlds = [...new Set(res.map((r) => r.bn))], low = (L, k) => Math.min(...L.map((x) => x[k])).toFixed(1);
   for (const bn of worlds) {
     const R = res.filter((r) => r.bn === bn);
