@@ -6,15 +6,19 @@
    time. It refuses to report if the page is hidden, the rAF clock is not at the
    display rate, or WebGL / 2D canvas are not GPU backed.
 
-   node tools/perf/frames.mjs [flags]       about 4 min for the default matrix;
+   node tools/perf/frames.mjs [flags]       about 5 min for the default matrix
+                                            (100 s per look; sweep 1 min per look);
                                             it takes the owner's focus meanwhile
      --looks 2d,px,3d    looks to run (default all three)
-     --only smoke|desk|phone|rate|sweep|flush   one block (default desk,phone,rate)
+     --only smoke|desk|phone|rate|sweep|flush|hitch   one block (default desk,phone,rate)
        smoke     5 s check of the clock, the GPU and the staging; prints and stops
        desk      MENU, busy gen-2 room, fat world, worst gen-3 room, PAUSE
        sweep     the desk rooms alone, every world at gen 2 and gen 3
        phone     393x852 @3 mobile emulation of the same scenes (M5 GPU, not a phone)
        rate      the busy room at FRAME RATE 30 / 60 / MAX
+       hitch     each first (room, lock-on, blast, kill) alone on a fresh page, with
+                 the longest frame, the 3D program count, and a second pass under
+                 the CPU profiler naming the top self-time functions
        flush     render + a GPU readback, at the real backing size, every gen-3 room,
                  gen-2 room 8 and the fat world: the GPU cost the 60 Hz clock hides.
                  Vsync off is no use for this: the rAF outruns the fixed step, so
@@ -76,7 +80,7 @@ export function parseArgs(argv) {
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i], v = argv[i + 1];
     if (k === "--looks") { if (!/^(2d|px|3d)(,(2d|px|3d))*$/.test(v || "")) throw new Error("--looks wants 2d,px,3d, got " + v); a.looks = v.split(","); i++; }
-    else if (k === "--only") { if (!/^(smoke|desk|phone|rate|sweep|flush)$/.test(v || "")) throw new Error("--only wants smoke|desk|phone|rate|sweep|flush, got " + v); a.only = [v]; i++; }
+    else if (k === "--only") { if (!/^(smoke|desk|phone|rate|sweep|flush|hitch)$/.test(v || "")) throw new Error("--only wants smoke|desk|phone|rate|sweep|flush|hitch, got " + v); a.only = [v]; i++; }
     else if (k === "--rooms") { if (!/^[1-8](,[1-8])*$/.test(v || "")) throw new Error("--rooms wants a list of 1..8, got " + v); a.rooms = v.split(",").map(Number); i++; }
     else if (k === "--tile") { if (!/^[1-8]$/.test(v || "")) throw new Error("--tile wants 1..8, got " + v); a.tile = +v; i++; }
     else if (k === "--secs") { if (!/^\d+(\.\d+)?$/.test(v || "")) throw new Error("--secs wants a number, got " + v); a.secs = +v; i++; }
@@ -142,7 +146,7 @@ const PROBE = `(()=>{const c=document.createElement('canvas'),g=c.getContext('we
 const STAGE = `Promise.all(['/src/core/entities.js','/src/core/config.js','/src/core/sim.js','/src/render/lockon.js'].map((u)=>import(u))).then(([E,C,S,L])=>{
 const g=window.__GAME__,G=g.G,{T,key}=C,TL=C.CFG.TILE,COLS=C.CFG.COLS,ROWS=C.CFG.ROWS;
 const at=(x,y)=>G.grid[key(x,y)],cen=(v)=>(v+0.5)*TL;
-let on=null,seed=1,nextBomb=0,marks=null,hub=null,lanes=[],free=[];
+let on=null,seed=1,nextBomb=0,marks=null,hub=null,lanes=[],free=[],opts={};
 const rnd=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
 const DIRS=[[1,0],[-1,0],[0,1],[0,-1]];
 const openRun=(x,y,d)=>{let n=0;for(let i=1;i<=3;i++){const X=x+d[0]*i,Y=y+d[1]*i;if(X<1||Y<1||X>=COLS-1||Y>=ROWS-1||at(X,Y)===T.WALL)break;n++;}return n;};
@@ -155,6 +159,7 @@ function pinHunter(e){const l=e.lane,x=hub.x+l.d[0]*l.n,y=hub.y+l.d[1]*l.n;e.x=c
 const ITEMS=['fire','bomb','speed','shield','kick','heart'];
 function roomItem(t){const f=free[Math.floor(rnd()*free.length)]||[hub.x+1,hub.y+1];return {x:cen(f[0]),y:cen(f[1]),tx:f[0],ty:f[1],t,col:(E.POWER.find((q)=>q.t===t)||{}).col||'#fff',taken:false,pdef:E.POWER.find((q)=>q.t===t)||null};}
 function busy(spec){
+  opts={...spec};
   G.seed=spec.seed>>>0;G.heat=2;G.pace=0;if('gen' in G)G.gen=spec.gen;S.loadLevel(G,spec.room,true);G.state='PLAY';
   let best=null,bs=-1;
   for(let y=2;y<ROWS-2;y++)for(let x=2;x<COLS-2;x++){if(at(x,y)===T.WALL)continue;const r=DIRS.map((d)=>openRun(x,y,d)),s=r.filter((v)=>v>=2).length*10-Math.abs(x-7)-Math.abs(y-6);if(s>bs){bs=s;best={x,y,r};}}
@@ -164,7 +169,7 @@ function busy(spec){
   buildFree();
   G.bombs=[];G.items=[];G.enemies=[];
   const H=['fast','chaser','knight','fast'];
-  lanes.forEach((l,i)=>G.enemies.push(hunter(H[i%4],l)));
+  if(!opts.noLock)lanes.forEach((l,i)=>G.enemies.push(hunter(H[i%4],l)));
   for(const t of ['walker','boomerang','rocket','stationary','shade','burrow']){if(G.enemies.length>=9)break;const f=free[Math.floor(rnd()*free.length)];if(f){const e=E.spawnEnemy(t,f[0],f[1],G.level,null,{invulnT:0});e.invuln=false;G.enemies.push(e);}}
   for(const t of ITEMS)G.items.push(roomItem(t));
   nextBomb=0;marks={locks:[],blast:0,frames:0,foes:0,items:0};
@@ -173,7 +178,7 @@ function busy(spec){
     for(let i=0;i<G.enemies.length;i++){const e=G.enemies[i];if(!e.lane)continue;if(e.dead){G.enemies[i]=hunter(e.type,e.lane);}pinHunter(G.enemies[i]);}
     while(G.enemies.length<9&&free.length){const f=free[Math.floor(rnd()*free.length)],e=E.spawnEnemy(['walker','boomerang','rocket','shade','burrow'][Math.floor(rnd()*5)],f[0],f[1],G.level,null,{invulnT:0});e.invuln=false;G.enemies.push(e);}
     G.items=G.items.filter((q)=>!q.taken);while(G.items.length<6)G.items.push(roomItem(ITEMS[Math.floor(rnd()*6)]));
-    if(t>=nextBomb&&free.length){nextBomb=t+400;buildFree();const f=free[Math.floor(rnd()*free.length)];if(f&&!G.bombs.some((b)=>b.tx===f[0]&&b.ty===f[1]))G.bombs.push({x:cen(f[0]),y:cen(f[1]),tx:f[0],ty:f[1],timer:0.02,radius:2,variant:'normal',dead:false});}
+    if(!opts.noBomb&&t>=nextBomb&&free.length){nextBomb=t+400;buildFree();const f=free[Math.floor(rnd()*free.length)];if(f&&!G.bombs.some((b)=>b.tx===f[0]&&b.ty===f[1]))G.bombs.push({x:cen(f[0]),y:cen(f[1]),tx:f[0],ty:f[1],timer:0.02,radius:2,variant:'normal',dead:false});}
     if(marks){marks.frames++;marks.locks.push(G.enemies.filter((e)=>L.lockOn(G,e)).length);if(G.blades.length)marks.blast++;marks.foes+=G.enemies.length;marks.items+=G.items.length;}
   };
 }
@@ -198,7 +203,12 @@ function fat(){
 }
 const tick=(t)=>{window.__rec.nr(tick);if(!on||G.state==='PAUSE')return;pinPlayer();on(t);};
 window.__rec.nr(tick);
-window.__stage={busy,fat,stop(){on=null;},reset(){if(marks){marks.locks=[];marks.blast=0;marks.frames=0;marks.foes=0;marks.items=0;}},
+const bombAt=(x,y)=>G.bombs.push({x:cen(x),y:cen(y),tx:x,ty:y,timer:0.02,radius:2,variant:'normal',dead:false});
+const H4=['fast','chaser','knight','fast'];
+window.__stage={busy,fat,stop(){on=null;},
+lock(){opts.noLock=false;const k=G.enemies.filter((e)=>e.lane).length;if(!k){G.enemies=G.enemies.slice(0,Math.max(0,9-lanes.length));lanes.forEach((l,i)=>G.enemies.push(hunter(H4[i%4],l)));}},
+plant(){buildFree();const near=(f)=>G.enemies.some((e)=>!e.dead&&Math.abs(e.tx-f[0])+Math.abs(e.ty-f[1])<5);const f=free.find((q)=>!near(q))||free[0];bombAt(f[0],f[1]);return f;},
+kill(){const e=G.enemies.find((q)=>!q.lane&&!q.dead&&q.type!=='stationary')||G.enemies.find((q)=>!q.lane&&!q.dead);if(e)bombAt(e.tx,e.ty);return !!e;},reset(){if(marks){marks.locks=[];marks.blast=0;marks.frames=0;marks.foes=0;marks.items=0;}},
 read(){if(!marks||!marks.frames)return null;const l=marks.locks.slice().sort((a,b)=>a-b),n=marks.frames;return {lockMin:l[0],lockMax:l[l.length-1],lockMed:l[l.length>>1],blastShare:+(marks.blast/n).toFixed(2),foes:+(marks.foes/n).toFixed(1),items:+(marks.items/n).toFixed(1)};}};
 return true;})`;
 
@@ -215,6 +225,17 @@ if(three){const c=three.getContext(),b=new Uint8Array(4);for(let i=0;i<40;i++){c
 else{const x=cv.getContext('2d');for(let j=0;j<9;j++){const t=performance.now();for(let i=0;i<10;i++){nudge(i);r.render(G,1/60,{hud:true});}x.getImageData(0,0,1,1);out.push((performance.now()-t)/10);}}
 out.sort((a,b)=>a-b);const q=(p)=>+out[Math.min(out.length-1,Math.ceil(p*out.length)-1)].toFixed(2);const el=three?three.domElement:cv;return {mode:three?'readPixels x1':'getImageData x10',canvas:el.id,size:el.width+'x'+el.height,med:q(.5),p95:q(.95),max:q(1)};})()`;
 
+const PROGRAMS = `(()=>{const d=window.__GAME__.renderer._dbg,t=d&&d.gl;return t&&t.info&&t.info.programs?t.info.programs.length:null;})()`;
+/* self time per function from a CDP profile, biggest first */
+export function topSelf(profile, n = 8) {
+  const byId = new Map(profile.nodes.map((x) => [x.id, x])), ms = new Map();
+  profile.samples.forEach((id, i) => {
+    const f = byId.get(id).callFrame, k = (f.functionName || "(anon)") + " " + String(f.url).split("/").slice(-1)[0];
+    ms.set(k, (ms.get(k) || 0) + (profile.timeDeltas[i] || 0) / 1000);
+  });
+  return [...ms].filter(([k]) => !/^\((idle|root|program)\)/.test(k)).sort((a, b) => b[1] - a[1]).slice(0, n).map(([k, v]) => k.trim() + " " + v.toFixed(1));
+}
+
 const settingsSeed = (o) => `try{localStorage.setItem('nb.settings.v1',JSON.stringify(${JSON.stringify(o)}));}catch(e){}`;
 
 export async function run(a) {
@@ -227,7 +248,7 @@ export async function run(a) {
   const ev = async (expr) => { const r = await S("Runtime.evaluate", {expression: expr, awaitPromise: true, returnByValue: true}); if (r.exceptionDetails) throw new Error(expr.slice(0, 80) + ": " + JSON.stringify(r.exceptionDetails).slice(0, 400)); return r.result.value; };
   const cpuNow = async () => { const r = await c.send("SystemInfo.getProcessInfo"); const o = {}; for (const p of r.processInfo) o[p.type] = (o[p.type] || 0) + p.cpuTime; return o; };
   const key = async (code, k) => { for (const type of ["keyDown", "keyUp"]) await S("Input.dispatchKeyEvent", {type, code, key: k || code, windowsVirtualKeyCode: code === "Enter" ? 13 : 0}); };
-  let period = 0;
+  let period = 0, lastLoaf = [];
   const record = async (label, look, cfg, ms) => {
     await S("Page.bringToFront");
     const m0 = (await S("Performance.getMetrics")).metrics, c0 = await cpuNow(), t0 = performance.now();
@@ -267,6 +288,7 @@ export async function run(a) {
     await sleep(30);
     await ev(expr);
     const r = await w;
+    lastLoaf = r.loaf;
     return r.iv.length ? Math.round(Math.max(...r.iv)) : 0;
   };
   const busy = (room, gen) => `window.__stage.busy({room:${room},gen:${gen},seed:${4242 + room}})`;
@@ -330,10 +352,27 @@ export async function run(a) {
         for (const gen of [2, 3]) for (let r = 1; r <= 8; r++) { const h = await staged(busy(r, gen), look, {}, 800); const w = await record("sweep gen-" + gen + " room " + r, look, {view: "sweep"}, (a.secs === 6 ? 3 : a.secs) * 1000); w.loadHitch = h; }
       }
       if (a.only.includes("phone")) { await open(look, {phone: true, fps: a.fps}); await S("Emulation.setCPUThrottlingRate", {rate: a.throttle}); await scene(look, {view: "phone", throttle: a.throttle}, Math.min(a.secs, 5), a.rooms, a.tile); await S("Emulation.setCPUThrottlingRate", {rate: 1}); }
-      if (a.only.includes("rate")) for (const [fps, n] of [[0, "30"], [2, "MAX"]]) {
+      if (a.only.includes("rate")) for (const [fps, n] of [[0, "30"], [1, "60"], [2, "MAX"]]) {
         await open(look, {fps}); await toRun();
         await staged(busy(a.rooms[0], 2), look, {});
         await record("FRAME RATE " + n + " busy room " + a.rooms[0], look, {view: "rate", fps: n}, Math.min(a.secs, 5) * 1000);
+      }
+      if (blk === "hitch") for (const prof of [false, true]) {
+        await open(look, {}); await toRun();
+        if (prof) { await S("Profiler.enable"); await S("Profiler.setSamplingInterval", {interval: 100}); }
+        const room = a.rooms[0], ST = "window.__stage.";
+        const steps = [["room, no bomb, no lock", ST + `busy({room:${room},gen:2,seed:${4242 + room},noBomb:true,noLock:true})`], ["first lock-on", ST + "lock()"], ["first blast", ST + "plant()"], ["second blast", ST + "plant()"], ["first kill", ST + "kill()"], ["second kill", ST + "kill()"], ["third blast", ST + "plant()"], ["room again, no bomb, no lock", ST + `busy({room:${room},gen:2,seed:${4243 + room},noBomb:true,noLock:true})`], ["other biome, no bomb, no lock", ST + `busy({room:${room === 1 ? 2 : 1},gen:2,seed:${4244 + room},noBomb:true,noLock:true})`]];
+        for (const [label, expr] of steps) {
+          await sleep(700);
+          const p0 = await ev(PROGRAMS);
+          if (prof) await S("Profiler.start");
+          const hitch = await staged(expr, look, {}, 1200);
+          const top = prof ? topSelf((await S("Profiler.stop")).profile) : null;
+          const p1 = await ev(PROGRAMS);
+          report.windows.push({label, look, view: prof ? "hitch-profiled" : "hitch", hitch, programs: [p0, p1], loaf: lastLoaf.slice(0, 3), top});
+          console.error(`${look} ${prof ? "prof " : ""}${label}: longest ${hitch} ms, programs ${p0} -> ${p1}, loaf ${JSON.stringify(lastLoaf.slice(0, 2))}${top ? "\n   " + top.join(" | ") : ""}`);
+        }
+        if (prof) await S("Profiler.disable");
       }
       if (blk === "flush") for (const phone of [false, true]) {
         const view = phone ? "phone" : "desk", cfg = {view: "flush-" + view};
