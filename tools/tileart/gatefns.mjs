@@ -108,7 +108,17 @@ export const CVD_PIN = {floorL: 3.5, floorE: 4, wallL: 19.5, wallE: 20, brickL: 
 /* named waivers, each a lower pin for one look / tile / check (still gated, printed WAIVED). CLASSIC GATE open (lit 0, the only GATE state the game draws: featM
    stays 0) separates CORE / PLUS / MAX by 2.14 L* in NORMAL vision (2.10 protan); the normal-vision heat gate only sampled lit 2 / 4. Owner approved the current art
    (2026-10-26), so the open-state heat tell is the owner's / #28's call, not a drive-by fix */
-export const CVD_WAIVE = {"CLASSIC gate-open heat": {pin: 2, normal: 2.14, issue: "#28"}};
+/* REAL 3D (2026-11-01, tools/tileart/cvd3dpage.mjs): the same rule, about 10 % under the worst simulated value measured through the real renderer, rounded down to 0.5;
+   lower than the flat looks' pins because the lit, multiplied scene compresses value. bedBrick is reported, not gated: a lit bed is not a hex. The heat bar stays 4 */
+export const CVD_PIN3 = {floorL: 2.5, floorE: 2.5, wallL: 9, wallE: 11, brickL: 11, brickE: 12, bedBrick: 0, heat: 4};
+export const CVD_WAIVE = {"CLASSIC gate-open heat": {pin: 2, normal: 2.14, issue: "#28"},
+  /* REAL 3D measures these under the heat bar in NORMAL vision too (a value gap of the lit scene, not a colour-vision one), so each is a regression floor about 10 % under
+     its measured worst, not a pass; the art is the owner's call (2026-10-26 "the current tile art are great"), see #28 */
+  "REAL 3D booster heat": {pin: 2.6, normal: 2.98, issue: "#28"}, "REAL 3D booster-flare heat": {pin: 2.7, normal: 3.09, issue: "#28"}, "REAL 3D ice-patch heat": {pin: 1.9, normal: 2.24, issue: "#28"},
+  "REAL 3D trap heat": {pin: 3.1, normal: 3.53, issue: "#28"}, "REAL 3D trap-wind heat": {pin: 2.3, normal: 2.62, issue: "#28"}, "REAL 3D quicksand heat": {pin: 3.1, normal: 3.69, issue: "#28"},
+  "REAL 3D portal heat": {pin: 2.2, normal: 2.52, issue: "#28"}, "REAL 3D portal-3 heat": {pin: 2.2, normal: 2.49, issue: "#28"}, "REAL 3D gate-open heat": {pin: 1.4, normal: 1.64, issue: "#28"}};
+/* a tile's heat pin in a look, after any waiver: gates.mjs and the golden test read the same answer */
+export const cvdHeatPin = (look, id, pin = CVD_PIN) => { const w = CVD_WAIVE[look + " " + id + " heat"]; return w ? w.pin : pin.heat; };
 const medRGB = (a) => [0, 1, 2].map((c) => { const v = []; for (let i = c; i < a.length; i += 4) v.push(a[i]); v.sort((x, y) => x - y); return v[v.length >> 1]; });
 /* L*a*b* of every 4x4 block mean (the 40-px view), once per image */
 function blocks(a, S) {
@@ -135,9 +145,10 @@ export function cvdSep(set, S, kinds = CVD_KINDS) {
   return {rows, heat};
 }
 /* the gate: one message per broken pin (simulated rows only); bed = also hold bedBrick */
-export function cvdFails(id, res, {bed = false, pin = CVD_PIN} = {}) {
+export function cvdFails(id, res, {bed = false, pin = CVD_PIN, look = ""} = {}) {
   const f = [], H = ["CORE", "PLUS", "MAX"], keys = ["floorL", "floorE", "wallL", "wallE", "brickL", "brickE"].concat(bed ? ["bedBrick"] : []);
   for (const r of res.rows) if (r.cvd !== "none") for (const k of keys) if (!(r[k] >= pin[k])) f.push(`${id} ${H[r.h]} ${r.cvd} ${k} ${r[k].toFixed(1)} < ${pin[k]}`);
-  for (const r of res.heat) if (r.cvd !== "none" && !(r.d >= pin.heat)) f.push(`${id} ${r.cvd} heat ${H[r.a]}-${H[r.c]} ${r.d.toFixed(2)} < ${pin.heat}`);
+  const hp = cvdHeatPin(look, id, pin);
+  for (const r of res.heat) if (r.cvd !== "none" && !(r.d >= hp)) f.push(`${id} ${r.cvd} heat ${H[r.a]}-${H[r.c]} ${r.d.toFixed(2)} < ${hp}`);
   return f;
 }
