@@ -216,12 +216,12 @@
      tests/loadbar.test.mjs pins to the real static graph of the entry below.
      Resource Timing only reports a file when it ends, so the count is true but
      stepped; no entries (an unsupported browser) means no number, only LOADING. -->
-<script id="loadjs" data-files="100">
+<script id="loadjs" data-files="100" data-gen3="3">
 (function(w,d){
   var $=function(i){return d.getElementById(i)},E=$("load"),bar=$("loadbar"),fill=$("loadfill"),msg=$("loadmsg"),act=$("loadact"),retry=$("loadretry"),keep=$("loadkeep");
   var STALL=30000,jobs={},cur=null,failed=null,drop=null,again=null,shown=null,iv=0,base=new URL("./",d.baseURI).href;
   var now=function(){return w.performance?performance.now():0};
-  var bootFiles=+$("loadjs").getAttribute("data-files");
+  var q=(w.location&&w.location.search)||"",bootFiles=+$("loadjs").getAttribute("data-files")+(/[?&]gen=3\b/.test(q)&&!/[?&]code=/.test(q)?+$("loadjs").getAttribute("data-gen3"):0);
   jobs.boot={k:"boot",label:"",files:bootFiles,total:bootFiles,weigh:function(u){return u.indexOf(base+"src/")===0&&/\.js(\?|$)/.test(u)?1:0},seen:{},n:0,w:0,f:0,ph:0,t:0,last:now(),dock:false};
   function view(){return failed?jobs[failed]:(cur&&jobs[cur])||jobs.boot||null}
   function paint(){
@@ -286,7 +286,7 @@
   };
   retry.onclick=function(){var f=again;if(f)f();else location.reload()};
   keep.onclick=function(){var f=drop,k=failed;failed=null;drop=null;again=null;delete jobs[k];act.hidden=true;E.removeAttribute("data-act");paint();if(f)f()};
-  /* the buttons are the card's own: nothing here reaches the game's keys or the title's press */
+  /* the buttons are the card's own: nothing here reaches the game's keys; the title's press skips the card in main.js's armUnlock */
   E.addEventListener("keydown",function(e){e.stopPropagation()});
   E.addEventListener("pointerdown",function(e){e.stopPropagation()});
   /* a throw while the boot job lives is a game that will never paint */

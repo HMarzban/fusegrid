@@ -275,5 +275,18 @@ for (const key of ["Shift", "Control", "Alt", "Meta", "CapsLock", "AltGraph", "N
   check("no removeEventListener: tolerated, handler inert after finish", n === 1, n);
 }
 
+// ---- skip: a press the listener must not see (the loader card's own buttons) ----
+{
+  const t = mkTarget(), a = mkAudio();
+  let n = 0, c = 0;
+  const u = a.unlock;
+  a.unlock = () => (c++, u.call(a));
+  armUnlock(t, a, () => n++, (ev) => ev.card === true);
+  const fire = (ev) => t.L.filter((x) => x.ty === "pointerup").forEach((x) => x.fn(ev));
+  fire({ card: true });
+  fire({ card: true });
+  check("skip: a card press neither unlocks nor counts toward the hatch", c === 0 && n === 0, c + "/" + n);
+}
+
 console.log("\n  UNLOCK RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);

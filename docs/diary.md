@@ -6,7 +6,7 @@
 
 This is the story of how the game was built: the big turns, the dead ends
 and what each one taught us. It runs from the first commit on 2026-08-16 to
-shell v196 on 2026-11-01.
+shell v197 on 2026-11-01.
 
 - **What changed in each release** lives in the [CHANGELOG](../CHANGELOG.md).
 - **How the game works today** lives in [architecture.md](architecture.md).
@@ -608,6 +608,16 @@ one short tip, and ice holds up on MAX whether you brake or not. Next comes the
 one test no bot can run: a person playing it.
 
 ---
+
+### 2026-11-01 · A bar instead of a freeze (shell v197)
+
+The owner asked the fair question: why stare at nothing while the game loads? So the game got a
+loading bar that counts real files and admits when it can't count, plus a failure card instead
+of a blank page. Six lanes ran at once. REAL 3D stopped recompiling its shaders between rooms,
+19 ms for a first frame on a fast laptop, with phones still to measure. The preview's board code
+left the boot, and every REAL 3D tile finally shows its heat. A reviewer caught the loader's own
+buttons pressing the title behind it.
+[Record](superpowers/specs/2026-11-01-loose-ends-v197.md).
 
 ### 2026-11-01 · Four tiles in one sitting, and an honest miss (shell v196)
 

@@ -15,6 +15,30 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
+## shell v197 · 2026-11-01
+
+A loading bar, and REAL 3D stops stalling between worlds. The rest is on the preview (`?gen=3`).
+
+### Added
+
+- **Loading bar.** A slow connection now shows real progress instead of a blank page, on first
+  load and the first time you pick REAL 3D or PIXEL. If a file can't load, you get a plain
+  message and RETRY, or USE CLASSIC 2D for a look. A fast visit never sees it.
+- **Preview: ICE brake tip.** If you first met ICE PATCH at CORE, your first slide at MAX now
+  tells you about the brake.
+
+### Changed
+
+- **Preview: BOOSTER warning marks** are heavier, so they read on a phone in all three looks.
+- **Preview: REAL 3D floor tiles** now show CORE / PLUS / MAX clearly apart, all fifteen tile states.
+- **Smaller start.** About 75 KB less for the game to load at startup, because the preview's
+  board code now loads only on the preview.
+
+### Fixed
+
+- **REAL 3D: entering a new world no longer hitches.** Shaders stay compiled between rooms.
+  On a fast laptop the first frame went from about 160 ms to 19 ms. Phones aren't measured yet.
+
 ## shell v196 · 2026-11-01
 
 Nothing changes in a normal run. All eight floor tiles now have rules, on the preview only

@@ -9,12 +9,13 @@
    the sting. onReady is the one-shot part: the listeners stay armed and keep
    calling unlock() until the ctx runs, so the music still joins.
    No WebAudio (Node, or unlock() false): the first gesture that is not
-   Escape or a modifier/lock key, so the Node key matrix matches the browser. */
+   Escape or a modifier/lock key, so the Node key matrix matches the browser.
+   skip(ev): a press this listener must not see (the loader card's own buttons). */
 export const UNLOCK_EV = Object.freeze(["keydown", "pointerdown", "pointerup", "touchend", "click"]);
 const isEsc = (ev) => !!ev && (ev.code === "Escape" || ev.key === "Escape");
 const MODS = ["Shift", "Control", "Alt", "AltGraph", "Meta", "CapsLock", "Fn", "FnLock", "NumLock", "ScrollLock", "Symbol", "SymbolLock", "Hyper", "Super"];
 const isMod = (ev) => !!ev && MODS.includes(ev.key);
-export function armUnlock(target, audio, onReady) {
+export function armUnlock(target, audio, onReady, skip) {
   let done = false,
     ready = false,
     presses = 0;
@@ -34,7 +35,7 @@ export function armUnlock(target, audio, onReady) {
     fire();
   };
   function handle(ty, ev) {
-    if (done) return;
+    if (done || (skip && skip(ev))) return;
     const esc = ty === "keydown" && isEsc(ev);
     const r = audio && audio.unlock ? audio.unlock() : false;
     if (r === false) return esc || (ty === "keydown" && isMod(ev)) ? undefined : finish();

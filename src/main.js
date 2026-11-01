@@ -520,7 +520,7 @@ export function createGame(canvas, opts = {}) {
   /* music unlock (opening §5): window capture listeners stay armed until the
      ctx RUNS (Escape / touch pointerdown carry no activation). P1: the sting
      rides it, and only the title's press gets it (deep links never do). */
-  if (typeof window !== "undefined") armUnlock(window, audio, () => { if (app.screen === SCREEN.INTRO) { fireJingle(); app.beginShow(); } }), mountAudioPower(window, typeof document !== "undefined" ? document : null, audio, () => settings.snd !== 0);
+  if (typeof window !== "undefined") armUnlock(window, audio, () => { if (app.screen === SCREEN.INTRO) { fireJingle(); app.beginShow(); } }, (ev) => !!(ev && ev.target && ev.target.closest && ev.target.closest("#load"))), mountAudioPower(window, typeof document !== "undefined" ? document : null, audio, () => settings.snd !== 0);
   if (typeof window !== "undefined") window.addEventListener("pointerdown", () => { if (app.screen === SCREEN.INTRO) app.skipShow(); }); // bubble: an off-canvas tap skips too; the canvas handler runs first
 
   /* ATTRACT demo world handle (src/app/attract.js): the shell machine only

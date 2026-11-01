@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-01 — v197 on LOCAL main, not pushed: loading bar + loose ends
+Owner: finish items 2–11 with a team, no questions. Loading bar, #36 first frame 150–167 → 19 ms (phone unmeasured, stays open), boot graph −75 KB raw, on `?gen=3` heavier BOOSTER marks, ICE brake tip, all 15 REAL 3D heat states ≥ 4. Rulings in `docs/superpowers/specs/2026-11-01-loose-ends-v197.md`; 442 tests. `frame-c` deletion was declined, stays. Open: push, the playtest #30, the design branch `descent-design`.
+
 ## 2026-11-01 — v196 LIVE: STREAM, QUICKSAND, GATE, PORTAL have rules (#26, #27)
 Owner: "finish them all", in parallel, ahead of the #30 playtest. `?gen=3` only, 430 tests. Review found and fixed a GATE + SHRINK no-escape, a mound boxing you in, dim pairs. Open: no new tile reaches MAX +3 for the bot, which cannot use gates or mounds; nobody has played them.
 

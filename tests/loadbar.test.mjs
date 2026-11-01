@@ -35,11 +35,12 @@ const mod = /<script type="module"[^>]*>([\s\S]*?)<\/script>/.exec(html)[1];
 const entries = [...strip(mod).matchAll(EDGE)].map((m) => m[1].replace(/^\.\//, ""));
 const boot = graph(entries), tree3 = graph(["src/render/three/wrapper.js"]).filter((f) => !boot.includes(f)), treePx = graph(["src/render/pixel/renderer.js"]).filter((f) => !boot.includes(f));
 const pinned = +/id="loadjs" data-files="(\d+)"/.exec(html)[1];
+const tree3g = graph(["src/core/board3.js"]).filter((f) => !boot.includes(f));
 const bytes = (a) => a.reduce((n, f) => n + statSync(join(ROOT, f)).size, 0);
 const bigW3 = Math.round(((tree3.length - 1) * statSync(join(ROOT, "vendor/three.module.js")).size) / (bytes(tree3) - statSync(join(ROOT, "vendor/three.module.js")).size));
 
 if (process.argv.includes("--write")) {
-  writeFileSync(htmlPath, html.replace(/(id="loadjs" data-files=")\d+/, "$1" + boot.length));
+  writeFileSync(htmlPath, html.replace(/(id="loadjs" data-files=")\d+/, "$1" + boot.length).replace(/(data-gen3=")\d+/, "$1" + tree3g.length));
   const src = readFileSync(barPath, "utf8");
   writeFileSync(barPath, src.replace(/(label: "REAL 3D", files: )\d+/, "$1" + tree3.length).replace(/(label: "PIXEL", files: )\d+/, "$1" + treePx.length));
   console.log("loader pins: boot " + boot.length + ", REAL 3D " + tree3.length + ", PIXEL " + treePx.length);
@@ -50,6 +51,7 @@ const FIX = " (fix: node tests/loadbar.test.mjs --write)";
 check("the entry reaches main and audio", entries.includes("src/main.js") && entries.includes("src/audio.js"), entries.join());
 check("every way the entry can die reaches the failure card: a failed file (the element's error event) and a rejected boot step (async, so the boot job ends only after it settles)", /<script type="module" onerror="__load\.fail\('boot'\)">/.test(html) && /Promise\.resolve\([\s\S]*\)\.then\(\(\)=>requestAnimationFrame\(\(\)=>L\.end\("boot"\)\),\(e\)=>\{console\.error\(e\);L\.fail\("boot"\);\}\)/.test(mod));
 check("data-files = the real static boot graph" + FIX, pinned === boot.length, pinned + " vs " + boot.length);
+check("data-gen3 = the ?gen=3 lazy chunk" + FIX, +/data-gen3="(\d+)"/.exec(html)[1] === tree3g.length, tree3g.join());
 check("REAL 3D files = its lazy tree" + FIX, LOOK["3d"].files === tree3.length, LOOK["3d"].files + " vs " + tree3.length);
 check("PIXEL files = its lazy tree" + FIX, LOOK.px.files === treePx.length, LOOK.px.files + " vs " + treePx.length);
 for (const [k, tree] of [["3d", tree3], ["px", treePx]]) {

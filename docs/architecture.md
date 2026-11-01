@@ -273,6 +273,8 @@ static checks moved to `src/core/featchecks.js`, no item lands on a tile, and
 room 5 re-rolls a layout that cannot hold three SHRINK-safe traps. Results and
 the open items are in the record's 2026-11-01 addendum.
 
+**Shell v197: loading bar and no recompile on a room change.** Before any module runs, `index.html` paints a plate whose progress is finished files against totals a test pins to the real import graphs, or an indeterminate glint when it has no numbers. `rcache.js` puts it up before a lazy look's fetch and synchronous bake. REAL 3D pins compiled programs (`three/progpin.js`) and moved per-world values to uniforms, so a new world links nothing (#36). `genBoard3` and its checks are a lazy chunk (`src/app/gen3load.js`) only `?gen=3` loads. [Record](superpowers/specs/2026-11-01-loose-ends-v197.md).
+
 **Shell v196: the last four tiles get rules, preview only (#26, #27).** One module per
 tile (`tilestream.js`, `tilequick.js`, `tilegate.js`, `tileportal.js`) behind the
 `tiles2.js` seam the sim calls, inert with no tile layer. Fairness comes from placement for

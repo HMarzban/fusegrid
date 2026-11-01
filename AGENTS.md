@@ -60,13 +60,13 @@ through `listGeom` / `listHit` (pitches are caps that scale down in a short
 box); MENU has a PLAY hero row whose tag is the run it starts and group gaps
 before OPTIONS / HIGH SCORES / SOURCE; the SOURCE URL shows only on its
 selected row. Build tag (owner 2026-10-21: "a game version in some where in
-the display or menue"): `v196` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
+the display or menue"): `v197` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
 derived ONLY in `shellview.js` (`REV`, handed to `drawMenu` / `drawSettings`
-as `rev`) and `update.js` (the card's "You are on v196", the running build,
+as `rev`) and `update.js` (the card's "You are on v197", the running build,
 never a guessed next one) — never a second literal. Keyboard MENU appends
 it to the foot hint; the touch hub hangs it under the plate when the box has
 >= 10 units below it (`#sh`), else on the SOURCE tile's teaser (landscape on
-the board canvas); OPTIONS keeps its `BUILD v196` kicker. Never on the HUD.
+the board canvas); OPTIONS keeps its `BUILD v197` kicker. Never on the HUD.
 PAUSE draws `pauseGeom(overlayBox, touch)`: touch (`touchLay`,
 data-lay p/l) caps pitch at `PAUSE_ROW_H` 70 / hero 76 / width 380, a keyboard
 screen at the compact `PAUSE_ROW_D` 44 / hero 54 / width 340 (owner: "too
@@ -168,6 +168,7 @@ not shell screens. Do not add them as `SCREEN` values.
   `src/render/shellview.js` (`drawShell` + the `kindSize`/`dims` logical box),
   `src/app/update.js` (`mountUpdate`: registers the SW and owns the NEW
   VERSION READY card; `U` is its key, live only while the card shows),
+  `src/app/loadbar.js` + the `#load` plate and inline `#loadjs` script in `index.html` (the honest loading bar, v197: finished files against totals `tests/loadbar.test.mjs` pins to the real graphs, `--write` re-pins; indeterminate when there are no numbers, shown after about 150 ms, a failure card with RETRY / USE CLASSIC 2D; `rcache.js` paints it before a lazy look's fetch and bake; `#wrap` stays hidden until the title paints; `armUnlock`'s `skip` keeps the card's buttons from pressing the title),
   `src/app/fit.js` (`mountFit`: stage scale per layout reserve `FIT_RES`, and
   `body[data-lay]` = `d` desktop / `p` touch portrait / `l` touch landscape —
   the ONE predicate `index.html`'s touch layout keys off, never a media
@@ -219,8 +220,7 @@ not shell screens. Do not add them as `SCREEN` values.
     CHASER / KNIGHT) **and brick-passers** (PHANTOM / ROCKET / SHADE; lead
     ruling 2026-10-26, owner accepted: they walk through the seal bricks).
   - `featchecks.js` — the static tile checks V13–V27 (#18, moved from
-    `tools/balance/`, which re-exports it; 48 KB since v196, in everyone's boot graph because
-    `genBoard3` is synchronous, though only `?gen=3` runs it). V14 is fixed in
+    `tools/balance/`, which re-exports it; 48 KB, out of the boot graph since v197 with `board3.js` (`genBoard3`, registers through `setGen3`) and `featplace.js` (`placeFeat`): `src/app/gen3load.js` imports them before `createGame` on `?gen=3` only, Node code imports `board3.js` itself, a gen-3 ask with the seam empty throws; the rule modules stay in boot). V14 is fixed in
     `loadLevel`, gen 3 only (no item on a tile).
   - `fair.js` — pure `validateBoard(grid, level, heat, opts)` (#11) returning
     failed rule IDs: V1 reach, V2 safe first bomb (reach 1–10, PIERCE, LINE x4,
@@ -338,6 +338,7 @@ not shell screens. Do not add them as `SCREEN` values.
     (BL3); only the bomb tile's crown climbs higher. REDUCE FLASH (`flashK`)
     scales the <=3 flash PointLights. Fat-world stays 141. `atlas.fire` is
     gone; never crossed quads again.
+  - No program compile on a room change (#36, v197): `three/progpin.js` pins compiled programs for the renderer's life (cap 96, released on a SHADOWS tier change, forgotten on context restore; it writes three's `usedTimes`, so it is tied to vendored r160), per-world values are uniforms, never a program key (`tests/program-share.test.mjs`), ambient and burst share one `_shared` material, world textures are kept per biome (`WORLDS_KEPT` 2) and the WIN overlay prepares the next room's. #36 stays open: no real phone measured.
   - The board border is ONE extruded cabinet rim (`tag:"trim"`, `RIM_W 36` /
     `RIM_LIP 6`) with a hole — never four rails, which crossed at the corners.
   - Walls follow the grid (shell v183, 2026-10-21): `scene.js` keeps a WALL
@@ -468,11 +469,8 @@ not shell screens. Do not add them as `SCREEN` values.
     and asks for `node tools/tileart/gates.mjs cvd --golden` (it proves today's
     calls were measured, not that CI re-rasterizes). REAL 3D (2026-11-01):
     `cvd3dpage.mjs` measures the real renderer at rig C, dpr 2, offline in
-    `gates.mjs` (`CVD_PIN3`, top faces only, a clean lit fixture). 10 of its 15
-    tile states miss the heat bar of 4 (9 in normal vision too: lighting
-    compresses value, not a colour problem); `CVD_HEAT3_PROPOSED` holds them as
-    printed KNOWN GAP floors pending the owner, worst CROWN open GATE 1.62, ICE
-    PATCH 2.11, VOID PORTAL 2.46. Fixed in v190: PIXEL SAND's parity-B base floor was raw
+    `gates.mjs` (`CVD_PIN3`, top faces only, a clean lit fixture). All 15
+    tile states clear the heat bar of 4 since v197 (`three/featmesh.js` `heatLayer`, static, no re-hue, 3D only; `CVD_HEAT3` regression floors), lowest ICE PATCH 4.23. Fixed in v190: PIXEL SAND's parity-B base floor was raw
     `floor1` `#a07828`, 4.9 ΔE from BRICK-B `#a07020`; `featpxcells.js`
     `floorPxCell` now builds that slab one step down (`floor1.shadow` base,
     16.8 ΔE), the PIXEL twin of CLASSIC's `floorart.js` `BED.SAND`.
@@ -809,8 +807,8 @@ Node v26, `"type": "module"`. No build step, no bundler.
   `flags.js` alone). The word `leaderboard` is refused in `src/` and `tests/`
   and executably gated by `tests/banned-name.test.mjs`; `docs/` is exempt
   because the spec names the term to refuse it.
-- Coach v2 (`nb.coach.v2`) also carries eight tile bits (`b g c x f q y o`, gen 3 only,
-  16 bits in all; copy `feat.js` `tileTip`, 6 s, a tip whose room is left closes
+- Coach v2 (`nb.coach.v2`) also carries nine tile bits (`b g c x f q y o z`, gen 3 only,
+  17 bits in all; `z` is the ICE brake, kind `BRAKE`, gated by `glideBrakes`, closing it also sets `g`; copy `feat.js` `tileTip`, 6 s, a tip whose room is left closes
   `rn:"room"`). It shows **one first-use tip per verb**, once ever,
   for EIGHT verbs (owner ruling 2026-10-10 widened the original three): KICK /
   THROW / REMOTE / PASS / LINE / POWER / PIERCE / SHIELD, one bit each
@@ -1070,7 +1068,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
       (O2) moves the tile boards to `?gen=3` and makes tile-free gen 2 the
       default for ordinary runs and the daily. (Pins at that step: CLASSIC `6ec1e0a5:65648`, px cap 145 KB; current
       values are below.)
-      Option C (stage set) sits unmerged on branch `frame-c`.
+      Option C (stage set) sits unmerged on branch `frame-c`, not to be merged (lead ruling 2026-11-01).
       Depth round (shadows, AO, brick value down, floor detail, 3D relief,
       PIXEL floor, stage fixes) and AMBIENT MOTION (owner 2026-10-25) are in:
       `src/render/ambient.js` is the one deterministic spec (`particleAt`,
@@ -1135,7 +1133,8 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   Node test fakes define `globalThis.location` WITHOUT `href`, so "is this a
   real page" means `typeof location.href === "string"` (the branch's gen-2 page
   default depended on it; since v188 the tile boards are `?gen=3` only).
-- Release state (2026-11-01): shell **v196** (rules for STREAM, QUICKSAND, GATE, PORTAL, all on
+- Release state (2026-11-01): shell **v197** (loading bar, REAL 3D new-world freeze fix #36, boot graph minus 75 KB raw, and on `?gen=3` BOOSTER marks, ICE brake tip, REAL 3D heat look; rulings and numbers in `docs/superpowers/specs/2026-11-01-loose-ends-v197.md`) is on LOCAL main, not pushed. A design on local branch `descent-design` is unmerged and stays unpushed until the owner says.
+  Shell **v196** (rules for STREAM, QUICKSAND, GATE, PORTAL, all on
   `?gen=3`; no change in a normal run) is LIVE on the owner's word.
   Shell **v195** (BOOSTER warning, tile tips, FLOOR
   line, PIT placement, all on `?gen=3`; no change in a normal run) and **v194**
@@ -1156,7 +1155,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   pushes, or says "push". Boards since v188: gen 2 (bold mazes, no tiles) for
   every ordinary run and the daily, gen 1 for F1 codes / ATTRACT / the intro,
   the floor-tile boards only with `?gen=3` (design pass 2 done, the build is
-  #18–#22), so the GUIDE FLOOR page is still a PREVIEW. 430 tests. Branches `tiles-d`, `frame-a`, `frame-b` are
+  #18–#22), so the GUIDE FLOOR page is still a PREVIEW. 442 tests. Branches `tiles-d`, `frame-a`, `frame-b` are
   deleted (merged); `frame-c` (stage set) stays unmerged. The look is recorded in
   `docs/superpowers/specs/2026-10-25-board-look-depth-ambient-design.md`,
   including the loose ends. Loopback dev server: `PORT=8091 node
