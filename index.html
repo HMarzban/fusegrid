@@ -171,11 +171,124 @@
   body[data-lay=p] #ana .yes,body[data-lay=l] #ana .yes,body[data-lay=p] #ana .no,body[data-lay=l] #ana .no{height:44px}
   body[data-lay=p] #ana{left:12px;right:12px;width:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px))}
   body[data-lay=p] #upd .later,body[data-lay=l] #upd .later{line-height:48px}
+  /* loader (window.__load, inline below; plan numbers in src/app/loadbar.js): the
+     CONSOLE PANEL plate. Hidden in markup, so no JS means no bar. Appears only
+     after 150 ms (a cached repeat visit never sees it). The fill and the glint are
+     transform-only and promoted, so the compositor keeps them moving through a
+     long main-thread job (parse, atlas bake, three scene build). The fill only
+     ever states finished files; the glint only says "still alive". Never takes a
+     pointer unless its buttons are up. */
+  #load{position:fixed;z-index:21;left:50%;top:50%;translate:-50% -50%;width:min(340px,calc(100vw - 32px));
+    display:flex;flex-direction:column;gap:10px;padding:16px 18px 16px 22px;
+    background:rgba(10,14,24,.97);border:1px solid #2a3550;border-radius:6px;
+    box-shadow:0 4px 0 rgba(0,0,0,.35),inset 3px 0 0 #37f0d0;color:#dfe7f5;pointer-events:none;
+    user-select:none;-webkit-user-select:none;animation:updFade .16s linear 150ms both}
+  #load[hidden]{display:none}
+  #load b{font:700 18px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.14em}
+  #load[data-dock]{top:calc(10px + env(safe-area-inset-top,0px));translate:-50% 0;padding:9px 14px 10px 18px;gap:7px;width:min(300px,calc(100vw - 32px))}
+  #load[data-dock] b{display:none}
+  #load[data-act]{pointer-events:auto}
+  #loadmsg{font:400 12px/1.45 ui-monospace,"SF Mono",Menlo,Consolas,monospace;color:#7385ad;letter-spacing:.04em}
+  #loadbar{position:relative;height:6px;overflow:hidden;background:#141a2b;border-radius:2px}
+  #loadbar[hidden]{display:none}
+  #loadfill{position:absolute;inset:0;background:#37f0d0;transform:scaleX(0);transform-origin:0 50%;transition:transform .18s linear;will-change:transform}
+  #loadbar[data-ind] #loadfill{opacity:0}
+  #loadrun{position:absolute;top:0;bottom:0;left:0;width:30%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.7),transparent);
+    transform:translateX(-100%);animation:loadRun 1.1s linear infinite;will-change:transform}
+  @keyframes loadRun{from{transform:translateX(-100%)}to{transform:translateX(334%)}}
+  #loadact{display:flex;align-items:center;gap:8px}
+  #loadact[hidden]{display:none}
+  #loadact button{flex:1;height:44px;padding:0 10px;border:1px solid #37f0d0;border-radius:4px;background:rgba(55,240,208,.14);color:#37f0d0;
+    font:700 13px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.1em;cursor:pointer}
+  #loadact button:hover{background:rgba(55,240,208,.22)}
+  #loadkeep[hidden]{display:none}
+  @media (prefers-reduced-motion:reduce){#loadrun{animation:none;opacity:0}#loadfill{transition:none}}
   .muted{opacity:.45}
   .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 </style>
 </head>
 <body>
+<div id="load" hidden><b>FUSE/GRID</b><div id="loadbar" role="progressbar" aria-label="Loading" aria-valuemin="0" aria-valuemax="100" data-ind><div id="loadfill"></div><div id="loadrun"></div></div><span id="loadmsg">LOADING</span><div id="loadact" hidden><button id="loadretry" type="button">RETRY</button><button id="loadkeep" type="button" hidden>USE CLASSIC 2D</button></div></div>
+<!-- The one loader. It runs before any module, so it is plain inline JS, and the
+     first-load job counts finished files against data-files, which
+     tests/loadbar.test.mjs pins to the real static graph of the entry below.
+     Resource Timing only reports a file when it ends, so the count is true but
+     stepped; no entries (an unsupported browser) means no number, only LOADING. -->
+<script id="loadjs" data-files="100">
+(function(w,d){
+  var $=function(i){return d.getElementById(i)},E=$("load"),bar=$("loadbar"),fill=$("loadfill"),msg=$("loadmsg"),act=$("loadact"),retry=$("loadretry"),keep=$("loadkeep");
+  var STALL=30000,jobs={},cur=null,failed=null,drop=null,shown=null,iv=0,base=new URL("./",d.baseURI).href;
+  var now=function(){return w.performance?performance.now():0};
+  var bootFiles=+$("loadjs").getAttribute("data-files");
+  jobs.boot={k:"boot",label:"",files:bootFiles,total:bootFiles,weigh:function(u){return u.indexOf(base+"src/")===0&&/\.js(\?|$)/.test(u)?1:0},seen:{},n:0,w:0,f:0,ph:0,t:0,last:now(),dock:false};
+  function view(){return failed?jobs[failed]:(cur&&jobs[cur])||jobs.boot||null}
+  function paint(){
+    var j=view();
+    if(!j){E.hidden=true;shown=null;msg.removeAttribute("role");return}
+    if(j!==shown){fill.style.transition="none";fill.style.transform="scaleX("+j.f+")";fill.getBoundingClientRect();fill.style.transition="";shown=j}
+    E.hidden=false;
+    if(j.dock)E.setAttribute("data-dock","");else E.removeAttribute("data-dock");
+    if(failed){
+      msg.setAttribute("role","alert");
+      msg.textContent=(j.k==="boot"?"COULD NOT LOAD THE GAME. CHECK YOUR CONNECTION, THEN RETRY.":j.label+" COULD NOT LOAD. RETRY RELOADS THE PAGE; A RUN IN PROGRESS ENDS.");
+      bar.hidden=true;act.hidden=false;keep.hidden=!drop;E.setAttribute("data-act","");return
+    }
+    bar.hidden=false;
+    var ind=j.ind||(!j.ph&&!j.n),all=j.n>=j.files,c=Math.min(j.n,j.files)+" / "+j.files+" FILES";
+    var t=j.k==="boot"?(ind?"LOADING":all?"STARTING":"LOADING · "+c):j.ph?"PREPARING "+j.label:ind?"LOADING "+j.label:j.label+" · "+c;
+    if(j.stall)t+=" · SLOW CONNECTION, STILL TRYING";
+    msg.textContent=t;
+    act.hidden=!j.stall;keep.hidden=true;
+    if(j.stall)E.setAttribute("data-act","");else E.removeAttribute("data-act");
+    if(ind){bar.setAttribute("data-ind","");bar.removeAttribute("aria-valuenow");bar.removeAttribute("aria-valuetext")}
+    else{bar.removeAttribute("data-ind");fill.style.transform="scaleX("+j.f+")";bar.setAttribute("aria-valuenow",String(Math.floor(j.f*100)));bar.setAttribute("aria-valuetext",t)}
+  }
+  function note(j,name,st){
+    var u=j.weigh(name);
+    if(!u||j.ph||j.seen[name]||st<j.t)return;
+    j.seen[name]=1;j.n++;j.w+=u;j.last=now();j.stall=false;
+    j.f=Math.max(j.f,Math.min(j.w,j.total)/(j.total+1));
+  }
+  function watch(){
+    if(iv)return;
+    iv=setInterval(function(){
+      var live=false,ch=false;
+      for(var k in jobs){live=true;var j=jobs[k];if(!j.ph&&!j.stall&&k!==failed&&!d.hidden&&now()-j.last>STALL){j.stall=true;ch=true}}
+      if(ch)paint();
+      if(!live){clearInterval(iv);iv=0}
+    },1000);
+  }
+  if(w.PerformanceObserver){try{
+    new PerformanceObserver(function(l){
+      l.getEntries().forEach(function(e){if(e.responseStatus>=400)return;for(var k in jobs)note(jobs[k],e.name,e.startTime)});
+      paint();
+    }).observe({type:"resource",buffered:true});
+  }catch(e){}}
+  var L=w.__load={
+    begin:function(k,plan,ready){
+      if(failed===k){failed=null;drop=null}
+      jobs[k]={k:k,label:plan.label,files:plan.files,total:plan.total,weigh:plan.weigh,seen:{},n:0,w:0,f:0,ph:ready?1:0,ind:!!ready,t:now(),last:now(),dock:!jobs.boot};
+      cur=k;watch();paint();
+    },
+    phase:function(k){var j=jobs[k];if(j&&!j.ph){j.ph=1;j.stall=false;j.f=Math.max(j.f,j.total/(j.total+1));paint()}},
+    focus:function(k){cur=k;if(failed&&failed!==k&&failed!=="boot"){delete jobs[failed];failed=null;drop=null}paint()},
+    end:function(k){if(failed===k)return;delete jobs[k];paint()},
+    fail:function(k,onDrop){
+      if(!jobs[k])return;
+      failed=k;drop=onDrop||null;paint();
+      if(k==="boot")retry.focus();
+    }
+  };
+  retry.onclick=function(){location.reload()};
+  keep.onclick=function(){var f=drop,k=failed;failed=null;drop=null;delete jobs[k];act.hidden=true;E.removeAttribute("data-act");paint();if(f)f()};
+  /* the buttons are the card's own: nothing here reaches the game's keys or the title's press */
+  E.addEventListener("keydown",function(e){e.stopPropagation()});
+  E.addEventListener("pointerdown",function(e){e.stopPropagation()});
+  /* a throw while the boot job lives is a game that will never paint */
+  w.addEventListener("error",function(e){if(jobs.boot&&e.filename&&e.filename.indexOf(location.origin)===0)L.fail("boot")});
+  watch();paint();
+})(window,document);
+</script>
 <h1 class="sr-only">Fusegrid — bomb-grid arcade you play in the browser</h1>
 <p class="sr-only">Single-player bomb-grid arcade. Flip REAL 3D, classic 2D and PIXEL. Heat CORE, PLUS, and MAX. Eight rooms, eight chiptune themes, a DAILY board. Free — no install, no account, plays offline.</p>
 <noscript><p>Play Fusegrid in the browser — a single-player bomb-grid arcade. JavaScript is required.</p></noscript>
@@ -196,12 +309,17 @@
      The authoritative sim lives in src/core/sim.js (Node-testable, no DOM).
      Single-player only; lockstep is a local harness, not internet play. -->
 <script type="module">
-   import {createGame} from "./src/main.js";
-   import {createAudio} from "./src/audio.js";
-   const canvas=document.getElementById("c");
-   const audio=createAudio();
-   if(/[?&]debug=1/.test(location.search||""))window.__audio=audio;
-   createGame(canvas,{audio, canvasEl:canvas});
+   /* dynamic, so a 404, a blocked file, a syntax error or a throw lands in one
+      catch (a static import fails silently: a blank page). The boot job ends in
+      the frame the loop first paints: frames.kick() has already queued it. */
+   const L=window.__load;
+   Promise.all([import("./src/main.js"),import("./src/audio.js")]).then(([{createGame},{createAudio}])=>{
+     const canvas=document.getElementById("c");
+     const audio=createAudio();
+     if(/[?&]debug=1/.test(location.search||""))window.__audio=audio;
+     createGame(canvas,{audio, canvasEl:canvas});
+     requestAnimationFrame(()=>L.end("boot"));
+   }).catch((e)=>{console.error(e);L.fail("boot");});
 </script>
 </body>
 </html>

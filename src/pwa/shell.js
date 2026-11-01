@@ -20,6 +20,7 @@ const SRC = Object.freeze([
   "src/app/ghost.js",
   "src/app/highscores.js",
   "src/app/intro.js",
+  "src/app/loadbar.js",
   "src/app/medals.js",
   "src/app/menuapp.js",
   "src/app/pactstore.js",
