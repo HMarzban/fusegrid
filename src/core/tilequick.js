@@ -31,9 +31,27 @@ function occupied(w, q) {
   for (const it of w.items) if (!it.taken && !it.buried && tileOf(it.x) === x && tileOf(it.y) === y) return true;
   return false;
 }
+/* a mound here would box the player in: the floor the player can walk, with this tile
+   shut, touches the tile but holds no cell off the line of the cell beside the mound.
+   Breaking out means a bomb on that line, with nowhere to step out of its arms. */
+function boxes(w, q) {
+  const p = w.players[0], C = CFG.COLS, D = [1, -1, C, -C];
+  if (!p || !p.alive) return false;
+  const start = key(tileOf(p.x), tileOf(p.y));
+  if (start === q.k || w.grid[start] !== T.EMPTY) return false;
+  const seen = new Set([start]), q2 = [start];
+  for (let h = 0; h < q2.length; h++) for (const d of D) {
+    const n = q2[h] + d;
+    if (n === q.k || seen.has(n) || w.grid[n] !== T.EMPTY) continue;
+    seen.add(n); q2.push(n);
+  }
+  const by = D.map((d) => q.k + d).filter((n) => seen.has(n));
+  if (!by.length) return false;
+  return by.some((a) => q2.every((c) => c % C === a % C || ((c / C) | 0) === ((a / C) | 0)));
+}
 function held(w, q) {
   for (const b of w.bombs) if (!b.dead && Math.abs(b.tx - q.x) + Math.abs(b.ty - q.y) <= holdReach(b.radius)) return true;
-  return false;
+  return boxes(w, q);
 }
 export function quickTick(w, dt, emit) {
   const s = stateOf(w);

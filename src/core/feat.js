@@ -425,9 +425,9 @@ export function quickDetour(ok, k) {
   }
   return worst;
 }
-export const QUICK_PLACE = Object.freeze({ min: 3, max: 5, gap: 4, nbrs: 2, detour: 2 });
+export const QUICK_PLACE = Object.freeze({ min: 3, max: 5, gap: 4, nbrs: 2, detour: 3 });
 /* V30: 3-5 singles at least 4 Manhattan apart, more than 4 steps from the start, off the
-   doors, at least 2 open neighbours, a detour of at least 2, and on the brick-free map
+   doors, at least 2 open neighbours, a detour of at least 3 (an open-field tile scores 2), and on the brick-free map
    (also after each SHRINK ring) all of them grown never part it. bgate re-checks the
    finished set against the grids of all three heats (V30 + V31). */
 function quick(m, f, rng, far, force, bgate) {

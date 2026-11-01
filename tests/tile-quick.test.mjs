@@ -135,6 +135,7 @@ test("O6: a mound scores 0, reveals nothing, carries the flag and skips the bric
   w.players[0].x = at(1); w.players[0].y = at(1);
   const b = bombAt(w, x - 1, y, 1, 0.01);
   if (w.grid[key(x - 1, y)] === T.WALL) { b.tx = x + 1; b.x = at(x + 1); w.grid[key(x + 1, y)] = T.EMPTY; } else w.grid[key(x - 1, y)] = T.EMPTY;
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const n = key(b.tx + dx, b.ty + dy); if (n !== k && w.grid[n] === T.BRICK) w.grid[n] = T.EMPTY; }
   w.players[0].iFrames = 99;
   step(w, DT, IDLE);
   const ev = w.events.filter((e) => e.t === "brick");
@@ -199,6 +200,23 @@ test("the sim stays deterministic on sand", () => {
 /* ---- placement ---- */
 const lattice = () => { const g = new Int8Array(N); for (let y = 0; y < R; y++) for (let x = 0; x < C; x++) g[key(x, y)] = x === 0 || y === 0 || x === C - 1 || y === R - 1 || (x % 2 === 0 && y % 2 === 0) ? T.WALL : T.EMPTY; return g; };
 const okOf = (g) => (x, y) => x >= 0 && y >= 0 && x < C && y < R && g[key(x, y)] !== T.WALL;
+test("a mound never boxes the player in: growth waits until the walkable floor has a cell off the line", () => {
+  const { w, k, x, y, pr } = room(2);
+  const g = w.grid, set = (a, b, v) => { if (a > 0 && b > 0 && a < C - 1 && b < R - 1) g[key(a, b)] = v; };
+  for (let a = x - 3; a <= x + 3; a++) for (let b = y - 2; b <= y + 2; b++) set(a, b, T.BRICK);
+  g[k] = T.EMPTY;
+  const dir = x > 3 ? -1 : 1;
+  set(x + dir, y, T.EMPTY); set(x + dir * 2, y, T.EMPTY);
+  set(x - dir, y, T.EMPTY);
+  const p = w.players[0];
+  p.x = at(x + dir * 2); p.y = at(y); p.tx = x + dir * 2; p.ty = y;
+  run(w, pr.wait + pr.retry * 3);
+  assert.equal(g[k], T.EMPTY, "a straight dead end behind the tile: no mound");
+  assert.equal(quickStep(w, k), 0);
+  set(x + dir * 2, y + 1, T.EMPTY);
+  run(w, pr.retry + pr.grow + 0.2);
+  assert.equal(g[k], T.BRICK, "a bend gives a place to step out of the blast: the mound grows");
+});
 test("V30 helpers: a lattice corridor tile has a detour, a dead-end cell seals nothing, a neck mound parts the map", () => {
   const g = lattice(), ok = okOf(g);
   assert.ok(quickDetour(ok, key(4, 5)) >= 2, "a corridor tile");
