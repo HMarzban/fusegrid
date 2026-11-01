@@ -91,7 +91,7 @@ test("room 5, 60 seeds x 3 heats: V20, V23, V26, V27 pass and a feasible layout 
       assert.equal(hx(w.feat), hx(ws[0].feat), "heat never moves a trap");
       const b2 = genBoard2(seed, 5, h), b3 = genBoard2(seed, 5, h, { feat: true });
       const g2 = layout2(seed, 5, b2.layout.tries[0]);
-      const ok = [0, 1, 2, 3].some((salt) => placeFeat(g2.m, seed, 5, g2.biome, salt).feat);
+      const ok = [0, 1, 2, 3].some((salt) => placeFeat(g2.m, seed, 5, g2.biome, salt, null, g2.tpl).feat);
       if (ok) assert.equal(b3.layout.tries[0], b2.layout.tries[0], "seed " + seed);
     }
   }
