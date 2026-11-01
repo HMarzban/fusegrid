@@ -105,6 +105,17 @@ function buildRim(biome,atlas){
   return rim;
 }
 
+/* the rim's other material type, for one warm pass only: three worlds draw a
+   Lambert rim and five a Phong one, and this is the only program a new world
+   could still need (#36). Same geometry, map and shader patch as buildRim. */
+export function rimTwin(rim,biome){
+  const src=rim.material, Other=src.isMeshPhongMaterial?THREE.MeshLambertMaterial:THREE.MeshPhongMaterial;
+  const mat=new Other({color:src.color,map:src.map});
+  const twin=new THREE.Mesh(rim.geometry,rimFX(mat,biome.hWall,!!src.map,biome.name));
+  twin.castShadow=false; twin.receiveShadow=true;
+  return twin;
+}
+
 function disposeGroup(group){
   const mats=new Set();
   if(group.userData.ao)group.userData.ao.dispose();
@@ -179,7 +190,8 @@ export function buildScene(world, atlas, bright){
   const gates=hasGates(world)?createGateBars(world,biome,NEAR_H):null;
   if(gates)group.add(gates.mesh);
 
-  group.add(buildRim(biome,atlas));
+  const rim=buildRim(biome,atlas);
+  group.add(rim);
 
   const lights=createLights(biome,bright);
   group.add(lights.hemi,lights.dir,lights.fill,lights.amb);
@@ -210,7 +222,7 @@ export function buildScene(world, atlas, bright){
     return ch;
   };
   group.userData.ao=ao;
-  const scene={group,amb,level:world.level,featRef:world.feat||null,brick,pools,lights,brickV:0,
+  const scene={group,amb,rim,biome,level:world.level,featRef:world.feat||null,brick,pools,lights,brickV:0,
     update(world){
       let diff=fresh, wDiff=fresh||world.grid!==lastG||(world.seed>>>0)!==lastS;
       lastG=world.grid; lastS=world.seed>>>0;

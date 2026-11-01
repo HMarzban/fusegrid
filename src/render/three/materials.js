@@ -63,7 +63,8 @@ function brickFX(mat, biome){
  diffuseColor.rgb*=mix(mix(0.6,1.0,smoothstep(0.0,0.4,vBu.y))*(1.0+0.08*smoothstep(0.85,1.0,vBu.y)),1.0,vBt);
  wGl=mix(0.1,0.34,vBt); wSh=mix(4.0,14.0,vBt); }`);
   };
-  mat.customProgramCacheKey=()=>"brickfx"+biome.name;
+  /* the world is all uniforms here, so every world shares one program (#36) */
+  mat.customProgramCacheKey=()=>"brickfx";
   return mat;
 }
 /* the Blinn gloss riding the Lambert direct term, shared with the wall */

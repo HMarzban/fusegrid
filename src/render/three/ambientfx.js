@@ -47,6 +47,14 @@ void main(){
   #include <colorspace_fragment>
 }`;
 
+/* one material for every room (#36). three names a ShaderMaterial's stage by a
+   counter that restarts when its last material goes, so a fresh one per room is a
+   fresh program key per room: a recompile, and with pins a leak. uK is rewritten
+   on every update. */
+const uK={value:1};
+let MAT=null;
+const sharedMat=()=>{ if(!MAT){ MAT=new THREE.ShaderMaterial({uniforms:{uK},vertexShader:VS,fragmentShader:FS,transparent:true,depthWrite:false,depthTest:true,toneMapped:false}); MAT._shared=true; } return MAT; };
+
 export function createAmbient(biome){
   const specs=biomeSpecs(biome.name), mote=MOTE[biome.name]||null, cols=specs.map(s=>new THREE.Color(ambientColor(biome,s)));
   const cap=Math.max(1,specs.reduce((n,s)=>n+s.n,0));
@@ -56,9 +64,7 @@ export function createAmbient(biome){
   for(const a of [aP,aC,aS])a.setUsage(THREE.DynamicDrawUsage);
   geo.setAttribute("position",aP); geo.setAttribute("aCol",aC); geo.setAttribute("aSS",aS);
   geo.setDrawRange(0,0);
-  const uK={value:1};
-  const mat=new THREE.ShaderMaterial({uniforms:{uK},vertexShader:VS,fragmentShader:FS,transparent:true,depthWrite:false,depthTest:true,toneMapped:false});
-  const points=new THREE.Points(geo,mat);
+  const points=new THREE.Points(geo,sharedMat());
   points.frustumCulled=false; points.castShadow=false; points.receiveShadow=false;
   points.userData.tag="ambient";
   let shown=0;
