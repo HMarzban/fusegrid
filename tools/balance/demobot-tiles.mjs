@@ -12,6 +12,7 @@
      at MAX, coast endpoints; with glide.stop "brake" every ice tile, since
      the fork brakes any coast it did not ask for); BOOSTER relay cover at the tier; TRAP pending
      wind-ups at full r and an idle TRAP a foe stands next to;
+   - plants: the timed pre-plant check (below);
    - joy: plant when the tile-extended blast (delivery / relay) holds a foe
      or brick the plain blast does not; wander toward a CONVEYOR when idle;
      with a hunter <= 5 steps away, hop over a TRAP, whose footprint then
@@ -39,13 +40,14 @@ import {escape} from "./escape.mjs";
    the coast (tilemodel BOT_BRAKE false); "naive" = never, and the flee model
    still thinks it can stop anywhere (a player who has not learned the brake);
    "late:N" = brakes only after N ticks of a coast it did not ask for (#30).
-   FG_BOTPLANT=timed: a plant is refused when, with the bomb in place, the timed
-   search (escape.mjs) finds a way out on the plain model and none on the tile
-   model: the counter's own definition, so a plant that is tight without tiles
-   stays as the A0 bot plays it; tile rooms only (#30). */
+   Timed pre-plant check (#30 ruling): a plant is refused when, with the bomb in
+   place, the timed search (escape.mjs) finds a way out on the plain model and
+   none on the tile model: the counter's own definition, so a plant that is tight
+   without tiles stays as the A0 bot plays it; tile rooms only, so parity holds.
+   FG_BOTPLANT=off: the fork before the ruling. */
 const ENV=(globalThis.process&&globalThis.process.env)||{};
 const BMODE=ENV.FG_BOTBRAKE||"",BRAKE=BMODE!=="0"&&BMODE!=="naive",BLATE=BMODE.startsWith("late:")?+BMODE.slice(5):0;
-const TIMED=ENV.FG_BOTPLANT==="timed";
+const TIMED=ENV.FG_BOTPLANT!=="off";
 export const NOOP=Object.freeze({move:{x:0,y:0},fire:false,firePrev:false,
   shift:false,remote:false,kick:false});
 
