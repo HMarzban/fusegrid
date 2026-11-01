@@ -1126,8 +1126,8 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   real page" means `typeof location.href === "string"` (the branch's gen-2 page
   default depended on it; since v188 the tile boards are `?gen=3` only).
 - Release state (2026-11-01): shell **v193** (tuned tiles on `?gen=3`, `KeyK`
-  unbound, `?net=local` follows every run; no change in a normal run) is committed
-  on local main, NOT pushed. **v192** (tiles design pass 2 docs, the
+  unbound, `?net=local` follows every run; no change in a normal run) is LIVE on
+  the owner's word. **v192** (tiles design pass 2 docs, the
   #25 harness and static checks, the harness-only `w.featProf` seam; no player
   change) is LIVE on the owner's word; v191 raised the PIXEL cap to 192 KB; v190 fixed PIXEL SAND's floor vs bricks and raised the cap
   to 176 KB; v189 added the hunter lock-on tell (#32), the tile colour-vision

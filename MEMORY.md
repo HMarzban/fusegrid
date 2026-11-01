@@ -16,7 +16,7 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
-## 2026-11-01 — v193 local: #18 + #22 merged, #34 and #30 bot-side measured
+## 2026-11-01 — v193 LIVE: #18 + #22 merged, #34 and #30 bot-side measured
 - #18 tuned tiles in `main` (`?gen=3` only), `featchecks` in `src/core` (33 KB at boot), V14 fixed, pin `7e57d1aa:71503`. #22 V20 = 0 (room 5 re-rolls ~8 % of layouts); PIT +13 / RING +3 / GAUNTLET +1 at MAX. #34: 0 dropped in all looks on M5 Max; REAL 3D ~85 ms freeze per new world. #30 stopped early by the lead: 8 strictly forced moments (BOOSTER flare timing the real one), first-5 s hits at MAX fail (CONVEYOR), ICE MAX +3.1 [2.2, 4.0] unresolved, `icefrag.mjs` never run. Owner calls pending. Scratch `base`, `base.tar` left in the scratchpad (delete refused).
 
 ## 2026-11-01 — known gaps: colour-vision gate for REAL 3D, CLASSIC under npm test
