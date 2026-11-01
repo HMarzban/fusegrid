@@ -36,7 +36,7 @@ const worldOn = (kind, heat = 0, seed = 4242) => { const w = room(3, seed, ROOM[
     check(`${k} heat ${h} fits the 600 board panel (12px mono)`, s.length * 7.2 + 24 <= 600, s.length);
     check(`${k} heat ${h} names no key`, !/\b(SPACE|SHIFT|WASD|ARROW|ENTER|TAP)\b/.test(s), s);
   });
-  check("ICE PATCH teaches the brake at MAX only", /OPPOSITE WAY TO STOP/.test(tips.GLIDE[2]) && !/OPPOSITE/.test(tips.GLIDE[0] + tips.GLIDE[1]));
+  check("ICE PATCH teaches the brake at MAX only", /PRESS BACK AS YOU LET GO/.test(tips.GLIDE[2]) && !/PRESS BACK/.test(tips.GLIDE[0] + tips.GLIDE[1]));
   check("TRAP never says lure above CORE", /LURE/.test(tips.PLATE[0]) && !/LURE/.test(tips.PLATE[1] + tips.PLATE[2]));
   check("TRAP at MAX: hurts only you, the 6 s window, no chain", /HURTS ONLY YOU/.test(tips.PLATE[2]) && /FIRST 6 S SAFE/.test(tips.PLATE[2]) && /NO BOMB CHAIN/.test(tips.PLATE[2]), tips.PLATE[2]);
   check("every TRAP tip says it sets off no bomb", tips.PLATE.every((s) => /NO BOMB CHAIN/.test(s)));
@@ -57,7 +57,7 @@ const worldOn = (kind, heat = 0, seed = 4242) => { const w = room(3, seed, ROOM[
   check("no world, no tip: a tile line is never guessed", coachTip("BELT", "d") === "");
   // one source: the copy literals live in feat.js alone
   const walk = (d) => readdirSync(d).flatMap((f) => { const p = join(d, f); return statSync(p).isDirectory() ? walk(p) : /\.js$/.test(f) ? [p] : []; });
-  const lits = Object.values(TILE_HELP).flat().concat(["HURTS ONLY YOU", "OPPOSITE WAY TO STOP", "HOLD A SIDE TO STEP OFF", "NO BOMB CHAIN", '"ICE PATCH"', '"CONVEYOR"']);
+  const lits = Object.values(TILE_HELP).flat().concat(["HURTS ONLY YOU", "PRESS BACK AS YOU LET GO", "HOLD A SIDE TO STEP OFF", "NO BOMB CHAIN", '"ICE PATCH"', '"CONVEYOR"']);
   const strays = [];
   for (const f of walk("src")) {
     if (f === join("src", "core", "feat.js")) continue;
