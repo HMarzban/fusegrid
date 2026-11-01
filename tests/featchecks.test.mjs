@@ -233,7 +233,7 @@ test("#18 V14 on real gen-3 worlds: no floor or buried item on a tile, foes only
     assert.ok(w.items.some((it) => it.buried));
   }
 });
-test("#18 V14 keeps the board: taking the tile layer away moves items only, never the grid or the foes", () => {
+test("#18 V14 leaves every rule room its items, and foes on a tile only on ice, never SENTRY", () => {
   for (const lv of [1, 2, 3, 5]) for (let s = 0; s < 20; s++) {
     const a = createWorld(9200 + s, lv); a.gen = 3; a.heat = 2; loadLevel(a, lv, false);
     const floor = a.items.filter((it) => !it.buried).length, buried = a.items.filter((it) => it.buried).length;
