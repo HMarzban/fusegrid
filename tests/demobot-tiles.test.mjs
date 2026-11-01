@@ -164,6 +164,23 @@ function parity(w, seed, ticks) {
   check("seam: a changed TRAP knob (near 0, wind 0.2) changes play", JSON.stringify(a) !== JSON.stringify(c));
 }
 
+/* ---- #19: a belt that carries nothing changes nothing ---- */
+{
+  const V0 = [0, 1, 2].map(() => ({ belt: { v: 0 } }));
+  let bad = [];
+  for (const heat of [0, 1, 2]) for (const s of [0, 1]) {
+    const A = makeWorld({ room: 3, heat, arm: "A0" }, s), B = makeWorld({ room: 3, heat, arm: "A1", prof: V0 }, s);
+    const a = createTileBot(A.seed), b = createTileBot(B.seed);
+    for (let i = 0; i < 7200 && A.w.state === "PLAY"; i++) {
+      const ia = a.intent(A.w), ib = b.intent(B.w);
+      if (iser(ia) !== iser(ib)) { bad.push(`h${heat}s${s}@${i}`); break; }
+      step(A.w, CFG.STEP, { 0: ia }); step(B.w, CFG.STEP, { 0: ib });
+      A.w.events.length = 0; B.w.events.length = 0;
+    }
+  }
+  check("CONVEYOR at speed 0: the fork plays A0 tick by tick (no belt lure in the judge)", !bad.length, bad.slice(0, 4).join(" "));
+}
+
 const ms = Date.now() - t0;
 check("suite under 10 s", ms < 10000, ms + " ms");
 console.log("\n  DEMOBOT-TILES RESULT: " + pass + " PASS / " + fail + " FAIL");

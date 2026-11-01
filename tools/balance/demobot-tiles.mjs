@@ -14,7 +14,8 @@
      wind-ups at full r and an idle TRAP a foe stands next to;
    - plants: the timed pre-plant check (below);
    - joy: plant when the tile-extended blast (delivery / relay) holds a foe
-     or brick the plain blast does not; wander toward a CONVEYOR when idle;
+     or brick the plain blast does not; a wander with nothing to reach aims at
+     a CONVEYOR cell where such a plant waits (beltAim), else at the foe;
      with a hunter <= 5 steps away, hop over a TRAP, whose footprint then
      reads as danger and turns the bot off its line.
    Stock header follows.
@@ -44,10 +45,14 @@ import {escape} from "./escape.mjs";
    place, the timed search (escape.mjs) finds a way out on the plain model and
    none on the tile model: the counter's own definition, so a plant that is tight
    without tiles stays as the A0 bot plays it; tile rooms only, so parity holds.
-   FG_BOTPLANT=off: the fork before the ruling. */
+   FG_BOTPLANT=off: the fork before the ruling.
+   FG_BOTLURE (#19): unset = beltAim; "any" = any belt within 6 beats the foe (the
+   fork before #19, kept as a belt-loving persona); "off" = never aim at a belt.
+   FG_BOTJOY=off: no tile-gain plant. */
 const ENV=(globalThis.process&&globalThis.process.env)||{};
 const BMODE=ENV.FG_BOTBRAKE||"",BRAKE=BMODE!=="0"&&BMODE!=="naive",BLATE=BMODE.startsWith("late:")?+BMODE.slice(5):0;
 const TIMED=ENV.FG_BOTPLANT!=="off";
+const LURE=ENV.FG_BOTLURE||"",JOY=ENV.FG_BOTJOY!=="off";
 export const NOOP=Object.freeze({move:{x:0,y:0},fire:false,firePrev:false,
   shift:false,remote:false,kick:false});
 
@@ -275,6 +280,10 @@ export function createTileBot(seed){
   function tryPlantTile(w,p,ptx,pty){
     if(w.bombs.length>=p.bombs||w.grid[key(ptx,pty)]!==T.EMPTY)return false;
     if(w.bombs.some(b=>b.tx===ptx&&b.ty===pty))return false;
+    if(!tileGain(w,p,ptx,pty))return false;
+    return canEscape(w,ptx,pty,blastAt(w,ptx,pty,p.range));
+   }
+  function tileGain(w,p,ptx,pty){
     const plain=new Set([key(ptx,pty)]);
     for(const dir of DIRS4)for(let i=1;i<=p.range;i++){
       const x=ptx+dir.x*i,y=pty+dir.y*i,v=w.grid[key(x,y)];
@@ -285,13 +294,18 @@ export function createTileBot(seed){
     const ext=blastAt(w,ptx,pty,p.range);
     const hit=prof(w).bloom.safe?bombCover(w,{tx:ptx,ty:pty,radius:p.range,pierce:false,line:false,dir:null},
       w.fuse==null?CFG.FUSE:w.fuse,new Set(ext),true):ext;
-    let gain=false;
     for(const k of hit){
       if(plain.has(k))continue;
-      if(w.grid[k]===T.BRICK||w.enemies.some(e=>!e.dead&&key(e.tx,e.ty)===k)){gain=true;break;}
+      if(w.grid[k]===T.BRICK||w.enemies.some(e=>!e.dead&&key(e.tx,e.ty)===k))return true;
      }
-    if(!gain)return false;
-    return canEscape(w,ptx,pty,ext);
+    return false;
+   }
+  /* the wander aim (#19): a CONVEYOR cell within 6 where a plant now would
+     deliver (tileGain), else none, so the foe stays the aim. Till 2026-11-01 any
+     belt within 6 won over the foe: the bot paced the belts and stopped hunting */
+  function beltAim(w,p,ptx,pty,danger){
+    if(LURE==="off"||w.bombs.length>=p.bombs)return null;
+    return nearestFeat(w,ptx,pty,(v,k)=>isBelt(v)&&!danger.has(k)&&(LURE==="any"||tileGain(w,p,k%CFG.COLS,(k/CFG.COLS)|0)),6);
    }
   function nearestFeat(w,ptx,pty,pred,maxd){
     let best=null,bd=maxd+1;
@@ -376,7 +390,7 @@ export function createTileBot(seed){
             if(hop&&walkOk(world,ptx,pty,ptx+hop.x,pty+hop.y,danger,onBomb,deep)){
               out.move=hop;adopt(hop.x,hop.y,24,3,t.x,t.y);
              }
-           }else if(tm&&tryPlantTile(world,p,ptx,pty)){
+           }else if(tm&&JOY&&tryPlantTile(world,p,ptx,pty)){
             want=true;esc=true;mode=8;gx=ptx;gy=pty;
            }else if(lure){
             out.move=lure.hop;adopt(lure.hop.x,lure.hop.y,10,7,lure.t.tx,lure.t.ty);
@@ -391,7 +405,7 @@ export function createTileBot(seed){
              }else if(tryPlantBrick(world,p,ptx,pty)){
               want=true;esc=true;mode=5;gx=ptx;gy=pty;
              }else{
-              const belt=tm?nearestFeat(world,ptx,pty,isBelt,6):null;
+              const belt=tm?beltAim(world,p,ptx,pty,danger):null;
               const d=wanderDir(world,ptx,pty,danger,onBomb,deep,belt||ne);
               if(d){
                 if(rng.next()<0.22)pause=rng.int(6,14);
