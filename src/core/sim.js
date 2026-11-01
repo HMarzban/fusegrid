@@ -16,7 +16,6 @@ export function newIntent() {
     firePrev: false,
     shift: false,
     remote: false,
-    kick: false,
   };
 }
 const emptyInputs = Object.freeze(
@@ -28,7 +27,6 @@ const emptyInputs = Object.freeze(
         firePrev: false,
         shift: false,
         remote: false,
-        kick: false,
       }),
     {},
   ),
