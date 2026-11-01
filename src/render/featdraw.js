@@ -65,7 +65,7 @@ export function cellSpec(w, x, y) {
     s.exit = featAt(w, x + dx, y + dy) !== v; s.entry = featAt(w, x - dx, y - dy) !== v;
     endSides(s, s.dir, s.exit, s.entry);
   } else if (k === "GATE") {
-    s.lit = w.featM ? w.featM[key(x, y)] : 0;
+    s.lit = w.featM ? Math.min(4, w.featM[key(x, y)]) : 0;
   } else if (k === "PORTAL") {
     s.pair = (w.featPair && w.featPair[key(x, y)]) || 1;
   } else if (k === "GLIDE") {
