@@ -172,8 +172,9 @@ function bombMap(n, g, c, r, live, blast = null) {
   const [cx, cy] = xy(c);
   let tb = n.fuse, chain = false;
   const extra = [];
-  for (const p of plates(n)) if (trapTiles(g, p, n.prof.plate.r, false).includes(c) && (n.prof.plate.near == null || manh(p, c) <= n.prof.plate.near + n.lim.escSteps)) {
-    chain = true; tb = Math.min(tb, n.prof.plate.wind);
+  for (const p of plates(n)) if (!n.prof.plate.hold && trapTiles(g, p, n.prof.plate.r, false).includes(c) && (n.prof.plate.near == null || manh(p, c) <= n.prof.plate.near + n.lim.escSteps)) {
+    const ch = n.prof.plate.chain;
+    if (ch !== false) { chain = true; tb = Math.min(tb, typeof ch === "number" ? Math.max(n.prof.plate.wind, ch) : n.prof.plate.wind); }
     extra.push({ t: n.prof.plate.wind, k: p, arms: cross(n.prof.plate.r), through: false });
   }
   const at = [c];
@@ -246,7 +247,7 @@ function v19(n) {
     }
   }
   const pr = n.prof.plate;
-  for (const p of plates(n)) for (const through of [true, false]) {
+  if (!pr.off) for (const p of plates(n)) for (const through of [true, false]) {
     const foot = trapTiles(n.g, p, pr.r, through), L = new Float64Array(N).fill(INF);
     for (const k of foot) L[k] = pr.wind;
     for (const q of foot) {

@@ -22,20 +22,26 @@ export const beltDir = (v) => FDIR[v - 1];
 export const HOME = Object.freeze({ FACTORY: "BELT", ICE: "GLIDE", JUNGLE: "BLOOM", ARENA: "PLATE", WATER: "STREAM", SAND: "QUICK", VOID: "PORTAL", CROWN: "GATE" });
 
 export const FEAT_PROFILE = Object.freeze([
-  Object.freeze({ belt: { actors: false, v: 1.0 }, glide: { boost: 1.25, coast: 0, turn: 0.35 }, bloom: { fwd: 2, side: 0, delay: 0, cd: 1.0 }, plate: { wind: 0.5, r: 1, cd: 3, inert: 2 } }),
-  Object.freeze({ belt: { actors: true, v: 1.0 }, glide: { boost: 1.25, coast: 1, turn: 0.2 }, bloom: { fwd: 2, side: 1, delay: 0.15, cd: 1.0 }, plate: { wind: 0.8, r: 2, cd: 4, inert: 2 } }),
-  Object.freeze({ belt: { actors: true, v: 1.2 }, glide: { boost: 1.25, coast: 3, turn: 0.1 }, bloom: { fwd: 2, side: 2, delay: 0.3, cd: 1.0 }, plate: { wind: 1.0, r: 3, cd: 3, inert: 2 } }),
+  Object.freeze({ belt: { actors: false, v: 1.0 }, glide: { boost: 1.25, coast: 0, turn: 0.35 }, bloom: { fwd: 2, side: 0, delay: 0, cd: 1.0 }, plate: { wind: 0.5, r: 1, cd: 3, inert: 2, near: 4, off: 1, hold: true, chain: false } }),
+  Object.freeze({ belt: { actors: true, v: 1.0 }, glide: { boost: 1.25, coast: 1, turn: 0.2 }, bloom: { fwd: 2, side: 1, delay: 0.15, cd: 1.0 }, plate: { wind: 0.8, r: 2, cd: 4, inert: 2, near: 4, off: 1, hold: true, chain: false, spare: true } }),
+  Object.freeze({ belt: { actors: true, v: 1.2 }, glide: { boost: 1.25, coast: 3, turn: 0.1 }, bloom: { fwd: 2, side: 2, delay: 0.3, cd: 1.0 }, plate: { wind: 1.0, r: 3, cd: 3, inert: 6, off: 1, hold: true, chain: false, kill: false } }),
 ]);
 export const TILE_HELP = Object.freeze({
   BELT: ["CARRIES BOMBS", "CARRIES BOMBS, YOU, FOES", "CARRIES ALL, FAST"],
   GLIDE: ["FAST ICE, STOP ANY TIME", "FAST ICE, SLIDES A STEP", "FAST ICE, NO STOPPING"],
   BLOOM: ["THROWS YOUR BLAST ON", "BLAST LEAKS SIDEWAYS", "BLAST TURNS CORNERS LATE"],
-  PLATE: ["FOES SET IT OFF · SHORT", "FOES SET IT OFF · LONG", "FOES SET IT OFF · HUGE"],
+  PLATE: ["LURE FOES ON · SHORT", "TRIGGER FOE LIVES · LONG", "FOES IMMUNE · HUGE"],
 });
 export function featTier(w) {
   const t = w.featTier != null ? w.featTier : w.heat;
   return t < 0 ? 0 : t > 2 ? 2 : t | 0;
 }
+/* PLATE knobs (#28 design pass 2): near = arms only with the player within
+   that many tiles (Manhattan; absent = anywhere); off = never arms while the
+   player is on or within that many tiles of its lines; hold = never arms while
+   a lit bomb's blast reaches its lines; chain false = its blast sets off no
+   bomb (a number = no bomb younger than that many s); spare = the foe that
+   armed it is immune to that blast; kill false = its blast kills no foe */
 /* w.featProf: an optional 3-tier knob table set by the offline balance harness
    (tools/balance) after loadLevel; unset everywhere in the game */
 export function featProfile(w) { return (w.featProf || FEAT_PROFILE)[featTier(w)]; }
@@ -188,23 +194,39 @@ function bloom(m, f, rng, force) {
   for (const [x, y] of used) { f[key(x, y)] = 6; force.push(key(x, y)); }
   return true;
 }
-/* V26 + V27: 3-5 on (odd,odd), >= 6 walking steps from spawn, no two on
+/* the skeleton after SHRINK rings 1-4 (pact SHRINK walls rim 1.. inward, (1,1) kept) */
+function shrinkMaps(m) {
+  const out = [];
+  for (let ring = 1; ring <= 4; ring++) {
+    const g = m.slice();
+    for (let y = 0; y < R; y++) for (let x = 0; x < C; x++) { const rim = Math.min(x, C - 1 - x, y, R - 1 - y); if (rim >= 1 && rim <= ring && !(x === 1 && y === 1)) g[key(x, y)] = 0; }
+    out.push(g);
+  }
+  return out;
+}
+/* V26 + V27 + V20: 3-5 on (odd,odd), >= 6 walking steps from spawn, no two on
    neighbouring intersections, forced floor; every tile on its r=3 arms has
-   a perpendicular open neighbour within 1 tile along the arm */
+   a perpendicular open neighbour within 1 tile along the arm; only spots that
+   keep it after each SHRINK ring 1-4 (V20), unless fewer than 3 do: then the
+   board tops up to 3 from the rest */
 function plate(m, f, rng, dS, force) {
-  const want = rng.int(3, 5), cand = [];
+  const want = rng.int(3, 5), cand = [], rings = shrinkMaps(m);
   for (let y = 1; y < R - 1; y += 2) for (let x = 1; x < C - 1; x += 2) {
     const k = key(x, y);
     if (!open(m, x, y) || dS[k] < 6 || !sideExit(m, x, y)) continue;
     cand.push([x, y]);
   }
   for (let i = cand.length - 1; i > 0; i--) { const j = rng.int(0, i); [cand[i], cand[j]] = [cand[j], cand[i]]; }
-  const used = [];
-  for (const [x, y] of cand) {
-    if (used.length >= want) break;
-    if (used.some(([a, b]) => Math.abs(a - x) + Math.abs(b - y) <= 2)) continue;
-    used.push([x, y]);
-  }
+  const ringOk = ([x, y]) => rings.every((g) => !open(g, x, y) || sideExit(g, x, y)), used = [];
+  const pick = (list, n) => {
+    for (const [x, y] of list) {
+      if (used.length >= n) break;
+      if (used.some(([a, b]) => Math.abs(a - x) + Math.abs(b - y) <= 2)) continue;
+      used.push([x, y]);
+    }
+  };
+  pick(cand.filter(ringOk), want);
+  if (used.length < 3) pick(cand.filter((c) => !ringOk(c)), 3);
   if (used.length < 3) return false;
   for (const [x, y] of used) { f[key(x, y)] = 7; force.push(key(x, y)); }
   return true;

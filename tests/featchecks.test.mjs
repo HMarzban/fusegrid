@@ -130,14 +130,23 @@ test("V19 CONVEYOR: a riding player cannot hide on a belt (PLUS); a CORE bomb ri
   const ride = spots({ ...b({ g: corridor(4, 13), tiles: E([5, 6, 7, 8], 5, F.BELT_E) }), heat: 0 }, P[0]);
   assert.ok(ride.cause["bomb-ride"] > 0, JSON.stringify(ride));
 });
-test("V19 TRAP: the MAX reach beats a straight flee in a corridor; CORE's does not, but its 0.5 s chain does", () => {
+/* the 2026-10-21 TRAP rule (no off / hold, chain on), kept as the fixture of the faults pass 2 fixed */
+const OLD = P.map((p) => ({ ...p, plate: { wind: p.plate.wind, r: p.plate.r, cd: p.plate.cd, inert: p.plate.inert } }));
+test("V19 TRAP (2026-10-21 rule): the MAX reach beats a straight flee in a corridor; CORE's does not, but its 0.5 s chain does", () => {
   const bd = b({ level: 5, g: corridor(3, 13), tiles: [[5, 5, F.PLATE]] });
-  const mx = spots({ ...bd, heat: 2 }, P[2]);
+  const mx = spots({ ...bd, heat: 2 }, OLD[2]);
   assert.ok(mx.cause["trap-blast"] > 0 && mx.time > 0 && mx.trapExact > 0, JSON.stringify(mx));
-  const co = spots({ ...bd, heat: 0 }, P[0]);
+  const co = spots({ ...bd, heat: 0 }, OLD[0]);
   assert.ok(!co.cause["trap-blast"], JSON.stringify(co));
   assert.ok(co.cause["trap-chain"] > 0, "a bomb on a CORE trap arm can go off at 0.5 s");
-  assert.ok(!spots({ ...bd, heat: 0 }, { ...P[0], plate: { ...P[0].plate, near: 0 } }).cause["trap-blast"]);
+  assert.ok(!spots({ ...bd, heat: 0 }, { ...OLD[0], plate: { ...OLD[0].plate, near: 0 } }).cause["trap-blast"]);
+  assert.ok(!spots({ ...bd, heat: 0 }, { ...OLD[0], plate: { ...OLD[0].plate, chain: false } }).cause["trap-chain"], "chain false: no bomb goes early");
+});
+test("V19 TRAP (pass 2): never arms on or beside you, holds under your lit bomb, chains nothing: no spot at any heat", () => {
+  const bd = b({ level: 5, g: corridor(3, 13), tiles: [[5, 5, F.PLATE]] });
+  for (const h of [0, 1, 2]) assert.equal(spots({ ...bd, heat: h }, P[h]).spots, 0, "heat " + h);
+  assert.ok(spots({ ...bd, heat: 2 }, { ...P[2], plate: { ...P[2].plate, off: false } }).cause["trap-blast"] > 0, "off is what removes the trap-blast spot");
+  assert.ok(spots({ ...bd, heat: 0 }, { ...P[0], plate: { ...P[0].plate, hold: false, chain: true } }).cause["trap-chain"] > 0, "hold is what removes the chain spot");
 });
 test("V20 SHRINK rings: a riding chain needs a step-off at the new wall, traps keep side exits, ice is never sealed", () => {
   const bd = b({ tiles: E([9, 10, 11, 12], 5, F.BELT_E) });

@@ -64,7 +64,7 @@ export function runRoom(c, s) {
   const r = { room: c.room, heat: c.heat, pace: c.pace || 0, arm: c.arm, prof: c.profName || "", s, seed, tpl: w.layout ? w.layout.tpl : "", kind: kind || "", rules: tm ? 1 : 0,
     st: "TIMEOUT", t: CAP, hits: 0, absorbs: 0, firstHit: -1, hit5: 0, hit15: 0, hBlast: 0, hContact: 0, hTile: 0, ownRelay: 0, chainEarly: 0, nearMiss: 0,
     kills: 0, tileKills: 0, relayKills: 0, trapKills: 0, selfClears: 0, selfClearsArm: 0, rideKills: 0, deliveries: 0,
-    noEsc: 0, noEscHit: 0, noEscRide: 0, noEscIce: 0, dangerT: 0 };
+    noEsc: 0, noEscArm: 0, noEscHit: 0, noEscRide: 0, noEscIce: 0, dangerT: 0 };
   const nm = new Map(), armD = new Map(), seenBl = new WeakSet(), cutoff = c.metrics === false;
   let trapped = false, lastEsc = -99, pendHit = 0;
   const coreBelt = tm && kind === "BELT" && !prof(w).belt.actors;
@@ -81,6 +81,7 @@ export function runRoom(c, s) {
         r.dangerT += CFG.STEP;
         if (pr.forced && !trapped) {
           r.noEsc++; lastEsc = tNow; pendHit = 1;
+          if (w.featPend.some((q) => q.kind === "plate" && w.featS[q.k] >= prof(w).plate.wind - 1.5 * CFG.STEP)) r.noEscArm++;
           if (isBelt(w.feat[pk0])) r.noEscRide++;
           if (w.feat[pk0] === 5) r.noEscIce++;
         }

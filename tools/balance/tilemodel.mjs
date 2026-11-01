@@ -130,7 +130,9 @@ export function tileDanger(w, danger) {
     for (const k of s) danger.add(k);
     relaySet(w, w.grid, s, x, y, danger, new Set());
   }
-  if (w.featT >= pc.inert - 0.5) {
+  /* plate.off: a trap never arms with the player on or beside its lines, so
+     an idle TRAP is never a danger to stand in; only pending wind-ups are */
+  if (w.featT >= pc.inert - 0.5 && (pc.off == null || pc.off === false)) {
     const p = w.players[0], ptx = tileOf(p.x), pty = tileOf(p.y);
     for (let k = 0; k < N; k++) {
       if (w.feat[k] !== 7 || w.featM[k] !== 0 || w.grid[k] !== T.EMPTY) continue;
