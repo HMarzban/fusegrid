@@ -213,8 +213,9 @@ function runsOk(f) {
   return true;
 }
 const farPocket = (x, y, d) => POCKET.concat(DOORS).every(([a, b]) => Math.abs(a - x) + Math.abs(b - y) >= d);
-/* V25: 2-4 on (odd,odd), >= 4 Manhattan from the pocket and doors, no two
-   within 3 in a row or column, forced floor (never under a fill brick) */
+/* V25: 3-5 on (odd,odd), >= 2 Manhattan from the pocket and doors, no two
+   within 3 in a row or column, forced floor (never under a fill brick), nearer
+   the start first */
 function bloom(m, f, rng, force, dS, out) {
   const P = BLOOM_PLACE;
   const want = rng.int(P.min, P.max), cand = [];

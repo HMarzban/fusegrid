@@ -5,10 +5,10 @@ import assert from "node:assert/strict";
 import { CFG, T, key } from "../src/core/config.js";
 import { createWorld, loadLevel, step } from "../src/core/sim.js";
 import { FEAT_PROFILE, BLOOM_PLACE } from "../src/core/feat.js";
-import { featChecks } from "../tools/balance/featchecks.mjs";
+import { featChecks } from "../src/core/featchecks.js";
+import { genBoard2, BLOOM_GATE } from "../src/core/board2.js";
 
 const mk = (seed, heat) => { const w = createWorld(seed, 1); w.gen = 3; w.heat = heat; loadLevel(w, 1, false); w.state = "PLAY"; return w; };
-const LIM = { boostMin: BLOOM_PLACE.min, boostMax: BLOOM_PLACE.max, boostPocket: BLOOM_PLACE.pocket, boostGap: BLOOM_PLACE.gap };
 
 test("room 1 gen 3: 3-5 boosters, the same at every heat, no V18 / V19 / V25 failure at any heat", () => {
   for (let s = 0; s < 12; s++) {
@@ -18,8 +18,18 @@ test("room 1 gen 3: 3-5 boosters, the same at every heat, no V18 / V19 / V25 fai
     assert.equal(hx[0], hx[1]); assert.equal(hx[1], hx[2]);
     const n = ws[0].feat.filter((v) => v === 6).length;
     assert.ok(n >= BLOOM_PLACE.min && n <= BLOOM_PLACE.max, "count " + n);
-    for (let h = 0; h < 3; h++) assert.deepEqual(featChecks(ws[h], FEAT_PROFILE[h], { only: ["V18", "V19", "V25"], limits: LIM }).map((r) => r.id), [], "seed " + s + " heat " + h);
+    for (let h = 0; h < 3; h++) assert.deepEqual(featChecks(ws[h], FEAT_PROFILE[h], { only: ["V18", "V19", "V25"] }).map((r) => r.id), [], "seed " + s + " heat " + h);
   }
+});
+
+test("#18 the near-only gate picks the same layer as the full scan", () => {
+  const hx = (s) => Buffer.from(genBoard2(s, 1, 0, { feat: true }).feat || []).toString("hex");
+  const near = [], full = [];
+  for (let s = 0; s < 40; s++) near.push(hx(7000 + s));
+  BLOOM_GATE.near = false;
+  try { for (let s = 0; s < 40; s++) full.push(hx(7000 + s)); } finally { BLOOM_GATE.near = true; }
+  assert.deepEqual(near, full);
+  assert.ok(near.every((h) => h.length));
 });
 
 function relayShot(safe) {

@@ -1,4 +1,4 @@
-/* tools/balance/featchecks.mjs (#28 design pass 2): the floor-tile checks
+/* src/core/featchecks.js (#28 design pass 2, moved in #18): the floor-tile checks
    V13-V27 as pure static checks. One hand-made pass and fail fixture per
    check, plus V18 == V2 parity on real boards with the layer off. */
 import test from "node:test";
@@ -9,7 +9,7 @@ import { createWorld, loadLevel } from "../src/core/sim.js";
 import { validateBoard, stampStart } from "../src/core/fair.js";
 import { heatProfile } from "../src/core/heat.js";
 import { F, FEAT_PROFILE } from "../src/core/feat.js";
-import { featChecks, skippedChecks, tableChecks, FEAT_RULES } from "../tools/balance/featchecks.mjs";
+import { featChecks, skippedChecks, tableChecks, FEAT_RULES } from "../src/core/featchecks.js";
 
 const C = CFG.COLS, R = CFG.ROWS, N = C * R, P = FEAT_PROFILE;
 /* the 2026-10-21 PLUS conveyor (foes ride, no wallStop): pass 2 (#28) keeps the checks for it */
@@ -192,12 +192,13 @@ test("V24 ICE PATCH sheets: 3-9 tiles, runs <= 3, >= 3 steps from spawn", () => 
   assert.ok(fails(b({ level: 2, tiles: E([2, 3, 4], 1, F.GLIDE) }), P[2], "V24"), "on the pocket");
   assert.ok(fails(b({ level: 2, tiles: E([5, 6], 5, F.GLIDE) }), P[2], "V24"), "sheet of 2");
 });
-test("V25 BOOSTER: 2-4 on (odd,odd), >= 4 from the pocket, no two within 3 in a line, never under a brick", () => {
-  const ok = [[7, 5, F.BLOOM], [11, 9, F.BLOOM]];
+test("V25 BOOSTER: 3-5 on (odd,odd), >= 2 from the pocket, no two within 3 in a line, never under a brick", () => {
+  const ok = [[7, 5, F.BLOOM], [11, 9, F.BLOOM], [5, 3, F.BLOOM]];
   assert.ok(!fails(b({ level: 1, tiles: ok }), P[0], "V25"));
-  assert.ok(fails(b({ level: 1, tiles: [[7, 5, F.BLOOM]] }), P[0], "V25"), "one");
+  assert.ok(fails(b({ level: 1, tiles: ok.slice(0, 2) }), P[0], "V25"), "two");
+  assert.ok(fails(b({ level: 1, tiles: [...ok, [1, 7, F.BLOOM], [13, 1, F.BLOOM], [13, 5, F.BLOOM]] }), P[0], "V25"), "six");
   assert.ok(fails(b({ level: 1, tiles: [...ok, [8, 5, F.BLOOM]] }), P[0], "V25"), "off (odd,odd)");
-  assert.ok(fails(b({ level: 1, tiles: [...ok, [5, 3, F.BLOOM]] }), P[0], "V25"), "3 from the pocket");
+  assert.ok(fails(b({ level: 1, tiles: [...ok, [3, 3, F.BLOOM]] }), P[0], "V25"), "1 from the pocket");
   assert.ok(fails(b({ level: 1, tiles: [...ok, [7, 7, F.BLOOM]] }), P[0], "V25"), "2 apart in a column");
   assert.ok(fails(b({ level: 1, tiles: ok, bricks: [[11, 9]] }), P[0], "V25"), "under a brick");
 });
@@ -222,4 +223,22 @@ test("featChecks is pure, ordered, and quiet on tile-free rooms", () => {
   assert.deepEqual(ids(r), FEAT_RULES.filter((id) => ids(r).includes(id)));
   const w = createWorld(77, 3); w.gen = 2; loadLevel(w, 3, false);
   assert.deepEqual(ids(featChecks(w, P[1])).filter((id) => id !== "V18"), []);
+});
+
+test("#18 V14 on real gen-3 worlds: no floor or buried item on a tile, foes only on ice", () => {
+  for (let s = 0; s < 40; s++) for (let lv = 1; lv <= 8; lv++) for (let h = 0; h < 3; h += 2) {
+    const w = createWorld(9100 + s, lv); w.gen = 3; w.heat = h; loadLevel(w, lv, false);
+    const f = featChecks(w, P[h], { only: ["V14"] });
+    assert.deepEqual(f, [], "seed " + s + " room " + lv + " heat " + h);
+    assert.ok(w.items.some((it) => it.buried));
+  }
+});
+test("#18 V14 keeps the board: taking the tile layer away moves items only, never the grid or the foes", () => {
+  for (const lv of [1, 2, 3, 5]) for (let s = 0; s < 20; s++) {
+    const a = createWorld(9200 + s, lv); a.gen = 3; a.heat = 2; loadLevel(a, lv, false);
+    const floor = a.items.filter((it) => !it.buried).length, buried = a.items.filter((it) => it.buried).length;
+    assert.ok(a.feat, "tile layer");
+    assert.ok(buried >= 3 && floor >= 1, "room " + lv + " keeps its items: " + buried + " / " + floor);
+    assert.ok(a.enemies.every((e) => !a.feat[key(e.tx, e.ty)] || (a.feat[key(e.tx, e.ty)] === F.GLIDE && e.type !== "stationary")));
+  }
 });

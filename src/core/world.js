@@ -146,13 +146,17 @@ export function loadLevel(world, level, keepProgress = false) {
     const j = rng.int(0, i);
     [brickCells[i], brickCells[j]] = [brickCells[j], brickCells[i]];
   }
+  /* V14 (#18, gen 3): no item on a floor tile. The shuffled lists keep their
+     draws; items take the next cells that hold no tile */
+  const noTile = ([x, y]) => !w.feat || !w.feat[key(x, y)];
+  const itemBricks = w.feat ? brickCells.filter(noTile) : brickCells;
   const nP = clamp(
     P.buriedAdd + level,
     3,
-    brickCells.length,
+    itemBricks.length,
   );
   for (let i = 0; i < nP; i++) {
-    const [x, y] = brickCells[i];
+    const [x, y] = itemBricks[i];
     const p = POWER[rng.int(0, POWER.length - 1)];
     w.items.push({
       x: x * CFG.TILE + CFG.TILE / 2,
@@ -209,15 +213,16 @@ export function loadLevel(world, level, keepProgress = false) {
     w.enemies.push(
       spawnEnemy(roster[i], free[i][0], free[i][1], level, rng, spawnOpts),
     );
+  const floorCells = w.feat ? free.slice(nE).filter(noTile) : free.slice(nE);
   const nFloor = P.bare
     ? 0
     : clamp(
         P.floorAdd + (level | 0),
         P.floorMin,
-        Math.max(0, free.length - nE),
+        floorCells.length,
       );
   for (let i = 0; i < nFloor; i++) {
-    const cell = free[nE + i];
+    const cell = floorCells[i];
     if (!cell) break;
     const [x, y] = cell;
     const p = POWER[rng.int(0, POWER.length - 1)];
