@@ -47,7 +47,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const argv = process.argv.slice(2);
 const arg = (k, d) => { const i = argv.indexOf(k); return i >= 0 ? argv[i + 1] : d; };
 const list = (s) => String(s).split(",").filter(Boolean).map((x) => (/^-?\d+$/.test(x) ? +x : x));
-const TILE_ROOMS = [1, 2, 3, 5], CTRL_ROOMS = [4, 6, 7, 8];
+const TILE_ROOMS = [1, 2, 3, 5, 7], CTRL_ROOMS = [4, 6, 8];
 
 /* ---------------- worker ---------------- */
 if (argv[0] === "--worker") {
