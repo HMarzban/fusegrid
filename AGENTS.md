@@ -1136,7 +1136,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   real page" means `typeof location.href === "string"` (the branch's gen-2 page
   default depended on it; since v188 the tile boards are `?gen=3` only).
 - Release state (2026-11-01): shell **v196** (rules for STREAM, QUICKSAND, GATE, PORTAL, all on
-  `?gen=3`; no change in a normal run) is on branch `tiles-wave-2-3`, not on main, not pushed.
+  `?gen=3`; no change in a normal run) is LIVE on the owner's word.
   Shell **v195** (BOOSTER warning, tile tips, FLOOR
   line, PIT placement, all on `?gen=3`; no change in a normal run) and **v194**
   (install screenshot label, listing art in CLASSIC 2D and PIXEL) are LIVE on the
