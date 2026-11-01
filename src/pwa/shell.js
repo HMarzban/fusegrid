@@ -136,6 +136,7 @@ const SRC = Object.freeze([
   "src/render/three/materials.js",
   "src/render/three/particles.js",
   "src/render/three/rimart.js",
+  "src/render/three/progpin.js",
   "src/render/three/scene.js",
   "src/render/three/textures.js",
   "src/render/three/upload.js",
