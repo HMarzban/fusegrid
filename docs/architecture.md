@@ -273,6 +273,13 @@ static checks moved to `src/core/featchecks.js`, no item lands on a tile, and
 room 5 re-rolls a layout that cannot hold three SHRINK-safe traps. Results and
 the open items are in the record's 2026-11-01 addendum.
 
+**Shell v195: the tiles learn to warn and teach, preview only (#19–#22, #24).**
+[`relaytell.js`](../src/render/relaytell.js) marks every tile a BOOSTER relay will
+reach, read-only, about 2.4 s ahead in all three looks. One first-contact tip per
+tile comes from `feat.js` `tileTip`, and LEVEL SELECT gains a FLOOR line on
+`?gen=3`. CONVEYOR's early-hit failure turned out to be the test bot pacing belts,
+fixed in the bot and pinned by a test.
+
 **Frame times (#34, `tools/perf/frames.mjs`, headed real-GPU Chrome, about 5 min,
 takes your focus).** MacBook Pro, Apple M5 Max, Metal; says nothing about weaker
 GPUs or real phones.

@@ -60,13 +60,13 @@ through `listGeom` / `listHit` (pitches are caps that scale down in a short
 box); MENU has a PLAY hero row whose tag is the run it starts and group gaps
 before OPTIONS / HIGH SCORES / SOURCE; the SOURCE URL shows only on its
 selected row. Build tag (owner 2026-10-21: "a game version in some where in
-the display or menue"): `v194` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
+the display or menue"): `v195` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
 derived ONLY in `shellview.js` (`REV`, handed to `drawMenu` / `drawSettings`
-as `rev`) and `update.js` (the card's "You are on v194", the running build,
+as `rev`) and `update.js` (the card's "You are on v195", the running build,
 never a guessed next one) — never a second literal. Keyboard MENU appends
 it to the foot hint; the touch hub hangs it under the plate when the box has
 >= 10 units below it (`#sh`), else on the SOURCE tile's teaser (landscape on
-the board canvas); OPTIONS keeps its `BUILD v194` kicker. Never on the HUD.
+the board canvas); OPTIONS keeps its `BUILD v195` kicker. Never on the HUD.
 PAUSE draws `pauseGeom(overlayBox, touch)`: touch (`touchLay`,
 data-lay p/l) caps pitch at `PAUSE_ROW_H` 70 / hero 76 / width 380, a keyboard
 screen at the compact `PAUSE_ROW_D` 44 / hero 54 / width 340 (owner: "too
@@ -809,7 +809,9 @@ Node v26, `"type": "module"`. No build step, no bundler.
   `flags.js` alone). The word `leaderboard` is refused in `src/` and `tests/`
   and executably gated by `tests/banned-name.test.mjs`; `docs/` is exempt
   because the spec names the term to refuse it.
-- Coach v2 (`nb.coach.v2`) shows **one first-use tip per verb**, once ever,
+- Coach v2 (`nb.coach.v2`) also carries four tile bits (`b g c x`, gen 3 only,
+  12 bits in all; copy `feat.js` `tileTip`, 6 s, a tip whose room is left closes
+  `rn:"room"`). It shows **one first-use tip per verb**, once ever,
   for EIGHT verbs (owner ruling 2026-10-10 widened the original three): KICK /
   THROW / REMOTE / PASS / LINE / POWER / PIERCE / SHIELD, one bit each
   (`k t r p l w i s`; a three-bit record from before loads byte-stable with
@@ -989,11 +991,12 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
     reference.
   - **#18 and #22 are MERGED on main (2026-11-01, `?gen=3` only)**: tuned rules,
     specs and the bot-side verdict are in the tiles record's 2026-11-01 addendum.
-    OPEN before tiles go default: first-5 s hits at MAX (CONVEYOR), ICE MAX
-    unresolved (+3.1 [2.2, 4.0], `tools/balance/icefrag.mjs` never run), 8 strictly
-    forced moments (BOOSTER flare timing is the real one), joy targets, the owner's
-    playtest (#30). Oracle: `tools/balance/oracle.mjs`; fork switches `FG_BOTPLANT`,
-    `FG_BOTBRAKE`.
+    #19 / #20 / #21 / #22 / #24 are built too (2026-11-01, later addendum: numbers
+    of record). `src/render/relaytell.js` is BOOSTER's read-only warning;
+    `tileTip` and the FLOOR line teach; `PLATE_TPL` shapes PIT. OPEN before tiles
+    go default: the owner's playtest (#30), foe-in-lane forced moments, TRAP's
+    wind-up shows on its own tile only, F3 / `g:3`. Oracle: `tools/balance/oracle.mjs`;
+    fork switches `FG_BOTPLANT`, `FG_BOTBRAKE`, `FG_BOTLURE`, `FG_BOTJOY`.
   - Design pass 2 (#28) is DONE (2026-10-26): the dial works for TRAP (MAX
     +5.9), ICE PATCH (+4.6) and CONVEYOR (+5.4), all with 0 static no-escape
     spots; BOOSTER is an assist tile (owner B1). Owner picks O1/O3/O7/O8/O9
@@ -1129,8 +1132,10 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   Node test fakes define `globalThis.location` WITHOUT `href`, so "is this a
   real page" means `typeof location.href === "string"` (the branch's gen-2 page
   default depended on it; since v188 the tile boards are `?gen=3` only).
-- Release state (2026-11-01): shell **v194** (install screenshot label, listing art
-  in CLASSIC 2D and PIXEL) is LOCAL until the owner pushes. Shell **v193** (tuned tiles on `?gen=3`, `KeyK`
+- Release state (2026-11-01): shell **v195** (BOOSTER warning, tile tips, FLOOR
+  line, PIT placement, all on `?gen=3`; no change in a normal run) and **v194**
+  (install screenshot label, listing art in CLASSIC 2D and PIXEL) are LOCAL until
+  the owner pushes. Shell **v193** (tuned tiles on `?gen=3`, `KeyK`
   unbound, `?net=local` follows every run; no change in a normal run) is LIVE on
   the owner's word. **v192** (tiles design pass 2 docs, the
   #25 harness and static checks, the harness-only `w.featProf` seam; no player
@@ -1146,7 +1151,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   pushes, or says "push". Boards since v188: gen 2 (bold mazes, no tiles) for
   every ordinary run and the daily, gen 1 for F1 codes / ATTRACT / the intro,
   the floor-tile boards only with `?gen=3` (design pass 2 done, the build is
-  #18–#22), so the GUIDE FLOOR page is still a PREVIEW. 338 tests. Branches `tiles-d`, `frame-a`, `frame-b` are
+  #18–#22), so the GUIDE FLOOR page is still a PREVIEW. 355 tests. Branches `tiles-d`, `frame-a`, `frame-b` are
   deleted (merged); `frame-c` (stage set) stays unmerged. The look is recorded in
   `docs/superpowers/specs/2026-10-25-board-look-depth-ambient-design.md`,
   including the loose ends. Loopback dev server: `PORT=8091 node

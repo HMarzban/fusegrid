@@ -15,6 +15,22 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
+## shell v195 · 2026-11-01
+
+Nothing changes in a normal run. Tiles are still a preview.
+
+### Added
+
+- **Boosters warn you (`?gen=3`).** Corner marks show every tile a relay will reach,
+  from the moment the bomb is lit, in all three looks.
+- **Tiles explain themselves (`?gen=3`).** One short tip the first time you meet each
+  tile, and a FLOOR line on the room card in LEVEL SELECT.
+
+### Changed
+
+- **ARENA's PIT layout is fairer on MAX (`?gen=3`).** It holds fewer traps, and fewer
+  of them on its central doors.
+
 ## shell v194 · 2026-11-01
 
 ### Changed

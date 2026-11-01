@@ -6,7 +6,7 @@
 
 This is the story of how the game was built: the big turns, the dead ends
 and what each one taught us. It runs from the first commit on 2026-08-16 to
-shell v193 on 2026-11-01 (714 commits by then).
+shell v195 on 2026-11-01 (727 commits by then).
 
 - **What changed in each release** lives in the [CHANGELOG](../CHANGELOG.md).
 - **How the game works today** lives in [architecture.md](architecture.md).
@@ -596,6 +596,16 @@ design note: a booster's flare gives you less warning than a human can react to.
 Frame times came back clean in all three looks on a fast Mac, with one hitch: REAL
 3D pauses about 85 ms when it enters a new world. Tiles stay a preview until a
 person has played them.
+
+### 2026-11-01 · The bot was the bug (shell v195)
+
+The conveyor looked guilty: early hits on MAX and wins falling off a cliff. So the
+belts got switched off, and the collapse stayed. The test bot simply loved belts
+and paced them instead of hunting. Fixing the bot cleared it, no game change
+needed. Five jobs ran side by side with hard time limits and all finished early:
+boosters now mark their reach about 2.4 seconds ahead, tiles teach themselves with
+one short tip, and ice holds up on MAX whether you brake or not. Next comes the
+one test no bot can run: a person playing it.
 
 ---
 

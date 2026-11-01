@@ -607,3 +607,76 @@ calls by construction; proposed for retirement in favour of the human playtest.
   pace, controls and the run-level arm on this build.
 - **Human playtest (#30):** joy, fairness feel, the ICE brake, and whether MAX feels
   harder. Tiles do not go default before it.
+
+---
+
+## Addendum (2026-11-01, later): the wave-1 open items (issues #19, #20, #21, #22, #24)
+
+This supersedes the "failing or open" list of the addendum above where named. It
+is the numbers of record until the human playtest (#30).
+
+**Combined run, all fixes merged (n 4000 per cell, seeds 800000+, NORM, Δ lose pp,
+95% CI):**
+
+| Tile | CORE | PLUS | MAX |
+|---|---|---|---|
+| BOOSTER | +0.3 [−0.4, 1.0] | +0.1 [−0.7, 0.9] | −1.2 [−2.8, 0.4] |
+| ICE PATCH | −0.0 [−0.8, 0.8] | +3.0 [1.8, 4.2] | +3.3 [2.2, 4.3] |
+| CONVEYOR | −0.6 [−1.5, 0.3] | +1.2 [−0.2, 2.6] | +9.0 [7.3, 10.8] |
+| TRAP | −4.1 [−4.9, −3.3] | −0.4 [−1.1, 0.4] | +4.7 [3.7, 5.7] |
+
+First-5 s hits pooled (A0 → A1, ceiling): CORE 40 → 36 (52.6), PLUS 61 → 53
+(76.6), MAX 155 → 140 (179.9), all pass. Static V13–V27: 0, except the one known
+CONVEYOR PLUS cap spot. CONVEYOR MAX moves between seed blocks and with the bot's
+aim (+6.3 on seeds 700000+, +9.0 here): its upper bound touches +10, so the
+playtest should watch it.
+
+**CONVEYOR (#19): the failure was the bot, not the tile.** The fork's wander aimed
+at any belt within 6 tiles, so it stopped hunting and paced belts. With belts
+stopped and the old aim the collapse stayed; with belts stopped and that aim off,
+the fork plays A0 exactly (now a test). The fork uses `beltAim` (aim at a belt only
+if a plant there would deliver); `FG_BOTLURE=any|off`, `FG_BOTJOY=off`. No game
+code changed. This supersedes "first-5 s hits at MAX fail" and the wins collapse.
+Still open: tile-caused forced moments with a foe in the lane (19 → 12 per 2000
+runs); CORE wins slightly down, cause not established; CORE deliveries 0.43 (0.5).
+MAX first-5 s falling under A0 is a bot side effect, not an easier game.
+
+**ICE PATCH (#20): holds at ×1.5.** MAX +3.96 [3.50, 4.42] on 24 000 seeds braking
+at once; +5.15 [4.67, 5.60] never braking; a brake 0.2 s late scores like no
+brake, so a reacting human sits near +5.2. Only ×1.5 and ×1.55 stay inside the band
+(a step at ×1.47–1.48, likely tick rounding; don't nudge the boost down). The coast
+drives the difficulty, not the speed; the speed-cap idea is wrong. **Static V19 is
+0 only because the rule assumes the brake:** without it, 947 of 1000 boards have
+no-escape spots, all from the coast. The tip teaches it as a pre-press. The combined
+run reads +3.3 [2.2, 4.3], inside sampling of the pooled figure.
+
+**BOOSTER (#21): a read-only warning.** `src/render/relaytell.js` `relayTell(world)`
+plays lit bombs and flares forward on a private grid and marks every tile a relay
+will reach: corner brackets from the moment the bomb is lit, a faint wash during the
+flare. All three looks, under pickups, no strobe, PAUSE frozen, REDUCE FLASH drops
+the wash; no sim change (a test proves byte-identity), 0 new draws, tile art
+untouched. Notice from a plant: at least 2.50 / 2.45 / 2.38 s (CORE / PLUS / MAX),
+up from 0.05–0.08 s. A brick a blast opens is marked once it is floor (0.15–0.28 s
+minimum, under the blast's own 0.34 s blade); a REMOTE press or a kick can shorten
+notice (timings, not measured). The bot ignores the marks: whether it helps a person
+is for #30.
+
+**TRAP (#22): the forced seeds are readable, PIT was a mechanism.** All four forced
+seeds were the bot walking or planting into a visible wind-up; 602439's NOWARN was a
+grading bug (`trapAge` fixes it). Standing still from arming is never hit by that
+trap (0 of 3601). Hits come from foes, not trap blasts: MAX traps raise lose by
+opening bricks (8.5 a run on PIT, 1.7 on GAUNTLET). `PLATE_TPL` limits PIT to 3–4
+traps with at most one on a central-door spot. On held-out seeds PIT +9.9, RING +3.7,
+GAUNTLET +0.8, overall +5.2. GAUNTLET's traps do almost nothing (3 edge spots;
+V20 and V26 allow no others). **Readability gap:** the wind-up shows only on the
+trap's own tile, its lines are never lit and it has no sound; the same kind of mark
+as BOOSTER's would close it (not built).
+
+**Teaching (#24).** `tileTip(kind, profile)` in `feat.js` composes one first-contact
+tip per tile from the live profile; `nb.coach.v2` grows to 12 bits (`b g c x`,
+byte-stable), and a tip closes `rn:"room"` when its room is left. FLOOR line on the
+LEVEL SELECT card, `?gen=3` only; a normal page's call stream is byte-identical.
+Tile tips last 6 s. Once-ever means a player who first meets ICE at CORE never gets
+the MAX brake tip.
+
+**Not measured:** pace cells and the run-level arm on this build; the oracle on it.
