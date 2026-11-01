@@ -60,13 +60,13 @@ through `listGeom` / `listHit` (pitches are caps that scale down in a short
 box); MENU has a PLAY hero row whose tag is the run it starts and group gaps
 before OPTIONS / HIGH SCORES / SOURCE; the SOURCE URL shows only on its
 selected row. Build tag (owner 2026-10-21: "a game version in some where in
-the display or menue"): `v192` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
+the display or menue"): `v193` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
 derived ONLY in `shellview.js` (`REV`, handed to `drawMenu` / `drawSettings`
-as `rev`) and `update.js` (the card's "You are on v192", the running build,
+as `rev`) and `update.js` (the card's "You are on v193", the running build,
 never a guessed next one) — never a second literal. Keyboard MENU appends
 it to the foot hint; the touch hub hangs it under the plate when the box has
 >= 10 units below it (`#sh`), else on the SOURCE tile's teaser (landscape on
-the board canvas); OPTIONS keeps its `BUILD v192` kicker. Never on the HUD.
+the board canvas); OPTIONS keeps its `BUILD v193` kicker. Never on the HUD.
 PAUSE draws `pauseGeom(overlayBox, touch)`: touch (`touchLay`,
 data-lay p/l) caps pitch at `PAUSE_ROW_H` 70 / hero 76 / width 380, a keyboard
 screen at the compact `PAUSE_ROW_D` 44 / hero 54 / width 340 (owner: "too
@@ -200,7 +200,9 @@ not shell screens. Do not add them as `SCREEN` values.
     `board2.js` `genBoard2` (the 14 BOLD layouts, #12: every ordinary run and
     the DAILY since v188), **3** = gen 2 + the `world.feat` floor-tile layer
     (`genBoard2(…, {feat:true})`, `?gen=3` only, a preview; O2 2026-10-26:
-    tiles become gen 3 / F3 so an F2 code is always tile-free). Gen 2: a layout
+    tiles become gen 3 / F3 so an F2 code is always tile-free; gen-3 room 5
+    re-rolls the layout on ~8 % of seeds, when it cannot place 3 SHRINK-safe
+    traps, #22). Gen 2: a layout
     keyed `(seed, room, attempt)` (template, stamps, flip; CROWN V or 180
     only) and a fill keyed `(seed, room, heat, attempt)` that moves bricks
     only, on a ceiling of the gen-1 brick count minus 17 (JUNGLE minus 6);
@@ -216,6 +218,10 @@ not shell screens. Do not add them as `SCREEN` values.
     at walking distance >= 10 with bricks passable, >= 12 for hunters (FAST /
     CHASER / KNIGHT) **and brick-passers** (PHANTOM / ROCKET / SHADE; lead
     ruling 2026-10-26, owner accepted: they walk through the seal bricks).
+  - `featchecks.js` — the static tile checks V13–V27 (#18, moved from
+    `tools/balance/`, which re-exports it; 33 KB in everyone's boot graph because
+    `genBoard3` is synchronous, though only `?gen=3` runs it). V14 is fixed in
+    `loadLevel`, gen 3 only (no item on a tile).
   - `fair.js` — pure `validateBoard(grid, level, heat, opts)` (#11) returning
     failed rule IDs: V1 reach, V2 safe first bomb (reach 1–10, PIERCE, LINE x4,
     slowest pace vs shortest fuse), V3 room fit, V4 foe distance, V5 bricks
@@ -239,7 +245,7 @@ not shell screens. Do not add them as `SCREEN` values.
     for each 2026-10-21..25 art round, the diff proven to be the intended art;
     `97480c1c:22630` is the stale pre-round value). Beside it, `classic-perf`
     pins a named tile world through `classicHash`'s `opt` (gen 3, seed 4242,
-    room 3 FACTORY CONVEYOR, CORE: `a4693824:71581`, #35) and checks that
+    room 3 FACTORY CONVEYOR, CORE: `7e57d1aa:71503`, #35 / #18) and checks that
     nulling the tile layer moves it. See the PIXEL paragraph below.
   - kind `"iso"` — legacy dimetric (`r3d/`), pinned by `?render=iso` only.
     `createRenderer({kind:"3d"|"iso"})` is the **dimetric** branch. Real 3D
@@ -977,18 +983,24 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
 
     Build from the committed specs and read the prototypes only for
     reference.
+  - **#18 and #22 are MERGED on main (2026-11-01, `?gen=3` only)**: tuned rules,
+    specs and the bot-side verdict are in the tiles record's 2026-11-01 addendum.
+    OPEN before tiles go default: first-5 s hits at MAX (CONVEYOR), ICE MAX
+    unresolved (+3.1 [2.2, 4.0], `tools/balance/icefrag.mjs` never run), 8 strictly
+    forced moments (BOOSTER flare timing is the real one), joy targets, the owner's
+    playtest (#30). Oracle: `tools/balance/oracle.mjs`; fork switches `FG_BOTPLANT`,
+    `FG_BOTBRAKE`.
   - Design pass 2 (#28) is DONE (2026-10-26): the dial works for TRAP (MAX
     +5.9), ICE PATCH (+4.6) and CONVEYOR (+5.4), all with 0 static no-escape
     spots; BOOSTER is an assist tile (owner B1). Owner picks O1/O3/O7/O8/O9
     and T1/I1/B1/C1, the per-heat specs and the lead gate rulings are in the
     tiles record's "design pass 2" addendum. Tuned code waits on branches
-    (pushed to GitHub, never merged as is) `pass2-trap` (#22), `pass2-ice` (#20), `pass2-conveyor` (#19),
-    `pass2-booster` (#21), never merged as is: #18 integrates them (move
-    `featchecks` into `src/core` first; fix V14 items-on-tiles in
-    `loadLevel`; then re-confirm, since A0 moves). Measuring: `tools/balance/`
+    (on GitHub, kept for reference) `pass2-trap`, `pass2-ice`, `pass2-conveyor`,
+    `pass2-booster`, integrated by #18. Measuring: `tools/balance/`
     (#25 harness: `tilesweep.mjs`, tick-for-tick parity with the stock bot;
     static checks V13–V27 `featchecks.mjs` + `featreport.mjs`), dev-only,
-    never imported by `src/`; `w.featProf` is a harness-only knob seam. Then
+    never imported by `src/`; `w.featProf` is a harness-only knob seam; real-GPU
+    frame times `tools/perf/frames.mjs` (#34, takes the owner's focus). Then
     the verdict and human playtest (#30).
   - Bests stay keyed by difficulty + room ("not related to the shuffle board").
   - `world.gen` defaults to 1 (Node worlds). F1 codes, past dailies,
@@ -1113,7 +1125,9 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   Node test fakes define `globalThis.location` WITHOUT `href`, so "is this a
   real page" means `typeof location.href === "string"` (the branch's gen-2 page
   default depended on it; since v188 the tile boards are `?gen=3` only).
-- Release state (2026-10-26): shell **v192** (tiles design pass 2 docs, the
+- Release state (2026-11-01): shell **v193** (tuned tiles on `?gen=3`, `KeyK`
+  unbound, `?net=local` follows every run; no change in a normal run) is committed
+  on local main, NOT pushed. **v192** (tiles design pass 2 docs, the
   #25 harness and static checks, the harness-only `w.featProf` seam; no player
   change) is LIVE on the owner's word; v191 raised the PIXEL cap to 192 KB; v190 fixed PIXEL SAND's floor vs bricks and raised the cap
   to 176 KB; v189 added the hunter lock-on tell (#32), the tile colour-vision
@@ -1127,7 +1141,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   pushes, or says "push". Boards since v188: gen 2 (bold mazes, no tiles) for
   every ordinary run and the daily, gen 1 for F1 codes / ATTRACT / the intro,
   the floor-tile boards only with `?gen=3` (design pass 2 done, the build is
-  #18–#22), so the GUIDE FLOOR page is still a PREVIEW. 301 tests. Branches `tiles-d`, `frame-a`, `frame-b` are
+  #18–#22), so the GUIDE FLOOR page is still a PREVIEW. 338 tests. Branches `tiles-d`, `frame-a`, `frame-b` are
   deleted (merged); `frame-c` (stage set) stays unmerged. The look is recorded in
   `docs/superpowers/specs/2026-10-25-board-look-depth-ambient-design.md`,
   including the loose ends. Loopback dev server: `PORT=8091 node

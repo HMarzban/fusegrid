@@ -540,3 +540,70 @@ and **off**: the bot played greedier with it (+1.5 pp).
   for TRAP by design (T1).
 - Human playtest (#30): joy on CORE, the ICE brake, and whether MAX feels
   harder by the margins measured here.
+
+---
+
+## Addendum (2026-11-01): integrated build and the bot-side verdict (issues #18, #22, #30)
+
+The four tuned tiles are now in `main` (still `?gen=3` only). This addendum
+replaces the pass-2 results table for the integrated build. Specs are unchanged
+except where named.
+
+**Integration (#18).** The `pass2-*` branches are merged. The static checks live
+in `src/core/featchecks.js` (`tools/balance/featchecks.mjs` re-exports them). V14
+is fixed in `loadLevel`, gen 3 only: floor and buried items take the next cell
+with no tile (0 of 1000 boards). BOOSTER's room-1 gate checks only bomb cells in
+line with the candidate, 83 ms → 19 ms mean per load. V25 is 3–5 boosters with
+pocket gap 2. Gen-3 tile pin `a4693824:71581` → `7e57d1aa:71503` (the chain moved
+and foes re-placed, then items left the tiles); gen 1 and gen 2 pins unmoved.
+
+**TRAP placement (#22).** Trap spots depend only on the layout's walls, so salts
+cannot help: 81 of 352 GAUNTLET boards cannot hold 3 spaced SHRINK-safe spots.
+`plate()` now takes strict safe spots only, and room 5 re-rolls the layout when
+it cannot place them, through the same gates at all three heats. V20, V23, V26
+and V27 are 0. About 8 % of gen-3 room 5 seeds leave the gen-2 layout, so
+"gen 3 = gen 2 + the tile layer" no longer holds there. The MAX dial is uneven by
+layout: PIT +13.1, RING +3.2, GAUNTLET +1.2 (A0 is already ~86 % on the last two).
+
+**Results (Δ lose, pp, 95% CI, n 6000, NORM, seeds 600000+, adopted fork):**
+
+| Tile | CORE | PLUS | MAX | MAX gate |
+|---|---|---|---|---|
+| BOOSTER | −0.0 [−0.6, 0.6] | −0.4 [−1.2, 0.3] | −1.4 [−2.6, −0.1] | pass under B1 (≥ −3), but measurably easier for this bot |
+| ICE PATCH | +0.5 [−0.0, 1.2] | +1.4 [0.4, 2.4] | +3.1 [2.2, 4.0] | **unresolved** (lower bound under +3) |
+| CONVEYOR | −0.7 [−1.6, 0.3] | +1.0 [−0.2, 2.1] | +4.9 [3.5, 6.2] | pass |
+| TRAP (before #22's re-roll) | −4.2 [−4.9, −3.5] | +0.8 [0.1, 1.5] | +5.7 [4.8, 6.5] | pass (+6.3 [5.5, 7.2] on #22's build, seeds 500000+) |
+
+Static on the merged build (1000 boards × 3 heats): V13–V27 all 0, except the one
+known CONVEYOR PLUS `cap` spot (an escape exists, past the 4-step budget).
+
+**Forced moments, real-sim oracle (`tools/balance/oracle.mjs`, all four tiles).**
+Strictly forced and tile-caused, per 6000 runs: BOOSTER 1 / 2 / 1, TRAP 1 / 1 / 2,
+CONVEYOR 0, ICE PATCH 0. Forced with a foe in the lane and tile-caused: BOOSTER 13,
+CONVEYOR 58, TRAP 3. "Forced" is an upper bound (the search only moves). Every
+episode had an earlier escape; six of the eight were hand-traced, all walking or
+standing into a blast whose source was already on the board. **The two concerning
+ones are BOOSTER PLUS s 605143 and MAX s 603670:** the bot walked into a side arm
+0.05–0.08 s after the flare lit, far below human reaction time. Proposal for
+#21 / #23: light the relay's reach earlier, or lengthen the flare. The static
+V19 = 0 stays the gate of record, and its model does not cover this timing.
+
+**Gates (lead rulings).** Tile hits now means the paired Δ hits vs A0 (pass in
+every cell). The bot's timed pre-plant check is the fork's default
+(`FG_BOTPLANT=off` restores the old one): fresh-plant flags fell 824 → 90, and
+exempting plants was rejected because 4 of them were real, forced and tile-caused.
+Parity holds (4800 runs, 0 divergent). The near-miss counter cannot see tile close
+calls by construction; proposed for retirement in favour of the human playtest.
+
+**Failing or open:**
+- **First-5 s hits at MAX fail:** 204 → 244 against a ceiling of 232.6, driven by
+  CONVEYOR MAX (73 → 109). Cause not investigated; #19 must look. CONVEYOR wins
+  also collapse (186 → 69, 222 → 83, 309 → 88), so its faster clear times are
+  survivorship.
+- **Joy targets fail:** CONVEYOR CORE deliveries 0.41 (≥ 0.5), BOOSTER kills 0.01
+  per run (≥ 0.33), BOOSTER assisted kills 1.3 / 3.9 / 6.2 %. ICE has no kill path.
+- **Not measured** (stopped by the lead): ICE fragility near ×1.5 and with a late
+  or absent brake (`tools/balance/icefrag.mjs` is written, never run), A2 / A3,
+  pace, controls and the run-level arm on this build.
+- **Human playtest (#30):** joy, fairness feel, the ICE brake, and whether MAX feels
+  harder. Tiles do not go default before it.

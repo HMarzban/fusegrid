@@ -6,7 +6,7 @@
 
 This is the story of how the game was built: the big turns, the dead ends
 and what each one taught us. It runs from the first commit on 2026-08-16 to
-shell v192 on 2026-10-26 (676 commits by then).
+shell v193 on 2026-11-01 (714 commits by then).
 
 - **What changed in each release** lives in the [CHANGELOG](../CHANGELOG.md).
 - **How the game works today** lives in [architecture.md](architecture.md).
@@ -586,6 +586,16 @@ now cost 4.6 to 5.9 points more lost runs, and no tile can trap you. BOOSTER
 turned out to be a helper at every heat, so it stays the friendly room-1 tile.
 The tiles themselves land in a later build; this release ships the design and
 the tools that measured it.
+
+### 2026-11-01 · The tiles get real, and the bot tells on them (shell v193)
+
+The four tuned tiles moved into the game code, still behind the preview link.
+Then a new checker replayed every "no escape" moment the bot flagged through the
+real game. Nearly all had a way out. Eight did not, and two of those are a real
+design note: a booster's flare gives you less warning than a human can react to.
+Frame times came back clean in all three looks on a fast Mac, with one hitch: REAL
+3D pauses about 85 ms when it enters a new world. Tiles stay a preview until a
+person has played them.
 
 ---
 

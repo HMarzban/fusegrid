@@ -256,7 +256,7 @@ the gameplay gaps are tracked in issue #35.
   waiver covers the open CROWN GATE in CLASSIC 2D, whose three heats are too
   close for everyone; the structural fix belongs to the tile design pass (#28).
 - **Tile-world pin (#35).** The CLASSIC call-log test now also pins a gen-3
-  FACTORY world with its conveyor tiles (`a4693824:71581`).
+  FACTORY world with its conveyor tiles (`7e57d1aa:71503` since the tile build).
 
 **Shell v192 adds the balance tools (#25, #28), dev-only, never imported by
 `src/`:** `tools/balance/tilesweep.mjs` runs a tile-aware fork of the demobot
@@ -267,6 +267,28 @@ including the no-escape spots. `w.featProf` is the one seam they use in the
 sim, a no-op when unset. Their results and the final per-heat tile specs are in
 the [tiles record](superpowers/specs/2026-10-21-difficulty-tiles-design.md)'s
 design pass 2 addendum.
+
+**Shell v193: the tuned tiles are in the code, preview only (#18, #22).** The
+static checks moved to `src/core/featchecks.js`, no item lands on a tile, and
+room 5 re-rolls a layout that cannot hold three SHRINK-safe traps. Results and
+the open items are in the record's 2026-11-01 addendum.
+
+**Frame times (#34, `tools/perf/frames.mjs`, headed real-GPU Chrome, about 5 min,
+takes your focus).** MacBook Pro, Apple M5 Max, Metal; says nothing about weaker
+GPUs or real phones.
+
+| Look | Busy room, JS work median / max | Total frame cost with GPU flush | Dropped frames |
+|---|---|---|---|
+| CLASSIC 2D | 0.7 / 1.6 ms | 1.0–2.0 ms | 0 |
+| PIXEL | 0.7 / 1.2 ms | 1.5–1.9 ms | 0 |
+| REAL 3D | 0.8 / 3.7 ms | 1.4–1.7 ms | 0 |
+
+All looks hold 60 and 120 fps; FRAME RATE 30 / 60 / MAX render exactly 30 / 60 /
+120; a sweep of all eight worlds on gen 2 and gen 3 dropped 0 frames on the
+merged tile build. **One known hitch:** REAL 3D freezes about 85 ms on the first
+frame of each new world, because per-biome shaders compile then (same world
+18 ms). Proposal: pre-compile with `compileAsync` during the WIN overlay. Vsync
+off is not a valid way to measure this game: the rAF outruns the fixed step.
 
 ## 🎲 A new board every run (shell v188)
 

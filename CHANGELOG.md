@@ -15,6 +15,26 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
+## shell v193 · 2026-11-01
+
+Nothing changes in a normal run. Tiles are still a preview.
+
+### Changed
+
+- **The floor-tile preview (`?gen=3`) plays by its new rules.** On MAX, traps are
+  a pure hazard and ice has a brake (press the opposite way); conveyors carry only
+  your bombs on CORE and everything on MAX; boosters sit nearer the start. Pickups
+  no longer land on tiles.
+
+### Removed
+
+- **The K key does nothing now.** KICK has always been passive: walk into a bomb.
+
+### Fixed
+
+- **`?net=local` follows every run,** so the two-world test board keeps up after a
+  restart or a new run.
+
 ## shell v192 · 2026-10-26
 
 ### Changed
