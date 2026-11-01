@@ -50,6 +50,7 @@
    Output: tools/balance/out/<name>.jsonl (one row per episode) and a printed
    table. Workers are child processes, stopped by PID. Never imported by src/. */
 import { fork } from "node:child_process";
+import "../../src/core/board3.js";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";

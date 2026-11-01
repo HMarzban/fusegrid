@@ -1,5 +1,6 @@
 /* TILE PROTO (2026-10-21, throwaway branch): wave-1 floor tiles. */
 import test from "node:test";
+import "../src/core/board3.js";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import { CFG } from "../src/core/config.js";

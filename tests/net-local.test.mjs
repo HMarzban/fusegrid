@@ -4,6 +4,7 @@
    worlds stays equal on every tick across a new run, a PAUSE, a PAUSE RESTART,
    a room change and the GAME OVER restart. A local proof, never netplay. */
 import { createGame } from "../src/main.js";
+import "../src/core/board3.js";
 import { createPixelRenderer } from "../src/render/pixel/renderer.js";
 import { PAUSE_ITEMS, SCREEN } from "../src/app/menuapp.js";
 import { runSeed } from "../src/core/rng.js";

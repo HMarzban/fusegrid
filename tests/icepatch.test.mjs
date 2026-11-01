@@ -4,6 +4,7 @@
    state never survives a room load, a SENTRY never starts on ice while other
    foes may, and the placement takes two rings in the open lane band. */
 import test from "node:test";
+import "../src/core/board3.js";
 import assert from "node:assert";
 import { CFG, T, key } from "../src/core/config.js";
 import { createWorld, loadLevel, step } from "../src/core/sim.js";

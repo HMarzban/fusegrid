@@ -1,5 +1,6 @@
 /* TILE ART direction D (2026-10-25): painter contract, colours, geometry. */
 import test from "node:test";
+import "../src/core/board3.js";
 import assert from "node:assert/strict";
 import { CFG, key } from "../src/core/config.js";
 import { cellSpec, specKey, mix as fdMix } from "../src/render/featdraw.js";

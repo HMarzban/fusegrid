@@ -198,10 +198,11 @@
 <script type="module">
    import {createGame} from "./src/main.js";
    import {createAudio} from "./src/audio.js";
+   import {gen3Boot} from "./src/app/gen3load.js";
    const canvas=document.getElementById("c");
    const audio=createAudio();
    if(/[?&]debug=1/.test(location.search||""))window.__audio=audio;
-   createGame(canvas,{audio, canvasEl:canvas});
+   gen3Boot(location.search,()=>createGame(canvas,{audio, canvasEl:canvas}));
 </script>
 </body>
 </html>

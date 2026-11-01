@@ -2,6 +2,7 @@
    ICE PATCH brake) and the FLOOR line on
    the LEVEL SELECT room card. Gen 3 only: a normal run must see neither. */
 import { COACH2_DUR, COACH2_KEY, COACH_TILE_DUR, coach2Mark, coach2Seen, coach2Tick, coachAlpha, coachTip, loadCoach2 } from "../src/app/coach.js";
+import "../src/core/board3.js";
 import { FEAT_PROFILE, TILE_HELP, TILE_NAME, featKindOf, isBelt, tileTip } from "../src/core/feat.js";
 import { createWorld, loadLevel } from "../src/core/sim.js";
 import { CFG, T, key } from "../src/core/config.js";

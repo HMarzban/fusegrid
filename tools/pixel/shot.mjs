@@ -254,7 +254,8 @@ const STAT = `(()=>{const g=window.__GAME__,r=g.renderer,d=r&&r._dbg,G=g.G;const
 export function loadExpr(a, r) {
   const set = [a.seed != null ? "G.seed=" + a.seed + ">>>0;" : "", a.heat != null ? "G.heat=" + a.heat + ";" : "", a.pace != null ? "G.pace=" + a.pace + ";" : "",
     a.gen != null ? "if('gen' in G)G.gen=" + a.gen + ";else w.push('--gen " + a.gen + " ignored: this world has no gen field');" : ""].join("");
-  return `import('/src/core/sim.js').then(m=>{const G=window.__GAME__.G,w=[];${set}m.loadLevel(G,${r},true);G.state='PLAY';return w;})`;
+  const pre = a.gen >= 3 ? "import('/src/core/board3.js').then(()=>" : "("; // a page without ?gen=3 has not loaded gen 3
+  return pre + `import('/src/core/sim.js').then(m=>{const G=window.__GAME__.G,w=[];${set}m.loadLevel(G,${r},true);G.state='PLAY';return w;}))`;
 }
 
 export async function run(a) {

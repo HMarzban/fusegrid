@@ -1,6 +1,7 @@
 /* BOOSTER relay tell (issue #21): the read-only relayTell rule, its mirror of the real step(), the proof that the sim never sees it, and the draw + PAUSE freeze in
    CLASSIC 2D, PIXEL and REAL 3D. */
 import test from "node:test";
+import "../src/core/board3.js";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { CFG, T, key, biomeOf } from "../src/core/config.js";

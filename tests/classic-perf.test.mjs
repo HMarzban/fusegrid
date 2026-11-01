@@ -1,4 +1,5 @@
 import { createRenderer, NET_MS, SNAP_MS } from "../src/render/renderer.js";
+import "../src/core/board3.js";
 import { createWorld, loadLevel } from "../src/core/sim.js";
 import { initFx, getFx, getShake, getFlash } from "../src/render/fx.js";
 import { classicHash } from "./lib/classichash.mjs";

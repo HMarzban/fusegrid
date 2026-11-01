@@ -4,9 +4,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { CFG, T, key } from "../src/core/config.js";
 import { createWorld, loadLevel, step } from "../src/core/sim.js";
-import { FEAT_PROFILE, BLOOM_PLACE } from "../src/core/feat.js";
+import { FEAT_PROFILE } from "../src/core/feat.js";
+import { BLOOM_PLACE } from "../src/core/featplace.js";
 import { featChecks } from "../src/core/featchecks.js";
-import { genBoard2, BLOOM_GATE } from "../src/core/board2.js";
+import { genBoard2 } from "../src/core/board2.js";
+import { BLOOM_GATE } from "../src/core/board3.js";
 
 const mk = (seed, heat) => { const w = createWorld(seed, 1); w.gen = 3; w.heat = heat; loadLevel(w, 1, false); w.state = "PLAY"; return w; };
 

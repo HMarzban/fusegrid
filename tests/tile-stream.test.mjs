@@ -1,11 +1,13 @@
 /* STREAM (#26, design 2026-11-01 section 3): water floats resting bombs tile by tile
    and slows walkers; nobody rides. Placement V28, fairness V29, SHRINK V20. */
 import test from "node:test";
+import "../src/core/board3.js";
 import assert from "node:assert/strict";
 import { CFG, T, key } from "../src/core/config.js";
 import { createWorld, loadLevel, step } from "../src/core/sim.js";
 import { genBoard2 } from "../src/core/board2.js";
-import { F, FEAT_PROFILE, isStream, flowDir, placeFeat } from "../src/core/feat.js";
+import { F, FEAT_PROFILE, isStream, flowDir } from "../src/core/feat.js";
+import { placeFeat } from "../src/core/featplace.js";
 import { featChecks } from "../src/core/featchecks.js";
 import { stampStart, walk } from "../src/core/fair.js";
 import { paceMul } from "../src/core/pace.js";

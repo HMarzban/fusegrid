@@ -3,11 +3,13 @@
    saved by a salt: gen 3 walks on to the next layout attempt, and only then
    leaves the gen-2 layout. Gen 2 itself never moves. */
 import test from "node:test";
+import "../src/core/board3.js";
 import assert from "node:assert/strict";
 import { CFG } from "../src/core/config.js";
 import { createWorld, loadLevel, step } from "../src/core/sim.js";
 import { genBoard2, layout2 } from "../src/core/board2.js";
-import { FEAT_PROFILE, PLATE_TPL, placeFeat, plateFill } from "../src/core/feat.js";
+import { FEAT_PROFILE } from "../src/core/feat.js";
+import { PLATE_TPL, placeFeat, plateFill } from "../src/core/featplace.js";
 import { featChecks } from "../src/core/featchecks.js";
 import { makeWorld } from "../tools/balance/tilerun.mjs";
 import { createTileBot } from "../tools/balance/demobot-tiles.mjs";
