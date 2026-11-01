@@ -324,8 +324,8 @@ walls became north-south, because REAL 3D hid MAKO behind them).
 - [Lockstep tests](../tests/net_lockstep.test.mjs) exercise the local
   synchronization protocol. The [`?net=local` harness](../src/net/localpair.js)
   drives two worlds, but the simulation still consumes player zero. Its mirror
-  world is built once at boot from the boot seed, so it mirrors run 0 only:
-  a later run, restart or gen-2 board on the main world is never loaded there. Internet
+  world follows every run and restart on the main world, dealing each board
+  itself ([hashes pinned equal](../tests/net-local.test.mjs)). Internet
   multiplayer would need real multiplayer simulation, session ownership,
   a disconnect/rejoin policy and network testing.
 - The tests in [`tests/`](../tests/) also cover storage, menus, rendering

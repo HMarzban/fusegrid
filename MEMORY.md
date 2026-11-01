@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-01 — known gaps: net=local follows every run, KeyK removed
+- `localpair.js` mirror follows every run start and restart (`tests/net-local.test.mjs`, 37 checks); `KeyK` unbound, `kick` kept as a reserved false wire slot (no replay shape moved). Left: `newIntent()` in `sim.js` still carries `kick:false`, a two-line tidy after #18; `__GAME__.advance` under `?debug=1&net=local` diverges (debug only).
+
 ## 2026-11-01 — clean-up and docs sync
 - Owner: clean up, sync docs, then known gaps and #18 #30 #22 #34 in parallel. `.codex/` (another tool's agent config) git-ignored, not deleted; 180 stale `fg-px-*` capture profiles removed; stale AGENTS lines fixed; #26 got the open-GATE note; the pass-2 art notes moved off closed #23 onto #19 / #21.
 

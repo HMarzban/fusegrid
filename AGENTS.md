@@ -587,7 +587,10 @@ not shell screens. Do not add them as `SCREEN` values.
   looks (PIXEL uses its own cells for the icons).
 - `src/ai/enemies.js` — enemy AI on sim state.
 - `src/net/` — `protocol.js`, `lockstep.js`, `transport.js`.
-  Default play uses **no** transport. `?net=local` is a 1P pair proof.
+  Default play uses **no** transport. `?net=local` is a 1P pair proof; its
+  mirror follows every run (2026-11-01, `localpair.js`: a new A grid no tick made
+  is a run start, B takes A's seed / gen / heat / pact / pace and deals its own
+  board; `tests/net-local.test.mjs` pins equal hashes).
   `applySnapshot` was removed (lockstep-only). `makeSnapshot` remains for harness dumps.
 - `src/input.js`, `src/touch.js`, `src/audio.js` — input + chiptune.
   Track tables live in `src/audio/tracks.js`. Boom tints live in
@@ -842,7 +845,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
 - Surviving a hit leaves live bombs and blades in the world.
 - Share the play URL with a trailing slash (`https://hmarzban.github.io/fusegrid/`); the no-slash GitHub Pages 301 has no Open Graph tags, so link previews fail. Share card is root `og.png` (1200×630); `og:image` stays the absolute Pages URL. The hero is a REAL capture of the live game, never generated key art, which drifts from the game. Since v180 (owner pick C, 2026-10-19) it is the ATLAS LEVEL SELECT page in CLASSIC 2D from a fresh profile (rooms 6–8 locked, NO TIME YET, no seeded records); the 2026-09 card was the transparent-clear 3D JUNGLE board. Card sells CLASSIC 2D · PIXEL · REAL 3D plus CORE / PLUS / MAX; the PLAY IN THE BROWSER pill spans that chip row (left = CORE left, right = MAX right) and type keeps a 10% inset. Sources, composer and the rejected A/B: git-ignored `.superpowers/sdd/2026-10-19-storefront/`. Never the reference game's name on the image or tags. Public About/meta copy leads with play-in-browser + the three looks + Heat; "deterministic" stays a contributor word, not the storefront lead.
 - A just-planted bomb is not solid while the bomber still occupies that tile; after leaving, re-entry is blocked (plant-and-leave / R16).
-- KICK is passive: with the KICK power, walking into a bomb slides it. No key kicks. `KeyK` still latches `intent.kick`, which `step()` never reads (a dead latch; removal is parked with the CONTROLS page, issue #3). No hint may say K + MOVE (issue #6); `menudraw.test` fails on it, and HOW TO's KICK key reads `WALK INTO BOMB`.
+- KICK is passive: with the KICK power, walking into a bomb slides it. No key kicks. `KeyK` is an ordinary unbound key (2026-11-01); INPUT keeps a reserved always-false `kick` wire slot so the lockstep shape never moved. No hint may say K + MOVE (issue #6); `menudraw.test` fails on it, and HOW TO's KICK key reads `WALK INTO BOMB`.
 - FLAME is blast length in tiles (starts at 1, caps at 8, persists across death and rooms); BOMB is how many bombs can be live at once.
 - Gold WALL never breaks; green BRICK breaks and stops a normal blast.
 - Rooms 6–8 use SAND / VOID / CROWN palettes, chiptune cues (`sand` / `void` / `crown`), and boom tints (kick 69 / 40 / 82). Those rooms append exclusive BURROW / SHADE / KNIGHT (`ROOM_EXTRA`); do not replace CORE L1–5 spawn lists. Rooms 1–5 stay JUNGLE–ARENA. Ice/water/arena boom numbers stay. Menu/intro use the default boom.
