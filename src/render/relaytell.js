@@ -111,7 +111,7 @@ export function dimCells(w) {
 }
 /* the CLASSIC mark, on the FLOOR before drawItems: four corner brackets in the world's own wallHi (the booster's mark colour, never a blast hue) over a dark
    under-stroke in bg1, and a faint wash while the flare burns, scaled by REDUCE FLASH (the brackets stay). Static: no march, no pulse. No tell = no ctx call. */
-const IN = 0.13, ARM = 0.2;
+const IN = 0.11, ARM = 0.25;
 export function drawRelayTell(c, world, flashK = 1) {
   const cells = relayTell(world), dim = dimCells(world);
   if (!cells.length && !dim.length) return;
@@ -122,9 +122,9 @@ export function drawRelayTell(c, world, flashK = 1) {
     const x0 = e.x * TL + a, y0 = e.y * TL + a, x1 = (e.x + 1) * TL - a, y1 = (e.y + 1) * TL - a;
     if (e.hot && flashK > 0) { c.globalAlpha = 0.22 * flashK * e.k; c.fillStyle = B.wallHi; c.fillRect(x0, y0, x1 - x0, y1 - y0); }
     for (let pass = 0; pass < 2; pass++) {
-      c.globalAlpha = e.k * (pass ? 0.95 : 0.55);
+      c.globalAlpha = e.k * (pass ? 0.95 : 0.7);
       c.strokeStyle = pass ? B.wallHi : B.bg1;
-      c.lineWidth = pass ? 3 : 5.5;
+      c.lineWidth = pass ? 4.5 : 8;
       c.beginPath();
       for (const [px, py, sx, sy] of [[x0, y0, 1, 1], [x1, y0, -1, 1], [x1, y1, -1, -1], [x0, y1, 1, -1]]) { c.moveTo(px + sx * L, py); c.lineTo(px, py); c.lineTo(px, py + sy * L); }
       c.stroke();
