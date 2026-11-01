@@ -43,8 +43,9 @@ const lockOf = (w, e, s, t) => (s.lt === t ? s.lk : lockK(s, lockOn(w, e), t));
 export function drawLanes(c, V, world) {
   for (const e of world.enemies) if (e.hunt && !e.dead) { const s = foeState(V, e), k = lockOf(world, e, s, V.t); if (k > 0.34) lane(c, s, snapArt(e.x), snapArt(e.y), k < 0.67 ? 0.5 : 0.9, pxRamp(e.color)); }
 }
-/* relay tell (relaytell.js, issue #21): 4 art px corner brackets on every tile a relay will reach, outline drop then light, in the world's own wallHi ramp, stepped alpha,
-   never pulsing; the flare adds a flat wash scaled by REDUCE FLASH. No tell = no ctx call. */
+/* relay tell (relaytell.js, issue #21): RT_L x RT_W art px corner brackets on every tile a relay will reach, a full 1 art px outline then light, in the world's own wallHi
+   ramp, stepped alpha, never pulsing; the flare adds a flat wash scaled by REDUCE FLASH. No tell = no ctx call. 2 art px thick since the phone contact sheet: 1 vanished. */
+const RT_L = 5, RT_W = 2;
 export function drawRelayTell(c, V, world) {
   const cells = relayTell(world), dim = dimCells(world);
   if (!cells.length && !dim.length) return;
@@ -57,10 +58,10 @@ export function drawRelayTell(c, V, world) {
     c.globalAlpha = e.k < 0.67 ? 0.5 : 1;
     for (let pass = 0; pass < 2; pass++) {
       c.fillStyle = pass ? R.light : R.outline;
-      const d = pass ? 0 : 1;
-      for (const [hx, vy, sx, sy] of [[x0, y0, 1, 1], [x0 + n - 4, y0, -1, 1], [x0, y0 + n - 1, 1, -1], [x0 + n - 4, y0 + n - 1, -1, -1]]) {
-        c.fillRect(hx, vy + d, 4, 1);
-        c.fillRect(sx > 0 ? hx : hx + 3, sy > 0 ? vy + d : vy - 3 + d, 1, 4);
+      const o = pass ? 0 : 1;
+      for (const [hx, vy, sx, sy] of [[x0, y0, 1, 1], [x0 + n - RT_L, y0, -1, 1], [x0, y0 + n - RT_W, 1, -1], [x0 + n - RT_L, y0 + n - RT_W, -1, -1]]) {
+        c.fillRect(hx - o, vy - o, RT_L + 2 * o, RT_W + 2 * o);
+        c.fillRect((sx > 0 ? hx : hx + RT_L - RT_W) - o, (sy > 0 ? vy : vy + RT_W - RT_L) - o, RT_W + 2 * o, RT_L + 2 * o);
       }
     }
   }

@@ -230,6 +230,30 @@ test("PIXEL: no tell = no call; ramp slots of JUNGLE's wallHi only; stepped alph
   assert.ok(F0.log.every((r) => r.a === 1), "REDUCE FLASH keeps a flare's brackets full");
 });
 
+/* the strength picked from the 2026-11-01 contact sheet: heavy enough for a phone, and each side of a tile keeps its gap, so the mark never closes into a blast plate or a pickup badge */
+test("strength: CLASSIC, PIXEL and REAL 3D brackets hold the phone weight, stay inside the tile and leave a gap on every side", () => {
+  const w = room(2), b = bomb(w, 5, 5); b.timer -= 1;
+  const R = recCtx(); drawRelayTell(R.ctx, w, 1);
+  const lw = R.log.filter((l) => l.startsWith("lineWidth=")).map((l) => +l.slice(10));
+  assert.ok(Math.min(...lw.filter((_, i) => i % 2)) >= 4, "the light stroke is at least 4 of a 40 tile");
+  const pts = R.log.filter((l) => /^(moveTo|lineTo)\(/.test(l)).map((l) => l.match(/\(([^)]*)\)/)[1].split(",").map(Number)), half = Math.max(...lw) / 2, TL = CFG.TILE;
+  for (const [x, y] of pts) { const u = x - Math.floor(x / TL) * TL, v = y - Math.floor(y / TL) * TL; assert.ok(Math.min(u, TL - u) >= half && Math.min(v, TL - v) >= half, "the under-stroke stays on its tile"); }
+  const us = [...new Set(pts.slice(0, 12).map(([x]) => x))].sort((p, q) => p - q);
+  assert.equal(us.length, 4, "one tile's four brackets: inner and outer x of each side");
+  assert.ok(us[2] - us[1] >= 0.2 * TL, "the top and bottom of the tile keep a gap");
+  const F = fakePx(); drawPx(F.c, { flashK: 1 }, w);
+  const S = pxRamp(JUNGLE.wallHi), lit = F.log.filter((r) => r.s === S.light), Z = CFG.TILE / 2;
+  assert.ok(lit.every((r) => Math.min(r.w, r.h) >= 2), "at least 2 art px thick");
+  const tiles = new Map();
+  for (const r of lit) if (r.w > r.h) { const t = Math.floor(r.x / Z) + "," + Math.floor(r.y / Z); (tiles.get(t) || tiles.set(t, []).get(t)).push(r); }
+  for (const rs of tiles.values()) { const top = rs.filter((r) => r.y === rs[0].y).sort((p, q) => p.x - q.x); assert.equal(top.length, 2); assert.ok(top[1].x - (top[0].x + top[0].w) >= 4, "a gap of at least 4 art px on a side"); }
+  const src = readFileSync(new URL("../src/render/three/groundfx.js", import.meta.url), "utf8"), m = src.match(/rb=step\(([\d.]+),ri\).*?rs=rb\*smoothstep\(([\d.]+),[\d.]+,ro\)\*\(1\.0-smoothstep\([\d.]+,([\d.]+),ro\)\)/);
+  assert.ok(m, "the 3D band is in the shader");
+  assert.ok(+m[3] - +m[2] >= 0.12, "the 3D light band is at least 0.12 of a tile");
+  assert.ok(+m[1] >= 0.12, "the 3D arms leave a gap of at least 0.24 of a tile on each side");
+  assert.ok(+m[3] <= 0.46, "and the band stays on its tile");
+});
+
 test("REAL 3D: the feed writes the board texture (no mesh), holds through PAUSE, clears when quiet; both ground shaders read it", () => {
   initFx(); setFxOpts({ flashK: 1 });
   const w = room(2), r = createRenderer3D(null, null, { audio: null, hud: null });
