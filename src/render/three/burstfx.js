@@ -39,6 +39,12 @@ void main(){
 const CCACHE=new Map();
 const colOf=(hex)=>{ let c=CCACHE.get(hex); if(!c){ c=new THREE.Color(hex||"#ffffff"); if(CCACHE.size<64)CCACHE.set(hex,c); } return c; };
 
+/* one material for every room, for the reason in ambientfx.js (#36) */
+const uK={value:1};
+let MAT=null;
+const sharedMat=()=>{ if(!MAT){ MAT=new THREE.ShaderMaterial({uniforms:{uK},vertexShader:VS,fragmentShader:FS,transparent:true,depthWrite:false,depthTest:true,
+  blending:THREE.NormalBlending,toneMapped:false}); MAT._shared=true; } return MAT; };
+
 export function createBurstFx(){
   const pos=new Float32Array(BURST_CAP*3), col=new Float32Array(BURST_CAP*4), ss=new Float32Array(BURST_CAP*2);
   const geo=new THREE.BufferGeometry();
@@ -46,10 +52,7 @@ export function createBurstFx(){
   for(const a of [aP,aC,aS])a.setUsage(THREE.DynamicDrawUsage);
   geo.setAttribute("position",aP); geo.setAttribute("aCol",aC); geo.setAttribute("aSS",aS);
   geo.setDrawRange(0,0);
-  const uK={value:1};
-  const mat=new THREE.ShaderMaterial({uniforms:{uK},vertexShader:VS,fragmentShader:FS,transparent:true,depthWrite:false,depthTest:true,
-    blending:THREE.NormalBlending,toneMapped:false});
-  const points=new THREE.Points(geo,mat);
+  const points=new THREE.Points(geo,sharedMat());
   points.frustumCulled=false; points.castShadow=false; points.receiveShadow=false;
   points.userData.tag="burst";
   let shown=0;
@@ -80,7 +83,7 @@ export function createBurstFx(){
     points.visible=n>0;
     return n;
   }
-  function dispose(){ geo.dispose(); mat.dispose(); }
+  function dispose(){ geo.dispose(); }
   return {points,update,dispose,get count(){return shown;}};
 }
 export {SHAPE};

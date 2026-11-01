@@ -26,8 +26,11 @@ export const LIP_GAIN = Object.freeze({SAND: 1.9, ICE: 1.8, ARENA: 1.15, WATER: 
 export function rimFX(mat, hWall, painted = false, name = "") {
   const g = LIP_GAIN[name] || 1, LG = (painted ? 0.55 : 1) * g, SG = painted ? 0.5 : 1, LEDGE = painted ? 0.82 : 0.64, CAPS = painted ? 0 : 1;
   const oX = W / 2 + RIM_W - RIM_BEV, oZ = D / 2 + RIM_W - RIM_BEV, iX = W / 2 - RIM_IN + RIM_BEV, iZ = D / 2 - RIM_IN + RIM_BEV, top = hWall + RIM_LIP;
-  const c = `#define OX ${f(oX)}\n#define OZ ${f(oZ)}\n#define IX ${f(iX)}\n#define IZ ${f(iZ)}\n#define TOPH ${f(top)}\n#define LG ${f(LG)}\n#define SG ${f(SG)}\n#define LEDGE ${f(LEDGE)}\n#define CAPS ${CAPS}\n`;
+  const c = `#define OX ${f(oX)}\n#define OZ ${f(oZ)}\n#define IX ${f(iX)}\n#define IZ ${f(iZ)}\n#define TOPH wellTop\n#define LG wellLg\nuniform float wellTop;\nuniform float wellLg;\n#define SG ${f(SG)}\n#define LEDGE ${f(LEDGE)}\n#define CAPS ${CAPS}\n`;
+  /* the wall height and lip gain are the only numbers a world changes: uniforms, so every world shares one program per material type (#36) */
+  const uTop = {value: +f(top)}, uLg = {value: +f(LG)};
   mat.onBeforeCompile = (sh) => {
+    sh.uniforms.wellTop = uTop; sh.uniforms.wellLg = uLg;
     sh.vertexShader = VS(sh.vertexShader);
     sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\n" + c + "varying vec3 vWq;\nvarying float vTop;")
       .replace("#include <map_fragment>", `#include <map_fragment>
@@ -54,7 +57,7 @@ export function rimFX(mat, hWall, painted = false, name = "") {
  diffuseColor.rgb*=k;
 }`);
   };
-  mat.customProgramCacheKey = () => "wellrim" + f(hWall) + f(LG) + CAPS;
+  mat.customProgramCacheKey = () => "wellrim" + f(SG) + f(LEDGE) + CAPS;
   return mat;
 }
 

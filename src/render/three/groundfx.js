@@ -57,13 +57,13 @@ export function createAO(arg) {
     tex.needsUpdate = true;
   };
   const ao = {tex, biome, bake(wMask) {
-    each(wMask, 0, (dx, dz, ox, oz, cy) => s0 * (cy === R - 1 ? 0.6 : 1) * Math.exp(-Math.hypot(dx, dz) / 13));
+    each(wMask, 0, (dx, dz, ox, oz, cy) => s0 * (cy === R - 1 ? 0.6 : 1) * Math.exp(-Math.sqrt(dx * dx + dz * dz) / 13));
   }, bakeBricks(grid) {
     let diff = !seen.n; seen.n = 1;
     for (let k = 0; k < C * R; k++) { const b = grid[k] === TT.BRICK ? 1 : 0; if (bmask[k] !== b) { bmask[k] = b; diff = true; } }
     if (!diff) return;
     each(bmask, 1, (dx, dz, ox, oz) => {
-      const d = Math.hypot(dx, dz), strip = oz > 0 && oz < 12 && Math.abs(ox) < T / 2 + 3 ? 0.24 * (1 - oz / 12) : 0;
+      const d = Math.sqrt(dx * dx + dz * dz), strip = oz > 0 && oz < 12 && Math.abs(ox) < T / 2 + 3 ? 0.24 * (1 - oz / 12) : 0;
       return Math.min(0.5, 0.16 * Math.exp(-d / 9) + strip);
     });
   }, dispose() { if (CUR === ao) CUR = null; tex.dispose(); }};
@@ -154,11 +154,14 @@ const AOUV = `(vWq.xz+vec2(${f(W / 2)},${f(D / 2)}))/vec2(${f(W)},${f(D)})`;
 
 export function floorFX(mat, ao) {
   const fx = FLOOR_FX[ao.biome.name] || {g: 1, c: 0.05};
+  /* gain and contrast are uniforms so every world shares one program (#36) */
+  const fg = {value: +f(fx.g)}, fc = {value: +f(fx.c)};
   mat.onBeforeCompile = (sh) => {
+    sh.uniforms.wellFg = fg; sh.uniforms.wellFc = fc;
     sh.uniforms.wellAO = {value: ao.tex}; sh.uniforms.wellCS = CONTACT.v; sh.uniforms.wellCSn = CONTACT.n; sh.uniforms.wellLn = LANES.v; sh.uniforms.wellLnN = LANES.n; tellU(sh);
     sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vWq;")
       .replace("#include <begin_vertex>", "#include <begin_vertex>\n#ifdef USE_INSTANCING\nvWq=(modelMatrix*instanceMatrix*vec4(transformed,1.0)).xyz;\n#else\nvWq=(modelMatrix*vec4(transformed,1.0)).xyz;\n#endif");
-    sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec3 vWq;" + UNI);
+    sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec3 vWq;\nuniform float wellFg;\nuniform float wellFc;" + UNI);
     /* the 2x2 slab atlas: variant by cell hash; no atlas = the plain colour */
     sh.fragmentShader = sh.fragmentShader.replace("#include <map_fragment>", `
 #ifdef USE_MAP
@@ -168,11 +171,11 @@ export function floorFX(mat, ao) {
  vec2 vo=vec2(mod(vi,2.0),floor(vi/2.0));
  diffuseColor*=texture2D(map,(clamp(vMapUv,0.006,0.994)+vo)*0.5);
 #endif
- diffuseColor.rgb*=${f(fx.g)}*(1.0+${f(fx.c)}*(1.0-2.0*mod(floor((vWq.x+${f(W / 2)})/${f(T)})+floor((vWq.z+${f(D / 2)})/${f(T)}),2.0)));
+ diffuseColor.rgb*=wellFg*(1.0+wellFc*(1.0-2.0*mod(floor((vWq.x+${f(W / 2)})/${f(T)})+floor((vWq.z+${f(D / 2)})/${f(T)}),2.0)));
 ` + GROUND(AOUV, "vWq.xz")).replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>" + LANE("vWq.xz") + TELLS(AOUV));
     shadowLift(sh);
   };
-  mat.customProgramCacheKey = () => "groundfx" + ao.biome.name;
+  mat.customProgramCacheKey = () => "groundfx";
   return mat;
 }
 

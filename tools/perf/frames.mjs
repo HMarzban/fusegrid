@@ -16,9 +16,12 @@
        sweep     the desk rooms alone, every world at gen 2 and gen 3
        phone     393x852 @3 mobile emulation of the same scenes (M5 GPU, not a phone)
        rate      the busy room at FRAME RATE 30 / 60 / MAX
-       hitch     each first (room, lock-on, blast, kill) alone on a fresh page, with
+       hitch     each first (room, lock-on, blast, kill) alone on a fresh page, then
+                 every other world once (each after a WIN overlay but the last, cold) and two
+                 again (revisit), with
                  the longest frame, the 3D program count, and a second pass under
-                 the CPU profiler naming the top self-time functions
+                 the CPU profiler naming the top self-time functions; --throttle N
+                 adds a third pass at that CPU rate (a JS-only proxy, not a phone)
        flush     render + a GPU readback, at the real backing size, every gen-3 room,
                  gen-2 room 8 and the fat world: the GPU cost the 60 Hz clock hides.
                  Vsync off is no use for this: the rAF outruns the fixed step, so
@@ -29,8 +32,8 @@
      --fps 0|1|2         FRAME RATE for desk / phone: 30 / 60 (AUTO, default) / MAX
      --at X,Y            window position, to pick a display (the rAF period is
                          measured, never assumed)
-     --throttle N        CDP CPU throttle on the page for phone (a JS-only proxy: the
-                         GPU stays an M5, so it is no phone number)
+     --throttle N        CDP CPU throttle on the page for phone and hitch (a JS-only
+                         proxy: the GPU stays an M5, so it is no phone number)
      --out DIR           JSON + table (default .superpowers/sdd/perf, git-ignored)
      --keep              keep the Chrome profile dir
    Binary: $CHROME if set, else the newest ms-playwright chromium-<N>.
@@ -205,7 +208,7 @@ const tick=(t)=>{window.__rec.nr(tick);if(!on||G.state==='PAUSE')return;pinPlaye
 window.__rec.nr(tick);
 const bombAt=(x,y)=>G.bombs.push({x:cen(x),y:cen(y),tx:x,ty:y,timer:0.02,radius:2,variant:'normal',dead:false});
 const H4=['fast','chaser','knight','fast'];
-window.__stage={busy,fat,stop(){on=null;},
+window.__stage={busy,fat,stop(){on=null;},win(){on=null;G.state='WIN';},
 lock(){opts.noLock=false;const k=G.enemies.filter((e)=>e.lane).length;if(!k){G.enemies=G.enemies.slice(0,Math.max(0,9-lanes.length));lanes.forEach((l,i)=>G.enemies.push(hunter(H4[i%4],l)));}},
 plant(){buildFree();const near=(f)=>G.enemies.some((e)=>!e.dead&&Math.abs(e.tx-f[0])+Math.abs(e.ty-f[1])<5);const f=free.find((q)=>!near(q))||free[0];bombAt(f[0],f[1]);return f;},
 kill(){const e=G.enemies.find((q)=>!q.lane&&!q.dead&&q.type!=='stationary')||G.enemies.find((q)=>!q.lane&&!q.dead);if(e)bombAt(e.tx,e.ty);return !!e;},reset(){if(marks){marks.locks=[];marks.blast=0;marks.frames=0;marks.foes=0;marks.items=0;}},
@@ -357,22 +360,30 @@ export async function run(a) {
         await staged(busy(a.rooms[0], 2), look, {});
         await record("FRAME RATE " + n + " busy room " + a.rooms[0], look, {view: "rate", fps: n}, Math.min(a.secs, 5) * 1000);
       }
-      if (blk === "hitch") for (const prof of [false, true]) {
+      if (blk === "hitch") for (const prof of a.throttle > 1 ? [false, true, "x"] : [false, true]) {
         await open(look, {}); await toRun();
-        if (prof) { await S("Profiler.enable"); await S("Profiler.setSamplingInterval", {interval: 100}); }
+        if (prof === "x") await S("Emulation.setCPUThrottlingRate", {rate: a.throttle});
+        const profiled = prof === true, tag = prof === "x" ? "x" + a.throttle + " " : profiled ? "prof " : "";
+        if (profiled) { await S("Profiler.enable"); await S("Profiler.setSamplingInterval", {interval: 100}); }
         const room = a.rooms[0], ST = "window.__stage.";
         const steps = [["room, no bomb, no lock", ST + `busy({room:${room},gen:2,seed:${4242 + room},noBomb:true,noLock:true})`], ["first lock-on", ST + "lock()"], ["first blast", ST + "plant()"], ["second blast", ST + "plant()"], ["first kill", ST + "kill()"], ["second kill", ST + "kill()"], ["third blast", ST + "plant()"], ["room again, no bomb, no lock", ST + `busy({room:${room},gen:2,seed:${4243 + room},noBomb:true,noLock:true})`], ["other biome, no bomb, no lock", ST + `busy({room:${room === 1 ? 2 : 1},gen:2,seed:${4244 + room},noBomb:true,noLock:true})`]];
+        const world = (r, kind) => [kind + " world " + r, ST + `busy({room:${r},gen:2,seed:${4300 + r},noBomb:true,noLock:true})`];
+        const unseen = [2, 3, 4, 5, 6, 7, 8].filter((r) => r !== room);
+        /* the real order: WIN overlay, then the next room; the last one jumps there cold (LEVEL SELECT) */
+        for (const r of unseen.slice(0, -1)) steps.push(["WIN overlay before world " + r, ST + "win()"], world(r, "new, after WIN,"));
+        steps.push(world(unseen[unseen.length - 1], "new, cold,"), world(unseen[0], "revisit"), world(room, "revisit"));
         for (const [label, expr] of steps) {
           await sleep(700);
           const p0 = await ev(PROGRAMS);
-          if (prof) await S("Profiler.start");
+          if (profiled) await S("Profiler.start");
           const hitch = await staged(expr, look, {}, 1200);
-          const top = prof ? topSelf((await S("Profiler.stop")).profile) : null;
+          const top = profiled ? topSelf((await S("Profiler.stop")).profile) : null;
           const p1 = await ev(PROGRAMS);
-          report.windows.push({label, look, view: prof ? "hitch-profiled" : "hitch", hitch, programs: [p0, p1], loaf: lastLoaf.slice(0, 3), top});
-          console.error(`${look} ${prof ? "prof " : ""}${label}: longest ${hitch} ms, programs ${p0} -> ${p1}, loaf ${JSON.stringify(lastLoaf.slice(0, 2))}${top ? "\n   " + top.join(" | ") : ""}`);
+          report.windows.push({label, look, view: profiled ? "hitch-profiled" : prof === "x" ? "hitch-x" + a.throttle : "hitch", hitch, programs: [p0, p1], loaf: lastLoaf.slice(0, 3), top});
+          console.error(`${look} ${tag}${label}: longest ${hitch} ms, programs ${p0} -> ${p1}, loaf ${JSON.stringify(lastLoaf.slice(0, 2))}${top ? "\n   " + top.join(" | ") : ""}`);
         }
-        if (prof) await S("Profiler.disable");
+        if (profiled) await S("Profiler.disable");
+        if (prof === "x") await S("Emulation.setCPUThrottlingRate", {rate: 1});
       }
       if (blk === "flush") for (const phone of [false, true]) {
         const view = phone ? "phone" : "desk", cfg = {view: "flush-" + view};

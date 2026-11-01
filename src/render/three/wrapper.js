@@ -7,16 +7,17 @@
    object so main's shell path never throws. fx stays the single singleton
    store (see fx.js header): events drained here exactly like the 2D path. */
 import * as THREE from "../../../vendor/three.module.js";
-import {CFG} from "../../core/config.js";
+import {CFG, ROOM_MAX, isFinale} from "../../core/config.js";
 import {biomeOf} from "../../core/config.js";
 import {sfxOf} from "../../audio/item.js";
-import {buildScene, disposeGroup} from "./scene.js";
+import {buildScene, disposeGroup, rimTwin} from "./scene.js";
+import {createPins} from "./progpin.js";
 import {applyBright} from "./lights.js";
 import {createRig, applyOrbit, CAM_FOV} from "./camrig.js";
 import {introCam} from "./flythrough.js";
 import {createParticles} from "./particles.js";
 import {ambientClock} from "../ambient.js";
-import {buildAtlas} from "./textures.js";
+import {buildSpriteAtlas, buildWorldAtlas} from "./textures.js";
 import {stageGlow, stageBack, hudPlate3} from "../frame.js";
 import {drawHudChips, drawAbilityBar, drawOverlay, overlayBox, drawCoach, drawCoach2} from "../scenes.js";
 import {onEvent, updateFx, getFxOpts, getShake, getFlash, getFx, feedFx, drawFxOverlay, drawPickupFx, syncFx, initFx} from "../fx.js";
@@ -25,6 +26,7 @@ const W=CFG.COLS*CFG.TILE, H=CFG.ROWS*CFG.TILE;
 /* the board sits VIEW_DY px lower in the canvas (a view-offset shift, rig and lens untouched): the plate takes the top 40, so the slack was all below */
 export const VIEW_DY=16;
 const noop=()=>{};
+export const WORLDS_KEPT=2;
 export const DPR_MAX=3;                     // RESOLUTION FULL (opt-in); default min(dpr,2)
 /* GRAPHICS 2026-10-10: the probe and three get ONE attribute object. The
    probe used to pass none, which fixed the context to the browser default
@@ -101,29 +103,62 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
      rebuilds never orphan live bursts; syncFx wipes them on world change. */
   const fxp=createParticles();
   scene3.add(fxp.points);
-  /* zero-asset atlas (§5): lazy per world.level; reused across rebuilds
-     until the level changes (old maps dispose on replace). Headless =>
-     null => color fallbacks downstream. */
-  let atlas=null, atlasLvl, atlasReady=false;
+  /* zero-asset atlas (§5). Sprites are one set for the renderer's life. World
+     textures are lazy per biome, and WORLDS_KEPT bounds them: the room in play
+     and the one prepared on its WIN overlay (the rim alone is 7 MB). Headless
+     => null => color fallbacks downstream. */
+  let sprites=null, spritesReady=false, atlas=null, atlasLvl, atlasReady=false;
+  const worlds=new Map(), texOf=(a)=>{ const out=[]; for(const k in a||{})if(a[k]&&a[k].isTexture)out.push(a[k]); return out; };
+  function worldAtlas(lvl){
+    const key=biomeOf(lvl).name;
+    let w=worlds.get(key);
+    if(w===undefined){ try{ w=(opts.buildWorld||buildWorldAtlas)(undefined,lvl); }catch(e){ w=null; } }
+    worlds.delete(key); worlds.set(key,w);
+    return w;
+   }
+  function trimWorlds(keep){
+    for(const k of worlds.keys()){
+      if(worlds.size<=WORLDS_KEPT)break;
+      if(k===keep||(atlasReady&&k===biomeOf(atlasLvl).name))continue;
+      for(const tx of texOf(worlds.get(k)))tx.dispose();
+      worlds.delete(k);
+     }
+   }
   function getAtlas(world){
     const lvl=world&&world.level;
     if(atlasReady&&atlasLvl===lvl)return atlas;
-    let next=null;
-    try{ next=buildAtlas(undefined,lvl); }catch(e){ next=null; }
-    if(atlas&&atlas!==next)
-      for(const k in atlas){ const tx=atlas[k]; if(tx&&tx.dispose)tx.dispose(); }
-    atlas=next; atlasLvl=lvl; atlasReady=true;
+    if(!spritesReady){ try{ sprites=(opts.buildSprites||buildSpriteAtlas)(); }catch(e){ sprites=null; } spritesReady=true; }
+    const w=worldAtlas(lvl);
+    atlas=sprites||w?{...sprites,...w}:null; atlasLvl=lvl; atlasReady=true;
+    trimWorlds(biomeOf(lvl).name);
     return atlas;
+   }
+  /* The next room's textures, painted and uploaded on the WIN overlay (nothing
+     moves there, and it is the one quiet moment a next room is known), so its
+     first frame only binds them. Once per room; never on a finale or at the end. */
+  let preparedFor=null;
+  function prepareNext(world){
+    const lvl=world.level, key=lvl+":"+world.seed;
+    if(preparedFor===key)return;
+    preparedFor=key;
+    if(lvl>=ROOM_MAX||isFinale(lvl))return;
+    const w=worldAtlas(lvl+1);
+    trimWorlds(biomeOf(lvl+1).name);
+    if(gl&&gl.initTexture)for(const tx of texOf(w))gl.initTexture(tx);
    }
   function setShadow(){
     if(!gl)return;
     gl.shadowMap.enabled=shadow!=="off";
     gl.shadowMap.type=shadow==="sharp"?THREE.PCFShadowMap:THREE.PCFSoftShadowMap;
    }
-  let sc=null, brightK=1;
+  let sc=null, brightK=1, twinDone=false, repin=false;
+  const pins=createPins();
+  const pinNow=()=>{ const l=gl&&gl.info&&gl.info.programs; if(l)pins.scan(l); };
+  const unpin=()=>{ const l=gl&&gl.info&&gl.info.programs; if(l)pins.release(l); };
   const aclock=ambientClock();
   function rebuild(world){
     if(sc){ scene3.remove(sc.group); disposeGroup(sc.group); }
+    if(repin){ repin=false; unpin(); }
     sc=buildScene(world,getAtlas(world),brightK);
     setShadow(); shadowNeed=inv=true;
     const biome=biomeOf(world.level);
@@ -212,7 +247,11 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
     if(live&&draw&&sc&&!sc.warm){ sc.warm=true; shadowNeed=true; if(armed)gl.shadowMap.needsUpdate=true; const undo=[];
       sc.group.traverse(m=>{ if(!m.visible&&!m.isLight){ undo.push([m,"visible",false]); m.visible=true; }
         if(m.isInstancedMesh&&m.count===0){ undo.push([m,"count",0]); m.count=1; } });
-      gl.render(scene3,camera); for(const [m,k,v] of undo)m[k]=v; }
+      const twin=twinDone?null:rimTwin(sc.rim,sc.biome); twinDone=true;
+      if(twin)sc.group.add(twin);
+      gl.render(scene3,camera); for(const [m,k,v] of undo)m[k]=v;
+      pinNow();
+      if(twin){ sc.group.remove(twin); twin.material.dispose(); } }
     if(draw)fxp.update(getFx());
     if(live&&draw){
       const wantW=Math.floor(W*dprUsed), wantH=Math.floor(H*dprUsed);
@@ -223,6 +262,8 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
       if(armed){ gl.shadowMap.needsUpdate=shadowNeed; if(shadowNeed&&gl.shadowMap.enabled)shadowUpdates++; }
       gl.render(scene3,camera);
       glRenders++; lastRaster=tNow; inv=false; shadowNeed=false;
+      pinNow();
+      if(world.state==="WIN")prepareNext(world);
      }
     else if(armed&&draw&&!live){ lastRaster=tNow; inv=false; }
     /* S4+S5: WIN/LOSE/PAUSE overlays ride the classic 2D layer exactly like
@@ -263,13 +304,14 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
     const d=K.dpr3d>0?Math.min(K.dpr3d,DPR_MAX):dprUsed;
     if(gl&&d!==dprUsed){ dprUsed=d; gl.setPixelRatio(d); }
     const sv=K.shadow==="off"||K.shadow==="sharp"?K.shadow:"soft";
-    if(sv!==shadow){ shadow=sv; setShadow(); shadowNeed=true;
+    if(sv!==shadow){ shadow=sv; setShadow(); shadowNeed=true; repin=true; twinDone=false;
       if(sc){ sc.group.traverse(m=>{ const ms=m.material; if(ms)(Array.isArray(ms)?ms:[ms]).forEach(x=>{ x.needsUpdate=true; }); });
         sc.warm=false; } }
    }
+  function allTex(){ const out=texOf(sprites); for(const w of worlds.values())out.push(...texOf(w)); return out; }
   function onLost(){ lost=true; lostAt=now(); }
-  function onRestored(){ lost=false; inv=shadowNeed=true; if(sc)sc.warm=false;
-    if(atlas)for(const k in atlas){ const tx=atlas[k]; if(tx&&tx.isTexture)tx.needsUpdate=true; } }
+  function onRestored(){ lost=false; inv=shadowNeed=true; twinDone=false; pins.forget(); if(sc)sc.warm=false;
+    for(const tx of allTex())tx.needsUpdate=true; }
   const hasEv=!!(gl&&glCanvas.addEventListener);
   if(hasEv){ glCanvas.addEventListener("webglcontextlost",onLost,false);
     glCanvas.addEventListener("webglcontextrestored",onRestored,false); }
@@ -277,10 +319,11 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
     if(hasEv){ glCanvas.removeEventListener("webglcontextlost",onLost,false);
       glCanvas.removeEventListener("webglcontextrestored",onRestored,false); }
     if(sc){ scene3.remove(sc.group); disposeGroup(sc.group); sc=null; }
-    if(atlas)for(const k in atlas){ const tx=atlas[k]; if(tx&&tx.dispose)tx.dispose(); }
-    atlas=null; atlasReady=false;
+    for(const tx of allTex())tx.dispose();
+    sprites=null; spritesReady=false; worlds.clear(); atlas=null; atlasReady=false;
     const pm=fxp.points.material; if(pm.map)pm.map.dispose();
     fxp.points.geometry.dispose(); pm.dispose();
+    unpin();
     if(gl){ const g0=gl; gl=null; g0.dispose(); if(!lost)try{ g0.forceContextLoss(); }catch(e){} }  // a lost context has no WEBGL_lose_context: three would only warn
    }
 

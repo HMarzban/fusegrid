@@ -110,6 +110,10 @@ function paintFace(c){
    floor ride the existing bakedTile atlas when the browser has baked it
    (biome keyed by `level`). */
 export function atlasSources(mk, level=1){
+  return {...spriteSources(mk),...worldSources(mk,level)};
+}
+/* what no world changes: painted once per renderer since #36 */
+export function spriteSources(mk){
   const o={};
   const fake={time:0};
   o.player=src(mk,(c)=>drawPlayerBody(c,fake,{face:{x:0,y:0},iFrames:0,
@@ -124,6 +128,11 @@ export function atlasSources(mk, level=1){
     o["eye_"+t]=captureSprite(64,32,(c)=>t==="stationary"?paintSlit(c):
       paintEyes(c,t),mk);
   o.face=captureSprite(128,128,paintFace,mk);
+  return o;
+}
+/* what one world changes: its walls, rim, brick and floor (about 9 MB of canvas, the rim most of it) */
+export function worldSources(mk, level=1){
+  const o={};
   if(typeof document!=="undefined"){
     try{
       bakeAtlas();
@@ -192,6 +201,19 @@ export function surfStrip(col,gl,C,shin,mk){
 export function buildAtlas(mk, level=1){
   let s;
   try{ s=atlasSources(mk,level); }catch(_){ return null; }
+  return wrapSources(s);
+}
+export function buildSpriteAtlas(mk){
+  let s;
+  try{ s=spriteSources(mk); }catch(_){ return null; }
+  return wrapSources(s);
+}
+export function buildWorldAtlas(mk, level=1){
+  let s;
+  try{ s=worldSources(mk,level); }catch(_){ return null; }
+  return wrapSources(s);
+}
+function wrapSources(s){
   if(!s)return null;
   const atlas={}; let n=0;
   for(const k in s){
