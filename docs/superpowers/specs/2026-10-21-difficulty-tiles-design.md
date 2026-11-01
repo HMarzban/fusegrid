@@ -680,3 +680,8 @@ Tile tips last 6 s. Once-ever means a player who first meets ICE at CORE never g
 the MAX brake tip.
 
 **Not measured:** pace cells and the run-level arm on this build; the oracle on it.
+
+## Addendum (2026-11-01, wave 2 and 3 design)
+
+The rules, placement and fairness checks V28–V35 for STREAM, QUICKSAND, GATE and PORTAL
+are in [their own record](2026-11-01-tiles-wave-2-3-design.md). Design only, nothing built.

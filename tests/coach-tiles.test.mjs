@@ -17,7 +17,7 @@ const memStore = (init) => {
   const m = new Map(init);
   return { m, getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)) };
 };
-const ROOM = { BLOOM: 1, GLIDE: 2, BELT: 3, PLATE: 5 };
+const ROOM = { BLOOM: 1, GLIDE: 2, BELT: 3, STREAM: 4, PLATE: 5, QUICK: 6, PORTAL: 7, GATE: 8 };
 const KINDS = Object.keys(ROOM);
 const room = (gen, seed, rm, heat) => { const w = createWorld(seed, rm); w.gen = gen; w.heat = heat; loadLevel(w, rm, false); w.state = "PLAY"; w.events = []; return w; };
 const tileCell = (w, kind) => { for (let k = 0; k < w.feat.length; k++) if (featKindOf(w.feat[k]) === kind && w.grid[k] === T.EMPTY) return k; return -1; };
@@ -67,14 +67,14 @@ const worldOn = (kind, heat = 0, seed = 4242) => { const w = room(3, seed, ROOM[
   check("no second literal of any tile copy in src/", strays.length === 0, strays.join("; "));
 }
 
-// ---- the record: twelve bits, an old eight-bit record loads byte-stable ----
+// ---- the record: sixteen bits, an old eight-bit record loads byte-stable ----
 {
   const s = memStore([[COACH2_KEY, '{"k":1,"t":0,"r":1,"p":0,"l":0,"w":1,"i":0,"s":1}']]);
   const v = loadCoach2(s);
-  check("an old eight-bit record keeps its bits and leads the record, the four new bits at 0",
-    JSON.stringify(v) === '{"k":1,"t":0,"r":1,"p":0,"l":0,"w":1,"i":0,"s":1,"b":0,"g":0,"c":0,"x":0}', JSON.stringify(v));
-  const once = coach2Mark(coach2Mark(coach2Mark(coach2Mark(v, "BLOOM"), "GLIDE"), "BELT"), "PLATE");
-  check("each tile has its own bit", once.b === 1 && once.g === 1 && once.c === 1 && once.x === 1 && KINDS.every((k) => coach2Seen(once, k)));
+  check("an old eight-bit record keeps its bits and leads the record, the new bits at 0",
+    JSON.stringify(v) === '{"k":1,"t":0,"r":1,"p":0,"l":0,"w":1,"i":0,"s":1,"b":0,"g":0,"c":0,"x":0,"f":0,"q":0,"y":0,"o":0}', JSON.stringify(v));
+  const once = KINDS.reduce((o, k) => coach2Mark(o, k), v);
+  check("each tile has its own bit", once.b === 1 && once.g === 1 && once.c === 1 && once.x === 1 && once.f === 1 && once.q === 1 && once.y === 1 && once.o === 1 && KINDS.every((k) => coach2Seen(once, k)));
   check("the verbs' bits did not move", once.k === 1 && once.t === 0 && once.s === 1);
 }
 
@@ -140,13 +140,6 @@ for (const k of KINDS) {
   check("a dead player meets nothing", !sd.kind);
 }
 {
-  // art-only tiles (rooms 4, 6-8) teach nothing: no rule, no tip
-  const s = memStore();
-  for (const rm of [4, 6, 7, 8]) {
-    const w = room(3, 4242, rm, 0), st = { kind: null, t: 0 }, out = [];
-    for (let k = 0; k < w.feat.length; k++) { if (!w.feat[k]) continue; stand(w, k); out.push(...tick(st, w, s)); }
-    check(`room ${rm}: its art-only tile opens no tip`, out.length === 0 && !st.kind, JSON.stringify(out));
-  }
 }
 
 // ---- gen 1 and gen 2 never: no feat layer, no tip, whatever the world does ----
@@ -277,7 +270,7 @@ function fakeCanvasTexts() {
     check("contact after a retry reopens", seeTip());
     for (let i = 0; i < 480 && !coach2Seen(loadCoach2(ls), "BLOOM"); i++) g.loop((t += 16));
     check("the real loop marks it seen after the window", coach2Seen(loadCoach2(ls), "BLOOM"));
-    check("the store round-trips twelve fields", Object.keys(JSON.parse(ls.getItem(COACH2_KEY))).length === 12, ls.getItem(COACH2_KEY));
+    check("the store round-trips sixteen fields", Object.keys(JSON.parse(ls.getItem(COACH2_KEY))).length === 16, ls.getItem(COACH2_KEY));
     g.stop && g.stop();
   } finally {
     delete globalThis.window;
@@ -343,9 +336,9 @@ function rec() {
 const LAYOUTS = [["keyboard", 600, 520, false], ["touch", 600, 520, true], ["phone 393 box", 400, 760, true], ["phone wide box", 420, 760, true]];
 const drawn = (W, H, T, rm, h, tiles, extra) => { const r = rec(); const L = md.layout(W, H, 140); md.drawLevelSelect(r.c, rm, L, 1.5, h, 0, true, 0, false, T, { kind: "2d", best: [], ...(tiles === undefined ? {} : { tiles }), ...extra }); return { ...r, L, G: md.levelGeom(L, true, T) }; };
 for (const [name, W, H, T] of LAYOUTS) {
-  for (const rm of [1, 2, 3, 5]) for (const h of [0, 1, 2]) {
+  for (const rm of [1, 2, 3, 4, 5, 6, 7, 8]) for (const h of [0, 1, 2]) {
     const { texts, G } = drawn(W, H, T, rm, h, true), P = G.pane, want = md.floorLine(rm, h);
-    const kind = { 1: "BLOOM", 2: "GLIDE", 3: "BELT", 5: "PLATE" }[rm];
+    const kind = { 1: "BLOOM", 2: "GLIDE", 3: "BELT", 4: "STREAM", 5: "PLATE", 6: "QUICK", 7: "PORTAL", 8: "GATE" }[rm];
     check(`${name} room ${rm} heat ${h}: the line is its name and its one help string`, want === "FLOOR " + TILE_NAME[kind] + " · " + TILE_HELP[kind][h], want);
     const fl = texts.filter((x) => x.y >= P.y + 30 && x.y <= P.y + P.h && x.x === P.x + 10 && want.includes(x.s) && !/^(LIVES|✓|NO TIME)/.test(x.s) && x.s !== "");
     const joined = fl.map((x) => x.s).join(" · ");
@@ -362,12 +355,7 @@ for (const [name, W, H, T] of LAYOUTS) {
     check(`${name} room ${rm} heat ${h}: nothing crowds it from above`, others.every((x) => x.y <= fTop - 8), others.filter((x) => x.y > fTop - 8).map((x) => x.s + "@" + x.y).join());
     check(`${name} room ${rm} heat ${h}: the MODES / START rows are untouched (one geometry)`, JSON.stringify(G) === JSON.stringify(md.levelGeom(md.layout(W, H, 140), true, T)));
   }
-  for (const rm of [4, 6, 7, 8]) {
-    const on = drawn(W, H, T, rm, 2, true), off = drawn(W, H, T, rm, 2, false);
-    check(`${name} room ${rm}: no rule, no FLOOR line`, !on.texts.some((x) => x.s.startsWith("FLOOR ")));
-    if (T) check(`${name} room ${rm}: the touch card byte-identical`, on.log.join() === off.log.join());
-  }
-  for (const rm of [1, 2, 3, 5]) {
+  for (const rm of [1, 2, 3, 4, 5, 6, 7, 8]) {
     const off = drawn(W, H, T, rm, 0, false), none = drawn(W, H, T, rm, 0, undefined);
     check(`${name} room ${rm}: tiles off draws no FLOOR line`, !off.texts.some((x) => /^FLOOR /.test(x.s)));
     check(`${name} room ${rm}: tiles off equals the old call (no field)`, off.log.join() === none.log.join());

@@ -995,7 +995,9 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
     of record). `src/render/relaytell.js` is BOOSTER's read-only warning;
     `tileTip` and the FLOOR line teach; `PLATE_TPL` shapes PIT. OPEN before tiles
     go default: the owner's playtest (#30), foe-in-lane forced moments, TRAP's
-    wind-up shows on its own tile only, F3 / `g:3`. Oracle: `tools/balance/oracle.mjs`;
+    wind-up shows on its own tile only, F3 / `g:3`. Wave 2 / 3 rules (STREAM, QUICKSAND,
+    GATE, PORTAL, V28–V35) are DESIGN ONLY, built only after #30 (owner 2026-11-01):
+    `docs/superpowers/specs/2026-11-01-tiles-wave-2-3-design.md`. Oracle: `tools/balance/oracle.mjs`;
     fork switches `FG_BOTPLANT`, `FG_BOTBRAKE`, `FG_BOTLURE`, `FG_BOTJOY`.
   - Design pass 2 (#28) is DONE (2026-10-26): the dial works for TRAP (MAX
     +5.9), ICE PATCH (+4.6) and CONVEYOR (+5.4), all with 0 static no-escape

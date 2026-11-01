@@ -336,7 +336,7 @@ check("round-trip", loadCoachSeen(store) === true);
   };
   check(
     "an unseen cabinet is all zeros, k/t/r first then the five 2026-10-10 bits",
-    JSON.stringify(loadCoach2(st)) === '{"k":0,"t":0,"r":0,"p":0,"l":0,"w":0,"i":0,"s":0,"b":0,"g":0,"c":0,"x":0}',
+    JSON.stringify(loadCoach2(st)) === '{"k":0,"t":0,"r":0,"p":0,"l":0,"w":0,"i":0,"s":0,"b":0,"g":0,"c":0,"x":0,"f":0,"q":0,"y":0,"o":0}',
     JSON.stringify(loadCoach2(st)),
   );
   const a = coach2Mark(loadCoach2(st), "throw");
@@ -364,7 +364,7 @@ check("round-trip", loadCoachSeen(store) === true);
   };
   check(
     "a junk blob clamps to the eight-bit shape",
-    JSON.stringify(loadCoach2(bad)) === '{"k":1,"t":1,"r":0,"p":0,"l":0,"w":0,"i":0,"s":0,"b":0,"g":0,"c":0,"x":0}',
+    JSON.stringify(loadCoach2(bad)) === '{"k":1,"t":1,"r":0,"p":0,"l":0,"w":0,"i":0,"s":0,"b":0,"g":0,"c":0,"x":0,"f":0,"q":0,"y":0,"o":0}',
     JSON.stringify(loadCoach2(bad)),
   );
   let threw = false;
@@ -379,7 +379,7 @@ check("round-trip", loadCoachSeen(store) === true);
   check(
     "a corrupt blob degrades to zeros",
     JSON.stringify(loadCoach2({ getItem: () => "{not json", setItem() {} })) ===
-      '{"k":0,"t":0,"r":0,"p":0,"l":0,"w":0,"i":0,"s":0,"b":0,"g":0,"c":0,"x":0}',
+      '{"k":0,"t":0,"r":0,"p":0,"l":0,"w":0,"i":0,"s":0,"b":0,"g":0,"c":0,"x":0,"f":0,"q":0,"y":0,"o":0}',
   );
 }
 
@@ -771,7 +771,7 @@ check("round-trip", loadCoachSeen(store) === true);
     check("Major-1 setup: quitting mid-tip lands on MENU", g.app.screen === SCREEN.MENU, String(g.app.screen));
     check(
       "Major-1 setup: nb.coach.v2 is still unwritten — the tip was never dismissed",
-      JSON.stringify(loadCoach2(ls)) === '{"k":0,"t":0,"r":0,"p":0,"l":0,"w":0,"i":0,"s":0,"b":0,"g":0,"c":0,"x":0}',
+      JSON.stringify(loadCoach2(ls)) === '{"k":0,"t":0,"r":0,"p":0,"l":0,"w":0,"i":0,"s":0,"b":0,"g":0,"c":0,"x":0,"f":0,"q":0,"y":0,"o":0}',
       JSON.stringify(loadCoach2(ls)),
     );
     g.app.cursor = 0; // PLAY
@@ -846,7 +846,7 @@ check("round-trip", loadCoachSeen(store) === true);
   saveCoach2(v, old);
   check(
     "and saving it back keeps k/t/r first and unchanged",
-    old.m.get("nb.coach.v2") === '{"k":1,"t":0,"r":1,"p":0,"l":0,"w":0,"i":0,"s":0,"b":0,"g":0,"c":0,"x":0}',
+    old.m.get("nb.coach.v2") === '{"k":1,"t":0,"r":1,"p":0,"l":0,"w":0,"i":0,"s":0,"b":0,"g":0,"c":0,"x":0,"f":0,"q":0,"y":0,"o":0}',
     old.m.get("nb.coach.v2"),
   );
   const verbs = ["kick", "throw", "remote", "pass", "line", "power", "pierce", "shield"];

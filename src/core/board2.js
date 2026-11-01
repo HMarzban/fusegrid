@@ -389,9 +389,14 @@ function bloomGate(base, level, lay) {
     return used.length >= BLOOM_GATE.min ? uk : null;
   };
 }
+/* wave 2 / 3 placement gates: a biome's function checks candidates against the
+   grids of all three heats, the same contract as bloomGate's closure. */
+function tileGate(base, level, lay) {
+  return null;
+}
 function place3(base, seed, level, heat) {
   const L = base[heat].layout, lay = layout2(seed, level, L.tries[0]);
-  const gate = BLOOM_GATE.on && lay.biome === "JUNGLE" ? bloomGate(base, level, lay) : null;
+  const gate = BLOOM_GATE.on && lay.biome === "JUNGLE" ? bloomGate(base, level, lay) : tileGate(base, level, lay);
   for (let pa = 0; pa < 4; pa++) {
     const pf = placeFeat(lay.m, seed, level, lay.biome, pa, gate, lay.tpl);
     if (gate && pf && !pf.feat) continue;

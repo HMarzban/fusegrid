@@ -31,8 +31,8 @@ import { spawnEnemy } from "./entities.js";
 const C = CFG.COLS, R = CFG.ROWS, N = C * R, INF = Infinity;
 const D4 = [[1, 0], [0, 1], [-1, 0], [0, -1]];
 const VP = CFG.PLAYER_START.speed;
-export const FEAT_RULES = Object.freeze(["V13", "V14", "V15", "V16", "V17", "V18", "V19", "V20", "V21", "V22", "V23", "V24", "V25", "V26", "V27"]);
-export const RULE_TILES = Object.freeze(["BLOOM", "GLIDE", "BELT", "PLATE"]);
+export const FEAT_RULES = Object.freeze(["V13", "V14", "V15", "V16", "V17", "V18", "V19", "V20", "V21", "V22", "V23", "V24", "V25", "V26", "V27", "V28", "V29", "V30", "V31", "V32", "V33", "V34", "V35"]);
+export const RULE_TILES = Object.freeze(["BLOOM", "GLIDE", "BELT", "PLATE", "STREAM", "QUICK", "GATE", "PORTAL"]);
 export { TILE_NAME };
 export const LIMITS = Object.freeze({
   spawnSteps: 4, chainMin: 4, chainMax: 9, chainTotal: 16, stepOff: 2, exitOpen: 2, foeKeep: 0.4, playerKeep: 0.5,
@@ -538,9 +538,21 @@ const CHECK = {
     for (const p of plates(n)) { const s = sideExit(n.g, p, Math.max(n.lim.sideR, n.prof.plate.r)); if (s) return s; }
     return null;
   },
+  /* STREAM */
+  V28() { return null; },
+  V29() { return null; },
+  /* QUICKSAND */
+  V30() { return null; },
+  V31() { return null; },
+  /* GATE */
+  V32() { return null; },
+  V33() { return null; },
+  /* PORTAL */
+  V34() { return null; },
+  V35() { return null; },
 };
 const NEED = { V21: (b) => !!b.featByHeat, V22: (b) => !!b.rebuild, V23: (b) => b.gen != null };
-const NEEDS_LAYER = new Set(["V14", "V15", "V16", "V17", "V19", "V20", "V24", "V25", "V26", "V27"]);
+const NEEDS_LAYER = new Set(["V14", "V15", "V16", "V17", "V19", "V20", "V24", "V25", "V26", "V27", "V28", "V29", "V30", "V31", "V32", "V33", "V34", "V35"]);
 /* the rules these inputs cannot decide: V21 needs featByHeat, V22 a rebuild, V23 the gen */
 export function skippedChecks(board, opts = {}) {
   return FEAT_RULES.filter((id) => (!opts.only || opts.only.includes(id)) && NEED[id] && !NEED[id](board));

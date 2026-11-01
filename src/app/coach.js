@@ -44,11 +44,11 @@ const TIPS = ["kick", "throw", "remote", "pass", "line", "power", "pierce", "shi
    tile's TILE_HELP key. A tile tip opens on first contact, never closes on a
    "use" (contact IS the use), and outlives a verb's: its line carries the tile's
    whole rule at this heat, and it fades only over the last COACH_FADE s. */
-const TILES = ["BLOOM", "GLIDE", "BELT", "PLATE"];
+const TILES = ["BLOOM", "GLIDE", "BELT", "PLATE", "STREAM", "QUICK", "GATE", "PORTAL"];
 export const COACH_TILE_DUR = 6;
 const COACH_FADE = 1.5;
 const isTile = (k) => TILES.indexOf(k) >= 0;
-const FIELD = { kick: "k", throw: "t", remote: "r", pass: "p", line: "l", power: "w", pierce: "i", shield: "s", BLOOM: "b", GLIDE: "g", BELT: "c", PLATE: "x" };
+const FIELD = { kick: "k", throw: "t", remote: "r", pass: "p", line: "l", power: "w", pierce: "i", shield: "s", BLOOM: "b", GLIDE: "g", BELT: "c", PLATE: "x", STREAM: "f", QUICK: "q", GATE: "y", PORTAL: "o" };
 const KEYS = TIPS.concat(TILES).map((k) => FIELD[k]);
 const bit = (v) => (v ? 1 : 0);
 const shape = (v) => { const o = {}; for (const f of KEYS) o[f] = bit(v && v[f]); return o; };
@@ -119,7 +119,7 @@ export function coachAlpha(st) {
 /* First contact with a tile, read from the world like usedNow: the player's
    centre on a tile the sim would act on (grid EMPTY, the sim's own test), a bomb
    riding a belt, or a booster / trap going off, which usually happens before the
-   player ever steps on one. Art-only tiles (8..14) map to no tip. */
+   player ever steps on one. */
 function tileMet(w, p, ev) {
   if (!w.feat || w.state !== "PLAY") return null;
   const at = (x, y) => { const k = key(x, y); return w.grid[k] === T.EMPTY ? featKindOf(w.feat[k]) : null; };

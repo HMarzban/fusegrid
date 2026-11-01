@@ -24,15 +24,19 @@ export const beltDir = (v) => FDIR[v - 1];
 export const HOME = Object.freeze({ FACTORY: "BELT", ICE: "GLIDE", JUNGLE: "BLOOM", ARENA: "PLATE", WATER: "STREAM", SAND: "QUICK", VOID: "PORTAL", CROWN: "GATE" });
 
 export const FEAT_PROFILE = Object.freeze([
-  Object.freeze({ belt: { actors: false, v: 0.6, thru: true }, glide: { boost: 1.0, coast: 0, turn: 0.35 }, bloom: { fwd: 2, side: 0, delay: 0, cd: 1.0 }, plate: { wind: 0.5, r: 1, cd: 3, inert: 2, near: 4, off: 1, hold: true, chain: false } }),
-  Object.freeze({ belt: { actors: true, v: 1.0, foes: false, thru: true, snap: true, endHalt: true, wallStop: true }, glide: { boost: 1.25, coast: 1, turn: 0.2 }, bloom: { fwd: 2, side: 1, delay: 0.15, cd: 1.0 }, plate: { wind: 0.8, r: 2, cd: 4, inert: 2, near: 4, off: 1, hold: true, chain: false, spare: true } }),
-  Object.freeze({ belt: { actors: true, v: 1.2, thru: true, snap: true, endHalt: true, wallStop: true }, glide: { boost: 1.5, coast: 3, turn: 0.1, stop: "brake" }, bloom: { fwd: 2, side: 2, delay: 0.3, cd: 1.0 }, plate: { wind: 1.0, r: 3, cd: 3, inert: 6, off: 1, hold: true, chain: false, kill: false } }),
+  Object.freeze({ belt: { actors: false, v: 0.6, thru: true }, glide: { boost: 1.0, coast: 0, turn: 0.35 }, bloom: { fwd: 2, side: 0, delay: 0, cd: 1.0 }, plate: { wind: 0.5, r: 1, cd: 3, inert: 2, near: 4, off: 1, hold: true, chain: false }, stream: { v: 0.8, wade: 1 }, quick: { wait: 30, max: 1, grow: 1.5, retry: 2, sink: 0.6 }, gate: { cross: true, warn: 0.5, shut: 3, after: 3 }, portal: { blast: false, foes: false } }),
+  Object.freeze({ belt: { actors: true, v: 1.0, foes: false, thru: true, snap: true, endHalt: true, wallStop: true }, glide: { boost: 1.25, coast: 1, turn: 0.2 }, bloom: { fwd: 2, side: 1, delay: 0.15, cd: 1.0 }, plate: { wind: 0.8, r: 2, cd: 4, inert: 2, near: 4, off: 1, hold: true, chain: false, spare: true }, stream: { v: 1.0, wade: 0.85 }, quick: { wait: 18, max: 3, grow: 1.5, retry: 2, sink: 1 }, gate: { open: 6, warn: 1, shut: 3 }, portal: { blast: true, foes: false } }),
+  Object.freeze({ belt: { actors: true, v: 1.2, thru: true, snap: true, endHalt: true, wallStop: true }, glide: { boost: 1.5, coast: 3, turn: 0.1, stop: "brake" }, bloom: { fwd: 2, side: 2, delay: 0.3, cd: 1.0 }, plate: { wind: 1.0, r: 3, cd: 3, inert: 6, off: 1, hold: true, chain: false, kill: false }, stream: { v: 1.2, wade: 0.75 }, quick: { wait: 10, max: 99, grow: 1.5, retry: 2, sink: 1 }, gate: { open: 4, warn: 0.75, shut: 4 }, portal: { blast: true, foes: true, guard: 3, hold: 2 } }),
 ]);
 export const TILE_HELP = Object.freeze({
   BELT: ["CARRIES YOUR BOMBS", "CARRIES BOMBS AND YOU", "CARRIES ALL, FOES TOO"],
   GLIDE: ["SMOOTH ICE, STOP ANY TIME", "FAST ICE, SLIDES A STEP", "SLIDES ON · BACK TO STOP"],
   BLOOM: ["THROWS YOUR BLAST 2 ON", "2 ON + 1 EACH SIDE", "2 ON + 2 EACH SIDE, LATE"],
   PLATE: ["LURE FOES ON · SHORT", "TRIGGER FOE LIVES · LONG", "FOES IMMUNE · HUGE"],
+  STREAM: ["CARRIES BOMBS", "CARRIES BOMBS · SLOWS ALL", "FAST · SLOWS ALL MORE"],
+  QUICK: ["BRICK GROWS BACK ONCE", "GROWS BACK, 3 TIMES", "KEEPS GROWING BACK"],
+  GATE: ["SHUTS BEHIND YOU", "SHUTS ON A CLOCK", "SHUTS LONGER"],
+  PORTAL: ["YOU AND BOMBS JUMP", "BLASTS JUMP TOO", "FOES JUMP TOO"],
 });
 export const TILE_NAME = Object.freeze({ BLOOM: "BOOSTER", GLIDE: "ICE PATCH", BELT: "CONVEYOR", STREAM: "STREAM", PLATE: "TRAP", QUICK: "QUICKSAND", PORTAL: "PORTAL", GATE: "GATE" });
 /* The first-contact coach tip (#24): TILE_HELP's short line says what a tile is,
@@ -62,6 +66,10 @@ export function tileTip(kind, pr) {
     if (p.spare) return n + "THE FOE THAT SETS IT OFF LIVES · " + reach + " BLAST HURTS YOU" + chain;
     return n + "LURE A FOE ON · " + reach + " BLAST KILLS IT, CAN HURT YOU" + chain;
   }
+  if (kind === "STREAM") return n + "FLOATS YOUR BOMBS" + (pr.stream.wade < 1 ? " · SLOWS YOU AND FOES" : " · WALK THROUGH FREELY");
+  if (kind === "QUICK") return n + (pr.quick.max === 1 ? "A BRICK GROWS BACK ONCE · FOES SINK SLOW" : "BRICKS GROW BACK · WATCH THE RIPPLES");
+  if (kind === "GATE") return n + (pr.gate.cross ? "SHUTS BEHIND YOU · FOES CAN'T PASS" : "SHUTS ON A CLOCK · WATCH THE WARNING");
+  if (kind === "PORTAL") return n + (pr.portal.foes ? "YOU, BOMBS, BLASTS AND FOES JUMP" : pr.portal.blast ? "YOU, BOMBS AND BLASTS JUMP" : "YOU AND BOMBS JUMP · BLASTS STOP");
   return "";
 }
 export function featTier(w) {
@@ -119,10 +127,10 @@ export function placeFeat(m, seed, level, biome, salt = 0, bgate = null, tpl = "
     else if (kind === "GLIDE") ok = glide(m, f, rng, dS);
     else if (kind === "BLOOM" && bgate) { const o = {}; if (bloom(m, f, rng, force, dS, o)) { const used = bgate(o.cand, o.want, o.sp); if (used) { for (const k of used) { f[k] = 6; force.push(k); } ok = true; } } }
     else if (kind === "BLOOM") ok = bloom(m, f, rng, force, dS);
-    else if (kind === "STREAM") ok = stream(m, f, rng, far, force);
-    else if (kind === "QUICK") ok = quick(m, f, rng, far, force);
-    else if (kind === "PORTAL") { pair = new Uint8Array(N); ok = portal(m, f, rng, far, force, pair); }
-    else if (kind === "GATE") ok = gate(m, f, rng, far, force);
+    else if (kind === "STREAM") ok = stream(m, f, rng, far, force, bgate, dS);
+    else if (kind === "QUICK") ok = quick(m, f, rng, far, force, bgate, dS);
+    else if (kind === "PORTAL") { pair = new Uint8Array(N); ok = portal(m, f, rng, far, force, pair, bgate, dS); }
+    else if (kind === "GATE") ok = gate(m, f, rng, far, force, bgate, dS);
     else ok = plate(m, f, rng, dS, force, tpl);
     if (ok) return pair ? { feat: f, force, kind, tries, pair } : { feat: f, force, kind, tries };
     if (bgate && kind === "BLOOM") break;
@@ -327,7 +335,7 @@ const clearOf = (f, x, y) => !f[key(x, y)] && D4.every(([dx, dy]) => !f[key(x + 
 /* art-only STREAM: 1-2 runs of 3-6 straight tiles in an open lane, one direction
    per run, every tile with a step-off (a side exit, or the open tile past the
    run) within 2 tiles downstream; never within 4 steps of spawn or on a door */
-function stream(m, f, rng, far, force) {
+function stream(m, f, rng, far, force, bgate, dS) {
   const lanes = [];
   for (let y = 1; y < R - 1; y++) { let x = 1; while (x < C - 1) { if (!far(x, y)) { x++; continue; } const s = x; while (far(x, y)) x++; if (x - s >= 3) lanes.push({ h: true, a: s, b: x - 1, l: y }); } }
   for (let x = 1; x < C - 1; x++) { let y = 1; while (y < R - 1) { if (!far(x, y)) { y++; continue; } const s = y; while (far(x, y)) y++; if (y - s >= 3) lanes.push({ h: false, a: s, b: y - 1, l: x }); } }
@@ -359,7 +367,7 @@ function stream(m, f, rng, far, force) {
   return made > 0;
 }
 /* art-only QUICK: 3-5 singles, no two within 4 Manhattan, none within 4 steps of spawn */
-function quick(m, f, rng, far, force) {
+function quick(m, f, rng, far, force, bgate, dS) {
   const want = rng.int(3, 5), cand = [], used = [];
   for (let y = 1; y < R - 1; y++) for (let x = 1; x < C - 1; x++) if (far(x, y)) cand.push([x, y]);
   for (const c of shuf(cand, rng)) {
@@ -373,7 +381,7 @@ function quick(m, f, rng, far, force) {
 }
 /* art-only PORTAL: 1-2 pairs (pair id 1, 2 in `pair`), each pair >= 8 walking steps
    and >= 8 Manhattan apart, no two tiles within 3 of each other */
-function portal(m, f, rng, far, force, pair) {
+function portal(m, f, rng, far, force, pair, bgate, dS) {
   const cand = [], used = [];
   for (let y = 1; y < R - 1; y++) for (let x = 1; x < C - 1; x++) if (far(x, y)) cand.push([x, y]);
   shuf(cand, rng);
@@ -399,7 +407,7 @@ function portal(m, f, rng, far, force, pair) {
 }
 /* art-only GATE: 2-3 singles on straight corridor tiles (two opposite open
    neighbours, nothing else), no two within 4 Manhattan; featM stays 0 = open */
-function gate(m, f, rng, far, force) {
+function gate(m, f, rng, far, force, bgate, dS) {
   const want = rng.int(2, 3), cand = [], used = [];
   const o = (x, y) => open(m, x, y);
   for (let y = 1; y < R - 1; y++) for (let x = 1; x < C - 1; x++) {

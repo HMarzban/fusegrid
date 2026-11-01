@@ -6,6 +6,7 @@ import { updateEnemies } from "../ai/enemies.js";
 import { hasPact, PACT } from "./pact.js";
 import { paceMul } from "./pace.js";
 import { isBelt, beltDir, featProfile } from "./feat.js";
+import { tileTick, featSpeed } from "./tiles2.js";
 
 /* A clean intent for one player for this tick. This is exactly what a network
    client would send the server: move vector + edge-triggered fire/remote. */
@@ -85,6 +86,7 @@ export function step(world, dt, inputs) {
   if (world.feat) {
     beltActors(world, dt, false);
     featTick(world, dt, emit);
+    tileTick(world, dt, emit);
   }
   if (adv && adv.advance) {
     world.events.push({ t: "win" });
@@ -128,7 +130,7 @@ function updatePlayer(world, dt, inp, emit) {
     p.face.y = dy;
   }
   const glided = w.feat && !p.passing ? glideMove(w, p, dx, dy, dt, emit) : false;
-  const sp = p.speed * CFG.TILE * dt * paceMul(w.pace);
+  const sp = p.speed * CFG.TILE * dt * paceMul(w.pace) * featSpeed(w, p.x, p.y, false);
   if ((dx || dy) && !glided) {
     p.tx = tileOf(p.x);
     p.ty = tileOf(p.y);

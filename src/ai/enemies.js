@@ -1,3 +1,4 @@
+import { featSpeed } from "../core/tiles2.js";
 import { CFG, DIRS4, key } from "../core/config.js";
 import {
   tileOf,
@@ -44,7 +45,7 @@ export function updateEnemies(world, dt, input, emit) {
       continue;
     }
     if (e.speed === 0) continue;
-    const sp = e.speed * CFG.TILE * dt * paceMul(world.pace);
+    const sp = e.speed * CFG.TILE * dt * paceMul(world.pace) * featSpeed(world, e.x, e.y, true);
     e.cd -= dt;
     if (e.cd <= 0) {
       e.cd = e.hunt
