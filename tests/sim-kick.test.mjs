@@ -74,7 +74,7 @@ function kickSetup(seed, kickPower) {
   const w = kickSetup(11, true);
   const b = w.bombs[0],
     p = w.players[0];
-  const hold = { 0: { ...newIntent(), move: { x: 1, y: 0 }, kick: true } };
+  const hold = { 0: { ...newIntent(), move: { x: 1, y: 0 } } };
   let maxTx = 4;
   for (let i = 0; i < 400; i++) {
     step(w, CFG.STEP, hold);
@@ -97,7 +97,7 @@ function kickSetup(seed, kickPower) {
   p2.ty = KICK_LANE;
   injectBomb(w2, 4, KICK_LANE, 99, 1);
   injectBomb(w2, 9, KICK_LANE, 99, 1);
-  const hold2 = { 0: { ...newIntent(), move: { x: 1, y: 0 }, kick: true } };
+  const hold2 = { 0: { ...newIntent(), move: { x: 1, y: 0 } } };
   for (let i = 0; i < 400; i++) step(w2, CFG.STEP, hold2);
   const s = w2.bombs.find((bb) => bb.tx === 4 || bb.prog !== undefined);
   check(
@@ -131,7 +131,7 @@ function kickSetup(seed, kickPower) {
   p3.tx = 3;
   p3.ty = KICK_LANE;
   injectBomb(w3, 4, KICK_LANE, 99, 1);
-  const hold3 = { 0: { ...newIntent(), move: { x: 1, y: 0 }, kick: true } };
+  const hold3 = { 0: { ...newIntent(), move: { x: 1, y: 0 } } };
   for (let i = 0; i < 400; i++) step(w3, CFG.STEP, hold3);
   check(
     "R5c slider stops before enemy tile",
@@ -143,7 +143,7 @@ function kickSetup(seed, kickPower) {
   const w4 = kickSetup(14, true);
   const b4 = w4.bombs[0];
   const t0 = b4.timer;
-  const hold4 = { 0: { ...newIntent(), move: { x: 1, y: 0 }, kick: true } };
+  const hold4 = { 0: { ...newIntent(), move: { x: 1, y: 0 } } };
   for (let i = 0; i < 20; i++) step(w4, CFG.STEP, hold4);
   check(
     "R5d fuse ticks while sliding",
@@ -156,7 +156,7 @@ function kickSetup(seed, kickPower) {
 {
   const w = kickSetup(15, false);
   const b = w.bombs[0];
-  const hold = { 0: { ...newIntent(), move: { x: 1, y: 0 }, kick: true } };
+  const hold = { 0: { ...newIntent(), move: { x: 1, y: 0 } } };
   for (let i = 0; i < 120; i++) step(w, CFG.STEP, hold);
   check(
     "R6 no kick power => bomb never launches",
@@ -175,7 +175,7 @@ function kickSetup(seed, kickPower) {
   p.tx = 2;
   p.ty = 1;
   w.grid[key(3, 1)] = T.BRICK;
-  const hold = { 0: { ...newIntent(), move: { x: 1, y: 0 }, kick: true } };
+  const hold = { 0: { ...newIntent(), move: { x: 1, y: 0 } } };
   for (let i = 0; i < 40; i++) step(w, CFG.STEP, hold);
   check(
     "R7 kick leaves bricks intact (brick-break kick removed)",
@@ -597,7 +597,7 @@ function kickSetup(seed, kickPower) {
 {
   const w = kickSetup(11, true);
   const b = w.bombs[0];
-  const hold = { 0: { ...newIntent(), move: { x: 1, y: 0 }, kick: false } };
+  const hold = { 0: { ...newIntent(), move: { x: 1, y: 0 } } };
   for (let i = 0; i < 80; i++) step(w, CFG.STEP, hold);
   check(
     "walk-into kick without inp.kick launches",

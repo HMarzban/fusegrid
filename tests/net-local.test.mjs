@@ -73,6 +73,16 @@ const both = (g, f) => { f(g.world); f(g.net.wB); };
   check("stateHash: one foe moved by a unit moves it", stateHash(w) !== stateHash(pair.wB));
 }
 
+// ---- drive() copies no sim-written field per tick, so a slip stays visible
+// (PAUSE: step() writes nothing that could overwrite it either) ----
+{
+  const g = menu();
+  press(g, "Enter"); g.tick(5); press(g, "Escape");
+  g.net.wB.fireEdge = !g.net.wB.fireEdge;
+  g.tick(3);
+  check("a flipped B fireEdge is not healed by the next drive", stateHash(g.world) !== stateHash(g.net.wB));
+}
+
 // ---- a new run, PAUSE, PAUSE RESTART, a room, GAME OVER ----
 {
   const g = menu();

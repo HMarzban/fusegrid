@@ -21,10 +21,8 @@ export function createLocalPair(world, input) {
     wB.pact = world.pact;
     wB.pace = world.pace;
     loadLevel(wB, world.level, false);
-    Object.assign(wB.players[0], structuredClone(world.players[0]));
-    wB.score = world.score;
-    wB.lives = world.lives;
     wB.state = world.state;
+    wB.fireEdge = world.fireEdge;
   };
   follow();
   let gridA = world.grid;
@@ -57,10 +55,13 @@ export function createLocalPair(world, input) {
     wB,
     drive() {
       if (world.grid !== gridA) follow();
-      // what the shell writes on A between ticks: the re-armed seed, the held-fire guard, PAUSE
+      // all the shell writes on A between ticks: the re-armed seed, PAUSE, RESUME's held-fire guard
       wB.nextSeed = world.nextSeed;
-      wB.fireEdge = world.fireEdge;
-      if (world.state === "PAUSE" || wB.state === "PAUSE") wB.state = world.state;
+      if (world.state === "PAUSE") wB.state = "PAUSE";
+      else if (wB.state === "PAUSE") {
+        wB.state = world.state;
+        wB.fireEdge = world.fireEdge;
+      }
       lsA.pushIntent(input.intent());
       input.advance();
       const m = [
