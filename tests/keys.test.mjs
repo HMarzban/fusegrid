@@ -280,6 +280,42 @@ for (const at of [1.0, 2.0, 3.0, 4.0]) {
   const e = show(mk({ gen3: true })); press(e, "Enter"); toRow(e, 1); press(e, "Enter"); press(e, "Escape");
   check("gen3 LEVEL Escape -> MENU", e.app.screen === SCREEN.MENU);
 }
+// ---- ICE PATCH at MAX on a ?gen=3 page: the brake tip paints, adds no key, and
+// the key path does what it says: back as you let go stops the slide. ----
+{
+  delete mem["nb.coach.v2"];
+  const v1 = mem["nb.coach.v1"];
+  mem["nb.coach.v1"] = "1";
+  const g = show(mk({ gen3: true })); press(g, "Enter"); toRow(g, 1); press(g, "Enter");
+  press(g, "ArrowRight"); press(g, "ArrowUp"); press(g, "ArrowUp"); press(g, "Enter");
+  const w = g.world, p = w.players[0], F = CFG.TILE;
+  check("gen3 room 2 at MAX, through the keys", g.app.screen === SCREEN.GAME && w.level === 2 && w.heat === 2 && w.gen === 3 && !!w.feat, w.level + "/" + w.heat);
+  for (const e of w.enemies) e.speed = 0;
+  const y = 6, xs = [3, 4, 5, 6, 7, 8, 9, 10, 11];
+  for (const x of xs) { w.grid[y * CFG.COLS + x] = 0; w.feat[y * CFG.COLS + x] = 5; }
+  w.bombs = [];
+  p.x = 3.5 * F; p.y = (y + 0.5) * F; p.tx = 3; p.ty = y;
+  g.tick(2);
+  check("first ICE at MAX paints the brake line", /PRESS BACK AS YOU LET GO/.test(g.ro.coach2.s) && g.ro.coach2.k === "BRAKE", g.ro.coach2.s);
+  down("ArrowRight"); g.tick(4); up("ArrowRight"); g.tick(2);
+  const moving = p.x; g.tick(2);
+  check("let go on MAX ice: the slide goes on", p.x > moving && !!p.gl, moving + " -> " + p.x);
+  down("ArrowLeft"); g.tick(1); up("ArrowLeft"); g.tick(30);
+  const rest = p.x; g.tick(10);
+  check("back as you let go: stopped on a tile centre, short of the far end", p.x === rest && !p.gl && (rest / F) % 1 === 0.5 && rest < 11.5 * F, rest / F);
+  check("the tip outlives the slide: a move key does not close it", g.ro.coach2.k === "BRAKE");
+  delete mem["nb.coach.v2"];
+  if (v1 === undefined) delete mem["nb.coach.v1"]; else mem["nb.coach.v1"] = v1;
+}
+{
+  // a normal page at MAX: the same keys, no tile, no tip, no brake bit
+  delete mem["nb.coach.v2"];
+  const g = show(mk()); press(g, "Enter"); toRow(g, 1); press(g, "Enter");
+  press(g, "ArrowRight"); press(g, "ArrowUp"); press(g, "ArrowUp"); press(g, "Enter");
+  g.tick(5);
+  check("a normal page, room 2 at MAX: no tile layer, no tile tip", g.world.gen === 2 && !g.world.feat && !g.ro.coach2.k && !(mem["nb.coach.v2"] || "").includes('"z":1'), g.world.gen);
+  delete mem["nb.coach.v2"];
+}
 // ---- LEVEL SELECT: ←/→ room, ↑/↓ heat, [ ] pace, 1–5 when unlocked, Enter, Esc ----
 {
   const g = menu(); toRow(g, 1); press(g, "Enter");

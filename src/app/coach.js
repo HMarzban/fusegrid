@@ -1,7 +1,7 @@
 import { defaultStore } from "./store.js";
 import { POWER } from "../core/entities.js";
 import { T, key } from "../core/config.js";
-import { featKindOf, featProfile, isBelt, tileTip } from "../core/feat.js";
+import { featKindOf, featProfile, glideBrakes, isBelt, tileTip } from "../core/feat.js";
 
 export const COACH_KEY = "nb.coach.v1";
 export const COACH_DUR = 3;
@@ -44,11 +44,18 @@ const TIPS = ["kick", "throw", "remote", "pass", "line", "power", "pierce", "shi
    tile's TILE_HELP key. A tile tip opens on first contact, never closes on a
    "use" (contact IS the use), and outlives a verb's: its line carries the tile's
    whole rule at this heat, and it fades only over the last COACH_FADE s. */
-const TILES = ["BLOOM", "GLIDE", "BELT", "PLATE", "STREAM", "QUICK", "GATE", "PORTAL"];
+/* BRAKE (17th bit, last, so a sixteen-bit record loads byte-stable with it at 0)
+   is ICE PATCH met at a heat whose line teaches the brake (glideBrakes): V19 = 0 on ICE
+   at MAX assumes the player knows that brake, and a once-ever GLIDE bit spent at
+   CORE would never teach it. It has no copy of its own (the GLIDE line at that
+   heat is the brake line, see coachTip) and closing it marks GLIDE too, so a
+   player who first meets ICE at MAX reads one tip, never two in a row. */
+const TILES = ["BLOOM", "GLIDE", "BELT", "PLATE", "STREAM", "QUICK", "GATE", "PORTAL", "BRAKE"];
 export const COACH_TILE_DUR = 6;
 const COACH_FADE = 1.5;
 const isTile = (k) => TILES.indexOf(k) >= 0;
-const FIELD = { kick: "k", throw: "t", remote: "r", pass: "p", line: "l", power: "w", pierce: "i", shield: "s", BLOOM: "b", GLIDE: "g", BELT: "c", PLATE: "x", STREAM: "f", QUICK: "q", GATE: "y", PORTAL: "o" };
+const floorOf = (k) => (k === "BRAKE" ? "GLIDE" : k);
+const FIELD = { kick: "k", throw: "t", remote: "r", pass: "p", line: "l", power: "w", pierce: "i", shield: "s", BLOOM: "b", GLIDE: "g", BELT: "c", PLATE: "x", STREAM: "f", QUICK: "q", GATE: "y", PORTAL: "o", BRAKE: "z" };
 const KEYS = TIPS.concat(TILES).map((k) => FIELD[k]);
 const bit = (v) => (v ? 1 : 0);
 const shape = (v) => { const o = {}; for (const f of KEYS) o[f] = bit(v && v[f]); return o; };
@@ -82,6 +89,7 @@ export function coach2Mark(v, kind) {
   const cur = shape(v);
   const f = FIELD[kind];
   if (f) cur[f] = 1;
+  if (kind === "BRAKE") cur[FIELD.GLIDE] = 1;
   return cur;
 }
 
@@ -104,7 +112,7 @@ export function coachLay() {
   }
 }
 export function coachTip(kind, lay, world) {
-  if (isTile(kind)) return world ? tileTip(kind, featProfile(world)) : "";
+  if (isTile(kind)) return world ? tileTip(floorOf(kind), featProfile(world)) : "";
   if (TIPS.indexOf(kind) < 0) return "";
   const d = POWER.find((x) => x.t === kind);
   if (!d) return "";
@@ -119,7 +127,8 @@ export function coachAlpha(st) {
 /* First contact with a tile, read from the world like usedNow: the player's
    centre on a tile the sim would act on (grid EMPTY, the sim's own test), a bomb
    riding a belt, or a booster / trap going off, which usually happens before the
-   player ever steps on one. */
+   player ever steps on one. ICE at a heat with the brake is the BRAKE tip until
+   that bit is set, whatever the GLIDE bit says. */
 function tileMet(w, p, ev) {
   if (!w.feat || w.state !== "PLAY") return null;
   const at = (x, y) => { const k = key(x, y); return w.grid[k] === T.EMPTY ? featKindOf(w.feat[k]) : null; };
@@ -128,7 +137,7 @@ function tileMet(w, p, ev) {
   if (Array.isArray(w.bombs) && w.bombs.some((b) => !b.dead && isBelt(w.feat[key(b.tx, b.ty)]))) return "BELT";
   return ev.some((e) => e && e.t === "bloom") ? "BLOOM" : ev.some((e) => e && e.t === "plate") ? "PLATE" : null;
 }
-const roomHas = (w, k) => !!w.feat && w.feat.some((v) => featKindOf(v) === k);
+const roomHas = (w, k) => !!w.feat && w.feat.some((v) => featKindOf(v) === floorOf(k));
 
 /* Per-verb "used" read from the world, never e.t === kind: "power" is also the
    pickup event's own type, and PASS / the bomb kinds / SHIELD emit nothing of
@@ -205,7 +214,8 @@ export function coach2Tick(st, world, v1Open, dt, store) {
     out.push(["coach_dismissed", { v: live, rn: isTile(live) ? "room" : "lost" }]);
     st.kind = null;
   }
-  const met = tileMet(w, p, ev);
+  const on = tileMet(w, p, ev);
+  const met = on === "GLIDE" && glideBrakes(featProfile(w)) && !coach2Seen(loadCoach2(store), "BRAKE") ? "BRAKE" : on;
   if (met && met !== st.kind && q.indexOf(met) < 0 && !coach2Seen(loadCoach2(store), met)) {
     if (v1Open) q.push(met);
     else {
