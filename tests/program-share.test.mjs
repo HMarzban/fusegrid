@@ -9,6 +9,7 @@ import assert from "node:assert/strict";
 import * as THREE from "../vendor/three.module.js";
 import {BIOMES} from "../src/core/config.js";
 import {createWorld, loadLevel} from "../src/core/sim.js";
+import "../src/core/board3.js";
 import {buildScene, disposeGroup, rimTwin} from "../src/render/three/scene.js";
 import {FLOOR_FX} from "../src/render/three/groundfx.js";
 import {createPins} from "../src/render/three/progpin.js";
