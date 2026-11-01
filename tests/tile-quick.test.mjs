@@ -11,6 +11,8 @@ import { quickStep, quickSpeed, holdReach, HOLD_MIN, GROW_STEPS } from "../src/c
 import { newTally, feedTally } from "../src/app/bests.js";
 import { cellSpec, specKey } from "../src/render/featdraw.js";
 import { featPxCell } from "../src/render/featpx.js";
+import { buildScene, countDrawCalls } from "../src/render/three/scene.js";
+import { Matrix4 } from "../vendor/three.module.js";
 
 const C = CFG.COLS, R = CFG.ROWS, N = C * R, TL = CFG.TILE, DT = CFG.STEP;
 const IDLE = [{ move: { x: 0, y: 0 }, fire: false }];
@@ -251,6 +253,25 @@ test("every real board in 150 seeds: 3-5 tiles, same at each heat, V30 V31 V19 V
 });
 
 /* ---- the looks ---- */
+test("REAL 3D: the heap and the mound are Y-scaled instances of the ONE brick mesh, no new draw", () => {
+  const { w, k, x, y, pr } = room(2);
+  const sc = buildScene(w), draws = countDrawCalls(sc.group), brick = sc.brick, n0 = brick.count;
+  const height = (i) => { const m = new Matrix4(); brick.getMatrixAt(i, m); return m.elements[5]; };
+  const tiles = w.feat.filter((v) => v === F.QUICK).length;
+  const slot = () => { let i = 0; for (let q = 0; q < N; q++) { if (q === k) return i; if (w.grid[q] === T.BRICK || w.feat[q] === F.QUICK) i++; } return -1; };
+  run(w, pr.wait + 0.8); sc.update(w);
+  assert.equal(w.grid[k], T.EMPTY, "still passable");
+  assert.equal(brick.count, n0 + tiles, "every growing tile takes a brick instance");
+  const low = height(slot());
+  assert.ok(low > 0 && low < 0.3, "a low heap, got " + low);
+  run(w, pr.grow); sc.update(w);
+  assert.equal(w.grid[k], T.BRICK);
+  assert.equal(brick.count, n0 + tiles);
+  run(w, 0.3); sc.update(w);
+  assert.equal(height(slot()), 1, "full height after the rise");
+  assert.equal(countDrawCalls(sc.group), draws);
+  assert.ok(x > 0 && y > 0);
+});
 test("the growth frame reaches the spec in steps, only while growing; a rest cell's key is unchanged", () => {
   const { w, k, x, y, pr } = room(2);
   const rest = specKey(cellSpec(w, x, y));
