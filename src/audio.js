@@ -468,6 +468,10 @@ export function createAudio(opts) {
           noise(0.07, 0.05, { t: "bandpass", f0: 700, q: 0.9 });
           voice("sawtooth", 210, 140, 0.06, 0.04, { t: "highpass", f0: 200 });
           break;
+        case "warp":
+          voice("triangle", 880, 220, 0.09, 0.06, { t: "highpass", f0: 200 });
+          voice("sine", 330, 990, 0.09, 0.05);
+          break;
         case "throw":
           noise(0.11, 0.07, { t: "highpass", f0: 900, f1: 2200 });
           voice("sawtooth", 420, 760, 0.1, 0.07, { t: "highpass", f0: 350 });

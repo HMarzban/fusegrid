@@ -2,7 +2,7 @@
 /* #28 baseline: the static tile checks (featchecks.mjs, V13-V27) over today's
    gen-3 boards, n seeds x rooms 1-8 x CORE / PLUS / MAX, each heat with its
    own FEAT_PROFILE row. Rule rooms 1 BOOSTER, 2 ICE PATCH, 3 CONVEYOR,
-   5 TRAP get every check; the art-only rooms 4 / 6 / 7 / 8 get the layer
+   5 TRAP, 7 PORTAL get every check; the art-only rooms 4 / 6 / 8 get the layer
    checks only (V13 V14 V21 V22 V23), the rest read n/a. A cell is the number
    of boards failing that check; V19 also sums no-escape spots by cause.
      node tools/balance/featreport.mjs [--n 1000] [--out file.json]
@@ -16,7 +16,7 @@ import { featChecks, tableChecks, FEAT_RULES, TILE_NAME } from "./featchecks.mjs
 
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
 const NS = +arg("--n", 1000), OUT = arg("--out", null), H = ["CORE", "PLUS", "MAX"];
-const RULE_ROOMS = [1, 2, 3, 5], ART_ROOMS = [4, 6, 7, 8], LAYER = ["V13", "V14", "V21", "V22", "V23"];
+const RULE_ROOMS = [1, 2, 3, 5, 7], ART_ROOMS = [4, 6, 8], LAYER = ["V13", "V14", "V21", "V22", "V23"];
 const fmix = (h) => { h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b) >>> 0; h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35) >>> 0; return (h ^ (h >>> 16)) >>> 0; };
 const t0 = performance.now(), cell = {};
 const get = (lv, h) => (cell[lv + ":" + h] ||= { boards: 0, fails: Object.fromEntries(FEAT_RULES.map((r) => [r, 0])), spots: 0, time: 0, cap: 0, trapExact: 0, cause: {}, why: {}, v14: {} });

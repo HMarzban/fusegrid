@@ -9,6 +9,7 @@
 import { CFG, T, key, biomeOf } from "../core/config.js";
 import { isWall } from "../core/board.js";
 import { featProfile } from "../core/feat.js";
+import { armJump, portalDim } from "../core/tileportal.js";
 
 export const TELL_IN = 0.1;
 const NONE = Object.freeze([]), D4 = [[1, 0], [-1, 0], [0, 1], [0, -1]], BLOOM = 6;
@@ -55,16 +56,36 @@ export function relayTell(w) {
     burn(tiles, t, k0);
     reach(tiles, cx, cy, t, k0);
   };
+  /* PORTAL (#27): an arm's tiles past a jump are this tell's cells, from the moment the bomb is lit: the warning that a blast comes out of the twin */
+  const mark = (x, y, t, k0) => {
+    const c = key(x, y);
+    if (g0[c] === T.BRICK) return;
+    const o = cells.get(c);
+    if (!o) cells.set(c, { x, y, t, k: k0, hot: false });
+    else { if (t < o.t) o.t = t; if (k0 > o.k) o.k = k0; }
+  };
   const boom = (b, t, k1) => {
     gone.add(b);
-    const tiles = [[b.tx, b.ty]], arms = b.line ? [[b.dir ? b.dir.x : 1, b.dir ? b.dir.y : 0]] : D4;
-    for (const [ax, ay] of arms) for (let i = 1; i <= b.radius; i++) {
-      const x = b.tx + ax * i, y = b.ty + ay * i;
-      if (isWall(g, x, y)) break;
-      tiles.push([x, y]);
-      if (g[key(x, y)] === T.BRICK && !b.pierce && !b.line) break;
+    const tiles = [[b.tx, b.ty]], arms = b.line ? [[b.dir ? b.dir.x : 1, b.dir ? b.dir.y : 0]] : D4, past = [];
+    for (const [ax, ay] of arms) {
+      let x = b.tx, y = b.ty, jumps = 0;
+      for (let i = 1; i <= b.radius; i++) {
+        x += ax; y += ay;
+        if (isWall(g, x, y)) break;
+        tiles.push([x, y]);
+        if (jumps) past.push([x, y]);
+        if (g[key(x, y)] === T.BRICK && !b.pierce && !b.line) break;
+        if (!w.featPair) continue;
+        const tw = armJump(w, g, key(x, y), jumps);
+        if (tw === -2) break;
+        if (tw < 0) continue;
+        jumps++;
+        x = tw % CFG.COLS; y = (tw / CFG.COLS) | 0;
+        tiles.push([x, y]); past.push([x, y]);
+      }
     }
     const k0 = Math.max(k1 || 0, Math.min(1, Math.max(0, (fz - b.timer) / TELL_IN)));
+    for (const [x, y] of past) mark(x, y, t, k0);
     burn(tiles, t, k0);
     reach(tiles, b.tx, b.ty, t, k0);
   };
@@ -80,13 +101,22 @@ export function relayTell(w) {
   return cells.size ? [...cells.values()] : NONE;
 }
 
+/* PORTAL (#27): the tiles a walker would cross as plain floor right now, for the dim look in all three looks */
+export function dimCells(w) {
+  const pr = w && w.featPair;
+  if (!pr || !w.grid) return NONE;
+  let out = null;
+  for (let k = 0; k < pr.length; k++) if (pr[k] && w.grid[k] === T.EMPTY && portalDim(w, k)) (out ||= []).push({ x: k % CFG.COLS, y: (k / CFG.COLS) | 0 });
+  return out || NONE;
+}
 /* the CLASSIC mark, on the FLOOR before drawItems: four corner brackets in the world's own wallHi (the booster's mark colour, never a blast hue) over a dark
    under-stroke in bg1, and a faint wash while the flare burns, scaled by REDUCE FLASH (the brackets stay). Static: no march, no pulse. No tell = no ctx call. */
 const IN = 0.13, ARM = 0.2;
 export function drawRelayTell(c, world, flashK = 1) {
-  const cells = relayTell(world);
-  if (!cells.length) return;
+  const cells = relayTell(world), dim = dimCells(world);
+  if (!cells.length && !dim.length) return;
   const B = biomeOf(world.level), TL = CFG.TILE, a = IN * TL, L = ARM * TL;
+  for (const e of dim) { c.globalAlpha = 0.6; c.fillStyle = B.bg1; c.fillRect(e.x * TL + 2, e.y * TL + 2, TL - 4, TL - 4); }
   for (const e of cells) {
     if (!(e.k > 0.01)) continue;
     const x0 = e.x * TL + a, y0 = e.y * TL + a, x1 = (e.x + 1) * TL - a, y1 = (e.y + 1) * TL - a;

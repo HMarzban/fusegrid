@@ -172,6 +172,7 @@ export function onEvent(world, ev, time, look){
     case "hurt":  addParticles(ev.x, ev.y, 6, "#ff5d73");
                    addParticles(ev.x, ev.y, 4, "#ff8a9a");
                    fx.shakeT=Math.max(fx.shakeT,0.15); break;
+    case "warp":  addParticles(ev.x, ev.y, 8, "#8a70b0"); addParticles(ev.x2, ev.y2, 8, "#8a70b0"); break;
     case "kick":  addParticles(ev.x, ev.y, 8, "#c4a070");
                    addStreaks(ev.x, ev.y, 4, "#e8d4a8"); break;
     case "throw": addParticles(ev.x, ev.y, 3, "#ffe28a");

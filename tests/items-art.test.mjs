@@ -1,5 +1,6 @@
 import { createWorld, loadLevel, step } from "../src/core/sim.js";
 import { CFG, BIOMES } from "../src/core/config.js";
+import { mix } from "../src/render/featart/kit.js";
 import { POWER } from "../src/core/entities.js";
 import { drawIcon, RIM, ITEM_FAMILY, ITEM_SHAPE, ITEM_ACCENT, dk } from "../src/render/icons.js";
 import {
@@ -755,6 +756,25 @@ for (const state of ["passing", "shield"]) {
     "MAKO on VOID: every VOID swatch is >= 14 dE away (the hue-blind room)",
     vMin >= 14,
     vMin.toFixed(1) + " dE at " + vAt,
+  );
+  /* PORTAL (#27): what MAKO stands on when he lands: the bezel floor per heat, the
+     ring stack, the socket, the lit lip, and the blocked look (bg1 at 0.6) over each */
+  const pTop = [0, 0.12, 0.27].map((a) => mix(V.wallHi, V.wall, a));
+  const pSw = [...pTop, mix(V.bg1, V.floor1, 0.4), V.bg1, V.wallHi, mix(V.wallHi, V.wall, 0.78), mix(V.wallHi, V.wall, 0.2)];
+  for (const a of [0.3, 0.5, 0.74]) for (let i = 0; i < 4; i++) pSw.push(mix(V.wallHi, V.wall, a - 0.1 * i));
+  let pMin = 1e9,
+    pAt = "";
+  for (const s of [...pSw, ...pSw.map((q) => mix(V.bg1, q, 0.6))]) {
+    const d = dE(PLAYER_SUIT, s);
+    if (d < pMin) {
+      pMin = d;
+      pAt = s;
+    }
+  }
+  check(
+    "MAKO on VOID: every PORTAL composite is >= 14 dE away, dim look included",
+    pMin >= 14,
+    pMin.toFixed(1) + " dE at " + pAt,
   );
   check(
     "MAKO on VOID: the brick face itself is >= 40 dE away",
