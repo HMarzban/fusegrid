@@ -406,8 +406,8 @@ function streamGate(base, level) {
       const g = base[h].grid.slice();
       for (const k of all) g[k] = T.EMPTY;
       const b = { grid: g, feat: f, level, heat: h, items: [], enemies: [] }, P = FEAT_PROFILE[h];
-      if (featChecks(b, P, { only: ["V18", "V19"], around: all, aroundR: P.stream.wade < 1 ? undefined : 0 }).length) return false;
       if (featChecks(b, P, { only: ["V29"], around: all, aroundR: 0 }).length) return false;
+      if (featChecks(b, P, { only: ["V18", "V19"], around: all, aroundR: P.stream.wade < 1 ? undefined : 0 }).length) return false;
     }
     return true;
   };

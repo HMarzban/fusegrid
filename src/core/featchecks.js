@@ -241,6 +241,7 @@ function bombMap(n, g, c, r, live, blast = null) {
   }
   L.cause = chain ? "trap-chain" : at.length > 1 || at[0] !== c ? "bomb-ride" : relay ? "relay" : null;
   L.moved = at.length > 1 || at[0] !== c;
+  L.at = at;
   return L;
 }
 const sameIn = (A, B, c, rad) => { const [cx, cy] = xy(c); for (let y = Math.max(0, cy - rad); y <= Math.min(R - 1, cy + rad); y++) for (let x = Math.max(0, cx - rad); x <= Math.min(C - 1, cx + rad); x++) { if (Math.abs(x - cx) + Math.abs(y - cy) > rad) continue; const k = key(x, y); if (A[k] !== B[k]) return false; } return true; };
@@ -281,12 +282,16 @@ function v19(n) {
     const Eb = env(n, g, { tiles: false }), Et = env(n, g, { tiles: true }), Em = env(n, g, { tiles: true, move: false });
     for (let c = 0; c < N; c++) {
       if (g[c] !== T.EMPTY || (n.mask && !n.mask[c])) continue;
+      let at = [c];
       for (let r = 1; r <= n.lim.radius; r++) {
+        /* a radius whose arms reach no further from any cell the bomb can blow at gives the same maps as the last one */
+        if (r > 1 && at.every((k) => { const [x, y] = xy(k); return armTiles(g, x, y, cross(r), false).length === armTiles(g, x, y, cross(r - 1), false).length; })) break;
+        const Lt = bombMap(n, g, c, r, true), plant = Lt.moved ? -1 : c;
+        if (Lt.at) at = [c, ...Lt.at];
+        if (timedEscape(Et, Lt, c, plant).ok) continue;
         const Lb = bombMap(n, g, c, r, false);
         if (!timedEscape(Eb, Lb, c, c).ok) break;
-        const Lt = bombMap(n, g, c, r, true), plant = Lt.moved ? -1 : c;
         if (sameIn(Lb, Lt, c, rad) && !moveTileNear(n, Et, c, rad)) continue;
-        if (timedEscape(Et, Lt, c, plant).ok) continue;
         const cause = Lt.cause && !timedEscape(Em, Lt, c, plant).ok ? Lt.cause : n.kind === "GLIDE" ? "coast" : n.kind === "BELT" ? "ride" : n.kind === "STREAM" ? "wade" : Lt.cause || "tile";
         const timed = !timedEscape(free(Et), Lt, c, plant).ok;
         add(c, cause, { at: xy(c), r, state: st, cause, kind: timed ? "time" : "cap" }, timed);
