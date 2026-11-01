@@ -61,20 +61,6 @@ test("foes never start on an art tile and the roster is whole", () => {
     if (w.feat) for (const e of w.enemies) assert.equal(w.feat[key(e.tx, e.ty)], 0, `room ${room} seed ${s}`);
   }
 });
-test("the art layer is ignored by step(): a replay is identical with and without it", () => {
-  for (const room of [7]) for (const seed of [4242, 77]) {
-    const a = mk(seed, room, 2), b = mk(seed, room, 2);
-    assert.ok(a.feat);
-    b.feat = null; b.featPair = null;
-    const ba = createDemobot(9), bb = createDemobot(9), snap = (w) => JSON.stringify([w.state, w.players[0].x, w.players[0].y, w.players[0].alive, w.enemies.map((e) => [e.type, e.x, e.y, e.dead]), w.bombs.map((q) => [q.tx, q.ty]), w.items.length, w.score, Array.from(w.grid), w.events.length]);
-    for (let i = 0; i < 1500; i++) {
-      step(a, CFG.STEP, { 0: ba.intent(a) }); step(b, CFG.STEP, { 0: bb.intent(b) });
-      if (i % 50 === 0) assert.equal(snap(a), snap(b), `room ${room} seed ${seed} step ${i}`);
-      a.events.length = 0; b.events.length = 0;
-    }
-    assert.equal(snap(a), snap(b), `room ${room} seed ${seed} end`);
-  }
-});
 test("gen 1 and gen 2 place nothing in these rooms", () => {
   for (const room of [4, 6, 7, 8]) { const w = createWorld(55, room); loadLevel(w, room, false); assert.equal(w.feat ?? null, null); }
   for (const room of [4, 6, 7, 8]) { const w = createWorld(55, room); w.gen = 2; loadLevel(w, room, false); assert.equal(w.feat ?? null, null); assert.equal(genBoard2(55, room, 0).feat, null); }

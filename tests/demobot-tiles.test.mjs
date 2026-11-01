@@ -62,32 +62,6 @@ function parity(w, seed, ticks) {
   check("parity, gen 1 rooms 1-8: fork == stock tick by tick", !bad.length, bad.join(" "));
 }
 
-/* ---- controls ---- */
-{
-  let bad = [], rows = 0;
-  for (const room of [7]) for (const heat of [0, 1, 2]) for (const s of [0, 1]) {
-    const a = runRoom({ room, heat, arm: "A0" }, s), b = runRoom({ room, heat, arm: "A1" }, s);
-    rows++;
-    if (b.rules) bad.push(`r${room} carries rule tiles`);
-    if (JSON.stringify({ ...a, arm: "" }) !== JSON.stringify({ ...b, arm: "" })) bad.push(`r${room}h${heat}s${s}`);
-  }
-  check(`controls: A0 row == A1 row, room 7 x 3 heats x 2 seeds (${rows} pairs)`, !bad.length, bad.slice(0, 4).join(" "));
-  bad = [];
-  for (const room of [7]) {
-    const A = makeWorld({ room, heat: 2, arm: "A0" }, 3), B = makeWorld({ room, heat: 2, arm: "A1" }, 3);
-    if (!B.w.feat) { bad.push(`r${room} no art layer`); continue; }
-    const ba = createTileBot(A.seed), bb = createTileBot(B.seed);
-    for (let i = 0; i < 7200 && A.w.state === "PLAY"; i++) {
-      const ia = ba.intent(A.w), ib = bb.intent(B.w);
-      if (iser(ia) !== iser(ib)) { bad.push(`r${room} intent@${i}`); break; }
-      step(A.w, CFG.STEP, { 0: ia }); step(B.w, CFG.STEP, { 0: ib });
-      A.w.events.length = 0; B.w.events.length = 0;
-      if (simSnap(A.w) !== simSnap(B.w)) { bad.push(`r${room} state@${i}`); break; }
-    }
-  }
-  check("controls: A0 == A1 intent stream + sim snapshot every tick (MAX, art layer present)", !bad.length, bad.join(" "));
-}
-
 /* ---- reproducibility ---- */
 {
   const cells = [{ room: 3, heat: 2, arm: "A1" }, { room: 5, heat: 1, arm: "A1" }, { room: 1, heat: 0, arm: "A3" }, { room: 2, heat: 2, arm: "A2" }];

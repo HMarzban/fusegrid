@@ -28,7 +28,7 @@
 import { CFG, T, key } from "../../src/core/config.js";
 import { tileOf } from "../../src/core/board.js";
 import { beltDir } from "../../src/core/feat.js";
-import { C, N, BD, prof, rulesOn, onIce, onBelt, carries, iceStop, cross, bombArms, bombPass, relayArms, plateArms, beltPath, cellAt, moveSpeed } from "./tilemodel.mjs";
+import { C, N, BD, prof, rulesOn, onIce, onBelt, carries, iceStop, cross, bombArms, bombPass, relayArms, plateArms, beltPath, cellAt, moveSpeed, warpTo, armPt } from "./tilemodel.mjs";
 
 export const MARGIN = CFG.STEP;
 const HR = 0.3;
@@ -56,7 +56,7 @@ export function lethalMap(w, tiles) {
     let x, y, arms, pass, t, plate = false, safe = false;
     if (ei >= 0 && et <= bt) { const e = ev.splice(ei, 1)[0]; x = e.x; y = e.y; arms = e.arms; pass = e.pass; t = e.t; plate = !!e.plate; safe = !!e.safe; }
     else { const o = bombs[bi]; o.done = true; [x, y] = cellOf(o, o.te); arms = bombArms(o.b); pass = bombPass(o.b); t = o.te; }
-    const s = cross(g, x, y, arms, pass, new Set());
+    const s = cross(g, x, y, arms, pass, new Set(), tiles ? armPt(w) : null);
     for (const k of s) {
       if (!safe && t < L[k]) L[k] = t;
       if (g[k] === T.BRICK) g[k] = T.EMPTY;
@@ -122,6 +122,14 @@ export function escape(w, tiles, L) {
       let o = 0, q = 0;
       if (k === s0) { o = dx ? ox * dx : oy * dy; q = Math.abs(dx ? oy : ox); }
       const leave = t + (0.5 + HR - o + q) / v, enter = t + Math.max(0, 0.5 - HR - o + q) / v, arrive = t + (1 - o + q) / v;
+      /* PORTAL: the centre crosses at half a step, onto the twin's centre; a warp that lands in a live blade does not fire */
+      const cross0 = t + Math.max(0, 0.5 - o + q) / v, tw = tiles ? warpTo(w, nk) : -1;
+      if (tw >= 0 && !bombAt[tw] && cross0 + MARGIN < L[tw]) {
+        if (leave + MARGIN >= L[k] && cross0 + MARGIN >= L[k]) continue;
+        const twid = sid(tw, 4);
+        if (!done[twid] && cross0 < best[twid]) best[twid] = cross0;
+        continue;
+      }
       if (leave + MARGIN >= L[k] || enter + MARGIN >= L[nk]) continue;
       if (arrive < best[nid]) best[nid] = arrive;
     }

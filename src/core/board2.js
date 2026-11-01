@@ -389,12 +389,28 @@ function bloomGate(base, level, lay) {
     return used.length >= BLOOM_GATE.min ? uk : null;
   };
 }
+/* PORTAL (V35): `cells` is the portals kept so far plus the new pair, twins in
+   pairs; only a bomb in line with a portal or a walk away from one can change the
+   answer, so `near` skips the rest */
+function portalGate(base, level) {
+  return (cells) => {
+    const ks = cells.map(([x, y]) => key(x, y)), f = new Uint8Array(N), pr = new Uint8Array(N);
+    ks.forEach((k, i) => { f[k] = 13; pr[k] = 1 + (i >> 1); });
+    for (let h = 2; h >= 0; h--) {
+      const g = base[h].grid.slice();
+      for (const k of ks) g[k] = T.EMPTY;
+      if (featChecks({ grid: g, feat: f, featPair: pr, level, heat: h, items: [], enemies: [] }, FEAT_PROFILE[h], { only: ["V35"], near: ks, firstSpot: true }).length) return false;
+    }
+    return true;
+  };
+}
 /* wave 2 / 3 placement gates: a biome's function checks candidates against the
    grids of all three heats, the same contract as bloomGate's closure. */
 function tileGate(base, level, lay) {
   if (lay.biome === "CROWN") return gatePlace(base, level);
   if (lay.biome === "SAND") return quickGate(base, level);
   if (lay.biome === "WATER") return streamGate(base, level);
+  if (lay.biome === "VOID") return portalGate(base, level);
   return null;
 }
 /* V32 + V33: a gate stays only if, with every kept gate shut for good, the map

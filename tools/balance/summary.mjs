@@ -8,7 +8,7 @@ import { readFileSync } from "node:fs";
 import { pairedCI, pairedRatioCI, medianRatio, discordant, nNeed, median } from "./stats.mjs";
 
 const HEAT = ["CORE", "PLUS", "MAX"], PACE = { "-1": "EASY", 0: "NORM", 1: "HARD" };
-const TILE_OF = { 1: "BOOSTER", 2: "ICE PATCH", 3: "CONVEYOR", 4: "STREAM", 5: "TRAP" };
+const TILE_OF = { 1: "BOOSTER", 2: "ICE PATCH", 3: "CONVEYOR", 4: "STREAM", 5: "TRAP", 6: "QUICKSAND", 7: "PORTAL", 8: "GATE" };
 const f1 = (x) => (x === x ? x.toFixed(1) : "–"), f2 = (x) => (x === x ? x.toFixed(2) : "–");
 const pp = (c) => `${c.mean >= 0 ? "+" : ""}${f1(100 * c.mean)} [${f1(100 * c.lo)}, ${f1(100 * c.hi)}]`;
 const sum = (rs, k) => rs.reduce((a, r) => a + (r[k] || 0), 0);

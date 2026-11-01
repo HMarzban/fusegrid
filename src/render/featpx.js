@@ -99,10 +99,13 @@ function streamHand(h, d, outer, ph) {
   }
   return slab(mk((X, Y) => (hz ? g[Y][X] : g[X][Y])), "O");
 }
-/* PORTAL pair id: 1 / 2 / 3 dark 2 px notches cut in the lit south bezel, centred */
+/* PORTAL pair id, read at 1x on a phone (#27): the south bezel goes dark and carries 1 / 2 / 3 lit 2 px pips, centred, never past wallHi base */
 function portalHand(h, pair) {
-  const r = HAND("PORTAL", h), n = clampI(pair || 1, 1, 3), x0 = 10 - (3 * n - 1) / 2;
-  if (r) for (let i = 0; i < n; i++) for (const y of [15, 16]) { at(r, x0 + 3 * i, y, "U"); at(r, x0 + 3 * i + 1, y, "U"); }
+  const r = HAND("PORTAL", h), n = clampI(pair || 1, 1, 3), x0 = Math.floor(10 - (3 * n - 1) / 2);
+  if (r) for (const y of [15, 16]) {
+    for (let x = 5; x < 15; x++) at(r, x, y, "U");
+    for (let i = 0; i < n; i++) { at(r, x0 + 3 * i, y, "W"); at(r, x0 + 3 * i + 1, y, "W"); }
+  }
   return r;
 }
 /* QUICKSAND growth (lit 1..4): 1 / 2 / 3 open dark arcs by heat over the hand drawing, thickening frame by frame, two gaps each; never a closed ring */

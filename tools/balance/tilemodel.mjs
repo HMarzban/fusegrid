@@ -7,17 +7,18 @@
    model exactly as it reaches step(). Never imported by src/. */
 import { CFG, T, key } from "../../src/core/config.js";
 import { tileOf } from "../../src/core/board.js";
-import { featProfile, isBelt, isStream, isFlow, flowDir } from "../../src/core/feat.js";
+import { featProfile, isBelt, beltDir, isStream, isFlow, flowDir, pairTwins } from "../../src/core/feat.js";
+import { portalDim, MAX_JUMPS } from "../../src/core/tileportal.js";
 import { paceMul } from "../../src/core/pace.js";
 
 export const C = CFG.COLS, R = CFG.ROWS, N = C * R;
 export const BD = [[1, 0], [0, 1], [-1, 0], [0, -1]];
-export const NAME = Object.freeze({ BELT: "CONVEYOR", GLIDE: "ICE PATCH", BLOOM: "BOOSTER", PLATE: "TRAP", STREAM: "STREAM" });
+export const NAME = Object.freeze({ BELT: "CONVEYOR", GLIDE: "ICE PATCH", BLOOM: "BOOSTER", PLATE: "TRAP", STREAM: "STREAM", PORTAL: "PORTAL" });
 export const prof = (w) => featProfile(w);
 export const beltV = (w) => prof(w).belt.v * paceMul(w.pace);
 
 /* the tile model runs only when the room carries a RULE code (1..11, STREAM is
-   8..11); art-only codes 12..14 (QUICKSAND / PORTAL / GATE) play as plain floor */
+   8..11, or 13 PORTAL); QUICKSAND and GATE are grid cells to the model */
 const memo = new WeakMap();
 export function rulesOn(w) {
   const f = w.feat;
@@ -25,14 +26,14 @@ export function rulesOn(w) {
   let v = memo.get(f);
   if (v === undefined) {
     v = false;
-    for (let i = 0; i < f.length; i++) if ((f[i] >= 1 && f[i] <= 7) || isStream(f[i])) { v = true; break; }
+    for (let i = 0; i < f.length; i++) if ((f[i] >= 1 && f[i] <= 7) || isStream(f[i]) || f[i] === 13) { v = true; break; }
     memo.set(f, v);
   }
   return v;
 }
 export function ruleKind(w) {
   if (!w.feat) return null;
-  for (const v of w.feat) { if (isBelt(v)) return "BELT"; if (v === 5) return "GLIDE"; if (v === 6) return "BLOOM"; if (v === 7) return "PLATE"; if (isStream(v)) return "STREAM"; }
+  for (const v of w.feat) { if (isBelt(v)) return "BELT"; if (v === 5) return "GLIDE"; if (v === 6) return "BLOOM"; if (v === 7) return "PLATE"; if (isStream(v)) return "STREAM"; if (v === 13) return "PORTAL"; }
   return null;
 }
 export const BOT_BRAKE = !(globalThis.process && globalThis.process.env && globalThis.process.env.FG_BOTBRAKE === "0");
@@ -54,17 +55,30 @@ export const onWater = (w, k) => isStream(w.feat[k]) && w.grid[k] === T.EMPTY;
 /* #28: does a CONVEYOR carry a standing player (actors ride at v > 0)? */
 export const carries = (w) => { const pb = prof(w).belt; return !!pb.actors && pb.v > 0; };
 
+/* PORTAL: the twin of k for a walker crossing onto it now, -1 when k is plain floor to him */
+export const warpTo = (w, k) => (w.featPair && w.featPair[k] && w.grid[k] === T.EMPTY && !portalDim(w, k) ? pairTwins(w.featPair)[k] : -1);
+export const armPt = (w) => (w.featPair ? { twin: pairTwins(w.featPair), blast: !!prof(w).portal.blast } : null);
 /* a cross footprint on grid g: centre plus arms [dx, dy, len]; the edge and
-   WALL block, a BRICK is hit and stops the arm unless `pass` */
-export function cross(g, cx, cy, arms, pass, out) {
+   WALL block, a BRICK is hit and stops the arm unless `pass`; pt: a PORTAL arm
+   stops on the tile (CORE) or goes on from the twin with its leftover reach */
+export function cross(g, cx, cy, arms, pass, out, pt = null) {
   out.add(key(cx, cy));
-  for (const [dx, dy, len] of arms)
+  for (const [dx, dy, len] of arms) {
+    let x = cx, y = cy, jumps = 0;
     for (let i = 1; i <= len; i++) {
-      const x = cx + dx * i, y = cy + dy * i, v = g[key(x, y)];
+      x += dx; y += dy;
+      const v = g[key(x, y)];
       if (v === undefined || v === T.WALL) break;
       out.add(key(x, y));
       if (v === T.BRICK && !pass) break;
+      const tw = pt ? pt.twin[key(x, y)] : -1;
+      if (tw < 0 || g[tw] === T.WALL) continue;
+      if (!pt.blast || jumps >= MAX_JUMPS) break;
+      jumps++;
+      out.add(tw);
+      x = tw % C; y = (tw / C) | 0;
     }
+  }
   return out;
 }
 export const bombArms = (b) => (b.line ? [[(b.dir || { x: 1 }).x || 0, (b.dir || { y: 0 }).y || 0, b.radius]] : BD.map(([dx, dy]) => [dx, dy, b.radius]));
@@ -130,7 +144,7 @@ export function bombCover(w, b, timer, out, gain = false) {
   const cells = timer != null ? beltPath(w, b, timer) : [[b.tx, b.ty, 0]];
   const arms = bombArms(b), pass = bombPass(b);
   for (const [x, y] of cells) {
-    const s = cross(w.grid, x, y, arms, pass, new Set());
+    const s = cross(w.grid, x, y, arms, pass, new Set(), armPt(w));
     for (const k of s) out.add(k);
     relaySet(w, w.grid, s, x, y, out, new Set(), 0, gain);
   }

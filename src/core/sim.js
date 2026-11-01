@@ -7,6 +7,7 @@ import { hasPact, PACT } from "./pact.js";
 import { paceMul } from "./pace.js";
 import { isBelt, beltDir, featProfile, isStream, isFlow, flowDir, F } from "./feat.js";
 import { tileTick, featSpeed } from "./tiles2.js";
+import { armJump } from "./tileportal.js";
 
 /* A clean intent for one player for this tick. This is exactly what a network
    client would send the server: move vector + edge-triggered fire/remote. */
@@ -280,11 +281,15 @@ function computeBlast(w, cx, cy, radius, pierce, line, dir) {
         { x: 0, y: 1 },
         { x: 0, y: -1 },
       ];
+  let jumped = false;
   for (const d of arms) {
-    let blocked = false;
+    let blocked = false,
+      tx = cx,
+      ty = cy,
+      jumps = 0;
     for (let i = 1; i <= radius && !blocked; i++) {
-      const tx = cx + d.x * i,
-        ty = cy + d.y * i;
+      tx += d.x;
+      ty += d.y;
       if (isWall(w.grid, tx, ty)) {
         blocked = true;
         break;
@@ -292,9 +297,20 @@ function computeBlast(w, cx, cy, radius, pierce, line, dir) {
       const brick = w.grid[key(tx, ty)] === T.BRICK;
       tiles.push({ tx, ty, brick });
       if (brick && !pierce && !line) blocked = true;
+      else if (w.featPair) {
+        const tw = armJump(w, w.grid, key(tx, ty), jumps);
+        if (tw === -2) blocked = true;
+        else if (tw >= 0) {
+          jumps++;
+          jumped = true;
+          tx = tw % CFG.COLS;
+          ty = (tw / CFG.COLS) | 0;
+          tiles.push({ tx, ty, brick: false });
+        }
+      }
     }
   }
-  return tiles;
+  return jumped ? tiles.filter((t, i) => tiles.findIndex((o) => o.tx === t.tx && o.ty === t.ty) === i) : tiles;
 }
 
 function snapFace(face) {

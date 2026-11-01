@@ -28,7 +28,7 @@ export const HOME = Object.freeze({ FACTORY: "BELT", ICE: "GLIDE", JUNGLE: "BLOO
 export const FEAT_PROFILE = Object.freeze([
   Object.freeze({ belt: { actors: false, v: 0.6, thru: true }, glide: { boost: 1.0, coast: 0, turn: 0.35 }, bloom: { fwd: 2, side: 0, delay: 0, cd: 1.0 }, plate: { wind: 0.5, r: 1, cd: 3, inert: 2, near: 4, off: 1, hold: true, chain: false }, stream: { v: 0.8, wade: 1 }, quick: { wait: 30, max: 1, grow: 1.5, retry: 2, sink: 0.6 }, gate: { cross: true, warn: 0.5, shut: 3, after: 3 }, portal: { blast: false, foes: false } }),
   Object.freeze({ belt: { actors: true, v: 1.0, foes: false, thru: true, snap: true, endHalt: true, wallStop: true }, glide: { boost: 1.25, coast: 1, turn: 0.2 }, bloom: { fwd: 2, side: 1, delay: 0.15, cd: 1.0 }, plate: { wind: 0.8, r: 2, cd: 4, inert: 2, near: 4, off: 1, hold: true, chain: false, spare: true }, stream: { v: 1.0, wade: 0.85 }, quick: { wait: 18, max: 3, grow: 1.5, retry: 2, sink: 1 }, gate: { open: 6, warn: 1, shut: 3 }, portal: { blast: true, foes: false } }),
-  Object.freeze({ belt: { actors: true, v: 1.2, thru: true, snap: true, endHalt: true, wallStop: true }, glide: { boost: 1.5, coast: 3, turn: 0.1, stop: "brake" }, bloom: { fwd: 2, side: 2, delay: 0.3, cd: 1.0 }, plate: { wind: 1.0, r: 3, cd: 3, inert: 6, off: 1, hold: true, chain: false, kill: false }, stream: { v: 1.4, wade: 0.75 }, quick: { wait: 10, max: 99, grow: 1.5, retry: 2, sink: 1 }, gate: { open: 4, warn: 0.75, shut: 4 }, portal: { blast: true, foes: true, guard: 3, hold: 2 } }),
+  Object.freeze({ belt: { actors: true, v: 1.2, thru: true, snap: true, endHalt: true, wallStop: true }, glide: { boost: 1.5, coast: 3, turn: 0.1, stop: "brake" }, bloom: { fwd: 2, side: 2, delay: 0.3, cd: 1.0 }, plate: { wind: 1.0, r: 3, cd: 3, inert: 6, off: 1, hold: true, chain: false, kill: false }, stream: { v: 1.4, wade: 0.75 }, quick: { wait: 10, max: 99, grow: 1.5, retry: 2, sink: 1 }, gate: { open: 4, warn: 0.75, shut: 4 }, portal: { blast: true, foes: true, guard: 3, hold: 2, inert: 6 } }),
 ]);
 export const TILE_HELP = Object.freeze({
   BELT: ["CARRIES YOUR BOMBS", "CARRIES BOMBS AND YOU", "CARRIES ALL, FOES TOO"],
@@ -73,6 +73,18 @@ export function tileTip(kind, pr) {
   if (kind === "GATE") return n + (pr.gate.cross ? "SHUTS BEHIND YOU · FOES CAN'T PASS" : "SHUTS ON A CLOCK · WATCH THE WARNING");
   if (kind === "PORTAL") return n + (pr.portal.foes ? "YOU, BOMBS, BLASTS AND FOES JUMP" : pr.portal.blast ? "YOU, BOMBS AND BLASTS JUMP" : "YOU AND BOMBS JUMP · BLASTS STOP");
   return "";
+}
+/* PORTAL placement (V34) and the pair lookup: twin cell per cell, -1 off a portal */
+export const PORTAL_PLACE = Object.freeze({ pairs: 2, start: 12, twin: 8, gap: 3, open: 2, joint: 4, tries: 6 });
+const TWINS = new WeakMap();
+export function pairTwins(pair) {
+  let t = TWINS.get(pair);
+  if (t) return t;
+  t = new Int16Array(N).fill(-1);
+  const seen = [0, -1, -1, -1, -1];
+  for (let k = 0; k < N; k++) { const id = pair[k]; if (!id) continue; if (seen[id] < 0) seen[id] = k; else { t[k] = seen[id]; t[seen[id]] = k; } }
+  TWINS.set(pair, t);
+  return t;
 }
 export function featTier(w) {
   const t = w.featTier != null ? w.featTier : w.heat;
@@ -135,7 +147,7 @@ export function placeFeat(m, seed, level, biome, salt = 0, bgate = null, tpl = "
     else if (kind === "GATE") ok = gate(m, f, rng, far, force, bgate, dS);
     else ok = plate(m, f, rng, dS, force, tpl);
     if (ok) return pair ? { feat: f, force, kind, tries, pair } : { feat: f, force, kind, tries };
-    if (bgate && (kind === "BLOOM" || kind === "STREAM")) break;
+    if (bgate && (kind === "BLOOM" || kind === "STREAM" || kind === "PORTAL")) break;
   }
   return { feat: null, force: [], kind, tries: 40, fallback: true };
 }
@@ -446,31 +458,49 @@ function quick(m, f, rng, far, force, bgate) {
   for (const k of ks) { f[k] = 12; force.push(k); }
   return true;
 }
-/* art-only PORTAL: 1-2 pairs (pair id 1, 2 in `pair`), each pair >= 8 walking steps
-   and >= 8 Manhattan apart, no two tiles within 3 of each other */
+/* V34 PORTAL: greedy up to PORTAL_PLACE.pairs pairs (pair id 1, 2 in `pair`). A pair
+   is kept only if bgate (V35) passes with it and the pairs kept so far; a seed that
+   keeps none ships the plain gen-2 board (V23). */
 function portal(m, f, rng, far, force, pair, bgate, dS) {
-  const cand = [], used = [];
-  for (let y = 1; y < R - 1; y++) for (let x = 1; x < C - 1; x++) if (far(x, y)) cand.push([x, y]);
+  const P = PORTAL_PLACE, cand = [];
+  for (let y = 1; y < R - 1; y++) for (let x = 1; x < C - 1; x++) if (far(x, y) && dS[key(x, y)] >= P.start && D4.filter(([dx, dy]) => open(m, x + dx, y + dy)).length >= P.open) cand.push([x, y]);
   shuf(cand, rng);
-  const want = rng.int(1, 2);
-  let made = 0;
-  for (let id = 1; id <= want; id++) {
-    let got = false;
-    for (let i = 0; i < cand.length && !got; i++) {
+  /* the next pair after `used`, in shuffled order, from candidate index `from` */
+  const nextPair = (used, from) => {
+    for (let i = from; i < cand.length; i++) {
       const a = cand[i];
-      if (used.some((u) => manh(u, a) < 3)) continue;
+      if (used.some((u) => manh(u, a) <= P.gap)) continue;
       const d = bfs(m, a[0], a[1]);
-      for (let j = 0; j < cand.length; j++) {
+      for (let j = i + 1; j < cand.length; j++) {
         const b = cand[j];
-        if (j === i || manh(a, b) < 8 || d[key(b[0], b[1])] < 8 || used.some((u) => manh(u, b) < 3)) continue;
-        used.push(a, b);
-        for (const [x, y] of [a, b]) { f[key(x, y)] = 13; pair[key(x, y)] = id; force.push(key(x, y)); }
-        got = true; made++;
-        break;
+        if (manh(a, b) >= P.twin && d[key(b[0], b[1])] >= P.twin && manh(a, b) > P.gap && !used.some((u) => manh(u, b) <= P.gap)) return { a, b, i };
       }
     }
+    return null;
+  };
+  const keep = (u) => { u.forEach(([x, y], i) => { f[key(x, y)] = 13; pair[key(x, y)] = 1 + (i >> 1); force.push(key(x, y)); }); return u.length > 0; };
+  /* most boards take two of the first pairs tried: one gate call each, not two */
+  for (let t = 0, from = 0; t < P.joint; t++) {
+    const p1 = nextPair([], from), p2 = p1 && nextPair([p1.a, p1.b], from + 1);
+    if (!p2) break;
+    if (!bgate || bgate([p1.a, p1.b, p2.a, p2.b])) return keep([p1.a, p1.b, p2.a, p2.b]);
+    from = p1.i + 1;
   }
-  return made > 0;
+  const used = [];
+  for (let id = 1; id <= P.pairs; id++) {
+    let from = 0, tried = 0, got = false;
+    while (!got && tried < P.tries) {
+      const q = nextPair(used, from);
+      if (!q) break;
+      tried++;
+      from = q.i + 1;
+      if (bgate && !bgate([...used, q.a, q.b])) continue;
+      used.push(q.a, q.b);
+      got = true;
+    }
+    if (!got) break;
+  }
+  return keep(used);
 }
 /* V32: up to 3 singles, at least 2, on straight corridor tiles (two opposite open
    neighbours, nothing else), no two within 4 Manhattan; bgate keeps a candidate only if the

@@ -7,6 +7,9 @@
    (tests/demobot-tiles.test.mjs; the full pin is `tilesweep.mjs --plan pin`).
    Tile model (spec 2026-10-21 §6, synthesis §7.5), all knobs read through
    the sim's featProfile(w):
+   - PORTAL (#27): a walk onto a live portal comes out of the twin, in the flee
+     search, the timed search and every hop; a twin in danger is no step; a
+     blast's arm goes on from the twin in the danger map;
    - danger: CONVEYOR edge costs in the flee search and every cell a carried
      bomb reaches before its fuse; ICE PATCH flee destinations (no wait tile
      at MAX, coast endpoints; with glide.stop "brake" every ice tile, since
@@ -33,8 +36,8 @@
 import {CFG,T,key,DIRS4} from "../../src/core/config.js";
 import {bfsNext} from "../../src/core/board.js";
 import {createRng} from "../../src/core/rng.js";
-import {isFlow} from "../../src/core/feat.js";
-import {rulesOn,prof,tileDanger,bombCover,iceDestOk,moveSpeed} from "./tilemodel.mjs";
+import {isBelt,isFlow} from "../../src/core/feat.js";
+import {rulesOn,prof,tileDanger,bombCover,iceDestOk,moveSpeed,warpTo} from "./tilemodel.mjs";
 import {escape} from "./escape.mjs";
 
 /* FG_BOTBRAKE: unset = brakes at once; "0" = never, and the flee model knows
@@ -115,7 +118,7 @@ export function createTileBot(seed){
      BFS does (first safe tile with no danger neighbour, else the first safe
      one): the fork departs from the stock bot only where a tile does. */
   function fleeMoveT(w,ptx,pty,danger){
-    const N=CFG.COLS*CFG.ROWS,best=new Float64Array(N).fill(Infinity),seq=new Int32Array(N),
+    const N=CFG.COLS*CFG.ROWS,best=new Float64Array(N).fill(Infinity),seq=new Int32Array(N),step0=new Int16Array(N),
       done=new Uint8Array(N),prev=new Int16Array(N).fill(-1),p=w.players[0],s0=key(ptx,pty);
     const pb=prof(w).belt;
     best[s0]=0;
@@ -132,18 +135,21 @@ export function createTileBot(seed){
         if(fallback<0)fallback=k;
        }
       for(const d of DIRS4){
-        const nx=x+d.x,ny=y+d.y,nk=key(nx,ny);
+        const nx=x+d.x,ny=y+d.y,ok=key(nx,ny);
         if(nx<0||ny<0||nx>=CFG.COLS||ny>=CFG.ROWS)continue;
-        if(done[nk]||w.grid[nk]!==T.EMPTY)continue;
+        if(w.grid[ok]!==T.EMPTY)continue;
+        const tw=warpTo(w,ok),nk=tw>=0?tw:ok;
+        if(done[nk])continue;
         const v=pb.actors?moveSpeed(w,p,k,d.x,d.y,true,true):1;
         if(v<=0.05)continue;
         const nt=bt+1/v;
-        if(nt<best[nk]){best[nk]=nt;prev[nk]=k;seq[nk]=n++;}
+        if(nt<best[nk]){best[nk]=nt;prev[nk]=k;seq[nk]=n++;step0[nk]=ok;}
        }
      }
     if(fallback<0)return null;
     let cur=fallback;
     while(prev[cur]!==s0)cur=prev[cur];
+    cur=step0[cur];
     return {x:Math.sign(cur%CFG.COLS-ptx),y:Math.sign(((cur/CFG.COLS)|0)-pty)};
    }
 
@@ -191,7 +197,27 @@ export function createTileBot(seed){
   function foeAt(w,x,y){
     return w.enemies.some(e=>!e.dead&&e.tx===x&&e.ty===y);
    }
+  /* PORTAL: bfsNext with warp edges, so a path never walks into a warp it did not plan */
+  function hopWarp(w,x0,y0,x1,y1,blocked){
+    const s0=key(x0,y0),t0=key(x1,y1),first=new Map(),q=[s0];
+    first.set(s0,-1);
+    for(let h=0;h<q.length;h++){
+      const a=q[h],x=a%CFG.COLS,y=(a/CFG.COLS)|0;
+      for(const d of DIRS4){
+        const nx=x+d.x,ny=y+d.y,ok=key(nx,ny);
+        if(nx<0||ny<0||nx>=CFG.COLS||ny>=CFG.ROWS||w.grid[ok]!==T.EMPTY||(blocked&&blocked.has(ok)))continue;
+        const tw=warpTo(w,ok),nk=tw>=0?tw:ok;
+        if(first.has(nk))continue;
+        const f=a===s0?ok:first.get(a);
+        first.set(nk,f);
+        if(nk===t0||ok===t0)return {x:Math.sign(f%CFG.COLS-x0),y:Math.sign(((f/CFG.COLS)|0)-y0)};
+        q.push(nk);
+       }
+     }
+    return null;
+   }
   function hopToward(w,x0,y0,x1,y1,blocked){
+    if(w.featPair)return hopWarp(w,x0,y0,x1,y1,blocked);
     const hop=bfsNext(w.grid,x0,y0,x1,y1,false,blocked);
     if(!hop)return null;
     return {x:Math.sign(hop.x-x0),y:Math.sign(hop.y-y0)};
@@ -250,10 +276,17 @@ export function createTileBot(seed){
     if(nx<0||ny<0||nx>=CFG.COLS||ny>=CFG.ROWS)return false;
     if(w.grid[key(nx,ny)]!==T.EMPTY)return false;
     if(foeAt(w,nx,ny))return false;
+    if(warpBad(w,nx,ny,danger))return false;
     if(w.bombs.some(b=>b.tx===nx&&b.ty===ny)&&!onBomb)return false;
     if(danger.has(key(nx,ny))&&!onBomb&&!danger.has(key(ptx,pty)))return false;
     if(deep&&w.bombs.length&&hugging(nx,ny,danger))return false;
     return true;
+   }
+
+  function warpBad(w,nx,ny,danger){
+    if(!w.featPair)return false;
+    const tw=warpTo(w,key(nx,ny));
+    return tw>=0&&danger.has(tw);
    }
 
   function tryPlantFoe(w,p,ptx,pty,ne,nd){
@@ -434,6 +467,7 @@ export function createTileBot(seed){
       const nx=ptx+mx,ny=pty+my;
       const reenter=world.bombs.some(b=>b.tx===nx&&b.ty===ny)&&!onBomb;
       if(reenter||foeAt(world,nx,ny))out.move={x:0,y:0};
+      else if(!inPocket&&!onBomb&&warpBad(world,nx,ny,danger))out.move={x:0,y:0};
       else if(!inPocket&&!onBomb&&danger.has(key(nx,ny)))out.move={x:0,y:0};
       else if(deep&&world.bombs.length&&hugging(nx,ny,danger))out.move={x:0,y:0};
      }

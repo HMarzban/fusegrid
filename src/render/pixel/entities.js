@@ -9,7 +9,7 @@ import {CFG, biomeOf} from "../../core/config.js";
 import {ITEM_FAMILY} from "../icons.js";
 import {MOTION, COLLECT_T, phaseOf, blinkAt, foeM, bobAt, leanAt, lockK, spawnK, itemIdle, collectM, collectParticle} from "../motion.js";
 import {lockOn} from "../lockon.js";
-import {relayTell} from "../relaytell.js";
+import {relayTell, dimCells} from "../relaytell.js";
 import {fxOf} from "../entityfx.js";
 import {getFxOpts} from "../fx.js";
 import {PX_T} from "./timing.js";
@@ -46,9 +46,10 @@ export function drawLanes(c, V, world) {
 /* relay tell (relaytell.js, issue #21): 4 art px corner brackets on every tile a relay will reach, outline drop then light, in the world's own wallHi ramp, stepped alpha,
    never pulsing; the flare adds a flat wash scaled by REDUCE FLASH. No tell = no ctx call. */
 export function drawRelayTell(c, V, world) {
-  const cells = relayTell(world);
-  if (!cells.length) return;
+  const cells = relayTell(world), dim = dimCells(world);
+  if (!cells.length && !dim.length) return;
   const R = pxRamp(biomeOf(world.level).wallHi), S = CFG.TILE / 2;
+  for (const e of dim) { c.globalAlpha = 0.6; c.fillStyle = R.outline; c.fillRect(e.x * S + 1, e.y * S + 1, S - 2, S - 2); }
   for (const e of cells) {
     if (e.k <= 0.34) continue;
     const x0 = e.x * S + 2, y0 = e.y * S + 2, n = S - 4;

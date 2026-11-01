@@ -18,7 +18,7 @@
    Light stays the frozen key at upper left: shadows fall right and away. */
 import * as THREE from "../../../vendor/three.module.js";
 import {CFG, T as TT, BIOMES, biomeOf as biomeAt} from "../../core/config.js";
-import {relayTell} from "../relaytell.js";
+import {relayTell, dimCells} from "../relaytell.js";
 import {getFxOpts} from "../fx.js";
 
 const W = CFG.COLS * CFG.TILE, D = CFG.ROWS * CFG.TILE, T = CFG.TILE, C = CFG.COLS, R = CFG.ROWS;
@@ -95,17 +95,18 @@ const TELLT = new THREE.DataTexture(TD, C, R, THREE.RGBAFormat, THREE.UnsignedBy
 TELLT.magFilter = TELLT.minFilter = THREE.NearestFilter; TELLT.generateMipmaps = false; TELLT.needsUpdate = true;
 export const TELL = {tex: {value: TELLT}, col: {value: new THREE.Color(0xffffff)}, n: {value: 0}, data: TD};
 export function feedTell(world) {
-  const cells = relayTell(world), fk = getFxOpts().flashK;
+  const cells = relayTell(world), fk = getFxOpts().flashK, dim = dimCells(world);
   TN.fill(0);
+  for (const e of dim) { const o = (e.y * C + e.x) * 4; TN[o + 2] = 255; TN[o + 3] = 255; }
   for (const e of cells) { const o = (e.y * C + e.x) * 4; TN[o] = Math.round(255 * e.k); TN[o + 1] = e.hot ? Math.round(255 * Math.min(1, fk) * e.k) : 0; TN[o + 3] = 255; }
   let diff = false;
   for (let i = 0; i < TD.length; i++) if (TD[i] !== TN[i]) { TD[i] = TN[i]; diff = true; }
   if (diff) TELLT.needsUpdate = true;
-  TELL.n.value = cells.length;
+  TELL.n.value = cells.length + dim.length;
   if (cells.length) TELL.col.value.set(biomeAt(world.level).wallHi);
 }
 const TELLS = (uv) => `
-if(wellRtN>0.5){ vec4 rt=texture2D(wellRt,${uv}); if(rt.r>0.004){
+if(wellRtN>0.5){ vec4 rt=texture2D(wellRt,${uv}); if(rt.b>0.004){ diffuseColor.rgb*=0.45; totalEmissiveRadiance*=0.3; } if(rt.r>0.004){
  vec2 rq=abs(fract((${uv})*vec2(${f(C)},${f(R)}))-0.5); float ro=max(rq.x,rq.y), ri=min(rq.x,rq.y);
  float rb=step(0.17,ri), ru=rb*step(0.28,ro)*step(ro,0.41), rs=rb*smoothstep(0.305,0.32,ro)*(1.0-smoothstep(0.375,0.39,ro));
  diffuseColor.rgb*=1.0-0.6*rt.r*ru;
