@@ -1,4 +1,5 @@
-/* #24: the first-contact tile tips (coach v2 bits b g c x) and the FLOOR line on
+/* #24: the first-contact tile tips (coach v2 bits b g c x f q y o, then z = the
+   ICE PATCH brake) and the FLOOR line on
    the LEVEL SELECT room card. Gen 3 only: a normal run must see neither. */
 import { COACH2_DUR, COACH2_KEY, COACH_TILE_DUR, coach2Mark, coach2Seen, coach2Tick, coachAlpha, coachTip, loadCoach2 } from "../src/app/coach.js";
 import { FEAT_PROFILE, TILE_HELP, TILE_NAME, featKindOf, isBelt, tileTip } from "../src/core/feat.js";
@@ -55,6 +56,9 @@ const worldOn = (kind, heat = 0, seed = 4242) => { const w = room(3, seed, ROOM[
     check(`${k} heat ${h}: touch and keyboard read the same line`, coachTip(k, "p", wk) === coachTip(k, "d", wk) && coachTip(k, "l", wk) === tips[k][h]);
   }
   check("no world, no tip: a tile line is never guessed", coachTip("BELT", "d") === "");
+  // the 6 s window at 3 words/s (an action game, the tip competes with play); a "·" is not a word
+  const words = (s) => s.split(/\s+/).filter((x) => x !== "·").length;
+  for (const k of KINDS) tips[k].forEach((s, h) => check(`${k} heat ${h} reads inside the ${COACH_TILE_DUR} s window at 3 words/s`, words(s) / 3 <= COACH_TILE_DUR, words(s) + " words"));
   // one source: the copy literals live in feat.js alone
   const walk = (d) => readdirSync(d).flatMap((f) => { const p = join(d, f); return statSync(p).isDirectory() ? walk(p) : /\.js$/.test(f) ? [p] : []; });
   const lits = Object.values(TILE_HELP).flat().concat(["HURTS ONLY YOU", "PRESS BACK AS YOU LET GO", "HOLD A SIDE TO STEP OFF", "NO BOMB CHAIN", '"ICE PATCH"', '"CONVEYOR"']);
@@ -67,15 +71,21 @@ const worldOn = (kind, heat = 0, seed = 4242) => { const w = room(3, seed, ROOM[
   check("no second literal of any tile copy in src/", strays.length === 0, strays.join("; "));
 }
 
-// ---- the record: sixteen bits, an old eight-bit record loads byte-stable ----
+// ---- the record: seventeen bits, an old eight- or sixteen-bit record loads byte-stable ----
 {
   const s = memStore([[COACH2_KEY, '{"k":1,"t":0,"r":1,"p":0,"l":0,"w":1,"i":0,"s":1}']]);
   const v = loadCoach2(s);
   check("an old eight-bit record keeps its bits and leads the record, the new bits at 0",
-    JSON.stringify(v) === '{"k":1,"t":0,"r":1,"p":0,"l":0,"w":1,"i":0,"s":1,"b":0,"g":0,"c":0,"x":0,"f":0,"q":0,"y":0,"o":0}', JSON.stringify(v));
+    JSON.stringify(v) === '{"k":1,"t":0,"r":1,"p":0,"l":0,"w":1,"i":0,"s":1,"b":0,"g":0,"c":0,"x":0,"f":0,"q":0,"y":0,"o":0,"z":0}', JSON.stringify(v));
   const once = KINDS.reduce((o, k) => coach2Mark(o, k), v);
   check("each tile has its own bit", once.b === 1 && once.g === 1 && once.c === 1 && once.x === 1 && once.f === 1 && once.q === 1 && once.y === 1 && once.o === 1 && KINDS.every((k) => coach2Seen(once, k)));
   check("the verbs' bits did not move", once.k === 1 && once.t === 0 && once.s === 1);
+  const raw16 = '{"k":1,"t":0,"r":0,"p":1,"l":0,"w":0,"i":0,"s":0,"b":1,"g":1,"c":0,"x":0,"f":1,"q":0,"y":0,"o":1}';
+  const v16 = loadCoach2(memStore([[COACH2_KEY, raw16]]));
+  check("a sixteen-bit record keeps its bytes as the prefix, the brake bit at 0", JSON.stringify(v16) === raw16.slice(0, -1) + ',"z":0}', JSON.stringify(v16));
+  check("a plain tile mark leaves the brake bit alone", coach2Mark(loadCoach2(memStore()), "GLIDE").z === 0);
+  const br = coach2Mark(loadCoach2(memStore()), "BRAKE");
+  check("the brake mark sets its own bit and GLIDE's, nothing else", br.z === 1 && br.g === 1 && Object.values(br).reduce((a, b) => a + b, 0) === 2, JSON.stringify(br));
 }
 
 // ---- first contact: opens, times out on the PLAY clock, once ever, pairs ----
@@ -92,7 +102,7 @@ for (const k of KINDS) {
   const again = [];
   for (let i = 0; i < 10; i++) again.push(...tick(st, w, s));
   const fresh = { kind: null, t: 0 };
-  again.push(...tick(fresh, worldOn(k, 2), s));
+  again.push(...tick(fresh, worldOn(k, k === "GLIDE" ? 1 : 2), s)); // GLIDE at MAX is the brake tip's, below
   check(`${k}: never again, this run or the next, at any heat`, again.length === 0 && !st.kind && !fresh.kind, JSON.stringify(again));
 }
 {
@@ -140,6 +150,85 @@ for (const k of KINDS) {
   check("a dead player meets nothing", !sd.kind);
 }
 {
+}
+
+// ---- the ICE PATCH brake (bit z): V19 at MAX assumes it, so CORE's tip cannot spend it ----
+{
+  const iceRun = (s, heat, prof) => { const w = worldOn("GLIDE", heat); if (prof) w.featProf = prof; const st = { kind: null, t: 0 }, log = [...tick(st, w, s)]; return { w, st, log }; };
+  const drain = (a, s) => { for (let i = 0; i < 500 && a.st.kind; i++) a.log.push(...tick(a.st, a.w, s, 1 / 60)); for (let i = 0; i < 30; i++) a.log.push(...tick(a.st, a.w, s, 1 / 60)); };
+  const shows = (a) => a.log.filter((o) => o[0] === "coach_shown").map((o) => o[1].v).join();
+  // first ICE at MAX: one tip covering the brake, never two in a row
+  let s = memStore(), a = iceRun(s, 2);
+  const first = coachTip(a.st.kind, "d", a.w);
+  check("first ICE at MAX: the tip names the brake", a.st.kind === "BRAKE" && /PRESS BACK AS YOU LET GO/.test(first), first);
+  check("no second string: it IS the GLIDE line of this heat", first === tileTip("GLIDE", FEAT_PROFILE[2]));
+  check("touch and keyboard read the same brake line", coachTip("BRAKE", "p", a.w) === first && coachTip("BRAKE", "l", a.w) === first);
+  drain(a, s);
+  check("first ICE at MAX: one tip, shown once, dismissed once, rn:timeout", shows(a) === "BRAKE" && a.log.length === 2 && a.log[1][0] === "coach_dismissed" && a.log[1][1].v === "BRAKE" && a.log[1][1].rn === "timeout", JSON.stringify(a.log));
+  const both = loadCoach2(s);
+  check("first ICE at MAX spends both bits", both.g === 1 && both.z === 1, JSON.stringify(both));
+  for (const h of [0, 1, 2]) { const b = iceRun(s, h); drain(b, s); check(`after it, ICE at heat ${h} says nothing again`, b.log.length === 0 && !b.st.kind, JSON.stringify(b.log)); }
+  // seen at CORE / PLUS, then MAX: the brake still comes, once
+  for (const h of [0, 1]) {
+    s = memStore(); a = iceRun(s, h);
+    check(`ICE at heat ${h}: the plain tip, no brake in it`, a.st.kind === "GLIDE" && !/PRESS BACK/.test(coachTip(a.st.kind, "d", a.w)));
+    drain(a, s);
+    const v = loadCoach2(s);
+    check(`ICE at heat ${h}: GLIDE's bit only, the brake still owed`, v.g === 1 && v.z === 0, JSON.stringify(v));
+    const b = iceRun(s, 2);
+    check(`seen at heat ${h}, then MAX: the brake tip opens`, b.st.kind === "BRAKE" && b.log.length === 1, JSON.stringify(b.log));
+    drain(b, s);
+    check(`seen at heat ${h}, then MAX: once, bit set`, shows(b) === "BRAKE" && loadCoach2(s).z === 1, JSON.stringify(b.log));
+    const c = iceRun(s, 2);
+    check(`seen at heat ${h}, then MAX twice: never again`, c.log.length === 0 && !c.st.kind, JSON.stringify(c.log));
+  }
+  // a CORE-seen record from before this bit gets the tip too
+  s = memStore([[COACH2_KEY, '{"k":0,"t":0,"r":0,"p":0,"l":0,"w":0,"i":0,"s":0,"b":0,"g":1,"c":0,"x":0,"f":0,"q":0,"y":0,"o":0}']]);
+  check("an old record with ICE seen still owes the brake at MAX", iceRun(s, 2).st.kind === "BRAKE");
+  // the profile decides, never the heat index
+  const noBrake = FEAT_PROFILE.map((r) => ({ ...r, glide: { ...r.glide, stop: undefined } }));
+  s = memStore(); a = iceRun(s, 2, noBrake);
+  check("a profile without the brake never tips it", a.st.kind === "GLIDE" && !/PRESS BACK/.test(coachTip(a.st.kind, "d", a.w)));
+  drain(a, s);
+  check("and leaves its bit at 0", loadCoach2(s).z === 0 && loadCoach2(s).g === 1);
+  const plusBrake = FEAT_PROFILE.map((r, i) => (i === 1 ? { ...r, glide: { ...r.glide, coast: 3, stop: "brake" } } : r));
+  s = memStore();
+  check("a retuned profile with the brake at PLUS tips it at PLUS", iceRun(s, 1, plusBrake).st.kind === "BRAKE");
+  const stepBrake = FEAT_PROFILE.map((r, i) => (i === 2 ? { ...r, glide: { ...r.glide, coast: 1, stop: "brake" } } : r));
+  s = memStore(); a = iceRun(s, 2, stepBrake);
+  check("a brake on a one-step coast: its line names no brake, so the plain tip, the bit kept", a.st.kind === "GLIDE" && !/PRESS BACK/.test(coachTip(a.st.kind, "d", a.w)));
+  drain(a, s);
+  check("and the brake is still owed", loadCoach2(s).z === 0);
+  // same close rules as every tile tip
+  s = memStore(); a = iceRun(s, 2);
+  const next = room(3, 4242, 3, 2);
+  clear(next);
+  let o = tick(a.st, next, s);
+  check("a live brake tip closes rn:room on a room change, both bits still 0", !a.st.kind && o.length === 1 && o[0][1].v === "BRAKE" && o[0][1].rn === "room" && loadCoach2(s).z === 0 && loadCoach2(s).g === 0, JSON.stringify(o));
+  s = memStore(); a = iceRun(s, 2);
+  check("it stays open on its own room, away from the ice", (() => { clear(a.w); return tick(a.st, a.w, s).length === 0 && a.st.kind === "BRAKE"; })());
+  s = memStore(); a = iceRun(s, 2);
+  a.w.players[0].kick = true;
+  a.w.events = [{ t: "power", kind: "kick" }];
+  o = tick(a.st, a.w, s);
+  check("a pickup replaces it: dismissed first, re-queued, bits 0", a.st.kind === "kick" && a.st.q.join() === "BRAKE" && o[0][1].v === "BRAKE" && o[0][1].rn === "replace" && o[1][1].v === "kick" && loadCoach2(s).z === 0, JSON.stringify(o));
+  a.w.events = [];
+  o = [];
+  for (let i = 0; i < 30; i++) o.push(...tick(a.st, a.w, s));
+  check("still on the ice: no ping-pong", a.st.kind === "kick" && o.length === 0, JSON.stringify(o));
+  o = [];
+  for (let i = 0; i < 200 && a.st.kind === "kick"; i++) o.push(...tick(a.st, a.w, s, 1 / 60));
+  check("the verb closes and the brake tip reopens", a.st.kind === "BRAKE" && o.at(-1)[1].v === "BRAKE", JSON.stringify(o));
+  s = memStore();
+  const w1 = worldOn("GLIDE", 2), st1 = { kind: null, t: 0 };
+  tick(st1, w1, s, 0.016, true);
+  check("v1 open: the brake queues", !st1.kind && st1.q.join() === "BRAKE");
+  tick(st1, w1, s, 0.016, false);
+  check("v1 closed: the queued brake opens (its room has ice)", st1.kind === "BRAKE" && st1.q.length === 0);
+  check("the tile window and fade apply", coachAlpha({ kind: "BRAKE", t: 2 }) === 1 && coachAlpha({ kind: "BRAKE", t: COACH_TILE_DUR }) === 0);
+  // another room's tile at MAX is untouched
+  s = memStore();
+  check("only ICE has a brake tip", iceRun(s, 2).st.kind === "BRAKE" && (() => { const st = { kind: null, t: 0 }; tick(st, worldOn("BELT", 2), memStore()); return st.kind === "BELT"; })());
 }
 
 // ---- gen 1 and gen 2 never: no feat layer, no tip, whatever the world does ----
@@ -270,7 +359,7 @@ function fakeCanvasTexts() {
     check("contact after a retry reopens", seeTip());
     for (let i = 0; i < 480 && !coach2Seen(loadCoach2(ls), "BLOOM"); i++) g.loop((t += 16));
     check("the real loop marks it seen after the window", coach2Seen(loadCoach2(ls), "BLOOM"));
-    check("the store round-trips sixteen fields", Object.keys(JSON.parse(ls.getItem(COACH2_KEY))).length === 16, ls.getItem(COACH2_KEY));
+    check("the store round-trips seventeen fields", Object.keys(JSON.parse(ls.getItem(COACH2_KEY))).length === 17, ls.getItem(COACH2_KEY));
     g.stop && g.stop();
   } finally {
     delete globalThis.window;

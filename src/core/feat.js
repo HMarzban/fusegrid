@@ -44,6 +44,8 @@ export const TILE_NAME = Object.freeze({ BLOOM: "BOOSTER", GLIDE: "ICE PATCH", B
    no key names, so every layout reads the same. Facts come from the live
    profile row, so a retuned knob cannot leave the copy behind. */
 const REACH = ["", "SHORT", "LONG", "HUGE"];
+/* The one test for "this heat's ICE line teaches the brake", V19's nostop case */
+export const glideBrakes = (pr) => pr.glide.coast >= 2 && pr.glide.stop === "brake";
 export function tileTip(kind, pr) {
   const n = TILE_NAME[kind] + " · ";
   if (kind === "BLOOM") {
@@ -54,7 +56,7 @@ export function tileTip(kind, pr) {
     const g = pr.glide;
     if (!g.coast) return n + TILE_HELP.GLIDE[0];
     if (g.coast === 1) return n + "FAST ICE · LET GO AND YOU SLIDE A STEP";
-    return n + "FAST ICE, YOU SLIDE ON · " + (g.stop === "brake" ? "STOP EARLY: PRESS BACK AS YOU LET GO" : "ONLY A BLOCK STOPS YOU");
+    return n + "FAST ICE, YOU SLIDE ON · " + (glideBrakes(pr) ? "STOP EARLY: PRESS BACK AS YOU LET GO" : "ONLY A BLOCK STOPS YOU");
   }
   if (kind === "BELT") {
     const b = pr.belt;
