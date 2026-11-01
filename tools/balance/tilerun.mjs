@@ -113,7 +113,7 @@ export function runRoom(c, s) {
       if (pendHit && tt - lastEsc <= 3) { r.noEscHit++; pendHit = 0; }
       const hx = tileOf(hurtEv.x), hy = tileOf(hurtEv.y), hk = key(hx, hy);
       const bl = w.blades.filter((b) => b.tiles && b.tiles.some((q) => q.tx === hx && q.ty === hy));
-      const onTile = tm && w.feat[hk] >= 1 && w.feat[hk] <= 7;
+      const onTile = tm && w.feat[hk] >= 1 && w.feat[hk] <= 11;
       if (bl.length) {
         r.hBlast++;
         if (bl.some((b) => b.src === "relay")) r.ownRelay++;
