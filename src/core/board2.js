@@ -19,7 +19,7 @@ import { createRng } from "./rng.js";
 import { genBoard } from "./board.js";
 import { heatProfile } from "./heat.js";
 import { placeFeat, FEAT_PROFILE, HOME } from "./feat.js";
-import { featChecks } from "./featchecks.js";
+import { featChecks, gateSplit, gateSpot } from "./featchecks.js";
 import { validateBoard, stampStart, STRUCT, TRIES, POCKET, DOORS, CORNERS } from "./fair.js";
 
 const C = CFG.COLS, R = CFG.ROWS, N = C * R;
@@ -392,7 +392,21 @@ function bloomGate(base, level, lay) {
 /* wave 2 / 3 placement gates: a biome's function checks candidates against the
    grids of all three heats, the same contract as bloomGate's closure. */
 function tileGate(base, level, lay) {
+  if (lay.biome === "CROWN") return gatePlace(base, level);
   return null;
+}
+/* V32 + V33: a gate stays only if, with every kept gate shut for good, the map
+   keeps its pieces and no heat gains a no-escape spot. A candidate that fails
+   alone fails in any company, so a re-shuffle never pays for it twice. */
+function gatePlace(base, level) {
+  const bad = new Set();
+  return ([x, y], used) => {
+    const c = key(x, y), ks = [...used.map(([a, b]) => key(a, b)), c];
+    if (bad.has(c)) return false;
+    const ok = !gateSplit(base[0].grid, ks) && [0, 1, 2].every((h) => !gateSpot({ grid: base[h].grid, level, heat: h }, FEAT_PROFILE[h], ks, c));
+    if (!ok && !used.length) bad.add(c);
+    return ok;
+  };
 }
 function place3(base, seed, level, heat) {
   const L = base[heat].layout, lay = layout2(seed, level, L.tries[0]);

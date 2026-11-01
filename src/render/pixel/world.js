@@ -7,6 +7,7 @@
    and through the Node RGBA shim (tools/pixel/rgba.mjs). Reads world, never
    writes it; per-entity anim state lives in V (the renderer's view state). */
 import {CFG, T, BIOMES} from "../../core/config.js";
+import {gateBar} from "../../core/tilegate.js";
 import {wallCodes} from "../wallvar.js";
 import {cellSpec} from "../featdraw.js";
 import {floorVar} from "../floorart.js";
@@ -37,7 +38,7 @@ export function resetView(V) { V.walk = new WeakMap(); V.ghostWalk = newWalk(); 
 export function trackGrid(V, world) {
   const g = world.grid, p = V.prev;
   if (!g) return;
-  if (V.prevGrid === g && V.shots) for (let k = 0; k < g.length; k++) if (g[k] === T.WALL && p[k] !== T.WALL) V.shots.push(OS.SLAM, (k % C) * CFG.TILE + TA, ((k / C) | 0) * CFG.TILE + TA, V.t);
+  if (V.prevGrid === g && V.shots) for (let k = 0; k < g.length; k++) if (g[k] === T.WALL && p[k] !== T.WALL && !gateBar(world, k)) V.shots.push(OS.SLAM, (k % C) * CFG.TILE + TA, ((k / C) | 0) * CFG.TILE + TA, V.t);
   for (let k = 0; k < g.length; k++) p[k] = g[k];
   V.prevGrid = g;
 }
@@ -48,7 +49,7 @@ function drawTiles(c, V, world) {
   const oc = (i) => (g[i] === T.WALL ? 1 : g[i] === T.BRICK ? 2 : 0);
   for (let y = 0; y < R; y++) for (let x = 0; x < C; x++) {
     const k = y * C + x, t = g[k], X = x * 20, Y = y * 20, alt = (x + y) & 1;
-    if (t === T.WALL) { c.drawImage(TS.wallV[alt][WC[k]].im, X, Y); V.draws++; continue; }
+    if (t === T.WALL && !gateBar(world, k)) { c.drawImage(TS.wallV[alt][WC[k]].im, X, Y); V.draws++; continue; }
     if (fe && fe[k]) { const sp = cellSpec(world, x, y); if (sp.kind) { c.drawImage(V.A.feat(bi, sp, world.featT).im, X, Y); V.draws++; continue; } }
     const n = y ? oc(k - C) : 0, w = x ? oc(k - 1) : 0, nw = x && y ? oc(k - C - 1) : 0;
     c.drawImage(TS.floor(alt, V.fv[k], n, w, nw).im, X, Y); V.draws++;

@@ -672,7 +672,7 @@ function relayCheck(w, tiles, cx, cy, emit) {
 function featTick(w, dt, emit) {
   const pc = featProfile(w).plate;
   for (let k = 0; k < w.featM.length; k++) {
-    if (!w.featM[k]) continue;
+    if (!w.featM[k] || w.feat[k] === 14) continue;
     w.featS[k] -= dt;
     if (w.featS[k] > 0) continue;
     if (w.featM[k] === 2) { w.featM[k] = 0; w.featS[k] = 0; continue; }

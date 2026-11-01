@@ -7,8 +7,7 @@
    on the gen-2 skeleton after stamps and flip, so heat never moves a tile.
    Never merges.
    ART-ONLY CODES 8..14 (2026-10-25 integration): 8..11 STREAM E/S/W/N, 12 QUICK,
-   13 PORTAL (pair id 1/2 in world.featPair), 14 GATE (lit in world.featM, always
-   0 = open). The sim never reads them (it tests only 1..7), so a WATER / SAND /
+   13 PORTAL (pair id 1/2 in world.featPair), 14 GATE (its rule is tilegate.js). The sim never reads them (it tests only 1..7), so a WATER / SAND /
    VOID / CROWN gen-2 room is placed for its look and plays exactly as without the
    layer until the sim rules land (#19-#22). HOME is the one room-biome -> tile
    table. */
@@ -405,10 +404,11 @@ function portal(m, f, rng, far, force, pair, bgate, dS) {
   }
   return made > 0;
 }
-/* art-only GATE: 2-3 singles on straight corridor tiles (two opposite open
-   neighbours, nothing else), no two within 4 Manhattan; featM stays 0 = open */
+/* V32: up to 3 singles, at least 2, on straight corridor tiles (two opposite open
+   neighbours, nothing else), no two within 4 Manhattan; bgate keeps a candidate only if the
+   kept gates plus it pass with all of them shut (board2 tileGate) */
 function gate(m, f, rng, far, force, bgate, dS) {
-  const want = rng.int(2, 3), cand = [], used = [];
+  const want = 3, cand = [], used = [];
   const o = (x, y) => open(m, x, y);
   for (let y = 1; y < R - 1; y++) for (let x = 1; x < C - 1; x++) {
     if (!far(x, y)) continue;
@@ -418,6 +418,7 @@ function gate(m, f, rng, far, force, bgate, dS) {
   for (const c of shuf(cand, rng)) {
     if (used.length >= want) break;
     if (used.some((u) => manh(u, c) < 4)) continue;
+    if (bgate && !bgate(c, used)) continue;
     used.push(c);
   }
   if (used.length < 2) return false;

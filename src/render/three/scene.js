@@ -13,6 +13,8 @@ import {createLights} from "./lights.js";
 import {createPools} from "./entities.js";
 import {live} from "./upload.js";
 import {buildFeat} from "./featmesh.js";
+import {hasGates, createGateBars} from "./gatebars.js";
+import {gateBar} from "../../core/tilegate.js";
 import {wallCodes} from "../wallvar.js";
 import {RIM_TEX, nearX, NEAR_Z} from "./rimart.js";
 import {createAmbient} from "./ambientfx.js";
@@ -171,6 +173,8 @@ export function buildScene(world, atlas, bright){
   group.add(checker);
   const feat=world.feat?buildFeat(world,biome):null;
   if(feat){ featAO(feat.mesh.material,ao); group.add(feat.mesh); }
+  const gates=hasGates(world)?createGateBars(world,biome,NEAR_H):null;
+  if(gates)group.add(gates.mesh);
 
   group.add(buildRim(biome,atlas));
 
@@ -194,7 +198,7 @@ export function buildScene(world, atlas, bright){
       let diff=fresh, wDiff=fresh||world.grid!==lastG||(world.seed>>>0)!==lastS;
       lastG=world.grid; lastS=world.seed>>>0;
       for(let i=0;i<mask.length;i++){ const t=world.grid[i],
-        b=t===T.BRICK?1:0, v=t===T.WALL?1:0;
+        b=t===T.BRICK?1:0, v=t===T.WALL&&!gateBar(world,i)?1:0;
         if(mask[i]!==b){ mask[i]=b; diff=true; }
         if(wMask[i]!==v){ wMask[i]=v; wDiff=true; } }
       if(wDiff){
@@ -232,6 +236,7 @@ export function buildScene(world, atlas, bright){
        }
       pools.update(world);
       if(feat)feat.update(world);
+      if(gates&&gates.update(world))scene.brickV++;
       return world.level!==scene.level||(world.feat||null)!==scene.featRef;
      }};
   scene.update(world);          // initial wall + brick fill

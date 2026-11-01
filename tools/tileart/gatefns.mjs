@@ -105,18 +105,16 @@ export const CVD_KINDS = ["protan", "deutan", "tritan"];
    normal-vision pin of 4. bedBrick binds CLASSIC 2D only (the CVD twin of its normal-vision bed gate, 14): a PIXEL bed is one slot's pixel and PIXEL's own SAND
    B floor already sits 4.9 dE off BRICK-B, so PIXEL is held to the rendered BRICK cell instead */
 export const CVD_PIN = {floorL: 3.5, floorE: 4, wallL: 19.5, wallE: 20, brickL: 12.5, brickE: 15, bedBrick: 10.5, heat: 4};
-/* named waivers, each a lower pin for one look / tile / check (still gated, printed WAIVED). CLASSIC GATE open (lit 0, the only GATE state the game draws: featM
-   stays 0) separates CORE / PLUS / MAX by 2.14 L* in NORMAL vision (2.10 protan); the normal-vision heat gate only sampled lit 2 / 4. Owner approved the current art
-   (2026-10-26), so the open-state heat tell is the owner's / #28's call, not a drive-by fix */
+/* named waivers, each a lower pin for one look / tile / check (still gated, printed WAIVED). None today: the open GATE's jamb posts (#26) removed the last */
 /* REAL 3D (2026-11-01, tools/tileart/cvd3dpage.mjs, AUTO's dpr 2): the same rule, about 10 % under the worst simulated value measured through the real renderer, rounded
    down to 0.5; lower than the flat looks' pins because the lit, multiplied scene compresses value. bedBrick is reported, not gated: a lit bed is not a hex. The heat bar stays 4 */
 export const CVD_PIN3 = {floorL: 2, floorE: 2.5, wallL: 9, wallE: 11, brickL: 11, brickE: 12, bedBrick: 0, heat: 4};
-export const CVD_WAIVE = {"CLASSIC gate-open heat": {pin: 2, normal: 2.14, issue: "#28"}};
+export const CVD_WAIVE = {};
 /* PROPOSED, not approved: these REAL 3D tiles measure UNDER the heat bar of 4, most of them in normal vision too (a value gap of the lit scene, not a colour-vision one). Each
    pin is a regression floor about 10 % under the measured worst so a further drop fails; the gate prints every one as a known gap. Accepting them or changing the art is the
    owner's call. normal = the worst heat separation in normal vision */
 export const CVD_HEAT3_PROPOSED = {booster: {pin: 2.5, normal: 2.89}, "booster-flare": {pin: 2.6, normal: 3.02}, "ice-patch": {pin: 1.8, normal: 2.16}, trap: {pin: 3, normal: 3.41}, "trap-wind": {pin: 2.3, normal: 2.66},
-  quicksand: {pin: 3.1, normal: 3.6}, portal: {pin: 2.2, normal: 2.5}, "portal-3": {pin: 2.2, normal: 2.47}, gate: {pin: 3.5, normal: 4.01}, "gate-open": {pin: 1.4, normal: 1.65}};
+  quicksand: {pin: 3.1, normal: 3.6}, portal: {pin: 2.2, normal: 2.5}, "portal-3": {pin: 2.2, normal: 2.47}, "gate-open": {pin: 3.5, normal: 4}};
 /* a tile's heat pin in a look, after any waiver or proposed floor: gates.mjs and the golden test read the same answer */
 export const cvdHeatPin = (look, id, pin = CVD_PIN) => { const w = CVD_WAIVE[look + " " + id + " heat"] || (look === "REAL 3D" && CVD_HEAT3_PROPOSED[id]); return w ? w.pin : pin.heat; };
 const medRGB = (a) => [0, 1, 2].map((c) => { const v = []; for (let i = c; i < a.length; i += 4) v.push(a[i]); v.sort((x, y) => x - y); return v[v.length >> 1]; });

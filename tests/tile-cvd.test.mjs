@@ -51,13 +51,14 @@ test("CLASSIC golden: every tile x heat clears CVD_PIN and its waiver under all 
   for (const k of CVD_KINDS) assert.ok(GOLD.sets.booster.rows.some((r) => r.cvd === k), k);
 });
 
-test("CLASSIC golden bites: a lowered number fails, the gate-open waiver covers CLASSIC only and only down to its pin", () => {
+test("CLASSIC golden bites: a lowered number fails; no waiver is left, the open GATE clears the heat bar on its jamb posts", () => {
   const r = structuredClone(GOLD.sets.trap), hit = r.rows.find((x) => x.cvd === "deutan");
   hit.brickE = CVD_PIN.brickE - 0.1;
   assert.ok(cvdFails("trap", r, { bed: true, look: "CLASSIC" }).some((m) => / brickE /.test(m)));
   const g = GOLD.sets["gate-open"];
-  assert.ok(cvdFails("gate-open", g, { look: "PIXEL" }).some((m) => / heat /.test(m)));
-  const low = structuredClone(g); low.heat.find((x) => x.cvd === "tritan").d = cvdHeatPin("CLASSIC", "gate-open") - 0.1;
+  assert.equal(cvdHeatPin("CLASSIC", "gate-open"), CVD_PIN.heat);
+  assert.ok(!cvdFails("gate-open", g, { look: "CLASSIC" }).some((m) => / heat /.test(m)));
+  const low = structuredClone(g); low.heat.find((x) => x.cvd === "tritan").d = CVD_PIN.heat - 0.1;
   assert.ok(cvdFails("gate-open", low, { look: "CLASSIC" }).some((m) => / heat /.test(m)));
 });
 

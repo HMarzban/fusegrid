@@ -38,6 +38,7 @@ export const LIMITS = Object.freeze({
   spawnSteps: 4, chainMin: 4, chainMax: 9, chainTotal: 16, stepOff: 2, exitOpen: 2, foeKeep: 0.4, playerKeep: 0.5,
   doorRing: 10, sheetMin: 3, sheetMax: 9, runMax: 3, iceSteps: 3, boostMin: 3, boostMax: 5, boostPocket: 2, boostGap: 3,
   trapMin: 3, trapMax: 5, trapSteps: 6, trapFoe: 2, trapGap: 2, sideR: 3, escSteps: ESC_STEPS, escFree: 12, radius: 8, rings: 4,
+  gateMin: 2, gateMax: 3, gateGap: 4,
 });
 const inB = (x, y) => x >= 0 && y >= 0 && x < C && y < R;
 const xy = (k) => [k % C, (k / C) | 0];
@@ -429,6 +430,58 @@ function sideExit(g, p, r) {
   return null;
 }
 
+/* ---- GATE: V32 + V33. All gates shut for good proves every phase of the clock:
+   movement reads the shut grid (no phase blocks more), the blast reads the open
+   grid (no phase reaches further, a shut bar only stops an arm). ---- */
+const pieces = (g, gone) => {
+  const seen = new Uint8Array(N);
+  let n = 0;
+  for (let s = 0; s < N; s++) {
+    if (seen[s] || g[s] === T.WALL || gone.includes(s)) continue;
+    n++; seen[s] = 1;
+    const q = [s];
+    while (q.length) { const a = q.pop(); for (let d = 0; d < 4; d++) { const b = nbr(a, d); if (b >= 0 && !seen[b] && g[b] !== T.WALL && !gone.includes(b)) { seen[b] = 1; q.push(b); } } }
+  }
+  return n;
+};
+/* a shut gate never parts the brick-free map, and neither does it under SHRINK
+   rings 1..LIMITS.rings (the rings may part it themselves): returns -1 on the
+   whole map, the ring number under a ring, 0 for no split */
+export function gateSplit(grid, gs) {
+  for (let ring = 0; ring <= LIMITS.rings; ring++) {
+    const g = grid.slice();
+    if (ring) for (let k = 0; k < N; k++) { const [x, y] = xy(k), rim = Math.min(x, C - 1 - x, y, R - 1 - y); if (rim >= 1 && rim <= ring && !(x === 1 && y === 1)) g[k] = T.WALL; }
+    if (pieces(g, gs) > pieces(g, [])) return ring || -1;
+  }
+  return 0;
+}
+/* own bomb at every cell the shut gates can touch (within the step cap of `near`,
+   default all of gs): an escape on the open grid that fails on the shut one is a
+   spot. A bomb on a gate holds that gate open. r stops at the cap: a blast further
+   out reaches no cell a capped escape can visit. Two brick states, as V19. */
+export function gateSpot(b, profile, gs, near = null) {
+  const n = norm(b, profile, {}), cap = n.lim.escSteps, rMax = Math.min(n.lim.radius, cap);
+  const cleared = n.g.map((v) => (v === T.BRICK ? T.EMPTY : v));
+  const at = near == null ? gs : [near];
+  for (const g0 of [n.g, cleared]) {
+    const g = g0.slice();
+    for (const k of gs) g[k] = T.EMPTY;
+    const shut = g.slice();
+    for (const k of gs) shut[k] = T.WALL;
+    const Eb = env(n, g, { tiles: false }), Es = env(n, shut, { tiles: false });
+    for (let c = 0; c < N; c++) {
+      if (g[c] !== T.EMPTY || !at.some((k) => manh(k, c) <= cap)) continue;
+      const own = gs.includes(c), E = own ? env(n, shut.map((v, i) => (i === c ? T.EMPTY : v)), { tiles: false }) : Es;
+      for (let r = 1; r <= rMax; r++) {
+        const L = bombMap(n, g, c, r, false);
+        if (!timedEscape(Eb, L, c, c).ok) break;
+        if (!timedEscape(E, L, c, c).ok) return { at: xy(c), r };
+      }
+    }
+  }
+  return null;
+}
+
 const CHECK = {
   V13(n) {
     const f = n.feat;
@@ -545,8 +598,29 @@ const CHECK = {
   V30() { return null; },
   V31() { return null; },
   /* GATE */
-  V32() { return null; },
-  V33() { return null; },
+  V32(n) {
+    if (n.kind !== "GATE") return null;
+    const { g, feat, lim } = n, gs = [], w = walk(g, true);
+    for (let k = 0; k < N; k++) if (feat[k] === F.GATE) gs.push(k);
+    if (gs.length < lim.gateMin || gs.length > lim.gateMax) return { why: gs.length + " gates" };
+    for (const k of gs) {
+      const [x, y] = xy(k), o = (d) => notWall(g, nbr(k, d));
+      if (!((o(0) && o(2) && !o(1) && !o(3)) || (o(1) && o(3) && !o(0) && !o(2)))) return { why: "gate off a corridor", at: [x, y] };
+      if (g[k] !== T.EMPTY) return { why: "gate under a brick", at: [x, y] };
+      if (w[k] >= 0 && w[k] <= lim.spawnSteps) return { why: "gate " + w[k] + " steps from spawn", at: [x, y] };
+      if (DOORS.includes(k)) return { why: "gate on a door", at: [x, y] };
+      if (gs.some((o2) => o2 !== k && manh(o2, k) < lim.gateGap)) return { why: "gates within " + lim.gateGap, at: [x, y] };
+    }
+    const r = gateSplit(g, gs);
+    return r ? { why: "shut gates split the map" + (r > 0 ? " at ring " + r : "") } : null;
+  },
+  V33(n) {
+    if (n.kind !== "GATE") return null;
+    const gs = [];
+    for (let k = 0; k < N; k++) if (n.feat[k] === F.GATE) gs.push(k);
+    const s = gateSpot({ grid: n.g, level: n.level, heat: n.heat, pact: n.pact }, n.prof, gs);
+    return s ? { why: "no-escape spot with the gates shut", ...s } : null;
+  },
   /* PORTAL */
   V34() { return null; },
   V35() { return null; },

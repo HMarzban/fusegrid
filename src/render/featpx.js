@@ -50,11 +50,14 @@ function glideHand(h, outer) {
 }
 /* GATE: the hand frame is the shut portcullis (bars rows 4..15); open (4) and half (7) keep each bar's body and pull its last two rows (the tip) up under it.
    N joins carry the bar tops on, S joins the sill */
+const POST = [[9], [6, 11], [5, 9, 13]];
 function gateHand(h, st, outer) {
   const r = HAND("GATE", h);
   if (!r) return r;
   const len = [4, 7, 12][st], o = r.slice();
   if (len < 12) for (let x = 2; x < 18; x++) if (r[8][x] !== "B") for (let t = 0; t < 12; t++) at(o, x, 4 + t, t >= len ? "B" : r[4 + t + (t >= len - 2 ? 12 - len : 0)][x]);
+  /* the heat tell while passable: 1 / 2 / 3 raised posts on each jamb */
+  if (st < 2) for (const y of POST[h]) for (const x of [2, 17]) { at(o, x, y, "X"); at(o, x, y + 1, "W"); at(o, x, y + 2, "R"); }
   return join(o, outer, 2, 4, 17);
 }
 /* CONVEYOR from its hand parts (pixel/art/feat.js BELT) in flow x across space, turned to the dir; the rollers scroll with ph, rails, bolts, caps and chevrons hold */
@@ -112,6 +115,6 @@ export function featPxCell(biome, s) {
   else if (s.kind === "GLIDE") rows = glideHand(h, outer);
   else if (s.kind === "STREAM") rows = streamHand(h, d, outer, s.ph | 0);
   else if (s.kind === "BELT") rows = beltHand(h, d, outer, s.ph | 0);
-  else if (s.kind === "GATE") { const l = s.lit | 0; rows = gateHand(h, s.state === 1 || l >= 3 ? 2 : l === 2 ? 1 : 0, outer); }
+  else if (s.kind === "GATE") { const l = s.lit | 0; rows = gateHand(h, s.state === 1 || l >= 4 ? 2 : l >= 1 ? 1 : 0, outer); }
   return {w: 20, h: 20, rows: (rows || mk(() => "O")).slice(), pal: {...DPAL}};
 }

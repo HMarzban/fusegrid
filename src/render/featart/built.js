@@ -135,7 +135,7 @@ export const BUILT = {
     bevel(c, core, octIn(x, y, w, w, cc, Math.min(1.6, w / 4)), false, 0.35, 0.7, hiC);
   },
 
-  /* CROWN GATE: a portcullis in a gilt inlay. `lit` 0..4 is the closing progress: 0 open (bars sunk in slits), 1..3 bars rising, 4 or on = shut. The bottom strip is the dial (shut cells raised, open cells sunk), the heat tell */
+  /* CROWN GATE: a portcullis in a gilt inlay. `lit` 0..4 is the closing progress: 0 open (bars sunk in slits), 1..3 bars rising, 4 or on = shut. The bottom strip is the dial (shut cells raised, open cells sunk); the jamb posts are the heat tell */
   GATE(c, k) {
     const b = k.bio, h = k.h, f = k.on ? 1 : Math.max(0, Math.min(4, k.lit)) / 4;
     floorTile(c, b, k.par);
@@ -168,6 +168,11 @@ export const BUILT = {
       const x = tx + i * pitchc, isOpen = i < open;
       if (isOpen) { rect(c, BK, x, ty, cw, 3.2, 0.62); rect(c, WH, x, ty + 2.5, cw, 0.7, 0.28); }
       else { rect(c, BK, x + 0.4, ty + 0.7, cw, 3.2, 0.4); rect(c, mix(b.wallHi, gilt, 0.75), x, ty, cw, 3.2); rect(c, WH, x, ty, cw, 0.9, 0.5); rect(c, BK, x, ty + 2.4, cw, 0.8, 0.3); }
+    }
+    /* the heat tell while passable: 1 / 2 / 3 raised posts on each jamb, gone when shut */
+    if (f < 1) for (const py of GEO.GATE.post[h]) for (const px of [1.9, 34.7]) {
+      rect(c, BK, px + 0.6, py - 1.6, 3.4, 4.6, 0.55);
+      rect(c, b.wallHi, px, py - 2.2, 3.4, 4.4); rect(c, WH, px, py - 2.2, 3.4, 1.3, 0.65); rect(c, BK, px, py + 1.2, 3.4, 1, 0.45);
     }
   },
 };

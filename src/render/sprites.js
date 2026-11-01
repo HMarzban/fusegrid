@@ -1,4 +1,5 @@
 import { CFG, T, key, biomeOf, BIOMES } from "../core/config.js";
+import { gateBar } from "../core/tilegate.js";
 import { drawIcon, rr, RIM, ITEM_FAMILY, dk, lt, poly, seal } from "./icons.js";
 import { drawEnemyBody, drawFoes } from "./enemybody.js";
 import { drawFeat } from "./featdraw.js";
@@ -158,7 +159,7 @@ export function drawGrid(c, world) {
       const t = world.grid[key(x, y)],
         px = x * CFG.TILE,
         py = y * CFG.TILE;
-      if (t === T.WALL) {
+      if (t === T.WALL && !gateBar(world, key(x, y))) {
         const v = WC[y * CFG.COLS + x];
         if (wV) c.drawImage(wV[v], px, py);
         else paintWall(c, b, v, px, py);
