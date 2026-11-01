@@ -349,6 +349,7 @@ function applyBlastHits(w, tiles, emit, bl) {
     if (
       p.alive &&
       p.iFrames <= 0 &&
+      !(bl && bl.safe) &&
       aabb(w.grid, t.tx, t.ty, p.x, p.y, CFG.TILE * 0.3)
     ) {
       if (p.shield) {
@@ -627,6 +628,7 @@ function fireBlast(w, cx, cy, arms, src, emit, pc, id) {
   const blade = { x, y, tiles, t: 0, ttl: CFG.BLADE_TTL, variant: "normal", src };
   if (pc && pc.kill === false) blade.spare = -1;
   else if (pc && pc.spare && id) blade.spare = id;
+  if (src === "relay" && featProfile(w).bloom.safe) blade.safe = true;
   w.blades.push(blade);
   for (const t of tiles) if (t.brick) breakBrick(w, t.tx, t.ty, emit);
   applyBlastHits(w, tiles, emit, blade);

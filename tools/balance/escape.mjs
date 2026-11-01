@@ -43,7 +43,7 @@ export function lethalMap(w, tiles) {
   if (tiles)
     for (const q of w.featPend) {
       const x = q.k % C, y = (q.k / C) | 0;
-      ev.push({ t: Math.max(0, w.featS[q.k]), x, y, arms: q.kind === "plate" ? plateArms(P.plate) : relayArms(bc, q.dx, q.dy), pass: false, plate: q.kind === "plate" });
+      ev.push({ t: Math.max(0, w.featS[q.k]), x, y, arms: q.kind === "plate" ? plateArms(P.plate) : relayArms(bc, q.dx, q.dy), pass: false, plate: q.kind === "plate", safe: q.kind !== "plate" && !!bc.safe });
     }
   const fired = new Set();
   const cellOf = (o, t) => (o.path ? cellAt(o.path, t) : [o.b.tx, o.b.ty]);
@@ -53,12 +53,12 @@ export function lethalMap(w, tiles) {
     let ei = -1, et = Infinity;
     for (let i = 0; i < ev.length; i++) if (ev[i].t < et) { et = ev[i].t; ei = i; }
     if (bi < 0 && ei < 0) break;
-    let x, y, arms, pass, t, plate = false;
-    if (ei >= 0 && et <= bt) { const e = ev.splice(ei, 1)[0]; x = e.x; y = e.y; arms = e.arms; pass = e.pass; t = e.t; plate = !!e.plate; }
+    let x, y, arms, pass, t, plate = false, safe = false;
+    if (ei >= 0 && et <= bt) { const e = ev.splice(ei, 1)[0]; x = e.x; y = e.y; arms = e.arms; pass = e.pass; t = e.t; plate = !!e.plate; safe = !!e.safe; }
     else { const o = bombs[bi]; o.done = true; [x, y] = cellOf(o, o.te); arms = bombArms(o.b); pass = bombPass(o.b); t = o.te; }
     const s = cross(g, x, y, arms, pass, new Set());
     for (const k of s) {
-      if (t < L[k]) L[k] = t;
+      if (!safe && t < L[k]) L[k] = t;
       if (g[k] === T.BRICK) g[k] = T.EMPTY;
     }
     const ch = plate ? P.plate.chain : undefined, fz = w.fuse == null ? CFG.FUSE : w.fuse;
@@ -68,7 +68,7 @@ export function lethalMap(w, tiles) {
         const kx = k % C, ky = (k / C) | 0;
         if ((kx === x && ky === y) || w.feat[k] !== 6 || w.grid[k] !== T.EMPTY || w.featM[k] !== 0 || fired.has(k)) continue;
         fired.add(k);
-        ev.push({ t: t + bc.delay, x: kx, y: ky, arms: relayArms(bc, Math.sign(kx - x), Math.sign(ky - y)), pass: false });
+        ev.push({ t: t + bc.delay, x: kx, y: ky, arms: relayArms(bc, Math.sign(kx - x), Math.sign(ky - y)), pass: false, safe: !!bc.safe });
       }
   }
   return L;
