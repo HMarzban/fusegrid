@@ -1676,8 +1676,9 @@ function check(name, cond, detail) {
       check(`FLOOR names all eight tiles once (${tag})`, NAMES.every((n) => ts.filter((x) => x === n).length === 1), ts.length);
       check(`FLOOR claims a rule only for the ${Object.keys(TILE_HELP).length} tiles that have one (${tag})`,
         ts.filter((x) => /^CORE · /.test(x)).length === Object.keys(TILE_HELP).length && ts.filter((x) => /^LOOK ONLY/.test(x)).length === NAMES.length - Object.keys(TILE_HELP).length);
+      for (const [k, help] of Object.entries(TILE_HELP)) check(`FLOOR draws ${k}'s CORE and MAX help whole, never clipped (${tag})`, ts.includes("CORE · " + help[0]) && ts.includes("MAX · " + help[2]), ts.filter((x) => /^(CORE|MAX) · /.test(x)).join(" | "));
       const gd = md.guideGeom(L, touch), T = gd.tiles;
-      const inside = T.every((r) => r.x >= gd.S.x && r.x + r.w <= gd.S.x + gd.S.w && r.y >= gd.S.y && r.y + r.h <= gd.S.y + gd.S.h);
+      const inside =T.every((r) => r.x >= gd.S.x && r.x + r.w <= gd.S.x + gd.S.w && r.y >= gd.S.y && r.y + r.h <= gd.S.y + gd.S.h);
       const apart = T.every((a, i) => T.every((b, j) => i >= j || a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y));
       check(`GUIDE has four doors inside the plate that never overlap (${tag})`, T.length === 4 && inside && apart);
       check(`GUIDE taps hit each door, off it backs out (${tag})`, T.every((r, i) => md.guideHit(r.x + r.w / 2, r.y + r.h / 2, L, 8, touch) === i) && md.guideHit(1, 1, L, 8, touch) === -1);

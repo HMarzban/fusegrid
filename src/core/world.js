@@ -117,6 +117,8 @@ export function loadLevel(world, level, keepProgress = false) {
     p.bombKind = "normal";
     p.iFrames = P.iFrames;
     p.alive = true;
+    if (p.gl) p.gl = null;
+    if (p.glBuf) p.glBuf = null;
     p.color = p.color || "#37f0d0";
     if (carry) {
       p.bombs = carry.bombs;
@@ -144,13 +146,17 @@ export function loadLevel(world, level, keepProgress = false) {
     const j = rng.int(0, i);
     [brickCells[i], brickCells[j]] = [brickCells[j], brickCells[i]];
   }
+  /* V14 (#18, gen 3): no item on a floor tile. The shuffled lists keep their
+     draws; items take the next cells that hold no tile */
+  const noTile = ([x, y]) => !w.feat || !w.feat[key(x, y)];
+  const itemBricks = w.feat ? brickCells.filter(noTile) : brickCells;
   const nP = clamp(
     P.buriedAdd + level,
     3,
-    brickCells.length,
+    itemBricks.length,
   );
   for (let i = 0; i < nP; i++) {
-    const [x, y] = brickCells[i];
+    const [x, y] = itemBricks[i];
     const p = POWER[rng.int(0, POWER.length - 1)];
     w.items.push({
       x: x * CFG.TILE + CFG.TILE / 2,
@@ -196,8 +202,9 @@ export function loadLevel(world, level, keepProgress = false) {
   if (w.gen >= 2) {
     const b0 = walk(w.grid);
     const fb = w.feat && w.feat.some(isBelt) ? FEAT_PROFILE[heat].belt : null;
-    const b = fb && fb.actors ? Array.from(beltDist(w.grid, w.feat, fb.v, CFG.ENEMY_BASE_SPEED + level * P.curve), (v, i) => (b0[i] < 0 ? -1 : Math.floor(v))) : b0;
-    const { pick, rest } = placeFoes(free, roster, b, (x, y) => spawnBlocked(w.feat, x, y));
+    const sp = fb ? roster.map((t) => spawnEnemy(t, 0, 0, level, null, spawnOpts).speed).filter((v) => v > 0) : [];
+    const b = fb && fb.actors && fb.foes !== false && sp.length ? Array.from(beltDist(w.grid, w.feat, fb.v, Math.min(...sp), 1, 1, Math.max(...sp)), (v, i) => (b0[i] < 0 ? -1 : Math.floor(v))) : b0;
+    const { pick, rest } = placeFoes(free, roster, b, (x, y, t) => spawnBlocked(w.feat, x, y, t));
     free.length = 0;
     free.push(...pick.map((p) => p[1]), ...rest);
     for (const [t, c] of pick) w.enemies.push(spawnEnemy(t, c[0], c[1], level, rng, spawnOpts));
@@ -206,15 +213,16 @@ export function loadLevel(world, level, keepProgress = false) {
     w.enemies.push(
       spawnEnemy(roster[i], free[i][0], free[i][1], level, rng, spawnOpts),
     );
+  const floorCells = w.feat ? free.slice(nE).filter(noTile) : free.slice(nE);
   const nFloor = P.bare
     ? 0
     : clamp(
         P.floorAdd + (level | 0),
         P.floorMin,
-        Math.max(0, free.length - nE),
+        floorCells.length,
       );
   for (let i = 0; i < nFloor; i++) {
-    const cell = free[nE + i];
+    const cell = floorCells[i];
     if (!cell) break;
     const [x, y] = cell;
     const p = POWER[rng.int(0, POWER.length - 1)];

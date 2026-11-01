@@ -28,7 +28,7 @@ export function armStats(rs) {
     clear: median(rs.filter((r) => r.st === "WIN").map((r) => r.t)), wins: rs.filter((r) => r.st === "WIN").length,
     hit5: sum(rs, "hit5"), hit15: sum(rs, "hit15"), hits: per(rs, "hits"), nm: per(rs, "nearMiss"), tileHitPct: sum(rs, "hits") ? sum(rs, "hTile") / sum(rs, "hits") : 0,
     tileKills: per(rs, "tileKills"), deliveries: per(rs, "deliveries"), relayKills: per(rs, "relayKills"), trapKills: per(rs, "trapKills"), selfClears: per(rs, "selfClears"), selfClearsArm: per(rs, "selfClearsArm"),
-    ownRelay: sum(rs, "ownRelay"), chainEarly: sum(rs, "chainEarly"), noEsc: sum(rs, "noEsc"), noEscRuns: rs.filter((r) => r.noEsc > 0).length, noEscHit: sum(rs, "noEscHit"),
+    ownRelay: sum(rs, "ownRelay"), chainEarly: sum(rs, "chainEarly"), noEsc: sum(rs, "noEsc"), noEscOn: sum(rs, "noEscOn"), noEscPlant: sum(rs, "noEscPlant"), noEscRuns: rs.filter((r) => r.noEsc > 0).length, noEscHit: sum(rs, "noEscHit"),
     noEscEx: sum(rs, "noEscEx"), noEscRide: sum(rs, "noEscRide"), noEscIce: sum(rs, "noEscIce"), absorbs: sum(rs, "absorbs") };
 }
 export function compare(a, b) {
@@ -53,8 +53,8 @@ export function summary(rows, meta = {}) {
   const tileK = keys.filter((k) => TILE_OF[k.split("|")[0]]), ctrlK = keys.filter((k) => !TILE_OF[k.split("|")[0]]);
   if (tileK.length) {
     L.push("## A0 vs A1 (the dial)", "");
-    L.push("| room · tile | heat · pace | n (tile rooms) | lose % A0 → A1 | Δ lose ITT | Δ lose tile-only | d | n @2pp / @3pp | win % A0/A1 | timeout % A1 | clear med s A0 → A1 (Δ%, CI) | hit<5 s runs A0/A1 | hit<15 s A0/A1 | hits/run A0/A1 | near miss/run A0/A1 (Δ CI) | tile hits % | tile kills/run | deliveries/run | relay kills/run | trap kills / self-clears (kill) / (arm) per room | own-relay / chain-early hits | no-escape ep raw (runs) [→hit ≤3 s] | no-escape exempt-CORE-CONVEYOR | on CONVEYOR / ICE |");
-    L.push("|" + "---|".repeat(24));
+    L.push("| room · tile | heat · pace | n (tile rooms) | lose % A0 → A1 | Δ lose ITT | Δ lose tile-only | d | n @2pp / @3pp | win % A0/A1 | timeout % A1 | clear med s A0 → A1 (Δ%, CI) | hit<5 s runs A0/A1 | hit<15 s A0/A1 | hits/run A0/A1 | near miss/run A0/A1 (Δ CI) | tile hits % | tile kills/run | deliveries/run | relay kills/run | trap kills / self-clears (kill) / (arm) per room | own-relay / chain-early hits | no-escape ep raw (runs) [→hit ≤3 s] | no-escape exempt-CORE-CONVEYOR | onset-forced (no tile escape since the danger began) / at a fresh own plant | on CONVEYOR / ICE |");
+    L.push("|" + "---|".repeat(25));
     const pooled = {};
     for (const k of tileK) {
       const g = groups.get(k), [rm, h, pc] = k.split("|").map(Number);
@@ -63,7 +63,7 @@ export function summary(rows, meta = {}) {
       const pk = `${h}|${pc}`;
       (pooled[pk] ||= [0, 0, 0])[0] += sa.hit5; pooled[pk][1] += sb.hit5; pooled[pk][2]++;
       const ct = c.clear;
-      L.push(`| ${rm} · ${TILE_OF[rm]} | ${HEAT[h]} · ${PACE[pc]} | ${a.length} (${sb.rules}) | ${f1(100 * sa.lose)} → ${f1(100 * sb.lose)} | ${pp(c.dLose)} | ${pp(c.dLoseTile)} | ${f2(c.d)} | ${c.n2} / ${c.n3} | ${f1(100 * sa.win)} / ${f1(100 * sb.win)} | ${f1(100 * sb.to)} | ${f1(ct.a)} → ${f1(ct.b)} (${ct.ratio === ct.ratio ? (ct.ratio >= 0 ? "+" : "") + f1(100 * ct.ratio) + "%" : "–"}${ct.lo === ct.lo ? ` [${f1(100 * ct.lo)}, ${f1(100 * ct.hi)}]` : ""}; ${ct.winsA}/${ct.winsB} wins; ${ct.status}) | ${sa.hit5} / ${sb.hit5} | ${sa.hit15} / ${sb.hit15} | ${f2(sa.hits)} / ${f2(sb.hits)} | ${f2(sa.nm)} / ${f2(sb.nm)} (${f2(c.dNear.mean)} [${f2(c.dNear.lo)}, ${f2(c.dNear.hi)}]) | ${f1(100 * sb.tileHitPct)} | ${f2(sb.tileKills)} | ${f2(sb.deliveries)} | ${f2(sb.relayKills)} | ${f2(sb.trapKills)} / ${f2(sb.selfClears)} / ${f2(sb.selfClearsArm)} | ${sb.ownRelay} / ${sb.chainEarly} | ${sb.noEsc} (${sb.noEscRuns}) [${sb.noEscHit}] | ${sb.noEscEx} | ${sb.noEscRide} / ${sb.noEscIce} |`);
+      L.push(`| ${rm} · ${TILE_OF[rm]} | ${HEAT[h]} · ${PACE[pc]} | ${a.length} (${sb.rules}) | ${f1(100 * sa.lose)} → ${f1(100 * sb.lose)} | ${pp(c.dLose)} | ${pp(c.dLoseTile)} | ${f2(c.d)} | ${c.n2} / ${c.n3} | ${f1(100 * sa.win)} / ${f1(100 * sb.win)} | ${f1(100 * sb.to)} | ${f1(ct.a)} → ${f1(ct.b)} (${ct.ratio === ct.ratio ? (ct.ratio >= 0 ? "+" : "") + f1(100 * ct.ratio) + "%" : "–"}${ct.lo === ct.lo ? ` [${f1(100 * ct.lo)}, ${f1(100 * ct.hi)}]` : ""}; ${ct.winsA}/${ct.winsB} wins; ${ct.status}) | ${sa.hit5} / ${sb.hit5} | ${sa.hit15} / ${sb.hit15} | ${f2(sa.hits)} / ${f2(sb.hits)} | ${f2(sa.nm)} / ${f2(sb.nm)} (${f2(c.dNear.mean)} [${f2(c.dNear.lo)}, ${f2(c.dNear.hi)}]) | ${f1(100 * sb.tileHitPct)} | ${f2(sb.tileKills)} | ${f2(sb.deliveries)} | ${f2(sb.relayKills)} | ${f2(sb.trapKills)} / ${f2(sb.selfClears)} / ${f2(sb.selfClearsArm)} | ${sb.ownRelay} / ${sb.chainEarly} | ${sb.noEsc} (${sb.noEscRuns}) [${sb.noEscHit}] | ${sb.noEscEx} | ${sb.noEscRide} / ${sb.noEscIce} | ${sb.noEscOn} / ${sb.noEscPlant} |`);
     }
     L.push("", "First-5 s hits pooled over the tile rooms (runs hit < 5 s; #30's rule is A1 ≤ A0 + 2√A0):", "");
     L.push("| heat · pace | rooms | A0 | A1 | ceiling A0 + 2√A0 | ok |", "|---|---|---|---|---|---|");

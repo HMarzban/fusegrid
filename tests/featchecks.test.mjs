@@ -1,4 +1,4 @@
-/* tools/balance/featchecks.mjs (#28 design pass 2): the floor-tile checks
+/* src/core/featchecks.js (#28 design pass 2, moved in #18): the floor-tile checks
    V13-V27 as pure static checks. One hand-made pass and fail fixture per
    check, plus V18 == V2 parity on real boards with the layer off. */
 import test from "node:test";
@@ -9,9 +9,11 @@ import { createWorld, loadLevel } from "../src/core/sim.js";
 import { validateBoard, stampStart } from "../src/core/fair.js";
 import { heatProfile } from "../src/core/heat.js";
 import { F, FEAT_PROFILE } from "../src/core/feat.js";
-import { featChecks, skippedChecks, tableChecks, FEAT_RULES } from "../tools/balance/featchecks.mjs";
+import { featChecks, skippedChecks, tableChecks, FEAT_RULES } from "../src/core/featchecks.js";
 
 const C = CFG.COLS, R = CFG.ROWS, N = C * R, P = FEAT_PROFILE;
+/* the 2026-10-21 PLUS conveyor (foes ride, no wallStop): pass 2 (#28) keeps the checks for it */
+const RIDE = { ...P[1], belt: { actors: true, v: 1.0 } };
 const lattice = () => { const g = new Int8Array(N); for (let y = 0; y < R; y++) for (let x = 0; x < C; x++) g[key(x, y)] = x === 0 || y === 0 || x === C - 1 || y === R - 1 || (x % 2 === 0 && y % 2 === 0) ? T.WALL : T.EMPTY; return g; };
 const blank = () => new Int8Array(N).fill(T.WALL);
 /* b({level, heat, g, open, walls, bricks, tiles:[[x,y,code]], items, foes}) */
@@ -74,8 +76,10 @@ test("V16 speed bound: a belt keeps >= 40% of the slowest moving foe and >= 50% 
 });
 test("V17 time-weighted foe distance, chain landings off the door ring, MAX never carries toward the start", () => {
   const free = { limits: { doorRing: 0 } }, foe = [{ type: "walker", tx: 11, ty: 1 }];
-  assert.ok(!fails(b({ foes: foe, tiles: E([6, 7, 8, 9], 1, F.BELT_E) }), P[1], "V17", free), "10 plain steps, belt against it");
-  assert.ok(fails(b({ foes: foe, tiles: E([6, 7, 8, 9], 1, F.BELT_W) }), P[1], "V17", free), "a belt toward the pocket shortens 10 steps in time");
+  assert.ok(!fails(b({ foes: foe, tiles: E([6, 7, 8, 9], 1, F.BELT_E) }), RIDE, "V17", free), "10 plain steps, belt against it");
+  assert.ok(fails(b({ foes: foe, tiles: E([6, 7, 8, 9], 1, F.BELT_W) }), RIDE, "V17", free), "a belt toward the pocket shortens 10 steps in time");
+  assert.ok(fails(b({ foes: foe, tiles: E([6, 7, 8, 9], 1, F.BELT_W) }), P[2], "V17", free), "MAX carries foes");
+  assert.ok(!fails(b({ foes: foe, tiles: E([6, 7, 8, 9], 1, F.BELT_W) }), P[1], "V17", free), "pass 2: PLUS carries no foe");
   assert.ok(!fails(b({ foes: foe, tiles: E([6, 7, 8, 9], 1, F.BELT_W) }), P[0], "V17", free), "CORE belts carry no foe");
   const west = b({ tiles: E([9, 10, 11, 12], 5, F.BELT_W) });
   assert.ok(fails(west, P[1], "V17"), "lands 7 steps from door (1,5)");
@@ -115,10 +119,12 @@ test("V19 BOOSTER: the +2 relay overtakes a straight flee; a booster in a niche 
   const g = corridor(3, 13); g[key(8, 4)] = T.EMPTY;
   assert.equal(spots(b({ level: 1, g, tiles: [[8, 4, F.BLOOM]] }), P[2]).spots, 0);
 });
-test("V19 ICE PATCH: MAX allows no stop mid-sheet; CORE and PLUS never add a spot", () => {
+test("V19 ICE PATCH: a MAX with no stop mid-sheet adds spots, the pass-2 brake closes them; CORE and PLUS never add a spot", () => {
   const bd = b({ level: 2, g: corridor(3, 9), tiles: E([5, 6, 7], 5, F.GLIDE) });
-  const s = spots({ ...bd, heat: 2 }, P[2]);
+  const s = spots({ ...bd, heat: 2 }, { ...P[2], glide: { ...P[2].glide, stop: undefined } });
   assert.ok(s.spots > 0 && s.cause.coast > 0 && s.cap > 0, "the coast to (8,5) is in time, past the 4-step budget " + JSON.stringify(s));
+  assert.equal(P[2].glide.stop, "brake");
+  assert.equal(spots({ ...bd, heat: 2 }, P[2]).spots, 0, "an opposite press stops the coast at any centre");
   assert.equal(spots({ ...bd, heat: 1 }, P[1]).spots, 0);
   assert.equal(spots({ ...bd, heat: 0 }, P[0]).spots, 0);
 });
@@ -130,22 +136,32 @@ test("V19 CONVEYOR: a riding player cannot hide on a belt (PLUS); a CORE bomb ri
   const ride = spots({ ...b({ g: corridor(4, 13), tiles: E([5, 6, 7, 8], 5, F.BELT_E) }), heat: 0 }, P[0]);
   assert.ok(ride.cause["bomb-ride"] > 0, JSON.stringify(ride));
 });
-test("V19 TRAP: the MAX reach beats a straight flee in a corridor; CORE's does not, but its 0.5 s chain does", () => {
+/* the 2026-10-21 TRAP rule (no off / hold, chain on), kept as the fixture of the faults pass 2 fixed */
+const OLD = P.map((p) => ({ ...p, plate: { wind: p.plate.wind, r: p.plate.r, cd: p.plate.cd, inert: p.plate.inert } }));
+test("V19 TRAP (2026-10-21 rule): the MAX reach beats a straight flee in a corridor; CORE's does not, but its 0.5 s chain does", () => {
   const bd = b({ level: 5, g: corridor(3, 13), tiles: [[5, 5, F.PLATE]] });
-  const mx = spots({ ...bd, heat: 2 }, P[2]);
+  const mx = spots({ ...bd, heat: 2 }, OLD[2]);
   assert.ok(mx.cause["trap-blast"] > 0 && mx.time > 0 && mx.trapExact > 0, JSON.stringify(mx));
-  const co = spots({ ...bd, heat: 0 }, P[0]);
+  const co = spots({ ...bd, heat: 0 }, OLD[0]);
   assert.ok(!co.cause["trap-blast"], JSON.stringify(co));
   assert.ok(co.cause["trap-chain"] > 0, "a bomb on a CORE trap arm can go off at 0.5 s");
-  assert.ok(!spots({ ...bd, heat: 0 }, { ...P[0], plate: { ...P[0].plate, near: 0 } }).cause["trap-blast"]);
+  assert.ok(!spots({ ...bd, heat: 0 }, { ...OLD[0], plate: { ...OLD[0].plate, near: 0 } }).cause["trap-blast"]);
+  assert.ok(!spots({ ...bd, heat: 0 }, { ...OLD[0], plate: { ...OLD[0].plate, chain: false } }).cause["trap-chain"], "chain false: no bomb goes early");
+});
+test("V19 TRAP (pass 2): never arms on or beside you, holds under your lit bomb, chains nothing: no spot at any heat", () => {
+  const bd = b({ level: 5, g: corridor(3, 13), tiles: [[5, 5, F.PLATE]] });
+  for (const h of [0, 1, 2]) assert.equal(spots({ ...bd, heat: h }, P[h]).spots, 0, "heat " + h);
+  assert.ok(spots({ ...bd, heat: 2 }, { ...P[2], plate: { ...P[2].plate, off: false } }).cause["trap-blast"] > 0, "off is what removes the trap-blast spot");
+  assert.ok(spots({ ...bd, heat: 0 }, { ...P[0], plate: { ...P[0].plate, hold: false, chain: true } }).cause["trap-chain"] > 0, "hold is what removes the chain spot");
 });
 test("V20 SHRINK rings: a riding chain needs a step-off at the new wall, traps keep side exits, ice is never sealed", () => {
   const bd = b({ tiles: E([9, 10, 11, 12], 5, F.BELT_E) });
   assert.ok(!fails(bd, P[1], "V15"));
-  assert.ok(fails(bd, P[1], "V20"), "ring 1 walls (13,5): (12,5) has only pillars beside it");
+  assert.ok(fails(bd, RIDE, "V20"), "ring 1 walls (13,5): (12,5) has only pillars beside it");
+  assert.ok(!fails(bd, P[1], "V20"), "pass 2 wallStop: a chain that runs into a new wall carries no one");
   assert.ok(!fails({ ...bd, heat: 0 }, P[0], "V20"), "CORE carries no rider");
   assert.ok(!fails(b({ tiles: [3, 4, 5, 6].map((y) => [7, y, F.BELT_S]) }), P[1], "V20"), "a chain whose ends hold through ring 4");
-  assert.ok(fails(b({ tiles: E([6, 7, 8, 9], 5, F.BELT_E) }), P[1], "V20"), "ring 3 leaves (10,5) a dead end");
+  assert.ok(fails(b({ tiles: E([6, 7, 8, 9], 5, F.BELT_E) }), RIDE, "V20"), "ring 3 leaves (10,5) a dead end");
   const g = blank(); for (let y = 3; y <= 9; y++) { g[key(1, y)] = T.EMPTY; g[key(2, y)] = T.EMPTY; }
   const tr = b({ level: 5, g, tiles: [[2, 6, F.PLATE]] });
   assert.ok(!fails(tr, P[2], "V27"));
@@ -176,12 +192,13 @@ test("V24 ICE PATCH sheets: 3-9 tiles, runs <= 3, >= 3 steps from spawn", () => 
   assert.ok(fails(b({ level: 2, tiles: E([2, 3, 4], 1, F.GLIDE) }), P[2], "V24"), "on the pocket");
   assert.ok(fails(b({ level: 2, tiles: E([5, 6], 5, F.GLIDE) }), P[2], "V24"), "sheet of 2");
 });
-test("V25 BOOSTER: 2-4 on (odd,odd), >= 4 from the pocket, no two within 3 in a line, never under a brick", () => {
-  const ok = [[7, 5, F.BLOOM], [11, 9, F.BLOOM]];
+test("V25 BOOSTER: 3-5 on (odd,odd), >= 2 from the pocket, no two within 3 in a line, never under a brick", () => {
+  const ok = [[7, 5, F.BLOOM], [11, 9, F.BLOOM], [5, 3, F.BLOOM]];
   assert.ok(!fails(b({ level: 1, tiles: ok }), P[0], "V25"));
-  assert.ok(fails(b({ level: 1, tiles: [[7, 5, F.BLOOM]] }), P[0], "V25"), "one");
+  assert.ok(fails(b({ level: 1, tiles: ok.slice(0, 2) }), P[0], "V25"), "two");
+  assert.ok(fails(b({ level: 1, tiles: [...ok, [1, 7, F.BLOOM], [13, 1, F.BLOOM], [13, 5, F.BLOOM]] }), P[0], "V25"), "six");
   assert.ok(fails(b({ level: 1, tiles: [...ok, [8, 5, F.BLOOM]] }), P[0], "V25"), "off (odd,odd)");
-  assert.ok(fails(b({ level: 1, tiles: [...ok, [5, 3, F.BLOOM]] }), P[0], "V25"), "3 from the pocket");
+  assert.ok(fails(b({ level: 1, tiles: [...ok, [3, 3, F.BLOOM]] }), P[0], "V25"), "1 from the pocket");
   assert.ok(fails(b({ level: 1, tiles: [...ok, [7, 7, F.BLOOM]] }), P[0], "V25"), "2 apart in a column");
   assert.ok(fails(b({ level: 1, tiles: ok, bricks: [[11, 9]] }), P[0], "V25"), "under a brick");
 });
@@ -206,4 +223,22 @@ test("featChecks is pure, ordered, and quiet on tile-free rooms", () => {
   assert.deepEqual(ids(r), FEAT_RULES.filter((id) => ids(r).includes(id)));
   const w = createWorld(77, 3); w.gen = 2; loadLevel(w, 3, false);
   assert.deepEqual(ids(featChecks(w, P[1])).filter((id) => id !== "V18"), []);
+});
+
+test("#18 V14 on real gen-3 worlds: no floor or buried item on a tile, foes only on ice", () => {
+  for (let s = 0; s < 40; s++) for (let lv = 1; lv <= 8; lv++) for (let h = 0; h < 3; h += 2) {
+    const w = createWorld(9100 + s, lv); w.gen = 3; w.heat = h; loadLevel(w, lv, false);
+    const f = featChecks(w, P[h], { only: ["V14"] });
+    assert.deepEqual(f, [], "seed " + s + " room " + lv + " heat " + h);
+    assert.ok(w.items.some((it) => it.buried));
+  }
+});
+test("#18 V14 leaves every rule room its items, and foes on a tile only on ice, never SENTRY", () => {
+  for (const lv of [1, 2, 3, 5]) for (let s = 0; s < 20; s++) {
+    const a = createWorld(9200 + s, lv); a.gen = 3; a.heat = 2; loadLevel(a, lv, false);
+    const floor = a.items.filter((it) => !it.buried).length, buried = a.items.filter((it) => it.buried).length;
+    assert.ok(a.feat, "tile layer");
+    assert.ok(buried >= 3 && floor >= 1, "room " + lv + " keeps its items: " + buried + " / " + floor);
+    assert.ok(a.enemies.every((e) => !a.feat[key(e.tx, e.ty)] || (a.feat[key(e.tx, e.ty)] === F.GLIDE && e.type !== "stationary")));
+  }
 });

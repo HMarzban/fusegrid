@@ -20,11 +20,15 @@
    never worse and the search is exact for the model (the 2026-10-21 first
    counter allowed entry after a blade window and stored Float32 times, and
    produced false spots). Success = reaching a tile that never turns lethal
-   (with tiles: not an ICE PATCH tile at coast >= 2, no wait tile). Tile
+   (with tiles at coast >= 2: an ICE PATCH tile only where the sim ends a
+   coast, by (tile, arrival dir) state: a block ahead that still stands at
+   arrival, or anywhere under glide.stop "brake"; a player at rest on ice may
+   stay; #28 pass 2, before it no ice tile ever counted). Tile
    speeds: ICE PATCH boost leaving a sheet tile, CONVEYOR push with / against. */
 import { CFG, T, key } from "../../src/core/config.js";
 import { tileOf } from "../../src/core/board.js";
-import { C, N, BD, prof, rulesOn, onIce, cross, bombArms, bombPass, relayArms, plateArms, beltPath, cellAt, moveSpeed } from "./tilemodel.mjs";
+import { beltDir } from "../../src/core/feat.js";
+import { C, N, BD, prof, rulesOn, onIce, onBelt, carries, iceStop, cross, bombArms, bombPass, relayArms, plateArms, beltPath, cellAt, moveSpeed } from "./tilemodel.mjs";
 
 export const MARGIN = CFG.STEP;
 const HR = 0.3;
@@ -39,7 +43,7 @@ export function lethalMap(w, tiles) {
   if (tiles)
     for (const q of w.featPend) {
       const x = q.k % C, y = (q.k / C) | 0;
-      ev.push({ t: Math.max(0, w.featS[q.k]), x, y, arms: q.kind === "plate" ? plateArms(P.plate) : relayArms(bc, q.dx, q.dy), pass: false });
+      ev.push({ t: Math.max(0, w.featS[q.k]), x, y, arms: q.kind === "plate" ? plateArms(P.plate) : relayArms(bc, q.dx, q.dy), pass: false, plate: q.kind === "plate", safe: q.kind !== "plate" && !!bc.safe });
     }
   const fired = new Set();
   const cellOf = (o, t) => (o.path ? cellAt(o.path, t) : [o.b.tx, o.b.ty]);
@@ -49,21 +53,22 @@ export function lethalMap(w, tiles) {
     let ei = -1, et = Infinity;
     for (let i = 0; i < ev.length; i++) if (ev[i].t < et) { et = ev[i].t; ei = i; }
     if (bi < 0 && ei < 0) break;
-    let x, y, arms, pass, t;
-    if (ei >= 0 && et <= bt) { const e = ev.splice(ei, 1)[0]; x = e.x; y = e.y; arms = e.arms; pass = e.pass; t = e.t; }
+    let x, y, arms, pass, t, plate = false, safe = false;
+    if (ei >= 0 && et <= bt) { const e = ev.splice(ei, 1)[0]; x = e.x; y = e.y; arms = e.arms; pass = e.pass; t = e.t; plate = !!e.plate; safe = !!e.safe; }
     else { const o = bombs[bi]; o.done = true; [x, y] = cellOf(o, o.te); arms = bombArms(o.b); pass = bombPass(o.b); t = o.te; }
     const s = cross(g, x, y, arms, pass, new Set());
     for (const k of s) {
-      if (t < L[k]) L[k] = t;
+      if (!safe && t < L[k]) L[k] = t;
       if (g[k] === T.BRICK) g[k] = T.EMPTY;
     }
-    for (const o of bombs) if (!o.done && o.te > t) { const [bx, by] = cellOf(o, t); if (s.has(key(bx, by))) o.te = t; }
+    const ch = plate ? P.plate.chain : undefined, fz = w.fuse == null ? CFG.FUSE : w.fuse;
+    if (ch !== false) for (const o of bombs) if (!o.done && o.te > t) { const [bx, by] = cellOf(o, t); if (s.has(key(bx, by))) o.te = typeof ch === "number" ? Math.min(o.te, Math.max(t, ch - (fz - o.b.timer))) : t; }
     if (tiles)
       for (const k of s) {
         const kx = k % C, ky = (k / C) | 0;
         if ((kx === x && ky === y) || w.feat[k] !== 6 || w.grid[k] !== T.EMPTY || w.featM[k] !== 0 || fired.has(k)) continue;
         fired.add(k);
-        ev.push({ t: t + bc.delay, x: kx, y: ky, arms: relayArms(bc, Math.sign(kx - x), Math.sign(ky - y)), pass: false });
+        ev.push({ t: t + bc.delay, x: kx, y: ky, arms: relayArms(bc, Math.sign(kx - x), Math.sign(ky - y)), pass: false, safe: !!bc.safe });
       }
   }
   return L;
@@ -73,32 +78,52 @@ export function escape(w, tiles, L) {
   tiles = !!tiles && rulesOn(w);
   if (!L) L = lethalMap(w, tiles);
   const p = w.players[0], sx = tileOf(p.x), sy = tileOf(p.y), s0 = key(sx, sy);
-  const glideStop = !(tiles && prof(w).glide.coast >= 2);
-  const terminal = (k) => L[k] === Infinity && (glideStop || !onIce(w, k));
-  if (terminal(s0)) return true;
-  const best = new Float64Array(N).fill(Infinity), done = new Uint8Array(N);
+  /* ICE PATCH at MAX (coast >= 2): an ice state is (tile, arrival dir) and
+     ends a search only where the sim ends a coast (iceStop); a player at rest
+     on ice (p.gl null) may stay put */
+  const nostop = tiles && prof(w).glide.coast >= 2, ice = (k) => nostop && onIce(w, k);
+  const carry = tiles && carries(w);
+  /* a standing rider is carried down the chain: safe when every belt cell to
+     the end is never lethal and the push then halts (a block, the chain end
+     under endHalt) or drops it on a never-lethal landing */
+  const endHalt = carry && !!prof(w).belt.endHalt;
+  const rideSafe = (k) => {
+    for (let q = k, n = 0; n < N; n++) {
+      if (L[q] !== Infinity) return false;
+      const [bx, by] = beltDir(w.feat[q]), x = (q % C) + bx, y = ((q / C) | 0) + by, nq = key(x, y), g = w.grid[nq];
+      if (g === undefined || g === T.WALL || (g === T.BRICK && L[nq] === Infinity) || w.bombs.some((b) => !b.dead && b.tx === x && b.ty === y)) return true;
+      if (!onBelt(w, nq)) return endHalt || L[nq] === Infinity;
+      q = nq;
+    }
+    return false;
+  };
   const bombAt = new Uint8Array(N);
   for (const b of w.bombs) if (!b.dead) bombAt[key(b.tx, b.ty)] = 1;
+  const d0 = ice(s0) && p.gl ? BD.findIndex(([a, b]) => a === p.gl.x && b === p.gl.y) : 4;
+  const terminal = (k, d, t) => L[k] === Infinity && (d === 4 || !ice(k) || iceStop(w, k, d, t, L, bombAt)) && !(carry && onBelt(w, k) && !rideSafe(k));
+  if (terminal(s0, d0, 0)) return true;
+  const Z = nostop ? 5 : 1, S = N * Z, sid = (k, d) => (nostop ? k * 5 + d : k), best = new Float64Array(S).fill(Infinity), done = new Uint8Array(S);
   bombAt[s0] = 0;
-  best[s0] = 0;
+  best[sid(s0, d0)] = 0;
   const ox = p.x / CFG.TILE - (sx + 0.5), oy = p.y / CFG.TILE - (sy + 0.5);
   for (;;) {
-    let k = -1, t = Infinity;
-    for (let i = 0; i < N; i++) if (!done[i] && best[i] < t) { t = best[i]; k = i; }
-    if (k < 0) return false;
-    done[k] = 1;
-    if (k !== s0 && terminal(k)) return true;
+    let id = -1, t = Infinity;
+    for (let i = 0; i < S; i++) if (!done[i] && best[i] < t) { t = best[i]; id = i; }
+    if (id < 0) return false;
+    done[id] = 1;
+    const k = nostop ? (id / 5) | 0 : id;
+    if (k !== s0 && terminal(k, nostop ? id % 5 : 4, t)) return true;
     const x = k % C, y = (k / C) | 0;
-    for (const [dx, dy] of BD) {
-      const nk = key(x + dx, y + dy);
-      if (done[nk] || w.grid[nk] !== T.EMPTY || bombAt[nk]) continue;
+    for (let di = 0; di < 4; di++) {
+      const [dx, dy] = BD[di], nk = key(x + dx, y + dy), nid = sid(nk, ice(nk) ? di : 4);
+      if (done[nid] || w.grid[nk] !== T.EMPTY || bombAt[nk]) continue;
       const v = moveSpeed(w, p, k, dx, dy, tiles);
       if (v <= 0.05) continue;
       let o = 0, q = 0;
       if (k === s0) { o = dx ? ox * dx : oy * dy; q = Math.abs(dx ? oy : ox); }
       const leave = t + (0.5 + HR - o + q) / v, enter = t + Math.max(0, 0.5 - HR - o + q) / v, arrive = t + (1 - o + q) / v;
       if (leave + MARGIN >= L[k] || enter + MARGIN >= L[nk]) continue;
-      if (arrive < best[nk]) best[nk] = arrive;
+      if (arrive < best[nid]) best[nid] = arrive;
     }
   }
 }
@@ -112,7 +137,7 @@ export function probe(w) {
   if (!p.alive) return null;
   const k = key(tileOf(p.x), tileOf(p.y));
   const L0 = lethalMap(w, false), L1 = tiles ? lethalMap(w, true) : L0;
-  if (L0[k] === Infinity && L1[k] === Infinity) return null;
+  if (L0[k] === Infinity && L1[k] === Infinity && !(tiles && carries(w) && onBelt(w, k) && w.bombs.length)) return null;
   const e0 = escape(w, false, L0), e1 = tiles ? escape(w, true, L1) : e0;
   return { e0, e1, forced: e0 && !e1 };
 }
