@@ -139,5 +139,5 @@ export function probe(w) {
   const L0 = lethalMap(w, false), L1 = tiles ? lethalMap(w, true) : L0;
   if (L0[k] === Infinity && L1[k] === Infinity && !(tiles && carries(w) && onBelt(w, k) && w.bombs.length)) return null;
   const e0 = escape(w, false, L0), e1 = tiles ? escape(w, true, L1) : e0;
-  return { e0, e1, forced: e0 && !e1 };
+  return { e0, e1, forced: e0 && !e1, l0: L0[k], l1: L1[k] };
 }

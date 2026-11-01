@@ -64,9 +64,9 @@ export function runRoom(c, s) {
   const r = { room: c.room, heat: c.heat, pace: c.pace || 0, arm: c.arm, prof: c.profName || "", s, seed, tpl: w.layout ? w.layout.tpl : "", kind: kind || "", rules: tm ? 1 : 0,
     st: "TIMEOUT", t: CAP, hits: 0, absorbs: 0, firstHit: -1, hit5: 0, hit15: 0, hBlast: 0, hContact: 0, hTile: 0, ownRelay: 0, chainEarly: 0, nearMiss: 0,
     kills: 0, tileKills: 0, relayKills: 0, trapKills: 0, selfClears: 0, selfClearsArm: 0, rideKills: 0, deliveries: 0,
-    noEsc: 0, noEscOn: 0, noEscPlant: 0, noEscArm: 0, noEscHit: 0, noEscRide: 0, noEscIce: 0, dangerT: 0 };
+    noEsc: 0, noEscOn: 0, noEscPlant: 0, noEscArm: 0, noEscHit: 0, noEscRide: 0, noEscIce: 0, dangerT: 0, closeCalls: 0, closeCallsT: 0 };
   const nm = new Map(), armD = new Map(), seenBl = new WeakSet(), cutoff = c.metrics === false;
-  let trapped = false, lastEsc = -99, pendHit = 0, had1 = false;
+  let trapped = false, lastEsc = -99, pendHit = 0, had1 = false, cc = null;
   const coreBelt = tm && kind === "BELT" && !prof(w).belt.actors;
   for (let i = 0; i < STEPS; i++) {
     const p0 = w.players[0], pk0 = key(tileOf(p0.x), tileOf(p0.y)), tNow = i * CFG.STEP;
@@ -88,6 +88,10 @@ export function runRoom(c, s) {
         }
         trapped = pr.forced;
         if (pr.e1) had1 = true;
+        /* close call: the tile model's lethal time on the player's tile is
+           <= 0.5 s, out of iFrames; it counts if that moment passes unhurt.
+           closeCallsT: the plain model saw no blast on this tile that soon */
+        if (!cc && p0.iFrames <= 0 && pr.l1 > 0 && pr.l1 <= 0.5) cc = { end: tNow + pr.l1 + 2 * CFG.STEP, tile: !(pr.l0 <= 0.5) };
       } else { trapped = false; had1 = false; }
     }
     const lives0 = w.lives, shield0 = w.players[0].shield;
@@ -139,6 +143,7 @@ export function runRoom(c, s) {
       if (bl.rode && (bl.tiles.some((q) => q.brick) || w.events.some((e) => e.t === "kill" && e.rode))) r.deliveries++;
     }
     for (const [b] of nm) if (b.dead) { nm.delete(b); if (!(lost > 0)) r.nearMiss++; }
+    if (cc) { if (hurtEv) cc = null; else if (tt >= cc.end) { r.closeCalls++; if (cc.tile) r.closeCallsT++; cc = null; } }
     w.events.length = 0;
     if (w.state === "WIN" || w.state === "LOSE") { r.st = w.state; r.t = +tt.toFixed(4); break; }
   }

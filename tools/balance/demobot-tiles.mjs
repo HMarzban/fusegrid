@@ -33,14 +33,25 @@ import {bfsNext} from "../../src/core/board.js";
 import {createRng} from "../../src/core/rng.js";
 import {isBelt} from "../../src/core/feat.js";
 import {rulesOn,prof,tileDanger,bombCover,iceDestOk,moveSpeed} from "./tilemodel.mjs";
+import {escape} from "./escape.mjs";
 
-const BRAKE=!(globalThis.process&&globalThis.process.env&&globalThis.process.env.FG_BOTBRAKE==="0");
+/* FG_BOTBRAKE: unset = brakes at once; "0" = never, and the flee model knows
+   the coast (tilemodel BOT_BRAKE false); "naive" = never, and the flee model
+   still thinks it can stop anywhere (a player who has not learned the brake);
+   "late:N" = brakes only after N ticks of a coast it did not ask for (#30).
+   FG_BOTPLANT=timed: a plant is refused when, with the bomb in place, the timed
+   search (escape.mjs) finds a way out on the plain model and none on the tile
+   model: the counter's own definition, so a plant that is tight without tiles
+   stays as the A0 bot plays it; tile rooms only (#30). */
+const ENV=(globalThis.process&&globalThis.process.env)||{};
+const BMODE=ENV.FG_BOTBRAKE||"",BRAKE=BMODE!=="0"&&BMODE!=="naive",BLATE=BMODE.startsWith("late:")?+BMODE.slice(5):0;
+const TIMED=ENV.FG_BOTPLANT==="timed";
 export const NOOP=Object.freeze({move:{x:0,y:0},fire:false,firePrev:false,
   shift:false,remote:false,kick:false});
 
 export function createTileBot(seed){
   let rng=createRng(seed>>>0),latch=false;
-  let mode=0,gx=0,gy=0,hx=0,hy=0,hold=0,pause=0,esc=false;
+  let mode=0,gx=0,gy=0,hx=0,hy=0,hold=0,pause=0,esc=false,coastN=0;
 
   function dangerTiles(w){
     const danger=new Set();
@@ -181,7 +192,20 @@ export function createTileBot(seed){
   function canEscape(w,ptx,pty,extra){
     const d=dangerTiles(w);
     for(const k of extra)d.add(k);
-    return !!fleeMove(w,ptx,pty,d);
+    if(!fleeMove(w,ptx,pty,d))return false;
+    return !TIMED||!rulesOn(w)||timedOk(w,ptx,pty);
+   }
+  /* the plant as the sim would make it, in place for one timed search */
+  function timedOk(w,ptx,pty){
+    const p=w.players[0],v=p.bombKind;
+    w.bombs.push({x:(ptx+0.5)*CFG.TILE,y:(pty+0.5)*CFG.TILE,tx:ptx,ty:pty,
+      timer:w.fuse==null?CFG.FUSE:w.fuse,
+      radius:v==="power"?p.range+2:v==="line"||v==="pierce"?Math.max(p.range,5):p.range,
+      pierce:v==="pierce",line:v==="line",dir:v==="line"?(p.face.x?{x:Math.sign(p.face.x),y:0}:{x:0,y:Math.sign(p.face.y)||1}):null,
+      variant:v,dead:false});
+    const ok=!escape(w,false)||escape(w,true);
+    w.bombs.pop();
+    return ok;
    }
   function tileOfItem(it){
     return {x:(it.x/CFG.TILE)|0,y:(it.y/CFG.TILE)|0};
@@ -399,12 +423,11 @@ export function createTileBot(seed){
      }
 
     /* ICE PATCH brake (glide.stop "brake"): a coast the bot did not ask
-       for is braked with the opposite press (FG_BOTBRAKE=0: a player who
-       never brakes) */
+       for is braked with the opposite press, FG_BOTBRAKE says how soon */
     if(!out.move.x&&!out.move.y&&p.gl&&BRAKE&&rulesOn(world)){
       const g=prof(world).glide;
-      if(g.coast>=2&&g.stop==="brake")out.move={x:-p.gl.x,y:-p.gl.y};
-     }
+      if(g.coast>=2&&g.stop==="brake"&&++coastN>BLATE)out.move={x:-p.gl.x,y:-p.gl.y};
+     }else coastN=0;
 
     const prev=latch;
     out.fire=want&&!prev&&!inPocket;

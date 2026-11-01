@@ -21,6 +21,16 @@ export function pairedCI(a, b, seed = 0x25) {
   for (let r = 0; r < B; r++) { let s = 0; for (let i = 0; i < n; i++) s += d[rng.int(0, n - 1)]; bs[r] = s / n; }
   return { mean: m / n, lo: pct(bs, 0.025), hi: pct(bs, 0.975) };
 }
+/* bootstrap over seed pairs of f(sum a, sum b): share (b - a) / b, ratio b / a - 1 */
+export function pairedRatioCI(a, b, f, seed = 0x27) {
+  const n = a.length, rng = createRng(seed >>> 0);
+  if (!n) return { mean: NaN, lo: NaN, hi: NaN };
+  const bs = new Float64Array(B);
+  for (let r = 0; r < B; r++) { let x = 0, y = 0; for (let i = 0; i < n; i++) { const j = rng.int(0, n - 1); x += a[j]; y += b[j]; } bs[r] = f(x, y); }
+  let x = 0, y = 0;
+  for (let i = 0; i < n; i++) { x += a[i]; y += b[i]; }
+  return { mean: f(x, y), lo: pct(bs, 0.025), hi: pct(bs, 0.975) };
+}
 export function medianRatio(ta, tb, seed = 0x26) {
   /* ta / tb: per seed clear time or NaN when that arm did not win */
   const n = ta.length, wa = ta.filter((x) => x === x), wb = tb.filter((x) => x === x);
