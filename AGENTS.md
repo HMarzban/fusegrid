@@ -60,13 +60,13 @@ through `listGeom` / `listHit` (pitches are caps that scale down in a short
 box); MENU has a PLAY hero row whose tag is the run it starts and group gaps
 before OPTIONS / HIGH SCORES / SOURCE; the SOURCE URL shows only on its
 selected row. Build tag (owner 2026-10-21: "a game version in some where in
-the display or menue"): `v193` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
+the display or menue"): `v194` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
 derived ONLY in `shellview.js` (`REV`, handed to `drawMenu` / `drawSettings`
-as `rev`) and `update.js` (the card's "You are on v193", the running build,
+as `rev`) and `update.js` (the card's "You are on v194", the running build,
 never a guessed next one) — never a second literal. Keyboard MENU appends
 it to the foot hint; the touch hub hangs it under the plate when the box has
 >= 10 units below it (`#sh`), else on the SOURCE tile's teaser (landscape on
-the board canvas); OPTIONS keeps its `BUILD v193` kicker. Never on the HUD.
+the board canvas); OPTIONS keeps its `BUILD v194` kicker. Never on the HUD.
 PAUSE draws `pauseGeom(overlayBox, touch)`: touch (`touchLay`,
 data-lay p/l) caps pitch at `PAUSE_ROW_H` 70 / hero 76 / width 380, a keyboard
 screen at the compact `PAUSE_ROW_D` 44 / hero 54 / width 340 (owner: "too
@@ -732,7 +732,9 @@ not shell screens. Do not add them as `SCREEN` values.
   per-release changes). Launch/promotion is PARKED as GitHub issue
   HMarzban/fusegrid#7 (owner 2026-10-19: lots to do before publishing).
   Stage 1 (art, copy, zip test) is done on v193; stages 2 and 3 wait for the owner's
-  go (owner 2026-11-01: the game is not finished yet).
+  go (owner 2026-11-01: the game is not finished yet). Listing art shows CLASSIC 2D
+  and PIXEL only, never REAL 3D (owner 2026-11-01: "let's focus on the 2d and pixel
+  only not 3d"); REAL 3D stays in the game.
   `docs/marketing/README.md` owns pitch copy, per-platform tags, the launch
   checklist and the About/topics text (the owner pastes and posts; agents
   never submit). JSON-LD never carries a rating or review; `playMode` is the
@@ -1127,7 +1129,8 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   Node test fakes define `globalThis.location` WITHOUT `href`, so "is this a
   real page" means `typeof location.href === "string"` (the branch's gen-2 page
   default depended on it; since v188 the tile boards are `?gen=3` only).
-- Release state (2026-11-01): shell **v193** (tuned tiles on `?gen=3`, `KeyK`
+- Release state (2026-11-01): shell **v194** (install screenshot label, listing art
+  in CLASSIC 2D and PIXEL) is LOCAL until the owner pushes. Shell **v193** (tuned tiles on `?gen=3`, `KeyK`
   unbound, `?net=local` follows every run; no change in a normal run) is LIVE on
   the owner's word. **v192** (tiles design pass 2 docs, the
   #25 harness and static checks, the harness-only `w.featProf` seam; no player

@@ -230,12 +230,12 @@ on it.
 | Need | Have it? |
 |---|---|
 | itch cover 630×500 | ✅ `media/cover-630x500.png` |
-| 3–5 gameplay stills | ✅ `media/still-*.png`: JUNGLE, ICE, CROWN in REAL 3D, FACTORY in PIXEL, and the MENU (all recaptured on v192, checked on v193) |
+| 3–5 gameplay stills | ✅ `media/still-*.png`: JUNGLE and ICE in CLASSIC 2D, CROWN and FACTORY in PIXEL, and the MENU (all recaptured on v192, checked on v193) |
 | Short gameplay GIF | ✅ `media/play.gif` |
 | A PIXEL still | ✅ `media/still-pixel.png` |
-| Silent 15–20 s clip, landscape + portrait | ✅ 18 s each: `media/clip-landscape.mp4` (1920×1080, REAL 3D) and `media/clip-portrait-2x3.mp4` (1080×1620, PIXEL) for CrazyGames, `media/clip-portrait-9x16.mp4` (1080×1920, REAL 3D) for Shorts / TikTok / Reels |
+| Silent 15–20 s clip, landscape + portrait | ✅ 18 s each: `media/clip-landscape.mp4` (1920×1080, CLASSIC 2D) and `media/clip-portrait-2x3.mp4` (1080×1620, PIXEL) for CrazyGames, `media/clip-portrait-9x16.mp4` (1080×1920, PIXEL) for Shorts / TikTok / Reels |
 | Install-dialog screenshots | ✅ `screenshots/wide.png` + `screenshots/narrow.png`, in the manifest |
-| CrazyGames covers 16:9, 2:3, 1:1 | ❌ Not made yet. The only text a cover may carry is the title, so the HUD has to go: that means REAL 3D or PIXEL with `#c` hidden, never CLASSIC, where `#c` is the board. No borders and no blur, so no upscaling. 1:1 and 2:3 can be cropped from a 1200×1040 (AUTO) or 1800×1560 (RESOLUTION FULL at DPR 3) board capture. 16:9 at 1920×1080 needs a ~1.07× upscale, or the page backdrop around the stage. Adding the title is optional, but a wordmark on the art makes it storefront art like `og.png` (owner) |
+| CrazyGames covers 16:9, 2:3, 1:1 | ❌ Not made yet. The only text a cover may carry is the title, so the HUD has to go: that means PIXEL with `#c` hidden, never CLASSIC, where `#c` is the board. No borders and no blur, so no upscaling. 1:1 and 2:3 can be cropped from a 1200×1040 (AUTO) or 1800×1560 (RESOLUTION FULL at DPR 3) board capture. 16:9 at 1920×1080 needs a ~1.07× upscale, or the page backdrop around the stage. Adding the title is optional, but a wordmark on the art makes it storefront art like `og.png` (owner) |
 
 CrazyGames also asks that a clip open on the static cover, so the portrait
 and landscape clips will get that first frame once the covers exist.
@@ -308,7 +308,7 @@ Leave out the classic franchise's name and any "-like" topic built on it.
 **Next search wins (follow-ups, not done here):**
 
 - ~~**Manifest screenshots.**~~ Done 2026-10-19: `screenshots/wide.png`
-  (REAL 3D, 1920×1080) and `screenshots/narrow.png` (CLASSIC 2D on a phone,
+  (PIXEL, 1920×1080) and `screenshots/narrow.png` (CLASSIC 2D on a phone,
   1080×1920) are in the manifest and staged by `pages.yml`. The manifest
   itself is precached, so they reach installed players with the first shell
   bump after they merge.
@@ -408,7 +408,8 @@ after saying yes to it. Nothing here posts by itself.
 - [x] GitHub About description, website and 20 topics.
 - [x] `og.png` uploaded under **Settings → Social preview** (the v180 card).
       Re-upload whenever the card changes.
-- [x] Listing art and install screenshots recaptured on v192, checked on v193.
+- [x] Listing art and install screenshots recaptured, in CLASSIC 2D and PIXEL only
+      (owner, 2026-11-01).
 - [x] Listing copy matches the live game.
 - [x] Portal zip tested in a cross-origin iframe on v193.
 - [ ] Search Console URL-prefix property, HTML-tag verification, submit

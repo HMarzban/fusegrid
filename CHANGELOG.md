@@ -15,6 +15,13 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
+## shell v194 · 2026-11-01
+
+### Changed
+
+- **New install pictures.** The install dialog now shows the current board look,
+  in PIXEL and CLASSIC 2D.
+
 ## shell v193 · 2026-11-01
 
 Nothing changes in a normal run. Tiles are still a preview.
