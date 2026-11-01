@@ -258,6 +258,16 @@ the gameplay gaps are tracked in issue #35.
 - **Tile-world pin (#35).** The CLASSIC call-log test now also pins a gen-3
   FACTORY world with its conveyor tiles (`a4693824:71581`).
 
+**Shell v192 adds the balance tools (#25, #28), dev-only, never imported by
+`src/`:** `tools/balance/tilesweep.mjs` runs a tile-aware fork of the demobot
+(tick-for-tick equal to the stock bot on tile-free boards) over paired worlds
+with and without the tile layer and reports 95% intervals;
+`featchecks.mjs` + `featreport.mjs` are the static fairness checks V13–V27,
+including the no-escape spots. `w.featProf` is the one seam they use in the
+sim, a no-op when unset. Their results and the final per-heat tile specs are in
+the [tiles record](superpowers/specs/2026-10-21-difficulty-tiles-design.md)'s
+design pass 2 addendum.
+
 ## 🎲 A new board every run (shell v188)
 
 Before v188 every room shared one wall lattice, and a whole session replayed

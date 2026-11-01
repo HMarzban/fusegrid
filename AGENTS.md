@@ -60,13 +60,13 @@ through `listGeom` / `listHit` (pitches are caps that scale down in a short
 box); MENU has a PLAY hero row whose tag is the run it starts and group gaps
 before OPTIONS / HIGH SCORES / SOURCE; the SOURCE URL shows only on its
 selected row. Build tag (owner 2026-10-21: "a game version in some where in
-the display or menue"): `v187` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
+the display or menue"): `v192` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
 derived ONLY in `shellview.js` (`REV`, handed to `drawMenu` / `drawSettings`
-as `rev`) and `update.js` (the card's "You are on v187", the running build,
+as `rev`) and `update.js` (the card's "You are on v192", the running build,
 never a guessed next one) — never a second literal. Keyboard MENU appends
 it to the foot hint; the touch hub hangs it under the plate when the box has
 >= 10 units below it (`#sh`), else on the SOURCE tile's teaser (landscape on
-the board canvas); OPTIONS keeps its `BUILD v187` kicker. Never on the HUD.
+the board canvas); OPTIONS keeps its `BUILD v192` kicker. Never on the HUD.
 PAUSE draws `pauseGeom(overlayBox, touch)`: touch (`touchLay`,
 data-lay p/l) caps pitch at `PAUSE_ROW_H` 70 / hero 76 / width 380, a keyboard
 screen at the compact `PAUSE_ROW_D` 44 / hero 54 / width 340 (owner: "too
@@ -455,7 +455,7 @@ not shell screens. Do not add them as `SCREEN` values.
     worst case (a regression floor, not a perceptual proof); one named waiver
     `CVD_WAIVE` "CLASSIC gate-open heat" (pin 2, normal vision 2.14 < 4: the
     open GATE's CORE / PLUS / MAX differ too little in CLASSIC for everyone; a
-    structural fix belongs to #28). CLASSIC runs in Chrome via `gates.mjs`;
+    structural fix belongs to wave 2, #26). CLASSIC runs in Chrome via `gates.mjs`;
     `tests/tile-cvd.test.mjs` runs the PIXEL half under `npm test`; REAL 3D has
     no CVD gate. Fixed in v190: PIXEL SAND's parity-B base floor was raw
     `floor1` `#a07828`, 4.9 ΔE from BRICK-B `#a07020`; `featpxcells.js`
@@ -998,7 +998,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
     - The fairness term "tile-forced trap" is now a **no-escape spot**, so it
       never collides with the TRAP tile.
     - HEAT turns each tile's dial: CORE gives joy, MAX gives challenge. Pace
-      scales tile speeds only (owner Q1 still open).
+      scales tile speeds only (owner O1, 2026-10-26).
     - A tile never starts damage on its own.
     - Tiles sit in the same places at every heat.
     - Heat is shown by edge, mark count and tip shape, never colour.
@@ -1114,8 +1114,8 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   `tests/hidden-css.test.mjs` now gates every `#id` display rule). The owner
   pushes, or says "push". Boards since v188: gen 2 (bold mazes, no tiles) for
   every ordinary run and the daily, gen 1 for F1 codes / ATTRACT / the intro,
-  the floor-tile boards only with `?gen=3` (the tile dial is #28), so the
-  GUIDE FLOOR page is still a PREVIEW. 263 tests. Branches `tiles-d`, `frame-a`, `frame-b` are
+  the floor-tile boards only with `?gen=3` (design pass 2 done, the build is
+  #18–#22), so the GUIDE FLOOR page is still a PREVIEW. 301 tests. Branches `tiles-d`, `frame-a`, `frame-b` are
   deleted (merged); `frame-c` (stage set) stays unmerged. The look is recorded in
   `docs/superpowers/specs/2026-10-25-board-look-depth-ambient-design.md`,
   including the loose ends. Loopback dev server: `PORT=8091 node
