@@ -253,9 +253,9 @@ function shrinkMaps(m) {
 }
 /* V26 + V27 + V20: 3-5 on (odd,odd), >= 6 walking steps from spawn, no two on
    neighbouring intersections, forced floor; every tile on its r=3 arms has
-   a perpendicular open neighbour within 1 tile along the arm; only spots that
-   keep it after each SHRINK ring 1-4 (V20), unless fewer than 3 do: then the
-   board tops up to 3 from the rest */
+   a perpendicular open neighbour within 1 tile along the arm, also after each
+   SHRINK ring 1-4 (V20). Fewer than 3 such spots fails the shuffle; a layout
+   with no 3 at all (some GAUNTLETs, #22) re-rolls in genBoard3 */
 function plate(m, f, rng, dS, force) {
   const want = rng.int(3, 5), cand = [], rings = shrinkMaps(m);
   for (let y = 1; y < R - 1; y += 2) for (let x = 1; x < C - 1; x += 2) {
@@ -265,15 +265,11 @@ function plate(m, f, rng, dS, force) {
   }
   for (let i = cand.length - 1; i > 0; i--) { const j = rng.int(0, i); [cand[i], cand[j]] = [cand[j], cand[i]]; }
   const ringOk = ([x, y]) => rings.every((g) => !open(g, x, y) || sideExit(g, x, y)), used = [];
-  const pick = (list, n) => {
-    for (const [x, y] of list) {
-      if (used.length >= n) break;
-      if (used.some(([a, b]) => Math.abs(a - x) + Math.abs(b - y) <= 2)) continue;
-      used.push([x, y]);
-    }
-  };
-  pick(cand.filter(ringOk), want);
-  if (used.length < 3) pick(cand.filter((c) => !ringOk(c)), 3);
+  for (const [x, y] of cand.filter(ringOk)) {
+    if (used.length >= want) break;
+    if (used.some(([a, b]) => Math.abs(a - x) + Math.abs(b - y) <= 2)) continue;
+    used.push([x, y]);
+  }
   if (used.length < 3) return false;
   for (const [x, y] of used) { f[key(x, y)] = 7; force.push(key(x, y)); }
   return true;
