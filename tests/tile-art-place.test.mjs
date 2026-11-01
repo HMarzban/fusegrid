@@ -1,5 +1,6 @@
 /* TILE ART PLACEMENT (2026-10-25): QUICK / PORTAL / GATE are placed by the gen-2 generator for their look only; the sim ignores codes 12..14. STREAM has rules since #26: tests/tile-stream.test.mjs, placement and a fair board here. */
 import test from "node:test";
+import "../src/core/board3.js";
 import assert from "node:assert/strict";
 import { CFG, key, T, EW_CAPPED } from "../src/core/config.js";
 import { createWorld, loadLevel, step } from "../src/core/sim.js";

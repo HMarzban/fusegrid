@@ -1,10 +1,12 @@
 /* PORTAL (#27, record 2026-11-01 section 6): warp, latch, blocked cases, a dead pair, bomb warp, blast continuation per heat, MAX foes with the exit guard, the tell, V34 / V35 */
 import test from "node:test";
+import "../src/core/board3.js";
 import assert from "node:assert/strict";
 import { CFG, T, key } from "../src/core/config.js";
 import { createWorld, loadLevel, step, newIntent } from "../src/core/sim.js";
 import { genBoard2 } from "../src/core/board2.js";
-import { FEAT_PROFILE, pairTwins, PORTAL_PLACE } from "../src/core/feat.js";
+import { FEAT_PROFILE, pairTwins } from "../src/core/feat.js";
+import { PORTAL_PLACE } from "../src/core/featplace.js";
 import { featChecks, lethalMap } from "../src/core/featchecks.js";
 import { portalDim } from "../src/core/tileportal.js";
 import { relayTell, dimCells } from "../src/render/relaytell.js";

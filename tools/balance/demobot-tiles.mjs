@@ -34,6 +34,7 @@
    do not. Reachable foes beat spawn-brick nibble. Hunger wander aims
    at a blocked foe. Fire is one rising edge per want episode. */
 import {CFG,T,key,DIRS4} from "../../src/core/config.js";
+import "../../src/core/board3.js";
 import {bfsNext} from "../../src/core/board.js";
 import {createRng} from "../../src/core/rng.js";
 import {isBelt,isFlow} from "../../src/core/feat.js";

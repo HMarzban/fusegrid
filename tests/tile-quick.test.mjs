@@ -1,11 +1,13 @@
 /* QUICKSAND (#26, wave 2 design section 4): the sim rule, the score rule, placement V30, fairness V31 and the looks' growth frame. */
 import test from "node:test";
+import "../src/core/board3.js";
 import assert from "node:assert/strict";
 import { CFG, T, key } from "../src/core/config.js";
 import { createWorld, loadLevel, step } from "../src/core/sim.js";
 import { genBoard2 } from "../src/core/board2.js";
 import { spawnEnemy } from "../src/core/entities.js";
-import { F, FEAT_PROFILE, QUICK_PLACE, quickSeals, quickDetour } from "../src/core/feat.js";
+import { F, FEAT_PROFILE } from "../src/core/feat.js";
+import { QUICK_PLACE, quickSeals, quickDetour } from "../src/core/featplace.js";
 import { featChecks } from "../src/core/featchecks.js";
 import { quickStep, quickSpeed, holdReach, HOLD_MIN, GROW_STEPS } from "../src/core/tilequick.js";
 import { newTally, feedTally } from "../src/app/bests.js";

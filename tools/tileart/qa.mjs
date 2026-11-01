@@ -16,7 +16,7 @@ for (let s = 0; s < 300; s++) {
 }
 await withPage(async (P) => {
   await P.key("Enter"); await sleep(5400); await P.ev("window.__GAME__.begin()"); await sleep(KIND === "3d" ? 4000 : 900);
-  const r = await P.ev(`import('/src/core/sim.js').then(m=>{const G=window.__GAME__.G;G.gen=3;G.seed=${best.seed};G.heat=${HEAT};G.pact=0;G.featTier=null;m.loadLevel(G,${ROOM},false);G.state='PLAY';G.players[0].iFrames=1e9;for(const e of G.enemies){e.speed=0;e.invuln=true;e.invulnT=1e9;}G.featT=0.4;return Array.from(G.feat||[]).filter(v=>v).length;})`);
+  const r = await P.ev(`import('/src/core/board3.js').then(()=>import('/src/core/sim.js')).then(m=>{const G=window.__GAME__.G;G.gen=3;G.seed=${best.seed};G.heat=${HEAT};G.pact=0;G.featTier=null;m.loadLevel(G,${ROOM},false);G.state='PLAY';G.players[0].iFrames=1e9;for(const e of G.enemies){e.speed=0;e.invuln=true;e.invulnT=1e9;}G.featT=0.4;return Array.from(G.feat||[]).filter(v=>v).length;})`);
   await sleep(KIND === "3d" ? 3000 : 700);
   const rect = await P.ev(`(()=>{const r=document.getElementById('c').getBoundingClientRect();return {x:r.left,y:r.top,width:r.width,height:r.height};})()`);
   const shot = await P.S("Page.captureScreenshot", {format: "png", clip: {...rect, scale: 2}});

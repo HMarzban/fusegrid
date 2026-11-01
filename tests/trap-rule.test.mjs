@@ -5,6 +5,7 @@
    (`hold`). Its blast sets off no bomb (`chain` false), spares the foe that
    armed it at PLUS (`spare`) and kills no foe at MAX (`kill` false). */
 import test from "node:test";
+import "../src/core/board3.js";
 import assert from "node:assert/strict";
 import { CFG, T, key } from "../src/core/config.js";
 import { createWorld, loadLevel, step } from "../src/core/sim.js";

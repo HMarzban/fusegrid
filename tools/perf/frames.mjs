@@ -143,7 +143,7 @@ const PROBE = `(()=>{const c=document.createElement('canvas'),g=c.getContext('we
 
 /* Page-side stage: window.__stage = {set(spec), read()}, driven by its own native
    rAF. Foes are pinned, bombs and pickups refilled, never time or RNG of the sim. */
-const STAGE = `Promise.all(['/src/core/entities.js','/src/core/config.js','/src/core/sim.js','/src/render/lockon.js'].map((u)=>import(u))).then(([E,C,S,L])=>{
+const STAGE = `Promise.all(['/src/core/entities.js','/src/core/config.js','/src/core/sim.js','/src/render/lockon.js','/src/core/board3.js'].map((u)=>import(u))).then(([E,C,S,L])=>{
 const g=window.__GAME__,G=g.G,{T,key}=C,TL=C.CFG.TILE,COLS=C.CFG.COLS,ROWS=C.CFG.ROWS;
 const at=(x,y)=>G.grid[key(x,y)],cen=(v)=>(v+0.5)*TL;
 let on=null,seed=1,nextBomb=0,marks=null,hub=null,lanes=[],free=[],opts={};

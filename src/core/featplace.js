@@ -1,0 +1,447 @@
+/* Floor-tile placement (gen 3 only, ?gen=3): moved out of feat.js so the boot graph
+   carries the tile layer's rules and tables but not the code that lays it. Keyed
+   (seed, room) on the gen-2 skeleton, so heat never moves a tile. Reached only through
+   board3.js and the tile checks. */
+import { CFG, key } from "./config.js";
+import { createRng } from "./rng.js";
+import { HOME } from "./feat.js";
+
+const C = CFG.COLS, R = CFG.ROWS, N = C * R;
+const D4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+/* PORTAL placement (V34) */
+export const PORTAL_PLACE = Object.freeze({ pairs: 2, start: 12, twin: 8, gap: 3, open: 2, joint: 4, tries: 6 });
+/* ---- placement (V13-V27 subset, see notes.md) ---- */
+function fmix(h) {
+  h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b) >>> 0;
+  h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35) >>> 0;
+  return (h ^ (h >>> 16)) >>> 0;
+}
+const POCKET = [[1,1],[2,1],[1,2],[3,1],[4,1],[3,2],[1,3],[1,4],[2,3]];
+const DOORS = [[5,1],[1,5]];
+const open = (m, x, y) => x > 0 && y > 0 && x < C - 1 && y < R - 1 && m[key(x, y)] !== 0;
+function bfs(m, sx, sy) {
+  const d = new Int16Array(N).fill(-1), q = [key(sx, sy)];
+  d[q[0]] = 0;
+  for (let h = 0; h < q.length; h++) {
+    const k = q[h], x = k % C, y = (k / C) | 0;
+    for (const [dx, dy] of D4) {
+      const nx = x + dx, ny = y + dy;
+      if (!open(m, nx, ny)) continue;
+      const nk = key(nx, ny);
+      if (d[nk] >= 0) continue;
+      d[nk] = d[k] + 1; q.push(nk);
+    }
+  }
+  return d;
+}
+/* m: skeleton class map (0 wall, else open; bricks count as passable, the
+   real route once the doors are open). Returns {feat, force, fails} or null. */
+export function placeFeat(m, seed, level, biome, salt = 0, bgate = null, tpl = "") {
+  const kind = HOME[biome];
+  if (!kind) return null;
+  const rng = createRng(fmix((seed ^ Math.imul(level + 1, 0x9e3779b1) ^ 0x7ea7 ^ Math.imul(salt, 0x27d4eb2f)) >>> 0));
+  const dS = bfs(m, 1, 1), dD = DOORS.map(([x, y]) => bfs(m, x, y));
+  const far = (x, y) => open(m, x, y) && dS[key(x, y)] > 4 && !DOORS.some(([a, b]) => a === x && b === y);
+  for (let tries = 0; tries < 40; tries++) {
+    const f = new Uint8Array(N), force = [];
+    let ok = false;
+    let pair = null;
+    if (kind === "BELT") ok = belt(m, f, rng, dD, dS);
+    else if (kind === "GLIDE") ok = glide(m, f, rng, dS);
+    else if (kind === "BLOOM" && bgate) { const o = {}; if (bloom(m, f, rng, force, dS, o)) { const used = bgate(o.cand, o.want, o.sp); if (used) { for (const k of used) { f[k] = 6; force.push(k); } ok = true; } } }
+    else if (kind === "BLOOM") ok = bloom(m, f, rng, force, dS);
+    else if (kind === "STREAM") ok = stream(m, f, rng, far, force, bgate, dS);
+    else if (kind === "QUICK") ok = quick(m, f, rng, far, force, bgate, dS);
+    else if (kind === "PORTAL") { pair = new Uint8Array(N); ok = portal(m, f, rng, far, force, pair, bgate, dS); }
+    else if (kind === "GATE") ok = gate(m, f, rng, far, force, bgate, dS);
+    else ok = plate(m, f, rng, dS, force, tpl);
+    if (ok) return pair ? { feat: f, force, kind, tries, pair } : { feat: f, force, kind, tries };
+    if (bgate && (kind === "BLOOM" || kind === "STREAM" || kind === "PORTAL")) break;
+  }
+  return { feat: null, force: [], kind, tries: 40, fallback: true };
+}
+/* CONVEYOR placement, design pass 2 (#28; the 2026-10-21 V15 + V17 rule
+   plus four fixes). Straight acyclic chains on odd lanes, 4-9 tiles, total
+   <= 16, two tried per board; entry and landing open with >= 2 open
+   neighbours; a side step-off within 2 tiles downstream (or the landing);
+   the landing >= 10 walking steps from both doors; never within 4 steps of
+   the spawn or on a door. Pass 2:
+   - every chain cell is open floor in the skeleton (class E), never a fill
+     or fixed brick, so no chain hides under bricks and ends at a brick face;
+   - the chain carries AWAY from the start: its landing is no nearer (1,1) in
+     walking steps than its head, so no chain feeds the start corner;
+   - V20: under SHRINK rings 1-4 every surviving segment keeps a step-off,
+     and an open landing unless the ring walls it (a chain that runs into a
+     wall stops carrying actors, sim.js wallStop) */
+const rimOf = (x, y) => Math.min(x, C - 1 - x, y, R - 1 - y);
+const FLOOR = 1;
+function belt(m, f, rng, dD, dS) {
+  const runs = [];
+  for (let y = 1; y < R - 1; y += 2) {
+    let x = 1;
+    while (x < C - 1) { if (!open(m, x, y)) { x++; continue; } const s = x; while (open(m, x, y)) x++; if (x - s >= 6) runs.push({ h: true, a: s, b: x - 1, l: y }); }
+  }
+  for (let x = 1; x < C - 1; x += 2) {
+    let y = 1;
+    while (y < R - 1) { if (!open(m, x, y)) { y++; continue; } const s = y; while (open(m, x, y)) y++; if (y - s >= 6) runs.push({ h: false, a: s, b: y - 1, l: x }); }
+  }
+  if (!runs.length) return false;
+  let total = 0, made = 0;
+  const order = runs.map((r) => [rng.next(), r]).sort((p, q) => p[0] - q[0]).map((p) => p[1]);
+  const nOpen = (ok, x, y) => D4.filter(([dx, dy]) => ok(x + dx, y + dy)).length;
+  const isDoor = (x, y) => DOORS.some(([a, b]) => a === x && b === y);
+  const o0 = (x, y) => open(m, x, y);
+  for (const r of order) {
+    if (made >= 2) break;
+    for (let t = 0; t < 12; t++) {
+      const L = rng.int(4, Math.min(9, r.b - r.a - 1, 16 - total));
+      if (L < 4) break;
+      const s = rng.int(r.a + 1, r.b - L);
+      let dir = rng.int(0, 1) ? 1 : -1;
+      const fwd = []; for (let i = 0; i < L; i++) fwd.push(r.h ? [s + i, r.l] : [r.l, s + i]);
+      const ends = (d) => { const c = d > 0 ? fwd : fwd.slice().reverse(), [hx, hy] = c[0], [tx, ty] = c[L - 1]; return { c, e: r.h ? [hx - d, hy] : [hx, hy - d], l: r.h ? [tx + d, ty] : [tx, ty + d] }; };
+      const gain = (d) => { const q = ends(d); return dS[key(q.l[0], q.l[1])] - dS[key(q.c[0][0], q.c[0][1])]; };
+      if (gain(dir) < 0) dir = -dir;
+      if (gain(dir) < 0) continue;
+      const { c: cells, e: [ex, ey], l: [lx, ly] } = ends(dir);
+      if (!o0(ex, ey) || !o0(lx, ly) || nOpen(o0, ex, ey) < 2 || nOpen(o0, lx, ly) < 2) continue;
+      if (cells.some(([x, y]) => m[key(x, y)] !== FLOOR)) continue;
+      if (cells.some(([x, y]) => { const k = key(x, y); return dS[k] >= 0 && dS[k] <= 4 || isDoor(x, y) || f[k] || D4.some(([dx, dy]) => f[key(x + dx, y + dy)]); })) continue;
+      if (f[key(lx, ly)] || f[key(ex, ey)]) continue;
+      if (dD.some((d) => { const v = d[key(lx, ly)]; return v >= 0 && v < 10; })) continue;
+      const mine = new Set(cells.map(([x, y]) => key(x, y)));
+      const side = (ok, x, y) => (r.h ? [[x, y - 1], [x, y + 1]] : [[x - 1, y], [x + 1, y]]).some(([a, b]) => ok(a, b) && !f[key(a, b)] && !mine.has(key(a, b)));
+      const steps = (ok, cs, landOk) => {
+        for (let i = 0; i < cs.length; i++) {
+          let any = false;
+          for (let j = i; j <= Math.min(cs.length, i + 2) && !any; j++) any = j === cs.length ? landOk : side(ok, cs[j][0], cs[j][1]);
+          if (!any) return false;
+        }
+        return true;
+      };
+      if (!steps(o0, cells, true)) continue;
+      let ringOk = true;
+      for (let ring = 1; ring <= 4 && ringOk; ring++) {
+        const ok = (x, y) => open(m, x, y) && (rimOf(x, y) > ring || (x === 1 && y === 1));
+        const alive = cells.filter(([x, y]) => ok(x, y));
+        if (!alive.length) continue;
+        const [ax, ay] = alive[alive.length - 1], nl = r.h ? [ax + dir, ay] : [ax, ay + dir];
+        if (!ok(nl[0], nl[1])) continue;
+        if (nOpen(ok, nl[0], nl[1]) < 2 || !steps(ok, alive, true)) ringOk = false;
+      }
+      if (!ringOk) continue;
+      const code = r.h ? (dir > 0 ? 1 : 3) : (dir > 0 ? 2 : 4);
+      for (const [x, y] of cells) f[key(x, y)] = code;
+      total += L; made++;
+      break;
+    }
+  }
+  return made > 0;
+}
+/* V24 (design pass 2, #28): two rings of 8 around a pillar (runs of 3 at
+   most), never within 4 walking steps of spawn, rings never share or touch a
+   run; the pillars whose rings hold the most always-open floor (the skeleton's
+   E cells: ICE's open lane band, where the foes walk) are taken first, ties in
+   a seeded shuffle. Heat never moves a tile (R5). */
+function glide(m, f, rng, dS) {
+  const cand = [];
+  for (let y = 2; y < R - 2; y += 2) for (let x = 2; x < C - 2; x += 2) {
+    if (m[key(x, y)] !== 0) continue;
+    let ok = true, e = 0;
+    for (let dy = -1; dy <= 1 && ok; dy++) for (let dx = -1; dx <= 1 && ok; dx++) {
+      if (!dx && !dy) continue;
+      const k = key(x + dx, y + dy);
+      if (!open(m, x + dx, y + dy) || dS[k] < 0 || dS[k] <= 4) ok = false;
+      else if (m[k] === 1) e++;
+    }
+    if (ok) cand.push([x, y, e]);
+  }
+  if (!cand.length) return false;
+  for (let i = cand.length - 1; i > 0; i--) { const j = rng.int(0, i); [cand[i], cand[j]] = [cand[j], cand[i]]; }
+  cand.sort((a, b) => b[2] - a[2]);
+  const used = [];
+  for (const [x, y] of cand) {
+    if (used.length >= 2) break;
+    if (used.some(([a, b]) => Math.abs(a - x) < 4 && Math.abs(b - y) < 4)) continue;
+    used.push([x, y]);
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (dx || dy) f[key(x + dx, y + dy)] = 5;
+  }
+  return used.length > 0 && runsOk(f);
+}
+function runsOk(f) {
+  for (let y = 0; y < R; y++) { let n = 0; for (let x = 0; x < C; x++) { n = f[key(x, y)] === 5 ? n + 1 : 0; if (n > 3) return false; } }
+  for (let x = 0; x < C; x++) { let n = 0; for (let y = 0; y < R; y++) { n = f[key(x, y)] === 5 ? n + 1 : 0; if (n > 3) return false; } }
+  return true;
+}
+const farPocket = (x, y, d) => POCKET.concat(DOORS).every(([a, b]) => Math.abs(a - x) + Math.abs(b - y) >= d);
+/* V25: 3-5 on (odd,odd), >= 2 Manhattan from the pocket and doors, no two
+   within 3 in a row or column, forced floor (never under a fill brick), nearer
+   the start first */
+function bloom(m, f, rng, force, dS, out) {
+  const P = BLOOM_PLACE;
+  const want = rng.int(P.min, P.max), cand = [];
+  for (let y = 1; y < R - 1; y += 2) for (let x = 1; x < C - 1; x += 2) if (open(m, x, y) && farPocket(x, y, P.pocket) && dS[key(x, y)] > 4) cand.push([x, y]);
+  for (let i = cand.length - 1; i > 0; i--) { const j = rng.int(0, i); [cand[i], cand[j]] = [cand[j], cand[i]]; }
+  if (P.near) {
+    const sc = new Map(cand.map(([x, y]) => [key(x, y), dS[key(x, y)] + rng.next() * P.near]));
+    cand.sort((a, b) => sc.get(key(a[0], a[1])) - sc.get(key(b[0], b[1])));
+  }
+  const sp = (u, x, y) => u.some(([a, b]) => (a === x && Math.abs(b - y) <= P.gap) || (b === y && Math.abs(a - x) <= P.gap));
+  if (out) { out.cand = cand; out.want = want; out.sp = sp; return cand.length >= P.min; }
+  const used = [];
+  for (const [x, y] of cand) {
+    if (used.length >= want) break;
+    if (sp(used, x, y)) continue;
+    used.push([x, y]);
+  }
+  if (used.length < P.min) return false;
+  for (const [x, y] of used) { f[key(x, y)] = 6; force.push(key(x, y)); }
+  return true;
+}
+/* #28 BOOSTER placement knobs (pass-2 lane): count min..max, Manhattan from
+   the pocket and doors, line gap, and `near` (0 = shuffled order as 2026-10-21;
+   > 0 = sort by walking steps from spawn plus up to `near` steps of noise) */
+export const BLOOM_PLACE = { min: 3, max: 5, pocket: 2, gap: 3, near: 4 };
+/* the skeleton after SHRINK rings 1-4 (pact SHRINK walls rim 1.. inward, (1,1) kept) */
+function shrinkMaps(m) {
+  const out = [];
+  for (let ring = 1; ring <= 4; ring++) {
+    const g = m.slice();
+    for (let y = 0; y < R; y++) for (let x = 0; x < C; x++) { const rim = Math.min(x, C - 1 - x, y, R - 1 - y); if (rim >= 1 && rim <= ring && !(x === 1 && y === 1)) g[key(x, y)] = 0; }
+    out.push(g);
+  }
+  return out;
+}
+/* V26 + V27 + V20: 3-5 on (odd,odd), >= 6 walking steps from spawn, no two on
+   neighbouring intersections, forced floor; every tile on its r=3 arms has
+   a perpendicular open neighbour within 1 tile along the arm, also after each
+   SHRINK ring 1-4 (V20). Fewer than 3 such spots fails the shuffle; a layout
+   with no 3 at all (some GAUNTLETs, #22) re-rolls in genBoard3.
+   PLATE_TPL (#22, the uneven MAX dial): PIT's pockets are sealed from each other
+   by fill bricks, and foes that walk its open rooms arm traps about 4x as often
+   as on RING, so its blasts open the seals and let foes reach the player: a
+   layout limit of `max` traps, at most `seal` of them on a spot whose r=3 lines
+   cross more than `fill` non-floor cells (PIT's central doors). */
+export const PLATE_TPL = Object.freeze({ pit: Object.freeze({ max: 4, seal: 1, fill: 5 }) });
+export function plateFill(m, x, y) {
+  let n = 0;
+  for (const [dx, dy] of D4) for (let i = 1; i <= 3; i++) {
+    if (!open(m, x + dx * i, y + dy * i)) break;
+    if (m[key(x + dx * i, y + dy * i)] !== FLOOR) n++;
+  }
+  return n;
+}
+function plate(m, f, rng, dS, force, tpl) {
+  const lim = PLATE_TPL[tpl], cand = [], rings = shrinkMaps(m);
+  let want = rng.int(3, 5), seals = 0;
+  if (lim && want > lim.max) want = lim.max;
+  for (let y = 1; y < R - 1; y += 2) for (let x = 1; x < C - 1; x += 2) {
+    const k = key(x, y);
+    if (!open(m, x, y) || dS[k] < 6 || !sideExit(m, x, y)) continue;
+    cand.push([x, y]);
+  }
+  for (let i = cand.length - 1; i > 0; i--) { const j = rng.int(0, i); [cand[i], cand[j]] = [cand[j], cand[i]]; }
+  const ringOk = ([x, y]) => rings.every((g) => !open(g, x, y) || sideExit(g, x, y)), used = [];
+  for (const [x, y] of cand.filter(ringOk)) {
+    if (used.length >= want) break;
+    if (used.some(([a, b]) => Math.abs(a - x) + Math.abs(b - y) <= 2)) continue;
+    if (lim && plateFill(m, x, y) > lim.fill) { if (seals >= lim.seal) continue; seals++; }
+    used.push([x, y]);
+  }
+  if (used.length < 3) return false;
+  for (const [x, y] of used) { f[key(x, y)] = 7; force.push(key(x, y)); }
+  return true;
+}
+const shuf = (a, rng) => { for (let i = a.length - 1; i > 0; i--) { const j = rng.int(0, i); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const manh = (a, b) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]);
+const clearOf = (f, x, y) => !f[key(x, y)] && D4.every(([dx, dy]) => !f[key(x + dx, y + dy)]);
+/* V28 STREAM (#26): 2 straight runs of 4-6 tiles, 12 at most, in one direction
+   each, never touching; every tile > 4 steps from spawn and off the doors; the
+   tile past the run is no WALL and no nearer the spawn in walking steps than the
+   run's head, so no float carries a bomb toward the start corner. After SHRINK
+   rings 1-4 a surviving tile still reaches plain floor (V20). bgate, when set,
+   refuses a run that adds a no-escape spot (V29), at most GATE_N asks per call. */
+const GATE_N = 8;
+function stream(m, f, rng, far, force, bgate, dS) {
+  const lanes = [];
+  for (let y = 1; y < R - 1; y++) { let x = 1; while (x < C - 1) { if (!far(x, y)) { x++; continue; } const s = x; while (far(x, y)) x++; if (x - s >= 4) lanes.push({ h: true, a: s, b: x - 1, l: y }); } }
+  for (let x = 1; x < C - 1; x++) { let y = 1; while (y < R - 1) { if (!far(x, y)) { y++; continue; } const s = y; while (far(x, y)) y++; if (y - s >= 4) lanes.push({ h: false, a: s, b: y - 1, l: x }); } }
+  if (!lanes.length) return false;
+  const rings = shrinkMaps(m);
+  let made = 0, total = 0, asks = 0;
+  for (const r of shuf(lanes, rng)) {
+    if (made >= 2 || asks >= GATE_N) break;
+    for (let t = 0; t < 8 && asks < GATE_N; t++) {
+      const L = rng.int(4, Math.min(6, r.b - r.a + 1, 12 - total));
+      if (L < 4) break;
+      const s = rng.int(r.a, r.b - L + 1);
+      let dir = rng.int(0, 1) ? 1 : -1;
+      const fwd = []; for (let i = 0; i < L; i++) fwd.push(r.h ? [s + i, r.l] : [r.l, s + i]);
+      const past = (d) => { const e = d > 0 ? fwd[L - 1] : fwd[0]; return r.h ? [e[0] + d, e[1]] : [e[0], e[1] + d]; };
+      const gain = (d) => { const p = past(d), h = d > 0 ? fwd[0] : fwd[L - 1]; return open(m, p[0], p[1]) && dS[key(p[0], p[1])] >= dS[key(h[0], h[1])]; };
+      if (!gain(dir)) dir = -dir;
+      if (!gain(dir)) continue;
+      if (!fwd.every(([x, y]) => clearOf(f, x, y))) continue;
+      const mine = new Set(fwd.map(([x, y]) => key(x, y)));
+      if (!rings.every((g) => fwd.every(([x, y]) => !open(g, x, y) || floorOut(g, mine, x, y)))) continue;
+      const cells = dir > 0 ? fwd : fwd.slice().reverse(), ks = cells.map(([x, y]) => key(x, y));
+      const code = r.h ? (dir > 0 ? 8 : 10) : (dir > 0 ? 9 : 11);
+      if (bgate) { asks++; if (!bgate(f, ks, code)) continue; }
+      for (const k of ks) { f[k] = code; force.push(k); }
+      made++; total += L;
+      break;
+    }
+  }
+  return made === 2;
+}
+/* from a run tile, along the run's own tiles, to a tile that is plain floor */
+function floorOut(g, mine, x, y) {
+  const seen = new Set([key(x, y)]), q = [[x, y]];
+  for (let h = 0; h < q.length; h++) for (const [dx, dy] of D4) {
+    const a = q[h][0] + dx, b = q[h][1] + dy, k = key(a, b);
+    if (!open(g, a, b) || seen.has(k)) continue;
+    if (!mine.has(k)) return true;
+    seen.add(k); q.push([a, b]);
+  }
+  return false;
+}
+/* V30 helpers over any open(x, y). quickSeals: mounds at the cells ks part two cells a
+   walker could otherwise join. quickDetour: blocking k, the extra steps between its two
+   worst-placed open neighbours (a tile in an open field scores 2; a neighbour cut off
+   scores Infinity). */
+function floodFrom(ok, k, blocked, label, id) {
+  const q = [k];
+  label[k] = id;
+  for (let h = 0; h < q.length; h++) {
+    const a = q[h], x = a % C, y = (a / C) | 0;
+    for (const [dx, dy] of D4) {
+      const b = key(x + dx, y + dy);
+      if (ok(x + dx, y + dy) && label[b] < 0 && !blocked.has(b)) { label[b] = id; q.push(b); }
+    }
+  }
+  return q;
+}
+export function quickSeals(ok, ks) {
+  const blocked = new Set(ks), label = new Int16Array(N).fill(-1), part = new Int16Array(N).fill(-1), none = new Set();
+  let id = 0, jd = 0;
+  for (let k = 0; k < N; k++) if (ok(k % C, (k / C) | 0) && !blocked.has(k) && label[k] < 0) floodFrom(ok, k, blocked, label, id++);
+  for (let k = 0; k < N; k++) {
+    if (!ok(k % C, (k / C) | 0) || part[k] >= 0) continue;
+    const cells = floodFrom(ok, k, none, part, jd++).filter((c) => !blocked.has(c));
+    if (cells.some((c) => label[c] !== label[cells[0]])) return true;
+  }
+  return false;
+}
+export function quickDetour(ok, k) {
+  const x = k % C, y = (k / C) | 0, nb = D4.map(([dx, dy]) => [x + dx, y + dy]).filter(([a, b]) => ok(a, b));
+  let worst = 0;
+  for (let i = 0; i < nb.length - 1; i++) {
+    const d = new Int16Array(N).fill(-1), q = [key(nb[i][0], nb[i][1])];
+    d[q[0]] = 0;
+    for (let h = 0; h < q.length; h++) {
+      const a = q[h], ax = a % C, ay = (a / C) | 0;
+      for (const [dx, dy] of D4) { const b = key(ax + dx, ay + dy); if (ok(ax + dx, ay + dy) && b !== k && d[b] < 0) { d[b] = d[a] + 1; q.push(b); } }
+    }
+    for (let j = i + 1; j < nb.length; j++) { const v = d[key(nb[j][0], nb[j][1])]; if (v < 0) return Infinity; if (v - 2 > worst) worst = v - 2; }
+  }
+  return worst;
+}
+export const QUICK_PLACE = Object.freeze({ min: 3, max: 5, gap: 4, nbrs: 2, detour: 3 });
+/* V30: 3-5 singles at least 4 Manhattan apart, more than 4 steps from the start, off the
+   doors, at least 2 open neighbours, a detour of at least 3 (an open-field tile scores 2), and on the brick-free map
+   (also after each SHRINK ring) all of them grown never part it. bgate re-checks the
+   finished set against the grids of all three heats (V30 + V31). */
+function quick(m, f, rng, far, force, bgate) {
+  const P = QUICK_PLACE, want = rng.int(P.min, P.max), cand = [], used = [], ok = (x, y) => open(m, x, y), rings = shrinkMaps(m).map((g) => (x, y) => open(g, x, y));
+  for (let y = 1; y < R - 1; y++) for (let x = 1; x < C - 1; x++) if (far(x, y) && D4.filter(([dx, dy]) => ok(x + dx, y + dy)).length >= P.nbrs) cand.push([x, y]);
+  for (const c of shuf(cand, rng)) {
+    if (used.length >= want) break;
+    if (used.some((u) => manh(u, c) < P.gap)) continue;
+    const k = key(c[0], c[1]), ks = [...used.map(([x, y]) => key(x, y)), k];
+    if (quickDetour(ok, k) < P.detour || quickSeals(ok, ks) || rings.some((o) => quickSeals(o, ks))) continue;
+    used.push(c);
+  }
+  if (used.length < P.min) return false;
+  const ks = used.map(([x, y]) => key(x, y));
+  if (bgate && !bgate(ks)) return false;
+  for (const k of ks) { f[k] = 12; force.push(k); }
+  return true;
+}
+/* V34 PORTAL: greedy up to PORTAL_PLACE.pairs pairs (pair id 1, 2 in `pair`). A pair
+   is kept only if bgate (V35) passes with it and the pairs kept so far; a seed that
+   keeps none ships the plain gen-2 board (V23). */
+function portal(m, f, rng, far, force, pair, bgate, dS) {
+  const P = PORTAL_PLACE, cand = [];
+  for (let y = 1; y < R - 1; y++) for (let x = 1; x < C - 1; x++) if (far(x, y) && dS[key(x, y)] >= P.start && D4.filter(([dx, dy]) => open(m, x + dx, y + dy)).length >= P.open) cand.push([x, y]);
+  shuf(cand, rng);
+  /* the next pair after `used`, in shuffled order, from candidate index `from` */
+  const nextPair = (used, from) => {
+    for (let i = from; i < cand.length; i++) {
+      const a = cand[i];
+      if (used.some((u) => manh(u, a) <= P.gap)) continue;
+      const d = bfs(m, a[0], a[1]);
+      for (let j = i + 1; j < cand.length; j++) {
+        const b = cand[j];
+        if (manh(a, b) >= P.twin && d[key(b[0], b[1])] >= P.twin && manh(a, b) > P.gap && !used.some((u) => manh(u, b) <= P.gap)) return { a, b, i };
+      }
+    }
+    return null;
+  };
+  const keep = (u) => { u.forEach(([x, y], i) => { f[key(x, y)] = 13; pair[key(x, y)] = 1 + (i >> 1); force.push(key(x, y)); }); return u.length > 0; };
+  /* most boards take two of the first pairs tried: one gate call each, not two */
+  for (let t = 0, from = 0; t < P.joint; t++) {
+    const p1 = nextPair([], from), p2 = p1 && nextPair([p1.a, p1.b], from + 1);
+    if (!p2) break;
+    if (!bgate || bgate([p1.a, p1.b, p2.a, p2.b])) return keep([p1.a, p1.b, p2.a, p2.b]);
+    from = p1.i + 1;
+  }
+  const used = [];
+  for (let id = 1; id <= P.pairs; id++) {
+    let from = 0, tried = 0, got = false;
+    while (!got && tried < P.tries) {
+      const q = nextPair(used, from);
+      if (!q) break;
+      tried++;
+      from = q.i + 1;
+      if (bgate && !bgate([...used, q.a, q.b])) continue;
+      used.push(q.a, q.b);
+      got = true;
+    }
+    if (!got) break;
+  }
+  return keep(used);
+}
+/* V32: up to 3 singles, at least 2, on straight corridor tiles (two opposite open
+   neighbours, nothing else), no two within 4 Manhattan; bgate keeps a candidate only if the
+   kept gates plus it pass with all of them shut (board2 tileGate) */
+function gate(m, f, rng, far, force, bgate, dS) {
+  const want = 3, cand = [], used = [];
+  const o = (x, y) => open(m, x, y);
+  for (let y = 1; y < R - 1; y++) for (let x = 1; x < C - 1; x++) {
+    if (!far(x, y)) continue;
+    const h = o(x - 1, y) && o(x + 1, y) && !o(x, y - 1) && !o(x, y + 1), v = o(x, y - 1) && o(x, y + 1) && !o(x - 1, y) && !o(x + 1, y);
+    if (h || v) cand.push([x, y]);
+  }
+  for (const c of shuf(cand, rng)) {
+    if (used.length >= want) break;
+    if (used.some((u) => manh(u, c) < 4)) continue;
+    if (bgate && !bgate(c, used)) continue;
+    used.push(c);
+  }
+  if (used.length < 2) return false;
+  for (const [x, y] of used) { f[key(x, y)] = 14; force.push(key(x, y)); }
+  return true;
+}
+export function sideExit(m, x, y) {
+  const perpOpen = (px, py, dx, dy) => open(m, px + dy, py + dx) || open(m, px - dy, py - dx);
+  for (const [dx, dy] of D4) {
+    const arm = [[x, y]];
+    for (let i = 1; i <= 3; i++) { if (!open(m, x + dx * i, y + dy * i)) break; arm.push([x + dx * i, y + dy * i]); }
+    for (let i = 1; i < arm.length; i++) {
+      let ok = false;
+      for (let j = Math.max(0, i - 1); j <= Math.min(arm.length - 1, i + 1); j++) if (perpOpen(arm[j][0], arm[j][1], dx, dy)) { ok = true; break; }
+      if (!ok) return false;
+    }
+  }
+  return true;
+}

@@ -14,6 +14,7 @@
    keyed to heat's stock profile (A0 is the same for every knob table).
    Never imported by src/. */
 import { CFG, T, key } from "../../src/core/config.js";
+import "../../src/core/board3.js";
 import { tileOf } from "../../src/core/board.js";
 import { createWorld, loadLevel, step } from "../../src/core/sim.js";
 import { createDemobot } from "../../src/app/demobot.js";

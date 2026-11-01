@@ -16,6 +16,7 @@
    not measured. Output: tools/balance/out/ice-*.jsonl and a printed report.
    Shipped knobs stay as they are; this proposes only. Never imported by src/. */
 import { spawnSync } from "node:child_process";
+import "../../src/core/board3.js";
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";

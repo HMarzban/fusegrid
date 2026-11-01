@@ -5,6 +5,7 @@
    through the live camera (bilinear, from a dpr 2 buffer, desktop AUTO's own, where a tile covers about 70 device px; the pins also hold at 1.5 and 3) to a 160 px square, which is what cvdSep's 40-px view reads. The tile
    shaders run on world.featT, so every tile is measured at six PLAY-clock phases (anim.mjs) and the caller keeps the worst. */
 import {createRenderer3D, projBoard} from "../../src/render/three/wrapper.js";
+import "../../src/core/board3.js";
 import {createWorld, loadLevel} from "../../src/core/sim.js";
 import {CFG, T, BIOMES, key} from "../../src/core/config.js";
 import {setWallOverride} from "../../src/render/wallvar.js";

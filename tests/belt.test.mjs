@@ -4,6 +4,7 @@
    no foe, and the static model's known fuse cell equals the sim's. Built on
    a real gen-3 world with a hand-made corridor. */
 import test from "node:test";
+import "../src/core/board3.js";
 import assert from "node:assert/strict";
 import { CFG, T, key } from "../src/core/config.js";
 import { tileOf } from "../src/core/board.js";

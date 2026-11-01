@@ -1,5 +1,6 @@
 /* TILE ART direction D, PIXEL wiring (2026-10-25): the floor tiles draw in the px look through atlas.feat, and a world without feat is untouched. */
 import test from "node:test";
+import "../src/core/board3.js";
 import assert from "node:assert/strict";
 import { CFG, BIOMES, T } from "../src/core/config.js";
 import { createWorld, loadLevel } from "../src/core/sim.js";

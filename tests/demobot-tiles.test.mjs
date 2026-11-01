@@ -15,6 +15,7 @@
    - the featProfile seam: unset or set to the stock table plays the same,
      a changed knob changes play. */
 import { CFG, T, key } from "../src/core/config.js";
+import "../src/core/board3.js";
 import { createWorld, loadLevel, step } from "../src/core/sim.js";
 import { createDemobot } from "../src/app/demobot.js";
 import { FEAT_PROFILE, featProfile } from "../src/core/feat.js";

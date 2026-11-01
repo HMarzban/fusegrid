@@ -2,6 +2,7 @@
    V13-V27 as pure static checks. One hand-made pass and fail fixture per
    check, plus V18 == V2 parity on real boards with the layer off. */
 import test from "node:test";
+import "../src/core/board3.js";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { CFG, T, key } from "../src/core/config.js";

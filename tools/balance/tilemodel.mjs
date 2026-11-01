@@ -6,6 +6,7 @@
    harness knob table (w.featProf) or tier override (w.featTier) reaches the
    model exactly as it reaches step(). Never imported by src/. */
 import { CFG, T, key } from "../../src/core/config.js";
+import "../../src/core/board3.js";
 import { tileOf } from "../../src/core/board.js";
 import { featProfile, isBelt, beltDir, isStream, isFlow, flowDir, pairTwins } from "../../src/core/feat.js";
 import { portalDim, MAX_JUMPS } from "../../src/core/tileportal.js";

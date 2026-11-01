@@ -4,6 +4,7 @@
    Expectations come from README "How to play", AGENTS.md and the on-screen
    foot hints in menudraw.js — not from reading the handlers back. */
 import { createGame } from "../src/main.js";
+import "../src/core/board3.js";
 import { createPixelRenderer } from "../src/render/pixel/renderer.js";
 import { SCREEN, ITEMS, GUIDE_ROWS, PAUSE_ITEMS, OPT_ROWS, IDLE_T } from "../src/app/menuapp.js";
 import { GFX_ROWS, DEMO_T } from "../src/app/gfx.js";

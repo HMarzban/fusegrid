@@ -1,5 +1,6 @@
 /* REAL 3D FOES AND ITEMS motion (entities round 2026-10-25): determinism, PAUSE freeze, bounds, spawn / death / collect, draw budget. Headless: THREE objects only. */
 import test from "node:test";
+import "../src/core/board3.js";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import * as THREE from "../vendor/three.module.js";

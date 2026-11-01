@@ -22,7 +22,8 @@
    Ride lengths take the HARD pace (the longest ride); speeds take EASY. */
 import { CFG, T, key, biomeOf } from "./config.js";
 import { walk, POCKET, DOORS, ESC_STEPS, REACH_MAX, foeMin } from "./fair.js";
-import { F, HOME, FEAT_PROFILE, TILE_NAME, isBelt, beltDir, isStream, isFlow, flowDir, featKindOf, QUICK_PLACE, quickSeals, quickDetour, pairTwins, PORTAL_PLACE } from "./feat.js";
+import { F, HOME, FEAT_PROFILE, TILE_NAME, isBelt, beltDir, isStream, isFlow, flowDir, featKindOf, pairTwins } from "./feat.js";
+import { QUICK_PLACE, quickSeals, quickDetour, PORTAL_PLACE } from "./featplace.js";
 import { HOLD_MIN, holdReach } from "./tilequick.js";
 import { heatProfile, heatRoster, clampHeat } from "./heat.js";
 import { applyPact } from "./pact.js";

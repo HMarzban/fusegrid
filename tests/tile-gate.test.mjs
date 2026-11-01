@@ -1,5 +1,6 @@
 /* GATE (#26): the rule at every heat, the deferral, SHRINK, placement and V32 / V33, and the three looks' wall passes. */
 import test from "node:test";
+import "../src/core/board3.js";
 import assert from "node:assert/strict";
 import { createWorld, loadLevel, step } from "../src/core/sim.js";
 import { CFG, T, key } from "../src/core/config.js";
