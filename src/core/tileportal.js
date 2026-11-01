@@ -29,7 +29,14 @@ const bladeOn = (w, k) => w.blades.some((bl) => bl.tiles && bl.tiles.some((t) =>
 function blockedTo(w, tw) {
   if (bombOn(w, tw) || bladeOn(w, tw)) return true;
   const x = tw % C, y = (tw / C) | 0;
-  return w.enemies.some((e) => !e.dead && Math.abs(tileOf(e.x) - x) <= 1 && Math.abs(tileOf(e.y) - y) <= 1);
+  /* a foe on the twin, or a moving one on a tile beside it; a sentry only hurts on contact, so it never holds a pair shut */
+  return w.enemies.some((e) => { if (e.dead) return false; const d = Math.abs(tileOf(e.x) - x) + Math.abs(tileOf(e.y) - y); return d === 0 || (d === 1 && e.speed > 0); });
+}
+/* a slide stops short of a live portal whose twin holds a bomb or a foe */
+export function slideBlocked(w, k, self) {
+  const tw = twinOf(w, k);
+  if (tw < 0 || dead(w.grid, k, tw)) return false;
+  return w.bombs.some((o) => o !== self && !o.dead && key(o.tx, o.ty) === tw) || w.enemies.some((e) => !e.dead && e.tx === tw % C && e.ty === ((tw / C) | 0));
 }
 /* the dim look, the truth for a walker: stepping on k would not warp you */
 export function portalDim(w, k) {
@@ -49,7 +56,7 @@ function warpPlayer(w, emit) {
   const p = w.players[0];
   if (!p.alive) { p.warpK = undefined; return; }
   const k = key(tileOf(p.x), tileOf(p.y)), tw = crossed(w, p, k);
-  if (tw < 0 || blockedTo(w, tw)) return;
+  if (tw < 0 || portalDim(w, k)) return;
   const x = p.x, y = p.y;
   jump(p, tw);
   p.warpK = tw;
@@ -66,7 +73,7 @@ function warpBombs(w, emit) {
     if (!b.slide) { b.warpK = k; continue; }
     const tw = crossed(w, b, k);
     if (tw < 0) continue;
-    if (w.bombs.some((o) => o !== b && !o.dead && key(o.tx, o.ty) === tw) || w.enemies.some((e) => !e.dead && e.tx === tw % C && e.ty === ((tw / C) | 0))) {
+    if (slideBlocked(w, k, b)) {
       b.tx -= b.slide.x; b.ty -= b.slide.y; b.warpK = was;
       b.x = (b.tx + 0.5) * FT; b.y = (b.ty + 0.5) * FT;
       b.slide = null; b.prog = 0;

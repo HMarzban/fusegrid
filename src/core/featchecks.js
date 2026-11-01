@@ -552,14 +552,16 @@ export function gateSplit(grid, gs) {
 /* own bomb at every cell the shut gates can touch (within the step cap of `near`,
    default all of gs): an escape on the open grid that fails on the shut one is a
    spot. A bomb on a gate holds that gate open. r stops at the cap: a blast further
-   out reaches no cell a capped escape can visit. Two brick states, as V19. */
+   out reaches no cell a capped escape can visit. Two brick states, as V19, on the
+   open board and after each SHRINK ring: a ring can wall the other way round. */
 export function gateSpot(b, profile, gs, near = null) {
   const n = norm(b, profile, {}), cap = n.lim.escSteps, rMax = Math.min(n.lim.radius, cap);
   const cleared = n.g.map((v) => (v === T.BRICK ? T.EMPTY : v));
   const at = near == null ? gs : [near];
-  for (const g0 of [n.g, cleared]) {
+  for (let ring = 0; ring <= n.lim.rings; ring++) for (const g0 of [n.g, cleared]) {
     const g = g0.slice();
     for (const k of gs) g[k] = T.EMPTY;
+    if (ring) for (let k = 0; k < N; k++) { const [x, y] = xy(k), rim = Math.min(x, C - 1 - x, y, R - 1 - y); if (rim >= 1 && rim <= ring && !(x === 1 && y === 1)) g[k] = T.WALL; }
     const shut = g.slice();
     for (const k of gs) shut[k] = T.WALL;
     const Eb = env(n, g, { tiles: false }), Es = env(n, shut, { tiles: false });

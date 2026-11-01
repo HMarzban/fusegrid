@@ -7,7 +7,7 @@ import { hasPact, PACT } from "./pact.js";
 import { paceMul } from "./pace.js";
 import { isBelt, beltDir, featProfile, isStream, isFlow, flowDir, F } from "./feat.js";
 import { tileTick, featSpeed } from "./tiles2.js";
-import { armJump } from "./tileportal.js";
+import { armJump, slideBlocked } from "./tileportal.js";
 
 /* A clean intent for one player for this tick. This is exactly what a network
    client would send the server: move vector + edge-triggered fire/remote. */
@@ -252,6 +252,7 @@ function sliderStopAt(w, b, tx, ty) {
   if (w.bombs.some((o) => o !== b && !o.dead && o.tx === tx && o.ty === ty))
     return true;
   if (w.enemies.some((e) => !e.dead && e.tx === tx && e.ty === ty)) return true;
+  if (w.featPair && slideBlocked(w, key(tx, ty), b)) return true;
   return false;
 }
 

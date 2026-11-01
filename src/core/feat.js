@@ -536,14 +536,14 @@ export function sideExit(m, x, y) {
   }
   return true;
 }
-/* spawner exclusion: no foe on a feature tile, none within 1 of a PLATE;
+/* spawner exclusion: no foe on a feature tile, none within 1 of a PLATE or a PORTAL;
    ICE PATCH is player-only, so only a SENTRY may not start on it (V24) */
 export function spawnBlocked(feat, x, y, t) {
   if (!feat) return false;
   const v = feat[key(x, y)];
   if (v === 5) return t === "stationary";
   if (v) return true;
-  for (const [dx, dy] of D4) if (feat[key(x + dx, y + dy)] === 7) return true;
+  for (const [dx, dy] of D4) { const n = feat[key(x + dx, y + dy)]; if (n === 7 || n === 13) return true; }
   return false;
 }
 /* V17 time-weighted foe distance (pass 2: the featchecks V17 model): steps

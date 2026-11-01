@@ -267,3 +267,14 @@ test("gen 1 and gen 2 carry no gate state", () => {
     assert.equal(gateBar(w, key(3, 3)), false);
   }
 });
+
+test("under SHRINK a shut gate never closes the only way out: V33 checks every ring", () => {
+  for (const seed of [5464155, 5432479]) for (const heat of [0, 1, 2]) {
+    const w = createWorld(seed, 8);
+    w.gen = 3; w.heat = heat; loadLevel(w, 8, false);
+    assert.ok(w.feat, "the board keeps its gates");
+    const gs = [];
+    for (let k = 0; k < w.feat.length; k++) if (w.feat[k] === F.GATE) gs.push(k);
+    assert.equal(gateSpot({ grid: w.grid, level: 8, heat }, FEAT_PROFILE[heat], gs), null, "seed " + seed + " heat " + heat);
+  }
+});

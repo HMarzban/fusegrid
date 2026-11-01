@@ -54,8 +54,8 @@ test("latch: standing on the twin does not warp back; leaving and stepping on ag
   while (tile(w.players[0])[0] === 12 && n++ < 200) step(w, DT, go(-1));
   assert.deepEqual(tile(w.players[0]), A);
 });
-test("blocked: a bomb on the twin, a live blade on it or a foe within 1 tile make it plain floor, and the look says so", () => {
-  const setups = [(w) => bomb(w, B[0], B[1], { timer: 60 }), (w) => w.blades.push({ x: 0, y: 0, t: 0, ttl: 60, tiles: [{ tx: B[0], ty: B[1], brick: false }] }), (w) => foe(w, B[0] + 1, B[1] - 1, 0.0001)];
+test("blocked: a bomb on the twin, a live blade on it or a moving foe on or beside it make it plain floor, and the look says so", () => {
+  const setups = [(w) => bomb(w, B[0], B[1], { timer: 60 }), (w) => w.blades.push({ x: 0, y: 0, t: 0, ttl: 60, tiles: [{ tx: B[0], ty: B[1], brick: false }] }), (w) => foe(w, B[0] + 1, B[1], 0.0001)];
   for (const set of setups) {
     const w = room(1); keep(w); set(w);
     assert.equal(portalDim(w, key(A[0], A[1])), true);
@@ -318,4 +318,39 @@ test("replay: a portal room is deterministic", () => {
   const a = mk(), b = mk();
   for (let i = 0; i < 900; i++) { const m = [[1, 0], [0, 1], [-1, 0], [0, -1]][(i >> 5) & 3]; step(a, DT, go(m[0], m[1])); step(b, DT, go(m[0], m[1])); }
   assert.equal(snap(a), snap(b));
+});
+
+test("a sentry or a diagonal foe never holds a pair shut, and a foe never spawns beside a portal", () => {
+  for (const set of [(w) => foe(w, B[0] + 1, B[1], 0), (w) => foe(w, B[0] + 1, B[1] - 1, 2)]) {
+    const w = room(1); keep(w); set(w);
+    assert.equal(portalDim(w, key(A[0], A[1])), false);
+  }
+  for (const seed of [1, 2, 3, 4, 5, 6]) {
+    const w = createWorld(seed, 7);
+    w.gen = 3; w.heat = 2; loadLevel(w, 7, false);
+    if (!w.featPair) continue;
+    for (let k = 0; k < w.featPair.length; k++) if (w.featPair[k]) for (const e of w.enemies) assert.ok(Math.abs(e.tx - k % CFG.COLS) + Math.abs(e.ty - ((k / CFG.COLS) | 0)) > 1);
+  }
+});
+test("the dim look is the truth: crossing a dim portal with PASS on its bomb does not warp you", () => {
+  const w = room(1); keep(w);
+  bomb(w, A[0], A[1], { timer: 60 });
+  assert.equal(portalDim(w, key(A[0], A[1])), true);
+  const p = w.players[0];
+  p.passing = true;
+  walkOn(w, A[0] - 1, A[1], 1);
+  run(w, 0.05);
+  assert.notDeepEqual(tile(p), B);
+});
+test("a held kick at a blocked portal stays still: no re-launch, no kick events", () => {
+  const w = room(1); keep(w);
+  const p = w.players[0];
+  p.kick = true;
+  bomb(w, B[0], B[1], { timer: 60 });
+  const b = bomb(w, A[0] - 1, A[1], { timer: 60 });
+  place(p, A[0] - 2, A[1]);
+  let kicks = 0;
+  for (let i = 0; i < 180; i++) { p.iFrames = 99; step(w, DT, go(1)); kicks += w.events.filter((e) => e.t === "kick").length; w.events.length = 0; }
+  assert.equal(kicks, 0);
+  assert.deepEqual([b.tx, b.ty], [A[0] - 1, A[1]]);
 });
