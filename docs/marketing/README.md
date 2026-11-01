@@ -73,6 +73,7 @@ script-counted texts (X weighted count, a URL = 23), alt text and a posting orde
 | `2026-10-23-post-x/` | Board devlog, IN THE WORKS | Posted by the owner |
 | `2026-10-25-post-x/` | Three posts × 4 cards, v184 BEFORE vs v185 NOW | Post only after v185 is live (OPTIONS reads `BUILD v185`) |
 | `2026-10-26-social/` | Eight standalone 16:9 cards: four dev stories, four ideas | Ideas badged; SOLIN card says "AI-assisted concept art"; boss names may change |
+| `2026-11-01-launch-prep/` | Stage 2 drafts: r/WebGames, r/playmygame, itch, list entries; the capture scripts | Not to post until the owner says go; re-read each venue's rules that day |
 
 Every picture is a real capture of the game or the owner's own design work,
 never generated key art for the game itself.
@@ -120,15 +121,16 @@ TURN UP THE HEAT
 Pick CORE, PLUS or MAX on LEVEL SELECT. Clear room 5 once and three more
 rooms open, plus four MODES (IRON, BARE, THIN, SHRINK) and a TIME stopwatch.
 
-EIGHT ROOMS, EIGHT TUNES
+EIGHT ROOMS, EIGHT TUNES, A NEW BOARD EVERY RUN
 JUNGLE, ICE, FACTORY, WATER, ARENA, then SAND, VOID and CROWN. Every room has
 its own chiptune theme and its own blast tint, and the last three bring
 foes you won't meet anywhere else.
 
 YOU AGAINST YOU
-A DAILY board seeded from the date. A ghost of your fastest clear to race.
-Board codes you can share. Medals for finale clears. Everything stays on your
-device: no account, no server, no ads.
+A DAILY board seeded from the date, with a ghost of your fastest clear to race.
+Board codes you can share. Medals for finale clears. Your runs stay on your
+device: no account, no server, no ads. The web build can share play stats only
+if you say yes.
 
 CONTROLS
 WASD / arrows move · Space bomb · P pause
@@ -228,7 +230,7 @@ on it.
 | Need | Have it? |
 |---|---|
 | itch cover 630×500 | ✅ `media/cover-630x500.png` |
-| 3–5 gameplay stills | ✅ `media/still-*.png`: JUNGLE, ICE, CROWN in REAL 3D, FACTORY in PIXEL, and the MENU (recaptured on v181) |
+| 3–5 gameplay stills | ✅ `media/still-*.png`: JUNGLE, ICE, CROWN in REAL 3D, FACTORY in PIXEL, and the MENU (all recaptured on v192, checked on v193) |
 | Short gameplay GIF | ✅ `media/play.gif` |
 | A PIXEL still | ✅ `media/still-pixel.png` |
 | Silent 15–20 s clip, landscape + portrait | ✅ 18 s each: `media/clip-landscape.mp4` (1920×1080, REAL 3D) and `media/clip-portrait-2x3.mp4` (1080×1620, PIXEL) for CrazyGames, `media/clip-portrait-9x16.mp4` (1080×1920, REAL 3D) for Shorts / TikTok / Reels |
@@ -245,29 +247,12 @@ Every asset is a real capture of the live game, never generated key art (see
 
 ## 🏷️ GitHub About and topics
 
-The owner edits the description, website and topics in the ⚙️ dialog next
-to **About** on the repo page. Only **Settings → Social preview** (the card
-image) has no API. Nothing here has been changed on GitHub.
+Live on GitHub (read 2026-11-01 with `gh api`): the description, website and
+20 topics below. GitHub's cap is 20, so adding a topic means dropping one. Only
+**Settings → Social preview** (the card image) has no API, and the owner
+uploads it by hand whenever the card changes.
 
-Prefer the terminal? The owner can run this once, after checking the text:
-
-```bash
-gh repo edit HMarzban/fusegrid --homepage "https://hmarzban.github.io/fusegrid/" --description "Play FUSE/GRID free in your browser: a single-player bomb-grid arcade in three looks (CLASSIC 2D, PIXEL, REAL 3D) with Heat CORE / PLUS / MAX. Eight rooms, a chiptune soundtrack, installable as a PWA." --add-topic web-game,html5-game,game,arcade,arcade-game,retro-game,single-player,pixel-art,chiptune,indie-game,offline-first,zero-dependencies,open-source-game
-```
-
-> **One text, not two.** The storefront refresh pass owns the About copy and
-> `og.png`. The description below is its draft (2026-10-19), still waiting on
-> the owner's OK. The topics are its sixteen plus four from this kit. If the
-> owner changes either, update this section to match.
-
-Today (read 2026-10-19 with `gh api`, read-only) the description reads
-"A browser arcade game with a deterministic simulation, replay tests, and
-switchable 2D and 3D renderers." That leads with a contributor word. The
-seven current topics are `browser-game canvas deterministic-simulation
-javascript pwa threejs webgl`; the list below keeps all seven and adds
-thirteen.
-
-**Description (draft, ≤ 350):**
+**Description (≤ 350):**
 
 ```
 Play FUSE/GRID free in your browser: a single-player bomb-grid arcade in three looks (CLASSIC 2D, PIXEL, REAL 3D) with Heat CORE / PLUS / MAX. Eight rooms, a chiptune soundtrack, installable as a PWA.
@@ -414,55 +399,49 @@ Fusegrid - Single-player bomb-grid arcade that runs in the browser, with live-sw
 
 ## ✅ Launch checklist
 
-Tick these in order. Every box past "Ready the page" is something the
-**owner** does by hand, after saying yes to it. Nothing here posts by itself.
+**The launch is on hold until the game is finished (owner, 2026-11-01).** Only
+stage 1 is open. Every external step is something the **owner** does by hand,
+after saying yes to it. Nothing here posts by itself.
 
-**1. Ready the page**
+**Stage 1: ready the page and the art**
 
-- [ ] Merge this branch; the next release bumps `CACHE_NAME` / `REV` and sets
-      the sitemap `lastmod` ([Shipping a release](../../CONTRIBUTING.md#-shipping-a-release)).
-- [ ] Paste the GitHub About description, website and 20 topics (above).
-- [ ] Upload `og.png` under **Settings → Social preview** whenever the card
-      changes (no API for it).
+- [x] GitHub About description, website and 20 topics.
+- [x] `og.png` uploaded under **Settings → Social preview** (the v180 card).
+      Re-upload whenever the card changes.
+- [x] Listing art and install screenshots recaptured on v192, checked on v193.
+- [x] Listing copy matches the live game.
+- [x] Portal zip tested in a cross-origin iframe on v193.
+- [ ] Search Console URL-prefix property, HTML-tag verification, submit
+      `sitemap.xml`, request indexing. The tag changes `index.html`, so it ships
+      as a release.
+- [ ] Bing Webmaster Tools: import from Search Console.
 - [ ] Open `https://hmarzban.github.io/fusegrid/` in a chat app and check the
       preview card shows.
 
-**2. Get found**
+**Stage 2: quiet launch (waits for the owner's go)**
 
-- [ ] Search Console URL-prefix property, HTML-tag verification, submit
-      `sitemap.xml`, request indexing.
-- [ ] Bing Webmaster Tools: import from Search Console.
-
-**3. Fill the art gaps**
-
-- [x] Merge the fresh `media/` recapture.
-- [x] Capture a PIXEL still and a 15–20 s silent clip (landscape and
-      portrait). Real captures only.
-- [x] Recapture `media/still-menu.png` on the current menus (v181).
-- [ ] CrazyGames covers 16:9, 2:3, 1:1 (see the art table).
-
-**4. List it (one a week is plenty)**
-
+- [ ] Recapture the art if the rooms have changed since v193.
 - [ ] itch.io: zip, embed size, fullscreen button, Mobile Friendly, cover,
       stills, GIF, long description, itch tags. Play it on a phone through
       itch before you publish.
-- [ ] Newgrounds, once the itch build plays clean (judgment is one shot).
 - [ ] Game Jolt, same zip.
-- [ ] CrazyGames Basic Launch, only if the owner accepts the SDK path that
-      follows.
+- [ ] r/WebGames, then r/playmygame a week or so later.
+- [ ] proyecto26/awesome-jsgames and OpenSourceVideoGames/list PRs.
 
-**5. Tell people (spread over a few weeks)**
+**Stage 3: the big listings (after the floor tiles ship)**
 
-- [ ] r/WebGames → r/playmygame → r/indiegames, a week or so apart.
-- [ ] Show HN (dev pitch, personal account, backstory in the first comment).
-- [ ] three.js forum Showcase with a REAL 3D clip.
-- [ ] r/javascript Showoff Saturday or a how-it's-built post.
+- [ ] Recapture the art and rebuild `og.png`.
+- [ ] Newgrounds, once the itch build plays clean (judgment is one shot).
+- [ ] Decide on a one-line AI-assistance disclosure, then Show HN.
+- [ ] r/indiegames, the three.js forum Showcase with a REAL 3D clip, r/javascript
+      Showoff Saturday or a how-it's-built post.
 - [ ] #ScreenshotSaturday every week with a fresh clip.
 - [ ] Jay Is Games form, Indie Games Plus contact.
-- [ ] proyecto26/awesome-jsgames and OpenSourceVideoGames/list PRs; the big
-      awesome list once the repo passes 40 stars.
+- [ ] The big awesome list once the repo passes 40 stars.
+- [ ] CrazyGames Basic Launch and its covers (16:9, 2:3, 1:1), only if the owner
+      accepts the SDK path that follows.
 
-**6. After each post**
+**After each post**
 
 - [ ] Answer every reply in the first two hours.
 - [ ] Note what landed in a dated `MEMORY.md` line, so the next post learns

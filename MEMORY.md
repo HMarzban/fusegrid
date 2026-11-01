@@ -27,6 +27,8 @@ append an entry when it makes a non-trivial change.
 
 ## 2026-11-01 — clean-up and docs sync
 - Owner: clean up, sync docs, then known gaps and #18 #30 #22 #34 in parallel. `.codex/` (another tool's agent config) git-ignored, not deleted; 180 stale `fg-px-*` capture profiles removed; stale AGENTS lines fixed; #26 got the open-GATE note; the pass-2 art notes moved off closed #23 onto #19 / #21.
+## 2026-11-01 — #7 stage 1: listing art and copy back in step with v192; launch on hold
+- Owner: "let's just work on the stage 1, the other stage must be waite, beacuse we did not finish the game yet." All of `media/` and `screenshots/` recaptured from the deployed v192 commit (gen 2, no tiles, demobot, virtual clock; provenance in `media/README.md`); v193 shipped mid-session, so the stills were re-shot on it (same frames) and MENU recaptured. Copy fixed: itch blurb K+move, ghost only on DAILY/code, opt-in stats. Portal zip passed a cross-origin iframe test in all three looks. `og.png` kept (only `NO TIME YET` differs). Left open: Search Console needs the owner's tag and a release; stages 2 and 3 wait for the owner's go. Art goes stale when tiles ship.
 
 ## 2026-10-26 — v192: tiles design pass 2 (#28) done, harness #25 built
 - Owner picks O1 Heat, O3 superset only if needed (unused), O7 no AI retune, O8 capped, O9 BOOSTER room 1; then T1 TRAP rules (no chain, off/hold, PLUS spares trigger foe, MAX kills no foe), I1 ICE CORE x1.0 + MAX brake, B1 BOOSTER = assist tile (MAX not easier), C1 CONVEYOR EASY accepted. Confirmed MAX Δ lose: TRAP +5.9, ICE +4.6, CONVEYOR +5.4; static V19 = 0 for all four. `tools/balance/` harness + featchecks on main; tuned code on branches pass2-trap/ice/conveyor/booster for #18–#22. Addendum in the tiles record.

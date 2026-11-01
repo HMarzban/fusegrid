@@ -731,6 +731,8 @@ not shell screens. Do not add them as `SCREEN` values.
   build (add an entry per release or big turn; CHANGELOG still owns
   per-release changes). Launch/promotion is PARKED as GitHub issue
   HMarzban/fusegrid#7 (owner 2026-10-19: lots to do before publishing).
+  Stage 1 (art, copy, zip test) is done on v193; stages 2 and 3 wait for the owner's
+  go (owner 2026-11-01: the game is not finished yet).
   `docs/marketing/README.md` owns pitch copy, per-platform tags, the launch
   checklist and the About/topics text (the owner pastes and posts; agents
   never submit). JSON-LD never carries a rating or review; `playMode` is the
