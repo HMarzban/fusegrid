@@ -184,8 +184,10 @@
     box-shadow:0 4px 0 rgba(0,0,0,.35),inset 3px 0 0 #37f0d0;color:#dfe7f5;pointer-events:none;
     user-select:none;-webkit-user-select:none;animation:updFade .16s linear 150ms both}
   #load[hidden]{display:none}
+  /* until the title paints, the unsized #c would draw an empty framed box behind the plate */
+  #load[data-boot]~#wrap{visibility:hidden}
   #load b{font:700 18px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.14em}
-  #load[data-dock]{top:calc(10px + env(safe-area-inset-top,0px));translate:-50% 0;padding:9px 14px 10px 18px;gap:7px;width:min(300px,calc(100vw - 32px))}
+  #load[data-dock]{top:calc(10px + env(safe-area-inset-top,0px));translate:-50% 0;padding:9px 14px 10px 18px;gap:7px;width:min(380px,calc(100vw - 32px))}
   #load[data-dock] b{display:none}
   #load[data-act]{pointer-events:auto}
   #loadmsg{font:400 12px/1.45 ui-monospace,"SF Mono",Menlo,Consolas,monospace;color:#7385ad;letter-spacing:.04em}
@@ -208,7 +210,7 @@
 </style>
 </head>
 <body>
-<div id="load" hidden><b>FUSE/GRID</b><div id="loadbar" role="progressbar" aria-label="Loading" aria-valuemin="0" aria-valuemax="100" data-ind><div id="loadfill"></div><div id="loadrun"></div></div><span id="loadmsg">LOADING</span><div id="loadact" hidden><button id="loadretry" type="button">RETRY</button><button id="loadkeep" type="button" hidden>USE CLASSIC 2D</button></div></div>
+<div id="load" hidden data-boot><b>FUSE/GRID</b><div id="loadbar" role="progressbar" aria-label="Loading" aria-valuemin="0" aria-valuemax="100" data-ind><div id="loadfill"></div><div id="loadrun"></div></div><span id="loadmsg">LOADING</span><div id="loadact" hidden><button id="loadretry" type="button">RETRY</button><button id="loadkeep" type="button" hidden>USE CLASSIC 2D</button></div></div>
 <!-- The one loader. It runs before any module, so it is plain inline JS, and the
      first-load job counts finished files against data-files, which
      tests/loadbar.test.mjs pins to the real static graph of the entry below.
@@ -217,29 +219,32 @@
 <script id="loadjs" data-files="100">
 (function(w,d){
   var $=function(i){return d.getElementById(i)},E=$("load"),bar=$("loadbar"),fill=$("loadfill"),msg=$("loadmsg"),act=$("loadact"),retry=$("loadretry"),keep=$("loadkeep");
-  var STALL=30000,jobs={},cur=null,failed=null,drop=null,shown=null,iv=0,base=new URL("./",d.baseURI).href;
+  var STALL=30000,jobs={},cur=null,failed=null,drop=null,again=null,shown=null,iv=0,base=new URL("./",d.baseURI).href;
   var now=function(){return w.performance?performance.now():0};
   var bootFiles=+$("loadjs").getAttribute("data-files");
   jobs.boot={k:"boot",label:"",files:bootFiles,total:bootFiles,weigh:function(u){return u.indexOf(base+"src/")===0&&/\.js(\?|$)/.test(u)?1:0},seen:{},n:0,w:0,f:0,ph:0,t:0,last:now(),dock:false};
   function view(){return failed?jobs[failed]:(cur&&jobs[cur])||jobs.boot||null}
   function paint(){
     var j=view();
+    if(!jobs.boot)E.removeAttribute("data-boot");
     if(!j){E.hidden=true;shown=null;msg.removeAttribute("role");return}
     if(j!==shown){fill.style.transition="none";fill.style.transform="scaleX("+j.f+")";fill.getBoundingClientRect();fill.style.transition="";shown=j}
     E.hidden=false;
     if(j.dock)E.setAttribute("data-dock","");else E.removeAttribute("data-dock");
     if(failed){
       msg.setAttribute("role","alert");
-      msg.textContent=(j.k==="boot"?"COULD NOT LOAD THE GAME. CHECK YOUR CONNECTION, THEN RETRY.":j.label+" COULD NOT LOAD. RETRY RELOADS THE PAGE; A RUN IN PROGRESS ENDS.");
+      msg.textContent=(j.k==="boot"?"COULD NOT LOAD THE GAME. CHECK YOUR CONNECTION, THEN RETRY.":j.label+(again?" COULD NOT LOAD. CHECK YOUR CONNECTION, THEN RETRY.":" STILL WILL NOT LOAD. RETRY RELOADS THE PAGE; A RUN IN PROGRESS ENDS."));
       bar.hidden=true;act.hidden=false;keep.hidden=!drop;E.setAttribute("data-act","");return
     }
-    bar.hidden=false;
+    bar.hidden=false;msg.removeAttribute("role");
     var ind=j.ind||(!j.ph&&!j.n),all=j.n>=j.files,c=Math.min(j.n,j.files)+" / "+j.files+" FILES";
     var t=j.k==="boot"?(ind?"LOADING":all?"STARTING":"LOADING · "+c):j.ph?"PREPARING "+j.label:ind?"LOADING "+j.label:j.label+" · "+c;
     if(j.stall)t+=" · SLOW CONNECTION, STILL TRYING";
     msg.textContent=t;
-    act.hidden=!j.stall;keep.hidden=true;
-    if(j.stall)E.setAttribute("data-act","");else E.removeAttribute("data-act");
+    /* only a stalled FIRST load offers RETRY: reloading under a look's bar could end a run */
+    var ask=j.stall&&j.k==="boot";
+    act.hidden=!ask;keep.hidden=true;
+    if(ask)E.setAttribute("data-act","");else E.removeAttribute("data-act");
     if(ind){bar.setAttribute("data-ind","");bar.removeAttribute("aria-valuenow");bar.removeAttribute("aria-valuetext")}
     else{bar.removeAttribute("data-ind");fill.style.transform="scaleX("+j.f+")";bar.setAttribute("aria-valuenow",String(Math.floor(j.f*100)));bar.setAttribute("aria-valuetext",t)}
   }
@@ -266,21 +271,21 @@
   }catch(e){}}
   var L=w.__load={
     begin:function(k,plan,ready){
-      if(failed===k){failed=null;drop=null}
+      if(failed===k){failed=null;drop=null;again=null}
       jobs[k]={k:k,label:plan.label,files:plan.files,total:plan.total,weigh:plan.weigh,seen:{},n:0,w:0,f:0,ph:ready?1:0,ind:!!ready,t:now(),last:now(),dock:!jobs.boot};
       cur=k;watch();paint();
     },
     phase:function(k){var j=jobs[k];if(j&&!j.ph){j.ph=1;j.stall=false;j.f=Math.max(j.f,j.total/(j.total+1));paint()}},
-    focus:function(k){cur=k;if(failed&&failed!==k&&failed!=="boot"){delete jobs[failed];failed=null;drop=null}paint()},
+    focus:function(k){cur=k;if(failed&&failed!==k&&failed!=="boot"){delete jobs[failed];failed=null;drop=null;again=null}paint()},
     end:function(k){if(failed===k)return;delete jobs[k];paint()},
-    fail:function(k,onDrop){
+    fail:function(k,onDrop,onAgain){
       if(!jobs[k])return;
-      failed=k;drop=onDrop||null;paint();
+      failed=k;drop=onDrop||null;again=onAgain||null;paint();
       if(k==="boot")retry.focus();
     }
   };
-  retry.onclick=function(){location.reload()};
-  keep.onclick=function(){var f=drop,k=failed;failed=null;drop=null;delete jobs[k];act.hidden=true;E.removeAttribute("data-act");paint();if(f)f()};
+  retry.onclick=function(){var f=again;if(f)f();else location.reload()};
+  keep.onclick=function(){var f=drop,k=failed;failed=null;drop=null;again=null;delete jobs[k];act.hidden=true;E.removeAttribute("data-act");paint();if(f)f()};
   /* the buttons are the card's own: nothing here reaches the game's keys or the title's press */
   E.addEventListener("keydown",function(e){e.stopPropagation()});
   E.addEventListener("pointerdown",function(e){e.stopPropagation()});
@@ -308,18 +313,18 @@
 <!-- Entry point. Single browser thread: input → sim → render.
      The authoritative sim lives in src/core/sim.js (Node-testable, no DOM).
      Single-player only; lockstep is a local harness, not internet play. -->
-<script type="module">
-   /* dynamic, so a 404, a blocked file, a syntax error or a throw lands in one
-      catch (a static import fails silently: a blank page). The boot job ends in
-      the frame the loop first paints: frames.kick() has already queued it. */
+<script type="module" onerror="__load.fail('boot')">
+   /* A file that fails to load fires this element's error event; a throw reaches
+      the loader's window listener; a rejected boot step lands in the second handler
+      below. The boot job ends in the frame the loop first paints: frames.kick()
+      has already queued it. */
+   import {createGame} from "./src/main.js";
+   import {createAudio} from "./src/audio.js";
    const L=window.__load;
-   Promise.all([import("./src/main.js"),import("./src/audio.js")]).then(([{createGame},{createAudio}])=>{
-     const canvas=document.getElementById("c");
-     const audio=createAudio();
-     if(/[?&]debug=1/.test(location.search||""))window.__audio=audio;
-     createGame(canvas,{audio, canvasEl:canvas});
-     requestAnimationFrame(()=>L.end("boot"));
-   }).catch((e)=>{console.error(e);L.fail("boot");});
+   const canvas=document.getElementById("c");
+   const audio=createAudio();
+   if(/[?&]debug=1/.test(location.search||""))window.__audio=audio;
+   Promise.resolve(createGame(canvas,{audio, canvasEl:canvas})).then(()=>requestAnimationFrame(()=>L.end("boot")),(e)=>{console.error(e);L.fail("boot");});
 </script>
 </body>
 </html>

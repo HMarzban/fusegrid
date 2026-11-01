@@ -8,7 +8,7 @@ export function mountRenderers(env) {
   const perf = () => (env.perf ? env.perf() : null);
   const el = (id) => (typeof document !== "undefined" && document && document.getElementById ? document.getElementById(id) : null);
   const cache = {}, seen = {}, slept = {};
-  const mk = { "3d": opts.createRenderer3D || null, px: opts.createPixelRenderer || null }, LD = { "3d": [loadRenderer3D, "createRenderer3D"], px: [loadRendererPx, "createPixelRenderer"] }, loading = {}, ready = {};
+  const mk = { "3d": opts.createRenderer3D || null, px: opts.createPixelRenderer || null }, LD = { "3d": [loadRenderer3D, "createRenderer3D"], px: [loadRendererPx, "createPixelRenderer"] }, loading = {}, ready = {}, fails = {};
   let lastK = null;
   if (canvas && canvas.getContext) canvas.getContext("2d", { alpha: true });
   function sizeCanvases(k) {
@@ -45,7 +45,9 @@ export function mountRenderers(env) {
   function lookFailed(k, e) {
     console.warn(k === "px" ? "PIXEL load failed" : "3D load failed", e);
     const lb = LB(), drop = () => { if (onFail) onFail(k); };
-    if (lb && kind() === k) lb.fail(k, drop); // the pick stays until the player answers: RETRY reloads into it
+    fails[k] = (fails[k] || 0) + 1;
+    // the pick stays until the player answers. RETRY re-imports in place (a run survives); a browser that caches the failed module, or a second miss, gets the page reload
+    if (lb && kind() === k) lb.fail(k, drop, fails[k] < 2 ? () => load(k) : null);
     else if (k === "px") drop();
   }
   function settled(k) {
@@ -53,6 +55,7 @@ export function mountRenderers(env) {
     if (!lb) return;
     delete loading[k];
     delete ready[k];
+    if (cache[k]) delete fails[k];
     if (kind() === k && cache[k]) bar.afterFirstRender(cache[k], () => lb.end(k));
     else lb.end(k);
   }

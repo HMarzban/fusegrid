@@ -31,8 +31,8 @@ function graph(entries) {
 
 const htmlPath = join(ROOT, "index.html"), barPath = join(ROOT, "src/app/loadbar.js");
 const html = readFileSync(htmlPath, "utf8");
-const mod = /<script type="module">([\s\S]*?)<\/script>/.exec(html)[1];
-const entries = [...strip(mod).matchAll(/import\("\.\/([^"]+)"\)/g)].map((m) => m[1]);
+const mod = /<script type="module"[^>]*>([\s\S]*?)<\/script>/.exec(html)[1];
+const entries = [...strip(mod).matchAll(EDGE)].map((m) => m[1].replace(/^\.\//, ""));
 const boot = graph(entries), tree3 = graph(["src/render/three/wrapper.js"]).filter((f) => !boot.includes(f)), treePx = graph(["src/render/pixel/renderer.js"]).filter((f) => !boot.includes(f));
 const pinned = +/id="loadjs" data-files="(\d+)"/.exec(html)[1];
 const bytes = (a) => a.reduce((n, f) => n + statSync(join(ROOT, f)).size, 0);
@@ -47,7 +47,8 @@ if (process.argv.includes("--write")) {
 }
 
 const FIX = " (fix: node tests/loadbar.test.mjs --write)";
-check("the entry imports main and audio dynamically, so a failed file reaches the catch", entries.join() === "src/main.js,src/audio.js" && /\.catch\(/.test(mod) && !/^\s*import\s/m.test(mod));
+check("the entry reaches main and audio", entries.includes("src/main.js") && entries.includes("src/audio.js"), entries.join());
+check("every way the entry can die reaches the failure card: a failed file (the element's error event) and a rejected boot step (async, so the boot job ends only after it settles)", /<script type="module" onerror="__load\.fail\('boot'\)">/.test(html) && /Promise\.resolve\([\s\S]*\)\.then\(\(\)=>requestAnimationFrame\(\(\)=>L\.end\("boot"\)\),\(e\)=>\{console\.error\(e\);L\.fail\("boot"\);\}\)/.test(mod));
 check("data-files = the real static boot graph" + FIX, pinned === boot.length, pinned + " vs " + boot.length);
 check("REAL 3D files = its lazy tree" + FIX, LOOK["3d"].files === tree3.length, LOOK["3d"].files + " vs " + tree3.length);
 check("PIXEL files = its lazy tree" + FIX, LOOK.px.files === treePx.length, LOOK.px.files + " vs " + treePx.length);
@@ -69,7 +70,7 @@ const css = strip(html.slice(html.indexOf("<style"), html.indexOf("</style>")));
 const rule = (sel) => (new RegExp("(?:^|\\n|\\})\\s*" + sel + "\\{([^}]*)\\}").exec(css) || [])[1] || "";
 check("the plate is the CONSOLE PANEL plate, centred, off the pointer", /border:1px solid #2a3550/.test(rule("#load")) && /border-radius:6px/.test(rule("#load")) && /pointer-events:none/.test(rule("#load")));
 check("it appears only after 150 ms, with no JS involved", /150ms/.test(rule("#load")));
-check("it is hidden in markup (no JS, no bar)", /<div id="load" hidden>/.test(html));
+check("it is hidden in markup (no JS, no bar)", /<div id="load" hidden data-boot>/.test(html));
 check("fill and glint move by transform only", /transition:transform/.test(rule("#loadfill")) && !/width|left/.test(rule("#loadfill").replace(/inset:0/, "")) && /@keyframes loadRun\{from\{transform:[^}]*\}to\{transform:[^}]*\}\}/.test(css));
 check("prefers-reduced-motion stops the glint and the fill's glide", /prefers-reduced-motion:reduce\)\{#loadrun\{animation:none[^}]*\}#loadfill\{transition:none\}/.test(css));
 check("progressbar role and range", /id="loadbar" role="progressbar"[^>]*aria-valuemin="0" aria-valuemax="100"/.test(html));
@@ -83,6 +84,7 @@ function boot1(opts = {}) {
     getBoundingClientRect() { return {}; }, addEventListener(t, f) { this.on[t] = f; }, focus() { this.focused = true; },
   });
   el("loadjs").attrs["data-files"] = String(opts.files || 4);
+  el("load").attrs["data-boot"] = "";
   let obs = null, t = 0, ivF = null;
   const winOn = {};
   const ctx = {
@@ -114,8 +116,9 @@ const U = (n) => "http://x/g/src/m" + n + ".js";
   for (const i of [2, 3, 4, 5, 6]) { b.files([U(i)]); seq.push(scale(b)); }
   check("the fill never moves back and never reaches 100 on files alone", seq.every((v, i) => !i || v >= seq[i - 1]) && Math.max(...seq) < 1, seq.join());
   check("all files in: STARTING, not done", b.el("loadmsg").textContent === "STARTING" && !b.el("load").hidden);
+  check("the stage stays hidden behind the first-load plate", "data-boot" in b.el("load").attrs && /#load\[data-boot\]~#wrap\{visibility:hidden\}/.test(css));
   b.L.end("boot");
-  check("end(boot) hides it", b.el("load").hidden);
+  check("end(boot) hides it and lets the stage show", b.el("load").hidden && !("data-boot" in b.el("load").attrs));
 }
 {
   const b = boot1({ noObs: true });
@@ -178,7 +181,7 @@ const U = (n) => "http://x/g/src/m" + n + ".js";
   check("the title painting leaves the look's bar up", !b.el("load").hidden && b.el("loadmsg").textContent === "LOADING PIXEL");
   let dropped = 0;
   b.L.fail("px", () => dropped++);
-  check("look failure: names the look, warns about the reload, offers both", /^PIXEL COULD NOT LOAD/.test(b.el("loadmsg").textContent) && /RUN IN PROGRESS/.test(b.el("loadmsg").textContent) && !b.el("loadkeep").hidden);
+  check("a last look failure: names the look, warns about the reload, offers both", /^PIXEL STILL WILL NOT LOAD/.test(b.el("loadmsg").textContent) && /RUN IN PROGRESS/.test(b.el("loadmsg").textContent) && !b.el("loadkeep").hidden);
   check("a look failure never grabs focus (the game keeps its keys)", !b.el("loadretry").focused);
   b.el("loadkeep").onclick();
   check("USE CLASSIC 2D drops the look and closes the card", dropped === 1 && b.el("load").hidden);
@@ -186,6 +189,17 @@ const U = (n) => "http://x/g/src/m" + n + ".js";
   b.L.fail("px", () => dropped++);
   b.L.focus("2d");
   check("moving off the failed look closes the card without touching the row", b.el("load").hidden && dropped === 1);
+  let again = 0;
+  b.L.begin("px", lookPlan("px"));
+  b.L.fail("px", () => {}, () => again++);
+  check("a first look failure asks for a retry with no reload warning", /^PIXEL COULD NOT LOAD/.test(b.el("loadmsg").textContent) && !/RELOADS/.test(b.el("loadmsg").textContent));
+  b.el("loadretry").onclick();
+  check("its RETRY re-imports in place and never reloads the run away", again === 1 && !b.ctx.reloaded);
+  b.L.begin("px", lookPlan("px"));
+  check("the new attempt puts the bar back, not the alert", !b.el("loadbar").hidden && b.el("loadact").hidden && !("role" in b.el("loadmsg").attrs));
+  b.time(1e6);
+  check("a stalled look says so but offers no reload (it could end a run)", /SLOW CONNECTION/.test(b.el("loadmsg").textContent) && b.el("loadact").hidden);
+  b.L.focus("2d");
   b.L.begin("3d", lookPlan("3d"), true);
   check("a rebuild with nothing to fetch is indeterminate", "data-ind" in b.el("loadbar").attrs && b.el("loadmsg").textContent === "PREPARING REAL 3D");
   b.L.focus("2d");
