@@ -393,7 +393,7 @@ function place3(base, seed, level, heat) {
   const L = base[heat].layout, lay = layout2(seed, level, L.tries[0]);
   const gate = BLOOM_GATE.on && lay.biome === "JUNGLE" ? bloomGate(base, level, lay) : null;
   for (let pa = 0; pa < 4; pa++) {
-    const pf = placeFeat(lay.m, seed, level, lay.biome, pa, gate);
+    const pf = placeFeat(lay.m, seed, level, lay.biome, pa, gate, lay.tpl);
     if (gate && pf && !pf.feat) continue;
     if (!pf || !pf.feat) break;
     const open = base.map((b) => { const g = b.grid.slice(); for (const k of pf.force) g[k] = T.EMPTY; return g; });

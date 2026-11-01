@@ -34,7 +34,10 @@
                closed the last escape; warned = every threat had been on the
                board >= 0.25 s at the last chance; NOWARN = the rest, read by
                hand (youngest, so an old killer beside a new bomb lands here:
-               it can only over-report);
+               it can only over-report). A trap blast (cause "plate") is graded
+               on trapAge, the wind-up age of the next trap to fire, instead,
+               since #22 hand-read s 602439: 0.87 s of wind-up beside a 0.18 s
+               old own bomb that had no part in the hit;
      capped    the strict search hit its layer cap (a foe keeps arming traps,
                the key has foe tiles in it); the loose 0.05 s result stands.
    Reaction margin of an escapable episode: the longest of 0.1 / 0.2 / 0.3 /
@@ -219,7 +222,7 @@ export function runOracle(c, s, { margins = true } = {}) {
           const kept = search(w, { H: 3, keepI: true });
           ep.realI = !kept;
           Object.assign(ep, walkBack(c, s, i));
-          ep.grade = !ep.realI ? "iFrames" : !ep.plainEsc ? "plain" : (ep.onStep || "").split(",").includes("bomb") && ep.gapPlant ? "plant" : ep.age >= WARN ? "warned" : "NOWARN";
+          ep.grade = !ep.realI ? "iFrames" : !ep.plainEsc ? "plain" : (ep.onStep || "").split(",").includes("bomb") && ep.gapPlant ? "plant" : (ep.cause === "plate" ? ep.trapAge : ep.age) >= WARN ? "warned" : "NOWARN";
         }
       }
       if (ep.stage !== "forced" && ep.stage !== "blast" && margins) ep.margin = reaction(w, last);
@@ -253,7 +256,8 @@ function walkBack(c, s, i) {
   const P = w0.feat ? featProfile(w0) : null, ages = w0.bombs.filter((b) => !b.dead).map((b) => fz - b.timer);
   for (const q of w0.featPend || []) ages.push((q.kind === "plate" ? P.plate.wind : P.bloom.delay) - w0.featS[q.k]);
   for (const bl of w0.blades) ages.push(bl.t);
-  return { lastEsc: a, noReturn: +((i - a) * ST).toFixed(3), onStep: [...new Set(w.events.map((e) => e.t))].join(","), gapPlant: w.bombs.filter((b) => !b.dead).length > n0, age: ages.length ? +Math.min(...ages).toFixed(3) : -1 };
+  const plates = (w0.featPend || []).filter((q) => q.kind === "plate").map((q) => w0.featS[q.k]);
+  return { lastEsc: a, noReturn: +((i - a) * ST).toFixed(3), onStep: [...new Set(w.events.map((e) => e.t))].join(","), gapPlant: w.bombs.filter((b) => !b.dead).length > n0, age: ages.length ? +Math.min(...ages).toFixed(3) : -1, trapAge: plates.length ? +(P.plate.wind - Math.min(...plates)).toFixed(3) : -1 };
 }
 
 export function table(rows, meta = {}) {

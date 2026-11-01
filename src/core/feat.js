@@ -75,7 +75,7 @@ function bfs(m, sx, sy) {
 }
 /* m: skeleton class map (0 wall, else open; bricks count as passable, the
    real route once the doors are open). Returns {feat, force, fails} or null. */
-export function placeFeat(m, seed, level, biome, salt = 0, bgate = null) {
+export function placeFeat(m, seed, level, biome, salt = 0, bgate = null, tpl = "") {
   const kind = HOME[biome];
   if (!kind) return null;
   const rng = createRng(fmix((seed ^ Math.imul(level + 1, 0x9e3779b1) ^ 0x7ea7 ^ Math.imul(salt, 0x27d4eb2f)) >>> 0));
@@ -93,7 +93,7 @@ export function placeFeat(m, seed, level, biome, salt = 0, bgate = null) {
     else if (kind === "QUICK") ok = quick(m, f, rng, far, force);
     else if (kind === "PORTAL") { pair = new Uint8Array(N); ok = portal(m, f, rng, far, force, pair); }
     else if (kind === "GATE") ok = gate(m, f, rng, far, force);
-    else ok = plate(m, f, rng, dS, force);
+    else ok = plate(m, f, rng, dS, force, tpl);
     if (ok) return pair ? { feat: f, force, kind, tries, pair } : { feat: f, force, kind, tries };
     if (bgate && kind === "BLOOM") break;
   }
@@ -255,9 +255,25 @@ function shrinkMaps(m) {
    neighbouring intersections, forced floor; every tile on its r=3 arms has
    a perpendicular open neighbour within 1 tile along the arm, also after each
    SHRINK ring 1-4 (V20). Fewer than 3 such spots fails the shuffle; a layout
-   with no 3 at all (some GAUNTLETs, #22) re-rolls in genBoard3 */
-function plate(m, f, rng, dS, force) {
-  const want = rng.int(3, 5), cand = [], rings = shrinkMaps(m);
+   with no 3 at all (some GAUNTLETs, #22) re-rolls in genBoard3.
+   PLATE_TPL (#22, the uneven MAX dial): PIT's pockets are sealed from each other
+   by fill bricks, and foes that walk its open rooms arm traps about 4x as often
+   as on RING, so its blasts open the seals and let foes reach the player: a
+   layout limit of `max` traps, at most `seal` of them on a spot whose r=3 lines
+   cross more than `fill` non-floor cells (PIT's central doors). */
+export const PLATE_TPL = Object.freeze({ pit: Object.freeze({ max: 4, seal: 1, fill: 5 }) });
+export function plateFill(m, x, y) {
+  let n = 0;
+  for (const [dx, dy] of D4) for (let i = 1; i <= 3; i++) {
+    if (!open(m, x + dx * i, y + dy * i)) break;
+    if (m[key(x + dx * i, y + dy * i)] !== FLOOR) n++;
+  }
+  return n;
+}
+function plate(m, f, rng, dS, force, tpl) {
+  const lim = PLATE_TPL[tpl], cand = [], rings = shrinkMaps(m);
+  let want = rng.int(3, 5), seals = 0;
+  if (lim && want > lim.max) want = lim.max;
   for (let y = 1; y < R - 1; y += 2) for (let x = 1; x < C - 1; x += 2) {
     const k = key(x, y);
     if (!open(m, x, y) || dS[k] < 6 || !sideExit(m, x, y)) continue;
@@ -268,6 +284,7 @@ function plate(m, f, rng, dS, force) {
   for (const [x, y] of cand.filter(ringOk)) {
     if (used.length >= want) break;
     if (used.some(([a, b]) => Math.abs(a - x) + Math.abs(b - y) <= 2)) continue;
+    if (lim && plateFill(m, x, y) > lim.fill) { if (seals >= lim.seal) continue; seals++; }
     used.push([x, y]);
   }
   if (used.length < 3) return false;
