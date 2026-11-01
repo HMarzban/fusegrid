@@ -1,17 +1,33 @@
 /* ?net=local dev aid: world A stays the live game world; a mirror peer B
-   (same seed) runs the same lockstep protocol over crossed LocalTransports.
-   B is driven by a deterministic script so both peers keep stepping.
-   This is a LOCAL two-world proof, never internet play — step() still
-   consumes inputs[0] / players[0] only. Flag off = default path untouched. */
+   runs the same lockstep protocol over crossed LocalTransports. B is driven by
+   a deterministic script so both peers keep stepping. This is a LOCAL
+   two-world proof, never internet play — step() still consumes inputs[0] /
+   players[0] only. Flag off = default path untouched.
+   B follows the real run with no hook in main: a new A grid that no tick made
+   is a run start (onStart, PAUSE RESTART), so B takes A's knobs and deals the
+   board itself, never a copy of it. A room change or the GAME OVER restart
+   happens inside step(), so each world does its own, on the seed B was handed. */
 import { CFG } from "../core/config.js";
 import { createWorld, loadLevel } from "../core/sim.js";
 import { createLockstep } from "./lockstep.js";
 import { LocalTransport } from "./transport.js";
 
 export function createLocalPair(world, input) {
-  const wB = createWorld(world.seed, 1);
-  loadLevel(wB, 1, false);
-  wB.state = "PLAY";
+  const wB = createWorld(world.seed, world.level);
+  const follow = () => {
+    wB.seed = world.seed;
+    wB.gen = world.gen;
+    wB.heat = world.heat;
+    wB.pact = world.pact;
+    wB.pace = world.pace;
+    loadLevel(wB, world.level, false);
+    Object.assign(wB.players[0], structuredClone(world.players[0]));
+    wB.score = world.score;
+    wB.lives = world.lives;
+    wB.state = world.state;
+  };
+  follow();
+  let gridA = world.grid;
   let lsA = null,
     lsB = null;
   const tA = new LocalTransport((m) => {
@@ -40,6 +56,11 @@ export function createLocalPair(world, input) {
     lsB,
     wB,
     drive() {
+      if (world.grid !== gridA) follow();
+      // what the shell writes on A between ticks: the re-armed seed, the held-fire guard, PAUSE
+      wB.nextSeed = world.nextSeed;
+      wB.fireEdge = world.fireEdge;
+      if (world.state === "PAUSE" || wB.state === "PAUSE") wB.state = world.state;
       lsA.pushIntent(input.intent());
       input.advance();
       const m = [
@@ -53,11 +74,11 @@ export function createLocalPair(world, input) {
         fire: bf % 19 === 0,
         shift: bf % 41 === 0,
         remote: bf % 97 === 0,
-        kick: false,
       });
       bf++;
       lsA.tick();
       lsB.tick();
+      gridA = world.grid;
     },
   };
 }
