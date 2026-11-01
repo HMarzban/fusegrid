@@ -107,9 +107,9 @@ export function feedTell(world) {
 const TELLS = (uv) => `
 if(wellRtN>0.5){ vec4 rt=texture2D(wellRt,${uv}); if(rt.r>0.004){
  vec2 rq=abs(fract((${uv})*vec2(${f(C)},${f(R)}))-0.5); float ro=max(rq.x,rq.y), ri=min(rq.x,rq.y);
- float rb=step(0.17,ri), ru=rb*step(0.29,ro)*step(ro,0.40), rs=rb*smoothstep(0.32,0.335,ro)*(1.0-smoothstep(0.365,0.38,ro));
- diffuseColor.rgb*=1.0-0.55*rt.r*ru;
- totalEmissiveRadiance+=wellRtC*(rt.r*0.8*rs+rt.g*0.16*step(ro,0.38));
+ float rb=step(0.17,ri), ru=rb*step(0.28,ro)*step(ro,0.41), rs=rb*smoothstep(0.305,0.32,ro)*(1.0-smoothstep(0.375,0.39,ro));
+ diffuseColor.rgb*=1.0-0.6*rt.r*ru;
+ totalEmissiveRadiance+=wellRtC*(rt.r*rs+rt.g*0.16*step(ro,0.38));
 }}`;
 const TUNI = "\nuniform sampler2D wellRt;\nuniform vec3 wellRtC;\nuniform float wellRtN;";
 const tellU = (sh) => { sh.uniforms.wellRt = TELL.tex; sh.uniforms.wellRtC = TELL.col; sh.uniforms.wellRtN = TELL.n; };
