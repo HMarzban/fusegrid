@@ -29,7 +29,7 @@ function staticGraph(entries) {
 }
 
 const html = readFileSync(join(ROOT, "index.html"), "utf8");
-const script = html.slice(html.lastIndexOf('<script type="module">'), html.lastIndexOf("</script>"));
+const script = html.slice(html.lastIndexOf('<script type="module"'), html.lastIndexOf("</script>"));
 const entries = [...script.matchAll(EDGE)].map((m) => m[1].replace(/^\.\//, ""));
 const LAZY = ["src/core/board3.js", "src/core/featchecks.js", "src/core/featplace.js"];
 const g = staticGraph(entries);

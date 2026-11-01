@@ -8,7 +8,7 @@ export function mountRenderers(env) {
   const perf = () => (env.perf ? env.perf() : null);
   const el = (id) => (typeof document !== "undefined" && document && document.getElementById ? document.getElementById(id) : null);
   const cache = {}, seen = {}, slept = {};
-  const mk = { "3d": opts.createRenderer3D || null, px: opts.createPixelRenderer || null }, LD = { "3d": [loadRenderer3D, "createRenderer3D"], px: [loadRendererPx, "createPixelRenderer"] }, loading = {};
+  const mk = { "3d": opts.createRenderer3D || null, px: opts.createPixelRenderer || null }, LD = { "3d": [loadRenderer3D, "createRenderer3D"], px: [loadRendererPx, "createPixelRenderer"] }, loading = {}, ready = {}, fails = {};
   let lastK = null;
   if (canvas && canvas.getContext) canvas.getContext("2d", { alpha: true });
   function sizeCanvases(k) {
@@ -27,19 +27,51 @@ export function mountRenderers(env) {
     if (lastK && r && r.setPerf) r.setPerf(K || lastK);
     return r;
   }
+  /* window.__load is index.html's loader (no page, no loader: Node and hosts stay
+     synchronous). With it, every first build of a lazy look is a job: the bar is
+     up and painted BEFORE the fetch and again BEFORE the synchronous bake, and
+     stays until the first frame of that build has been drawn. */
+  const bar = env.bar || null, LB = () => (bar && globalThis.__load) || null;
+  function fetchLook(k) {
+    const [raw, fn] = LD[k], lb = LB();
+    if (!lb) return raw;
+    const have = !!mk[k];
+    lb.begin(k, bar.lookPlan(k), have);
+    return () => bar.paintYield().then(() => (have ? { [fn]: mk[k] } : raw())).then((m) => {
+      lb.phase(k);
+      return bar.paintYield().then(() => { ready[k] = true; return m; });
+    });
+  }
+  function lookFailed(k, e) {
+    console.warn(k === "px" ? "PIXEL load failed" : "3D load failed", e);
+    const lb = LB(), drop = () => { if (onFail) onFail(k); };
+    fails[k] = (fails[k] || 0) + 1;
+    // the pick stays until the player answers. RETRY re-imports in place (a run survives); a browser that caches the failed module, or a second miss, gets the page reload
+    if (lb && kind() === k) lb.fail(k, drop, fails[k] < 2 ? () => load(k) : null);
+    else if (k === "px") drop();
+  }
+  function settled(k) {
+    const lb = LB();
+    if (!lb) return;
+    delete loading[k];
+    delete ready[k];
+    if (cache[k]) delete fails[k];
+    if (kind() === k && cache[k]) bar.afterFirstRender(cache[k], () => lb.end(k));
+    else lb.end(k);
+  }
   function load(k) {
     if (loading[k]) return loading[k];
-    const [ld, fn] = LD[k];
+    const [, fn] = LD[k], ld = fetchLook(k);
     return (loading[k] = ld().then((m) => {
       mk[k] = m[fn];
       if (kind() === k) onSwap(get(k));
     }).catch((e) => {
-      console.warn(k === "px" ? "PIXEL load failed" : "3D load failed", e);
-      if (k === "px" && onFail) onFail(k);
-    }).then(() => { if (k === "3d" || kind() !== "3d") onReady(); }));
+      lookFailed(k, e);
+    }).then(() => { if (k === "3d" || kind() !== "3d") onReady(); }).then(() => settled(k)));
   }
-  function get(k) {
+  function get(k, inner) {
     if (k === "3d" && cache["3d"] && cache["3d"].dead) drop3d();
+    if (!inner && LB()) LB().focus(k);
     sizeCanvases(k);
     delete slept[k];
     delete seen[k];
@@ -47,9 +79,9 @@ export function mountRenderers(env) {
       if (cache[k].invalidate) cache[k].invalidate(true);
       return cache[k];
     }
-    if ((k === "3d" || k === "px") && !mk[k]) {
+    if ((k === "3d" || k === "px") && (!mk[k] || (LB() && !ready[k]))) {
       load(k);
-      return cache["2d"] || get("2d");
+      return cache["2d"] || get("2d", true);
     }
     try {
       cache[k] = build(k, el("gl"), perf());

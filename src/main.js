@@ -23,6 +23,7 @@ import { mountDebugHook } from "./app/debughook.js";
 import { mountFit } from "./app/fit.js";
 import { mountFrames } from "./app/frameloop.js";
 import { mountRenderers } from "./app/rcache.js";
+import { afterFirstRender, lookPlan, paintYield } from "./app/loadbar.js";
 import { mountAudioPower } from "./app/audiopower.js";
 import { introPhase, popOf, createShow, stepShow } from "./app/intro.js";
 import { loadScores, recordScore, saveScores, scoreEntry, scoresForHeat, qualifies, isPlaceholder } from "./app/highscores.js";
@@ -535,7 +536,7 @@ export function createGame(canvas, opts = {}) {
     return kindOf(urlKind, app);
   }
   let curKind = effKind();
-  const rc = mountRenderers({ canvas, opts, rig, make: { "2d": createRenderer }, size: kindSize, fit: () => fit, kind: effKind, perf: () => frames.knobs(), loadRenderer3D, loadRendererPx, eager: urlKind === "3d" || !!opts.render3d, eagerPx: urlKind === "px" || !!opts.pixel, onSwap: (r) => { renderer = r; }, onReady: () => { app.boardReady = true; }, onFail: () => { if (app.pixel) app._optRender(0); } });
+  const rc = mountRenderers({ canvas, opts, rig, make: { "2d": createRenderer }, size: kindSize, fit: () => fit, kind: effKind, perf: () => frames.knobs(), loadRenderer3D, loadRendererPx, bar: { afterFirstRender, lookPlan, paintYield }, eager: urlKind === "3d" || !!opts.render3d, eagerPx: urlKind === "px" || !!opts.pixel, onSwap: (r) => { renderer = r; }, onReady: () => { app.boardReady = true; }, onFail: (k) => { if (effKind() === k) app._optRender(0); } });
   let renderer = rc.get(curKind);
   app.boardReady = curKind === "3d" ? rc.has3d() : curKind === "px" ? rc.hasPx() : true;
 
