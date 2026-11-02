@@ -16,7 +16,7 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
-## 2026-11-02 — v200 on local main, not pushed: v199's loose ends
+## 2026-11-02 — v200 LIVE, release v2.3.1: v199's loose ends
 Owner: "do the 1 to 8". PASS no longer causes false holds, GATE and TRAP tips corrected, `hide` survives a conveyor loop, the bake test takes the best of 3, the bot model sees a hold on a bomb's next step, stale AGENTS text fixed. Boards unchanged. Open: the owner's decisions, real phones, playtest #30.
 
 ## 2026-11-02 — v199 LIVE: tile round finished as far as agents can
