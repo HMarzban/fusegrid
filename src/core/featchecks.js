@@ -12,6 +12,8 @@
      opts    {only, limits, fuse, tier, pace, near}
              near: a BOOSTER-only speed-up (see inLine), an array of booster
              cells; only bombs in line with one are checked in V18 / V19
+             firstSpot: the placement gates, V19 stops at its first spot, so the
+             pass / fail is the full scan's and the detail fields are not
    The behaviour checks (V18 V19) share ONE timed-escape engine: earliest
    arrival over (cell, dir, steps) with float64 times. The player plants at
    t 0 and moves at 3.4 x the EASY pace; a cell is held until the NEXT centre
@@ -43,10 +45,20 @@ export const LIMITS = Object.freeze({
   gateMin: 2, gateMax: 3, gateGap: 4,
   streamRuns: 2, streamMin: 4, streamMax: 6, streamTotal: 12,
 });
+const K11 = key(1, 1);
 const inB = (x, y) => x >= 0 && y >= 0 && x < C && y < R;
 const xy = (k) => [k % C, (k / C) | 0];
 const manh = (a, b) => Math.abs((a % C) - (b % C)) + Math.abs(((a / C) | 0) - ((b / C) | 0));
-const nbr = (k, d) => { const x = (k % C) + D4[d][0], y = ((k / C) | 0) + D4[d][1]; return inB(x, y) ? key(x, y) : -1; };
+/* the checks run on the room-start frame, so the hot path below allocates nothing
+   per bomb: lookup tables here, one-owner scratch beside armInto / lethalInto /
+   bombMap / timedEscape. Each scratch buffer is read before its next writer runs. */
+const NB = new Int16Array(N * 4).fill(-1), RIM = new Uint8Array(N);
+for (let k = 0; k < N; k++) {
+  const x = k % C, y = (k / C) | 0;
+  RIM[k] = Math.min(x, C - 1 - x, y, R - 1 - y);
+  for (let d = 0; d < 4; d++) { const a = x + D4[d][0], b = y + D4[d][1]; if (inB(a, b)) NB[k * 4 + d] = key(a, b); }
+}
+const nbr = (k, d) => NB[k * 4 + d];
 const dirOf = (dx, dy) => D4.findIndex(([a, b]) => a === dx && b === dy);
 const notWall = (g, k) => k >= 0 && g[k] !== T.WALL;
 
@@ -84,10 +96,16 @@ function norm(b, profile, opts) {
   const items = (b.items || []).map((it) => ({ k: key(it.tx ?? Math.floor(it.x / CFG.TILE), it.ty ?? Math.floor(it.y / CFG.TILE)), buried: !!it.buried, t: it.t }));
   const foes = (b.foes || b.enemies || []).map((e) => ({ type: e.type, k: key(e.tx, e.ty), speed: e.speed ?? foeSpeed(e.type, level, P.curve) }));
   const pace = opts.pace ?? -1, pm = paceMul(pace);
-  return { ...b, g: b.grid, feat: b.feat || null, level, heat, pact, P, lim, kind, items, foes, prof: profile || FEAT_PROFILE[heat], tier: opts.tier ?? heat, firstSpot: !!opts.firstSpot,
+  return { ...b, g: b.grid, feat: b.feat || null, level, heat, pact, P, lim, kind, has: layerHas(b.feat), items, foes, prof: profile || FEAT_PROFILE[heat], tier: opts.tier ?? heat, firstSpot: !!opts.firstSpot,
     fuse: opts.fuse ?? P.fuse, pm, pmRide: Math.max(...PACE_MUL), biome: biomeOf(level).name,
     twin: kind === "PORTAL" && b.featPair ? pairTwins(b.featPair) : null,
     mask: opts.near ? inLine(b.grid, opts.near, Math.max(lim.radius, REACH_MAX), kind === "PORTAL" ? lim.escSteps : 0) : opts.around ? aroundMask(opts.around, opts.aroundR ?? lim.escSteps) : null };
+}
+/* which moving tiles a layer holds: without them speeds and hides need no per-cell look */
+function layerHas(f) {
+  const h = { ice: false, belt: false, stream: false };
+  if (f) for (let k = 0; k < N; k++) { const v = f[k]; if (!v) continue; if (v === F.GLIDE) h.ice = true; else if (isBelt(v)) h.belt = true; else if (isStream(v)) h.stream = true; }
+  return h;
 }
 function kindOfLayer(f) { for (const v of f) if (v) return featKindOf(v); return null; }
 export function foeSpeed(type, level, curve) { return spawnEnemy(type, 0, 0, level, null, { curve }).speed; }
@@ -96,52 +114,88 @@ export function foeSpeed(type, level, curve) { return spawnEnemy(type, 0, 0, lev
    pierce/line (fair.js blast()); BOOSTER relays run as an event queue on a
    grid copy (bricks broken earlier in the cascade are gone), one fire per
    booster (cooldown >= the cascade), never inheriting pierce ---- */
-function armTiles(g, cx, cy, arms, through, pt = null) {
-  const out = [key(cx, cy)];
-  for (const [dx, dy, len] of arms) {
+const TILES = new Int16Array(512);
+function armInto(g, cx, cy, arms, through, pt) {
+  let n = 0;
+  TILES[n++] = key(cx, cy);
+  for (let a = 0; a < arms.length; a++) {
+    const arm = arms[a], dx = arm[0], dy = arm[1], len = arm[2];
     let x = cx, y = cy, jumps = 0;
     for (let i = 1; i <= len; i++) {
       x += dx; y += dy;
       if (!inB(x, y)) break;
-      const v = g[key(x, y)];
+      const c = key(x, y), v = g[c];
       if (v === T.WALL) break;
-      out.push(key(x, y));
+      TILES[n++] = c;
       if (v === T.BRICK && !through) break;
       /* PORTAL (#27), the sim's computeBlast: CORE stops on the tile; PLUS / MAX
          include the twin and go on with the leftover reach, 2 jumps at most */
-      const tw = pt ? pt.twin[key(x, y)] : -1;
+      const tw = pt ? pt.twin[c] : -1;
       if (tw < 0 || g[tw] === T.WALL) continue;
       if (!pt.blast || jumps >= 2) break;
       jumps++;
-      out.push(tw);
+      TILES[n++] = tw;
       x = tw % C; y = (tw / C) | 0;
     }
   }
-  return out;
+  return n;
 }
-const cross = (r) => D4.map(([dx, dy]) => [dx, dy, r]);
+const armTiles = (g, cx, cy, arms, through, pt = null) => Array.from(TILES.subarray(0, armInto(g, cx, cy, arms, through, pt)));
+const CROSS = [];
+const cross = (r) => (CROSS[r] ??= D4.map(([dx, dy]) => [dx, dy, r]));
+/* the furthest any plain arm of a bomb at k runs: cross(r) gains no tile past this r */
+function armMax(g, k) {
+  let best = 0;
+  for (let d = 0; d < 4; d++) {
+    let i = 0;
+    for (let c = NB[k * 4 + d]; c >= 0 && g[c] !== T.WALL; c = NB[c * 4 + d]) { i++; if (g[c] === T.BRICK) break; }
+    if (i > best) best = i;
+  }
+  return best;
+}
 /* first lethal time per cell for blasts [{t, k, arms, through}] */
 export function lethalMap(g, feat, prof, blasts, useTiles = true, twin = null) {
-  const L = new Float64Array(N).fill(INF), grid = g.slice(), fired = new Uint8Array(N), q = blasts.slice();
-  const bl = useTiles && feat ? prof.bloom : null, pt = useTiles && twin ? { twin, blast: !!prof.portal.blast } : null;
+  const L = new Float64Array(N);
+  L.relay = lethalInto(L, g, feat, prof, blasts, useTiles, twin);
+  return L;
+}
+const INF_L = new Float64Array(N).fill(INF), GRID = new Int8Array(N), FIRED = new Uint8Array(N), PT = { twin: null, blast: false };
+/* fills L, returns whether a BOOSTER relayed. One blast whose tiles hold no booster
+   (nearly every bomb) never needs the event queue or the grid copy. */
+function lethalInto(L, g, feat, prof, blasts, useTiles, twin) {
+  L.set(INF_L);
+  const bl = useTiles && feat ? prof.bloom : null;
+  let pt = null;
+  if (useTiles && twin) { pt = PT; pt.twin = twin; pt.blast = !!prof.portal.blast; }
+  if (blasts.length === 1) {
+    const { t, k, arms, through, safe } = blasts[0], cnt = armInto(g, k % C, (k / C) | 0, arms, through, pt);
+    let relays = false;
+    if (bl) for (let i = 0; i < cnt && !relays; i++) relays = TILES[i] !== k && feat[TILES[i]] === F.BLOOM;
+    if (!relays) {
+      if (!safe) for (let i = 0; i < cnt; i++) { const c = TILES[i]; if (t < L[c]) L[c] = t; }
+      return false;
+    }
+  }
+  const q = blasts.slice();
+  GRID.set(g); FIRED.fill(0);
   let relay = false;
   while (q.length) {
     let i = 0;
     for (let j = 1; j < q.length; j++) if (q[j].t < q[i].t) i = j;
-    const { t, k, arms, through, safe } = q.splice(i, 1)[0], [cx, cy] = xy(k), tiles = armTiles(grid, cx, cy, arms, through, pt);
-    if (!safe) for (const c of tiles) if (t < L[c]) L[c] = t;
-    for (const c of tiles) if (grid[c] === T.BRICK) grid[c] = T.EMPTY;
+    const { t, k, arms, through, safe } = q.splice(i, 1)[0], cx = k % C, cy = (k / C) | 0, cnt = armInto(GRID, cx, cy, arms, through, pt);
+    if (!safe) for (let a = 0; a < cnt; a++) { const c = TILES[a]; if (t < L[c]) L[c] = t; }
+    for (let a = 0; a < cnt; a++) if (GRID[TILES[a]] === T.BRICK) GRID[TILES[a]] = T.EMPTY;
     if (!bl) continue;
-    for (const c of tiles) {
-      if (c === k || feat[c] !== F.BLOOM || grid[c] !== T.EMPTY || fired[c]) continue;
-      fired[c] = 1; relay = true;
-      const [x, y] = xy(c), dx = Math.sign(x - cx), dy = Math.sign(y - cy), a = [[dx, dy, bl.fwd]];
-      if (bl.side) a.push([dy, dx, bl.side], [-dy, -dx, bl.side]);
-      q.push({ t: t + (bl.delay || 0), k: c, arms: a, through: false, safe: !!bl.safe });
+    for (let a = 0; a < cnt; a++) {
+      const c = TILES[a];
+      if (c === k || feat[c] !== F.BLOOM || GRID[c] !== T.EMPTY || FIRED[c]) continue;
+      FIRED[c] = 1; relay = true;
+      const dx = Math.sign((c % C) - cx), dy = Math.sign(((c / C) | 0) - cy), arm = [[dx, dy, bl.fwd]];
+      if (bl.side) arm.push([dy, dx, bl.side], [-dy, -dx, bl.side]);
+      q.push({ t: t + (bl.delay || 0), k: c, arms: arm, through: false, safe: !!bl.safe });
     }
   }
-  L.relay = relay;
-  return L;
+  return relay;
 }
 
 /* ---- the timed-escape engine ----
@@ -155,8 +209,9 @@ export function lethalMap(g, feat, prof, blasts, useTiles = true, twin = null) {
    (vb/vp 0.35 at MAX: a centre-timed step-off clears a corner, 0.48 < 0.5). */
 function env(n, g, o = {}) {
   const prof = n.prof, t = !!(o.tiles && n.feat);
-  return { g, feat: n.feat, prof, pm: n.pm, cap: n.lim.escSteps, tiles: t, mvTiles: t && o.move !== false, stopOnBrick: o.stopOnBrick !== false, plantBlock: o.plantBlock !== false, open: o.open ?? -1, twin: t && o.warp !== false ? n.twin : null,
-    vp: VP * n.pm, vIce: Math.min(VP * prof.glide.boost, CFG.MAX_SPEED) * n.pm, vb: prof.belt.v * n.pm, actors: !!prof.belt.actors, endHalt: !!prof.belt.endHalt, nostop: prof.glide.coast >= 2, stop: prof.glide.stop, wade: prof.stream ? prof.stream.wade : 1 };
+  const mvTiles = t && o.move !== false, wade = prof.stream ? prof.stream.wade : 1, has = n.has;
+  return { g, feat: n.feat, prof, pm: n.pm, cap: n.lim.escSteps, tiles: t, mvTiles, moves: mvTiles && (has.ice || (has.belt && !!prof.belt.actors) || (has.stream && wade < 1)), near: null, stopOnBrick: o.stopOnBrick !== false, plantBlock: o.plantBlock !== false, open: o.open ?? -1, twin: t && o.warp !== false ? n.twin : null,
+    vp: VP * n.pm, vIce: Math.min(VP * prof.glide.boost, CFG.MAX_SPEED) * n.pm, vb: prof.belt.v * n.pm, actors: !!prof.belt.actors, endHalt: !!prof.belt.endHalt, nostop: prof.glide.coast >= 2, stop: prof.glide.stop, wade };
 }
 const isIce = (E, k) => E.mvTiles && E.feat[k] === F.GLIDE && E.g[k] === T.EMPTY;
 const isRide = (E, k) => E.mvTiles && E.actors && isBelt(E.feat[k]) && E.g[k] === T.EMPTY;
@@ -175,6 +230,7 @@ function blockAt(E, k, t, L, plant) {
 }
 function hide(E, k, d, t, L, plant) {
   if (L[k] !== INF) return false;
+  if (!E.moves) return true;
   if (isIce(E, k) && E.nostop && d < 4) return E.stop === "brake" || blockAt(E, nbr(k, d), t, L, plant);
   if (isRide(E, k)) {
     const [ux, uy] = beltDir(E.feat[k]), dn = nbr(k, dirOf(ux, uy));
@@ -186,52 +242,73 @@ function hide(E, k, d, t, L, plant) {
 }
 /* earliest escape from `start` under lethal map L; plant = the static bomb
    cell (never re-entered, a stop block on ice until it goes) or -1 */
+const STATES = N * 5, FRONT = [new Int16Array(STATES), new Int16Array(STATES)], TIME = [new Float64Array(STATES), new Float64Array(STATES)], SLOT = new Int16Array(STATES), SEEN = new Int32Array(STATES);
+let layer = 0;
 export function timedEscape(E, L, start, plant = -1) {
-  if (hide(E, start, 4, 0, L, plant)) return { ok: true, t: 0, steps: 0 };
-  let cur = new Map([[start * 5 + 4, 0]]);
-  for (let s = 0; s < E.cap && cur.size; s++) {
-    const nx = new Map();
-    for (const [id, ta] of cur) {
-      const a = (id / 5) | 0;
+  return escapes(E, L, start, plant) ? { ok: true, t: escT, steps: escS } : { ok: false };
+}
+let escT = 0, escS = 0;
+function escapes(E, L, start, plant) {
+  if (hide(E, start, 4, 0, L, plant)) { escT = 0; escS = 0; return true; }
+  if (layer > 0x3fffffff) { SEEN.fill(0); layer = 0; }
+  const g = E.g, open = E.open, mv = E.moves, twin = E.twin, nostop = E.nostop, vp = E.vp;
+  let side = 0, count = 1;
+  FRONT[0][0] = start * 5 + 4; TIME[0][0] = 0;
+  for (let s = 0; s < E.cap && count; s++) {
+    const ids = FRONT[side], ts = TIME[side], nid = FRONT[1 - side], nt = TIME[1 - side], gen = ++layer;
+    let nn = 0;
+    for (let i = 0; i < count; i++) {
+      const a = (ids[i] / 5) | 0, ta = ts[i];
       for (let d = 0; d < 4; d++) {
-        const b = nbr(a, d);
-        if (!passable(E, b, plant)) continue;
-        const sa = spd(E, a, d), sb = spd(E, b, d);
+        const b = NB[a * 4 + d];
+        if (b < 0 || b === plant || (g[b] !== T.EMPTY && b !== open)) continue;
+        const sa = mv ? spd(E, a, d) : vp, sb = mv ? spd(E, b, d) : vp;
         if (sa <= 0 || sb <= 0) continue;
         /* a warp fires as the centre crosses onto the tile and lands on the twin's
            centre; a bomb on the twin or a blade already there leaves plain floor */
-        const tw = E.twin ? E.twin[b] : -1, te = ta + 0.5 / sa, jump = tw >= 0 && tw !== plant && E.g[tw] !== T.WALL && te < L[tw];
+        const tw = twin ? twin[b] : -1, te = ta + 0.5 / sa, jump = tw >= 0 && tw !== plant && g[tw] !== T.WALL && te < L[tw];
         const tb = jump ? te : te + 0.5 / sb, c = jump ? tw : b;
         if (tb > L[a]) continue;
-        const sid = c * 5 + (isIce(E, c) && E.nostop ? d : 4), o = nx.get(sid);
-        if (o === undefined || tb < o) nx.set(sid, tb);
+        const sid = c * 5 + (mv && nostop && isIce(E, c) ? d : 4);
+        if (SEEN[sid] !== gen) { SEEN[sid] = gen; SLOT[sid] = nn; nid[nn] = sid; nt[nn++] = tb; }
+        else if (tb < nt[SLOT[sid]]) nt[SLOT[sid]] = tb;
       }
     }
-    for (const [id, tb] of nx) if (hide(E, (id / 5) | 0, id % 5, tb, L, plant)) return { ok: true, t: tb, steps: s + 1 };
-    cur = nx;
+    for (let i = 0; i < nn; i++) if (hide(E, (nid[i] / 5) | 0, nid[i] % 5, nt[i], L, plant)) { escT = nt[i]; escS = s + 1; return true; }
+    side = 1 - side; count = nn;
   }
-  return { ok: false };
+  return false;
 }
 
 /* the TRAP footprint a foe arms at plate k: reach r, bricks transparent when
    `through` (an over-approximation of every brick state), else the sim's arms */
 const trapTiles = (g, k, r, through) => { const [x, y] = xy(k); return armTiles(g, x, y, cross(r), through); };
-const plates = (n) => n.feat ? [...n.feat.keys()].filter((k) => n.feat[k] === F.PLATE && n.g[k] === T.EMPTY) : [];
+/* memo on n, keyed by grid: v20 and v29 re-enter with {...n, g} */
+function plates(n) {
+  if (n.plateG === n.g) return n.plateL;
+  const out = [];
+  if (n.feat) for (let k = 0; k < N; k++) if (n.feat[k] === F.PLATE && n.g[k] === T.EMPTY) out.push(k);
+  n.plateG = n.g; n.plateL = out;
+  return out;
+}
 
 /* own bomb at cell c, radius r, on grid g: the lethal map with the tile live
    (BOOSTER relays, CONVEYOR ride union, TRAP chain) or ignored */
+/* one owner each: v19 holds a live map and a base map at once, nothing holds two of a kind */
+const L_LIVE = new Float64Array(N), L_BASE = new Float64Array(N), L_MORE = new Float64Array(N), NONE = [], AT_ONE = [0], BLAST = { t: 0, k: 0, arms: null, through: false, safe: false }, ONE = [BLAST];
+function oneBlast(t, k, arms, through) { BLAST.t = t; BLAST.k = k; BLAST.arms = arms; BLAST.through = through; return ONE; }
 function bombMap(n, g, c, r, live, blast = null) {
   const arms = blast ? blast.arms : cross(r), through = blast ? blast.through : false;
-  if (!live || !n.feat) return lethalMap(g, null, n.prof, [{ t: n.fuse, k: c, arms, through }], false);
-  const [cx, cy] = xy(c);
-  let tb = n.fuse, chain = false;
-  const extra = [];
+  if (!live || !n.feat) { lethalInto(L_BASE, g, null, n.prof, oneBlast(n.fuse, c, arms, through), false, null); return L_BASE; }
+  let tb = n.fuse, chain = false, extra = NONE;
   for (const p of plates(n)) if (!n.prof.plate.hold && trapTiles(g, p, n.prof.plate.r, false).includes(c) && (n.prof.plate.near == null || manh(p, c) <= n.prof.plate.near + n.lim.escSteps)) {
     const ch = n.prof.plate.chain;
     if (ch !== false) { chain = true; tb = Math.min(tb, typeof ch === "number" ? Math.max(n.prof.plate.wind, ch) : n.prof.plate.wind); }
+    if (extra === NONE) extra = [];
     extra.push({ t: n.prof.plate.wind, k: p, arms: cross(n.prof.plate.r), through: false });
   }
-  let at = [c];
+  let at = AT_ONE;
+  AT_ONE[0] = c;
   if ((n.prof.belt.thru || isStream(n.feat[c])) && isFlow(n.feat[c]) && g[c] === T.EMPTY) {
     /* #28 pass-through carry: only WALL / BRICK / a bomb stops a ridden bomb, so
        its cell at the fuse is known for each pace (the cells it passes are safe);
@@ -246,17 +323,19 @@ function bombMap(n, g, c, r, live, blast = null) {
     at = [...new Set(PACE_MUL.map((pm) => path[Math.min(path.length - 1, Math.floor(v * pm * n.fuse + 1e-9))]))];
   } else if (isBelt(n.feat[c]) && g[c] === T.EMPTY) {
     let k = c, steps = Math.ceil(n.prof.belt.v * n.pmRide * n.fuse - 1e-9);
+    at = [c];
     while (steps-- > 0 && isBelt(n.feat[k]) && g[k] === T.EMPTY) {
       const [ux, uy] = beltDir(n.feat[k]), nk = nbr(k, dirOf(ux, uy));
       if (nk < 0 || g[nk] !== T.EMPTY) break;
       k = nk; at.push(k);
     }
   }
-  let L = null, relay = false;
-  for (const k of at) {
-    const M = lethalMap(g, n.feat, n.prof, [{ t: tb, k, arms, through }, ...extra], true, n.twin);
-    relay ||= M.relay;
-    if (!L) L = M; else for (let i = 0; i < N; i++) if (M[i] < L[i]) L[i] = M[i];
+  const L = L_LIVE;
+  let relay = false;
+  for (let a = 0; a < at.length; a++) {
+    const list = extra.length ? [{ t: tb, k: at[a], arms, through }, ...extra] : oneBlast(tb, at[a], arms, through), M = a ? L_MORE : L;
+    relay = lethalInto(M, g, n.feat, n.prof, list, true, n.twin) || relay;
+    if (a) for (let i = 0; i < N; i++) if (M[i] < L[i]) L[i] = M[i];
   }
   L.cause = chain ? "trap-chain" : at.length > 1 || at[0] !== c ? "bomb-ride" : relay ? "relay" : null;
   L.moved = at.length > 1 || at[0] !== c;
@@ -264,16 +343,23 @@ function bombMap(n, g, c, r, live, blast = null) {
   return L;
 }
 const sameIn = (A, B, c, rad) => { const [cx, cy] = xy(c); for (let y = Math.max(0, cy - rad); y <= Math.min(R - 1, cy + rad); y++) for (let x = Math.max(0, cx - rad); x <= Math.min(C - 1, cx + rad); x++) { if (Math.abs(x - cx) + Math.abs(y - cy) > rad) continue; const k = key(x, y); if (A[k] !== B[k]) return false; } return true; };
-function moveTileNear(n, E, c, rad) { const [cx, cy] = xy(c); for (let y = Math.max(0, cy - rad); y <= Math.min(R - 1, cy + rad); y++) for (let x = Math.max(0, cx - rad); x <= Math.min(C - 1, cx + rad); x++) { if (Math.abs(x - cx) + Math.abs(y - cy) > rad) continue; const k = key(x, y); if (isIce(E, k) || isRide(E, k) || isWade(E, k) || (E.twin && E.twin[k] >= 0)) return true; } return false; }
+function moveTileNear(E, c, rad) {
+  if (!E.moves && !E.twin) return false;
+  if (!E.near) { E.near = []; for (let k = 0; k < N; k++) if (isIce(E, k) || isRide(E, k) || isWade(E, k) || (E.twin && E.twin[k] >= 0)) E.near.push(k); }
+  for (let i = 0; i < E.near.length; i++) if (manh(E.near[i], c) <= rad) return true;
+  return false;
+}
 
+const FIRST = [];
+for (let r = 1; r <= REACH_MAX; r++) FIRST[r] = [["normal", cross(r), false], ["pierce", cross(r), true], ...D4.map(([dx, dy]) => ["line", [[dx, dy, r]], true])];
 /* V18: V2 re-run with the tile live, this heat's fuse (opts.fuse overrides),
    the EASY pace; bomb at (1,1), r 1..REACH_MAX, normal / pierce / line x4 */
 function v18(n) {
   const g = n.g, s = key(1, 1), E = env(n, g, { tiles: true }), Ef = n.twin ? env(n, g, { tiles: true, warp: false }) : null;
   if (n.mask && !n.mask[s]) return null;
-  for (let r = 1; r <= REACH_MAX; r++) for (const [kind, arms, through] of [["normal", cross(r), false], ["pierce", cross(r), true], ...D4.map(([dx, dy]) => ["line", [[dx, dy, r]], true])]) {
+  for (let r = 1; r <= REACH_MAX; r++) for (const [kind, arms, through] of FIRST[r]) {
     const L = bombMap(n, g, s, r, true, { arms, through });
-    if (!timedEscape(E, L, s, s).ok || (Ef && !timedEscape(Ef, L, s, s).ok)) return { why: "first bomb has no escape", r, kind };
+    if (!escapes(E, L, s, s) || (Ef && !escapes(Ef, L, s, s))) return { why: "first bomb has no escape", r, kind };
   }
   return null;
 }
@@ -296,28 +382,29 @@ function v19(n) {
   const spots = new Map(), by = {}, kind = { time: new Set(), cap: new Set() }, exact = new Set();
   const add = (k, cause, ex, timed) => { if (!spots.has(k)) spots.set(k, ex); (by[cause] ||= new Set()).add(k); kind[timed ? "time" : "cap"].add(k); };
   const free = (E) => ({ ...E, cap: n.lim.escFree });
-  const cleared = n.g.map((v) => (v === T.BRICK ? T.EMPTY : v)), rad = n.lim.escSteps + 1;
+  const cleared = n.g.map((v) => (v === T.BRICK ? T.EMPTY : v)), rad = n.lim.escSteps + 1, twinPt = n.twin ? { twin: n.twin, blast: !!n.prof.portal.blast } : null;
   for (const [st, g] of [["loaded", n.g], ["cleared", cleared]]) {
     const Eb = env(n, g, { tiles: false }), Et = env(n, g, { tiles: true }), Em = env(n, g, { tiles: true, move: false }), Ef = n.twin ? env(n, g, { tiles: true, warp: false }) : null;
     for (let c = 0; c < N; c++) {
       if (g[c] !== T.EMPTY || (n.mask && !n.mask[c])) continue;
-      let at = [c];
+      let reach = 0;
       for (let r = 1, cnt = -1; r <= n.lim.radius; r++) {
-        if (n.twin) { const [x, y] = xy(c), m = armTiles(g, x, y, cross(r), false, { twin: n.twin, blast: !!n.prof.portal.blast }).length + armTiles(g, x, y, cross(r), false).length; if (m === cnt) continue; cnt = m; }
+        if (n.twin) { const x = c % C, y = (c / C) | 0, rc = cross(r), m = armInto(g, x, y, rc, false, twinPt) + armInto(g, x, y, rc, false, null); if (m === cnt) continue; cnt = m; }
         /* a radius whose arms reach no further from any cell the bomb can blow at gives the same maps as the last one */
-        else if (r > 1 && at.every((k) => { const [x, y] = xy(k); return armTiles(g, x, y, cross(r), false).length === armTiles(g, x, y, cross(r - 1), false).length; })) break;
+        else if (r > reach && r > 1) break;
         const Lt = bombMap(n, g, c, r, true), plant = Lt.moved ? -1 : c;
-        if (Lt.at) at = [c, ...Lt.at];
-        if (!n.twin && timedEscape(Et, Lt, c, plant).ok) continue;
+        if (r === 1 && !n.twin) { reach = armMax(g, c); for (const k of Lt.at) reach = Math.max(reach, armMax(g, k)); }
+        if (!n.twin && escapes(Et, Lt, c, plant)) continue;
         const Lb = bombMap(n, g, c, r, false);
-        if (!timedEscape(Eb, Lb, c, c).ok) break;
-        if (sameIn(Lb, Lt, c, rad) && !moveTileNear(n, Et, c, rad)) continue;
+        if (!escapes(Eb, Lb, c, c)) break;
+        if (!moveTileNear(Et, c, rad) && sameIn(Lb, Lt, c, rad)) continue;
         /* PORTAL: the escape holds both ways, every portal warping and every portal plain floor (a foe the check cannot see may block a warp) */
-        const warped = timedEscape(Et, Lt, c, plant).ok;
-        if (warped && (!Ef || timedEscape(Ef, Lt, c, plant).ok)) continue;
-        if (Ef) { const cz = warped ? "floor" : "warp", timed = !n.firstSpot && !timedEscape(free(warped ? Ef : Et), Lt, c, plant).ok; add(c, cz, { at: xy(c), r, state: st, cause: cz, kind: timed ? "time" : "cap" }, timed); if (n.firstSpot) return { why: "no-escape spot", spots: 1 }; break; }
-        const cause = Lt.cause && !timedEscape(Em, Lt, c, plant).ok ? Lt.cause : n.kind === "GLIDE" ? "coast" : n.kind === "BELT" ? "ride" : n.kind === "STREAM" ? "wade" : Lt.cause || "tile";
-        const timed = !timedEscape(free(Et), Lt, c, plant).ok;
+        const warped = escapes(Et, Lt, c, plant);
+        if (warped && (!Ef || escapes(Ef, Lt, c, plant))) continue;
+        if (Ef) { const cz = warped ? "floor" : "warp", timed = !n.firstSpot && !escapes(free(warped ? Ef : Et), Lt, c, plant); add(c, cz, { at: xy(c), r, state: st, cause: cz, kind: timed ? "time" : "cap" }, timed); if (n.firstSpot) return { why: "no-escape spot", spots: 1 }; break; }
+        if (n.firstSpot) return { why: "no-escape spot", spots: 1 };
+        const cause = Lt.cause && !escapes(Em, Lt, c, plant) ? Lt.cause : n.kind === "GLIDE" ? "coast" : n.kind === "BELT" ? "ride" : n.kind === "STREAM" ? "wade" : Lt.cause || "tile";
+        const timed = !escapes(free(Et), Lt, c, plant);
         add(c, cause, { at: xy(c), r, state: st, cause, kind: timed ? "time" : "cap" }, timed);
         break;
       }
@@ -330,9 +417,9 @@ function v19(n) {
     for (const q of foot) {
       if (q === p || (pr.near != null && manh(p, q) > pr.near) || (!through && n.g[q] !== T.EMPTY)) continue;
       const E = through ? env(n, n.g, { tiles: true, stopOnBrick: false, plantBlock: false, open: q }) : env(n, n.g, { tiles: true, plantBlock: false });
-      if (timedEscape(E, L, q, p).ok) continue;
+      if (escapes(E, L, q, p)) continue;
       if (!through) { exact.add(q); continue; }
-      const timed = !timedEscape(free(E), L, q, p).ok;
+      const timed = !escapes(free(E), L, q, p);
       add(q, "trap-blast", { at: xy(q), trap: xy(p), cause: "trap-blast", kind: timed ? "time" : "cap" }, timed);
     }
   }
@@ -511,12 +598,12 @@ function v31(n) {
       const near = qs.filter((q) => g[q] === T.EMPTY && manh(q, c) <= lim.escSteps && manh(q, c) > hold);
       if (!near.length) continue;
       for (let r = 1; r <= lim.radius; r++) {
-        if (!timedEscape(Eb, bombMap(n, g, c, r, false), c, c).ok) break;
+        if (!escapes(Eb, bombMap(n, g, c, r, false), c, c)) break;
         const walls = near.filter((q) => manh(q, c) > (hold < 0 ? hold : holdReach(r, hold)));
         if (!walls.length) break;
         const m = g.slice();
         for (const q of walls) m[q] = T.WALL;
-        if (timedEscape(env(n, m, { tiles: false }), bombMap(n, m, c, r, false), c, c).ok) continue;
+        if (escapes(env(n, m, { tiles: false }), bombMap(n, m, c, r, false), c, c)) continue;
         spots.set(c, { at: xy(c), r, state: st });
         break;
       }
@@ -545,7 +632,7 @@ const pieces = (g, gone) => {
 export function gateSplit(grid, gs) {
   for (let ring = 0; ring <= LIMITS.rings; ring++) {
     const g = grid.slice();
-    if (ring) for (let k = 0; k < N; k++) { const [x, y] = xy(k), rim = Math.min(x, C - 1 - x, y, R - 1 - y); if (rim >= 1 && rim <= ring && !(x === 1 && y === 1)) g[k] = T.WALL; }
+    if (ring) for (let k = 0; k < N; k++) if (RIM[k] >= 1 && RIM[k] <= ring && k !== K11) g[k] = T.WALL;
     if (pieces(g, gs) > pieces(g, [])) return ring || -1;
   }
   return 0;
@@ -562,7 +649,7 @@ export function gateSpot(b, profile, gs, near = null) {
   for (let ring = 0; ring <= n.lim.rings; ring++) for (const g0 of [n.g, cleared]) {
     const g = g0.slice();
     for (const k of gs) g[k] = T.EMPTY;
-    if (ring) for (let k = 0; k < N; k++) { const [x, y] = xy(k), rim = Math.min(x, C - 1 - x, y, R - 1 - y); if (rim >= 1 && rim <= ring && !(x === 1 && y === 1)) g[k] = T.WALL; }
+    if (ring) for (let k = 0; k < N; k++) if (RIM[k] >= 1 && RIM[k] <= ring && k !== K11) g[k] = T.WALL;
     const shut = g.slice();
     for (const k of gs) shut[k] = T.WALL;
     const Eb = env(n, g, { tiles: false }), Es = env(n, shut, { tiles: false });
@@ -571,8 +658,8 @@ export function gateSpot(b, profile, gs, near = null) {
       const own = gs.includes(c), E = own ? env(n, shut.map((v, i) => (i === c ? T.EMPTY : v)), { tiles: false }) : Es;
       for (let r = 1; r <= rMax; r++) {
         const L = bombMap(n, g, c, r, false);
-        if (!timedEscape(Eb, L, c, c).ok) break;
-        if (!timedEscape(E, L, c, c).ok) return { at: xy(c), r };
+        if (!escapes(Eb, L, c, c)) break;
+        if (!escapes(E, L, c, c)) return { at: xy(c), r };
       }
     }
   }
@@ -617,7 +704,7 @@ function v28(n) {
 function v29(n) {
   for (let ring = 1; ring <= n.lim.rings; ring++) {
     const g = n.g.slice();
-    for (let y = 0; y < R; y++) for (let x = 0; x < C; x++) { const rim = Math.min(x, C - 1 - x, y, R - 1 - y); if (rim >= 1 && rim <= ring && !(x === 1 && y === 1)) g[key(x, y)] = T.WALL; }
+    for (let k = 0; k < N; k++) if (RIM[k] >= 1 && RIM[k] <= ring && k !== K11) g[k] = T.WALL;
     const f = v19({ ...n, g });
     if (f) return { ...f, why: "ring " + ring + ": " + f.why, ring };
   }

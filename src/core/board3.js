@@ -36,7 +36,7 @@ function bloomGate(base, level, lay) {
       for (let h = 0; h < 3 && ok; h++) {
         const g = base[h].grid.slice();
         for (const k of ks) g[k] = T.EMPTY;
-        ok = !featChecks({ grid: g, feat: f, level, heat: h, items: [], enemies: [] }, FEAT_PROFILE[h], { only: BLOOM_GATE.only, near: BLOOM_GATE.near ? [key(x, y)] : null }).length;
+        ok = !featChecks({ grid: g, feat: f, level, heat: h, items: [], enemies: [] }, FEAT_PROFILE[h], { only: BLOOM_GATE.only, near: BLOOM_GATE.near ? [key(x, y)] : null, firstSpot: true }).length;
       }
       if (ok) { used.push([x, y]); uk.push(key(x, y)); }
     }
@@ -103,8 +103,8 @@ function streamGate(base, level) {
       const g = base[h].grid.slice();
       for (const k of all) g[k] = T.EMPTY;
       const b = { grid: g, feat: f, level, heat: h, items: [], enemies: [] }, P = FEAT_PROFILE[h];
-      if (featChecks(b, P, { only: ["V29"], around: all, aroundR: 0 }).length) return false;
-      if (featChecks(b, P, { only: ["V18", "V19"], around: all, aroundR: P.stream.wade < 1 ? undefined : 0 }).length) return false;
+      if (featChecks(b, P, { only: ["V29"], around: all, aroundR: 0, firstSpot: true }).length) return false;
+      if (featChecks(b, P, { only: ["V18", "V19"], around: all, aroundR: P.stream.wade < 1 ? undefined : 0, firstSpot: true }).length) return false;
     }
     return true;
   };
