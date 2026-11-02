@@ -138,6 +138,89 @@ test("mirror: every predicted tile fires and nothing else does, at the predicted
   assert.ok(chains >= 5, "and really stagger them: " + chains);
 });
 
+/* ---- TRAP wind-up (#22): the same tell, by featTick + fireBlast ---- */
+const WIND = [0.5, 0.8, 1.0], REACH = [1, 2, 3];
+function trapRoom(heat) { const w = room(heat); w.feat.fill(0); w.feat[key(7, 5)] = 7; return w; }
+const arm = (w, k = key(7, 5), left = null) => { w.featM[k] = 1; w.featS[k] = left == null ? WIND[w.heat] : left; w.featPend.push({ k, kind: "plate", by: "walker" }); };
+test("trap reach per heat: its own tile and arms of 1 / 2 / 3, hot, from the arm moment", () => {
+  for (let h = 0; h < 3; h++) {
+    const w = trapRoom(h); arm(w, key(7, 5), 0.3);
+    const want = [[7, 5]];
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) for (let i = 1; i <= REACH[h]; i++) want.push([7 + dx * i, 5 + dy * i]);
+    const c = relayTell(w);
+    assert.deepEqual(set(c), S(...want), "heat " + h);
+    for (const e of c) { assert.equal(e.hot, true); assert.equal(e.k, 1); assert.equal(e.t, w.featS[key(7, 5)]); }
+  }
+});
+test("trap fade comes from the arm moment; a wall stops an arm, a brick is left out and stops it; a cooling trap has no tell", () => {
+  const w = trapRoom(2), k = key(7, 5);
+  arm(w);
+  assert.equal(relayTell(w)[0].k, 0);
+  w.featS[k] -= TELL_IN / 2;
+  assert.ok(Math.abs(relayTell(w)[0].k - 0.5) < 1e-6);
+  w.featS[k] -= TELL_IN;
+  assert.equal(relayTell(w)[0].k, 1);
+  w.grid[key(8, 5)] = T.WALL; w.grid[key(6, 5)] = T.BRICK;
+  assert.deepEqual(set(relayTell(w)), S([7, 5], [7, 4], [7, 3], [7, 2], [7, 6], [7, 7], [7, 8]));
+  w.featM[k] = 2;
+  assert.deepEqual(relayTell(w), []);
+});
+test("trap: chain false sets off no bomb; a bomb's own blast opening a brick earlier lets the arm through, a later one does not", () => {
+  {
+    const w = trapRoom(2); arm(w, key(7, 5), 0.2); bomb(w, 9, 5, { timer: 2, radius: 2 }); w.feat[key(11, 5)] = 6;
+    const c = relayTell(w), far = c.find((e) => e.x === 11 && e.y === 5);
+    assert.ok(Math.abs(far.t - 2.3) < 1e-9, "the bomb in the trap's arm keeps its own fuse, so the booster past it fires at 2 s + its 0.3 s flare, not at 0.2 s");
+  }
+  { const w = trapRoom(2); w.grid[key(8, 5)] = T.BRICK; arm(w, key(7, 5), 0.8); bomb(w, 8, 4, { timer: 0.3, radius: 1 }); const c = set(relayTell(w)); assert.ok(c.includes("9,5"), "the bomb opens (8,5) first, so the arm reaches on"); assert.ok(!c.includes("8,5"), "a brick right now stays out"); }
+  { const w = trapRoom(2); w.grid[key(8, 5)] = T.BRICK; arm(w, key(7, 5), 0.2); bomb(w, 8, 4, { timer: 0.8, radius: 1 }); assert.ok(!set(relayTell(w)).includes("9,5"), "the trap fires first: the brick stops the arm"); }
+});
+test("mirror: a trap's predicted tiles are what the real step() blasts, with bombs on the board, at all heats", () => {
+  let cases = 0, tiles = 0, opened = 0;
+  for (let h = 0; h < 3; h++) for (let s = 0; s < 60; s++) {
+    const w = createWorld(730000 + s * 29, 1); w.gen = 3; w.heat = h; loadLevel(w, 5, false); w.state = "PLAY";
+    const ps = []; for (let k = 0; k < w.feat.length; k++) if (w.feat[k] === 7) ps.push(k);
+    if (!ps.length) continue;
+    w.enemies.length = 1; Object.assign(w.enemies[0], { invuln: true, invulnT: 1e9, speed: 0 }); w.players[0].iFrames = 1e9;
+    let r = 777 + s * 31 + h;
+    const rnd = (n) => { r = (Math.imul(r, 1103515245) + 12345) >>> 0; return (r >>> 8) % n; };
+    const k = ps[rnd(ps.length)], cx = k % CFG.COLS, cy = (k / CFG.COLS) | 0;
+    arm(w, k, 0.3 + rnd(8) / 10);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) for (const d of [1, 2]) {
+      const x = cx + dx * d + dy, y = cy + dy * d + dx;
+      if (x > 0 && y > 0 && x < CFG.COLS - 1 && y < CFG.ROWS - 1 && w.grid[key(x, y)] === T.EMPTY && rnd(2)) w.bombs.push({ x: ctr(x), y: ctr(y), tx: x, ty: y, timer: 0.2 + rnd(10) / 10, radius: 1 + rnd(3), pierce: false, line: false, dir: null, variant: "normal", dead: false });
+    }
+    const pred = relayTell(w), bricks0 = w.grid.slice(), got = new Map(), seen = new Set(), inp = [newIntent()];
+    let time = 0;
+    for (let i = 0; i < 200 && (w.bombs.length || w.featPend.length || i < 2); i++) {
+      step(w, DT, inp); time += DT; w.events.length = 0;
+      assert.equal(w.state, "PLAY");
+      for (const b of w.blades) if (b.src === "plate" && !seen.has(b)) { seen.add(b); for (const t of b.tiles) { const c = key(t.tx, t.ty); if (bricks0[c] !== T.BRICK && !got.has(c)) got.set(c, time); } }
+    }
+    const label = "heat " + h + " seed " + s;
+    assert.deepEqual([...new Set(pred.map((e) => key(e.x, e.y)))].sort((a, b) => a - b), [...got.keys()].sort((a, b) => a - b), label);
+    for (const e of pred) assert.ok(Math.abs(got.get(key(e.x, e.y)) - e.t) <= 3 * DT, label + " time");
+    cases++; tiles += pred.length;
+    if (w.grid.some((v, c) => v === T.EMPTY && bricks0[c] === T.BRICK)) opened++;
+  }
+  assert.ok(cases >= 150 && tiles >= 400, cases + " cases, " + tiles + " tiles");
+  assert.ok(opened >= 20, "bricks really broke on these boards: " + opened);
+});
+test("trap tell in the looks: CLASSIC brackets + wash, PIXEL and REAL 3D read the same cells", () => {
+  const w = trapRoom(2); arm(w, key(7, 5), 0.5);
+  const R = recCtx(); drawRelayTell(R.ctx, w, 1);
+  assert.equal(R.log.filter((l) => l === "stroke()").length, 26, "13 tiles, two strokes each");
+  assert.equal(R.log.filter((l) => l.startsWith("fillRect")).length, 13, "a wash on each while it winds up");
+  const R0 = recCtx(); drawRelayTell(R0.ctx, w, 0);
+  assert.equal(R0.log.filter((l) => l.startsWith("fillRect")).length, 0, "REDUCE FLASH takes the wash");
+  const F = fakePx(); drawPx(F.c, { flashK: 1 }, w);
+  assert.equal(F.log.length, 13 * 2 * 8 + 13, "PIXEL: brackets and wash per tile");
+  initFx(); setFxOpts({ flashK: 1 });
+  const r = createRenderer3D(null, null, { audio: null, hud: null });
+  w.time += 1 / 60; r.render(w, 1 / 60);
+  assert.equal(TELL.n.value, 13);
+  assert.equal(TELL.data[(5 * CFG.COLS + 10) * 4], 255, "the arm's far tile is in the board texture");
+});
+
 /* ---- the sim never sees it ---- */
 const snap = (w) => JSON.stringify(w, (k, v) => (ArrayBuffer.isView(v) ? Array.from(v) : v));
 test("purity: a call writes nothing, and a run with a call every tick is byte-identical to a run with none (all heats, a bomb every 40 ticks)", () => {

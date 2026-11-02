@@ -1,10 +1,11 @@
-/* BOOSTER RELAY TELL (issue #21): a READ-ONLY warning of where a relay will reach, drawn from the moment the bomb that sets it off is lit, never a sim field.
+/* BOOSTER RELAY TELL (issue #21) + TRAP WIND-UP (#22): a READ-ONLY warning of where a relay or a trap's blast will reach, drawn from the moment the bomb that sets it off is lit or the trap arms, never a sim field.
    relayTell plays the lit bombs and flares forward on a private copy of the grid, in fuse order, by the sim's own rules (sim.js): detonate + computeBlast, a
    blast breaks its bricks and sets off the bombs it covers, relayCheck (an arm from a neighbouring tile arms an idle booster on open floor; a bomb on the booster
    does not), fireBlast (the relay arms stop at WALL, stop on a brick, never inherit PIERCE or POWER), the cooldown. So a brick one bomb will open and a chain are
    already in the answer. Pure: reads world, writes nothing, no clock, no Math.random; timers stand still in PAUSE, so the tell does too. tests/relaytell.test.mjs
    holds the mirror to the real step(). It cannot see what has not happened yet: a new plant, a kick, REMOTE, a SHRINK ring.
-   Cell {x, y, t, k, hot}: t = seconds until the relay fires on it; k = the 0..1 fade from the lit bomb's own fuse (TELL_IN); hot = its booster is flaring now.
+   A trap in wind-up plays by featTick + fireBlast: 4 arms of plate.r, stop at WALL, stop on a brick, and with chain false it opens bricks but sets off no bomb.
+   Cell {x, y, t, k, hot}: t = seconds until the relay or trap fires on it; k = the 0..1 fade from the lit bomb's own fuse or the trap's arm moment (TELL_IN); hot = its booster is flaring or its trap winding up now.
    A tile that is a brick right now is left out: nobody stands there, and every look draws under the bricks. */
 import { CFG, T, key, biomeOf } from "../core/config.js";
 import { isWall } from "../core/board.js";
@@ -17,12 +18,13 @@ const NONE = Object.freeze([]), D4 = [[1, 0], [-1, 0], [0, 1], [0, -1]], BLOOM =
 export function relayTell(w) {
   const f = w && w.feat, g0 = w && w.grid;
   if (!f || !g0 || !w.featM) return NONE;
-  const bombs = (w.bombs || []).filter((b) => !b.dead), pend = (w.featPend || []).filter((q) => q.kind === "bloom");
+  const bombs = (w.bombs || []).filter((b) => !b.dead), pend = (w.featPend || []).filter((q) => q.kind === "bloom" || (q.kind === "plate" && w.featM[q.k] === 1));
   if (!bombs.length && !pend.length) return NONE;
-  const bc = featProfile(w).bloom, fz = w.fuse == null ? CFG.FUSE : w.fuse, g = g0.slice(), gone = new Set(), until = new Map(), cells = new Map(), q = [];
+  const { bloom: bc, plate: pc } = featProfile(w), fz = w.fuse == null ? CFG.FUSE : w.fuse, g = g0.slice(), gone = new Set(), until = new Map(), cells = new Map(), q = [];
   const idleAt = (k) => (until.has(k) ? until.get(k) : w.featM[k] === 2 ? w.featS[k] : w.featM[k] === 1 ? w.featS[k] + bc.cd : 0);
-  const burn = (tiles, t, k0) => {
+  const burn = (tiles, t, k0, chain = true) => {
     for (const [x, y] of tiles) if (g[key(x, y)] === T.BRICK) g[key(x, y)] = T.EMPTY;
+    if (!chain) return;
     const hit = new Set(tiles.map(([x, y]) => key(x, y)));
     for (const b of bombs) if (!gone.has(b) && hit.has(key(b.tx, b.ty))) boom(b, t, k0);
   };
@@ -38,8 +40,12 @@ export function relayTell(w) {
     }
   };
   const fire = (k, dx, dy, t, k0, hot) => {
-    const cx = k % CFG.COLS, cy = (k / CFG.COLS) | 0, tiles = [[cx, cy]], arms = [[dx, dy, bc.fwd]];
+    const arms = [[dx, dy, bc.fwd]];
     if (bc.side) arms.push([dy, dx, bc.side], [-dy, -dx, bc.side]);
+    strike(k, arms, t, k0, hot, true);
+  };
+  const strike = (k, arms, t, k0, hot, chain) => {
+    const cx = k % CFG.COLS, cy = (k / CFG.COLS) | 0, tiles = [[cx, cy]];
     for (const [ax, ay, len] of arms) for (let i = 1; i <= len; i++) {
       const x = cx + ax * i, y = cy + ay * i;
       if (isWall(g, x, y)) break;
@@ -53,7 +59,7 @@ export function relayTell(w) {
       if (!o) cells.set(c, { x, y, t, k: k0, hot });
       else { if (t < o.t) o.t = t; if (k0 > o.k) o.k = k0; if (hot) o.hot = true; }
     }
-    burn(tiles, t, k0);
+    burn(tiles, t, k0, chain);
     reach(tiles, cx, cy, t, k0);
   };
   /* PORTAL (#27): an arm's tiles past a jump are this tell's cells, from the moment the bomb is lit: the warning that a blast comes out of the twin */
@@ -90,12 +96,16 @@ export function relayTell(w) {
     reach(tiles, b.tx, b.ty, t, k0);
   };
   for (const b of bombs) q.push({ t: b.timer, b });
-  for (const p of pend) q.push({ t: w.featS[p.k], k: p.k, dx: p.dx, dy: p.dy, k0: 1, hot: true });
+  for (const p of pend) {
+    if (p.kind === "bloom") q.push({ t: w.featS[p.k], k: p.k, dx: p.dx, dy: p.dy, k0: 1, hot: true });
+    else q.push({ t: w.featS[p.k], k: p.k, trap: true, k0: Math.min(1, Math.max(0, (pc.wind - w.featS[p.k]) / TELL_IN)) });
+  }
   while (q.length) {
     let m = 0;
     for (let i = 1; i < q.length; i++) if (q[i].t < q[m].t) m = i;
     const e = q.splice(m, 1)[0];
-    if (!e.b) fire(e.k, e.dx, e.dy, e.t, e.k0, e.hot);
+    if (e.trap) strike(e.k, D4.map(([x, y]) => [x, y, pc.r]), e.t, e.k0, true, pc.chain !== false);
+    else if (!e.b) fire(e.k, e.dx, e.dy, e.t, e.k0, e.hot);
     else if (!gone.has(e.b)) boom(e.b, e.t, 0);
   }
   return cells.size ? [...cells.values()] : NONE;
