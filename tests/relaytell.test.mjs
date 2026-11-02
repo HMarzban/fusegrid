@@ -240,6 +240,27 @@ test("purity: a call writes nothing, and a run with a call every tick is byte-id
     assert.equal(b.s, a.s, "heat " + h);
   }
 });
+test("purity with traps: a room-5 MAX run with a call every tick is byte-identical to a run with none, and traps really wound up", () => {
+  let armed = 0, marked = 0;
+  for (let s = 0; s < 6; s++) {
+    const run = (call) => {
+      const w = createWorld(735000 + s * 41, 1), inp = [newIntent()];
+      w.gen = 3; w.heat = 2; loadLevel(w, 5, false); w.state = "PLAY"; w.players[0].iFrames = 1e9;
+      let a = 0, n = 0;
+      for (let i = 0; i < 1800 && w.state === "PLAY"; i++) {
+        if (call) n += relayTell(w).filter((e) => e.hot).length;
+        step(w, DT, inp);
+        for (const e of w.events) if (e.t === "plate") a++;
+        w.events.length = 0;
+      }
+      return { s: snap(w), a, n };
+    };
+    const a = run(false), b = run(true);
+    assert.equal(b.s, a.s, "seed " + s);
+    armed += b.a; marked += b.n;
+  }
+  assert.ok(armed >= 3 && marked > 0, "not vacuous: " + armed + " arms, " + marked + " marks");
+});
 test("the sim does not import the tell", () => {
   for (const f of ["sim", "feat", "world", "board2", "featchecks"]) assert.ok(!readFileSync(new URL("../src/core/" + f + ".js", import.meta.url), "utf8").includes("relaytell"), f);
 });
