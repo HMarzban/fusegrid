@@ -509,7 +509,8 @@ function beltActors(w, dt, player, inp) {
 }
 /* where a carried bomb stops: anything a kick stops for, plus the player's
    tile; pass 2 thru: only a WALL, a BRICK or another bomb, so a bomb rides
-   under walkers and its cell at the fuse is known from the board alone */
+   under walkers and its cell at the fuse is known from the board alone,
+   unless carryPins holds it */
 function carryStop(w, b, tx, ty) {
   if (featProfile(w).belt.thru || isStream(w.feat[key(b.tx, b.ty)])) {
     const v = w.grid[key(tx, ty)];

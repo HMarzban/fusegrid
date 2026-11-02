@@ -72,19 +72,28 @@ for (const [name, code] of [["CONVEYOR", F.BELT_E], ["STREAM", F.STREAM_E]]) for
 }
 test("the flow's wait is lifted the moment the foe leaves the lane", () => {
   const w = pocket(F.BELT_E, 2), e = foe(w, 9, 5);
-  put(w, 11, 4);
-  w.bombs.length = 0;
   put(w, 10, 5);
   step(w, ST, { 0: mv(0, 0, true) }); w.events.length = 0;
   const b = w.bombs.find((q) => !q.dead);
   run(w, 0.3, NO);
   assert.equal(b.tx, 10);
-  /* the lane west is open now, so (11,5) no longer pins him */
+  /* the lane west is open now, so (11,5) no longer pins him; he has not moved */
   w.enemies = w.enemies.filter((q) => q !== e);
-  run(w, 0.3, NO);
-  w.players[0].x = 3.5 * TL; w.players[0].tx = 3;
   run(w, 1.2, NO);
   assert.equal(b.tx, 11);
+});
+test("no foe needed: the flow waits rather than pin the player in a dead end", () => {
+  const w = world(3, 2, [...row(5, 6, 11), [11, 4]]);
+  for (let x = 6; x <= 10; x++) w.feat[key(x, 5)] = F.BELT_E;
+  put(w, 10, 5);
+  step(w, ST, { 0: mv(0, 0, true) }); w.events.length = 0;
+  const b = w.bombs.find((q) => !q.dead);
+  /* he walks up into the dead end: the bomb stays a tile short, off the line of his cell */
+  run(w, 0.5, mv(1, 0));
+  const hurt = run(w, 0.5, mv(0, -1));
+  assert.equal(tileOf(w.players[0].y), 4);
+  assert.equal(b.tx, 10);
+  assert.ok(!hurt && !run(w, 2.5, NO), "he lives in the dead end");
 });
 
 /* row 5: pocket x 2..6 west of the gate at (7,5), long floor east of it */

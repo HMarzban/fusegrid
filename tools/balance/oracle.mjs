@@ -50,7 +50,8 @@
    grid cells, so the probe never flags them): the tick a gate shuts or a mound lands
    with the player in a footprint or a foe within CLOSE_R tiles. A quiet world is not
    safe here (a foe needs no bomb), so the search must also last HOLD s. "plainEsc"
-   reopens THAT cell alone, so the foes' routes change only if it mattered. Grade: warned when the last escape came at least
+   reopens the cells that closed on that step (PLUS and MAX gates share one clock) and
+   nothing else, so the foes' routes change only if they mattered. Grade: warned when the last escape came at least
    WARN after that closure's own warning first showed (gate bars, the growing mound).
      node tools/balance/oracle.mjs --rooms 1,2,3,5 --heats 0,1,2 --n 6000 --from 600000 --workers 8 --name oracle600k
    Output: tools/balance/out/<name>.jsonl (one row per episode) and a printed
@@ -207,7 +208,7 @@ function reaction(w0, last) {
    walked back from a fresh replay of the same run */
 export function runOracle(c, s, { margins = true } = {}) {
   const { w, seed } = makeWorld(c, s), bot = createTileBot(seed), out = [];
-  let trapped = false, had1 = false, last = MV[0], shutAt = -1;
+  let trapped = false, had1 = false, last = MV[0], shut = [];
   const closers = [];
   if (w.feat) for (let k = 0; k < w.feat.length; k++) if (w.feat[k] === F.GATE || w.feat[k] === F.QUICK) closers.push(k);
   const was = new Uint8Array(closers.length);
@@ -240,7 +241,7 @@ export function runOracle(c, s, { margins = true } = {}) {
       if (ep.stage !== "forced" && ep.stage !== "blast" && margins) ep.margin = reaction(w, last);
       out.push(ep);
     }
-    if (shutAt >= 0) { const ep = closure(c, s, w, i, shutAt); if (ep) out.push(ep); shutAt = -1; }
+    if (shut.length) { const ep = closure(c, s, w, i, shut); if (ep) out.push(ep); shut = []; }
     trapped = !!(pr && pr.forced);
     if (!pr) had1 = false; else if (pr.e1) had1 = true;
     if (w.state !== "PLAY") break;
@@ -249,29 +250,29 @@ export function runOracle(c, s, { margins = true } = {}) {
     for (let q = 0; q < closers.length; q++) was[q] = w.grid[closers[q]];
     step(w, ST, { 0: it });
     w.events.length = 0;
-    for (let q = 0; q < closers.length; q++) if (was[q] === T.EMPTY && w.grid[closers[q]] !== T.EMPTY && w.state === "PLAY") { shutAt = closers[q]; break; }
+    for (let q = 0; q < closers.length; q++) if (was[q] === T.EMPTY && w.grid[closers[q]] !== T.EMPTY && w.state === "PLAY") shut.push(closers[q]);
     if (w.state === "WIN" || w.state === "LOSE") break;
   }
   return out;
 }
-/* the counterfactual of one closure: cell k never closed and never will */
-function reopen(w, k) {
-  w.grid[k] = T.EMPTY; w.feat[k] = 0; w.featM[k] = 0;
-  if (w.quick) w.quick.list = w.quick.list.filter((q) => q.k !== k);
+/* the counterfactual of one step's closures: cells ks never closed and never will */
+function reopen(w, ks) {
+  for (const k of ks) { w.grid[k] = T.EMPTY; w.feat[k] = 0; w.featM[k] = 0; }
+  if (w.quick) w.quick.list = w.quick.list.filter((q) => !ks.includes(q.k));
   return w;
 }
 /* a gate shut or a mound landed on the step before tick i, world w at tick i */
-function closure(c, s, w, i, k) {
+function closure(c, s, w, i, ks) {
   const p = w.players[0];
   if (!p.alive) return null;
   const px = tileOf(p.x), py = tileOf(p.y), L0 = lethalMap(w, false);
   if (L0[key(px, py)] === Infinity && !w.enemies.some((e) => !e.dead && Math.abs(tileOf(e.x) - px) + Math.abs(tileOf(e.y) - py) <= CLOSE_R)) return null;
-  const hold = HOLD, gate = w.feat[k] === F.GATE;
+  const hold = HOLD, gate = ks.some((k) => w.feat[k] === F.GATE);
   if (hasEscape(w, { hold }) || search(w, { H: 3, hold })) return null;
-  if (!hasEscape(reopen(clone(w), k), { H: 3, hold })) return null;
+  if (!hasEscape(reopen(clone(w), ks), { H: 3, hold })) return null;
   const clean = search(w, { H: 3, strict: true, hold });
   if (clean) return null;
-  const ep = { room: c.room, heat: c.heat, s, seed: seedOf(s), tick: i, t: +(i * ST).toFixed(3), cls: "C", closer: gate ? "gate" : "mound", at: k, inv: p.iFrames > 0, stage: "", bot: false, margin: 0 };
+  const ep = { room: c.room, heat: c.heat, s, seed: seedOf(s), tick: i, t: +(i * ST).toFixed(3), cls: "C", closer: gate ? "gate" : "mound", at: ks, inv: p.iFrames > 0, stage: "", bot: false, margin: 0 };
   if (clean === null) ep.capped = true;
   const info = {};
   search(w, { H: 3, info, hold });
