@@ -120,3 +120,10 @@ Follow-up on the known items above. Boards hash identical to v199.
 - **Flaky test:** the bake check takes the best of up to 3.
 - **Pre-existing `hide` overflow:** fixed. A closed loop is no hide.
 - **Copy:** TRAP MAX and both GATE tips corrected. CONVEYOR and STREAM tips stay: PLUS and MAX have no room in the 80-character panel, and a bomb pausing on a belt reads for itself.
+
+## Owner rulings (2026-11-02)
+
+- GAUNTLET stays ARENA's mild layout.
+- All 11 calls in the wave 2 and 3 record's section 8 stand; real play can still overturn them.
+- PORTAL foes keep today's rule; warping only toward the player waits for real play.
+- CONVEYOR art stays, which drops #19's "direction reads in a still frame" goal.
