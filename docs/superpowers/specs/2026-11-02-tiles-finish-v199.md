@@ -41,7 +41,7 @@ human playtest and its verdict (#30) still need people.
 ## Numbers
 
 Bot, n 2000 per cell, seeds 900000+, change in lose rate against no tiles, points, 95 % CI. This
-sweep ran before the review's one-line gate fix; only room 8 can move.
+sweep ran before the review's one-line gate fix; room 8 was re-run after it and read the same.
 
 | Tile | CORE | PLUS | MAX |
 |---|---|---|---|
@@ -84,8 +84,9 @@ mean changing foe AI, which is off limits. The oracle's search only moves, so th
 | 8 | 98, 107 | 27, 31 |
 
 The p95 goal of 50 ms is met on a 300-seed sample on every room, but not on this 40-seed run in
-rooms 4 and 7, or on cold first boards in rooms 1 (51) and 4 (73, n 5). The machine was heavily
-loaded. Max stays under 150 ms everywhere. A stand-in, not a phone.
+rooms 4 and 7, or on cold first boards in rooms 1 (51) and 4 (73, n 5), with the machine heavily
+loaded. Re-measured on a quiet machine on the final build, 40 seeds at 6x: p95 at most 38 ms (room 7) and
+max at most 62 ms (room 4). A stand-in, not a phone.
 
 ## Known and accepted
 
