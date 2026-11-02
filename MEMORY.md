@@ -16,7 +16,7 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
-## 2026-11-02 — v198: tile boards for everyone, `?gen=3` removed, F3 links, daily on tiles
+## 2026-11-02 — v198 LIVE: tile boards for everyone, `?gen=3` removed, F3 links, daily on tiles
 Owner: "Ship without a playtest", waiving #30's human playtest. Boot graph gains the tile code back (about 75 KB raw). Open: no human or real-GPU play; rooms 1, 4, 7 stall on a slow phone (6x CPU: p95 138 / 225 / 296 ms, worst 746); MAX reads no harder for the bot on the four newer tiles; moving tiles later breaks F3 links or needs gen 4. Record `docs/superpowers/specs/2026-11-02-tiles-default-v198.md`.
 
 ## 2026-11-02 — v197 LIVE: loading bar + loose ends

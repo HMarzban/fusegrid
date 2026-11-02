@@ -1,6 +1,6 @@
 # Floor tiles for everyone (shell v198)
 
-Date: 2026-11-02. Status: built; live once pushed on the owner's word.
+Date: 2026-11-02. Status: live since 2026-11-02 on the owner's word.
 
 **The ruling.** Owner, 2026-11-02: remove the gen flag so the latest version is available to
 everyone, then, offered a playtest first: "Ship without a playtest". This waives the human
