@@ -991,12 +991,12 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
     specs and the bot-side verdict are in the tiles record's 2026-11-01 addendum.
     #19 / #20 / #21 / #22 / #24 are built too (2026-11-01, later addendum: numbers
     of record). `src/render/relaytell.js` is BOOSTER's and, since v199, TRAP's read-only warning;
-    `tileTip` and the FLOOR line teach; `PLATE_TPL` shapes PIT. OPEN before tiles
-    go default: the owner's playtest (#30), foe-in-lane forced moments, TRAP's
-    wind-up shows on its own tile only, F3 / `g:3`. Wave 2 / 3 (STREAM, QUICKSAND, GATE,
-    PORTAL, V28–V35) are BUILT on `?gen=3` too (v196): rules, numbers and what the bot cannot
+    `tileTip` and the FLOOR line teach; `PLATE_TPL` shapes PIT. Tiles went default in v198 with the
+    owner waiving the playtest; TRAP's wind-up marks and the foe-in-lane rules came in v199, and the
+    human playtest (#30) is still open. Wave 2 / 3 (STREAM, QUICKSAND, GATE,
+    PORTAL, V28–V35) were built in v196: rules, numbers and what the bot cannot
     see in `docs/superpowers/specs/2026-11-01-tiles-wave-2-3-design.md`; no new tile reaches
-    the MAX target for the bot, so the playtest decides. Oracle: `tools/balance/oracle.mjs`;
+    the MAX target for the bot (v199 re-measured with a bot that sees them), so the playtest decides. Oracle: `tools/balance/oracle.mjs`;
     fork switches `FG_BOTPLANT`, `FG_BOTBRAKE`, `FG_BOTLURE`, `FG_BOTJOY`.
   - Design pass 2 (#28) is DONE (2026-10-26): the dial works for TRAP (MAX
     +5.9), ICE PATCH (+4.6) and CONVEYOR (+5.4), all with 0 static no-escape
@@ -1132,7 +1132,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   any "PLAY-only" animation needs its own clock (`ambientClock`, `world.featT`).
   Node test fakes define `globalThis.location` WITHOUT `href`, so "is this a
   real page" means `typeof location.href === "string"` (the branch's gen-2 page
-  default depended on it; since v188 the tile boards are `?gen=3` only).
+  default depended on it; the tile boards were `?gen=3` only from v188 to v197).
 - Release state (2026-11-02): shell **v199** (TRAP warning marks and arm sound, `carryPins` and `gatePins` keep a tile from closing your only way out, faster board building, bot and harness see every tile; BOOSTER flare dropped by the owner; record `docs/superpowers/specs/2026-11-02-tiles-finish-v199.md`) is LIVE on the owner's word. 475 tests. Shell **v198** (GitHub release **v2.3.0**, shell v188 → v198) makes the tile boards what everyone plays: ordinary runs and the DAILY deal gen 3, `?gen=3` is gone, F3 links exist (owner: "Ship without a playtest", waiving #30's playtest; record `docs/superpowers/specs/2026-11-02-tiles-default-v198.md`, with the known risks). Older text below that says `?gen=3` is history. Shell **v197** (loading bar, REAL 3D new-world freeze fix #36, boot graph minus 75 KB raw, and on `?gen=3` BOOSTER marks, ICE brake tip, REAL 3D heat look; rulings and numbers in `docs/superpowers/specs/2026-11-01-loose-ends-v197.md`) is LIVE on the owner's word (2026-11-02). A design on local branch `descent-design` is unmerged and stays unpushed until the owner says.
   Shell **v196** (rules for STREAM, QUICKSAND, GATE, PORTAL, all on
   `?gen=3`; no change in a normal run) is LIVE on the owner's word.

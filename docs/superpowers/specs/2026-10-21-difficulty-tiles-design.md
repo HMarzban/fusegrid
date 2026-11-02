@@ -1,7 +1,7 @@
 # Difficulty tiles: eight floor tiles that are fun on easy and tough on hard
 
-**Date:** 2026-10-21 · **Status:** designed, first wave in prototype, **not
-built** · **Issue:** HMarzban/fusegrid#16 (sub-tasks listed in section 9) ·
+**Date:** 2026-10-21 · **Status:** live for everyone since shell v198; see the last addendum
+(this record's first status: designed, first wave in prototype, not built) · **Issue:** HMarzban/fusegrid#16 (sub-tasks listed in section 9) ·
 **Builds on:** [level variety](2026-10-20-level-variety-design.md)
 
 > Owner: *"diffrent custom tile is needed … the challange must be base on the
@@ -686,3 +686,10 @@ the MAX brake tip.
 The rules, placement and fairness checks V28–V35 for STREAM, QUICKSAND, GATE and PORTAL
 are in [their own record](2026-11-01-tiles-wave-2-3-design.md). Built in shell v196 on `?gen=3`.
 That record also holds the numbers: no new tile reaches the MAX target for the bot.
+
+## Addendum (2026-11-02, live for everyone)
+
+Tiles went default in shell v198, when the owner chose "Ship without a playtest": [that record](2026-11-02-tiles-default-v198.md)
+holds the waiver and the risks. Shell v199 added TRAP's wind-up marks and the rules that keep a tile from
+closing your only way out, and re-measured every tile: [that record](2026-11-02-tiles-finish-v199.md) overrides
+the numbers above. #30's human playtest and verdict are still open.

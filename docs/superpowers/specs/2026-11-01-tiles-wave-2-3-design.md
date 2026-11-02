@@ -1,7 +1,7 @@
 # Floor tiles, waves 2 and 3: STREAM, QUICKSAND, GATE, PORTAL
 
 Date: 2026-11-01. Issues: #26 (STREAM, QUICKSAND, GATE), #27 (PORTAL). Umbrella: #16.
-Status: **built in shell v196, `?gen=3` only; the "As built" section at the end overrides this text where they differ.** It extends
+Status: **built in shell v196, live for everyone since v198; the "As built" section at the end overrides this text where they differ, and the [v199 record](2026-11-02-tiles-finish-v199.md) has the latest numbers.** It extends
 [the tiles record](2026-10-21-difficulty-tiles-design.md), whose rulings still hold
 (R1–R7, O1–O9). The owner skipped the design questions ("skip"), so every rule not
 already in that record or the two issues is the writer's call, listed in section 8.
