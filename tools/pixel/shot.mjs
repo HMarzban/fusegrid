@@ -20,8 +20,9 @@
      --seed N            world.seed (uint32) before every room load
      --heat 0|1|2        world.heat (CORE / PLUS / MAX) before every room load
      --pace -1|0|1       world.pace (EASY / NORM / HARD) before every room load
-     --gen N             world.gen (1 today's boards, 2 bold mazes, 3 + floor
-                         tiles) before every room load; a page whose world
+     --gen N             world.gen (1 lattice boards: attract, F1 links; 2 bold
+                         mazes: F2 links; 3 + floor tiles: what ordinary runs and
+                         the daily deal) before every room load; a page whose world
                          has no gen field warns in the report and ignores it
      --pause             also capture a PAUSE still per room (roomN-pause)
      --evals JS;;JS      after each room shot, run each page script (G is the
@@ -254,7 +255,7 @@ const STAT = `(()=>{const g=window.__GAME__,r=g.renderer,d=r&&r._dbg,G=g.G;const
 export function loadExpr(a, r) {
   const set = [a.seed != null ? "G.seed=" + a.seed + ">>>0;" : "", a.heat != null ? "G.heat=" + a.heat + ";" : "", a.pace != null ? "G.pace=" + a.pace + ";" : "",
     a.gen != null ? "if('gen' in G)G.gen=" + a.gen + ";else w.push('--gen " + a.gen + " ignored: this world has no gen field');" : ""].join("");
-  const pre = a.gen >= 3 ? "import('/src/core/board3.js').then(()=>" : "("; // a page without ?gen=3 has not loaded gen 3
+  const pre = a.gen >= 3 ? "import('/src/core/board3.js').then(()=>" : "("; // the page's boot graph has it since v198; this keeps an older page working
   return pre + `import('/src/core/sim.js').then(m=>{const G=window.__GAME__.G,w=[];${set}m.loadLevel(G,${r},true);G.state='PLAY';return w;}))`;
 }
 

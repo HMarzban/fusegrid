@@ -1,4 +1,5 @@
 import {step, createWorld, loadLevel} from "../src/core/sim.js";
+import "../src/core/board3.js";
 import {
   MSG, makeInput, makeSnapshot, encode, decode,
   makeError, ERROR_CODES, capsOk, isKnownType
@@ -38,6 +39,40 @@ function check(name, cond, detail){ cond?pass++:fail++;
     &&snap.players.length===server.players.length);
   check("applySnapshot is not on the protocol surface",
     proto.applySnapshot===undefined, typeof proto.applySnapshot);
+}
+
+// 3b) gen 3: the snapshot tells two tile worlds apart, and still fits the wire
+{
+  const g3=(seed,room,heat)=>{ const w=createWorld(seed,room); w.gen=3; w.heat=heat; loadLevel(w,room,false); w.state="PLAY"; return w; };
+  const noTile=createWorld(99,1); loadLevel(noTile,1,false);
+  check("a gen 1 snapshot has no tiles key (the old shape)", !("tiles" in makeSnapshot(noTile,99,1)));
+  const run=(room,heat)=>{ const w=g3(4242,room,heat); for(let i=0;i<300;i++){ step(w,1/60,{0:{move:{x:i%60<30?1:0,y:i%60<30?0:1},fire:i%20===0,firePrev:false,shift:false,remote:false,kick:false}}); w.events.length=0; } return w; };
+  let fits=true, same=true, plain=true;
+  for(let room=1;room<=8;room++) for(let heat=0;heat<3;heat++){
+    const a=run(room,heat), s=makeSnapshot(a,4242,room);
+    if(!capsOk(s))fits=false;
+    if(encode(s)!==encode(makeSnapshot(run(room,heat),4242,room)))same=false;
+    if(JSON.stringify(decode(encode(s)).tiles)!==JSON.stringify(s.tiles))plain=false;
+  }
+  check("gen 3 snapshots pass capsOk on all eight rooms x heats (transport.js drops anything else)", fits);
+  check("gen 3 snapshots round-trip plain JSON (no typed array)", plain);
+  check("a replay gives the same encoded snapshot", same);
+  const a=g3(4242,8,1), b=g3(4242,8,1), k=a.feat.findIndex(Boolean), p=a.players[0];
+  check("two equal tile worlds encode the same", encode(makeSnapshot(a,1,8))===encode(makeSnapshot(b,1,8)));
+  const moved=(n,mut,undo)=>{ mut(); const d=encode(makeSnapshot(a,1,8))!==encode(makeSnapshot(b,1,8)); undo(); check("snapshot sees "+n, d); };
+  moved("featS",()=>{ a.featS[k]=0.25; },()=>{ a.featS[k]=0; });
+  moved("featS with featM 0 (a CORE GATE's running clock)",()=>{ a.featS[k]=-1e-6; },()=>{ a.featS[k]=0; });
+  moved("featM",()=>{ a.featM[k]=4; },()=>{ a.featM[k]=0; });
+  moved("featT",()=>{ a.featT=1; },()=>{ a.featT=0; });
+  moved("featPend",()=>{ a.featPend.push({k,kind:"plate",by:"walker"}); },()=>{ a.featPend.pop(); });
+  moved("the tile layer",()=>{ a.feat[k]=0; },()=>{ a.feat[k]=b.feat[k]; });
+  moved("a shut gate's grid",()=>{ const v=a.grid[k]; a.grid[k]=v?0:2; },()=>{ a.grid[k]=b.grid[k]; });
+  moved("the player's glide",()=>{ p.gl={x:1,y:0}; },()=>{ p.gl=null; });
+  moved("a foe's warp hold",()=>{ a.enemies[0].warpHold=1; },()=>{ delete a.enemies[0].warpHold; });
+  const q=run(6,2), qs=makeSnapshot(q,1,6);
+  check("QUICKSAND's life states are in the dump", qs.tiles.quick.length>0&&qs.tiles.quick.length===q.quick.list.length&&qs.tiles.quick[0].length===4, qs.tiles.quick.length);
+  const pt=g3(4242,7,2), pb=g3(4242,7,2); pt.featPair[pt.featPair.findIndex(Boolean)]=9;
+  check("snapshot sees a portal pair", encode(makeSnapshot(pt,1,7))!==encode(makeSnapshot(pb,1,7)));
 }
 
 // 4) determinism across an independent replay (the netcode linchpin)

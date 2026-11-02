@@ -74,6 +74,25 @@ const both = (g, f) => { f(g.world); f(g.net.wB); };
   check("stateHash: one foe moved by a unit moves it", stateHash(w) !== stateHash(pair.wB));
 }
 
+// ---- and on a gen-3 world it sees the tile state: the layer, its clocks, QUICKSAND ----
+{
+  const w = createWorld(7, 6); w.gen = 3; w.heat = 2; loadLevel(w, 6, false); w.state = "PLAY";
+  const stub = { intent: () => ({ move: { x: 0, y: 0 }, fire: false, shift: false, remote: false }), advance() {} };
+  const pair = createLocalPair(w, stub), b = pair.wB;
+  for (let i = 0; i < 700; i++) pair.drive();
+  const k = b.feat.findIndex(Boolean);
+  check("stateHash, gen 3: equal once built and driven, with a tile layer and a live clock", stateHash(w) === stateHash(b) && k >= 0 && b.featT > 0 && !!b.quick);
+  const moves = (name, mut, undo) => { mut(); check("stateHash, gen 3: " + name + " moves it", stateHash(w) !== stateHash(b)); undo(); };
+  moves("one featS cell", () => { b.featS[k] += 0.25; }, () => { b.featS[k] -= 0.25; });
+  moves("one featM cell", () => { b.featM[k] ^= 1; }, () => { b.featM[k] ^= 1; });
+  moves("one tile of the layer", () => { b.feat[k] ^= 1; }, () => { b.feat[k] ^= 1; });
+  moves("featT", () => { b.featT += 0.25; }, () => { b.featT -= 0.25; });
+  moves("featPend", () => { b.featPend.push({ k, kind: "plate" }); }, () => { b.featPend.pop(); });
+  moves("a QUICKSAND life", () => { b.quick.list[0].n++; }, () => { b.quick.list[0].n--; });
+  moves("a player warp latch", () => { b.players[0].warpK = -7; }, () => { b.players[0].warpK = w.players[0].warpK; });
+  check("stateHash, gen 3: equal again after every undo", stateHash(w) === stateHash(b));
+}
+
 // ---- drive() copies no sim-written field per tick, so a slip stays visible
 // (PAUSE: step() writes nothing that could overwrite it either) ----
 {
@@ -150,7 +169,7 @@ const both = (g, f) => { f(g.world); f(g.net.wB); };
   mirrored(g, "after the finale");
 }
 
-// ---- a fixed board and the tile preview boards ----
+// ---- a fixed board, and an old ?gen=3 link ----
 {
   const g = menu();
   const a = g.world, b = g.net.wB;
