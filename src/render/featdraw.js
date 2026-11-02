@@ -34,7 +34,7 @@ function runPainter(P, c, k) {
 }
 const featAt = (w, x, y) => (x < 0 || y < 0 || x >= C || y >= R ? 0 : w.feat[key(x, y)]);
 const isBeltV = (v) => v >= 1 && v <= 4;
-/* render-only codes 8..14 (no sim yet): STREAM E/S/W/N, QUICK, PORTAL, GATE */
+/* codes 8..14 (rules in core/tiles2.js): STREAM E/S/W/N, QUICK, PORTAL, GATE */
 const kindOf = (v) => (isBeltV(v) ? "BELT" : v === 5 ? "GLIDE" : v === 6 ? "BLOOM" : v === 7 ? "PLATE" : v >= 8 && v <= 11 ? "STREAM" : v === 12 ? "QUICK" : v === 13 ? "PORTAL" : v === 14 ? "GATE" : null);
 export function tierOf(w) { const t = w.featTier != null ? w.featTier : w.heat; return t < 0 ? 0 : t > 2 ? 2 : t | 0; }
 const PM = [0.85, 1, 1.15];
