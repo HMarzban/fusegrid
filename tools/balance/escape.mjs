@@ -24,11 +24,15 @@
    coast, by (tile, arrival dir) state: a block ahead that still stands at
    arrival, or anywhere under glide.stop "brake"; a player at rest on ice may
    stay; #28 pass 2, before it no ice tile ever counted). Tile
-   speeds: ICE PATCH boost leaving a sheet tile, CONVEYOR push with / against. */
+   speeds: ICE PATCH boost leaving a sheet tile, CONVEYOR push with / against.
+   GATE (tile model): each blast walks the grid at its own time, so a bar shut then is
+   cover and a bar open then is not; a walker enters a gate only while it is open and may
+   wait beside it for the opening. QUICKSAND (tile model): a tile due to be a mound before
+   the walker touches it is shut to him; touching it first cancels the growth. */
 import { CFG, T, key } from "../../src/core/config.js";
 import { tileOf } from "../../src/core/board.js";
 import { beltDir } from "../../src/core/feat.js";
-import { C, N, BD, prof, rulesOn, onIce, onBelt, carries, iceStop, cross, bombArms, bombPass, relayArms, plateArms, beltPath, cellAt, moveSpeed, warpTo, armPt } from "./tilemodel.mjs";
+import { C, N, BD, prof, rulesOn, onIce, onBelt, carries, iceStop, cross, bombArms, bombPass, relayArms, plateArms, beltPath, cellAt, moveSpeed, warpTo, armPt, gatesOf, gridAt, isLiveGate, gateOpenIn, moundTimes } from "./tilemodel.mjs";
 
 export const MARGIN = CFG.STEP;
 const HR = 0.3;
@@ -37,7 +41,7 @@ export function lethalMap(w, tiles) {
   tiles = !!tiles && rulesOn(w);
   const L = new Float64Array(N).fill(Infinity), g = w.grid.slice();
   for (const bl of w.blades) if (bl.tiles) for (const t of bl.tiles) L[key(t.tx, t.ty)] = 0;
-  const P = tiles ? prof(w) : null, bc = P && P.bloom;
+  const P = tiles ? prof(w) : null, bc = P && P.bloom, gated = tiles && gatesOf(w).length > 0;
   const bombs = w.bombs.filter((b) => !b.dead).map((b) => ({ b, te: b.timer, done: false, path: tiles ? beltPath(w, b, b.timer) : null }));
   const ev = [];
   if (tiles)
@@ -56,6 +60,7 @@ export function lethalMap(w, tiles) {
     let x, y, arms, pass, t, plate = false, safe = false;
     if (ei >= 0 && et <= bt) { const e = ev.splice(ei, 1)[0]; x = e.x; y = e.y; arms = e.arms; pass = e.pass; t = e.t; plate = !!e.plate; safe = !!e.safe; }
     else { const o = bombs[bi]; o.done = true; [x, y] = cellOf(o, o.te); arms = bombArms(o.b); pass = bombPass(o.b); t = o.te; }
+    if (gated) gridAt(w, t, g);
     const s = cross(g, x, y, arms, pass, new Set(), tiles ? armPt(w) : null);
     for (const k of s) {
       if (!safe && t < L[k]) L[k] = t;
@@ -97,6 +102,7 @@ export function escape(w, tiles, L) {
     }
     return false;
   };
+  const gated = tiles && gatesOf(w).length > 0, mound = tiles ? moundTimes(w) : null;
   const bombAt = new Uint8Array(N);
   for (const b of w.bombs) if (!b.dead) bombAt[key(b.tx, b.ty)] = 1;
   const d0 = ice(s0) && p.gl ? BD.findIndex(([a, b]) => a === p.gl.x && b === p.gl.y) : 4;
@@ -116,14 +122,17 @@ export function escape(w, tiles, L) {
     const x = k % C, y = (k / C) | 0;
     for (let di = 0; di < 4; di++) {
       const [dx, dy] = BD[di], nk = key(x + dx, y + dy), nid = sid(nk, ice(nk) ? di : 4);
-      if (done[nid] || w.grid[nk] !== T.EMPTY || bombAt[nk]) continue;
+      const bar = gated && isLiveGate(w, nk);
+      if (done[nid] || (w.grid[nk] !== T.EMPTY && !bar) || bombAt[nk]) continue;
       const v = moveSpeed(w, p, k, dx, dy, tiles);
       if (v <= 0.05) continue;
       let o = 0, q = 0;
       if (k === s0) { o = dx ? ox * dx : oy * dy; q = Math.abs(dx ? oy : ox); }
-      const leave = t + (0.5 + HR - o + q) / v, enter = t + Math.max(0, 0.5 - HR - o + q) / v, arrive = t + (1 - o + q) / v;
+      const e0 = Math.max(0, 0.5 - HR - o + q) / v, t1 = bar ? t + gateOpenIn(w, nk, t + e0) : t;
+      const leave = t1 + (0.5 + HR - o + q) / v, enter = t1 + e0, arrive = t1 + (1 - o + q) / v;
+      if (mound && mound[nk] <= enter) continue;
       /* PORTAL: the centre crosses at half a step, onto the twin's centre; a warp that lands in a live blade does not fire */
-      const cross0 = t + Math.max(0, 0.5 - o + q) / v, tw = tiles ? warpTo(w, nk) : -1;
+      const cross0 = t1 + Math.max(0, 0.5 - o + q) / v, tw = tiles ? warpTo(w, nk) : -1;
       if (tw >= 0 && !bombAt[tw] && cross0 + MARGIN < L[tw]) {
         if (leave + MARGIN >= L[k] && cross0 + MARGIN >= L[k]) continue;
         const twid = sid(tw, 4);

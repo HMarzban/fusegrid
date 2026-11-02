@@ -3,11 +3,6 @@
    - parity: with feat = null (gen-3 worlds after loadLevel, A0) and on gen 1,
      the fork's intent AND private state equal the stock demobot's tick by
      tick (rooms 1-8 x 3 heats x 2 seeds);
-   - controls: rooms with no rule tile (4, 6, 7 carry art-only codes) give
-     A0 == A1 byte for byte: the result row (bar the arm field), the
-     per-tick intent stream, and a sim-state snapshot that leaves out only
-     the tile-layer fields (feat*, p.gl / p.glBuf, which the sim's glide
-     path touches on any truthy feat);
    - reproducibility: the same (cell, seed) gives the same row;
    - the no-escape counter: ICE PATCH CORE reports 0 tile-forced spots, and
      every probed state there escapes with tiles whenever it escapes without
@@ -22,7 +17,7 @@ import { FEAT_PROFILE, featProfile } from "../src/core/feat.js";
 import { createTileBot } from "../tools/balance/demobot-tiles.mjs";
 import { runRoom, makeWorld, iser, simSnap } from "../tools/balance/tilerun.mjs";
 import { probe, escape, lethalMap } from "../tools/balance/escape.mjs";
-import { rulesOn } from "../tools/balance/tilemodel.mjs";
+import { rulesOn, moundTimes } from "../tools/balance/tilemodel.mjs";
 
 let pass = 0, fail = 0;
 function check(name, cond, detail) {
@@ -126,6 +121,75 @@ function parity(w, seed, ticks) {
   check("probe: relay cover makes the corridor spot tile-forced", pr && pr.e0 && !pr.e1 && pr.forced);
   w.featM[key(3, 5)] = 2;
   check("lethal map: a cooling BOOSTER does not relay", lethalMap(w, true)[key(1, 5)] === Infinity);
+}
+
+/* ---- GATE and QUICKSAND in the tile model ---- */
+{
+  const NN = CFG.COLS * CFG.ROWS, F = (w) => { w.feat = new Uint8Array(NN); w.featM = new Uint8Array(NN); w.featS = new Float32Array(NN); w.featPend = []; w.quick = null; };
+  const w = createWorld(1, 8);
+  loadLevel(w, 8, false); w.state = "PLAY"; w.feat = null;
+  w.grid.fill(T.WALL);
+  for (let x = 1; x <= 9; x++) w.grid[key(x, 5)] = T.EMPTY;
+  const p = w.players[0];
+  p.x = 5.5 * CFG.TILE; p.y = 5.5 * CFG.TILE; p.speed = 3;
+  w.enemies = []; w.blades = [];
+  const bomb = (tx, timer, radius = 3) => ({ x: (tx + 0.5) * CFG.TILE, y: 5.5 * CFG.TILE, tx, ty: 5, timer, radius, pierce: false, line: false, dir: null, variant: "normal", dead: false });
+  F(w); w.heat = 2; w.feat[key(3, 5)] = 14; w.bombs = [bomb(7, 2.5, 4)];
+  check("rulesOn: a room with only GATE codes runs the tile model", rulesOn(w));
+  /* MAX 4 open + 4 shut: 0.2 s of open left, 2 steps away: the bar shuts first and stays shut past the fuse */
+  w.featT = 3.8;
+  let pr = probe(w);
+  check("escape: a bar that shuts before you reach it is tile-forced", pr && pr.e0 && !pr.e1 && pr.forced, JSON.stringify(pr));
+  w.featT = 0;
+  pr = probe(w);
+  check("escape: the same bar, open for the walk, is a way out", pr && pr.e0 && pr.e1 && !pr.forced);
+  /* shut now, opens in 0.5 s: only the tile model can use it (the plain grid sees a WALL) */
+  w.grid[key(3, 5)] = T.WALL; w.featT = 7.5;
+  check("escape: a shut bar opening before the fuse is a way out, by waiting for it", escape(w, false) === false && escape(w, true) === true);
+  /* a bar shut now and open at the fuse is no cover; a bar shut at the fuse is */
+  w.bombs = [bomb(4, 1)];
+  check("lethal map: a blast walks each bar at its own time", lethalMap(w, false)[key(2, 5)] === Infinity && lethalMap(w, true)[key(2, 5)] === 1, `${lethalMap(w, true)[key(2, 5)]}`);
+  w.bombs = [bomb(5, 1, 4)];
+  w.grid[key(3, 5)] = T.EMPTY; w.featT = 3.5;
+  check("lethal map: a bar that shuts before the fuse covers the far side", lethalMap(w, false)[key(2, 5)] === 1 && lethalMap(w, true)[key(2, 5)] === Infinity);
+  /* the bot walks up to a shut bar, waits, and crosses when it opens */
+  {
+    const bw = createWorld(3, 8);
+    loadLevel(bw, 8, false); bw.state = "PLAY"; bw.heat = 2;
+    bw.grid.fill(T.WALL);
+    for (let x = 1; x <= 9; x++) bw.grid[key(x, 5)] = T.EMPTY;
+    F(bw);
+    const k = key(5, 5);
+    bw.feat[k] = 14; bw.featT = 4; bw.grid[k] = T.WALL; bw.featM[k] = 4;
+    const q = bw.players[0];
+    q.x = 2.5 * CFG.TILE; q.y = 5.5 * CFG.TILE; q.tx = 2; q.ty = 5;
+    bw.items = []; bw.bombs = []; bw.blades = [];
+    bw.enemies = bw.enemies.slice(0, 1);
+    Object.assign(bw.enemies[0], { x: 8.5 * CFG.TILE, y: 5.5 * CFG.TILE, tx: 8, ty: 5, speed: 0, hunt: false, type: "stationary" });
+    const bot = createTileBot(3);
+    let waited = 0, passed = -1;
+    for (let i = 0; i < 600 && bw.state === "PLAY" && passed < 0; i++) {
+      const it = bot.intent(bw);
+      if (bw.grid[k] === T.WALL && q.tx === 4 && !it.move.x) waited++;
+      step(bw, CFG.STEP, { 0: it });
+      bw.events.length = 0;
+      if (q.tx > 5) passed = i;
+    }
+    check("bot: walks to a shut bar, waits beside it, crosses when it opens", waited > 0 && passed > 0, `waited ${waited} passed ${passed}`);
+  }
+  /* QUICKSAND: a tile due to be a mound before you touch it shuts the way; the hold rule
+     means no lit bomb does this alone, so the lethal map is handed in */
+  F(w); w.heat = 2; w.featT = 0; w.grid[key(3, 5)] = T.EMPTY; w.bombs = [];
+  w.feat[key(2, 5)] = 12;
+  w.quick = { grid: w.grid, list: [{ k: key(2, 5), x: 2, y: 5, st: 2, t: 1.4, n: 0 }] };
+  const LQ = new Float64Array(NN).fill(Infinity);
+  for (let x = 3; x <= 9; x++) LQ[key(x, 5)] = 2.5;
+  check("rulesOn + escape: a mound finishing before you arrive shuts the way", rulesOn(w) && escape(w, false, LQ) === true && escape(w, true, LQ) === false);
+  w.quick.list[0].t = 0;
+  check("escape: reaching the tile first cancels the growth", escape(w, true, LQ) === true);
+  w.bombs = [bomb(5, 2.5, 2)];
+  w.quick.list[0].t = 1.4;
+  check("mound forecast: a lit bomb in the hold reach holds it", moundTimes(w)[key(2, 5)] === Infinity);
 }
 
 /* ---- the featProfile seam ---- */
