@@ -269,28 +269,28 @@ for (const at of [1.0, 2.0, 3.0, 4.0]) {
     lv0 && a === "uiMove" && b === "uiMove" && c === "uiMove" && g.app.level === 2 && g.app.heat === 1 && g.app.pace === 1, [lv0, a, b, c, g.app.level, g.app.heat, g.app.pace].join("|"));
   check("LEVEL ] at HARD clamps silently", d === "" && g.app.pace === 1, d);
 }
-// ---- LEVEL SELECT on a ?gen=3 page: the FLOOR line adds no key and moves none (#24) ----
+// ---- LEVEL SELECT: the FLOOR line adds no key and moves none (#24) ----
 {
-  const g = show(mk({ gen3: true })); press(g, "Enter"); toRow(g, 1); press(g, "Enter");
+  const g = show(mk()); press(g, "Enter"); toRow(g, 1); press(g, "Enter");
   const scr = g.app.screen === SCREEN.LEVEL;
   press(g, "ArrowRight"); press(g, "ArrowRight"); press(g, "ArrowUp"); press(g, "ArrowUp");
   press(g, "KeyF"); press(g, "KeyT");
-  check("gen3 LEVEL: ←/→ and ↑/↓ as ever, F and T are not bound", scr && g.app.screen === SCREEN.LEVEL && g.app.level === 3 && g.app.heat === 2, g.app.level + "/" + g.app.heat);
+  check("LEVEL: ←/→ and ↑/↓ as ever, F and T are not bound", scr && g.app.screen === SCREEN.LEVEL && g.app.level === 3 && g.app.heat === 2, g.app.level + "/" + g.app.heat);
   press(g, "Enter");
-  check("gen3 LEVEL Enter starts that room on a tile board", g.app.screen === SCREEN.GAME && g.world.level === 3 && g.world.heat === 2 && g.world.gen === 3 && !!g.world.feat, g.world.gen);
-  const e = show(mk({ gen3: true })); press(e, "Enter"); toRow(e, 1); press(e, "Enter"); press(e, "Escape");
-  check("gen3 LEVEL Escape -> MENU", e.app.screen === SCREEN.MENU);
+  check("LEVEL Enter starts that room on a tile board", g.app.screen === SCREEN.GAME && g.world.level === 3 && g.world.heat === 2 && g.world.gen === 3 && !!g.world.feat, g.world.gen);
+  const e = show(mk()); press(e, "Enter"); toRow(e, 1); press(e, "Enter"); press(e, "Escape");
+  check("LEVEL Escape -> MENU", e.app.screen === SCREEN.MENU);
 }
-// ---- ICE PATCH at MAX on a ?gen=3 page: the brake tip paints, adds no key, and
+// ---- ICE PATCH at MAX: the brake tip paints, adds no key, and
 // the key path does what it says: back as you let go stops the slide. ----
 {
   delete mem["nb.coach.v2"];
   const v1 = mem["nb.coach.v1"];
   mem["nb.coach.v1"] = "1";
-  const g = show(mk({ gen3: true })); press(g, "Enter"); toRow(g, 1); press(g, "Enter");
+  const g = show(mk()); press(g, "Enter"); toRow(g, 1); press(g, "Enter");
   press(g, "ArrowRight"); press(g, "ArrowUp"); press(g, "ArrowUp"); press(g, "Enter");
   const w = g.world, p = w.players[0], F = CFG.TILE;
-  check("gen3 room 2 at MAX, through the keys", g.app.screen === SCREEN.GAME && w.level === 2 && w.heat === 2 && w.gen === 3 && !!w.feat, w.level + "/" + w.heat);
+  check("room 2 at MAX, through the keys", g.app.screen === SCREEN.GAME && w.level === 2 && w.heat === 2 && w.gen === 3 && !!w.feat, w.level + "/" + w.heat);
   for (const e of w.enemies) e.speed = 0;
   const y = 6, xs = [3, 4, 5, 6, 7, 8, 9, 10, 11];
   for (const x of xs) { w.grid[y * CFG.COLS + x] = 0; w.feat[y * CFG.COLS + x] = 5; }
@@ -309,12 +309,12 @@ for (const at of [1.0, 2.0, 3.0, 4.0]) {
   if (v1 === undefined) delete mem["nb.coach.v1"]; else mem["nb.coach.v1"] = v1;
 }
 {
-  // a normal page at MAX: the same keys, no tile, no tip, no brake bit
+  // an F2 link at MAX: its own board, no tile, no tip, no brake bit
   delete mem["nb.coach.v2"];
-  const g = show(mk()); press(g, "Enter"); toRow(g, 1); press(g, "Enter");
-  press(g, "ArrowRight"); press(g, "ArrowUp"); press(g, "ArrowUp"); press(g, "Enter");
+  const g = show(mk());
+  g.app.playChallenge({ seed: 7, heat: 2, pact: 0, pace: 0, gen: 2 });
   g.tick(5);
-  check("a normal page, room 2 at MAX: no tile layer, no tile tip", g.world.gen === 2 && !g.world.feat && !g.ro.coach2.k && !(mem["nb.coach.v2"] || "").includes('"z":1'), g.world.gen);
+  check("an F2 run at MAX: no tile layer, no tile tip", g.world.gen === 2 && !g.world.feat && !g.ro.coach2.k && !(mem["nb.coach.v2"] || "").includes('"z":1'), g.world.gen);
   delete mem["nb.coach.v2"];
 }
 // ---- LEVEL SELECT: ←/→ room, ↑/↓ heat, [ ] pace, 1–5 when unlocked, Enter, Esc ----
@@ -849,7 +849,7 @@ for (const code of ["Space", "Enter", "NumpadEnter"]) {
   check("WIN C copies the result line", clip.length === c0 + 1 && clip[clip.length - 1] === copyPayload(g.world), clip[clip.length - 1]);
   check("WIN C shows COPIED on the overlay", !!g.ro.toast && g.ro.toast.s === "COPIED" && g.ro.toast.ok === true, JSON.stringify(g.ro.toast));
   press(g, "KeyB"); await flush(); g.tick();
-  check("WIN B copies the board link (an ordinary run is gen 2: F2, #13)", /^https:\/\/hmarzban\.github\.io\/fusegrid\/\?code=F2/.test(clip[clip.length - 1]), clip[clip.length - 1]);
+  check("WIN B copies the board link (an ordinary run is gen 3: F3)", /^https:\/\/hmarzban\.github\.io\/fusegrid\/\?code=F3/.test(clip[clip.length - 1]), clip[clip.length - 1]);
   check("WIN B shows BOARD LINK COPIED", !!g.ro.toast && g.ro.toast.s === "BOARD LINK COPIED", JSON.stringify(g.ro.toast));
   g.tick(Math.ceil(TOAST_T * 60) + 2);
   check("the copy note clears after ~" + TOAST_T + " s", g.ro.toast === null, JSON.stringify(g.ro.toast));
@@ -888,7 +888,7 @@ for (const code of ["Space", "Enter"]) {
   press(g, "KeyC"); await flush(); g.tick();
   check("LOSE C copies and shows COPIED", clip[clip.length - 1] === copyPayload(g.world) && g.ro.toast && g.ro.toast.s === "COPIED", JSON.stringify(g.ro.toast));
   press(g, "KeyB"); await flush(); g.tick();
-  check("LOSE B copies the board link and says so", /\?code=F2/.test(clip[clip.length - 1]) && g.ro.toast && g.ro.toast.s === "BOARD LINK COPIED", JSON.stringify(g.ro.toast));
+  check("LOSE B copies the board link and says so", /\?code=F3/.test(clip[clip.length - 1]) && g.ro.toast && g.ro.toast.s === "BOARD LINK COPIED", JSON.stringify(g.ro.toast));
   press(g, "KeyP");
   check("LOSE P does not pause a finished run", g.world.state === "LOSE", g.world.state);
 }

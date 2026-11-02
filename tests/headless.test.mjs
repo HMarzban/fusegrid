@@ -1921,7 +1921,7 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
       const frames=(n)=>{ for(let f=0;f<n;f++){ t+=16; g.loop(t); } };
       frames(30); g.world.enemies.length=0; let n=0;
       while(g.world.state!=="WIN"&&n++<400){ t+=16; g.loop(t); } frames(2);
-      const kd=dailySeed(local)+":1:0:0:1:2"; // #13: the daily is a gen-2 board
+      const kd=dailySeed(local)+":1:0:0:1:3"; // v198: the daily is a gen-3 board
       check("R9a O4 a DAILY room clear records its ghost under the daily board's key",
         GHOST_KEY in mem&&JSON.stringify(Object.keys(G()))===JSON.stringify([kd]),String(mem[GHOST_KEY]));
     }

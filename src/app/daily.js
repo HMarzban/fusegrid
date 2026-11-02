@@ -3,10 +3,10 @@ import { defaultStore } from "./store.js";
 
 export const DAILY_KEY = "nb.daily.v1";
 /* The board generation every daily on this build deals (#13: the daily moved to
-   the gen-2 bold mazes on release day). A record stamps it as `g` (missing = 1,
+   the gen-2 bold mazes on release day, then to the gen-3 tile boards in v198). A record stamps it as `g` (missing = 1,
    a pre-#13 record), and one stamped with another generation is a different
    board: treated as absent, never compared. */
-export const DAILY_GEN = 2;
+export const DAILY_GEN = 3;
 /* FNV-1a 32-bit plus the standard 32-bit avalanche. The avalanche is not
    decoration: world.js:15 seeds the rng with seed ^ (level*40503), so a hash
    whose low bits barely move between consecutive dates would hand two

@@ -36,6 +36,7 @@ import { loadSettings, saveSettings } from "./app/settings.js";
 import { timeKey, loadTimes, saveTimes, bestOf, recordTime } from "./app/times.js";
 import { bestKey, loadBests, saveBests, bestOfRun, recordBest, newTally, feedTally } from "./app/bests.js";
 import { loadStats, setStatsOn, stat, statPlaques, statsRows, statsNotes, statsPayload } from "./app/stats.js";
+import "./core/board3.js"; // every ordinary run deals gen 3: registers genBoard3 with board2's seam
 import { DAILY_GEN, dailySeed, loadDaily, dailyTag, dailyStamp, finishDaily } from "./app/daily.js";
 import { decodeChallenge } from "./app/code.js";
 import { createToast, copyText, endKey, toastTick, toastOf } from "./app/endkeys.js";
@@ -88,7 +89,6 @@ export function createGame(canvas, opts = {}) {
   const bootSeed = (opts.seed != null ? opts.seed : Math.random() * 1e9) >>> 0;
   let runI = 0, runFixed = false;
   const world = createWorld(bootSeed, 1);
-  if (flags.gen3) world.gen = 3; // ?gen=3 only: the gen-2 board plus the floor tile layer (prototype preview)
   loadLevel(world, 1, false);
   world.state = "PLAY";
 
@@ -201,7 +201,7 @@ export function createGame(canvas, opts = {}) {
 
   /* run handoff (menu START / LEVEL select): fresh board, score reset */
   const onStart = (args) => {
-    world.gen = args && args.seed != null ? (args.gen === 2 ? 2 : 1) : flags.gen3 ? 3 : 2; // ordinary runs deal gen-2 boards (#12); a DAILY / ?code= run plays the generation it names (#13)
+    world.gen = args && args.seed != null ? (args.gen === 3 ? 3 : args.gen === 2 ? 2 : 1) : 3; // ordinary runs deal the tile boards (owner 2026-11-02); a DAILY / ?code= run plays the generation it names (#13)
     world.heat = clampHeat(args && args.heat);
     world.pact = clampPact(args && args.pact);
     world.pace = clampPace(args && args.pace);
@@ -544,7 +544,7 @@ export function createGame(canvas, opts = {}) {
   // no new closures per frame.
   const getScoresForHeat = (heat) => scoresForHeat(loadScores(), heat);
   const getPlaquesFn = () => loadPlaques();
-  const getCab = () => ({ tiles: flags.gen3, times: loadTimes(), medals: loadMedals(), stats: loadStats(), daily: app.dailyTag === "PLAYED" ? dailyRec : null, top: scoresForHeat(loadScores(), 0).filter((r) => !isPlaceholder(r)).slice(0, 3) }); // ATLAS pane / room card data, read on screen entry
+  const getCab = () => ({ tiles: true, times: loadTimes(), medals: loadMedals(), stats: loadStats(), daily: app.dailyTag === "PLAYED" ? dailyRec : null, top: scoresForHeat(loadScores(), 0).filter((r) => !isPlaceholder(r)).slice(0, 3) }); // ATLAS pane / room card data, read on screen entry
 
   let last = null,
     acc = 0,

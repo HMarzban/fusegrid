@@ -6,7 +6,7 @@
    an exact budget (the gen-1 count for the same seed / room / heat minus CUT).
    The gate: up to TRIES layouts, the first structurally valid one gets up to
    TRIES fills against validateBoard (fair.js); else the fair fallback, the
-   gen-1 grid with the fair-start stamp. Gen 3 (?gen=3 only) is the same board
+   gen-1 grid with the fair-start stamp. Gen 3 is the same board
    plus the world.feat tile layer, whose placement may force EMPTY tiles; gen 2
    itself never carries a tile.
    Templates: # wall  x pillar that may ruin  o lane slot that may join
@@ -330,8 +330,8 @@ export function fill2(lay, seed, level, heat, attempt = 0) {
   return { grid: g, target, cap: fixed + elig };
 }
 
-/* gen 3 lives in board3.js, out of the boot graph (only ?gen=3 pays for the tile
-   checks): importing it registers genBoard3 here. Asking for a gen-3 board with the
+/* gen 3 lives in board3.js, which src/main.js imports: importing it registers
+   genBoard3 here. Asking for a gen-3 board with the
    seam empty throws, never a tile-free board under gen-3 rules. */
 let gen3 = null;
 export function setGen3(fn) { gen3 = fn; }

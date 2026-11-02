@@ -1,4 +1,4 @@
-/* Floor-tile placement (gen 3 only, ?gen=3): moved out of feat.js so the boot graph
+/* Floor-tile placement (gen 3 only): moved out of feat.js so the boot graph
    carries the tile layer's rules and tables but not the code that lays it. Keyed
    (seed, room) on the gen-2 skeleton, so heat never moves a tile. Reached only through
    board3.js and the tile checks. */

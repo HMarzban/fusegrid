@@ -767,6 +767,14 @@ Design work that stayed on the drawing board. None of it is in the game.
   primitives and became glyph badges. Merged into local `main` the same day (World 6);
   [record](superpowers/specs/2026-10-25-board-look-depth-ambient-design.md).
 
+## 2026-11-02: the floor goes live
+
+The tiles had spent a week behind a URL flag. The owner asked what stood in the way of giving
+them to everyone, heard "a playtest", and shipped without one. Shell v198 drops `?gen=3`, deals
+tile boards on every ordinary run and the daily, and adds F3 links so those boards can be shared.
+The risks went into the [record](superpowers/specs/2026-11-02-tiles-default-v198.md) with the
+ruling. Real players are the playtest now.
+
 ---
 
 **CONTINUE?** See what each release changed in the

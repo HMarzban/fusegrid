@@ -89,8 +89,8 @@ const both = (g, f) => { f(g.world); f(g.net.wB); };
   const g = menu();
   const a = g.world, b = g.net.wB;
   press(g, "Enter");
-  check("PLAY start: A is on gen 2, run 0's seed", g.app.screen === SCREEN.GAME && a.gen === 2 && a.seed === runSeed(42, 0), a.gen + "/" + a.seed);
-  check("PLAY start: B follows gen, seed and deals the board itself", b.gen === 2 && b.seed === a.seed && b.grid !== a.grid && b.grid.join() === a.grid.join(), b.gen + "/" + b.seed);
+  check("PLAY start: A is on gen 3, run 0's seed", g.app.screen === SCREEN.GAME && a.gen === 3 && a.seed === runSeed(42, 0), a.gen + "/" + a.seed);
+  check("PLAY start: B follows gen, seed and deals the board itself", b.gen === 3 && !!b.feat === !!a.feat && b.seed === a.seed && b.grid !== a.grid && b.grid.join() === a.grid.join(), b.gen + "/" + b.seed);
   down("KeyD"); down("Space"); mirrored(g, "new run, walking and planting"); up("KeyD"); up("Space");
   g.tick(2);
 
@@ -167,9 +167,9 @@ const both = (g, f) => { f(g.world); f(g.net.wB); };
   const g = menu();
   location.search = "";
   const a = g.world, b = g.net.wB;
-  check("?gen=3 boot: B starts on A's generation", a.gen === 3 && b.gen === 3, a.gen + "/" + b.gen);
+  check("an old ?gen=3 link boots like any page: B starts on A's generation", a.gen === 1 && b.gen === 1, a.gen + "/" + b.gen);
   press(g, "Enter"); g.tick();
-  check("?gen=3 run: B carries the tile layer", a.gen === 3 && b.gen === 3 && !!b.feat === !!a.feat, a.gen + "/" + b.gen);
+  check("its run: B carries the tile layer", a.gen === 3 && b.gen === 3 && !!b.feat === !!a.feat, a.gen + "/" + b.gen);
   mirrored(g, "gen 3", 60);
 }
 

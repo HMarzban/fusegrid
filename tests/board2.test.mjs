@@ -166,7 +166,7 @@ test("world.gen survives WIN -> next room, a lost life, GAME OVER and RESTART; g
   assert.equal(g.gen, 1); assert.equal(g.layout, null);
 });
 
-test("ATTRACT (DEMO_SEED) and the intro show (SHOW_SEED) stay gen 1; ordinary runs and the DAILY deal gen 2 (#13)", () => {
+test("ATTRACT (DEMO_SEED) and the intro show (SHOW_SEED) stay gen 1; ordinary runs and the DAILY deal gen 3 (owner 2026-11-02)", () => {
   const d = newDemoWorld(2), s = createShow().world;
   assert.equal(d.seed, DEMO_SEED); assert.equal(d.gen, 1); assert.equal(d.layout, null);
   assert.equal(s.seed, SHOW_SEED); assert.equal(s.gen, 1); assert.equal(s.layout, null);
@@ -174,13 +174,13 @@ test("ATTRACT (DEMO_SEED) and the intro show (SHOW_SEED) stay gen 1; ordinary ru
   g.app.cabinetSeen = true; g.app.skip();
   g.app.cursor = ITEMS.indexOf("PLAY"); g.app.confirm();
   assert.equal(g.app.screen, SCREEN.GAME);
-  assert.equal(g.world.gen, 2); assert.ok(g.world.layout && g.world.layout.name);
+  assert.equal(g.world.gen, 3); assert.ok(g.world.feat); assert.ok(g.world.layout && g.world.layout.name);
   assert.deepEqual(validateBoard(g.world.grid, g.world.level, g.world.heat, full(g.world)), []);
   const h = createGame(null, { seed: 4242 });
   h.app.cabinetSeen = true; h.app.skip();
   h.app.cursor = ITEMS.indexOf("DAILY"); h.app.confirm();
   assert.equal(h.app.screen, SCREEN.GAME);
-  assert.equal(h.world.gen, 2); assert.ok(h.world.layout && h.world.layout.name);
+  assert.equal(h.world.gen, 3); assert.ok(h.world.feat); assert.ok(h.world.layout && h.world.layout.name);
   g.stop(); h.stop();
 });
 

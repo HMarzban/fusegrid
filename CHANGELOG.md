@@ -15,6 +15,33 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
+## shell v198 · 2026-11-02
+
+The floor tiles are in the game. Every world's floor now does something.
+
+### Added
+
+- **Eight floor tiles, one per world.** BOOSTER, ICE PATCH, CONVEYOR, STREAM, TRAP, QUICKSAND,
+  PORTAL and GATE now appear on every ordinary run and the daily. CORE makes them a help, MAX
+  makes them a danger. GUIDE → FLOOR explains each one.
+- **F3 board links.** B at the end of a run copies a link to your tile board. Old links still
+  open their old boards.
+
+### Changed
+
+- **The daily plays tile boards.** If you already tried today's daily, your try counter starts
+  again once.
+- **Your old bests stand,** but tiles change how hard they are to beat.
+
+### Removed
+
+- **The `?gen=3` preview.** It isn't needed now, and old preview links open the normal game.
+
+### Known
+
+- These tiles haven't been playtested by people yet, so expect them to be tuned. A slow phone may
+  pause briefly on entering rooms 1, 4 and 7.
+
 ## shell v197 · 2026-11-01
 
 A loading bar, and REAL 3D stops stalling between worlds. The rest is on the preview (`?gen=3`).

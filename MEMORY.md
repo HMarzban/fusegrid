@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-02 — v198: tile boards for everyone, `?gen=3` removed, F3 links, daily on tiles
+Owner: "Ship without a playtest", waiving #30's human playtest. Boot graph gains the tile code back (about 75 KB raw). Open: no human or real-GPU play; rooms 1, 4, 7 stall on a slow phone (6x CPU: p95 138 / 225 / 296 ms, worst 746); MAX reads no harder for the bot on the four newer tiles; moving tiles later breaks F3 links or needs gen 4. Record `docs/superpowers/specs/2026-11-02-tiles-default-v198.md`.
+
 ## 2026-11-02 — v197 LIVE: loading bar + loose ends
 Owner: finish items 2–11 with a team, no questions. Loading bar, #36 first frame 150–167 → 19 ms (phone unmeasured, stays open), boot graph −75 KB raw, on `?gen=3` heavier BOOSTER marks, ICE brake tip, all 15 REAL 3D heat states ≥ 4. Rulings in `docs/superpowers/specs/2026-11-01-loose-ends-v197.md`; 442 tests. `frame-c` deletion was declined, stays. Open: the playtest #30, #36 on a real phone, the design branch `descent-design`.
 

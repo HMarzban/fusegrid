@@ -213,8 +213,8 @@ Shell v185 (2026-10-26) gives the board a new look in all three looks. It adds:
   ([`core/feat.js`](../src/core/feat.js)); STREAM, QUICKSAND, PORTAL and GATE are
   art for now. In v185 the tiles appeared only on a test build reached with
   `?gen=2`; since v188 that preview is `?gen=3` (the gen-2 board plus the
-  tile layer, see below), and the GUIDE's FLOOR page still marks the tiles
-  PREVIEW.
+  tile layer, see below), and the GUIDE's FLOOR page marked the tiles
+  PREVIEW. Since v198 every ordinary run and the DAILY play them, and the flag is gone.
 - **A world bezel and a recessed well** around the board
   ([`frameart.js`](../src/render/frameart.js), [`frame.js`](../src/render/frame.js)).
 - **Depth**: cast and contact shadows, ambient occlusion, lower-value bricks
@@ -273,6 +273,8 @@ static checks moved to `src/core/featchecks.js`, no item lands on a tile, and
 room 5 re-rolls a layout that cannot hold three SHRINK-safe traps. Results and
 the open items are in the record's 2026-11-01 addendum.
 
+**Shell v198: tiles for everyone.** Ordinary runs and the DAILY deal gen 3, `src/main.js` imports `core/board3.js`, so the tile code is back in the boot graph (the bare sim still imports without it, through board2's seam), `?gen=3` is gone and `code.js` knows F3. [Record](superpowers/specs/2026-11-02-tiles-default-v198.md), with the room-start build times and the risks of shipping with no playtest.
+
 **Shell v197: loading bar and no recompile on a room change.** Before any module runs, `index.html` paints a plate whose progress is finished files against totals a test pins to the real import graphs, or an indeterminate glint when it has no numbers. `rcache.js` puts it up before a lazy look's fetch and synchronous bake. REAL 3D pins compiled programs (`three/progpin.js`) and moved per-world values to uniforms, so a new world links nothing (#36). `genBoard3` and its checks are a lazy chunk (`src/app/gen3load.js`) only `?gen=3` loads. [Record](superpowers/specs/2026-11-01-loose-ends-v197.md).
 
 **Shell v196: the last four tiles get rules, preview only (#26, #27).** One module per
@@ -324,10 +326,10 @@ the same board. Now every ordinary run deals a fresh one.
   resets it. **Gen 1** is the original lattice ([`board.js`](../src/core/board.js)),
   kept forever for F1 codes, past dailies, the demo and the intro show.
   **Gen 2** is the bold mazes ([`board2.js`](../src/core/board2.js)), played by
-  every ordinary run and the DAILY: 14 layouts (one per world, three each for
+  F2 links: 14 layouts (one per world, three each for
   WATER, ARENA and CROWN), a layout stage keyed by seed and room, and a fill
   stage that changes bricks only, so heat never moves a wall. **Gen 3** is gen 2
-  plus the floor tiles, only behind `?gen=3`, so an F2 code is always tile-free.
+  plus the floor tiles, every ordinary run and the DAILY since v198; an F2 code is always tile-free.
 - **The fairness gate.** [`fair.js`](../src/core/fair.js) is one pure
   `validateBoard` with thirteen rules (reach, a safe first bomb, room fit, foe
   distance, brick count, room 1's FLAME and BOMB, SHRINK connectivity, dead

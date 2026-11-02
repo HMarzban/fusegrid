@@ -1,7 +1,7 @@
-/* Gen 3 (?gen=3 only): the gen-2 board plus the world.feat tile layer, gated by the
-   static tile checks. Lazy: board2.js holds the seam and this module registers
-   genBoard3 on import, so a page without ?gen=3 never downloads or parses the checks
-   (src/app/gen3load.js in the browser, a plain import in Node tests and tools). */
+/* Gen 3 (every ordinary run and the DAILY since v198): the gen-2 board plus the
+   world.feat tile layer, gated by the static tile checks. board2.js holds the seam and
+   this module registers genBoard3 on import (src/main.js in the browser, a plain import
+   in Node tests and tools), so the bare sim still imports without the checks. */
 import { CFG, T, key, biomeOf } from "./config.js";
 import { FEAT_PROFILE, HOME } from "./feat.js";
 import { placeFeat } from "./featplace.js";
@@ -11,7 +11,7 @@ import { genBoard2, layout2, gateOpts, setGen3 } from "./board2.js";
 
 const N = CFG.COLS * CFG.ROWS;
 
-/* gen 3 (?gen=3 only): the gen-2 board of every heat plus the world.feat tile
+/* gen 3: the gen-2 board of every heat plus the world.feat tile
    layer, placed on the layout (so heat never moves a tile). The tiles it
    forces open are the only grid change (bar the TRAP re-roll below); a salt is
    kept only when all three heats still pass the gate, else the plain gen-2

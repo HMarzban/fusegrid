@@ -60,13 +60,13 @@ through `listGeom` / `listHit` (pitches are caps that scale down in a short
 box); MENU has a PLAY hero row whose tag is the run it starts and group gaps
 before OPTIONS / HIGH SCORES / SOURCE; the SOURCE URL shows only on its
 selected row. Build tag (owner 2026-10-21: "a game version in some where in
-the display or menue"): `v197` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
+the display or menue"): `v198` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
 derived ONLY in `shellview.js` (`REV`, handed to `drawMenu` / `drawSettings`
-as `rev`) and `update.js` (the card's "You are on v197", the running build,
+as `rev`) and `update.js` (the card's "You are on v198", the running build,
 never a guessed next one) — never a second literal. Keyboard MENU appends
 it to the foot hint; the touch hub hangs it under the plate when the box has
 >= 10 units below it (`#sh`), else on the SOURCE tile's teaser (landscape on
-the board canvas); OPTIONS keeps its `BUILD v197` kicker. Never on the HUD.
+the board canvas); OPTIONS keeps its `BUILD v198` kicker. Never on the HUD.
 PAUSE draws `pauseGeom(overlayBox, touch)`: touch (`touchLay`,
 data-lay p/l) caps pitch at `PAUSE_ROW_H` 70 / hero 76 / width 380, a keyboard
 screen at the compact `PAUSE_ROW_D` 44 / hero 54 / width 340 (owner: "too
@@ -199,9 +199,9 @@ not shell screens. Do not add them as `SCREEN` values.
     `loadLevel`): **1** = `board.js` `genBoard` (the original lattice; F1
     codes, ATTRACT, the intro show, Node worlds by default), **2** =
     `board2.js` `genBoard2` (the 14 BOLD layouts, #12: every ordinary run and
-    the DAILY since v188), **3** = gen 2 + the `world.feat` floor-tile layer
-    (`genBoard2(…, {feat:true})`, `?gen=3` only, a preview; O2 2026-10-26:
-    tiles become gen 3 / F3 so an F2 code is always tile-free; gen-3 room 5
+    the DAILY from v188 to v197, F2 links), **3** = gen 2 + the `world.feat` floor-tile layer
+    (`genBoard2(…, {feat:true})`, every ordinary run and the DAILY since v198, owner
+    2026-11-02, playtest waived; O2 2026-10-26: an F2 code is always tile-free; gen-3 room 5
     re-rolls the layout on ~8 % of seeds, when it cannot place 3 SHRINK-safe
     traps, #22). Gen 2: a layout
     keyed `(seed, room, attempt)` (template, stamps, flip; CROWN V or 180
@@ -220,7 +220,7 @@ not shell screens. Do not add them as `SCREEN` values.
     CHASER / KNIGHT) **and brick-passers** (PHANTOM / ROCKET / SHADE; lead
     ruling 2026-10-26, owner accepted: they walk through the seal bricks).
   - `featchecks.js` — the static tile checks V13–V27 (#18, moved from
-    `tools/balance/`, which re-exports it; 48 KB, out of the boot graph since v197 with `board3.js` (`genBoard3`, registers through `setGen3`) and `featplace.js` (`placeFeat`): `src/app/gen3load.js` imports them before `createGame` on `?gen=3` only, Node code imports `board3.js` itself, a gen-3 ask with the seam empty throws; the rule modules stay in boot). V14 is fixed in
+    `tools/balance/`, which re-exports it; 48 KB, in the boot graph with `board3.js` (`genBoard3`, registers through `setGen3`) and `featplace.js` (`placeFeat`): `src/main.js` imports `board3.js`, Node code that skips main imports it itself, a gen-3 ask with the seam empty throws). V14 is fixed in
     `loadLevel`, gen 3 only (no item on a tile).
   - `fair.js` — pure `validateBoard(grid, level, heat, opts)` (#11) returning
     failed rule IDs: V1 reach, V2 safe first bomb (reach 1–10, PIERCE, LINE x4,
@@ -487,11 +487,11 @@ not shell screens. Do not add them as `SCREEN` values.
   per new LOCAL `ld` at `room_enter`, monotonic, self-heals a future `a.day`,
   never a streak) + three bests) · `daily.js` (`nb.daily.v1`, one board a day from a **date string**,
   pure FNV-1a `dailySeed`; the record is stamped `g`, the board generation:
-  `DAILY_GEN` 2 since v188, a record with no `g` is gen 1 and reads ABSENT for
+  `DAILY_GEN` 3 since v198, a record with no `g` is gen 1 and reads ABSENT for
   today's daily, so no PLAYED / YOUR TRIES TODAY / comparison across
-  generations) · `code.js` (no store; a 12-char `F1` / `F2` challenge code
+  generations) · `code.js` (no store; a 12-char `F1` / `F2` / `F3` challenge code
   with a checksum; the digit is the generation, `?code=F1…` boots gen 1
-  forever, older clients refuse F2 at `CODE_RE` and boot normally, any other
+  forever, older clients refuse a newer digit at `CODE_RE` and boot normally, any other
   prefix fails closed). Every date is a string computed in `main.js` (`todayStr`
   local, `dateStr` UTC) and passed in — `src/app/` never calls `Date`.
   `nb.times.v1` stays the one best-TIMES store; STATS **reads** both and
@@ -742,8 +742,8 @@ not shell screens. Do not add them as `SCREEN` values.
   sitemap reaches Google through Search Console.
 
 Flags: `?render=3d|px|iso` (3d/px seed the boot only; iso is pinned), `?play=1`, `?net=local`, `?orbit=1`, `?debug=1`,
-`?code=` (12-char challenge, URL-only — no opts fallback), `?gen=3` (the floor-tile
-preview boards; ignored beside a `?code=`; `?gen=2` does nothing since v188).
+`?code=` (12-char challenge, URL-only — no opts fallback). No `?gen=` flag since v198; an old
+`?gen=3` link boots like any page.
 
 Node v26, `"type": "module"`. No build step, no bundler.
 
@@ -801,8 +801,7 @@ Node v26, `"type": "module"`. No build step, no bundler.
   included (R never arms reset or resets the camera there; M has no mute
   binding, so it only leaves).
 - **The challenge code carries a board, never a claim.** `?code=` is 12 chars
-  (`F1` / `F2` + seed + cfg + checksum; a gen-3 preview run's B copies no
-  link and says NO LINK FOR PREVIEW BOARDS until F3 exists), seed/heat/pact/pace only — **no score
+  (`F1` / `F2` / `F3` + seed + cfg + checksum), seed/heat/pact/pace only — **no score
   field**, and no `window.prompt` / DOM paste box (entry is through
   `flags.js` alone). The word `leaderboard` is refused in `src/` and `tests/`
   and executably gated by `tests/banned-name.test.mjs`; `docs/` is exempt
@@ -1012,8 +1011,8 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
     the verdict and human playtest (#30).
   - Bests stay keyed by difficulty + room ("not related to the shuffle board").
   - `world.gen` defaults to 1 (Node worlds). F1 codes, past dailies,
-    ATTRACT and the intro show stay on gen 1 forever. Gen-2 boards copy F2
-    codes; the daily switched to gen 2 with v188; the ghost key carries `gen`.
+    ATTRACT and the intro show stay on gen 1 forever. Gen-3 boards copy F3
+    codes (gen-2 boards F2); the daily switched to gen 2 with v188 and gen 3 with v198; the ghost key carries `gen`.
   - 14 BOLD layouts: one per biome, but 3 each for WATER / ARENA / CROWN.
     Heat changes only bricks.
   - A fairness check gates every board, including a sealed start and a
@@ -1133,7 +1132,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   Node test fakes define `globalThis.location` WITHOUT `href`, so "is this a
   real page" means `typeof location.href === "string"` (the branch's gen-2 page
   default depended on it; since v188 the tile boards are `?gen=3` only).
-- Release state (2026-11-01): shell **v197** (loading bar, REAL 3D new-world freeze fix #36, boot graph minus 75 KB raw, and on `?gen=3` BOOSTER marks, ICE brake tip, REAL 3D heat look; rulings and numbers in `docs/superpowers/specs/2026-11-01-loose-ends-v197.md`) is LIVE on the owner's word (2026-11-02). A design on local branch `descent-design` is unmerged and stays unpushed until the owner says.
+- Release state (2026-11-02): shell **v198** makes the tile boards what everyone plays: ordinary runs and the DAILY deal gen 3, `?gen=3` is gone, F3 links exist (owner: "Ship without a playtest", waiving #30's playtest; record `docs/superpowers/specs/2026-11-02-tiles-default-v198.md`, with the known risks). Older text below that says `?gen=3` is history. Shell **v197** (loading bar, REAL 3D new-world freeze fix #36, boot graph minus 75 KB raw, and on `?gen=3` BOOSTER marks, ICE brake tip, REAL 3D heat look; rulings and numbers in `docs/superpowers/specs/2026-11-01-loose-ends-v197.md`) is LIVE on the owner's word (2026-11-02). A design on local branch `descent-design` is unmerged and stays unpushed until the owner says.
   Shell **v196** (rules for STREAM, QUICKSAND, GATE, PORTAL, all on
   `?gen=3`; no change in a normal run) is LIVE on the owner's word.
   Shell **v195** (BOOSTER warning, tile tips, FLOOR
@@ -1152,10 +1151,8 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   LIVE 2026-10-26; **v187** turns the consent ask into a corner card; **v186** is its hotfix (`#upd[hidden],#ana[hidden]`: an
   author `display:flex` beats the UA `[hidden]` rule, so neither card ever hid;
   `tests/hidden-css.test.mjs` now gates every `#id` display rule). The owner
-  pushes, or says "push". Boards since v188: gen 2 (bold mazes, no tiles) for
-  every ordinary run and the daily, gen 1 for F1 codes / ATTRACT / the intro,
-  the floor-tile boards only with `?gen=3` (design pass 2 done, the build is
-  #18–#22), so the GUIDE FLOOR page is still a PREVIEW. 442 tests. Branches `tiles-d`, `frame-a`, `frame-b` are
+  pushes, or says "push". Boards: gen 3 (bold mazes with tiles) for
+  every ordinary run and the daily since v198, gen 2 for F2 codes, gen 1 for F1 codes / ATTRACT / the intro. 442 tests. Branches `tiles-d`, `frame-a`, `frame-b` are
   deleted (merged); `frame-c` (stage set) stays unmerged. The look is recorded in
   `docs/superpowers/specs/2026-10-25-board-look-depth-ambient-design.md`,
   including the loose ends. Loopback dev server: `PORT=8091 node

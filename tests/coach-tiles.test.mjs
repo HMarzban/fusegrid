@@ -320,10 +320,10 @@ function fakeCanvasTexts() {
   globalThis.window = { localStorage: ls, addEventListener() {} };
   try {
     const { texts, canvas } = fakeCanvasTexts();
-    const g = createGame(canvas, { autoplay: true, seed: 4242, gen3: true });
+    const g = createGame(canvas, { autoplay: true, seed: 4242 });
     let t = 1000;
     g.loop(t);
-    check("gen3 page: a run deals gen 3 with a tile layer", g.world.gen === 3 && !!g.world.feat, g.world.gen);
+    check("an ordinary run deals gen 3 with a tile layer", g.world.gen === 3 && !!g.world.feat, g.world.gen);
     const put = () => { const k = tileCell(g.world, "BLOOM"), p = g.world.players[0]; p.x = ((k % CFG.COLS) + 0.5) * CFG.TILE; p.y = (((k / CFG.COLS) | 0) + 0.5) * CFG.TILE; p.tx = k % CFG.COLS; p.ty = (k / CFG.COLS) | 0; };
     const seeTip = () => { put(); texts.length = 0; g.loop((t += 16)); g.loop((t += 16)); return texts.some((s) => s.startsWith("BOOSTER · ")); };
     check("the tip paints through the real loop", seeTip(), texts.filter((s) => s.includes("·")).join("|"));
@@ -371,26 +371,28 @@ function fakeCanvasTexts() {
   globalThis.window = { localStorage: ls, addEventListener() {} };
   try {
     const { texts, canvas } = fakeCanvasTexts();
-    const g = createGame(canvas, { autoplay: true, seed: 4242 });
+    const g = createGame(canvas, { seed: 4242 });
     let t = 1000;
+    g.app.skip();
+    g.app.playChallenge({ seed: 4242, heat: 0, pact: 0, pace: 0, gen: 2 });
     g.loop(t);
     g.world.events.push({ t: "bloom", x: 1, y: 1 }, { t: "plate", x: 1, y: 1 });
     texts.length = 0;
     for (let i = 0; i < 5; i++) g.loop((t += 16));
-    check("a normal run: gen 2, no tile layer, no tile tip", g.world.gen === 2 && !g.world.feat && !texts.some((s) => Object.values(TILE_NAME).some((n) => s.startsWith(n + " · "))), texts.join("|"));
-    check("a normal run's coach record gained no bit", Object.values(loadCoach2(ls)).every((v) => v === 0));
+    check("an F2 run: gen 2, no tile layer, no tile tip", g.world.gen === 2 && !g.world.feat && !texts.some((s) => Object.values(TILE_NAME).some((n) => s.startsWith(n + " · "))), texts.join("|"));
+    check("an F2 run's coach record gained no bit", Object.values(loadCoach2(ls)).every((v) => v === 0));
     g.stop && g.stop();
   } finally {
     delete globalThis.window;
   }
 }
 {
-  // the DAILY on a ?gen=3 page is still its gen-2 board: no tile, no tip
+  // the DAILY deals the tile board too (v198)
   const ls = memStore([["nb.coach.v1", "1"]]);
   globalThis.window = { localStorage: ls, addEventListener() {} };
   try {
     const { texts, canvas } = fakeCanvasTexts();
-    const g = createGame(canvas, { seed: 4242, gen3: true });
+    const g = createGame(canvas, { seed: 4242 });
     let t = 1000;
     g.app.skip();
     g.loop(t);
@@ -399,7 +401,7 @@ function fakeCanvasTexts() {
     g.world.events.push({ t: "bloom", x: 1, y: 1 });
     texts.length = 0;
     g.loop((t += 16));
-    check("a DAILY from a gen3 page: gen 2, no tile layer, no tile tip", g.world.gen === 2 && !g.world.feat && !texts.some((s) => s.startsWith("BOOSTER · ")), g.world.gen);
+    check("a DAILY: gen 3 with a tile layer", g.world.gen === 3 && !!g.world.feat, g.world.gen);
     g.stop && g.stop();
   } finally {
     delete globalThis.window;
@@ -463,14 +465,14 @@ for (const [name, W, H, T] of LAYOUTS) {
   check("every help string stays <= 28 chars (the card's budget)", help.every((s) => s.length <= 28), Math.max(...help.map((s) => s.length)));
 }
 {
-  // the real page: the flag reaches the card; the normal page never promises a tile
-  for (const [gen3, want] of [[true, true], [false, false]]) {
+  // the real page: the FLOOR line reaches the card
+  for (const want of [true]) {
     const ls = memStore();
     globalThis.window = { localStorage: ls, addEventListener() {} };
     try {
       const { texts, canvas } = fakeCanvasTexts();
       canvas.width = 600; canvas.height = 520;
-      const g = createGame(canvas, { seed: 4242, ...(gen3 ? { gen3 } : {}) });
+      const g = createGame(canvas, { seed: 4242 });
       let t = 1000;
       g.app.skip();
       g.loop(t); g.loop((t += 16)); // shellview re-reads its cabinet on a screen entry, so enter LEVEL from MENU
@@ -478,7 +480,7 @@ for (const [name, W, H, T] of LAYOUTS) {
       g.loop((t += 16));
       texts.length = 0;
       g.loop((t += 16));
-      check(`${gen3 ? "?gen=3" : "a normal page"}: LEVEL SELECT ${want ? "shows" : "never shows"} a FLOOR line`, texts.some((s) => s.startsWith("FLOOR ")) === want, texts.filter((s) => s.startsWith("FLOOR ")).join("|"));
+      check("LEVEL SELECT shows a FLOOR line", texts.some((s) => s.startsWith("FLOOR ")) === want, texts.filter((s) => s.startsWith("FLOOR ")).join("|"));
       g.stop && g.stop();
     } finally {
       delete globalThis.window;

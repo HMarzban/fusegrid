@@ -840,7 +840,7 @@ export function createMenuApp(opts = {}) {
         pact: clampPact(c.pact),
         pace: clampPace(c.pace),
         seed: c.seed >>> 0,
-        gen: c.gen === 2 ? 2 : 1,
+        gen: c.gen === 3 ? 3 : c.gen === 2 ? 2 : 1,
       });
     },
     /* Shared CORE handoff for playFromAttract/startDaily/playChallenge: reset

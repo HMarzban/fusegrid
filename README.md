@@ -28,6 +28,8 @@ No install needed, no account, no server. Just press start.
 **The one rule:** clear every enemy in the room to advance.
 
 - Gold **WALL** never breaks. Green **BRICK** breaks, and stops a normal blast.
+- Every world has its own floor tile: BOOSTER, ICE PATCH, CONVEYOR, STREAM, TRAP, QUICKSAND,
+  PORTAL or GATE. On CORE it helps you; on MAX it fights you.
 - Floor cubes lie in the open and hide under bricks: more bombs, longer
   flames, kick, throw, remote, shield and more. Grab them.
 - Take a hit and you lose a heart, but the room keeps going. Any bombs and

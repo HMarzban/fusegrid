@@ -216,12 +216,12 @@
      tests/loadbar.test.mjs pins to the real static graph of the entry below.
      Resource Timing only reports a file when it ends, so the count is true but
      stepped; no entries (an unsupported browser) means no number, only LOADING. -->
-<script id="loadjs" data-files="100" data-gen3="3">
+<script id="loadjs" data-files="102">
 (function(w,d){
   var $=function(i){return d.getElementById(i)},E=$("load"),bar=$("loadbar"),fill=$("loadfill"),msg=$("loadmsg"),act=$("loadact"),retry=$("loadretry"),keep=$("loadkeep");
   var STALL=30000,jobs={},cur=null,failed=null,drop=null,again=null,shown=null,iv=0,base=new URL("./",d.baseURI).href;
   var now=function(){return w.performance?performance.now():0};
-  var q=(w.location&&w.location.search)||"",bootFiles=+$("loadjs").getAttribute("data-files")+(/[?&]gen=3\b/.test(q)&&!/[?&]code=/.test(q)?+$("loadjs").getAttribute("data-gen3"):0);
+  var bootFiles=+$("loadjs").getAttribute("data-files");
   jobs.boot={k:"boot",label:"",files:bootFiles,total:bootFiles,weigh:function(u){return u.indexOf(base+"src/")===0&&/\.js(\?|$)/.test(u)?1:0},seen:{},n:0,w:0,f:0,ph:0,t:0,last:now(),dock:false};
   function view(){return failed?jobs[failed]:(cur&&jobs[cur])||jobs.boot||null}
   function paint(){
@@ -320,12 +320,11 @@
       has already queued it. */
    import {createGame} from "./src/main.js";
    import {createAudio} from "./src/audio.js";
-   import {gen3Boot} from "./src/app/gen3load.js";
    const L=window.__load;
    const canvas=document.getElementById("c");
    const audio=createAudio();
    if(/[?&]debug=1/.test(location.search||""))window.__audio=audio;
-   Promise.resolve(gen3Boot(location.search,()=>createGame(canvas,{audio, canvasEl:canvas}))).then(()=>requestAnimationFrame(()=>L.end("boot")),(e)=>{console.error(e);L.fail("boot");});
+   Promise.resolve().then(()=>createGame(canvas,{audio, canvasEl:canvas})).then(()=>requestAnimationFrame(()=>L.end("boot")),(e)=>{console.error(e);L.fail("boot");});
 </script>
 </body>
 </html>

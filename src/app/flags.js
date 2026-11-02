@@ -10,7 +10,6 @@ export function readFlags(search, opts = {}) {
     autoplay: /[?&]play=1/.test(s) || opts.autoplay === true,
     netLocal: /[?&]net=local/.test(s) || opts.netLocal === true,
     orbit: opts.orbit ?? /[?&]orbit=1/.test(s),
-    gen3: opts.gen3 === true || (/[?&]gen=3\b/.test(s) && !cm), // gen 3 = the gen-2 board plus the floor-tile layer, opt-in only (O2, 2026-10-26); a code never plays it
     debug: opts.debug === true || /[?&]debug=1/.test(s),
     // R8: URL-only — unlike the flags above, there is no opts fallback,
     // because the whole product claim is that the link IS the interaction.
