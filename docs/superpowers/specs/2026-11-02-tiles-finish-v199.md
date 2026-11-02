@@ -1,6 +1,6 @@
 # Finishing the floor tiles (shell v199)
 
-Date: 2026-11-02. Status: built on `main`; live once the owner says to push.
+Date: 2026-11-02. Status: live since 2026-11-02 on the owner's word.
 
 The owner asked to finish all tile and floor tasks, in parallel, before the next phase. This
 round covers everything an agent can do alone. Real-device checks, the owner's veto round, the
