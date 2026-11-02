@@ -6,12 +6,13 @@
    end. PLUS / MAX read u from the room clock, every gate in step. CORE keeps it in
    featS: 0 = idle, your crossing arms `after`, standing on the tile holds it there.
    A shut waits while anything overlaps the tile, then lands the moment it clears if
-   at least GATE_MIN s of the window is left, else this shut is skipped. */
+   at least GATE_MIN s of the window is left, else this shut is skipped. A shut waits the
+   same way while it would pin the player (gatePins). */
 import { CFG, T, key } from "./config.js";
 import { F, featProfile } from "./feat.js";
 
 const C = CFG.COLS, R = CFG.ROWS, TL = CFG.TILE;
-export const GATE_SHUT = 4, GATE_DEAD = 5, GATE_MIN = 0.5;
+export const GATE_SHUT = 4, GATE_DEAD = 5, GATE_MIN = 0.5, GATE_ROOM = 10;
 /* a tile the wall passes leave to the gate's own bars: a shut bar is a WALL for
    collision only; a ring-dead gate is a real wall again */
 export const gateBar = (w, k) => !!w.feat && w.feat[k] === F.GATE && (!w.featM || w.featM[k] !== GATE_DEAD);
@@ -28,6 +29,45 @@ export function gateBusy(w, x, y) {
   for (const bl of w.blades) for (const t of bl.tiles) if (t.tx === x && t.ty === y) return true;
   for (const it of w.items) if ((it.tx ?? Math.floor(it.x / TL)) === x && (it.ty ?? Math.floor(it.y / TL)) === y) return true;
   return false;
+}
+/* the cells the player can walk to that no live bomb's blast covers; a foe, a bomb, a
+   brick and tile `shut` (-1: none) block him, his own tile never does. Infinity when nothing
+   threatens that ground (no foe at its edge, no blast on it): a quiet pocket is no pin,
+   the room's own V33 says he can bomb out of it */
+function freeCells(w, sx, sy, shut) {
+  const g = w.grid, D = [[1, 0], [-1, 0], [0, 1], [0, -1]], hit = new Set(), block = new Set(), s0 = key(sx, sy), seen = new Set([s0]), q = [s0];
+  for (const b of w.bombs) {
+    if (b.dead) continue;
+    block.add(key(b.tx, b.ty)); hit.add(key(b.tx, b.ty));
+    for (const [dx, dy] of b.line ? [[(b.dir || { x: 1 }).x || 0, (b.dir || { y: 0 }).y || 0]] : D) for (let i = 1; i <= b.radius; i++) {
+      const n = key(b.tx + dx * i, b.ty + dy * i), v = g[n];
+      if (v === undefined || v === T.WALL) break;
+      hit.add(n);
+      if (v === T.BRICK && !b.pierce && !b.line) break;
+    }
+  }
+  const foes = new Set();
+  for (const e of w.enemies) if (!e.dead) foes.add(key(Math.floor(e.x / TL), Math.floor(e.y / TL)));
+  let n = 0, threat = false;
+  for (let h = 0; h < q.length; h++) {
+    if (!hit.has(q[h])) n++; else threat = true;
+    const x = q[h] % C, y = (q[h] / C) | 0;
+    for (const [dx, dy] of D) {
+      const c = key(x + dx, y + dy);
+      if (foes.has(c)) threat = true;
+      if (c === shut || seen.has(c) || block.has(c) || foes.has(c) || g[c] !== T.EMPTY) continue;
+      seen.add(c); q.push(c);
+    }
+  }
+  return threat ? n : Infinity;
+}
+/* never shut on the player: this shut would leave him fewer than GATE_ROOM free cells,
+   counting a foe in the lane and a lit bomb's blast, and fewer than it being open would */
+export function gatePins(w, x, y) {
+  const p = w.players[0];
+  if (!p || p.alive === false) return false;
+  const sx = Math.floor(p.x / TL), sy = Math.floor(p.y / TL), n = freeCells(w, sx, sy, key(x, y));
+  return n < GATE_ROOM && n < freeCells(w, sx, sy, -1);
 }
 export function gateTick(w, dt, emit) {
   const f = w.feat, M = w.featM, S = w.featS, pr = featProfile(w).gate, ring = w.shrinkGen | 0, p = w.players[0];
@@ -49,7 +89,7 @@ export function gateTick(w, dt, emit) {
       M[k] = u > 0 && u <= pr.warn ? litOf(u, pr.warn) : 0;
       if (pr.cross && u <= 0) S[k] = 0;
     } else if (M[k] !== GATE_SHUT) {
-      if (gateBusy(w, x, y)) M[k] = 3;
+      if (gateBusy(w, x, y) || gatePins(w, x, y)) M[k] = 3;
       else if (u + pr.shut >= GATE_MIN) { M[k] = GATE_SHUT; w.grid[key(x, y)] = T.WALL; }
       else M[k] = 0;
     }

@@ -46,6 +46,13 @@
    Classes (as the sweep's noEscOn / noEscPlant): S = strict onset (no tile
    escape since the danger began, no fresh own plant), P = at a fresh own plant
    (< 0.05 s old), L = lost (the tile model had an escape earlier in the stretch).
+   Closure moments (cls "C", GATE and QUICKSAND, which the tile model reads as plain
+   grid cells, so the probe never flags them): the tick a gate shuts or a mound lands
+   with the player in a footprint or a foe within CLOSE_R tiles. A quiet world is not
+   safe here (a foe needs no bomb), so the search must also last HOLD s. "plainEsc"
+   reopens the cells that closed on that step (PLUS and MAX gates share one clock) and
+   nothing else, so the foes' routes change only if they mattered. Grade: warned when the last escape came at least
+   WARN after that closure's own warning first showed (gate bars, the growing mound).
      node tools/balance/oracle.mjs --rooms 1,2,3,5 --heats 0,1,2 --n 6000 --from 600000 --workers 8 --name oracle600k
    Output: tools/balance/out/<name>.jsonl (one row per episode) and a printed
    table. Workers are child processes, stopped by PID. Never imported by src/. */
@@ -54,17 +61,19 @@ import "../../src/core/board3.js";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { CFG } from "../../src/core/config.js";
+import { CFG, T, key } from "../../src/core/config.js";
 import { tileOf } from "../../src/core/board.js";
 import { step } from "../../src/core/sim.js";
 import { createRng } from "../../src/core/rng.js";
-import { featProfile } from "../../src/core/feat.js";
+import { featProfile, F } from "../../src/core/feat.js";
+import { GATE_SHUT } from "../../src/core/tilegate.js";
 import { makeWorld, STEPS, seedOf } from "./tilerun.mjs";
 import { createTileBot } from "./demobot-tiles.mjs";
-import { probe } from "./escape.mjs";
+import { probe, lethalMap } from "./escape.mjs";
 
 const ST = CFG.STEP, D = [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]], CAP_T = Math.ceil(8 / ST), CAP_LAYER = 1500, WARN = 0.25;
-const HEAT = ["CORE", "PLUS", "MAX"], TILE_OF = { 1: "BOOSTER", 2: "ICE PATCH", 3: "CONVEYOR", 5: "TRAP" };
+const HEAT = ["CORE", "PLUS", "MAX"], TILE_OF = { 1: "BOOSTER", 2: "ICE PATCH", 3: "CONVEYOR", 4: "STREAM", 5: "TRAP", 6: "QUICKSAND", 7: "PORTAL", 8: "GATE" };
+const HOLD = 2.5, CLOSE_R = 5;
 
 /* frozen tables and functions are shared, the rng is rebuilt from its state */
 export function clone(v, seen = new Map()) {
@@ -82,7 +91,7 @@ const mv = (d) => ({ move: { x: D[d][0], y: D[d][1] }, fire: false, firePrev: fa
 const MV = D.map((_, d) => mv(d));
 export const quiet = (w) => !w.blades.length && !w.bombs.some((b) => !b.dead) && !(w.featPend && w.featPend.length);
 const hurtIn = (w) => w.events.some((e) => e.t === "hurt");
-const over = (w) => w.state !== "PLAY" || quiet(w);
+const over = (w, t = 0, hold = 0) => w.state !== "PLAY" || (t >= hold && quiet(w));
 /* a branch world: iFrames gone; `noContact` turns foe contact off (checkContact
    tests dist^2 < (e.r + R)^2, so r = -R never holds) */
 function branch(w0, noContact, keepI) {
@@ -92,7 +101,7 @@ function branch(w0, noContact, keepI) {
   if (noContact) for (const e of w.enemies) e.r = -CFG.TILE * CFG.CONTACT_R;
   return w;
 }
-function tilesOff(w) { w.feat = null; w.featPair = null; w.featS = null; w.featM = null; w.featPend = null; const p = w.players[0]; p.gl = null; p.glBuf = null; for (const b of w.bombs) if (b.carry) { b.carry = false; b.slide = null; b.prog = 0; b.x = (b.tx + 0.5) * CFG.TILE; b.y = (b.ty + 0.5) * CFG.TILE; } return w; }
+function tilesOff(w) { if (w.feat) for (let k = 0; k < w.feat.length; k++) if ((w.feat[k] === F.GATE && w.grid[k] === T.WALL && w.featM[k] === GATE_SHUT) || (w.feat[k] === F.QUICK && w.grid[k] === T.BRICK)) w.grid[k] = T.EMPTY; w.quick = null; w.feat = null; w.featPair = null; w.featS = null; w.featM = null; w.featPend = null; const p = w.players[0]; p.gl = null; p.glBuf = null; for (const b of w.bombs) if (b.carry) { b.carry = false; b.slide = null; b.prog = 0; b.x = (b.tx + 0.5) * CFG.TILE; b.y = (b.ty + 0.5) * CFG.TILE; } return w; }
 
 /* the bot's own line through the danger */
 function botLine(w0, bot0, seed) {
@@ -108,9 +117,9 @@ function botLine(w0, bot0, seed) {
 const PLANS = [{ t: 0, a: 0, b: 0 }];
 for (let d = 1; d < 5; d++) PLANS.push({ t: 99, a: d, b: d });
 for (let k = 1; k <= 12; k++) for (let a = 0; a < 5; a++) for (let b = 0; b < 5; b++) if (a !== b) PLANS.push({ t: k * 0.1, a, b });
-function planOk(w0, plan) {
+function planOk(w0, plan, hold = 0) {
   const w = branch(w0);
-  for (let j = 0; j < CAP_T && !over(w); j++) {
+  for (let j = 0; j < CAP_T && !over(w, j * ST, hold); j++) {
     step(w, ST, { 0: MV[j * ST < plan.t ? plan.a : plan.b] });
     if (hurtIn(w)) return false;
     w.events.length = 0;
@@ -138,9 +147,9 @@ const sig = (w, strict) => {
 /* reachable-set BFS over the real step(): true when some input sequence on an
    H-tick grid reaches a quiet world (or a room end) with no hurt; null when a
    strict search outgrows CAP_LAYER */
-export function search(w0, { H = 6, noContact = false, info = null, strict = false, keepI = false } = {}) {
+export function search(w0, { H = 6, noContact = false, info = null, strict = false, keepI = false, hold = 0 } = {}) {
   let layer = [branch(w0, noContact, keepI)];
-  if (over(layer[0])) return true;
+  if (over(layer[0], 0, hold)) return true;
   let nodes = 0, bestT = -1;
   for (let t = 0; t < CAP_T; t += H) {
     const seen = new Set(), next = [];
@@ -157,7 +166,7 @@ export function search(w0, { H = 6, noContact = false, info = null, strict = fal
             break;
           }
           c.events.length = 0;
-          if (over(c)) return true;
+          if (over(c, (t + j + 1) * ST, hold)) return true;
         }
         if (dead) continue;
         const g = sig(c, strict);
@@ -175,7 +184,7 @@ export function search(w0, { H = 6, noContact = false, info = null, strict = fal
 }
 /* any escape at all from this state: the plans first (cheap witnesses) */
 export function hasEscape(w0, opts = {}) {
-  for (const p of PLANS) if (planOk(w0, p)) return true;
+  for (const p of PLANS) if (planOk(w0, p, opts.hold || 0)) return true;
   return search(w0, opts);
 }
 /* longest delay of keeping the last input that still leaves an escape */
@@ -199,7 +208,10 @@ function reaction(w0, last) {
    walked back from a fresh replay of the same run */
 export function runOracle(c, s, { margins = true } = {}) {
   const { w, seed } = makeWorld(c, s), bot = createTileBot(seed), out = [];
-  let trapped = false, had1 = false, last = MV[0];
+  let trapped = false, had1 = false, last = MV[0], shut = [];
+  const closers = [];
+  if (w.feat) for (let k = 0; k < w.feat.length; k++) if (w.feat[k] === F.GATE || w.feat[k] === F.QUICK) closers.push(k);
+  const was = new Uint8Array(closers.length);
   for (let i = 0; i < STEPS; i++) {
     const pr = probe(w);
     if (pr && pr.forced && !trapped) {
@@ -229,16 +241,51 @@ export function runOracle(c, s, { margins = true } = {}) {
       if (ep.stage !== "forced" && ep.stage !== "blast" && margins) ep.margin = reaction(w, last);
       out.push(ep);
     }
+    if (shut.length) { const ep = closure(c, s, w, i, shut); if (ep) out.push(ep); shut = []; }
     trapped = !!(pr && pr.forced);
     if (!pr) had1 = false; else if (pr.e1) had1 = true;
     if (w.state !== "PLAY") break;
     const it = bot.intent(w);
     last = { ...MV[0], move: { x: it.move.x, y: it.move.y } };
+    for (let q = 0; q < closers.length; q++) was[q] = w.grid[closers[q]];
     step(w, ST, { 0: it });
     w.events.length = 0;
+    for (let q = 0; q < closers.length; q++) if (was[q] === T.EMPTY && w.grid[closers[q]] !== T.EMPTY && w.state === "PLAY") shut.push(closers[q]);
     if (w.state === "WIN" || w.state === "LOSE") break;
   }
   return out;
+}
+/* the counterfactual of one step's closures: cells ks never closed and never will */
+function reopen(w, ks) {
+  for (const k of ks) { w.grid[k] = T.EMPTY; w.feat[k] = 0; w.featM[k] = 0; }
+  if (w.quick) w.quick.list = w.quick.list.filter((q) => !ks.includes(q.k));
+  return w;
+}
+/* a gate shut or a mound landed on the step before tick i, world w at tick i */
+function closure(c, s, w, i, ks) {
+  const p = w.players[0];
+  if (!p.alive) return null;
+  const px = tileOf(p.x), py = tileOf(p.y), L0 = lethalMap(w, false);
+  if (L0[key(px, py)] === Infinity && !w.enemies.some((e) => !e.dead && Math.abs(tileOf(e.x) - px) + Math.abs(tileOf(e.y) - py) <= CLOSE_R)) return null;
+  const hold = HOLD, gate = ks.some((k) => w.feat[k] === F.GATE);
+  if (hasEscape(w, { hold }) || search(w, { H: 3, hold })) return null;
+  if (!hasEscape(reopen(clone(w), ks), { H: 3, hold })) return null;
+  const clean = search(w, { H: 3, strict: true, hold });
+  if (clean) return null;
+  const ep = { room: c.room, heat: c.heat, s, seed: seedOf(s), tick: i, t: +(i * ST).toFixed(3), cls: "C", closer: gate ? "gate" : "mound", at: ks, inv: p.iFrames > 0, stage: "", bot: false, margin: 0 };
+  if (clean === null) ep.capped = true;
+  const info = {};
+  search(w, { H: 3, info, hold });
+  const bl = search(w, { H: 3, noContact: true, strict: true, hold });
+  ep.stage = (bl === null ? search(w, { H: 3, noContact: true, hold }) : bl) ? "blast" : "forced";
+  ep.cause = info.cause || "?"; ep.hitIn = info.t; ep.remote = !!p.remote; ep.kick = !!p.kick;
+  ep.plainEsc = true;
+  ep.realI = !search(w, { H: 3, keepI: true, hold });
+  if (ep.realI) Object.assign(ep, walkBack(c, s, i, hold));
+  const P = featProfile(w), lit = gate ? (P.gate.warn || 0) : P.quick.grow;
+  ep.lit = lit;
+  ep.grade = !ep.realI ? "iFrames" : !ep.plainEsc ? "plain" : (ep.onStep || "").split(",").includes("bomb") && ep.gapPlant ? "plant" : ep.lastEsc >= 0 && ep.noReturn <= lit - WARN ? "warned" : "NOWARN";
+  return ep;
 }
 function atTick(c, s, i) {
   const { w, seed } = makeWorld(c, s), bot = createTileBot(seed);
@@ -246,8 +293,8 @@ function atTick(c, s, i) {
   return w;
 }
 /* the last tick (at most 4 s back) with an escape, and what the next step did */
-function walkBack(c, s, i) {
-  const has = (j) => hasEscape(atTick(c, s, j), { H: 3 });
+function walkBack(c, s, i, hold = 0) {
+  const has = (j) => hasEscape(atTick(c, s, j), { H: 3, hold });
   let j = i;
   while (j > 0 && i - j < 240) { j = Math.max(0, j - 6); if (has(j)) break; }
   if (i - j >= 240 || (j === 0 && !has(0))) return { lastEsc: -1 };

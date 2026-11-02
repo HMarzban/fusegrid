@@ -509,7 +509,8 @@ function beltActors(w, dt, player, inp) {
 }
 /* where a carried bomb stops: anything a kick stops for, plus the player's
    tile; pass 2 thru: only a WALL, a BRICK or another bomb, so a bomb rides
-   under walkers and its cell at the fuse is known from the board alone */
+   under walkers and its cell at the fuse is known from the board alone,
+   unless carryPins holds it */
 function carryStop(w, b, tx, ty) {
   if (featProfile(w).belt.thru || isStream(w.feat[key(b.tx, b.ty)])) {
     const v = w.grid[key(tx, ty)];
@@ -524,6 +525,35 @@ function carryStop(w, b, tx, ty) {
   }
   return false;
 }
+/* can the player, from his tile, walk to a cell no live bomb covers, with bomb b at
+   (cx, cy)? Foes and other bombs block, his own tile never */
+function carryOpen(w, b, cx, cy, sx, sy) {
+  const hit = new Set(), bx = b.tx, by = b.ty, seen = new Set([key(sx, sy)]), q = [key(sx, sy)], foes = new Set(), C = CFG.COLS;
+  b.tx = cx; b.ty = cy;
+  for (const o of w.bombs) if (!o.dead) {
+    foes.add(key(o.tx, o.ty));
+    for (const t of computeBlast(w, o.tx, o.ty, o.radius, o.pierce, o.line, o.dir)) hit.add(key(t.tx, t.ty));
+  }
+  b.tx = bx; b.ty = by;
+  for (const e of w.enemies) if (!e.dead) foes.add(key(tileOf(e.x), tileOf(e.y)));
+  for (let h = 0; h < q.length; h++) {
+    if (!hit.has(q[h])) return true;
+    for (const d of [1, -1, C, -C]) {
+      const n = q[h] + d;
+      if (seen.has(n) || foes.has(n) || w.grid[n] !== T.EMPTY) continue;
+      seen.add(n); q.push(n);
+    }
+  }
+  return false;
+}
+/* the flow waits rather than carry a bomb to where it pins the player (a dead end, a
+   foe in the lane), while the bomb staying put would leave him a way out */
+function carryPins(w, b, nx, ny) {
+  const p = w.players[0];
+  if (!p.alive) return false;
+  const sx = tileOf(p.x), sy = tileOf(p.y);
+  return !carryOpen(w, b, nx, ny, sx, sy) && carryOpen(w, b, b.tx, b.ty, sx, sy);
+}
 /* BELT carry: a resting bomb on a belt rides at v tile to tile; it re-reads
    the layer on arrival (a new belt turns it, plain floor stops it) and
    stops short of anything a kick stops for, plus the player's tile */
@@ -533,7 +563,7 @@ function carryBomb(w, b, dt) {
     const k = key(b.tx, b.ty), f = w.feat[k];
     if (!isFlow(f) || w.grid[k] !== T.EMPTY) return;
     const [dx, dy] = flowDir(f);
-    if (carryStop(w, b, b.tx + dx, b.ty + dy)) return;
+    if (carryStop(w, b, b.tx + dx, b.ty + dy) || carryPins(w, b, b.tx + dx, b.ty + dy)) return;
     b.slide = { x: dx, y: dy };
     b.carry = true;
     b.prog = 0;
@@ -541,7 +571,7 @@ function carryBomb(w, b, dt) {
   let travel = b.prog + (isStream(w.feat[key(b.tx, b.ty)]) ? featProfile(w).stream.v : featProfile(w).belt.v) * paceMul(w.pace) * dt;
   while (travel >= 1) {
     const nx = b.tx + b.slide.x, ny = b.ty + b.slide.y;
-    if (carryStop(w, b, nx, ny)) return snap();
+    if (carryStop(w, b, nx, ny) || carryPins(w, b, nx, ny)) return snap();
     b.tx = nx;
     b.ty = ny;
     b.rode = true;
@@ -549,6 +579,7 @@ function carryBomb(w, b, dt) {
     const f = w.feat[key(nx, ny)];
     if (isFlow(f) && w.grid[key(nx, ny)] === T.EMPTY) {
       const [dx, dy] = flowDir(f);
+      if (carryPins(w, b, nx + dx, ny + dy)) return snap();
       b.slide = { x: dx, y: dy };
     } else return snap();
   }
