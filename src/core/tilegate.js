@@ -30,15 +30,16 @@ export function gateBusy(w, x, y) {
   for (const it of w.items) if ((it.tx ?? Math.floor(it.x / TL)) === x && (it.ty ?? Math.floor(it.y / TL)) === y) return true;
   return false;
 }
-/* the cells the player can walk to that no live bomb's blast covers; a foe, a bomb, a
-   brick and tile `shut` (-1: none) block him, his own tile never does. Infinity when nothing
+/* the cells the player can walk to that no live bomb's blast covers; a foe and tile `shut`
+   (-1: none) block him, a bomb and a brick too unless he holds PASS, his own tile never does. Infinity when nothing
    threatens that ground (no foe at its edge, no blast on it): a quiet pocket is no pin,
    the room's own V33 says he can bomb out of it */
 function freeCells(w, sx, sy, shut) {
-  const g = w.grid, D = [[1, 0], [-1, 0], [0, 1], [0, -1]], hit = new Set(), block = new Set(), s0 = key(sx, sy), seen = new Set([s0]), q = [s0];
+  const g = w.grid, pass = w.players[0].passing, D = [[1, 0], [-1, 0], [0, 1], [0, -1]], hit = new Set(), block = new Set(), s0 = key(sx, sy), seen = new Set([s0]), q = [s0];
   for (const b of w.bombs) {
     if (b.dead) continue;
-    block.add(key(b.tx, b.ty)); hit.add(key(b.tx, b.ty));
+    if (!pass) block.add(key(b.tx, b.ty));
+    hit.add(key(b.tx, b.ty));
     for (const [dx, dy] of b.line ? [[(b.dir || { x: 1 }).x || 0, (b.dir || { y: 0 }).y || 0]] : D) for (let i = 1; i <= b.radius; i++) {
       const n = key(b.tx + dx * i, b.ty + dy * i), v = g[n];
       if (v === undefined || v === T.WALL || n === shut) break;
@@ -55,7 +56,7 @@ function freeCells(w, sx, sy, shut) {
     for (const [dx, dy] of D) {
       const c = key(x + dx, y + dy);
       if (foes.has(c)) threat = true;
-      if (c === shut || seen.has(c) || block.has(c) || foes.has(c) || g[c] !== T.EMPTY) continue;
+      if (c === shut || seen.has(c) || block.has(c) || foes.has(c) || (g[c] !== T.EMPTY && !(pass && g[c] === T.BRICK))) continue;
       seen.add(c); q.push(c);
     }
   }

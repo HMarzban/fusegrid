@@ -16,6 +16,9 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-02 — v200 on local main, not pushed: v199's loose ends
+Owner: "do the 1 to 8". PASS no longer causes false holds, GATE and TRAP tips corrected, `hide` survives a conveyor loop, the bake test takes the best of 3, the bot model sees a hold on a bomb's next step, stale AGENTS text fixed. Boards unchanged. Open: the owner's decisions, real phones, playtest #30.
+
 ## 2026-11-02 — v199 LIVE: tile round finished as far as agents can
 Owner: finish all tile and floor tasks, in parallel. TRAP marks and sound, `carryPins` / `gatePins` (CONVEYOR forced moments 18 → 5, GATE 21 → 14), board build worst 803 → 62 ms at 6x on a quiet machine with boards identical, bot sees every tile, flare dropped. STREAM, QUICKSAND, PORTAL, GATE still miss MAX for the bot; no knob did it. Open: real phone, playtest #30, veto round. Record `docs/superpowers/specs/2026-11-02-tiles-finish-v199.md`.
 

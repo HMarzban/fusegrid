@@ -41,7 +41,7 @@ const worldOn = (kind, heat = 0, seed = 4242) => { const w = room(3, seed, ROOM[
   });
   check("ICE PATCH teaches the brake at MAX only", /PRESS BACK AS YOU LET GO/.test(tips.GLIDE[2]) && !/PRESS BACK/.test(tips.GLIDE[0] + tips.GLIDE[1]));
   check("TRAP never says lure above CORE", /LURE/.test(tips.PLATE[0]) && !/LURE/.test(tips.PLATE[1] + tips.PLATE[2]));
-  check("TRAP at MAX: hurts only you, the 6 s window, no chain", /HURT ONLY YOU/.test(tips.PLATE[2]) && /FIRST 6 S SAFE/.test(tips.PLATE[2]) && /NO BOMB CHAIN/.test(tips.PLATE[2]), tips.PLATE[2]);
+  check("TRAP at MAX: hurts only you, the 6 s window, no chain", /HURT ONLY YOU/.test(tips.PLATE[2]) && /6 S SAFE AT START/.test(tips.PLATE[2]) && /NO BOMB CHAIN/.test(tips.PLATE[2]), tips.PLATE[2]);
   check("every TRAP tip says it sets off no bomb", tips.PLATE.every((s) => /NO BOMB CHAIN/.test(s)));
   check("every TRAP tip points at the marks", tips.PLATE.every((s) => /MARKS/.test(s)));
   check("TRAP's MAX FLOOR line says it hurts only you", /HURTS ONLY YOU/.test(TILE_HELP.PLATE[2]) && !/IMMUNE/.test(TILE_HELP.PLATE[2]));
@@ -51,10 +51,10 @@ const worldOn = (kind, heat = 0, seed = 4242) => { const w = room(3, seed, ROOM[
   check("BOOSTER spreads sideways at PLUS / MAX only, and warns at every heat", !/EACH SIDE/.test(tips.BLOOM[0]) && /1 EACH SIDE/.test(tips.BLOOM[1]) && /2 EACH SIDE/.test(tips.BLOOM[2]) && tips.BLOOM.every((s) => /CAN HURT YOU/.test(s)));
   // facts follow the profile, so a parallel retune cannot strand the copy
   const prof = FEAT_PROFILE.map((r) => ({ ...r, plate: { ...r.plate, inert: 5 } }));
-  check("a retuned profile moves the tip's number", /FIRST 5 S SAFE/.test(tileTip("PLATE", prof[2])));
+  check("a retuned profile moves the tip's number", /5 S SAFE AT START/.test(tileTip("PLATE", prof[2])));
   const w = worldOn("PLATE", 2);
   w.featProf = prof;
-  check("coachTip reads the run's own profile", /FIRST 5 S SAFE/.test(coachTip("PLATE", "d", w)));
+  check("coachTip reads the run's own profile", /5 S SAFE AT START/.test(coachTip("PLATE", "d", w)));
   for (const k of KINDS) for (const h of [0, 1, 2]) {
     const wk = worldOn(k, h);
     check(`${k} heat ${h}: touch and keyboard read the same line`, coachTip(k, "p", wk) === coachTip(k, "d", wk) && coachTip(k, "l", wk) === tips[k][h]);

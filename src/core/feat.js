@@ -63,13 +63,13 @@ export function tileTip(kind, pr) {
   }
   if (kind === "PLATE") {
     const p = pr.plate, chain = p.chain === false ? " · NO BOMB CHAIN" : "";
-    if (p.kill === false) return n + "FOES SET IT OFF · MARKS HURT ONLY YOU · FIRST " + p.inert + " S SAFE" + chain;
+    if (p.kill === false) return n + "FOES SET IT OFF · MARKS HURT ONLY YOU · " + p.inert + " S SAFE AT START" + chain;
     if (p.spare) return n + "THE FOE THAT SETS IT OFF LIVES · MARKS HURT YOU" + chain;
     return n + "LURE A FOE ON · MARKS KILL IT, CAN HURT YOU" + chain;
   }
   if (kind === "STREAM") return n + "FLOATS YOUR BOMBS" + (pr.stream.wade < 1 ? " · SLOWS YOU AND FOES" : " · WALK THROUGH FREELY");
   if (kind === "QUICK") return n + (pr.quick.max === 1 ? "A BRICK GROWS BACK ONCE · FOES SINK SLOW" : "BRICKS GROW BACK · WATCH THE RIPPLES");
-  if (kind === "GATE") return n + (pr.gate.cross ? "SHUTS BEHIND YOU · FOES CAN'T PASS" : "SHUTS ON A CLOCK · WATCH THE WARNING");
+  if (kind === "GATE") return n + (pr.gate.cross ? "SHUTS BEHIND YOU · STOPS FOES · WAITS IF A FOE OR BLAST HAS YOU" : "SHUTS ON A CLOCK · WATCH THE WARNING · WAITS IF A FOE OR BLAST HAS YOU");
   if (kind === "PORTAL") return n + (pr.portal.foes ? "YOU, BOMBS, BLASTS AND FOES JUMP" : pr.portal.blast ? "YOU, BOMBS AND BLASTS JUMP" : "YOU AND BOMBS JUMP · BLASTS STOP");
   return "";
 }

@@ -526,12 +526,12 @@ function carryStop(w, b, tx, ty) {
   return false;
 }
 /* can the player, from his tile, walk to a cell no live bomb covers, with bomb b at
-   (cx, cy)? Foes and other bombs block, his own tile never */
+   (cx, cy)? Foes block; bricks and bombs do too, unless he holds PASS; his own tile never */
 function carryOpen(w, b, cx, cy, sx, sy) {
-  const hit = new Set(), bx = b.tx, by = b.ty, seen = new Set([key(sx, sy)]), q = [key(sx, sy)], foes = new Set(), C = CFG.COLS;
+  const hit = new Set(), bx = b.tx, by = b.ty, seen = new Set([key(sx, sy)]), q = [key(sx, sy)], foes = new Set(), C = CFG.COLS, pass = w.players[0].passing;
   b.tx = cx; b.ty = cy;
   for (const o of w.bombs) if (!o.dead) {
-    foes.add(key(o.tx, o.ty));
+    if (!pass) foes.add(key(o.tx, o.ty));
     for (const t of computeBlast(w, o.tx, o.ty, o.radius, o.pierce, o.line, o.dir)) hit.add(key(t.tx, t.ty));
   }
   b.tx = bx; b.ty = by;
@@ -540,7 +540,7 @@ function carryOpen(w, b, cx, cy, sx, sy) {
     if (!hit.has(q[h])) return true;
     for (const d of [1, -1, C, -C]) {
       const n = q[h] + d;
-      if (seen.has(n) || foes.has(n) || w.grid[n] !== T.EMPTY) continue;
+      if (seen.has(n) || foes.has(n) || (w.grid[n] !== T.EMPTY && !(pass && w.grid[n] === T.BRICK))) continue;
       seen.add(n); q.push(n);
     }
   }
@@ -548,7 +548,7 @@ function carryOpen(w, b, cx, cy, sx, sy) {
 }
 /* the flow waits rather than carry a bomb to where it pins the player (a dead end, a
    foe in the lane), while the bomb staying put would leave him a way out */
-function carryPins(w, b, nx, ny) {
+export function carryPins(w, b, nx, ny) {
   const p = w.players[0];
   if (!p.alive) return false;
   const sx = tileOf(p.x), sy = tileOf(p.y);

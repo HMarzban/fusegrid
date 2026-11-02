@@ -60,13 +60,13 @@ through `listGeom` / `listHit` (pitches are caps that scale down in a short
 box); MENU has a PLAY hero row whose tag is the run it starts and group gaps
 before OPTIONS / HIGH SCORES / SOURCE; the SOURCE URL shows only on its
 selected row. Build tag (owner 2026-10-21: "a game version in some where in
-the display or menue"): `v199` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
+the display or menue"): `v200` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
 derived ONLY in `shellview.js` (`REV`, handed to `drawMenu` / `drawSettings`
-as `rev`) and `update.js` (the card's "You are on v199", the running build,
+as `rev`) and `update.js` (the card's "You are on v200", the running build,
 never a guessed next one) — never a second literal. Keyboard MENU appends
 it to the foot hint; the touch hub hangs it under the plate when the box has
 >= 10 units below it (`#sh`), else on the SOURCE tile's teaser (landscape on
-the board canvas); OPTIONS keeps its `BUILD v199` kicker. Never on the HUD.
+the board canvas); OPTIONS keeps its `BUILD v200` kicker. Never on the HUD.
 PAUSE draws `pauseGeom(overlayBox, touch)`: touch (`touchLay`,
 data-lay p/l) caps pitch at `PAUSE_ROW_H` 70 / hero 76 / width 380, a keyboard
 screen at the compact `PAUSE_ROW_D` 44 / hero 54 / width 340 (owner: "too
@@ -935,7 +935,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
 - Storefront live 2026-10-19: the About description leads with play-in-browser
   + three looks + Heat, the Social preview carries the v180 card, and the
   repo has 20 topics (GitHub's cap), so adding one means dropping one.
-- Owner-pending, NOT built (research/design only, 2026-10-11): the 2026-10-11
+- Dropped by the owner 2026-11-01 for The Descent, kept as history (the old story files are not inputs and are never deleted). Research/design only, 2026-10-11, never built: the 2026-10-11
   menu redesign variants A/B/C (separate from the 2026-10-19 CONSOLE PANEL
   menu that shipped); story mode "FUSE/GRID: LOW TIDE"; naming (keep FUSE/GRID +
   subtitle; FUSEBORN is the only clean rename); game bible v2, COMPLETE as
@@ -1086,7 +1086,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
       silhouettes are canon for all three looks; pickups never change shape or
       colour. CLASSIC hash `9fb48f0a:72431`; px cap 160 KB (the px tree is a lazy
       import since #15, about 160 KB after the v189 chevrons; cap 192 KB since v191).
-- Walls (owner rulings 2026-10-21, designed and prototyped, NOT built; issues
+- Walls (owner rulings 2026-10-21; built, in the live game since v185 with the board look; issues
   #17 for CLASSIC 2D + REAL 3D and #31 for PIXEL after #15; record
   `docs/superpowers/specs/2026-10-21-wall-art-design.md`).
   - **W1:** ships SOON on today's gen-1 boards; the CLASSIC hash is re-pinned
@@ -1111,7 +1111,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
     whole-side timer, slow PLAY-clock 3D effects at 142 draws). Prototypes:
     `worktree-agent-ab0dfcf6e3434b2c3` (walls) and
     `worktree-agent-a3057d0a51e6a8d96` (floor), both locked.
-- Hero direction reset (owner ruling 2026-10-11, concept only, NOT built): a
+- Hero direction reset (owner ruling 2026-10-11, concept only, never built; SOLIN was dropped by the owner 2026-11-01 for The Descent's WICK, itself awaiting approval on local branch `descent-design`; MAKO stays the live hero): a
   cartoon with a head, arms and legs, "googooli" (appealing yet dignified,
   smart, stylish), NOT human, space theme — a small being of starlight held in
   a clean flight suit, dark visor with two glowing almond eyes, crown-flame,
@@ -1133,7 +1133,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   Node test fakes define `globalThis.location` WITHOUT `href`, so "is this a
   real page" means `typeof location.href === "string"` (the branch's gen-2 page
   default depended on it; the tile boards were `?gen=3` only from v188 to v197).
-- Release state (2026-11-02): shell **v199** (TRAP warning marks and arm sound, `carryPins` and `gatePins` keep a tile from closing your only way out, faster board building, bot and harness see every tile; BOOSTER flare dropped by the owner; record `docs/superpowers/specs/2026-11-02-tiles-finish-v199.md`) is LIVE on the owner's word. 475 tests. Shell **v198** (GitHub release **v2.3.0**, shell v188 → v198) makes the tile boards what everyone plays: ordinary runs and the DAILY deal gen 3, `?gen=3` is gone, F3 links exist (owner: "Ship without a playtest", waiving #30's playtest; record `docs/superpowers/specs/2026-11-02-tiles-default-v198.md`, with the known risks). Older text below that says `?gen=3` is history. Shell **v197** (loading bar, REAL 3D new-world freeze fix #36, boot graph minus 75 KB raw, and on `?gen=3` BOOSTER marks, ICE brake tip, REAL 3D heat look; rulings and numbers in `docs/superpowers/specs/2026-11-01-loose-ends-v197.md`) is LIVE on the owner's word (2026-11-02). A design on local branch `descent-design` is unmerged and stays unpushed until the owner says.
+- Release state (2026-11-02): shell **v200** (loose ends: PASS no longer causes false holds, GATE tips mention the hold, no crash on a hand-made conveyor loop; no board changes) is on local `main`, not pushed. 478 tests. Shell **v199** (TRAP warning marks and arm sound, `carryPins` and `gatePins` keep a tile from closing your only way out, faster board building, bot and harness see every tile; BOOSTER flare dropped by the owner; record `docs/superpowers/specs/2026-11-02-tiles-finish-v199.md`) is LIVE on the owner's word. 475 tests. Shell **v198** (GitHub release **v2.3.0**, shell v188 → v198) makes the tile boards what everyone plays: ordinary runs and the DAILY deal gen 3, `?gen=3` is gone, F3 links exist (owner: "Ship without a playtest", waiving #30's playtest; record `docs/superpowers/specs/2026-11-02-tiles-default-v198.md`, with the known risks). Older text below that says `?gen=3` is history. Shell **v197** (loading bar, REAL 3D new-world freeze fix #36, boot graph minus 75 KB raw, and on `?gen=3` BOOSTER marks, ICE brake tip, REAL 3D heat look; rulings and numbers in `docs/superpowers/specs/2026-11-01-loose-ends-v197.md`) is LIVE on the owner's word (2026-11-02). A design on local branch `descent-design` is unmerged and stays unpushed until the owner says.
   Shell **v196** (rules for STREAM, QUICKSAND, GATE, PORTAL, all on
   `?gen=3`; no change in a normal run) is LIVE on the owner's word.
   Shell **v195** (BOOSTER warning, tile tips, FLOOR
@@ -1153,7 +1153,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   author `display:flex` beats the UA `[hidden]` rule, so neither card ever hid;
   `tests/hidden-css.test.mjs` now gates every `#id` display rule). The owner
   pushes, or says "push". Boards: gen 3 (bold mazes with tiles) for
-  every ordinary run and the daily since v198, gen 2 for F2 codes, gen 1 for F1 codes / ATTRACT / the intro. 442 tests. Branches `tiles-d`, `frame-a`, `frame-b` are
+  every ordinary run and the daily since v198, gen 2 for F2 codes, gen 1 for F1 codes / ATTRACT / the intro. Branches `tiles-d`, `frame-a`, `frame-b` are
   deleted (merged); `frame-c` (stage set) stays unmerged. The look is recorded in
   `docs/superpowers/specs/2026-10-25-board-look-depth-ambient-design.md`,
   including the loose ends. Loopback dev server: `PORT=8091 node

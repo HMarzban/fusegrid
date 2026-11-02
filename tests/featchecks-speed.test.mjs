@@ -57,3 +57,11 @@ test("the exported engine keeps its shapes", () => {
   assert.ok(hit.ok ? hit.t > 0 && hit.steps > 0 : Object.keys(hit).length === 1);
   assert.deepEqual(timedEscape(E, new Float64Array(N).fill(Infinity), k, k), { ok: true, t: 0, steps: 0 });
 });
+
+test("a closed conveyor loop is no hide and no stack overflow (hand-made layers only: belt() never places one)", () => {
+  const w = board(3, 3, 2), feat = new Uint8Array(N), grid = w.grid.slice(), at = (x, y) => y * CFG.COLS + x;
+  for (const [x, y] of [[3, 3], [4, 3], [5, 3], [3, 4], [4, 4], [5, 4]]) grid[at(x, y)] = T.EMPTY;
+  feat[at(3, 3)] = 1; feat[at(4, 3)] = 2; feat[at(4, 4)] = 3; feat[at(3, 4)] = 4;
+  const b = { grid, feat, level: w.level, heat: 2, items: [], enemies: [] };
+  assert.doesNotThrow(() => featChecks(b, FEAT_PROFILE[2], { only: ["V18", "V19"] }));
+});

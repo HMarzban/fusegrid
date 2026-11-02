@@ -13,6 +13,7 @@ import { portalDim, MAX_JUMPS } from "../../src/core/tileportal.js";
 import { holdReach } from "../../src/core/tilequick.js";
 import { GATE_DEAD } from "../../src/core/tilegate.js";
 import { paceMul } from "../../src/core/pace.js";
+import { carryPins } from "../../src/core/sim.js";
 
 export const C = CFG.COLS, R = CFG.ROWS, N = C * R;
 export const BD = [[1, 0], [0, 1], [-1, 0], [0, -1]];
@@ -145,8 +146,9 @@ export const plateArms = (pc) => BD.map(([dx, dy]) => [dx, dy, pc.r]);
    its tile at t 0, each later cell at its arrival time, up to `horizon` s.
    It moves tile to tile at belt v (pace-scaled), re-reads the layer on
    arrival (plain floor = it stops there) and stops short of WALL / BRICK /
-   another bomb; foes and the player's own tile (dynamic stops) are not
-   predicted. Kicked sliders are left alone, as in the sim. */
+   another bomb, or where carryPins holds it right now (its next step only: a later
+   hold depends on where foes and the player are by then); foes and the player's own
+   tile (dynamic stops) are not otherwise predicted. Kicked sliders are left alone, as in the sim. */
 export function beltPath(w, b, horizon) {
   const path = [[b.tx, b.ty, 0]];
   if (b.slide && !b.carry) return path;
@@ -158,6 +160,7 @@ export function beltPath(w, b, horizon) {
     if (!onFlow(w, k)) break;
     const [dx, dy] = flowDir(w.feat[k]), nx = x + dx, ny = y + dy, nk = key(nx, ny);
     if (w.grid[nk] !== T.EMPTY || w.bombs.some((o) => o !== b && !o.dead && o.tx === nx && o.ty === ny)) break;
+    if (n === 0 && !b.carry && carryPins(w, b, nx, ny)) break;
     t += 1 / v;
     if (t > horizon) break;
     x = nx; y = ny;

@@ -181,3 +181,32 @@ test("a gate is not held open by a blast it would stop: hiding behind it costs n
     assert.equal(w.lives, lives, "heat " + heat);
   }
 });
+
+/* with PASS he walks through bricks, so a brick is no reason to hold anything */
+test("PASS: a flow carries a bomb when he can walk out through the bricks", () => {
+  const walled = (pass) => {
+    const w = pocket(F.BELT_E, 2);
+    w.grid[key(11, 3)] = T.BRICK; w.grid[key(11, 2)] = T.EMPTY; w.grid[key(10, 2)] = T.EMPTY; w.grid[key(9, 2)] = T.EMPTY;
+    put(w, 11, 4);
+    w.players[0].iFrames = 1e9; w.players[0].passing = pass;
+    const b = { x: 10.5 * TL, y: 5.5 * TL, tx: 10, ty: 5, timer: 2, radius: 3, pierce: false, line: false, dir: null, variant: "normal", dead: false };
+    w.bombs = [b];
+    return { w, b };
+  };
+  const a = walled(false); run(a.w, 1.2, NO);
+  assert.equal(a.b.tx, 10, "without PASS the flow waits");
+  const c = walled(true); run(c.w, 1.2, NO);
+  assert.equal(c.b.tx, 11, "with PASS it carries");
+});
+test("PASS: a gate is not held when he can walk out through the bricks", () => {
+  const w = world(8, 2, [...row(5, 4, 6), [7, 5], ...row(5, 8, 10)]);
+  w.feat[key(7, 5)] = F.GATE;
+  w.grid[key(5, 6)] = T.BRICK;
+  for (let x = 2; x <= 10; x++) w.grid[key(x, 7)] = T.EMPTY;
+  w.grid[key(5, 6)] = T.BRICK;
+  put(w, 5, 5);
+  foe(w, 4, 5);
+  assert.equal(gatePins(w, 7, 5), true, "without PASS: a foe beside him, too few cells");
+  w.players[0].passing = true;
+  assert.equal(gatePins(w, 7, 5), false, "with PASS the brick is a door");
+});

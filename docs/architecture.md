@@ -273,6 +273,8 @@ static checks moved to `src/core/featchecks.js`, no item lands on a tile, and
 room 5 re-rolls a layout that cannot hold three SHRINK-safe traps. Results and
 the open items are in the record's 2026-11-01 addendum.
 
+**Shell v200: v199's loose ends.** The hold rules count bricks and bombs as open ground for a player with PASS; `bombMap` keeps its board-only fuse model on purpose, since changing it would change which boards pass and so every F3 link. Boards are unchanged.
+
 **Shell v199: a tile may not close your only way out.** `carryPins` (`sim.js`) and `gatePins` (`tilegate.js`) hold a carried bomb or a shutting gate when the move would leave the player nowhere safe and staying wouldn't; they run on gen 3 only, so F1 and F2 play as before. `relayTell` also marks a trap's wind-up. `featchecks.js` got faster without changing a decision. [Record](superpowers/specs/2026-11-02-tiles-finish-v199.md).
 
 **Shell v198: tiles for everyone.** Ordinary runs and the DAILY deal gen 3, `src/main.js` imports `core/board3.js`, so the tile code is back in the boot graph (the bare sim still imports without it, through board2's seam), `?gen=3` is gone and `code.js` knows F3. [Record](superpowers/specs/2026-11-02-tiles-default-v198.md), with the room-start build times and the risks of shipping with no playtest.

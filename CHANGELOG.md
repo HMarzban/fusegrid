@@ -15,6 +15,20 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
+## shell v200 · 2026-11-02
+
+Small fixes after v199. Same boards.
+
+### Changed
+
+- **GATE's tip says it can wait.** A gate holds open when a foe or blast has you, and the tip now
+  says so. TRAP's MAX tip now says the 6 safe seconds are at the start of the room.
+
+### Fixed
+
+- **PASS no longer stops a CONVEYOR, STREAM or GATE for nothing.** They used to wait as if bricks
+  blocked you even when you could walk through them.
+
 ## shell v199 · 2026-11-02
 
 Traps warn you, and the floor plays fairer.

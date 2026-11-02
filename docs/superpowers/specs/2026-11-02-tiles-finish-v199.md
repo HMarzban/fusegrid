@@ -109,3 +109,14 @@ max at most 62 ms (room 4). A stand-in, not a phone.
 No human has played any of this. No real phone, Safari or Firefox. No real-GPU frame times. The TRAP
 arm sound hasn't been heard. The TRAP wash at MAX wasn't checked on a phone. The CONVEYOR's direction is
 weak in a still frame outside PIXEL, left as is.
+
+## Addendum (shell v200, same day)
+
+Follow-up on the known items above. Boards hash identical to v199.
+
+- **False holds:** fixed for PASS. A foe still counts as a blocker and a threat wherever it stands, on purpose: touching any foe hurts.
+- **Static model drift:** `tilemodel.mjs` `beltPath` now sees a hold on a bomb's next step. `bombMap` stays as it was, because
+  a hold fires only when it leaves the player a way out, so the static answer is never the optimistic one, and changing it would change boards.
+- **Flaky test:** the bake check takes the best of up to 3.
+- **Pre-existing `hide` overflow:** fixed. A closed loop is no hide.
+- **Copy:** TRAP MAX and both GATE tips corrected. CONVEYOR and STREAM tips stay: PLUS and MAX have no room in the 80-character panel, and a bomb pausing on a belt reads for itself.

@@ -228,15 +228,15 @@ function blockAt(E, k, t, L, plant) {
   if (k === plant) return E.plantBlock && t < L[k];
   return E.stopOnBrick && E.g[k] === T.BRICK && t < L[k];
 }
-function hide(E, k, d, t, L, plant) {
+function hide(E, k, d, t, L, plant, hops = 0) {
   if (L[k] !== INF) return false;
   if (!E.moves) return true;
   if (isIce(E, k) && E.nostop && d < 4) return E.stop === "brake" || blockAt(E, nbr(k, d), t, L, plant);
   if (isRide(E, k)) {
     const [ux, uy] = beltDir(E.feat[k]), dn = nbr(k, dirOf(ux, uy));
     if (dn < 0 || E.g[dn] === T.WALL || (E.stopOnBrick && E.g[dn] === T.BRICK && L[dn] === INF)) return true;
-    /* #28 endHalt: a rider is carried to the chain's last cell and stays there */
-    return E.endHalt && (isRide(E, dn) ? hide(E, dn, d, t, L, plant) : E.g[dn] !== T.WALL);
+    /* #28 endHalt: a rider is carried to the chain's last cell and stays there; a closed loop has no last cell, so it is no hide (generated belts never loop) */
+    return E.endHalt && (isRide(E, dn) ? hops < N && hide(E, dn, d, t, L, plant, hops + 1) : E.g[dn] !== T.WALL);
   }
   return true;
 }
@@ -297,6 +297,10 @@ function plates(n) {
 /* one owner each: v19 holds a live map and a base map at once, nothing holds two of a kind */
 const L_LIVE = new Float64Array(N), L_BASE = new Float64Array(N), L_MORE = new Float64Array(N), NONE = [], AT_ONE = [0], BLAST = { t: 0, k: 0, arms: null, through: false, safe: false }, ONE = [BLAST];
 function oneBlast(t, k, arms, through) { BLAST.t = t; BLAST.k = k; BLAST.arms = arms; BLAST.through = through; return ONE; }
+/* carryPins (sim.js) can hold a carried bomb short of the cell modelled here, at run time, on foes and
+   the player's tile, which a static check can't see. It fires only when the bomb staying put leaves him a way
+   out and moving it would not, so a hold is never worse for him than this model. Left alone on purpose: changing
+   the answer here changes which boards pass, and so every F3 link. */
 function bombMap(n, g, c, r, live, blast = null) {
   const arms = blast ? blast.arms : cross(r), through = blast ? blast.through : false;
   if (!live || !n.feat) { lethalInto(L_BASE, g, null, n.prof, oneBlast(n.fuse, c, arms, through), false, null); return L_BASE; }
