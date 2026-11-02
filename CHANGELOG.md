@@ -15,6 +15,27 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
+## shell v199 · 2026-11-02
+
+Traps warn you, and the floor plays fairer.
+
+### Added
+
+- **TRAP warning.** Once a trap starts to wind up, corner marks show every tile its blast will hit,
+  with a short sound.
+
+### Changed
+
+- **A tile won't close your only way out.** A CONVEYOR or STREAM holds a bomb rather than carry it
+  to where you'd have nowhere safe to go, and a GATE holds open rather than shut you in with a foe
+  or a blast.
+- **TRAP's text says what it does.** MAX now reads HURTS ONLY YOU, and the tips point at the marks.
+
+### Fixed
+
+- **Shorter pause entering rooms 1, 4, 7 and 8.** Boards build many times faster, and they're the
+  same boards as before.
+
 ## shell v198 · 2026-11-02
 
 The floor tiles are in the game. Every world's floor now does something.

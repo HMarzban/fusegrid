@@ -166,3 +166,18 @@ test("the oracle's closure search: a quiet world is not safe from a foe", () => 
   assert.equal(search(w), true, "no hold: nothing lit, so it stops at once");
   assert.equal(search(w, { hold: 2.5 }), false, "hold: he has nowhere to go and the chaser walks in");
 });
+
+/* review 2026-11-02: a shut gate stops a blast, so the pocket behind it is safe ground, not a reason to hold it open */
+test("a gate is not held open by a blast it would stop: hiding behind it costs no life", () => {
+  for (const [heat, open] of [[1, 6], [2, 4]]) {
+    const w = world(8, heat, [...row(5, 4, 10), [8, 6], [8, 7], [8, 8], [8, 9], ...row(9, 8, 11)]);
+    w.feat[key(7, 5)] = F.GATE; w.featT = open - 0.05;
+    put(w, 5, 5);
+    const lives = w.lives;
+    w.bombs = [{ x: 9.5 * TL, y: 5.5 * TL, tx: 9, ty: 5, timer: 1, radius: 5, pierce: false, line: false, dir: null, variant: "normal", dead: false }];
+    assert.equal(gatePins(w, 7, 5), false, "heat " + heat);
+    const hurt = run(w, 2, NO);
+    assert.equal(hurt, false, "heat " + heat + " takes no hit");
+    assert.equal(w.lives, lives, "heat " + heat);
+  }
+});

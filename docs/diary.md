@@ -775,6 +775,14 @@ tile boards on every ordinary run and the daily, and adds F3 links so those boar
 The risks went into the [record](superpowers/specs/2026-11-02-tiles-default-v198.md) with the
 ruling. Real players are the playtest now.
 
+## 2026-11-02: finishing the floor
+
+Same day, six agents at once: TRAP's marks, a rule that a tile may not close your only way out,
+faster boards, a bot that finally sees gates and mounds. The honest result: the bot still can't say
+whether MAX feels harder on four of the tiles, because it dies to foes first, and tuning harder to
+please it would only have changed the game for a bot. The flare got cut. Details in the
+[record](superpowers/specs/2026-11-02-tiles-finish-v199.md).
+
 ---
 
 **CONTINUE?** See what each release changed in the

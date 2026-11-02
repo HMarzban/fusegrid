@@ -41,7 +41,7 @@ function freeCells(w, sx, sy, shut) {
     block.add(key(b.tx, b.ty)); hit.add(key(b.tx, b.ty));
     for (const [dx, dy] of b.line ? [[(b.dir || { x: 1 }).x || 0, (b.dir || { y: 0 }).y || 0]] : D) for (let i = 1; i <= b.radius; i++) {
       const n = key(b.tx + dx * i, b.ty + dy * i), v = g[n];
-      if (v === undefined || v === T.WALL) break;
+      if (v === undefined || v === T.WALL || n === shut) break;
       hit.add(n);
       if (v === T.BRICK && !b.pierce && !b.line) break;
     }

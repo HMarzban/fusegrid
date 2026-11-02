@@ -60,13 +60,13 @@ through `listGeom` / `listHit` (pitches are caps that scale down in a short
 box); MENU has a PLAY hero row whose tag is the run it starts and group gaps
 before OPTIONS / HIGH SCORES / SOURCE; the SOURCE URL shows only on its
 selected row. Build tag (owner 2026-10-21: "a game version in some where in
-the display or menue"): `v198` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
+the display or menue"): `v199` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
 derived ONLY in `shellview.js` (`REV`, handed to `drawMenu` / `drawSettings`
-as `rev`) and `update.js` (the card's "You are on v198", the running build,
+as `rev`) and `update.js` (the card's "You are on v199", the running build,
 never a guessed next one) — never a second literal. Keyboard MENU appends
 it to the foot hint; the touch hub hangs it under the plate when the box has
 >= 10 units below it (`#sh`), else on the SOURCE tile's teaser (landscape on
-the board canvas); OPTIONS keeps its `BUILD v198` kicker. Never on the HUD.
+the board canvas); OPTIONS keeps its `BUILD v199` kicker. Never on the HUD.
 PAUSE draws `pauseGeom(overlayBox, touch)`: touch (`touchLay`,
 data-lay p/l) caps pitch at `PAUSE_ROW_H` 70 / hero 76 / width 380, a keyboard
 screen at the compact `PAUSE_ROW_D` 44 / hero 54 / width 340 (owner: "too
@@ -806,6 +806,7 @@ Node v26, `"type": "module"`. No build step, no bundler.
   `flags.js` alone). The word `leaderboard` is refused in `src/` and `tests/`
   and executably gated by `tests/banned-name.test.mjs`; `docs/` is exempt
   because the spec names the term to refuse it.
+- A tile may not close your only way out (v199, gen 3 only, every heat, no profile knob): `sim.js` `carryPins` holds a carried bomb, `tilegate.js` `gatePins` holds a gate at its last warning step (`GATE_ROOM` 10). `tests/tile-foe-lane.test.mjs`. `makeSnapshot` adds a `tiles` key only when `world.feat` is set; `determinism.test` replays all eight tile rooms.
 - Coach v2 (`nb.coach.v2`) also carries nine tile bits (`b g c x f q y o z`, gen 3 only,
   17 bits in all; `z` is the ICE brake, kind `BRAKE`, gated by `glideBrakes`, closing it also sets `g`; copy `feat.js` `tileTip`, 6 s, a tip whose room is left closes
   `rn:"room"`). It shows **one first-use tip per verb**, once ever,
@@ -989,7 +990,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   - **#18 and #22 are MERGED on main (2026-11-01, `?gen=3` only)**: tuned rules,
     specs and the bot-side verdict are in the tiles record's 2026-11-01 addendum.
     #19 / #20 / #21 / #22 / #24 are built too (2026-11-01, later addendum: numbers
-    of record). `src/render/relaytell.js` is BOOSTER's read-only warning;
+    of record). `src/render/relaytell.js` is BOOSTER's and, since v199, TRAP's read-only warning;
     `tileTip` and the FLOOR line teach; `PLATE_TPL` shapes PIT. OPEN before tiles
     go default: the owner's playtest (#30), foe-in-lane forced moments, TRAP's
     wind-up shows on its own tile only, F3 / `g:3`. Wave 2 / 3 (STREAM, QUICKSAND, GATE,
@@ -1132,7 +1133,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   Node test fakes define `globalThis.location` WITHOUT `href`, so "is this a
   real page" means `typeof location.href === "string"` (the branch's gen-2 page
   default depended on it; since v188 the tile boards are `?gen=3` only).
-- Release state (2026-11-02): shell **v198** (GitHub release **v2.3.0**, shell v188 → v198) makes the tile boards what everyone plays: ordinary runs and the DAILY deal gen 3, `?gen=3` is gone, F3 links exist (owner: "Ship without a playtest", waiving #30's playtest; record `docs/superpowers/specs/2026-11-02-tiles-default-v198.md`, with the known risks). Older text below that says `?gen=3` is history. Shell **v197** (loading bar, REAL 3D new-world freeze fix #36, boot graph minus 75 KB raw, and on `?gen=3` BOOSTER marks, ICE brake tip, REAL 3D heat look; rulings and numbers in `docs/superpowers/specs/2026-11-01-loose-ends-v197.md`) is LIVE on the owner's word (2026-11-02). A design on local branch `descent-design` is unmerged and stays unpushed until the owner says.
+- Release state (2026-11-02): shell **v199** (TRAP warning marks and arm sound, `carryPins` and `gatePins` keep a tile from closing your only way out, faster board building, bot and harness see every tile; BOOSTER flare dropped by the owner; record `docs/superpowers/specs/2026-11-02-tiles-finish-v199.md`) is on local `main`, not pushed. 475 tests. Shell **v198** (GitHub release **v2.3.0**, shell v188 → v198) makes the tile boards what everyone plays: ordinary runs and the DAILY deal gen 3, `?gen=3` is gone, F3 links exist (owner: "Ship without a playtest", waiving #30's playtest; record `docs/superpowers/specs/2026-11-02-tiles-default-v198.md`, with the known risks). Older text below that says `?gen=3` is history. Shell **v197** (loading bar, REAL 3D new-world freeze fix #36, boot graph minus 75 KB raw, and on `?gen=3` BOOSTER marks, ICE brake tip, REAL 3D heat look; rulings and numbers in `docs/superpowers/specs/2026-11-01-loose-ends-v197.md`) is LIVE on the owner's word (2026-11-02). A design on local branch `descent-design` is unmerged and stays unpushed until the owner says.
   Shell **v196** (rules for STREAM, QUICKSAND, GATE, PORTAL, all on
   `?gen=3`; no change in a normal run) is LIVE on the owner's word.
   Shell **v195** (BOOSTER warning, tile tips, FLOOR

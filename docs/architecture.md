@@ -273,6 +273,8 @@ static checks moved to `src/core/featchecks.js`, no item lands on a tile, and
 room 5 re-rolls a layout that cannot hold three SHRINK-safe traps. Results and
 the open items are in the record's 2026-11-01 addendum.
 
+**Shell v199: a tile may not close your only way out.** `carryPins` (`sim.js`) and `gatePins` (`tilegate.js`) hold a carried bomb or a shutting gate when the move would leave the player nowhere safe and staying wouldn't; they run on gen 3 only, so F1 and F2 play as before. `relayTell` also marks a trap's wind-up. `featchecks.js` got faster without changing a decision. [Record](superpowers/specs/2026-11-02-tiles-finish-v199.md).
+
 **Shell v198: tiles for everyone.** Ordinary runs and the DAILY deal gen 3, `src/main.js` imports `core/board3.js`, so the tile code is back in the boot graph (the bare sim still imports without it, through board2's seam), `?gen=3` is gone and `code.js` knows F3. [Record](superpowers/specs/2026-11-02-tiles-default-v198.md), with the room-start build times and the risks of shipping with no playtest.
 
 **Shell v197: loading bar and no recompile on a room change.** Before any module runs, `index.html` paints a plate whose progress is finished files against totals a test pins to the real import graphs, or an indeterminate glint when it has no numbers. `rcache.js` puts it up before a lazy look's fetch and synchronous bake. REAL 3D pins compiled programs (`three/progpin.js`) and moved per-world values to uniforms, so a new world links nothing (#36). `genBoard3` and its checks are a lazy chunk (`src/app/gen3load.js`) only `?gen=3` loads. [Record](superpowers/specs/2026-11-01-loose-ends-v197.md).
