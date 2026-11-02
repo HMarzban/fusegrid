@@ -4,7 +4,7 @@
 export const MSG={
   JOIN:   "join",     // {type,pid,name?,seed?}
   INPUT:  "input",    // {type,seq,pid,tick,move:{x,y},fire,shift,remote,kick}
-  SNAPSHOT:"snapshot",// {type,tick,seed,level,state,players[],bombs[],enemies[]}
+  SNAPSHOT:"snapshot",// {type,tick,seed,level,state,players[],bombs[],enemies[],tiles?}
   EVENT:  "event",    // {type,e:{t,x,y,color?}} (cosmetic fx)
   LEAVE:  "leave",    // {type,pid,tick}
   WELCOME:"welcome",  // {type,pid,seed,tick,players?}
@@ -109,10 +109,37 @@ export function validateWelcome(msg){
   return{ok:true};
 }
 
+const fnv=a=>{
+  let h=0x811c9dc5;
+  if(a)for(let i=0;i<a.length;i++){h^=a[i];h=Math.imul(h,16777619);}
+  return h>>>0;
+};
+/* The floor-tile state of a gen-3 world, sparse so every list stays well under
+   capsOk's 64 (a board holds <=16 tiles) and no typed array reaches the wire:
+   layer / pair / grid as hashes, live cells as [k,featM,featS] (a CORE GATE's
+   featS can run with featM 0, so either counts as live), QUICKSAND as
+   [k,st,t,n], then the per-entity tile fields, in entity order. */
+function tileDump(w){
+  const cells=[];
+  for(let k=0;k<w.feat.length;k++)
+    if(w.featM[k]||w.featS[k])cells.push([k,w.featM[k],w.featS[k]]);
+  return {
+    t:w.featT, n:w.featN|0, tier:w.featTier!=null?w.featTier:w.heat,
+    feat:fnv(w.feat), pair:fnv(w.featPair), grid:fnv(w.grid), cells,
+    pend:w.featPend.map(q=>({...q})),
+    quick:w.quick&&w.quick.grid===w.grid?w.quick.list.map(q=>[q.k,q.st,q.t,q.n]):[],
+    players:w.players.map(p=>[p.gl?{...p.gl}:null,p.glBuf?{...p.glBuf}:null,p.warpK,p.beltT]),
+    foes:w.enemies.map(e=>[e.warpK,e.warpHold,e.warpFrom,e.plateK,e.beltT]),
+    bombs:w.bombs.map(b=>[!!b.carry,b.slide?{...b.slide}:null,b.prog,b.warpK]),
+  };
+}
+
 /* Authoritative snapshot the server sends to every client. Intentionally
-   compact: positions + flags only. The client re-derives visuals (fx/particles). */
+   compact: positions + flags only. The client re-derives visuals (fx/particles).
+   `tiles` exists only on a world with a floor-tile layer; gen 1 / 2 keep the old shape. */
 export function makeSnapshot(world, seed, level){
   return {
+    ...(world.feat?{tiles:tileDump(world)}:null),
     type:MSG.SNAPSHOT,
     tick:world.tick, seed, level, state:world.state,
     players: world.players.map(p=>({

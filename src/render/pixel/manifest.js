@@ -1,10 +1,11 @@
 /* PIXEL manifest: every cell the px look needs, derived from code (FOES,
-   POWER, BIOMES, bomb variants), so a new foe, pickup or biome without px
-   cells shows up as a fallback row instead of passing silently. Keys are
+   POWER, BIOMES, bomb variants, the floor tile codes F), so a new foe, pickup,
+   biome or tile without px cells shows up as a failure instead of passing silently. Keys are
    "<group>/<name>"; <group> is the art sheet (art/<group>.js) and <name> the
    key in its cells object. */
 import {BIOMES} from "../../core/config.js";
 import {POWER, FOES} from "../../core/entities.js";
+import {F, FEAT_PROFILE, featKindOf} from "../../core/feat.js";
 
 export const MAKO_FACES = Object.freeze(["front", "side", "back"]);
 export const MAKO_CYCLE = Object.freeze(["idle0", "idle1", "walk0", "walk1"]);
@@ -53,4 +54,14 @@ export const MANIFEST = Object.freeze([
 /* Manifest keys an art set does not draw yet (served by fallback.js). */
 export function pendingOf(art) {
   return MANIFEST.filter((k) => { const i = k.indexOf("/"), sh = art[k.slice(0, i)]; return !(sh && sh.cells && sh.cells[k.slice(i + 1)]); });
+}
+/* The floor tiles, derived from the sim's codes. Not MANIFEST keys: they are not sheet cells, featpx.js builds them from
+   art/feat.js by tile state, and a missing one is a blank slab there, not a fallback.js placeholder. featKindOf answers null
+   for a new code it does not know, which stays in the list on purpose so the check fails. */
+export const FEAT_KINDS = Object.freeze([...new Set(Object.values(F).filter(Boolean).map(featKindOf))]);
+export const FEAT_HEATS = FEAT_PROFILE.length;
+/* Parts-built kinds (CONVEYOR roll[h], STREAM c[h]) hold one row per heat in `roll` / `c`, the rest one frame per heat. */
+const featHas = (a, h) => !!a && !!(a.roll || a.c || a)[h];
+export function featPending(art, kinds = FEAT_KINDS) {
+  return kinds.flatMap((k) => Array.from({length: FEAT_HEATS}, (_, h) => h).filter((h) => !featHas(art[k], h)).map((h) => "feat/" + k + "." + h));
 }

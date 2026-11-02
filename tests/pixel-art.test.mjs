@@ -17,6 +17,10 @@ import { PLAYER_HULL } from "../src/render/sprites.js";
 import { pxRamp, resolveSlot, HEX } from "../src/render/pixel/palette.js";
 import { validateCell, flipX, rot90, swapCell, cellRGBA, axisOf } from "../src/render/pixel/grid.js";
 import { MANIFEST, pendingOf, FOE_TYPES, ITEM_TYPES, BOMB_MARKS, BLAST_PIECES, BLAST_AGES, MAKO_FACES, MAKO_CYCLE, MAKO_ONE, MAKO_OVER } from "../src/render/pixel/manifest.js";
+import { FEAT_KINDS, FEAT_HEATS, featPending } from "../src/render/pixel/manifest.js";
+import { F, featKindOf } from "../src/core/feat.js";
+import { FEAT_ART } from "../src/render/pixel/art/feat.js";
+import { featPxCell } from "../src/render/featpx.js";
 import { ART } from "../src/render/pixel/art/index.js";
 import { createAtlas } from "../src/render/pixel/atlas.js";
 import { fallbackCell } from "../src/render/pixel/fallback.js";
@@ -153,6 +157,20 @@ function check(name, cond, detail) {
   check("manifest: 3 blast pieces x 3 authored ages (fade generated)", BLAST_PIECES.length * BLAST_AGES.length === MANIFEST.filter((k) => k.startsWith("blast/")).length);
   check("manifest: MAKO 3 facings x 4 + 13 one-shots + 3 overlays", MAKO_FACES.length * MAKO_CYCLE.length + MAKO_ONE.length + MAKO_OVER.length === MANIFEST.filter((k) => k.startsWith("mako/")).length && MANIFEST.filter((k) => k.startsWith("mako/")).length === 28);
   check("manifest keys unique", new Set(MANIFEST).size === MANIFEST.length, MANIFEST.length);
+}
+
+// ---- floor tiles, derived from the sim's codes: a new tile without cells fails here, not as a blank slab in the game ----
+{
+  const blank = (s) => featPxCell(BIOMES[0], s).rows.every((r) => /^O+$/.test(r));
+  check("floor tiles: every code in F has a kind (" + FEAT_KINDS.join() + ")", FEAT_KINDS.length === 8 && !FEAT_KINDS.includes(null) && Object.values(F).filter(Boolean).every((v) => FEAT_KINDS.includes(featKindOf(v))));
+  check("floor tiles: art/feat.js holds every kind x heat", featPending(FEAT_ART).length === 0, featPending(FEAT_ART).join());
+  const empty = FEAT_KINDS.flatMap((kind) => [0, 1, 2].filter((h) => blank({kind, h, pair: 1})).map((h) => kind + "." + h));
+  check("floor tiles: featPxCell draws every kind x heat (no blank slab)", FEAT_HEATS === 3 && empty.length === 0, empty.join());
+  check("floor tiles: the blank check can fail (a kind featPxCell does not know)", blank({kind: "NEW", h: 0}));
+  const noGate = {...FEAT_ART, GATE: undefined}, thin = {...FEAT_ART, BELT: {...FEAT_ART.BELT, roll: [FEAT_ART.BELT.roll[0]]}};
+  check("floor tiles: a tile whose art is missing is reported at every heat", featPending(noGate).join() === "feat/GATE.0,feat/GATE.1,feat/GATE.2", featPending(noGate).join());
+  check("floor tiles: a parts-built tile missing a heat is reported", featPending(thin).join() === "feat/BELT.1,feat/BELT.2", featPending(thin).join());
+  check("floor tiles: a new kind with no cells is reported", featPending(FEAT_ART, [...FEAT_KINDS, "NEW"]).length === 3 && featPending(FEAT_ART, [null]).length === 3);
 }
 
 // ---- PENDING ----

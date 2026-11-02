@@ -13,6 +13,8 @@
      --only smoke|desk|phone|rate|sweep|flush|hitch   one block (default desk,phone,rate)
        smoke     5 s check of the clock, the GPU and the staging; prints and stops
        desk      MENU, busy gen-2 room, fat world, worst gen-3 room, PAUSE
+                 (gen 3 is what ordinary runs deal since v198; gen 2 is an F2 link's
+                 tile-free board, so read the gen-3 row as the live game's)
        sweep     the desk rooms alone, every world at gen 2 and gen 3
        phone     393x852 @3 mobile emulation of the same scenes (M5 GPU, not a phone)
        rate      the busy room at FRAME RATE 30 / 60 / MAX
