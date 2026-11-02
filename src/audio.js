@@ -472,6 +472,10 @@ export function createAudio(opts) {
           voice("triangle", 880, 220, 0.09, 0.06, { t: "highpass", f0: 200 });
           voice("sine", 330, 990, 0.09, 0.05);
           break;
+        case "plate":
+          voice("square", 740, 990, 0.05, 0.05, { t: "highpass", f0: 400 });
+          voice("triangle", 1480, 1480, 0.04, 0.03, { t: "highpass", f0: 700 });
+          break;
         case "throw":
           noise(0.11, 0.07, { t: "highpass", f0: 900, f1: 2200 });
           voice("sawtooth", 420, 760, 0.1, 0.07, { t: "highpass", f0: 350 });

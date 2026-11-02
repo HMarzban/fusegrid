@@ -41,8 +41,10 @@ const worldOn = (kind, heat = 0, seed = 4242) => { const w = room(3, seed, ROOM[
   });
   check("ICE PATCH teaches the brake at MAX only", /PRESS BACK AS YOU LET GO/.test(tips.GLIDE[2]) && !/PRESS BACK/.test(tips.GLIDE[0] + tips.GLIDE[1]));
   check("TRAP never says lure above CORE", /LURE/.test(tips.PLATE[0]) && !/LURE/.test(tips.PLATE[1] + tips.PLATE[2]));
-  check("TRAP at MAX: hurts only you, the 6 s window, no chain", /HURTS ONLY YOU/.test(tips.PLATE[2]) && /FIRST 6 S SAFE/.test(tips.PLATE[2]) && /NO BOMB CHAIN/.test(tips.PLATE[2]), tips.PLATE[2]);
+  check("TRAP at MAX: hurts only you, the 6 s window, no chain", /HURT ONLY YOU/.test(tips.PLATE[2]) && /FIRST 6 S SAFE/.test(tips.PLATE[2]) && /NO BOMB CHAIN/.test(tips.PLATE[2]), tips.PLATE[2]);
   check("every TRAP tip says it sets off no bomb", tips.PLATE.every((s) => /NO BOMB CHAIN/.test(s)));
+  check("every TRAP tip points at the marks", tips.PLATE.every((s) => /MARKS/.test(s)));
+  check("TRAP's MAX FLOOR line says it hurts only you", /HURTS ONLY YOU/.test(TILE_HELP.PLATE[2]) && !/IMMUNE/.test(TILE_HELP.PLATE[2]));
   check("PLUS TRAP spares the foe that sets it off", /SETS IT OFF LIVES/.test(tips.PLATE[1]));
   check("CONVEYOR says who rides at each heat", /NOT YOU/.test(tips.BELT[0]) && /YOU, NOT FOES/.test(tips.BELT[1]) && /BOMBS, YOU AND FOES/.test(tips.BELT[2]), tips.BELT.join(" | "));
   check("CONVEYOR teaches the step-off only when it carries you", !/STEP OFF/.test(tips.BELT[0]) && /HOLD A SIDE TO STEP OFF/.test(tips.BELT[1]) && /HOLD A SIDE TO STEP OFF/.test(tips.BELT[2]));
@@ -63,7 +65,7 @@ const worldOn = (kind, heat = 0, seed = 4242) => { const w = room(3, seed, ROOM[
   for (const k of KINDS) tips[k].forEach((s, h) => check(`${k} heat ${h} reads inside the ${COACH_TILE_DUR} s window at 3 words/s`, words(s) / 3 <= COACH_TILE_DUR, words(s) + " words"));
   // one source: the copy literals live in feat.js alone
   const walk = (d) => readdirSync(d).flatMap((f) => { const p = join(d, f); return statSync(p).isDirectory() ? walk(p) : /\.js$/.test(f) ? [p] : []; });
-  const lits = Object.values(TILE_HELP).flat().concat(["HURTS ONLY YOU", "PRESS BACK AS YOU LET GO", "HOLD A SIDE TO STEP OFF", "NO BOMB CHAIN", '"ICE PATCH"', '"CONVEYOR"']);
+  const lits = Object.values(TILE_HELP).flat().concat(["HURT ONLY YOU", "PRESS BACK AS YOU LET GO", "HOLD A SIDE TO STEP OFF", "NO BOMB CHAIN", '"ICE PATCH"', '"CONVEYOR"']);
   const strays = [];
   for (const f of walk("src")) {
     if (f === join("src", "core", "feat.js")) continue;

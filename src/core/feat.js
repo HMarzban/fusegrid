@@ -32,7 +32,7 @@ export const TILE_HELP = Object.freeze({
   BELT: ["CARRIES YOUR BOMBS", "CARRIES BOMBS AND YOU", "CARRIES ALL, FOES TOO"],
   GLIDE: ["SMOOTH ICE, STOP ANY TIME", "FAST ICE, SLIDES A STEP", "SLIDES ON · BACK TO STOP"],
   BLOOM: ["THROWS YOUR BLAST 2 ON", "2 ON + 1 EACH SIDE", "2 ON + 2 EACH SIDE, LATE"],
-  PLATE: ["LURE FOES ON · SHORT", "TRIGGER FOE LIVES · LONG", "FOES IMMUNE · HUGE"],
+  PLATE: ["LURE FOES ON · SHORT", "TRIGGER FOE LIVES · LONG", "HURTS ONLY YOU · HUGE"],
   STREAM: ["CARRIES BOMBS", "CARRIES BOMBS · SLOWS ALL", "FAST · SLOWS ALL MORE"],
   QUICK: ["BRICK GROWS BACK ONCE", "GROWS BACK, 3 TIMES", "KEEPS GROWING BACK"],
   GATE: ["SHUTS BEHIND YOU", "SHUTS ON A CLOCK", "SHUTS LONGER"],
@@ -43,7 +43,6 @@ export const TILE_NAME = Object.freeze({ BLOOM: "BOOSTER", GLIDE: "ICE PATCH", B
    this says what to do about it, one panel line (<= 80 chars, the 600 board) and
    no key names, so every layout reads the same. Facts come from the live
    profile row, so a retuned knob cannot leave the copy behind. */
-const REACH = ["", "SHORT", "LONG", "HUGE"];
 /* The one test for "this heat's ICE line teaches the brake", V19's nostop case */
 export const glideBrakes = (pr) => pr.glide.coast >= 2 && pr.glide.stop === "brake";
 export function tileTip(kind, pr) {
@@ -63,10 +62,10 @@ export function tileTip(kind, pr) {
     return n + "CARRIES " + (!b.actors ? "YOUR BOMBS, NOT YOU" : b.foes === false ? "BOMBS AND YOU, NOT FOES" : "BOMBS, YOU AND FOES") + (b.actors && b.snap ? " · HOLD A SIDE TO STEP OFF" : "");
   }
   if (kind === "PLATE") {
-    const p = pr.plate, reach = REACH[p.r] || "BIG", chain = p.chain === false ? " · NO BOMB CHAIN" : "";
-    if (p.kill === false) return n + "FOES SET IT OFF · HURTS ONLY YOU · ROOM'S FIRST " + p.inert + " S SAFE" + chain;
-    if (p.spare) return n + "THE FOE THAT SETS IT OFF LIVES · " + reach + " BLAST HURTS YOU" + chain;
-    return n + "LURE A FOE ON · " + reach + " BLAST KILLS IT, CAN HURT YOU" + chain;
+    const p = pr.plate, chain = p.chain === false ? " · NO BOMB CHAIN" : "";
+    if (p.kill === false) return n + "FOES SET IT OFF · MARKS HURT ONLY YOU · FIRST " + p.inert + " S SAFE" + chain;
+    if (p.spare) return n + "THE FOE THAT SETS IT OFF LIVES · MARKS HURT YOU" + chain;
+    return n + "LURE A FOE ON · MARKS KILL IT, CAN HURT YOU" + chain;
   }
   if (kind === "STREAM") return n + "FLOATS YOUR BOMBS" + (pr.stream.wade < 1 ? " · SLOWS YOU AND FOES" : " · WALK THROUGH FREELY");
   if (kind === "QUICK") return n + (pr.quick.max === 1 ? "A BRICK GROWS BACK ONCE · FOES SINK SLOW" : "BRICKS GROW BACK · WATCH THE RIPPLES");
