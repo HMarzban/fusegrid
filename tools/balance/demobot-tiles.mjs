@@ -1,8 +1,8 @@
 /* TILE-AWARE DEMOBOT FORK (#25 balance harness; tracked, offline, never
    imported by src/, never shipped). A copy of src/app/demobot.js (the stock
    attract bot, pinned by tests/demobot.test.mjs) plus a tile model that runs
-   ONLY when the room carries floor-tile rule codes 1..7 (`rulesOn`, see
-   tilemodel.mjs). With world.feat null, or art-only codes 8..14, every
+   ONLY when the room carries floor-tile rule codes (`rulesOn`, see
+   tilemodel.mjs). With world.feat null every
    intent and every private-rng draw equals the stock bot's tick by tick
    (tests/demobot-tiles.test.mjs; the full pin is `tilesweep.mjs --plan pin`).
    Tile model (spec 2026-10-21 §6, synthesis §7.5), all knobs read through
@@ -10,6 +10,12 @@
    - PORTAL (#27): a walk onto a live portal comes out of the twin, in the flee
      search, the timed search and every hop; a twin in danger is no step; a
      blast's arm goes on from the twin in the danger map;
+   - GATE (#26): the flee search reads each bar at the time it gets there, a bomb's
+     danger is its arm at the fuse (a bar that opens by then is no cover), and a route
+     may go through a shut bar: the bot walks up and waits for it when that beats the
+     way round; it does not lure a foe into a bar;
+   - QUICKSAND (#26): the flee search closes a tile due to be a mound before it gets
+     there; a grown mound is a brick to it, as it is to every path;
    - danger: CONVEYOR edge costs in the flee search and every cell a carried
      bomb reaches before its fuse; ICE PATCH flee destinations (no wait tile
      at MAX, coast endpoints; with glide.stop "brake" every ice tile, since
@@ -37,8 +43,9 @@ import {CFG,T,key,DIRS4} from "../../src/core/config.js";
 import "../../src/core/board3.js";
 import {bfsNext} from "../../src/core/board.js";
 import {createRng} from "../../src/core/rng.js";
-import {isBelt,isFlow} from "../../src/core/feat.js";
-import {rulesOn,prof,tileDanger,bombCover,iceDestOk,moveSpeed,warpTo} from "./tilemodel.mjs";
+import {isFlow} from "../../src/core/feat.js";
+import {paceMul} from "../../src/core/pace.js";
+import {rulesOn,prof,tileDanger,bombCover,iceDestOk,moveSpeed,warpTo,gatesOf,isLiveGate,gateShutAt,gateOpenIn,moundTimes} from "./tilemodel.mjs";
 import {escape} from "./escape.mjs";
 
 /* FG_BOTBRAKE: unset = brakes at once; "0" = never, and the flee model knows
@@ -121,7 +128,7 @@ export function createTileBot(seed){
   function fleeMoveT(w,ptx,pty,danger){
     const N=CFG.COLS*CFG.ROWS,best=new Float64Array(N).fill(Infinity),seq=new Int32Array(N),step0=new Int16Array(N),
       done=new Uint8Array(N),prev=new Int16Array(N).fill(-1),p=w.players[0],s0=key(ptx,pty);
-    const pb=prof(w).belt;
+    const pb=prof(w).belt,mound=moundTimes(w),secs=pb.actors?1:p.speed*paceMul(w.pace);
     best[s0]=0;
     let fallback=-1,n=1;
     for(;;){
@@ -138,12 +145,15 @@ export function createTileBot(seed){
       for(const d of DIRS4){
         const nx=x+d.x,ny=y+d.y,ok=key(nx,ny);
         if(nx<0||ny<0||nx>=CFG.COLS||ny>=CFG.ROWS)continue;
-        if(w.grid[ok]!==T.EMPTY)continue;
+        const bar=isLiveGate(w,ok);
+        if(w.grid[ok]!==T.EMPTY&&!bar)continue;
         const tw=warpTo(w,ok),nk=tw>=0?tw:ok;
         if(done[nk])continue;
         const v=pb.actors?moveSpeed(w,p,k,d.x,d.y,true,true):1;
         if(v<=0.05)continue;
         const nt=bt+1/v;
+        if(bar&&gateShutAt(w,ok,nt/secs))continue;
+        if(mound&&mound[ok]<=nt/secs)continue;
         if(nt<best[nk]){best[nk]=nt;prev[nk]=k;seq[nk]=n++;step0[nk]=ok;}
        }
      }
@@ -217,8 +227,40 @@ export function createTileBot(seed){
      }
     return null;
    }
+  /* BFS steps from (x0, y0) to (x1, y1), through live gates or not: {first, len} */
+  function route(w,x0,y0,x1,y1,blocked,through){
+    const s0=key(x0,y0),t0=key(x1,y1),first=new Map([[s0,-1]]),q=[[s0,0]];
+    for(let h=0;h<q.length;h++){
+      const [a,n]=q[h],x=a%CFG.COLS,y=(a/CFG.COLS)|0;
+      for(const d of DIRS4){
+        const nx=x+d.x,ny=y+d.y,k=key(nx,ny);
+        if(nx<0||ny<0||nx>=CFG.COLS||ny>=CFG.ROWS||first.has(k)||(blocked&&blocked.has(k)))continue;
+        if(w.grid[k]!==T.EMPTY&&!(through&&isLiveGate(w,k)))continue;
+        first.set(k,a===s0?k:first.get(a));
+        if(k===t0)return {first:first.get(k),len:n+1};
+        q.push([k,n+1]);
+       }
+     }
+    return null;
+   }
+  /* GATE: through a shut bar when the wait plus the steps beats the way round; a bar
+     next on the route is a wait: {x, y, wait:true}, and the caller stands */
+  function hopGate(w,x0,y0,x1,y1,blocked){
+    if(x0===x1&&y0===y1)return null;
+    const shut=gatesOf(w).filter(k=>isLiveGate(w,k)&&w.grid[k]===T.WALL);
+    const open=route(w,x0,y0,x1,y1,blocked,false);
+    let r=open;
+    if(shut.length){
+      const via=route(w,x0,y0,x1,y1,blocked,true);
+      if(via&&(!open||via.len+Math.max(...shut.map(k=>gateOpenIn(w,k,0)))*w.players[0].speed*paceMul(w.pace)<open.len))r=via;
+     }
+    if(!r)return null;
+    const x=Math.sign(r.first%CFG.COLS-x0),y=Math.sign(((r.first/CFG.COLS)|0)-y0);
+    return w.grid[r.first]===T.WALL?{x,y,wait:true}:{x,y};
+   }
   function hopToward(w,x0,y0,x1,y1,blocked){
     if(w.featPair)return hopWarp(w,x0,y0,x1,y1,blocked);
+    if(gatesOf(w).length)return hopGate(w,x0,y0,x1,y1,blocked);
     const hop=bfsNext(w.grid,x0,y0,x1,y1,false,blocked);
     if(!hop)return null;
     return {x:Math.sign(hop.x-x0),y:Math.sign(hop.y-y0)};
@@ -433,7 +475,8 @@ export function createTileBot(seed){
            }else if(ne){
             const hop=hopToward(world,ptx,pty,ne.tx,ne.ty,blocked)
               ||hopToward(world,ptx,pty,ne.tx,ne.ty,null);
-            if(hop&&!foeAt(world,ptx+hop.x,pty+hop.y)
+            if(hop&&hop.wait){mode=9;}
+            else if(hop&&!foeAt(world,ptx+hop.x,pty+hop.y)
               &&walkOk(world,ptx,pty,ptx+hop.x,pty+hop.y,danger,onBomb,deep)){
               out.move=hop;adopt(hop.x,hop.y,20,4,ne.tx,ne.ty);
              }else if(tryPlantBrick(world,p,ptx,pty)){

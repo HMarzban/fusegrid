@@ -20,7 +20,7 @@ import { createWorld, loadLevel, step } from "../../src/core/sim.js";
 import { createDemobot } from "../../src/app/demobot.js";
 import { FEAT_PROFILE, isBelt } from "../../src/core/feat.js";
 import { createTileBot } from "./demobot-tiles.mjs";
-import { rulesOn, ruleKind, prof } from "./tilemodel.mjs";
+import { rulesOn, ruleKind, prof, gatesOf } from "./tilemodel.mjs";
 import { probe } from "./escape.mjs";
 
 export const CAP = 120, STEPS = Math.round(CAP / CFG.STEP);
@@ -66,9 +66,9 @@ export function runRoom(c, s) {
   const r = { room: c.room, heat: c.heat, pace: c.pace || 0, arm: c.arm, prof: c.profName || "", s, seed, tpl: w.layout ? w.layout.tpl : "", kind: kind || "", rules: tm ? 1 : 0,
     st: "TIMEOUT", t: CAP, hits: 0, absorbs: 0, firstHit: -1, hit5: 0, hit15: 0, hBlast: 0, hContact: 0, hTile: 0, ownRelay: 0, chainEarly: 0, nearMiss: 0,
     kills: 0, tileKills: 0, relayKills: 0, trapKills: 0, selfClears: 0, selfClearsArm: 0, rideKills: 0, deliveries: 0,
-    noEsc: 0, noEscOn: 0, noEscPlant: 0, noEscArm: 0, noEscHit: 0, noEscRide: 0, noEscIce: 0, dangerT: 0, closeCalls: 0, closeCallsT: 0 };
+    noEsc: 0, noEscOn: 0, noEscPlant: 0, noEscArm: 0, noEscHit: 0, noEscRide: 0, noEscIce: 0, dangerT: 0, closeCalls: 0, closeCallsT: 0, warps: 0, foeWarps: 0, gateX: 0, mounds: 0, grown: 0, heldT: 0, shutT: 0 };
   const nm = new Map(), armD = new Map(), seenBl = new WeakSet(), cutoff = c.metrics === false;
-  let trapped = false, lastEsc = -99, pendHit = 0, had1 = false, cc = null;
+  let trapped = false, lastEsc = -99, pendHit = 0, had1 = false, cc = null, warpT = -99, gateK = -1, grew = 0;
   const coreBelt = tm && kind === "BELT" && !prof(w).belt.actors;
   for (let i = 0; i < STEPS; i++) {
     const p0 = w.players[0], pk0 = key(tileOf(p0.x), tileOf(p0.y)), tNow = i * CFG.STEP;
@@ -99,10 +99,23 @@ export function runRoom(c, s) {
     const lives0 = w.lives, shield0 = w.players[0].shield;
     step(w, CFG.STEP, { 0: bot.intent(w) });
     const p = w.players[0], tt = (i + 1) * CFG.STEP, ptx = tileOf(p.x), pty = tileOf(p.y);
-    const lost = lives0 - w.lives;
+    const lost = lives0 - w.lives, pk = key(ptx, pty);
+    if (w.feat && w.feat[pk] === 14 && pk !== gateK) r.gateX++;
+    gateK = w.feat && w.feat[pk] === 14 ? pk : -1;
+    if (w.quick && w.quick.list.length) {
+      /* mounds grown (a new room state restarts the q.n sum) and time with a growth waiting to retry */
+      let n = 0, wait = 0;
+      for (const q of w.quick.list) { n += q.n; if (q.st === 1) wait = 1; }
+      if (n > grew) r.grown += n - grew;
+      grew = n;
+      if (wait) r.heldT += CFG.STEP;
+    }
+    if (w.featM && w.feat) { const g = gatesOf(w); if (g.some((k) => w.featM[k] === 4)) r.shutT += CFG.STEP; }
     let hurtEv = null;
     for (const e of w.events) {
       if (e.t === "hurt") hurtEv = e;
+      else if (e.t === "warp") { if (e.who === "you") { r.warps++; warpT = tt; } else if (e.who === "foe") r.foeWarps++; }
+      else if (e.t === "brick" && e.mound) r.mounds++;
       else if (e.t === "plate") { const k = key(tileOf(e.x), tileOf(e.y)); armD.set(k, man(ptx, pty, tileOf(e.x), tileOf(e.y))); }
     }
     if (shield0 && !w.players[0].shield && hurtEv) r.absorbs++;
@@ -114,7 +127,7 @@ export function runRoom(c, s) {
       if (pendHit && tt - lastEsc <= 3) { r.noEscHit++; pendHit = 0; }
       const hx = tileOf(hurtEv.x), hy = tileOf(hurtEv.y), hk = key(hx, hy);
       const bl = w.blades.filter((b) => b.tiles && b.tiles.some((q) => q.tx === hx && q.ty === hy));
-      const onTile = tm && w.feat[hk] >= 1 && w.feat[hk] <= 11;
+      const onTile = tm && (w.feat[hk] >= 1 || tt - warpT < 0.5);
       if (bl.length) {
         r.hBlast++;
         if (bl.some((b) => b.src === "relay")) r.ownRelay++;

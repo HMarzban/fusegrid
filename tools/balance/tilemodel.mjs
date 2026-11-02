@@ -1,6 +1,6 @@
 /* Tile model for the offline balance harness (#25): the floor-tile rules of
-   src/core/sim.js (codes 1..7 = CONVEYOR E/S/W/N, ICE PATCH, BOOSTER, TRAP;
-   sim names BELT / GLIDE / BLOOM / PLATE) as read-only predictions. Shared by
+   src/core/sim.js (codes 1..14: CONVEYOR E/S/W/N, ICE PATCH, BOOSTER, TRAP, STREAM E/S/W/N,
+   QUICKSAND, PORTAL, GATE; sim names BELT / GLIDE / BLOOM / PLATE / QUICK) as read-only predictions. Shared by
    the bot fork (danger sets) and the no-escape counter (timed lethal map).
    Every knob comes from the sim's own featProfile(w) and paceMul, so a
    harness knob table (w.featProf) or tier override (w.featTier) reaches the
@@ -10,16 +10,17 @@ import "../../src/core/board3.js";
 import { tileOf } from "../../src/core/board.js";
 import { featProfile, isBelt, beltDir, isStream, isFlow, flowDir, pairTwins } from "../../src/core/feat.js";
 import { portalDim, MAX_JUMPS } from "../../src/core/tileportal.js";
+import { holdReach } from "../../src/core/tilequick.js";
+import { GATE_DEAD } from "../../src/core/tilegate.js";
 import { paceMul } from "../../src/core/pace.js";
 
 export const C = CFG.COLS, R = CFG.ROWS, N = C * R;
 export const BD = [[1, 0], [0, 1], [-1, 0], [0, -1]];
-export const NAME = Object.freeze({ BELT: "CONVEYOR", GLIDE: "ICE PATCH", BLOOM: "BOOSTER", PLATE: "TRAP", STREAM: "STREAM", PORTAL: "PORTAL" });
+export const NAME = Object.freeze({ BELT: "CONVEYOR", GLIDE: "ICE PATCH", BLOOM: "BOOSTER", PLATE: "TRAP", STREAM: "STREAM", PORTAL: "PORTAL", QUICK: "QUICKSAND", GATE: "GATE" });
 export const prof = (w) => featProfile(w);
 export const beltV = (w) => prof(w).belt.v * paceMul(w.pace);
 
-/* the tile model runs only when the room carries a RULE code (1..11, STREAM is
-   8..11, or 13 PORTAL); QUICKSAND and GATE are grid cells to the model */
+/* the tile model runs only when the room carries a rule code; every code 1..14 has a rule */
 const memo = new WeakMap();
 export function rulesOn(w) {
   const f = w.feat;
@@ -27,14 +28,14 @@ export function rulesOn(w) {
   let v = memo.get(f);
   if (v === undefined) {
     v = false;
-    for (let i = 0; i < f.length; i++) if ((f[i] >= 1 && f[i] <= 7) || isStream(f[i]) || f[i] === 13) { v = true; break; }
+    for (let i = 0; i < f.length; i++) if (f[i] >= 1 && f[i] <= 14) { v = true; break; }
     memo.set(f, v);
   }
   return v;
 }
 export function ruleKind(w) {
   if (!w.feat) return null;
-  for (const v of w.feat) { if (isBelt(v)) return "BELT"; if (v === 5) return "GLIDE"; if (v === 6) return "BLOOM"; if (v === 7) return "PLATE"; if (isStream(v)) return "STREAM"; if (v === 13) return "PORTAL"; }
+  for (const v of w.feat) { if (isBelt(v)) return "BELT"; if (v === 5) return "GLIDE"; if (v === 6) return "BLOOM"; if (v === 7) return "PLATE"; if (isStream(v)) return "STREAM"; if (v === 13) return "PORTAL"; if (v === 12) return "QUICK"; if (v === 14) return "GATE"; }
   return null;
 }
 export const BOT_BRAKE = !(globalThis.process && globalThis.process.env && globalThis.process.env.FG_BOTBRAKE === "0");
@@ -59,6 +60,55 @@ export const carries = (w) => { const pb = prof(w).belt; return !!pb.actors && p
 /* PORTAL: the twin of k for a walker crossing onto it now, -1 when k is plain floor to him */
 export const warpTo = (w, k) => (w.featPair && w.featPair[k] && w.grid[k] === T.EMPTY && !portalDim(w, k) ? pairTwins(w.featPair)[k] : -1);
 export const armPt = (w) => (w.featPair ? { twin: pairTwins(w.featPair), blast: !!prof(w).portal.blast } : null);
+/* GATE, tilegate.js as a forecast: one signed countdown u, > 0 open, (-shut, 0] shut.
+   PLUS / MAX read the room clock; CORE reads featS (0 idle, your next crossing is not
+   predicted). A shut that waits on an occupied tile is not predicted either. */
+const GATES = new WeakMap();
+export function gatesOf(w) {
+  const f = w.feat;
+  if (!f) return [];
+  let g = GATES.get(f);
+  if (!g) { g = []; for (let k = 0; k < f.length; k++) if (f[k] === 14) g.push(k); GATES.set(f, g); }
+  return g;
+}
+export const isLiveGate = (w, k) => !!w.feat && w.feat[k] === 14 && w.featM[k] !== GATE_DEAD;
+function gateU(w, k, t, pr) {
+  if (pr.cross) { const s = w.featS[k]; return s === 0 ? 1 : s - t; }
+  return pr.open - (w.featT + t) % (pr.open + pr.shut);
+}
+export function gateShutAt(w, k, t) {
+  const pr = prof(w).gate, u = gateU(w, k, t, pr);
+  if (!(u <= 0 && u > -pr.shut)) return false;
+  /* in its shut window and still open now: something on the tile holds it (tilegate.js gateBusy) */
+  const u0 = gateU(w, k, 0, pr);
+  return !(u0 <= 0 && u0 > -pr.shut && w.grid[k] !== T.WALL);
+}
+/* seconds after t until a walker can enter gate k: 0 when it is open at t */
+export function gateOpenIn(w, k, t) {
+  const pr = prof(w).gate;
+  return gateShutAt(w, k, t) ? pr.shut + gateU(w, k, t, pr) : 0;
+}
+/* the grid a blast sees t s from now: every live gate at its phase then */
+export function gridAt(w, t, g = w.grid.slice()) {
+  for (const k of gatesOf(w)) if (w.featM[k] !== GATE_DEAD) g[k] = gateShutAt(w, k, t) ? T.WALL : (g[k] === T.WALL ? T.EMPTY : g[k]);
+  return g;
+}
+/* QUICKSAND, tilequick.js as a forecast: per tile the s from now it is a mound, Infinity
+   for none, null in a room with no sand. A walker arriving earlier cancels the growth; a
+   lit bomb in its hold reach holds it past any escape, so a mound never closes an arm of
+   a live bomb. */
+const Q_WAIT = 0, Q_RETRY = 1, Q_GROW = 2;
+export function moundTimes(w) {
+  const s = w.quick;
+  if (!s || s.grid !== w.grid || !s.list.length) return null;
+  const M = new Float64Array(N).fill(Infinity), pr = prof(w).quick;
+  for (const q of s.list) {
+    if (q.st !== Q_WAIT && q.st !== Q_RETRY && q.st !== Q_GROW) continue;
+    if (w.bombs.some((b) => !b.dead && Math.abs(b.tx - q.x) + Math.abs(b.ty - q.y) <= holdReach(b.radius))) continue;
+    M[q.k] = q.st === Q_GROW ? pr.grow - q.t : q.t + pr.grow;
+  }
+  return M;
+}
 /* a cross footprint on grid g: centre plus arms [dx, dy, len]; the edge and
    WALL block, a BRICK is hit and stops the arm unless `pass`; pt: a PORTAL arm
    stops on the tile (CORE) or goes on from the twin with its leftover reach */
@@ -144,10 +194,12 @@ export function relaySet(w, g, tiles, cx, cy, out, seen, depth = 0, gain = false
 export function bombCover(w, b, timer, out, gain = false) {
   const cells = timer != null ? beltPath(w, b, timer) : [[b.tx, b.ty, 0]];
   const arms = bombArms(b), pass = bombPass(b);
+  /* GATE: the arm the bomb throws when it blows; a bar that opens by then is no cover */
+  const g = timer != null && gatesOf(w).length ? gridAt(w, timer) : w.grid;
   for (const [x, y] of cells) {
-    const s = cross(w.grid, x, y, arms, pass, new Set(), armPt(w));
+    const s = cross(g, x, y, arms, pass, new Set(), armPt(w));
     for (const k of s) out.add(k);
-    relaySet(w, w.grid, s, x, y, out, new Set(), 0, gain);
+    relaySet(w, g, s, x, y, out, new Set(), 0, gain);
   }
   return out;
 }
