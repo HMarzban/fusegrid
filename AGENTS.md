@@ -1133,7 +1133,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   Node test fakes define `globalThis.location` WITHOUT `href`, so "is this a
   real page" means `typeof location.href === "string"` (the branch's gen-2 page
   default depended on it; since v188 the tile boards are `?gen=3` only).
-- Release state (2026-11-01): shell **v197** (loading bar, REAL 3D new-world freeze fix #36, boot graph minus 75 KB raw, and on `?gen=3` BOOSTER marks, ICE brake tip, REAL 3D heat look; rulings and numbers in `docs/superpowers/specs/2026-11-01-loose-ends-v197.md`) is on LOCAL main, not pushed. A design on local branch `descent-design` is unmerged and stays unpushed until the owner says.
+- Release state (2026-11-01): shell **v197** (loading bar, REAL 3D new-world freeze fix #36, boot graph minus 75 KB raw, and on `?gen=3` BOOSTER marks, ICE brake tip, REAL 3D heat look; rulings and numbers in `docs/superpowers/specs/2026-11-01-loose-ends-v197.md`) is LIVE on the owner's word (2026-11-02). A design on local branch `descent-design` is unmerged and stays unpushed until the owner says.
   Shell **v196** (rules for STREAM, QUICKSAND, GATE, PORTAL, all on
   `?gen=3`; no change in a normal run) is LIVE on the owner's word.
   Shell **v195** (BOOSTER warning, tile tips, FLOOR
