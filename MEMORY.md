@@ -17,7 +17,7 @@ append an entry when it makes a non-trivial change.
 ## Log
 
 ## 2026-11-07 — v201 is LIVE
-- Pages CI green (test + deploy) on `334ea8b`; live `sw.js` and `CACHE_NAME` read v201, the live page boots in headless Chrome with zero exceptions, the new `og.png` is served. Open: M1-M7 on real controllers, the GitHub release, the owner's Social preview re-upload.
+- Pages CI green (test + deploy) on `334ea8b`; live `sw.js` and `CACHE_NAME` read v201, the live page boots in headless Chrome with zero exceptions, the new `og.png` is served. GitHub release v2.4.0 (shell v200 → v201) cut the same day. Open: M1-M7 on real controllers, the owner's Social preview re-upload.
 
 ## 2026-11-07 — v201 pushed: controller play, rebinding, CONTROLS page
 - Owner: "make it ready and push it up", a day before the planned Sunday. Released as one squashed commit on `origin/main`'s v200 tip (`feature/controls` and `feature/delivery` are never pushed); CHANGELOG and sitemap dated 2026-11-07; the brand of the test controller left the tracked docs (A5). 578 tests; the stubbed-pad browser pass re-run on the release tree, its leftover fails all stale against `e1384f5` or timing (record's go/no-go). M1-M7 ship open by the owner's call. The new share card (`og.png` + alt text) ships beside it as its own commit; the owner re-uploads Social preview by hand.
