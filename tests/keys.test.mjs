@@ -8,7 +8,7 @@ import "../src/core/board3.js";
 import { createPixelRenderer } from "../src/render/pixel/renderer.js";
 import { SCREEN, ITEMS, GUIDE_ROWS, PAUSE_ITEMS, OPT_ROWS, IDLE_T } from "../src/app/menuapp.js";
 import { GFX_ROWS, DEMO_T } from "../src/app/gfx.js";
-import { graphicsGeom, layout as menuLayout } from "../src/render/menudraw.js";
+import { graphicsGeom, layout as menuLayout, modeFocusOf } from "../src/render/menudraw.js";
 import { readFileSync } from "node:fs";
 import { SHOW_STEP, SHOW_DUR, popOf } from "../src/app/intro.js";
 import { CFG } from "../src/core/config.js";
@@ -297,7 +297,7 @@ for (const at of [1.0, 2.0, 3.0, 4.0]) {
   w.bombs = [];
   p.x = 3.5 * F; p.y = (y + 0.5) * F; p.tx = 3; p.ty = y;
   g.tick(2);
-  check("first ICE at MAX paints the brake line", /PRESS BACK AS YOU LET GO/.test(g.ro.coach2.s) && g.ro.coach2.k === "BRAKE", g.ro.coach2.s);
+  check("first ICE at MAX paints the brake line", /PRESS THE OTHER WAY/.test(g.ro.coach2.s) && g.ro.coach2.k === "BRAKE", g.ro.coach2.s);
   down("ArrowRight"); g.tick(4); up("ArrowRight"); g.tick(2);
   const moving = p.x; g.tick(2);
   check("let go on MAX ice: the slide goes on", p.x > moving && !!p.gl, moving + " -> " + p.x);
@@ -986,6 +986,296 @@ for (const code of ["Space", "Enter"]) {
   const g = run(); down("KeyK");
   check("K held in PLAY latches nothing: the intent has no kick field", !("kick" in g.input._intent) && !("kick" in g.input.intent()), JSON.stringify(g.input._intent));
   up("KeyK");
+}
+
+// ---- PAD MATRIX (plan T11): a fake getGamepads, the real poller, router and seam ----
+{
+  const IDX = { S: 0, E: 1, W: 2, N: 3, SHL: 4, SHR: 5, TRL: 6, TRR: 7, SELECT: 8, START: 9, dU: 12, dD: 13, dL: 14, dR: 15 };
+  const mkP = () => { const p = { connected: true, mapping: "standard", axes: [0, 0, 0, 0], buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })) };
+    p.set = (id, on) => { const b = p.buttons[IDX[id]]; b.pressed = on; b.value = on ? 1 : 0; }; return p; };
+  const pk = (o = {}) => {
+    const rig = { list: [mkP()] }, g = mk({ getGamepads: () => rig.list, ...o });
+    g.gpr = rig; g.pad = rig.list[0];
+    g.tick = (n = 1) => { for (let i = 0; i < n; i++) { g.t += 1000 / 60; g.ctl.poll(g.t); g.loop(g.t); } };
+    return g;
+  };
+  const tap = (g, id, hold = 3) => { g.pad.set(id, true); g.tick(hold); g.pad.set(id, false); g.tick(2); };
+  /* the first press a pad gives is its first sight: it acts at the title, and a pad
+     seen elsewhere has that press swallowed (ruling Q10), so a pad-only route starts here */
+  const pMenu = () => { const g = pk(); tap(g, "S"); g.tick(15); tap(g, "S"); return g; };
+  const pRun = () => { const g = pMenu(); tap(g, "S"); return g; };
+  const pPause = () => { const g = pRun(); tap(g, "START"); return g; };
+  const rowTo = (g, i) => { for (let k = 0; k < i; k++) tap(g, "dD"); };
+  const pOpt = () => { const g = pMenu(); rowTo(g, ITEMS.indexOf("OPTIONS")); tap(g, "S"); return g; };
+  const pCtl = () => { const g = pOpt(); rowTo(g, OPT_ROWS.indexOf("CONTROLS")); tap(g, "S"); return g; };
+
+  { const g = pk();
+    check("pad: the title waits for a press", g.app.screen === SCREEN.INTRO && g.app.introStage === 0);
+    g.pad.axes[0] = 0.9; g.tick(10); g.pad.axes[0] = 0; g.tick(2);
+    check("pad: a stick never leaves the title", g.app.introStage === 0 && g.app.screen === SCREEN.INTRO, g.app.introStage);
+    tap(g, "dU");
+    check("pad: a pad alone leaves the title, D-PAD included, into the show", g.app.screen === SCREEN.INTRO && g.app.introStage === 1, g.app.introStage);
+    g.tick(15); tap(g, "E");
+    check("pad: any button skips the show past its guard, onto MENU at cursor 0", g.app.screen === SCREEN.MENU && g.app.cursor === 0, g.app.screen); }
+  { const g = pk(); tap(g, "S", 1);
+    check("pad: the press that starts the show never also skips it", g.app.introStage === 1 && g.app.screen === SCREEN.INTRO); }
+
+  const guided = (i) => (g) => { const n = g; for (let k = 0; k < i; k++) tap(n, "dD"); tap(n, "S"); };
+  /* every state, table driven: [boot, SOUTH expect, EAST expect, START expect] */
+  const onScr = (s) => (g) => g.app.screen === s;
+  const paused = (v) => (g) => g.world.state === "PAUSE" && g.app.pauseView === v;
+  const page = (name, go) => () => { const g = pMenu(); rowTo(g, ITEMS.indexOf(name)); tap(g, "S"); if (go) go(g); return g; };
+  const MATRIX = {
+    "MENU root": { boot: pMenu, E: onScr(SCREEN.MENU) },
+    "LEVEL SELECT": { boot: page("LEVEL SELECT"), E: onScr(SCREEN.MENU), S: onScr(SCREEN.GAME), START: onScr(SCREEN.GAME) },
+    "OPTIONS": { boot: page("OPTIONS"), E: onScr(SCREEN.MENU) },
+    "GUIDE": { boot: page("GUIDE"), E: onScr(SCREEN.MENU), S: onScr(SCREEN.HOWTO) },
+    "HIGH SCORES": { boot: page("HIGH SCORES"), E: onScr(SCREEN.MENU), S: onScr(SCREEN.MENU) },
+    "STATS": { boot: page("STATS"), E: onScr(SCREEN.MENU) },
+    "HOW TO": { boot: page("GUIDE", (g) => tap(g, "S")), E: onScr(SCREEN.GUIDE), S: onScr(SCREEN.GUIDE) },
+    "GRAPHICS": { boot: () => { const g = pOpt(); rowTo(g, OPT_ROWS.indexOf("GRAPHICS")); tap(g, "S"); return g; }, E: onScr(SCREEN.SETTINGS) },
+    "CONTROLS": { boot: pCtl, E: onScr(SCREEN.SETTINGS) },
+    "ITEMS": { boot: page("GUIDE", guided(GUIDE_ROWS.indexOf("ITEMS"))), E: onScr(SCREEN.GUIDE), S: onScr(SCREEN.GUIDE) },
+    "ENEMIES": { boot: page("GUIDE", guided(GUIDE_ROWS.indexOf("ENEMIES"))), E: onScr(SCREEN.GUIDE), S: onScr(SCREEN.GUIDE) },
+    "FLOOR": { boot: page("GUIDE", guided(GUIDE_ROWS.indexOf("FLOOR"))), E: onScr(SCREEN.GUIDE), S: onScr(SCREEN.GUIDE) },
+    "MEDALS": { boot: page("STATS", (g) => { g.app.key("KeyT"); g.tick(); }), E: onScr(SCREEN.STATS) },
+    "PAUSE GRAPHICS": { boot: () => { const g = pPause(); rowTo(g, PAUSE_ITEMS.indexOf("OPTIONS")); tap(g, "S"); rowTo(g, OPT_ROWS.indexOf("GRAPHICS")); tap(g, "S"); return g; }, E: paused(1), START: paused(1) },
+    "GAME PLAY": { boot: pRun, E: (g) => g.world.state === "PLAY" && g.app.screen === SCREEN.GAME, START: paused(0), SELECT: paused(0) },
+    "GAME PAUSE": { boot: pPause, E: (g) => g.world.state === "PLAY", START: (g) => g.world.state === "PLAY", S: (g) => g.world.state === "PLAY" },
+    "GAME PAUSE OPTIONS": { boot: () => { const g = pPause(); rowTo(g, PAUSE_ITEMS.indexOf("OPTIONS")); tap(g, "S"); return g; }, E: paused(0), START: paused(0) },
+    "GAME WIN": { boot: () => { const g = pRun(); clearRoom(g); return g; }, E: (g) => g.world.state === "WIN", S: (g) => g.world.state !== "WIN", START: (g) => g.world.state !== "WIN" },
+    "GAME LOSE": { boot: () => { const g = pRun(); g.world.state = "LOSE"; g.tick(); return g; }, E: (g) => g.world.state === "LOSE", S: (g) => g.world.state !== "LOSE" },
+    "ATTRACT": { boot: () => { const g = pMenu(); g.app.enterAttract(); g.tick(); return g; }, E: onScr(SCREEN.MENU), S: onScr(SCREEN.GAME), START: onScr(SCREEN.GAME) },
+  };
+  for (const [name, row] of Object.entries(MATRIX)) for (const id of ["S", "E", "START", "SELECT"]) {
+    if (!row[id]) continue;
+    const g = row.boot();
+    tap(g, id);
+    check("pad matrix: " + name + " + " + id, row[id](g), "screen " + g.app.screen + " state " + g.world.state + " view " + g.app.pauseView);
+  }
+
+  { const g = page("LEVEL SELECT")(); const p0 = g.app.pace;
+    tap(g, "SHR"); const p1 = g.app.pace; tap(g, "SHL");
+    check("pad: L/R SHOULDER move PACE on LEVEL SELECT", p1 === Math.min(1, p0 + 1) && g.app.pace === Math.max(-1, p1 - 1), p0 + ">" + p1 + ">" + g.app.pace); }
+  { const g = page("HIGH SCORES")(); const h0 = g.app.scoreHeat;
+    tap(g, "SHR"); const h1 = g.app.scoreHeat; tap(g, "SHL");
+    check("pad: L/R SHOULDER walk the HIGH SCORES tabs", h1 !== h0 && g.app.scoreHeat === h0, h0 + ">" + h1 + ">" + g.app.scoreHeat); }
+  { const g = page("STATS")(), r0 = reloads;
+    for (const id of Object.keys(IDX)) { tap(g, id); tap(g, id); if (g.app.screen !== SCREEN.STATS) { g.app.screen = SCREEN.STATS; g.tick(); } }
+    check("S12: no pad path reaches the STATS wipe", !g.app.resetArm && reloads === r0, reloads - r0); }
+  for (const [name, boot] of [["MENU", pMenu], ["PAUSE", pPause]]) {
+    const g = boot(), s0 = () => JSON.stringify([g.app.screen, g.app.cursor, g.app.pauseCursor, g.app.pauseView, g.app.optRow, g.world.state, g.world.seed, live(g.world), g.input._intent]);
+    const a0 = s0();
+    for (const id of ["N", "W", "TRL", "TRR"]) tap(g, id);
+    check("pad: N, W and the triggers are inert on " + name, s0() === a0, s0());
+  }
+  /* T14: the routes through the real createGame */
+  const pLevel = () => { const g = pMenu(); g.app.pactUnlocked = true; rowTo(g, ITEMS.indexOf("LEVEL SELECT")); tap(g, "S"); return g; };
+  { const g = pLevel();
+    check("T14: on LEVEL SELECT", g.app.screen === SCREEN.LEVEL);
+    tap(g, "TRR"); tap(g, "TRR");
+    check("T14: R TRIGGER walks the MODES cursor", g.app.modeCur === 1, g.app.modeCur);
+    tap(g, "N");
+    check("T14: NORTH toggles a mode through the key path", g.app.pact !== 0, g.app.pact);
+    const p = g.app.pact; tap(g, "N");
+    check("T14: NORTH toggles it back", g.app.pact !== p && g.app.pact === 0, g.app.pact);
+    while (g.app.modeCur < 4) tap(g, "TRR");
+    const t0 = g.app.timeAttack; tap(g, "N");
+    check("T14: TIME too", g.app.timeAttack === !t0);
+    tap(g, "N");
+    g.app.timeAttack = t0; }
+  { const g = page("LEVEL SELECT")(); g.app.pactUnlocked = false; tap(g, "TRR"); tap(g, "N");
+    check("T14: MODES stay shut before the first CLEAR", g.app.modeCur === -1 && g.app.pact === 0); }
+  { const g = page("STATS")(), c0 = clip.length; tap(g, "W"); await flush(); g.tick();
+    check("T14: STATS WEST copies the stats, with the same note", g.app.screen === SCREEN.STATS && clip.length === c0 + 1 && g.app.toast.s === "COPIED" && g.app.toast.t > 0, g.app.toast.s);
+    clipMode = "no"; tap(g, "W"); await flush(); g.tick(); clipMode = "ok";
+    check("T14: STATS WEST with a refusing clipboard says COPY FAILED", g.app.toast.s === "COPY FAILED", g.app.toast.s);
+    tap(g, "N");
+    check("T14: STATS NORTH opens MEDALS", g.app.screen === SCREEN.TROPHIES, g.app.screen);
+    tap(g, "E");
+    check("T14: EAST backs to STATS", g.app.screen === SCREEN.STATS, g.app.screen); }
+  for (const [nm, set] of [["WIN", (g) => clearRoom(g)], ["LOSE", (g) => { g.world.state = "LOSE"; g.tick(); }]]) {
+    const g = pRun(); set(g);
+    const st = g.world.state, c0 = clip.length;
+    tap(g, "W"); await flush(); g.tick();
+    check("T14: " + nm + " WEST copies the result, with the same toast", g.world.state === st && clip.length === c0 + 1 && clip.at(-1) === copyPayload(g.world) && g.ro.toast && g.ro.toast.s === "COPIED", JSON.stringify(g.ro.toast));
+    tap(g, "N"); await flush(); g.tick();
+    check("T14: " + nm + " NORTH copies the board link", g.world.state === st && /\?code=F3/.test(clip.at(-1)) && g.ro.toast && g.ro.toast.s === "BOARD LINK COPIED", JSON.stringify(g.ro.toast));
+    check("T14: the cue names them", /WEST copy · NORTH board/.test((() => { const lines = []; const r = { font: "", fillText: (s) => lines.push(s), measureText: () => ({ width: 0 }) }; const c = new Proxy(r, { get: (t, p) => (p in t ? t[p] : () => {}), set: (t, p, v) => { t[p] = v; return true; } }); drawOverlay(c, g.world, 600, 520, 300, 260, {}); return lines.join("|"); })()));
+  }
+  { const g = pMenu(), log = [], c = { on: true, live() { return this.on; }, press(id) { log.push(id); } };
+    g.app.padCards = [c, ...g.app.padCards]; g.tick();
+    const c0 = g.app.cursor, s0 = g.app.screen;
+    tap(g, "S"); tap(g, "E"); tap(g, "S");
+    check("T14: a mash within 0.5 s never reaches the card or MENU", log.length === 0 && g.app.screen === s0 && g.app.cursor === c0, log.join());
+    g.pad.set("dD", true); g.tick(40); g.pad.set("dD", false); g.tick(2);
+    check("T14: a held D-PAD under the card walks nothing", g.app.cursor === c0, g.app.cursor);
+    tap(g, "S");
+    check("T14: past the guard SOUTH answers the card only", log.join() === "S" && g.app.screen === s0, log.join());
+    c.on = false; g.tick(); tap(g, "S");
+    check("T14: the card gone, SOUTH confirms again", g.app.screen === SCREEN.GAME, g.app.screen); }
+  { const g = pMenu(), k = Object.keys(mem).length, a0 = mem["nb.analytics.v1"];
+    for (const id of Object.keys(IDX)) { tap(g, id); tap(g, id); if (g.app.screen !== SCREEN.MENU) { g.app.screen = SCREEN.MENU; g.world.state = "PLAY"; g.tick(); } }
+    check("T14: no pad button on MENU writes a consent answer", a0 === undefined && mem["nb.analytics.v1"] === undefined, mem["nb.analytics.v1"]); }
+  { delete mem["nb.analytics.v1"];
+    const g = pOpt(); rowTo(g, OPT_ROWS.indexOf("ANALYTICS"));
+    check("T14: on the ANALYTICS row", g.app.screen === SCREEN.SETTINGS && OPT_ROWS[g.app.optRow] === "ANALYTICS", g.app.optRow);
+    for (const id of ["S", "START", "dL", "dR", "W", "N", "SELECT", "SHL", "SHR", "TRL", "TRR", "S"]) tap(g, id);
+    check("T14: the consent row: a pad mash on an unanswered card never answers it", mem["nb.analytics.v1"] === undefined && g.app.anaNote !== "", mem["nb.analytics.v1"] + " / " + g.app.anaNote); }
+  { const plays = [], g = pk({ audio: { play: (n) => plays.push(n), toggle: () => false, duck: noop, pump: noop, unlocked: () => false } });
+    g.app.screen = SCREEN.LEVEL; g.app.pactUnlocked = true; plays.length = 0;
+    g.app.modeWalk(1); const one = plays.join(); g.app.modeWalk(-1);
+    check("T14: a MODES step plays one uiMove, the clamped end is silent", one === "uiMove" && plays.length === 1, plays.join()); }
+  { const g = pLevel(); tap(g, "TRR"); tap(g, "TRR");
+    check("T14: the ring reads the live cursor", modeFocusOf() === 1 && g.app.modeCur === 1, modeFocusOf()); }
+  { const g = pMenu(); const calls = []; globalThis.__load = { padLive: (pad) => { calls.push("live:" + pad); return true; }, padPress: (id) => calls.push(id) };
+    const c0 = g.app.cursor; g.tick(2); tap(g, "S");
+    const early = calls.filter((c) => !c.startsWith("live")).length;
+    g.tick(40); tap(g, "E"); delete globalThis.__load;
+    check("T14: the look-load card is wired: guarded, then EAST reaches it, nothing behind", early === 0 && calls.includes("E") && calls.includes("live:true") && g.app.screen === SCREEN.MENU && g.app.cursor === c0, calls.slice(-3).join()); }
+  { const v1 = mem["nb.coach.v1"], v2 = mem["nb.coach.v2"]; mem["nb.coach.v1"] = "1"; delete mem["nb.coach.v2"];
+    const g = pRun();
+    g.world.events.push({ t: "power", kind: "throw" }); g.tick(1);
+    check("T14: the live coach tip names the pad button", g.ro.coach2.k === "throw" && g.ro.coach2.s === "THROW · WEST tosses a bomb", g.ro.coach2.k + " / " + g.ro.coach2.s);
+    if (v1 === undefined) delete mem["nb.coach.v1"]; else mem["nb.coach.v1"] = v1;
+    if (v2 === undefined) delete mem["nb.coach.v2"]; else mem["nb.coach.v2"] = v2; }
+  { const g = pRun(); const p = g.world.players[0], x0 = p.x, y0 = p.y, b0 = live(g.world);
+    g.pad.set("dR", true); g.tick(25); g.pad.set("dR", false); g.pad.set("dD", true); g.tick(25); g.pad.set("dD", false); g.tick(2);
+    check("pad: movement moves the hero", p.x !== x0 || p.y !== y0, (p.x - x0) + "," + (p.y - y0));
+    tap(g, "S");
+    check("pad: SOUTH plants", live(g.world) === b0 + 1, live(g.world));
+    tap(g, "W");
+    check("pad: WEST without the power plants nothing", live(g.world) === b0 + 1, live(g.world)); }
+  { const g = pMenu(); const b0 = live(g.world); tap(g, "S");
+    check("pad: the SOUTH that started the run plants nothing", g.app.screen === SCREEN.GAME && live(g.world) === b0, live(g.world)); }
+  { const g = pMenu(); g.app.parked = true; g.app.idleT = 20; tap(g, "N");
+    check("pad: a press zeroes idleT and parked", g.app.idleT < 0.5 && g.app.parked === false, g.app.idleT);
+    g.app.idleT = IDLE_T - 0.01; g.pad.set("N", true); g.ctl.poll(g.t + 1); g.pad.set("N", false); g.tick();
+    check("pad: a press never lets MENU drop into ATTRACT", g.app.screen === SCREEN.MENU, g.app.screen);
+    g.app.idleT = 20; g.pad.axes[0] = 0.2; g.tick(); g.pad.axes[0] = 0; g.tick();
+    check("pad: stick noise does not wake", g.app.idleT > 20, g.app.idleT); }
+  { const g = pMenu(); const c0 = g.app.cursor, n = ITEMS.length;
+    g.pad.set("dD", true); g.tick(1);
+    check("pad repeat: one move at the press", g.app.cursor === (c0 + 1) % n, g.app.cursor);
+    g.tick(18);
+    check("pad repeat: none before 350 ms", g.app.cursor === (c0 + 1) % n, g.app.cursor);
+    g.tick(5);
+    check("pad repeat: the second at 350 ms", g.app.cursor === (c0 + 2) % n, g.app.cursor);
+    g.tick(8);
+    check("pad repeat: then every 110 ms", g.app.cursor === (c0 + 3) % n, g.app.cursor);
+    g.pad.set("dD", false); g.tick(); }
+  { const g = pCtl();
+    check("pad: CONTROLS opens on the pad tab, MOVE's neighbour BOMB selected", g.app.ctlTab === "pad" && g.app.controls.view(g.app.ctlT).row === 1, g.app.ctlTab);
+    /* a double tap: open with SOUTH, tap SOUTH again inside 200 ms, it binds nothing */
+    g.pad.set("S", true); g.tick(2); g.pad.set("S", false); g.tick(2); g.pad.set("S", true); g.tick(2); g.pad.set("S", false); g.tick(2);
+    check("pad double tap: the capture stays open, nothing bound", g.app.capturing && !mem["nb.controls.v1"], String(g.app.capturing));
+    g.tick(20); tap(g, "E");
+    check("pad capture: EAST onto BOMB swaps with REMOTE and saves", !g.app.capturing && JSON.parse(mem["nb.controls.v1"]).pad.BOMB === "E" && JSON.parse(mem["nb.controls.v1"]).pad.REMOTE === "S", mem["nb.controls.v1"]);
+    tap(g, "E"); // the same button after the commit: menu EAST is still back
+    check("pad: a rebound EAST still backs out of the page", g.app.screen === SCREEN.SETTINGS, g.app.screen);
+    tap(g, "E");
+    rowTo(g, 0);
+    /* to a run: the new bomb plants, and menu SOUTH still confirms */
+    g.app.cursor = 0; tap(g, "S");
+    check("pad: menu SOUTH still confirms after the rebind", g.app.screen === SCREEN.GAME, g.app.screen);
+    const b0 = live(g.world);
+    tap(g, "S");
+    check("pad: SOUTH no longer plants", live(g.world) === b0, live(g.world));
+    tap(g, "E");
+    check("pad: the rebound button plants", live(g.world) === b0 + 1, live(g.world));
+    delete mem["nb.controls.v1"]; }
+  { const g = pCtl(), v = () => g.app.controls.view(g.app.ctlT);
+    tap(g, "dD");
+    check("pad CONTROLS: D-PAD down walks one row", v().row === 2, v().row);
+    tap(g, "dL");
+    check("pad CONTROLS: D-PAD left changes tab", g.app.ctlTab === "key", g.app.ctlTab);
+    tap(g, "SHR");
+    check("pad CONTROLS: a shoulder changes tab", g.app.ctlTab === "pad", g.app.ctlTab);
+    for (let i = 0; i < 3; i++) tap(g, "dD");
+    const d0 = v().dead;
+    tap(g, "dR");
+    check("pad CONTROLS: D-PAD right on SENSITIVITY adjusts", v().row === 5 && d0 === 25 && v().dead === 15 && g.app.ctlTab === "pad", v().dead);
+    tap(g, "dL");
+    check("pad CONTROLS: D-PAD left on SENSITIVITY adjusts back", v().dead === d0, v().dead);
+    delete mem["nb.controls.v1"]; }
+  { const g = pCtl(); tap(g, "S"); g.tick(20);
+    check("pad capture: open", g.app.capturing);
+    tap(g, "START");
+    check("pad capture: START cancels and writes nothing", !g.app.capturing && !mem["nb.controls.v1"] && g.app.screen === SCREEN.CONTROLS); }
+  { const g = pPause(); rowTo(g, PAUSE_ITEMS.indexOf("OPTIONS")); tap(g, "S"); rowTo(g, OPT_ROWS.indexOf("CONTROLS")); tap(g, "S");
+    check("pad: PAUSE CONTROLS is pauseView 3", g.app.pauseView === 3 && g.world.state === "PAUSE", g.app.pauseView);
+    tap(g, "S"); g.tick(20);
+    check("pauseView 3: a capture is open", g.app.capturing);
+    press(g, "Escape");
+    check("ESC in capture never pauses or backs out", !g.app.capturing && g.app.pauseView === 3 && g.world.state === "PAUSE", g.app.pauseView);
+    tap(g, "E");
+    check("pauseView 3 steps back to OPTIONS on the door", g.app.pauseView === 1 && g.app.optRow === OPT_ROWS.indexOf("CONTROLS"), g.app.pauseView); }
+  { const g = mk(); show(g); press(g, "Enter"); toRow(g, ITEMS.indexOf("OPTIONS")); press(g, "Enter"); toRow(g, OPT_ROWS.indexOf("CONTROLS")); press(g, "Enter");
+    check("keys: CONTROLS opens on the keyboard tab", g.app.screen === SCREEN.CONTROLS && g.app.ctlTab === "key", g.app.ctlTab);
+    press(g, "ArrowRight");
+    check("keys: → changes tab", g.app.ctlTab === "pad", g.app.ctlTab);
+    press(g, "ArrowLeft");
+    check("keys: ← changes it back", g.app.ctlTab === "key", g.app.ctlTab);
+    press(g, "ArrowDown"); press(g, "ArrowUp");
+    check("keys: ↓ then ↑ comes back to BOMB", g.app.controls.view(g.app.ctlT).row === 1);
+    press(g, "Enter"); g.tick(20);
+    check("keys capture: open", g.app.capturing);
+    for (const k of ["KeyU", "KeyY", "KeyN"]) press(g, k);
+    check("U, Y and N are refused by the capture, which stays open, and answer nothing", g.app.capturing && mem["nb.analytics.v1"] === undefined && !mem["nb.controls.v1"]);
+    g.tick(20); press(g, "KeyZ");
+    const c1 = JSON.parse(mem["nb.controls.v1"] || "{}");
+    check("keys capture: Z binds BOMB", !g.app.capturing && c1.key && c1.key.BOMB === "KeyZ", mem["nb.controls.v1"]);
+    press(g, "Escape");
+    check("keys: back on OPTIONS", g.app.screen === SCREEN.SETTINGS, g.app.screen);
+    delete mem["nb.controls.v1"]; }
+  { mem["nb.controls.v1"] = JSON.stringify({ v: 1, key: { BOMB: "Space", THROW: "KeyE", REMOTE: "KeyQ", PAUSE: "KeyP", MOVE: ["KeyI", "KeyL", "KeyO", "KeyK"] }, pad: { BOMB: "S", THROW: "W", REMOTE: "E", PAUSE: "SELECT" }, stick: "L", dead: 25, rumble: 0 });
+    const g = menu(); const c0 = g.app.cursor;
+    press(g, "KeyO");
+    check("keyboard rebind of MOVE navigates menus", g.app.cursor === c0 + 1, g.app.cursor);
+    press(g, "KeyS");
+    check("the old key is dead in menus", g.app.cursor === c0 + 1, g.app.cursor);
+    g.app.cursor = 0; press(g, "Enter");
+    const p = g.world.players[0], y0 = p.y, x0 = p.x;
+    down("KeyL"); g.tick(20); up("KeyL"); down("KeyO"); g.tick(20); up("KeyO"); g.tick(2);
+    check("keyboard rebind of MOVE plays", p.x !== x0 || p.y !== y0, (p.x - x0) + "," + (p.y - y0));
+    delete mem["nb.controls.v1"]; }
+  { const g = pRun();
+    g.gpr.list[0] = null; g.tick();
+    check("disconnect with the pad last used in GAME PLAY pauses, kicker CONTROLLER LOST", g.world.state === "PAUSE" && g.app.padNote === "CONTROLLER LOST", g.world.state + " " + g.app.padNote);
+    g.tick(30);
+    g.gpr.list[0] = g.pad; g.tick();
+    check("reconnect never resumes", g.world.state === "PAUSE", g.world.state);
+    check("reconnect: CONTROLLER BACK", g.app.padNote === "CONTROLLER BACK", g.app.padNote);
+    g.pad.set("S", true); g.tick(3); g.pad.set("S", false); g.tick(2);
+    check("the wake press is swallowed in PAUSE", g.world.state === "PAUSE", g.world.state); }
+  { const g = pMenu();
+    g.gpr.list[0] = null; g.tick(5);
+    check("disconnect on MENU's PLAY backdrop never pauses", g.world.state === "PLAY" && g.app.screen === SCREEN.MENU, g.world.state); }
+  { const g = pRun(); press(g, "KeyA");
+    g.gpr.list[0] = null; g.tick(5);
+    check("disconnect with keys last used does not pause; the note waits", g.world.state === "PLAY" && g.app.padNote === "", g.world.state + " " + g.app.padNote);
+    press(g, "Escape");
+    check("the note shows at the next PAUSE", g.world.state === "PAUSE" && g.app.padNote === "CONTROLLER LOST", g.app.padNote); }
+  { const g = pRun(); const p = g.world.players[0], x0 = p.x;
+    g.pad.set("dR", true); g.pad.set("S", true); g.tick(3);
+    (L.blur || []).forEach((f) => f({}));
+    check("blur clears the pad latches", g.input._intent.fire === false && g.input.axes.right === false, JSON.stringify(g.input.axes));
+    const b1 = live(g.world);
+    g.tick(40);
+    check("a button held across blur stays no press", live(g.world) === b1, live(g.world));
+    void x0;
+    g.pad.set("dR", false); g.pad.set("S", false); g.tick(2); }
+  { /* the design review's case: SOUTH held, then START, inside one capped frame must not pause and resume */
+    const g = pRun();
+    g.pad.set("S", true); g.ctl.poll(g.t + 1); g.pad.set("START", true); g.ctl.poll(g.t + 2);
+    g.pad.set("START", false); g.tick(3);
+    check("SOUTH then START between frames pauses and stays paused", g.world.state === "PAUSE", g.world.state);
+    g.pad.set("S", false); g.tick(2);
+    check("and the released SOUTH confirms nothing", g.world.state === "PAUSE", g.world.state); }
+  { const g = pk(); // no pad press, keys only: the pad layer changes nothing
+    g.gpr.list[0] = null; g.tick();
+    press(g, "KeyA"); g.tick(15); press(g, "Enter");
+    check("no pad: the key path still reaches MENU", g.app.screen === SCREEN.MENU, g.app.screen); }
 }
 
 delete globalThis.window; delete globalThis.location; delete navigator.clipboard;

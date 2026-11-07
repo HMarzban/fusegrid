@@ -246,5 +246,32 @@ function rig(o = {}) {
   check("the flip frame hands rc.tick the NEW kind (a stale one slept a just-woken PIXEL to 1x1)", ticks.join() === "2d,2d,px,px", ticks.join());
 }
 
+// ---- a held menu direction is not idle: 60 Hz while held, the idle rate again after ----
+{
+  const app = { screen: SCREEN.MENU, pauseView: 0, repDir: 0 };
+  const R = rig({ app, vsync: true });
+  R.st.idle = true;
+  R.F.apply({ ...AUTO(), fps: 1 });
+  R.F.kick();
+  R.step(60, 1000 / 120);
+  const rate = (n) => R.step(n, 1000 / 120) / (n / 120);
+  rate(60);
+  const idle = rate(120);
+  check("menus idle at the idle rate", idle <= 31, idle);
+  app.repDir = 1;
+  const held = rate(120);
+  check("a held direction runs at 60 Hz", held >= 55 && held <= 62, held);
+  app.repDir = 0;
+  rate(4);
+  const back = rate(120);
+  check("released: back to the idle rate", back <= 31, back);
+  const K0 = R.F.knobs().fpsCap;
+  R.F.apply({ ...AUTO(), fps: 0 });
+  app.repDir = -1;
+  rate(10);
+  const low = rate(120);
+  check("a player's lower cap still wins", low <= 31 && R.F.knobs().fpsCap < K0, low);
+}
+
 console.log("\n  FRAMELOOP RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);

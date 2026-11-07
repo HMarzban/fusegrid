@@ -20,6 +20,14 @@ export function lookPlan(k) {
   };
 }
 
+/* The look-load card for a pad's router (padroute.js): {live(padLast), press(id)} over the inline loader. A boot failure has no pad route. */
+export function loadCard(host = globalThis) {
+  return {
+    live: (pad) => { const L = host.__load; return !!(L && L.padLive && L.padLive(pad)); },
+    press: (id) => { const L = host.__load; if (L && L.padPress) L.padPress(id); },
+  };
+}
+
 const rafOf = (raf) => raf || (typeof globalThis.requestAnimationFrame === "function" ? (f) => globalThis.requestAnimationFrame(f) : null);
 
 /* Resolves once a frame has been given the chance to commit, so a compositor

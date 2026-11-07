@@ -10,9 +10,10 @@ import { createRenderer } from "./render/renderer.js";
 import { loadRendererPx } from "./render/pixel/load.js";
 import { copyPayload, isRunEnd, overlayBox, pauseHit, touchLay } from "./render/scenes.js";
 import { paintBombPad } from "./render/sprites.js";
-import { dims, drawShell, isShellScreen, kindSize } from "./render/shellview.js";
-import { menuHit, settingsHit, statsHit, graphicsHit, guideHit, levelHit, scoresHit, layout as menuLayout } from "./render/menudraw.js";
+import { controlsHit, dims, drawShell, isShellScreen, kindSize } from "./render/shellview.js";
+import { menuHit, settingsHit, statsHit, graphicsHit, guideHit, levelHit, scoresHit, layout as menuLayout, setModeFocus } from "./render/menudraw.js";
 import { setFxOpts } from "./render/fx.js";
+import { hints, setHints } from "./render/hintcopy.js";
 import { ITEMS, SCREEN, SOURCE_URL, createMenuApp } from "./app/menuapp.js";
 import { clampHeat } from "./core/heat.js";
 import { clampPact } from "./core/pact.js";
@@ -23,7 +24,7 @@ import { mountDebugHook } from "./app/debughook.js";
 import { mountFit } from "./app/fit.js";
 import { mountFrames } from "./app/frameloop.js";
 import { mountRenderers } from "./app/rcache.js";
-import { afterFirstRender, lookPlan, paintYield } from "./app/loadbar.js";
+import { afterFirstRender, loadCard, lookPlan, paintYield } from "./app/loadbar.js";
 import { mountAudioPower } from "./app/audiopower.js";
 import { introPhase, popOf, createShow, stepShow } from "./app/intro.js";
 import { loadScores, recordScore, saveScores, scoreEntry, scoresForHeat, qualifies, isPlaceholder } from "./app/highscores.js";
@@ -55,6 +56,7 @@ import {
 import { clampPace } from "./core/pace.js";
 import { mountUpdate } from "./app/update.js";
 import { mountAnalytics } from "./app/analytics.js";
+import { mountControls } from "./app/controlswire.js";
 import { Input } from "./input.js";
 import { mountTouch } from "./touch.js";
 import {
@@ -240,7 +242,7 @@ export function createGame(canvas, opts = {}) {
   // SETTINGS (nb.settings.v1): loaded once at boot; applySettings is the seam S2's OPTIONS rows call again.
   let settings = loadSettings();
   if (settings.snd === 0 && audio && audio.toggle) audio.toggle();
-  const frames = mountFrames(loop, { running: () => running, idle: () => !(app.screen === SCREEN.GAME && world.state === "PLAY") && !(app.screen === SCREEN.INTRO && app.introStage === 1), kind: () => curKind, rc: () => rc, app: () => app, fit: () => fit, canvas }); // GRAPHICS frame gate (src/app/frameloop.js): every getter is lazy
+  const frames = mountFrames(loop, { running: () => running, idle: () => !(app.screen === SCREEN.GAME && world.state === "PLAY") && !(app.screen === SCREEN.INTRO && app.introStage === 1), kind: () => curKind, rc: () => rc, app: () => app, fit: () => fit, canvas, pre: (t) => ctl.poll(t) }); // GRAPHICS frame gate (src/app/frameloop.js): every getter is lazy
   const applySettings = (S) => {
     if (audio && audio.setVols) audio.setVols({ mus: S.mus / 100, sfx: S.sfx / 100 });
     setFxOpts({ flashK: S.flx ? 0.25 : 1, shakeK: S.shk ? 1 : 0, partK: frames.apply(S).partK });
@@ -260,7 +262,7 @@ export function createGame(canvas, opts = {}) {
     onTimeAttack: (on) => saveTimes({ ...loadTimes(), on: on ? 1 : 0 }),
     ...bootRender(urlKind, opts, settings),
     settings,
-    analytics: ga.consent === 1, onAnalytics: (v) => ga.set(v),
+    analytics: ga.consent === 1, onAnalytics: (v) => ga.set(v), anaOpen: () => ga.consent === -1,
     onSettings: (s) => {
       saveSettings(s);
       applySettings(s);
@@ -318,10 +320,11 @@ export function createGame(canvas, opts = {}) {
       b0 = app.back.bind(app),
       c0 = app.confirm.bind(app);
     app.move = (d, axis) => {
-      const r = m0(d, axis);
-      if (r) audio.play("uiMove");
+      const adj = app.ctlAdjusts(axis), r = m0(d, axis); // read before the move: the move may change the row
+      if (r && !adj) audio.play("uiMove"); // a DEADZONE step is a write: controlswire cues it
       return r;
     };
+    const w0 = app.modeWalk.bind(app); app.modeWalk = (d) => { const r = w0(d); if (r) audio.play("uiMove"); return r; };
     const p0 = app.adjustPace.bind(app);
     app.adjustPace = (d) => {
       const r = p0(d);
@@ -335,6 +338,7 @@ export function createGame(canvas, opts = {}) {
     };
     app.confirm = () => {
       const sB = app.screen,
+        ctlOn = app.onControls(), // CONTROLS cues its own rows (controlswire.js)
         r = c0();
       if (!r) return r;
       if (sB === SCREEN.SETTINGS || sB === SCREEN.GRAPHICS) audio.play(app.screen === sB ? "uiTog" : "uiSel");
@@ -344,7 +348,7 @@ export function createGame(canvas, opts = {}) {
         sB !== SCREEN.ITEMS &&
         sB !== SCREEN.ENEMIES &&
         sB !== SCREEN.FLOOR &&
-        sB !== SCREEN.STATS && sB !== SCREEN.TROPHIES
+        sB !== SCREEN.STATS && sB !== SCREEN.TROPHIES && !ctlOn
       )
         audio.play("uiSel");
       return r;
@@ -372,11 +376,12 @@ export function createGame(canvas, opts = {}) {
   /* app.update() contract adapter over the live Input (held axes + fire) */
   const shellInput = {
     get input() {
-      return input.input;
+      return input.axes; // keys + touch + pad, so a pad gets the menu repeat
     },
     get confirmHeld() {
-      return input._intent.fire;
+      return input._intent.fire && !input._hold.fire.pad; // pad SOUTH confirms through the router's one Enter, never this edge too
     },
+    get anyDown() { return ctl.anyDown(); },
   };
   /* high-score persist through the guarded default store (§6) */
   const persistScore = () => {
@@ -387,6 +392,7 @@ export function createGame(canvas, opts = {}) {
     saveScores(recordScore(sc, en));
   };
   const toast = app.toast = createToast(); // C / B note on the WIN / LOSE overlay, C on STATS (src/app/endkeys.js)
+  app.padCards = [upd.padCard, loadCard()]; setModeFocus(() => app.modeCur); // what a pad may answer (src/app/padroute.js); the MODES ring (menudraw.js)
   /* UI key side-channel: ALWAYS routed to the shell; M-in-PAUSE records the
      score then quits to MENU (spec §4 table). Machine self-gates elsewhere. */
   input.onUiKey = (code) => {
@@ -423,7 +429,7 @@ export function createGame(canvas, opts = {}) {
     if (world.state === "PLAY") {
       world.state = "PAUSE";
       app.enterPause();
-    } else if (world.state === "PAUSE") world.state = "PLAY";
+    } else if (world.state === "PAUSE") { world.state = "PLAY"; app._feel("back"); }
   };
   input.onPause = onPause;
 
@@ -445,6 +451,7 @@ export function createGame(canvas, opts = {}) {
         const px = (ev.clientX - r.left) * k,
           py = (ev.clientY - r.top) * k;
         const B = overlayBox(curKind);
+        if (app.pauseView === 3) return void ctl.tap(controlsHit(app.controls.view(app.ctlT), px, py, canvas, curKind, true));
         if (app.pauseView) {
           const row = (app.pauseView === 2 ? graphicsHit : settingsHit)(px, py, menuLayout(B.w, B.h), 0, touchLay(canvas));
           if (row < 0) { if (row === -1) app.pauseBack(); } // -2: on the plate, off the rows (inert)
@@ -468,6 +475,7 @@ export function createGame(canvas, opts = {}) {
         return;
       }
       if (app.screen === SCREEN.INTRO) app.skipShow();
+      else if (app.screen === SCREEN.CONTROLS) { const r = cv.getBoundingClientRect(), k = cv.width / (r.width || cv.width); ctl.tap(controlsHit(app.controls.view(app.ctlT), (ev.clientX - r.left) * k, (ev.clientY - r.top) * k, cv, curKind, false)); }
       else if (app.screen === SCREEN.SETTINGS || app.screen === SCREEN.MENU || app.screen === SCREEN.GRAPHICS || app.screen === SCREEN.GUIDE) {
         /* One rule with PAUSE: tap a row = Enter on it; off the rows a page
            backs out and a root list (MENU, the PAUSE list) does nothing. Client px map through
@@ -520,7 +528,9 @@ export function createGame(canvas, opts = {}) {
   /* music unlock (opening §5): window capture listeners stay armed until the
      ctx RUNS (Escape / touch pointerdown carry no activation). P1: the sting
      rides it, and only the title's press gets it (deep links never do). */
-  if (typeof window !== "undefined") armUnlock(window, audio, () => { if (app.screen === SCREEN.INTRO) { fireJingle(); app.beginShow(); } }, (ev) => !!(ev && ev.target && ev.target.closest && ev.target.closest("#load"))), mountAudioPower(window, typeof document !== "undefined" ? document : null, audio, () => settings.snd !== 0);
+  let padUnlock = null;
+  if (typeof window !== "undefined") padUnlock = armUnlock(window, audio, () => { if (app.screen === SCREEN.INTRO) { fireJingle(); app.beginShow(); } }, (ev) => !!(ev && ev.target && ev.target.closest && ev.target.closest("#load"))).pad, mountAudioPower(window, typeof document !== "undefined" ? document : null, audio, () => settings.snd !== 0);
+  const ctl = mountControls({ input, app, SCREEN, world, onPause, getGamepads: opts.getGamepads, store: opts.store, audio, unlock: padUnlock, setHints }); // pad + rebinds + hints + rumble (src/app/controlswire.js)
   if (typeof window !== "undefined") window.addEventListener("pointerdown", () => { if (app.screen === SCREEN.INTRO) app.skipShow(); }); // bubble: an off-canvas tap skips too; the canvas handler runs first
 
   /* ATTRACT demo world handle (src/app/attract.js): the shell machine only
@@ -628,6 +638,7 @@ export function createGame(canvas, opts = {}) {
          "bomb" pushed by this frame's step() is still readable. Persist is
          app-layer only, fires once (the !coachSeen gate) the frame coachOpen
          flips closed (DUR elapsed or a plant), never in the draw code. */
+      ctl.afterStep(world.events, world.players[0]); // before render drains them, like feedTally
       feedTally(tally, world);
       for (const [ev, d] of coach2Tick(coach2, world, coachOpen(coachSeen, coachT, coachPlanted), dt)) stat(ev, d, dateStr());
       if (tally.dNew > 0) stat("death", { r: world.level | 0 }, dateStr());
@@ -711,8 +722,8 @@ export function createGame(canvas, opts = {}) {
                 coachOpen(coachSeen, coachT, coachPlanted)
                   ? Math.max(0, 1 - coachT / COACH_DUR)
                   : 0,
-              coach2: world.state === "PLAY" ? { a: coachAlpha(coach2), s: coachTip(coach2.kind, undefined, world), k: coach2.kind } : { a: 0, s: "" },
-              pause: { view: app.pauseView | 0, cursor: app.pauseCursor | 0 }, toast: toastOf(toast),
+              coach2: world.state === "PLAY" ? { a: coachAlpha(coach2), s: coachTip(coach2.kind, undefined, world, hints()), k: coach2.kind } : { a: 0, s: "" },
+              pause: { view: app.pauseView | 0, cursor: app.pauseCursor | 0, note: app.padNote }, toast: toastOf(toast),
               time: { on: !!app.timeAttack, t: roomT, best: bestPrev }, ghost: ghostAt(ghost, world, roomT),
               run: { r: tally.r, k: tally.k, p: tally.p, t: runT, best: bestRun, fromStart: runFromStart, daily: dailyDate, tries: dailyRec.played, dbest: dailyRec.best, md: medalLine(tally.mn) },
             }
@@ -739,6 +750,7 @@ export function createGame(canvas, opts = {}) {
       renderer: () => renderer,
       demo: () => demo,
       ga,
+      ctl,
     });
 
   // boot
@@ -761,6 +773,7 @@ export function createGame(canvas, opts = {}) {
     get demo() {
       return demo;
     }, // read-only for tests (spec §5.4)
+    ctl,
     get show() { return show; }, // opening show world (null once a run or ATTRACT starts)
     stop() {
       running = false;

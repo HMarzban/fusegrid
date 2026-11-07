@@ -1,5 +1,5 @@
 import { defaultStore } from "./store.js";
-import { POWER } from "../core/entities.js";
+import { POWER, helpOf } from "../core/entities.js";
 import { T, key } from "../core/config.js";
 import { featKindOf, featProfile, glideBrakes, isBelt, tileTip } from "../core/feat.js";
 
@@ -97,11 +97,11 @@ export function coach2Mark(v, kind) {
    verb and the ITEMS help screen already shows those strings, so writing more
    would create a second source that drifts. Composed here rather than in
    render/, because scenes.js states in its own words that main.js precomputes
-   what the panel draws and render/ never re-derives it. On a touch layout
-   (body[data-lay] p or l) a help line that OPENS with a key chord (THROW's
-   and REMOTE's, the only two) swaps that chord for the touch button touch.js
-   paints with the same POWER name; the rest of the line is the same string. */
-const KEY_HINT = /^[A-Z]\w*(?:\+[A-Z]\w*)*(?= )/;
+   what the panel draws and render/ never re-derives it. A help line that OPENS
+   with a key (THROW's and REMOTE's, the only two) swaps it through helpOf: on a
+   touch layout (body[data-lay] p or l) for the touch button touch.js paints with
+   the same POWER name, and otherwise for the live word in words (hints.js
+   wordsOf), a paired pad winning over the layout; the rest is the same string. */
 export function coachLay() {
   try {
     const b = globalThis.document && globalThis.document.body;
@@ -111,13 +111,13 @@ export function coachLay() {
     return "d";
   }
 }
-export function coachTip(kind, lay, world) {
+export function coachTip(kind, lay, world, words) {
   if (isTile(kind)) return world ? tileTip(floorOf(kind), featProfile(world)) : "";
   if (TIPS.indexOf(kind) < 0) return "";
   const d = POWER.find((x) => x.t === kind);
   if (!d) return "";
   const l = lay === undefined ? coachLay() : lay;
-  return d.name + " · " + (l === "p" || l === "l" ? d.help.replace(KEY_HINT, "the " + d.name + " button") : d.help);
+  return d.name + " · " + helpOf(d, words, (l === "p" || l === "l") && !(words && words.dev === "pad"));
 }
 
 export function coachAlpha(st) {

@@ -55,7 +55,7 @@ export function tileTip(kind, pr) {
     const g = pr.glide;
     if (!g.coast) return n + TILE_HELP.GLIDE[0];
     if (g.coast === 1) return n + "FAST ICE · LET GO AND YOU SLIDE A STEP";
-    return n + "FAST ICE, YOU SLIDE ON · " + (glideBrakes(pr) ? "STOP EARLY: PRESS BACK AS YOU LET GO" : "ONLY A BLOCK STOPS YOU");
+    return n + "FAST ICE, YOU SLIDE ON · " + (glideBrakes(pr) ? "STOP EARLY: PRESS THE OTHER WAY" : "ONLY A BLOCK STOPS YOU");
   }
   if (kind === "BELT") {
     const b = pr.belt;

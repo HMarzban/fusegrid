@@ -16,6 +16,33 @@ append an entry when it makes a non-trivial change.
 
 ## Log
 
+## 2026-11-07 — v201 pushed: controller play, rebinding, CONTROLS page
+- Owner: "make it ready and push it up", a day before the planned Sunday. Released as one squashed commit on `origin/main`'s v200 tip (`feature/controls` and `feature/delivery` are never pushed); CHANGELOG and sitemap dated 2026-11-07; the brand of the test controller left the tracked docs (A5). 578 tests; the stubbed-pad browser pass re-run on the release tree, its leftover fails all stale against `e1384f5` or timing (record's go/no-go). M1-M7 ship open by the owner's call. The new share card (`og.png` + alt text) ships beside it as its own commit; the owner re-uploads Social preview by hand.
+
+## 2026-11-03 — promotion material is local only
+- Owner: it stays on this Mac. The promotion kit moved from `docs/marketing/` to the git-ignored `.superpowers/sdd/marketing/` (README.md, LOG.md), with the promotion entries from this log; AGENTS, the docs map, diary, media README and the controls records no longer carry it. v201 reaches GitHub as one squashed commit on main; `feature/controls` is never pushed.
+
+## 2026-11-03 — v201 push moved to Sunday 2026-11-08
+- Owner moved the push from Friday. Date moved in AGENTS, CHANGELOG (v201 · 2026-11-08), sitemap lastmod, diary, the built record's go/no-go, memory.
+
+## 2026-11-03 — v201: menu vibration (launch, enter, back, deny, hello) on the local branch
+- Owner asked for subtle buzz on page enter and game start. Research, accessibility and game-design reviews in `.superpowers/sdd/notes/v201-controls-build/menu-haptics/`; one classifier per poll in `controlswire.js`, feels in `rumble.js` `menu()`, `scaleMag` piecewise (identity from 0.5, LOW <= 0.40), cap 900 ms per 10 s on ticks only, menu steps play late not skipped (browser stub 11/11, `menu-haptics/buzzsmoke.mjs`). Open: felt on a real pad, the finale WIN second press untested end to end.
+
+## 2026-11-03 — v201: VIBRATION felt on a real controller
+- Owner felt the VIBRATION row's test buzz on a real controller on macOS (`e1384f5`), so the route reaches a motor. Open: the in-run patterns and each level (M6), M1-M5 and M7.
+
+## 2026-11-03 — v201 docs synced to `ee2a34e`: VIBRATION levels and patterns, SENSITIVITY levels, menu repeat and tick
+Record, AGENTS, CHANGELOG, architecture, diary and acceptance now state the code; `rumble` stays the internal name, VIBRATION the player's word. Rulings: menu ticks have no separate off (departure from the accessibility ask), a keyboard-only player gets no buzz except the row's test pulse, patterns capped 500 ms and 3 pulses. Measured: 556 tests; twelve modules 111,107 bytes raw; boot graph +137,052 since `8853efc`. Open: M1-M7 (owner says the controller works; nobody has confirmed vibration felt on real hardware), A2 browser pass and A5 denylist to re-run. Not committed.
+
+## 2026-11-02 — v201 rulings after the owner played on a real controller: CONTROLS in the kit, rumble default ON
+Owner: "the controller UI is not like the rest of the menue ui", "since we have controller so we have to vibration too". Lead rulings, docs synced beside the code agents: CONTROLS rebuilt in CONSOLE PANEL (list + pane, tile style dropped, code left in git-ignored `mock/page2.js`), no all-menus restyle this release; rumble default ON, independent of REDUCE FLASH; MENU note `CONTROLLER READY · SET IT UP IN OPTIONS › CONTROLS`. Owner reports it works, details not yet reported, so M1-M7 stay open. Open: tile-build numbers in the record (boot weight, test count, fit sizes) and A1-A6 to re-run on the rebuild; tile cards need a re-render.
+
+## 2026-11-02 — v201 prepared on `feature/controls`, NOT live: controller play, rebinding, CONTROLS page
+T15 close-out, uncommitted for the lead: `CACHE_NAME`/REV v201, sitemap and CHANGELOG dated 2026-11-06, record `docs/superpowers/specs/2026-11-06-controls-built.md`, docs synced. The owner pushes Friday. Open: M1-M7 (no real controller has been used), browser pass A2 to re-run on v201, the consent card over LEVEL SELECT not confirmed against v200, owner calls, the all-menus skin ruling unbuilt, AGENTS Menu look still says `v200` in its examples.
+
+## 2026-11-02 — CONTROLS menu design, not built
+CONTROLS menu DESIGN only (keyboard + game controller, rebinding), nothing built, v200 unchanged. Record `docs/superpowers/specs/2026-11-02-controls-menu-design.md`; mock on the real kit in git-ignored `.superpowers/sdd/notes/v200-controls-design/ui/`. Same day, on the owner's ask, the page moved to a calmer tile style (direction D, `mock/page2.js`), PAUSE unchanged; the first set is in `v1-final/`. Owner rulings: every menu moves to this style once built, but menu design waits for the owner's go. Open: owner calls in the record; a pad alone cannot leave the title today.
+
 ## 2026-11-02 — v200 LIVE, release v2.3.1: v199's loose ends
 Owner: "do the 1 to 8". PASS no longer causes false holds, GATE and TRAP tips corrected, `hide` survives a conveyor loop, the bake test takes the best of 3, the bot model sees a hold on a bomb's next step, stale AGENTS text fixed. Boards unchanged. Open: the owner's decisions, real phones, playtest #30.
 
@@ -35,9 +62,6 @@ Owner: "finish them all", in parallel, ahead of the #30 playtest. `?gen=3` only,
 ## 2026-11-01 — v195 LIVE: #19 #20 #21 #22 #24 built in parallel, time-boxed
 - #19: the CONVEYOR failure was the fork's belt lure (`beltAim` now; no game change). #20: ICE MAX +3.96 braking, +5.15 not; V19 = 0 assumes the brake. #21: `relaytell.js`, 2.4 s notice. #22: forced seeds readable, `PLATE_TPL` PIT +9.9. #24: `tileTip`, 12-bit coach, FLOOR line. Combined MAX: BOOSTER −1.2, ICE +3.3, CONVEYOR +9.0, TRAP +4.7; first-5 s passes. All agents finished under their limits. Next: owner playtest (#30).
 
-## 2026-11-01 — Listing art: CLASSIC 2D and PIXEL only (v194, live with v195)
-- Owner: "let's focus on the 2d and pixel only not 3d", read as the listing art; the game keeps REAL 3D. Cover, stills, GIF, clips and the wide install screenshot recaptured without REAL 3D; the manifest label changed, so shell v194. Open: the pitch copy still leads with REAL 3D, pending the owner.
-
 ## 2026-11-01 — v193 LIVE: #18 + #22 merged, #34 and #30 bot-side measured
 - #18 tuned tiles in `main` (`?gen=3` only), `featchecks` in `src/core` (33 KB at boot), V14 fixed, pin `7e57d1aa:71503`. #22 V20 = 0 (room 5 re-rolls ~8 % of layouts); PIT +13 / RING +3 / GAUNTLET +1 at MAX. #34: 0 dropped in all looks on M5 Max; REAL 3D ~85 ms freeze per new world. #30 stopped early by the lead: 8 strictly forced moments (BOOSTER flare timing the real one), first-5 s hits at MAX fail (CONVEYOR), ICE MAX +3.1 [2.2, 4.0] unresolved, `icefrag.mjs` never run. Owner calls pending. Scratch `base`, `base.tar` left in the scratchpad (delete refused).
 
@@ -49,9 +73,6 @@ Owner: "finish them all", in parallel, ahead of the #30 playtest. `?gen=3` only,
 
 ## 2026-11-01 — clean-up and docs sync
 - Owner: clean up, sync docs, then known gaps and #18 #30 #22 #34 in parallel. `.codex/` (another tool's agent config) git-ignored, not deleted; 180 stale `fg-px-*` capture profiles removed; stale AGENTS lines fixed; #26 got the open-GATE note; the pass-2 art notes moved off closed #23 onto #19 / #21.
-## 2026-11-01 — #7 stage 1: listing art and copy back in step with v192; launch on hold
-- Owner: "let's just work on the stage 1, the other stage must be waite, beacuse we did not finish the game yet." All of `media/` and `screenshots/` recaptured from the deployed v192 commit (gen 2, no tiles, demobot, virtual clock; provenance in `media/README.md`); v193 shipped mid-session, so the stills were re-shot on it (same frames) and MENU recaptured. Copy fixed: itch blurb K+move, ghost only on DAILY/code, opt-in stats. Portal zip passed a cross-origin iframe test in all three looks. `og.png` kept (only `NO TIME YET` differs). Left open: Search Console needs the owner's tag and a release; stages 2 and 3 wait for the owner's go. Art goes stale when tiles ship.
-
 ## 2026-10-26 — v192: tiles design pass 2 (#28) done, harness #25 built
 - Owner picks O1 Heat, O3 superset only if needed (unused), O7 no AI retune, O8 capped, O9 BOOSTER room 1; then T1 TRAP rules (no chain, off/hold, PLUS spares trigger foe, MAX kills no foe), I1 ICE CORE x1.0 + MAX brake, B1 BOOSTER = assist tile (MAX not easier), C1 CONVEYOR EASY accepted. Confirmed MAX Δ lose: TRAP +5.9, ICE +4.6, CONVEYOR +5.4; static V19 = 0 for all four. `tools/balance/` harness + featchecks on main; tuned code on branches pass2-trap/ice/conveyor/booster for #18–#22. Addendum in the tiles record.
 
@@ -76,7 +97,7 @@ Owner: "finish them all", in parallel, ahead of the #30 playtest. `?gen=3` only,
 - Users reported ALLOW leaves the card up. Cause: `#upd,#ana{display:flex}` beats the UA `[hidden]{display:none}`, so `el.hidden = true` did nothing (NEW VERSION card too, since v179). My v185 check read `card.hidden` and never looked at the screen after the click. Fix: `#upd[hidden],#ana[hidden]{display:none}` + `tests/hidden-css.test.mjs`; CACHE_NAME/REV v186, CHANGELOG. v185 itself was pushed and went live today.
 
 ## 2026-10-26 — Opt-in Google Analytics (GA4) built, ID G-C3MW30HPQ0 in
-- Owner asked for a tracker (opens + who stays), picked GA4 with "ask once, with an OPTIONS switch". `src/app/analytics.js` (consent card `#ana`, `nb.analytics.v1` KEEP, OPTIONS ANALYTICS row 8, run_start/run_end + days bucket), `docs/privacy.md`, plan `docs/superpowers/plans/2026-10-26-google-analytics.md`; marketing kit's "no analytics, by design" line rewritten. Folded into unpushed v185 (no CACHE bump).
+- Owner asked for a tracker (opens + who stays), picked GA4 with "ask once, with an OPTIONS switch". `src/app/analytics.js` (consent card `#ana`, `nb.analytics.v1` KEEP, OPTIONS ANALYTICS row 8, run_start/run_end + days bucket), `docs/privacy.md`, plan `docs/superpowers/plans/2026-10-26-google-analytics.md`. Folded into unpushed v185 (no CACHE bump).
 - v185 re-dated to its ship day 2026-10-26 (CHANGELOG, sitemap lastmod, diary, architecture, docs map); housekeeping: six merged `claude/*` branches deleted, dirty 2026-10-11/10-19 worktrees left for the owner.
 - `GA_ID` = `G-C3MW30HPQ0` (owner's web stream). Open: owner registers custom definitions (mode, room, result, heat, pace, days_played, look); real sending is unverified until it is live on Pages (check GA Realtime/DebugView).
 
@@ -84,10 +105,8 @@ Owner: "finish them all", in parallel, ahead of the #30 playtest. `?gen=3` only,
 - Owner: "work on the enemies and the Items ... improve the details and animations like what we have done for floor and walls? run team of agents and run the related skills and also agents". Process: art-director + technical-artist critiques (read-only) -> shared spec `src/render/motion.js` + `entityfx.js` -> four lanes (2D foes `enemybody.js`, 2D items `itemdraw.js`/`icons.js`/`fx.js`/`renderer.js`, REAL 3D `three/entities.js`+`entityanim.js`+`burstfx.js`, PIXEL `pixel/entities.js`+`foegen.js`) -> independent art review -> round 2 fixes. Commits `6ce8047`, `5488c65`; 195 tests; CLASSIC hash `127e8b05:72409`; 3D fat-world 156 draws (cap 160); px tree ~146 KB of 152.
 - Loose ends: no real-GPU frame time for the new motion; hunter windup needs a sim field; 3D spawn is scale + ring (shared materials); PIXEL surface detail thin on chaser/burrow/boomerang/rocket/fast; ENEMIES guide page shows the static pose; docs record: `docs/superpowers/specs/2026-10-25-board-look-depth-ambient-design.md` (Foes and items section).
 
-## 2026-10-26 — Two X campaigns prepared; GUIDE keyboard door fix
-- `883ac5d`: the 2x2 keyboard GUIDE doors clipped their words into the preview strip (found on a campaign card); the strip ends left of the chevron and a narrow box drops it. Part of the unpushed v185.
-- Campaigns (git-ignored, owner posts): `.superpowers/sdd/2026-10-25-post-x/` (three posts x four 1200x1200 cards, real v184 vs v185 captures, same seed; `copy.md`; post only after v185 is live) and `.superpowers/sdd/2026-10-26-social/` (eight 1600x900 standalone cards: dev stories A1-A4 from real captures, ideas B1-B4 badged; `copy.md`, schedule from Mon 11-02). Owner rulings: SOLIN card + post say "AI-assisted concept art"; boss names still the owner's call. Indexed in docs/marketing/README.md.
-- Not mine, left alone: an untracked `docs/superpowers/plans/2026-10-26-google-analytics.md` appeared (the marketing kit says "no analytics, by design").
+## 2026-10-26 — GUIDE keyboard door fix
+- `883ac5d`: the 2x2 keyboard GUIDE doors clipped their words into the preview strip; the strip ends left of the chevron and a narrow box drops it. Part of the unpushed v185.
 
 ## 2026-10-25 — Shell v185 prepared on local main (not pushed)
 - `CACHE_NAME`/`REV` v185, CHANGELOG "shell v185 · 2026-10-25", sitemap lastmod 2026-10-25, AGENTS/architecture/diary/docs map/record updated. Owner ruling "Today's boards": gen 1 is the default everywhere, `?gen=2` is the only way to the tile boards (`flags.js`; ghost key and F1 code carry no `gen`, #13; tile dial #28); GUIDE FLOOR page and door say PREVIEW. Owner asked what "gen" is: explained gen 1 must live forever for old codes/dailies. The owner pushes.
@@ -126,15 +145,13 @@ Owner: "finish them all", in parallel, ahead of the #30 playtest. `?gen=3` only,
 - DEPTH + AMBIENT (owner 2026-10-25: "work on the depth of the graphics ... improve it", then "ambient motion ... in all three looks, in parallel lanes"): committed on `tiles-d` (`3f36d02` depth, `18ca6ea` ambient): shadows/AO/contact shadows, brick face down 8-14 L*, per-biome floor detail, 3D relief + per-world rim, PIXEL floor + shadows + 2x hearts, phone layout, then `ambient.js` + three lane painters. 131/131 tests, hash `c7b4c843:71320`, tile gates 192 PASS (before the ambient round). Unmeasured: real-GPU frame time; ATTRACT shows no ambient (renderer cannot tell it from menus, needs a flag from main.js).
 - Open: final-review findings (see the closing message of that session); PIXEL pass is cleaned procedural builders, not frame-by-frame hand art; sim only exists for 4 tiles (CONVEYOR, ICE PATCH, BOOSTER, TRAP); porting to main waits for #28 / #16 / #15; owner may veto the gate redefinitions (busyness replaces the 30 % marks gate). Stale tools: `tools/tileart/measure.mjs` and friends still call removed `tones()` / marks-only pass.
 
-## 2026-10-25 — Second X devlog post prepared; handoff for the floor/tile redesign
-- Owner picked post C ("Still on the board. I'm making FUSE/GRID look and feel like a real game…") with two polished cards (`fusegrid-x-post2-1-walls.png`, `-2-floors.png`) and an optional moving-tiles GIF, all in `.superpowers/sdd/2026-10-23-post-x/`. Not posted by agents. Owner rule: posts in the first person, no internal round names.
+## 2026-10-25 — Handoff for the floor/tile redesign
 - Next: the owner opens a new session to redesign all floor tiles. Handoff: `.superpowers/sdd/2026-10-23-tile-art/START-HERE.md`. Main is ahead of origin (unpushed) until the owner says push.
 
 ## 2026-10-23 — Art round 3: maturity pass on walls + floor tiles (local prototypes)
 - Owner: "find the best skills and agents for art design and make the visual look better, more mature and add tinny details that are matter in game and for gamers", then "the real 3D need more effort … and also put more efferts for floor tiles". Installed (owner-approved, reviewed first): skills `~/.claude/skills/pixel-art` (omer-metin) and `~/.claude/skills/pxl-pixel-art` (crsolver/claude-pxl, runs from source, no npm install); agents `.claude/agents/art-director.md` + `technical-artist.md` (Donchitos, local, `.git/info/exclude`). The agents ask before writing, so they serve as read-only critics; pixel-art `validations.md` contradicts R20 / the Linear 3D atlas — treat it as craft knowledge, not repo rules.
 - Art-director critique (`.superpowers/sdd/2026-10-23-tile-art/round3-critique.md`): the detail pass drew unbreakable WALL faces as masonry (brick's "this breaks" cue) and added causeless speckle. Round 3 fixed both. Walls `worktree-agent-ab0dfcf6e3434b2c3`: monolithic faces, caused marks only, warm bevels, REAL 3D relief + gloss + contact AO at 141 draws, PIXEL `art/walls.js` 25.1 → 12.8 KB (px tree still 13 KB over cap; #15). Floor `worktree-agent-a3057d0a51e6a8d96`: QUICKSAND spiral, STREAM ripples, PORTAL pips, GATE whole-side timer, 8 REAL 3D shader effects on the PLAY clock, 142 draws, 65/65 tests. Both locked, local only, indexed in `PROTOTYPES-2026-10.md`. Page v2: https://claude.ai/artifact/47wrvBBwmuzqiUrwKDn6A9 (actual-size toggle, moving 3D tiles).
 - Open: six CVD pairs dip ≤ 0.5 (within the brief's rule; owner may veto), the 3D wall strip build costs 6–7.5 ms per room on a laptop (phone unmeasured), 3D frame time needs headed real-GPU Chrome. Issues #17 / #23 / #31 carry an "Art target: round 3" section (images resolve once main is pushed).
-- X devlog carousel for round 3 (owner asked: 4 pictures, CLASSIC 2D / PIXEL / REAL 3D before → after + one compact 2D board): `.superpowers/sdd/2026-10-23-post-x/` (4 cards 1200×1200, `post.md` copy + alt text). Tagged IN THE WORKS · DEVLOG; floor-tile "before" is today's plain floor. Card 4 is a real ICE room from `worktree-agent-a3e81f1a8f93b6124` (both round-3 branches merged; locked). Not posted; the owner posts.
 
 ## 2026-10-23 — Tile art detail pass + clean tiles-only page
 - The owner asked for a page with only the tiles (no boards) and for better graphics. Two art leads did detail passes in all 3 looks:
@@ -177,7 +194,7 @@ Owner: "finish them all", in parallel, ahead of the #30 playtest. `?gen=3` only,
 - The owner pushed main at `c6ee713`; Pages CI is green, so v183 is LIVE (SHRINK REAL 3D walls, the MENU build tag, the level-variety and tiles docs, issues #8–#30 resolvable). The #6 kick-hint fix is a separate v184 committed locally by another session, not pushed. Three leftover headless-Chrome temp profiles were deleted. Next: owner decisions O1–O12 on #8, then a GO on the build order.
 
 ## 2026-10-21 — Issue #6: no hint says K + MOVE to kick
-- HOW TO's KICK row key now reads `WALK INTO BOMB` (agrees with `POWER[].help`); the OPTIONS keyboard key line drops `KICK K+MOVE` (kick has no key); README and the marketing kit match. Ships as shell v184 (v183 was already live, so the changed `menudraw.js` needed a cache bump). Pushed at `5fc9d80` and Pages is green, so v184 is LIVE. HOW TO pins re-hashed in `pixel-hud.test`; `menudraw.test` now fails on any `K + MOVE`. Left open (owner call): the dead `KeyK` → `intent.kick` latch, with #3.
+- HOW TO's KICK row key now reads `WALK INTO BOMB` (agrees with `POWER[].help`); the OPTIONS keyboard key line drops `KICK K+MOVE` (kick has no key); README matches. Ships as shell v184 (v183 was already live, so the changed `menudraw.js` needed a cache bump). Pushed at `5fc9d80` and Pages is green, so v184 is LIVE. HOW TO pins re-hashed in `pixel-hud.test`; `menudraw.test` now fails on any `K + MOVE`. Left open (owner call): the dead `KeyK` → `intent.kick` latch, with #3.
 
 ## 2026-10-21 — Prototypes kept local, indexed for agents
 - The owner said to keep the prototype code local. The two worktrees with loose changes were committed on their own branches, and all four prototype worktrees are `git worktree lock`ed. Index: `.superpowers/sdd/PROTOTYPES-2026-10.md`; there is an AGENTS.md pointer under Level variety.
@@ -227,21 +244,11 @@ Owner: "finish them all", in parallel, ahead of the #30 playtest. `?gen=3` only,
 ## 2026-10-19 — Release shell v182 (install screenshots + share card C), pushed
 - Supervisor pass: merged v181, dev diary/CHANGELOG backfill, SEO kit, listing art (9df402e); storefront session pushed card C (07aca1f). v182 bumps CACHE_NAME/REV so installed clients get the precached manifest screenshots and new share text. Marketing parked as HMarzban/fusegrid#7. Owner said keep old media/worktrees for now (no cleanup); duplicate branch claude/menu-still-recapture (805ac64) stays unmerged.
 
-## 2026-10-19 — Storefront: new og.png (owner pick C, ATLAS LEVEL SELECT) for v180
-- I built three real-capture cards (A: three looks side by side, B: today's card plus PIXEL insets, C: ATLAS LEVEL SELECT) on a contact sheet at full and preview size, and the owner picked C. `og.png` now sells CLASSIC 2D · PIXEL · REAL 3D plus CORE / PLUS / MAX over a fresh-profile LEVEL SELECT. og/twitter `image:alt` are updated; AGENTS storefront rules and the media/README og paragraph are re-synced. It needs no CACHE bump, because og.png is network-bypassed.
-- Owner uploaded the card to Social preview and set the About description (live, checked with gh). I added 13 topics with `gh repo edit --add-topic`, keeping the old seven, which makes 20 (the cap). The seo-marketing branch owns og:description and JSON-LD. Capture recipe: a black/white difference matte for the transparent 3D board, and CAMERA WIDE fits the whole cabinet.
-
-## 2026-10-19 — Listing art gaps filled: manifest screenshots, PIXEL still, silent clips
-- Merged the promo kit (inspiring-moser) + media recapture (modest-haslett) branches, then captured on a virtual clock (performance.now stepped 2x1/60 s per frame, so 1080p is real-speed with no dropped frames) with the game's own demobot on the real Input: screenshots/wide.png (3D 1920x1080) + narrow.png (CLASSIC phone 1080x1920) in manifest `screenshots`, staged by pages.yml, NOT precached (pwa.test pins it); media/still-pixel.png (FACTORY); 18 s silent clips: landscape 16:9 3D, portrait 2:3 PIXEL (CrazyGames), 9:16 3D (Shorts). Merged main (v181) after; still-menu.png recaptured on v181 (CONSOLE PANEL list + preview pane). Open: manifest is precached, so it needs a shell bump to reach installs (v181, still unpushed, covers it only if this merges first; else v182); CrazyGames covers need a title composite (owner/storefront). Capture scripts: shared notes folder.
-
 ## 2026-10-19 — Shell v181: phone menus on a full-screen box, iso overflow, NO TIME YET (not pushed)
 - Owner GO from a before/after sheet (https://claude.ai/artifact/NB6JbVSgTkDueFSgvYhdfZ): touch-portrait MENU + pages draw on #sh (fit.js shellGeo, ~0.9 vs 0.63), board canvases untouched; narrow re-flows in menudraw. Iso MEDALS/STATS/SCORES fixes gated on f<1; NO TIME YET waits for TIME. npm test green, CDP verify2 129/129; scripts in git-ignored .superpowers/sdd/2026-10-19-polish2/.
 
 ## 2026-10-19 — Dev diary + CHANGELOG backfill (docs only, no shell bump)
 - Owner asked for updated changelogs plus "a story of the game development, a diary of the changes". New `docs/diary.md` (dated entries 2026-08-16 → v180, lessons, explored-not-built list without lore), linked from docs/README who-owns-what (one row) and README "Go to". CHANGELOG: v180's two `### Added` merged + "v179 never deployed" line; new sections shell v31 (pushed `569bc0a`, arcade loop + v2–v31), shell v1 (Heat/Pact/rooms 6–8/offline, commits dated 09-03) and 2026-09-01 public launch; Unreleased untouched. Open: SIGNAL RUNNER/IONVEST only in the diary (never public).
-
-## 2026-10-19 — SEO + promotion kit (docs/marketing/README.md)
-- index.html meta/JSON-LD (MODES not Pact, PIXEL, playMode enum, numberOfPlayers, no fake screenshot/rating), manifest description + categories, sitemap lastmod 2026-10-19 pinned >= newest release by a headless test, README Pact->MODES/IRON fix; kit = positioning, copy, per-platform tags, portal/community research dated 2026-10-19, launch checklist, About+topics draft. Not done: no CACHE_NAME bump (next release), manifest screenshots, PIXEL still, Search Console, every external post (owner).
 
 ## 2026-10-19 — Release shell v180 pushed (menus, ATLAS, NEW VERSION READY)
 - CHANGELOG Unreleased -> shell v180 · 2026-10-19 (v179 was never deployed, so v180 carries it). The update card is centred over a blurred backdrop (#updbg, tap = LATER). Pushed main to origin; Pages CI runs npm test before deploy.

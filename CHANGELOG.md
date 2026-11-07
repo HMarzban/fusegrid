@@ -15,6 +15,59 @@ Entries are written for players. How a change works lives in
 [docs/architecture.md](docs/architecture.md); how to ship one is in
 [CONTRIBUTING.md](CONTRIBUTING.md#-shipping-a-release).
 
+## shell v201 · 2026-11-07
+
+Plug in a controller and play. Set your own keys and buttons.
+
+### Added
+
+- **Controller play.** D-PAD or stick to walk, SOUTH for a bomb, WEST to throw, EAST for remote,
+  START or SELECT to pause. In menus, SOUTH or START confirms, EAST goes back, and the shoulders
+  change PACE or tab. A controller alone takes you from the title to QUIT TO MENU.
+- **CONTROLS page.** A new door in OPTIONS, and in the pause menu, built like every other menu: a list on the
+  left, a preview on the right. ↑↓ walks the rows, ←→ changes tab, and ←→ on SENSITIVITY or VIBRATION adjusts it. Rebind BOMB, THROW, REMOTE and a second PAUSE
+  input on the keyboard and on a controller, and MOVE on the keyboard. If you take an input that's in use, the two swap and one line tells you.
+  Pick the left or right stick.
+  Your binds survive a reload, RESET DEFAULTS and a cabinet reset.
+- **VIBRATION.** Four levels in CONTROLS: OFF, LOW, MEDIUM (to start) and HIGH. Each moment has its own rhythm: a hit, a
+  SHIELD saving you, a loss, a win, a blast next to you, a chain that builds, a plant. LOW drops the plant tick, single blasts a little way off and the menu ticks. OFF
+  is really off. Changing the level plays one short pulse so you can feel it. During a run and in the menus it buzzes only while the
+  controller is what you last used. REDUCE FLASH leaves it alone. A controller or browser that gives the game no motors
+  shows `NONE` and says so.
+- **Menus you can feel.** On MEDIUM and HIGH a controller now gives each menu moment its own light buzz: a crisp tap when
+  a page opens, a softer thump going back, a quick rising double pulse when a run starts, a double tap when something
+  is refused, a short hello when a controller connects, and light ticks for the cursor. One buzz per press, never on a held
+  direction, and a run's own vibration always comes first. LOW and OFF keep the menus quiet.
+- **SENSITIVITY.** Five levels in CONTROLS, MIN to MAX (MEDIUM to start), set how far the stick moves before it counts.
+  A live view shows your stick, how much it drifts at rest and what the game reads.
+- **`CONTROLLER READY · OPTIONS › CONTROLS`.** MENU points you to the page, and names your VIBRATION level where it fits.
+  So does the CONTROLS row in OPTIONS.
+- **A light tick in the menus.** At MEDIUM and HIGH, a controller ticks when the cursor really moves or a row confirms,
+  never on a hold. LOW and OFF turn it off; it has no switch of its own.
+- **Hints that follow your hands.** Prompts, tips and the pause cue name the keys or buttons you just
+  used, with your own binds.
+- **Pulled the cable?** If the controller you're playing on drops mid-run, the game pauses and says `CONTROLLER LOST`.
+  Plugging it back in never resumes on its own.
+
+### Changed
+
+- **THROW is on E.** One key, no chord.
+- **`PRESS ANY KEY OR BUTTON`.** A controller press leaves the title. If the browser holds the sound
+  back, the show runs silent until you press a key or tap.
+- **`ENTER CONFIRM`** replaces `ENTER SELECT`, because a controller has a button called SELECT.
+- **ICE PATCH tip.** Where you can brake, it now reads `STOP EARLY: PRESS THE OTHER WAY`.
+- **OPTIONS has twelve rows**, slightly tighter on a keyboard to fit.
+- **Steadier menus.** Holding a direction repeats more evenly, on keys and on a controller. A slightly sideways stick push
+  on a list now walks it instead of doing nothing.
+
+### Known limits
+
+- A controller walks in four directions. Keyboard diagonals are unchanged and still move faster on
+  open floor.
+- The privacy card, the STATS reset and the camera reset take a keyboard or a tap, on purpose.
+- The SENSITIVITY, turning and VIBRATION numbers are starting values. A real controller has played this and works, and
+  its VIBRATION test buzz was felt on real hardware; the in-run patterns are not yet checked on one.
+
 ## shell v200 · 2026-11-02
 
 Small fixes after v199. Same boards.

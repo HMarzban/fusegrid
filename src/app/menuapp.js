@@ -3,7 +3,8 @@
 // untouched; nothing here is ever read by step().
 //
 // update(dt, input) input contract: { input:{up,down,left,right},  // held axes,
-//   live via Input's public getter; confirmHeld:boolean }           // held fire
+//   live via Input's public getter; confirmHeld:boolean,            // held fire
+//   anyDown?:boolean }   // any key or pad button down: the CONTROLS capture's arm clock
 // Confirm/repeat edges are computed here: rising-edge only, repeats 350ms then
 // 110ms. key(code) is the discrete side-channel (Enter/Esc/Backspace/M +
 // arrows/WASD as taps); taps are handed to update() via a per-frame consume map
@@ -33,7 +34,10 @@ export const SCREEN = Object.freeze({
   TROPHIES: 13, // appended — the MEDALS page, opened from STATS by T (R6)
   GRAPHICS: 14, // appended — the GRAPHICS page, opened from the OPTIONS door row
   FLOOR: 15, // appended — the floor-tile page, the fourth GUIDE door
+  CONTROLS: 16, // appended — the CONTROLS page, opened from the OPTIONS door row
 });
+/* Menu feels by rank, highest first (controlswire.js plays them on a pad). */
+export const FEELS = Object.freeze(["launch", "enter", "deny", "back", "confirm", "move"]);
 export const ITEMS = Object.freeze([
   "PLAY",
   "LEVEL SELECT",
@@ -60,6 +64,7 @@ export const OPT_ROWS = Object.freeze([
   "REDUCE FLASH",
   "ANALYTICS",
   "GRAPHICS",
+  "CONTROLS",
   "RESET DEFAULTS",
 ]);
 /* PAUSE list (spec §3). world.state stays PAUSE and the shell stays GAME —
@@ -75,6 +80,8 @@ export const SOURCE_URL = "https://github.com/HMarzban/fusegrid";
 const REP_FIRST = 0.35,
   REP_NEXT = 0.11;
 export const IDLE_T = 10; // MENU idle seconds before ATTRACT takes over
+const DEF_MOVE = Object.freeze(["KeyW", "KeyD", "KeyS", "KeyA"]); // UP RIGHT DOWN LEFT; no controls.js import, it is not in this file's boot graph
+const ANA_NOTE = "ANSWER THE CARD WITH Y OR N";
 
 export function createMenuApp(opts = {}) {
   const o = opts || {};
@@ -96,7 +103,15 @@ export function createMenuApp(opts = {}) {
     // survives a round trip through the page
     guideRow: 0, // GUIDE row cursor — its OWN field too, same reason
     pauseCursor: 0,
-    pauseView: 0, // 0 list / 1 inline OPTIONS / 2 inline GRAPHICS; reset on the PLAY->PAUSE edge
+    pauseView: 0, // 0 list / 1 inline OPTIONS / 2 inline GRAPHICS / 3 inline CONTROLS; reset on the PLAY->PAUSE edge
+    controls: o.controls || null, // the CONTROLS page (controlspage.js); null = the door is inert
+    ctlT: 0, // ms, summed from update()'s dt: the ONE clock the page's tick, confirm and feeds share
+    feel: "", // the one menu feel the last presses asked for, highest FEELS rank kept; controlswire arms it before a pad poll routes and reads it after
+    lastDev: "key", // raw last-used device "key" | "pad" | "touch", no dwell: opens the page's tab and gates the consent row
+    padNote: "", // CONTROLLER LOST / BACK / READY, written by the controls seam
+    padCards: [], // the cards a pad may answer, {live, press}: never the consent card (padroute.js)
+    modeCur: -1, // LEVEL MODES chip a pad has focused; -1 = none yet. Shell-only, never reaches a run
+    _anaSaid: false,
     gfxRow: 0, // GRAPHICS row cursor — its own field, like guideRow
     gfxChg: 0, // GRAPHICS rows (bitmask) the last accepted change touched: the togT glow lights them all
     gfx: null, // live frame info {fps,hz,kind,dpr3d,dprPx,liveAA,pendingAA,limit,gov}, written by main's frame loop
@@ -142,7 +157,17 @@ export function createMenuApp(opts = {}) {
       let rising = ch && !this.prevConfirm;
       this.prevConfirm = ch;
       this.subT += d;
+      this.ctlT += d * 1000;
       if (this.boardReady) this.readyT += d;
+      if (this.onControls()) {
+        const h = (input && input.input) || {};
+        this.controls.tick(this.ctlT, !!((input && input.anyDown) || ch || h.up || h.down || h.left || h.right));
+        if (this.capturing) {
+          this._repeat(d, 0, 0);
+          this._taps = {};
+          return;
+        }
+      }
       if (this.screen === SCREEN.GAME) {
         if (this.worldState === "PAUSE") {
           const ax = (input && input.input) || {};
@@ -189,7 +214,7 @@ export function createMenuApp(opts = {}) {
         const g = this.screen === SCREEN.GUIDE; // GUIDE's doors sit side by side: ←/→ walk them too
         dir = ax.up || (g && ax.left) ? -1 : ax.down || (g && ax.right) ? 1 : 0;
       }
-      else if (this.screen === SCREEN.LEVEL || this.screen === SCREEN.SETTINGS || this.screen === SCREEN.GRAPHICS) {
+      else if (this.screen === SCREEN.LEVEL || this.screen === SCREEN.SETTINGS || this.screen === SCREEN.GRAPHICS || this.screen === SCREEN.CONTROLS) {
         if (ax.left || ax.right) {
           dir = ax.left ? -1 : 1;
           axis = 0;
@@ -223,7 +248,9 @@ export function createMenuApp(opts = {}) {
           while (g++ < 64) {
             const thr = this._hot ? REP_NEXT : REP_FIRST;
             if (this.repT < thr) break;
+            this._repHeld = true; // main's cue wrapper passes only (dir, axis); a held ←→ may not turn a tab change into a value step
             this.move(dir, axis);
+            this._repHeld = false;
             this.repT -= thr;
             this._hot = true;
           }
@@ -237,6 +264,7 @@ export function createMenuApp(opts = {}) {
     },
     /* Discrete key tap (Enter/Esc/Backspace/M + arrows-as-tap fallback). */
     key(code) {
+      if (this.capturing) return false; // the capture owns the key (controlspage.js)
       if (this.screen === SCREEN.ATTRACT) {
         if (code === "Escape" || code === "Backspace") return this.exitAttract();
         return this.playFromAttract();
@@ -244,6 +272,8 @@ export function createMenuApp(opts = {}) {
       if (this.screen === SCREEN.INTRO) return this._skipKey(); // title: no-op; show: "ANY KEY TO SKIP"
       this.idleT = 0;
       this.parked = false;
+      const mi = this.moveKeys.indexOf(code); // UP RIGHT DOWN LEFT, live binds; ARROWS always work
+      if (mi >= 0) return this._tapMove(mi === 1 || mi === 2 ? 1 : -1, mi === 1 || mi === 3);
       switch (code) {
         case "Enter":
         case "NumpadEnter":
@@ -255,16 +285,12 @@ export function createMenuApp(opts = {}) {
         case "KeyM":
           return this.quitToMenu(this.worldState);
         case "ArrowUp":
-        case "KeyW":
           return this._tapMove(-1, false);
         case "ArrowDown":
-        case "KeyS":
           return this._tapMove(1, false);
         case "ArrowLeft":
-        case "KeyA":
           return this._tapMove(-1, true);
         case "ArrowRight":
-        case "KeyD":
           return this._tapMove(1, true);
         case "Digit1":
         case "Numpad1":
@@ -282,9 +308,9 @@ export function createMenuApp(opts = {}) {
         case "Numpad5":
           return this.toggleTimeAttack();
         case "BracketLeft":
-          return this.adjustPace(-1);
+          return this.onControls() ? this.controls.tab("key") : this.adjustPace(-1);
         case "BracketRight":
-          return this.adjustPace(1);
+          return this.onControls() ? this.controls.tab("pad") : this.adjustPace(1);
         case "KeyT":
           return this.screen === SCREEN.STATS ? this._push(SCREEN.TROPHIES) : false;
         case "KeyR":
@@ -329,7 +355,7 @@ export function createMenuApp(opts = {}) {
         this._taps[dir + ":" + (lat ? 0 : 1)] = true;
         return true;
       }
-      if ((this.screen === SCREEN.SETTINGS || this.screen === SCREEN.GRAPHICS) && this.move(dir, lat ? 0 : 1)) {
+      if ((this.screen === SCREEN.SETTINGS || this.screen === SCREEN.GRAPHICS || this.screen === SCREEN.CONTROLS) && this.move(dir, lat ? 0 : 1)) {
         this._taps[dir + ":" + (lat ? 0 : 1)] = true;
         return true;
       }
@@ -340,6 +366,7 @@ export function createMenuApp(opts = {}) {
       return false;
     },
     confirm() {
+      if (this.capturing) return false;
       if (this.screen === SCREEN.ATTRACT) return this.playFromAttract();
       this.idleT = 0;
       this.parked = false;
@@ -353,6 +380,7 @@ export function createMenuApp(opts = {}) {
             case "PLAY":
               return this.startRun();
             case "LEVEL SELECT":
+              this.modeCur = -1;
               return this._push(SCREEN.LEVEL);
             case "DAILY":
               return this.startDaily();
@@ -369,16 +397,18 @@ export function createMenuApp(opts = {}) {
               return this._push(SCREEN.STATS);
             case "SOURCE":
               if (onSource) onSource();
-              return true;
+              return this._feel("confirm");
           }
           return false;
         }
         case SCREEN.LEVEL:
           return this.startRun();
         case SCREEN.SETTINGS:
-          return this.optCycle();
+          return this._conf(this.optCycle());
         case SCREEN.GRAPHICS:
-          return this.gfxCycle();
+          return this._conf(this.gfxCycle());
+        case SCREEN.CONTROLS:
+          return this.controls ? this.controls.confirm(this.ctlT) : false;
         case SCREEN.GUIDE:
           switch (GUIDE_ROWS[this.guideRow]) {
             case "HOW TO PLAY":
@@ -404,9 +434,14 @@ export function createMenuApp(opts = {}) {
     },
     back() {
       this.parked = false;
+      if (this.screen === SCREEN.CONTROLS) {
+        if (this.controls && this.controls.back() !== "page") return true; // a capture or an armed reset ends first
+        this.optRow = OPT_ROWS.indexOf("CONTROLS");
+        return this._push(SCREEN.SETTINGS, 1);
+      }
       if (this.screen === SCREEN.GRAPHICS) {
         this.optRow = OPT_ROWS.indexOf("GRAPHICS");
-        return this._push(SCREEN.SETTINGS);
+        return this._push(SCREEN.SETTINGS, 1);
       }
       if (
         this.screen === SCREEN.HOWTO ||
@@ -414,8 +449,8 @@ export function createMenuApp(opts = {}) {
         this.screen === SCREEN.ENEMIES ||
         this.screen === SCREEN.FLOOR
       )
-        return this._push(SCREEN.GUIDE);
-      if (this.screen === SCREEN.TROPHIES) return this._push(SCREEN.STATS);
+        return this._push(SCREEN.GUIDE, 1);
+      if (this.screen === SCREEN.TROPHIES) return this._push(SCREEN.STATS, 1);
       if (
         this.screen === SCREEN.LEVEL ||
         this.screen === SCREEN.SCORES ||
@@ -423,7 +458,7 @@ export function createMenuApp(opts = {}) {
         this.screen === SCREEN.GUIDE ||
         this.screen === SCREEN.STATS
       )
-        return this._push(SCREEN.MENU);
+        return this._push(SCREEN.MENU, 1);
       return false;
     },
     /* Direct programmatic jump from either stage (tests, debughook). Never
@@ -472,11 +507,19 @@ export function createMenuApp(opts = {}) {
       this.cursor = 0;
       return this._push(SCREEN.MENU);
     },
+    /* A step on a value row (OPTIONS, GRAPHICS, a CONTROLS value) is a write: confirm; any other accepted step is move. */
     move(dir, axis) {
+      const g = this.screen === SCREEN.GAME, adj = (axis | 0) === 0 && (this.ctlAdjusts(0) || this.screen === SCREEN.SETTINGS || this.screen === SCREEN.GRAPHICS || (g && (this.pauseView === 1 || this.pauseView === 2)));
+      return adj ? this._conf(this._move(dir, axis)) : this._move(dir, axis) && this._feel("move");
+    },
+    _move(dir, axis) {
+      if (this.capturing) return false;
       this.idleT = 0;
       this.parked = false;
+      if (this.screen === SCREEN.CONTROLS) return this.controls ? this.controls.walk(dir, axis | 0, !!this._repHeld) : false;
       if (this.screen === SCREEN.GAME) {
         if (this.worldState !== "PAUSE") return false;
+        if (this.pauseView === 3) return this.controls ? this.controls.walk(dir, axis | 0, !!this._repHeld) : false;
         if (this.pauseView === 2)
           return (axis | 0) === 1 ? this.gfxMove(dir) : this.gfxAdjust(dir);
         if (this.pauseView === 1)
@@ -528,7 +571,7 @@ export function createMenuApp(opts = {}) {
       if (np === this.pace) return false;
       this.pace = np;
       if (o.onPaceChange) o.onPaceChange(np);
-      return true;
+      return this._feel("confirm");
     },
     /* OPTIONS knobs (spec §2). LEVEL SELECT is the only precedent for
        in-subscreen adjustment, so this copies its move(dir,axis) shape: axis 1
@@ -538,6 +581,7 @@ export function createMenuApp(opts = {}) {
        through o.onSettings — the same shape onPaceChange already uses. */
     optMove(dir) {
       this.idleT = 0;
+      this._anaSaid = false;
       const n = OPT_ROWS.length;
       this.optRow = (this.optRow + (dir < 0 ? -1 : 1) + n) % n;
       return true;
@@ -569,6 +613,21 @@ export function createMenuApp(opts = {}) {
       this.togT = this.subT;
       if (o.onAnalytics) o.onAnalytics(this.analytics);
       return true;
+    },
+    /* Consent ruling (Q11): a stray pad button must not consent, so with no
+       answer yet the row does nothing on a pad and says why. o.anaOpen = the
+       card is still unanswered; a pad with no getter blocks. */
+    _anaOpen() {
+      return o.anaOpen ? !!o.anaOpen() : true;
+    },
+    _anaBlocked() {
+      if (this.lastDev !== "pad" || !this._anaOpen()) return false;
+      this._anaSaid = true;
+      this._feel("deny");
+      return true;
+    },
+    get anaNote() {
+      return this._anaSaid && this._anaOpen() ? ANA_NOTE : "";
     },
     /* RENDER (R4): 0 CLASSIC 2D, 1 PIXEL, 2 REAL 3D. r3d and px move together
        and report through onSettings once, never as two half-states. */
@@ -603,7 +662,7 @@ export function createMenuApp(opts = {}) {
       if (r === "RENDER") return this._optRender(renderVal(this) + d);
       if (r === "SCREEN SHAKE") return this._optSet("shk", d > 0 ? 1 : 0);
       if (r === "REDUCE FLASH") return this._optSet("flx", d > 0 ? 1 : 0);
-      if (r === "ANALYTICS") return this._optAna(d > 0);
+      if (r === "ANALYTICS") return this._anaBlocked() ? false : this._optAna(d > 0);
       return false;
     },
     optCycle() {
@@ -621,8 +680,9 @@ export function createMenuApp(opts = {}) {
       if (r === "RENDER") return this._optRender((renderVal(this) + 1) % 3);
       if (r === "SCREEN SHAKE") return this._optSet("shk", this.settings.shk ? 0 : 1);
       if (r === "REDUCE FLASH") return this._optSet("flx", this.settings.flx ? 0 : 1);
-      if (r === "ANALYTICS") return this._optAna(!this.analytics);
+      if (r === "ANALYTICS") return this._anaBlocked() ? false : this._optAna(!this.analytics);
       if (r === "GRAPHICS") return this._gfxOpen();
+      if (r === "CONTROLS") return this._ctlOpen();
       if (r === "RESET DEFAULTS") return this.optReset();
       return false;
     },
@@ -638,7 +698,53 @@ export function createMenuApp(opts = {}) {
       if (this.screen !== SCREEN.GAME) return this._push(SCREEN.GRAPHICS);
       this.pauseView = 2;
       this.togT = -1;
+      return this._feel("enter");
+    },
+    /* CONTROLS (record 2026-11-02): the door opens a SCREEN from the menu and
+       the inline pauseView 3 from PAUSE, like GRAPHICS. The page owns its rows;
+       the shell owns the walk, the clock and every way out. Keys and buttons
+       reach the page FIRST through ctlKey / ctlBtn. */
+    onControls() {
+      if (!this.controls) return false;
+      return this.screen === SCREEN.CONTROLS || (this.screen === SCREEN.GAME && this.worldState === "PAUSE" && this.pauseView === 3);
+    },
+    get capturing() {
+      return !!(this.controls && this.controls.capturing);
+    },
+    /* ←→ on the page's live value row: the move was a write, which cues itself. */
+    ctlAdjusts(axis) {
+      return (axis | 0) === 0 && this.onControls() && this.controls.onValue;
+    },
+    get ctlTab() {
+      return this.controls ? this.controls.view(this.ctlT).tab : "key";
+    },
+    get moveKeys() {
+      return this.controls ? this.controls.view(this.ctlT).key.MOVE : DEF_MOVE;
+    },
+    ctlKey(code, key) {
+      return this.onControls() ? this.controls.feedKey(code, key, this.ctlT) : false;
+    },
+    ctlBtn(id) {
+      return this.onControls() ? this.controls.feedBtn(id, this.ctlT) : false;
+    },
+    _ctlOpen() {
+      if (!this.controls) return false;
+      if (this.screen === SCREEN.GAME) {
+        this.pauseView = 3;
+        this.togT = -1;
+        this._feel("enter");
+      } else this._push(SCREEN.CONTROLS);
+      this.controls.open(this.lastDev);
       return true;
+    },
+    _ctlCancel() {
+      if (this.controls) this.controls.cancel();
+      this._anaSaid = false;
+    },
+    /* A pad wake: an input was seen, whatever it went on to do. */
+    wake() {
+      this.idleT = 0;
+      this.parked = false;
     },
     _gfxKind() {
       return this.gfx && this.gfx.kind === "iso" ? "iso" : this.render3d ? "3d" : this.pixel ? "px" : "2d"; // the flags flip with RENDER at once; app.gfx lags up to 0.5 s
@@ -689,7 +795,7 @@ export function createMenuApp(opts = {}) {
         const n = i < 0 ? (d < 0 ? 0 : PRESET_NAMES.length - 1) : Math.min(PRESET_NAMES.length - 1, Math.max(0, i + d));
         return n === i ? false : this._gfxPreset(PRESET_NAMES[n]);
       }
-      if (locked(key, this._gfxKind())) return false;
+      if (locked(key, this._gfxKind())) return !this._feel("deny");
       return this._gfxSet(key, Math.min(VALUES[key].length - 1, Math.max(0, this.settings[key] + d)));
     },
     gfxCycle() {
@@ -699,7 +805,7 @@ export function createMenuApp(opts = {}) {
         const p = presetOf(this.settings);
         return this._gfxPreset(p === "AUTO" ? "HIGH" : p === "HIGH" ? "BATTERY" : "AUTO");
       }
-      if (locked(key, this._gfxKind())) return false;
+      if (locked(key, this._gfxKind())) return !this._feel("deny");
       return this._gfxSet(key, (this.settings[key] + 1) % VALUES[key].length);
     },
     /* Writes DEFAULTS and re-applies every knob live. Progress data
@@ -725,35 +831,56 @@ export function createMenuApp(opts = {}) {
        menu track mid-run, hide the touch pad and falsify every screen===GAME
        guard, for a page the player closes in four seconds. */
     confirmPause() {
-      if (this.pauseView === 2) return this.gfxCycle();
-      if (this.pauseView === 1) return this.optCycle();
+      if (this.pauseView === 3) return this.controls ? this.controls.confirm(this.ctlT) : false;
+      if (this.pauseView === 2) return this._conf(this.gfxCycle());
+      if (this.pauseView === 1) return this._conf(this.optCycle());
       const cmd = PAUSE_ITEMS[this.pauseCursor];
       if (cmd === "OPTIONS") {
         this.pauseView = 1;
         this.optRow = 0;
         this.togT = -1;
-        return true;
+        return this._feel("enter");
       }
+      this._feel(cmd === "RESTART" ? "launch" : "back");
       if (onPauseCmd) onPauseCmd(cmd);
       return true;
     },
     pauseBack() {
+      if (this.pauseView === 3) {
+        if (this.controls && this.controls.back() !== "page") return true; // a capture or an armed reset ends first
+        this.pauseView = 1; // 3 -> 1 on the door, never 3 -> 2
+        this._feel("back");
+        this.optRow = OPT_ROWS.indexOf("CONTROLS");
+        this.togT = -1;
+        return true;
+      }
       if (this.pauseView !== 1 && this.pauseView !== 2) return false;
+      this._anaSaid = false;
       this.pauseView--; // 2 -> 1 keeps optRow on the GRAPHICS door
       this.togT = -1;
-      return true;
+      return this._feel("back");
     },
     enterPause() {
+      this._ctlCancel();
       this.pauseCursor = 0;
       this.pauseView = 0;
       this.togT = -1;
-      return true;
+      return this._feel("enter");
+    },
+    /* A pad's L/R TRIGGER on LEVEL SELECT. The first step lands on an end; the ends clamp and are silent. */
+    modeWalk(d) {
+      this.idleT = 0;
+      if (this.screen !== SCREEN.LEVEL || !this.pactUnlocked) return false;
+      const n = this.modeCur < 0 ? (d > 0 ? 0 : 4) : Math.max(0, Math.min(4, this.modeCur + d));
+      if (n === this.modeCur) return false;
+      this.modeCur = n;
+      return this._feel("move");
     },
     togglePactBit(bit) {
       this.idleT = 0;
       if (this.screen !== SCREEN.LEVEL || !this.pactUnlocked) return false;
       this.pact = togglePact(this.pact, bit);
-      return true;
+      return this._feel("confirm");
     },
     /* TIME ATTACK is a DISPLAY toggle: it gates the stopwatch chip and the
        CLEARED time line and nothing else. It is deliberately absent from
@@ -763,7 +890,7 @@ export function createMenuApp(opts = {}) {
       if (this.screen !== SCREEN.LEVEL || !this.pactUnlocked) return false;
       this.timeAttack = !this.timeAttack;
       if (o.onTimeAttack) o.onTimeAttack(this.timeAttack);
-      return true;
+      return this._feel("confirm");
     },
     /* Start a run at app.level; main's onStart does loadLevel/score/state. */
     startRun() {
@@ -773,6 +900,8 @@ export function createMenuApp(opts = {}) {
         pact: this.pactUnlocked ? clampPact(this.pact) : 0,
         pace: this.pace | 0,
       };
+      this._ctlCancel();
+      this.pauseView = 0;
       this.screen = SCREEN.GAME;
       this.inGame = true;
       this.subT = 0;
@@ -782,12 +911,14 @@ export function createMenuApp(opts = {}) {
       this._taps = {};
       this.togT = -1;
       this.idleT = 0;
+      this._feel("launch");
       if (onStart) onStart(args);
       return args;
     },
     /* ATTRACT (spec §1): idle demo takeover. The machine never creates the
        demo world — main owns that harness; entry/exit only flip state here. */
     enterAttract() {
+      this._ctlCancel();
       this.screen = SCREEN.ATTRACT;
       this.attractT = 0;
       this.subT = 0;
@@ -801,7 +932,7 @@ export function createMenuApp(opts = {}) {
     exitAttract() {
       if (this.screen !== SCREEN.ATTRACT) return false;
       this.idleT = 0;
-      this._push(SCREEN.MENU);
+      this._push(SCREEN.MENU, 1);
       return true;
     },
     /* Tap/confirm/non-Escape key on ATTRACT: start a CORE room-1 run, keeping
@@ -847,6 +978,8 @@ export function createMenuApp(opts = {}) {
        the shell into GAME and hand args to main's onStart. Callers gate the
        screen check themselves before reaching here. */
     _playCore(args) {
+      this._ctlCancel();
+      this.pauseView = 0;
       this.screen = SCREEN.GAME;
       this.inGame = true;
       this.subT = 0;
@@ -856,12 +989,14 @@ export function createMenuApp(opts = {}) {
       this._taps = {};
       this.togT = -1;
       this.idleT = 0;
+      this._feel("launch");
       if (onStart) onStart(args);
       return args;
     },
     /* M-quit: valid ONLY while in GAME with world paused (state passed in). */
     quitToMenu(worldState) {
       if (this.screen !== SCREEN.GAME || worldState !== "PAUSE") return false;
+      this._feel("back");
       this._toMenuInner();
       return true;
     },
@@ -872,6 +1007,8 @@ export function createMenuApp(opts = {}) {
       return was;
     },
     _toMenuInner() {
+      this._ctlCancel();
+      this.pauseView = 0; // a stale view would make the next run's first pause a pauseBack
       this.screen = SCREEN.MENU;
       this.inGame = false;
       this.subT = 0;
@@ -882,7 +1019,17 @@ export function createMenuApp(opts = {}) {
       this.togT = -1;
       this.idleT = 0;
     },
-    _push(s) {
+    _feel(n) {
+      if (!this.feel || FEELS.indexOf(n) < FEELS.indexOf(this.feel)) this.feel = n;
+      return true;
+    },
+    _conf(r) {
+      if (r) this._feel("confirm");
+      return r;
+    },
+    _push(s, back) {
+      this._feel(back ? "back" : "enter");
+      this._ctlCancel();
       this.screen = s;
       this.resetArm = false;
       this.subT = 0;

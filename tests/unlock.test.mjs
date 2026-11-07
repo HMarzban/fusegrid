@@ -288,5 +288,86 @@ for (const key of ["Shift", "Control", "Alt", "Meta", "CapsLock", "AltGraph", "N
   check("skip: a card press neither unlocks nor counts toward the hatch", c === 0 && n === 0, c + "/" + n);
 }
 
+// ---- pad entry: one press starts the show (plan T11); a pad carries no promise of activation ----
+{
+  const t = mkTarget(), a = mkAudio();
+  let n = 0;
+  const off = armUnlock(t, a, () => n++);
+  check("armUnlock still returns a disarm function, with a pad entry on it", typeof off === "function" && typeof off.pad === "function");
+  a._act = true;
+  off.pad();
+  a._act = false;
+  await flush(); await flush();
+  check("a pad press unlocks and starts the show when the ctx runs", n === 1 && a.state === "running", n);
+  off.pad();
+  await flush();
+  check("a later pad press never fires it twice", n === 1, n);
+}
+{
+  const t = mkTarget(), a = mkAudio();
+  let n = 0;
+  const off = armUnlock(t, a, () => n++);
+  off.pad();
+  await flush();
+  check("a ctx that will not run: nothing before the hatch", n === 0 && a.state === "suspended", n);
+  await wait(300);
+  check("a pad press with a ctx that never runs starts the show silently after 250 ms, one press", n === 1 && a.state === "suspended", n);
+  const c0 = a.calls;
+  off.pad();
+  check("a later pad press re-calls unlock", a.calls === c0 + 1, a.calls - c0);
+  check("the listeners stay armed", t.L.length === UNLOCK_EV.length, t.L.length);
+  gesture(t, a, "keydown", { code: "KeyA", key: "a" }, true);
+  await flush(); await flush();
+  check("a later key still joins the music, and the show is not started twice", a.state === "running" && n === 1 && t.L.length === 0, a.state + " " + n);
+}
+{
+  const t = mkTarget(), a = mkAudio();
+  let n = 0;
+  const off = armUnlock(t, a, () => n++);
+  off.pad();
+  await wait(300);
+  gesture(t, a, "pointerup", {}, true);
+  await flush(); await flush();
+  check("a later tap still joins the music", a.state === "running" && n === 1, a.state + " " + n);
+}
+{
+  const t = mkTarget(), a = mkAudio();
+  let n = 0;
+  const off = armUnlock(t, a, () => n++);
+  off.pad();
+  gesture(t, a, "keydown", { code: "KeyA", key: "a" }, false);
+  await flush();
+  check("a pad press does not count toward the keyboard's two presses", n === 0, n);
+  gesture(t, a, "keydown", { code: "Escape", key: "Escape" }, false);
+  gesture(t, a, "keydown", { code: "ShiftLeft", key: "Shift" }, false);
+  off();
+  await wait(300);
+  check("disarmed: the pending hatch finds onReady already spent", n === 0, n);
+  off.pad();
+  check("disarmed: the pad entry is inert", n === 0, n);
+}
+{
+  const t = mkTarget(), a = mkAudio();
+  let n = 0;
+  armUnlock(t, a, () => n++);
+  gesture(t, a, "keydown", { code: "Escape", key: "Escape" }, false);
+  gesture(t, a, "keydown", { code: "ShiftLeft", key: "Shift" }, false);
+  await wait(300);
+  check("Escape and modifiers still do not count", n === 0, n);
+  gesture(t, a, "keydown", { code: "KeyA", key: "a" }, false);
+  gesture(t, a, "keydown", { code: "KeyB", key: "b" }, false);
+  await wait(300);
+  check("the keyboard's two-press hatch is unchanged", n === 1, n);
+}
+{
+  const t = mkTarget(), a = mkAudio({ none: true });
+  let n = 0;
+  armUnlock(t, a, () => n++).pad();
+  check("no WebAudio: a pad press fires at once", n === 1, n);
+  let m = 0;
+  armUnlock(mkTarget(), null, () => m++).pad();
+  check("no audio at all: a pad press fires at once", m === 1, m);
+}
+
 console.log("\n  UNLOCK RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);

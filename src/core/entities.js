@@ -1,5 +1,16 @@
 import { CFG, clamp } from "./config.js";
 
+/* The live form of a pickup's help line, the ONE source for the coach tip and
+   ITEMS. Only THROW and REMOTE open with an input; that leading token becomes
+   this device's word for it (words = hints.js wordsOf), or the touch button when
+   tap is set. No words and no tap is the table's own line. */
+const KEY_HINT = /^[A-Z]\w*(?:\+[A-Z]\w*)*(?= )/;
+export function helpOf(p, words, tap) {
+  if (p.t !== "throw" && p.t !== "remote") return p.help;
+  const w = tap ? "the " + p.name + " button" : words && words[p.t];
+  return w ? p.help.replace(KEY_HINT, () => w) : p.help;
+}
+
 /* Power-up table. apply(world, player) is PURE (no Math.random) so it is
    deterministic and network-safe. permanent=false -> reverted on death. */
 export const POWER = [
@@ -62,7 +73,7 @@ export const POWER = [
     col: "#ffb347",
     permanent: false,
     name: "THROW",
-    help: "Shift+Space tosses a bomb",
+    help: "E tosses a bomb",
     apply: (w, p) => (p.throw = true),
   },
   {

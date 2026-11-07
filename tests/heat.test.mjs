@@ -63,7 +63,7 @@ check(
 );
 check(
   "overlayCue PAUSE is the pause-list cue, exactly (keys / touch)",
-  overlayCue({ state: "PAUSE", heat: 1 }) === "ESC · P RESUME · ↑↓ MOVE · ENTER SELECT · M QUIT" &&
+  overlayCue({ state: "PAUSE", heat: 1 }) === "ESC · P RESUME · ↑↓ MOVE · ENTER CONFIRM · M QUIT" &&
     overlayCue({ state: "PAUSE", heat: 1 }, true) === "TAP A ROW · PAUSE PILL RESUMES",
   overlayCue({ state: "PAUSE", heat: 1 }),
 );
@@ -339,7 +339,7 @@ check(
     "drawOverlay PAUSE defaults to the list at cursor 0",
     texts.includes("PAUSED") &&
       PAUSE_ROWS.every((r) => texts.includes(r)) &&
-      texts.includes("ESC · P RESUME · ↑↓ MOVE · ENTER SELECT · M QUIT"),
+      texts.includes("ESC · P RESUME · ↑↓ MOVE · ENTER CONFIRM · M QUIT"),
     texts.join("|"),
   );
   texts.length = 0;

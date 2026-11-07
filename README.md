@@ -37,24 +37,27 @@ No install needed, no account, no server. Just press start.
 
 ### Controls
 
-| Input | Action |
-|---|---|
-| WASD / arrows | Move |
-| Space (or J / X) | Place bomb |
-| Shift + Space | Throw *(needs THROW)* |
-| Q | Detonate remote *(needs REMOTE)* |
-| Walk into a bomb | Kick it so it slides *(needs KICK)* |
-| R *(in a run)* | Reset the camera and zoom |
-| P / Esc | Pause (RESUME / RESTART / OPTIONS / QUIT TO MENU); ↑↓ + Enter pick a row |
-| M *(paused)* | Quit to menu |
-| Space / Enter *(end screen)* | Next room, back to the menu after the finale, or a new run after GAME OVER |
-| C *(end screen or STATS)* | Copy your result or your stats as text (both say COPIED, or COPY FAILED) |
-| B *(end screen)* | Copy the board's challenge link (the end screen says BOARD LINK COPIED) |
-| T *(STATS)* | Open the MEDALS page |
-| R, R *(STATS)* | Reset my cabinet (two presses; any other key cancels) |
+| Keyboard | Controller | Action |
+|---|---|---|
+| WASD / arrows | D-PAD / left stick | Move |
+| Space (or J / X) | SOUTH | Place bomb |
+| E | WEST | Throw *(needs THROW)* |
+| Q | EAST | Detonate remote *(needs REMOTE)* |
+| Walk into a bomb | Walk into a bomb | Kick it so it slides *(needs KICK)* |
+| R *(in a run)* | none | Reset the camera and zoom |
+| P / Esc | START / SELECT | Pause (RESUME / RESTART / OPTIONS / QUIT TO MENU); ↑↓ + Enter or SOUTH pick a row |
+| M *(paused)* | none, QUIT TO MENU is a row | Quit to menu |
+| Space / Enter *(end screen)* | SOUTH / START | Next room, back to the menu after the finale, or a new run after GAME OVER |
+| C *(end screen or STATS)* | WEST | Copy your result or your stats as text (both say COPIED, or COPY FAILED) |
+| B *(end screen)* | NORTH | Copy the board's challenge link (the end screen says BOARD LINK COPIED) |
+| T *(STATS)* | NORTH | Open the MEDALS page |
+| R, R *(STATS)* | none | Reset my cabinet (two presses; any other key cancels) |
 
-Menus run on the arrows, Enter and Esc. Powers marked `*` in the in-game
-HOW TO need their pickup first.
+Menus run on the arrows, Enter and Esc, or on the D-PAD or stick, SOUTH or START, and EAST.
+Buttons are named by position. Powers marked `*` in the in-game HOW TO need their pickup first.
+
+**Your binds, your call.** **OPTIONS → CONTROLS** rebinds both devices. The table
+shows the defaults. Arrows, Esc, Enter, the D-PAD and START stay put, so you can always get back.
 
 **On a phone or tablet,** a virtual D-pad and bomb button sit off the board.
 In portrait they dock low in the thumb zone (the board centres on the menus and
@@ -124,7 +127,7 @@ CORE ×1, PLUS ×2, MAX ×3.
 
 ## ✨ What's in the cabinet
 
-- **The opening.** A FUSE/GRID title waits for any key or tap. That press drops
+- **The opening.** A FUSE/GRID title waits for any key, tap or controller button. That press drops
   the music and a ~4 s show that blasts the menu open. Any key skips it.
 - **A new board every run.** Every PLAY, restart and GAME OVER retry deals a
   fresh board; losing a life keeps the one you're on. Each world has its own
@@ -168,7 +171,7 @@ CORE ×1, PLUS ×2, MAX ×3.
 - **Medals.** Eight of them, each earned on a finale clear. `T` (or a tap on
   `T MEDALS`) on STATS opens the MEDALS page.
 - **Reset my cabinet.** On STATS press `R` twice (or tap `R RESET`, then
-  `R AGAIN`) to wipe progress and reload. Settings and pace are kept. Anything
+  `R AGAIN`) to wipe progress and reload. Settings, pace and controls are kept. Anything
   else cancels (`C`, or a tap on `C COPY`, cancels and copies your stats).
 - **Help on the cabinet.** **GUIDE** (HOW TO, ITEMS, ENEMIES), HIGH SCORES,
   STATS and **SOURCE**, which opens this repository.

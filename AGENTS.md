@@ -60,13 +60,13 @@ through `listGeom` / `listHit` (pitches are caps that scale down in a short
 box); MENU has a PLAY hero row whose tag is the run it starts and group gaps
 before OPTIONS / HIGH SCORES / SOURCE; the SOURCE URL shows only on its
 selected row. Build tag (owner 2026-10-21: "a game version in some where in
-the display or menue"): `v200` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
+the display or menue"): `v201` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
 derived ONLY in `shellview.js` (`REV`, handed to `drawMenu` / `drawSettings`
-as `rev`) and `update.js` (the card's "You are on v200", the running build,
+as `rev`) and `update.js` (the card's "You are on v201", the running build,
 never a guessed next one) — never a second literal. Keyboard MENU appends
 it to the foot hint; the touch hub hangs it under the plate when the box has
 >= 10 units below it (`#sh`), else on the SOURCE tile's teaser (landscape on
-the board canvas); OPTIONS keeps its `BUILD v200` kicker. Never on the HUD.
+the board canvas); OPTIONS keeps its `BUILD v201` kicker. Never on the HUD.
 PAUSE draws `pauseGeom(overlayBox, touch)`: touch (`touchLay`,
 data-lay p/l) caps pitch at `PAUSE_ROW_H` 70 / hero 76 / width 380, a keyboard
 screen at the compact `PAUSE_ROW_D` 44 / hero 54 / width 340 (owner: "too
@@ -106,7 +106,7 @@ lever more intractive", "put hooks … to see what we deliver"): pick on the
 left, see it on the right. Every plate HUGS its content through `pageBox`
 (band keyboard 73..492 / touch 8..512; pitches are caps, scale only in the
 iso 608x352 guard; `shellBox` is gone, no page divides its band by a row
-count). Pitches: list 26 keyboard / 52 touch, OPTIONS + GRAPHICS 28, hero
+count). Pitches: list 26 keyboard / 52 touch, OPTIONS 27 keyboard (37 touch, 34 where 37 does not fit), GRAPHICS 28, hero
 40 / 70. LEVEL SELECT (`levelGeom(L, unlocked, touch)` = draw + tap): a 4x2
 grid of room tiles (biome schematic, finale pip, ✓ when a time is saved at
 this heat/pace/modes; 6–8 dim + locked until the first CLEAR, a locked tap
@@ -130,18 +130,19 @@ world (`FACTORY · MAX · HARD`), the same words as START. `SCREEN.STATS = 12` i
 `menuapp.js`: appended, never inserted). `SCREEN.TROPHIES = 13` (the MEDALS page) is
 appended too: opened from STATS by `T` or a tap on its `T MEDALS` label, backs out to STATS,
 never a MENU row. `SCREEN.GRAPHICS = 14` is appended too: opened by the
-OPTIONS `GRAPHICS` door row (`OPT_ROWS` eleven rows, ANALYTICS then the door before RESET
-DEFAULTS), backs out to OPTIONS on the door. `SCREEN.FLOOR = 15` is appended too
+OPTIONS `GRAPHICS` door row (`OPT_ROWS` twelve rows, ANALYTICS, then the GRAPHICS and CONTROLS doors
+before RESET DEFAULTS), backs out to OPTIONS on the door. `SCREEN.FLOOR = 15` is appended too
 (2026-10-25): the fourth GUIDE door (`GUIDE_ROWS` HOW TO PLAY, ITEMS, ENEMIES,
 FLOOR; keyboard GUIDE is a 2x2 of doors, touch four stacked rows), backs out to
 GUIDE. `drawFloorHelp` lists the eight floor tiles at CORE / PLUS / MAX in the
 current look (`featdraw.drawSpec`, PIXEL `atlas.feat`), each with its rule line
-(`TILE_HELP`).
+(`TILE_HELP`). `SCREEN.CONTROLS = 16` is appended too (v201): the OPTIONS `CONTROLS` door row, backs out to
+OPTIONS on the door; see the CONTROLS paragraph under `src/`.
 The GUIDE pages and the MENU preview draw the live foe and pickup animation
 (CLASSIC: `drawEnemyBody` / `drawItemBody`; PIXEL: `hudart.js` `foeAnim` /
 `itemAnim`, a pure function of the page clock). From PAUSE the same page is
-inline `pauseView 2` (0 list / 1 OPTIONS / 2 GRAPHICS; Esc steps 2 → 1),
-never a SCREEN. WIN/LOSE run summaries are **not** a SCREEN — they
+inline `pauseView 2` (0 list / 1 OPTIONS / 2 GRAPHICS / 3 CONTROLS; Esc steps 2 → 1 and 3 → 1, onto
+the door), never a SCREEN. WIN/LOSE run summaries are **not** a SCREEN — they
 live in `drawOverlay`.
 
 The sim ticks only while the shell is GAME. PAUSE/WIN/LOSE are `world.state`,
@@ -150,7 +151,7 @@ not shell screens. Do not add them as `SCREEN` values.
 - `src/main.js` — **browser entry only**, pinned `<=799` lines
   (`tests/headless.test.mjs`; raised 808→812 once in wave 3 for `ro.ghost`,
   tightened to 799 when C2 moved `fit()` out; 733 by split-length at v178 after
-  GRAPHICS moved the frame gate and renderer cache out). RAF loop, fixed-step
+  GRAPHICS moved the frame gate and renderer cache out; 784 at v201). RAF loop, fixed-step
   accumulator, kind switch, and the handler wiring that binds them. Never
   imported by sim or renderer. Its seams live beside it and must stay OUT of
   `main.js`: `src/app/flags.js` (URL/opts, pure over a search string),
@@ -158,7 +159,8 @@ not shell screens. Do not add them as `SCREEN` values.
   (`mountFrames`: the rAF owner, frame gate, knob push), `src/app/rcache.js`
   (`mountRenderers`: per-kind renderer cache, lazy/eager three, release),
   `src/app/audiopower.js` (`mountAudioPower`), `src/app/renderkind.js`
-  (`bootRender` / `kindOf` / `renderVal` / `renderBits`), `src/app/debughook.js`
+  (`bootRender` / `kindOf` / `renderVal` / `renderBits`),
+  `src/app/controlswire.js` (`mountControls`, v201: binds `gamepad.js`, `padroute.js`, `capture.js`, `controlspage.js`, `controls.js`, `hints.js`, `rumble.js` and render's `controlsgeo.js`, `controlsdraw.js`, `padart.js`, `hintcopy.js` to main, frameloop and unlock; see the CONTROLS paragraph), `src/app/debughook.js`
   (`window.__GAME__`), `src/app/endkeys.js` (WIN/LOSE keys: Enter =
   Space through `Input.pulse()`, one fire tick and never a latch; C/B copy.
   Every copy reports COPIED / COPY FAILED through the ONE `app.toast` — on
@@ -526,7 +528,7 @@ not shell screens. Do not add them as `SCREEN` values.
   nothing.
   CLEAR = highscores, bests, stats, daily, times, medals, plaques, ghost,
   pact, coach v1/v2, cabinet (12); KEEP = `nb.settings.v1`, `nb.pace.v1`,
-  `nb.analytics.v1` (the GA consent).
+  `nb.analytics.v1` (the GA consent), `nb.controls.v1` (the binds).
   `nb.cabinet.v1` is still written on the first INTRO exit and no longer
   branches anything (ruling 2026-10-09).
   Lists import each store's own `*_KEY`; `tests/reset.test.mjs` fails on any
@@ -579,6 +581,33 @@ not shell screens. Do not add them as `SCREEN` values.
   pre-branch): title/menus/attract −56…−80 % CPU, PAUSE −59…−67 %, PLAY
   −27…−36 %. Keys: ←/→ clamp, Enter cycles; `keys.test` covers GRAPHICS and
   pauseView 2.
+- CONTROLS (owner 2026-11-02, shell v201, released 2026-11-07; record
+  `docs/superpowers/specs/2026-11-06-controls-built.md`). Gamepad play, rebinding on both devices, one
+  page, hints that follow the last-used device. **The sim never sees a pad:** the pad is another writer
+  into `Input` with its own held axes and latches, OR-merged with keys; no wire field, no `src/core` read
+  of a pad, SENSITIVITY or vibration. The reserved `kick` slot stays false. Button names are by position only (SOUTH EAST WEST NORTH,
+  L/R SHOULDER, L/R TRIGGER, SELECT, START, D-PAD, L-STICK, R-STICK; ids `S E W N SHL SHR TRL TRR SELECT
+  START dU dD dL dR`); no maker's name anywhere. Seams: `src/app/controlswire.js` (the wire), `gamepad.js`
+  (poller, above the frame gate; radial deadzone, 4-way; SENSITIVITY `SENS_LEVELS` MIN 60 / LOW 40 / MEDIUM 25 / HIGH 15 / MAX 8, turn 1.40x to 1.10x, release `dead - 0.05`, `- 0.10` at 40 and above, floor 0.03; no response curve; a menu's first engage is vertical unless x > 1.25y), `padroute.js` (pad -> `Input` / shell, the
+  swallow rule), `capture.js` (all input up, then 200 ms; later MOVE steps and a retry need only the release;
+  no timeout), `controlspage.js` (reducer), `controls.js` (model, rules, store), `hints.js` (device tracker,
+  0.75 s dwell, `wordsOf`, `helpOf`), `rumble.js` (one-way from the event drain; player word VIBRATION, internal names stay `rumble`; stored `vib` OFF / LOW / MEDIUM / HIGH, default MEDIUM, owner's call, `rumble` still written for older cached pages; scale 0.4 / 0.75 / 1 gives x, played as x from 0.5 up and as `0.35 + 0.3x` below (`LIMITS.knee`), LOW never past 0.40; independent of REDUCE FLASH; `PATTERNS` lose, hurt, win, shield, chain, close, near, plant, test, and the menu feels launch, enter, hello, deny, confirm, back, move (2026-11-03, owner: "subtle vibration when menu changes"; shell call sites write one ranked slot `app.feel` (`menuapp.js` `FEELS`), `controlswire.js` arms it around the pad poll's routing and plays one feel per press, launch > enter > deny > back > confirm > move; deny only where a refusal is shown; hello on connect off GAME PLAY; weak motor except back, strong .3; none over 250 ms or 0.7; menu cap 900 ms per 10 s on cursor ticks, page feels (enter, back, deny) always play but count, launch and hello outside it; a late frame plays a menu step late, never skips it; gameplay preempts; record's Menu feels section); `LIMITS`: a pattern at most 500 ms and 3 pulses, a pulse at most 300 ms, gaps at least 80 ms, 4 pulses a second or 2 at LOW, about 50 % on-time, hurt and lose exempt, near + plant 900 ms per 10 s; LOW drops plant, near and menu ticks; OFF is zero calls through the one `fire`; a run and menu ticks only while `app.lastDev` is the pad, the row's test pulse is the one exception; menu feels have no separate off, MEDIUM and HIGH only, never a hold repeat or a clamped edge, move and confirm at least 100 ms apart; no actuator shows `NONE` and `NO VIBRATION ON THIS CONTROLLER OR BROWSER`); a held menu direction (`app.repDir`) runs its frame at up to `HELD_FPS` 60 under the FRAME RATE cap, keys too; render side `controlsgeo.js`
+  (the one geometry for draw and tap), `controlsdraw.js`, `padart.js`,
+  `hintcopy.js` (the setter that keeps `menudraw.js` free of `src/app/`). All static in the boot graph (111,107
+  bytes raw at `ee2a34e`, boot graph +137,052 since `8853efc`; 12 files, on purpose; lazy paint is a later job). `SCREEN.CONTROLS = 16`; from PAUSE `pauseView 3`. The door
+  sits between GRAPHICS and RESET DEFAULTS; OPTIONS is twelve rows at keyboard pitch 27 (note line removed), touch 37 or 34.
+  **CONTROLS is in the CONSOLE PANEL kit like every other menu (lead ruling 2026-11-02, on the owner's ask for one cohesive menu): list on the left, preview pane on the right, HEAT-style tabs, kit band, notch and caret; ↑↓ rows, ←→ tab, ←→ on SENSITIVITY or VIBRATION adjusts.** The other menus do not change, and the all-menus restyle is not planned for this release. MENU carries the note `CONTROLLER READY · OPTIONS › CONTROLS`, naming the VIBRATION level where it fits, and the OPTIONS door reads `VIBRATION MEDIUM ›` the same way; no OPTIONS or PAUSE row of its own. Tap rule exception: on CONTROLS a tap off the
+  plate backs out anywhere in the viewport, not only on the canvas. Store `nb.controls.v1` (KEEP); invalid data
+  loads that device's defaults, an off-level SENSITIVITY value snaps to the nearest level, a bad `vib` never touches the binds. Keyboard defaults: BOMB SPACE (J, X silent
+  aliases until BOMB moves), **THROW E** (SHIFT + BOMB still throws, never advertised), REMOTE Q, PAUSE P, ESC
+  and arrows fixed. Pad defaults: BOMB SOUTH, THROW WEST, REMOTE EAST, PAUSE SELECT, START fixed; menus use the
+  fixed layer SOUTH / START confirm, EAST back. Pad start rule: one pad press leaves the title and starts the
+  show, silently if the ctx will not run, `app.soundNote` then says `NO SOUND YET`. No pad route to
+  the consent card (a stray button must not consent; an unanswered OPTIONS ANALYTICS row is inert on a pad and says
+  `ANSWER THE CARD WITH Y OR N`), the STATS wipe or the camera reset, on purpose. Disconnect pauses only with the pad last
+  used in GAME PLAY (`CONTROLLER LOST`), never resumes. Pad name `CONTROLLER 1 · STANDARD` (`BUTTONS 0-N` non-standard); the device
+  id is never printed or stored. Keyboard diagonals stay about 1.41x while a pad is 4-way, disclosed. **The owner has
+  played on a real controller (2026-11-02) and reported it works; details not yet reported, so M1-M7 stay open. On 2026-11-03 the owner felt the VIBRATION row's test buzz on a real controller on macOS; the in-run patterns are not yet reported.** No URL flag; `__GAME__.ctl` is the test hook. `keys.test` carries the pad matrix.
 - Pickup feedback (owner: "agree with research team, let's work on all of
   them", 2026-10-10). All names/copy come from `POWER[].name` / `.help` —
   never a second source. `fx.js`: one floating label per `power` event showing
@@ -605,7 +634,7 @@ not shell screens. Do not add them as `SCREEN` values.
   is a run start, B takes A's seed / gen / heat / pact / pace and deals its own
   board; `tests/net-local.test.mjs` pins equal hashes).
   `applySnapshot` was removed (lockstep-only). `makeSnapshot` remains for harness dumps.
-- `src/input.js`, `src/touch.js`, `src/audio.js` — input + chiptune.
+- `src/input.js`, `src/touch.js`, `src/audio.js` — input + chiptune. `input.js` reads the live binds and takes the pad as a second writer (v201, CONTROLS).
   Track tables live in `src/audio/tracks.js`. Boom tints live in
   `src/audio/boom.js` (`boomOf`). Pickup grab tints live in
   `src/audio/item.js` (`itemOf` / `sfxOf`); `play("item_"+kind)` from power
@@ -669,7 +698,7 @@ not shell screens. Do not add them as `SCREEN` values.
   ATTRACT, never a touch run (the bomb button's corner); it waits while NEW
   VERSION READY is up. It stays until answered (no snooze).
   OPTIONS `ANALYTICS` ON/OFF sits after REDUCE FLASH (row 8; OPTIONS touch
-  pitch 37 so eleven rows fit unscaled); OFF sets `ga-disable-<ID>`, denies
+  pitch 37 or 34 so twelve rows fit unscaled); OFF sets `ga-disable-<ID>`, denies
   consent and expires the `_ga*` cookies. Cookies live on the game's own path
   (`cookie_path`, shared `github.io` origin); every ad signal is denied. Events:
   GA's page_view = an open; `run_start` from `startRunState` and `run_end` from
@@ -727,22 +756,17 @@ not shell screens. Do not add them as `SCREEN` values.
   voice: arcade tone, facts exact; dated `docs/superpowers/` records are never
   rewritten, only indexed there. `docs/diary.md` is the dated story of the
   build (add an entry per release or big turn; CHANGELOG still owns
-  per-release changes). Launch/promotion is PARKED as GitHub issue
-  HMarzban/fusegrid#7 (owner 2026-10-19: lots to do before publishing).
-  Stage 1 (art, copy, zip test) is done on v193; stages 2 and 3 wait for the owner's
-  go (owner 2026-11-01: the game is not finished yet). Listing art shows CLASSIC 2D
-  and PIXEL only, never REAL 3D (owner 2026-11-01: "let's focus on the 2d and pixel
-  only not 3d"); REAL 3D stays in the game.
-  `docs/marketing/README.md` owns pitch copy, per-platform tags, the launch
-  checklist and the About/topics text (the owner pastes and posts; agents
-  never submit). JSON-LD never carries a rating or review; `playMode` is the
+  per-release changes). Promotion material (pitch copy, tags, launch
+  plan, posts, replies and their decisions) is local only, in the git-ignored
+  `.superpowers/sdd/marketing/`; never write it into a tracked file or a commit
+  message. JSON-LD never carries a rating or review; `playMode` is the
   schema.org enum URL. `sitemap.xml` `lastmod` must be >= the newest
   CHANGELOG release date (`headless.test`), set at every release.
   `/fusegrid/robots.txt` is inert (crawlers read only the host root), so the
   sitemap reaches Google through Search Console.
 
 Flags: `?render=3d|px|iso` (3d/px seed the boot only; iso is pinned), `?play=1`, `?net=local`, `?orbit=1`, `?debug=1`,
-`?code=` (12-char challenge, URL-only — no opts fallback). No `?gen=` flag since v198; an old
+`?code=` (12-char challenge, URL-only — no opts fallback). CONTROLS adds no flag. No `?gen=` flag since v198; an old
 `?gen=3` link boots like any page.
 
 Node v26, `"type": "module"`. No build step, no bundler.
@@ -843,13 +867,14 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   session did/decided/left open. Both are auto-loaded via `opencode.json`
   `instructions`.
 - **Standing rule:** after any non-trivial change, append a dated entry to
-  `MEMORY.md` (newest first) so the next session/agent inherits context. Keep it
+  `MEMORY.md` (newest first; promotion work goes to the local
+  `.superpowers/sdd/marketing/LOG.md` instead) so the next session/agent inherits context. Keep it
   to 1–2 lines: what changed, why, or what's left open.
 
 ## Learned User Preferences
 - Public name and wordmark are Fusegrid / FUSE/GRID; keep the local checkout as `rollblock`. Never write the name of the private reference game (the well-known grid-bomb franchise this project is measured against) into any committed file (specs, comments, commit messages, docs, alt text, tags) — it is a private quality reference only; `docs/` is public.
 - This repository is the arcade game only — do not add unrelated demos.
-- Social posts (owner 2026-10-23 / 2026-10-26): first person, no internal round names, ideas and previews badged "not in the game yet", AI-made concept art labelled "AI-assisted concept art" on the card and in the post; agents prepare, the owner posts. Prepared series are indexed in `docs/marketing/README.md`.
+- Promotion and posts: rules, plans and the log live in the git-ignored `.superpowers/sdd/marketing/` (README.md, LOG.md). Never in a tracked file.
 - Keep a visible path to the public repo: menu SOURCE opens https://github.com/HMarzban/fusegrid.
 - Keep ITEMS, ENEMIES, and HOW TO as in-menu help so pickups and foes are explained in the shell, not only as HUD chips.
 - Opening (2026-10-09): title, then press, then a ~4 s show (camera sweep, MAKO pop-in, fuse, blast reveals MENU), with music from the press. Any key skips the show (the title waits for a press). First visits land on MENU at PLAY, not in a run. The title follows RENDER; the show plays the MENU theme throughout, and the `intro` track is kept unused.
@@ -864,7 +889,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
 - Surviving a hit leaves live bombs and blades in the world.
 - Share the play URL with a trailing slash (`https://hmarzban.github.io/fusegrid/`); the no-slash GitHub Pages 301 has no Open Graph tags, so link previews fail. Share card is root `og.png` (1200×630); `og:image` stays the absolute Pages URL. The hero is a REAL capture of the live game, never generated key art, which drifts from the game. Since v180 (owner pick C, 2026-10-19) it is the ATLAS LEVEL SELECT page in CLASSIC 2D from a fresh profile (rooms 6–8 locked, NO TIME YET, no seeded records); the 2026-09 card was the transparent-clear 3D JUNGLE board. Card sells CLASSIC 2D · PIXEL · REAL 3D plus CORE / PLUS / MAX; the PLAY IN THE BROWSER pill spans that chip row (left = CORE left, right = MAX right) and type keeps a 10% inset. Sources, composer and the rejected A/B: git-ignored `.superpowers/sdd/2026-10-19-storefront/`. Never the reference game's name on the image or tags. Public About/meta copy leads with play-in-browser + the three looks + Heat; "deterministic" stays a contributor word, not the storefront lead.
 - A just-planted bomb is not solid while the bomber still occupies that tile; after leaving, re-entry is blocked (plant-and-leave / R16).
-- KICK is passive: with the KICK power, walking into a bomb slides it. No key kicks. `KeyK` is an ordinary unbound key (2026-11-01); INPUT keeps a reserved always-false `kick` wire slot so the lockstep shape never moved. No hint may say K + MOVE (issue #6); `menudraw.test` fails on it, and HOW TO's KICK key reads `WALK INTO BOMB`.
+- KICK is passive: with the KICK power, walking into a bomb slides it. No key kicks. `KeyK` is unbound by default (2026-11-01), and a player may bind it on CONTROLS; INPUT keeps a reserved always-false `kick` wire slot so the lockstep shape never moved. No hint may say K + MOVE (issue #6); `menudraw.test` fails on it, and HOW TO's KICK key reads `WALK INTO BOMB`.
 - FLAME is blast length in tiles (starts at 1, caps at 8, persists across death and rooms); BOMB is how many bombs can be live at once.
 - Gold WALL never breaks; green BRICK breaks and stops a normal blast.
 - Rooms 6–8 use SAND / VOID / CROWN palettes, chiptune cues (`sand` / `void` / `crown`), and boom tints (kick 69 / 40 / 82). Those rooms append exclusive BURROW / SHADE / KNIGHT (`ROOM_EXTRA`); do not replace CORE L1–5 spawn lists. Rooms 1–5 stay JUNGLE–ARENA. Ice/water/arena boom numbers stay. Menu/intro use the default boom.
@@ -1133,7 +1158,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   Node test fakes define `globalThis.location` WITHOUT `href`, so "is this a
   real page" means `typeof location.href === "string"` (the branch's gen-2 page
   default depended on it; the tile boards were `?gen=3` only from v188 to v197).
-- Release state (2026-11-02): shell **v200** (loose ends: PASS no longer causes false holds, GATE tips mention the hold, no crash on a hand-made conveyor loop; no board changes; GitHub release **v2.3.1**, shell v198 → v200) is LIVE on the owner's word. 478 tests. Shell **v199** (TRAP warning marks and arm sound, `carryPins` and `gatePins` keep a tile from closing your only way out, faster board building, bot and harness see every tile; BOOSTER flare dropped by the owner; record `docs/superpowers/specs/2026-11-02-tiles-finish-v199.md`) is LIVE on the owner's word. 475 tests. Shell **v198** (GitHub release **v2.3.0**, shell v188 → v198) makes the tile boards what everyone plays: ordinary runs and the DAILY deal gen 3, `?gen=3` is gone, F3 links exist (owner: "Ship without a playtest", waiving #30's playtest; record `docs/superpowers/specs/2026-11-02-tiles-default-v198.md`, with the known risks). Older text below that says `?gen=3` is history. Shell **v197** (loading bar, REAL 3D new-world freeze fix #36, boot graph minus 75 KB raw, and on `?gen=3` BOOSTER marks, ICE brake tip, REAL 3D heat look; rulings and numbers in `docs/superpowers/specs/2026-11-01-loose-ends-v197.md`) is LIVE on the owner's word (2026-11-02). A design on local branch `descent-design` is unmerged and stays unpushed until the owner says.
+- Release state (2026-11-07): shell **v201** (CONTROLS: controller play, rebinding, the CONTROLS page in the menu kit, VIBRATION levels and patterns with MEDIUM by default, SENSITIVITY levels, hints that follow the device; 578 tests; record `docs/superpowers/specs/2026-11-06-controls-built.md`) was pushed to `main` on 2026-11-07 on the owner's word, as one squashed commit (`feature/controls` is never pushed; its history carries local notes). The owner played it on a real controller and reported it works, details not yet reported, so its human checks M1-M7 ship open, and the VIBRATION test buzz was felt on a real pad on 2026-11-03 (in-run patterns not yet reported). Shell **v200** (loose ends: PASS no longer causes false holds, GATE tips mention the hold, no crash on a hand-made conveyor loop; no board changes; GitHub release **v2.3.1**, shell v198 → v200) is LIVE on the owner's word. 478 tests. Shell **v199** (TRAP warning marks and arm sound, `carryPins` and `gatePins` keep a tile from closing your only way out, faster board building, bot and harness see every tile; BOOSTER flare dropped by the owner; record `docs/superpowers/specs/2026-11-02-tiles-finish-v199.md`) is LIVE on the owner's word. 475 tests. Shell **v198** (GitHub release **v2.3.0**, shell v188 → v198) makes the tile boards what everyone plays: ordinary runs and the DAILY deal gen 3, `?gen=3` is gone, F3 links exist (owner: "Ship without a playtest", waiving #30's playtest; record `docs/superpowers/specs/2026-11-02-tiles-default-v198.md`, with the known risks). Older text below that says `?gen=3` is history. Shell **v197** (loading bar, REAL 3D new-world freeze fix #36, boot graph minus 75 KB raw, and on `?gen=3` BOOSTER marks, ICE brake tip, REAL 3D heat look; rulings and numbers in `docs/superpowers/specs/2026-11-01-loose-ends-v197.md`) is LIVE on the owner's word (2026-11-02). A design on local branch `descent-design` is unmerged and stays unpushed until the owner says.
   Shell **v196** (rules for STREAM, QUICKSAND, GATE, PORTAL, all on
   `?gen=3`; no change in a normal run) is LIVE on the owner's word.
   Shell **v195** (BOOSTER warning, tile tips, FLOOR

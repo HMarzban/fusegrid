@@ -283,7 +283,7 @@ check("round-trip", loadCoachSeen(store) === true);
   check(
     "coachTip composes the three locked strings verbatim",
     coachTip("kick") === "KICK · walk into a bomb to slide it" &&
-      coachTip("throw") === "THROW · Shift+Space tosses a bomb" &&
+      coachTip("throw") === "THROW · E tosses a bomb" &&
       coachTip("remote") === "REMOTE · Q detonates your bombs",
     [coachTip("kick"), coachTip("throw"), coachTip("remote")].join(" | "),
   );
@@ -553,7 +553,7 @@ check("round-trip", loadCoachSeen(store) === true);
     g.world.events.push({ t: "power", kind: "throw", x: 1, y: 1 });
     g.loop((t += 16));
     check("a THROW pickup shows the THROW tip",
-      texts.includes("THROW · Shift+Space tosses a bomb"), texts.join("|"));
+      texts.includes("THROW · E tosses a bomb"), texts.join("|"));
     const wt0 = g.world.time;
     g.input.onPause();
     check("run is paused", g.world.state === "PAUSE", g.world.state);
@@ -574,7 +574,7 @@ check("round-trip", loadCoachSeen(store) === true);
     g.loop((t += 16));
     check(
       "and the tip is still on screen after the pause",
-      texts.includes("THROW · Shift+Space tosses a bomb"),
+      texts.includes("THROW · E tosses a bomb"),
       texts.join("|"),
     );
     check(
@@ -806,7 +806,7 @@ check("round-trip", loadCoachSeen(store) === true);
     g.loop((t += 16));
     check(
       "Major-1 LOSE setup: THROW tip is live before dying",
-      texts.includes("THROW · Shift+Space tosses a bomb"),
+      texts.includes("THROW · E tosses a bomb"),
       texts.join("|"),
     );
     g.world.state = "LOSE";

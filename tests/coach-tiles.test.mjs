@@ -39,7 +39,7 @@ const worldOn = (kind, heat = 0, seed = 4242) => { const w = room(3, seed, ROOM[
     check(`${k} heat ${h} fits the 600 board panel (12px mono)`, s.length * 7.2 + 24 <= 600, s.length);
     check(`${k} heat ${h} names no key`, !/\b(SPACE|SHIFT|WASD|ARROW|ENTER|TAP)\b/.test(s), s);
   });
-  check("ICE PATCH teaches the brake at MAX only", /PRESS BACK AS YOU LET GO/.test(tips.GLIDE[2]) && !/PRESS BACK/.test(tips.GLIDE[0] + tips.GLIDE[1]));
+  check("ICE PATCH teaches the brake at MAX only", /PRESS THE OTHER WAY/.test(tips.GLIDE[2]) && !/PRESS THE OTHER WAY/.test(tips.GLIDE[0] + tips.GLIDE[1]) && !/PRESS BACK/.test(tips.GLIDE.join()));
   check("TRAP never says lure above CORE", /LURE/.test(tips.PLATE[0]) && !/LURE/.test(tips.PLATE[1] + tips.PLATE[2]));
   check("TRAP at MAX: hurts only you, the 6 s window, no chain", /HURT ONLY YOU/.test(tips.PLATE[2]) && /6 S SAFE AT START/.test(tips.PLATE[2]) && /NO BOMB CHAIN/.test(tips.PLATE[2]), tips.PLATE[2]);
   check("every TRAP tip says it sets off no bomb", tips.PLATE.every((s) => /NO BOMB CHAIN/.test(s)));
@@ -65,7 +65,7 @@ const worldOn = (kind, heat = 0, seed = 4242) => { const w = room(3, seed, ROOM[
   for (const k of KINDS) tips[k].forEach((s, h) => check(`${k} heat ${h} reads inside the ${COACH_TILE_DUR} s window at 3 words/s`, words(s) / 3 <= COACH_TILE_DUR, words(s) + " words"));
   // one source: the copy literals live in feat.js alone
   const walk = (d) => readdirSync(d).flatMap((f) => { const p = join(d, f); return statSync(p).isDirectory() ? walk(p) : /\.js$/.test(f) ? [p] : []; });
-  const lits = Object.values(TILE_HELP).flat().concat(["HURT ONLY YOU", "PRESS BACK AS YOU LET GO", "HOLD A SIDE TO STEP OFF", "NO BOMB CHAIN", '"ICE PATCH"', '"CONVEYOR"']);
+  const lits = Object.values(TILE_HELP).flat().concat(["HURT ONLY YOU", "PRESS THE OTHER WAY", "HOLD A SIDE TO STEP OFF", "NO BOMB CHAIN", '"ICE PATCH"', '"CONVEYOR"']);
   const strays = [];
   for (const f of walk("src")) {
     if (f === join("src", "core", "feat.js")) continue;
@@ -164,7 +164,7 @@ for (const k of KINDS) {
   // first ICE at MAX: one tip covering the brake, never two in a row
   let s = memStore(), a = iceRun(s, 2);
   const first = coachTip(a.st.kind, "d", a.w);
-  check("first ICE at MAX: the tip names the brake", a.st.kind === "BRAKE" && /PRESS BACK AS YOU LET GO/.test(first), first);
+  check("first ICE at MAX: the tip names the brake", a.st.kind === "BRAKE" && /PRESS THE OTHER WAY/.test(first), first);
   check("no second string: it IS the GLIDE line of this heat", first === tileTip("GLIDE", FEAT_PROFILE[2]));
   check("touch and keyboard read the same brake line", coachTip("BRAKE", "p", a.w) === first && coachTip("BRAKE", "l", a.w) === first);
   drain(a, s);
@@ -175,7 +175,7 @@ for (const k of KINDS) {
   // seen at CORE / PLUS, then MAX: the brake still comes, once
   for (const h of [0, 1]) {
     s = memStore(); a = iceRun(s, h);
-    check(`ICE at heat ${h}: the plain tip, no brake in it`, a.st.kind === "GLIDE" && !/PRESS BACK/.test(coachTip(a.st.kind, "d", a.w)));
+    check(`ICE at heat ${h}: the plain tip, no brake in it`, a.st.kind === "GLIDE" && !/PRESS THE OTHER WAY/.test(coachTip(a.st.kind, "d", a.w)));
     drain(a, s);
     const v = loadCoach2(s);
     check(`ICE at heat ${h}: GLIDE's bit only, the brake still owed`, v.g === 1 && v.z === 0, JSON.stringify(v));
@@ -192,7 +192,7 @@ for (const k of KINDS) {
   // the profile decides, never the heat index
   const noBrake = FEAT_PROFILE.map((r) => ({ ...r, glide: { ...r.glide, stop: undefined } }));
   s = memStore(); a = iceRun(s, 2, noBrake);
-  check("a profile without the brake never tips it", a.st.kind === "GLIDE" && !/PRESS BACK/.test(coachTip(a.st.kind, "d", a.w)));
+  check("a profile without the brake never tips it", a.st.kind === "GLIDE" && !/PRESS THE OTHER WAY/.test(coachTip(a.st.kind, "d", a.w)));
   drain(a, s);
   check("and leaves its bit at 0", loadCoach2(s).z === 0 && loadCoach2(s).g === 1);
   const plusBrake = FEAT_PROFILE.map((r, i) => (i === 1 ? { ...r, glide: { ...r.glide, coast: 3, stop: "brake" } } : r));
@@ -200,7 +200,7 @@ for (const k of KINDS) {
   check("a retuned profile with the brake at PLUS tips it at PLUS", iceRun(s, 1, plusBrake).st.kind === "BRAKE");
   const stepBrake = FEAT_PROFILE.map((r, i) => (i === 2 ? { ...r, glide: { ...r.glide, coast: 1, stop: "brake" } } : r));
   s = memStore(); a = iceRun(s, 2, stepBrake);
-  check("a brake on a one-step coast: its line names no brake, so the plain tip, the bit kept", a.st.kind === "GLIDE" && !/PRESS BACK/.test(coachTip(a.st.kind, "d", a.w)));
+  check("a brake on a one-step coast: its line names no brake, so the plain tip, the bit kept", a.st.kind === "GLIDE" && !/PRESS THE OTHER WAY/.test(coachTip(a.st.kind, "d", a.w)));
   drain(a, s);
   check("and the brake is still owed", loadCoach2(s).z === 0);
   // same close rules as every tile tip

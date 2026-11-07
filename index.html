@@ -143,6 +143,8 @@
   #upd kbd,#ana kbd{font:900 11px ui-monospace,monospace;padding:2px 6px;background:rgba(4,7,14,.95);border:1px solid #26324a;
     border-radius:3px;color:#dfe7f5;letter-spacing:0}
   #upd .later{font:12px ui-monospace,monospace;color:#7385ad;letter-spacing:.06em;padding:0 12px;line-height:40px;cursor:pointer}
+  #upd .later kbd{display:none;margin-right:8px}
+  #upd[data-pad="1"] kbd{display:inline}
   #upd .go:hover{background:rgba(55,240,208,.22)}#upd .later:hover{color:#dfe7f5}
   /* consent card (src/app/analytics.js): the same plate, small, docked bottom
      right with no backdrop, so the game plays on behind it (owner 2026-10-26);
@@ -167,6 +169,7 @@
   @media (prefers-reduced-motion:reduce){#upd,#ana{animation:updFade .12s linear both}}
   @keyframes updFade{from{opacity:0}to{opacity:1}}
   body[data-lay=p] #upd kbd,body[data-lay=l] #upd kbd,body[data-lay=p] #ana kbd,body[data-lay=l] #ana kbd{display:none}
+  body[data-lay=p] #upd[data-pad="1"] kbd,body[data-lay=l] #upd[data-pad="1"] kbd{display:inline}
   body[data-lay=p] #upd .go,body[data-lay=l] #upd .go{height:48px}
   body[data-lay=p] #ana .yes,body[data-lay=l] #ana .yes,body[data-lay=p] #ana .no,body[data-lay=l] #ana .no{height:44px}
   body[data-lay=p] #ana{left:12px;right:12px;width:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px))}
@@ -216,10 +219,10 @@
      tests/loadbar.test.mjs pins to the real static graph of the entry below.
      Resource Timing only reports a file when it ends, so the count is true but
      stepped; no entries (an unsupported browser) means no number, only LOADING. -->
-<script id="loadjs" data-files="102">
+<script id="loadjs" data-files="114">
 (function(w,d){
   var $=function(i){return d.getElementById(i)},E=$("load"),bar=$("loadbar"),fill=$("loadfill"),msg=$("loadmsg"),act=$("loadact"),retry=$("loadretry"),keep=$("loadkeep");
-  var STALL=30000,jobs={},cur=null,failed=null,drop=null,again=null,shown=null,iv=0,base=new URL("./",d.baseURI).href;
+  var STALL=30000,jobs={},cur=null,failed=null,drop=null,again=null,shown=null,words=false,iv=0,base=new URL("./",d.baseURI).href;
   var now=function(){return w.performance?performance.now():0};
   var bootFiles=+$("loadjs").getAttribute("data-files");
   jobs.boot={k:"boot",label:"",files:bootFiles,total:bootFiles,weigh:function(u){return u.indexOf(base+"src/")===0&&/\.js(\?|$)/.test(u)?1:0},seen:{},n:0,w:0,f:0,ph:0,t:0,last:now(),dock:false};
@@ -282,7 +285,10 @@
       if(!jobs[k])return;
       failed=k;drop=onDrop||null;again=onAgain||null;paint();
       if(k==="boot")retry.focus();
-    }
+    },
+    /* a pad's route to a look's failure card (src/app/loadbar.js loadCard); pad = last used, so the buttons name its words */
+    padLive:function(pad){var on=!!failed&&failed!=="boot";if(on&&words!==!!pad){words=!!pad;retry.textContent=(pad?"SOUTH ":"")+"RETRY";keep.textContent=(pad?"EAST ":"")+"USE CLASSIC 2D"}return on},
+    padPress:function(id){if(!failed||failed==="boot")return;if(id==="S")retry.onclick();else if(id==="E"&&drop)keep.onclick()}
   };
   retry.onclick=function(){var f=again;if(f)f();else location.reload()};
   keep.onclick=function(){var f=drop,k=failed;failed=null;drop=null;again=null;delete jobs[k];act.hidden=true;E.removeAttribute("data-act");paint();if(f)f()};
@@ -309,6 +315,7 @@
   </div>
 </div>
 <canvas id="sh" hidden aria-label="Fusegrid menu"></canvas>
+<div id="ctlsay" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 
 <!-- Entry point. Single browser thread: input → sim → render.
      The authoritative sim lives in src/core/sim.js (Node-testable, no DOM).

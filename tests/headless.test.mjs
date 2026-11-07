@@ -1295,6 +1295,8 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   // GRAPHICS rcache swap: -57 (the renderer cache, sizeCanvases, both three
   // loads and the fallback stub moved to src/app/rcache.js mountRenderers;
   // +1 import) — measured 733, against the 799 cap.
+  // CONTROLS seam T11: +11 (src/app/controlswire.js owns the logic) — measured
+  // 784, against the 799 cap, which stays.
   check("main.js stays a lean browser entry (<=799 lines)",
     L.length<=799,String(L.length));
   const lastImp=L.reduce((a,l,i)=>/^import[\s{]/.test(l)?i:a,-1);
@@ -1954,7 +1956,7 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
     check("O2 body[data-lay]="+v+" title paints TAP TO START",shot(intro(0,1),lay(v)).texts.includes("TAP TO START"));
     check("O2 body[data-lay]="+v+" show paints TAP TO SKIP",shot(intro(1,0.6),lay(v)).texts.includes("TAP TO SKIP"));
   }
-  check("O2 body[data-lay]=d title paints PRESS ANY KEY",shot(intro(0,1),lay("d")).texts.includes("PRESS ANY KEY"));
+  check("O2 body[data-lay]=d title paints PRESS ANY KEY OR BUTTON",shot(intro(0,1),lay("d")).texts.includes("PRESS ANY KEY OR BUTTON"));
   const L=layout(600,520);
   const menu=(fromShow)=>shot({screen:SCREEN.MENU,fromShow,subT:0,cursor:0,heat:0,dailyTag:""},lay("d"));
   const ns=menu(true), sk=menu(false);

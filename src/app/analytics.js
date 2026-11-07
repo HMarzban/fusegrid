@@ -49,7 +49,8 @@ export const gaLive = (id, host) => /^G-[A-Z0-9]{4,}$/.test(id || "") && id !== 
    keyboard screen, the run itself when the card clears the board (`roomy`).
    Never INTRO or ATTRACT (any key leaves them), and never a touch run, whose
    bomb button owns that corner. */
-export function cardVisible(screen, S, touch, roomy) {
+export function cardVisible(screen, S, touch, roomy, capturing) {
+  if (capturing) return false; // a CONTROLS capture owns the keys
   if (screen === S.GAME) return !touch && roomy !== false;
   return screen !== S.BOOT && screen !== S.INTRO && screen !== S.ATTRACT;
 }
@@ -150,7 +151,8 @@ export function mountAnalytics(env) {
     doc.body.appendChild(card);
     /* Y / N answer while it shows; every other key goes on to the game */
     win.addEventListener("keydown", (ev) => {
-      if (!shown() || ev.repeat || (ev.code !== "KeyY" && ev.code !== "KeyN")) return;
+      const g = e.get && e.get();
+      if (!shown() || ev.repeat || (ev.code !== "KeyY" && ev.code !== "KeyN") || (g && g.app && g.app.capturing)) return;
       ev.stopImmediatePropagation();
       set(ev.code === "KeyY" ? 1 : 0);
     }, true);
@@ -162,7 +164,7 @@ export function mountAnalytics(env) {
     const lay = doc.body && doc.body.dataset ? doc.body.dataset.lay : "d",
       stage = g.app.screen === g.SCREEN.GAME && doc.getElementById ? doc.getElementById("c") : null,
       roomy = !stage || !win.innerWidth || cardClears(stage.getBoundingClientRect(), win.innerWidth, win.innerHeight, card.offsetHeight),
-      show = consent === -1 && !(g.busy && g.busy()) && cardVisible(g.app.screen, g.SCREEN, lay === "p" || lay === "l", roomy);
+      show = consent === -1 && !(g.busy && g.busy()) && cardVisible(g.app.screen, g.SCREEN, lay === "p" || lay === "l", roomy, g.app.capturing);
     if (card.hidden === show) card.hidden = !show;
   };
   if (consent === 1) boot();

@@ -475,10 +475,9 @@ their branches:
 
 - **This diary**, plus a CHANGELOG backfilled all the way to the public
   launch.
-- **An SEO pass and a promotion kit** ([marketing/README.md](marketing/README.md)):
+- **An SEO pass**:
   a meta description and JSON-LD that lead with play-in-the-browser, the
-  three looks and Heat; a sitemap `lastmod` a test keeps honest; pitch copy,
-  per-platform tags, portal research and a launch checklist.
+  three looks and Heat; a sitemap `lastmod` a test keeps honest.
 - **Fresh listing art**, all real captures: install-dialog screenshots in the
   web manifest, a PIXEL still, three short silent gameplay clips and a MENU
   still retaken on v181. Two sessions retook that same still at once; the
@@ -782,6 +781,58 @@ faster boards, a bot that finally sees gates and mounds. The honest result: the 
 whether MAX feels harder on four of the tiles, because it dies to foes first, and tuning harder to
 please it would only have changed the game for a bot. The flare got cut. Details in the
 [record](superpowers/specs/2026-11-02-tiles-finish-v199.md).
+
+## 2026-11-02: the cabinet gets a controller
+
+Fusegrid only ever knew keys and fingers. The owner called it: build the controller feature on a
+local branch and ship it Friday. It arrives with a CONTROLS page, rebinding on both devices and hints
+that name whatever you just pressed. The sim never finds out: a pad is one more writer into the same
+inputs, so every replay still replays. A game designer's review caught three real traps first,
+including a lost window focus that could eat the first press on the title. The honest bit: every
+test ran on a fake pad. Nothing has been played on a real controller yet, so the
+[record](superpowers/specs/2026-11-06-controls-built.md) keeps those seven checks open for a human.
+Shell v201 was set to ship 2026-11-06; on 2026-11-03 the owner moved it to Sunday 2026-11-08.
+
+## 2026-11-02: the controller joins the menu
+
+Then the owner picked up a real controller and played. It works, they said, with the details still to
+come, so those seven checks stay open. Two notes came back with it: "the controller UI is not like the
+rest of the menue ui", and "since we have controller so we have to vibration too". Fair on both. CONTROLS
+had worn its own tile look while every other menu wore the panel, so it got rebuilt in the panel: list on
+the left, preview on the right, same band, notch and caret. Restyling every menu came off this release's
+list. And the pad buzzes now: a hit, a loss, a win, a blast next door, a light tick on every plant. It
+starts on, and one row turns it off. MENU also tells a plugged-in controller where to set itself up.
+
+## 2026-11-03: four levels and a rhythm
+
+The owner's next note: "for controller, we need a sensetive UI and controller and option for vibration, let's
+work on this and put the option in the menu ... see how can we improve the vibration for controller". So VIBRATION
+got OFF, LOW, MEDIUM and HIGH, and a pattern per moment instead of one buzz for everything. A cheap pad may drive both
+motors alike, so rhythm carries the meaning: a hit is a long thump, a SHIELD save is two quick taps, a chain builds.
+The accessibility review capped it hard: 500 ms and 3 pulses a pattern, and OFF means zero calls to the motor, counted.
+DEADZONE became SENSITIVITY, five levels with a live stick view that shows the drift and what the game actually reads.
+Menus got steadier on keys as well, since held repeats had been landing on idle frames. One honest trade: the
+menu tick has no switch of its own, because the page holds eight rows, so LOW is how you keep game vibration without it.
+And one honest gap: the owner says the controller works, but nobody has yet confirmed the vibration felt on a real
+one. The motor numbers stay guesses until someone holds the pad with their eyes shut.
+
+## 2026-11-03: menus you can feel
+
+The owner held a real controller, changed VIBRATION, and it buzzed. Then: "I would be good to add subtle
+vibration when menu changes, I mean when user enter to a new menue or when the press button to start the game".
+A research pass, an accessibility review and a game designer all weighed in, and the menus got their own small
+vocabulary: a crisp tap going in, a dull thump going out, a rising double pulse when a run starts, a double tap
+when something is refused, a hello when a controller connects. One feel per press, never on a held direction,
+and the game's own vibration always wins. The browser check caught two honest misses before anyone felt them:
+a fast scroll ate the page's buzz, and the board build made the start's second pulse vanish.
+
+## 2026-11-07: the controller ships
+
+The owner called it a day early: "let's make it ready and push it up". The whole controller round went out as
+one commit: controller play, rebinding on keys and buttons, the CONTROLS page, four VIBRATION levels and five
+SENSITIVITY levels. Before the push the tests ran again (578 pass) and the browser check drove the real page with
+a fake controller once more. The honest bit hasn't changed: a person has played it on a real controller and felt
+the test buzz, but the seven hands-on checks are still open, so the changelog promises nothing about feel.
 
 ---
 

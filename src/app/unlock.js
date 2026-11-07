@@ -10,7 +10,10 @@
    calling unlock() until the ctx runs, so the music still joins.
    No WebAudio (Node, or unlock() false): the first gesture that is not
    Escape or a modifier/lock key, so the Node key matrix matches the browser.
-   skip(ev): a press this listener must not see (the loader card's own buttons). */
+   skip(ev): a press this listener must not see (the loader card's own buttons).
+   The returned disarm carries .pad(), a rising pad button from the poll: it calls
+   unlock() there, and with a ctx that will not run it fires onReady after 250 ms,
+   on ONE press (no second key to wait for), with the listeners still armed. */
 export const UNLOCK_EV = Object.freeze(["keydown", "pointerdown", "pointerup", "touchend", "click"]);
 const isEsc = (ev) => !!ev && (ev.code === "Escape" || ev.key === "Escape");
 const MODS = ["Shift", "Control", "Alt", "AltGraph", "Meta", "CapsLock", "Fn", "FnLock", "NumLock", "ScrollLock", "Symbol", "SymbolLock", "Hyper", "Super"];
@@ -45,8 +48,16 @@ export function armUnlock(target, audio, onReady, skip) {
     Promise.resolve(r).then(() => audio.unlocked() && finish(), finish);
   }
   for (const [ty, fn] of hs) target.addEventListener(ty, fn, true);
-  return () => {
+  const off = () => {
     done = ready = true;
     disarm();
   };
+  off.pad = () => {
+    if (done) return;
+    const r = audio && audio.unlock ? audio.unlock() : false;
+    if (r === false || audio.unlocked()) return finish();
+    if (!ready) setTimeout(() => { if (!done) fire(); }, 250);
+    Promise.resolve(r).then(() => audio.unlocked() && finish(), finish);
+  };
+  return off;
 }

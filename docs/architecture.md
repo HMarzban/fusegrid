@@ -14,7 +14,7 @@ For the binding rulebook (pinned numbers, test contracts, owner rulings), see
 
 ```mermaid
 flowchart LR
-  K[Keys / touch] --> I[input.js<br/>intents]
+  K[Keys / touch / pad] --> I[input.js<br/>intents]
   I --> S["step(world, dt, intents)<br/>src/core: fixed steps, seeded rng"]
   S --> W[(world)]
   W --> C[CLASSIC 2D<br/>Canvas]
@@ -197,6 +197,45 @@ height, so the stage is centred on menu screens and slides up under the pause
 button during play, giving the touch controls a bigger thumb area below. The
 geometry is a pure function tested in Node; how it feels in the hand still
 needs a real phone.
+
+### The input seam: keys, fingers and pads (shell v201)
+
+**The sim never knows a pad exists.** `step()` gets the same `{move, fire, firePrev, shift, remote}` it
+always got, so replays and hashes hold. A pad is one more writer into [`input.js`](../src/input.js), with
+its own held axes and latches, OR-merged with keys. A held key beats the pad on a mixed axis.
+
+- [`gamepad.js`](../src/app/gamepad.js) polls on every rAF **above** the frame gate, so a 30 FPS cap or the
+  20 FPS idle floor can't lose a tap. A press holds for at least one tick. The stick has a radial deadzone and walks 4-way.
+  SENSITIVITY has five levels (MIN 60, LOW 40, MEDIUM 25, HIGH 15, MAX 8 percent), each with its own release and turn
+  (1.40x to 1.10x). No response curve: `step()` gets -1, 0 or 1, so stick distance never reaches the sim. On a menu the
+  first engage takes vertical unless x leads y by 1.25x.
+- [`padroute.js`](../src/app/padroute.js) decides what a press means on the current screen. A press in one
+  layer is spent there, so SOUTH that starts a run plants nothing.
+- [`controls.js`](../src/app/controls.js) holds the binds and their rules (`nb.controls.v1`, kept by a cabinet
+  reset). [`capture.js`](../src/app/capture.js) and [`controlspage.js`](../src/app/controlspage.js) run the
+  page. Capture goes first in every path, so ESC while listening never pauses the game.
+- [`hints.js`](../src/app/hints.js) tracks the last-used device, and the render side reads its words through
+  [`hintcopy.js`](../src/render/hintcopy.js), so render still imports nothing from `src/app/`.
+- [`rumble.js`](../src/app/rumble.js) reads the event drain one way and never touches the world. The player's word for it is
+  VIBRATION: OFF, LOW, MEDIUM (default) and HIGH, separate from REDUCE FLASH. Each step is one `playEffect` call, because a new call
+  replaces the running one, so `tick` on every rAF walks a pattern table with priorities. Same or lower priority is dropped,
+  never queued. Patterns stop at 500 ms and 3 pulses, and the per-second limits hold everything but hurt and lose. There's one
+  fire function, so OFF really makes zero calls. A run and the menu ticks buzz only while the pad is the last-used device; the
+  row's test pulse is the one exception. Trade-off: menu ticks have no switch of their own, since the page holds 8 rows, so LOW
+  is the way to keep game vibration without them. Menu feels (launch, enter, back, deny, hello, confirm, move) are written by
+  the shell call that causes them into one ranked slot (`app.feel`), armed and read around the pad poll's routing, so a press gets exactly one feel; gameplay
+  preempts them, cursor ticks share 900 ms of motor per 10 s while page feels always play but count (launch and hello outside it) and they never fire alone, without a change on screen.
+- A held menu direction runs its frame at up to 60 Hz ([`frameloop.js`](../src/app/frameloop.js) `HELD_FPS`, under the FRAME RATE
+  cap), so a repeat no longer lands on a 20-30 FPS idle frame. The 350 then 110 ms repeat itself did not change.
+- The CONTROLS page draws with the same menu kit as every other page: list on the left, preview pane on the right,
+  HEAT-style tabs, band, notch and caret. One look to maintain, no second skin.
+- [`controlswire.js`](../src/app/controlswire.js) binds all of it to `main`, the frame loop and the audio unlock.
+
+Trade-offs: the page paints from the static boot graph (the twelve modules are 111,107 bytes raw at `ee2a34e`, +137,052 on the whole boot graph since the feature began), because lazy paint risks a blank
+first frame. Keyboard diagonals stay about 1.41x while a pad is 4-way, because changing keys would alter feel
+and old bests. Every pad test uses a fake pad. The owner has played on a real controller and reports it works; the details
+are not in yet, so the human checks stay open, and nobody has yet confirmed vibration felt on real hardware. The
+[record](superpowers/specs/2026-11-06-controls-built.md) has the rulings and the go/no-go list.
 
 ## 🧱 The board look (shell v185)
 

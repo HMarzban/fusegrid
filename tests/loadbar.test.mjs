@@ -5,7 +5,7 @@ import { readFileSync, writeFileSync, existsSync, statSync } from "node:fs";
 import { join, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import vm from "node:vm";
-import { LOOK, lookPlan, paintYield, afterFirstRender } from "../src/app/loadbar.js";
+import { LOOK, lookPlan, paintYield, afterFirstRender, loadCard } from "../src/app/loadbar.js";
 import { PRECACHE } from "../src/pwa/shell.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -219,6 +219,30 @@ const U = (n) => "http://x/g/src/m" + n + ".js";
   check("then one more frame, and the wrapper is gone", done === 0 && r.render === r0);
   cb();
   check("then done, once", done === 1);
+}
+
+// ---- T14: the look-load card on a pad ----
+{
+  check("loadCard with no loader is inert", (() => { const c = loadCard({}); c.press("S"); return c.live(true) === false; })());
+  const b = boot1(), c = loadCard(b.ctx);
+  check("no failure: nothing to answer", c.live(true) === false);
+  b.L.begin("px", lookPlan("px"));
+  let again = 0, dropped = 0;
+  b.L.fail("px", () => dropped++, () => again++);
+  check("a look failure is live for a pad; keys leave the labels alone", c.live(false) === true && !/SOUTH/.test(b.el("loadretry").textContent) && !/EAST/.test(b.el("loadkeep").textContent));
+  c.live(true);
+  check("pad last used: the buttons name their pad words", b.el("loadretry").textContent === "SOUTH RETRY" && b.el("loadkeep").textContent === "EAST USE CLASSIC 2D");
+  c.live(false);
+  check("back on keys: the plain labels", b.el("loadretry").textContent === "RETRY" && b.el("loadkeep").textContent === "USE CLASSIC 2D");
+  c.press("W"); c.press("N"); c.press("START");
+  check("only SOUTH and EAST act", again === 0 && dropped === 0);
+  c.press("S");
+  check("SOUTH is RETRY", again === 1 && dropped === 0);
+  c.press("E");
+  check("EAST is USE CLASSIC 2D", dropped === 1 && c.live(true) === false);
+  const n = boot1(), nc = loadCard(n.ctx);
+  n.L.fail("boot");
+  check("a boot failure stays off the pad's table", nc.live(true) === false && (nc.press("S"), !n.ctx.reloaded));
 }
 
 console.log("LOADBAR", pass + " PASS / " + fail + " FAIL");

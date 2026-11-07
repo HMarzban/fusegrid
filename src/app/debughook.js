@@ -24,6 +24,7 @@ const SCREEN_NAME = [
   "TROPHIES",
   "GRAPHICS",
   "FLOOR",
+  "CONTROLS",
 ];
 
 export function mountDebugHook(h) {
@@ -38,6 +39,7 @@ export function mountDebugHook(h) {
     app,
     audio: h.audio,
     net: h.net,
+    ctl: h.ctl,
     ga: h.ga,
     cam: h.cam,
     get demo() {

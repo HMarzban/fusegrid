@@ -21,7 +21,6 @@ something another doc owns, that's a bug. Replace the copy with a link.
 | The binding rulebook: pinned numbers, test contracts, owner rulings | [AGENTS.md](../AGENTS.md) | Maintainers and coding agents |
 | What each work session did, decided or left open | [MEMORY.md](../MEMORY.md) | Maintainers and coding agents |
 | Store art and clips, install-dialog screenshots, the itch blurb and the upload zip recipe | [media/README.md](../media/README.md) | Whoever lists the game |
-| Pitch copy, platform tags, launch checklist, GitHub About text and topics | [marketing/README.md](marketing/README.md) | Whoever promotes the game |
 | How we treat each other | [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md) | Everyone |
 | How to report a vulnerability | [SECURITY.md](../SECURITY.md) | Everyone |
 | What the opt-in play stats send, and how to switch them off | [privacy.md](privacy.md) | Players |
@@ -131,6 +130,8 @@ decision was later replaced. The note says by what.
 | 2026-10-20 | [Level variety: random boards, bold biome mazes](superpowers/specs/2026-10-20-level-variety-design.md) | ✅ Built in shell v188 (2026-10-26: #10–#13); its tile section is replaced by the 2026-10-21 tiles record, and the tiles moved to gen 3, played by everyone since v198 |
 | 2026-10-20 | [Level variety: the 14 bold layouts](superpowers/specs/2026-10-20-level-variety-layouts.md) | The ASCII templates, edit grammar and fair-start pocket for #12. ⚠️ Since v188, CROWN THRONE and COURT ship with their east-west walls turned north-south (`TPL_EDITS` in `board2.js`), and brick-passing foes start 12 steps away like hunters |
 | 2026-10-21 | [Difficulty tiles: fun on easy, tough on hard](superpowers/specs/2026-10-21-difficulty-tiles-design.md) | ⚠️ Rules for wave 1 in prototype (now on `main`), art built; art round 3 addendum 2026-10-23, direction D addendum 2026-10-25; **design pass 2 addendum 2026-10-26: the dial works; addenda 2026-11-01: built on `?gen=3`, bot-side verdict, then the wave-1 open items; live for everyone since v198, see the 2026-11-02 records** (issue #16, #18–#22, #24, #28, #30) |
+| 2026-11-06 | [CONTROLS, as built](superpowers/specs/2026-11-06-controls-built.md) | Built for shell v201: what differed from the design, every ruling and its cost, boot weight, the go/no-go list. Played once on a real controller by the owner, with the detailed checks still open. |
+| 2026-11-02 | [CONTROLS menu: keyboard and game controller](superpowers/specs/2026-11-02-controls-menu-design.md) · [plan](superpowers/plans/2026-11-02-controls-feature.md) · [acceptance](superpowers/plans/2026-11-02-controls-acceptance.md) | The design: the page, the rules, the rulings. Built for shell v201, see the 2026-11-06 record. |
 | 2026-11-02 | [Finishing the floor tiles](superpowers/specs/2026-11-02-tiles-finish-v199.md) | Built in shell v199: TRAP marks, no tile closes your only way out, faster boards, numbers and rulings. |
 | 2026-11-02 | [Floor tiles for everyone](superpowers/specs/2026-11-02-tiles-default-v198.md) | Built in shell v198: tile boards by default, F3 links, the owner's playtest waiver and the known risks. |
 | 2026-11-01 | [Loose ends and the loading bar](superpowers/specs/2026-11-01-loose-ends-v197.md) | Built in shell v197: loading bar, #36 fix, REAL 3D heat look, boot size, the lead's rulings on the open picks. |

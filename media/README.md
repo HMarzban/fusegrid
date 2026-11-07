@@ -143,8 +143,7 @@ error. The one leftover: OPTIONS still lists ANALYTICS there, where it does
 nothing because analytics only runs on the Pages host.
 
 Tags: `arcade`, `singleplayer`, `webgl`, `chiptune` (the core four every
-listing carries). The full set for each platform lives in the
-[promotion kit](../docs/marketing/README.md#tags-per-platform).
+listing carries).
 
 ## 📣 itch blurb
 

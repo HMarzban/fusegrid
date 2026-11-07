@@ -9,6 +9,8 @@ import {
 } from "../src/app/menuapp.js";
 import { SHOW_DUR, TITLE_IN } from "../src/app/intro.js";
 import { Input } from "../src/input.js";
+import { createControlsPage } from "../src/app/controlspage.js";
+import { DEF_CONTROLS, DEF_KEY } from "../src/app/controls.js";
 import { createAudio } from "../src/audio.js";
 import { readFileSync } from "node:fs";
 
@@ -82,10 +84,10 @@ check(
   GUIDE_ROWS.join("|"),
 );
 check(
-  "OPT_ROWS frozen, the eleven spec rows in order (ANALYTICS before the GRAPHICS door, door above RESET)",
+  "OPT_ROWS frozen, twelve rows in order, CONTROLS between GRAPHICS and RESET DEFAULTS",
   Object.isFrozen(OPT_ROWS) &&
     OPT_ROWS.join("|") ===
-      "MUSIC|SFX|SOUND|RENDER|CAMERA|BRIGHTNESS|SCREEN SHAKE|REDUCE FLASH|ANALYTICS|GRAPHICS|RESET DEFAULTS",
+      "MUSIC|SFX|SOUND|RENDER|CAMERA|BRIGHTNESS|SCREEN SHAKE|REDUCE FLASH|ANALYTICS|GRAPHICS|CONTROLS|RESET DEFAULTS",
   OPT_ROWS.join("|"),
 );
 check(
@@ -620,11 +622,11 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
 {
   const a = createMenuApp();
   a.screen = SCREEN.SETTINGS;
-  a.optRow = 10;
+  a.optRow = 11;
   a.optMove(1);
-  check("optMove wraps 10 -> 0", a.optRow === 0, a.optRow);
+  check("optMove wraps 11 -> 0", a.optRow === 0, a.optRow);
   a.optMove(-1);
-  check("optMove wraps 0 -> 10", a.optRow === 10 && OPT_ROWS[10] === "RESET DEFAULTS", a.optRow);
+  check("optMove wraps 0 -> 11", a.optRow === 11 && OPT_ROWS[11] === "RESET DEFAULTS", a.optRow);
   a.optRow = 0;
   a.key("ArrowDown");
   check("ArrowDown tap moves the row (axis 1)", a.optRow === 1, a.optRow);
@@ -1333,9 +1335,9 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
 // ---- R6: SCREEN.TROPHIES (the MEDALS page) is appended, opened from STATS by T ----
 {
   check(
-    "R6 TROPHIES appended at 13 — never inserted, STATS stays 12 (GRAPHICS 14, FLOOR 15 after it)",
-    SCREEN.TROPHIES === 13 && SCREEN.STATS === 12 && SCREEN.GRAPHICS === 14 && SCREEN.FLOOR === 15 &&
-      Object.keys(SCREEN).length === 16,
+    "R6 TROPHIES appended at 13 — never inserted, STATS stays 12 (GRAPHICS 14, FLOOR 15, CONTROLS 16 after it)",
+    SCREEN.TROPHIES === 13 && SCREEN.STATS === 12 && SCREEN.GRAPHICS === 14 && SCREEN.FLOOR === 15 && SCREEN.CONTROLS === 16 &&
+      Object.keys(SCREEN).length === 17,
     JSON.stringify(SCREEN),
   );
   check(
@@ -1368,7 +1370,7 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
   const a = createMenuApp({ settings: {}, onSettings: (s, k) => seen.push(k) });
   a.screen = SCREEN.MENU; a.cursor = ITEMS.indexOf("OPTIONS"); a.confirm();
   a.optRow = OPT_ROWS.indexOf("GRAPHICS");
-  check("GRAPHICS door sits at optRow 9, right above RESET", a.optRow === 9 && OPT_ROWS[10] === "RESET DEFAULTS");
+  check("GRAPHICS door sits at optRow 9, CONTROLS then RESET below it", a.optRow === 9 && OPT_ROWS[10] === "CONTROLS" && OPT_ROWS[11] === "RESET DEFAULTS");
   const s0 = JSON.stringify(a.settings);
   check("door ←/→ do nothing", a.move(-1, 0) === false && a.move(1, 0) === false && JSON.stringify(a.settings) === s0);
   a.gfxRow = 5;
@@ -1505,6 +1507,307 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
   }
   const t = createMenuApp({ settings: {} }); t.screen = SCREEN.MENU; t.parked = true; t._tapMove(1, false);
   check("_tapMove clears parked", t.parked === false);
+}
+
+check("menuapp's DEF_MOVE is controls.js DEF_KEY.MOVE", JSON.stringify(createMenuApp({ settings: {} }).moveKeys) === JSON.stringify(DEF_KEY.MOVE));
+// ---- CONTROLS (T6, plan 2026-11-02): the door, pauseView 3, capture owns the keys ----
+{
+  const mkPage = (st = "ready") => {
+    const box = { c: DEF_CONTROLS, sets: 0 };
+    box.page = createControlsPage({ get: () => box.c, set: (c) => { box.c = c; box.sets++; }, padView: () => ({ state: st, name: "CONTROLLER 1 · STANDARD" }), say: () => {} });
+    return box;
+  };
+  const DOOR = OPT_ROWS.indexOf("CONTROLS");
+  const opened = (o) => {
+    const b = mkPage(), a = createMenuApp({ controls: b.page, ...o });
+    a.screen = SCREEN.SETTINGS;
+    a.optRow = DOOR;
+    return { a, b, ok: a.confirm() };
+  };
+  const paused = () => {
+    const { a, b } = opened();
+    a.screen = SCREEN.GAME; a.worldState = "PAUSE"; a.pauseCursor = 2; a.pauseView = 1; a.optRow = DOOR;
+    return { a, b, ok: a.confirm() };
+  };
+  const quiet = (a, ms = 300) => a.update(ms / 1000, mkInput());
+  const listen = (a) => { quiet(a); a.confirm(); quiet(a, 1); quiet(a); };
+
+  check("SCREEN.CONTROLS is 16, no value shifted", SCREEN.CONTROLS === 16 && SCREEN.FLOOR === 15 && SCREEN.SETTINGS === 10);
+  {
+    const { a, b, ok } = opened();
+    check("door Enter opens SCREEN.CONTROLS, optRow kept", ok === true && a.screen === SCREEN.CONTROLS && a.optRow === DOOR);
+    check("page opens on the keyboard tab for a keyboard player", a.ctlTab === "key" && a.capturing === false && b.sets === 0);
+    a.key("Escape");
+    check("Esc returns to OPTIONS on the door row", a.screen === SCREEN.SETTINGS && a.optRow === DOOR);
+    a.confirm(); a.key("Backspace");
+    check("Backspace returns to OPTIONS on the door row", a.screen === SCREEN.SETTINGS && a.optRow === DOOR);
+    a.lastDev = "pad"; a.confirm();
+    check("a pad player's page opens on the controller tab", a.screen === SCREEN.CONTROLS && a.ctlTab === "pad");
+    a.back();
+    a.lastDev = "touch"; a.confirm();
+    check("a touch player's page opens on the controller tab", a.ctlTab === "pad");
+  }
+  {
+    const { a } = opened();
+    const v = () => a.controls.view(a.ctlT);
+    const r0 = v().row;
+    a.key("ArrowDown");
+    check("↓ walks a row", v().row === r0 + 1, v().row);
+    a.key("ArrowUp");
+    check("↑ walks back", v().row === r0, v().row);
+    a.controls.pick(0);
+    a.key("ArrowUp");
+    check("↑ wraps from the first row to the last", v().row === 7, v().row);
+    a.key("ArrowDown");
+    check("↓ wraps from the last row to the first", v().row === 0, v().row);
+    a.key("ArrowRight");
+    check("→ goes to the controller tab, row kept", a.ctlTab === "pad" && v().row === 0);
+    check("→ on the tab already set is silent", a.key("ArrowRight") === false && a.ctlTab === "pad");
+    a.key("ArrowLeft");
+    check("← goes to the keyboard tab", a.ctlTab === "key");
+    a.key("BracketRight");
+    check("] goes to the controller tab", a.ctlTab === "pad");
+    check("] on the tab already set is silent", a.key("BracketRight") === false);
+    a.key("BracketLeft");
+    check("[ goes to the keyboard tab", a.ctlTab === "key");
+    a.key("BracketRight");
+    a.controls.pick(5);
+    const d0 = a.controls.view(a.ctlT).dead;
+    a.key("ArrowRight");
+    check("→ on SENSITIVITY steps up a level and keeps the row and tab", v().row === 5 && d0 === 25 && v().dead === 15 && a.ctlTab === "pad", v().row + "/" + v().dead);
+    a.key("ArrowLeft");
+    check("← on SENSITIVITY steps back", v().dead === d0 && a.ctlTab === "pad", v().dead);
+    a.key("Enter");
+    check("ENTER steps SENSITIVITY a level", v().dead === 15, v().dead);
+    a.key("Enter"); a.key("Enter");
+    check("ENTER wraps SENSITIVITY MAX -> MIN", v().dead === 60, v().dead);
+  }
+  {
+    const { a } = opened();
+    const v = () => a.controls.view(a.ctlT).row;
+    const r0 = v();
+    const held = mkInput({ down: true });
+    a.update(1 / 60, held);
+    check("a held ↓ walks once at first", v() === r0 + 1, v());
+    for (let i = 0; i < 40; i++) a.update(1 / 60, held);
+    check("a held ↓ repeats as in OPTIONS", v() !== r0 + 1, v());
+    a.update(1 / 60, mkInput());
+    a.controls.pick(5);
+    const lat = mkInput({ right: true }), dv = () => a.controls.view(a.ctlT).dead;
+    a.update(1 / 60, lat);
+    check("a held → over a keyboard row changes the tab once, onto PAUSE", a.ctlTab === "pad" && v() === 4 && dv() === 25, a.ctlTab);
+    for (let i = 0; i < 60; i++) a.update(1 / 60, lat);
+    check("and never turns into a value step", a.ctlTab === "pad" && dv() === 25, dv());
+    a.update(1 / 60, mkInput());
+    a.controls.pick(5);
+    a.update(1 / 60, lat);
+    check("a fresh → on SENSITIVITY adjusts", dv() === 15, dv());
+    for (let i = 0; i < 120; i++) a.update(1 / 60, lat);
+    check("a held → repeats and clamps at MAX, never wraps", dv() === 8, dv());
+    a.update(1 / 60, mkInput());
+    a.update(1 / 60, mkInput());
+    a.controls.pick(1);
+    frames(a, 1, 1 / 60, null, true);
+    check("a rising held confirm is Enter on the page", a.capturing === true);
+  }
+  {
+    const { a, b } = opened();
+    listen(a);
+    check("Enter on a row opens a capture", a.capturing === true);
+    const c0 = a.cursor, r0 = a.controls.view(a.ctlT).row;
+    const all = ["Enter", "NumpadEnter", "Escape", "Backspace", "KeyM", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "KeyW", "KeyA", "KeyS", "KeyD", "Digit1", "BracketLeft", "BracketRight", "KeyT", "KeyR"];
+    check("keys while capturing never reach confirm / back / move", all.every((k) => a.key(k) === false) && a.capturing === true && a.screen === SCREEN.CONTROLS && a.cursor === c0 && a.controls.view(a.ctlT).row === r0 && a.ctlTab === "key");
+    check("move and confirm refuse while capturing", a.move(1, 0) === false && a.confirm() === false && a.capturing === true);
+    a.update(1 / 60, mkInput({ down: true }));
+    check("held axes do not walk the page while capturing", a.controls.view(a.ctlT).row === r0);
+    a.update(1 / 60, mkInput(null, true));
+    check("a held confirm does not reach the page while capturing", a.capturing === true);
+    a.update(1 / 60, mkInput());
+    check("back() cancels the capture and stays on the page", a.back() === true && a.capturing === false && a.screen === SCREEN.CONTROLS && b.sets === 0);
+  }
+  {
+    const { a, b } = opened();
+    check("ctlKey off a capture does not take the key", a.ctlKey("ArrowRight", "ArrowRight") === false);
+    a.confirm();
+    check("the arm clock waits for the release: anyDown holds it", (a.update(0.5, { ...mkInput(), anyDown: true }), a.controls.view(a.ctlT).capture !== null));
+    check("a press while the key is still down binds nothing", a.ctlKey("KeyZ", "z") === true && b.sets === 0);
+    a.update(0.001, mkInput()); a.update(0.25, mkInput());
+    check("released and 200 ms later a key commits through ctlKey", a.ctlKey("KeyZ", "z") === true && b.sets === 1 && b.c.key.BOMB === "KeyZ" && a.capturing === false);
+    check("the committing key stays swallowed until released", a.ctlKey("KeyZ", "z") === true);
+    a.update(1 / 60, mkInput());
+    check("once up it is an ordinary key again", a.ctlKey("KeyZ", "z") === false);
+    a.back();
+    check("ctlKey is inert off the page", a.screen === SCREEN.SETTINGS && a.ctlKey("KeyZ", "z") === false && a.ctlBtn("S") === false);
+    let ticks = 0;
+    const p = a.controls, t0 = p.tick;
+    p.tick = (...x) => { ticks++; return t0(...x); };
+    a.update(1 / 60, mkInput());
+    check("the page ticks only while CONTROLS is open", ticks === 0);
+    a.confirm();
+    a.update(1 / 60, mkInput());
+    check("the page ticks once a frame on CONTROLS", ticks === 1);
+    p.tick = t0;
+  }
+  {
+    const { a } = opened(); a.confirm();
+    a.startRun();
+    check("startRun clears a capture", a.capturing === false && a.screen === SCREEN.GAME);
+    const c = opened(); c.a.confirm();
+    c.a.toMenu();
+    check("toMenu clears a capture", c.a.capturing === false && c.a.screen === SCREEN.MENU);
+    const d = paused(); d.a.confirm();
+    d.a.enterPause();
+    check("a new PAUSE clears a capture and the view", d.a.capturing === false && d.a.pauseView === 0);
+    const e = opened(); e.a.confirm();
+    e.a._push(SCREEN.SETTINGS);
+    check("_push clears a capture", e.a.capturing === false);
+    const f = paused();
+    f.a.quitToMenu("PAUSE");
+    check("quit to menu leaves no stale pauseView for the next run", f.a.pauseView === 0);
+  }
+  {
+    const { a, b, ok } = paused();
+    check("PAUSE door opens inline pauseView 3, shell stays GAME", ok === true && a.pauseView === 3 && a.screen === SCREEN.GAME);
+    a.key("ArrowDown");
+    check("view 3: ↓ walks, never moves an OPTIONS row", a.controls.view(a.ctlT).row === 2 && a.optRow === DOOR && a.gfxRow === 0);
+    a.update(1 / 60, mkInput());
+    a.update(1 / 60, mkInput({ down: true }));
+    check("view 3: a held ↓ walks through update", a.controls.view(a.ctlT).row === 3);
+    a.update(1 / 60, mkInput());
+    a.key("ArrowRight");
+    check("view 3: → changes the tab, never adjusts an OPTIONS row", a.ctlTab === "pad" && a.optRow === DOOR);
+    a.key("ArrowLeft");
+    a.update(1 / 60, mkInput());
+    a.key("BracketRight");
+    check("view 3: ] switches the tab", a.ctlTab === "pad");
+    a.key("BracketLeft");
+    check("view 3: [ switches it back", a.ctlTab === "key");
+    a.controls.pick(1);
+    quiet(a); a.confirm();
+    check("view 3: Enter opens a capture", a.capturing === true);
+    check("view 3: back during a capture only cancels it", a.pauseBack() === true && a.pauseView === 3 && a.capturing === false && b.sets === 0);
+    check("view 3: Esc steps 3 -> 1 on the door, never 3 -> 2", a.pauseBack() === true && a.pauseView === 1 && a.optRow === DOOR);
+    check("then 1 -> 0, never to play", a.pauseBack() === true && a.pauseView === 0 && a.worldState === "PAUSE");
+    check("Backspace does not leave view 3 (as views 1 and 2)", (a.pauseView = 3, a.key("Backspace") === false && a.pauseView === 3));
+    a.controls.pick(7);
+    a.confirm();
+    check("an armed reset is disarmed first, the view stays", a.controls.view(a.ctlT).armed === true && a.pauseBack() === true && a.pauseView === 3 && a.controls.view(a.ctlT).armed === false);
+    let ticks = 0;
+    const t0 = a.controls.tick;
+    a.controls.tick = (...x) => { ticks++; return t0(...x); };
+    a.update(1 / 60, mkInput());
+    a.pauseView = 0;
+    a.update(1 / 60, mkInput());
+    check("the page ticks in view 3 and not on the PAUSE list", ticks === 1, ticks);
+    a.controls.tick = t0;
+  }
+  {
+    const b = mkPage();
+    b.c = { ...DEF_CONTROLS, key: { ...DEF_CONTROLS.key, MOVE: ["KeyI", "KeyL", "KeyK", "KeyH"] } };
+    const m = createMenuApp({ controls: b.page });
+    m.screen = SCREEN.MENU; m.cursor = 1;
+    check("rebound MOVE reads live", m.moveKeys.join() === "KeyI,KeyL,KeyK,KeyH");
+    m.key("KeyK");
+    check("rebound DOWN walks the menu", m.cursor === 2, m.cursor);
+    m.key("KeyI");
+    check("rebound UP walks the menu", m.cursor === 1, m.cursor);
+    m.key("KeyS");
+    check("the old DOWN does nothing", m.cursor === 1, m.cursor);
+    m.key("KeyW");
+    check("the old UP does nothing", m.cursor === 1, m.cursor);
+    m.key("ArrowDown");
+    check("ARROWS always do", m.cursor === 2, m.cursor);
+    m.screen = SCREEN.LEVEL; m.level = 2;
+    m.key("KeyL");
+    check("MOVE index 1 is RIGHT", m.level === 3, m.level);
+    m.key("KeyH");
+    check("MOVE index 3 is LEFT", m.level === 2, m.level);
+    const d = createMenuApp();
+    d.screen = SCREEN.LEVEL; d.level = 2;
+    d.key("KeyD");
+    check("default D is RIGHT", d.level === 3, d.level);
+    d.key("KeyA");
+    check("default A is LEFT", d.level === 2, d.level);
+  }
+  {
+    const a = createMenuApp();
+    a.idleT = 7; a.parked = true;
+    a.wake();
+    check("wake() clears idleT and parked", a.idleT === 0 && a.parked === false);
+    check("padNote starts empty", a.padNote === "");
+  }
+  {
+    const a = createMenuApp();
+    a.screen = SCREEN.SETTINGS; a.optRow = DOOR;
+    check("no page: the door is inert", a.confirm() === false && a.screen === SCREEN.SETTINGS && a.pauseView === 0);
+    check("no page: nothing is capturing, tab reads keyboard", a.capturing === false && a.ctlTab === "key");
+    check("no page: MOVE keys read WASD", a.moveKeys.join() === "KeyW,KeyD,KeyS,KeyA");
+    a.screen = SCREEN.GAME; a.worldState = "PAUSE"; a.pauseView = 1;
+    check("no page: the PAUSE door is inert too", a.confirm() === false && a.pauseView === 1);
+    a.screen = SCREEN.SETTINGS; a.optRow = OPT_ROWS.indexOf("RESET DEFAULTS"); a.settings.mus = 10;
+    check("no page: RESET DEFAULTS still resets", a.confirm() === true && a.settings.mus !== 10);
+    a.optRow = OPT_ROWS.indexOf("GRAPHICS");
+    check("no page: GRAPHICS still opens", a.confirm() === true && a.screen === SCREEN.GRAPHICS);
+    a.pauseView = 3; a.screen = SCREEN.GAME;
+    check("no page: a view 3 still backs out to the door", a.pauseBack() === true && a.pauseView === 1 && a.optRow === DOOR);
+  }
+  // Consent ruling: a pad can never turn analytics on from an unanswered state.
+  {
+    const ANA = OPT_ROWS.indexOf("ANALYTICS"), NOTE = "ANSWER THE CARD WITH Y OR N";
+    const mk = (open, dev) => {
+      const calls = [];
+      const a = createMenuApp({ onAnalytics: (v) => calls.push(v), anaOpen: () => open.v });
+      a.screen = SCREEN.SETTINGS; a.optRow = ANA; a.lastDev = dev;
+      return { a, calls };
+    };
+    let t = mk({ v: true }, "pad");
+    check("pad, unanswered: Enter does nothing", t.a.confirm() === false && t.a.analytics === false && t.calls.length === 0);
+    check("pad, unanswered: the row says why", t.a.anaNote === NOTE, t.a.anaNote);
+    check("pad, unanswered: → does nothing", t.a.move(1, 0) === false && t.a.analytics === false && t.calls.length === 0);
+    t.a.update(1, mkInput({ right: true }));
+    check("pad, unanswered: a held → does nothing", t.a.analytics === false && t.calls.length === 0);
+    t.a.update(1 / 60, mkInput());
+    t.a.key("Enter");
+    check("pad, unanswered: the key path does nothing", t.a.analytics === false && t.calls.length === 0);
+    t.a.optMove(1);
+    check("the note ends when the row moves", t.a.anaNote === "");
+    t.a.optRow = ANA; t.a.confirm(); t.a._push(SCREEN.SETTINGS);
+    check("the note ends with the page", t.a.anaNote === "");
+    t = mk({ v: true }, "pad");
+    t.a.screen = SCREEN.GAME; t.a.worldState = "PAUSE"; t.a.pauseView = 1;
+    check("pad, unanswered, PAUSE view 1: Enter does nothing", t.a.confirm() === false && t.a.analytics === false && t.a.anaNote === NOTE);
+    const q = { v: true };
+    t = mk(q, "pad");
+    t.a.confirm();
+    q.v = false;
+    check("answering the card ends the note", t.a.anaNote === "");
+    t = mk({ v: false }, "pad");
+    check("pad, answered: the row toggles as today", t.a.confirm() === true && t.a.analytics === true && t.calls.join() === "true" && t.a.anaNote === "");
+    t = mk({ v: true }, "key");
+    check("keys, unanswered: the row toggles as today", t.a.confirm() === true && t.a.analytics === true && t.calls.length === 1);
+    t = mk({ v: true }, "touch");
+    check("touch, unanswered: the row toggles as today", t.a.confirm() === true && t.a.analytics === true);
+    const n = createMenuApp({ onAnalytics: () => { throw new Error("consented"); } });
+    n.screen = SCREEN.SETTINGS; n.optRow = ANA; n.lastDev = "pad";
+    check("pad with no consent getter blocks, never consents", n.confirm() === false && n.analytics === false);
+  }
+}
+
+// ---- T14: the MODES cursor is shell-only ----
+{
+  const a = createMenuApp({ autoplay: false, pactUnlocked: true }); a.skip();
+  check("modeCur starts unset", a.modeCur === -1);
+  check("modeWalk off LEVEL is inert", a.modeWalk(1) === false && a.modeCur === -1);
+  a.cursor = ITEMS.indexOf("LEVEL SELECT"); a.confirm();
+  check("modeWalk: first step lands on an end", a.screen === SCREEN.LEVEL && a.modeWalk(1) === true && a.modeCur === 0);
+  check("modeWalk: clamps, the end is silent", a.modeWalk(-1) === false && a.modeCur === 0);
+  a.modeCur = 4;
+  check("modeWalk: clamps at TIME", a.modeWalk(1) === false && a.modeCur === 4);
+  a.back(); a.confirm();
+  check("re-entering LEVEL clears the cursor", a.screen === SCREEN.LEVEL && a.modeCur === -1);
+  const l = createMenuApp({ autoplay: false }); l.skip(); l.cursor = ITEMS.indexOf("LEVEL SELECT"); l.confirm();
+  check("modeWalk: locked before the first CLEAR", l.modeWalk(1) === false && l.modeCur === -1);
+  check("the cursor never reaches startRun", !("modeCur" in (() => { let got = {}; const s = createMenuApp({ autoplay: false, pactUnlocked: true, onStart: (o) => { got = o; } }); s.skip(); s.cursor = ITEMS.indexOf("LEVEL SELECT"); s.confirm(); s.modeWalk(1); s.confirm(); return got; })()));
 }
 
 console.log("\n  MENUAPP RESULT: " + pass + " PASS / " + fail + " FAIL");

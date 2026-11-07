@@ -7,6 +7,7 @@ import { clampPact, pactLabel } from "../core/pact.js";
 import { clampPace, paceToken } from "../core/pace.js";
 import { abilityList, abilityText, abilityOrd, getStrip } from "./fx.js";
 import { layout, listGeom, listHit, drawList, plate, head as plateHead, foot as plateFoot } from "./menudraw.js";
+import { hints } from "./hintcopy.js";
 
 /* Scene UI: menu logo, HUD, and the CLEARED / GAME OVER / PAUSED overlays.
    Pure draw; reads world + (optionally) DOM for HUD. */
@@ -39,14 +40,19 @@ export function winHeadline(world) {
     ? "FUSE/GRID CLEAR"
     : "LEVEL " + world.level + " CLEARED";
 }
-export function overlayCue(world, touch) {
+export function overlayCue(world, touch, words) {
+  const W = words || hints(),
+    pad = W.dev === "pad",
+    go = pad ? W.ok : W.bomb + " / " + W.ok + " / TAP";
   if (world.state === "WIN") {
     const fin = isFinale(world.level) || world.finale;
-    return fin ? "SPACE / ENTER / TAP · menu" : "SPACE / ENTER / TAP · next room";
+    return fin ? go + " · menu" : go + " · next room";
   }
-  if (world.state === "LOSE") return "SPACE / ENTER / TAP · new run";
-  if (world.state === "PAUSE")
-    return touch ? "TAP A ROW · PAUSE PILL RESUMES" : "ESC · P RESUME · ↑↓ MOVE · ENTER SELECT · M QUIT";
+  if (world.state === "LOSE") return go + " · new run";
+  if (world.state === "PAUSE") {
+    if (pad) return W.pause + " · " + W.back + " RESUME · ↑↓ MOVE · " + W.ok + " CONFIRM";
+    return touch ? "TAP A ROW · PAUSE PILL RESUMES" : W.back + " · " + W.pause + " RESUME · ↑↓ MOVE · " + W.ok + " CONFIRM · M QUIT";
+  }
   return "";
 }
 export function runStamp(world) {
@@ -185,7 +191,7 @@ export function dailyLine(world, run) {
     " · TRY " + (r.tries | 0) + " · YOUR BEST " + (r.dbest | 0)
   );
 }
-const COPY_HINT = " · C copy · B board";
+const copyHint = () => (hints().dev === "pad" ? " · WEST copy · NORTH board" : " · C copy · B board");
 /* Pause-list row copy mirrors src/app/menuapp.js PAUSE_ITEMS — render/ must
    not import src/app (only shellview.js may), so the labels are duplicated
    here the way menudraw's PLAQUE_NAME is. */
@@ -283,14 +289,14 @@ export function drawOverlay(
     sub(runStamp(world), "#9fb3d8", dy);
     for (const [s, col] of summaryLines(world, run)) sub(s, col, (dy += 24));
     if (tm && tm.on) sub(timeLine(world, tm), "#9fb3d8", (dy += 24));
-    sub(overlayCue(world) + COPY_HINT, "#9fb3d8", (dy += 24));
+    sub(overlayCue(world) + copyHint(), "#9fb3d8", (dy += 24));
     note();
   } else if (world.state === "LOSE") {
     head("GAME OVER", "#ff5d73");
     let dy = 20;
     sub(runStamp(world), "#9fb3d8", dy);
     for (const [s, col] of summaryLines(world, run)) sub(s, col, (dy += 24));
-    sub(overlayCue(world) + COPY_HINT, "#9fb3d8", (dy += 24));
+    sub(overlayCue(world) + copyHint(), "#9fb3d8", (dy += 24));
     note();
   } else if (world.state === "PAUSE") {
     const u = ui || {};
@@ -301,7 +307,7 @@ export function drawOverlay(
     const touch = u.touch == null ? touchOf(c) : !!u.touch,
       g = pauseGeom({ w, h }, touch);
     plate(c, g.x, g.y, g.w, g.h);
-    plateHead(c, g, "PAUSED", pauseKicker(world, run));
+    plateHead(c, g, "PAUSED", u.note || pauseKicker(world, run));
     drawList(c, g, PAUSE_SHAPE, u.cursor | 0, 0, { touch });
     plateFoot(c, g, overlayCue(world, touch));
   }
@@ -467,7 +473,8 @@ export function drawAbilityBar(c, world, ico, gone, y) {
   c.restore();
 }
 
-/* Ghost coach (first-run nudge): faded W A S D + a SPACE pill drawn once so a
+/* Ghost coach (first-run nudge): faded MOVE caps + a BOMB pill from the live
+   binds (W A S D + SPACE by default, a D-PAD pill on a pad) drawn once so a
    first-time player sees the controls, then never again. In CLASSIC 2D this
    paints straight onto the board context near the spawn tile (1,1); in REAL
    3D it paints onto the fixed HUD-space overlay canvas instead (wrapper.js),
@@ -490,10 +497,13 @@ export function drawCoach(c, alpha) {
   c.strokeStyle = COACH_LINE;
   /* the bottom lane (y 486-514, the border row), right end: never on a board
      tile, clear of the ability bar that grows from the left */
-  const ks = 22,
+  const W = hints(),
+    ks = 22,
     gap = 4,
-    pw = 54,
-    ox = CFG.COLS * CFG.TILE - 20 - (ks * 4 + gap * 3 + 10 + pw),
+    pw = Math.max(54, W.bomb.length * 6 + 12),
+    caps = (W.moveCaps || [W.move]).map((k) => ({ k, w: W.moveCaps ? (k.length > 1 ? k.length * 6 + 8 : ks) : ks * 4 + gap * 3 })),
+    mw = caps.reduce((a, k) => a + k.w, 0) + gap * (caps.length - 1),
+    ox = CFG.COLS * CFG.TILE - 20 - (mw + 10 + pw),
     oy = ABAR.y + (ABAR.h - ks) / 2;
   const cap = (x, w, label, size) => {
     c.fillStyle = COACH_PANEL;
@@ -504,8 +514,9 @@ export function drawCoach(c, alpha) {
     c.font = "900 " + size + "px ui-monospace,monospace";
     c.fillText(label, x + w / 2, oy + ks / 2 + 1);
   };
-  ["W", "A", "S", "D"].forEach((k, i) => cap(ox + i * (ks + gap), ks, k, 12));
-  cap(ox + 4 * (ks + gap) + 6, pw, "SPACE", 10);
+  let x = ox;
+  for (const k of caps) { cap(x, k.w, k.k, k.k.length > 1 ? 10 : 12); x += k.w + gap; }
+  cap(x + 6, pw, W.bomb, 10);
   c.restore();
 }
 

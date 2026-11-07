@@ -583,23 +583,22 @@ function check(name, cond, detail) {
       const ftT = T2.texts.find((t) => t.s === md.FOOT_TAP);
       const ft = texts.find((t) => t.s.indexOf("ENTER CYCLE") >= 0);
       const kick = texts.find((t) => t.s === "BUILD v99");
-      /* Keyboard: ten rows, the one CONTROLS line under them, the foot. Touch
-         drops the CONTROLS line (no key chords on a phone; the rows take the
-         room) and names the tap model in the foot. */
+      /* Twelve rows and the foot, no line of key chords on either layout: a
+         fixed line would lie after a rebind (HOW TO keeps the long form). Touch
+         names the tap model in the foot. */
       check(
-        `options plate: ten rows, the keyboard's one controls line and the foot all inside at ${W}x${H}`,
+        `options plate: twelve rows and the foot inside, the fixed key line is gone at ${W}x${H}`,
         !!p &&
           !!first &&
           !!lastRow &&
-          !!note &&
+          !note &&
+          !texts.some((t) => t.s.indexOf("MOVE WASD") >= 0) &&
           !!ft &&
           !!kick &&
           first.y > p.y + 8 &&
-          lastRow.y < note.y &&
-          note.y < ft.y &&
-          ft.y < p.y + p.h - 8 &&
-          Math.abs(note.y - (g.noteY + 4)) < 0.01,
-        JSON.stringify({ p, first, lastRow, note, ft }),
+          lastRow.y < ft.y &&
+          ft.y < p.y + p.h - 8,
+        JSON.stringify({ p, first, lastRow, ft }),
       );
       check(
         `options touch: no controls line, the tap foot inside the touch plate at ${W}x${H}`,
@@ -612,8 +611,8 @@ function check(name, cond, detail) {
           Math.abs(pT.x - gT.S.x) <= 1 && Math.abs(pT.y - gT.S.y) <= 1 && Math.abs(pT.h - gT.S.h) <= 1, // plate() snaps to even px
         JSON.stringify({ pT, ftT }),
       );
-      /* The pitch is a cap (28 keyboard / 37 touch, ATLAS "not fat"); a short
-         box scales it by the plate's f. Rows start under the head (S.by), the
+      /* The pitch is a cap (27 keyboard / 34 touch on the board box, 37 touch
+         in the shell box below, ATLAS "not fat"); a short box scales it by the plate's f. Rows start under the head (S.by), the
          note line sits 6 under the last row, and the drawn labels sit on the
          geometry's row centres (draw -> settingsHit share one table). */
       const pitchOk = (G, pitch, B) =>
@@ -624,13 +623,13 @@ function check(name, cond, detail) {
         G.S.y >= B.top - 0.5 && G.S.y + G.S.h <= B.bot + 0.5;
       const firstT = T2.texts.find((t) => t.s === "MUSIC"), lastT = T2.texts.find((t) => t.s === "RESET DEFAULTS");
       check(
-        `options row pitch: 28 keyboard / 37 touch, scaled only in a short box, plate inside its band at ${W}x${H}`,
-        pitchOk(g, 28, md.bandOf(L, false)) &&
-          pitchOk(gT, 37, md.bandOf(L, true)) &&
+        `options row pitch: 27 keyboard / 34 touch, scaled only in a short box, plate inside its band at ${W}x${H}`,
+        pitchOk(g, 27, md.bandOf(L, false)) &&
+          pitchOk(gT, 34, md.bandOf(L, true)) &&
           Math.abs(first.y - (g.y0 + g.rowH / 2)) < 0.01 &&
-          Math.abs(lastRow.y - (g.y0 + 10.5 * g.rowH)) < 0.01 &&
+          Math.abs(lastRow.y - (g.y0 + 11.5 * g.rowH)) < 0.01 &&
           Math.abs(firstT.y - (gT.y0 + gT.rowH / 2)) < 0.01 &&
-          Math.abs(lastT.y - (gT.y0 + 10.5 * gT.rowH)) < 0.01,
+          Math.abs(lastT.y - (gT.y0 + 11.5 * gT.rowH)) < 0.01,
         [g.y0, g.rowH, g.noteY, g.S.f, gT.y0, gT.rowH, gT.S.f].join("/"),
       );
       check(
@@ -933,7 +932,8 @@ function check(name, cond, detail) {
       for (let i = 0; i < md.OPT_N; i++) if (hit(mid, g.y0 + i * g.rowH + g.rowH / 2) !== i) all = false;
       check(`settingsHit maps every row centre at ${tag}`, all);
       check(`settingsHit on the plate above the rows (head) is -2, inert at ${tag}`, hit(mid, g.y0 - 1) === -2 && hit(mid, S.y + 4) === -2);
-      check(`settingsHit on the plate below the rows (note / foot) is -2, inert at ${tag}`, hit(mid, g.y0 + md.OPT_N * g.rowH + 1) === -2 && hit(mid, S.y + S.h - 4) === -2);
+      check(`settingsHit row 11 is RESET DEFAULTS' band, just below it -2 at ${tag}`, hit(mid, g.y0 + 11.5 * g.rowH) === 11 && hit(mid, g.y0 + 12 * g.rowH - 0.001) === 11);
+      check(`settingsHit on the plate below the rows (foot) is -2, inert at ${tag}`, hit(mid, g.y0 + md.OPT_N * g.rowH + 1) === -2 && hit(mid, S.y + S.h - 4) === -2);
       check(`settingsHit in the plate's outer margin is -2, inert at ${tag}`, hit(S.x + 4, cy) === -2 && hit(S.x + S.w - 4, cy) === -2);
       check(`settingsHit off the plate is -1 (back) at ${tag}`,
         hit(S.x - 2, cy) === -1 && hit(S.x + S.w + 2, cy) === -1 && hit(mid, S.y - 2) === -1 && hit(mid, S.y + S.h + 2) === -1);
@@ -964,9 +964,10 @@ function check(name, cond, detail) {
     pathRects(c, rects);
     return { c, texts, rects };
   };
-  check("OPT_N === OPT_ROWS.length (11)", md.OPT_N === OPT_ROWS.length && md.OPT_N === 11);
+  check("OPT_N === OPT_ROWS.length (12)", md.OPT_N === OPT_ROWS.length && md.OPT_N === 12);
   check("GFX_N === GFX_ROWS.length (8)", md.GFX_N === gfx.GFX_ROWS.length && md.GFX_N === 8);
   check("settingsRows carries the door value at the GRAPHICS row", md.settingsRows({}, false, false, "CUSTOM ›")[OPT_ROWS.indexOf("GRAPHICS")] === "CUSTOM ›" && md.settingsRows({}, false, false)[9] === "›");
+  check("settingsRows carries the CONTROLS door at row 10, RESET DEFAULTS has no value", md.settingsRows({}, false, false, "AUTO ›", false, "CONTROLLER ›")[OPT_ROWS.indexOf("CONTROLS")] === "CONTROLLER ›" && md.settingsRows({}, false, false)[10] === "›" && md.settingsRows({}, false, false)[9] === "›" && md.settingsRows({}, false, false)[11] === "" && md.settingsRows({}, false, false).length === 12);
   check("settingsRows shows ANALYTICS ON/OFF from its own flag", md.settingsRows({}, false, false, "", true)[OPT_ROWS.indexOf("ANALYTICS")] === "ON" && md.settingsRows({}, false, false)[8] === "OFF");
   const S = (o) => ({ ...(gfx.PRESETS.AUTO), fpm: 0, ...o });
   for (const [W, H] of [[600, 520], [608, 352]]) {
@@ -1104,7 +1105,7 @@ function check(name, cond, detail) {
       check(`MENU build tag painted once, inside the box, never on a row (${nm})`,
         hit.length === 1 && t.x > 0 && t.x < W && t.y > 0 && t.y < H - 18 &&
           (inSource || t.y > g.y + g.h || t.y < g.y) &&
-          (touch ? true : t.s === "↑↓ MOVE · ENTER SELECT · v99"),
+          (touch ? true : t.s === "↑↓ MOVE · ENTER CONFIRM · v99"),
         JSON.stringify({ t, plate: [g.y, g.y + g.h] }));
       check(`MENU without rev paints no build tag (${nm})`, !paint("").texts.some((x) => /\bv\d+\b/.test(x.s)));
       check(`MENU build tag waits for the plate (enterT < -0.12 paints nothing) (${nm})`, paint("v99", -0.5).texts.length === 0);
@@ -1119,7 +1120,7 @@ function check(name, cond, detail) {
     const a = createMenuApp({ settings: {} });
     a.screen = SCREEN.MENU;
     const Rs = rec(); drawShell(Rs.c, a, { state: "PLAY", time: 0 }, null, "2d", () => [], () => 0);
-    check("shellview: MENU foot carries the CACHE_NAME build tag end to end", Rs.texts.some((x) => x.s === "↑↓ MOVE · ENTER SELECT · " + want), want);
+    check("shellview: MENU foot carries the CACHE_NAME build tag end to end", Rs.texts.some((x) => x.s === "↑↓ MOVE · ENTER CONFIRM · " + want), want);
   }
 }
 
@@ -1485,7 +1486,7 @@ function check(name, cond, detail) {
     for (const lay of ["d", "p", "l"]) {
       const r = rec();
       md.drawIntroChrome(r.c, 0, 1.0, W, H, lay);
-      const want = lay === "d" ? "PRESS ANY KEY" : "TAP TO START";
+      const want = lay === "d" ? "PRESS ANY KEY OR BUTTON" : "TAP TO START";
       const got = r.texts.map((x) => x.s);
       check(`title ${W}x${H} lay ${lay}: paints ${want}, never PRESS ENTER, no skip hint`,
         got.includes(want) && !got.includes("PRESS ENTER") && !got.some((x) => /SKIP/.test(x)), got.join("|"));
@@ -1497,9 +1498,9 @@ function check(name, cond, detail) {
     check(`show ${W}x${H}: no skip hint inside SKIP_GUARD, TAP TO SKIP after it on touch`,
       !pre.texts.some((x) => /SKIP/.test(x.s)) && post.texts.some((x) => x.s === "TAP TO SKIP"),
       post.texts.map((x) => x.s).join("|"));
-    const fits = [["PRESS ANY KEY", 18], ["TAP TO START", 26], ["ANY KEY TO SKIP", 10], ["TAP TO SKIP", 18]]
+    const fits = [["PRESS ANY KEY OR BUTTON", 18], ["TAP TO START", 26], ["ANY KEY TO SKIP", 10], ["ANY BUTTON TO SKIP", 10], ["TAP TO SKIP", 18]]
       .every(([str, px]) => str.length * px * 0.6 <= W - 28);
-    check(`all four opening strings fit W-28 at ${W}x${H} (0.6 em mono advance, touch copy at its phone size)`, fits);
+    check(`every opening string fits W-28 at ${W}x${H} (0.6 em mono advance, touch copy at its phone size)`, fits);
     const px = (r, re) => { const x = r.texts.find((t) => re.test(t.s)); return x ? parseFloat(/(\d+)px/.exec(x.font)[1]) : 0; };
     const tp = rec(); md.drawIntroChrome(tp.c, 0, 1.0, W, H, "p");
     const ts = rec(); md.drawIntroChrome(ts.c, 1, 0.6, W, H, "l");
@@ -1584,6 +1585,7 @@ function check(name, cond, detail) {
 {
   const md = await import("../src/render/menudraw.js");
   const { shellGeo } = await import("../src/app/fit.js");
+  const { geoFor, geomOf, hitPage } = await import("../src/render/controlsgeo.js");
   for (const [VW, VH] of [[393, 852], [360, 640], [430, 932]]) {
     const g = shellGeo(VW, VH, 600, 520), L = md.layout(g.w, g.h, g.logo), tg = `${VW}x${VH} box ${g.w}x${g.h}`;
     const inBox = (S) => S.x >= 0 && S.y >= 0 && S.x + S.w <= g.w && S.y + S.h <= g.h && S.f === 1;
@@ -1609,6 +1611,12 @@ function check(name, cond, detail) {
       const q = geo(L, true);
       check(`${nm}: rows inside the box, each taps to itself (${tg})`, inBox(q.S) && Array.from({ length: n }, (_, i) => hit(q.S.mid, q.y0 + (i + 0.5) * q.rowH, L, 0, true) === i).every(Boolean));
     }
+    check(`OPTIONS keeps pitch 37 in the shell box (${tg})`, md.settingsGeom(L, true).rowH === 37);
+    const cg = geoFor(L, true, L.narrow, g.s);
+    check(`CONTROLS: plate inside the box, every row inside it and tapping to itself, off the plate backs out (${tg})`,
+      cg.x >= 0 && cg.y >= 0 && cg.x + cg.w <= g.w && cg.y + cg.h <= g.h &&
+        Array.from({ length: 8 }, (_, i) => geomOf(i, cg)).every((r, i) => inPlate(r, cg) && hitPage({}, ...ctr(r), cg).row === i) &&
+        hitPage({}, 1, 1, cg).off === 1);
     const gd = md.guideGeom(L, true);
     check(`GUIDE: doors inside the box, each taps to itself (${tg})`, inBox(gd.S) && gd.tiles.every((r, i) => md.guideHit(...ctr(r), L, 0, true) === i));
     const st = md.statsGeom(L).S;
@@ -1648,8 +1656,8 @@ function check(name, cond, detail) {
       const o = rec();
       md.drawSettings(o.c, L, 1, { touch, rev: "v0" });
       const line = o.texts.find((t) => t.s.indexOf("MOVE WASD") === 0);
-      check(`OPTIONS never says K+MOVE; the keyboard key line fits unclipped (${tg}${touch ? " touch" : ""})`,
-        !o.texts.some((t) => K.test(t.s)) && (touch ? !line : !!line && (L.narrow || /PAUSE P$/.test(line.s))), line && line.s);
+      check(`OPTIONS never says K+MOVE and prints no fixed key line (${tg}${touch ? " touch" : ""})`,
+        !o.texts.some((t) => K.test(t.s)) && !line, line && line.s);
     }
   }
 }
@@ -1690,6 +1698,187 @@ function check(name, cond, detail) {
       }
       check(`GUIDE draws the FLOOR door and its label (${tag})`, d.texts.some((t) => t.s === "FLOOR") && d.texts.some((t) => /^8/.test(t.s)));
     }
+  }
+}
+
+// CONTROLS (T9): shellview's routes, the real box scale, the door, the consent note, the MENU pane.
+{
+  const md = await import("../src/render/menudraw.js");
+  const { SCREEN, OPT_ROWS, ITEMS, createMenuApp } = await import("../src/app/menuapp.js");
+  const { drawShell, isShellScreen, controlsGeo, controlsHit } = await import("../src/render/shellview.js");
+  const { createControlsPage } = await import("../src/app/controlspage.js");
+  const { DEF_CONTROLS } = await import("../src/app/controls.js");
+  const { geoFor, geomOf } = await import("../src/render/controlsgeo.js");
+  const { shellGeo } = await import("../src/app/fit.js");
+  const rec = () => {
+    const texts = [];
+    const o = {
+      font: "10px x", textAlign: "left", globalAlpha: 1,
+      fillText(s, x, y) { texts.push({ s: String(s), x, y, w: o.measureText(s).width, align: o.textAlign }); },
+      measureText(s) { const m = /(\d+(?:\.\d+)?)px/.exec(o.font); return { width: String(s).length * 0.6 * (m ? +m[1] : 10) }; },
+      createLinearGradient: () => ({ addColorStop() {} }),
+      createRadialGradient: () => ({ addColorStop() {} }),
+    };
+    return { texts, c: new Proxy(o, { get: (t, p) => (p in t ? t[p] : () => {}), set: (t, p, v) => ((t[p] = v), true) }) };
+  };
+  const boxOf = (w, h, cssW, lay, logo) => ({ width: w, height: h, logo, ownerDocument: { body: { getAttribute: () => lay } }, getBoundingClientRect: () => ({ width: cssW }) });
+  const mk = (state = "ready", o = {}, rumble = true) => {
+    const a = createMenuApp({ settings: {}, controls: createControlsPage({ get: () => DEF_CONTROLS, set() {}, padView: () => ({ state, name: "CONTROLLER 1 · STANDARD", rumble }), say() {} }), ...o });
+    return a;
+  };
+  const draw = (a, world, canvas) => { const R = rec(); drawShell(R.c, a, world, canvas || null, "2d", () => [], () => 0); return R; };
+  const has = (R, s) => R.texts.some((t) => t.s === s);
+  const PLAY = { state: "PLAY", time: 0 }, PAUSE = { state: "PAUSE", time: 0, level: 3 };
+
+  check("isShellScreen(SCREEN.CONTROLS), PAUSE stays on the board canvas", isShellScreen(SCREEN.CONTROLS) && !isShellScreen(SCREEN.GAME));
+  {
+    const a = mk();
+    a.screen = SCREEN.CONTROLS;
+    const R = draw(a, PLAY);
+    check("shellview routes SCREEN.CONTROLS to drawControls, never drawSettings", has(R, "CONTROLS") && has(R, "CONTROLLER") && has(R, "BOMB") && !has(R, "MUSIC") && !has(R, "RESET DEFAULTS"), R.texts.map((t) => t.s).join("|"));
+    a.screen = SCREEN.GAME; a.pauseView = 3;
+    const P = draw(a, PAUSE);
+    check("shellview routes pauseView 3 to drawControls against overlayBox, never drawSettings", has(P, "CONTROLS") && has(P, "BOMB") && !has(P, "MUSIC") && !has(P, "RESET DEFAULTS") && !has(P, "OPTIONS"));
+    const G = geoFor(md.layout(600, 520), false, false);
+    check("PAUSE CONTROLS paints on overlayBox's geometry", P.texts.some((t) => t.s === "CONTROLS" && t.y === G.S.headY + 8));
+    {
+      const strip = (cv) => { const rs = []; const R = rec(); const c = new Proxy(R.c, { get: (t, p) => (p === "fillRect" ? (x, y, w, h) => rs.push({ x, y, w, h, fill: t.fillStyle }) : t[p]), set: (t, p, v) => ((t[p] = v), true) }); drawShell(c, a, PAUSE, cv, "2d", () => [], () => 0); return rs.find((q) => q.x === 4 && q.y === 10 && q.w === 592 && q.h === 30); };
+      const q = strip(boxOf(600, 520, 378, "p"));
+      check("PAUSE CONTROLS on a phone: the plate reaches the HUD strip, so the strip is covered whole, opaque, no heart sliver at its edge", !!q && /^#/.test(q.fill), q && q.fill);
+      check("and in landscape", !!strip(boxOf(600, 520, 435, "l")));
+      check("PAUSE CONTROLS on a keyboard clears the strip: nothing covered", !strip(null) && !strip(boxOf(600, 520, 600, "d")));
+    }
+    a.pauseView = 1;
+    check("pauseView 1 still draws OPTIONS", has(draw(a, PAUSE), "MUSIC"));
+    a.pauseView = 3; PLAY.state = "PLAY";
+    check("pauseView 3 outside PAUSE draws no page", !has(draw(a, PLAY), "CONTROLS"));
+  }
+  {
+    const a = createMenuApp({ settings: {} });
+    a.screen = SCREEN.GAME; a.pauseView = 3;
+    let threw = null, R = null;
+    try { R = draw(a, PAUSE); } catch (e) { threw = e; }
+    check("no page: view 3 draws nothing and never falls through to OPTIONS", !threw && !has(R, "MUSIC"), String(threw));
+    a.screen = SCREEN.CONTROLS; threw = null;
+    try { R = draw(a, PLAY); } catch (e) { threw = e; }
+    check("no page: SCREEN.CONTROLS draws no plate and does not throw", !threw && !has(R, "BOMB"), String(threw));
+  }
+  // PAUSE CONTROLS: a whole-canvas veil under the plate, so the HUD reads as behind it. View 3 only.
+  {
+    const veilOf = (a, world) => {
+      const log = [], o = {
+        font: "10px x", textAlign: "left", globalAlpha: 1, fillStyle: "",
+        fillRect(x, y, w, h) { log.push({ k: "rect", x, y, w, h, fill: o.fillStyle, alpha: o.globalAlpha }); },
+        fillText(s) { log.push({ k: "text", s: String(s) }); },
+        measureText(s) { return { width: String(s).length * 6 }; },
+        createLinearGradient: () => ({ addColorStop() {} }), createRadialGradient: () => ({ addColorStop() {} }),
+      };
+      drawShell(new Proxy(o, { get: (t, p) => (p in t ? t[p] : () => {}), set: (t, p, v) => ((t[p] = v), true) }), a, world, null, "2d", () => [], () => 0);
+      return { log, full: log.findIndex((e) => e.k === "rect" && /,0\.72\)$/.test(e.fill) && e.x === 0 && e.y === 0 && e.w === 600 && e.h === 520), first: log.findIndex((e) => e.k === "text") };
+    };
+    const a = mk();
+    a.screen = SCREEN.GAME; a.pauseView = 3;
+    const V = veilOf(a, PAUSE);
+    check("view 3 paints a whole-canvas veil before the page", V.full === 0 && V.first > 0, V.full + "/" + V.first);
+    for (const v of [0, 1, 2]) { a.pauseView = v; check("view " + v + " paints no veil", veilOf(a, PAUSE).full === -1, v); }
+    a.pauseView = 3;
+    check("view 3 outside PAUSE paints no veil", veilOf(a, PLAY).full === -1);
+    const n = createMenuApp({ settings: {} }); n.screen = SCREEN.GAME; n.pauseView = 3;
+    check("no page: no veil", veilOf(n, PAUSE).full === -1);
+  }
+  // The real box scale reaches the floor: #sh at 0.9 keeps pitch 52 (46.8 CSS), the 0.63 default would ask for 70
+  {
+    const g = shellGeo(393, 852, 600, 520), box = boxOf(g.w, g.h, g.w * g.s, "p", g.logo), L = md.layout(g.w, g.h, g.logo), a = mk();
+    const G = geoFor(L, true, L.narrow, g.s), row = geomOf(7, G);
+    a.screen = SCREEN.CONTROLS;
+    a.controls.open("key");
+    const R = draw(a, PLAY, box), reset = R.texts.find((t) => t.s === "RESET KEYS");
+    check("#sh: the real box scale keeps the shared pitch 52, not the default's 70", G.list.rows[0].h === 52 && geoFor(L, true, L.narrow).list.rows[0].h === 70 && 52 * g.s >= 44);
+    check("#sh: paint uses that geometry", !!reset && Math.abs(reset.y - (row.y + row.h / 2)) < 0.01, reset && reset.y);
+    const H = controlsGeo(box, "2d", false);
+    check("controlsGeo is the paint's geometry on #sh", geomOf(7, H).h === row.h && geomOf(7, H).y === row.y && H.narrow === true);
+    check("controlsHit: every painted row taps to itself on #sh", Array.from({ length: 8 }, (_, i) => geomOf(i, G)).every((r, i) => controlsHit(a.controls.view(0), r.x + r.w / 2, r.y + r.h / 2, box, "2d", false).row === i));
+    check("controlsHit: off the plate backs out on #sh", controlsHit(a.controls.view(0), 1, 1, box, "2d", false).off === 1);
+  }
+  {
+    const c0 = boxOf(600, 520, 378, "p"), L = md.layout(600, 520), a = mk();
+    const G = geoFor(L, true, false, 0.63), row = geomOf(7, G);
+    a.screen = SCREEN.GAME; a.pauseView = 3;
+    a.controls.open("key");
+    const reset = draw(a, PAUSE, c0).texts.find((t) => t.s === "RESET KEYS");
+    check("PAUSE #c at 0.63: paint uses the real scale, inside the touch band", !!reset && Math.abs(reset.y - (row.y + row.h / 2)) < 0.01 && G.y >= 8 && G.y + G.h <= 512 && G.tabs[0].h * 0.63 >= 44);
+    check("PAUSE #c: controlsHit taps its own rows", Array.from({ length: 8 }, (_, i) => geomOf(i, G)).every((r, i) => controlsHit(a.controls.view(0), r.x + r.w / 2, r.y + r.h / 2, c0, "2d", true).row === i));
+    const k = boxOf(600, 520, 900, "d"), K = controlsGeo(k, "2d", true);
+    check("a keyboard layout keeps pitch 26 at any scale", K.list.rows[0].h === 26 && K.x === 20);
+    for (const [tg, bad] of [["no rect", { width: 600, height: 520, ownerDocument: c0.ownerDocument }], ["a 0 wide rect", boxOf(600, 520, 0, "p")], ["a 0 wide canvas", boxOf(0, 520, 300, "p")]])
+      check(`${tg} falls back to the 0.63 worst case`, controlsGeo(bad, "2d", true).tabs[0].h === 70, controlsGeo(bad, "2d", true).tabs[0].h);
+  }
+  // The door follows the device; a touch layout reads CONTROLLER
+  {
+    const a = mk("ready", {}, false), door = (R) => { const r = R.texts.find((t) => t.s === "KEYBOARD ›" || t.s === "CONTROLLER ›"); return r && r.s; };
+    a.screen = SCREEN.SETTINGS;
+    check("door reads KEYBOARD on keys", door(draw(a, PLAY)) === "KEYBOARD ›");
+    a.lastDev = "pad";
+    check("door reads CONTROLLER on a pad", door(draw(a, PLAY)) === "CONTROLLER ›");
+    a.lastDev = "key";
+    check("door reads CONTROLLER on a touch layout", door(draw(a, PLAY, boxOf(600, 520, 378, "p"))) === "CONTROLLER ›");
+    a.screen = SCREEN.GAME; a.pauseView = 1; a.lastDev = "pad";
+    check("PAUSE OPTIONS carries the same door", door(draw(a, PAUSE)) === "CONTROLLER ›");
+    const v = mk(), vd = (R) => R.texts.some((t) => t.s === "VIBRATION MEDIUM ›");
+    v.screen = SCREEN.SETTINGS;
+    check("a pad with an actuator: the door reads the level, on keys and on a pad", vd(draw(v, PLAY)) && (v.lastDev = "pad", vd(draw(v, PLAY))) && !has(draw(v, PLAY), "CONTROLLER ›"));
+    check("and on a touch layout", vd(draw(v, PLAY, boxOf(600, 520, 378, "p"))));
+    v.screen = SCREEN.GAME; v.pauseView = 1;
+    check("and in PAUSE OPTIONS", vd(draw(v, PAUSE)));
+    const gone = mk("lost"); gone.screen = SCREEN.SETTINGS;
+    check("a lost pad keeps today's door", !vd(draw(gone, PLAY)) && door(draw(gone, PLAY)) === "KEYBOARD ›");
+  }
+  // Q11: the ANALYTICS row says why it did nothing, whole, on its own row
+  {
+    const a = mk("ready", { anaOpen: () => true }), NOTE = "ANSWER THE CARD WITH Y OR N";
+    a.screen = SCREEN.SETTINGS; a.lastDev = "pad"; a.optRow = OPT_ROWS.indexOf("ANALYTICS");
+    check("no note before the press", !has(draw(a, PLAY), NOTE));
+    a.optCycle();
+    check("app holds the note after a pad press", a.anaNote === NOTE);
+    const row = (R, s) => R.texts.find((t) => t.s === s);
+    const shG = shellGeo(360, 640, 600, 520);
+    for (const [tg, cv, Lx] of [["600x520", null, md.layout(600, 520)], ["400-wide shell", boxOf(shG.w, shG.h, shG.w * shG.s, "p", shG.logo), md.layout(shG.w, shG.h, shG.logo)]]) {
+      const R = draw(a, PLAY, cv), n = row(R, NOTE), lab = row(R, "ANALYTICS"), g = md.settingsGeom(Lx, !!cv);
+      check(`the note is the ANALYTICS row's value, unclipped, clear of its label (${tg})`, !!n && !!lab && n.y === lab.y && Math.abs(n.y - (g.y0 + 8.5 * g.rowH)) < 0.01 && n.x - n.w > lab.x + lab.w, n && [n.x, n.w, lab.x, lab.w].join());
+    }
+    a.screen = SCREEN.GAME; a.pauseView = 1;
+    check("PAUSE OPTIONS shows it too", has(draw(a, PAUSE), NOTE));
+    a.pauseView = 0; a.screen = SCREEN.SETTINGS;
+    const b = mk("ready", { anaOpen: () => false });
+    b.screen = SCREEN.SETTINGS;
+    check("an answered card shows ON/OFF, no note", !has(draw(b, PLAY), NOTE) && has(draw(b, PLAY), "OFF"));
+  }
+  // MENU's OPTIONS pane: twelve rows, and the pad line from info.pad
+  {
+    const paneText = (state) => {
+      const a = state ? mk(state) : createMenuApp({ settings: {} });
+      a.screen = SCREEN.MENU; a.cursor = ITEMS.indexOf("OPTIONS");
+      return draw(a, PLAY).texts;
+    };
+    const T = paneText("ready"), n = T.find((t) => t.s === "ENTER OPENS ALL TWELVE ROWS"), l = T.find((t) => t.s === "CONTROLS · CONTROLLER READY"), g = T.find((t) => t.s.startsWith("GRAPHICS "));
+    check("OPTIONS pane: ENTER OPENS ALL TWELVE ROWS drawn whole, ALL TEN gone", !!n && !T.some((t) => t.s === "ENTER OPENS ALL TEN ROWS"));
+    check("OPTIONS pane: a ready pad reads CONTROLLER READY, between GRAPHICS and the bottom line, overlapping neither", !!l && !!g && l.y >= g.y + 12 && l.y <= n.y - 12, l && [g.y, l.y, n.y].join());
+    {
+      const R = rec();
+      md.drawMenu(R.c, { cursor: 3, enterT: 9, items: ITEMS.slice(), touch: false, kind: "iso", rev: "v", info: { pad: true, level: 1 } }, md.layout(608, 352), 9);
+      check("OPTIONS pane: the short iso box drops the pad line rather than print it over the bottom line", R.texts.some((t) => t.s === "ENTER OPENS ALL TWELVE ROWS") && !R.texts.some((t) => t.s.startsWith("CONTROLS ·")));
+    }
+    {
+      /* The signpost owns the foot only while the note lives; the pane line stays a pane line. */
+      const a = mk("ready");
+      a.screen = SCREEN.MENU; a.cursor = ITEMS.indexOf("OPTIONS"); a.padNote = "CONTROLLER READY · VIBRATION MEDIUM";
+      const S = draw(a, PLAY).texts;
+      check("MENU foot: CONTROLLER READY signposts OPTIONS › CONTROLS, and the OPTIONS pane keeps its line", S.some((t) => /^CONTROLLER READY · VIBRATION MEDIUM · OPTIONS › CONTROLS( · v\d+)?$/.test(t.s)) && S.some((t) => t.s === "CONTROLS · CONTROLLER READY"));
+      a.padNote = "CONTROLLER LOST";
+      check("MENU foot: CONTROLLER LOST is no signpost", !draw(a, PLAY).texts.some((t) => t.s.includes("OPTIONS › CONTROLS")));
+    }
+    check("OPTIONS pane: a non-standard pad is ready too", paneText("nonstd").some((t) => t.s === "CONTROLS · CONTROLLER READY"));
+    for (const st of ["none", "lost", null]) check(`OPTIONS pane: ${st} reads KEYS + CONTROLLER`, paneText(st).some((t) => t.s === "CONTROLS · KEYS + CONTROLLER"));
   }
 }
 

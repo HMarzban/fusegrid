@@ -2,6 +2,7 @@ import { createGate, createGovernor, limitHint, IV_STALL } from "./perf.js";
 import { resolve } from "./gfx.js";
 import { SCREEN } from "./menuapp.js";
 
+const HELD_FPS = 60;
 const DEV0 = Object.freeze({ lay: "d", dpr: 1, scale: 1 });
 const on = (o, t, f, opt) => { if (o && typeof o.addEventListener === "function") o.addEventListener(t, f, opt); };
 const same = (a, b) => { if (!a || !b) return false; for (const k in b) if (k !== "epoch" && a[k] !== b[k]) return false; return true; };
@@ -75,9 +76,11 @@ export function mountFrames(loop, env = {}) {
     tPrev = t;
     if (iv > IV_STALL || iv < 0) { raw = []; rawSum = 0; tRun = null; }
     else if (iv > 0) { raw.push(iv); rawSum += iv; while (rawSum > 2000 && raw.length > 1) rawSum -= raw.shift(); }
+    if (env.pre && env.pre(t)) gate.poke(); // the pad polls on every rAF: the idle floor of 20 fps can miss a tap
     const a = env.app ? env.app() : null, r = rc();
     const idle = (wasIdle = !!(env.idle && env.idle()));
-    const cap = !K ? Infinity : idle ? K.idleFps : K.fpsCap;
+    /* A held menu direction repeats on the frames app.update gets: 60 Hz while it is held, or the repeat lands on idle frames. */
+    const cap = !K ? Infinity : idle && a && a.repDir ? Math.min(HELD_FPS, K.fpsCap) : idle ? K.idleFps : K.fpsCap;
     if (gate.tick(t, cap)) tick(t, a, r, idle, cap);
     if (r && typeof r.tick === "function") r.tick(now(), env.kind ? env.kind() : lk); // re-read: loop() may have just flipped RENDER
     if (infoT == null || iv > IV_STALL || iv < 0) { infoT = t; runs = 0; }

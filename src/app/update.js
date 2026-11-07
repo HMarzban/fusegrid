@@ -5,7 +5,8 @@
    cost a run: menus and a finished run's WIN / LOSE, never INTRO, ATTRACT,
    live PLAY or PAUSE. U or the button posts SKIP_WAITING; register.js's one
    controllerchange listener does the single reload. LATER snoozes until the
-   next return to the menus from a run (or the next boot). No store. */
+   next return to the menus from a run (or the next boot). No store. A pad
+   answers through padCard: SOUTH RELOAD, EAST LATER (padroute.js owns the guard). */
 import { registerSW, applyUpdate } from "../pwa/register.js";
 import { CACHE_NAME } from "../pwa/shell.js";
 
@@ -13,8 +14,9 @@ import { CACHE_NAME } from "../pwa/shell.js";
    number is never known here, so the card names only this one. */
 const REV = CACHE_NAME.replace("fusegrid-shell-", "");
 
-/* Pure: may the card show on this frame? */
-export function updVisible(screen, state, runEnd, S) {
+/* Pure: may the card show on this frame? A CONTROLS capture owns the keys. */
+export function updVisible(screen, state, runEnd, S, capturing) {
+  if (capturing) return false;
   if (screen === S.GAME) return (state === "WIN" || state === "LOSE") && !!runEnd;
   return screen !== S.BOOT && screen !== S.INTRO && screen !== S.ATTRACT;
 }
@@ -25,6 +27,7 @@ export function mountUpdate(get, env) {
     snoozed = false,
     wasGame = false,
     card = null,
+    wordPad = false,
     bg = null;
   const go = () => reg && applyUpdate(reg);
   const later = () => { snoozed = true; card.hidden = bg.hidden = true; };
@@ -45,7 +48,7 @@ export function mountUpdate(get, env) {
     card.setAttribute("aria-live", "polite");
     card.innerHTML = '<b>NEW VERSION READY</b><i>You are on ' + REV + '. Reload to play the latest build. Your scores stay.</i>' +
       '<span class="go" role="button" tabindex="-1" aria-label="Reload to update"><kbd>U</kbd>RELOAD</span>' +
-      '<span class="later" role="button" tabindex="-1" aria-label="Later">LATER</span>';
+      '<span class="later" role="button" tabindex="-1" aria-label="Later"><kbd>EAST</kbd>LATER</span>';
     const tap = (sel, fn) => {
       const el = card.querySelector(sel);
       el.addEventListener("pointerdown", (e) => e.stopPropagation());
@@ -54,7 +57,7 @@ export function mountUpdate(get, env) {
     tap(".go", go);
     tap(".later", later);
     doc.body.appendChild(card);
-    doc.addEventListener("keydown", (e) => { if (e.code === "KeyU" && !e.repeat && card && !card.hidden) go(); });
+    doc.addEventListener("keydown", (e) => { const g = get(); if (e.code === "KeyU" && !e.repeat && card && !card.hidden && !(g && g.app && g.app.capturing)) go(); });
   };
   const tick = () => {
     const g = get();
@@ -63,11 +66,21 @@ export function mountUpdate(get, env) {
       inGame = app.screen === SCREEN.GAME;
     if (wasGame && !inGame) snoozed = false;
     wasGame = inGame;
-    const show = !!reg && !snoozed && updVisible(app.screen, world.state, isRunEnd(world), SCREEN);
+    const show = !!reg && !snoozed && updVisible(app.screen, world.state, isRunEnd(world), SCREEN, app.capturing);
     card.dataset.ctx = inGame ? "end" : "menu";
+    const pad = app.lastDev === "pad";
+    if (pad !== wordPad) { // the card is a live region: a rewrite would be read out again
+      wordPad = pad;
+      card.dataset.pad = pad ? "1" : "";
+      card.querySelector(".go kbd").textContent = pad ? "SOUTH" : "U";
+    }
     if (card.hidden === show) card.hidden = bg.hidden = !show;
   };
   const ok = registerSW({ ...(env || {}), onUpdate: (r) => { reg = r; if (doc && !card) build(); tick(); } });
   if (ok && doc) setInterval(tick, 250);
-  return { tick, get ready() { return !!reg; }, get shown() { return !!card && !card.hidden; } };
+  const padCard = {
+    live: () => !!card && !card.hidden,
+    press: (id) => { if (!card || card.hidden) return; if (id === "S") go(); else if (id === "E") later(); },
+  };
+  return { tick, padCard, get ready() { return !!reg; }, get shown() { return !!card && !card.hidden; } };
 }
