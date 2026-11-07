@@ -59,6 +59,8 @@ Plug in a controller and play. Set your own keys and buttons.
 - **OPTIONS has twelve rows**, slightly tighter on a keyboard to fit.
 - **Steadier menus.** Holding a direction repeats more evenly, on keys and on a controller. A slightly sideways stick push
   on a list now walks it instead of doing nothing.
+- **A new share card.** Links to Fusegrid now preview one real moment from room 5 at MAX heat, split between
+  CLASSIC 2D and PIXEL. Some apps keep showing the old preview for a while.
 
 ### Known limits
 
