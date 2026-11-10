@@ -1601,7 +1601,7 @@ function check(name, cond, detail) {
       hub.hub && hub.h === 362 && Math.abs(hub.y0 - Math.round(lg.cy + 10 * lg.s + 8)) <= 1 && hub.y0 + hub.h <= g.h &&
         hub.rows.every((r, i) => md.menuHit(r.x + r.w / 2, r.cy, L, 7, true) === i), hub.y0 + "+" + hub.h);
     for (const U of [false, true]) {
-      const G = md.levelGeom(L, U, true), S = G.S, rects = [...G.room, G.pane, G.heatCap, ...G.heat, G.paceCap, ...G.pace, ...(U ? [G.modeCap, ...G.mode, G.help] : []), G.start, ...G.rows.filter(Boolean)]; // + the focus rows the mark is drawn at (v202 Task 2.3)
+      const G = md.levelGeom(L, U, true), S = G.S, rects = [...G.room, G.pane, G.heatCap, ...G.heat, G.paceCap, ...G.pace, ...(U ? [G.modeCap, ...G.mode, G.help] : []), G.start, ...Object.values(G.rows).filter(Boolean)]; // + the focus rows the mark is drawn at, keyed by row name (v202 Task 2.3)
       check(`LEVEL SELECT narrow${U ? " (modes open)" : ""}: plate in the box, every rect in the plate (${tg})`, G.narrow && inBox(S) && rects.every((r) => inPlate(r, { ...S, x: S.x - 1, w: S.w + 2 })));
       const hits = [...G.room.map((r, i) => [r, i < G.cap ? "room" : "lock", i]), ...G.heat.map((r, i) => [r, "heat", i]), ...G.pace.map((r, i) => [r, "pace", i]), ...G.mode.map((r, i) => [r, "mode", i]), [G.start, "start"]];
       check(`LEVEL SELECT narrow${U ? " (modes open)" : ""}: every chip / tile / START taps to itself, card inert, off-plate backs (${tg})`,

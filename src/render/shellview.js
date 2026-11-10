@@ -9,7 +9,7 @@ import { clampHeat } from "../core/heat.js";
 import { clampPact } from "../core/pact.js";
 import { clampPace } from "../core/pace.js";
 import { LABEL, runWords } from "./words.js";
-import { SCREEN, ITEMS } from "../app/menuapp.js";
+import { SCREEN, ITEMS, LEVEL_ROWS } from "../app/menuapp.js";
 import { PROJ } from "./r3d/camera.js";
 import { drawLogo, overlayBox, touchLay, fmtTime, isRunEnd } from "./scenes.js";
 import * as menudraw from "./menudraw.js";
@@ -218,7 +218,7 @@ function infoOf(app, kind, getScores, getCab) {
   return {
     kind, heatT, tiles: !!cab.tiles, level: app.level | 0 || 1, heat: h, pace: pz - 1, pact, unlocked: !!app.pactUnlocked,
     lockR: app.lockR, lockT: app.lockT !== lockSeen ? app.lockT : null,
-    row: app.levelRow | 0, open: !!app.modOpen, cur: app.modeCur, // LEVEL SELECT's focus: the row, the MODIFIERS list and its cursor (v202 Task 2.3)
+    row: LEVEL_ROWS[app.levelRow | 0], open: !!app.modOpen, cur: app.modeCur, // LEVEL SELECT's focus: the row's name, the MODIFIERS list and its cursor (v202 Task 2.3)
     best: Array.from({ length: 8 }, (_, i) => { const d = tb[i + 1 + ":" + h + ":" + pact + ":" + pz]; return d > 0 ? fmtTime(d / 10) : null; }),
     daily: cab.daily || null, // the STATS row's medals / lifetime counters left MENU with it (RECORDS, v202 Task 2.2)
     top: top3, look: app.render3d ? 2 : app.pixel ? 1 : 0, snd: st.snd !== 0, mus: st.mus, sfx: st.sfx, gfx: app.gfxPreset ? app.gfxPreset() : "", pad: padOn(app),

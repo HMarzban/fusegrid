@@ -596,7 +596,7 @@ function fitFont(c, s, w, px, min, weight, f) {
   return c.font;
 }
 /* The key / name cell at a control's left: keyboard prints its key under the
-   name ("DIFFICULTY ↑↓"), touch only the name, each stepped down to fit the
+   name ("GAME SPEED [ ]"), touch only the name, each stepped down to fit the
    44 px cell (DIFFICULTY and GAME SPEED outgrew it; LEVEL SELECT's own redraw
    gives them room). */
 function capCell(c, r, name, keyStr, touch, keyPx) {
@@ -1118,7 +1118,8 @@ export function setModeFocus(f) { modeFocus = f || NO_FOCUS; }
 export function modeFocusOf() { return modeFocus(); }
 /* The MODIFIERS cap has no room for TRIGGERS + NORTH (44 px), so a pad reads them here. */
 const PAD_MODE = "TRIGGERS PICK · NORTH TOGGLES";
-const padModeHelp = (i) => (i < 0 ? PAD_MODE : PAD_MODE + " · " + (i < 4 ? MODE_HELP[i] : TIME_HELP));
+const modeOne = (i) => (i < 4 ? MODE_HELP[i] : TIME_HELP); // one chip's help, in chip order
+const padModeHelp = (i) => (i < 0 ? PAD_MODE : PAD_MODE + " · " + modeOne(i));
 export function modeHelp(pact, time) {
   const on = MODE_HELP.filter((_, i) => (pact | 0) & MODE_BIT[i]);
   if (time) on.push(TIME_HELP);
@@ -1170,19 +1171,30 @@ export function levelGeom(L, unlocked, touch) {
     y += (segH + helpH + gap) * f;
   }
   const start = { x: S.ix - 8, y, w: S.iw + 16, h: heroH * f };
-  return { S, f, grid, pane, room, heatCap, heat, paceCap, pace, modeCap, mode, help, start, rows: focusRows(grid, heatCap, heat, paceCap, pace, modeCap, mode, start), capY: by + (capH * f) / 2, cap: roomCap(U) };
+  return { S, f, grid, pane, room, heatCap, heat, paceCap, pace, modeCap, mode, help, start, rows: focusRows(f, grid, heatCap, heat, paceCap, pace, modeCap, mode, help, start), capY: by + (capH * f) / 2, cap: roomCap(U) };
 }
-/* The focus mark's rect per LEVEL SELECT row (menuapp LEVEL_ROWS: 0 LEVEL, 1 DIFFICULTY, 2 GAME SPEED, 3 MODIFIERS, 4 START,
-   v202 Task 2.3): a group's ring 2 px outside it (the level grid with its caption, the cap and its segments, the cap and its
-   chips; null until modifiers are offered), START its painted hero band. */
-const ringOf = (r) => ({ x: r.x - 2, y: r.y - 2, w: r.w + 4, h: r.h + 4 });
-const spanOf = (a, b) => ({ x: a.x, y: a.y, w: b.x + b.w - a.x, h: a.h });
-function focusRows(grid, heatCap, heat, paceCap, pace, modeCap, mode, start) {
-  return [ringOf(grid), ringOf(spanOf(heatCap, heat[2])), ringOf(spanOf(paceCap, pace[2])), modeCap ? ringOf(spanOf(modeCap, mode[4])) : null, { x: start.x + 8, y: start.y + 2, w: start.w - 16, h: start.h - 4 }];
+/* LEVEL SELECT's rows by name: menuapp LEVEL_ROWS, which words.test pins equal to these words (this file may not import
+   src/app). shellview hands drawLevelSelect the focused row's name, never an index. */
+const LV = Object.freeze({ LEVEL: LABEL.LEVEL, DIFF: LABEL.DIFFICULTY, SPEED: LABEL.GAME_SPEED, MODS: LABEL.MODIFIERS, START: LABEL.START });
+/* The focus mark's rect per LEVEL SELECT row, keyed by its name (v202 Task 2.3). A group's ring sits half the row gap outside
+   it, at most 3 px, so its 2 px paint stays 2 px clear of a selected segment's own 2 px stroke and clear of every neighbour
+   row: the level grid with its caption, a cap and its segments, the MODIFIERS cap, chips and their help line (null until
+   modifiers are offered); START is its painted hero band. A chip's ring stays today's 2 px. */
+const ringOf = (r, o) => ({ x: r.x - o, y: r.y - o, w: r.w + 2 * o, h: r.h + 2 * o });
+const spanOf = (a, b, c) => ({ x: a.x, y: a.y, w: b.x + b.w - a.x, h: (c || b).y + (c || b).h - a.y });
+function focusRows(f, grid, heatCap, heat, paceCap, pace, modeCap, mode, help, start) {
+  const o = Math.min(3, 3 * f);
+  return Object.freeze({
+    [LV.LEVEL]: ringOf(grid, o),
+    [LV.DIFF]: ringOf(spanOf(heatCap, heat[2]), o),
+    [LV.SPEED]: ringOf(spanOf(paceCap, pace[2]), o),
+    [LV.MODS]: modeCap ? ringOf(spanOf(modeCap, mode[4], help), o) : null,
+    [LV.START]: { x: start.x + 8, y: start.y + 2, w: start.w - 16, h: start.h - 4 },
+  });
 }
-/** Where LEVEL SELECT's focus mark is drawn: the open list's chip (a ring like a row's), else the focused row's rect. */
+/** Where LEVEL SELECT's focus mark is drawn: the open list's chip (a ring like a row's), else the named row's rect. */
 export function levelMark(G, row, open, cur) {
-  return open && G.mode[cur] ? ringOf(G.mode[cur]) : G.rows[row] || null;
+  return open && G.mode[cur] ? ringOf(G.mode[cur], 2) : G.rows[row] || null;
 }
 /* The ring: today's chip-focus outline, 2 px TEXT, on every focus target but START (its own hero band). */
 function focusRing(c, r) {
@@ -1194,8 +1206,9 @@ function focusRing(c, r) {
     (opens the list on MODIFIERS); in the open list ↑↓ pick, confirm toggles, back closes it. Keys and controller words. */
 export function levelFoot(row, open) {
   const W = hints();
-  if (open) return "↑↓ PICK · " + W.ok + " TOGGLE · " + W.back + " CLOSE";
-  return "↑↓ ROW · " + (row < 3 ? "←→ ADJUST · " : "") + W.ok + (row === 3 ? " OPEN" : " START") + " · " + W.back + " BACK";
+  if (open) return "↑↓ PICK · " + W.ok + " TOGGLE · " + W.back + " " + LABEL.CLOSE;
+  const value = row !== LV.MODS && row !== LV.START; // LEVEL, DIFFICULTY, GAME SPEED change on ←→
+  return "↑↓ ROW · " + (value ? "←→ ADJUST · " : "") + W.ok + (row === LV.MODS ? " OPEN" : " " + LV.START) + " · " + W.back + " BACK";
 }
 /* The narrow box (touch-portrait shell, < 560 wide): the same rects
    stacked — the room grid across the plate, the ROOM CARD under it, HEAT and
@@ -1226,7 +1239,7 @@ function levelNarrow(L, U, T) {
     y += (segH + helpH + gap) * f;
   }
   const start = { x: S.ix - 8, y, w: S.iw + 16, h: heroH * f };
-  return { S, f, grid, pane, room, heatCap, heat, paceCap, pace, modeCap, mode, help, start, rows: focusRows(grid, heatCap, heat, paceCap, pace, modeCap, mode, start), capY: by + (capH * f) / 2, cap: roomCap(U), narrow: true };
+  return { S, f, grid, pane, room, heatCap, heat, paceCap, pace, modeCap, mode, help, start, rows: focusRows(f, grid, heatCap, heat, paceCap, pace, modeCap, mode, help, start), capY: by + (capH * f) / 2, cap: roomCap(U), narrow: true };
 }
 /* A tap on LEVEL SELECT: {k:"room"|"heat"|"pace"|"mode", i}, {k:"lock", i}
    on a locked room (main shows its card, never sets app.level), {k:"start"}
@@ -1242,6 +1255,8 @@ export function levelHit(x, y, L, unlocked, touch) {
 }
 /* touch swaps the key foot for the tap rule levelHit implements (main.js). */
 export const LEVEL_TAP = "TAP START TO PLAY · TAP OUTSIDE TO GO BACK";
+/* the same with the MODIFIERS list open (opened by keys on a touch layout): a tap off the plate closes it first */
+export const LEVEL_TAP_LIST = "TAP START TO PLAY · TAP OUTSIDE TO " + LABEL.CLOSE;
 /* info = {kind, best:[8 strings|null] at this heat/pace/modes, heatT, lockR,
    lockT, row, open, cur} from shellview (times arrive formatted; this file never reads a
    store). row / open / cur: the focused row (LEVEL when absent), the MODIFIERS list open and its cursor (v202 Task 2.3). */
@@ -1257,8 +1272,9 @@ export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked, pace, timeAt
     mask = U ? pact | 0 : 0,
     A = pxArt(I.kind),
     best = I.best || [],
-    row = I.row == null ? 0 : I.row | 0,
-    open = !!I.open && U;
+    row = I.row || LV.LEVEL,
+    open = !!I.open && U,
+    tap = tapMode(T); // tap mode: no focus is shown (a tap has none); keys, or a controller on a touch layout, run the focus model
   let p = pace | 0;
   if (p < -1) p = -1;
   else if (p > 1) p = 1;
@@ -1321,8 +1337,10 @@ export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked, pace, timeAt
         on = i < 4 ? (mask & MODE_BIT[i]) !== 0 : !!timeAttack;
       chip(c, r, ((G.narrow && T) || onPad ? "" : i + 1 + " ") + (i < 4 ? MODE_NAME[i] : TIME_TRIAL), on, i < 4 ? PACT_COL[i] : TIME_COL, T, G.narrow ? 12 : 0); // a narrow touch chip drops the key digit
     }
-    const foc = open ? I.cur | 0 : onPad ? modeFocus() : -1, help = onPad ? padModeHelp(foc) : modeHelp(mask, timeAttack);
-    if (foc >= 0 && G.mode[foc]) focusRing(c, ringOf(G.mode[foc])); // the open list's cursor, or a pad's TRIGGER cursor: a shape, so it reads apart from an on chip's own outline
+    const cur = open ? I.cur | 0 : -1, trig = onPad ? modeFocus() : -1,
+      help = open ? (onPad ? padModeHelp(cur) : modeOne(cur)) : onPad ? padModeHelp(trig) : modeHelp(mask, timeAttack), // the open list describes its focused entry
+      ring = open ? cur : row !== LV.MODS ? trig : -1; // the open list's cursor; a controller's TRIGGER cursor, unless the MODIFIERS row's own ring is on (they share edges)
+    if (ring >= 0 && G.mode[ring]) focusRing(c, ringOf(G.mode[ring], 2)); // a shape, so it reads apart from an on chip's own outline
     c.textAlign = "center";
     c.fillStyle = MUTED;
     if (G.narrow) {
@@ -1336,9 +1354,9 @@ export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked, pace, timeAt
   }
   const st = G.start,
     tag = fitVal(c, setupVals(BIOMES[sel - 1].name, { heat: h, pace: p, pact: mask, time: U && timeAttack }), heroRoom(c, st.w - 16, st.h - 4, "START", T));
-  paintRow(c, st.x + 8, st.y + 2, st.w - 16, st.h - 4, "START", tag, !open && row === 4, { hero: true, touch: T }); // selected only while focused
-  if (!open && row !== 4 && G.rows[row]) focusRing(c, G.rows[row]);
-  foot(c, S, tapMode(T) ? LEVEL_TAP : levelFoot(row, open));
+  paintRow(c, st.x + 8, st.y + 2, st.w - 16, st.h - 4, LV.START, tag, tap || (!open && row === LV.START), { hero: true, touch: T }); // lit in tap mode (the page's one action), else only while focused
+  if (!tap && !open && row !== LV.START && G.rows[row]) focusRing(c, G.rows[row]);
+  foot(c, S, tap ? (open ? LEVEL_TAP_LIST : LEVEL_TAP) : levelFoot(row, open));
 }
 
 /* GUIDE art in PIXEL (W5, R19): kind "px" swaps only the scaled vector glyph

@@ -248,7 +248,7 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
     const mg = md.menuGeom(L, 7, touch);
     check(`MENU: inside the box, every row taps to itself (${tg})`, mg.y0 >= 0 && mg.y0 + mg.h <= g.h && mg.rows.every((r, i) => md.menuHit(r.x != null ? r.x + r.w / 2 : g.w / 2, r.cy, L, 7, touch) === i));
     for (const U of [false, true]) {
-      const G = md.levelGeom(L, U, touch), rects = [...G.room, G.pane, G.heatCap, ...G.heat, G.paceCap, ...G.pace, ...(U ? [G.modeCap, ...G.mode, G.help] : []), G.start, ...G.rows.filter(Boolean)]; // + the focus rows the mark is drawn at (v202 Task 2.3)
+      const G = md.levelGeom(L, U, touch), rects = [...G.room, G.pane, G.heatCap, ...G.heat, G.paceCap, ...G.pace, ...(U ? [G.modeCap, ...G.mode, G.help] : []), G.start, ...Object.values(G.rows).filter(Boolean)]; // + the focus rows the mark is drawn at, keyed by row name (v202 Task 2.3)
       const hits = [...G.room.map((r, i) => [r, i < G.cap ? "room" : "lock", i]), ...G.heat.map((r, i) => [r, "heat", i]), ...G.pace.map((r, i) => [r, "pace", i]), ...G.mode.map((r, i) => [r, "mode", i]), [G.start, "start"]];
       check(`LEVEL SELECT${U ? " (modes open)" : ""}: plate in the box, every rect in it, each taps to itself, card inert, off-plate backs (${tg})`,
         inBox(G.S) && rects.every((r) => inPlate(r, G.S)) && hits.every(([r, k, i]) => { const h = md.levelHit(...ctr(r), L, U, touch); return h.k === k && (i == null || h.i === i); }) &&

@@ -27,6 +27,8 @@ export const LABEL = Object.freeze({
   MODIFIERS: "MODIFIERS",
   TAB: "TAB", // RECORDS' foot hints: ←→ TAB on the tab row, ↑ TABS back to it from a page body
   TABS: "TABS",
+  START: "START", // LEVEL SELECT's hero row and the last of its rows (menuapp LEVEL_ROWS)
+  CLOSE: "CLOSE", // LEVEL SELECT's open MODIFIERS list: ESC / EAST CLOSE, TAP OUTSIDE TO CLOSE
 });
 /* RECORDS' tabs, in the order ←/→ walk them (menuapp.js RECORD_SCREENS: SCORES, STATS, TROPHIES). */
 export const RECORD_TABS = Object.freeze(["SCORES", "STATS", "MEDALS"]);

@@ -186,6 +186,8 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
     ["GUIDE foot, touch", PAGES.GUIDE(true), "TAP A DOOR · TAP OUTSIDE TO GO BACK"],
   ];
   for (const [nm, f, s] of WANT) { const r = paint(f); check("default: " + nm + " stays \"" + s + "\"", r.has(s), r.strs().join("|")); }
+  { const G = md.levelGeom(L, true, false), cap = paint(PAGES.LEVEL(false)).texts.filter((t) => t.x === G.grid.x && Math.abs(t.y - G.capY) < 0.01); // the caption itself, by its place over the grid
+    check("default: the LEVEL caption over the grid reads \"LEVEL\", no keycap", cap.length === 1 && cap[0].s === "LEVEL", JSON.stringify(cap)); }
   check("FOOT_KEYS keeps its default bytes", md.FOOT_KEYS === "↑↓ ROW · ←→ ADJUST · ENTER CYCLE · ESC BACK");
   const how = paint(PAGES.HOWTO(false));
   for (const s of ["WASD / ARROWS", "SPACE", "E", "Q", "WALK INTO BOMB", "P"]) check("HOW TO row reads " + s, how.has(s));
@@ -280,6 +282,11 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
     setHints(null); const a = paint(p(T));
     setHints(PAD); const b = paint(p(T));
     setHints(null);
+    if (nm === "LEVEL" && T) { // v202 Task 2.3 fix round 1: tap mode lights START (keys / touch words on a touch layout), a controller runs the focus model (the LEVEL row's ring, a stroke): the flip moves only START's band + notch
+      const sb = md.levelGeom(L, true, true).rows.START, lit = (x) => (x[0] === "rgba(55,240,208,0.12)" && J(x.slice(1)) === J([sb.x, sb.y, sb.w, sb.h])) || (x[0] === "#37f0d0" && J(x.slice(1)) === J([sb.x, sb.y, 3, sb.h]));
+      check("a flip changes words only: LEVEL touch keeps every rect but START's lit band and notch (tap mode lights START, a controller does not)", J(flat(a).filter((x) => !lit(x))) === J(flat(b)) && flat(a).filter(lit).length === 2 && flat(b).filter(lit).length === 0, J(flat(a)).length + " vs " + J(flat(b)).length);
+      continue;
+    }
     check(`a flip changes words only: ${nm}${T ? " touch" : ""} keeps every rect`, J(flat(a)) === J(flat(b)), J(flat(a)).length + " vs " + J(flat(b)).length);
   }
 }

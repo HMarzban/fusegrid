@@ -386,7 +386,7 @@ function lvWant(s, k) {
       break;
     }
     case "Enter": case "Space": // toggle in the list, open it on MODIFIERS, else start the run
-      if (e.open) { tog(s.cur); Object.assign(e, { cues: "uiSel", feel: "confirm" }); }
+      if (e.open) { tog(s.cur); Object.assign(e, { cues: "uiTog", feel: "confirm" }); } // the in-place toggle sound (SETTINGS' precedent), never the start sound
       else if (s.row === 3) Object.assign(e, { open: true, cur: 0, cues: "uiSel", feel: "enter" });
       else go();
       break;
@@ -460,6 +460,14 @@ const lvMem = () => { const s = { p: mem["nb.pace.v1"], t: mem["nb.times.v1"] };
     const h = lvAt({ U: true, row: 3, open: true, cur: 0 });
     down("ArrowDown"); h.tick(120); up("ArrowDown"); h.tick(2);
     check("LEVEL keys: ↓ held in the open list walks to TIME TRIAL and stops silently", h.app.modeCur === 4 && h.app.modOpen && LVPLAY.filter((n) => n === "uiMove").length === 4, h.app.modeCur + " " + LVPLAY.join());
+    const sp = lvAt({ U: true, row: 2 }); sp.app.pace = -1;
+    down("ArrowRight"); sp.tick(90); up("ArrowRight"); sp.tick(2);
+    check("LEVEL keys: → held on GAME SPEED repeats like any value row: SLOW -> FAST, two uiMoves, then silent at FAST", sp.app.pace === 1 && LVPLAY.join() === "uiMove,uiMove" && sp.app.levelRow === 2, sp.app.pace + " " + LVPLAY.join());
+    for (const k of ["ArrowLeft", "ArrowRight"]) {
+      const l = lvAt({ U: true, row: 3, open: true, cur: 2 });
+      down(k); l.tick(90); up(k); l.tick(2);
+      check("LEVEL keys: " + k + " held in the open list does nothing at all (no step, no repeat, no cue)", l.app.modeCur === 2 && l.app.modOpen && l.app.pace === 0 && l.app.level === 3 && l.app.heat === 1 && LVPLAY.length === 0, l.app.modeCur + " " + LVPLAY.join());
+    }
   }
   restore();
 }
@@ -1423,6 +1431,28 @@ for (const code of ["Space", "Enter"]) {
       const t = pLv({ U: true, row: 3, open: true, cur: 0 });
       tap(t, "TRR");
       check("LEVEL controller: R TRIGGER in the open list walks the same cursor", t.app.modeCur === 1 && t.app.modOpen, t.app.modeCur);
+      /* the L-STICK walks the rows and steps a value like the D-PAD */
+      const st = pLv({ U: true, row: 0 });
+      st.pad.axes[1] = 0.9; st.tick(3); st.pad.axes[1] = 0; st.tick(3);
+      const r1 = st.app.levelRow, c1 = LVPLAY.join(); LVPLAY.length = 0;
+      st.pad.axes[0] = 0.9; st.tick(3); st.pad.axes[0] = 0; st.tick(3);
+      check("LEVEL controller: L-STICK down walks to DIFFICULTY, L-STICK right then raises it (one uiMove each)", r1 === 1 && c1 === "uiMove" && st.app.heat === 2 && LVPLAY.join() === "uiMove" && st.app.levelRow === 1, [r1, c1, st.app.heat, LVPLAY.join()].join("/"));
+      /* TRIGGER / NORTH in two states: the list shut on LEVEL (today's cursor, the focus stays), and the list open (the same cursor) */
+      const sh = pLv({ U: true, row: 0 });
+      tap(sh, "TRR"); const a1 = [sh.app.modeCur, sh.app.levelRow, sh.app.modOpen, LVPLAY.join(), lvTop(sh.fs)]; LVPLAY.length = 0; sh.fs.length = 0;
+      tap(sh, "N");
+      check("LEVEL controller: list shut on LEVEL: R TRIGGER puts the chip cursor on ONE LIFE (uiMove, move) and the focus stays on LEVEL; NORTH toggles ONE LIFE (silent, confirm)",
+        JSON.stringify(a1) === JSON.stringify([0, 0, false, "uiMove", "move"]) && sh.app.pact === PACT.LAST && sh.app.levelRow === 0 && !sh.app.modOpen && LVPLAY.length === 0 && lvTop(sh.fs) === "confirm", JSON.stringify(a1) + " " + sh.app.pact + " " + LVPLAY.join());
+      const op = pLv({ U: true, row: 3, open: true, cur: 2 });
+      tap(op, "TRR"); const b1 = [op.app.modeCur, LVPLAY.join()]; LVPLAY.length = 0;
+      tap(op, "N");
+      check("LEVEL controller: list open on FEWER ITEMS: R TRIGGER moves its cursor to SHRINK (uiMove); NORTH toggles SHRINK (silent); the list stays open",
+        JSON.stringify(b1) === JSON.stringify([3, "uiMove"]) && op.app.pact === PACT.SHRINK && op.app.modOpen && op.app.modeCur === 3 && LVPLAY.length === 0, JSON.stringify(b1) + " " + op.app.pact);
+      /* a TRIGGER cursor from the shut list never leaks into the list: SOUTH on MODIFIERS opens it on ONE LIFE */
+      const lk = pLv({ U: true, row: 3 });
+      tap(lk, "TRR"); tap(lk, "TRR"); const c0 = lk.app.modeCur;
+      tap(lk, "S");
+      check("LEVEL controller: R TRIGGER twice with the list shut (cursor 1), then SOUTH on MODIFIERS: the list opens on ONE LIFE", c0 === 1 && lk.app.modOpen && lk.app.modeCur === 0, c0 + " -> " + lk.app.modeCur);
     }
     restore();
   }

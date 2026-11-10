@@ -351,9 +351,10 @@ export function createGame(canvas, opts = {}) {
     app.confirm = () => {
       const sB = app.screen,
         ctlOn = app.onControls(), // CONTROLS cues its own rows (controlswire.js)
+        tog = sB === SCREEN.LEVEL && app.modOpen, // a toggle in LEVEL SELECT's open MODIFIERS list stays in place, like a SETTINGS row
         r = c0();
       if (!r) return r;
-      if (sB === SCREEN.SETTINGS || sB === SCREEN.GRAPHICS) audio.play(app.screen === sB ? "uiTog" : "uiSel");
+      if (sB === SCREEN.SETTINGS || sB === SCREEN.GRAPHICS || tog) audio.play(app.screen === sB ? "uiTog" : "uiSel");
       else if (
         sB !== SCREEN.HOWTO &&
         sB !== SCREEN.SCORES &&

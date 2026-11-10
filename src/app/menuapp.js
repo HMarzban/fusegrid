@@ -697,7 +697,7 @@ export function createMenuApp(opts = {}) {
       if (this.modOpen) return this.key("Digit" + (this.modeCur + 1));
       if (this.levelRow === LV_MODS && this.pactUnlocked) {
         this.modOpen = true;
-        if (this.modeCur < 0) this.modeCur = 0;
+        this.modeCur = 0; // always its first entry: a controller's TRIGGER cursor from the shut list never leaks in
         return this._feel("enter");
       }
       return this.startRun();
@@ -1043,7 +1043,7 @@ export function createMenuApp(opts = {}) {
     modeWalk(d) {
       this.idleT = 0;
       if (this.screen !== SCREEN.LEVEL || !this.pactUnlocked) return false;
-      const n = this.modeCur < 0 ? (d > 0 ? 0 : 4) : Math.max(0, Math.min(4, this.modeCur + d));
+      const n = this.modeCur < 0 ? (d > 0 ? 0 : MODS_N - 1) : Math.max(0, Math.min(MODS_N - 1, this.modeCur + d));
       if (n === this.modeCur) return false;
       this.modeCur = n;
       return this._feel("move");

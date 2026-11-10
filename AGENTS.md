@@ -164,8 +164,8 @@ returns `{k:"lock"}` and only flashes CLEAR LEVEL 5 TO OPEN, never sets
 getter, `LIVES · FUSE · SCORE ×n` from `heatProfile`/`applyPact`, pulsing on a
 heat change); then DIFFICULTY | GAME SPEED segments, MODIFIERS (ONE LIFE,
 NO FLOOR ITEMS, FEWER ITEMS, SHRINK + TIME TRIAL; a name too wide for its chip
-breaks onto two lines; help says what each does), and a START hero. No start-on-miss: only START or
-Enter (off MODIFIERS) starts. MENU keyboard: a 272 list beside a preview pane that follows
+breaks onto two lines; help says what each does), and a START hero. No start-on-miss: a tap starts only on
+START (keys and controller: LEVEL SELECT rows, below). MENU keyboard: a 272 list beside a preview pane that follows
 the cursor (one mini-page per row; RECORDS shows the top three and its
 tabs); MENU touch: a tile HUB in the pinned reading order (PLAY bar, LEVEL
 SELECT | DAILY, RECORDS | SETTINGS, the GUIDE bar, SOURCE 50 logical = 32 CSS px;
@@ -175,23 +175,17 @@ tiles, not full-width rows; ↑↓ stays the linear walk. One vocabulary: MODIFI
 (never MODES or PACT) on screens and in copy; pact.js and `nb.pact.v1` keep their
 names. Hooks never lie: a score teaser reads only played runs
 (`highscores.isPlaceholder` drops the seeded table; main hands `getCab().top`),
-and DAILY says YOUR TRIES TODAY. LEVEL SELECT is one path (UI upgrade v202 Task 2.3, design record §4):
-menuapp `LEVEL_ROWS` LEVEL, DIFFICULTY, GAME SPEED, MODIFIERS, START, `app.levelRow` the focused one (every
-entry lands on LEVEL). `↑↓` (D-PAD, stick) walk the rows, clamped, MODIFIERS only once modifiers are offered;
-`←→` change the focused row (level, heat, pace through the same `_pace` as `[ ]`; nothing on MODIFIERS or
-START); `↑↓` never change the heat. Past the last open level `→` is refused, never selected: the card flashes
-CLEAR LEVEL 5 TO OPEN (`lockR` / `lockT`, as a locked tap) with the feel `deny`, once a press or a hold
-(`_lockHeld`). Enter / the BOMB alias / SOUTH start the run, except on MODIFIERS, where they open the inline
-list: `app.modOpen` (no SCREEN), `modeCur` its cursor over ONE LIFE, NO FLOOR ITEMS, FEWER ITEMS, SHRINK, TIME
-TRIAL (`↑↓`, clamped; confirm toggles through the entry's digit key; `←→` nothing), shared with a controller's
-TRIGGER cursor (NORTH still toggles it). Esc / Backspace / EAST close the list first, then leave for MENU on
-LEVEL SELECT. A controller's START always starts (`padroute` focuses START first). `[ ]`, the shoulders and
-`1–5` stay shortcuts from any row and never move the focus. A tap first focuses the row it touched
-(`levelFocus`; leaving MODIFIERS closes the list, a chip tap in the open list moves its cursor), then acts as
-before; only START starts. The focus is drawn from `levelGeom(...).rows` / `levelMark`: a 2 px TEXT ring
-around the level grid, a segment group or the chip group (the open list: around its chip, today's chip
-ring), START its hero band only while focused; the foot (`levelFoot`) names the focused row's keys, and
-the caps name only keys that work from any row (`[ ]`, `1–5`). Read-only pages (HOW TO / POWER-UPS / ENEMIES /
+and DAILY says YOUR TRIES TODAY. LEVEL SELECT rows (v202 Task 2.3): menuapp `LEVEL_ROWS` LEVEL,
+DIFFICULTY, GAME SPEED, MODIFIERS (only once offered), START; `app.levelRow` is the focused one, LEVEL on every
+entry. `↑↓` walk the rows (clamped); `←→` change LEVEL, DIFFICULTY or GAME SPEED and do nothing on MODIFIERS or
+START; `→` past the last open level only flashes CLEAR LEVEL 5 TO OPEN (deny, once a press or hold). Enter /
+the BOMB alias / SOUTH start the run, except on MODIFIERS: there they open the inline list (`app.modOpen`, no
+SCREEN; `modeCur` its cursor, always from ONE LIFE: `↑↓` pick, confirm toggles through the entry's digit with a
+`uiTog`; Esc / Backspace / EAST close it first, then leave for MENU). A controller's START always starts. `[ ]`, the shoulders, `1–5`
+and TRIGGER / NORTH (T14) work from any row and move no focus. A tap focuses its row (`levelFocus`) and acts as
+before; only START starts; off the plate backs out (an open list closes first). Tap mode (`tapMode`) shows no
+focus: START lit, no ring; otherwise the focused row gets a TEXT ring (`levelGeom(...).rows`, keyed by row
+name, `levelMark`) or START its band, the foot is `levelFoot`, and caps name only `[ ]` / `1–5`. Read-only pages (HOW TO / POWER-UPS / ENEMIES /
 FLOOR / MEDALS) back out on any tap (MEDALS: off its tabs); STATS taps its foot labels. PLAY's tag names the
 world (`FACTORY · EXPERT DIFFICULTY · FAST SPEED`), the same words as START,
 stepped down to the slot by `setupVals` (a modifier count, then only what differs
@@ -489,7 +483,7 @@ not shell screens. Do not add them as `SCREEN` values.
   - `shellview.js` routes `app.screen` to `menudraw.js` and owns `kindSize` /
     `dims`, the one logical box every screen measures against (a real canvas
     wins, otherwise kind picks the classic box or the projected one). It is
-    the only render module that may read `src/app/` — screen constants only,
+    the only render module that may read `src/app/` — screen constants and the `ITEMS` / `LEVEL_ROWS` label tables only,
     and scores arrive as a getter so `highscores` stays on the app side.
   - Board look modules (2026-10-25, record
     `docs/superpowers/specs/2026-10-25-board-look-depth-ambient-design.md`):

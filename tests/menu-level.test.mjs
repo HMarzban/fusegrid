@@ -85,8 +85,9 @@ const DT = 1 / 60;
   a.key("ArrowLeft");
   check("LEVEL ArrowLeft cools to PLUS", a.heat === 1);
   a.key("ArrowUp");
+  a.level = 2;
   a.move(-1);
-  check("LEVEL move() without axis still steps room (on the LEVEL row)", a.level === 1 && a.heat === 1);
+  check("LEVEL move() without axis still steps room (on the LEVEL row: 2 -> 1, heat kept)", a.level === 1 && a.heat === 1);
 }
 {
   const started = [];
