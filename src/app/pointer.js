@@ -1,7 +1,10 @@
 /* The one tap router on #c and #sh, moved out of main.js whole (v202 Task 0.4).
    src/app never imports src/render, so main hands the hit functions and the
    layout in (hit); kind and ctl are getters, read at the tap. */
-import { ITEMS, RECORD_SCREENS, SCREEN, isRecords } from "./menuapp.js";
+import { ITEMS, LEVEL_ROWS, RECORD_SCREENS, SCREEN, isRecords } from "./menuapp.js";
+
+/* LEVEL SELECT: the row each levelHit kind belongs to (a locked tile is on the LEVEL row too). */
+const LEVEL_TAP_ROW = Object.freeze({ room: "LEVEL", lock: "LEVEL", heat: "DIFFICULTY", pace: "GAME SPEED", mode: "MODIFIERS", start: "START" });
 
 /* pointer outside GAME = skip (INTRO) / confirm (menus) / play (ATTRACT).
    C1 single-fire: Input's fire latch listens on the SAME event (registered
@@ -65,7 +68,7 @@ export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: {
       app[menu ? "cursor" : gx ? "gfxRow" : gd ? "guideRow" : "optRow"] = row;
       app.confirm();
     } else if (app.screen === SCREEN.LEVEL || isRecords(app.screen)) {
-      /* A chip / tab tap sets it (modes ride their 1–5 keys); LEVEL: only START starts, a locked room shows its card, the rest of the plate is inert, outside backs out. */
+      /* A chip / tab tap sets it (modifiers ride their 1–5 keys); LEVEL: the tap first focuses the row it touched (levelFocus), only START starts, a locked level shows its card, the rest of the plate is inert, outside backs out (an open list closes first). */
       const r = cv.getBoundingClientRect(), k = cv.width / (r.width || cv.width), { cw, ch } = dims(cv, kind()), x = (ev.clientX - r.left) * k, y = (ev.clientY - r.top) * k, L = menuLayout(cw, ch);
       // every chip is ONE call through the cued key path: one uiMove per change, none on the chip already set
       const p = RECORD_SCREENS.indexOf(app.screen), ti = p < 0 ? -1 : recTabHit(x, y, L, p, touchLay(cv));
@@ -77,8 +80,9 @@ export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: {
         return;
       }
       if (app.screen === SCREEN.TROPHIES) return void app.confirm(); // read-only: off a tab, any tap backs out
-      const h = levelHit(x, y, L, app.pactUnlocked, touchLay(cv));
-      if (h.k === "room") app.move(h.i + 1 - app.level, 0); else if (h.k === "heat") app.move(app.heat - h.i, 1); else if (h.k === "pace") app.adjustPace(h.i - 1 - app.pace); else if (h.k === "mode") input.onUiKey("Digit" + (h.i + 1)); else if (h.k === "lock") { app.lockR = h.i + 1; app.lockT = app.subT; } else if (h.k === "back") app.back(); else if (h.k === "start") app.confirm();
+      const h = levelHit(x, y, L, app.pactUnlocked, touchLay(cv)), row = LEVEL_TAP_ROW[h.k];
+      if (row) app.levelFocus(LEVEL_ROWS.indexOf(row), h.k === "mode" ? h.i : -1);
+      if (h.k === "room") app.move(h.i + 1 - app.level, 0); else if (h.k === "heat") app.move(h.i - app.heat, 0); else if (h.k === "pace") app.adjustPace(h.i - 1 - app.pace); else if (h.k === "mode") input.onUiKey("Digit" + (h.i + 1)); else if (h.k === "lock") { app.lockR = h.i + 1; app.lockT = app.subT; } else if (h.k === "back") app.back(); else if (h.k === "start") app.confirm();
     } else app.confirm();
   };
   for (const el of [canvas, fit && fit.sh]) if (el) {

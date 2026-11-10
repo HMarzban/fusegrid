@@ -42,7 +42,7 @@ main's `let show`, never `demo`), backs MENU after the reveal and is dropped
 for good at GAME / ATTRACT. In 3D the title paints an opaque veil until three
 settles (`app.boardReady`, set on resolve or reject).
 
-Heat grades CORE / PLUS / MAX live on LEVEL SELECT (`←/→` room, `↑/↓` heat). CORE is replay baseline v6. Attract is always CORE + pact=0. After a first FUSE/GRID CLEAR, LEVEL SELECT also offers Pact toggles (`1–4`). Knobs live on `world`, not frozen `CFG`. Score × heat is persist-only (CORE ×1 / PLUS ×2 / MAX ×3); live HUD stays raw.
+Heat grades CORE / PLUS / MAX live on LEVEL SELECT (its DIFFICULTY row; see LEVEL SELECT below). CORE is replay baseline v6. Attract is always CORE + pact=0. After a first FUSE/GRID CLEAR, LEVEL SELECT also offers Pact toggles (`1–4`). Knobs live on `world`, not frozen `CFG`. Score × heat is persist-only (CORE ×1 / PLUS ×2 / MAX ×3); live HUD stays raw.
 
 MENU is seven rows in this order: `PLAY, LEVEL SELECT, DAILY, RECORDS, SETTINGS,
 GUIDE, SOURCE` (UI upgrade v202 Task 2.2, design record §4). `confirm()` dispatches by **label**, so an insert
@@ -144,8 +144,8 @@ line in box units (MENU's logo stays on the board; the hub hangs under it),
 the grid, DIFFICULTY / GAME SPEED rows, digit-free touch MODIFIERS chips, 2-line help), HOW
 TO stacked rules, ENEMIES 2 cols, MEDALS 1 col, SCORES tab width, 11px hub
 teasers; STATS is centred (not floor-pinned) in a tall box. LEVEL / HIGH SCORES chip
-taps are ONE call through the cued key path (`app.move` with a delta,
-`app.adjustPace`), so a change plays one `uiMove` and the chip already set is
+taps are ONE call through the cued key path (`app.move` with a delta on the row the tap
+focused, `app.adjustPace`), so a change plays one `uiMove` and the chip already set is
 silent; `[ ]` pace keys cue too.
 
 Menu pages (owner pick 2026-10-19 round 2, direction B "ATLAS", over the
@@ -159,13 +159,13 @@ count). Pitches: list 26 keyboard / 52 touch, SETTINGS 27 keyboard (37 touch, 34
 grid of room tiles (biome schematic, finale pip, ✓ when a time is saved at
 this heat/pace/modes; 6–8 dim + locked until the first CLEAR, a locked tap
 returns `{k:"lock"}` and only flashes CLEAR LEVEL 5 TO OPEN, never sets
-`app.level`) beside a ROOM CARD pane (world name, schematic, YOU'LL MEET from
+`app.level`; `→` from level 5 does the same) beside a ROOM CARD pane (world name, schematic, YOU'LL MEET from
 `heatRoster` with FOES names ×n, BEST time (NO TIME YET only once TIME is open, `d.open`; never on DAILY) via the `getCab`
 getter, `LIVES · FUSE · SCORE ×n` from `heatProfile`/`applyPact`, pulsing on a
 heat change); then DIFFICULTY | GAME SPEED segments, MODIFIERS (ONE LIFE,
 NO FLOOR ITEMS, FEWER ITEMS, SHRINK + TIME TRIAL; a name too wide for its chip
 breaks onto two lines; help says what each does), and a START hero. No start-on-miss: only START or
-Enter starts. MENU keyboard: a 272 list beside a preview pane that follows
+Enter (off MODIFIERS) starts. MENU keyboard: a 272 list beside a preview pane that follows
 the cursor (one mini-page per row; RECORDS shows the top three and its
 tabs); MENU touch: a tile HUB in the pinned reading order (PLAY bar, LEVEL
 SELECT | DAILY, RECORDS | SETTINGS, the GUIDE bar, SOURCE 50 logical = 32 CSS px;
@@ -175,7 +175,23 @@ tiles, not full-width rows; ↑↓ stays the linear walk. One vocabulary: MODIFI
 (never MODES or PACT) on screens and in copy; pact.js and `nb.pact.v1` keep their
 names. Hooks never lie: a score teaser reads only played runs
 (`highscores.isPlaceholder` drops the seeded table; main hands `getCab().top`),
-and DAILY says YOUR TRIES TODAY. Read-only pages (HOW TO / POWER-UPS / ENEMIES /
+and DAILY says YOUR TRIES TODAY. LEVEL SELECT is one path (UI upgrade v202 Task 2.3, design record §4):
+menuapp `LEVEL_ROWS` LEVEL, DIFFICULTY, GAME SPEED, MODIFIERS, START, `app.levelRow` the focused one (every
+entry lands on LEVEL). `↑↓` (D-PAD, stick) walk the rows, clamped, MODIFIERS only once modifiers are offered;
+`←→` change the focused row (level, heat, pace through the same `_pace` as `[ ]`; nothing on MODIFIERS or
+START); `↑↓` never change the heat. Past the last open level `→` is refused, never selected: the card flashes
+CLEAR LEVEL 5 TO OPEN (`lockR` / `lockT`, as a locked tap) with the feel `deny`, once a press or a hold
+(`_lockHeld`). Enter / the BOMB alias / SOUTH start the run, except on MODIFIERS, where they open the inline
+list: `app.modOpen` (no SCREEN), `modeCur` its cursor over ONE LIFE, NO FLOOR ITEMS, FEWER ITEMS, SHRINK, TIME
+TRIAL (`↑↓`, clamped; confirm toggles through the entry's digit key; `←→` nothing), shared with a controller's
+TRIGGER cursor (NORTH still toggles it). Esc / Backspace / EAST close the list first, then leave for MENU on
+LEVEL SELECT. A controller's START always starts (`padroute` focuses START first). `[ ]`, the shoulders and
+`1–5` stay shortcuts from any row and never move the focus. A tap first focuses the row it touched
+(`levelFocus`; leaving MODIFIERS closes the list, a chip tap in the open list moves its cursor), then acts as
+before; only START starts. The focus is drawn from `levelGeom(...).rows` / `levelMark`: a 2 px TEXT ring
+around the level grid, a segment group or the chip group (the open list: around its chip, today's chip
+ring), START its hero band only while focused; the foot (`levelFoot`) names the focused row's keys, and
+the caps name only keys that work from any row (`[ ]`, `1–5`). Read-only pages (HOW TO / POWER-UPS / ENEMIES /
 FLOOR / MEDALS) back out on any tap (MEDALS: off its tabs); STATS taps its foot labels. PLAY's tag names the
 world (`FACTORY · EXPERT DIFFICULTY · FAST SPEED`), the same words as START,
 stepped down to the slot by `setupVals` (a modifier count, then only what differs
@@ -654,7 +670,7 @@ not shell screens. Do not add them as `SCREEN` values.
   loads that device's defaults, an off-level SENSITIVITY value snaps to the nearest level, a bad `vib` never touches the binds. Keyboard defaults: BOMB SPACE (J, X silent
   aliases until BOMB moves), **THROW E** (SHIFT + BOMB still throws, never advertised), REMOTE Q, PAUSE P, ESC
   and arrows fixed. Pad defaults: BOMB SOUTH, THROW WEST, REMOTE EAST, PAUSE SELECT, START fixed; menus use the
-  fixed layer SOUTH / START confirm, EAST back. Pad start rule: one pad press leaves the title and starts the
+  fixed layer SOUTH / START confirm, EAST back (on LEVEL SELECT START always starts the run). Pad start rule: one pad press leaves the title and starts the
   show, silently if the ctx will not run, `app.soundNote` then says `NO SOUND YET`. No pad route to
   the consent card (a stray button must not consent; an unanswered SETTINGS ANALYTICS row is inert on a pad and says
   `ANSWER THE CARD WITH Y OR N`), the STATS wipe or the camera reset, on purpose. Disconnect pauses only with the pad last

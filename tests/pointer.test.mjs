@@ -36,7 +36,7 @@ function mkHit(over = {}) {
   for (const [k, f] of Object.entries(REAL)) hit[k] = (...a) => { const r = (over[k] || f)(...a); calls.push({ f: k, a, r }); return r; };
   return { hit, calls, of: (k) => calls.filter((c) => c.f === k), last: (k) => calls.filter((c) => c.f === k).pop() };
 }
-const SHELL = ["confirm", "back", "pauseBack", "playFromAttract", "skipShow", "move", "adjustPace", "recTab"];
+const SHELL = ["confirm", "back", "pauseBack", "playFromAttract", "skipShow", "move", "adjustPace", "recTab", "levelFocus"];
 function rig(o = {}) {
   const log = [], taps = [];
   const app = { screen: SCREEN.MENU, pauseView: 0, pauseCursor: 0, cursor: 0, optRow: 0, gfxRow: 0, guideRow: 0, level: 1, heat: 1, pace: 0, scoreHeat: 0, pactUnlocked: true, resetArm: false, subT: 1.25, ctlT: 0.5, controls: { view: (t) => ({ view: t }) }, ...o.app };
@@ -160,22 +160,23 @@ for (const [scr, fn, field, row, offAct] of [[SCREEN.MENU, "menuHit", "cursor", 
   if (plate) { r.log.length = 0; r.down(plate.x, plate.y); check(fn + ": -2 is inert", r.log.length === 0, J(r.log)); }
 }
 
-// ---- LEVEL SELECT: chips are one call through the cued key path; only START starts ----
+// ---- LEVEL SELECT: a tap first focuses the row it touched (levelFocus, v202 Task 2.3), then acts through the cued key path
+// (one call each, ←→ on that row = move(d, 0)); only START starts ----
 {
   const G = levelGeom(L0, true, false), c = (q) => [q.x + q.w / 2, q.y + q.h / 2];
   const r = rig({ app: { screen: SCREEN.LEVEL, level: 2, heat: 1, pace: 0, pactUnlocked: true } });
   r.down(...c(G.room[5]));
-  check("LEVEL room tile 6: app.move(6 - level, 0)", J(r.log) === J([["move", 4, 0]]), J(r.log));
+  check("LEVEL room tile 6: levelFocus(LEVEL), then app.move(6 - level, 0)", J(r.log) === J([["levelFocus", 0, -1], ["move", 4, 0]]), J(r.log));
   const h = r.H.last("levelHit"), lc = r.H.last("layout");
   check("LEVEL: levelHit(x, y, layout(cw, ch), app.pactUnlocked, touchLay(cv))", J(h.a[2]) === J(L0) && h.a[3] === true && h.a[4] === false && lc.a.length === 2, J(lc.a));
   r.log.length = 0; r.down(...c(G.heat[2]));
-  check("LEVEL heat chip MAX: app.move(heat - 2, 1)", J(r.log) === J([["move", -1, 1]]), J(r.log));
+  check("LEVEL heat chip MAX: levelFocus(DIFFICULTY), then app.move(2 - heat, 0) (→ raises it)", J(r.log) === J([["levelFocus", 1, -1], ["move", 1, 0]]), J(r.log));
   r.log.length = 0; r.down(...c(G.pace[0]));
-  check("LEVEL pace chip EASY: app.adjustPace(0 - 1 - pace)", J(r.log) === J([["adjustPace", -1]]), J(r.log));
+  check("LEVEL pace chip EASY: levelFocus(GAME SPEED), then app.adjustPace(0 - 1 - pace)", J(r.log) === J([["levelFocus", 2, -1], ["adjustPace", -1]]), J(r.log));
   r.log.length = 0; r.down(...c(G.mode[2]));
-  check("LEVEL mode chip 3: input.onUiKey('Digit3'), no shell call", J(r.input.keys) === J(["Digit3"]) && r.log.length === 0, J(r.input.keys));
+  check("LEVEL mode chip 3: levelFocus(MODIFIERS, 2), then input.onUiKey('Digit3'), no other shell call", J(r.input.keys) === J(["Digit3"]) && J(r.log) === J([["levelFocus", 3, 2]]), J(r.input.keys) + " " + J(r.log));
   r.log.length = 0; r.down(...c(G.start));
-  check("LEVEL START: confirm", J(r.log) === J([["confirm"]]), J(r.log));
+  check("LEVEL START: levelFocus(START), then confirm", J(r.log) === J([["levelFocus", 4, -1], ["confirm"]]), J(r.log));
   const none = spot((x, y) => levelHit(x, y, L0, true, false).k === "none");
   r.log.length = 0; r.down(none.x, none.y);
   check("LEVEL: the rest of the plate is inert", r.log.length === 0 && r.input.keys.length === 1, J(r.log));
@@ -183,7 +184,7 @@ for (const [scr, fn, field, row, offAct] of [[SCREEN.MENU, "menuHit", "cursor", 
   check("LEVEL: off the plate backs out", J(r.log) === J([["back"]]), J(r.log));
   const lk = rig({ app: { screen: SCREEN.LEVEL, pactUnlocked: false, subT: 3.5 } }), GL = levelGeom(L0, false, false);
   lk.down(...c(GL.room[6]));
-  check("LEVEL locked room 7: lockR 7, lockT = subT, nothing else", lk.app.lockR === 7 && lk.app.lockT === 3.5 && lk.log.length === 0 && lk.app.level === 1, lk.app.lockR + "/" + lk.app.lockT);
+  check("LEVEL locked room 7: lockR 7, lockT = subT, the LEVEL row focused, nothing else", lk.app.lockR === 7 && lk.app.lockT === 3.5 && J(lk.log) === J([["levelFocus", 0, -1]]) && lk.app.level === 1, lk.app.lockR + "/" + lk.app.lockT + " " + J(lk.log));
 }
 
 // ---- HIGH SCORES: a tab is app.move(i - scoreHeat, 0); -1 confirms (= back); -2 inert ----

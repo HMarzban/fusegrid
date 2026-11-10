@@ -26,7 +26,7 @@ function rig(o={}){
   const pad=createPad({getGamepads:()=>raw.list});
   const input=new Input(null);
   const world={state:o.state||"PLAY"};
-  const app={screen:o.screen===undefined?SCREEN.GAME:o.screen,pauseView:o.view||0};
+  const app={screen:o.screen===undefined?SCREEN.GAME:o.screen,pauseView:o.view||0,focus:[],levelFocus(r){this.focus.push(r);return true;}}; // levelFocus: LEVEL SELECT's START route (v202 Task 2.3)
   const ui=[];let pauses=0;
   const binds=o.binds||DEF_CONTROLS;
   const onPause=()=>{pauses++;if(app.screen!==SCREEN.GAME)return;
@@ -358,6 +358,19 @@ const fires=(inp,n)=>{let s="";for(let k=0;k<n;k++){s+=inp.intent().fire?"1":"0"
   check("PAUSE view 3 counts as CONTROLS",eq(w.log,["S"])&&eq(v.ui,["Enter"]));
   const a=rig({screen:SCREEN.CONTROLS,page:null});a.dn(S);
   check("no page object is inert, no crash",eq(a.ui,["Enter"]));
+}
+
+// ---- LEVEL SELECT's START (v202 Task 2.3): START always starts the run, so it focuses the START row before its one Enter;
+// SOUTH stays a plain Enter (on MODIFIERS it opens the list, in the list it toggles) ----
+{
+  const x=rig({screen:SCREEN.LEVEL});x.dn(START);
+  check("LEVEL: START focuses the START row (4), then one Enter",eq(x.app.focus,[4])&&eq(x.ui,["Enter"]));
+  const y=rig({screen:SCREEN.LEVEL});y.dn(S);
+  check("LEVEL: SOUTH is a plain Enter, no focus move",y.app.focus.length===0&&eq(y.ui,["Enter"]));
+  const z=rig({screen:SCREEN.LEVEL});z.dn(S,START);
+  check("LEVEL: SOUTH + START in one poll: START wins, one Enter",eq(z.app.focus,[4])&&eq(z.ui,["Enter"]));
+  const m=rig({screen:SCREEN.MENU});m.dn(START);
+  check("MENU: START is a plain Enter (no LEVEL focus)",m.app.focus.length===0&&eq(m.ui,["Enter"]));
 }
 
 // ---- shoulders ----

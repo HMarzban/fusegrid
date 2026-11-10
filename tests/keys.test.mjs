@@ -8,7 +8,8 @@ import { preloadControls } from "../src/app/controlswire.js";
 import { loadControlsArt } from "../src/render/shellview.js";
 import "../src/core/board3.js";
 import { createPixelRenderer } from "../src/render/pixel/renderer.js";
-import { SCREEN, ITEMS, GUIDE_ROWS, PAUSE_ITEMS, OPT_ROWS, IDLE_T } from "../src/app/menuapp.js";
+import { SCREEN, ITEMS, GUIDE_ROWS, PAUSE_ITEMS, OPT_ROWS, IDLE_T, FEELS } from "../src/app/menuapp.js";
+import { PACT } from "../src/core/pact.js";
 import { GFX_ROWS, DEMO_T } from "../src/app/gfx.js";
 import { graphicsGeom, layout as menuLayout, modeFocusOf } from "../src/render/menudraw.js";
 import { readFileSync } from "node:fs";
@@ -257,29 +258,29 @@ for (const at of [1.0, 2.0, 3.0, 4.0]) {
   }
 }
 
-// ---- LEVEL SELECT cues (polish 2026-10-19): ←/→, ↑/↓ and [ ] each play ONE
-// uiMove per change through the real keydown path, and none at a clamp edge
-// (pace used to change silently). ----
+// ---- LEVEL SELECT cues (polish 2026-10-19; rows since v202 Task 2.3): ←/→ on a value row, ↓ to the next row and [ ] each
+// play ONE uiMove per change through the real keydown path, and none at a clamp edge (pace used to change silently). ----
 {
   const plays = [];
   const g = mk({ audio: { play: (n) => plays.push(n), toggle: () => false, duck: noop, pump: noop, unlocked: () => false } });
   g.app.skip(); g.app.cursor = ITEMS.indexOf("LEVEL SELECT"); g.app.confirm(); g.tick(2);
   const lv0 = g.app.screen === SCREEN.LEVEL;
   plays.length = 0; press(g, "ArrowRight"); const a = plays.join();
-  plays.length = 0; press(g, "ArrowUp"); const b = plays.join();
+  plays.length = 0; press(g, "ArrowDown"); const b0 = plays.join();
+  plays.length = 0; press(g, "ArrowRight"); const b = plays.join();
   plays.length = 0; press(g, "BracketRight"); const c = plays.join();
   plays.length = 0; press(g, "BracketRight"); const d = plays.join();
-  check("LEVEL → / ↑ / ] each cue exactly one uiMove",
-    lv0 && a === "uiMove" && b === "uiMove" && c === "uiMove" && g.app.level === 2 && g.app.heat === 1 && g.app.pace === 1, [lv0, a, b, c, g.app.level, g.app.heat, g.app.pace].join("|"));
+  check("LEVEL → / ↓ then → on DIFFICULTY / ] each cue exactly one uiMove",
+    lv0 && a === "uiMove" && b0 === "uiMove" && b === "uiMove" && c === "uiMove" && g.app.level === 2 && g.app.heat === 1 && g.app.pace === 1, [lv0, a, b0, b, c, g.app.level, g.app.heat, g.app.pace].join("|"));
   check("LEVEL ] at HARD clamps silently", d === "" && g.app.pace === 1, d);
 }
 // ---- LEVEL SELECT: the FLOOR line adds no key and moves none (#24) ----
 {
   const g = show(mk()); press(g, "Enter"); toRow(g, 1); press(g, "Enter");
   const scr = g.app.screen === SCREEN.LEVEL;
-  press(g, "ArrowRight"); press(g, "ArrowRight"); press(g, "ArrowUp"); press(g, "ArrowUp");
+  press(g, "ArrowRight"); press(g, "ArrowRight"); press(g, "ArrowDown"); press(g, "ArrowRight"); press(g, "ArrowRight");
   press(g, "KeyF"); press(g, "KeyT");
-  check("LEVEL: ←/→ and ↑/↓ as ever, F and T are not bound", scr && g.app.screen === SCREEN.LEVEL && g.app.level === 3 && g.app.heat === 2, g.app.level + "/" + g.app.heat);
+  check("LEVEL: ←/→ on the LEVEL row, ↓ then ←/→ on DIFFICULTY, F and T are not bound", scr && g.app.screen === SCREEN.LEVEL && g.app.level === 3 && g.app.heat === 2, g.app.level + "/" + g.app.heat);
   press(g, "Enter");
   check("LEVEL Enter starts that room on a tile board", g.app.screen === SCREEN.GAME && g.world.level === 3 && g.world.heat === 2 && g.world.gen === 3 && !!g.world.feat, g.world.gen);
   const e = show(mk()); press(e, "Enter"); toRow(e, 1); press(e, "Enter"); press(e, "Escape");
@@ -292,7 +293,7 @@ for (const at of [1.0, 2.0, 3.0, 4.0]) {
   const v1 = mem["nb.coach.v1"];
   mem["nb.coach.v1"] = "1";
   const g = show(mk()); press(g, "Enter"); toRow(g, 1); press(g, "Enter");
-  press(g, "ArrowRight"); press(g, "ArrowUp"); press(g, "ArrowUp"); press(g, "Enter");
+  press(g, "ArrowRight"); press(g, "ArrowDown"); press(g, "ArrowRight"); press(g, "ArrowRight"); press(g, "Enter");
   const w = g.world, p = w.players[0], F = CFG.TILE;
   check("room 2 at MAX, through the keys", g.app.screen === SCREEN.GAME && w.level === 2 && w.heat === 2 && w.gen === 3 && !!w.feat, w.level + "/" + w.heat);
   for (const e of w.enemies) e.speed = 0;
@@ -321,18 +322,20 @@ for (const at of [1.0, 2.0, 3.0, 4.0]) {
   check("an F2 run at MAX: no tile layer, no tile tip", g.world.gen === 2 && !g.world.feat && !g.ro.coach2.k && !(mem["nb.coach.v2"] || "").includes('"z":1'), g.world.gen);
   delete mem["nb.coach.v2"];
 }
-// ---- LEVEL SELECT: ←/→ room, ↑/↓ heat, [ ] pace, 1–5 when unlocked, Enter, Esc ----
+// ---- LEVEL SELECT: ←/→ room on the LEVEL row, ↓ then ←/→ heat on DIFFICULTY, [ ] pace, 1–5 when unlocked, Enter, Esc ----
 {
   const g = menu(); toRow(g, 1); press(g, "Enter");
   press(g, "ArrowRight"); press(g, "KeyD"); press(g, "ArrowLeft");
   const lv = g.app.level;
-  press(g, "ArrowUp"); const h1 = g.app.heat; press(g, "ArrowDown"); const h0 = g.app.heat; press(g, "KeyW");
+  press(g, "ArrowDown"); press(g, "ArrowRight"); const h1 = g.app.heat; press(g, "ArrowLeft"); const h0 = g.app.heat; press(g, "KeyD");
   press(g, "BracketRight"); const p1 = g.app.pace; press(g, "BracketLeft"); press(g, "BracketLeft");
   press(g, "Digit1");
   check("LEVEL → / D raise the room, ← lowers it", lv === 2, lv);
-  check("LEVEL ↑ / W raise heat, ↓ lowers it", h1 === 1 && h0 === 0 && g.app.heat === 1, h1 + "," + h0 + "," + g.app.heat);
+  check("LEVEL ↓ to DIFFICULTY, then → / D raise heat, ← lowers it", h1 === 1 && h0 === 0 && g.app.heat === 1, h1 + "," + h0 + "," + g.app.heat);
   check("LEVEL ] raises pace, [ lowers it", g.app.pace === p1 - 2, p1 + "->" + g.app.pace);
   check("LEVEL 1 is inert before the first clear", (g.app.pact | 0) === 0, g.app.pact);
+  press(g, "KeyW");
+  check("LEVEL W / ↑ walks back to the LEVEL row, heat kept", g.app.levelRow === 0 && g.app.heat === 1, g.app.levelRow + "/" + g.app.heat);
   for (let i = 0; i < 6; i++) press(g, "ArrowRight");
   check("LEVEL → clamps at room 5 while locked", g.app.level === 5, g.app.level);
   press(g, "Enter");
@@ -346,6 +349,119 @@ for (const at of [1.0, 2.0, 3.0, 4.0]) {
   check("LEVEL 5 toggles TIME ATTACK once unlocked", u.app.timeAttack === true);
   for (let i = 0; i < 9; i++) press(u, "ArrowRight");
   check("LEVEL → reaches room 8 once unlocked", u.app.level === 8, u.app.level);
+}
+
+// ---- LEVEL SELECT matrix (v202 Task 2.3; design record §4 "LEVEL SELECT: one path"; the lead's rulings 1-10): every row
+// focused (0 LEVEL, 1 DIFFICULTY, 2 GAME SPEED, 3 MODIFIERS, 4 START), modifiers offered and not, and the open MODIFIERS list
+// (cursor on ONE LIFE, FEWER ITEMS, TIME TRIAL), x every key, through the real keydown listeners and main's cue wrappers.
+// Base: level 3, HARD, NORMAL speed, no modifiers, so every step has room. Each row checks the screen, the focused row, the
+// list and its cursor, level, difficulty, speed, the modifier mask and TIME TRIAL, the run started (from the world), the cues
+// and the one ranked feel the press leaves. Expected values come from the rulings, never from reading the handlers back. ----
+const LVPLAY = [];
+const LVAUD = { play: (n) => LVPLAY.push(n), toggle: () => false, duck: noop, unlocked: () => true, pump: noop, unlock: () => true };
+const LVBITS = [PACT.LAST, PACT.BARE, PACT.THIN, PACT.SHRINK];
+const LVROW = ["LEVEL", "DIFFICULTY", "GAME SPEED", "MODIFIERS", "START"];
+const lvWalk = (U) => (U ? [0, 1, 2, 3, 4] : [0, 1, 2, 4]);
+const lvTop = (fs) => fs.reduce((a, f) => (!a || FEELS.indexOf(f) < FEELS.indexOf(a) ? f : a), "");
+const lvStates = () => [...[false, true].flatMap((U) => lvWalk(U).map((row) => ({ U, row }))), ...[0, 2, 4].map((cur) => ({ U: true, row: 3, open: true, cur }))];
+const lvName = (s) => (s.open ? "the open list on " + ["ONE LIFE", "NO FLOOR ITEMS", "FEWER ITEMS", "SHRINK", "TIME TRIAL"][s.cur] : LVROW[s.row] + (s.U ? "" : " (no modifiers)"));
+/* The rulings as a table: the state after one press of k (a key code, or START for the controller's START). */
+function lvWant(s, k) {
+  const e = { scr: SCREEN.LEVEL, row: s.row, open: !!s.open, cur: s.open ? s.cur : -1, level: 3, heat: 1, pace: 0, pact: 0, time: false, run: null, cues: "", feel: "" };
+  const W = lvWalk(s.U), i = W.indexOf(s.row);
+  const go = () => Object.assign(e, { scr: SCREEN.GAME, run: { level: e.level, heat: e.heat, pace: e.pace, pact: e.pact }, cues: "uiSel", feel: "launch" });
+  const tog = (j) => { if (j < 4) e.pact ^= LVBITS[j]; else e.time = !e.time; };
+  switch (k) {
+    case "ArrowLeft": case "ArrowRight": { // the focused row's value; nothing on MODIFIERS, START or in the list
+      const d = k === "ArrowLeft" ? -1 : 1;
+      if (e.open || s.row > 2) break;
+      if (s.row === 0) e.level += d; else if (s.row === 1) e.heat += d; else e.pace += d;
+      Object.assign(e, { cues: "uiMove", feel: "move" });
+      break;
+    }
+    case "ArrowUp": case "ArrowDown": { // the rows (MODIFIERS skipped when not offered), or the list's entries; clamped, silent at an edge
+      const d = k === "ArrowUp" ? -1 : 1;
+      if (e.open) { const n = s.cur + d; if (n >= 0 && n <= 4) Object.assign(e, { cur: n, cues: "uiMove", feel: "move" }); }
+      else { const j = i + d; if (j >= 0 && j < W.length) Object.assign(e, { row: W[j], cues: "uiMove", feel: "move" }); }
+      break;
+    }
+    case "Enter": case "Space": // toggle in the list, open it on MODIFIERS, else start the run
+      if (e.open) { tog(s.cur); Object.assign(e, { cues: "uiSel", feel: "confirm" }); }
+      else if (s.row === 3) Object.assign(e, { open: true, cur: 0, cues: "uiSel", feel: "enter" });
+      else go();
+      break;
+    case "Escape": case "Backspace": // close the list first, then leave for MENU on LEVEL SELECT
+      if (e.open) Object.assign(e, { open: false, cur: -1, cues: "uiBack", feel: "back" });
+      else Object.assign(e, { scr: SCREEN.MENU, cues: "uiBack", feel: "back" });
+      break;
+    case "BracketLeft": case "BracketRight": // the pace shortcut from anywhere, the focus kept
+      e.pace += k === "BracketLeft" ? -1 : 1;
+      Object.assign(e, { cues: "uiMove", feel: "confirm" });
+      break;
+    case "START": // the controller's START always starts, from any row, the list open or shut
+      Object.assign(e, { row: 4, open: false, cur: -1 });
+      go();
+      break;
+    default: { const m = /^Digit([1-5])$/.exec(k); if (m && s.U) { tog(+m[1] - 1); e.feel = "confirm"; } } // the digit shortcuts: silent, as before
+  }
+  return e;
+}
+const lvGot = (g) => { const a = g.app, w = g.world; return { scr: a.screen, row: a.levelRow, open: a.modOpen, cur: a.modeCur, level: a.level, heat: a.heat, pace: a.pace, pact: a.pact | 0, time: a.timeAttack, run: a.screen === SCREEN.GAME ? { level: w.level, heat: w.heat | 0, pace: w.pace | 0, pact: w.pact | 0 } : null, cues: LVPLAY.join(), feel: lvTop(g.fs) }; };
+const lvSpy = (g) => { const f0 = g.app._feel.bind(g.app); g.fs = []; g.app._feel = (n) => { g.fs.push(n); return f0(n); }; LVPLAY.length = 0; return g; };
+const lvMem = () => { const s = { p: mem["nb.pace.v1"], t: mem["nb.times.v1"] }; return () => { for (const [k, v] of [["nb.pace.v1", s.p], ["nb.times.v1", s.t]]) if (v === undefined) delete mem[k]; else mem[k] = v; }; };
+{
+  const restore = lvMem();
+  /* setup by state (the walk, the entry and the list's opening are rows of this matrix and of tests/level-select.test.mjs) */
+  const lvAt = (s) => {
+    const g = mk({ audio: LVAUD }); g.app.cabinetSeen = true; g.app.skip();
+    g.app.pactUnlocked = s.U; g.app.cursor = ITEMS.indexOf("LEVEL SELECT"); g.app.confirm(); g.tick(2);
+    Object.assign(g.app, { level: 3, heat: 1, pace: 0, pact: 0, timeAttack: false, levelRow: s.row, modOpen: !!s.open, modeCur: s.open ? s.cur : -1 });
+    return lvSpy(g);
+  };
+  const KEYS_LV = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Enter", "Space", "Escape", "Backspace", "BracketLeft", "BracketRight", "Digit1", "Digit2", "Digit3", "Digit4", "Digit5"];
+  for (const s of lvStates()) for (const k of KEYS_LV) {
+    const g = lvAt(s), w = lvWant(s, k);
+    press(g, k); g.tick();
+    const got = lvGot(g), ok = JSON.stringify(got) === JSON.stringify(w) && (w.scr !== SCREEN.MENU || g.app.cursor === ITEMS.indexOf("LEVEL SELECT"));
+    check("LEVEL keys: " + lvName(s) + " + " + k + " -> " + (w.scr === SCREEN.GAME ? "a run " + JSON.stringify(w.run) : w.scr === SCREEN.MENU ? "MENU on LEVEL SELECT" : (w.open ? "list " + w.cur : LVROW[w.row])) + ", cues [" + w.cues + "], feel " + (w.feel || "none"),
+      ok, JSON.stringify(got) + " vs " + JSON.stringify(w));
+  }
+  /* ruling 10: a start from LEVEL SELECT starts exactly what the page shows, from every row that starts */
+  for (const row of [0, 1, 2, 4]) for (const k of ["Enter", "Space"]) {
+    const g = lvAt({ U: true, row });
+    Object.assign(g.app, { level: 4, heat: 2, pace: 1, pact: PACT.LAST | PACT.THIN, timeAttack: true });
+    press(g, k); g.tick();
+    check("LEVEL keys: " + k + " on " + LVROW[row] + " starts level 4, EXPERT, FAST, ONE LIFE + FEWER ITEMS (what the page shows)",
+      g.app.screen === SCREEN.GAME && g.world.level === 4 && g.world.heat === 2 && g.world.pace === 1 && g.world.pact === (PACT.LAST | PACT.THIN), [g.world.level, g.world.heat, g.world.pace, g.world.pact].join("/"));
+  }
+  /* the lock cannot be bypassed by any key path */
+  {
+    const g = lvAt({ U: false, row: 0 });
+    down("ArrowRight"); g.tick(90); up("ArrowRight"); g.tick(2);
+    check("LEVEL keys (locked): → held from 3 stops at 5, one uiMove a level, the card flashes level 6 once (one deny) for the whole hold",
+      g.app.level === 5 && LVPLAY.join() === "uiMove,uiMove" && g.fs.filter((f) => f === "deny").length === 1 && g.app.lockR === 6, g.app.level + " " + LVPLAY.join() + " " + g.fs.join());
+    LVPLAY.length = 0; g.fs.length = 0;
+    press(g, "ArrowRight");
+    check("LEVEL keys (locked): one press of → at 5 flashes once and plays no cue", g.app.level === 5 && LVPLAY.length === 0 && g.fs.join() === "deny", g.fs.join());
+    for (const k of ["Digit1", "Digit2", "Digit3", "Digit4", "Digit5"]) press(g, k);
+    press(g, "Enter");
+    check("LEVEL keys (locked): Enter after the flash and 1-5 starts level 5, no modifier, never the locked level", g.app.screen === SCREEN.GAME && g.world.level === 5 && (g.world.pact | 0) === 0, g.world.level + "/" + g.world.pact);
+  }
+  /* held repeat: rows walk at the menu rate and stop silently; a held → on DIFFICULTY steps it; a held ↓ walks the list */
+  for (const U of [false, true]) {
+    const g = lvAt({ U, row: 0 });
+    down("ArrowDown"); g.tick(120); up("ArrowDown"); g.tick(2);
+    check("LEVEL keys: ↓ held walks every row to START and stops there silently (" + (U ? "offered" : "not offered") + ")", g.app.levelRow === 4 && LVPLAY.filter((n) => n === "uiMove").length === lvWalk(U).length - 1 && g.app.heat === 1, g.app.levelRow + " " + LVPLAY.join());
+  }
+  {
+    const g = lvAt({ U: true, row: 1 }); g.app.heat = 0;
+    down("ArrowRight"); g.tick(90); up("ArrowRight"); g.tick(2);
+    check("LEVEL keys: → held on DIFFICULTY steps NORMAL -> EXPERT and stops silently", g.app.heat === 2 && LVPLAY.join() === "uiMove,uiMove" && g.app.levelRow === 1, g.app.heat + " " + LVPLAY.join());
+    const h = lvAt({ U: true, row: 3, open: true, cur: 0 });
+    down("ArrowDown"); h.tick(120); up("ArrowDown"); h.tick(2);
+    check("LEVEL keys: ↓ held in the open list walks to TIME TRIAL and stops silently", h.app.modeCur === 4 && h.app.modOpen && LVPLAY.filter((n) => n === "uiMove").length === 4, h.app.modeCur + " " + LVPLAY.join());
+  }
+  restore();
 }
 
 // ---- DAILY ----
@@ -1264,6 +1380,52 @@ for (const code of ["Space", "Enter"]) {
     check("T14: a MODES step plays one uiMove, the clamped end is silent", one === "uiMove" && plays.length === 1, plays.join()); }
   { const g = pLevel(); tap(g, "TRR"); tap(g, "TRR");
     check("T14: the ring reads the live cursor", modeFocusOf() === 1 && g.app.modeCur === 1, modeFocusOf()); }
+  /* LEVEL SELECT on a controller (v202 Task 2.3): the keyboard matrix's states x D-PAD four ways, SOUTH, EAST, START and the
+     shoulders, through the real poller, router and seam (lvWant is the same table: D-PAD = arrows, SOUTH = Enter, EAST = Escape,
+     the shoulders = [ ]); START always starts the run. */
+  {
+    const restore = lvMem();
+    const PADKEY = { dL: "ArrowLeft", dR: "ArrowRight", dU: "ArrowUp", dD: "ArrowDown", S: "Enter", E: "Escape", START: "START", SHL: "BracketLeft", SHR: "BracketRight" };
+    const pLv = (s) => { // the pad's first sight on the first poll (nothing pressed, so nothing to swallow), then the page set by state like the keyboard matrix
+      const g = pk({ audio: LVAUD }); g.app.cabinetSeen = true; g.app.skip(); g.tick(1);
+      g.app.pactUnlocked = s.U; g.app.cursor = ITEMS.indexOf("LEVEL SELECT"); g.app.confirm(); g.tick(2);
+      Object.assign(g.app, { level: 3, heat: 1, pace: 0, pact: 0, timeAttack: false, levelRow: s.row, modOpen: !!s.open, modeCur: s.open ? s.cur : -1 });
+      return lvSpy(g);
+    };
+    for (const s of lvStates()) for (const [id, k] of Object.entries(PADKEY)) {
+      const g = pLv(s), w = lvWant(s, k);
+      tap(g, id); g.tick();
+      const got = lvGot(g), ok = JSON.stringify(got) === JSON.stringify(w) && (w.scr !== SCREEN.MENU || g.app.cursor === ITEMS.indexOf("LEVEL SELECT"));
+      check("LEVEL controller: " + lvName(s) + " + " + id + " -> " + (w.scr === SCREEN.GAME ? "a run " + JSON.stringify(w.run) : w.scr === SCREEN.MENU ? "MENU on LEVEL SELECT" : (w.open ? "list " + w.cur : LVROW[w.row])) + ", cues [" + w.cues + "], feel " + (w.feel || "none"),
+        ok, JSON.stringify(got) + " vs " + JSON.stringify(w));
+    }
+    for (const s of [...[0, 1, 2, 3, 4].map((row) => ({ U: true, row })), { U: true, row: 3, open: true, cur: 2 }]) for (const id of s.row === 3 ? ["START"] : ["S", "START"]) {
+      const g = pLv(s);
+      Object.assign(g.app, { level: 4, heat: 2, pace: 1, pact: PACT.LAST | PACT.THIN, timeAttack: true });
+      tap(g, id); g.tick();
+      check("LEVEL controller: " + id + " on " + lvName(s) + " starts level 4, EXPERT, FAST, ONE LIFE + FEWER ITEMS (what the page shows)",
+        g.app.screen === SCREEN.GAME && g.world.level === 4 && g.world.heat === 2 && g.world.pace === 1 && g.world.pact === (PACT.LAST | PACT.THIN), [g.app.screen, g.world.level, g.world.heat, g.world.pace, g.world.pact].join("/"));
+    }
+    {
+      const g = pLv({ U: true, row: 3 });
+      g.pad.set("S", true); g.pad.set("START", true); g.tick(3); g.pad.set("S", false); g.pad.set("START", false); g.tick(2);
+      check("LEVEL controller: SOUTH + START in one poll on MODIFIERS: START wins, one run, the list never opens", g.app.screen === SCREEN.GAME && LVPLAY.join() === "uiSel" && g.world.level === 3, g.app.screen + " " + LVPLAY.join());
+    }
+    {
+      const g = pLv({ U: false, row: 0 });
+      g.pad.set("dR", true); g.tick(90); g.pad.set("dR", false); g.tick(2);
+      check("LEVEL controller (locked): D-PAD → held from 3 stops at 5 and flashes level 6 once", g.app.level === 5 && LVPLAY.join() === "uiMove,uiMove" && g.fs.filter((f) => f === "deny").length === 1 && g.app.lockR === 6, g.app.level + " " + LVPLAY.join() + " " + g.fs.join());
+      tap(g, "dR"); tap(g, "START");
+      check("LEVEL controller (locked): another → then START starts level 5, never the locked level", g.app.screen === SCREEN.GAME && g.world.level === 5, g.world.level);
+      const d = pLv({ U: true, row: 0 });
+      d.pad.set("dD", true); d.tick(120); d.pad.set("dD", false); d.tick(2);
+      check("LEVEL controller: D-PAD ↓ held walks every row to START and stops silently", d.app.levelRow === 4 && LVPLAY.filter((n) => n === "uiMove").length === 4, d.app.levelRow + " " + LVPLAY.join());
+      const t = pLv({ U: true, row: 3, open: true, cur: 0 });
+      tap(t, "TRR");
+      check("LEVEL controller: R TRIGGER in the open list walks the same cursor", t.app.modeCur === 1 && t.app.modOpen, t.app.modeCur);
+    }
+    restore();
+  }
   { const g = pMenu(); const calls = []; globalThis.__load = { padLive: (pad) => { calls.push("live:" + pad); return true; }, padPress: (id) => calls.push(id) };
     const c0 = g.app.cursor; g.tick(2); tap(g, "S");
     const early = calls.filter((c) => !c.startsWith("live")).length;

@@ -9,7 +9,7 @@
 // 110ms. key(code) is the discrete side-channel (Enter/Esc/Backspace/M +
 // arrows/WASD as taps); taps are handed to update() via a per-frame consume map
 // so wiring BOTH channels never double-moves.
-import { roomCap } from "../core/config.js";
+import { roomCap, ROOM_MAX } from "../core/config.js";
 import { clampHeat } from "../core/heat.js";
 import { clampPact, PACT, togglePact } from "../core/pact.js";
 import { clampPace } from "../core/pace.js";
@@ -54,6 +54,14 @@ export const ITEMS = Object.freeze([
 export const RECORD_SCREENS = Object.freeze([SCREEN.SCORES, SCREEN.STATS, SCREEN.TROPHIES]);
 /** One of RECORDS' three pages. */
 export const isRecords = (s) => RECORD_SCREENS.indexOf(s) >= 0;
+/* LEVEL SELECT rows (v202 Task 2.3; design record §4, "LEVEL SELECT: one path"), frozen and index-addressed: levelRow and
+   menudraw's levelGeom rows count this array. ↑↓ walk them (MODIFIERS only once modifiers are offered, the first CLEAR), ←→
+   change the focused one, confirm starts the run; on MODIFIERS it opens the inline list (app.modOpen, modeCur its cursor:
+   the four modifier bits, then TIME TRIAL, the Digit1-5 order). No SCREEN. */
+export const LEVEL_ROWS = Object.freeze(["LEVEL", "DIFFICULTY", "GAME SPEED", "MODIFIERS", "START"]);
+const LV_MODS = LEVEL_ROWS.indexOf("MODIFIERS"),
+  LV_START = LEVEL_ROWS.indexOf("START"),
+  MODS_N = 5;
 /* GUIDE rows, frozen and index-addressed: guideRow, drawGuide and confirm's
    GUIDE dispatch all count this array. */
 export const GUIDE_ROWS = Object.freeze(["HOW TO PLAY", "POWER-UPS", "ENEMIES", "FLOOR"]);
@@ -112,6 +120,8 @@ export function createMenuApp(opts = {}) {
     // survives a round trip through the page
     guideRow: 0, // GUIDE row cursor — its OWN field too, same reason
     recFocus: 0, // RECORDS: 0 the tab row, 1 the page body; every arrival lands on the tab row
+    levelRow: 0, // LEVEL SELECT's focused row (LEVEL_ROWS); every entry lands on LEVEL
+    modOpen: false, // LEVEL SELECT's MODIFIERS list is open inline, modeCur its cursor
     pauseCursor: 0,
     pauseView: 0, // 0 list / 1 inline SETTINGS / 2 inline GRAPHICS / 3 inline CONTROLS; reset on the PLAY->PAUSE edge
     controls: o.controls || null, // the CONTROLS page (controlspage.js); null = the door is inert
@@ -120,7 +130,7 @@ export function createMenuApp(opts = {}) {
     lastDev: "key", // raw last-used device "key" | "pad" | "touch", no dwell: opens the page's tab and gates the consent row
     padNote: "", // CONTROLLER LOST / BACK / READY, written by the controls seam
     padCards: [], // the cards a pad may answer, {live, press}: never the consent card (padroute.js)
-    modeCur: -1, // LEVEL MODES chip a pad has focused; -1 = none yet. Shell-only, never reaches a run
+    modeCur: -1, // LEVEL SELECT's MODIFIERS chip in focus: the open list's cursor, or a pad's TRIGGER cursor; -1 = none. Shell-only, never reaches a run
     _anaSaid: false,
     gfxRow: 0, // GRAPHICS row cursor — its own field, like guideRow
     gfxChg: 0, // GRAPHICS rows (bitmask) the last accepted change touched: the togT glow lights them all
@@ -280,6 +290,7 @@ export function createMenuApp(opts = {}) {
         this.repAxis = 0;
         this.repT = 0;
         this._hot = false;
+        this._lockHeld = false; // released: the next press may flash LEVEL SELECT's lock again
       }
     },
     /* Discrete key tap (Enter/Esc/Backspace/M + arrows-as-tap fallback). */
@@ -405,6 +416,9 @@ export function createMenuApp(opts = {}) {
               return this.startRun();
             case "LEVEL SELECT":
               this.modeCur = -1;
+              this.levelRow = 0;
+              this.modOpen = false;
+              this._lockHeld = false;
               return this._push(SCREEN.LEVEL);
             case "DAILY":
               return this.startDaily();
@@ -424,7 +438,7 @@ export function createMenuApp(opts = {}) {
           return false;
         }
         case SCREEN.LEVEL:
-          return this.startRun();
+          return this._levelConfirm();
         case SCREEN.SETTINGS:
           return this._conf(this.optCycle());
         case SCREEN.GRAPHICS:
@@ -475,6 +489,10 @@ export function createMenuApp(opts = {}) {
       if (isRecords(this.screen)) { // any tab, tab row or body: MENU on RECORDS
         this.cursor = ITEMS.indexOf("RECORDS");
         return this._push(SCREEN.MENU, 1);
+      }
+      if (this.screen === SCREEN.LEVEL && this.modOpen) { // the open list closes first, onto its MODIFIERS row
+        this._modClose();
+        return this._feel("back");
       }
       if (
         this.screen === SCREEN.LEVEL ||
@@ -562,16 +580,15 @@ export function createMenuApp(opts = {}) {
         return true;
       }
       if (this.screen === SCREEN.LEVEL) {
-        if ((axis | 0) === 1) {
-          const nh = clampHeat(this.heat - dir); // up (dir -1) heats; any delta, so a chip tap is one move
-          if (nh === this.heat) return false;
-          this.heat = nh;
-          return true;
-        }
-        const cap = roomCap(this.pactUnlocked);
-        const nl = Math.min(cap, Math.max(1, this.level + dir));
-        if (nl === this.level) return false;
-        this.level = nl;
+        if ((axis | 0) === 1) return this.modOpen ? this._modStep(dir) : this._rowStep(dir);
+        if (this.modOpen) return false; // ←→ do nothing in the open list
+        const r = LEVEL_ROWS[this.levelRow];
+        if (r === "LEVEL") return this._levelStep(dir);
+        if (r === "GAME SPEED") return this._pace(dir);
+        if (r !== "DIFFICULTY") return false; // MODIFIERS and START have no value
+        const nh = clampHeat(this.heat + dir); // → raises it; any delta, so a segment tap is one move
+        if (nh === this.heat) return false;
+        this.heat = nh;
         return true;
       }
       if (isRecords(this.screen)) {
@@ -622,14 +639,79 @@ export function createMenuApp(opts = {}) {
       this.recFocus = f;
       return true;
     },
+    /* The [ ] keys, a controller's shoulders and a GAME SPEED tap; ←→ on the GAME SPEED row step the same _pace through move(). */
     adjustPace(dir) {
       this.idleT = 0;
       if (this.screen !== SCREEN.LEVEL) return false;
+      return this._pace(dir) && this._feel("confirm");
+    },
+    _pace(dir) {
       const np = clampPace(this.pace + dir);
       if (np === this.pace) return false;
       this.pace = np;
       if (o.onPaceChange) o.onPaceChange(np);
-      return this._feel("confirm");
+      return true;
+    },
+    /* ↑↓ on LEVEL SELECT: the next row, MODIFIERS skipped until modifiers are offered; clamped, never wrapping. */
+    _rowStep(dir) {
+      const s = dir < 0 ? -1 : 1;
+      let r = this.levelRow + s;
+      if (r === LV_MODS && !this.pactUnlocked) r += s;
+      if (r < 0 || r > LV_START) return false;
+      this.levelRow = r;
+      return true;
+    },
+    /* ↑↓ in the open MODIFIERS list: clamped at both ends, ↑ on the first entry stays (the list closes on Esc only). */
+    _modStep(dir) {
+      const n = Math.max(0, Math.min(MODS_N - 1, this.modeCur + (dir < 0 ? -1 : 1)));
+      if (n === this.modeCur) return false;
+      this.modeCur = n;
+      return true;
+    },
+    _modClose() {
+      this.modOpen = false;
+      this.modeCur = -1;
+    },
+    /* ←→ on the LEVEL row (a tile tap passes its delta). Past the last open level a locked one is refused, never selected:
+       its card flashes CLEAR LEVEL 5 TO OPEN as a tap on its tile does (lockR / lockT) and the feel is deny, once a press or
+       a hold (_lockHeld, cleared when the arrows are let go). */
+    _levelStep(d) {
+      const cap = roomCap(this.pactUnlocked);
+      if (this.level === cap && this.level + d > cap) {
+        if (cap < ROOM_MAX && !this._lockHeld) {
+          this._lockHeld = true;
+          this.lockR = cap + 1;
+          this.lockT = this.subT;
+          this._feel("deny");
+        }
+        return false;
+      }
+      const nl = Math.min(cap, Math.max(1, this.level + d));
+      if (nl === this.level) return false;
+      this.level = nl;
+      return true;
+    },
+    /* Enter, the BOMB alias, SOUTH on LEVEL SELECT: in the open list toggle the focused entry through its digit (the path the
+       1-5 keys take), on MODIFIERS open the list, on any other row start the run. */
+    _levelConfirm() {
+      if (this.modOpen) return this.key("Digit" + (this.modeCur + 1));
+      if (this.levelRow === LV_MODS && this.pactUnlocked) {
+        this.modOpen = true;
+        if (this.modeCur < 0) this.modeCur = 0;
+        return this._feel("enter");
+      }
+      return this.startRun();
+    },
+    /* A tap's row (pointer.js) and a controller's START (padroute.js): the focus moves to the row first, leaving MODIFIERS
+       closes the list, a chip tap in the open list moves its cursor there. No cue, no feel: what follows cues itself. */
+    levelFocus(r, i) {
+      if (this.screen !== SCREEN.LEVEL || !(r >= 0 && r <= LV_START) || (r === LV_MODS && !this.pactUnlocked)) return false;
+      this.idleT = 0;
+      this.parked = false;
+      this.levelRow = r;
+      if (r !== LV_MODS) this._modClose();
+      else if (this.modOpen && i >= 0 && i < MODS_N) this.modeCur = i;
+      return true;
     },
     /* SETTINGS knobs (spec §2). LEVEL SELECT is the only precedent for
        in-subscreen adjustment, so this copies its move(dir,axis) shape: axis 1
@@ -956,7 +1038,8 @@ export function createMenuApp(opts = {}) {
       this.togT = -1;
       return this._feel("enter");
     },
-    /* A pad's L/R TRIGGER on LEVEL SELECT. The first step lands on an end; the ends clamp and are silent. */
+    /* A pad's L/R TRIGGER on LEVEL SELECT, with the list open or shut (one cursor over the chips). The first step lands on an
+       end; the ends clamp and are silent. */
     modeWalk(d) {
       this.idleT = 0;
       if (this.screen !== SCREEN.LEVEL || !this.pactUnlocked) return false;

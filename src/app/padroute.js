@@ -1,5 +1,5 @@
 // The router from pad state to Input and the shell. Plan: docs/superpowers/plans/2026-11-02-controls-feature.md T7.
-import { SCREEN as SHELL } from "./menuapp.js";
+import { SCREEN as SHELL, LEVEL_ROWS } from "./menuapp.js";
 
 const NONE = Object.freeze({ up: false, down: false, left: false, right: false });
 const TAPS = [["up", "ArrowUp"], ["right", "ArrowRight"], ["down", "ArrowDown"], ["left", "ArrowLeft"]];
@@ -48,7 +48,8 @@ export function createPadRouter({ input, app, SCREEN, binds, world, onPause, onU
     const alias = binds().pad.PAUSE, was0 = sig();
     let ok = false;
     if (scr === SCREEN.STATS && press.length) app.resetArm = false; // R arms (keyboard only); any button cancels it, as any other key does
-    const enter = () => { if (!ok) { ok = true; onUiKey("Enter"); } };
+    const go = scr === SCREEN.LEVEL && press.includes("START"); // LEVEL SELECT: START always starts the run, from any row, the list open or shut, and wins a tie with SOUTH
+    const enter = () => { if (!ok) { ok = true; if (go) app.levelFocus(LEVEL_ROWS.indexOf("START")); onUiKey("Enter"); } };
     for (const id of press) {
       if (onPage && page && page.feedBtn(id, t)) continue;
       if (ended) { if (id === "S" || id === "START") enter(); else if (END_COPY[id]) onUiKey(END_COPY[id]); }

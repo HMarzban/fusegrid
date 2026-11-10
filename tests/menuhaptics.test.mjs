@@ -242,6 +242,35 @@ const at = (g, label) => { g.app.cursor = ITEMS.indexOf(label); g.tick(2); };
   f = feel(g, () => tap(g, "N"));
   check("NORTH toggles the mode: confirm", g.app.pact !== 0 && f === "confirm", f);
 }
+{
+  /* LEVEL SELECT rows (v202 Task 2.3): a row step or a value step is move, the lock's refusal deny, opening the list enter,
+     a toggle in it confirm, closing it back, START launch from the open list; nothing at a clamped edge */
+  const g = menu(); at(g, "LEVEL SELECT"); tap(g, "S"); Object.assign(g.app, { level: 5, heat: 0, pace: 0 }); g.tick(2); // pace: an earlier check here saved FAST
+  let f = feel(g, () => tap(g, "dR"));
+  check("LEVEL: → at level 5 while locked flashes the lock: deny", g.app.level === 5 && g.app.lockR === 6 && f === "deny", f);
+  f = feel(g, () => tap(g, "dD"));
+  check("LEVEL: ↓ a row step: move", g.app.levelRow === 1 && f === "move", f);
+  f = feel(g, () => tap(g, "dR"));
+  check("LEVEL: → on DIFFICULTY, a value step: move", g.app.heat === 1 && f === "move", f);
+  f = feel(g, () => tap(g, "dD"));
+  f = feel(g, () => tap(g, "dR"));
+  check("LEVEL: → on GAME SPEED, a value step: move (the shoulders keep confirm)", g.app.levelRow === 2 && g.app.pace === 1 && f === "move", f);
+  f = feel(g, () => tap(g, "dR"));
+  check("LEVEL: → on GAME SPEED at FAST: clamped, silent", g.app.pace === 1 && f === "", f);
+  g.app.pactUnlocked = true; g.tick(2);
+  f = feel(g, () => tap(g, "dD"));
+  f = feel(g, () => tap(g, "S"));
+  check("LEVEL: SOUTH on MODIFIERS opens the list: enter", g.app.modOpen === true && f === "enter", f);
+  f = feel(g, () => tap(g, "dU"));
+  check("LEVEL: ↑ at the list's first entry: silent", g.app.modOpen === true && g.app.modeCur === 0 && f === "", f);
+  f = feel(g, () => tap(g, "S"));
+  check("LEVEL: SOUTH in the list toggles: confirm", g.app.pact !== 0 && f === "confirm", f);
+  f = feel(g, () => tap(g, "E"));
+  check("LEVEL: EAST closes the list: back", g.app.modOpen === false && g.app.screen === SCREEN.LEVEL && f === "back", f);
+  tap(g, "S");
+  f = feel(g, () => tap(g, "START"));
+  check("LEVEL: START from the open list: launch", g.app.screen === SCREEN.GAME && f === "launch", f);
+}
 
 // ---- deny, and refusals that show nothing ----
 {

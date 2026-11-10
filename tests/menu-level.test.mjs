@@ -72,18 +72,21 @@ const DT = 1 / 60;
   );
 }
 {
+  /* v202 Task 2.3: ↑↓ walk the rows (LEVEL, DIFFICULTY, ...); ←→ change the focused one. ↑↓ no longer change the heat. */
   const a = createMenuApp();
   a.screen = SCREEN.LEVEL;
   check("default heat is CORE", a.heat === 0);
-  a.key("ArrowUp");
-  check("LEVEL ArrowUp heats to PLUS", a.heat === 1 && a.level === 1);
-  a.key("ArrowUp");
-  a.key("ArrowUp");
-  check("LEVEL heat clamps at MAX", a.heat === 2);
   a.key("ArrowDown");
-  check("LEVEL ArrowDown cools to PLUS", a.heat === 1);
+  a.key("ArrowRight");
+  check("LEVEL ArrowDown to DIFFICULTY, then ArrowRight heats to PLUS", a.heat === 1 && a.level === 1 && a.levelRow === 1);
+  a.key("ArrowRight");
+  a.key("ArrowRight");
+  check("LEVEL heat clamps at MAX", a.heat === 2);
+  a.key("ArrowLeft");
+  check("LEVEL ArrowLeft cools to PLUS", a.heat === 1);
+  a.key("ArrowUp");
   a.move(-1);
-  check("LEVEL move() without axis still steps room", a.level === 1);
+  check("LEVEL move() without axis still steps room (on the LEVEL row)", a.level === 1 && a.heat === 1);
 }
 {
   const started = [];

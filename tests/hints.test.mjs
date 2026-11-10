@@ -154,7 +154,7 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
 /* ---- default copy, byte for byte ---- */
 {
   const WANT = [
-    ["LEVEL foot", PAGES.LEVEL(false), "ENTER START · ESC BACK"],
+    ["LEVEL foot", PAGES.LEVEL(false), "↑↓ ROW · ←→ ADJUST · ENTER START · ESC BACK"], // the LEVEL row focused (v202 Task 2.3: the foot follows the row)
     ["HOW TO foot", PAGES.HOWTO(false), "ESC / ENTER BACK"],
     ["ITEMS foot", PAGES.ITEMS(false), "WALK OVER A POWER-UP TO COLLECT · ESC BACK"],
     ["ENEMIES foot", PAGES.ENEMIES(false), "ESC BACK"],
@@ -174,7 +174,7 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
     ["show skip", (c) => md.drawIntroChrome(c, 1, 0.6, 600, 520, "d"), "ANY KEY TO SKIP"],
     ["show skip, touch", (c) => md.drawIntroChrome(c, 1, 0.6, 600, 520, "p"), "TAP TO SKIP"],
     ["title, touch", (c) => md.drawIntroChrome(c, 0, 1, 600, 520, "p"), "TAP TO START"],
-    ["LEVEL room cap", PAGES.LEVEL(false), "LEVEL  ← →"],
+    ["LEVEL room cap", PAGES.LEVEL(false), "LEVEL"], // caps name only keys that work from any row; ←→ live in the foot (Task 2.3)
     ["LEVEL pace cap", PAGES.LEVEL(false), "[ ]"],
     ["LEVEL modes cap", PAGES.LEVEL(false), "1–5"],
     ["LEVEL modes chip keeps its digit", PAGES.LEVEL(false), "1 ONE LIFE"],
@@ -219,7 +219,7 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
 {
   setHints(PAD);
   const PADWANT = [
-    ["LEVEL foot", PAGES.LEVEL(false), "SOUTH START · EAST BACK"],
+    ["LEVEL foot", PAGES.LEVEL(false), "↑↓ ROW · ←→ ADJUST · SOUTH START · EAST BACK"],
     ["HOW TO foot", PAGES.HOWTO(false), "REBIND IN SETTINGS › CONTROLS · EAST / SOUTH BACK"],
     ["ITEMS foot", PAGES.ITEMS(false), "WALK OVER A POWER-UP TO COLLECT · EAST BACK"],
     ["ENEMIES foot", PAGES.ENEMIES(false), "EAST BACK"],
@@ -243,7 +243,7 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
     ["HOW TO move", PAGES.HOWTO(false), "D-PAD / L-STICK"],
     ["HOW TO throw", PAGES.HOWTO(false), "WEST"],
     ["HOW TO pause", PAGES.HOWTO(false), "START"],
-    ["pad words on a touch layout: LEVEL", PAGES.LEVEL(true), "SOUTH START · EAST BACK"],
+    ["pad words on a touch layout: LEVEL", PAGES.LEVEL(true), "↑↓ ROW · ←→ ADJUST · SOUTH START · EAST BACK"],
     ["pad words on a touch layout: OPTIONS", PAGES.OPTIONS(true), "↑↓ ROW · ←→ ADJUST · SOUTH CYCLE · EAST BACK"],
     ["pad words on a touch layout: HOW TO", PAGES.HOWTO(true), "REBIND IN SETTINGS › CONTROLS · EAST / SOUTH BACK"],
     ["pad words on a touch layout: show skip", (c) => md.drawIntroChrome(c, 1, 0.6, 600, 520, "p"), "ANY BUTTON TO SKIP"],

@@ -450,7 +450,7 @@ function mkCanvas(){
   cv.calls.length=0; g.loop(5000); g.loop(5016);
   const foot=cv.calls.filter(c=>c[0]==="fillText").map(c=>String(c[1][0]));
   check("M1 touch LEVEL SELECT foot is the tap rule, not the key list",
-    g.app.screen===SCREEN.LEVEL&&foot.includes(LEVEL_TAP)&&!foot.some(t=>/^ENTER START/.test(t)), foot.filter(t=>/TAP|ENTER/.test(t)).join("|"));
+    g.app.screen===SCREEN.LEVEL&&foot.includes(LEVEL_TAP)&&!foot.some(t=>/ENTER START/.test(t)), foot.filter(t=>/TAP|ENTER/.test(t)).join("|"));
 }
 {
   const cv=mkCamCanvas(600,520);
@@ -458,7 +458,7 @@ function mkCanvas(){
   g.app.cabinetSeen=true; g.app.skip(); g.app.cursor=ITEMS.indexOf("LEVEL SELECT"); g.app.confirm();
   cv.calls.length=0; g.loop(16); g.loop(32);
   const foot=cv.calls.filter(c=>c[0]==="fillText").map(c=>String(c[1][0]));
-  check("M1 desktop LEVEL SELECT foot keeps the key list", foot.some(t=>/^ENTER START/.test(t))&&!foot.includes(LEVEL_TAP), foot.filter(t=>/TAP|ENTER/.test(t)).join("|"));
+  check("M1 desktop LEVEL SELECT foot keeps the key list (the focused row's: ↑↓ ROW · ←→ ADJUST · ENTER START · ESC BACK)", foot.some(t=>/^↑↓ ROW · ←→ ADJUST · ENTER START · ESC BACK$/.test(t))&&!foot.includes(LEVEL_TAP), foot.filter(t=>/TAP|ENTER/.test(t)).join("|"));
 }
 {
   const plays=[];
@@ -551,12 +551,12 @@ function mkCanvas(){
   const audio={play:n=>plays.push(n),toggle:()=>false};
   const g=createGame(null,{seed:14,audio});
   g.app.screen=SCREEN.LEVEL; g.app.level=1; g.app.heat=0;
-  g.app.key("ArrowUp");
-  check("I1 LEVEL ArrowUp through wrapper heats PLUS, room stays 1",
+  g.app.key("ArrowDown"); g.app.key("ArrowRight"); // v202 Task 2.3: ↓ to the DIFFICULTY row, → raises it (↑↓ walk rows now)
+  check("I1 LEVEL ArrowDown then ArrowRight through wrapper heats PLUS, room stays 1",
     g.app.heat===1&&g.app.level===1, "heat="+g.app.heat+" lv="+g.app.level);
   plays.length=0;
-  g.app.move(-1,1);
-  check("I1 wrapped move(-1,1) heats MAX and cues uiMove",
+  g.app.move(1,0);
+  check("I1 wrapped move(1,0) on DIFFICULTY heats MAX and cues uiMove",
     g.app.heat===2&&plays.join()==="uiMove",
     "heat="+g.app.heat+" plays="+plays.join());
 }
