@@ -255,9 +255,28 @@ if (G && W) {
   check("sheet corner marks (screen.css:17-21 under the kit's *{box-sizing:border-box}, kit5.css:30: the 1 px border is inside the CSS size): FACTORY round bolts 7 px, ARENA 7 px squares turned 45 deg, CROWN 9 px filigree with radii 2 / 50 % / 2 / 50 %, none elsewhere",
     J(NAMES.map((n) => WORLDS[n].corner)) === J([null, null, { kind: "bolt", size: 7, radii: [3.5, 3.5, 3.5, 3.5], rot: 0 }, null, { kind: "stud", size: 7, radii: [0, 0, 0, 0], rot: 45 }, null, null, { kind: "filigree", size: 9, radii: [2, 4.5, 2, 4.5], rot: 0 }]));
   /* ---- what the logo sits on, as the approved mock places it (corrected plate ruling) ---- */
-  check("PLATE: CSS px that never scale with the cap", PLATE.unit === "css" && PLATE.scales === false);
-  check("PLATE.title: the kit plate as the mock's marquee (screen.js:79-81): desktop one-line cap 88, padding 26 / 54 / 28 / 54, ring T 16, bed tile 80; phone stacked cap 76, padding 16 / 12 / 18 / 12, T 10, tile 56",
-    J(PLATE.title) === J({ plate: "kit", d: { build: "line", cap: 88, pad: [26, 54, 28, 54], T: 16, tile: 80 }, p: { build: "stack", cap: 76, pad: [16, 12, 18, 12], T: 10, tile: 56 } }));
+  check("PLATE: CSS px; the full-window placement scales nothing with the cap, the fitted title scales pad, ring T and bed tile", PLATE.unit === "css" && J(PLATE.scales) === J({ full: [], fitted: ["pad", "T", "tile"] }));
+  check("PLATE.title: the kit plate as the mock's marquee (screen.js:79-81): desktop one-line cap 88, padding 26 / 54 / 28 / 54, ring T 16, bed tile 80; phone stacked cap 76, padding 16 / 12 / 18 / 12, T 10, tile 56; fitted: scaled by cap / that cap, the kit plate's fixed reach 2 / 2 / 3 / 2 past its ring outside, tier title",
+    J(PLATE.title) === J({ plate: "kit", d: { build: "line", cap: 88, pad: [26, 54, 28, 54], T: 16, tile: 80 }, p: { build: "stack", cap: 76, pad: [16, 12, 18, 12], T: 10, tile: 56 }, fitted: { by: "cap / PLATE.title[dev].cap", reach: [2, 2, 3, 2], tier: "title", unit: "box" } }));
+  {
+    /* the fitted title (lead ruling, fix round 1): the title drawn into the box the caller has, the mock's plate scaled as one piece */
+    const { titleFit } = W, cases = [["desktop 600x520 board", "d", 576, 463], ["touch landscape 600x520 board", "d", 576, 459], ["touch portrait 600x520 board", "p", 576, 459], ["iso 608x352", "d", 584, 295], ["a small box (token-range cap)", "d", 400, 200]];
+    for (const [nm, dev, bw, bh] of cases) {
+      const f = titleFit(dev, bw, bh), ti = PLATE.title[dev], p = plan("CROWN", { fit: { w: bw, h: bh }, dev, dpr: 1 }), pl = p.layers[0], k = f.cap / ti.cap, R = PLATE.title.fitted.reach;
+      const fits = f.outer.w <= bw + 1e-9 && f.outer.h <= bh + 1e-9, grown = (f.outer.w - R[1] - R[3]) - (f.box.w + 2 * f.T);
+      const nextUp = titleFit(dev, bw, bh).cap + 0.01, E = layout(ti.build).env, over = nextUp * (E.w + (ti.pad[1] + ti.pad[3] + 2 * ti.T) / ti.cap) + R[1] + R[3] > bw || nextUp * (E.h + (ti.pad[0] + ti.pad[2] + 2 * ti.T) / ti.cap) + R[0] + R[2] > bh;
+      check(`fitted title, ${nm}: cap ${f.cap} is the largest .01 whose plate (ring and reach included) fits ${bw} x ${bh}`, f.cap > 0 && fits && over && near(grown, 0, 1e-9), J([f.cap, f.outer]));
+      check(`fitted title, ${nm}: pad, T and tile are the mock's x cap / ${ti.cap}; the box is plateBox of those pads; build ${ti.build}`, f.build === ti.build && near(f.T, ti.T * k) && near(f.tile, ti.tile * k) && f.pad.every((v, i) => near(v, ti.pad[i] * k)) && J(f.box) === J(W.plateBox(ti.build, f.cap, f.pad)));
+      check(`fitted title, ${nm}: plan takes it whole: tier title whatever the cap, place title, the plate layer's box / T / tile / outer from titleFit, cap returned`,
+        p.tier === "title" && p.place === "title" && p.build === ti.build && p.cap === f.cap && pl.id === "plate" && pl.kind === "kit" && J([pl.box, pl.T, pl.tile, pl.outer]) === J([f.box, f.T, f.tile, f.outer]) && pl.unit === "box" && p.layers.some((l) => l.id === "light") && J(p.layers.find((l) => l.id === "rope").over) === J(["light", "braid", "burnt", "char"]) && p.layers.find((l) => l.id === "spark").embers === true, J([p.tier, f.cap]));
+    }
+    const sm = titleFit("d", 400, 200).cap;
+    check("a fitted cap in the token range is still the title tier (the title is the title)", sm >= 40 && sm < 64 && plan("ICE", { fit: { w: 400, h: 200 }, dpr: 1 }).tier === "title" && tierOf({ cap: sm }) === "token", sm);
+    const c1 = plan("JUNGLE", { cap: 36, ver: "menu", dpr: 1 }), c6 = plan("JUNGLE", { cap: 36, ver: "menu", dpr: 1, css: 0.6 }), d6 = plan("CROWN", { cap: 36, ver: "menu", dpr: 1, css: 0.6 }), d1 = plan("CROWN", { cap: 36, ver: "menu", dpr: 1 });
+    const L = (p, id) => p.layers.find((l) => l.id === id);
+    check("css (CSS px per unit the cap is given in, default 1): CSS minimums are n / (cap x css), device minimums ignore it",
+      near(L(c1, "shade").shift[0], -2 / 36) && near(L(c6, "shade").shift[0], -2 / (36 * 0.6)) && near(L(c6, "cordInk").w, 1.2 / (36 * 0.6)) && near(L(c1, "cordInk").w, 0.035) && near(L(c6, "bomb").dpx, BD * 36 * 0.6) && L(d6, "gilt").band === L(d1, "gilt").band && L(d6, "giltInk").grow === L(d1, "giltInk").grow);
+  }
   check("PLATE.title's ring and tile are the kit plate's own defaults (kit type.js DEV), so a painter may call plate() with only {phone}", PLATE.title.d.T === DEV.d.T && PLATE.title.p.T === DEV.p.T && PLATE.title.d.tile === DEV.d.tile && PLATE.title.p.tile === DEV.p.tile);
   check("PLATE.menu: no plate; the cream one-line cap 36 sits centred in the menu panel's header; below = the header's bottom margin plus the panel's flex gap: desktop 28 (18 at 125 %), phone 0 + the .mp.p gap 10 (menu.css 49, 118, 136, 217, 229, 234, 235, 241)",
     J(PLATE.menu) === J({ plate: "none", host: "the MENU panel header", build: "line", cap: 36, ver: "menu", align: "centre", d: { pad: [0, 0, 0, 0], below: 28 }, d125: { pad: [0, 0, 4, 0], below: 18 }, p: { pad: [18, 0, 10, 0], below: 10 }, p125: { pad: [10, 0, 6, 0], below: 10 } }));

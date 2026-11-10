@@ -413,7 +413,8 @@ initFx();
 
 // 11) headless render smoke (spec §6 step 7): full createRenderer pipeline,
 //     both kinds, non-PLAY state (loadLevel leaves state="MENU") so the
-//     drawOverlay/drawLogo parameter path is exercised; assert no throw.
+//     drawOverlay parameter path is exercised (the logo is shellview's,
+//     logo/draw2d.js, never the renderer's); assert no throw.
 {
   initFx();
   const stub = new Proxy(function () {}, {

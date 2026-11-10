@@ -153,24 +153,31 @@ check("null-canvas renderer render() does not throw", ok);
 
 // ---- fix round 1: MENU logo (spec §2) + 0.25s intro-skip fade ramp ----
 {
-  const texts=[], sets=[];
+  const texts=[], sets=[], blits=[];
   const rec=new Proxy(function(){},{
     get:(t,p)=>{
       if(p===Symbol.toPrimitive)return()=>"" ;
-      return (...a)=>{ if(p==="fillText")texts.push(String(a[0])); return rec; };
+      return (...a)=>{ if(p==="fillText")texts.push(String(a[0])); if(p==="drawImage")blits.push(a[0]); return rec; };
      },
     apply:()=>rec,
     set:(t,p,v)=>{ if(p==="fillStyle")sets.push(String(v)); return true; }
    });
+  // the logo's layers need a canvas source: a stub OffscreenCanvas (the cache and the painter both make theirs from it)
+  const ID={a:1,b:0,c:0,d:1,e:0,f:0}, sctx=new Proxy({},{get:(t,p)=>p in t?t[p]:p==="getTransform"?()=>ID:()=>{},set:(t,p,v)=>{t[p]=v;return true;}});
+  class StubCv{constructor(w,h){this.width=w;this.height=h;} getContext(){return sctx;}}
+  globalThis.OffscreenCanvas=StubCv;
   const fake={getContext:()=>rec,addEventListener(){},style:{}};
   const g=createGame(fake,{seed:5});
-  const {_dbg:logo}=await import("../src/render/logo/draw2d.js"), ran0=logo.ran;
+  const {_dbg:logo}=await import("../src/render/logo/draw2d.js");
+  logo.on=true; const ran0=logo.ran;
   g.app.cabinetSeen=true;                // seen cabinet: skip lands on MENU
   g.app.skip();                          // INTRO -> MENU
   for(let i=1;i<=20;i++)g.loop(i*16);    // ~0.32s of MENU frames
-  check("MENU draws the FUSE/GRID wordmark (logo B: its painter ran on MENU frames, place menu; no font text)",
-    logo.ran>ran0&&logo.place==="menu"&&texts.indexOf("FUSE")<0,
-    (logo.ran-ran0)+" runs, last "+logo.place+" / "+texts.filter(t=>t==="FUSE"||t==="GRID").join(","));
+  const runs=logo.ran-ran0, stubBlits=blits.filter(b=>b instanceof StubCv).length;
+  check("MENU draws the FUSE/GRID wordmark (logo B: each MENU frame's painter run blits its layer and its spark, place menu; no font text)",
+    runs>0&&stubBlits===2*runs&&logo.place==="menu"&&texts.indexOf("FUSE")<0,
+    runs+" runs, "+stubBlits+" layer blits, last "+logo.place+" / "+texts.filter(t=>t==="FUSE"||t==="GRID").join(","));
+  logo.on=false; delete globalThis.OffscreenCanvas; (await import("../src/render/kit/cache.js")).release();
   const alphas=sets.filter(s=>s.slice(0,13)==="rgba(7,10,18,")
     .map(s=>parseFloat(s.slice(13)));
   check("skip fade ramps past menu veil in first frames (alpha>0.9)",

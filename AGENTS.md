@@ -46,21 +46,29 @@ The wordmark is logo B (LIT FUSE), drawn by ONE painter, `src/render/logo/draw2d
 `drawLogo2d` (UI upgrade Task 7.2), from `glyphs.js` / `worlds.js` `plan()` alone,
 in the world of `app.level`, the CLASSIC build in every look until Task 7.3. The
 title (`menudraw.drawIntroChrome`, `titleLogoBox`) is the full-colour build on the
-kit plate, line on `d` / `l`, stacked on `p`, fitted to `#c` inside a 12 px margin
-above the prompt with PLATE.title's padding, ring and bed tile scaled to its cap
-(cap 67.94 at 600x520, 119.35 stacked); the reveal fades, slides and pops the whole
-logo (0.92 -> 1 over 0.45 s, the old GRID letters' pop), and the show's 0.3 s exit
-runs the spark up the cord (`sparkAt` run). `TITLE_LIT` (true, the lead's call)
-keeps the spark lit at the tip while the title waits. MENU (`scenes.drawLogo`
-delegates) is the cream build, no plate, cap 36 x logoScale in the old wordmark's
-slot (`menudraw.LOGO_SLOT` / `menuLogoBox`): apart from the spark the logo paints
-no `#ffd447` on MENU. Static parts are `kit/cache.js` layers: one world-independent
-`logo.mask` atlas per build, version, cap and dpr, one tinted layer per world,
-one `logo.spark` sprite of frames A / B / reduced; a steady frame is two blits.
-The spark is `floor(t * 14) & 1` on the page clock, frozen on the reduced frame
-under prefers-reduced-motion or REDUCE FLASH. Masks never read a pixel or blur
-(path dilation, whole-px sweeps, octagon closings by doubling). No canvas source
-(Node) draws nothing and counts `_dbg.ran`.
+kit plate, line on `d` / `l`, stacked on `p`, inside a 12 px margin of `#c` above
+the prompt: the geometry's FITTED title (`worlds.js` `titleFit`, `plan({fit})`,
+`PLATE.title.fitted`: the mock's plate scaled as one piece, pad, ring and bed tile
+x cap / 88 or 76, the kit plate's fixed reach outside, tier title whatever the
+cap; cap 67.93 at 600x520, 119.34 stacked). The reveal fades, slides and pops the
+whole logo (0.92 -> 1 over 0.45 s, the old GRID letters' pop). The title waits lit,
+the spark flickering at the tip, and keeps it there through the show's 0.3 s exit:
+`TITLE_RUNUP` (false, lead ruling; one constant the owner may flip) would run it
+up the cord instead; the run-up stays reachable as the painter's `o.run`. MENU
+(`scenes.drawLogo` delegates) is the cream build, no plate, cap 36 x logoScale in
+the old wordmark's slot (`menudraw.LOGO_SLOT` / `menuLogoBox`): apart from the
+spark the logo paints no `#ffd447` on MENU. Static parts are `kit/cache.js` layers:
+one world-independent `logo.mask` atlas per build, version, cap and dpr, one tinted
+layer per world, one `logo.spark` sprite of frames A / B / reduced whose cell is the
+spark parts' own reach. A steady frame is a memo check, one `getTransform` and two
+blits: the placement, plan and both layer canvases are kept per place until an
+input changes or the cache frees one (0x0, asked for again, never drawn). The spark
+is `floor(t * SPARK.hz) & 1` on the page clock, frozen on the reduced frame under
+prefers-reduced-motion or REDUCE FLASH. CSS minimums take `o.css` (CSS px per box
+unit, default 1; `shellview` has no stage scale at hand, so it passes none). Masks
+never read a pixel or blur (path dilation, whole-px sweeps, octagon closings by
+doubling). No canvas source (Node) draws nothing; `_dbg` records only while
+`_dbg.on`.
 
 Heat grades CORE / PLUS / MAX live on LEVEL SELECT (its DIFFICULTY row; see LEVEL SELECT below). CORE is replay baseline v6. Attract is always CORE + pact=0. After a first FUSE/GRID CLEAR, LEVEL SELECT also offers Pact toggles (`1–4`). Knobs live on `world`, not frozen `CFG`. Score × heat is persist-only (CORE ×1 / PLUS ×2 / MAX ×3); live HUD stays raw.
 

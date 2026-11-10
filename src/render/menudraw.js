@@ -18,7 +18,7 @@ import { rr } from "./icons.js";
 import { pixelArt, itemCell, foeCell, pageScale, blitAnim, blitCell, foeAnim, itemAnim, seedOf as pxSeed, SLOT_PAD } from "./hudart.js";
 import { foeM, blinkAt } from "./motion.js";
 import { hints, tapMode } from "./hintcopy.js";
-import { drawLogo2d, deviceScale, TITLE_LIT } from "./logo/draw2d.js";
+import { drawLogo2d, deviceScale, TITLE_RUNUP } from "./logo/draw2d.js";
 const ACCENT = "#37f0d0",
   TEXT = "#dfe7f5",
   MUTED = "#7385ad";
@@ -646,24 +646,31 @@ export function layout(W, H, lg) {
    on the old wordmark's line (logoCy - 35.5 x logoScale); the stacked build on
    touch portrait, the line build elsewhere. MENU's slot is the old wordmark's
    (81 above the logo line to 10 below, 16 in from each side), in its own
-   units around (cx, logo line) before logoScale. */
+   units around (cx, logo line) before logoScale. Both keep their last answer,
+   so a steady frame allocates no box. */
 export const LOGO_SLOT = Object.freeze({ top: -81, bot: 10, side: 16 });
+let tlb = null, mlb = null;
 export function titleLogoBox(W, H, lay) {
+  if (tlb && tlb.W === W && tlb.H === H && tlb.lay === lay) return tlb.v;
   const L = layout(W, H),
     px = lay === "p" || lay === "l" ? 26 : 18,
     m = 12;
-  return { box: { x: m, y: m, w: W - 2 * m, h: L.footY - (px + 12) / 2 - 10 - m }, cy: L.logoCy - 35.5 * L.logoScale, dev: lay === "p" ? "p" : "d" };
+  tlb = { W, H, lay, v: Object.freeze({ box: Object.freeze({ x: m, y: m, w: W - 2 * m, h: L.footY - (px + 12) / 2 - 10 - m }), cy: L.logoCy - 35.5 * L.logoScale, dev: lay === "p" ? "p" : "d" }) };
+  return tlb.v;
 }
 export function menuLogoBox(L) {
+  if (mlb && mlb.cx === L.cx && mlb.s === L.logoScale) return mlb.v;
   const hw = (L.cx - LOGO_SLOT.side) / L.logoScale;
-  return { x: -hw, y: LOGO_SLOT.top, w: 2 * hw, h: LOGO_SLOT.bot - LOGO_SLOT.top };
+  mlb = { cx: L.cx, s: L.logoScale, v: Object.freeze({ x: -hw, y: LOGO_SLOT.top, w: 2 * hw, h: LOGO_SLOT.bot - LOGO_SLOT.top }) };
+  return mlb.v;
 }
 /* INTRO chrome (opening spec §3/§7). Title (stage 0): logo reveal (fade +
    slide 0.9 s, a 0.92 -> 1 pop over 0.45 s: the old GRID letters' pop, on
    the whole logo) then a +-2 px bob on 16S, and a prompt that fades in from
    0.6 s and pulses 0.45<->1 on the beat (4S). Show (stage 1): logo and prompt
-   exit up over 0.3 s while the spark runs up the cord (the same 0.3 s), the
-   veil drops 0.45 -> 0.12 by 8S, and the skip hint
+   exit up over 0.3 s, the spark still flickering at the tip (it runs up the
+   cord over that 0.3 s only if TITLE_RUNUP), the veil drops 0.45 -> 0.12 by
+   8S, and the skip hint
    appears only past SKIP_GUARD. lay is body[data-lay] (p/l = touch copy);
    rk is the board-ready fraction: 0 paints an opaque veil (3D still loading),
    1 the stage veil. o: {level (the world the logo wears), reduced (REDUCE FLASH)}. */
@@ -684,7 +691,8 @@ export function drawIntroChrome(c, stage, t, W, H, lay, rk = 1, o = {}) {
     c.save();
     c.translate(0, slide);
     c.globalAlpha *= a;
-    drawLogo2d(c, { level: o.level, place: "title", ...titleLogoBox(W, H, lay), dpr, touch, t, run: show ? seg(t, 0, 0.3) : undefined, spark: show || TITLE_LIT, reduced: o.reduced, scale: show ? 1 : 0.92 + 0.08 * easeOutBack(seg(t, 0, 0.45)) });
+    const B = titleLogoBox(W, H, lay);
+    drawLogo2d(c, { level: o.level, place: "title", box: B.box, cy: B.cy, dev: B.dev, dpr, touch, t, run: show && TITLE_RUNUP ? seg(t, 0, 0.3) : undefined, reduced: o.reduced, scale: show ? 1 : 0.92 + 0.08 * easeOutBack(seg(t, 0, 0.45)) });
     c.restore();
   }
   const pin = show ? 1 - exit : easeOutCubic(seg(t, 0.6, TITLE_IN));
