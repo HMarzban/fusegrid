@@ -980,11 +980,15 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   Every child is stopped by PID, also on a crash or Ctrl-C, and the `fg-px-*`
   profile is deleted after Chrome exits; the header documents every flag
   (`tests/shot-tool.test.mjs`).
-- UI captures (Task 1.5, R14 / R15): `tools/ui/shots.mjs` (on `shot.mjs`'s machinery;
-  same flags, byte-identical CLASSIC PNGs) writes named screens plus a dump of
-  `__GAME__.ui.snap()` to git-ignored `tools/ui/out/`; `__GAME__.ui` exists on `?debug=1`
-  only (`src/render/kit/probe.js`, handed in by main). `gates.mjs <dir>`: no probe data
-  is `skipped`, never a pass; `--strict` fails skips. `compare.mjs` (`refmap.json`), `sheet.html`.
+- UI captures (Task 1.5, R14 / R15): `tools/ui/shots.mjs` (on `shot.mjs`'s machinery,
+  same guarantees, its own flags; byte-identical CLASSIC PNGs) writes named screens, a dump of
+  `__GAME__.ui.snap()` each and a `shots.json` manifest to git-ignored `tools/ui/out/`
+  (one run per `--out` dir); `__GAME__.ui` exists on `?debug=1` only
+  (`src/render/kit/probe.js`, handed in by main; only `shots.mjs` switches the probe on).
+  `gates.mjs <dir>` judges the latest run only: no probe data is `skipped`, never a pass;
+  `--strict` fails skips; `tools/ui/lib/screens.mjs` lists each screen's required gates
+  (default-deny, a page cannot exempt itself); a probe fault, a page error or a missing
+  capture fails. `compare.mjs` (`refmap.json`), `sheet.html`.
 - Blender is driven through the blender-mcp add-on socket `127.0.0.1:9876`
   with a small Python client (`.superpowers/sdd/2026-10-11-bible/blender/bl.py`,
   local only); the session `mcp__Blender__` tools time out.
