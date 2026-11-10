@@ -7,33 +7,12 @@ import { LABEL, diffTag, speedTag, runParts } from "./words.js";
 import { abilityList, abilityText, abilityOrd, getStrip } from "./fx.js";
 import { layout, listGeom, listHit, drawList, plate, fitKicker, setupVals, head as plateHead, foot as plateFoot, LINE } from "./menudraw.js";
 import { hints } from "./hintcopy.js";
+import { drawLogo2d } from "./logo/draw2d.js";
 
 /* Scene UI: menu logo, HUD, and the CLEARED / GAME OVER / PAUSED overlays.
-   Pure draw; reads world + (optionally) DOM for HUD. */
-export function drawLogo(
-  c,
-  time,
-  cx = (CFG.COLS * CFG.TILE) / 2,
-  cy = (CFG.ROWS * CFG.TILE) / 2,
-) {
-  c.save();
-  c.textAlign = "center";
-  c.textBaseline = "middle";
-  const x = cx,
-    y = cy - 34;
-  function text(txt, yy, size, fill, outline) {
-    c.font = "900 " + size + "px ui-monospace,monospace";
-    c.lineWidth = size * 0.14;
-    c.strokeStyle = outline || "#0a0d14";
-    c.lineJoin = "round";
-    c.strokeText(txt, x, yy);
-    c.fillStyle = fill;
-    c.fillText(txt, x, yy);
-  }
-  text("FUSE", y - 30, 34, "#ffd447", "#3a2a00");
-  text("GRID", y + 18, 46, "#ff5d73", "#3a0014");
-  c.restore();
-}
+   Pure draw; reads world + (optionally) DOM for HUD. The MENU logo is logo B
+   through its one painter (logo/draw2d.js), o as drawLogo2d takes it. */
+export const drawLogo = (c, o) => drawLogo2d(c, o);
 export function winHeadline(world) {
   return isFinale(world.level) || world.finale
     ? "FUSE/GRID CLEAR"

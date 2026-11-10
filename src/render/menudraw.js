@@ -18,6 +18,7 @@ import { rr } from "./icons.js";
 import { pixelArt, itemCell, foeCell, pageScale, blitAnim, blitCell, foeAnim, itemAnim, seedOf as pxSeed, SLOT_PAD } from "./hudart.js";
 import { foeM, blinkAt } from "./motion.js";
 import { hints, tapMode } from "./hintcopy.js";
+import { drawLogo2d, deviceScale, TITLE_LIT } from "./logo/draw2d.js";
 const ACCENT = "#37f0d0",
   TEXT = "#dfe7f5",
   MUTED = "#7385ad";
@@ -640,17 +641,37 @@ export function layout(W, H, lg) {
   });
 }
 
+/* The title's logo box (logo B on the kit plate, logo/draw2d.js): the board
+   canvas inside a 12 px margin, above the prompt's backing by 10 px, centred
+   on the old wordmark's line (logoCy - 35.5 x logoScale); the stacked build on
+   touch portrait, the line build elsewhere. MENU's slot is the old wordmark's
+   (81 above the logo line to 10 below, 16 in from each side), in its own
+   units around (cx, logo line) before logoScale. */
+export const LOGO_SLOT = Object.freeze({ top: -81, bot: 10, side: 16 });
+export function titleLogoBox(W, H, lay) {
+  const L = layout(W, H),
+    px = lay === "p" || lay === "l" ? 26 : 18,
+    m = 12;
+  return { box: { x: m, y: m, w: W - 2 * m, h: L.footY - (px + 12) / 2 - 10 - m }, cy: L.logoCy - 35.5 * L.logoScale, dev: lay === "p" ? "p" : "d" };
+}
+export function menuLogoBox(L) {
+  const hw = (L.cx - LOGO_SLOT.side) / L.logoScale;
+  return { x: -hw, y: LOGO_SLOT.top, w: 2 * hw, h: LOGO_SLOT.bot - LOGO_SLOT.top };
+}
 /* INTRO chrome (opening spec §3/§7). Title (stage 0): logo reveal (fade +
-   slide 0.9 s) then a +-2 px bob on 16S, and a prompt that fades in from
+   slide 0.9 s, a 0.92 -> 1 pop over 0.45 s: the old GRID letters' pop, on
+   the whole logo) then a +-2 px bob on 16S, and a prompt that fades in from
    0.6 s and pulses 0.45<->1 on the beat (4S). Show (stage 1): logo and prompt
-   exit up over 0.3 s, the veil drops 0.45 -> 0.12 by 8S, and the skip hint
+   exit up over 0.3 s while the spark runs up the cord (the same 0.3 s), the
+   veil drops 0.45 -> 0.12 by 8S, and the skip hint
    appears only past SKIP_GUARD. lay is body[data-lay] (p/l = touch copy);
    rk is the board-ready fraction: 0 paints an opaque veil (3D still loading),
-   1 the stage veil. */
-export function drawIntroChrome(c, stage, t, W, H, lay, rk = 1) {
+   1 the stage veil. o: {level (the world the logo wears), reduced (REDUCE FLASH)}. */
+export function drawIntroChrome(c, stage, t, W, H, lay, rk = 1, o = {}) {
   const L = layout(W, H),
     touch = lay === "p" || lay === "l",
-    show = stage === 1;
+    show = stage === 1,
+    dpr = deviceScale(c);
   const v0 = show ? 0.45 + (0.12 - 0.45) * easeInOutCubic(seg(t, 0, 8 * SHOW_STEP)) : 0.45;
   c.fillStyle = "rgba(7,10,18," + (rk >= 1 ? v0 : 1 - clamp01(rk) * (1 - v0)) + ")";
   c.fillRect(0, 0, W, H);
@@ -661,43 +682,9 @@ export function drawIntroChrome(c, stage, t, W, H, lay, rk = 1) {
     const bob = show ? 0 : 2 * Math.sin((2 * Math.PI * t) / (16 * SHOW_STEP));
     const slide = 14 * (1 - reveal) - 20 * exit + bob;
     c.save();
-    c.textAlign = "center";
-    c.textBaseline = "middle";
-    c.lineJoin = "round";
-    // FUSE: whole-word fade + slide (easeOutCubic)
-    c.save();
-    c.translate(L.cx, L.logoCy - 30 + slide);
-    c.scale(L.logoScale, L.logoScale);
+    c.translate(0, slide);
     c.globalAlpha *= a;
-    c.font = font(34, "900");
-    c.lineWidth = 34 * 0.14;
-    c.strokeStyle = "#3a2a00";
-    c.strokeText("FUSE", 0, 0);
-    c.fillStyle = "#ffd447";
-    c.fillText("FUSE", 0, 0);
-    c.restore();
-    const word = "GRID",
-      size = 46,
-      adv = size * 0.6 * L.logoScale;
-    const x0 = L.cx - (word.length * adv) / 2 + adv / 2;
-    for (let i = 0; i < word.length; i++) {
-      const lt = show ? 1 : t - i * 0.06;
-      const ka = easeOutCubic(seg(lt, 0, 0.5));
-      if (ka <= 0) continue;
-      const ks = 0.92 + 0.08 * easeOutBack(seg(lt, 0, 0.45));
-      c.save();
-      c.translate(x0 + i * adv, L.logoCy + 18 + slide);
-      c.scale(L.logoScale * ks, L.logoScale * ks);
-      c.globalAlpha *= a * ka;
-      c.font = font(size, "900");
-      c.lineWidth = size * 0.14;
-      c.strokeStyle = "#3a0014";
-      c.textAlign = "center";
-      c.strokeText(word[i], 0, 0);
-      c.fillStyle = "#ff5d73";
-      c.fillText(word[i], 0, 0);
-      c.restore();
-    }
+    drawLogo2d(c, { level: o.level, place: "title", ...titleLogoBox(W, H, lay), dpr, touch, t, run: show ? seg(t, 0, 0.3) : undefined, spark: show || TITLE_LIT, reduced: o.reduced, scale: show ? 1 : 0.92 + 0.08 * easeOutBack(seg(t, 0, 0.45)) });
     c.restore();
   }
   const pin = show ? 1 - exit : easeOutCubic(seg(t, 0.6, TITLE_IN));

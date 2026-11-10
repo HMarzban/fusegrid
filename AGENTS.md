@@ -42,6 +42,26 @@ main's `let show`, never `demo`), backs MENU after the reveal and is dropped
 for good at GAME / ATTRACT. In 3D the title paints an opaque veil until three
 settles (`app.boardReady`, set on resolve or reject).
 
+The wordmark is logo B (LIT FUSE), drawn by ONE painter, `src/render/logo/draw2d.js`
+`drawLogo2d` (UI upgrade Task 7.2), from `glyphs.js` / `worlds.js` `plan()` alone,
+in the world of `app.level`, the CLASSIC build in every look until Task 7.3. The
+title (`menudraw.drawIntroChrome`, `titleLogoBox`) is the full-colour build on the
+kit plate, line on `d` / `l`, stacked on `p`, fitted to `#c` inside a 12 px margin
+above the prompt with PLATE.title's padding, ring and bed tile scaled to its cap
+(cap 67.94 at 600x520, 119.35 stacked); the reveal fades, slides and pops the whole
+logo (0.92 -> 1 over 0.45 s, the old GRID letters' pop), and the show's 0.3 s exit
+runs the spark up the cord (`sparkAt` run). `TITLE_LIT` (true, the lead's call)
+keeps the spark lit at the tip while the title waits. MENU (`scenes.drawLogo`
+delegates) is the cream build, no plate, cap 36 x logoScale in the old wordmark's
+slot (`menudraw.LOGO_SLOT` / `menuLogoBox`): apart from the spark the logo paints
+no `#ffd447` on MENU. Static parts are `kit/cache.js` layers: one world-independent
+`logo.mask` atlas per build, version, cap and dpr, one tinted layer per world,
+one `logo.spark` sprite of frames A / B / reduced; a steady frame is two blits.
+The spark is `floor(t * 14) & 1` on the page clock, frozen on the reduced frame
+under prefers-reduced-motion or REDUCE FLASH. Masks never read a pixel or blur
+(path dilation, whole-px sweeps, octagon closings by doubling). No canvas source
+(Node) draws nothing and counts `_dbg.ran`.
+
 Heat grades CORE / PLUS / MAX live on LEVEL SELECT (its DIFFICULTY row; see LEVEL SELECT below). CORE is replay baseline v6. Attract is always CORE + pact=0. After a first FUSE/GRID CLEAR, LEVEL SELECT also offers Pact toggles (`1–4`). Knobs live on `world`, not frozen `CFG`. Score × heat is persist-only (CORE ×1 / PLUS ×2 / MAX ×3); live HUD stays raw.
 
 MENU is seven rows in this order: `PLAY, LEVEL SELECT, DAILY, RECORDS, SETTINGS,
@@ -141,7 +161,7 @@ smoothing off) and returns `{ctx, box}`; `box` is the logical canvas
 stand-in (`width/height/logo`, its rect) that `drawShell` measures and the
 one pointer handler (bound on `#c` and `#sh`) maps through, so a tap lands
 where it is drawn. `layout(W,H,lg)`: `lg` = the centred board's 0.27 logo
-line in box units (MENU's logo stays on the board; the hub hangs under it),
+line in box units (MENU's logo B stays on the board; the hub hangs under it),
 `tall` / `narrow` (< 560) flags; narrow re-flows: `levelNarrow` (card under
 the grid, DIFFICULTY / GAME SPEED rows, digit-free touch MODIFIERS chips, 2-line help), HOW
 TO stacked rules, ENEMIES 2 cols, MEDALS 1 col, SCORES tab width, 11px hub

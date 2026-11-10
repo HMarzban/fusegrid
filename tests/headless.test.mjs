@@ -164,12 +164,13 @@ check("null-canvas renderer render() does not throw", ok);
    });
   const fake={getContext:()=>rec,addEventListener(){},style:{}};
   const g=createGame(fake,{seed:5});
+  const {_dbg:logo}=await import("../src/render/logo/draw2d.js"), ran0=logo.ran;
   g.app.cabinetSeen=true;                // seen cabinet: skip lands on MENU
   g.app.skip();                          // INTRO -> MENU
   for(let i=1;i<=20;i++)g.loop(i*16);    // ~0.32s of MENU frames
-  check("MENU draws FUSE wordmark (drawLogo reused per spec §2)",
-    texts.indexOf("FUSE")>=0,
-    texts.filter(t=>t==="FUSE"||t==="GRID").join(","));
+  check("MENU draws the FUSE/GRID wordmark (logo B: its painter ran on MENU frames, place menu; no font text)",
+    logo.ran>ran0&&logo.place==="menu"&&texts.indexOf("FUSE")<0,
+    (logo.ran-ran0)+" runs, last "+logo.place+" / "+texts.filter(t=>t==="FUSE"||t==="GRID").join(","));
   const alphas=sets.filter(s=>s.slice(0,13)==="rgba(7,10,18,")
     .map(s=>parseFloat(s.slice(13)));
   check("skip fade ramps past menu veil in first frames (alpha>0.9)",

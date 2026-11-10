@@ -15,6 +15,7 @@ import { drawLogo, overlayBox, touchLay, fmtTime, isRunEnd } from "./scenes.js";
 import * as menudraw from "./menudraw.js";
 import { CACHE_NAME } from "../pwa/shell.js";
 import { hints } from "./hintcopy.js";
+import { deviceScale } from "./logo/draw2d.js";
 
 export function kindSize(kind) {
   const iso = kind === "iso";
@@ -269,7 +270,7 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
   }
   const { cw, ch: chh, lg: logoY } = dims(canvas, kind);
   if (s === SCREEN.INTRO) // board alpha eases the veil from opaque once the board is ready (3D waits on three)
-    return menudraw.drawIntroChrome(c, app.introStage, app.subT, cw, chh, layOf(canvas), app.boardReady ? Math.min(1, app.readyT / 0.4) : 0);
+    return menudraw.drawIntroChrome(c, app.introStage, app.subT, cw, chh, layOf(canvas), app.boardReady ? Math.min(1, app.readyT / 0.4) : 0, { level: app.level, reduced: !!(app.settings && app.settings.flx) });
   if (s === SCREEN.ATTRACT) {
     // no dim: the demo IS the show; only the blinking footer hint
     const L = menudraw.layout(cw, chh, logoY);
@@ -285,13 +286,13 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
     const sl = app.fromShow ? menudraw.slamOf(app.subT) : null;
     menudraw.drawDim(c, sl ? sl.dim : 0.62, cw, chh);
     if (!sl && app.subT < 0.25) menudraw.drawFade(c, 1 - app.subT / 0.25, cw, chh);
-    // logo per spec §2: reuse drawLogo at logoScale via ctx.scale
+    // logo B (cream, the world of the next run) in the old wordmark's slot at logoScale via ctx.scale
     c.save();
-    const ls = lg.s * (sl ? sl.s : 1);
+    const ls = lg.s * (sl ? sl.s : 1), dpr = deviceScale(c);
     c.translate(L.cx, touch ? Math.max(lg.cy, 4 + 83 * ls) : lg.cy); // the slam's 1.35x never clips the touch logo off the top
     c.scale(ls, ls);
     if (sl) c.globalAlpha = sl.a;
-    drawLogo(c, world.time, 0, 0);
+    drawLogo(c, { level: app.level, place: "menu", box: menudraw.menuLogoBox(L), k: lg.s, dpr, touch, t: app.subT, reduced: !!(app.settings && app.settings.flx) });
     c.restore();
     menudraw.drawMenu(
       c,
