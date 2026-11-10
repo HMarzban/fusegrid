@@ -12,10 +12,10 @@ import { deflateSync } from "node:zlib";
 import { createRGBA, png, unpng } from "../tools/pixel/rgba.mjs";
 import { PRECACHE } from "../src/pwa/shell.js";
 import * as P from "../src/render/kit/probe.js";
-import { squint, stat, evaluate, tally, FLOOR, CAP } from "../tools/ui/lib/gatelib.mjs";
+import { squint, stat, evaluate, tally, colOf, FLOOR, CAP, GATES, REQUIRED } from "../tools/ui/lib/gatelib.mjs";
 import { ORDER, SCREENS, canon, capName, parseCapName } from "../tools/ui/lib/screens.mjs";
 import { refKeys, findRef, compareHtml } from "../tools/ui/lib/refs.mjs";
-import { parseArgs as shotsArgs } from "../tools/ui/shots.mjs";
+import { parseArgs as shotsArgs, intended, manifest } from "../tools/ui/shots.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const UI = join(ROOT, "tools/ui");
@@ -39,7 +39,7 @@ test("sheet.html and every tools/ui path stay out of the precache; src never imp
   assert.deepEqual(bad, []);
 });
 
-test("main hands the probe and the text scale to the debug hook; the debug hook owns __GAME__.ui", async () => {
+test("main hands the probe and the text scale to the debug hook; the hook exposes __GAME__.ui but never switches it on", async () => {
   const main = readFileSync(join(ROOT, "src/main.js"), "utf8");
   assert.match(main, /from "\.\/render\/kit\/probe\.js"/);
   assert.match(main, /from "\.\/render\/kit\/type\.js"/);
@@ -50,17 +50,21 @@ test("main hands the probe and the text scale to the debug hook; the debug hook 
   try {
     mountDebugHook({ world: {}, input: {}, app: {}, renderer: () => null, demo: () => null, ui });
     assert.equal(window.__GAME__.ui, ui);
-    assert.deepEqual(ons, [true], "the hook switches the probe on");
+    assert.deepEqual(ons, [], "a ?debug=1 session (tools/pixel/shot.mjs, headed debugging) records nothing: only shots.mjs calls ui.on(true)");
   } finally { delete globalThis.window; }
+  assert.match(readFileSync(join(UI, "shots.mjs"), "utf8"), /u\.on\(true\)/, "shots.mjs switches it on itself");
 });
 
 test("probe: off is a no-op, on records, setOn(false) clears, snapshot is plain JSON", () => {
+  const OFF = { page: "", box: null, rects: [], texts: [], pairs: [], frames: 0, overflow: false };
   P.setOn(false);
   P.begin("menu", { w: 600, h: 520, dpr: 2, el: "sh" });
   P.rect("play", 1, 2, 3, 4, { touch: true });
   P.text("PLAY", 1, 2, 30, 14.8, { role: "primary" });
   P.pair("nope", { x: 0, y: 0 }, { x: 1, y: 1 });
-  assert.deepEqual(P.snapshot(), { page: "", box: null, rects: [], texts: [], pairs: [], frames: 0 });
+  P.rect("nan", NaN, 0, 1, 1);
+  assert.deepEqual(P.snapshot(), OFF, "off: nothing recorded and nothing thrown, even for bad input");
+  assert.deepEqual(P.PAIR_KINDS, ["chosen", "band", "ring", "info", "locked"]);
   P.setOn(true);
   P.begin("menu", { w: 600, h: 520, dpr: 2, el: "sh" });
   P.rect("play", 10, 20, 200, 44, { touch: true, set: "list", kind: "list", fill: "#ffd447", fn: () => 1, deep: { a: 1 } });
@@ -82,7 +86,40 @@ test("probe: off is a no-op, on records, setOn(false) clears, snapshot is plain 
   P.begin("level");
   assert.deepEqual([P.snapshot().rects.length, P.snapshot().frames, P.snapshot().box], [0, 2, null], "begin clears the last frame");
   P.setOn(false);
-  assert.deepEqual(P.snapshot(), { page: "", box: null, rects: [], texts: [], pairs: [], frames: 0 });
+  assert.deepEqual(P.snapshot(), OFF);
+});
+
+test("probe, while on: bad input throws (a page bug the gates could not judge), and the lists are bounded", () => {
+  P.setOn(true);
+  try {
+    P.begin("menu", { w: 600, h: 520, el: "c" });
+    for (const [what, f, re] of [
+      ["unknown role", () => P.text("A", 0, 0, 1, 1, { role: "title" }), /unknown role/],
+      ["body without px", () => P.text("A", 0, 0, 1, 1, { role: "body" }), /px/],
+      ["translucent text colour", () => P.text("A", 0, 0, 1, 1, { col: "rgba(255,255,255,0.5)" }), /colour/],
+      ["named text colour", () => P.text("A", 0, 0, 1, 1, { col: "white" }), /colour/],
+      ["#rrggbbaa fill", () => P.rect("k", 0, 0, 1, 1, { fill: "#ffd44780" }), /colour/],
+      ["NaN x", () => P.rect("k", NaN, 0, 1, 1), /finite/],
+      ["undefined capH", () => P.text("A", 0, 0, 1, undefined), /finite/],
+      ["null pair point", () => P.pair("chosen", { x: null, y: 0 }, { x: 0, y: 0 }), /finite/],
+      ["string w", () => P.pair("band", [0, 0, "10", 1], [0, 0]), /finite/],
+      ["Infinity floor", () => P.pair("locked", [0, 0], [0, 0], { floor: [0, 0, Infinity, 1] }), /finite/],
+      ["info without its mark colour", () => P.pair("info", [0, 0, 4, 4], [0, 0, 8, 8]), /colour/],
+      ["plate T NaN", () => P.rect("p", 0, 0, 1, 1, { plate: NaN }), /finite/],
+      ["box NaN", () => P.begin("x", { w: NaN, h: 1 }), /finite/],
+      ["box 0 wide", () => P.begin("x", { w: 0, h: 1 }), /> 0/],
+    ]) assert.throws(f, re, what);
+    P.begin("menu", { w: 600, h: 520, el: "c" });
+    P.text("Body", 0, 0, 1, 1, { role: "body", px: 18, col: "rgb(220, 203, 184)" });
+    P.pair("info", [0, 0, 4, 4], [0, 0, 8, 8], { col: "#fff" });
+    P.rect("k", 0, 0, 1, 1, { fill: "rgba(255,212,71,1)", plate: true });
+    assert.deepEqual([P.snapshot().texts.length, P.snapshot().pairs[0].col, P.snapshot().rects[0].plate], [1, "#fff", true]);
+    for (let i = 0; i < P.CAP_N + 5; i++) P.rect("r" + i, 0, 0, 1, 1);
+    const s = P.snapshot();
+    assert.deepEqual([s.rects.length, s.overflow], [P.CAP_N, true], "a page recording without begin cannot grow the lists without limit");
+    P.begin("menu");
+    assert.equal(P.snapshot().overflow, false, "begin clears it");
+  } finally { P.setOn(false); }
 });
 
 /* a hand-built 8-bit RGB PNG with filters None, Sub, Up, Average and Paeth (Chrome screenshots use all five) */
@@ -135,64 +172,153 @@ test("squint: greyscale at half size, 2 x dpr box, mean contrast", () => {
   assert.ok(Math.abs(m - Math.pow((127.5 / 255 + 0.055) / 1.055, 2.4)) < 1e-4, String(m));
 });
 
-const dump = (ui, o = {}) => ({ screen: "menu", file: "menu.2d.w1.png", flags: { look: "2d", world: 1, phone: !!o.phone, t125: false, size: o.size || [40, 20], dpr: o.dpr || 2 },
-  read: { lay: o.phone ? "p" : "d" }, canvases: { sh: { x: 0, y: 0, w: (o.size || [40, 20])[0], h: (o.size || [40, 20])[1], hidden: false }, c: null }, ui });
-const ui = (o) => ({ page: "menu", box: { w: 40, h: 20, dpr: 2, el: "sh" }, rects: [], texts: [], pairs: [], frames: 1, ...o });
+const dump = (ui, o = {}) => ({ screen: o.screen || "menu", file: "menu.2d.w1.png", flags: { look: "2d", world: 1, phone: !!o.phone, t125: false, size: o.size || [40, 20], dpr: o.dpr || 2 },
+  read: { lay: o.phone ? "p" : "d" }, canvases: o.canvases || { sh: { x: 0, y: 0, w: (o.size || [40, 20])[0], h: (o.size || [40, 20])[1], hidden: false }, c: null }, ui });
+const ui = (o) => ({ page: "menu", box: { w: 40, h: 20, dpr: 2, el: "sh" }, rects: [], texts: [], pairs: [], frames: 1, overflow: false, ...o });
+const NONE = []; // need nothing: look at the declared gates alone
+/* CSS w x h at dpr, vertical bands [x0, x1, colour] over a base colour */
+const paint = (w, h, dpr, base, bands = []) => {
+  const img = createRGBA(w * dpr, h * dpr, base);
+  for (const [x0, x1, col, y0 = 0, y1 = h] of bands) { const c = createRGBA(1, 1, col).data; for (let y = y0 * dpr; y < y1 * dpr; y++) for (let x = x0 * dpr; x < x1 * dpr; x++) img.data.set(c, (y * w * dpr + x) * 4); }
+  return img;
+};
+const R = (name, x, y, w, h, o) => ({ name, x, y, w, h, ...o });
+const T = (s, x, y, w, capH, o) => ({ s, x, y, w, capH, role: "primary", ...o });
 
 test("gates: no probe data skips every gate, never a pass; --strict makes the skips fail", () => {
   const img = twoTone(40, 20, 2, "#ffffff", "#000000");
   for (const u of [null, ui({ box: null, page: "" })]) {
     const g = evaluate(dump(u), img, null);
-    assert.ok(Object.keys(g).length >= 10, Object.keys(g).join(" "));
+    assert.deepEqual(Object.keys(g), GATES);
     for (const [n, r] of Object.entries(g)) assert.equal(r.status, "skipped", n);
     assert.match(g.chosen.note, /no probe data/);
     const t = tally([{ gates: g }]);
-    assert.deepEqual([t.pass, t.fail, t.skipped, t.exit(false), t.exit(true)], [0, 0, Object.keys(g).length, 0, 1]);
+    assert.deepEqual([t.pass, t.fail, t.skipped, t.exit(false), t.exit(true)], [0, 0, GATES.length, 0, 1]);
   }
 });
 
-test("gates: squint pairs, ring max, locked texture, info contrast", () => {
+test("gates: REQUIRED is default-deny; n/a only for touch and gap on a desktop capture", () => {
+  const img = twoTone(40, 20, 2, "#ffffff", "#000000"), one = dump(ui({ rects: [R("x", 0, 0, 4, 4)] }));
+  const g = evaluate(one, img, null);
+  for (const k of REQUIRED) { assert.equal(g[k].status, "skipped", k); assert.match(g[k].note, /required, not declared/, k); }
+  assert.deepEqual([g.record.status, g.touch.status, g.gap.status], ["pass", "n/a", "n/a"]);
+  assert.deepEqual([tally([{ gates: g }]).exit(false), tally([{ gates: g }]).exit(true)], [0, 1], "a page that records one rect cannot pass --strict");
+  const free = evaluate(one, img, null, NONE);
+  assert.equal(free.chosen.status, "n/a", "only a screen row's exemption (need) turns a required gate into n/a");
+  assert.equal(tally([{ gates: free }]).exit(true), 0);
+  for (const n of ORDER) {
+    const s = SCREENS[n];
+    assert.deepEqual(s.need, REQUIRED.filter((k) => !s.exempt[k]), n);
+    for (const [k, why] of Object.entries(s.exempt)) assert.ok(REQUIRED.includes(k) && why.trim(), n + " exempts " + k + " with a reason");
+  }
+  assert.deepEqual(REQUIRED, ["chosen", "band", "ring", "locked", "info", "text", "cap", "inside", "plate", "yellow"]);
+});
+
+test("gates: squint pairs and ring max", () => {
   const img = twoTone(40, 20, 2, "#ffffff", "#000000"), W = { x: 0, y: 0, w: 20, h: 20 }, B = { x: 20, y: 0, w: 20, h: 20 };
-  const g = evaluate(dump(ui({ pairs: [{ kind: "chosen", a: W, b: B }, { kind: "band", a: W, b: W, name: "flat" }, { kind: "ring", a: W, b: B }, { kind: "info", a: W, b: B }, { kind: "locked", a: W, b: B, floor: B }] })), img, null);
+  const g = evaluate(dump(ui({ pairs: [{ kind: "chosen", a: W, b: B }, { kind: "band", a: W, b: W, name: "flat" }, { kind: "ring", a: W, b: B }] })), img, null, NONE);
   assert.equal(g.chosen.status, "pass"); assert.equal(g.chosen.value, 21); assert.equal(g.chosen.threshold, FLOOR.chosen);
   assert.equal(g.band.status, "fail"); assert.equal(g.band.value, 1); assert.match(g.band.on, /flat/);
   assert.equal(g.ring.status, "pass");
-  assert.equal(g.info.status, "pass");
-  assert.equal(g.locked.status, "fail", "a flat locked face: sd 0 / max(1e-4, floor sd) = 0 < 2, as the mock divides");
-  assert.deepEqual(g.locked.items.map((i) => [i.status, i.value]), [["pass", 21], ["fail", 0]]);
-  assert.match(g.locked.on, /texture sd/);
-  const t = tally([{ gates: g }]);
-  assert.equal(t.exit(false), 1, "a real fail exits 1");
-  const n = evaluate(dump(ui({ rects: [{ name: "x", x: 0, y: 0, w: 4, h: 4 }] })), img, null);
-  assert.equal(n.chosen.status, "n/a", "an instrumented page with no chosen pair: nothing to measure, never a pass");
-  assert.equal(tally([{ gates: n }]).exit(true), 0, "--strict fails skips, not n/a");
+  assert.equal(tally([{ gates: g }]).exit(false), 1, "a real fail exits 1");
+  const bad = evaluate(dump(ui({ pairs: [{ kind: "chosen", a: { x: null, y: 0, w: 4, h: 4 }, b: B, name: "nul" }] })), img, null, NONE);
+  assert.deepEqual([bad.chosen.status, bad.chosen.on], ["fail", "nul"], "a null coordinate fails, never measures the corner");
+  assert.match(bad.chosen.note, /non-finite/);
 });
 
-test("gates: touch targets and gaps (phone), text inside the page box, cap floors by role and device, one yellow", () => {
+test("gates: locked texture sd on the lip, so an outline cannot pass a flat face", () => {
+  /* 80 x 40 CSS at 2x: a flat #606060 face with a 2 px #000 outline, a striped face with the same outline, a faint floor cell, a white chosen part */
+  const out = (x0, y0) => [[x0, x0 + 40, "#000000", y0, y0 + 2], [x0, x0 + 40, "#000000", y0 + 18, y0 + 20], [x0, x0 + 2, "#000000", y0, y0 + 20], [x0 + 38, x0 + 40, "#000000", y0, y0 + 20]];
+  const stripes = (x0, y0, a, b) => Array.from({ length: 10 }, (_, i) => [x0 + i * 4, x0 + i * 4 + 4, i % 2 ? b : a, y0, y0 + 20]);
+  const img = paint(80, 40, 2, "#606060", [...stripes(40, 0, "#404040", "#a0a0a0"), ...out(0, 0), ...out(40, 0), ...stripes(0, 20, "#505050", "#585858"), [40, 80, "#ffffff", 20, 40]]);
+  const F = { x: 0, y: 20, w: 40, h: 20 }, C = { x: 40, y: 20, w: 40, h: 20 }, flat = { x: 0, y: 0, w: 40, h: 20 }, tex = { x: 40, y: 0, w: 40, h: 20 };
+  const d = (a, name) => dump(ui({ box: { w: 80, h: 40, el: "sh" }, pairs: [{ kind: "locked", a, b: C, floor: F, name }] }), { size: [80, 40] });
+  const sq = squint(img, 2);
+  assert.ok(stat(sq, flat).sd / stat(sq, F).sd >= 2, "the whole outlined rect would clear 2x: the old reading passed a flat face");
+  const g1 = evaluate(d(flat, "flat"), img, null, NONE);
+  assert.deepEqual(g1.locked.items.map((i) => i.status), ["pass", "fail"], JSON.stringify(g1.locked.items));
+  assert.equal(g1.locked.status, "fail"); assert.match(g1.locked.on, /flat texture sd/);
+  const g2 = evaluate(d(tex, "tex"), img, null, NONE);
+  assert.equal(g2.locked.status, "pass", JSON.stringify(g2.locked.items));
+  assert.deepEqual(g2.locked.items[1].lip, { x: 43, y: 3, w: 8, h: 14 });
+  const nf = evaluate(dump(ui({ box: { w: 80, h: 40, el: "sh" }, pairs: [{ kind: "locked", a: tex, b: C }] }), { size: [80, 40] }), img, null, NONE);
+  assert.equal(nf.locked.status, "skipped", "a locked pair without o.floor leaves the texture unmeasured, a skip under --strict");
+});
+
+test("gates: info marks by their declared colour against the background's extreme, both branches, lock floor", () => {
+  /* 60 x 20 CSS: black 0..20, grey #808080 20..40, white 40..60 */
+  const img = paint(60, 20, 2, "#000000", [[20, 40, "#808080"], [40, 60, "#ffffff"]]), K = { x: 0, y: 0, w: 20, h: 20 }, G = { x: 20, y: 0, w: 20, h: 20 }, Wt = { x: 40, y: 0, w: 20, h: 20 };
+  const at = { x: 5, y: 5, w: 4, h: 4 }, run = (pairs) => evaluate(dump(ui({ box: { w: 60, h: 20, el: "sh" }, pairs }), { size: [60, 20] }), img, null, NONE).info;
+  const g = run([{ kind: "info", a: at, b: K, col: "#ffffff", name: "light" }, { kind: "info", a: at, b: Wt, col: "#000000", name: "dark" }, { kind: "info", a: at, b: G, col: "#fff", lock: true, name: "lock" }]);
+  assert.equal(g.status, "pass", JSON.stringify(g.items));
+  assert.deepEqual(g.items.map((i) => [i.on, i.light, i.value, i.threshold]), [["light", true, 21, 4.5], ["dark", false, 21, 4.5], ["lock", true, 3.95, 3]]);
+  assert.deepEqual(run([{ kind: "info", a: at, b: G, col: "#ffffff" }]).value, 3.95, "4.5 without o.lock");
+  assert.equal(run([{ kind: "info", a: at, b: G, col: "#ffffff" }]).status, "fail");
+  assert.equal(run([{ kind: "info", a: Wt, b: K, col: "#101010", name: "dark on black" }]).status, "fail", "the dark branch fails too; a only locates the mark");
+  assert.equal(run([{ kind: "info", a: at, b: K, col: "rgba(255,255,255,0.5)" }]).status, "fail", "a translucent colour cannot be judged");
+});
+
+test("gates: text by its declared colour on the text-hidden twin, the appendix method", () => {
+  const cap = paint(60, 20, 2, "#ff00ff"), twin = paint(60, 20, 2, "#000000", [[20, 40, "#808080"], [40, 60, "#ffffff"]]);
+  const d = (texts) => dump(ui({ box: { w: 60, h: 20, el: "sh" }, texts }), { size: [60, 20] });
+  const g = evaluate(d([T("ON BLACK", 2, 5, 15, 10, { col: "#ffffff" }), T("ON GREY", 22, 5, 15, 10, { col: "#ffffff" }), T("LOCKED", 22, 5, 15, 10, { col: "#ffffff", lock: true }),
+    T("DARK", 42, 5, 15, 10, { col: "#000" }), T("BARE", 42, 5, 15, 10)]), cap, twin, NONE);
+  assert.deepEqual(g.text.items.map((i) => [i.on, i.status, i.value]), [["ON BLACK", "pass", 21], ["ON GREY", "fail", 3.95], ["LOCKED", "pass", 3.95], ["DARK", "pass", 21], ["BARE", "skipped", null]]);
+  assert.equal(g.text.status, "fail"); assert.equal(g.text.on, "ON GREY");
+  assert.equal(evaluate(d([T("BARE", 42, 5, 15, 10)]), cap, twin, NONE).text.status, "skipped", "a text without o.col is unmeasured, never a pass");
+  assert.equal(evaluate(d([T("A", 2, 5, 15, 10, { col: "#fff" })]), cap, null, NONE).text.status, "skipped", "no twin, no text gate");
+  assert.equal(evaluate(d([T("A", 2, 5, 15, 10, { col: "rgba(255,255,255,.4)" })]), cap, twin, NONE).text.status, "fail");
+  assert.deepEqual([colOf("#fff").rgb, colOf("#ffd447ff").rgb, colOf("rgb(255, 212, 71)").rgb], [[255, 255, 255], [255, 212, 71], [255, 212, 71]]);
+  for (const c of ["#ffd44780", "rgba(1,2,3,0.5)", "white", "rgb(300,0,0)", null]) assert.ok(colOf(c).err, String(c));
+});
+
+test("gates: box px are scaled onto the canvas content box (600 x 520 on 831 x 720)", () => {
+  const cv = { c: { x: 10, y: 5, w: 831, h: 720 }, sh: null }, size = [850, 730], u = (o) => ui({ box: { w: 600, h: 520, el: "c" }, ...o });
+  const img = paint(850, 730, 1, "#000000", [[149, 287, "#ffffff", 144, 212]]); // box (100, 100, 100, 50) mapped
+  const g = evaluate(dump(u({ pairs: [{ kind: "chosen", a: { x: 110, y: 110, w: 60, h: 20 }, b: { x: 300, y: 300, w: 50, h: 50 } }], texts: [T("PLAY", 300, 300, 60, 10)] }), { size, dpr: 1, canvases: cv }), img, null, NONE);
+  assert.equal(g.chosen.value, 21, "1:1 would sample black and read 1");
+  assert.deepEqual([g.cap.status, g.cap.value], ["fail", 13.85], "10 box px is 13.85 CSS px");
+  const t = evaluate(dump(u({ rects: [R("ok", 10, 10, 32, 32, { touch: true }), R("small", 100, 10, 31, 31, { touch: true })] }), { size, dpr: 1, canvases: cv, phone: true }), img, null, NONE);
+  assert.deepEqual(t.touch.items.map((i) => [i.on, i.status, i.value]), [["ok", "pass", 44.31], ["small", "fail", 42.92]]);
+  const p = evaluate(dump(u({ rects: [R("edge", 5, 100, 50, 50, { plate: true }), R("room", 20, 100, 50, 50, { plate: true })] }), { size, dpr: 1, canvases: cv }), img, null, NONE);
+  assert.deepEqual([p.plate.status, p.plate.value, p.plate.on], ["fail", 1, "edge"], "T 16 CSS px is 11.55 box px: 5 is too close, 20 is not");
+});
+
+test("gates: plate, touch and gap, cap, inside, yellow, record", () => {
   const img = createRGBA(80, 40, "#000000");
-  const R = (name, x, y, w, h, o) => ({ name, x, y, w, h, ...o });
+  const pl = (rects) => evaluate(dump(ui({ rects })), img, null, NONE).plate;
+  assert.deepEqual([pl([R("in", 20, 6, 4, 4, { plate: 2 })]).status, pl([R("in", 20, 6, 4, 4, { plate: 2 })]).value], ["pass", 0]);
+  assert.deepEqual([pl([R("in", 20, 6, 4, 4, { plate: 2 }), R("out", 1, 1, 4, 4, { plate: true })]).status, pl([R("out", 1, 1, 4, 4, { plate: true })]).on], ["fail", "out"]);
   const ph = evaluate(dump(ui({ rects: [R("a", 0, 0, 44, 44, { touch: true, set: "s" }), R("b", 48, 0, 44, 44, { touch: true, set: "s" }), R("c", 0, 50, 30, 44, { touch: true, set: "t" }),
-    R("l1", 0, 100, 44, 44, { touch: true, set: "u", kind: "list" }), R("l2", 0, 145, 44, 44, { touch: true, set: "u", kind: "list" })] }), { phone: true }), img, null);
+    R("free", 94, 0, 44, 44, { touch: true }), R("l1", 0, 100, 44, 44, { touch: true, set: "u", kind: "list" }), R("l2", 0, 145, 44, 44, { touch: true, set: "u", kind: "list" })] }), { phone: true }), img, null, NONE);
   assert.equal(ph.touch.status, "fail"); assert.equal(ph.touch.value, 30); assert.match(ph.touch.on, /\bc\b/);
-  assert.equal(ph.gap.status, "fail"); assert.equal(ph.gap.value, 4); assert.match(ph.gap.on, /a .* b/);
-  const ok = evaluate(dump(ui({ rects: [R("a", 0, 0, 44, 44, { touch: true, set: "s" }), R("b", 52, 0, 44, 44, { touch: true, set: "s" })] }), { phone: true }), img, null);
+  assert.equal(ph.gap.status, "fail"); assert.equal(ph.gap.value, 2); assert.equal(ph.gap.on, "b / free", "a target without a set is checked against every target");
+  assert.ok(ph.gap.items.some((i) => i.on === "a / b" && i.value === 4) && !ph.gap.items.some((i) => i.on === "a / c" || i.on === "l1 / l2"), "two sets are apart; same-kind list members are exempt");
+  const ok = evaluate(dump(ui({ rects: [R("a", 0, 0, 44, 44, { touch: true, set: "s" }), R("b", 52, 0, 44, 44, { touch: true, set: "s" })] }), { phone: true }), img, null, NONE);
   assert.deepEqual([ok.touch.status, ok.gap.status, ok.gap.value], ["pass", "pass", 8]);
-  const dk = evaluate(dump(ui({ rects: [R("a", 0, 0, 10, 10, { touch: true })] })), img, null);
-  assert.equal(dk.touch.status, "n/a", "desktop: no touch gate");
-  const T = (s, x, y, w, capH, o) => ({ s, x, y, w, capH, role: "primary", ...o });
-  const tx = evaluate(dump(ui({ texts: [T("PLAY", 1, 1, 20, 14.8), T("SUB", 1, 5, 20, 10.9, { role: "secondary" }), T("WIDE", 30, 1, 20, 14)] })), img, null);
-  assert.equal(tx.inside.status, "fail"); assert.match(tx.inside.on, /WIDE/);
+  const ex = evaluate(dump(ui({ rects: [R("l1", 0, 0, 44, 44, { touch: true, set: "u", kind: "list" }), R("l2", 0, 45, 44, 44, { touch: true, set: "u", kind: "list" })] }), { phone: true }), img, null, NONE);
+  assert.deepEqual([ex.gap.status, ex.gap.value], ["pass", null]); assert.match(ex.gap.note, /exempt/);
+  assert.equal(evaluate(dump(ui({ rects: [R("a", 0, 0, 44, 44, { touch: true })] }), { phone: true }), img, null, NONE).gap.status, "skipped", "one target: no gap to measure");
+  const dk = evaluate(dump(ui({ rects: [R("a", 0, 0, 10, 10, { touch: true })] })), img, null, NONE);
+  assert.deepEqual([dk.touch.status, dk.gap.status], ["n/a", "n/a"], "desktop: no touch gates");
+  const tx = evaluate(dump(ui({ texts: [T("PLAY", 1, 1, 20, 14.8), T("SUB", 1, 5, 20, 10.9, { role: "secondary" }), T("WIDE", 30, 1, 20, 14), T("NUL", null, 1, 4, 14)] })), img, null, NONE);
+  assert.equal(tx.inside.status, "fail"); assert.equal(tx.inside.value, 2); assert.match(tx.inside.on, /WIDE/);
   assert.equal(tx.cap.status, "fail"); assert.equal(tx.cap.value, 10.9); assert.match(tx.cap.on, /SUB/);
-  const pc = evaluate(dump(ui({ texts: [T("SUB", 1, 5, 20, 9.5, { role: "secondary" }), T("HUD", 1, 5, 20, 14.9, { role: "hud" }), T("Body", 1, 5, 20, 10, { role: "body", px: 15 })] }), { phone: true }), img, null);
+  const pc = evaluate(dump(ui({ texts: [T("SUB", 1, 5, 20, 9.5, { role: "secondary" }), T("HUD", 1, 5, 20, 14.9, { role: "hud" }), T("Body", 1, 5, 20, 10, { role: "body", px: 15 })] }), { phone: true }), img, null, NONE);
   assert.equal(pc.cap.status, "pass", JSON.stringify(pc.cap));
+  for (const t of [T("Who", 1, 1, 4, 14, { role: "title" }), T("Body", 1, 1, 4, 14, { role: "body" })]) assert.equal(evaluate(dump(ui({ texts: [t] })), img, null, NONE).cap.status, "fail", t.role + " " + t.px);
   assert.equal(CAP.d.primary, 14); assert.equal(CAP.p.body, 14.1);
-  const y = evaluate(dump(ui({ rects: [R("play", 0, 0, 4, 4, { fill: "#FFD447" }), R("start", 5, 0, 4, 4, { fill: "#ffd447" }), R("k", 0, 0, 4, 4, { fill: "#222" })] })), img, null);
-  assert.deepEqual([y.yellow.status, y.yellow.value], ["fail", 2]);
-  const y1 = evaluate(dump(ui({ rects: [R("play", 0, 0, 4, 4, { fill: "#ffd447" }), R("play", 0, 0, 4, 4, { fill: "#ffd447" })] })), img, null);
-  assert.deepEqual([y1.yellow.status, y1.yellow.value], ["pass", 1], "one part drawn twice is still one part");
+  const yl = (rects) => evaluate(dump(ui({ rects })), img, null, NONE).yellow;
+  const one = yl([R("play", 0, 0, 4, 4, { fill: "#FFD447" }), R("k", 5, 0, 4, 4, { fill: "#222" })]);
+  assert.deepEqual([one.status, one.value, one.on], ["pass", 1, "play"], "only the yellow fill counts");
+  assert.deepEqual([yl([R("main", 0, 0, 4, 4, { fill: "#ffd447" }), R("main", 5, 0, 4, 4, { fill: "#ffd447" })]).status, yl([R("main", 0, 0, 4, 4, { fill: "#ffd447" }), R("main", 5, 0, 4, 4, { fill: "#ffd447" })]).value], ["fail", 2], "two parts named main are two parts");
+  assert.deepEqual([yl([R("play", 0, 0, 4, 4, { fill: "#ffd447" }), R("play", 0, 0, 4, 4, { fill: "#ffd447" })]).status, yl([R("play", 0, 0, 4, 4, { fill: "#ffd447" }), R("play", 0, 0, 4, 4, { fill: "#ffd447" })]).value], ["pass", 1], "one part drawn twice is one part");
+  assert.equal(yl([R("play", 0, 0, 4, 4, { fill: "#ffd447" }), R("start", 5, 0, 4, 4, { fill: "rgb(255,212,71)" })]).value, 2, "rgb() counts");
+  assert.equal(yl([R("glass", 0, 0, 4, 4, { fill: "rgba(255,212,71,0.5)" })]).status, "fail");
+  assert.equal(evaluate(dump(ui({ rects: [R("x", 0, 0, 4, 4)], overflow: true })), img, null, NONE).record.status, "fail", "an overflowed record fails");
 });
 
-test("gates CLI: writes gates.json, exit 0 with skips, 1 under --strict, 1 on a fail, 1 on an empty dir", () => {
+test("gates CLI: gates.json, exit 0 with skips, 1 under --strict, on a fail, on an empty dir, and on a capture shots.json lists but lacks", () => {
   const d = tmp();
   try {
     const run = (...a) => spawnSync(process.execPath, [join(UI, "gates.mjs"), d, ...a], { encoding: "utf8", timeout: 30000 });
@@ -201,11 +327,18 @@ test("gates CLI: writes gates.json, exit 0 with skips, 1 under --strict, 1 on a 
     writeFileSync(join(d, "menu.2d.w1.json"), JSON.stringify(dump(null)));
     const r = run();
     assert.equal(r.status, 0, r.stdout + r.stderr);
+    assert.match(r.stderr, /no shots\.json manifest/);
     const G = JSON.parse(readFileSync(join(d, "gates.json"), "utf8"));
-    assert.equal(G.summary.captures, 1);
-    assert.equal(G.summary.pass, 0);
-    assert.ok(G.screens["menu.2d.w1"].gates.chosen.status === "skipped");
+    assert.deepEqual([G.summary.captures, G.summary.pass], [1, 0]);
+    assert.equal(G.screens["menu.2d.w1"].gates.chosen.status, "skipped");
+    assert.deepEqual(G.screens["menu.2d.w1"].need, SCREENS.menu.need);
     assert.equal(run("--strict").status, 1);
+    writeFileSync(join(d, "shots.json"), JSON.stringify({ intended: ["menu.2d.w1", "level.2d.w1"], runs: [] }));
+    const m = run();
+    assert.equal(m.status, 1, "a screen shots.mjs meant to take and did not is an error");
+    assert.match(JSON.parse(readFileSync(join(d, "gates.json"), "utf8")).summary.errors.join(), /level\.2d\.w1: listed in shots\.json, no capture/);
+    writeFileSync(join(d, "shots.json"), JSON.stringify({ intended: ["menu.2d.w1"], runs: [] }));
+    assert.equal(run().status, 0);
     writeFileSync(join(d, "menu.2d.w1.json"), JSON.stringify(dump(ui({ pairs: [{ kind: "chosen", a: { x: 0, y: 0, w: 10, h: 10 }, b: { x: 2, y: 2, w: 4, h: 4 } }] }))));
     assert.equal(run().status, 1, "chosen 1:1 fails");
   } finally { rmSync(d, { recursive: true, force: true }); }
@@ -222,6 +355,16 @@ test("shots: flags, lists, aliases, phone defaults, refusals", () => {
   assert.deepEqual([shotsArgs(["--phone", "--size", "430x932", "--dpr", "2"]).w, shotsArgs(["--size", "800x600"]).h, shotsArgs(["--dpr", "1"]).dpr], [430, 600, 1]);
   for (const v of [["--screens", "nope"], ["--screens"], ["--look", "iso"], ["--world", "0"], ["--world", "9"], ["--seed", "-1"], ["--seed", "4294967296"], ["--size", "big"], ["--dpr", "x"], ["--bogus"]])
     assert.throws(() => shotsArgs(v), Error, v.join(" "));
+});
+
+test("shots: the manifest lists every capture a run means to take, a union across runs into one dir", () => {
+  const a = shotsArgs(["--screens", "menu,pause", "--look", "2d,px", "--world", "1,8", "--t125", "--phone"]);
+  assert.deepEqual(intended(a), ["menu.2d.w1.t125.phone", "pause.2d.w1.t125.phone", "menu.2d.w8.t125.phone", "pause.2d.w8.t125.phone",
+    "menu.px.w1.t125.phone", "pause.px.w1.t125.phone", "menu.px.w8.t125.phone", "pause.px.w8.t125.phone"]);
+  const r1 = { n: 1 }, m1 = manifest(null, shotsArgs(["--screens", "menu"]), r1), r2 = { n: 2 }, m2 = manifest(JSON.parse(JSON.stringify(m1)), shotsArgs(["--screens", "level", "--t125"]), r2);
+  assert.deepEqual(m1, { intended: ["menu.2d.w1"], runs: [r1] });
+  assert.deepEqual(m2, { intended: ["menu.2d.w1", "level.2d.w1.t125"], runs: [{ n: 1 }, r2] });
+  assert.deepEqual(manifest({ captures: ["old format"] }, shotsArgs(["--screens", "menu"]), r1).intended, ["menu.2d.w1"]);
 });
 
 test("screens: every name has a recipe and a state; aliases; capture names round trip", () => {

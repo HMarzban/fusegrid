@@ -9,19 +9,23 @@
      --world 1,2,8    worlds, levels 1..8 (default 1): app.level before the title (6..8 also open rooms 6-8, app.pactUnlocked, as after a first CLEAR);
                       a run screen plays that level
      --seed N         world.seed (uint32) before each run screen's room load, as tools/pixel/shot.mjs --seed; menus are not seeded by it
-     --t125           window.__GAME__.ui.textScale(1.25) before the first frame (R14: the kit's text scale, never a player setting)
+     --t125           window.__GAME__.ui.textScale(1.25) before the first frame, in every look (R14: the kit's text scale, never a player setting)
      --phone          393x852 at dpr 3, mobile + touch emulation (the title press is a tap and the rest goes through __GAME__.app, so the hints stay
                       on touch); --size still wins
      --size WxH       viewport in CSS px (default 1366x768); not in the file names, so give each size its own --out
      --dpr N          device pixel ratio (default 2, phone 3: the mock frames' metrics, and the 2x capture the squint gates assume)
      --out DIR        output dir (default tools/ui/out, git-ignored)
-     --notext         also capture every screen with all canvas text hidden (<name>.notext.png, for gates.mjs's text gate); taken by itself whenever
-                      the page's probe records a text colour
+     --notext         also capture every screen with all canvas text hidden (<name>.notext.png, 2 frames after its capture, for gates.mjs's text and
+                      info gates); taken by itself whenever the page's probe records a text colour
      --gpu            ANGLE on Metal instead of SwiftShader (byte-identical PNGs are claimed for SwiftShader CLASSIC only)
    Per capture: <screen>.<look>.w<n>[.t125][.phone].png and a .json dump beside it: the flags, what the page reads back (state, screen, level,
-   seed, gen, look, data-lay, text scale, dpr, whether a service worker exists), the CSS content boxes of #c / #sh / #px / #gl (border and
-   padding taken off: #c has a 1 px border; the raw rect is `outer`), and window.__GAME__.ui.snap()
-   (src/render/kit/probe.js: the page's own rects, text boxes and squint pairs, empty until a page records them). Plus shots.json for the run.
+   seed, gen, look, data-lay, text scale, dpr, and swRegistrations: the page's REAL service worker registrations, read through the getter INIT
+   hides, any is an error), the CSS content boxes of #c / #sh / #px / #gl (border and padding taken off: #c has a 1 px border; the raw rect is
+   `outer`), and window.__GAME__.ui.snap() (src/render/kit/probe.js: the page's own rects, text boxes and squint pairs, empty until a page records
+   them; shots.mjs is what switches the probe on, __GAME__.ui.on(true), cleared before every capture). And <out>/shots.json, the manifest:
+   `intended`, every capture name this run means to take (a union with the names earlier runs in the same dir listed), written BEFORE the first
+   capture, so gates.mjs fails a listed capture that is missing (a crash, a screen not reached), and `runs`, each run's flags, captures, errors,
+   warnings and page console errors.
    How each screen is reached (tools/ui/lib/screens.mjs): boot index.html?render=<look>&debug=1, step 1.2 s, the title press (desktop a real Enter
    key, phone a real tap: the gesture that unlocks audio and starts the 4.4 s show), 5.2 s of show, MENU. Menu pages: back to MENU with
    __GAME__.reset(), the row picked by LABEL (app.cursor / optRow / guideRow), then confirm (desktop a real Enter, phone app.confirm()); STATS T
@@ -33,8 +37,9 @@
    newest installed chrome-headless-shell ($CHROME overrides) with a fresh --user-data-dir, the page's rAF held and stepped in exact 1000/60 ms
    frames, Math.random seeded, every child stopped by PID, also on a crash or Ctrl-C, and the profile deleted after Chrome exits. On top, every
    document starts with an empty localStorage (the analytics card pre-answered NO so it never covers a capture; ?debug=1 sends nothing either way)
-   and no navigator.serviceWorker, so no worker registers. Same flags, same CLASSIC PNGs, byte for byte. Exit 1 if a screen was not reached. */
-import { mkdirSync, writeFileSync } from "node:fs";
+   and no navigator.serviceWorker, so no worker registers. Same flags, same CLASSIC PNGs, byte for byte. Exit 1 if a screen was not reached or a
+   service worker registration exists. */
+import { mkdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { findChrome, PW_DIR, startServer, startChrome, stopChrome, stop, cdp, openPage, loadExpr } from "../pixel/shot.mjs";
@@ -69,18 +74,20 @@ export function parseArgs(argv) {
 }
 
 /* every document: an empty store with the analytics card answered NO, no service worker, and canvas text that __uiNoText hides */
-export const INIT = `(()=>{try{Object.defineProperty(Navigator.prototype,'serviceWorker',{get(){return undefined;},configurable:true});}catch(e){try{Object.defineProperty(navigator,'serviceWorker',{value:undefined});}catch(e2){}}
+export const INIT = `(()=>{const sw=Object.getOwnPropertyDescriptor(Navigator.prototype,'serviceWorker');window.__uiSW=sw&&sw.get?()=>sw.get.call(navigator):null;
+try{Object.defineProperty(Navigator.prototype,'serviceWorker',{get(){return undefined;},configurable:true});}catch(e){try{Object.defineProperty(navigator,'serviceWorker',{value:undefined});}catch(e2){}}
 try{localStorage.clear();sessionStorage.clear();localStorage.setItem('nb.analytics.v1','0');}catch(e){}
 for(const C of [window.CanvasRenderingContext2D,window.OffscreenCanvasRenderingContext2D])if(C)for(const m of ['fillText','strokeText']){const f=C.prototype[m];C.prototype[m]=function(){if(window.__uiNoText)return;return f.apply(this,arguments);};}})();`;
-const READ = `(()=>{const g=window.__GAME__,G=g.G,a=g.app,r=g.renderer,d=r&&r._dbg,gl=document.getElementById('gl');
+const READ = `(async()=>{const g=window.__GAME__,G=g.G,a=g.app,r=g.renderer,d=r&&r._dbg,gl=document.getElementById('gl'),real=window.__uiSW&&window.__uiSW();
  const rc=(id)=>{const e=document.getElementById(id);if(!e)return null;const b=e.getBoundingClientRect(),cs=getComputedStyle(e),f=(k)=>parseFloat(cs[k])||0,l=f('borderLeftWidth')+f('paddingLeft'),t=f('borderTopWidth')+f('paddingTop'),r=f('borderRightWidth')+f('paddingRight'),u=f('borderBottomWidth')+f('paddingBottom');
   return {x:b.left+l,y:b.top+t,w:Math.max(0,b.width-l-r),h:Math.max(0,b.height-t-u),outer:[b.left,b.top,b.width,b.height],hidden:!!e.hidden||cs.display==='none'||cs.visibility==='hidden',bw:e.width,bh:e.height};};
  return {read:{state:g.state(),screen:a.screen,level:a.level,pactUnlocked:a.pactUnlocked,worldLevel:G.level,seed:G.seed,gen:G.gen,look:d&&d.atlas?'px':(gl&&!gl.hidden?'3d':'2d'),
-  lay:document.body.getAttribute('data-lay'),textScale:g.ui?g.ui.textScale():null,dpr:devicePixelRatio,inner:[innerWidth,innerHeight],lastDev:a.lastDev,sw:!!navigator.serviceWorker},
+  lay:document.body.getAttribute('data-lay'),textScale:g.ui?g.ui.textScale():null,dpr:devicePixelRatio,inner:[innerWidth,innerHeight],lastDev:a.lastDev,swRegistrations:real?(await real.getRegistrations()).length:null},
   canvases:{c:rc('c'),sh:rc('sh'),px:rc('px'),gl:rc('gl')}};})()`;
 const UIRESET = "(()=>{const u=window.__GAME__.ui;if(u){u.on(false);u.on(true);}return !!u;})()";
 const NOTEXT = (on) => `(window.__uiNoText=${on},import('/src/render/kit/cache.js').then((m)=>{m.invalidate('notext');return true;}))`;
 const LOSE = `(()=>{const G=window.__GAME__.G,p=G.players[0];G.lives=1;p.iFrames=0;p.shield=false;G.bombs.push({x:p.x,y:p.y,tx:Math.floor(p.x/40),ty:Math.floor(p.y/40),timer:0.05,radius:1,variant:'normal',dead:false});return true;})()`;
+const TWIN_MS = 1000 / 30;
 const RUN0 = "(async()=>{try{localStorage.clear();localStorage.setItem('nb.analytics.v1','0');}catch(e){}await import('/src/core/board3.js');window.__GAME__.reset();return true;})()";
 
 async function group(c, port, a, look, world, rep) {
@@ -104,24 +111,25 @@ async function group(c, port, a, look, world, rep) {
     await P.shot(join(a.out, base + ".png"));
     const ui = await ev("window.__GAME__.ui?window.__GAME__.ui.snap():null");
     let notext = null;
-    if (a.notext || (ui && ui.texts.some((t) => t.col != null))) {
-      await ev(NOTEXT(true)); await P.adv(100);
+    if (a.notext || (ui && ui.texts.some((t) => t.col != null))) { // 2 frames: an idle screen renders every 2nd rAF at 60 Hz (idle cap 30, never lower)
+      await ev(NOTEXT(true)); await P.adv(TWIN_MS);
       await P.shot(join(a.out, (notext = base + ".notext.png")));
-      await ev(NOTEXT(false)); await P.adv(100);
+      await ev(NOTEXT(false)); await P.adv(TWIN_MS);
     }
     if (!ui) warn("window.__GAME__.ui is missing: no probe dump");
-    if (R.read.sw) warn("a service worker exists on this page");
+    if (R.read.swRegistrations) rep.errors.push(base + ": " + R.read.swRegistrations + " service worker registration(s) on the page");
+    else if (R.read.swRegistrations == null) warn("the real service worker state could not be read");
     writeFileSync(join(a.out, base + ".json"), JSON.stringify({ screen, file: base + ".png", notext, flags: { ...ctx, seed: a.seed, size: [a.w, a.h], dpr: a.dpr }, read: R.read, canvases: R.canvases, ui }, null, 1));
     rep.captures.push(base);
   };
   try {
+    if (a.t125) await ev("window.__GAME__.ui&&window.__GAME__.ui.textScale(1.25)"); // the rAF is still held: no frame has run in any look
+    await ev(`(()=>{const a=window.__GAME__.app;if(${world}>5)a.pactUnlocked=true;a.level=${world};return true;})()`);
     if (look !== "2d") { // px and three load async: give them real time (frames still stepped) until the look is live, as shot.mjs
       let live = false;
       for (let i = 0; i < 150 && !live; i++) { const s = await ev(READ); live = s.read.look === look && (await ev("window.__GAME__.app.boardReady")) !== false; if (!live) { await P.adv(50); await sleep(100); } }
       if (!live) warn("look " + look + " never went live");
     }
-    if (a.t125) await ev("window.__GAME__.ui&&window.__GAME__.ui.textScale(1.25)");
-    await ev(`(()=>{const a=window.__GAME__.app;if(${world}>5)a.pactUnlocked=true;a.level=${world};return true;})()`);
     const want = a.screens;
     if (want.includes("title")) await shoot("title", SCREENS.title.settle); else await P.adv(SCREENS.title.settle);
     if (!want.some((s) => s !== "title")) return;
@@ -169,11 +177,22 @@ async function group(c, port, a, look, world, rep) {
   }
 }
 
+/* every capture name these flags mean to take */
+export const intended = (a) => a.looks.flatMap((look) => a.worlds.flatMap((world) => a.screens.map((screen) => capName({ screen, look, world, t125: a.t125, phone: a.phone }))));
+/* the manifest after this run: the union of the names this dir's earlier runs meant to take with this run's, and the runs so far */
+export function manifest(prev, a, rep) {
+  const p = prev && typeof prev === "object" ? prev : {}, runs = Array.isArray(p.runs) ? p.runs : [];
+  return { intended: [...new Set([...(Array.isArray(p.intended) ? p.intended : []), ...intended(a)])], runs: [...runs, rep] };
+}
+
 export async function run(a) {
   const bin = findChrome();
   if (!bin) throw new Error("no chrome-headless-shell: set CHROME or install one under " + PW_DIR + "/chromium_headless_shell-<N>");
   mkdirSync(a.out, { recursive: true });
-  const rep = { out: a.out, flags: { screens: a.screens, looks: a.looks, worlds: a.worlds, seed: a.seed, t125: a.t125, phone: a.phone, size: [a.w, a.h], dpr: a.dpr, notext: a.notext, gpu: a.gpu }, chrome: bin, captures: [], errors: [], warnings: [], pageErrors: [] };
+  const rep = { out: a.out, flags: { screens: a.screens, looks: a.looks, worlds: a.worlds, seed: a.seed, t125: a.t125, phone: a.phone, size: [a.w, a.h], dpr: a.dpr, notext: a.notext, gpu: a.gpu }, chrome: bin, done: false, captures: [], errors: [], warnings: [], pageErrors: [] };
+  const mf = join(a.out, "shots.json"), prev = existsSync(mf) ? (() => { try { return JSON.parse(readFileSync(mf, "utf8")); } catch { return null; } })() : null;
+  const save = () => writeFileSync(mf, JSON.stringify(manifest(prev, a, rep), null, 1));
+  save(); // before the first capture: a crash still leaves what was meant
   let srv = null, chr = null, c = null;
   try {
     srv = await startServer();
@@ -185,8 +204,9 @@ export async function run(a) {
   } finally {
     await stopChrome(chr, c);
     if (srv) await stop(srv.proc);
+    rep.done = true;
+    save();
   }
-  writeFileSync(join(a.out, "shots.json"), JSON.stringify(rep, null, 1));
   return rep;
 }
 

@@ -4,8 +4,9 @@
    refs (renderer, demo) come in as getters because both are swapped mid-run
    by the RENDER toggle and the ATTRACT harness. `ui` (R15) is the page probe
    main hands in ({snap, on, textScale}: src/render/kit/probe.js and type.js,
-   which src/app may not import): __GAME__.ui for tools/ui/shots.mjs and
-   gates.mjs, switched on here, so only a ?debug=1 page records anything. */
+   which src/app may not import): __GAME__.ui for tools/ui/shots.mjs, which
+   alone switches it on (ui.on(true)), so a plain ?debug=1 session records
+   nothing. */
 import { CFG } from "../core/config.js";
 import { loadLevel, step } from "../core/sim.js";
 import { SCREEN } from "./menuapp.js";
@@ -80,7 +81,6 @@ export function mountDebugHook(h) {
     canvas: h.canvas,
     ui: h.ui || null,
   };
-  if (h.ui && h.ui.on) h.ui.on(true);
   window.__pause = h.onPause;
   window.__resume = () => {
     if (world.state === "PAUSE") world.state = "PLAY";
