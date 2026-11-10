@@ -36,6 +36,7 @@ const SRC = Object.freeze([
   "src/app/padroute.js",
   "src/app/perf.js",
   "src/app/plaques.js",
+  "src/app/pointer.js",
   "src/app/rcache.js",
   "src/app/renderkind.js",
   "src/app/reset.js",
