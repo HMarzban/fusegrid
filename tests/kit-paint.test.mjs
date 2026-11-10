@@ -1,11 +1,12 @@
 import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { rec as textrec } from "./lib/textrec.mjs";
 import { rec as ctxrec } from "./lib/ctxrec.mjs";
 import { drawBombBody, paintBrick } from "../src/render/sprites.js";
 import { wallShapes, paintShapes } from "../src/render/wallart.js";
 import { railOf } from "../src/render/frameart.js";
 import { paintFloor } from "../src/render/floorart.js";
-import { CONST, worldTokens } from "../src/render/kit/tokens.js";
+import { CONST, rgba, worldTokens } from "../src/render/kit/tokens.js";
 import { key, cap, capW, plate, band, focusBomb, wallCell, floorCell, brickCell, KINDS } from "../src/render/kit/paint.js";
 import { setTextScale, textScale, T, DEV, dsp, lbl, body, nums, measure } from "../src/render/kit/type.js";
 
@@ -19,7 +20,6 @@ const ALL = [];
 const rec = (o) => { const r = textrec(o); ALL.push(r); return r; };
 const J = (v) => JSON.stringify(v);
 const eqBox = (a, b) => !!a && !!b && ["x", "y", "w", "h"].every((k) => Math.abs(a[k] - b[k]) < 1e-6);
-const rgbaOf = (h, a) => `rgba(${parseInt(h.slice(1, 3), 16)},${parseInt(h.slice(3, 5), 16)},${parseInt(h.slice(5, 7), 16)},${a})`;
 const balanced = (r) => r.calls.filter((q) => q.op === "save").length === r.calls.filter((q) => q.op === "restore").length && J(r.ctx.getTransform()) === J({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 });
 
 /* ---- R8: drawBombBody o.bare. The default path is pinned to the call log recorded at fd71988 (before o.bare existed) ---- */
@@ -85,7 +85,7 @@ check("lit: brick two-tone (lit 54 % over lit2), lithi strip 3 px at inset 3, li
   has(face("lit"), tok.lit2, INL) && has(face("lit"), tok.lit, { ...INL, h: (H - 4) * 0.54 }) && has(face("lit"), tok.lithi, { x: X + 5, y: Y + 3, w: W - 10, h: 3 }) && has(face("lit"), tok.lip, INL));
 check("mid: mid face, dark bottom inset at .25", has(face("mid"), tok.mid, IN) && has(face("mid"), "rgba(0,0,0,0.25)", IN));
 check("well: well face, dark top inset at .6, no drop", has(face("well"), tok.well, IN) && has(face("well"), "rgba(0,0,0,0.6)", IN));
-const wr = face("wall"), veil = rgbaOf(tok.wallTex.veil, tok.wallTex.a);
+const wr = face("wall"), veil = rgba(tok.wallTex.veil, tok.wallTex.a);
 check("wall: well base, the world's wall cell (code 1) veiled, dark top inset at .4", has(wr, tok.well, IN) && wr.filter((p) => p.style === veil).length >= 1 && has(wr, "rgba(0,0,0,0.4)", IN) && wr.findIndex((p) => p.style === veil) < wr.findIndex((p) => p.style === "rgba(0,0,0,0.4)"));
 const cell = rec(); wallCell(cell.ctx, X + 2, Y + 2, H - 4, tok, { code: 1, veil: true });
 check("wall: the texture's first tile is wallCell(code 1, veil) at the inner height", J(wr.slice(2, 2 + cell.paints.length).map((p) => [p.op, p.style])) === J(cell.paints.map((p) => [p.op, p.style])), wr.length);
@@ -167,7 +167,7 @@ for (const lv of [1, 2, 7]) {
   check(`${t.name} brickCell = the CLASSIC paintBrick`, got((c) => brickCell(c, 5, 7, 20, t)) === via((c, b) => paintBrick(c, b), t));
   const v = rec(); wallCell(v.ctx, 5, 7, 20, t, { veil: true });
   const last = v.paints[v.paints.length - 1];
-  check(`${t.name} wallCell veil: rgba(wallTex.veil, wallTex.a) over the whole cell`, last.style === rgbaOf(t.wallTex.veil, t.wallTex.a) && eqBox(last.box, { x: 5, y: 7, w: 20, h: 20 }), J(last));
+  check(`${t.name} wallCell veil: rgba(wallTex.veil, wallTex.a) over the whole cell`, last.style === rgba(t.wallTex.veil, t.wallTex.a) && eqBox(last.box, { x: 5, y: 7, w: 20, h: 20 }), J(last));
 }
 let bst = "";
 try { brickCell(rec().ctx, 0, 0, 40, tok, "won"); } catch (e) { bst = e.message; }
@@ -221,6 +221,65 @@ setTextScale(1);
   const u = prop(), wu = nums(u.ctx, "2.5s", 0, 0, 27);
   check("nums: units unspaced, cream by default", u.texts.map((t) => t.s).join("") === "2.5s" && wu === 9 + 7 + 9 + 7 && u.texts.every((t) => t.fill === CONST.ink));
 }
+
+/* ---- fix round 1: degenerate sizes never hang (each probe runs in its own process under a 4 s alarm) ---- */
+const href = (p) => J(new URL(p, import.meta.url).href);
+const probe = (code) => {
+  const src = `import {key, plate} from ${href("../src/render/kit/paint.js")}; import {worldTokens} from ${href("../src/render/kit/tokens.js")}; import {rec} from ${href("./lib/textrec.mjs")};
+    const tok = worldTokens(3), out = []; ${code}; console.log(JSON.stringify(out));`;
+  const r = spawnSync(process.execPath, ["--input-type=module", "-e", src], { timeout: 4000, encoding: "utf8" });
+  return r.error ? "HANG (killed after 4 s)" : r.status ? "exit " + r.status + ": " + r.stderr.slice(-240) : JSON.parse(r.stdout);
+};
+const ringP = probe(`for (const T of [0, -4, NaN, 1e-9]) { const r = rec(); plate(r.ctx, 10, 10, 200, 100, tok, {T}); out.push([r.paints.filter((p) => p.op === "strokeRect" || p.rule === "evenodd").length, r.paints.filter((p) => p.style === tok.bedB).length]); }`);
+check("plate T 0 / negative / NaN / sub-pixel: no hang, no ring, the bed still drawn", Array.isArray(ringP) && ringP.length === 4 && ringP.every(([ring, bed]) => ring === 0 && bed > 0), J(ringP));
+const bedP = probe(`for (const tile of [0, -8, NaN, 1e-9]) { const r = rec(); plate(r.ctx, 10, 10, 200, 100, tok, {tile}); out.push([r.paints.filter((p) => p.style === tok.bedB).length, r.paints.filter((p) => p.style === tok.bedA).length, r.paints.filter((p) => p.rule === "evenodd").length]); }`);
+check("plate tile 0 / negative / NaN / sub-pixel: no hang, no checker, the bedA fill and the ring stay", Array.isArray(bedP) && bedP.length === 4 && bedP.every(([b, a, ring]) => b === 0 && a === 1 && ring === 2), J(bedP));
+const wallP = probe(`for (const [w, h] of [[120, 4], [120, 3], [120, 0], [120, -2], [120, NaN], [120, 4 + 1e-9], [Infinity, 30]]) { const r = rec(); key(r.ctx, 0, 0, w, h, "wall", {tok}); out.push(r.paints.filter((p) => p.style === tok.wall).length); } { const r = rec(); plate(r.ctx, 0, 0, Infinity, 50, tok); out.push(r.paints.length > 0); }`);
+check("wall key with a padding box under 1 px tall, or an unbounded width: no hang, no tiles; a plate of unbounded size does not hang", Array.isArray(wallP) && wallP.length === 8 && wallP.slice(0, 7).every((n) => n === 0) && wallP[7] === true, J(wallP));
+
+/* ---- fix round 1: the caller's alpha is scaled, never overwritten, and left as found ---- */
+const A = [
+  ["key", (c) => key(c, 0, 0, 120, 30, "wall", { tok, label: "X", ring: true, bomb: true })], ["key main", (c) => key(c, 0, 0, 120, 30, "main", { tok, label: "GO", ring: true })],
+  ["cap", (c) => cap(c, 0, 0, "ESC", { tok })], ["cap main", (c) => cap(c, 0, 0, "ESC", { tok, main: true })], ["plate", (c) => plate(c, 20, 20, 200, 120, tok)],
+  ["band", (c) => band(c, 0, 0, 200, 40, tok)], ["focusBomb", (c) => focusBomb(c, 0, 20, 30)], ["wallCell", (c) => wallCell(c, 0, 0, 40, tok, { code: 1, veil: true })],
+  ["floorCell", (c) => floorCell(c, 0, 0, 40, tok)], ["brickCell", (c) => brickCell(c, 0, 0, 40, tok)],
+  ["dsp", (c) => dsp(c, "GO", 0, 0, 40)], ["lbl", (c) => lbl(c, "GO", 0, 0, 21)], ["body", (c) => body(c, "Go.", 0, 0, 18)], ["nums", (c) => nums(c, "1,240", 0, 0, 27)],
+];
+for (const [name, fn] of A) {
+  const r = rec();
+  r.ctx.globalAlpha = 0.5;
+  fn(r.ctx);
+  check(`${name}: leaves a caller alpha of 0.5 as it found it`, r.ctx.globalAlpha === 0.5, r.ctx.globalAlpha);
+  if (name !== "brickCell") check(`${name}: paints nothing above the caller's alpha`, r.paints.every((p) => p.alpha <= 0.5 + 1e-9), J(r.paints.filter((p) => p.alpha > 0.5).map((p) => [p.style, p.alpha])));
+}
+{
+  const r = rec(), b = tok.biome;
+  r.ctx.globalAlpha = 0.5;
+  plate(r.ctx, 200, 100, 300, 220, tok);
+  const lit = r.paints.filter((p) => p.op === "fillRect" && p.style === b.wallHi && Math.abs(p.alpha - 0.3) < 1e-9), ink = r.paints.filter((p) => p.op === "strokeRect");
+  check("plate under alpha 0.5: the wallHi light at 0.5 x 0.6, the ink lines at 0.5", lit.length === 2 && ink.length === 2 && ink.every((p) => p.alpha === 0.5), J(ink.map((p) => p.alpha)));
+}
+
+/* ---- fix round 1: a focused key's legend clears the bomb inside it (appendix 5: padding-left --bombs + 6, the bomb at left 8) ---- */
+for (const [dv, o] of [["d", {}], ["p", { phone: true }]]) {
+  const bs = DEV[dv].bombs, plain = drawKey("main", { label: "RESUME", ...o }), foc = drawKey("main", { label: "RESUME", bomb: true, ...o });
+  const t0 = plain.texts.find((q) => q.s === "RESUME"), t1 = foc.texts.find((q) => q.s === "RESUME");
+  const bomb = foc.paints.find((p) => p.op === "fill" && p.style === "#15181f"), k = bs / 30;
+  check(`${dv}: legend centred without o.bomb`, t0.x === X + W / 2 && !plain.paints.some((p) => p.style === "#15181f"), t0.x);
+  check(`${dv}: o.bomb centres the legend in the box past padding-left ${bs} + 6`, t1.x === X + (W + bs + 6) / 2 && t1.y === Y + H / 2, t1.x);
+  check(`${dv}: o.bomb draws the bare bomb (size ${bs}) 8 px in, on the key's centre line, adding no cord or spark colour`, bomb && eqBox(bomb.box, { x: X + 8 + bs / 2 - 12 * k, y: Y + H / 2 + 0.08 * bs + 0.96 * k - 12 * k, w: 24 * k, h: 24 * k }) && foc.paints.filter((p) => HOT.includes(p.style)).length === plain.paints.filter((p) => HOT.includes(p.style)).length, J(bomb && bomb.box));
+}
+{
+  const g = drawKey("main", { label: "GO", bomb: true, ring: true }), last = g.paints[g.paints.length - 1];
+  check("o.bomb with o.ring: the ring stays on top", last.op === "stroke" && last.style === "#fff2df");
+}
+
+/* ---- fix round 1: named errors ---- */
+const err = (fn) => { try { fn(); return ""; } catch (e) { return e.message; } };
+check("key without o.tok throws a named error", /^kit key: .*tok/.test(err(() => key(rec().ctx, 0, 0, 10, 10, "key", {}))), err(() => key(rec().ctx, 0, 0, 10, 10, "key", {})));
+check("plate, band and the cells without tok throw named errors", [() => plate(rec().ctx, 0, 0, 9, 9), () => band(rec().ctx, 0, 0, 9, 9), () => wallCell(rec().ctx, 0, 0, 9), () => floorCell(rec().ctx, 0, 0, 9), () => brickCell(rec().ctx, 0, 0, 9)].every((f) => /^kit \w+: .*tok/.test(err(f))));
+check("focusBomb without a size (or a size of 0, -1, NaN) throws a named error", [undefined, 0, -1, NaN].every((s) => /^kit focusBomb: .*size/.test(err(() => focusBomb(rec().ctx, 0, 0, s)))), err(() => focusBomb(rec().ctx, 0, 0)));
+check("rgba is written once, in tokens.js", rgba("#0b0609", 0.5) === "rgba(11,6,9,0.5)" && !/const rgba|function rgba/.test(readFileSync(new URL("../src/render/kit/paint.js", import.meta.url), "utf8")));
 
 /* ---- no filter, no blur, no DOM ---- */
 const SRC = ["paint.js", "type.js"].map((f) => readFileSync(new URL("../src/render/kit/" + f, import.meta.url), "utf8"));

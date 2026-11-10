@@ -18,7 +18,7 @@ const lin = (v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0
 export const lum = (h) => { const [r, g, b] = hx(h); return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b); };
 const hex = (a) => "#" + a.map((v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, "0")).join("");
 const mixA = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
-const rgba = (h, a) => { const [r, g, b] = hx(h); return `rgba(${r},${g},${b},${a})`; };
+export const rgba = (h, a) => { const [r, g, b] = hx(h); return `rgba(${r},${g},${b},${a})`; };
 export function toL(h, target) {
   const c = hx(h), dark = lum(h) > target, to = dark ? [0, 0, 0] : [255, 255, 255];
   let lo = 0, hi = 1;
