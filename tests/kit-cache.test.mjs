@@ -27,7 +27,7 @@ const reset = () => {
 
 check("budget is 24 MB", BUDGET === 24 * 1024 * 1024);
 check("touch dpr is capped at 2", capDpr(3, true) === 2 && capDpr(1.5, true) === 1.5 && capDpr(3, false) === 3);
-check("key distinguishes every field", new Set(["layer", "biome", "level", "W", "H", "dpr", "look", "textScale"].map((f) => keyOf(K({ [f]: f === "layer" ? "x" : 9 })))).size === 8 && !new Set([keyOf(K())]).has(keyOf(K({ W: 1 }))));
+check("key distinguishes every field", new Set(["layer", "biome", "level", "W", "H", "dpr", "look", "textScale"].map((f) => keyOf(K({ [f]: f === "layer" ? "x" : 9 })))).size === 8 && keyOf(K({ layer: "a|b" })) !== keyOf(K({ layer: "a", biome: "b|0" })));
 
 reset();
 const a = layer(K(), 100, 100, paint);
@@ -82,6 +82,19 @@ layer(K({ biome: 1 }), 500, 500, paint);
 const live = made.slice();
 release();
 check("release returns bytes to 0 and zeroes canvases", _dbg.bytes === 0 && live.every((c) => c.width === 0 && c.height === 0));
+
+reset();
+let threw = false;
+try {
+  layer(K(), 10, 10, () => {
+    throw new Error("font not ready");
+  });
+} catch (e) {
+  threw = e.message === "font not ready";
+}
+check("a throwing paint rethrows and leaves nothing cached", threw && _dbg.bytes === 0 && made[0].width === 0);
+layer(K(), 10, 10, paint);
+check("the same key then misses again and paints", _dbg.misses === 2 && paints === 1 && _dbg.bytes === 400);
 
 reset();
 let seen;

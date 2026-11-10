@@ -10,7 +10,7 @@ let make = null;
 
 export const setFactory = (fn) => (make = fn);
 export const capDpr = (dpr, touch) => (touch ? Math.min(dpr, 2) : dpr);
-export const keyOf = (k) => [k.layer, k.biome, k.level, k.W, k.H, k.dpr, k.look, k.textScale].join("|");
+export const keyOf = (k) => JSON.stringify([k.layer, k.biome, k.level, k.W, k.H, k.dpr, k.look, k.textScale]);
 
 function create(w, h) {
   if (make) return make(w, h);
@@ -45,7 +45,12 @@ export function layer(key, w, h, paint) {
   const canvas = create(w, h);
   live.set(k, { canvas, bytes });
   _dbg.bytes += bytes;
-  paint(canvas.getContext("2d"), canvas);
+  try {
+    paint(canvas.getContext("2d"), canvas);
+  } catch (e) {
+    free(k);
+    throw e;
+  }
   return canvas;
 }
 
