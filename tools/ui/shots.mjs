@@ -22,24 +22,29 @@
    seed, gen, look, data-lay, text scale, dpr, and swRegistrations: the page's REAL service worker registrations, read through the getter INIT
    hides, any is an error), the CSS content boxes of #c / #sh / #px / #gl (border and padding taken off: #c has a 1 px border; the raw rect is
    `outer`), and window.__GAME__.ui.snap() (src/render/kit/probe.js: the page's own rects, text boxes and squint pairs, empty until a page records
-   them; shots.mjs is what switches the probe on, __GAME__.ui.on(true), cleared before every capture). And <out>/shots.json, the manifest:
-   `intended`, every capture name this run means to take (a union with the names earlier runs in the same dir listed), written BEFORE the first
-   capture, so gates.mjs fails a listed capture that is missing (a crash, a screen not reached), and `runs`, each run's flags, captures, errors,
-   warnings and page console errors.
+   them; shots.mjs is what switches the probe on, __GAME__.ui.on(true), cleared before every capture). Before the first capture every intended
+   capture's .png, .json and .notext.png are deleted, so an earlier run's files can never stand in for one this run failed to take.
+   And <out>/shots.json, the manifest, written BEFORE the first capture and again at the end: `runs`, every run into this dir, the latest last, each
+   with its flags, `intended` (every capture name it means to take), `captures` (the ones it took cleanly), `failed` (name -> why: a screen not
+   reached, or a page exception, console error or warning or log error while the capture was being reached, settled or taken: every entry
+   shot.mjs's openPage collects from Runtime.exceptionThrown, the console and the log), `errors`, `warnings`, `pageErrors` and `done` (true only when the run completed). gates.mjs judges
+   the latest run alone. One gated run per --out dir.
    How each screen is reached (tools/ui/lib/screens.mjs): boot index.html?render=<look>&debug=1, step 1.2 s, the title press (desktop a real Enter
    key, phone a real tap: the gesture that unlocks audio and starts the 4.4 s show), 5.2 s of show, MENU. Menu pages: back to MENU with
    __GAME__.reset(), the row picked by LABEL (app.cursor / optRow / guideRow), then confirm (desktop a real Enter, phone app.confirm()); STATS T
    opens MEDALS. Run screens, each on a run of its own started from MENU PLAY on cleared storage: play after 0.9 s, pause through window.__pause,
    lose by a bomb on the last life, win by clearing the foes (the room's own 1.6 s all-clear). Before each capture the probe is cleared and the
-   screen's settle time is stepped; a screen whose __GAME__.state() is not the one expected is an error and gets no PNG.
+   screen's settle time is stepped; a screen whose __GAME__.state() is not the one expected is an error and gets no PNG; a page exception (the
+   rAF shim rethrows a callback's throw from a timer, so the frames still step) is an error for the capture it falls in, and outside any capture
+   (boot, the title, the show) an error for the run.
 
    Everything tools/pixel/shot.mjs guarantees (its startServer / startChrome / openPage / stopChrome are reused): its own PORT=0 node serve.js, the
    newest installed chrome-headless-shell ($CHROME overrides) with a fresh --user-data-dir, the page's rAF held and stepped in exact 1000/60 ms
    frames, Math.random seeded, every child stopped by PID, also on a crash or Ctrl-C, and the profile deleted after Chrome exits. On top, every
    document starts with an empty localStorage (the analytics card pre-answered NO so it never covers a capture; ?debug=1 sends nothing either way)
-   and no navigator.serviceWorker, so no worker registers. Same flags, same CLASSIC PNGs, byte for byte. Exit 1 if a screen was not reached or a
-   service worker registration exists. */
-import { mkdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
+   and no navigator.serviceWorker, so no worker registers. Same flags, same CLASSIC PNGs, byte for byte. Exit 1 on any run error: a screen not
+   reached, a page exception or console error or warning, a service worker registration. */
+import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { findChrome, PW_DIR, startServer, startChrome, stopChrome, stop, cdp, openPage, loadExpr } from "../pixel/shot.mjs";
@@ -88,12 +93,28 @@ const UIRESET = "(()=>{const u=window.__GAME__.ui;if(u){u.on(false);u.on(true);}
 const NOTEXT = (on) => `(window.__uiNoText=${on},import('/src/render/kit/cache.js').then((m)=>{m.invalidate('notext');return true;}))`;
 const LOSE = `(()=>{const G=window.__GAME__.G,p=G.players[0];G.lives=1;p.iFrames=0;p.shield=false;G.bombs.push({x:p.x,y:p.y,tx:Math.floor(p.x/40),ty:Math.floor(p.y/40),timer:0.05,radius:1,variant:'normal',dead:false});return true;})()`;
 const TWIN_MS = 1000 / 30;
+/* the run's ledger: a capture that fails is named in failed and errors; a page error is charged to the capture whose window it falls in (from the
+   start of reaching that screen to the end of its capture) or, outside every window, to the run */
+export function ledger(rep, gid, errs) {
+  let used = 0;
+  const fail = (base, why) => { rep.failed[base] = rep.failed[base] ? rep.failed[base] + "; " + why : why; rep.errors.push(base + ": " + why); };
+  return {
+    fail,
+    flush(where) { for (const e of errs.slice(used)) rep.errors.push(gid + ": page error " + where + ": " + e); used = errs.length; },
+    close(base) {
+      const e = errs.slice(used);
+      used = errs.length;
+      if (e.length) fail(base, "page error while the capture was reached, settled or taken: " + e[0] + (e.length > 1 ? " (+" + (e.length - 1) + " more)" : ""));
+      else if (!rep.failed[base]) rep.captures.push(base);
+    },
+  };
+}
 const RUN0 = "(async()=>{try{localStorage.clear();localStorage.setItem('nb.analytics.v1','0');}catch(e){}await import('/src/core/board3.js');window.__GAME__.reset();return true;})()";
 
 async function group(c, port, a, look, world, rep) {
-  const ctx = { look, world, t125: a.t125, phone: a.phone }, warn = (s) => rep.warnings.push(capName({ screen: "-", ...ctx }).slice(2) + ": " + s);
+  const ctx = { look, world, t125: a.t125, phone: a.phone }, gid = capName({ screen: "-", ...ctx }).slice(2), warn = (s) => rep.warnings.push(gid + ": " + s);
   const url = "http://127.0.0.1:" + port + "/index.html?render=" + look + "&debug=1";
-  const P = await openPage(c, { w: a.w, h: a.h, dpr: a.dpr, mobile: a.phone, vt: true, init: INIT }, url);
+  const P = await openPage(c, { w: a.w, h: a.h, dpr: a.dpr, mobile: a.phone, vt: true, init: INIT }, url), L = ledger(rep, gid, P.errors);
   const ev = P.ev, poll = async (expr, ms) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await ev(expr).catch(() => false)) return true; await sleep(50); } return false; };
   const key = (code, k) => P.key(code, k);
   const confirm = () => (a.phone ? ev("(window.__GAME__.app.confirm(),true)") : key("Enter"));
@@ -107,7 +128,7 @@ async function group(c, port, a, look, world, rep) {
     await ev(UIRESET);
     await P.adv(settle);
     const base = capName({ screen, ...ctx }), R = await ev(READ), want = SCREENS[screen].state;
-    if (R.read.state !== want) { rep.errors.push(base + ": expected " + want + ", got " + R.read.state + " (no capture)"); return; }
+    if (R.read.state !== want) { L.fail(base, "expected " + want + ", got " + R.read.state + " (no capture)"); return L.close(base); }
     await P.shot(join(a.out, base + ".png"));
     const ui = await ev("window.__GAME__.ui?window.__GAME__.ui.snap():null");
     let notext = null;
@@ -117,10 +138,11 @@ async function group(c, port, a, look, world, rep) {
       await ev(NOTEXT(false)); await P.adv(TWIN_MS);
     }
     if (!ui) warn("window.__GAME__.ui is missing: no probe dump");
-    if (R.read.swRegistrations) rep.errors.push(base + ": " + R.read.swRegistrations + " service worker registration(s) on the page");
+    if (R.read.swRegistrations) L.fail(base, R.read.swRegistrations + " service worker registration(s) on the page");
     else if (R.read.swRegistrations == null) warn("the real service worker state could not be read");
     writeFileSync(join(a.out, base + ".json"), JSON.stringify({ screen, file: base + ".png", notext, flags: { ...ctx, seed: a.seed, size: [a.w, a.h], dpr: a.dpr }, read: R.read, canvases: R.canvases, ui }, null, 1));
-    rep.captures.push(base);
+    await sleep(60); // a throw the rAF shim rethrows from a timer reaches us as Runtime.exceptionThrown a moment later
+    L.close(base);
   };
   try {
     if (a.t125) await ev("window.__GAME__.ui&&window.__GAME__.ui.textScale(1.25)"); // the rAF is still held: no frame has run in any look
@@ -131,6 +153,7 @@ async function group(c, port, a, look, world, rep) {
       if (!live) warn("look " + look + " never went live");
     }
     const want = a.screens;
+    L.flush("at boot");
     if (want.includes("title")) await shoot("title", SCREENS.title.settle); else await P.adv(SCREENS.title.settle);
     if (!want.some((s) => s !== "title")) return;
     const showing = "(()=>{const a=window.__GAME__.app;return a.screen!==1||a.introStage===1||!!a._showPending;})()";
@@ -141,13 +164,15 @@ async function group(c, port, a, look, world, rep) {
     for (const s of want) {
       const R = SCREENS[s];
       if (s === "title") continue;
+      await sleep(60);
+      L.flush("outside a capture (the title press, the show, or between captures)");
       if (s === "menu") { await shoot(s, R.settle); continue; }
       const base = capName({ screen: s, ...ctx });
       if (R.run) {
         await ev(RUN0);
-        if (!(await pick("cursor", "ITEMS", ["PLAY"]))) { rep.errors.push(base + ": no PLAY row on MENU"); continue; }
+        if (!(await pick("cursor", "ITEMS", ["PLAY"]))) { L.fail(base, "no PLAY row on MENU"); L.close(base); continue; }
         await confirm();
-        if (!(await poll("window.__GAME__.app.screen===6&&window.__GAME__.G.state==='PLAY'", 5000))) { rep.errors.push(base + ": the run did not start"); continue; }
+        if (!(await poll("window.__GAME__.app.screen===6&&window.__GAME__.G.state==='PLAY'", 5000))) { L.fail(base, "the run did not start"); L.close(base); continue; }
         if (a.seed != null) for (const w of await ev(loadExpr({ seed: a.seed, heat: null, pace: null, gen: null }, world))) warn(w);
         if (s === "pause") { await P.adv(600); await ev("window.__pause&&window.__pause()"); }
         if (s === "lose" || s === "win") {
@@ -163,35 +188,38 @@ async function group(c, port, a, look, world, rep) {
       let ok = true;
       for (const [field, rows, labels] of [["cursor", "ITEMS", R.menu], ["optRow", "OPT_ROWS", R.opt], ["guideRow", "GUIDE_ROWS", R.guide]]) {
         if (!labels || !ok) continue;
-        if (!(await pick(field, rows, labels))) { rep.errors.push(base + ": no " + labels.join(" / ") + " row"); ok = false; continue; }
+        if (!(await pick(field, rows, labels))) { L.fail(base, "no " + labels.join(" / ") + " row"); ok = false; continue; }
         await confirm(); await P.adv(50);
       }
-      if (!ok) continue;
+      if (!ok) { L.close(base); continue; }
       if (R.key) { if (a.phone) await ev(`(window.__GAME__.app.key(${JSON.stringify(R.key)}),true)`); else await key(R.key, R.key.replace(/^Key/, "").toLowerCase()); await P.adv(50); }
       if (R.wait === "controls" && !(await poll("!!window.__GAME__.app.controls&&!window.__GAME__.app.controls.loading", 10000))) warn("the CONTROLS page never loaded");
       await shoot(s, R.settle || 600);
     }
   } finally {
-    rep.pageErrors.push(...P.errors.map((e) => capName({ screen: "-", ...ctx }).slice(2) + ": " + e));
+    L.flush("after the last capture");
+    rep.pageErrors.push(...P.errors.map((e) => gid + ": " + e));
     await P.S("Page.close").catch(() => {});
   }
 }
 
 /* every capture name these flags mean to take */
 export const intended = (a) => a.looks.flatMap((look) => a.worlds.flatMap((world) => a.screens.map((screen) => capName({ screen, look, world, t125: a.t125, phone: a.phone }))));
-/* the manifest after this run: the union of the names this dir's earlier runs meant to take with this run's, and the runs so far */
-export function manifest(prev, a, rep) {
-  const p = prev && typeof prev === "object" ? prev : {}, runs = Array.isArray(p.runs) ? p.runs : [];
-  return { intended: [...new Set([...(Array.isArray(p.intended) ? p.intended : []), ...intended(a)])], runs: [...runs, rep] };
+/* the manifest after this run: the dir's earlier runs, then this one (gates.mjs judges the latest alone) */
+export function manifest(prev, rep) {
+  const runs = prev && typeof prev === "object" && Array.isArray(prev.runs) ? prev.runs : [];
+  return { runs: [...runs, rep] };
 }
 
 export async function run(a) {
   const bin = findChrome();
   if (!bin) throw new Error("no chrome-headless-shell: set CHROME or install one under " + PW_DIR + "/chromium_headless_shell-<N>");
   mkdirSync(a.out, { recursive: true });
-  const rep = { out: a.out, flags: { screens: a.screens, looks: a.looks, worlds: a.worlds, seed: a.seed, t125: a.t125, phone: a.phone, size: [a.w, a.h], dpr: a.dpr, notext: a.notext, gpu: a.gpu }, chrome: bin, done: false, captures: [], errors: [], warnings: [], pageErrors: [] };
+  const rep = { out: a.out, flags: { screens: a.screens, looks: a.looks, worlds: a.worlds, seed: a.seed, t125: a.t125, phone: a.phone, size: [a.w, a.h], dpr: a.dpr, notext: a.notext, gpu: a.gpu }, chrome: bin,
+    done: false, intended: intended(a), captures: [], failed: {}, errors: [], warnings: [], pageErrors: [] };
   const mf = join(a.out, "shots.json"), prev = existsSync(mf) ? (() => { try { return JSON.parse(readFileSync(mf, "utf8")); } catch { return null; } })() : null;
-  const save = () => writeFileSync(mf, JSON.stringify(manifest(prev, a, rep), null, 1));
+  const save = () => writeFileSync(mf, JSON.stringify(manifest(prev, rep), null, 1));
+  for (const n of rep.intended) for (const ext of [".png", ".json", ".notext.png"]) rmSync(join(a.out, n + ext), { force: true }); // no earlier file can stand in
   save(); // before the first capture: a crash still leaves what was meant
   let srv = null, chr = null, c = null;
   try {
@@ -201,10 +229,10 @@ export async function run(a) {
     console.error("shots: chrome pid " + chr.proc.pid + " profile " + chr.dir);
     c = await cdp(chr.ws);
     for (const look of a.looks) for (const world of a.worlds) await group(c, srv.port, a, look, world, rep);
+    rep.done = true; // completed: never set when a step threw
   } finally {
     await stopChrome(chr, c);
     if (srv) await stop(srv.proc);
-    rep.done = true;
     save();
   }
   return rep;
@@ -214,7 +242,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   for (const s of ["SIGINT", "SIGTERM", "SIGHUP"]) process.once(s, () => process.exit(130)); // shot.mjs's exit hook then stops every child by PID
   try {
     const r = await run(parseArgs(process.argv.slice(2)));
-    console.log(JSON.stringify({ out: r.out, captures: r.captures.length, errors: r.errors, warnings: r.warnings, pageErrors: r.pageErrors.length }, null, 1));
+    console.log(JSON.stringify({ out: r.out, captures: r.captures.length, failed: r.failed, errors: r.errors, warnings: r.warnings, pageErrors: r.pageErrors.length }, null, 1));
     if (r.errors.length) process.exitCode = 1;
   } catch (e) {
     console.error("shots: " + ((e && e.message) || e));

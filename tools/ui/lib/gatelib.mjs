@@ -9,41 +9,52 @@
    stats are the mean / max / min / sd over the squint px it covers (x0 = round(x s), x1 = max(x0 + 1, round((x + w) s)), s = dpr / k).
    Contrast is (max + .05) / (min + .05) of two means, rounded to 2 places before it is judged (as the mock).
    The colour rule (text and info): the declared colour's luminance L against the background's brightest pixel when L > .18 (light on dark),
-   (L + .05) / (max + .05), else against its darkest, (min + .05) / (L + .05); >= 4.5, >= 3 with o.lock. A colour must be opaque #rgb, #rrggbb or
-   rgb(): a translucent one cannot be judged from its value and fails.
+   (L + .05) / (max + .05), else against its darkest, (min + .05) / (L + .05); >= 4.5, >= 3 with o.lock. A colour must be an opaque #rgb, #rrggbb,
+   rgb() or rgba(.., 1) with channels 0..255, the probe's own syntax (an 8-digit hex is refused by both); anything else, a translucent colour
+   included, cannot be judged from its value and fails.
+   Regions: the mocks sample element rects only (every [data-m] rect and text glyph band in the round 7 measure.mjs files; none samples a point),
+   so every region must have area: w and h > 0, or its item fails. A measured sample (a locked pair's floor cell and lip, an info pair's b) must also
+   be at least MIN_SAMPLE (4 x 4) CSS px, or its item fails "region too small to measure".
 
    Gates (value, threshold, and the pair or text it was measured on; every item is listed too):
-     record   the probe record is whole: overflow (more than probe.CAP_N entries a frame) fails
+     record   the capture can be judged: fails on a probe fault (the page threw at a bad probe call and stopped painting there: probe.fault),
+              an overflowed record (more than probe.CAP_N entries a frame), or a flags.dpr that is not a finite number > 0
      chosen   chosen pairs (chosen vs unchosen, keycap vs chosen): squint mean contrast >= 3
      band     band pairs (focus band vs bed): squint mean contrast >= 1.5
      ring     ring pairs: (ring max + .05) / (surround mean + .05) >= 3, squint
      locked   locked pairs: squint mean contrast of the whole locked part vs a chosen part >= 3; and the texture: the sd of the locked part's lip
               (x + 3, y + 3, w x .2, h - 6 in CSS px, the mocks' sub-rect, clear of the outline and the legend) / max(1e-4, the o.floor cell's sd) >= 2;
               a locked pair without o.floor leaves that item skipped
-     info     NON-TEXT marks (chevrons, glyphs, icons, meters): the mark's declared o.col by the colour rule against b, the background region, on
-              the text-hidden twin when there is one, else the capture; a only locates the mark
+     info     NON-TEXT marks (chevrons, glyphs, icons, meters): the mark's declared o.col by the colour rule against b, the background region, with a's
+              pixels masked out of b (the twin hides text only, so the mark is on both images); b is read on the text-hidden twin when there is one,
+              else the capture. Nothing of b left once a is out fails
      text     every recorded text by the colour rule: o.col against the TEXT-HIDDEN twin under its cap band (the appendix method); a text without o.col
               is an unmeasured (skipped) item, and with no twin the gate is skipped
      cap      cap height in CSS px by role and device (desktop primary 14 / secondary 11 / hud 18, body font px 17.9; phone 11 / 9 / 11 / 14.1),
               0.05 tolerance as the mock's audit; the same floors at 125 %. An unknown role or body text without o.px fails
-     inside   every text box inside the page box (0.5 px tolerance): count outside = 0
+     inside   every text box inside the page box (0.5 px tolerance): count outside = 0 (a box without area counts as outside)
      plate    every plate rect keeps its ring inside the page box: o.plate a number = T in box px, true = the appendix T (16 desktop / 10 phone) in
               CSS px, taken through the box-to-CSS scale; count outside = 0
      yellow   distinct parts (name AND rect) whose o.fill is #ffd447 <= 1
      touch    touch captures only: every touch target >= 43.95 x 43.95 CSS px
      gap      touch captures only: >= 8 CSS px between two targets of one set, and between a target without o.set and every other target; members of
-              one set of the same kind list|tab|bank|step are exempt, a target nested in another is skipped, an overlap is 0. With only exempt or
-              nested pairs the gate passes with no value (nothing it forbids exists); with fewer than two targets it is skipped
-   Bad data never measures as 0: a null or non-finite number in the dump fails its item (the probe throws on one while recording).
+              one set of the same kind list|tab|bank|step are exempt, a target nested in another of its set is skipped, an overlap is 0; two targets of
+              DIFFERENT sets are not measured, but if they overlap that is a fail. With no pair to measure (every pair exempt, nested or across sets;
+              the note counts each) the gate passes with no value; with fewer than two targets it is skipped
+   Bad data never measures as 0: a null or non-finite number in the dump, a region without area, a non-finite canvas rect or page box fails (the probe
+   throws on each while recording).
    Status: pass | fail | skipped (the gate needs data the capture lacks: no probe data, no canvas mapping, no text-hidden twin, a sample outside the
-   capture, a required gate the page did not declare) | n/a (only touch and gap on a desktop capture). REQUIRED gates are default-deny: on an
-   instrumented capture each one in `need` (tools/ui/lib/screens.mjs: all of REQUIRED but what the screen's row exempts, with a reason) that would
-   be n/a is skipped, "required, not declared". tally().exit(strict) fails on a fail, on no capture, and under --strict on a skip; never on n/a. */
+   capture, a required gate the page did not declare) | n/a (touch and gap on a desktop capture, or on a screen whose row exempts them; a REQUIRED
+   gate a row exempts and the page does not declare). Default-deny: on an instrumented capture each gate in `need` (tools/ui/lib/screens.mjs:
+   EXEMPTABLE but what the screen's row exempts, each with a reason) that would be n/a is skipped, "required, not declared". tally().exit(strict)
+   fails on a fail, on no capture, and under --strict on a skip; never on n/a. */
 export const FLOOR = Object.freeze({ chosen: 3, band: 1.5, ring: 3, locked: 3, lockedSd: 2, info: 4.5, infoLock: 3, touch: 43.95, gap: 8, yellow: 1 });
 export const CAP = Object.freeze({ d: Object.freeze({ primary: 14, secondary: 11, hud: 18, body: 17.9 }), p: Object.freeze({ primary: 11, secondary: 9, hud: 11, body: 14.1 }) });
 export const GATES = Object.freeze(["record", "chosen", "band", "ring", "locked", "info", "text", "cap", "inside", "plate", "yellow", "touch", "gap"]);
 export const REQUIRED = Object.freeze(["chosen", "band", "ring", "locked", "info", "text", "cap", "inside", "plate", "yellow"]);
+export const EXEMPTABLE = Object.freeze([...REQUIRED, "touch", "gap"]);
 export const PLATE_T = Object.freeze({ d: 16, p: 10 });
+export const MIN_SAMPLE = 4;
 const TH = { record: null, chosen: FLOOR.chosen, band: FLOOR.band, ring: FLOOR.ring, locked: FLOOR.locked, info: FLOOR.info, text: FLOOR.info, cap: null, inside: 0, plate: 0, yellow: FLOOR.yellow, touch: FLOOR.touch, gap: FLOOR.gap };
 const TOL = 0.05, EXEMPT = /^(list|tab|bank|step)$/, YEL = [255, 212, 71];
 
@@ -51,15 +62,12 @@ export const lin = (v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow
 const Y = (r, g, b) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
 const r2 = (v) => +v.toFixed(2), r4 = (v) => +v.toFixed(4);
 export const cr = (a, b) => r2((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05));
-/* an opaque #rgb, #rrggbb (#rrggbbff), rgb() or rgba(.., 1) -> {rgb, L}; anything else {err} */
+/* the probe's colour syntax, exactly: an opaque #rgb, #rrggbb, rgb() or rgba(.., 1), channels 0..255 -> {rgb, L}; anything else {err} */
+const COL = /^(?:#([0-9a-f]{3}|[0-9a-f]{6})|rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*1(?:\.0*)?\s*)?\))$/i;
 export function colOf(c) {
-  const s = String(c == null ? "" : c).trim();
-  let m, rgb = null, a = 1;
-  if ((m = /^#([0-9a-f]{3})$/i.exec(s))) rgb = [...m[1]].map((h) => parseInt(h + h, 16));
-  else if ((m = /^#([0-9a-f]{6})([0-9a-f]{2})?$/i.exec(s))) { rgb = [0, 2, 4].map((i) => parseInt(m[1].slice(i, i + 2), 16)); if (m[2]) a = parseInt(m[2], 16) / 255; }
-  else if ((m = /^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)$/i.exec(s))) { rgb = [+m[1], +m[2], +m[3]]; if (m[4] !== undefined) a = +m[4]; }
-  if (!rgb || rgb.some((v) => !(v >= 0 && v <= 255))) return { err: "not a colour: " + JSON.stringify(c) };
-  if (!(a >= 1)) return { err: "translucent colour " + s + " cannot be judged from its value" };
+  const s = typeof c === "string" ? c.trim() : "", m = COL.exec(s);
+  const rgb = !m ? null : m[1] ? (m[1].length === 3 ? [...m[1]].map((h) => parseInt(h + h, 16)) : [0, 2, 4].map((i) => parseInt(m[1].slice(i, i + 2), 16))) : [+m[2], +m[3], +m[4]];
+  if (!rgb || rgb.some((v) => v > 255)) return { err: "not an opaque #rrggbb, #rgb, rgb() or rgba(.., 1) colour (a translucent one cannot be judged from its value): " + JSON.stringify(c) };
   return { rgb, L: Y(...rgb) };
 }
 
@@ -73,10 +81,11 @@ export function squint(img, dpr) {
   return { w, h, L, s: dpr / k };
 }
 const span = (v0, v1, n) => { const a = Math.max(0, v0), b = Math.min(n, Math.max(v0 + 1, v1)); return a < b ? [a, b] : null; };
-function acc(get, xs, ys) {
+function acc(get, xs, ys, skip) {
   if (!xs || !ys) return null;
   let n = 0, m = 0, q = 0, mx = -Infinity, mn = Infinity;
-  for (let j = ys[0]; j < ys[1]; j++) for (let i = xs[0]; i < xs[1]; i++) { const v = get(i, j); n++; m += v; q += v * v; if (v > mx) mx = v; if (v < mn) mn = v; }
+  for (let j = ys[0]; j < ys[1]; j++) for (let i = xs[0]; i < xs[1]; i++) { if (skip && skip(i, j)) continue; const v = get(i, j); n++; m += v; q += v * v; if (v > mx) mx = v; if (v < mn) mn = v; }
+  if (!n) return { n: 0 };
   m /= n;
   return { n, mean: m, max: mx, min: mn, sd: Math.sqrt(Math.max(0, q / n - m * m)) };
 }
@@ -85,18 +94,21 @@ export function stat(sq, r) {
   const s = sq.s, x0 = Math.round(r.x * s), y0 = Math.round(r.y * s);
   return acc((i, j) => sq.L[j * sq.w + i], span(x0, Math.round((r.x + (r.w || 0)) * s), sq.w), span(y0, Math.round((r.y + (r.h || 0)) * s), sq.h));
 }
-/* a CSS px rect at full resolution, per device px */
-export function full(img, dpr, r) {
-  const d = img.data, W = img.width, x0 = Math.floor(r.x * dpr), y0 = Math.floor(r.y * dpr);
-  return acc((i, j) => { const o = (j * W + i) * 4; return Y(d[o], d[o + 1], d[o + 2]); }, span(x0, Math.ceil((r.x + (r.w || 0)) * dpr), W), span(y0, Math.ceil((r.y + (r.h || 0)) * dpr), img.height));
+/* a CSS px rect at full resolution, per device px; with mask (a CSS px rect) the device px it covers are left out */
+const dev = (r, dpr) => [Math.floor(r.x * dpr), Math.ceil((r.x + (r.w || 0)) * dpr), Math.floor(r.y * dpr), Math.ceil((r.y + (r.h || 0)) * dpr)];
+export function full(img, dpr, r, mask) {
+  const d = img.data, W = img.width, [x0, x1, y0, y1] = dev(r, dpr), M = mask ? dev(mask, dpr) : null;
+  return acc((i, j) => { const o = (j * W + i) * 4; return Y(d[o], d[o + 1], d[o + 2]); }, span(x0, x1, W), span(y0, y1, img.height), M && ((i, j) => i >= M[0] && i < M[1] && j >= M[2] && j < M[3]));
 }
 const fin = (...v) => v.every((n) => typeof n === "number" && Number.isFinite(n));
-const okRect = (r) => !!r && fin(r.x, r.y, r.w, r.h);
+/* null when the region is good, else why it cannot be judged */
+const regionErr = (r) => (!r || !fin(r.x, r.y, r.w, r.h) ? "a null or non-finite coordinate" : r.w <= 0 || r.h <= 0 ? "a region without area (w or h <= 0)" : null);
 const okBox = (b) => !!b && fin(b.w, b.h) && b.w > 0 && b.h > 0;
-/* box px -> CSS px through the canvas the page names in ui.box.el; null when the dump cannot say where the page sits */
+/* box px -> CSS px through the canvas the page names in ui.box.el; null when the dump cannot say where the page sits, {err} when what it says is bad */
 export function mapper(d) {
   const u = d && d.ui, box = u && u.box, cv = okBox(box) && box.el && d.canvases ? d.canvases[box.el] : null;
-  if (!cv || !fin(cv.x, cv.y, cv.w, cv.h) || !(cv.w > 0) || !(cv.h > 0)) return null;
+  if (!cv) return null;
+  if (!fin(cv.x, cv.y, cv.w, cv.h) || !(cv.w > 0) || !(cv.h > 0)) return { err: "the canvas rect of #" + box.el + " is not finite or has no area" };
   const sx = cv.w / box.w, sy = cv.h / box.h;
   return { sx, sy, css: (r) => ({ x: cv.x + r.x * sx, y: cv.y + r.y * sy, w: (r.w || 0) * sx, h: (r.h || 0) * sy }) };
 }
@@ -106,6 +118,8 @@ const G = (status, o = {}) => ({ status, value: null, threshold: null, on: null,
 const item = (on, value, threshold, o = {}) => { const v = r2(value), { tol = 0, ...rest } = o; return { on, value: v, threshold, status: v >= threshold - tol ? "pass" : "fail", ...rest }; };
 const bad = (on, threshold, note, o = {}) => ({ on, value: null, threshold, status: "fail", note, ...o });
 const skip = (on, threshold, note, o = {}) => ({ on, value: null, threshold, status: "skipped", note, ...o });
+const small = (r) => r.w < MIN_SAMPLE || r.h < MIN_SAMPLE;
+const TOO_SMALL = "region too small to measure (under " + MIN_SAMPLE + " x " + MIN_SAMPLE + " CSS px)";
 /* the gate from its items: fail if any fails, else skipped if any could not be measured (or there is none), else pass; value from the worst
    measured item, on / note from the item that decides the status */
 function sum(items, th) {
@@ -117,12 +131,16 @@ function sum(items, th) {
 }
 const nm = (p, i) => p.name || (p.a && p.b && p.a.name && p.b.name ? p.a.name + " vs " + p.b.name : p.kind + " #" + (i + 1));
 
-export function evaluate(d, img, notext, need = REQUIRED) {
-  const u = d && d.ui, rects = (u && u.rects) || [], texts = (u && u.texts) || [], pairs = (u && u.pairs) || [];
-  if (!rects.length && !texts.length && !pairs.length && !(u && u.overflow)) return Object.fromEntries(GATES.map((g) => [g, G("skipped", { threshold: TH[g], note: "no probe data" })]));
-  const f = d.flags || {}, dpr = +f.dpr || 1, phone = !!f.phone, box = u.box, boxBad = !!box && !okBox(box), m = mapper(d), sq = m && img ? squint(img, dpr) : null, out = {};
-  const noMap = (g) => G(boxBad ? "fail" : "skipped", { threshold: TH[g], note: boxBad ? "the page box has a non-finite or empty size" : !box ? "no page box (begin without a box)" : !m ? "no canvas mapping (box.el names no captured canvas)" : "no capture PNG" });
-  out.record = u.overflow ? G("fail", { note: "the probe record overflowed (more than probe.CAP_N entries a frame: a page recording without begin?)" }) : G("pass");
+export function evaluate(d, img, notext, need = EXEMPTABLE) {
+  const u = d && d.ui, rects = (u && u.rects) || [], texts = (u && u.texts) || [], pairs = (u && u.pairs) || [], f = (d && d.flags) || {};
+  const dprBad = !(fin(f.dpr) && f.dpr > 0), recordWhy = dprBad ? "flags.dpr is not a finite number > 0: " + f.dpr : u && u.fault ? "probe fault: " + u.fault : u && u.overflow ? "the probe record overflowed (more than probe.CAP_N entries a frame: a page recording without begin?)" : null;
+  const record = recordWhy ? G("fail", { note: recordWhy }) : G("pass");
+  if (!rects.length && !texts.length && !pairs.length && !(u && (u.overflow || u.fault))) return Object.fromEntries(GATES.map((g) => [g, g === "record" && dprBad ? record : G("skipped", { threshold: TH[g], note: "no probe data" })]));
+  const dpr = f.dpr, phone = !!f.phone, box = u.box, boxBad = !!box && !okBox(box), mp = mapper(d), m = mp && !mp.err ? mp : null, sq = m && img && !dprBad ? squint(img, dpr) : null, out = { record };
+  const noMap = (g) => {
+    const why = dprBad ? "flags.dpr is not a finite number > 0" : boxBad ? "the page box has a non-finite or empty size" : mp && mp.err ? mp.err : null;
+    return G(why ? "fail" : "skipped", { threshold: TH[g], note: why || (!box ? "no page box (begin without a box)" : !m ? "no canvas mapping (box.el names no captured canvas)" : "no capture PNG") });
+  };
   const bgImg = notext || img;
   for (const k of ["chosen", "band", "ring", "locked", "info"]) {
     const ps = pairs.map((p, i) => [p, i]).filter(([p]) => p.kind === k);
@@ -130,15 +148,18 @@ export function evaluate(d, img, notext, need = REQUIRED) {
     if (!sq) { out[k] = noMap(k); continue; }
     const items = [];
     for (const [p, i] of ps) {
-      const on = nm(p, i), at = { a: p.a, b: p.b };
-      if (!okRect(p.a) || !okRect(p.b)) { items.push(bad(on, TH[k], "a null or non-finite coordinate", at)); continue; }
+      const on = nm(p, i), at = { a: p.a, b: p.b }, re = regionErr(p.a) || regionErr(p.b);
+      if (re) { items.push(bad(on, TH[k], re, at)); continue; }
       const A = m.css(p.a), B = m.css(p.b);
       if (k === "info") {
-        const c = colOf(p.col), th = p.lock ? FLOOR.infoLock : FLOOR.info, bg = full(bgImg, dpr, B);
+        const c = colOf(p.col), th = p.lock ? FLOOR.infoLock : FLOOR.info;
         if (c.err) { items.push(bad(on, th, "the mark's o.col: " + c.err, at)); continue; }
-        if (!bg) { items.push(skip(on, th, "b is outside the capture", at)); continue; }
+        if (small(B)) { items.push(bad(on, th, "b: " + TOO_SMALL, at)); continue; }
+        const whole = full(bgImg, dpr, B), bg = whole && full(bgImg, dpr, B, A);
+        if (!whole) { items.push(skip(on, th, "b is outside the capture", at)); continue; }
+        if (!bg.n) { items.push(bad(on, th, "nothing of b is left once the mark a is masked out: b must be the background around the mark", at)); continue; }
         const light = c.L > 0.18;
-        items.push(item(on, light ? (c.L + 0.05) / (bg.max + 0.05) : (bg.min + 0.05) / (c.L + 0.05), th, { ...at, col: p.col, light, bgFrom: notext ? "twin" : "capture" }));
+        items.push(item(on, light ? (c.L + 0.05) / (bg.max + 0.05) : (bg.min + 0.05) / (c.L + 0.05), th, { ...at, col: p.col, light, bgFrom: notext ? "twin" : "capture", bgPx: bg.n, masked: whole.n - bg.n }));
         continue;
       }
       const sa = stat(sq, A), sb = stat(sq, B);
@@ -147,22 +168,27 @@ export function evaluate(d, img, notext, need = REQUIRED) {
       else items.push(item(on, cr(sa.mean, sb.mean), FLOOR[k], { ...at, meanA: r4(sa.mean), meanB: r4(sb.mean) }));
       if (k !== "locked") continue;
       const tn = on + " texture sd";
-      if (!p.floor) { items.push(skip(tn, FLOOR.lockedSd, "no floor cell declared (o.floor)")); continue; }
-      if (!okRect(p.floor)) { items.push(bad(tn, FLOOR.lockedSd, "a null or non-finite floor coordinate")); continue; }
-      const lip = { x: A.x + 3, y: A.y + 3, w: A.w * 0.2, h: A.h - 6 }, sl = stat(sq, lip), sf = stat(sq, m.css(p.floor));
-      items.push(sl && sf ? item(tn, sl.sd / Math.max(1e-4, sf.sd), FLOOR.lockedSd, { lip: { x: r2(lip.x), y: r2(lip.y), w: r2(lip.w), h: r2(lip.h) }, lipSd: r4(sl.sd), floorSd: r4(sf.sd) }) : skip(tn, FLOOR.lockedSd, "the lip or the floor cell is outside the capture"));
+      if (p.floor == null) { items.push(skip(tn, FLOOR.lockedSd, "no floor cell declared (o.floor)")); continue; }
+      const fe = regionErr(p.floor);
+      if (fe) { items.push(bad(tn, FLOOR.lockedSd, "floor: " + fe)); continue; }
+      const lip = { x: A.x + 3, y: A.y + 3, w: A.w * 0.2, h: A.h - 6 }, Fl = m.css(p.floor), lp = { x: r2(lip.x), y: r2(lip.y), w: r2(lip.w), h: r2(lip.h) };
+      if (small(Fl)) { items.push(bad(tn, FLOOR.lockedSd, "floor: " + TOO_SMALL)); continue; }
+      if (small(lip)) { items.push(bad(tn, FLOOR.lockedSd, "lip (w x .2, h - 6 of a locked part): " + TOO_SMALL, { lip: lp })); continue; }
+      const sl = stat(sq, lip), sf = stat(sq, Fl);
+      items.push(sl && sf ? item(tn, sl.sd / Math.max(1e-4, sf.sd), FLOOR.lockedSd, { lip: lp, lipSd: r4(sl.sd), floorSd: r4(sf.sd) }) : skip(tn, FLOOR.lockedSd, "the lip or the floor cell is outside the capture"));
     }
     out[k] = sum(items, TH[k]);
   }
+  const tbox = (t) => ({ x: t.x, y: t.y, w: t.w, h: t.capH });
   if (!texts.length) out.text = G("n/a", { threshold: TH.text, note: "no text recorded" });
-  else if (!m) out.text = noMap("text");
+  else if (!m || dprBad) out.text = noMap("text");
   else if (!notext) out.text = G("skipped", { threshold: TH.text, note: "no text-hidden twin (shots.mjs takes one when a text declares o.col, or with --notext)" });
   else {
     out.text = sum(texts.map((t) => {
-      const th = t.lock ? FLOOR.infoLock : FLOOR.info;
-      if (!fin(t.x, t.y, t.w, t.capH)) return bad(t.s, th, "a null or non-finite coordinate");
+      const th = t.lock ? FLOOR.infoLock : FLOOR.info, re = regionErr(tbox(t));
+      if (re) return bad(t.s, th, re);
       if (t.col == null) return skip(t.s, th, "no o.col: its contrast is not measured");
-      const c = colOf(t.col), bg = full(notext, dpr, m.css({ x: t.x, y: t.y, w: t.w, h: t.capH }));
+      const c = colOf(t.col), bg = full(notext, dpr, m.css(tbox(t)));
       if (c.err) return bad(t.s, th, c.err);
       if (!bg) return skip(t.s, th, "outside the capture");
       const light = c.L > 0.18;
@@ -176,59 +202,64 @@ export function evaluate(d, img, notext, need = REQUIRED) {
     out.cap = sum(texts.map((t) => {
       const th = F[t.role];
       if (th == null) return bad(t.s, null, "unknown role " + t.role);
-      if (t.role === "body") return fin(t.px) && t.px > 0 ? item(t.s, t.px * m.sy, th, { role: t.role, unit: "font px", tol: TOL }) : bad(t.s, th, "body text without a finite o.px");
-      return fin(t.capH) ? item(t.s, t.capH * m.sy, th, { role: t.role, tol: TOL }) : bad(t.s, th, "a null or non-finite cap height");
+      if (t.role === "body") return fin(t.px) && t.px > 0 ? item(t.s, t.px * m.sy, th, { role: t.role, unit: "font px", tol: TOL }) : bad(t.s, th, "body text without a finite o.px > 0");
+      return fin(t.capH) && t.capH > 0 ? item(t.s, t.capH * m.sy, th, { role: t.role, tol: TOL }) : bad(t.s, th, "a null, non-finite or non-positive cap height");
     }), null);
   }
-  const outside = (x, y, w, h) => !fin(x, y, w, h) || x < -0.5 || y < -0.5 || x + w > box.w + 0.5 || y + h > box.h + 0.5;
-  const count = (list, T, label) => {
-    const o = list.filter((r) => outside(...T(r)));
-    return G(o.length ? "fail" : "pass", { value: o.length, threshold: 0, on: o.length ? label(o[0]) : null, items: o.map((r) => ({ on: label(r), status: "fail" })) });
+  const outside = (r) => regionErr(r) || r.x < -0.5 || r.y < -0.5 || r.x + r.w > box.w + 0.5 || r.y + r.h > box.h + 0.5;
+  const count = (list, R, label) => {
+    const o = list.filter((r) => outside(R(r)));
+    return G(o.length ? "fail" : "pass", { value: o.length, threshold: 0, on: o.length ? label(o[0]) : null, items: o.map((r) => ({ on: label(r), note: regionErr(R(r)) || "outside the page box", status: "fail" })) });
   };
   if (!texts.length) out.inside = G("n/a", { threshold: 0, note: "no text recorded" });
   else if (!box || boxBad) out.inside = noMap("inside");
-  else out.inside = count(texts, (t) => [t.x, t.y, t.w, t.capH], (t) => t.s);
+  else out.inside = count(texts, tbox, (t) => t.s);
   const plates = rects.filter((r) => r.plate != null && r.plate !== false);
   if (!plates.length) out.plate = G("n/a", { threshold: 0, note: "no plate declared" });
-  else if (!box || boxBad) out.plate = noMap("plate");
+  else if (!box || boxBad || mp && mp.err) out.plate = noMap("plate");
   else if (!m && plates.some((r) => typeof r.plate !== "number")) out.plate = noMap("plate");
   else out.plate = count(plates, (r) => {
-    const tx = typeof r.plate === "number" ? r.plate : PLATE_T[phone ? "p" : "d"] / m.sx, ty = typeof r.plate === "number" ? r.plate : PLATE_T[phone ? "p" : "d"] / m.sy;
-    return [r.x - tx, r.y - ty, r.w + 2 * tx, r.h + 2 * ty];
+    const num = typeof r.plate === "number", tx = num ? r.plate : PLATE_T[phone ? "p" : "d"] / m.sx, ty = num ? r.plate : PLATE_T[phone ? "p" : "d"] / m.sy;
+    return regionErr(r) || (num && !(fin(r.plate) && r.plate > 0)) ? { x: NaN, y: 0, w: 0, h: 0 } : { x: r.x - tx, y: r.y - ty, w: r.w + 2 * tx, h: r.h + 2 * ty };
   }, (r) => r.name);
   const fills = rects.filter((r) => r.fill != null);
   if (!fills.length) out.yellow = G("n/a", { threshold: TH.yellow, note: "no fill declared" });
   else {
-    const badFill = fills.find((r) => colOf(r.fill).err || !okRect(r));
-    if (badFill) out.yellow = G("fail", { threshold: TH.yellow, on: badFill.name, note: colOf(badFill.fill).err || "a null or non-finite coordinate" });
+    const badFill = fills.find((r) => colOf(r.fill).err || regionErr(r));
+    if (badFill) out.yellow = G("fail", { threshold: TH.yellow, on: badFill.name, note: colOf(badFill.fill).err || regionErr(badFill) });
     else {
       const y = [...new Map(fills.filter((r) => colOf(r.fill).rgb.every((v, i) => v === YEL[i])).map((r) => [[r.name, r.x, r.y, r.w, r.h].join("|"), r])).values()];
       out.yellow = G(y.length <= FLOOR.yellow ? "pass" : "fail", { value: y.length, threshold: FLOOR.yellow, on: y.map((r) => r.name).join(", ") || null, items: y.map((r) => ({ on: r.name, x: r.x, y: r.y, w: r.w, h: r.h, status: "counted" })) });
     }
   }
-  const tg = rects.filter((r) => r.touch);
+  const tg = rects.filter((r) => r.touch), ex = (g) => !need.includes(g);
+  const off = (g, why) => G(ex(g) ? "n/a" : "skipped", { threshold: TH[g], note: ex(g) ? why + "; exempt on this screen" : why });
   if (!phone) { out.touch = G("n/a", { threshold: TH.touch, note: "desktop capture" }); out.gap = G("n/a", { threshold: TH.gap, note: "desktop capture" }); }
-  else if (!tg.length) { out.touch = G("skipped", { threshold: TH.touch, note: "no touch target declared" }); out.gap = G("skipped", { threshold: TH.gap, note: "no touch target declared" }); }
+  else if (!tg.length) { out.touch = off("touch", "no touch target declared"); out.gap = off("gap", "no touch target declared"); }
   else if (!m) { out.touch = noMap("touch"); out.gap = noMap("gap"); }
   else {
-    const C = tg.map((r) => ({ r, c: okRect(r) ? m.css(r) : null }));
-    out.touch = sum(C.map(({ r, c }) => (c ? item(r.name, Math.min(c.w, c.h), FLOOR.touch, { w: r2(c.w), h: r2(c.h) }) : bad(r.name, FLOOR.touch, "a null or non-finite coordinate"))), TH.touch);
-    const items = [];
-    let exempt = 0;
+    const C = tg.map((r) => ({ r, c: regionErr(r) ? null : m.css(r) }));
+    out.touch = sum(C.map(({ r, c }) => (c ? item(r.name, Math.min(c.w, c.h), FLOOR.touch, { w: r2(c.w), h: r2(c.h) }) : bad(r.name, FLOOR.touch, regionErr(r)))), TH.touch);
+    const items = [], n = { exempt: 0, nested: 0, crossSet: 0 };
     for (let i = 0; i < C.length; i++) for (let j = i + 1; j < C.length; j++) {
       const A = C[i], B = C[j], on = A.r.name + " / " + B.r.name;
-      if (A.r.set != null && B.r.set != null && A.r.set !== B.r.set) continue;
-      if (A.r.set != null && A.r.set === B.r.set && A.r.kind && A.r.kind === B.r.kind && EXEMPT.test(A.r.kind)) { exempt++; continue; }
-      if (!A.c || !B.c) { items.push(bad(on, FLOOR.gap, "a null or non-finite coordinate")); continue; }
-      const a = A.c, b = B.c, inA = b.x >= a.x && b.y >= a.y && b.x + b.w <= a.x + a.w && b.y + b.h <= a.y + a.h, inB = a.x >= b.x && a.y >= b.y && a.x + a.w <= b.x + b.w && a.y + a.h <= b.y + b.h;
-      if (inA || inB) { exempt++; continue; }
-      const dx = Math.max(0, Math.max(a.x, b.x) - Math.min(a.x + a.w, b.x + b.w)), dy = Math.max(0, Math.max(a.y, b.y) - Math.min(a.y + a.h, b.y + b.h));
+      if (!A.c || !B.c) { items.push(bad(on, FLOOR.gap, "a null, non-finite or empty target")); continue; }
+      const a = A.c, b = B.c, ix = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x), iy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+      if (A.r.set != null && B.r.set != null && A.r.set !== B.r.set) {
+        if (ix > 0 && iy > 0) items.push(bad(on, FLOOR.gap, "targets of two sets overlap", { sets: [A.r.set, B.r.set] }));
+        else n.crossSet++;
+        continue;
+      }
+      if (A.r.set != null && A.r.set === B.r.set && A.r.kind && A.r.kind === B.r.kind && EXEMPT.test(A.r.kind)) { n.exempt++; continue; }
+      const inA = b.x >= a.x && b.y >= a.y && b.x + b.w <= a.x + a.w && b.y + b.h <= a.y + a.h, inB = a.x >= b.x && a.y >= b.y && a.x + a.w <= b.x + b.w && a.y + a.h <= b.y + b.h;
+      if (inA || inB) { n.nested++; continue; }
+      const dx = Math.max(0, -ix), dy = Math.max(0, -iy);
       items.push(item(on, dx === 0 && dy === 0 ? 0 : Math.max(dx, dy), FLOOR.gap, { set: A.r.set ?? B.r.set ?? null }));
     }
-    out.gap = C.length < 2 ? G("skipped", { threshold: TH.gap, note: "fewer than two touch targets" })
-      : items.length ? sum(items, TH.gap) : G("pass", { threshold: TH.gap, note: "every pair of targets is exempt (one set, one kind list|tab|bank|step) or nested: " + exempt });
+    out.gap = C.length < 2 ? off("gap", "fewer than two touch targets")
+      : items.length ? sum(items, TH.gap) : G("pass", { threshold: TH.gap, note: "no pair to measure: " + n.crossSet + " across sets, " + n.exempt + " exempt (one set, one kind list|tab|bank|step), " + n.nested + " nested" });
   }
-  for (const g of need) if (out[g] && out[g].status === "n/a") out[g] = { ...out[g], status: "skipped", note: "required, not declared (" + out[g].note + ")" };
+  for (const g of REQUIRED) if (need.includes(g) && out[g].status === "n/a") out[g] = { ...out[g], status: "skipped", note: "required, not declared (" + out[g].note + ")" };
   return out;
 }
 

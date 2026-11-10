@@ -12,10 +12,10 @@ import { deflateSync } from "node:zlib";
 import { createRGBA, png, unpng } from "../tools/pixel/rgba.mjs";
 import { PRECACHE } from "../src/pwa/shell.js";
 import * as P from "../src/render/kit/probe.js";
-import { squint, stat, evaluate, tally, colOf, FLOOR, CAP, GATES, REQUIRED } from "../tools/ui/lib/gatelib.mjs";
-import { ORDER, SCREENS, canon, capName, parseCapName } from "../tools/ui/lib/screens.mjs";
+import { squint, stat, evaluate, tally, colOf, FLOOR, CAP, GATES, REQUIRED, EXEMPTABLE, MIN_SAMPLE } from "../tools/ui/lib/gatelib.mjs";
+import { ORDER, SCREENS, canon, capName, parseCapName, needOf } from "../tools/ui/lib/screens.mjs";
 import { refKeys, findRef, compareHtml } from "../tools/ui/lib/refs.mjs";
-import { parseArgs as shotsArgs, intended, manifest } from "../tools/ui/shots.mjs";
+import { parseArgs as shotsArgs, intended, manifest, ledger } from "../tools/ui/shots.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const UI = join(ROOT, "tools/ui");
@@ -56,7 +56,7 @@ test("main hands the probe and the text scale to the debug hook; the hook expose
 });
 
 test("probe: off is a no-op, on records, setOn(false) clears, snapshot is plain JSON", () => {
-  const OFF = { page: "", box: null, rects: [], texts: [], pairs: [], frames: 0, overflow: false };
+  const OFF = { page: "", box: null, rects: [], texts: [], pairs: [], frames: 0, overflow: false, fault: null };
   P.setOn(false);
   P.begin("menu", { w: 600, h: 520, dpr: 2, el: "sh" });
   P.rect("play", 1, 2, 3, 4, { touch: true });
@@ -70,7 +70,7 @@ test("probe: off is a no-op, on records, setOn(false) clears, snapshot is plain 
   P.rect("play", 10, 20, 200, 44, { touch: true, set: "list", kind: "list", fill: "#ffd447", fn: () => 1, deep: { a: 1 } });
   P.text("PLAY", 12, 30, 40, 14.8, { role: "primary", col: "#fff2df" });
   P.pair("chosen", [0, 0, 10, 10], { x: 20, y: 0, w: 10, h: 10 });
-  P.pair("locked", { x: 0, y: 0, w: 4, h: 4 }, { x: 5, y: 5 }, { floor: { x: 9, y: 9, w: 2, h: 2 }, name: "lock" });
+  P.pair("locked", { x: 0, y: 0, w: 4, h: 4 }, { x: 5, y: 5, w: 2, h: 2 }, { floor: { x: 9, y: 9, w: 2, h: 2 }, name: "lock" });
   assert.throws(() => P.pair("glow", { x: 0, y: 0 }, { x: 0, y: 0 }), /unknown pair kind/);
   const s = P.snapshot();
   assert.deepEqual(JSON.parse(JSON.stringify(s)), s, "JSON round trip");
@@ -79,7 +79,7 @@ test("probe: off is a no-op, on records, setOn(false) clears, snapshot is plain 
   assert.deepEqual(s.rects, [{ touch: true, set: "list", kind: "list", fill: "#ffd447", name: "play", x: 10, y: 20, w: 200, h: 44 }]);
   assert.equal(s.texts[0].role, "primary");
   assert.deepEqual(s.pairs[0].a, { x: 0, y: 0, w: 10, h: 10 });
-  assert.deepEqual(s.pairs[1].b, { x: 5, y: 5, w: 0, h: 0 });
+  assert.deepEqual(s.pairs[1].b, { x: 5, y: 5, w: 2, h: 2 });
   assert.deepEqual(s.pairs[1].floor, { x: 9, y: 9, w: 2, h: 2 });
   s.rects[0].x = 99;
   assert.equal(P.snapshot().rects[0].x, 10, "a snapshot is a copy");
@@ -108,7 +108,20 @@ test("probe, while on: bad input throws (a page bug the gates could not judge), 
       ["plate T NaN", () => P.rect("p", 0, 0, 1, 1, { plate: NaN }), /finite/],
       ["box NaN", () => P.begin("x", { w: NaN, h: 1 }), /finite/],
       ["box 0 wide", () => P.begin("x", { w: 0, h: 1 }), /> 0/],
+      ["8-digit hex, even ff", () => P.text("A", 0, 0, 1, 1, { col: "#ffd447ff" }), /colour/],
+      ["channel over 255", () => P.rect("k", 0, 0, 1, 1, { fill: "rgb(256,0,0)" }), /colour/],
+      ["a point pair: the mocks sample rects only", () => P.pair("chosen", { x: 0, y: 0 }, [0, 0, 4, 4]), /finite/],
+      ["a zero-width region", () => P.pair("band", [0, 0, 0, 4], [0, 0, 4, 4]), /area/],
+      ["a point floor", () => P.pair("locked", [0, 0, 4, 4], [0, 0, 4, 4], { floor: [9, 9, 0, 0] }), /area/],
+      ["a negative rect height", () => P.rect("k", 0, 0, 4, -1), /area/],
+      ["a negative cap height", () => P.text("A", 0, 0, 4, -1), /area/],
+      ["an empty text box", () => P.text("A", 0, 0, 0, 10), /area/],
     ]) assert.throws(f, re, what);
+    assert.match(P.snapshot().fault, /unknown role title/, "the first fault is kept in the record");
+    P.begin("menu", { w: 600, h: 520, el: "c" });
+    assert.match(P.snapshot().fault, /unknown role/, "begin keeps it: a fault stands until setOn");
+    P.setOn(false); P.setOn(true);
+    assert.equal(P.snapshot().fault, null);
     P.begin("menu", { w: 600, h: 520, el: "c" });
     P.text("Body", 0, 0, 1, 1, { role: "body", px: 18, col: "rgb(220, 203, 184)" });
     P.pair("info", [0, 0, 4, 4], [0, 0, 8, 8], { col: "#fff" });
@@ -208,10 +221,16 @@ test("gates: REQUIRED is default-deny; n/a only for touch and gap on a desktop c
   assert.equal(tally([{ gates: free }]).exit(true), 0);
   for (const n of ORDER) {
     const s = SCREENS[n];
-    assert.deepEqual(s.need, REQUIRED.filter((k) => !s.exempt[k]), n);
-    for (const [k, why] of Object.entries(s.exempt)) assert.ok(REQUIRED.includes(k) && why.trim(), n + " exempts " + k + " with a reason");
+    assert.deepEqual(s.need, EXEMPTABLE.filter((k) => !s.exempt[k]), n);
+    for (const [k, why] of Object.entries(s.exempt)) assert.ok(EXEMPTABLE.includes(k) && why.trim(), n + " exempts " + k + " with a reason");
   }
   assert.deepEqual(REQUIRED, ["chosen", "band", "ring", "locked", "info", "text", "cap", "inside", "plate", "yellow"]);
+  assert.deepEqual(EXEMPTABLE, [...REQUIRED, "touch", "gap"]);
+  assert.deepEqual(needOf("title", { touch: "tap anywhere starts", gap: "no tap targets of its own" }), REQUIRED, "a row can exempt touch and gap");
+  for (const ex of [{ record: "x" }, { touch: "" }, { glow: "x" }]) assert.throws(() => needOf("t", ex), /reason|EXEMPTABLE/, JSON.stringify(ex));
+  const ph = dump(ui({ rects: [R("x", 0, 0, 4, 4)] }), { phone: true });
+  assert.deepEqual([evaluate(ph, img, null).touch.status, evaluate(ph, img, null).gap.status], ["skipped", "skipped"], "phone: no targets declared is a skip");
+  assert.deepEqual([evaluate(ph, img, null, needOf("t", { touch: "tap anywhere", gap: "tap anywhere" })).touch.status, evaluate(ph, img, null, needOf("t", { touch: "tap anywhere", gap: "tap anywhere" })).gap.status], ["n/a", "n/a"], "unless the screen row exempts them");
 });
 
 test("gates: squint pairs and ring max", () => {
@@ -268,8 +287,17 @@ test("gates: text by its declared colour on the text-hidden twin, the appendix m
   assert.equal(evaluate(d([T("BARE", 42, 5, 15, 10)]), cap, twin, NONE).text.status, "skipped", "a text without o.col is unmeasured, never a pass");
   assert.equal(evaluate(d([T("A", 2, 5, 15, 10, { col: "#fff" })]), cap, null, NONE).text.status, "skipped", "no twin, no text gate");
   assert.equal(evaluate(d([T("A", 2, 5, 15, 10, { col: "rgba(255,255,255,.4)" })]), cap, twin, NONE).text.status, "fail");
-  assert.deepEqual([colOf("#fff").rgb, colOf("#ffd447ff").rgb, colOf("rgb(255, 212, 71)").rgb], [[255, 255, 255], [255, 212, 71], [255, 212, 71]]);
-  for (const c of ["#ffd44780", "rgba(1,2,3,0.5)", "white", "rgb(300,0,0)", null]) assert.ok(colOf(c).err, String(c));
+  assert.deepEqual([colOf("#fff").rgb, colOf("rgba(255,212,71,1)").rgb, colOf("rgb(255, 212, 71)").rgb], [[255, 255, 255], [255, 212, 71], [255, 212, 71]]);
+  for (const c of ["#ffd44780", "#ffd447ff", "rgba(1,2,3,0.5)", "white", "rgb(300,0,0)", "rgb(1.5,2,3)", null]) assert.ok(colOf(c).err, String(c));
+  /* the probe and colOf agree on every colour: the stricter syntax, no 8-digit hex */
+  P.setOn(true);
+  try {
+    for (const c of ["#fff", "#FFD447", "#ffd447ff", "#ffd44780", "rgb(255,212,71)", "rgba(255, 212, 71, 1)", "rgba(255,212,71,1.0)", "rgba(255,212,71,.5)", "rgb(256,0,0)", "rgb(1.5,2,3)", "hsl(0,0%,0%)", "white", ""]) {
+      let threw = false;
+      try { P.text("A", 0, 0, 1, 1, { col: c }); } catch { threw = true; }
+      assert.equal(threw, !!colOf(c).err, c);
+    }
+  } finally { P.setOn(false); }
 });
 
 test("gates: box px are scaled onto the canvas content box (600 x 520 on 831 x 720)", () => {
@@ -298,7 +326,7 @@ test("gates: plate, touch and gap, cap, inside, yellow, record", () => {
   assert.deepEqual([ok.touch.status, ok.gap.status, ok.gap.value], ["pass", "pass", 8]);
   const ex = evaluate(dump(ui({ rects: [R("l1", 0, 0, 44, 44, { touch: true, set: "u", kind: "list" }), R("l2", 0, 45, 44, 44, { touch: true, set: "u", kind: "list" })] }), { phone: true }), img, null, NONE);
   assert.deepEqual([ex.gap.status, ex.gap.value], ["pass", null]); assert.match(ex.gap.note, /exempt/);
-  assert.equal(evaluate(dump(ui({ rects: [R("a", 0, 0, 44, 44, { touch: true })] }), { phone: true }), img, null, NONE).gap.status, "skipped", "one target: no gap to measure");
+  assert.equal(evaluate(dump(ui({ rects: [R("a", 0, 0, 44, 44, { touch: true })] }), { phone: true }), img, null).gap.status, "skipped", "one target: no gap to measure");
   const dk = evaluate(dump(ui({ rects: [R("a", 0, 0, 10, 10, { touch: true })] })), img, null, NONE);
   assert.deepEqual([dk.touch.status, dk.gap.status], ["n/a", "n/a"], "desktop: no touch gates");
   const tx = evaluate(dump(ui({ texts: [T("PLAY", 1, 1, 20, 14.8), T("SUB", 1, 5, 20, 10.9, { role: "secondary" }), T("WIDE", 30, 1, 20, 14), T("NUL", null, 1, 4, 14)] })), img, null, NONE);
@@ -318,7 +346,69 @@ test("gates: plate, touch and gap, cap, inside, yellow, record", () => {
   assert.equal(evaluate(dump(ui({ rects: [R("x", 0, 0, 4, 4)], overflow: true })), img, null, NONE).record.status, "fail", "an overflowed record fails");
 });
 
-test("gates CLI: gates.json, exit 0 with skips, 1 under --strict, on a fail, on an empty dir, and on a capture shots.json lists but lacks", () => {
+test("gates: a faulted, overflowed or unjudgeable capture fails record in both modes", () => {
+  const img = twoTone(40, 20, 2, "#ffffff", "#000000"), W = { x: 0, y: 0, w: 20, h: 20 }, B = { x: 20, y: 0, w: 20, h: 20 };
+  const all = { pairs: [{ kind: "chosen", a: W, b: B }, { kind: "band", a: W, b: B }, { kind: "ring", a: W, b: B }, { kind: "locked", a: W, b: B, floor: B }, { kind: "info", a: W, b: B, col: "#fff" }],
+    rects: [R("p", 10, 6, 4, 4, { plate: 1, fill: "#ffd447" })], texts: [T("A", 1, 1, 10, 14.8, { col: "#fff" })] };
+  const faulted = evaluate(dump(ui({ ...all, fault: "kit probe: text \"B\" col is not an opaque #rrggbb, #rgb, rgb() or rgba(.., 1) colour: rgba(255,255,255,0.5)" })), img, img, NONE);
+  assert.equal(faulted.record.status, "fail"); assert.match(faulted.record.note, /probe fault/);
+  assert.deepEqual([tally([{ gates: faulted }]).exit(false), tally([{ gates: faulted }]).exit(true)], [1, 1], "every required gate has data, yet the half-drawn page cannot pass");
+  const early = evaluate(dump(ui({ fault: "kit probe: box w is not a finite number: NaN" })), img, null);
+  assert.equal(early.record.status, "fail", "a fault before any entry is still an instrumented capture");
+  for (const dpr of [null, undefined, NaN, 0, "2"]) {
+    const g = evaluate({ ...dump(ui(all)), flags: { ...dump(null).flags, dpr } }, img, img, NONE);
+    assert.deepEqual([g.record.status, g.chosen.status, g.text.status], ["fail", "fail", "fail"], "dpr " + dpr + " is never read as 1");
+    assert.equal(evaluate({ ...dump(null), flags: { ...dump(null).flags, dpr } }, img, null).record.status, "fail", "even with no probe data");
+  }
+  const cv = evaluate(dump(ui(all), { canvases: { sh: { x: 0, y: NaN, w: 40, h: 20 } } }), img, img, NONE);
+  assert.deepEqual([cv.chosen.status, cv.cap.status, cv.plate.status], ["fail", "fail", "fail"]); assert.match(cv.chosen.note, /canvas rect/);
+  const bx = evaluate(dump(ui({ ...all, box: { w: 0, h: 20, el: "sh" } })), img, img, NONE);
+  assert.deepEqual([bx.chosen.status, bx.inside.status, bx.plate.status], ["fail", "fail", "fail"], "a page box without area fails");
+});
+
+test("gates: regions need area, and a measured sample at least 4 x 4 CSS px", () => {
+  const img = paint(80, 40, 2, "#606060", [[40, 80, "#ffffff", 20, 40]]), C = { x: 40, y: 20, w: 40, h: 20 }, face = { x: 0, y: 0, w: 40, h: 20 };
+  const g = (pairs, o) => evaluate(dump(ui({ box: { w: 80, h: 40, el: "sh" }, pairs }), { size: [80, 40], ...o }), img, null, NONE);
+  const pf = g([{ kind: "locked", a: face, b: C, floor: { x: 9, y: 30, w: 0, h: 0 }, name: "pt" }]).locked;
+  assert.deepEqual([pf.status, pf.items[1].status], ["fail", "fail"], "a point floor (sd 0, divisor 1e-4) is never a pass"); assert.match(pf.items[1].note, /without area/);
+  const sf = g([{ kind: "locked", a: face, b: C, floor: { x: 0, y: 30, w: 3, h: 3 } }]).locked;
+  assert.equal(sf.status, "fail"); assert.match(sf.items[1].note, /too small to measure/);
+  const sl = g([{ kind: "locked", a: { x: 0, y: 0, w: 15, h: 20 }, b: C, floor: { x: 0, y: 24, w: 30, h: 10 } }]).locked;
+  assert.equal(sl.status, "fail"); assert.match(sl.items[1].note, /lip .* too small/, "a 15 px part has a 3 px lip");
+  assert.equal(MIN_SAMPLE, 4);
+  const ib = g([{ kind: "info", a: { x: 50, y: 25, w: 4, h: 4 }, b: { x: 0, y: 0, w: 3, h: 3 }, col: "#fff" }]).info;
+  assert.equal(ib.status, "fail"); assert.match(ib.note, /too small/);
+  for (const [k, a] of [["chosen", { x: 0, y: 0, w: 0, h: 10 }], ["band", { x: 0, y: 0, w: 10, h: -2 }]]) {
+    const r = g([{ kind: k, a, b: C }])[k];
+    assert.equal(r.status, "fail", k); assert.match(r.note, /without area/);
+  }
+  const tx = evaluate(dump(ui({ texts: [T("NEG", 30, 1, -40, 10), T("ZERO", 1, 1, 10, 0)] })), img, null, NONE);
+  assert.deepEqual([tx.inside.status, tx.inside.value, tx.cap.status], ["fail", 2, "fail"], "a negative w cannot hide an overflow");
+  const rt = evaluate(dump(ui({ rects: [R("k", 0, 0, 0, 4, { fill: "#ffd447" })] })), img, null, NONE);
+  assert.equal(rt.yellow.status, "fail");
+});
+
+test("gates: gap across sets: apart is not measured (and the note says so), overlapping fails", () => {
+  const img = createRGBA(80, 40, "#000000"), gap = (rects) => evaluate(dump(ui({ rects }), { phone: true }), img, null, NONE).gap;
+  const apart = gap([R("tab", 0, 0, 44, 44, { touch: true, set: "tabs" }), R("row", 0, 46, 44, 44, { touch: true, set: "rows" })]);
+  assert.deepEqual([apart.status, apart.value], ["pass", null]); assert.match(apart.note, /1 across sets, 0 exempt/);
+  const over = gap([R("tab", 0, 0, 44, 44, { touch: true, set: "tabs" }), R("row", 20, 20, 44, 44, { touch: true, set: "rows" })]);
+  assert.deepEqual([over.status, over.on], ["fail", "tab / row"]); assert.match(over.note, /two sets overlap/);
+  const inside = gap([R("plate", 0, 0, 200, 200, { touch: true, set: "back" }), R("key", 20, 20, 44, 44, { touch: true, set: "keys" })]);
+  assert.equal(inside.status, "fail", "nesting across sets is an overlap too");
+});
+
+test("gates: an info mark inside its background is masked out of b", () => {
+  /* a black 20 x 20 CSS field with a white 4 x 4 mark painted in its middle */
+  const img = paint(40, 20, 2, "#000000", [[8, 12, "#ffffff", 8, 12]]), field = { x: 0, y: 0, w: 20, h: 20 }, mark = { x: 8, y: 8, w: 4, h: 4 };
+  const g = (a, b) => evaluate(dump(ui({ pairs: [{ kind: "info", a, b, col: "#ffffff", name: "chevron" }] })), img, null, NONE).info;
+  const m = g(mark, field);
+  assert.deepEqual([m.status, m.value, m.items[0].masked > 0], ["pass", 21, true], "unmasked, the mark itself would be b's brightest pixel and read 1");
+  const nothing = g(mark, mark);
+  assert.equal(nothing.status, "fail"); assert.match(nothing.note, /nothing of b is left/);
+});
+
+test("gates CLI: gates.json, exit 0 with skips, 1 under --strict, on a fail, on an empty dir; a stale gates.json never survives", () => {
   const d = tmp();
   try {
     const run = (...a) => spawnSync(process.execPath, [join(UI, "gates.mjs"), d, ...a], { encoding: "utf8", timeout: 30000 });
@@ -333,12 +423,20 @@ test("gates CLI: gates.json, exit 0 with skips, 1 under --strict, on a fail, on 
     assert.equal(G.screens["menu.2d.w1"].gates.chosen.status, "skipped");
     assert.deepEqual(G.screens["menu.2d.w1"].need, SCREENS.menu.need);
     assert.equal(run("--strict").status, 1);
-    writeFileSync(join(d, "shots.json"), JSON.stringify({ intended: ["menu.2d.w1", "level.2d.w1"], runs: [] }));
-    const m = run();
-    assert.equal(m.status, 1, "a screen shots.mjs meant to take and did not is an error");
-    assert.match(JSON.parse(readFileSync(join(d, "gates.json"), "utf8")).summary.errors.join(), /level\.2d\.w1: listed in shots\.json, no capture/);
-    writeFileSync(join(d, "shots.json"), JSON.stringify({ intended: ["menu.2d.w1"], runs: [] }));
-    assert.equal(run().status, 0);
+    const readG = () => JSON.parse(readFileSync(join(d, "gates.json"), "utf8")), good = png(twoTone(40, 20, 2, "#ffffff", "#000000"));
+    writeFileSync(join(d, "gates.json"), JSON.stringify({ summary: { exit: 0 }, stale: true }));
+    writeFileSync(join(d, "menu.2d.w1.png"), Buffer.from("not a png at all"));
+    assert.equal(run().status, 1, "a corrupt PNG is an error for its capture");
+    assert.ok(readG().screens["menu.2d.w1"].error && !readG().stale, "the earlier gates.json is gone");
+    writeFileSync(join(d, "menu.2d.w1.png"), good);
+    writeFileSync(join(d, "menu.2d.w1.json"), "{ half a dump");
+    assert.equal(run().status, 1, "a dump that does not parse is an error for its capture");
+    writeFileSync(join(d, "menu.2d.w1.json"), JSON.stringify(dump(null)));
+    writeFileSync(join(d, "gates.json"), JSON.stringify({ summary: { exit: 0 }, stale: true }));
+    writeFileSync(join(d, "shots.json"), "{ not json");
+    assert.equal(run().status, 1, "an unreadable manifest aborts");
+    assert.deepEqual([readG().summary.exit, typeof readG().error, readG().stale], [1, "string", undefined], "an aborted run overwrites gates.json with error and why");
+    rmSync(join(d, "shots.json"));
     writeFileSync(join(d, "menu.2d.w1.json"), JSON.stringify(dump(ui({ pairs: [{ kind: "chosen", a: { x: 0, y: 0, w: 10, h: 10 }, b: { x: 2, y: 2, w: 4, h: 4 } }] }))));
     assert.equal(run().status, 1, "chosen 1:1 fails");
   } finally { rmSync(d, { recursive: true, force: true }); }
@@ -357,14 +455,60 @@ test("shots: flags, lists, aliases, phone defaults, refusals", () => {
     assert.throws(() => shotsArgs(v), Error, v.join(" "));
 });
 
-test("shots: the manifest lists every capture a run means to take, a union across runs into one dir", () => {
+test("shots: the manifest keeps every run, the latest last, each with what it meant to take", () => {
   const a = shotsArgs(["--screens", "menu,pause", "--look", "2d,px", "--world", "1,8", "--t125", "--phone"]);
   assert.deepEqual(intended(a), ["menu.2d.w1.t125.phone", "pause.2d.w1.t125.phone", "menu.2d.w8.t125.phone", "pause.2d.w8.t125.phone",
     "menu.px.w1.t125.phone", "pause.px.w1.t125.phone", "menu.px.w8.t125.phone", "pause.px.w8.t125.phone"]);
-  const r1 = { n: 1 }, m1 = manifest(null, shotsArgs(["--screens", "menu"]), r1), r2 = { n: 2 }, m2 = manifest(JSON.parse(JSON.stringify(m1)), shotsArgs(["--screens", "level", "--t125"]), r2);
-  assert.deepEqual(m1, { intended: ["menu.2d.w1"], runs: [r1] });
-  assert.deepEqual(m2, { intended: ["menu.2d.w1", "level.2d.w1.t125"], runs: [{ n: 1 }, r2] });
-  assert.deepEqual(manifest({ captures: ["old format"] }, shotsArgs(["--screens", "menu"]), r1).intended, ["menu.2d.w1"]);
+  const r1 = { n: 1 }, m1 = manifest(null, r1), r2 = { n: 2 };
+  assert.deepEqual(m1, { runs: [r1] });
+  assert.deepEqual(manifest(JSON.parse(JSON.stringify(m1)), r2), { runs: [{ n: 1 }, r2] });
+  assert.deepEqual(manifest({ intended: ["old format"] }, r1), { runs: [r1] });
+  assert.match(readFileSync(join(UI, "shots.mjs"), "utf8"), /rmSync\(join\(a\.out, n \+ ext\)/, "each intended capture's files are deleted before the run takes it");
+  assert.match(readFileSync(join(UI, "shots.mjs"), "utf8"), /rep\.done = true; \/\/ completed/, "done is set only when the loop completed, never in finally");
+});
+
+test("shots: the ledger charges a page error to the capture it falls in, else to the run", () => {
+  const rep = { captures: [], failed: {}, errors: [] }, errs = [], L = ledger(rep, "2d.w1", errs);
+  errs.push("exception: boot");
+  L.flush("at boot");
+  L.close("title.2d.w1");
+  errs.push("exception: kit probe: text \"A\" col is not an opaque ...");
+  L.close("menu.2d.w1");
+  L.fail("level.2d.w1", "expected LEVEL, got MENU (no capture)");
+  L.close("level.2d.w1");
+  errs.push("warning: between");
+  L.flush("outside a capture");
+  L.close("pause.2d.w1");
+  assert.deepEqual(rep.captures, ["title.2d.w1", "pause.2d.w1"]);
+  assert.deepEqual(Object.keys(rep.failed), ["menu.2d.w1", "level.2d.w1"]);
+  assert.match(rep.failed["menu.2d.w1"], /page error while the capture was reached, settled or taken: exception: kit probe/);
+  assert.deepEqual(rep.errors.map((e) => e.split(":")[0]), ["2d.w1", "menu.2d.w1", "level.2d.w1", "2d.w1"], "boot and between-capture errors are the run's");
+});
+
+test("gates: only the latest run is judged; a stale capture or a failed one can never pass", () => {
+  const d = tmp();
+  try {
+    const run = (...a) => spawnSync(process.execPath, [join(UI, "gates.mjs"), d, ...a], { encoding: "utf8", timeout: 30000 }), readG = () => JSON.parse(readFileSync(join(d, "gates.json"), "utf8"));
+    const put = (n) => { writeFileSync(join(d, n + ".png"), png(twoTone(40, 20, 2, "#ffffff", "#000000"))); writeFileSync(join(d, n + ".json"), JSON.stringify({ ...dump(null), screen: n.split(".")[0], file: n + ".png" })); };
+    const r = (o) => ({ flags: {}, intended: [], captures: [], failed: {}, errors: [], warnings: [], done: true, ...o });
+    const man = (...runs) => writeFileSync(join(d, "shots.json"), JSON.stringify({ runs }));
+    put("menu.2d.w1"); put("level.2d.w1");
+    man(r({ intended: ["level.2d.w1"], captures: ["level.2d.w1"] }), r({ intended: ["menu.2d.w1", "level.2d.w1"], captures: ["menu.2d.w1"], failed: { "level.2d.w1": "expected LEVEL, got MENU (no capture)" }, errors: ["level.2d.w1: expected LEVEL, got MENU (no capture)"] }));
+    for (const f of [[], ["--strict"]]) assert.equal(run(...f).status, 1, "run 1's level capture cannot stand in for the one run 2 failed " + f);
+    const G = readG();
+    assert.match(G.summary.errors.join("\n"), /level\.2d\.w1: not taken by the latest run \(expected LEVEL, got MENU/);
+    assert.equal(G.summary.captures, 1, "only menu is judged");
+    assert.equal(G.screens["level.2d.w1"].gates, undefined);
+    assert.match(G.summary.warnings.join("\n"), /level\.2d\.w1: in the dir but not taken by the latest run, ignored/);
+    man(r({ intended: ["menu.2d.w1"], captures: ["menu.2d.w1"] }));
+    assert.equal(run().status, 0, "a clean latest run with skips only: exit 0 by default");
+    assert.equal(readG().summary.captures, 1, "the stray level dump is ignored, never judged");
+    man(r({ intended: ["menu.2d.w1"], captures: [], failed: { "menu.2d.w1": "page error while the capture was reached, settled or taken: exception: kit probe ..." }, errors: ["menu.2d.w1: page error ..."] }));
+    assert.equal(run().status, 1, "a capture with a page exception fails in both modes");
+    man(r({ intended: ["menu.2d.w1"], captures: ["menu.2d.w1"], done: false }));
+    assert.equal(run().status, 1, "a run that did not complete fails");
+    assert.match(readG().summary.errors.join(), /did not complete/);
+  } finally { rmSync(d, { recursive: true, force: true }); }
 });
 
 test("screens: every name has a recipe and a state; aliases; capture names round trip", () => {

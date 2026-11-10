@@ -10,11 +10,12 @@
      run    a run screen: play, pause, win or lose
      state  what window.__GAME__.state() must read before the capture; a mismatch is an error and no PNG
      settle virtual ms stepped before the capture (default 600)
-     exempt {gate: "reason"}: a REQUIRED gate (tools/ui/lib/gatelib.mjs) this screen has nothing for, each with a one-line reason. DEFAULT-DENY: every
-            other REQUIRED gate is in the screen's `need`, so once the page records into the probe, a required gate it does not declare is skipped
-            ("required, not declared") and fails --strict. Only this tracked table exempts, in review, when a page task instruments its page;
-            the page under test cannot exempt itself. No screen is instrumented yet, so no row exempts anything yet. */
-import { REQUIRED } from "./gatelib.mjs";
+     exempt {gate: "reason"}: an EXEMPTABLE gate (tools/ui/lib/gatelib.mjs: the ten REQUIRED ones, plus touch and gap for a phone screen with no
+            tap targets of its own, the title's tap-anywhere, PLAY's DOM touch strip) this screen has nothing for, each with a one-line reason.
+            DEFAULT-DENY: every other EXEMPTABLE gate is in the screen's `need`, so once the page records into the probe, a required gate it does not
+            declare is skipped ("required, not declared") and fails --strict. Only this tracked table exempts, in review, when a page task instruments
+            its page; the page under test cannot exempt itself. No screen is instrumented yet, so no row exempts anything yet. */
+import { EXEMPTABLE } from "./gatelib.mjs";
 
 const ROWS = {
   title: { state: "INTRO", settle: 1200 },
@@ -36,11 +37,14 @@ const ROWS = {
   win: { run: "win", state: "WIN", settle: 1800 },
   lose: { run: "lose", state: "LOSE", settle: 1600 },
 };
+/* a row's need from its exemptions: EXEMPTABLE minus each exempt gate, which must be EXEMPTABLE and carry a non-empty reason */
+export function needOf(name, exempt = {}) {
+  for (const [g, why] of Object.entries(exempt)) if (!EXEMPTABLE.includes(g) || typeof why !== "string" || !why.trim()) throw new Error("screens: " + name + " exempts " + g + " without a reason, or it is not an EXEMPTABLE gate");
+  return Object.freeze(EXEMPTABLE.filter((g) => !exempt[g]));
+}
 for (const [n, r] of Object.entries(ROWS)) {
-  const ex = r.exempt || {};
-  for (const [g, why] of Object.entries(ex)) if (!REQUIRED.includes(g) || typeof why !== "string" || !why.trim()) throw new Error("screens: " + n + " exempts " + g + " without a reason, or it is not a REQUIRED gate");
-  r.exempt = Object.freeze({ ...ex });
-  r.need = Object.freeze(REQUIRED.filter((g) => !ex[g]));
+  r.need = needOf(n, r.exempt);
+  r.exempt = Object.freeze({ ...(r.exempt || {}) });
   Object.freeze(r);
 }
 export const SCREENS = Object.freeze(ROWS);
