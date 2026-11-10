@@ -9,8 +9,9 @@ import { CFG, T, key, biomeOf } from "../src/core/config.js";
 import { createWorld, loadLevel } from "../src/core/sim.js";
 import { POCKET, DOORS, CORNERS, sealed } from "../src/core/fair.js";
 import { heatRoster } from "../src/core/heat.js";
-import { HOME, featKindOf } from "../src/core/feat.js";
-import { FOES } from "../src/core/entities.js";
+import { F, HOME, featKindOf } from "../src/core/feat.js";
+import { FOES, POWER } from "../src/core/entities.js";
+import { fxOf } from "../src/render/entityfx.js";
 import { worldTokens, toL } from "../src/render/kit/tokens.js";
 import { setFactory, release, _dbg as cacheDbg } from "../src/render/kit/cache.js";
 import { wallCell, floorCell, brickCell } from "../src/render/kit/paint.js";
@@ -235,6 +236,16 @@ if (room) {
     const f = L.foe, fi = r.calls.findIndex((q) => q.op === "translate" && near(q.a[0], 2 + (f.x + 0.5) * s) && near(q.a[1], 2 - 0.3 * s + 1.5 * s + 0.04 * s));
     check("o.cols 9 (the narrow crop): cell 30, the foe still drawn inside the clip", near(h, 75) && fi >= 0 && 2 + (f.x + 1) * s <= 270 - 2, h);
   }
+  {
+    const before = (r) => { r.ctx.fillStyle = "#123456"; r.ctx.strokeStyle = "#654321"; r.ctx.lineWidth = 7; r.ctx.globalAlpha = 0.8; };
+    const same = (r) => r.ctx.fillStyle === "#123456" && r.ctx.strokeStyle === "#654321" && r.ctx.lineWidth === 7 && r.ctx.globalAlpha === 0.8 && balanced(r);
+    const a = rec(); before(a); roomLook(a.ctx, { x: 0, y: 0, w: 300, h: 260 }, 2, worldTokens(2));
+    const b = rec(); before(b); lane(b.ctx, 0, 0, 280, 2.5, 8, worldTokens(8));
+    check("roomLook and lane leave the caller's fillStyle, strokeStyle, lineWidth, globalAlpha and transform as they found them", same(a) && same(b), J([a.ctx.fillStyle, b.ctx.fillStyle, b.ctx.strokeStyle, b.ctx.lineWidth]));
+    check("the tile code is feat.js's own first code of the kind (CONVEYOR and STREAM flow east)", laneGrid(3).tile.code === F.BELT_E && laneGrid(4).tile.code === F.STREAM_E && laneGrid(2).tile.code === F.GLIDE && laneGrid(8).tile.code === F.GATE);
+    const src = readFileSync(join(ROOT, "src/render/kit/room.js"), "utf8");
+    check("room.js does not restate feat.js's kind -> code table", !/BELT:\s*F\.|STREAM:\s*F\./.test(src));
+  }
 }
 
 /* ---- covered: CLASSIC ---- */
@@ -353,6 +364,74 @@ const playWorld = (lv = 1) => { const w = createWorld(4242, lv); loadLevel(w, lv
   b.r.render(b.w, STEP);
   const [b2, g2] = b.total();
   check("REAL 3D: the first frame after the cover lifts builds the room and renders", b2 === b1 + 1 && g2 > g1, J([b1, g1, b2, g2]));
+}
+
+/* ---- covered: PIXEL leaves #c's style alone too, and the next uncovered frame still sets the glow for the current level ---- */
+{
+  initFx();
+  let n = 0;
+  const writes = [];
+  const cvOf = (w, h) => {
+    const base = { imageSmoothingEnabled: true, imageSmoothingQuality: "high", globalAlpha: 1, fillStyle: "#000", getTransform: () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }), measureText: () => ({ width: 10 }) };
+    const ctx = new Proxy(base, { get: (t, k) => (k in t ? t[k] : () => (String(k).startsWith("create") ? { addColorStop() {} } : undefined)) });
+    return { width: w, height: h, clientWidth: 0, clientHeight: 0, dataset: {}, getContext: () => ctx };
+  };
+  const ov = cvOf(600, 520);
+  ov.style = new Proxy({}, { set: (t, k, v) => { writes.push(String(k) + "=" + v); t[k] = v; return true; } });
+  const r = createPixelRenderer(cvOf(600, 520), ov, { mkCanvas: (w, h) => (n++, cvOf(w, h)), surf: surfRGBA });
+  r.render(playWorld(1), STEP);
+  const w0 = writes.length, w3 = playWorld(3);
+  r.render(w3, STEP, { covered: true });
+  const w1 = writes.length;
+  r.render(w3, STEP);
+  check("PIXEL covered: #c's style is not written (stageGlow skipped, as CLASSIC)", w0 === 1 && w1 === w0, w0 + " -> " + w1);
+  check("PIXEL: the first uncovered frame still writes the new level's glow", writes.length === 2 && writes[1] !== writes[0] && /^boxShadow=/.test(writes[1]), writes.length);
+}
+
+/* ---- covered: REAL 3D on the SAME world replays nothing on uncover, and a covered WIN still prepares the next room ---- */
+const rig3d = () => {
+  initFx();
+  const builds = [];
+  const g = { renders: 0, shadowRenders: 0, inits: 0, toneMapping: 0, debug: { checkShaderErrors: true }, domElement: { width: 0, height: 0 }, ratio: 1, info: { programs: [] },
+    shadowMap: { enabled: true, type: 0, autoUpdate: true, needsUpdate: false },
+    setPixelRatio(d) { g.ratio = d; }, setSize(w, h) { g.domElement.width = Math.floor(w * g.ratio); g.domElement.height = Math.floor(h * g.ratio); },
+    render() { g.renders++; if (g.shadowMap.enabled && (g.shadowMap.autoUpdate || g.shadowMap.needsUpdate)) g.shadowRenders++; g.shadowMap.needsUpdate = false; },
+    initTexture() { g.inits++; }, dispose() {}, forceContextLoss() {} };
+  const ovCtx = new Proxy({}, { get: (t, k) => (k in t ? t[k] : () => ({ addColorStop() {} })) });
+  const glCv = { width: 0, height: 0, style: {}, getContext: () => ({}), addEventListener() {}, removeEventListener() {} };
+  const perf = { aa: true, dpr3d: 1, shadow: "soft", partK: 1, epoch: 1 };
+  const r = createRenderer3D(glCv, { width: 600, height: 520, style: {}, getContext: () => ovCtx }, { audio: null, perf, makeGL: () => g, buildSprites: () => null,
+    buildWorld: (u, lvl) => { builds.push(lvl); return lvl === 1 ? null : { floor: { isTexture: true, dispose() {} } }; } });
+  r.setPerf(perf);
+  return { r, g, builds };
+};
+{
+  const { r } = rig3d(), w = playWorld(1), fx = fxOf(w, "3d");
+  const it = { x: 140, y: 220, t: POWER[0].t, col: POWER[0].col, taken: false, buried: false };
+  w.items.push(it);
+  r.render(w, STEP);
+  w.time += STEP; r.render(w, STEP);
+  const n0 = w.enemies.length, grid0 = w.grid;
+  w.enemies.shift();
+  it.taken = true;
+  w.time += STEP; r.render(w, STEP, { covered: true });
+  w.time += STEP; r.render(w, STEP);
+  const g1 = fx.ghosts(w.time).length, b1 = fx.bursts(w.time).length;
+  check("REAL 3D same world: a foe killed and a pickup taken under the cover feed no ghost and no burst on uncover", n0 >= 2 && w.grid === grid0 && g1 === 0 && b1 === 0, "ghosts " + g1 + ", bursts " + b1);
+  w.enemies.shift();
+  w.time += STEP; r.render(w, STEP);
+  check("REAL 3D same world: a foe killed after the uncover still gets its death ghost", fx.ghosts(w.time).length === 1, fx.ghosts(w.time).length);
+}
+{
+  const { r, g, builds } = rig3d(), w = playWorld(1);
+  r.render(w, STEP);
+  const g0 = g.renders;
+  w.state = "WIN";
+  w.time += STEP; r.render(w, STEP, { covered: true });
+  const b1 = builds.slice(), i1 = g.inits;
+  w.time += STEP; r.render(w, STEP, { covered: true });
+  check("REAL 3D covered WIN: the next room's world is built and uploaded once (prepareNext)", J(b1) === J([1, 2]) && i1 === 1 && g.renders === g0, J(b1) + " inits " + i1);
+  check("REAL 3D covered WIN: a second covered WIN frame does not repeat it", J(builds) === J([1, 2]) && g.inits === 1, J(builds) + " inits " + g.inits);
 }
 
 /* ---- bookkeeping: the precache knows room.js ---- */

@@ -73,7 +73,7 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
   const K0=opts.perf||null, now=opts.now||clock;
   const ATTR={...ATTR0,antialias:!K0||K0.aa!==false};
   let shadow=K0&&K0.shadow||"soft", armed=false, inv=true, lost=false, lostAt=0;
-  let glRenders=0, shadowUpdates=0, shadowNeed=true, lastRaster=-Infinity, pzT=null, pzL=0, skew=0, wT=0, lastW=null, lastG=null, wasP=false;
+  let glRenders=0, shadowUpdates=0, shadowNeed=true, lastRaster=-Infinity, pzT=null, pzL=0, skew=0, wT=0, lastW=null, lastG=null, wasP=false, cov=false;
 
   /* GL init guarded three ways: absent canvas (headless), context probe that
      is not a real object (recording-proxy test stubs return functions), and
@@ -363,9 +363,11 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
     const ambOn=!!(o&&(o.hud===true||o.amb===true)); if(ambOn)aclock.tick(world,dt||0);
     /* o.covered (R4): the menu canvas hides the board; no scene update, no
        gl.render, no shadow pass, no overlay (no #c clear: the caller paints
-       its menu opaque every covered frame or on its own canvas); the next
-       uncovered frame draws */
-    if(o&&o.covered){ inv=true; return; }
+       its menu opaque every covered frame or on its own canvas). A covered
+       WIN still prepares the next room; the next uncovered frame draws, with
+       the pools' kill / pickup edges rebased so nothing from under the cover
+       replays */
+    if(o&&o.covered){ if(world.state==="WIN"&&gl&&!lost)prepareNext(world); inv=cov=true; return; }
     const bk=o&&typeof o.bright==="number"&&isFinite(o.bright)?o.bright:brightK;
     const pop=o&&o.pop!=null?o.pop:1, sh=paused?STILL:getShake();
     const tB=tc, g=o&&o.ghost;
@@ -381,6 +383,7 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
       /* PAUSE (R16, all three looks): the board holds the time it first saw. */
       const t0=world.time; world.time=tc;
       try{
+        if(cov){ cov=false; if(sc)sc.pools.rebase(); }
         if(!sc||sc.update(world))rebuild(world);   // brick rescan / level rebuild
         else if(bChanged&&sc.lights)applyBright(sc.lights,brightK);
       }finally{ world.time=t0; }

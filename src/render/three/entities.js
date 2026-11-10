@@ -1324,9 +1324,14 @@ export function createPools(biome, atlas) {
      killed, a pickup drawn last frame that is now taken was collected. The
      synthetic kill / power events go through entityfx on this frame's clock.
      A new room (world, grid or a clock that went backwards) resets, so a
-     room change never fires a burst. */
+     room change never fires a burst. rebase() drops the edges the same way
+     when the wrapper's menu cover lifts (o.covered): what died or was taken
+     under the cover is not shown, and the next update tracks afresh. */
   function feed(world, dpr) {
     if (dpr > 0) dprHint = dpr;
+  }
+  function rebase() {
+    prevE.length = prevI.length = 0;
   }
   function ground(o, r, k) {
     const a = CONTACT.v.value;
@@ -1757,6 +1762,7 @@ export function createPools(biome, atlas) {
     cores,
     flashes,
     update,
+    rebase,
     ghost,
     feed,
     burst,

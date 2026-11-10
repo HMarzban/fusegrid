@@ -226,7 +226,7 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
     if (world !== lastWorld || world.grid !== lastGrid) { V.shots.reset(); if (world === lastWorld) fxOf(world, "px").clear(); resetView(V); if (wasPaused) initFx(); lastWorld = world; lastGrid = world.grid; }
     wasPaused = paused;
     animClock(clock, world);
-    stageGlow(overlayCanvas, world.level);
+    if (!(o && o.covered)) stageGlow(overlayCanvas, world.level);
     consumeEvents(world, dt, !(o && o.sfx === false));
     V.t = clock.t; V.dt = clock.dt;
     armAmbient(V, world, o, dt);
