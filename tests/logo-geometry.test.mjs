@@ -6,6 +6,7 @@ import { join, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { BIOMES } from "../src/core/config.js";
 import { lum, worldTokens } from "../src/render/kit/tokens.js";
+import { DEV } from "../src/render/kit/type.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 let pass = 0,
@@ -228,7 +229,7 @@ if (G && W) {
     && J(STACK.outline.min) === J({ px: 2, unit: "css", tiers: ["small"] }) && J(STACK.side.min) === J({ px: 2, unit: "css", tiers: ["small"] }) && J(STACK.shade.min) === J({ px: 2, unit: "css", tiers: ["token", "menu"] })
     && J(STACK.shade.tiers) === J(["title", "token", "menu"]) && J(STACK.light.tiers) === J(["title", "menu"]) && J(STACK.face.tiers) === J(["title", "token", "menu", "small"]) && STACK.shade.clip === "face" && STACK.light.clip === "face");
   check("LAYERS is the mock's paint order (paintVec 399-469): plate, rings under the outline, outline, side, CROWN gilt, faces, shade, light, motif, bomb, cord ink, rope, spark; mono its own (372-378)",
-    J(LAYERS) === J(["plate", "ringOuter", "ringInner", "outline", "side", "gilt", "giltInk", "face", "shade", "light", "motif", "bomb", "cordInk", "rope", "spark"]) && J(MONO_LAYERS) === J(["plate", "monoFace", "monoBomb", "monoCord", "monoTip"]));
+    J(LAYERS) === J(["plate", "ringOuter", "ringInner", "outline", "side", "gilt", "giltInk", "face", "shade", "light", "motif", "bomb", "cordInk", "rope", "spark"]) && J(MONO_LAYERS) === J(["ground", "monoFace", "monoBomb", "monoCord", "monoTip"]));
   check("fit solves the cap from the box like the mock's solve (639-643): the 40 px build is cap 22.73, a 330 px phone title width caps at 79.71", fit("line", { fitH: 40 }) === 22.73 && fit("stack", { fitW: 330 }) === 79.71 && fit("line", { fitH: 400, capMax: 88 }) === 88);
   const T = [[{ cap: 19.9 }, "mono"], [{ cap: 20 }, "small"], [{ cap: 31.9 }, "small"], [{ cap: 32 }, "menu"], [{ cap: 39.9 }, "menu"], [{ cap: 40 }, "token"], [{ cap: 63.9 }, "token"], [{ cap: 64 }, "title"], [{ cap: 200 }, "title"], [{ cap: 88, ver: "menu" }, "menu"], [{ cap: 88, ver: "mono" }, "mono"], [{ cap: 88, ver: "ink" }, "mono"], [{ cap: 50, ver: "full" }, "token"]];
   check("tierOf: < 20 or mono / ink -> mono; MENU or 32-39 -> menu; < 32 small; 40-63 token; >= 64 title", T.every(([o, t]) => tierOf(o) === t), J(T.map(([o]) => tierOf(o))));
@@ -249,16 +250,37 @@ if (G && W) {
     J(WORLDS.CROWN.gilt) === J({ tiers: ["title", "token", "menu", "small"], line: { w: .02, min: { px: 1, unit: "device" }, col: "#fff0a8" }, ink: { w: .03, min: { px: 1.2, unit: "device" }, col: "#0b0609" } }) && NAMES.filter((n) => WORLDS[n].frost || WORLDS[n].ring || WORLDS[n].gilt).join() === "ICE,VOID,CROWN");
   check("plate corner marks (mock screen.css:17-21): FACTORY round bolts 9 px, ARENA 9 px squares turned 45 deg, CROWN 11 px filigree with radii 2 / 50 % / 2 / 50 %, none elsewhere",
     J(NAMES.map((n) => WORLDS[n].corner)) === J([null, null, { kind: "bolt", size: 9, radii: [4.5, 4.5, 4.5, 4.5], rot: 0 }, null, { kind: "stud", size: 9, radii: [0, 0, 0, 0], rot: 45 }, null, null, { kind: "filigree", size: 11, radii: [2, 5.5, 2, 5.5], rot: 0 }]));
-  check("PLATE.world is the mock's .wp (screen.css:15-18) in CSS px that never scale with the cap: 2 px ink ring outside, 3 px frame, 2 px ink then 1 px frameHi inside, radius 6, padding 8 / 10, an opaque bed; corner marks 4 px inside the frame with a 1 px ink border",
-    J(PLATE.world) === J({ unit: "css", scales: false, radius: 6, pad: [8, 10], ink: { w: 2, col: "#0b0609" }, frame: { w: 3 }, inner: [{ w: 2, col: "#0b0609" }, { w: 1, col: "frameHi" }], bed: { a: 1 }, corner: { inset: 4, border: 1, ink: "#0b0609", fill: "frameHi" } }));
-  check("the mock's title and MENU screens do not use the world plate: the title sits on the kit plate (screen.js:79-80, class marq, padding 26/54/28 desktop, 16/12/18 phone), the MENU logo in the menu panel's header (menu.js:99, 110)",
-    J(PLATE.title) === J({ plate: "kit", cls: "marq", pad: { d: [26, 54, 28], p: [16, 12, 18] } }) && PLATE.menu.plate === "none");
+  /* ---- what the logo sits on, as the approved mock places it (corrected plate ruling) ---- */
+  check("PLATE: CSS px that never scale with the cap", PLATE.unit === "css" && PLATE.scales === false);
+  check("PLATE.title: the kit plate as the mock's marquee (screen.js:79-81): desktop one-line cap 88, padding 26 / 54 / 28 / 54, ring T 16, bed tile 80; phone stacked cap 76, padding 16 / 12 / 18 / 12, T 10, tile 56",
+    J(PLATE.title) === J({ plate: "kit", d: { build: "line", cap: 88, pad: [26, 54, 28, 54], T: 16, tile: 80 }, p: { build: "stack", cap: 76, pad: [16, 12, 18, 12], T: 10, tile: 56 } }));
+  check("PLATE.title's ring and tile are the kit plate's own defaults (kit type.js DEV), so a painter may call plate() with only {phone}", PLATE.title.d.T === DEV.d.T && PLATE.title.p.T === DEV.p.T && PLATE.title.d.tile === DEV.d.tile && PLATE.title.p.tile === DEV.p.tile);
+  check("PLATE.menu: no plate; the cream one-line cap 36 sits centred in the menu panel's header, padding / space below as the mock's menu.css (49, 118, 136, 217, 229, 235, 241 resolved by specificity)",
+    J(PLATE.menu) === J({ plate: "none", host: "the MENU panel header", build: "line", cap: 36, ver: "menu", align: "centre", d: { pad: [0, 0, 0, 0], below: 28 }, d125: { pad: [0, 0, 4, 0], below: 18 }, p: { pad: [18, 0, 10, 0], below: 0 }, p125: { pad: [10, 0, 6, 0], below: 0 } }));
+  check("PLATE.ground: the mono and ink builds sit on a plain rounded ground (screen.css:35-36): radius 6, padding 8 / 10, one colour (cream) on #1e1216, ink on #fff2df",
+    J(PLATE.ground) === J({ radius: 6, pad: [8, 10, 8, 10], mono: "#1e1216", ink: "#fff2df" }));
+  check("PLATE.sheet is the logo sheet's .wp only (screen.css:15-18): 2 px ink ring outside, 3 px frame, 2 px ink then 1 px frameHi inside, radius 6, padding 8 / 10, an opaque bed; corner marks 4 px inside the frame",
+    J(PLATE.sheet) === J({ radius: 6, pad: [8, 10, 8, 10], ink: { w: 2, col: "#0b0609" }, frame: { w: 3 }, inner: [{ w: 2, col: "#0b0609" }, { w: 1, col: "frameHi" }], bed: { a: 1 }, corner: { inset: 4, border: 1, ink: "#0b0609", fill: "frameHi" } }) && !("world" in PLATE));
   {
-    const pc = plan("CROWN", { cap: 72 }).layers[0], pi = plan("ICE", { cap: 36 }).layers[0];
-    check("plan's plate resolves the world: CROWN bed #140808, frame #8a6040, frameHi #f0d080 inner ring and corner fill; ICE has no corner mark", pc.id === "plate" && pc.bed.col === "#140808" && pc.bed.a === 1 && pc.frame.col === "#8a6040" && pc.inner[1].col === "#f0d080" && pc.corner.fill === "#f0d080" && pc.corner.kind === "filigree" && pc.corner.inset === 4 && pi.corner === null && pi.bed.col === "#0f2429");
+    const L88 = layout("line").env, S76 = layout("stack").env, t = plan("CROWN", { cap: 88 }), tp = plan("ICE", { cap: 76, dev: "p", build: "stack" }).layers[0];
+    check("title (default for title, token and small): plan's first layer is the kit plate, its bed box the logo canvas grown by the marquee padding, from the canvas's top-left",
+      t.place === "title" && J(t.layers[0]) === J({ id: "plate", kind: "kit", level: 8, phone: false, T: 16, tile: 80, box: { x: -54, y: -26, w: L88.w * 88 + 108, h: L88.h * 88 + 54 }, unit: "css" })
+      && J(tp.box) === J({ x: -12, y: -16, w: S76.w * 76 + 24, h: S76.h * 76 + 34 }) && tp.phone === true && tp.T === 10 && plan("JUNGLE", { cap: 48 }).place === "title" && plan("JUNGLE", { cap: 24 }).place === "title", J(t.layers[0]));
+    check("plateBox(build, cap, pad) is that box: line cap 88 -> -54, -26, 703.76 x 208.88", J(W.plateBox("line", 88, [26, 54, 28, 54])) === J({ x: -54, y: -26, w: 6.7700000000000005 * 88 + 108, h: 1.76 * 88 + 54 }) && near(W.plateBox("line", 88, [26, 54, 28, 54]).w, 703.76, 1e-9) && near(W.plateBox("line", 88, [26, 54, 28, 54]).h, 208.88, 1e-9));
+    check("MENU (the menu tier by default, or place menu): no plate layer at all", plan("JUNGLE", { cap: 36, ver: "menu" }).place === "menu" && !plan("JUNGLE", { cap: 36, ver: "menu" }).layers.some((l) => l.id === "plate") && !plan("JUNGLE", { cap: 72, place: "menu" }).layers.some((l) => l.id === "plate"));
+    check("mono and ink: a plain ground first (#1e1216 under the cream mark, #fff2df under the ink mark), never the world plate", J(plan("VOID", { cap: 16 }).layers[0]) === J({ id: "ground", col: "#1e1216", radius: 6, pad: [8, 10, 8, 10], unit: "css" }) && plan("VOID", { cap: 30, ver: "ink" }).layers[0].col === "#fff2df" && plan("VOID", { cap: 30, ver: "mono" }).layers[0].col === "#1e1216" && plan("VOID", { cap: 16 }).place === "ground");
+    const pc = plan("CROWN", { cap: 72, place: "sheet" }).layers[0], pi = plan("ICE", { cap: 72, place: "sheet" }).layers[0];
+    check("place sheet (the dev sheet only, never a default) resolves the world plate: CROWN bed #140808, frame #8a6040, frameHi #f0d080 inner ring and corner fill; ICE has no corner mark",
+      pc.kind === "sheet" && pc.bed.col === "#140808" && pc.bed.a === 1 && pc.frame.col === "#8a6040" && pc.inner[1].col === "#f0d080" && pc.corner.fill === "#f0d080" && pc.corner.kind === "filigree" && pc.corner.inset === 4 && pi.corner === null && pi.bed.col === "#0f2429"
+      && NAMES.every((n) => [72, 48, 36, 24, 16].every((cap) => !plan(n, { cap }).layers.some((l) => l.kind === "sheet"))));
   }
 
-  /* ---- L1 twin: every face colour >= 3:1 on its world's plate bed, by token math ---- */
+  /* ---- L1 twin: every face colour >= 3:1 on what it sits on, by token math: the kit plate's bed checker (bedA, bedB) under the title and the menu
+     panel, the plain grounds under mono and ink, and the sheet plate's bed (bg1) ---- */
+  const kitBed = NAMES.map((n, i) => { const t = worldTokens(i + 1), lo = (h) => Math.min(ratio(h, t.bedA), ratio(h, t.bedB)); return [n, lo(P.yel), lo(P.cor), lo(P.cream)]; });
+  console.log("    contrast vs the kit plate bed, worst of bedA / bedB (FUSE / GRID / MENU cream): " + kitBed.map(([n, f, g, c]) => `${n} ${f.toFixed(2)} / ${g.toFixed(2)} / ${c.toFixed(2)}`).join(", "));
+  check("L1 (token math): FUSE, GRID and the MENU cream >= 3:1 on the kit plate's bed in every world (the title marquee and the menu panel)", kitBed.every(([, f, g, c]) => f >= 3 && g >= 3 && c >= 3), J(kitBed.filter(([, f, g, c]) => f < 3 || g < 3 || c < 3)));
+  check("L1 (token math): the one-colour cream on #1e1216 and the ink #0b0609 on #fff2df >= 3:1", ratio(P.cream, PLATE.ground.mono) >= 3 && ratio(P.ol, PLATE.ground.ink) >= 3, [ratio(P.cream, PLATE.ground.mono), ratio(P.ol, PLATE.ground.ink)].map((v) => v.toFixed(2)).join());
   const table = NAMES.map((n) => [n, ratio(P.yel, WORLDS[n].bed), ratio(P.cor, WORLDS[n].bed), ratio(P.cream, WORLDS[n].bed)]);
   console.log("    contrast vs plate bed (FUSE / GRID / MENU cream): " + table.map(([n, f, g, c]) => `${n} ${f.toFixed(2)} / ${g.toFixed(2)} / ${c.toFixed(2)}`).join(", "));
   check("L1 (token math): FUSE and GRID faces >= 3:1 against every world's plate bed", table.every(([, f, g]) => f >= 3 && g >= 3), J(table.filter(([, f, g]) => f < 3 || g < 3)));
@@ -286,11 +308,12 @@ if (G && W) {
   /* ---- plan: the CLASSIC paint list per world and tier, read from paintVec (logo.js 365-470):
      372-378 mono draws only its own four layers; 399-404 VOID rings (outer title only, none at small) go UNDER the ink (405); 415-418 side, then CROWN's
      catch line and ink line at every tier; 420-438 per word face, shade (not small, 424), light (title and MENU, 436; ICE frost at title); 440-444 motif
-     at title / token / MENU, none for CROWN at MENU, VOID draws none; 460 bomb; 464 cord ink then the rope layer; 466-469 spark. ---- */
-  const BASE = { title: "plate outline side face shade light motif bomb cordInk rope spark", token: "plate outline side face shade motif bomb cordInk rope spark", menu: "plate outline side face shade light motif bomb cordInk rope spark", small: "plate outline side face bomb cordInk rope spark", mono: "plate monoFace monoBomb monoCord monoTip" };
+     at title / token / MENU, none for CROWN at MENU, VOID draws none; 460 bomb; 464 cord ink then the rope layer; 466-469 spark. The plate first: the kit
+     plate under the title (screen.js:79-80), none in the MENU header (menu.js:99, 110), a plain ground under mono and ink (screen.js:50). ---- */
+  const BASE = { title: "plate outline side face shade light motif bomb cordInk rope spark", token: "plate outline side face shade motif bomb cordInk rope spark", menu: "outline side face shade light motif bomb cordInk rope spark", small: "plate outline side face bomb cordInk rope spark", mono: "ground monoFace monoBomb monoCord monoTip" };
   const TABLE = {
-    VOID: { title: "plate ringOuter ringInner outline side face shade light bomb cordInk rope spark", token: "plate ringInner outline side face shade bomb cordInk rope spark", menu: "plate ringInner outline side face shade light bomb cordInk rope spark", small: BASE.small, mono: BASE.mono },
-    CROWN: { title: "plate outline side gilt giltInk face shade light motif bomb cordInk rope spark", token: "plate outline side gilt giltInk face shade motif bomb cordInk rope spark", menu: "plate outline side gilt giltInk face shade light bomb cordInk rope spark", small: "plate outline side gilt giltInk face bomb cordInk rope spark", mono: BASE.mono },
+    VOID: { title: "plate ringOuter ringInner outline side face shade light bomb cordInk rope spark", token: "plate ringInner outline side face shade bomb cordInk rope spark", menu: "ringInner outline side face shade light bomb cordInk rope spark", small: BASE.small, mono: BASE.mono },
+    CROWN: { title: "plate outline side gilt giltInk face shade light motif bomb cordInk rope spark", token: "plate outline side gilt giltInk face shade motif bomb cordInk rope spark", menu: "outline side gilt giltInk face shade light bomb cordInk rope spark", small: "plate outline side gilt giltInk face bomb cordInk rope spark", mono: BASE.mono },
   };
   const CAPT = { title: 72, token: 48, menu: 36, small: 24, mono: 16 };
   for (const n of NAMES) for (const [t, cap] of Object.entries(CAPT)) {

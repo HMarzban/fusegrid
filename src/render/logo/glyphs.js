@@ -12,8 +12,9 @@
      clip "body" = inside the bomb body ellipse; "face" = inside the faces; "rope" = only where the rope tube painted (the mock draws those parts
      source-atop on the rope's own layer, then lays that layer over the canvas). tf [x, y, rot] = drawn in a frame moved to (x, y), turned rot (radians).
    Tier names are tierOf's (worlds.js): title, token, menu, small, mono. Every tier rule is data on what it governs: a tiers list (drawn only at those
-   tiers) and min {px, unit, tiers} (a minimum width that applies only at those tiers). LAYERS is the CLASSIC paint order, the same for both builds;
-   worlds.js plan() resolves it for one world, tier and size. Every minimum is CSS px (n / cap in C units) unless its record says unit "device"
+   tiers) and min {px, unit, tiers} (a minimum width that applies only at those tiers). LAYERS is the CLASSIC paint order, the same for both builds
+   ("plate" is the kit plate on the title, absent in the MENU header, the world plate only on the logo sheet); MONO_LAYERS starts on a plain ground.
+   worlds.js plan() resolves them for one world, size and placement. Every minimum is CSS px (n / cap in C units) unless its record says unit "device"
    (n / (cap * dpr)).
    glyph(ch): d = one op list per shape (rings as subpaths, filled even-odd; round tops and bottoms overshoot OVER, radii clamped to half an edge, as
    canvas arcTo draws them), rings = the same flattened for painters. inGlyph(ch, x, y, shape?) is exact: true arcs, and a point within 1e-9 of the
@@ -55,7 +56,7 @@ export const STACK = deep({solid: "the faces of both words and the bomb body ell
   shade: {perWord: true, shift: [-.04, -.06], min: {px: 2, unit: "css", tiers: ["token", "menu"]}, clip: "face", tiers: T3},
   light: {perWord: true, shift: [.025, .035], clip: "face", tiers: ["title", "menu"]}});
 export const LAYERS = deep(["plate", "ringOuter", "ringInner", "outline", "side", "gilt", "giltInk", "face", "shade", "light", "motif", "bomb", "cordInk", "rope", "spark"]);
-export const MONO_LAYERS = deep(["plate", "monoFace", "monoBomb", "monoCord", "monoTip"]);
+export const MONO_LAYERS = deep(["ground", "monoFace", "monoBomb", "monoCord", "monoTip"]);
 export const CORD = deep({w0: .11, w1: .09, min: {px: 3, unit: "css", tiers: T4}, col: P.cord, lead: 6, n: 90, tiers: T4,
   ink: {w: .035, min: {px: {title: 1.2, token: 1.2, menu: 1.2, small: 2}, unit: "css"}, col: P.ol, layer: "cordInk"},
   over: ["light", "braid", "burnt", "char"],
