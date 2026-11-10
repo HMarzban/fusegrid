@@ -4,7 +4,7 @@ import {fileURLToPath} from "node:url";
 import {createGame} from "../src/main.js";
 import {createRenderer} from "../src/render/renderer.js";
 import {createWorld, loadLevel} from "../src/core/sim.js";
-import {SCREEN, IDLE_T} from "../src/app/menuapp.js";
+import {SCREEN, IDLE_T, ITEMS, PAUSE_ITEMS, OPT_ROWS} from "../src/app/menuapp.js";
 import {SHOW_DUR} from "../src/app/intro.js";
 import {encodeChallenge} from "../src/app/code.js";
 import {CFG, BIOMES, biomeOf} from "../src/core/config.js";
@@ -221,13 +221,13 @@ function mkCanvas(){
   tick(10);
   check("C1 click-skip does not auto-start a run",
     g.app.screen===SCREEN.MENU&&g.world.time===0, g.app.screen);
-  cv.fire("pointerdown",menuTap(3));            // OPTIONS
+  cv.fire("pointerdown",menuTap(ITEMS.indexOf("OPTIONS")));            // OPTIONS
   check("C1 OPTIONS click pushes SETTINGS once",
     g.app.screen===SCREEN.SETTINGS&&g.app.optRow===0,String(g.app.screen));
   tick(10);
   check("C1 push is not re-fired by rising edge next frame",
     g.app.screen===SCREEN.SETTINGS&&g.app.optRow===0);
-  g.app.optRow=3; g.app.confirm();              // RENDER row
+  g.app.optRow=OPT_ROWS.indexOf("RENDER"); g.app.confirm();              // RENDER row
   check("C1 RENDER row toggles exactly once",
     g.app.pixel===true&&g.app.render3d===false&&g.app.settings.px===1&&g.app.settings.r3d===0,
     "pixel="+g.app.pixel+" render3d="+g.app.render3d);
@@ -236,7 +236,7 @@ function mkCanvas(){
   check("C1 RENDER Enter cycles PIXEL -> REAL 3D -> CLASSIC 2D",
     v2==="true,false,1,0"&&g.app.render3d===false&&g.app.pixel===false&&g.app.settings.r3d===0&&g.app.settings.px===0, v2);
   g.app.key("Escape");
-  cv.fire("pointerdown",menuTap(4));            // GUIDE
+  cv.fire("pointerdown",menuTap(ITEMS.indexOf("GUIDE")));            // GUIDE
   check("C1 subscreen click lands once", g.app.screen===SCREEN.GUIDE);
   tick(10);
   check("C1 subscreen does not bounce back", g.app.screen===SCREEN.GUIDE);
@@ -302,8 +302,8 @@ function mkCanvas(){
   const g=createGame(cv.el,{seed:71});
   g.app.cabinetSeen=true;                       // seen cabinet: skip -> MENU
   g.app.skip();
-  g.app.cursor=3;                               // OPTIONS
-  cv.fire("pointerdown",menuTap(3));            // MENU tap on the OPTIONS row
+  g.app.cursor=ITEMS.indexOf("OPTIONS");                               // OPTIONS
+  cv.fire("pointerdown",menuTap(ITEMS.indexOf("OPTIONS")));            // MENU tap on the OPTIONS row
   check("tap glue: OPTIONS push lands on SETTINGS row 0",
     g.app.screen===SCREEN.SETTINGS&&g.app.optRow===0,
     g.app.screen+"/"+g.app.optRow);
@@ -325,7 +325,7 @@ function mkCanvas(){
   const cv=mkCamCanvas(600,520);
   const g=createGame(cv.el,{autoplay:true,seed:72});
   g.input.onPause(); g.loop(16);
-  g.app.pauseCursor=2; g.app.confirm();          // OPTIONS row -> pauseView 1
+  g.app.pauseCursor=PAUSE_ITEMS.indexOf("OPTIONS"); g.app.confirm();          // OPTIONS row -> pauseView 1
   check("PAUSE tap glue setup: pauseView 1 at row 0",
     g.app.pauseView===1&&g.app.optRow===0,
     g.app.pauseView+"/"+g.app.optRow);
@@ -356,8 +356,8 @@ function mkCanvas(){
   const cs=mkCamCanvas(600,520);
   cs.el.getBoundingClientRect=()=>({left:0,top:0,width:300,height:260});
   const h=createGame(cs.el,{seed:74});
-  h.app.cabinetSeen=true; h.app.skip(); h.app.cursor=3;
-  cs.fire("pointerdown",menuTap(3,2));
+  h.app.cabinetSeen=true; h.app.skip(); h.app.cursor=ITEMS.indexOf("OPTIONS");
+  cs.fire("pointerdown",menuTap(ITEMS.indexOf("OPTIONS"),2));
   cs.fire("pointerdown",{clientX:150,clientY:158});   // row 6 (buf 300,316)
   check("D1 scaled tap: SETTINGS row 6 toggles SCREEN SHAKE",
     h.app.screen===SCREEN.SETTINGS&&h.app.optRow===6&&h.app.settings.shk===0,
@@ -376,7 +376,7 @@ function mkCanvas(){
     !!at&&g.app.screen===SCREEN.MENU&&g.app.cursor===0,String(at&&at[1]));
   cv.fire("pointerdown",{clientX:at[1][1]/2,clientY:at[1][2]/2});
   check("D2 MENU tap on the STATS row opens STATS, not a PLAY run",
-    g.app.screen===SCREEN.STATS&&g.app.cursor===6,
+    g.app.screen===SCREEN.STATS&&g.app.cursor===ITEMS.indexOf("STATS"),
     g.app.screen+"/"+g.app.cursor);
 }
 
@@ -392,8 +392,8 @@ function mkCanvas(){
   cv.fire("pointerdown",{clientX:300,clientY:R[7].y1+6});
   check("M1 a MENU tap above / below the rows starts nothing",
     g.app.screen===SCREEN.MENU&&g.world.time===0&&g.app.cursor===0, g.app.screen);
-  cv.fire("pointerdown",{clientX:8,clientY:R[4].cy});        // far left, GUIDE band
-  check("M1 a MENU side tap on a row's band opens that row (full-width bands)", g.app.screen===SCREEN.GUIDE&&g.app.cursor===4, g.app.screen+"/"+g.app.cursor);
+  cv.fire("pointerdown",{clientX:8,clientY:R[ITEMS.indexOf("GUIDE")].cy});        // far left, GUIDE band
+  check("M1 a MENU side tap on a row's band opens that row (full-width bands)", g.app.screen===SCREEN.GUIDE&&g.app.cursor===ITEMS.indexOf("GUIDE"), g.app.screen+"/"+g.app.cursor);
   const G=mdGuideGeom(L);
   cv.fire("pointerdown",{clientX:G.tiles[2].x+G.tiles[2].w/2,clientY:G.tiles[2].y+G.tiles[2].h/2}); // ATLAS: GUIDE doors are tiles
   check("M1 GUIDE tap on ENEMIES opens ENEMIES (GUIDE no longer traps touch)", g.app.screen===SCREEN.ENEMIES&&g.app.guideRow===2, g.app.screen+"/"+g.app.guideRow);
@@ -417,7 +417,7 @@ function mkCanvas(){
     tagTxt==="FACTORY · MAX · HARD"&&g.app.screen===SCREEN.GAME&&g.world.level===3&&(g.world.heat|0)===2&&(g.world.pace|0)===1,
     tagTxt+" -> "+[g.app.screen,g.world.level,g.world.heat,g.world.pace].join());
   g.app.toMenu();
-  g.app.cursor=5; g.app.confirm();
+  g.app.cursor=ITEMS.indexOf("HIGH SCORES"); g.app.confirm();
   const T=mdScoreTabs(L);
   cv.fire("pointerdown",{clientX:T.x(1),clientY:T.y});
   check("M1 HIGH SCORES heat tab tap shows PLUS and stays", g.app.screen===SCREEN.SCORES&&g.app.scoreHeat===1, g.app.screen+"/"+g.app.scoreHeat);
@@ -445,8 +445,8 @@ function mkCanvas(){
   check("M1 touch MENU paints STATS inside its hub tile",
     !!at&&at[1][2]>R[6].y0&&at[1][2]<R[6].y1&&at[1][1]>R[6].x&&at[1][1]<R[6].x+R[6].w, String(at&&at[1]));
   cv.fire("pointerdown",{clientX:at[1][1],clientY:at[1][2]});
-  check("M1 touch MENU tap on the painted STATS label opens STATS", g.app.screen===SCREEN.STATS&&g.app.cursor===6, g.app.screen+"/"+g.app.cursor);
-  g.app.toMenu(); g.app.cursor=1; g.app.confirm();
+  check("M1 touch MENU tap on the painted STATS label opens STATS", g.app.screen===SCREEN.STATS&&g.app.cursor===ITEMS.indexOf("STATS"), g.app.screen+"/"+g.app.cursor);
+  g.app.toMenu(); g.app.cursor=ITEMS.indexOf("LEVEL SELECT"); g.app.confirm();
   cv.calls.length=0; g.loop(5000); g.loop(5016);
   const foot=cv.calls.filter(c=>c[0]==="fillText").map(c=>String(c[1][0]));
   check("M1 touch LEVEL SELECT foot is the tap rule, not the key list",
@@ -455,7 +455,7 @@ function mkCanvas(){
 {
   const cv=mkCamCanvas(600,520);
   const g=createGame(cv.el,{seed:78});
-  g.app.cabinetSeen=true; g.app.skip(); g.app.cursor=1; g.app.confirm();
+  g.app.cabinetSeen=true; g.app.skip(); g.app.cursor=ITEMS.indexOf("LEVEL SELECT"); g.app.confirm();
   cv.calls.length=0; g.loop(16); g.loop(32);
   const foot=cv.calls.filter(c=>c[0]==="fillText").map(c=>String(c[1][0]));
   check("M1 desktop LEVEL SELECT foot keeps the key list", foot.some(t=>/^ENTER START/.test(t))&&!foot.includes(LEVEL_TAP), foot.filter(t=>/TAP|ENTER/.test(t)).join("|"));
@@ -464,13 +464,13 @@ function mkCanvas(){
   const plays=[];
   const cv=mkCamCanvas(600,520,"p");
   const g=createGame(cv.el,{seed:79,audio:{play:n=>plays.push(n),toggle:()=>false}});
-  g.app.cabinetSeen=true; g.app.skip(); g.app.cursor=1; g.app.confirm();
+  g.app.cabinetSeen=true; g.app.skip(); g.app.cursor=ITEMS.indexOf("LEVEL SELECT"); g.app.confirm();
   const L=menuLayout(600,520), LG=levelGeom(L,g.app.pactUnlocked,true), c=(r)=>({clientX:r.x+r.w/2,clientY:r.y+r.h/2}), tap=(r)=>{plays.length=0; cv.fire("pointerdown",c(r)); return plays.join();};
   const a=tap(LG.room[3]), b=tap(LG.heat[2]), d=tap(LG.pace[0]), e=tap(LG.pace[2]), f=tap(LG.room[3]);
   check("M1 LEVEL chip taps cue ONE uiMove each (room 4, heat MAX two steps, pace EASY, pace HARD)",
     a==="uiMove"&&b==="uiMove"&&d==="uiMove"&&e==="uiMove"&&g.app.level===4&&g.app.heat===2&&g.app.pace===1, [a,b,d,e,g.app.level,g.app.heat,g.app.pace].join("|"));
   check("M1 a tap on the chip already set is silent", f==="", f);
-  g.app.toMenu(); g.app.cursor=5; g.app.confirm();
+  g.app.toMenu(); g.app.cursor=ITEMS.indexOf("HIGH SCORES"); g.app.confirm();
   const T=mdScoreTabs(L,true);
   plays.length=0; cv.fire("pointerdown",{clientX:T.x(2),clientY:T.y}); const s1=plays.join();
   plays.length=0; cv.fire("pointerdown",{clientX:T.x(2),clientY:T.y}); const s2=plays.join();
@@ -499,17 +499,17 @@ function mkCanvas(){
   const plays=[];
   const audio={play:n=>plays.push(n),toggle:()=>false};
   const g=createGame(null,{seed:13,audio});
-  g.app.screen=SCREEN.MENU; g.app.cursor=3; plays.length=0;
+  g.app.screen=SCREEN.MENU; g.app.cursor=ITEMS.indexOf("OPTIONS"); plays.length=0;
   g.app.confirm();                              // OPTIONS push
   check("I1 OPTIONS confirm -> uiSel + SETTINGS",
     plays.join()==="uiSel"&&g.app.screen===SCREEN.SETTINGS,
     JSON.stringify(plays));
-  g.app.optRow=6; plays.length=0;
+  g.app.optRow=OPT_ROWS.indexOf("SCREEN SHAKE"); plays.length=0;
   g.app.confirm();                              // SCREEN SHAKE knob
   check("I1 SETTINGS knob confirm -> uiTog (never uiSel)",
     plays.join()==="uiTog"&&g.app.settings.shk===0,JSON.stringify(plays));
   g.app.key("Escape");
-  g.app.cursor=4; plays.length=0;
+  g.app.cursor=ITEMS.indexOf("GUIDE"); plays.length=0;
   g.app.confirm();                              // push GUIDE
   g.app.key("Escape");                          // back
   check("I1 GUIDE enter->uiSel then Esc back->uiBack",
@@ -531,7 +531,7 @@ function mkCanvas(){
   try{
     const cv=mkCamCanvas(600,520);
     const g=createGame(cv.el,{seed:15});
-    g.app.screen=SCREEN.MENU; g.app.cursor=6;
+    g.app.screen=SCREEN.MENU; g.app.cursor=ITEMS.indexOf("STATS");
     g.app.confirm();                              // STATS row -> onStats
     check("R6 STATS confirm wires the stored medals into app.stats.trophies",
       g.app.screen===SCREEN.STATS&&(g.app.stats.trophies||[]).length===8,
@@ -846,7 +846,7 @@ for(const mode of ["autoplay","code"]){
   g.demo.t=edge; t+=250; g.loop(t);
   check("attract: rollover 3 -> 1 (cycle wraps)", g.demo.world.level===1);
   // exit paths: Escape exits instantly, demo discarded on next frame, cursor kept
-  g.app.cursor=4;
+  g.app.cursor=ITEMS.indexOf("GUIDE");
   const esc=g.app.key("Escape");
   check("attract: Escape exits to MENU", esc===true && g.app.screen===SCREEN.MENU);
   t+=16; g.loop(t);
@@ -857,7 +857,7 @@ for(const mode of ["autoplay","code"]){
   check("attract: Enter starts a CORE run",
     play && g.app.screen===SCREEN.GAME
     && g.world.level===1 && (g.world.heat|0)===0 && (g.world.pact|0)===0
-    && g.world.state==="PLAY" && g.app.cursor===4);
+    && g.world.state==="PLAY" && g.app.cursor===ITEMS.indexOf("GUIDE"));
 }
 
 {
@@ -919,7 +919,7 @@ for(const mode of ["autoplay","code"]){
   const baseline=JSON.stringify(loadScores());
   const g=createGame(null,{seed:23});
   g.app.cabinetSeen=true;                // seen cabinet: skip lands on MENU
-  g.app.skip(); g.app.cursor=2;
+  g.app.skip(); g.app.cursor=ITEMS.indexOf("DAILY");
   g.app.settings.dmo=2;                  // DEMO ON: an unbounded attract (SHORT parks at 60 s)
   g.app.enterAttract();                  // direct entry for a deterministic run
   const levels=new Set();
@@ -1512,7 +1512,7 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   try{
     const g=createGame(null,{seed:21});
     globalThis.location={search:"",reload:()=>{reloads++;}};
-    const stats=()=>{ g.app.cabinetSeen=true; g.app.screen=SCREEN.MENU; g.app.cursor=6; g.app.confirm(); };
+    const stats=()=>{ g.app.cabinetSeen=true; g.app.screen=SCREEN.MENU; g.app.cursor=ITEMS.indexOf("STATS"); g.app.confirm(); };
     const kept=()=>[...CLEAR_KEYS,...KEEP_KEYS].every((k)=>k in mem);
     fill(); stats();
     g.input._onKey({code:"KeyR"});
@@ -1579,7 +1579,7 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
     const g=createGame(cv.el,{seed:76});
     globalThis.location={search:"",reload:()=>{reloads++;}};
     const tap=(x,y)=>cv.fire("pointerdown",{clientX:x/2,clientY:y/2});
-    const stats=()=>{ g.app.cabinetSeen=true; g.app.screen=SCREEN.MENU; g.app.cursor=6; g.app.confirm(); };
+    const stats=()=>{ g.app.cabinetSeen=true; g.app.screen=SCREEN.MENU; g.app.cursor=ITEMS.indexOf("STATS"); g.app.confirm(); };
     fill(); stats();
     tap(183,478);
     check("T1 tap: the T MEDALS label on STATS opens the MEDALS page",
@@ -1648,7 +1648,7 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
       const g=createGame(null,{autoplay:true});
       g.world.score=1500; g.world.level=3;
       g.input.onPause(); g.loop(16);
-      g.app.pauseCursor=1; g.app.confirm();   // RESTART
+      g.app.pauseCursor=PAUSE_ITEMS.indexOf("RESTART"); g.app.confirm();   // RESTART
       check("P1 RESTART reloads L1 at PLAY with the score zeroed",
         g.world.level===1&&g.world.state==="PLAY"&&g.world.score===0,
         g.world.level+"/"+g.world.state+"/"+g.world.score);
@@ -1661,7 +1661,7 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
       const g=createGame(null,{autoplay:true});
       g.world.score=1234;
       g.input.onPause(); g.loop(16);
-      g.app.pauseCursor=3; g.app.confirm();   // QUIT TO MENU
+      g.app.pauseCursor=PAUSE_ITEMS.indexOf("QUIT TO MENU"); g.app.confirm();   // QUIT TO MENU
       check("P1 QUIT lands on MENU with no PAUSE ghost",
         g.app.screen===SCREEN.MENU&&g.world.state==="PLAY",
         g.app.screen+"/"+g.world.state);
@@ -1672,7 +1672,7 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
       const gMax=createGame(null,{autoplay:true});
       gMax.world.score=1234; gMax.world.heat=2;
       gMax.input.onPause(); gMax.loop(16);
-      gMax.app.pauseCursor=3; gMax.app.confirm();
+      gMax.app.pauseCursor=PAUSE_ITEMS.indexOf("QUIT TO MENU"); gMax.app.confirm();
       check("P1 QUIT MAX persist stores s*3 and t=2",
         loadScores().some(r=>r.s===3702&&r.t===2&&r.l===1),
         JSON.stringify(loadScores().slice(0,3)));
@@ -1680,12 +1680,12 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
     {
       const g=createGame(null,{autoplay:true});
       g.input.onPause(); g.loop(16);
-      g.app.pauseCursor=2; g.app.confirm();   // OPTIONS
+      g.app.pauseCursor=PAUSE_ITEMS.indexOf("OPTIONS"); g.app.confirm();   // OPTIONS
       check("P1 OPTIONS opens inline — pauseView 1, shell still GAME",
         g.app.pauseView===1&&g.app.screen===SCREEN.GAME
         &&g.world.state==="PAUSE",
         g.app.pauseView+"/"+g.app.screen+"/"+g.world.state);
-      g.app.optRow=6; g.app.confirm();
+      g.app.optRow=OPT_ROWS.indexOf("SCREEN SHAKE"); g.app.confirm();
       check("P1 the paused page drives the SAME knob code",
         g.app.settings.shk===0,String(g.app.settings.shk));
       g.input.onPause();
@@ -1755,7 +1755,7 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
     const old=()=>{ const v=JSON.parse(mem["nb.stats.v1"]); v.a.day="2000-01-01"; mem["nb.stats.v1"]=JSON.stringify(v); };
     old(); retry();
     check("R12 the LOSE->PLAY retry edge carries ld",a().days===2,JSON.stringify(a()));
-    old(); g.input.onPause(); t+=16; g.loop(t); g.app.pauseCursor=1; g.app.confirm();
+    old(); g.input.onPause(); t+=16; g.loop(t); g.app.pauseCursor=PAUSE_ITEMS.indexOf("RESTART"); g.app.confirm();
     check("R12 the pause RESTART edge carries ld",
       a().days===3&&g.world.state==="PLAY",JSON.stringify(a())+"/"+g.world.state);
   }finally{ delete globalThis.window; }
@@ -1802,7 +1802,7 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
       g.app.skip(); g.app.level=6; g.app.heat=2; g.app.startRun();
       let t=1000; t+=16; g.loop(t);
       g.input.onPause(); t+=16; g.loop(t);
-      g.app.pauseCursor=3; g.app.confirm();
+      g.app.pauseCursor=PAUSE_ITEMS.indexOf("QUIT TO MENU"); g.app.confirm();
       check("R6 a pause QUIT during a staged 6->8 run writes nothing",
         g.app.screen===SCREEN.MENU&&!(K in mem),g.app.screen+"/"+mem[K]);
     }

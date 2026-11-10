@@ -1,5 +1,6 @@
 import { initFx } from "../src/render/fx.js";
 import { readFileSync } from "node:fs";
+import { rec as textrec } from "./lib/textrec.mjs";
 /* The console-panel plate is a rounded path (icons.js rr): a filled path that
    used arcTo is recorded as its bbox rect, so the plate checks keep reading
    rects. Carets and glyphs (no arcTo) are not recorded. */
@@ -1631,17 +1632,7 @@ function check(name, cond, detail) {
   const md = await import("../src/render/menudraw.js");
   const { POWER } = await import("../src/core/entities.js");
   const { shellGeo } = await import("../src/app/fit.js");
-  const rec = () => {
-    const texts = [];
-    const o = {
-      font: "10px x", textAlign: "left",
-      fillText(s, x) { texts.push({ s: String(s), x, w: o.measureText(s).width, align: o.textAlign }); },
-      measureText(s) { const m = /(\d+(?:\.\d+)?)px/.exec(o.font); return { width: String(s).length * 0.6 * (m ? +m[1] : 10) }; },
-      createLinearGradient: () => ({ addColorStop() {} }),
-      createRadialGradient: () => ({ addColorStop() {} }),
-    };
-    return { texts, c: new Proxy(o, { get: (t, p) => (p in t ? t[p] : () => {}), set: (t, p, v) => ((t[p] = v), true) }) };
-  };
+  const rec = () => { const r = textrec(); return { texts: r.texts, c: r.ctx }; };
   const K = /\bK\s*\+\s*MOVE\b/i;
   check("KICK's own help says walk-into", POWER.find((p) => p.t === "kick").help === "walk into a bomb to slide it");
   const g = shellGeo(393, 852, 600, 520);

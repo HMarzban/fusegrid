@@ -369,7 +369,7 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
     },
   });
   a.screen = SCREEN.MENU;
-  a.cursor = 0;
+  a.cursor = ITEMS.indexOf("PLAY");
   a.confirm();
   check(
     "cursor 0 PLAY -> onStart({level}) + GAME + inGame",
@@ -382,13 +382,14 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
   );
 }
 {
-  for (const [cur, screen] of [
-    [1, SCREEN.LEVEL],
-    [3, SCREEN.SETTINGS],
-    [4, SCREEN.GUIDE],
-    [5, SCREEN.SCORES],
-    [6, SCREEN.STATS],
+  for (const [lab, screen] of [
+    ["LEVEL SELECT", SCREEN.LEVEL],
+    ["OPTIONS", SCREEN.SETTINGS],
+    ["GUIDE", SCREEN.GUIDE],
+    ["HIGH SCORES", SCREEN.SCORES],
+    ["STATS", SCREEN.STATS],
   ]) {
+    const cur = ITEMS.indexOf(lab);
     const a = createMenuApp();
     a.screen = SCREEN.MENU;
     a.cursor = cur;
@@ -406,7 +407,7 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
     },
   });
   s.screen = SCREEN.MENU;
-  s.cursor = 7;
+  s.cursor = ITEMS.indexOf("SOURCE");
   s.confirm();
   check(
     "cursor 7 SOURCE -> onSource(), screen stays MENU",
@@ -417,7 +418,7 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
 {
   const a = createMenuApp();
   a.screen = SCREEN.MENU;
-  a.cursor = 4;
+  a.cursor = ITEMS.indexOf("GUIDE");
   a.confirm();
   check(
     "GUIDE entry resets guideRow",
@@ -431,7 +432,7 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
   ]) {
     const g = createMenuApp();
     g.screen = SCREEN.MENU;
-    g.cursor = 4;
+    g.cursor = ITEMS.indexOf("GUIDE");
     g.confirm(); // -> GUIDE, guideRow 0
     g.guideRow = row;
     g.confirm();
@@ -478,7 +479,7 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
 {
   const a = createMenuApp();
   a.screen = SCREEN.MENU;
-  a.cursor = 3;
+  a.cursor = ITEMS.indexOf("OPTIONS");
   a.confirm();
   check("OPTIONS entry resets optRow and clears togT", a.optRow === 0 && a.togT === -1);
   check(
@@ -486,7 +487,7 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
     a.key("Escape") === true && a.screen === SCREEN.MENU,
     String(a.screen),
   );
-  a.cursor = 3;
+  a.cursor = ITEMS.indexOf("OPTIONS");
   a.confirm();
   check(
     "confirm on SETTINGS is NOT back — Enter is consumed by the row",
@@ -517,7 +518,7 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
     a.settings.mus === 100 && a.settings.sfx === 100 && a.settings.bri === 100 && a.settings.cam === 0,
     JSON.stringify(a.settings),
   );
-  a.cursor = 5;
+  a.cursor = ITEMS.indexOf("HIGH SCORES");
   a.optMove(1);
   check("optMove moves optRow and never the MENU cursor", a.optRow === 1 && a.cursor === 5, a.optRow + "/" + a.cursor);
   a.optRow = 0;
@@ -546,32 +547,32 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
 {
   const a = createMenuApp();
   a.screen = SCREEN.SETTINGS;
-  a.optRow = 4;
+  a.optRow = OPT_ROWS.indexOf("CAMERA");
   check("CAMERA rejects adjust in CLASSIC 2D", a.move(1, 0) === false && a.settings.cam === 0);
   check("CAMERA rejects Enter in CLASSIC 2D", a.optCycle() === false && a.settings.cam === 0);
-  a.optRow = 5;
+  a.optRow = OPT_ROWS.indexOf("BRIGHTNESS");
   check("BRIGHTNESS rejects adjust in CLASSIC 2D", a.move(1, 0) === false && a.settings.bri === 100);
-  a.optRow = 3;
+  a.optRow = OPT_ROWS.indexOf("RENDER");
   a.optCycle();
   check("RENDER Enter CLASSIC 2D -> PIXEL sets pixel and px together", a.pixel === true && a.render3d === false && a.settings.px === 1 && a.settings.r3d === 0);
-  a.optRow = 4;
+  a.optRow = OPT_ROWS.indexOf("CAMERA");
   check("CAMERA rejects Enter in PIXEL", a.optCycle() === false && a.settings.cam === 0);
-  a.optRow = 5;
+  a.optRow = OPT_ROWS.indexOf("BRIGHTNESS");
   check("BRIGHTNESS rejects adjust in PIXEL", a.move(1, 0) === false && a.settings.bri === 100);
-  a.optRow = 3;
+  a.optRow = OPT_ROWS.indexOf("RENDER");
   a.optCycle();
   check("RENDER flips render3d and r3d together", a.render3d === true && a.settings.r3d === 1);
   check("RENDER PIXEL -> REAL 3D clears pixel and px", a.pixel === false && a.settings.px === 0);
-  a.optRow = 4;
+  a.optRow = OPT_ROWS.indexOf("CAMERA");
   check("CAMERA cycles STANDARD -> WIDE in REAL 3D", a.optCycle() === true && a.settings.cam === 1);
   a.move(1, 0);
   check("CAMERA adjusts to FAR then clamps", a.settings.cam === 2 && a.move(1, 0) === false, a.settings.cam);
   check("CAMERA Enter wraps FAR -> STANDARD", a.optCycle() === true && a.settings.cam === 0);
-  a.optRow = 5;
+  a.optRow = OPT_ROWS.indexOf("BRIGHTNESS");
   for (let i = 0; i < 10; i++) a.move(1, 0);
   check("BRIGHTNESS clamps at 130", a.settings.bri === 130 && a.move(1, 0) === false, a.settings.bri);
   check("BRIGHTNESS Enter wraps 130 -> 70", a.optCycle() === true && a.settings.bri === 70, a.settings.bri);
-  a.optRow = 3;
+  a.optRow = OPT_ROWS.indexOf("RENDER");
   a.optCycle();
   check("RENDER back to CLASSIC 2D re-locks the two 3D rows", a.render3d === false && a.settings.r3d === 0);
   check("RENDER Enter wraps REAL 3D -> CLASSIC 2D (px stays 0)", a.pixel === false && a.settings.px === 0);
@@ -581,7 +582,7 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
   const seen = [];
   const a = createMenuApp({ onSettings: (s, k) => seen.push(k + ":" + s.r3d + s.px) });
   a.screen = SCREEN.SETTINGS;
-  a.optRow = 3;
+  a.optRow = OPT_ROWS.indexOf("RENDER");
   const val = () => (a.render3d ? 2 : a.pixel ? 1 : 0);
   check("RENDER ← at CLASSIC 2D clamps (no change, no report)", a.move(-1, 0) === false && val() === 0 && seen.length === 0);
   a.move(1, 0);
@@ -610,7 +611,7 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
     },
   });
   a.screen = SCREEN.SETTINGS;
-  a.optRow = 2;
+  a.optRow = OPT_ROWS.indexOf("SOUND");
   a.optCycle();
   check(
     "SOUND row drives audio.toggle() and syncs both flags",
@@ -661,7 +662,7 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
 {
   const a = createMenuApp();
   a.screen = SCREEN.MENU;
-  a.cursor = 1;
+  a.cursor = ITEMS.indexOf("LEVEL SELECT");
   a.confirm();
   a.key("Escape");
   check("Esc pops LEVEL->MENU", a.screen === SCREEN.MENU);

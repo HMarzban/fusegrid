@@ -263,7 +263,7 @@ for (const at of [1.0, 2.0, 3.0, 4.0]) {
 {
   const plays = [];
   const g = mk({ audio: { play: (n) => plays.push(n), toggle: () => false, duck: noop, pump: noop, unlocked: () => false } });
-  g.app.skip(); g.app.cursor = 1; g.app.confirm(); g.tick(2);
+  g.app.skip(); g.app.cursor = ITEMS.indexOf("LEVEL SELECT"); g.app.confirm(); g.tick(2);
   const lv0 = g.app.screen === SCREEN.LEVEL;
   plays.length = 0; press(g, "ArrowRight"); const a = plays.join();
   plays.length = 0; press(g, "ArrowUp"); const b = plays.join();
@@ -388,7 +388,7 @@ for (const at of [1.0, 2.0, 3.0, 4.0]) {
   press(g, "ArrowRight");
   const kinds = [g.app.pixel, g.renderer && g.renderer._dbg ? "px" : "?"].join();
   press(g, "ArrowDown"); const cam0 = g.app.settings.cam; press(g, "Enter"); press(g, "ArrowRight");
-  check("OPTIONS CAMERA is locked in PIXEL (Enter and → change nothing)", g.app.settings.cam === cam0 && g.app.optRow === 4, g.app.settings.cam);
+  check("OPTIONS CAMERA is locked in PIXEL (Enter and → change nothing)", g.app.settings.cam === cam0 && g.app.optRow === OPT_ROWS.indexOf("CAMERA"), g.app.settings.cam);
   check("OPTIONS RENDER PIXEL swaps the live renderer and saves px:1, r3d:0", kinds === "true,px" && /"r3d":0,.*"px":1[,}]/.test(mem["nb.settings.v1"] || ""), kinds + " " + mem["nb.settings.v1"]);
   g = mk({ createRenderer3D: fake3d });
   check("RENDER PIXEL survives a reload: boots pixel, px renderer, blob unchanged", g.app.pixel === true && g.app.render3d === false && !!g.renderer._dbg && g.app.settings.px === 1, v(g));
@@ -633,7 +633,7 @@ for (let i = 0; i < GUIDE_ROWS.length; i++) {
   press(g, "KeyC"); await flush(); g.tick();
   check("MENU C copies nothing and raises no note", toastOf(g.app.toast) === null, JSON.stringify(g.app.toast));
   toRow(g, ITEMS.indexOf("STATS")); press(g, "Enter"); press(g, "KeyC"); await flush(); press(g, "Escape");
-  while (g.app.cursor > 0) press(g, "ArrowUp"); press(g, "Enter");
+  while (g.app.cursor !== ITEMS.indexOf("PLAY")) press(g, "ArrowUp"); press(g, "Enter");
   check("a STATS note never leaks onto a run", g.app.screen === SCREEN.GAME && g.ro.toast === null, g.app.screen + "/" + JSON.stringify(g.ro.toast));
 }
 // STATS label taps (T1) ride the keyboard's own path: a tap on the painted
