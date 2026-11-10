@@ -20,24 +20,34 @@ export const LABEL = Object.freeze({
   ART_STYLE: "ART STYLE",
   POWER_UPS: "POWER-UPS",
   LEVEL: "LEVEL",
+  LEVELS: "LEVELS",
   DIFFICULTY: "DIFFICULTY",
   GAME_SPEED: "GAME SPEED",
+  MODIFIER: "MODIFIER",
   MODIFIERS: "MODIFIERS",
 });
+/* NORMAL difficulty, NORMAL speed, no modifiers: the plain run, as PAUSE's tag row reads it ("only non-default rules"). */
+export const DEFAULT_RULES = "DEFAULT RULES";
 export const diffWord = (h) => DIFF[clampHeat(h)];
 export const speedWord = (p) => SPEED[clampPace(p) + 1];
 export const diffTag = (h) => diffWord(h) + " DIFFICULTY";
 export const speedTag = (p) => speedWord(p) + " SPEED";
 export const modWords = (mask) => MOD_BITS.filter((b) => clampPact(mask) & b).map((b) => MOD[b]);
 export const modCount = (mask) => modWords(mask).length;
-/* run = {heat, pace, pact, time}: every setting (all) or only what differs from a default run, each naming its setting. */
-function parts(run, all) {
-  const r = run || {}, h = clampHeat(r.heat), p = clampPace(r.pace), out = [];
-  if (all || h) out.push(diffTag(h));
-  if (all || p) out.push(speedTag(p));
-  out.push(...modWords(r.pact));
+/* "1 MODIFIER", "4 MODIFIERS", "" for none. */
+export const modsCount = (mask) => { const n = modCount(mask); return n ? n + " " + (n === 1 ? LABEL.MODIFIER : LABEL.MODIFIERS) : ""; };
+/* A level span as FOES.rooms writes it: "LEVEL 8" for one, "LEVELS 1-8" / "LEVELS 1-3, 5-8" for more. */
+export const levelsOf = (span) => (/^\d+$/.test(String(span).trim()) ? LABEL.LEVEL : LABEL.LEVELS) + " " + span;
+/* run = {heat, pace, pact, time}, the one non-default filter: each part names its setting. o.all: every setting, defaults
+   included; o.diff: the difficulty always; o.count: the modifiers as a count; o.terse: EXPERT bare (the one value no other
+   setting or foe shares). */
+export function runParts(run, o) {
+  const p = o || {}, r = run || {}, h = clampHeat(r.heat), s = clampPace(r.pace), out = [];
+  if (p.all || p.diff || h) out.push(p.terse && h === 2 ? DIFF[2] : diffTag(h));
+  if (p.all || s) out.push(speedTag(s));
+  if (p.count) { const c = modsCount(r.pact); if (c) out.push(c); } else out.push(...modWords(r.pact));
   if (r.time) out.push(TIME_TRIAL);
   return out;
 }
-export const runWords = (run) => parts(run, true).join(" · ");
-export const tagFor = (run) => parts(run, false).join(" · ");
+export const runWords = (run) => runParts(run, { all: true }).join(" · ");
+export const tagFor = (run) => runParts(run).join(" · ");

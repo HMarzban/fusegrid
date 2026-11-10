@@ -10,7 +10,8 @@
 // ITEMS the same day: POWER help opens with E, and on touch both key lines name the button;
 // 2026-11-10 for the player words (UI upgrade v202 Task 2.1): only fillText strings changed, same
 // call count and coordinates — POWER-UPS for ITEMS / PICKUPS / CUBE, POWER BOMB, LEVELS for ROOMS,
-// and HOW TO's glossary line cut to "* NEEDS ITS POWER-UP"; the HUD pins did not move).
+// and HOW TO's glossary line cut to "* NEEDS ITS POWER-UP"; the HUD pins did not move;
+// fix round 1: ENEMIES prints LEVEL 8, not LEVELS 8, for KNIGHT's one level, the one fillText that changed).
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -50,13 +51,13 @@ const HUDS = [[0, null], [3, {on: true, t: 12.3}], [8, null]];
 const PAGES = ["drawHowTo", "drawItemsHelp", "drawEnemiesHelp"], BOXES = [[600, 520], [600, 360]];
 const PIN = {
   hud0: "7c298753:175", hud3: "60b2bf24:349", hud8: "2aa8d78c:508",
-  drawHowTo520: "a99f5726:556", drawItemsHelp520: "d79aa7bf:1484", drawEnemiesHelp520: "558fd9fd:1387",
-  drawHowTo360: "cd6f58c0:556", drawItemsHelp360: "105d7a3a:1484", drawEnemiesHelp360: "e23cd183:1387",
-  drawHowTo520T: "07a1b49a:556", drawItemsHelp520T: "f726aa19:1488", drawEnemiesHelp520T: "d306d106:1387",
-  drawHowTo360T: "66bb2955:556", drawItemsHelp360T: "1c66a2e4:1488", drawEnemiesHelp360T: "bc58d276:1387",
-  "shell.2d.HOWTO": "f02911b5:558", "shell.2d.ITEMS": "810ff31c:1486", "shell.2d.ENEMIES": "8ad84050:1389",
-  "shell.3d.HOWTO": "f02911b5:558", "shell.3d.ITEMS": "810ff31c:1486", "shell.3d.ENEMIES": "8ad84050:1389",
-  "shell.iso.HOWTO": "d7739ff2:558", "shell.iso.ITEMS": "f4e3714e:1486", "shell.iso.ENEMIES": "a28addf0:1389",
+  drawHowTo520: "a99f5726:556", drawItemsHelp520: "d79aa7bf:1484", drawEnemiesHelp520: "98b566a8:1387",
+  drawHowTo360: "cd6f58c0:556", drawItemsHelp360: "105d7a3a:1484", drawEnemiesHelp360: "86a5212c:1387",
+  drawHowTo520T: "07a1b49a:556", drawItemsHelp520T: "f726aa19:1488", drawEnemiesHelp520T: "2d9467fb:1387",
+  drawHowTo360T: "66bb2955:556", drawItemsHelp360T: "1c66a2e4:1488", drawEnemiesHelp360T: "d5c1208d:1387",
+  "shell.2d.HOWTO": "f02911b5:558", "shell.2d.ITEMS": "810ff31c:1486", "shell.2d.ENEMIES": "ff407daf:1389",
+  "shell.3d.HOWTO": "f02911b5:558", "shell.3d.ITEMS": "810ff31c:1486", "shell.3d.ENEMIES": "ff407daf:1389",
+  "shell.iso.HOWTO": "d7739ff2:558", "shell.iso.ITEMS": "f4e3714e:1486", "shell.iso.ENEMIES": "7e63d213:1389",
 };
 const hud = (lv, tm, ico) => { const r = rec(); drawHudChips(r.c, HUDW(lv), tm, ico); return r; };
 const page = (f, w, h, kind, touch) => { const r = rec(); md[f](r.c, md.layout(w, h), 1.25, kind, touch); return r; };

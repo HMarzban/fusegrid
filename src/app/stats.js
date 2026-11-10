@@ -212,8 +212,9 @@ const fmtT = (sec) => {
   return Math.floor(d / 600) + ":" + pad2(Math.floor(d / 10) % 60) + "." + (d % 10);
 };
 
-/* Four plain-text lines, pure over four values. Line 3's time reads
-   nb.times.v1's level-1 NORMAL-plain key, so the payload NAMES R7's store instead
+/* Four plain-text lines, pure over four values. Line 3 reads the plain buckets
+   (no modifier, NORMAL SPEED) and says so, as the STATS page's BESTS row does; its
+   time reads nb.times.v1's level-1 NORMAL-plain key, so the payload NAMES R7's store instead
    of duplicating it. The URL keeps its trailing slash: the no-slash Pages 301
    drops the OG tags. main.js hands the times blob in rather than this module
    reading a store, because purity is what makes the payload pinnable. */
@@ -232,7 +233,7 @@ export function statsPayload(v, bests, times, today) {
     "RUNS " + a.runs + " · LEVELS " + a.rooms + " · DEATHS " + a.deaths +
       " · KILLS " + a.kills + " · POWER-UPS " + a.picks + " · BRICKS " + a.bricks +
       " · TIME " + fmtLong(a.secs) + "\n" +
-    "NORMAL DIFFICULTY " + best(0) + " · HARD DIFFICULTY " + best(1) + " · EXPERT DIFFICULTY " + best(2) +
+    "BESTS · NO MODIFIERS · NORMAL SPEED · NORMAL DIFFICULTY " + best(0) + " · HARD DIFFICULTY " + best(1) + " · EXPERT DIFFICULTY " + best(2) +
       " · LEVEL 1 NORMAL DIFFICULTY BEST TIME " + (t1 == null ? "—" : fmtT(t1)) + "\n" +
     "https://hmarzban.github.io/fusegrid/"
   );

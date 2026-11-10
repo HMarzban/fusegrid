@@ -99,10 +99,11 @@ export function dailyTag(v, today, gen = DAILY_GEN) {
 
 /* No code is appended: the board is derivable from the date by anyone who
    presses DAILY that day, which is the whole point. The URL keeps its trailing
-   slash — the no-slash Pages 301 drops the OG tags. */
+   slash — the no-slash Pages 301 drops the OG tags. LEVEL is the player word
+   (src/render/words.js, pinned equal in tests/words.test.mjs). */
 export function dailyStamp(date, level, score) {
   return (
-    "DAILY " + date + " · L" + (level | 0) + " · " + (score | 0) +
+    "DAILY " + date + " · LEVEL " + (level | 0) + " · " + (score | 0) +
     " · https://hmarzban.github.io/fusegrid/"
   );
 }

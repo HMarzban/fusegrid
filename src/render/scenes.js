@@ -3,8 +3,7 @@ import { HEAT_COL, heatToken } from "../core/heat.js";
 import { drawIcon } from "./sprites.js";
 import { rr } from "./icons.js";
 import { PROJ } from "./r3d/camera.js";
-import { clampPace } from "../core/pace.js";
-import { LABEL, diffTag, speedTag, modWords } from "./words.js";
+import { LABEL, diffTag, speedTag, runParts } from "./words.js";
 import { abilityList, abilityText, abilityOrd, getStrip } from "./fx.js";
 import { layout, listGeom, listHit, drawList, plate, fitKicker, setupVals, head as plateHead, foot as plateFoot } from "./menudraw.js";
 import { hints } from "./hintcopy.js";
@@ -103,7 +102,7 @@ export function fmtSpan(sec) {
 export function runLine(run) {
   const r = run || {};
   return (
-    LABEL.LEVEL + "S " + (r.r | 0) + " · KILLS " + (r.k | 0) + " · " + LABEL.POWER_UPS + " " + (r.p | 0) +
+    LABEL.LEVELS + " " + (r.r | 0) + " · KILLS " + (r.k | 0) + " · " + LABEL.POWER_UPS + " " + (r.p | 0) +
     " · " + fmtSpan(r.t)
   );
 }
@@ -112,7 +111,7 @@ export function runLine(run) {
    each modifier when they are not the default, every one named (words.js). */
 export function bestLabel(world) {
   const w = world || {};
-  return [diffTag(w.heat)].concat(clampPace(w.pace) ? [speedTag(w.pace)] : [], modWords(w.pact)).join(" · ");
+  return runParts({ heat: w.heat, pace: w.pace, pact: w.pact }, { diff: true }).join(" · ");
 }
 /* The display edge and the persist edge are the SAME edge. A mid-room NEW BEST
    claims a record that has not been written and that a later death can still
@@ -437,7 +436,7 @@ export function drawHudChips(c, world, tm, ico) {
    lower half of the screen. Holding nothing paints nothing at all (not even
    a save), so every idle call log is unchanged. ico is PIXEL's painter, as
    in drawHudChips; y moves the lane for a canvas of another height. */
-export const ABAR = Object.freeze({ x: 16, y: 486, h: 28, gap: 5, fade: 0.6, dim: 0.5, ch: 7.8 });
+export const ABAR = Object.freeze({ x: 16, y: 486, h: 28, gap: 5, fade: 0.6, dim: 0.5, ch: 7.8, min: 9 });
 export function abilityChips(p, gone) {
   const on = abilityList(p).map((k) => ({ k, a: 1 }));
   for (const e of gone || [])
@@ -460,6 +459,14 @@ export function drawAbilityBar(c, world, ico, gone, y) {
   c.textBaseline = "middle";
   c.textAlign = "left";
   c.font = "900 13px ui-monospace,monospace";
+  /* The row fits the overlay, ABAR.x in from each side. An estimate with no ctx
+     call (ABAR.ch, 8 % wide as R13's recorder) clears the usual row, whose call
+     log is unchanged; only a row that may not fit (every ability with the
+     longest bomb kind) measures itself and steps its type down from 13 px until it fits. */
+  const live = L.filter((e) => e.a > 0).map((e) => abilityText(e.k, p)), lab = (t) => (t[1] ? t[0] + " " + t[1] : t[0]),
+    room = CFG.COLS * CFG.TILE - ABAR.x, span = (f) => live.reduce((a, t) => a + Math.round(f(lab(t)) + 32) + ABAR.gap, ABAR.x) - ABAR.gap;
+  if (span((s) => s.length * ABAR.ch * 1.08) > room)
+    for (let k = 13; k > ABAR.min && span(mw) > room; ) c.font = "900 " + --k + "px ui-monospace,monospace";
   let x = ABAR.x;
   for (const e of L) {
     if (!(e.a > 0)) continue;

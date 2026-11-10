@@ -33,9 +33,9 @@ export const SCREEN = Object.freeze({
   GUIDE: 11, // appended — folds HOW TO PLAY/ITEMS/ENEMIES one hop deeper
   STATS: 12, // appended — the opt-in cabinet counters (R5)
   TROPHIES: 13, // appended — the MEDALS page, opened from STATS by T (R6)
-  GRAPHICS: 14, // appended — the GRAPHICS page, opened from the OPTIONS door row
+  GRAPHICS: 14, // appended — the GRAPHICS page, opened from the SETTINGS door row
   FLOOR: 15, // appended — the floor-tile page, the fourth GUIDE door
-  CONTROLS: 16, // appended — the CONTROLS page, opened from the OPTIONS door row
+  CONTROLS: 16, // appended — the CONTROLS page, opened from the SETTINGS door row
 });
 /* Menu feels by rank, highest first (controlswire.js plays them on a pad). */
 export const FEELS = Object.freeze(["launch", "enter", "deny", "back", "confirm", "move"]);
@@ -52,7 +52,7 @@ export const ITEMS = Object.freeze([
 /* GUIDE rows, frozen and index-addressed: guideRow, drawGuide and confirm's
    GUIDE dispatch all count this array. */
 export const GUIDE_ROWS = Object.freeze(["HOW TO PLAY", "POWER-UPS", "ENEMIES", "FLOOR"]);
-/* OPTIONS rows, frozen and index-addressed: optRow, drawSettings and
+/* SETTINGS rows, frozen and index-addressed: optRow, drawSettings and
    settingsHit all agree because they all count this array. */
 export const OPT_ROWS = Object.freeze([
   "MUSIC",
@@ -81,7 +81,7 @@ export const SOURCE_URL = "https://github.com/HMarzban/fusegrid";
 const REP_FIRST = 0.35,
   REP_NEXT = 0.11;
 export const IDLE_T = 10; // MENU idle seconds before ATTRACT takes over
-export const WARM_T = 0.4; // s on the RENDER row before the next look warms
+export const WARM_T = 0.4; // s on the ART STYLE row before the next look warms
 const DEF_MOVE = Object.freeze(["KeyW", "KeyD", "KeyS", "KeyA"]); // UP RIGHT DOWN LEFT; no controls.js import, it is not in this file's boot graph
 const ANA_NOTE = "ANSWER THE CARD WITH Y OR N";
 
@@ -101,12 +101,12 @@ export function createMenuApp(opts = {}) {
     heat: clampHeat(o.heat),
     scoreHeat: 0,
     settings: clampSettings(o.settings),
-    analytics: !!o.analytics, // OPTIONS ANALYTICS: its truth lives in nb.analytics.v1 (src/app/analytics.js), like SOUND's in audio
-    optRow: 0, // OPTIONS row cursor — its OWN field, so the MENU cursor
+    analytics: !!o.analytics, // SETTINGS ANALYTICS: its truth lives in nb.analytics.v1 (src/app/analytics.js), like SOUND's in audio
+    optRow: 0, // SETTINGS row cursor — its OWN field, so the MENU cursor
     // survives a round trip through the page
     guideRow: 0, // GUIDE row cursor — its OWN field too, same reason
     pauseCursor: 0,
-    pauseView: 0, // 0 list / 1 inline OPTIONS / 2 inline GRAPHICS / 3 inline CONTROLS; reset on the PLAY->PAUSE edge
+    pauseView: 0, // 0 list / 1 inline SETTINGS / 2 inline GRAPHICS / 3 inline CONTROLS; reset on the PLAY->PAUSE edge
     controls: o.controls || null, // the CONTROLS page (controlspage.js); null = the door is inert
     ctlT: 0, // ms, summed from update()'s dt: the ONE clock the page's tick, confirm and feeds share
     feel: "", // the one menu feel the last presses asked for, highest FEELS rank kept; controlswire arms it before a pad poll routes and reads it after
@@ -150,8 +150,8 @@ export function createMenuApp(opts = {}) {
     fromShow: false,
     boardReady: true,
     readyT: 0,
-    warmT: 0, _warmA: null, _warmK: null, // v202 warm on intent: the rest on the RENDER row
-    lookJob: null, // v202: the RENDER row's look job, set by main from rcache: {k, state "loading"|"preparing"|"ready"|"failed", phase, done, total, f, ind, fails} or null
+    warmT: 0, _warmA: null, _warmK: null, // v202 warm on intent: the rest on the ART STYLE row
+    lookJob: null, // v202: the ART STYLE row's look job, set by main from rcache: {k, state "loading"|"preparing"|"ready"|"failed", phase, done, total, f, ind, fails} or null
     _showPending: false,
     showBoom: false,
     /* Advance the shell by dt seconds. Reads held axes + confirmHeld only. */
@@ -513,7 +513,7 @@ export function createMenuApp(opts = {}) {
       this.cursor = 0;
       return this._push(SCREEN.MENU);
     },
-    /* A step on a value row (OPTIONS, GRAPHICS, a CONTROLS value) is a write: confirm; any other accepted step is move. */
+    /* A step on a value row (SETTINGS, GRAPHICS, a CONTROLS value) is a write: confirm; any other accepted step is move. */
     move(dir, axis) {
       const g = this.screen === SCREEN.GAME, adj = (axis | 0) === 0 && (this.ctlAdjusts(0) || this.screen === SCREEN.SETTINGS || this.screen === SCREEN.GRAPHICS || (g && (this.pauseView === 1 || this.pauseView === 2)));
       return adj ? this._conf(this._move(dir, axis)) : this._move(dir, axis) && this._feel("move");
@@ -579,7 +579,7 @@ export function createMenuApp(opts = {}) {
       if (o.onPaceChange) o.onPaceChange(np);
       return this._feel("confirm");
     },
-    /* OPTIONS knobs (spec §2). LEVEL SELECT is the only precedent for
+    /* SETTINGS knobs (spec §2). LEVEL SELECT is the only precedent for
        in-subscreen adjustment, so this copies its move(dir,axis) shape: axis 1
        = up/down = row, axis 0 = left/right = adjust. Adjust CLAMPS, Enter
        CYCLES (which is what gives touch full control, since a tap maps to
@@ -664,7 +664,7 @@ export function createMenuApp(opts = {}) {
       const j = this.lookJob;
       return !!(j && j.restore && !j.on && j.state !== "failed");
     },
-    /* warm on intent (Q3): the cursor resting WARM_T on the RENDER row (OPTIONS, or PAUSE's OPTIONS view) warms the next look of the cycle once per rest; live PLAY never */
+    /* warm on intent (Q3): the cursor resting WARM_T on the ART STYLE row (SETTINGS, or PAUSE's SETTINGS view) warms the next look of the cycle once per rest; live PLAY never */
     _warmTick(d) {
       const on = OPT_ROWS[this.optRow] === "ART STYLE" && (this.screen === SCREEN.SETTINGS || (this.screen === SCREEN.GAME && this.worldState === "PAUSE" && this.pauseView === 1));
       if (!on) { this.warmT = 0; this._warmA = this._warmK = null; return; }
@@ -673,7 +673,7 @@ export function createMenuApp(opts = {}) {
       this.warmT += d;
       if (this.warmT >= WARM_T && this._warmK !== nx) { this._warmK = nx; if (onWarm) onWarm(nx); }
     },
-    /* the 10 s look release waits while the player compares looks: OPTIONS, GRAPHICS, CONTROLS and PAUSE's views */
+    /* the 10 s look release waits while the player compares looks: SETTINGS, GRAPHICS, CONTROLS and PAUSE's views */
     lookHold() {
       const s = this.screen;
       return s === SCREEN.SETTINGS || s === SCREEN.GRAPHICS || s === SCREEN.CONTROLS || (s === SCREEN.GAME && this.worldState === "PAUSE" && this.pauseView >= 1);
@@ -722,7 +722,7 @@ export function createMenuApp(opts = {}) {
       if (r === "RESET DEFAULTS") return this.optReset();
       return false;
     },
-    /* GRAPHICS (unified spec 2026-10-10 §5): the OPTIONS door row opens a
+    /* GRAPHICS (unified spec 2026-10-10 §5): the SETTINGS door row opens a
        SCREEN from the menu and the inline pauseView 2 from PAUSE (the room
        track keeps playing). Rows, presets, locks and value strings all come
        from gfx.js; QUALITY is derived from the six governed rows, never
@@ -862,7 +862,7 @@ export function createMenuApp(opts = {}) {
       if (onSettings) onSettings(this.settings, "reset");
       return true;
     },
-    /* OPTIONS here is an INLINE page, not a screen jump: jumping to
+    /* SETTINGS here is an INLINE page, not a screen jump: jumping to
        SCREEN.SETTINGS would flip musicCue from the room's biome track to the
        menu track mid-run, hide the touch pad and falsify every screen===GAME
        guard, for a page the player closes in four seconds. */

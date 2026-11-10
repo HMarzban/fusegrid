@@ -59,13 +59,16 @@ IRON / BARE / THIN / SHRINK + TIME), POWER BOMB (the POWER pickup, in
 `POWER[].name`, still the one source), ART STYLE (RENDER), POWER-UPS (PICKS,
 ITEMS, CUBES, PICKUPS). A difficulty or speed value is printed with its setting's
 name wherever nothing beside it names the setting (`EXPERT DIFFICULTY`,
-`FAST SPEED`), because NORMAL is both. `src/render/words.js` is the one table
-(`DIFF`, `SPEED`, `MOD` by PACT bit, `TIME_TRIAL`, `LABEL`, `tagFor`,
-`runWords`); src/app may not import it, so its few player strings (`ITEMS`,
-`OPT_ROWS`, `PAUSE_ITEMS`, `GUIDE_ROWS` labels, stats rows and payload, medal
-rule copy, `gfx.js` LOCK_3D, the consent card) are literals that
+`FAST SPEED`), on its own line or row, because NORMAL is both; DEFAULT RULES
+is the plain run (NORMAL difficulty and speed, no modifiers). `src/render/words.js`
+is the one table (`DIFF`, `SPEED`, `MOD` by PACT bit, `TIME_TRIAL`, `LABEL`,
+`DEFAULT_RULES`, `tagFor`, `runWords`, `runParts` the one non-default filter,
+`modsCount` and `levelsOf` the one singular / plural); src/app may not import
+it, so its few player strings (`ITEMS`, `OPT_ROWS`, `PAUSE_ITEMS`, `GUIDE_ROWS`
+labels, stats rows and payload, the daily share line, medal rule copy, `gfx.js`
+LOCK_3D, the consent card) are literals that
 `tests/words.test.mjs` pins equal to it, with a render sweep and a source grep
-for the old words. Display only: stores keep their keys, bits and indices
+for the old words and for a level shorthand built at runtime (`" · L" + n`). Display only: stores keep their keys, bits and indices
 (`nb.pact.v1`, heat 0..2, pace -1..1, medal bits), analytics event names and
 params are byte-identical, identifiers keep the old names (`heat`, `pace`,
 `pact`, `SCREEN.ITEMS`, `OPT_ROWS`), and core keeps `HEAT_NAME` / `PACE_NAME` /
@@ -908,7 +911,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
 - This repository is the arcade game only — do not add unrelated demos.
 - Promotion and posts: rules, plans and the log live in the git-ignored `.superpowers/sdd/marketing/` (README.md, LOG.md). Never in a tracked file.
 - Keep a visible path to the public repo: menu SOURCE opens https://github.com/HMarzban/fusegrid.
-- Keep ITEMS, ENEMIES, and HOW TO as in-menu help so pickups and foes are explained in the shell, not only as HUD chips.
+- Keep POWER-UPS (the GUIDE door once named ITEMS), ENEMIES, and HOW TO as in-menu help so power-ups and foes are explained in the shell, not only as HUD chips.
 - Opening (2026-10-09): title, then press, then a ~4 s show (camera sweep, MAKO pop-in, fuse, blast reveals MENU), with music from the press. Any key skips the show (the title waits for a press). First visits land on MENU at PLAY, not in a run. The title follows RENDER; the show plays the MENU theme throughout, and the `intro` track is kept unused.
 - Difficulty is Heat on LEVEL SELECT (CORE / PLUS / MAX). Global **pace** (EASY / NORM / HARD) is a separate LEVEL SELECT control (`[`/`]`), persisted in `nb.pace.v1`, scaling player/enemy move speed on `world.pace` — not frozen `CFG`. Pact (`1–4`) and rooms 6–8 unlock after the first FUSE/GRID CLEAR. Score × heat is persist-only; HIGH SCORES fifth column tags pact bitmask (`p`). Music uses WebAudio stereo panning on the oscillator engine (zero npm deps). Mid-run heat, always-on Sudden Death, and internet play stay parked.
 - Foes must read as arcade characters (distinct silhouette, face or lens, shading, facing) in CLASSIC 2D, PIXEL and REAL 3D, not flat colored tokens. `enemybody.js` is the 2D five-beat build; 3D matches via merged hulls in the four-mesh slot. Art only — do not retune AI.

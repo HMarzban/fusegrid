@@ -246,7 +246,7 @@ const TODAY = "2026-09-07";
   check(
     "dailyStamp is the exact share line, URL trailing slash included",
     dailyStamp(TODAY, 3, 1840) ===
-      "DAILY 2026-09-07 · L3 · 1840 · https://hmarzban.github.io/fusegrid/",
+      "DAILY 2026-09-07 · LEVEL 3 · 1840 · https://hmarzban.github.io/fusegrid/",
     dailyStamp(TODAY, 3, 1840),
   );
   check(

@@ -9,7 +9,7 @@ import { POWER, FOES, helpOf } from "../core/entities.js";
 import { HEAT_COL, HEAT_MARK, clampHeat, heatRoster, heatProfile } from "../core/heat.js";
 import { pactLabel } from "../core/pact.js";
 import { PACT_COL, applyPact } from "../core/pact.js";
-import { DIFF, SPEED, MOD, MOD_BITS, TIME_TRIAL, LABEL, diffTag, speedTag, modWords, runWords } from "./words.js";
+import { DIFF, SPEED, MOD, MOD_BITS, TIME_TRIAL, LABEL, diffTag, speedTag, modWords, runWords, runParts, levelsOf } from "./words.js";
 import { drawEnemyBody } from "./sprites.js";
 import { drawItemBody } from "./itemdraw.js";
 import { HOME, TILE_HELP, TILE_NAME } from "../core/feat.js";
@@ -548,15 +548,11 @@ function chip(c, r, label, on, col, touch, fs) {
 /* A run's setup for one value slot, longest first (fitVal / fitIn keep the
    first that fits): every setting named; the modifiers as a count; only what
    differs from a default run (the approved PLAY tag); the same with EXPERT
-   bare (the one value no other setting or foe shares); the same without the
-   world, which the MENU pane beside the list already names. */
+   bare; the same without the world, which the MENU pane beside the list
+   already names. The words and the non-default filter are words.js runParts. */
 export function setupVals(world, run) {
-  const r = run || {}, h = clampHeat(r.heat), sp = speedTag(r.pace) !== speedTag(0), n = modWords(r.pact).length,
-    t = r.time ? [TIME_TRIAL] : [], cnt = n ? [n + " " + (n === 1 ? "MODIFIER" : LABEL.MODIFIERS)] : [],
-    j = (a) => [world].concat(a).join(" · "),
-    tail = (sp ? [speedTag(r.pace)] : []).concat(cnt, t),
-    terse = (h ? [h === 2 ? DIFF[2] : diffTag(h)] : []).concat(tail);
-  return [j([runWords(r)]), j([diffTag(h), speedTag(r.pace)].concat(cnt, t)), j((h ? [diffTag(h)] : []).concat(tail)), j(terse), terse.join(" · ") || world];
+  const j = (a) => [world].concat(a).join(" · "), terse = runParts(run, { count: true, terse: true });
+  return [j(runParts(run, { all: true })), j(runParts(run, { all: true, count: true })), j(runParts(run, { count: true })), j(terse), terse.join(" · ") || world];
 }
 /* fitVal for any type: the first candidate that fits w in the font already set, else the last one clipped. */
 function fitIn(c, cands, w) {
@@ -752,7 +748,7 @@ export function slamOf(t) {
 
 /* MAIN MENU over the dimmed frozen arena (ATLAS, r2 direction B): pick on
    the left, see it on the right. ui={cursor,items,enterT,touch,info,kind};
-   item entries may carry a value token ("PLAY|L1 · CORE · NORM"). The row
+   item entries may carry a value token ("PLAY|JUNGLE · NORMAL DIFFICULTY · …"). The row
    SHAPE (PLAY hero, group gaps before OPTIONS / HIGH SCORES / SOURCE) is a
    constant here, never read from items: main.js hit-tests with only n, so the
    painted and tapped rows come from the same table.
@@ -830,7 +826,7 @@ function teaser(label, val, I) {
   const i = I || {};
   switch (label) {
     case "PLAY": return val;
-    case LABEL.LEVEL_SELECT: return i.unlocked ? "8 LEVELS · " + LABEL.MODIFIERS + " OPEN" : "5 LEVELS · 3 LOCKED";
+    case LABEL.LEVEL_SELECT: return i.unlocked ? "8 " + LABEL.LEVELS + " · " + LABEL.MODIFIERS + " OPEN" : "5 " + LABEL.LEVELS + " · 3 LOCKED";
     case "DAILY": return val === "NEW" ? "NEW · TODAY'S BOARD" : "PLAYED · " + ((i.daily && i.daily.played) | 0) + " TODAY";
     case LABEL.SETTINGS: return "LOOK · " + LOOK[i.look | 0];
     case "GUIDE": return POWER.length + " " + LABEL.POWER_UPS + " · " + FOES.length + " FOES";
@@ -963,13 +959,13 @@ function menuPane(c, P, row, I, kind, t) {
       c.font = font(10, "700");
       paneLine(c, P, y, fitIn(c, (row.cands || [row.val || ""]).map((v) => "NEXT RUN · " + v), P.w - 20), TEXT);
       paneLine(c, P, y + 16, hints().ok + " STARTS IT · LEVEL SELECT CHANGES IT", MUTED);
-      paneLine(c, P, y + 32, "8 LEVELS · 3 DIFFICULTIES · 3 SPEEDS", MUTED);
+      paneLine(c, P, y + 32, "8 " + LABEL.LEVELS + " · 3 DIFFICULTIES · 3 SPEEDS", MUTED);
     }
     return;
   }
   cell(c, P);
   if (lab === LABEL.LEVEL_SELECT) {
-    paneHead(c, P, I.unlocked ? "8 LEVELS" : "5 LEVELS", I.unlocked ? "ALL OPEN" : "3 LOCKED", I.unlocked ? ACCENT : MUTED);
+    paneHead(c, P, (I.unlocked ? "8 " : "5 ") + LABEL.LEVELS, I.unlocked ? "ALL OPEN" : "3 LOCKED", I.unlocked ? ACCENT : MUTED);
     const tw = 60, tg = 5, x0 = P.x + (P.w - (4 * tw + 3 * tg)) / 2;
     for (let i = 0; i < 8; i++) {
       const r = { x: x0 + (i % 4) * (tw + tg), y: P.y + 30 + (i >> 2) * 58, w: tw, h: 54 },
@@ -988,8 +984,8 @@ function menuPane(c, P, row, I, kind, t) {
     paneLine(c, P, P.y + 176, LABEL.GAME_SPEED + "  " + SPEED.join(" · "), TEXT);
     if (I.unlocked) {
       c.font = font(10, "700");
-      wrap(c, LABEL.MODIFIERS + " " + modWords(15).concat(TIME_TRIAL).join(" · "), P.w - 20, 2).forEach((l, i) => paneLine(c, P, P.y + 192 + 16 * i, l, TEXT)); // two lines: the names no longer fit one
-    } else paneLine(c, P, P.y + 192, "CLEAR LEVEL 5: LEVELS 6–8 + " + LABEL.MODIFIERS, ACCENT);
+      wrap(c, LABEL.MODIFIERS + " " + modWords(15).concat(TIME_TRIAL).join(" · "), P.w - 20, P.h >= 216 ? 2 : 1).forEach((l, i) => paneLine(c, P, P.y + 192 + 16 * i, l, TEXT)); // a second line only where the pane has it (the iso guard's pane does not, as SETTINGS' pad line)
+    } else paneLine(c, P, P.y + 192, "CLEAR " + LABEL.LEVEL + " 5: " + LABEL.LEVELS + " 6–8 + " + LABEL.MODIFIERS, ACCENT);
     paneLine(c, P, P.y + P.h - 14, "EVERY LEVEL SHOWS ITS FOES + YOUR BEST", MUTED);
   } else if (lab === LABEL.SETTINGS) {
     paneHead(c, P, "THREE LOOKS", LABEL.ART_STYLE + " ROW");
@@ -1078,8 +1074,8 @@ function menuPane(c, P, row, I, kind, t) {
       c.font = font(10, "700");
       c.fillText(LABEL.LEVEL + " " + s.l + " · " + s.d, r.x + r.w - 10, r.y + 20);
     }
-    paneLine(c, P, P.y + 186, DIFF[1] + " ×2 · " + DIFF[2] + " ×3 ON EVERY SAVED SCORE", TEXT);
-    paneLine(c, P, P.y + P.h - 14, hints().ok + ": ALL TEN · " + DIFF.join(" / "), MUTED);
+    paneLine(c, P, P.y + 186, "×2 ON " + DIFF[1] + " · ×3 ON " + DIFF[2] + " " + LABEL.DIFFICULTY, TEXT); // the setting named on the line (ruling 7)
+    paneLine(c, P, P.y + P.h - 14, hints().ok + ": ALL TEN · BY " + LABEL.DIFFICULTY, MUTED);
   } else if (lab === "STATS") {
     paneHead(c, P, "YOUR CABINET", (I.medals | 0) + "/8 MEDALS", (I.medals | 0) ? ACCENT : MUTED);
     const dw = (P.w - 20) / 8;
@@ -1257,7 +1253,7 @@ export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked, pace, timeAt
   if (p < -1) p = -1;
   else if (p > 1) p = 1;
   boxPlate(c, S);
-  head(c, S, LABEL.LEVEL_SELECT, U ? "8 LEVELS · " + LABEL.MODIFIERS + " OPEN" : "5 LEVELS · 3 LOCKED");
+  head(c, S, LABEL.LEVEL_SELECT, U ? "8 " + LABEL.LEVELS + " · " + LABEL.MODIFIERS + " OPEN" : "5 " + LABEL.LEVELS + " · 3 LOCKED");
   c.textAlign = "left";
   c.textBaseline = "middle";
   c.fillStyle = MUTED;
@@ -1489,7 +1485,7 @@ export function drawEnemiesHelp(c, L, t, kind, touch) {
     wrap(c, e.help, tw, 2).forEach((l, j) => c.fillText(l, tx, r.y + (T ? 36 : 26) + j * (T ? 15 : 11)));
     c.fillStyle = ACCENT;
     c.font = font(T ? 11 : 8, "900");
-    c.fillText(LABEL.LEVEL + "S " + e.rooms, tx, r.y + r.h - (T ? 11 : 8));
+    c.fillText(levelsOf(e.rooms), tx, r.y + r.h - (T ? 11 : 8)); // LEVEL 8 for one
   }
   foot(c, S, tapMode(T) ? BACK_TAP : hints().back + " BACK");
 }
@@ -1784,7 +1780,7 @@ const statsFoot = () => (hints().dev === "pad" ? [STATS_PAD, ["KeyT", "KeyC"]] :
 const RESET_FOOT = "R AGAIN ERASES · OTHER KEYS CANCEL · KEEPS " + LABEL.SETTINGS + " + " + LABEL.GAME_SPEED + " · C COPY"; // 73 chars: the S.iw budget of 74 at the 0.6 em advance
 const RESET_NOTES = Object.freeze([
   "ERASES SCORES · BESTS · TIMES · DAILY · MEDALS · PLAQUES · GHOSTS",
-  "ERASES STATS + DAYS PLAYED · RELOCKS LEVELS 6-8 · " + LABEL.MODIFIERS + " · " + TIME_TRIAL,
+  "ERASES STATS + DAYS PLAYED · RELOCKS " + LABEL.LEVELS + " 6-8 · " + LABEL.MODIFIERS + " · " + TIME_TRIAL,
 ]);
 /* STATS (ATLAS): eight tiles (seven lifetime counters + MEDALS n/8) in two
    columns, a BESTS row of three heat-coloured tiles, two notes, the foot.

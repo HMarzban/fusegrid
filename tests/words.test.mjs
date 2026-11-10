@@ -16,7 +16,8 @@ import { createControlsPage } from "../src/app/controlspage.js";
 import { DEF_CONTROLS } from "../src/app/controls.js";
 import { wordsOf } from "../src/app/hints.js";
 import { statsRows, statsNotes, statsPayload, clampStats } from "../src/app/stats.js";
-import { MEDAL_ROWS, medalRows, medalLine } from "../src/app/medals.js";
+import { MEDAL_ROWS, SPRINT_S, medalRows, medalLine } from "../src/app/medals.js";
+import { dailyStamp } from "../src/app/daily.js";
 import { recordBest } from "../src/app/bests.js";
 import { LOCK_3D, gfxView } from "../src/app/gfx.js";
 import { mountAnalytics, GA_HOST } from "../src/app/analytics.js";
@@ -59,6 +60,11 @@ check("tagFor: a default run has no tag", W.tagFor({ heat: 0, pace: 0, pact: 0 }
 }
 check("tagFor: only what differs from a default run, each naming its setting", W.tagFor({ heat: 1 }) === "HARD DIFFICULTY" && W.tagFor({ pace: -1 }) === "SLOW SPEED" && W.tagFor({ pact: PACT.BARE }) === "NO FLOOR ITEMS" && W.tagFor({ time: true }) === "TIME TRIAL");
 check("tagFor: the longest run (appendix §12 row 6)", W.tagFor({ heat: 2, pace: 1, pact: 15, time: true }) === "EXPERT DIFFICULTY · FAST SPEED · ONE LIFE · NO FLOOR ITEMS · FEWER ITEMS · SHRINK · TIME TRIAL");
+check("modsCount: the one singular / plural", W.modsCount(0) === "" && W.modsCount(PACT.THIN) === "1 " + W.LABEL.MODIFIER && W.modsCount(15) === "4 " + W.LABEL.MODIFIERS);
+check("runParts: the one non-default filter (all / diff / count / terse), which tagFor, runWords, bestLabel and setupVals call",
+  J(W.runParts({ heat: 2, pace: 0, pact: 3 }, { count: true, terse: true })) === J(["EXPERT", "2 MODIFIERS"]) && J(W.runParts({ heat: 0, pace: 1 }, { diff: true })) === J(["NORMAL DIFFICULTY", "FAST SPEED"]) &&
+    J(W.runParts({}, { all: true, count: true })) === J(["NORMAL DIFFICULTY", "NORMAL SPEED"]) && J(W.runParts({ heat: 1 }, { terse: true })) === J(["HARD DIFFICULTY"]));
+check("DEFAULT_RULES: the plain run (NORMAL difficulty and speed, no modifiers), as PAUSE's tag row reads it", W.DEFAULT_RULES === "DEFAULT RULES" && W.tagFor({}) === "");
 check("runWords: every setting, defaults included", W.runWords({}) === "NORMAL DIFFICULTY · NORMAL SPEED" && W.runWords({ heat: 2, pace: -1, pact: PACT.THIN }) === "EXPERT DIFFICULTY · SLOW SPEED · FEWER ITEMS");
 
 /* ---- labels the app dispatches by (confirm() reads the label): the strings changed, the rows and their order did not ---- */
@@ -70,7 +76,7 @@ check("POWER (the pickup) is POWER BOMB in POWER[].name, still the one source", 
 
 /* ---- app-side literals pinned equal to words.js (src/app may not import src/render) ---- */
 {
-  const L = W.LABEL, lv = (a, b) => L.LEVEL + "S " + a + "-" + b;
+  const L = W.LABEL, lv = (a, b) => L.LEVELS + " " + a + "-" + b;
   const want = [
     ["FLAWLESS", lv(1, 5) + " IN ONE RUN · NO LIFE LOST"],
     ["UNSCATHED", lv(6, 8) + " IN ONE RUN · NO LIFE LOST"],
@@ -78,10 +84,10 @@ check("POWER (the pickup) is POWER BOMB in POWER[].name, still the one source", 
     ["ALL OUT", lv(6, 8) + " IN ONE RUN · ALL FOUR " + L.MODIFIERS],
     ["OVERDRIVE", lv(1, 5) + " IN ONE RUN AT " + W.speedTag(1)],
     ["REDLINE", lv(6, 8) + " IN ONE RUN AT " + W.speedTag(1)],
-    ["SPRINT", lv(1, 5) + " IN 3:00 · ALL " + W.DIFF[0] + " · NO " + L.MODIFIERS], // the medal tile's 46-char budget; ALL NORMAL is honest only while both defaults read NORMAL
+    ["SPRINT", lv(1, 5) + " UNDER " + Math.floor(SPRINT_S / 60) + ":" + String(SPRINT_S % 60).padStart(2, "0") + " · " + W.DEFAULT_RULES], // the predicate is runT < SPRINT_S (strict: UNDER) at heat 0, pace 0, pact 0 (DEFAULT RULES)
     ["IRON CROWN", lv(6, 8) + " IN ONE RUN ON " + W.diffTag(2)],
   ];
-  check("medals.js rule copy = the words.js words; the proper names stay", J(MEDAL_ROWS) === J(want) && W.DIFF[0] === W.SPEED[1], J(MEDAL_ROWS));
+  check("medals.js rule copy = the words.js words; the proper names stay", J(MEDAL_ROWS) === J(want) && W.DEFAULT_RULES === "DEFAULT RULES", J(MEDAL_ROWS));
 }
 {
   const st = clampStats({ a: { runs: 118, rooms: 214, deaths: 301, kills: 4820, picks: 913, bricks: 7702, secs: 50820, sessions: 42, days: 9, first: "2026-08-30", last: "2026-09-07" } });
@@ -89,37 +95,52 @@ check("POWER (the pickup) is POWER BOMB in POWER[].name, still the one source", 
   b = recordBest(b, "1:0:1", 2210, 4);
   const rows = statsRows(st, b);
   check("stats.js rows: LEVELS CLEARED, POWER-UPS, the three difficulty bests named, LEVEL n",
-    rows[1][0] === "LEVELS CLEARED" && rows[4][0] === "POWER-UPS" && rows[7][0] === W.diffTag(0) && rows[8][0] === W.diffTag(1) && rows[9][0] === W.diffTag(2) &&
+    rows[1][0] === W.LABEL.LEVELS + " CLEARED" && rows[4][0] === W.LABEL.POWER_UPS && rows[7][0] === W.diffTag(0) && rows[8][0] === W.diffTag(1) && rows[9][0] === W.diffTag(2) &&
       rows[7][1] === "1840 · " + W.LABEL.LEVEL + " 5" && rows[8][1] === "2210 · " + W.LABEL.LEVEL + " 4" && rows[9][1] === "—", J(rows));
   const notes = statsNotes(st, null, "2026-09-07");
   check("stats.js note: the session line (the BESTS row on the page names the bucket: the words outgrew the note)", notes[0] === "SINCE 2026-08-30 · LAST 2026-09-07 · 42 SESSIONS", notes[0]);
   const lines = statsPayload(st, b, { b: { "1:0:0:1": 389 } }, "2026-09-07").split("\n");
   check("stats.js clipboard payload uses the new words (R10)",
-    lines[1] === "RUNS 118 · LEVELS 214 · DEATHS 301 · KILLS 4820 · POWER-UPS 913 · BRICKS 7702 · TIME 14h 07m" &&
-      lines[2] === W.diffTag(0) + " 1840/" + W.LABEL.LEVEL + " 5 · " + W.diffTag(1) + " 2210/" + W.LABEL.LEVEL + " 4 · " + W.diffTag(2) + " — · " + W.LABEL.LEVEL + " 1 " + W.diffTag(0) + " BEST TIME 0:38.9", J(lines));
+    lines[1] === "RUNS 118 · " + W.LABEL.LEVELS + " 214 · DEATHS 301 · KILLS 4820 · " + W.LABEL.POWER_UPS + " 913 · BRICKS 7702 · TIME 14h 07m" &&
+      lines[2] === "BESTS · NO " + W.LABEL.MODIFIERS + " · " + W.speedTag(0) + " · " + W.diffTag(0) + " 1840/" + W.LABEL.LEVEL + " 5 · " + W.diffTag(1) + " 2210/" + W.LABEL.LEVEL + " 4 · " + W.diffTag(2) + " — · " + W.LABEL.LEVEL + " 1 " + W.diffTag(0) + " BEST TIME 0:38.9", J(lines));
 }
+check("daily.js share line (what C copies at a daily WIN / LOSE) says LEVEL n", dailyStamp("2026-11-10", 3, 1840) === "DAILY 2026-11-10 · " + W.LABEL.LEVEL + " 3 · 1840 · https://hmarzban.github.io/fusegrid/", dailyStamp("2026-11-10", 3, 1840));
 check("gfx.js lock line names ART STYLE and SETTINGS", LOCK_3D === "REAL 3D ONLY · CHANGE " + W.LABEL.ART_STYLE + " IN " + W.LABEL.SETTINGS, LOCK_3D);
 
 /* ---- the old words ---- */
-const OLD = /\b(HEAT|CORE|PLUS|PACE|NORM|MODES|IRON|BARE|THIN|ROOMS?|LV|OPTIONS|RENDER|CHANGE RUN|EASY|PICKS|PICKUPS?|CUBES?)\b/i;
+const OLD = /\b(HEAT|CORE|PLUS|MAX|PACE|NORM|MODES|IRON|BARE|THIN|ROOMS?|LV|OPTIONS|RENDER|CHANGE RUN|EASY|PICKS|PICKUPS?|CUBES?)\b/i;
 const ALLOW_HUD = new Set(["LV", heatToken(0), heatToken(1), heatToken(2)]); // drawHudChips only, Phase 8 (R9)
-const scrub = (s) => s.replace(/IRON CROWN/g, "").replace(/NO FLOOR ITEMS|FEWER ITEMS/gi, "");
+/* the narrow allow: the medal name; the two modifier names that hold ITEMS; MAX beside the power-up it caps (the pickup label
+   FLAME / BOMB / SPEED MAX, the ability bar's SPD MAX, the catalogue's "(max 8)"); and FRAME RATE's own MAX value and help line
+   on GRAPHICS (a frame rate, not a difficulty) */
+const scrub = (s) => s.replace(/IRON CROWN/g, "").replace(/NO FLOOR ITEMS|FEWER ITEMS/gi, "").replace(/\b(FLAME|BOMB|SPEED|SPD) MAX\b/g, "").replace(/\(max \d+\)/g, "").replace(/^30 SAVES MOST BATTERY · MAX IS UP TO YOUR SCREEN, HOTTE(ST|…)$/, "").replace(/^(FRAME RATE|SENSITIVITY) MAX$/, "");
 const bad = (s) => OLD.test(scrub(s)) || /\bITEMS?\b/i.test(scrub(s)) || /\b[LR]\d\b/.test(s) || /\bHARD\W{0,3}(SPEED|PACE)\b|\b(SPEED|PACE)\W{0,3}HARD\b/i.test(s);
-const MAX_OK = /^(MAX|(FLAME|BOMB|SPEED|SPD) MAX)$|\(max \d\)|MAX IS UP TO YOUR SCREEN/; // a capped power-up (alone: the ability bar, SENSITIVITY, FRAME RATE values), the help's (max n), FRAME RATE's help
 const found = new Map();
-/* ruling 7: a bare NORMAL (a difficulty and a speed) or HARD (a speed before v202) only on a draw that names its setting */
-const bare = [];
-const named = (where, ss) => {
-  const all = ss.join("\n").replace(/ALL NORMAL/g, ""), b = /\b(NORMAL|HARD)\b(?! (DIFFICULTY|SPEED)\b)/.exec(all);
-  if (b && !/DIFFICULTY|SPEED/.test(all)) bare.push(where + " :: " + b[0]);
-  else if (b && b[1] === "HARD" && !/DIFFICULTY/.test(all)) bare.push(where + " :: HARD with no DIFFICULTY");
+/* ruling 7: a bare NORMAL (a difficulty and a speed) or HARD (a speed before v202) only where its own drawn line, or the row
+   it sits on (a text within ROW px of its baseline, as a segmented control's caption cell), names the setting. EXEMPT: the
+   two table pages Phase 3 redraws (HIGH SCORES' difficulty tabs and plaques under BEST RUNS BY DIFFICULTY; FLOOR's columns
+   and row prefixes under ONE PER WORLD · BY DIFFICULTY), exactly those tokens */
+const bare = [], ROW = 10;
+const EXEMPT = [[/^SCORES /, /^(NORMAL|HARD)$/], [/^FLOOR /, /^(NORMAL|HARD)$|^NORMAL · /]];
+const named = (where, texts) => {
+  const T = texts.filter((t) => t && typeof t.s === "string");
+  for (const t of T) {
+    const b = /\b(NORMAL|HARD)\b(?! (DIFFICULTY|SPEED)\b)/.exec(t.s);
+    if (!b) continue;
+    const need = b[1] === "HARD" ? /DIFFICULTY/ : /DIFFICULTY|SPEED/;
+    if (need.test(t.s) || T.some((u) => u !== t && typeof u.y === "number" && Math.abs(u.y - t.y) <= ROW && need.test(u.s))) continue;
+    if (EXEMPT.some(([w, r]) => w.test(where) && r.test(t.s))) continue;
+    bare.push(where + " :: " + t.s);
+  }
 };
-/* a chip name broken over two lines (NO FLOOR / ITEMS) is read back as one */
+/* a chip name broken over two lines (NO FLOOR / ITEMS) and the ability bar's SPD + MAX are read back as one; a value MAX is
+   read with its row's FRAME RATE or SENSITIVITY label (its own setting, not a difficulty) */
 const note = (where, texts, draw) => {
+  if (draw) named(where, texts);
   const ss = texts.map((t) => String(typeof t === "string" ? t : t && t.s != null ? t.s : t));
-  if (draw) named(where, ss);
   for (let i = 0; i < ss.length; i++) {
-    const s = ss[i] === "ITEMS" && /(NO FLOOR|FEWER)$/.test(ss[i - 1] || "") ? ss[i - 1] + " " + ss[i] : ss[i];
+    const t = texts[i], lab = ss[i] === "MAX" && t && typeof t.y === "number" ? texts.find((u) => u && /^(FRAME RATE|SENSITIVITY)$/.test(u.s) && Math.abs(u.y - t.y) <= ROW) : null;
+    const s = lab ? lab.s + " MAX" : (ss[i] === "ITEMS" && /(NO FLOOR|FEWER)$/.test(ss[i - 1] || "")) || (ss[i] === "MAX" && ss[i - 1] === "SPD") ? ss[i - 1] + " " + ss[i] : ss[i];
     if (!found.has(s)) found.set(s, where);
   }
 };
@@ -148,6 +169,7 @@ for (let h = 0; h < 3; h++) APPS.push(["SCORES", { scoreHeat: h }]);
 APPS.push(["STATS", {}], ["STATS", { resetArm: true }], ["STATS", { toast: { s: "COPIED", ok: true, t: 1 } }]);
 for (let r = 0; r < 12; r++) APPS.push(["SETTINGS", { optRow: r, lookJob: r === 3 ? { k: "px", state: "failed" } : null, _anaSaid: r === 8 }]);
 for (let r = 0; r < 8; r++) APPS.push(["GRAPHICS", { gfxRow: r }]);
+APPS.push(["GRAPHICS", { gfxRow: 1, settings: { fpm: 1, fps: 2, res: 2, shd: 2, aa: 2, fxq: 1, dmo: 2 } }]); // FRAME RATE MAX: a frame rate's MAX
 APPS.push(["INTRO", { introStage: 0 }], ["INTRO", { introStage: 1, subT: 1 }], ["ATTRACT", { subT: 0.2 }]);
 const LAYS = [["d", 600, 520], ["d", 1366, 768], ["l", 1024, 768], ["p", 436, 946], ["d", 608, 352]];
 const DEVS = [["key", null], ["pad", wordsOf("pad", DEF_CONTROLS)], ["touch", wordsOf("touch", DEF_CONTROLS)]];
@@ -188,7 +210,7 @@ setPixelArt(null);
 {
   const keyV = (o) => ({ tab: "key", device: "key", row: 1, pad: { state: "none" }, key: DEF_KEY, binds: DEF_PAD, stick: "L", dead: 25, vib: 2, stickVal: [0, 0], reads: "", drift: 0.06, armed: false, swap: null, status: "", capture: null, echo: null, ...o });
   const PR = { state: "ready", name: "CONTROLLER 1", rumble: true };
-  for (const o of [{ row: 2 }, { row: 3 }, { row: 7, armed: true }, ...[0, 1, 2, 3].map((vib) => ({ tab: "pad", device: "pad", pad: PR, row: 6, vib })), { tab: "pad", device: "pad", pad: PR, row: 2 }, { tab: "pad", device: "pad", pad: PR, row: 3 }, { tab: "pad", device: "pad", pad: PR, row: 5 }])
+  for (const o of [{ row: 2 }, { row: 3 }, { row: 7, armed: true }, ...[0, 1, 2, 3].map((vib) => ({ tab: "pad", device: "pad", pad: PR, row: 6, vib })), { tab: "pad", device: "pad", pad: PR, row: 2 }, { tab: "pad", device: "pad", pad: PR, row: 3 }, { tab: "pad", device: "pad", pad: PR, row: 5 }, { tab: "pad", device: "pad", pad: PR, row: 5, dead: 8 }])
     for (const T of [false, true]) { const R = rec({ widthK: 0.648 }); drawControls(R.ctx, md.layout(600, 520), keyV(o), { touch: T, narrow: false }); note("CONTROLS " + J(o), R.texts, true); }
   const hud = rec({ widthK: 0.648 });
   drawHudChips(hud.ctx, { players: [{ bombs: 2, range: 3 }], lives: 3, level: 4, enemies: [1], heat: 1, score: 1234, state: "PLAY" }, { on: true, t: 12 });
@@ -206,7 +228,7 @@ setPixelArt(null);
   for (const f of FOES) note("FOES", [f.name, f.help]);
 }
 /* clipboard payloads and the strings handed to a page from outside the sweep */
-note("CLIPBOARD", [copyPayload({ level: 3, heat: 2, score: 1234 }), statsPayload(st0, bests0, { b: { "1:0:0:1": 389 } }, "2026-11-10"), pauseKicker({ level: 3, heat: 1, pace: -1, pact: 15 }, { daily: true })]);
+note("CLIPBOARD", [copyPayload({ level: 3, heat: 2, score: 1234 }), statsPayload(st0, bests0, { b: { "1:0:0:1": 389 } }, "2026-11-10"), dailyStamp("2026-11-10", 3, 1840), pauseKicker({ level: 3, heat: 1, pace: -1, pact: 15 }, { daily: true })]);
 /* the DOM cards: the analytics consent card, NEW VERSION READY, the load card and every other player string in index.html */
 {
   const mkEl = (tag) => { const kids = {}; return { tag, id: "", hidden: false, innerHTML: "", attrs: {}, setAttribute(k, v) { this.attrs[k] = v; }, addEventListener() {}, querySelector(sel) { return (kids[sel] = kids[sel] || mkEl(sel)); } }; };
@@ -215,7 +237,7 @@ note("CLIPBOARD", [copyPayload({ level: 3, heat: 2, score: 1234 }), statsPayload
   mountAnalytics({ id: "G-TEST1234", store: { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, v) }, win: { addEventListener() {} }, doc, loc: { hostname: GA_HOST, pathname: "/fusegrid/" } });
   const card = body.find((e) => e.id === "ana");
   const text = card ? card.innerHTML.replace(/<[^>]+>/g, " ") : "";
-  check("the consent card names SETTINGS and the level you reach (card copy only)", !!card && text.indexOf("any time in " + W.LABEL.SETTINGS) >= 0 && text.indexOf("the level you reach") >= 0, text);
+  check("the consent card names SETTINGS and the level you reach (card copy only)", !!card && text.indexOf("any time in " + W.LABEL.SETTINGS) >= 0 && text.indexOf("the " + W.LABEL.LEVEL.toLowerCase() + " you reach") >= 0, text);
   note("CARD #ana", [text, card.attrs["aria-label"]]);
   const upd = readFileSync(join(ROOT, "src/app/update.js"), "utf8").match(/card\.innerHTML = ([\s\S]*?);\n/)[1];
   note("CARD #upd", [upd.replace(/<[^>]+>/g, " ")]);
@@ -228,18 +250,19 @@ note("CLIPBOARD", [copyPayload({ level: 3, heat: 2, score: 1234 }), statsPayload
   note("index.html", strs);
   check("index.html: the load chip points at SETTINGS › ART STYLE", /DID NOT LOAD · SETTINGS › ART STYLE/.test(html));
 }
-const hits = [...found].filter(([s]) => bad(s)), maxs = [...found].filter(([s]) => /\bMAX\b/i.test(s) && !MAX_OK.test(s));
+const hits = [...found].filter(([s]) => bad(s));
 check(`render sweep (${draws} shell draws + overlays, 3 looks x 5 boxes x 3 devices) prints no old word; HUD chips and medal names allow-listed`, hits.length === 0, hits.slice(0, 40).map(([s, w]) => w + " :: " + s).join("\n      "));
-check("ruling 7: a bare NORMAL or HARD only where the same screen names its setting (DIFFICULTY / SPEED)", bare.length === 0, [...new Set(bare)].slice(0, 20).join("\n      "));
-check("MAX only as a capped power-up, a SENSITIVITY level or the help's (max n)", maxs.length === 0, maxs.slice(0, 20).map(([s, w]) => w + " :: " + s).join("\n      "));
+check("ruling 7: a bare NORMAL or HARD only where its own line or row names its setting (DIFFICULTY / SPEED)", bare.length === 0, [...new Set(bare)].slice(0, 20).join("\n      "));
 {
   /* one marker per branch the sweep must reach, so a narrowed sweep cannot pass by seeing less */
   const SEEN = ["SETTINGS", "ART STYLE", "POWER-UPS", "NORMAL", "EXPERT", "GAME SPEED", "DIFFICULTY", "MODIFIERS", "ONE LIFE", "NO FLOOR ITEMS", "TIME TRIAL", "POWER BOMB", "IRON CROWN",
     "FURTHEST LEVEL YET", "MATCHED YOUR", "FROM YOUR", "DAILY 2026-11-10 · NORMAL SPEED", "PAUSED · LEVEL 3", "LEVEL ENDS", "THROW POWER-UP", "CLEAR LEVEL 5 TO OPEN", "REBIND IN SETTINGS",
     "KEEPS SETTINGS", "replaces POWER BOMB", "NO NORMAL DIFFICULTY RUNS YET", "TOP 4210", "LEVELS 1-5 IN ONE RUN", "BESTS · NO MODIFIERS", "NEXT RUN", "MODIFIERS ONE LIFE", "CHANGE ART STYLE",
-    "LEVEL 8 · CROWN", "the level you reach", "DID NOT LOAD · SETTINGS", "· next level", "8 LEVELS", "5 LEVELS · 3 LOCKED", "NO VIBRATION AT ALL", "LIVES 1"];
+    "LEVEL 8 · CROWN", "the level you reach", "DID NOT LOAD · SETTINGS", "· next level", "8 LEVELS", "5 LEVELS · 3 LOCKED", "NO VIBRATION AT ALL", "LIVES 1",
+    "UNDER 3:00 · DEFAULT RULES", "DAILY 2026-11-10 · LEVEL 3 · 1840", "×2 ON HARD · ×3 ON EXPERT DIFFICULTY", "ALL TEN · BY DIFFICULTY", "BEST RUNS BY DIFFICULTY", "SPD MAX", "FRAME RATE MAX", "SENSITIVITY MAX", "LEVEL 8"];
   const all = [...found.keys()], miss = SEEN.filter((w) => !all.some((s) => s.indexOf(w) >= 0));
   check("the sweep reached every branch it claims (one marker each)", miss.length === 0, miss.join(" | "));
+  check("ENEMIES: one level reads LEVEL 8, a span LEVELS 1-8 (words.js levelsOf); no LEVELS n for a single level", found.has("LEVEL 8") && found.has("LEVELS 1-8") && ![...found.keys()].some((k) => /^LEVELS \d+$/.test(k) && !/^LEVELS \d+ ·/.test(k) && !/RUN|KILLS/.test(k)) && W.levelsOf("8") === "LEVEL 8" && W.levelsOf("1-3, 5-8") === "LEVELS 1-3, 5-8");
 }
 
 /* ---- fit: the longer words keep what the old slots said ---- */
@@ -266,6 +289,36 @@ check("MAX only as a capped power-up, a SENSITIVITY level or the help's (max n)"
   }
 }
 
+/* ---- fit, fix round 1: the iso MENU pane and the ability bar ---- */
+{
+  /* MENU keyboard, LEVEL SELECT row: the MODIFIERS list wraps to a second line only where the pane has room for it; in the iso
+     guard's short pane every text stays inside the plate (the second line once landed under it, over the foot) */
+  for (const [name, W0, H0, two] of [["608x352 (iso)", 608, 352, false], ["600x520", 600, 520, true]]) {
+    const L = md.layout(W0, H0), R = rec({ widthK: 0.648 }), g = md.menuList(L, 8, false), P = g.pane;
+    /* the pane's texts: every text over the pane's columns but the MENU foot hint, which sits under the plate by design */
+    md.drawMenu(R.ctx, { cursor: ITEMS.indexOf(W.LABEL.LEVEL_SELECT), enterT: 9, items: ITEMS.slice(), touch: false, kind: "2d", info: { level: 1, heat: 0, pace: 0, pact: 0, unlocked: true } }, L, 9);
+    const pane = R.texts.filter((t) => t.x >= P.x && t.x <= P.x + P.w && t.y !== L.footY), out = pane.filter((t) => t.y < g.y || t.y > g.y + g.h), mods = pane.filter((t) => /^MODIFIERS ONE LIFE|^NO FLOOR ITEMS|FEWER ITEMS · SHRINK/.test(t.s));
+    check(`MENU LEVEL SELECT pane (${name}): every text inside the plate; the MODIFIERS list on ${two ? "two lines" : "one line"}`, pane.length > 5 && out.length === 0 && mods.length === (two ? 2 : 1), J(out.map((t) => [t.s, t.y])) + " plate " + g.y + ".." + (g.y + g.h) + " " + J(mods.map((t) => t.s)));
+  }
+  /* the ability bar with every ability held fits the overlay (ABAR.x in from each side) at the recorder's +8 % width, in the
+     CLASSIC / REAL 3D vector form and with PIXEL's icon painter; only a row that may overflow measures itself and shrinks */
+  const ALL = (bombKind) => ({ state: "PLAY", players: [{ shield: true, kick: true, throw: true, passing: true, bombKind, remote: true, speed: 999 }] });
+  const bar = (w, ico, k) => { const R = rec({ widthK: k }); drawAbilityBar(R.ctx, w, ico, []); return R; };
+  const fontPx = (t) => +/(\d+)px/.exec(t.font)[1];
+  for (const kind of ["line", "power", "pierce"]) for (const [look, ico] of [["CLASSIC 2D / REAL 3D", undefined], ["PIXEL", () => {}]]) {
+    const R = bar(ALL(kind), ico, 0.648), panels = R.rects.filter((r) => r.fill === "rgba(13,18,32,0.72)"), last = panels[panels.length - 1];
+    const inPanel = R.texts.every((t) => panels.some((r) => t.x >= r.x && t.x + t.w <= r.x + r.w + 0.01));
+    check(`ability bar, every ability held, ${kind === "power" ? "POWER BOMB" : kind.toUpperCase()} (${look}, +8 %): inside 16..584, each word inside its chip, type >= 9 px`,
+      panels.length === 7 && panels[0].x === 16 && last.x + last.w <= 600 - 16 && inPanel && R.texts.every((t) => fontPx(t) >= 9), J([last, R.texts.map((t) => t.s + "@" + fontPx(t))]));
+  }
+  {
+    const old = bar(ALL("pierce"), undefined, 0.6), pb = bar(ALL("power"), undefined, 0.6), one = bar({ state: "PLAY", players: [{ kick: true }] }, undefined, 0.6);
+    const sizes = (R) => [...new Set(R.texts.map(fontPx))].join();
+    check("ability bar: at the recorder's own width the old full row keeps 13 px, the POWER BOMB row steps to 12, a short row measures once and keeps 13 (its call log unchanged)",
+      sizes(old) === "13" && sizes(pb) === "12" && sizes(one) === "13" && one.calls.filter((c) => c.op === "measureText").length === 1, sizes(old) + " / " + sizes(pb) + " / " + one.calls.filter((c) => c.op === "measureText").length);
+  }
+}
+
 /* ---- source grep: a string literal anywhere in src/ that carries an old word (comments and identifiers are not player text) ---- */
 function literals(src) {
   const out = [];
@@ -280,29 +333,41 @@ function literals(src) {
     else if (c === '"' || c === "'" || c === "`") {
       let j = i + 1, s = "";
       while (j < src.length && src[j] !== c) { if (src[j] === "\\") { s += src[j + 1]; j += 2; continue; } if (src[j] === "\n") line++; s += src[j++]; }
-      out.push([line, s]);
+      let k = j + 1;
+      while (k < src.length && (src[k] === " " || src[k] === "\n")) k++;
+      out.push([line, s, src[k], c === "`"]);
       i = j + 1;
     } else i++;
   }
   return out;
 }
 const walk = (d) => readdirSync(d).flatMap((f) => { const p = join(d, f); return statSync(p).isDirectory() ? walk(p) : p.endsWith(".js") ? [p] : []; });
-/* the only literals allowed an old word: core's own name tables (the HUD heat token and the scores letters read them until
-   Phase 8, R9 / R10) and the HUD's LV chip (Phase 8); the IRON CROWN medal name is scrubbed like on screen */
+/* the only literals allowed an old word, each by its file and the source line that holds it: core's name tables the HUD
+   heat token reads until Phase 8 (HEAT_NAME, R9) and the two the screens no longer read (PACE_NAME, PACT_NAME's words: dead,
+   pinned unread below); the HUD's LV chip (Phase 8); MAX as a capped power-up (fx.js), FRAME RATE's MAX value (gfx.js) and
+   the SENSITIVITY level MAX (controls, controlsgeo). IRON CROWN is scrubbed like on screen. */
 const SRC_ALLOW = [
-  ["src/core/heat.js", /^(CORE|PLUS|MAX)$/], ["src/core/pace.js", /^(EASY|NORM|HARD)$/], ["src/core/pact.js", /^(LAST|BARE|THIN|SHRINK)$/],
-  ["src/render/scenes.js", /^LV$/],
+  ["src/core/heat.js", /^export const HEAT_NAME = /, /^(CORE|PLUS|MAX)$/], ["src/core/pace.js", /^export const PACE_NAME = /, /^(EASY|NORM)$/],
+  ["src/core/pact.js", /^export const PACT_NAME=/, /^(BARE|THIN)$/], ["src/render/scenes.js", /chip\(314, 64, "LV"/, /^LV$/],
+  ["src/render/fx.js", /cap=\(v,m\)=>|CFG\.MAX_SPEED\?/, /^MAX$/], ["src/app/gfx.js", /^\s*fps: Object\.freeze\(\["30", "60", "MAX"\]\)/, /^MAX$/],
+  ["src/app/controls.js", /^export const SENS_LEVELS = /, /^MAX$/], ["src/render/controlsgeo.js", /^export const SENS_LEVELS = /, /^MAX$/],
 ];
 const OLD_CAPS = new RegExp(OLD.source);
-const srcHits = [];
+/* a level / heat / pace shorthand built at runtime: a literal that ends in a lone L, R or LV just before a "+", or a template
+   that puts one before a ${...} (the daily share line's " · L" + level slipped past the word grep) */
+const SHORT = /(^|[\s·/(])(L|R|LV)\s*$/, SHORT_T = /(^|[^A-Za-z])(L|R|LV) ?\$\{/;
+const srcHits = [], unread = [];
 for (const f of walk(join(ROOT, "src"))) {
-  const rel = relative(ROOT, f).split("\\").join("/");
-  for (const [ln, s] of literals(readFileSync(f, "utf8"))) {
+  const rel = relative(ROOT, f).split("\\").join("/"), text = readFileSync(f, "utf8"), lines = text.split("\n");
+  if (rel !== "src/core/pace.js" && /\b(PACE_NAME|paceToken)\b/.test(text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, ""))) unread.push(rel); // code, not comments
+  for (const [ln, s, after, tmpl] of literals(text)) {
+    if ((after === "+" && SHORT.test(s)) || (tmpl && SHORT_T.test(s))) { srcHits.push(rel + ":" + ln + " builds a shorthand " + J(s)); continue; }
     if (!OLD_CAPS.test(scrub(s)) && !/\b[LR]\d\b/.test(s)) continue; // labels are CAPS; lowercase prose is the sweep's and the cards' job
-    if (SRC_ALLOW.some(([p, r]) => p === rel && r.test(s))) continue;
+    if (SRC_ALLOW.some(([p, l, r]) => p === rel && l.test(lines[ln - 1] || "") && r.test(s))) continue;
     srcHits.push(rel + ":" + ln + " " + J(s));
   }
 }
+check("PACE_NAME and paceToken are unread outside src/core/pace.js (dead tables, kept there by the no-core-change rule)", unread.length === 0, unread.join());
 check("source grep (tripwire): no string literal in src/ carries an old word outside the allow-list", srcHits.length === 0, srcHits.join("\n      "));
 
 /* ---- analytics: event names and params byte-identical to v202 before the renames (captured at 4677b8e) ---- */

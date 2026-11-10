@@ -489,7 +489,7 @@ function check(name, cond, detail) {
           r.x + r.w <= p.x + p.w - 8 &&
           r.y + r.h <= p.y + p.h - 8,
       );
-      const rooms = texts.filter((t) => t.s.indexOf("LEVELS ") === 0);
+      const rooms = texts.filter((t) => /^LEVELS? \d/.test(t.s)); // LEVEL 8 for KNIGHT's one level
       check(
         `enemies 9 + ESC inside plate at ${W}x${H}`,
         !!p &&
