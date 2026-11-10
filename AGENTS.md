@@ -151,7 +151,7 @@ not shell screens. Do not add them as `SCREEN` values.
 - `src/main.js` — **browser entry only**, pinned `<=799` lines
   (`tests/headless.test.mjs`; raised 808→812 once in wave 3 for `ro.ghost`,
   tightened to 799 when C2 moved `fit()` out; 733 by split-length at v178 after
-  GRAPHICS moved the frame gate and renderer cache out; 784 at v201). RAF loop, fixed-step
+  GRAPHICS moved the frame gate and renderer cache out; 784 at v201; 716 once the pointer router moved out, UI upgrade Task 0.4). RAF loop, fixed-step
   accumulator, kind switch, and the handler wiring that binds them. Never
   imported by sim or renderer. Its seams live beside it and must stay OUT of
   `main.js`: `src/app/flags.js` (URL/opts, pure over a search string),
@@ -161,7 +161,7 @@ not shell screens. Do not add them as `SCREEN` values.
   `src/app/audiopower.js` (`mountAudioPower`), `src/app/renderkind.js`
   (`bootRender` / `kindOf` / `renderVal` / `renderBits`),
   `src/app/controlswire.js` (`mountControls`, v201: binds `gamepad.js`, `padroute.js`, `capture.js`, `controlspage.js`, `controls.js`, `hints.js`, `rumble.js` and render's `controlsgeo.js`, `controlsdraw.js`, `padart.js`, `hintcopy.js` to main, frameloop and unlock; see the CONTROLS paragraph), `src/app/debughook.js`
-  (`window.__GAME__`), `src/app/endkeys.js` (WIN/LOSE keys: Enter =
+  (`window.__GAME__`), `src/app/pointer.js` (`mountPointer`: the ONE tap handler, bound on `#c` and `#sh`; `main.js` hands it the hit functions as `hit` because `src/app` never imports `src/render`, and `kind` / `ctl` as getters), `src/app/endkeys.js` (WIN/LOSE keys: Enter =
   Space through `Input.pulse()`, one fire tick and never a latch; C/B copy.
   Every copy reports COPIED / COPY FAILED through the ONE `app.toast` — on
   the WIN/LOSE overlay, and on STATS in place of the `YOUR CABINET` kicker;
