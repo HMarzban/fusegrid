@@ -16,6 +16,9 @@ import { squint, stat, evaluate, tally, colOf, FLOOR, CAP, GATES, REQUIRED, EXEM
 import { ORDER, SCREENS, canon, capName, parseCapName, needOf } from "../tools/ui/lib/screens.mjs";
 import { refKeys, findRef, compareHtml } from "../tools/ui/lib/refs.mjs";
 import { parseArgs as shotsArgs, intended, manifest, ledger } from "../tools/ui/shots.mjs";
+import { SCREEN, ITEMS, OPT_ROWS, GUIDE_ROWS, createMenuApp } from "../src/app/menuapp.js";
+import { createControlsPage } from "../src/app/controlspage.js";
+import { DEF_CONTROLS } from "../src/app/controls.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const UI = join(ROOT, "tools/ui");
@@ -509,6 +512,39 @@ test("gates: only the latest run is judged; a stale capture or a failed one can 
     assert.equal(run().status, 1, "a run that did not complete fails");
     assert.match(readG().summary.errors.join(), /did not complete/);
   } finally { rmSync(d, { recursive: true, force: true }); }
+});
+
+/* A recipe cannot rot silently (Task 2.2 fix round 1: RECORDS moved STATS / MEDALS off MENU and the medals recipe stopped reaching
+   MEDALS). Every screen's recipe is walked through the REAL menu app the way shots.mjs walks the page: from MENU (__GAME__.reset), each
+   of menu / opt / guide picks the first row in that table whose label the recipe lists and confirms, then the keys are pressed in order
+   (the phone path's app.key); the screen reached must be the recipe's state. A run screen starts from MENU PLAY. No browser. */
+test("screens: every recipe reaches its state through the real menu app", () => {
+  const PICK = [["menu", "cursor", ITEMS], ["opt", "optRow", OPT_ROWS], ["guide", "guideRow", GUIDE_ROWS]];
+  const nameOf = (s) => Object.keys(SCREEN).find((k) => SCREEN[k] === s);
+  const page = () => createControlsPage({ get: () => DEF_CONTROLS, set() {}, padView: () => ({ state: "none" }), say() {} });
+  for (const n of ORDER) {
+    const R = SCREENS[n], a = createMenuApp({ controls: page() });
+    if (n === "title") { assert.equal(nameOf(a.screen), R.state, n); continue; }
+    a.skip();
+    assert.equal(a.screen, SCREEN.MENU, n + ": MENU after the show");
+    if (R.run) {
+      a.cursor = ITEMS.indexOf("PLAY");
+      a.confirm();
+      assert.equal(a.screen, SCREEN.GAME, n + ": MENU PLAY starts the run");
+      assert.ok(["PLAY", "PAUSE", "WIN", "LOSE"].includes(R.state) && R.run.toUpperCase() === R.state, n + ": a run screen's state is its world state");
+      continue;
+    }
+    a.toMenu();
+    for (const [f, field, rows] of PICK) {
+      if (!R[f]) continue;
+      const i = rows.findIndex((x) => R[f].includes(x));
+      assert.ok(i >= 0, n + ": no " + R[f].join(" / ") + " row in " + f);
+      a[field] = i;
+      a.confirm();
+    }
+    for (const k of [].concat(R.key || [])) a.key(k);
+    assert.equal(nameOf(a.screen), R.state, n + ": reached " + nameOf(a.screen));
+  }
 });
 
 test("screens: every name has a recipe and a state; aliases; capture names round trip", () => {

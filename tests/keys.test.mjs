@@ -781,6 +781,55 @@ const OUT = want(MN, null, UB);
   check("RECORDS keys: → held on the tab row repeats at the menu rate and stops silently at MEDALS", mid === ME && g.app.screen === ME && recPlays.filter((n) => n === UM).length === 2, mid + "/" + recPlays.join());
 }
 
+// ---- RECORDS, fix round 1: one press, one action. A key that is both a tab shortcut (Q / E) and the confirm alias (BOMB rebound
+// to it) only steps the tab on the three RECORDS pages; elsewhere it still confirms. ----
+{
+  mem["nb.controls.v1"] = JSON.stringify({ v: 1, key: { BOMB: "KeyE", THROW: "Space", REMOTE: "KeyQ", PAUSE: "KeyP", MOVE: ["KeyW", "KeyD", "KeyS", "KeyA"] }, pad: { BOMB: "S", THROW: "W", REMOTE: "E", PAUSE: "SELECT" }, stick: "L", dead: 25, vib: 2 });
+  const g = mk({ audio: RECAUD }); g.app.cabinetSeen = true; g.app.skip(); g.tick(2);
+  toRow(g, ITEMS.indexOf("RECORDS")); recPlays.length = 0;
+  press(g, "KeyE");
+  check("BOMB bound to E: on MENU, E still confirms (RECORDS opens SCORES)", g.app.screen === SC && recPlays.join() === "uiSel", g.app.screen + "/" + recPlays.join());
+  recPlays.length = 0; press(g, "KeyE");
+  check("BOMB bound to E: on SCORES, E steps to STATS and does not back out", g.app.screen === ST && recPlays.join() === UM, g.app.screen + "/" + recPlays.join());
+  recPlays.length = 0; press(g, "KeyE"); press(g, "KeyE");
+  check("BOMB bound to E: E onto MEDALS, then E at the last tab: silent, still MEDALS, no back out", g.app.screen === ME && recPlays.join() === UM, g.app.screen + "/" + recPlays.join());
+  recPlays.length = 0; press(g, "Space"); // THROW now: no confirm in a menu
+  press(g, "Enter");
+  check("BOMB bound to E: Enter still backs out of MEDALS to MENU on RECORDS", g.app.screen === MN && g.app.cursor === ITEMS.indexOf("RECORDS"), g.app.screen);
+  delete mem["nb.controls.v1"];
+}
+// ---- STATS foot taps with RECORDS' tab row focused (fix round 1): every arrival lands on the tab row, whose foot leads with
+// ←→ TAB; the body's leads with ↑ TABS, the same length, so the T / C / R centres below hold in both. Mouse and touch, through
+// the real pointer: C copies (a touch on pointerup), R RESET arms, R AGAIN erases, the armed C COPY disarms and copies. ----
+{
+  const PL = {};
+  const ctx = new Proxy(function () {}, { get: (t, p) => (p === Symbol.toPrimitive ? () => "" : () => ctx), apply: () => ctx, set: () => true });
+  const el = { width: 600, height: 520, style: {}, getContext: () => ctx,
+    getBoundingClientRect: () => ({ left: 0, top: 0, width: 300, height: 260 }),
+    addEventListener: (ty, fn) => { (PL[ty] = PL[ty] || []).push(fn); }, removeEventListener: noop };
+  const g = menu(el);
+  const fire = (ty, x, y, pointerType) => (PL[ty] || []).forEach((f) => f({ clientX: x / 2, clientY: y / 2, pointerType }));
+  const tap = (x, y, pt) => { fire("pointerdown", x, y, pt); g.tick(); fire("pointerup", x, y, pt); g.tick(); };
+  const toTabs = () => { while (g.app.screen !== SCREEN.MENU) press(g, "Escape"); g.app.cursor = ITEMS.indexOf("RECORDS"); press(g, "Enter"); press(g, "ArrowRight"); g.tick(Math.ceil(TOAST_T * 60) + 2); };
+  for (const pt of ["mouse", "touch"]) {
+    toTabs();
+    const c0 = clip.length, r0 = reloads;
+    fire("pointerdown", 270, 478, pt); g.tick(); await flush();
+    const dn = clip.length - c0;
+    fire("pointerup", 270, 478, pt); await flush(); g.tick();
+    check("STATS tab row, " + pt + " tap on C COPY MY STATS: copies once (" + (pt === "touch" ? "on pointerup" : "on pointerdown") + "), COPIED, still the tab row",
+      g.app.screen === SCREEN.STATS && g.app.recFocus === 0 && dn === (pt === "touch" ? 0 : 1) && clip.length === c0 + 1 && g.app.toast.s === "COPIED" && reloads === r0, dn + "/" + (clip.length - c0) + "/" + g.app.recFocus);
+    g.tick(Math.ceil(TOAST_T * 60) + 2);
+    tap(354, 478, pt);
+    check("STATS tab row, " + pt + " tap on R RESET arms, clears nothing", g.app.resetArm === true && reloads === r0 && g.app.recFocus === 0, g.app.resetArm + "/" + reloads);
+    const c1 = clip.length;
+    fire("pointerdown", 492, 478, pt); g.tick(); await flush(); fire("pointerup", 492, 478, pt); await flush(); g.tick();
+    check("STATS tab row, " + pt + " tap on the armed C COPY: disarms, copies once, erases nothing", g.app.resetArm === false && clip.length === c1 + 1 && reloads === r0, g.app.resetArm + "/" + (clip.length - c1));
+    tap(354, 478, pt); tap(132, 478, pt);
+    check("STATS tab row, " + pt + ": R RESET then R AGAIN erases and reloads once", reloads === r0 + 1 && g.app.resetArm === false, reloads - r0);
+  }
+}
+
 // ---- GAME / PLAY ----
 {
   const g = run();
@@ -1129,7 +1178,7 @@ for (const code of ["Space", "Enter"]) {
       "STATS body": [1, 1, { dL: want(ST, 1), dR: want(ST, 1), dU: want(ST, 0, UM), dD: want(ST, 1), SHL: want(ST, 1), SHR: want(ST, 1), N: want(ME, 0, UM), W: want(ST, 1, "", { copy: 1 }) }],
       "MEDALS tab row": [2, 0, { dL: want(ST, 0, UM), dR: want(ME, 0), dU: want(ME, 0), dD: want(ME, 0), SHL: want(ME, 0), SHR: want(ME, 0), N: want(ME, 0), W: want(ME, 0) }],
     };
-    for (const [name, [page, body, btns]] of Object.entries(P)) for (const [id, w] of Object.entries({ ...btns, S: OUT, E: OUT })) {
+    for (const [name, [page, body, btns]] of Object.entries(P)) for (const [id, w] of Object.entries({ ...btns, S: OUT, E: OUT, START: OUT })) {
       const g = pRec(page, body), c0 = clip.length, r0 = reloads;
       tap(g, id); await flush(); g.tick();
       const a = g.app, copy = clip.length - c0;
@@ -1142,7 +1191,14 @@ for (const code of ["Space", "Enter"]) {
     check("RECORDS controller: D-PAD right held repeats the tab step and stops silently at MEDALS", mid === ME && g.app.screen === ME && recPlays.filter((n) => n === UM).length === 2, mid + "/" + recPlays.join());
     const s = pRec(0, 0);
     s.pad.axes[0] = 0.9; s.tick(3); s.pad.axes[0] = 0; s.tick(3);
-    check("RECORDS controller: the stick steps the tab too", s.app.screen === ST && recPlays.join() === UM, s.app.screen + "/" + recPlays.join()); }
+    check("RECORDS controller: the stick steps the tab too", s.app.screen === ST && recPlays.join() === UM, s.app.screen + "/" + recPlays.join());
+    /* fix round 1: a reset armed by a keyboard R (a controller has no route to it) is cancelled by every button, and nothing wipes */
+    for (const body of [0, 1]) for (const id of ["S", "E", "W", "N", "SHL", "SHR", "TRL", "TRR", "SELECT", "START", "dU", "dD", "dL", "dR"]) {
+      const g = pRec(1, body), r0 = reloads;
+      press(g, "KeyR"); const armed = g.app.resetArm;
+      tap(g, id); await flush(); g.tick();
+      check("RECORDS controller: STATS " + (body ? "body" : "tab row") + " armed by a keyboard R, then " + id + ": disarmed, nothing wiped", armed === true && g.app.resetArm === false && reloads === r0, armed + "/" + g.app.resetArm + "/" + (reloads - r0) + " on " + g.app.screen);
+    } }
   for (const [name, boot] of [["MENU", pMenu], ["PAUSE", pPause]]) {
     const g = boot(), s0 = () => JSON.stringify([g.app.screen, g.app.cursor, g.app.pauseCursor, g.app.pauseView, g.app.optRow, g.world.state, g.world.seed, live(g.world), g.input._intent]);
     const a0 = s0();

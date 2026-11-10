@@ -160,10 +160,10 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
     ["ENEMIES foot", PAGES.ENEMIES(false), "ESC BACK"],
     ["FLOOR foot", PAGES.FLOOR(false), "ESC BACK"],
     ["GUIDE foot", PAGES.GUIDE(false), "← → / ↑↓ PICK · ENTER OPEN · ESC BACK"],
-    ["SCORES foot", PAGES.SCORES(false), "← → DIFFICULTY · ESC BACK"],
+    ["SCORES foot", PAGES.SCORES(false), "↑ TABS · ← → DIFFICULTY · ESC BACK"], // the page body's foot (no tab-row flag): RECORDS' ↑ TABS lead
     ["OPTIONS foot", PAGES.OPTIONS(false), "↑↓ ROW · ←→ ADJUST · ENTER CYCLE · ESC BACK"],
     ["GRAPHICS foot", PAGES.GRAPHICS(false), "↑↓ ROW · ←→ ADJUST · ENTER CYCLE · ESC BACK"],
-    ["STATS foot", (c) => md.drawStats(c, L, 9, STATS_UI, false, null), "T MEDALS · C COPY MY STATS · R RESET · ESC BACK"],
+    ["STATS foot", (c) => md.drawStats(c, L, 9, STATS_UI, false, null), "↑ TABS · T MEDALS · C COPY MY STATS · R RESET · ESC BACK"],
     ["STATS armed foot", (c) => md.drawStats(c, L, 9, STATS_UI, true, null), "R AGAIN ERASES · OTHER KEYS CANCEL · KEEPS SETTINGS + GAME SPEED · C COPY"],
     ["MEDALS foot", (c) => md.drawTrophies(c, L, 9, []), "←→ TAB · ENTER / ESC BACK"],
     ["PLAY pane", menu(0), "ENTER STARTS IT · LEVEL SELECT CHANGES IT"],
@@ -225,10 +225,10 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
     ["ENEMIES foot", PAGES.ENEMIES(false), "EAST BACK"],
     ["FLOOR foot", PAGES.FLOOR(false), "EAST BACK"],
     ["GUIDE foot", PAGES.GUIDE(false), "← → / ↑↓ PICK · SOUTH OPEN · EAST BACK"],
-    ["SCORES foot", PAGES.SCORES(false), "← → DIFFICULTY · EAST BACK"],
+    ["SCORES foot", PAGES.SCORES(false), "↑ TABS · ← → DIFFICULTY · EAST BACK"],
     ["OPTIONS foot", PAGES.OPTIONS(false), "↑↓ ROW · ←→ ADJUST · SOUTH CYCLE · EAST BACK"],
     ["GRAPHICS foot", PAGES.GRAPHICS(false), "↑↓ ROW · ←→ ADJUST · SOUTH CYCLE · EAST BACK"],
-    ["STATS foot offers no reset", (c) => md.drawStats(c, L, 9, STATS_UI, false, null), "NORTH MEDALS · WEST COPY MY STATS · EAST BACK"],
+    ["STATS foot offers no reset", (c) => md.drawStats(c, L, 9, STATS_UI, false, null), "↑ TABS · NORTH MEDALS · WEST COPY MY STATS · EAST BACK"],
     ["MEDALS foot", (c) => md.drawTrophies(c, L, 9, []), "←→ TAB · SOUTH / EAST BACK"],
     ["MENU foot", menu(0, false, "v99"), "↑↓ MOVE · SOUTH CONFIRM · v99"],
     ["PLAY pane", menu(0), "SOUTH STARTS IT · LEVEL SELECT CHANGES IT"],
@@ -290,12 +290,13 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
   check("keys: STATS taps stay T / C / R", J(zones(false)) === J(["KeyT", "KeyC", "KeyR"]), J(zones(false)));
   check("keys: armed taps stay R / C", J(zones(true)) === J(["KeyR", "KeyC"]), J(zones(true)));
   setHints(PAD);
-  const z = zones(false), s = "NORTH MEDALS · WEST COPY MY STATS · EAST BACK", x0 = 300 - s.length * 3;
+  const z = zones(false), s = "↑ TABS · NORTH MEDALS · WEST COPY MY STATS · EAST BACK", x0 = 300 - s.length * 3; // the body's foot, led by ↑ TABS
   const y = md.statsGeom(L).S.footY;
   check("pad words: the taps are MEDALS and COPY, no route to the wipe", J(z) === J(["KeyT", "KeyC"]), J(z));
-  check("pad words: a tap on MEDALS lands on the painted word", md.statsHit(x0 + 6 * 6, y, L, false) === "KeyT");
-  check("pad words: a tap on COPY lands on the painted word", md.statsHit(x0 + 6 * 20, y, L, false) === "KeyC");
-  check("pad words: a tap on EAST BACK does nothing", md.statsHit(x0 + 6 * 40, y, L, false) === null);
+  check("pad words: a tap on MEDALS lands on the painted word", md.statsHit(x0 + 6 * (9 + 6), y, L, false) === "KeyT");
+  check("pad words: a tap on COPY lands on the painted word", md.statsHit(x0 + 6 * (9 + 20), y, L, false) === "KeyC");
+  check("pad words: a tap on EAST BACK does nothing", md.statsHit(x0 + 6 * (9 + 40), y, L, false) === null);
+  check("pad words: a tap on the ↑ TABS lead does nothing", md.statsHit(x0 + 6 * 3, y, L, false) === null);
   const armed = paint((c) => md.drawStats(c, L, 9, STATS_UI, true, null));
   check("pad words: an armed foot (a key armed it) keeps its own line", armed.has("R AGAIN ERASES · OTHER KEYS CANCEL · KEEPS SETTINGS + GAME SPEED · C COPY"));
   setHints(null);

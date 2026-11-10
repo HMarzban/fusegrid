@@ -47,6 +47,7 @@ export function createPadRouter({ input, app, SCREEN, binds, world, onPause, onU
     const st = world().state, ended = game && (st === "WIN" || st === "LOSE");
     const alias = binds().pad.PAUSE, was0 = sig();
     let ok = false;
+    if (scr === SCREEN.STATS && press.length) app.resetArm = false; // R arms (keyboard only); any button cancels it, as any other key does
     const enter = () => { if (!ok) { ok = true; onUiKey("Enter"); } };
     for (const id of press) {
       if (onPage && page && page.feedBtn(id, t)) continue;

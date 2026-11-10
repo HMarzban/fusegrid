@@ -31,8 +31,8 @@
    the latest run alone. One gated run per --out dir.
    How each screen is reached (tools/ui/lib/screens.mjs): boot index.html?render=<look>&debug=1, step 1.2 s, the title press (desktop a real Enter
    key, phone a real tap: the gesture that unlocks audio and starts the 4.4 s show), 5.2 s of show, MENU. Menu pages: back to MENU with
-   __GAME__.reset(), the row picked by LABEL (app.cursor / optRow / guideRow), then confirm (desktop a real Enter, phone app.confirm()); STATS T
-   opens MEDALS. Run screens, each on a run of its own started from MENU PLAY on cleared storage: play after 0.9 s, pause through window.__pause,
+   __GAME__.reset(), the row picked by LABEL (app.cursor / optRow / guideRow), then confirm (desktop a real Enter, phone app.confirm()), then
+   the recipe's key or keys, in order (RECORDS opens on SCORES; E steps one tab: STATS, then MEDALS). Run screens, each on a run of its own started from MENU PLAY on cleared storage: play after 0.9 s, pause through window.__pause,
    lose by a bomb on the last life, win by clearing the foes (the room's own 1.6 s all-clear). Before each capture the probe is cleared and the
    screen's settle time is stepped; a screen whose __GAME__.state() is not the one expected is an error and gets no PNG; a page exception (the
    rAF shim rethrows a callback's throw from a timer, so the frames still step) is an error for the capture it falls in, and outside any capture
@@ -192,7 +192,7 @@ async function group(c, port, a, look, world, rep) {
         await confirm(); await P.adv(50);
       }
       if (!ok) { L.close(base); continue; }
-      if (R.key) { if (a.phone) await ev(`(window.__GAME__.app.key(${JSON.stringify(R.key)}),true)`); else await key(R.key, R.key.replace(/^Key/, "").toLowerCase()); await P.adv(50); }
+      for (const k of [].concat(R.key || [])) { if (a.phone) await ev(`(window.__GAME__.app.key(${JSON.stringify(k)}),true)`); else await key(k, k.replace(/^Key/, "").toLowerCase()); await P.adv(50); } // a key or a list, pressed in order
       if (R.wait === "controls" && !(await poll("!!window.__GAME__.app.controls&&!window.__GAME__.app.controls.loading", 10000))) warn("the CONTROLS page never loaded");
       await shoot(s, R.settle || 600);
     }

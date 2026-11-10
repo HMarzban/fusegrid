@@ -797,7 +797,7 @@ const TODAY = "2026-09-07";
     };
     return { c, out };
   };
-  const FOOT = "T MEDALS · C COPY MY STATS · R RESET · ESC BACK";
+  const FOOT = "↑ TABS · T MEDALS · C COPY MY STATS · R RESET · ESC BACK"; // the page body's foot (no recFocus on this app): RECORDS' ↑ TABS lead
   const paint = (kind, toast, arm) => {
     const { c, out } = rec();
     drawShell(c, { screen: SCREEN.STATS, subT: 0, stats: { rows: [["RUNS", 3]], notes: ["NOTE A"] }, resetArm: !!arm, toast },

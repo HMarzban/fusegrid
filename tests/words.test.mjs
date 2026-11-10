@@ -69,7 +69,8 @@ check("runWords: every setting, defaults included", W.runWords({}) === "NORMAL D
 
 /* ---- labels the app dispatches by (confirm() reads the label): the strings changed, the rows and their order did not ---- */
 check("MENU row OPTIONS is SETTINGS; seven rows in the design record's order, RECORDS for HIGH SCORES and STATS (Task 2.2)", J(ITEMS) === J(["PLAY", W.LABEL.LEVEL_SELECT, "DAILY", W.LABEL.RECORDS, W.LABEL.SETTINGS, "GUIDE", "SOURCE"]));
-check("RECORDS' tabs: SCORES · STATS · MEDALS, frozen, in tab order", J(W.RECORD_TABS) === J(["SCORES", "STATS", "MEDALS"]) && Object.isFrozen(W.RECORD_TABS));
+check("RECORDS' tabs: SCORES · STATS · MEDALS, frozen, in tab order; the hint words TAB / TABS", J(W.RECORD_TABS) === J(["SCORES", "STATS", "MEDALS"]) && Object.isFrozen(W.RECORD_TABS) && W.LABEL.TAB === "TAB" && W.LABEL.TABS === "TABS");
+check("menudraw builds the RECORDS leads from words.js (keycap glyphs stay with the painter)", md.TAB_LEAD === "←→ " + W.LABEL.TAB + " · " && md.TABS_LEAD === "↑ " + W.LABEL.TABS + " · ");
 check("PAUSE row OPTIONS is SETTINGS, order kept; scenes' copy mirrors it", J(PAUSE_ITEMS) === J(["RESUME", "RESTART", W.LABEL.SETTINGS, "QUIT TO MENU"]) && J(PAUSE_ROWS) === J(PAUSE_ITEMS));
 check("SETTINGS row RENDER is ART STYLE, twelve rows in order", OPT_ROWS.length === 12 && OPT_ROWS[3] === W.LABEL.ART_STYLE && md.OPT_N === 12);
 check("GUIDE door ITEMS is POWER-UPS", J(GUIDE_ROWS) === J(["HOW TO PLAY", W.LABEL.POWER_UPS, "ENEMIES", "FLOOR"]));
@@ -260,7 +261,7 @@ check("ruling 7: a bare NORMAL or HARD only where its own line or row names its 
     "FURTHEST LEVEL YET", "MATCHED YOUR", "FROM YOUR", "DAILY 2026-11-10 · NORMAL SPEED", "PAUSED · LEVEL 3", "LEVEL ENDS", "THROW POWER-UP", "CLEAR LEVEL 5 TO OPEN", "REBIND IN SETTINGS",
     "KEEPS SETTINGS", "replaces POWER BOMB", "NO NORMAL DIFFICULTY RUNS YET", "TOP 4210", "LEVELS 1-5 IN ONE RUN", "BESTS · NO MODIFIERS", "NEXT RUN", "MODIFIERS ONE LIFE", "CHANGE ART STYLE",
     "LEVEL 8 · CROWN", "the level you reach", "DID NOT LOAD · SETTINGS", "· next level", "8 LEVELS", "5 LEVELS · 3 LOCKED", "NO VIBRATION AT ALL", "LIVES 1",
-    "UNDER 3:00 · DEFAULT RULES", "DAILY 2026-11-10 · LEVEL 3 · 1840", "RECORDS", "←→ TAB · ↓ DIFFICULTY", "←→ TAB · T MEDALS", "←→ TAB · ENTER / ESC BACK", "TABS: SCORES · STATS · MEDALS", "×2 ON HARD · ×3 ON EXPERT DIFFICULTY", "ALL TEN · BY DIFFICULTY", "BEST RUNS BY DIFFICULTY", "SPD MAX", "FRAME RATE MAX", "SENSITIVITY MAX", "LEVEL 8"];
+    "UNDER 3:00 · DEFAULT RULES", "DAILY 2026-11-10 · LEVEL 3 · 1840", "RECORDS", "←→ TAB · ↓ DIFFICULTY", "←→ TAB · T MEDALS", "←→ TAB · ENTER / ESC BACK", "TABS: SCORES · STATS · MEDALS", "↑ TABS · ← → DIFFICULTY", "↑ TABS · T MEDALS", "×2 ON HARD · ×3 ON EXPERT DIFFICULTY", "ALL TEN · BY DIFFICULTY", "BEST RUNS BY DIFFICULTY", "SPD MAX", "FRAME RATE MAX", "SENSITIVITY MAX", "LEVEL 8"];
   const all = [...found.keys()], miss = SEEN.filter((w) => !all.some((s) => s.indexOf(w) >= 0));
   check("the sweep reached every branch it claims (one marker each)", miss.length === 0, miss.join(" | "));
   check("ENEMIES: one level reads LEVEL 8, a span LEVELS 1-8 (words.js levelsOf); no LEVELS n for a single level", found.has("LEVEL 8") && found.has("LEVELS 1-8") && ![...found.keys()].some((k) => /^LEVELS \d+$/.test(k) && !/^LEVELS \d+ ·/.test(k) && !/RUN|KILLS/.test(k)) && W.levelsOf("8") === "LEVEL 8" && W.levelsOf("1-3, 5-8") === "LEVELS 1-3, 5-8");

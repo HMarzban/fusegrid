@@ -52,6 +52,8 @@ export const ITEMS = Object.freeze([
    SCORES · STATS · MEDALS). The tab strip is the top row of each page's ↑↓ walk (recFocus 0); the body under it is
    recFocus 1 where the page has one (SCORES' difficulty filter, STATS' foot actions; MEDALS has none). */
 export const RECORD_SCREENS = Object.freeze([SCREEN.SCORES, SCREEN.STATS, SCREEN.TROPHIES]);
+/** One of RECORDS' three pages. */
+export const isRecords = (s) => RECORD_SCREENS.indexOf(s) >= 0;
 /* GUIDE rows, frozen and index-addressed: guideRow, drawGuide and confirm's
    GUIDE dispatch all count this array. */
 export const GUIDE_ROWS = Object.freeze(["HOW TO PLAY", "POWER-UPS", "ENEMIES", "FLOOR"]);
@@ -234,7 +236,7 @@ export function createMenuApp(opts = {}) {
           axis = 1;
         }
       }
-      else if (RECORD_SCREENS.indexOf(this.screen) >= 0) { // a held ←/→ repeats only on the tab row: the SCORES body filter steps per press, as before
+      else if (isRecords(this.screen)) { // a held ←/→ repeats only on the tab row: the SCORES body filter steps per press, as before
         if ((ax.left || ax.right) && !this.recFocus) dir = ax.left ? -1 : 1;
         else if (ax.up || ax.down) {
           dir = ax.up ? -1 : 1;
@@ -330,9 +332,9 @@ export function createMenuApp(opts = {}) {
         case "BracketRight":
           return this.onControls() ? this.controls.tab("pad") : this.adjustPace(1);
         case "KeyQ": // RECORDS' tab keys from anywhere on its pages (keyboard only; off them recTab is false)
-          return this.recTab(-1);
         case "KeyE":
-          return this.recTab(1);
+          if (isRecords(this.screen)) this.prevConfirm = true; // one press, one action: a Q / E that is also the rebound confirm (BOMB) only steps the tab here
+          return this.recTab(code === "KeyQ" ? -1 : 1);
         case "KeyT": // STATS' T MEDALS: the MEDALS tab
           return this.screen === SCREEN.STATS ? this.recTab(1) : false;
         case "KeyR":
@@ -381,7 +383,7 @@ export function createMenuApp(opts = {}) {
         this._taps[dir + ":" + (lat ? 0 : 1)] = true;
         return true;
       }
-      if (RECORD_SCREENS.indexOf(this.screen) >= 0 && this.move(dir, lat ? 0 : 1)) {
+      if (isRecords(this.screen) && this.move(dir, lat ? 0 : 1)) {
         this._taps[dir + ":" + (lat ? 0 : 1)] = true;
         return true;
       }
@@ -470,7 +472,7 @@ export function createMenuApp(opts = {}) {
         this.screen === SCREEN.FLOOR
       )
         return this._push(SCREEN.GUIDE, 1);
-      if (RECORD_SCREENS.indexOf(this.screen) >= 0) { // any tab, tab row or body: MENU on RECORDS
+      if (isRecords(this.screen)) { // any tab, tab row or body: MENU on RECORDS
         this.cursor = ITEMS.indexOf("RECORDS");
         return this._push(SCREEN.MENU, 1);
       }
@@ -572,7 +574,7 @@ export function createMenuApp(opts = {}) {
         this.level = nl;
         return true;
       }
-      if (RECORD_SCREENS.indexOf(this.screen) >= 0) {
+      if (isRecords(this.screen)) {
         if ((axis | 0) === 1) return this._recFocus(dir);
         if (!this.recFocus) return this._recTab(dir); // the tab row; the move() wrapper cues it, so never the public recTab here
         if (this.screen !== SCREEN.SCORES) return false; // STATS' body has no lateral control
@@ -588,9 +590,10 @@ export function createMenuApp(opts = {}) {
       return false;
     },
     /* RECORDS' tab step by d tabs (a key ±1, a tap the delta to its tab), clamped, never wrapping. Lands on the tab row,
-       disarms an armed STATS reset, and every arrival at STATS calls onStats (the event ring's opt-in, as opening STATS from
-       MENU did), every arrival at MEDALS onMedals (its rows only). main wraps this for the one uiMove; false (no cue, no
-       feel) at a clamped edge, on the tab already shown, and off the three pages. */
+       and every arrival at STATS calls onStats (the event ring's opt-in, as opening STATS from MENU did), every arrival at
+       MEDALS onMedals (its rows only). main wraps this for the one uiMove; false (no cue, no feel) at a clamped edge, on the
+       tab already shown, and off the three pages. ANY call on the three pages disarms an armed STATS reset, a step that does
+       not move included (a tap on the tab shown): R arms, anything but a second R cancels. */
     recTab(d) {
       return this._recTab(d);
     },
@@ -598,10 +601,11 @@ export function createMenuApp(opts = {}) {
       if (this.capturing) return false;
       const i = RECORD_SCREENS.indexOf(this.screen),
         j = Math.max(0, Math.min(RECORD_SCREENS.length - 1, i + Math.round(d || 0)));
-      if (i < 0 || j === i) return false;
+      if (i < 0) return false;
+      this.resetArm = false; // before the no-move return: a tap on the tab shown cancels the reset too
+      if (j === i) return false;
       this.idleT = 0;
       this.parked = false;
-      this.resetArm = false;
       const s = RECORD_SCREENS[j];
       if (s === SCREEN.STATS && onStats) onStats();
       if (s === SCREEN.TROPHIES && onMedals) onMedals();

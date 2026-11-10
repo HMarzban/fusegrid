@@ -1361,11 +1361,13 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
   check("R6 back() on TROPHIES returns to MENU on RECORDS (R7)", a.back() === true && a.screen === SCREEN.MENU && a.cursor === ITEMS.indexOf("RECORDS"),
     String(a.screen));
   a.screen = SCREEN.STATS; a.key("KeyT");
-  check("R6 confirm() on TROPHIES returns to MENU on RECORDS (R7)", a.confirm() === true && a.screen === SCREEN.MENU,
+  a.cursor = 0; // the back must put it on RECORDS, not leave it where it was
+  check("R6 confirm() on TROPHIES returns to MENU on RECORDS (R7)", a.confirm() === true && a.screen === SCREEN.MENU && a.cursor === ITEMS.indexOf("RECORDS"),
     String(a.screen));
   a.screen = SCREEN.STATS; a.key("KeyT");
+  a.cursor = 0;
   a.key("Escape");
-  check("R6 Escape on TROPHIES returns to MENU on RECORDS (R7)", a.screen === SCREEN.MENU, String(a.screen));
+  check("R6 Escape on TROPHIES returns to MENU on RECORDS (R7)", a.screen === SCREEN.MENU && a.cursor === ITEMS.indexOf("RECORDS"), String(a.screen));
 }
 
 // ---- GRAPHICS (unified spec 2026-10-10 §5): door row, page, presets, locks, DEMO ----

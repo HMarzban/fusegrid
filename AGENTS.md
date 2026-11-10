@@ -45,29 +45,25 @@ settles (`app.boardReady`, set on resolve or reject).
 Heat grades CORE / PLUS / MAX live on LEVEL SELECT (`←/→` room, `↑/↓` heat). CORE is replay baseline v6. Attract is always CORE + pact=0. After a first FUSE/GRID CLEAR, LEVEL SELECT also offers Pact toggles (`1–4`). Knobs live on `world`, not frozen `CFG`. Score × heat is persist-only (CORE ×1 / PLUS ×2 / MAX ×3); live HUD stays raw.
 
 MENU is seven rows in this order: `PLAY, LEVEL SELECT, DAILY, RECORDS, SETTINGS,
-GUIDE, SOURCE` (UI upgrade v202 Task 2.2, design record §4; owner: "the first
-menu is too complicated"). `confirm()` dispatches by **label**, so an insert
+GUIDE, SOURCE` (UI upgrade v202 Task 2.2, design record §4). `confirm()` dispatches by **label**, so an insert
 moves no runtime index — but `tests/headless.test.mjs`'s index-driven MENU
 confirms and `tests/menuapp.test.mjs`'s literals must be renegotiated with any
 reorder.
 
 RECORDS (ruling R7) is no SCREEN: its row opens SCORES, and SCORES · STATS ·
-MEDALS (`SCREEN.SCORES` / `STATS` / `TROPHIES`, menuapp `RECORD_SCREENS`,
-words.js `RECORD_TABS`) share one tab strip on the head's title line
-(menudraw `recTabsGeom` / `recTabHit`, one geometry for draw and tap; no plate
-moved). The strip is the top row of each page's ↑↓ walk (`app.recFocus` 0,
-every arrival lands there); ↓ reaches the body where there is one (SCORES'
-difficulty filter, STATS' foot actions; MEDALS has none). On the tab row ←/→
-(keys, D-PAD, stick; a held one repeats at the menu rate) and a tab tap step
-the tabs through `app.recTab(d)`: clamped, never wrapping, one `uiMove` (main's
-wrapper) and one `move` feel, silent at an edge or on the tab already shown;
-it disarms an armed STATS reset, and every arrival at STATS calls `onStats`
-(the event ring's opt-in), at MEDALS `onMedals` (its rows only, so a tap that
-skips STATS starts no ring). `Q` / `E` step the tabs from anywhere on the three
-pages (keyboard only); in the SCORES body ←/→ and L/R SHOULDER keep the filter
-(no repeat, as before), and the shoulders do nothing on the tab row. Esc,
-Backspace, Enter and EAST from any of the three, tab row or body: MENU on
-RECORDS. The tab row's foot leads with `←→ TAB`.
+MEDALS (`SCREEN.SCORES` / `STATS` / `TROPHIES`, menuapp `RECORD_SCREENS` /
+`isRecords`) share one tab strip on the head's title line (menudraw
+`recTabsGeom`, draw = tap through `recTabHit`). `app.recFocus` 0 is the tab
+row, the top of each page's ↑↓ walk, where every arrival lands; 1 is the body
+(SCORES' difficulty filter, STATS' foot actions; MEDALS has none). Tab steps
+go through `app.recTab(d)` (←/→ on the tab row, `Q` / `E` anywhere on the
+three pages, a tab tap, STATS' `T`): clamped, one `uiMove`; every arrival at
+STATS calls `onStats` (the event ring's opt-in), at MEDALS `onMedals` (its
+rows only). Any `recTab` call disarms an armed STATS reset, a tap on the tab
+already shown included; R arms and anything but a second R cancels it (any
+other key in main's `onUiKey`, any controller button in `padroute`, any tap
+off `R AGAIN`). On those pages `Q` / `E` never also confirm. Esc, Backspace,
+Enter, EAST and START from any of them: MENU on RECORDS.
 
 Names (UI upgrade v202, Task 2.1; owner: "we must use the name that users know
 about"; design record §3). Players read SETTINGS (was OPTIONS: MENU row, page

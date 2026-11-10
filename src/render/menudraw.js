@@ -1085,7 +1085,7 @@ function menuPane(c, P, row, I, kind, t) {
       c.fillText(LABEL.LEVEL + " " + s.l + " · " + s.d, r.x + r.w - 10, r.y + 20);
     }
     paneLine(c, P, P.y + 186, "×2 ON " + DIFF[1] + " · ×3 ON " + DIFF[2] + " " + LABEL.DIFFICULTY, TEXT); // the setting named on the line (ruling 7)
-    if (P.h >= 216) paneLine(c, P, P.y + 202, "TABS: " + RECORD_TABS.join(" · "), MUTED); // where the pane has the line (the iso guard's does not)
+    if (P.h >= 216) paneLine(c, P, P.y + 202, LABEL.TABS + ": " + RECORD_TABS.join(" · "), MUTED); // where the pane has the line (the iso guard's does not)
     paneLine(c, P, P.y + P.h - 14, hints().ok + ": ALL TEN · BY " + LABEL.DIFFICULTY, MUTED);
   } else if (lab === "SOURCE") {
     paneHead(c, P, "OPEN SOURCE", "↗");
@@ -1671,7 +1671,9 @@ function recTabs(c, S, page, tabs, touch) {
   c.fillRect(r.x, r.y, 3, r.h);
   caret(c, T[0].x - 12, r.y + r.h / 2, r.h);
 }
-const TAB_KEYS = "←→ TAB · "; // the tab row's foot lead: ←/→ (keys, D-PAD) step the tabs there
+/* The foot leads (the words from words.js, the keycaps here): on the tab row ←/→ (keys, D-PAD) step the tabs; from a page body
+   ↑ goes back to them. The same length, so STATS' tappable T / C / R sit in the same place in both focus states. */
+export const TAB_LEAD = "←→ " + LABEL.TAB + " · ", TABS_LEAD = "↑ " + LABEL.TABS + " · ";
 
 /* HIGH SCORES (RECORDS' SCORES tab; the strip on the head's title line): the
    CORE / PLUS / MAX segmented control, the four plaques
@@ -1730,7 +1732,7 @@ export function drawScores(c, scores, L, t, heat, plaques, touch, tabs) {
     nShow = Math.min(10, list.length),
     rh = g.rh,
     bt = g.bodyTop,
-    foot0 = tapMode(T) ? BACK_TAP : tabs ? TAB_KEYS + "↓ " + LABEL.DIFFICULTY + " · " + hints().back + " BACK" : "← → " + LABEL.DIFFICULTY + " · " + hints().back + " BACK"; // tab row: ←/→ step the tabs, ↓ reaches the filter
+    foot0 = tapMode(T) ? BACK_TAP : tabs ? TAB_LEAD + "↓ " + LABEL.DIFFICULTY + " · " + hints().back + " BACK" : TABS_LEAD + "← → " + LABEL.DIFFICULTY + " · " + hints().back + " BACK"; // tab row: ←/→ step the tabs, ↓ reaches the filter; the body: ↑ back to the tabs
   if (!nShow) {
     c.fillStyle = MUTED;
     c.font = font(T ? 15 : 12, "900");
@@ -1787,11 +1789,11 @@ export function drawScores(c, scores, L, t, heat, plaques, touch, tabs) {
 const RESET_RED = "#ff5d73";
 const STATS_FOOT = "T MEDALS · C COPY MY STATS · R RESET · ESC BACK";
 const STATS_PAD = "NORTH MEDALS · WEST COPY MY STATS · EAST BACK"; // no route to the wipe on a pad (acceptance S12)
-/* The idle foot and its tap keys, one source for drawStats and statsHit; on the tab row ←→ TAB leads it (no tap of its
-   own) for keys and a controller; a touch player taps the tabs, so that foot stays today's. */
+/* The idle foot and its tap keys, one source for drawStats and statsHit. For keys and a controller a lead (no tap of its own)
+   names the way to the tabs: ←→ TAB on the tab row, ↑ TABS from the body; a touch player taps the tabs, so that foot has none. */
 const statsFoot = (tabs) => {
   const f = hints().dev === "pad" ? [STATS_PAD, ["KeyT", "KeyC"]] : [STATS_FOOT, ["KeyT", "KeyC", "KeyR"]];
-  return tabs && hints().dev !== "touch" ? [TAB_KEYS + f[0], [null].concat(f[1])] : f;
+  return hints().dev === "touch" ? f : [(tabs ? TAB_LEAD : TABS_LEAD) + f[0], [null].concat(f[1])];
 };
 const RESET_FOOT = "R AGAIN ERASES · OTHER KEYS CANCEL · KEEPS " + LABEL.SETTINGS + " + " + LABEL.GAME_SPEED + " · C COPY"; // 73 chars: the S.iw budget of 74 at the 0.6 em advance
 const RESET_NOTES = Object.freeze([
@@ -1940,7 +1942,7 @@ export function drawTrophies(c, L, t, rows, touch, tabs) {
     c.font = font(10, "700");
     wrap(c, String(desc), r.w - 52, 2).forEach((l, j) => c.fillText(l, r.x + 42, sq ? cy + 1 + j * 11 : r.y + 32 + j * 12));
   }
-  foot(c, S, tapMode(touch) ? BACK_TAP : TAB_KEYS + hints().ok + " / " + hints().back + " BACK"); // no body: the tab row always has the focus; back is MENU
+  foot(c, S, tapMode(touch) ? BACK_TAP : TAB_LEAD + hints().ok + " / " + hints().back + " BACK"); // no body: the tab row always has the focus; back is MENU
 }
 
 /* SETTINGS (SCREEN.SETTINGS, spec §2): twelve rows on LEVEL SELECT's adjust model — eight live

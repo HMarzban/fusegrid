@@ -736,7 +736,7 @@ function check(name, cond, detail) {
         `stats plate paints both notes and the copy foot at ${W}x${H}`,
         all.some((s) => s.indexOf("NOT PLAYED YET") >= 0) &&
           all.some((s) => s.indexOf("42 SESSIONS") >= 0) && all.includes(CAP) &&
-          all.includes("T MEDALS · C COPY MY STATS · R RESET · ESC BACK"),
+          all.includes("↑ TABS · T MEDALS · C COPY MY STATS · R RESET · ESC BACK"), // the body's foot (no tab-row flag): ↑ TABS leads it
         all.join("|"),
       );
       check(
@@ -857,7 +857,7 @@ function check(name, cond, detail) {
 // notes replace the daily/since notes and the foot turns red, all inside S
 {
   const md = await import("../src/render/menudraw.js");
-  const IDLE = "T MEDALS · C COPY MY STATS · R RESET · ESC BACK";
+  const IDLE = "↑ TABS · T MEDALS · C COPY MY STATS · R RESET · ESC BACK"; // the body's foot: RECORDS' ↑ TABS lead (fix round 1)
   const ARMED = [
     "ERASES SCORES · BESTS · TIMES · DAILY · MEDALS · PLAQUES · GHOSTS",
     "ERASES STATS + DAYS PLAYED · RELOCKS LEVELS 6-8 · MODIFIERS · TIME TRIAL",
@@ -1185,13 +1185,13 @@ function check(name, cond, detail) {
   ]) {
     const L = md.layout(W, H);
     for (const [arm, want] of [
-      [false, ["KeyT", "KeyC", "KeyR", null]],
+      [false, [null, "KeyT", "KeyC", "KeyR", null]], // the body's ↑ TABS lead is no tap
       [true, ["KeyR", null, null, "KeyC"]],
     ]) {
       const f = paint(L, arm), z = zones(f), tag = `${arm ? "armed" : "idle"} at ${W}x${H}`;
-      const mid = (i) => (z[i][0] + z[i][1]) / 2;
+      const mid = (i) => (z[i][0] + z[i][1]) / 2, live = want.findIndex((k) => k); // the first token that taps
       check(`statsHit: the ${tag} foot is the last line painted and splits into ${want.length} tokens`,
-        !!f && z.length === want.length && f.s.startsWith(arm ? "R AGAIN" : "T MEDALS"), f && f.s);
+        !!f && z.length === want.length && f.s.startsWith(arm ? "R AGAIN" : "↑ TABS · T MEDALS"), f && f.s);
       check(`statsHit: every ${tag} token centre maps to its key`,
         want.every((k, i) => md.statsHit(mid(i), f.y, L, arm) === k),
         JSON.stringify(want.map((k, i) => md.statsHit(mid(i), f.y, L, arm))));
@@ -1200,19 +1200,19 @@ function check(name, cond, detail) {
           md.statsHit(z[i][1] + 1, f.y, L, arm) !== k && md.statsHit(z[i][0] + 1, f.y, L, arm) === k &&
           md.statsHit(z[i][1] - 1, f.y, L, arm) === k)));
       check(`statsHit: 1 px above the band (foot y - 12) is null ${tag}`,
-        md.statsHit(mid(0), f.y - 13, L, arm) === null && md.statsHit(mid(0), f.y - 12, L, arm) !== null);
+        md.statsHit(mid(live), f.y - 13, L, arm) === null && md.statsHit(mid(live), f.y - 12, L, arm) !== null);
       check(`statsHit: the band reaches the plate bottom and no further ${tag}`,
-        md.statsHit(mid(0), f.y + 16, L, arm) !== null && md.statsHit(mid(0), f.y + 17, L, arm) === null);
+        md.statsHit(mid(live), f.y + 16, L, arm) !== null && md.statsHit(mid(live), f.y + 17, L, arm) === null);
     }
   }
   const L = md.layout(600, 520), f = paint(L, false), z = zones(f);
-  check("statsHit: the 600x520 idle zones are T 150-216 and R 324-384 on the band 464-492 (spec §4.1)",
-    z[0][0] === 150 && z[0][1] === 216 && z[2][0] === 324 && z[2][1] === 384 && f.y === 476, JSON.stringify(z));
+  check("statsHit: the 600x520 idle zones are T 177-243 and R 351-411 on the band 464-492 (spec §4.1, moved by the ↑ TABS lead)",
+    z[1][0] === 177 && z[1][1] === 243 && z[3][0] === 351 && z[3][1] === 411 && f.y === 476, JSON.stringify(z));
   const fa = paint(L, true), za = zones(fa);
   check("statsHit: the 600x520 armed zones are R AGAIN 72-174 and C COPY 474-528, both inside the 60-540 plate",
     za[0][0] === 72 && za[0][1] === 174 && za[3][0] === 474 && za[3][1] === 528 && fa.y === 476, JSON.stringify(za));
-  check("statsHit: armed, no tap on the idle C COPY MY STATS zone (216-324) can land on R AGAIN",
-    za[0][1] < z[1][0] && md.statsHit(z[1][0], f.y, L, true) === null, JSON.stringify([za[0], z[1]]));
+  check("statsHit: armed, no tap on the idle C COPY MY STATS zone (243-351) can land on R AGAIN",
+    za[0][1] < z[2][0] && md.statsHit(z[2][0], f.y, L, true) === null, JSON.stringify([za[0], z[2]]));
 }
 
 // 13d) plaque chips on the SCORES plate: four labels, locked vs unlocked
@@ -1550,6 +1550,8 @@ function check(name, cond, detail) {
     return { c, texts, cells, strokes };
   };
   const body = (recd, L, p) => recd.cells.filter((r) => r.y >= md.recPlate(L, p, false).by - 0.5); // the tiles; RECORDS' tab strip (v202 Task 2.2) paints its unselected tabs in the same fill, in the head
+  /* every cell the page paints is a tile or one of the strip's two unselected tabs (the shown tab is banded, not in this fill): nothing else in the head */
+  const strip = (recd, L, p) => { const T = md.recTabsGeom(md.recPlate(L, p, false), false); return recd.cells.length === body(recd, L, p).length + 2 && recd.cells.filter((r) => !body(recd, L, p).includes(r)).every((r) => T.some((q, i) => i !== p && q.x === r.x && q.y === r.y && q.w === r.w && q.h === r.h)); };
   const inside = (r, recd) => recd.texts.filter((t) => t.x > r.x && t.x < r.x + r.w && t.y > r.y && t.y < r.y + r.h).every((t) => t.y - t.px / 2 >= r.y - 0.5 && t.y + t.px / 2 <= r.y + r.h + 0.5);
   const rows = Array.from({ length: 8 }, (_, i) => ["MEDAL " + i, "ROOMS 1-5 IN ONE RUN · NO LIFE LOST · ALL FOUR MODES", i < 2]);
   const stats = { rows: Array.from({ length: 10 }, (_, i) => ["DAYS PLAYED", "1234"]), notes: ["N1", "N2"], trophies: rows };
@@ -1558,10 +1560,10 @@ function check(name, cond, detail) {
     const L = md.layout(W, H), tg = `${W}x${H}`;
     const m = rec();
     md.drawTrophies(m.c, L, 1, rows);
-    check(`MEDALS: name + both goal lines inside each tile at ${tg}`, body(m, L, 2).length === 8 && body(m, L, 2).every((r) => inside(r, m)));
+    check(`MEDALS: name + both goal lines inside each tile at ${tg}`, body(m, L, 2).length === 8 && body(m, L, 2).every((r) => inside(r, m)) && strip(m, L, 2));
     const st = rec();
     md.drawStats(st.c, L, 1, stats, false, null);
-    check(`STATS: value + label inside each of the 11 tiles at ${tg}`, body(st, L, 1).length === 11 && body(st, L, 1).every((r) => inside(r, st)));
+    check(`STATS: value + label inside each of the 11 tiles at ${tg}`, body(st, L, 1).length === 11 && body(st, L, 1).every((r) => inside(r, st)) && strip(st, L, 1));
     const sc = rec(), g = md.scoresGeom(L, false);
     md.drawScores(sc.c, [], L, 1, 0, 0b11, false);
     const chips = sc.strokes.filter((r) => Math.abs(r.y - (g.chipY + 0.5)) < 1e-9);

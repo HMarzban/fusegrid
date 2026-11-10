@@ -9,6 +9,7 @@ import { overlayBox, pauseHit, touchLay } from "../src/render/scenes.js";
 import { controlsHit, dims, drawShell } from "../src/render/shellview.js";
 import * as md from "../src/render/menudraw.js";
 import { RECORD_TABS, LABEL } from "../src/render/words.js";
+import * as W from "../src/render/words.js";
 import { setHints } from "../src/render/hintcopy.js";
 import { wordsOf } from "../src/app/hints.js";
 import { DEF_CONTROLS } from "../src/app/controls.js";
@@ -179,17 +180,19 @@ for (const [nm, L, touch] of BOXES) for (let p = 0; p < 3; p++) {
   const L = md.layout(600, 520), feet = (p, touch, tabs) => paintPage(p, L, touch, tabs).texts.map((t) => t.s);
   const PAD = wordsOf("pad", DEF_CONTROLS), TOUCH = wordsOf("touch", DEF_CONTROLS);
   check("SCORES tab row (keys): ←→ TAB · ↓ DIFFICULTY · ESC BACK", feet(0, false, true).includes("←→ TAB · ↓ DIFFICULTY · ESC BACK"));
-  check("SCORES body (keys): today's foot, ← → DIFFICULTY · ESC BACK", feet(0, false, false).includes("← → DIFFICULTY · ESC BACK") && !feet(0, false, false).some((s) => /TAB/.test(s)));
+  check("SCORES body (keys): ↑ TABS leads back to the tabs, then today's foot", feet(0, false, false).includes("↑ TABS · ← → DIFFICULTY · ESC BACK"));
   check("STATS tab row (keys): ←→ TAB, then today's foot", feet(1, false, true).includes("←→ TAB · T MEDALS · C COPY MY STATS · R RESET · ESC BACK"));
-  check("STATS body (keys): today's foot, byte for byte", feet(1, false, false).includes("T MEDALS · C COPY MY STATS · R RESET · ESC BACK") && !feet(1, false, false).some((s) => /TAB/.test(s)));
+  check("STATS body (keys): ↑ TABS leads back to the tabs, then today's foot", feet(1, false, false).includes("↑ TABS · T MEDALS · C COPY MY STATS · R RESET · ESC BACK"));
+  check("the two leads are the same length, so STATS' T / C / R zones do not move with the focus", md.TAB_LEAD.length === md.TABS_LEAD.length && md.TAB_LEAD === "←→ " + W.LABEL.TAB + " · " && md.TABS_LEAD === "↑ " + W.LABEL.TABS + " · ");
   check("MEDALS (keys): ←→ TAB · ENTER / ESC BACK (Esc goes to MENU now, never BACK TO STATS)", feet(2, false, true).includes("←→ TAB · ENTER / ESC BACK") && !feet(2, false, true).some((s) => /TO STATS/.test(s)));
   setHints(PAD);
   check("SCORES tab row (controller): ←→ TAB · ↓ DIFFICULTY · EAST BACK", feet(0, false, true).includes("←→ TAB · ↓ DIFFICULTY · EAST BACK"));
   check("STATS tab row (controller): ←→ TAB, then the controller foot, no wipe", feet(1, false, true).includes("←→ TAB · NORTH MEDALS · WEST COPY MY STATS · EAST BACK") && !feet(1, false, true).some((s) => /RESET/.test(s)));
+  check("SCORES and STATS body (controller): ↑ TABS leads back", feet(0, false, false).includes("↑ TABS · ← → DIFFICULTY · EAST BACK") && feet(1, false, false).includes("↑ TABS · NORTH MEDALS · WEST COPY MY STATS · EAST BACK"));
   check("MEDALS (controller): ←→ TAB · SOUTH / EAST BACK", feet(2, false, true).includes("←→ TAB · SOUTH / EAST BACK"));
   setHints(TOUCH);
   check("SCORES and MEDALS on a touch layout: the tap rule", feet(0, true, true).includes("TAP OUTSIDE TO GO BACK") && feet(2, true, true).includes("TAP OUTSIDE TO GO BACK") && !feet(0, true, true).some((s) => /TAB ·/.test(s)));
-  check("STATS for a touch player: no ←→ TAB lead (the tabs are tapped), today's tappable foot", feet(1, true, true).includes("T MEDALS · C COPY MY STATS · R RESET · ESC BACK") && !feet(1, true, true).some((s) => /TAB ·/.test(s)));
+  check("STATS for a touch player: no lead in either focus (the tabs are tapped), today's tappable foot", [true, false].every((tb) => feet(1, true, tb).includes("T MEDALS · C COPY MY STATS · R RESET · ESC BACK") && !feet(1, true, tb).some((s) => /TABS? ·/.test(s))));
   { const S = md.statsGeom(L).S, s0 = "T MEDALS · C COPY MY STATS · R RESET · ESC BACK", x0 = S.mid - s0.length * 3;
     check("statsHit follows the touch foot on the tab row too: T MEDALS at its painted place", md.statsHit(x0 + 6 * 4, S.footY, L, false, true) === "KeyT"); }
   setHints(null);
@@ -198,7 +201,7 @@ for (const [nm, L, touch] of BOXES) for (let p = 0; p < 3; p++) {
     const R = paintPage(1, L, false, tabs), f = R.texts.find((t) => /T MEDALS/.test(t.s)), S = md.statsGeom(L).S, x0 = S.mid - f.s.length * 3;
     const at = (tok) => { const a = f.s.indexOf(tok); return x0 + 6 * (a + tok.length / 2); };
     const got = ["T MEDALS", "C COPY MY STATS", "R RESET", "ESC BACK"].map((tok) => md.statsHit(at(tok), S.footY, L, false, tabs));
-    check(`statsHit maps T / C / R at their painted place (${tabs ? "tab row" : "body"}); ESC and ←→ TAB are not taps`, J(got) === J(["KeyT", "KeyC", "KeyR", null]) && (!tabs || md.statsHit(at("←→ TAB"), S.footY, L, false, true) === null), J(got));
+    check(`statsHit maps T / C / R at their painted place (${tabs ? "tab row" : "body"}); ESC and the lead are not taps`, J(got) === J(["KeyT", "KeyC", "KeyR", null]) && md.statsHit(at(tabs ? "←→ TAB" : "↑ TABS"), S.footY, L, false, tabs) === null, J(got));
   }
 }
 
@@ -211,7 +214,7 @@ for (const [nm, L, touch] of BOXES) for (let p = 0; p < 3; p++) {
   const R = rec();
   md.drawMenu(R.ctx, { cursor: ITEMS.indexOf("RECORDS"), enterT: 9, items: ITEMS.slice(), touch: false, kind: "2d", info: { level: 1, top: TOP } }, L, 9);
   const s = R.texts.map((t) => t.s), P = g.pane;
-  check("the RECORDS pane is today's HIGH SCORES pane plus the tabs line", s.includes("YOUR TOP 3") && s.includes("4210") && s.includes("TABS: SCORES · STATS · MEDALS") && s.some((x) => /ALL TEN · BY DIFFICULTY/.test(x)), s.join("|"));
+  check("the RECORDS pane is today's HIGH SCORES pane plus the tabs line", s.includes("YOUR TOP 3") && s.includes("4210") && s.includes(W.LABEL.TABS + ": SCORES · STATS · MEDALS") && s.some((x) => /ALL TEN · BY DIFFICULTY/.test(x)), s.join("|"));
   check("every RECORDS pane text sits inside the pane", R.texts.filter((t) => t.x >= P.x && t.x <= P.x + P.w && t.y !== L.footY).every((t) => t.y > P.y && t.y < P.y + P.h), J(P));
   const R0 = rec();
   md.drawMenu(R0.ctx, { cursor: 3, enterT: 9, items: ITEMS.slice(), touch: false, kind: "2d", info: { level: 1, top: [] } }, L, 9);
@@ -220,7 +223,7 @@ for (const [nm, L, touch] of BOXES) for (let p = 0; p < 3; p++) {
 }
 for (const [nm, W, H, lg] of [["600x520 #c", 600, 520], ["portrait #sh", sgP.w, sgP.h, sgP.logo], ["landscape #sh", sgL.w, sgL.h, sgL.logo]]) {
   const L = md.layout(W, H, lg), g = md.menuList(L, ITEMS.length, true), r = g.rows;
-  check(`touch hub (${nm}): seven tiles in reading order, PLAY | LEVEL SELECT, DAILY | RECORDS, SETTINGS | GUIDE | SOURCE`,
+  check(`touch hub (${nm}): seven tiles in reading order: the PLAY bar; LEVEL SELECT | DAILY; RECORDS | SETTINGS; the GUIDE bar; the SOURCE bar`,
     g.hub && r.length === 7 && r[1].y === r[2].y && r[1].x < r[2].x && r[3].y === r[4].y && r[3].x < r[4].x && r[0].w === r[5].w && r[5].w === r[6].w && r[1].w < r[0].w / 2 && r[5].y > r[4].y && r[6].y > r[5].y, J(r.map((q) => [q.x, q.y, q.w])));
   check(`touch hub (${nm}): today's height (the rows keep 70 / 66 / 66 / 66 / 50)`, g.h === Math.round(20 + 318 * g.f + 24 * g.f), g.h);
 }
@@ -249,7 +252,7 @@ function tapRig(kind, o = {}) {
   mountPointer({ canvas: cv, fit, input, app, world, kind: () => "2d", ctl: () => null, hit: HIT });
   const surf = box || cv, el = sh || cv;
   const draw = () => { const R = rec(); drawShell(R.ctx, app, world, surf, "2d", () => TOP, () => 0, () => ({ top: TOP })); return R; };
-  const tapAt = (x, y) => { const r = surf.getBoundingClientRect(); el.fire("pointerdown", { clientX: r.left + (x * r.width) / surf.width, clientY: r.top + (y * r.height) / surf.height, currentTarget: el, pointerType: "mouse" }); el.fire("pointerup", {}); };
+  const tapAt = (x, y, pointerType = "mouse") => { const r = surf.getBoundingClientRect(); el.fire("pointerdown", { clientX: r.left + (x * r.width) / surf.width, clientY: r.top + (y * r.height) / surf.height, currentTarget: el, pointerType }); el.fire("pointerup", {}); };
   return { app, cues, draw, tapAt, surf };
 }
 for (const kind of ["d", "l", "p"]) {
@@ -301,6 +304,31 @@ for (const kind of ["d", "l", "p"]) {
     if (t.app.screen !== want[ITEMS[i]] || (ITEMS[i] === "SOURCE" && src !== 1) || (want[ITEMS[i]] !== SCREEN.GAME && t.app.cursor !== i)) bad.push(ITEMS[i] + " -> " + t.app.screen + "@" + t.app.cursor);
   }
   check("hub taps open their own tile: PLAY; LEVEL SELECT | DAILY; RECORDS | SETTINGS; GUIDE; SOURCE", bad.length === 0, bad.join(" | "));
+}
+
+/* ---- an armed STATS reset (fix round 1): R arms, and anything but a second R cancels it. Every tap cell through the real
+   mountPointer, on #c (desktop), a landscape #sh box and a portrait #sh box, with the tab row and the body focused, by mouse and
+   by touch: the three tabs (the one shown included), a miss on the plate, a tap off it, and each label of the armed foot. After
+   each the reset is disarmed, and nothing is wiped except by R AGAIN ERASES, the documented second press. ---- */
+const RESET_TOKENS = ["R AGAIN ERASES", "OTHER KEYS CANCEL", "KEEPS SETTINGS + GAME SPEED", "C COPY"];
+for (const kind of ["d", "l", "p"]) for (const focus of [0, 1]) for (const pt of ["mouse", "touch"]) {
+  const t = tapRig(kind), a = t.app, touch = kind !== "d", L = md.layout(t.surf.width, t.surf.height), S = md.statsGeom(L).S, T = md.recTabsGeom(md.recPlate(L, 1, touch), touch);
+  const armed = () => { a.screen = SCREEN.MENU; a.cursor = ITEMS.indexOf("RECORDS"); a.confirm(); a.recTab(1); if (focus) a.move(1, 1); a.key("KeyR"); return a.screen === SCREEN.STATS && a.recFocus === focus && a.resetArm === true; };
+  const bad = [], cell = (name, x, y, wipes, then) => {
+    const ok0 = armed(), r0 = a.n.reset;
+    t.tapAt(x, y, pt);
+    if (then) then();
+    const w = a.n.reset - r0;
+    if (!ok0 || a.resetArm !== false || w !== wipes) bad.push(name + " armed:" + ok0 + " after:" + a.resetArm + " wipes:" + w);
+  };
+  T.forEach((r, i) => cell("tab " + PAGES[i], r.x + r.w / 2, r.y + r.h / 2, 0));
+  cell("the tab shown, then R", T[1].x + T[1].w / 2, T[1].y + T[1].h / 2, 0, () => { if (a.resetArm) return; a.key("KeyR"); if (a.n.reset || !a.resetArm) bad.push("R after the current-tab tap did more than arm"); a.resetArm = false; });
+  cell("a miss on the plate", S.mid, S.by + 30, 0);
+  cell("off the plate", Math.max(2, S.x - 8), S.y + 60, 0);
+  const R = (armed(), t.draw()), f = R.texts.find((x) => /^R AGAIN ERASES/.test(x.s)), x0 = S.mid - f.s.length * 3;
+  a.resetArm = false;
+  for (const tok of RESET_TOKENS) { const i = f.s.indexOf(tok); cell("foot " + tok, x0 + 6 * (i + tok.length / 2), S.footY, tok === "R AGAIN ERASES" ? 1 : 0); }
+  check(`armed STATS (${kind}, ${focus ? "body" : "tab row"}, ${pt}): every tab, the plate, off it and each foot label disarm; only R AGAIN ERASES wipes`, bad.length === 0, bad.join(" | "));
 }
 
 console.log("\n  RECORDS RESULT: " + pass + " PASS / " + fail + " FAIL");
