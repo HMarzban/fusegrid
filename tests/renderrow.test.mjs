@@ -100,10 +100,10 @@ const NOTES = [
   { k: "3d", st: "ready" },
   { k: "3d", st: "fail" },
 ];
-const RI = 3; // RENDER
+const RI = 3; // ART STYLE
 function slot(c, L, touch) {
   const g = md.settingsGeom(L, touch), S = g.S;
-  return md.valueRoom(c, S.iw + 16, g.rowH - 2, "RENDER", touch);
+  return md.valueRoom(c, S.iw + 16, g.rowH - 2, "ART STYLE", touch);
 }
 const boxes = [
   ["keyboard 600x520", md.layout(600, 520), false, true],

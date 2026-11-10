@@ -208,7 +208,7 @@ for (const at of [1.0, 2.0, 3.0, 4.0]) {
   check("MENU Escape stays on MENU", g.app.screen === SCREEN.MENU);
 }
 {
-  const want = { "PLAY": SCREEN.GAME, "LEVEL SELECT": SCREEN.LEVEL, "DAILY": SCREEN.GAME, "OPTIONS": SCREEN.SETTINGS,
+  const want = { "PLAY": SCREEN.GAME, "LEVEL SELECT": SCREEN.LEVEL, "DAILY": SCREEN.GAME, "SETTINGS": SCREEN.SETTINGS,
     "GUIDE": SCREEN.GUIDE, "HIGH SCORES": SCREEN.SCORES, "STATS": SCREEN.STATS, "SOURCE": SCREEN.MENU };
   for (let i = 0; i < ITEMS.length; i++) {
     const g = menu();
@@ -407,11 +407,11 @@ const withSettings = (blob, fn) => {
   if (blob) mem["nb.settings.v1"] = JSON.stringify(blob); else delete mem["nb.settings.v1"];
   try { fn(); } finally { if (s0 === undefined) delete mem["nb.settings.v1"]; else mem["nb.settings.v1"] = s0; }
 };
-const gfxPage = (g) => { toRow(g, ITEMS.indexOf("OPTIONS")); press(g, "Enter"); toRow(g, GDOOR); press(g, "Enter"); return g; };
+const gfxPage = (g) => { toRow(g, ITEMS.indexOf("SETTINGS")); press(g, "Enter"); toRow(g, GDOOR); press(g, "Enter"); return g; };
 const six = (s) => [s.fps, s.res, s.shd, s.aa, s.fxq, s.dmo].join("");
 withSettings(null, () => {
   // 1: the door
-  const g = menu(); toRow(g, ITEMS.indexOf("OPTIONS")); press(g, "Enter"); toRow(g, GDOOR);
+  const g = menu(); toRow(g, ITEMS.indexOf("SETTINGS")); press(g, "Enter"); toRow(g, GDOOR);
   const s0 = JSON.stringify(g.app.settings);
   press(g, "ArrowLeft"); press(g, "ArrowRight");
   check("GRAPHICS door: OPTIONS ↓ x9 lands on it, ←/→ change nothing", g.app.optRow === 9 && OPT_ROWS[9] === "GRAPHICS" && g.app.screen === SCREEN.SETTINGS && JSON.stringify(g.app.settings) === s0, g.app.optRow);
@@ -448,7 +448,7 @@ withSettings(null, () => {
   press(g, "Escape");
   check("a second Escape -> MENU", g.app.screen === SCREEN.MENU);
   // RESET DEFAULTS returns GRAPHICS to AUTO
-  check("MENU kept its cursor on OPTIONS", g.app.cursor === ITEMS.indexOf("OPTIONS"));
+  check("MENU kept its cursor on OPTIONS", g.app.cursor === ITEMS.indexOf("SETTINGS"));
   press(g, "Enter"); toRow(g, OPT_ROWS.indexOf("RESET DEFAULTS")); press(g, "Enter");
   check("RESET DEFAULTS returns GRAPHICS to AUTO", g.app.gfxPreset() === "AUTO" && /"fps":1,"res":1,"shd":2,"aa":1,"fxq":1,"dmo":1,"fpm":0/.test(mem["nb.settings.v1"] || ""), mem["nb.settings.v1"]);
 });
@@ -491,7 +491,7 @@ withSettings({ dmo: 0 }, () => {
 });
 // 9: PAUSE -> OPTIONS -> GRAPHICS is the inline pauseView 2
 withSettings(null, () => {
-  const o = run(); press(o, "KeyP"); toRow(o, PAUSE_ITEMS.indexOf("OPTIONS")); press(o, "Enter"); toRow(o, GDOOR); press(o, "Enter");
+  const o = run(); press(o, "KeyP"); toRow(o, PAUSE_ITEMS.indexOf("SETTINGS")); press(o, "Enter"); toRow(o, GDOOR); press(o, "Enter");
   check("PAUSE OPTIONS GRAPHICS door opens inline pauseView 2 (shell GAME, still PAUSE)", o.app.pauseView === 2 && o.app.screen === SCREEN.GAME && o.world.state === "PAUSE" && o.app.gfxRow === 0,
     o.app.pauseView + "/" + o.app.screen + "/" + o.world.state);
   press(o, "ArrowDown"); press(o, "ArrowLeft");
@@ -526,7 +526,7 @@ withSettings(null, () => {
   A.tap(g, 300, 20);
   wired("GRAPHICS tap off the rows backs out to OPTIONS on the door", g.app.screen === SCREEN.SETTINGS && g.app.optRow === GDOOR, g.app.screen);
   const B = mkEl(), o = menu(B.el); press(o, "Enter");
-  press(o, "KeyP"); toRow(o, PAUSE_ITEMS.indexOf("OPTIONS")); press(o, "Enter"); toRow(o, GDOOR); press(o, "Enter");
+  press(o, "KeyP"); toRow(o, PAUSE_ITEMS.indexOf("SETTINGS")); press(o, "Enter"); toRow(o, GDOOR); press(o, "Enter");
   B.tap(o, 300, at(5));
   wired("pause view 2 tap on EFFECTS = Enter on it (FULL -> LOW), still PAUSE", o.app.pauseView === 2 && o.app.gfxRow === 5 && o.app.settings.fxq === 0 && o.world.state === "PAUSE",
     o.app.pauseView + "/" + o.app.gfxRow + "/" + o.app.settings.fxq);
@@ -541,7 +541,7 @@ withSettings(null, () => {
   for (const code of ["Space", "KeyJ", "KeyX"]) {
     const g = gfxPage(menu()); g.app.gfxRow = 5; const f0 = g.app.settings.fxq; press(g, code);
     check("GRAPHICS " + code + " = Enter: cycles EFFECTS, stays on the page", g.app.screen === SCREEN.GRAPHICS && g.app.settings.fxq === 1 - f0 && live(g.world) === 0, f0 + "->" + g.app.settings.fxq);
-    const o = run(); press(o, "KeyP"); toRow(o, PAUSE_ITEMS.indexOf("OPTIONS")); press(o, "Enter"); toRow(o, GDOOR); press(o, "Enter");
+    const o = run(); press(o, "KeyP"); toRow(o, PAUSE_ITEMS.indexOf("SETTINGS")); press(o, "Enter"); toRow(o, GDOOR); press(o, "Enter");
     o.app.gfxRow = 5; const q0 = o.app.settings.fxq; press(o, code);
     check("pause view 2 " + code + " = Enter: cycles EFFECTS, still PAUSE view 2, no bomb", o.app.pauseView === 2 && o.world.state === "PAUSE" && o.app.settings.fxq === 1 - q0 && live(o.world) === 0, q0 + "->" + o.app.settings.fxq);
   }
@@ -550,11 +550,11 @@ withSettings(null, () => {
     check("GRAPHICS " + code + " does nothing", gs(g) === s0, gs(g));
   }
   for (const code of ["KeyQ", "KeyN", "KeyC", "KeyB", "KeyR", "KeyT", "KeyK", "ShiftLeft", "Digit1", "BracketLeft", "Backspace"]) {
-    const o = run(); press(o, "KeyP"); toRow(o, PAUSE_ITEMS.indexOf("OPTIONS")); press(o, "Enter"); toRow(o, GDOOR); press(o, "Enter");
+    const o = run(); press(o, "KeyP"); toRow(o, PAUSE_ITEMS.indexOf("SETTINGS")); press(o, "Enter"); toRow(o, GDOOR); press(o, "Enter");
     const s0 = gs(o); press(o, code);
     check("pause view 2 " + code + " does nothing (still PAUSE view 2)", gs(o) === s0, gs(o));
   }
-  const o = run(); press(o, "KeyP"); toRow(o, PAUSE_ITEMS.indexOf("OPTIONS")); press(o, "Enter"); toRow(o, GDOOR); press(o, "Enter");
+  const o = run(); press(o, "KeyP"); toRow(o, PAUSE_ITEMS.indexOf("SETTINGS")); press(o, "Enter"); toRow(o, GDOOR); press(o, "Enter");
   press(o, "KeyM");
   check("pause view 2 M quits to MENU like the PAUSE list (score recorded by the same path)", o.app.screen === SCREEN.MENU && !o.app.inGame, o.app.screen);
 });
@@ -955,7 +955,7 @@ for (const code of ["Space", "Enter"]) {
 // shell and world state it does exactly what Z, bound to nothing anywhere, does. ----
 {
   const at = (scr) => (g) => { g.app.screen = scr; };
-  const pauseOn = (view) => (g) => { press(g, "Enter"); press(g, "KeyP"); if (view) { toRow(g, PAUSE_ITEMS.indexOf("OPTIONS")); press(g, "Enter"); } if (view === 2) { toRow(g, OPT_ROWS.indexOf("GRAPHICS")); press(g, "Enter"); } };
+  const pauseOn = (view) => (g) => { press(g, "Enter"); press(g, "KeyP"); if (view) { toRow(g, PAUSE_ITEMS.indexOf("SETTINGS")); press(g, "Enter"); } if (view === 2) { toRow(g, OPT_ROWS.indexOf("GRAPHICS")); press(g, "Enter"); } };
   const STATES = {
     "INTRO title": { boot: mk },
     "INTRO show": { boot: () => show(mk()) },
@@ -1010,7 +1010,7 @@ for (const code of ["Space", "Enter"]) {
   const pRun = () => { const g = pMenu(); tap(g, "S"); return g; };
   const pPause = () => { const g = pRun(); tap(g, "START"); return g; };
   const rowTo = (g, i) => { for (let k = 0; k < i; k++) tap(g, "dD"); };
-  const pOpt = () => { const g = pMenu(); rowTo(g, ITEMS.indexOf("OPTIONS")); tap(g, "S"); return g; };
+  const pOpt = () => { const g = pMenu(); rowTo(g, ITEMS.indexOf("SETTINGS")); tap(g, "S"); return g; };
   const pCtl = () => { const g = pOpt(); rowTo(g, OPT_ROWS.indexOf("CONTROLS")); tap(g, "S"); return g; };
 
   { const g = pk();
@@ -1032,21 +1032,21 @@ for (const code of ["Space", "Enter"]) {
   const MATRIX = {
     "MENU root": { boot: pMenu, E: onScr(SCREEN.MENU) },
     "LEVEL SELECT": { boot: page("LEVEL SELECT"), E: onScr(SCREEN.MENU), S: onScr(SCREEN.GAME), START: onScr(SCREEN.GAME) },
-    "OPTIONS": { boot: page("OPTIONS"), E: onScr(SCREEN.MENU) },
+    "SETTINGS": { boot: page("SETTINGS"), E: onScr(SCREEN.MENU) },
     "GUIDE": { boot: page("GUIDE"), E: onScr(SCREEN.MENU), S: onScr(SCREEN.HOWTO) },
     "HIGH SCORES": { boot: page("HIGH SCORES"), E: onScr(SCREEN.MENU), S: onScr(SCREEN.MENU) },
     "STATS": { boot: page("STATS"), E: onScr(SCREEN.MENU) },
     "HOW TO": { boot: page("GUIDE", (g) => tap(g, "S")), E: onScr(SCREEN.GUIDE), S: onScr(SCREEN.GUIDE) },
     "GRAPHICS": { boot: () => { const g = pOpt(); rowTo(g, OPT_ROWS.indexOf("GRAPHICS")); tap(g, "S"); return g; }, E: onScr(SCREEN.SETTINGS) },
     "CONTROLS": { boot: pCtl, E: onScr(SCREEN.SETTINGS) },
-    "ITEMS": { boot: page("GUIDE", guided(GUIDE_ROWS.indexOf("ITEMS"))), E: onScr(SCREEN.GUIDE), S: onScr(SCREEN.GUIDE) },
+    "ITEMS": { boot: page("GUIDE", guided(GUIDE_ROWS.indexOf("POWER-UPS"))), E: onScr(SCREEN.GUIDE), S: onScr(SCREEN.GUIDE) },
     "ENEMIES": { boot: page("GUIDE", guided(GUIDE_ROWS.indexOf("ENEMIES"))), E: onScr(SCREEN.GUIDE), S: onScr(SCREEN.GUIDE) },
     "FLOOR": { boot: page("GUIDE", guided(GUIDE_ROWS.indexOf("FLOOR"))), E: onScr(SCREEN.GUIDE), S: onScr(SCREEN.GUIDE) },
     "MEDALS": { boot: page("STATS", (g) => { g.app.key("KeyT"); g.tick(); }), E: onScr(SCREEN.STATS) },
-    "PAUSE GRAPHICS": { boot: () => { const g = pPause(); rowTo(g, PAUSE_ITEMS.indexOf("OPTIONS")); tap(g, "S"); rowTo(g, OPT_ROWS.indexOf("GRAPHICS")); tap(g, "S"); return g; }, E: paused(1), START: paused(1) },
+    "PAUSE GRAPHICS": { boot: () => { const g = pPause(); rowTo(g, PAUSE_ITEMS.indexOf("SETTINGS")); tap(g, "S"); rowTo(g, OPT_ROWS.indexOf("GRAPHICS")); tap(g, "S"); return g; }, E: paused(1), START: paused(1) },
     "GAME PLAY": { boot: pRun, E: (g) => g.world.state === "PLAY" && g.app.screen === SCREEN.GAME, START: paused(0), SELECT: paused(0) },
     "GAME PAUSE": { boot: pPause, E: (g) => g.world.state === "PLAY", START: (g) => g.world.state === "PLAY", S: (g) => g.world.state === "PLAY" },
-    "GAME PAUSE OPTIONS": { boot: () => { const g = pPause(); rowTo(g, PAUSE_ITEMS.indexOf("OPTIONS")); tap(g, "S"); return g; }, E: paused(0), START: paused(0) },
+    "GAME PAUSE OPTIONS": { boot: () => { const g = pPause(); rowTo(g, PAUSE_ITEMS.indexOf("SETTINGS")); tap(g, "S"); return g; }, E: paused(0), START: paused(0) },
     "GAME WIN": { boot: () => { const g = pRun(); clearRoom(g); return g; }, E: (g) => g.world.state === "WIN", S: (g) => g.world.state !== "WIN", START: (g) => g.world.state !== "WIN" },
     "GAME LOSE": { boot: () => { const g = pRun(); g.world.state = "LOSE"; g.tick(); return g; }, E: (g) => g.world.state === "LOSE", S: (g) => g.world.state !== "LOSE" },
     "ATTRACT": { boot: () => { const g = pMenu(); g.app.enterAttract(); g.tick(); return g; }, E: onScr(SCREEN.MENU), S: onScr(SCREEN.GAME), START: onScr(SCREEN.GAME) },
@@ -1206,7 +1206,7 @@ for (const code of ["Space", "Enter"]) {
     check("pad capture: open", g.app.capturing);
     tap(g, "START");
     check("pad capture: START cancels and writes nothing", !g.app.capturing && !mem["nb.controls.v1"] && g.app.screen === SCREEN.CONTROLS); }
-  { const g = pPause(); rowTo(g, PAUSE_ITEMS.indexOf("OPTIONS")); tap(g, "S"); rowTo(g, OPT_ROWS.indexOf("CONTROLS")); tap(g, "S");
+  { const g = pPause(); rowTo(g, PAUSE_ITEMS.indexOf("SETTINGS")); tap(g, "S"); rowTo(g, OPT_ROWS.indexOf("CONTROLS")); tap(g, "S");
     check("pad: PAUSE CONTROLS is pauseView 3", g.app.pauseView === 3 && g.world.state === "PAUSE", g.app.pauseView);
     tap(g, "S"); g.tick(20);
     check("pauseView 3: a capture is open", g.app.capturing);
@@ -1214,7 +1214,7 @@ for (const code of ["Space", "Enter"]) {
     check("ESC in capture never pauses or backs out", !g.app.capturing && g.app.pauseView === 3 && g.world.state === "PAUSE", g.app.pauseView);
     tap(g, "E");
     check("pauseView 3 steps back to OPTIONS on the door", g.app.pauseView === 1 && g.app.optRow === OPT_ROWS.indexOf("CONTROLS"), g.app.pauseView); }
-  { const g = mk(); show(g); press(g, "Enter"); toRow(g, ITEMS.indexOf("OPTIONS")); press(g, "Enter"); toRow(g, OPT_ROWS.indexOf("CONTROLS")); press(g, "Enter");
+  { const g = mk(); show(g); press(g, "Enter"); toRow(g, ITEMS.indexOf("SETTINGS")); press(g, "Enter"); toRow(g, OPT_ROWS.indexOf("CONTROLS")); press(g, "Enter");
     check("keys: CONTROLS opens on the keyboard tab", g.app.screen === SCREEN.CONTROLS && g.app.ctlTab === "key", g.app.ctlTab);
     press(g, "ArrowRight");
     check("keys: → changes tab", g.app.ctlTab === "pad", g.app.ctlTab);

@@ -339,21 +339,21 @@ const TODAY = "2026-09-07";
   check(
     "the seven lifetime counters read the aggregates, DAYS PLAYED after PLAY TIME",
     rows[0][0] === "RUNS" && rows[0][1] === "118" &&
-      rows[1][0] === "ROOMS CLEARED" && rows[2][0] === "DEATHS" &&
-      rows[3][0] === "KILLS" && rows[4][0] === "PICKUPS" &&
+      rows[1][0] === "LEVELS CLEARED" && rows[2][0] === "DEATHS" &&
+      rows[3][0] === "KILLS" && rows[4][0] === "POWER-UPS" &&
       rows[5][0] === "PLAY TIME" && rows[5][1] === "14h 07m" &&
       rows[6][0] === "DAYS PLAYED" && rows[6][1] === "12",
     JSON.stringify(rows.slice(0, 7)),
   );
   check(
-    "rows 8-10 read the PLAIN bucket only — an IRON run is not a CORE best",
-    rows[7][0] === "CORE BEST" && rows[7][1] === "1840 · R5" &&
-      rows[8][0] === "PLUS BEST" && rows[8][1] === "2210 · R4" &&
-      rows[9][0] === "MAX BEST" && rows[9][1] === "—",
+    "rows 8-10 read the PLAIN bucket only — a ONE LIFE run is not a NORMAL DIFFICULTY best",
+    rows[7][0] === "NORMAL DIFFICULTY" && rows[7][1] === "1840 · LEVEL 5" &&
+      rows[8][0] === "HARD DIFFICULTY" && rows[8][1] === "2210 · LEVEL 4" &&
+      rows[9][0] === "EXPERT DIFFICULTY" && rows[9][1] === "—",
     JSON.stringify(rows.slice(7)),
   );
   check(
-    "an IRON (pact) record never leaks into CORE BEST",
+    "a ONE LIFE (pact) record never leaks into the NORMAL DIFFICULTY best",
     statsRows(v, recordBest(undefined, "0:1:1", 99999, 8))[7][1] === "—",
     statsRows(v, recordBest(undefined, "0:1:1", 99999, 8))[7][1],
   );
@@ -366,7 +366,7 @@ const TODAY = "2026-09-07";
   check(
     "with no daily record there is ONE note and it is the session line",
     n0.length === 1 &&
-      n0[0] === "SINCE 2026-08-30 · LAST 2026-09-07 · 42 SESSIONS · BESTS: NO MODES · NORM",
+      n0[0] === "SINCE 2026-08-30 · LAST 2026-09-07 · 42 SESSIONS",
     JSON.stringify(n0),
   );
   const n1 = statsNotes(v, { date: TODAY, best: 1840, played: 3, g: 3 }, TODAY);
@@ -383,7 +383,7 @@ const TODAY = "2026-09-07";
     n2[0],
   );
   check(
-    "note 2 fits the plate: 72 chars at ~6px against an inner width of 448",
+    "note 2 fits the plate: 48 chars at ~6px against an inner width of 448",
     n0[0].length <= 74,
     n0[0].length + " chars",
   );
@@ -401,7 +401,7 @@ const TODAY = "2026-09-07";
   );
   check(
     "Minor-3: a single session reads 1 SESSION, never 1 SESSIONS",
-    n1s[1] === "SINCE " + TODAY + " · LAST " + TODAY + " · 1 SESSION · BESTS: NO MODES · NORM",
+    n1s[1] === "SINCE " + TODAY + " · LAST " + TODAY + " · 1 SESSION",
     n1s[1],
   );
   const nPlural = statsNotes(v1, { date: TODAY, best: 0, played: 2, g: 3 }, TODAY);
@@ -449,12 +449,12 @@ const TODAY = "2026-09-07";
   check(
     "line 2 is the lifetime counters, bricks included",
     lines[1] ===
-      "RUNS 118 · ROOMS 214 · DEATHS 301 · KILLS 4820 · PICKS 913 · BRICKS 7702 · TIME 14h 07m",
+      "RUNS 118 · LEVELS 214 · DEATHS 301 · KILLS 4820 · POWER-UPS 913 · BRICKS 7702 · TIME 14h 07m",
     lines[1],
   );
   check(
     "line 3 names R7's store rather than duplicating it",
-    lines[2] === "CORE 1840/R5 · PLUS 2210/R4 · MAX — · CORE BEST TIME 0:38.9",
+    lines[2] === "NORMAL DIFFICULTY 1840/LEVEL 5 · HARD DIFFICULTY 2210/LEVEL 4 · EXPERT DIFFICULTY — · LEVEL 1 NORMAL DIFFICULTY BEST TIME 0:38.9",
     lines[2],
   );
   check(
@@ -726,7 +726,7 @@ const TODAY = "2026-09-07";
     );
     check(
       "shellview hands app.resetArm to drawStats — the armed foot is painted, the idle foot is not",
-      texts.includes("R AGAIN ERASES · ANY OTHER KEY CANCELS · KEEPS OPTIONS + PACE · C COPY") &&
+      texts.includes("R AGAIN ERASES · OTHER KEYS CANCEL · KEEPS SETTINGS + GAME SPEED · C COPY") &&
         !texts.includes("T MEDALS · C COPY MY STATS · R RESET · ESC BACK"),
       texts.join("|"),
     );

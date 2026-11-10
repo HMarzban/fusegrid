@@ -62,7 +62,7 @@ export const HELP_CUSTOM = "CUSTOM · YOU CHANGED A ROW · ENTER = AUTO";
 export const helpLimit = (n) => "YOUR DEVICE IS HOLDING " + n + " · LOW POWER MODE?";
 export const HELP_LIMIT = helpLimit(30);
 export const HELP_PX_RES = "LOW SAVES MOST · AUTO CAPS THE DENSITY ON PHONES";
-export const LOCK_3D = "REAL 3D ONLY · CHANGE RENDER IN OPTIONS", LOCK_RES = "REAL 3D AND PIXEL ONLY";
+export const LOCK_3D = "REAL 3D ONLY · CHANGE ART STYLE IN SETTINGS", LOCK_RES = "REAL 3D AND PIXEL ONLY"; // words pinned equal to src/render/words.js
 
 export function gfxView(s, kind, info) {
   const v = s || {}, i = info || {}, k = kind === "3d" || kind === "px" || kind === "iso" ? kind : "2d";

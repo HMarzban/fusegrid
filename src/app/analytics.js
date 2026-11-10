@@ -134,8 +134,8 @@ export function mountAnalytics(env) {
     card.hidden = true;
     card.setAttribute("role", "region");
     card.setAttribute("aria-label", "Share play stats");
-    card.innerHTML = "<b>HELP TUNE FUSE/GRID?</b><i>Share play stats with Google Analytics: opens, runs and the room " +
-      'you reach. It sets a cookie that recognises you when you come back. Change it any time in OPTIONS. <a href="' + PRIVACY_URL +
+    card.innerHTML = "<b>HELP TUNE FUSE/GRID?</b><i>Share play stats with Google Analytics: opens, runs and the level " +
+      'you reach. It sets a cookie that recognises you when you come back. Change it any time in SETTINGS. <a href="' + PRIVACY_URL +
       '" target="_blank" rel="noopener noreferrer">Privacy</a></i>' +
       '<span class="yes" role="button" tabindex="-1"><kbd>Y</kbd>ALLOW</span>' +
       '<span class="no" role="button" tabindex="-1"><kbd>N</kbd>NO THANKS</span>';

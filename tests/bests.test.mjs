@@ -409,15 +409,15 @@ const rec = () => {
 {
   check(
     "bestLabel names the exact bucket the record lives in",
-    bestLabel({ heat: 0, pact: 0, pace: 0 }) === "CORE" &&
-      bestLabel({ heat: 1, pact: 3, pace: 1 }) === "PLUS · LB · HARD" &&
-      bestLabel({ heat: 2, pact: 15, pace: -1 }) === "MAX · LBTS · EASY",
+    bestLabel({ heat: 0, pact: 0, pace: 0 }) === "NORMAL DIFFICULTY" &&
+      bestLabel({ heat: 1, pact: 3, pace: 1 }) === "HARD DIFFICULTY · FAST SPEED · ONE LIFE · NO FLOOR ITEMS" &&
+      bestLabel({ heat: 2, pact: 15, pace: -1 }) === "EXPERT DIFFICULTY · SLOW SPEED · ONE LIFE · NO FLOOR ITEMS · FEWER ITEMS · SHRINK",
     bestLabel({ heat: 1, pact: 3, pace: 1 }),
   );
   const W = { level: 3, score: 1000, heat: 0, pact: 0, pace: 0 };
   check(
     "form 1: furthest room, no new score",
-    deltaLine(W, { best: { s: 2000, r: 2 } }) === "FURTHEST ROOM YET",
+    deltaLine(W, { best: { s: 2000, r: 2 } }) === "FURTHEST LEVEL YET",
     deltaLine(W, { best: { s: 2000, r: 2 } }),
   );
   check(
@@ -427,19 +427,19 @@ const rec = () => {
   );
   check(
     "form 3: both — and every first-ever run on a bucket",
-    deltaLine(W, { best: { s: 500, r: 2 } }) === "FURTHEST ROOM YET · NEW BEST" &&
-      deltaLine(W, { best: null }) === "FURTHEST ROOM YET · NEW BEST",
+    deltaLine(W, { best: { s: 500, r: 2 } }) === "FURTHEST LEVEL YET · NEW BEST" &&
+      deltaLine(W, { best: null }) === "FURTHEST LEVEL YET · NEW BEST",
     deltaLine(W, { best: null }),
   );
   check(
     "form 4: an exact tie names the bucket, never a delta",
-    deltaLine(W, { best: { s: 1000, r: 3 } }) === "MATCHED YOUR CORE BEST",
+    deltaLine(W, { best: { s: 1000, r: 3 } }) === "MATCHED YOUR NORMAL DIFFICULTY BEST",
     deltaLine(W, { best: { s: 1000, r: 3 } }),
   );
   check(
     "form 5: short of it — the + is a GAP, never a surplus",
     deltaLine({ ...W, score: 858 }, { best: { s: 1000, r: 5 } }) ===
-      "+142 FROM YOUR CORE BEST",
+      "+142 FROM YOUR NORMAL DIFFICULTY BEST",
     deltaLine({ ...W, score: 858 }, { best: { s: 1000, r: 5 } }),
   );
   check(
@@ -454,7 +454,7 @@ const rec = () => {
 {
   check(
     "runLine is the locked tally copy",
-    runLine({ r: 4, k: 27, p: 9, t: 761 }) === "ROOMS 4 · KILLS 27 · PICKS 9 · 12:41",
+    runLine({ r: 4, k: 27, p: 9, t: 761 }) === "LEVELS 4 · KILLS 27 · POWER-UPS 9 · 12:41",
     runLine({ r: 4, k: 27, p: 9, t: 761 }),
   );
   check(
@@ -468,7 +468,7 @@ const rec = () => {
 {
   const W = { state: "WIN", level: 3, score: 1000, heat: 0, pact: 0, pace: 0 };
   /* best.r matches W.level so the LOSE/finale checks below isolate the score
-     comparison alone (a lower best.r would ALSO trip FURTHEST ROOM YET at
+     comparison alone (a lower best.r would ALSO trip FURTHEST LEVEL YET at
      every level>=3 assertion here, since deltaOf compares world.level, not
      whether the room was cleared). */
   const run = { r: 2, k: 5, p: 1, t: 90, best: { s: 500, r: 3 } };
@@ -476,7 +476,7 @@ const rec = () => {
   const mid = summaryLines(W, run);
   check(
     "a mid-room WIN yields exactly ONE pair — the tally line, never a delta",
-    mid.length === 1 && mid[0][0].indexOf("ROOMS 2") === 0,
+    mid.length === 1 && mid[0][0].indexOf("LEVELS 2") === 0,
     JSON.stringify(mid),
   );
   const lose = summaryLines({ ...W, state: "LOSE" }, run);
@@ -531,7 +531,7 @@ const rec = () => {
     "drawOverlay WIN with no run records today's exact fillText list",
     a.texts.join("|") === b.texts.join("|") &&
       a.texts.some((s) => s.indexOf("CLEARED") >= 0) &&
-      !a.texts.some((s) => s.indexOf("ROOMS ") === 0),
+      !a.texts.some((s) => s.indexOf("LEVELS ") === 0),
     a.texts.join("|"),
   );
   const r = rec();
@@ -540,7 +540,7 @@ const rec = () => {
   });
   check(
     "drawOverlay WIN with a run adds the tally line and nothing else mid-room",
-    r.texts.includes("ROOMS 2 · KILLS 5 · PICKS 1 · 1:30") &&
+    r.texts.includes("LEVELS 2 · KILLS 5 · POWER-UPS 1 · 1:30") &&
       r.texts.length === a.texts.length + 1,
     r.texts.join("|"),
   );
@@ -550,7 +550,7 @@ const rec = () => {
     { r: 2, k: 5, p: 1, t: 90, best: { s: 500, r: 3 } });
   check(
     "drawOverlay LOSE with a run adds BOTH the tally line and the delta line",
-    L.texts.includes("ROOMS 2 · KILLS 5 · PICKS 1 · 1:30") &&
+    L.texts.includes("LEVELS 2 · KILLS 5 · POWER-UPS 1 · 1:30") &&
       L.texts.includes("NEW BEST"),
     L.texts.join("|"),
   );
@@ -662,7 +662,7 @@ const rec = () => {
 {
   const W = { level: 5, score: 900, heat: 0, pact: 0, pace: 0 };
   check(
-    "R1M3(a): a LEVEL SELECT run (fromStart:false) never prints FURTHEST ROOM YET, even as a first-ever record",
+    "R1M3(a): a LEVEL SELECT run (fromStart:false) never prints FURTHEST LEVEL YET, even as a first-ever record",
     deltaLine(W, { best: null, fromStart: false }) === "NEW BEST",
     deltaLine(W, { best: null, fromStart: false }),
   );
@@ -674,14 +674,14 @@ const rec = () => {
   check(
     "R1M3(a): LEVEL SELECT short of the score falls through to the ordinary gap form — room ignored entirely",
     deltaLine({ ...W, score: 100 }, { best: { s: 500, r: 4 }, fromStart: false }) ===
-      "+400 FROM YOUR CORE BEST",
+      "+400 FROM YOUR NORMAL DIFFICULTY BEST",
     deltaLine({ ...W, score: 100 }, { best: { s: 500, r: 4 }, fromStart: false }),
   );
   check(
-    "R1M3(b): a room-1 start (fromStart:true, or absent — the old default) still fires FURTHEST ROOM YET as before",
+    "R1M3(b): a room-1 start (fromStart:true, or absent — the old default) still fires FURTHEST LEVEL YET as before",
     deltaLine({ ...W, score: 100 }, { best: { s: 2000, r: 2 }, fromStart: true }) ===
-      "FURTHEST ROOM YET" &&
-      deltaLine({ ...W, score: 100 }, { best: { s: 2000, r: 2 } }) === "FURTHEST ROOM YET",
+      "FURTHEST LEVEL YET" &&
+      deltaLine({ ...W, score: 100 }, { best: { s: 2000, r: 2 } }) === "FURTHEST LEVEL YET",
     deltaLine({ ...W, score: 100 }, { best: { s: 2000, r: 2 } }),
   );
 }
@@ -705,7 +705,7 @@ const rec = () => {
   );
   check(
     "R10N6(c): a fresh bucket scoring 1 keeps form 3 unchanged, from-start",
-    deltaLine({ ...Z, score: 1 }, { best: null }) === "FURTHEST ROOM YET · NEW BEST",
+    deltaLine({ ...Z, score: 1 }, { best: null }) === "FURTHEST LEVEL YET · NEW BEST",
     deltaLine({ ...Z, score: 1 }, { best: null }),
   );
   check(
@@ -715,7 +715,7 @@ const rec = () => {
   );
   check(
     "R10N6(e): a prior record present is unaffected by the score-0 clause, even at score 0",
-    deltaLine(Z, { best: { s: 500, r: 3 } }) === "+500 FROM YOUR CORE BEST",
+    deltaLine(Z, { best: { s: 500, r: 3 } }) === "+500 FROM YOUR NORMAL DIFFICULTY BEST",
     deltaLine(Z, { best: { s: 500, r: 3 } }),
   );
   const z0 = rec();
@@ -813,7 +813,7 @@ const rec = () => {
     );
     check(
       "A: it prints the gap to the record run 1 just wrote",
-      texts.some((s) => s === "+200 FROM YOUR CORE BEST"),
+      texts.some((s) => s === "+200 FROM YOUR NORMAL DIFFICULTY BEST"),
       texts.join("|"),
     );
     check(
@@ -823,7 +823,7 @@ const rec = () => {
     );
     check(
       "A: the tally line paints on both WIN and LOSE",
-      texts.some((s) => s.indexOf("ROOMS ") === 0),
+      texts.some((s) => s.indexOf("LEVELS ") === 0),
       texts.join("|"),
     );
   } finally {
@@ -926,7 +926,7 @@ const rec = () => {
 }
 
 /* ---- SELF-REVIEW PIN C (Minor-3, owner ruling 2026-09-07): a LEVEL SELECT
-   start writes NO room record and never prints FURTHEST ROOM YET; its score
+   start writes NO room record and never prints FURTHEST LEVEL YET; its score
    still records — exactly like HIGH SCORES already does for level-select
    runs. The sim's retry after LOSE always reloads room 1, so it is
    from-start again and FURTHEST fires normally there (pin (a)/(b)/(c) from
@@ -978,7 +978,7 @@ const rec = () => {
       ls.getItem(BESTS_KEY),
     );
     check(
-      "C(a): the overlay never prints FURTHEST ROOM YET on a LEVEL SELECT death — plain NEW BEST",
+      "C(a): the overlay never prints FURTHEST LEVEL YET on a LEVEL SELECT death — plain NEW BEST",
       texts.includes("NEW BEST") && !texts.some((s) => s.indexOf("FURTHEST") >= 0),
       texts.join("|"),
     );
@@ -996,8 +996,8 @@ const rec = () => {
     texts.length = 0;
     g.loop(1048);
     check(
-      "C(b)/(c): a retry is from-start again — FURTHEST ROOM YET fires normally once it is",
-      texts.some((s) => s.indexOf("FURTHEST ROOM YET") >= 0),
+      "C(b)/(c): a retry is from-start again — FURTHEST LEVEL YET fires normally once it is",
+      texts.some((s) => s.indexOf("FURTHEST LEVEL YET") >= 0),
       texts.join("|"),
     );
     check(

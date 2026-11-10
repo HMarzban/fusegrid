@@ -94,7 +94,7 @@ export const POWER = [
   {
     t: "power",
     col: "#ff4d5e",
-    name: "POWER",
+    name: "POWER BOMB",
     help: "extra-long cross blast",
     apply: (w, p) => (p.bombKind = "power"),
   },

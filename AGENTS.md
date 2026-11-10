@@ -44,11 +44,34 @@ settles (`app.boardReady`, set on resolve or reject).
 
 Heat grades CORE / PLUS / MAX live on LEVEL SELECT (`←/→` room, `↑/↓` heat). CORE is replay baseline v6. Attract is always CORE + pact=0. After a first FUSE/GRID CLEAR, LEVEL SELECT also offers Pact toggles (`1–4`). Knobs live on `world`, not frozen `CFG`. Score × heat is persist-only (CORE ×1 / PLUS ×2 / MAX ×3); live HUD stays raw.
 
-MENU is eight rows in this order: `PLAY, LEVEL SELECT, DAILY, OPTIONS, GUIDE,
+MENU is eight rows in this order: `PLAY, LEVEL SELECT, DAILY, SETTINGS, GUIDE,
 HIGH SCORES, STATS, SOURCE`. `confirm()` dispatches by **label**, so an insert
 moves no runtime index — but `tests/headless.test.mjs`'s index-driven MENU
 confirms and `tests/menuapp.test.mjs`'s literals must be renegotiated with any
 reorder.
+
+Names (UI upgrade v202, Task 2.1; owner: "we must use the name that users know
+about"; design record §3). Players read SETTINGS (was OPTIONS: MENU row, page
+title, PAUSE row), LEVEL (ROOM, LV, L3), DIFFICULTY NORMAL / HARD / EXPERT (heat
+CORE / PLUS / MAX), GAME SPEED SLOW / NORMAL / FAST (pace EASY / NORM / HARD),
+MODIFIERS ONE LIFE / NO FLOOR ITEMS / FEWER ITEMS / SHRINK + TIME TRIAL (MODES
+IRON / BARE / THIN / SHRINK + TIME), POWER BOMB (the POWER pickup, in
+`POWER[].name`, still the one source), ART STYLE (RENDER), POWER-UPS (PICKS,
+ITEMS, CUBES, PICKUPS). A difficulty or speed value is printed with its setting's
+name wherever nothing beside it names the setting (`EXPERT DIFFICULTY`,
+`FAST SPEED`), because NORMAL is both. `src/render/words.js` is the one table
+(`DIFF`, `SPEED`, `MOD` by PACT bit, `TIME_TRIAL`, `LABEL`, `tagFor`,
+`runWords`); src/app may not import it, so its few player strings (`ITEMS`,
+`OPT_ROWS`, `PAUSE_ITEMS`, `GUIDE_ROWS` labels, stats rows and payload, medal
+rule copy, `gfx.js` LOCK_3D, the consent card) are literals that
+`tests/words.test.mjs` pins equal to it, with a render sweep and a source grep
+for the old words. Display only: stores keep their keys, bits and indices
+(`nb.pact.v1`, heat 0..2, pace -1..1, medal bits), analytics event names and
+params are byte-identical, identifiers keep the old names (`heat`, `pace`,
+`pact`, `SCREEN.ITEMS`, `OPT_ROWS`), and core keeps `HEAT_NAME` / `PACE_NAME` /
+`PACT_NAME` / `pactLabel`. Still old until Phase 8 (R9, inside the CLASSIC
+hash): the HUD's `LV` chip and heat token. Medal proper names stay (IRON CROWN).
+The paragraphs below use the internal names (heat, pace, pact, room) for code.
 
 Menu look (owner pick 2026-10-19, direction A "CONSOLE PANEL"): MENU, the
 PAUSE list and every plated page share ONE kit in `menudraw.js` — `plate`
@@ -58,7 +81,7 @@ band + 3px notch + caret; `danger` rows select red). Labels are system-ui
 sans (OS-dependent, owner-accepted), values / tags / hints mono. Lists go
 through `listGeom` / `listHit` (pitches are caps that scale down in a short
 box); MENU has a PLAY hero row whose tag is the run it starts and group gaps
-before OPTIONS / HIGH SCORES / SOURCE; the SOURCE URL shows only on its
+before SETTINGS / HIGH SCORES / SOURCE; the SOURCE URL shows only on its
 selected row. Build tag (owner 2026-10-21: "a game version in some where in
 the display or menue"): `v202` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
 derived ONLY in `shellview.js` (`REV`, handed to `drawMenu` / `drawSettings`
@@ -66,16 +89,16 @@ as `rev`) and `update.js` (the card's "You are on v202", the running build,
 never a guessed next one) — never a second literal. Keyboard MENU appends
 it to the foot hint; the touch hub hangs it under the plate when the box has
 >= 10 units below it (`#sh`), else on the SOURCE tile's teaser (a landscape
-phone, on the board canvas); OPTIONS keeps its `BUILD v202` kicker. Never on the HUD.
+phone, on the board canvas); SETTINGS keeps its `BUILD v202` kicker. Never on the HUD.
 PAUSE draws `pauseGeom(overlayBox, touch)`: touch (`touchLay`,
 data-lay p/l) caps pitch at `PAUSE_ROW_H` 70 / hero 76 / width 380, a keyboard
 screen at the compact `PAUSE_ROW_D` 44 / hero 54 / width 340 (owner: "too
 fat"); `pauseHit` takes the same flag. RESUME hero, RESTART/QUIT danger,
-kicker = room · biome · heat · pace, cue `ESC · P RESUME · … · M QUIT`.
+kicker = `LEVEL n · world · NORMAL DIFFICULTY · NORMAL SPEED` (+ modifiers, + DAILY; dropped from the end to fit), cue `ESC · P RESUME · … · M QUIT`.
 Touch rule: a tap on a row = Enter on it; keyboard MENU and PAUSE bands span
 the full width of their box (MENU's `#sh` where there is a shell box, else the stage, as under the floor; PAUSE's stage; the touch MENU hub's tiles own half of each gutter);
 off the rows a root list (MENU, PAUSE list) does nothing; on a page
-(OPTIONS, GRAPHICS, GUIDE, LEVEL SELECT, SCORES) a miss ON the plate is inert
+(SETTINGS, GRAPHICS, GUIDE, LEVEL SELECT, SCORES) a miss ON the plate is inert
 (hit -2) and only a tap OFF the plate backs out (-1). `guideHit`,
 `levelHit` / `levelGeom` and `scoresHit` share the geometry their pages
 draw. Hints follow `data-lay` (keys vs taps; LEVEL SELECT's touch foot is
@@ -99,7 +122,7 @@ one pointer handler (bound on `#c` and `#sh`) maps through, so a tap lands
 where it is drawn. `layout(W,H,lg)`: `lg` = the centred board's 0.27 logo
 line in box units (MENU's logo stays on the board; the hub hangs under it),
 `tall` / `narrow` (< 560) flags; narrow re-flows: `levelNarrow` (card under
-the grid, HEAT / PACE rows, digit-free touch MODES chips, 2-line help), HOW
+the grid, DIFFICULTY / GAME SPEED rows, digit-free touch MODIFIERS chips, 2-line help), HOW
 TO stacked rules, ENEMIES 2 cols, MEDALS 1 col, SCORES tab width, 11px hub
 teasers; STATS is centred (not floor-pinned) in a tall box. LEVEL / HIGH SCORES chip
 taps are ONE call through the cued key path (`app.move` with a delta,
@@ -112,42 +135,45 @@ lever more intractive", "put hooks … to see what we deliver"): pick on the
 left, see it on the right. Every plate HUGS its content through `pageBox`
 (band keyboard 73..492 / touch 8..512; pitches are caps, scale only in the
 iso 608x352 guard; `shellBox` is gone, no page divides its band by a row
-count). Pitches: list 26 keyboard / 52 touch, OPTIONS 27 keyboard (37 touch, 34 where 37 does not fit), GRAPHICS 28, hero
+count). Pitches: list 26 keyboard / 52 touch, SETTINGS 27 keyboard (37 touch, 34 where 37 does not fit), GRAPHICS 28, hero
 40 / 70. LEVEL SELECT (`levelGeom(L, unlocked, touch)` = draw + tap): a 4x2
 grid of room tiles (biome schematic, finale pip, ✓ when a time is saved at
 this heat/pace/modes; 6–8 dim + locked until the first CLEAR, a locked tap
-returns `{k:"lock"}` and only flashes CLEAR ROOM 5 TO OPEN, never sets
+returns `{k:"lock"}` and only flashes CLEAR LEVEL 5 TO OPEN, never sets
 `app.level`) beside a ROOM CARD pane (world name, schematic, YOU'LL MEET from
 `heatRoster` with FOES names ×n, BEST time (NO TIME YET only once TIME is open, `d.open`; never on DAILY) via the `getCab`
 getter, `LIVES · FUSE · SCORE ×n` from `heatProfile`/`applyPact`, pulsing on a
-heat change); then HEAT | PACE segments, MODES (IRON BARE THIN SHRINK + TIME,
-help says what each does), and a START hero. No start-on-miss: only START or
+heat change); then DIFFICULTY | GAME SPEED segments, MODIFIERS (ONE LIFE,
+NO FLOOR ITEMS, FEWER ITEMS, SHRINK + TIME TRIAL; a name too wide for its chip
+breaks onto two lines; help says what each does), and a START hero. No start-on-miss: only START or
 Enter starts. MENU keyboard: a 272 list beside a preview pane that follows
 the cursor (one mini-page per row); MENU touch: a tile HUB in the pinned
-reading order (PLAY bar, LEVEL SELECT | DAILY, OPTIONS | GUIDE, HIGH SCORES |
+reading order (PLAY bar, LEVEL SELECT | DAILY, SETTINGS | GUIDE, HIGH SCORES |
 STATS, SOURCE 50 logical = 32 CSS px) — the one MENU idiom whose bands are
-tiles, not full-width rows; ↑↓ stays the linear walk. One vocabulary: MODES
-(never PACT) on screens and in copy; pact.js and `nb.pact.v1` keep their
+tiles, not full-width rows; ↑↓ stays the linear walk. One vocabulary: MODIFIERS
+(never MODES or PACT) on screens and in copy; pact.js and `nb.pact.v1` keep their
 names. Hooks never lie: a score teaser reads only played runs
 (`highscores.isPlaceholder` drops the seeded table; main hands `getCab().top`),
-and DAILY says YOUR TRIES TODAY. Read-only pages (HOW TO / ITEMS / ENEMIES /
+and DAILY says YOUR TRIES TODAY. Read-only pages (HOW TO / POWER-UPS / ENEMIES /
 FLOOR / MEDALS) back out on any tap; STATS taps its foot labels. PLAY's tag names the
-world (`FACTORY · MAX · HARD`), the same words as START. `SCREEN.STATS = 12` is **appended** (the `SCREEN` enum's own rule in
+world (`FACTORY · EXPERT DIFFICULTY · FAST SPEED`), the same words as START,
+stepped down to the slot by `setupVals` (a modifier count, then only what differs
+from a default run). `SCREEN.STATS = 12` is **appended** (the `SCREEN` enum's own rule in
 `menuapp.js`: appended, never inserted). `SCREEN.TROPHIES = 13` (the MEDALS page) is
 appended too: opened from STATS by `T` or a tap on its `T MEDALS` label, backs out to STATS,
 never a MENU row. `SCREEN.GRAPHICS = 14` is appended too: opened by the
-OPTIONS `GRAPHICS` door row (`OPT_ROWS` twelve rows, ANALYTICS, then the GRAPHICS and CONTROLS doors
-before RESET DEFAULTS), backs out to OPTIONS on the door. `SCREEN.FLOOR = 15` is appended too
-(2026-10-25): the fourth GUIDE door (`GUIDE_ROWS` HOW TO PLAY, ITEMS, ENEMIES,
+SETTINGS `GRAPHICS` door row (`OPT_ROWS` twelve rows, ANALYTICS, then the GRAPHICS and CONTROLS doors
+before RESET DEFAULTS), backs out to SETTINGS on the door. `SCREEN.FLOOR = 15` is appended too
+(2026-10-25): the fourth GUIDE door (`GUIDE_ROWS` HOW TO PLAY, POWER-UPS, ENEMIES,
 FLOOR; keyboard GUIDE is a 2x2 of doors, touch four stacked rows), backs out to
 GUIDE. `drawFloorHelp` lists the eight floor tiles at CORE / PLUS / MAX in the
 current look (`featdraw.drawSpec`, PIXEL `atlas.feat`), each with its rule line
-(`TILE_HELP`). `SCREEN.CONTROLS = 16` is appended too (v201): the OPTIONS `CONTROLS` door row, backs out to
-OPTIONS on the door; see the CONTROLS paragraph under `src/`.
+(`TILE_HELP`). `SCREEN.CONTROLS = 16` is appended too (v201): the SETTINGS `CONTROLS` door row, backs out to
+SETTINGS on the door; see the CONTROLS paragraph under `src/`.
 The GUIDE pages and the MENU preview draw the live foe and pickup animation
 (CLASSIC: `drawEnemyBody` / `drawItemBody`; PIXEL: `hudart.js` `foeAnim` /
 `itemAnim`, a pure function of the page clock). From PAUSE the same page is
-inline `pauseView 2` (0 list / 1 OPTIONS / 2 GRAPHICS / 3 CONTROLS; Esc steps 2 → 1 and 3 → 1, onto
+inline `pauseView 2` (0 list / 1 SETTINGS / 2 GRAPHICS / 3 CONTROLS; Esc steps 2 → 1 and 3 → 1, onto
 the door), never a SCREEN. WIN/LOSE run summaries are **not** a SCREEN — they
 live in `drawOverlay`.
 
@@ -257,7 +283,7 @@ not shell screens. Do not add them as `SCREEN` values.
     nulling the tile layer moves it. See the PIXEL paragraph below.
   - kind `"iso"` — legacy dimetric (`r3d/`), pinned by `?render=iso` only.
     `createRenderer({kind:"3d"|"iso"})` is the **dimetric** branch. Real 3D
-    never enters that factory. Menu RENDER cycles CLASSIC 2D → PIXEL → REAL 3D
+    never enters that factory. Menu ART STYLE (the RENDER row) cycles CLASSIC 2D → PIXEL → REAL 3D
     (row value 0/1/2, `renderkind.js`); iso is never on it.
   - PIXEL (owner GO 2026-10-10 "finish the job and not ask me anything";
     adviser-panel rulings: R17 / R20–R25 logged in the PIXEL plan §7.3, the
@@ -530,7 +556,7 @@ not shell screens. Do not add them as `SCREEN` values.
   `pointercancel` / `pointerleave`): a touch `pointerdown` grants no
   clipboard activation. C while armed (key or tap) disarms and copies. An
   off-label tap while armed disarms and stays on STATS; the idle C spot falls
-  between R AGAIN (81–183) and C COPY (465–519 at 600×520), so it copies
+  between R AGAIN (72–174) and C COPY (474–528 at 600×520), so it copies
   nothing.
   CLEAR = highscores, bests, stats, daily, times, medals, plaques, ghost,
   pact, coach v1/v2, cabinet (12); KEEP = `nb.settings.v1`, `nb.pace.v1`,
@@ -601,15 +627,15 @@ not shell screens. Do not add them as `SCREEN` values.
   (the one geometry for draw and tap), `controlsdraw.js`, `padart.js`,
   `hintcopy.js` (the setter that keeps `menudraw.js` free of `src/app/`). All static in the boot graph (111,107
   bytes raw at `ee2a34e`, boot graph +137,052 since `8853efc`; 12 files, on purpose; lazy paint is a later job). `SCREEN.CONTROLS = 16`; from PAUSE `pauseView 3`. The door
-  sits between GRAPHICS and RESET DEFAULTS; OPTIONS is twelve rows at keyboard pitch 27 (note line removed), touch 37 or 34.
-  **CONTROLS is in the CONSOLE PANEL kit like every other menu (lead ruling 2026-11-02, on the owner's ask for one cohesive menu): list on the left, preview pane on the right, HEAT-style tabs, kit band, notch and caret; ↑↓ rows, ←→ tab, ←→ on SENSITIVITY or VIBRATION adjusts.** The other menus do not change, and the all-menus restyle is not planned for this release. MENU carries the note `CONTROLLER READY · OPTIONS › CONTROLS`, naming the VIBRATION level where it fits, and the OPTIONS door reads `VIBRATION MEDIUM ›` the same way; no OPTIONS or PAUSE row of its own. Tap rule exception: on CONTROLS a tap off the
+  sits between GRAPHICS and RESET DEFAULTS; SETTINGS is twelve rows at keyboard pitch 27 (note line removed), touch 37 or 34.
+  **CONTROLS is in the CONSOLE PANEL kit like every other menu (lead ruling 2026-11-02, on the owner's ask for one cohesive menu): list on the left, preview pane on the right, HEAT-style tabs, kit band, notch and caret; ↑↓ rows, ←→ tab, ←→ on SENSITIVITY or VIBRATION adjusts.** The other menus do not change, and the all-menus restyle is not planned for this release. MENU carries the note `CONTROLLER READY · SETTINGS › CONTROLS`, naming the VIBRATION level where it fits, and the SETTINGS door reads `VIBRATION MEDIUM ›` the same way; no SETTINGS or PAUSE row of its own. Tap rule exception: on CONTROLS a tap off the
   plate backs out anywhere in the viewport, not only on the canvas. Store `nb.controls.v1` (KEEP); invalid data
   loads that device's defaults, an off-level SENSITIVITY value snaps to the nearest level, a bad `vib` never touches the binds. Keyboard defaults: BOMB SPACE (J, X silent
   aliases until BOMB moves), **THROW E** (SHIFT + BOMB still throws, never advertised), REMOTE Q, PAUSE P, ESC
   and arrows fixed. Pad defaults: BOMB SOUTH, THROW WEST, REMOTE EAST, PAUSE SELECT, START fixed; menus use the
   fixed layer SOUTH / START confirm, EAST back. Pad start rule: one pad press leaves the title and starts the
   show, silently if the ctx will not run, `app.soundNote` then says `NO SOUND YET`. No pad route to
-  the consent card (a stray button must not consent; an unanswered OPTIONS ANALYTICS row is inert on a pad and says
+  the consent card (a stray button must not consent; an unanswered SETTINGS ANALYTICS row is inert on a pad and says
   `ANSWER THE CARD WITH Y OR N`), the STATS wipe or the camera reset, on purpose. Disconnect pauses only with the pad last
   used in GAME PLAY (`CONTROLLER LOST`), never resumes. Pad name `CONTROLLER 1 · STANDARD` (`BUTTONS 0-N` non-standard); the device
   id is never printed or stored. Keyboard diagonals stay about 1.41x while a pad is 4-way, disclosed. **The owner has
@@ -618,7 +644,7 @@ not shell screens. Do not add them as `SCREEN` values.
   them", 2026-10-10). All names/copy come from `POWER[].name` / `.help` —
   never a second source. `fx.js`: one floating label per `power` event showing
   the value AFTER pickup (`FLAME 3`, muted `MAX` at the cap, `SPEED UP`,
-  `+1 LIFE`, `LINE BOMB` + a `replaces POWER` sub-line on a bomb-kind swap);
+  `+1 LIFE`, `LINE BOMB` + a `replaces POWER BOMB` sub-line on a bomb-kind swap);
   same kind merges, near ones stack, max 3, 0.9 s, PLAY-only clock, wiped by
   `clearR2`; suppressed for the live coach v2 kind; pure `labelBox` keeps it
   off the y46 HUD band, the combo callout and the coach panel (REAL 3D
@@ -703,7 +729,7 @@ not shell screens. Do not add them as `SCREEN` values.
   `cardClears` (it sits beside or under the `#c` stage); never INTRO /
   ATTRACT, never a touch run (the bomb button's corner); it waits while NEW
   VERSION READY is up. It stays until answered (no snooze).
-  OPTIONS `ANALYTICS` ON/OFF sits after REDUCE FLASH (row 8; OPTIONS touch
+  SETTINGS `ANALYTICS` ON/OFF sits after REDUCE FLASH (row 8; SETTINGS touch
   pitch 37 or 34 so twelve rows fit unscaled); OFF sets `ga-disable-<ID>`, denies
   consent and expires the `_ga*` cookies. Cookies live on the game's own path
   (`cookie_path`, shared `github.io` origin); every ad signal is denied. Events:

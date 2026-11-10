@@ -450,7 +450,7 @@ check("round-trip", loadCoachSeen(store) === true);
   );
   check(
     "scenes.js never re-derives the tip — main hands the finished string down",
-    !/POWER|coachTip/.test(readFileSync("src/render/scenes.js", "utf8")),
+    !/\bPOWER\b|coachTip/.test(readFileSync("src/render/scenes.js", "utf8")), // words.js's LABEL.POWER_UPS is a word, not the POWER table
   );
   /* Wave-1's own bug class: one draw site updated, one not. Both are asserted
      in the same pin so they cannot land in different commits. */

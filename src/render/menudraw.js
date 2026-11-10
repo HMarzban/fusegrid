@@ -6,10 +6,10 @@
    must not import from src/app. */
 import { CFG, roomCap, BIOMES, isFinale } from "../core/config.js";
 import { POWER, FOES, helpOf } from "../core/entities.js";
-import { HEAT_COL, HEAT_MARK, HEAT_NAME, clampHeat, heatRoster, heatProfile } from "../core/heat.js";
-import { PACE_NAME } from "../core/pace.js";
+import { HEAT_COL, HEAT_MARK, clampHeat, heatRoster, heatProfile } from "../core/heat.js";
 import { pactLabel } from "../core/pact.js";
-import { PACT, PACT_COL, applyPact } from "../core/pact.js";
+import { PACT_COL, applyPact } from "../core/pact.js";
+import { DIFF, SPEED, MOD, MOD_BITS, TIME_TRIAL, LABEL, diffTag, speedTag, modWords, runWords } from "./words.js";
 import { drawEnemyBody } from "./sprites.js";
 import { drawItemBody } from "./itemdraw.js";
 import { HOME, TILE_HELP, TILE_NAME } from "../core/feat.js";
@@ -103,7 +103,7 @@ export function fitKicker(c, cands, room) {
   c.font = sans(10, "600");
   spaced(c, true);
   let s = cands[cands.length - 1];
-  for (const t of cands) if (c.measureText(t).width <= room) { s = t; break; }
+  for (const t of cands) if (mw(c, t) <= room) { s = t; break; }
   spaced(c, false);
   return s;
 }
@@ -408,7 +408,7 @@ function roomCard(c, P, d, touch, A, t) {
   c.textAlign = "right";
   c.font = font(touch ? 12 : 10, "700");
   c.fillStyle = fin ? DANGER : MUTED;
-  c.fillText("ROOM " + d.room + (fin ? " · FINALE" : ""), P.x + P.w - 10, hy);
+  c.fillText(LABEL.LEVEL + " " + d.room + (fin ? " · FINALE" : ""), P.x + P.w - 10, hy);
   const ts = touch ? 6 : d.tiles ? 7 : 8,
     ty = P.y + (touch ? 32 : 28),
     tw = 15 * ts,
@@ -433,11 +433,11 @@ function roomCard(c, P, d, touch, A, t) {
     lockGlyph(c, x0 + tw / 2, ty + th / 2, touch ? 22 : 20, TEXT);
     c.fillStyle = TEXT;
     c.font = sans(touch ? 15 : 12, "700");
-    wrap(c, "CLEAR ROOM 5 TO OPEN", rw, 2).forEach((l, i) => c.fillText(l, rx, ty + 8 + i * (touch ? 18 : 15)));
+    wrap(c, "CLEAR LEVEL 5 TO OPEN", rw, 2).forEach((l, i) => c.fillText(l, rx, ty + 8 + i * (touch ? 18 : 15)));
     c.fillStyle = MUTED;
     c.font = font(touch ? 12 : 10, "700");
     c.fillText("SAND · VOID · CROWN", rx, ty + (touch ? 52 : 44));
-    c.fillText("+ MODES", rx, ty + (touch ? 70 : 59));
+    c.fillText("+ " + LABEL.MODIFIERS, rx, ty + (touch ? 70 : 59));
   } else {
     const ros = rosterOf(d.room, d.heat),
       cap = 5,
@@ -522,6 +522,49 @@ function paintTile(c, r, label, sub, sel, o) {
     }
   }
 }
+/* A MODIFIERS chip: segs' own frame and type; a name too wide for its chip
+   (NO FLOOR ITEMS) breaks at a space onto two lines, then steps down to fit. */
+function chip(c, r, label, on, col, touch, fs) {
+  const px = fs || (touch ? 14 : 11), wt = on ? "900" : "700", room = r.w - 6;
+  c.font = font(px, wt);
+  if (mw(c, label) <= room || label.indexOf(" ") < 0) return segs(c, [r], [label], on ? 0 : -1, [col], touch, fs);
+  segs(c, [r], [""], on ? 0 : -1, [col], touch, fs);
+  let best = null;
+  for (let i = label.indexOf(" "); i > 0; i = label.indexOf(" ", i + 1)) {
+    const two = [label.slice(0, i), label.slice(i + 1)], w = Math.max(mw(c, two[0]), mw(c, two[1]));
+    if (!best || w < best.w) best = { two, w };
+  }
+  const L2 = best.two;
+  fitFont(c, L2[0].length > L2[1].length ? L2[0] : L2[1], room, px, 8, wt);
+  const lh = (parseFloat(/(\d+(?:\.\d+)?)px/.exec(c.font)[1]) || px) + 1;
+  c.fillStyle = on ? col : MUTED;
+  c.textAlign = "center";
+  c.textBaseline = "middle";
+  L2.forEach((l, i) => c.fillText(l, r.x + r.w / 2, r.y + r.h / 2 + 1 + (i - 0.5) * lh));
+}
+/* A run's setup for one value slot, longest first (fitVal / fitIn keep the
+   first that fits): every setting named; the modifiers as a count; only what
+   differs from a default run (the approved PLAY tag); the same with EXPERT
+   bare (the one value no other setting or foe shares); the same without the
+   world, which the MENU pane beside the list already names. */
+export function setupVals(world, run) {
+  const r = run || {}, h = clampHeat(r.heat), sp = speedTag(r.pace) !== speedTag(0), n = modWords(r.pact).length,
+    t = r.time ? [TIME_TRIAL] : [], cnt = n ? [n + " " + (n === 1 ? "MODIFIER" : LABEL.MODIFIERS)] : [],
+    j = (a) => [world].concat(a).join(" · "),
+    tail = (sp ? [speedTag(r.pace)] : []).concat(cnt, t),
+    terse = (h ? [h === 2 ? DIFF[2] : diffTag(h)] : []).concat(tail);
+  return [j([runWords(r)]), j([diffTag(h), speedTag(r.pace)].concat(cnt, t)), j((h ? [diffTag(h)] : []).concat(tail)), j(terse), terse.join(" · ") || world];
+}
+/* fitVal for any type: the first candidate that fits w in the font already set, else the last one clipped. */
+function fitIn(c, cands, w) {
+  for (const s of cands) if (mw(c, s) <= w) return s;
+  return clip(c, cands[cands.length - 1], w);
+}
+/* The value slot beside a hero row's label (PLAY, START): paintRow's hero type. */
+function heroRoom(c, w, h, label, touch) {
+  c.font = sans(rowSize(h, { hero: true, touch }), "800");
+  return w - 12 - 26 - mw(c, label) - 12;
+}
 /* Segmented control: one outer frame, abutting segments, the selected one
    banded and stroked in its colour. */
 function segs(c, rs, labels, on, cols, touch, fs) {
@@ -541,18 +584,28 @@ function segs(c, rs, labels, on, cols, touch, fs) {
     c.fillText(labels[i], r.x + r.w / 2, r.y + r.h / 2 + 1);
   }
 }
+/* The largest size from px down to min whose s fits w (the font is left set);
+   a word that outgrows its old slot keeps its whole spelling, smaller. */
+function fitFont(c, s, w, px, min, weight, f) {
+  const mk = f || font;
+  let k = px;
+  for (c.font = mk(k, weight); k > min && mw(c, s) > w; ) c.font = mk(--k, weight);
+  return c.font;
+}
 /* The key / name cell at a control's left: keyboard prints its key under the
-   name ("HEAT ↑↓"), touch only the name. */
+   name ("DIFFICULTY ↑↓"), touch only the name, each stepped down to fit the
+   44 px cell (DIFFICULTY and GAME SPEED outgrew it; LEVEL SELECT's own redraw
+   gives them room). */
 function capCell(c, r, name, keyStr, touch, keyPx) {
   c.textAlign = "center";
   c.textBaseline = "middle";
   c.fillStyle = MUTED;
   if (touch || !keyStr) {
-    c.font = sans(touch ? 13 : 10, "700");
+    fitFont(c, name, r.w - 2, touch ? 13 : 10, 7, "700", sans);
     c.fillText(name, r.x + r.w / 2, r.y + r.h / 2);
     return;
   }
-  c.font = font(8, "700");
+  fitFont(c, name, r.w - 2, 8, 6, "700");
   c.fillText(name, r.x + r.w / 2, r.y + r.h / 2 - 6);
   c.fillStyle = TEXT;
   c.font = font(keyPx || 11, "900");
@@ -709,7 +762,7 @@ export function slamOf(t) {
    for shellview's logo and the list top. ui.rev is the build tag shellview
    derives from CACHE_NAME: keyboard prints it in the foot hint; touch hangs it
    under the hub where the box has room (#sh), else on the SOURCE tile. */
-const MENU_DOOR = ["LEVEL SELECT", "OPTIONS", "GUIDE", "HIGH SCORES", "STATS"];
+const MENU_DOOR = [LABEL.LEVEL_SELECT, LABEL.SETTINGS, "GUIDE", "HIGH SCORES", "STATS"];
 const menuShape = (n, touch) => Array.from({ length: n }, (_, i) => ({ hero: i === 0, gapBefore: !touch && n === 8 && (i === 3 || i === 5 || i === 7) }));
 export const MENU_PITCH = 26, MENU_PITCH_T = 66;
 const MENU_W = 560, MENU_LIST = 272, HUB = [70, 66, 66, 66, 50]; // SOURCE 50 = the 32 CSS px floor on a 393 px phone
@@ -773,24 +826,24 @@ function teaser(label, val, I) {
   const i = I || {};
   switch (label) {
     case "PLAY": return val;
-    case "LEVEL SELECT": return i.unlocked ? "8 ROOMS · MODES OPEN" : "5 ROOMS · 3 LOCKED";
+    case LABEL.LEVEL_SELECT: return i.unlocked ? "8 LEVELS · " + LABEL.MODIFIERS + " OPEN" : "5 LEVELS · 3 LOCKED";
     case "DAILY": return val === "NEW" ? "NEW · TODAY'S BOARD" : "PLAYED · " + ((i.daily && i.daily.played) | 0) + " TODAY";
-    case "OPTIONS": return "LOOK · " + LOOK[i.look | 0];
-    case "GUIDE": return POWER.length + " ITEMS · " + FOES.length + " FOES";
-    case "HIGH SCORES": return i.top && i.top.length ? "TOP " + i.top[0].s + " · CORE" : "NO RUNS YET";
+    case LABEL.SETTINGS: return "LOOK · " + LOOK[i.look | 0];
+    case "GUIDE": return POWER.length + " " + LABEL.POWER_UPS + " · " + FOES.length + " FOES";
+    case "HIGH SCORES": return i.top && i.top.length ? "TOP " + i.top[0].s + " · " + diffTag(0) : "NO RUNS YET";
     case "STATS": return (i.medals | 0) + "/8 MEDALS · " + (i.days | 0) + ((i.days | 0) === 1 ? " DAY" : " DAYS");
     case "SOURCE": return "github.com/HMarzban/fusegrid";
   }
   return val;
 }
 /* A controller just arrived: the words that send its player to CONTROLS. LOST has its own place, the PAUSE kicker. */
-const PAD_SIGN = "CONTROLLER READY · OPTIONS › CONTROLS";
+const PAD_SIGN = "CONTROLLER READY · " + LABEL.SETTINGS + " › CONTROLS";
 const VIB_NOTE = /^(CONTROLLER READY · VIBRATION \w+)$/;
 const padSign = (n) => (n === "CONTROLLER READY" || n === "CONTROLLER BACK" || VIB_NOTE.test(n || "") ? PAD_SIGN : "");
 /* The note that names the level, only where it measures inside room; else today's words stand. */
 const vibSign = (c, sign, padNote, rev, room, f) => {
   if (!sign || !VIB_NOTE.test(padNote || "")) return sign;
-  const s = padNote + " · OPTIONS › CONTROLS" + (rev ? " · " + rev : "");
+  const s = padNote + " · " + LABEL.SETTINGS + " › CONTROLS" + (rev ? " · " + rev : "");
   c.font = f || font(10);
   return Math.max(mw(c, s), s.length * 6) + 24 <= room ? s : sign; // footTag's own plate width
 };
@@ -813,8 +866,9 @@ export function drawMenu(c, ui, L, t) {
       pipe = str.indexOf("|"),
       label = pipe > 0 ? str.slice(0, pipe) : str,
       val = pipe > 0 ? str.slice(pipe + 1) : "",
-      ext = label === "SOURCE";
-    return { label, val, hero: shape[i].hero, door: MENU_DOOR.indexOf(label) >= 0, ext, vc: label === "DAILY" && val === "NEW" ? ACCENT : null };
+      ext = label === "SOURCE",
+      cands = label === "PLAY" && I.level ? setupVals(BIOMES[(I.level - 1) % BIOMES.length].name, { heat: I.heat, pace: I.pace, pact: I.pact }) : null; // the run PLAY starts, longest first
+    return { label, val, cands, hero: shape[i].hero, door: MENU_DOOR.indexOf(label) >= 0, ext, vc: label === "DAILY" && val === "NEW" ? ACCENT : null };
   });
   const rev = (ui && ui.rev) || "",
     note = (ui && ui.soundNote) || "",
@@ -829,7 +883,7 @@ export function drawMenu(c, ui, L, t) {
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i],
         k = easeOutCubic(clamp01((et - i * 0.03) / 0.12)),
-        sub = teaser(r.label, r.val, I);
+        sub = r.cands ? (c.font = font(touch && g.rows[i].w >= 220 ? 13 : 11, "700"), fitIn(c, r.cands, g.rows[i].w - 12 - 94)) : teaser(r.label, r.val, I); // paintTile's hero type and room
       c.globalAlpha = pa * k;
       const q = g.rows[i],
         rr2 = { x: q.x, y: q.y + 6 * (1 - k), w: q.w, h: q.h };
@@ -843,6 +897,7 @@ export function drawMenu(c, ui, L, t) {
     return;
   }
   plate(c, g.px, g.y, g.pw, g.h);
+  rows.forEach((r, i) => { if (r.cands) r.val = fitVal(c, r.cands, heroRoom(c, g.w - 16, g.rows[i].h - 4, r.label, touch)); });
   drawList(c, g, rows, cur, t, { et, touch, alpha: pa });
   const pk = easeOutCubic(clamp01((et - 0.08) / 0.12));
   c.globalAlpha = pa * pk;
@@ -896,19 +951,20 @@ function menuPane(c, P, row, I, kind, t) {
     if (d) {
       const D = I.daily || {},
         played = (D.played | 0) > 0;
-      paneLine(c, P, y, "ONE BOARD A DAY · JUNGLE · CORE · NORM", TEXT);
+      paneLine(c, P, y, "JUNGLE · " + runWords({}), TEXT); // the daily's pinned settings, each named (it ignores the player's own)
       paneLine(c, P, y + 16, "YOUR TRIES TODAY " + (D.played | 0) + (played ? " · YOUR BEST " + (D.best | 0) : ""), played ? ACCENT : MUTED);
       paneLine(c, P, y + 32, "SAME BOARD ON EVERY TRY TODAY", MUTED);
     } else {
-      paneLine(c, P, y, "NEXT RUN · " + (row.val || ""), TEXT);
+      c.font = font(10, "700");
+      paneLine(c, P, y, fitIn(c, (row.cands || [row.val || ""]).map((v) => "NEXT RUN · " + v), P.w - 20), TEXT);
       paneLine(c, P, y + 16, hints().ok + " STARTS IT · LEVEL SELECT CHANGES IT", MUTED);
-      paneLine(c, P, y + 32, "8 ROOMS · 3 HEATS · 3 PACES", MUTED);
+      paneLine(c, P, y + 32, "8 LEVELS · 3 DIFFICULTIES · 3 SPEEDS", MUTED);
     }
     return;
   }
   cell(c, P);
-  if (lab === "LEVEL SELECT") {
-    paneHead(c, P, I.unlocked ? "8 ROOMS" : "5 ROOMS", I.unlocked ? "ALL OPEN" : "3 LOCKED", I.unlocked ? ACCENT : MUTED);
+  if (lab === LABEL.LEVEL_SELECT) {
+    paneHead(c, P, I.unlocked ? "8 LEVELS" : "5 LEVELS", I.unlocked ? "ALL OPEN" : "3 LOCKED", I.unlocked ? ACCENT : MUTED);
     const tw = 60, tg = 5, x0 = P.x + (P.w - (4 * tw + 3 * tg)) / 2;
     for (let i = 0; i < 8; i++) {
       const r = { x: x0 + (i % 4) * (tw + tg), y: P.y + 30 + (i >> 2) * 58, w: tw, h: 54 },
@@ -923,12 +979,15 @@ function menuPane(c, P, row, I, kind, t) {
       c.font = font(9, "700");
       c.fillText(BIOMES[i].name, r.x + r.w / 2, r.y + 48);
     }
-    paneLine(c, P, P.y + 160, "HEAT  CORE · PLUS · MAX", TEXT);
-    paneLine(c, P, P.y + 176, "PACE  EASY · NORM · HARD", TEXT);
-    paneLine(c, P, P.y + 192, I.unlocked ? "MODES IRON · BARE · THIN · SHRINK · TIME" : "CLEAR ROOM 5: ROOMS 6–8 + MODES", I.unlocked ? TEXT : ACCENT);
-    paneLine(c, P, P.y + P.h - 14, "EVERY ROOM SHOWS ITS FOES + YOUR BEST", MUTED);
-  } else if (lab === "OPTIONS") {
-    paneHead(c, P, "THREE LOOKS", "RENDER ROW");
+    paneLine(c, P, P.y + 160, LABEL.DIFFICULTY + "  " + DIFF.join(" · "), TEXT);
+    paneLine(c, P, P.y + 176, LABEL.GAME_SPEED + "  " + SPEED.join(" · "), TEXT);
+    if (I.unlocked) {
+      c.font = font(10, "700");
+      wrap(c, LABEL.MODIFIERS + " " + modWords(15).concat(TIME_TRIAL).join(" · "), P.w - 20, 2).forEach((l, i) => paneLine(c, P, P.y + 192 + 16 * i, l, TEXT)); // two lines: the names no longer fit one
+    } else paneLine(c, P, P.y + 192, "CLEAR LEVEL 5: LEVELS 6–8 + " + LABEL.MODIFIERS, ACCENT);
+    paneLine(c, P, P.y + P.h - 14, "EVERY LEVEL SHOWS ITS FOES + YOUR BEST", MUTED);
+  } else if (lab === LABEL.SETTINGS) {
+    paneHead(c, P, "THREE LOOKS", LABEL.ART_STYLE + " ROW");
     const bw = (P.w - 28) / 3;
     for (let i = 0; i < 3; i++) {
       const r = { x: P.x + 10 + i * (bw + 4), y: P.y + 30, w: bw, h: 70 },
@@ -970,7 +1029,7 @@ function menuPane(c, P, row, I, kind, t) {
     if (P.h >= 216) paneLine(c, P, P.y + 188, I.pad ? "CONTROLS · CONTROLLER READY" : "CONTROLS · KEYS + CONTROLLER");
     paneLine(c, P, P.y + P.h - 14, hints().ok + " OPENS ALL TWELVE ROWS", MUTED);
   } else if (lab === "GUIDE") {
-    paneHead(c, P, "FIELD GUIDE", POWER.length + " ITEMS · " + FOES.length + " FOES");
+    paneHead(c, P, "FIELD GUIDE", POWER.length + " " + LABEL.POWER_UPS + " · " + FOES.length + " FOES");
     const sw = (P.w - 20) / 6;
     for (let i = 0; i < 6; i++) {
       const p = POWER[i], cx = P.x + 10 + sw * (i + 0.5);
@@ -991,12 +1050,12 @@ function menuPane(c, P, row, I, kind, t) {
       c.font = font(9, "700");
       c.fillText(f.name, cx, P.y + 136);
     }
-    paneLine(c, P, P.y + 166, "HOW TO PLAY · ITEMS · ENEMIES", TEXT, 10, "center");
-    paneLine(c, P, P.y + P.h - 14, "EVERY PICKUP + FOE, WITH WHAT IT DOES", MUTED, 10, "center");
+    paneLine(c, P, P.y + 166, "HOW TO PLAY · " + LABEL.POWER_UPS + " · ENEMIES", TEXT, 10, "center");
+    paneLine(c, P, P.y + P.h - 14, "EVERY POWER-UP + FOE, WITH WHAT IT DOES", MUTED, 10, "center");
   } else if (lab === "HIGH SCORES") {
-    paneHead(c, P, "YOUR TOP 3", "CORE");
+    paneHead(c, P, "YOUR TOP 3", diffTag(0));
     const top = I.top || [];
-    if (!top.length) paneLine(c, P, P.y + 90, "NO CORE RUNS YET", MUTED, 12, "center");
+    if (!top.length) paneLine(c, P, P.y + 90, "NO " + diffTag(0) + " RUNS YET", MUTED, 12, "center");
     for (let i = 0; i < Math.min(3, top.length); i++) {
       const r = { x: P.x + 10, y: P.y + 30 + i * 46, w: P.w - 20, h: 40 }, s = top[i];
       cell(c, r, 0.5);
@@ -1012,10 +1071,10 @@ function menuPane(c, P, row, I, kind, t) {
       c.textAlign = "right";
       c.fillStyle = MUTED;
       c.font = font(10, "700");
-      c.fillText("ROOM " + s.l + " · " + s.d, r.x + r.w - 10, r.y + 20);
+      c.fillText(LABEL.LEVEL + " " + s.l + " · " + s.d, r.x + r.w - 10, r.y + 20);
     }
-    paneLine(c, P, P.y + 186, "PLUS ×2 · MAX ×3 ON EVERY SAVED SCORE", TEXT);
-    paneLine(c, P, P.y + P.h - 14, hints().ok + ": ALL TEN · CORE / PLUS / MAX", MUTED);
+    paneLine(c, P, P.y + 186, DIFF[1] + " ×2 · " + DIFF[2] + " ×3 ON EVERY SAVED SCORE", TEXT);
+    paneLine(c, P, P.y + P.h - 14, hints().ok + ": ALL TEN · " + DIFF.join(" / "), MUTED);
   } else if (lab === "STATS") {
     paneHead(c, P, "YOUR CABINET", (I.medals | 0) + "/8 MEDALS", (I.medals | 0) ? ACCENT : MUTED);
     const dw = (P.w - 20) / 8;
@@ -1031,7 +1090,7 @@ function menuPane(c, P, row, I, kind, t) {
         c.stroke();
       }
     }
-    const big = [["DAYS PLAYED", I.days | 0], ["RUNS", I.runs | 0], ["ROOMS CLEARED", I.rooms | 0], ["KILLS", I.kills | 0]];
+    const big = [["DAYS PLAYED", I.days | 0], ["RUNS", I.runs | 0], ["LEVELS CLEARED", I.rooms | 0], ["KILLS", I.kills | 0]];
     for (let i = 0; i < 4; i++) {
       const r = { x: P.x + 10 + (i % 2) * ((P.w - 24) / 2 + 4), y: P.y + 70 + (i >> 1) * 52, w: (P.w - 24) / 2, h: 46 };
       cell(c, r, 0.5);
@@ -1054,31 +1113,32 @@ function menuPane(c, P, row, I, kind, t) {
   }
 }
 
-/* MODES is a PRESENTATION relabel of the four Pact bits, so these names live
-   here and core/pact.js keeps its own frozen name table and pactLabel's
-   L/B/T/S letters — the HIGH SCORES p column and every pact.js pin depend on
-   them. Same render-side duplication precedent as PLAQUE_NAME. IRON is a
-   display name for PACT.LAST (applyPact sets lives = 1); BARE is PACT.BARE
-   verbatim. TIME_COL is deliberately OUTSIDE PACT_COL so the fifth chip cannot
-   read as a fifth Pact bit — that plus the 12px double gap are the two devices
-   that enforce it. #ff8a3c is already the palette's FLAME colour. MODE_HELP
-   says what the sim does with each bit (applyPact / sim.js advanceShrink). */
-const MODE_NAME = ["IRON", "BARE", "THIN", "SHRINK"];
-const MODE_HELP = ["IRON 1 life", "BARE no floor pickups", "THIN fewer buried items", "SHRINK walls close in from 25 s"];
+/* MODIFIERS are a PRESENTATION relabel of the four Pact bits: their names come
+   from words.js (MOD, keyed by PACT bit), and core/pact.js keeps its own frozen
+   name table and pactLabel's L/B/T/S letters — the HIGH SCORES p column and
+   every pact.js pin depend on them. ONE LIFE is PACT.LAST (applyPact sets
+   lives = 1). TIME_COL is deliberately OUTSIDE PACT_COL so the fifth chip
+   cannot read as a fifth Pact bit — that plus the 12px double gap are the two
+   devices that enforce it. #ff8a3c is already the palette's FLAME colour.
+   MODE_HELP says what the sim does with each bit (applyPact / sim.js
+   advanceShrink). */
+const MODE_BIT = MOD_BITS;
+const MODE_NAME = MODE_BIT.map((b) => MOD[b]);
+const MODE_HELP = [MOD[MODE_BIT[0]], MOD[MODE_BIT[1]], MOD[MODE_BIT[2]] + " in bricks", MOD[MODE_BIT[3]] + " walls close in from 25s"];
+const TIME_HELP = TIME_TRIAL + " timer + per-level best"; // "stopwatch" no longer fits the pad help line on touch
 const TIME_COL = "#ff8a3c";
-const MODE_BIT = [PACT.LAST, PACT.BARE, PACT.THIN, PACT.SHRINK];
 const NO_FOCUS = () => -1;
 let modeFocus = NO_FOCUS;
-/** The LEVEL MODES chip a pad has focused, as a getter: -1 = none. Set once by main; shellview's info does not carry it. */
+/** The LEVEL SELECT MODIFIERS chip a pad has focused, as a getter: -1 = none. Set once by main; shellview's info does not carry it. */
 export function setModeFocus(f) { modeFocus = f || NO_FOCUS; }
 export function modeFocusOf() { return modeFocus(); }
-/* The MODES cap has no room for TRIGGERS + NORTH (44 px), so a pad reads them here. */
+/* The MODIFIERS cap has no room for TRIGGERS + NORTH (44 px), so a pad reads them here. */
 const PAD_MODE = "TRIGGERS PICK · NORTH TOGGLES";
-const padModeHelp = (i) => (i < 0 ? PAD_MODE : PAD_MODE + " · " + (i < 4 ? MODE_HELP[i] : "TIME stopwatch + per-room best"));
+const padModeHelp = (i) => (i < 0 ? PAD_MODE : PAD_MODE + " · " + (i < 4 ? MODE_HELP[i] : TIME_HELP));
 export function modeHelp(pact, time) {
   const on = MODE_HELP.filter((_, i) => (pact | 0) & MODE_BIT[i]);
-  if (time) on.push("TIME stopwatch + per-room best");
-  return on.length ? on.join(" · ") : "ONE LIFE · NO PICKUPS · FEWER ITEMS · WALLS CLOSE IN · STOPWATCH";
+  if (time) on.push(TIME_HELP);
+  return on.length ? on.join(" · ") : "ONE LIFE · NO FLOOR ITEMS · FEWER ITEMS · WALLS CLOSE IN · STOPWATCH";
 }
 
 /* LEVEL SELECT (ATLAS): ONE table for draw and tap (levelHit). Top block: a
@@ -1192,12 +1252,12 @@ export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked, pace, timeAt
   if (p < -1) p = -1;
   else if (p > 1) p = 1;
   boxPlate(c, S);
-  head(c, S, "LEVEL SELECT", U ? "8 ROOMS · MODES OPEN" : "5 ROOMS · 3 LOCKED");
+  head(c, S, LABEL.LEVEL_SELECT, U ? "8 LEVELS · " + LABEL.MODIFIERS + " OPEN" : "5 LEVELS · 3 LOCKED");
   c.textAlign = "left";
   c.textBaseline = "middle";
   c.fillStyle = MUTED;
   c.font = T ? sans(13, "700") : font(9, "700");
-  c.fillText(tapMode(T) ? "TAP A ROOM" : "ROOM  ← →", G.grid.x, G.capY);
+  c.fillText(tapMode(T) ? "TAP A LEVEL" : LABEL.LEVEL + "  ← →", G.grid.x, G.capY);
   const ts = G.f < 0.8 ? 2 : 3;
   for (let i = 0; i < 8; i++) {
     const r = G.room[i],
@@ -1239,16 +1299,16 @@ export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked, pace, timeAt
   const peek = I.lockR && typeof I.lockT === "number" && t - I.lockT >= 0 && t - I.lockT < 1.8 ? I.lockR : 0,
     hk = typeof I.heatT === "number" && t - I.heatT >= 0 ? 1 - clamp01((t - I.heatT) / 0.45) : 0;
   roomCard(c, G.pane, peek ? { room: peek, heat: h, pact: mask, locked: true, tiles: !!I.tiles } : { room: sel, heat: h, pact: mask, best: best[sel - 1], k: hk, open: U, tiles: !!I.tiles, floor: I.tiles ? floorLine(sel, h) : "" }, T, A, t);
-  capCell(c, G.heatCap, "HEAT", "↑↓", T);
-  segs(c, G.heat, HEAT_NAME, h, HEAT_COL.map((x, i) => (i ? x : TEXT)), T);
-  capCell(c, G.paceCap, "PACE", W.tab, T, onPad ? 8 : 0); // SHOULDERS only fits the 44 px cap at 8 px
-  segs(c, G.pace, PACE_NAME, p + 1, null, T);
+  capCell(c, G.heatCap, LABEL.DIFFICULTY, "↑↓", T);
+  segs(c, G.heat, DIFF, h, HEAT_COL.map((x, i) => (i ? x : TEXT)), T);
+  capCell(c, G.paceCap, LABEL.GAME_SPEED, W.tab, T, onPad ? 8 : 0); // SHOULDERS only fits the 44 px cap at 8 px
+  segs(c, G.pace, SPEED, p + 1, null, T);
   if (U) {
-    capCell(c, G.modeCap, "MODES", onPad ? "" : "1–5", T);
+    capCell(c, G.modeCap, LABEL.MODIFIERS, onPad ? "" : "1–5", T);
     for (let i = 0; i < 5; i++) {
       const r = G.mode[i],
         on = i < 4 ? (mask & MODE_BIT[i]) !== 0 : !!timeAttack;
-      segs(c, [r], [((G.narrow && T) || onPad ? "" : i + 1 + " ") + (i < 4 ? MODE_NAME[i] : "TIME")], on ? 0 : -1, [i < 4 ? PACT_COL[i] : TIME_COL], T, G.narrow ? 12 : 0); // a narrow touch chip drops the key digit
+      chip(c, r, ((G.narrow && T) || onPad ? "" : i + 1 + " ") + (i < 4 ? MODE_NAME[i] : TIME_TRIAL), on, i < 4 ? PACT_COL[i] : TIME_COL, T, G.narrow ? 12 : 0); // a narrow touch chip drops the key digit
     }
     const foc = onPad ? modeFocus() : -1, help = onPad ? padModeHelp(foc) : modeHelp(mask, timeAttack);
     if (foc >= 0) { // a shape, so it reads apart from an on chip's own outline
@@ -1269,7 +1329,7 @@ export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked, pace, timeAt
     }
   }
   const st = G.start,
-    tag = BIOMES[sel - 1].name + " · " + HEAT_NAME[h] + " · " + PACE_NAME[p + 1] + (mask ? " · " + MODE_NAME.filter((_, i) => mask & MODE_BIT[i]).join("+") : "") + (U && timeAttack ? " · TIME" : "");
+    tag = fitVal(c, setupVals(BIOMES[sel - 1].name, { heat: h, pace: p, pact: mask, time: U && timeAttack }), heroRoom(c, st.w - 16, st.h - 4, "START", T));
   paintRow(c, st.x + 8, st.y + 2, st.w - 16, st.h - 4, "START", tag, true, { hero: true, touch: T });
   foot(c, S, tapMode(T) ? LEVEL_TAP : W.ok + " START · " + W.back + " BACK");
 }
@@ -1341,11 +1401,11 @@ export function drawHowTo(c, L, t, kind, touch) {
   c.textAlign = "center";
   c.fillStyle = MUTED;
   c.font = font(T ? 12 : 10);
-  c.fillText(tapMode(T) ? "TOUCH · LEFT PAD MOVES · RIGHT BUTTON BOMBS" : "* NEEDS ITS POWER-UP · ITEMS = CUBES · LEVEL = ROOM + HEAT", S.mid, y0 + (3 * rh + 6 + note / 2) * f - 4);
-  foot(c, S, tapMode(T) ? BACK_TAP : (W.dev === "pad" ? "REBIND IN OPTIONS › CONTROLS · " : "") + W.back + " / " + W.ok + " BACK");
+  c.fillText(tapMode(T) ? "TOUCH · LEFT PAD MOVES · RIGHT BUTTON BOMBS" : "* NEEDS ITS POWER-UP", S.mid, y0 + (3 * rh + 6 + note / 2) * f - 4);
+  foot(c, S, tapMode(T) ? BACK_TAP : (W.dev === "pad" ? "REBIND IN " + LABEL.SETTINGS + " › CONTROLS · " : "") + W.back + " / " + W.ok + " BACK");
 }
 
-/* ITEMS: two-column catalogue of every POWER pickup; help wraps (≤2 lines). */
+/* POWER-UPS (SCREEN.ITEMS): two-column catalogue of every POWER pickup; help wraps (≤2 lines). */
 /* A narrow touch column cannot hold "the REMOTE button detonates your bombs" in two lines; the row's title already names the button. */
 const NARROW_TAP = Object.freeze({ throw: "tap", remote: "tap" });
 export function drawItemsHelp(c, L, t, kind, touch) {
@@ -1360,7 +1420,7 @@ export function drawItemsHelp(c, L, t, kind, touch) {
     A = pxArt(kind),
     ps = A ? pageScale(POWER.map((p) => itemCell(A, p.t)), ws + SLOT_PAD) : 1;
   boxPlate(c, S);
-  head(c, S, "ITEMS", n + " PICKUPS");
+  head(c, S, LABEL.POWER_UPS, n + " " + LABEL.POWER_UPS);
   for (let i = 0; i < n; i++) {
     const p = POWER[i],
       r = { x: S.ix + (i % 2) * (cw + 8), y: S.by + (i >> 1) * (rh + 4) * f, w: cw, h: rh * f },
@@ -1388,10 +1448,10 @@ export function drawItemsHelp(c, L, t, kind, touch) {
       c.globalAlpha = 1;
     }
   }
-  foot(c, S, tapMode(T) ? BACK_TAP : "WALK OVER A CUBE TO COLLECT · " + hints().back + " BACK");
+  foot(c, S, tapMode(T) ? BACK_TAP : "WALK OVER A POWER-UP TO COLLECT · " + hints().back + " BACK");
 }
 
-/* ENEMIES: 3x3 field guide; name, a 2-line measured help and ROOMS. */
+/* ENEMIES: 3x3 field guide; name, a 2-line measured help and its LEVELS. */
 export function drawEnemiesHelp(c, L, t, kind, touch) {
   const T = !!touch,
     n = FOES.length,
@@ -1424,7 +1484,7 @@ export function drawEnemiesHelp(c, L, t, kind, touch) {
     wrap(c, e.help, tw, 2).forEach((l, j) => c.fillText(l, tx, r.y + (T ? 36 : 26) + j * (T ? 15 : 11)));
     c.fillStyle = ACCENT;
     c.font = font(T ? 11 : 8, "900");
-    c.fillText("ROOMS " + e.rooms, tx, r.y + r.h - (T ? 11 : 8));
+    c.fillText(LABEL.LEVEL + "S " + e.rooms, tx, r.y + r.h - (T ? 11 : 8));
   }
   foot(c, S, tapMode(T) ? BACK_TAP : hints().back + " BACK");
 }
@@ -1433,7 +1493,7 @@ export function drawEnemiesHelp(c, L, t, kind, touch) {
    walk them in order), stacked 70-tall rows with the strip inline on touch. Each door
    shows what is behind it. guideHit shares guideGeom; a tile owns half of
    each gutter, the rest of the plate is inert (-2), off it backs out (-1). */
-const GUIDE_LABEL = ["HOW TO PLAY", "ITEMS", "ENEMIES", "FLOOR"];
+const GUIDE_LABEL = ["HOW TO PLAY", LABEL.POWER_UPS, "ENEMIES", "FLOOR"];
 export function guideGeom(L, touch) {
   const T = !!touch,
     S = pageBox(L, T ? 520 : 552, T ? 4 * 70 + 18 : 2 * 64 + 8, T),
@@ -1464,7 +1524,7 @@ function keyCap(c, x, y, s, T) {
   c.fillText(s, x + w / 2, y + 1);
   return w;
 }
-/* FLOOR: the eight tiles, one per world (core/feat.js HOME), painted by the look's own painter at CORE / PLUS / MAX. All eight have rules since v196; every ordinary run and the DAILY play them since v198. */
+/* FLOOR: the eight tiles, one per world (core/feat.js HOME), painted by the look's own painter at each difficulty (heat 0..2). All eight have rules since v196; every ordinary run and the DAILY play them since v198. */
 const FLOOR_ROWS = [
   { k: "BLOOM", name: TILE_NAME.BLOOM, room: 1 },
   { k: "GLIDE", name: TILE_NAME.GLIDE, room: 2 },
@@ -1499,7 +1559,7 @@ export function drawFloorHelp(c, L, t, kind, touch) {
   c.textBaseline = "middle";
   c.fillStyle = MUTED;
   c.font = font(T ? 10 : 8, "900");
-  for (let j = 0; j < 3; j++) c.fillText(HEAT_NAME[j], gx + j * (sw + 4) + sw / 2, S.by + hd / 2 - 1);
+  for (let j = 0; j < 3; j++) { c.font = fitFont(c, DIFF[j], sw + 2, T ? 10 : 8, 6, "900"); c.fillText(DIFF[j], gx + j * (sw + 4) + sw / 2, S.by + hd / 2 - 1); } // EXPERT outgrows a narrow 28 px column
   for (let i = 0; i < n; i++) {
     const row = FLOOR_ROWS[i],
       r = { x: S.ix, y: S.by + (hd + i * (rh + 4)) * f, w: S.iw, h: rh * f },
@@ -1516,11 +1576,11 @@ export function drawFloorHelp(c, L, t, kind, touch) {
     const nw = mw(c, row.name);
     c.fillStyle = ACCENT;
     c.font = font(T ? 10 : 8, "900");
-    c.fillText(clip(c, "ROOM " + row.room + " · " + BIOMES[row.room - 1].name, tw - nw - 10), tx + nw + 10, cy - (T ? 14 : 11));
+    c.fillText(clip(c, LABEL.LEVEL + " " + row.room + " · " + BIOMES[row.room - 1].name, tw - nw - 10), tx + nw + 10, cy - (T ? 14 : 11));
     c.fillStyle = MUTED;
     c.font = font(T ? 11 : 9);
-    const l1 = rules ? "CORE · " + TILE_HELP[row.k][0] : "LOOK ONLY FOR NOW",
-      l2 = rules ? "MAX · " + TILE_HELP[row.k][2] : "ITS RULE COMES LATER";
+    const l1 = rules ? DIFF[0] + " · " + TILE_HELP[row.k][0] : "LOOK ONLY FOR NOW",
+      l2 = rules ? DIFF[2] + " · " + TILE_HELP[row.k][2] : "ITS RULE COMES LATER";
     c.fillText(clip(c, l1, tw), tx, cy + (T ? 4 : 3));
     c.fillText(clip(c, l2, tw), tx, cy + (T ? 19 : 14));
     if (rules) {
@@ -1540,8 +1600,8 @@ export function drawGuide(c, L, t, cursor, kind, touch) {
     T = g.T,
     A = pxArt(kind);
   boxPlate(c, S);
-  head(c, S, "GUIDE", "HOW TO · ITEMS · ENEMIES · FLOOR");
-  const W = hints(), subs = [T || W.dev === "pad" ? "2 RULES · 6 CONTROLS" : "2 RULES · 6 KEYS", POWER.length + " PICKUPS", FOES.length + " FOES", FLOOR_ROWS.length + " TILES"];
+  head(c, S, "GUIDE", "HOW TO · " + LABEL.POWER_UPS + " · ENEMIES · FLOOR");
+  const W = hints(), subs = [T || W.dev === "pad" ? "2 RULES · 6 CONTROLS" : "2 RULES · 6 KEYS", POWER.length + " " + LABEL.POWER_UPS, FOES.length + " FOES", FLOOR_ROWS.length + " TILES"];
   for (let i = 0; i < 4; i++) {
     const r = g.tiles[i],
       sel = i === cur;
@@ -1598,8 +1658,9 @@ export function drawGuide(c, L, t, cursor, kind, touch) {
 
 /* Local cabinet plaques (plan 5): bit order matches src/app/plaques.js
    PLAQUE = {CLEAR:1,PLUS:2,MAX:4,CROWN:8} — this file must not import
-   src/app, so the names are duplicated here rather than imported. */
-const PLAQUE_NAME = ["CLEAR", "PLUS", "MAX", "CROWN"];
+   src/app, so the names are duplicated here rather than imported; the two
+   heat plaques read as their difficulty (words.js). */
+const PLAQUE_NAME = ["CLEAR", DIFF[1], DIFF[2], "CROWN"];
 
 /* HIGH SCORES: the CORE / PLUS / MAX segmented control, the four plaques
    (dim when locked), then a hugging ten-slot table. `scores` arrives already
@@ -1631,7 +1692,7 @@ export function drawScores(c, scores, L, t, heat, plaques, touch) {
     h = clampHeat(heat);
   boxPlate(c, S);
   head(c, S, "HIGH SCORES", "BEST RUNS");
-  segs(c, g.tabs, HEAT_NAME, h, HEAT_COL.map((x, i) => (i ? x : TEXT)), T);
+  segs(c, g.tabs, DIFF, h, HEAT_COL.map((x, i) => (i ? x : TEXT)), T);
   const pmask = plaques | 0,
     chH = g.f < 1 ? Math.max(12, Math.floor((18 + 8) * g.f) - 4) : 18, // iso: the chip never reaches bodyTop
     chipW = 74,
@@ -1656,20 +1717,21 @@ export function drawScores(c, scores, L, t, heat, plaques, touch) {
     nShow = Math.min(10, list.length),
     rh = g.rh,
     bt = g.bodyTop,
-    foot0 = tapMode(T) ? BACK_TAP : "← → HEAT · " + hints().back + " BACK";
+    foot0 = tapMode(T) ? BACK_TAP : "← → " + LABEL.DIFFICULTY + " · " + hints().back + " BACK";
   if (!nShow) {
     c.fillStyle = MUTED;
     c.font = font(T ? 15 : 12, "900");
     c.textAlign = "center";
     c.textBaseline = "middle";
-    c.fillText("NO " + HEAT_NAME[h] + " RUNS YET", S.mid, bt + 5 * rh);
+    c.fillText("NO " + diffTag(h) + " RUNS YET", S.mid, bt + 5 * rh);
     c.font = font(T ? 13 : 10);
-    c.fillText("PICK " + HEAT_NAME[h] + " ON LEVEL SELECT TO SET ONE", S.mid, bt + 6.2 * rh);
+    c.fillText("PICK " + diffTag(h) + " ON " + LABEL.LEVEL_SELECT + " TO SET ONE", S.mid, bt + 6.2 * rh);
     foot(c, S, foot0);
     return;
   }
   const gap = 10,
-    cw = [32, 64, 40, 36, Math.max(56, S.iw - 32 - 64 - 40 - 36 - gap * 4)],
+    mc = T ? 62 : 52, // MODIFIERS: the header outgrew today's 36 px column
+    cw = [32, 64, 40, mc, Math.max(56, S.iw - 32 - 64 - 40 - mc - gap * 4)],
     xs = [S.ix];
   for (let i = 0; i < 4; i++) xs.push(xs[i] + cw[i] + gap);
   const hy = bt + rh / 2;
@@ -1678,8 +1740,8 @@ export function drawScores(c, scores, L, t, heat, plaques, touch) {
   c.textAlign = "left";
   c.textBaseline = "middle";
   c.fillText("RANK", xs[0], hy);
-  c.fillText("LV", xs[2], hy);
-  c.fillText("MODES", xs[3], hy);
+  c.fillText(LABEL.LEVEL, xs[2], hy);
+  c.fillText(LABEL.MODIFIERS, xs[3], hy);
   c.fillText("DATE", xs[4], hy);
   c.textAlign = "right";
   c.fillText("SCORE", xs[1] + cw[1], hy);
@@ -1714,10 +1776,10 @@ const STATS_FOOT = "T MEDALS · C COPY MY STATS · R RESET · ESC BACK";
 const STATS_PAD = "NORTH MEDALS · WEST COPY MY STATS · EAST BACK"; // no route to the wipe on a pad (acceptance S12)
 /* The idle foot and its tap keys, one source for drawStats and statsHit. */
 const statsFoot = () => (hints().dev === "pad" ? [STATS_PAD, ["KeyT", "KeyC"]] : [STATS_FOOT, ["KeyT", "KeyC", "KeyR"]]);
-const RESET_FOOT = "R AGAIN ERASES · ANY OTHER KEY CANCELS · KEEPS OPTIONS + PACE · C COPY";
+const RESET_FOOT = "R AGAIN ERASES · OTHER KEYS CANCEL · KEEPS " + LABEL.SETTINGS + " + " + LABEL.GAME_SPEED + " · C COPY"; // 73 chars: the S.iw budget of 74 at the 0.6 em advance
 const RESET_NOTES = Object.freeze([
   "ERASES SCORES · BESTS · TIMES · DAILY · MEDALS · PLAQUES · GHOSTS",
-  "ERASES STATS + DAYS PLAYED · RELOCKS ROOMS 6-8 · MODES · TIME ATTACK",
+  "ERASES STATS + DAYS PLAYED · RELOCKS LEVELS 6-8 · " + LABEL.MODIFIERS + " · " + TIME_TRIAL,
 ]);
 /* STATS (ATLAS): eight tiles (seven lifetime counters + MEDALS n/8) in two
    columns, a BESTS row of three heat-coloured tiles, two notes, the foot.
@@ -1778,7 +1840,7 @@ export function drawStats(c, L, t, ui, arm, toast) {
   let y = S.by + (4 * 46 + 3 * 6 + 8) * f;
   c.fillStyle = MUTED;
   c.font = font(9, "700");
-  c.fillText("BESTS · NO MODES · NORM", S.ix, y + 6);
+  c.fillText("BESTS · NO " + LABEL.MODIFIERS + " · " + speedTag(0), S.ix, y + 6);
   y += 14 * f;
   const bw = (S.iw - 12) / 3;
   for (let i = 0; i < 3; i++) {
@@ -1788,7 +1850,7 @@ export function drawStats(c, L, t, ui, arm, toast) {
     c.fillStyle = i ? HEAT_COL[i] : TEXT;
     c.fillRect(r.x, r.y, 3, r.h);
     c.textAlign = "left";
-    c.font = font(sq ? 13 : 15, "900");
+    c.font = font(sq ? 12 : 13, "900"); // 13, not 15: "1840 · LEVEL 5" fits the tile whole
     c.fillStyle = TEXT;
     c.fillText(clip(c, String(v[1]), r.w - 20), r.x + 12, r.y + r.h / 2 - (sq ? 5 : 6));
     c.fillStyle = i ? HEAT_COL[i] : MUTED;
@@ -1858,7 +1920,7 @@ export function drawTrophies(c, L, t, rows) {
   foot(c, S, hints().ok + " / " + hints().back + " BACK TO STATS");
 }
 
-/* OPTIONS (spec §2): twelve rows on LEVEL SELECT's adjust model — eight live
+/* SETTINGS (SCREEN.SETTINGS, spec §2): twelve rows on LEVEL SELECT's adjust model — eight live
    knobs, ANALYTICS (the GA consent, its own store), the GRAPHICS and CONTROLS
    doors and RESET DEFAULTS.
    ui = {row, vals, r3d, px, togT, rev, door, ctlDoor, ana, anaNote, touch}; vals is the nb.settings.v1 blob,
@@ -1877,7 +1939,7 @@ const OPT_LABEL = [
   "MUSIC",
   "SFX",
   "SOUND",
-  "RENDER",
+  LABEL.ART_STYLE,
   "CAMERA",
   "BRIGHTNESS",
   "SCREEN SHAKE",
@@ -1980,7 +2042,7 @@ export function lookNote(m, job, now, pick) {
 /* The value's words, longest first; the row keeps the first that fits its slot. */
 export function lookVal(n, touch) {
   const L = LOOK_NAME[n.k] || "";
-  if (n.st === "fail") { const r = tapMode(touch) ? "TAP TO RETRY" : hints().ok + " RETRY"; return [L + " · DID NOT LOAD · " + r, "DID NOT LOAD · " + r]; }
+  if (n.st === "fail") { const r = tapMode(touch) ? "TAP TO RETRY" : hints().ok + " RETRY"; return [L + " · DID NOT LOAD · " + r, "DID NOT LOAD · " + r, r]; } // r alone, in the danger colour: the narrowest box, where ART STYLE (longer than RENDER) leaves less room
   if (n.st === "ready") return [L + " · READY", "READY"];
   const cnt = n.total > 0 ? n.done + " / " + n.total : "";
   const s = n.st === "loading" ? (n.slow ? "SLOW, STILL TRYING" : cnt || "LOADING") : PH_WORD[n.phase] && cnt ? PH_WORD[n.phase] + " " + cnt : "PREPARING";
@@ -2004,7 +2066,7 @@ function jobLine(c, x, y, w, f) {
   if (f < 0) for (let xx = x; xx < x + w; xx += 8) c.fillRect(xx, y, Math.min(4, x + w - xx), 2);
   else if (f > 0) c.fillRect(x, y, Math.round(w * Math.min(1, f)), 2);
 }
-const RENDER_ROW = OPT_LABEL.indexOf("RENDER");
+const RENDER_ROW = OPT_LABEL.indexOf(LABEL.ART_STYLE);
 export function drawSettings(c, L, t, ui) {
   const u = ui || {};
   const cur = u.row | 0,
@@ -2014,7 +2076,7 @@ export function drawSettings(c, L, t, ui) {
   const g = settingsGeom(L, u.touch),
     S = g.S;
   boxPlate(c, S);
-  head(c, S, "OPTIONS", u.kicker || "BUILD " + (u.rev || ""));
+  head(c, S, LABEL.SETTINGS, u.kicker || "BUILD " + (u.rev || ""));
   if (u.padVib) { // the door reads the level, only where it fits beside the label at the row's largest type
     const s = "VIBRATION " + u.padVib + " ›";
     c.font = sans(17, "600");

@@ -195,7 +195,7 @@
   /* the chip (v202): a look's job after boot, only while its RENDER row is off screen and never in live PLAY.
      One line, a 3 px bar along its bottom, no wordmark, no pointer, no keys. shellview hands the drawn stage's
      top-centre (--chip-x/-y/-w): inside the stage, so never over the PAUSE pill or the touch pad. data-note: the
-     0.8 s READY at the swap, or a failure's 4 s pointer to OPTIONS › RENDER. A look's old failure card keeps its
+     0.8 s READY at the swap, or a failure's 4 s pointer to SETTINGS › ART STYLE. A look's old failure card keeps its
      docked form (data-act). */
   #load[data-dock]{top:calc(10px + env(safe-area-inset-top,0px));translate:-50% 0;padding:9px 14px 10px 18px;gap:7px;width:min(380px,calc(100vw - 32px))}
   #load[data-dock]:not([data-act]){top:max(var(--chip-y,0px),calc(6px + env(safe-area-inset-top,0px)));left:var(--chip-x,50%);
@@ -238,7 +238,7 @@
      #loadsay (outside #load, which hides) speaks stages only, never counts; a failure
      card speaks through #loadmsg's alert. Enter answers a failure card with RETRY,
      Escape with the other button, the keyboard twin of a pad's SOUTH and EAST. -->
-<script id="loadjs" data-files="105">
+<script id="loadjs" data-files="106">
 (function(w,d){
   var $=function(i){return d.getElementById(i)},E=$("load"),bar=$("loadbar"),fill=$("loadfill"),msg=$("loadmsg"),act=$("loadact"),retry=$("loadretry"),keep=$("loadkeep");
   var SLOW=10000,STALL=30000,say0=$("loadsay"),jobs={},cur=null,failed=null,drop=null,again=null,shown=null,words=false,iv=0,base=new URL("./",d.baseURI).href;
@@ -340,7 +340,7 @@
     miss:function(k,kept){
       var j=jobs[k];if(!j||k==="boot")return;delete jobs[k];
       if(failed===k){failed=null;drop=null;again=null;act.hidden=true;E.removeAttribute("data-act")}
-      cn={t:j.label+" DID NOT LOAD · OPTIONS › RENDER",bad:true,until:now()+4000};later(paint,4020);
+      cn={t:j.label+" DID NOT LOAD · SETTINGS › ART STYLE",bad:true,until:now()+4000};later(paint,4020);
       paint();say(j.label+" did not load."+(kept?" "+kept+" stays.":""))
     },
     /* the game's frame hands where the chip may show (shellview loaderSpot); repaints only on a change */
@@ -487,10 +487,11 @@
 <link rel="modulepreload" href="./src/render/three/load.js">
 <link rel="modulepreload" href="./src/render/wallart.js">
 <link rel="modulepreload" href="./src/render/wallvar.js">
+<link rel="modulepreload" href="./src/render/words.js">
 <link rel="modulepreload" href="./src/touch.js">
 <!-- preload:end -->
 <h1 class="sr-only">Fusegrid — bomb-grid arcade you play in the browser</h1>
-<p class="sr-only">Single-player bomb-grid arcade. Flip REAL 3D, classic 2D and PIXEL. Heat CORE, PLUS, and MAX. Eight rooms, eight chiptune themes, a DAILY board. Free — no install, no account, plays offline.</p>
+<p class="sr-only">Single-player bomb-grid arcade. Pick the art style: REAL 3D, classic 2D or PIXEL. Difficulty NORMAL, HARD and EXPERT. Eight levels, eight chiptune themes, a DAILY board. Free — no install, no account, plays offline.</p>
 <noscript><p>Play Fusegrid in the browser — a single-player bomb-grid arcade. JavaScript is required.</p></noscript>
 <div id="wrap">
   <div id="stage"><canvas id="gl" hidden></canvas><canvas id="px" hidden></canvas><canvas id="c" aria-label="Fusegrid game board"></canvas>

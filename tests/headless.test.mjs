@@ -221,13 +221,13 @@ function mkCanvas(){
   tick(10);
   check("C1 click-skip does not auto-start a run",
     g.app.screen===SCREEN.MENU&&g.world.time===0, g.app.screen);
-  cv.fire("pointerdown",menuTap(ITEMS.indexOf("OPTIONS")));            // OPTIONS
+  cv.fire("pointerdown",menuTap(ITEMS.indexOf("SETTINGS")));            // OPTIONS
   check("C1 OPTIONS click pushes SETTINGS once",
     g.app.screen===SCREEN.SETTINGS&&g.app.optRow===0,String(g.app.screen));
   tick(10);
   check("C1 push is not re-fired by rising edge next frame",
     g.app.screen===SCREEN.SETTINGS&&g.app.optRow===0);
-  g.app.optRow=OPT_ROWS.indexOf("RENDER"); g.app.confirm();              // RENDER row
+  g.app.optRow=OPT_ROWS.indexOf("ART STYLE"); g.app.confirm();              // RENDER row
   check("C1 RENDER row toggles exactly once",
     g.app.pixel===true&&g.app.render3d===false&&g.app.settings.px===1&&g.app.settings.r3d===0,
     "pixel="+g.app.pixel+" render3d="+g.app.render3d);
@@ -302,8 +302,8 @@ function mkCanvas(){
   const g=createGame(cv.el,{seed:71});
   g.app.cabinetSeen=true;                       // seen cabinet: skip -> MENU
   g.app.skip();
-  g.app.cursor=ITEMS.indexOf("OPTIONS");                               // OPTIONS
-  cv.fire("pointerdown",menuTap(ITEMS.indexOf("OPTIONS")));            // MENU tap on the OPTIONS row
+  g.app.cursor=ITEMS.indexOf("SETTINGS");                               // OPTIONS
+  cv.fire("pointerdown",menuTap(ITEMS.indexOf("SETTINGS")));            // MENU tap on the OPTIONS row
   check("tap glue: OPTIONS push lands on SETTINGS row 0",
     g.app.screen===SCREEN.SETTINGS&&g.app.optRow===0,
     g.app.screen+"/"+g.app.optRow);
@@ -325,7 +325,7 @@ function mkCanvas(){
   const cv=mkCamCanvas(600,520);
   const g=createGame(cv.el,{autoplay:true,seed:72});
   g.input.onPause(); g.loop(16);
-  g.app.pauseCursor=PAUSE_ITEMS.indexOf("OPTIONS"); g.app.confirm();          // OPTIONS row -> pauseView 1
+  g.app.pauseCursor=PAUSE_ITEMS.indexOf("SETTINGS"); g.app.confirm();          // OPTIONS row -> pauseView 1
   check("PAUSE tap glue setup: pauseView 1 at row 0",
     g.app.pauseView===1&&g.app.optRow===0,
     g.app.pauseView+"/"+g.app.optRow);
@@ -356,8 +356,8 @@ function mkCanvas(){
   const cs=mkCamCanvas(600,520);
   cs.el.getBoundingClientRect=()=>({left:0,top:0,width:300,height:260});
   const h=createGame(cs.el,{seed:74});
-  h.app.cabinetSeen=true; h.app.skip(); h.app.cursor=ITEMS.indexOf("OPTIONS");
-  cs.fire("pointerdown",menuTap(ITEMS.indexOf("OPTIONS"),2));
+  h.app.cabinetSeen=true; h.app.skip(); h.app.cursor=ITEMS.indexOf("SETTINGS");
+  cs.fire("pointerdown",menuTap(ITEMS.indexOf("SETTINGS"),2));
   cs.fire("pointerdown",{clientX:150,clientY:158});   // row 6 (buf 300,316)
   check("D1 scaled tap: SETTINGS row 6 toggles SCREEN SHAKE",
     h.app.screen===SCREEN.SETTINGS&&h.app.optRow===6&&h.app.settings.shk===0,
@@ -411,10 +411,10 @@ function mkCanvas(){
   cv.fire("pointerdown",{clientX:2,clientY:2});
   check("M1 LEVEL tap outside the plate backs out", g.app.screen===SCREEN.MENU, g.app.screen);
   cv.calls.length=0; for(let i=1;i<=40;i++)g.loop(100000+i*16);
-  const tagTxt=cv.calls.filter(c=>c[0]==="fillText").map(c=>String(c[1][0])).find(t=>/^[A-Z]+ · (CORE|PLUS|MAX) · /.test(t));
+  const tagTxt=cv.calls.filter(c=>c[0]==="fillText").map(c=>String(c[1][0])).find(t=>/^[A-Z]+ · (NORMAL|HARD|EXPERT)\b/.test(t));
   cv.fire("pointerdown",{clientX:300,clientY:R[0].cy}); g.loop(100700);
   check("M1 the PLAY tag is the run PLAY starts (room 3 by its world name, heat, pace)",
-    tagTxt==="FACTORY · MAX · HARD"&&g.app.screen===SCREEN.GAME&&g.world.level===3&&(g.world.heat|0)===2&&(g.world.pace|0)===1,
+    tagTxt==="FACTORY · EXPERT · FAST SPEED"&&g.app.screen===SCREEN.GAME&&g.world.level===3&&(g.world.heat|0)===2&&(g.world.pace|0)===1,
     tagTxt+" -> "+[g.app.screen,g.world.level,g.world.heat,g.world.pace].join());
   g.app.toMenu();
   g.app.cursor=ITEMS.indexOf("HIGH SCORES"); g.app.confirm();
@@ -499,7 +499,7 @@ function mkCanvas(){
   const plays=[];
   const audio={play:n=>plays.push(n),toggle:()=>false};
   const g=createGame(null,{seed:13,audio});
-  g.app.screen=SCREEN.MENU; g.app.cursor=ITEMS.indexOf("OPTIONS"); plays.length=0;
+  g.app.screen=SCREEN.MENU; g.app.cursor=ITEMS.indexOf("SETTINGS"); plays.length=0;
   g.app.confirm();                              // OPTIONS push
   check("I1 OPTIONS confirm -> uiSel + SETTINGS",
     plays.join()==="uiSel"&&g.app.screen===SCREEN.SETTINGS,
@@ -1680,7 +1680,7 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
     {
       const g=createGame(null,{autoplay:true});
       g.input.onPause(); g.loop(16);
-      g.app.pauseCursor=PAUSE_ITEMS.indexOf("OPTIONS"); g.app.confirm();   // OPTIONS
+      g.app.pauseCursor=PAUSE_ITEMS.indexOf("SETTINGS"); g.app.confirm();   // OPTIONS
       check("P1 OPTIONS opens inline — pauseView 1, shell still GAME",
         g.app.pauseView===1&&g.app.screen===SCREEN.GAME
         &&g.world.state==="PAUSE",

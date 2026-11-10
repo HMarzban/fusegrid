@@ -6,15 +6,17 @@ import { defaultStore } from "./store.js";
 export const MEDALS_KEY = "nb.medals.v1";
 export const MEDAL = Object.freeze({ FLAWLESS: 1, UNSCATHED: 2, ALLIN: 4, ALLOUT: 8,
   OVERDRIVE: 16, REDLINE: 32, SPRINT: 64, IRONCROWN: 128 });
+/* Rule copy in the player words (src/render/words.js, which src/app may not
+   import): tests/words.test.mjs pins each line equal to it. The names stay. */
 export const MEDAL_ROWS = Object.freeze([
-  ["FLAWLESS", "ROOMS 1-5 IN ONE RUN · NO LIFE LOST"],
-  ["UNSCATHED", "ROOMS 6-8 IN ONE RUN · NO LIFE LOST"],
-  ["ALL IN", "ROOMS 1-5 IN ONE RUN · ALL FOUR MODES"],
-  ["ALL OUT", "ROOMS 6-8 IN ONE RUN · ALL FOUR MODES"],
-  ["OVERDRIVE", "ROOMS 1-5 IN ONE RUN ON HARD PACE"],
-  ["REDLINE", "ROOMS 6-8 IN ONE RUN ON HARD PACE"],
-  ["SPRINT", "ROOMS 1-5 · CORE · NORM · NO MODES · BEAT 3:00"],
-  ["IRON CROWN", "ROOMS 6-8 IN ONE RUN AT MAX HEAT"],
+  ["FLAWLESS", "LEVELS 1-5 IN ONE RUN · NO LIFE LOST"],
+  ["UNSCATHED", "LEVELS 6-8 IN ONE RUN · NO LIFE LOST"],
+  ["ALL IN", "LEVELS 1-5 IN ONE RUN · ALL FOUR MODIFIERS"],
+  ["ALL OUT", "LEVELS 6-8 IN ONE RUN · ALL FOUR MODIFIERS"],
+  ["OVERDRIVE", "LEVELS 1-5 IN ONE RUN AT FAST SPEED"],
+  ["REDLINE", "LEVELS 6-8 IN ONE RUN AT FAST SPEED"],
+  ["SPRINT", "LEVELS 1-5 IN 3:00 · ALL NORMAL · NO MODIFIERS"],
+  ["IRON CROWN", "LEVELS 6-8 IN ONE RUN ON EXPERT DIFFICULTY"],
 ]);
 export const SPRINT_S = 180;
 

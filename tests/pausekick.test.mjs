@@ -34,7 +34,7 @@ for (const [name, B, touch] of [["keyboard 600x520", overlayBox("2d"), false], [
   const texts = c.log.filter((e) => e[0] === "fillText").map((e) => e[1]);
   const k = texts.find((s) => /REAL 3D NEXT$/.test(s));
   check(name + ": the longest real kicker keeps the tail and fits the plate (" + g.w + " wide)", !!k && k.length * 7 <= g.w - 24, k);
-  check(name + ": what stays is the kicker's own start (room, then biome ...), dropped from the end", !!k && longest.startsWith(k.replace(/ · REAL 3D NEXT$/, "")) && /^ROOM 8/.test(k), k);
+  check(name + ": what stays is the kicker's own start (room, then biome ...), dropped from the end", !!k && longest.startsWith(k.replace(/ · REAL 3D NEXT$/, "")) && /^LEVEL 8/.test(k), k);
 }
 {
   const c = ctx();

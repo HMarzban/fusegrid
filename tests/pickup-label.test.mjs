@@ -36,7 +36,7 @@ const fresh = (over) => { initFx(); const w = mkW(over); syncFx(w); feed(w); ret
     ["throw", {}, null, "THROW"], ["pass", {}, null, "PASS"], ["remote", {}, null, "REMOTE"],
     ["line", {}, "normal", "LINE BOMB"], ["power", {}, "normal", "POWER BOMB"], ["pierce", {}, "normal", "PIERCE BOMB"],
     ["power", {}, "line", "POWER BOMB / replaces LINE"], ["line", {}, "pierce", "LINE BOMB / replaces PIERCE"],
-    ["pierce", {}, "power", "PIERCE BOMB / replaces POWER"], ["line", {}, "line", "LINE BOMB"],
+    ["pierce", {}, "power", "PIERCE BOMB / replaces POWER BOMB"], ["line", {}, "line", "LINE BOMB"],
   ];
   for (const [k, p, prev, want] of rows) check("pickupLabel " + k + " " + JSON.stringify(p) + " prev " + prev + " -> " + want, txt(k, p, prev) === want, txt(k, p, prev));
   check("every POWER kind has a label", POWER.every((d) => !!pickupLabel(d.t, {})), POWER.length);

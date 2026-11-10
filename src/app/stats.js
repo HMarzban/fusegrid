@@ -153,28 +153,30 @@ export function fmtLong(sec) {
   return Math.floor(s / 3600) + "h " + pad2(Math.floor(s / 60) % 60) + "m";
 }
 
-/* Rows 8-10 read the PLAIN bucket "<heat>:0:1" — no pact, NORM pace. Folding an
-   IRON run into "CORE BEST" would be the same unit error nb.highscores.v1
-   makes; note 2 says so on screen. STATS READS nb.bests.v1 and nb.times.v1 and
-   copies neither — a second copy of a best is a second thing that can disagree
-   with the overlay. */
+/* Rows 8-10 read the PLAIN bucket "<heat>:0:1" — no pact, NORMAL SPEED. Folding
+   a ONE LIFE run into the NORMAL DIFFICULTY best would be the same unit error
+   nb.highscores.v1 makes; the STATS page's BESTS row says so on screen (note 2
+   no longer has room for the longer words). STATS READS nb.bests.v1 and
+   nb.times.v1 and copies neither — a second copy of a best is a second thing
+   that can disagree with the overlay. The words are literals (src/app may not
+   import src/render/words.js); tests/words.test.mjs pins them equal to it. */
 export function statsRows(v, bests) {
   const s = clampStats(v);
   const best = (h) => {
     const b = bestOfRun(bests, h + ":0:1");
-    return b ? b.s + " · R" + b.r : "—";
+    return b ? b.s + " · LEVEL " + b.r : "—";
   };
   return [
     ["RUNS", String(s.a.runs)],
-    ["ROOMS CLEARED", String(s.a.rooms)],
+    ["LEVELS CLEARED", String(s.a.rooms)],
     ["DEATHS", String(s.a.deaths)],
     ["KILLS", String(s.a.kills)],
-    ["PICKUPS", String(s.a.picks)],
+    ["POWER-UPS", String(s.a.picks)],
     ["PLAY TIME", fmtLong(s.a.secs)],
     ["DAYS PLAYED", String(s.a.days)],
-    ["CORE BEST", best(0)],
-    ["PLUS BEST", best(1)],
-    ["MAX BEST", best(2)],
+    ["NORMAL DIFFICULTY", best(0)],
+    ["HARD DIFFICULTY", best(1)],
+    ["EXPERT DIFFICULTY", best(2)],
   ];
 }
 /* `today` is used for one thing only: deciding whether the stored daily record
@@ -196,8 +198,7 @@ export function statsNotes(v, daily, today) {
   }
   out.push(
     "SINCE " + (s.a.first || "—") + " · LAST " + (s.a.last || "—") + " · " +
-    s.a.sessions + (s.a.sessions === 1 ? " SESSION" : " SESSIONS") +
-    " · BESTS: NO MODES · NORM",
+    s.a.sessions + (s.a.sessions === 1 ? " SESSION" : " SESSIONS"),
   );
   return out;
 }
@@ -212,7 +213,7 @@ const fmtT = (sec) => {
 };
 
 /* Four plain-text lines, pure over four values. Line 3's time reads
-   nb.times.v1's room-1 CORE-plain key, so the payload NAMES R7's store instead
+   nb.times.v1's level-1 NORMAL-plain key, so the payload NAMES R7's store instead
    of duplicating it. The URL keeps its trailing slash: the no-slash Pages 301
    drops the OG tags. main.js hands the times blob in rather than this module
    reading a store, because purity is what makes the payload pinnable. */
@@ -221,18 +222,18 @@ export function statsPayload(v, bests, times, today) {
   const a = s.a;
   const best = (h) => {
     const b = bestOfRun(bests, h + ":0:1");
-    return b ? b.s + "/R" + b.r : "—";
+    return b ? b.s + "/LEVEL " + b.r : "—";
   };
   const t1 = bestOf(times, "1:0:0:1");
   return (
     "FUSEGRID STATS · " + (a.first || "—") + "→" + (a.last || today || "—") +
       " · " + a.sessions + (a.sessions === 1 ? " SESSION" : " SESSIONS") +
       " · " + a.days + (a.days === 1 ? " DAY PLAYED" : " DAYS PLAYED") + "\n" +
-    "RUNS " + a.runs + " · ROOMS " + a.rooms + " · DEATHS " + a.deaths +
-      " · KILLS " + a.kills + " · PICKS " + a.picks + " · BRICKS " + a.bricks +
+    "RUNS " + a.runs + " · LEVELS " + a.rooms + " · DEATHS " + a.deaths +
+      " · KILLS " + a.kills + " · POWER-UPS " + a.picks + " · BRICKS " + a.bricks +
       " · TIME " + fmtLong(a.secs) + "\n" +
-    "CORE " + best(0) + " · PLUS " + best(1) + " · MAX " + best(2) +
-      " · CORE BEST TIME " + (t1 == null ? "—" : fmtT(t1)) + "\n" +
+    "NORMAL DIFFICULTY " + best(0) + " · HARD DIFFICULTY " + best(1) + " · EXPERT DIFFICULTY " + best(2) +
+      " · LEVEL 1 NORMAL DIFFICULTY BEST TIME " + (t1 == null ? "—" : fmtT(t1)) + "\n" +
     "https://hmarzban.github.io/fusegrid/"
   );
 }

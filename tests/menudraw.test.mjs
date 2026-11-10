@@ -206,7 +206,7 @@ function check(name, cond, detail) {
     const { stub, sets } = mk();
     md.drawMenu(
       stub,
-      { cursor: 2, enterT: 1.0, togT: 0.97, items: ["PLAY|CORE", "LEVEL SELECT|CORE", "OPTIONS"] },
+      { cursor: 2, enterT: 1.0, togT: 0.97, items: ["PLAY|NORMAL DIFFICULTY", "LEVEL SELECT|NORMAL DIFFICULTY", "SETTINGS"] },
       L,
       1.0,
     );
@@ -298,10 +298,10 @@ function check(name, cond, detail) {
           cursor: 0,
           enterT: 1,
           items: [
-            "PLAY|CORE",
-            "LEVEL SELECT|CORE",
+            "PLAY|NORMAL DIFFICULTY",
+            "LEVEL SELECT|NORMAL DIFFICULTY",
             "DAILY",
-            "OPTIONS",
+            "SETTINGS",
             "GUIDE",
             "HIGH SCORES",
             "STATS",
@@ -332,9 +332,9 @@ function check(name, cond, detail) {
       md.drawLevelSelect(c, 3, L, 1, 1);
       check(
         `level select heat chips at ${W}x${H}`,
-        ["CORE", "PLUS", "MAX"].every((n) =>
+        ["NORMAL", "HARD", "EXPERT"].every((n) =>
           texts.some((t) => t.s.indexOf(n) >= 0),
-        ) && texts.some((t) => t.s.indexOf("HEAT") >= 0),
+        ) && texts.some((t) => t.s.indexOf("DIFFICULTY") >= 0),
         texts.map((t) => t.s).join("|"),
       );
     }
@@ -347,12 +347,12 @@ function check(name, cond, detail) {
       const all = texts.map((t) => t.s);
       const G = md.levelGeom(L, false);
       check(
-        `level select LOCKED draws no MODES rail at ${W}x${H}`,
-        !all.includes("MODES") && !all.includes("1–5") &&
-          !all.some((s) => /^\d (IRON|BARE|THIN|SHRINK|TIME)$/.test(s)) &&
+        `level select LOCKED draws no MODIFIERS rail at ${W}x${H}`,
+        !all.includes("MODIFIERS") && !all.includes("1–5") &&
+          !all.some((s) => /^\d (ONE LIFE|NO FLOOR|FEWER|SHRINK|TIME TRIAL)/.test(s)) &&
           !all.includes(md.modeHelp(0, false)) && !all.includes(md.modeHelp(0, true)) &&
           G.mode.length === 0 && G.modeCap === null && G.help === null &&
-          all.includes("5 ROOMS · 3 LOCKED"),
+          all.includes("5 LEVELS · 3 LOCKED"),
         all.join("|"),
       );
     }
@@ -363,14 +363,15 @@ function check(name, cond, detail) {
       const p = plateOf(rects);
       const G = md.levelGeom(L, true);
       const gloss = texts.find((t) => t.s === md.modeHelp(0, true));
-      const time = texts.find((t) => t.s === "5 TIME");
+      const time = texts.find((t) => t.s === "5 TIME TRIAL");
+      const two = (a, b) => all.includes(a + " " + b) || all.some((s, i) => s === a && all[i + 1] === b); // a chip too narrow for its name breaks it over two lines
       check(
-        `level select UNLOCKED shows the five MODES chips at ${W}x${H}`,
-        all.includes("1 IRON") &&
-          all.includes("2 BARE") &&
-          all.includes("3 THIN") &&
+        `level select UNLOCKED shows the five MODIFIERS chips at ${W}x${H}`,
+        all.includes("1 ONE LIFE") &&
+          two("2 NO FLOOR", "ITEMS") &&
+          two("3 FEWER", "ITEMS") &&
           all.includes("4 SHRINK") &&
-          all.includes("5 TIME") &&
+          all.includes("5 TIME TRIAL") &&
           !all.includes("1 LAST") &&
           G.mode.length === 5,
         all.join("|"),
@@ -378,9 +379,9 @@ function check(name, cond, detail) {
       check(
         `modes help + head + cap copy at ${W}x${H}`,
         !!gloss &&
-          gloss.s === "TIME stopwatch + per-room best" &&
-          all.includes("8 ROOMS · MODES OPEN") &&
-          all.includes("MODES") && all.includes("1–5") &&
+          gloss.s === "TIME TRIAL timer + per-level best" &&
+          all.includes("8 LEVELS · MODIFIERS OPEN") &&
+          all.includes("MODIFIERS") && all.includes("1–5") &&
           all.includes("ENTER START · ESC BACK"),
         all.join("|"),
       );
@@ -420,18 +421,18 @@ function check(name, cond, detail) {
       const esc = texts.find((t) => t.s.indexOf("ESC BACK") >= 0);
       const ten = texts.find((t) => t.s === "10");
       const dates = texts.filter((t) => t.s === "2026-08-23");
-      const tabs = ["CORE", "PLUS", "MAX"].map((n) =>
+      const tabs = ["NORMAL", "HARD", "EXPERT"].map((n) =>
         texts.find((t) => t.s === n),
       );
       check(
-        `scores CORE/PLUS/MAX tabs + 10 rows + foot inside plate at ${W}x${H}`,
+        `scores NORMAL/HARD/EXPERT tabs + 10 rows + foot inside plate at ${W}x${H}`,
         !!p &&
           !!esc &&
           !!ten &&
           dates.length === 10 &&
           tabs.every((t) => !!t) &&
           tabs.every((t) => t.y > p.y + 8 && t.y < ten.y) &&
-          esc.s.indexOf("HEAT") >= 0 &&
+          esc.s.indexOf("DIFFICULTY") >= 0 &&
           ten.y < esc.y &&
           esc.y < p.y + p.h - 4 &&
           last(dates).y < esc.y &&
@@ -449,8 +450,8 @@ function check(name, cond, detail) {
       const { c, texts } = rec();
       md.drawScores(c, [], L, 1, 1);
       check(
-        `empty PLUS tab shows NO PLUS RUNS YET at ${W}x${H}`,
-        texts.some((t) => t.s === "NO PLUS RUNS YET"),
+        `empty HARD tab shows NO HARD DIFFICULTY RUNS YET at ${W}x${H}`,
+        texts.some((t) => t.s === "NO HARD DIFFICULTY RUNS YET"),
         texts.map((t) => t.s).join("|"),
       );
     }
@@ -488,7 +489,7 @@ function check(name, cond, detail) {
           r.x + r.w <= p.x + p.w - 8 &&
           r.y + r.h <= p.y + p.h - 8,
       );
-      const rooms = texts.filter((t) => t.s.indexOf("ROOMS ") === 0);
+      const rooms = texts.filter((t) => t.s.indexOf("LEVELS ") === 0);
       check(
         `enemies 9 + ESC inside plate at ${W}x${H}`,
         !!p &&
@@ -551,7 +552,7 @@ function check(name, cond, detail) {
       const { c, texts, rects } = rec();
       md.drawGuide(c, L, 1, 1);
       const p = plateOf(rects);
-      const rows = ["HOW TO PLAY", "ITEMS", "ENEMIES"];
+      const rows = ["HOW TO PLAY", "POWER-UPS", "ENEMIES"];
       const hits = rows.map((n) => texts.find((t) => t.s === n));
       const esc = texts.find((t) => t.s.indexOf("ESC BACK") >= 0);
       check(
@@ -659,7 +660,7 @@ function check(name, cond, detail) {
           "MUSIC",
           "SFX",
           "SOUND",
-          "RENDER",
+          "ART STYLE",
           "CAMERA",
           "BRIGHTNESS",
           "SCREEN SHAKE",
@@ -683,13 +684,13 @@ function check(name, cond, detail) {
       const { c, texts, rects, lines } = rec();
       md.drawStats(c, L, 0.4, {
         rows: [
-          ["RUNS", "118"], ["ROOMS CLEARED", "214"], ["DEATHS", "301"],
-          ["KILLS", "4820"], ["PICKUPS", "913"], ["PLAY TIME", "14h 07m"], ["DAYS PLAYED", "12"],
-          ["CORE BEST", "1840 · R5"], ["PLUS BEST", "—"], ["MAX BEST", "—"],
+          ["RUNS", "118"], ["LEVELS CLEARED", "214"], ["DEATHS", "301"],
+          ["KILLS", "4820"], ["POWER-UPS", "913"], ["PLAY TIME", "14h 07m"], ["DAYS PLAYED", "12"],
+          ["NORMAL DIFFICULTY", "1840 · LEVEL 5"], ["HARD DIFFICULTY", "—"], ["EXPERT DIFFICULTY", "—"],
         ],
         notes: [
           "DAILY 2026-09-07 · NOT PLAYED YET",
-          "SINCE 2026-08-30 · LAST 2026-09-07 · 42 SESSIONS · BESTS: NO MODES · NORM",
+          "SINCE 2026-08-30 · LAST 2026-09-07 · 42 SESSIONS",
         ],
       });
       const all = texts.map((t) => t.s);
@@ -699,20 +700,20 @@ function check(name, cond, detail) {
          per-heat best tiles (R12). It must sit strictly below every lifetime
          label and above every best value, and in the same place for an empty
          row list (geometry, never data, places it; never up in the head). */
-      const CAP = "BESTS · NO MODES · NORM";
+      const CAP = "BESTS · NO MODIFIERS · NORMAL SPEED";
       const capOf = (tx) => tx.find((t) => t.s === CAP);
       check(
-        `the BESTS caption sits strictly between the lifetime tiles and CORE BEST at ${W}x${H}`,
+        `the BESTS caption sits strictly between the lifetime tiles and the NORMAL DIFFICULTY best at ${W}x${H}`,
         (() => {
-          const cap = capOf(texts), core = texts.find((t) => t.s === "1840 · R5");
-          const life = ["RUNS", "ROOMS CLEARED", "DEATHS", "KILLS", "PICKUPS", "PLAY TIME", "DAYS PLAYED", "MEDALS"].map((n) => texts.find((t) => t.s === n));
+          const cap = capOf(texts), core = texts.find((t) => t.s === "1840 · LEVEL 5");
+          const life = ["RUNS", "LEVELS CLEARED", "DEATHS", "KILLS", "POWER-UPS", "PLAY TIME", "DAYS PLAYED", "MEDALS"].map((n) => texts.find((t) => t.s === n));
           return !!cap && !!core && life.every((t) => t && t.y < cap.y) && cap.y < core.y &&
-            cap.y < (texts.find((t) => t.s === "CORE BEST") || {}).y;
+            cap.y < (texts.find((t) => t.s === "NORMAL DIFFICULTY") || {}).y;
         })(),
         JSON.stringify({
           cap: capOf(texts),
           daysY: (texts.find((t) => t.s === "DAYS PLAYED") || {}).y,
-          coreY: (texts.find((t) => t.s === "CORE BEST") || {}).y,
+          coreY: (texts.find((t) => t.s === "NORMAL DIFFICULTY") || {}).y,
         }),
       );
       {
@@ -728,15 +729,15 @@ function check(name, cond, detail) {
       }
       check(
         `stats plate paints all ten labels and the head at ${W}x${H}`,
-        ["RUNS", "ROOMS CLEARED", "DEATHS", "KILLS", "PICKUPS", "PLAY TIME", "DAYS PLAYED",
-          "CORE BEST", "PLUS BEST", "MAX BEST", "STATS", "YOUR CABINET"]
+        ["RUNS", "LEVELS CLEARED", "DEATHS", "KILLS", "POWER-UPS", "PLAY TIME", "DAYS PLAYED",
+          "NORMAL DIFFICULTY", "HARD DIFFICULTY", "EXPERT DIFFICULTY", "STATS", "YOUR CABINET"]
           .every((s) => all.includes(s)),
         all.join("|"),
       );
       check(
         `stats plate paints both notes and the copy foot at ${W}x${H}`,
         all.some((s) => s.indexOf("NOT PLAYED YET") >= 0) &&
-          all.some((s) => s.indexOf("BESTS: NO MODES · NORM") >= 0) &&
+          all.some((s) => s.indexOf("42 SESSIONS") >= 0) && all.includes(CAP) &&
           all.includes("T MEDALS · C COPY MY STATS · R RESET · ESC BACK"),
         all.join("|"),
       );
@@ -861,8 +862,8 @@ function check(name, cond, detail) {
   const IDLE = "T MEDALS · C COPY MY STATS · R RESET · ESC BACK";
   const ARMED = [
     "ERASES SCORES · BESTS · TIMES · DAILY · MEDALS · PLAQUES · GHOSTS",
-    "ERASES STATS + DAYS PLAYED · RELOCKS ROOMS 6-8 · MODES · TIME ATTACK",
-    "R AGAIN ERASES · ANY OTHER KEY CANCELS · KEEPS OPTIONS + PACE · C COPY",
+    "ERASES STATS + DAYS PLAYED · RELOCKS LEVELS 6-8 · MODIFIERS · TIME TRIAL",
+    "R AGAIN ERASES · OTHER KEYS CANCEL · KEEPS SETTINGS + GAME SPEED · C COPY",
   ];
   const rec = () => {
     const texts = [], rects = [];
@@ -1063,7 +1064,7 @@ function check(name, cond, detail) {
     check("shellview: FPS METER in GAME PLAY too, untagged", draw().includes("30 FPS"));
     world.state = "PAUSE"; a.pauseView = 2;
     T = draw();
-    check("shellview: PAUSE view 2 draws the GRAPHICS page against overlayBox, kicked as the pause", T.includes("GRAPHICS") && T.some((s) => /^PAUSED · ROOM \d+$/.test(s)) && T.includes("30 FPS · IDLE"));
+    check("shellview: PAUSE view 2 draws the GRAPHICS page against overlayBox, kicked as the pause", T.includes("GRAPHICS") && T.some((s) => /^PAUSED · LEVEL \d+$/.test(s)) && T.includes("30 FPS · IDLE"));
     a.pauseView = 1;
     check("shellview: PAUSE view 1 still draws OPTIONS with the door", draw().includes("AUTO ›"));
     a.settings.fpm = 0; a.screen = SCREEN.MENU;
@@ -1096,7 +1097,7 @@ function check(name, cond, detail) {
     const { CACHE_NAME } = await import("../src/pwa/shell.js");
     const { shellGeo } = await import("../src/app/fit.js");
     const want = "v" + CACHE_NAME.match(/(\d+)$/)[1];
-    const items = ["PLAY|X", "LEVEL SELECT", "DAILY|NEW", "OPTIONS", "GUIDE", "HIGH SCORES", "STATS", "SOURCE"];
+    const items = ["PLAY|X", "LEVEL SELECT", "DAILY|NEW", "SETTINGS", "GUIDE", "HIGH SCORES", "STATS", "SOURCE"];
     const sg = shellGeo(393, 852);
     for (const [nm, W, H, touch, lg] of [["600x520 d", 600, 520, false], ["608x352 d", 608, 352, false], ["600x520 l", 600, 520, true], ["608x352 l", 608, 352, true], ["phone #sh p", sg.w, sg.h, true, sg.logo]]) {
       const L = md.layout(W, H, lg), g = md.menuList(L, 8, touch);
@@ -1129,7 +1130,7 @@ function check(name, cond, detail) {
 //      label lands on its own row, the plate edges are -1, bands contiguous.
 {
   const md = await import("../src/render/menudraw.js");
-  const items = ["PLAY", "LEVEL SELECT", "DAILY", "OPTIONS", "GUIDE", "HIGH SCORES", "STATS", "SOURCE"];
+  const items = ["PLAY", "LEVEL SELECT", "DAILY", "SETTINGS", "GUIDE", "HIGH SCORES", "STATS", "SOURCE"];
   const n = items.length;
   for (const [W, H] of [
     [600, 520],
@@ -1210,8 +1211,8 @@ function check(name, cond, detail) {
   check("statsHit: the 600x520 idle zones are T 150-216 and R 324-384 on the band 464-492 (spec §4.1)",
     z[0][0] === 150 && z[0][1] === 216 && z[2][0] === 324 && z[2][1] === 384 && f.y === 476, JSON.stringify(z));
   const fa = paint(L, true), za = zones(fa);
-  check("statsHit: the 600x520 armed zones are R AGAIN 81-183 and C COPY 465-519, both inside the 60-540 plate",
-    za[0][0] === 81 && za[0][1] === 183 && za[3][0] === 465 && za[3][1] === 519 && fa.y === 476, JSON.stringify(za));
+  check("statsHit: the 600x520 armed zones are R AGAIN 72-174 and C COPY 474-528, both inside the 60-540 plate",
+    za[0][0] === 72 && za[0][1] === 174 && za[3][0] === 474 && za[3][1] === 528 && fa.y === 476, JSON.stringify(za));
   check("statsHit: armed, no tap on the idle C COPY MY STATS zone (216-324) can land on R AGAIN",
     za[0][1] < z[1][0] && md.statsHit(z[1][0], f.y, L, true) === null, JSON.stringify([za[0], z[1]]));
 }
@@ -1268,7 +1269,7 @@ function check(name, cond, detail) {
   };
   const plateOf = (rects) => rects.find((r) => r.fill === PLATE_FILL);
   const PLAQUE = { CLEAR: 1, PLUS: 2, MAX: 4, CROWN: 8 };
-  // "PLUS"/"MAX" also name the HEAT tabs drawn above the chip row, so
+  // "HARD"/"EXPERT" (the PLUS / MAX plaques) also name the DIFFICULTY tabs drawn above the chip row, so
   // disambiguate every chip by the unique "CLEAR" text's row-y, not by
   // first-match on the label string alone.
   const chipsOf = (texts) => {
@@ -1282,8 +1283,8 @@ function check(name, cond, detail) {
     };
     return {
       clear,
-      plus: rightmost("PLUS"),
-      max: rightmost("MAX"),
+      plus: rightmost("HARD"),
+      max: rightmost("EXPERT"),
       crown: texts.find((t) => t.s === "CROWN"),
     };
   };
@@ -1368,7 +1369,7 @@ function check(name, cond, detail) {
     {
       const { c, texts } = rec();
       md.drawScores(c, DEFAULT_SCORES, L, 1, 0, 15);
-      const plusTab = texts.find((t) => t.s === "PLUS");
+      const plusTab = texts.find((t) => t.s === "HARD");
       const clear = texts.find((t) => t.s === "CLEAR");
       /* ATLAS: one chip row under the heat tabs in every box (scoresGeom.chipY);
          a short box scales the page (f) instead of folding the plaques onto the
@@ -1525,7 +1526,7 @@ function check(name, cond, detail) {
     JSON.stringify([a, b, h, e]));
   {
     // the blast reads first: with enterT held back the plate and rows are not painted, then fade in
-    const L = md.layout(600, 520), items = ["PLAY|CORE", "LEVEL SELECT|CORE", "DAILY", "OPTIONS", "GUIDE", "HIGH SCORES", "STATS", "SOURCE"];
+    const L = md.layout(600, 520), items = ["PLAY|NORMAL DIFFICULTY", "LEVEL SELECT|NORMAL DIFFICULTY", "DAILY", "SETTINGS", "GUIDE", "HIGH SCORES", "STATS", "SOURCE"];
     const paint = (et) => { const r = rec(); md.drawMenu(r.c, { cursor: 0, enterT: et, items }, L, 0); return r; };
     const held = paint(-0.2), mid = paint(-0.06), set = paint(1);
     check("MENU held behind the blast: enterT < -0.12 paints no plate and no rows; the plate fades in over the last 0.12 s",
@@ -1574,7 +1575,7 @@ function check(name, cond, detail) {
   const L = md.layout(600, 520), lv = (U, best) => { const r = rec(); md.drawLevelSelect(r.c, 2, L, 1, 0, 0, U, 0, false, false, { best: best ? [null, "0:38.9"] : [] }); return r.texts.map((t) => t.s); };
   check("LEVEL SELECT: no NO TIME YET before MODES / TIME open; it shows once open; a saved best shows either way",
     !lv(false).includes("NO TIME YET") && lv(true).includes("NO TIME YET") && lv(false, true).includes("✓ BEST 0:38.9") && lv(true, true).includes("✓ BEST 0:38.9"));
-  const mn = (row, U) => { const r = rec(); md.drawMenu(r.c, { cursor: row, items: ["PLAY|X", "LEVEL SELECT", "DAILY|NEW", "OPTIONS", "GUIDE", "HIGH SCORES", "STATS", "SOURCE"], info: { level: 1, unlocked: U, best: [] } }, L, 1); return r.texts.map((t) => t.s); };
+  const mn = (row, U) => { const r = rec(); md.drawMenu(r.c, { cursor: row, items: ["PLAY|X", "LEVEL SELECT", "DAILY|NEW", "SETTINGS", "GUIDE", "HIGH SCORES", "STATS", "SOURCE"], info: { level: 1, unlocked: U, best: [] } }, L, 1); return r.texts.map((t) => t.s); };
   check("MENU pane: PLAY card follows the same rule, DAILY never says NO TIME YET",
     !mn(0, false).includes("NO TIME YET") && mn(0, true).includes("NO TIME YET") && !mn(2, true).includes("NO TIME YET") && !mn(2, false).includes("NO TIME YET"));
 }
@@ -1608,7 +1609,7 @@ function check(name, cond, detail) {
     }
     const sc = md.scoresGeom(L, true);
     check(`HIGH SCORES: tabs inside the plate, each taps to itself (${tg})`, inBox(sc.S) && sc.tabs.every((r, i) => inPlate(r, sc.S) && md.scoresHit(...ctr(r), L, true) === i));
-    for (const [nm, geo, hit, n] of [["OPTIONS", md.settingsGeom, md.settingsHit, md.OPT_N], ["GRAPHICS", md.graphicsGeom, md.graphicsHit, md.GFX_N]]) {
+    for (const [nm, geo, hit, n] of [["SETTINGS", md.settingsGeom, md.settingsHit, md.OPT_N], ["GRAPHICS", md.graphicsGeom, md.graphicsHit, md.GFX_N]]) {
       const q = geo(L, true);
       check(`${nm}: rows inside the box, each taps to itself (${tg})`, inBox(q.S) && Array.from({ length: n }, (_, i) => hit(q.S.mid, q.y0 + (i + 0.5) * q.rowH, L, 0, true) === i).every(Boolean));
     }
@@ -1674,8 +1675,8 @@ function check(name, cond, detail) {
       const ts = h.texts.map((t) => t.s), tag = `${tg}${touch ? " touch" : ""}`;
       check(`FLOOR names all eight tiles once (${tag})`, NAMES.every((n) => ts.filter((x) => x === n).length === 1), ts.length);
       check(`FLOOR claims a rule only for the ${Object.keys(TILE_HELP).length} tiles that have one (${tag})`,
-        ts.filter((x) => /^CORE · /.test(x)).length === Object.keys(TILE_HELP).length && ts.filter((x) => /^LOOK ONLY/.test(x)).length === NAMES.length - Object.keys(TILE_HELP).length);
-      for (const [k, help] of Object.entries(TILE_HELP)) check(`FLOOR draws ${k}'s CORE and MAX help whole, never clipped (${tag})`, ts.includes("CORE · " + help[0]) && ts.includes("MAX · " + help[2]), ts.filter((x) => /^(CORE|MAX) · /.test(x)).join(" | "));
+        ts.filter((x) => /^NORMAL · /.test(x)).length === Object.keys(TILE_HELP).length && ts.filter((x) => /^LOOK ONLY/.test(x)).length === NAMES.length - Object.keys(TILE_HELP).length);
+      for (const [k, help] of Object.entries(TILE_HELP)) check(`FLOOR draws ${k}'s NORMAL and EXPERT help whole, never clipped (${tag})`, ts.includes("NORMAL · " + help[0]) && ts.includes("EXPERT · " + help[2]), ts.filter((x) => /^(NORMAL|EXPERT) · /.test(x)).join(" | "));
       const gd = md.guideGeom(L, touch), T = gd.tiles;
       const inside =T.every((r) => r.x >= gd.S.x && r.x + r.w <= gd.S.x + gd.S.w && r.y >= gd.S.y && r.y + r.h <= gd.S.y + gd.S.h);
       const apart = T.every((a, i) => T.every((b, j) => i >= j || a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y));
@@ -1849,7 +1850,7 @@ function check(name, cond, detail) {
   {
     const paneText = (state) => {
       const a = state ? mk(state) : createMenuApp({ settings: {} });
-      a.screen = SCREEN.MENU; a.cursor = ITEMS.indexOf("OPTIONS");
+      a.screen = SCREEN.MENU; a.cursor = ITEMS.indexOf("SETTINGS");
       return draw(a, PLAY).texts;
     };
     const T = paneText("ready"), n = T.find((t) => t.s === "ENTER OPENS ALL TWELVE ROWS"), l = T.find((t) => t.s === "CONTROLS · CONTROLLER READY"), g = T.find((t) => t.s.startsWith("GRAPHICS "));
@@ -1863,11 +1864,11 @@ function check(name, cond, detail) {
     {
       /* The signpost owns the foot only while the note lives; the pane line stays a pane line. */
       const a = mk("ready");
-      a.screen = SCREEN.MENU; a.cursor = ITEMS.indexOf("OPTIONS"); a.padNote = "CONTROLLER READY · VIBRATION MEDIUM";
+      a.screen = SCREEN.MENU; a.cursor = ITEMS.indexOf("SETTINGS"); a.padNote = "CONTROLLER READY · VIBRATION MEDIUM";
       const S = draw(a, PLAY).texts;
-      check("MENU foot: CONTROLLER READY signposts OPTIONS › CONTROLS, and the OPTIONS pane keeps its line", S.some((t) => /^CONTROLLER READY · VIBRATION MEDIUM · OPTIONS › CONTROLS( · v\d+)?$/.test(t.s)) && S.some((t) => t.s === "CONTROLS · CONTROLLER READY"));
+      check("MENU foot: CONTROLLER READY signposts SETTINGS › CONTROLS, and the SETTINGS pane keeps its line", S.some((t) => /^CONTROLLER READY · VIBRATION MEDIUM · SETTINGS › CONTROLS( · v\d+)?$/.test(t.s)) && S.some((t) => t.s === "CONTROLS · CONTROLLER READY"));
       a.padNote = "CONTROLLER LOST";
-      check("MENU foot: CONTROLLER LOST is no signpost", !draw(a, PLAY).texts.some((t) => t.s.includes("OPTIONS › CONTROLS")));
+      check("MENU foot: CONTROLLER LOST is no signpost", !draw(a, PLAY).texts.some((t) => t.s.includes("SETTINGS › CONTROLS")));
     }
     check("OPTIONS pane: a non-standard pad is ready too", paneText("nonstd").some((t) => t.s === "CONTROLS · CONTROLLER READY"));
     for (const st of ["none", "lost", null]) check(`OPTIONS pane: ${st} reads KEYS + CONTROLLER`, paneText(st).some((t) => t.s === "CONTROLS · KEYS + CONTROLLER"));

@@ -384,7 +384,7 @@ export function pickupLabel(kind, p, prev){
   else if(kind==="speed") [s,m]=(q.speed||0)>=CFG.MAX_SPEED?[d.name,"MAX"]:[d.name+" UP",""];
   else if(kind==="heart") s="+1 LIFE";
   else if(BKIND[kind]){
-    s=d.name+" BOMB";
+    s=/ BOMB$/.test(d.name)?d.name:d.name+" BOMB";
     if(BKIND[prev]&&prev!==kind) sub="replaces "+PDEF[prev].name;
   }
   return {k:kind,s,m,sub,col:d.col};

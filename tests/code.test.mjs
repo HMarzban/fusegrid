@@ -380,7 +380,7 @@ function check(name, cond, detail) {
     600, 520, 300, 260);
   check(
     "the WIN cue line now offers both keys",
-    texts.some((s) => s === "SPACE / ENTER / TAP · next room · C copy · B board"),
+    texts.some((s) => s === "SPACE / ENTER / TAP · next level · C copy · B board"),
     texts.join("|"),
   );
   texts.length = 0;

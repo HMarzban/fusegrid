@@ -49,7 +49,7 @@ check(
 check(
   "overlayCue WIN mid",
   overlayCue({ state: "WIN", level: 3, finale: false, score: 10, heat: 0 }) ===
-    "SPACE / ENTER / TAP · next room",
+    "SPACE / ENTER / TAP · next level",
 );
 check(
   "overlayCue WIN finale",
@@ -69,16 +69,16 @@ check(
 );
 check(
   "runStamp is raw score + biome + heat",
-  runStamp({ level: 3, heat: 1, score: 1840 }) === "L3 FACTORY · PLUS · 1840",
+  runStamp({ level: 3, heat: 1, score: 1840 }) === "LEVEL 3 · FACTORY · HARD DIFFICULTY · 1840",
 );
 check(
   "runStamp CORE",
-  runStamp({ level: 1, heat: 0, score: 0 }) === "L1 JUNGLE · CORE · 0",
+  runStamp({ level: 1, heat: 0, score: 0 }) === "LEVEL 1 · JUNGLE · NORMAL DIFFICULTY · 0",
 );
 check(
   "copyPayload appends the play URL with a trailing slash",
   copyPayload({ level: 1, heat: 0, score: 0 }) ===
-    "L1 JUNGLE · CORE · 0 https://hmarzban.github.io/fusegrid/",
+    "LEVEL 1 · JUNGLE · NORMAL DIFFICULTY · 0 https://hmarzban.github.io/fusegrid/",
 );
 
 check("heatScore CORE 1200 stays 1200", heatScore(1200, 0) === 1200);
@@ -250,7 +250,7 @@ check(
   check(
     "PAUSE_ROWS is the four-verb list, frozen, pitch cap 70",
     Object.isFrozen(PAUSE_ROWS) &&
-      PAUSE_ROWS.join("|") === "RESUME|RESTART|OPTIONS|QUIT TO MENU" &&
+      PAUSE_ROWS.join("|") === "RESUME|RESTART|SETTINGS|QUIT TO MENU" &&
       PAUSE_ROW_H === 70,
     PAUSE_ROWS.join("|"),
   );

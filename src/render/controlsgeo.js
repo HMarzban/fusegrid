@@ -42,13 +42,13 @@ export const STATUS = Object.freeze({ doneKey: "KEYBOARD BACK TO DEFAULTS", done
 /** Lines under the pad diagram when no controller is there. */
 export const CAPTION = Object.freeze({ none: "PRESS ANY BUTTON ON A CONTROLLER", touch: "TOUCH NEEDS NO SETUP" });
 const RULE = {
-  MOVE: "WALK THE GRID", BOMB: "PLANT A BOMB", THROW: "NEEDS THE THROW POWER · TOSS A BOMB", REMOTE: "NEEDS THE REMOTE POWER · SET OFF YOUR BOMBS",
+  MOVE: "WALK THE GRID", BOMB: "PLANT A BOMB", THROW: "NEEDS THE THROW POWER-UP · TOSS A BOMB", REMOTE: "NEEDS THE REMOTE POWER-UP · SET OFF YOUR BOMBS",
   PAUSE: "STOP THE RUN", SENSITIVITY: "HOW FAR THE STICK MOVES BEFORE IT COUNTS", VIBRATION: "HITS, BLASTS, PLANTS AND MENUS · LOW SKIPS MENUS",
 };
 /** No actuator on the live pad; the unknown-effects addition to the rule. */
 export const NO_VIB = "NO VIBRATION ON THIS CONTROLLER OR BROWSER", FEEL_NOTHING = "FEEL NOTHING? THIS PAD OR BROWSER MAY NOT VIBRATE";
 /* The rule follows the level, so it never promises what this level drops. */
-const VIB_RULE = ["NO VIBRATION AT ALL", "HITS, BIG BLASTS AND ROOM ENDS · NO MENU BUZZ", "HITS, BLASTS, PLANTS AND MENUS · LOW SKIPS MENUS", "HITS, BLASTS, PLANTS AND MENUS · STRONGEST"];
+const VIB_RULE = ["NO VIBRATION AT ALL", "HITS, BIG BLASTS AND LEVEL ENDS · NO MENU BUZZ", "HITS, BLASTS, PLANTS AND MENUS · LOW SKIPS MENUS", "HITS, BLASTS, PLANTS AND MENUS · STRONGEST"];
 const SENS_WORN = "SENSITIVE: A WORN STICK CAN KEEP WALKING";
 const IDX = { S: 0, E: 1, W: 2, N: 3, SHL: 4, SHR: 5, TRL: 6, TRR: 7, SELECT: 8, START: 9 };
 const padOff = (s) => s.tab === "pad" && (!s.pad || s.pad.state === "none" || s.pad.state === "lost");

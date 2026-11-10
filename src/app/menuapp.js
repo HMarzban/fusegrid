@@ -43,7 +43,7 @@ export const ITEMS = Object.freeze([
   "PLAY",
   "LEVEL SELECT",
   "DAILY",
-  "OPTIONS",
+  "SETTINGS",
   "GUIDE",
   "HIGH SCORES",
   "STATS",
@@ -51,14 +51,14 @@ export const ITEMS = Object.freeze([
 ]);
 /* GUIDE rows, frozen and index-addressed: guideRow, drawGuide and confirm's
    GUIDE dispatch all count this array. */
-export const GUIDE_ROWS = Object.freeze(["HOW TO PLAY", "ITEMS", "ENEMIES", "FLOOR"]);
+export const GUIDE_ROWS = Object.freeze(["HOW TO PLAY", "POWER-UPS", "ENEMIES", "FLOOR"]);
 /* OPTIONS rows, frozen and index-addressed: optRow, drawSettings and
    settingsHit all agree because they all count this array. */
 export const OPT_ROWS = Object.freeze([
   "MUSIC",
   "SFX",
   "SOUND",
-  "RENDER",
+  "ART STYLE",
   "CAMERA",
   "BRIGHTNESS",
   "SCREEN SHAKE",
@@ -74,7 +74,7 @@ export const OPT_ROWS = Object.freeze([
 export const PAUSE_ITEMS = Object.freeze([
   "RESUME",
   "RESTART",
-  "OPTIONS",
+  "SETTINGS",
   "QUIT TO MENU",
 ]);
 export const SOURCE_URL = "https://github.com/HMarzban/fusegrid";
@@ -390,7 +390,7 @@ export function createMenuApp(opts = {}) {
               return this._push(SCREEN.LEVEL);
             case "DAILY":
               return this.startDaily();
-            case "OPTIONS":
+            case "SETTINGS":
               this.optRow = 0;
               return this._push(SCREEN.SETTINGS);
             case "GUIDE":
@@ -419,7 +419,7 @@ export function createMenuApp(opts = {}) {
           switch (GUIDE_ROWS[this.guideRow]) {
             case "HOW TO PLAY":
               return this._push(SCREEN.HOWTO);
-            case "ITEMS":
+            case "POWER-UPS":
               return this._push(SCREEN.ITEMS);
             case "ENEMIES":
               return this._push(SCREEN.ENEMIES);
@@ -666,7 +666,7 @@ export function createMenuApp(opts = {}) {
     },
     /* warm on intent (Q3): the cursor resting WARM_T on the RENDER row (OPTIONS, or PAUSE's OPTIONS view) warms the next look of the cycle once per rest; live PLAY never */
     _warmTick(d) {
-      const on = OPT_ROWS[this.optRow] === "RENDER" && (this.screen === SCREEN.SETTINGS || (this.screen === SCREEN.GAME && this.worldState === "PAUSE" && this.pauseView === 1));
+      const on = OPT_ROWS[this.optRow] === "ART STYLE" && (this.screen === SCREEN.SETTINGS || (this.screen === SCREEN.GAME && this.worldState === "PAUSE" && this.pauseView === 1));
       if (!on) { this.warmT = 0; this._warmA = this._warmK = null; return; }
       const nx = RENDER_KINDS[(renderVal(this) + 1) % RENDER_KINDS.length];
       if (nx !== this._warmA) { this._warmA = nx; this.warmT = 0; }
@@ -695,7 +695,7 @@ export function createMenuApp(opts = {}) {
       if (r === "CAMERA")
         return this._optSet("cam", Math.min(2, Math.max(0, this.settings.cam + d)));
       if (r === "SOUND") return this._optSound(d > 0 ? 1 : 0);
-      if (r === "RENDER") return this._optRender(renderVal(this) + d);
+      if (r === "ART STYLE") return this._optRender(renderVal(this) + d);
       if (r === "SCREEN SHAKE") return this._optSet("shk", d > 0 ? 1 : 0);
       if (r === "REDUCE FLASH") return this._optSet("flx", d > 0 ? 1 : 0);
       if (r === "ANALYTICS") return this._anaBlocked() ? false : this._optAna(d > 0);
@@ -713,7 +713,7 @@ export function createMenuApp(opts = {}) {
         return this._optSet("bri", this.settings.bri >= 130 ? 70 : this.settings.bri + 10);
       if (r === "CAMERA") return this._optSet("cam", (this.settings.cam + 1) % 3);
       if (r === "SOUND") return this._optSound(this.settings.snd ? 0 : 1);
-      if (r === "RENDER") return this._optRender(this.lookJob && this.lookJob.state === "failed" ? RENDER_KINDS.indexOf(this.lookJob.k) : (renderVal(this) + 1) % 3); // Enter on a look that did not load retries it
+      if (r === "ART STYLE") return this._optRender(this.lookJob && this.lookJob.state === "failed" ? RENDER_KINDS.indexOf(this.lookJob.k) : (renderVal(this) + 1) % 3); // Enter on a look that did not load retries it
       if (r === "SCREEN SHAKE") return this._optSet("shk", this.settings.shk ? 0 : 1);
       if (r === "REDUCE FLASH") return this._optSet("flx", this.settings.flx ? 0 : 1);
       if (r === "ANALYTICS") return this._anaBlocked() ? false : this._optAna(!this.analytics);
@@ -871,7 +871,7 @@ export function createMenuApp(opts = {}) {
       if (this.pauseView === 2) return this._conf(this.gfxCycle());
       if (this.pauseView === 1) return this._conf(this.optCycle());
       const cmd = PAUSE_ITEMS[this.pauseCursor];
-      if (cmd === "OPTIONS") {
+      if (cmd === "SETTINGS") {
         this.pauseView = 1;
         this.optRow = 0;
         this.togT = -1;

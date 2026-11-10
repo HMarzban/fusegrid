@@ -146,7 +146,7 @@ check("while capturing, a tap on the capture plate is inert", Object.keys(hitPag
   check("SENSITIVITY reads the level name, off-level values snap to the nearest", SENS_LEVELS.every((l) => rowsOf(padV({ dead: l.dead }))[5].text === l.name) && rowsOf(padV({ dead: 30 }))[5].text === "MEDIUM" && rowsOf(padV({ dead: 5 }))[5].text === "MAX" && rowsOf(padV({ dead: 55 }))[5].text === "MIN" && sensIdx(25) === 2);
   check("the segment bars fill by level index, never by the dead value", rowsOf(padV({ dead: 60 }))[5].bar.join() === "1,5" && rowsOf(padV({ dead: 8 }))[5].bar.join() === "5,5" && rowsOf(padV({ vib: 0 }))[6].bar.join() === "0,3" && rowsOf(padV({ vib: 3 }))[6].bar.join() === "3,3");
   check("the unknown-effects line joins only while on", statusOf(padV({ pad: { ...PR, effects: null } }), rowsOf(padV())[6]) === "HITS, BLASTS, PLANTS AND MENUS · LOW SKIPS MENUS · " + FEEL_NOTHING && statusOf(padV({ vib: 0, pad: { ...PR, effects: null } }), rowsOf(padV())[6]) === "NO VIBRATION AT ALL" && statusOf(padV(), rowsOf(padV())[6]) === "HITS, BLASTS, PLANTS AND MENUS · LOW SKIPS MENUS");
-  check("the rule follows the level", ["NO VIBRATION AT ALL", "HITS, BIG BLASTS AND ROOM ENDS · NO MENU BUZZ", "HITS, BLASTS, PLANTS AND MENUS · LOW SKIPS MENUS", "HITS, BLASTS, PLANTS AND MENUS · STRONGEST"].every((w, i) => statusOf(padV({ vib: i }), rowsOf(padV())[6]) === w));
+  check("the rule follows the level", ["NO VIBRATION AT ALL", "HITS, BIG BLASTS AND LEVEL ENDS · NO MENU BUZZ", "HITS, BLASTS, PLANTS AND MENUS · LOW SKIPS MENUS", "HITS, BLASTS, PLANTS AND MENUS · STRONGEST"].every((w, i) => statusOf(padV({ vib: i }), rowsOf(padV())[6]) === w));
   check("vibWord: only a connected pad with an actuator and a stored level", vibWord(padV({ vib: 1 })) === "LOW" && vibWord(padV({ vib: 0 })) === "OFF" && vibWord(padV({ pad: { ...PR, rumble: false } })) === "" && vibWord(padV({ pad: { state: "lost", rumble: true } })) === "" && vibWord(keyV()) === "" && vibWord(padV({ vib: undefined })) === "" && vibWord(padV({ pad: { ...NON, rumble: true } })) === "MEDIUM");
   check("a non-standard pad reads its actuator, not its mapping", rowsOf(padV({ pad: NON }))[6].text === "NONE" && rowsOf(padV({ pad: { ...NON, rumble: true } }))[6].text === "MEDIUM" && statusOf(padV({ pad: { ...NON, rumble: true } }), rowsOf(padV())[6]) === "HITS, BLASTS, PLANTS AND MENUS · LOW SKIPS MENUS" && statusOf(padV({ pad: NON }), rowsOf(padV())[5]) === "HOW FAR THE STICK MOVES BEFORE IT COUNTS");
   check("no pad never reads a level: NONE on the dimmed row", rowsOf(keyV({ tab: "pad", pad: { state: "none" } }))[6].text === "NONE" && rowsOf(padV({ pad: { state: "lost" } }))[6].text === "NONE");
@@ -160,7 +160,7 @@ check("while capturing, a tap on the capture plate is inert", Object.keys(hitPag
 {
   const say = (v) => statusOf(v, rowsOf(v)[v.row]);
   const T = [
-    ["key default rule", keyV({ row: 2 }), "NEEDS THE THROW POWER · TOSS A BOMB"],
+    ["key default rule", keyV({ row: 2 }), "NEEDS THE THROW POWER-UP · TOSS A BOMB"],
     ["key BOMB names the aliases still alive", keyV({ row: 1 }), "PLANT A BOMB · J · X ALSO WORK"],
     ["key MOVE", keyV({ row: 0 }), "ARROWS ALWAYS MOVE · ENTER REBINDS WASD"],
     ["key PAUSE", keyV({ row: 4 }), "ESC ALWAYS PAUSES · ENTER REBINDS THE SECOND KEY"],
@@ -302,7 +302,7 @@ const paint = (v, ui, Lx = L600) => { const r = recCtx(); drawControls(r.c, Lx, 
   check("a caret on the selected row, from the kit", ctl.log.some((x) => x === "f" + ACCENT));
   const lab = (r, s) => r.texts.find((t) => t.s === s);
   check("the label's font and colour are OPTIONS' own", lab(ctl, "MOVE").fill === lab(opts, "MUSIC").fill && lab(ctl, "BOMB").fill === MUTED && lab(ctl, "MOVE").px === lab(opts, "MUSIC").px && !lab(ctl, "MOVE").mono);
-  const head1 = lab(ctl, "CONTROLS"), head2 = lab(opts, "OPTIONS");
+  const head1 = lab(ctl, "CONTROLS"), head2 = lab(opts, "SETTINGS");
   check("the title is head(): same size and colour", head1.px === head2.px && head1.fill === head2.fill && head1.x === head2.x);
   const noRound = paint(padV());
   const radii = (r) => r.log.filter((x) => x.startsWith("at")).map((x) => +x.slice(2).split(",")[4]);

@@ -123,8 +123,8 @@ check("cookiePath keeps the cookies on the game's own directory",
     get: () => ({ app: { screen }, SCREEN, busy: () => busy }), onChange: (v) => seen.push(v) });
   check("live + never asked: the card is built hidden, nothing loads",
     ga.live && !!D.card() && D.card().hidden && D.head.length === 0 && D.win.dataLayer === undefined);
-  check("the card names Google Analytics, the cookie and OPTIONS",
-    /Google Analytics/.test(D.card().innerHTML) && /cookie/.test(D.card().innerHTML) && /OPTIONS/.test(D.card().innerHTML));
+  check("the card names Google Analytics, the cookie and SETTINGS",
+    /Google Analytics/.test(D.card().innerHTML) && /cookie/.test(D.card().innerHTML) && /SETTINGS/.test(D.card().innerHTML));
   ga.event("run_start", { room: 1 });
   check("an event before an answer sends nothing", D.win.dataLayer === undefined);
   ga.tick();

@@ -325,7 +325,7 @@ const U = (n) => "http://x/g/src/m" + n + ".js";
   b.L.spot({});
   check("chip: no stage rect falls back to the CSS top", !("--chip-y" in E.style));
   b.L.miss("px", "CLASSIC 2D");
-  check("chip: a failure points to OPTIONS › RENDER, in the danger form, no card, no buttons", !E.hidden && b.el("loadmsg").textContent === "PIXEL DID NOT LOAD · OPTIONS › RENDER" && E.attrs["data-note"] === "bad" && b.el("loadbar").hidden && b.el("loadact").hidden && !("data-act" in E.attrs));
+  check("chip: a failure points to SETTINGS › ART STYLE, in the danger form, no card, no buttons", !E.hidden && b.el("loadmsg").textContent === "PIXEL DID NOT LOAD · SETTINGS › ART STYLE" && E.attrs["data-note"] === "bad" && b.el("loadbar").hidden && b.el("loadact").hidden && !("data-act" in E.attrs));
   check("chip: the failure is spoken with the look kept", b.say() === "PIXEL did not load. CLASSIC 2D stays.");
   b.L.spot({ row: true });
   check("chip: on the RENDER row the row says it, the chip stays down", E.hidden);

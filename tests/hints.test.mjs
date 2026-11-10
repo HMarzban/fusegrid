@@ -36,7 +36,7 @@ const rec = () => {
 const paint = (f) => { const r = rec(); f(r.c); return r; };
 const L = md.layout(600, 520);
 const INFO = { level: 1, best: [], unlocked: true, daily: null, top: [] };
-const ITEMS = ["PLAY|JUNGLE · CORE · NORM", "LEVEL SELECT", "DAILY|TODAY", "OPTIONS", "GUIDE", "HIGH SCORES", "STATS", "SOURCE"];
+const ITEMS = ["PLAY|JUNGLE · NORMAL DIFFICULTY · NORMAL SPEED", "LEVEL SELECT", "DAILY|TODAY", "SETTINGS", "GUIDE", "HIGH SCORES", "STATS", "SOURCE"];
 const menu = (cur, touch, rev = "") => (c) => md.drawMenu(c, { cursor: cur, enterT: 9, items: ITEMS, touch: !!touch, kind: "2d", rev, info: INFO }, L, 9);
 const STATS_UI = { rows: [], notes: [], trophies: [] };
 const GFX = { rows: [] };
@@ -156,28 +156,28 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
   const WANT = [
     ["LEVEL foot", PAGES.LEVEL(false), "ENTER START · ESC BACK"],
     ["HOW TO foot", PAGES.HOWTO(false), "ESC / ENTER BACK"],
-    ["ITEMS foot", PAGES.ITEMS(false), "WALK OVER A CUBE TO COLLECT · ESC BACK"],
+    ["ITEMS foot", PAGES.ITEMS(false), "WALK OVER A POWER-UP TO COLLECT · ESC BACK"],
     ["ENEMIES foot", PAGES.ENEMIES(false), "ESC BACK"],
     ["FLOOR foot", PAGES.FLOOR(false), "ESC BACK"],
     ["GUIDE foot", PAGES.GUIDE(false), "← → / ↑↓ PICK · ENTER OPEN · ESC BACK"],
-    ["SCORES foot", PAGES.SCORES(false), "← → HEAT · ESC BACK"],
+    ["SCORES foot", PAGES.SCORES(false), "← → DIFFICULTY · ESC BACK"],
     ["OPTIONS foot", PAGES.OPTIONS(false), "↑↓ ROW · ←→ ADJUST · ENTER CYCLE · ESC BACK"],
     ["GRAPHICS foot", PAGES.GRAPHICS(false), "↑↓ ROW · ←→ ADJUST · ENTER CYCLE · ESC BACK"],
     ["STATS foot", (c) => md.drawStats(c, L, 9, STATS_UI, false, null), "T MEDALS · C COPY MY STATS · R RESET · ESC BACK"],
-    ["STATS armed foot", (c) => md.drawStats(c, L, 9, STATS_UI, true, null), "R AGAIN ERASES · ANY OTHER KEY CANCELS · KEEPS OPTIONS + PACE · C COPY"],
+    ["STATS armed foot", (c) => md.drawStats(c, L, 9, STATS_UI, true, null), "R AGAIN ERASES · OTHER KEYS CANCEL · KEEPS SETTINGS + GAME SPEED · C COPY"],
     ["MEDALS foot", (c) => md.drawTrophies(c, L, 9, []), "ENTER / ESC BACK TO STATS"],
     ["PLAY pane", menu(0), "ENTER STARTS IT · LEVEL SELECT CHANGES IT"],
     ["OPTIONS pane", menu(3), "ENTER OPENS ALL TWELVE ROWS"],
-    ["SCORES pane", menu(5), "ENTER: ALL TEN · CORE / PLUS / MAX"],
+    ["SCORES pane", menu(5), "ENTER: ALL TEN · NORMAL / HARD / EXPERT"],
     ["SOURCE pane", menu(7), "ENTER OPENS IT IN A NEW TAB"],
     ["ATTRACT", (c) => md.drawAttractHint(c, L, 200), "DEMO — TAP TO PLAY"],
     ["show skip", (c) => md.drawIntroChrome(c, 1, 0.6, 600, 520, "d"), "ANY KEY TO SKIP"],
     ["show skip, touch", (c) => md.drawIntroChrome(c, 1, 0.6, 600, 520, "p"), "TAP TO SKIP"],
     ["title, touch", (c) => md.drawIntroChrome(c, 0, 1, 600, 520, "p"), "TAP TO START"],
-    ["LEVEL room cap", PAGES.LEVEL(false), "ROOM  ← →"],
+    ["LEVEL room cap", PAGES.LEVEL(false), "LEVEL  ← →"],
     ["LEVEL pace cap", PAGES.LEVEL(false), "[ ]"],
     ["LEVEL modes cap", PAGES.LEVEL(false), "1–5"],
-    ["LEVEL modes chip keeps its digit", PAGES.LEVEL(false), "1 IRON"],
+    ["LEVEL modes chip keeps its digit", PAGES.LEVEL(false), "1 ONE LIFE"],
     ["GUIDE sub", PAGES.GUIDE(false), "2 RULES · 6 KEYS"],
     ["GUIDE sub, touch", PAGES.GUIDE(true), "2 RULES · 6 CONTROLS"],
     ["LEVEL foot, touch", PAGES.LEVEL(true), md.LEVEL_TAP],
@@ -220,12 +220,12 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
   setHints(PAD);
   const PADWANT = [
     ["LEVEL foot", PAGES.LEVEL(false), "SOUTH START · EAST BACK"],
-    ["HOW TO foot", PAGES.HOWTO(false), "REBIND IN OPTIONS › CONTROLS · EAST / SOUTH BACK"],
-    ["ITEMS foot", PAGES.ITEMS(false), "WALK OVER A CUBE TO COLLECT · EAST BACK"],
+    ["HOW TO foot", PAGES.HOWTO(false), "REBIND IN SETTINGS › CONTROLS · EAST / SOUTH BACK"],
+    ["ITEMS foot", PAGES.ITEMS(false), "WALK OVER A POWER-UP TO COLLECT · EAST BACK"],
     ["ENEMIES foot", PAGES.ENEMIES(false), "EAST BACK"],
     ["FLOOR foot", PAGES.FLOOR(false), "EAST BACK"],
     ["GUIDE foot", PAGES.GUIDE(false), "← → / ↑↓ PICK · SOUTH OPEN · EAST BACK"],
-    ["SCORES foot", PAGES.SCORES(false), "← → HEAT · EAST BACK"],
+    ["SCORES foot", PAGES.SCORES(false), "← → DIFFICULTY · EAST BACK"],
     ["OPTIONS foot", PAGES.OPTIONS(false), "↑↓ ROW · ←→ ADJUST · SOUTH CYCLE · EAST BACK"],
     ["GRAPHICS foot", PAGES.GRAPHICS(false), "↑↓ ROW · ←→ ADJUST · SOUTH CYCLE · EAST BACK"],
     ["STATS foot offers no reset", (c) => md.drawStats(c, L, 9, STATS_UI, false, null), "NORTH MEDALS · WEST COPY MY STATS · EAST BACK"],
@@ -233,7 +233,7 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
     ["MENU foot", menu(0, false, "v99"), "↑↓ MOVE · SOUTH CONFIRM · v99"],
     ["PLAY pane", menu(0), "SOUTH STARTS IT · LEVEL SELECT CHANGES IT"],
     ["OPTIONS pane", menu(3), "SOUTH OPENS ALL TWELVE ROWS"],
-    ["SCORES pane", menu(5), "SOUTH: ALL TEN · CORE / PLUS / MAX"],
+    ["SCORES pane", menu(5), "SOUTH: ALL TEN · NORMAL / HARD / EXPERT"],
     ["SOURCE pane", menu(7), "NEEDS A CLICK OR ENTER"],
     ["ATTRACT", (c) => md.drawAttractHint(c, L, 200), "DEMO — PRESS ANY BUTTON"],
     ["show skip", (c) => md.drawIntroChrome(c, 1, 0.6, 600, 520, "d"), "ANY BUTTON TO SKIP"],
@@ -245,12 +245,12 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
     ["HOW TO pause", PAGES.HOWTO(false), "START"],
     ["pad words on a touch layout: LEVEL", PAGES.LEVEL(true), "SOUTH START · EAST BACK"],
     ["pad words on a touch layout: OPTIONS", PAGES.OPTIONS(true), "↑↓ ROW · ←→ ADJUST · SOUTH CYCLE · EAST BACK"],
-    ["pad words on a touch layout: HOW TO", PAGES.HOWTO(true), "REBIND IN OPTIONS › CONTROLS · EAST / SOUTH BACK"],
+    ["pad words on a touch layout: HOW TO", PAGES.HOWTO(true), "REBIND IN SETTINGS › CONTROLS · EAST / SOUTH BACK"],
     ["pad words on a touch layout: show skip", (c) => md.drawIntroChrome(c, 1, 0.6, 600, 520, "p"), "ANY BUTTON TO SKIP"],
   ];
   for (const [nm, f, s] of PADWANT) { const r = paint(f); check("pad: " + nm + " = \"" + s + "\"", r.has(s), r.strs().join("|")); }
   const lv = paint(PAGES.LEVEL(false));
-  check("pad: LEVEL has no [ ] or 1–5 cap and no key digits on MODES", !lv.has("[ ]") && !lv.has("1–5") && lv.has("IRON") && !lv.has("1 IRON"), lv.strs().join("|"));
+  check("pad: LEVEL has no [ ] or 1–5 cap and no key digits on MODIFIERS", !lv.has("[ ]") && !lv.has("1–5") && lv.has("ONE LIFE") && !lv.has("1 ONE LIFE"), lv.strs().join("|"));
   const gd = paint(PAGES.GUIDE(false));
   check("pad: GUIDE preview names pad buttons, no key caps", gd.has("D-PAD") && gd.has("SOUTH") && gd.has("WEST") && gd.has("EAST") && !gd.has("WASD") && !gd.has("SPACE"), gd.strs().join("|"));
   const noLetter = /(^|[ ·/])(A|B|X|Y) (CONFIRM|BACK|OPEN|START|CYCLE|STARTS|OPENS|MEDALS|COPY)|(^|[ ·/])(LB|RB|LT|RT)( |$)/;
@@ -296,7 +296,7 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
   check("pad words: a tap on COPY lands on the painted word", md.statsHit(x0 + 6 * 20, y, L, false) === "KeyC");
   check("pad words: a tap on EAST BACK does nothing", md.statsHit(x0 + 6 * 40, y, L, false) === null);
   const armed = paint((c) => md.drawStats(c, L, 9, STATS_UI, true, null));
-  check("pad words: an armed foot (a key armed it) keeps its own line", armed.has("R AGAIN ERASES · ANY OTHER KEY CANCELS · KEEPS OPTIONS + PACE · C COPY"));
+  check("pad words: an armed foot (a key armed it) keeps its own line", armed.has("R AGAIN ERASES · OTHER KEYS CANCEL · KEEPS SETTINGS + GAME SPEED · C COPY"));
   setHints(null);
 }
 
@@ -331,23 +331,23 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
   check("coachTip: a touch device on a desktop layout has no button to name", coachTip("throw", "d", null, wordsOf("touch", DEF_CONTROLS)) === "THROW · E tosses a bomb");
 
   check("overlayCue keyboard default: PAUSE reads ENTER CONFIRM", overlayCue({ state: "PAUSE" }) === "ESC · P RESUME · ↑↓ MOVE · ENTER CONFIRM · M QUIT", overlayCue({ state: "PAUSE" }));
-  check("overlayCue keyboard default: WIN / LOSE bytes", overlayCue({ state: "WIN", level: 1 }) === "SPACE / ENTER / TAP · next room" && overlayCue({ state: "WIN", level: 5 }) === "SPACE / ENTER / TAP · menu" && overlayCue({ state: "LOSE" }) === "SPACE / ENTER / TAP · new run");
+  check("overlayCue keyboard default: WIN / LOSE bytes", overlayCue({ state: "WIN", level: 1 }) === "SPACE / ENTER / TAP · next level" && overlayCue({ state: "WIN", level: 5 }) === "SPACE / ENTER / TAP · menu" && overlayCue({ state: "LOSE" }) === "SPACE / ENTER / TAP · new run");
   check("overlayCue touch default", overlayCue({ state: "PAUSE" }, true) === "TAP A ROW · PAUSE PILL RESUMES");
   check("overlayCue pad PAUSE", overlayCue({ state: "PAUSE" }, false, padW) === "START · EAST RESUME · ↑↓ MOVE · SOUTH CONFIRM", overlayCue({ state: "PAUSE" }, false, padW));
   check("overlayCue pad wins on a touch layout", overlayCue({ state: "PAUSE" }, true, padW) === "START · EAST RESUME · ↑↓ MOVE · SOUTH CONFIRM");
-  check("overlayCue pad run end, BOMB rebound or not", overlayCue({ state: "WIN", level: 1 }, false, padW) === "SOUTH · next room" && overlayCue({ state: "LOSE" }, false, wordsOf("pad", bindBtn(DEF_CONTROLS, "BOMB", "E").c)) === "SOUTH · new run");
+  check("overlayCue pad run end, BOMB rebound or not", overlayCue({ state: "WIN", level: 1 }, false, padW) === "SOUTH · next level" && overlayCue({ state: "LOSE" }, false, wordsOf("pad", bindBtn(DEF_CONTROLS, "BOMB", "E").c)) === "SOUTH · new run");
   check("overlayCue follows rebound PAUSE and BOMB keys", overlayCue({ state: "PAUSE" }, false, wordsOf("key", bindKey(DEF_CONTROLS, "PAUSE", "KeyO").c)) === "ESC · O RESUME · ↑↓ MOVE · ENTER CONFIRM · M QUIT" && overlayCue({ state: "LOSE" }, false, wordsOf("key", Z)) === "Z / ENTER / TAP · new run");
   setHints(padW);
   check("overlayCue reads the live hints with no words argument", overlayCue({ state: "PAUSE" }) === "START · EAST RESUME · ↑↓ MOVE · SOUTH CONFIRM");
   setHints(null);
 
   const over = (w, ui) => { const r = rec(); drawOverlay(r.c, { level: 1, heat: 0, pace: 0, score: 0, players: [{}], ...w }, 600, 520, 300, 260, ui); return r; };
-  check("PAUSE kicker: the room line with no note", over({ state: "PAUSE" }, { view: 0, cursor: 0, touch: false }).strs().some((s) => s.startsWith("ROOM 1 · ")));
+  check("PAUSE kicker: the level line with no note", over({ state: "PAUSE" }, { view: 0, cursor: 0, touch: false }).strs().some((s) => s.startsWith("LEVEL 1 · ")));
   for (const n of ["CONTROLLER LOST", "CONTROLLER BACK"]) {
     const r = over({ state: "PAUSE" }, { view: 0, cursor: 0, touch: false, note: n });
-    check(n + " replaces the room kicker", r.has(n) && !r.strs().some((s) => s.startsWith("ROOM 1 · ")), r.strs().join("|"));
+    check(n + " replaces the level kicker", r.has(n) && !r.strs().some((s) => s.startsWith("LEVEL 1 · ")), r.strs().join("|"));
   }
-  check("an empty note keeps the room kicker", over({ state: "PAUSE" }, { view: 0, cursor: 0, touch: false, note: "" }).strs().some((s) => s.startsWith("ROOM 1 · ")));
+  check("an empty note keeps the level kicker", over({ state: "PAUSE" }, { view: 0, cursor: 0, touch: false, note: "" }).strs().some((s) => s.startsWith("LEVEL 1 · ")));
   check("an inline page draws no note", !over({ state: "PAUSE" }, { view: 3, cursor: 0, touch: false, note: "CONTROLLER LOST" }).has("CONTROLLER LOST"));
   const endText = () => over({ state: "LOSE" }).strs().join("|");
   check("run end keeps the copy hint on keys", /new run · C copy · B board/.test(endText()), endText());
@@ -395,7 +395,7 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
   check("shellview hands app.soundNote to the MENU foot", shot(NOTE).strs().some((s) => s.startsWith(NOTE)), shot(NOTE).strs().join("|"));
   check("no note on app: no note drawn", !shot("").strs().some((s) => /NO SOUND/.test(s)));
   /* A controller arrives: the MENU signposts CONTROLS, in accent, for the note's lifetime. */
-  const SIGN = "CONTROLLER READY · OPTIONS › CONTROLS · v99", ACC = "#37f0d0";
+  const SIGN = "CONTROLLER READY · SETTINGS › CONTROLS · v99", ACC = "#37f0d0";
   const padded = (touch, pad, sound = "", L2) => { const r = rec(), cols = []; const c = new Proxy(r.c, { get: (t, p) => (p === "fillText" ? (s, x, y) => { cols.push({ s: String(s), col: t.fillStyle, x }); t.fillText(s, x, y); } : t[p]), set: (t, p, v) => { t[p] = v; return true; } }); md.drawMenu(c, { cursor: 0, enterT: 9, items: ITEMS, touch, kind: "2d", rev: "v99", info: INFO, soundNote: sound, padNote: pad }, L2 || L, 9); return { r, cols, col: (s) => (cols.find((x) => x.s === s) || {}).col }; };
   const TODAY = "↑↓ MOVE · ENTER CONFIRM · v99";
   for (const pad of ["CONTROLLER READY", "CONTROLLER BACK"]) {
@@ -425,7 +425,7 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
     check("touch hub: a tile too narrow clips rather than run over the label", !!N && N.s !== SIGN, N && N.s);
   }
   {
-    const LONG = "CONTROLLER READY · VIBRATION MEDIUM · OPTIONS › CONTROLS · v99", VN = "CONTROLLER READY · VIBRATION MEDIUM", sh = (touch, LT, padNote = VN) => { const r = rec(); md.drawMenu(r.c, { cursor: 0, enterT: 9, items: ITEMS, touch, kind: "2d", rev: "v99", info: INFO, padNote }, LT, 9); return r; };
+    const LONG = "CONTROLLER READY · VIBRATION MEDIUM · SETTINGS › CONTROLS · v99", VN = "CONTROLLER READY · VIBRATION MEDIUM", sh = (touch, LT, padNote = VN) => { const r = rec(); md.drawMenu(r.c, { cursor: 0, enterT: 9, items: ITEMS, touch, kind: "2d", rev: "v99", info: INFO, padNote }, LT, 9); return r; };
     check("MENU foot: the level joins the note where it fits", sh(false, L).has(LONG) && !sh(false, L).has(SIGN));
     check("the long note fits the stage it is drawn on", LONG.length * 6 + 24 <= 600 - 16);
     check("MENU foot: no level, today's note", sh(false, L, "CONTROLLER READY").has(SIGN) && sh(false, L, "CONTROLLER BACK").has(SIGN) && !sh(false, L, "CONTROLLER BACK").has(LONG));
@@ -434,13 +434,13 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
     check("touch hub, on the SOURCE tile: too wide, today's note stands", !sh(true, md.layout(600, 520)).has(LONG) && sh(true, md.layout(600, 520)).has(SIGN));
   }
   const padShot = (n) => { const r = rec(); const app = createMenuApp({ settings: {} }); app.screen = SCREEN.MENU; app.subT = 9; app.padNote = n; drawShell(r.c, app, {}, null, "2d", () => [], () => 0); return r; };
-  const SIGN0 = /^CONTROLLER READY · OPTIONS › CONTROLS · v\d+$/;
+  const SIGN0 = /^CONTROLLER READY · SETTINGS › CONTROLS · v\d+$/;
   check("shellview hands app.padNote to the MENU foot, the live build tag kept", padShot("CONTROLLER READY").strs().some((s) => SIGN0.test(s)), padShot("CONTROLLER READY").strs().join("|"));
   check("no padNote on app: no signpost", !padShot("").strs().some((s) => s.startsWith("CONTROLLER READY")));
-  { const r = rec(); md.drawMenu(r.c, { cursor: 0, enterT: 9, items: ITEMS, touch: false, kind: "2d", rev: "", info: INFO, padNote: "CONTROLLER READY" }, L, 9); check("no tag to keep: the sign alone, no dangling dot", r.has("CONTROLLER READY · OPTIONS › CONTROLS")); }
+  { const r = rec(); md.drawMenu(r.c, { cursor: 0, enterT: 9, items: ITEMS, touch: false, kind: "2d", rev: "", info: INFO, padNote: "CONTROLLER READY" }, L, 9); check("no tag to keep: the sign alone, no dangling dot", r.has("CONTROLLER READY · SETTINGS › CONTROLS")); }
   check("the note gone, the normal foot is back with its tag", padded(false, "").r.has(TODAY));
   setHints(PAD);
-  check("HOW TO on a pad: the foot names CONTROLS, whole, and fits its plate", paint(PAGES.HOWTO(false)).has("REBIND IN OPTIONS › CONTROLS · EAST / SOUTH BACK") && "REBIND IN OPTIONS › CONTROLS · EAST / SOUTH BACK".length * 6 <= 520);
+  check("HOW TO on a pad: the foot names CONTROLS, whole, and fits its plate", paint(PAGES.HOWTO(false)).has("REBIND IN SETTINGS › CONTROLS · EAST / SOUTH BACK") && "REBIND IN SETTINGS › CONTROLS · EAST / SOUTH BACK".length * 6 <= 520);
   setHints(null);
   check("HOW TO on keys: the foot stays today's bytes", paint(PAGES.HOWTO(false)).has("ESC / ENTER BACK") && !paint(PAGES.HOWTO(false)).strs().some((s) => s.includes("REBIND")));
   const src = (p) => readFileSync(new URL("../src/" + p, import.meta.url), "utf8");
@@ -473,21 +473,21 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
   const ringOf = (x) => x.strokes.filter((s) => s.col === "#dfe7f5" && s.y + s.h > x.G.mode[0].y && s.y < x.G.mode[0].y + x.G.mode[0].h);
   const inHelp = (x) => x.r.texts.filter((t) => t.y >= x.G.help.y - 2 && t.y <= x.G.help.y + x.G.help.h + 2).map((t) => t.s).join(" ");
   const k = lvl(600, 520, false, 2);
-  check("keys: help line and chips unchanged, no ring", !inHelp(k).includes("TRIGGERS") && k.r.has("3 THIN") && ringOf(k).length === 0, inHelp(k));
+  check("keys: help line and chips unchanged, no ring", !inHelp(k).includes("TRIGGERS") && k.r.has("4 SHRINK") && ringOf(k).length === 0, inHelp(k));
   setHints(wordsOf("pad", DEF_CONTROLS));
   const a = lvl(600, 520, false, -1);
   check("pad, no cursor: the help line says how, no ring", inHelp(a) === "TRIGGERS PICK · NORTH TOGGLES" && ringOf(a).length === 0, inHelp(a));
   const b = lvl(600, 520, false, 3), ring = ringOf(b), m = b.G.mode[3];
   check("pad, cursor: one ring, on the focused chip, outside its edge", ring.length === 1 && ring[0].x < m.x && ring[0].x + ring[0].w > m.x + m.w && ring[0].y < m.y && ring[0].y + ring[0].h > m.y + m.h, J(ring));
-  check("pad, cursor: the help line names the focused mode", inHelp(b) === "TRIGGERS PICK · NORTH TOGGLES · SHRINK walls close in from 25 s", inHelp(b));
-  check("pad, cursor on the fifth chip: TIME", inHelp(lvl(600, 520, false, 4)).endsWith("TIME stopwatch + per-room best"));
+  check("pad, cursor: the help line names the focused mode", inHelp(b) === "TRIGGERS PICK · NORTH TOGGLES · SHRINK walls close in from 25s", inHelp(b));
+  check("pad, cursor on the fifth chip: TIME TRIAL", inHelp(lvl(600, 520, false, 4)).endsWith("TIME TRIAL timer + per-level best"));
   const clipped = (x) => /…|\.\.\./.test(inHelp(x));
   for (const [W, H, T, lg, tag] of [[600, 520, false, undefined, "keyboard"], [600, 520, true, undefined, "touch"], [608, 352, false, undefined, "iso guard"], [400, 800, true, 140, "narrow touch"], [440, 760, true, 140, "narrow touch wide"]])
     for (let i = 0; i < 5; i++) {
       const x = lvl(W, H, T, i), words = inHelp(x).replace(/\s+/g, " "), S = x.G.S;
-      check("pad help fits, whole: " + tag + " chip " + i, words.startsWith("TRIGGERS PICK · NORTH TOGGLES") && !clipped(x) && words.endsWith(i === 4 ? "per-room best" : ["1 life", "floor pickups", "buried items", "from 25 s"][i]), words + " / " + S.iw);
+      check("pad help fits, whole: " + tag + " chip " + i, words.startsWith("TRIGGERS PICK · NORTH TOGGLES") && !clipped(x) && words.endsWith(i === 4 ? "per-level best" : ["ONE LIFE", "NO FLOOR ITEMS", "in bricks", "from 25s"][i]), words + " / " + S.iw);
     }
-  check("no MODES row before the first CLEAR: no help, no ring", !lvl(600, 520, false, 2, 0, false, false).r.has("TRIGGERS PICK · NORTH TOGGLES"));
+  check("no MODIFIERS row before the first CLEAR: no help, no ring", !lvl(600, 520, false, 2, 0, false, false).r.has("TRIGGERS PICK · NORTH TOGGLES"));
   setHints(null);
   check("setModeFocus(null) restores no cursor", md.modeFocusOf() === -1);
 }

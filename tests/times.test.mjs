@@ -275,19 +275,19 @@ const HUD_W = {
   check(
     "timeLine: a slower clear names the standing best",
     timeLine({ level: 3 }, { on: true, t: 41.23, best: 38.9 }) ===
-      "ROOM 3 · 0:41.2 · BEST 0:38.9",
+      "LEVEL 3 · 0:41.2 · BEST 0:38.9",
     timeLine({ level: 3 }, { on: true, t: 41.23, best: 38.9 }),
   );
   check(
     "timeLine: no prior best is NEW BEST",
     timeLine({ level: 3 }, { on: true, t: 41.23, best: null }) ===
-      "ROOM 3 · 0:41.2 · NEW BEST",
+      "LEVEL 3 · 0:41.2 · NEW BEST",
     timeLine({ level: 3 }, { on: true, t: 41.23, best: null }),
   );
   check(
     "timeLine: beating the standing best is NEW BEST",
     timeLine({ level: 3 }, { on: true, t: 41.23, best: 45 }) ===
-      "ROOM 3 · 0:41.2 · NEW BEST",
+      "LEVEL 3 · 0:41.2 · NEW BEST",
     timeLine({ level: 3 }, { on: true, t: 41.23, best: 45 }),
   );
 }
@@ -327,9 +327,9 @@ const HUD_W = {
   const a = rec();
   drawOverlay(a.c, W, 600, 520, 300, 260, undefined, undefined);
   check(
-    "drawOverlay WIN with no tm records today's lines and no ROOM line",
+    "drawOverlay WIN with no tm records today's lines and no time line",
     a.texts.some((s) => s.indexOf("CLEARED") >= 0) &&
-      !a.texts.some((s) => s.indexOf("ROOM 3") === 0),
+      !a.texts.some((s) => /^LEVEL 3 · \d+:\d\d\.\d/.test(s)),
     a.texts.join("|"),
   );
   const b = rec();
@@ -340,7 +340,7 @@ const HUD_W = {
   });
   check(
     "drawOverlay WIN with tm.on adds exactly the timeLine string",
-    b.texts.includes("ROOM 3 · 0:41.2 · BEST 0:38.9") &&
+    b.texts.includes("LEVEL 3 · 0:41.2 · BEST 0:38.9") &&
       b.texts.some((s) => s.indexOf("CLEARED") >= 0) &&
       b.texts.length === a.texts.length + 1,
     b.texts.join("|"),
@@ -467,13 +467,13 @@ const HUD_W = {
   const first = timeLine({ level: 3 }, { on: true, t: 41.23, best: bestPrev });
   check(
     "B: the first clear reads NEW BEST, never its own freshly-written time",
-    first === "ROOM 3 · 0:41.2 · NEW BEST",
+    first === "LEVEL 3 · 0:41.2 · NEW BEST",
     first,
   );
   check(
     "B: reading the store AFTER the write is what this forbids",
     timeLine({ level: 3 }, { on: true, t: 41.23, best: bestOf(v, k) }) ===
-      "ROOM 3 · 0:41.2 · BEST 0:41.2",
+      "LEVEL 3 · 0:41.2 · BEST 0:41.2",
     "that string is the bug, and the pin above is what excludes it",
   );
   bestPrev = bestOf(v, k);
@@ -481,7 +481,7 @@ const HUD_W = {
   const second = timeLine({ level: 3 }, { on: true, t: 44.0, best: bestPrev });
   check(
     "B: a slower second clear names the standing best and does not overwrite it",
-    second === "ROOM 3 · 0:44.0 · BEST 0:41.2" && v.b[k] === 412,
+    second === "LEVEL 3 · 0:44.0 · BEST 0:41.2" && v.b[k] === 412,
     second + " / " + v.b[k],
   );
   const mainSrc = readFileSync("src/main.js", "utf8");
@@ -675,7 +675,7 @@ const HUD_W = {
   const mdSrc = readFileSync("src/render/menudraw.js", "utf8");
   check(
     "menudraw keeps MODE_NAME render-side and never touches core PACT_NAME",
-    /MODE_NAME\s*=\s*\[\s*"IRON"/.test(mdSrc) && !/PACT_NAME/.test(mdSrc),
+    /MODE_NAME\s*=\s*MODE_BIT\.map\(\(b\) => MOD\[b\]\)/.test(mdSrc) && /from "\.\/words\.js"/.test(mdSrc) && !/PACT_NAME/.test(mdSrc),
     (mdSrc.match(/MODE_NAME[^\n]*/) || [])[0],
   );
   const pactSrc = readFileSync("src/core/pact.js", "utf8");

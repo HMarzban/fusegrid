@@ -1,10 +1,10 @@
 # FUSE/GRID
 
-> **INSERT COIN.** Light the fuse, clear the room, don't stand in the blast.
+> **INSERT COIN.** Light the fuse, clear the level, don't stand in the blast.
 
 **Fusegrid** is a single-player bomb-grid arcade you play right in your browser.
-Flip **REAL 3D ⇄ CLASSIC 2D** (or hand-pixelled **PIXEL**) whenever you like, dial
-the **Heat** to CORE, PLUS or MAX, and blow your way through eight rooms of
+Flip **REAL 3D ⇄ CLASSIC 2D** (or hand-pixelled **PIXEL**) whenever you like, set
+the **DIFFICULTY** to NORMAL, HARD or EXPERT, and blow your way through eight levels of
 bricks, foes and chiptune.
 
 [![Pages](https://github.com/HMarzban/fusegrid/actions/workflows/pages.yml/badge.svg)](https://github.com/HMarzban/fusegrid/actions/workflows/pages.yml)
@@ -25,14 +25,14 @@ No install needed, no account, no server. Just press start.
 
 ## 🕹️ How to play
 
-**The one rule:** clear every enemy in the room to advance.
+**The one rule:** clear every enemy in the level to advance.
 
 - Gold **WALL** never breaks. Green **BRICK** breaks, and stops a normal blast.
 - Every world has its own floor tile: BOOSTER, ICE PATCH, CONVEYOR, STREAM, TRAP, QUICKSAND,
-  PORTAL or GATE. On CORE it helps you; on MAX it fights you.
-- Floor cubes lie in the open and hide under bricks: more bombs, longer
+  PORTAL or GATE. On NORMAL it helps you; on EXPERT it fights you.
+- Power-ups lie in the open and hide under bricks: more bombs, longer
   flames, kick, throw, remote, shield and more. Grab them.
-- Take a hit and you lose a heart, but the room keeps going. Any bombs and
+- Take a hit and you lose a heart, but the level keeps going. Any bombs and
   blades already lit stay lit, so step lively.
 
 ### Controls
@@ -45,18 +45,18 @@ No install needed, no account, no server. Just press start.
 | Q | EAST | Detonate remote *(needs REMOTE)* |
 | Walk into a bomb | Walk into a bomb | Kick it so it slides *(needs KICK)* |
 | R *(in a run)* | none | Reset the camera and zoom |
-| P / Esc | START / SELECT | Pause (RESUME / RESTART / OPTIONS / QUIT TO MENU); ↑↓ + Enter or SOUTH pick a row |
+| P / Esc | START / SELECT | Pause (RESUME / RESTART / SETTINGS / QUIT TO MENU); ↑↓ + Enter or SOUTH pick a row |
 | M *(paused)* | none, QUIT TO MENU is a row | Quit to menu |
-| Space / Enter *(end screen)* | SOUTH / START | Next room, back to the menu after the finale, or a new run after GAME OVER |
+| Space / Enter *(end screen)* | SOUTH / START | Next level, back to the menu after the finale, or a new run after GAME OVER |
 | C *(end screen or STATS)* | WEST | Copy your result or your stats as text (both say COPIED, or COPY FAILED) |
 | B *(end screen)* | NORTH | Copy the board's challenge link (the end screen says BOARD LINK COPIED) |
 | T *(STATS)* | NORTH | Open the MEDALS page |
 | R, R *(STATS)* | none | Reset my cabinet (two presses; any other key cancels) |
 
 Menus run on the arrows, Enter and Esc, or on the D-PAD or stick, SOUTH or START, and EAST.
-Buttons are named by position. Powers marked `*` in the in-game HOW TO need their pickup first.
+Buttons are named by position. Powers marked `*` in the in-game HOW TO need their power-up first.
 
-**Your binds, your call.** **OPTIONS → CONTROLS** rebinds both devices. The table
+**Your binds, your call.** **SETTINGS → CONTROLS** rebinds both devices. The table
 shows the defaults. Arrows, Esc, Enter, the D-PAD and START stay put, so you can always get back.
 
 **On a phone or tablet,** a virtual D-pad and bomb button sit off the board.
@@ -66,7 +66,7 @@ side gutters, with pause above. Holding THROW or REMOTE? A matching button pops
 up beside the bomb button (in the right gutter in landscape). STATS's MEDALS,
 Copy and Reset labels are tappable too.
 
-Want the full cast of pickups and foes? Open **GUIDE → ITEMS / ENEMIES** in the
+Want the full cast of power-ups and foes? Open **GUIDE → POWER-UPS / ENEMIES** in the
 game. The cabinet explains itself, and its wording comes straight from the
 game's own item table, so it's never out of date.
 
@@ -74,9 +74,9 @@ game's own item table, so it's never out of date.
 
 ## 🗺️ The run
 
-### Eight rooms
+### Eight levels
 
-| Room | Look | Notes |
+| Level | World | Notes |
 |---|---|---|
 | 1 | JUNGLE | Bright grass, gold stumps |
 | 2 | ICE | White cubes, navy cliffs |
@@ -87,41 +87,41 @@ game's own item table, so it's never out of date.
 | 7 | VOID | Violet dark, tall cliffs *(unlocks after your first CLEAR)* |
 | 8 | CROWN | Gold court. **Finale after unlock** *(unlocks after your first CLEAR)* |
 
-Every room has its own chiptune theme and its own blast tint. Fresh installs
-show rooms 1–5 only. That's the gate, not a bug: beat room 5 and the map grows.
+Every level has its own chiptune theme and its own blast tint. Fresh installs
+show levels 1–5 only. That's the gate, not a bug: beat level 5 and the map grows.
 
-### Turn up the Heat
+### Turn up the DIFFICULTY
 
-On LEVEL SELECT, `←/→` picks the room, `↑/↓` picks Heat and `[`/`]` picks pace
-(EASY / NORM / HARD). Enter starts, Esc backs out.
+On LEVEL SELECT, `←/→` picks the level, `↑/↓` picks DIFFICULTY and `[`/`]` picks
+GAME SPEED (SLOW / NORMAL / FAST). Enter starts, Esc backs out.
 
-| Heat | What changes |
+| Difficulty | What changes |
 |---|---|
-| **CORE** | The baseline run (baseline v6, the replay reference) |
-| **PLUS** | Harder spawns and a tighter fuse |
-| **MAX** | Highest pressure |
+| **NORMAL** | The baseline run (baseline v6, the replay reference) |
+| **HARD** | Harder spawns and a tighter fuse |
+| **EXPERT** | Highest pressure |
 
-The attract demo always runs CORE with every MODE off, whatever you picked last.
+The attract demo always runs NORMAL with every modifier off, whatever you picked last.
 
-### Stack the MODES *(after your first FUSE/GRID CLEAR)*
+### Stack the MODIFIERS *(after your first FUSE/GRID CLEAR)*
 
-Clear room 5 once and LEVEL SELECT also offers four optional **MODES**,
+Clear level 5 once and LEVEL SELECT also offers four optional **MODIFIERS**,
 each a voluntary handicap:
 
-| Key | Mode | Rule |
+| Key | Modifier | Rule |
 |---|---|---|
-| `1` | IRON | Start with one life |
-| `2` | BARE | No walkable floor cubes |
-| `3` | THIN | One fewer buried cube under breakables |
+| `1` | ONE LIFE | Start with one life |
+| `2` | NO FLOOR ITEMS | No power-ups lying in the open |
+| `3` | FEWER ITEMS | One fewer power-up buried under breakables |
 | `4` | SHRINK | Arena walls close inward over time |
 
-`5` adds **TIME**: a play-only stopwatch with a per-room best. A CORE run
-with every MODE off is bit-identical to baseline v6.
+`5` adds **TIME TRIAL**: a play-only stopwatch with a per-level best. A NORMAL run
+with every modifier off is bit-identical to baseline v6.
 
 ### Score
 
-The live HUD shows raw points. **HIGH SCORES** saves Heat-scaled totals:
-CORE ×1, PLUS ×2, MAX ×3.
+The live HUD shows raw points. **HIGH SCORES** saves difficulty-scaled totals:
+NORMAL ×1, HARD ×2, EXPERT ×3.
 
 ---
 
@@ -131,52 +131,52 @@ CORE ×1, PLUS ×2, MAX ×3.
   the music and a ~4 s show that blasts the menu open. Any key skips it.
 - **A new board every run.** Every PLAY, restart and GAME OVER retry deals a
   fresh board; losing a life keeps the one you're on. Each world has its own
-  bold room shape (fourteen in all), and you start sealed in a brick corner
+  bold level shape (fourteen in all), and you start sealed in a brick corner
   with every foe at least 10 steps away. Every board passes a fairness check
   before you see it.
-- **Three looks, one game.** **OPTIONS → RENDER** cycles CLASSIC 2D (Canvas),
+- **Three looks, one game.** **SETTINGS → ART STYLE** cycles CLASSIC 2D (Canvas),
   PIXEL (hand-drawn sprites over the same board) and REAL 3D (WebGL), live, no
   reload. REAL 3D frames the whole board from one 3/4 camera; wheel or pinch to
-  zoom, and zoom snaps back to your CAMERA preset every room. OPTIONS also
+  zoom, and zoom snaps back to your CAMERA preset every level. SETTINGS also
   holds music and SFX volume, the 3D camera preset, brightness, screen shake
   and reduce-flash.
-- **GRAPHICS.** One page (under OPTIONS, and in the pause menu) for look versus
+- **GRAPHICS.** One page (under SETTINGS, and in the pause menu) for look versus
   frame rate: QUALITY BATTERY / AUTO / HIGH in one press, or tune FRAME RATE
   (30 / 60 / MAX), RESOLUTION, SHADOWS, ANTI-ALIAS, EFFECTS, DEMO and an FPS
   METER yourself (CUSTOM). Game speed never changes. Menus and pause idle at
   30 fps, and audio sleeps while the tab is hidden.
-- **Pickups that talk back.** Every pickup floats a label with your new value
+- **Power-ups that talk back.** Every power-up floats a label with your new value
   (`FLAME 4`, `MAX`, or `replaces …` on a bomb swap) and pulses its HUD chip.
   An ability bar along the bottom of the board lists the powers you hold.
 - **Coach.** A ghost demonstrates your first bomb on a fresh install, then you
   get one short tip the first time you grab KICK, THROW, REMOTE, PASS, LINE,
-  POWER, PIERCE or SHIELD. Once each, ever.
+  POWER BOMB, PIERCE or SHIELD. Once each, ever.
 - **Run summary.** GAME OVER and the finale show your tally and a delta
-  against your saved best for that Heat: NEW BEST, FURTHEST ROOM YET, MATCHED,
+  against your saved best for that difficulty: NEW BEST, FURTHEST LEVEL YET, MATCHED,
   or how far short you fell. Combo callouts and a close-call flash fire during
   play (both respect reduce-flash).
 - **DAILY.** One board a day, seeded from the date. Your tries and your best
   for the day stay on this device. Nobody is ranked; it's you against you.
 - **Challenge code.** On the end screen, `B` copies a twelve-character board
-  code (seed, Heat, MODES, pace and which board maker built it, never a score;
+  code (seed, difficulty, modifiers, game speed and which board maker built it, never a score;
   `F2` codes are the new mazes, `F1` codes keep the original boards). Open
   `…/fusegrid/?code=XXXXXXXXXXXX` to play that same board.
 - **Ghost.** On a DAILY or challenge board (the boards you can play twice),
-  clear a room faster than ever and replaying that exact board (same seed,
-  room, Heat, MODES, pace) races a translucent copy of your best
+  clear a level faster than ever and replaying that exact board (same seed,
+  level, difficulty, modifiers, game speed) races a translucent copy of your best
   route, in every look.
-- **STATS.** Lifetime runs, rooms, deaths, kills, pickups, play time, DAYS
-  PLAYED and your CORE / PLUS / MAX bests. `C` (or a tap on `C COPY MY STATS`)
+- **STATS.** Lifetime runs, levels, deaths, kills, power-ups, play time, DAYS
+  PLAYED and your NORMAL / HARD / EXPERT bests. `C` (or a tap on `C COPY MY STATS`)
   copies it as text. HIGH SCORES carries four local plaques.
 - **Medals.** Eight of them, each earned on a finale clear. `T` (or a tap on
   `T MEDALS`) on STATS opens the MEDALS page.
 - **Reset my cabinet.** On STATS press `R` twice (or tap `R RESET`, then
-  `R AGAIN`) to wipe progress and reload. Settings, pace and controls are kept. Anything
+  `R AGAIN`) to wipe progress and reload. Settings, game speed and controls are kept. Anything
   else cancels (`C`, or a tap on `C COPY`, cancels and copies your stats).
-- **Help on the cabinet.** **GUIDE** (HOW TO, ITEMS, ENEMIES), HIGH SCORES,
+- **Help on the cabinet.** **GUIDE** (HOW TO, POWER-UPS, ENEMIES, FLOOR), HIGH SCORES,
   STATS and **SOURCE**, which opens this repository.
 - **Menus built for both hands.** On a keyboard, MENU shows a preview of the
-  row you point at and LEVEL SELECT is a grid of room tiles beside a room
+  row you point at and LEVEL SELECT is a grid of level tiles beside a level
   card. On a phone, MENU is a hub of big tiles and every menu page fills the
   screen.
 - **Plays offline.** Install it from the browser as a PWA. After your first
@@ -191,7 +191,7 @@ CORE ×1, PLUS ×2, MAX ×3.
 Everything the game remembers lives in your browser's local storage. There is
 no account, no server and no global ranking. The game asks once whether to
 share play stats through Google Analytics; nothing is sent unless you
-allow it, and **OPTIONS → ANALYTICS** changes your mind
+allow it, and **SETTINGS → ANALYTICS** changes your mind
 ([privacy](docs/privacy.md)).
 
 ---

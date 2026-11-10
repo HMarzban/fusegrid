@@ -277,13 +277,13 @@ import { readFileSync } from "node:fs";
   const daily = { ...plain, daily: TODAY, tries: 3, dbest: 1840 };
   check(
     "dailyLine is the exact locked copy, and YOUR is in it",
-    dailyLine(W, daily) === "DAILY 2026-09-07 · NORM · TRY 3 · YOUR BEST 1840",
+    dailyLine(W, daily) === "DAILY 2026-09-07 · NORMAL SPEED · TRY 3 · YOUR BEST 1840",
     dailyLine(W, daily),
   );
   check(
-    "the pace token is printed, so the daily's pinned NORM is never a silent surprise",
+    "the speed is printed, so the daily's pinned NORMAL SPEED is never a silent surprise",
     dailyLine({ ...W, pace: 1 }, daily) ===
-      "DAILY 2026-09-07 · HARD · TRY 3 · YOUR BEST 1840",
+      "DAILY 2026-09-07 · FAST SPEED · TRY 3 · YOUR BEST 1840",
     dailyLine({ ...W, pace: 1 }, daily),
   );
   const lp = summaryLines(W, plain);
@@ -312,7 +312,7 @@ import { readFileSync } from "node:fs";
   check("DAILY sits directly under LEVEL SELECT", ITEMS[2] === "DAILY", JSON.stringify(ITEMS));
   /* Written through indexOf so a future insert cannot silently re-point a row
      at the wrong screen — the failure mode stage 2 exists to catch. */
-  const map = [["OPTIONS", SCREEN.SETTINGS], ["GUIDE", SCREEN.GUIDE],
+  const map = [["SETTINGS", SCREEN.SETTINGS], ["GUIDE", SCREEN.GUIDE],
     ["HIGH SCORES", SCREEN.SCORES], ["STATS", SCREEN.STATS], ["LEVEL SELECT", SCREEN.LEVEL]];
   const wrong = map.filter(([label, screen]) => {
     const a = createMenuApp();
@@ -623,7 +623,7 @@ import "../src/core/board3.js";
     g.loop((t += 16));
     check(
       "ro.run.tries/dbest reach the LOSE overlay pixels exactly — TRY 3, YOUR BEST 1840 (kills M9 and M21)",
-      texts.indexOf("DAILY " + local + " · NORM · TRY 3 · YOUR BEST 1840") >= 0,
+      texts.indexOf("DAILY " + local + " · NORMAL SPEED · TRY 3 · YOUR BEST 1840") >= 0,
       JSON.stringify(texts),
     );
   } finally {

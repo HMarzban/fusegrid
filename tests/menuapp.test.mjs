@@ -62,7 +62,7 @@ check(
     ITEMS.length === 8 &&
     ITEMS[0] === "PLAY" &&
     ITEMS[2] === "DAILY" &&
-    ITEMS[3] === "OPTIONS" &&
+    ITEMS[3] === "SETTINGS" &&
     ITEMS[4] === "GUIDE" &&
     ITEMS[6] === "STATS" &&
     ITEMS[7] === "SOURCE",
@@ -80,14 +80,14 @@ check(
 check(
   "GUIDE_ROWS frozen, the four folded rows in order",
   Object.isFrozen(GUIDE_ROWS) &&
-    GUIDE_ROWS.join("|") === "HOW TO PLAY|ITEMS|ENEMIES|FLOOR",
+    GUIDE_ROWS.join("|") === "HOW TO PLAY|POWER-UPS|ENEMIES|FLOOR",
   GUIDE_ROWS.join("|"),
 );
 check(
   "OPT_ROWS frozen, twelve rows in order, CONTROLS between GRAPHICS and RESET DEFAULTS",
   Object.isFrozen(OPT_ROWS) &&
     OPT_ROWS.join("|") ===
-      "MUSIC|SFX|SOUND|RENDER|CAMERA|BRIGHTNESS|SCREEN SHAKE|REDUCE FLASH|ANALYTICS|GRAPHICS|CONTROLS|RESET DEFAULTS",
+      "MUSIC|SFX|SOUND|ART STYLE|CAMERA|BRIGHTNESS|SCREEN SHAKE|REDUCE FLASH|ANALYTICS|GRAPHICS|CONTROLS|RESET DEFAULTS",
   OPT_ROWS.join("|"),
 );
 check(
@@ -384,7 +384,7 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
 {
   for (const [lab, screen] of [
     ["LEVEL SELECT", SCREEN.LEVEL],
-    ["OPTIONS", SCREEN.SETTINGS],
+    ["SETTINGS", SCREEN.SETTINGS],
     ["GUIDE", SCREEN.GUIDE],
     ["HIGH SCORES", SCREEN.SCORES],
     ["STATS", SCREEN.STATS],
@@ -479,7 +479,7 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
 {
   const a = createMenuApp();
   a.screen = SCREEN.MENU;
-  a.cursor = ITEMS.indexOf("OPTIONS");
+  a.cursor = ITEMS.indexOf("SETTINGS");
   a.confirm();
   check("OPTIONS entry resets optRow and clears togT", a.optRow === 0 && a.togT === -1);
   check(
@@ -487,7 +487,7 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
     a.key("Escape") === true && a.screen === SCREEN.MENU,
     String(a.screen),
   );
-  a.cursor = ITEMS.indexOf("OPTIONS");
+  a.cursor = ITEMS.indexOf("SETTINGS");
   a.confirm();
   check(
     "confirm on SETTINGS is NOT back — Enter is consumed by the row",
@@ -552,14 +552,14 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
   check("CAMERA rejects Enter in CLASSIC 2D", a.optCycle() === false && a.settings.cam === 0);
   a.optRow = OPT_ROWS.indexOf("BRIGHTNESS");
   check("BRIGHTNESS rejects adjust in CLASSIC 2D", a.move(1, 0) === false && a.settings.bri === 100);
-  a.optRow = OPT_ROWS.indexOf("RENDER");
+  a.optRow = OPT_ROWS.indexOf("ART STYLE");
   a.optCycle();
   check("RENDER Enter CLASSIC 2D -> PIXEL sets pixel and px together", a.pixel === true && a.render3d === false && a.settings.px === 1 && a.settings.r3d === 0);
   a.optRow = OPT_ROWS.indexOf("CAMERA");
   check("CAMERA rejects Enter in PIXEL", a.optCycle() === false && a.settings.cam === 0);
   a.optRow = OPT_ROWS.indexOf("BRIGHTNESS");
   check("BRIGHTNESS rejects adjust in PIXEL", a.move(1, 0) === false && a.settings.bri === 100);
-  a.optRow = OPT_ROWS.indexOf("RENDER");
+  a.optRow = OPT_ROWS.indexOf("ART STYLE");
   a.optCycle();
   check("RENDER flips render3d and r3d together", a.render3d === true && a.settings.r3d === 1);
   check("RENDER PIXEL -> REAL 3D clears pixel and px", a.pixel === false && a.settings.px === 0);
@@ -572,7 +572,7 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
   for (let i = 0; i < 10; i++) a.move(1, 0);
   check("BRIGHTNESS clamps at 130", a.settings.bri === 130 && a.move(1, 0) === false, a.settings.bri);
   check("BRIGHTNESS Enter wraps 130 -> 70", a.optCycle() === true && a.settings.bri === 70, a.settings.bri);
-  a.optRow = OPT_ROWS.indexOf("RENDER");
+  a.optRow = OPT_ROWS.indexOf("ART STYLE");
   a.optCycle();
   check("RENDER back to CLASSIC 2D re-locks the two 3D rows", a.render3d === false && a.settings.r3d === 0);
   check("RENDER Enter wraps REAL 3D -> CLASSIC 2D (px stays 0)", a.pixel === false && a.settings.px === 0);
@@ -582,7 +582,7 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
   const seen = [];
   const a = createMenuApp({ onSettings: (s, k) => seen.push(k + ":" + s.r3d + s.px) });
   a.screen = SCREEN.SETTINGS;
-  a.optRow = OPT_ROWS.indexOf("RENDER");
+  a.optRow = OPT_ROWS.indexOf("ART STYLE");
   const val = () => (a.render3d ? 2 : a.pixel ? 1 : 0);
   check("RENDER ← at CLASSIC 2D clamps (no change, no report)", a.move(-1, 0) === false && val() === 0 && seen.length === 0);
   a.move(1, 0);
@@ -1298,7 +1298,7 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
     "LEVEL SELECT": SCREEN.LEVEL,
     // no o.dailySeed here, so DAILY is inert and stays on MENU (R3)
     DAILY: SCREEN.MENU,
-    OPTIONS: SCREEN.SETTINGS,
+    SETTINGS: SCREEN.SETTINGS,
     GUIDE: SCREEN.GUIDE,
     "HIGH SCORES": SCREEN.SCORES,
     STATS: SCREEN.STATS,
@@ -1328,7 +1328,7 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
   }
   check(
     "confirm follows ITEMS labels (SOURCE stays MENU, PLAY starts the run)",
-    ok && started === 1 && srcHits === 1 && want.OPTIONS === SCREEN.SETTINGS,
+    ok && started === 1 && srcHits === 1 && want.SETTINGS === SCREEN.SETTINGS,
     det.join(" ") || "ok",
   );
 }
@@ -1343,7 +1343,7 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
   );
   check(
     "R6 ITEMS is unchanged: eight rows, same order, no trophy row",
-    ITEMS.join("|") === "PLAY|LEVEL SELECT|DAILY|OPTIONS|GUIDE|HIGH SCORES|STATS|SOURCE",
+    ITEMS.join("|") === "PLAY|LEVEL SELECT|DAILY|SETTINGS|GUIDE|HIGH SCORES|STATS|SOURCE",
     ITEMS.join("|"),
   );
   const a = createMenuApp();
@@ -1369,7 +1369,7 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
 {
   const seen = [];
   const a = createMenuApp({ settings: {}, onSettings: (s, k) => seen.push(k) });
-  a.screen = SCREEN.MENU; a.cursor = ITEMS.indexOf("OPTIONS"); a.confirm();
+  a.screen = SCREEN.MENU; a.cursor = ITEMS.indexOf("SETTINGS"); a.confirm();
   a.optRow = OPT_ROWS.indexOf("GRAPHICS");
   check("GRAPHICS door sits at optRow 9, CONTROLS then RESET below it", a.optRow === 9 && OPT_ROWS[10] === "CONTROLS" && OPT_ROWS[11] === "RESET DEFAULTS");
   const s0 = JSON.stringify(a.settings);
@@ -1817,7 +1817,7 @@ check("menuapp's DEF_MOVE is controls.js DEF_KEY.MOVE", JSON.stringify(createMen
   const s = createMenuApp({ autoplay: false, onWarm: (k) => warms.push(k) });
   s.skip();
   s.screen = SCREEN.SETTINGS;
-  s.optRow = OPT_ROWS.indexOf("RENDER");
+  s.optRow = OPT_ROWS.indexOf("ART STYLE");
   s.update(0.2, mkInput({}, false));
   check("warm: nothing before 0.4 s on the RENDER row", warms.length === 0);
   s.update(0.25, mkInput({}, false));
@@ -1832,7 +1832,7 @@ check("menuapp's DEF_MOVE is controls.js DEF_KEY.MOVE", JSON.stringify(createMen
   s.optRow = OPT_ROWS.indexOf("MUSIC");
   s.update(1, mkInput({}, false));
   check("off the RENDER row: no warm", warms.length === 2);
-  s.screen = SCREEN.GAME; s.worldState = "PLAY"; s.pauseView = 1; s.optRow = OPT_ROWS.indexOf("RENDER"); s._optRender(0);
+  s.screen = SCREEN.GAME; s.worldState = "PLAY"; s.pauseView = 1; s.optRow = OPT_ROWS.indexOf("ART STYLE"); s._optRender(0);
   s.update(1, mkInput({}, false));
   check("live PLAY never warms", warms.length === 2);
   s.worldState = "PAUSE";

@@ -1,10 +1,10 @@
 import { CFG, isFinale, biomeOf } from "../core/config.js";
-import { HEAT_COL, heatToken, HEAT_NAME, clampHeat } from "../core/heat.js";
+import { HEAT_COL, heatToken } from "../core/heat.js";
 import { drawIcon } from "./sprites.js";
 import { rr } from "./icons.js";
 import { PROJ } from "./r3d/camera.js";
-import { clampPact, pactLabel } from "../core/pact.js";
-import { clampPace, paceToken } from "../core/pace.js";
+import { clampPace } from "../core/pace.js";
+import { LABEL, diffTag, speedTag, modWords, runWords } from "./words.js";
 import { abilityList, abilityText, abilityOrd, getStrip } from "./fx.js";
 import { layout, listGeom, listHit, drawList, plate, fitKicker, head as plateHead, foot as plateFoot } from "./menudraw.js";
 import { hints } from "./hintcopy.js";
@@ -46,7 +46,7 @@ export function overlayCue(world, touch, words) {
     go = pad ? W.ok : W.bomb + " / " + W.ok + " / TAP";
   if (world.state === "WIN") {
     const fin = isFinale(world.level) || world.finale;
-    return fin ? go + " · menu" : go + " · next room";
+    return fin ? go + " · menu" : go + " · next level";
   }
   if (world.state === "LOSE") return go + " · new run";
   if (world.state === "PAUSE") {
@@ -57,9 +57,7 @@ export function overlayCue(world, touch, words) {
 }
 export function runStamp(world) {
   const lv = world.level | 0;
-  const bio = biomeOf(lv).name;
-  const heat = HEAT_NAME[clampHeat(world.heat)];
-  return "L" + lv + " " + bio + " · " + heat + " · " + (world.score | 0);
+  return LABEL.LEVEL + " " + lv + " · " + biomeOf(lv).name + " · " + diffTag(world.heat) + " · " + (world.score | 0);
 }
 export function copyPayload(world) {
   return runStamp(world) + " https://hmarzban.github.io/fusegrid/";
@@ -83,7 +81,7 @@ export function fmtTime(sec) {
 export function timeLine(world, tm) {
   const t = tm || {};
   return (
-    "ROOM " +
+    LABEL.LEVEL + " " +
     ((world && world.level) | 0) +
     " · " +
     fmtTime(t.t) +
@@ -105,20 +103,16 @@ export function fmtSpan(sec) {
 export function runLine(run) {
   const r = run || {};
   return (
-    "ROOMS " + (r.r | 0) + " · KILLS " + (r.k | 0) + " · PICKS " + (r.p | 0) +
+    LABEL.LEVEL + "S " + (r.r | 0) + " · KILLS " + (r.k | 0) + " · " + LABEL.POWER_UPS + " " + (r.p | 0) +
     " · " + fmtSpan(r.t)
   );
 }
 /* bestLabel names the EXACT bucket the record is kept in, so the sentence can
-   never be read against the wrong record. pactLabel/paceToken are src/core,
-   which render/ may read. */
+   never be read against the wrong record: the difficulty always, the speed and
+   each modifier when they are not the default, every one named (words.js). */
 export function bestLabel(world) {
   const w = world || {};
-  return (
-    HEAT_NAME[clampHeat(w.heat)] +
-    (clampPact(w.pact) ? " · " + pactLabel(w.pact) : "") +
-    (clampPace(w.pace) ? " · " + paceToken(w.pace) : "")
-  );
+  return [diffTag(w.heat)].concat(clampPace(w.pace) ? [speedTag(w.pace)] : [], modWords(w.pact)).join(" · ");
 }
 /* The display edge and the persist edge are the SAME edge. A mid-room NEW BEST
    claims a record that has not been written and that a later death can still
@@ -138,7 +132,7 @@ export function isRunEnd(world) {
 /* Minor-3 (owner ruling, review 2026-09-07): a LEVEL SELECT start begins
    above room 1, so "world.level > b.r" would read as a room the player
    PICKED, not one they earned. run.fromStart (absent => true, the
-   pre-existing room-1-start behaviour) gates FURTHEST ROOM YET alone — never
+   pre-existing room-1-start behaviour) gates FURTHEST LEVEL YET alone — never
    inside the combination either, so that case degrades to plain NEW BEST.
    The score comparison is unaffected: a level-select run's score is a real
    run either way. */
@@ -147,11 +141,11 @@ function deltaOf(world, run) {
   const fromStart = run.fromStart !== false;
   /* Nit-6 (owner ruling 2026-09-07): a first-ever run on a bucket (no prior
      record) that scores exactly 0 sets no record worth naming — no delta line
-     at all, not even FURTHEST ROOM YET. A first-ever run with score > 0 keeps
+     at all, not even FURTHEST LEVEL YET. A first-ever run with score > 0 keeps
      form 3 unchanged. */
   if (!b && (world.score | 0) === 0) return ["", false];
   const p = [];
-  if (fromStart && (!b || (world.level | 0) > (b.r | 0))) p.push("FURTHEST ROOM YET");
+  if (fromStart && (!b || (world.level | 0) > (b.r | 0))) p.push("FURTHEST " + LABEL.LEVEL + " YET");
   if (!b || (world.score | 0) > (b.s | 0)) p.push("NEW BEST");
   if (p.length) return [p.join(" · "), true];
   if ((world.score | 0) === (b.s | 0))
@@ -181,13 +175,13 @@ export function summaryLines(world, run) {
 }
 /* On a daily run this REPLACES the delta line in slot 3: the day's comparison
    is the one that matters that day, and the nb.bests.v1 write still happens so
-   nothing is lost from the record. The pace token is printed because the daily
-   pins NORM and ignores the player's own pace — an ignored setting is shown,
+   nothing is lost from the record. The speed is printed because the daily
+   pins NORMAL SPEED and ignores the player's own — an ignored setting is shown,
    never swallowed. "YOUR" is the honesty word and it is free. */
 export function dailyLine(world, run) {
   const w = world || {}, r = run || {};
   return (
-    "DAILY " + r.daily + " · " + paceToken(w.pace) +
+    "DAILY " + r.daily + " · " + speedTag(w.pace) +
     " · TRY " + (r.tries | 0) + " · YOUR BEST " + (r.dbest | 0)
   );
 }
@@ -198,7 +192,7 @@ const copyHint = () => (hints().dev === "pad" ? " · WEST copy · NORTH board" :
 export const PAUSE_ROWS = Object.freeze([
   "RESUME",
   "RESTART",
-  "OPTIONS",
+  LABEL.SETTINGS,
   "QUIT TO MENU",
 ]);
 /* PAUSE is the MENU's own plate (menudraw listGeom/drawList): RESUME is the
@@ -210,7 +204,7 @@ export const PAUSE_ROW_H = 70,
   PAUSE_ROW_D = 44;
 const PAUSE_SHAPE = Object.freeze(PAUSE_ROWS.map((label, i) => ({ label, hero: i === 0, danger: i === 1 || i === 3, door: i === 2 })));
 /* The ONE named coordinate space for pause chrome: it feeds both drawOverlay
-   call sites and both hit tests, so the list, the inline OPTIONS page and the
+   call sites and both hit tests, so the list, the inline SETTINGS page and the
    tap map can never disagree by a pixel. */
 export function overlayBox(kind) {
   if (kind === "iso")
@@ -226,21 +220,27 @@ export function pauseGeom(B, touch) {
 export function pauseHit(x, y, box, touch) {
   return listHit(x, y, pauseGeom(box || overlayBox("2d"), touch), true);
 }
-/* Run context for the PAUSE kicker: room, biome, heat, pace (+pact, +DAILY). */
+/* Run context for the PAUSE kicker: level, world, difficulty, speed (+modifiers, +DAILY), each setting named. */
 export function pauseKicker(world, run) {
-  const w = world || {},
-    p = clampPact(w.pact);
-  return "ROOM " + (w.level | 0) + " · " + biomeOf(w.level | 0).name + " · " + HEAT_NAME[clampHeat(w.heat)] + " · " + paceToken(w.pace) +
-    (p ? " · MODES " + pactLabel(p) : "") + (run && run.daily ? " · DAILY" : "");
+  const w = world || {};
+  return LABEL.LEVEL + " " + (w.level | 0) + " · " + biomeOf(w.level | 0).name + " · " + runWords({ heat: w.heat, pace: w.pace, pact: w.pact }) + (run && run.daily ? " · DAILY" : "");
 }
 /* v202 Q1: the look the player picked mid-run (app.lookNext: REAL 3D NEXT / READY /
    · RESTORING) rides the kicker's end; run context drops from the end (DAILY,
-   MODES, pace, heat) until it fits. No tail = today's kicker, no measuring. */
+   modifiers, speed, difficulty) until it fits. No tail = the kicker, no measuring:
+   drawOverlay fits a kicker with no tail itself (pauseFit). */
 export function pauseKick(c, base, next, room) {
   if (!next) return base;
   const p = String(base).split(" · "), cands = [];
   for (let n = p.length; n >= 1; n--) cands.push(p.slice(0, n).join(" · ") + " · " + next);
   cands.push(next);
+  return fitKicker(c, cands, room);
+}
+/* A kicker with no tail, dropped from the end until it fits (the named settings
+   outgrew the plate): the same candidates pauseKick walks, minus the tail. */
+export function pauseFit(c, base, room) {
+  const p = String(base).split(" · "), cands = [];
+  for (let n = p.length; n >= 1; n--) cands.push(p.slice(0, n).join(" · "));
   return fitKicker(c, cands, room);
 }
 /* body[data-lay] p / l (fit.js) = a touch layout: the one predicate the
@@ -310,14 +310,15 @@ export function drawOverlay(
     note();
   } else if (world.state === "PAUSE") {
     const u = ui || {};
-    /* view 1 / 2 = the inline OPTIONS / GRAPHICS page: veil only, so
+    /* view 1 / 2 = the inline SETTINGS / GRAPHICS page: veil only, so
        drawShell's plate never lands on top of a live PAUSED headline. */
     if ((u.view | 0) >= 1) return;
     /* Static (R16: PAUSE freezes everything) — no entry timer. */
     const touch = u.touch == null ? touchOf(c) : !!u.touch,
       g = pauseGeom({ w, h }, touch);
     plate(c, g.x, g.y, g.w, g.h);
-    plateHead(c, g, "PAUSED", pauseKick(c, u.note || pauseKicker(world, run), u.next, g.w - 24));
+    const base = u.note || pauseKicker(world, run);
+    plateHead(c, g, "PAUSED", u.next ? pauseKick(c, base, u.next, g.w - 24) : pauseFit(c, base, g.w - 24));
     drawList(c, g, PAUSE_SHAPE, u.cursor | 0, 0, { touch });
     plateFoot(c, g, overlayCue(world, touch));
   }

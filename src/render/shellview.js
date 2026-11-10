@@ -5,10 +5,10 @@
    screen measures against: a real canvas always wins, otherwise the render
    kind picks the classic box or the projected dimetric one. */
 import { CFG, biomeOf } from "../core/config.js";
-import { HEAT_NAME, clampHeat } from "../core/heat.js";
-import { paceToken } from "../core/pace.js";
-import { clampPact, pactLabel } from "../core/pact.js";
+import { clampHeat } from "../core/heat.js";
+import { clampPact } from "../core/pact.js";
 import { clampPace } from "../core/pace.js";
+import { LABEL, runWords } from "./words.js";
 import { SCREEN, ITEMS } from "../app/menuapp.js";
 import { PROJ } from "./r3d/camera.js";
 import { drawLogo, overlayBox, touchLay, fmtTime, isRunEnd } from "./scenes.js";
@@ -24,7 +24,7 @@ export function kindSize(kind) {
   };
 }
 
-/* Build tag for the OPTIONS head kicker and the MENU foot. CACHE_NAME is the only build identifier
+/* Build tag for the SETTINGS head kicker and the MENU foot. CACHE_NAME is the only build identifier
    in the repo, and the PWA rule already forces it to change whenever shipped
    bytes do — same precedent as scores arriving through a getter: a screen fed
    from outside app/world gets its value handed in, not re-derived downstream. */
@@ -37,11 +37,9 @@ const layOf = (cv) => {
 };
 
 /* PLAY's tag is the whole setup it will start, worded like LEVEL SELECT's
-   START: room (by its world name), heat, pace (+pact). */
-const playTag = (app) => {
-  const p = app.pactUnlocked ? clampPact(app.pact) : 0;
-  return biomeOf(app.level | 0 || 1).name + " · " + HEAT_NAME[clampHeat(app.heat)] + " · " + paceToken(app.pace) + (p ? " · " + pactLabel(p) : "");
-};
+   START: the level (by its world name), difficulty, speed (+modifiers), each
+   named (words.js); drawMenu fits it to its slot from info. */
+const playTag = (app) => biomeOf(app.level | 0 || 1).name + " · " + runWords({ heat: app.heat, pace: app.pace, pact: app.pactUnlocked ? clampPact(app.pact) : 0 });
 /* The screens drawn on #sh's own box (fit.js shellGeo) on every layout that
    has one: MENU and every plated page. INTRO, ATTRACT and GAME (PAUSE and
    WIN/LOSE included) stay on the board canvas and its box. */
@@ -220,7 +218,7 @@ function infoOf(app, kind, getScores, getCab) {
     a = (cab.stats && cab.stats.a) || {},
     st = app.settings || {};
   return {
-    kind, heatT, tiles: !!cab.tiles, level: app.level | 0 || 1, heat: h, pact, unlocked: !!app.pactUnlocked,
+    kind, heatT, tiles: !!cab.tiles, level: app.level | 0 || 1, heat: h, pace: pz - 1, pact, unlocked: !!app.pactUnlocked,
     lockR: app.lockR, lockT: app.lockT !== lockSeen ? app.lockT : null,
     best: Array.from({ length: 8 }, (_, i) => { const d = tb[i + 1 + ":" + h + ":" + pact + ":" + pz]; return d > 0 ? fmtTime(d / 10) : null; }),
     daily: cab.daily || null, mask: cab.medals | 0, medals: bits(cab.medals), days: a.days | 0, runs: a.runs | 0, rooms: a.rooms | 0, kills: a.kills | 0,
@@ -248,7 +246,7 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
   if (s === SCREEN.BOOT) return;
   if (s === SCREEN.GAME) {
     /* All shell chrome routing stays in the one module whose job it is. The
-       paused OPTIONS / GRAPHICS pages measure against overlayBox — the SAME
+       paused SETTINGS / GRAPHICS pages measure against overlayBox — the SAME
        box the pause list uses — never dims(canvas, kind), so list and page
        never disagree by a pixel. */
     if (world.state === "PAUSE" && app.pauseView >= 1) {
@@ -256,7 +254,7 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
       // HUD stays lit as run context on every pause view but CONTROLS, whose
       // plate would cut it at the top corners: there the veil puts it behind
       const B = overlayBox(kind),
-        kicker = "PAUSED · ROOM " + (world.level | 0);
+        kicker = "PAUSED · " + LABEL.LEVEL + " " + (world.level | 0);
       if (app.pauseView === 3) {
         if (!app.controls) return;
         menudraw.drawDim(c, 0.72, B.w, B.h);

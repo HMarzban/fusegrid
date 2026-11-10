@@ -215,7 +215,7 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
     mountPointer({ canvas: cv, fit, input, app, world: { state: "PLAY" }, kind: () => "2d", ctl: () => null, hit: HIT });
     const R = rec();
     drawShell(R.c, app, { state: "PLAY", time: 1 }, sh.box, "2d", () => [], () => 0, () => ({}));
-    const t = R.texts.find((q) => q.s === "OPTIONS"), r = D.sh.getBoundingClientRect(), k = r.width / sh.box.width;
+    const t = R.texts.find((q) => q.s === "SETTINGS"), r = D.sh.getBoundingClientRect(), k = r.width / sh.box.width;
     D.sh.fire("pointerdown", { clientX: r.left + (t.x + 4) * k, clientY: r.top + t.y * k, pointerType: "mouse" });
     check(`${lay} ${W}x${H}: a tap on #sh at the drawn OPTIONS row confirms it (cursor 3, OPTIONS opens), the fire latch swallowed`,
       app.cursor === 3 && app.screen === SCREEN.SETTINGS && input._intent.fire === false, app.cursor + "/" + app.screen);
@@ -256,7 +256,7 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
     }
     const sc = md.scoresGeom(L, touch);
     check(`HIGH SCORES: tabs in the plate, each taps to itself (${tg})`, inBox(sc.S) && sc.tabs.every((r, i) => inPlate(r, sc.S) && md.scoresHit(...ctr(r), L, touch) === i));
-    for (const [nm, geo, hit, n] of [["OPTIONS", md.settingsGeom, md.settingsHit, md.OPT_N], ["GRAPHICS", md.graphicsGeom, md.graphicsHit, md.GFX_N]]) {
+    for (const [nm, geo, hit, n] of [["SETTINGS", md.settingsGeom, md.settingsHit, md.OPT_N], ["GRAPHICS", md.graphicsGeom, md.graphicsHit, md.GFX_N]]) {
       const q = geo(L, touch);
       check(`${nm}: rows in the box, each taps to itself, a miss on the plate is inert (-2), off the plate at either corner backs out (-1) (${tg})`,
         inBox(q.S) && Array.from({ length: n }, (_, i) => hit(q.S.mid, q.y0 + (i + 0.5) * q.rowH, L, 0, touch) === i).every(Boolean) &&
@@ -311,7 +311,7 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
     const tick = (n = 1) => { for (let i = 0; i < n; i++) { t += 16; g.loop(t); } };
     const frame = () => { shText.length = 0; cText.length = 0; tick(); };
     g.app.cabinetSeen = true; g.app.skip(); frame();
-    check("MENU: #sh shown and taking pointers, the menu drawn on #sh, none of it on #c", g.app.screen === SCREEN.MENU && !D.sh.hidden && D.sh.style.pointerEvents === "" && shText.includes("OPTIONS") && !cText.includes("OPTIONS"), J([D.sh.hidden, shText.length, cText.includes("OPTIONS")]));
+    check("MENU: #sh shown and taking pointers, the menu drawn on #sh, none of it on #c", g.app.screen === SCREEN.MENU && !D.sh.hidden && D.sh.style.pointerEvents === "" && shText.includes("SETTINGS") && !cText.includes("SETTINGS"), J([D.sh.hidden, shText.length, cText.includes("SETTINGS")]));
     g.app.confirm(); frame();
     check("GAME PLAY: #sh hidden", g.app.screen === SCREEN.GAME && g.world.state === "PLAY" && D.sh.hidden);
     g.input.onPause(); frame();

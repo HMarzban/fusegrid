@@ -147,7 +147,7 @@ const at = (g, label) => { g.app.cursor = ITEMS.indexOf(label); g.tick(2); };
   const grid = g.world.grid;
   f = feel(g, () => tap(g, "S"));
   check("PAUSE RESTART: launch, once", g.world.state === "PLAY" && g.world.grid !== grid && f === "launch", f);
-  tap(g, "START"); g.app.pauseCursor = PAUSE_ITEMS.indexOf("OPTIONS"); g.tick(2);
+  tap(g, "START"); g.app.pauseCursor = PAUSE_ITEMS.indexOf("SETTINGS"); g.tick(2);
   f = feel(g, () => tap(g, "S"));
   check("PAUSE list -> OPTIONS view: enter", g.app.pauseView === 1 && f === "enter", f);
   f = feel(g, () => tap(g, "E"));
@@ -177,7 +177,7 @@ const at = (g, label) => { g.app.cursor = ITEMS.indexOf(label); g.tick(2); };
 // ---- pages, confirm, move ----
 {
   const g = menu();
-  at(g, "OPTIONS");
+  at(g, "SETTINGS");
   let f = feel(g, () => tap(g, "S"));
   check("MENU -> OPTIONS: enter", g.app.screen === SCREEN.SETTINGS && f === "enter", f);
   g.app.optRow = OPT_ROWS.indexOf("GRAPHICS"); g.tick(2);
@@ -227,7 +227,7 @@ const at = (g, label) => { g.app.cursor = ITEMS.indexOf(label); g.tick(2); };
 
 // ---- deny, and refusals that show nothing ----
 {
-  const g = menu(); at(g, "OPTIONS"); tap(g, "S");
+  const g = menu(); at(g, "SETTINGS"); tap(g, "S");
   g.app.optRow = OPT_ROWS.indexOf("ANALYTICS"); g.tick(2);
   let f = feel(g, () => tap(g, "S"));
   check("ANALYTICS on a pad before the card is answered: deny", g.app.anaNote !== "" && f === "deny", f);
@@ -239,7 +239,7 @@ const at = (g, label) => { g.app.cursor = ITEMS.indexOf(label); g.tick(2); };
   check("a locked GRAPHICS row in CLASSIC: deny", g.app.gfxView().rows[g.app.gfxRow].locked && f === "deny", f);
 }
 {
-  const g = menu(); at(g, "OPTIONS"); tap(g, "S");
+  const g = menu(); at(g, "SETTINGS"); tap(g, "S");
   g.app.optRow = OPT_ROWS.indexOf("CONTROLS"); g.tick(2);
   let f = feel(g, () => tap(g, "S"));
   check("OPTIONS -> CONTROLS: enter", g.app.screen === SCREEN.CONTROLS && f === "enter", f);
@@ -281,7 +281,7 @@ const at = (g, label) => { g.app.cursor = ITEMS.indexOf(label); g.tick(2); };
 }
 {
   const low = menu({ vib: 1 });
-  at(low, "OPTIONS");
+  at(low, "SETTINGS");
   const f = feel(low, () => { tap(low, "dD"); tap(low, "S"); tap(low, "E"); });
   check("LOW: no menu feel at all", low.app.screen === SCREEN.MENU && f === "" && low.calls.length === 0, JSON.stringify(low.calls));
   const off = mk({ vib: 0 }); off.tick(30); tap(off, "S"); off.tick(15); tap(off, "S"); tap(off, "S");
@@ -301,8 +301,8 @@ const at = (g, label) => { g.app.cursor = ITEMS.indexOf(label); g.tick(2); };
   const q = menu();
   const two = feel(q, () => { q.pad.set("dD", true); q.tick(1); q.pad.set("dD", false); q.tick(1); q.pad.set("dU", true); q.tick(1); q.pad.set("dU", false); });
   check("two moves inside 100 ms: one move", two === "move", two);
-  const o = menu(); at(o, "OPTIONS");
-  const ef = feel(o, () => { o.pad.set("dD", true); o.tick(1); o.pad.set("dD", false); o.tick(1); at(o, "OPTIONS"); o.pad.set("S", true); o.tick(1); o.pad.set("S", false); });
+  const o = menu(); at(o, "SETTINGS");
+  const ef = feel(o, () => { o.pad.set("dD", true); o.tick(1); o.pad.set("dD", false); o.tick(1); at(o, "SETTINGS"); o.pad.set("S", true); o.tick(1); o.pad.set("S", false); });
   check("TICK_GAP never holds back an enter", o.app.screen === SCREEN.SETTINGS && ef === "move,enter", ef);
   const p = run();
   const pf = feel(p, () => { p.pad.set("dR", true); p.tick(30); p.pad.set("dR", false); p.pad.set("S", true); p.tick(2); p.pad.set("S", false); });

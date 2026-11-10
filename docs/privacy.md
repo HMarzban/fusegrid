@@ -15,12 +15,12 @@ no Google script and sets no cookie.
 If you allow it, the game uses Google Analytics 4 to count:
 
 - **opens**: a page view each time you open the game;
-- **runs**: when a run starts (normal, daily or challenge code; room, Heat, Pact
-  and pace), and how it ends (win, game over or quit, the room reached, the
-  score, the run's length in seconds);
+- **runs**: when a run starts (normal, daily or challenge code; level,
+  difficulty, modifiers and game speed), and how it ends (win, game over or
+  quit, the level reached, the score, the run's length in seconds);
 - **how often you come back**: a rough bucket of how many days you've played
-  (0, 1, 2–3, 4–7, 8–14 or 15+), and which look you play in (CLASSIC 2D, PIXEL or
-  REAL 3D).
+  (0, 1, 2–3, 4–7, 8–14 or 15+), and which art style you play in (CLASSIC 2D,
+  PIXEL or REAL 3D).
 
 Google Analytics sets cookies (`_ga`, `_ga_…`) on the game's own path, so it can
 tell a returning player from a new one. That makes the stats pseudonymous, not
@@ -40,7 +40,7 @@ Google Analytics.
 
 ## Changing your mind
 
-**OPTIONS → ANALYTICS** switches it on or off at any time, including mid-run
+**SETTINGS → ANALYTICS** switches it on or off at any time, including mid-run
 from PAUSE. Switching it off stops sending at once and deletes the game's
 Google Analytics cookies. **RESET DEFAULTS** and the STATS reset keep your
 choice; clearing the site's data in your browser forgets it, and the game will
