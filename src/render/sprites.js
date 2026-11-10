@@ -521,11 +521,15 @@ export function drawGhost(c, world, g) {
   drawPlayerBody(c, world, { face: { x: g.fx, y: g.fy }, walk: g.t, iFrames: 0, kick: false, shield: false, passing: false });
   c.restore();
 }
-export function drawBombBody(c, world, bm) {
-  const fuse = world && world.fuse != null ? world.fuse : CFG.FUSE;
-  const t = 1 - Math.max(0, bm.timer) / fuse;
-  const pulse = 1 + Math.sin(world.time * 18) * 0.1 * t;
-  c.scale(pulse, pulse);
+/* o.bare (R8, opt-in): the body only, for the menu focus bomb: no cord, no spark, no pulse, no world clock (world may be null) */
+export function drawBombBody(c, world, bm, o) {
+  const bare = !!(o && o.bare);
+  if (!bare) {
+    const fuse = world && world.fuse != null ? world.fuse : CFG.FUSE;
+    const t = 1 - Math.max(0, bm.timer) / fuse;
+    const pulse = 1 + Math.sin(world.time * 18) * 0.1 * t;
+    c.scale(pulse, pulse);
+  }
   const r = CFG.TILE * 0.3;
   c.fillStyle = "rgba(0,0,0,0.35)";
   c.beginPath();
@@ -554,7 +558,7 @@ export function drawBombBody(c, world, bm) {
     c.strokeStyle = "#8f8fff";
     c.lineWidth = 2;
     for (let i = 0; i < 6; i++) {
-      const a = (i / 6) * 6.283 + world.time * 3;
+      const a = (i / 6) * 6.283 + (bare ? 0 : world.time * 3);
       c.beginPath();
       c.moveTo(Math.cos(a) * r * 0.9, Math.sin(a) * r * 0.9);
       c.lineTo(Math.cos(a) * r * 1.35, Math.sin(a) * r * 1.35);
@@ -573,16 +577,18 @@ export function drawBombBody(c, world, bm) {
   c.moveTo(0, -r * 0.2);
   c.lineTo(0, r * 0.36);
   c.stroke();
-  c.strokeStyle = "#ff9d5a";
-  c.lineWidth = 2.5;
-  c.beginPath();
-  c.moveTo(r * 0.22, -r * 0.62);
-  c.quadraticCurveTo(r * 0.48, -r * 0.95, r * 0.58, -r * 1.22);
-  c.stroke();
-  c.fillStyle = Math.floor(world.time * 14) % 2 ? "#ff5d73" : "#ffd447";
-  c.beginPath();
-  c.arc(r * 0.6, -r * 1.26, r * 0.13 + Math.sin(world.time * 30) * 0.03, 0, 7);
-  c.fill();
+  if (!bare) {
+    c.strokeStyle = "#ff9d5a";
+    c.lineWidth = 2.5;
+    c.beginPath();
+    c.moveTo(r * 0.22, -r * 0.62);
+    c.quadraticCurveTo(r * 0.48, -r * 0.95, r * 0.58, -r * 1.22);
+    c.stroke();
+    c.fillStyle = Math.floor(world.time * 14) % 2 ? "#ff5d73" : "#ffd447";
+    c.beginPath();
+    c.arc(r * 0.6, -r * 1.26, r * 0.13 + Math.sin(world.time * 30) * 0.03, 0, 7);
+    c.fill();
+  }
   if (bm.variant === "line") {
     c.fillStyle = "#15181f";
     for (let i = -1; i <= 1; i++) {

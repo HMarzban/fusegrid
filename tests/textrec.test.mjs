@@ -53,3 +53,40 @@ test("getTransform follows translate, scale and setTransform", () => {
   r.ctx.setTransform(1, 0, 0, 1, 4, 5);
   assert.deepEqual([r.ctx.getTransform().e, r.ctx.getTransform().f], [4, 5]);
 });
+
+test("writes logs every property write; paints log fills and strokes with style, width, alpha, rule and device-space bounds", () => {
+  const r = rec();
+  r.ctx.fillStyle = "#123"; r.ctx.lineWidth = 3; r.ctx.globalAlpha = 0.5;
+  assert.deepEqual(r.writes, [{ k: "fillStyle", v: "#123" }, { k: "lineWidth", v: 3 }, { k: "globalAlpha", v: 0.5 }]);
+  r.ctx.save(); r.ctx.translate(10, 20); r.ctx.scale(2, 2);
+  r.ctx.beginPath(); r.ctx.rect(0, 0, 5, 5); r.ctx.rect(1, 1, 2, 2); r.ctx.fill("evenodd");
+  r.ctx.strokeStyle = "#456"; r.ctx.beginPath(); r.ctx.arc(5, 5, 1, 0, 7); r.ctx.stroke();
+  r.ctx.fillRect(1, 1, 1, 1);
+  r.ctx.restore();
+  assert.equal(r.ctx.lineWidth, 3);
+  const [f, s, q] = r.paints;
+  assert.deepEqual([f.op, f.style, f.rule, f.alpha, f.box, f.subs], ["fill", "#123", "evenodd", 0.5, { x: 10, y: 20, w: 10, h: 10 }, [{ x: 10, y: 20, w: 10, h: 10 }, { x: 12, y: 22, w: 4, h: 4 }]]);
+  assert.deepEqual([s.op, s.style, s.lw, s.box], ["stroke", "#456", 3, { x: 18, y: 28, w: 4, h: 4 }]);
+  assert.deepEqual([q.op, q.style, q.box], ["fillRect", "#123", { x: 12, y: 22, w: 2, h: 2 }]);
+  assert.deepEqual(r.rects.map((x) => [x.x, x.y, x.w, x.h]), [[1, 1, 1, 1]]);
+});
+
+test("rounded paths built from arcTo, and lineWidth restore", () => {
+  const r = rec();
+  r.ctx.beginPath(); r.ctx.moveTo(4, 0); r.ctx.arcTo(10, 0, 10, 6, 4); r.ctx.arcTo(10, 6, 0, 6, 4); r.ctx.arcTo(0, 6, 0, 0, 4); r.ctx.arcTo(0, 0, 10, 0, 4); r.ctx.closePath();
+  r.ctx.save(); r.ctx.lineWidth = 7; r.ctx.restore();
+  r.ctx.fill();
+  assert.deepEqual([r.paints[0].box, r.paints[0].rule, r.paints[0].lw], [{ x: 0, y: 0, w: 10, h: 6 }, "nonzero", 1]);
+});
+
+test("a clip cuts paint boxes to its bounds until restore; subs stay unclipped", () => {
+  const r = rec();
+  r.ctx.save(); r.ctx.beginPath(); r.ctx.rect(0, 0, 10, 10); r.ctx.clip();
+  r.ctx.fillRect(5, 5, 20, 20);
+  r.ctx.beginPath(); r.ctx.rect(2, 2, 4, 4); r.ctx.rect(2, 6, 4, 9); r.ctx.fill("evenodd");
+  r.ctx.fillRect(30, 30, 2, 2);
+  r.ctx.restore();
+  r.ctx.fillRect(5, 5, 20, 20);
+  assert.deepEqual(r.paints.map((p) => p.box), [{ x: 5, y: 5, w: 5, h: 5 }, { x: 2, y: 2, w: 4, h: 8 }, null, { x: 5, y: 5, w: 20, h: 20 }]);
+  assert.deepEqual(r.paints[1].subs, [{ x: 2, y: 2, w: 4, h: 4 }, { x: 2, y: 6, w: 4, h: 9 }]);
+});
