@@ -73,7 +73,7 @@ same.
 The main menu and every menu page draw on their own canvas, `#sh`, laid over
 the whole viewport ([`fit.js`](../src/app/fit.js) `shellGeo`). On a desktop
 and a landscape tablet that box is the window at scale 1; a window under
-600 × 520 has no box and keeps the menus on the board canvas, as does every
+600 × 520 (`WIN_SHELL`) has no box and keeps the menus on the board canvas, as does every
 landscape phone, since a page narrower than 600 would cut its text. A
 portrait phone sizes the board by its width, which left the menus at about
 0.63 scale in a third of the screen, so there the box is the viewport at

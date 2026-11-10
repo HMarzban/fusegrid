@@ -73,7 +73,7 @@ screen at the compact `PAUSE_ROW_D` 44 / hero 54 / width 340 (owner: "too
 fat"); `pauseHit` takes the same flag. RESUME hero, RESTART/QUIT danger,
 kicker = room · biome · heat · pace, cue `ESC · P RESUME · … · M QUIT`.
 Touch rule: a tap on a row = Enter on it; keyboard MENU and PAUSE bands span
-the full width of their box (MENU's `#sh`, PAUSE's stage; the touch MENU hub's tiles own half of each gutter);
+the full width of their box (MENU's `#sh` where there is a shell box, else the stage, as under the floor; PAUSE's stage; the touch MENU hub's tiles own half of each gutter);
 off the rows a root list (MENU, PAUSE list) does nothing; on a page
 (OPTIONS, GRAPHICS, GUIDE, LEVEL SELECT, SCORES) a miss ON the plate is inert
 (hit -2) and only a tap OFF the plate backs out (-1). `guideHit`,
@@ -83,7 +83,7 @@ draw. Hints follow `data-lay` (keys vs taps; LEVEL SELECT's touch foot is
 layout since UI upgrade Task 1.0, owner pick "Full window"): MENU and every plated page
 (`isShellScreen`, shellview) draw on `#sh`, a fixed canvas over the whole
 viewport (`fit.js` `shellGeo(W,H,cw,ch,lay)`). `d` and `l`: the window at scale 1
-(`DESK_SHELL {min [600,520], dpr 2}`; a smaller window keeps the menus on `#c`,
+(`WIN_SHELL {min [600,520], dpr 2}`; a smaller window keeps the menus on `#c`,
 since a page under 600 wide clips its text; every landscape phone is under it,
 and a landscape tablet is the desktop form with touch pitches, lead ruling). `p`: the portrait
 board stage is width-bound (~0.63 on a 393 px phone), so ~0.9 (`PORT_SHELL {s 0.9, w [400,600],
@@ -189,7 +189,7 @@ not shell screens. Do not add them as `SCREEN` values.
   to `min(centred top, PORT_GAME.top 72)` under the pause pill, pad cap 184,
   and `--sd` 0.2s glides that edge only (0s on resize / rotation).
   INTRO/MENU/ATTRACT keep the centred stage; `d` / `l` are untouched.
-  `shellGeo` sizes the shell box `#sh` on every layout (see Menu look).
+  `shellGeo` sizes the shell box `#sh` on every layout that has one (see Menu look).
 - `src/core/` — deterministic simulation, no DOM, no browser globals.
   - `world.js` — `createWorld`, `loadLevel` (re-exported from `sim.js`).
   - `sim.js` — `step(world, dt, intents)`.

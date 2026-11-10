@@ -559,9 +559,11 @@ function capCell(c, r, name, keyStr, touch, keyPx) {
   c.fillText(keyStr, r.x + r.w / 2, r.y + r.h / 2 + 6);
 }
 
-/* lg: the touch-portrait shell box's logo line (fit.js shellGeo, the board's
-   own 0.27 in #sh units); tall marks that box (MENU's hub then hangs under the
-   logo instead of centring in the band) and narrow any box under 560 wide
+/* lg: the shell box's logo line (fit.js shellGeo, the board's own 0.27 in #sh
+   units, on every layout that has a shell box); tall marks a box over 1.3x as
+   tall as wide (a portrait phone's #sh or a tall window: the touch MENU hub
+   then hangs under the logo instead of centring in the band, STATS centres
+   instead of pinning to the floor) and narrow any box under 560 wide
    (pages re-flow: LEVEL SELECT stacks its card under the grid, MEDALS goes to
    one column). Neither ever holds at 600x520 or 608x352. */
 export function layout(W, H, lg) {

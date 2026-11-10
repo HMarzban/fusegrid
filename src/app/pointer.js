@@ -81,5 +81,6 @@ export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: {
     el.addEventListener("pointerdown", onDown);
     el.addEventListener("pointerup", () => { if (statsC && app.screen === SCREEN.STATS) input.onUiKey("KeyC"); statsC = false; });
     for (const t of ["pointercancel", "pointerleave"]) el.addEventListener(t, () => { statsC = false; }); // a cancelled C touch never copies on a later pointerup
+    if (el !== canvas) el.addEventListener("contextmenu", (e) => e.preventDefault()); // #c's camera controls swallow it there; on #sh a right-click confirms a row as it did on #c, with no browser menu
   }
 }

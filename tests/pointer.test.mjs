@@ -60,7 +60,7 @@ const SENT = { sentinel: 1 };
 {
   const want = ["pointerdown", "pointerup", "pointercancel", "pointerleave"].map((t) => [t, 2]);
   const sh = mkEl(436, 946), r = rig({ fit: { sh, box: () => null } });
-  check("mount: #c then #sh each get pointerdown, pointerup, pointercancel, pointerleave, with no options", J(r.canvas.adds) === J(want) && J(sh.adds) === J(want), J(r.canvas.adds) + " / " + J(sh.adds));
+  check("mount: #c then #sh each get pointerdown, pointerup, pointercancel, pointerleave, with no options; #sh adds contextmenu (#c's camera controls own it there)", J(r.canvas.adds) === J(want) && J(sh.adds) === J([...want, ["contextmenu", 2]]), J(r.canvas.adds) + " / " + J(sh.adds));
   const a = rig({ fit: { sh: null, box: () => null } }), b = rig({ fit: null });
   check("mount: no #sh (or no fit) binds #c alone", J(a.canvas.adds) === J(want) && J(b.canvas.adds) === J(want));
 }

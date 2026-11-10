@@ -4,7 +4,7 @@
 // seams together: shellGeo, mountFit's fit.shell / fit.box, shellview's shellMode and drawShell,
 // mountPointer with the real hit functions, and createGame's frame wiring.
 import { readFileSync } from "node:fs";
-import { DESK_SHELL, FIT_RES, PORT_SHELL, fitBox, mountFit, portraitGeo, shellGeo } from "../src/app/fit.js";
+import { WIN_SHELL, FIT_RES, PORT_SHELL, fitBox, mountFit, portraitGeo, shellGeo } from "../src/app/fit.js";
 import { mountPointer } from "../src/app/pointer.js";
 import { SCREEN, createMenuApp } from "../src/app/menuapp.js";
 import { createControlsPage } from "../src/app/controlspage.js";
@@ -78,14 +78,14 @@ const SHELL_SCREENS = ["MENU", "LEVEL", "HOWTO", "SCORES", "ITEMS", "ENEMIES", "
       !!g && g.w === W && g.h === H && g.s === 1 && g.left === 0 && g.top === 0 && Math.abs(g.logo - boardLine(W, H, "d")) < 1e-9, J(g));
   }
   check("d 1366x768 is exactly {w 1366, h 768, s 1, left 0, top 0} plus logo", J({ ...shellGeo(1366, 768, 600, 520, "d"), logo: 0 }) === J({ w: 1366, h: 768, s: 1, left: 0, top: 0, logo: 0 }));
-  check("DESK_SHELL is frozen: a 600 x 520 floor, backing dpr cap 2", Object.isFrozen(DESK_SHELL) && J(DESK_SHELL) === J({ min: [600, 520], dpr: 2 }));
+  check("WIN_SHELL is frozen: a 600 x 520 floor, backing dpr cap 2", Object.isFrozen(WIN_SHELL) && J(WIN_SHELL) === J({ min: [600, 520], dpr: 2 }));
   check("d floor: 520 tall has a box, 519 does not (falls back to #c)", !!shellGeo(1366, 520, 600, 520, "d") && shellGeo(1366, 519, 600, 520, "d") === null);
   check("d floor: 600 wide has a box, 599 does not (a narrower keyboard page clips its text)", !!shellGeo(600, 768, 600, 520, "d") && shellGeo(599, 768, 600, 520, "d") === null);
   for (const [W, H] of [[393, 852], [390, 844], [360, 640], [430, 932], [768, 1024], [400, 470]])
     check(`p ${W}x${H}: unchanged from today's rule (lay defaults to p)`, J(shellGeo(W, H, 600, 520, "p")) === J(shellGeo(W, H, 600, 520)) && !!shellGeo(W, H, 600, 520, "p"));
   {
     const g = shellGeo(393, 852, 600, 520, "p");
-    check("p 393x852: today's pin (s 0.9, 436 wide)", Math.abs(g.s - 0.9) < 0.002 && g.w === 436 && g.logo * g.s - (portraitGeo(393, 852, 600, 520).top + 1 + 0.27 * 520 * fitBox(393, 852, true, 600, 520).s) < 1e-6);
+    check("p 393x852: today's pin (s 0.9, 436 wide)", Math.abs(g.s - 0.9) < 0.002 && g.w === 436 && Math.abs(g.logo * g.s - (portraitGeo(393, 852, 600, 520).top + 1 + 0.27 * 520 * fitBox(393, 852, true, 600, 520).s)) < 1e-6);
   }
   {
     const at = (H) => shellGeo(400, H, 600, 520, "p");
@@ -150,6 +150,48 @@ for (const [lay, W, H, touch, dpr, q] of [["d", 1366, 768, false, 2, 2], ["d", 1
     fit.shell(1);
     check("hidden after a run end -> a page: pointers back", !D.sh.hidden && D.sh.style.pointerEvents === "");
     check("fit.shell(true) still draws, fit.shell(false) still hides", !!fit.shell(true) && D.sh.style.pointerEvents === "" && fit.shell(false) === null && D.sh.hidden);
+    const clears = () => D.log.filter((x) => x[0] === "clearRect").length;
+    fit.shell(1);
+    check("fit.box(): the box while a page draws", !!fit.box() && fit.box().width === 1366);
+    D.log.length = 0; fit.shell(2);
+    check("fit.box(): null at a run end (#sh shown but drawn on by nothing, click-through)", fit.box() === null && !D.sh.hidden);
+    const c0 = clears(); fit.shell(2); fit.shell(2);
+    check("run end: cleared once on entry; the next run-end frames clear nothing", c0 === 1 && clears() === 1, c0 + "/" + clears());
+    D.win.innerWidth = 1280; D.hs.resize.forEach((f) => f()); fit.shell(2);
+    check("run end: a new backing (a resize) clears it again, once", clears() === 2 && D.sh.width === 1280 && fit.box() === null, clears());
+    fit.shell(2);
+    check("run end: and then no more", clears() === 2);
+    fit.shell(0);
+    check("fit.box(): null when hidden", fit.box() === null);
+    fit.shell(2);
+    check("hidden -> run end clears on entry again", clears() === 3);
+    const n = clears(); fit.shell(1); fit.shell(1);
+    check("a page clears every frame (it redraws every frame) and has its box back", clears() === n + 2 && !!fit.box());
+  } finally { undo(); }
+}
+
+// ---- no browser menu on the menu canvas; a right-click on a row does on #sh what it did on #c before (it confirms the row) ----
+{
+  const D = mkDom(1366, 768, false, 1);
+  try {
+    const cv = mkCv(), fit = mountFit(cv), sh = fit.shell(1), app = mkApp(SCREEN.MENU);
+    mountPointer({ canvas: cv, fit, input: { _intent: { fire: true }, onUiKey() {} }, app, world: { state: "PLAY" }, kind: () => "2d", ctl: () => null, hit: HIT });
+    let pd = 0;
+    D.sh.fire("contextmenu", { preventDefault: () => { pd++; } });
+    check("#sh: contextmenu is prevented (no Save image as… over the menus), as #c's camera controls do on #c", pd === 1);
+    const R = rec();
+    drawShell(R.c, app, { state: "PLAY", time: 1 }, sh.box, "2d", () => [], () => 0, () => ({}));
+    const t = R.texts.find((q) => q.s === "GUIDE");
+    D.sh.fire("pointerdown", { clientX: t.x + 4, clientY: t.y, button: 2, pointerType: "mouse" });
+    check("#sh: a right-click pointerdown on the GUIDE row confirms it", app.cursor === 4 && app.screen === SCREEN.GUIDE, app.cursor + "/" + app.screen);
+  } finally { undo(); }
+  const D2 = mkDom(1366, 500, false, 1);
+  try {
+    const cv = mkCv(), fit = mountFit(cv), app = mkApp(SCREEN.MENU), L0 = md.layout(600, 520);
+    mountPointer({ canvas: cv, fit, input: { _intent: { fire: true }, onUiKey() {} }, app, world: { state: "PLAY" }, kind: () => "2d", ctl: () => null, hit: HIT });
+    const row = md.menuGeom(L0, 8, false).rows[4];
+    cv.fire("pointerdown", { clientX: 300, clientY: row.cy, button: 2, pointerType: "mouse", currentTarget: cv });
+    check("#c with no shell box (the pre-task path): the same right-click confirms the row, so #sh matches it", fit.shell(1) === null && app.cursor === 4 && app.screen === SCREEN.GUIDE, app.cursor + "/" + app.screen);
   } finally { undo(); }
 }
 
@@ -159,7 +201,7 @@ for (const [lay, W, H, touch, dpr, q] of [["d", 1366, 768, false, 2, 2], ["d", 1
   check("every shell page draws on #sh (1)", SHELL_SCREENS.every((s) => shellMode(SCREEN[s], W("PLAY")) === 1 && isShellScreen(SCREEN[s])));
   check("BOOT, INTRO and ATTRACT: hidden (0)", [SCREEN.BOOT, SCREEN.INTRO, SCREEN.ATTRACT].every((s) => shellMode(s, W("PLAY")) === 0));
   check("GAME PLAY: hidden", shellMode(SCREEN.GAME, W("PLAY")) === 0);
-  check("GAME PAUSE (every pause view): hidden, PAUSE stays on #c", [0, 1, 2, 3].every((v) => shellMode(SCREEN.GAME, W("PAUSE")) === 0) && !isShellScreen(SCREEN.GAME));
+  check("GAME PAUSE: hidden, PAUSE stays on #c (each pause view is driven for real in the createGame case below)", shellMode(SCREEN.GAME, W("PAUSE")) === 0 && !isShellScreen(SCREEN.GAME));
   check("a mid-run WIN (room 1): hidden", shellMode(SCREEN.GAME, W("WIN", 1)) === 0);
   check("a run end: LOSE, a finale WIN (room 5, room 8, world.finale) -> 2", shellMode(SCREEN.GAME, W("LOSE", 3)) === 2 && shellMode(SCREEN.GAME, W("WIN", 5)) === 2 && shellMode(SCREEN.GAME, W("WIN", 8)) === 2 && shellMode(SCREEN.GAME, W("WIN", 2, { finale: true })) === 2);
   check("no world outside GAME never throws", shellMode(SCREEN.MENU, null) === 1 && shellMode(SCREEN.INTRO, undefined) === 0);
@@ -186,19 +228,20 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
   const shot = (nm, box, cur) => { const a = mkApp(SCREEN[nm]); if (cur != null) a.cursor = cur; const R = rec(); drawShell(R.c, a, { state: "PLAY", time: 1 }, box, "2d", () => [], () => 0, () => ({})); return R.texts; };
   const boxOf = (g, lay) => ({ width: g.w, height: g.h, logo: g.logo, ownerDocument: { body: { getAttribute: () => lay } }, getBoundingClientRect: () => ({ left: 0, top: 0, width: g.w * g.s, height: g.h * g.s }) });
   const each = (f) => { for (const nm of SHELL_SCREENS) for (let cur = 0; cur < (nm === "MENU" ? 8 : 1); cur++) f(nm, nm === "MENU" ? cur : null); };
-  /* the words, by " · " token: a tall touch box hangs the hub's build tag under the plate instead of on the SOURCE tile (menudraw drawMenu), the same tokens; an ellipsis changes a token */
-  const words = (T) => T.flatMap((q) => q.s.split(" · ")).sort().join("|");
-  for (const lay of ["d", "l"]) each((nm, cur) => { base[lay + nm + cur] = words(shot(nm, boxOf({ w: 600, h: 520, s: 1 }, lay), cur)); });
+  /* exact strings in order, except the landscape tablets' MENU: a tall touch box hangs the hub's build tag under the plate instead of on the SOURCE tile
+     (menudraw drawMenu), so there the words are compared by " · " token, order-free; an ellipsis still changes a token */
+  const exact = (T) => T.map((q) => q.s).join("|"), words = (T) => T.flatMap((q) => q.s.split(" · ")).sort().join("|");
+  for (const lay of ["d", "l"]) each((nm, cur) => { base[lay + nm + cur] = shot(nm, boxOf({ w: 600, h: 520, s: 1 }, lay), cur); });
   for (const [lay, W, H] of [["d", 600, 520], ["d", 1366, 768], ["d", 1920, 1080], ["d", 3840, 2160], ["l", 600, 520], ["l", 1024, 768], ["l", 1180, 820], ["l", 1194, 834], ["l", 1366, 1024]]) {
     const g = shellGeo(W, H, 600, 520, lay), box = boxOf(g, lay), touch = lay !== "d", L = md.layout(g.w, g.h, g.logo), tg = `${lay} ${W}x${H} box ${g.w}x${g.h}`;
-    const out = [], same = [];
+    const out = [], same = [], tab = lay === "l" && W > 600;
     each((nm, cur) => {
-      const T = shot(nm, box, cur);
+      const T = shot(nm, box, cur), cmp = tab && nm === "MENU" ? words : exact;
       if (T.some((q) => q.x < -0.5 || q.x + q.w > g.w + 0.5 || q.y < 0 || q.y > g.h)) out.push(nm + cur);
-      if (words(T) !== base[lay + nm + cur]) same.push(nm + cur);
+      if (cmp(T) !== cmp(base[lay + nm + cur])) same.push(nm + cur);
     });
     check(`every page's text sits inside the box (${tg})`, out.length === 0, out.join());
-    check(`every page prints exactly its 600x520 words, token for token: nothing elided (${tg})`, same.length === 0, same.join());
+    check(`every page prints exactly its 600x520 strings, in order${tab ? " (MENU: the same words by token, its build tag hung under the hub)" : ""}: nothing elided (${tg})`, same.length === 0, same.join());
     const inBox = (S) => S.x >= 0 && S.y >= 0 && S.x + S.w <= g.w && S.y + S.h <= g.h && S.f === 1;
     const inPlate = (r, S) => r.x >= S.x - 1 && r.y >= S.y && r.x + r.w <= S.x + S.w + 1.01 && r.y + r.h <= S.y + S.h + 0.01;
     const ctr = (r) => [r.x + r.w / 2, r.y + r.h / 2];
@@ -215,7 +258,9 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
     check(`HIGH SCORES: tabs in the plate, each taps to itself (${tg})`, inBox(sc.S) && sc.tabs.every((r, i) => inPlate(r, sc.S) && md.scoresHit(...ctr(r), L, touch) === i));
     for (const [nm, geo, hit, n] of [["OPTIONS", md.settingsGeom, md.settingsHit, md.OPT_N], ["GRAPHICS", md.graphicsGeom, md.graphicsHit, md.GFX_N]]) {
       const q = geo(L, touch);
-      check(`${nm}: rows in the box, each taps to itself, off the plate backs out (${tg})`, inBox(q.S) && Array.from({ length: n }, (_, i) => hit(q.S.mid, q.y0 + (i + 0.5) * q.rowH, L, 0, touch) === i).every(Boolean) && hit(4, 4, L, 0, touch) === -1);
+      check(`${nm}: rows in the box, each taps to itself, a miss on the plate is inert (-2), off the plate at either corner backs out (-1) (${tg})`,
+        inBox(q.S) && Array.from({ length: n }, (_, i) => hit(q.S.mid, q.y0 + (i + 0.5) * q.rowH, L, 0, touch) === i).every(Boolean) &&
+          q.S.y + 4 < q.y0 && hit(q.S.mid, q.S.y + 4, L, 0, touch) === -2 && hit(4, 4, L, 0, touch) === -1 && hit(g.w - 4, g.h - 4, L, 0, touch) === -1);
     }
     const gd = md.guideGeom(L, touch);
     check(`GUIDE: doors in the box, each taps to itself (${tg})`, inBox(gd.S) && gd.tiles.every((r, i) => md.guideHit(...ctr(r), L, 0, touch) === i));
@@ -271,7 +316,11 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
     check("GAME PLAY: #sh hidden", g.app.screen === SCREEN.GAME && g.world.state === "PLAY" && D.sh.hidden);
     g.input.onPause(); frame();
     check("PAUSE: #sh hidden, the PAUSE list still on #c", g.world.state === "PAUSE" && D.sh.hidden && cText.includes("RESUME"), J(cText.slice(0, 12)));
-    g.input.onPause(); frame();
+    for (const [v, word] of [[1, "MUSIC"], [2, "FRAME RATE"], [3, "BOMB"]]) {
+      g.app.pauseView = v; frame();
+      check(`PAUSE view ${v}: #sh hidden, the inline page on #c (${word})`, g.world.state === "PAUSE" && D.sh.hidden && cText.includes(word) && !shText.length, J(cText.slice(0, 8)));
+    }
+    g.app.pauseView = 0; g.input.onPause(); frame();
     g.world.state = "WIN"; frame();
     check("a mid-run WIN (room 1): #sh hidden", g.world.level === 1 && g.world.state === "WIN" && D.sh.hidden);
     g.world.state = "LOSE"; frame();
