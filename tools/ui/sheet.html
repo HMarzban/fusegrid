@@ -1,0 +1,116 @@
+<!doctype html>
+<!-- Kit sheet (UI upgrade Task 1.5; dev only, for eyeballing, no test renders it, never precached): every kit part of src/render/kit for one world.
+     Serve the repo (PORT=0 node serve.js) and open /tools/ui/sheet.html?world=1..8; &t125=1 sets the kit text scale to 1.25 (R14), &phone=1 the phone
+     metrics. It draws: every key kind at rest and focused (the ring), caps, a plate with its rampart ring holding the focus band and the bare focus bomb,
+     the band alone, wall / floor / brick cells, each type.js role, and every token swatch by name. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kit sheet</title>
+<style>
+  :root{color-scheme:dark}
+  body{margin:0;background:#0d0b10;color:#dccbb8;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  nav{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:12px 16px}
+  nav a{color:#fff2df;padding:3px 9px;border:1px solid #3a3040;border-radius:4px;text-decoration:none}
+  nav a[aria-current]{background:#3a3040}
+  nav span{margin-left:8px;color:#8f8476}
+  canvas{display:block;margin:0 16px 24px}
+</style>
+</head>
+<body>
+<nav id="nav"></nav>
+<canvas id="k"></canvas>
+<script type="module">
+  import {BIOMES} from "../../src/core/config.js";
+  import {worldTokens, LUM} from "../../src/render/kit/tokens.js";
+  import {key, cap, capW, plate, band, focusBomb, wallCell, floorCell, brickCell, KINDS} from "../../src/render/kit/paint.js";
+  import {setTextScale, textScale, DEV, dsp, lbl, body, nums} from "../../src/render/kit/type.js";
+
+  const Q = new URLSearchParams(location.search), level = Math.min(8, Math.max(1, Math.floor(+Q.get("world")) || 1)), phone = Q.get("phone") === "1";
+  if (Q.get("t125") === "1") setTextScale(1.25);
+  const tok = worldTokens(level), d = DEV[phone ? "p" : "d"], P = {tok, phone};
+  const nav = document.getElementById("nav"), q = (o) => "?" + new URLSearchParams({world: level, ...(Q.get("t125") === "1" ? {t125: 1} : {}), ...(phone ? {phone: 1} : {}), ...o});
+  nav.innerHTML = BIOMES.map((b, i) => `<a href="${q({world: i + 1})}"${i + 1 === level ? " aria-current=page" : ""}>${i + 1} ${b.name}</a>`).join("") +
+    `<a href="${q({t125: textScale() > 1 ? 0 : 1})}">text ${textScale() > 1 ? "125" : "100"} %</a><a href="${q({phone: phone ? 0 : 1})}">${phone ? "phone" : "desktop"} metrics</a>` +
+    `<span>${tok.name} · LUM band ${LUM.band} · lit ${LUM.lit}</span>`;
+
+  const W = 1240, H = 1700, dpr = Math.min(3, devicePixelRatio || 1), cv = document.getElementById("k");
+  cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + "px"; cv.style.height = H + "px";
+  const c = cv.getContext("2d");
+  c.scale(dpr, dpr);
+  c.fillStyle = tok.pane; c.fillRect(0, 0, W, H);
+  const head = (s, y) => lbl(c, s, 24, y, d.sec, {col: tok.t2});
+  let y = 40;
+  dsp(c, "KIT · " + tok.name, 24, y, d.ttl);
+  y += 56;
+
+  head("KEYS: at rest, then focused (ring)", y); y += 30;
+  const kinds = Object.keys(KINDS), kw = 150;
+  kinds.forEach((k, i) => {
+    const x = 32 + i * (kw + 20);
+    key(c, x, y, kw, d.keyh, k, {...P, label: k.toUpperCase()});
+    key(c, x, y + d.keyh + 26, kw, d.keyh, k, {...P, label: k.toUpperCase(), ring: true});
+  });
+  y += 2 * d.keyh + 64;
+
+  head("CAPS", y); y += 30;
+  let cx = 32;
+  for (const s of ["ESC", "ENTER", "P", "←", "SPACE"]) cx += cap(c, cx, y, s, P) + 14;
+  const mw = 260, my = y - 10; // the one main key: label first, keycap last
+  key(c, cx + 10, my, mw, d.btnh, "main", P);
+  lbl(c, "START", cx + 28, my + d.btnh / 2, d.pri, {col: tok.yelInk});
+  cap(c, cx + 10 + mw - 18 - capW(c, "ENTER", P), my + (d.btnh - d.caph) / 2, "ENTER", {...P, main: true});
+  y += Math.max(d.caph, d.btnh) + 40;
+
+  head("PLATE with its ring, the focus band and the bare focus bomb", y); y += 30 + d.T;
+  const px0 = 32 + d.T, pw = 560, ph = 3 * d.rowh + 48;
+  plate(c, px0, y, pw, ph, tok, P);
+  band(c, px0 + 16, y + 16, pw - 32, d.rowh, tok);
+  focusBomb(c, px0 + 24, y + 16 + d.rowh / 2, d.bombs);
+  lbl(c, "PLAY", px0 + 16 + d.labx, y + 16 + d.rowh / 2, d.pri);
+  lbl(c, "LEVEL SELECT", px0 + 16 + d.labx, y + 16 + d.rowh * 1.5 + 8, d.pri);
+  lbl(c, "SETTINGS", px0 + 16 + d.labx, y + 16 + d.rowh * 2.5 + 16, d.pri, {col: tok.t2});
+  const bx = px0 + pw + d.T + 48;
+  lbl(c, "band", bx, y + 8, d.sec, {col: tok.t2});
+  band(c, bx, y + 24, 260, d.rowh, tok);
+  lbl(c, "focus bomb " + d.bombs + " / 28 / 40", bx, y + d.rowh + 60, d.sec, {col: tok.t2});
+  [d.bombs, 28, 40].forEach((s, i) => focusBomb(c, bx + i * 70, y + d.rowh + 110, s));
+  y += ph + d.T + 48;
+
+  head("CELLS: wall 0-3, wall veiled (locked), floor parity 0 / 1, brick; 40 and 80 px", y); y += 30;
+  cx = 32;
+  for (const s of [40, 80]) {
+    for (let code = 0; code < 4; code++) { wallCell(c, cx, y, s, tok, {code}); cx += s + 10; }
+    wallCell(c, cx, y, s, tok, {code: 1, veil: true}); cx += s + 10;
+    floorCell(c, cx, y, s, tok, {par: 0}); cx += s + 10;
+    floorCell(c, cx, y, s, tok, {par: 1}); cx += s + 10;
+    brickCell(c, cx, y, s, tok); cx += s + 30;
+  }
+  y += 80 + 48;
+
+  head("TYPE: display " + d.ttl + ", label " + d.pri + " / " + d.sec + ", body " + d.bod + ", numbers " + d.hud + " (x text scale " + textScale() + ")", y); y += 44;
+  dsp(c, "FUSE/GRID CLEAR", 32, y, d.ttl);
+  dsp(c, "LEVEL 5", 520, y, d.ttl, {col: tok.yel});
+  y += 56;
+  lbl(c, "QUIT TO MENU", 32, y, d.pri);
+  lbl(c, "CONTROLLER 1 · STANDARD", 300, y, d.sec, {col: tok.t2});
+  y += 40;
+  body(c, "120 points short of your NORMAL best (1,480).", 32, y, d.bod);
+  y += 44;
+  nums(c, "1,234,567", 32, y, d.hud);
+  nums(c, "0:42.5s", 300, y, d.hud, {col: tok.yel});
+  y += 56;
+
+  head("TOKENS", y); y += 28;
+  const sw = Object.entries(tok).filter(([, v]) => typeof v === "string" && /^(#|rgba?\()/.test(v));
+  sw.forEach(([n, v], i) => {
+    const col = i % 3, row = Math.floor(i / 3), x = 32 + col * 400, yy = y + row * 34;
+    c.fillStyle = v; c.fillRect(x, yy, 44, 26);
+    c.strokeStyle = "#0b0609"; c.lineWidth = 2; c.strokeRect(x, yy, 44, 26);
+    lbl(c, n, x + 56, yy + 13, 15);
+    lbl(c, v, x + 150, yy + 13, 13, {col: tok.t2});
+  });
+</script>
+</body>
+</html>

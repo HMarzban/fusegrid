@@ -29,3 +29,5 @@ tools/bounce/out/
 tools/levels/out/
 # Offline tile balance sweeps (tools/balance): regenerated on demand, never shipped
 tools/balance/out/
+# UI captures and gate reports (tools/ui/shots.mjs, gates.mjs, compare.mjs): regenerated on demand, never shipped
+tools/ui/out/

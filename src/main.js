@@ -21,6 +21,8 @@ import { createDemo, stepDemo, demoReady } from "./app/attract.js";
 import { readFlags, locationSearch } from "./app/flags.js";
 import { bootRender, kindOf } from "./app/renderkind.js";
 import { mountDebugHook } from "./app/debughook.js";
+import { snapshot, setOn as probeOn } from "./render/kit/probe.js";
+import { setTextScale, textScale } from "./render/kit/type.js";
 import { mountFit } from "./app/fit.js";
 import { mountFrames } from "./app/frameloop.js";
 import { mountRenderers } from "./app/rcache.js";
@@ -683,6 +685,7 @@ export function createGame(canvas, opts = {}) {
       demo: () => demo,
       ga,
       ctl,
+      ui: { snap: snapshot, on: probeOn, textScale: (k) => { if (k !== undefined) setTextScale(k); return textScale(); } }, // R15 __GAME__.ui: the page probe; the text scale only for tests and shots.mjs --t125 (R14)
     });
 
   // boot

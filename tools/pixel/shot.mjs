@@ -179,7 +179,8 @@ export async function cdp(wsUrl) {
 }
 
 /* a.vt holds the page's rAF from the first script (see the header):
-   adv(ms) then steps round(ms*60/1000) frames instead of sleeping */
+   adv(ms) then steps round(ms*60/1000) frames instead of sleeping; a.init is
+   more page script run first on every document (tools/ui/shots.mjs; unset here) */
 export async function openPage(c, a, url) {
   const {targetId} = await c.send("Target.createTarget", {url: "about:blank"});
   const {sessionId} = await c.send("Target.attachToTarget", {targetId, flatten: true});
@@ -194,7 +195,7 @@ export async function openPage(c, a, url) {
   await S("Page.enable"); await S("Runtime.enable"); await S("Log.enable");
   await S("Emulation.setDeviceMetricsOverride", {width: a.w, height: a.h, deviceScaleFactor: a.dpr, mobile: a.mobile});
   if (a.mobile) await S("Emulation.setTouchEmulationEnabled", {enabled: true, maxTouchPoints: 5});
-  await S("Page.addScriptToEvaluateOnNewDocument", {source: (a.vt ? VT_INIT : "") + RAF_SHIM});
+  await S("Page.addScriptToEvaluateOnNewDocument", {source: (a.vt ? VT_INIT : "") + RAF_SHIM + (a.init || "")});
   await S("Page.navigate", {url});
   const ev = async (expr) => { const r = await S("Runtime.evaluate", {expression: expr, awaitPromise: true, returnByValue: true}); if (r.exceptionDetails) throw new Error(expr.slice(0, 80) + ": " + JSON.stringify(r.exceptionDetails).slice(0, 300)); return r.result.value; };
   for (let i = 0; i < 100; i++) { await sleep(100); if (await ev("!!(window.__GAME__&&document.readyState==='complete')").catch(() => false)) break; }
