@@ -39,7 +39,7 @@ export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: {
       return;
     }
     input._intent.fire = false;
-    const cv = (ev.currentTarget !== canvas && fit && fit.box()) || canvas; // a touch-portrait shell page is drawn (and so tapped) on #sh's box
+    const cv = (ev.currentTarget !== canvas && fit && fit.box()) || canvas; // a shell page is drawn (and so tapped) on #sh's box, on every layout that has one
     if (app.screen === SCREEN.ATTRACT) {
       app.playFromAttract();
       return;

@@ -11,7 +11,7 @@ import { clampPact, pactLabel } from "../core/pact.js";
 import { clampPace } from "../core/pace.js";
 import { SCREEN, ITEMS } from "../app/menuapp.js";
 import { PROJ } from "./r3d/camera.js";
-import { drawLogo, overlayBox, touchLay, fmtTime } from "./scenes.js";
+import { drawLogo, overlayBox, touchLay, fmtTime, isRunEnd } from "./scenes.js";
 import * as menudraw from "./menudraw.js";
 import { CACHE_NAME } from "../pwa/shell.js";
 import { hints } from "./hintcopy.js";
@@ -42,11 +42,16 @@ const playTag = (app) => {
   const p = app.pactUnlocked ? clampPact(app.pact) : 0;
   return biomeOf(app.level | 0 || 1).name + " · " + HEAT_NAME[clampHeat(app.heat)] + " · " + paceToken(app.pace) + (p ? " · " + pactLabel(p) : "");
 };
-/* The screens a touch-portrait phone draws on #sh's own box (fit.js
-   shellGeo): MENU and every plated page. INTRO, ATTRACT and GAME (PAUSE and
+/* The screens drawn on #sh's own box (fit.js shellGeo) on every layout that
+   has one: MENU and every plated page. INTRO, ATTRACT and GAME (PAUSE and
    WIN/LOSE included) stay on the board canvas and its box. */
 const SHELL_ON = new Set([SCREEN.MENU, SCREEN.LEVEL, SCREEN.HOWTO, SCREEN.SCORES, SCREEN.ITEMS, SCREEN.ENEMIES, SCREEN.SETTINGS, SCREEN.GUIDE, SCREEN.STATS, SCREEN.TROPHIES, SCREEN.GRAPHICS, SCREEN.FLOOR, SCREEN.CONTROLS]);
 export const isShellScreen = (s) => SHELL_ON.has(s);
+/* fit.shell's argument for this frame: 1 = a shell screen draws on #sh; 2 = a
+   run end (isRunEnd), #sh shown click-through and drawn on by nothing (the end
+   overlay keeps #c until its own redesign); 0 = hidden (PLAY, PAUSE, a mid-run
+   WIN, INTRO, ATTRACT). */
+export const shellMode = (s, world) => (SHELL_ON.has(s) ? 1 : s === SCREEN.GAME && isRunEnd(world) ? 2 : 0);
 export function dims(canvas, kind) {
   const s = kindSize(kind);
   return { cw: canvas ? canvas.width : s.w, ch: canvas ? canvas.height : s.h, lg: canvas ? canvas.logo : undefined }; // lg: #sh's logo line (fit.js shellGeo)

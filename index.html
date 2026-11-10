@@ -55,9 +55,11 @@
   #px{position:absolute;inset:0;width:100%;height:100%;z-index:0;image-rendering:auto}
   #px[hidden]{display:none}
   #c{position:relative;z-index:1}
-  /* touch portrait shell box (fit.js shellGeo): MENU and the plated pages draw
-     on #sh, a fixed overlay over the viewport slack; the board stays on #c. */
-  #sh{position:fixed;z-index:6;border:0;border-radius:0;box-shadow:none;image-rendering:auto}
+  /* shell box (fit.js shellGeo, every layout that has one): MENU and the plated
+     pages draw on #sh, a fixed overlay over the whole viewport; the board stays
+     on #c. Over #c, under #touchpad and the cards; a run end shows it
+     click-through (fit.shell). */
+  #sh{position:fixed;z-index:4;border:0;border-radius:0;box-shadow:none;image-rendering:auto}
   #sh[hidden]{display:none}
   canvas{image-rendering:pixelated;display:block;border-radius:10px;
     border:1px solid var(--line);box-shadow:0 12px 48px rgba(0,0,0,.6),0 0 0 4px #0a0e18;

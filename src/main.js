@@ -10,7 +10,7 @@ import { createRenderer } from "./render/renderer.js";
 import { loadRendererPx } from "./render/pixel/load.js";
 import { copyPayload, isRunEnd, overlayBox, pauseHit, touchLay } from "./render/scenes.js";
 import { paintBombPad } from "./render/sprites.js";
-import { controlsHit, dims, drawShell, isShellScreen, kindSize, loadControlsArt } from "./render/shellview.js";
+import { controlsHit, dims, drawShell, kindSize, loadControlsArt, shellMode } from "./render/shellview.js";
 import { menuHit, settingsHit, statsHit, graphicsHit, guideHit, levelHit, scoresHit, layout as menuLayout, setModeFocus } from "./render/menudraw.js";
 import { setFxOpts } from "./render/fx.js";
 import { hints, setHints } from "./render/hintcopy.js";
@@ -665,7 +665,7 @@ export function createGame(canvas, opts = {}) {
     if (curKind === "3d") ro = { ...(ro || {}), bright: settings.bri / 100 };
     renderer.render(attract && demo ? demo.world : show ? show.world : world, dt, ro);
     c.restore();
-    const sh = fit && fit.shell(isShellScreen(app.screen)); // touch portrait: MENU + plated pages on #sh's own box
+    const sh = fit && fit.shell(shellMode(app.screen, world)); // MENU + plated pages on #sh's own box; a run end shows it click-through (shellview shellMode)
     drawShell(sh ? sh.ctx : c, app, world, sh ? sh.box : canvas, curKind, getScoresForHeat, getPlaquesFn, getCab);
     if (swapped || world.grid !== gPrev) { swapped = false; gPrev = world.grid; last = null; } // G5: a look swap, run start or room start drops this long frame from the next dt
   }

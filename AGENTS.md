@@ -73,20 +73,25 @@ screen at the compact `PAUSE_ROW_D` 44 / hero 54 / width 340 (owner: "too
 fat"); `pauseHit` takes the same flag. RESUME hero, RESTART/QUIT danger,
 kicker = room · biome · heat · pace, cue `ESC · P RESUME · … · M QUIT`.
 Touch rule: a tap on a row = Enter on it; keyboard MENU and PAUSE bands span
-the full stage width (the touch MENU hub's tiles own half of each gutter);
+the full width of their box (MENU's `#sh`, PAUSE's stage; the touch MENU hub's tiles own half of each gutter);
 off the rows a root list (MENU, PAUSE list) does nothing; on a page
 (OPTIONS, GRAPHICS, GUIDE, LEVEL SELECT, SCORES) a miss ON the plate is inert
 (hit -2) and only a tap OFF the plate backs out (-1). `guideHit`,
 `levelHit` / `levelGeom` and `scoresHit` share the geometry their pages
 draw. Hints follow `data-lay` (keys vs taps; LEVEL SELECT's touch foot is
-`LEVEL_TAP`). Touch-portrait SHELL BOX (owner GO 2026-10-19, shell v181): the board
-stage is width-bound (~0.63 on a 393 px phone), so MENU and every plated page
+`LEVEL_TAP`). SHELL BOX (owner GO 2026-10-19, shell v181, touch portrait; every
+layout since UI upgrade Task 1.0, owner pick "Full window"): MENU and every plated page
 (`isShellScreen`, shellview) draw on `#sh`, a fixed canvas over the whole
-viewport at ~0.9 (`fit.js` `shellGeo` / `PORT_SHELL {s 0.9, w [400,600],
+viewport (`fit.js` `shellGeo(W,H,cw,ch,lay)`). `d`: the window at scale 1
+(`DESK_SHELL {min [600,520], dpr 2}`; a smaller window keeps the menus on `#c`,
+since a keyboard page under 600 wide clips its text). `p` / `l`: the portrait
+board stage is width-bound (~0.63 on a 393 px phone), so ~0.9 (`PORT_SHELL {s 0.9, w [400,600],
 logo 0.27}`; a tablet keeps 600 wide and only grows taller; < 520 box units
-tall = no shell box). INTRO, ATTRACT and GAME (PAUSE, WIN/LOSE) stay on `#c`,
-and `#c` / `#gl` / `#px` never see the box, so no renderer changes.
-`fit.shell(on)` shows + clears `#sh` (device-density backing, cap 3,
+tall = no shell box: every landscape phone and the common landscape tablets). INTRO, ATTRACT, PLAY and PAUSE stay on `#c`
+with `#sh` hidden; a run end (`isRunEnd`, `shellMode` 2) shows `#sh` click-through
+and drawing nothing, so WIN/LOSE keep `#c`, its overlay and its taps.
+`#c` / `#gl` / `#px` never see the box, so no renderer changes. `#sh` sits over `#c`, under `#touchpad` and the DOM cards.
+`fit.shell(on)` shows + clears `#sh` (device-density backing, cap 3 touch / 2 desktop,
 smoothing off) and returns `{ctx, box}`; `box` is the logical canvas
 stand-in (`width/height/logo`, its rect) that `drawShell` measures and the
 one pointer handler (bound on `#c` and `#sh`) maps through, so a tap lands
@@ -183,7 +188,7 @@ not shell screens. Do not add them as `SCREEN` values.
   to `min(centred top, PORT_GAME.top 72)` under the pause pill, pad cap 184,
   and `--sd` 0.2s glides that edge only (0s on resize / rotation).
   INTRO/MENU/ATTRACT keep the centred stage; `d` / `l` are untouched.
-  `shellGeo` sizes the touch-portrait shell box `#sh` (see Menu look).
+  `shellGeo` sizes the shell box `#sh` on every layout (see Menu look).
 - `src/core/` — deterministic simulation, no DOM, no browser globals.
   - `world.js` — `createWorld`, `loadLevel` (re-exported from `sim.js`).
   - `sim.js` — `step(world, dt, intents)`.
