@@ -9,7 +9,7 @@ import { PACT } from "../src/core/pact.js";
 import { mountPointer } from "../src/app/pointer.js";
 import { shellGeo } from "../src/app/fit.js";
 import { overlayBox, pauseHit, touchLay } from "../src/render/scenes.js";
-import { controlsHit, dims } from "../src/render/shellview.js";
+import { controlsHit, dims, drawShell } from "../src/render/shellview.js";
 import * as md from "../src/render/menudraw.js";
 import { setHints } from "../src/render/hintcopy.js";
 import { wordsOf } from "../src/app/hints.js";
@@ -267,6 +267,30 @@ for (const [nm, L, T] of BOXES) for (const U of [false, true]) {
   const p = drawLv(L, false, true, { row: ROW.DIFFICULTY });
   md.setModeFocus(null); setHints(null);
   check("a controller's TRIGGER cursor with the list shut keeps today's chip ring beside the row's ring", J(rings(p)) === J([r3(G.rows[1]), r3(ring(G.mode[2]))].sort((a, b) => a.y - b.y)) || J(rings(p)) === J([r3(ring(G.mode[2])), r3(G.rows[1])]), J(rings(p)));
+}
+
+/* ---- the real path: app.levelRow / modOpen / modeCur reach the painter through shellview's infoOf (drawShell) ---- */
+{
+  const box = (w, h, lay) => ({ width: w, height: h, ownerDocument: { body: { getAttribute: (k) => (k === "data-lay" ? lay : null) } }, getBoundingClientRect: () => ({ left: 0, top: 0, width: w, height: h }) });
+  for (const [nm, w, h, lay] of [["600x520 d", 600, 520, "d"], ["portrait #sh " + sgP.w + "x" + sgP.h, sgP.w, sgP.h, "p"]]) {
+    const a = createMenuApp({ pactUnlocked: true, settings: { fpm: 0 } }), cv = box(w, h, lay), G = md.levelGeom(md.layout(w, h), true, lay !== "d");
+    a.screen = SCREEN.LEVEL; a.heat = 1;
+    const shot = () => { const r = rec({ widthK: 0.648 }); drawShell(r.ctx, a, { state: "PLAY", time: 1, level: 1 }, cv, "2d", () => [], () => 0, () => ({})); return r; };
+    for (const row of [0, 1, 2, 3]) {
+      a.levelRow = row;
+      const r = shot();
+      check(`drawShell (${nm}) app.levelRow ${row}: one ring, = levelGeom rows[${row}], START not selected`, J(rings(r)) === J([r3(G.rows[row])]) && bands(r, G.rows[ROW.START]).length === 0, J(rings(r)));
+    }
+    a.levelRow = ROW.START;
+    let r = shot();
+    check(`drawShell (${nm}) app.levelRow START: no ring, START's band = rows[4]`, rings(r).length === 0 && bands(r, G.rows[ROW.START]).length === 1, J(rings(r)));
+    a.levelRow = ROW.MODS; a.modOpen = true;
+    for (let cur = 0; cur < 5; cur++) {
+      a.modeCur = cur;
+      r = shot();
+      check(`drawShell (${nm}) app.modOpen, app.modeCur ${cur}: one ring, on that chip (levelMark)`, J(rings(r)) === J([r3(md.levelMark(G, ROW.MODS, true, cur))]), J(rings(r)));
+    }
+  }
 }
 
 /* ---- the foot follows the focus and the device; no hint names a key that does nothing there ---- */
