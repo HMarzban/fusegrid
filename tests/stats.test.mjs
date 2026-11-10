@@ -745,7 +745,7 @@ const TODAY = "2026-09-07";
     check(
       "shellview routes SCREEN.SCORES to drawScores — BEST RUNS is painted" +
         " (pre-existing gap, fairness baseline for Minor-7)",
-      texts.includes("BEST RUNS"),
+      texts.includes("BEST RUNS BY DIFFICULTY"),
       texts.join("|"),
     );
   }

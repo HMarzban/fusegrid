@@ -4,9 +4,9 @@ import { drawIcon } from "./sprites.js";
 import { rr } from "./icons.js";
 import { PROJ } from "./r3d/camera.js";
 import { clampPace } from "../core/pace.js";
-import { LABEL, diffTag, speedTag, modWords, runWords } from "./words.js";
+import { LABEL, diffTag, speedTag, modWords } from "./words.js";
 import { abilityList, abilityText, abilityOrd, getStrip } from "./fx.js";
-import { layout, listGeom, listHit, drawList, plate, fitKicker, head as plateHead, foot as plateFoot } from "./menudraw.js";
+import { layout, listGeom, listHit, drawList, plate, fitKicker, setupVals, head as plateHead, foot as plateFoot } from "./menudraw.js";
 import { hints } from "./hintcopy.js";
 
 /* Scene UI: menu logo, HUD, and the CLEARED / GAME OVER / PAUSED overlays.
@@ -220,11 +220,17 @@ export function pauseGeom(B, touch) {
 export function pauseHit(x, y, box, touch) {
   return listHit(x, y, pauseGeom(box || overlayBox("2d"), touch), true);
 }
-/* Run context for the PAUSE kicker: level, world, difficulty, speed (+modifiers, +DAILY), each setting named. */
-export function pauseKicker(world, run) {
-  const w = world || {};
-  return LABEL.LEVEL + " " + (w.level | 0) + " · " + biomeOf(w.level | 0).name + " · " + runWords({ heat: w.heat, pace: w.pace, pact: w.pact }) + (run && run.daily ? " · DAILY" : "");
+/* Run context for the PAUSE kicker, longest first: level, world, difficulty,
+   speed (+modifiers, +DAILY), each setting named; then menudraw's setupVals
+   forms (a modifier count, only what differs from a default run, EXPERT bare),
+   then the same without the world, DAILY kept on every one. pauseKicker is the
+   first. */
+export function pauseKickers(world, run) {
+  const w = world || {}, lv = LABEL.LEVEL + " " + (w.level | 0), d = run && run.daily ? " · DAILY" : "", r = { heat: w.heat, pace: w.pace, pact: w.pact };
+  const t = setupVals(lv, r)[3];
+  return setupVals(lv + " · " + biomeOf(w.level | 0).name, r).slice(0, 4).concat(t === lv ? [] : [t]).map((s) => s + d);
 }
+export const pauseKicker = (world, run) => pauseKickers(world, run)[0];
 /* v202 Q1: the look the player picked mid-run (app.lookNext: REAL 3D NEXT / READY /
    · RESTORING) rides the kicker's end; run context drops from the end (DAILY,
    modifiers, speed, difficulty) until it fits. No tail = the kicker, no measuring:
@@ -236,12 +242,12 @@ export function pauseKick(c, base, next, room) {
   cands.push(next);
   return fitKicker(c, cands, room);
 }
-/* A kicker with no tail, dropped from the end until it fits (the named settings
-   outgrew the plate): the same candidates pauseKick walks, minus the tail. */
-export function pauseFit(c, base, room) {
-  const p = String(base).split(" · "), cands = [];
-  for (let n = p.length; n >= 1; n--) cands.push(p.slice(0, n).join(" · "));
-  return fitKicker(c, cands, room);
+/* A kicker with no tail: the first of cands that fits, else the last dropped
+   from the end until it does (the named settings outgrew the plate). */
+export function pauseFit(c, cands, room) {
+  const L = [].concat(cands), p = String(L[L.length - 1]).split(" · ");
+  for (let n = p.length - 1; n >= 1; n--) L.push(p.slice(0, n).join(" · "));
+  return fitKicker(c, L, room);
 }
 /* body[data-lay] p / l (fit.js) = a touch layout: the one predicate the
    pause draw (through its ctx's canvas) and main's tap map both read. */
@@ -318,7 +324,7 @@ export function drawOverlay(
       g = pauseGeom({ w, h }, touch);
     plate(c, g.x, g.y, g.w, g.h);
     const base = u.note || pauseKicker(world, run);
-    plateHead(c, g, "PAUSED", u.next ? pauseKick(c, base, u.next, g.w - 24) : pauseFit(c, base, g.w - 24));
+    plateHead(c, g, "PAUSED", u.next ? pauseKick(c, base, u.next, g.w - 24) : pauseFit(c, u.note ? [u.note] : pauseKickers(world, run), g.w - 24));
     drawList(c, g, PAUSE_SHAPE, u.cursor | 0, 0, { touch });
     plateFoot(c, g, overlayCue(world, touch));
   }

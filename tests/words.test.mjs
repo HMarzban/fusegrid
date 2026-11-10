@@ -107,9 +107,17 @@ const scrub = (s) => s.replace(/IRON CROWN/g, "").replace(/NO FLOOR ITEMS|FEWER 
 const bad = (s) => OLD.test(scrub(s)) || /\bITEMS?\b/i.test(scrub(s)) || /\b[LR]\d\b/.test(s) || /\bHARD\W{0,3}(SPEED|PACE)\b|\b(SPEED|PACE)\W{0,3}HARD\b/i.test(s);
 const MAX_OK = /^(MAX|(FLAME|BOMB|SPEED|SPD) MAX)$|\(max \d\)|MAX IS UP TO YOUR SCREEN/; // a capped power-up (alone: the ability bar, SENSITIVITY, FRAME RATE values), the help's (max n), FRAME RATE's help
 const found = new Map();
+/* ruling 7: a bare NORMAL (a difficulty and a speed) or HARD (a speed before v202) only on a draw that names its setting */
+const bare = [];
+const named = (where, ss) => {
+  const all = ss.join("\n").replace(/ALL NORMAL/g, ""), b = /\b(NORMAL|HARD)\b(?! (DIFFICULTY|SPEED)\b)/.exec(all);
+  if (b && !/DIFFICULTY|SPEED/.test(all)) bare.push(where + " :: " + b[0]);
+  else if (b && b[1] === "HARD" && !/DIFFICULTY/.test(all)) bare.push(where + " :: HARD with no DIFFICULTY");
+};
 /* a chip name broken over two lines (NO FLOOR / ITEMS) is read back as one */
-const note = (where, texts) => {
+const note = (where, texts, draw) => {
   const ss = texts.map((t) => String(typeof t === "string" ? t : t && t.s != null ? t.s : t));
+  if (draw) named(where, ss);
   for (let i = 0; i < ss.length; i++) {
     const s = ss[i] === "ITEMS" && /(NO FLOOR|FEWER)$/.test(ss[i - 1] || "") ? ss[i - 1] + " " + ss[i] : ss[i];
     if (!found.has(s)) found.set(s, where);
@@ -152,7 +160,7 @@ for (const kind of ["2d", "px", "3d"]) {
       const a = mkApp(SCREEN[scr], o), R = rec({ widthK: 0.648 });
       if (scr === "GRAPHICS") a.gfxView = () => gfxView(a.settings, kind, {});
       drawShell(R.ctx, a, { state: "PLAY", time: 1, level: 1 }, box(w, h, lay), kind, SCORES[ci], () => 0b0110, cab);
-      note(scr + " " + kind + " " + lay + w + " " + dev, R.texts);
+      note(scr + " " + kind + " " + lay + w + " " + dev, R.texts, true);
       draws++;
     }));
     /* GAME: PAUSE views 1-3 through drawShell, view 0 and WIN / LOSE through drawOverlay (every look calls it with its overlayBox) */
@@ -161,7 +169,7 @@ for (const kind of ["2d", "px", "3d"]) {
         const a = mkApp(SCREEN.GAME, { pauseView: v, gfxRow: 1, optRow: 3 }), R = rec({ widthK: 0.648 });
         a.gfxView = () => gfxView(a.settings, kind, {});
         drawShell(R.ctx, a, { state: "PAUSE", time: 1, ...wo }, box(w, h, lay), kind, SCORES[0], () => 0, CABS[0]);
-        note("PAUSE view " + v + " " + kind, R.texts);
+        note("PAUSE view " + v + " " + kind, R.texts, true);
       }
       const B = overlayBox(kind), touch = lay !== "d";
       const RUNS = [null, { r: 3, k: 12, p: 4, t: 200 }, { r: 5, k: 40, p: 9, t: 700, best: { s: 99999, r: 8 }, fromStart: true, md: medalLine(255) }, { r: 5, k: 40, p: 9, t: 700, best: { s: 1, r: 1 }, md: medalLine(128) },
@@ -169,7 +177,7 @@ for (const kind of ["2d", "px", "3d"]) {
       for (const run of RUNS) for (const [state, lv] of [["PAUSE", wo.level], ["WIN", 3], ["WIN", 5], ["WIN", 8], ["LOSE", wo.level]]) for (const ui of [{ view: 0, cursor: 2, touch }, { view: 0, cursor: 0, touch, note: "CONTROLLER LOST" }, { view: 0, cursor: 1, touch, next: "REAL 3D NEXT" }]) {
         const R = rec({ widthK: 0.648 }), world = { ...wo, state, level: lv, score: 1234, players: [{}] };
         drawOverlay(R.ctx, world, B.w, B.h, B.cx, B.cy, ui, { on: true, t: 41.2, best: 38.9 }, run, { s: "COPIED", ok: true });
-        note(state + " " + lv + " " + kind, R.texts);
+        note(state + " " + lv + " " + kind + " " + lay + w + " " + dev, R.texts, true);
       }
     }
   }
@@ -181,7 +189,7 @@ setPixelArt(null);
   const keyV = (o) => ({ tab: "key", device: "key", row: 1, pad: { state: "none" }, key: DEF_KEY, binds: DEF_PAD, stick: "L", dead: 25, vib: 2, stickVal: [0, 0], reads: "", drift: 0.06, armed: false, swap: null, status: "", capture: null, echo: null, ...o });
   const PR = { state: "ready", name: "CONTROLLER 1", rumble: true };
   for (const o of [{ row: 2 }, { row: 3 }, { row: 7, armed: true }, ...[0, 1, 2, 3].map((vib) => ({ tab: "pad", device: "pad", pad: PR, row: 6, vib })), { tab: "pad", device: "pad", pad: PR, row: 2 }, { tab: "pad", device: "pad", pad: PR, row: 3 }, { tab: "pad", device: "pad", pad: PR, row: 5 }])
-    for (const T of [false, true]) { const R = rec({ widthK: 0.648 }); drawControls(R.ctx, md.layout(600, 520), keyV(o), { touch: T, narrow: false }); note("CONTROLS " + J(o), R.texts); }
+    for (const T of [false, true]) { const R = rec({ widthK: 0.648 }); drawControls(R.ctx, md.layout(600, 520), keyV(o), { touch: T, narrow: false }); note("CONTROLS " + J(o), R.texts, true); }
   const hud = rec({ widthK: 0.648 });
   drawHudChips(hud.ctx, { players: [{ bombs: 2, range: 3 }], lives: 3, level: 4, enemies: [1], heat: 1, score: 1234, state: "PLAY" }, { on: true, t: 12 });
   const hudTexts = hud.texts.map((t) => t.s);
@@ -222,6 +230,7 @@ note("CLIPBOARD", [copyPayload({ level: 3, heat: 2, score: 1234 }), statsPayload
 }
 const hits = [...found].filter(([s]) => bad(s)), maxs = [...found].filter(([s]) => /\bMAX\b/i.test(s) && !MAX_OK.test(s));
 check(`render sweep (${draws} shell draws + overlays, 3 looks x 5 boxes x 3 devices) prints no old word; HUD chips and medal names allow-listed`, hits.length === 0, hits.slice(0, 40).map(([s, w]) => w + " :: " + s).join("\n      "));
+check("ruling 7: a bare NORMAL or HARD only where the same screen names its setting (DIFFICULTY / SPEED)", bare.length === 0, [...new Set(bare)].slice(0, 20).join("\n      "));
 check("MAX only as a capped power-up, a SENSITIVITY level or the help's (max n)", maxs.length === 0, maxs.slice(0, 20).map(([s, w]) => w + " :: " + s).join("\n      "));
 {
   /* one marker per branch the sweep must reach, so a narrowed sweep cannot pass by seeing less */
@@ -231,6 +240,30 @@ check("MAX only as a capped power-up, a SENSITIVITY level or the help's (max n)"
     "LEVEL 8 · CROWN", "the level you reach", "DID NOT LOAD · SETTINGS", "· next level", "8 LEVELS", "5 LEVELS · 3 LOCKED", "NO VIBRATION AT ALL", "LIVES 1"];
   const all = [...found.keys()], miss = SEEN.filter((w) => !all.some((s) => s.indexOf(w) >= 0));
   check("the sweep reached every branch it claims (one marker each)", miss.length === 0, miss.join(" | "));
+}
+
+/* ---- fit: the longer words keep what the old slots said ---- */
+{
+  /* PAUSE: a daily keeps DAILY (a daily is always a default run), a heavy run keeps its modifier count; the kicker fits the plate */
+  for (const [name, B, touch] of [["keyboard", overlayBox("2d"), false], ["touch", overlayBox("2d"), true], ["iso", overlayBox("iso"), false]]) {
+    const kick = (w, run) => { const R = rec({ widthK: 0.7 }); drawOverlay(R.ctx, { state: "PAUSE", ...w }, B.w, B.h, B.cx, B.cy, { view: 0, cursor: 0, touch }, null, run); return R.texts.find((t) => /^LEVEL \d/.test(t.s)); };
+    const d = kick({ level: 1, heat: 0, pace: 0, pact: 0 }, { daily: "2026-11-10" }), h = kick({ level: 8, heat: 2, pace: 1, pact: 15 }, null), plain = kick({ level: 3, heat: 0, pace: 0, pact: 0 }, null);
+    check(`PAUSE kicker (${name}): a daily keeps DAILY, a heavy run keeps its modifier count, a default run reads LEVEL n · world`,
+      !!d && d.s === "LEVEL 1 · JUNGLE · DAILY" && !!h && /4 MODIFIERS$/.test(h.s) && /^LEVEL 8 · /.test(h.s) && !!plain && plain.s === "LEVEL 3 · FACTORY", J([d && d.s, h && h.s, plain && plain.s]));
+  }
+  /* LEVEL SELECT: a MODIFIERS name broken over two lines stays inside its chip, in the iso guard and on a narrow touch box */
+  const px = (t) => +/(\d+(?:\.\d+)?)px/.exec(t.font)[1];
+  for (const [name, L, T] of [["iso 608x352", md.layout(608, 352), false], ["iso touch", md.layout(608, 352), true], ["narrow touch", md.layout(436, 946, 255), true], ["600x520", md.layout(600, 520), false]]) {
+    const R = rec({ widthK: 0.648 }), G = md.levelGeom(L, true, T);
+    md.drawLevelSelect(R.ctx, 3, L, 1, 1, 15, true, 1, true, T, {});
+    const out = [];
+    G.mode.forEach((r, i) => {
+      const lines = R.texts.filter((t) => t.s && Math.abs(t.x - (r.x + r.w / 2)) < 0.01 && t.y >= r.y - 4 && t.y <= r.y + r.h + 4 && t.align === "center"); // this chip's own centred lines
+      for (const t of lines) if (t.y - px(t) / 2 < r.y - 0.01 || t.y + px(t) / 2 > r.y + r.h + 0.01 || t.w > r.w) out.push(i + ":" + t.s + "@" + px(t));
+    });
+    const n = G.mode.map((r) => R.texts.filter((t) => t.s && Math.abs(t.x - (r.x + r.w / 2)) < 0.01 && t.y >= r.y && t.y <= r.y + r.h).length);
+    check(`MODIFIERS chips (${name}): every line inside its chip, two-line names included`, out.length === 0 && n.every((k) => k >= 1) && n.some((k) => k === 2), out.join(" | ") + " " + J(n));
+  }
 }
 
 /* ---- source grep: a string literal anywhere in src/ that carries an old word (comments and identifiers are not player text) ---- */

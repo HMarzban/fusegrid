@@ -94,7 +94,7 @@ PAUSE draws `pauseGeom(overlayBox, touch)`: touch (`touchLay`,
 data-lay p/l) caps pitch at `PAUSE_ROW_H` 70 / hero 76 / width 380, a keyboard
 screen at the compact `PAUSE_ROW_D` 44 / hero 54 / width 340 (owner: "too
 fat"); `pauseHit` takes the same flag. RESUME hero, RESTART/QUIT danger,
-kicker = `LEVEL n · world · NORMAL DIFFICULTY · NORMAL SPEED` (+ modifiers, + DAILY; dropped from the end to fit), cue `ESC · P RESUME · … · M QUIT`.
+kicker = `LEVEL n · world` + difficulty, speed and modifiers, each named (+ DAILY), stepped down to fit by `pauseKickers` (a modifier count, then only what differs from a default run, so a default run reads `LEVEL 3 · FACTORY`; DAILY kept), cue `ESC · P RESUME · … · M QUIT`.
 Touch rule: a tap on a row = Enter on it; keyboard MENU and PAUSE bands span
 the full width of their box (MENU's `#sh` where there is a shell box, else the stage, as under the floor; PAUSE's stage; the touch MENU hub's tiles own half of each gutter);
 off the rows a root list (MENU, PAUSE list) does nothing; on a page

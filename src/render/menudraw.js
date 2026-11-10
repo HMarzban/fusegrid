@@ -523,7 +523,8 @@ function paintTile(c, r, label, sub, sel, o) {
   }
 }
 /* A MODIFIERS chip: segs' own frame and type; a name too wide for its chip
-   (NO FLOOR ITEMS) breaks at a space onto two lines, then steps down to fit. */
+   (NO FLOOR ITEMS) breaks at a space onto two lines, then steps down until both
+   lines fit its width and height (the iso guard's chip is ~19 px tall). */
 function chip(c, r, label, on, col, touch, fs) {
   const px = fs || (touch ? 14 : 11), wt = on ? "900" : "700", room = r.w - 6;
   c.font = font(px, wt);
@@ -536,11 +537,13 @@ function chip(c, r, label, on, col, touch, fs) {
   }
   const L2 = best.two;
   fitFont(c, L2[0].length > L2[1].length ? L2[0] : L2[1], room, px, 8, wt);
-  const lh = (parseFloat(/(\d+(?:\.\d+)?)px/.exec(c.font)[1]) || px) + 1;
+  let k = parseFloat(/(\d+(?:\.\d+)?)px/.exec(c.font)[1]) || px;
+  while (k > 8 && 2 * k + 1 > r.h - 2) c.font = font(--k, wt);
+  const lh = k + 1;
   c.fillStyle = on ? col : MUTED;
   c.textAlign = "center";
   c.textBaseline = "middle";
-  L2.forEach((l, i) => c.fillText(l, r.x + r.w / 2, r.y + r.h / 2 + 1 + (i - 0.5) * lh));
+  L2.forEach((l, i) => c.fillText(l, r.x + r.w / 2, r.y + r.h / 2 + (i - 0.5) * lh));
 }
 /* A run's setup for one value slot, longest first (fitVal / fitIn keep the
    first that fits): every setting named; the modifiers as a count; only what
@@ -820,7 +823,8 @@ export function menuHit(x, y, L, n, touch) {
   }
   return -1;
 }
-/* MENU teasers (the hub's second line), from info shellview hands in. */
+/* MENU teasers (the hub's second line), from info shellview hands in; an
+   array is longest first, fitted to its tile (a bare NORMAL never shows). */
 const LOOK = ["CLASSIC 2D", "PIXEL", "REAL 3D"];
 function teaser(label, val, I) {
   const i = I || {};
@@ -830,7 +834,7 @@ function teaser(label, val, I) {
     case "DAILY": return val === "NEW" ? "NEW · TODAY'S BOARD" : "PLAYED · " + ((i.daily && i.daily.played) | 0) + " TODAY";
     case LABEL.SETTINGS: return "LOOK · " + LOOK[i.look | 0];
     case "GUIDE": return POWER.length + " " + LABEL.POWER_UPS + " · " + FOES.length + " FOES";
-    case "HIGH SCORES": return i.top && i.top.length ? "TOP " + i.top[0].s + " · " + diffTag(0) : "NO RUNS YET";
+    case "HIGH SCORES": return i.top && i.top.length ? ["TOP " + i.top[0].s + " · " + diffTag(0), "TOP " + i.top[0].s] : "NO RUNS YET";
     case "STATS": return (i.medals | 0) + "/8 MEDALS · " + (i.days | 0) + ((i.days | 0) === 1 ? " DAY" : " DAYS");
     case "SOURCE": return "github.com/HMarzban/fusegrid";
   }
@@ -883,7 +887,8 @@ export function drawMenu(c, ui, L, t) {
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i],
         k = easeOutCubic(clamp01((et - i * 0.03) / 0.12)),
-        sub = r.cands ? (c.font = font(touch && g.rows[i].w >= 220 ? 13 : 11, "700"), fitIn(c, r.cands, g.rows[i].w - 12 - 94)) : teaser(r.label, r.val, I); // paintTile's hero type and room
+        tz = r.cands || teaser(r.label, r.val, I),
+        sub = Array.isArray(tz) ? (c.font = font(touch && g.rows[i].w >= 220 ? 13 : 11, "700"), fitIn(c, tz, g.rows[i].w - (r.hero ? 12 + 94 : 40))) : tz; // paintTile's type and room (hero: one line, else under the label)
       c.globalAlpha = pa * k;
       const q = g.rows[i],
         rr2 = { x: q.x, y: q.y + 6 * (1 - k), w: q.w, h: q.h };
@@ -1554,7 +1559,7 @@ export function drawFloorHelp(c, L, t, kind, touch) {
     gx = S.ix + 8,
     tx = gx + 3 * sw + 2 * 4 + 14;
   boxPlate(c, S);
-  head(c, S, "FLOOR", n + " TILES · ONE PER WORLD");
+  head(c, S, "FLOOR", n + " TILES · ONE PER WORLD · BY " + LABEL.DIFFICULTY); // its columns are the three difficulties
   c.textAlign = "center";
   c.textBaseline = "middle";
   c.fillStyle = MUTED;
@@ -1691,7 +1696,7 @@ export function drawScores(c, scores, L, t, heat, plaques, touch) {
     T = g.T,
     h = clampHeat(heat);
   boxPlate(c, S);
-  head(c, S, "HIGH SCORES", "BEST RUNS");
+  head(c, S, "HIGH SCORES", "BEST RUNS BY " + LABEL.DIFFICULTY); // its tabs and plaques are difficulties; the touch foot names no key
   segs(c, g.tabs, DIFF, h, HEAT_COL.map((x, i) => (i ? x : TEXT)), T);
   const pmask = plaques | 0,
     chH = g.f < 1 ? Math.max(12, Math.floor((18 + 8) * g.f) - 4) : 18, // iso: the chip never reaches bodyTop
