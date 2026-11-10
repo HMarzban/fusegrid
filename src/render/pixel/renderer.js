@@ -36,6 +36,8 @@
    the anim clock stops, updateFx is skipped so particles hold still, and the
    shake and the flash wash read as zero until PLAY resumes them; a new grid
    straight out of PAUSE (RESTART, QUIT) drops that held shake and flash.
+   o.covered (R4: the menu canvas hides the board): events, clocks, one-shots
+   and the grid track run; nothing touches #px or #c; the next frame rasters.
    Surface contract mirrors the wrapper: {canvas:#px, overlay:#c, ctx:overlay
    2D ctx, render, consumeEvents, getShake, reset, setPerf, invalidate,
    sleep}. Node / no-canvas => stub mode (overlay noop ctx, no world draw),
@@ -233,6 +235,7 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
     V.pop = o && o.pop != null ? o.pop : null;
     V.parts = getFx();
     V.bg = biomeOf(world.level).bg1;
+    if (o && o.covered) { inv = true; return; }
     const m = ovCtx.getTransform ? ovCtx.getTransform() : ID;
     if (ovCtx.setTransform) { ovCtx.save(); ovCtx.setTransform(1, 0, 0, 1, 0, 0); ovCtx.clearRect(0, 0, W, H); ovCtx.restore(); }
     if (nctx) {

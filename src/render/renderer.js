@@ -84,7 +84,9 @@ export function createRenderer(canvas, opts={}){
   }
   /* render(world,dt,o): additive opts — o.hud===true opts into the overlay
      chips/coach (GAME only), o.sfx===false gates audio.play only. Defaults
-     (o undefined) are byte-identical. */
+     (o undefined) are byte-identical. o.covered (the menu canvas hides the
+     board, R4): events and clocks run as ever, no canvas call at all, and the
+     next uncovered frame rasters fresh. */
   function render(world, dt, o){
     if(!world) return;
     const paused=world.state==="PAUSE", ev=world.events.length>0;
@@ -93,6 +95,7 @@ export function createRenderer(canvas, opts={}){
     if(!paused) pzT=null; else if(pzT==null) pzT=world.time;
     consumeEvents(world, dt, !(o&&o.sfx===false));
     if(kind==="2d"&&o&&(o.hud===true||o.amb===true)) amb.tick(world, dt);
+    if(o&&o.covered){ inv=true; return; }
     if(kind==="2d") stageGlow(canvas, world.level);
     const shake=paused?STILL:getShake();
     const g=o&&o.ghost, busy=!paused&&(getFx().length>0||shake.x!==0||shake.y!==0);

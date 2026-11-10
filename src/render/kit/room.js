@@ -1,0 +1,95 @@
+/* KIT ROOM: the world behind the menus (R4) and the next run's start corner (R5). Menus look the same in every art style, so both are the CLASSIC board art on
+   the 2D menu canvas, painted through the kit's cell painters (paint.js wallCell / floorCell / brickCell) on artOf(tok, level) = tok.biome (lead ruling 1).
+   roomLook   (c, box, level, tok, o) fills bg1, scales the 600 x 520 representative board to COVER box (s = max(w/600, h/520) x o.k) and centres it, then
+              lays the veil rgba(toL(tok.bg1, 0.004), o.veil = 0.5) over the box last (appendix 6). The layout is fixed, never the board the run deals:
+              border and even-even pillar walls (border codes, pillar variant [0,0,1,2] by hsh seed 7), bricks where hsh(x, y, 10) < 0.42 off both diagonals.
+   roomLayer  (box, level, tok, o) the same painted once per key into a cache.js layer at o.dpr (o.look, o.textScale in the key; a veil or k other than
+              the default joins the layer name, so a WIN veil never reuses the menu one).
+   laneGrid   (level) pure and DOM-free: the representative board as T codes with fair.js stampStart over it (the sealed spawn pocket, doors (5,1) and
+              (1,5) BRICK), MAKO on (1,1), the room's first CORE roster foe and its floor tile (core/feat.js HOME) on FLOOR cells of row 1 past the door,
+              inside the first 8 columns so a 9-column crop still shows them. Its only true facts: the pocket, the roster, the tile. A fresh grid per call.
+   lane       (c, x, y, w, rows, level, tok, o) the first LANE_COLS (o.cols) columns of that grid at s = w / cols, rows x s tall, cut 0.3 cell into the
+              top border: the bed, the cells, the tile (featdraw drawSpec, CORE, a lone cell), MAKO and the foe at rest at the appendix 6 scales, a 2 px
+              #0b0609 frame on the box edge. Returns the height. No clock: the page animates its focused cell itself. */
+import {CFG, T, key, biomeOf} from "../../core/config.js";
+import {stampStart} from "../../core/fair.js";
+import {heatRoster} from "../../core/heat.js";
+import {F, HOME, featKindOf, isBelt, isStream} from "../../core/feat.js";
+import {FOES} from "../../core/entities.js";
+import {drawPlayerBody, drawEnemyBody} from "../sprites.js";
+import {drawSpec} from "../featdraw.js";
+import {floorVar} from "../floorart.js";
+import {borderCode} from "../wallvar.js";
+import {wallCell, floorCell, brickCell} from "./paint.js";
+import {CONST, toL} from "./tokens.js";
+import {layer} from "./cache.js";
+
+const C = CFG.COLS, R = CFG.ROWS, TS = 40, BW = C * TS, BH = R * TS, SEED = 7;
+export const LANE_COLS = 14;
+const FOE_AT = Object.freeze([7, 1]), TILE_AT = Object.freeze([6, 1]);
+const TILE_CODE = Object.freeze({BELT: F.BELT_E, GLIDE: F.GLIDE, BLOOM: F.BLOOM, PLATE: F.PLATE, STREAM: F.STREAM_E, QUICK: F.QUICK, PORTAL: F.PORTAL, GATE: F.GATE});
+const SIDES = Object.freeze(["N", "E", "S", "W"]);
+const REST = {time: 0}, MAKO = {face: {x: 1, y: 0}, walk: 0, iFrames: 0, kick: false, shield: false, passing: false, color: "#37f0d0"};
+
+const hsh = (x, y, s) => { let h = (x * 374761393 + y * 668265263 + s * 1442695041) >>> 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+const rgba = (h, a) => `rgba(${parseInt(h.slice(1, 3), 16)},${parseInt(h.slice(3, 5), 16)},${parseInt(h.slice(5, 7), 16)},${a})`;
+const edge = (x, y) => x === 0 || y === 0 || x === C - 1 || y === R - 1;
+const isWall = (x, y) => edge(x, y) || (x % 2 === 0 && y % 2 === 0);
+const wallCode = (x, y) => (edge(x, y) ? borderCode(x, y) : [0, 0, 1, 2][Math.floor(hsh(x, y, SEED) * 4)]);
+const isBrick = (x, y) => !(x + y <= 3 || x + y >= C + R - 5) && hsh(x, y, SEED + 3) < 0.42;
+const artOf = (tok, level) => tok;
+function cell(c, px, py, s, art, v, x, y, level) {
+  if (v === T.WALL) return wallCell(c, px, py, s, art, {code: wallCode(x, y)});
+  floorCell(c, px, py, s, art, {par: (x + y) & 1, v: floorVar(x, y, level)});
+  if (v === T.BRICK) brickCell(c, px, py, s, art);
+}
+
+export function roomLook(c, box, level, tok, o = {}) {
+  const x = box.x || 0, y = box.y || 0, w = box.w, h = box.h, art = artOf(tok, level), s = Math.max(w / BW, h / BH) * (o.k || 1);
+  c.save();
+  c.beginPath(); c.rect(x, y, w, h); c.clip();
+  c.fillStyle = art.biome.bg1; c.fillRect(x, y, w, h);
+  c.translate(x + (w - BW * s) / 2, y + (h - BH * s) / 2); c.scale(s, s);
+  for (let j = 0; j < R; j++) for (let i = 0; i < C; i++) cell(c, i * TS, j * TS, TS, art, isWall(i, j) ? T.WALL : isBrick(i, j) ? T.BRICK : T.EMPTY, i, j, level);
+  c.restore();
+  c.fillStyle = rgba(toL(tok.bg1, 0.004), o.veil ?? 0.5); c.fillRect(x, y, w, h);
+}
+
+export function roomLayer(box, level, tok, o = {}) {
+  const dpr = o.dpr || 1, veil = o.veil ?? 0.5, k = o.k || 1, w = box.w, h = box.h;
+  const name = veil === 0.5 && k === 1 ? "room" : "room|" + veil + "|" + k;
+  return layer({layer: name, biome: tok.name, level, W: w, H: h, dpr, look: o.look || "2d", textScale: o.textScale || 1}, Math.round(w * dpr), Math.round(h * dpr),
+    (g) => { g.scale(dpr, dpr); roomLook(g, {x: 0, y: 0, w, h}, level, tok, {veil, k}); });
+}
+
+export function laneGrid(level) {
+  const g = new Uint8Array(C * R), b = biomeOf(level), [fx, fy] = FOE_AT, [tx, ty] = TILE_AT;
+  for (let y = 0; y < R; y++) for (let x = 0; x < C; x++) g[key(x, y)] = isWall(x, y) ? T.WALL : isBrick(x, y) ? T.BRICK : T.EMPTY;
+  g[key(fx, fy)] = g[key(tx, ty)] = T.EMPTY;
+  stampStart(g);
+  return {cols: C, rows: R, grid: g, mako: {x: 1, y: 1}, foe: {x: fx, y: fy, type: heatRoster(level, 0)[0]}, tile: {x: tx, y: ty, code: TILE_CODE[HOME[b.name]]}};
+}
+
+const specOf = (t) => ({kind: featKindOf(t.code), h: 0, par: (t.x + t.y) & 1, dir: isBelt(t.code) ? t.code - 1 : isStream(t.code) ? t.code - 8 : 0,
+  outer: SIDES.slice(), exit: true, entry: true, phase: 0, state: 0, lit: 0, pair: 1, gx: t.x, gy: t.y});
+
+export function lane(c, x, y, w, rows, level, tok, o = {}) {
+  const L = laneGrid(level), n = o.cols || LANE_COLS, s = w / n, h = rows * s, art = artOf(tok, level), ox = x + 2, oy = y + 2 - 0.3 * s;
+  c.save();
+  c.fillStyle = tok.bed; c.fillRect(x, y, w, h);
+  c.beginPath(); c.rect(x + 2, y + 2, w - 4, h - 4); c.clip();
+  const nr = Math.min(R, Math.ceil(rows + 0.3)), nc = Math.min(C, Math.ceil(n));
+  for (let j = 0; j < nr; j++) for (let i = 0; i < nc; i++) cell(c, ox + i * s, oy + j * s, s, art, L.grid[key(i, j)], i, j, level);
+  const t = L.tile;
+  if (t.code) drawSpec(c, art.biome, specOf(t), ox + t.x * s, oy + t.y * s, s);
+  c.save(); c.translate(ox + (L.mako.x + 0.5) * s, oy + (L.mako.y + 0.5) * s + s * 0.02); c.scale(s / 40, s / 40);
+  drawPlayerBody(c, REST, MAKO);
+  c.restore();
+  const f = L.foe, ft = FOES.find((q) => q.t === f.type) || FOES[0];
+  c.save(); c.translate(ox + (f.x + 0.5) * s, oy + (f.y + 0.5) * s + s * 0.04); c.scale(s / 34, s / 34);
+  drawEnemyBody(c, REST, {type: ft.t, color: ft.col, r: 14, home: {x: 3, y: 7}, invuln: false, dir: {x: 0, y: 1}});
+  c.restore();
+  c.restore();
+  c.strokeStyle = CONST.ol; c.lineWidth = 2; c.strokeRect(x + 1, y + 1, w - 2, h - 2);
+  return h;
+}

@@ -361,6 +361,9 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
     const tc=paused?pzT:world.time-skew;
     consumeEvents(world, dt, !(o&&o.sfx===false));
     const ambOn=!!(o&&(o.hud===true||o.amb===true)); if(ambOn)aclock.tick(world,dt||0);
+    /* o.covered (R4): the menu canvas hides the board; no scene update, no
+       gl.render, no shadow pass, no overlay; the next uncovered frame draws */
+    if(o&&o.covered){ inv=true; return; }
     const bk=o&&typeof o.bright==="number"&&isFinite(o.bright)?o.bright:brightK;
     const pop=o&&o.pop!=null?o.pop:1, sh=paused?STILL:getShake();
     const tB=tc, g=o&&o.ghost;
