@@ -3,21 +3,28 @@
    and the REAL 3D build. No DOM, no canvas, no clock, no randomness; every result is deep-frozen.
    Paths are op lists a painter replays on a canvas path or flattens with flat():
      ["M",x,y] ["L",x,y] ["Q",cx,cy,x,y] ["C",c1x,c1y,c2x,c2y,x,y] ["A",cx,cy,r,a0,a1,ccw] (canvas arc, joined from the current point) ["Z"].
-   Parts (spark, bomb, world motifs) are drawn in list order:
-     fill  {d, col, a?, ink?, clip?}  fill d; ink > 0 strokes d first in P.ol at that width, round joins; clip "face" = inside the faces only
+   Parts (spark, bomb, cord, world motifs) are drawn in list order:
+     fill  {d, col, a?, ink?, clip?}  fill d; ink > 0 strokes d first in P.ol at that width, round joins
      line  {d, w, col, cap}           stroke d, round joins
+     tube  {d, w[], col, cap}         stroke each L segment of d on its own at its own width w[i] (the tapered cord)
      disc  {x, y, r, col}   ring {x, y, r, w, col}   rect {x, y, w, h, col}   ell {x, y, rx, ry, rot, col, a?}   rrect {x, y, w, h, r, col}
      rim   {x, y, rx, ry, dx, dy, a0, a1, r, col}  even-odd of the body ellipse and itself moved (dx, dy), kept to the wedge a0..a1 of radius r
-     clip "body" = inside the bomb body ellipse; tf [x, y, rot] = drawn in a frame moved to (x, y) and turned rot (radians).
+     clip "body" = inside the bomb body ellipse; "face" = inside the faces; "rope" = only where the rope tube painted (the mock draws those parts
+     source-atop on the rope's own layer, then lays that layer over the canvas). tf [x, y, rot] = drawn in a frame moved to (x, y), turned rot (radians).
+   Tier names are tierOf's (worlds.js): title, token, menu, small, mono. Every tier rule is data on what it governs: a tiers list (drawn only at those
+   tiers) and min {px, unit, tiers} (a minimum width that applies only at those tiers). LAYERS is the CLASSIC paint order, the same for both builds;
+   worlds.js plan() resolves it for one world, tier and size. Every minimum is CSS px (n / cap in C units) unless its record says unit "device"
+   (n / (cap * dpr)).
    glyph(ch): d = one op list per shape (rings as subpaths, filled even-odd; round tops and bottoms overshoot OVER, radii clamped to half an edge, as
-   canvas arcTo draws them), rings = the same flattened; inGlyph tests a point in the letter's own units. layout(build) is the one box per build
-   ("line" | "stack"): letters {ch, x, y, word 0 FUSE / 1 GRID, i}, bomb {x, y, d}, cord control points, collar tip, face, baselines, env.
+   canvas arcTo draws them), rings = the same flattened for painters. inGlyph(ch, x, y, shape?) is exact: true arcs, and a point within 1e-9 of the
+   outline counts as inside (the canvas isPointInPath rule). layout(build) is the one box per build ("line" | "stack"): letters {ch, x, y,
+   word 0 FUSE / 1 GRID, i}, bomb {x, y, d}, cord control points, collar tip, face, baselines, env; the canvas is env x cap and fit() solves the cap.
    cordPath: 97 samples {x, y, s arc length, tx, ty}, 6 straight segments from the collar tip (the MONO start at the mono tier) to P0, then 90 of the
-   cubic; atS(pts, s) is the point at arc length s (braid ticks, the intro run-up). sparkAt: the cord tip moved along its tangent by SPARK.off[tier].
-   spark(frame, {reduced, tier, px}) around its centre: frame = floor(t * 14) & 1 (0 A, 1 B); reduced = frame A in #ffb347, no embers; the small tier
-   grows it to 8 px across; no embers at the MENU and small tiers. bomb(dpx): units of D, origin the centre, tiers hero >= 60 px, the 40 recipe >= 26,
-   else the 24 recipe; tip = the collar tip; in the logo its body joins the letters' solid, standalone it adds BOMB.shadow.
-   px arguments are the cap height (or the bomb diameter) in CSS px; they only raise the appendix's minimum widths ("min n px"). */
+   cubic; atS(pts, s) is the point at arc length s (braid ticks; the intro run-up puts the spark at atS(pts, run * length), no offset).
+   cord(build, tier, px, ver) resolves CORD into parts (layer "cordInk" or "rope"). sparkAt: the cord tip moved along its tangent by SPARK.off[tier].
+   spark(frame, {reduced, tier, px}) around its centre: frame = floor(t * 14) & 1 (0 A, 1 B); reduced = frame A in #ffb347, no embers.
+   bomb(dpx): units of D, origin the centre, tiers by the diameter in CSS px; tip = the collar tip; in the logo its body joins the letters' solid,
+   standalone it adds BOMB.shadow. */
 import {CONST} from "../kit/tokens.js";
 
 const deep = (o) => { for (const v of Object.values(o)) if (v && typeof v === "object" && !Object.isFrozen(v)) deep(v); return Object.freeze(o); };
@@ -40,15 +47,28 @@ export const OVER = 0.015, BD = 0.72;
 export const FACE = deep({full: {f: [P.yel, P.yelLip, P.pale], g: [P.cor, P.corLip, P.corHi]}, menu: {f: [P.cream, P.t2, P.white], g: [P.cream, P.t2, P.white]},
   mono: {f: [P.cream], g: [P.cream]}, ink: {f: [P.ol], g: [P.ol]}});
 export const faces = (tier, ver) => (tier === "mono" ? (ver === "ink" ? FACE.ink : FACE.mono) : tier === "menu" ? FACE.menu : FACE.full);
-export const STACK = deep({ol: .10, ext: .14, smallPx: 2, close: .08, shade: [-.04, -.06], shadePx: 2, light: [.025, .035], lightTiers: ["title", "menu"], plateA: .94, side: P.dk});
-export const CORD = deep({w0: .11, w1: .09, minPx: 3, ol: .035, olPx: 1.2, olPxSmall: 2, col: P.cord, lead: 6, n: 90,
-  braid: {w: .025, wPx: 1, len: .2, deg: 35, step: {title: .10, token: .16}, first: .6, stop: .08, col: P.cord2},
-  light: {w: .015, wPx: 1, inset: .022, insetPx: 1.4, col: P.pale}, burnt: {len: .07, k: 1.3, col: P.cord2}, char: {w: .03, wPx: 1.5, half: .1, back: .01, col: P.dk}});
-export const MONO = deep({start: [.23, -.27], w: .10, wPx: 2, ring: {off: .04, r: .08, w: .04, wPx: 1.5}});
-export const SPARK = deep({A: {len: .17, deg: 15, col: P.yel, ember: [[.18, -.08], [-.10, -.16]]}, B: {len: .13, deg: 45, col: P.cor, ember: [[.12, -.18], [.20, .04]]},
-  root: .05, core: .065, coreInk: .025, ink: .02, inkPx: 1, ember: .03, off: {title: .04, token: 0, menu: 0, small: -.04}, minPx: {small: 8}, reach: .34, hz: 14});
-export const BOMB = deep({hero: 60, mid: 26, rx: .5, ry: .48, oy: .02, ol: .05, collar: {deg: 40, at: .52, tip: .60},
-  shadow: {k: "ell", x: 0, y: .49, rx: .20, ry: .045, rot: 0, col: "#000000", a: .35}});
+const T4 = ["title", "token", "menu", "small"], T3 = ["title", "token", "menu"];
+export const STACK = deep({solid: "the faces of both words and the bomb body ellipse (BOMB rx, ry at oy, times BD)",
+  outline: {src: ["solid", "side"], grow: .10, close: .08, padded: true, min: {px: 2, unit: "css", tiers: ["small"]}, col: P.ol, tiers: T4},
+  side: {src: "solid", sweep: .14, min: {px: 2, unit: "css", tiers: ["small"]}, col: P.dk, tiers: T4},
+  face: {perWord: true, tiers: T4},
+  shade: {perWord: true, shift: [-.04, -.06], min: {px: 2, unit: "css", tiers: ["token", "menu"]}, clip: "face", tiers: T3},
+  light: {perWord: true, shift: [.025, .035], clip: "face", tiers: ["title", "menu"]}});
+export const LAYERS = deep(["plate", "ringOuter", "ringInner", "outline", "side", "gilt", "giltInk", "face", "shade", "light", "motif", "bomb", "cordInk", "rope", "spark"]);
+export const MONO_LAYERS = deep(["plate", "monoFace", "monoBomb", "monoCord", "monoTip"]);
+export const CORD = deep({w0: .11, w1: .09, min: {px: 3, unit: "css", tiers: T4}, col: P.cord, lead: 6, n: 90, tiers: T4,
+  ink: {w: .035, min: {px: {title: 1.2, token: 1.2, menu: 1.2, small: 2}, unit: "css"}, col: P.ol, layer: "cordInk"},
+  over: ["light", "braid", "burnt", "char"],
+  light: {tiers: T3, w: .015, min: {px: 1, unit: "css"}, inset: .022, insetMin: {px: 1.4, unit: "css"}, side: "the normal with the smaller x + y (upper left)", col: P.pale, cap: "round", clip: "rope"},
+  braid: {tiers: ["title", "token"], step: {title: .10, token: .16}, first: .6, stop: .08, len: .2, rot: 35, axes: "y down; the tangent turned +35 deg from +x toward +y (clockwise on screen)", w: .025, min: {px: 1, unit: "css"}, col: P.cord2, cap: "butt", clip: "rope"},
+  burnt: {tiers: T3, len: .07, k: 1.3, col: P.cord2, cap: "round", clip: "rope"},
+  char: {tiers: T3, w: .03, min: {px: 1.5, unit: "css"}, half: .1, back: .01, col: P.dk, cap: "butt", clip: "rope"}});
+export const MONO = deep({tiers: ["mono"], start: [.23, -.27], w: .10, min: {px: 2, unit: "css"}, bomb: "the body ellipse, no outline", ring: {off: .04, r: .08, w: .04, min: {px: 1.5, unit: "css"}}});
+export const SPARK = deep({tiers: T4, A: {len: .17, deg: 15, col: P.yel, ember: [[.18, -.08], [-.10, -.16]]}, B: {len: .13, deg: 45, col: P.cor, ember: [[.12, -.18], [.20, .04]]},
+  root: .05, core: .065, coreInk: .025, ink: .02, inkMin: {px: 1, unit: "css"}, ember: .03, embers: ["title", "token"], off: {title: .04, token: 0, menu: 0, small: -.04},
+  grow: {px: 8, unit: "css", tiers: ["small"]}, reach: .34, hz: 14});
+export const BOMB = deep({hero: 60, mid: 26, unit: "css", rx: .5, ry: .48, oy: .02, ol: .05, collar: {deg: 40, at: .52, tip: .60},
+  shadow: {k: "ell", x: 0, y: .49, rx: .20, ry: .045, rot: 0, col: "#000000", a: .35, use: "standalone only, never in the logo"}});
 export const LOOK3D = deep({sy: .93, drop: .135, hull: .06, mix: .30, deep: .72, shadow: {dx: .08, dy: .12, sigma: .02, a: .45}});
 export const PX_SCALE = deep({title: 3, menu: 3, small: 2});
 export const pxEnv = (A) => deep({t: Math.max(Math.ceil(.40 * A), 7), b: Math.ceil(.36 * A), s: Math.ceil(.20 * A)});
@@ -104,9 +124,45 @@ export function glyph(ch) {
   }
   return g;
 }
-const inPoly = (pts, x, y) => { let c = false; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { const [xi, yi] = pts[i], [xj, yj] = pts[j]; if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c; } return c; };
-export const inShape = (rings, x, y) => rings.reduce((c, r) => (inPoly(r, x, y) ? !c : c), false);
-export const inGlyph = (ch, x, y) => glyph(ch).rings.some((rings) => inShape(rings, x, y));
+const EPS = 1e-9, HALF = Math.PI / 2;
+function edgesOf(ops) {
+  const out = [];
+  let s0 = null, cur = null;
+  const seg = (a, b) => { if (a[0] !== b[0] || a[1] !== b[1]) out.push([a[0], a[1], b[0], b[1]]); };
+  for (const o of ops) {
+    if (o[0] === "M") s0 = cur = [o[1], o[2]];
+    else if (o[0] === "L") { seg(cur, [o[1], o[2]]); cur = [o[1], o[2]]; }
+    else if (o[0] === "A") { const [, cx, cy, r, a0, a1, ccw] = o, s = sweep(a0, a1, ccw); seg(cur, [cx + r * Math.cos(a0), cy + r * Math.sin(a0)]); out.push([cx, cy, r, a0, s]); cur = [cx + r * Math.cos(a0 + s), cy + r * Math.sin(a0 + s)]; }
+    else if (o[0] === "Z") { seg(cur, s0); cur = s0; }
+  }
+  return out;
+}
+const segNear = ([ax, ay, bx, by], x, y) => { const dx = bx - ax, dy = by - ay, l = dx * dx + dy * dy, t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / l)); return Math.hypot(x - ax - t * dx, y - ay - t * dy) <= EPS; };
+const arcNear = ([cx, cy, r, a0, s], x, y) => {
+  if (Math.abs(Math.hypot(x - cx, y - cy) - r) > EPS) return false;
+  const T = 2 * Math.PI, rel = (((s >= 0 ? Math.atan2(y - cy, x - cx) - a0 : a0 - Math.atan2(y - cy, x - cx)) % T) + T) % T;
+  return rel <= Math.abs(s) + EPS || T - rel <= EPS;
+};
+const segCross = ([ax, ay, bx, by], x, y) => (ay > y !== by > y && x < ax + ((y - ay) * (bx - ax)) / (by - ay) ? 1 : 0);
+function arcCross([cx, cy, r, a0, s], x, y) {
+  const t0 = Math.min(a0, a0 + s), t1 = Math.max(a0, a0 + s), cut = [t0];
+  for (let k = Math.ceil((t0 - HALF) / Math.PI), b = HALF + k * Math.PI; b < t1; b = HALF + ++k * Math.PI) if (b > t0) cut.push(b);
+  cut.push(t1);
+  let c = 0;
+  for (let i = 1; i < cut.length; i++) {
+    const u = cut[i - 1], v = cut[i];
+    if (cy + r * Math.sin(u) > y === cy + r * Math.sin(v) > y) continue;
+    if (x < cx + (Math.cos((u + v) / 2) >= 0 ? 1 : -1) * Math.sqrt(Math.max(0, r * r - (y - cy) * (y - cy)))) c ^= 1;
+  }
+  return c;
+}
+const inEdges = (E, x, y) => { let c = 0; for (const e of E) { if (e.length === 4 ? segNear(e, x, y) : arcNear(e, x, y)) return true; c ^= e.length === 4 ? segCross(e, x, y) : arcCross(e, x, y); } return c === 1; };
+const EDG = new Map();
+export function inGlyph(ch, x, y, shape) {
+  let S = EDG.get(ch);
+  if (!S) EDG.set(ch, (S = glyph(ch).d.map(edgesOf)));
+  return shape == null ? S.some((E) => inEdges(E, x, y)) : inEdges(S[shape], x, y);
+}
 export const wordW = (w) => [...w].reduce((a, ch, i) => a + GL[ch].w + (i ? GAP[w[i - 1] + ch] : 0), 0);
 
 const bez = (Q, t) => { const u = 1 - t; return [0, 1].map((k) => u * u * u * Q[0][k] + 3 * u * u * t * Q[1][k] + 3 * u * t * t * Q[2][k] + t * t * t * Q[3][k]); };
@@ -167,12 +223,47 @@ export function sparkAt(build, tier) {
   const e = cordPath(build)[CORD.lead + CORD.n], off = SPARK.off[tier] || 0;
   return deep({x: e.x + e.tx * off, y: e.y + e.ty * off});
 }
+export function fit(build, o) {
+  const E = layout(build).env;
+  return +Math.min(o.fitH ? o.fitH / E.h : 1e9, o.fitW ? o.fitW / E.w : 1e9, o.capMax || 1e9).toFixed(2);
+}
+export function cord(build, tier = "title", px = Infinity, ver) {
+  const pts = cordPath(build, tier), n = pts.length, e = pts[n - 1], len = e.s, d = pts.map((p, i) => [i ? "L" : "M", p.x, p.y]);
+  if (tier === "mono") {
+    const col = faces("mono", ver).f[0], R = MONO.ring;
+    return deep([{k: "line", d, w: Math.max(MONO.w, MONO.min.px / px), col, cap: "round", layer: "monoCord"},
+      {k: "ring", x: e.x + e.tx * R.off, y: e.y + e.ty * R.off, r: R.r, w: Math.max(R.w, R.min.px / px), col, layer: "monoTip"}]);
+  }
+  const C = CORD, k = len ? 1 / len : 0, w = (s) => Math.max(C.w0 - (C.w0 - C.w1) * s * k, C.min.px / px), ow = Math.max(C.ink.w, C.ink.min.px[tier] / px);
+  const nrm = (p) => { const a = [-p.ty, p.tx], b = [p.ty, -p.tx]; return a[0] + a[1] < b[0] + b[1] ? a : b; };
+  const parts = [{k: "tube", d, w: pts.slice(1).map((p) => w(p.s) + 2 * ow), col: C.ink.col, cap: "round", layer: "cordInk"}, {k: "tube", d, w: pts.slice(1).map((p) => w(p.s)), col: C.col, cap: "round", layer: "rope"}];
+  const over = (o, q) => parts.push({...q, col: o.col, cap: o.cap, clip: o.clip, layer: "rope"});
+  if (C.light.tiers.includes(tier)) {
+    const L = C.light, ins = Math.max(L.inset, L.insetMin.px / px);
+    over(L, {k: "line", d: pts.map((p, i) => { const q = nrm(p), o = w(p.s) / 2 - ins; return [i ? "L" : "M", p.x + q[0] * o, p.y + q[1] * o]; }), w: Math.max(L.w, L.min.px / px)});
+  }
+  if (C.braid.tiers.includes(tier)) {
+    const B = C.braid, st = B.step[tier], a = rad(B.rot), h = B.len / 2, t = [];
+    for (let s = st * B.first; s < len - B.stop; s += st) { const p = atS(pts, s), dx = p.tx * Math.cos(a) - p.ty * Math.sin(a), dy = p.tx * Math.sin(a) + p.ty * Math.cos(a); t.push(["M", p.x - dx * h, p.y - dy * h], ["L", p.x + dx * h, p.y + dy * h]); }
+    over(B, {k: "line", d: t, w: Math.max(B.w, B.min.px / px)});
+  }
+  if (C.burnt.tiers.includes(tier)) {
+    const j = pts.findIndex((p, i) => i && p.s > len - C.burnt.len);
+    over(C.burnt, {k: "tube", d: pts.slice(j - 1).map((p, i) => [i ? "L" : "M", p.x, p.y]), w: pts.slice(j).map((p) => w(p.s) * C.burnt.k)});
+  }
+  if (C.char.tiers.includes(tier)) {
+    const H = C.char, q = nrm(e);
+    over(H, {k: "line", d: [["M", e.x + q[0] * H.half - e.tx * H.back, e.y + q[1] * H.half - e.ty * H.back], ["L", e.x - q[0] * H.half - e.tx * H.back, e.y - q[1] * H.half - e.ty * H.back]], w: Math.max(H.w, H.min.px / px)});
+  }
+  return deep(parts);
+}
 export function spark(frame, o = {}) {
   const red = !!o.reduced, f = red || !(frame & 1) ? SPARK.A : SPARK.B, px = o.px || Infinity;
-  const k = Math.max(1, (SPARK.minPx[o.tier] || 0) / (SPARK.reach * px)), len = f.len * k, rw = SPARK.root * k, inkw = Math.max(SPARK.ink * k, SPARK.inkPx / px), col = red ? P.amb : f.col;
+  const tier = o.tier || "title", g = SPARK.grow.tiers.includes(tier) ? SPARK.grow.px : 0, k =Math.max(1, g / (SPARK.reach * px)), len = f.len * k, rw = SPARK.root * k;
+  const inkw = Math.max(SPARK.ink * k, SPARK.inkMin.px / px), col = red ? P.amb : f.col;
   const rays = [0, 1, 2, 3].map((i) => { const a = rad(f.deg + i * 90), dx = Math.cos(a), dy = Math.sin(a); return [["M", (-dy * rw) / 2, (dx * rw) / 2], ["L", dx * len, dy * len], ["L", (dy * rw) / 2, (-dx * rw) / 2], ["Z"]]; });
   const parts = [...rays.map((d) => ({k: "line", d, w: 2 * inkw, col: P.ol, cap: "round"})), ...rays.map((d) => ({k: "fill", d, col}))];
-  if (!red && o.tier !== "small" && o.tier !== "menu") for (const [ex, ey] of f.ember) { const q = SPARK.ember * k; parts.push({k: "rect", x: ex * k - q / 2, y: ey * k - q / 2, w: q, h: q, col: P.amb}); }
+  if (!red && SPARK.embers.includes(tier)) for (const [ex, ey] of f.ember) { const q = SPARK.ember * k; parts.push({k: "rect", x: ex * k - q / 2, y: ey * k - q / 2, w: q, h: q, col: P.amb}); }
   parts.push({k: "disc", x: 0, y: 0, r: (SPARK.core + SPARK.coreInk) * k, col: P.ol}, {k: "disc", x: 0, y: 0, r: SPARK.core * k, col: red ? P.amb : P.pale});
   return deep({frame: f === SPARK.B ? 1 : 0, k, parts});
 }

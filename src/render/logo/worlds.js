@@ -1,23 +1,36 @@
 /* LOGO B WORLDS: what each of the eight worlds changes on the wordmark (appendix 8.8, built values): the side colour (the extrusion), the plate (bed,
    frame, frame highlight, corner marks) and one motif; faces, cord, bomb and spark never change. Rows read the kit's world tokens, so there is one colour
    source: bed = bg1, frame = frame (wall), frame highlight = boss (wallHi), side = the biome slot the PIXEL side slot names (ICE takes the kit's glacier
-   cyan, lead ruling on appendix 14 item 13). ICE frost, VOID rings and CROWN gilt are layer-stack dressing; motif(world, build, tier, px) returns the
-   parts (glyphs.js part kinds, layout units, each tagged with the letter it sits on, or "bomb") in draw order: title tier the full motif, token and MENU
-   the token, small and mono none, CROWN none at MENU. px = the cap height in CSS px; it only raises the minimum widths. Pure: no DOM, clock or randomness
-   (SAND grain is a fixed LCG pattern seeded by the letter's layout index, its inside test run in the letter's own units). */
+   cyan, lead ruling on appendix 14 item 13). ICE frost, VOID rings and CROWN gilt are layer-stack dressing, each with its tiers; motif(world, build,
+   tier, px) returns the parts (glyphs.js part kinds, layout units, each tagged with the letter it sits on, or "bomb") in draw order; MOTIF.set says
+   which set a tier wears. PLATE is the world plate in CSS px at every cap (it does not scale): outermost first a 2 px ink ring, the 3 px frame, 2 px of
+   ink and 1 px of frameHi inside it, then the bed; corner marks sit 4 px inside the frame. plan(world, {cap, ver, dpr}) is the CLASSIC paint list for
+   one size: glyphs.js LAYERS filtered by each layer's tiers and world, every width resolved to C units (CSS minimums n / cap, device n / (cap * dpr)).
+   Its mask words: src = what a layer is built from (solid = faces + bomb body, side, outline, ringInner); grow = dilate by; close = closings in order,
+   on a padded canvas; sweep = swept straight down by; band = the bottom band of the side that tall, minus the solid; shift = the face minus itself
+   moved by (shade, light); col [FUSE, GRID] per word for face, shade and light.
+   px = the cap height in CSS px. Pure: no DOM, clock or randomness (SAND grain is a fixed LCG pattern seeded by the letter's layout index). */
 import {BIOMES} from "../../core/config.js";
 import {worldTokens} from "../kit/tokens.js";
-import {GL, P, BD, layout, glyph, inShape} from "./glyphs.js";
+import {GL, P, BD, STACK, LAYERS, MONO_LAYERS, CORD, SPARK, BOMB, MONO, layout, inGlyph, faces} from "./glyphs.js";
 
 const deep = (o) => { for (const v of Object.values(o)) if (v && typeof v === "object" && !Object.isFrozen(v)) deep(v); return Object.freeze(o); };
 const rad = (d) => (d * Math.PI) / 180;
+const T3 = ["title", "token", "menu"], T4 = [...T3, "small"];
 const SIDE = {JUNGLE: "bg0", ICE: "wall", FACTORY: "bg0", WATER: "bg0", ARENA: "bg0", SAND: "bg0", VOID: "brickB", CROWN: "brickB"};
-const CORNER = {FACTORY: {kind: "bolt", size: 7, inset: 4}, ARENA: {kind: "stud", size: 7, inset: 4}, CROWN: {kind: "filigree", size: 9, inset: 4}};
-const DRESS = {ICE: {frost: "#f4fcff"}, VOID: {ring: {close: .16, w: [.04, .04], col: ["#6a20c8", "#3a1070"]}}, CROWN: {gilt: {line: .02, linePx: 1, col: "#fff0a8", ink: .03, inkPx: 1.2}}};
+const CORNER = {FACTORY: {kind: "bolt", size: 9, radii: [4.5, 4.5, 4.5, 4.5], rot: 0}, ARENA: {kind: "stud", size: 9, radii: [0, 0, 0, 0], rot: 45}, CROWN: {kind: "filigree", size: 11, radii: [2, 5.5, 2, 5.5], rot: 0}};
+const DRESS = {ICE: {frost: {col: "#f4fcff", tiers: ["title"]}},
+  VOID: {ring: {close: {w: .16, tiers: T3}, inner: {w: .04, col: "#6a20c8", tiers: T3}, outer: {w: .04, col: "#3a1070", tiers: ["title"]}}},
+  CROWN: {gilt: {tiers: T4, line: {w: .02, min: {px: 1, unit: "device"}, col: "#fff0a8"}, ink: {w: .03, min: {px: 1.2, unit: "device"}, col: P.ol}}}};
 export const WORLDS = deep(Object.fromEntries(BIOMES.map((b, i) => {
   const t = worldTokens(i + 1), f = SIDE[b.name];
-  return [b.name, {name: b.name, level: i + 1, side: t.biome[f], bed: t.bg1, a: .94, frame: t.frame, frameHi: t.boss, px: "tile." + f, corner: CORNER[b.name] || null, ...DRESS[b.name]}];
+  return [b.name, {name: b.name, level: i + 1, side: t.biome[f], bed: t.bg1, frame: t.frame, frameHi: t.boss, px: "tile." + f, corner: CORNER[b.name] || null, ...DRESS[b.name]}];
 })));
+export const PLATE = deep({
+  world: {unit: "css", scales: false, radius: 6, pad: [8, 10], ink: {w: 2, col: P.ol}, frame: {w: 3}, inner: [{w: 2, col: P.ol}, {w: 1, col: "frameHi"}], bed: {a: 1},
+    corner: {inset: 4, border: 1, ink: P.ol, fill: "frameHi"}},
+  title: {plate: "kit", cls: "marq", pad: {d: [26, 54, 28], p: [16, 12, 18]}},
+  menu: {plate: "none", host: "the MENU panel header .mh, on the panel's own plate"}});
 export const worldOf = (w) => (typeof w === "number" ? WORLDS[worldTokens(w).name] : WORLDS[w]) || null;
 export function tierOf(o) {
   if (o.ver === "mono" || o.ver === "ink" || o.cap < 20) return "mono";
@@ -26,14 +39,14 @@ export function tierOf(o) {
   if (o.cap < 64) return "token";
   return "title";
 }
-export const MOTIF = deep({edge: .025, edgePx: 2, vine: {w: .036, ink: .015, pass: [.50, .82], col: "#14a018"}, leaf: {l: .16, w: .08, vein: .015, col: "#42f024"},
+export const MOTIF = deep({set: {title: "title", token: "token", menu: "token"}, none: ["VOID"], edge: .025, edgeMin: {px: 2, unit: "css"}, vine: {w: .036, ink: .015, pass: [.50, .82], col: "#14a018"}, leaf: {l: .16, w: .08, vein: .015, col: "#42f024"},
   snow: {title: [.045, .065], token: [.035, .05], col: "#f4fcff", under: "#b0dcf0"}, icicle: {at: [["E", .40, .16], ["G", .30, .12], ["D", .26, .18]], col: "#d0e8f8", edge: "#ffffff"},
   rivet: {r: .045, ink: .015, glint: .013, y: .075, run: .30, col: "#d0d8e0"}, drip: {title: [["U", .35, .14], ["E", .30, .10], ["R", .13, .18], ["D", .30, .16]], token: [["U", .35, .14], ["D", .30, .16]], col: "#3ad0c8", pin: "#b8fff4"},
   gloss: {w: .05, l: .35, a: .35}, bubble: {r: [.05, .035], w: .015, ink: .015}, stud: {h: .06, ink: .02, y: .075, col: ["#c8b8b0", "#e2d6ce", "#6a6460", "#8a8480"]},
-  grain: {q: .014, dens: [.05, .10], split: .6, edge: .03}, drift: {at: ["U", "E", "R"], col: "#e8b040", crest: "#fbf1a0"}, coronet: {w: .15, h: .16, lift: .02, col: "#c49020", tip: "#fff0a8"}});
+  grain: {q: .014, dens: [.05, .10], split: .6, edge: .03}, drift: {at: ["U", "E", "R"], col: "#e8b040", crest: "#fbf1a0"}, coronet: {tiers: ["title", "token"], w: .15, h: .16, lift: .02, col: "#c49020", tip: "#fff0a8"}});
 
 const M = MOTIF, LET = (L, ch) => L.letters.find((l) => l.ch === ch), bl = (l) => l.y + 1, mn = (c, n, px) => Math.max(c, n / px);
-const inked = (o, on, d, col, px) => o.push({on, k: "fill", d, col, ink: mn(2 * M.edge, M.edgePx, px)});
+const inked = (o, on, d, col, px) => o.push({on, k: "fill", d, col, ink: mn(2 * M.edge, M.edgeMin.px, px)});
 const PAINT = {
   JUNGLE(o, L, tok, px) {
     const F = LET(L, "F"), U = LET(L, "U"), D = LET(L, "D"), cap = tok ? "butt" : "round";
@@ -118,10 +131,12 @@ const PAINT = {
     const G = M.grain, q = mn(G.q, 1, px), df = (G.q / q) ** 2, OFF = [[0, 0], [G.edge, 0], [-G.edge, 0], [0, G.edge], [0, -G.edge]];
     for (const l of L.letters) {
       let seed = l.i * 977 + 13;
-      const r = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296, col = l.word ? P.corLip : P.yelLip, rings = glyph(l.ch).rings, w = GL[l.ch].w;
+      const r = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296, col = l.word ? P.corLip : P.yelLip, ns = GL[l.ch].sh.length, w = GL[l.ch].w;
       for (let gy = .03; gy < .97; gy += .014) for (let gx = .03; gx < w - .03; gx += .014) {
         const dens = (gy < G.split ? G.dens[0] : G.dens[1]) * df;
-        if (r() < dens && rings.some((s) => OFF.every(([dx, dy]) => inShape(s, gx + dx, gy + dy)))) o.push({on: l.ch, k: "rect", x: l.x + gx, y: l.y + gy, w: q, h: q, col});
+        let hit = false;
+        if (r() < dens) for (let k = 0; k < ns && !hit; k++) hit = OFF.every(([dx, dy]) => inGlyph(l.ch, gx + dx, gy + dy, k));
+        if (hit) o.push({on: l.ch, k: "rect", x: l.x + gx, y: l.y + gy, w: q, h: q, col});
       }
     }
     if (tok) return;
@@ -140,10 +155,41 @@ const PAINT = {
   },
 };
 const NONE = Object.freeze([]);
+const hasMotif = (w, tier) => !!M.set[tier] && !M.none.includes(w.name) && (w.name !== "CROWN" || M.coronet.tiers.includes(tier));
 export function motif(world, build, tier, px = Infinity) {
   const w = worldOf(world), L = layout(build);
-  if (!w || tier === "small" || tier === "mono" || (w.name === "CROWN" && tier === "menu")) return NONE;
+  if (!w || !hasMotif(w, tier)) return NONE;
   const out = [];
-  PAINT[w.name](out, L, tier !== "title", px);
+  PAINT[w.name](out, L, M.set[tier] === "token", px);
   return deep(out);
+}
+export function plan(world, o) {
+  const w = worldOf(world), cap = o.cap, dpr = o.dpr || 1, tier = tierOf(o), F = faces(tier, o.ver), on = (r) => !!r && r.tiers.includes(tier);
+  const mn = (v, m) => (m && (!m.tiers || m.tiers.includes(tier)) ? Math.max(v, m.px / (m.unit === "device" ? cap * dpr : cap)) : v);
+  const pl = PLATE.world, plate = {id: "plate", ...pl, bed: {col: w.bed, a: pl.bed.a}, frame: {w: pl.frame.w, col: w.frame}, inner: [pl.inner[0], {w: pl.inner[1].w, col: w.frameHi}],
+    corner: w.corner && {...w.corner, inset: pl.corner.inset, border: pl.corner.border, ink: pl.corner.ink, fill: w.frameHi}};
+  if (tier === "mono") {
+    const col = F.f[0];
+    return deep({tier, layers: MONO_LAYERS.map((id) => (id === "plate" ? plate : id === "monoFace" ? {id, col} : id === "monoBomb" ? {id, x: 0, y: BOMB.oy, rx: BOMB.rx, ry: BOMB.ry, unit: "D", col}
+      : id === "monoCord" ? {id, w: mn(MONO.w, MONO.min), col} : {id, off: MONO.ring.off, r: MONO.ring.r, w: mn(MONO.ring.w, MONO.ring.min), col}))});
+  }
+  const S = STACK, R = w.ring, G = w.gilt, sh = S.shade.shift, ICE = on(w.frost) ? w.frost.col : null;
+  const L = {
+    plate: () => plate,
+    ringOuter: () => R && on(R.outer) && {src: "ringInner", grow: R.outer.w, col: R.outer.col},
+    ringInner: () => R && on(R.inner) && {src: "outline", grow: R.inner.w, col: R.inner.col},
+    outline: () => ({src: S.outline.src, grow: mn(S.outline.grow, S.outline.min), close: R && on(R.close) ? [S.outline.close, R.close.w] : [S.outline.close], padded: S.outline.padded, col: S.outline.col}),
+    side: () => ({src: S.side.src, sweep: mn(S.side.sweep, S.side.min), col: w.side}),
+    gilt: () => on(G) && {src: "side", band: mn(G.line.w, G.line.min), minus: "solid", col: G.line.col},
+    giltInk: () => on(G) && {src: "solid", grow: mn(G.ink.w, G.ink.min), col: G.ink.col},
+    face: () => on(S.face) && {col: [F.f[0], F.g[0]]},
+    shade: () => on(S.shade) && {shift: [-mn(-sh[0], S.shade.min), -mn(-sh[1], S.shade.min)], col: [F.f[1], F.g[1]], clip: S.shade.clip},
+    light: () => on(S.light) && {shift: S.light.shift, col: [ICE || F.f[2], ICE || F.g[2]], clip: S.light.clip},
+    motif: () => hasMotif(w, tier) && {set: M.set[tier]},
+    bomb: () => ({dpx: BD * cap, unit: "css"}),
+    cordInk: () => on(CORD) && {w: Math.max(CORD.ink.w, CORD.ink.min.px[tier] / cap), col: CORD.ink.col},
+    rope: () => on(CORD) && {over: CORD.over.filter((k) => on(CORD[k])), clip: "rope"},
+    spark: () => on(SPARK) && {off: SPARK.off[tier], embers: SPARK.embers.includes(tier), grow: on(SPARK.grow)},
+  };
+  return deep({tier, layers: LAYERS.map((id) => { const v = L[id](); return v && {id, ...v}; }).filter(Boolean)});
 }

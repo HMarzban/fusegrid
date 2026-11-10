@@ -39,7 +39,7 @@ const FILES = ["src/render/logo/glyphs.js", "src/render/logo/worlds.js"];
   }
   const graph = [...seen].map((f) => relative(ROOT, f));
   check("the logo graph never reaches src/app, vendor, render/three, board3, featplace or featchecks", graph.length >= 4 && !graph.some((f) => /^src\/app\/|^vendor\/|^src\/render\/three\/|core\/(board3|featplace|featchecks)\.js$/.test(f)), graph.join());
-  const BAN = /\bdocument\b|\bwindow\b|Path2D|Math\.random|\bDate\b|performance|getImageData|requestAnimationFrame|matchMedia|setTimeout|getContext|\bcanvas\b|\.filter\s*=/;
+  const BAN = /\bdocument\b|\bwindow\b|Path2D|Math\.random|\bDate\b|performance|getImageData|requestAnimationFrame|matchMedia|setTimeout|getContext|\bcanvas\b|\.filter\s*=|\bimport\s*\(/;
   const bad = FILES.filter((f) => existsSync(join(ROOT, f)) && BAN.test(strip(readFileSync(join(ROOT, f), "utf8"))));
   check("no DOM, canvas, clock or Math.random in either module (comments stripped)", bad.length === 0, bad.join());
   const wrap = strip(readFileSync(join(ROOT, "src/render/three/wrapper.js"), "utf8"));
@@ -51,8 +51,8 @@ const W = await import("../src/render/logo/worlds.js").catch((e) => { check("wor
 
 if (G && W) {
   check("both modules load under Node with no DOM stub in place", typeof globalThis.document === "undefined" && typeof globalThis.Path2D === "undefined");
-  const { P, GL, GAP, OVER, BD, glyph, wordW, layout, cordPath, atS, CORD, spark, sparkAt, SPARK, bomb, BOMB, faces, STACK, flat, inGlyph, pxEnv, PX_SCALE, LOOK3D, MONO } = G;
-  const { WORLDS, worldOf, tierOf, motif, MOTIF } = W;
+  const { P, GL, GAP, OVER, BD, glyph, wordW, layout, cordPath, atS, CORD, cord, fit, spark, sparkAt, SPARK, bomb, BOMB, faces, STACK, LAYERS, MONO_LAYERS, flat, inGlyph, pxEnv, PX_SCALE, LOOK3D, MONO } = G;
+  const { WORLDS, PLATE, worldOf, tierOf, motif, MOTIF, plan } = W;
 
   /* ---- geometry helpers of the test's own (point in polygon, distances, part hit and bounds) ---- */
   const inPoly = (pts, x, y) => { let c = false; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { const [xi, yi] = pts[i], [xj, yj] = pts[j]; if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c; } return c; };
@@ -100,13 +100,20 @@ if (G && W) {
   for (const ch of Object.keys(GL)) {
     const g = glyph(ch), pts = g.d.flatMap((ops) => flat(ops).flatMap((s) => s.pts)), xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
     check(`(d) ${ch}: every outline point inside its advance box [0, w] x [-OVER, 1 + OVER]`, g.w === GL[ch].w && Math.min(...xs) >= -1e-9 && Math.max(...xs) <= g.w + 1e-9 && Math.min(...ys) >= -OVER - 1e-9 && Math.max(...ys) <= 1 + OVER + 1e-9, [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)].map((v) => v.toFixed(4)).join());
-    const rings = g.d.map((ops) => flat(ops).map((s) => s.pts)), N = 500;
+    const rings = g.d.map((ops) => flat(ops).map((s) => s.pts)), subs = g.d.flatMap((ops) => flat(ops)), N = 500;
     let n = 0, agree = 0, tot = 0;
-    for (let y = -8; y < N + 8; y++) for (let x = 0; x < g.w * N; x++) { const px = (x + 0.5) / N, py = (y + 0.5) / N, a = rings.some((r) => evenodd(r, px, py)); if (a) n++; if (y % 7 === 0 && x % 7 === 0) { tot++; if (a === inGlyph(ch, px, py)) agree++; } }
+    for (let y = -8; y < N + 8; y++) for (let x = 0; x < g.w * N; x++) { const px = (x + 0.5) / N, py = (y + 0.5) / N, a = rings.some((r) => evenodd(r, px, py)); if (a) n++; if (y % 7 === 0 && x % 7 === 0 && pathD(subs, px, py) > .0025) { tot++; if (a === inGlyph(ch, px, py)) agree++; } }
     areas[ch] = n / (N * N);
-    check(`${ch}: inGlyph agrees with the even-odd fill of the glyph's own outline`, agree === tot, agree + "/" + tot);
+    check(`${ch}: inGlyph agrees with the even-odd fill of the flattened outline away from it (> .0025C, past the arc sag)`, tot > 200 && agree === tot, agree + "/" + tot);
   }
   check("R and D carry one counter ring each; R has a second shape (the leg)", glyph("D").d.length === 1 && flat(glyph("D").d[0]).length === 2 && glyph("R").d.length === 2 && flat(glyph("R").d[0]).length === 2);
+  check("inGlyph counts a point on the outline (within 1e-9) as inside, the canvas isPointInPath rule; 1e-6 outside is outside", inGlyph("F", 0, .5) && inGlyph("F", -1e-12, .5) && !inGlyph("F", -1e-6, .5) && inGlyph("F", .26, .8) && !inGlyph("F", .26 + 1e-6, .8) && inGlyph("D", .26, .5) && !inGlyph("D", .26 + 1e-6, .5));
+  {
+    const a = glyph("U").d[0].find((o) => o[0] === "A" && o[3] === .3), [, cx, cy, r, a0, a1, ccw] = a, s = flat([["M", cx + r * Math.cos(a0), cy + r * Math.sin(a0)], a]);
+    const step = (Math.atan2(s[0].pts[2][1] - cy, s[0].pts[2][0] - cx) - Math.atan2(s[0].pts[1][1] - cy, s[0].pts[1][0] - cx)) / 2, t = Math.atan2(s[0].pts[1][1] - cy, s[0].pts[1][0] - cx) + step, p = [cx + (r - 2e-4) * Math.cos(t), cy + (r - 2e-4) * Math.sin(t)];
+    check("inGlyph follows the true arc: a point inside U's 0.30C corner but outside its flattened chord is inside", inGlyph("U", ...p) && !glyph("U").rings.some((rg) => evenodd(rg, ...p)) && !inGlyph("U", cx + (r + 2e-4) * Math.cos(t), cy + (r + 2e-4) * Math.sin(t)), J(p));
+    check("inGlyph(ch, x, y, shape) tests one shape: R's leg alone, its bowl alone", inGlyph("R", .6, .9, 1) && !inGlyph("R", .6, .9, 0) && inGlyph("R", .1, .1, 0) && !inGlyph("R", .1, .1, 1) && inGlyph("R", .6, .9));
+  }
   check("round tops and bottoms overshoot 0.015C, flat stems do not", glyph("U").d.flatMap((o) => flat(o).flatMap((s) => s.pts)).some((p) => near(p[1], 1 + OVER, 1e-6)) && !glyph("F").d.flatMap((o) => flat(o).flatMap((s) => s.pts)).some((p) => p[1] < -1e-9 || p[1] > 1 + 1e-9));
 
   /* ---- 8.3 layout ---- */
@@ -132,14 +139,36 @@ if (G && W) {
     check(`${b}: the control points are the appendix's (origin the baseline point under the bomb, y up)`, L.cord.every((p, i) => near(p[0], Q[i][0]) && near(p[1], Q[i][1])), J(L.cord));
     check(`(e) ${b}: 97 points; [0] the collar tip, [6] P0, [96] P3`, pts.length === 97 && near(pts[0].x, tip[0]) && near(pts[0].y, tip[1]) && near(L.collar[0], tip[0]) && near(L.collar[1], tip[1]) && near(pts[6].x, Q[0][0]) && near(pts[6].y, Q[0][1]) && near(pts[96].x, Q[3][0]) && near(pts[96].y, Q[3][1]), J([pts[0], pts[6], pts[96]]));
     check(`(e) ${b}: arc length grows, tangents are unit, every point inside the envelope`, pts.every((p, i) => (!i ? p.s === 0 : p.s > pts[i - 1].s) && near(Math.hypot(p.tx, p.ty), 1, 1e-9)) && pts.every((p) => inEnv([p.x, p.y, p.x, p.y], L.env)));
-    check(`(e) ${b}: the widest cord with its outline stays inside the envelope`, pts.every((p) => inEnv([p.x - (CORD.w0 / 2 + CORD.ol), p.y - (CORD.w0 / 2 + CORD.ol), p.x + CORD.w0 / 2 + CORD.ol, p.y + CORD.w0 / 2 + CORD.ol], L.env)));
+    check(`(e) ${b}: the widest cord with its outline stays inside the envelope`, pts.every((p) => inEnv([p.x - (CORD.w0 / 2 + CORD.ink.w), p.y - (CORD.w0 / 2 + CORD.ink.w), p.x + CORD.w0 / 2 + CORD.ink.w, p.y + CORD.w0 / 2 + CORD.ink.w], L.env)));
     const m = atS(pts, pts[96].s / 2);
     check(`${b}: atS walks the arc (half length lands between the ends)`, m.y < pts[0].y && m.y > pts[96].y && near(atS(pts, 1e9).x, pts[96].x));
     const mono = cordPath(b, "mono");
     check(`${b}: the mono cord starts at bomb + MONO.start (.23, -.27), not the collar`, near(mono[0].x, L.bomb.x + .23) && near(mono[0].y, L.bomb.y - .27) && near(mono[96].x, Q[3][0]) && J(MONO.start) === J([.23, -.27]));
   }
   check("deviation 7: the line cord tip is .18C above the cap line (P2 y 1.03, P3 1.18), the stacked tip .16C (P3 2.46)", near(cordPath("line")[96].y, -.18) && near(cordPath("stack")[96].y, -.16));
-  check("CORD is appendix 8.5 (0.11 -> 0.09C, min 3 px, outline .035C / 1.2 px / 2 px small, braid .025C x .2C at 35 deg every .10 / .16C, key light .015C, burnt .07C at 1.3x, char .03C)", CORD.w0 === .11 && CORD.w1 === .09 && CORD.minPx === 3 && CORD.ol === .035 && CORD.olPx === 1.2 && CORD.olPxSmall === 2 && CORD.braid.w === .025 && CORD.braid.len === .2 && CORD.braid.deg === 35 && J(CORD.braid.step) === J({ title: .10, token: .16 }) && CORD.light.w === .015 && CORD.light.col === "#fff3b0" && CORD.burnt.len === .07 && CORD.burnt.k === 1.3 && CORD.char.w === .03 && CORD.char.col === "#1e1216" && CORD.col === "#ff9d5a" && CORD.braid.col === "#b8582a" && CORD.lead === 6 && CORD.n === 90);
+  check("CORD is appendix 8.5 (0.11 -> 0.09C, min 3 px, outline .035C / 1.2 px / 2 px small, braid .025C x .2C at 35 deg every .10 / .16C, key light .015C, burnt .07C at 1.3x, char .03C)", CORD.w0 === .11 && CORD.w1 === .09 && CORD.min.px === 3 && CORD.ink.w === .035 && J(CORD.ink.min.px) === J({ title: 1.2, token: 1.2, menu: 1.2, small: 2 }) && CORD.braid.w === .025 && CORD.braid.len === .2 && CORD.braid.rot === 35 && J(CORD.braid.step) === J({ title: .10, token: .16 }) && CORD.light.w === .015 && CORD.light.col === "#fff3b0" && CORD.burnt.len === .07 && CORD.burnt.k === 1.3 && CORD.char.w === .03 && CORD.char.col === "#1e1216" && CORD.col === "#ff9d5a" && CORD.braid.col === "#b8582a" && CORD.lead === 6 && CORD.n === 90);
+
+  /* ---- cord overlays as data (logo.js drawCord 211-242): per tier, clipped to the rope (source-atop on the rope layer, 221 / 240) ---- */
+  const OVERS = { title: ["light", "braid", "burnt", "char"], token: ["light", "braid", "burnt", "char"], menu: ["light", "burnt", "char"], small: [] };
+  check("CORD.over order light, braid, burnt, char; each overlay clips to the rope, with its own tiers (226 key light not small; 230-231 braid title .10 / token .16, none at menu; 236 burnt and char not small)", J(CORD.over) === J(["light", "braid", "burnt", "char"]) && CORD.over.every((k) => CORD[k].clip === "rope") && Object.entries(OVERS).every(([t, l]) => J(CORD.over.filter((k) => CORD[k].tiers.includes(t))) === J(l)) && CORD.over.every((k) => !CORD[k].tiers.includes("mono")));
+  check("braid rotation carries its sign and axes in the data: +35 deg from the tangent toward +y, y down", CORD.braid.rot === 35 && /y down/.test(CORD.braid.axes) && /\+35/.test(CORD.braid.axes));
+  for (const b of BUILDS) for (const [tier, cap] of [["title", 72], ["token", 48], ["menu", 36], ["small", 24]]) {
+    const parts = cord(b, tier, cap), sig = parts.map((q) => q.k + "/" + q.layer + "/" + (q.clip || "-") + "/" + q.col).join(" ");
+    const want = ["tube/cordInk/-/#0b0609", "tube/rope/-/#ff9d5a", ...OVERS[tier].map((k) => ({ light: "line/rope/rope/#fff3b0", braid: "line/rope/rope/#b8582a", burnt: "tube/rope/rope/#b8582a", char: "line/rope/rope/#1e1216" })[k])].join(" ");
+    check(`cord ${b} ${tier}: ink tube, rope tube, then the tier's overlays clipped to the rope`, sig === want, sig);
+  }
+  {
+    const pts = cordPath("line"), len = pts[96].s, ct = cord("line", "title", 72), wOf = (s) => Math.max(.11 - .02 * s / len, 3 / 72);
+    check("cord tubes: one width per segment, the rope tapers .11 -> .09C, the ink adds .035C each side (2 px each side at the small tier)", ct[0].w.length === 96 && ct[1].w.length === 96 && near(ct[1].w[95], wOf(len)) && near(ct[0].w[0] - ct[1].w[0], .07) && near(cord("line", "small", 24)[0].w[3] - cord("line", "small", 24)[1].w[3], 4 / 24));
+    const br = ct.find((q) => q.col === "#b8582a" && q.k === "line"), d0 = br.d[0], d1 = br.d[1], mx = (d0[1] + d1[1]) / 2, my = (d0[2] + d1[2]) / 2, tk = atS(pts, .6 * .1), dx = d1[1] - d0[1], dy = d1[2] - d0[2];
+    check("braid ticks: .2C long, centred on the cord every .10C from .06C, turned +35 deg from the tangent in y-down (cross product > 0)", near(Math.hypot(dx, dy), .2) && near(mx, tk.x) && near(my, tk.y) && near((tk.tx * dx + tk.ty * dy) / .2, Math.cos(deg(35))) && near((tk.tx * dy - tk.ty * dx) / .2, Math.sin(deg(35))) && br.d.length / 2 === Math.ceil((len - .08 - .06) / .1));
+    const ch = ct[ct.length - 1], e = pts[96], c0 = ch.d[0], c1 = ch.d[1];
+    check("char ring: a .20C line across the tip, .01C behind it (it reads as a ring only because it is clipped to the rope)", near(Math.hypot(c1[1] - c0[1], c1[2] - c0[2]), .2) && near((c0[1] + c1[1]) / 2, e.x - e.tx * .01) && ch.clip === "rope");
+    const bt = ct.find((q) => q.k === "tube" && q.col === "#b8582a");
+    check("burnt end: the segments whose end lies in the last .07C, at 1.3x the rope width", bt.w.length === pts.filter((p, i) => i && p.s > len - .07).length && near(bt.w[bt.w.length - 1], wOf(len) * 1.3));
+    const mo = cord("line", "mono", 16, "ink");
+    check("mono cord: one stroke max(.10C, 2 px) from the mono start plus a tip ring r .08C at +.04C, in the mono colour", J(mo.map((q) => q.k + "/" + q.layer + "/" + q.col)) === J(["line/monoCord/#0b0609", "ring/monoTip/#0b0609"]) && near(mo[0].w, 2 / 16) && near(mo[1].r, .08) && near(mo[1].w, 1.5 / 16) && near(cord("line", "mono", 16)[0].w, .125) && cord("line", "mono", 16)[0].col === "#fff2df");
+  }
 
   /* ---- spark: frame A / B, reduced still; pure in the frame index ---- */
   const rays = (sp) => sp.parts.filter((q) => q.k === "fill");
@@ -178,7 +207,7 @@ if (G && W) {
   const a40 = deg(40);
   check("collar at 40 deg, centre .52D along the axis from (0, .02); tip .60D", hb.parts.filter((q) => q.tf).every((q) => near(q.tf[0], Math.sin(a40) * .52) && near(q.tf[1], .02 - Math.cos(a40) * .52) && near(q.tf[2], a40)) && near(hb.tip[0], Math.sin(a40) * .6) && near(hb.tip[1], .02 - Math.cos(a40) * .6) && J(sb.tip) === J(hb.tip));
   check("the layout's collar tip is the bomb's tip at D = BD", BUILDS.every((b) => { const L = layout(b); return near(L.collar[0], L.bomb.x + hb.tip[0] * BD) && near(L.collar[1], L.bomb.y + hb.tip[1] * BD); }));
-  check("standalone contact shadow: ellipse .40 x .09 at (0, +.49), #000000 at .35", J(BOMB.shadow) === J({ k: "ell", x: 0, y: .49, rx: .2, ry: .045, rot: 0, col: "#000000", a: .35 }));
+  check("standalone contact shadow: ellipse .40 x .09 at (0, +.49), #000000 at .35, never in the logo (logo.js:130, drawn only with o.shadow)", J(BOMB.shadow) === J({ k: "ell", x: 0, y: .49, rx: .2, ry: .045, rot: 0, col: "#000000", a: .35, use: "standalone only, never in the logo" }) && BOMB.unit === "css");
   const bombBox = (q) => {
     if (q.k === "rim") return [-q.rx, q.y - q.ry, q.rx, q.y + q.ry];
     const loc = q.k === "ell" ? (() => { const r = Math.max(q.rx, q.ry); return [q.x - r, q.y - r, q.x + r, q.y + r]; })() : q.k === "rrect" || q.k === "rect" ? [q.x, q.y, q.x + q.w, q.y + q.h] : boxOf(q);
@@ -194,7 +223,13 @@ if (G && W) {
   /* ---- faces, layer stack, tiers ---- */
   check("faces never change by world: title / token / small FUSE #ffd447 #c8981e #fff3b0, GRID #ff5d73 #c23058 #ffc0d0", ["title", "token", "small"].every((t) => J(faces(t)) === J({ f: ["#ffd447", "#c8981e", "#fff3b0"], g: ["#ff5d73", "#c23058", "#ffc0d0"] })) && faces.length <= 2);
   check("MENU is cream #fff2df, shade #dccbb8, light #ffffff on both words; mono is one colour (cream, or #0b0609 for ink)", J(faces("menu")) === J({ f: ["#fff2df", "#dccbb8", "#ffffff"], g: ["#fff2df", "#dccbb8", "#ffffff"] }) && J(faces("mono")) === J({ f: ["#fff2df"], g: ["#fff2df"] }) && J(faces("mono", "ink")) === J({ f: ["#0b0609"], g: ["#0b0609"] }));
-  check("STACK is appendix 8.4 (outline .10C, extrusion .14C, close .08C, shade (-.04, -.06), light (+.025, +.035), plate .94)", STACK.ol === .1 && STACK.ext === .14 && STACK.close === .08 && J(STACK.shade) === J([-.04, -.06]) && J(STACK.light) === J([.025, .035]) && STACK.plateA === .94 && STACK.side === "#1e1216" && STACK.smallPx === 2 && STACK.shadePx === 2 && J(STACK.lightTiers) === J(["title", "menu"]));
+  check("STACK is appendix 8.4 (outline .10C closed .08C, extrusion .14C, shade (-.04, -.06), light (+.025, +.035)) with each part's tiers and minimums (logo.js 391, 394, 424, 434, 436)",
+    STACK.outline.grow === .1 && STACK.outline.close === .08 && STACK.outline.padded === true && STACK.side.sweep === .14 && J(STACK.shade.shift) === J([-.04, -.06]) && J(STACK.light.shift) === J([.025, .035]) && STACK.side.col === "#1e1216"
+    && J(STACK.outline.min) === J({ px: 2, unit: "css", tiers: ["small"] }) && J(STACK.side.min) === J({ px: 2, unit: "css", tiers: ["small"] }) && J(STACK.shade.min) === J({ px: 2, unit: "css", tiers: ["token", "menu"] })
+    && J(STACK.shade.tiers) === J(["title", "token", "menu"]) && J(STACK.light.tiers) === J(["title", "menu"]) && J(STACK.face.tiers) === J(["title", "token", "menu", "small"]) && STACK.shade.clip === "face" && STACK.light.clip === "face");
+  check("LAYERS is the mock's paint order (paintVec 399-469): plate, rings under the outline, outline, side, CROWN gilt, faces, shade, light, motif, bomb, cord ink, rope, spark; mono its own (372-378)",
+    J(LAYERS) === J(["plate", "ringOuter", "ringInner", "outline", "side", "gilt", "giltInk", "face", "shade", "light", "motif", "bomb", "cordInk", "rope", "spark"]) && J(MONO_LAYERS) === J(["plate", "monoFace", "monoBomb", "monoCord", "monoTip"]));
+  check("fit solves the cap from the box like the mock's solve (639-643): the 40 px build is cap 22.73, a 330 px phone title width caps at 79.71", fit("line", { fitH: 40 }) === 22.73 && fit("stack", { fitW: 330 }) === 79.71 && fit("line", { fitH: 400, capMax: 88 }) === 88);
   const T = [[{ cap: 19.9 }, "mono"], [{ cap: 20 }, "small"], [{ cap: 31.9 }, "small"], [{ cap: 32 }, "menu"], [{ cap: 39.9 }, "menu"], [{ cap: 40 }, "token"], [{ cap: 63.9 }, "token"], [{ cap: 64 }, "title"], [{ cap: 200 }, "title"], [{ cap: 88, ver: "menu" }, "menu"], [{ cap: 88, ver: "mono" }, "mono"], [{ cap: 88, ver: "ink" }, "mono"], [{ cap: 50, ver: "full" }, "token"]];
   check("tierOf: < 20 or mono / ink -> mono; MENU or 32-39 -> menu; < 32 small; 40-63 token; >= 64 title", T.every(([o, t]) => tierOf(o) === t), J(T.map(([o]) => tierOf(o))));
 
@@ -204,11 +239,24 @@ if (G && W) {
   check("seven worlds equal the mock's built rows (side, bed, frame, frame highlight, PIXEL side slot)", Object.entries(MOCK).every(([n, r]) => J([WORLDS[n].side, WORLDS[n].bed, WORLDS[n].frame, WORLDS[n].frameHi, WORLDS[n].px]) === J(r)), J(Object.keys(MOCK).map((n) => [WORLDS[n].side, WORLDS[n].bed, WORLDS[n].frame, WORLDS[n].frameHi])));
   const ice = WORLDS.ICE, it = worldTokens(2);
   check("ICE (lead ruling, section 14 item 13): bed tok.bg1 #0f2429, side and frame the tinted wall #3a4d54, frame highlight tok.boss #dae6ea, slot tile.wall", ice.bed === "#0f2429" && ice.bed === it.bg1 && ice.side === "#3a4d54" && ice.side === it.wall && ice.frame === it.frame && ice.frameHi === "#dae6ea" && ice.frameHi === it.boss && ice.px === "tile.wall", J(ice));
-  check("one colour source: every row reads worldTokens (bed = bg1, frame = frame, frame highlight = boss, side = the slot named by px)", NAMES.every((n, i) => { const t = worldTokens(i + 1), r = WORLDS[n]; return r.bed === t.bg1 && r.frame === t.frame && r.frameHi === t.boss && r.side === t.biome[r.px.slice(5)] && r.a === .94; }));
+  check("one colour source: every row reads worldTokens (bed = bg1, frame = frame, frame highlight = boss, side = the slot named by px)", NAMES.every((n, i) => { const t = worldTokens(i + 1), r = WORLDS[n]; return r.bed === t.bg1 && r.frame === t.frame && r.frameHi === t.boss && r.side === t.biome[r.px.slice(5)]; }));
   check("rows carry no face colour: faces stay yellow and coral in every world", NAMES.every((n) => !Object.values(WORLDS[n]).some((v) => v === "#ffd447" || v === "#ff5d73")) && P.yel === "#ffd447" && P.cor === "#ff5d73");
   check("worldOf takes a name or a level (9 wraps to JUNGLE)", worldOf("SAND") === WORLDS.SAND && worldOf(6) === WORLDS.SAND && worldOf(9) === WORLDS.JUNGLE && worldOf("NOPE") === null);
-  check("ICE frost rim #f4fcff; VOID rings .04 + .04C (#6a20c8 then #3a1070) after a .16C close; CROWN gilt .02C #fff0a8 catch line, .03C ink line", ice.frost === "#f4fcff" && J(WORLDS.VOID.ring) === J({ close: .16, w: [.04, .04], col: ["#6a20c8", "#3a1070"] }) && J(WORLDS.CROWN.gilt) === J({ line: .02, linePx: 1, col: "#fff0a8", ink: .03, inkPx: 1.2 }) && NAMES.filter((n) => WORLDS[n].frost || WORLDS[n].ring || WORLDS[n].gilt).join() === "ICE,VOID,CROWN");
-  check("plate corner marks (mock screen.css): FACTORY bolts, ARENA studs, CROWN filigree, none elsewhere", J(NAMES.map((n) => WORLDS[n].corner && WORLDS[n].corner.kind)) === J([null, null, "bolt", null, "stud", null, null, "filigree"]));
+  check("ICE frost #f4fcff replaces the light band at the title tier only (logo.js:436)", J(ice.frost) === J({ col: "#f4fcff", tiers: ["title"] }));
+  check("VOID rings carry their tiers (logo.js:399-404): the .16C close and the inner #6a20c8 .04C ring at title, token and MENU, the outer #3a1070 .04C ring at title only; none at small or mono",
+    J(WORLDS.VOID.ring) === J({ close: { w: .16, tiers: ["title", "token", "menu"] }, inner: { w: .04, col: "#6a20c8", tiers: ["title", "token", "menu"] }, outer: { w: .04, col: "#3a1070", tiers: ["title"] } }));
+  check("CROWN gilt at every tier but mono, its minimums in DEVICE px (logo.js:417, Math.max(.02 s, 1) and Math.max(.03 s, 1.2) with s = cap x dpr)",
+    J(WORLDS.CROWN.gilt) === J({ tiers: ["title", "token", "menu", "small"], line: { w: .02, min: { px: 1, unit: "device" }, col: "#fff0a8" }, ink: { w: .03, min: { px: 1.2, unit: "device" }, col: "#0b0609" } }) && NAMES.filter((n) => WORLDS[n].frost || WORLDS[n].ring || WORLDS[n].gilt).join() === "ICE,VOID,CROWN");
+  check("plate corner marks (mock screen.css:17-21): FACTORY round bolts 9 px, ARENA 9 px squares turned 45 deg, CROWN 11 px filigree with radii 2 / 50 % / 2 / 50 %, none elsewhere",
+    J(NAMES.map((n) => WORLDS[n].corner)) === J([null, null, { kind: "bolt", size: 9, radii: [4.5, 4.5, 4.5, 4.5], rot: 0 }, null, { kind: "stud", size: 9, radii: [0, 0, 0, 0], rot: 45 }, null, null, { kind: "filigree", size: 11, radii: [2, 5.5, 2, 5.5], rot: 0 }]));
+  check("PLATE.world is the mock's .wp (screen.css:15-18) in CSS px that never scale with the cap: 2 px ink ring outside, 3 px frame, 2 px ink then 1 px frameHi inside, radius 6, padding 8 / 10, an opaque bed; corner marks 4 px inside the frame with a 1 px ink border",
+    J(PLATE.world) === J({ unit: "css", scales: false, radius: 6, pad: [8, 10], ink: { w: 2, col: "#0b0609" }, frame: { w: 3 }, inner: [{ w: 2, col: "#0b0609" }, { w: 1, col: "frameHi" }], bed: { a: 1 }, corner: { inset: 4, border: 1, ink: "#0b0609", fill: "frameHi" } }));
+  check("the mock's title and MENU screens do not use the world plate: the title sits on the kit plate (screen.js:79-80, class marq, padding 26/54/28 desktop, 16/12/18 phone), the MENU logo in the menu panel's header (menu.js:99, 110)",
+    J(PLATE.title) === J({ plate: "kit", cls: "marq", pad: { d: [26, 54, 28], p: [16, 12, 18] } }) && PLATE.menu.plate === "none");
+  {
+    const pc = plan("CROWN", { cap: 72 }).layers[0], pi = plan("ICE", { cap: 36 }).layers[0];
+    check("plan's plate resolves the world: CROWN bed #140808, frame #8a6040, frameHi #f0d080 inner ring and corner fill; ICE has no corner mark", pc.id === "plate" && pc.bed.col === "#140808" && pc.bed.a === 1 && pc.frame.col === "#8a6040" && pc.inner[1].col === "#f0d080" && pc.corner.fill === "#f0d080" && pc.corner.kind === "filigree" && pc.corner.inset === 4 && pi.corner === null && pi.bed.col === "#0f2429");
+  }
 
   /* ---- L1 twin: every face colour >= 3:1 on its world's plate bed, by token math ---- */
   const table = NAMES.map((n) => [n, ratio(P.yel, WORLDS[n].bed), ratio(P.cor, WORLDS[n].bed), ratio(P.cream, WORLDS[n].bed)]);
@@ -232,8 +280,43 @@ if (G && W) {
   let outside = [];
   for (const n of NAMES) for (const b of BUILDS) for (const t of TIERS) for (const cap of CAPS[t]) for (const q of motif(n, b, t, cap)) if (!inEnv(boxOf(q), layout(b).env)) outside.push([n, b, t, cap, q.on, boxOf(q).map((v) => +v.toFixed(3))]);
   check("(a) every world's motif, every build, tier and cap, lies inside the fixed envelope", !outside.length, J(outside.slice(0, 4)));
-  const rw = WORLDS.VOID.ring.w[0] + WORLDS.VOID.ring.w[1];
-  check("(a) the layer stack fits the envelope margins: sides outline + VOID rings <= .20, below extrusion + outline + rings <= .36, above outline + rings <= .40", STACK.ol + rw <= .2 + 1e-9 && STACK.ext + STACK.ol + rw <= .36 + 1e-9 && STACK.ol + rw <= .4, [STACK.ol + rw, STACK.ext + STACK.ol + rw].map((v) => v.toFixed(3)).join());
+  const rw = WORLDS.VOID.ring.inner.w + WORLDS.VOID.ring.outer.w, OL = STACK.outline.grow, EX = STACK.side.sweep;
+  check("(a) the layer stack fits the envelope margins: sides outline + VOID rings <= .20, below extrusion + outline + rings <= .36, above outline + rings <= .40", OL + rw <= .2 + 1e-9 && EX + OL + rw <= .36 + 1e-9 && OL + rw <= .4, [OL + rw, EX + OL + rw].map((v) => v.toFixed(3)).join());
+
+  /* ---- plan: the CLASSIC paint list per world and tier, read from paintVec (logo.js 365-470):
+     372-378 mono draws only its own four layers; 399-404 VOID rings (outer title only, none at small) go UNDER the ink (405); 415-418 side, then CROWN's
+     catch line and ink line at every tier; 420-438 per word face, shade (not small, 424), light (title and MENU, 436; ICE frost at title); 440-444 motif
+     at title / token / MENU, none for CROWN at MENU, VOID draws none; 460 bomb; 464 cord ink then the rope layer; 466-469 spark. ---- */
+  const BASE = { title: "plate outline side face shade light motif bomb cordInk rope spark", token: "plate outline side face shade motif bomb cordInk rope spark", menu: "plate outline side face shade light motif bomb cordInk rope spark", small: "plate outline side face bomb cordInk rope spark", mono: "plate monoFace monoBomb monoCord monoTip" };
+  const TABLE = {
+    VOID: { title: "plate ringOuter ringInner outline side face shade light bomb cordInk rope spark", token: "plate ringInner outline side face shade bomb cordInk rope spark", menu: "plate ringInner outline side face shade light bomb cordInk rope spark", small: BASE.small, mono: BASE.mono },
+    CROWN: { title: "plate outline side gilt giltInk face shade light motif bomb cordInk rope spark", token: "plate outline side gilt giltInk face shade motif bomb cordInk rope spark", menu: "plate outline side gilt giltInk face shade light bomb cordInk rope spark", small: "plate outline side gilt giltInk face bomb cordInk rope spark", mono: BASE.mono },
+  };
+  const CAPT = { title: 72, token: 48, menu: 36, small: 24, mono: 16 };
+  for (const n of NAMES) for (const [t, cap] of Object.entries(CAPT)) {
+    const p = plan(n, { cap }), ids = p.layers.map((l) => l.id).join(" "), want = (TABLE[n] || BASE)[t];
+    check(`plan ${n} ${t}: ${want}`, p.tier === t && ids === want, ids);
+  }
+  check("plan follows tierOf: ver menu at cap 72 is the MENU tier, ver ink is mono in #0b0609", plan("JUNGLE", { cap: 72, ver: "menu" }).tier === "menu" && plan("JUNGLE", { cap: 72, ver: "ink" }).layers[1].col === "#0b0609" && plan("JUNGLE", { cap: 72, ver: "mono" }).layers[1].col === "#fff2df");
+  check("plan rope overlays per tier (title and token all four; MENU no braid; small none) and the rope clip", Object.entries({ title: 72, token: 48, menu: 36, small: 24 }).every(([t, cap]) => { const r = plan("SAND", { cap }).layers.find((l) => l.id === "rope"); return J(r.over) === J(OVERS[t]) && r.clip === "rope"; }));
+  check("plan spark: offset .04 / 0 / 0 / -.04C, embers at title and token only, grown to 8 px at small", J(Object.entries({ title: 72, token: 48, menu: 36, small: 24 }).map(([, cap]) => { const s = plan("ARENA", { cap }).layers.find((l) => l.id === "spark"); return [s.off, s.embers, s.grow]; })) === J([[.04, true, false], [0, true, false], [0, false, false], [-.04, false, true]]));
+  const lay = (n, cap, id, o = {}) => plan(n, { cap, ...o }).layers.find((l) => l.id === id);
+  check("VOID: the outline is closed .08 then .16C wherever the rings show (logo.js:400), .08 only at small", J(lay("VOID", 72, "outline").close) === J([.08, .16]) && J(lay("VOID", 36, "outline").close) === J([.08, .16]) && J(lay("VOID", 24, "outline").close) === J([.08]) && J(lay("JUNGLE", 72, "outline").close) === J([.08]));
+  check("rings stack on the outline: inner = outline grown .04C, outer = inner grown .04C", J(lay("VOID", 72, "ringInner")) === J({ id: "ringInner", src: "outline", grow: .04, col: "#6a20c8" }) && J(lay("VOID", 72, "ringOuter")) === J({ id: "ringOuter", src: "ringInner", grow: .04, col: "#3a1070" }));
+  check("light band: ICE frost #f4fcff at the title tier, the menu white #ffffff at MENU, the face highlight elsewhere", J(lay("ICE", 72, "light").col) === J(["#f4fcff", "#f4fcff"]) && J(lay("ICE", 36, "light").col) === J(["#ffffff", "#ffffff"]) && J(lay("JUNGLE", 72, "light").col) === J(["#fff3b0", "#ffc0d0"]));
+  check("shade band: exact at the title tier, at least 2 CSS px at token and MENU whatever the dpr (logo.js:434, 2 x dpr device px)", J(lay("JUNGLE", 72, "shade").shift) === J([-.04, -.06]) && near(lay("JUNGLE", 36, "shade").shift[0], -2 / 36) && near(lay("JUNGLE", 36, "shade", { dpr: 2 }).shift[0], -2 / 36) && near(lay("JUNGLE", 48, "shade").shift[1], -.06));
+  check("outline .10C and side .14C at every non-mono tier: their 2 px small-tier minimum (logo.js:391) never binds, since small starts at cap 20", [20, 24, 31, 36, 48, 72].every((cap) => lay("JUNGLE", cap, "outline").grow === .1 && lay("JUNGLE", cap, "side").sweep === .14));
+  check("CROWN gilt minimums are device px: at cap 24 the catch line is 1/24C at dpr 1 and 1/48C at dpr 2; the ink line likewise 1.2 device px", near(lay("CROWN", 24, "gilt").band, 1 / 24) && near(lay("CROWN", 24, "gilt", { dpr: 2 }).band, .0208333333) && near(lay("CROWN", 24, "giltInk").grow, 1.2 / 24) && near(lay("CROWN", 24, "giltInk", { dpr: 2 }).grow, .03) && lay("CROWN", 72, "gilt").band === .02);
+  const units = [];
+  const walk = (o, path) => { if (!o || typeof o !== "object") return; if ("px" in o && typeof o.px !== "string") units.push([path, o.unit]); for (const [k, v] of Object.entries(o)) walk(v, path + "." + k); };
+  for (const [nm, o] of Object.entries({ STACK, CORD, MONO, SPARK, MOTIF, WORLDS })) walk(o, nm);
+  check("every minimum carries its unit; only CROWN's gilt minimums are device px", units.length >= 14 && units.every(([p, u]) => u === (/WORLDS\.CROWN\.gilt/.test(p) ? "device" : "css")), J(units));
+
+  /* SAND grain against a canvas-faithful replay of the mock (exact arcs, points on the outline inside): per letter, title tier, cap >= 72 */
+  const grain = (b) => { const c = {}; for (const q of motif("SAND", b, "title", 72)) if (q.k === "rect") c[q.on] = (c[q.on] || 0) + 1; return c; };
+  check("SAND grain per letter, line build, title tier", J(grain("line")) === J({ F: 95, U: 120, S: 130, E: 125, G: 170, R: 161, I: 81, D: 164 }), J(grain("line")));
+  check("SAND grain per letter, stacked build, title tier", J(grain("stack")) === J({ G: 170, R: 130, I: 72, D: 153, F: 83, U: 154, S: 141, E: 136 }), J(grain("stack")));
+  check("SAND grain uses each face's own lip: #c8981e on FUSE, #c23058 on GRID (logo.js:341, MENU tier included)", motif("SAND", "line", "menu", 36).filter((q) => q.k === "rect").every((q) => q.col === ("FUSE".includes(q.on) ? "#c8981e" : "#c23058")));
 
   /* (b) coverage: motif area (fill + ink edge, every part) over the letter's own face area, on a 1/500 C grid */
   const N = 500, MASK = {};
@@ -274,7 +357,7 @@ if (G && W) {
 
   /* (c) CROWN never uses the FUSE yellow */
   const near6 = (h) => { const a = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)), y = [0xff, 0xd4, 0x47]; return a.every((v, i) => Math.abs(v - y[i]) <= 6); };
-  const crownCols = [...new Set([...BUILDS.flatMap((b) => TIERS.flatMap((t) => motif("CROWN", b, t, 64).map((q) => q.col))), WORLDS.CROWN.side, WORLDS.CROWN.frame, WORLDS.CROWN.frameHi, WORLDS.CROWN.gilt.col])];
+  const crownCols = [...new Set([...BUILDS.flatMap((b) => TIERS.flatMap((t) => motif("CROWN", b, t, 64).map((q) => q.col))), WORLDS.CROWN.side, WORLDS.CROWN.frame, WORLDS.CROWN.frameHi, WORLDS.CROWN.gilt.line.col])];
   check("(c) no CROWN motif, side, frame or gilt colour within 6 per channel of #ffd447", crownCols.length >= 5 && !crownCols.some(near6), crownCols.join());
 
   /* ---- (f) the 14 builder deviations, each number pinned at its built value ---- */
@@ -291,11 +374,11 @@ if (G && W) {
   check("dev 7: spark offset and cord tip (pinned above)", SPARK.off.title === .04 && SPARK.off.small === -.04 && near(cordPath("line")[96].y, -.18));
   check("dev 8: PIXEL envelope top max(ceil(.40A), 7) art px (7 at cap 12), bottom ceil(.36A), sides ceil(.20A); x3 title and MENU, x2 the 40 px build", J(pxEnv(12)) === J({ t: 7, b: 5, s: 3 }) && J(pxEnv(24)) === J({ t: 10, b: 9, s: 5 }) && J(PX_SCALE) === J({ title: 3, menu: 3, small: 2 }));
   check("dev 9: REAL 3D side = 70 / 30 mix of the lip hex and the world side, x .72 at depth; .06C inverted-hull outline", LOOK3D.mix === .3 && LOOK3D.deep === .72 && LOOK3D.hull === .06 && LOOK3D.drop === .135 && LOOK3D.sy === .93);
-  check("dev 10: VOID rings .04 + .04C after a .16C close (pinned above)", J(WORLDS.VOID.ring.w) === J([.04, .04]) && WORLDS.VOID.ring.close === .16);
+  check("dev 10: VOID rings .04 + .04C after a .16C close (pinned above)", WORLDS.VOID.ring.inner.w === .04 && WORLDS.VOID.ring.outer.w === .04 && WORLDS.VOID.ring.close.w === .16);
   check("dev 11: REAL 3D soft shadow sigma .02C at (+.08, +.12)C, alpha .45", J(LOOK3D.shadow) === J({ dx: .08, dy: .12, sigma: .02, a: .45 }));
 
   /* ---- (h) frozen, and the same on every call ---- */
-  const outs = [P, GL, GAP, CORD, SPARK, BOMB, STACK, LOOK3D, MONO, PX_SCALE, WORLDS, MOTIF, LN, ST, glyph("R"), cordPath("line"), cordPath("stack", "mono"), atS(cordPath("line"), .2), A, R, hb, sb, sparkAt("line", "title"), faces("title"), pxEnv(12), motif("JUNGLE", "line", "title", 64), motif("SAND", "stack", "token", 40), motif("CROWN", "stack", "title", 88)];
+  const outs = [P, GL, GAP, CORD, SPARK, BOMB, STACK, LAYERS, MONO_LAYERS, PLATE, LOOK3D, MONO, PX_SCALE, WORLDS, MOTIF, LN, ST, cord("stack", "title", 72), cord("line", "mono", 16), plan("CROWN", { cap: 72 }), plan("VOID", { cap: 16 }), glyph("R"), cordPath("line"), cordPath("stack", "mono"), atS(cordPath("line"), .2), A, R, hb, sb, sparkAt("line", "title"), faces("title"), pxEnv(12), motif("JUNGLE", "line", "title", 64), motif("SAND", "stack", "token", 40), motif("CROWN", "stack", "title", 88)];
   check("(h) every export and every result is deep-frozen", outs.every(deepFrozen), outs.findIndex((o) => !deepFrozen(o)));
   let mut = false; try { LN.env.w = 99; } catch { mut = true; }
   check("(h) mutating a result throws and changes nothing", mut && LN.env.w !== 99 && near(layout("line").env.w, 6.77));
