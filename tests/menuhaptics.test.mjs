@@ -207,9 +207,27 @@ const at = (g, label) => { g.app.cursor = ITEMS.indexOf(label); g.tick(2); };
   check("GUIDE -> HOW TO: enter", h.app.screen === SCREEN.HOWTO && f === "enter", f);
   f = feel(h, () => tap(h, "S"));
   check("SOUTH on a read-only page backs out: back", h.app.screen === SCREEN.GUIDE && f === "back", f);
-  const s = menu(); at(s, "STATS"); tap(s, "S");
+  const s = menu(); at(s, "RECORDS"); tap(s, "S"); tap(s, "dR");
   f = feel(s, () => tap(s, "N"));
-  check("STATS -> MEDALS by NORTH: enter", s.app.screen === SCREEN.TROPHIES && f === "enter", f);
+  check("STATS -> MEDALS by NORTH: move (the MEDALS tab, R7)", s.app.screen === SCREEN.TROPHIES && f === "move", f);
+}
+{
+  /* RECORDS (Task 2.2): enter on the row, move on a tab step, nothing at a clamped edge or from a shoulder on the tab row, back on EAST */
+  const r = menu(); at(r, "RECORDS");
+  let f = feel(r, () => tap(r, "S"));
+  check("MENU -> RECORDS: enter", r.app.screen === SCREEN.SCORES && f === "enter", f);
+  f = feel(r, () => tap(r, "dL"));
+  check("RECORDS: D-PAD left on the first tab is clamped, silent", r.app.screen === SCREEN.SCORES && f === "", f);
+  f = feel(r, () => tap(r, "SHR"));
+  check("RECORDS tab row: a shoulder does nothing, silent", r.app.screen === SCREEN.SCORES && r.app.scoreHeat === 0 && f === "", f);
+  f = feel(r, () => tap(r, "dR"));
+  check("RECORDS: a tab step (SCORES -> STATS) is move", r.app.screen === SCREEN.STATS && f === "move", f);
+  f = feel(r, () => tap(r, "dR"));
+  check("RECORDS: a tab step (STATS -> MEDALS) is move", r.app.screen === SCREEN.TROPHIES && f === "move", f);
+  f = feel(r, () => tap(r, "dR"));
+  check("RECORDS: D-PAD right on the last tab is clamped, silent", r.app.screen === SCREEN.TROPHIES && f === "", f);
+  f = feel(r, () => tap(r, "E"));
+  check("RECORDS: EAST from MEDALS: back, onto MENU at RECORDS", r.app.screen === SCREEN.MENU && r.app.cursor === ITEMS.indexOf("RECORDS") && f === "back", f);
 }
 {
   const g = menu(); at(g, "LEVEL SELECT"); tap(g, "S");

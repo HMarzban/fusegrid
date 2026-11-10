@@ -209,7 +209,7 @@ for (const at of [1.0, 2.0, 3.0, 4.0]) {
 }
 {
   const want = { "PLAY": SCREEN.GAME, "LEVEL SELECT": SCREEN.LEVEL, "DAILY": SCREEN.GAME, "SETTINGS": SCREEN.SETTINGS,
-    "GUIDE": SCREEN.GUIDE, "HIGH SCORES": SCREEN.SCORES, "STATS": SCREEN.STATS, "SOURCE": SCREEN.MENU };
+    "GUIDE": SCREEN.GUIDE, "RECORDS": SCREEN.SCORES, "SOURCE": SCREEN.MENU };
   for (let i = 0; i < ITEMS.length; i++) {
     const g = menu();
     toRow(g, i);
@@ -360,7 +360,7 @@ for (const at of [1.0, 2.0, 3.0, 4.0]) {
 
 // ---- OPTIONS ----
 {
-  const g = menu(); toRow(g, 3); press(g, "Enter");
+  const g = menu(); toRow(g, ITEMS.indexOf("SETTINGS")); press(g, "Enter");
   const m0 = g.app.settings.mus;
   press(g, "ArrowLeft"); const m1 = g.app.settings.mus; press(g, "ArrowRight");
   press(g, "ArrowDown"); const r1 = g.app.optRow; press(g, "ArrowUp");
@@ -377,7 +377,7 @@ for (const at of [1.0, 2.0, 3.0, 4.0]) {
   const fake3d = () => ({ ctx: rec, overlay: null, canvas: null, render() {}, consumeEvents() {}, getShake: () => ({ x: 0, y: 0 }) });
   const s0 = mem["nb.settings.v1"];
   const v = (g) => (g.app.render3d ? 2 : g.app.pixel ? 1 : 0) + ":" + g.app.settings.r3d + g.app.settings.px;
-  let g = show(mk({ createRenderer3D: fake3d })); press(g, "Enter"); toRow(g, 3); press(g, "Enter"); toRow(g, 3);
+  let g = show(mk({ createRenderer3D: fake3d })); press(g, "Enter"); toRow(g, ITEMS.indexOf("SETTINGS")); press(g, "Enter"); toRow(g, 3);
   const at = [v(g)];
   for (let i = 0; i < 3; i++) { press(g, "Enter"); at.push(v(g)); }
   check("OPTIONS RENDER Enter cycles CLASSIC 2D -> PIXEL -> REAL 3D -> CLASSIC 2D", at.join() === "0:00,1:01,2:10,0:00", at.join());
@@ -563,7 +563,7 @@ withSettings(null, () => {
 
 // ---- GUIDE + HOW TO / ITEMS / ENEMIES / FLOOR ----
 for (let i = 0; i < GUIDE_ROWS.length; i++) {
-  const g = menu(); toRow(g, 4); press(g, "Enter");
+  const g = menu(); toRow(g, ITEMS.indexOf("GUIDE")); press(g, "Enter");
   toRow(g, i); press(g, "Enter");
   const want = [SCREEN.HOWTO, SCREEN.ITEMS, SCREEN.ENEMIES, SCREEN.FLOOR][i];
   const opened = g.app.screen === want;
@@ -575,27 +575,28 @@ for (let i = 0; i < GUIDE_ROWS.length; i++) {
   check("GUIDE Escape -> MENU (" + GUIDE_ROWS[i] + ")", g.app.screen === SCREEN.MENU);
 }
 
-// ---- HIGH SCORES ----
+// ---- RECORDS: SCORES (its difficulty filter is the page body, under the tab row) ----
 {
-  const g = menu(); toRow(g, 5); press(g, "Enter");
+  const g = menu(); toRow(g, ITEMS.indexOf("RECORDS")); press(g, "Enter"); press(g, "ArrowDown");
   press(g, "ArrowRight"); const h = g.app.scoreHeat; press(g, "ArrowLeft");
-  check("HIGH SCORES ← / → flip the heat tab", h === 1 && g.app.scoreHeat === 0, h + "," + g.app.scoreHeat);
+  check("SCORES ← / → flip the heat tab", h === 1 && g.app.scoreHeat === 0, h + "," + g.app.scoreHeat);
   press(g, "Enter");
-  check("HIGH SCORES Enter -> MENU", g.app.screen === SCREEN.MENU);
-  const e = menu(); toRow(e, 5); press(e, "Enter"); press(e, "Escape");
-  check("HIGH SCORES Escape -> MENU", e.app.screen === SCREEN.MENU);
+  check("SCORES Enter -> MENU", g.app.screen === SCREEN.MENU);
+  const e = menu(); toRow(e, ITEMS.indexOf("RECORDS")); press(e, "Enter"); press(e, "Escape");
+  check("SCORES Escape -> MENU", e.app.screen === SCREEN.MENU);
 }
 
-// ---- STATS + MEDALS ----
+// ---- STATS + MEDALS (RECORDS' second and third tabs) ----
 {
-  const g = menu(); toRow(g, 6); press(g, "Enter");
+  const g = menu(); toRow(g, ITEMS.indexOf("RECORDS")); press(g, "Enter"); press(g, "ArrowRight");
   const c0 = clip.length;
   press(g, "KeyC"); await flush();
   check("STATS C copies the stats text", clip.length === c0 + 1 && /STATS|FUSE/i.test(clip[clip.length - 1]), clip[clip.length - 1]);
   press(g, "KeyT");
   check("STATS T opens MEDALS", g.app.screen === SCREEN.TROPHIES);
-  press(g, "Escape"); const e = g.app.screen; press(g, "KeyT"); press(g, "Enter");
-  check("MEDALS Escape and Enter both back out to STATS", e === SCREEN.STATS && g.app.screen === SCREEN.STATS);
+  press(g, "Escape"); const e = g.app.screen, ec = g.app.cursor; press(g, "Enter"); press(g, "ArrowRight"); press(g, "KeyT"); press(g, "Enter");
+  check("MEDALS Escape and Enter both back out to MENU on RECORDS", e === SCREEN.MENU && ec === ITEMS.indexOf("RECORDS") && g.app.screen === SCREEN.MENU && g.app.cursor === ITEMS.indexOf("RECORDS"));
+  press(g, "Enter"); press(g, "ArrowRight");
   press(g, "KeyR"); const arm = g.app.resetArm; press(g, "KeyN");
   check("STATS R arms, any other key disarms", arm === true && g.app.resetArm === false && reloads === 0);
   press(g, "KeyR"); press(g, "KeyR");
@@ -605,7 +606,7 @@ for (let i = 0; i < GUIDE_ROWS.length; i++) {
 }
 // STATS C reports back through the SAME endkeys toast WIN / LOSE use (app.toast, painted by shellview)
 {
-  const g = menu(); toRow(g, ITEMS.indexOf("STATS")); press(g, "Enter");
+  const g = menu(); toRow(g, ITEMS.indexOf("RECORDS")); press(g, "Enter"); press(g, "ArrowRight");
   check("STATS: no copy note before any C", toastOf(g.app.toast) === null, JSON.stringify(g.app.toast));
   press(g, "KeyC"); await flush(); g.tick();
   check("STATS C shows COPIED", g.app.screen === SCREEN.STATS && toastOf(g.app.toast) && g.app.toast.s === "COPIED" && g.app.toast.ok === true,
@@ -632,14 +633,15 @@ for (let i = 0; i < GUIDE_ROWS.length; i++) {
   check("STATS C note is dropped the moment STATS closes", g.app.screen === SCREEN.MENU && toastOf(g.app.toast) === null, JSON.stringify(g.app.toast));
   press(g, "KeyC"); await flush(); g.tick();
   check("MENU C copies nothing and raises no note", toastOf(g.app.toast) === null, JSON.stringify(g.app.toast));
-  toRow(g, ITEMS.indexOf("STATS")); press(g, "Enter"); press(g, "KeyC"); await flush(); press(g, "Escape");
+  press(g, "Enter"); press(g, "ArrowRight"); press(g, "KeyC"); await flush(); press(g, "Escape"); // MENU's cursor came back on RECORDS
   while (g.app.cursor !== ITEMS.indexOf("PLAY")) press(g, "ArrowUp"); press(g, "Enter");
   check("a STATS note never leaks onto a run", g.app.screen === SCREEN.GAME && g.ro.toast === null, g.app.screen + "/" + JSON.stringify(g.ro.toast));
 }
 // STATS label taps (T1) ride the keyboard's own path: a tap on the painted
 // C COPY MY STATS label IS KeyC — copy plus the same note. 600x520 buffer under
 // a 300x260 CSS box (k=2); buffer label centres T (183,478), C (270,478),
-// R (354,478); (300,300) is off every label.
+// R (354,478); (300,300) is off every label. These centres are the page body's
+// foot (RECORDS' tab row leads it with ←→ TAB), so toStats steps into the body.
 {
   const PL = {};
   const ctx = new Proxy(function () {}, { get: (t, p) => (p === Symbol.toPrimitive ? () => "" : () => ctx), apply: () => ctx, set: () => true });
@@ -649,7 +651,7 @@ for (let i = 0; i < GUIDE_ROWS.length; i++) {
   const g = menu(el);
   const tap = (x, y) => { (PL.pointerdown || []).forEach((f) => f({ clientX: x / 2, clientY: y / 2 })); g.tick();
     (PL.pointerup || []).forEach((f) => f({ clientX: x / 2, clientY: y / 2 })); g.tick(); };
-  const toStats = () => { while (g.app.screen !== SCREEN.MENU) press(g, "Escape"); g.app.cursor = ITEMS.indexOf("STATS"); press(g, "Enter"); };
+  const toStats = () => { while (g.app.screen !== SCREEN.MENU) press(g, "Escape"); g.app.cursor = ITEMS.indexOf("RECORDS"); press(g, "Enter"); press(g, "ArrowRight"); press(g, "ArrowDown"); };
   toStats();
   const c0 = clip.length, r0 = reloads;
   tap(270, 478); await flush(); g.tick();
@@ -672,7 +674,7 @@ for (let i = 0; i < GUIDE_ROWS.length; i++) {
     g.app.resetArm + "/" + JSON.stringify(g.app.toast));
   tap(183, 478);
   check("STATS tap on T MEDALS still opens MEDALS (unchanged)", g.app.screen === SCREEN.TROPHIES, g.app.screen);
-  press(g, "Escape"); g.tick(Math.ceil(TOAST_T * 60) + 2);
+  toStats(); g.tick(Math.ceil(TOAST_T * 60) + 2); // MEDALS' Escape is MENU now: back onto STATS for the off-label tap
   const c2 = clip.length;
   tap(300, 300);
   check("STATS idle off-label tap still backs out to MENU, copies nothing", g.app.screen === SCREEN.MENU && clip.length === c2 && toastOf(g.app.toast) === null,
@@ -729,6 +731,54 @@ for (let i = 0; i < GUIDE_ROWS.length; i++) {
   }
   const r7 = reloads; tap(354, 478); tap(132, 478);
   check("STATS armed, a tap on R AGAIN (132,478) still erases + reloads once", reloads === r7 + 1 && g.app.resetArm === false, reloads - r7);
+}
+
+// ---- RECORDS matrix (v202 Task 2.2, plan ruling R7): SCORES, STATS and MEDALS, tab row and body, every key through the real
+// keydown listeners and main's cue wrappers. The tab row is the top of each page's ↑↓ walk; MEDALS has no body. A STATS row runs
+// unarmed and armed (R pressed first): any other key disarms, R again wipes. Expected values come from R7 and the lead's rulings. ----
+const recPlays = [];
+const RECAUD = { play: (n) => recPlays.push(n), toggle: () => false, duck: noop, unlocked: () => true, pump: noop, unlock: () => true };
+const SC = SCREEN.SCORES, ST = SCREEN.STATS, ME = SCREEN.TROPHIES, MN = SCREEN.MENU, UM = "uiMove", UB = "uiBack";
+const want = (s, f, c, x) => ({ s, f, c: c || "", ...x });
+const OUT = want(MN, null, UB);
+{
+  const recAt = (page, body, armed) => {
+    const g = mk({ audio: RECAUD }); g.app.cabinetSeen = true; g.app.skip(); g.tick(2);
+    toRow(g, ITEMS.indexOf("RECORDS")); press(g, "Enter");
+    for (let i = 0; i < page; i++) press(g, "ArrowRight");
+    if (body) press(g, "ArrowDown");
+    g.app.scoreHeat = 1;
+    if (armed) press(g, "KeyR");
+    recPlays.length = 0;
+    return g;
+  };
+  const K = {
+    "SCORES tab row": [0, 0, { ArrowLeft: want(SC, 0, "", { h: 1 }), ArrowRight: want(ST, 0, UM), ArrowUp: want(SC, 0, "", { h: 1 }), ArrowDown: want(SC, 1, UM, { h: 1 }), KeyQ: want(SC, 0), KeyE: want(ST, 0, UM), KeyT: want(SC, 0), KeyC: want(SC, 0), KeyR: want(SC, 0) }],
+    "SCORES body": [0, 1, { ArrowLeft: want(SC, 1, UM, { h: 0 }), ArrowRight: want(SC, 1, UM, { h: 2 }), ArrowUp: want(SC, 0, UM, { h: 1 }), ArrowDown: want(SC, 1, "", { h: 1 }), KeyQ: want(SC, 1, "", { h: 1 }), KeyE: want(ST, 0, UM), KeyT: want(SC, 1), KeyC: want(SC, 1), KeyR: want(SC, 1) }],
+    "STATS tab row": [1, 0, { ArrowLeft: want(SC, 0, UM), ArrowRight: want(ME, 0, UM), ArrowUp: want(ST, 0), ArrowDown: want(ST, 1, UM), KeyQ: want(SC, 0, UM), KeyE: want(ME, 0, UM), KeyT: want(ME, 0, UM), KeyC: want(ST, 0), KeyR: want(ST, 0) }],
+    "STATS body": [1, 1, { ArrowLeft: want(ST, 1), ArrowRight: want(ST, 1), ArrowUp: want(ST, 0, UM), ArrowDown: want(ST, 1), KeyQ: want(SC, 0, UM), KeyE: want(ME, 0, UM), KeyT: want(ME, 0, UM), KeyC: want(ST, 1), KeyR: want(ST, 1) }],
+    "MEDALS tab row": [2, 0, { ArrowLeft: want(ST, 0, UM), ArrowRight: want(ME, 0), ArrowUp: want(ME, 0), ArrowDown: want(ME, 0), KeyQ: want(ST, 0, UM), KeyE: want(ME, 0), KeyT: want(ME, 0), KeyC: want(ME, 0), KeyR: want(ME, 0) }],
+  };
+  for (const [name, [page, body, keys]] of Object.entries(K)) for (const armed of page === 1 ? [false, true] : [false]) {
+    for (const [code, w] of Object.entries({ ...keys, Enter: OUT, Escape: OUT, Backspace: OUT })) {
+      const g = recAt(page, body, armed), c0 = clip.length, r0 = reloads;
+      press(g, code); await flush(); g.tick();
+      const a = g.app, copy = clip.length - c0, wipe = reloads - r0;
+      const arm = page === 1 && code === "KeyR" && !armed, wiped = armed && code === "KeyR" ? 1 : 0, copied = page === 1 && code === "KeyC" ? 1 : 0;
+      const ok = a.screen === w.s && (w.s === MN ? a.cursor === ITEMS.indexOf("RECORDS") : a.recFocus === w.f) && (w.h == null || a.scoreHeat === w.h) && recPlays.join() === w.c && a.resetArm === arm && wipe === wiped && copy === copied;
+      check("RECORDS keys: " + name + (armed ? " (armed)" : "") + " + " + code + " -> " + (w.s === MN ? "MENU on RECORDS" : ["SCORES", "STATS", "MEDALS"][[SC, ST, ME].indexOf(w.s)] + (w.f ? " body" : " tab row")) + (w.h != null ? " difficulty " + w.h : "") + ", cues [" + w.c + "]" + (arm ? ", armed" : "") + (wiped ? ", wiped once" : "") + (copied ? ", copied" : ""),
+        ok, JSON.stringify([a.screen, a.cursor, a.recFocus, a.scoreHeat, recPlays, a.resetArm, wipe, copy]));
+    }
+  }
+  /* the RECORDS row itself: one uiSel, SCORES on the tab row; Q / E on MENU are nothing */
+  const g = mk({ audio: RECAUD }); g.app.cabinetSeen = true; g.app.skip(); g.tick(2);
+  toRow(g, ITEMS.indexOf("RECORDS")); recPlays.length = 0;
+  press(g, "KeyQ"); press(g, "KeyE");
+  check("RECORDS keys: Q / E on MENU do nothing", g.app.screen === MN && g.app.cursor === ITEMS.indexOf("RECORDS") && recPlays.length === 0, recPlays.join());
+  press(g, "Enter");
+  check("RECORDS keys: MENU Enter on RECORDS opens SCORES on the tab row with one uiSel", g.app.screen === SC && g.app.recFocus === 0 && recPlays.join() === "uiSel", recPlays.join());
+  down("ArrowRight"); g.tick(Math.ceil(0.4 * 60)); const mid = g.app.screen; g.tick(60); up("ArrowRight"); g.tick(2);
+  check("RECORDS keys: → held on the tab row repeats at the menu rate and stops silently at MEDALS", mid === ME && g.app.screen === ME && recPlays.filter((n) => n === UM).length === 2, mid + "/" + recPlays.join());
 }
 
 // ---- GAME / PLAY ----
@@ -1034,15 +1084,15 @@ for (const code of ["Space", "Enter"]) {
     "LEVEL SELECT": { boot: page("LEVEL SELECT"), E: onScr(SCREEN.MENU), S: onScr(SCREEN.GAME), START: onScr(SCREEN.GAME) },
     "SETTINGS": { boot: page("SETTINGS"), E: onScr(SCREEN.MENU) },
     "GUIDE": { boot: page("GUIDE"), E: onScr(SCREEN.MENU), S: onScr(SCREEN.HOWTO) },
-    "HIGH SCORES": { boot: page("HIGH SCORES"), E: onScr(SCREEN.MENU), S: onScr(SCREEN.MENU) },
-    "STATS": { boot: page("STATS"), E: onScr(SCREEN.MENU) },
+    "SCORES": { boot: page("RECORDS"), E: onScr(SCREEN.MENU), S: onScr(SCREEN.MENU) },
+    "STATS": { boot: page("RECORDS", (g) => tap(g, "dR")), E: onScr(SCREEN.MENU) },
     "HOW TO": { boot: page("GUIDE", (g) => tap(g, "S")), E: onScr(SCREEN.GUIDE), S: onScr(SCREEN.GUIDE) },
     "GRAPHICS": { boot: () => { const g = pOpt(); rowTo(g, OPT_ROWS.indexOf("GRAPHICS")); tap(g, "S"); return g; }, E: onScr(SCREEN.SETTINGS) },
     "CONTROLS": { boot: pCtl, E: onScr(SCREEN.SETTINGS) },
     "ITEMS": { boot: page("GUIDE", guided(GUIDE_ROWS.indexOf("POWER-UPS"))), E: onScr(SCREEN.GUIDE), S: onScr(SCREEN.GUIDE) },
     "ENEMIES": { boot: page("GUIDE", guided(GUIDE_ROWS.indexOf("ENEMIES"))), E: onScr(SCREEN.GUIDE), S: onScr(SCREEN.GUIDE) },
     "FLOOR": { boot: page("GUIDE", guided(GUIDE_ROWS.indexOf("FLOOR"))), E: onScr(SCREEN.GUIDE), S: onScr(SCREEN.GUIDE) },
-    "MEDALS": { boot: page("STATS", (g) => { g.app.key("KeyT"); g.tick(); }), E: onScr(SCREEN.STATS) },
+    "MEDALS": { boot: page("RECORDS", (g) => { tap(g, "dR"); g.app.key("KeyT"); g.tick(); }), E: onScr(SCREEN.MENU) },
     "PAUSE GRAPHICS": { boot: () => { const g = pPause(); rowTo(g, PAUSE_ITEMS.indexOf("SETTINGS")); tap(g, "S"); rowTo(g, OPT_ROWS.indexOf("GRAPHICS")); tap(g, "S"); return g; }, E: paused(1), START: paused(1) },
     "GAME PLAY": { boot: pRun, E: (g) => g.world.state === "PLAY" && g.app.screen === SCREEN.GAME, START: paused(0), SELECT: paused(0) },
     "GAME PAUSE": { boot: pPause, E: (g) => g.world.state === "PLAY", START: (g) => g.world.state === "PLAY", S: (g) => g.world.state === "PLAY" },
@@ -1061,12 +1111,38 @@ for (const code of ["Space", "Enter"]) {
   { const g = page("LEVEL SELECT")(); const p0 = g.app.pace;
     tap(g, "SHR"); const p1 = g.app.pace; tap(g, "SHL");
     check("pad: L/R SHOULDER move PACE on LEVEL SELECT", p1 === Math.min(1, p0 + 1) && g.app.pace === Math.max(-1, p1 - 1), p0 + ">" + p1 + ">" + g.app.pace); }
-  { const g = page("HIGH SCORES")(); const h0 = g.app.scoreHeat;
+  { const g = page("RECORDS", (g) => tap(g, "dD"))(); const h0 = g.app.scoreHeat;
     tap(g, "SHR"); const h1 = g.app.scoreHeat; tap(g, "SHL");
-    check("pad: L/R SHOULDER walk the HIGH SCORES tabs", h1 !== h0 && g.app.scoreHeat === h0, h0 + ">" + h1 + ">" + g.app.scoreHeat); }
-  { const g = page("STATS")(), r0 = reloads;
+    check("pad: L/R SHOULDER walk the SCORES difficulty tabs (in the page body)", h1 !== h0 && g.app.scoreHeat === h0, h0 + ">" + h1 + ">" + g.app.scoreHeat); }
+  { const g = page("RECORDS", (g) => tap(g, "dR"))(), r0 = reloads;
     for (const id of Object.keys(IDX)) { tap(g, id); tap(g, id); if (g.app.screen !== SCREEN.STATS) { g.app.screen = SCREEN.STATS; g.tick(); } }
     check("S12: no pad path reaches the STATS wipe", !g.app.resetArm && reloads === r0, reloads - r0); }
+  /* RECORDS on a controller (Task 2.2, R7): D-PAD left / right switch tabs on the tab row; in the SCORES body they and the
+     shoulders keep the difficulty filter; the shoulders do nothing on the tab row; NORTH / WEST stay STATS' MEDALS / copy;
+     SOUTH and EAST leave for MENU on RECORDS; nothing is newly bound and no button reaches the wipe */
+  { const pRec = (page, body) => { const g = pk({ audio: RECAUD }); tap(g, "S"); g.tick(15); tap(g, "S"); rowTo(g, ITEMS.indexOf("RECORDS")); tap(g, "S");
+      for (let i = 0; i < page; i++) tap(g, "dR"); if (body) tap(g, "dD"); g.app.scoreHeat = 1; recPlays.length = 0; return g; };
+    const P = {
+      "SCORES tab row": [0, 0, { dL: want(SC, 0, "", { h: 1 }), dR: want(ST, 0, UM), dU: want(SC, 0), dD: want(SC, 1, UM), SHL: want(SC, 0, "", { h: 1 }), SHR: want(SC, 0, "", { h: 1 }), N: want(SC, 0), W: want(SC, 0) }],
+      "SCORES body": [0, 1, { dL: want(SC, 1, UM, { h: 0 }), dR: want(SC, 1, UM, { h: 2 }), dU: want(SC, 0, UM, { h: 1 }), dD: want(SC, 1), SHL: want(SC, 1, UM, { h: 0 }), SHR: want(SC, 1, UM, { h: 2 }), N: want(SC, 1), W: want(SC, 1) }],
+      "STATS tab row": [1, 0, { dL: want(SC, 0, UM), dR: want(ME, 0, UM), dU: want(ST, 0), dD: want(ST, 1, UM), SHL: want(ST, 0), SHR: want(ST, 0), N: want(ME, 0, UM), W: want(ST, 0, "", { copy: 1 }) }],
+      "STATS body": [1, 1, { dL: want(ST, 1), dR: want(ST, 1), dU: want(ST, 0, UM), dD: want(ST, 1), SHL: want(ST, 1), SHR: want(ST, 1), N: want(ME, 0, UM), W: want(ST, 1, "", { copy: 1 }) }],
+      "MEDALS tab row": [2, 0, { dL: want(ST, 0, UM), dR: want(ME, 0), dU: want(ME, 0), dD: want(ME, 0), SHL: want(ME, 0), SHR: want(ME, 0), N: want(ME, 0), W: want(ME, 0) }],
+    };
+    for (const [name, [page, body, btns]] of Object.entries(P)) for (const [id, w] of Object.entries({ ...btns, S: OUT, E: OUT })) {
+      const g = pRec(page, body), c0 = clip.length, r0 = reloads;
+      tap(g, id); await flush(); g.tick();
+      const a = g.app, copy = clip.length - c0;
+      const ok = a.screen === w.s && (w.s === MN ? a.cursor === ITEMS.indexOf("RECORDS") : a.recFocus === w.f) && (w.h == null || a.scoreHeat === w.h) && recPlays.join() === w.c && !a.resetArm && reloads === r0 && copy === (w.copy | 0);
+      check("RECORDS controller: " + name + " + " + id + " -> " + (w.s === MN ? "MENU on RECORDS" : ["SCORES", "STATS", "MEDALS"][[SC, ST, ME].indexOf(w.s)] + (w.f ? " body" : " tab row")) + (w.h != null ? " difficulty " + w.h : "") + ", cues [" + w.c + "]" + (w.copy ? ", copied" : ""),
+        ok, JSON.stringify([a.screen, a.cursor, a.recFocus, a.scoreHeat, recPlays, a.resetArm, reloads - r0, copy]));
+    }
+    const g = pRec(0, 0);
+    g.pad.set("dR", true); g.tick(Math.ceil(0.4 * 60)); const mid = g.app.screen; g.tick(60); g.pad.set("dR", false); g.tick(2);
+    check("RECORDS controller: D-PAD right held repeats the tab step and stops silently at MEDALS", mid === ME && g.app.screen === ME && recPlays.filter((n) => n === UM).length === 2, mid + "/" + recPlays.join());
+    const s = pRec(0, 0);
+    s.pad.axes[0] = 0.9; s.tick(3); s.pad.axes[0] = 0; s.tick(3);
+    check("RECORDS controller: the stick steps the tab too", s.app.screen === ST && recPlays.join() === UM, s.app.screen + "/" + recPlays.join()); }
   for (const [name, boot] of [["MENU", pMenu], ["PAUSE", pPause]]) {
     const g = boot(), s0 = () => JSON.stringify([g.app.screen, g.app.cursor, g.app.pauseCursor, g.app.pauseView, g.app.optRow, g.world.state, g.world.seed, live(g.world), g.input._intent]);
     const a0 = s0();
@@ -1090,14 +1166,14 @@ for (const code of ["Space", "Enter"]) {
     g.app.timeAttack = t0; }
   { const g = page("LEVEL SELECT")(); g.app.pactUnlocked = false; tap(g, "TRR"); tap(g, "N");
     check("T14: MODES stay shut before the first CLEAR", g.app.modeCur === -1 && g.app.pact === 0); }
-  { const g = page("STATS")(), c0 = clip.length; tap(g, "W"); await flush(); g.tick();
+  { const g = page("RECORDS", (g) => tap(g, "dR"))(), c0 = clip.length; tap(g, "W"); await flush(); g.tick();
     check("T14: STATS WEST copies the stats, with the same note", g.app.screen === SCREEN.STATS && clip.length === c0 + 1 && g.app.toast.s === "COPIED" && g.app.toast.t > 0, g.app.toast.s);
     clipMode = "no"; tap(g, "W"); await flush(); g.tick(); clipMode = "ok";
     check("T14: STATS WEST with a refusing clipboard says COPY FAILED", g.app.toast.s === "COPY FAILED", g.app.toast.s);
     tap(g, "N");
     check("T14: STATS NORTH opens MEDALS", g.app.screen === SCREEN.TROPHIES, g.app.screen);
     tap(g, "E");
-    check("T14: EAST backs to STATS", g.app.screen === SCREEN.STATS, g.app.screen); }
+    check("T14: EAST backs to MENU on RECORDS", g.app.screen === SCREEN.MENU && g.app.cursor === ITEMS.indexOf("RECORDS"), g.app.screen); }
   for (const [nm, set] of [["WIN", (g) => clearRoom(g)], ["LOSE", (g) => { g.world.state = "LOSE"; g.tick(); }]]) {
     const g = pRun(); set(g);
     const st = g.world.state, c0 = clip.length;

@@ -57,15 +57,15 @@ check(
   JSON.stringify(SCREEN),
 );
 check(
-  "ITEMS frozen, 8 entries",
+  "ITEMS frozen, 7 entries",
   Object.isFrozen(ITEMS) &&
-    ITEMS.length === 8 &&
+    ITEMS.length === 7 &&
     ITEMS[0] === "PLAY" &&
     ITEMS[2] === "DAILY" &&
-    ITEMS[3] === "SETTINGS" &&
-    ITEMS[4] === "GUIDE" &&
-    ITEMS[6] === "STATS" &&
-    ITEMS[7] === "SOURCE",
+    ITEMS[4] === "SETTINGS" &&
+    ITEMS[5] === "GUIDE" &&
+    ITEMS[3] === "RECORDS" &&
+    ITEMS[6] === "SOURCE",
   JSON.stringify(ITEMS),
 );
 check(
@@ -382,18 +382,19 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
   );
 }
 {
-  for (const [lab, screen] of [
+  for (const [lab, screen, then] of [
     ["LEVEL SELECT", SCREEN.LEVEL],
     ["SETTINGS", SCREEN.SETTINGS],
     ["GUIDE", SCREEN.GUIDE],
-    ["HIGH SCORES", SCREEN.SCORES],
-    ["STATS", SCREEN.STATS],
+    ["RECORDS", SCREEN.SCORES],
+    ["RECORDS", SCREEN.STATS, (a) => a.recTab(1)], // STATS is RECORDS' second tab (R7)
   ]) {
     const cur = ITEMS.indexOf(lab);
     const a = createMenuApp();
     a.screen = SCREEN.MENU;
     a.cursor = cur;
     a.confirm();
+    if (then) then(a);
     check(
       "cursor " + cur + " (" + ITEMS[cur] + ") -> screen " + screen,
       a.screen === screen,
@@ -518,9 +519,9 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
     a.settings.mus === 100 && a.settings.sfx === 100 && a.settings.bri === 100 && a.settings.cam === 0,
     JSON.stringify(a.settings),
   );
-  a.cursor = ITEMS.indexOf("HIGH SCORES");
+  a.cursor = ITEMS.indexOf("RECORDS");
   a.optMove(1);
-  check("optMove moves optRow and never the MENU cursor", a.optRow === 1 && a.cursor === 5, a.optRow + "/" + a.cursor);
+  check("optMove moves optRow and never the MENU cursor", a.optRow === 1 && a.cursor === 3, a.optRow + "/" + a.cursor);
   a.optRow = 0;
   check("MUSIC left steps down by 10", a.move(-1, 0) === true && a.settings.mus === 90, a.settings.mus);
   for (let i = 0; i < 20; i++) a.move(-1, 0);
@@ -705,6 +706,7 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
 {
   const a = createMenuApp();
   a.screen = SCREEN.SCORES;
+  a.recFocus = 1; // the difficulty filter is the page body, under RECORDS' tab row (R7)
   check("scoreHeat defaults CORE", (a.scoreHeat | 0) === 0);
   check(
     "SCORES right heats PLUS",
@@ -727,10 +729,12 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
 {
   const a = createMenuApp();
   a.screen = SCREEN.SCORES;
+  a.recFocus = 1; // the body, where ←/→ are the filter
   check(
     "key ArrowRight (lateral tap) cycles scoreHeat via _tapMove",
     a.key("ArrowRight") === true && a.scoreHeat === 1,
   );
+  a.recFocus = 0; // the tab row: ↑ has nowhere to go (in the body ↑ is the tab row)
   check(
     "key ArrowUp (non-lateral tap) on SCORES is a no-op for scoreHeat",
     a.key("ArrowUp") === false && a.scoreHeat === 1,
@@ -1300,8 +1304,7 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
     DAILY: SCREEN.MENU,
     SETTINGS: SCREEN.SETTINGS,
     GUIDE: SCREEN.GUIDE,
-    "HIGH SCORES": SCREEN.SCORES,
-    STATS: SCREEN.STATS,
+    RECORDS: SCREEN.SCORES,
     SOURCE: SCREEN.MENU,
   };
   let srcHits = 0,
@@ -1342,8 +1345,8 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
     JSON.stringify(SCREEN),
   );
   check(
-    "R6 ITEMS is unchanged: eight rows, same order, no trophy row",
-    ITEMS.join("|") === "PLAY|LEVEL SELECT|DAILY|SETTINGS|GUIDE|HIGH SCORES|STATS|SOURCE",
+    "R6 ITEMS: the seven rows of the design record, no trophy row",
+    ITEMS.join("|") === "PLAY|LEVEL SELECT|DAILY|RECORDS|SETTINGS|GUIDE|SOURCE",
     ITEMS.join("|"),
   );
   const a = createMenuApp();
@@ -1355,14 +1358,14 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
     String(a.screen));
   check("R6 KeyT on TROPHIES does nothing", a.key("KeyT") === false && a.screen === SCREEN.TROPHIES,
     String(a.screen));
-  check("R6 back() on TROPHIES returns to STATS", a.back() === true && a.screen === SCREEN.STATS,
+  check("R6 back() on TROPHIES returns to MENU on RECORDS (R7)", a.back() === true && a.screen === SCREEN.MENU && a.cursor === ITEMS.indexOf("RECORDS"),
     String(a.screen));
-  a.key("KeyT");
-  check("R6 confirm() on TROPHIES returns to STATS", a.confirm() === true && a.screen === SCREEN.STATS,
+  a.screen = SCREEN.STATS; a.key("KeyT");
+  check("R6 confirm() on TROPHIES returns to MENU on RECORDS (R7)", a.confirm() === true && a.screen === SCREEN.MENU,
     String(a.screen));
-  a.key("KeyT");
+  a.screen = SCREEN.STATS; a.key("KeyT");
   a.key("Escape");
-  check("R6 Escape on TROPHIES returns to STATS", a.screen === SCREEN.STATS, String(a.screen));
+  check("R6 Escape on TROPHIES returns to MENU on RECORDS (R7)", a.screen === SCREEN.MENU, String(a.screen));
 }
 
 // ---- GRAPHICS (unified spec 2026-10-10 §5): door row, page, presets, locks, DEMO ----

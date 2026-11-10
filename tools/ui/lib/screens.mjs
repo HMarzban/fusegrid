@@ -5,7 +5,7 @@
      menu   MENU row labels (app.cursor over menuapp ITEMS), then confirm
      opt    OPTIONS row labels (app.optRow over OPT_ROWS), then confirm
      guide  GUIDE door labels (app.guideRow over GUIDE_ROWS), then confirm
-     key    a key code pressed on the page reached (STATS: T opens MEDALS)
+     key    a key code pressed on the page reached (RECORDS opens on SCORES: E steps to the next tab, STATS; STATS: T opens MEDALS)
      wait   "controls": the lazy CONTROLS page must be in (app.controls.loading false) before the frames are stepped
      run    a run screen: play, pause, win or lose
      state  what window.__GAME__.state() must read before the capture; a mismatch is an error and no PNG
@@ -29,8 +29,8 @@ const ROWS = {
   items: { menu: ["GUIDE"], guide: ["ITEMS", "POWER-UPS"], state: "ITEMS" },
   enemies: { menu: ["GUIDE"], guide: ["ENEMIES"], state: "ENEMIES" },
   floor: { menu: ["GUIDE"], guide: ["FLOOR"], state: "FLOOR" },
-  scores: { menu: ["HIGH SCORES", "RECORDS"], state: "SCORES" },
-  stats: { menu: ["STATS", "RECORDS"], state: "STATS" },
+  scores: { menu: ["RECORDS"], state: "SCORES" },
+  stats: { menu: ["RECORDS"], key: "KeyE", state: "STATS" },
   medals: { menu: ["STATS", "RECORDS"], key: "KeyT", state: "TROPHIES" },
   play: { run: "play", state: "PLAY", settle: 900 },
   pause: { run: "pause", state: "PAUSE", settle: 300 },

@@ -36,7 +36,7 @@ const rec = () => {
 const paint = (f) => { const r = rec(); f(r.c); return r; };
 const L = md.layout(600, 520);
 const INFO = { level: 1, best: [], unlocked: true, daily: null, top: [] };
-const ITEMS = ["PLAY|JUNGLE · NORMAL DIFFICULTY · NORMAL SPEED", "LEVEL SELECT", "DAILY|TODAY", "SETTINGS", "GUIDE", "HIGH SCORES", "STATS", "SOURCE"];
+const ITEMS = ["PLAY|JUNGLE · NORMAL DIFFICULTY · NORMAL SPEED", "LEVEL SELECT", "DAILY|TODAY", "RECORDS", "SETTINGS", "GUIDE", "SOURCE"];
 const menu = (cur, touch, rev = "") => (c) => md.drawMenu(c, { cursor: cur, enterT: 9, items: ITEMS, touch: !!touch, kind: "2d", rev, info: INFO }, L, 9);
 const STATS_UI = { rows: [], notes: [], trophies: [] };
 const GFX = { rows: [] };
@@ -165,11 +165,11 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
     ["GRAPHICS foot", PAGES.GRAPHICS(false), "↑↓ ROW · ←→ ADJUST · ENTER CYCLE · ESC BACK"],
     ["STATS foot", (c) => md.drawStats(c, L, 9, STATS_UI, false, null), "T MEDALS · C COPY MY STATS · R RESET · ESC BACK"],
     ["STATS armed foot", (c) => md.drawStats(c, L, 9, STATS_UI, true, null), "R AGAIN ERASES · OTHER KEYS CANCEL · KEEPS SETTINGS + GAME SPEED · C COPY"],
-    ["MEDALS foot", (c) => md.drawTrophies(c, L, 9, []), "ENTER / ESC BACK TO STATS"],
+    ["MEDALS foot", (c) => md.drawTrophies(c, L, 9, []), "←→ TAB · ENTER / ESC BACK"],
     ["PLAY pane", menu(0), "ENTER STARTS IT · LEVEL SELECT CHANGES IT"],
-    ["OPTIONS pane", menu(3), "ENTER OPENS ALL TWELVE ROWS"],
-    ["SCORES pane", menu(5), "ENTER: ALL TEN · BY DIFFICULTY"],
-    ["SOURCE pane", menu(7), "ENTER OPENS IT IN A NEW TAB"],
+    ["OPTIONS pane", menu(4), "ENTER OPENS ALL TWELVE ROWS"],
+    ["RECORDS pane", menu(3), "ENTER: ALL TEN · BY DIFFICULTY"],
+    ["SOURCE pane", menu(6), "ENTER OPENS IT IN A NEW TAB"],
     ["ATTRACT", (c) => md.drawAttractHint(c, L, 200), "DEMO — TAP TO PLAY"],
     ["show skip", (c) => md.drawIntroChrome(c, 1, 0.6, 600, 520, "d"), "ANY KEY TO SKIP"],
     ["show skip, touch", (c) => md.drawIntroChrome(c, 1, 0.6, 600, 520, "p"), "TAP TO SKIP"],
@@ -229,12 +229,12 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
     ["OPTIONS foot", PAGES.OPTIONS(false), "↑↓ ROW · ←→ ADJUST · SOUTH CYCLE · EAST BACK"],
     ["GRAPHICS foot", PAGES.GRAPHICS(false), "↑↓ ROW · ←→ ADJUST · SOUTH CYCLE · EAST BACK"],
     ["STATS foot offers no reset", (c) => md.drawStats(c, L, 9, STATS_UI, false, null), "NORTH MEDALS · WEST COPY MY STATS · EAST BACK"],
-    ["MEDALS foot", (c) => md.drawTrophies(c, L, 9, []), "SOUTH / EAST BACK TO STATS"],
+    ["MEDALS foot", (c) => md.drawTrophies(c, L, 9, []), "←→ TAB · SOUTH / EAST BACK"],
     ["MENU foot", menu(0, false, "v99"), "↑↓ MOVE · SOUTH CONFIRM · v99"],
     ["PLAY pane", menu(0), "SOUTH STARTS IT · LEVEL SELECT CHANGES IT"],
-    ["OPTIONS pane", menu(3), "SOUTH OPENS ALL TWELVE ROWS"],
-    ["SCORES pane", menu(5), "SOUTH: ALL TEN · BY DIFFICULTY"],
-    ["SOURCE pane", menu(7), "NEEDS A CLICK OR ENTER"],
+    ["OPTIONS pane", menu(4), "SOUTH OPENS ALL TWELVE ROWS"],
+    ["RECORDS pane", menu(3), "SOUTH: ALL TEN · BY DIFFICULTY"],
+    ["SOURCE pane", menu(6), "NEEDS A CLICK OR ENTER"],
     ["ATTRACT", (c) => md.drawAttractHint(c, L, 200), "DEMO — PRESS ANY BUTTON"],
     ["show skip", (c) => md.drawIntroChrome(c, 1, 0.6, 600, 520, "d"), "ANY BUTTON TO SKIP"],
     ["LEVEL pace cap", PAGES.LEVEL(false), "SHOULDERS"],
@@ -254,7 +254,7 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
   const gd = paint(PAGES.GUIDE(false));
   check("pad: GUIDE preview names pad buttons, no key caps", gd.has("D-PAD") && gd.has("SOUTH") && gd.has("WEST") && gd.has("EAST") && !gd.has("WASD") && !gd.has("SPACE"), gd.strs().join("|"));
   const noLetter = /(^|[ ·/])(A|B|X|Y) (CONFIRM|BACK|OPEN|START|CYCLE|STARTS|OPENS|MEDALS|COPY)|(^|[ ·/])(LB|RB|LT|RT)( |$)/;
-  const every = [...Object.values(PAGES).map((p) => p(false)), menu(0), menu(3), menu(5), menu(7)].flatMap((f) => paint(f).strs());
+  const every = [...Object.values(PAGES).map((p) => p(false)), menu(0), menu(4), menu(3), menu(6)].flatMap((f) => paint(f).strs());
   check("no face-button letter on a pad hint", !every.some((s) => noLetter.test(s)), every.filter((s) => noLetter.test(s)).join("|"));
 
   check("pad: SHOULDERS fits its 44 px cap at the cap's 8 px face", "SHOULDERS".length * 8 * 0.6 <= 44);
@@ -274,7 +274,8 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
 
   setHints(null);
   const flat = (r) => r.rects.filter((x) => x[0] !== "rgba(4,7,14,0.9)");
-  const pages = { ...PAGES, MENU0: () => menu(0, false, "v99"), MENU3: () => menu(3, false, "v99"), STATS: () => (c) => md.drawStats(c, L, 9, STATS_UI, false, null), MEDALS: () => (c) => md.drawTrophies(c, L, 9, []) };
+  const pages = { ...PAGES, MENU0: () => menu(0, false, "v99"), MENU3: () => menu(3, false, "v99"), MENU4: () => menu(4, false, "v99"), STATS: () => (c) => md.drawStats(c, L, 9, STATS_UI, false, null), MEDALS: () => (c) => md.drawTrophies(c, L, 9, []),
+    SCORES_TABS: (T) => (c) => md.drawScores(c, [], L, 9, 0, 0, T, true), STATS_TABS: (T) => (c) => md.drawStats(c, L, 9, STATS_UI, false, null, T, true), MEDALS_TABS: (T) => (c) => md.drawTrophies(c, L, 9, [], T, true) }; // MENU3 is RECORDS since v202 Task 2.2, MENU4 SETTINGS; *_TABS: RECORDS' tab row
   for (const T of [false, true]) for (const [nm, p] of Object.entries(pages)) {
     setHints(null); const a = paint(p(T));
     setHints(PAD); const b = paint(p(T));
@@ -417,7 +418,7 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
     check("touch hub: LOST paints no signpost (" + n + ")", !padded(true, "CONTROLLER LOST", "", LT).r.strs().includes(SIGN));
   }
   {
-    const LT = md.layout(600, 520), S = md.menuList(LT, 8, true).rows[7], tile = padded(true, "CONTROLLER BACK", "", LT).cols.find((x) => x.s === SIGN);
+    const LT = md.layout(600, 520), S = md.menuList(LT, 7, true).rows[6], tile = padded(true, "CONTROLLER BACK", "", LT).cols.find((x) => x.s === SIGN);
     check("touch hub: on the SOURCE tile the signpost clears the SOURCE label", !!tile && tile.x - SIGN.length * 0.6 * 13 >= S.x + 24 + 70, tile && tile.x);
     const LN = md.layout(400, 520), N = padded(true, "CONTROLLER READY", "", LN).cols.find((x) => /^CONTROLLER READY/.test(x.s));
     const LP = md.layout(400, 800, 108), P = padded(true, "CONTROLLER READY", "", LP), URL0 = "github.com/HMarzban/fusegrid";

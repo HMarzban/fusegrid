@@ -523,7 +523,7 @@ const VIBROW = 6, SENSROW = 5;
   g.app.screen = SCREEN.SETTINGS; g.app.optRow = 0; g.tick(2);
   tap(g, "dL"); tap(g, "dR"); g.tick(12);
   check("a value write on OPTIONS: one 70 ms confirm, the second inside 100 ms dropped", calls.length === 1 && calls[0].duration === 70, JSON.stringify(calls));
-  g.app.screen = SCREEN.MENU; g.app.cursor = 3; g.tick(12); calls.length = 0;
+  g.app.screen = SCREEN.MENU; g.app.cursor = 4; g.tick(12); calls.length = 0; // SETTINGS (row 4 since RECORDS, v202 Task 2.2)
   tap(g, "S"); g.tick(12);
   check("a row that opens a page: one 90 ms enter", g.app.screen === SCREEN.SETTINGS && calls.length === 1 && calls[0].duration === 90, JSON.stringify(calls));
   calls.length = 0;

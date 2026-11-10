@@ -8,7 +8,7 @@ import { ITEMS, SCREEN } from "../src/app/menuapp.js";
 import { shellGeo } from "../src/app/fit.js";
 import { overlayBox, pauseGeom, pauseHit, touchLay } from "../src/render/scenes.js";
 import { controlsHit, dims } from "../src/render/shellview.js";
-import { graphicsHit, guideHit, layout, levelGeom, levelHit, menuHit, scoresHit, settingsHit, statsHit } from "../src/render/menudraw.js";
+import { graphicsHit, guideHit, layout, levelGeom, levelHit, menuHit, scoresHit, settingsHit, statsHit, recTabHit, recTabsGeom, recPlate } from "../src/render/menudraw.js";
 
 let pass = 0,
   fail = 0;
@@ -30,13 +30,13 @@ function mkEl(w, h, rect, lay) {
   if (lay) el.ownerDocument = { body: { getAttribute: (k) => (k === "data-lay" ? lay : null) } }; // body[data-lay] as fit.js writes it
   return el;
 }
-const REAL = { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit, settingsHit, graphicsHit, guideHit, levelHit, scoresHit, statsHit, layout };
+const REAL = { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit, settingsHit, graphicsHit, guideHit, levelHit, scoresHit, statsHit, recTabHit, layout };
 function mkHit(over = {}) {
   const calls = [], hit = {};
   for (const [k, f] of Object.entries(REAL)) hit[k] = (...a) => { const r = (over[k] || f)(...a); calls.push({ f: k, a, r }); return r; };
   return { hit, calls, of: (k) => calls.filter((c) => c.f === k), last: (k) => calls.filter((c) => c.f === k).pop() };
 }
-const SHELL = ["confirm", "back", "pauseBack", "playFromAttract", "skipShow", "move", "adjustPace"];
+const SHELL = ["confirm", "back", "pauseBack", "playFromAttract", "skipShow", "move", "adjustPace", "recTab"];
 function rig(o = {}) {
   const log = [], taps = [];
   const app = { screen: SCREEN.MENU, pauseView: 0, pauseCursor: 0, cursor: 0, optRow: 0, gfxRow: 0, guideRow: 0, level: 1, heat: 1, pace: 0, scoreHeat: 0, pactUnlocked: true, resetArm: false, subT: 1.25, ctlT: 0.5, controls: { view: (t) => ({ view: t }) }, ...o.app };
@@ -265,10 +265,32 @@ for (const [scr, fn, field, row, offAct] of [[SCREEN.MENU, "menuHit", "cursor", 
 }
 
 // ---- read-only pages: any tap confirms (backs out) ----
-for (const s of ["HOWTO", "ITEMS", "ENEMIES", "FLOOR", "TROPHIES"]) {
+for (const s of ["HOWTO", "ITEMS", "ENEMIES", "FLOOR"]) {
   const r = rig({ app: { screen: SCREEN[s] } });
   r.down(300, 260);
   check(s + ": any tap confirms, no hit test", J(r.log) === J([["confirm"]]) && r.H.calls.length === 0 && r.input._intent.fire === false, J(r.log));
+}
+{
+  /* MEDALS (TROPHIES) is read-only too, but its head carries RECORDS' tab strip (v202 Task 2.2): the strip is its one hit test */
+  const r = rig({ app: { screen: SCREEN.TROPHIES } });
+  r.down(300, 260);
+  check("TROPHIES: any tap off the tabs confirms; the only hit test is the tab strip's", J(r.log) === J([["confirm"]]) && r.H.calls.every((c) => ["dims", "layout", "touchLay", "recTabHit"].includes(c.f)) && r.H.of("recTabHit").length === 1 && r.input._intent.fire === false, J(r.log) + " " + J(r.H.calls.map((c) => c.f)));
+}
+
+// ---- RECORDS' tab strip: recTabHit(x, y, layout(cw, ch), page, touchLay(cv)); a tab is app.recTab(tab - page), never a key ----
+for (const [scr, page] of [[SCREEN.SCORES, 0], [SCREEN.STATS, 1], [SCREEN.TROPHIES, 2]]) {
+  for (let tab = 0; tab < 3; tab++) {
+    const r = rig({ app: { screen: scr, recFocus: 1, resetArm: false } }), T = recTabsGeom(recPlate(L0, page, false), false)[tab];
+    r.down(T.x + T.w / 2, T.y + T.h / 2);
+    const h = r.H.last("recTabHit");
+    check("RECORDS tab " + tab + " on page " + page + ": app.recTab(" + (tab - page) + "), no key, no confirm, fire swallowed", J(r.log) === J([["recTab", tab - page]]) && r.input.keys.length === 0 && r.input._intent.fire === false &&
+      J(h.a) === J([T.x + T.w / 2, T.y + T.h / 2, L0, page, false]) && r.H.last("layout").a.length === 2, J(r.log));
+  }
+}
+{
+  const r = rig({ app: { screen: SCREEN.SCORES, scoreHeat: 0, recFocus: 0 } }), t2 = mid((x, y) => scoresHit(x, y, L0, false) === 2);
+  r.down(t2.x, t2.y);
+  check("SCORES: a difficulty tab tapped from the tab row focuses the body first, then app.move(2 - scoreHeat, 0)", r.app.recFocus === 1 && J(r.log) === J([["move", 2, 0]]), J(r.log));
 }
 
 // ---- #sh: a touch-portrait shell page is tapped on #sh's own box ----

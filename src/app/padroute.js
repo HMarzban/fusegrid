@@ -59,7 +59,7 @@ export function createPadRouter({ input, app, SCREEN, binds, world, onPause, onU
       else if (id === "S" || id === "START") enter();
       else if (id === "E") onUiKey("Escape");
       else if ((onPage || scr === SCREEN.LEVEL) && BRACKET[id]) onUiKey(BRACKET[id]);
-      else if (scr === SCREEN.SCORES && LATERAL[id]) onUiKey(LATERAL[id]);
+      else if (scr === SCREEN.SCORES && app.recFocus === 1 && LATERAL[id]) onUiKey(LATERAL[id]); // the difficulty filter, in the body only: the tab row's shoulders do nothing
       else if (scr === SCREEN.STATS && STATS_KEY[id]) onUiKey(STATS_KEY[id]);
       else if (scr === SCREEN.LEVEL && app.pactUnlocked && TRIGGER[id]) app.modeWalk(TRIGGER[id]);
       else if (scr === SCREEN.LEVEL && app.pactUnlocked && id === "N") { if (app.modeCur < 0) app.modeWalk(1); else onUiKey("Digit" + (app.modeCur + 1)); }

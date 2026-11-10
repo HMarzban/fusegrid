@@ -1,14 +1,14 @@
 /* The one tap router on #c and #sh, moved out of main.js whole (v202 Task 0.4).
    src/app never imports src/render, so main hands the hit functions and the
    layout in (hit); kind and ctl are getters, read at the tap. */
-import { ITEMS, SCREEN } from "./menuapp.js";
+import { ITEMS, RECORD_SCREENS, SCREEN } from "./menuapp.js";
 
 /* pointer outside GAME = skip (INTRO) / confirm (menus) / play (ATTRACT).
    C1 single-fire: Input's fire latch listens on the SAME event (registered
    first, in the constructor), so swallow it here — otherwise the latched
    intent.fire re-enters as a rising-edge confirm on the next frame
    (auto-start after skip, toggles bouncing back, subscreens bouncing). */
-export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit, settingsHit, graphicsHit, guideHit, levelHit, scoresHit, statsHit, layout: menuLayout } }) {
+export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit, settingsHit, graphicsHit, guideHit, levelHit, scoresHit, statsHit, recTabHit, layout: menuLayout } }) {
   let statsC = false; // a touch pointerdown carries no activation, so a touch C tap copies on its pointerup
   const onDown = (ev) => {
     if (app.screen === SCREEN.GAME) {
@@ -64,17 +64,21 @@ export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: {
       if (row < 0) return menu || row < -1 ? undefined : app.back(); // -2: on the plate, off the rows (inert)
       app[menu ? "cursor" : gx ? "gfxRow" : gd ? "guideRow" : "optRow"] = row;
       app.confirm();
-    } else if (app.screen === SCREEN.LEVEL || app.screen === SCREEN.SCORES) {
+    } else if (app.screen === SCREEN.LEVEL || RECORD_SCREENS.indexOf(app.screen) >= 0) {
       /* A chip / tab tap sets it (modes ride their 1–5 keys); LEVEL: only START starts, a locked room shows its card, the rest of the plate is inert, outside backs out. */
       const r = cv.getBoundingClientRect(), k = cv.width / (r.width || cv.width), { cw, ch } = dims(cv, kind()), x = (ev.clientX - r.left) * k, y = (ev.clientY - r.top) * k, L = menuLayout(cw, ch);
       // every chip is ONE call through the cued key path: one uiMove per change, none on the chip already set
-      if (app.screen === SCREEN.SCORES) { const i = scoresHit(x, y, L, touchLay(cv)); return i >= 0 ? void app.move(i - app.scoreHeat, 0) : i === -1 ? app.confirm() : null; }
+      const p = RECORD_SCREENS.indexOf(app.screen), ti = p < 0 ? -1 : recTabHit(x, y, L, p, touchLay(cv));
+      if (ti >= 0) return void app.recTab(ti - p); // a RECORDS tab: that tab, the tab row focused (recTab disarms an armed STATS)
+      if (app.screen === SCREEN.SCORES) { const i = scoresHit(x, y, L, touchLay(cv)); if (i >= 0) app.recFocus = 1; return i >= 0 ? void app.move(i - app.scoreHeat, 0) : i === -1 ? app.confirm() : null; } // a difficulty tab is in the body
+      if (app.screen === SCREEN.STATS) {
+        const hit = statsHit(x, y, L, app.resetArm, app.recFocus === 0);
+        if (hit === "KeyC" && ev.pointerType && ev.pointerType !== "mouse") statsC = true; else if (hit) input.onUiKey(hit); else if (app.resetArm) app.resetArm = false; else app.confirm(); // a label tap IS its key (C copies + notes)
+        return;
+      }
+      if (app.screen === SCREEN.TROPHIES) return void app.confirm(); // read-only: off a tab, any tap backs out
       const h = levelHit(x, y, L, app.pactUnlocked, touchLay(cv));
       if (h.k === "room") app.move(h.i + 1 - app.level, 0); else if (h.k === "heat") app.move(app.heat - h.i, 1); else if (h.k === "pace") app.adjustPace(h.i - 1 - app.pace); else if (h.k === "mode") input.onUiKey("Digit" + (h.i + 1)); else if (h.k === "lock") { app.lockR = h.i + 1; app.lockT = app.subT; } else if (h.k === "back") app.back(); else if (h.k === "start") app.confirm();
-    } else if (app.screen === SCREEN.STATS) {
-      const r = cv.getBoundingClientRect(), k = cv.width / (r.width || cv.width), { cw, ch } = dims(cv, kind());
-      const hit = statsHit((ev.clientX - r.left) * k, (ev.clientY - r.top) * k, menuLayout(cw, ch), app.resetArm);
-      if (hit === "KeyC" && ev.pointerType && ev.pointerType !== "mouse") statsC = true; else if (hit) input.onUiKey(hit); else if (app.resetArm) app.resetArm = false; else app.confirm(); // a label tap IS its key (C copies + notes)
     } else app.confirm();
   };
   for (const el of [canvas, fit && fit.sh]) if (el) {

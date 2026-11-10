@@ -364,8 +364,10 @@ const fires=(inp,n)=>{let s="";for(let k=0;k<n;k++){s+=inp.intent().fire?"1":"0"
 {
   const x=rig({screen:SCREEN.LEVEL});x.dn(SHL);x.up(SHL);x.dn(SHR);
   check("shoulders send bracket codes on LEVEL",eq(x.ui,["BracketLeft","BracketRight"]));
-  const y=rig({screen:SCREEN.SCORES});y.dn(SHL);y.up(SHL);y.dn(SHR);
+  const y=rig({screen:SCREEN.SCORES});y.app.recFocus=1;y.dn(SHL);y.up(SHL);y.dn(SHR); // the difficulty filter is SCORES' page body (RECORDS, v202 Task 2.2)
   check("shoulders walk the SCORES tabs through the arrow tap path",eq(y.ui,["ArrowLeft","ArrowRight"]));
+  const tr=rig({screen:SCREEN.SCORES});tr.app.recFocus=0;tr.dn(SHL);tr.up(SHL);tr.dn(SHR);
+  check("shoulders on RECORDS' tab row send nothing (no new bind: D-PAD left / right step the tabs)",tr.ui.length===0,tr.ui.join());
   const z=rig({screen:SCREEN.CONTROLS});z.dn(SHL);z.up(SHL);z.dn(SHR);
   check("shoulders send bracket codes on CONTROLS",eq(z.ui,["BracketLeft","BracketRight"]));
   const v=rig({state:"PAUSE",view:3});v.dn(SHL);

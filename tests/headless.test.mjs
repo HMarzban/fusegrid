@@ -371,12 +371,12 @@ function mkCanvas(){
   const g=createGame(cv.el,{seed:75});
   g.app.cabinetSeen=true; g.app.skip();
   for(let i=1;i<=40;i++)g.loop(i*16);            // settle the row entrance
-  const at=cv.calls.filter(c=>c[0]==="fillText"&&c[1][0]==="STATS").pop();
-  check("D2 setup: MENU painted a STATS label at cursor 0",
+  const at=cv.calls.filter(c=>c[0]==="fillText"&&c[1][0]==="RECORDS").pop();
+  check("D2 setup: MENU painted a RECORDS label at cursor 0",
     !!at&&g.app.screen===SCREEN.MENU&&g.app.cursor===0,String(at&&at[1]));
   cv.fire("pointerdown",{clientX:at[1][1]/2,clientY:at[1][2]/2});
-  check("D2 MENU tap on the STATS row opens STATS, not a PLAY run",
-    g.app.screen===SCREEN.STATS&&g.app.cursor===ITEMS.indexOf("STATS"),
+  check("D2 MENU tap on the RECORDS row opens RECORDS (its SCORES tab), not a PLAY run",
+    g.app.screen===SCREEN.SCORES&&g.app.cursor===ITEMS.indexOf("RECORDS"),
     g.app.screen+"/"+g.app.cursor);
 }
 
@@ -387,9 +387,9 @@ function mkCanvas(){
   const cv=mkCamCanvas(600,520);
   const g=createGame(cv.el,{seed:76});
   g.app.cabinetSeen=true; g.app.skip(); g.app.cursor=0;
-  const L=menuLayout(600,520), R=menuGeom(L,8).rows;
+  const L=menuLayout(600,520), R=menuGeom(L,7).rows;
   cv.fire("pointerdown",{clientX:300,clientY:R[0].y0-6});
-  cv.fire("pointerdown",{clientX:300,clientY:R[7].y1+6});
+  cv.fire("pointerdown",{clientX:300,clientY:R[6].y1+6});
   check("M1 a MENU tap above / below the rows starts nothing",
     g.app.screen===SCREEN.MENU&&g.world.time===0&&g.app.cursor===0, g.app.screen);
   cv.fire("pointerdown",{clientX:8,clientY:R[ITEMS.indexOf("GUIDE")].cy});        // far left, GUIDE band
@@ -417,7 +417,7 @@ function mkCanvas(){
     tagTxt==="FACTORY · EXPERT · FAST SPEED"&&g.app.screen===SCREEN.GAME&&g.world.level===3&&(g.world.heat|0)===2&&(g.world.pace|0)===1,
     tagTxt+" -> "+[g.app.screen,g.world.level,g.world.heat,g.world.pace].join());
   g.app.toMenu();
-  g.app.cursor=ITEMS.indexOf("HIGH SCORES"); g.app.confirm();
+  g.app.cursor=ITEMS.indexOf("RECORDS"); g.app.confirm();
   const T=mdScoreTabs(L);
   cv.fire("pointerdown",{clientX:T.x(1),clientY:T.y});
   check("M1 HIGH SCORES heat tab tap shows PLUS and stays", g.app.screen===SCREEN.SCORES&&g.app.scoreHeat===1, g.app.screen+"/"+g.app.scoreHeat);
@@ -431,21 +431,21 @@ function mkCanvas(){
 // LEVEL / HIGH SCORES chip taps cue one uiMove per change, none on the chip
 // already set.
 {
-  const L=menuLayout(600,520), R=menuGeom(L,8,true).rows, band=Math.min(...R.slice(0,7).map(r=>r.b-r.a)), src=R[7].b-R[7].a;
+  const L=menuLayout(600,520), R=menuGeom(L,7,true).rows, band=Math.min(...R.slice(0,6).map(r=>r.b-r.a)), src=R[6].b-R[6].a;
   const sp=fitBox(393,852,true,600,520).s, sl=fitBox(852,393,true,600,520).s;
   // ATLAS hub: tiles >= 32 CSS px, the SOURCE foot link (50 logical) too
   check("M1 touch MENU hub tiles are >= 32 CSS px on a 393x852 phone and in landscape (SOURCE too)",
-    band*sp>=32&&band*sl>=32&&src*sp>=32&&R[0].y0>=56&&R[7].y1<=512, [band.toFixed(1),(band*sp).toFixed(1),(band*sl).toFixed(1),(src*sp).toFixed(1),R[0].y0,R[7].y1].join("|"));
-  check("M1 desktop MENU geometry is untouched by the touch shape (ATLAS pitch 26)", menuGeom(L,8).rows[1].h===26&&menuGeom(L,8,false).rows[1].h===26&&!menuGeom(L,8).hub&&menuGeom(L,8,true).hub, menuGeom(L,8).rows[1].h);
+    band*sp>=32&&band*sl>=32&&src*sp>=32&&R[0].y0>=56&&R[6].y1<=512, [band.toFixed(1),(band*sp).toFixed(1),(band*sl).toFixed(1),(src*sp).toFixed(1),R[0].y0,R[6].y1].join("|"));
+  check("M1 desktop MENU geometry is untouched by the touch shape (ATLAS pitch 26)", menuGeom(L,7).rows[1].h===26&&menuGeom(L,7,false).rows[1].h===26&&!menuGeom(L,7).hub&&menuGeom(L,7,true).hub, menuGeom(L,7).rows[1].h);
   const cv=mkCamCanvas(600,520,"p");
   const g=createGame(cv.el,{seed:77});
   g.app.cabinetSeen=true; g.app.skip();
   for(let i=1;i<=40;i++)g.loop(i*16);
-  const at=cv.calls.filter(c=>c[0]==="fillText"&&c[1][0]==="STATS").pop();
-  check("M1 touch MENU paints STATS inside its hub tile",
-    !!at&&at[1][2]>R[6].y0&&at[1][2]<R[6].y1&&at[1][1]>R[6].x&&at[1][1]<R[6].x+R[6].w, String(at&&at[1]));
+  const at=cv.calls.filter(c=>c[0]==="fillText"&&c[1][0]==="RECORDS").pop();
+  check("M1 touch MENU paints RECORDS inside its hub tile",
+    !!at&&at[1][2]>R[3].y0&&at[1][2]<R[3].y1&&at[1][1]>R[3].x&&at[1][1]<R[3].x+R[3].w, String(at&&at[1]));
   cv.fire("pointerdown",{clientX:at[1][1],clientY:at[1][2]});
-  check("M1 touch MENU tap on the painted STATS label opens STATS", g.app.screen===SCREEN.STATS&&g.app.cursor===ITEMS.indexOf("STATS"), g.app.screen+"/"+g.app.cursor);
+  check("M1 touch MENU tap on the painted RECORDS label opens RECORDS (its SCORES tab)", g.app.screen===SCREEN.SCORES&&g.app.cursor===ITEMS.indexOf("RECORDS"), g.app.screen+"/"+g.app.cursor);
   g.app.toMenu(); g.app.cursor=ITEMS.indexOf("LEVEL SELECT"); g.app.confirm();
   cv.calls.length=0; g.loop(5000); g.loop(5016);
   const foot=cv.calls.filter(c=>c[0]==="fillText").map(c=>String(c[1][0]));
@@ -470,7 +470,7 @@ function mkCanvas(){
   check("M1 LEVEL chip taps cue ONE uiMove each (room 4, heat MAX two steps, pace EASY, pace HARD)",
     a==="uiMove"&&b==="uiMove"&&d==="uiMove"&&e==="uiMove"&&g.app.level===4&&g.app.heat===2&&g.app.pace===1, [a,b,d,e,g.app.level,g.app.heat,g.app.pace].join("|"));
   check("M1 a tap on the chip already set is silent", f==="", f);
-  g.app.toMenu(); g.app.cursor=ITEMS.indexOf("HIGH SCORES"); g.app.confirm();
+  g.app.toMenu(); g.app.cursor=ITEMS.indexOf("RECORDS"); g.app.confirm();
   const T=mdScoreTabs(L,true);
   plays.length=0; cv.fire("pointerdown",{clientX:T.x(2),clientY:T.y}); const s1=plays.join();
   plays.length=0; cv.fire("pointerdown",{clientX:T.x(2),clientY:T.y}); const s2=plays.join();
@@ -516,11 +516,12 @@ function mkCanvas(){
     plays.join()==="uiSel,uiBack",JSON.stringify(plays));
   g.app.screen=SCREEN.STATS; plays.length=0;
   g.input.onUiKey("KeyT");
-  check("R6 KeyT reaches app.key on STATS, opens TROPHIES and plays no cue",
-    g.app.screen===SCREEN.TROPHIES&&plays.length===0,g.app.screen+"/"+JSON.stringify(plays));
+  check("R6 KeyT reaches app.key on STATS, opens TROPHIES and plays one uiMove (the MEDALS tab, R7)",
+    g.app.screen===SCREEN.TROPHIES&&plays.join()==="uiMove",g.app.screen+"/"+JSON.stringify(plays));
+  plays.length=0;
   g.app.confirm();
-  check("R6 confirm on TROPHIES backs to STATS with ONE uiBack, never uiSel",
-    g.app.screen===SCREEN.STATS&&plays.join()==="uiBack",JSON.stringify(plays));
+  check("R6 confirm on TROPHIES backs to MENU on RECORDS with ONE uiBack, never uiSel",
+    g.app.screen===SCREEN.MENU&&g.app.cursor===ITEMS.indexOf("RECORDS")&&plays.join()==="uiBack",JSON.stringify(plays));
 }
 {
   const noop=()=>{};
@@ -531,8 +532,8 @@ function mkCanvas(){
   try{
     const cv=mkCamCanvas(600,520);
     const g=createGame(cv.el,{seed:15});
-    g.app.screen=SCREEN.MENU; g.app.cursor=ITEMS.indexOf("STATS");
-    g.app.confirm();                              // STATS row -> onStats
+    g.app.screen=SCREEN.MENU; g.app.cursor=ITEMS.indexOf("RECORDS");
+    g.app.confirm(); g.app.recTab(1);             // RECORDS row, STATS tab -> onStats
     check("R6 STATS confirm wires the stored medals into app.stats.trophies",
       g.app.screen===SCREEN.STATS&&(g.app.stats.trophies||[]).length===8,
       g.app.screen+"/"+JSON.stringify(g.app.stats&&g.app.stats.trophies));
@@ -1512,7 +1513,7 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   try{
     const g=createGame(null,{seed:21});
     globalThis.location={search:"",reload:()=>{reloads++;}};
-    const stats=()=>{ g.app.cabinetSeen=true; g.app.screen=SCREEN.MENU; g.app.cursor=ITEMS.indexOf("STATS"); g.app.confirm(); };
+    const stats=()=>{ g.app.cabinetSeen=true; g.app.screen=SCREEN.MENU; g.app.cursor=ITEMS.indexOf("RECORDS"); g.app.confirm(); g.app.recTab(1); };
     const kept=()=>[...CLEAR_KEYS,...KEEP_KEYS].every((k)=>k in mem);
     fill(); stats();
     g.input._onKey({code:"KeyR"});
@@ -1579,13 +1580,14 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
     const g=createGame(cv.el,{seed:76});
     globalThis.location={search:"",reload:()=>{reloads++;}};
     const tap=(x,y)=>cv.fire("pointerdown",{clientX:x/2,clientY:y/2});
-    const stats=()=>{ g.app.cabinetSeen=true; g.app.screen=SCREEN.MENU; g.app.cursor=ITEMS.indexOf("STATS"); g.app.confirm(); };
+    const stats=()=>{ g.app.cabinetSeen=true; g.app.screen=SCREEN.MENU; g.app.cursor=ITEMS.indexOf("RECORDS"); g.app.confirm(); g.app.recTab(1); g.app.move(1,1); }; // RECORDS, STATS tab, its body: the zone centres above are the body's foot
     fill(); stats();
     tap(183,478);
     check("T1 tap: the T MEDALS label on STATS opens the MEDALS page",
       g.app.screen===SCREEN.TROPHIES,String(g.app.screen));
     tap(300,300);
-    check("T1 tap: a tap on MEDALS backs out to STATS",g.app.screen===SCREEN.STATS,String(g.app.screen));
+    check("T1 tap: a tap on MEDALS backs out to MENU on RECORDS (R7)",g.app.screen===SCREEN.MENU&&g.app.cursor===ITEMS.indexOf("RECORDS"),String(g.app.screen));
+    stats();
     const wrote=[]; navigator.clipboard={writeText:(s)=>(wrote.push(s),Promise.resolve())};
     tap(270,478); await new Promise((r)=>setImmediate(r));
     check("T1 tap: the C COPY MY STATS label copies through the KeyC path and raises COPIED, still STATS",

@@ -11,7 +11,7 @@ import { loadRendererPx } from "./render/pixel/load.js";
 import { copyPayload, isRunEnd, overlayBox, pauseHit, touchLay } from "./render/scenes.js";
 import { paintBombPad } from "./render/sprites.js";
 import { controlsHit, dims, drawShell, kindSize, loadControlsArt, shellMode } from "./render/shellview.js";
-import { menuHit, settingsHit, statsHit, graphicsHit, guideHit, levelHit, scoresHit, layout as menuLayout, setModeFocus } from "./render/menudraw.js";
+import { menuHit, settingsHit, statsHit, graphicsHit, guideHit, levelHit, scoresHit, recTabHit, layout as menuLayout, setModeFocus } from "./render/menudraw.js";
 import { setFxOpts } from "./render/fx.js";
 import { hints, setHints } from "./render/hintcopy.js";
 import { SCREEN, SOURCE_URL, createMenuApp } from "./app/menuapp.js";
@@ -283,6 +283,7 @@ export function createGame(canvas, opts = {}) {
     onSource, onWarm: (k) => rc.warm(k), // v202 warm on intent: the rest on the RENDER row
     onStats: () => { setStatsOn(); const sv = loadStats();
       app.stats = { rows: statsRows(sv, loadBests()), notes: statsNotes(sv, dailyRec, todayStr()), trophies: medalRows(loadMedals()) }; },
+    onMedals: () => { app.stats = { rows: [], notes: [], ...app.stats, trophies: medalRows(loadMedals()) }; }, // a RECORDS tab tap may reach MEDALS without STATS: its rows only, never the opt-in
     onReset: () => { clearCabinet(); if (typeof location !== "undefined") location.reload(); },
     dailySeed: () => { const d = todayStr(); return { seed: dailySeed(d), date: d, gen: DAILY_GEN }; },
     onPauseCmd: (cmd) => {
@@ -335,6 +336,7 @@ export function createGame(canvas, opts = {}) {
       return r;
     };
     const w0 = app.modeWalk.bind(app); app.modeWalk = (d) => { const r = w0(d); if (r) audio.play("uiMove"); return r; };
+    const t0 = app.recTab.bind(app); app.recTab = (d) => { const r = t0(d); if (r) audio.play("uiMove"); return r; }; // Q / E / T and a tab tap; ←/→ step through move()
     const p0 = app.adjustPace.bind(app);
     app.adjustPace = (d) => {
       const r = p0(d);
@@ -443,7 +445,7 @@ export function createGame(canvas, opts = {}) {
   };
   input.onPause = onPause;
 
-  if (canvas) mountPointer({ canvas, fit, input, app, world, kind: () => curKind, ctl: () => ctl, hit: { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit, settingsHit, graphicsHit, guideHit, levelHit, scoresHit, statsHit, layout: menuLayout } }); // taps on #c and #sh: skip / confirm / play, the PAUSE rows, the C1 fire swallow (src/app/pointer.js)
+  if (canvas) mountPointer({ canvas, fit, input, app, world, kind: () => curKind, ctl: () => ctl, hit: { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit, settingsHit, graphicsHit, guideHit, levelHit, scoresHit, statsHit, recTabHit, layout: menuLayout } }); // taps on #c and #sh: skip / confirm / play, the PAUSE rows, the C1 fire swallow (src/app/pointer.js)
   /* pad taps bubble to #stage: play from ATTRACT too (spec §4 tap-to-play). */
   {
     const stageEl =
@@ -485,7 +487,7 @@ export function createGame(canvas, opts = {}) {
   // no new closures per frame.
   const getScoresForHeat = (heat) => scoresForHeat(loadScores(), heat);
   const getPlaquesFn = () => loadPlaques();
-  const getCab = () => ({ tiles: true, times: loadTimes(), medals: loadMedals(), stats: loadStats(), daily: app.dailyTag === "PLAYED" ? dailyRec : null, top: scoresForHeat(loadScores(), 0).filter((r) => !isPlaceholder(r)).slice(0, 3) }); // ATLAS pane / room card data, read on screen entry
+  const getCab = () => ({ tiles: true, times: loadTimes(), daily: app.dailyTag === "PLAYED" ? dailyRec : null, top: scoresForHeat(loadScores(), 0).filter((r) => !isPlaceholder(r)).slice(0, 3) }); // ATLAS pane / room card data, read on screen entry
 
   let last = null,
     acc = 0,

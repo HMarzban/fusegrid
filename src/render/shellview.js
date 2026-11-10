@@ -184,7 +184,7 @@ function scoreData(app, getScores, getPlaques) {
 }
 
 /* ATLAS info (MENU pane + hub teasers, LEVEL SELECT card + room ticks).
-   getCab hands main's read-only stores {times, medals, stats, daily}; they
+   getCab hands main's read-only stores {times, daily, top}; they
    are read once per screen entry (nothing writes them while a menu page is
    open) and formatted here, so menudraw never reads a store. heatT stamps
    every heat change (the card's heat-line pulse); lockT is honoured only
@@ -195,7 +195,6 @@ let cab = null,
   heatT = -1,
   lockSeen = null,
   top3 = [];
-const bits = (m) => { let n = 0; for (let v = m | 0; v; v &= v - 1) n++; return n; };
 /* Read live: a pad can wake while MENU is open. */
 const padOn = (app) => { const st = app.controls ? app.controls.view(app.ctlT).pad.state : "none"; return st === "ready" || st === "nonstd"; };
 function infoOf(app, kind, getScores, getCab) {
@@ -215,13 +214,12 @@ function infoOf(app, kind, getScores, getCab) {
     pact = app.pactUnlocked ? clampPact(app.pact) : 0,
     pz = clampPace(app.pace) + 1,
     tb = (cab.times && cab.times.b) || {},
-    a = (cab.stats && cab.stats.a) || {},
     st = app.settings || {};
   return {
     kind, heatT, tiles: !!cab.tiles, level: app.level | 0 || 1, heat: h, pace: pz - 1, pact, unlocked: !!app.pactUnlocked,
     lockR: app.lockR, lockT: app.lockT !== lockSeen ? app.lockT : null,
     best: Array.from({ length: 8 }, (_, i) => { const d = tb[i + 1 + ":" + h + ":" + pact + ":" + pz]; return d > 0 ? fmtTime(d / 10) : null; }),
-    daily: cab.daily || null, mask: cab.medals | 0, medals: bits(cab.medals), days: a.days | 0, runs: a.runs | 0, rooms: a.rooms | 0, kills: a.kills | 0,
+    daily: cab.daily || null, // the STATS row's medals / lifetime counters left MENU with it (RECORDS, v202 Task 2.2)
     top: top3, look: app.render3d ? 2 : app.pixel ? 1 : 0, snd: st.snd !== 0, mus: st.mus, sfx: st.sfx, gfx: app.gfxPreset ? app.gfxPreset() : "", pad: padOn(app),
   };
 }
@@ -305,7 +303,6 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
           ITEMS[4],
           ITEMS[5],
           ITEMS[6],
-          ITEMS[7],
         ],
         touch,
         kind,
@@ -350,16 +347,16 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
   } else if (s === SCREEN.GUIDE) {
     menudraw.drawDim(c, 0.72, cw, chh);
     menudraw.drawGuide(c, L, app.subT, app.guideRow, kind, touchLay(canvas));
-  } else if (s === SCREEN.SCORES) {
+  } else if (s === SCREEN.SCORES) { // RECORDS' three pages: recFocus 0 = the tab row has the focus
     menudraw.drawDim(c, 0.72, cw, chh);
     const sd = scoreData(app, getScores, getPlaques);
-    menudraw.drawScores(c, sd.s, L, app.subT, app.scoreHeat, sd.p, touchLay(canvas));
+    menudraw.drawScores(c, sd.s, L, app.subT, app.scoreHeat, sd.p, touchLay(canvas), app.recFocus === 0);
   } else if (s === SCREEN.STATS) {
     menudraw.drawDim(c, 0.72, cw, chh);
-    menudraw.drawStats(c, L, app.subT, app.stats, app.resetArm, app.toast && app.toast.t > 0 ? app.toast : null);
+    menudraw.drawStats(c, L, app.subT, app.stats, app.resetArm, app.toast && app.toast.t > 0 ? app.toast : null, touchLay(canvas), app.recFocus === 0);
   } else if (s === SCREEN.TROPHIES) {
     menudraw.drawDim(c, 0.72, cw, chh);
-    menudraw.drawTrophies(c, L, app.subT, app.stats && app.stats.trophies);
+    menudraw.drawTrophies(c, L, app.subT, app.stats && app.stats.trophies, touchLay(canvas), app.recFocus === 0);
   } else if (s === SCREEN.SETTINGS) {
     menudraw.drawDim(c, 0.72, cw, chh);
     menudraw.drawSettings(c, L, app.subT, optUi(app, canvas));

@@ -111,7 +111,7 @@ function mapStore(throwOn) {
   app.key("KeyR");
   check("KeyR, back, STATS again, KeyR only arms", app.resetArm === true && n === 1, n + "/" + app.resetArm);
   app.key("KeyT");
-  check("KeyT on STATS disarms (via _push)", app.screen === SCREEN.TROPHIES && app.resetArm === false);
+  check("KeyT on STATS disarms (via the MEDALS tab step, recTab)", app.screen === SCREEN.TROPHIES && app.resetArm === false);
   app._push(SCREEN.MENU);
   check("KeyR on MENU returns false and does not arm",
     app.key("KeyR") === false && app.resetArm === false && n === 1);

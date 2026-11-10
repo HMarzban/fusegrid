@@ -313,12 +313,13 @@ import { readFileSync } from "node:fs";
   /* Written through indexOf so a future insert cannot silently re-point a row
      at the wrong screen — the failure mode stage 2 exists to catch. */
   const map = [["SETTINGS", SCREEN.SETTINGS], ["GUIDE", SCREEN.GUIDE],
-    ["HIGH SCORES", SCREEN.SCORES], ["STATS", SCREEN.STATS], ["LEVEL SELECT", SCREEN.LEVEL]];
-  const wrong = map.filter(([label, screen]) => {
+    ["RECORDS", SCREEN.SCORES], ["RECORDS", SCREEN.STATS, 1], ["LEVEL SELECT", SCREEN.LEVEL]]; // STATS: RECORDS' second tab (v202 Task 2.2)
+  const wrong = map.filter(([label, screen, tab]) => {
     const a = createMenuApp();
     a.screen = SCREEN.MENU;
     a.cursor = ITEMS.indexOf(label);
     a.confirm();
+    if (tab) a.recTab(tab);
     return a.screen !== screen;
   });
   check(
@@ -472,9 +473,9 @@ import "../src/core/board3.js";
       "and STATS note 1 now reads the standing daily record",
       (() => {
         g.app.toMenu();
-        g.app.cursor = ITEMS.indexOf("STATS");
-        g.app.confirm();
-        return g.app.stats.notes.length === 2 &&
+        g.app.cursor = ITEMS.indexOf("RECORDS");
+        g.app.confirm(); g.app.recTab(1); // STATS, RECORDS' second tab: onStats re-reads the notes
+        return g.app.screen === SCREEN.STATS && g.app.stats.notes.length === 2 &&
           g.app.stats.notes[0].indexOf("YOUR OWN ATTEMPTS ONLY") > 0;
       })(),
       JSON.stringify(g.app.stats && g.app.stats.notes),

@@ -26,6 +26,8 @@ export const LABEL = Object.freeze({
   MODIFIER: "MODIFIER",
   MODIFIERS: "MODIFIERS",
 });
+/* RECORDS' tabs, in the order ←/→ walk them (menuapp.js RECORD_SCREENS: SCORES, STATS, TROPHIES). */
+export const RECORD_TABS = Object.freeze(["SCORES", "STATS", "MEDALS"]);
 /* NORMAL difficulty, NORMAL speed, no modifiers: the plain run, as PAUSE's tag row reads it ("only non-default rules"). */
 export const DEFAULT_RULES = "DEFAULT RULES";
 export const diffWord = (h) => DIFF[clampHeat(h)];

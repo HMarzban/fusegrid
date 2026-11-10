@@ -68,7 +68,8 @@ check("DEFAULT_RULES: the plain run (NORMAL difficulty and speed, no modifiers),
 check("runWords: every setting, defaults included", W.runWords({}) === "NORMAL DIFFICULTY · NORMAL SPEED" && W.runWords({ heat: 2, pace: -1, pact: PACT.THIN }) === "EXPERT DIFFICULTY · SLOW SPEED · FEWER ITEMS");
 
 /* ---- labels the app dispatches by (confirm() reads the label): the strings changed, the rows and their order did not ---- */
-check("MENU row OPTIONS is SETTINGS, same eight rows in today's order", J(ITEMS) === J(["PLAY", W.LABEL.LEVEL_SELECT, "DAILY", W.LABEL.SETTINGS, "GUIDE", "HIGH SCORES", "STATS", "SOURCE"]));
+check("MENU row OPTIONS is SETTINGS; seven rows in the design record's order, RECORDS for HIGH SCORES and STATS (Task 2.2)", J(ITEMS) === J(["PLAY", W.LABEL.LEVEL_SELECT, "DAILY", W.LABEL.RECORDS, W.LABEL.SETTINGS, "GUIDE", "SOURCE"]));
+check("RECORDS' tabs: SCORES · STATS · MEDALS, frozen, in tab order", J(W.RECORD_TABS) === J(["SCORES", "STATS", "MEDALS"]) && Object.isFrozen(W.RECORD_TABS));
 check("PAUSE row OPTIONS is SETTINGS, order kept; scenes' copy mirrors it", J(PAUSE_ITEMS) === J(["RESUME", "RESTART", W.LABEL.SETTINGS, "QUIT TO MENU"]) && J(PAUSE_ROWS) === J(PAUSE_ITEMS));
 check("SETTINGS row RENDER is ART STYLE, twelve rows in order", OPT_ROWS.length === 12 && OPT_ROWS[3] === W.LABEL.ART_STYLE && md.OPT_N === 12);
 check("GUIDE door ITEMS is POWER-UPS", J(GUIDE_ROWS) === J(["HOW TO PLAY", W.LABEL.POWER_UPS, "ENEMIES", "FLOOR"]));
@@ -160,13 +161,13 @@ const page = () => createControlsPage({ get: () => DEF_CONTROLS, set() {}, padVi
 const mkApp = (screen, o) => Object.assign(createMenuApp({ settings: { fpm: 1 }, controls: page(), anaOpen: () => true }), { screen, subT: 5, stats: STATS, dailyTag: "PLAYED" }, o || {});
 const box = (w, h, lay) => ({ width: w, height: h, ownerDocument: { body: { getAttribute: () => lay } }, getBoundingClientRect: () => ({ left: 0, top: 0, width: w, height: h }) });
 const APPS = [];
-for (let cur = 0; cur < 8; cur++) for (const o of [{}, { pactUnlocked: true, heat: 2, pace: 1, pact: 15, timeAttack: true, level: 7, padNote: "CONTROLLER READY · VIBRATION MEDIUM" }]) APPS.push(["MENU", { cursor: cur, ...o }]);
+for (let cur = 0; cur < ITEMS.length; cur++) for (const o of [{}, { pactUnlocked: true, heat: 2, pace: 1, pact: 15, timeAttack: true, level: 7, padNote: "CONTROLLER READY · VIBRATION MEDIUM" }]) APPS.push(["MENU", { cursor: cur, ...o }]);
 APPS.push(["MENU", { soundNote: "NO SOUND YET · PRESS A KEY OR TAP" }], ["MENU", { padNote: "CONTROLLER READY" }]);
 for (const o of [{}, { pactUnlocked: true }, { pactUnlocked: true, heat: 1, pace: -1, pact: 15, timeAttack: true, level: 8 }, { pactUnlocked: false, lockR: 7, lockT: 4.9 }]) APPS.push(["LEVEL", o]);
 for (const s of ["HOWTO", "ITEMS", "ENEMIES", "FLOOR", "TROPHIES", "CONTROLS"]) APPS.push([s, {}]);
 for (let r = 0; r < 4; r++) APPS.push(["GUIDE", { guideRow: r }]);
-for (let h = 0; h < 3; h++) APPS.push(["SCORES", { scoreHeat: h }]);
-APPS.push(["STATS", {}], ["STATS", { resetArm: true }], ["STATS", { toast: { s: "COPIED", ok: true, t: 1 } }]);
+for (let h = 0; h < 3; h++) APPS.push(["SCORES", { scoreHeat: h }], ["SCORES", { scoreHeat: h, recFocus: 1 }]); // RECORDS: the tab row (an app's default), then the page body
+APPS.push(["STATS", {}], ["STATS", { recFocus: 1 }], ["STATS", { resetArm: true }], ["STATS", { toast: { s: "COPIED", ok: true, t: 1 } }]);
 for (let r = 0; r < 12; r++) APPS.push(["SETTINGS", { optRow: r, lookJob: r === 3 ? { k: "px", state: "failed" } : null, _anaSaid: r === 8 }]);
 for (let r = 0; r < 8; r++) APPS.push(["GRAPHICS", { gfxRow: r }]);
 APPS.push(["GRAPHICS", { gfxRow: 1, settings: { fpm: 1, fps: 2, res: 2, shd: 2, aa: 2, fxq: 1, dmo: 2 } }]); // FRAME RATE MAX: a frame rate's MAX
@@ -259,7 +260,7 @@ check("ruling 7: a bare NORMAL or HARD only where its own line or row names its 
     "FURTHEST LEVEL YET", "MATCHED YOUR", "FROM YOUR", "DAILY 2026-11-10 · NORMAL SPEED", "PAUSED · LEVEL 3", "LEVEL ENDS", "THROW POWER-UP", "CLEAR LEVEL 5 TO OPEN", "REBIND IN SETTINGS",
     "KEEPS SETTINGS", "replaces POWER BOMB", "NO NORMAL DIFFICULTY RUNS YET", "TOP 4210", "LEVELS 1-5 IN ONE RUN", "BESTS · NO MODIFIERS", "NEXT RUN", "MODIFIERS ONE LIFE", "CHANGE ART STYLE",
     "LEVEL 8 · CROWN", "the level you reach", "DID NOT LOAD · SETTINGS", "· next level", "8 LEVELS", "5 LEVELS · 3 LOCKED", "NO VIBRATION AT ALL", "LIVES 1",
-    "UNDER 3:00 · DEFAULT RULES", "DAILY 2026-11-10 · LEVEL 3 · 1840", "×2 ON HARD · ×3 ON EXPERT DIFFICULTY", "ALL TEN · BY DIFFICULTY", "BEST RUNS BY DIFFICULTY", "SPD MAX", "FRAME RATE MAX", "SENSITIVITY MAX", "LEVEL 8"];
+    "UNDER 3:00 · DEFAULT RULES", "DAILY 2026-11-10 · LEVEL 3 · 1840", "RECORDS", "←→ TAB · ↓ DIFFICULTY", "←→ TAB · T MEDALS", "←→ TAB · ENTER / ESC BACK", "TABS: SCORES · STATS · MEDALS", "×2 ON HARD · ×3 ON EXPERT DIFFICULTY", "ALL TEN · BY DIFFICULTY", "BEST RUNS BY DIFFICULTY", "SPD MAX", "FRAME RATE MAX", "SENSITIVITY MAX", "LEVEL 8"];
   const all = [...found.keys()], miss = SEEN.filter((w) => !all.some((s) => s.indexOf(w) >= 0));
   check("the sweep reached every branch it claims (one marker each)", miss.length === 0, miss.join(" | "));
   check("ENEMIES: one level reads LEVEL 8, a span LEVELS 1-8 (words.js levelsOf); no LEVELS n for a single level", found.has("LEVEL 8") && found.has("LEVELS 1-8") && ![...found.keys()].some((k) => /^LEVELS \d+$/.test(k) && !/^LEVELS \d+ ·/.test(k) && !/RUN|KILLS/.test(k)) && W.levelsOf("8") === "LEVEL 8" && W.levelsOf("1-3, 5-8") === "LEVELS 1-3, 5-8");

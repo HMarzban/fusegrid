@@ -43,12 +43,15 @@ export const ITEMS = Object.freeze([
   "PLAY",
   "LEVEL SELECT",
   "DAILY",
+  "RECORDS",
   "SETTINGS",
   "GUIDE",
-  "HIGH SCORES",
-  "STATS",
   "SOURCE",
 ]);
+/* RECORDS is no SCREEN of its own: the three pages its row opens, in tab order (words.js RECORD_TABS
+   SCORES · STATS · MEDALS). The tab strip is the top row of each page's ↑↓ walk (recFocus 0); the body under it is
+   recFocus 1 where the page has one (SCORES' difficulty filter, STATS' foot actions; MEDALS has none). */
+export const RECORD_SCREENS = Object.freeze([SCREEN.SCORES, SCREEN.STATS, SCREEN.TROPHIES]);
 /* GUIDE rows, frozen and index-addressed: guideRow, drawGuide and confirm's
    GUIDE dispatch all count this array. */
 export const GUIDE_ROWS = Object.freeze(["HOW TO PLAY", "POWER-UPS", "ENEMIES", "FLOOR"]);
@@ -91,6 +94,7 @@ export function createMenuApp(opts = {}) {
   const onStart = o.onStart || null;
   const onSource = o.onSource || null;
   const onStats = o.onStats || null;
+  const onMedals = o.onMedals || null; // the MEDALS page's rows, read on every arrival; never the STATS opt-in (a tap may skip STATS)
   const onSettings = o.onSettings || null;
   const onPauseCmd = o.onPauseCmd || null;
   const onWarm = o.onWarm || null;
@@ -105,6 +109,7 @@ export function createMenuApp(opts = {}) {
     optRow: 0, // SETTINGS row cursor — its OWN field, so the MENU cursor
     // survives a round trip through the page
     guideRow: 0, // GUIDE row cursor — its OWN field too, same reason
+    recFocus: 0, // RECORDS: 0 the tab row, 1 the page body; every arrival lands on the tab row
     pauseCursor: 0,
     pauseView: 0, // 0 list / 1 inline SETTINGS / 2 inline GRAPHICS / 3 inline CONTROLS; reset on the PLAY->PAUSE edge
     controls: o.controls || null, // the CONTROLS page (controlspage.js); null = the door is inert
@@ -229,6 +234,13 @@ export function createMenuApp(opts = {}) {
           axis = 1;
         }
       }
+      else if (RECORD_SCREENS.indexOf(this.screen) >= 0) { // a held ←/→ repeats only on the tab row: the SCORES body filter steps per press, as before
+        if ((ax.left || ax.right) && !this.recFocus) dir = ax.left ? -1 : 1;
+        else if (ax.up || ax.down) {
+          dir = ax.up ? -1 : 1;
+          axis = 1;
+        }
+      }
       this._repeat(d, dir, axis);
       if (rising) this.confirm();
       this._taps = {};
@@ -317,8 +329,12 @@ export function createMenuApp(opts = {}) {
           return this.onControls() ? this.controls.tab("key") : this.adjustPace(-1);
         case "BracketRight":
           return this.onControls() ? this.controls.tab("pad") : this.adjustPace(1);
-        case "KeyT":
-          return this.screen === SCREEN.STATS ? this._push(SCREEN.TROPHIES) : false;
+        case "KeyQ": // RECORDS' tab keys from anywhere on its pages (keyboard only; off them recTab is false)
+          return this.recTab(-1);
+        case "KeyE":
+          return this.recTab(1);
+        case "KeyT": // STATS' T MEDALS: the MEDALS tab
+          return this.screen === SCREEN.STATS ? this.recTab(1) : false;
         case "KeyR":
           if (this.screen !== SCREEN.STATS) return false;
           if (this.resetArm) { this.resetArm = false; if (o.onReset) o.onReset(); return true; }
@@ -365,8 +381,8 @@ export function createMenuApp(opts = {}) {
         this._taps[dir + ":" + (lat ? 0 : 1)] = true;
         return true;
       }
-      if (this.screen === SCREEN.SCORES && lat && this.move(dir, 0)) {
-        this._taps[dir + ":0"] = true;
+      if (RECORD_SCREENS.indexOf(this.screen) >= 0 && this.move(dir, lat ? 0 : 1)) {
+        this._taps[dir + ":" + (lat ? 0 : 1)] = true;
         return true;
       }
       return false;
@@ -396,11 +412,9 @@ export function createMenuApp(opts = {}) {
             case "GUIDE":
               this.guideRow = 0;
               return this._push(SCREEN.GUIDE);
-            case "HIGH SCORES":
+            case "RECORDS":
+              this.recFocus = 0;
               return this._push(SCREEN.SCORES);
-            case "STATS":
-              if (onStats) onStats();
-              return this._push(SCREEN.STATS);
             case "SOURCE":
               if (onSource) onSource();
               return this._feel("confirm");
@@ -456,13 +470,14 @@ export function createMenuApp(opts = {}) {
         this.screen === SCREEN.FLOOR
       )
         return this._push(SCREEN.GUIDE, 1);
-      if (this.screen === SCREEN.TROPHIES) return this._push(SCREEN.STATS, 1);
+      if (RECORD_SCREENS.indexOf(this.screen) >= 0) { // any tab, tab row or body: MENU on RECORDS
+        this.cursor = ITEMS.indexOf("RECORDS");
+        return this._push(SCREEN.MENU, 1);
+      }
       if (
         this.screen === SCREEN.LEVEL ||
-        this.screen === SCREEN.SCORES ||
         this.screen === SCREEN.SETTINGS ||
-        this.screen === SCREEN.GUIDE ||
-        this.screen === SCREEN.STATS
+        this.screen === SCREEN.GUIDE
       )
         return this._push(SCREEN.MENU, 1);
       return false;
@@ -557,9 +572,11 @@ export function createMenuApp(opts = {}) {
         this.level = nl;
         return true;
       }
-      if (this.screen === SCREEN.SCORES) {
-        if ((axis | 0) !== 0) return false;
-        const nh = clampHeat(this.scoreHeat + dir);
+      if (RECORD_SCREENS.indexOf(this.screen) >= 0) {
+        if ((axis | 0) === 1) return this._recFocus(dir);
+        if (!this.recFocus) return this._recTab(dir); // the tab row; the move() wrapper cues it, so never the public recTab here
+        if (this.screen !== SCREEN.SCORES) return false; // STATS' body has no lateral control
+        const nh = clampHeat(this.scoreHeat + dir); // any delta, so a difficulty tab tap is one move
         if (nh === this.scoreHeat) return false;
         this.scoreHeat = nh;
         return true;
@@ -569,6 +586,37 @@ export function createMenuApp(opts = {}) {
       if (this.screen === SCREEN.GRAPHICS)
         return (axis | 0) === 1 ? this.gfxMove(dir) : this.gfxAdjust(dir);
       return false;
+    },
+    /* RECORDS' tab step by d tabs (a key ±1, a tap the delta to its tab), clamped, never wrapping. Lands on the tab row,
+       disarms an armed STATS reset, and every arrival at STATS calls onStats (the event ring's opt-in, as opening STATS from
+       MENU did), every arrival at MEDALS onMedals (its rows only). main wraps this for the one uiMove; false (no cue, no
+       feel) at a clamped edge, on the tab already shown, and off the three pages. */
+    recTab(d) {
+      return this._recTab(d);
+    },
+    _recTab(d) {
+      if (this.capturing) return false;
+      const i = RECORD_SCREENS.indexOf(this.screen),
+        j = Math.max(0, Math.min(RECORD_SCREENS.length - 1, i + Math.round(d || 0)));
+      if (i < 0 || j === i) return false;
+      this.idleT = 0;
+      this.parked = false;
+      this.resetArm = false;
+      const s = RECORD_SCREENS[j];
+      if (s === SCREEN.STATS && onStats) onStats();
+      if (s === SCREEN.TROPHIES && onMedals) onMedals();
+      this.screen = s; // no _push: the repeat state stays, so a held arrow and its own key press make one step, never two
+      this.recFocus = 0;
+      this.subT = 0;
+      this.togT = -1;
+      return this._feel("move");
+    },
+    /* ↓ from the tab row into the page body where it has one, ↑ back; MEDALS has no body. */
+    _recFocus(dir) {
+      const f = dir > 0 ? 1 : 0;
+      if (f === this.recFocus || (f && this.screen === SCREEN.TROPHIES)) return false;
+      this.recFocus = f;
+      return true;
     },
     adjustPace(dir) {
       this.idleT = 0;

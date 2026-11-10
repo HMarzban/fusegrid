@@ -6,7 +6,7 @@
 import { readFileSync } from "node:fs";
 import { WIN_SHELL, FIT_RES, PORT_SHELL, fitBox, mountFit, portraitGeo, shellGeo } from "../src/app/fit.js";
 import { mountPointer } from "../src/app/pointer.js";
-import { SCREEN, createMenuApp } from "../src/app/menuapp.js";
+import { ITEMS, SCREEN, createMenuApp } from "../src/app/menuapp.js";
 import { createControlsPage } from "../src/app/controlspage.js";
 import { DEF_CONTROLS } from "../src/app/controls.js";
 import { overlayBox, pauseHit, touchLay } from "../src/render/scenes.js";
@@ -66,7 +66,7 @@ const mkApp = (screen) => {
   a.screen = screen; a.subT = 5; a.stats = { rows: [["RUNS", 3]], notes: ["NOTE"], trophies: [] };
   return a;
 };
-const HIT = { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit: md.menuHit, settingsHit: md.settingsHit, graphicsHit: md.graphicsHit, guideHit: md.guideHit, levelHit: md.levelHit, scoresHit: md.scoresHit, statsHit: md.statsHit, layout: md.layout };
+const HIT = { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit: md.menuHit, settingsHit: md.settingsHit, graphicsHit: md.graphicsHit, guideHit: md.guideHit, levelHit: md.levelHit, scoresHit: md.scoresHit, statsHit: md.statsHit, recTabHit: md.recTabHit, layout: md.layout };
 const SHELL_SCREENS = ["MENU", "LEVEL", "HOWTO", "SCORES", "ITEMS", "ENEMIES", "SETTINGS", "GUIDE", "STATS", "TROPHIES", "GRAPHICS", "FLOOR", "CONTROLS"];
 
 // ---- shellGeo per layout: d and l are the window at scale 1, p follows PORT_SHELL ----
@@ -183,15 +183,15 @@ for (const [lay, W, H, touch, dpr, q] of [["d", 1366, 768, false, 2, 2], ["d", 1
     drawShell(R.c, app, { state: "PLAY", time: 1 }, sh.box, "2d", () => [], () => 0, () => ({}));
     const t = R.texts.find((q) => q.s === "GUIDE");
     D.sh.fire("pointerdown", { clientX: t.x + 4, clientY: t.y, button: 2, pointerType: "mouse" });
-    check("#sh: a right-click pointerdown on the GUIDE row confirms it", app.cursor === 4 && app.screen === SCREEN.GUIDE, app.cursor + "/" + app.screen);
+    check("#sh: a right-click pointerdown on the GUIDE row confirms it", app.cursor === ITEMS.indexOf("GUIDE") && app.screen === SCREEN.GUIDE, app.cursor + "/" + app.screen);
   } finally { undo(); }
   const D2 = mkDom(1366, 500, false, 1);
   try {
     const cv = mkCv(), fit = mountFit(cv), app = mkApp(SCREEN.MENU), L0 = md.layout(600, 520);
     mountPointer({ canvas: cv, fit, input: { _intent: { fire: true }, onUiKey() {} }, app, world: { state: "PLAY" }, kind: () => "2d", ctl: () => null, hit: HIT });
-    const row = md.menuGeom(L0, 8, false).rows[4];
+    const row = md.menuGeom(L0, 7, false).rows[ITEMS.indexOf("GUIDE")];
     cv.fire("pointerdown", { clientX: 300, clientY: row.cy, button: 2, pointerType: "mouse", currentTarget: cv });
-    check("#c with no shell box (the pre-task path): the same right-click confirms the row, so #sh matches it", fit.shell(1) === null && app.cursor === 4 && app.screen === SCREEN.GUIDE, app.cursor + "/" + app.screen);
+    check("#c with no shell box (the pre-task path): the same right-click confirms the row, so #sh matches it", fit.shell(1) === null && app.cursor === ITEMS.indexOf("GUIDE") && app.screen === SCREEN.GUIDE, app.cursor + "/" + app.screen);
   } finally { undo(); }
 }
 
@@ -217,8 +217,8 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
     drawShell(R.c, app, { state: "PLAY", time: 1 }, sh.box, "2d", () => [], () => 0, () => ({}));
     const t = R.texts.find((q) => q.s === "SETTINGS"), r = D.sh.getBoundingClientRect(), k = r.width / sh.box.width;
     D.sh.fire("pointerdown", { clientX: r.left + (t.x + 4) * k, clientY: r.top + t.y * k, pointerType: "mouse" });
-    check(`${lay} ${W}x${H}: a tap on #sh at the drawn OPTIONS row confirms it (cursor 3, OPTIONS opens), the fire latch swallowed`,
-      app.cursor === 3 && app.screen === SCREEN.SETTINGS && input._intent.fire === false, app.cursor + "/" + app.screen);
+    check(`${lay} ${W}x${H}: a tap on #sh at the drawn OPTIONS row confirms it (cursor 4, OPTIONS opens), the fire latch swallowed`,
+      app.cursor === ITEMS.indexOf("SETTINGS") && app.screen === SCREEN.SETTINGS && input._intent.fire === false, app.cursor + "/" + app.screen);
   } finally { undo(); }
 }
 
@@ -227,7 +227,7 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
   const base = {};
   const shot = (nm, box, cur) => { const a = mkApp(SCREEN[nm]); if (cur != null) a.cursor = cur; const R = rec(); drawShell(R.c, a, { state: "PLAY", time: 1 }, box, "2d", () => [], () => 0, () => ({})); return R.texts; };
   const boxOf = (g, lay) => ({ width: g.w, height: g.h, logo: g.logo, ownerDocument: { body: { getAttribute: () => lay } }, getBoundingClientRect: () => ({ left: 0, top: 0, width: g.w * g.s, height: g.h * g.s }) });
-  const each = (f) => { for (const nm of SHELL_SCREENS) for (let cur = 0; cur < (nm === "MENU" ? 8 : 1); cur++) f(nm, nm === "MENU" ? cur : null); };
+  const each = (f) => { for (const nm of SHELL_SCREENS) for (let cur = 0; cur < (nm === "MENU" ? ITEMS.length : 1); cur++) f(nm, nm === "MENU" ? cur : null); };
   /* exact strings in order, except the landscape tablets' MENU: a tall touch box hangs the hub's build tag under the plate instead of on the SOURCE tile
      (menudraw drawMenu), so there the words are compared by " · " token, order-free; an ellipsis still changes a token */
   const exact = (T) => T.map((q) => q.s).join("|"), words = (T) => T.flatMap((q) => q.s.split(" · ")).sort().join("|");
@@ -245,8 +245,8 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
     const inBox = (S) => S.x >= 0 && S.y >= 0 && S.x + S.w <= g.w && S.y + S.h <= g.h && S.f === 1;
     const inPlate = (r, S) => r.x >= S.x - 1 && r.y >= S.y && r.x + r.w <= S.x + S.w + 1.01 && r.y + r.h <= S.y + S.h + 0.01;
     const ctr = (r) => [r.x + r.w / 2, r.y + r.h / 2];
-    const mg = md.menuGeom(L, 8, touch);
-    check(`MENU: inside the box, every row taps to itself (${tg})`, mg.y0 >= 0 && mg.y0 + mg.h <= g.h && mg.rows.every((r, i) => md.menuHit(r.x != null ? r.x + r.w / 2 : g.w / 2, r.cy, L, 8, touch) === i));
+    const mg = md.menuGeom(L, 7, touch);
+    check(`MENU: inside the box, every row taps to itself (${tg})`, mg.y0 >= 0 && mg.y0 + mg.h <= g.h && mg.rows.every((r, i) => md.menuHit(r.x != null ? r.x + r.w / 2 : g.w / 2, r.cy, L, 7, touch) === i));
     for (const U of [false, true]) {
       const G = md.levelGeom(L, U, touch), rects = [...G.room, G.pane, G.heatCap, ...G.heat, G.paceCap, ...G.pace, ...(U ? [G.modeCap, ...G.mode, G.help] : []), G.start];
       const hits = [...G.room.map((r, i) => [r, i < G.cap ? "room" : "lock", i]), ...G.heat.map((r, i) => [r, "heat", i]), ...G.pace.map((r, i) => [r, "pace", i]), ...G.mode.map((r, i) => [r, "mode", i]), [G.start, "start"]];
@@ -266,6 +266,8 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
     check(`GUIDE: doors in the box, each taps to itself (${tg})`, inBox(gd.S) && gd.tiles.every((r, i) => md.guideHit(...ctr(r), L, 0, touch) === i));
     const st = md.statsGeom(L).S;
     check(`STATS: in the box, foot T taps KeyT (${tg})`, inBox(st) && md.statsHit(st.mid - 47 * 3 + 24, st.footY, L, false) === "KeyT");
+    check(`RECORDS: the tab strip of SCORES, STATS and MEDALS sits in each plate and each tab taps to itself (${tg})`,
+      [0, 1, 2].every((p) => { const S = md.recPlate(L, p, touch); return md.recTabsGeom(S, touch).every((r, i) => inPlate(r, S) && md.recTabHit(...ctr(r), L, p, touch) === i); }));
     const cg = controlsGeo(box, "2d", false);
     check(`CONTROLS: the painted geometry is the tapped one, every row taps to itself, a window corner is off the plate (${tg})`,
       J(cg) === J(geoFor(L, touch, L.narrow, g.s)) && cg.x >= 0 && cg.y >= 0 && cg.x + cg.w <= g.w && cg.y + cg.h <= g.h &&

@@ -9,7 +9,7 @@ import { POWER, FOES, helpOf } from "../core/entities.js";
 import { HEAT_COL, HEAT_MARK, clampHeat, heatRoster, heatProfile } from "../core/heat.js";
 import { pactLabel } from "../core/pact.js";
 import { PACT_COL, applyPact } from "../core/pact.js";
-import { DIFF, SPEED, MOD, MOD_BITS, TIME_TRIAL, LABEL, diffTag, speedTag, modWords, runWords, runParts, levelsOf } from "./words.js";
+import { DIFF, SPEED, MOD, MOD_BITS, TIME_TRIAL, LABEL, RECORD_TABS, diffTag, speedTag, modWords, runWords, runParts, levelsOf } from "./words.js";
 import { drawEnemyBody } from "./sprites.js";
 import { drawItemBody } from "./itemdraw.js";
 import { HOME, TILE_HELP, TILE_NAME } from "../core/feat.js";
@@ -94,6 +94,7 @@ export function head(c, S, title, kicker) {
     c.fillText(kicker, S.mid, S.headY - 9);
     spaced(c, false);
   }
+  if (!title) return; // RECORDS' pages: the tab strip stands on the title's line
   c.fillStyle = TEXT;
   c.font = sans(18, "700");
   c.fillText(title, S.mid, S.headY + 8);
@@ -170,8 +171,10 @@ export function paintRow(c, x, y, w, h, label, val, sel, o) {
   }
 }
 /* Pure list geometry. rows=[{hero,gapBefore}] (label etc. ignored); o =
-   {top, bot, w, pitch, hero, gap, pad, head, foot}. Pitches are CAPS: a band
-   too short for them scales pitch / hero / gap down together. Hit bands are
+   {top, bot, w, pitch, hero, gap, pad, head, foot, body}. Pitches are CAPS: a band
+   too short for them scales pitch / hero / gap down together. body is a floor
+   for the rows' own height (MENU: its pane keeps its room); the rows stay at the
+   top and the floor's rest is plate under the last one. Hit bands are
    contiguous: each row owns half of any group gap beside it. */
 export function listGeom(L, rows, o) {
   const p = o || {},
@@ -185,9 +188,10 @@ export function listGeom(L, rows, o) {
     sum += rows[i].hero ? p.hero || p.pitch : p.pitch;
     if (i && rows[i].gapBefore) gaps += p.gap | 0;
   }
+  const body = Math.max(sum + gaps, p.body || 0);
   const room = p.bot - p.top - pad * 2 - hd - ft;
-  const f = sum + gaps > 0 ? Math.min(1, room / (sum + gaps)) : 1;
-  const h = Math.round(pad * 2 + hd + ft + (sum + gaps) * f);
+  const f = body > 0 ? Math.min(1, room / body) : 1;
+  const h = Math.round(pad * 2 + hd + ft + body * f);
   const w = Math.min(L.cx * 2 - 40, p.w || 380);
   const x = p.x != null ? p.x : Math.round(L.cx - w / 2),
     y = Math.round(p.top + Math.max(0, (p.bot - p.top - h) / 2));
@@ -755,16 +759,22 @@ export function slamOf(t) {
    Keyboard: one 560 plate under the logo, a 272 list (pitch 26 / hero 40 /
    gap 6) beside a preview pane that follows the cursor (menuPane).
    Touch (body[data-lay] p/l): a hub of tiles in the pinned reading order —
-   PLAY bar, LEVEL SELECT | DAILY, OPTIONS | GUIDE, HIGH SCORES | STATS, the
+   PLAY bar, LEVEL SELECT | DAILY, RECORDS | SETTINGS, the GUIDE bar, the
    SOURCE foot link — so ↑↓ stays the linear walk and every index the
-   headless confirms use still names the same row. menuLogo is the one source
+   headless confirms use still names the same row (Task 2.2: the approved
+   phone hub reaches LEVEL SELECT through a next-run card, which a later task
+   builds; until then the hub keeps its LEVEL SELECT tile). menuLogo is the one source
    for shellview's logo and the list top. ui.rev is the build tag shellview
    derives from CACHE_NAME: keyboard prints it in the foot hint; touch hangs it
-   under the hub where the box has room (#sh), else on the SOURCE tile. */
-const MENU_DOOR = [LABEL.LEVEL_SELECT, LABEL.SETTINGS, "GUIDE", "HIGH SCORES", "STATS"];
-const menuShape = (n, touch) => Array.from({ length: n }, (_, i) => ({ hero: i === 0, gapBefore: !touch && n === 8 && (i === 3 || i === 5 || i === 7) }));
+   under the hub where the box has room (#sh), else on the SOURCE tile.
+   Keyboard groups (seven rows): PLAY, LEVEL SELECT, DAILY | RECORDS |
+   SETTINGS, GUIDE | SOURCE; the plate keeps the eight-row list's body
+   (MENU_BODY), so the preview pane keeps the room every pane is laid out for. */
+const MENU_DOOR = [LABEL.LEVEL_SELECT, LABEL.RECORDS, LABEL.SETTINGS, "GUIDE"];
+const menuShape = (n, touch) => Array.from({ length: n }, (_, i) => ({ hero: i === 0, gapBefore: !touch && n === 7 && (i === 3 || i === 4 || i === 6) }));
 export const MENU_PITCH = 26, MENU_PITCH_T = 66;
-const MENU_W = 560, MENU_LIST = 272, HUB = [70, 66, 66, 66, 50]; // SOURCE 50 = the 32 CSS px floor on a 393 px phone
+const MENU_W = 560, MENU_LIST = 272, HUB = [70, 66, 66, 66, 50], HUB_N = [1, 2, 2, 1, 1]; // tiles per hub row; SOURCE 50 = the 32 CSS px floor on a 393 px phone
+const MENU_BODY = 40 + 7 * MENU_PITCH + 3 * 6; // 240: the hero, seven rows and three gaps the panes were laid out for
 export function menuLogo(L) {
   return { cy: L.logoCy, s: L.logoScale };
 }
@@ -782,9 +792,9 @@ function hubGeom(L, top) {
     cw = (iw - g) / 2,
     cells = [];
   let yy = y + pad;
-  for (let r = 0; r < 5; r++) {
+  for (let r = 0; r < HUB.length; r++) {
     const rh = HUB[r] * f;
-    if (r === 0 || r === 4) cells.push({ x: x + pad, y: yy, w: iw, h: rh });
+    if (HUB_N[r] === 1) cells.push({ x: x + pad, y: yy, w: iw, h: rh });
     else cells.push({ x: x + pad, y: yy, w: cw, h: rh }, { x: x + pad + cw + g, y: yy, w: cw, h: rh });
     yy += rh + g * f;
   }
@@ -794,10 +804,10 @@ function hubGeom(L, top) {
 export function menuList(L, n, touch) {
   const lg = menuLogo(L),
     top = Math.max(lg.cy + 10 * lg.s + 8, 8);
-  if (touch && n === 8) return hubGeom(L, top);
+  if (touch && n === 7) return hubGeom(L, top);
   const w = Math.min(L.cx * 2 - 40, MENU_W),
     x = Math.round(L.cx - w / 2),
-    g = listGeom(L, menuShape(n), { top, bot: L.footY - 14, w: MENU_LIST, x, pitch: MENU_PITCH, hero: 40, gap: 6, pad: 10 });
+    g = listGeom(L, menuShape(n), { top, bot: L.footY - 14, w: MENU_LIST, x, pitch: MENU_PITCH, hero: 40, gap: 6, pad: 10, body: MENU_BODY });
   g.px = x;
   g.pw = w;
   g.pane = { x: x + MENU_LIST + 2, y: g.y + 10, w: w - MENU_LIST - 12, h: g.h - 20 };
@@ -830,8 +840,7 @@ function teaser(label, val, I) {
     case "DAILY": return val === "NEW" ? "NEW · TODAY'S BOARD" : "PLAYED · " + ((i.daily && i.daily.played) | 0) + " TODAY";
     case LABEL.SETTINGS: return "LOOK · " + LOOK[i.look | 0];
     case "GUIDE": return POWER.length + " " + LABEL.POWER_UPS + " · " + FOES.length + " FOES";
-    case "HIGH SCORES": return i.top && i.top.length ? ["TOP " + i.top[0].s + " · " + diffTag(0), "TOP " + i.top[0].s] : "NO RUNS YET";
-    case "STATS": return (i.medals | 0) + "/8 MEDALS · " + (i.days | 0) + ((i.days | 0) === 1 ? " DAY" : " DAYS");
+    case LABEL.RECORDS: return i.top && i.top.length ? ["TOP " + i.top[0].s + " · " + diffTag(0), "TOP " + i.top[0].s] : "NO RUNS YET"; // played runs only (main drops the seeded table)
     case "SOURCE": return "github.com/HMarzban/fusegrid";
   }
   return val;
@@ -876,8 +885,9 @@ export function drawMenu(c, ui, L, t) {
   let sign = note || !padSign(ui && ui.padNote) ? "" : PAD_SIGN + (rev ? " · " + rev : ""), // the owner's build tag stays visible
     tag = note || sign;
   if (g.hub) {
-    const under = !!(rev || tag) && L.footY - (g.y + g.h) >= 10; // off every tile: a root list ignores an off-plate tap
-    sign = vibSign(c, sign, padNote, rev, under ? L.cx * 2 - 16 : g.rows[7].w - 124 + 24, under ? null : font(touch && g.rows[7].w >= 220 ? 13 : 11, "700")); // on the tile: paintTile's fit, at its type
+    const under = !!(rev || tag) && L.footY - (g.y + g.h) >= 10, // off every tile: a root list ignores an off-plate tap
+      sw = g.rows[n - 1].w; // the SOURCE tile, the last row
+    sign = vibSign(c, sign, padNote, rev, under ? L.cx * 2 - 16 : sw - 124 + 24, under ? null : font(touch && sw >= 220 ? 13 : 11, "700")); // on the tile: paintTile's fit, at its type
     tag = note || sign;
     plate(c, g.x, g.y, g.w, g.h);
     for (let i = 0; i < rows.length; i++) {
@@ -888,7 +898,7 @@ export function drawMenu(c, ui, L, t) {
       c.globalAlpha = pa * k;
       const q = g.rows[i],
         rr2 = { x: q.x, y: q.y + 6 * (1 - k), w: q.w, h: q.h };
-      paintTile(c, rr2, r.label, r.ext && tag && !under ? tag : r.ext && rev && !under ? rev + " · " + sub : sub, i === cur, { hero: r.hero, ext: r.ext, door: r.door, touch, flat: i === 7, subCol: r.ext && sign && !under ? ACCENT : r.vc, fit: r.ext && !!sign && !under });
+      paintTile(c, rr2, r.label, r.ext && tag && !under ? tag : r.ext && rev && !under ? rev + " · " + sub : sub, i === cur, { hero: r.hero, ext: r.ext, door: r.door, touch, flat: i === n - 1, subCol: r.ext && sign && !under ? ACCENT : r.vc, fit: r.ext && !!sign && !under });
     }
     if (under) {
       c.globalAlpha = pa;
@@ -1053,7 +1063,7 @@ function menuPane(c, P, row, I, kind, t) {
     }
     paneLine(c, P, P.y + 166, "HOW TO PLAY · " + LABEL.POWER_UPS + " · ENEMIES", TEXT, 10, "center");
     paneLine(c, P, P.y + P.h - 14, "EVERY POWER-UP + FOE, WITH WHAT IT DOES", MUTED, 10, "center");
-  } else if (lab === "HIGH SCORES") {
+  } else if (lab === LABEL.RECORDS) {
     paneHead(c, P, "YOUR TOP 3", diffTag(0));
     const top = I.top || [];
     if (!top.length) paneLine(c, P, P.y + 90, "NO " + diffTag(0) + " RUNS YET", MUTED, 12, "center");
@@ -1075,35 +1085,8 @@ function menuPane(c, P, row, I, kind, t) {
       c.fillText(LABEL.LEVEL + " " + s.l + " · " + s.d, r.x + r.w - 10, r.y + 20);
     }
     paneLine(c, P, P.y + 186, "×2 ON " + DIFF[1] + " · ×3 ON " + DIFF[2] + " " + LABEL.DIFFICULTY, TEXT); // the setting named on the line (ruling 7)
+    if (P.h >= 216) paneLine(c, P, P.y + 202, "TABS: " + RECORD_TABS.join(" · "), MUTED); // where the pane has the line (the iso guard's does not)
     paneLine(c, P, P.y + P.h - 14, hints().ok + ": ALL TEN · BY " + LABEL.DIFFICULTY, MUTED);
-  } else if (lab === "STATS") {
-    paneHead(c, P, "YOUR CABINET", (I.medals | 0) + "/8 MEDALS", (I.medals | 0) ? ACCENT : MUTED);
-    const dw = (P.w - 20) / 8;
-    for (let i = 0; i < 8; i++) {
-      const cx = P.x + 10 + dw * (i + 0.5), on = ((I.mask | 0) >> i) & 1;
-      rr(c, cx - 10, P.y + 36, 20, 20, 10);
-      if (on) {
-        c.fillStyle = ACCENT;
-        c.fill();
-      } else {
-        c.strokeStyle = MUTED;
-        c.lineWidth = 1.5;
-        c.stroke();
-      }
-    }
-    const big = [["DAYS PLAYED", I.days | 0], ["RUNS", I.runs | 0], ["LEVELS CLEARED", I.rooms | 0], ["KILLS", I.kills | 0]];
-    for (let i = 0; i < 4; i++) {
-      const r = { x: P.x + 10 + (i % 2) * ((P.w - 24) / 2 + 4), y: P.y + 70 + (i >> 1) * 52, w: (P.w - 24) / 2, h: 46 };
-      cell(c, r, 0.5);
-      c.textAlign = "left";
-      c.fillStyle = TEXT;
-      c.font = font(18, "900");
-      c.fillText(String(big[i][1]), r.x + 10, r.y + 18);
-      c.fillStyle = MUTED;
-      c.font = font(9, "700");
-      c.fillText(big[i][0], r.x + 10, r.y + 36);
-    }
-    paneLine(c, P, P.y + P.h - 14, "EIGHT MEDALS · EACH NEEDS A FINALE WIN", MUTED);
   } else if (lab === "SOURCE") {
     paneHead(c, P, "OPEN SOURCE", "↗");
     paneLine(c, P, P.y + 60, "github.com/HMarzban/fusegrid", ACCENT, 12);
@@ -1663,7 +1646,35 @@ export function drawGuide(c, L, t, cursor, kind, touch) {
    heat plaques read as their difficulty (words.js). */
 const PLAQUE_NAME = ["CLEAR", DIFF[1], DIFF[2], "CROWN"];
 
-/* HIGH SCORES: the CORE / PLUS / MAX segmented control, the four plaques
+/* RECORDS' tab strip (Task 2.2, ruling R7): SCORES · STATS · MEDALS as one segmented row on the head's title line of
+   each of the three pages (no plate moves), the current tab marked by segs, the tab row's focus the kit's selection
+   (the 3px notch on the current tab and the caret). recTabsGeom is the one geometry for draw and tap; recPlate is the
+   plate each page paints (page 0 SCORES, 1 STATS, 2 MEDALS); recTabHit's band is the head over each tab, the kicker
+   included, and ends 5 px above the body, so it never meets SCORES' difficulty tabs (inR pad 4 under it). */
+export function recTabsGeom(S, touch) {
+  const tw = Math.min(touch ? 120 : 96, S.iw / 3), x0 = S.mid - (3 * tw) / 2;
+  return [0, 1, 2].map((i) => ({ x: x0 + i * tw, y: S.y + 23, w: tw, h: 22 }));
+}
+export const recPlate = (L, page, touch) => (page === 0 ? scoresGeom(L, touch).S : page === 1 ? statsGeom(L).S : trophiesGeom(L).S);
+/* The RECORDS tab under a tap on page's plate, else -1. */
+export function recTabHit(x, y, L, page, touch) {
+  const S = recPlate(L, page, touch), T = recTabsGeom(S, touch);
+  if (y < S.y || y > T[0].y + T[0].h + 4) return -1;
+  for (let i = 0; i < 3; i++) if (x >= T[i].x - (i ? 0 : 4) && x <= T[i].x + T[i].w + (i < 2 ? 0 : 4)) return i;
+  return -1;
+}
+function recTabs(c, S, page, tabs, touch) {
+  const T = recTabsGeom(S, touch), r = T[page];
+  segs(c, T, RECORD_TABS, page, null, touch, touch ? 13 : 11);
+  if (!tabs) return;
+  c.fillStyle = ACCENT;
+  c.fillRect(r.x, r.y, 3, r.h);
+  caret(c, T[0].x - 12, r.y + r.h / 2, r.h);
+}
+const TAB_KEYS = "←→ TAB · "; // the tab row's foot lead: ←/→ (keys, D-PAD) step the tabs there
+
+/* HIGH SCORES (RECORDS' SCORES tab; the strip on the head's title line): the
+   CORE / PLUS / MAX segmented control, the four plaques
    (dim when locked), then a hugging ten-slot table. `scores` arrives already
    filtered by heat (scoresForHeat lives in src/app/highscores.js — this file
    must not import src/app); `plaques` is the unlocked bitmask. scoresGeom is
@@ -1686,13 +1697,14 @@ export function scoresHit(x, y, L, touch) {
   for (let i = 0; i < 3; i++) if (inR(g.tabs[i], x, y, 4)) return i;
   return x >= S.x && x <= S.x + S.w && y >= S.y && y <= S.y + S.h ? -2 : -1;
 }
-export function drawScores(c, scores, L, t, heat, plaques, touch) {
+export function drawScores(c, scores, L, t, heat, plaques, touch, tabs) {
   const g = scoresGeom(L, touch),
     S = g.S,
     T = g.T,
     h = clampHeat(heat);
   boxPlate(c, S);
-  head(c, S, "HIGH SCORES", "BEST RUNS BY " + LABEL.DIFFICULTY); // its tabs and plaques are difficulties; the touch foot names no key
+  head(c, S, "", "BEST RUNS BY " + LABEL.DIFFICULTY); // its tabs and plaques are difficulties; the touch foot names no key
+  recTabs(c, S, 0, tabs, T);
   segs(c, g.tabs, DIFF, h, HEAT_COL.map((x, i) => (i ? x : TEXT)), T);
   const pmask = plaques | 0,
     chH = g.f < 1 ? Math.max(12, Math.floor((18 + 8) * g.f) - 4) : 18, // iso: the chip never reaches bodyTop
@@ -1718,7 +1730,7 @@ export function drawScores(c, scores, L, t, heat, plaques, touch) {
     nShow = Math.min(10, list.length),
     rh = g.rh,
     bt = g.bodyTop,
-    foot0 = tapMode(T) ? BACK_TAP : "← → " + LABEL.DIFFICULTY + " · " + hints().back + " BACK";
+    foot0 = tapMode(T) ? BACK_TAP : tabs ? TAB_KEYS + "↓ " + LABEL.DIFFICULTY + " · " + hints().back + " BACK" : "← → " + LABEL.DIFFICULTY + " · " + hints().back + " BACK"; // tab row: ←/→ step the tabs, ↓ reaches the filter
   if (!nShow) {
     c.fillStyle = MUTED;
     c.font = font(T ? 15 : 12, "900");
@@ -1775,14 +1787,18 @@ export function drawScores(c, scores, L, t, heat, plaques, touch) {
 const RESET_RED = "#ff5d73";
 const STATS_FOOT = "T MEDALS · C COPY MY STATS · R RESET · ESC BACK";
 const STATS_PAD = "NORTH MEDALS · WEST COPY MY STATS · EAST BACK"; // no route to the wipe on a pad (acceptance S12)
-/* The idle foot and its tap keys, one source for drawStats and statsHit. */
-const statsFoot = () => (hints().dev === "pad" ? [STATS_PAD, ["KeyT", "KeyC"]] : [STATS_FOOT, ["KeyT", "KeyC", "KeyR"]]);
+/* The idle foot and its tap keys, one source for drawStats and statsHit; on the tab row ←→ TAB leads it (no tap of its
+   own) for keys and a controller; a touch player taps the tabs, so that foot stays today's. */
+const statsFoot = (tabs) => {
+  const f = hints().dev === "pad" ? [STATS_PAD, ["KeyT", "KeyC"]] : [STATS_FOOT, ["KeyT", "KeyC", "KeyR"]];
+  return tabs && hints().dev !== "touch" ? [TAB_KEYS + f[0], [null].concat(f[1])] : f;
+};
 const RESET_FOOT = "R AGAIN ERASES · OTHER KEYS CANCEL · KEEPS " + LABEL.SETTINGS + " + " + LABEL.GAME_SPEED + " · C COPY"; // 73 chars: the S.iw budget of 74 at the 0.6 em advance
 const RESET_NOTES = Object.freeze([
   "ERASES SCORES · BESTS · TIMES · DAILY · MEDALS · PLAQUES · GHOSTS",
   "ERASES STATS + DAYS PLAYED · RELOCKS " + LABEL.LEVELS + " 6-8 · " + LABEL.MODIFIERS + " · " + TIME_TRIAL,
 ]);
-/* STATS (ATLAS): eight tiles (seven lifetime counters + MEDALS n/8) in two
+/* STATS (ATLAS; RECORDS' STATS tab, the strip on the head's title line): eight tiles (seven lifetime counters + MEDALS n/8) in two
    columns, a BESTS row of three heat-coloured tiles, two notes, the foot.
    ui={rows,notes,trophies} arrives already computed (app/stats.js). The
    plate is pinned to the keyboard band floor so the foot tap band (statsHit)
@@ -1792,9 +1808,9 @@ export function statsGeom(L) {
 }
 /* STATS foot taps (T1): token zones over the one painted foot string at the
    0.6 em mono advance, half a separator wide each side. */
-export function statsHit(x, y, L, arm) {
+export function statsHit(x, y, L, arm, tabs) {
   const S = statsGeom(L).S,
-    idle = statsFoot(),
+    idle = statsFoot(tabs),
     s = arm ? RESET_FOOT : idle[0],
     keys = arm ? ["KeyR", null, null, "KeyC"] : idle[1];
   if (y < S.footY - 12 || y > S.y + S.h) return null;
@@ -1807,7 +1823,7 @@ export function statsHit(x, y, L, arm) {
   }
   return null;
 }
-export function drawStats(c, L, t, ui, arm, toast) {
+export function drawStats(c, L, t, ui, arm, toast, touch, tabs) {
   const S = statsGeom(L).S,
     f = S.f,
     sq = f < 1, // the iso 608x352 guard: a 28px tile takes a smaller value + label pair
@@ -1816,7 +1832,8 @@ export function drawStats(c, L, t, ui, arm, toast) {
     tro = (ui && ui.trophies) || [],
     notes = arm ? RESET_NOTES : (ui && ui.notes) || [];
   boxPlate(c, S);
-  head(c, S, "STATS", tn ? "" : "YOUR CABINET");
+  head(c, S, "", tn ? "" : "YOUR CABINET");
+  recTabs(c, S, 1, tabs, touch);
   if (tn) {
     c.fillStyle = toast.ok ? ACCENT : RESET_RED;
     c.font = font(11, "900");
@@ -1863,23 +1880,28 @@ export function drawStats(c, L, t, ui, arm, toast) {
   c.textAlign = "center";
   for (let i = 0; i < notes.length && i < 2; i++) c.fillText(clip(c, String(notes[i]), S.iw), S.mid, S.footY - (notes.length - i) * 14 - 2);
   if (arm) foot(c, S, RESET_FOOT, RESET_RED);
-  else foot(c, S, statsFoot()[0]);
+  else foot(c, S, statsFoot(tabs)[0]);
 }
 
 /* MEDALS (R6, SCREEN.TROPHIES): a 2x4 grid of medal tiles; the lock lives in
    the disc (filled accent = earned, hollow ring = still a goal), never in a
    0.45 alpha. rows=[name, desc, on] arrive finished from app/medals.js, so a
-   missing list paints eight name-free placeholders. n/8 is a head bar. */
-export function drawTrophies(c, L, t, rows) {
+   missing list paints eight name-free placeholders. n/8 is a head bar. RECORDS'
+   MEDALS tab: the strip on the head's title line, and no body under it. */
+export function trophiesGeom(L) {
+  const nc = L.narrow ? 1 : 2, // the narrow box: one column, so every goal reads whole
+    nr = 8 / nc;
+  return { S: pageBox(L, 552, nr * 60 + (nr - 1) * 6, false), nc };
+}
+export function drawTrophies(c, L, t, rows, touch, tabs) {
   const r0 = rows || [],
-    nc = L.narrow ? 1 : 2, // the narrow box: one column, so every goal reads whole
-    nr = 8 / nc,
-    S = pageBox(L, 552, nr * 60 + (nr - 1) * 6, false),
+    { S, nc } = trophiesGeom(L),
     f = S.f,
     n = r0.filter((x) => x && x[2]).length,
     tw = (S.iw - 8 * (nc - 1)) / nc;
   boxPlate(c, S);
-  head(c, S, "MEDALS", n + "/8");
+  head(c, S, "", n + "/8");
+  recTabs(c, S, 2, tabs, touch);
   c.fillStyle = LINE;
   c.fillRect(S.mid - 80, S.y + 48, 160, 3);
   c.fillStyle = ACCENT;
@@ -1918,7 +1940,7 @@ export function drawTrophies(c, L, t, rows) {
     c.font = font(10, "700");
     wrap(c, String(desc), r.w - 52, 2).forEach((l, j) => c.fillText(l, r.x + 42, sq ? cy + 1 + j * 11 : r.y + 32 + j * 12));
   }
-  foot(c, S, hints().ok + " / " + hints().back + " BACK TO STATS");
+  foot(c, S, tapMode(touch) ? BACK_TAP : TAB_KEYS + hints().ok + " / " + hints().back + " BACK"); // no body: the tab row always has the focus; back is MENU
 }
 
 /* SETTINGS (SCREEN.SETTINGS, spec §2): twelve rows on LEVEL SELECT's adjust model — eight live

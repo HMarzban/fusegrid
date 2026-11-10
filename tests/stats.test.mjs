@@ -293,30 +293,31 @@ const TODAY = "2026-09-07";
   check("SCREEN.STATS is 12, appended after GUIDE", SCREEN.STATS === 12, SCREEN.STATS);
   /* Written structurally rather than as an index literal so it survives R3's
      stage-2 insert: SOURCE is always last because it is the one row that leaves
-     the page, and STATS always sits directly above it. */
+     the page. STATS is RECORDS' second tab (v202 Task 2.2), and RECORDS sits
+     directly under DAILY. */
   check(
-    "STATS sits directly above SOURCE, which stays the last row",
-    ITEMS[ITEMS.length - 1] === "SOURCE" && ITEMS[ITEMS.length - 2] === "STATS",
+    "RECORDS (STATS' row) sits directly under DAILY, SOURCE stays the last row",
+    ITEMS[ITEMS.length - 1] === "SOURCE" && ITEMS[ITEMS.indexOf("DAILY") + 1] === "RECORDS",
     JSON.stringify(ITEMS),
   );
   let opened = 0;
   const a = createMenuApp({ onStats: () => opened++ });
   a.screen = SCREEN.MENU;
-  a.cursor = ITEMS.indexOf("STATS");
+  a.cursor = ITEMS.indexOf("RECORDS");
   check(
-    "confirming STATS pushes SCREEN.STATS and fires onStats exactly once",
-    a.confirm() === true && a.screen === SCREEN.STATS && opened === 1,
+    "confirming RECORDS then its STATS tab shows SCREEN.STATS and fires onStats exactly once",
+    a.confirm() === true && a.recTab(1) === true && a.screen === SCREEN.STATS && opened === 1,
     a.screen + "/" + opened,
   );
   check("Enter on STATS backs out to MENU, exactly as SCORES does",
     a.confirm() === true && a.screen === SCREEN.MENU, String(a.screen));
-  a.cursor = ITEMS.indexOf("STATS");
-  a.confirm();
+  a.cursor = ITEMS.indexOf("RECORDS");
+  a.confirm(); a.recTab(1);
   check("Escape on STATS backs out to MENU",
     a.key("Escape") === true && a.screen === SCREEN.MENU, String(a.screen));
   check("onStats is optional — a machine built without it still pushes",
     (() => { const b = createMenuApp(); b.screen = SCREEN.MENU;
-      b.cursor = ITEMS.indexOf("STATS"); return b.confirm() === true &&
+      b.cursor = ITEMS.indexOf("RECORDS"); return b.confirm() === true && b.recTab(1) === true &&
       b.screen === SCREEN.STATS; })());
   const src2 = readFileSync("src/render/shellview.js", "utf8");
   check(
@@ -497,8 +498,8 @@ const TODAY = "2026-09-07";
     g.app.skip();
     check("session_start recorded at boot",
       loadStats(ls).a.sessions >= 1, JSON.stringify(loadStats(ls).a));
-    g.app.cursor = ITEMS.indexOf("STATS");
-    g.app.confirm();
+    g.app.cursor = ITEMS.indexOf("RECORDS");
+    g.app.confirm(); g.app.recTab(1);
     check("STATS is open and the opt-in flipped on",
       g.app.screen === SCREEN.STATS && loadStats(ls).on === 1,
       g.app.screen + "/" + loadStats(ls).on);
@@ -520,6 +521,30 @@ const TODAY = "2026-09-07";
   } finally {
     delete globalThis.window;
     delete navigator.clipboard;
+  }
+}
+
+// ---- 11b2. RECORDS (v202 Task 2.2): a tab tap from SCORES straight to MEDALS shows the stored medals (onMedals) and starts
+// no event ring; only an arrival at STATS (onStats) opts it in ----
+{
+  const mem = new Map([["nb.medals.v1", "129"]]);
+  const ls = { getItem: (k) => (mem.has(k) ? mem.get(k) : null), setItem: (k, v) => mem.set(k, String(v)) };
+  globalThis.window = { localStorage: ls, addEventListener() {} };
+  try {
+    const g = createGame(null, { seed: 32 });
+    g.app.cabinetSeen = true;
+    g.app.skip();
+    g.app.cursor = ITEMS.indexOf("RECORDS");
+    g.app.confirm();
+    check("RECORDS opens SCORES and starts no event ring", g.app.screen === SCREEN.SCORES && loadStats(ls).on !== 1, String(loadStats(ls).on));
+    g.app.recTab(2);
+    const tro = (g.app.stats && g.app.stats.trophies) || [];
+    check("SCORES -> MEDALS by one tab step: the stored medals, never the placeholders, and still no event ring",
+      g.app.screen === SCREEN.TROPHIES && tro.length === 8 && tro.filter((r) => r[2]).length === 2 && loadStats(ls).on !== 1, JSON.stringify([tro.map((r) => r[2]), loadStats(ls).on]));
+    g.app.recTab(-1);
+    check("MEDALS -> STATS: onStats builds the rows and opts the ring in", g.app.screen === SCREEN.STATS && loadStats(ls).on === 1 && g.app.stats.rows.length === 10, String(loadStats(ls).on));
+  } finally {
+    delete globalThis.window;
   }
 }
 

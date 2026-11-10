@@ -26,7 +26,7 @@ Two state machines:
 
 | Layer | States | Owner |
 |---|---|---|
-| Shell | INTRO (title → show) → MENU ⇄ LEVEL/SCORES/SETTINGS(→GRAPHICS)/GUIDE(→HOWTO/ITEMS/ENEMIES/FLOOR)/STATS(→TROPHIES) → GAME; idle → ATTRACT | `src/app/menuapp.js` |
+| Shell | INTRO (title → show) → MENU ⇄ LEVEL/RECORDS (SCORES ⇄ STATS ⇄ TROPHIES tabs)/SETTINGS(→GRAPHICS)/GUIDE(→HOWTO/ITEMS/ENEMIES/FLOOR) → GAME; idle → ATTRACT | `src/app/menuapp.js` |
 | Sim | PLAY / WIN / LOSE / PAUSE | `src/core/sim.js` |
 
 INTRO is two phases inside one SCREEN (`app.introStage` 0 title / 1 show),
@@ -44,11 +44,30 @@ settles (`app.boardReady`, set on resolve or reject).
 
 Heat grades CORE / PLUS / MAX live on LEVEL SELECT (`←/→` room, `↑/↓` heat). CORE is replay baseline v6. Attract is always CORE + pact=0. After a first FUSE/GRID CLEAR, LEVEL SELECT also offers Pact toggles (`1–4`). Knobs live on `world`, not frozen `CFG`. Score × heat is persist-only (CORE ×1 / PLUS ×2 / MAX ×3); live HUD stays raw.
 
-MENU is eight rows in this order: `PLAY, LEVEL SELECT, DAILY, SETTINGS, GUIDE,
-HIGH SCORES, STATS, SOURCE`. `confirm()` dispatches by **label**, so an insert
+MENU is seven rows in this order: `PLAY, LEVEL SELECT, DAILY, RECORDS, SETTINGS,
+GUIDE, SOURCE` (UI upgrade v202 Task 2.2, design record §4; owner: "the first
+menu is too complicated"). `confirm()` dispatches by **label**, so an insert
 moves no runtime index — but `tests/headless.test.mjs`'s index-driven MENU
 confirms and `tests/menuapp.test.mjs`'s literals must be renegotiated with any
 reorder.
+
+RECORDS (ruling R7) is no SCREEN: its row opens SCORES, and SCORES · STATS ·
+MEDALS (`SCREEN.SCORES` / `STATS` / `TROPHIES`, menuapp `RECORD_SCREENS`,
+words.js `RECORD_TABS`) share one tab strip on the head's title line
+(menudraw `recTabsGeom` / `recTabHit`, one geometry for draw and tap; no plate
+moved). The strip is the top row of each page's ↑↓ walk (`app.recFocus` 0,
+every arrival lands there); ↓ reaches the body where there is one (SCORES'
+difficulty filter, STATS' foot actions; MEDALS has none). On the tab row ←/→
+(keys, D-PAD, stick; a held one repeats at the menu rate) and a tab tap step
+the tabs through `app.recTab(d)`: clamped, never wrapping, one `uiMove` (main's
+wrapper) and one `move` feel, silent at an edge or on the tab already shown;
+it disarms an armed STATS reset, and every arrival at STATS calls `onStats`
+(the event ring's opt-in), at MEDALS `onMedals` (its rows only, so a tap that
+skips STATS starts no ring). `Q` / `E` step the tabs from anywhere on the three
+pages (keyboard only); in the SCORES body ←/→ and L/R SHOULDER keep the filter
+(no repeat, as before), and the shoulders do nothing on the tab row. Esc,
+Backspace, Enter and EAST from any of the three, tab row or body: MENU on
+RECORDS. The tab row's foot leads with `←→ TAB`.
 
 Names (UI upgrade v202, Task 2.1; owner: "we must use the name that users know
 about"; design record §3). Players read SETTINGS (was OPTIONS: MENU row, page
@@ -84,7 +103,8 @@ band + 3px notch + caret; `danger` rows select red). Labels are system-ui
 sans (OS-dependent, owner-accepted), values / tags / hints mono. Lists go
 through `listGeom` / `listHit` (pitches are caps that scale down in a short
 box); MENU has a PLAY hero row whose tag is the run it starts and group gaps
-before SETTINGS / HIGH SCORES / SOURCE; the SOURCE URL shows only on its
+before RECORDS / SETTINGS / SOURCE (the plate keeps the eight-row list's body,
+`MENU_BODY` 240, so the preview pane keeps its room); the SOURCE URL shows only on its
 selected row. Build tag (owner 2026-10-21: "a game version in some where in
 the display or menue"): `v202` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
 derived ONLY in `shellview.js` (`REV`, handed to `drawMenu` / `drawSettings`
@@ -103,7 +123,7 @@ the full width of their box (MENU's `#sh` where there is a shell box, else the s
 off the rows a root list (MENU, PAUSE list) does nothing; on a page
 (SETTINGS, GRAPHICS, GUIDE, LEVEL SELECT, SCORES) a miss ON the plate is inert
 (hit -2) and only a tap OFF the plate backs out (-1). `guideHit`,
-`levelHit` / `levelGeom` and `scoresHit` share the geometry their pages
+`levelHit` / `levelGeom`, `scoresHit` and `recTabHit` share the geometry their pages
 draw. Hints follow `data-lay` (keys vs taps; LEVEL SELECT's touch foot is
 `LEVEL_TAP`). SHELL BOX (owner GO 2026-10-19, shell v181, touch portrait; every
 layout since UI upgrade Task 1.0, owner pick "Full window"): MENU and every plated page
@@ -150,21 +170,23 @@ heat change); then DIFFICULTY | GAME SPEED segments, MODIFIERS (ONE LIFE,
 NO FLOOR ITEMS, FEWER ITEMS, SHRINK + TIME TRIAL; a name too wide for its chip
 breaks onto two lines; help says what each does), and a START hero. No start-on-miss: only START or
 Enter starts. MENU keyboard: a 272 list beside a preview pane that follows
-the cursor (one mini-page per row); MENU touch: a tile HUB in the pinned
-reading order (PLAY bar, LEVEL SELECT | DAILY, SETTINGS | GUIDE, HIGH SCORES |
-STATS, SOURCE 50 logical = 32 CSS px) — the one MENU idiom whose bands are
+the cursor (one mini-page per row; RECORDS shows the top three and its
+tabs); MENU touch: a tile HUB in the pinned reading order (PLAY bar, LEVEL
+SELECT | DAILY, RECORDS | SETTINGS, the GUIDE bar, SOURCE 50 logical = 32 CSS px;
+a later MENU task replaces it with the approved phone layout, which reaches
+LEVEL SELECT through its next-run card) — the one MENU idiom whose bands are
 tiles, not full-width rows; ↑↓ stays the linear walk. One vocabulary: MODIFIERS
 (never MODES or PACT) on screens and in copy; pact.js and `nb.pact.v1` keep their
 names. Hooks never lie: a score teaser reads only played runs
 (`highscores.isPlaceholder` drops the seeded table; main hands `getCab().top`),
 and DAILY says YOUR TRIES TODAY. Read-only pages (HOW TO / POWER-UPS / ENEMIES /
-FLOOR / MEDALS) back out on any tap; STATS taps its foot labels. PLAY's tag names the
+FLOOR / MEDALS) back out on any tap (MEDALS: off its tabs); STATS taps its foot labels. PLAY's tag names the
 world (`FACTORY · EXPERT DIFFICULTY · FAST SPEED`), the same words as START,
 stepped down to the slot by `setupVals` (a modifier count, then only what differs
 from a default run). `SCREEN.STATS = 12` is **appended** (the `SCREEN` enum's own rule in
 `menuapp.js`: appended, never inserted). `SCREEN.TROPHIES = 13` (the MEDALS page) is
-appended too: opened from STATS by `T` or a tap on its `T MEDALS` label, backs out to STATS,
-never a MENU row. `SCREEN.GRAPHICS = 14` is appended too: opened by the
+appended too: RECORDS' third tab (STATS' `T` or a tap on its `T MEDALS` label is the same
+tab step), backs out to MENU on RECORDS, never a MENU row. `SCREEN.GRAPHICS = 14` is appended too: opened by the
 SETTINGS `GRAPHICS` door row (`OPT_ROWS` twelve rows, ANALYTICS, then the GRAPHICS and CONTROLS doors
 before RESET DEFAULTS), backs out to SETTINGS on the door. `SCREEN.FLOOR = 15` is appended too
 (2026-10-25): the fourth GUIDE door (`GUIDE_ROWS` HOW TO PLAY, POWER-UPS, ENEMIES,

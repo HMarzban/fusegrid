@@ -137,7 +137,6 @@ function check(name, cond, detail) {
             ITEMS[4],
             ITEMS[5],
             ITEMS[6],
-            ITEMS[7],
           ],
         },
         L,
@@ -301,10 +300,9 @@ function check(name, cond, detail) {
             "PLAY|NORMAL DIFFICULTY",
             "LEVEL SELECT|NORMAL DIFFICULTY",
             "DAILY",
+            "RECORDS",
             "SETTINGS",
             "GUIDE",
-            "HIGH SCORES",
-            "STATS",
             "SOURCE",
           ],
         },
@@ -800,7 +798,7 @@ function check(name, cond, detail) {
       all.includes("MEDALS") && all.includes("2/8") &&
         rows.every((r) => all.includes(r[0]) && descOf(r[0]) === r[1]) &&
         !all.some((s) => s.indexOf("…") >= 0) &&
-        all.includes("ENTER / ESC BACK TO STATS"),
+        all.includes("←→ TAB · ENTER / ESC BACK"),
       all.join("|") + " :: " + rows.map((r) => descOf(r[0])).join(" / "),
     );
     check(
@@ -1097,13 +1095,13 @@ function check(name, cond, detail) {
     const { CACHE_NAME } = await import("../src/pwa/shell.js");
     const { shellGeo } = await import("../src/app/fit.js");
     const want = "v" + CACHE_NAME.match(/(\d+)$/)[1];
-    const items = ["PLAY|X", "LEVEL SELECT", "DAILY|NEW", "SETTINGS", "GUIDE", "HIGH SCORES", "STATS", "SOURCE"];
+    const items = ["PLAY|X", "LEVEL SELECT", "DAILY|NEW", "RECORDS", "SETTINGS", "GUIDE", "SOURCE"];
     const sg = shellGeo(393, 852);
     for (const [nm, W, H, touch, lg] of [["600x520 d", 600, 520, false], ["608x352 d", 608, 352, false], ["600x520 l", 600, 520, true], ["608x352 l", 608, 352, true], ["phone #sh p", sg.w, sg.h, true, sg.logo]]) {
-      const L = md.layout(W, H, lg), g = md.menuList(L, 8, touch);
+      const L = md.layout(W, H, lg), g = md.menuList(L, 7, touch);
       const paint = (rev, et = 9) => { const R = rec(); md.drawMenu(R.c, { cursor: 0, enterT: et, items, touch, rev, info: { level: 1, best: [] } }, L, 9); return R; };
       const R = paint("v99"), hit = R.texts.filter((t) => t.s.indexOf("v99") >= 0), t = hit[0] || {};
-      const src = g.rows[7], inSource = touch && t.s === "v99 · github.com/HMarzban/fusegrid" && t.y > src.y && t.y < src.y + src.h && t.x - t.s.length * t.px * 0.6 > src.x + 24 + 80; // clear of the SOURCE label
+      const src = g.rows[6], inSource = touch && t.s === "v99 · github.com/HMarzban/fusegrid" && t.y > src.y && t.y < src.y + src.h && t.x - t.s.length * t.px * 0.6 > src.x + 24 + 80; // clear of the SOURCE label
       check(`MENU build tag painted once, inside the box, never on a row (${nm})`,
         hit.length === 1 && t.x > 0 && t.x < W && t.y > 0 && t.y < H - 18 &&
           (inSource || t.y > g.y + g.h || t.y < g.y) &&
@@ -1112,7 +1110,7 @@ function check(name, cond, detail) {
       check(`MENU without rev paints no build tag (${nm})`, !paint("").texts.some((x) => /\bv\d+\b/.test(x.s)));
       check(`MENU build tag waits for the plate (enterT < -0.12 paints nothing) (${nm})`, paint("v99", -0.5).texts.length === 0);
     }
-    const Lp = md.layout(sg.w, sg.h, sg.logo), gp2 = md.menuList(Lp, 8, true);
+    const Lp = md.layout(sg.w, sg.h, sg.logo), gp2 = md.menuList(Lp, 7, true);
     const Rp = rec(); md.drawMenu(Rp.c, { cursor: 0, enterT: 9, items, touch: true, rev: "v99" }, Lp, 9);
     const tp = Rp.texts.find((x) => x.s === "v99");
     check("phone #sh: the tag hangs under the hub on its own line, the SOURCE tile keeps the bare URL",
@@ -1130,7 +1128,7 @@ function check(name, cond, detail) {
 //      label lands on its own row, the plate edges are -1, bands contiguous.
 {
   const md = await import("../src/render/menudraw.js");
-  const items = ["PLAY", "LEVEL SELECT", "DAILY", "SETTINGS", "GUIDE", "HIGH SCORES", "STATS", "SOURCE"];
+  const items = ["PLAY", "LEVEL SELECT", "DAILY", "RECORDS", "SETTINGS", "GUIDE", "SOURCE"];
   const n = items.length;
   for (const [W, H] of [
     [600, 520],
@@ -1419,7 +1417,7 @@ function check(name, cond, detail) {
   check(
     "shellview passes app.scoreHeat into the (memoised) getter and into drawScores",
     /getScores\(app\.scoreHeat\)/.test(shellSrc) && /getPlaques \? getPlaques\(\)/.test(shellSrc) &&
-      /drawScores\(\s*c,\s*sd\.s,\s*L,\s*app\.subT,\s*app\.scoreHeat,\s*sd\.p,\s*touchLay\(canvas\)\)/.test(shellSrc),
+      /drawScores\(\s*c,\s*sd\.s,\s*L,\s*app\.subT,\s*app\.scoreHeat,\s*sd\.p,\s*touchLay\(canvas\),\s*app\.recFocus === 0\)/.test(shellSrc),
     shellSrc.match(/menudraw\.drawScores\([^;]*\);/s)?.[0],
   );
   const mainSrc = readFileSync("src/main.js", "utf8");
@@ -1526,7 +1524,7 @@ function check(name, cond, detail) {
     JSON.stringify([a, b, h, e]));
   {
     // the blast reads first: with enterT held back the plate and rows are not painted, then fade in
-    const L = md.layout(600, 520), items = ["PLAY|NORMAL DIFFICULTY", "LEVEL SELECT|NORMAL DIFFICULTY", "DAILY", "SETTINGS", "GUIDE", "HIGH SCORES", "STATS", "SOURCE"];
+    const L = md.layout(600, 520), items = ["PLAY|NORMAL DIFFICULTY", "LEVEL SELECT|NORMAL DIFFICULTY", "DAILY", "RECORDS", "SETTINGS", "GUIDE", "SOURCE"];
     const paint = (et) => { const r = rec(); md.drawMenu(r.c, { cursor: 0, enterT: et, items }, L, 0); return r; };
     const held = paint(-0.2), mid = paint(-0.06), set = paint(1);
     check("MENU held behind the blast: enterT < -0.12 paints no plate and no rows; the plate fades in over the last 0.12 s",
@@ -1551,6 +1549,7 @@ function check(name, cond, detail) {
     });
     return { c, texts, cells, strokes };
   };
+  const body = (recd, L, p) => recd.cells.filter((r) => r.y >= md.recPlate(L, p, false).by - 0.5); // the tiles; RECORDS' tab strip (v202 Task 2.2) paints its unselected tabs in the same fill, in the head
   const inside = (r, recd) => recd.texts.filter((t) => t.x > r.x && t.x < r.x + r.w && t.y > r.y && t.y < r.y + r.h).every((t) => t.y - t.px / 2 >= r.y - 0.5 && t.y + t.px / 2 <= r.y + r.h + 0.5);
   const rows = Array.from({ length: 8 }, (_, i) => ["MEDAL " + i, "ROOMS 1-5 IN ONE RUN · NO LIFE LOST · ALL FOUR MODES", i < 2]);
   const stats = { rows: Array.from({ length: 10 }, (_, i) => ["DAYS PLAYED", "1234"]), notes: ["N1", "N2"], trophies: rows };
@@ -1559,10 +1558,10 @@ function check(name, cond, detail) {
     const L = md.layout(W, H), tg = `${W}x${H}`;
     const m = rec();
     md.drawTrophies(m.c, L, 1, rows);
-    check(`MEDALS: name + both goal lines inside each tile at ${tg}`, m.cells.length === 8 && m.cells.every((r) => inside(r, m)));
+    check(`MEDALS: name + both goal lines inside each tile at ${tg}`, body(m, L, 2).length === 8 && body(m, L, 2).every((r) => inside(r, m)));
     const st = rec();
     md.drawStats(st.c, L, 1, stats, false, null);
-    check(`STATS: value + label inside each of the 11 tiles at ${tg}`, st.cells.length === 11 && st.cells.every((r) => inside(r, st)));
+    check(`STATS: value + label inside each of the 11 tiles at ${tg}`, body(st, L, 1).length === 11 && body(st, L, 1).every((r) => inside(r, st)));
     const sc = rec(), g = md.scoresGeom(L, false);
     md.drawScores(sc.c, [], L, 1, 0, 0b11, false);
     const chips = sc.strokes.filter((r) => Math.abs(r.y - (g.chipY + 0.5)) < 1e-9);
@@ -1570,12 +1569,12 @@ function check(name, cond, detail) {
     pos[tg] = [m, st].map((r) => r.texts.map((t) => t.s + "@" + t.y + "/" + t.px).join("|"));
   }
   check("MEDALS / STATS text at 600x520 is the pre-guard layout (name at tile+15, goals +32/+44; value 18px at -6, label 10px at +12)",
-    /MEDAL 0@\d+(\.\d+)?\/13/.test(pos["600x520"][0]) && (() => { const r = rec(); md.drawTrophies(r.c, md.layout(600, 520), 1, rows); const c0 = r.cells[0], n = r.texts.find((t) => t.s === "MEDAL 0"), d = r.texts.filter((t) => t.x === n.x && t.y > n.y); return n.y === c0.y + 15 && d[0].y === c0.y + 32 && d[1].y === c0.y + 44; })()
-      && (() => { const r = rec(); md.drawStats(r.c, md.layout(600, 520), 1, stats, false, null); const c0 = r.cells[0], v = r.texts.find((t) => t.s === "1234"), l = r.texts.find((t) => t.s === "DAYS PLAYED"); return v.px === 18 && v.y === c0.y + c0.h / 2 - 6 && l.px === 10 && l.y === c0.y + c0.h / 2 + 12; })());
+    /MEDAL 0@\d+(\.\d+)?\/13/.test(pos["600x520"][0]) && (() => { const r = rec(); md.drawTrophies(r.c, md.layout(600, 520), 1, rows); const c0 = body(r, md.layout(600, 520), 2)[0], n = r.texts.find((t) => t.s === "MEDAL 0"), d = r.texts.filter((t) => t.x === n.x && t.y > n.y); return n.y === c0.y + 15 && d[0].y === c0.y + 32 && d[1].y === c0.y + 44; })()
+      && (() => { const r = rec(); md.drawStats(r.c, md.layout(600, 520), 1, stats, false, null); const c0 = body(r, md.layout(600, 520), 1)[0], v = r.texts.find((t) => t.s === "1234"), l = r.texts.find((t) => t.s === "DAYS PLAYED"); return v.px === 18 && v.y === c0.y + c0.h / 2 - 6 && l.px === 10 && l.y === c0.y + c0.h / 2 + 12; })());
   const L = md.layout(600, 520), lv = (U, best) => { const r = rec(); md.drawLevelSelect(r.c, 2, L, 1, 0, 0, U, 0, false, false, { best: best ? [null, "0:38.9"] : [] }); return r.texts.map((t) => t.s); };
   check("LEVEL SELECT: no NO TIME YET before MODES / TIME open; it shows once open; a saved best shows either way",
     !lv(false).includes("NO TIME YET") && lv(true).includes("NO TIME YET") && lv(false, true).includes("✓ BEST 0:38.9") && lv(true, true).includes("✓ BEST 0:38.9"));
-  const mn = (row, U) => { const r = rec(); md.drawMenu(r.c, { cursor: row, items: ["PLAY|X", "LEVEL SELECT", "DAILY|NEW", "SETTINGS", "GUIDE", "HIGH SCORES", "STATS", "SOURCE"], info: { level: 1, unlocked: U, best: [] } }, L, 1); return r.texts.map((t) => t.s); };
+  const mn = (row, U) => { const r = rec(); md.drawMenu(r.c, { cursor: row, items: ["PLAY|X", "LEVEL SELECT", "DAILY|NEW", "RECORDS", "SETTINGS", "GUIDE", "SOURCE"], info: { level: 1, unlocked: U, best: [] } }, L, 1); return r.texts.map((t) => t.s); };
   check("MENU pane: PLAY card follows the same rule, DAILY never says NO TIME YET",
     !mn(0, false).includes("NO TIME YET") && mn(0, true).includes("NO TIME YET") && !mn(2, true).includes("NO TIME YET") && !mn(2, false).includes("NO TIME YET"));
 }
@@ -1594,11 +1593,11 @@ function check(name, cond, detail) {
     const inPlate = (r, S) => r.x >= S.x && r.y >= S.y && r.x + r.w <= S.x + S.w + 0.01 && r.y + r.h <= S.y + S.h + 0.01;
     const ctr = (r) => [r.x + r.w / 2, r.y + r.h / 2];
     check(`shell layout is tall + narrow, logo on the board line (${tg})`, L.tall && L.narrow && L.logoCy === g.logo);
-    const hub = md.menuGeom(L, 8, true);
+    const hub = md.menuGeom(L, 7, true);
     const lg = md.menuLogo(L);
     check(`MENU hub hangs under the logo, inside the box, every tile taps to itself (${tg})`,
       hub.hub && hub.h === 362 && Math.abs(hub.y0 - Math.round(lg.cy + 10 * lg.s + 8)) <= 1 && hub.y0 + hub.h <= g.h &&
-        hub.rows.every((r, i) => md.menuHit(r.x + r.w / 2, r.cy, L, 8, true) === i), hub.y0 + "+" + hub.h);
+        hub.rows.every((r, i) => md.menuHit(r.x + r.w / 2, r.cy, L, 7, true) === i), hub.y0 + "+" + hub.h);
     for (const U of [false, true]) {
       const G = md.levelGeom(L, U, true), S = G.S, rects = [...G.room, G.pane, G.heatCap, ...G.heat, G.paceCap, ...G.pace, ...(U ? [G.modeCap, ...G.mode, G.help] : []), G.start];
       check(`LEVEL SELECT narrow${U ? " (modes open)" : ""}: plate in the box, every rect in the plate (${tg})`, G.narrow && inBox(S) && rects.every((r) => inPlate(r, { ...S, x: S.x - 1, w: S.w + 2 })));
@@ -1858,7 +1857,7 @@ function check(name, cond, detail) {
     check("OPTIONS pane: a ready pad reads CONTROLLER READY, between GRAPHICS and the bottom line, overlapping neither", !!l && !!g && l.y >= g.y + 12 && l.y <= n.y - 12, l && [g.y, l.y, n.y].join());
     {
       const R = rec();
-      md.drawMenu(R.c, { cursor: 3, enterT: 9, items: ITEMS.slice(), touch: false, kind: "iso", rev: "v", info: { pad: true, level: 1 } }, md.layout(608, 352), 9);
+      md.drawMenu(R.c, { cursor: ITEMS.indexOf("SETTINGS"), enterT: 9, items: ITEMS.slice(), touch: false, kind: "iso", rev: "v", info: { pad: true, level: 1 } }, md.layout(608, 352), 9);
       check("OPTIONS pane: the short iso box drops the pad line rather than print it over the bottom line", R.texts.some((t) => t.s === "ENTER OPENS ALL TWELVE ROWS") && !R.texts.some((t) => t.s.startsWith("CONTROLS ·")));
     }
     {
