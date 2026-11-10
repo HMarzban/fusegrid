@@ -37,7 +37,8 @@
    shake and the flash wash read as zero until PLAY resumes them; a new grid
    straight out of PAUSE (RESTART, QUIT) drops that held shake and flash.
    o.covered (R4: the menu canvas hides the board): events, clocks, one-shots
-   and the grid track run; nothing touches #px or #c; the next frame rasters.
+   and the grid track run; nothing touches #px or #c (no clear: the caller
+   paints its menu opaque every covered frame or on its own canvas).
    Surface contract mirrors the wrapper: {canvas:#px, overlay:#c, ctx:overlay
    2D ctx, render, consumeEvents, getShake, reset, setPerf, invalidate,
    sleep}. Node / no-canvas => stub mode (overlay noop ctx, no world draw),

@@ -1,5 +1,7 @@
 /* KIT ROOM: the world behind the menus (R4) and the next run's start corner (R5). Menus look the same in every art style, so both are the CLASSIC board art on
-   the 2D menu canvas, painted through the kit's cell painters (paint.js wallCell / floorCell / brickCell) on artOf(tok, level) = tok.biome (lead ruling 1).
+   the 2D menu canvas, painted through the kit's cell painters (paint.js wallCell / floorCell / brickCell) on artOf(level): the level's REAL board art, the
+   untinted biomeOf(level) (appendix 1.3: the backdrop keeps the game's real art, only the veil is tinted; the mock's lane paints the same raw biome).
+   tok gives the UI colours only: the veil (tok.bg1), the lane bed (tok.bed) and the cache key (tok.name).
    roomLook   (c, box, level, tok, o) fills bg1, scales the 600 x 520 representative board to COVER box (s = max(w/600, h/520) x o.k) and centres it, then
               lays the veil rgba(toL(tok.bg1, 0.004), o.veil = 0.5) over the box last (appendix 6). The layout is fixed, never the board the run deals:
               border and even-even pillar walls (border codes, pillar variant [0,0,1,2] by hsh seed 7), bricks where hsh(x, y, 10) < 0.42 off both diagonals.
@@ -37,7 +39,7 @@ const edge = (x, y) => x === 0 || y === 0 || x === C - 1 || y === R - 1;
 const isWall = (x, y) => edge(x, y) || (x % 2 === 0 && y % 2 === 0);
 const wallCode = (x, y) => (edge(x, y) ? borderCode(x, y) : [0, 0, 1, 2][Math.floor(hsh(x, y, SEED) * 4)]);
 const isBrick = (x, y) => !(x + y <= 3 || x + y >= C + R - 5) && hsh(x, y, SEED + 3) < 0.42;
-const artOf = (tok, level) => tok;
+const ART = new Map(), artOf = (level) => { const b = biomeOf(level); let a = ART.get(b); if (!a) ART.set(b, (a = Object.freeze({biome: b}))); return a; };
 function cell(c, px, py, s, art, v, x, y, level) {
   if (v === T.WALL) return wallCell(c, px, py, s, art, {code: wallCode(x, y)});
   floorCell(c, px, py, s, art, {par: (x + y) & 1, v: floorVar(x, y, level)});
@@ -45,7 +47,7 @@ function cell(c, px, py, s, art, v, x, y, level) {
 }
 
 export function roomLook(c, box, level, tok, o = {}) {
-  const x = box.x || 0, y = box.y || 0, w = box.w, h = box.h, art = artOf(tok, level), s = Math.max(w / BW, h / BH) * (o.k || 1);
+  const x = box.x || 0, y = box.y || 0, w = box.w, h = box.h, art = artOf(level), s = Math.max(w / BW, h / BH) * (o.k || 1);
   c.save();
   c.beginPath(); c.rect(x, y, w, h); c.clip();
   c.fillStyle = art.biome.bg1; c.fillRect(x, y, w, h);
@@ -74,7 +76,7 @@ const specOf = (t) => ({kind: featKindOf(t.code), h: 0, par: (t.x + t.y) & 1, di
   outer: SIDES.slice(), exit: true, entry: true, phase: 0, state: 0, lit: 0, pair: 1, gx: t.x, gy: t.y});
 
 export function lane(c, x, y, w, rows, level, tok, o = {}) {
-  const L = laneGrid(level), n = o.cols || LANE_COLS, s = w / n, h = rows * s, art = artOf(tok, level), ox = x + 2, oy = y + 2 - 0.3 * s;
+  const L = laneGrid(level), n = o.cols || LANE_COLS, s = w / n, h = rows * s, art = artOf(level), ox = x + 2, oy = y + 2 - 0.3 * s;
   c.save();
   c.fillStyle = tok.bed; c.fillRect(x, y, w, h);
   c.beginPath(); c.rect(x + 2, y + 2, w - 4, h - 4); c.clip();

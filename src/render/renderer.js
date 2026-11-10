@@ -86,7 +86,8 @@ export function createRenderer(canvas, opts={}){
      chips/coach (GAME only), o.sfx===false gates audio.play only. Defaults
      (o undefined) are byte-identical. o.covered (the menu canvas hides the
      board, R4): events and clocks run as ever, no canvas call at all, and the
-     next uncovered frame rasters fresh. */
+     next uncovered frame rasters fresh. The canvas keeps its last frame, so a
+     caller paints its menu opaque every covered frame or on its own canvas. */
   function render(world, dt, o){
     if(!world) return;
     const paused=world.state==="PAUSE", ev=world.events.length>0;

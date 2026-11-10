@@ -13,6 +13,8 @@ import { HOME, featKindOf } from "../src/core/feat.js";
 import { FOES } from "../src/core/entities.js";
 import { worldTokens, toL } from "../src/render/kit/tokens.js";
 import { setFactory, release, _dbg as cacheDbg } from "../src/render/kit/cache.js";
+import { wallCell, floorCell, brickCell } from "../src/render/kit/paint.js";
+import { paintCell } from "../src/render/featdraw.js";
 import { createRenderer } from "../src/render/renderer.js";
 import { createPixelRenderer } from "../src/render/pixel/renderer.js";
 import { createRenderer3D } from "../src/render/three/wrapper.js";
@@ -116,7 +118,7 @@ if (room) {
     const tok = worldTokens(1), box = { x: 10, y: 20, w: 300, h: 260 }, r = rec();
     roomLook(r.ctx, box, 1, tok);
     const first = r.paints[0], last = r.paints[r.paints.length - 1];
-    check("roomLook fills bg1 over the box first", first.op === "fillRect" && first.style === tok.biome.bg1 && eqBox(first.box, box), J(first));
+    check("roomLook fills the real bg1 over the box first", first.op === "fillRect" && first.style === biomeOf(1).bg1 && eqBox(first.box, box), J(first));
     check("roomLook draws the veil last: rgba(toL(bg1, 0.004), 0.5) over the box at alpha 1", last.op === "fillRect" && last.style === rgbaOf(toL(tok.bg1, 0.004), 0.5) && last.alpha === 1 && eqBox(last.box, box), J(last));
     const tr = r.calls.findIndex((q) => q.op === "translate" && near(q.a[0], 10) && near(q.a[1], 20));
     check("box 300 x 260: the board scales by max(w/600, h/520) = 0.5 from the box corner", tr >= 0 && r.calls[tr + 1].op === "scale" && near(r.calls[tr + 1].a[0], 0.5) && near(r.calls[tr + 1].a[1], 0.5), J(r.calls[tr + 1]));
@@ -138,6 +140,44 @@ if (room) {
     const ice = worldTokens(2), ir = rec();
     roomLook(ir.ctx, { x: 0, y: 0, w: 300, h: 260 }, 2, ice);
     check("ICE: the veil is the tinted bg1 (cyan), as the appendix", ir.paints[ir.paints.length - 1].style === rgbaOf(toL(ice.bg1, 0.004), 0.5) && ice.bg1 !== biomeOf(2).bg1);
+  }
+
+  /* ---- the real board art (appendix 1.3; lead ruling 2026-11-10): the backdrop and the lane paint the level's untinted BIOMES entry, as the mock does
+     (kit5.js boardBg and S7-menu lane use K.W = the BIOMES entry); only the veil takes the tinted bg1. A palette is every string style the cell
+     painters (walls 0..10, floors, the brick) and the world's tile paint for one biome object. ---- */
+  {
+    const SLOTS = ["bg0", "bg1", "floor0", "floor1", "wall", "wallHi", "brickA", "brickB", "brickHi"];
+    const TABLE2 = ["#5c9faf", "#0f2429", "#8bb9c4", "#6a9eab", "#3a4d54", "#dae6ea", "#f4fcfe", "#a7dfea", "#ffffff"];
+    const styles = (ps) => new Set(ps.map((p) => p.style).filter((v) => typeof v === "string"));
+    const palette = (b) => {
+      const r = rec(), t = { biome: b };
+      for (let code = 0; code <= 10; code++) wallCell(r.ctx, 0, 0, 40, t, { code });
+      for (const par of [0, 1]) for (let v = 0; v < 4; v++) floorCell(r.ctx, 0, 0, 40, t, { par, v });
+      brickCell(r.ctx, 0, 0, 40, t);
+      paintCell(r.ctx, b, { kind: HOME[b.name], h: 0, par: 1, dir: 0, outer: ["N", "E", "S", "W"], exit: true, entry: true, phase: 0, state: 0, lit: 0, pair: 1, gx: 6, gy: 1 });
+      return styles(r.paints);
+    };
+    const raw = biomeOf(2), ice = worldTokens(2), P = palette(raw), Q = palette(ice.biome);
+    const tintOnly = [...Q].filter((v) => !P.has(v)), rawOnly = [...P].filter((v) => !Q.has(v));
+    check("ICE: the tinted slots are appendix 1.4's second table, so the test's premise holds", J(SLOTS.map((k) => ice.biome[k])) === J(TABLE2) && SLOTS.some((k) => raw[k] !== ice.biome[k]), J(SLOTS.map((k) => ice.biome[k])));
+    check("ICE: the real and the tinted cell art paint different colours (the palettes tell them apart)", tintOnly.length >= 5 && rawOnly.length >= 5, tintOnly.length + " tinted-only / " + rawOnly.length + " real-only");
+    const bad = (S) => [...S].filter((v) => tintOnly.includes(v) || TABLE2.slice(0, 8).includes(v));
+    const box = { x: 0, y: 0, w: 300, h: 260 }, r = rec();
+    roomLook(r.ctx, box, 2, ice);
+    const first = r.paints[0], last = r.paints[r.paints.length - 1], S = styles(r.paints.slice(1, -1));
+    check("ICE roomLook: the first fill is the real ICE bg1 " + raw.bg1, first.op === "fillRect" && first.style === raw.bg1 && raw.bg1 === "#0a2048", first.style);
+    check("ICE roomLook: the board paints the real ICE art (real-only colours present)", rawOnly.filter((v) => S.has(v)).length >= 5, rawOnly.filter((v) => S.has(v)).length);
+    check("ICE roomLook: no tinted ICE colour on the board (none of table 2, no tinted-only shade)", bad(S).length === 0, bad(S).join());
+    check("ICE roomLook: only the veil is tinted: rgba(toL(tinted bg1 #0f2429, 0.004), 0.5), drawn last", last.style === rgbaOf(toL("#0f2429", 0.004), 0.5) && ice.bg1 === "#0f2429", last.style);
+    const l = rec();
+    lane(l.ctx, 20, 30, 280, 2.5, 2, ice);
+    const LS = styles(l.paints.slice(1, -1));
+    check("ICE lane: the cells and the tile paint the real ICE art, as the mock's lane (S7-menu screen.js K.W)", rawOnly.filter((v) => LS.has(v)).length >= 5, rawOnly.filter((v) => LS.has(v)).length);
+    check("ICE lane: no tinted ICE colour in the cells or the tile", bad(LS).length === 0, bad(LS).join());
+    check("ICE lane: the bed under the cells is the UI token (tok.bed)", l.paints[0].style === ice.bed);
+    const jt = worldTokens(1), jr = biomeOf(1);
+    check("JUNGLE: tinted and real slots are equal, so nothing changes outside ICE", SLOTS.every((k) => jt.biome[k] === jr[k]) && J([...palette(jt.biome)]) === J([...palette(jr)]));
+    check("the other six worlds too: tinted slots equal the real ones", [3, 4, 5, 6, 7, 8].every((lv) => SLOTS.every((k) => worldTokens(lv).biome[k] === biomeOf(lv)[k])));
   }
 
   /* ---- roomLayer: painted once per key through cache.js ---- */
