@@ -178,8 +178,7 @@ export function onEvent(world, ev, time, look){
     case "throw": addParticles(ev.x, ev.y, 3, "#ffe28a");
                    addParticles(ev.x, ev.y, 2, "#fff8d8"); break;
     case "remote":addParticles(ev.x, ev.y, 7, "#7fe0ff"); break;
-    case "lose":  addConfetti(50,["#ff5d73","#ff3b5c","#c23058","#ff8a9a"]);
-                   fx.shakeT=Math.min(0.7,fx.shakeT+0.28); break;
+    case "lose":  fx.shakeT=Math.min(0.7,fx.shakeT+0.28); break;
     case "win":   addConfetti(60); fx.shakeT=Math.max(fx.shakeT,0.15); break;
   }
 }

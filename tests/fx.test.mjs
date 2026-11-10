@@ -651,5 +651,30 @@ const chainW = (n, px, py, blades) => {
   initFx();
 }
 
+// ---- No confetti on a loss: GAME OVER must not look like a WIN, in all three looks ----
+{
+  const W = { seed: 9, level: 1 };
+  const src = (f) => readFileSync(new URL(f, import.meta.url), "utf8");
+  const reads = {
+    "2d": ["../src/render/renderer.js", /onEvent\(world, world\.events\[i\], world\.time, "2d"\)/, /drawFx\(ctx\)/],
+    px: ["../src/render/pixel/renderer.js", /onEvent\(world, ev, world\.time\)/, /drawPartsOver\(V\.parts\)/],
+    "3d": ["../src/render/three/wrapper.js", /onEvent\(world, world\.events\[i\], world\.time\)/, /fxp\.update\(getFx\(\)\)/],
+  };
+  for (const look of ["2d", "px", "3d"]) {
+    const [f, a, b] = reads[look];
+    const t = src(f);
+    check("lose: " + look + " feeds fx.js onEvent and draws its particles", a.test(t) && b.test(t));
+    const lk = look === "2d" ? "2d" : undefined;
+    initFx();
+    onEvent(W, { t: "lose" }, 0, lk);
+    check("lose adds no particles (" + look + ")", getFx().length === 0, getFx().length);
+    check("lose still shakes (" + look + ")", getShake().x !== undefined && fxBusy() === true);
+    initFx();
+    onEvent(W, { t: "win" }, 0, lk);
+    check("win still throws confetti (" + look + ")", getFx().length > 0 && getFx().every((q) => q.confetti), getFx().length);
+  }
+  initFx();
+}
+
 console.log("\n  FX RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);
