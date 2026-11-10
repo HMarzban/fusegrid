@@ -65,8 +65,8 @@ derived ONLY in `shellview.js` (`REV`, handed to `drawMenu` / `drawSettings`
 as `rev`) and `update.js` (the card's "You are on v202", the running build,
 never a guessed next one) — never a second literal. Keyboard MENU appends
 it to the foot hint; the touch hub hangs it under the plate when the box has
->= 10 units below it (`#sh`), else on the SOURCE tile's teaser (landscape on
-the board canvas); OPTIONS keeps its `BUILD v202` kicker. Never on the HUD.
+>= 10 units below it (`#sh`), else on the SOURCE tile's teaser (a landscape
+phone, on the board canvas); OPTIONS keeps its `BUILD v202` kicker. Never on the HUD.
 PAUSE draws `pauseGeom(overlayBox, touch)`: touch (`touchLay`,
 data-lay p/l) caps pitch at `PAUSE_ROW_H` 70 / hero 76 / width 380, a keyboard
 screen at the compact `PAUSE_ROW_D` 44 / hero 54 / width 340 (owner: "too
@@ -82,16 +82,17 @@ draw. Hints follow `data-lay` (keys vs taps; LEVEL SELECT's touch foot is
 `LEVEL_TAP`). SHELL BOX (owner GO 2026-10-19, shell v181, touch portrait; every
 layout since UI upgrade Task 1.0, owner pick "Full window"): MENU and every plated page
 (`isShellScreen`, shellview) draw on `#sh`, a fixed canvas over the whole
-viewport (`fit.js` `shellGeo(W,H,cw,ch,lay)`). `d`: the window at scale 1
+viewport (`fit.js` `shellGeo(W,H,cw,ch,lay)`). `d` and `l`: the window at scale 1
 (`DESK_SHELL {min [600,520], dpr 2}`; a smaller window keeps the menus on `#c`,
-since a keyboard page under 600 wide clips its text). `p` / `l`: the portrait
+since a page under 600 wide clips its text; every landscape phone is under it,
+and a landscape tablet is the desktop form with touch pitches, lead ruling). `p`: the portrait
 board stage is width-bound (~0.63 on a 393 px phone), so ~0.9 (`PORT_SHELL {s 0.9, w [400,600],
 logo 0.27}`; a tablet keeps 600 wide and only grows taller; < 520 box units
-tall = no shell box: every landscape phone and the common landscape tablets). INTRO, ATTRACT, PLAY and PAUSE stay on `#c`
+tall = no shell box). INTRO, ATTRACT, PLAY and PAUSE stay on `#c`
 with `#sh` hidden; a run end (`isRunEnd`, `shellMode` 2) shows `#sh` click-through
 and drawing nothing, so WIN/LOSE keep `#c`, its overlay and its taps.
 `#c` / `#gl` / `#px` never see the box, so no renderer changes. `#sh` sits over `#c`, under `#touchpad` and the DOM cards.
-`fit.shell(on)` shows + clears `#sh` (device-density backing, cap 3 touch / 2 desktop,
+`fit.shell(on)` shows + clears `#sh` (device-density backing, cap 3 on `p` / 2 on `d` and `l`,
 smoothing off) and returns `{ctx, box}`; `box` is the logical canvas
 stand-in (`width/height/logo`, its rect) that `drawShell` measures and the
 one pointer handler (bound on `#c` and `#sh`) maps through, so a tap lands

@@ -69,7 +69,7 @@ const mkApp = (screen) => {
 const HIT = { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit: md.menuHit, settingsHit: md.settingsHit, graphicsHit: md.graphicsHit, guideHit: md.guideHit, levelHit: md.levelHit, scoresHit: md.scoresHit, statsHit: md.statsHit, layout: md.layout };
 const SHELL_SCREENS = ["MENU", "LEVEL", "HOWTO", "SCORES", "ITEMS", "ENEMIES", "SETTINGS", "GUIDE", "STATS", "TROPHIES", "GRAPHICS", "FLOOR", "CONTROLS"];
 
-// ---- shellGeo per layout: d is the window at scale 1, l and p follow PORT_SHELL ----
+// ---- shellGeo per layout: d and l are the window at scale 1, p follows PORT_SHELL ----
 {
   const boardLine = (W, H, lay) => { const b = fitBox(W, H, lay !== "d", 600, 520).s; return (H - 520 * b) / 2 + 1 + PORT_SHELL.logo * 520 * b; }; // body flex-centres #wrap; 1px canvas border
   for (const [W, H] of [[1366, 768], [1920, 1080], [1280, 720], [3840, 2160], [600, 520]]) {
@@ -92,23 +92,24 @@ const SHELL_SCREENS = ["MENU", "LEVEL", "HOWTO", "SCORES", "ITEMS", "ENEMIES", "
     let H0 = 470; while (at(H0 - 1)) H0--;
     check("p floor: the first height with a box is exactly 520 units tall, one px less has none", at(H0).h === 520 && at(H0 - 1) === null, H0);
   }
-  for (const [W, H, s, w, h] of [[1366, 1024, 1.8, 758, 568], [1366, 936, 1.8, 758, 520]]) {
-    const g = shellGeo(W, H, 600, 520, "l"), aw = W - FIT_RES.p[0], b = fitBox(W, H, true, 600, 520).s;
-    check(`l ${W}x${H}: the PORT_SHELL scale and width clamp on the landscape viewport (s ${s}, ${w}x${h}), logo on the centred board's 0.27 line`,
-      !!g && Math.abs(g.s - s) < 1e-9 && g.w === w && g.h === h && g.left === 0 && g.top === 0 && Math.abs(g.s - Math.min(1.8, aw / Math.round(Math.max(400, Math.min(600, aw / 0.9))))) < 1e-9 &&
-        Math.abs(g.logo * g.s - ((H - 520 * b) / 2 + 1 + 0.27 * 520 * b)) < 1e-6, J(g));
+  // lead ruling (pre-review): a landscape tablet is the desktop form with touch pitches, so l takes the desktop rule
+  for (const [W, H] of [[1024, 768], [1180, 820], [1194, 834], [1366, 1024]]) {
+    const g = shellGeo(W, H, 600, 520, "l");
+    check(`l ${W}x${H} (tablet): the shell box is the window at scale 1, logo on the centred landscape board's 0.27 line`,
+      !!g && g.w === W && g.h === H && g.s === 1 && g.left === 0 && g.top === 0 && Math.abs(g.logo - boardLine(W, H, "l")) < 1e-9 && g.logo !== boardLine(W, H, "d"), J(g));
   }
-  check("l floor: 1366x936 has a box 520 tall, 1366x935 has none", shellGeo(1366, 936, 600, 520, "l").h === 520 && shellGeo(1366, 935, 600, 520, "l") === null);
-  check("l: a landscape phone (852x393) and the common tablets (1024x768, 1180x820, 1194x834) stay under 520 units: no box, menus stay on #c",
-    [[852, 393], [1024, 768], [1180, 820], [1194, 834]].every(([W, H]) => shellGeo(W, H, 600, 520, "l") === null));
+  check("l: landscape phones (844x390, 932x430, 852x393) are under the floor: no box, menus stay on #c", [[844, 390], [932, 430], [852, 393]].every(([W, H]) => shellGeo(W, H, 600, 520, "l") === null));
+  check("l floor: 520 tall has a box, 519 does not", !!shellGeo(1024, 520, 600, 520, "l") && shellGeo(1024, 519, 600, 520, "l") === null);
+  check("l floor: 600 wide has a box, 599 does not", !!shellGeo(600, 560, 600, 520, "l") && shellGeo(599, 560, 600, 520, "l") === null);
+  check("p is never the window rule: a 768x1024 tablet keeps the PORT_SHELL box (612 wide, s 1.2533)", shellGeo(768, 1024, 600, 520, "p").w === 612 && Math.abs(shellGeo(768, 1024, 600, 520, "p").s - 1.2533) < 1e-3 && FIT_RES.p[0] === 16);
 }
 
 // ---- mountFit: the box on every layout, its CSS box, its backing ----
-for (const [lay, W, H, touch, dpr, q] of [["d", 1366, 768, false, 2, 2], ["d", 1366, 768, false, 3, 2], ["d", 1920, 1080, false, 1, 1], ["p", 393, 852, true, 3, 2.7], ["l", 1366, 1024, true, 3, 3]]) {
+for (const [lay, W, H, touch, dpr, q] of [["d", 1366, 768, false, 2, 2], ["d", 1366, 768, false, 3, 2], ["d", 1920, 1080, false, 1, 1], ["p", 393, 852, true, 3, 2.7], ["l", 1024, 768, true, 3, 2], ["l", 1366, 1024, true, 1.5, 1.5]]) {
   const D = mkDom(W, H, touch, dpr);
   try {
     const fit = mountFit(mkCv()), g = shellGeo(W, H, 600, 520, lay);
-    check(`${lay} ${W}x${H} dpr ${dpr}: data-lay ${lay}, #sh spans the box's CSS rect, backing = box x ${q} (${lay === "d" ? "desktop cap 2" : "touch cap 3"})`,
+    check(`${lay} ${W}x${H} dpr ${dpr}: data-lay ${lay}, #sh spans the box's CSS rect, backing = box x ${q} (${lay === "p" ? "portrait cap 3" : "window cap 2"})`,
       D.attrs["data-lay"] === lay && D.sh.style.left === "0px" && D.sh.style.top === "0px" && D.sh.style.width === g.w * g.s + "px" && D.sh.style.height === g.h * g.s + "px" &&
         D.sh.width === Math.round(g.w * q) && D.sh.height === Math.round(g.h * q), J([D.sh.width, D.sh.height, D.sh.style]));
     const s = fit.shell(1);
@@ -126,8 +127,10 @@ for (const [lay, W, H, touch, dpr, q] of [["d", 1366, 768, false, 2, 2], ["d", 1
     check("a resize past the floor brings the box (#sh sized to the window)", !!fit.shell(1) && D.sh.style.height === "768px" && !D.sh.hidden);
     D.win.innerWidth = 560; D.hs.resize.forEach((f) => f());
     check("a resize under the width floor hides #sh and drops the box", D.sh.hidden && fit.shell(1) === null && fit.box() === null);
-    D.win.innerWidth = 1366; D.win.ontouchstart = null; D.win.innerHeight = 600; D.hs.orientationchange.forEach((f) => f());
-    check("orientationchange re-fits too (here to a touch landscape under the floor: no box)", D.attrs["data-lay"] === "l" && fit.shell(1) === null && D.sh.hidden);
+    D.win.innerWidth = 844; D.win.ontouchstart = null; D.win.innerHeight = 390; D.hs.orientationchange.forEach((f) => f());
+    check("orientationchange re-fits too (here to a landscape phone under the floor: no box)", D.attrs["data-lay"] === "l" && fit.shell(1) === null && D.sh.hidden);
+    D.win.innerWidth = 1024; D.win.innerHeight = 768; D.hs.orientationchange.forEach((f) => f());
+    check("orientationchange to a landscape tablet brings the window box", D.attrs["data-lay"] === "l" && !!fit.shell(1) && D.sh.style.width === "1024px" && D.sh.style.height === "768px" && fit.box().width === 1024);
   } finally { undo(); }
 }
 
@@ -163,7 +166,7 @@ for (const [lay, W, H, touch, dpr, q] of [["d", 1366, 768, false, 2, 2], ["d", 1
 }
 
 // ---- the pointer maps through the box on every layout: a tap at a drawn MENU row confirms that row ----
-for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2160, false, 1], ["l", 1366, 1024, true, 3], ["p", 393, 852, true, 3]]) {
+for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2160, false, 1], ["l", 1024, 768, true, 3], ["p", 393, 852, true, 3]]) {
   const D = mkDom(W, H, touch, dpr);
   try {
     const cv = mkCv(), fit = mountFit(cv), sh = fit.shell(1), app = mkApp(SCREEN.MENU), input = { _intent: { fire: true }, onUiKey() {} };
@@ -177,23 +180,25 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
   } finally { undo(); }
 }
 
-// ---- every page in a desktop box (and a landscape tablet's) draws inside it, unclipped, and taps where it draws ----
+// ---- every page in a desktop window box (and a landscape tablet's, touch pitches) draws inside it, unclipped, and taps where it draws ----
 {
   const base = {};
   const shot = (nm, box, cur) => { const a = mkApp(SCREEN[nm]); if (cur != null) a.cursor = cur; const R = rec(); drawShell(R.c, a, { state: "PLAY", time: 1 }, box, "2d", () => [], () => 0, () => ({})); return R.texts; };
   const boxOf = (g, lay) => ({ width: g.w, height: g.h, logo: g.logo, ownerDocument: { body: { getAttribute: () => lay } }, getBoundingClientRect: () => ({ left: 0, top: 0, width: g.w * g.s, height: g.h * g.s }) });
   const each = (f) => { for (const nm of SHELL_SCREENS) for (let cur = 0; cur < (nm === "MENU" ? 8 : 1); cur++) f(nm, nm === "MENU" ? cur : null); };
-  for (const lay of ["d", "l"]) each((nm, cur) => { base[lay + nm + cur] = shot(nm, boxOf({ w: 600, h: 520, s: 1 }, lay), cur).map((q) => q.s).join("|"); });
-  for (const [lay, W, H] of [["d", 600, 520], ["d", 1366, 768], ["d", 1920, 1080], ["d", 3840, 2160], ["l", 1366, 1024]]) {
+  /* the words, by " · " token: a tall touch box hangs the hub's build tag under the plate instead of on the SOURCE tile (menudraw drawMenu), the same tokens; an ellipsis changes a token */
+  const words = (T) => T.flatMap((q) => q.s.split(" · ")).sort().join("|");
+  for (const lay of ["d", "l"]) each((nm, cur) => { base[lay + nm + cur] = words(shot(nm, boxOf({ w: 600, h: 520, s: 1 }, lay), cur)); });
+  for (const [lay, W, H] of [["d", 600, 520], ["d", 1366, 768], ["d", 1920, 1080], ["d", 3840, 2160], ["l", 600, 520], ["l", 1024, 768], ["l", 1180, 820], ["l", 1194, 834], ["l", 1366, 1024]]) {
     const g = shellGeo(W, H, 600, 520, lay), box = boxOf(g, lay), touch = lay !== "d", L = md.layout(g.w, g.h, g.logo), tg = `${lay} ${W}x${H} box ${g.w}x${g.h}`;
     const out = [], same = [];
     each((nm, cur) => {
       const T = shot(nm, box, cur);
       if (T.some((q) => q.x < -0.5 || q.x + q.w > g.w + 0.5 || q.y < 0 || q.y > g.h)) out.push(nm + cur);
-      if (T.map((q) => q.s).join("|") !== base[lay + nm + cur]) same.push(nm + cur);
+      if (words(T) !== base[lay + nm + cur]) same.push(nm + cur);
     });
     check(`every page's text sits inside the box (${tg})`, out.length === 0, out.join());
-    check(`every page prints exactly its 600x520 words: nothing elided (${tg})`, same.length === 0, same.join());
+    check(`every page prints exactly its 600x520 words, token for token: nothing elided (${tg})`, same.length === 0, same.join());
     const inBox = (S) => S.x >= 0 && S.y >= 0 && S.x + S.w <= g.w && S.y + S.h <= g.h && S.f === 1;
     const inPlate = (r, S) => r.x >= S.x - 1 && r.y >= S.y && r.x + r.w <= S.x + S.w + 1.01 && r.y + r.h <= S.y + S.h + 0.01;
     const ctr = (r) => [r.x + r.w / 2, r.y + r.h / 2];

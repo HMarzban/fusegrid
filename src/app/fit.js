@@ -38,20 +38,21 @@
    at the new ratio.
    Shell box (every layout, UI upgrade Task 1.0): shellGeo gives MENU and
    the plated pages their own logical box on #sh, a fixed overlay canvas over
-   the whole viewport. d: the window at scale 1 (never under DESK_SHELL.min
-   600 x 520, the classic page box: a narrower keyboard page clips its text,
-   so the menus stay on #c as before). p and l: the menus are width-bound at
-   the board's 600 too, so a 393 px phone shows them at ~0.63 in a third of
-   the screen; the scale is the one that fits a PORT_SHELL.w-clamped width
-   into the stage's width (~0.9 on a phone, so every size grows ~1.4x; a
-   tablet keeps 600 and only grows taller) and the box is the viewport at
-   that scale (never under 520 tall, else no shell box: most landscape
-   screens). logo is the board's own logo line (0.27 of the centred stage) in
-   box units, so MENU's logo still sits on the board behind it. The board
+   the whole viewport. d and l: the window at scale 1 (never under
+   DESK_SHELL.min 600 x 520, the classic page box: a narrower page clips its
+   text, so the menus stay on #c as before; every landscape phone is under
+   it); a landscape tablet is the desktop form with touch pitches. p: the
+   menus are width-bound at the board's 600 too, so a 393 px phone shows them
+   at ~0.63 in a third of the screen; the scale is the one that fits a
+   PORT_SHELL.w-clamped width into the stage's width (~0.9 on a phone, so
+   every size grows ~1.4x; a tablet keeps 600 and only grows taller) and the
+   box is the viewport at that scale (never under 520 tall, else no shell
+   box). logo is the board's own logo line (0.27 of the centred stage) in box
+   units, so MENU's logo still sits on the board behind it. The board
    canvases never see it:
    #c / #gl / #px keep the board box and their own fit. #sh's backing is the
-   box at device density (q = s x dpr, cap 3 on touch, DESK_SHELL.dpr 2 on d,
-   smoothing off for the PIXEL cells) under a q transform, so its text is
+   box at device density (q = s x dpr, cap 3 on p, DESK_SHELL.dpr 2 on d and
+   l, smoothing off for the PIXEL cells) under a q transform, so its text is
    crisp where #c's is upscaled.
    fit.shell(on) shows #sh, clears it and hands back {ctx, box}; box is the
    logical canvas stand-in ({width, height} = the box, its rect and document)
@@ -93,10 +94,10 @@ export const PORT_SHELL = Object.freeze({ s: 0.9, w: [400, 600], logo: 0.27 });
 export const DESK_SHELL = Object.freeze({ min: [600, 520], dpr: 2 });
 
 export function shellGeo(W, H, cw = 600, ch = 520, lay = "p") {
-  const P = PORT_SHELL, d = lay === "d", b = fitBox(W, H, !d, cw, ch).s, mid = lay === "p" ? portraitGeo(W, H, cw, ch, false).top : (H - ch * b) / 2;
-  if (d) return W < DESK_SHELL.min[0] || H < DESK_SHELL.min[1] ? null : { w: Math.floor(W), h: Math.floor(H), s: 1, left: 0, top: 0, logo: mid + 1 + P.logo * ch * b };
+  const P = PORT_SHELL, b = fitBox(W, H, lay !== "d", cw, ch).s;
+  if (lay !== "p") return W < DESK_SHELL.min[0] || H < DESK_SHELL.min[1] ? null : { w: Math.floor(W), h: Math.floor(H), s: 1, left: 0, top: 0, logo: (H - ch * b) / 2 + 1 + P.logo * ch * b };
   const aw = W - FIT_RES.p[0], s = Math.min(1.8, aw / Math.round(Math.max(P.w[0], Math.min(P.w[1], aw / P.s)))), w = Math.floor(W / s), h = Math.floor(H / s);
-  return h < 520 ? null : { w, h, s, left: 0, top: 0, logo: (mid + 1 + P.logo * ch * b) / s };
+  return h < 520 ? null : { w, h, s, left: 0, top: 0, logo: (portraitGeo(W, H, cw, ch, false).top + 1 + P.logo * ch * b) / s };
 }
 
 export const ACT_GEO = Object.freeze({ max: 52, min: 44, gap: 8, pill: 44 });
@@ -187,7 +188,7 @@ export function mountFit(canvas) {
       const sh = shEl();
       shG = sh ? shellGeo(window.innerWidth, window.innerHeight, canvas.width, canvas.height, lay) : null;
       if (shG) {
-        const q = Math.min(lay === "d" ? DESK_SHELL.dpr : 3, shG.s * ((typeof devicePixelRatio !== "undefined" && devicePixelRatio) || 1)), bw = Math.round(shG.w * q), bh = Math.round(shG.h * q);
+        const q = Math.min(lay === "p" ? 3 : DESK_SHELL.dpr, shG.s * ((typeof devicePixelRatio !== "undefined" && devicePixelRatio) || 1)), bw = Math.round(shG.w * q), bh = Math.round(shG.h * q);
         if (sh.width !== bw) sh.width = bw;
         if (sh.height !== bh) sh.height = bh;
         for (const [k, v] of [["left", shG.left], ["top", shG.top], ["width", shG.w * shG.s], ["height", shG.h * shG.s]]) sh.style[k] = v + "px";

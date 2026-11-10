@@ -70,17 +70,22 @@ the pause list and backs out of any other page. A chip tap on LEVEL SELECT or
 HIGH SCORES goes through the same app call as its arrow key, so it sounds the
 same.
 
-A portrait phone sizes the board by its width, which left the menus at about
-0.63 scale in a third of the screen. So on a portrait phone the main menu and
-every menu page draw on their own canvas, `#sh`, laid over the whole viewport
-at about 0.9 scale ([`fit.js`](../src/app/fit.js) `shellGeo`). The board
-canvases never see that box: they keep their own size and position, so no
-renderer changes and the board still sits behind the menu with the logo on
-it. The box is narrower than 600, so pages re-flow there (LEVEL SELECT stacks
-its room card under the grid, MEDALS goes to one column). `fit.shell` hands
-the drawing code and the tap handler the same logical box, so a tap still
-lands where it is drawn. The intro, attract mode, play and the pause menu stay
-on the board canvas.
+The main menu and every menu page draw on their own canvas, `#sh`, laid over
+the whole viewport ([`fit.js`](../src/app/fit.js) `shellGeo`). On a desktop
+and a landscape tablet that box is the window at scale 1; a window under
+600 × 520 has no box and keeps the menus on the board canvas, as does every
+landscape phone, since a page narrower than 600 would cut its text. A
+portrait phone sizes the board by its width, which left the menus at about
+0.63 scale in a third of the screen, so there the box is the viewport at
+about 0.9 scale; it is narrower than 600, so pages re-flow there (LEVEL
+SELECT stacks its room card under the grid, MEDALS goes to one column). The
+board canvases never see the box: they keep their own size and position, so
+no renderer changes and the board still sits behind the menu with the logo on
+it. `fit.shell` hands the drawing code and the tap handler the same logical
+box, so a tap still lands where it is drawn. The intro, attract mode, play, the
+pause menu and a room WIN mid-run stay on the board canvas with `#sh` hidden. At the end of a run
+`#sh` shows but draws nothing and lets every tap through, so GAME OVER and the
+final WIN keep the board canvas and its taps.
 
 The 3D renderer works to a fixed budget of 500 draw calls, and the tests' fully
 populated room draws 141. Anything repeated is instanced, so cost doesn't grow
