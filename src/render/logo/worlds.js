@@ -5,11 +5,14 @@
    part kinds, layout units, each tagged with the letter it sits on, or "bomb") in draw order; MOTIF.set says which set a tier wears.
    PLATE says what the logo sits on, as the approved mock places it, in CSS px that never scale with the cap: on the title, the kit's plate() with
    worldTokens(level) (its bed box = the logo canvas, layout(build).env x cap, grown by PLATE.title[dev].pad; the kit draws its T-wide ring outside
-   that box, so the plate is painted beneath the logo canvas, not inside it); in the MENU, no plate (the logo sits in the menu panel's header); the mono
-   and ink builds on a plain rounded ground; PLATE.sheet (the row's bed, frame, frameHi and corner mark) is the logo sheet's presentation only, never a
-   default. plan(world, {cap, ver, dpr, build, dev, place}) is the CLASSIC paint list for one size: glyphs.js LAYERS filtered by each layer's tiers,
-   world and placement (default: mono ground, MENU tier "menu", else "title"), every width resolved to C units (CSS minimums n / cap, device
-   n / (cap * dpr)); plateBox(build, cap, pad) is the kit plate's box from the logo canvas's top-left.
+   that box, so the plate is painted beneath the logo canvas, not inside it); in the MENU, no plate (the logo sits centred in the menu panel's header,
+   pad = the header's padding, below = the space from the header's bottom edge to the next item: its bottom margin plus the panel's flex gap); the mono
+   and ink builds on a plain rounded ground; PLATE.sheet (the row's bed, frame, frameHi and corner mark, sizes border-box as the kit's CSS sets them) is
+   the logo sheet's presentation only, never a default. plan(world, {cap, ver, dpr, build, dev, place}) is the CLASSIC paint list for one size:
+   glyphs.js LAYERS filtered by each layer's tiers, world and place, every width resolved to C units (CSS minimums n / cap, device n / (cap * dpr)).
+   place: title (the default at the title tier only), menu (the default at the MENU tier), none (the default at token and small: no plate), sheet (only
+   when asked), ground (the mono and ink builds, which take no other); an unknown world or an impossible place throws. It returns {tier, place, build,
+   dev, layers}: lay the logo out with that build. plateBox(build, cap, pad) and groundBox(build, cap) are boxes from the logo canvas's top-left.
    Its mask words: src = what a layer is built from (solid = faces + bomb body, side, outline, ringInner); grow = dilate by; close = closings in order,
    on a padded canvas; sweep = swept straight down by; band = the bottom band of the side that tall, minus the solid; shift = the face minus itself
    moved by (shade, light); col [FUSE, GRID] per word for face, shade and light.
@@ -22,7 +25,7 @@ const deep = (o) => { for (const v of Object.values(o)) if (v && typeof v === "o
 const rad = (d) => (d * Math.PI) / 180;
 const T3 = ["title", "token", "menu"], T4 = [...T3, "small"];
 const SIDE = {JUNGLE: "bg0", ICE: "wall", FACTORY: "bg0", WATER: "bg0", ARENA: "bg0", SAND: "bg0", VOID: "brickB", CROWN: "brickB"};
-const CORNER = {FACTORY: {kind: "bolt", size: 9, radii: [4.5, 4.5, 4.5, 4.5], rot: 0}, ARENA: {kind: "stud", size: 9, radii: [0, 0, 0, 0], rot: 45}, CROWN: {kind: "filigree", size: 11, radii: [2, 5.5, 2, 5.5], rot: 0}};
+const CORNER = {FACTORY: {kind: "bolt", size: 7, radii: [3.5, 3.5, 3.5, 3.5], rot: 0}, ARENA: {kind: "stud", size: 7, radii: [0, 0, 0, 0], rot: 45}, CROWN: {kind: "filigree", size: 9, radii: [2, 4.5, 2, 4.5], rot: 0}};
 const DRESS = {ICE: {frost: {col: "#f4fcff", tiers: ["title"]}},
   VOID: {ring: {close: {w: .16, tiers: T3}, inner: {w: .04, col: "#6a20c8", tiers: T3}, outer: {w: .04, col: "#3a1070", tiers: ["title"]}}},
   CROWN: {gilt: {tiers: T4, line: {w: .02, min: {px: 1, unit: "device"}, col: "#fff0a8"}, ink: {w: .03, min: {px: 1.2, unit: "device"}, col: P.ol}}}};
@@ -33,11 +36,13 @@ export const WORLDS = deep(Object.fromEntries(BIOMES.map((b, i) => {
 export const PLATE = deep({unit: "css", scales: false,
   title: {plate: "kit", d: {build: "line", cap: 88, pad: [26, 54, 28, 54], T: 16, tile: 80}, p: {build: "stack", cap: 76, pad: [16, 12, 18, 12], T: 10, tile: 56}},
   menu: {plate: "none", host: "the MENU panel header", build: "line", cap: 36, ver: "menu", align: "centre",
-    d: {pad: [0, 0, 0, 0], below: 28}, d125: {pad: [0, 0, 4, 0], below: 18}, p: {pad: [18, 0, 10, 0], below: 0}, p125: {pad: [10, 0, 6, 0], below: 0}},
+    d: {pad: [0, 0, 0, 0], below: 28}, d125: {pad: [0, 0, 4, 0], below: 18}, p: {pad: [18, 0, 10, 0], below: 10}, p125: {pad: [10, 0, 6, 0], below: 10}},
   ground: {radius: 6, pad: [8, 10, 8, 10], mono: P.dk, ink: P.cream},
   sheet: {radius: 6, pad: [8, 10, 8, 10], ink: {w: 2, col: P.ol}, frame: {w: 3}, inner: [{w: 2, col: P.ol}, {w: 1, col: "frameHi"}], bed: {a: 1},
     corner: {inset: 4, border: 1, ink: P.ol, fill: "frameHi"}}});
 export const plateBox = (build, cap, pad) => { const E = layout(build).env; return deep({x: -pad[3], y: -pad[0], w: E.w * cap + pad[1] + pad[3], h: E.h * cap + pad[0] + pad[2]}); };
+export const groundBox = (build, cap) => plateBox(build, cap, PLATE.ground.pad);
+const PLACES = ["title", "menu", "none", "sheet"];
 export const worldOf = (w) => (typeof w === "number" ? WORLDS[worldTokens(w).name] : WORLDS[w]) || null;
 export function tierOf(o) {
   if (o.ver === "mono" || o.ver === "ink" || o.cap < 20) return "mono";
@@ -63,9 +68,9 @@ const PAINT = {
       o.push({on, k: "line", d: [["M", ...T(.01, 0)], ["L", ...T(.12, 0)]], w: mn(M.leaf.vein, 1, px), col: M.vine.col, cap});
     };
     if (tok) return leaf("F", F.x + .06, F.y + .05, -150);
-    const vine = (on, d) => o.push({on, k: "line", d, w: M.vine.w + 2 * M.vine.ink, col: P.ol, cap: "round"}, {on, k: "line", d, w: M.vine.w, col: M.vine.col, cap: "round"});
-    for (const yy of M.vine.pass) vine("F", [["M", F.x - .04, F.y + yy + .035], ["Q", F.x + .12, F.y + yy + .045, F.x + .30, F.y + yy - .03]]);
-    vine("F", [["M", F.x + .27, bl(F) + .07], ["C", F.x + .55, bl(F) + .07, U.x + .10, bl(U) + .07, U.x + .40, bl(U) + .07], ["A", U.x + .40, bl(U) + .13, .06, -Math.PI / 2, Math.PI * 1.2, false]]);
+    const vine = (on, d, mj) => o.push({on, k: "line", d, w: M.vine.w + 2 * M.vine.ink, col: P.ol, cap: "round", ...(mj && {join: "miter"})}, {on, k: "line", d, w: M.vine.w, col: M.vine.col, cap: "round", ...(mj && {join: "miter"})});
+    for (const yy of M.vine.pass) vine("F", [["M", F.x - .04, F.y + yy + .035], ["Q", F.x + .12, F.y + yy + .045, F.x + .30, F.y + yy - .03]], true);
+    vine("F", [["M", F.x + .27, bl(F) + .07], ["C", F.x + .55, bl(F) + .07, U.x + .10, bl(U) + .07, U.x + .40, bl(U) + .07], ["A", U.x + .40, bl(U) + .13, .06, -Math.PI / 2, Math.PI * 1.2, false]], true);
     leaf("F", F.x - .005, F.y + .50, 162);
     leaf("F", F.x - .005, F.y + .80, 198);
     leaf("U", U.x + .48, bl(U) + .10, 25);
@@ -171,24 +176,29 @@ export function motif(world, build, tier, px = Infinity) {
   return deep(out);
 }
 export function plan(world, o) {
-  const w = worldOf(world), cap = o.cap, dpr = o.dpr || 1, tier = tierOf(o), F = faces(tier, o.ver), on = (r) => !!r && r.tiers.includes(tier);
+  const w = worldOf(world);
+  if (!w) throw new Error("logo plan: unknown world " + world);
+  const cap = o.cap, dpr = o.dpr || 1, tier = tierOf(o), F = faces(tier, o.ver), on = (r) => !!r && r.tiers.includes(tier), dev = o.dev === "p" ? "p" : "d";
   const mn = (v, m) => (m && (!m.tiers || m.tiers.includes(tier)) ? Math.max(v, m.px / (m.unit === "device" ? cap * dpr : cap)) : v);
+  const place = o.place || (tier === "mono" ? "ground" : tier === "title" ? "title" : tier === "menu" ? "menu" : "none");
+  if (tier === "mono" ? place !== "ground" : !PLACES.includes(place)) throw new Error("logo plan: place " + place + (tier === "mono" ? " (the mono and ink builds sit on a ground)" : place === "ground" ? " is for the mono and ink builds only" : " is not one of " + PLACES.join(", ")));
+  const build = o.build || (place === "title" ? PLATE.title[dev].build : place === "menu" ? PLATE.menu.build : "line");
   if (tier === "mono") {
     const col = F.f[0], g = PLATE.ground;
-    return deep({tier, place: "ground", layers: MONO_LAYERS.map((id) => (id === "ground" ? {id, col: o.ver === "ink" ? g.ink : g.mono, radius: g.radius, pad: g.pad, unit: PLATE.unit}
+    return deep({tier, place, build, dev, layers: MONO_LAYERS.map((id) => (id === "ground" ? {id, col: o.ver === "ink" ? g.ink : g.mono, radius: g.radius, pad: g.pad, box: groundBox(build, cap), unit: PLATE.unit}
       : id === "monoFace" ? {id, col} : id === "monoBomb" ? {id, x: 0, y: BOMB.oy, rx: BOMB.rx, ry: BOMB.ry, unit: "D", col}
-      : id === "monoCord" ? {id, w: mn(MONO.w, MONO.min), col} : {id, off: MONO.ring.off, r: MONO.ring.r, w: mn(MONO.ring.w, MONO.ring.min), col}))});
+      : id === "monoCord" ? {id, w: mn(MONO.w, MONO.min), col, join: "miter"} : {id, off: MONO.ring.off, r: MONO.ring.r, w: mn(MONO.ring.w, MONO.ring.min), col}))});
   }
-  const place = o.place || (tier === "menu" ? "menu" : "title"), dev = o.dev === "p" ? "p" : "d", sh0 = PLATE.sheet, ti = PLATE.title[dev];
-  const plate = place === "title" ? {kind: "kit", level: w.level, phone: dev === "p", T: ti.T, tile: ti.tile, box: plateBox(o.build || ti.build, cap, ti.pad), unit: PLATE.unit}
-    : place === "sheet" ? {kind: "sheet", radius: sh0.radius, pad: sh0.pad, ink: sh0.ink, frame: {w: sh0.frame.w, col: w.frame}, inner: [sh0.inner[0], {w: sh0.inner[1].w, col: w.frameHi}],
+  const sh0 = PLATE.sheet, ti = PLATE.title[dev];
+  const plate = place === "title" ? {kind: "kit", level: w.level, phone: dev === "p", T: ti.T, tile: ti.tile, box: plateBox(build, cap, ti.pad), unit: PLATE.unit}
+    : place === "sheet" ? {kind: "sheet", radius: sh0.radius, pad: sh0.pad, box: plateBox(build, cap, sh0.pad), ink: sh0.ink, frame: {w: sh0.frame.w, col: w.frame}, inner: [sh0.inner[0], {w: sh0.inner[1].w, col: w.frameHi}],
       bed: {col: w.bed, a: sh0.bed.a}, corner: w.corner && {...w.corner, inset: sh0.corner.inset, border: sh0.corner.border, ink: sh0.corner.ink, fill: w.frameHi}, unit: PLATE.unit} : null;
   const S = STACK, R = w.ring, G = w.gilt, sh = S.shade.shift, ICE = on(w.frost) ? w.frost.col : null;
   const L = {
     plate: () => plate,
     ringOuter: () => R && on(R.outer) && {src: "ringInner", grow: R.outer.w, col: R.outer.col},
     ringInner: () => R && on(R.inner) && {src: "outline", grow: R.inner.w, col: R.inner.col},
-    outline: () => ({src: S.outline.src, grow: mn(S.outline.grow, S.outline.min), close: R && on(R.close) ? [S.outline.close, R.close.w] : [S.outline.close], padded: S.outline.padded, col: S.outline.col}),
+    outline: () => ({src: S.outline.src, grow: mn(S.outline.grow, S.outline.min), close: R && on(R.close) ? [S.outline.close, R.close.w] : [S.outline.close], padded: S.outline.padded, clean: S.outline.clean.below, col: S.outline.col}),
     side: () => ({src: S.side.src, sweep: mn(S.side.sweep, S.side.min), col: w.side}),
     gilt: () => on(G) && {src: "side", band: mn(G.line.w, G.line.min), minus: "solid", col: G.line.col},
     giltInk: () => on(G) && {src: "solid", grow: mn(G.ink.w, G.ink.min), col: G.ink.col},
@@ -201,5 +211,5 @@ export function plan(world, o) {
     rope: () => on(CORD) && {over: CORD.over.filter((k) => on(CORD[k])), clip: "rope"},
     spark: () => on(SPARK) && {off: SPARK.off[tier], embers: SPARK.embers.includes(tier), grow: on(SPARK.grow)},
   };
-  return deep({tier, place, layers: LAYERS.map((id) => { const v = L[id](); return v && {id, ...v}; }).filter(Boolean)});
+  return deep({tier, place, build, dev, layers: LAYERS.map((id) => { const v = L[id](); return v && {id, ...v}; }).filter(Boolean)});
 }

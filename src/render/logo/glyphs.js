@@ -5,7 +5,7 @@
      ["M",x,y] ["L",x,y] ["Q",cx,cy,x,y] ["C",c1x,c1y,c2x,c2y,x,y] ["A",cx,cy,r,a0,a1,ccw] (canvas arc, joined from the current point) ["Z"].
    Parts (spark, bomb, cord, world motifs) are drawn in list order:
      fill  {d, col, a?, ink?, clip?}  fill d; ink > 0 strokes d first in P.ol at that width, round joins
-     line  {d, w, col, cap}           stroke d, round joins
+     line  {d, w, col, cap, join?}    stroke d, round joins unless join says otherwise (the mock's context state: the mono cord, JUNGLE's first vines)
      tube  {d, w[], col, cap}         stroke each L segment of d on its own at its own width w[i] (the tapered cord)
      disc  {x, y, r, col}   ring {x, y, r, w, col}   rect {x, y, w, h, col}   ell {x, y, rx, ry, rot, col, a?}   rrect {x, y, w, h, r, col}
      rim   {x, y, rx, ry, dx, dy, a0, a1, r, col}  even-odd of the body ellipse and itself moved (dx, dy), kept to the wedge a0..a1 of radius r
@@ -21,8 +21,9 @@
    outline counts as inside (the canvas isPointInPath rule). layout(build) is the one box per build ("line" | "stack"): letters {ch, x, y,
    word 0 FUSE / 1 GRID, i}, bomb {x, y, d}, cord control points, collar tip, face, baselines, env; the canvas is env x cap and fit() solves the cap.
    cordPath: 97 samples {x, y, s arc length, tx, ty}, 6 straight segments from the collar tip (the MONO start at the mono tier) to P0, then 90 of the
-   cubic; atS(pts, s) is the point at arc length s (braid ticks; the intro run-up puts the spark at atS(pts, run * length), no offset).
-   cord(build, tier, px, ver) resolves CORD into parts (layer "cordInk" or "rope"). sparkAt: the cord tip moved along its tangent by SPARK.off[tier].
+   cubic; atS(pts, s) is the point at arc length s (braid ticks). cord(build, tier, px, ver) resolves CORD into parts (layer "cordInk" or "rope").
+   sparkAt(build, tier, run?): with no run, or run >= 1, the cord tip moved along its tangent by SPARK.off[tier]; while 0 <= run < 1 (the intro
+   run-up) the point atS(cordPath, run x length) with no offset, so the spark jumps to the offset position when run reaches 1, as in the mock.
    spark(frame, {reduced, tier, px}) around its centre: frame = floor(t * 14) & 1 (0 A, 1 B); reduced = frame A in #ffb347, no embers.
    bomb(dpx): units of D, origin the centre, tiers by the diameter in CSS px; tip = the collar tip; in the logo its body joins the letters' solid,
    standalone it adds BOMB.shadow. */
@@ -50,7 +51,7 @@ export const FACE = deep({full: {f: [P.yel, P.yelLip, P.pale], g: [P.cor, P.corL
 export const faces = (tier, ver) => (tier === "mono" ? (ver === "ink" ? FACE.ink : FACE.mono) : tier === "menu" ? FACE.menu : FACE.full);
 const T4 = ["title", "token", "menu", "small"], T3 = ["title", "token", "menu"];
 export const STACK = deep({solid: "the faces of both words and the bomb body ellipse (BOMB rx, ry at oy, times BD)",
-  outline: {src: ["solid", "side"], grow: .10, close: .08, padded: true, min: {px: 2, unit: "css", tiers: ["small"]}, col: P.ol, tiers: T4},
+  outline: {src: ["solid", "side"], grow: .10, close: .08, padded: true, clean: {below: 24, of: 255, after: "each closing"}, min: {px: 2, unit: "css", tiers: ["small"]}, col: P.ol, tiers: T4},
   side: {src: "solid", sweep: .14, min: {px: 2, unit: "css", tiers: ["small"]}, col: P.dk, tiers: T4},
   face: {perWord: true, tiers: T4},
   shade: {perWord: true, shift: [-.04, -.06], min: {px: 2, unit: "css", tiers: ["token", "menu"]}, clip: "face", tiers: T3},
@@ -220,8 +221,9 @@ export function atS(pts, s) {
   const e = pts[pts.length - 1];
   return deep({x: e.x, y: e.y, tx: e.tx, ty: e.ty});
 }
-export function sparkAt(build, tier) {
-  const e = cordPath(build)[CORD.lead + CORD.n], off = SPARK.off[tier] || 0;
+export function sparkAt(build, tier, run) {
+  const pts = cordPath(build), e = pts[CORD.lead + CORD.n], off = SPARK.off[tier] || 0;
+  if (run != null && run < 1) { const q = atS(pts, e.s * run); return deep({x: q.x, y: q.y}); }
   return deep({x: e.x + e.tx * off, y: e.y + e.ty * off});
 }
 export function fit(build, o) {
@@ -232,7 +234,7 @@ export function cord(build, tier = "title", px = Infinity, ver) {
   const pts = cordPath(build, tier), n = pts.length, e = pts[n - 1], len = e.s, d = pts.map((p, i) => [i ? "L" : "M", p.x, p.y]);
   if (tier === "mono") {
     const col = faces("mono", ver).f[0], R = MONO.ring;
-    return deep([{k: "line", d, w: Math.max(MONO.w, MONO.min.px / px), col, cap: "round", layer: "monoCord"},
+    return deep([{k: "line", d, w: Math.max(MONO.w, MONO.min.px / px), col, cap: "round", join: "miter", layer: "monoCord"},
       {k: "ring", x: e.x + e.tx * R.off, y: e.y + e.ty * R.off, r: R.r, w: Math.max(R.w, R.min.px / px), col, layer: "monoTip"}]);
   }
   const C = CORD, k = len ? 1 / len : 0, w = (s) => Math.max(C.w0 - (C.w0 - C.w1) * s * k, C.min.px / px), ow = Math.max(C.ink.w, C.ink.min.px[tier] / px);
