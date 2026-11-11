@@ -442,7 +442,7 @@ for (const state of ["none", "lost"]) {
   const k = walkAll(open("key"));
   check("keyboard walk", J(k) === J(["Move, WASD. 1 of 8.", "Bomb, SPACE. 2 of 8.", "Throw, E. 3 of 8.", "Remote, Q. 4 of 8.", "Pause, P. 5 of 8.", "Confirm, ENTER. 6 of 8.", "Back, ESC. 7 of 8.", "Reset keys. 8 of 8."]), J(k));
   const p = walkAll(open("pad"));
-  check("pad walk", J(p) === J(["Move, D-PAD and L-STICK. 1 of 8.", "Bomb, SOUTH. 2 of 8.", "Throw, WEST. 3 of 8.", "Remote, EAST. 4 of 8.", "Pause, START and SELECT. 5 of 8.", "Sensitivity, medium. The stick must move 25 percent before it counts. 6 of 8.", "Vibration, medium. Menus buzz too. Left and right change it. 7 of 8.", "Reset pad. 8 of 8."]), J(p));
+  check("pad walk", J(p) === J(["Move, D-PAD and L-STICK. 1 of 8.", "Bomb, SOUTH. 2 of 8.", "Throw, WEST. 3 of 8.", "Remote, EAST. 4 of 8.", "Pause, START and SELECT. 5 of 8.", "Sensitivity, medium. The stick must move 25 percent before it counts. 6 of 8.", "Vibration, medium. Menus buzz too. Left and right change it. 7 of 8.", "Reset controller. 8 of 8."]), J(p));
   const r = open("key");
   r.p.pick(2); r.p.confirm(0); r.p.tick(1, false); r.p.tick(300, false); r.p.feedKey("KeyZ", "z", 301); r.p.tick(302, true); r.p.tick(600, false);
   r.said.length = 0; r.p.pick(3); r.said.length = 0; r.p.pick(2);

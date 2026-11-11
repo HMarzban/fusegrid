@@ -95,6 +95,8 @@ Locked floor sample now mapped to the box (endkit `rpair` transforms `o.floor`; 
 
 ## 2026-11-11 — UI upgrade Task 5.2: end-screen routing (lane-5-ends, held for R2)
 - `src/render/pages/endgeom.js` (draw / tap contract of WIN and GAME OVER, boot), Esc / EAST → MENU at a run end (finale via the fire edge), run-end taps on endgeom keys on pointerup; main's `runInfo` / `timeInfo`. The old summary stays until 5.3 / 5.4 register their pages.
+## 2026-11-11 — UI upgrade Task 6.1: a real controller on CONTROLS (held lane lane-6-controls, R3)
+- `padart.js` draws the round 7 twin-grip controller in the world's brick (cached layer), `controlsgeo.js` plans crossing-free callouts (`padPlan` / `padCross` / `padFit`; compact with no leaders where they do not fit); desk boxes widen the CONTROLS plate; RESET PAD is RESET CONTROLLER. Open: NORTH / shoulders / triggers are still bindable in `controls.js` (R3 says not), and CONTROLS is still uninstrumented for `gates.mjs`.
 
 ## 2026-11-11 — UI upgrade Task 3.6: DOM cards on the world kit
 - `#upd`, `#ana`, `#load` now use `--k-*` world-1 kit properties (pinned to `tokens.js` in hidden-css.test); keycaps last; failure copy names ART STYLE. Left: the REAL 3D/PIXEL row copy `SOUTH RETRY` in menudraw (renderrow.test:87) still keycap-first, for the SETTINGS lane.

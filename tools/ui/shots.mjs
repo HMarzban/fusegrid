@@ -3,7 +3,7 @@
    Every page task proves its layout on these: tools/ui/gates.mjs measures them, tools/ui/compare.mjs puts each beside its approved mock frame.
 
    node tools/ui/shots.mjs [flags]
-     --screens a,b    screens to capture (default all): title, menu, level, options (alias settings), graphics, controls, guide, howto, items,
+     --screens a,b    screens to capture (default all): title, menu, level, options (alias settings), graphics, controls, controlsnone, controlspad, controlscapture, guide, howto, items,
                       enemies, floor, scores, stats, statsreset (STATS armed), medals, scoresfull / statsfull (a seeded cabinet,
                       __GAME__.seedRecords()), statspage2 (STATS' second page on a paged phone), scoresidle (RECORDS through the real lazy.idle() load: no want()), pause, pausetags (PAUSE with the run's rules seeded: the tag row), win, win2 (a paged run end's second
                       page), lose, loseshort (a saved best: the shortfall), losedaily (today's DAILY), lose2,
@@ -98,6 +98,9 @@ const UIRESET = "(()=>{const u=window.__GAME__.ui;if(u){u.on(false);u.on(true);}
 const NOTEXT = (on) => `(window.__uiNoText=${on},import('/src/render/kit/cache.js').then((m)=>{m.invalidate('notext');return true;}))`;
 const LOSE = `(()=>{const G=window.__GAME__.G,p=G.players[0];G.lives=1;p.iFrames=0;p.shield=false;G.bombs.push({x:p.x,y:p.y,tx:Math.floor(p.x/40),ty:Math.floor(p.y/40),timer:0.05,radius:1,variant:'normal',dead:false});return true;})()`;
 const TWIN_MS = 1000 / 30;
+/* a standard-mapping controller in slot 0 (headless Chrome has none), no button down, for the CONTROLS frames that need one; false takes it away */
+const PAD = (on) => `(()=>{const b=()=>({pressed:false,touched:false,value:0}),p={id:'shots controller',index:0,connected:true,mapping:'standard',timestamp:0,axes:[0,0,0,0],buttons:Array.from({length:17},b),vibrationActuator:null};
+ Object.defineProperty(navigator,'getGamepads',{value:${on} ? (()=>[p,null,null,null]) : (()=>[null,null,null,null]),configurable:true,writable:true});return true;})()`;
 /* the run's ledger: a capture that fails is named in failed and errors; a page error is charged to the capture whose window it falls in (from the
    start of reaching that screen to the end of its capture) or, outside every window, to the run */
 export function ledger(rep, gid, errs) {
@@ -223,7 +226,10 @@ async function group(c, port, a, look, world, rep) {
       if (R.wait === "controls" && !(await poll("!!window.__GAME__.app.controls&&!window.__GAME__.app.controls.loading", 10000))) warn("the CONTROLS page never loaded");
       if (R.wait === "records" && !(await poll("import('/src/render/pages/lazy.js').then((m)=>(m.want('records').catch(()=>{}),!!m.get('records')))", 10000))) warn("the RECORDS page never loaded");
       if (R.wait === "records-idle" && !(await poll("import('/src/render/pages/lazy.js').then((m)=>!!m.get('records'))", 10000))) { L.fail(base, "the RECORDS page never loaded through lazy.idle()"); L.close(base); continue; } // never want(): the page's own idle load
+      if (R.pad) { await ev(PAD(true)); await P.adv(100); }
+      for (const st of [].concat(R.ctl || [])) { await ev(`(window.__GAME__.app.controls.${st},true)`); await P.adv(50); } // the page's own reducer calls, by name
       await shoot(s, R.settle || 600);
+      if (R.pad) { await ev(PAD(false)); await P.adv(100); }
     }
   } finally {
     L.flush("after the last capture");

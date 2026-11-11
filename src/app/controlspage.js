@@ -13,7 +13,7 @@ const NOTE_MS = 6000, ECHO_MS = 120, CANCELLED = "CANCELLED · NOTHING CHANGED",
 const TAB_SAY = { key: "Controls, keyboard.", pad: "Controls, controller." };
 const FIXED_KEY = { CONFIRM: "ENTER", BACK: "ESC" };
 const CANCEL_WORD = { key: "ESC", pad: "START", touch: "TAP OFF THE PLATE" };
-const LABEL = { key: "RESET KEYS", pad: "RESET PAD" };
+const LABEL = { key: "RESET KEYS", pad: "RESET CONTROLLER" };
 const J = JSON.stringify;
 const absent = (s) => s === "none" || s === "lost";
 const isDpad = (id) => id === "dU" || id === "dD" || id === "dL" || id === "dR";

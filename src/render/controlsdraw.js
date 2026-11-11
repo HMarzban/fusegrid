@@ -1,7 +1,9 @@
 // CONTROLS page paint, on the menu kit: plate, head, foot, paintRow, segs and the MENU pane's cell, paneHead and paneLine. Static: nothing here reads the clock.
 import { ACCENT, TEXT, MUTED, LINE, WARM, font, sans, spaced, mw, clip, wrap, plate, head, foot, paintRow, lockGlyph, cell, segs, paneHead, paneLine, drawDim } from "./menudraw.js";
-import { drawPad, drawKeys, glyph, spark } from "./padart.js";
-import { geoFor, geomOf, rowsOf, statusOf, footOf, padStates, keyStates, padLabels, keyLabels, CAPTION } from "./controlsgeo.js";
+import { drawPad, drawCallouts, drawKeys, glyph, padBox } from "./padart.js";
+import { geoFor, geomOf, rowsOf, statusOf, footOf, padStates, padRing, padCallouts, padFit, keyStates, keyLabels, CAPTION, PAD_TALL } from "./controlsgeo.js";
+import { worldTokens } from "./kit/tokens.js";
+import { textScale } from "./kit/type.js";
 
 const BASE_KEYS = new Set(["KeyQ", "KeyW", "KeyE", "KeyP", "KeyA", "KeyS", "KeyD", "KeyJ", "KeyX"]);
 const VAL_PX = 12, GLYPH_H = 16, TOK_GAP = 12, TAB_LABEL = ["KEYBOARD", "CONTROLLER"], SEG_W = 6, SEG_GAP = 2, WIDEST = "MEDIUM";
@@ -66,7 +68,7 @@ export function drawRow(c, r, g, sel, s, touch) {
     c.fillText("SWAPPED", left + 15, cy);
     left += 15 + mw(c, "SWAPPED") + 8;
   }
-  if (armed) { c.fillStyle = TEXT; c.font = font(VAL_PX); c.textAlign = "right"; c.textBaseline = "middle"; c.fillText("PRESS AGAIN", rx, cy); }
+  if (armed) { c.fillStyle = TEXT; c.font = font(VAL_PX); c.textAlign = "right"; c.textBaseline = "middle"; if (mw(c, "PRESS AGAIN") <= rx - left) c.fillText("PRESS AGAIN", rx, cy); } // a long label keeps the row whole: the rule line says it
   else if (r.val) {
     const whole = valW(c, r.val) <= rx - left, v = whole ? r.val : [r.val[r.id === "PAUSE" ? r.val.length - 1 : 0]];
     drawValue(c, v, rx, cy, rx - left);
@@ -114,46 +116,70 @@ function drawRule(c, P, bottom, s, col) {
   const L = ruleLines(c, s, P.w - 20);
   L.forEach((l, i) => paneLine(c, P, bottom - (L.length - 1 - i) * 13, l, col, 10, "center"));
 }
-/** The preview pane, as MENU's: head, diagram, rule. */
-function drawPane(c, s, row, G) {
+/* The callout type: ACTION at the pane's primary size, the position a step down, both scaled with the kit's text scale. */
+const metrics = (c) => { const ts = textScale(); return { pri: 13 * ts, sec: 11 * ts, wOf: (s, px) => { c.font = sans(px, "700"); return mw(c, s); } }; };
+/* The last fit, kept while its inputs hold, so a steady frame never re-plans. */
+let fitMemo = { k: "", F: null };
+function fitPad(c, aw, ah, it, lit) {
+  const k = [aw, ah, textScale(), JSON.stringify(it)].join("|");
+  if (fitMemo.k !== k) fitMemo = { k, F: padFit(aw, ah, it, metrics(c), lit) };
+  return fitMemo.F;
+}
+/** The controller in its art box: every bound input in the world's brick, the focused row's button ringed, the callouts where they fit (else none:
+    the row and its value name the button). off = no controller: the locked body, every input a well, the plaque under it. */
+function drawPadArt(c, s, row, A, tok, ui) {
+  const off = padOff(s), lit = off ? {} : padStates(s), it = off ? [] : padCallouts(s), plq = off ? 34 : 0;
+  const F = fitPad(c, A.w, A.h - plq, it, lit), ox = A.x + F.ox, oy = A.y + F.oy, W = off ? F.W * 0.82 : F.W;
+  drawPad(c, ox + (F.W - W) / 2, oy, W, { tok, lit, lock: off, ring: off ? null : padRing(s, row.id), press: s.echo, grips: row.id === "VIBRATION" && !off && !row.none && row.text !== "OFF", reduced: !!ui.reduced });
+  if (F.plan) drawCallouts(c, ox, oy, F.plan);
+  if (off) {
+    const P = { x: A.x, w: A.w }, y = A.y + A.h - plq;
+    c.fillStyle = TEXT; c.font = sans(13, "800"); c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(NO_PAD, A.x + A.w / 2, y + 8);
+    paneLine(c, P, y + 26, s.device === "touch" ? CAPTION.touch : CAPTION.none, TEXT, 10, "center");
+  }
+}
+const NO_PAD = "NO CONTROLLER";
+/** The preview pane, as MENU's: head, drawing, rule. */
+function drawPane(c, s, row, G, tok, ui) {
   const P = G.pane, off = padOff(s), nonstd = s.tab === "pad" && !off && s.pad.state === "nonstd", A = G.art;
   cell(c, P);
   const lv = !off && row.text; // the level word; the row's dot still says changed
   paneHead(c, P, row.label || row.id, lv || (row.changed ? "CHANGED" : ""), lv && (row.none || row.text === "OFF") ? MUTED : ACCENT);
+  const rule = statusOf(s, row), more = Math.max(0, ruleLines(c, rule, P.w - 20).length - 1) * 13; // a long rule takes the drawing's foot
   if (row.id === "SENSITIVITY" && !off) {
     const r = Math.min(56, A.h / 2 - 4);
     stickView(c, s, P.x + 16 + r, A.y + A.h / 2, r);
   } else if (s.tab === "key") drawKeys(c, G.keys.x, G.keys.y, G.keys.k, { keys: row.reset ? {} : keyStates(s, row.id), labels: row.reset ? [] : keyLabels(s, row.id), base: BASE_KEYS, names: s.names, fs: 10 });
-  else if (nonstd) paneLine(c, P, A.y + A.h / 2, "NO DIAGRAM FOR THIS PAD", MUTED, 11, "center");
-  else {
-    const parts = off || row.reset ? {} : padStates(s, row.id), all = off || row.reset ? {} : padLabels(s);
-    /* A rule past two lines takes the pad's empty foot, then lifts it into the empty top; never over the grips. */
-    const k = G.pad.k, lift = Math.max(0, Math.min(24 * k, (ruleLines(c, statusOf(s, row), P.w - 20).length - 2) * 13 - 31 * k));
-    drawPad(c, G.pad.x, G.pad.y - lift, k, { parts, labels: Object.fromEntries(Object.entries(all).filter(([id]) => parts[id])), spark: !off, fs: 10, grips: row.id === "VIBRATION" && !off && !row.none && row.text !== "OFF" });
-    if (off) paneLine(c, P, A.y + A.h - 8, s.device === "touch" ? CAPTION.touch : CAPTION.none, TEXT, 10, "center");
-  }
-  drawRule(c, P, P.y + P.h - 10, statusOf(s, row), s.swap ? WARM : TEXT);
+  else if (nonstd) paneLine(c, P, A.y + A.h / 2, NO_DRAWING, MUTED, 11, "center");
+  else drawPadArt(c, s, row, { x: P.x + 6, y: A.y, w: P.w - 12, h: A.h - more }, tok, ui);
+  drawRule(c, P, P.y + P.h - 10, rule, s.swap ? WARM : TEXT);
 }
-/** The listening plate: a kit plate, a static dashed slot with the lit fuse running into it. No timer. */
-export function drawCapture(c, cap, G) {
-  const { x, y, w, h } = G.cap, mid = x + w / 2, sw = 64, sh = 30, sy = y + 58, sx = mid - sw / 2, fy = sy + sh / 2;
+const NO_DRAWING = "NO DRAWING FOR THIS CONTROLLER";
+/** The listening plate: a kit plate, the prompt, what is listened for and how to cancel. Static: nothing counts down. On the controller tab the drawing
+    shows every input quiet but the action's own button, ringed; on the keyboard a dashed slot waits for the key. */
+export function drawCapture(c, cap, G, pad) {
+  const { x, y, w, h } = G.cap, mid = x + w / 2;
   drawDim(c, 0.72, G.W, G.H);
   plate(c, x, y, w, h);
   head(c, { mid, headY: y + 26 }, cap.prompt, "REBIND " + cap.action);
-  c.strokeStyle = TEXT; c.lineWidth = 2;
-  dashLine(c, sx, sy, sx + sw, sy); dashLine(c, sx + sw, sy, sx + sw, sy + sh); dashLine(c, sx + sw, sy + sh, sx, sy + sh); dashLine(c, sx, sy + sh, sx, sy);
-  c.fillStyle = WARM; c.font = font(14, "900"); c.textAlign = "center"; c.textBaseline = "middle";
-  c.fillText("· · ·", mid, fy + 0.5);
-  c.strokeStyle = MUTED; c.lineWidth = 3; c.lineCap = "round";
-  c.beginPath(); c.moveTo(sx - 4, fy); c.bezierCurveTo(sx - 26, fy - 6, sx - 34, fy + 8, sx - 54, fy + 2); c.stroke();
-  c.lineCap = "butt";
-  spark(c, sx - 60, fy + 2, 1.5);
-  paneLine(c, G.cap, y + 104, cap.sub || "", cap.warn ? WARM : MUTED, 11, "center");
+  const top = y + 48, room = h - 48 - 52;
+  if (pad && pad.tok) {
+    const W = Math.min(150, w - 40, room / PAD_TALL), B = padBox(W), px = mid - W / 2, py = top + (room - (B.y1 - B.y0)) / 2 - B.y0;
+    drawPad(c, px, py, W, { tok: pad.tok, lit: pad.ring ? { [pad.ring]: "lit" } : {}, ring: pad.ring });
+  } else {
+    const sw = 64, sh = 30, sx = mid - sw / 2, sy = top + (room - sh) / 2;
+    c.strokeStyle = TEXT; c.lineWidth = 2;
+    dashLine(c, sx, sy, sx + sw, sy); dashLine(c, sx + sw, sy, sx + sw, sy + sh); dashLine(c, sx + sw, sy + sh, sx, sy + sh); dashLine(c, sx, sy + sh, sx, sy);
+    c.fillStyle = TEXT; c.font = font(14, "900"); c.textAlign = "center"; c.textBaseline = "middle";
+    c.fillText("· · ·", mid, sy + sh / 2 + 0.5);
+  }
+  paneLine(c, G.cap, y + h - 40, cap.sub || "", cap.warn ? WARM : MUTED, 11, "center");
   foot(c, { mid, footY: y + h - 16 }, clip(c, cap.foot || "", w - 16));
 }
-/** The whole page. view = the reducer's View; ui = {touch, narrow, scale, words}. */
+/** The whole page. view = the reducer's View; ui = {touch, narrow, scale, words, level, reduced}: level dresses the drawing (the room the menus show,
+    or the room being played from PAUSE), reduced = REDUCE FLASH. */
 export function drawControls(c, L, view, ui) {
-  const u = ui || {}, s = view, G = geoFor(L, u.touch, u.narrow, u.scale), S = G.S, rows = rowsOf(s), sel = Math.min(s.row | 0, rows.length - 1), row = rows[sel], st = s.pad && s.pad.state, off = padOff(s);
+  const u = ui || {}, s = view, G = geoFor(L, u.touch, u.narrow, u.scale), S = G.S, rows = rowsOf(s), sel = Math.min(s.row | 0, rows.length - 1), row = rows[sel], st = s.pad && s.pad.state, off = padOff(s), tok = worldTokens(u.level | 0 || 1);
   plate(c, S.x, S.y, S.w, S.h);
   c.font = sans(10, "600");
   spaced(c, true); // head() draws its kicker spaced: measure it so, or a long pad id overruns
@@ -162,10 +188,10 @@ export function drawControls(c, L, view, ui) {
   head(c, S, "CONTROLS", kicker);
   segs(c, G.tabs, TAB_LABEL, s.tab === "key" ? 0 : 1, null, G.touch);
   rows.forEach((r, i) => drawRow(c, r, geomOf(i, G), i === sel, s, G.touch));
-  if (G.pane) drawPane(c, s, row, G);
+  if (G.pane) drawPane(c, s, row, G, tok, u);
   else drawRule(c, { x: S.ix - 8, w: S.iw + 16 }, G.statusY + 13, statusOf(s, row) + (row.id === "SENSITIVITY" && !off && !s.status ? " · " + driftWord(s) + " · " + readsWord(s) : ""), s.swap ? WARM : TEXT);
   const ft = footOf(s, row, u.words);
   c.font = font(10);
   foot(c, S, mw(c, ft) <= S.w - 24 ? ft : footOf(s, row, u.words, true));
-  if (s.capture) drawCapture(c, s.capture, G);
+  if (s.capture) drawCapture(c, s.capture, G, s.tab === "pad" && !off && st !== "nonstd" ? { tok, ring: padRing(s, row.id) } : null);
 }

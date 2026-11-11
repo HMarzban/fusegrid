@@ -989,7 +989,22 @@ not shell screens. Do not add them as `SCREEN` values.
   bytes raw at `ee2a34e`, boot graph +137,052 since `8853efc`; 12 files, on purpose; lazy paint is a later job). `SCREEN.CONTROLS = 16`; from PAUSE `pauseView 3`. The door
   sits between GRAPHICS and RESET DEFAULTS; SETTINGS is twelve rows in REAL 3D and ten otherwise, at its page's pitches (v202 Task 3.4: see SETTINGS page).
   **CONTROLS is in the CONSOLE PANEL kit like every other menu (lead ruling 2026-11-02, on the owner's ask for one cohesive menu): list on the left, preview pane on the right, HEAT-style tabs, kit band, notch and caret; ↑↓ rows, ←→ tab, ←→ on SENSITIVITY or VIBRATION adjusts.** The other menus do not change, and the all-menus restyle is not planned for this release. MENU carries the note `CONTROLLER READY · SETTINGS › CONTROLS`, naming the VIBRATION level where it fits, and the SETTINGS door reads `VIBRATION MEDIUM ›` the same way (the `›` is the door's chevron glyph; on a narrow touch row the words take the row's second line, whole); no SETTINGS or PAUSE row of its own. Tap rule exception: on CONTROLS a tap off the
-  plate backs out anywhere in the viewport, not only on the canvas. Store `nb.controls.v1` (KEEP); invalid data
+  plate backs out anywhere in the viewport, not only on the canvas.
+  The controller drawing (UI upgrade Task 6.1, appendix 9.1/9.2, the round 7 C7-controls frames) is `padart.js` `drawPad`: the generic twin-grip body
+  (`HALF` / `BUMP` / `PADG`, sizes in body width W, face buttons 0.104 W), top-lit gradient FILLS (the approved exception) and hard offset drops, no
+  filter; every bound input (the D-PAD, the live stick, START, each action's button: `controlsgeo.js` `padStates`) in the world's brick
+  (`worldTokens` of `app.level`, or the played room's from PAUSE view 3: shellview hands `level`), unbound ones quiet, the focused row's button
+  ringed (`padRing`: none on SENSITIVITY / VIBRATION / RESET), VIBRATION lights both grips, no cord or spark anywhere. The static drawing is one
+  `kit/cache.js` layer keyed by world, W, dpr and the lit set; ring and press draw live. Callouts (`padCallouts` / `padPlan`, drawn by
+  `drawCallouts`): one per bound input by position, ACTION over the position word, START with a FIXED tag; plain orthogonal leaders, START /
+  SELECT / WEST rise to a lane, the rest run straight out and drop through a gutter knee (the lower leader on the inner knee). `padFit` takes the
+  largest W whose plan passes `padCross` (leader vs leader, a leader within r + 2 of another input, a bound shoulder or trigger included) and
+  fits the art box; under `PAD_FULL` 180 or with no clean plan (a rare rebind of a trigger or shoulder beside WEST) it draws the compact
+  drawing with no leaders, and the rows name the buttons. A desk-sized box (`WIDE` 800 up) widens the plate (`WIDE_W` 1000) and lets the pane
+  grow past the list, so callouts show on the desk; the 600x520 box (PAUSE view 3, small windows) is compact. NO CONTROLLER: the locked body
+  (rule tone under the wall texture), every input a well, a `NO CONTROLLER` plaque. Capture: the controller in the capture plate, every input
+  quiet but the action's own button lit and ringed, the cancel foot, nothing counts down (`CAP_H` 200). Player copy says controller: the pad
+  tab's reset row is `RESET CONTROLLER`. Store `nb.controls.v1` (KEEP); invalid data
   loads that device's defaults, an off-level SENSITIVITY value snaps to the nearest level, a bad `vib` never touches the binds. Keyboard defaults: BOMB SPACE (J, X silent
   aliases until BOMB moves), **THROW E** (SHIFT + BOMB still throws, never advertised), REMOTE Q, PAUSE P, ESC
   and arrows fixed. Pad defaults: BOMB SOUTH, THROW WEST, REMOTE EAST, PAUSE SELECT, START fixed; menus use the
@@ -1357,6 +1372,8 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   captures a paged STATS' second page (the page keys and ↓ / ↑ page SCORES and MEDALS too); `scoresidle` reaches RECORDS through the real `lazy.idle()` load (its wait never calls `want()`). Wrap every
   capture run in a watchdog (kill it by PID past 10 minutes, or when its `--out` dir stops growing for 3 minutes; a REAL 3D run once
   hung 1.5 h).
+  CONTROLS has four captures: `controls` (the KEYBOARD tab), `controlsnone`, `controlspad` and `controlscapture` (THROW listening); a recipe's
+  `pad` puts a standard controller in slot 0 through `navigator.getGamepads` (headless Chrome has none) and `ctl` calls the page reducer by name.
 - Blender is driven through the blender-mcp add-on socket `127.0.0.1:9876`
   with a small Python client (`.superpowers/sdd/2026-10-11-bible/blender/bl.py`,
   local only); the session `mcp__Blender__` tools time out.

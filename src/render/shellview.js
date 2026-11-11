@@ -179,7 +179,7 @@ export function controlsGeo(canvas, kind, paused) {
 }
 /** A tap on the CONTROLS page: controlsgeo's hitPage on the painted geometry; null (inert) until the paint is in. */
 export const controlsHit = (view, x, y, canvas, kind, paused) => (art ? art.hitPage(view, x, y, controlsGeo(canvas, kind, paused)) : null);
-const paintControls = (c, app, canvas, kind, paused) => {
+const paintControls = (c, app, canvas, kind, paused, world) => {
   const L = ctlLayout(canvas, kind, paused), u = ctlUi(canvas, L);
   if (!art || app.controls.loading) {
     const S = menudraw.pageBox(L, 360, 0, u.touch), failed = !!app.controls.failed;
@@ -190,7 +190,7 @@ const paintControls = (c, app, canvas, kind, paused) => {
   }
   /* A phone's plate climbs over the HUD strip and stops short of its ends, which would leave a heart cut to a sliver: cover the whole strip. */
   if (paused && art.geoFor(L, u.touch, u.narrow, u.scale).y < HUD_BOT) { c.fillStyle = STRIP; c.fillRect(4, 10, L.cx * 2 - 8, 30); } // a 2D heart overhangs the strip's own x 10
-  art.draw(c, L, app.controls.view(app.ctlT), { ...u, words: hints() });
+  art.draw(c, L, app.controls.view(app.ctlT), { ...u, words: hints(), level: paused && world ? world.level : app.level, reduced: !!(app.settings && app.settings.flx) }); // the drawing wears the menus' room, or the one being played
 };
 
 /* SCORES / plaques memo: nothing writes either store while SCORES is open
@@ -290,7 +290,7 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
       if (app.pauseView === 3) {
         if (!app.controls) return;
         menudraw.drawDim(c, 0.72, B.w, B.h);
-        return paintControls(c, app, canvas, kind, true);
+        return paintControls(c, app, canvas, kind, true, world);
       }
       /* the same box the pointer maps a PAUSE tap through: overlayBox at #c's CSS scale (the touch floors), paused (the HUD band kept clear), the
          focused row (its page is on screen); the room being played dresses the plate (world.level, never the menu's app.level) */

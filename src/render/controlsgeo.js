@@ -1,6 +1,7 @@
 // CONTROLS page geometry and copy, shared by draw, tap and the page reducer. Pure. BTN, DEF_KEY, DEF_PAD, VIB_LEVELS, SENS_LEVELS, keyName, moveLabel and softAliasesOf are local copies of src/app/controls.js (render never reads src/app), pinned equal in tests/controlsdraw.test.mjs.
 import { FOOT_TAP, VIB_LEVELS, bandOf, listGeom, listHit, pageBox, vibWord } from "./menudraw.js";
-import { KB_ROWS } from "./padart.js";
+import { KB_ROWS, PART_AT, PART_R, padBox } from "./padart.js";
+import { textScale } from "./kit/type.js";
 
 const dpad = { g: "dpad", v: "all", w: "D-PAD" };
 export const BTN = Object.freeze({
@@ -46,7 +47,7 @@ const RULE = {
   PAUSE: "STOP THE RUN", SENSITIVITY: "HOW FAR THE STICK MOVES BEFORE IT COUNTS", VIBRATION: "HITS, BLASTS, PLANTS AND MENUS · LOW SKIPS MENUS",
 };
 /** No actuator on the live pad; the unknown-effects addition to the rule. */
-export const NO_VIB = "NO VIBRATION ON THIS CONTROLLER OR BROWSER", FEEL_NOTHING = "FEEL NOTHING? THIS PAD OR BROWSER MAY NOT VIBRATE";
+export const NO_VIB = "NO VIBRATION ON THIS CONTROLLER OR BROWSER", FEEL_NOTHING = "FEEL NOTHING? THIS CONTROLLER OR BROWSER MAY NOT VIBRATE";
 /* The rule follows the level, so it never promises what this level drops. */
 const VIB_RULE = ["NO VIBRATION AT ALL", "HITS, BIG BLASTS AND LEVEL ENDS · NO MENU BUZZ", "HITS, BLASTS, PLANTS AND MENUS · LOW SKIPS MENUS", "HITS, BLASTS, PLANTS AND MENUS · STRONGEST"];
 const SENS_WORN = "SENSITIVE: A WORN STICK CAN KEEP WALKING";
@@ -74,7 +75,7 @@ export function rowsOf(s) {
   const tail = () => [
     { id: "SENSITIVITY", gap: 1, text: SENS_LEVELS[sensIdx(dead)].name, off, changed: dead !== DEF_DEAD, bar: [sensIdx(dead) + 1, SENS_LEVELS.length] },
     noBuzz(s) ? { id: "VIBRATION", text: "NONE", off, none: 1 } : { id: "VIBRATION", text: VIB_LEVELS[vibOf(s)], off, changed: vibOf(s) !== DEF_VIB, bar: [vibOf(s), VIB_LEVELS.length - 1] },
-    { id: "RESET", gap: 1, label: "RESET PAD", reset: 1, off },
+    { id: "RESET", gap: 1, label: "RESET CONTROLLER", reset: 1, off },
   ];
   if (p.state === "nonstd") {
     const B = (id) => ({ cap: "BUTTON " + IDX[id] });
@@ -126,16 +127,16 @@ export function footOf(s, row, words, short) {
   if (onPad) { ok = nonstd ? "BUTTON 0" : "SOUTH"; back = nonstd ? "BUTTON 1" : "EAST"; }
   return side + (verb ? " · " + ok + " " + verb : "") + " · " + back + " BACK";
 }
-/** Which pad parts light for a row. */
-export function padStates(s, id) {
-  const b = s.binds || DEF_PAD, st = {}, stick = s.stick === "R" ? "RS" : "LS";
-  if (id === "MOVE") { st.dpad = "lit"; st[stick] = "lit"; }
-  else if (id === "PAUSE") { st.START = "lit"; st[b.PAUSE] = "alias"; }
-  else if (id === "SENSITIVITY") st[stick] = "lit";
-  else if (b[id]) st[b[id]] = "lit";
-  if (s.echo) st[s.echo] = "lit";
-  if (s.swap && s.swap.part) st[s.swap.part] = "swap";
+/** Which controller inputs wear the brick: every bound one (the D-PAD, the live stick, START, and each action's button), whatever the row. */
+export function padStates(s) {
+  const st = {};
+  for (const id in padLabels(s)) st[id] = "lit";
   return st;
+}
+/** The focused row's button, the one the drawing rings: the live stick on MOVE, an action's button, PAUSE's rebindable one; none elsewhere. */
+export function padRing(s, id) {
+  const b = s.binds || DEF_PAD;
+  return id === "MOVE" ? (s.stick === "R" ? "RS" : "LS") : id === "BOMB" || id === "THROW" || id === "REMOTE" || id === "PAUSE" ? b[id] : null;
 }
 /** Which keyboard keys light for a row. */
 export function keyStates(s, id) {
@@ -157,6 +158,93 @@ export function padLabels(s) {
   for (const a of ["BOMB", "THROW", "REMOTE", "PAUSE"]) o[b[a]] = a;
   return o;
 }
+/** The controller's callouts, one per bound input by position: MOVE joins the D-PAD and the live stick (listed top to bottom as drawn), START is FIXED. */
+export function padCallouts(s) {
+  const L = padLabels(s), out = [];
+  out.push(s.stick === "R" ? { grp: "MOVE", act: "MOVE", parts: ["dpad", "RS"], pos: ["D-PAD", "R-STICK"] } : { grp: "MOVE", act: "MOVE", parts: ["LS", "dpad"], pos: ["L-STICK", "D-PAD"] });
+  for (const id in L) if (id !== "dpad" && id !== "LS" && id !== "RS") out.push({ grp: id, act: L[id], pos: [BTN[id].w], tag: id === "START" });
+  return out;
+}
+/* Leaders (round 7 rules, appendix 9.2): plain orthogonal lines from a dot on the button out to a gutter label, ACTION over the position. Right gutter
+   top to bottom START, R TRIGGER, WEST, R SHOULDER, NORTH, EAST, SOUTH; left SELECT, L TRIGGER, L SHOULDER, MOVE (the D-PAD and the live stick on one
+   spine; a right stick reaches it under the body). START, SELECT and WEST rise to a lane (WEST under NORTH's well, the pills over the triggers); the
+   rest run straight out, and a label that would meet the one above drops through a knee in the gutter, the lower leader taking the inner knee. */
+const R_ORDER = ["START", "TRR", "W", "SHR", "N", "E", "S"], L_ORDER = ["SELECT", "TRL", "SHL", "MOVE"], UP = { START: 1, SELECT: 1, W: 1 }, GAP_L = 6, KNEE = 4;
+const lineYs = (n, m) => [0, ...Array.from({ length: n }, (_, i) => 0.6 * m.pri + 0.6 * m.sec + i * 1.2 * m.sec)];
+/** The plan at body width W for callouts it (padCallouts), m = {pri, sec, wOf(s, px)}: {ok, lines:[{grp, pts, dot}], labels:[{grp, side, x, lines}], ext}. ok
+    is false when a lane cannot clear its neighbour (a rare rebind on a narrow drawing): the page then draws no leaders. Px from the body box's top-left. */
+export function padPlan(W, it, m) {
+  const at = (id) => [PART_AT[id][0] * W, PART_AT[id][1] * W], by = Object.fromEntries(it.map((q) => [q.grp, q]));
+  const lines = [], labels = [], top = (y) => y - 0.6 * m.pri, bot = (y, q) => y + lineYs(q.pos.length, m).at(-1) + 0.6 * m.sec;
+  let ok = true, ext = { ...padBox(W) };
+  for (const side of [1, -1]) {
+    const list = (side > 0 ? R_ORDER : L_ORDER).filter((g) => by[g]), Y = {};
+    let prev = -Infinity;
+    for (const g of list) {
+      const q = by[g], lo = prev + GAP_L + 0.6 * m.pri;
+      let ex;
+      if (g === "MOVE") { const ys = q.parts.map((p) => (p === "RS" ? 0.56 * W : at(p)[1])); ex = (ys[0] + ys[1]) / 2; }
+      else ex = UP[g] ? (g === "W" ? 0.07 * W : -0.13 * W) : at(g)[1];
+      const y = Math.max(ex, lo);
+      if (UP[g] && y > (g === "W" ? 0.096 * W - 2 : -0.045 * W - 4)) ok = false;
+      Y[g] = { y, ex };
+      prev = bot(y, q);
+    }
+    const knees = list.filter((g) => !UP[g] && g !== "MOVE" && Y[g].y > Y[g].ex + 0.5).sort((a, b) => Y[b].ex - Y[a].ex);
+    const kx = (g) => (side > 0 ? W + 8 + KNEE * knees.indexOf(g) : -8 - KNEE * knees.indexOf(g)), xG = side > 0 ? W + 18 + KNEE * knees.length : -18 - KNEE * knees.length;
+    for (const g of list) {
+      const q = by[g], { y } = Y[g];
+      if (g === "MOVE") {
+        const ys = [];
+        for (const p of q.parts) { const d = at(p); if (p === "RS") { lines.push({ grp: g, pts: [d, [d[0], 0.56 * W], [xG, 0.56 * W]], dot: 1 }); ys.push(0.56 * W); } else { lines.push({ grp: g, pts: [d, [xG, d[1]]], dot: 1 }); ys.push(d[1]); } }
+        lines.push({ grp: g, pts: [[xG, Math.min(...ys, y)], [xG, Math.max(...ys, y)]], dot: 0 });
+      } else {
+        const d = at(g);
+        lines.push({ grp: g, pts: UP[g] ? [d, [d[0], y], [xG, y]] : y > Y[g].ex + 0.5 ? [d, [kx(g), d[1]], [kx(g), y], [xG, y]] : [d, [xG, y]], dot: 1 });
+      }
+      const ys = lineYs(q.pos.length, m), tagW = q.tag ? m.wOf(FIXED_WORD, m.sec) + 8 : 0;
+      const L = [{ s: q.act, px: m.pri, act: 1, y, w: m.wOf(q.act, m.pri) }, ...q.pos.map((s, i) => ({ s, px: m.sec, y: y + ys[i + 1], w: m.wOf(s, m.sec), tag: i === q.pos.length - 1 ? tagW : 0 }))];
+      const x = xG + side * 6, wide = Math.max(...L.map((l) => l.w + (l.tag ? l.tag + 6 : 0)));
+      labels.push({ grp: g, side: side > 0 ? "r" : "l", x, lines: L });
+      ext = { x0: Math.min(ext.x0, side > 0 ? ext.x0 : x - wide), x1: Math.max(ext.x1, side > 0 ? x + wide : ext.x1), y0: Math.min(ext.y0, top(y)), y1: Math.max(ext.y1, bot(y, q)) };
+    }
+  }
+  return { ok, lines, labels, ext, W };
+}
+const FIXED_WORD = "FIXED";
+const segX = (a, b, c, d) => {
+  const o = (p, q, r) => Math.sign((q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0])), on = (p, q, r) => Math.min(p[0], q[0]) - 1e-6 <= r[0] && r[0] <= Math.max(p[0], q[0]) + 1e-6 && Math.min(p[1], q[1]) - 1e-6 <= r[1] && r[1] <= Math.max(p[1], q[1]) + 1e-6;
+  const o1 = o(a, b, c), o2 = o(a, b, d), o3 = o(c, d, a), o4 = o(c, d, b);
+  return (o1 !== o2 && o3 !== o4 && o1 && o2 && o3 && o4) || (!o1 && on(a, b, c)) || (!o2 && on(a, b, d)) || (!o3 && on(c, d, a)) || (!o4 && on(c, d, b));
+};
+const segD = (p, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * dx + dy * dy, t = l2 ? Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / l2)) : 0; return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy); };
+/** The crossing gate (appendix 9.2) on a plan: leader vs leader of another callout, and a leader within r + 2 of any input but its own (the sticks,
+    the D-PAD, the face buttons, the pills; a BOUND shoulder or trigger too, sampled along its shape). [] when clean. */
+export function padCross(plan, lit) {
+  const W = plan.W, out = [], segs = (L) => L.pts.slice(1).map((p, i) => [L.pts[i], p]), own = (g) => (g === "MOVE" ? ["LS", "dpad", "RS"] : [g]);
+  const obs = Object.entries(PART_R).map(([id, r]) => ({ id, x: PART_AT[id][0] * W, y: PART_AT[id][1] * W, r: r * W }));
+  for (const id of ["SHL", "SHR"]) if (lit && lit[id]) for (const p of BUMP_AT) obs.push({ id, x: (id === "SHL" ? 1 - p[0] : p[0]) * W, y: p[1] * W, r: 0.036 * W });
+  for (const id of ["TRL", "TRR"]) if (lit && lit[id]) for (const dx of [-0.06, 0, 0.06]) obs.push({ id, x: ((id === "TRL" ? 0.24 : 0.76) + dx) * W, y: 0.02 * W, r: 0.05 * W });
+  const L = plan.lines;
+  for (let i = 0; i < L.length; i++) for (let j = i + 1; j < L.length; j++) if (L[i].grp !== L[j].grp) for (const [a, b] of segs(L[i])) for (const [c, d] of segs(L[j])) if (segX(a, b, c, d)) out.push(L[i].grp + " x " + L[j].grp);
+  for (const l of L) for (const [a, b] of segs(l)) for (const q of obs) if (!own(l.grp).includes(q.id) && segD([q.x, q.y], a, b) < q.r + 2) out.push(l.grp + " near " + q.id);
+  return [...new Set(out)];
+}
+const BUMP_AT = [[0.66, 0.035], [0.74, 0.044], [0.82, 0.065], [0.88, 0.08], [0.93, 0.11], [0.96, 0.16]];
+export const PAD_CAP = 460, PAD_FULL = 180, PAD_TALL = 0.74, PAD_KEEP = 0.7;
+/** Fits the controller into an art box aw x ah: the largest W (<= 460) whose clean plan fits, else (under PAD_FULL, or no clean plan) the compact
+    drawing with no leaders, as large as the box allows. {W, plan|null, ox, oy}: ox oy put the body box's top-left in the box's own px. */
+export function padFit(aw, ah, it, m, lit) {
+  const Wc = Math.max(40, Math.min(PAD_CAP, aw - 8, (ah - 8) / PAD_TALL));
+  if (it && it.length) {
+    for (let W = Math.floor(Math.min(PAD_CAP, aw - 120)); W >= Math.max(PAD_FULL, PAD_KEEP * Wc); W -= 4) { // callouts never shrink the drawing past PAD_KEEP of what the box holds without them
+      const p = padPlan(W, it, m), e = p.ext, w = e.x1 - e.x0, h = e.y1 - e.y0;
+      if (p.ok && w <= aw && h <= ah && !padCross(p, lit).length) return { W, plan: p, ox: (aw - w) / 2 - e.x0, oy: (ah - h) / 2 - e.y0 };
+    }
+  }
+  const W = Wc, e = padBox(W);
+  return { W, plan: null, ox: (aw - (e.x1 - e.x0)) / 2 - e.x0, oy: (ah - (e.y1 - e.y0)) / 2 - e.y0 };
+}
 const KEY_XY = {};
 for (const [ry, row] of KB_ROWS) for (const [id, , kx, kw] of row) if (id) KEY_XY[id] = [kx + (kw || 18) / 2, ry];
 /** The selected row's leaders on the keyboard: [[points], x, y, align, word]. A key off the diagram has none; its row still names it. */
@@ -176,7 +264,19 @@ export function keyLabels(s, id) {
   return out;
 }
 
-const CHROME = 88, PITCH = 26, PITCH_T = 52, GAP = 6, TAB_H = 30, TAB_T = 52, RULE_H = 30, HEAD_H = 26, PANE_MIN = 140, CAP_W = 400, CAP_H = 140, K_MAX = 1.25;
+const CHROME = 88, PITCH = 26, PITCH_T = 52, GAP = 6, TAB_H = 30, TAB_T = 52, RULE_H = 30, HEAD_H = 26, PANE_MIN = 140, CAP_W = 400, CAP_H = 200, K_MAX = 1.25, WIDE = 800, WIDE_W = 1000;
+/* The pane a w-wide drawing box wants: head, rule (one spare line) and the default controller with all its callouts, at the text scale. */
+const EST = (s, px) => s.length * px * 0.66;
+const tallMemo = new Map();
+function paneTall(w) {
+  const ts = textScale(), key = w + "|" + ts;
+  if (tallMemo.has(key)) return tallMemo.get(key);
+  const m = { pri: 13 * ts, sec: 11 * ts, wOf: EST }, it = padCallouts({ binds: DEF_PAD, stick: "L" });
+  let h = 0;
+  for (let W = Math.floor(Math.min(PAD_CAP, w - 120)); W >= PAD_FULL && !h; W -= 4) { const p = padPlan(W, it, m); if (p.ok) h = Math.ceil(HEAD_H + RULE_H + 13 + p.ext.y1 - p.ext.y0 + 4); }
+  tallMemo.set(key, h);
+  return h;
+}
 const SHAPE = [0, 0, 0, 0, 0, 1, 0, 1].map((g) => ({ gapBefore: !!g }));
 const LIST_W = 272; // MENU's list column
 /** The page's one geometry: a pageBox plate, HEAT | PACE height tabs, a listGeom list, and MENU's pane beside it (above it under 560 wide). scale = CSS px per logical px on a touch layout (default the worst real stage, PAUSE on a phone's #c). The tabs hold 44 CSS. Rows ask for it, but pitches are caps, as everywhere: a box too short for eight rows scales them, so they are 31 CSS in phone landscape and 26 in PAUSE on a phone, in line with PAUSE OPTIONS (lead ruling), and a pane too small to read goes. */
@@ -186,11 +286,13 @@ export function geoFor(L, touch, narrow, scale) {
   const paneRoom = nar ? room - tabH - GAP * 2 - listH : Math.min(room - tabH - GAP, listH);
   const hasPane = paneRoom >= PANE_MIN, wPane = nar ? L.cx * 2 - 56 : 0;
   const paneNat = nar && hasPane ? Math.min(paneRoom, HEAD_H + RULE_H + Math.ceil(196 * Math.min(K_MAX, (wPane - 12) / 300))) : 0;
-  const body = tabH + GAP + (nar && hasPane ? paneNat + GAP : 0) + listH + (hasPane ? 0 : RULE_H);
-  const S = pageBox(L, 560, body, T), bot = S.y + S.h - 34, tw = Math.min(T ? 130 : 100, S.iw / 3); // HIGH SCORES' tab size, centred
+  /* A desk-sized box (800 wide and up) widens the plate and lets the pane grow past the list, so the drawings have room for their callouts. */
+  const wide = hasPane && !nar && L.cx * 2 >= WIDE, maxW = wide ? Math.min(L.cx * 2 - 80, WIDE_W) : 560, paneH = wide ? Math.max(listH, Math.min(room - tabH - GAP, paneTall(maxW - LIST_W - 24))) : 0;
+  const body = tabH + GAP + (nar && hasPane ? paneNat + GAP : 0) + Math.max(listH, paneH) + (hasPane ? 0 : RULE_H);
+  const S = pageBox(L, maxW, body, T), bot = S.y + S.h - 34, tw = Math.min(T ? 130 : 100, S.iw / 3); // HIGH SCORES' tab size, centred
   const tabs = [0, 1].map((i) => ({ x: S.mid - tw + i * tw, y: S.by, w: tw, h: tabH }));
   const top = S.by + tabH + GAP + (nar && hasPane ? paneNat + GAP : 0);
-  const list = listGeom(L, SHAPE, { top, bot: bot - (hasPane ? 0 : RULE_H), x: S.x, w: nar ? S.w : LIST_W, pitch, gap: GAP, pad: 0 });
+  const list = listGeom(L, SHAPE, { top, bot: wide ? Math.min(bot, top + listH) : bot - (hasPane ? 0 : RULE_H), x: S.x, w: nar ? S.w : LIST_W, pitch, gap: GAP, pad: 0 });
   const paneBox = !hasPane ? null : nar ? { x: S.ix - 8, y: S.by + tabH + GAP, w: S.iw + 16, h: paneNat } : { x: S.x + LIST_W + 2, y: top, w: S.w - LIST_W - 12, h: bot - top };
   const art = paneBox && { y: paneBox.y + HEAD_H, h: paneBox.h - HEAD_H - RULE_H }, cap = Math.min(CAP_W, S.w - 24);
   const fitK = (w, h) => Math.min(K_MAX, (paneBox.w - 12) / w, art.h / h);
