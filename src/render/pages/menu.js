@@ -171,7 +171,7 @@ export function menuHit(x, y, F, rows = MENU_ROWS) {
 }
 
 const sep3 = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-function teasers(l, ui, phoneMode) {
+function teasers(l, ui, phoneMode, words) {
   const n = ui.daily, b = ui.best;
   switch (l) {
     case LS: return phoneMode ? [] : [M.LEVEL_TEASE];
@@ -179,7 +179,7 @@ function teasers(l, ui, phoneMode) {
     case LABEL.RECORDS: return b == null ? [M.NO_RUNS] : phoneMode ? [M.BEST + " " + sep3(b), sep3(b)] : [M.BEST + " " + sep3(b) + " · " + DIFF[0] + " " + LABEL.DIFFICULTY, M.BEST + " " + sep3(b), sep3(b)];
     case LABEL.SETTINGS: return [ART_STYLES[ui.look | 0] || ART_STYLES[0]];
     case GUIDE: return [(ui.pages | 0) + " " + M.PAGES];
-    case SOURCE: return phoneMode ? noteCands(ui).concat(ui.rev ? [ui.rev] : []) : [M.GITHUB];
+    case SOURCE: return phoneMode ? (words && words.dev === "pad" && !ui.note ? [M.SOURCE_PAD, M.SOURCE_PAD_SHORT] : []).concat(noteCands(ui), ui.rev ? [ui.rev] : []) : [M.GITHUB]; // a controller's press opens no tab: SOURCE says so first (R1 cohesion 11; the desk's foot says it)
   }
   return [];
 }
@@ -216,7 +216,7 @@ function rowPlan(c, G, ui, l, words, showCap) {
     return o;
   }
   const lf = lblF(dv.pri), lw = W(c, lf, l), gs = ph ? 18 : 16, tile = k === "tile", sh = dv.bombs + 6;
-  const tzCol = l === SOURCE && ph && (ui.note || padSign(ui.pad)) ? CONST.ink : TZ;
+  const tzCol = l === SOURCE && ph && (ui.note || padSign(ui.pad) || words.dev === "pad") ? CONST.ink : TZ;
   o.label = {s: l, f: lf, px: dv.pri, w: lw, col: l === SOURCE ? CONST.t2 : CONST.ink, lines: [l], ws: [lw]};
   o.glyph = {n: l === SOURCE ? "ext" : "chev", s: gs};
   const tf = lblF(dv.sec);
@@ -224,7 +224,7 @@ function rowPlan(c, G, ui, l, words, showCap) {
     const gx = r.x + r.w - (ph ? 16 : 18) - gs, lx = r.x + 24, room = gx - 10 - (lx + sh + lw + 12);
     o.glyph.x = gx; o.glyph.y = r.y + r.h / 2 - gs / 2;
     o.rest.x = lx; o.foc.x = lx + sh; o.label.y = r.y + r.h / 2; o.label.ys = [o.label.y];
-    const tz = fitCands(c, tf, teasers(l, ui, ph), room)[0] || "";
+    const tz = fitCands(c, tf, teasers(l, ui, ph, words), room)[0] || "";
     o.tz = tz ? {lines: [tz], f: tf, px: dv.sec, x: gx - 10, ys: [r.y + r.h / 2], align: "right", w: W(c, tf, tz), col: tzCol} : null;
     return o;
   }
@@ -233,7 +233,7 @@ function rowPlan(c, G, ui, l, words, showCap) {
   /* a one-word label too wide for its tile at 125 % (SETTINGS on a 667 x 375 phone's least tiles) steps down to its 100 % size, still over the floors */
   if (lw > room && ts > 1 && !/ /.test(l) && W(c, lblF(dv.pri / ts), l) <= room) { o.label.f = lblF(dv.pri / ts); o.label.px = dv.pri / ts; o.label.w = o.label.ws[0] = W(c, o.label.f, l); }
   const lab = o.label.w <= room ? [l] : fitCands(c, lf, [l], room, true), ll = lab.length ? lab : [l], lhL = dv.pri * ts * 1.15, lhT = dv.sec * ts * 1.2;
-  const nT = Math.floor((r.h - 4 - ll.length * lhL - 4) / lhT), lines = nT >= 1 ? fitCands(c, tf, teasers(l, ui, ph), room, big(ts) && nT >= 2) : [];
+  const nT = Math.floor((r.h - 4 - ll.length * lhL - 4) / lhT), lines = nT >= 1 ? fitCands(c, tf, teasers(l, ui, ph, words), room, big(ts) && nT >= 2) : [];
   const bh = ll.length * lhL + (lines.length ? 4 + lines.length * lhT : 0), top = r.y + r.h / 2 - bh / 2;
   o.glyph.x = gx; o.glyph.y = r.y + r.h / 2 - gs / 2; o.glyph.focHide = true;
   o.rest.x = lx; o.foc.x = fx; o.label.lines = ll; o.label.ys = ll.map((_, i) => top + lhL * (i + 0.5)); o.label.y = o.label.ys[0];

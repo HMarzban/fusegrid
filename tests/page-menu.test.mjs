@@ -513,5 +513,19 @@ const { readFileSync } = await import("node:fs");
   check("no page builds its own PAGE label or page keys (\" / \" counters, its own key widths)", !/PAGE\s*\+\s*" "\s*\+\s*\(p\s*\+\s*1\)\s*\+\s*" \/ "/.test(src) && !/kw:\s*64/.test(src) && !/function pageKeys\b/.test(src));
 }
 
+/* R1 cohesion 11: on the phone and compact (no foot) a controller is told SOURCE needs a click or Enter: SOURCE's teaser leads with it while a
+   controller drives (the desk's foot says it); keys keep the build tag */
+{
+  const { setHints } = await import("../src/render/hintcopy.js"), { wordsOf } = await import("../src/app/hints.js"), { DEF_CONTROLS } = await import("../src/app/controls.js");
+  const t = rec({ widthK: K8 }), bad = [];
+  for (const b of ["p393", "c852x393"]) {
+    const G = P.menuGeom(BOX[b]), row = (dev) => { setHints(wordsOf(dev, DEF_CONTROLS)); return J(P.plan(t.ctx, Object.assign(Object.create(G), { touch: true, tap: false }), UI({ focus: "SOURCE" })).rows.SOURCE); };
+    const pad = row("pad"), key = row("key");
+    if (!(pad.includes('"' + W.MENU_WORDS.SOURCE_PAD + '"') || pad.includes('"' + W.MENU_WORDS.SOURCE_PAD_SHORT + '"')) || !W.MENU_WORDS.SOURCE_PAD.endsWith(W.MENU_WORDS.SOURCE_PAD_SHORT) || key.includes(W.MENU_WORDS.SOURCE_PAD_SHORT) || !key.includes("v201")) bad.push(b + " " + G.mode + " " + pad.slice(-160));
+  }
+  setHints(null);
+  check("MENU phone / compact: SOURCE's teaser says NEEDS A CLICK OR ENTER (stepped down to CLICK OR ENTER where it does not fit) while a controller drives, the build tag on keys", bad.length === 0, bad.join(" | "));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

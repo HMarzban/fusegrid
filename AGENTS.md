@@ -106,7 +106,7 @@ second press leaves (`back()`; main's `onUiKey` and `padroute` leave the arm for
 RECORDS page (UI upgrade v202 Task 4.1; `src/render/pages/records.js`, LAZY: one `pages/lazy.js` entry `records`, loaded in the first idle
 after MENU's first frame; until it lands menudraw paints THE LOADING plate (`loadingPage`, see Lazy pages) and every RECORDS hit is -2, inert,
 so a tap never backs out of a page still loading (DID NOT LOAD: a tap off the plate backs out); tests `want` / `_set` it). The room of `app.level` opaque under it (MENU's own room layer
-at MENU's room dpr (`kit/room.js` `roomDpr`, MENU's rule, with `rev`; R1 train: the one rule of MENU, LEVEL SELECT, SETTINGS and GUIDE, no logo reserve, the page's own fit the floor), whatever MENU last painted: no re-raster on a MENU <-> RECORDS trip; `shellCovers` SCORES, STATS and TROPHIES). `recordsGeom(F)`
+at MENU's room dpr (`kit/room.js` `pageRoomDpr`, MENU's rule (`pages/menu.js` `roomRule`) with `rev`, capped by the page's own fit; R1 train: the one rule of MENU, LEVEL SELECT, SETTINGS, GUIDE and RECORDS, no logo reserve; with no canvas source the kit answers 1), whatever MENU last painted: no re-raster on a MENU <-> RECORDS trip; `shellCovers` SCORES, STATS and TROPHIES). `recordsGeom(F)`
 (F = MENU's frame: W, H, touch, shell, css, ts; the pointer hands RECORDS `layout(cw, ch, lg, css)`) is one plate for every tab: desk
 (keyboard boxes; the S7-pages frame, plate 980 wide, 1080 at 125 %, kicker MENU over the RECORDS title, tabs 150 x 36 over an 11 px trough,
 the pane as tall as the tallest body, the foot under the plate, label first, keycaps last; a shorter window gives way before it scales, fix
@@ -179,7 +179,8 @@ hash): the HUD's `LV` chip and heat token. Medal proper names stay (IRON CROWN).
 The paragraphs below use the internal names (heat, pace, pact, room) for code.
 
 Menu look (owner pick 2026-10-19, direction A "CONSOLE PANEL"): the
-PAUSE list and every plated page but MENU, SETTINGS, GRAPHICS and GUIDE's pages (the world kit: MENU page, SETTINGS page below; GUIDE since UI upgrade Task 3.5) share ONE kit in `menudraw.js` — `plate`
+PAUSE list and CONTROLS (every other plated page is on the world kit: MENU, LEVEL SELECT, SETTINGS / GRAPHICS, GUIDE's pages and RECORDS; values,
+tags and hints there are sans, keycaps mono) share ONE kit in `menudraw.js` — `plate`
 (one 0.94 fill, one `#2a3550` border, radius 6, even-px snapped), `head`
 (sans title, muted spaced kicker), `foot`, and `paintRow` (selected = 0.12
 band + 3px notch + caret; `danger` rows select red). Labels are system-ui
@@ -232,7 +233,7 @@ number, so a 44 CSS px target measures 44 inside `#c`'s border, never 43.77; `te
 phones with `tools/ui/gates.mjs`'s own `evaluate()` against `#c`'s content box (the border pinned against index.html); `lg` = the centred board's 0.27 logo
 line in box units,
 `tall` / `narrow` (< 560) flags; narrow re-flows: none of the world-kit pages (MEDALS and SCORES re-flow on their own frame, pages/records.js; the GUIDE
-pages re-flow by their own measured widths and page instead: see GUIDE pages below); STATS is centred (not floor-pinned) in a tall box. LEVEL / HIGH SCORES chip
+pages re-flow by their own measured widths and page instead: see GUIDE pages below); STATS is centred (not floor-pinned) in a tall box. LEVEL SELECT / SCORES (RECORDS) chip
 taps are ONE call through the cued key path (`app.move` with a delta on the row the tap
 focused, `app.adjustPace`), so a change plays one `uiMove` and the chip already set is
 silent; `[ ]` pace keys cue too.
@@ -279,7 +280,7 @@ size to it, and every reader acts by `optLabel()`. Every ART STYLE write
 (a pick, RESET DEFAULTS, `lookFailed` from a failed load or a lost context that cannot be rebuilt) goes through `_setR3d` before
 `onSettings`: the cursor keeps its label, or lands on ART STYLE when its row went away. `SCREEN.FLOOR = 15` is appended too
 (2026-10-25): the fourth GUIDE door (`GUIDE_ROWS` HOW TO PLAY, POWER-UPS, ENEMIES,
-FLOOR; keyboard GUIDE is a 2x2 of doors, touch four stacked rows), backs out to
+FLOOR; GUIDE is a 2x2 of doors on the desk (a touch desk included) and compact, one column of four on the phone), backs out to
 GUIDE. `drawFloorHelp` lists the eight floor tiles at CORE / PLUS / MAX in the
 current look (`featdraw.drawSpec`, PIXEL `atlas.feat`), each with its rule line
 (`TILE_HELP`). GUIDE pages (UI upgrade v202 Task 3.5) are `src/render/pages/guide.js`, lazy (`pages/lazy.js` `guide`; until it is in a page
@@ -334,6 +335,8 @@ Desk (every keyboard box; the 1366 x 768 frame at 1 box unit per CSS px): the lo
 doors 46, 8 px pitch, 24 px breaks after PLAY and before GUIDE; 125 %: 520, 72, 49) beside the next-run card (Task 3.2, below), the foot under
 the plate (`MOVE ▲▼ · START ENTER | v201`, label first, keycap last; the verb follows focus: START on PLAY, OPEN on a door, and with a controller
 on SOURCE `NEEDS A CLICK OR ENTER`, no keycap; a touch layout reads `TAP A ROW`; a note leads it, the controller's signpost replaces it in cream).
+Phone and compact have no foot: while a controller drives, SOURCE's teaser leads with `NEEDS A CLICK OR ENTER` (step-down `CLICK OR ENTER`, words.js
+`SOURCE_PAD_SHORT`; R1 cohesion 11), cream, before the signpost and the build tag.
 The plate keeps the mock's size and centres; a narrower window narrows only the card's column, the 70 px top margin gives way to a short one,
 then the page scales as one piece (#c with no shell box, the iso guard; text floors not held there).
 Touch floors (fix round 1, every touch layout): MENU's rows are >= 44 CSS px and >= 8 CSS px apart, never scaled below. A touch box takes the
@@ -386,15 +389,17 @@ ONE branch to `app.pageKey(d, to)`, one step, one `move` feel and the one `uiMov
 only what an item is; tap mode keeps the keys), `cache`, `room` (the room look, the lane, and the ONE shared room rule: `shareRoom` / `roomDpr` / `pageRoomDpr` /
 `roomFit`; `frameOf` in menudraw hands every page the bare box, SETTINGS' delegates add `paused` / `focus`), `probe`. A part two or more pages use lives here; a part one page uses stays in its page.
 Static parts are `kit/cache.js` layers keyed by content (`roomLayer` shared by every page of a box, LEVEL SELECT's included, at one room dpr:
-MENU's rule (`pages/menu.js` installs it with `kit/room.js` `shareRoom`; every page asks `kit/room.js` `roomDpr`, or `pageRoomDpr` with its own
-fit as the floor; it throws until installed), its dpr giving way so MENU's plate, its foot reserve and a 3 MiB logo reserve fit `BUDGET`; so a MENU /
+MENU's rule (`pages/menu.js` installs it with `kit/room.js` `shareRoom`; every page asks `kit/room.js` `roomDpr`, or `pageRoomDpr` capped at its own
+fit, the kit guarding each ask (1 with no canvas source); it throws until installed), its dpr giving way so MENU's plate, its foot reserve and a 3 MiB logo reserve fit `BUDGET`; so a MENU /
 LEVEL SELECT switch never refills the room; a page keeps its plate out of the room layer), made at once so a cursor move never misses, `touch()`ed on a steady frame (`cache.touch(key)`: a held layer
 goes LRU-recent, so a stale one is freed first); live on top: focus, ring, the logo's spark. `shellview.shellCovers(screen)` (MENU, LEVEL SELECT,
 SETTINGS and GRAPHICS, GUIDE with its four pages since Task 3.5, SCORES, STATS and TROPHIES since Tasks 4.1 / 4.2; each page task adds its screen) makes main pass `{covered: true}` to the renderer: no look rasters a board a page covers. `frameloop` frees the kit's
 layers (`release`, handed in by main) after `KIT_FREE` 10 s of GAME PLAY on a PLAY-only clock and on `pagehide`; the next shell frame refills.
 Under the probe a page records `begin(page, {w, h, dpr, el})`, its rects (touch, set, focus, fill), texts (role, cap height, colour) and
-squint pairs outside any layer paint; its `tools/ui/lib/screens.mjs` row exempts what it has none of (MENU: chosen, locked; GUIDE and ENEMIES:
-chosen, locked; HOW TO, POWER-UPS, FLOOR also band, ring and gap, HOW TO and FLOOR info; SCORES, MEDALS: locked), and a lazy page's row waits for it (`wait: "records"`). Text under an open tooltip is not recorded. With no canvas
+squint pairs outside any layer paint; its `tools/ui/lib/screens.mjs` row exempts what it has none of (MENU: chosen, locked; LEVEL SELECT: ring, locked; SETTINGS: ring, locked, chosen only by
+`exemptIfNo` (no two-state part drawn); GRAPHICS: ring, locked, chosen by the same `exemptIfNo` (R1 cohesion 12); GUIDE and ENEMIES: chosen, locked;
+HOW TO, POWER-UPS, FLOOR also band, ring and gap, HOW TO and FLOOR info; SCORES, MEDALS: locked; RECORDS' rows `exemptPhone` ring and band (a phone
+capture in tap mode shows no focus)), and a lazy page's row waits for it (`wait: "records"`). Text under an open tooltip is not recorded. With no canvas
 source (Node) it paints straight onto the target over a flat fill; a context with no clip or rect (the headless renderer's) gets the plan only.
 Lazy pages (R20): `src/render/pages/lazy.js` is the ONE loader (boot; `LOAD` has one line per page, `want(name)` imports, `get(name)` is the
 module or null, `idle()` asks for every page in the first idle after MENU's first frame: shellview calls it on MENU). A lazy page is in
@@ -480,7 +485,7 @@ not shell screens. Do not add them as `SCREEN` values.
 - `src/main.js` — **browser entry only**, pinned `<=799` lines
   (`tests/headless.test.mjs`; raised 808→812 once in wave 3 for `ro.ghost`,
   tightened to 799 when C2 moved `fit()` out; 733 by split-length at v178 after
-  GRAPHICS moved the frame gate and renderer cache out; 784 at v201; 716 once the pointer router moved out, UI upgrade Task 0.4; 722 with Task 3.1's covered flag and kit release). RAF loop, fixed-step
+  GRAPHICS moved the frame gate and renderer cache out; 784 at v201; 716 once the pointer router moved out, UI upgrade Task 0.4; 722 with Task 3.1's covered flag and kit release; 727 with R1 cohesion's close-first and page-key cue). RAF loop, fixed-step
   accumulator, kind switch, and the handler wiring that binds them. Never
   imported by sim or renderer. Its seams live beside it and must stay OUT of
   `main.js`: `src/app/flags.js` (URL/opts, pure over a search string),

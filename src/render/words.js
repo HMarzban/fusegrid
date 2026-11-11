@@ -77,6 +77,7 @@ export const MENU_WORDS = Object.freeze({
   TRIES: "YOUR TRIES TODAY", TRIES_SHORT: "TRIES TODAY", TRIES_MIN: "TRIES", BEST: "BEST", NO_RUNS: "NO RUNS YET", PAGES: "PAGES",
   GITHUB: "GITHUB", MOVE: "MOVE", START: "START", OPEN, TAP: "TAP A ROW",
   SOURCE_PAD: "NEEDS A CLICK OR ENTER", // a controller press opens no browser tab: SOURCE's foot says so while a controller drives MENU
+  SOURCE_PAD_SHORT: "CLICK OR ENTER", // its step-down on the phone / compact SOURCE row, where the whole sentence does not fit
   PAD_READY: "CONTROLLER READY", PAD_BACK: "CONTROLLER BACK", // the app's pad notes (controlswire), read back to make the signpost
 });
 /* The next-run card (v202 Task 3.2, MENU; LEVEL SELECT reuses it): its kicker, the level's mark (level 1, a finale, the last one), its
