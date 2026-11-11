@@ -369,7 +369,7 @@ export const statsPages = (F) => recPages(F, "stats");
 export function pageKeyHit(x, y, F, page, rows) {
   if (!okBox(F) || recPages(F, page, rows) < 2) return 0;
   const G = recordsGeom(F), [dx, dy] = toD(G, x, y), b = G.d.bodies[page], q = b && b.pager;
-  return !q ? 0 : inR(q.up, dx, dy) ? -1 : inR(q.dn, dx, dy) ? 1 : 0;
+  return pagerHit(q, dx, dy);
 }
 /** MEDALS and any page with no body hit: -2 on the plate, -1 off it or on the BACK key. */
 export function plateHit(x, y, F) {

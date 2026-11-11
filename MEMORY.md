@@ -24,6 +24,9 @@ append an entry when it makes a non-trivial change.
 
 ## 2026-11-07 — v201 pushed: controller play, rebinding, CONTROLS page
 - Owner: "make it ready and push it up", a day before the planned Sunday. Released as one squashed commit on `origin/main`'s v200 tip (`feature/controls` and `feature/delivery` are never pushed); CHANGELOG and sitemap dated 2026-11-07; the brand of the test controller left the tracked docs (A5). 578 tests; the stubbed-pad browser pass re-run on the release tree, its leftover fails all stale against `e1384f5` or timing (record's go/no-go). M1-M7 ship open by the owner's call. The new share card (`og.png` + alt text) ships beside it as its own commit; the owner re-uploads Social preview by hand.
+## 2026-11-11 — R1 kit harmonisation (feature/ui-upgrade, c649818..)
+- One kit for the R1 pages: kit geom / copy / pager (new), the shared room rule and THE LOADING plate in kit room.js, shared measurer / text / plaque; 48 R1 captures byte-identical before / after, gates 0 fail 0 skip; boot graph -25 bytes. Visible only where a page pages (46 CSS px keys, PAGE n OF m) and on LOADING frames.
+
 ## 2026-11-11 — R1 train: RECORDS on MENU's room dpr (branch `r1-train`)
 - SCORES, STATS, MEDALS and their LOADING plate now take `pages/menu.js` `roomDpr` (with `rev`, no logo reserve) instead of borrowing MENU's last frame: 0 room refills MENU <-> RECORDS on every tested box, whatever MENU last painted. All R1 pages now share one room rule.
 
