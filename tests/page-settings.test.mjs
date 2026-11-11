@@ -271,12 +271,45 @@ for (const pv of [1, 2]) {
   const t = rec({ widthK: K8 }); t.ctx.setTransform(2, 0, 0, 2, 0, 0);
   const n0 = made.length;
   lazy._set("settings", null);
-  md.drawSettings(t.ctx, md.layout(1366, 768, 207), 0, { rows: R10, row: "MUSIC", level: 1 });
+  md.drawSettings(t.ctx, md.layout(1366, 768, 207), 0, { rows: R10, row: "MUSIC", level: 1, rev: "v201" }); // rev: shellview's optUi always carries the build tag (MENU's room dpr reads it)
   lazy._set("settings", P);
   const loadRooms = room0(made.slice(n0)), n1 = made.length, m1 = cache._dbg.misses;
   md.drawSettings(t.ctx, md.layout(1366, 768, 207), 0, UI({ rows: R10, row: "MUSIC" }));
   const landed = made.slice(n1), roomAgain = landed.filter((cv) => cv.width === loadRooms[0].width && cv.height === loadRooms[0].height);
-  check("LOADING's room at the page's dpr (roomDpr, under the budget), and the page that lands finds it: no second room", loadRooms.length === 1 && loadRooms[0].width === Math.round(1366 * md.roomDpr(1366, 768, 2)) && loadRooms[0].width * loadRooms[0].height * 4 < 16e6 && roomAgain.length === 0 && P._dbg.last.s.rd === md.roomDpr(1366, 768, 2), J([loadRooms.map((c) => [c.width, c.height]), landed.map((c) => [c.width, c.height]), cache._dbg.misses - m1]));
+  const MRD = (await import("../src/render/pages/menu.js")).roomDpr(t.ctx, BOX.d1366, { rev: "v201" }, 2); // MENU's room dpr (R1 train: one rule for MENU, LEVEL SELECT, SETTINGS and the LOADING plate)
+  check("LOADING's room at the page's dpr (MENU's roomDpr, under the budget), and the page that lands finds it: no second room", loadRooms.length === 1 && loadRooms[0].width === Math.round(1366 * MRD) && loadRooms[0].width * loadRooms[0].height * 4 < 16e6 && roomAgain.length === 0 && P._dbg.last.s.rd === MRD, J([loadRooms.map((c) => [c.width, c.height]), landed.map((c) => [c.width, c.height]), cache._dbg.misses - m1, MRD]));
+}
+
+/* ---- R1 train (the LEVEL SELECT fix round's ruling (c)): SETTINGS, GRAPHICS and their LOADING plate fill MENU's own roomLayer at MENU's room dpr
+   (pages/menu.js roomDpr), so MENU -> SETTINGS / GRAPHICS -> MENU never refills the room: the page finds MENU's canvas, makes no room of its own,
+   and MENU finds it again, never freed; the whole cache stays inside the budget ---- */
+{
+  const MP = await import("../src/render/pages/menu.js");
+  const { ITEMS } = await import("../src/app/menuapp.js");
+  const bad = [], gave = [];
+  for (const [b, dpr] of [["d1366", 2], ["d1920", 2], ["d1024", 2], ["l1024", 2], ["p393", 2.7]]) for (const ts of [1, 1.25]) for (const g of [false, true]) for (const loading of [false, true]) {
+    setTextScale(ts); fresh();
+    const F = BOX[b], t = rec({ widthK: K8 }); t.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const MUI = { rows: ITEMS, focus: "SETTINGS", level: 2, run: {}, rev: "v201", enterT: 9 };
+    MP.drawMenuPage(t.ctx, F, MUI, 0);
+    const room0 = MP._dbg.last.S.room, mrd = MP._dbg.last.S.rd, n0 = made.length;
+    const ui = g ? { row: 0, view: GV("2d"), togT: -1, chg: 0, level: 2, rev: "v201" } : UI({ level: 2, row: "MUSIC" });
+    if (loading) { lazy._set("settings", null); md.loadingPage(t.ctx, F, g ? "GRAPHICS" : "SETTINGS", ui); lazy._set("settings", P); }
+    (g ? P.drawGraphicsPage : P.drawSettingsPage)(t.ctx, F, ui, 0);
+    const s = P._dbg.last.s, rooms = made.slice(n0).filter((cv) => cv.width === room0.width && cv.height === room0.height), peak = cache._dbg.bytes;
+    const n1 = made.length;
+    MP.drawMenuPage(t.ctx, F, MUI, 0.1);
+    const back = MP._dbg.last.S.room, remade = made.slice(n1).includes(back);
+    /* the page's own fit (its full-dpr page layer and the 3 MiB reserve inside the budget) is the floor: where it is under MENU's dpr the room gives
+       way to exactly it (a refill, never over the budget) */
+    const own = +Math.max(0.5, Math.min(cache.capDpr(dpr, !!F.touch), Math.sqrt(Math.max(0, cache.BUDGET - s.pw * s.ph * 4 - 3 * 1024 * 1024) / (4 * F.W * F.H)))).toFixed(3);
+    if (own < mrd) { gave.push(b + " x" + ts + (g ? " GRAPHICS" : " SETTINGS")); if (!(s.rd === own && peak <= cache.BUDGET)) bad.push(J({ b, ts, g, gaveWay: [s.rd, own, mrd], peak })); continue; }
+    if (!(s.room === room0 && s.rd === mrd && rooms.length === 0 && back === room0 && !remade && room0.width > 0 && peak <= cache.BUDGET))
+      bad.push(J({ b, dpr, ts, g, loading, same: s.room === room0, rd: [s.rd, mrd], rooms: rooms.length, back: back === room0, remade, peak }));
+  }
+  setTextScale(1);
+  check("shared room: SETTINGS and GRAPHICS (and their LOADING plate) blit MENU's room canvas at MENU's room dpr, and MENU finds the same canvas again: 0 room refills, within the budget (desk 1366 / 1920 / 1024, the touch tablet, the phone @2.7; text 1 and 1.25); where the page's own layer cannot sit beside MENU's room the room gives way to the page's fit, inside the budget", bad.length === 0, bad.slice(0, 3).join(" | "));
+  check("shared room: the only box whose page cannot hold MENU's room dpr is the touch tablet 1024 x 768 at text 1, SETTINGS (its touch rows; 1.892 vs MENU's 1.925)", J([...new Set(gave)]) === J(["l1024 x1 SETTINGS"]), J([...new Set(gave)]));
 }
 
 /* ---- the ART STYLE row's load job: the words in the window, the fill line live, no reflow ---- */

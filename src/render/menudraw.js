@@ -25,7 +25,7 @@ import * as lazy from "./pages/lazy.js";
 import { worldTokens, CONST, toL } from "./kit/tokens.js";
 import { plate as kitPlate } from "./kit/paint.js";
 import { dsp as kitDsp, lbl as kitLbl } from "./kit/type.js";
-import { canMake, capDpr, BUDGET } from "./kit/cache.js";
+import { canMake, capDpr } from "./kit/cache.js";
 import { roomLayer } from "./kit/room.js";
 const ACCENT = "#37f0d0",
   TEXT = "#dfe7f5",
@@ -1201,9 +1201,6 @@ const want = () => {
 /* OPTIONS and GRAPHICS share the tap model on a touch layout (row = Enter, off the plate = back); CONTROLS' foot reads it too. */
 export const FOOT_TAP = "TAP A ROW TO CHANGE IT · TAP OUTSIDE TO GO BACK";
 const LOAD_W = 360, LOAD_H = 128;
-/* The room's dpr behind a lazy page and its LOADING plate, one formula for both (so the room the plate made is the one the page finds): the
-   budget less the logo reserve and a page layer up to 0.7 of the box at full dpr; a page that needs more lowers its own. */
-export const roomDpr = (W, H, dpr) => +Math.max(0.5, Math.min(dpr, Math.sqrt(Math.max(0, BUDGET - 3 * 1024 * 1024 - 0.7 * 4 * W * H * dpr * dpr) / (4 * W * H)))).toFixed(3);
 function loadBox(F) {
   const k = Math.min(1, (F.W - 52) / LOAD_W, (F.H - 52) / LOAD_H), w = LOAD_W * k, h = LOAD_H * k;
   return { x: (F.W - w) / 2, y: (F.H - h) / 2, w, h, k };
@@ -1213,7 +1210,7 @@ export function loadingPage(c, F, title, ui) {
   const u = ui || {}, level = u.level | 0 || 1, tok = worldTokens(level), B = loadBox(F);
   if (!(F.W > 0 && F.H > 0) || typeof c.clip !== "function") return;
   if (!u.paused) {
-    if (canMake()) c.drawImage(roomLayer({ w: F.W, h: F.H }, level, tok, { dpr: roomDpr(F.W, F.H, capDpr(deviceScale(c), !!F.touch)), look: "2d", textScale: 1 }), 0, 0, F.W, F.H);
+    if (canMake()) c.drawImage(roomLayer({ w: F.W, h: F.H }, level, tok, { dpr: menuPage.roomDpr(c, F, { rev: u.rev }, capDpr(deviceScale(c), !!F.touch)), look: "2d", textScale: 1 }), 0, 0, F.W, F.H); // MENU's own room at MENU's room dpr (pages/menu.js roomDpr): the room MENU left, the one the page finds
     else { c.fillStyle = toL(tok.bg1, 0.004); c.fillRect(0, 0, F.W, F.H); }
   }
   c.save(); c.translate(B.x, B.y); c.scale(B.k, B.k);

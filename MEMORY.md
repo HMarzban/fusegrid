@@ -24,6 +24,9 @@ append an entry when it makes a non-trivial change.
 
 ## 2026-11-07 — v201 pushed: controller play, rebinding, CONTROLS page
 - Owner: "make it ready and push it up", a day before the planned Sunday. Released as one squashed commit on `origin/main`'s v200 tip (`feature/controls` and `feature/delivery` are never pushed); CHANGELOG and sitemap dated 2026-11-07; the brand of the test controller left the tracked docs (A5). 578 tests; the stubbed-pad browser pass re-run on the release tree, its leftover fails all stale against `e1384f5` or timing (record's go/no-go). M1-M7 ship open by the owner's call. The new share card (`og.png` + alt text) ships beside it as its own commit; the owner re-uploads Social preview by hand.
+## 2026-11-11 — R1 train: SETTINGS on MENU's room dpr (branch `r1-train`)
+- SETTINGS, GRAPHICS and their LOADING plate now fill MENU's own room at `pages/menu.js` `roomDpr` (as LEVEL SELECT since its fix round): 0 room refills MENU <-> SETTINGS / GRAPHICS; menudraw's own `roomDpr` deleted. Open: the touch tablet 1024x768 at text 1 still gives way on SETTINGS (page 1.892 vs MENU 1.925; a lead call: page dpr or room).
+
 ## 2026-11-11 — UI upgrade Task 3.4: SETTINGS and GRAPHICS on the world kit (lane `lane-3.4-settings`)
 - `src/render/pages/settings.js` (lazy through the new `src/render/pages/lazy.js`): meters, rockers, steppers, doors, courses, the ART STYLE pane, desk / col / phone; PAUSE views 1 / 2 reuse it in `overlayBox`; SETTINGS and GRAPHICS cover the board. Open: PAUSE on a phone and landscape phones' #c cannot hold twelve 44 CSS px rows (floors give way); the pane's look keys stand in for the mock's photo thumbnails.
 

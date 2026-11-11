@@ -130,6 +130,7 @@ const gfxUi = (app, canvas, kicker) => ({
   view: app.gfxView ? app.gfxView() : null,
   togT: app.togT,
   chg: app.gfxChg,
+  rev: REV,
   touch: layOf(canvas) !== "d",
 });
 
