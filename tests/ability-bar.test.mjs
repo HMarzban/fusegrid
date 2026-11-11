@@ -139,8 +139,11 @@ const ALL = { shield: true, kick: true, throw: true, passing: true, bombKind: "p
   check("MAX is the muted part", r.ops.some((o, i) => o[0] === "fillText" && o[1][0] === "MAX" && r.ops.slice(0, i).reverse().find((q) => q[0] === "=fillStyle")[1] === CONST.t2));
   check("no blink: with every chip live, alpha is only 1 (and the kit plate's fixed 0.6 lit edge)", r.ops.filter((o) => o[0] === "=globalAlpha").every((o) => o[1] === 1 || o[1] === 0.6), r.ops.filter((o) => o[0] === "=globalAlpha").map((o) => o[1]).join());
   const g = bar(mkW({ throw: true }), [{ k: "kick", t: ABAR.fade }]);
-  const al = g.ops.filter((o) => o[0] === "=globalAlpha").map((o) => o[1]);
-  check("a stripped chip paints dimmed, then the active one at full", al.includes(ABAR.dim) && al.indexOf(ABAR.dim) < al.lastIndexOf(1) && barWords(g).indexOf("KICK") < barWords(g).indexOf("THROW"), al.join() + " " + barWords(g).join());
+  /* the bar's own ops: the same frame drawn with no bar is an exact prefix (the chips first), so the rest is the bar alone */
+  const wb = rec(), nb = rec(); drawHud(wb.c, g.G, g.st, worldTokens(1), {}); drawHud(nb.c, { ...g.G, bar: null }, g.st, worldTokens(1), {});
+  const pre = nb.ops.length > 0 && JSON.stringify(wb.ops.slice(0, nb.ops.length)) === JSON.stringify(nb.ops), tail = wb.ops.slice(nb.ops.length);
+  const al = tail.filter((o) => o[0] === "=globalAlpha").map((o) => o[1]), bw = words(tail);
+  check("a stripped chip paints dimmed, then the active one at full", pre && al.join() === ABAR.dim + ",1" && bw.join() === "KICK,THROW", pre + " " + al.join() + " " + bw.join());
   const z = bar(mkW({}), [{ k: "kick", t: 0 }]);
   check("a spent ghost paints no chip", z.G.bar === null && !words(z.ops).includes("KICK"));
 }

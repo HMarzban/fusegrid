@@ -189,7 +189,7 @@ export function resetShort(clear, keep) {
 /** The sentence for every store this table knows (CLEAR = every group not kept): what the confirm plate is sized for. */
 const ALL_CLEAR = Object.keys(RESET_GROUP).filter((k) => !KEEP_NOUNS.includes(RESET_GROUP[k])), ALL_KEEP = Object.keys(RESET_GROUP).filter((k) => KEEP_NOUNS.includes(RESET_GROUP[k]));
 export const RESET_DEFAULT = resetSentence(ALL_CLEAR, ALL_KEEP), RESET_SHORT = resetShort(ALL_CLEAR, ALL_KEEP);
-/* The HUD (v202 Task 8.2, round 5 09-hud; R9): the seven chips in order, LEVEL for the old LV chip, the difficulty word beside the level only when it
-   is not NORMAL (HARD and EXPERT are no other setting's word), and the phone's PAUSE key. */
+/* The HUD (v202 Task 8.2, round 5 09-hud; R9): the seven chips in order, LEVEL for the old LV chip (no difficulty word: lead ruling R1), and the
+   phone strip's PAUSE / RESUME and BOMB keys. */
 export const HUD_CHIPS = Object.freeze(["LIVES", "BOMBS", "FLAME", LABEL.LEVEL, "ENEMIES", "TIME", "SCORE"]);
 export const HUD_WORDS = Object.freeze({ PAUSE: "PAUSE", RESUME: "RESUME", BOMB: "BOMB" });

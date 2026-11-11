@@ -23,8 +23,9 @@ import {drawOverlay, overlayBox, drawCoach, drawCoach2, boardTip} from "../scene
 import {onEvent, updateFx, getFxOpts, getShake, getFlash, getFx, feedFx, drawFxOverlay, drawPickupFx, syncFx, initFx} from "../fx.js";
 
 const W=CFG.COLS*CFG.TILE, H=CFG.ROWS*CFG.TILE;
-/* the board sits VIEW_DY px lower in the canvas (a view-offset shift, rig and lens untouched): the plate takes the top 40, so the slack was all below */
-export const VIEW_DY=16;
+/* the board's view-offset shift in the canvas (rig and lens untouched): 0 since the HUD left the board (UI upgrade Task 8.2, fix round 1); it was
+   16 while the HUD plate took the top 40 */
+export const VIEW_DY=0;
 const noop=()=>{};
 export const WORLDS_KEPT=2;
 export const DPR_MAX=3;                     // RESOLUTION FULL (opt-in); default min(dpr,2)

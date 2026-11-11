@@ -392,10 +392,11 @@ check("hasTouch({ontouchstart:null}) true", hasTouch({ontouchstart:null})===true
         &&gut>=lRemG+actW&&lRemG>=lThrG+actW+8&&lThrB===lRemB&&lThrB>=lBombB+bombW+8
         &&sh-lPillT-pillW-8>=lThrB+actW&&base("tthrow").includes("width:"+actW+"px")&&base("tremote").includes("width:"+actW+"px");
     }else ok=[false,true].every((game)=>{
+      const sh=520*fitBox(W,H,true,600,520,game).s, shG=520*fitBox(W,H,true,600,520,true).s; // the board's height off GAME (today's) and in GAME (the HUD's reserve, R2)
       const g=portraitGeo(W,H,600,520,game), below=H-g.top-sh, G=PORT_GEO, a=stripGeo(W,H,600,520);
       return g.top>=pillW+pillG&&g.padTop>=G.gap&&a.bomb.t>=G.gap&&a.thr.t>=G.gap
-        &&below>=g.padTop+g.pad&&H-PORT_GAME.top-sh>=a.bomb.t+a.bomb.h
-        &&g.pad>=G.pad[0]&&g.pad<=(game?PORT_GAME.pad:G.pad[1])&&a.bomb.h>=44&&a.thr.w>=44
+        &&below>=g.padTop+g.pad&&H-PORT_GAME.top-shG>=a.bomb.t+a.bomb.h
+        &&g.pad>=(game?G.pad[0]:G.menu)&&g.pad<=(game?PORT_GAME.pad:G.pad[1])&&a.bomb.h>=44&&a.thr.w>=44
         &&W>=STRIP.dpad+g.pad+8+a.bomb.w+STRIP.right;
     });
     if(!ok&&bad.length<4) bad.push(W+"x"+H+" "+l+" stage "+sw.toFixed(1)+"x"+sh.toFixed(1));

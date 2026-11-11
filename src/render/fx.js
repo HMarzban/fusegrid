@@ -376,7 +376,7 @@ export function drawFxOverlay(c){
 const PDEF={};
 for(const d of POWER) PDEF[d.t]=d;
 const BKIND={line:1,power:1,pierce:1};
-export const LBL=Object.freeze({life:0.9,rise:22,riseT:0.6,fade:0.35,merge:0.25,near:1.5,max:3,step:20,top:46,pulse:0.6,lift:0,subH:16,subY:17,subDn:25});
+export const LBL=Object.freeze({life:0.9,rise:22,riseT:0.6,fade:0.35,merge:0.25,near:1.5,max:3,step:20,top:6,pulse:0.6,lift:0,subH:16,subY:17,subDn:25});
 export function pickupLabel(kind, p, prev){
   const d=PDEF[kind];
   if(!d) return null;
@@ -475,13 +475,14 @@ export function getPulse(){ return {b:fx.pu.b,r:fx.pu.r,l:fx.pu.l}; }
 const CHAR=10.8, BW0=CFG.COLS*CFG.TILE;
 const ease=(t)=>1-Math.pow(1-Math.min(1,Math.max(0,t)),3);
 /* PURE layout over one label: x is the left edge of icon+word, y the text
-   middle, a the alpha. The y46 test uses the FULL rise, so a label never
+   middle, a the alpha. The top test (LBL.top: the canvas's own top since the
+   HUD left the board, UI upgrade Task 8.2; it was the y46 HUD band) uses the FULL rise, so a label never
    flips sides mid-animation; below the tile it drifts DOWN, away from the
    tile. The rise scales with the projected tile height (k, 1 in board space)
    so a far 3D row is not left a row and a half behind. x centres on the
    mid of the near and far edge, which is the tile centre in every look. An
    above-side label that meets the combo callout hops over it while that
-   stays clear of y46, else (and for a below-side one) it drops under it.
+   stays clear of LBL.top, else (and for a below-side one) it drops under it.
    cal is the live combo callout {s,w} or null, cw the live coach v2 panel
    width (0 when shut), l.tw a measured word width, bw the overlay width (608
    on the iso canvas; the callout centres on it, the coach panel on 300). A
@@ -489,12 +490,12 @@ const ease=(t)=>1-Math.pow(1-Math.min(1,Math.max(0,t)),3);
    reaches below its text middle): a stacked label above the tile adds its
    OWN sub height, one below adds the sub of the label it stacks on (l.sb).
    Callout and coach panel are one obstacle list: an above-side label hops
-   over every band it meets while that stays clear of y46, else it drops
+   over every band it meets while that stays clear of LBL.top, else it drops
    under them. drawPickupFx latches any overlap it still finds (an iso
    diagonal, two rise phases) into l.st, so a label only ever steps further
    from its tile and never snaps back. Known per-look difference: a row-1
-   pickup drops below its tile in CLASSIC 2D and PIXEL, but REAL 3D's far rim
-   projects its top clear of y46, so there it stays above. */
+   pickup stays above its tile in every look now that only the canvas top
+   bounds it. */
 export function labelBox(l, proj, still, cal, bw, cw){
   const T=CFG.TILE, cx=(l.tx+0.5)*T, BW=bw||BW0;
   const top=proj?proj(cx,l.ty*T,LBL.lift):{x:cx,y:l.ty*T};

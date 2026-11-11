@@ -289,10 +289,14 @@ setPixelArt(null);
   for (const o of [{ row: 2 }, { row: 3 }, { row: 7, armed: true }, ...[0, 1, 2, 3].map((vib) => ({ tab: "pad", device: "pad", pad: PR, row: 6, vib })), { tab: "pad", device: "pad", pad: PR, row: 2 }, { tab: "pad", device: "pad", pad: PR, row: 3 }, { tab: "pad", device: "pad", pad: PR, row: 5 }, { tab: "pad", device: "pad", pad: PR, row: 5, dead: 8 }])
     for (const T of [false, true]) { const R = rec({ widthK: 0.648 }); drawControls(R.ctx, md.layout(600, 520), keyV(o), { touch: T, narrow: false }); note("CONTROLS " + J(o), R.texts, true); }
   const hudOf = (w, lay, W, H) => { const R = rec({ widthK: 0.648 }), st = hudState(w, { time: { on: true, t: 12 } }); drawHud(R.ctx, hudGeom(R.ctx, hudGeo(W, H, 600, 520, lay, true), st, { w: W, h: H }), st, worldTokens(w.level || 1), {}); return R; };
-  const hud = hudOf({ players: [{ bombs: 2, range: 3 }], lives: 3, level: 4, enemies: [1], heat: 1, score: 1234, state: "PLAY" }, "d", 1366, 768);
-  const hudTexts = hud.texts.map((t) => t.s);
-  check("the HUD prints LEVEL and the difficulty word (R9, Phase 8): no LV, no heat token", hudTexts.includes("LEVEL") && hudTexts.includes(W.DIFF[1]) && !hudTexts.includes("LV") && ![0, 1, 2].some((h) => hudTexts.includes(heatToken(h))));
-  for (const [lay, W, H] of [["d", 1366, 768], ["p", 393, 852], ["l", 844, 390]]) note("HUD", hudOf({ players: [{ bombs: 2, range: 3 }], lives: 3, level: 4, enemies: [1], heat: 2, score: 1234, state: "PLAY" }, lay, W, H).texts);
+  const hw = (heat) => ({ players: [{ bombs: 2, range: 3 }], lives: 3, level: 4, enemies: [1], heat, score: 1234, state: "PLAY" }), LAYS = [["d", 1366, 768], ["p", 393, 852], ["l", 844, 390]];
+  const hudBad = [];
+  for (const heat of [0, 1, 2]) for (const [lay, Wd, Hd] of LAYS) {
+    const ts = hudOf(hw(heat), lay, Wd, Hd).texts.map((t) => t.s);
+    if (!ts.includes("LEVEL") || ts.includes("LV") || [0, 1, 2].some((h) => ts.includes(heatToken(h))) || ts.some((t) => W.DIFF.some((d) => t.includes(d)))) hudBad.push(heat + " " + lay + ": " + ts.join("|"));
+  }
+  check("the HUD prints LEVEL and no difficulty at any heat (R9; lead ruling R1: PAUSE and LEVEL SELECT name it): no LV, no heat token, no NORMAL / HARD / EXPERT", hudBad.length === 0, hudBad.join(" ; "));
+  for (const heat of [1, 2]) for (const [lay, Wd, Hd] of LAYS) note("HUD heat " + heat + " " + lay, hudOf(hw(heat), lay, Wd, Hd).texts, true);
   const bar = hudOf({ state: "PLAY", level: 1, players: [{ shield: true, kick: true, throw: true, passing: true, bombKind: "power", remote: true, speed: 999 }] }, "d", 1366, 768);
   note("ABILITY BAR", bar.texts);
   for (const p of POWER) for (const prev of [null, "line", "power", "pierce"]) { const l = pickupLabel(p.t, { range: 8, bombs: 8, speed: 999 }, prev); note("PICKUP LABEL", [labelText(l), l.sub].filter(Boolean)); const m = pickupLabel(p.t, {}, prev); note("PICKUP LABEL", [labelText(m), m.sub].filter(Boolean)); }

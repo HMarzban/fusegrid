@@ -1,12 +1,13 @@
 // The HUD on the world kit (UI upgrade Task 8.2, round 5 09-hud): seven labelled chips in order above the board, the power-ups bar below it, all on
-// #hud and never on the board; values at the HUD size (cap >= 18 desktop, >= 11 phone) at text scale 1 and 1.25; LEVEL and the difficulty words
-// (R9); an idle frame makes no canvas call; the board canvases draw no HUD (the CLASSIC hash drops exactly the old HUD segment).
+// #hud and never on the board; values at the HUD size (cap >= 18 desktop, >= 11 phone) at text scale 1 and 1.25; LEVEL and no difficulty word
+// (R9, fix round 1 R1); an idle frame makes no canvas call; the board canvases draw no HUD (the CLASSIC hash drops exactly the old HUD segment).
 import test from "node:test";
 import assert from "node:assert/strict";
 import { rec } from "./lib/textrec.mjs";
 import { hudGeo, mountFit } from "../src/app/fit.js";
 import { CAPR, CHIP_NAMES, HUD, createHud, drawHud, hudGeom, hudState } from "../src/render/hud.js";
 import { HUD_CHIPS, DIFF } from "../src/render/words.js";
+import { CONST } from "../src/render/kit/tokens.js";
 import { worldTokens } from "../src/render/kit/tokens.js";
 import { setTextScale } from "../src/render/kit/type.js";
 import { initFx, feedFx } from "../src/render/fx.js";
@@ -41,12 +42,10 @@ test("seven labelled chips in order: LIVES BOMBS FLAME LEVEL ENEMIES TIME SCORE 
   }
 });
 
-test("the difficulty word sits by the level only off NORMAL (R9), and LIVES follows kit5 lives(): up to five hearts, else one heart and the count", () => {
-  for (const h of [0, 1, 2]) {
-    const { r } = paint("d", 1366, 768, W0({ heat: h }));
-    const ws = r.texts.map((t) => t.s);
-    assert.equal(ws.includes(DIFF[1]) || ws.includes(DIFF[2]), h > 0, "heat " + h);
-    if (h) assert.ok(ws.includes(DIFF[h]));
+test("the HUD names no difficulty at any heat (lead ruling R1: PAUSE and LEVEL SELECT name it), and LIVES follows kit5 lives(): up to five hearts, else one heart and the count", () => {
+  for (const [lay, W, H] of BOXES) for (const h of [0, 1, 2]) {
+    const ws = paint(lay, W, H, W0({ heat: h })).r.texts.map((t) => t.s);
+    assert.ok(!ws.some((s) => DIFF.some((d) => s.includes(d))), `${lay} ${W}x${H} heat ${h}: ${ws.join("|")}`);
   }
   const n5 = paint("d", 1366, 768, W0({ lives: 5 })), n6 = paint("d", 1366, 768, W0({ lives: 6 }));
   assert.ok(!n5.r.texts.some((t) => t.s === "5"), "five lives are five hearts");
@@ -109,6 +108,35 @@ test("power-ups: the held ones in order with key caps on a keyboard layout; a hi
   initFx();
 });
 
+test("landscape: the power-ups grid and every chip stay off the D-PAD's box and the gutter keys (BOMB, THROW, REMOTE), at text 1 and 1.25", () => {
+  const LS = [[844, 390], [932, 430], [852, 393], [667, 375], [740, 360], [1024, 600], [800, 600], [1180, 820], [1024, 768]];
+  for (const k of [1, 1.25]) {
+    setTextScale(k);
+    try {
+      for (const [W, H] of LS) for (const w of [W0({ players: [{ bombs: 2, range: 3, ...ALL }] }), LONG()]) {
+        const { G, geo } = paint("l", W, H, w), S = geo.strip, keys = [["pad", S.pad], ["bomb", S.bomb], ["throw", S.thr], ["remote", S.rem]];
+        assert.ok(G.bar && G.bar.items.length === 7, `l ${W}x${H}: seven power-ups`);
+        for (const [n, q] of [["bar", G.bar], ...G.bar.items.map((q, i) => ["item " + i, q]), ...CHIP_NAMES.map((n) => [n, G.chips[n]])]) for (const [kn, kq] of keys)
+          assert.ok(off(q, kq), `l ${W}x${H} @${k}: ${n} ${JSON.stringify(q)} meets the ${kn} ${JSON.stringify(kq)}`);
+        assert.ok([G.bar, ...G.bar.items].every((q) => off(q, geo.stage) && q.x >= 0 && q.y >= 0 && q.x + q.w <= W + 0.5 && q.y + q.h <= H + 0.5), `l ${W}x${H} @${k}: the grid in the viewport, off the board`);
+      }
+    } finally { setTextScale(1); }
+  }
+});
+
+test("#hud's data-r is the reach as drawn: the plate's ring and the bar, widened at text 1.25", () => {
+  setTextScale(1.25);
+  try {
+    const r = rec(), geo = geoOf("d", 1024, 768), el = { width: 2048, dataset: {} };
+    const fit = { hudGeo: () => geo, hud: () => ({ ctx: r.ctx, geo, w: 1024, h: 768, el }) };
+    createHud().frame(fit, LONG(), { time: { t: 3 } }, "2d");
+    const { G } = paint("d", 1024, 768, LONG(), { t: 3 }), [x, y] = el.dataset.r.split(",").map(Number);
+    assert.ok(G.bar.w > geo.bar.w, "the bar widened at 1.25 (the case the estimate missed)");
+    assert.equal(x, Math.ceil(Math.max(geo.stage.x + geo.stage.w, G.bar.x + G.bar.w, G.plate.x + G.plate.w + HUD.d.ring)));
+    assert.equal(y, Math.ceil(Math.max(geo.stage.y + geo.stage.h, G.bar.y + G.bar.h)));
+  } finally { setTextScale(1); }
+});
+
 test("the pulse: a changed BOMBS value rings its chip for the pulse time, then nothing; LIVES and BOMBS pulsing together never meet", () => {
   initFx();
   const w = W0();
@@ -116,13 +144,15 @@ test("the pulse: a changed BOMBS value rings its chip for the pulse time, then n
   w.players[0].bombs = 3;
   feedFx(w, 1 / 60);
   const { r, G } = paint("d", 1366, 768, w), b = G.chips.bombs;
-  assert.ok(r.paints.some((q) => q.op === "stroke" && q.style === "#ff5d73" && q.box && inside(q.box, b)), "BOMBS pulses, a ring inside its chip");
+  assert.ok(r.paints.some((q) => q.op === "stroke" && q.style === CONST.ink && q.box && inside(q.box, b)), "BOMBS pulses, a ring inside its chip, in the kit's ink (coral is danger only)");
+  assert.ok(!r.paints.some((q) => /ff5d73/i.test(String(q.style))), "no coral anywhere on the HUD");
   w.lives = 9;
   feedFx(w, 1 / 60);
-  const two = paint("d", 1366, 768, w), lr = two.r.paints.find((q) => q.op === "stroke" && q.style === "#ff3b5c"), br = two.r.paints.find((q) => q.op === "stroke" && q.style === "#ff5d73");
+  const two = paint("d", 1366, 768, w), lr = two.r.paints.find((q) => q.op === "stroke" && q.style === "#ff3b5c"), br = two.r.paints.find((q) => q.op === "stroke" && q.style === CONST.ink && q.box && inside(q.box, two.G.chips.bombs));
   assert.ok(lr && br && lr.box.x + lr.box.w + 1.5 <= br.box.x - 1.5, "the LIVES ring ends before the BOMBS ring, strokes included");
   for (let i = 0; i < 60; i++) feedFx(w, 1 / 60);
-  assert.ok(!paint("d", 1366, 768, w).r.paints.some((q) => q.op === "stroke" && q.style === "#ff5d73"), "gone after LBL.pulse");
+  const late = paint("d", 1366, 768, w);
+  assert.ok(!late.r.paints.some((q) => q.op === "stroke" && q.style === CONST.ink && q.box && inside(q.box, late.G.chips.bombs)), "gone after LBL.pulse");
   initFx();
 });
 
@@ -179,7 +209,7 @@ test("fit bumps hudGen when it reassigns #hud's backing (a dpr change with no re
   globalThis.document = { getElementById: (id) => (id === "hud" ? hud : null), body: { setAttribute() {}, style: { setProperty() {} } } };
   globalThis.devicePixelRatio = 2;
   try {
-    const fit = mountFit({ width: 600, height: 520, style: {} }), g0 = fit.hudGen();
+    const fit = mountFit({ width: 600, height: 520, style: {} }); fit.hud(1); const g0 = fit.hudGen();
     globalThis.devicePixelRatio = 1; mq[0].f();
     assert.ok(fit.hudGen() > g0 && hud.width === 1366);
     const g1 = fit.hudGen(); fit();
@@ -225,4 +255,4 @@ test("the HUD painter's call log is pinned (the CLASSIC hash no longer covers th
   for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
   assert.equal(h.toString(16).padStart(8, "0") + ":" + r.paints.length, HUD_PIN);
 });
-const HUD_PIN = "76fe60be:2906"; // the HUD painter (LONG world, 1366x768, CLASSIC glyphs); a change here is a HUD art change, re-pinned by ruling like the CLASSIC hash
+const HUD_PIN = "7bbc49ac:2904"; // the HUD painter (LONG world, 1366x768, CLASSIC glyphs); a change here is a HUD art change, re-pinned by ruling like the CLASSIC hash. Fix round 1: 76fe60be:2906 -> 7bbc49ac:2904, the EXPERT word left LEVEL (R1), the BOMBS glyph cream

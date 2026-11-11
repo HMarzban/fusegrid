@@ -9,7 +9,7 @@ import { cardClears, reach, CARD_H } from "../src/app/analytics.js";
 
 const OLD = { d: [40, 48], p: [16, 250], l: [332, 16] }; // the reserves before the HUD left the board (shell v202)
 const old = (W, H, lay) => Math.max(0.3, Math.min((W - OLD[lay][0]) / 600, (H - OLD[lay][1]) / 520, 1.8));
-const now = (W, H, lay) => fitBox(W, H, lay !== "d", 600, 520).s;
+const now = (W, H, lay) => fitBox(W, H, lay !== "d", 600, 520, true).s; // the HUD on (GAME)
 const D = [[1366, 768], [1280, 720], [1440, 900], [1920, 1080], [1024, 640], [1280, 800], [1536, 864], [2560, 1440], [800, 600]];
 const P = [[393, 852], [390, 844], [430, 932], [412, 915], [375, 812], [375, 667], [360, 740], [768, 1024]];
 const L = [[844, 390], [932, 430], [852, 393], [667, 375], [740, 360], [1024, 768], [1180, 820]];
@@ -26,6 +26,22 @@ test("HUD_RES and FIT_RES: the desktop reserve is exactly the plate rows above p
   assert.deepEqual(FIT_RES.l, OLD.l);
   assert.equal(PORT_GAME.top, p.top);
   assert.equal(d.tip.card, 16 + CARD_H + 8, "the tip column stops above the analytics card's corner");
+});
+
+/* R3 (fix round 1): every window keeps 0.84 of today's board in GAME (the mock's HK) except these, named for the owner at O4 with
+   their measured ratio held as a floor: short windows where the plate and bar rows cost more than 16 % of the height */
+const EXEMPT = { "d 1280x720": 0.8289, "d 1366x657": 0.8112, "d 1024x640": 0.8057, "d 800x600": 0.7917, "p 320x568": 0.6832 };
+
+test("R3: GAME keeps 0.84 of today's board everywhere but the named exemptions, which hold their measured ratio; off GAME the scale is today's", () => {
+  const rows = [...[...D, [1366, 657], [1024, 768]].map(([W, H]) => ["d", W, H]), ...[...P, [360, 640], [320, 568]].map(([W, H]) => ["p", W, H])];
+  for (const [lay, W, H] of rows) {
+    const k = lay + " " + W + "x" + H, r = now(W, H, lay) / old(W, H, lay), floor = EXEMPT[k] ?? 0.84;
+    assert.ok(r >= floor - 1e-4, `${k}: ${r.toFixed(4)} < ${floor}`);
+    if (k in EXEMPT) assert.ok(r < 0.84, `${k} reaches 0.84 now: drop its exemption`);
+    assert.equal(fitBox(W, H, lay !== "d", 600, 520).s, old(W, H, lay), `${k}: off GAME (no HUD) the board keeps today's scale`);
+  }
+  assert.ok(now(360, 640, "p") / old(360, 640, "p") >= 0.84, "360x640 reaches the floor (pad floor 148, plate air 8)");
+  for (const k of Object.keys(EXEMPT)) assert.ok(rows.some(([l, W, H]) => l + " " + W + "x" + H === k), k + " is measured");
 });
 
 test("the board never shrinks below today's scale by more than the mock allows", () => {
@@ -80,25 +96,28 @@ test("the analytics card still clears the play column where it did, and never me
   assert.deepEqual(reach(r, null), { right: 900, bottom: 600 });
 });
 
-test("mountFit: desktop pads #wrap with the HUD rows, sizes #hud to the viewport and writes its reach; fit.hud shows and hides it", () => {
-  const props = {}, hud = { width: 300, height: 150, hidden: true, style: {}, dataset: {}, getContext: () => ctx }, log = [];
+test("mountFit: the HUD's reserve, #wrap's rows and #hud's backing exist only while the HUD shows (R2); off, the backing sleeps at 1x1", () => {
+  const props = {}, hud = { width: 300, height: 150, hidden: true, style: {}, dataset: {}, getContext: () => ctx }, log = [], cv = { width: 600, height: 520, style: {} };
   const ctx = { setTransform: (...a) => log.push(a) };
   globalThis.window = { innerWidth: 1366, innerHeight: 768, addEventListener() {} };
-  globalThis.document = { getElementById: (id) => (id === "hud" ? hud : null), body: { setAttribute() {}, style: { setProperty: (k, v) => { props[k] = v; } } } };
+  globalThis.document = { getElementById: (id) => (id === "hud" ? hud : null), body: { setAttribute() {}, style: { setProperty: (k, v) => { props[k] = v; }, removeProperty: (k) => { delete props[k]; } } } };
   globalThis.devicePixelRatio = 2;
   try {
-    const fit = mountFit({ width: 600, height: 520, style: {} }), g = hudGeo(1366, 768, 600, 520, "d"), u = hudReach(g);
+    const fit = mountFit(cv), g = hudGeo(1366, 768, 600, 520, "d");
+    assert.equal(cv.style.width, 600 * old(1366, 768, "d") + "px", "INTRO / MENU / ATTRACT: today's board scale");
+    assert.ok(!("--ht" in props) && !("--hb" in props) && hud.width === 300 && hud.style.width === "1366px");
+    assert.ok(hud.hidden && fit.hud(0) === null && hud.hidden && hud.width === 1 && hud.height === 1);
+    const g0 = fit.hudGen(), h = fit.hud(1);
+    assert.equal(cv.style.width, 600 * now(1366, 768, "d") + "px", "GAME: the HUD's reserve");
     assert.equal(props["--ht"], HUD_RES.d.top + "px");
     assert.equal(props["--hb"], HUD_RES.d.bot + "px");
-    assert.equal(hud.width, 2732);
-    assert.equal(hud.height, 1536);
-    assert.equal(hud.style.width, "1366px");
-    assert.equal(hud.dataset.r, Math.ceil(u.right) + "," + Math.ceil(u.bottom));
-    assert.ok(hud.hidden && fit.hud(0) === null && hud.hidden);
-    const h = fit.hud(1);
+    assert.ok(hud.width === 2732 && hud.height === 1536 && fit.hudGen() > g0, "the backing is restored (and the HUD told to repaint)");
     assert.ok(!hud.hidden && h.ctx === ctx && h.w === 1366 && h.h === 768 && JSON.stringify(h.geo) === JSON.stringify(g));
     assert.deepEqual(log.at(-1), [2, 0, 0, 2, 0, 0]);
-    assert.ok(fit.hud(false) === null && hud.hidden);
+    hud.dataset.r = "999,700"; fit();
+    assert.equal(hud.dataset.r, "999,700", "a re-fit leaves data-r to the painter (the reach as drawn)");
+    assert.ok(fit.hud(false) === null && hud.hidden && hud.width === 1 && hud.height === 1 && hud.dataset.r === "");
+    assert.ok(!("--ht" in props) && cv.style.width === 600 * old(1366, 768, "d") + "px", "leaving GAME gives today's scale back");
   } finally { delete globalThis.window; delete globalThis.document; delete globalThis.devicePixelRatio; }
 });
 

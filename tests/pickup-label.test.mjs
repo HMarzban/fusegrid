@@ -140,7 +140,10 @@ const fresh = (over) => { initFx(); const w = mkW(over); syncFx(w); feed(w); ret
   check("the y46 rule never crosses the HUD lane at any phase", [0, 0.2, 0.6, 0.9].every((t) => [1, 2, 3].every((ty) => labelBox(L({ ty, t }), null, false, null).y - 9 >= LBL.top)));
   const cal = labelBox(L({ tx: 7, ty: 3, t: 0 }), null, false, { s: "TRIPLE" });
   check("an above-side label overlapping the combo callout hops over it, clear of y46 and the coach lane", cal.y + 9 <= 96 - 13 && cal.y - 9 >= LBL.top, cal.y);
-  const calS = labelBox(L({ tx: 7, ty: 3, t: 0, st: 1 }), null, false, { s: "TRIPLE" });
+  /* LBL.top is the canvas's own top since the HUD left the board (UI upgrade Task 8.2, fix round 1; it was y46), so a stack must climb four
+     lines before it runs out of room above the callout */
+  const calS = labelBox(L({ tx: 7, ty: 3, t: 0, st: 4 }), null, false, { s: "TRIPLE" }), calF = labelBox(L({ tx: 7, ty: 3, t: 0, st: 1 }), null, false, { s: "TRIPLE" });
+  check("a stacked one that still fits hops over the callout, clear of LBL.top", calF.y + 9 <= 96 - 13 && calF.y - 9 >= LBL.top && !calF.below, calF.y);
   check("a stacked one with no room above drops under the callout instead", calS.y - 9 >= 96 + 13, calS.y);
   const calB = labelBox(L({ tx: 7, ty: 1, t: 0 }), null, false, { s: "TRIPLE" });
   check("a below-side label that meets the callout drops under it, never back onto its tile", calB.below && calB.y - 9 >= 96 + 13, calB.y);
@@ -344,7 +347,7 @@ const rec = () => {
   const L = (o) => Object.assign({ k: "power", s: "POWER BOMB", m: "", sub: "", tx: 7, ty: 6, t: 0, st: 0 }, o);
   const plain = labelBox(L({}), null, true, null), withSub = labelBox(L({ st: 1, sub: "replaces LINE" }), null, true, null);
   check("a stacked label with a sub sits its full 36 px higher above the tile", plain.y - withSub.y === LBL.step + LBL.subH && withSub.dn === LBL.subDn, plain.y + "/" + withSub.y);
-  const lo = labelBox(L({ ty: 1 }), null, true, null), lo2 = labelBox(L({ ty: 1, st: 1, sb: true }), null, true, null);
+  const lo = labelBox(L({ ty: 1, st: 1 }), null, true, null), lo2 = labelBox(L({ ty: 1, st: 2, sb: true }), null, true, null); // row 1: one line fits above under LBL.top, a stack drops below
   check("below the tile a label stacked on one with a sub clears that sub", lo.below && lo2.y - lo.y === LBL.step + LBL.subH, lo.y + "/" + lo2.y);
   const cs = labelBox(L({ tx: 7, ty: 4, sub: "replaces LINE" }), null, true, { s: "TRIPLE" });
   check("a label with a sub hops the callout with its sub clear of the callout too", cs.y + LBL.subDn <= 96 - 13 || cs.y - 9 >= 96 + 13, cs.y);

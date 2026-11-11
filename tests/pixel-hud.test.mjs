@@ -54,7 +54,7 @@ const HUDW = (lives) => ({players: [{bombs: 2, range: 3}], lives, level: 4, enem
 const HUDS = [[0, null], [3, {on: true, t: 12.3}], [8, null]];
 const PAGES = ["drawHowTo", "drawItemsHelp", "drawEnemiesHelp"], BOXES = [[600, 520], [600, 360]];
 const PIN = {
-  hud0: "45edb7b3:8165", hud3: "7d097d48:8270", hud8: "da9dd5eb:8165", // the HUD on #hud (hud.js, UI upgrade Task 8.2)
+  hud0: "5188aeeb:8158", hud3: "9c9cdb21:8263", hud8: "40b3ec83:8158", // fix round 1: the HARD word left LEVEL (R1), the BOMBS glyph cream // the HUD on #hud (hud.js, UI upgrade Task 8.2)
   /* v202 Task 3.5 fix round 1: pages/guide.js's call logs, re-pinned (a 600 x 520 / 600 x 360 #c box, keyboard and touch; the shell through drawShell
      on the classic box per kind: iso keeps its own box, so its own pins) */
   drawHowTo520: "37cf363d:21065", drawItemsHelp520: "4b731a9a:13296", drawEnemiesHelp520: "daf197f6:93094",

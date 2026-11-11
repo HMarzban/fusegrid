@@ -79,17 +79,20 @@ import { hasTouch } from "../touch.js";
 
 export const HUD_RES = Object.freeze({
   d: Object.freeze({ top: 106, bot: 57, air: 9, ring: 10, box: 74, gap: 8, bar: 42, tip: Object.freeze({ gap: 30, edge: 22, min: 220, max: 360, card: 184 }) }),
-  p: Object.freeze({ top: 164, air: 12, ring: 10, box: 126, gap: 10, bar: 38, side: 12 }),
+  p: Object.freeze({ top: 160, air: 8, ring: 10, box: 126, gap: 10, bar: 38, side: 12 }),
   l: Object.freeze({ edge: 8, gap: 12, pad: 152, padR: 8, act: 142, bomb: Object.freeze([40, 10, 72]), thr: Object.freeze([40, 90, 52]), rem: Object.freeze([100, 90, 52]) }),
 });
 
-export const FIT_RES = Object.freeze({ d: [40, 163], p: [16, 396], l: [332, 16] });
+/* FIT_RES: the reserves while the HUD shows (GAME, PAUSE and run ends included); FIT_BASE: everywhere else (INTRO, the show, ATTRACT,
+   the menus keep the v202 board scale; lead ruling R2, fix round 1) */
+export const FIT_RES = Object.freeze({ d: [40, 163], p: [16, 388], l: [332, 16] });
+export const FIT_BASE = Object.freeze({ d: [40, 48], p: [16, 250], l: [332, 16] });
 
 export const stageCss = (s, cw, ch, bx = 0, by = 0) => Math.min((cw * s - 2 * bx) / cw, (ch * s - 2 * by) / ch);
 
-export function fitBox(W, H, touch, cw, ch) {
+export function fitBox(W, H, touch, cw, ch, hud) {
   const lay = !touch ? "d" : W > H ? "l" : "p";
-  const [rw, rh] = FIT_RES[lay];
+  const [rw, rh] = (hud ? FIT_RES : FIT_BASE)[lay];
   return { lay, s: Math.max(0.3, Math.min((W - rw) / cw, (H - rh) / ch, 1.8)) };
 }
 
@@ -99,21 +102,23 @@ export function fitBox(W, H, touch, cw, ch) {
    above it one row of two fixed halves, THROW left and REMOTE right, so neither moves when the other appears. Offsets are
    the CSS ones on #touchpad (the stage's box): tops below the stage's bottom edge, l from its left, r from its right, so
    a stage narrower than the viewport still docks the strip to the viewport's sides. */
-export const STRIP = Object.freeze({ dpad: 20, gap: 10, right: 16, col: 130, air: 4, row: 14, bomb: 90 / 176 });
+export const STRIP = Object.freeze({ dpad: 20, gap: 10, gapMin: 8, right: 16, col: 130, air: 4, row: 14, bomb: 90 / 176 });
 
-export const PORT_GEO = Object.freeze({ top: 60, bot: 190, edge: 24, gap: 22, pad: [152, 176], side: [6, 14], mid: 24 });
+/* pad: the GAME strip's D-PAD floor and cap (148 keeps 44 keys 8 apart); menu: the floor off GAME, where #touchpad is hidden and the
+   board keeps today's scale (R2), so a 300-wide phone's 190 band below the board still holds it */
+export const PORT_GEO = Object.freeze({ top: 60, bot: 190, edge: 24, gap: 22, pad: [148, 176], menu: 128, side: [6, 14], mid: 24 });
 
 export const PORT_GAME = Object.freeze({ top: HUD_RES.p.top, pad: 176, sd: "0.2s" });
 
 export function portraitGeo(W, H, cw, ch, game) {
-  const { s } = fitBox(W, H, true, cw, ch), G = PORT_GEO, gap = game ? HUD_RES.p.gap + HUD_RES.p.bar + 8 : G.gap;
+  const { s } = fitBox(W, H, true, cw, ch, game), G = PORT_GEO, gap = game ? HUD_RES.p.gap + HUD_RES.p.bar + 8 : G.gap;
   const sw = cw * s, sh = ch * s, slack = H - sh;
   const mid = Math.floor(Math.max(G.top, Math.min(slack / 2, slack - G.bot)));
   const roomW = W - STRIP.dpad - STRIP.right - 8 - (2 * 44 + 8);
   /* GAME: the stage sits right under the HUD plate (PORT_GAME.top) and the controls dock to the thumb zone; the band
      between holds the power-ups bar and the tile tip (at least gap: one bar row) */
   const top = game ? PORT_GAME.top : mid, band = H - top - sh;
-  const pad = Math.floor(Math.max(G.pad[0], Math.min(game ? PORT_GAME.pad : G.pad[1], band - G.edge - gap, roomW)));
+  const pad = Math.floor(Math.max(game ? G.pad[0] : G.menu, Math.min(game ? PORT_GAME.pad : G.pad[1], band - G.edge - gap, roomW)));
   return { top, pad, padTop: Math.max(gap, Math.floor(band - G.edge - pad)) };
 }
 
@@ -124,7 +129,7 @@ export function portraitGeo(W, H, cw, ch, game) {
    its key size, BOMB, THROW, REMOTE). l: left and right gutter columns from the viewport's top, above the pad (left) and above THROW /
    REMOTE and the bomb (right; the PAUSE key heads it), and strip (the gutter controls index.html places with HUD_RES.l's numbers). */
 export function hudGeo(W, H, cw, ch, lay, game) {
-  const { s } = fitBox(W, H, lay !== "d", cw, ch), sw = cw * s, sh = ch * s, sx = (W - sw) / 2, R = (x, y, w, h) => ({ x, y, w, h });
+  const { s } = fitBox(W, H, lay !== "d", cw, ch, true), sw = cw * s, sh = ch * s, sx = (W - sw) / 2, R = (x, y, w, h) => ({ x, y, w, h });
   if (lay === "d") {
     const D = HUD_RES.d, T = D.tip, sy = Math.max(0, (H - D.top - sh - D.bot) / 2) + D.top, tx = sx + sw + T.gap, tw = Math.min(T.max, W - T.edge - tx);
     const pt = sy - D.top + D.air + D.ring;
@@ -166,10 +171,10 @@ export function shellGeo(W, H, cw = 600, ch = 520, lay = "p") {
 }
 
 export function stripGeo(W, H, cw, ch) {
-  const { s } = fitBox(W, H, true, cw, ch), sx = (W - cw * s) / 2, g = portraitGeo(W, H, cw, ch, true), S = STRIP;
-  const key = Math.floor((g.pad - 2 * S.gap) / 3), col = Math.min(S.col, W - S.right - 8 - S.dpad - g.pad), half = Math.floor((col - 8) / 2);
+  const { s } = fitBox(W, H, true, cw, ch, true), sx = (W - cw * s) / 2, g = portraitGeo(W, H, cw, ch, true), S = STRIP;
+  const gap = Math.max(S.gapMin, Math.min(S.gap, Math.floor((g.pad - 3 * 44) / 2))), key = Math.floor((g.pad - 2 * gap) / 3), col = Math.min(S.col, W - S.right - 8 - S.dpad - g.pad), half = Math.floor((col - 8) / 2);
   const bh = Math.round(g.pad * S.bomb), rh = g.pad - 2 * S.air - bh - S.row, r = S.right - sx;
-  return { pad: { l: S.dpad - sx, t: g.padTop, s: g.pad, key, gap: S.gap }, bomb: { r, t: g.padTop + g.pad - S.air - bh, w: col, h: bh },
+  return { pad: { l: S.dpad - sx, t: g.padTop, s: g.pad, key, gap }, bomb: { r, t: g.padTop + g.pad - S.air - bh, w: col, h: bh },
     thr: { r: r + col - half, t: g.padTop + S.air, w: half, h: rh }, rem: { r, t: g.padTop + S.air, w: half, h: rh } };
 }
 
@@ -219,12 +224,13 @@ function snapPxOrigin(el) {
 }
 
 export function mountFit(canvas) {
-  let was, cap = Infinity, shG = null, shM = 0, shNew = false, hG = null, hQ = 1, hGen = 0;
+  let was, cap = Infinity, shG = null, shM = 0, shNew = false, hG = null, hQ = 1, hGen = 0, hudOn = false, hBW = 1, hBH = 1;
   const shEl = () => (typeof document !== "undefined" && document.getElementById && document.getElementById("sh")) || null;
   const hudEl = () => (typeof document !== "undefined" && document.getElementById && document.getElementById("hud")) || null;
   const fit = () => {
     if (typeof window === "undefined") return;
-    const { lay, s } = fitBox(window.innerWidth, window.innerHeight, hasTouch(window), canvas.width, canvas.height);
+    const tp0 = typeof document !== "undefined" && document.getElementById && document.getElementById("touchpad");
+    const { lay, s } = fitBox(window.innerWidth, window.innerHeight, hasTouch(window), canvas.width, canvas.height, hudOn || (!!tp0 && !tp0.hidden));
     canvas.style.width = canvas.width * s + "px";
     canvas.style.height = canvas.height * s + "px";
     const [bx, by] = bdr(canvas);
@@ -250,15 +256,18 @@ export function mountFit(canvas) {
       } else if (sh && !sh.hidden) sh.hidden = true;
       const hud = hudEl();
       hG = hudGeo(window.innerWidth, window.innerHeight, canvas.width, canvas.height, lay, game);
-      if (lay === "d" && body.style && body.style.setProperty) { body.style.setProperty("--ht", HUD_RES.d.top + "px"); body.style.setProperty("--hb", HUD_RES.d.bot + "px"); }
+      const st = body.style;
+      if (st && st.setProperty) {
+        if (lay === "d" && hudOn) { st.setProperty("--ht", HUD_RES.d.top + "px"); st.setProperty("--hb", HUD_RES.d.bot + "px"); }
+        else if (st.removeProperty) { st.removeProperty("--ht"); st.removeProperty("--hb"); }
+      }
       if (hud) {
         hQ = Math.min(lay === "p" ? 3 : WIN_SHELL.dpr, (typeof devicePixelRatio !== "undefined" && devicePixelRatio) || 1);
-        const bw = Math.round(window.innerWidth * hQ), bh = Math.round(window.innerHeight * hQ), u = lay === "d" && hudReach(hG);
-        if (hud.width !== bw) { hud.width = bw; hGen++; }
-        if (hud.height !== bh) { hud.height = bh; hGen++; }
+        hBW = Math.round(window.innerWidth * hQ); hBH = Math.round(window.innerHeight * hQ);
+        if (hudOn) { if (hud.width !== hBW) { hud.width = hBW; hGen++; } if (hud.height !== hBH) { hud.height = hBH; hGen++; } }
         hud.style.width = window.innerWidth + "px";
         hud.style.height = window.innerHeight + "px";
-        if (hud.dataset) hud.dataset.r = u ? Math.ceil(u.right) + "," + Math.ceil(u.bottom) : "";
+        if (hud.dataset && hud.dataset.r && !(hudOn && lay === "d")) hud.dataset.r = ""; // data-r is the painter's (hud.js reachOf, as drawn); off it reads nothing
       }
       if (lay === "p" && body.style && body.style.setProperty) {
         const g = portraitGeo(window.innerWidth, window.innerHeight, canvas.width, canvas.height, game);
@@ -291,9 +300,16 @@ export function mountFit(canvas) {
   /* the HUD canvas: on shows it and hands back {ctx (CSS px transform), geo (hudGeo), w, h}; off (or no #hud, or no slots: p
      off GAME) hides it. Never clears: the HUD painter clears what it repaints, and only on a change. */
   fit.hud = (on) => {
-    const el = hudEl();
+    const el = hudEl(), want = !!on;
+    if (want !== hudOn) { hudOn = want; fit(); } // the HUD's reserve comes and goes with it (R2): the stage re-fits once on the edge
     if (!el) return null;
-    if (!on || !hG) { if (!el.hidden) el.hidden = true; return null; }
+    if (!on || !hG) {
+      if (!el.hidden) el.hidden = true;
+      if (el.width !== 1 || el.height !== 1) { el.width = 1; el.height = 1; hGen++; } // off GAME the backing sleeps (a full-viewport canvas is real memory)
+      if (el.dataset && el.dataset.r) el.dataset.r = "";
+      return null;
+    }
+    if (el.width !== hBW || el.height !== hBH) { el.width = hBW; el.height = hBH; hGen++; }
     if (el.hidden) el.hidden = false;
     const ctx = el.getContext("2d");
     ctx.setTransform(hQ, 0, 0, hQ, 0, 0);

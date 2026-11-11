@@ -1,4 +1,4 @@
-import { STRIP, FIT_RES, HUD_RES, PORT_GAME, PORT_GEO, PORT_SHELL, stripGeo, shellGeo, fitBox, mountFit, portraitGeo, pxBox, pxBack } from "../src/app/fit.js";
+import { STRIP, FIT_RES, FIT_BASE, HUD_RES, PORT_GAME, PORT_GEO, PORT_SHELL, stripGeo, shellGeo, fitBox, mountFit, portraitGeo, pxBox, pxBack } from "../src/app/fit.js";
 
 let pass = 0,
   fail = 0;
@@ -13,7 +13,7 @@ function check(name, cond, detail) {
 
 check("FIT_RES is frozen with the desktop / portrait / landscape reserves",
   Object.isFrozen(FIT_RES) && JSON.stringify(FIT_RES) ===
-    JSON.stringify({ d: [40, 163], p: [16, 396], l: [332, 16] }),
+    JSON.stringify({ d: [40, 163], p: [16, 388], l: [332, 16] }) && JSON.stringify(FIT_BASE) === JSON.stringify({ d: [40, 48], p: [16, 250], l: [332, 16] }) && Object.isFrozen(FIT_BASE),
   JSON.stringify(FIT_RES));
 
 check("lay is d without touch, l for touch W>H, p for touch H>=W",
@@ -23,8 +23,8 @@ check("lay is d without touch, l for touch W>H, p for touch H>=W",
     fitBox(500, 500, true, 600, 520).lay === "p");
 
 for (const [W, H, t, lay, s] of [
-  [1440, 900, false, "d", 1.417],
-  [1280, 720, false, "d", 1.071],
+  [1440, 900, false, "d", 1.638],
+  [1280, 720, false, "d", 1.292],
   [375, 812, true, "p", 0.598],
   [390, 844, true, "p", 0.623],
   [812, 375, true, "l", 0.69],
@@ -35,9 +35,9 @@ for (const [W, H, t, lay, s] of [
     b.lay === lay && b.s.toFixed(3) === s.toFixed(3), b.lay + " " + b.s);
 }
 
-check("PORT_GEO is frozen: 60/190 menu split, 24 edge, 22 gap, pad 152..176; FIT_RES.p is the GAME stack (HUD plate, one bar row, the pad floor, the edge)",
+check("PORT_GEO is frozen: 60/190 menu split, 24 edge, 22 gap, pad 148..176; FIT_RES.p is the GAME stack (HUD plate, one bar row, the pad floor, the edge)",
   Object.isFrozen(PORT_GEO) && JSON.stringify(PORT_GEO) === JSON.stringify(
-    { top: 60, bot: 190, edge: 24, gap: 22, pad: [152, 176], side: [6, 14], mid: 24 }) &&
+    { top: 60, bot: 190, edge: 24, gap: 22, pad: [148, 176], menu: 128, side: [6, 14], mid: 24 }) &&
     PORT_GAME.top + HUD_RES.p.gap + HUD_RES.p.bar + 8 + PORT_GEO.pad[0] + PORT_GEO.edge === FIT_RES.p[1],
   JSON.stringify(PORT_GEO));
 
@@ -45,28 +45,28 @@ for (const [W, H, g] of [
   [375, 812, { top: 250, pad: 176, padTop: 50 }],
   [390, 844, { top: 259, pad: 176, padTop: 60 }],
   [412, 915, { top: 285, pad: 176, padTop: 86 }],
-  [375, 667, { top: 198, pad: 152, padTop: 22 }],
-  [600, 700, { top: 198, pad: 152, padTop: 22 }],
-  [768, 1024, { top: 198, pad: 152, padTop: 22 }],
+  [375, 667, { top: 165, pad: 144, padTop: 22 }],
+  [600, 700, { top: 60, pad: 144, padTop: 22 }],
+  [768, 1024, { top: 182, pad: 144, padTop: 22 }],
 ]) {
   const got = portraitGeo(W, H, 600, 520);
   check(W + "x" + H + " portrait geometry " + JSON.stringify(g), JSON.stringify(got) === JSON.stringify(g), JSON.stringify(got));
 }
 
-check("PORT_GAME is frozen: GAME puts the stage at the HUD plate's foot (164), pad cap 176, 0.2s glide",
-  Object.isFrozen(PORT_GAME) && JSON.stringify(PORT_GAME) === JSON.stringify({ top: 164, pad: 176, sd: "0.2s" }) &&
+check("PORT_GAME is frozen: GAME puts the stage at the HUD plate's foot (160), pad cap 176, 0.2s glide",
+  Object.isFrozen(PORT_GAME) && JSON.stringify(PORT_GAME) === JSON.stringify({ top: 160, pad: 176, sd: "0.2s" }) &&
     PORT_GAME.top >= 44 + 8 && PORT_GAME.top >= PORT_GEO.top && PORT_GAME.pad >= PORT_GEO.pad[1],
   JSON.stringify(PORT_GAME));
 
 // UI upgrade Task 8.1: GAME puts the stage at the HUD plate's foot (164) and docks the controls' band to the thumb zone; the band between holds the power-ups bar and the tip
 for (const [W, H, g] of [
-  [375, 812, { top: 164, pad: 176, padTop: 136 }],
-  [390, 844, { top: 164, pad: 176, padTop: 155 }],
-  [412, 915, { top: 164, pad: 176, padTop: 207 }],
-  [375, 667, { top: 164, pad: 152, padTop: 56 }],
-  [320, 568, { top: 164, pad: 152, padTop: 56 }],
-  [600, 700, { top: 164, pad: 152, padTop: 56 }],
-  [768, 1024, { top: 164, pad: 152, padTop: 56 }],
+  [375, 812, { top: 160, pad: 176, padTop: 140 }],
+  [390, 844, { top: 160, pad: 176, padTop: 159 }],
+  [412, 915, { top: 160, pad: 176, padTop: 211 }],
+  [375, 667, { top: 160, pad: 148, padTop: 56 }],
+  [320, 568, { top: 160, pad: 148, padTop: 56 }],
+  [600, 700, { top: 160, pad: 148, padTop: 56 }],
+  [768, 1024, { top: 160, pad: 148, padTop: 56 }],
 ]) {
   const got = portraitGeo(W, H, 600, 520, true);
   check(W + "x" + H + " GAME geometry " + JSON.stringify(g), JSON.stringify(got) === JSON.stringify(g), JSON.stringify(got));
@@ -89,11 +89,11 @@ check("portraitGeo's game flag defaults off: the 4-arg call is the INTRO / MENU 
   const bad = [], worse = [];
   const G = PORT_GEO, low = HUD_RES.p.gap + HUD_RES.p.bar + 8;
   for (const game of [false, true]) for (let W = 300; W <= 1000; W += 3) for (let H = Math.max(W, 552); H <= 1400; H += 3) {
-    const { s } = fitBox(W, H, true, 600, 520), sh = 520 * s;
+    const { s } = fitBox(W, H, true, 600, 520, game), sh = 520 * s;
     const g = portraitGeo(W, H, 600, 520, game), below = H - g.top - sh;
     const ok = g.top >= 44 + 8 && g.top >= G.top && below >= G.bot - 1e-9 &&
       g.padTop >= (game ? low : G.gap) && g.top + sh + g.padTop + g.pad <= H - G.edge + 1e-9 &&
-      g.pad >= G.pad[0] && g.pad <= (game ? PORT_GAME.pad : G.pad[1]) && W >= STRIP.dpad + g.pad + 8 + 2 * 44 + 8 + STRIP.right &&
+      g.pad >= (game ? G.pad[0] : G.menu) && g.pad <= (game ? PORT_GAME.pad : G.pad[1]) && W >= STRIP.dpad + g.pad + 8 + 2 * 44 + 8 + STRIP.right &&
       Number.isInteger(g.top) && Number.isInteger(g.pad) && Number.isInteger(g.padTop);
     if (!ok && bad.length < 4) bad.push((game ? "GAME " : "MENU ") + W + "x" + H + " " + JSON.stringify(g));
     if (game) {
@@ -103,17 +103,17 @@ check("portraitGeo's game flag defaults off: the 4-arg call is the INTRO / MENU 
     }
   }
   check("every portrait 300..1000 x 552..1400 (the shortest the GAME stack fits at the 0.3 scale floor), MENU and GAME: pill room above,"
-    + " the controls' band under the board (gap >= 22; GAME >= one power-ups row), inside the viewport, pad 152..176, the strip fits across",
+    + " the controls' band under the board (gap >= 22; GAME >= one power-ups row), inside the viewport, pad 148..176 (MENU, hidden: 128..176), the strip fits across",
     bad.length === 0, bad.join(" | ") || "clean");
   check("GAME: the stage sits at the HUD plate's foot, the controls keep the thumb dock, and the pad is never smaller than MENU's",
     worse.length === 0, worse.join(" | ") || "clean");
 }
 
-check("STRIP is frozen: D-PAD 20 from the left, keys 10 apart; a 130 column 16 from the right, BOMB 90/176 of the band",
-  Object.isFrozen(STRIP) && JSON.stringify(STRIP) === JSON.stringify({ dpad: 20, gap: 10, right: 16, col: 130, air: 4, row: 14, bomb: 90 / 176 }), JSON.stringify(STRIP));
+check("STRIP is frozen: D-PAD 20 from the left, keys 10 apart (8 at the least, so a 148 pad keeps 44 keys); a 130 column 16 from the right, BOMB 90/176 of the band",
+  Object.isFrozen(STRIP) && JSON.stringify(STRIP) === JSON.stringify({ dpad: 20, gap: 10, gapMin: 8, right: 16, col: 130, air: 4, row: 14, bomb: 90 / 176 }), JSON.stringify(STRIP));
 
 {
-  const a = stripGeo(393, 852, 600, 520), sx = (393 - 600 * fitBox(393, 852, true, 600, 520).s) / 2;
+  const a = stripGeo(393, 852, 600, 520), sx = (393 - 600 * fitBox(393, 852, true, 600, 520, true).s) / 2;
   check("393x852 (the round 5 phone frame): D-PAD 176 box, 52 keys 10 apart at x 20; BOMB 130x90 and THROW / REMOTE 61x64 halves at 16 from the right",
     a.pad.s === 176 && a.pad.key === 52 && a.pad.gap === 10 && Math.abs(a.pad.l + sx - 20) < 1e-9 && a.bomb.w === 130 && a.bomb.h === 90 &&
       Math.abs(a.bomb.r + sx - 16) < 1e-9 && a.thr.w === 61 && a.thr.h === 64 && a.rem.w === 61 && a.rem.r === a.bomb.r && a.thr.r === a.bomb.r + 69, JSON.stringify(a));
@@ -123,7 +123,7 @@ check("STRIP is frozen: D-PAD 20 from the left, keys 10 apart; a 130 column 16 f
   const sep = (a, b, m) => a[2] + m <= b[0] + 1e-6 || b[2] + m <= a[0] + 1e-6 || a[3] + m <= b[1] + 1e-6 || b[3] + m <= a[1] + 1e-6;
   const bad = [];
   for (let W = 300; W <= 1000; W += 3) for (let H = Math.max(W, 552); H <= 1400; H += 3) {
-    const { s } = fitBox(W, H, true, 600, 520), sw = 600 * s, sh = 520 * s, g = portraitGeo(W, H, 600, 520, true), A = stripGeo(W, H, 600, 520), sx = (W - sw) / 2;
+    const { s } = fitBox(W, H, true, 600, 520, true), sw = 600 * s, sh = 520 * s, g = portraitGeo(W, H, 600, 520, true), A = stripGeo(W, H, 600, 520), sx = (W - sw) / 2;
     const vb = (o) => [sx + sw - o.r - o.w, g.top + sh + o.t, sx + sw - o.r, g.top + sh + o.t + o.h], T = vb(A.thr), R = vb(A.rem), B = vb(A.bomb);
     const P = [sx + A.pad.l, g.top + sh + A.pad.t, sx + A.pad.l + A.pad.s, g.top + sh + A.pad.t + A.pad.s], k = A.pad.key;
     const keys = [[k + A.pad.gap, 0], [0, k + A.pad.gap], [2 * (k + A.pad.gap), k + A.pad.gap], [k + A.pad.gap, 2 * (k + A.pad.gap)]].map(([x, y]) => [P[0] + x, P[1] + y, P[0] + x + k, P[1] + y + k]);
@@ -215,7 +215,9 @@ check("scale floors at 0.3 and caps at 1.8",
     check("touch landscape writes no portrait vars (l / d rules never read them)",
       attrs["data-lay"] === "l" && Object.keys(props).length === 0, JSON.stringify(props));
     delete win.ontouchstart; win.innerWidth = 1280; win.innerHeight = 720; fit();
-    check("desktop writes no portrait vars, only the HUD rows' --ht / --hb", attrs["data-lay"] === "d" && JSON.stringify(props) === JSON.stringify({ "--ht": HUD_RES.d.top + "px", "--hb": HUD_RES.d.bot + "px" }), JSON.stringify(props));
+    check("desktop writes no portrait vars, and no HUD rows while the HUD is off (R2)", attrs["data-lay"] === "d" && Object.keys(props).length === 0, JSON.stringify(props));
+    fit.hud(1);
+    check("desktop with the HUD on writes only the HUD rows' --ht / --hb", JSON.stringify(props) === JSON.stringify({ "--ht": HUD_RES.d.top + "px", "--hb": HUD_RES.d.bot + "px" }), JSON.stringify(props));
   } finally {
     delete globalThis.window;
     delete globalThis.document;
@@ -256,8 +258,8 @@ check("scale floors at 0.3 and caps at 1.8",
     for (const k in props) delete props[k];
     tp.hidden = false; win.innerWidth = 812; win.innerHeight = 375; fit();
     delete win.ontouchstart; win.innerWidth = 1280; win.innerHeight = 720; fit();
-    check("landscape / desktop still write no portrait vars, even with #touchpad shown (desktop: only the HUD rows' --ht / --hb)",
-      attrs["data-lay"] === "d" && JSON.stringify(props) === JSON.stringify({ "--ht": HUD_RES.d.top + "px", "--hb": HUD_RES.d.bot + "px" }), JSON.stringify(props));
+    check("landscape / desktop still write no portrait vars, even with #touchpad shown (no HUD rows while the HUD is off)",
+      attrs["data-lay"] === "d" && Object.keys(props).length === 0, JSON.stringify(props));
   } finally {
     delete globalThis.window;
     delete globalThis.document;

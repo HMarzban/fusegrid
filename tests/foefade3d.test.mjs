@@ -1,6 +1,7 @@
 /* REAL 3D spawn fade (2026-10-25 loose end): a spawning foe's slot swaps to its own transparent clones with opacity from spawnK().a, and returns to the
    shared per-type materials the frame its invulnerable window ends; a settled board is material-identical to before; PAUSE freezes the fade; draws do not move.
-   Also pins that the far (top) corner bosses of the REAL 3D bezel sit below the HUD plate at the frozen rig and every CAMERA preset. Headless: THREE only. */
+   Also pins that the far (top) corner bosses of the REAL 3D bezel stay inside the canvas at the frozen rig and every CAMERA preset (the HUD plate
+   left the board in UI upgrade Task 8.2, so VIEW_DY is 0 and only the canvas top bounds them). Headless: THREE only. */
 import test from "node:test";
 import assert from "node:assert/strict";
 import * as THREE from "../vendor/three.module.js";
@@ -153,8 +154,9 @@ test("draw calls do not move: a fresh room (every foe invulnerable and fading) c
   assert.ok(n > 0 && disposed === n, "every fade clone disposed with the scene");
 });
 
-test("the REAL 3D bezel's far (top) corner bosses sit below the HUD plate at the frozen rig and every CAMERA preset", () => {
-  const W = 600, H = 520, PLATE_BOT = 40, cam = new THREE.PerspectiveCamera(CAM_FOV, W / H, 1, 3000);
+test("the REAL 3D bezel's far (top) corner bosses stay inside the canvas at the frozen rig and every CAMERA preset (no HUD plate on the board)", () => {
+  assert.equal(VIEW_DY, 0, "the HUD left the board: no view-offset shift");
+  const W = 600, H = 520, cam = new THREE.PerspectiveCamera(CAM_FOV, W / H, 1, 3000);
   cam.setViewOffset(W, H, 0, -VIEW_DY, W, H);
   const { rx, rz } = RIM_TEX;
   for (const dist of CAM_PRESET) {
@@ -165,7 +167,7 @@ test("the REAL 3D bezel's far (top) corner bosses sit below the HUD plate at the
         const v = new THREE.Vector3(sx * x, B.hWall + 6, z).project(cam);
         top = Math.min(top, (1 - v.y) / 2 * H);
       }
-      assert.ok(top >= PLATE_BOT + 20, B.name + " dist " + dist + ": far corner top y " + top.toFixed(1));
+      assert.ok(top >= 8, B.name + " dist " + dist + ": far corner top y " + top.toFixed(1));
     }
   }
 });

@@ -6,9 +6,10 @@
         grid in the band under the board.
      l  one-line chips stacked in the side gutters (LIVES BOMBS FLAME LEVEL left above the power-ups, the PAUSE slot then ENEMIES TIME SCORE right).
    A chip is a pane (the world's pane, an ol band 4 px around and between) with its label (secondary, t2) over its value (the HUD size, nums: fixed
-   digit cells) after its glyph; LIVES is up to five hearts, else one heart and the count (kit5 lives()); LEVEL carries the difficulty word only
-   when it is not NORMAL; SCORE has thousands separators. Too wide for its slot, a chip steps down in order: hearts to heart + count, the value to
-   its floor (cap 18 desktop / 11 phone), the label to its floor, the difficulty word dropped, then (l only) the label of a chip whose glyph names it.
+   digit cells) after its glyph; LIVES is up to five hearts, else one heart and the count (kit5 lives()); LEVEL is the number alone (the HUD names
+   no difficulty: lead ruling R1, PAUSE's tag row and LEVEL SELECT name the run's); SCORE has thousands separators. Too wide for its slot, a chip
+   steps down in order: hearts to heart + count, the value to its floor (cap 18 desktop / 11 phone), the label to its floor, then (l only) the
+   label of a chip whose glyph names it.
    Glyphs are the look's own: PIXEL the atlas cells (hudart, once pixelArt() is registered), else the vector icons and the foe body.
    The bar lists the powers held now (fx abilityList order) and the ones a hit just took, dimmed and fading (ABAR.dim, ABAR.fade); THROW and
    REMOTE carry their key cap (the controller's button with a controller) on a desktop or portrait layout. A changed BOMBS / FLAME / LIVES value pulses a ring just inside its chip for LBL.pulse (fx
@@ -33,7 +34,7 @@ import {drawEnemyBody} from "./sprites.js";
 import {pixelArt, itemCell, foeCell, blitCell, opaqueBox} from "./hudart.js";
 import {abilityText, getStrip, getPulse, LBL} from "./fx.js";
 import {abilityChips, fmtTime} from "./scenes.js";
-import {DIFF, HUD_CHIPS, HUD_WORDS} from "./words.js";
+import {HUD_CHIPS, HUD_WORDS} from "./words.js";
 import {hints} from "./hintcopy.js";
 
 const deep = (o) => { for (const v of Object.values(o)) if (v && typeof v === "object") deep(v); return Object.freeze(o); };
@@ -46,7 +47,8 @@ export const HUD = deep({
     bar: {pad: 4, gap: 4, row: 30, cx: 10, icon: 18, ig: 8, px: DEV.p.pri, floor: 15.7, capg: 8}},
   l: {pad: 4, gap: 4, ch: 30, cx: 8, icon: 18, ig: 6, heart: 3, r: 5, hud: DEV.p.hud, sec: DEV.p.sec, floor: {hud: 14.8, sec: 12.8}, pause: 44, bargap: 6, cell: 26, ci: 18},
 });
-const COL = deep({heart: "#ff3b5c", bomb: "#ff5d73", fire: "#ff8a3c"}), PCOL = Object.freeze(Object.fromEntries(POWER.map((q) => [q.t, q.col])));
+/* glyph colours: the catalog heart and fire; the bomb in the kit's cream (coral is danger only), the BOMBS pulse in the kit's ink */
+const COL = deep({heart: "#ff3b5c", bomb: CONST.t2, fire: "#ff8a3c"}), PULSE = deep({l: "#ff3b5c", b: CONST.ink, r: "#ff8a3c"}), PCOL = Object.freeze(Object.fromEntries(POWER.map((q) => [q.t, q.col])));
 const WALKER = FOES.find((f) => f.t === "walker") || FOES[0];
 const REST = {time: 0}, FOE = {type: WALKER.t, color: WALKER.col, r: 14, home: {x: 3, y: 7}, invuln: false, dir: {x: 0, y: 1}};
 const NAME = ["lives", "bombs", "flame", "level", "enemies", "time", "score"];
@@ -99,7 +101,7 @@ function parts(name, st, f, L) {
   if (name === "lives") return f.hearts && st.lives >= 1 && st.lives <= 5 ? Array.from({length: st.lives}, () => ({g: "heart", s: ic})) : [{g: "heart", s: ic}, {n: String(st.lives), px: f.hud}];
   if (name === "bombs") return [{g: "bomb", s: ic}, {n: String(st.bombs), px: f.hud}];
   if (name === "flame") return [{g: "fire", s: ic}, {n: String(st.flame), px: f.hud}];
-  if (name === "level") return st.heat && f.diff ? [{n: String(st.level), px: f.hud}, {w: DIFF[st.heat], px: f.sec}] : [{n: String(st.level), px: f.hud}];
+  if (name === "level") return [{n: String(st.level), px: f.hud}];
   if (name === "enemies") return [{g: "foe", s: ic + 2}, {n: String(st.enemies), px: f.hud}];
   if (name === "time") return [{n: st.time, px: f.hud}];
   return [{n: commas(st.score), px: f.hud}];
@@ -114,8 +116,8 @@ const labW = (c, name, f) => (f.nolab && f.nolab.includes(name) ? 0 : measure(c,
 /* the step-down ladder: each form a little smaller than the one before */
 function forms(L, one) {
   const K = textScale(), hud = Math.min(L.hud, L.floor.hud / K), sec = Math.min(L.sec, L.floor.sec / K);
-  const b = {hearts: true, diff: true, hud: L.hud, sec: L.sec}, out = [b, {...b, hearts: false}, {...b, hearts: false, hud}, {...b, hearts: false, hud, sec}, {hearts: false, diff: false, hud, sec}];
-  if (one) out.push({...out[4], nolab: ["lives", "bombs", "flame", "enemies"]});
+  const b = {hearts: true, hud: L.hud, sec: L.sec}, out = [b, {...b, hearts: false}, {...b, hearts: false, hud}, {...b, hearts: false, hud, sec}];
+  if (one) out.push({...out[3], nolab: ["lives", "bombs", "flame", "enemies"]});
   return out;
 }
 const chipW = (c, name, st, f, L, one) => (one ? L.cx + labW(c, name, f) + (labW(c, name, f) ? 8 : 0) + rowW(c, parts(name, st, f, L), L) + L.cx : L.cx + Math.max(labW(c, name, f), rowW(c, parts(name, st, f, L), L)) + L.cx);
@@ -274,20 +276,20 @@ const rf = (c, q, r, col) => { c.fillStyle = col; c.beginPath(); sp(c, q.x, q.y,
 export const pxScale = (f, s) => { const b = opaqueBox(f); return Math.max(1, Math.floor(s / Math.max(1, b.w, b.h))); };
 /* a glyph is a cached sprite (one layer per kind, size, look and backing scale), blitted on whole device px; with no canvas source it draws straight */
 let curQ = 1, curLook = "";
-function glyph(c, g, x, cy, s, px) {
-  if (!canMake()) { glyphNow(c, g, x, cy, s, px); return; }
-  const A = px && pixelArt(), b = s + 12, key = {layer: "hud.glyph", biome: "", level: g + (A ? ":px" : ""), W: b, H: b, dpr: curQ, look: curLook, textScale: 1};
-  const img = layer(key, Math.ceil(b * curQ), Math.ceil(b * curQ), (x2) => { x2.scale(curQ, curQ); glyphNow(x2, g, 6, b / 2, s, px); });
+function glyph(c, g, x, cy, s, px, col) {
+  if (!canMake()) { glyphNow(c, g, x, cy, s, px, col); return; }
+  const A = px && pixelArt(), b = s + 12, key = {layer: "hud.glyph", biome: "", level: g + (A ? ":px" : "") + (col ? ":" + col : ""), W: b, H: b, dpr: curQ, look: curLook, textScale: 1};
+  const img = layer(key, Math.ceil(b * curQ), Math.ceil(b * curQ), (x2) => { x2.scale(curQ, curQ); glyphNow(x2, g, 6, b / 2, s, px, col); });
   touchLayer(keyOf(key));
   const sx = Math.round((x - 6) * curQ) / curQ, sy = Math.round((cy - b / 2) * curQ) / curQ;
   c.drawImage(img, sx, sy, b, b);
 }
-function glyphNow(c, g, x, cy, s, px) {
+function glyphNow(c, g, x, cy, s, px, col) {
   const A = px && pixelArt();
   if (A) { const fs = g === "foe" ? foeCell(A, WALKER.t) : itemCell(A, g); if (fs.length) blitCell(c, fs, x + s / 2, cy, pxScale(fs[0], s)); return; }
   c.save(); c.translate(x + s / 2, cy);
   if (g === "foe") { c.translate(0, s * 0.04); c.scale(s / 34, s / 34); drawEnemyBody(c, REST, FOE); }
-  else { c.scale(s / 24, s / 24); drawIcon(c, g, COL[g] || PCOL[g], 0); }
+  else { c.scale(s / 24, s / 24); drawIcon(c, g, col || COL[g] || PCOL[g], 0); }
   c.restore();
 }
 /* rec: the chip's rect; its glyphs are one info pair (their union against the chip's pane, the glyphs masked out, the text hidden in the twin) */
@@ -335,7 +337,7 @@ function chipValue(c, name, r, st, f, L, o, rec) {
   drawParts(c, ps, o.one ? r.x + r.w - L.cx - rowW(c, ps, L) : r.x + L.cx, vy, L, o, rec && r);
 }
 function pulse(c, G, st) {
-  for (const [k, n, col] of [["l", "lives", COL.heart], ["b", "bombs", COL.bomb], ["r", "flame", COL.fire]]) {
+  for (const [k, n, col] of [["l", "lives", PULSE.l], ["b", "bombs", PULSE.b], ["r", "flame", PULSE.r]]) {
     const v = st.pu[k], r = G.chips[n];
     if (!(v > 0) || !r) continue;
     c.globalAlpha = Math.min(1, v / LBL.pulse);
@@ -348,10 +350,11 @@ function bar(c, G, st, tok, o, rec) {
   if (!B) return;
   const L = HUD[G.lay], Bs = L.bar || {cx: 4, icon: B.icon || L.ci, ig: 0};
   rf(c, B, 8, CONST.ol);
+  let al = 1; // alpha is written only where it changes: a ghost's dim, then the next live chip back at 1
   st.ab.forEach((a, i) => {
     const r = B.items[i], cy = r.y + r.h / 2, txt = a.m ? a.s + " " + a.m : a.s;
     if (o.hid && o.hid(r)) return;
-    c.globalAlpha = a.a;
+    if (a.a !== al) c.globalAlpha = al = a.a;
     rf(c, r, L.r, tok.pane);
     const capOn = st.keys && a.cap && G.lay !== "l", cw = capOn ? capWOf(c, G.lay, a.cap) : 0;
     if (!B.px) { glyph(c, a.k, r.x + (r.w - Bs.icon) / 2 - (capOn ? (cw + Bs.capg) / 2 : 0), cy, Bs.icon, o.px); }
@@ -370,7 +373,7 @@ function bar(c, G, st, tok, o, rec) {
       if (rec && a.a === 1) P.text(a.cap, x + cw / 2 - tw / 2, cy - px * textScale() * CAPR.label / 2, tw, px * textScale() * CAPR.label, {role: "secondary", col: CONST.t2});
     }
   });
-  c.globalAlpha = 1;
+  if (al !== 1) c.globalAlpha = 1;
 }
 /* the plate: the kit rampart ring and bed around the chips' ol band; a cache layer at the backing scale q where a canvas can be made */
 /* a static part as a kit cache layer: region r (CSS px) at the backing scale q, keyed by its name, world, size, look, text scale and what (the
@@ -431,7 +434,7 @@ function strip(c, G, st, tok, o, rec) {
     for (const [n, d] of [["up", 0], ["rt", 1], ["dn", 2], ["lf", 3]]) { const r = S.keys[n]; kkey(x, r.x, r.y, r.w, r.h, "key", {tok, phone: true}); mark(x, d, r.x + r.w / 2, r.y + r.h / 2, Math.round(r.w * 0.36), CONST.ink); }
     kkey(x, S.well.x, S.well.y, S.well.w, S.well.h, "well", {tok, phone: true});
     kkey(x, b.x, b.y, b.w, b.h, "main", {tok, phone: true});
-    glyph(x, "bomb", b.x + b.w / 2 - bs / 2, b.y + 6 + bs / 2, bs, o.px);
+    glyph(x, "bomb", b.x + b.w / 2 - bs / 2, b.y + 6 + bs / 2, bs, o.px, CONST.yelInk);
     lx(HUD_WORDS.BOMB, b.x + b.w / 2, b.y + b.h - 8 - D.pri * K / 2, D.pri, CONST.yelInk);
   });
   for (const [n, r] of Object.entries(S.keys)) tr("D-PAD " + n, r);
@@ -514,6 +517,13 @@ function dockPause(G, geo) {
   el.style.left = v[0] + "px"; el.style.top = v[1] + "px"; el.style.width = v[2] + "px"; el.style.height = v[3] + "px"; el.style.right = "auto"; el.style.bottom = "auto";
 }
 
+/* the right / bottom reach of the HUD as drawn (the plate's ring, the bar, both widened when they needed it, and the board): #hud's data-r,
+   which the analytics card clears; fit writes the board-wide estimate, this the truth once painted */
+function reachOf(G, geo) {
+  const T0 = HUD[G.lay].ring, rs = [geo.stage, G.bar, G.plate && ringed(G.plate, T0)].filter(Boolean);
+  return Math.ceil(Math.max(...rs.map((r) => r.x + r.w))) + "," + Math.ceil(Math.max(...rs.map((r) => r.y + r.h)));
+}
+
 /* main's seam: frame(fit, world, o, look, view) each frame; world null (off GAME) hides #hud once; view = {proj, cam} places the tip's leader */
 export function createHud() {
   let shown = false, last = "";
@@ -536,6 +546,7 @@ export function createHud() {
       if (rec) P.begin("hud", {w: h.w, h: h.h, dpr: q, el: "hud"});
       drawHud(c, G, st, worldTokens(world.level), {px: look === "px", q, look, rec});
       dockPause(G, geo);
+      if (geo.lay === "d" && h.el && h.el.dataset) { const r = reachOf(G, geo); if (h.el.dataset.r !== r) h.el.dataset.r = r; }
     },
   };
 }

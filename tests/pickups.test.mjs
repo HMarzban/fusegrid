@@ -481,8 +481,8 @@ const APPLY = {
     texts.join("|"),
   );
   check(
-    "HUD chips use catalog heart/BOMB/FLAME colors",
-    fills.includes("#ff3b5c") && fills.includes("#ff5d73")
+    "HUD chips use the catalog heart / FLAME colors; the BOMBS glyph is the kit's cream t2, never coral (danger only; UI upgrade Task 8.2 fix round 1)",
+    fills.includes("#ff3b5c") && fills.includes("#dccbb8") && !fills.some((f) => /ff5d73/i.test(String(f)))
       && fills.includes("#ff8a3c"),
     fills.join("|"),
   );
