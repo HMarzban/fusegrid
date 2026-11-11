@@ -1,6 +1,6 @@
 // CONTROLS page geometry and copy, shared by draw, tap and the page reducer. Pure. BTN, DEF_KEY, DEF_PAD, VIB_LEVELS, SENS_LEVELS, keyName, moveLabel and softAliasesOf are local copies of src/app/controls.js (render never reads src/app), pinned equal in tests/controlsdraw.test.mjs.
 import { FOOT_TAP, VIB_LEVELS, bandOf, listGeom, listHit, pageBox, vibWord } from "./menudraw.js";
-import { KB_ROWS, PART_AT, PART_R, padBox } from "./padart.js";
+import { KB_AT, KB_KEYS, KB_W, KB_H, PART_AT, PART_R, padBox, keyRect, kbBox } from "./padart.js";
 import { textScale } from "./kit/type.js";
 
 const dpad = { g: "dpad", v: "all", w: "D-PAD" };
@@ -138,20 +138,6 @@ export function padRing(s, id) {
   const b = s.binds || DEF_PAD;
   return id === "MOVE" ? (s.stick === "R" ? "RS" : "LS") : id === "BOMB" || id === "THROW" || id === "REMOTE" || id === "PAUSE" ? b[id] : null;
 }
-/** Which keyboard keys light for a row. */
-export function keyStates(s, id) {
-  const k = s.key || DEF_KEY, st = {};
-  if (id === "MOVE") { k.MOVE.forEach((q) => (st[q] = "lit")); for (const q of ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]) st[q] = "alias"; }
-  else if (id === "BOMB") { st[k.BOMB] = "lit"; for (const q of softAliasesOf(k)) st[q] = "alias"; }
-  else if (id === "PAUSE") { st.Escape = "lit"; st[k.PAUSE] = "alias"; }
-  else if (id === "CONFIRM") st.Enter = "lit";
-  else if (id === "BACK") st.Escape = "lit";
-  else if (k[id]) st[k[id]] = "lit";
-  if (s.echo) st[s.echo] = "lit";
-  if (s.swap && s.swap.part) st[s.swap.part] = "swap";
-  return st;
-}
-
 /** Every pad part's leader word. */
 export function padLabels(s) {
   const b = s.binds || DEF_PAD, o = { dpad: "MOVE", START: "PAUSE", [s.stick === "R" ? "RS" : "LS"]: "MOVE" };
@@ -245,23 +231,109 @@ export function padFit(aw, ah, it, m, lit) {
   const W = Wc, e = padBox(W);
   return { W, plan: null, ox: (aw - (e.x1 - e.x0)) / 2 - e.x0, oy: (ah - (e.y1 - e.y0)) / 2 - e.y0 };
 }
-const KEY_XY = {};
-for (const [ry, row] of KB_ROWS) for (const [id, , kx, kw] of row) if (id) KEY_XY[id] = [kx + (kw || 18) / 2, ry];
-/** The selected row's leaders on the keyboard: [[points], x, y, align, word]. A key off the diagram has none; its row still names it. */
-export function keyLabels(s, id) {
-  const k = s.key || DEF_KEY, out = [], up = (code, word) => {
-    const p = KEY_XY[code];
-    if (!p) return;
-    if (p[1] >= 92 && code !== "ArrowUp") out.push([[[p[0], p[1] + 17], [p[0], 146]], p[0], 154, "center", word]); // the two bottom rows leave downward, or the leader crosses the whole board
-    else out.push([[p, [p[0], 14]], p[0], 8, "center", word]);
-  };
-  if (id === "MOVE") { up(k.MOVE[0], moveLabel(k.MOVE, s.names)); up("ArrowUp", "ARROWS"); }
-  else if (id === "BOMB") up(k.BOMB, "BOMB");
-  else if (id === "PAUSE") { up("Escape", "ESC"); up(k.PAUSE, "PAUSE"); }
-  else if (id === "BACK") up("Escape", "BACK");
-  else if (id === "CONFIRM") up("Enter", "CONFIRM");
-  else if (k[id]) up(k[id], id);
-  return out;
+/** Which keyboard keys wear the brick: every bound key (the MOVE set, BOMB, THROW, REMOTE, PAUSE's second key) and the fixed ESC and arrows. The
+    silent J / X aliases are never advertised. */
+export function keyStates(s) {
+  const k = s.key || DEF_KEY, st = {};
+  for (const q of [...k.MOVE, k.BOMB, k.THROW, k.REMOTE, k.PAUSE, "Escape", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]) st[q] = "lit";
+  return st;
+}
+/** The focused row's key, the one the board rings: MOVE's first key, an action's key, PAUSE's second key, ENTER on CONFIRM, ESC on BACK. */
+export function keyRing(s, id) {
+  const k = s.key || DEF_KEY;
+  return id === "MOVE" ? k.MOVE[0] : id === "CONFIRM" ? "Enter" : id === "BACK" ? "Escape" : id === "BOMB" || id === "THROW" || id === "REMOTE" || id === "PAUSE" ? k[id] : null;
+}
+/** The keyboard's callouts: BACK on ESC (FIXED), each action on its key, MOVE on the set's first key and on the arrows (FIXED). A key the drawing
+    does not have (a numpad key) has none: its row still names it. */
+export function keyCallouts(s) {
+  const k = s.key || DEF_KEY, nm = (q) => nameOf(q, s.names), out = [{ grp: "Escape", act: "BACK", pos: ["ESC"], tag: true }];
+  for (const a of ["REMOTE", "THROW", "PAUSE", "BOMB"]) out.push({ grp: k[a], act: a, pos: [nm(k[a])] });
+  out.push({ grp: k.MOVE[0], act: "MOVE", pos: [[k.MOVE[0], k.MOVE[3], k.MOVE[2], k.MOVE[1]].map(nm).join(" ")] }, { grp: "ArrowDown", act: "MOVE", pos: ["ARROWS"], tag: true });
+  return out.filter((q) => KB_AT[q.grp]);
+}
+/* Keyboard leaders (appendix 9.3): ESC straight left; a key in the top three rows straight up through the key gaps, a stub of 0.75 k, the label after
+   it; the bottom rows and the arrows straight down, the label centred under. A label that would meet another goes one tier further out; a leader
+   never runs through another label. No clear way out (a key boxed in by its neighbours): ok false, and the board draws no leaders. */
+const KB_TIERS = 4, ROW_Y = [...new Set(KB_KEYS.map((q) => q.y))], EDGES = [...new Set(KB_KEYS.flatMap((e) => [e.x, e.x + e.w]))].filter((x) => x > 0 && x < KB_W), COLS = (k) => EDGES.map((x) => x * k); // the column lines a leader may run up or down
+export function kbPlan(k, it, m) {
+  const dk = 0.38 * k, lines = [], labels = [], rects = KB_KEYS.map((q) => ({ id: q.id, ...keyRect(q, k) }));
+  const lh = 0.6 * m.pri + 1.2 * m.sec, step = 0.6 * m.pri + lh + 8, upY = (t) => -dk - 8 - lh - t * step, dnY = (t) => KB_H * k + dk + 0.3 * k + 8 + 0.6 * m.pri + t * step;
+  const clear = (id, a, b) => rects.every((r) => r.id === id || !segHitsRect(a, b, r));
+  let ok = true, ext = { ...kbBox(k) };
+  const placed = [], lineOf = (q) => [{ s: q.act, px: m.pri, act: 1, w: m.wOf(q.act, m.pri) }, ...q.pos.map((s, i) => ({ s, px: m.sec, w: m.wOf(s, m.sec), tag: q.tag && i === q.pos.length - 1 ? m.wOf(FIXED_WORD, m.sec) + 8 : 0 }))];
+  const widthOf = (L) => Math.max(...L.map((l) => l.w + (l.tag ? l.tag + 6 : 0)));
+  const order = it.map((q) => { const K = KB_AT[q.grp], r = keyRect(K, k), cx = r.x + r.w / 2; return { q, K, r, cx }; }).sort((a, b) => b.cx - a.cx);
+  /* a key on the left edge (ESC, `, TAB, CAPS, SHIFT, CTRL) runs straight left; labels stack down the left gutter, a pushed one through a knee,
+     the lower leader on the inner knee */
+  const left = order.filter((o) => o.K.x === 0).sort((a, b) => a.K.y - b.K.y), LY = {};
+  let prev = -Infinity;
+  for (const o of left) { const ey = o.r.y + o.r.h / 2, L = lineOf(o.q); LY[o.q.grp] = { ey, y: Math.max(ey, prev + 6 + 0.6 * m.pri), L }; prev = LY[o.q.grp].y + lineYs(o.q.pos.length, m).at(-1) + 0.6 * m.sec; }
+  const knees = left.filter((o) => LY[o.q.grp].y > LY[o.q.grp].ey + 0.5).sort((a, b) => LY[b.q.grp].ey - LY[a.q.grp].ey).map((o) => o.q.grp), xL = -dk - 8 - KNEE * knees.length;
+  for (const o of left) {
+    const { ey, y, L } = LY[o.q.grp], i = knees.indexOf(o.q.grp), kx = -dk - 4 - KNEE * i;
+    lines.push({ grp: o.q.grp, pts: i < 0 ? [[o.r.x, ey], [xL, ey]] : [[o.r.x, ey], [kx, ey], [kx, y], [xL, y]], dot: 1 });
+    labels.push(lab(o.q, "l", xL - 6, y, L, m));
+    ext = { ...ext, x0: Math.min(ext.x0, xL - 6 - widthOf(L)), y1: Math.max(ext.y1, y + lineYs(o.q.pos.length, m).at(-1) + 0.6 * m.sec) };
+  }
+  for (const o of order) {
+    const { q, K, r, cx } = o, L = lineOf(q), w = widthOf(L);
+    if (K.x === 0) continue;
+    /* the way out, row by row: straight on through each row's key gap, or a jog along the gap line before a row to the nearest column line that
+       crosses it clear (never more than 1.5 k aside) */
+    const way = (u) => {
+      let x = cx, cur = K.y;
+      const pts = [[cx, u ? r.y : r.y + r.h]];
+      for (const yb of ROW_Y.filter((v) => (u ? v < K.y : v > K.y)).sort((a, b) => (u ? b - a : a - b))) {
+        const yL = ((u ? yb + 1 + cur : cur + 1 + yb) / 2) * k, yF = (u ? yb : yb + 1) * k, thru = (xx) => clear(q.grp, [xx, yL], [xx, yF]);
+        if (!thru(x)) {
+          const x2 = COLS(k).filter((c) => Math.abs(c - x) <= 1.5 * k && thru(c) && clear(q.grp, [x, yL], [c, yL])).sort((a, b) => Math.abs(a - x) - Math.abs(b - x))[0];
+          if (x2 == null) return null;
+          pts.push([x, yL], [x2, yL]); x = x2;
+        }
+        cur = yb;
+      }
+      return { x, pre: pts };
+    };
+    const U = way(true), D = way(false), up = K.y <= 2.5 ? !!U || !D : !D && !!U, Wy = up ? U : D;
+    if (!Wy) { ok = false; continue; }
+    const vx = Wy.x, box = (t) => (up ? { x0: vx, x1: vx + 0.75 * k + 6 + w, t } : { x0: vx - w / 2, x1: vx + w / 2, t });
+    let t = 0;
+    for (; t < KB_TIERS; t++) {
+      const b = box(t), bad = placed.some((p) => p.up === up && ((p.t === t && b.x0 < p.x1 + 8 && p.x0 < b.x1 + 8) || (p.t < t && vx > p.x0 - 3 && vx < p.x1 + 3) || (p.t > t && p.cx > b.x0 - 3 && p.cx < b.x1 + 3)));
+      if (!bad) break;
+    }
+    if (t === KB_TIERS) { ok = false; continue; }
+    const b = box(t), y = up ? upY(t) : dnY(t);
+    placed.push({ ...b, up, cx: vx });
+    if (up) { lines.push({ grp: q.grp, pts: [...Wy.pre, [vx, y], [vx + 0.75 * k, y]], dot: 1 }); labels.push(lab(q, "r", vx + 0.75 * k + 6, y, L, m)); }
+    else { lines.push({ grp: q.grp, pts: [...Wy.pre, [vx, y - 0.6 * m.pri - 4]], dot: 1 }); labels.push(lab(q, "r", vx - w / 2, y, L, m)); }
+    ext = { x0: Math.min(ext.x0, b.x0), x1: Math.max(ext.x1, b.x1), y0: Math.min(ext.y0, y - 0.6 * m.pri), y1: Math.max(ext.y1, y + lh) };
+  }
+  return { ok, lines, labels, ext, k };
+}
+const lab = (q, side, x, y, L, m) => { const ys = lineYs(q.pos.length, m); return { grp: q.grp, side, x, lines: L.map((l, i) => ({ ...l, y: y + ys[i] })) }; };
+/* a segment through a key's rect (its interior: a line along a key gap is clear) */
+function segHitsRect(a, b, r) {
+  const x0 = Math.min(a[0], b[0]), x1 = Math.max(a[0], b[0]), y0 = Math.min(a[1], b[1]), y1 = Math.max(a[1], b[1]);
+  return x1 > r.x && x0 < r.x + r.w && y1 > r.y && y0 < r.y + r.h;
+}
+/** The keyboard's crossing gate: leader vs leader of another callout, a leader through a key that is not its own. [] when clean. */
+export function kbCross(plan) {
+  const out = [], segs = (L) => L.pts.slice(1).map((p, i) => [L.pts[i], p]), rects = KB_KEYS.map((q) => ({ id: q.id, ...keyRect(q, plan.k) })), L = plan.lines;
+  for (let i = 0; i < L.length; i++) for (let j = i + 1; j < L.length; j++) if (L[i].grp !== L[j].grp) for (const [a, b] of segs(L[i])) for (const [c, d] of segs(L[j])) if (segX(a, b, c, d)) out.push(L[i].grp + " x " + L[j].grp);
+  for (const l of L) for (const [a, b] of segs(l)) for (const r of rects) if (r.id !== l.grp && segHitsRect(a, b, r)) out.push(l.grp + " through " + r.id);
+  return [...new Set(out)];
+}
+export const KB_CAP = 36, KB_FULL = 22;
+/** Fits the keyboard into an art box aw x ah: the largest pitch (<= 36) whose clean plan fits, else (under KB_FULL 22, or no clean plan) the board with
+    no leaders, as large as the box allows. {k, plan|null, ox, oy}. */
+export function kbFit(aw, ah, it, m) {
+  if (it && it.length) for (let k = KB_CAP; k >= KB_FULL; k -= 0.5) {
+    const p = kbPlan(k, it, m), e = p.ext, w = e.x1 - e.x0, h = e.y1 - e.y0;
+    if (p.ok && w <= aw && h <= ah && !kbCross(p).length) return { k, plan: p, ox: (aw - w) / 2 - e.x0, oy: (ah - h) / 2 - e.y0 };
+  }
+  const k = Math.max(4, Math.min(KB_CAP, (aw - 8) / (KB_W + 0.8), (ah - 8) / (KB_H + 1.1))), e = kbBox(k);
+  return { k, plan: null, ox: (aw - (e.x1 - e.x0)) / 2 - e.x0, oy: (ah - (e.y1 - e.y0)) / 2 - e.y0 };
 }
 
 const CHROME = 88, PITCH = 26, PITCH_T = 52, GAP = 6, TAB_H = 30, TAB_T = 52, RULE_H = 30, HEAD_H = 26, PANE_MIN = 140, CAP_W = 400, CAP_H = 200, K_MAX = 1.25, WIDE = 800, WIDE_W = 1000;
@@ -274,6 +346,8 @@ function paneTall(w) {
   const m = { pri: 13 * ts, sec: 11 * ts, wOf: EST }, it = padCallouts({ binds: DEF_PAD, stick: "L" });
   let h = 0;
   for (let W = Math.floor(Math.min(PAD_CAP, w - 120)); W >= PAD_FULL && !h; W -= 4) { const p = padPlan(W, it, m); if (p.ok) h = Math.ceil(HEAD_H + RULE_H + 13 + p.ext.y1 - p.ext.y0 + 4); }
+  const kit = keyCallouts({ key: DEF_KEY }); // and the default keyboard with its callouts, at the largest pitch its width allows
+  for (let k = KB_CAP, kh = 0; k >= KB_FULL && !kh; k -= 0.5) { const p = kbPlan(k, kit, m); if (p.ok && p.ext.x1 - p.ext.x0 <= w) h = Math.max(h, (kh = Math.ceil(HEAD_H + RULE_H + 13 + p.ext.y1 - p.ext.y0 + 4))); }
   tallMemo.set(key, h);
   return h;
 }
@@ -295,14 +369,8 @@ export function geoFor(L, touch, narrow, scale) {
   const list = listGeom(L, SHAPE, { top, bot: wide ? Math.min(bot, top + listH) : bot - (hasPane ? 0 : RULE_H), x: S.x, w: nar ? S.w : LIST_W, pitch, gap: GAP, pad: 0 });
   const paneBox = !hasPane ? null : nar ? { x: S.ix - 8, y: S.by + tabH + GAP, w: S.iw + 16, h: paneNat } : { x: S.x + LIST_W + 2, y: top, w: S.w - LIST_W - 12, h: bot - top };
   const art = paneBox && { y: paneBox.y + HEAD_H, h: paneBox.h - HEAD_H - RULE_H }, cap = Math.min(CAP_W, S.w - 24);
-  const fitK = (w, h) => Math.min(K_MAX, (paneBox.w - 12) / w, art.h / h);
-  const pad = paneBox && { k: fitK(300, 196) }, keys = paneBox && { k: fitK(318, 162) };
-  if (paneBox) {
-    pad.x = paneBox.x + (paneBox.w - 300 * pad.k) / 2; pad.y = art.y + (art.h - 196 * pad.k) / 2;
-    keys.x = paneBox.x + (paneBox.w - 300 * keys.k) / 2; keys.y = art.y + (art.h - 162 * keys.k) / 2;
-  }
   return {
-    S, x: S.x, y: S.y, w: S.w, h: S.h, narrow: nar, touch: T, W: L.cx * 2, H: L.footY + 20, tabs, list, pane: paneBox, art, pad, keys, statusY: bot - RULE_H + 8,
+    S, x: S.x, y: S.y, w: S.w, h: S.h, narrow: nar, touch: T, W: L.cx * 2, H: L.footY + 20, tabs, list, pane: paneBox, art, statusY: bot - RULE_H + 8,
     cap: { x: L.cx - cap / 2, y: S.y + (S.h - CAP_H) / 2, w: cap, h: CAP_H },
   };
 }

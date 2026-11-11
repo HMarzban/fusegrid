@@ -1,11 +1,10 @@
 // Controller and keyboard diagrams and the position glyphs, on the menu kit's colours: vector only, no images, no maker shapes. Ids are positions.
-import { ACCENT, TEXT, MUTED, WARM, font, sans } from "./menudraw.js";
+import { TEXT, MUTED, sans } from "./menudraw.js";
 import { rr } from "./icons.js";
 import { CONST } from "./kit/tokens.js";
 import { wallCell } from "./kit/paint.js";
 import { layer, canMake } from "./kit/cache.js";
 
-const WELL = "#0a0e18", CAP = "rgba(4,7,14,0.9)", BODY = "#16203a";
 
 /** Reads an SVG-style path (M L H V C Q Z, absolute) into canvas calls, so the art draws on the headless stub too. */
 export function trace(c, d) {
@@ -215,68 +214,88 @@ export function drawCallouts(c, x, y, plan) {
   }
 }
 export const FIXED = "FIXED";
-/* One highlight rule for pad and keyboard, on the path already built: lit = solid accent with a soft edge, alias = accent outline, swap = gold outline. */
-function paintBuilt(c, s) {
-  if (s === "lit") {
-    c.save();
-    c.strokeStyle = ACCENT; c.lineJoin = "round";
-    c.globalAlpha = 0.12; c.lineWidth = 10; c.stroke();
-    c.globalAlpha = 0.25; c.lineWidth = 6; c.stroke();
-    c.restore();
-    c.fillStyle = ACCENT; c.fill();
-    return;
-  }
-  c.fillStyle = CAP; c.fill();
-  c.lineWidth = s ? 2 : 1;
-  c.strokeStyle = s === "alias" ? ACCENT : s === "swap" ? WARM : MUTED;
-  c.stroke();
+/* THE KEYBOARD (round 7, appendix 9.3): a tenkeyless board in key units k. ESC / F-row with the 4-4-4 groups, the main block in real widths and
+   stagger (TAB 1.5, CAPS 1.75, SHIFT 2.25 / 2.75, ENTER 2.25, BACKSPACE 2, SPACE 6.25), the arrows an inverted T after a 0.5 u gap. A row entry is
+   [code, width (default 1), legend (default the code's own)]; "_" is a gap. Codes are KeyboardEvent codes, so a bind lights its own key. */
+const KR = (y, list) => [y, list.map((q) => (Array.isArray(q) ? q : [q]))];
+const K1 = (s, pre = "Key") => [...s].map((ch) => [pre + ch, 1, ch]);
+export const KB_ROWS = Object.freeze([
+  KR(0, [["Escape", 1.5, "ESC"], ["_", 0.5], ...[1, 2, 3, 4].map((n) => ["F" + n]), ["_", 0.5], ...[5, 6, 7, 8].map((n) => ["F" + n]), ["_", 0.5], ...[9, 10, 11, 12].map((n) => ["F" + n])]),
+  KR(1.5, [["Backquote", 1, "`"], ...K1("1234567890", "Digit"), ["Minus", 1, "-"], ["Equal", 1, "="], ["Backspace", 2, "⌫"]]),
+  KR(2.5, [["Tab", 1.5, "TAB"], ...K1("QWERTYUIOP"), ["BracketLeft", 1, "["], ["BracketRight", 1, "]"], ["Backslash", 1.5, "\\"]]),
+  KR(3.5, [["CapsLock", 1.75, "CAPS"], ...K1("ASDFGHJKL"), ["Semicolon", 1, ";"], ["Quote", 1, "'"], ["Enter", 2.25, "ENTER"]]),
+  KR(4.5, [["ShiftLeft", 2.25, "SHIFT"], ...K1("ZXCVBNM"), ["Comma", 1, ","], ["Period", 1, "."], ["Slash", 1, "/"], ["ShiftRight", 2.75, "SHIFT"]]),
+  KR(5.5, [["ControlLeft", 1.75, "CTRL"], ["AltLeft", 2, "ALT"], ["Space", 6.25, "SPACE"], ["AltRight", 2, "ALT"], ["Fn", 1.25, "FN"], ["ControlRight", 1.75, "CTRL"]]),
+]);
+export const KB_W = 18.5, KB_H = 6.5, KB_ARROWS = Object.freeze([["ArrowUp", 16.5, 4.5], ["ArrowLeft", 15.5, 5.5], ["ArrowDown", 16.5, 5.5], ["ArrowRight", 17.5, 5.5]]);
+/** Every key in units: {id, x, y, w, leg, f (an F-row key)}. */
+export const KB_KEYS = Object.freeze((() => {
+  const out = [];
+  for (const [y, row] of KB_ROWS) { let x = 0; for (const [id, w = 1, leg = id] of row) { if (id !== "_") out.push(Object.freeze({ id, x, y, w, leg, f: /^F\d+$/.test(id) })); x += w; } }
+  for (const [id, x, y] of KB_ARROWS) out.push(Object.freeze({ id, x, y, w: 1, leg: "", f: false }));
+  return out;
+})());
+export const KB_AT = Object.freeze(Object.fromEntries(KB_KEYS.map((q) => [q.id, q])));
+/** A key's drawn rect at pitch k: the gap g = max(2, 0.1 k) is split round it. */
+export const keyRect = (q, k) => { const g = Math.max(2, 0.1 * k); return { x: q.x * k + g / 2, y: q.y * k + g / 2, w: q.w * k - g, h: k - g }; };
+/** A key's top face inside its rect: set back more at the front, so the skirt shows below. */
+const faceOf = (r, k) => ({ x: r.x + 0.08 * k, y: r.y + 0.04 * k, w: r.w - 0.16 * k, h: r.h - 0.22 * k });
+const rrect = (c, x, y, w, h, r) => { // corners as arcs (the drawing's own art, never a kit corner)
+  r = Math.max(0, Math.min(r, w / 2, h / 2)); const P = Math.PI;
+  c.beginPath(); c.moveTo(x + r, y); c.lineTo(x + w - r, y); c.arc(x + w - r, y + r, r, -P / 2, 0); c.lineTo(x + w, y + h - r); c.arc(x + w - r, y + h - r, r, 0, P / 2);
+  c.lineTo(x + r, y + h); c.arc(x + r, y + h - r, r, P / 2, P); c.lineTo(x, y + r); c.arc(x + r, y + r, r, P, P * 1.5); c.closePath();
+};
+/** The legend size at pitch k and text scale ts (desktop 15.8, never under the 10 px floor: 0 = no print). */
+export const kbLegend = (k, ts = 1) => { const px = Math.min(15.8 * ts, 0.5 * k); return px >= 10 && k - Math.max(2, 0.1 * k) - 0.22 * k >= px * 0.75 + 2 ? px : 0; };
+/** Which legends print at pitch k: a legend wider than its top face is left off (a lit key gets the face's whole width), the F-row prints all or
+    none, and with no legend size at all only the arrow glyphs print (the rows name every key). mw(s, px) measures. */
+export function kbPrints(k, lit, mw, ts = 1) {
+  const px = kbLegend(k, ts), out = {};
+  if (!px) return out;
+  const fits = (q) => { const f = faceOf(keyRect(q, k), k); return q.id === "Backspace" ? f.w >= 24 : mw(q.leg, px) <= f.w - (lit[q.id] ? 0 : 4); };
+  const F = KB_KEYS.filter((q) => q.f), fAll = F.every(fits);
+  for (const q of KB_KEYS) if (q.leg && (q.f ? fAll : fits(q))) out[q.id] = true;
+  return out;
 }
-/* Keyboard, u=20, true stagger. [id,label,x,w]; a null label is a ghost cap. */
-const LETTERS = (s, x0) => [...s].map((ch, i) => ["Key" + ch, null, x0 + i * 20]);
-export const KB_ROWS = [
-  [30, [["Escape", "ESC", 0, 30]]],
-  [52, [[0, null, 0, 28], ...LETTERS("QWERTYUIOP", 30)]],
-  [72, [[0, null, 0, 34], ...LETTERS("ASDFGHJKL", 36), ["Enter", "ENTER", 216, 44]]],
-  [92, [["ShiftLeft", null, 0, 44], ...LETTERS("ZXCVBNM", 46), ["Comma", null, 186], ["Period", null, 206], ["Slash", null, 226], ["ArrowUp", "U", 260]]],
-  [112, [[0, null, 0, 30], [0, null, 32, 38], ["Space", "SPACE", 72, 122], [0, null, 196, 30], ["ArrowLeft", "L", 240], ["ArrowDown", "D", 260], ["ArrowRight", "R", 280]]],
-];
-const ARROW = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] };
-const shortKey = (id) => (id === "ShiftLeft" ? "SHIFT" : id === "Comma" ? "," : id === "Period" ? "." : id === "Slash" ? "/" : id.replace("Key", ""));
-/** The keyboard. o: {keys:{code:state}, base:Set of always-labelled codes, names:{code:printed}, labels:[[points],x,y,align,word], fs}. Type floors at 10 px on screen. */
+/** The board's reach past its 18.5 x 6.5 k box: the deck margin 0.38 k and its drop. */
+export const kbBox = (k) => ({ x0: -0.38 * k - 2, y0: -0.38 * k - 2, x1: KB_W * k + 0.38 * k + 2, y1: KB_H * k + 0.38 * k + 0.3 * k + 2 });
+function arrowGlyph(c, id, cx, cy, s, col) {
+  const d = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] }[id], [dx, dy] = d;
+  c.fillStyle = col; c.beginPath(); c.moveTo(cx + dx * s, cy + dy * s); c.lineTo(cx - dx * s * 0.7 + dy * s, cy - dy * s * 0.7 + dx * s); c.lineTo(cx - dx * s * 0.7 - dy * s, cy - dy * s * 0.7 - dx * s); c.closePath(); c.fill();
+}
+function paintKeys(c, k, t, lit, prints, px) {
+  const dk = 0.38 * k, W = KB_W * k + 2 * dk, H = KB_H * k + 2 * dk;
+  rrect(c, -dk, -dk + 0.3 * k, W, H, 0.32 * k); alpha(c, 0.55, () => { c.fillStyle = BK; c.fill(); }); // the deck's drop: a hard offset fill, never a soft shadow
+  rrect(c, -dk, -dk, W, H, 0.32 * k); c.fillStyle = lin(c, -dk, H - dk, [[0, mix(t.band, WH, 0.2)], [0.3, t.band], [1, mix(t.band, BK, 0.3)]], t.band); c.fill();
+  c.save(); if (typeof c.clip === "function") { c.clip(); c.fillStyle = mix(t.key, BK, 0.4); c.fillRect(-dk, H - dk - 0.18 * k, W, 0.18 * k); c.fillStyle = "rgba(255,255,255,0.16)"; c.fillRect(-dk, -dk, W, 2); } c.restore();
+  rrect(c, -dk, -dk, W, H, 0.32 * k); c.strokeStyle = OL; c.lineWidth = 2.5; c.stroke();
+  for (const q of KB_KEYS) {
+    const r = keyRect(q, k), f = faceOf(r, k), on = !!lit[q.id];
+    alpha(c, 0.6, () => { rrect(c, r.x, r.y + 1, r.w, r.h, 0.16 * k); c.fillStyle = BK; c.fill(); });
+    rrect(c, r.x, r.y, r.w, r.h, 0.16 * k); c.fillStyle = on ? lin(c, r.y, r.y + r.h, [[0, t.lit2], [1, t.lip]], t.lit2) : lin(c, r.y, r.y + r.h, [[0, mix(t.key, BK, 0.3)], [1, mix(t.key, BK, 0.65)]], t.key); c.fill();
+    c.strokeStyle = OL; c.lineWidth = 1.5; c.stroke();
+    rrect(c, f.x, f.y, f.w, f.h, 0.11 * k); c.fillStyle = on ? lin(c, f.y, f.y + f.h, [[0, mix(t.lit, WH, 0.3)], [0.6, t.lit]], t.lit) : lin(c, f.y, f.y + f.h, [[0, mix(t.key, WH, 0.12)], [0.3, t.key], [1, mix(t.key, BK, 0.15)]], t.key); c.fill();
+    c.strokeStyle = on ? "rgba(0,0,0,0.25)" : "rgba(0,0,0,0.35)"; c.lineWidth = 1; c.stroke();
+    const ink = on ? CONST.dk : CONST.off, cx = f.x + f.w / 2, cy = f.y + f.h / 2;
+    if (!q.leg) arrowGlyph(c, q.id, cx, cy, Math.min(f.w, f.h) * 0.28, ink);
+    else if (prints[q.id] && q.id === "Backspace") { c.strokeStyle = ink; c.lineWidth = 2.2; c.lineCap = "round"; c.lineJoin = "round"; c.beginPath(); c.moveTo(cx + 10, cy); c.lineTo(cx - 7, cy); c.moveTo(cx - 3, cy - 4.5); c.lineTo(cx - 8, cy); c.lineTo(cx - 3, cy + 4.5); c.stroke(); c.lineCap = "butt"; }
+    else if (prints[q.id]) { c.fillStyle = ink; c.font = sans(px, "700"); c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(q.leg, cx, cy + 0.5); }
+  }
+}
+/** The keyboard at pitch k, its 18.5 x 6.5 k box's top-left at x y. o: {tok, lit:{code:true}, ring:code, prints:{code:true}, px}: the static board
+    is one kit/cache.js layer keyed by world, k, dpr, the lit set and the printed set; the focus ring draws live, 3 px cream at offset 3. */
 export function drawKeys(c, x, y, k, o) {
-  const q = o || {}, st = q.keys || {}, base = q.base || new Set(), names = q.names || {};
-  c.save(); c.translate(x, y); c.scale(k, k);
-  rr(c, -6, 24, 312, 112, 6); c.fillStyle = BODY; c.fill();
-  c.strokeStyle = MUTED; c.lineWidth = 1.5; c.stroke();
-  for (const [ry, row] of KB_ROWS) for (const [id, lab0, kx, kw] of row) {
-    const w = kw || 18, s = st[id], lab = lab0 || (id && (s || base.has(id)) ? (names[id] ? String(names[id]).toUpperCase() : shortKey(id)) : null);
-    rr(c, kx + 0.5, ry + 0.5, w - 1, 17, 2);
-    if (!lab) {
-      c.fillStyle = CAP; c.fill();
-      c.save(); c.globalAlpha = 0.45; c.strokeStyle = MUTED; c.lineWidth = 1; c.stroke(); c.restore();
-      continue;
-    }
-    paintBuilt(c, s);
-    const ink = s === "lit" ? WELL : s === "alias" ? ACCENT : s === "swap" ? WARM : TEXT;
-    if (ARROW[id]) {
-      const [dx, dy] = ARROW[id], mx = kx + w / 2, my = ry + 9;
-      c.fillStyle = ink; c.beginPath();
-      c.moveTo(mx + dx * 4, my + dy * 4); c.lineTo(mx - dx * 3 + dy * 4, my - dy * 3 + dx * 4); c.lineTo(mx - dx * 3 - dy * 4, my - dy * 3 - dx * 4);
-      c.closePath(); c.fill();
-    } else {
-      c.fillStyle = ink; c.font = font(Math.max(lab.length > 1 ? 9 : 11, 10 / k), "900"); c.textAlign = "center"; c.textBaseline = "middle";
-      c.fillText(lab, kx + w / 2, ry + 9.5);
-    }
+  const q = o || {}, t = q.tok, lit = q.lit || {}, prints = q.prints || {}, px = q.px || 0, B = kbBox(k);
+  if (canMake() && typeof c.drawImage === "function") {
+    const dpr = devScale(c), sig = Object.keys(lit).filter((i) => lit[i]).sort().join(",") + "|" + Object.keys(prints).length + "|" + px, w = Math.ceil((B.x1 - B.x0) * dpr), h = Math.ceil((B.y1 - B.y0) * dpr);
+    const cv = layer({ layer: "keys", biome: t.name, level: sig, W: Math.round(k * 100) / 100, H: 0, dpr, look: "2d", textScale: 1 }, w, h, (g) => { g.scale(dpr, dpr); g.translate(-B.x0, -B.y0); paintKeys(g, k, t, lit, prints, px); });
+    c.drawImage(cv, x + B.x0, y + B.y0, w / dpr, h / dpr);
+  } else { c.save(); c.translate(x, y); paintKeys(c, k, t, lit, prints, px); c.restore(); }
+  const r = q.ring && KB_AT[q.ring] && keyRect(KB_AT[q.ring], k);
+  if (r) {
+    alpha(c, 0.7, () => { rrect(c, x + r.x - 4.5, y + r.y - 4.5, r.w + 9, r.h + 9, 0.16 * k + 4.5); c.strokeStyle = OL; c.lineWidth = 5; c.stroke(); });
+    rrect(c, x + r.x - 4.5, y + r.y - 4.5, r.w + 9, r.h + 9, 0.16 * k + 4.5); c.strokeStyle = CONST.ink; c.lineWidth = 3; c.stroke();
   }
-  for (const [pts, lx, ly, al, word] of q.labels || []) {
-    c.strokeStyle = ACCENT; c.lineWidth = 1.5;
-    c.beginPath();
-    pts.forEach((p, i) => (i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1])));
-    c.stroke();
-    c.fillStyle = ACCENT; c.font = font((q.fs || 10) / k, "900"); c.textAlign = al; c.textBaseline = "middle";
-    c.fillText(word, lx, ly);
-  }
-  c.restore();
 }
 /* A rounded rect with square bottom corners, for the trigger glyph. */
 function rrTop(c, x, y, w, h, r) {

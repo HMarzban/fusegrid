@@ -1,11 +1,10 @@
 // CONTROLS page paint, on the menu kit: plate, head, foot, paintRow, segs and the MENU pane's cell, paneHead and paneLine. Static: nothing here reads the clock.
 import { ACCENT, TEXT, MUTED, LINE, WARM, font, sans, spaced, mw, clip, wrap, plate, head, foot, paintRow, lockGlyph, cell, segs, paneHead, paneLine, drawDim } from "./menudraw.js";
-import { drawPad, drawCallouts, drawKeys, glyph, padBox } from "./padart.js";
-import { geoFor, geomOf, rowsOf, statusOf, footOf, padStates, padRing, padCallouts, padFit, keyStates, keyLabels, CAPTION, PAD_TALL } from "./controlsgeo.js";
+import { drawPad, drawCallouts, drawKeys, glyph, padBox, kbPrints, kbLegend, KB_AT } from "./padart.js";
+import { geoFor, geomOf, rowsOf, statusOf, footOf, padStates, padRing, padCallouts, padFit, keyStates, keyRing, keyCallouts, kbFit, CAPTION, PAD_TALL } from "./controlsgeo.js";
 import { worldTokens } from "./kit/tokens.js";
 import { textScale } from "./kit/type.js";
 
-const BASE_KEYS = new Set(["KeyQ", "KeyW", "KeyE", "KeyP", "KeyA", "KeyS", "KeyD", "KeyJ", "KeyX"]);
 const VAL_PX = 12, GLYPH_H = 16, TOK_GAP = 12, TAB_LABEL = ["KEYBOARD", "CONTROLLER"], SEG_W = 6, SEG_GAP = 2, WIDEST = "MEDIUM";
 const tokW = (c, t) => (t.g === "stick" ? 18 : 16) * (GLYPH_H / 16) + 4 + mw(c, t.w);
 const padOff = (s) => s.tab === "pad" && (!s.pad || s.pad.state === "none" || s.pad.state === "lost");
@@ -131,6 +130,7 @@ function drawPadArt(c, s, row, A, tok, ui) {
   const off = padOff(s), lit = off ? {} : padStates(s), it = off ? [] : padCallouts(s), plq = off ? 34 : 0;
   const F = fitPad(c, A.w, A.h - plq, it, lit), ox = A.x + F.ox, oy = A.y + F.oy, W = off ? F.W * 0.82 : F.W;
   drawPad(c, ox + (F.W - W) / 2, oy, W, { tok, lit, lock: off, ring: off ? null : padRing(s, row.id), press: s.echo, grips: row.id === "VIBRATION" && !off && !row.none && row.text !== "OFF", reduced: !!ui.reduced });
+  _dbg.plan = F.plan;
   if (F.plan) drawCallouts(c, ox, oy, F.plan);
   if (off) {
     const P = { x: A.x, w: A.w }, y = A.y + A.h - plq;
@@ -139,6 +139,23 @@ function drawPadArt(c, s, row, A, tok, ui) {
   }
 }
 const NO_PAD = "NO CONTROLLER";
+/** The plan the last drawing used (null when it drew no leaders): tests hold its callout strings apart, as MENU's card. */
+export const _dbg = { plan: null, legends: [] };
+let kbMemo = { k: "", F: null };
+/** The keyboard in its art box: the bound keys and the fixed ESC and arrows in the brick, the focused row's key ringed, the callouts where they fit;
+    legends print where they fit their top face (none at a phone's pitch: the rows name every key). */
+function drawKeyArt(c, s, row, A, tok) {
+  const lit = keyStates(s), it = keyCallouts(s), ts = textScale(), key = [A.w, A.h, ts, JSON.stringify(it), Object.keys(lit).sort().join()].join("|");
+  if (kbMemo.k !== key) { // the fit and the printed legends measure once, never on a steady frame
+    const m = metrics(c), F = kbFit(A.w, A.h, it, m), prints = kbPrints(F.k, lit, m.wOf, ts);
+    kbMemo = { k: key, F, prints, legends: Object.keys(prints).filter((id) => id !== "Backspace").map((id) => KB_AT[id].leg) };
+  }
+  const { F, prints } = kbMemo, ox = A.x + F.ox, oy = A.y + F.oy;
+  _dbg.legends = kbMemo.legends;
+  drawKeys(c, ox, oy, F.k, { tok, lit, ring: keyRing(s, row.id), prints, px: kbLegend(F.k, ts) });
+  _dbg.plan = F.plan;
+  if (F.plan) drawCallouts(c, ox, oy, F.plan);
+}
 /** The preview pane, as MENU's: head, drawing, rule. */
 function drawPane(c, s, row, G, tok, ui) {
   const P = G.pane, off = padOff(s), nonstd = s.tab === "pad" && !off && s.pad.state === "nonstd", A = G.art;
@@ -149,7 +166,7 @@ function drawPane(c, s, row, G, tok, ui) {
   if (row.id === "SENSITIVITY" && !off) {
     const r = Math.min(56, A.h / 2 - 4);
     stickView(c, s, P.x + 16 + r, A.y + A.h / 2, r);
-  } else if (s.tab === "key") drawKeys(c, G.keys.x, G.keys.y, G.keys.k, { keys: row.reset ? {} : keyStates(s, row.id), labels: row.reset ? [] : keyLabels(s, row.id), base: BASE_KEYS, names: s.names, fs: 10 });
+  } else if (s.tab === "key") drawKeyArt(c, s, row, { x: P.x + 6, y: A.y, w: P.w - 12, h: A.h - more }, tok);
   else if (nonstd) paneLine(c, P, A.y + A.h / 2, NO_DRAWING, MUTED, 11, "center");
   else drawPadArt(c, s, row, { x: P.x + 6, y: A.y, w: P.w - 12, h: A.h - more }, tok, ui);
   drawRule(c, P, P.y + P.h - 10, rule, s.swap ? WARM : TEXT);
@@ -180,6 +197,7 @@ export function drawCapture(c, cap, G, pad) {
     or the room being played from PAUSE), reduced = REDUCE FLASH. */
 export function drawControls(c, L, view, ui) {
   const u = ui || {}, s = view, G = geoFor(L, u.touch, u.narrow, u.scale), S = G.S, rows = rowsOf(s), sel = Math.min(s.row | 0, rows.length - 1), row = rows[sel], st = s.pad && s.pad.state, off = padOff(s), tok = worldTokens(u.level | 0 || 1);
+  _dbg.plan = null; _dbg.legends = [];
   plate(c, S.x, S.y, S.w, S.h);
   c.font = sans(10, "600");
   spaced(c, true); // head() draws its kicker spaced: measure it so, or a long pad id overruns

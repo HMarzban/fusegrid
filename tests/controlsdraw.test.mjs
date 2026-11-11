@@ -6,8 +6,8 @@ import { layout, bandOf, drawSettings, lockGlyph, ACCENT, TEXT, MUTED, DANGER, W
 import * as lazyPages from "../src/render/pages/lazy.js";
 import * as settingsPage from "../src/render/pages/settings.js";
 lazyPages._set("settings", settingsPage); // the lazy SETTINGS page, in as if its import had landed (R20)
-import { CAPTION, geomOf, geoFor, hitPage, rowsOf, statusOf, footOf, padStates, padRing, keyStates, padLabels, keyLabels, keyName, moveLabel, softAliasesOf, BTN, DEF_KEY, DEF_PAD, DEF_VIB, VIB_LEVELS, SENS_LEVELS, sensIdx, vibWord, NO_VIB, FEEL_NOTHING, STATUS } from "../src/render/controlsgeo.js";
-import { PART_AT, BODY_PATH, KB_ROWS, trace, glyph, drawPad, drawKeys } from "../src/render/padart.js";
+import { CAPTION, geomOf, geoFor, hitPage, rowsOf, statusOf, footOf, padStates, padRing, keyStates, keyRing, keyCallouts, kbPlan, padLabels, keyName, moveLabel, softAliasesOf, BTN, DEF_KEY, DEF_PAD, DEF_VIB, VIB_LEVELS, SENS_LEVELS, sensIdx, vibWord, NO_VIB, FEEL_NOTHING, STATUS } from "../src/render/controlsgeo.js";
+import { PART_AT, BODY_PATH, KB_AT, keyRect, kbPrints, kbLegend, trace, glyph, drawPad, drawKeys } from "../src/render/padart.js";
 import { worldTokens, CONST } from "../src/render/kit/tokens.js";
 import { drawControls } from "../src/render/controlsdraw.js";
 import * as model from "../src/app/controls.js";
@@ -72,8 +72,7 @@ const BOXES = [["600x520", L600, false, false, undefined], ["608x352 guard", lay
 check("600x520 keyboard: MENU's split, the shared pitch, the kit's group gaps", G2.x === 20 && G2.w === 560 && G2.list.x === 20 && G2.list.w === 272 && G2.pane.x === 294 && G2.pane.w === 276 && G2.list.rows[0].h === 26 && G2.list.rows[5].y0 === G2.list.rows[4].y1 + 6 && G2.list.rows[7].y0 === G2.list.rows[6].y1 + 6, JSON.stringify([G2.x, G2.y, G2.w, G2.h]));
 check("the row band sits at drawList's insets", geomOf(0, G2).x === 28 && geomOf(0, G2).w === 256 && geomOf(0, G2).h === 24);
 check("the pane spans the list", G2.pane.y === G2.list.rows[0].y0 && G2.pane.h === G2.list.rows[7].y1 - G2.list.rows[0].y0, JSON.stringify(G2.pane));
-check("the diagram is drawn as large as the pane allows", G2.pad.k >= 0.8 && G2.keys.k >= 0.8, [G2.pad.k, G2.keys.k].join());
-check("the keyboard centres in its pane on its 162 box", G2.keys.k === Math.min(1.25, (G2.pane.w - 12) / 318, G2.art.h / 162) && G2.keys.y === G2.art.y + (G2.art.h - 162 * G2.keys.k) / 2, [G2.keys.k, G2.keys.y].join());
+check("the pane leaves the drawings room: art box at least 160 tall at 600x520", G2.art.h >= 160 && G2.art.y === G2.pane.y + 26, G2.art.h);
 
 for (const [nm, Lx, touch, narrow, scale] of BOXES) {
   const G = geoFor(Lx, touch, narrow, scale), v = padV();
@@ -108,7 +107,7 @@ for (const [nm, Lx, touch, narrow, scale] of BOXES) {
 }
 const nar = geoFor(layout(436, 946), true, true, 0.9);
 check("narrow: the pane above the list, both full width", nar.pane.y + nar.pane.h <= nar.list.rows[0].y0 && nar.list.w === nar.w && nar.pane.w === nar.w - 16);
-check("narrow: the diagram grows past the keyboard's", nar.pad.k > 1.1, nar.pad.k);
+check("narrow: the pane grows for the drawing", nar.art.h > 1.1 * 196, nar.art.h);
 
 // touch floors, with the real fit numbers. Eight rows at 44 CSS need 70 logical at 0.63, 560 of a 416 room: only #sh holds the floor for rows; every box holds it for tabs
 for (const s of [0.63, 0.73, 0.9]) {
@@ -222,24 +221,23 @@ check("while capturing, a tap on the capture plate is inert", Object.keys(hitPag
   check("padStates: MOVE lights D-PAD and the live stick", padStates(padV({ stick: "R" })).dpad === "lit" && padStates(padV({ stick: "R" })).RS === "lit" && !padStates(padV({ stick: "R" })).LS);
   check("padStates: PAUSE lights START and its second button, the ring on the second", padStates(padV()).START === "lit" && padStates(padV()).SELECT === "lit" && padRing(padV(), "PAUSE") === "SELECT");
   check("padStates: a swap's displaced button stays lit under its new action", padStates(padV({ binds: { ...DEF_PAD, BOMB: "E", REMOTE: "S" }, swap: { row: "REMOTE", part: "S" } })).S === "lit" && padLabels(padV({ binds: { ...DEF_PAD, BOMB: "E", REMOTE: "S" } })).S === "REMOTE");
-  const ks = keyStates(keyV(), "BOMB");
-  check("keyStates: SPACE lit, J and X alias", ks.Space === "lit" && ks.KeyJ === "alias" && ks.KeyX === "alias");
-  check("keyStates: an alias vanishes once taken", keyStates(keyV({ key: { ...DEF_KEY, THROW: "KeyX" } }), "BOMB").KeyX === undefined);
-  check("keyStates: MOVE lights the set, arrows alias", keyStates(keyV(), "MOVE").KeyW === "lit" && keyStates(keyV(), "MOVE").ArrowUp === "alias");
-  check("keyStates: CONFIRM and BACK", keyStates(keyV(), "CONFIRM").Enter === "lit" && keyStates(keyV(), "BACK").Escape === "lit");
+  const ks = keyStates(keyV());
+  check("keyStates: SPACE lit; the silent J and X never advertised", ks.Space === "lit" && !ks.KeyJ && !ks.KeyX);
+  check("keyStates: a rebound key lights, the old one goes dark", keyStates(keyV({ key: { ...DEF_KEY, THROW: "KeyX" } })).KeyX === "lit" && !keyStates(keyV({ key: { ...DEF_KEY, THROW: "KeyX" } })).KeyE);
+  check("keyStates: MOVE lights the set, the fixed arrows lit too", ks.KeyW === "lit" && ks.ArrowUp === "lit");
+  check("keyStates: ESC lit (fixed); CONFIRM and BACK ring ENTER and ESC", ks.Escape === "lit" && keyRing(keyV(), "CONFIRM") === "Enter" && keyRing(keyV(), "BACK") === "Escape");
   const pl = padLabels(padV());
   check("padLabels name every action on its bound part", pl.S === "BOMB" && pl.W === "THROW" && pl.E === "REMOTE" && pl.SELECT === "PAUSE" && pl.START === "PAUSE" && pl.dpad === "MOVE" && pl.LS === "MOVE");
   check("padLabels follow the stick and the binds", padLabels(padV({ stick: "R" })).RS === "MOVE" && padLabels(padV({ binds: { ...DEF_PAD, BOMB: "TRL" } })).TRL === "BOMB");
-  { const sp = keyLabels(keyV(), "BOMB")[0], x = 72 + 61;
-    check("keyLabels: SPACE's leader runs down, under the keyboard", JSON.stringify(sp[0]) === JSON.stringify([[x, 129], [x, 146]]) && sp[1] === x && sp[2] === 154, JSON.stringify(sp));
-    const z = keyLabels(keyV({ key: { ...DEF_KEY, THROW: "KeyZ" } }), "THROW")[0];
-    check("keyLabels: the Z row runs down too", z[2] === 154 && z[0][0][1] === 109 && z[0][1][1] === 146, JSON.stringify(z));
-    const ar = keyLabels(keyV(), "MOVE").find((l) => l[4] === "ARROWS");
-    check("keyLabels: ArrowUp stays up", ar[2] === 8 && ar[0][1][1] === 14, JSON.stringify(ar));
-    const e = keyLabels(keyV(), "THROW")[0];
-    check("keyLabels: an upper-row key stays up", e[2] === 8, JSON.stringify(e)); }
-  check("keyLabels: a leader off the bound key", keyLabels(keyV(), "THROW")[0][4] === "THROW" && keyLabels(keyV(), "BOMB")[0][4] === "BOMB" && keyLabels(keyV(), "MOVE").map((l) => l[4]).join() === "WASD,ARROWS");
-  check("keyLabels: a key off the diagram has none and draws no crash", keyLabels(keyV({ key: { ...DEF_KEY, THROW: "Numpad7" } }), "THROW").length === 0);
+  { const M1 = { pri: 13, sec: 11, wOf: (t, px) => t.length * px * 0.6 }, k = 30, P = kbPlan(k, keyCallouts(keyV()), M1), L = (g) => P.lines.find((l) => l.grp === g), sp = keyRect(KB_AT.Space, k);
+    check("keyboard: SPACE's leader runs straight down from the key, under the board", L("Space").pts[0][1] === sp.y + sp.h && L("Space").pts.at(-1)[1] > 6.5 * k && L("Space").pts.every((q) => q[0] === sp.x + sp.w / 2), JSON.stringify(L("Space").pts));
+    const z = kbPlan(k, keyCallouts(keyV({ key: { ...DEF_KEY, THROW: "KeyZ" } })), M1), zl = z.lines.find((l) => l.grp === "KeyZ");
+    check("keyboard: a boxed-in Z row key jogs along a row gap and still gets out", z.ok && zl.pts.length > 2 && zl.pts.slice(1).every((q, i) => q[0] === zl.pts[i][0] || q[1] === zl.pts[i][1]), JSON.stringify(zl && zl.pts));
+    check("keyboard: the arrows' leader runs down from DOWN", L("ArrowDown").pts.at(-1)[1] > 6.5 * k);
+    check("keyboard: an upper-row key (E) runs up through the key gaps", L("KeyE").pts[1][1] < 0 && L("KeyE").pts[1][0] === L("KeyE").pts[0][0]);
+    check("keyboard: ESC runs straight left", L("Escape").pts.at(-1)[0] < 0 && L("Escape").pts.every((q) => q[1] === L("Escape").pts[0][1])); }
+  check("keyCallouts: the action on its bound key", keyCallouts(keyV()).find((q) => q.grp === "KeyE").act === "THROW" && keyCallouts(keyV()).find((q) => q.grp === "Space").act === "BOMB" && keyCallouts(keyV()).filter((q) => q.act === "MOVE").map((q) => q.pos[0]).join() === "W A S D,ARROWS");
+  check("keyCallouts: a key off the drawing has none and draws no crash", !keyCallouts(keyV({ key: { ...DEF_KEY, THROW: "Numpad7" } })).some((q) => q.act === "THROW") && (() => { try { drawControls(recCtx().c, L600, keyV({ key: { ...DEF_KEY, THROW: "Numpad7" }, row: 2 }), {}); return true; } catch (e) { return false; } })());
 }
 
 // the render-side copies stay equal to the model (menudraw.js's local-copy idiom)
@@ -360,7 +358,8 @@ const paint = (v, ui, Lx = L600) => { const r = recCtx(); drawControls(r.c, Lx, 
   }
   check("the pane's words read at game size", lit.texts.filter((t) => t.mono || t.fill === CONST.ink || t.fill === CONST.t2).every((t) => t.px >= 10 - 1e-6));
   const kb = paint(keyV());
-  check("the keyboard's leader names the action", kb.texts.some((t) => t.s === "BOMB" && t.fill === ACCENT && t.mono));
+  const kbD = paint(keyV(), {}, DESK);
+  check("the keyboard's callouts name the action, in cream, at the desk", kbD.texts.some((t) => t.s === "BOMB" && t.fill === CONST.ink && !t.mono) && kbD.texts.some((t) => t.s === "SPACE" && t.fill === CONST.t2));
   check("tabs both read, the open one banded as HEAT | PACE", has(selT, "KEYBOARD") && has(selT, "CONTROLLER") && selT.rects.some((q) => q.fill === "rgba(55,240,208,0.12)" && q.y === G2.tabs[0].y && q.w === G2.tabs[0].w) && selT.texts.find((t) => t.s === "KEYBOARD").fill === ACCENT && selT.texts.find((t) => t.s === "CONTROLLER").fill === MUTED);
   check("the kicker names the controller, never a mapping word", has(paint(padV()), "CONNECTED · CONTROLLER 1") && has(paint(padV({ pad: NON })), "CONNECTED · CONTROLLER 1 · BUTTONS 0-16"));
   check("the foot is the kit's line", selT.texts.some((t) => t.s === "↑↓ ROW · ←→ TAB · ENTER REBIND · ESC BACK" && t.y === G2.S.footY && t.fill === MUTED));
@@ -414,12 +413,13 @@ const paint = (v, ui, Lx = L600) => { const r = recCtx(); drawControls(r.c, Lx, 
     check("value tokens sit 12 apart, glyph between", Math.abs(b.left - a.right - (12 + 18 + 4)) < 1e-6, b.left - a.right);
   }
   {
-    const row = (y) => KB_ROWS.find((q) => q[0] === y)[1], en = row(72).find((q) => q[0] === "Enter"), es = row(30).find((q) => q[0] === "Escape");
-    check("ENTER is 44 wide, 216..260; ESC is 30", en[2] === 216 && en[3] === 44 && es[3] === 30, [en, es].join("|"));
-    for (const k of [G2.keys.k, 1, 1.25]) {
-      const d = recCtx(); drawKeys(d.c, 0, 0, k, { keys: {} });
-      const fit = (s, x, w) => { const q = d.texts.find((t) => t.s === s); return q && q.left >= x * k && q.right <= (x + w) * k; };
-      check("ENTER and ESC fit their caps at k " + k.toFixed(2), fit("ENTER", en[2], en[3]) && fit("ESC", es[2], es[3]));
+    const en = KB_AT.Enter, es = KB_AT.Escape;
+    check("ENTER is 2.25 u, 12.75..15 on the home row; ESC is 1.5 u", en.x === 12.75 && en.w === 2.25 && es.w === 1.5, [en.x, en.w, es.w].join("|"));
+    for (const k of [34, 30, 26]) {
+      const d = recCtx(), mw = (s, px) => s.length * px * 0.6, lit = keyStates(keyV()), pr = kbPrints(k, lit, mw);
+      drawKeys(d.c, 0, 0, k, { tok: worldTokens(1), lit, prints: pr, px: kbLegend(k) });
+      const fit = (s, q) => { const r = keyRect(q, k), t = d.texts.find((x) => x.s === s); return !pr[q.id] || (t && t.left >= r.x && t.right <= r.x + r.w); };
+      check("a printed ENTER and ESC fit their caps at k " + k + ", and a lit ESC always prints", fit("ENTER", en) && fit("ESC", es) && !!pr.Escape);
     }
   }
   {
@@ -475,7 +475,7 @@ for (const [nm, Lx, touch] of [["keyboard 27", L600, false], ["touch 37", L600, 
   check("each glyph kind paints and reports a width", ok && g.log.length > 20);
   const d = recCtx();
   drawPad(d.c, 0, 0, 200, { tok: worldTokens(1), lit: { S: "lit", dpad: "lit", LS: "lit", START: "lit", SELECT: "lit" }, ring: "S", press: "S" });
-  drawKeys(d.c, 0, 0, 1.3, { keys: { Space: "lit", KeyJ: "alias", KeyQ: "swap", ArrowUp: "alias" }, base: new Set(["KeyQ"]) });
+  drawKeys(d.c, 0, 0, 30, { tok: worldTokens(1), lit: { Space: "lit", ArrowUp: "lit" }, ring: "Space", prints: { Space: true, KeyQ: true }, px: 12 });
   check("controller and keyboard drawings draw on the headless stand-in", d.log.filter((q) => q.startsWith("bz")).length >= 14 && d.texts.some((t) => t.s === "SPACE"));
 }
 

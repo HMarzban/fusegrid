@@ -20,6 +20,7 @@ lazyPages._set("settings", settingsPage); // the lazy SETTINGS / GRAPHICS page, 
 import { POWER, FOES } from "../src/core/entities.js";
 import { TILE_NAME } from "../src/core/feat.js";
 import { rec as textrec } from "./lib/textrec.mjs";
+import { _dbg as ctlDbg } from "../src/render/controlsdraw.js";
 import { geoFor, geomOf, hitPage } from "../src/render/controlsgeo.js";
 import { createGame } from "../src/main.js";
 import "../src/core/board3.js"; // an ordinary run deals gen 3; with the seam empty the start holds
@@ -259,11 +260,16 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
      the strings drawn inside the card's rect are exactly the plan's (a dropped quiet line is a plan decision the check sees), each inside the card
      and the box, whole, and the facts always there */
   /* v202 Task 3.3: LEVEL SELECT's card is the same card in the card's column a narrower window narrows (pages/level.js): held the same way */
-  const cardOut = { s: [] }, cardOutL = { s: [] };
+  const cardOut = { s: [] }, cardOutL = { s: [] }, calloutBad = [];
   /* SETTINGS / GRAPHICS also hand back their plan's words (every row's label and value, on every page: a paged column draws one page) */
   const planWords = () => Object.values(settingsPage._dbg.last.Pl.rows).flatMap((o) => [o.label.s, ...o.val.P.filter((q) => q.s != null).map((q) => q.s)]);
   const shot = (nm, box, cur) => {
     const a = mkApp(SCREEN[nm]); if (cur != null) a.cursor = cur; const R = rec(); drawShell(R.c, a, { state: "PLAY", time: 1 }, box, "2d", () => [], () => 0, () => ({}));
+    if (nm === "CONTROLS" && (ctlDbg.plan || ctlDbg.legends.length)) { // Tasks 6.1 / 6.2: the drawing's callouts and key legends show where the pane holds them (a desk box), so they leave the 600x520 comparison, held here: each drawn whole, inside the box. Both paint after the rows: the last of each string is the drawing's
+      const left = R.texts.slice(), Wb = box.width, Hb = box.height, FX = ctlDbg.plan ? ctlDbg.plan.labels.flatMap((l) => l.lines.filter((x) => x.tag).map(() => "FIXED")) : [];
+      for (const s of [...(ctlDbg.plan ? ctlDbg.plan.labels.flatMap((l) => l.lines.map((x) => x.s)) : []), ...FX, ...ctlDbg.legends]) { const i = left.findLastIndex((q) => q.s === s); if (i < 0 || /…/.test(s) || left[i].x < 0 || left[i].x + left[i].w > Wb || left[i].y < 0 || left[i].y > Hb) calloutBad.push(Wb + "x" + Hb + ":" + s); else left.splice(i, 1); }
+      return left;
+    }
     if (nm === "SETTINGS" || nm === "GRAPHICS") R.texts.plan = planWords();
     const pg = nm === "MENU" ? menuPage : nm === "LEVEL" ? levelPage : null;
     if (!pg || !pg._dbg.last.P.card) return R.texts;
@@ -321,6 +327,8 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
     });
     check(`every page's text sits inside the box (${tg})`, out.length === 0, out.join());
     check(`every page prints exactly its 600x520 strings, in order${tab ? " (MENU: the 1024x768 tablet's words by token; RECORDS' three tabs: the 1024x768 tablet's, exactly)" : ""}: nothing elided (${tg})`, same.length === 0, same.join());
+    check(`CONTROLS: every callout and key legend the drawing plans is drawn whole, inside the box (${tg})`, calloutBad.length === 0, calloutBad.join());
+    calloutBad.length = 0;
     const cbad = cardOut.s.filter((q) => q.card.some((t) => /…/.test(t)) || !q.card.every((t) => q.drawn.includes(t)) || J(q.inCard) !== J(q.plan) || q.out.length || !["JUNGLE", "×2", "BOOSTER", "LIVES", "FUSE", "2.5s", "SCORE"].every((w) => q.card.includes(w)));
     const compact = lay === "l" && W === 600; // MENU's compact arrangement: no card slot, PLAY's tag carries the run
     check(`MENU's card (${tg}): ${compact ? "none (compact)" : "drawn in every MENU frame; the strings inside its rect are exactly its plan's, each inside the card and the box, whole; the world, WALKER's ×2, the floor tile and LIVES / FUSE / SCORE"}`, compact ? cardOut.s.length === 0 : cardOut.s.length === ITEMS.length && cbad.length === 0, JSON.stringify([cardOut.s.length, cbad.slice(0, 1)]));

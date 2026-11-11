@@ -999,12 +999,21 @@ not shell screens. Do not add them as `SCREEN` values.
   `drawCallouts`): one per bound input by position, ACTION over the position word, START with a FIXED tag; plain orthogonal leaders, START /
   SELECT / WEST rise to a lane, the rest run straight out and drop through a gutter knee (the lower leader on the inner knee). `padFit` takes the
   largest W whose plan passes `padCross` (leader vs leader, a leader within r + 2 of another input, a bound shoulder or trigger included) and
-  fits the art box; under `PAD_FULL` 180 or with no clean plan (a rare rebind of a trigger or shoulder beside WEST) it draws the compact
+  fits the art box, never under `PAD_KEEP` 0.7 of the compact size; under `PAD_FULL` 180 or with no clean plan (a rebind of a trigger or shoulder beside WEST) it draws the compact
   drawing with no leaders, and the rows name the buttons. A desk-sized box (`WIDE` 800 up) widens the plate (`WIDE_W` 1000) and lets the pane
   grow past the list, so callouts show on the desk; the 600x520 box (PAUSE view 3, small windows) is compact. NO CONTROLLER: the locked body
   (rule tone under the wall texture), every input a well, a `NO CONTROLLER` plaque. Capture: the controller in the capture plate, every input
   quiet but the action's own button lit and ringed, the cancel foot, nothing counts down (`CAP_H` 200). Player copy says controller: the pad
-  tab's reset row is `RESET CONTROLLER`. Store `nb.controls.v1` (KEEP); invalid data
+  tab's reset row is `RESET CONTROLLER`.
+  The keyboard drawing (Task 6.2, appendix 9.3) is `padart.js` `drawKeys`: a tenkeyless board in key units (`KB_ROWS` / `KB_KEYS` / `KB_AT`, KeyboardEvent
+  codes, 18.5 x 6.5 u; TAB 1.5, CAPS 1.75, SHIFT 2.25 / 2.75, ENTER 2.25, BACKSPACE 2, SPACE 6.25, ESC 1.5; the arrows an inverted T after a 0.5 u
+  gap), keycaps a top face over a darker skirt, the deck top-lit with a hard drop; the bound keys (the MOVE set, BOMB, THROW, REMOTE, PAUSE's second
+  key) and the fixed ESC and arrows in the brick (`keyStates`), never J / X; the focused row's key ringed (`keyRing`; ENTER on CONFIRM). Legends
+  (`kbPrints`, `kbLegend`) print where they fit the top face at >= 10 px (the F-row all or none, a lit key never blanked); at a phone's or the
+  600x520 box's pitch only the arrow glyphs print and the rows name every key. Callouts (`keyCallouts` / `kbPlan` / `kbCross` / `kbFit`): BACK on
+  ESC and MOVE on the arrows with FIXED tags, each action on its key; a left-edge key runs straight left, the top rows up through the key gaps
+  and the bottom rows down, jogging along a row gap to a clear column line when boxed in; labels tier out so no leader crosses a leader, a
+  label or a foreign key, else the board draws no leaders. Store `nb.controls.v1` (KEEP); invalid data
   loads that device's defaults, an off-level SENSITIVITY value snaps to the nearest level, a bad `vib` never touches the binds. Keyboard defaults: BOMB SPACE (J, X silent
   aliases until BOMB moves), **THROW E** (SHIFT + BOMB still throws, never advertised), REMOTE Q, PAUSE P, ESC
   and arrows fixed. Pad defaults: BOMB SOUTH, THROW WEST, REMOTE EAST, PAUSE SELECT, START fixed; menus use the

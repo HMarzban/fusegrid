@@ -1,8 +1,8 @@
 // CONTROLS drawings (UI upgrade v202 Task 6.1 / 6.2): the round 7 controller, its leaders and states, against the appendix (section 9).
 import { readFileSync } from "node:fs";
 import { layout } from "../src/render/menudraw.js";
-import { PADG, HALF, PART_AT, drawPad, padBox, ringR } from "../src/render/padart.js";
-import { DEF_PAD, DEF_KEY, BTN, geoFor, geomOf, hitPage, rowsOf, padStates, padRing, padCallouts, padPlan, padFit, padCross, PAD_FULL } from "../src/render/controlsgeo.js";
+import { PADG, HALF, PART_AT, drawPad, padBox, ringR, KB_KEYS, KB_AT, KB_W, KB_H, keyRect, drawKeys, kbPrints, kbLegend } from "../src/render/padart.js";
+import { DEF_PAD, DEF_KEY, BTN, geoFor, geomOf, hitPage, rowsOf, padStates, padRing, padCallouts, padPlan, padFit, padCross, PAD_FULL, keyStates, keyRing, keyCallouts, kbFit, kbCross } from "../src/render/controlsgeo.js";
 import { drawControls } from "../src/render/controlsdraw.js";
 import { worldTokens, CONST } from "../src/render/kit/tokens.js";
 import { setTextScale } from "../src/render/kit/type.js";
@@ -32,7 +32,7 @@ function rec(o = {}) {
     bezierCurveTo() { log.push("bz"); }, quadraticCurveTo() { log.push("q"); },
     fill() { log.push("f" + (typeof c.fillStyle === "string" ? c.fillStyle : "grad")); }, stroke() { log.push("k" + (typeof c.strokeStyle === "string" ? c.strokeStyle : "grad")); },
     fillRect() { log.push("fr"); }, strokeRect() { log.push("sr"); }, drawImage() { log.push("img"); },
-    measureText(s) { return { width: String(s).length * (+/([\d.]+)px/.exec(c.font)[1]) * 0.6 }; },
+    measureText(s) { log.push("mt"); return { width: String(s).length * (+/([\d.]+)px/.exec(c.font)[1]) * 0.6 }; },
     fillText(s, x, y) { texts.push({ s: String(s), x: tx + sx * x, y: ty + sx * y, px: +/([\d.]+)px/.exec(c.font)[1] * sx, fill: c.fillStyle }); log.push("x" + s); },
   };
   Object.defineProperty(c, "fillStyle", set("fill")); Object.defineProperty(c, "strokeStyle", set("stroke"));
@@ -188,18 +188,83 @@ const M = (ts) => ({ pri: 13 * ts, sec: 11 * ts, wOf: (s, px) => s.length * px *
 check("the drawing routes a leader for every button the model accepts", BINDABLE.every((id) => PART_AT[id]), BINDABLE.join());
 
 // ---- a steady frame blits the cached drawing ----
+/* the page chrome's own measureText per steady frame (CONSOLE PANEL rows, kicker, foot, rule): base c1f9bd9 made 34 (controller) / 26 (keyboard); the
+   keyboard tab now counts its rule lines once, as the controller tab always did (+1). The drawings themselves measure only when their fit changes. */
+const MT_ROWS = { controller: 34, keyboard: 27 };
 {
   const made = [];
   globalThis.OffscreenCanvas = class { constructor(w, h) { this.width = w; this.height = h; made.push(this); } getContext() { return rec({ grad: true }).c; } };
   try {
     cache.release();
-    const frame = () => { const r = rec({ grad: true, getTransform: 2 }); drawControls(r.c, DESK, padV(), { level: 1 }); return r; };
-    frame();
-    const m0 = cache._dbg.misses, r = frame();
-    check("a steady CONTROLS frame: 0 cache misses, the drawing one blit, <= 400 canvas calls", cache._dbg.misses === m0 && r.log.filter((q) => q === "img").length === 1 && r.log.length <= 400, r.log.length);
+    for (const [tab, v] of [["controller", padV()], ["keyboard", keyV()]]) {
+      const frame = () => { const r = rec({ grad: true, getTransform: 2 }); drawControls(r.c, DESK, v, { level: 1 }); return r; };
+      frame();
+      const m0 = cache._dbg.misses, r = frame(), mt = r.log.filter((q) => q === "mt").length;
+      console.log("    (" + tab + " steady frame: " + r.log.length + " calls, " + mt + " measureText)");
+      check("a steady CONTROLS frame, " + tab + " tab: 0 cache misses, the drawing one blit, <= 400 canvas calls", cache._dbg.misses === m0 && r.log.filter((q) => q === "img").length === 1 && r.log.length <= 400, r.log.length);
+      check("the drawing measures nothing on a steady frame (" + tab + "): the page's own rows measure as before", mt === MT_ROWS[tab], mt);
+    }
     const m1 = cache._dbg.misses, w = rec({ grad: true, getTransform: 2 }); drawControls(w.c, DESK, padV({ row: 2 }), { level: 1 });
     check("a row move re-blits the same layer: the ring is live, no miss", cache._dbg.misses === m1);
   } finally { delete globalThis.OffscreenCanvas; cache.release(); setTextScale(1); }
+}
+
+// ---- THE KEYBOARD (Task 6.2, appendix 9.3) ----
+{
+  const at = (id) => KB_AT[id];
+  const W = { Tab: 1.5, CapsLock: 1.75, ShiftLeft: 2.25, ShiftRight: 2.75, Enter: 2.25, Backspace: 2, Space: 6.25, Escape: 1.5, ControlLeft: 1.75, AltLeft: 2, AltRight: 2, Fn: 1.25, ControlRight: 1.75, Backslash: 1.5 };
+  check("key widths per the appendix: TAB 1.5, CAPS 1.75, SHIFT 2.25 / 2.75, ENTER 2.25, BACKSPACE 2, SPACE 6.25, ESC 1.5", Object.entries(W).every(([id, w]) => at(id) && at(id).w === w), Object.entries(W).filter(([id, w]) => !at(id) || at(id).w !== w).map(([id]) => id).join());
+  const rows = {};
+  for (const q of KB_KEYS) if (!q.id.startsWith("Arrow")) rows[q.y] = Math.max(rows[q.y] || 0, q.x + q.w);
+  check("the F-row ends at 15 and every main row spans 15 units; the board is 18.5 x 6.5", Object.values(rows).every((v) => v === 15) && KB_W === 18.5 && KB_H === 6.5, JSON.stringify(rows));
+  check("the F-row is ESC, a 0.5 gap, then 4-4-4 groups with 0.5 gaps", at("F1").x === 2 && at("F4").x === 5 && at("F5").x === 6.5 && at("F8").x === 9.5 && at("F9").x === 11 && at("F12").x === 14);
+  check("the stagger: Q from 1.5, A from 1.75, Z from 2.25", at("KeyQ").x === 1.5 && at("KeyA").x === 1.75 && at("KeyZ").x === 2.25 && at("Space").x === 3.75);
+  const ar = ["ArrowUp", "ArrowLeft", "ArrowDown", "ArrowRight"].map(at);
+  check("the arrows: an inverted T after a 0.5 u gap", ar.map((q) => q.x + "," + q.y).join(" ") === "16.5,4.5 15.5,5.5 16.5,5.5 17.5,5.5" && at("ArrowLeft").x - (at("ControlRight").x + at("ControlRight").w) === 0.5 && ar.every((q) => q.w === 1));
+  const g = (k) => Math.max(2, 0.1 * k), r = keyRect(at("Space"), 30);
+  check("a key's rect: (x k + g/2, y k + g/2), (w k - g) x (k - g)", r.x === 3.75 * 30 + g(30) / 2 && r.y === 5.5 * 30 + g(30) / 2 && r.w === 6.25 * 30 - g(30) && r.h === 30 - g(30));
+
+  const lit = keyStates(keyV());
+  check("bound keys lit: SPACE, E, Q, P, W A S D, the fixed ESC and arrows; J, X and ENTER never", ["Space", "KeyE", "KeyQ", "KeyP", "KeyW", "KeyA", "KeyS", "KeyD", "Escape", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].every((q) => lit[q] === "lit") && !lit.KeyJ && !lit.KeyX && !lit.Enter && !lit.KeyK);
+  check("a rebind lights the new key, not the old", keyStates(keyV({ key: { ...DEF_KEY, THROW: "KeyZ" } })).KeyZ && !keyStates(keyV({ key: { ...DEF_KEY, THROW: "KeyZ" } })).KeyE);
+  check("the ring follows the row: SPACE on BOMB, W on MOVE, ENTER on CONFIRM, ESC on BACK, none on RESET", keyRing(keyV(), "BOMB") === "Space" && keyRing(keyV(), "MOVE") === "KeyW" && keyRing(keyV(), "CONFIRM") === "Enter" && keyRing(keyV(), "BACK") === "Escape" && keyRing(keyV(), "RESET") === null);
+  for (const lv of [1, 2, 8]) {
+    const t = worldTokens(lv), d = rec();
+    drawKeys(d.c, 0, 0, 30, { tok: t, lit, ring: "Space", prints: kbPrints(30, lit, (s, px) => s.length * px * 0.6), px: kbLegend(30) });
+    const sp = keyRect(at("Space"), 30), face = "f" + t.lit, off = "f" + t.key;
+    check("world " + lv + ": lit keys in the brick, the rest the quiet key, the ring on SPACE", d.log.includes(face) && d.log.includes(off) && d.log.includes("k" + CONST.ink) && d.texts.some((x) => x.s === "SPACE" && x.fill === CONST.dk) && d.texts.some((x) => x.s === "G" && x.fill === CONST.off));
+  }
+  const C = keyCallouts(keyV());
+  check("callouts: BACK ESC FIXED, REMOTE Q, THROW E, PAUSE P, BOMB SPACE, MOVE W A S D, MOVE ARROWS FIXED", C.map((q) => q.act + ":" + q.pos.join("") + (q.tag ? ":FIXED" : "")).join() === "BACK:ESC:FIXED,REMOTE:Q,THROW:E,PAUSE:P,BOMB:SPACE,MOVE:W A S D,MOVE:ARROWS:FIXED", C.map((q) => q.act + ":" + q.pos.join("")).join());
+  check("a key off the drawing has no callout and draws no crash", !keyCallouts(keyV({ key: { ...DEF_KEY, THROW: "Numpad7" } })).some((q) => q.act === "THROW"));
+  const G = geoFor(DESK, false, false), A = { w: G.pane.w - 12, h: G.art.h - 13 };
+  for (const ts of [1, 1.25]) {
+    const F = kbFit(A.w, A.h, C, M(ts));
+    check("desk 1366x768 at text " + ts + ": the board draws every callout, prints its legends (k " + F.k + ")", !!F.plan && F.plan.labels.length === 7 && !kbCross(F.plan).length && kbLegend(F.k, ts) >= 10, F.plan && kbCross(F.plan).join());
+    const fx = F.plan && F.plan.labels.filter((l) => l.lines.some((x) => x.tag)).map((l) => l.grp).sort().join();
+    check("FIXED tags on BACK (ESC) and the arrows, nowhere else: text " + ts, fx === "ArrowDown,Escape", fx);
+  }
+  let bad = [], drawn = 0, n = 0;
+  const codes = ["KeyQ", "KeyE", "KeyP", "KeyZ", "KeyM", "Digit1", "Digit0", "Space", "ShiftLeft", "Slash", "KeyJ", "Tab", "Backquote", "Semicolon", "KeyI"];
+  for (const B of codes) for (const T of codes) for (const R of codes) for (const P of codes) {
+    if (new Set([B, T, R, P]).size < 4 || [B, T, R, P].some((q) => DEF_KEY.MOVE.includes(q))) continue;
+    n++;
+    const F = kbFit(A.w, A.h, keyCallouts(keyV({ key: { ...DEF_KEY, BOMB: B, THROW: T, REMOTE: R, PAUSE: P } })), M(1));
+    if (!F.plan) continue;
+    drawn++;
+    const x = kbCross(F.plan);
+    if (x.length) bad.push([B, T, R, P].join("/") + ": " + x[0]);
+  }
+  check("rebinds: no drawn leader crosses another or runs through a key (" + drawn + " of " + n + " drawn with leaders)", !bad.length && drawn > n * 0.5, bad.slice(0, 3).join(" | "));
+  for (const [nm, Lx, touch, narrow, scale] of BOXES) {
+    const v = keyV(), r = rec(); drawControls(r.c, Lx, v, { touch, narrow, scale, level: 1 });
+    const Gx = geoFor(Lx, touch, narrow, scale), rowsTxt = r.texts.filter((t) => t.x < (Gx.pane && !narrow ? Gx.pane.x : Infinity) || narrow && t.y > Gx.list.rows[0].y0).map((t) => t.s).join(" ");
+    const printed = r.texts.filter((t) => t.fill === CONST.dk).map((t) => t.s);
+    const named = ["WASD", "ARROWS", "SPACE", "E", "Q", "ESC", "P", "ENTER"].every((w) => rowsTxt.includes(w));
+    check("where the board prints no legends, the rows name every bound key: " + nm, printed.length || named, printed.join() + " / " + rowsTxt.slice(0, 80));
+  }
+  const ph = rec(); drawControls(ph.c, layout(436, 946), keyV(), { touch: true, narrow: true, scale: 0.9, level: 1 });
+  check("the phone column's board prints only the arrow glyphs (no legend at its pitch)", !ph.texts.some((t) => t.fill === CONST.dk || t.fill === CONST.off));
 }
 
 console.log(fail ? `PADART FAIL (${pass} pass, ${fail} fail)` : `PADART OK (${pass} pass)`);
