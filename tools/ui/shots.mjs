@@ -4,7 +4,8 @@
 
    node tools/ui/shots.mjs [flags]
      --screens a,b    screens to capture (default all): title, menu, level, options (alias settings), graphics, controls, guide, howto, items,
-                      enemies, floor, scores, stats, statsreset (STATS armed), medals, pause, win, lose, play; captured in that canonical order
+                      enemies, floor, scores, stats, statsreset (STATS armed), medals, scoresfull / statsfull (a seeded cabinet,
+                      __GAME__.seedRecords()), pause, win, lose, play; captured in that canonical order
                       whatever the order given
      --look 2d,px,3d  art styles (default 2d); one page load per look and world
      --world 1,2,8    worlds, levels 1..8 (default 1): app.level before the title (6..8 also open rooms 6-8, app.pactUnlocked, as after a first CLEAR);
@@ -188,6 +189,7 @@ async function group(c, port, a, look, world, rep) {
         continue;
       }
       await ev("(window.__GAME__.reset(),true)");
+      if (R.seed === "records" && !(await ev("!!(window.__GAME__.seedRecords&&window.__GAME__.seedRecords())"))) warn("no __GAME__.seedRecords: " + s + " shows a fresh profile");
       let ok = true;
       for (const [field, rows, labels] of [["cursor", "m.ITEMS", R.menu], ["optRow", "a.optRows()", R.opt], ["guideRow", "m.GUIDE_ROWS", R.guide]]) {
         if (!labels || !ok) continue;

@@ -355,7 +355,7 @@ export function createMenuApp(opts = {}) {
         case "KeyE":
           if (isRecords(this.screen)) this.prevConfirm = true; // one press, one action: a Q / E that is also the rebound confirm (BOMB) only steps the tab here
           return this.recTab(code === "KeyQ" ? -1 : 1);
-        case "KeyT": // STATS' T MEDALS: the MEDALS tab
+        case "KeyT": // STATS' T: the MEDALS tab (the controller foot's MEDALS NORTH)
           return this.screen === SCREEN.STATS ? this.recTab(1) : false;
         case "KeyR":
           if (this.screen !== SCREEN.STATS) return false;

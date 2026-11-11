@@ -35,6 +35,10 @@ const ROWS = {
   stats: { menu: ["RECORDS"], key: "KeyE", wait: "records", state: "STATS", exempt: { locked: "STATS from a fresh profile draws no level course (no run is saved), the one place a locked level shows as a wall cell" } }, // v202 Task 4.2
   statsreset: { menu: ["RECORDS"], key: ["KeyE", "KeyR"], wait: "records", state: "STATS", exempt: { locked: "the armed STATS page from a fresh profile draws no level course (no run is saved)" } }, // STATS armed: the confirm plate
   medals: { menu: ["RECORDS"], key: ["KeyE", "KeyE"], wait: "records", state: "TROPHIES", exempt: { locked: "MEDALS shows no locked value: a medal not yet earned is a goal tile, read-only, never a wall cell" } },
+  /* v202 fix round 1: a played-looking cabinet (window.__GAME__.seedRecords(), debug only) for a FILLED SCORES table, badges and a STATS hero; after
+     the fresh-profile pages, since the seeded storage stays for the rest of the page load */
+  scoresfull: { menu: ["RECORDS"], seed: "records", wait: "records", state: "SCORES", exempt: { locked: "SCORES shows no locked value: the badges not yet earned are lock tags on a dark chip, not wall cells, and every key is open" } },
+  statsfull: { menu: ["RECORDS"], seed: "records", key: "KeyE", wait: "records", state: "STATS" },
   play: { run: "play", state: "PLAY", settle: 900 },
   pause: { run: "pause", state: "PAUSE", settle: 300 },
   win: { run: "win", state: "WIN", settle: 1800 },

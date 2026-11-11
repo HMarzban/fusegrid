@@ -91,6 +91,15 @@ check("RECORDS' tabs: SCORES · STATS · MEDALS, frozen, in tab order; the hint 
   check("words.js RESET_GROUP is keyed by exactly reset.js's CLEAR and KEEP stores; RESET_DEFAULT is the sentence over those lists (STATS' armed plate)",
     J(Object.keys(W.RESET_GROUP).sort()) === J([...CLEAR_KEYS, ...KEEP_KEYS].sort()) && W.RESET_DEFAULT === W.resetSentence(CLEAR_KEYS, KEEP_KEYS) &&
       W.RESET_DEFAULT === "Erases every score, best, time, daily try, ghost, medal, badge and stat, shows the first-time tips again and locks levels 6–8, modifiers and time trial again. Keeps your settings, game speed, analytics choice and controls.");
+  /* fix round 1: no silent drop. Every group has words (RESET_WORDED; resetSentence throws on one without), and each store alone, in CLEAR or in KEEP,
+     prints a sentence that names it */
+  const groups = [...new Set(Object.values(W.RESET_GROUP))], quiet = [];
+  for (const [k, gr] of Object.entries(W.RESET_GROUP)) {
+    const c = W.resetSentence([k], []), kp = W.resetSentence([], [k]), word = gr === "tips" ? /tips/ : gr === "locks" ? /levels 6–8|unlocked levels/ : new RegExp(gr);
+    if (!c || !word.test(c) || !/^[A-Z]/.test(c)) quiet.push("CLEAR " + k);
+    if (!kp || !word.test(kp) || !/^Keeps your /.test(kp)) quiet.push("KEEP " + k);
+  }
+  check("resetSentence names every group whichever list it is in (no silent drop); every RESET_GROUP group has words", quiet.length === 0 && groups.every((g) => W.RESET_WORDED.includes(g)), quiet.join(" | "));
 }
 check("the RECORDS feet build their TAB and DIFFICULTY words from words.js (keycap glyphs stay with the painter)", RP.footItems("scores", "tabs", wordsOf("key", DEF_CONTROLS))[0].t === W.LABEL.TAB && RP.footItems("scores", "body", wordsOf("key", DEF_CONTROLS))[0].t === W.LABEL.DIFFICULTY && RP.footItems("stats", "tabs", wordsOf("key", DEF_CONTROLS))[2].t === W.LABEL.TAB);
 check("PAUSE rows: RESUME, SETTINGS, RESTART, QUIT TO MENU (design record §4, Task 2.4); scenes' copy mirrors it", J(PAUSE_ITEMS) === J(["RESUME", W.LABEL.SETTINGS, "RESTART", "QUIT TO MENU"]) && J(PAUSE_ROWS) === J(PAUSE_ITEMS));

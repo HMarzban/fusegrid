@@ -147,7 +147,7 @@ export function mountAnalytics(env) {
     const disarm = () => { const g = e.get && e.get(); if (g && g.app) g.app.resetArm = false; }; // an answer is input that is not the second R: it cancels an armed STATS reset
     tap(".yes", () => { disarm(); set(1); });
     tap(".no", () => { disarm(); set(0); });
-    card.addEventListener("pointerdown", (ev) => ev.stopPropagation());
+    card.addEventListener("pointerdown", (ev) => { ev.stopPropagation(); disarm(); }); // a tap on the card's body or its Privacy link stops here: input that is not the second R
     card.addEventListener("pointerup", (ev) => ev.stopPropagation());
     doc.body.appendChild(card);
     /* Y / N answer while it shows; every other key goes on to the game */

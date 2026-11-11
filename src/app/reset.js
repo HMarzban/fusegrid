@@ -27,3 +27,20 @@ export function clearCabinet(store) {
     try { st.removeItem(k); } catch (_) {}
   }
 }
+
+/* The inline load-failure card (index.html #load, the boot and FLOOR TILES card) answers its own keys and taps ahead of the game (its window
+   capture keydown runs first and stops Enter / Escape; its plate stops pointerdown). An answer there is input that is not the second R, so it
+   cancels an armed STATS reset (v202 fix round 1): a document capture listener for any pointer, click or key event whose target is inside #load
+   (taps on RETRY / USE CLASSIC 2D, a focused button's own Enter), and the two buttons' onclick, which the card's Enter / Escape and a
+   controller's SOUTH / EAST all call, wrapped to disarm first. No #load (Node, a page without the loader): nothing. */
+export function guardLoadCard(doc, disarm) {
+  const E = doc && typeof doc.getElementById === "function" ? doc.getElementById("load") : null;
+  if (!E || typeof doc.addEventListener !== "function") return false;
+  const inCard = (t) => !!t && (t === E || (typeof E.contains === "function" && E.contains(t)));
+  for (const ty of ["pointerdown", "pointerup", "click", "keydown"]) doc.addEventListener(ty, (e) => { if (e && inCard(e.target)) disarm(); }, true);
+  for (const id of ["loadretry", "loadkeep"]) {
+    const b = doc.getElementById(id), f = b && b.onclick;
+    if (typeof f === "function") b.onclick = function (...a) { disarm(); return f.apply(this, a); };
+  }
+  return true;
+}

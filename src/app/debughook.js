@@ -10,6 +10,28 @@
 import { CFG } from "../core/config.js";
 import { loadLevel, step } from "../core/sim.js";
 import { SCREEN } from "./menuapp.js";
+import { recordScore, saveScores } from "./highscores.js";
+import { recordBest, saveBests } from "./bests.js";
+import { saveMedals } from "./medals.js";
+import { savePlaques } from "./plaques.js";
+import { clampStats, saveStats } from "./stats.js";
+
+/* seedRecords (v202 fix round 1, for tools/ui/shots.mjs's scoresfull / statsfull captures): a played-looking cabinet written through the stores'
+   own savers, so RECORDS draws a FILLED table, badges, medals and a STATS hero. One bucket's best score (8,120 on HARD) comes from a level-3 run
+   while another bucket reached level 5, so the page's BEST SCORE and FURTHEST LEVEL read as the two separate maxima they are. Debug only. */
+export function seedRecords(store) {
+  let list = [];
+  const P = [0, 1, 0, 3, 7, 0, 5, 2, 0, 15];
+  for (let i = 0; i < 10; i++) list = recordScore(list, { s: 9640 - i * 731, l: 8 - (i % 6), d: "2026-11-" + String(10 - i).padStart(2, "0"), p: P[i] });
+  saveScores(list, store);
+  let b = {};
+  for (const [k, sc, r] of [["0:0:1", 4820, 5], ["1:0:1", 8120, 3], ["2:0:1", 3100, 2], ["1:5:2", 6200, 4]]) b = recordBest(b, k, sc, r);
+  saveBests(b, store);
+  saveMedals(0b10100101, store);
+  savePlaques(0b0101, store);
+  saveStats(clampStats({ a: { runs: 47, secs: 11520, rooms: 132, kills: 588, picks: 214, deaths: 61, days: 9, sessions: 5, first: "2026-11-01", last: "2026-11-10" } }), store);
+  return true;
+}
 
 const SCREEN_NAME = [
   "BOOT",
@@ -80,6 +102,7 @@ export function mountDebugHook(h) {
     },
     canvas: h.canvas,
     ui: h.ui || null,
+    seedRecords: () => seedRecords(),
   };
   window.__pause = h.onPause;
   window.__resume = () => {

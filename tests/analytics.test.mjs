@@ -250,5 +250,14 @@ for (const how of ["KeyY", "KeyN", ".yes", ".no"]) {
   check("gap 2: armed STATS, the consent card answered by " + how + ": the answer lands and the reset is cancelled", app.resetArm === false && ga.consent === (/Y|yes/.test(how) ? 1 : 0), app.resetArm + "/" + ga.consent);
 }
 
+// fix round 1: a tap on the card's body or its Privacy link (it stops at the card) cancels the reset too, and answers nothing
+{
+  const D = mkDom(), app = { screen: SCREEN.STATS, resetArm: true };
+  const ga = mountAnalytics({ id: ID, store: mkStore(), win: D.win, doc: D.doc, loc: LOC, get: () => ({ app, SCREEN }) });
+  ga.tick();
+  D.card().fire("pointerdown", ptr());
+  check("armed STATS: a tap on the consent card's body or Privacy link cancels the reset and answers nothing", app.resetArm === false && ga.consent !== 0 && ga.consent !== 1, app.resetArm + "/" + ga.consent);
+}
+
 console.log("\n  ANALYTICS RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);

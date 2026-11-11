@@ -78,16 +78,18 @@ function medalsBody(dv, ts, iw, cols = iw >= 640 ? 2 : 1, lines = 2, c = 0) {
   const tiles = Array.from({length: 8}, (_, i) => R((i % cols) * (tw + gap), y0 + Math.floor(i / cols) * (th + gap), tw, th));
   return {count: R(0, 0, iw, cnt), tiles, cols, pad, lines, h: y0 + n * th + (n - 1) * gap};
 }
-/* STATS (Task 4.2): the hero (BEST RUN, the qualifier on up to two lines, the score in brick digits, the level course, REACHED LEVEL n · WORLD), three
+/* STATS (Task 4.2): the hero (BEST SCORE, its qualifier on up to two lines, the score in brick digits; then, apart, the level course and FURTHEST
+   LEVEL n · WORLD: the stores keep the best score and the furthest level as separate maxima, so they are two facts, never one run), three
    stat tiles (RUNS, PLAY TIME, MEDALS), LIFETIME (five ledger lines), BEST BY DIFFICULTY (no modifiers, NORMAL SPEED: three two-line ledger lines, the
    level under the difficulty) and the cabinet's notes. Two columns from 700 wide (the hero and the bests left of a wall course; the tiles, LIFETIME and
    the notes right), one column below it (there the notes drop: their facts ride the copy payload and MENU's DAILY teaser). */
 export const LEDGER = Object.freeze({d: 35, p: 30});
-/* tight (a touch body too short for it, steps in order so its words keep their size): 1 the gaps close to 10, 2 the level course drops (REACHED
-   LEVEL n · WORLD still says it), 3 the LIFETIME pitch closes to 27, 4 the bests take one line each (the level after the difficulty, stepping out
-   where it would touch the score) */
+/* tight (a touch body too short for it, steps in order so its words keep their size): 1 the gaps close to 10, 2 the level course drops (FURTHEST
+   LEVEL n · WORLD still says it), 3 the LIFETIME pitch closes to 27, 4 the stat tiles tighten (a 20 px glyph, closer pads; fix round 1), 5 the bests
+   take one line each (the level after the difficulty, stepping out where it would touch the score) */
+export const TILE = Object.freeze({n: {top: 8, gs: 28, gg: 6, pad: 12}, t: {top: 6, gs: 20, gg: 3, pad: 10}});
 function statsBody(dv, ts, iw, D, narrow, tight = 0) {
-  const sec = dv.sec * ts * 1.2, pri = dv.pri * ts * 1.2, lh = Math.max(tight >= 3 ? 27 : narrow ? LEDGER.p : LEDGER.d, Math.round(dv.pri * ts * 1.5)), one = tight >= 4, lh2 = one ? lh : Math.round(dv.pri * ts * 1.15 + sec + 4), g = tight >= 1 ? 10 : narrow ? 14 : 18;
+  const sec = dv.sec * ts * 1.2, pri = dv.pri * ts * 1.2, lh = Math.max(tight >= 3 ? 27 : narrow ? LEDGER.p : LEDGER.d, Math.round(dv.pri * ts * 1.5)), one = tight >= 5, tl = tight >= 4 ? TILE.t : TILE.n, lh2 = one ? lh : Math.round(dv.pri * ts * 1.15 + sec + 4), g = tight >= 1 ? 10 : narrow ? 14 : 18;
   const L = narrow ? iw : D.statL, rx = narrow ? 0 : L + 40, rw = narrow ? iw : iw - rx;
   let y = 0;
   const kick = R(0, y, L, sec); y += sec + 4;
@@ -95,19 +97,21 @@ function statsBody(dv, ts, iw, D, narrow, tight = 0) {
   const digits = R(0, y, L, dv.sdh + 4); y += dv.sdh + 4 + 8;
   const course = tight >= 2 ? null : R(0, y, L, dv.lch + 4); if (course) y += dv.lch + 4 + 6;
   const reached = R(0, y, L, sec); y += sec;
-  const tileH = Math.round(12 + 28 + 6 + dv.hud * ts + 6 + sec), tw = (rw - 20) / 3;
+  const tileH = Math.round(tl.top + 4 + tl.gs + tl.gg + dv.hud * ts + 6 + sec), tw = (rw - 20) / 3;
   let ry = narrow ? y + g : 0;
   const tiles = [0, 1, 2].map((i) => R(rx + i * (tw + 10), ry, tw, tileH));
   ry += tileH + g;
   const lifeK = R(rx, ry, rw, sec); ry += sec + 6;
   const life = [0, 1, 2, 3, 4].map((i) => R(rx, ry + i * lh, rw, lh)); ry += 5 * lh;
-  let by = narrow ? ry + g : y + g;
-  /* the kicker breaks once (BEST BY DIFFICULTY / NO MODIFIERS · NORMAL SPEED) on a narrow body and at 125 % (one line there ran past the column into
-     the wall course); at 100 % it keeps the mock's one line */
-  const bk = narrow || ts > 1 ? 2 : 1, bestK = R(0, by, L, bk * sec); by += bk * sec + 6;
+  /* the kicker breaks once (BEST BY DIFFICULTY / NO MODIFIERS · NORMAL SPEED) wherever its width at the recorder's generous 0.648 em (0.6 + 8 %)
+     passes its column, 100 % included (fix round 1: one line ran into the wall course); the plan then draws one line only where it measures inside
+     the column. Broken on a two-column desk, the gap above it closes to 12 so the 1366 x 768 frame still fits unscaled */
+  const bk = narrow || bestKick().join(" · ").length * 0.648 * dv.sec * ts > L ? 2 : 1;
+  let by = narrow ? ry + g : y + (bk === 2 && g > 12 ? 12 : g);
+  const bestK = R(0, by, L, bk * sec); by += bk * sec + 6;
   const best = [0, 1, 2].map((i) => R(0, by + i * lh2, L, lh2)); by += 3 * lh2;
   const notes = narrow ? null : R(rx, ry + 12, rw, 3 * sec), h = narrow ? by : Math.max(by, ry + 12 + 3 * sec);
-  return {kick, qual, digits, course, reached, tiles, lifeK, life, bestK, bk, best, one, notes, lh, lh2, div: narrow ? null : R(L + 18, 0, 3, h), narrow, h};
+  return {kick, qual, digits, course, reached, tiles, tl, lifeK, life, bestK, bk, best, one, notes, lh, lh2, div: narrow ? null : R(L + 18, 0, 3, h), narrow, h};
 }
 const bestKick = () => [ST.BY_DIFF, RW.NO_MODS + " · " + speedTag(0)];
 /* the armed reset's confirm plate (appendix 7.3) inside the pane: desk centred, 700 wide (680 at 125 %), its keys side by side (stacked at 125 %); touch at
@@ -151,9 +155,9 @@ function bodiesAt(dv, ts, iw, D, row, bx, by, avail, c = 0, st0 = 0) {
   /* STATS: on a touch box COPY STATS and RESET sit under the body at their size; the body above them scales into what is left */
   const actH = avail > 0 ? DEV.p.btnh : 0, room = avail > 0 ? avail - actH - 14 : 0, narrow = iw < 700;
   let tt = st0, st = statsBody(dv, ts, iw, D, narrow, tt), sk = 1;
-  for (let t = tt + 1; room > 0 && st.h > room && t <= 3; t++) st = statsBody(dv, ts, iw, D, narrow, tt = t);
-  /* step 4 (one-line bests) only where it makes the body fit; a body that must scale anyway keeps its two-line bests and every level */
-  if (room > 0 && st.h > room) { const s4 = statsBody(dv, ts, iw, D, narrow, 4); if (s4.h <= room) st = s4; }
+  for (let t = tt + 1; room > 0 && st.h > room && t <= 4; t++) st = statsBody(dv, ts, iw, D, narrow, tt = t);
+  /* step 5 (one-line bests) only where it makes the body fit; a body that must scale anyway keeps its two-line bests and every level */
+  if (room > 0 && st.h > room) { const s5 = statsBody(dv, ts, iw, D, narrow, 5); if (s5.h <= room) st = s5; }
   if (room > 0 && st.h > room) { sk = room / st.h; st = statsBody(dv, ts, iw / sk, D, (iw / sk) < 700, tt); }
   out.stats = place(st, bx, by, sk);
   if (actH) { const cw = Math.round((iw - 12) * 0.58); out.stats.acts = {copy: R(bx, by + avail - actH, cw, actH), reset: R(bx + cw + 12, by + avail - actH, iw - cw - 12, actH)}; }
@@ -163,8 +167,9 @@ function bodiesAt(dv, ts, iw, D, row, bx, by, avail, c = 0, st0 = 0) {
 /* the desk gives way before it scales (as MENU's): SHORT[sl] for sl = 0.. in order, the first that fits the box at u 1 wins, else the last scales as
    one piece. 1 the margins close (the plate's ring 18 from the top, the foot 10 under the plate, 4 under it); 2 the plate's and the pane's pads and the
    head's gaps close; 3 the bodies tighten (SCORES' rows 24 and badge gaps 8, MEDALS' gaps 4 and pads 5, STATS' gaps 10); 4 STATS' level course drops
-   (REACHED LEVEL n · WORLD still says it); 5 the MENU kicker drops (the title stays) and STATS' LIFETIME pitch closes; 6 STATS' bests take one line.
-   Steps 4 to 6 take something away, so they are used only where they make the page fit (u >= FIT_U, inside the text floors' tolerance); a box that
+   (FURTHEST LEVEL n · WORLD still says it); 5 the MENU kicker drops (the title stays) and STATS' LIFETIME pitch closes; 6 STATS' tiles tighten;
+   7 STATS' bests take one line.
+   Steps 4 to 7 take something away, so they are used only where they make the page fit (u >= FIT_U, inside the text floors' tolerance); a box that
    must scale anyway (#c's 600 x 520, the iso guard) scales at step 3, every word kept. A narrower window narrows the plate first, down to 40 px under
    the mock's (the bodies keep their columns), then scales. */
 const SHORT = deep([
@@ -175,6 +180,7 @@ const SHORT = deep([
   {top: 18, foot: 10, bot: 4, pad: [10, 12], gap: 6, pg: 6, pane: [12, 12], c: 1, st: 2, kick: true},
   {top: 18, foot: 10, bot: 4, pad: [10, 12], gap: 6, pg: 6, pane: [12, 12], c: 1, st: 3, kick: false},
   {top: 18, foot: 10, bot: 4, pad: [10, 12], gap: 6, pg: 6, pane: [12, 12], c: 1, st: 4, kick: false},
+  {top: 18, foot: 10, bot: 4, pad: [10, 12], gap: 6, pg: 6, pane: [12, 12], c: 1, st: 5, kick: false},
 ]);
 export const PW_GIVE = 40, FIT_U = 0.995, KEEP_SL = 3;
 function deskAt(F, t125, sl) {
@@ -269,9 +275,10 @@ export function scoresHit(x, y, F) {
   if (footHit(G, dx, dy) === "back") return -1; // the foot's BACK label (its words and keycap) backs out; the rest of the plaque is inert
   return onPlate(G, dx, dy) ? -2 : -1;
 }
-/* the desk foot's tap zones: each item from its label to its last keycap, on the foot painted for this geometry (the last plan) */
-function footHit(G, dx, dy) {
-  const S0 = S, q = S0 && S0.G === G && S0.feet ? S0.feet.find((f) => f.v === S0.fv) : null;
+/* the desk foot's tap zones: each item from its label to its last keycap, on the foot painted for this geometry (the last plan). A zone answers only
+   when the painted foot's armed state is the one asked (fix round 1): a second click that lands before the armed frame paints reads no idle RESET */
+function footHit(G, dx, dy, arm = false) {
+  const S0 = S, q = S0 && S0.G === G && S0.feet && (S0.fv === "arm") === !!arm ? S0.feet.find((f) => f.v === S0.fv) : null;
   if (!q || dy < q.fp.y || dy > q.fp.y + q.fp.h) return null;
   for (const z of q.fp.zones) if (dx >= z.x0 - 6 && dx <= z.x1 + 6) return z.key || null;
   return null;
@@ -281,7 +288,7 @@ function footHit(G, dx, dy) {
 export function statsHit(x, y, F, arm) {
   if (!okBox(F)) return arm ? "cancel" : "back";
   const G = recordsGeom(F), [dx, dy] = toD(G, x, y), d = G.d;
-  if (arm) return inR(d.confirm.again, dx, dy) ? "KeyR" : inR(d.confirm.copy, dx, dy) ? "KeyC" : footHit(G, dx, dy) || "cancel";
+  if (arm) return inR(d.confirm.again, dx, dy) ? "KeyR" : inR(d.confirm.copy, dx, dy) ? "KeyC" : footHit(G, dx, dy, true) || "cancel";
   if (inR(d.back, dx, dy)) return "back";
   const a = d.bodies.stats.acts;
   if (a && inR(a.copy, dx, dy)) return "KeyC";
@@ -546,8 +553,8 @@ function statsPlan(c, G, ui) {
   if (b.notes) for (const n of ui.notes || []) { const ls = wrap(c, sf, String(n), b.notes.w / k, 3) || []; for (const l of ls) if (notes.length < 3) notes.push(l); }
   const conf = d.confirm, fk = conf.fk, cf = T.body(dv.bod * fk), sentence = resetSentence(ui.wipe ? ui.wipe[0] : null, ui.wipe ? ui.wipe[1] : null) || RESET_DEFAULT;
   const titleF = T.display(dv.ttl * 0.72 * fk), tl = wrap(c, titleF, ST.TITLE, conf.title.w - 34, conf.tl) || [ST.TITLE];
-  const bk2 = bestKick(), bk = bk2.join(" · "), bestK = b.bk === 1 || W(c, sf, bk) <= b.bestK.w / k ? [bk] : bk2;
-  return {bestK, hero: h, qual, digits: h ? [...sep3(h.s)] : [], reached: h ? ST.REACHED + " " + h.r + " · " + biomeOf(h.r).name : "", life, bests, top, notes,
+  const bk2 = bestKick(), bk = bk2.join(" · "), bestK = W(c, sf, bk) <= b.bestK.w / k ? [bk] : bk2;
+  return {bestK, hero: h, qual, digits: h ? [...sep3(h.s)] : [], far: h && v.far >= 1 ? v.far | 0 : 0, reached: h && v.far >= 1 ? ST.FURTHEST + " " + (v.far | 0) + " · " + biomeOf(v.far | 0).name : "", life, bests, top, notes,
     tiles: [[ST.RUNS, sep3(v.runs | 0), "bomb"], [ST.PLAY_TIME, hm(v.secs), "clock"], [ST.MEDALS, (v.medals | 0) + "/8", "medal"]],
     confirm: {title: tl, body: wrap(c, cf, sentence, conf.body.w, conf.bl) || [sentence], sentence, tf: titleF}};
 }
@@ -564,7 +571,7 @@ function statsStatic(c, G, P, ui, tok) {
   c.save(); c.translate(b.x, b.y); c.scale(k, k); c.translate(-b.x, -b.y);
   const L = (r) => R(b.x + (r.x - b.x) / k, b.y + (r.y - b.y) / k, r.w / k, r.h / k), sf = T.label(dv.sec), pf = T.label(dv.pri);
   const kr = L(b.kick);
-  text(c, ST.BEST_RUN, kr.x, kr.y + kr.h / 2, sf, CONST.t2);
+  text(c, ST.BEST_SCORE, kr.x, kr.y + kr.h / 2, sf, CONST.t2);
   const qr = L(b.qual);
   if (!S.hero) text(c, ST.NO_BEST, qr.x, qr.y + dv.pri * ts * 0.6, pf, CONST.t2);
   else {
@@ -576,22 +583,23 @@ function statsStatic(c, G, P, ui, tok) {
       key(c, x, dr.y + 2, w, dv.sdh, ch === "," ? "well" : "lit", {tok, label: ch, px: dv.sdf, phone: ph});
       x += w + 4;
     }
-    const cr = b.course && L(b.course);
+    const cr = b.course && S.far && L(b.course); // the course shows the furthest level only (no run is implied by the score above it)
     if (cr) for (let r = 1; r <= 8; r++) {
-      const x0 = cr.x + (r - 1) * (dv.lcw + 5), kind = r < S.hero.r ? "lit" : r === S.hero.r ? "key" : r > 5 && !ui.unlocked ? "wall" : "well";
+      const x0 = cr.x + (r - 1) * (dv.lcw + 5), kind = r < S.far ? "lit" : r === S.far ? "key" : r > 5 && !ui.unlocked ? "wall" : "well";
       key(c, x0, cr.y + 2, dv.lcw, dv.lch, kind, {tok, label: kind === "wall" ? null : String(r), px: dv.pri, phone: ph});
       if (kind === "wall") ic(c, "lock", x0 + dv.lcw / 2 - 7, cr.y + 2 + dv.lch / 2 - 7, 14, CONST.off);
       if (r === 5 || r === 8) ic(c, "flag", x0 + dv.lcw - 13, cr.y + 4, 10, kind === "lit" ? CONST.dk : CONST.t2);
     }
     const rr = L(b.reached);
-    text(c, S.reached, rr.x, rr.y + rr.h / 2, sf, CONST.t2);
+    if (S.reached) text(c, S.reached, rr.x, rr.y + rr.h / 2, sf, CONST.t2);
   }
   S.tiles.forEach(([name, val, g], i) => {
     const r = L(b.tiles[i]);
     key(c, r.x, r.y, r.w, r.h, "well", {tok});
-    glyphAt(c, g, r.x + 10, r.y + 8, 28, (ui.view && ui.view.medals) > 0);
-    nums(c, val, r.x + 12, r.y + 8 + 28 + 6 + dv.hud * ts / 2, dv.hud, {col: CONST.ink});
-    text(c, name, r.x + 12, r.y + r.h - 8 - dv.sec * ts * 0.6, sf, CONST.t2);
+    const q = b.tl;
+    glyphAt(c, g, r.x + q.pad - 2, r.y + q.top, q.gs, (ui.view && ui.view.medals) > 0);
+    nums(c, val, r.x + q.pad, r.y + q.top + q.gs + q.gg + dv.hud * ts / 2, dv.hud, {col: CONST.ink});
+    text(c, name, r.x + q.pad, r.y + r.h - 8 - dv.sec * ts * 0.6, sf, CONST.t2);
   });
   const lk = L(b.lifeK);
   text(c, ST.LIFETIME, lk.x, lk.y + lk.h / 2, sf, CONST.t2);
@@ -782,7 +790,7 @@ function record(G, P, ui, foc, dpr, el, F0, tok, touchy, tap) {
   if (page === "stats") {
     const B = d.bodies.stats, S = P.stats, k = B.k, sw = (s, px) => measureOr(s, px) * k;
     if (!ui.arm) { // armed, the page under the confirm plate is dimmed and inert: not read (the mock's data-ng)
-    txt(ST.BEST_RUN, B.kick.x, B.kick.y + B.kick.h / 2, sw(ST.BEST_RUN, dv.sec), dv.sec * k, CONST.t2, "secondary");
+    txt(ST.BEST_SCORE, B.kick.x, B.kick.y + B.kick.h / 2, sw(ST.BEST_SCORE, dv.sec), dv.sec * k, CONST.t2, "secondary");
     if (!S.hero) txt(ST.NO_BEST, B.qual.x, B.qual.y + dv.pri * ts * 0.6 * k, sw(ST.NO_BEST, dv.pri), dv.pri * k, CONST.t2, "primary");
     else {
       S.qual.forEach((l, i) => txt(l, B.qual.x, B.qual.y + dv.pri * ts * (0.6 + 1.2 * i) * k, sw(l, dv.pri), dv.pri * k, CONST.ink, "primary"));
@@ -791,16 +799,17 @@ function record(G, P, ui, foc, dpr, el, F0, tok, touchy, tap) {
       for (const ch of S.digits) { const w = (ch === "," ? Math.round(dv.sdw * 0.6) : dv.sdw) * k; cells.push(R(x, B.digits.y + 2 * k - (ch === "," ? 0 : 2 * k), w, dv.sdh * k)); x += w + 4 * k; }
       cells.forEach((r, i) => { probe.rect("digit " + i, ...b(r), {fill: S.digits[i] === "," ? tok.well : tok.lit}); const w = measureOr(S.digits[i], dv.sdf) * k; txt(S.digits[i], r.x + r.w / 2 - w / 2, r.y + r.h / 2, w, dv.sdf * k, S.digits[i] === "," ? CONST.t2 : CONST.dk, "hud"); });
       const cell = (r) => R(B.course.x + (r - 1) * (dv.lcw + 5) * k, B.course.y + 2 * k, dv.lcw * k, dv.lch * k);
-      if (B.course) for (let r = 1; r <= 8; r++) probe.rect("level " + r, ...b(cell(r)), {fill: r < S.hero.r ? tok.lit : r === S.hero.r ? tok.key : tok.well});
-      if (B.course && S.hero.r > 1 && S.hero.r < 8) probe.pair("chosen", b(R(cell(1).x + 3 * k, cell(1).y + 2 * k, cell(1).w - 6 * k, 6 * k)), b(R(cell(8).x + 3 * k, cell(8).y + 6 * k, cell(8).w - 6 * k, 6 * k)), {name: "cleared vs ahead level"});
-      txt(S.reached, B.reached.x, B.reached.y + B.reached.h / 2, sw(S.reached, dv.sec), dv.sec * k, CONST.t2, "secondary");
+      if (B.course && S.far) for (let r = 1; r <= 8; r++) probe.rect("level " + r, ...b(cell(r)), {fill: r < S.far ? tok.lit : r === S.far ? tok.key : tok.well});
+      if (B.course && S.far > 1 && S.far < 8) probe.pair("chosen", b(R(cell(1).x + 3 * k, cell(1).y + 2 * k, cell(1).w - 6 * k, 6 * k)), b(R(cell(8).x + 3 * k, cell(8).y + 6 * k, cell(8).w - 6 * k, 6 * k)), {name: "cleared vs ahead level"});
+      if (S.reached) txt(S.reached, B.reached.x, B.reached.y + B.reached.h / 2, sw(S.reached, dv.sec), dv.sec * k, CONST.t2, "secondary");
     }
     S.tiles.forEach(([name, val, g], i) => {
       const r = B.tiles[i];
       probe.rect("tile " + name, ...b(r), {fill: tok.well});
-      txt(val, r.x + 12 * k, r.y + (8 + 28 + 6 + dv.hud * ts / 2) * k, nWOr(val, dv.hud) * k, dv.hud * k, CONST.ink, "hud");
-      txt(name, r.x + 12 * k, r.y + r.h - (8 + dv.sec * ts * 0.6) * k, sw(name, dv.sec), dv.sec * k, CONST.t2, "secondary");
-      probe.pair("info", b(R(r.x + 8 * k, r.y + 6 * k, 32 * k, 32 * k)), b(R(r.x + 3 * k, r.y + 1 * k, 42 * k, 42 * k)), {col: g === "medal" ? (S.tiles && (ui.view && ui.view.medals) > 0 ? CONST.medal : CONST.t2) : g === "clock" ? CONST.t2 : CONST.ink, name: "tile glyph " + name});
+      const q = B.tl;
+      txt(val, r.x + q.pad * k, r.y + (q.top + q.gs + q.gg + dv.hud * ts / 2) * k, nWOr(val, dv.hud) * k, dv.hud * k, CONST.ink, "hud");
+      txt(name, r.x + q.pad * k, r.y + r.h - (8 + dv.sec * ts * 0.6) * k, sw(name, dv.sec), dv.sec * k, CONST.t2, "secondary");
+      probe.pair("info", b(R(r.x + (q.pad - 4) * k, r.y + (q.top - 2) * k, (q.gs + 4) * k, (q.gs + 4) * k)), b(R(r.x + (q.pad - 9) * k, r.y + (q.top - 7) * k, (q.gs + 14) * k, (q.gs + 14) * k)), {col: g === "medal" ? (S.tiles && (ui.view && ui.view.medals) > 0 ? CONST.medal : CONST.t2) : g === "clock" ? CONST.t2 : CONST.ink, name: "tile glyph " + name});
     });
     txt(ST.LIFETIME, B.lifeK.x, B.lifeK.y + B.lifeK.h / 2, sw(ST.LIFETIME, dv.sec), dv.sec * k, CONST.t2, "secondary");
     const line = (r, label, sub, num, two) => {

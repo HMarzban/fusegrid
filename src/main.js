@@ -45,7 +45,7 @@ import { decodeChallenge } from "./app/code.js";
 import { createToast, copyText, endKey, toastTick, toastOf } from "./app/endkeys.js";
 import { settleMedals, medalLine, medalRows, loadMedals } from "./app/medals.js";
 import { createGhost, ghostTick, ghostAt } from "./app/ghost.js";
-import { clearCabinet, CLEAR_KEYS, KEEP_KEYS } from "./app/reset.js";
+import { clearCabinet, CLEAR_KEYS, KEEP_KEYS, guardLoadCard } from "./app/reset.js";
 import {
   loadCoachSeen,
   saveCoachSeen,
@@ -408,6 +408,7 @@ export function createGame(canvas, opts = {}) {
   };
   const toast = app.toast = createToast(); // C / B note on the WIN / LOSE overlay, C on STATS (src/app/endkeys.js)
   app.padCards = [upd.padCard, loadCard()]; setModeFocus(() => app.modeCur); // what a pad may answer (src/app/padroute.js); the MODES ring (menudraw.js)
+  if (typeof document !== "undefined") guardLoadCard(document, () => { app.resetArm = false; }); // the inline load card's answers cancel an armed reset
   /* UI key side-channel: ALWAYS routed to the shell; M-in-PAUSE records the
      score then quits to MENU (spec §4 table). Machine self-gates elsewhere. */
   input.onUiKey = (code) => {

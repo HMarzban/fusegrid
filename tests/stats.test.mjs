@@ -736,8 +736,8 @@ const TODAY = "2026-09-07";
       () => 0,
     );
     check(
-      "shellview routes SCREEN.STATS to drawStats — the RECORDS page's STATS is painted (BEST RUN, LIFETIME; Minor-7, v202 Task 4.2)",
-      texts.includes("BEST RUN") && texts.includes("LIFETIME"),
+      "shellview routes SCREEN.STATS to drawStats — the RECORDS page's STATS is painted (BEST SCORE, LIFETIME; Minor-7, v202 Task 4.2; fix round 1: BEST SCORE, never BEST RUN)",
+      texts.includes("BEST SCORE") && !texts.includes("BEST RUN") && texts.includes("LIFETIME"),
       texts.join("|"),
     );
   }

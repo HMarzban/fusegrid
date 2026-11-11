@@ -97,7 +97,7 @@ export const pickToSet = (h) => "PICK " + diffTag(h) + " ON " + LABEL.LEVEL_SELE
    main; this file cannot import src/app). RESET_GROUP names each store key's player group; tests/words.test.mjs pins its keys equal to the two lists, so
    a store that joins either list must join this table. Groups print in RESET_ORDER; the sentence names every group with at least one key in its list. */
 export const STATS_WORDS = Object.freeze({
-  BEST_RUN: "BEST RUN", REACHED: "REACHED " + LABEL.LEVEL, NO_BEST: "NO RUNS YET", LIFETIME: "LIFETIME", BY_DIFF: "BEST BY " + LABEL.DIFFICULTY,
+  BEST_SCORE: "BEST SCORE", FURTHEST: "FURTHEST " + LABEL.LEVEL, NO_BEST: "NO RUNS YET", LIFETIME: "LIFETIME", BY_DIFF: "BEST BY " + LABEL.DIFFICULTY,
   RUNS: "RUNS", PLAY_TIME: "PLAY TIME", MEDALS: "MEDALS", CLEARED: "LEVELS CLEARED", KILLS: "KILLS", PICKS: LABEL.POWER_UPS, DEATHS: "DEATHS", DAYS: "DAYS PLAYED",
   COPY: "COPY MY STATS", COPY_SHORT: "COPY STATS", RESET: "RESET", ERASE: "ERASE", COPY_ARMED: "COPY", AGAIN: "AGAIN ERASES", CANCEL: "ANY OTHER KEY CANCELS",
   TAP_CANCEL: "TAP ANYWHERE ELSE TO CANCEL", TITLE: "ERASE ALL RECORDS?", MEDALS_T: "MEDALS",
@@ -108,15 +108,21 @@ export const RESET_GROUP = Object.freeze({
   "nb.settings.v1": "settings", "nb.pace.v1": "game speed", "nb.analytics.v1": "analytics choice", "nb.controls.v1": "controls",
 });
 const ERASE_NOUNS = ["score", "best", "time", "daily try", "ghost", "medal", "badge", "stat"], KEEP_NOUNS = ["settings", "game speed", "analytics choice", "controls"];
+/* the two groups that are not nouns: how each reads when kept (fix round 1: every group prints in either list, or the sentence throws) */
+const KEEP_PHRASE = Object.freeze({tips: "first-time tips already seen", locks: "unlocked levels, modifiers and time trial"});
+export const RESET_WORDED = Object.freeze([...ERASE_NOUNS, ...KEEP_NOUNS, "tips", "locks"]);
 const andList = (a) => (a.length < 2 ? a.join("") : a.slice(0, -1).join(", ") + " and " + a[a.length - 1]);
 /** The armed reset's sentence: what clear erases, what keep keeps, each by its group (sentence case). */
 export function resetSentence(clear, keep) {
   const g = (l) => new Set((l || []).map((k) => RESET_GROUP[k]).filter(Boolean)), C = g(clear), K = g(keep);
+  for (const x of [...C, ...K]) if (!RESET_WORDED.includes(x)) throw new Error("resetSentence: no words for the group " + x + " (add it to the noun lists)");
   const er = ERASE_NOUNS.filter((n) => C.has(n)), parts = [];
   if (er.length) parts.push("erases every " + andList(er));
   if (C.has("tips")) parts.push("shows the first-time tips again");
   if (C.has("locks")) parts.push("locks levels 6–8, modifiers and time trial again");
-  const kp = [...KEEP_NOUNS, ...ERASE_NOUNS].filter((n) => K.has(n));
+  const rs = KEEP_NOUNS.filter((n) => C.has(n));
+  if (rs.length) parts.push("resets your " + andList(rs)); // a kept group moved to CLEAR is named too
+  const kp = [...KEEP_NOUNS, ...ERASE_NOUNS].filter((n) => K.has(n)).concat(Object.keys(KEEP_PHRASE).filter((n) => K.has(n)).map((n) => KEEP_PHRASE[n]));
   const s = parts.length ? parts[0][0].toUpperCase() + andList(parts).slice(1) + "." : "";
   return (s + (kp.length ? " Keeps your " + andList(kp) + "." : "")).trim();
 }

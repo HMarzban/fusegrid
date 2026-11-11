@@ -26,7 +26,7 @@ const MP = await import("../src/render/pages/menu.js");
 const md = await import("../src/render/menudraw.js");
 const W = await import("../src/render/words.js");
 const { setTextScale, DEV } = await import("../src/render/kit/type.js");
-const { CONST } = await import("../src/render/kit/tokens.js");
+const { CONST, worldTokens } = await import("../src/render/kit/tokens.js");
 const probe = await import("../src/render/kit/probe.js");
 const { ITEMS, SCREEN, createMenuApp } = await import("../src/app/menuapp.js");
 const { shellGeo, fitBox } = await import("../src/app/fit.js");
@@ -429,12 +429,13 @@ for (const b of ["d1366", "p393", "c600"]) for (const ui of [UI({ plaques: 15 })
 for (const b of ALL) for (const ts of [1, 1.25]) {
   setTextScale(ts);
   const F = BOX[b], G = RP.recordsGeom(F), { s } = snap(F, SUI({})), T = s.texts.map((t) => t.s), joined = T.join("|");
-  const want = ["BEST RUN", "8", "1", "2", "0", "REACHED LEVEL 5 · ARENA", "RUNS", "47", "PLAY TIME", "3h12m", "MEDALS", "3/8", "LIFETIME", "LEVELS CLEARED", "132", "KILLS", "588", "POWER-UPS", "214", "DEATHS", "61", "DAYS PLAYED", "9", "4,820", "8,120", "3,100", "NORMAL DIFFICULTY", "HARD DIFFICULTY", "EXPERT DIFFICULTY", "LEVEL 3"];
+  const want = ["BEST SCORE", "8", "1", "2", "0", "FURTHEST LEVEL 5 · ARENA", "RUNS", "47", "PLAY TIME", "3h12m", "MEDALS", "3/8", "LIFETIME", "LEVELS CLEARED", "132", "KILLS", "588", "POWER-UPS", "214", "DEATHS", "61", "DAYS PLAYED", "9", "4,820", "8,120", "3,100", "NORMAL DIFFICULTY", "HARD DIFFICULTY", "EXPERT DIFFICULTY", "LEVEL 3"];
   const miss = want.filter((w) => !T.includes(w)), plateBox = { x: G.plate.x, y: G.plate.y, w: G.plate.w, h: G.plate.h + (G.foot ? G.foot.y + G.foot.h - G.plate.y - G.plate.h : 0) };
   const out = s.texts.filter((t) => !inside(t, plateBox, 0.6));
   check(`STATS (${b}${ts > 1 ? " t125" : ""}): every fact drawn (the hero's qualifier, digits, course, the tiles, LIFETIME, BEST BY DIFFICULTY), inside the plate, no ellipsis`, miss.length === 0 && out.length === 0 && !/…/.test(joined) && T.some((x) => /HARD DIFFICULTY/.test(x)), J({ miss, out: out.slice(0, 3) }));
   const B = G.d.bodies.stats, kl = RP._dbg.last.P.stats.bestK, kt = kl.map((l) => s.texts.find((t) => t.s === l));
-  if (B.div && ts > 1) check(`STATS (${b} t125): the BEST BY DIFFICULTY kicker breaks once and each line ends before the wall course (one line ran into it)`, kl.length === 2 && kt.every((t) => t && t.x + t.w <= B.div.x * G.u + 0.01), J({ kl, kt, div: B.div.x * G.u }));
+  /* fix round 1: at 100 % too, measured at the recorder's +8 % width: each kicker line ends before the wall course and inside its column */
+  if (B.div) check(`STATS (${b}${ts > 1 ? " t125" : ""}): the BEST BY DIFFICULTY kicker breaks once where one line would pass its column; each line ends before the wall course`, kt.every((t) => t && t.x + t.w <= B.div.x * G.u + 0.01 && t.x + t.w <= (B.bestK.x + B.bestK.w) * G.u + 0.01) && (kl.length === 2 || kt[0].w <= B.bestK.w * G.u), J({ kl, kt, div: B.div.x * G.u }));
   const a = snap(F, SUI({ arm: true })).s, f = a.rects.find((r) => r.name === "confirm"), body = a.texts.filter((t) => t.role === "body");
   check(`STATS armed (${b}${ts > 1 ? " t125" : ""}): ERASE ALL RECORDS? and the whole sentence inside the confirm plate, AGAIN ERASES focused, COPY beside it`,
     !!f && body.map((t) => t.s).join(" ") === W.RESET_DEFAULT && body.every((t) => inside(t, f, 0.6)) && a.texts.some((t) => /ERASE ALL/.test(t.s)) && a.rects.some((r) => r.name === "AGAIN ERASES" && r.focus) && a.rects.some((r) => /^COPY/.test(r.name)), J({ f, body: body.map((t) => t.s) }));
@@ -446,21 +447,61 @@ for (const b of ALL) for (const ts of [1, 1.25]) {
 {
   const G = RP.recordsGeom(BOX.p393), B = G.d.bodies.stats, { s } = snap(BOX.p393, SUI({}));
   check("STATS on the 393x852 phone at 100 %: the body is not scaled (k 1), the course dropped, the bests keep two lines and every level",
-    B.k === 1 && B.course === null && B.one === false && !s.rects.some((r) => /^level /.test(r.name)) && ["REACHED LEVEL 5 · ARENA", "LEVEL 3"].every((w) => s.texts.some((t) => t.s === w)), J({ k: B.k, one: B.one }));
+    B.k === 1 && B.course === null && B.one === false && !s.rects.some((r) => /^level /.test(r.name)) && ["FURTHEST LEVEL 5 · ARENA", "LEVEL 3"].every((w) => s.texts.some((t) => t.s === w)), J({ k: B.k, one: B.one }));
   const PS = shellGeo(390, 844), F = { W: PS.w, H: PS.h, touch: true, shell: true, css: PS.s }, B2 = RP.recordsGeom(F).d.bodies.stats, s2 = snap(F, SUI({})).s;
   const cy = (t) => t.y + (t.h != null ? t.h : t.capH) / 2, row = (n) => s2.texts.find((t) => t.s === n);
   const bad = [["NORMAL DIFFICULTY", "4,820"], ["HARD DIFFICULTY", "8,120"], ["EXPERT DIFFICULTY", "3,100"]].filter(([l, n]) => {
     const a = row(l), z = a && s2.texts.filter((t) => /^LEVEL \d$/.test(t.s)).find((t) => Math.abs(cy(t) - cy(a)) < 4), m = a && s2.texts.filter((t) => t.s === n).find((t) => Math.abs(cy(t) - cy(a)) < 4);
     return !a || !m || (z && (z.x < a.x + a.w || z.x + z.w > m.x));
   });
-  check("STATS on a 390x844 phone at 100 %: k 1 with one-line bests; a level drawn on a best's line sits clear of its difficulty and its score", B2.k === 1 && B2.one === true && bad.length === 0, J({ k: B2.k, one: B2.one, bad }));
+  check("STATS on a 390x844 phone at 100 %: k 1; a level drawn on a best's line sits clear of its difficulty and its score", B2.k === 1 && bad.length === 0, J({ k: B2.k, one: B2.one, bad }));
+  /* fix round 1: the tighter tiles (step 4) bring 375x812 to scale 1 as well */
+  const P3 = shellGeo(375, 812), B3 = RP.recordsGeom({ W: P3.w, H: P3.h, touch: true, shell: true, css: P3.s }).d.bodies.stats;
+  check("STATS on a 375x812 phone at 100 %: k 1 (the tiles tighten before the body scales)", B3.k === 1 && B3.tl === RP.TILE.t, J({ k: B3.k }));
   const D = RP.recordsGeom(BOX.d1366).d.bodies.stats;
   check("STATS on the desk keeps the mock's layout: two-line bests and the level course", D.one === false && !!D.course && D.k === 1, J({ one: D.one, k: D.k }));
 }
-/* no best run yet: the hero says so and shows no score or course */
+/* no best run yet: the hero says so and shows no score or course; the three bests each draw "—" (fix round 1, the old R12 coverage) */
 {
-  const { s } = snap(BOX.d1366, SUI({ view: { ...SV0, hero: null } }));
-  check("STATS with no saved run: BEST RUN · NO RUNS YET, no digits, no course", s.texts.some((t) => t.s === "NO RUNS YET") && !s.rects.some((r) => /^(digit|level) /.test(r.name)));
+  const { s } = snap(BOX.d1366, SUI({ view: { ...SV0, hero: null, far: null, bests: [null, null, null] } }));
+  const dash = ["NORMAL DIFFICULTY", "HARD DIFFICULTY", "EXPERT DIFFICULTY"].map((l) => { const a = s.texts.find((t) => t.s === l); return !!a && s.texts.some((t) => t.s === "—" && Math.abs(t.y - a.y) < 6 && t.x > a.x + a.w); });
+  check("STATS with no saved run: BEST SCORE · NO RUNS YET, no digits, no course, no FURTHEST line; each empty best draws — on its line", s.texts.some((t) => t.s === "BEST SCORE") && s.texts.some((t) => t.s === "NO RUNS YET") && !s.rects.some((r) => /^(digit|level) /.test(r.name)) && !s.texts.some((t) => /^FURTHEST/.test(t.s)) && dash.every(Boolean), J(dash));
+}
+/* lead ruling, fix round 1: nb.bests.v1 keeps each bucket's score and level as SEPARATE maxima, so the page never pairs them as one run: BEST SCORE (the
+   highest score, its bucket's qualifier) and, apart, FURTHEST LEVEL (the highest level any bucket saved), with the course lit to that level only */
+{
+  const two = recordBest(recordBest({}, "1:0:1", 8120, 3), "0:0:1", 500, 5), v = statsView(clampStats({ a: { runs: 2 } }), two, 0);
+  check("statsView: the best score and the furthest level come from their own maxima (score 8,120 from a level-3 run, level 5 from a 500-point run); the hero carries no level", v.hero && v.hero.s === 8120 && v.hero.heat === 1 && !("r" in v.hero) && v.far === 5, J(v));
+  const one = recordBest({}, "0:0:1", 900, 2), v1 = statsView(clampStats({ a: { runs: 1 } }), recordBest(one, "0:0:1", 100, 4), 0);
+  check("statsView: one bucket whose score and level came from different runs still reads as two maxima (900, level 4)", v1.hero.s === 900 && v1.far === 4, J(v1));
+  for (const b of ["d1366", "p393"]) {
+    const { s } = snap(BOX[b], SUI({ view: { ...SV0, hero: v.hero, far: v.far } })), T = s.texts.map((t) => t.s);
+    const lv = s.rects.filter((r) => /^level /.test(r.name)), key = lv.find((r) => r.fill === worldTokens(1).key);
+    check(`STATS (${b}): BEST SCORE 8,120 (HARD DIFFICULTY) and FURTHEST LEVEL 5 · ARENA as two labelled facts; no REACHED wording; the course (where drawn) raises level 5 only`,
+      T.includes("BEST SCORE") && T.includes("FURTHEST LEVEL 5 · ARENA") && !T.some((x) => /REACHED|BEST RUN/.test(x)) && (lv.length === 0 || (!!key && key.name === "level 5")), J({ lv: lv.map((r) => [r.name, r.fill]) }));
+  }
+}
+/* fix round 1: __GAME__.seedRecords (debug only, tools/ui/shots.mjs scoresfull / statsfull) writes a played-looking cabinet through the stores' own
+   savers: ten played NORMAL rows (no placeholder), badges, medals, and a best score whose run did not reach the furthest level */
+{
+  const { seedRecords } = await import("../src/app/debughook.js"), { loadScores, scoresForHeat, isPlaceholder } = await import("../src/app/highscores.js");
+  const { loadBests } = await import("../src/app/bests.js"), { loadStats } = await import("../src/app/stats.js"), { loadMedals } = await import("../src/app/medals.js"), { loadPlaques } = await import("../src/app/plaques.js");
+  const m = new Map(), st = { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k) };
+  seedRecords(st);
+  const rows = scoresForHeat(loadScores(st), 0), v = statsView(loadStats(st), loadBests(st), loadMedals(st));
+  check("seedRecords: ten played NORMAL rows with modifiers, badges CLEAR + EXPERT, four medals, and a STATS hero of 8,120 (HARD) beside a furthest level 5",
+    rows.length === 10 && !rows.some(isPlaceholder) && rows.some((r) => r.p) && loadPlaques(st) === 5 && v.medals === 4 && v.hero.s === 8120 && v.hero.heat === 1 && v.far === 5 && v.runs === 47, J({ n: rows.length, hero: v.hero, far: v.far, med: v.medals }));
+}
+/* fix round 1, Important 3: a foot zone answers only in the armed state it was painted in: a second click on RESET that lands before the armed frame
+   paints reads the idle foot's zones as nothing, never the second R */
+{
+  const F = BOX.d1366, G = RP.recordsGeom(F), u = G.u;
+  frame(F, SUI({ arm: false }));
+  const fp = RP._dbg.last.S.feet.find((q) => q.v === "tabs").fp, z = fp.zones.find((q) => q.key === "KeyR"), x = ((z.x0 + z.x1) / 2) * u, y = fp.mid * u;
+  const idle = RP.statsHit(x, y, F, false), stale = RP.statsHit(x, y, F, true);
+  frame(F, SUI({ arm: true }));
+  const armed = RP.statsHit(x, y, F, true);
+  check("STATS: RESET (idle frame) is R; a second click before the armed frame paints is cancel, never R; once armed is painted, the same point is still not R", idle === "KeyR" && stale === "cancel" && armed !== "KeyR", J({ idle, stale, armed }));
 }
 /* the hits: the armed page answers R (AGAIN ERASES) and C (COPY) only; everything else is "cancel" */
 for (const b of ["d1366", "p393", "c600", "l1024"]) {
@@ -597,7 +638,7 @@ for (const b of ["d1366", "p393", "c600", "l1024"]) {
 for (const b of ["c600", "iso", "d1366", "p393"]) {
   const F = BOX[b], G = RP.recordsGeom(F), u = G.u, B = G.d.bodies.stats;
   const s0 = snap(F, SUI({})).s, s1 = snap(F, SUI({ view: { ...SV0, hero: null, bests: [null, null, null] }, notes: [] })).s;
-  const cap = (s) => s.texts.find((t) => /^BEST BY DIFFICULTY/.test(t.s)), nd = s0.texts.find((t) => t.s === "NORMAL DIFFICULTY"), reached = s0.texts.find((t) => /^REACHED/.test(t.s));
+  const cap = (s) => s.texts.find((t) => /^BEST BY DIFFICULTY/.test(t.s)), nd = s0.texts.find((t) => t.s === "NORMAL DIFFICULTY"), reached = s0.texts.find((t) => /^FURTHEST/.test(t.s));
   check(`STATS (${b}): the BEST BY DIFFICULTY caption sits under the hero and over NORMAL DIFFICULTY, in the same place with no data`, !!cap(s0) && !!nd && cap(s0).y < nd.y && cap(s0).y > reached.y && cap(s1).y === cap(s0).y, J([cap(s0), cap(s1)]));
   check(`STATS (${b}): no JSON on the page`, !s0.texts.some((t) => /[{}\[\]]/.test(t.s)));
   const tiles = s0.rects.filter((r) => /^tile /.test(r.name)), tx = (r) => s0.texts.filter((t) => t.x >= r.x - 0.5 && t.x < r.x + r.w && t.y >= r.y - 0.5 && t.y < r.y + r.h);

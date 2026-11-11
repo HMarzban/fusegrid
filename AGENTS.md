@@ -94,11 +94,13 @@ STATS calls `onStats` (the event ring's opt-in), at MEDALS `onMedals` (its
 rows only). Any `recTab` call disarms an armed STATS reset, a tap on the tab
 already shown included; R arms and any input that is not the second plain R cancels it: any other key in main's `onUiKey`,
 a chorded R (Ctrl / Cmd / Alt / Shift, `controlswire` guard: never arms or erases), Y / N answering the consent card and its
-taps (`analytics.js`), the update card's LATER and backdrop taps (`update.js`), any controller press or fresh direction in
+taps, its body and Privacy link included (`analytics.js`), the update card's LATER and backdrop taps (`update.js`), the inline
+load-failure card's Enter / Escape, RETRY / USE CLASSIC 2D taps and a controller's SOUTH / EAST (`reset.js` `guardLoadCard`, wired by main:
+a document capture listener for a target in `#load` and the two buttons' `onclick` wrapped, index.html unchanged), any controller press or fresh direction in
 `padroute.route`, a swallowed first press after a connect and a card's answer included, and any tap but AGAIN ERASES (a
 touch C disarms at its pointerdown, so a cancelled C still cancels). Armed, the confirm plate is modal: a tab tap only
-cancels. Left open: the inline load-failure card's own Enter / Escape (`index.html`, capture-phase `stopImmediatePropagation`)
-never reaches the app. On those pages `Q` / `E` never also confirm. Esc, Backspace, Enter, EAST and START from any of them:
+cancels. A desk foot zone answers only in the armed state it was painted in (`footHit`), so a second click before the armed frame
+paints is never the second R. On those pages `Q` / `E` never also confirm. Esc, Backspace, Enter, EAST and START from any of them:
 MENU on RECORDS.
 RECORDS page (UI upgrade v202 Task 4.1; `src/render/pages/records.js`, LAZY: one `pages/lazy.js` entry `records`, loaded in the first idle
 after MENU's first frame; until it lands menudraw paints `loadingPage` (the room, a small plate, LOADING) and every RECORDS hit is -2, inert,
@@ -126,11 +128,13 @@ dropped: a legend that will not fit beside it steps down to its 100 % size, then
 difficulty and SCORES' rows. A focus move or a
 filter step misses nothing; a tab step paints its page and foot once. STATS (Task 4.2): app/stats.js `statsView` (the numbers:
 runs, secs, medals, the lifetime counters, the hero = the saved best with the highest score and its difficulty / modifiers / speed
-from its key, the three plain-bucket bests), worded on the page: the hero (BEST RUN, the qualifier on up to two lines, the score
-in brick digits, the 8-level course: cleared lit, the level reached a raised key, 6–8 wall cells while locked, flags on 5 and
-8, REACHED LEVEL n · WORLD; NO RUNS YET with none), three sunk stat tiles (RUNS, PLAY TIME as `3h12m`, MEDALS n/8), the LIFETIME
-ledger, BEST BY DIFFICULTY · NO MODIFIERS · NORMAL SPEED (its kicker breaks once at 125 % and on a narrow body; two-line rows, the level under the difficulty, the best one's pip a
-brick), the cabinet notes (desk only; on the phone they drop, their facts ride the copy payload and MENU's DAILY teaser). A touch body too short steps down before it scales (`statsBody` tight: gaps 10, the level course drops, LIFETIME pitch 27, then one-line bests only where that makes it fit; the 393 x 852 phone at 100 % is unscaled at step 3). RESET
+from its key, `far` = the highest level any bucket saved, the three plain-bucket bests), worded on the page: the hero (BEST SCORE,
+its qualifier on up to two lines, the score in brick digits; then, apart, the 8-level course lit to the furthest level only, 6–8 wall
+cells while locked, flags on 5 and 8, and FURTHEST LEVEL n · WORLD: lead ruling, fix round 1, `nb.bests.v1` keeps a bucket's score and
+level as separate maxima, so the page never pairs them as one run; NO RUNS YET with none), three sunk stat tiles (RUNS, PLAY TIME as `3h12m`, MEDALS n/8), the LIFETIME
+ledger, BEST BY DIFFICULTY · NO MODIFIERS · NORMAL SPEED (its kicker breaks once wherever one line at 0.648 em would pass its column,
+100 % included; the plan draws one line only where it measures inside; two-line rows, each empty best a —, the level under the difficulty, the best one's pip a
+brick), the cabinet notes (desk only; on the phone they drop, their facts ride the copy payload and MENU's DAILY teaser). A touch body too short steps down before it scales (`statsBody` tight: gaps 10, the level course drops, LIFETIME pitch 27, the stat tiles tighten (`TILE.t`), then one-line bests only where that makes it fit; 393 x 852 and 375 x 812 phones at 100 % are unscaled; 360 x 780 scales 0.90, 375 x 667 0.69). The armed sentence names every group in either list (`resetSentence` throws on a group with no words, `RESET_WORDED`). RESET
 is quiet at rest (the foot on a keyboard, `COPY STATS` / `RESET` keys under the pane on touch). Armed: the page dims under a
 confirm plate (ERASE ALL RECORDS?, one sentence = words.js `resetSentence(CLEAR_KEYS, KEEP_KEYS)`, the lists main hands in as
 `app.stats.wipe`; `RESET_GROUP` names each store key and words.test pins it equal to reset.js's lists), AGAIN ERASES focused (the
@@ -251,7 +255,7 @@ points values and page keys, a tap on one opens its tooltip, and with a tooltip 
 tags name what differs from a default run, each setting named (`tagFor`: `EXPERT DIFFICULTY · FAST SPEED`), then a modifier
 count, stepped down to the slot; PAUSE's kicker steps down through menudraw `setupVals`. `SCREEN.STATS = 12` is **appended** (the `SCREEN` enum's own rule in
 `menuapp.js`: appended, never inserted). `SCREEN.TROPHIES = 13` (the MEDALS page) is
-appended too: RECORDS' third tab (STATS' `T` or a tap on its `T MEDALS` label is the same
+appended too: RECORDS' third tab (STATS' `T` key, a controller's NORTH or a tap on the MEDALS tab is the same
 tab step), backs out to MENU on RECORDS, never a MENU row. `SCREEN.GRAPHICS = 14` is appended too: opened by the
 SETTINGS `GRAPHICS` door row (`OPT_ROWS` is all twelve rows; the rows on screen are `optRows(r3d)`, CAMERA and BRIGHTNESS
 only while ART STYLE is REAL 3D, ten otherwise; ANALYTICS, then the GRAPHICS and CONTROLS doors before RESET DEFAULTS in both),
@@ -446,7 +450,7 @@ not shell screens. Do not add them as `SCREEN` values.
   (`window.__GAME__`), `src/app/pointer.js` (`mountPointer`: the ONE tap handler, bound on `#c` and `#sh`; `main.js` hands it the hit functions as `hit` because `src/app` never imports `src/render`, and `kind` / `ctl` as getters), `src/app/endkeys.js` (WIN/LOSE keys: Enter =
   Space through `Input.pulse()`, one fire tick and never a latch; C/B copy.
   Every copy reports COPIED / COPY FAILED through the ONE `app.toast` — on
-  the WIN/LOSE overlay, and on STATS in place of the `YOUR CABINET` kicker;
+  the WIN/LOSE overlay, and on STATS as a tag at the right end of the title row;
   `toastTick(toast,world,dt,app)` ages it only there and zeroes it anywhere
   else), `src/net/localpair.js` (`?net=local`),
   `src/render/shellview.js` (`drawShell` + the `kindSize`/`dims` logical box),
@@ -1237,6 +1241,10 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   `--strict` fails skips; `tools/ui/lib/screens.mjs` lists each screen's required gates
   (default-deny, a page cannot exempt itself; MENU is the first instrumented screen, Task 3.1; LEVEL SELECT the second, Task 3.3, exempting ring and locked with reasons); a probe fault, a page error or a missing
   capture fails. `compare.mjs` (`refmap.json`; MENU's frames are the L7 ones, logo B in the header), `sheet.html`.
+  `scoresfull` / `statsfull` (v202 fix round 1) capture a played-looking cabinet: `__GAME__.seedRecords()` (debughook.js, `?debug=1`
+  only) writes ten played rows, badges, medals and bests through the stores' own savers, after the fresh-profile pages. Wrap every
+  capture run in a watchdog (kill it by PID past 10 minutes, or when its `--out` dir stops growing for 3 minutes; a REAL 3D run once
+  hung 1.5 h).
 - Blender is driven through the blender-mcp add-on socket `127.0.0.1:9876`
   with a small Python client (`.superpowers/sdd/2026-10-11-bible/blender/bl.py`,
   local only); the session `mcp__Blender__` tools time out.

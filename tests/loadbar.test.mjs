@@ -149,7 +149,7 @@ function boot1(opts = {}) {
   let obs = null, t = 0, ivF = null;
   const winOn = {}, winCap = {};
   const ctx = {
-    document: { getElementById: el, baseURI: "http://x/g/index.html", hidden: false },
+    document: { getElementById: el, baseURI: "http://x/g/index.html", hidden: false, cap: {}, addEventListener(k, f, c) { if (c) (this.cap[k] ||= []).push(f); } },
     location: { origin: "http://x", reload() { ctx.reloaded = (ctx.reloaded || 0) + 1; } },
     URL, performance: { now: () => t }, setInterval: (f) => { ivF = f; return 1; }, clearInterval: () => {},
     addEventListener(k, f, c) { winOn[k] = f; winCap[k] = c; },
@@ -418,6 +418,33 @@ const U = (n) => "http://x/g/src/m" + n + ".js";
   const n = boot1(), nc = loadCard(n.ctx);
   n.L.fail("boot");
   check("a boot failure stays off the pad's table", nc.live(true) === false && (nc.press("S"), !n.ctx.reloaded));
+}
+
+/* v202 fix round 1: the card's answers cancel an armed STATS reset (src/app/reset.js guardLoadCard, wired by main): its Enter / Escape (the inline
+   script's own capture keydown calls the buttons' onclick), a tap on RETRY / USE CLASSIC 2D (a document capture listener for a target in #load) and a
+   controller's SOUTH / EAST (padPress calls the same onclick). Run against the real inline script */
+{
+  const { guardLoadCard } = await import("../src/app/reset.js");
+  const inLoad = new Set(["loadretry", "loadkeep", "loadmsg", "loadact", "loadbar", "loadfill"]);
+  const arm = () => {
+    const b = boot1(), E = b.el("load"), app = { resetArm: true };
+    E.contains = (t) => !!t && (t === E || inLoad.has(t.id));
+    const ok = guardLoadCard(b.ctx.document, () => { app.resetArm = false; });
+    b.L.end("boot"); b.L.begin("tiles", lookPlan("px")); b.L.fail("tiles", () => {}, () => {});
+    const cap = (ty, target) => (b.ctx.document.cap[ty] || []).forEach((f) => f({ type: ty, target }));
+    return { b, app, ok, cap };
+  };
+  const rows = [];
+  for (const [how, act] of [
+    ["Enter", (t) => t.b.key("Enter")], ["Escape", (t) => t.b.key("Escape")],
+    ["a tap on RETRY", (t) => { t.cap("pointerdown", t.b.el("loadretry")); }], ["a tap on USE CLASSIC 2D", (t) => { t.cap("pointerdown", t.b.el("loadkeep")); }],
+    ["a click on RETRY (its onclick)", (t) => { t.cap("click", t.b.el("loadretry")); t.b.el("loadretry").onclick(); }],
+    ["a controller's SOUTH", (t) => t.b.L.padPress("S")], ["a controller's EAST", (t) => t.b.L.padPress("E")],
+  ]) { const t = arm(); act(t); rows.push([how, t.ok, t.app.resetArm]); }
+  check("the load card's Enter / Escape, its RETRY / USE CLASSIC 2D taps and a controller's SOUTH / EAST each cancel an armed reset", rows.every(([, ok, arm]) => ok && arm === false), JSON.stringify(rows));
+  const t = arm(); t.cap("pointerdown", { id: "c" }); t.b.key("ArrowUp");
+  check("a tap or key that is not the card's leaves the reset armed (the game's own paths decide)", t.app.resetArm === true);
+  check("no #load (Node, a page without the loader): guardLoadCard does nothing", guardLoadCard({ getElementById: () => null, addEventListener() {} }, () => {}) === false && guardLoadCard(null, () => {}) === false);
 }
 
 console.log("LOADBAR", pass + " PASS / " + fail + " FAIL");
