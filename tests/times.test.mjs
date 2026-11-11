@@ -8,7 +8,10 @@ import {
   bestOf,
   recordTime,
 } from "../src/app/times.js";
-import { fmtTime, timeLine, drawHudChips, drawOverlay } from "../src/render/scenes.js";
+import { fmtTime, drawHudChips, drawOverlay } from "../src/render/scenes.js";
+import { endFacts } from "../src/render/pages/endgeom.js";
+/* v202 Task 5.3: a level clear's time is its TIME stat card, and only a new best hangs the LEVEL n TIME ribbon (endgeom.endFacts; was timeLine) */
+const clearOf = (lv, tm) => { const F = endFacts({ state: "WIN", level: lv }, { r: 1 }, tm); const rib = F.pieces.find((p) => p.kind === "rib"); return F.stats[0][2] + (rib ? " · " + rib.name[0] + " " + rib.value : ""); };
 import { readFileSync } from "node:fs";
 import { createGame } from "../src/main.js";
 import { SCREEN } from "../src/app/menuapp.js";
@@ -276,25 +279,22 @@ const HUD_W = {
   );
 }
 
-// ---- 6. timeLine: both locked copy forms ----
+// ---- 6. a level clear's time: both forms (was timeLine) ----
 {
   check(
-    "timeLine: a slower clear names the standing best",
-    timeLine({ level: 3 }, { on: true, t: 41.23, best: 38.9 }) ===
-      "LEVEL 3 · 0:41.2 · BEST 0:38.9",
-    timeLine({ level: 3 }, { on: true, t: 41.23, best: 38.9 }),
+    "a slower clear shows its time and hangs no ribbon (the standing best is no record)",
+    clearOf(3, { on: true, t: 41.23, best: 38.9 }) === "0:41.2",
+    clearOf(3, { on: true, t: 41.23, best: 38.9 }),
   );
   check(
-    "timeLine: no prior best is NEW BEST",
-    timeLine({ level: 3 }, { on: true, t: 41.23, best: null }) ===
-      "LEVEL 3 · 0:41.2 · NEW BEST",
-    timeLine({ level: 3 }, { on: true, t: 41.23, best: null }),
+    "no prior best hangs the LEVEL n TIME ribbon",
+    clearOf(3, { on: true, t: 41.23, best: null }) === "0:41.2 · LEVEL 3 TIME 0:41.2",
+    clearOf(3, { on: true, t: 41.23, best: null }),
   );
   check(
-    "timeLine: beating the standing best is NEW BEST",
-    timeLine({ level: 3 }, { on: true, t: 41.23, best: 45 }) ===
-      "LEVEL 3 · 0:41.2 · NEW BEST",
-    timeLine({ level: 3 }, { on: true, t: 41.23, best: 45 }),
+    "beating the standing best hangs the ribbon",
+    clearOf(3, { on: true, t: 41.23, best: 45 }) === "0:41.2 · LEVEL 3 TIME 0:41.2",
+    clearOf(3, { on: true, t: 41.23, best: 45 }),
   );
 }
 
@@ -472,24 +472,23 @@ const HUD_W = {
   let v = clampTimes(null);
   let bestPrev = bestOf(v, k); // captured BEFORE
   v = recordTime(v, k, 41.23);
-  const first = timeLine({ level: 3 }, { on: true, t: 41.23, best: bestPrev });
+  const first = clearOf(3, { on: true, t: 41.23, best: bestPrev });
   check(
-    "B: the first clear reads NEW BEST, never its own freshly-written time",
-    first === "LEVEL 3 · 0:41.2 · NEW BEST",
+    "B: the first clear hangs the record ribbon, never reads its own freshly-written time as the bar",
+    first === "0:41.2 · LEVEL 3 TIME 0:41.2",
     first,
   );
   check(
-    "B: reading the store AFTER the write is what this forbids",
-    timeLine({ level: 3 }, { on: true, t: 41.23, best: bestOf(v, k) }) ===
-      "LEVEL 3 · 0:41.2 · BEST 0:41.2",
-    "that string is the bug, and the pin above is what excludes it",
+    "B: reading the store AFTER the write is what this forbids (it would hang no ribbon)",
+    clearOf(3, { on: true, t: 41.23, best: bestOf(v, k) }) === "0:41.2",
+    "that result is the bug, and the pin above is what excludes it",
   );
   bestPrev = bestOf(v, k);
   v = recordTime(v, k, 44.0);
-  const second = timeLine({ level: 3 }, { on: true, t: 44.0, best: bestPrev });
+  const second = clearOf(3, { on: true, t: 44.0, best: bestPrev });
   check(
-    "B: a slower second clear names the standing best and does not overwrite it",
-    second === "LEVEL 3 · 0:44.0 · BEST 0:41.2" && v.b[k] === 412,
+    "B: a slower second clear hangs no ribbon and does not overwrite the best",
+    second === "0:44.0" && v.b[k] === 412,
     second + " / " + v.b[k],
   );
   const mainSrc = readFileSync("src/main.js", "utf8");

@@ -264,15 +264,16 @@ const TODAY = "2026-09-07";
 }
 
 import { SCREEN, ITEMS, createMenuApp } from "../src/app/menuapp.js";
-import { summaryLines, deltaLine, dailyLine } from "../src/render/scenes.js";
+import { dailyLine } from "../src/render/scenes.js";
+import { endFacts } from "../src/render/pages/endgeom.js";
 import { readFileSync } from "node:fs";
 
-// ---- 7. slot 3: on a daily run the daily line REPLACES the delta line ----
+// ---- 7. on a daily run the daily line REPLACES the record line (v202 Task 5.4: GAME OVER's tail, endgeom.endFacts) ----
 {
   const W = { state: "LOSE", level: 3, score: 1840, heat: 0, pact: 0, pace: 0 };
-  // best.r matches world.level(3) so FURTHEST ROOM YET does not also fire —
-  // this block isolates the delta-vs-daily slot-3 swap, not deltaLine's own
-  // five-form table (covered by bests.test.mjs).
+  // best.r matches world.level(3) so FURTHEST LEVEL YET does not also fire —
+  // this block isolates the record-vs-daily swap, not the tail's own
+  // five-form table (covered by bests.test.mjs §8).
   const plain = { r: 2, k: 5, p: 1, t: 90, best: { s: 500, r: 3 } };
   const daily = { ...plain, daily: TODAY, tries: 3, dbest: 1840 };
   check(
@@ -286,24 +287,23 @@ import { readFileSync } from "node:fs";
       "DAILY 2026-09-07 · FAST SPEED · TRY 3 · YOUR BEST 1840",
     dailyLine({ ...W, pace: 1 }, daily),
   );
-  const lp = summaryLines(W, plain);
-  const ld = summaryLines(W, daily);
+  const lp = endFacts(W, plain).tail;
+  const ld = endFacts(W, daily).tail;
   check(
-    "a NON-daily LOSE still emits the delta line — R1 is unchanged by this plan",
-    lp.length === 2 && lp[1][0] === "NEW BEST",
+    "a NON-daily LOSE still carries the record (the NEW BEST plaque)",
+    lp.kind === "plaque" && lp.text[0] === "NEW BEST · NORMAL DIFFICULTY",
     JSON.stringify(lp),
   );
   check(
-    "a daily LOSE emits the daily line INSTEAD of the delta line",
-    ld.length === 2 &&
-      ld[1][0] === dailyLine(W, daily) &&
-      ld[1][0] !== deltaLine(W, daily),
+    "a daily LOSE carries the daily line INSTEAD of the record",
+    ld.kind === "daily" && ld.text === dailyLine(W, daily) && !/NEW BEST/.test(JSON.stringify(endFacts(W, daily))),
     JSON.stringify(ld),
   );
+  const mid = endFacts({ ...W, state: "WIN" }, daily);
   check(
-    "a daily MID-ROOM win emits neither — slot 3 is still run-end only",
-    summaryLines({ ...W, state: "WIN" }, daily).length === 1,
-    JSON.stringify(summaryLines({ ...W, state: "WIN" }, daily)),
+    "a daily MID-ROOM win carries neither — the record and the day's line are run-end only",
+    mid.tail === null && mid.note === null && mid.pieces.length === 0,
+    JSON.stringify(mid),
   );
 }
 

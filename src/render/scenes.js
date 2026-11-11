@@ -16,20 +16,10 @@ import { lbl } from "./kit/type.js";
 /* Scene UI: HUD, and the CLEARED / GAME OVER / PAUSED overlays.
    Pure draw; reads world + (optionally) DOM for HUD. The MENU logo is the MENU
    page header's (pages/menu.js). */
-export function winHeadline(world) {
-  return isFinale(world.level) || world.finale
-    ? "FUSE/GRID CLEAR"
-    : "LEVEL " + world.level + " CLEARED";
-}
 export function overlayCue(world, touch, words) {
   const W = words || hints(),
-    pad = W.dev === "pad",
-    go = pad ? W.ok : W.bomb + " / " + W.ok + " / TAP";
-  if (world.state === "WIN") {
-    const fin = isFinale(world.level) || world.finale;
-    return fin ? go + " · menu" : go + " · next level";
-  }
-  if (world.state === "LOSE") return go + " · new run";
+    pad = W.dev === "pad";
+  /* PAUSE only: the run ends carry their own keys (pages/endgeom.js endFacts().keys, v202 Task 5.2) */
   if (world.state === "PAUSE") {
     if (pad) return W.pause + " · " + W.back + " RESUME · ↑↓ MOVE · " + W.ok + " CONFIRM";
     return touch ? "TAP A ROW · PAUSE PILL RESUMES" : W.back + " · " + W.pause + " RESUME · ↑↓ MOVE · " + W.ok + " CONFIRM · M QUIT";
@@ -56,20 +46,6 @@ export function fmtTime(sec) {
     Math.floor(d / 600) + ":" + (m < 10 ? "0" + m : String(m)) + "." + (d % 10)
   );
 }
-/* tm.best is main's bestPrev, captured BEFORE the WIN-edge write — otherwise
-   this line would read back the record it just set and every clear would print
-   its own time as the best. */
-export function timeLine(world, tm) {
-  const t = tm || {};
-  return (
-    LABEL.LEVEL + " " +
-    ((world && world.level) | 0) +
-    " · " +
-    fmtTime(t.t) +
-    " · " +
-    (t.best == null || t.t < t.best ? "NEW BEST" : "BEST " + fmtTime(t.best))
-  );
-}
 /* R1 run formatting. fmtSpan is a THIRD formatter, not a widening of fmtTime:
    fmtTime clamps at 9:59.9 because its six-character guarantee holds the HUD
    chip's width budget, and a run is 4-13 minutes. fmtSpan clamps at 99:59; a
@@ -81,13 +57,6 @@ export function fmtSpan(sec) {
   const m = s % 60;
   return Math.floor(s / 60) + ":" + (m < 10 ? "0" + m : String(m));
 }
-export function runLine(run) {
-  const r = run || {};
-  return (
-    LABEL.LEVELS + " " + (r.r | 0) + " · KILLS " + (r.k | 0) + " · " + LABEL.POWER_UPS + " " + (r.p | 0) +
-    " · " + fmtSpan(r.t)
-  );
-}
 /* bestLabel names the EXACT bucket the record is kept in, so the sentence can
    never be read against the wrong record: the difficulty always, the speed and
    each modifier when they are not the default, every one named (words.js). */
@@ -98,8 +67,8 @@ export function bestLabel(world) {
 /* The display edge and the persist edge are the SAME edge. A mid-room NEW BEST
    claims a record that has not been written and that a later death can still
    take back, and repeating it on rooms 3, 4 and 5 cheapens the one line the
-   whole feature exists for. isFinale is the same predicate winHeadline and
-   overlayCue use, which AGENTS.md requires of overlay code. */
+   whole feature exists for. isFinale is the same predicate endgeom.endMode
+   uses, which AGENTS.md requires of overlay code. */
 export function isRunEnd(world) {
   const w = world || {};
   return (
@@ -107,54 +76,7 @@ export function isRunEnd(world) {
     (w.state === "WIN" && (isFinale(w.level) || !!w.finale))
   );
 }
-/* Returns [text, hot] so summaryLines never has to sniff its own string for a
-   colour. The + in form 5 is a GAP, never a surplus: it is only reachable when
-   forms 1-3 did not fire. */
-/* Minor-3 (owner ruling, review 2026-09-07): a LEVEL SELECT start begins
-   above room 1, so "world.level > b.r" would read as a room the player
-   PICKED, not one they earned. run.fromStart (absent => true, the
-   pre-existing room-1-start behaviour) gates FURTHEST LEVEL YET alone — never
-   inside the combination either, so that case degrades to plain NEW BEST.
-   The score comparison is unaffected: a level-select run's score is a real
-   run either way. */
-function deltaOf(world, run) {
-  const b = run.best;
-  const fromStart = run.fromStart !== false;
-  /* Nit-6 (owner ruling 2026-09-07): a first-ever run on a bucket (no prior
-     record) that scores exactly 0 sets no record worth naming — no delta line
-     at all, not even FURTHEST LEVEL YET. A first-ever run with score > 0 keeps
-     form 3 unchanged. */
-  if (!b && (world.score | 0) === 0) return ["", false];
-  const p = [];
-  if (fromStart && (!b || (world.level | 0) > (b.r | 0))) p.push("FURTHEST " + LABEL.LEVEL + " YET");
-  if (!b || (world.score | 0) > (b.s | 0)) p.push("NEW BEST");
-  if (p.length) return [p.join(" · "), true];
-  if ((world.score | 0) === (b.s | 0))
-    return ["MATCHED YOUR " + bestLabel(world) + " BEST", false];
-  return [
-    "+" + ((b.s | 0) - (world.score | 0)) + " FROM YOUR " + bestLabel(world) + " BEST",
-    false,
-  ];
-}
-export function deltaLine(world, run) {
-  return deltaOf(world || {}, run || {})[0];
-}
-/* [text, col] pairs so the draw never sniffs strings. A record highlights only
-   when a record actually fell — the same honesty rule, in pixels. */
-export function summaryLines(world, run) {
-  if (!run) return [];
-  const out = [[runLine(run), "#9fb3d8"]];
-  if (isRunEnd(world)) {
-    if (run.daily) out.push([dailyLine(world, run), "#9fb3d8"]);
-    else {
-      const [s, hot] = deltaOf(world || {}, run);
-      if (s) out.push([s, hot ? "#37f0d0" : "#9fb3d8"]);
-    }
-    if (run.md) out.push([run.md, "#ffd447"]);
-  }
-  return out;
-}
-/* On a daily run this REPLACES the delta line in slot 3: the day's comparison
+/* On a daily run this REPLACES the record line (GAME OVER's tail, a finale's score ribbon): the day's comparison
    is the one that matters that day, and the nb.bests.v1 write still happens so
    nothing is lost from the record. The speed is printed because the daily
    pins NORMAL SPEED and ignores the player's own — an ignored setting is shown,

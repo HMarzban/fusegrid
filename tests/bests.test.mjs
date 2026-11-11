@@ -12,11 +12,8 @@ import {
 } from "../src/app/bests.js";
 import {
   fmtSpan,
-  runLine,
   bestLabel,
-  deltaLine,
   isRunEnd,
-  summaryLines,
   drawOverlay,
   fmtTime,
 } from "../src/render/scenes.js";
@@ -26,6 +23,8 @@ import { PAUSE_ITEMS } from "../src/app/menuapp.js";
 import { rec as krec } from "./lib/textrec.mjs";
 import * as kprobe from "../src/render/kit/probe.js";
 import { endGeom, endFacts } from "../src/render/pages/endgeom.js";
+/* v202 Task 5.4: the run-end line is GAME OVER's tail (endgeom.endFacts): the plaque's words, the shortfall or matched sentence, "" for none */
+const tailOf = (w, run) => { const t = endFacts({ state: "LOSE", ...w }, run).tail; return !t ? "" : t.kind === "plaque" ? t.text[0] : t.text; };
 import * as lazyPages from "../src/render/pages/lazy.js";
 import * as endWin from "../src/render/pages/endwin.js";
 lazyPages._set("endwin", endWin); // WIN is a lazy page (v202 Task 5.3): handed in as if its import had landed
@@ -424,108 +423,93 @@ const rec = () => {
     bestLabel({ heat: 1, pact: 3, pace: 1 }),
   );
   const W = { level: 3, score: 1000, heat: 0, pact: 0, pace: 0 };
+  // v202 Task 5.4: the five forms are GAME OVER's tail now (endFacts), one quiet plaque for a record, the shortfall saved to saved
   check(
-    "form 1: furthest room, no new score",
-    deltaLine(W, { best: { s: 2000, r: 2 } }) === "FURTHEST LEVEL YET",
-    deltaLine(W, { best: { s: 2000, r: 2 } }),
+    "form 1: furthest level, no new score -> the FURTHEST LEVEL YET plaque",
+    tailOf(W, { best: { s: 2000, r: 2 } }) === "FURTHEST LEVEL YET",
+    tailOf(W, { best: { s: 2000, r: 2 } }),
   );
   check(
-    "form 2: new score, same depth",
-    deltaLine(W, { best: { s: 500, r: 3 } }) === "NEW BEST",
-    deltaLine(W, { best: { s: 500, r: 3 } }),
+    "form 2: new score, same depth -> the NEW BEST plaque naming the bucket",
+    tailOf(W, { best: { s: 500, r: 3 } }) === "NEW BEST · NORMAL DIFFICULTY",
+    tailOf(W, { best: { s: 500, r: 3 } }),
   );
   check(
-    "form 3: both — and every first-ever run on a bucket",
-    deltaLine(W, { best: { s: 500, r: 2 } }) === "FURTHEST LEVEL YET · NEW BEST" &&
-      deltaLine(W, { best: null }) === "FURTHEST LEVEL YET · NEW BEST",
-    deltaLine(W, { best: null }),
+    "form 3: both, and every first-ever run on a bucket -> one plaque, NEW BEST (never two records merged)",
+    tailOf(W, { best: { s: 500, r: 2 } }) === "NEW BEST · NORMAL DIFFICULTY" &&
+      tailOf(W, { best: null }) === "NEW BEST · NORMAL DIFFICULTY",
+    tailOf(W, { best: null }),
   );
   check(
-    "form 4: an exact tie names the bucket, never a delta",
-    deltaLine(W, { best: { s: 1000, r: 3 } }) === "MATCHED YOUR NORMAL DIFFICULTY BEST",
-    deltaLine(W, { best: { s: 1000, r: 3 } }),
+    "form 4: an exact tie names the bucket and the saved best, never a delta",
+    tailOf(W, { best: { s: 1000, r: 3 } }) === "Matched your NORMAL DIFFICULTY best (1,000).",
+    tailOf(W, { best: { s: 1000, r: 3 } }),
   );
   check(
-    "form 5: short of it — the + is a GAP, never a surplus",
-    deltaLine({ ...W, score: 858 }, { best: { s: 1000, r: 5 } }) ===
-      "+142 FROM YOUR NORMAL DIFFICULTY BEST",
-    deltaLine({ ...W, score: 858 }, { best: { s: 1000, r: 5 } }),
+    "form 5: short of it -> the gap in saved points, the saved best named",
+    tailOf({ ...W, score: 858 }, { best: { s: 1000, r: 5 } }) ===
+      "142 points short of your NORMAL DIFFICULTY best (1,000).",
+    tailOf({ ...W, score: 858 }, { best: { s: 1000, r: 5 } }),
   );
   check(
-    "form 5 is unreachable when forms 1-3 fired — no negative gap can print",
-    !/\+-/.test(deltaLine(W, { best: { s: 500, r: 2 } })) &&
-      !/\+-/.test(deltaLine({ ...W, score: 5000 }, { best: { s: 1000, r: 5 } })),
-    deltaLine({ ...W, score: 5000 }, { best: { s: 1000, r: 5 } }),
+    "form 5 is unreachable when forms 1-3 fired: no negative gap can print",
+    !/-\d|points short/.test(tailOf(W, { best: { s: 500, r: 2 } })) &&
+      !/-\d|points short/.test(tailOf({ ...W, score: 5000 }, { best: { s: 1000, r: 5 } })),
+    tailOf({ ...W, score: 5000 }, { best: { s: 1000, r: 5 } }),
   );
 }
 
-// ---- 9. runLine ----
+// ---- 9. the run's tally (was runLine): the finale's stat cards, never bricks ----
 {
+  const F = endFacts({ state: "WIN", level: 5, score: 10, heat: 0 }, { r: 4, k: 27, p: 9, b: 99, t: 761 });
   check(
-    "runLine is the locked tally copy",
-    runLine({ r: 4, k: 27, p: 9, t: 761 }) === "LEVELS 4 · KILLS 27 · POWER-UPS 9 · 12:41",
-    runLine({ r: 4, k: 27, p: 9, t: 761 }),
+    "the run's tally is the finale's ENEMIES / POWER-UPS / TIME (v202 Task 5.3; was runLine's LEVELS · KILLS · POWER-UPS · time)",
+    JSON.stringify(F.stats) === JSON.stringify([["foe", "ENEMIES", "27"], ["item", "POWER-UPS", "9"], ["clock", "TIME", "12:41"]]),
+    JSON.stringify(F.stats),
   );
   check(
-    "runLine does NOT show bricks — they ride R5's payload, so nothing is counted and never used",
-    runLine({ r: 1, k: 0, p: 0, b: 99, t: 0 }).indexOf("99") < 0,
-    runLine({ r: 1, k: 0, p: 0, b: 99, t: 0 }),
+    "the tally does NOT show bricks: they ride R5's payload",
+    !JSON.stringify(F).includes("99"),
+    JSON.stringify(F.stats),
   );
 }
 
-// ---- 10. summaryLines: [text, col] pairs, and the run-end gate ----
+// ---- 10. the run-end gate (was summaryLines): claims only at a run end ----
 {
   const W = { state: "WIN", level: 3, score: 1000, heat: 0, pact: 0, pace: 0 };
-  /* best.r matches W.level so the LOSE/finale checks below isolate the score
-     comparison alone (a lower best.r would ALSO trip FURTHEST LEVEL YET at
-     every level>=3 assertion here, since deltaOf compares world.level, not
-     whether the room was cleared). */
   const run = { r: 2, k: 5, p: 1, t: 90, best: { s: 500, r: 3 } };
-  check("summaryLines with no run is empty", summaryLines(W, undefined).length === 0);
-  const mid = summaryLines(W, run);
+  const claims = (w, r) => { const F = endFacts(w, r); return [...F.pieces.map((q) => q.kind + ":" + [].concat(q.name)[0]), ...(F.tail ? [F.tail.kind] : []), ...(F.note ? ["note"] : [])]; };
+  check("no run (ATTRACT): no claim", claims(W, undefined).length === 0 && claims({ ...W, state: "LOSE" }, undefined).length === 0);
   check(
-    "a mid-room WIN yields exactly ONE pair — the tally line, never a delta",
-    mid.length === 1 && mid[0][0].indexOf("LEVELS 2") === 0,
-    JSON.stringify(mid),
-  );
-  const lose = summaryLines({ ...W, state: "LOSE" }, run);
-  const fin = summaryLines({ ...W, level: 5 }, run);
-  check(
-    "a LOSE and a finale WIN each yield two pairs",
-    lose.length === 2 && fin.length === 2 && lose[1][0] === "NEW BEST",
-    JSON.stringify(lose),
+    "a mid-room WIN claims nothing about the score (a level clear has no score piece)",
+    claims(W, run).length === 0,
+    JSON.stringify(claims(W, run)),
   );
   check(
-    "the delta highlights ONLY when a record actually fell",
-    lose[1][1] === "#37f0d0" &&
-      summaryLines({ ...W, state: "LOSE", score: 100 }, run)[1][1] === "#9fb3d8",
-    lose[1][1] +
-      " / " +
-      summaryLines({ ...W, state: "LOSE", score: 100 }, run)[1][1],
+    "a LOSE and a finale WIN each claim the record once",
+    JSON.stringify(claims({ ...W, state: "LOSE" }, run)) === JSON.stringify(["plaque"]) && JSON.stringify(claims({ ...W, level: 5 }, run)) === JSON.stringify(["rib:SCORE · NORMAL DIFFICULTY"]),
+    JSON.stringify([claims({ ...W, state: "LOSE" }, run), claims({ ...W, level: 5 }, run)]),
   );
   check(
-    "the tally line is always the muted sub colour",
-    mid[0][1] === "#9fb3d8",
-    mid[0][1],
+    "a record shows only when one actually fell: under the best, GAME OVER prints the shortfall, never the plaque",
+    endFacts({ ...W, state: "LOSE", score: 100 }, run).tail.kind === "short",
+    JSON.stringify(endFacts({ ...W, state: "LOSE", score: 100 }, run).tail),
   );
-  const md = { ...run, md: "MEDAL · IRON CROWN" };
-  const finM = summaryLines({ ...W, level: 8 }, md);
-  const loseM = summaryLines({ ...W, state: "LOSE" }, { ...run, md: "" });
+  const md = { ...run, medals: [["IRON CROWN", "LEVELS 6-8 IN ONE RUN ON EXPERT DIFFICULTY"]] };
   check(
-    "R6: a run-end summary appends the medal line last, in gold",
-    finM.length === 3 && finM[2][0] === "MEDAL · IRON CROWN" && finM[2][1] === "#ffd447",
-    JSON.stringify(finM),
+    "R6: a finale hangs the newly saved medal last, after the score record",
+    JSON.stringify(claims({ ...W, level: 8 }, md)) === JSON.stringify(["rib:SCORE · NORMAL DIFFICULTY", "medal:IRON CROWN"]),
+    JSON.stringify(claims({ ...W, level: 8 }, md)),
   );
   check(
-    "R6: an empty md adds no line, and a mid-room WIN with md set prints none",
-    loseM.length === 2 && summaryLines(W, md).length === 1,
-    JSON.stringify([loseM, summaryLines(W, md)]),
+    "R6: no medals adds no piece, and a mid-room WIN with medals set hangs none",
+    JSON.stringify(claims({ ...W, level: 8 }, run)) === JSON.stringify(["rib:SCORE · NORMAL DIFFICULTY"]) && claims(W, md).length === 0,
+    JSON.stringify([claims({ ...W, level: 8 }, run), claims(W, md)]),
   );
-  const dailyM = summaryLines({ ...W, level: 5 }, { ...md, daily: "2026-10-08", tries: 1, dbest: 0 });
   check(
-    "R6: on a daily run the medal line still follows the daily line",
-    dailyM.length === 3 && dailyM[1][0].indexOf("DAILY") === 0 && dailyM[2][0] === "MEDAL · IRON CROWN",
-    JSON.stringify(dailyM),
+    "R6: on a daily finale the day's line replaces the score record and the medal still hangs",
+    JSON.stringify(claims({ ...W, level: 5 }, { ...md, daily: "2026-10-08", tries: 1, dbest: 0 })) === JSON.stringify(["medal:IRON CROWN", "note"]) && /^DAILY 2026-10-08 /.test(endFacts({ ...W, level: 5 }, { ...md, daily: "2026-10-08", tries: 1, dbest: 0 }).note),
+    JSON.stringify(claims({ ...W, level: 5 }, { ...md, daily: "2026-10-08", tries: 1, dbest: 0 })),
   );
 }
 
@@ -687,7 +671,7 @@ const rec = () => {
   );
 }
 
-// ---- 14. Minor-3 (owner ruling 2026-09-07): deltaLine gates FURTHEST ROOM
+// ---- 14. Minor-3 (owner ruling 2026-09-07): the record line (GAME OVER's tail, endFacts) gates FURTHEST ROOM
 // YET on run.fromStart — a LEVEL SELECT start never claims a room it picked
 // rather than earned, not even inside the FURTHEST-ROOM-YET-and-NEW-BEST
 // combination (that case degrades to plain NEW BEST). Absent fromStart is
@@ -697,26 +681,26 @@ const rec = () => {
   const W = { level: 5, score: 900, heat: 0, pact: 0, pace: 0 };
   check(
     "R1M3(a): a LEVEL SELECT run (fromStart:false) never prints FURTHEST LEVEL YET, even as a first-ever record",
-    deltaLine(W, { best: null, fromStart: false }) === "NEW BEST",
-    deltaLine(W, { best: null, fromStart: false }),
+    tailOf(W, { best: null, fromStart: false }) === "NEW BEST · NORMAL DIFFICULTY",
+    tailOf(W, { best: null, fromStart: false }),
   );
   check(
     "R1M3(a): LEVEL SELECT beating the stored score still just says NEW BEST — never the FURTHEST combo",
-    deltaLine(W, { best: { s: 500, r: 4 }, fromStart: false }) === "NEW BEST",
-    deltaLine(W, { best: { s: 500, r: 4 }, fromStart: false }),
+    tailOf(W, { best: { s: 500, r: 4 }, fromStart: false }) === "NEW BEST · NORMAL DIFFICULTY",
+    tailOf(W, { best: { s: 500, r: 4 }, fromStart: false }),
   );
   check(
     "R1M3(a): LEVEL SELECT short of the score falls through to the ordinary gap form — room ignored entirely",
-    deltaLine({ ...W, score: 100 }, { best: { s: 500, r: 4 }, fromStart: false }) ===
-      "+400 FROM YOUR NORMAL DIFFICULTY BEST",
-    deltaLine({ ...W, score: 100 }, { best: { s: 500, r: 4 }, fromStart: false }),
+    tailOf({ ...W, score: 100 }, { best: { s: 500, r: 4 }, fromStart: false }) ===
+      "400 points short of your NORMAL DIFFICULTY best (500).",
+    tailOf({ ...W, score: 100 }, { best: { s: 500, r: 4 }, fromStart: false }),
   );
   check(
     "R1M3(b): a room-1 start (fromStart:true, or absent — the old default) still fires FURTHEST LEVEL YET as before",
-    deltaLine({ ...W, score: 100 }, { best: { s: 2000, r: 2 }, fromStart: true }) ===
+    tailOf({ ...W, score: 100 }, { best: { s: 2000, r: 2 }, fromStart: true }) ===
       "FURTHEST LEVEL YET" &&
-      deltaLine({ ...W, score: 100 }, { best: { s: 2000, r: 2 } }) === "FURTHEST LEVEL YET",
-    deltaLine({ ...W, score: 100 }, { best: { s: 2000, r: 2 } }),
+      tailOf({ ...W, score: 100 }, { best: { s: 2000, r: 2 } }) === "FURTHEST LEVEL YET",
+    tailOf({ ...W, score: 100 }, { best: { s: 2000, r: 2 } }),
   );
 }
 
@@ -729,28 +713,28 @@ const rec = () => {
   const Z = { state: "LOSE", level: 1, score: 0, heat: 0, pact: 0, pace: 0 };
   check(
     "R10N6(a): a fresh bucket scoring exactly 0 prints no delta line at all",
-    deltaLine(Z, { best: null }) === "",
-    JSON.stringify(deltaLine(Z, { best: null })),
+    tailOf(Z, { best: null }) === "" && endFacts(Z, { best: null }).tail === null,
+    JSON.stringify(tailOf(Z, { best: null })),
   );
   check(
-    "R10N6(b): summaryLines omits the entry entirely — one pair, not two with an empty string",
-    summaryLines(Z, { r: 0, k: 0, p: 0, t: 2, best: null }).length === 1,
-    JSON.stringify(summaryLines(Z, { r: 0, k: 0, p: 0, t: 2, best: null })),
+    "R10N6(b): GAME OVER omits the section entirely (no tail rect), not an empty line",
+    !endGeom({ w: 600, h: 520 }, endFacts(Z, { r: 0, k: 0, p: 0, t: 2, best: null }), { lay: "d", css: 1.38 }).rects.tail,
+    JSON.stringify(endFacts(Z, { r: 0, k: 0, p: 0, t: 2, best: null }).tail),
   );
   check(
     "R10N6(c): a fresh bucket scoring 1 keeps form 3 unchanged, from-start",
-    deltaLine({ ...Z, score: 1 }, { best: null }) === "FURTHEST LEVEL YET · NEW BEST",
-    deltaLine({ ...Z, score: 1 }, { best: null }),
+    tailOf({ ...Z, score: 1 }, { best: null }) === "NEW BEST · NORMAL DIFFICULTY",
+    tailOf({ ...Z, score: 1 }, { best: null }),
   );
   check(
     "R10N6(d): a fresh bucket scoring 1, not from-start, still just says NEW BEST",
-    deltaLine({ ...Z, score: 1 }, { best: null, fromStart: false }) === "NEW BEST",
-    deltaLine({ ...Z, score: 1 }, { best: null, fromStart: false }),
+    tailOf({ ...Z, score: 1 }, { best: null, fromStart: false }) === "NEW BEST · NORMAL DIFFICULTY",
+    tailOf({ ...Z, score: 1 }, { best: null, fromStart: false }),
   );
   check(
     "R10N6(e): a prior record present is unaffected by the score-0 clause, even at score 0",
-    deltaLine(Z, { best: { s: 500, r: 3 } }) === "+500 FROM YOUR NORMAL DIFFICULTY BEST",
-    deltaLine(Z, { best: { s: 500, r: 3 } }),
+    tailOf(Z, { best: { s: 500, r: 3 } }) === "500 points short of your NORMAL DIFFICULTY best (500).",
+    tailOf(Z, { best: { s: 500, r: 3 } }),
   );
   // v202 Task 5.4: the skipped line is GAME OVER's tail section; the plate is shorter by exactly that section and its gap
   const zr = { r: 0, k: 0, p: 0, t: 2, best: null, css: 1.38 }, zG0 = endGeom({ w: 600, h: 520 }, endFacts(Z, zr), { lay: "d", css: 1.38 }), zG1 = endGeom({ w: 600, h: 520 }, endFacts({ ...Z, score: 1 }, zr), { lay: "d", css: 1.38 });

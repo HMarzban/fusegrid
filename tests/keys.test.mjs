@@ -20,7 +20,7 @@ import { SHOW_STEP, SHOW_DUR, popOf } from "../src/app/intro.js";
 import { CFG } from "../src/core/config.js";
 import { dailySeed } from "../src/app/daily.js";
 import { getFlash, getShake } from "../src/render/fx.js";
-import { copyPayload, drawOverlay, overlayBox, overlayCue } from "../src/render/scenes.js";
+import { copyPayload, drawOverlay, overlayBox } from "../src/render/scenes.js";
 import { createToast, copyText, toastOf, toastTick, TOAST_T } from "../src/app/endkeys.js";
 import "../src/app/demobot.js";
 import { rec as krec } from "./lib/textrec.mjs";
@@ -1260,10 +1260,14 @@ for (const code of ["Space", "Enter"]) {
     return { c, rows }; };
   for (const B of [overlayBox("2d"), overlayBox("iso")]) {
     const tag = B.w + "x" + B.h;
+    /* v202 Tasks 5.2-5.4: the run ends name their keys on the page (endFacts().keys + endkit.capsOf), each inside the plate; was one cue line */
+    lazyPages._set("endwin", endWin); lazyPages._set("endlose", endLose);
     for (const st of [{ state: "WIN", level: 3 }, { state: "WIN", level: 5 }, { state: "LOSE", level: 2 }]) {
-      const cue = overlayCue(st) + " · C copy · B board";
-      check("cue '" + cue + "' fits one line in " + tag, [...cue].length * 15 * 0.6 <= B.w - 48, [...cue].length * 9);
-      check("cue names ENTER for " + st.state + " L" + st.level, /SPACE \/ ENTER \/ TAP/.test(cue));
+      const R = krec(); kprobe.setOn(true);
+      drawOverlay(R.ctx, { ...st, score: 1 }, B.w, B.h, B.cx, B.cy, { r: 1, k: 0, p: 0, t: 5, best: null });
+      const S = kprobe.snapshot(); kprobe.setOn(false);
+      const main = S.texts.find((t) => t.s === "ENTER");
+      check("the " + st.state + " L" + st.level + " page names ENTER on its main key, inside the box " + tag, !!main && main.x >= 0 && main.x <= B.w && main.y >= 0 && main.y <= B.h, JSON.stringify(main));
     }
     for (const s of ["COPIED", "BOARD LINK COPIED", "COPY FAILED"]) {
       // v202 Task 5.3: the WIN page (lazy, handed in) drops the note as a brick tag at its plate's top, above the headline

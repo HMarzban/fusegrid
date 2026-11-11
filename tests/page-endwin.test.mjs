@@ -53,6 +53,24 @@ check("ATTRACT (no run): no claim on a finale or a level clear", J(claims(fin({ 
 check("a mid-run WIN claims no score, only the level time the times store kept (faster than the best before the write, or the first)", J(claims(mid({ score: 99999 }), RUN, { t: 30, best: 40 })) === J(["LEVEL 3 TIME"]) && J(claims(mid(), RUN, { t: 50, best: 40 })) === "[]" && J(claims(mid(), RUN, { t: 50, best: null })) === J(["LEVEL 3 TIME"]));
 check("medals: only the newly saved ones, as handed in; more than three pieces fold into +N MORE", J(claims(fin({ score: 2000 }), { ...RUN, medals: [["FLAWLESS", "x"], ["SPRINT", "y"], ["OVERDRIVE", "z"]] }, { t: 1, best: 2 })) === J(["SCORE · NORMAL DIFFICULTY", "LEVEL 5 TIME", "MORE 3"]) && J(claims(fin({ score: 1 }), { ...RUN, medals: [["FLAWLESS", "x"]] })) === J(["MEDAL FLAWLESS"]));
 check("the course: the run's levels won (with the finale's medal), 6-8 locked while the cap is 5", J(endFacts(fin(), RUN).course.map((c) => c.st)) === J(["won", "won", "won", "won", "won", "locked", "locked", "locked"]) && J(endFacts(fin({ level: 8 }), { ...RUN, r: 3, cap: 8 }).course.map((c) => c.st)) === J(["clear", "clear", "clear", "clear", "clear", "won", "won", "won"]));
+// ---- the finale that first opens 6-8 says so (lead ruling: main saves the unlock at the run end, run.opened) ----
+{
+  const OPEN = "LEVELS 6 TO 8 NOW OPEN";
+  check("run.opened on a finale: the line, under the course; never on a later finale, a level clear, ATTRACT or GAME OVER",
+    endFacts(fin(), { ...RUN, cap: 8, opened: true }).opened === OPEN && !endFacts(fin(), { ...RUN, cap: 8 }).opened && !endFacts(mid(), { ...RUN, opened: true }).opened &&
+      !endFacts(fin(), undefined).opened && !endFacts({ ...fin(), state: "LOSE" }, { ...RUN, opened: true }).opened);
+  check("the opened course: 6-8 open (ahead), none locked", J(endFacts(fin(), { ...RUN, cap: 8, opened: true }).course.map((c) => c.st)) === J(["won", "won", "won", "won", "won", "ahead", "ahead", "ahead"]));
+  for (const [lay, css, box] of [["d", 1.38, B], ["p", 2.4, B], ["d", 1, IB]]) {
+    const run = { ...RUN, cap: 8, opened: true, lay, css };
+    const courseOf = (F) => { const G = endGeom(box, F, { lay, css }); for (let page = 0; page < G.pages; page++) { const g = endGeom(box, F, { lay, css, page }); if (g.rects.course) return [g.rects.course.h, G.pages]; } return [0, G.pages]; };
+    const c0 = courseOf(endFacts(fin(), { ...RUN, cap: 8, lay, css })), c1 = courseOf(endFacts(fin(), run)), G1 = endGeom(box, endFacts(fin(), run), { lay, css });
+    check("the line's room: the course row grows by it (" + lay + " " + box.w + "x" + box.h + ")", c1[0] > c0[0], J([c0, c1]));
+    let seen = false;
+    for (let pg = 0; pg < G1.pages; pg++) { const T = S(draw(fin(), { ...run, page: pg }, null, null, box)); if (T.includes(OPEN)) seen = true; }
+    check("the line is drawn on one of the pages (" + lay + " " + box.w + "x" + box.h + ")", seen);
+  }
+  check("a later finale (already open) draws no line", !S(draw(fin(), { ...RUN, cap: 8 })).includes(OPEN));
+}
 // ---- the toast ----
 for (const [s, ok] of [["COPIED", true], ["COPY FAILED", false], ["BOARD LINK COPIED", true]]) {
   const R = draw(fin(), RUN, null, { s, ok, t: 1 });

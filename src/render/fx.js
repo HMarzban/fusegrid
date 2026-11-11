@@ -1,4 +1,4 @@
-import {CFG} from "../core/config.js";
+import {CFG, isFinale} from "../core/config.js";
 import {POWER} from "../core/entities.js";
 import {drawIcon} from "./icons.js";
 import {collectParticle, collectM, COLLECT_T} from "./motion.js";
@@ -179,7 +179,8 @@ export function onEvent(world, ev, time, look){
                    addParticles(ev.x, ev.y, 2, "#fff8d8"); break;
     case "remote":addParticles(ev.x, ev.y, 7, "#7fe0ff"); break;
     case "lose":  fx.shakeT=Math.min(0.7,fx.shakeT+0.28); break;
-    case "win":   addConfetti(60); fx.shakeT=Math.max(fx.shakeT,0.15); break;
+    /* confetti on a FUSE/GRID CLEAR only (v202 appendix 10.4): a level clear is a step on the way, its shake stays */
+    case "win":   if(world&&(isFinale(world.level)||world.finale))addConfetti(60); fx.shakeT=Math.max(fx.shakeT,0.15); break;
   }
 }
 /* EFFECTS LOW (partK<1) thins only these decorative spawns; at partK 1 the

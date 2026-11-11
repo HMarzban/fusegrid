@@ -117,5 +117,16 @@ setTextScale(1);
   check("probe: page lose on #c, no fault, its squint pairs", s.page === "lose" && s.box.el === "c" && !s.fault && ["chosen", "locked", "band", "ring"].every((k) => s.pairs.some((p) => p.kind === k)), J(s.pairs.map((p) => p.kind + " " + (p.name || ""))));
 }
 
+/* the locked pair's floor sample (the texture gate's plain floor): mapped to the box like its pair, inside a reached-not cell, clear of its number,
+   at least 4 x 4 CSS px (desk, phone, and a death on level 1 and on the finale) */
+for (const [lay, css, w] of [["d", 1.38, lose({ level: 1 })], ["d", 1.38, lose({ level: 4 })], ["p", 2.4, lose({ level: 1 })], ["p", 2.4, lose({ level: 5 })]]) {
+  probe.setOn(true);
+  draw(w, { ...RUN, r: w.level - 1, lay, css });
+  const s = probe.snapshot(); probe.setOn(false);
+  const lk = s.pairs.find((q) => q.kind === "locked"), f = lk && lk.floor, cells = s.rects.filter((r) => /^cell \d$/.test(r.name)), nums = s.texts.filter((t) => /^\d$/.test(t.s));
+  const host = f && cells.find((r) => f.x >= r.x && f.y >= r.y && f.x + f.w <= r.x + r.w && f.y + f.h <= r.y + r.h);
+  const hit = f && nums.some((t) => t.x < f.x + f.w && t.x + t.w > f.x && t.y < f.y + f.h && t.y + t.capH > f.y);
+  check("the locked floor sample sits inside one cell, clear of the numbers, >= 4x4 CSS px (" + lay + " L" + w.level + ")", !!host && !hit && f.w * css >= 4 && f.h * css >= 4, J([f, host, hit]));
+}
 console.log(fail ? "PAGE ENDLOSE FAIL " + fail + "/" + (pass + fail) : "PAGE ENDLOSE OK " + pass);
 process.exit(fail ? 1 : 0);

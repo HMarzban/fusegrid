@@ -74,6 +74,20 @@ for (const code of ["Enter", "Space"]) {
   check("LOSE (?code=) + Enter -> level 1 on the same board", started && g.world.state === "PLAY" && g.world.level === 1 && g.world.seed === 123456, started + "/" + g.world.seed);
   globalThis.location.search = "";
 }
+/* the unlock line (lead ruling): the first finale saves 6-8 open at the run end (endRun, the same edge as the bests), before the page is left, and says
+   so; a later finale does not */
+{
+  delete mem["nb.pact.v1"];
+  const g = finale(), at5 = g.world.state === "WIN" && g.world.level === 5;
+  const F = endFacts(g.world, g.ro.run, g.ro.time);
+  check("the first finale: nb.pact.v1 is saved while its page still shows, and the page says LEVELS 6 TO 8 NOW OPEN", at5 && mem["nb.pact.v1"] === "1" && g.ro.run.opened === true && F.opened === "LEVELS 6 TO 8 NOW OPEN" && F.course.every((c) => c.st !== "locked"), J([at5, mem["nb.pact.v1"], g.ro.run.opened, F.opened]));
+  press(g, "Enter"); g.tick(5);
+  const h = finale(), F2 = endFacts(h.world, h.ro.run, h.ro.time);
+  check("a later finale: no line (the levels were already open)", h.world.state === "WIN" && h.world.level === 5 && h.ro.run.opened === false && !F2.opened, J([h.world.state, h.world.level, h.ro.run.opened, F2.opened]));
+  lose(h); const F3 = endFacts(h.world, h.ro.run);
+  check("GAME OVER never says it", !F3.opened, J(F3.opened));
+  delete mem["nb.pact.v1"];
+}
 {
   const g = finale(), at5 = g.world.state === "WIN" && g.world.level === 5;
   press(g, "Enter"); g.tick(5);

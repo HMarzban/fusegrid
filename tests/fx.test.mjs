@@ -578,7 +578,7 @@ const chainW = (n, px, py, blades) => {
 
 // ---- GRAPHICS P1: dt-scaled motion, EFFECTS partK, fxBusy ----
 {
-  const W = { seed: 9, level: 1 };
+  const W = { seed: 9, level: 5 }; // a finale: the only win that throws confetti (v202 appendix 10.4)
   const snap = () => getFx().map((p) => ({ x: p.x, y: p.y, vx: p.vx, vy: p.vy, t: p.t, c: !!p.confetti }));
   const seedParts = () => {
     initFx();
@@ -653,7 +653,7 @@ const chainW = (n, px, py, blades) => {
 
 // ---- No confetti on a loss: GAME OVER must not look like a WIN, in all three looks ----
 {
-  const W = { seed: 9, level: 1 };
+  const W = { seed: 9, level: 5 }; // a finale (the confetti win)
   const src = (f) => readFileSync(new URL(f, import.meta.url), "utf8");
   const reads = {
     "2d": ["../src/render/renderer.js", /onEvent\(world, world\.events\[i\], world\.time, "2d"\)/, /drawFx\(ctx\)/],
@@ -672,6 +672,17 @@ const chainW = (n, px, py, blades) => {
     initFx();
     onEvent(W, { t: "win" }, 0, lk);
     check("win still throws confetti (" + look + ")", getFx().length > 0 && getFx().every((q) => q.confetti), getFx().length);
+    /* v202 appendix 10.4: confetti on a FUSE/GRID CLEAR only; a level clear shakes and throws none */
+    for (const [w, tag] of [[{ seed: 9, level: 1 }, "L1"], [{ seed: 9, level: 6 }, "L6"], [{ seed: 9, level: 7 }, "L7"]]) {
+      initFx();
+      onEvent(w, { t: "win" }, 0, lk);
+      check("a level clear (" + tag + ") throws no confetti, still shakes (" + look + ")", getFx().length === 0 && fxBusy() === true, getFx().length);
+    }
+    for (const [w, tag] of [[{ seed: 9, level: 8 }, "L8"], [{ seed: 9, level: 6, finale: true }, "finale latch"]]) {
+      initFx();
+      onEvent(w, { t: "win" }, 0, lk);
+      check("a FUSE/GRID CLEAR (" + tag + ") throws confetti (" + look + ")", getFx().length === 60 && getFx().every((q) => q.confetti), getFx().length);
+    }
   }
   initFx();
 }

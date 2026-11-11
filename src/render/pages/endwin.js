@@ -4,7 +4,7 @@
      most one ribbon (the level time the times store kept at the WIN edge), NEXT LEVEL.
    fin (FUSE/GRID CLEAR): the kicker with the run's difficulty (and its other rules, stepped down to fit), the headline over a static blast cross and
      a warm core, the saved score (score × difficulty) on the world's bricks with the multiplier named, the course with check notches (6-8 stay
-     locked until the finale is saved on leaving), the run's ENEMIES / POWER-UPS / TIME, the shelf (a score record, a time record, the medals newly
+     locked until a finale opens them: endRun saves it on the run-end edge, and that finale says LEVELS 6 TO 8 NOW OPEN under the course), the run's ENEMIES / POWER-UPS / TIME, the shelf (a score record, a time record, the medals newly
      saved; a fourth and later fold into +N MORE), MENU as the main key and COPY RESULT / COPY MAP.
    Every claim comes from endFacts (isRunEnd and the run-start best). The world of the level played dresses it. The motion beats run on run.et
    (appendix 10.4: plate in, headline drop, digits flip, cells pop, pieces swing, focus at 1.5 s); REDUCE FLASH or prefers-reduced-motion: the end
@@ -88,6 +88,7 @@ function scene(p, F, G, tok, caps, A) {
     });
     const won = F.course.findIndex((q) => q.st === "won"), other = F.course.findIndex((q) => q.st === "ahead" || q.st === "locked");
     if (won >= 0 && other >= 0) rpair(p, "chosen", [x0 + won * (cs + gap), co.y + 2, cs, cs], [x0 + other * (cs + gap), co.y + 2, cs, cs], {name: "won vs " + F.course[other].st});
+    if (F.opened) { let oy = co.y + 2 + cs + 6; const lh = D.sec * ts * 1.25; for (const ln of wrap(p, "label", F.opened, D.sec, inner)) { text(p, "label", ln, cx, oy + lh / 2, D.sec, {align: "center", col: CONST.ink, role: "secondary"}); oy += lh; } }
     const lk = F.course.findIndex((q) => q.st === "locked");
     const sr = G.rects.score ? R("score") : null; // a plain floor: the bed at the score row's left end (beside the digits, never under them)
     if (lk >= 0 && won >= 0) rpair(p, "locked", [x0 + lk * (cs + gap), co.y + 2, cs, cs], [x0 + won * (cs + gap) + 2, co.y + 2, cs * 0.5, cs * 0.5], {name: "locked level", floor: sr && dw ? [sr.x + 2, sr.y + 2, Math.max(6, Math.min(24, (sr.w - dw) / 2 - 8)), 3.4 * L * 0.6] : [x0 - 34, co.y + 2, 28, cs]}); // the won brick's lit top, clear of its notch

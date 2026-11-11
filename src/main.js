@@ -163,9 +163,9 @@ export function createGame(canvas, opts = {}) {
      for a run that BEGINS at room 1 (the sim's retry after LOSE and RESTART
      both reload room 1, so only onStart can begin above it) — endRun
      withholds the room from recordBest otherwise; the score still records. */
-  let tally = newTally(), runT = 0, bestRun = null, runEnded = true, runFromStart = true, runMode = "run", roomK0 = 0, roomP0 = 0, endT = 0, endPg = 0; // roomK0 / roomP0: the tally at the room start (a level clear's own counts); endT: seconds on WIN / LOSE (the end page's motion clock)
+  let tally = newTally(), runT = 0, bestRun = null, runEnded = true, runFromStart = true, runMode = "run", roomK0 = 0, roomP0 = 0, endT = 0, endPg = 0, runOpened = false; // runOpened: this run's finale first opened levels 6-8 (saved in endRun); roomK0 / roomP0: the tally at the room start (a level clear's own counts); endT: seconds on WIN / LOSE (the end page's motion clock)
   const startRunState = (fromStart) => {
-    tally = newTally(); runT = 0; runEnded = false; runFromStart = fromStart; coach2 = { kind: null, t: 0 }; roomK0 = roomP0 = 0;
+    tally = newTally(); runT = 0; runEnded = false; runFromStart = fromStart; coach2 = { kind: null, t: 0 }; roomK0 = roomP0 = 0; runOpened = false;
     bestRun = bestOfRun(loadBests(), bestKey(world));
     ga.event("run_start", { mode: runMode, room: fromStart ? 1 : world.level | 0, heat: world.heat | 0, pact: world.pact | 0, pace: world.pace | 0 });
   };
@@ -178,6 +178,7 @@ export function createGame(canvas, opts = {}) {
     if (dailyDate) { const f = finishDaily(dailyDate, world.score | 0, world.level | 0, world.pace | 0, undefined, world.gen); dailyRec = f.rec; app.dailyTag = f.tag; }
     ga.event("run_end", { mode: runMode, room: world.level | 0, result: !isRunEnd(world) ? "quit" : world.state === "WIN" ? "win" : "lose", heat: world.heat | 0, pace: world.pace | 0, score: world.score | 0, secs: Math.round(runT) });
     if (isRunEnd(world)) tally.mn = settleMedals(world, tally, runT);
+    if (isRunEnd(world) && world.state === "WIN") { runOpened = !app.pactUnlocked; savePactUnlocked(); app.pactUnlocked = true; } // a finale opens 6-8 on the run-end edge, so its page states a saved fact
   };
 
   /* USER CAMERA (spec §1): render-side closure state, NEVER in world/snapshot.
@@ -412,7 +413,7 @@ export function createGame(canvas, opts = {}) {
      time, DAILY / fixed board, the level cap, the medals settled at the end, the end clock, REDUCE FLASH, and the layout and stage scale of #c */
   const layNow = () => { const b = typeof document !== "undefined" && document && document.body, l = b && b.getAttribute && b.getAttribute("data-lay"); return l === "p" || l === "l" ? l : "d"; };
   const runInfo = () => ({ r: tally.r, k: tally.k, p: tally.p, t: runT, best: bestRun, fromStart: runFromStart, daily: dailyDate, tries: dailyRec.played, dbest: dailyRec.best, md: medalLine(tally.mn),
-    medals: medalRows(tally.mn).filter((m) => m[2]), lk: tally.k - roomK0, lp: tally.p - roomP0, fixed: runFixed, cap: roomCap(app.pactUnlocked), et: endT, page: endPg, reduced: !!settings.flx, lay: layNow(), css: canvas && canvas.css > 0 ? canvas.css : 1 });
+    medals: medalRows(tally.mn).filter((m) => m[2]), lk: tally.k - roomK0, lp: tally.p - roomP0, fixed: runFixed, cap: roomCap(app.pactUnlocked), opened: runOpened, et: endT, page: endPg, reduced: !!settings.flx, lay: layNow(), css: canvas && canvas.css > 0 ? canvas.css : 1 });
   const timeInfo = () => ({ on: !!app.timeAttack, t: roomT, best: bestPrev });
   const toast = app.toast = createToast(); // C / B note on the WIN / LOSE overlay, C on STATS (src/app/endkeys.js)
   app.padCards = [upd.padCard, loadCard()]; setModeFocus(() => app.modeCur); // what a pad may answer (src/app/padroute.js); the MODES ring (menudraw.js)

@@ -135,8 +135,8 @@ function scene(p, F, G, tok, caps, A) {
     if (at("clear") >= 0 && at("ahead") >= 0) rpair(p, "chosen", cl(at("clear")), cl(at("ahead")), {name: "cleared vs not reached"});
     if (at("crack") >= 0 && at("ahead") >= 0) rpair(p, "chosen", cl(at("crack")), cl(at("ahead")), {name: "cracked vs not reached"});
     const lit = at("clear") >= 0 ? at("clear") : at("crack"); // a lit brick: a cleared level, or the one fallen on (a death on level 1)
-    const top = (i) => [x0 + i * (cs + gap) + 3, co.y, cs - 6, cs * 0.45], plain = (i) => [x0 + i * (cs + gap) + cs * 0.15, co.y + 2 + cs * 0.6, cs * 0.2, cs * 0.25]; // a lit brick's lit top; a well's plain lower-left (its number mid, its flag right)
-    if (at("locked") >= 0 && lit >= 0) rpair(p, "locked", cl(at("locked")), top(lit), {name: "locked level", floor: plain(at("ahead") >= 0 ? at("ahead") : at("locked"))});
+    const top = (i) => [x0 + i * (cs + gap) + 3, co.y, cs - 6, cs * 0.45], plain = (i) => [x0 + i * (cs + gap) + 5, co.y + 2 + cs * 0.72, Math.max(5, cs * 0.18), Math.max(4.5, cs * 0.28 - 5)]; // a lit brick's lit top; a cell's plain lower-left, inside its outline and under its number (a finale's number sits left, its flag right and high)
+    if (at("locked") >= 0 && lit >= 0) rpair(p, "locked", cl(at("locked")), top(lit), {name: "locked level", floor: plain(at("ahead") >= 0 ? at("ahead") : lit)});
   }
   if (has("score")) {
     const sc = R("score"), spx = (1.6 * L) / 0.72, ts = textScale(), split = scoreSplit(F, D, rw, p.m), h1 = spx * ts * 1.15, sy = sc.y + h1 / 2;

@@ -18,6 +18,7 @@ import { _set as setLazyPage } from "../src/render/pages/lazy.js";
 setLazyPage("guide", await import("../src/render/pages/guide.js")); // the lazy GUIDE pages (v202 Task 3.5), as if their import had landed
 import * as endWin from "../src/render/pages/endwin.js";
 import * as endLose from "../src/render/pages/endlose.js";
+import { capsOf } from "../src/render/pages/endkit.js";
 setLazyPage("endwin", endWin); setLazyPage("endlose", endLose); // the run-end pages are lazy (v202 Tasks 5.3 / 5.4): handed in as if their imports had landed
 import { rec as krec } from "./lib/textrec.mjs";
 
@@ -474,12 +475,17 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
   check("coachTip: a touch device on a desktop layout has no button to name", coachTip("throw", "d", null, wordsOf("touch", DEF_CONTROLS)) === "THROW · E tosses a bomb");
 
   check("overlayCue keyboard default: PAUSE reads ENTER CONFIRM", overlayCue({ state: "PAUSE" }) === "ESC · P RESUME · ↑↓ MOVE · ENTER CONFIRM · M QUIT", overlayCue({ state: "PAUSE" }));
-  check("overlayCue keyboard default: WIN / LOSE bytes", overlayCue({ state: "WIN", level: 1 }) === "SPACE / ENTER / TAP · next level" && overlayCue({ state: "WIN", level: 5 }) === "SPACE / ENTER / TAP · menu" && overlayCue({ state: "LOSE" }) === "SPACE / ENTER / TAP · new run");
+  check("run-end keycaps, keyboard default: ENTER / ESC / C / B (endkit.capsOf; was overlayCue's WIN / LOSE line)", JSON.stringify(capsOf(false)) === JSON.stringify({ main: "ENTER", menu: "ESC", copy: "C", map: "B" }), JSON.stringify(capsOf(false)));
   check("overlayCue touch default", overlayCue({ state: "PAUSE" }, true) === "TAP A ROW · PAUSE PILL RESUMES");
   check("overlayCue pad PAUSE", overlayCue({ state: "PAUSE" }, false, padW) === "START · EAST RESUME · ↑↓ MOVE · SOUTH CONFIRM", overlayCue({ state: "PAUSE" }, false, padW));
   check("overlayCue pad wins on a touch layout", overlayCue({ state: "PAUSE" }, true, padW) === "START · EAST RESUME · ↑↓ MOVE · SOUTH CONFIRM");
-  check("overlayCue pad run end, BOMB rebound or not", overlayCue({ state: "WIN", level: 1 }, false, padW) === "SOUTH · next level" && overlayCue({ state: "LOSE" }, false, wordsOf("pad", bindBtn(DEF_CONTROLS, "BOMB", "E").c)) === "SOUTH · new run");
-  check("overlayCue follows rebound PAUSE and BOMB keys", overlayCue({ state: "PAUSE" }, false, wordsOf("key", bindKey(DEF_CONTROLS, "PAUSE", "KeyO").c)) === "ESC · O RESUME · ↑↓ MOVE · ENTER CONFIRM · M QUIT" && overlayCue({ state: "LOSE" }, false, wordsOf("key", Z)) === "Z / ENTER / TAP · new run");
+  setHints(padW);
+  const padCaps = capsOf(false);
+  setHints(wordsOf("pad", bindBtn(DEF_CONTROLS, "BOMB", "E").c));
+  const padCapsE = capsOf(false);
+  setHints(null);
+  check("run-end keycaps on a controller, BOMB rebound or not: SOUTH / EAST / WEST / NORTH", JSON.stringify(padCaps) === JSON.stringify({ main: "SOUTH", menu: "EAST", copy: "WEST", map: "NORTH" }) && JSON.stringify(padCapsE) === JSON.stringify(padCaps), JSON.stringify([padCaps, padCapsE]));
+  check("overlayCue follows rebound PAUSE and BOMB keys", overlayCue({ state: "PAUSE" }, false, wordsOf("key", bindKey(DEF_CONTROLS, "PAUSE", "KeyO").c)) === "ESC · O RESUME · ↑↓ MOVE · ENTER CONFIRM · M QUIT" );
   setHints(padW);
   check("overlayCue reads the live hints with no words argument", overlayCue({ state: "PAUSE" }) === "START · EAST RESUME · ↑↓ MOVE · SOUTH CONFIRM");
   setHints(null);

@@ -25,7 +25,7 @@ export function pen(c, m, P, u, rec) { return {c, m, P, u, rec: !!rec && probe.p
 export const scaledPen = (p, cx, cy, k) => ({...p, t: {k: p.t.k * k, x: p.t.x + p.t.k * cx * (1 - k), y: p.t.y + p.t.k * cy * (1 - k)}});
 const bx = (p, x, y, w, h) => { const t = p.t; return [p.P.x + (t.x + t.k * x) * p.u, p.P.y + (t.y + t.k * y) * p.u, Math.max(0.01, w * t.k * p.u), Math.max(0.01, h * t.k * p.u)]; };
 export const rrect = (p, name, x, y, w, h, o) => { if (p.rec) probe.rect(name, ...bx(p, x, y, w, h), o); };
-export const rpair = (p, kind, a, b, o) => { if (p.rec) probe.pair(kind, bx(p, ...a), bx(p, ...b), o); };
+export const rpair = (p, kind, a, b, o) => { if (p.rec) probe.pair(kind, bx(p, ...a), bx(p, ...b), o && Array.isArray(o.floor) ? {...o, floor: bx(p, ...o.floor)} : o); }; // a locked pair's floor cell is design px too
 const FONT = {display: T.display, label: T.label, body: T.body, num: T.num};
 /* one string: face display | label | body | num, at px design px; o.align (left), o.col, o.role (primary), o.outline (display: the kit's raised recipe) */
 export function text(p, face, s, x, y, px, o = {}) {
@@ -281,6 +281,7 @@ export function pager(p, G, tok) {
   for (const [n, q, gl, off] of [["up", up, "up", first], ["down", dn, "dn", last]]) {
     if (p.c) { key(p.c, q.x, q.y, q.w, q.h, off ? "well" : "key", {tok}); glyph(p.c, gl, q.x + q.w / 2 - 9, q.y + q.h / 2 - 9, 18, off ? CONST.off : CONST.ink); }
     rrect(p, n, q.x, q.y, q.w, q.h, {touch: true, set: "end"});
+    if (!off) rpair(p, "info", [q.x + q.w / 2 - 9, q.y + q.h / 2 - 9, 18, 18], [q.x + 3, q.y + 3, q.w - 6, q.h - 6], {col: CONST.ink, name: "pager " + n}); // a live arrow is a mark that must read (a spent one is the well's off ink, quiet on purpose)
   }
   text(p, "label", G.page + 1 + " / " + G.pages, R.x + R.w / 2, R.y + R.h / 2, d.sec, {align: "center", col: CONST.t2, role: "secondary"});
 }

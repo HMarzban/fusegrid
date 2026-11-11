@@ -2,13 +2,14 @@ import { step, createWorld, newIntent, loadLevel } from "../src/core/sim.js";
 import { HEAT, heatRoster, heatProfile, heatScore } from "../src/core/heat.js";
 import { PACT, applyPact } from "../src/core/pact.js";
 import { CFG, T, key, ROOM_LOCK, ROOM_MAX, isFinale, roomCap } from "../src/core/config.js";
-import { winHeadline, overlayCue, runStamp, copyPayload, drawOverlay,
+import { overlayCue, runStamp, copyPayload, drawOverlay,
   overlayBox, pauseHit, pauseGeom, PAUSE_ROWS, PAUSE_ROW_H, PAUSE_ROW_D } from "../src/render/scenes.js";
 import { scoreEntry } from "../src/app/highscores.js";
 import { PACT_KEY, loadPactUnlocked, savePactUnlocked } from "../src/app/pactstore.js";
 import { readFileSync } from "node:fs";
 import * as lazyPages from "../src/render/pages/lazy.js";
 import * as endWin from "../src/render/pages/endwin.js";
+import { endFacts } from "../src/render/pages/endgeom.js";
 lazyPages._set("endwin", endWin); // WIN is a lazy page (v202 Task 5.3): handed in as if its import had landed
 import * as endLose from "../src/render/pages/endlose.js";
 lazyPages._set("endlose", endLose); // GAME OVER is a lazy page (v202 Task 5.4)
@@ -36,35 +37,26 @@ check(
     !isFinale(7),
 );
 check("roomCap locked 5 unlocked 8", roomCap(false) === 5 && roomCap(true) === 8);
+/* v202 Tasks 5.2-5.4: the run-end headline and keys are endgeom.endFacts' (was winHeadline / overlayCue's WIN and LOSE branches) */
+const hd = (w) => endFacts({ state: "WIN", ...w }).head;
 check(
-  "winHeadline L6/L7 are room clears",
-  winHeadline({ level: 6, finale: false }) === "LEVEL 6 CLEARED" &&
-    winHeadline({ level: 7, finale: false }) === "LEVEL 7 CLEARED",
+  "the WIN headline: L6/L7 are level clears",
+  hd({ level: 6, finale: false }) === "LEVEL 6 CLEAR" && hd({ level: 7, finale: false }) === "LEVEL 7 CLEAR",
 );
 check(
-  "winHeadline L5/L8 are FUSE/GRID CLEAR",
-  winHeadline({ level: 5, finale: false }) === "FUSE/GRID CLEAR" &&
-    winHeadline({ level: 8, finale: false }) === "FUSE/GRID CLEAR",
+  "the WIN headline: L5/L8 are FUSE/GRID CLEAR",
+  hd({ level: 5, finale: false }) === "FUSE/GRID CLEAR" && hd({ level: 8, finale: false }) === "FUSE/GRID CLEAR",
+);
+check("the WIN headline: the finale latch wins", hd({ level: 6, finale: true }) === "FUSE/GRID CLEAR");
+check(
+  "the run-end main key: NEXT LEVEL mid-run, MENU on a finale, TRY AGAIN on GAME OVER",
+  endFacts({ state: "WIN", level: 3, finale: false, score: 10, heat: 0 }).keys.main === "NEXT LEVEL" &&
+    endFacts({ state: "WIN", level: 5, finale: false, score: 10, heat: 1 }).keys.main === "MENU" &&
+    endFacts({ state: "LOSE", level: 4, score: 99, heat: 2 }).keys.main === "TRY AGAIN",
 );
 check(
-  "winHeadline finale latch wins",
-  winHeadline({ level: 6, finale: true }) === "FUSE/GRID CLEAR",
-);
-
-check(
-  "overlayCue WIN mid",
-  overlayCue({ state: "WIN", level: 3, finale: false, score: 10, heat: 0 }) ===
-    "SPACE / ENTER / TAP · next level",
-);
-check(
-  "overlayCue WIN finale",
-  overlayCue({ state: "WIN", level: 5, finale: false, score: 10, heat: 1 }) ===
-    "SPACE / ENTER / TAP · menu",
-);
-check(
-  "overlayCue LOSE",
-  overlayCue({ state: "LOSE", level: 4, score: 99, heat: 2 }) ===
-    "SPACE / ENTER / TAP · new run",
+  "overlayCue has no run-end cue any more: the pages carry their keys",
+  overlayCue({ state: "WIN", level: 3 }) === "" && overlayCue({ state: "LOSE", level: 4 }) === "",
 );
 check(
   "overlayCue PAUSE is the pause-list cue, exactly (keys / touch)",

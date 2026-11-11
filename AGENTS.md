@@ -361,12 +361,17 @@ one cached `frame`); `drawOverlay` paints a LOADING plate until it lands (taps i
 `lazy.idle()` on MENU and GAME. It sits under the HUD band (`HUD_TOP` 42) inside `#c`'s box: a level clear (LEVEL n
 CLEAR, three stat cards of this level, at most one time ribbon, NEXT LEVEL) and the finale (FUSE/GRID CLEAR over a
 blast cross and warm core, the saved score on bricks with `multTag` (`×2 HARD DIFFICULTY`), the course with check
-notches and 6-8 locked until the finale is saved on leaving, the run's stats, the shelf: a score record, a time record,
+notches and 6-8 locked until a finale opens them: `endRun` saves the unlock on the run-end edge, the same edge as the bests,
+so the finale that first opens them prints LEVELS 6 TO 8 NOW OPEN under the course from a persisted fact (`run.opened`), a later one
+never; the run's stats, the shelf: a score record, a time record,
 the newly saved medals, `+N MORE` past three; MENU, COPY RESULT, COPY MAP). Motion beats on `run.et`; REDUCE FLASH or
 prefers-reduced-motion: the end state with one fade. A touch box lays out the phone's column. Never scaled under the text
 and touch floors (u = 1 / css): the plate narrows to the box, a short box closes the gaps, then PAGES the content (whole
 sections, the keys on every page, a ▲ / ▼ pager column; ↑ / ↓, the D-PAD and the ▲ / ▼ taps turn it, main holds
-`run.page`, `scenes.endPagesAt` clamps it); a phone's medals hang on shelves of their own.
+`run.page`, `scenes.endPagesAt` clamps it); a phone's medals hang on shelves of their own. Confetti (`fx.js` `win`) falls on a
+FUSE/GRID CLEAR only (appendix 10.4); a level clear shakes and throws none. The old summary helpers (`winHeadline`, `timeLine`,
+`deltaLine`, `summaryLines`, `runLine`, overlayCue's WIN / LOSE lines) are gone: `endgeom.endFacts` is the one source of every
+run-end claim and key; `overlayCue` is PAUSE's.
 GAME OVER is its page since Task 5.4: `src/render/pages/endlose.js` (lazy, `endlose`): a cool grey veil (R18,
 `VEIL`), the burnt-out bomb (no spark once out, a charred stub, a soot ring by gradient, live smoke), the engraved
 headline, "Reached level n of m." (m the run's finale, 5 or 8), the course (cleared, cracked on the level fallen,

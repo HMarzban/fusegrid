@@ -65,6 +65,8 @@ export function endFacts(world, run, tm) {
     F.score = {digits: fmtN(s * k), sub: "SCORE · " + multTag(h), subs: ["SCORE · " + multTag(h), multTag(h)]};
     F.stats = [["foe", "ENEMIES", String(run ? run.k | 0 : 0)], ["item", LABEL.POWER_UPS, String(run ? run.p | 0 : 0)], ["clock", "TIME", fmtSpan(run ? run.t : 0)]];
     if (end && F.daily) F.note = dailyLine(w, run);
+    /* the finale that first opens levels 6-8 says so: run.opened is main's persisted fact (endRun saves the unlock on this run-end edge) */
+    if (end && run.opened) F.opened = LABEL.LEVELS + " 6 TO 8 NOW OPEN";
     const p = [];
     if (end && !F.daily && (b ? s > (b.s | 0) : s > 0)) p.push({kind: "rib", name: ["SCORE · " + bestLabel(w), "SCORE"], value: fmtN(s * k)});
     const t = run ? timeRib(lv, tm) : null;
@@ -145,7 +147,7 @@ function content(F, D, ph, ts, W, m, two) {
   rows.push(["band", kick + 6 + head + (F.mode === "fin" && !ph ? Math.max(0, 5 * L - kick - 6 - head) : 0)]);
   if (F.mode === "fin") {
     rows.push(["score", dig + (ph ? 0.6 : 0.8) * L + line(D.sec) + (F.note ? 6 + line(D.sec) * lineCount(F.note, W, D.sec, m, "label") : 0)]);
-    rows.push(["course", cellOf(D, ph, W) + 4]);
+    rows.push(["course", cellOf(D, ph, W) + 4 + (F.opened ? 6 + line(D.sec) * lineCount(F.opened, W, D.sec, m, "label") : 0)]);
   }
   rows.push(["tally", card]);
   shelvesOf(F.pieces, L, ph, m, W).forEach((ix, i) => rows.push(["shelf" + (i || ""), 0.9 * L + 0.5 * L + Math.max(...ix.map((j) => (F.pieces[j].kind === "medal" ? med(F.pieces[j]) : rib + 1.4 * L + 4))), ix]));
