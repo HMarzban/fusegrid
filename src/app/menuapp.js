@@ -511,6 +511,10 @@ export function createMenuApp(opts = {}) {
         this.screen === SCREEN.FLOOR
       )
         return this._push(SCREEN.GUIDE, 1);
+      if (this.screen === SCREEN.STATS && this.resetArm) { // close-first (R1 cohesion ruling): Esc / Backspace / EAST cancel an armed reset only, as a tap does; a second leaves
+        this.resetArm = false;
+        return this._feel("back");
+      }
       if (isRecords(this.screen)) { // any tab, tab row or body: MENU on RECORDS
         this.cursor = ITEMS.indexOf("RECORDS");
         return this._push(SCREEN.MENU, 1);

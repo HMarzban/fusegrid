@@ -779,6 +779,9 @@ for (const [row, scr] of [["HOW TO PLAY", SCREEN.HOWTO], ["POWER-UPS", SCREEN.IT
   check("STATS R arms, any other key disarms", arm === true && g.app.resetArm === false && reloads === 0);
   press(g, "KeyR"); press(g, "KeyR");
   check("STATS R, R resets and reloads once", reloads === 1, reloads);
+  const cf = [];
+  for (const k of ["Escape", "Backspace"]) { press(g, "KeyR"); const a0 = g.app.resetArm; press(g, k); cf.push(a0 && g.app.resetArm === false && g.app.screen === SCREEN.STATS); }
+  check("STATS armed, Escape / Backspace close first (R1 cohesion ruling): the reset cancels, STATS stays, nothing reloads", cf.every(Boolean) && reloads === 1, JSON.stringify(cf));
   press(g, "Escape");
   check("STATS Escape -> MENU", g.app.screen === SCREEN.MENU);
   /* v202 Task 4.2, gap 4: only a plain R arms or erases; a chorded R (Ctrl / Cmd / Alt / Shift) never arms, and cancels an armed reset */
@@ -950,7 +953,7 @@ const OUT = want(MN, null, UB);
     "MEDALS tab row": [2, 0, { ArrowLeft: want(ST, 0, UM), ArrowRight: want(ME, 0), ArrowUp: want(ME, 0), ArrowDown: want(ME, 0), KeyQ: want(ST, 0, UM), KeyE: want(ME, 0), KeyT: want(ME, 0), KeyC: want(ME, 0), KeyR: want(ME, 0) }],
   };
   for (const [name, [page, body, keys]] of Object.entries(K)) for (const armed of page === 1 ? [false, true] : [false]) {
-    for (const [code, w] of Object.entries({ ...keys, Enter: OUT, Escape: OUT, Backspace: OUT })) {
+    for (const [code, w] of Object.entries({ ...keys, Enter: OUT, Escape: armed ? want(ST, body, UB) : OUT, Backspace: armed ? want(ST, body, UB) : OUT })) { // armed, Esc / Backspace close first (R1 cohesion ruling)
       const g = recAt(page, body, armed), c0 = clip.length, r0 = reloads;
       press(g, code); await flush(); g.tick();
       const a = g.app, copy = clip.length - c0, wipe = reloads - r0;

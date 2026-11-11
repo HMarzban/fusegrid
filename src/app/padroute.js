@@ -47,7 +47,7 @@ export function createPadRouter({ input, app, SCREEN, binds, world, onPause, onU
     const st = world().state, ended = game && (st === "WIN" || st === "LOSE");
     const alias = binds().pad.PAUSE, was0 = sig();
     let ok = false;
-    if (scr === SCREEN.STATS && press.length) app.resetArm = false; // R arms (keyboard only); any button cancels it, as any other key does
+    if (scr === SCREEN.STATS && press.some((id) => id !== "E")) app.resetArm = false; // R arms (keyboard only); any button cancels it, as any other key does; EAST reaches back(), which cancels it first (close-first)
     const go = scr === SCREEN.LEVEL && press.includes("START"); // LEVEL SELECT: START always starts the run, from any row, the list open or shut, and wins a tie with SOUTH
     const enter = () => { if (!ok) { ok = true; if (go) app.levelFocus(LEVEL_ROWS.indexOf("START")); onUiKey("Enter"); } };
     for (const id of press) {
@@ -95,7 +95,6 @@ export function createPadRouter({ input, app, SCREEN, binds, world, onPause, onU
         if (id === fireBy) { fireBy = null; input.gpFire(false); }
         if (id === remBy) { remBy = null; input.gpRemote(false); }
       }
-      if (app.resetArm && (snap.press.length || TAPS.some(([a]) => snap.menuDir[a] && !prev[a]))) app.resetArm = false; // STATS: any controller input is not the second R (a swallowed press, a card's answer included)
       const swallow = deaf || ((snap.found || woke) && !front);
       const press = swallow ? [] : snap.press;
       let edge = !deaf && snap.press.length > 0;
@@ -108,6 +107,7 @@ export function createPadRouter({ input, app, SCREEN, binds, world, onPause, onU
       else if (!dpad && app.controls && app.controls.stickBench) benchHeld = true;
       const bench = (benchHeld || !!(onCtl && app.controls && app.controls.stickBench)) && !dpad;
       const md = bench ? NONE : snap.menuDir, cap = !!(page && page.capturing), modal = !cap && lay !== "play" ? liveCard(t) : (card = null);
+      if (app.resetArm && (snap.press.some((id) => id !== "E" || swallow || cap || !!modal || lay === "play") || TAPS.some(([a]) => snap.menuDir[a] && !prev[a]))) app.resetArm = false; // STATS: any controller input is not the second R (a swallowed press, a card's answer included); an EAST that reaches the shell closes it in back() (close-first)
       if (hard && isClear(lay === "play" ? snap.dir : md)) hard = false;
       if (soft && isClear(md)) soft = false;
       if ((swallow || front || cap || modal) && !isClear(snap.dir)) hard = true;

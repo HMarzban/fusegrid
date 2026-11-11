@@ -1593,8 +1593,10 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
     fill(); stats();
     g.input._onKey({code:"KeyR"});
     g.input._onKey({code:"Escape"});
-    check("Reset: Escape on an armed STATS backs out disarmed, nothing cleared",
-      g.app.screen===SCREEN.MENU&&g.app.resetArm===false&&kept()&&reloads===1);
+    const esc1=g.app.screen===SCREEN.STATS&&g.app.resetArm===false;
+    g.input._onKey({code:"Escape"});
+    check("Reset: Escape on an armed STATS closes first (disarmed, still on STATS), a second Escape backs out; nothing cleared",
+      esc1&&g.app.screen===SCREEN.MENU&&g.app.resetArm===false&&kept()&&reloads===1);
     const a=createGame(null,{seed:22,autoplay:true});
     a.cam.x=40; a.cam.zoom=2;
     a.input._onKey({code:"KeyR"});

@@ -733,7 +733,7 @@ for (const b of ["d1366", "p393", "c600", "l1024"]) {
     const n = { reset: 0 }, a = createMenuApp({ onReset: () => n.reset++, onStats() {}, onMedals() {} });
     a.screen = SCREEN.MENU; a.cursor = ITEMS.indexOf("RECORDS"); a.confirm(); a.recTab(1);
     const raw = { list: [{ connected: true, mapping: "standard", axes: [0, 0, 0, 0], buttons: Array.from({ length: 16 }, () => ({ pressed: false, value: 0 })) }] }, pad = createPad({ getGamepads: () => raw.list });
-    const r = createPadRouter({ input: new Input(null), app: a, SCREEN, binds: () => DEF_CONTROLS, world: () => ({ state: "PLAY" }), onPause() {}, onUiKey: (c) => { if (c !== "KeyR") a.resetArm = false; a.key(c); }, page: null });
+    const r = createPadRouter({ input: new Input(null), app: a, SCREEN, binds: () => DEF_CONTROLS, world: () => ({ state: "PLAY" }), onPause() {}, onUiKey: (c) => { if (c !== "KeyR" && c !== "Escape" && c !== "Backspace") a.resetArm = false; a.key(c); }, page: null }); // main's onUiKey rule
     let t = 0; const run = () => r.route(pad.poll((t += 16)), t); run();
     for (let k = 0; k < 3; k++) {
       if (armedFirst && a.screen === SCREEN.STATS) a.key("KeyR");
@@ -742,6 +742,16 @@ for (const b of ["d1366", "p393", "c600", "l1024"]) {
     }
   }
   check("no controller button reaches the wipe: armed, any button cancels; unarmed, none arms", bad.length === 0, bad.join());
+  { /* close-first (R1 cohesion ruling): armed, EAST cancels the reset only; a second EAST leaves for MENU */
+    const a = createMenuApp({ onReset() {}, onStats() {}, onMedals() {} });
+    a.screen = SCREEN.MENU; a.cursor = ITEMS.indexOf("RECORDS"); a.confirm(); a.recTab(1);
+    const raw = { list: [{ connected: true, mapping: "standard", axes: [0, 0, 0, 0], buttons: Array.from({ length: 16 }, () => ({ pressed: false, value: 0 })) }] }, pad = createPad({ getGamepads: () => raw.list });
+    const r = createPadRouter({ input: new Input(null), app: a, SCREEN, binds: () => DEF_CONTROLS, world: () => ({ state: "PLAY" }), onPause() {}, onUiKey: (c) => { if (c !== "KeyR" && c !== "Escape" && c !== "Backspace") a.resetArm = false; a.key(c); }, page: null });
+    let t = 0; const run = () => r.route(pad.poll((t += 16)), t), east = () => { raw.list[0].buttons[1] = { pressed: true, value: 1 }; run(); raw.list[0].buttons[1] = { pressed: false, value: 0 }; run(); }; // button 1: EAST (controls.js PAD_IDX)
+    run(); a.key("KeyR");
+    const armed = a.resetArm; east(); const one = [a.screen, a.resetArm]; east();
+    check("STATS armed, EAST closes first: the reset cancels and STATS stays; a second EAST backs out to MENU", armed && one[0] === SCREEN.STATS && one[1] === false && a.screen === SCREEN.MENU, J(one));
+  }
 }
 /* the wipe guards (four gaps found in review, each reached R, <input>, R in the live game): any input that is not the second plain R disarms */
 {

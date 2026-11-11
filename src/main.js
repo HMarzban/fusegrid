@@ -413,7 +413,7 @@ export function createGame(canvas, opts = {}) {
   /* UI key side-channel: ALWAYS routed to the shell; M-in-PAUSE records the
      score then quits to MENU (spec §4 table). Machine self-gates elsewhere. */
   input.onUiKey = (code) => {
-    if (code !== "KeyR") app.resetArm = false;
+    if (code !== "KeyR" && code !== "Escape" && code !== "Backspace") app.resetArm = false; // Esc / Backspace reach back(), which closes an armed reset first
     if (code === "KeyR" && app.screen !== SCREEN.STATS && app.screen !== SCREEN.INTRO && app.screen !== SCREEN.ATTRACT) {
       if (app.screen === SCREEN.GAME) {
         resetCamera(cam); // §2 reset, GAME only

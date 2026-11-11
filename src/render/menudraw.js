@@ -488,6 +488,11 @@ function lazyMod(name) {
     });
   return null;
 }
+const loadHit = (x, y, F) => { const B = loadBox(F); return x >= B.x && x < B.x + B.w && y >= B.y && y < B.y + B.h ? -2 : -1; };
+const failedOf = (name) => !!(asks[name] && asks[name].fails > 0);
+/* a lazy page's hit before its module is in: inert (-2) while it loads; once the plate says DID NOT LOAD, SETTINGS' rule on every lazy page: -2 on
+   the plate, -1 off it (backs out), so a touch player is never stuck on a failed page (lane lesson 5) */
+const lazyHit = (name, x, y, F) => (failedOf(name) ? loadHit(x, y, F) : -2);
 /** THE LOADING plate (kit room.js loadingPlate); DID NOT LOAD while name's last import failed. ui: {level, rev, paused, failed}. */
 export function loadingPage(c, F, title, ui, name) {
   const u = ui || {}, a = asks[name];
@@ -497,7 +502,8 @@ export function loadingPage(c, F, title, ui, name) {
 /* GUIDE and its four pages are src/render/pages/guide.js (UI upgrade v202 Task 3.5), lazy (pages/lazy.js "guide"): one geometry for draw and
    tap, names by label. These keep the entry names shellview, the pointer and the tests call; L is layout(W, H, lg, css) for the box the page draws
    on, touch body[data-lay] p / l, o = {level (the world), foe (ENEMIES' focused foe), tip (its tooltip open)}. Until the module is in, a page
-   paints the LOADING plate (loadingPage) and its hits find nothing (-2: inert, so a tap while it loads never backs out). */
+   paints the LOADING plate (loadingPage) and its hits find nothing (-2: inert, so a tap while it loads never backs out) until the plate says DID NOT
+   LOAD: then a tap off the plate backs out (lazyHit, SETTINGS' rule). */
 const guideMod = () => lazy.get("guide");
 const gui = (page, kind, L, o, focus) => ({ page, focus, tip: !!(o && o.tip), pg: (o && o.pg) | 0, level: (o && o.level) | 0 || 1, look: kind === "px" ? "px" : "2d", narrow: !!L.narrow, rev: o && o.rev });
 const guideLoading = (c, L, touch, title, o) => loadingPage(c, frameOf(L, touch), title, { level: o && o.level, rev: o && o.rev }, "guide");
@@ -513,15 +519,15 @@ export function drawGuide(c, L, t, cursor, kind, touch, o) {
 }
 /** The GUIDE page's geometry (pages/guide.js guideGeom), null until the module is in. */
 export const guideGeom = (L, touch, page) => { const g = guideMod(); return g ? g.guideGeom(frameOf(L, touch), page || "GUIDE") : null; };
-export const guideHit = (x, y, L, _n, touch, focus) => { const g = guideMod(); return g ? g.guideHit(x, y, frameOf(L, touch), focus | 0) : -2; };
-export const enemiesHit = (x, y, L, touch, focus, tip) => { const g = guideMod(); return g ? g.enemiesHit(x, y, frameOf(L, touch), focus | 0, !!tip) : -2; };
-/** A read-only page (HOW TO PLAY, POWER-UPS, FLOOR) showing page pg: "up" / "down" on its page keys, else -1 (backs out); -2 while it loads. */
-export const guideReadHit = (x, y, L, touch, page, pg) => { const g = guideMod(); return g ? g.readHit(x, y, frameOf(L, touch), page, pg | 0) : -2; };
+export const guideHit = (x, y, L, _n, touch, focus) => { const g = guideMod(), F = frameOf(L, touch); return g ? g.guideHit(x, y, F, focus | 0) : lazyHit("guide", x, y, F); };
+export const enemiesHit = (x, y, L, touch, focus, tip) => { const g = guideMod(), F = frameOf(L, touch); return g ? g.enemiesHit(x, y, F, focus | 0, !!tip) : lazyHit("guide", x, y, F); };
+/** A read-only page (HOW TO PLAY, POWER-UPS, FLOOR) showing page pg: "up" / "down" on its page keys, else -1 (backs out); -2 while it loads (DID NOT LOAD: -1 off the plate). */
+export const guideReadHit = (x, y, L, touch, page, pg) => { const g = guideMod(), F = frameOf(L, touch); return g ? g.readHit(x, y, F, page, pg | 0) : lazyHit("guide", x, y, F); };
 /** How many pages a GUIDE page takes on this box (1 until the module is in). */
 export const guidePages = (L, touch, page) => { const g = guideMod(); return g ? g.guideGeom(frameOf(L, touch), page).pages : 1; };
 
 /* RECORDS' three tabs (SCORES, STATS, MEDALS) are src/render/pages/records.js (UI upgrade v202 Tasks 4.1 / 4.2), a lazy page (pages/lazy.js): until it
-   lands they paint the LOADING plate and every hit is inert (-2, or "plate"). The entry names stay: shellview, the pointer and the tests call them. ui is
+   lands they paint the LOADING plate and every hit is inert (-2, or "plate"), until the plate says DID NOT LOAD: then a tap off it backs out. The entry names stay: shellview, the pointer and the tests call them. ui is
    the page's (records.js drawRecordsPage); L is layout(W, H, lg, css) for the box the page draws on, touch body[data-lay] p / l. */
 const recMod = () => lazy.get("records");
 const recDraw = (page) => (c, ui, L, t, touch) => {
@@ -530,12 +536,12 @@ const recDraw = (page) => (c, ui, L, t, touch) => {
   return loadingPage(c, F, LABEL.RECORDS, ui || {}, "records");
 };
 export const drawScores = recDraw("scores"), drawStats = recDraw("stats"), drawTrophies = recDraw("medals");
-/* The RECORDS tab under a tap, else -1; -2 while the page module is still loading (inert). */
-export const recTabHit = (x, y, L, _page, touch) => { const m = recMod(); return m ? m.tabHit(x, y, frameOf(L, touch)) : -2; };
+/* The RECORDS tab under a tap, else -1; -2 while the page module is still loading (inert; DID NOT LOAD: -1 off the plate). */
+export const recTabHit = (x, y, L, _page, touch) => { const m = recMod(), F = frameOf(L, touch); return m ? m.tabHit(x, y, F) : lazyHit("records", x, y, F); };
 /* SCORES: the difficulty under a tap, -2 on the plate (inert), -1 off it or on the BACK key (main backs out). */
-export const scoresHit = (x, y, L, touch, spage) => { const m = recMod(); return m ? m.scoresHit(x, y, frameOf(L, touch), spage | 0) : -2; }; // spage: the page shown (a split SCORES' bank answers on its first only)
-/* STATS: a key code (KeyC / KeyR / KeyT), "back", "plate" (inert) or, armed, "cancel" (records.js statsHit); "plate" while loading. */
-export const statsHit = (x, y, L, arm, _tabs, touch, spage) => { const m = recMod(); return m ? m.statsHit(x, y, frameOf(L, touch), arm, spage | 0) : "plate"; }; // spage: the page shown (a paged #c STATS keeps COPY / RESET on its last)
+export const scoresHit = (x, y, L, touch, spage) => { const m = recMod(), F = frameOf(L, touch); return m ? m.scoresHit(x, y, F, spage | 0) : lazyHit("records", x, y, F); }; // spage: the page shown (a split SCORES' bank answers on its first only)
+/* STATS: a key code (KeyC / KeyR / KeyT), "back", "plate" (inert) or, armed, "cancel" (records.js statsHit); "plate" while loading, "back" off a DID NOT LOAD plate. */
+export const statsHit = (x, y, L, arm, _tabs, touch, spage) => { const m = recMod(), F = frameOf(L, touch); return m ? m.statsHit(x, y, F, arm, spage | 0) : lazyHit("records", x, y, F) === -1 ? "back" : "plate"; }; // spage: the page shown (a paged #c STATS keeps COPY / RESET on its last)
 /* A RECORDS tab's page count on this box (records.js recPages: 1 where its body fits unpaged, and while the module loads); page scores | stats | medals. */
 export const recPages = (L, touch, page, rows) => { const m = recMod(); return m ? m.recPages(frameOf(L, touch), page, rows) : 1; };
 /* A RECORDS tab's page keys under a tap: -1 (▲), 1 (▼), else 0 (rows: SCORES' rows, whose count sets its pages). */
@@ -549,7 +555,6 @@ const page = () => lazy.get("settings");
 const setFrame = (L, touch) => ({ ...frameOf(L, touch), paused: !!L.paused, focus: L.focus });
 /* kit/copy.js words (CONTROLS' foot reads FOOT_TAP too) */
 export { FOOT_TAP, LOOK_NAME, lookVal };
-const loadHit = (x, y, F) => { const B = loadBox(F); return x >= B.x && x < B.x + B.w && y >= B.y && y < B.y + B.h ? -2 : -1; };
 /** SETTINGS' geometry for the visible rows (pages/settings.js settingsGeom on this box); null until the page is in. */
 export const settingsGeom = (L, touch, rows) => { const m = page(); return m ? m.settingsGeom(setFrame(L, touch), rows) : null; };
 export const graphicsGeom = (L, touch) => { const m = page(); return m ? m.graphicsGeom(setFrame(L, touch)) : null; };

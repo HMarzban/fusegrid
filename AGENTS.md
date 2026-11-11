@@ -101,10 +101,11 @@ a document capture listener for a target in `#load` and the two buttons' `onclic
 touch C disarms at its pointerdown, so a cancelled C still cancels). Armed, the confirm plate is modal: a tab tap only
 cancels. A desk foot zone answers only in the armed state it was painted in (`footHit`), so a second click before the armed frame
 paints is never the second R. On those pages `Q` / `E` never also confirm. Esc, Backspace, Enter, EAST and START from any of them:
-MENU on RECORDS.
+MENU on RECORDS, except close-first (R1 cohesion ruling): on an armed STATS, Esc / Backspace / EAST cancel the reset only, as a tap does, and a
+second press leaves (`back()`; main's `onUiKey` and `padroute` leave the arm for it).
 RECORDS page (UI upgrade v202 Task 4.1; `src/render/pages/records.js`, LAZY: one `pages/lazy.js` entry `records`, loaded in the first idle
 after MENU's first frame; until it lands menudraw paints THE LOADING plate (`loadingPage`, see Lazy pages) and every RECORDS hit is -2, inert,
-so a tap never backs out of a page still loading; tests `want` / `_set` it). The room of `app.level` opaque under it (MENU's own room layer
+so a tap never backs out of a page still loading (DID NOT LOAD: a tap off the plate backs out); tests `want` / `_set` it). The room of `app.level` opaque under it (MENU's own room layer
 at MENU's room dpr (`kit/room.js` `roomDpr`, MENU's rule, with `rev`; R1 train: the one rule of MENU, LEVEL SELECT, SETTINGS and GUIDE, no logo reserve, the page's own fit the floor), whatever MENU last painted: no re-raster on a MENU <-> RECORDS trip; `shellCovers` SCORES, STATS and TROPHIES). `recordsGeom(F)`
 (F = MENU's frame: W, H, touch, shell, css, ts; the pointer hands RECORDS `layout(cw, ch, lg, css)`) is one plate for every tab: desk
 (keyboard boxes; the S7-pages frame, plate 980 wide, 1080 at 125 %, kicker MENU over the RECORDS title, tabs 150 x 36 over an 11 px trough,
@@ -392,8 +393,9 @@ the box with the page's title and one line, LOADING, or DID NOT LOAD while its l
 fits and never under 0.8 CSS px, the plate narrowing to the box and the title fitting it, so its line holds the phone's floor; it records the probe
 as page `loading`). Every LOADING frame asks for the module
 again (menudraw `lazyMod`; `lazy.want` keeps one import in flight): a failed import is asked again on the next frame (a blip recovers), then at most
-every 3 s, never every frame; `_rec.want` is the test seam for every lazy page. Hits keep each page's rule: SETTINGS / GRAPHICS -2 on the plate,
--1 off it; GUIDE and RECORDS -2 everywhere. Tests import the page or hand it in with `lazy._set`. `src/app` never imports it.
+every 3 s, never every frame; `_rec.want` is the test seam for every lazy page. Hits: SETTINGS / GRAPHICS -2 on the plate, -1 off it; GUIDE and
+RECORDS -2 everywhere while the import is in flight, and once it failed (the plate says DID NOT LOAD) SETTINGS' rule (menudraw `lazyHit` over
+`loadHit`; STATS "plate" / "back"), so a touch player is never stuck on a failed page (R1 cohesion 1, `tests/lazy-leave.test.mjs`). Tests import the page or hand it in with `lazy._set`. `src/app` never imports it.
 
 SETTINGS page (UI upgrade v202 Task 3.4, `src/render/pages/settings.js`, lazy; the round 7 S7-menu 04-settings / 04-settings-3d frames): SETTINGS and
 GRAPHICS, and PAUSE views 1 / 2 inside `overlayBox` (a paused box: no room, the plate over the board under PAUSE's veil, kept off the HUD strip

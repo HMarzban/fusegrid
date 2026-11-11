@@ -106,7 +106,9 @@ function mapStore(throwOn) {
     app.key("KeyR") === true && n === 1 && app.resetArm === false, n + "/" + app.resetArm);
   app.key("KeyR");
   app.back();
-  check("back() from an armed STATS disarms", app.resetArm === false && app.screen === SCREEN.MENU);
+  const closed = app.resetArm === false && app.screen === SCREEN.STATS;
+  app.back();
+  check("back() from an armed STATS disarms first (close-first, R1 cohesion ruling); a second back() leaves for MENU", closed && app.resetArm === false && app.screen === SCREEN.MENU);
   app._push(SCREEN.STATS);
   app.key("KeyR");
   check("KeyR, back, STATS again, KeyR only arms", app.resetArm === true && n === 1, n + "/" + app.resetArm);
