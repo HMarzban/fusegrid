@@ -4,7 +4,7 @@
 // seams together: shellGeo, mountFit's fit.shell / fit.box, shellview's shellMode and drawShell,
 // mountPointer with the real hit functions, and createGame's frame wiring.
 import { readFileSync } from "node:fs";
-import { WIN_SHELL, FIT_RES, PORT_SHELL, fitBox, mountFit, portraitGeo, shellGeo } from "../src/app/fit.js";
+import { WIN_SHELL, FIT_RES, PORT_SHELL, fitBox, mountFit, portraitGeo, shellGeo, stageCss } from "../src/app/fit.js";
 import { mountPointer } from "../src/app/pointer.js";
 import { ITEMS, SCREEN, optRows, createMenuApp } from "../src/app/menuapp.js";
 import { createControlsPage } from "../src/app/controlspage.js";
@@ -144,18 +144,20 @@ for (const [lay, W, H, touch, dpr, q] of [["d", 1366, 768, false, 2, 2], ["d", 1
     check("orientationchange to a landscape tablet brings the window box", D.attrs["data-lay"] === "l" && !!fit.shell(1) && D.sh.style.width === "1024px" && D.sh.style.height === "768px" && fit.box().width === 1024);
   } finally { undo(); }
 }
-/* fix round 1: the box's CSS px per unit, handed in by fit for paint and tap alike (MENU's touch floors): #c carries the stage scale fit applied, the
-   #sh stand-in shellGeo's s; shellview dims hands it on touch layouts only (no rect read when it is there) */
+/* fix round 1: the box's CSS px per unit, handed in by fit for paint and tap alike (MENU's touch floors): #c carries the scale of its CONTENT box (R1
+   landscape: the stage fit applied minus #c's 1 px border, the tighter axis, fit.js stageCss), the #sh stand-in shellGeo's s; shellview dims hands it
+   on touch layouts only (no rect read when it is there) */
 for (const [W, H, lay] of [[852, 393, "l"], [667, 375, "l"], [393, 852, "p"], [1024, 600, "l"], [1366, 768, "d"]]) {
   const D = mkDom(W, H, lay !== "d", 2);
+  globalThis.getComputedStyle = () => ({ borderLeftWidth: "1px", borderTopWidth: "1px" });
   try {
-    const cv = mkCv(), fit = mountFit(cv), s = fitBox(W, H, lay !== "d", 600, 520).s, g = shellGeo(W, H, 600, 520, lay), box = (fit.shell(1), fit.box());
+    const cv = mkCv(), fit = mountFit(cv), s = fitBox(W, H, lay !== "d", 600, 520).s, cs = stageCss(s, 600, 520, 1, 1), g = shellGeo(W, H, 600, 520, lay), box = (fit.shell(1), fit.box());
     let reads = 0;
     const el = { ...cv, ownerDocument: { body: { getAttribute: (k) => (k === "data-lay" ? lay : null) } }, getBoundingClientRect: () => { reads++; return { width: 1, height: 1 }; } };
     const dc = dims(el, "2d"), db = box && dims({ ...box, ownerDocument: el.ownerDocument }, "2d");
-    check(`${lay} ${W}x${H}: fit writes the stage scale on #c (canvas.css ${s.toFixed(3)}) and the shell box carries its own (${g ? g.s.toFixed(3) : "no box"}); dims hands it on a touch layout without reading a rect, none on a keyboard one`,
-      cv.css === s && (!g || box.css === g.s) && (lay === "d" ? dc.css === undefined && (!db || db.css === undefined) : dc.css === s && (!db || db.css === g.s)) && reads === 0, J({ css: cv.css, s, box: box && box.css, dc: dc.css, db: db && db.css, reads }));
-  } finally { undo(); }
+    check(`${lay} ${W}x${H}: fit writes #c's content-box scale (canvas.css ${cs.toFixed(4)} = (520 x ${s.toFixed(3)} - 2) / 520, inside its 1 px border) and the shell box carries its own (${g ? g.s.toFixed(3) : "no box"}); dims hands it on a touch layout without reading a rect, none on a keyboard one`,
+      cv.css === cs && cs < s && Math.abs(cs - (520 * s - 2) / 520) < 1e-12 && cv.style.width === 600 * s + "px" && (!g || box.css === g.s) && (lay === "d" ? dc.css === undefined && (!db || db.css === undefined) : dc.css === cs && (!db || db.css === g.s)) && reads === 0, J({ css: cv.css, cs, s, box: box && box.css, dc: dc.css, db: db && db.css, reads }));
+  } finally { undo(); delete globalThis.getComputedStyle; }
 }
 
 // ---- fit.shell modes: 1 draws, 2 (a run end) shows it click-through and hands back nothing, 0 hides ----

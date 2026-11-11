@@ -26,7 +26,7 @@ const { worldTokens, CONST } = await import("../src/render/kit/tokens.js");
 const probe = await import("../src/render/kit/probe.js");
 const logo = await import("../src/render/logo/draw2d.js");
 const { ITEMS, SCREEN, createMenuApp } = await import("../src/app/menuapp.js");
-const { shellGeo, fitBox } = await import("../src/app/fit.js");
+const { shellGeo, fitBox, stageCss } = await import("../src/app/fit.js");
 const { setHints } = await import("../src/render/hintcopy.js");
 const { wordsOf } = await import("../src/app/hints.js");
 const { DEF_CONTROLS } = await import("../src/app/controls.js");
@@ -47,7 +47,7 @@ const BOX = {
   p393: { W: PG.w, H: PG.h, touch: true, shell: true, css: PG.s },
   c600: { W: 600, H: 520, touch: false, shell: false, css: 1 },
   iso: { W: 608, H: 352, touch: false, shell: false, css: 1 },
-  c852x393: { W: 600, H: 520, touch: true, shell: false, css: fitBox(852, 393, true, 600, 520).s },
+  c852x393: { W: 600, H: 520, touch: true, shell: false, css: stageCss(fitBox(852, 393, true, 600, 520).s, 600, 520, 1, 1) },
 };
 const CARDB = ["d1366", "d1024", "l1024", "l1024x600", "p393", "c600", "iso"];
 const UI = (o) => ({ rows: ITEMS, focus: "PLAY", level: 1, run: { heat: 0, pace: 0, pact: 0 }, daily: null, best: null, look: 0, pages: 4, rev: "v201", note: "", pad: "", enterT: 9, ...o });

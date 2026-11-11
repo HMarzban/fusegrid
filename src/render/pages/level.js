@@ -475,13 +475,14 @@ function record(G, P, ui, foc, dpr, el, touchy, verb, tipR, tok) {
   probe.begin("level", {w: G.W, h: G.H, dpr, el});
   probe.rect("plate", ...b(d.plate), {plate: G.T});
   const txt = (s, x, y, w, px, col, role, o = {}) => probe.text(s, x * u, (y - px * ts * CAP_K / 2) * u, Math.max(0.01, w * u), px * ts * CAP_K * u, {role, col, px: px * u, ...o});
-  txt(P.title.s, P.title.x, P.title.y, P.title.w, P.title.px, CONST.ink, "primary");
-  if (P.kick) txt(P.kick.s, P.kick.x, P.kick.y, P.kick.w, P.kick.px, CONST.t2, "secondary");
+  const cov = G.open && d.cover; // compact's open list stands over the head and the groups: what it covers is neither seen nor tapped (levelHit's over)
+  if (!cov) txt(P.title.s, P.title.x, P.title.y, P.title.w, P.title.px, CONST.ink, "primary");
+  if (P.kick && !cov) txt(P.kick.s, P.kick.x, P.kick.y, P.kick.w, P.kick.px, CONST.t2, "secondary");
   if (d.pageKeys) d.pageKeys.forEach((r, i) => probe.rect(i ? "PAGE DOWN" : "PAGE UP", ...b(r), {touch: touchy, set: "page", kind: "step", fill: tok.key}));
   if (P.back) { probe.rect("BACK", ...b(P.back.r), {touch: touchy, set: "back", focus: false, fill: tok.key}); txt(P.back.s, P.back.r.x + 46, P.back.r.y + P.back.r.h / 2, P.back.w, P.back.px, CONST.ink, "primary"); }
   for (const l of [LV.LEVEL, LV.DIFF, LV.SPEED, LV.MODS]) {
     const o = P.rows[l];
-    if (!o) continue;
+    if (!o || cov && l !== LV.MODS) continue;
     const f = foc === l, lab = o.label;
     txt(lab.s, f && (d.labels !== "left" || o.door) ? lab.fx : lab.x, lab.y, lab.w, lab.px, lab.col, d.labels === "left" || o.door ? "primary" : "secondary");
     if (l === LV.MODS) {
@@ -492,7 +493,7 @@ function record(G, P, ui, foc, dpr, el, touchy, verb, tipR, tok) {
     } else if (f) probe.rect(l + " band", ...b(d.rows[l]), {focus: true, fill: tok.band});
   }
   let chosen = {}, unchosen = {}, lockedK = null, wellK = null;
-  for (const q of P.keys) {
+  for (const q of cov ? [] : P.keys) {
     const lit = q.kind === "lit", nm = (q.set === "level" ? LABEL.LEVEL : q.set === "heat" ? LABEL.DIFFICULTY : LABEL.GAME_SPEED) + " " + q.s;
     probe.rect(nm, ...b(q.r), {touch: touchy, set: q.set, kind: "bank", fill: lit ? tok.lit : q.kind === "wall" ? tok.well : tok.well});
     const x0 = q.center ? q.x - q.w / 2 : q.x;

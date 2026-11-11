@@ -57,16 +57,20 @@
    fit.shell(on) shows #sh, clears it and hands back {ctx, box}; box is the
    logical canvas stand-in ({width, height} = the box, its rect and document)
    that drawShell and the tap map both measure, so a tap lands where it is
-   drawn; its css is the box's CSS px per unit (shellGeo s). fit also writes the
-   stage scale it applied on #c as canvas.css, so a page laid out in CSS px on
-   #c (MENU's touch floors) reads the same number for paint and tap and never
-   measures a rect per frame. on 2 (a run end) shows it click-through and hands back null, so the
+   drawn; its css is the box's CSS px per unit (shellGeo s). fit also writes
+   #c's CSS px per unit as canvas.css, so a page laid out in CSS px on #c
+   (MENU's touch floors) reads the same number for paint and tap and never
+   measures a rect per frame: stageCss, the CONTENT box's scale (the stage
+   minus #c's border, the tighter axis), so a 44 CSS px target measures 44
+   inside the border, never 43.77 (R1 landscape). on 2 (a run end) shows it click-through and hands back null, so the
    end overlay keeps #c and its taps; nothing draws there, so it is cleared
    once on entry (and again after a new backing, shM / shNew), and fit.box()
    is null while it lasts. Off (or no shell box) hides #sh and returns null. */
 import { hasTouch } from "../touch.js";
 
 export const FIT_RES = Object.freeze({ d: [40, 48], p: [16, 250], l: [332, 16] });
+
+export const stageCss = (s, cw, ch, bx = 0, by = 0) => Math.min((cw * s - 2 * bx) / cw, (ch * s - 2 * by) / ch);
 
 export function fitBox(W, H, touch, cw, ch) {
   const lay = !touch ? "d" : W > H ? "l" : "p";
@@ -178,7 +182,8 @@ export function mountFit(canvas) {
     const { lay, s } = fitBox(window.innerWidth, window.innerHeight, hasTouch(window), canvas.width, canvas.height);
     canvas.style.width = canvas.width * s + "px";
     canvas.style.height = canvas.height * s + "px";
-    canvas.css = s;
+    const [bx, by] = bdr(canvas);
+    canvas.css = stageCss(s, canvas.width, canvas.height, bx, by);
     if (typeof document === "undefined") return;
     const gl = document.getElementById && document.getElementById("gl"), px = document.getElementById && document.getElementById("px");
     if (gl) {

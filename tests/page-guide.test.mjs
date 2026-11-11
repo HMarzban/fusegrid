@@ -27,7 +27,7 @@ const { setTextScale } = await import("../src/render/kit/type.js");
 const { worldTokens, CONST } = await import("../src/render/kit/tokens.js");
 const probe = await import("../src/render/kit/probe.js");
 const { ITEMS, SCREEN, GUIDE_ROWS, createMenuApp } = await import("../src/app/menuapp.js");
-const { shellGeo, fitBox } = await import("../src/app/fit.js");
+const { shellGeo, fitBox, stageCss } = await import("../src/app/fit.js");
 const { setHints } = await import("../src/render/hintcopy.js");
 const { wordsOf } = await import("../src/app/hints.js");
 const { DEF_CONTROLS } = await import("../src/app/controls.js");
@@ -48,7 +48,7 @@ const BOX = {
   d1280: { W: 1280, H: 720, touch: false, shell: true, css: 1 }, // fix round 1 (R2): desk windows that page rather than scale
   d1366s: { W: 1366, H: 657, touch: false, shell: true, css: 1 },
   iso: { W: 608, H: 352, touch: false, shell: false, css: 1 },
-  c852: { W: 600, H: 520, touch: true, shell: false, css: fitBox(852, 393, true, 600, 520).s },
+  c852: { W: 600, H: 520, touch: true, shell: false, css: stageCss(fitBox(852, 393, true, 600, 520).s, 600, 520, 1, 1) },
 };
 const ALL = Object.keys(BOX), TOUCHB = ["l1024", "p393", "c852"];
 const PAGES = ["GUIDE", "HOW TO PLAY", "POWER-UPS", "ENEMIES", "FLOOR"];

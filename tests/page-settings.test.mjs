@@ -25,7 +25,7 @@ const gfx = await import("../src/app/gfx.js");
 const { setTextScale } = await import("../src/render/kit/type.js");
 const { worldTokens, CONST } = await import("../src/render/kit/tokens.js");
 const probe = await import("../src/render/kit/probe.js");
-const { shellGeo, fitBox } = await import("../src/app/fit.js");
+const { shellGeo, fitBox, stageCss } = await import("../src/app/fit.js");
 const { overlayBox } = await import("../src/render/scenes.js");
 const SV = await import("../src/render/shellview.js");
 const { BOOT, LOOK_LATER } = await import("../src/pwa/shell.js");
@@ -76,7 +76,7 @@ const BOX = {
 /* fix round 1: the boxes where 44 CSS px rows page (a 640-tall phone, landscape phones' #c, PAUSE views on a phone and a keyboard PAUSE) */
 const P640 = shellGeo(360, 640);
 BOX.p360 = { W: P640.w, H: P640.h, touch: true, shell: true, css: P640.s };
-for (const [w, h] of [[852, 393], [667, 375]]) BOX["c" + w] = { W: 600, H: 520, touch: true, shell: false, css: fitBox(w, h, true, 600, 520).s };
+for (const [w, h] of [[852, 393], [667, 375]]) BOX["c" + w] = { W: 600, H: 520, touch: true, shell: false, css: stageCss(fitBox(w, h, true, 600, 520).s, 600, 520, 1, 1) };
 BOX.pauseT = { W: 600, H: 520, touch: true, shell: false, css: 0.63, paused: true };
 BOX.pauseK = { W: 600, H: 520, touch: false, shell: false, css: 1, paused: true };
 const TOUCHB = ["l1024", "p393", "p360", "c600t", "c852", "c667", "pauseT"];

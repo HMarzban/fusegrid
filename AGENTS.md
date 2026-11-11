@@ -217,8 +217,10 @@ stand-in (`width/height/logo`, its rect) that `drawShell` measures and the
 one pointer handler (bound on `#c` and `#sh`) maps through, so a tap lands
 where it is drawn. `layout(W,H,lg,css)`: `W`, `H`, `shell` (an `lg` was handed: #sh's box) and `css` (CSS px per box unit, which
 shellview `dims` hands on every touch layout, none on a keyboard one: fit.js writes it as the box's own `css`, shellGeo's `s` on the #sh
-stand-in and the stage scale it applied on `#c`, so paint and tap read one number and no frame measures a rect; MENU's touch floors, phone
-column and compact tiles are laid out in CSS px); `lg` = the centred board's 0.27 logo
+stand-in and, on `#c`, the scale of its CONTENT box (`stageCss`: the stage it applied minus `#c`'s 1 px border, the tighter axis), so paint and tap read one number and no frame measures a rect; MENU's touch floors, phone
+column and compact tiles are laid out in CSS px). The touch size rule (R1 landscape): every touch target is sized in CSS px through that one
+number, so a 44 CSS px target measures 44 inside `#c`'s border, never 43.77; `tests/landscape.test.mjs` judges every R1 page on the landscape
+phones with `tools/ui/gates.mjs`'s own `evaluate()` against `#c`'s content box (the border pinned against index.html); `lg` = the centred board's 0.27 logo
 line in box units,
 `tall` / `narrow` (< 560) flags; narrow re-flows: none of the world-kit pages (MEDALS and SCORES re-flow on their own frame, pages/records.js; the GUIDE
 pages re-flow by their own measured widths and page instead: see GUIDE pages below); STATS is centred (not floor-pinned) in a tall box. LEVEL / HIGH SCORES chip

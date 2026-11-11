@@ -29,7 +29,7 @@ const { setTextScale, DEV } = await import("../src/render/kit/type.js");
 const { CONST, worldTokens } = await import("../src/render/kit/tokens.js");
 const probe = await import("../src/render/kit/probe.js");
 const { ITEMS, SCREEN, createMenuApp } = await import("../src/app/menuapp.js");
-const { shellGeo, fitBox } = await import("../src/app/fit.js");
+const { shellGeo, fitBox, stageCss } = await import("../src/app/fit.js");
 const { setHints } = await import("../src/render/hintcopy.js");
 const { wordsOf } = await import("../src/app/hints.js");
 const { DEF_CONTROLS } = await import("../src/app/controls.js");
@@ -53,7 +53,7 @@ const BOX = {
   l1024: { W: LG.w, H: LG.h, touch: true, shell: true, css: LG.s },
   c600t: { W: 600, H: 520, touch: true, shell: false, css: 1 },
 };
-for (const [w, h] of [[852, 393], [740, 360]]) BOX["c" + w + "x" + h] = { W: 600, H: 520, touch: true, shell: false, css: fitBox(w, h, true, 600, 520).s };
+for (const [w, h] of [[852, 393], [740, 360]]) BOX["c" + w + "x" + h] = { W: 600, H: 520, touch: true, shell: false, css: stageCss(fitBox(w, h, true, 600, 520).s, 600, 520, 1, 1) };
 const ALL = Object.keys(BOX), TOUCHB = ALL.filter((b) => BOX[b].touch);
 const near = (a, b, e = 0.51) => Math.abs(a - b) <= e;
 const nearR = (a, b, e) => near(a.x, b.x, e) && near(a.y, b.y, e) && near(a.w, b.w, e) && near(a.h, b.h, e);

@@ -27,7 +27,7 @@ const { worldTokens, CONST } = await import("../src/render/kit/tokens.js");
 const probe = await import("../src/render/kit/probe.js");
 const logo = await import("../src/render/logo/draw2d.js");
 const { ITEMS, SCREEN, createMenuApp } = await import("../src/app/menuapp.js");
-const { shellGeo, fitBox } = await import("../src/app/fit.js");
+const { shellGeo, fitBox, stageCss } = await import("../src/app/fit.js");
 const { setHints } = await import("../src/render/hintcopy.js");
 const { wordsOf } = await import("../src/app/hints.js");
 const { DEF_CONTROLS } = await import("../src/app/controls.js");
@@ -47,7 +47,7 @@ const BOX = {
 };
 /* fix round 1: the short touch-landscape windows (a shell box at 1 CSS px per unit) and the landscape phones (no shell box: #c at the stage's own scale) */
 for (const [w, h] of [[1024, 600], [800, 600], [600, 520], [1280, 650]]) BOX["l" + w + "x" + h] = { W: w, H: h, touch: true, shell: true, css: 1 };
-for (const [w, h] of [[852, 393], [932, 430], [740, 360], [667, 375]]) BOX["c" + w + "x" + h] = { W: 600, H: 520, touch: true, shell: false, css: fitBox(w, h, true, 600, 520).s };
+for (const [w, h] of [[852, 393], [932, 430], [740, 360], [667, 375]]) BOX["c" + w + "x" + h] = { W: 600, H: 520, touch: true, shell: false, css: stageCss(fitBox(w, h, true, 600, 520).s, 600, 520, 1, 1) };
 const SHORT = ["l1024x600", "l800x600", "l600x520", "l1280x650"], LAND = ["c852x393", "c932x430", "c740x360", "c667x375"], TOUCHB = ["p393", "l1024", ...SHORT, ...LAND, "c600t"];
 const SIX = ["d1366", "d1920", "d1024", "p393", "c600", "iso"];
 const UI = (o) => ({ rows: ITEMS, focus: "PLAY", level: 1, run: { heat: 0, pace: 0, pact: 0 }, daily: null, best: null, look: 0, pages: 4, rev: "v201", note: "", pad: "", enterT: 9, ...o });
@@ -487,7 +487,7 @@ const { readFileSync } = await import("node:fs");
   const kp = await import("../src/render/kit/pager.js"), SP = await import("../src/render/pages/settings.js"), GP = await import("../src/render/pages/guide.js");
   const RP = await import("../src/render/pages/records.js"), LP = await import("../src/render/pages/level.js");
   const P640 = shellGeo(360, 640), BX = { p360: { W: P640.w, H: P640.h, touch: true, shell: true, css: P640.s }, l1024: { W: 1024, H: 768, touch: true, shell: true, css: 1 }, pauseT: { W: 600, H: 520, touch: true, shell: false, css: 0.63, paused: true } };
-  for (const [w, h] of [[852, 393], [667, 375]]) BX["c" + w] = { W: 600, H: 520, touch: true, shell: false, css: fitBox(w, h, true, 600, 520).s };
+  for (const [w, h] of [[852, 393], [667, 375]]) BX["c" + w] = { W: 600, H: 520, touch: true, shell: false, css: stageCss(fitBox(w, h, true, 600, 520).s, 600, 520, 1, 1) };
   const R10 = ["MUSIC", "SFX", "SOUND", "ART STYLE", "SCREEN SHAKE", "REDUCE FLASH", "ANALYTICS", "GRAPHICS", "CONTROLS", "RESET DEFAULTS"], out = [], seen = new Set();
   const size = (nm, up, dn, k, want = kp.PAGE_KEY) => { seen.add(nm.split(" ")[0]); const a = [up.w * k, up.h * k, dn.w * k, dn.h * k]; if (a.some((v) => Math.abs(v - want) > 0.01) || (dn.x - up.x - up.w) * k < 7.99) out.push(nm + " " + J(a.map((v) => +v.toFixed(2)))); };
   for (const [b, F] of Object.entries(BX)) {
