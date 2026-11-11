@@ -2,7 +2,7 @@ import {readFileSync} from "node:fs";
 import {Input} from "../src/input.js";
 import {hasTouch, PadMapper, mountTouch} from "../src/touch.js";
 import {stampBombIcon} from "../src/render/sprites.js";
-import {FIT_RES, fitBox, PORT_GAME, PORT_GEO, portraitGeo} from "../src/app/fit.js";
+import {FIT_RES, HUD_RES, STRIP, fitBox, PORT_GAME, PORT_GEO, portraitGeo, stripGeo} from "../src/app/fit.js";
 
 let pass=0, fail=0;
 function check(name, cond, detail){ cond?pass++:fail++;
@@ -391,29 +391,29 @@ check("hasTouch({ontouchstart:null}) true", hasTouch({ontouchstart:null})===true
         &&gut>=lRemG+actW&&lRemG>=lThrG+actW+8&&lThrB===lRemB&&lThrB>=lBombB+bombW+8
         &&sh-lPillT-pillW-8>=lThrB+actW&&base("tthrow").includes("width:"+actW+"px")&&base("tremote").includes("width:"+actW+"px");
     }else ok=[false,true].every((game)=>{
-      const g=portraitGeo(W,H,600,520,game), below=H-g.top-sh, G=PORT_GEO;
-      return g.top>=pillW+pillG&&g.padTop>=G.gap&&g.bombTop>=G.gap
-        &&below>=g.padTop+g.pad&&below>=g.bombTop+g.bomb
-        &&g.pad>=G.pad[0]&&g.pad<=(game?PORT_GAME.pad:G.pad[1])&&g.bomb>=bombW
-        &&sw>=G.side[0]+g.pad+G.side[1]+g.bomb;
+      const g=portraitGeo(W,H,600,520,game), below=H-g.top-sh, G=PORT_GEO, a=stripGeo(W,H,600,520);
+      return g.top>=pillW+pillG&&g.padTop>=G.gap&&a.bomb.t>=G.gap&&a.thr.t>=G.gap
+        &&below>=g.padTop+g.pad&&H-PORT_GAME.top-sh>=a.bomb.t+a.bomb.h
+        &&g.pad>=G.pad[0]&&g.pad<=(game?PORT_GAME.pad:G.pad[1])&&a.bomb.h>=44&&a.thr.w>=44
+        &&W>=STRIP.dpad+g.pad+8+a.bomb.w+STRIP.right;
     });
     if(!ok&&bad.length<4) bad.push(W+"x"+H+" "+l+" stage "+sw.toFixed(1)+"x"+sh.toFixed(1));
   };
   for(let W=560;W<=1400;W+=2) for(let H=280;H<W&&H<=1000;H+=2) probe(W,H);
-  for(let W=320;W<=1000;W+=2) for(let H=Math.max(W,480);H<=1400;H+=2) probe(W,H);
+  for(let W=320;W<=1000;W+=2) for(let H=Math.max(W,552);H<=1400;H+=2) probe(W,H);
   for(const [W,H] of [[812,375],[667,375],[568,320],[915,412],[932,430],[320,568],[375,667],[390,844],[430,932],[1180,820],[1024,768],[768,1024]]) probe(W,H);
   check("pad, bomb, pill and THROW / REMOTE never sit on the board (or each other): side gutters in touch"
     +" landscape, below/above the stage in touch portrait, MENU and GAME geometry (env() insets are 0,"
     +" no viewport-fit=cover)",
-    parsed.every(Number.isFinite)&&/left:auto/.test(lay("l","tpad"))&&PORT_GEO.top+PORT_GEO.bot===FIT_RES.p[1]
+    parsed.every(Number.isFinite)&&/left:auto/.test(lay("l","tpad"))&&PORT_GAME.top+HUD_RES.p.gap+HUD_RES.p.bar+8+PORT_GEO.pad[0]+PORT_GEO.edge===FIT_RES.p[1]
       &&/padding:var\(--st,/.test(pRules)&&/top:calc\(100% \+ var\(--tpt,/.test(lay("p","tpad"))
       &&/width:var\(--tp,/.test(lay("p","tpad"))&&/top:calc\(100% \+ var\(--tbt,/.test(lay("p","tbomb"))
-      &&/width:var\(--tb,/.test(lay("p","tbomb"))&&new RegExp("left:"+PORT_GEO.side[0]+"px").test(lay("p","tpad"))
-      &&new RegExp("right:"+PORT_GEO.side[1]+"px").test(lay("p","tbomb"))&&bad.length===0,
+      &&/width:var\(--tbw,/.test(lay("p","tbomb"))&&/height:var\(--tbh,/.test(lay("p","tbomb"))&&/left:var\(--tpl,/.test(lay("p","tpad"))
+      &&/right:var\(--tbr,/.test(lay("p","tbomb"))&&bad.length===0,
     bad.join(" | ")||parsed.join()+" "+lay("l","tpad"));
-  check("portrait THROW / REMOTE read their slots from actGeo's vars (--ta, --tthr/--ttht, --trem/--tret)",
-    /top:calc\(100% \+ var\(--ttht,/.test(lay("p","tthrow"))&&/right:var\(--tthr,/.test(lay("p","tthrow"))&&/width:var\(--ta,/.test(lay("p","tthrow"))
-      &&/top:calc\(100% \+ var\(--tret,/.test(lay("p","tremote"))&&/right:var\(--trem,/.test(lay("p","tremote"))&&/height:var\(--ta,/.test(lay("p","tremote")),
+  check("portrait THROW / REMOTE read their slots from stripGeo's vars (--taw/--tah, --tthr/--ttht, --trem/--tret)",
+    /top:calc\(100% \+ var\(--ttht,/.test(lay("p","tthrow"))&&/right:var\(--tthr,/.test(lay("p","tthrow"))&&/width:var\(--taw,/.test(lay("p","tthrow"))
+      &&/top:calc\(100% \+ var\(--tret,/.test(lay("p","tremote"))&&/right:var\(--trem,/.test(lay("p","tremote"))&&/height:var\(--tah,/.test(lay("p","tremote")),
     lay("p","tthrow")+lay("p","tremote"));
   const rules=["p","l"].flatMap((l)=>["wrap","tpad","tbomb","tpause","tthrow","tremote"].map((id)=>lay(l,id))).join("");
   check("the layout rules carry no display: (the [hidden] guard stays the only one)",

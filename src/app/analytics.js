@@ -64,6 +64,13 @@ export function cardClears(r, vw, vh, ch) {
   return r.right + 8 <= x || r.bottom + 8 <= y;
 }
 
+/* The stage's rect grown by the HUD rows' reach (fit.js writes #hud data-r "right,bottom": the plate and the power-ups bar),
+   so the card clears the whole play column, not only the board. */
+export function reach(stage, hud) {
+  const r = stage.getBoundingClientRect(), u = hud && hud.dataset && hud.dataset.r ? hud.dataset.r.split(",").map(Number) : null;
+  return u && u.length === 2 && u.every(Number.isFinite) ? { right: Math.max(r.right, u[0]), bottom: Math.max(r.bottom, u[1]) } : r;
+}
+
 /* The game's own directory, so the _ga cookies never cover the rest of the
    shared github.io origin. */
 export const cookiePath = (p) => (typeof p === "string" && p.charAt(0) === "/" ? p.replace(/[^/]*$/, "") : "/");
@@ -165,7 +172,7 @@ export function mountAnalytics(env) {
     if (!g || !g.app) return;
     const lay = doc.body && doc.body.dataset ? doc.body.dataset.lay : "d",
       stage = g.app.screen === g.SCREEN.GAME && doc.getElementById ? doc.getElementById("c") : null,
-      roomy = !stage || !win.innerWidth || cardClears(stage.getBoundingClientRect(), win.innerWidth, win.innerHeight, card.offsetHeight),
+      roomy = !stage || !win.innerWidth || cardClears(reach(stage, doc.getElementById("hud")), win.innerWidth, win.innerHeight, card.offsetHeight),
       show = consent === -1 && !(g.busy && g.busy()) && cardVisible(g.app.screen, g.SCREEN, lay === "p" || lay === "l", roomy, g.app.capturing);
     if (card.hidden === show) card.hidden = !show;
   };

@@ -593,15 +593,34 @@ not shell screens. Do not add them as `SCREEN` values.
   `src/app/fit.js` (`mountFit`: stage scale per layout reserve `FIT_RES`, and
   `body[data-lay]` = `d` desktop / `p` touch portrait / `l` touch landscape —
   the ONE predicate `index.html`'s touch layout keys off, never a media
-  query; re-fits on `resize` and `orientationchange`). Portrait (`p`) only:
+  query; re-fits on `resize` and `orientationchange`). HUD reserves (UI
+  upgrade Task 8.1, round 5 `09-hud`, CSS px): `HUD_RES`; `d` gives the chip
+  plate 106 px above the board and the power-ups bar 57 below
+  (`FIT_RES.d` [40, 163], exactly those rows: at the mock's 1366x768 the
+  board is 0.84 of the v202 scale, the mock's own HK), carried by `#wrap`'s
+  padding (`--ht` / `--hb`); `l` keeps `FIT_RES.l` (the chips stand in the
+  side gutters, so a landscape phone keeps its whole board); `p` in GAME
+  stacks plate (164), board, a band for the bar and the tile tip, and the
+  strip (`FIT_RES.p` [16, 396] is that stack at one bar row and the pad
+  floor). Pure `hudGeo(W,H,cw,ch,lay,game)` is the one slot geometry in
+  viewport CSS px (d: plate, bar, tip column kept above the analytics card;
+  p: plate, band, ctl; l: left / right gutter columns); `#hud` is its canvas
+  (fixed, the viewport, click-through, z 3: over the board canvases, under
+  `#sh`, `#touchpad` and the cards), backing owned by `fit` (`fit.hud(on)`
+  shows it and hands back `{ctx, geo}`), `data-r` its reach that the
+  analytics card clears (`analytics.js` `reach`). Portrait (`p`) only:
   pure `portraitGeo(W,H,cw,ch,game)` (`PORT_GEO`) centres the stage in the
-  vertical slack (clamped 60 top / 190 bottom) and docks a grown pad
-  (128–176) + bomb (9/16 of the pad) 24px above the bottom, written as
-  `--st/--tp/--tb/--tpt/--tbt` on `body.style`. While `#touchpad` shows
-  (GAME only; a `MutationObserver` on its `hidden`), `game` lifts the stage
-  to `min(centred top, PORT_GAME.top 72)` under the pause pill, pad cap 184,
-  and `--sd` 0.2s glides that edge only (0s on resize / rotation).
-  INTRO/MENU/ATTRACT keep the centred stage; `d` / `l` are untouched.
+  vertical slack (clamped 60 top / 190 bottom) and sizes the controls' band
+  (pad 152–176) 24px above the bottom; while `#touchpad` shows (GAME only; a
+  `MutationObserver` on its `hidden`), `game` puts the stage at the HUD
+  plate's foot (`PORT_GAME.top` 164), pad cap 176, the band under the board
+  at least one power-ups row, and `--sd` 0.2s glides that edge only (0s on
+  resize / rotation). `stripGeo` lays the round 5 strip in the band (`STRIP`:
+  D-PAD box 20 from the viewport's left, three keys 10 apart, never under
+  44; a 130 column 16 from its right: BOMB 90/176 of the band at its foot,
+  THROW and REMOTE as two fixed halves of one row above it), written as
+  `--st/--tp/--tpl/--tpt/--tbw/--tbh/--tbr/--tbt/--taw/--tah/--tthr/--ttht/--trem/--tret`.
+  INTRO/MENU/ATTRACT keep the centred stage.
   `shellGeo` sizes the shell box `#sh` on every layout that has one (see Menu look).
 - `src/core/` — deterministic simulation, no DOM, no browser globals.
   - `world.js` — `createWorld`, `loadLevel` (re-exported from `sim.js`).

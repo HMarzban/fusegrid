@@ -61,6 +61,11 @@
      click-through (fit.shell). */
   #sh{position:fixed;z-index:4;border:0;border-radius:0;box-shadow:none;image-rendering:auto}
   #sh[hidden]{display:none}
+  /* HUD canvas (fit.js hudGeo, UI upgrade Task 8.1): GAME only, the viewport, click-through; over the board canvases,
+     under #sh, #touchpad and the cards. Desktop: #wrap's padding carries the HUD rows above and below the board. */
+  #hud{position:fixed;left:0;top:0;z-index:3;pointer-events:none;border:0;border-radius:0;box-shadow:none;image-rendering:auto}
+  #hud[hidden]{display:none}
+  body[data-lay=d] #wrap{padding:var(--ht,14px) 14px var(--hb,14px)}
   canvas{image-rendering:pixelated;display:block;border-radius:10px;
     border:1px solid var(--line);box-shadow:0 12px 48px rgba(0,0,0,.6),0 0 0 4px #0a0e18;
     touch-action:none}
@@ -88,8 +93,9 @@
   /* THROW / REMOTE (touch only): shown while the player holds that power,
      one tap = one tick of the keyboard's Shift+Space / Q (Input.pulseThrow /
      pulseRemote). Fixed slots so neither moves when the other appears: THROW
-     over the bomb, REMOTE beside it. Portrait slots come from actGeo
-     (--ta, --tthr/--ttht, --trem/--tret); landscape sits in the right gutter. */
+     over the bomb, REMOTE beside it. Portrait slots come from stripGeo
+     (--taw/--tah, --tthr/--ttht, --trem/--tret: two halves of one row over
+     BOMB); landscape sits in the right gutter. */
   #tthrow{width:52px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
     right:calc(16px + env(safe-area-inset-right));bottom:calc(96px + env(safe-area-inset-bottom))}
   #tremote{width:52px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
@@ -112,14 +118,15 @@
   /* touch portrait is width-bound: fit() writes --st (stage top, centred in
      the vertical slack; lifted under the pause pill while #touchpad shows)
      and docks + grows pad/bomb into the band below (--tp/--tb sizes,
-     --tpt/--tbt offsets under the stage; portraitGeo). --sd glides the lift
-     on the GAME edge only. */
+     --tpt/--tbt offsets under the stage, --tpl / --tbr from its sides, so the
+     strip docks to the viewport's sides; stripGeo). --sd glides the lift on
+     the GAME edge only. */
   body[data-lay=p] #wrap{align-self:flex-start;padding:var(--st,60px) 8px 0;transition:padding-top var(--sd,0s) ease-out}
-  body[data-lay=p] #tpad{top:calc(100% + var(--tpt,22px));bottom:auto;left:6px;width:var(--tp,128px);height:var(--tp,128px)}
-  body[data-lay=p] #tbomb{top:calc(100% + var(--tbt,50px));bottom:auto;right:14px;width:var(--tb,72px);height:var(--tb,72px)}
-  body[data-lay=p] #tbomb canvas{width:calc(var(--tb,72px)*5/9);height:calc(var(--tb,72px)*5/9)}
-  body[data-lay=p] #tthrow{top:calc(100% + var(--ttht,8px));bottom:auto;right:var(--tthr,14px);width:var(--ta,44px);height:var(--ta,44px)}
-  body[data-lay=p] #tremote{top:calc(100% + var(--tret,8px));bottom:auto;right:var(--trem,66px);width:var(--ta,44px);height:var(--ta,44px)}
+  body[data-lay=p] #tpad{top:calc(100% + var(--tpt,22px));bottom:auto;left:var(--tpl,20px);width:var(--tp,152px);height:var(--tp,152px)}
+  body[data-lay=p] #tbomb{top:calc(100% + var(--tbt,82px));bottom:auto;right:var(--tbr,16px);width:var(--tbw,130px);height:var(--tbh,78px)}
+  body[data-lay=p] #tbomb canvas{width:calc(var(--tbh,78px)*4/9);height:calc(var(--tbh,78px)*4/9)}
+  body[data-lay=p] #tthrow{top:calc(100% + var(--ttht,26px));bottom:auto;right:var(--tthr,77px);width:var(--taw,61px);height:var(--tah,52px)}
+  body[data-lay=p] #tremote{top:calc(100% + var(--tret,26px));bottom:auto;right:var(--trem,16px);width:var(--taw,61px);height:var(--tah,52px)}
   body[data-lay=l] #tpad{left:auto;right:calc(100% + 22px);bottom:0}
   body[data-lay=l] #tbomb{right:auto;left:calc(100% + 40px);bottom:10px}
   body[data-lay=l] #tthrow{right:auto;left:calc(100% + 40px);bottom:90px}
@@ -525,6 +532,7 @@
     </div>
   </div>
 </div>
+<canvas id="hud" hidden aria-hidden="true"></canvas>
 <canvas id="sh" hidden aria-label="Fusegrid menu"></canvas>
 <div id="ctlsay" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 

@@ -1,4 +1,4 @@
-import { ACT_GEO, FIT_RES, PORT_GAME, PORT_GEO, PORT_SHELL, actGeo, shellGeo, fitBox, mountFit, portraitGeo, pxBox, pxBack } from "../src/app/fit.js";
+import { STRIP, FIT_RES, HUD_RES, PORT_GAME, PORT_GEO, PORT_SHELL, stripGeo, shellGeo, fitBox, mountFit, portraitGeo, pxBox, pxBack } from "../src/app/fit.js";
 
 let pass = 0,
   fail = 0;
@@ -13,7 +13,7 @@ function check(name, cond, detail) {
 
 check("FIT_RES is frozen with the desktop / portrait / landscape reserves",
   Object.isFrozen(FIT_RES) && JSON.stringify(FIT_RES) ===
-    JSON.stringify({ d: [40, 48], p: [16, 250], l: [332, 16] }),
+    JSON.stringify({ d: [40, 163], p: [16, 396], l: [332, 16] }),
   JSON.stringify(FIT_RES));
 
 check("lay is d without touch, l for touch W>H, p for touch H>=W",
@@ -23,8 +23,8 @@ check("lay is d without touch, l for touch W>H, p for touch H>=W",
     fitBox(500, 500, true, 600, 520).lay === "p");
 
 for (const [W, H, t, lay, s] of [
-  [1440, 900, false, "d", 1.638],
-  [1280, 720, false, "d", 1.292],
+  [1440, 900, false, "d", 1.417],
+  [1280, 720, false, "d", 1.071],
   [375, 812, true, "p", 0.598],
   [390, 844, true, "p", 0.623],
   [812, 375, true, "l", 0.69],
@@ -35,38 +35,38 @@ for (const [W, H, t, lay, s] of [
     b.lay === lay && b.s.toFixed(3) === s.toFixed(3), b.lay + " " + b.s);
 }
 
-check("PORT_GEO is frozen: 60/190 split of FIT_RES.p, 24 edge, 22 gap, pad 128..176",
+check("PORT_GEO is frozen: 60/190 menu split, 24 edge, 22 gap, pad 152..176; FIT_RES.p is the GAME stack (HUD plate, one bar row, the pad floor, the edge)",
   Object.isFrozen(PORT_GEO) && JSON.stringify(PORT_GEO) === JSON.stringify(
-    { top: 60, bot: 190, edge: 24, gap: 22, pad: [128, 176], side: [6, 14], mid: 24 }) &&
-    PORT_GEO.top + PORT_GEO.bot === FIT_RES.p[1],
+    { top: 60, bot: 190, edge: 24, gap: 22, pad: [152, 176], side: [6, 14], mid: 24 }) &&
+    PORT_GAME.top + HUD_RES.p.gap + HUD_RES.p.bar + 8 + PORT_GEO.pad[0] + PORT_GEO.edge === FIT_RES.p[1],
   JSON.stringify(PORT_GEO));
 
 for (const [W, H, g] of [
-  [375, 812, { top: 250, pad: 176, bomb: 99, padTop: 50, bombTop: 89 }],
-  [390, 844, { top: 259, pad: 176, bomb: 99, padTop: 60, bombTop: 99 }],
-  [412, 915, { top: 285, pad: 176, bomb: 99, padTop: 86, bombTop: 125 }],
-  [375, 667, { top: 165, pad: 144, bomb: 81, padTop: 22, bombTop: 54 }],
-  [600, 700, { top: 60, pad: 144, bomb: 81, padTop: 22, bombTop: 54 }],
-  [768, 1024, { top: 182, pad: 144, bomb: 81, padTop: 22, bombTop: 54 }],
+  [375, 812, { top: 250, pad: 176, padTop: 50 }],
+  [390, 844, { top: 259, pad: 176, padTop: 60 }],
+  [412, 915, { top: 285, pad: 176, padTop: 86 }],
+  [375, 667, { top: 198, pad: 152, padTop: 22 }],
+  [600, 700, { top: 198, pad: 152, padTop: 22 }],
+  [768, 1024, { top: 198, pad: 152, padTop: 22 }],
 ]) {
   const got = portraitGeo(W, H, 600, 520);
   check(W + "x" + H + " portrait geometry " + JSON.stringify(g), JSON.stringify(got) === JSON.stringify(g), JSON.stringify(got));
 }
 
-check("PORT_GAME is frozen: GAME lifts the stage to 72 (44 pill + 8 gap + 20 air), pad cap 184, 0.2s glide",
-  Object.isFrozen(PORT_GAME) && JSON.stringify(PORT_GAME) === JSON.stringify({ top: 72, pad: 184, sd: "0.2s" }) &&
+check("PORT_GAME is frozen: GAME puts the stage at the HUD plate's foot (164), pad cap 176, 0.2s glide",
+  Object.isFrozen(PORT_GAME) && JSON.stringify(PORT_GAME) === JSON.stringify({ top: 164, pad: 176, sd: "0.2s" }) &&
     PORT_GAME.top >= 44 + 8 && PORT_GAME.top >= PORT_GEO.top && PORT_GAME.pad >= PORT_GEO.pad[1],
   JSON.stringify(PORT_GAME));
 
-// frame round 2026-10-25: GAME centres the stage between the pause pill and the docked pad (was: lifted to 72, a ~240 px dead gap above the pad)
+// UI upgrade Task 8.1: GAME puts the stage at the HUD plate's foot (164) and docks the controls' band to the thumb zone; the band between holds the power-ups bar and the tip
 for (const [W, H, g] of [
-  [375, 812, { top: 182, pad: 184, bomb: 104, padTop: 110, bombTop: 150 }],
-  [390, 844, { top: 191, pad: 184, bomb: 104, padTop: 120, bombTop: 160 }],
-  [412, 915, { top: 217, pad: 184, bomb: 104, padTop: 146, bombTop: 186 }],
-  [375, 667, { top: 109, pad: 184, bomb: 104, padTop: 38, bombTop: 78 }],
-  [320, 568, { top: 93, pad: 165, bomb: 93, padTop: 22, bombTop: 58 }],
-  [600, 700, { top: 60, pad: 144, bomb: 81, padTop: 22, bombTop: 54 }],
-  [768, 1024, { top: 118, pad: 184, bomb: 104, padTop: 46, bombTop: 86 }],
+  [375, 812, { top: 164, pad: 176, padTop: 136 }],
+  [390, 844, { top: 164, pad: 176, padTop: 155 }],
+  [412, 915, { top: 164, pad: 176, padTop: 207 }],
+  [375, 667, { top: 164, pad: 152, padTop: 56 }],
+  [320, 568, { top: 164, pad: 152, padTop: 56 }],
+  [600, 700, { top: 164, pad: 152, padTop: 56 }],
+  [768, 1024, { top: 164, pad: 152, padTop: 56 }],
 ]) {
   const got = portraitGeo(W, H, 600, 520, true);
   check(W + "x" + H + " GAME geometry " + JSON.stringify(g), JSON.stringify(got) === JSON.stringify(g), JSON.stringify(got));
@@ -80,70 +80,62 @@ check("portraitGeo's game flag defaults off: the 4-arg call is the INTRO / MENU 
   const sh = 520 * fitBox(375, 812, true, 600, 520).s, g = portraitGeo(375, 812, 600, 520);
   check("width-bound phone: the stage sits centred in the slack (INTRO / MENU bands equal within 1px)",
     Math.abs(g.top - (812 - g.top - sh)) <= 1, g.top + " / " + (812 - g.top - sh).toFixed(2));
-  check("width-bound phone: pad + bomb dock to the thumb zone, pad bottom exactly edge above the viewport bottom",
-    Math.abs(812 - (g.top + sh + g.padTop + g.pad) - PORT_GEO.edge) < 1 &&
-      g.bombTop + g.bomb / 2 === g.padTop + Math.round((g.pad - g.bomb) / 2) + g.bomb / 2,
+  check("width-bound phone: the controls' band docks to the thumb zone, its bottom exactly edge above the viewport bottom",
+    Math.abs(812 - (g.top + sh + g.padTop + g.pad) - PORT_GEO.edge) < 1,
     (812 - (g.top + sh + g.padTop + g.pad)).toFixed(2));
 }
 
 {
   const bad = [], worse = [];
-  const G = PORT_GEO;
-  for (const game of [false, true]) for (let W = 300; W <= 1000; W += 3) for (let H = Math.max(W, 460); H <= 1400; H += 3) {
-    const { s } = fitBox(W, H, true, 600, 520), sw = 600 * s, sh = 520 * s;
+  const G = PORT_GEO, low = HUD_RES.p.gap + HUD_RES.p.bar + 8;
+  for (const game of [false, true]) for (let W = 300; W <= 1000; W += 3) for (let H = Math.max(W, 552); H <= 1400; H += 3) {
+    const { s } = fitBox(W, H, true, 600, 520), sh = 520 * s;
     const g = portraitGeo(W, H, 600, 520, game), below = H - g.top - sh;
     const ok = g.top >= 44 + 8 && g.top >= G.top && below >= G.bot - 1e-9 &&
-      g.padTop >= G.gap && g.bombTop >= G.gap && g.top + sh + g.padTop + g.pad <= H - G.edge + 1e-9 &&
-      g.top + sh + g.bombTop + g.bomb <= H && g.pad >= G.pad[0] && g.pad <= (game ? PORT_GAME.pad : G.pad[1]) &&
-      g.bomb === Math.round(g.pad * 9 / 16) && sw >= G.side[0] + g.pad + G.side[1] + g.bomb &&
+      g.padTop >= (game ? low : G.gap) && g.top + sh + g.padTop + g.pad <= H - G.edge + 1e-9 &&
+      g.pad >= G.pad[0] && g.pad <= (game ? PORT_GAME.pad : G.pad[1]) && W >= STRIP.dpad + g.pad + 8 + 2 * 44 + 8 + STRIP.right &&
       Number.isInteger(g.top) && Number.isInteger(g.pad) && Number.isInteger(g.padTop);
     if (!ok && bad.length < 4) bad.push((game ? "GAME " : "MENU ") + W + "x" + H + " " + JSON.stringify(g));
     if (game) {
       const m = portraitGeo(W, H, 600, 520);
-      const same = g.top + sh + g.padTop + g.pad === m.top + sh + m.padTop + m.pad || m.padTop === G.gap;
-      if (!(g.top <= m.top && g.top >= Math.min(m.top, PORT_GAME.top) && g.pad >= m.pad && same) && worse.length < 4)
+      if (!(g.top === PORT_GAME.top && (Math.abs(H - G.edge - (g.top + sh + g.padTop + g.pad)) < 1 || g.padTop === low) && g.pad >= Math.min(m.pad, PORT_GAME.pad)) && worse.length < 4)
         worse.push(W + "x" + H + " " + JSON.stringify(m) + " -> " + JSON.stringify(g));
     }
   }
-  check("every portrait 300..1000 x 460..1400, MENU and GAME: pill room above, pad/bomb under the board"
-    + " (gap >= 22), inside the viewport, pad 128..176 (GAME ..184), bomb 9/16 pad, no horizontal overlap",
+  check("every portrait 300..1000 x 552..1400 (the shortest the GAME stack fits at the 0.3 scale floor), MENU and GAME: pill room above,"
+    + " the controls' band under the board (gap >= 22; GAME >= one power-ups row), inside the viewport, pad 152..176, the strip fits across",
     bad.length === 0, bad.join(" | ") || "clean");
-  check("GAME never sits lower than MENU, lifts to min(menu top, 72), never shrinks the pad, and keeps the pad's thumb dock",
+  check("GAME: the stage sits at the HUD plate's foot, the controls keep the thumb dock, and the pad is never smaller than MENU's",
     worse.length === 0, worse.join(" | ") || "clean");
 }
 
-check("ACT_GEO is frozen: THROW / REMOTE 52px, never under 44 (the touch-target floor), 8px clearances, 44px pill",
-  Object.isFrozen(ACT_GEO) && JSON.stringify(ACT_GEO) === JSON.stringify({ max: 52, min: 44, gap: 8, pill: 44 }), JSON.stringify(ACT_GEO));
+check("STRIP is frozen: D-PAD 20 from the left, keys 10 apart; a 130 column 16 from the right, BOMB 90/176 of the band",
+  Object.isFrozen(STRIP) && JSON.stringify(STRIP) === JSON.stringify({ dpad: 20, gap: 10, right: 16, col: 130, air: 4, row: 14, bomb: 90 / 176 }), JSON.stringify(STRIP));
 
-for (const [W, H, a] of [
-  [390, 844, { mode: "up", act: 52, thr: { r: 14, t: 100 }, rem: { r: 74, t: 100 } }],
-  [412, 915, { mode: "up", act: 52, thr: { r: 14, t: 126 }, rem: { r: 74, t: 126 } }],
-  [320, 568, { mode: "down", act: 44, thr: { r: 14, t: 159 }, rem: { r: 66, t: 159 } }],
-  [375, 548, { mode: "mid", act: 52, thr: { r: 118, t: 39 }, rem: { r: 118, t: 99 } }],
-  [360, 560, { mode: "mid", act: 52, thr: { r: 118, t: 39 }, rem: { r: 118, t: 99 } }],
-  [600, 700, { mode: "mid", act: 52, thr: { r: 206, t: 39 }, rem: { r: 206, t: 99 } }],
-]) {
-  const got = actGeo(W, H, 600, 520);
-  check(W + "x" + H + " THROW / REMOTE slots " + JSON.stringify(a), JSON.stringify(got) === JSON.stringify(a), JSON.stringify(got));
+{
+  const a = stripGeo(393, 852, 600, 520), sx = (393 - 600 * fitBox(393, 852, true, 600, 520).s) / 2;
+  check("393x852 (the round 5 phone frame): D-PAD 176 box, 52 keys 10 apart at x 20; BOMB 130x90 and THROW / REMOTE 61x64 halves at 16 from the right",
+    a.pad.s === 176 && a.pad.key === 52 && a.pad.gap === 10 && Math.abs(a.pad.l + sx - 20) < 1e-9 && a.bomb.w === 130 && a.bomb.h === 90 &&
+      Math.abs(a.bomb.r + sx - 16) < 1e-9 && a.thr.w === 61 && a.thr.h === 64 && a.rem.w === 61 && a.rem.r === a.bomb.r && a.thr.r === a.bomb.r + 69, JSON.stringify(a));
 }
 
 {
   const sep = (a, b, m) => a[2] + m <= b[0] + 1e-6 || b[2] + m <= a[0] + 1e-6 || a[3] + m <= b[1] + 1e-6 || b[3] + m <= a[1] + 1e-6;
-  const bad = [], modes = {};
-  for (let W = 300; W <= 1000; W += 3) for (let H = Math.max(W, 460); H <= 1400; H += 3) {
-    const { s } = fitBox(W, H, true, 600, 520), sw = 600 * s, sh = 520 * s, g = portraitGeo(W, H, 600, 520, true), A = actGeo(W, H, 600, 520), a = A.act;
-    const box = (o) => [sw - o.r - a, sh + o.t, sw - o.r, sh + o.t + a], T = box(A.thr), R = box(A.rem);
-    const pad = [PORT_GEO.side[0], sh + g.padTop, PORT_GEO.side[0] + g.pad, sh + g.padTop + g.pad];
-    const bomb = [sw - PORT_GEO.side[1] - g.bomb, sh + g.bombTop, sw - PORT_GEO.side[1], sh + g.bombTop + g.bomb];
-    const pill = [sw - 44, -52, sw, -8], vx = (W - sw) / 2, vp = [-vx, -g.top, sw + vx, H - g.top];
-    const inV = (q) => q[0] >= vp[0] + 4 && q[2] <= vp[2] - 4 && q[1] >= vp[1] + 4 && q[3] <= vp[3] - 4;
-    modes[A.mode] = (modes[A.mode] || 0) + 1;
-    const ok = a >= ACT_GEO.min && a <= ACT_GEO.max && sep(T, R, 8) &&
-      [T, R].every((q) => sep(q, [0, 0, sw, sh], 8) && sep(q, pad, 8) && sep(q, bomb, 8) && sep(q, pill, 8) && inV(q));
+  const bad = [];
+  for (let W = 300; W <= 1000; W += 3) for (let H = Math.max(W, 552); H <= 1400; H += 3) {
+    const { s } = fitBox(W, H, true, 600, 520), sw = 600 * s, sh = 520 * s, g = portraitGeo(W, H, 600, 520, true), A = stripGeo(W, H, 600, 520), sx = (W - sw) / 2;
+    const vb = (o) => [sx + sw - o.r - o.w, g.top + sh + o.t, sx + sw - o.r, g.top + sh + o.t + o.h], T = vb(A.thr), R = vb(A.rem), B = vb(A.bomb);
+    const P = [sx + A.pad.l, g.top + sh + A.pad.t, sx + A.pad.l + A.pad.s, g.top + sh + A.pad.t + A.pad.s], k = A.pad.key;
+    const keys = [[k + A.pad.gap, 0], [0, k + A.pad.gap], [2 * (k + A.pad.gap), k + A.pad.gap], [k + A.pad.gap, 2 * (k + A.pad.gap)]].map(([x, y]) => [P[0] + x, P[1] + y, P[0] + x + k, P[1] + y + k]);
+    const band = [0, g.top + sh, W, g.top + sh + HUD_RES.p.gap + HUD_RES.p.bar + 8];
+    const inV = (q) => q[0] >= 4 && q[2] <= W - 4 && q[1] >= 4 && q[3] <= H - 4;
+    const big = (q) => q[2] - q[0] >= 44 - 1e-9 && q[3] - q[1] >= 44 - 1e-9;
+    const all = [T, R, B, P], ok = [...keys, T, R, B].every(big) && sep(T, R, 8) && sep(T, B, 8) && sep(R, B, 8) && [T, R, B].every((q) => sep(q, P, 8)) &&
+      keys.every((q, i) => keys.every((o, j) => i === j || sep(q, o, 8))) && all.every((q) => inV(q) && sep(q, band, 0));
     if (!ok && bad.length < 4) bad.push(W + "x" + H + " " + JSON.stringify(A));
   }
-  check("every GAME portrait 300..1000 x 460..1400: THROW and REMOTE (>= 44px) clear the board, pad, bomb, pill and each other by 8px, inside the viewport",
-    bad.length === 0 && modes.up > 0 && modes.mid > 0, bad.join(" | ") || JSON.stringify(modes));
+  check("every GAME portrait 300..1000 x 552..1400: D-PAD keys, THROW, REMOTE and BOMB are >= 44px, 8px apart, off the board and the power-ups row, inside the viewport",
+    bad.length === 0, bad.join(" | ") || "clean");
 }
 
 check("scale floors at 0.3 and caps at 1.8",
@@ -209,21 +201,21 @@ check("scale floors at 0.3 and caps at 1.8",
   try {
     const cv = { width: 600, height: 520, style: {} };
     const fit = mountFit(cv);
-    const g = portraitGeo(375, 812, 600, 520);
-    check("touch portrait: mountFit writes --st/--tp/--tb/--tpt/--tbt from portraitGeo",
-      attrs["data-lay"] === "p" && props["--st"] === g.top + "px" && props["--tp"] === g.pad + "px" &&
-        props["--tb"] === g.bomb + "px" && props["--tpt"] === g.padTop + "px" && props["--tbt"] === g.bombTop + "px",
+    const g = portraitGeo(375, 812, 600, 520), a = stripGeo(375, 812, 600, 520);
+    check("touch portrait: mountFit writes --st from portraitGeo and the strip's D-PAD / BOMB vars from stripGeo",
+      attrs["data-lay"] === "p" && props["--st"] === g.top + "px" && props["--tp"] === a.pad.s + "px" && props["--tpl"] === a.pad.l + "px" &&
+        props["--tpt"] === a.pad.t + "px" && props["--tbw"] === a.bomb.w + "px" && props["--tbh"] === a.bomb.h + "px" &&
+        props["--tbr"] === a.bomb.r + "px" && props["--tbt"] === a.bomb.t + "px",
       JSON.stringify(props));
-    const a = actGeo(375, 812, 600, 520);
-    check("touch portrait: mountFit writes the THROW / REMOTE slots --ta/--tthr/--ttht/--trem/--tret from actGeo",
-      props["--ta"] === a.act + "px" && props["--tthr"] === a.thr.r + "px" && props["--ttht"] === a.thr.t + "px" &&
+    check("touch portrait: mountFit writes the THROW / REMOTE slots --taw/--tah/--tthr/--ttht/--trem/--tret from stripGeo",
+      props["--taw"] === a.thr.w + "px" && props["--tah"] === a.thr.h + "px" && props["--tthr"] === a.thr.r + "px" && props["--ttht"] === a.thr.t + "px" &&
         props["--trem"] === a.rem.r + "px" && props["--tret"] === a.rem.t + "px", JSON.stringify(props));
     for (const k in props) delete props[k];
     win.innerWidth = 812; win.innerHeight = 375; fit();
     check("touch landscape writes no portrait vars (l / d rules never read them)",
       attrs["data-lay"] === "l" && Object.keys(props).length === 0, JSON.stringify(props));
     delete win.ontouchstart; win.innerWidth = 1280; win.innerHeight = 720; fit();
-    check("desktop writes no portrait vars", attrs["data-lay"] === "d" && Object.keys(props).length === 0, JSON.stringify(props));
+    check("desktop writes no portrait vars, only the HUD rows' --ht / --hb", attrs["data-lay"] === "d" && JSON.stringify(props) === JSON.stringify({ "--ht": HUD_RES.d.top + "px", "--hb": HUD_RES.d.bot + "px" }), JSON.stringify(props));
   } finally {
     delete globalThis.window;
     delete globalThis.document;
@@ -248,23 +240,24 @@ check("scale floors at 0.3 and caps at 1.8",
     check("hidden #touchpad (INTRO / MENU / ATTRACT): centred menu geometry, no glide",
       props["--st"] === m.top + "px" && props["--tp"] === m.pad + "px" && props["--sd"] === "0s", JSON.stringify(props));
     tp.hidden = false; obs[0][2]();
+    const a = stripGeo(375, 812, 600, 520);
     check("#touchpad shown (GAME edge): game geometry, glided by --sd " + PORT_GAME.sd,
-      props["--st"] === g.top + "px" && props["--tp"] === g.pad + "px" && props["--tb"] === g.bomb + "px" &&
-        props["--tpt"] === g.padTop + "px" && props["--tbt"] === g.bombTop + "px" && props["--sd"] === PORT_GAME.sd, JSON.stringify(props));
+      props["--st"] === g.top + "px" && props["--tp"] === a.pad.s + "px" && props["--tbh"] === a.bomb.h + "px" &&
+        props["--tpt"] === a.pad.t + "px" && props["--tbt"] === a.bomb.t + "px" && props["--sd"] === PORT_GAME.sd, JSON.stringify(props));
     fit();
     check("a re-fit inside GAME (resize, kind swap, pause toggling pad/bomb) keeps the game geometry with no glide",
       props["--st"] === g.top + "px" && props["--sd"] === "0s", JSON.stringify(props));
     win.innerWidth = 390; win.innerHeight = 844; fit();
     check("rotating / resizing mid-run lands on that viewport's GAME geometry",
-      props["--st"] === portraitGeo(390, 844, 600, 520, true).top + "px" && props["--tpt"] === portraitGeo(390, 844, 600, 520, true).padTop + "px", JSON.stringify(props));
+      props["--st"] === portraitGeo(390, 844, 600, 520, true).top + "px" && props["--tpt"] === stripGeo(390, 844, 600, 520).pad.t + "px", JSON.stringify(props));
     tp.hidden = true; obs[0][2]();
     check("#touchpad hidden again (leaving GAME): back to the centred menu geometry, glided",
       props["--st"] === portraitGeo(390, 844, 600, 520).top + "px" && props["--sd"] === PORT_GAME.sd, JSON.stringify(props));
     for (const k in props) delete props[k];
     tp.hidden = false; win.innerWidth = 812; win.innerHeight = 375; fit();
     delete win.ontouchstart; win.innerWidth = 1280; win.innerHeight = 720; fit();
-    check("landscape / desktop still write no portrait vars, even with #touchpad shown",
-      attrs["data-lay"] === "d" && Object.keys(props).length === 0, JSON.stringify(props));
+    check("landscape / desktop still write no portrait vars, even with #touchpad shown (desktop: only the HUD rows' --ht / --hb)",
+      attrs["data-lay"] === "d" && JSON.stringify(props) === JSON.stringify({ "--ht": HUD_RES.d.top + "px", "--hb": HUD_RES.d.bot + "px" }), JSON.stringify(props));
   } finally {
     delete globalThis.window;
     delete globalThis.document;
@@ -274,8 +267,9 @@ check("scale floors at 0.3 and caps at 1.8",
 
 {
   const tiny = [[200, 300], [0, 0], [240, 320]].flatMap(([W, H]) => [portraitGeo(W, H, 600, 520), portraitGeo(W, H, 600, 520, true)]);
-  check("portraitGeo (MENU and GAME) on a tiny viewport never puts pad/bomb over the board (padTop, bombTop >= gap)",
-    tiny.every((g) => g.padTop >= PORT_GEO.gap && g.bombTop >= PORT_GEO.gap), JSON.stringify(tiny));
+  const st = [[200, 300], [0, 0], [240, 320]].map(([W, H]) => stripGeo(W, H, 600, 520));
+  check("portraitGeo (MENU and GAME) on a tiny viewport never puts the controls over the board (padTop >= gap; the strip's keys below it)",
+    tiny.every((g) => g.padTop >= PORT_GEO.gap) && st.every((a) => a.pad.t >= PORT_GEO.gap && a.bomb.t >= PORT_GEO.gap && a.thr.t >= PORT_GEO.gap), JSON.stringify(tiny));
 }
 
 {

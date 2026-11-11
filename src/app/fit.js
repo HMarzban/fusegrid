@@ -5,18 +5,16 @@
    gutters). Never assigns the #gl / #px drawing buffers (each renderer
    owns its own).
    Touch portrait is width-bound, so the slack is vertical: portraitGeo
-   centres the stage in it (clamped to the FIT_RES.p split, 60 above for the
-   pause pill, 190 below for the controls) and docks the pad + bomb to the
-   thumb zone at the bottom, grown into the band. actGeo docks the touch
-   THROW / REMOTE row (GAME only, shown while the player holds the power) to
-   the bomb: a row above it (THROW over the bomb, REMOTE to its left), else
-   a column in the pad-bomb gap (short phones: THROW over REMOTE), else a
-   row below the bomb, else beside the pause pill above the stage.
+   centres the stage in it (clamped to the PORT_GEO split, 60 above for the
+   pause pill, 190 below for the controls) and sizes the controls' band at the
+   thumb zone at the bottom, grown into the band; stripGeo lays the touch
+   strip in it (D-PAD box, BOMB, and the THROW / REMOTE halves above BOMB,
+   GAME only, each shown while the player holds the power).
    INTRO / MENU / ATTRACT keep
    that centred stage; while #touchpad shows (GAME only — touch.update flips
-   its hidden on the GAME edge) the game geometry lifts the stage to just
-   under the pause pill (PORT_GAME.top, never below the centred top) and the
-   freed band goes to the controls, still docked to the thumb zone. A
+   its hidden on the GAME edge) the game geometry puts the stage right under
+   the HUD plate (PORT_GAME.top = HUD_RES.p.top) and docks the controls to the
+   thumb zone, the band between them for the power-ups bar and the tip. A
    MutationObserver on that one hidden attribute re-fits, and --sd glides the
    lift on that edge only (0s on resize / rotation).
    #px (PIXEL) is snapped on top of that: it switches to content-box sizing
@@ -65,10 +63,27 @@
    inside the border, never 43.77 (R1 landscape). on 2 (a run end) shows it click-through and hands back null, so the
    end overlay keeps #c and its taps; nothing draws there, so it is cleared
    once on entry (and again after a new backing, shM / shNew), and fit.box()
-   is null while it lasts. Off (or no shell box) hides #sh and returns null. */
+   is null while it lasts. Off (or no shell box) hides #sh and returns null.
+   HUD reserves (UI upgrade Task 8.1, round 5 09-hud; CSS px, never board units, so the HUD's type floors hold at any stage
+   scale). d: the chip plate above the board (HUD_RES.d.top: 9 air + the plate's 10 px ring + its 74 px box + ring + its 3 px
+   drop) and the power-ups bar below (bot: 8 gap + 42 bar + 7 air), so FIT_RES.d's height is exactly top + bot and the board
+   gives up those rows and no more (at the mock's own 1366 x 768 the board is 0.84 of the old scale, the mock's HK); #wrap's
+   padding carries them (--ht / --hb). p in GAME: the chip plate (12 air, ring, a two-row 126 px box, ring, drop, 3 air)
+   above the stage, the power-ups bar and the tile tip in the band under it, the controls docked below; FIT_RES.p's height
+   is that stack at its smallest (one bar row, the PORT_GEO.pad floor). l: no rows taken; the chips stand in the side
+   gutters beside the pad and the bomb, so a landscape phone keeps its whole board. hudGeo is the one geometry (viewport
+   CSS px) the HUD painter and the touch strip read; #hud is its canvas (fixed, the viewport, click-through, over the
+   board canvases and under #sh, #touchpad and the cards), backing owned here like #sh's; data-r is the right / bottom
+   reach of the stage plus its rows, which the analytics card clears. */
 import { hasTouch } from "../touch.js";
 
-export const FIT_RES = Object.freeze({ d: [40, 48], p: [16, 250], l: [332, 16] });
+export const HUD_RES = Object.freeze({
+  d: Object.freeze({ top: 106, bot: 57, air: 9, ring: 10, box: 74, gap: 8, bar: 42, tip: Object.freeze({ gap: 30, edge: 22, min: 220, max: 360, card: 184 }) }),
+  p: Object.freeze({ top: 164, air: 12, ring: 10, box: 126, gap: 10, bar: 38, side: 12 }),
+  l: Object.freeze({ edge: 8, gap: 12, pad: 128, act: 142 }),
+});
+
+export const FIT_RES = Object.freeze({ d: [40, 163], p: [16, 396], l: [332, 16] });
 
 export const stageCss = (s, cw, ch, bx = 0, by = 0) => Math.min((cw * s - 2 * bx) / cw, (ch * s - 2 * by) / ch);
 
@@ -78,24 +93,62 @@ export function fitBox(W, H, touch, cw, ch) {
   return { lay, s: Math.max(0.3, Math.min((W - rw) / cw, (H - rh) / ch, 1.8)) };
 }
 
-export const PORT_GEO = Object.freeze({ top: 60, bot: 190, edge: 24, gap: 22, pad: [128, 176], side: [6, 14], mid: 24 });
+/* The phone's touch strip in GAME (round 5 09-hud), from the controls' band portraitGeo docks to the thumb zone: the D-PAD
+   box (pad: three keys and two STRIP.gap gaps across, so a key is never under 44 at the PORT_GEO.pad floor) at STRIP.dpad
+   from the viewport's left, and a column STRIP.col wide at STRIP.right from its right: BOMB (the yellow key) at its foot,
+   above it one row of two fixed halves, THROW left and REMOTE right, so neither moves when the other appears. Offsets are
+   the CSS ones on #touchpad (the stage's box): tops below the stage's bottom edge, l from its left, r from its right, so
+   a stage narrower than the viewport still docks the strip to the viewport's sides. */
+export const STRIP = Object.freeze({ dpad: 20, gap: 10, right: 16, col: 130, air: 4, row: 14, bomb: 90 / 176 });
 
-export const PORT_GAME = Object.freeze({ top: 72, pad: 184, sd: "0.2s" });
+export const PORT_GEO = Object.freeze({ top: 60, bot: 190, edge: 24, gap: 22, pad: [152, 176], side: [6, 14], mid: 24 });
+
+export const PORT_GAME = Object.freeze({ top: HUD_RES.p.top, pad: 176, sd: "0.2s" });
 
 export function portraitGeo(W, H, cw, ch, game) {
-  const { s } = fitBox(W, H, true, cw, ch), G = PORT_GEO;
+  const { s } = fitBox(W, H, true, cw, ch), G = PORT_GEO, gap = game ? HUD_RES.p.gap + HUD_RES.p.bar + 8 : G.gap;
   const sw = cw * s, sh = ch * s, slack = H - sh;
   const mid = Math.floor(Math.max(G.top, Math.min(slack / 2, slack - G.bot)));
-  const roomW = (sw - G.side[0] - G.side[1] - G.mid) * 16 / 25;
-  const fitPad = (top) => Math.floor(Math.max(G.pad[0], Math.min(game ? PORT_GAME.pad : G.pad[1], H - top - sh - G.edge - G.gap, roomW)));
-  let top = game ? Math.min(mid, PORT_GAME.top) : mid;
-  /* GAME: the stage sits centred between the pause pill and the docked pad
-     (never above the lift, never below the MENU position), so a tall phone
-     no longer leaves the board stranded in the top third over a dead gap */
-  if (game) top = Math.max(top, Math.min(mid, Math.floor((top + (H - G.edge - fitPad(top)) - sh) / 2)));
-  const band = H - top - sh, pad = fitPad(top);
-  const bomb = Math.round(pad * 9 / 16), padTop = Math.max(G.gap, Math.floor(band - G.edge - pad));
-  return { top, pad, bomb, padTop, bombTop: padTop + Math.round((pad - bomb) / 2) };
+  const roomW = W - STRIP.dpad - STRIP.right - 8 - (2 * 44 + 8);
+  /* GAME: the stage sits right under the HUD plate (PORT_GAME.top) and the controls dock to the thumb zone; the band
+     between holds the power-ups bar and the tile tip (at least gap: one bar row) */
+  const top = game ? PORT_GAME.top : mid, band = H - top - sh;
+  const pad = Math.floor(Math.max(G.pad[0], Math.min(game ? PORT_GAME.pad : G.pad[1], band - G.edge - gap, roomW)));
+  return { top, pad, padTop: Math.max(gap, Math.floor(band - G.edge - pad)) };
+}
+
+/* The HUD's slots in viewport CSS px (null off GAME on p, where no HUD shows). stage: the board's CSS box. d: plate = the
+   chip plate's box (its ring and drop outside it, above the stage), bar = the power-ups bar, tip = the tile tip's column
+   right of the board (y0..y1 the room it may take; null when the window is too narrow), kept above the analytics card's
+   corner. p: plate, band (bar on top, tip at its foot) and ctl (the controls' band). l: left and right gutter columns from
+   the viewport's top, above the pad (left) and above THROW / REMOTE and the bomb (right; the PAUSE key heads it). */
+export function hudGeo(W, H, cw, ch, lay, game) {
+  const { s } = fitBox(W, H, lay !== "d", cw, ch), sw = cw * s, sh = ch * s, sx = (W - sw) / 2, R = (x, y, w, h) => ({ x, y, w, h });
+  if (lay === "d") {
+    const D = HUD_RES.d, T = D.tip, sy = Math.max(0, (H - D.top - sh - D.bot) / 2) + D.top, tx = sx + sw + T.gap, tw = Math.min(T.max, W - T.edge - tx);
+    const pt = sy - D.top + D.air + D.ring;
+    return { lay, s, stage: R(sx, sy, sw, sh), plate: R(sx, pt, sw, D.box), bar: R(sx, sy + sh + D.gap, sw, D.bar),
+      tip: tw >= T.min ? { x: tx, w: tw, y0: pt, y1: Math.min(sy + sh, H - T.card) } : null };
+  }
+  if (lay === "p") {
+    if (!game) return null;
+    const P = HUD_RES.p, g = portraitGeo(W, H, cw, ch, true), sy = g.top, sb = sy + sh, ct = sb + g.padTop;
+    return { lay, s, stage: R(sx, sy, sw, sh), plate: R(P.side + P.ring, P.air + P.ring, W - 2 * (P.side + P.ring), P.box),
+      band: R(P.side, sb + P.gap, W - 2 * P.side, ct - 8 - sb - P.gap), ctl: R(0, ct, W, g.pad) };
+  }
+  const L = HUD_RES.l, sy = (H - sh) / 2, rx = sx + sw + L.gap;
+  return { lay, s, stage: R(sx, sy, sw, sh), left: R(L.edge, L.edge, sx - L.gap - L.edge, sy + sh - L.pad - 8 - L.edge),
+    right: R(rx, L.edge, W - L.edge - rx, sy + sh - L.act - 8 - L.edge) };
+}
+
+/* the right / bottom reach of the stage and its HUD rows (the plate's ring, the bar), never the tip's column: the analytics
+   card clears this (cardClears) on a keyboard layout */
+export function hudReach(g) {
+  if (!g) return null;
+  const r = HUD_RES.d.ring, b = [g.stage, g.bar].filter(Boolean);
+  let right = Math.max(...b.map((q) => q.x + q.w)), bottom = Math.max(...b.map((q) => q.y + q.h));
+  if (g.plate) right = Math.max(right, g.plate.x + g.plate.w + r);
+  return { right, bottom };
 }
 
 export const PORT_SHELL = Object.freeze({ s: 0.9, w: [400, 600], logo: 0.27 });
@@ -108,25 +161,12 @@ export function shellGeo(W, H, cw = 600, ch = 520, lay = "p") {
   return h < 520 ? null : { w, h, s, left: 0, top: 0, logo: (portraitGeo(W, H, cw, ch, false).top + 1 + P.logo * ch * b) / s };
 }
 
-export const ACT_GEO = Object.freeze({ max: 52, min: 44, gap: 8, pill: 44 });
-
-export function actGeo(W, H, cw, ch) {
-  const { s } = fitBox(W, H, true, cw, ch), sw = cw * s, sh = ch * s, g = portraitGeo(W, H, cw, ch, true), A = ACT_GEO, G = PORT_GEO, r = G.side[1];
-  const band = H - g.top - sh, padR = G.side[0] + g.pad + A.gap, out = (mode, a, t0, r0, t1, r1) => ({ mode, act: a, thr: { r: r0, t: t0 }, rem: { r: r1, t: t1 } });
-  for (let a = A.max; a >= A.min; a--) {
-    const t = g.bombTop - A.gap - a;
-    if (t >= A.gap && (sw - r - 2 * a - A.gap >= padR || t + a <= g.padTop - A.gap)) return out("up", a, t, r, t, r + a + A.gap);
-  }
-  for (let a = A.max; a >= A.min; a--) {
-    const mid = sw - r - g.bomb - padR + A.gap, t = Math.max(A.gap, Math.min(band - A.gap - 2 * a - A.gap, g.bombTop + Math.round(g.bomb / 2) - a - A.gap / 2));
-    if (mid >= a + 2 * A.gap && t >= A.gap) { const x = r + g.bomb + Math.floor((mid - a) / 2); return out("mid", a, t, x, t + a + A.gap, x); }
-  }
-  for (let a = A.max; a >= A.min; a--) {
-    const t = g.bombTop + g.bomb + A.gap;
-    if (t + a <= band - A.gap && sw - r - 2 * a - A.gap >= padR) return out("down", a, t, r, t, r + a + A.gap);
-  }
-  const a = A.min, t = -(sh + A.gap + a), x = A.pill + A.gap;
-  return out("top", a, t, x, t, x + a + A.gap);
+export function stripGeo(W, H, cw, ch) {
+  const { s } = fitBox(W, H, true, cw, ch), sx = (W - cw * s) / 2, g = portraitGeo(W, H, cw, ch, true), S = STRIP;
+  const key = Math.floor((g.pad - 2 * S.gap) / 3), col = Math.min(S.col, W - S.right - 8 - S.dpad - g.pad), half = Math.floor((col - 8) / 2);
+  const bh = Math.round(g.pad * S.bomb), rh = g.pad - 2 * S.air - bh - S.row, r = S.right - sx;
+  return { pad: { l: S.dpad - sx, t: g.padTop, s: g.pad, key, gap: S.gap }, bomb: { r, t: g.padTop + g.pad - S.air - bh, w: col, h: bh },
+    thr: { r: r + col - half, t: g.padTop + S.air, w: half, h: rh }, rem: { r, t: g.padTop + S.air, w: half, h: rh } };
 }
 
 export function pxQuant(dpr) {
@@ -175,8 +215,9 @@ function snapPxOrigin(el) {
 }
 
 export function mountFit(canvas) {
-  let was, cap = Infinity, shG = null, shM = 0, shNew = false;
+  let was, cap = Infinity, shG = null, shM = 0, shNew = false, hG = null, hQ = 1;
   const shEl = () => (typeof document !== "undefined" && document.getElementById && document.getElementById("sh")) || null;
+  const hudEl = () => (typeof document !== "undefined" && document.getElementById && document.getElementById("hud")) || null;
   const fit = () => {
     if (typeof window === "undefined") return;
     const { lay, s } = fitBox(window.innerWidth, window.innerHeight, hasTouch(window), canvas.width, canvas.height);
@@ -203,11 +244,23 @@ export function mountFit(canvas) {
         if (sh.height !== bh) { sh.height = bh; shNew = true; }
         for (const [k, v] of [["left", shG.left], ["top", shG.top], ["width", shG.w * shG.s], ["height", shG.h * shG.s]]) sh.style[k] = v + "px";
       } else if (sh && !sh.hidden) sh.hidden = true;
+      const hud = hudEl();
+      hG = hudGeo(window.innerWidth, window.innerHeight, canvas.width, canvas.height, lay, game);
+      if (lay === "d" && body.style && body.style.setProperty) { body.style.setProperty("--ht", HUD_RES.d.top + "px"); body.style.setProperty("--hb", HUD_RES.d.bot + "px"); }
+      if (hud) {
+        hQ = Math.min(lay === "p" ? 3 : WIN_SHELL.dpr, (typeof devicePixelRatio !== "undefined" && devicePixelRatio) || 1);
+        const bw = Math.round(window.innerWidth * hQ), bh = Math.round(window.innerHeight * hQ), u = lay === "d" && hudReach(hG);
+        if (hud.width !== bw) hud.width = bw;
+        if (hud.height !== bh) hud.height = bh;
+        hud.style.width = window.innerWidth + "px";
+        hud.style.height = window.innerHeight + "px";
+        if (hud.dataset) hud.dataset.r = u ? Math.ceil(u.right) + "," + Math.ceil(u.bottom) : "";
+      }
       if (lay === "p" && body.style && body.style.setProperty) {
         const g = portraitGeo(window.innerWidth, window.innerHeight, canvas.width, canvas.height, game);
         body.style.setProperty("--sd", flip ? PORT_GAME.sd : "0s");
-        const a = actGeo(window.innerWidth, window.innerHeight, canvas.width, canvas.height);
-        for (const [k, v] of [["st", g.top], ["tp", g.pad], ["tb", g.bomb], ["tpt", g.padTop], ["tbt", g.bombTop], ["ta", a.act], ["tthr", a.thr.r], ["ttht", a.thr.t], ["trem", a.rem.r], ["tret", a.rem.t]]) body.style.setProperty("--" + k, v + "px");
+        const a = stripGeo(window.innerWidth, window.innerHeight, canvas.width, canvas.height);
+        for (const [k, v] of [["st", g.top], ["tp", a.pad.s], ["tpl", a.pad.l], ["tpt", a.pad.t], ["tbw", a.bomb.w], ["tbh", a.bomb.h], ["tbr", a.bomb.r], ["tbt", a.bomb.t], ["taw", a.thr.w], ["tah", a.thr.h], ["tthr", a.thr.r], ["ttht", a.thr.t], ["trem", a.rem.r], ["tret", a.rem.t]]) body.style.setProperty("--" + k, v + "px");
       }
     }
     if (px && px.style) fitPx(px, canvas.width * s, canvas.height * s, cap);
@@ -230,6 +283,17 @@ export function mountFit(canvas) {
     ctx.setTransform(sh.width / shG.w, 0, 0, sh.height / shG.h, 0, 0);
     ctx.imageSmoothingEnabled = false;
     return end ? null : { ctx, box: fit.box(), el: sh };
+  };
+  /* the HUD canvas: on shows it and hands back {ctx (CSS px transform), geo (hudGeo), w, h}; off (or no #hud, or no slots: p
+     off GAME) hides it. Never clears: the HUD painter clears what it repaints, and only on a change. */
+  fit.hud = (on) => {
+    const el = hudEl();
+    if (!el) return null;
+    if (!on || !hG) { if (!el.hidden) el.hidden = true; return null; }
+    if (el.hidden) el.hidden = false;
+    const ctx = el.getContext("2d");
+    ctx.setTransform(hQ, 0, 0, hQ, 0, 0);
+    return { ctx, geo: hG, w: el.width / hQ, h: el.height / hQ, el };
   };
   fit.setPxCap = (c) => { const v = c > 0 ? c : Infinity; if (v !== cap) { cap = v; fit(); } };
   fit();

@@ -464,7 +464,7 @@ const rasters = (log) => log.filter((q) => q[0] === "hi" && q[1] === "drawImage"
     const bw2 = +px.dataset.bw;
     globalThis.devicePixelRatio = 1; mq[0].f();
     check("a dpr change with no resize re-fits #px (one-shot matchMedia, re-armed at the new ratio)",
-      mq.length === 2 && mq[0].m === "(resolution: 2dppx)" && mq[0].once && mq[1].m === "(resolution: 1dppx)" && mq[1].once && +px.dataset.bw === Math.round(bw2 / 2), mq.map((q) => q.m).join() + " " + bw2 + "->" + px.dataset.bw);
+      mq.length === 2 && mq[0].m === "(resolution: 2dppx)" && mq[0].once && mq[1].m === "(resolution: 1dppx)" && mq[1].once && +px.dataset.bw === Math.round(600 * s - 2), mq.map((q) => q.m).join() + " " + bw2 + "->" + px.dataset.bw);
     globalThis.devicePixelRatio = 2; mq[1].f();
     px.hidden = true; px.style.left = "0.3px"; hs.resize.forEach((f) => f());
     check("a hidden #px still gets its backing size but no origin read", px.style.left === "0.3px" && +px.dataset.bw > 0);
