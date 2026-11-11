@@ -25,6 +25,7 @@ import { snapshot, setOn as probeOn } from "./render/kit/probe.js";
 import { release as freeKit } from "./render/kit/cache.js";
 import { setTextScale, textScale } from "./render/kit/type.js";
 import { mountFit } from "./app/fit.js";
+import { createHud } from "./render/hud.js";
 import { mountFrames } from "./app/frameloop.js";
 import { mountRenderers } from "./app/rcache.js";
 import { afterFirstRender, loadCard, lookPlan, paintYield } from "./app/loadbar.js";
@@ -99,7 +100,7 @@ export function createGame(canvas, opts = {}) {
   loadLevel(world, 1, false);
   world.state = "PLAY";
 
-  let fit = null;
+  let fit = null; const hud = createHud();
   if (canvas) {
     canvas.width = CFG.COLS * CFG.TILE;
     canvas.height = CFG.ROWS * CFG.TILE;
@@ -681,6 +682,7 @@ export function createGame(canvas, opts = {}) {
     if (curKind === "3d") ro = { ...(ro || {}), bright: settings.bri / 100 };
     renderer.render(attract && demo ? demo.world : show ? show.world : world, dt, ro);
     c.restore();
+    hud.frame(fit, app.screen === SCREEN.GAME ? world : null, ro, curKind); // chips + power-ups on #hud, off the board; paints only on a change
     const sh = fit && fit.shell(shellMode(app.screen, world)); // MENU + plated pages on #sh's own box; a run end shows it click-through (shellview shellMode)
     shBox = sh ? sh.box : null;
     drawShell(sh ? sh.ctx : c, app, world, sh ? sh.box : canvas, curKind, getScoresForHeat, getPlaquesFn, getCab);

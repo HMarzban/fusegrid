@@ -1865,56 +1865,61 @@ function hudRecorder(){
   const rec=new Proxy(function(){},{
     get:(t,p)=>{
       if(p===Symbol.toPrimitive)return()=>"";
+      if(p==="measureText")return(s)=>({width:String(s).length*8});
 
       return(...a)=>{ops.push([String(p),a]);return grad;};},
     set:(t,p,v)=>{ops.push(["set:"+String(p),v]);return true;}});
   return {rec,ops};
 }
-const HUD_STUB={save(){},restore(){},translate(){},scale(){},beginPath(){},
+const HUD_STUB={save(){},restore(){},translate(){},scale(){},beginPath(){},ellipse(){},rect(){},clip(){},measureText:(s)=>({width:String(s).length*8}),
   closePath(){},moveTo(){},lineTo(){},bezierCurveTo(){},
   quadraticCurveTo(){},arcTo(){},arc(){},
   fill(){},stroke(){},fillRect(){},strokeRect(){},fillText(){},
   createLinearGradient:()=>({addColorStop(){}}),
   createRadialGradient:()=>({addColorStop(){}})};
 await sec("S4.D",async()=>{
-  const scenes=await import("../src/render/scenes.js");
-  const {drawHudChips}=scenes;
+  const {drawHud,hudGeom,hudState}=await import("../src/render/hud.js");
+  const {hudGeo}=await import("../src/app/fit.js");
+  const {worldTokens}=await import("../src/render/kit/tokens.js");
   const mkW=(lives,bombs,range,level,foes)=>({state:"PLAY",lives,
     level:level|0,enemies:new Array(foes|0).fill(0),
     players:[{bombs,range}]});
+  const hud=(c,w)=>{ const st=hudState(w,{time:{t:0}}); drawHud(c,hudGeom(c,hudGeo(1366,768,600,520,"d"),st,{w:1366,h:768}),st,worldTokens(w.level||1),{}); };
   let threw=false;
-  try{ drawHudChips(HUD_STUB,mkW(3,2,3)); }
+  try{ hud(HUD_STUB,mkW(3,2,3)); }
   catch(e){ threw=true; console.log(e.message); }
-  check("S4.D drawHudChips no-throw on stub ctx", !threw);
+  check("S4.D the HUD (hud.js, #hud) no-throw on stub ctx", !threw);
   const r=hudRecorder();
-  drawHudChips(r.rec,mkW(9,2,3));
+  hud(r.rec,mkW(4,2,3));
   const texts=r.ops.filter(o=>o[0]==="fillText").map(o=>String(o[1][0]));
   const curves=r.ops.filter(o=>o[0]==="bezierCurveTo"||o[0]==="quadraticCurveTo").length;
-  check("S4.D lives drawn as heart glyphs (vector curves), capped at 6"
-      +" with +n overflow text",
-    curves>=12&&texts.includes("+3"), "curves="+curves);
-  check("S4.D BOMB chip: label + count from players[0].bombs",
-    texts.includes("BOMB")&&texts.includes("2"), texts.join("|"));
+  const r9=hudRecorder();
+  hud(r9.rec,mkW(9,2,3));
+  const texts9=r9.ops.filter(o=>o[0]==="fillText").map(o=>String(o[1][0]));
+  check("S4.D lives drawn as heart glyphs (vector curves) up to 5, more is one heart and the count",
+    curves>=8&&texts[texts.indexOf("LIVES")+1]==="BOMBS"&&texts9.includes("9"), "curves="+curves);
+  check("S4.D BOMBS chip: label + count from players[0].bombs",
+    texts.includes("BOMBS")&&texts.includes("2"), texts.join("|"));
   check("S4.D FLAME chip: label + count from players[0].range",
     texts.includes("FLAME")&&texts.includes("3"), texts.join("|"));
   const r2=hudRecorder();
-  drawHudChips(r2.rec,mkW(9,2,3,4,5));
+  hud(r2.rec,mkW(9,2,3,4,5));
   const texts2=r2.ops.filter(o=>o[0]==="fillText").map(o=>String(o[1][0]));
-  check("S4.D LV chip: label + count from world.level",
-    texts2.includes("LV")&&texts2.includes("4"), texts2.join("|"));
+  check("S4.D LEVEL chip: label + count from world.level",
+    texts2.includes("LEVEL")&&texts2.includes("4"), texts2.join("|"));
   check("S4.D ENEMIES chip: label + count from world.enemies.length",
     texts2.includes("ENEMIES")&&texts2.includes("5"), texts2.join("|"));
-  check("S4.D chips paint panel backgrounds",
-    r.ops.some(o=>o[0]==="fillRect")&&r.ops.some(o=>o[0]==="strokeRect"));
-  // wrapper integration: o.hud===true paints chips on the overlay ctx
+  check("S4.D chips paint pane backgrounds",
+    r.ops.some(o=>o[0]==="fill")&&r.ops.some(o=>o[0]==="fillRect"));
+  // wrapper integration: o.hud===true keeps the overlay (labels, coach) but no chips
   const cv=hudRecorder();
   const fake={getContext:()=>cv.rec};
   const rw=createRenderer3D(null,fake,{audio:null,hud:null});
   const wg=createWorld(74,1); loadLevel(wg,1,false); wg.state="PLAY";
   rw.render(wg,1/60,{hud:true});
-  check("S4.E wrapper o.hud===true draws HUD chips on overlay (cleared first)",
-    cv.ops.some(o=>o[0]==="clearRect")&&cv.ops.some(
-      o=>o[0]==="fillText"), "ops="+cv.ops.length);
+  check("S4.E wrapper o.hud===true clears its overlay and paints no HUD chip (the HUD is on #hud)",
+    cv.ops.some(o=>o[0]==="clearRect")&&!cv.ops.some(
+      o=>o[0]==="fillText"&&/^(BOMBS?|FLAME|LV|LEVEL|ENEMIES)$/.test(String(o[1][0]))), "ops="+cv.ops.length);
   // Minor-7 (test quality, review 2026-09-07): the 3D wrapper's drawCoach2
   // seam was pinned by source-regex only — M15 (alpha/text args swapped) and
   // M16 (alpha hard-coded to 1) both survived. Drive the real overlay draw.
@@ -1952,8 +1957,8 @@ await sec("S4.D",async()=>{
     audio:null});
   const w2=createWorld(75,1); loadLevel(w2,1,false); w2.state="PLAY";
   r2d.render(w2,1/60,{hud:true});
-  check("S4.E classic renderer o.hud===true draws chips too",
-    cr.ops.some(o=>o[0]==="fillText"));
+  check("S4.E classic renderer o.hud===true draws no chips either (the HUD is on #hud)",
+    !cr.ops.some(o=>o[0]==="fillText"&&/^(BOMBS?|FLAME|LV|LEVEL|ENEMIES)$/.test(String(o[1][0]))));
 });
 
 // ---- §BL3 blast v3 at rig C: end caps stay near their tile, ends taper,

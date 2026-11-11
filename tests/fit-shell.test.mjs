@@ -429,8 +429,9 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
     check("GAME PLAY: #sh hidden", g.app.screen === SCREEN.GAME && g.world.state === "PLAY" && D.sh.hidden);
     g.input.onPause(); frame();
     check("PAUSE: #sh hidden, the PAUSE list still on #c", g.world.state === "PAUSE" && D.sh.hidden && cText.includes("RESUME"), J(cText.slice(0, 12)));
-    for (const [v, word] of [[1, "MUSIC"], [2, "FRAME RATE"], [3, "BOMB"]]) {
+    for (const [v, word] of [[1, "MUSIC"], [2, "FRAME RATE"], [3, "CONTROLS"]]) {
       g.app.pauseView = v; frame();
+      // view 3: the CONTROLS page's own head (its lazy page module is not opened by a bare pauseView write; BOMB here was the old in-board HUD's word)
       check(`PAUSE view ${v}: #sh hidden, the inline page on #c (${word})`, g.world.state === "PAUSE" && D.sh.hidden && cText.includes(word) && !shText.length, J(cText.slice(0, 8)));
     }
     g.app.pauseView = 0; g.input.onPause(); frame();

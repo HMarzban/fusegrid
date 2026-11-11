@@ -215,7 +215,7 @@ function snapPxOrigin(el) {
 }
 
 export function mountFit(canvas) {
-  let was, cap = Infinity, shG = null, shM = 0, shNew = false, hG = null, hQ = 1;
+  let was, cap = Infinity, shG = null, shM = 0, shNew = false, hG = null, hQ = 1, hGen = 0;
   const shEl = () => (typeof document !== "undefined" && document.getElementById && document.getElementById("sh")) || null;
   const hudEl = () => (typeof document !== "undefined" && document.getElementById && document.getElementById("hud")) || null;
   const fit = () => {
@@ -250,8 +250,8 @@ export function mountFit(canvas) {
       if (hud) {
         hQ = Math.min(lay === "p" ? 3 : WIN_SHELL.dpr, (typeof devicePixelRatio !== "undefined" && devicePixelRatio) || 1);
         const bw = Math.round(window.innerWidth * hQ), bh = Math.round(window.innerHeight * hQ), u = lay === "d" && hudReach(hG);
-        if (hud.width !== bw) hud.width = bw;
-        if (hud.height !== bh) hud.height = bh;
+        if (hud.width !== bw) { hud.width = bw; hGen++; }
+        if (hud.height !== bh) { hud.height = bh; hGen++; }
         hud.style.width = window.innerWidth + "px";
         hud.style.height = window.innerHeight + "px";
         if (hud.dataset) hud.dataset.r = u ? Math.ceil(u.right) + "," + Math.ceil(u.bottom) : "";
@@ -295,6 +295,8 @@ export function mountFit(canvas) {
     ctx.setTransform(hQ, 0, 0, hQ, 0, 0);
     return { ctx, geo: hG, w: el.width / hQ, h: el.height / hQ, el };
   };
+  fit.hudGeo = () => hG;
+  fit.hudGen = () => hGen; // bumped whenever #hud's backing is reassigned (which clears it): the HUD repaints then, change or not
   fit.setPxCap = (c) => { const v = c > 0 ? c : Infinity; if (v !== cap) { cap = v; fit(); } };
   fit();
   if (typeof window !== "undefined") {

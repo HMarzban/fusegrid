@@ -5,9 +5,9 @@ import {
   drawItems, drawEnemies, drawPlayer, drawPlayerBody, drawBombs, drawBlades, drawGhost, drawLanes
 } from "./sprites.js";
 import {onEvent, updateFx, drawFx, drawBursts, drawFxOverlay, drawPickupFx, feedFx, getShake, getFlash, getFx, getFxOpts, initFx, syncFx} from "./fx.js";
-import {drawOverlay, overlayBox, drawHudChips, drawAbilityBar, drawCoach, drawCoach2} from "./scenes.js";
+import {drawOverlay, overlayBox, drawCoach, drawCoach2} from "./scenes.js";
 import {PROJ, project} from "./r3d/camera.js";
-import {wellBoard, hudPlate, stageGlow} from "./frame.js";
+import {wellBoard, stageGlow} from "./frame.js";
 import {drawDepth} from "./depth2d.js";
 import {createAmbient2d} from "./ambient2d.js";
 import {fxOf} from "./entityfx.js";
@@ -174,14 +174,11 @@ export function createRenderer(canvas, opts={}){
       drawOverlay(ctx, world, B.w, B.h, B.cx, B.cy, o&&o.pause, o&&o.time, o&&o.run, o&&o.toast);
       if(world.state==="WIN"||world.state==="LOSE") drawFx(ctx);
     }
-    /* S4: overlay HUD chips — explicit opt-in only ({hud:true} during GAME),
-       drawn after restore so they never shake with the camera. */
-    if(o&&o.hud===true&&kind==="2d") hudPlate(ctx, false, world.level);
-    if(o&&o.hud===true) drawHudChips(ctx, world, o&&o.time);
-    if(o&&o.hud===true&&kind==="2d") drawAbilityBar(ctx, world);
+    /* the in-run overlay ({hud:true} during GAME), drawn after restore so it never shakes with the camera; the HUD chips and the
+       power-ups bar are off the board on #hud (hud.js, UI upgrade Task 8.2) */
     if(o&&o.hud===true&&world.state==="PLAY") drawFxOverlay(ctx);
     if(o&&o.hud===true&&world.state==="PLAY") drawPickupFx(ctx, kind==="3d"?{coach:o.coach2,proj:isoProj,bw:PROJ.canvasW}:{coach:o.coach2});
-    /* ghost coach (plan 4): same opt-in gate as the HUD chips; o.coach is
+    /* ghost coach (plan 4): same opt-in gate as the in-run overlay; o.coach is
        the fade alpha precomputed in main.js from coachOpen(...) + COACH_DUR
        + world.state==="PLAY" (0 when closed), never re-derived here. */
     if(o&&o.hud===true) drawCoach(ctx, (o&&o.coach)||0);

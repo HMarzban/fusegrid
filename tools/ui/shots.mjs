@@ -7,7 +7,7 @@
                       enemies, floor, scores, stats, statsreset (STATS armed), medals, scoresfull / statsfull (a seeded cabinet,
                       __GAME__.seedRecords()), statspage2 (STATS' second page on a paged phone), scoresidle (RECORDS through the real lazy.idle() load: no want()), pause, pausetags (PAUSE with the run's rules seeded: the tag row), win, win2 (a paged run end's second
                       page), lose, loseshort (a saved best: the shortfall), losedaily (today's DAILY), lose2,
-                      play; optionskeys / graphicskeys / guidekeys (SETTINGS, GRAPHICS, GUIDE reached by real key presses, so a phone capture
+                      play, hud; optionskeys / graphicskeys / guidekeys (SETTINGS, GRAPHICS, GUIDE reached by real key presses, so a phone capture
                       shows the keyboard focus); captured in that canonical order
                       whatever the order given (win at --world 5 or 8 is the finale)
      --look 2d,px,3d  art styles (default 2d); one page load per look and world
@@ -25,7 +25,7 @@
      --gpu            ANGLE on Metal instead of SwiftShader (byte-identical PNGs are claimed for SwiftShader CLASSIC only)
    Per capture: <screen>.<look>.w<n>[.t125][.phone].png and a .json dump beside it: the flags, what the page reads back (state, screen, level,
    seed, gen, look, data-lay, text scale, dpr, and swRegistrations: the page's REAL service worker registrations, read through the getter INIT
-   hides, any is an error), the CSS content boxes of #c / #sh / #px / #gl (border and padding taken off: #c has a 1 px border; the raw rect is
+   hides, any is an error), the CSS content boxes of #c / #sh / #px / #gl / #hud (border and padding taken off: #c has a 1 px border; the raw rect is
    `outer`), and window.__GAME__.ui.snap() (src/render/kit/probe.js: the page's own rects, text boxes and squint pairs, empty until a page records
    them; shots.mjs is what switches the probe on, __GAME__.ui.on(true), cleared before every capture). Before the first capture every intended
    capture's .png, .json and .notext.png are deleted, so an earlier run's files can never stand in for one this run failed to take.
@@ -93,9 +93,12 @@ const READ = `(async()=>{const g=window.__GAME__,G=g.G,a=g.app,r=g.renderer,d=r&
   return {x:b.left+l,y:b.top+t,w:Math.max(0,b.width-l-r),h:Math.max(0,b.height-t-u),outer:[b.left,b.top,b.width,b.height],hidden:!!e.hidden||cs.display==='none'||cs.visibility==='hidden',bw:e.width,bh:e.height};};
  return {read:{state:g.state(),screen:a.screen,level:a.level,pactUnlocked:a.pactUnlocked,worldLevel:G.level,seed:G.seed,gen:G.gen,look:d&&d.atlas?'px':(gl&&!gl.hidden?'3d':'2d'),
   lay:document.body.getAttribute('data-lay'),textScale:g.ui?g.ui.textScale():null,dpr:devicePixelRatio,inner:[innerWidth,innerHeight],lastDev:a.lastDev,swRegistrations:real?(await real.getRegistrations()).length:null},
-  canvases:{c:rc('c'),sh:rc('sh'),px:rc('px'),gl:rc('gl')}};})()`;
+  canvases:{c:rc('c'),sh:rc('sh'),px:rc('px'),gl:rc('gl'),hud:rc('hud')}};})()`;
 const UIRESET = "(()=>{const u=window.__GAME__.ui;if(u){u.on(false);u.on(true);}return !!u;})()";
 const NOTEXT = (on) => `(window.__uiNoText=${on},import('/src/render/kit/cache.js').then((m)=>{m.invalidate('notext');return true;}))`;
+/* the hud screen: every power held (THROW and REMOTE among them), the player made safe and set on the room's first floor tile, so coach v2's
+   tile tip opens once the ghost coach's 3 s are up (shots.mjs steps the screen's settle, 3.6 s) */
+const HUD_RUN = `(()=>{const G=window.__GAME__.G,p=G.players[0];Object.assign(p,{shield:true,kick:true,throw:true,remote:true,bombKind:'line',iFrames:99});const f=G.feat||{};let k=null;for(const q in f)if(f[q]){k=+q;break;}if(k!=null){p.x=(k%15+0.5)*40;p.y=(Math.floor(k/15)+0.5)*40;}return k;})()`;
 const LOSE = `(()=>{const G=window.__GAME__.G,p=G.players[0];G.lives=1;p.iFrames=0;p.shield=false;G.bombs.push({x:p.x,y:p.y,tx:Math.floor(p.x/40),ty:Math.floor(p.y/40),timer:0.05,radius:1,variant:'normal',dead:false});return true;})()`;
 const TWIN_MS = 1000 / 30;
 /* a standard-mapping controller in slot 0 (headless Chrome has none), no button down, for the CONTROLS frames that need one; false takes it away */
@@ -203,6 +206,7 @@ async function group(c, port, a, look, world, rep) {
           if (R.tags) await ev("(Object.assign(window.__GAME__.G,{heat:2,pace:1,pact:15}),window.__GAME__.app.timeAttack=true,true)"); // the tag row: every rule on, for the capture only
           await ev("window.__pause&&window.__pause()");
         }
+        if (s === "hud" && (await ev(HUD_RUN)) == null) warn("the room has no floor tile: no tile tip");
         if (R.run === "lose" || R.run === "win") {
           await P.adv(300);
           await ev(R.run === "lose" ? LOSE : "window.__GAME__.clearAllEnemies()");

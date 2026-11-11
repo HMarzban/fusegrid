@@ -1,18 +1,16 @@
 import { CFG, isFinale, biomeOf } from "../core/config.js";
-import { HEAT_COL, heatToken } from "../core/heat.js";
-import { drawIcon } from "./sprites.js";
 import { rr } from "./icons.js";
 import { PROJ } from "./r3d/camera.js";
 import { LABEL, diffTag, speedTag, runParts } from "./words.js";
-import { abilityList, abilityText, abilityOrd, getStrip } from "./fx.js";
+import { abilityList, abilityOrd } from "./fx.js";
 import { drawPause, VEIL as PAUSE_VEIL } from "./pages/pause.js";
 import { hints } from "./hintcopy.js";
 import { endTap, endMode, endPagesOf } from "./pages/endgeom.js";
 import * as lazy from "./pages/lazy.js";
 import { loadingPage, lazyPage, lazyFailed, loadBox } from "./menudraw.js";
 
-/* Scene UI: HUD, and the CLEARED / GAME OVER / PAUSED overlays.
-   Pure draw; reads world + (optionally) DOM for HUD. The MENU logo is the MENU
+/* Scene UI: the CLEARED / GAME OVER / PAUSED overlays and the coach tips (the HUD is hud.js).
+   Pure draw; reads world. The MENU logo is the MENU
    page header's (pages/menu.js). */
 export function overlayCue(world, touch, words) {
   const W = words || hints(),
@@ -168,113 +166,9 @@ export function drawOverlay(
   }
 }
 
-/* S4 overlay HUD chips (real3d §3): lives as heart glyphs, BOMB/FLAME/LV/
-   ENEMIES as icon+count (or label-only) chips, painted on the overlay ctx
-   in board space — the sole in-game HUD since the DOM #hud strip was
-   removed (GUIDE+HUD plan). Palette and mono type match menudraw.
-   Opt-in per frame via o.hud===true so menus/attract keep their authored
-   canvases untouched. ico (W5, PIXEL only) paints the heart and chip glyphs
-   as ico(c, type, col, cx, cy) in place of the scaled drawIcon block; absent,
-   the call log is byte-identical to before. */
-const HUD_TEXT = "#dfe7f5",
-  HUD_MUTED = "#7385ad",
-  HUD_PANEL = "rgba(13,18,32,0.72)",
-  HUD_LINE = "#26324a";
-export function drawHudChips(c, world, tm, ico) {
-  const p = world.players[0] || {};
-  c.save();
-  c.textBaseline = "middle";
-  c.textAlign = "left";
-  const lives = Math.max(0, world.lives | 0);
-  const n = Math.min(lives, 6);
-  /* one band behind the whole row, so the hearts, the chips and the score
-     read on the same ground; each chip is an outline on it */
-  const panel = (x, w, fill) => {
-    if (fill) {
-      c.fillStyle = HUD_PANEL;
-      c.fillRect(x, 10, w, 30);
-    }
-    c.strokeStyle = HUD_LINE;
-    c.lineWidth = 1;
-    c.strokeRect(x + 0.5, 10.5, w - 1, 29);
-  };
-  panel(10, CFG.COLS * CFG.TILE - 22, true);
-  for (let i = 0; i < n; i++) {
-    if (ico) { ico(c, "heart", "#ff3b5c", 16 + i * 19, 25); continue; }
-    c.save();
-    c.translate(16 + i * 19, 25);
-    c.scale(0.62, 0.62);
-    drawIcon(c, "heart", "#ff3b5c", 0);
-    c.restore();
-  }
-  if (lives > n) {
-    c.fillStyle = HUD_TEXT;
-    c.font = "900 12px ui-monospace,monospace";
-    c.fillText("+" + (lives - n), 16 + 6 * 19, 25);
-  }
-  const chip = (x, w, label, count, col, icon) => {
-    panel(x, w);
-    let tx = x + 10;
-    if (icon && ico) {
-      ico(c, icon, col, x + 17, 25);
-      tx = x + 31;
-    } else if (icon) {
-      c.save();
-      c.translate(x + 17, 25);
-      c.scale(0.55, 0.55);
-      drawIcon(c, icon, col, 0);
-      c.restore();
-      tx = x + 31;
-    }
-    c.fillStyle = HUD_MUTED;
-    c.font = "9px ui-monospace,monospace";
-    c.fillText(label, tx, 18);
-    c.fillStyle = HUD_TEXT;
-    c.font = "900 13px ui-monospace,monospace";
-    c.fillText(String(count), tx, 33);
-  };
-  chip(140, 76, "BOMB", p.bombs || 0, "#ff5d73", "bomb");
-  chip(224, 82, "FLAME", p.range || 0, "#ff8a3c", "fire");
-  chip(314, 64, "LV", world.level | 0, null, null);
-  /* R7: the ENEMIES chip narrows from 94 to 64 to make room for the stopwatch,
-     which ends at 530 against the right-aligned score column's left reach of
-     541 at six digits. tm absent or tm.on falsy is byte-identical to before —
-     which is what keeps three.test.mjs and pickups.test.mjs unmoved. If a
-     headed check ever shows overlap, narrow ENEMIES further; never move the
-     right-aligned score column. */
-  const ta = !!(tm && tm.on);
-  chip(
-    386,
-    ta ? 64 : 94,
-    "ENEMIES",
-    Array.isArray(world.enemies) ? world.enemies.length : 0,
-    null,
-    null,
-  );
-  if (ta) chip(458, 72, "TIME", fmtTime(tm.t), null, null);
-  const scx = CFG.COLS * CFG.TILE - 18;
-  c.textAlign = "right";
-  const hk = world.heat | 0;
-  c.fillStyle = HEAT_COL[hk] || HUD_MUTED;
-  c.font = "9px ui-monospace,monospace";
-  c.fillText(heatToken(hk), scx, 18);
-  c.fillStyle = HUD_TEXT;
-  c.font = "900 13px ui-monospace,monospace";
-  c.fillText(String(world.score | 0), scx, 33);
-  c.restore();
-}
-
-/* Ability bar (owner ruling 2026-10-10, research D): the abilities a player
-   holds right now, as icon+word chips in the bottom lane (y 486-514), which
-   is the border wall row in CLASSIC 2D and PIXEL and sits under the near rim
-   at every REAL 3D CAMERA preset (row 11's floor edge projects to y 407.5 at
-   STANDARD). Active entries only, in the order SHIELD, KICK, THROW, PASS,
-   bomb kind, REMOTE, SPD n; a chip a hit took away (fx.js getStrip) stays in
-   its slot, dimmed to ABAR.dim and fading out over ABAR.fade — a static
-   fade, never a flash. PLAY and PAUSE only: the WIN/LOSE summary owns the
-   lower half of the screen. Holding nothing paints nothing at all (not even
-   a save), so every idle call log is unchanged. ico is PIXEL's painter, as
-   in drawHudChips; y moves the lane for a canvas of another height. */
+/* Ability bar (owner ruling 2026-10-10, research D): the powers a player holds right now, in the order SHIELD, KICK, THROW, PASS, bomb kind,
+   REMOTE, SPD n; a chip a hit took away (fx.js getStrip) stays in its slot, dimmed to ABAR.dim and fading out over ABAR.fade, a static fade,
+   never a flash. Painted off the board by hud.js (UI upgrade Task 8.2); ABAR's lane (y, h) is the bottom border row the ghost coach uses. */
 export const ABAR = Object.freeze({ x: 16, y: 486, h: 28, gap: 5, fade: 0.6, dim: 0.5, ch: 7.8, min: 9 });
 export function abilityChips(p, gone) {
   const on = abilityList(p).map((k) => ({ k, a: 1 }));
@@ -283,59 +177,6 @@ export function abilityChips(p, gone) {
       on.push({ k: e.k, a: ABAR.dim * Math.max(0, Math.min(1, e.t / ABAR.fade)) });
   return on.sort((a, b) => abilityOrd(a.k) - abilityOrd(b.k));
 }
-export function drawAbilityBar(c, world, ico, gone, y) {
-  if (!world || (world.state !== "PLAY" && world.state !== "PAUSE")) return;
-  const p = world.players && world.players[0];
-  const L = abilityChips(p, gone === undefined ? getStrip() : gone);
-  if (!L.length) return;
-  const Y = typeof y === "number" ? y : ABAR.y,
-    cy = Y + ABAR.h / 2,
-    mw = (s) => {
-      const m = c.measureText ? c.measureText(s) : null;
-      return m && m.width > 0 ? m.width : s.length * ABAR.ch;
-    };
-  c.save();
-  c.textBaseline = "middle";
-  c.textAlign = "left";
-  c.font = "900 13px ui-monospace,monospace";
-  /* The row fits the overlay, ABAR.x in from each side. An estimate with no ctx
-     call (ABAR.ch, 8 % wide as R13's recorder) clears the usual row, whose call
-     log is unchanged; only a row that may not fit (every ability with the
-     longest bomb kind) measures itself and steps its type down from 13 px until it fits. */
-  const live = L.filter((e) => e.a > 0).map((e) => abilityText(e.k, p)), lab = (t) => (t[1] ? t[0] + " " + t[1] : t[0]),
-    room = CFG.COLS * CFG.TILE - ABAR.x, span = (f) => live.reduce((a, t) => a + Math.round(f(lab(t)) + 32) + ABAR.gap, ABAR.x) - ABAR.gap;
-  if (span((s) => s.length * ABAR.ch * 1.08) > room)
-    for (let k = 13; k > ABAR.min && span(mw) > room; ) c.font = "900 " + --k + "px ui-monospace,monospace";
-  let x = ABAR.x;
-  for (const e of L) {
-    if (!(e.a > 0)) continue;
-    const [s, m, col] = abilityText(e.k, p);
-    const w = Math.round(mw(m ? s + " " + m : s) + 32);
-    c.globalAlpha = e.a;
-    c.fillStyle = HUD_PANEL;
-    c.fillRect(x, Y, w, ABAR.h);
-    c.strokeStyle = HUD_LINE;
-    c.lineWidth = 1;
-    c.strokeRect(x + 0.5, Y + 0.5, w - 1, ABAR.h - 1);
-    if (ico) ico(c, e.k, col, x + 13, cy);
-    else {
-      c.save();
-      c.translate(x + 13, cy);
-      c.scale(0.6, 0.6);
-      drawIcon(c, e.k, col, 0);
-      c.restore();
-    }
-    c.fillStyle = HUD_TEXT;
-    c.fillText(s, x + 24, cy + 1);
-    if (m) {
-      c.fillStyle = "#9fb3d8";
-      c.fillText(m, x + 24 + mw(s + " "), cy + 1);
-    }
-    x += w + ABAR.gap;
-  }
-  c.restore();
-}
-
 /* Ghost coach (first-run nudge): faded MOVE caps + a BOMB pill from the live
    binds (W A S D + SPACE by default, a D-PAD pill on a pad) drawn once so a
    first-time player sees the controls, then never again. In CLASSIC 2D this

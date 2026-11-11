@@ -18,8 +18,8 @@ import {introCam} from "./flythrough.js";
 import {createParticles} from "./particles.js";
 import {ambientClock} from "../ambient.js";
 import {buildSpriteAtlas, buildWorldAtlas, spriteSteps, worldSteps, wrapTex} from "./textures.js";
-import {stageGlow, stageBack, hudPlate3} from "../frame.js";
-import {drawHudChips, drawAbilityBar, drawOverlay, overlayBox, drawCoach, drawCoach2} from "../scenes.js";
+import {stageGlow, stageBack} from "../frame.js";
+import {drawOverlay, overlayBox, drawCoach, drawCoach2} from "../scenes.js";
 import {onEvent, updateFx, getFxOpts, getShake, getFlash, getFx, feedFx, drawFxOverlay, drawPickupFx, syncFx, initFx} from "../fx.js";
 
 const W=CFG.COLS*CFG.TILE, H=CFG.ROWS*CFG.TILE;
@@ -443,9 +443,6 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
     if(ov||(o&&o.hud===true)){
       if(ov){ const B=overlayBox("3d");
         drawOverlay(ovCtx,world,B.w,B.h,B.cx,B.cy,o&&o.pause,o&&o.time,o&&o.run,o&&o.toast); }
-      if(o&&o.hud===true)hudPlate3(ovCtx,world.level);
-      if(o&&o.hud===true)drawHudChips(ovCtx,world,o&&o.time);
-      if(o&&o.hud===true)drawAbilityBar(ovCtx,world);
       if(o&&o.hud===true&&world.state==="PLAY")drawFxOverlay(ovCtx);
       if(o&&o.hud===true&&world.state==="PLAY"){camera.updateMatrixWorld();drawPickupFx(ovCtx,{coach:o.coach2,proj});}
       if(o&&o.hud===true)drawCoach(ovCtx,(o&&o.coach)||0);

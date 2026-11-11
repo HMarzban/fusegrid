@@ -4,7 +4,9 @@ import { CFG } from "../src/core/config.js";
 import { createAudio } from "../src/audio.js";
 import * as audioMod from "../src/audio.js";
 import { drawIcon, paintItemFace, drawBombBody } from "../src/render/sprites.js";
-import { drawHudChips } from "../src/render/scenes.js";
+import { drawHud, hudGeom, hudState } from "../src/render/hud.js";
+import { hudGeo } from "../src/app/fit.js";
+import { worldTokens } from "../src/render/kit/tokens.js";
 import { createRenderer } from "../src/render/renderer.js";
 import { initFx, onEvent, getFx } from "../src/render/fx.js";
 
@@ -462,23 +464,19 @@ const APPLY = {
       return true;
     },
   });
-  drawHudChips(rec, {
-    lives: 3,
-    score: 0,
-    heat: 0,
-    level: 4,
-    enemies: [1, 2],
-    players: [{ bombs: 2, range: 3 }],
-  });
+  const HW = { state: "PLAY", lives: 3, score: 0, heat: 0, level: 4, enemies: [1, 2], players: [{ bombs: 2, range: 3 }] }, HS = hudState(HW, { time: { t: 0 } });
+  rec.measureText = (s) => ({ width: String(s).length * 8 });
+  rec.arcTo = () => {}; rec.rect = () => {}; rec.clip = () => {}; rec.ellipse = () => {};
+  drawHud(rec, hudGeom(rec, hudGeo(1366, 768, 600, 520, "d"), HS, { w: 1366, h: 768 }), HS, worldTokens(4), {});
   check(
-    "HUD still paints BOMB / FLAME",
-    texts.includes("BOMB") && texts.includes("FLAME") && texts.includes("2")
+    "HUD still paints BOMBS / FLAME (the HUD on #hud, UI upgrade Task 8.2)",
+    texts.includes("BOMBS") && texts.includes("FLAME") && texts.includes("2")
       && texts.includes("3"),
     texts.join("|"),
   );
   check(
-    "HUD paints the migrated LV / ENEMIES chips",
-    texts.includes("LV") && texts.includes("4") &&
+    "HUD paints the LEVEL / ENEMIES chips",
+    texts.includes("LEVEL") && texts.includes("4") &&
       texts.includes("ENEMIES") && texts.includes("2"),
     texts.join("|"),
   );

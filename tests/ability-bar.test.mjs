@@ -1,7 +1,10 @@
 import { CFG } from "../src/core/config.js";
 import { POWER } from "../src/core/entities.js";
 import { abilityList, abilityText, abilityOrd, getStrip, feedFx, initFx, syncFx } from "../src/render/fx.js";
-import { drawAbilityBar, abilityChips, drawHudChips, ABAR } from "../src/render/scenes.js";
+import { abilityChips, ABAR } from "../src/render/scenes.js";
+import { createHud, drawHud, hudGeom, hudState } from "../src/render/hud.js";
+import { hudGeo } from "../src/app/fit.js";
+import { worldTokens, CONST } from "../src/render/kit/tokens.js";
 import { createRenderer } from "../src/render/renderer.js";
 import { createRenderer3D, projBoard } from "../src/render/three/wrapper.js";
 import { createRig, applyOrbit, CAM_PRESET } from "../src/render/three/camrig.js";
@@ -21,8 +24,8 @@ const feed = (w, dt) => { w.events = []; feedFx(w, dt === undefined ? CFG.STEP :
 const fresh = (over) => { initFx(); const w = mkW(over); syncFx(w); feed(w); return w; };
 const rec = () => {
   const ops = [];
-  const c = new Proxy({}, {
-    get: (o, k) => (k in o ? o[k] : (...a) => { ops.push([k, a]); }),
+  const c = new Proxy({ globalAlpha: 1 }, {
+    get: (o, k) => (k in o ? o[k] : k === "measureText" ? (s) => ({ width: String(s).length * 8 }) : (...a) => { ops.push([k, a]); }),
     set: (o, k, v) => { ops.push(["=" + k, v]); o[k] = v; return true; },
   });
   return { c, ops };
@@ -115,74 +118,60 @@ const ALL = { shield: true, kick: true, throw: true, passing: true, bombKind: "p
   check("a fresh ghost is dimmed to ABAR.dim, a half-spent one to half that", L[1].a === ABAR.dim && Math.abs(L[0].a - ABAR.dim / 2) < 1e-9 && L[2].a === 1 && L[3].a === 1);
 }
 
-// ---- 5. drawAbilityBar: idle paints nothing, chips sit in the y 484-516 lane ----
+// ---- 5. the power-ups bar (hud.js, UI upgrade Task 8.2): idle paints nothing, the chips sit in hudGeo's bar slot under the board ----
 {
   initFx();
-  const idle = rec();
-  drawAbilityBar(idle.c, mkW({}));
-  check("holding nothing paints nothing at all (not even a save)", idle.ops.length === 0, idle.ops.length);
+  const GEO = hudGeo(1366, 768, 600, 520, "d");
+  const bar = (w, gone) => { const r = rec(), st = hudState(w, { time: { t: 1 } }); if (gone) st.ab = abilityChips(w.players[0], gone).filter((e) => e.a > 0).map((e) => { const [s, m, col] = abilityText(e.k, w.players[0]); return { k: e.k, a: e.a, s, m, col, cap: "" }; }); const G = hudGeom(r.c, GEO, st, { w: 1366, h: 768 }); drawHud(r.c, G, st, worldTokens(1), {}); return { ...r, G, st }; };
+  const barWords = (b) => { const ws = words(b.ops), i = ws.indexOf("SCORE"); return ws.slice(i + 2); };
+  const idle = bar(mkW({}));
+  check("holding nothing paints no bar at all", idle.G.bar === null && !words(idle.ops).some((s) => /SHIELD|KICK/.test(s)));
   for (const st of ["WIN", "LOSE", "PAUSE", "PLAY"]) {
-    const r = rec();
-    drawAbilityBar(r.c, mkW({ kick: true }, st), undefined, []);
-    const want = st === "PLAY" || st === "PAUSE";
-    check(st + (want ? " paints" : " paints nothing (the summary owns the screen)"), want ? words(r.ops).includes("KICK") : r.ops.length === 0);
+    const r = bar(mkW({ kick: true }, st)), want = st === "PLAY" || st === "PAUSE";
+    check(st + (want ? " paints" : " paints no bar (the summary owns the screen)"), want ? words(r.ops).includes("KICK") : r.G.bar === null && !words(r.ops).includes("KICK"));
   }
-  const r = rec();
-  drawAbilityBar(r.c, mkW(ALL), undefined, []);
-  check("all seven chips read in order", words(r.ops).join("|") === "SHIELD|KICK|THROW|PASS|PIERCE|REMOTE|SPD|MAX", words(r.ops).join("|"));
-  const rects = r.ops.filter((o) => o[0] === "fillRect").map((o) => o[1]);
-  check("seven panels, each inside the y 484-516 lane", rects.length === 7 && rects.every(([, y, , h]) => y >= 484 && y + h <= 516), JSON.stringify(rects));
-  check("the bar starts at x16 and the full set ends inside the 600-wide overlay", rects[0][0] === 16 && rects[6][0] + rects[6][2] <= 600 - 16, JSON.stringify(rects[6]));
-  check("panels never overlap", rects.every((q, i) => !i || q[0] >= rects[i - 1][0] + rects[i - 1][2]));
-  check("MAX is the muted part", r.ops.some((o, i) => o[0] === "fillText" && o[1][0] === "MAX" && r.ops.slice(0, i).reverse().find((q) => q[0] === "=fillStyle")[1] === "#9fb3d8"));
-  check("no blink: alpha set only to fixed per-chip values", r.ops.filter((o) => o[0] === "=globalAlpha").every((o) => o[1] === 1));
-  const g = rec();
-  drawAbilityBar(g.c, mkW({ throw: true }), undefined, [{ k: "kick", t: ABAR.fade }]);
+  const r = bar(mkW(ALL));
+  check("all seven chips read in order", ["SHIELD", "KICK", "THROW", "PASS", "PIERCE", "REMOTE", "SPD"].every((k, i, a) => !i || words(r.ops).indexOf(k) > words(r.ops).indexOf(a[i - 1])) && words(r.ops).includes("MAX"), words(r.ops).join("|"));
+  const rects = r.G.bar.items, B = r.G.bar;
+  check("seven panels, each inside the bar under the board", rects.length === 7 && rects.every((q) => q.y >= B.y && q.y + q.h <= B.y + B.h && q.x >= B.x && q.x + q.w <= B.x + B.w) && B.y >= GEO.stage.y + GEO.stage.h, JSON.stringify(B));
+  check("the bar takes hudGeo's slot under the board, centred on it, widened only when every label would not fit the board's width", B.y === GEO.bar.y && Math.abs(B.x + B.w / 2 - (GEO.bar.x + GEO.bar.w / 2)) < 1e-6 && B.w >= GEO.bar.w && bar(mkW({ kick: true })).G.bar.w === GEO.bar.w);
+  check("panels never overlap", rects.every((q, i) => !i || q.x >= rects[i - 1].x + rects[i - 1].w));
+  check("MAX is the muted part", r.ops.some((o, i) => o[0] === "fillText" && o[1][0] === "MAX" && r.ops.slice(0, i).reverse().find((q) => q[0] === "=fillStyle")[1] === CONST.t2));
+  check("no blink: with every chip live, alpha is only 1 (and the kit plate's fixed 0.6 lit edge)", r.ops.filter((o) => o[0] === "=globalAlpha").every((o) => o[1] === 1 || o[1] === 0.6), r.ops.filter((o) => o[0] === "=globalAlpha").map((o) => o[1]).join());
+  const g = bar(mkW({ throw: true }), [{ k: "kick", t: ABAR.fade }]);
   const al = g.ops.filter((o) => o[0] === "=globalAlpha").map((o) => o[1]);
-  check("a stripped chip paints dimmed, then the active one at full", al.join() === ABAR.dim + ",1" && words(g.ops).join() === "KICK,THROW", al.join() + " " + words(g.ops).join());
-  const z = rec();
-  drawAbilityBar(z.c, mkW({}), undefined, [{ k: "kick", t: 0 }]);
-  check("a spent ghost paints no chip", !words(z.ops).length);
-  const ic = [];
-  const p = rec();
-  drawAbilityBar(p.c, mkW({ kick: true, bombKind: "line" }), (c, k, col, x, y) => ic.push([k, col, x, y]), []);
-  check("PIXEL's painter gets each kind, its colour and the chip centre", ic.map((q) => q[0]).join() === "kick,line" && ic.every((q) => q[3] === ABAR.y + ABAR.h / 2), JSON.stringify(ic));
-  check("PIXEL's painter replaces the vector icon", !p.ops.some((o) => o[0] === "translate"));
-  const y2 = rec();
-  drawAbilityBar(y2.c, mkW({ kick: true }), undefined, [], 300);
-  check("y moves the lane", y2.ops.find((o) => o[0] === "fillRect")[1][1] === 300);
+  check("a stripped chip paints dimmed, then the active one at full", al.includes(ABAR.dim) && al.indexOf(ABAR.dim) < al.lastIndexOf(1) && barWords(g).indexOf("KICK") < barWords(g).indexOf("THROW"), al.join() + " " + barWords(g).join());
+  const z = bar(mkW({}), [{ k: "kick", t: 0 }]);
+  check("a spent ghost paints no chip", z.G.bar === null && !words(z.ops).includes("KICK"));
 }
 
-// ---- 6. drawHudChips' call log does not depend on abilities ----
+// ---- 6. the HUD chips do not depend on abilities ----
 {
-  const a = rec(), b = rec();
-  drawHudChips(a.c, mkW({}));
-  drawHudChips(b.c, mkW(ALL));
-  check("drawHudChips is byte-identical with and without abilities", JSON.stringify(a.ops) === JSON.stringify(b.ops), a.ops.length + " vs " + b.ops.length);
+  const GEO = hudGeo(1366, 768, 600, 520, "d"), chips = (w) => { const r = rec(), st = hudState(w, { time: { t: 1 } }); return hudGeom(r.c, GEO, st, { w: 1366, h: 768 }).chips; };
+  check("the chip rects are identical with and without abilities", JSON.stringify(chips(mkW({}))) === JSON.stringify(chips(mkW(ALL))));
 }
 
-// ---- 7. renderer wiring ----
+// ---- 7. renderer wiring: no board canvas paints the bar; the HUD does ----
 {
   const texts = (r, w, o) => { const out = []; r.ctx.fillText = (s) => out.push(String(s)); r.render(w, CFG.STEP, o); return out; };
   const mk = (over) => { const w = createWorld(7, 1); loadLevel(w, 1); w.state = "PLAY"; Object.assign(w.players[0], over || {}); return w; };
   initFx();
-  check("CLASSIC 2D paints the bar under hud:true", texts(createRenderer(null, { kind: "2d" }), mk({ kick: true }), { hud: true }).includes("KICK"));
+  check("CLASSIC 2D paints no bar on #c, hud:true or not", !texts(createRenderer(null, { kind: "2d" }), mk({ kick: true }), { hud: true }).includes("KICK"));
   initFx();
-  check("hud:false (ATTRACT) paints no bar", !texts(createRenderer(null, { kind: "2d" }), mk({ kick: true }), { hud: false }).includes("KICK"));
-  initFx();
-  check("?render=iso has no bar (its 352-tall canvas has no free lane)", !texts(createRenderer(null, { kind: "iso" }), mk({ kick: true }), { hud: true }).includes("KICK"));
-  const files = [["src/render/renderer.js", /drawAbilityBar\(ctx, world\)/], ["src/render/three/wrapper.js", /drawAbilityBar\(ovCtx,world\)/], ["src/render/pixel/renderer.js", /drawAbilityBar\(ovCtx, world, hudIco\)/]];
-  for (const [f, re] of files) {
-    const src = readFileSync(f, "utf8"), line = (src.match(/^.*drawAbilityBar\(.*$/m) || [""])[0];
-    check(f + ": the bar is gated on hud===true", /o\s*&&\s*o\.hud\s*===\s*true/.test(line) && re.test(line), line.trim());
-    check(f + ": drawn right after the HUD chips, before the labels", src.indexOf("drawHudChips(") < src.indexOf("drawAbilityBar(") && src.indexOf("drawAbilityBar(") < src.indexOf("drawPickupFx("));
+  check("?render=iso paints no bar either", !texts(createRenderer(null, { kind: "iso" }), mk({ kick: true }), { hud: true }).includes("KICK"));
+  for (const f of ["src/render/renderer.js", "src/render/three/wrapper.js", "src/render/pixel/renderer.js"]) {
+    const src = readFileSync(f, "utf8");
+    check(f + ": no HUD chips, plate or bar on the board canvas", !/drawAbilityBar\(|drawHudChips\(|hudPlate3?\(/.test(src));
   }
   const cv = [];
   const ctx = new Proxy({}, { get: (o, k) => (k in o ? o[k] : (...a) => { if (k === "fillText") cv.push(String(a[0])); }), set: (o, k, v) => { o[k] = v; return true; } });
   initFx();
   const r3 = createRenderer3D(null, { getContext: () => ctx }, { audio: null });
   r3.render(mk({ remote: true }), CFG.STEP, { hud: true });
-  check("REAL 3D paints the bar on its overlay", cv.includes("REMOTE"), cv.join("|"));
+  check("REAL 3D paints no bar on its overlay", !cv.includes("REMOTE"), cv.join("|"));
+  const hr = rec(), geo = hudGeo(1366, 768, 600, 520, "d");
+  createHud().frame({ hudGeo: () => geo, hud: () => ({ ctx: hr.c, geo, w: 1366, h: 768, el: { width: 2732 } }) }, mk({ remote: true }), { time: { t: 0 } }, "3d");
+  check("the HUD paints it, in every look", words(hr.ops).includes("REMOTE"));
 }
 
 // ---- 8. REAL 3D: the lane covers no playfield at any CAMERA preset ----

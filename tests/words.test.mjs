@@ -47,7 +47,10 @@ const withLayers = (R, n0) => {
 import { drawShell, loadControlsArt } from "../src/render/shellview.js";
 import { want as wantPage } from "../src/render/pages/lazy.js";
 const RP = await wantPage("records"); // RECORDS is a lazy page (R20): the sweep paints it, not its LOADING plate
-import { drawOverlay, overlayBox, drawHudChips, drawAbilityBar, PAUSE_ROWS, runStamp, copyPayload, pauseKicker } from "../src/render/scenes.js";
+import { drawOverlay, overlayBox, PAUSE_ROWS, runStamp, copyPayload, pauseKicker } from "../src/render/scenes.js";
+import { drawHud, hudGeom, hudState } from "../src/render/hud.js";
+import { hudGeo } from "../src/app/fit.js";
+import { worldTokens } from "../src/render/kit/tokens.js";
 import { pickupLabel, labelText } from "../src/render/fx.js";
 import { setHints } from "../src/render/hintcopy.js";
 import { setPixelArt } from "../src/render/hudart.js";
@@ -170,7 +173,6 @@ check("gfx.js lock line names ART STYLE and SETTINGS", LOCK_3D === "REAL 3D ONLY
 
 /* ---- the old words ---- */
 const OLD = /\b(HEAT|CORE|PLUS|MAX|PACE|NORM|MODES|IRON|BARE|THIN|ROOMS?|LV|OPTIONS|RENDER|CHANGE RUN|EASY|PICKS|PICKUPS?|CUBES?)\b/i;
-const ALLOW_HUD = new Set(["LV", heatToken(0), heatToken(1), heatToken(2)]); // drawHudChips only, Phase 8 (R9)
 /* the narrow allow: the medal name; the two modifier names that hold ITEMS; MAX beside the power-up it caps (the pickup label
    FLAME / BOMB / SPEED MAX, the ability bar's SPD MAX, the catalogue's "(max 8)"); and FRAME RATE's own MAX value and help line
    on GRAPHICS (a frame rate, not a difficulty) */
@@ -286,13 +288,12 @@ setPixelArt(null);
   const PR = { state: "ready", name: "CONTROLLER 1", rumble: true };
   for (const o of [{ row: 2 }, { row: 3 }, { row: 7, armed: true }, ...[0, 1, 2, 3].map((vib) => ({ tab: "pad", device: "pad", pad: PR, row: 6, vib })), { tab: "pad", device: "pad", pad: PR, row: 2 }, { tab: "pad", device: "pad", pad: PR, row: 3 }, { tab: "pad", device: "pad", pad: PR, row: 5 }, { tab: "pad", device: "pad", pad: PR, row: 5, dead: 8 }])
     for (const T of [false, true]) { const R = rec({ widthK: 0.648 }); drawControls(R.ctx, md.layout(600, 520), keyV(o), { touch: T, narrow: false }); note("CONTROLS " + J(o), R.texts, true); }
-  const hud = rec({ widthK: 0.648 });
-  drawHudChips(hud.ctx, { players: [{ bombs: 2, range: 3 }], lives: 3, level: 4, enemies: [1], heat: 1, score: 1234, state: "PLAY" }, { on: true, t: 12 });
+  const hudOf = (w, lay, W, H) => { const R = rec({ widthK: 0.648 }), st = hudState(w, { time: { on: true, t: 12 } }); drawHud(R.ctx, hudGeom(R.ctx, hudGeo(W, H, 600, 520, lay, true), st, { w: W, h: H }), st, worldTokens(w.level || 1), {}); return R; };
+  const hud = hudOf({ players: [{ bombs: 2, range: 3 }], lives: 3, level: 4, enemies: [1], heat: 1, score: 1234, state: "PLAY" }, "d", 1366, 768);
   const hudTexts = hud.texts.map((t) => t.s);
-  check("the HUD chips still print LV and the heat token: Phase 8 (R9), never this task", hudTexts.includes("LV") && hudTexts.includes(heatToken(1)));
-  for (const s of hudTexts) if (!ALLOW_HUD.has(s)) note("HUD", [s]);
-  const bar = rec({ widthK: 0.648 });
-  drawAbilityBar(bar.ctx, { state: "PLAY", players: [{ shield: true, kick: true, throw: true, passing: true, bombKind: "power", remote: true, speed: 999 }] }, null, []);
+  check("the HUD prints LEVEL and the difficulty word (R9, Phase 8): no LV, no heat token", hudTexts.includes("LEVEL") && hudTexts.includes(W.DIFF[1]) && !hudTexts.includes("LV") && ![0, 1, 2].some((h) => hudTexts.includes(heatToken(h))));
+  for (const [lay, W, H] of [["d", 1366, 768], ["p", 393, 852], ["l", 844, 390]]) note("HUD", hudOf({ players: [{ bombs: 2, range: 3 }], lives: 3, level: 4, enemies: [1], heat: 2, score: 1234, state: "PLAY" }, lay, W, H).texts);
+  const bar = hudOf({ state: "PLAY", level: 1, players: [{ shield: true, kick: true, throw: true, passing: true, bombKind: "power", remote: true, speed: 999 }] }, "d", 1366, 768);
   note("ABILITY BAR", bar.texts);
   for (const p of POWER) for (const prev of [null, "line", "power", "pierce"]) { const l = pickupLabel(p.t, { range: 8, bombs: 8, speed: 999 }, prev); note("PICKUP LABEL", [labelText(l), l.sub].filter(Boolean)); const m = pickupLabel(p.t, {}, prev); note("PICKUP LABEL", [labelText(m), m.sub].filter(Boolean)); }
   for (const k of ["kick", "throw", "remote", "pass", "line", "power", "pierce", "shield"]) for (const lay of ["d", "p"]) note("COACH", [coachTip(k, lay, null, wordsOf(lay === "p" ? "touch" : "key", DEF_CONTROLS))]);
@@ -406,22 +407,26 @@ check("ruling 7: a bare NORMAL or HARD only where its own line or row names its 
     const tag = P.rows.PLAY.tag, F = P.foot.OPEN;
     check(`MENU, LEVEL SELECT focused, a heavy run (${name}): every word inside its key and the plate; PLAY's tag one whole candidate; the foot under the plate`, out.length === 0 && !!tag && pgm.playTags({ run, level: 7 }).includes(tag.lines.join(" ")) && tag.lines.every((t) => R.texts.some((q) => q.s === t)) && F.y > d.plate.y + d.plate.h, out.join(" | ") + " " + J(tag && tag.lines));
   }
-  /* the ability bar with every ability held fits the overlay (ABAR.x in from each side) at the recorder's +8 % width, in the
-     CLASSIC / REAL 3D vector form and with PIXEL's icon painter; only a row that may overflow measures itself and shrinks */
-  const ALL = (bombKind) => ({ state: "PLAY", players: [{ shield: true, kick: true, throw: true, passing: true, bombKind, remote: true, speed: 999 }] });
-  const bar = (w, ico, k) => { const R = rec({ widthK: k }); drawAbilityBar(R.ctx, w, ico, []); return R; };
-  const fontPx = (t) => +/(\d+)px/.exec(t.font)[1];
-  for (const kind of ["line", "power", "pierce"]) for (const [look, ico] of [["CLASSIC 2D / REAL 3D", undefined], ["PIXEL", () => {}]]) {
-    const R = bar(ALL(kind), ico, 0.648), panels = R.rects.filter((r) => r.fill === "rgba(13,18,32,0.72)"), last = panels[panels.length - 1];
-    const inPanel = R.texts.every((t) => panels.some((r) => t.x >= r.x && t.x + t.w <= r.x + r.w + 0.01));
-    check(`ability bar, every ability held, ${kind === "power" ? "POWER BOMB" : kind.toUpperCase()} (${look}, +8 %): inside 16..584, each word inside its chip, type >= 9 px`,
-      panels.length === 7 && panels[0].x === 16 && last.x + last.w <= 600 - 16 && inPanel && R.texts.every((t) => fontPx(t) >= 9), J([last, R.texts.map((t) => t.s + "@" + fontPx(t))]));
+  /* the power-ups bar with every ability held (hud.js, UI upgrade Task 8.2) at the recorder's +8 % width: every word inside its chip and the
+     viewport, the label never under its floor (cap 11 desktop / 9 phone); a short row keeps the full label size */
+  const ALL = (bombKind) => ({ state: "PLAY", level: 1, players: [{ shield: true, kick: true, throw: true, passing: true, bombKind, remote: true, speed: 999 }] });
+  const fontPx = (t) => +/(\d+(?:\.\d+)?)px/.exec(t.font)[1];
+  for (const kind of ["line", "power", "pierce"]) for (const [lay, W, H] of [["d", 1366, 768], ["d", 1024, 640], ["p", 393, 852], ["p", 375, 667]]) {
+    const R = rec({ widthK: 0.648 }), st = hudState(ALL(kind), { time: { t: 0 } }), G = hudGeom(R.ctx, hudGeo(W, H, 600, 520, lay, true), st, { w: W, h: H });
+    drawHud(R.ctx, G, st, worldTokens(1), {});
+    const items = G.bar.items, words = R.texts.filter((t) => items.some((r) => t.y >= r.y && t.y <= r.y + r.h && t.x >= r.x - 0.5 && t.x <= r.x + r.w));
+    const inChip = words.every((t) => { const x0 = t.align === "center" ? t.x - t.w / 2 : t.x; return items.some((r) => x0 >= r.x - 0.5 && x0 + t.w <= r.x + r.w + 0.5); });
+    check(`power-ups bar, every ability held, ${kind === "power" ? "POWER BOMB" : kind.toUpperCase()} (${lay} ${W}x${H}, +8 %): inside the viewport, each word inside its chip, labels >= the floor`,
+      items.length === 7 && G.bar.x >= 0 && G.bar.x + G.bar.w <= W && inChip && words.every((t) => fontPx(t) * 0.704 >= (lay === "d" ? 11 : 9) - 0.05), J([G.bar, words.map((t) => t.s + "@" + fontPx(t))]));
   }
   {
-    const old = bar(ALL("pierce"), undefined, 0.6), pb = bar(ALL("power"), undefined, 0.6), one = bar({ state: "PLAY", players: [{ kick: true }] }, undefined, 0.6);
-    const sizes = (R) => [...new Set(R.texts.map(fontPx))].join();
-    check("ability bar: at the recorder's own width the old full row keeps 13 px, the POWER BOMB row steps to 12, a short row measures once and keeps 13 (its call log unchanged)",
-      sizes(old) === "13" && sizes(pb) === "12" && sizes(one) === "13" && one.calls.filter((c) => c.op === "measureText").length === 1, sizes(old) + " / " + sizes(pb) + " / " + one.calls.filter((c) => c.op === "measureText").length);
+    /* at the recorder's own width, desktop 1366x768: a full row keeps 21 px and widens to exactly its content (no slack, centred on the board);
+       POWER BOMB's is the widest; a one-chip row keeps 21 px in the board-wide slot */
+    const GEO = hudGeo(1366, 768, 600, 520, "d"), row = (players) => { const R = rec({ widthK: 0.6 }), st = hudState({ state: "PLAY", level: 1, players }, { time: { t: 0 } }), G = hudGeom(R.ctx, GEO, st, { w: 1366, h: 768 }); drawHud(R.ctx, G, st, worldTokens(1), {}); return { R, B: G.bar }; };
+    const full = ["line", "power", "pierce"].map((k) => row(ALL(k).players).B), one = row([{ kick: true }]);
+    const tight = (B) => Math.abs(B.items.reduce((a, q) => a + q.w, 0) + (B.items.length - 1) * 4 + 8 - B.w) < 1e-6 && Math.abs(B.x + B.w / 2 - (GEO.bar.x + GEO.bar.w / 2)) < 1e-6;
+    check("power-ups bar: every full row keeps 21 px and widens to exactly its content, centred; POWER BOMB's row is the widest; a one-chip row keeps 21 px in the board-wide slot",
+      full.every((B) => B.px === 21 && B.w > GEO.bar.w && tight(B)) && full[1].w > full[0].w && full[1].w > full[2].w && one.B.px === 21 && one.B.w === GEO.bar.w && one.R.texts.some((t) => t.s === "KICK" && fontPx(t) === 21), J(full.map((B) => [B.px, Math.round(B.w)])));
   }
 }
 

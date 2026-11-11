@@ -27,9 +27,12 @@ test("an ATTRACT frame ({hud:false, amb:true}) carries ambient, a menu frame ({h
   assert.deepEqual(frame(1, { hud: false }), frame(0, { hud: false }));
   setFxOpts({ partK: 1 });
 });
-test("an ATTRACT frame draws no HUD chips", () => {
+test("an ATTRACT frame draws no HUD chips: no board frame does (the HUD is #hud, GAME only), so ATTRACT's board is the in-run one", () => {
   const a = frame(1, { hud: false, amb: true }), g = frame(1, { hud: true });
-  assert.ok(g.length > a.length);
+  assert.deepEqual(g, a);
+  assert.ok(!g.some((l) => /^fillText\((LIVES|BOMBS?|FLAME|LV|LEVEL|ENEMIES|SCORE),/.test(l)));
+  const src = readFileSync(new URL("../src/main.js", import.meta.url), "utf8");
+  assert.match(src, /hud\.frame\(fit, app\.screen === SCREEN\.GAME \? world : null, ro, curKind\)/);
   setFxOpts({ partK: 1 });
 });
 test("main.js hands amb:true to the ATTRACT frame only", () => {

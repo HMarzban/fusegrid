@@ -194,7 +194,7 @@ const rec = () => {
   const styles = b.ops.filter((o) => o[0] === "=fillStyle").map((o) => o[1]);
   check("word #eef3ff, MAX muted #9fb3d8", styles.includes("#eef3ff") && styles.includes("#9fb3d8"));
   check("font is 900 18px mono with a 4 px dark stroke", b.ops.some((o) => o[0] === "=font" && o[1] === "900 18px ui-monospace,monospace") && b.ops.some((o) => o[0] === "=lineWidth" && o[1] === 4));
-  check("the pulse outlines the FLAME chip once its value changed", b.ops.some((o) => o[0] === "strokeRect" && o[1][0] === 224 - 2), JSON.stringify(b.ops.filter((o) => o[0] === "strokeRect")));
+  check("the FLAME pulse is live once its value changed, and the board label paints no chip outline (the HUD rings its own chip, hud.js)", getPulse().r > 0 && !b.ops.some((o) => o[0] === "strokeRect"), JSON.stringify(b.ops.filter((o) => o[0] === "strokeRect")));
   const ic = [];
   const d = rec();
   drawPickupFx(d.c, { ico: (c, t, col, x, y) => ic.push([t, x, y]) });
@@ -252,7 +252,7 @@ const rec = () => {
   for (const f of ["src/render/renderer.js", "src/render/three/wrapper.js", "src/render/pixel/renderer.js"]) {
     const src = readFileSync(f, "utf8"), line = (src.match(/^.*drawPickupFx\(.*$/m) || [""])[0];
     check(f + ": drawPickupFx is gated on hud===true and PLAY", /o\s*&&\s*o\.hud\s*===\s*true\s*&&\s*world\.state\s*===\s*"PLAY"/.test(line), line.trim());
-    check(f + ": drawn after the HUD chips and before the coach", src.indexOf("drawHudChips(") < src.indexOf("drawPickupFx(") && src.indexOf("drawPickupFx(") < src.lastIndexOf("drawCoach("));
+    check(f + ": drawn after the fx overlay and before the coach", src.indexOf("drawFxOverlay(") < src.indexOf("drawPickupFx(") && src.indexOf("drawPickupFx(") < src.lastIndexOf("drawCoach("));
   }
   const at = (r, tx, ty) => {
     const out = [];
@@ -355,7 +355,7 @@ const rec = () => {
   check("the callout centres on the overlay width passed in (iso 608)", iso.y !== 3 * T - 12 || 3 * T - 12 - 9 > 96 + 13);
 }
 
-// ---- 11. heart-row pulse stays clear of the BOMB chip pulse ----
+// ---- 11. heart-row pulse stays clear of the BOMB chip pulse: now rings inside the HUD's own chips (hud-kit.test), none on the board ----
 {
   setFxOpts({ flashK: 1, shakeK: 1 });
   const w = fresh();
@@ -363,9 +363,7 @@ const rec = () => {
   feed(w, [], 0.01);
   const r = rec();
   drawPickupFx(r.c, {});
-  const rs = r.ops.filter((o) => o[0] === "strokeRect").map((o) => o[1]);
-  const heart = rs.find((a) => a[0] === 3), bomb = rs.find((a) => a[0] === 138);
-  check("with lives > 6 the heart pulse box (plus its 4 px stroke) ends before the BOMB chip pulse at 136", heart && bomb && heart[0] + heart[2] + 2 <= bomb[0] - 2, JSON.stringify(rs));
+  check("with lives > 6 and BOMB changed, both pulses are live and the board paints no pulse box", getPulse().l > 0 && getPulse().b > 0 && !r.ops.some((o) => o[0] === "strokeRect"), JSON.stringify(getPulse()));
 }
 
 // ---- merge pin: render-on-change sees labels, pulses and fading ability chips as busy ----

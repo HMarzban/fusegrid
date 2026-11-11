@@ -542,7 +542,7 @@ test("screens: every recipe reaches its state through the real menu app", () => 
       a.cursor = ITEMS.indexOf("PLAY");
       a.confirm();
       assert.equal(a.screen, SCREEN.GAME, n + ": MENU PLAY starts the run");
-      assert.ok(["PLAY", "PAUSE", "WIN", "LOSE"].includes(R.state) && R.run.toUpperCase() === R.state, n + ": a run screen's state is its world state");
+      assert.ok(["PLAY", "PAUSE", "WIN", "LOSE"].includes(R.state) && (R.run.toUpperCase() === R.state || (R.run === "hud" && R.state === "PLAY")), n + ": a run screen's state is its world state (hud: a PLAY with every power held)");
       continue;
     }
     a.toMenu();
@@ -572,7 +572,7 @@ test("screens: exemptPhone exempts on .phone captures only, on the same rules (R
 });
 
 test("screens: every name has a recipe and a state; aliases; capture names round trip", () => {
-  assert.deepEqual(ORDER, ["title", "menu", "level", "options", "graphics", "controls", "controlsnone", "controlspad", "controlscapture", "guide", "howto", "items", "enemies", "floor", "optionskeys", "graphicskeys", "guidekeys", "scoresidle", "scores", "stats", "statsreset", "statspage2", "medals", "scoresfull", "statsfull", "play", "pause", "pausetags", "win", "winrun", "win2", "lose", "loseshort", "losedaily", "lose2"]); // pausetags: v202 Task 5.1, PAUSE with the tag row; v202 Task 5.4: GAME OVER with a saved best, and on a DAILY
+  assert.deepEqual(ORDER, ["title", "menu", "level", "options", "graphics", "controls", "controlsnone", "controlspad", "controlscapture", "guide", "howto", "items", "enemies", "floor", "optionskeys", "graphicskeys", "guidekeys", "scoresidle", "scores", "stats", "statsreset", "statspage2", "medals", "scoresfull", "statsfull", "play", "hud", "pause", "pausetags", "win", "winrun", "win2", "lose", "loseshort", "losedaily", "lose2"]); // pausetags: v202 Task 5.1, PAUSE with the tag row; v202 Task 5.4: GAME OVER with a saved best, and on a DAILY
   for (const n of ORDER) assert.ok(SCREENS[n] && SCREENS[n].state, n);
   /* R1 release (c): the key-driven twins of SETTINGS / GRAPHICS / GUIDE press real keys on a phone and gate the focus there (no exemptPhone) */
   for (const [k, base, gates] of [["optionskeys", "options", ["band"]], ["graphicskeys", "graphics", ["band"]], ["guidekeys", "guide", ["band", "ring"]]]) {

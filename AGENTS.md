@@ -203,8 +203,8 @@ for the old words and for a level shorthand built at runtime (`" · L" + n`). Di
 (`nb.pact.v1`, heat 0..2, pace -1..1, medal bits), analytics event names and
 params are byte-identical, identifiers keep the old names (`heat`, `pace`,
 `pact`, `SCREEN.ITEMS`, `OPT_ROWS`), and core keeps `HEAT_NAME` / `PACE_NAME` /
-`PACT_NAME` / `pactLabel`. Still old until Phase 8 (R9, inside the CLASSIC
-hash): the HUD's `LV` chip and heat token. Medal proper names stay (IRON CROWN).
+`PACT_NAME` / `pactLabel`. The HUD reads LEVEL and, off NORMAL, the difficulty
+word (R9, UI upgrade Task 8.2; `words.js` `HUD_CHIPS`). Medal proper names stay (IRON CROWN).
 The paragraphs below use the internal names (heat, pace, pact, room) for code.
 
 Menu look (owner pick 2026-10-19, direction A "CONSOLE PANEL"): CONTROLS
@@ -570,7 +570,7 @@ not shell screens. Do not add them as `SCREEN` values.
 - `src/main.js` — **browser entry only**, pinned `<=799` lines
   (`tests/headless.test.mjs`; raised 808→812 once in wave 3 for `ro.ghost`,
   tightened to 799 when C2 moved `fit()` out; 733 by split-length at v178 after
-  GRAPHICS moved the frame gate and renderer cache out; 784 at v201; 716 once the pointer router moved out, UI upgrade Task 0.4; 722 with Task 3.1's covered flag and kit release; 727 with R1 cohesion's close-first and page-key cue). RAF loop, fixed-step
+  GRAPHICS moved the frame gate and renderer cache out; 784 at v201; 716 once the pointer router moved out, UI upgrade Task 0.4; 722 with Task 3.1's covered flag and kit release; 727 with R1 cohesion's close-first and page-key cue; Task 8.2's `createHud` adds its wiring). RAF loop, fixed-step
   accumulator, kind switch, and the handler wiring that binds them. Never
   imported by sim or renderer. Its seams live beside it and must stay OUT of
   `main.js`: `src/app/flags.js` (URL/opts, pure over a search string),
@@ -681,11 +681,14 @@ not shell screens. Do not add them as `SCREEN` values.
   - kind `"px"` — PIXEL, `createPixelRenderer` (`src/render/pixel/**`), its
     own factory modelled on the 3D wrapper, never a branch of `createRenderer`
     (the CLASSIC call-log hash is pinned in `tests/classic-perf.test.mjs` and
-    `tests/pixel-render.test.mjs`, now `9fb48f0a:72431`: re-pinned by ruling
-    for each 2026-10-21..25 art round, the diff proven to be the intended art;
-    `97480c1c:22630` is the stale pre-round value). Beside it, `classic-perf`
+    `tests/pixel-render.test.mjs`, now `238a30af:71940`: re-pinned by ruling
+    for each 2026-10-21..25 art round, the diff proven to be the intended art,
+    and for UI upgrade Task 8.2, whose diff is exactly the old HUD segment
+    removed (the board no longer draws a HUD; `9fb48f0a:72431` and
+    `97480c1c:22630` are stale). The HUD has its own pin, `tests/hud-kit.test.mjs`
+    `HUD_PIN`. Beside it, `classic-perf`
     pins a named tile world through `classicHash`'s `opt` (gen 3, seed 4242,
-    room 3 FACTORY CONVEYOR, CORE: `7e57d1aa:71503`, #35 / #18) and checks that
+    room 3 FACTORY CONVEYOR, CORE: `cef5c020:70998`, was `7e57d1aa:71503`, #35 / #18) and checks that
     nulling the tile layer moves it. See the PIXEL paragraph below.
   - kind `"iso"` — legacy dimetric (`r3d/`), pinned by `?render=iso` only.
     `createRenderer({kind:"3d"|"iso"})` is the **dimetric** branch. Real 3D
@@ -867,7 +870,7 @@ not shell screens. Do not add them as `SCREEN` values.
     2 parities); floor tiles `featdraw.js` (`cellSpec`, `drawSpec`, painters in
     `featart/{built,living,geo,kit}.js`), PIXEL `featpx.js` + `featpxcells.js`,
     REAL 3D `three/featmesh.js` (`fragSource(GEO)`); outline `frameart.js`
-    (world bezel) + `frame.js` (recessed well, HUD plate), REAL 3D
+    (world bezel) + `frame.js` (recessed well; no HUD plate since Task 8.2), REAL 3D
     `three/rimart.js` + `three/wellfx.js`; depth `depth2d.js`,
     `three/groundfx.js`; ambient `ambient.js` (spec) -> `ambient2d.js`,
     `three/ambientfx.js`, `pixel/ambient.js`; foes and items `motion.js`
@@ -1077,17 +1080,34 @@ not shell screens. Do not add them as `SCREEN` values.
   same kind merges, near ones stack, max 3, 0.9 s, PLAY-only clock, wiped by
   `clearR2`; suppressed for the live coach v2 kind; pure `labelBox` keeps it
   off the y46 HUD band, the combo callout and the coach panel (REAL 3D
-  projects through the live camera). HUD pulse: a 600 ms outline on the
-  BOMB/FLAME chip or heart row when the number changes (the first feed after
-  a wipe only seeds, so a room change never pulses). Ability bar
-  (`drawAbilityBar`, `scenes.js`, y 486–514): held SHIELD / KICK / THROW /
-  PASS / bomb kind / REMOTE / SPD n; a chip a hit or spent SHIELD removes dims
-  out over 600 ms (a bomb-kind swap is not a loss); PLAY/PAUSE and `hud:true`
-  only (ATTRACT and iso draw none). Touch `#tthrow` / `#tremote`
+  projects through the live camera). HUD (UI upgrade Task 8.2, round 5
+  `09-hud` on the world kit, `src/render/hud.js`): off the board on `#hud`
+  (fit.js `hudGeo`) in every look, so no board canvas draws a chip; seven
+  labelled chips LIVES BOMBS FLAME LEVEL ENEMIES TIME SCORE (one row in the
+  rampart plate above the board on `d`, a three-over-four grid with the PAUSE
+  slot on `p`, one-line chips in the side gutters on `l`); LIVES up to five
+  hearts, else one heart and the count; LEVEL with HARD / EXPERT beside it off
+  NORMAL; TIME the room clock (`o.time.t`) in every run; values in fixed digit
+  cells at cap >= 18 desktop / 11 phone, stepping down (hearts, value, label,
+  difficulty word, then on `l` an icon chip's label) to fit, never clipped.
+  HUD pulse: a 600 ms ring just inside the BOMBS / FLAME / LIVES chip when the
+  number changes (fx `getPulse`; the first feed after a wipe only seeds, so a
+  room change never pulses). Power-ups bar (the old ability bar): held SHIELD
+  / KICK / THROW / PASS / bomb kind / REMOTE / SPD n under the board (`d`,
+  widened past the board only when every label would not fit; THROW and
+  REMOTE carry their key cap on a keyboard layout), in the band under it
+  (`p`), as glyph cells under the left chips or the board (`l`); a chip a hit
+  or spent SHIELD removes dims out over 600 ms (a bomb-kind swap is not a
+  loss); PLAY / PAUSE only. `createHud()` (one main.js call a frame, GAME
+  only; ATTRACT, INTRO and menus hide `#hud`) paints only when what it shows
+  changes, so a held PAUSE or a still TIME makes no canvas call; the plate's
+  ring is a kit cache layer; the probe records page `hud`. `scenes.js` keeps
+  `ABAR` (the strip's fade, dim and the ghost coach's bottom lane) and
+  `abilityChips`. Touch `#tthrow` / `#tremote`
   (`touch.js`): shown only while the player holds that power, a tap is a
   one-tick `pulseThrow` / `pulseRemote` intent, fixed slots. Every idle
-  frame paints nothing new, so idle HUD call logs are unchanged. All three
-  looks (PIXEL uses its own cells for the icons).
+  frame paints nothing new. All three looks (PIXEL uses its own cells for
+  the icons, `hudart.js` `pixelArt()`).
 - `src/ai/enemies.js` — enemy AI on sim state.
 - `src/net/` — `protocol.js`, `lockstep.js`, `transport.js`.
   Default play uses **no** transport. `?net=local` is a 1P pair proof; its
@@ -1589,7 +1609,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
       `kill` / `power` into ghosts and bursts on each look's PLAY-frozen clock);
       REAL 3D fat-world is now 156 draws (158 worst case; budget 160); the 2D foe
       silhouettes are canon for all three looks; pickups never change shape or
-      colour. CLASSIC hash `9fb48f0a:72431`; px cap 160 KB (the px tree is a lazy
+      colour. CLASSIC hash `9fb48f0a:72431` then (`238a30af:71940` since UI upgrade Task 8.2); px cap 160 KB (the px tree is a lazy
       import since #15, about 160 KB after the v189 chevrons; cap 192 KB since v191).
 - Walls (owner rulings 2026-10-21; built, in the live game since v185 with the board look; issues
   #17 for CLASSIC 2D + REAL 3D and #31 for PIXEL after #15; record

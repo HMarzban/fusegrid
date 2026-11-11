@@ -166,6 +166,7 @@ const SRC = Object.freeze([
   "src/render/floorart.js",
   "src/render/frameart.js",
   "src/render/frame.js",
+  "src/render/hud.js",
   "src/render/wallart.js",
   "src/render/wallvar.js",
   "src/render/featpx.js",

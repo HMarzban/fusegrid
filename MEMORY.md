@@ -110,6 +110,9 @@ Locked floor sample now mapped to the box (endkit `rpair` transforms `o.floor`; 
 
 ## 2026-11-11 — UI upgrade Task 7.3: logo B in PIXEL and REAL 3D (held lane, R3)
 - Look seam in `logo/draw2d.js` (`setLogoLook` from shellview, `registerLogo` from `pixel/logo.js` and `logo/draw3d.js`); title and MENU gated in Chrome (logo faces as locked info pairs). PIXEL logo 9,148 B (pixel/logo.js 7,398 + art/logo.js 1,750; R3 carry-in, was misstated 8,858) inside its 9 KB sub-budget (lead ruling); the REAL 3D loading bar counts and warms draw3d.js (fix round 1). Open: O3 owner checkpoint
+## 2026-11-11 — UI upgrade Task 8.2: the HUD on the world kit (lane-8-hud, held for R4)
+- `src/render/hud.js` draws the seven chips (LEVEL, difficulty word off NORMAL: R9) and the power-ups bar on `#hud`, off the board, in every look; `drawHudChips`, `drawAbilityBar`, `hudPlate`, `hudPlate3` deleted; CLASSIC pins re-pinned by ruling (`238a30af:71940`, tile world `cef5c020:70998`: the diff is only the old HUD segment removed). TIME now shows in every run (the mock's seven chips).
+
 ## 2026-11-11 — UI upgrade Task 8.1: stage reserves for the new HUD (lane-8-hud, held for R4)
 - `fit.js` `HUD_RES` / `hudGeo` / `stripGeo` / `#hud` canvas: desktop board gives up exactly the plate (106) and bar (57) rows (0.84 at 1366x768, the mock's HK); landscape keeps its board (chips go in the gutters); portrait GAME stacks plate, board, bar band, strip. Left: phones under 667 tall lose more than 0.84 (360x640 0.82, 320x568 0.65), for the owner at O4.
 

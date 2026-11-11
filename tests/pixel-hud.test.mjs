@@ -16,7 +16,9 @@ import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as md from "../src/render/menudraw.js";
-import { drawHudChips } from "../src/render/scenes.js";
+import { drawHud, hudGeom, hudState, pxScale } from "../src/render/hud.js";
+import { hudGeo } from "../src/app/fit.js";
+import { worldTokens } from "../src/render/kit/tokens.js";
 import { drawShell } from "../src/render/shellview.js";
 import { SCREEN } from "../src/app/menuapp.js";
 import { POWER, FOES } from "../src/core/entities.js";
@@ -52,7 +54,7 @@ const HUDW = (lives) => ({players: [{bombs: 2, range: 3}], lives, level: 4, enem
 const HUDS = [[0, null], [3, {on: true, t: 12.3}], [8, null]];
 const PAGES = ["drawHowTo", "drawItemsHelp", "drawEnemiesHelp"], BOXES = [[600, 520], [600, 360]];
 const PIN = {
-  hud0: "7c298753:175", hud3: "60b2bf24:349", hud8: "2aa8d78c:508",
+  hud0: "3676e2b3:8168", hud3: "e7f46b94:8273", hud8: "7dcb58db:8168", // the HUD on #hud (hud.js, UI upgrade Task 8.2)
   /* v202 Task 3.5 fix round 1: pages/guide.js's call logs, re-pinned (a 600 x 520 / 600 x 360 #c box, keyboard and touch; the shell through drawShell
      on the classic box per kind: iso keeps its own box, so its own pins) */
   drawHowTo520: "37cf363d:21065", drawItemsHelp520: "4b731a9a:13296", drawEnemiesHelp520: "daf197f6:93094",
@@ -66,7 +68,10 @@ const PIN = {
 };
 /* and relational: every non-PIXEL kind (none, 2d, 3d, iso) paints the identical page call log, with or without a px atlas registered */
 const GPIN = {};
-const hud = (lv, tm, ico) => { const r = rec(); drawHudChips(r.c, HUDW(lv), tm, ico); return r; };
+/* the HUD (hud.js, UI upgrade Task 8.2) on the 1366x768 desktop slots; px = the PIXEL look (its glyphs are the registered atlas's cells) */
+const HG = hudGeo(1366, 768, 600, 520, "d");
+const hudG = (lv, tm) => { const r = rec(), st = hudState({...HUDW(lv), state: "PLAY"}, {time: tm || {t: 0}}); return {r, st, G: hudGeom(r.c, HG, st, {w: 1366, h: 768})}; };
+const hud = (lv, tm, px) => { const {r, st, G} = hudG(lv, tm); drawHud(r.c, G, st, worldTokens(4), {px: !!px}); r.G = G; return r; };
 const page = (f, w, h, kind, touch) => { const r = rec(); md[f](r.c, md.layout(w, h), 1.25, kind, touch); return r; };
 const shell = (k, s) => { const r = rec(); drawShell(r.c, {screen: SCREEN[s], subT: 1.25}, {}, null, k, () => [], () => 0); return r; };
 function unchanged(tag) {
@@ -74,7 +79,7 @@ function unchanged(tag) {
   for (const [lv, tm] of HUDS) if (H(hud(lv, tm).log) !== PIN["hud" + lv]) bad.push("hud" + lv);
   for (const [w, h] of BOXES) for (const f of PAGES) for (const t of [false, true]) for (const k of [undefined, "2d", "3d", "iso"]) { const id = f + h + (t ? "T" : ""), v = H(page(f, w, h, k, t).log); if (!(id in GPIN)) GPIN[id] = v; if (GPIN[id] !== v || PIN[id] !== v) bad.push(id + ":" + k + "=" + v); }
   for (const k of ["2d", "3d", "iso"]) for (const s of ["HOWTO", "ITEMS", "ENEMIES"]) { const v = H(shell(k, s).log); if (PIN["shell." + k + "." + s] !== v) bad.push(k + "." + s + "=" + v); }
-  check("CLASSIC 2D / REAL 3D / iso HUD chips (pre-W5) and GUIDE pages (ATLAS, keyboard + touch) match their pins (" + tag + ")", bad.length === 0, bad.join());
+  check("the HUD's vector glyphs (CLASSIC 2D, REAL 3D, iso) and GUIDE pages (ATLAS, keyboard + touch) match their pins (" + tag + ")", bad.length === 0, bad.join());
 }
 const text = (log) => log.filter((l) => /^(fillText|font=|textAlign=|textBaseline=)/.test(l)).join("\n");
 const draws = (r) => r.ops.filter((o) => o[0] === "drawImage");
@@ -102,19 +107,17 @@ unchanged("px art registered: it never leaks into another kind");
   check("pageScale: one oversize cell drops the whole page to x1", pageScale([itemCell(A, "fire"), [big]], 36) === 1 && pageScale([[big]], 40) === 2);
 }
 
-// ---- HUD chips in PIXEL ----
+// ---- HUD chips in PIXEL (the HUD on #hud, hud.js): the atlas cells by identity, x1, whole px, smoothing off, text as CLASSIC ----
 {
-  const ico = hudIcon(A);
   for (const [lv, tm] of HUDS) {
-    const px = hud(lv, tm, ico), v = hud(lv, tm), d = draws(px);
-    const want = Math.min(lv, 6) + 2;
-    const ims = d.map((o) => o[1][0]), exp = [...Array(Math.min(lv, 6)).fill(A.items.glyph.heart.im), A.items.glyph.bomb.im, A.items.glyph.fire.im];
-    check("HUD px lives " + lv + ": hearts + BOMB + FLAME glyphs are the atlas frames, by identity", d.length === want && ims.every((im, i) => im === exp[i]), d.length + "/" + want);
-    check("HUD px lives " + lv + ": hearts x2, chips x1, whole logical px, smoothing off", d.every((o, i) => { const m = i < Math.min(lv, 6) ? 2 : HUD_S; return integral(o) && o[1][3] === o[1][0].width * m && o[1][4] === o[1][0].height * m && o[2] === false; }));
-    check("HUD px lives " + lv + ": text identical to CLASSIC (shared vector font)", text(px.log) === text(v.log));
+    const px = hud(lv, tm, true), v = hud(lv, tm), d = draws(px), n = lv >= 1 && lv <= 5 ? lv : 1;
+    const ims = d.map((o) => o[1][0]), exp = [...Array(n).fill(A.items.glyph.heart.im), A.items.glyph.bomb.im, A.items.glyph.fire.im];
+    check("HUD px lives " + lv + ": hearts + BOMBS + FLAME glyphs are the atlas frames, by identity, then the foe cell", d.length === n + 3 && exp.every((im, i) => ims[i] === im), d.length + "/" + (n + 3));
+    check("HUD px lives " + lv + ": every cell at one whole scale (as large as fits its glyph box, by its opaque rect), whole logical px, smoothing off", d.every((o) => { const k = o[1][3] / o[1][0].width; return Number.isInteger(k) && k >= 1 && o[1][4] === o[1][0].height * k && integral(o) && o[2] === false; }) && d.some((o) => o[1][3] / o[1][0].width >= 2));
+    check("HUD px lives " + lv + ": text identical to CLASSIC (shared kit type)", text(px.log) === text(v.log));
   }
-  const d = draws(hud(1, null, ico)), f = A.items.glyph.heart, b = opaqueBox(f);
-  check("HUD px heart centred on the CLASSIC heart centre (16,25) by its opaque box", d[0][1][1] === Math.round(16 - (b.x + b.w / 2) * 2) && d[0][1][2] === Math.round(25 - (b.y + b.h / 2) * 2));
+  const r = hud(1, null, true), d = draws(r), f = A.items.glyph.heart, b = opaqueBox(f), c = r.G.chips.lives, s = 22, k = pxScale(f, s);
+  check("HUD px heart centred on the CLASSIC heart's centre (its glyph box) by its opaque box", d[0][1][1] === Math.round(c.x + 10 + s / 2 - (b.x + b.w / 2) * k), JSON.stringify(d[0][1].slice(1)));
 }
 
 // ---- GUIDE cells move in PIXEL (pure function of the page clock) ----
@@ -168,7 +171,9 @@ unchanged("px art registered: it never leaks into another kind");
   const w = {players: [{bombs: 1, range: 2, x: 30, y: 30}], lives: 2, level: 1, enemies: [], heat: 0, score: 0, state: "PLAY", events: [], items: [], bombs: [], blades: [], time: 0, grid: {}};
   R.render(w, 1 / 60, {hud: true});
   const ims = draws(r0).map((o) => o[1][0]), G = R._dbg.atlas.items.glyph;
-  check("px renderer draws HUD chips with the atlas glyphs (hearts, BOMB, FLAME)", [G.heart.im, G.heart.im, G.bomb.im, G.fire.im].every((im) => ims.includes(im)), ims.length);
+  check("px renderer draws no HUD chip on its overlay (the HUD is on #hud)", ![G.heart.im, G.bomb.im, G.fire.im].some((im) => ims.includes(im)), ims.length);
+  const hp = hud(2, null, true), hims = draws(hp).map((o) => o[1][0]);
+  check("the HUD in the PIXEL look blits the renderer's registered atlas (hearts, BOMBS, FLAME)", [G.heart.im, G.bomb.im, G.fire.im].every((im) => hims.includes(im)), hims.length);
   setPixelArt(A);
 }
 

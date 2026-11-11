@@ -231,7 +231,7 @@ function recCanvas(w, h, log, tag) {
   const ovl = log.filter((q) => q[0] === "ov");
   const ci = ovl.findIndex((q) => q[1] === "clearRect");
   check("overlay cleared under identity before anything else draws on it", ci > 0 && JSON.stringify(ovl[ci - 1][2]) === "[1,0,0,1,0,0]" && JSON.stringify(ovl[ci][2]) === "[0,0,600,520]");
-  check("HUD chips draw on the overlay", ovl.some((q) => q[1] === "fillText"));
+  check("the overlay draws no HUD chip (the HUD is on #hud, hud.js)", !ovl.some((q) => q[1] === "fillText" && /^(LIVES|BOMBS?|FLAME|LV|LEVEL|ENEMIES|SCORE)$/.test(String(q[2] && q[2][0]))));
   const V = r._dbg.view;
   w.events.push({t: "brick", x: 100, y: 100}, {t: "kill", x: 140, y: 100, type: "walker", color: "#8affc1"});
   r.render(w, CFG.STEP);
@@ -507,7 +507,7 @@ const rasters = (log) => log.filter((q) => q[0] === "hi" && q[1] === "drawImage"
 // ---- CLASSIC 2D unchanged ----
 {
   const h = await classicHash((p) => import(pathToFileURL(join(ROOT, p)).href));
-  check("CLASSIC 2D call-log hash unchanged (pinned from fe101c5)", h === "9fb48f0a:72431", h);
+  check("CLASSIC 2D call-log hash unchanged (pinned from fe101c5)", h === "238a30af:71940", h);
 }
 
 // ---- hygiene ----

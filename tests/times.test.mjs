@@ -8,10 +8,14 @@ import {
   bestOf,
   recordTime,
 } from "../src/app/times.js";
-import { fmtTime, drawHudChips, drawOverlay } from "../src/render/scenes.js";
+import { fmtTime, drawOverlay } from "../src/render/scenes.js";
 import { endFacts } from "../src/render/pages/endgeom.js";
 /* v202 Task 5.3: a level clear's time is its TIME stat card, and only a new best hangs the LEVEL n TIME ribbon (endgeom.endFacts; was timeLine) */
 const clearOf = (lv, tm) => { const F = endFacts({ state: "WIN", level: lv }, { r: 1 }, tm); const rib = F.pieces.find((p) => p.kind === "rib"); return F.stats[0][2] + (rib ? " · " + rib.name[0] + " " + rib.value : ""); };
+import { drawHud, hudGeom, hudState } from "../src/render/hud.js";
+import { hudGeo } from "../src/app/fit.js";
+import { worldTokens } from "../src/render/kit/tokens.js";
+import { rec as krec } from "./lib/textrec.mjs";
 import { readFileSync } from "node:fs";
 import { createGame } from "../src/main.js";
 import { SCREEN } from "../src/app/menuapp.js";
@@ -298,32 +302,24 @@ const HUD_W = {
   );
 }
 
-// ---- 7. drawHudChips: the third arg is optional and absent is byte-identical ----
+// ---- 7. the HUD's TIME chip (hud.js, UI upgrade Task 8.2: the round 5 frame shows it in every run) reads fmtTime(o.time.t) ----
 {
-  const a = rec();
-  drawHudChips(a.c, HUD_W);
-  const b = rec();
-  drawHudChips(b.c, HUD_W, undefined);
-  const d = rec();
-  drawHudChips(d.c, HUD_W, { on: false, t: 41.23 });
+  const chipTexts = (o) => { const r = krec(), st = hudState(HUD_W, o); drawHud(r.ctx, hudGeom(r.ctx, hudGeo(1366, 768, 600, 520, "d"), st, { w: 1366, h: 768 }), st, worldTokens(1), {}); return r.texts.map((t) => t.s); };
+  const a = chipTexts(undefined), d = chipTexts({ time: { on: false, t: 41.23 } }), e = chipTexts({ time: { on: true, t: 41.23 } });
   check(
-    "drawHudChips with no third arg records today's exact fillText list",
-    a.texts.join("|") === b.texts.join("|") &&
-      a.texts.join("|") === d.texts.join("|") &&
-      !a.texts.includes("TIME"),
-    a.texts.join("|"),
-  );
-  const e = rec();
-  drawHudChips(e.c, HUD_W, { on: true, t: 41.23 });
-  check(
-    "drawHudChips with tm.on paints a TIME chip reading fmtTime(tm.t)",
-    e.texts.includes("TIME") && e.texts.includes("0:41.2"),
-    e.texts.join("|"),
+    "no time handed in reads 0:00.0; TIME TRIAL or not, the chip shows the room clock",
+    hudState(HUD_W, undefined).time === "0:00.0" && hudState(HUD_W, { time: { on: false, t: 41.23 } }).time === "0:41.2" && a.includes("TIME") && d.includes("TIME"),
+    a.join("|"),
   );
   check(
-    "the TIME chip is additive — every existing chip label survives",
-    ["BOMB", "FLAME", "LV", "ENEMIES"].every((s) => e.texts.includes(s)),
-    e.texts.join("|"),
+    "the TIME chip reads fmtTime(tm.t)",
+    e.includes("TIME") && hudState(HUD_W, { time: { on: true, t: 41.23 } }).time === fmtTime(41.23),
+    e.join("|"),
+  );
+  check(
+    "every chip label is there, LEVEL for the old LV",
+    ["LIVES", "BOMBS", "FLAME", "LEVEL", "ENEMIES", "TIME", "SCORE"].every((s) => e.includes(s)) && !e.includes("LV"),
+    e.join("|"),
   );
 }
 
@@ -382,8 +378,8 @@ const HUD_W = {
 // ---- wiring: both renderers pass o.time through as tm ----
 {
   for (const [f, ov, ch] of [
-    ["src/render/renderer.js", "drawOverlay(ctx, world, B.w", "drawHudChips(ctx, world"],
-    ["src/render/three/wrapper.js", "drawOverlay(ovCtx,world,B.w", "drawHudChips(ovCtx,world"],
+    ["src/render/renderer.js", "drawOverlay(ctx, world, B.w", "drawOverlay(ctx, world, B.w"],
+    ["src/render/three/wrapper.js", "drawOverlay(ovCtx,world,B.w", "drawOverlay(ovCtx,world,B.w"],
   ]) {
     const src = readFileSync(f, "utf8");
     const ovLine = (src.match(new RegExp(".*" + ov.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ".*")) || [""])[0];
@@ -398,12 +394,9 @@ const HUD_W = {
       /o\s*&&\s*o\.run\s*,\s*o\s*&&\s*o\.toast\s*\)/.test(ovLine),
       ovLine.trim(),
     );
-    check(
-      f + ": drawHudChips receives o.time as its third arg",
-      /o\s*&&\s*o\.time/.test(chLine),
-      chLine.trim(),
-    );
   }
+  const main = readFileSync("src/main.js", "utf8"), hl = (main.match(/.*hud\.frame\(.*/) || [""])[0];
+  check("main hands the HUD the frame's render options (o.time) in GAME", /hud\.frame\(fit, app\.screen === SCREEN\.GAME \? world : null, ro, curKind\)/.test(hl) && /time: \{ on: !!app\.timeAttack, t: roomT/.test(main), hl.trim());
 }
 
 /* ---- SELF-REVIEW PIN A: the stopwatch is roomT, NOT world.time.
@@ -412,22 +405,24 @@ const HUD_W = {
    climbing through a pause. This pin fails if anyone ever "simplifies" roomT
    back to world.time, because it asserts the two clocks DISAGREE. ---- */
 {
-  const { c: rc, texts } = rec();
+  /* the TIME chip is on #hud (hud.js, UI upgrade Task 8.2) and reads fmtTime(o.time.t) from the frame's render options (hudState): the stamp is
+     the TIME the HUD is handed, read off the renderer's own render call */
+  const { c: rc } = rec();
   const fake = { getContext: () => rc, addEventListener() {}, style: {} };
   const g = createGame(fake, { autoplay: true, seed: 41 });
+  let last = null;
+  const r0 = g.renderer, render = r0.render.bind(r0);
+  r0.render = (w, dt, o) => { if (o && o.hud === true) last = hudState(w, o).time; return render(w, dt, o); };
+  const loop = (t) => { g.loop(t); };
   /* app.timeAttack is added for real in Task 4; ro.time reads !!app.timeAttack
      dynamically, so setting it here is exactly what the shipped toggle will do
      and this pin survives Task 4 unchanged. */
   g.app.timeAttack = true;
-  const stamp = () => {
-    const t = texts.filter((s) => /^\d:\d\d\.\d$/.test(s));
-    return t.length ? t[t.length - 1] : null;
-  };
+  const stamp = () => (last && /^\d:\d\d\.\d$/.test(last) ? last : null);
   let t = 1000;
   for (let i = 0; i < 40; i++) {
     t += 16;
-    texts.length = 0;
-    g.loop(t);
+    loop(t);
   }
   const running = stamp();
   check("A: the TIME chip paints a stopwatch while playing", running !== null, running);
@@ -436,8 +431,7 @@ const HUD_W = {
   check("A: onPause reaches world.state", g.world.state === "PAUSE", g.world.state);
   for (let i = 0; i < 60; i++) {
     t += 16;
-    texts.length = 0;
-    g.loop(t);
+    loop(t);
   }
   const paused = stamp();
   check(
@@ -453,8 +447,7 @@ const HUD_W = {
   g.input.onPause();
   for (let i = 0; i < 40; i++) {
     t += 16;
-    texts.length = 0;
-    g.loop(t);
+    loop(t);
   }
   check(
     "A: resuming continues the room, it does not restart it",

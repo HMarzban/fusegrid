@@ -368,10 +368,11 @@ export function drawFxOverlay(c){
    POWER[].name — no second copy. The pulse is a 600 ms outline fade on the
    FLAME / BOMB chip or the heart row when that number changes; the first feed
    after a wipe only seeds the baseline, so a room change never pulses.
-   drawPickupFx paints in overlay space through an optional proj(bx,by,h)
-   (REAL 3D passes the live camera projection, CLASSIC 2D and PIXEL pass
-   nothing: overlay space is board space there) and paints nothing at all
-   while no label or pulse is live, so every idle call log is unchanged. */
+   drawPickupFx paints the labels in overlay space through an optional
+   proj(bx,by,h) (REAL 3D passes the live camera projection, CLASSIC 2D and
+   PIXEL pass nothing: overlay space is board space there) and paints nothing
+   at all while no label is live, so every idle call log is unchanged; the
+   pulse is read by the HUD (hud.js getPulse, UI upgrade Task 8.2). */
 const PDEF={};
 for(const d of POWER) PDEF[d.t]=d;
 const BKIND={line:1,power:1,pierce:1};
@@ -521,32 +522,13 @@ export function labelBox(l, proj, still, cal, bw, cw){
   const rem=LBL.life-l.t;
   return {x,y:Math.round(y),w,dn,a:rem<LBL.fade?Math.max(0,rem/LBL.fade):1,below};
 }
-const PULSE_BOX={b:[140,10,76,30],r:[224,10,82,30]};
 export function coachKind(c2){ return c2&&c2.a>0&&c2.k||null; }
 const mw=(c,s)=>{ const m=c.measureText?c.measureText(s):null; return m&&m.width>0?m.width:0; };
 export function drawPickupFx(c, o){
-  const u=fx.pu;
-  if(!fx.lbl.length&&!(u.b>0||u.r>0||u.l>0)) return;
+  if(!fx.lbl.length) return;
   const ico=o&&o.ico, proj=o&&o.proj, bw=o&&o.bw, ck=coachKind(o&&o.coach);
   const cw=o&&o.coach&&o.coach.a>0&&o.coach.s?String(o.coach.s).length*7.2+24:0;
   c.save();
-  if(u.b>0||u.r>0||u.l>0){
-    for(const k of ["b","r","l"]){
-      if(!(u[k]>0)) continue;
-      let bx;
-      if(k==="l"){ const n=Math.min(6,fx.pv?fx.pv.l:0); if(!n) continue;
-        let hw=(n-1)*19+22;
-        if(fx.pv.l>6){ c.font="900 12px ui-monospace,monospace"; const s="+"+(fx.pv.l-6); hw=Math.min(126,125+(mw(c,s)||s.length*7.2)); }
-        bx=[5,13,hw,24]; }
-      else bx=PULSE_BOX[k];
-      c.globalAlpha=u[k]/LBL.pulse;
-      c.lineWidth=4; c.strokeStyle="#0a0d14";
-      c.strokeRect(bx[0]-2,bx[1]-2,bx[2]+4,bx[3]+4);
-      c.lineWidth=2; c.strokeStyle=k==="b"?"#ff5d73":k==="r"?"#ff8a3c":"#ff3b5c";
-      c.strokeRect(bx[0]-2,bx[1]-2,bx[2]+4,bx[3]+4);
-    }
-    c.globalAlpha=1;
-  }
   const still=flashK<1||shakeK<=0;
   let cal=null;
   if(fx.calT>0&&fx.calS){ c.font="900 26px ui-monospace,monospace"; cal={s:fx.calS,w:mw(c,fx.calS)}; }
