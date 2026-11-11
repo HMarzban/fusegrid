@@ -660,6 +660,7 @@ function record(G, Pl, foc, ui, dpr, el, touchy, gp, pg) {
       if (p.k === "key" && p.win) winR = winR || p.r;
       if (p.k === "key" && p.kind === "lit") litR = litR || R(p.r.x, p.r.y - 2, p.r.w, p.r.h);
     }
+    if (keys.length === 2 || cells.some((p) => p.empty)) probe.rect("two-state " + l, ...b(o.r)); // a rocker or a meter with an empty cell: a chosen pair this page can show (screens.mjs exemptIfNo)
     if (!chosen && keys.length === 2) { const on = keys.find((k) => k.chosen), off = keys.find((k) => !k.chosen); chosen = true; const side = (k) => Math.max(4, (k.r.w - measure(Pl.c, T.label(k.px), k.s)) / 2 - 4); probe.pair("chosen", b(R(on.r.x + 2, on.r.y, side(on), on.r.h - 4)), b(R(off.r.x + 2, off.r.y + 2, side(off), off.r.h - 4)), {name: "rocker on vs off " + l}); } // the faces inside the outline, beside the legend (the lit key stands 2 px up)
     if (!meterP && cells.length) { const h = cells.find((p) => p.head), e = cells.find((p) => p.empty); if (h && e) { meterP = true; probe.pair("chosen", b(R(h.r.x + 2, h.r.y, h.r.w - 4, h.r.h - 4)), b(R(e.r.x + 2, e.r.y + 2, e.r.w - 4, e.r.h - 4)), {name: "meter head vs empty " + l}); } }
   }

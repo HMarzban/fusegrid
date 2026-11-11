@@ -9,6 +9,7 @@ import { clampPace } from "../core/pace.js";
 import { PACT, clampPact } from "../core/pact.js";
 
 export const DIFF = Object.freeze(["NORMAL", "HARD", "EXPERT"]); // by heat 0..2
+export const POINTS_RULE = DIFF[1] + " ×2 · " + DIFF[2] + " ×3"; // ENEMIES' one-line compact tooltip: the points rule only (R1 landscape)
 export const SPEED = Object.freeze(["SLOW", "NORMAL", "FAST"]); // by pace + 1
 export const MOD = Object.freeze({ [PACT.LAST]: "ONE LIFE", [PACT.BARE]: "NO FLOOR ITEMS", [PACT.THIN]: "FEWER ITEMS", [PACT.SHRINK]: "SHRINK" }); // by PACT bit (R10)
 export const MOD_BITS = Object.freeze([PACT.LAST, PACT.BARE, PACT.THIN, PACT.SHRINK]); // chip and list order

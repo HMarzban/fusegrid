@@ -288,7 +288,10 @@ layout): desk windows keep u = 1 wherever MENU does (1366 x 768, 1280 x 720, 102
 compact pages at 1 box unit per CSS px (its margins just clear the ring, pads 8 / 10) and never scales (R1 landscape): a title too wide beside BACK
 steps down there while it holds the primary cap floor, then where bands do not page whole ENEMIES drops a foe's help (as at 125 %), then the phone's
 one-column body (`one`: POWER-UPS one tile a row), then BACK steps down to its chevron and the page keys ride the head's row (no label there); only a
-568 x 320 phone's #c still scales (the named exemption). A keyboard `#c` (a window under 600 x 520, the iso guard) still scales as one piece, as MENU does there. The page on screen is the focused door's or foe's; HOW TO,
+568 x 320 phone's #c still scales (the named exemption). ENEMIES' compact tooltip (lead ruling) may cover the page head under the BACK row but never
+BACK, the page keys or its row; where the full copy fits nowhere it is the one-line points rule (words.js `POINTS_RULE`, no POINTS row), and a box whose
+tooltips fit nowhere moves the page keys to the head row; LEVEL SELECT's finale flag is cream on an open level (`FLAG_INK`), >= 4.5 in every world;
+SETTINGS' `chosen` is exempt only on a page whose probe records no `two-state` part (screens.mjs `exemptIfNo`). A keyboard `#c` (a window under 600 x 520, the iso guard) still scales as one piece, as MENU does there. The page on screen is the focused door's or foe's; HOW TO,
 POWER-UPS and FLOOR keep menuapp `infoPg` (every arrival 0; ↑↓ / ←→ / the controller step it, clamped, through `opts.pageCount`, which main
 reads from shellview `guidePageCount`); a page key tap is `guideFocus(i)` / `foeFocus(i)` (that page's first door or foe) or `infoStep(±1)`
 (`guideReadHit`). FLOOR keeps both rule lines of every tile and its level line on every row (beside the name on all rows or under it on

@@ -387,10 +387,11 @@ function lockGlyph(c, cx, cy, s, col) {
   c.fillRect(cx - s * 0.38, cy - s * 0.1, s * 0.76, s * 0.55);
 }
 const KEY_INK = {lit: CONST.dk, well: CONST.t2, wall: CONST.off};
+export const FLAG_INK = Object.freeze({lit: CONST.dk, well: CONST.ink, wall: CONST.off}); // a finale flag: cream on an open level's well (R1 landscape: t2 read 3.29 at a 667 phone's key size), dark on the lit one
 function paintKey(c, q, tok, ph) {
   const r = q.r;
   key(c, r.x, r.y, r.w, r.h, q.kind, {tok, phone: ph});
-  const dy = q.kind === "lit" ? -2 : 0, col = KEY_INK[q.kind];
+  const dy = q.kind === "lit" ? -2 : 0, col = KEY_INK[q.kind], fcol = FLAG_INK[q.kind];
   if (q.center) return text(c, q.s, q.x, q.y + dy, q.f, col, "center");
   if (q.lock) {
     const cw = q.w + 14, ch = q.px * textScale() + 6;
@@ -398,7 +399,7 @@ function paintKey(c, q, tok, ph) {
   }
   text(c, q.s, q.x, q.y + dy, q.f, col);
   if (q.lock) lockGlyph(c, q.x + q.nw + 3 + q.gs / 2, q.y, q.gs, col);
-  else if (q.fin) glyph(c, "flag", q.x + q.nw + 3, q.y + dy - q.gs / 2, q.gs, col);
+  else if (q.fin) glyph(c, "flag", q.x + q.nw + 3, q.y + dy - q.gs / 2, q.gs, fcol);
 }
 function bankFrame(c, b) { c.fillStyle = CONST.ol; c.beginPath(); rp(c, b.x, b.y, b.w, b.h, 8); c.fill(); }
 /* one row's controls and label, at rest or focused (band, bomb, label at its focused x) */
@@ -503,7 +504,7 @@ function record(G, P, ui, foc, dpr, el, touchy, verb, tipR, tok) {
     if (lit) chosen[q.set] = q; else if (q.kind === "well" && !unchosen[q.set]) unchosen[q.set] = q;
     if (q.kind === "wall" && !lockedK) lockedK = q;
     if (q.set === "level" && q.kind === "well" && !wellK) wellK = q;
-    if (q.fin && !q.lock) probe.pair("info", b(R(q.x + q.nw + 3, q.y - (lit ? 2 : 0) - q.gs / 2, q.gs, q.gs)), b(R(q.x + q.nw - 2, q.y - q.gs, q.gs + 10, 2 * q.gs)), {col: KEY_INK[q.kind], name: "flag " + q.s});
+    if (q.fin && !q.lock) probe.pair("info", b(R(q.x + q.nw + 3, q.y - (lit ? 2 : 0) - q.gs / 2, q.gs, q.gs)), b(R(q.x + q.nw - 2, q.y - q.gs, q.gs + 10, 2 * q.gs)), {col: FLAG_INK[q.kind], name: "flag " + q.s});
   }
   for (const s of ["level", "heat", "pace"]) if (chosen[s] && unchosen[s]) probe.pair("chosen", b(chosen[s].r), b(unchosen[s].r), {name: s + " chosen vs not"});
   /* the locked key against the chosen one; its texture against an open well's own lip (the same sub-rect the gate reads, clear of the legend) */

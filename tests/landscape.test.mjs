@@ -140,6 +140,34 @@ const worst = (fs, k) => Math.min(...fs.map((f) => (f.g[k] && f.g[k].value != nu
   check("a controller on the landscape phones: SETTINGS / GRAPHICS keep BACK + its keycap on the pager strip, every gate passing", bad.length === 0, bad.slice(0, 8).join(" | "));
 }
 
+/* ---- lead ruling (R1 landscape leftovers): ENEMIES' compact tooltip holds its words inside its own plate for every foe at 667x375 and 852x393, text 1
+   and 1.25: the full tip where it fits, else the one-line points rule (words.js POINTS_RULE), never scaled; it may cover the page head under the BACK row,
+   never BACK, the page keys or the focused foe's row ---- */
+{
+  const GP = MODS.guide, bad = [];
+  for (const ts of [1, 1.25]) for (const wh of [[852, 393], [667, 375]]) {
+    setTextScale(ts);
+    const B = boxOf(wh), G = GP.guideGeom({ W: 600, H: 520, touch: true, shell: false, css: B.css }, "ENEMIES"), D = G.d, at = wh.join("x") + " " + ts;
+    if (Math.abs(G.u * B.css - 1) > 1e-9) bad.push(at + " scales " + (G.u * B.css).toFixed(3));
+    const ov = (a, b) => a && b && a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+    D.tips.forEach((t, i) => {
+      const it = D.items[D.order[i]], P = D.plate, U = t.U, keys = D.pager ? [D.pager.up, D.pager.dn] : [];
+      if (t.r.h + 0.01 < t.need) bad.push(at + " " + FOES[i].name + " tip " + t.r.h.toFixed(1) + " < " + t.need.toFixed(1));
+      if (U.x < P.x - 0.01 || U.y < P.y - 0.01 || U.x + U.w > P.x + P.w + 0.01 || U.y + U.h > P.y + P.h + 0.01) bad.push(at + " " + FOES[i].name + " tip off the plate");
+      if (ov(U, it.r) || ov(U, D.head.back) || keys.some((k) => ov(U, k))) bad.push(at + " " + FOES[i].name + " tip covers its row, BACK or a page key");
+      if (t.short && t.n !== 1) bad.push(at + " " + FOES[i].name + " short tip on " + t.n + " lines");
+    });
+  }
+  setTextScale(1);
+  check("ENEMIES' compact tooltip: inside its own plate for every foe (667x375, 852x393 at 1 and 1.25), never scaled, never over BACK, a page key or its row; the short form one line", bad.length === 0, bad.slice(0, 8).join(" | "));
+}
+/* ---- LEVEL SELECT's finale flag: cream on an open level's well, dark on the lit one, >= 4.5 against that key's face in every world ---- */
+{
+  const { worldTokens, CONST } = await import("../src/render/kit/tokens.js"), { colOf, cr } = await import("../tools/ui/lib/gatelib.mjs"), LP = await import("../src/render/pages/level.js"), bad = [];
+  for (let lv = 1; lv <= 8; lv++) { const tok = worldTokens(lv); for (const [k, face] of [["well", tok.well], ["lit", tok.lit]]) { const c = cr(colOf(LP.FLAG_INK[k]).L, colOf(face).L); if (c < 4.5) bad.push(lv + " " + k + " " + c); } }
+  check("LEVEL SELECT's finale flag reads >= 4.5 against its key's face (well: cream, lit: dark) in all eight worlds", bad.length === 0 && LP.FLAG_INK.well === CONST.ink, bad.join(" | "));
+}
+
 /* ---- the one named exemption: a 568 x 320 phone (#c 236 x 204 CSS px; three RECORDS tabs and BACK do not fit 44 CSS px across, nor one GUIDE
    band a page): there the pages that cannot page whole scale as one piece, their last give-way. Asserted at their measured best (today's values,
    floored to 0.1: a regression fails), and never a throw, an overflow (inside, plate) or a LOADING plate under the floors ---- */

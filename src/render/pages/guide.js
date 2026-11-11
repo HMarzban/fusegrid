@@ -24,7 +24,7 @@
 import {CFG, biomeOf, BIOMES} from "../../core/config.js";
 import {POWER, FOES, helpOf} from "../../core/entities.js";
 import {TILE_HELP, TILE_NAME} from "../../core/feat.js";
-import {LABEL, DIFF, levelsOf} from "../words.js";
+import {LABEL, DIFF, levelsOf, POINTS_RULE} from "../words.js";
 import {worldTokens, CONST, toL} from "../kit/tokens.js";
 import {key, cap, capW, plate, band, focusBomb, glyph, wallCell, floorCell, plaque, rpath as rp} from "../kit/paint.js";
 import {T, DEV, dsp, measure, textScale, measurer as mOf, CAP_K} from "../kit/type.js";
@@ -180,7 +180,7 @@ function body(page, m, iw) {
     const g = grid(FOES.length, cols, gap, iw, (i) => need(i), 0);
     const items = FOES.map((e, i) => { const r = g.rects[i], x0 = r.x + 6, tx = x0 + 54, ptx = r.x + r.w - 6 - ptw, top = r.y + (r.h - (lhP + lhS + hl[i] * lhB)) / 2, py = r.y + (r.h - pth) / 2, dig = R(ptx + 8 + dv.bombs + 6, py + 6, 67, 28);
       return {name: e.name, t: e.t, r, band: g.ri[i], ri: g.ri[i], col: i % cols, cell: R(x0, r.y + (r.h - 44) / 2, 44, 44), tx, tw, nameY: top + lhP / 2, levY: top + lhP + lhS / 2, helpY: help ? top + lhP + lhS : null, hl: hl[i], pts: R(ptx, py, ptw, pth), dig, digF: dig, side}; });
-    return {h: g.h, top: 0, bands: g.rows, items, cols, gap, help, iw, tipH: (w) => tipNeed(m, w), tipHd: tipHead(m)};
+    return {h: g.h, top: 0, bands: g.rows, items, cols, gap, help, iw, tipH: (w, short) => tipNeed(m, w, short), tipHd: tipHead(m)};
   }
   /* FLOOR: three tile cells (by difficulty) then the tile's name, its world and the NORMAL and EXPERT lines, every one whole; the level line on every row
      (beside the name where it fits on all of them, else under it), never on some. A desk plate under 700 wide stacks a row as the phone does (the
@@ -197,9 +197,9 @@ function body(page, m, iw) {
 /* the tooltip's head: pad, the title row (36: POINTS and the value), then 6, the body lines and the bottom pad; a compact box (a landscape phone)
    has no room for the value's keys, so its title row is the POINTS word alone (the value sits ringed on the row it points at) */
 const tipHead = (m) => (m.mode === "compact" ? {top: 8, th: m.dv.pri * m.ts * 1.15, bot: 8, dig: false} : {top: 12, th: 36, bot: 14, dig: true});
-function tipNeed(m, w) {
-  const n = Math.max(...FOES.map((e) => linesOf(T.body, m.dv.bod, tipText(e.name), w))), q = tipHead(m);
-  return {h: q.top + q.th + 6 + n * m.dv.bod * m.ts * 1.4 + q.bot, n};
+function tipNeed(m, w, short = false) {
+  const n = short ? linesOf(T.body, m.dv.bod, POINTS_RULE, w) : Math.max(...FOES.map((e) => linesOf(T.body, m.dv.bod, tipText(e.name), w))), q = tipHead(m);
+  return {h: (short ? q.top + q.bot - 4 : q.top + q.th + 6 + q.bot) + n * m.dv.bod * m.ts * 1.4, n}; // short: the points rule alone, no POINTS row, pads 2 closer
 }
 function headOf(page, m, iw) {
   const {dv, ts} = m, Sx = dv.sec, sec = Sx * ts, hint = page === EN ? (m.tap ? HINT.tap : HINT.key) : "", D = (s) => mw(T.display, dv.ttl, s);
@@ -224,14 +224,14 @@ function frameOf(F) {
 /* page breaks: whole bands, greedy, each page as tall as `room` holds (its header included); null when one band is taller than a page. With `need`
    (ENEMIES off the desk: the tooltip's height) every band also keeps that much room above or below it on its page (the pager's strip counts), and
    the body grows toward `room` until it does */
-function paginate(B, room, need = 0, PAGER = PAGE_KEY + PAGE_GAP) {
+function paginate(B, room, need = 0, PAGER = PAGE_KEY + PAGE_GAP, strict = false) {
   const n = B.bands.length, req = (b0, k) => { const y = B.bands[k].y - B.bands[b0].y; return !need || y >= need ? 0 : y + B.bands[k].h + need; };
   if (B.h <= room) { const r = Math.max(0, ...B.bands.map((_, k) => req(0, k))); if (B.top + r <= room) return {pages: [{b0: 0, b1: n, y0: B.top, h: B.h - B.top}], h: Math.max(B.h, B.top + r)}; }
   const per = room - PAGER - B.top, pages = [];
   let b0 = 0, r = 0;
   while (b0 < n) {
     let b1 = b0;
-    while (b1 < n && B.bands[b1].y + B.bands[b1].h - B.bands[b0].y <= per && (b1 === b0 || req(b0, b1) <= room - B.top)) { r = Math.max(r, Math.min(room - B.top, req(b0, b1))); b1++; }
+    while (b1 < n && B.bands[b1].y + B.bands[b1].h - B.bands[b0].y <= per && ((b1 === b0 && !strict) || req(b0, b1) <= room - B.top - (strict ? PAGER : 0))) { r = Math.max(r, Math.min(room - B.top, req(b0, b1))); b1++; } // strict (compact ENEMIES): every band keeps its tooltip's room, the page keys apart
     if (b1 === b0) return null;
     pages.push({b0, b1, y0: B.bands[b0].y, h: B.bands[b1 - 1].y + B.bands[b1 - 1].h - B.bands[b0].y});
     b0 = b1;
@@ -240,10 +240,10 @@ function paginate(B, room, need = 0, PAGER = PAGE_KEY + PAGE_GAP) {
 }
 function lay(F, page, mode, fr) {
   const dev = mode === "desk" ? "d" : "p", dv = DEV[dev], W = hints(), m = {mode, dev, dv, ts: fr.ts, W, tap: tapMode(fr.touch), narrow: F.W < 560, cue: mode !== "desk" && W.dev === "pad"}, P0 = PAD[mode === "compact" ? "c" : dev];
-  const tipNeed0 = (iw) => (page === EN && mode !== "desk" ? tipNeed(m, iw - 2 * TIP_T[dev] - 4 - 2 * (mode === "compact" ? TIP_PAD.c : TIP_PAD.d)).h + 2 * TIP_T[dev] + 5 : 0);
+  const tipNeed0 = (iw) => (page === EN && mode !== "desk" ? tipNeed(m, iw - 2 * TIP_T[dev] - 4 - 2 * (mode === "compact" ? TIP_PAD.c : TIP_PAD.d), mode === "compact" && fr.hkEN).h + 2 * TIP_T[dev] + 5 : 0); // hkEN: the one-line tip's room
   let hk = false; // the page keys ride the head's row (compact's last step)
   const fit = (u, H, top0, tail, build) => {
-    const S = build(u), fixed = top0 + P0[0] + S.hd.h + S.gap + P0[2] + tail, pg = paginate(S.bd, H / u - fixed, tipNeed0(S.iw), hk ? 0 : PAGER);
+    const S = build(u), fixed = top0 + P0[0] + S.hd.h + S.gap + P0[2] + tail, pg = paginate(S.bd, H / u - fixed, tipNeed0(S.iw), hk ? 0 : PAGER, page === EN && mode === "compact" && !!fr.hkEN);
     return pg ? {S, pg, u} : null;
   };
   if (mode === "desk") {
@@ -263,6 +263,7 @@ function lay(F, page, mode, fr) {
   /* compact (a landscape phone's #c): margins just clear the plate's ring, tighter pads and head gap, so a foe's row keeps its tooltip's room */
   const side = 12, cp = mode === "compact", top = cp ? DEV.p.T + 2 : 20, bot = cp ? DEV.p.T + 3 : 20, hg = cp ? 8 : 12, max = mode === "phone" ? PHONE_MAX : COMPACT_MAX;
   let u = 1 / fr.css, mb = m;
+  if (cp && fr.hkEN) hk = true; // ENEMIES' tooltip asked for the body's foot (guideGeom)
   const build = (uu) => { const pw = Math.min(F.W / uu - 2 * side, max), iw = pw - P0[1] - P0[3]; return {pw, iw, hd: headOf(page, {...m, hk}, iw), bd: body(page, mb, iw), gap: hg}; };
   let R0 = fit(u, F.H, top, bot, build);
   /* compact (#c, R1 landscape): where the bands do not page whole at 1 / css the page steps down, never scales: ENEMIES drops a foe's help from its row
@@ -282,9 +283,9 @@ function lay(F, page, mode, fr) {
 const off = (r, x, y) => (r ? R(r.x + x, r.y + y, r.w, r.h) : null);
 const RECTS = ["cell", "pts", "dig", "digF", "pips"], YS = ["nameY", "helpY", "appY", "levY"];
 let gm = null;
-export function guideGeom(F, page = GUIDE) {
-  const fr = frameOf(F), W = hints();
-  if (gm && gm.W === F.W && gm.H === F.H && gm.page === page && gm.touch === fr.touch && gm.shell === fr.shell && gm.css === fr.css && gm.ts === fr.ts && gm.words === W) return gm.G;
+export function guideGeom(F, page = GUIDE, hkEN = false) {
+  const fr = {...frameOf(F), hkEN}, W = hints();
+  if (!hkEN && gm && gm.W === F.W && gm.H === F.H && gm.page === page && gm.touch === fr.touch && gm.shell === fr.shell && gm.css === fr.css && gm.ts === fr.ts && gm.words === W) return gm.G;
   let d = lay(F, page, fr.phone ? "phone" : "desk", fr);
   if (!fr.phone && fr.touch && !(d.u * fr.css >= Math.max(TOUCH_U, uFloor(fr.ts)) - 1e-9)) d = lay(F, page, "compact", fr);
   const u = d.u, x0 = d.ix, y0 = d.by, B = d.bd, pages = d.pg.pages, D = {mode: d.mode, dev: d.dev, u, plate: d.plate, foot: d.foot, T: DEV[d.dev].T, head: {}, items: {}, order: [], hit: {}, tips: null, pages: pages.length, pager: null};
@@ -320,6 +321,9 @@ export function guideGeom(F, page = GUIDE) {
     }
   }
   if (page === EN) D.tips = FOES.map((e, i) => tipGeom(D, B, i, d, {x0, w: d.iw, y0, top: B.top, h: d.pg.h}));
+  /* compact ENEMIES whose tooltip holds its words nowhere beside its row: the page keys move to the head's row, freeing the body's foot for it */
+  const tipScore = (ts0) => ts0.reduce((a, q) => a + (q.r.h + 0.01 < q.need ? 100 : 0) + (q.short ? 1 : 0), 0);
+  if (page === EN && d.mode === "compact" && !hkEN && !d.hk && tipScore(D.tips) >= 100) { const A = guideGeom(F, page, true); if (A.mode === "compact" && Math.abs(A.u * fr.css - 1) < 1e-9 && tipScore(A.d.tips) < tipScore(D.tips)) return A; }
   const G = {page, mode: d.mode, dev: d.dev, u, W: F.W, H: F.H, t125: fr.t125, touch: fr.touch, T: D.T * u, d: D, order: D.order.slice(), plate: sc(D.plate, u), foot: sc(D.foot, u), back: sc(D.head.back, u),
     pages: pages.length, pageOf: {}, pager: D.pager ? {up: sc(D.pager.up, u), dn: sc(D.pager.dn, u)} : null, items: {}, hit: {}, tips: null};
   for (const n of D.order) { G.items[n] = sc(D.items[n].r, u); G.pageOf[n] = D.items[n].page; if (D.hit[n]) G.hit[n] = sc(D.hit[n], u); }
@@ -333,7 +337,8 @@ export function guideGeom(F, page = GUIDE) {
    ring; the pointer runs from the plaque toward the points value. */
 function tipGeom(D, B, i, d, body) {
   const it = D.items[D.order[i]], Tt = TIP_T[d.dev], pad = d.mode === "compact" ? TIP_PAD.c : TIP_PAD.d, onPg = (j) => D.items[D.order[j]].page === it.page, all = D.order.map((_, j) => j);
-  const fits = (U) => U.h >= B.tipH(U.w - 2 * Tt - 4 - 2 * pad).h + 2 * Tt + 5;
+  let short = false;
+  const fits = (U) => U.h >= B.tipH(U.w - 2 * Tt - 4 - 2 * pad, short).h + 2 * Tt + 5;
   const across = (U) => all.filter((j) => { const q = D.items[D.order[j]].r; return j !== i && onPg(j) && q.y < U.y + U.h - 1e-6 && q.y + q.h > U.y + 1e-6 && q.x < U.x + U.w - 1e-6 && q.x + q.w > U.x + 1e-6; });
   const cands = [];
   if (d.mode === "desk" && B.cols > 1) {
@@ -353,17 +358,23 @@ function tipGeom(D, B, i, d, body) {
     else { cands.push({U: b, up: false}); if (a) cands.push({U: a, up: true}); }
   }
   /* the body region grows by whole rows (to the body's edge last) until the words fit */
-  const top = body.y0 + body.top, bot = body.y0 + body.h, y1 = it.r.y + it.r.h, mine = all.filter((j) => j !== i && onPg(j)).map((j) => D.items[D.order[j]].r);
+  /* compact (#c, R1 landscape): the tip may cover the page head under the BACK row (title, hint, pager label) but never a control: not BACK, not the
+     page keys at the body's foot, never the focused row; where the full words fit nowhere it takes the one-line points rule (words.js POINTS_RULE) */
+  const cp = d.mode === "compact", hb = D.head.back, pk = D.pager && !D.pager.head ? D.pager.up.y - 2 : Infinity;
+  const top = cp && hb ? hb.y + hb.h + 2 : body.y0 + body.top, bot = Math.min(body.y0 + body.h, cp ? pk : Infinity), y1 = it.r.y + it.r.h, mine = all.filter((j) => j !== i && onPg(j)).map((j) => D.items[D.order[j]].r);
   const grow = (ends, mk) => { let U = null; for (const e of ends) { U = mk(e); if (fits(U)) break; } return U || mk(ends[ends.length - 1]); };
   const below = grow([...new Set([...mine.filter((r) => r.y >= y1 - 1e-6).map((r) => r.y + r.h), bot])].sort((a, b) => a - b), (e) => R(body.x0, y1, body.w, e - y1));
   const over = grow([...new Set([...mine.filter((r) => r.y + r.h <= it.r.y + 1e-6).map((r) => r.y), top])].sort((a, b) => b - a), (e) => R(body.x0, e, body.w, it.r.y - e));
   if (below.h >= over.h) cands.push({U: below, up: false}, {U: over, up: true}); else cands.push({U: over, up: true}, {U: below, up: false});
-  const pick = cands.find((q) => q.U.h > 0 && fits(q.U)) || cands.filter((q) => q.U.h > 0).sort((p, q) => q.U.h - p.U.h)[0] || {U: R(body.x0, it.r.y + it.r.h, body.w, 1), up: false};
-  const U = pick.U, up = pick.up, need = B.tipH(U.w - 2 * Tt - 4 - 2 * pad), cover = across(U);
+  let pick = cands.find((q) => q.U.h > 0 && fits(q.U));
+  if (!pick && cp) { short = true; pick = cands.find((q) => q.U.h > 0 && fits(q.U)); if (!pick) { short = false; } }
+  pick = pick || cands.filter((q) => q.U.h > 0).sort((p, q) => q.U.h - p.U.h)[0] || {U: R(body.x0, it.r.y + it.r.h, body.w, 1), up: false};
+  const U0 = pick.U, up = pick.up, need = B.tipH(U0.w - 2 * Tt - 4 - 2 * pad, short);
+  const U = U0, cover = across(U);
   const box = R(U.x + Tt + 2, U.y + Tt + 2, U.w - 2 * Tt - 4, Math.max(1, U.h - 2 * Tt - 5)), p = it.pts, pw = d.dev === "p" ? 16 : 18, phh = d.dev === "p" ? 10 : 14;
   const cx = Math.max(box.x + 14 + pw / 2, Math.min(box.x + box.w - 14 - pw / 2, p.x + p.w / 2));
   const ptr = up ? {x: cx, y: box.y + box.h + Tt + 3, w: pw, h: phh, dir: 1} : {x: cx, y: box.y - Tt - 2, w: pw, h: phh, dir: -1};
-  return {r: box, U, up, cover, ptr, n: need.n, Tt, pad, page: it.page, hd: B.tipHd};
+  return {r: box, U, up, cover, ptr, n: need.n, need: need.h, short, Tt, pad, page: it.page, hd: B.tipHd};
 }
 const onPlate = (G, x, y) => { const p = G.plate; return x >= p.x && x <= p.x + p.w && y >= p.y && y <= p.y + p.h; };
 const clampPg = (G, pg) => Math.max(0, Math.min(G.pages - 1, pg | 0));
@@ -555,8 +566,8 @@ function enemies(c, G, ui, on, focus, tips, info) {
       on(pg, txt(levelsOf(e.rooms), q.tx, q.levY, sec, {col: CONST.t2, role: "secondary"}));
       if (q.helpY != null) wrap(c, T.body(bod), helpOfFoe(e), q.tw).forEach((s, j) => on(pg, txt(s, q.tx, q.helpY + bod * ts * 1.4 * (j + 0.5), bod, {face: T.body, col: CONST.t2, role: "body"})));
     }
-    const tg = D.tips[i], tp = tg.pad, tw = tg.r.w - 2 * tp, lines = wrap(c, T.body(bod), tipText(e.name), tw);
-    const th = tg.hd.th, ty = tg.r.y + tg.hd.top, top = [{op: "tipPlate", r: tg.r, U: tg.U, Tt: tg.Tt}, {op: "wedge", ...tg.ptr}, txt(POINTS, tg.r.x + tp, ty + th / 2, pri, {name: "tip"})];
+    const tg = D.tips[i], tp = tg.pad, tw = tg.r.w - 2 * tp, lines = wrap(c, T.body(bod), tg.short ? POINTS_RULE : tipText(e.name), tw);
+    const th = tg.short ? -6 : tg.hd.th, ty = tg.r.y + tg.hd.top - (tg.short ? 2 : 0), top = [{op: "tipPlate", r: tg.r, U: tg.U, Tt: tg.Tt}, {op: "wedge", ...tg.ptr}, ...(tg.short ? [] : [txt(POINTS, tg.r.x + tp, ty + th / 2, pri, {name: "tip"})])];
     if (tg.hd.dig) top.push({op: "digits", v, r: R(tg.r.x + tg.r.w - tp - (ph ? 67 : 85), ty, ph ? 67 : 85, ph ? 28 : 36), ph});
     lines.forEach((s, j) => top.push(txt(s, tg.r.x + tp, ty + th + 6 + bod * ts * 1.4 * (j + 0.5), bod, {face: T.body, col: CONST.t2, role: "body"})));
     tips[i] = top;

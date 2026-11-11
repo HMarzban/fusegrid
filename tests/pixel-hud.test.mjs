@@ -59,7 +59,7 @@ const PIN = {
   drawHowTo360: "1df6ba7e:21237", drawItemsHelp360: "eb60eb99:13283", drawEnemiesHelp360: "c6e3a685:78040",
   /* R1 kit harmonisation: the paged touch pages take the kit pager (PAGE n OF m beside the keys, the glyphs centred), re-pinned; same call counts */
   drawHowTo520T: "b9c68521:28035", drawItemsHelp520T: "ed9a705f:11758", drawEnemiesHelp520T: "169bcbea:13883",
-  drawHowTo360T: "9697ba74:25946", drawItemsHelp360T: "1083cb07:10559", drawEnemiesHelp360T: "5428557f:10316",
+  drawHowTo360T: "9697ba74:25946", drawItemsHelp360T: "1083cb07:10559", drawEnemiesHelp360T: "49b6f472:10106", // R1 landscape leftovers: a 600 x 360 touch #c: ENEMIES' compact tooltip never covers the page keys (the one-line points rule where the full copy does not fit) (was 5428557f:10316)
   "shell.2d.HOWTO": "37cf363d:21065", "shell.2d.ITEMS": "4b731a9a:13296", "shell.2d.ENEMIES": "3018d168:93529",
   "shell.3d.HOWTO": "37cf363d:21065", "shell.3d.ITEMS": "4b731a9a:13296", "shell.3d.ENEMIES": "3018d168:93529",
   "shell.iso.HOWTO": "ccc7496f:21777", "shell.iso.ITEMS": "d9f28577:13470", "shell.iso.ENEMIES": "7e158d1a:78475",

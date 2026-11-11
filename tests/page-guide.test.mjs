@@ -35,7 +35,7 @@ const SV = await import("../src/render/shellview.js");
 const { SCREENS } = await import("../tools/ui/lib/screens.mjs");
 const { FOES, POWER, helpOf } = await import("../src/core/entities.js");
 const { TILE_HELP, TILE_NAME } = await import("../src/core/feat.js");
-const { DIFF, levelsOf } = await import("../src/render/words.js");
+const { DIFF, levelsOf, POINTS_RULE } = await import("../src/render/words.js");
 
 const PG = shellGeo(393, 852);
 const BOX = {
@@ -195,7 +195,9 @@ for (const ts of [1, 1.25]) for (const b of ALL) {
     const lines = P._dbg.last.P.tips[i].filter((o) => o.op === "text");
     const lb = lines[lines.length - 1];
     if (lb.y + lb.px * ts * 0.7 > tg.r.y + tg.r.h + 0.01) bad.push(D.order[i] + " text below its tip");
-    if (lines.slice(1).map((o) => o.s).join(" ") !== P.tipText(FOES[i].name) || lines.some((o) => o.x + o.mw > tg.r.x + tg.r.w - tg.pad + 0.01)) bad.push(D.order[i] + " text not whole inside");
+    /* R1 landscape (lead ruling): a compact tip that cannot hold the full copy beside its row is the one-line points rule (words.js POINTS_RULE), no POINTS row */
+    const want = tg.short ? [POINTS_RULE] : [P.POINTS, P.tipText(FOES[i].name)], got = tg.short ? lines.map((o) => o.s) : [lines[0] && lines[0].s, lines.slice(1).map((o) => o.s).join(" ")];
+    if (J(got) !== J(want) || (tg.short && D.mode !== "compact") || lines.some((o) => o.x + o.mw > tg.r.x + tg.r.w - tg.pad + 0.01)) bad.push(D.order[i] + " text not whole inside");
     const p = tg.ptr;
     if (Math.abs(p.dir) === 2) { if (p.y < tg.r.y || p.y > tg.r.y + tg.r.h || Math.sign(q.pts.x + q.pts.w / 2 - p.x) !== Math.sign(p.dir)) bad.push(D.order[i] + " pointer off"); } // compact: across, toward the value's column
     else if (p.x < tg.r.x || p.x > tg.r.x + tg.r.w || (tg.up ? p.y + p.h > q.pts.y + q.pts.h : p.y - p.h < q.r.y - 14)) bad.push(D.order[i] + " pointer off");
