@@ -154,7 +154,7 @@ for (const [scr, fn, field, row, offAct, R] of [[SCREEN.MENU, "menuHit", "cursor
   r.down(on.x, on.y);
   const c = r.H.last(fn), lc = r.H.last("layout");
   check(fn + (R ? " (" + R.length + " rows)" : "") + ": a tap on row " + row + " sets " + field + " and confirms, fire swallowed", r.app[field] === row && J(r.log) === J([["confirm"]]) && r.input._intent.fire === false, r.app[field] + " " + J(r.log));
-  check(fn + "(x, y, layout(cw, ch, lg), " + (R ? "app.optRows()" : "ITEMS.length") + ", touchLay(cv)) with dims(cv, kind)", c.a[0] === on.x && c.a[1] === on.y && J(c.a[2]) === J(L0) && c.a[3] === n4 && c.a[4] === false && lc.a.length === 3 && lc.a[2] === undefined && r.H.last("dims").a[0] === r.canvas && r.H.last("dims").a[1] === "2d", J(lc.a));
+  check(fn + "(x, y, layout(cw, ch, lg, css), " + (R ? "app.optRows()" : "ITEMS.length") + ", touchLay(cv)) with dims(cv, kind) (css: the MENU phone column's scale, none on #c)", c.a[0] === on.x && c.a[1] === on.y && J(c.a[2]) === J(L0) && c.a[3] === n4 && c.a[4] === false && lc.a.length === 4 && lc.a[2] === undefined && lc.a[3] === undefined && r.H.last("dims").a[0] === r.canvas && r.H.last("dims").a[1] === "2d", J(lc.a));
   r.log.length = 0;
   r.down(off.x, off.y);
   check(fn + ": -1 " + (offAct ? "backs out" : "does nothing (a root list)"), J(r.log) === J(offAct ? [[offAct]] : []), J(r.log));
@@ -303,11 +303,11 @@ for (const [scr, page] of [[SCREEN.SCORES, 0], [SCREEN.STATS, 1], [SCREEN.TROPHI
   let boxOn = true;
   const cv = mkEl(600, 520, { left: 30, top: 300, width: 378, height: 327.6 }, "p");
   const r = rig({ canvas: cv, fit: { sh, box: () => (boxOn ? box : null) } });
-  const LB = layout(g.w, g.h, g.logo), hit = mid((x, y) => menuHit(x, y, LB, ITEMS.length, true) === 2, g.w, g.h);
+  const LB = layout(g.w, g.h, g.logo, g.s), hit = mid((x, y) => menuHit(x, y, LB, ITEMS.length, true) === 2, g.w, g.h); // the phone column is laid out in CSS px: css = the box's scale
   const cx = rect.left + (hit.x * rect.width) / g.w, cy = rect.top + (hit.y * rect.height) / g.h;
   sh.fire("pointerdown", { clientX: cx, clientY: cy, currentTarget: sh });
   const d = r.H.last("dims"), m = r.H.last("menuHit"), lc = r.H.last("layout");
-  check("#sh MENU: the tap maps through the box (its rect, its width / height / logo, touch) onto row 2", r.app.cursor === 2 && J(r.log) === J([["confirm"]]) && d.a[0] === box && r.H.last("touchLay").a[0] === box && m.a[4] === true && J(lc.a) === J([g.w, g.h, g.logo]) && Math.abs(m.a[0] - hit.x) < 1e-6 && Math.abs(m.a[1] - hit.y) < 1e-6, J(m.a.slice(0, 2)) + " " + J(lc.a));
+  check("#sh MENU: the tap maps through the box (its rect, its width / height / logo, touch) onto row 2", r.app.cursor === 2 && J(r.log) === J([["confirm"]]) && d.a[0] === box && r.H.last("touchLay").a[0] === box && m.a[4] === true && J(lc.a.slice(0, 3)) === J([g.w, g.h, g.logo]) && Math.abs(lc.a[3] - g.s) < 1e-9 && Math.abs(m.a[0] - hit.x) < 1e-6 && Math.abs(m.a[1] - hit.y) < 1e-6, J(m.a.slice(0, 2)) + " " + J(lc.a));
   r.log.length = 0;
   cv.fire("pointerdown", { clientX: 30, clientY: 300, currentTarget: cv });
   check("#sh on, a tap whose currentTarget is #c maps through #c", r.H.last("dims").a[0] === cv);

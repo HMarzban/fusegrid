@@ -10,7 +10,7 @@ import { createRenderer } from "./render/renderer.js";
 import { loadRendererPx } from "./render/pixel/load.js";
 import { copyPayload, isRunEnd, overlayBox, pauseHit, touchLay } from "./render/scenes.js";
 import { paintBombPad } from "./render/sprites.js";
-import { controlsHit, dims, drawShell, kindSize, loadControlsArt, shellMode } from "./render/shellview.js";
+import { controlsHit, dims, drawShell, kindSize, loadControlsArt, shellMode, shellCovers } from "./render/shellview.js";
 import { menuHit, settingsHit, statsHit, graphicsHit, guideHit, levelHit, scoresHit, recTabHit, layout as menuLayout, setModeFocus } from "./render/menudraw.js";
 import { setFxOpts } from "./render/fx.js";
 import { hints, setHints } from "./render/hintcopy.js";
@@ -22,6 +22,7 @@ import { readFlags, locationSearch } from "./app/flags.js";
 import { bootRender, kindOf } from "./app/renderkind.js";
 import { mountDebugHook } from "./app/debughook.js";
 import { snapshot, setOn as probeOn } from "./render/kit/probe.js";
+import { release as freeKit } from "./render/kit/cache.js";
 import { setTextScale, textScale } from "./render/kit/type.js";
 import { mountFit } from "./app/fit.js";
 import { mountFrames } from "./app/frameloop.js";
@@ -252,7 +253,7 @@ export function createGame(canvas, opts = {}) {
   let settings = loadSettings();
   if (settings.snd === 0 && audio && audio.toggle) audio.toggle();
   const idleNow = () => !(app.screen === SCREEN.GAME && world.state === "PLAY") && !(app.screen === SCREEN.INTRO && app.introStage === 1); // one idle predicate: the frame gate and the look jobs (rcache) share it
-  const frames = mountFrames(loop, { running: () => running, idle: idleNow, kind: () => curKind, rc: () => rc, app: () => app, fit: () => fit, canvas, pre: (t) => ctl.poll(t) }); // GRAPHICS frame gate (src/app/frameloop.js): every getter is lazy
+  const frames = mountFrames(loop, { running: () => running, idle: idleNow, kind: () => curKind, rc: () => rc, app: () => app, fit: () => fit, canvas, pre: (t) => ctl.poll(t), release: freeKit }); // GRAPHICS frame gate (src/app/frameloop.js): every getter is lazy
   const applySettings = (S) => {
     if (audio && audio.setVols) audio.setVols({ mus: S.mus / 100, sfx: S.sfx / 100 });
     setFxOpts({ flashK: S.flx ? 0.25 : 1, shakeK: S.shk ? 1 : 0, partK: frames.apply(S).partK });
@@ -663,7 +664,7 @@ export function createGame(canvas, opts = {}) {
               time: { on: !!app.timeAttack, t: roomT, best: bestPrev }, ghost: ghostAt(ghost, world, roomT),
               run: { r: tally.r, k: tally.k, p: tally.p, t: runT, best: bestRun, fromStart: runFromStart, daily: dailyDate, tries: dailyRec.played, dbest: dailyRec.best, md: medalLine(tally.mn) },
             }
-          : { hud: false };
+          : { hud: false, covered: shellCovers(app.screen) }; // a page that paints the room look opaque hides the board: no look rasters it
     // BRIGHTNESS is 3D only — CLASSIC 2D blits the authored hex unregraded.
     if (curKind === "3d") ro = { ...(ro || {}), bright: settings.bri / 100 };
     renderer.render(attract && demo ? demo.world : show ? show.world : world, dt, ro);

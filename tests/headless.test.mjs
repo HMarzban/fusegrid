@@ -13,7 +13,7 @@ import {loadScores} from "../src/app/highscores.js";
 import {loadStats} from "../src/app/stats.js";
 import {copyPayload, pauseGeom, overlayBox} from "../src/render/scenes.js";
 import {menuGeom, guideGeom as mdGuideGeom, levelGeom, scoresHit, settingsGeom, LEVEL_TAP, layout as menuLayout} from "../src/render/menudraw.js";
-import {fitBox} from "../src/app/fit.js";
+import {fitBox, shellGeo} from "../src/app/fit.js";
 import "../src/core/board3.js";
 import "../src/app/demobot.js";
 import "../src/render/r3d/scene3d.js";
@@ -21,7 +21,8 @@ import { createLocalPair } from "../src/net/localpair.js";
 // tab centres found through scoresHit itself (the one tap map), scanning the tab row band
 const mdScoreTabs=(L,t)=>{ for(let y=8;y<200;y++){ const xs=[]; for(let x=0;x<600;x++) if(scoresHit(x,y,L,t)>=0) xs.push([x,scoresHit(x,y,L,t)]); if(xs.length) return {y:y+12,x:(i)=>{const r=xs.filter(p=>p[1]===i).map(p=>p[0]);return (r[0]+r[r.length-1])/2;}}; } return null; };
 // MENU taps land on the painted row (an off-row MENU tap is a no-op since the menu redesign)
-const menuTap=(i,k=1)=>({clientX:300/k,clientY:menuGeom(menuLayout(600,520),8).rows[i].cy/k});
+const menuTap=(i,k=1)=>{const r=menuGeom(menuLayout(600,520),7).rows[ITEMS[i]];return {clientX:(r.x+r.w/2)/k,clientY:(r.y+r.h/2)/k};}; // a row's centre (the MENU page's geometry, rows by name)
+const menuU=()=>menuGeom(menuLayout(600,520),7).u; // box units per design px: the page paints under this scale, so a raw fillText x / y maps through it
 /* a SETTINGS row's centre by LABEL in the ten rows CLASSIC 2D shows (v202 Task 2.4): page and PAUSE view 1 share the 600x520 box */
 const OPT10=optRows(false), optG=()=>settingsGeom(menuLayout(600,520),false,OPT10), optY=(lab,k=1)=>(optG().y0+(OPT10.indexOf(lab)+0.5)*optG().rowH)/k;
 
@@ -153,14 +154,14 @@ check("null-canvas renderer render() does not throw", ok);
 
 // ---- fix round 1: MENU logo (spec §2) + 0.25s intro-skip fade ramp ----
 {
-  const texts=[], sets=[], blits=[];
+  const texts=[], sets=[], blits=[], alphas=[];
   const rec=new Proxy(function(){},{
     get:(t,p)=>{
       if(p===Symbol.toPrimitive)return()=>"" ;
       return (...a)=>{ if(p==="fillText")texts.push(String(a[0])); if(p==="drawImage")blits.push(a[0]); return rec; };
      },
     apply:()=>rec,
-    set:(t,p,v)=>{ if(p==="fillStyle")sets.push(String(v)); return true; }
+    set:(t,p,v)=>{ if(p==="fillStyle")sets.push(String(v)); if(p==="globalAlpha"&&Number.isFinite(+v))alphas.push(+v); return true; }
    });
   // the logo's layers need a canvas source: a stub OffscreenCanvas (the cache and the painter both make theirs from it)
   const ID={a:1,b:0,c:0,d:1,e:0,f:0}, sctx=new Proxy({},{get:(t,p)=>p in t?t[p]:p==="getTransform"?()=>ID:()=>{},set:(t,p,v)=>{t[p]=v;return true;}});
@@ -174,16 +175,15 @@ check("null-canvas renderer render() does not throw", ok);
   g.app.skip();                          // INTRO -> MENU
   for(let i=1;i<=20;i++)g.loop(i*16);    // ~0.32s of MENU frames
   const runs=logo.ran-ran0, stubBlits=blits.filter(b=>b instanceof StubCv).length;
-  check("MENU draws the FUSE/GRID wordmark (logo B: each MENU frame's painter run blits its layer and its spark, place menu; no font text)",
-    runs>0&&stubBlits===2*runs&&logo.place==="menu"&&texts.indexOf("FUSE")<0,
+  check("MENU draws the FUSE/GRID wordmark (logo B: each MENU frame's painter run blits its layer and its spark, place menu; no font text) beside the page's own three layers (room, plate, foot)",
+    runs>0&&stubBlits===5*runs&&logo.place==="menu"&&texts.indexOf("FUSE")<0,
     runs+" runs, "+stubBlits+" layer blits, last "+logo.place+" / "+texts.filter(t=>t==="FUSE"||t==="GRID").join(","));
   logo.on=false; delete globalThis.OffscreenCanvas; (await import("../src/render/kit/cache.js")).release();
-  const alphas=sets.filter(s=>s.slice(0,13)==="rgba(7,10,18,")
-    .map(s=>parseFloat(s.slice(13)));
-  check("skip fade ramps past menu veil in first frames (alpha>0.9)",
-    alphas.some(a=>a>0.9), "max "+Math.max.apply(null,[0].concat(alphas)));
-  check("fade settled after 0.25s (back to 0.62 veil)",
-    alphas.slice(-6).every(a=>a<=0.73),
+  /* v202 Task 3.1: no black fade and no 0.62 dim over a frozen board: the room look is opaque from MENU's first frame, the plate fades in */
+  check("skip: the plate fades in from alpha ~0 in the first frames, with no veil over a board (the room look under it is opaque)",
+    alphas.length>0&&Math.min(...alphas)<0.2&&!sets.some(s=>s.slice(0,13)==="rgba(7,10,18,"), "min "+Math.min(...alphas));
+  check("fade settled after 0.25s (the plate at alpha 1)",
+    alphas.slice(-3).every(a=>a===1)&&alphas.some(a=>a>0&&a<1),
     "tail "+alphas.slice(-4).map(a=>a.toFixed(2)).join(","));
 }
 
@@ -383,7 +383,7 @@ function mkCanvas(){
   const at=cv.calls.filter(c=>c[0]==="fillText"&&c[1][0]==="RECORDS").pop();
   check("D2 setup: MENU painted a RECORDS label at cursor 0",
     !!at&&g.app.screen===SCREEN.MENU&&g.app.cursor===0,String(at&&at[1]));
-  cv.fire("pointerdown",{clientX:at[1][1]/2,clientY:at[1][2]/2});
+  cv.fire("pointerdown",{clientX:at[1][1]*menuU()/2,clientY:at[1][2]*menuU()/2}); // the page paints under its scale u
   check("D2 MENU tap on the RECORDS row opens RECORDS (its SCORES tab), not a PLAY run",
     g.app.screen===SCREEN.SCORES&&g.app.cursor===ITEMS.indexOf("RECORDS"),
     g.app.screen+"/"+g.app.cursor);
@@ -396,20 +396,21 @@ function mkCanvas(){
   const cv=mkCamCanvas(600,520);
   const g=createGame(cv.el,{seed:76});
   g.app.cabinetSeen=true; g.app.skip(); g.app.cursor=0;
-  const L=menuLayout(600,520), R=menuGeom(L,7).rows;
-  cv.fire("pointerdown",{clientX:300,clientY:R[0].y0-6});
-  cv.fire("pointerdown",{clientX:300,clientY:R[6].y1+6});
-  check("M1 a MENU tap above / below the rows starts nothing",
+  const L=menuLayout(600,520), MG=menuGeom(L,7), R=ITEMS.map(l=>{const r=MG.rows[l];return {...r,y0:r.y,y1:r.y+r.h,cy:r.y+r.h/2};}), u=MG.u;
+  cv.fire("pointerdown",{clientX:R[0].x+R[0].w/2,clientY:R[0].y0-14*u});        // the logo, above PLAY
+  cv.fire("pointerdown",{clientX:R[0].x+R[0].w/2,clientY:R[6].y1+14*u});        // the plate's foot padding, under SOURCE
+  cv.fire("pointerdown",{clientX:MG.card.x+MG.card.w/2,clientY:R[2].cy});        // the next-run card's slot, beside DAILY
+  check("M1 a MENU tap above / below the rows or on the card's slot starts nothing",
     g.app.screen===SCREEN.MENU&&g.world.time===0&&g.app.cursor===0, g.app.screen);
-  cv.fire("pointerdown",{clientX:8,clientY:R[ITEMS.indexOf("GUIDE")].cy});        // far left, GUIDE band
-  check("M1 a MENU side tap on a row's band opens that row (full-width bands)", g.app.screen===SCREEN.GUIDE&&g.app.cursor===ITEMS.indexOf("GUIDE"), g.app.screen+"/"+g.app.cursor);
+  cv.fire("pointerdown",{clientX:MG.plate.x+2,clientY:R[ITEMS.indexOf("GUIDE")].cy});        // the plate's bed left of GUIDE
+  check("M1 a MENU side tap on the plate's bed beside a row opens that row", g.app.screen===SCREEN.GUIDE&&g.app.cursor===ITEMS.indexOf("GUIDE"), g.app.screen+"/"+g.app.cursor);
   const G=mdGuideGeom(L);
   cv.fire("pointerdown",{clientX:G.tiles[2].x+G.tiles[2].w/2,clientY:G.tiles[2].y+G.tiles[2].h/2}); // ATLAS: GUIDE doors are tiles
   check("M1 GUIDE tap on ENEMIES opens ENEMIES (GUIDE no longer traps touch)", g.app.screen===SCREEN.ENEMIES&&g.app.guideRow===2, g.app.screen+"/"+g.app.guideRow);
   g.app.back();
   cv.fire("pointerdown",{clientX:300,clientY:4});
   check("M1 GUIDE tap off the rows backs out to MENU", g.app.screen===SCREEN.MENU, g.app.screen);
-  cv.fire("pointerdown",{clientX:300,clientY:R[1].cy});
+  cv.fire("pointerdown",{clientX:R[1].x+R[1].w/2,clientY:R[1].cy});
   check("M1 LEVEL SELECT opens from its row", g.app.screen===SCREEN.LEVEL, g.app.screen);
   const LG=levelGeom(L,g.app.pactUnlocked), c=(r)=>({clientX:r.x+r.w/2,clientY:r.y+r.h/2});
   cv.fire("pointerdown",c(LG.room[2])); cv.fire("pointerdown",c(LG.heat[2])); cv.fire("pointerdown",c(LG.pace[0]));
@@ -420,10 +421,10 @@ function mkCanvas(){
   cv.fire("pointerdown",{clientX:2,clientY:2});
   check("M1 LEVEL tap outside the plate backs out", g.app.screen===SCREEN.MENU, g.app.screen);
   cv.calls.length=0; for(let i=1;i<=40;i++)g.loop(100000+i*16);
-  const tagTxt=cv.calls.filter(c=>c[0]==="fillText").map(c=>String(c[1][0])).find(t=>/^[A-Z]+ · (NORMAL|HARD|EXPERT)\b/.test(t));
-  cv.fire("pointerdown",{clientX:300,clientY:R[0].cy}); g.loop(100700);
-  check("M1 the PLAY tag is the run PLAY starts (room 3 by its world name, heat, pace)",
-    tagTxt==="FACTORY · EXPERT · FAST SPEED"&&g.app.screen===SCREEN.GAME&&g.world.level===3&&(g.world.heat|0)===2&&(g.world.pace|0)===1,
+  const drawn=cv.calls.filter(c=>c[0]==="fillText").map(c=>String(c[1][0])), tagTxt=(await import("../src/render/pages/menu.js"))._dbg.last.P.rows.PLAY.tag.lines;
+  cv.fire("pointerdown",{clientX:R[0].x+R[0].w/2,clientY:R[0].cy}); g.loop(100700);
+  check("M1 the PLAY tag names what differs from a default run (EXPERT DIFFICULTY · FAST SPEED, drawn whole) and PLAY starts it (room 3, heat, pace)",
+    tagTxt.join(" ")==="EXPERT DIFFICULTY · FAST SPEED"&&tagTxt.every(t=>drawn.includes(t))&&g.app.screen===SCREEN.GAME&&g.world.level===3&&(g.world.heat|0)===2&&(g.world.pace|0)===1,
     tagTxt+" -> "+[g.app.screen,g.world.level,g.world.heat,g.world.pace].join());
   g.app.toMenu();
   g.app.cursor=ITEMS.indexOf("RECORDS"); g.app.confirm();
@@ -440,20 +441,23 @@ function mkCanvas(){
 // LEVEL / HIGH SCORES chip taps cue one uiMove per change, none on the chip
 // already set.
 {
-  const L=menuLayout(600,520), R=menuGeom(L,7,true).rows, band=Math.min(...R.slice(0,6).map(r=>r.b-r.a)), src=R[6].b-R[6].a;
-  const sp=fitBox(393,852,true,600,520).s, sl=fitBox(852,393,true,600,520).s;
-  // ATLAS hub: tiles >= 32 CSS px, the SOURCE foot link (50 logical) too
-  check("M1 touch MENU hub tiles are >= 32 CSS px on a 393x852 phone and in landscape (SOURCE too)",
-    band*sp>=32&&band*sl>=32&&src*sp>=32&&R[0].y0>=56&&R[6].y1<=512, [band.toFixed(1),(band*sp).toFixed(1),(band*sl).toFixed(1),(src*sp).toFixed(1),R[0].y0,R[6].y1].join("|"));
-  check("M1 desktop MENU geometry is untouched by the touch shape (ATLAS pitch 26)", menuGeom(L,7).rows[1].h===26&&menuGeom(L,7,false).rows[1].h===26&&!menuGeom(L,7).hub&&menuGeom(L,7,true).hub, menuGeom(L,7).rows[1].h);
+  /* v202 Task 3.1: a portrait phone's MENU is the #sh shell box's phone column (rows >= 44 CSS px, page-menu.test); a landscape phone has no shell
+     box, so the desk geometry scales into #c as one piece (lead ruling 2): every row stays tappable, its hit band contiguous; the sizes are reported */
+  const L=menuLayout(600,520), MG=menuGeom(L,7,true), R=ITEMS.map(l=>{const r=MG.rows[l],h=MG.hit[l];return {...r,y0:r.y,y1:r.y+r.h,cy:r.y+r.h/2,a:h.y,b:h.y+h.h};});
+  const sg=shellGeo(393,852), PG=menuGeom(menuLayout(sg.w,sg.h,sg.logo,sg.s),7,true), sl=fitBox(852,393,true,600,520).s;
+  const pmin=Math.min(...ITEMS.map(l=>PG.rows[l].h*sg.s)), lband=Math.min(...R.map(r=>r.b-r.a))*sl;
+  console.log("  NOTE landscape 852x393 (no shell box): MENU hit bands "+lband.toFixed(1)+" CSS px, doors "+(R[1].h*sl).toFixed(1)+"; portrait phone rows >= "+pmin.toFixed(1));
+  check("M1 touch MENU: a 393x852 phone's rows are >= 44 CSS px (its #sh phone column); landscape #c rows tile the list with no gap (hit bands contiguous) inside the canvas",
+    pmin>=43.95&&R.every((r,i)=>!i||Math.abs(r.a-R[i-1].b)<1e-9)&&R[0].a>=0&&R[6].b<=520&&PG.mode==="phone"&&MG.mode==="desk", [pmin.toFixed(1),lband.toFixed(1)].join("|"));
+  check("M1 desktop MENU geometry is the same with or without touch on the board canvas (one desk geometry; touch changes words only)", ITEMS.every(l=>JSON.stringify(menuGeom(L,7,false).rows[l])===JSON.stringify(MG.rows[l])));
   const cv=mkCamCanvas(600,520,"p");
   const g=createGame(cv.el,{seed:77});
   g.app.cabinetSeen=true; g.app.skip();
   for(let i=1;i<=40;i++)g.loop(i*16);
-  const at=cv.calls.filter(c=>c[0]==="fillText"&&c[1][0]==="RECORDS").pop();
-  check("M1 touch MENU paints RECORDS inside its hub tile",
-    !!at&&at[1][2]>R[3].y0&&at[1][2]<R[3].y1&&at[1][1]>R[3].x&&at[1][1]<R[3].x+R[3].w, String(at&&at[1]));
-  cv.fire("pointerdown",{clientX:at[1][1],clientY:at[1][2]});
+  const at=cv.calls.filter(c=>c[0]==="fillText"&&c[1][0]==="RECORDS").pop(), u=MG.u, ax=at&&at[1][1]*u, ay=at&&at[1][2]*u;
+  check("M1 touch MENU paints RECORDS inside its row",
+    !!at&&ay>R[3].y0&&ay<R[3].y1&&ax>R[3].x&&ax<R[3].x+R[3].w, String(at&&at[1]));
+  cv.fire("pointerdown",{clientX:ax,clientY:ay});
   check("M1 touch MENU tap on the painted RECORDS label opens RECORDS (its SCORES tab)", g.app.screen===SCREEN.SCORES&&g.app.cursor===ITEMS.indexOf("RECORDS"), g.app.screen+"/"+g.app.cursor);
   g.app.toMenu(); g.app.cursor=ITEMS.indexOf("LEVEL SELECT"); g.app.confirm();
   cv.calls.length=0; g.loop(5000); g.loop(5016);
@@ -898,7 +902,7 @@ for(const mode of ["autoplay","code"]){
       return (...a)=>{ if(p==="fillText")texts.push(String(a[0])); return rec; };
      },
     apply:()=>rec,
-    set:(t,p,v)=>{ if(p==="fillStyle")sets.push(String(v)); return true; }
+    set:(t,p,v)=>{ if(p==="fillStyle")sets.push(String(v)); if(p==="globalAlpha")sets.push(+v); return true; }
    });
   const fake={getContext:()=>rec,addEventListener(){},style:{}};
   const g=createGame(fake,{seed:41});
@@ -911,16 +915,17 @@ for(const mode of ["autoplay","code"]){
     g.app.screen===SCREEN.ATTRACT&&!!g.demo,String(g.app.screen));
   sets.length=0;
   g.app.key("Escape");                   // exitAttract -> MENU, subT reset
-  const alphas=[];
+  const alphas=[], veils=[];
   for(let i=1;i<=20;i++){ t+=16; g.loop(t);
-    alphas.push(...sets.filter(s=>String(s).slice(0,13)==="rgba(7,10,18,")
-      .map(s=>parseFloat(String(s).slice(13))));
+    alphas.push(...sets.filter(s=>Number.isFinite(s))); // the page's own alpha writes (this stub's reads are not numbers, so a painter's a0 * k is NaN)
+    veils.push(...sets.filter(s=>String(s).slice(0,13)==="rgba(7,10,18,"));
     sets.length=0;
    }
-  check("P2 post-attract MENU: fade veil k>0.9 in first frames",
-    alphas.some(a=>a>0.9),"max "+Math.max.apply(null,[0].concat(alphas)));
-  check("P2 veil settles to plain 0.62 dim after 0.25s",
-    alphas.slice(-6).every(a=>a<=0.73),
+  /* v202 Task 3.1: MENU's room look covers the demo board from the first frame (no veil over it); the plate fades in over 0.25 s */
+  check("P2 post-attract MENU: the plate fades in from alpha ~0 in the first frames, no veil over the demo board",
+    alphas.length>0&&Math.min(...alphas)<0.2&&veils.length===0,"min "+Math.min(...alphas)+" veils "+veils.length);
+  check("P2 the plate settles at alpha 1 after 0.25s",
+    alphas.slice(-3).every(a=>a===1),
     "tail "+alphas.slice(-4).map(a=>a.toFixed(2)).join(","));
 }
 
@@ -1975,16 +1980,16 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   check("O2 body[data-lay]=d title paints PRESS ANY KEY OR BUTTON",shot(intro(0,1),lay("d")).texts.includes("PRESS ANY KEY OR BUTTON"));
   const L=layout(600,520);
   const menu=(fromShow)=>shot({screen:SCREEN.MENU,fromShow,subT:0,cursor:0,heat:0,dailyTag:"",optRows:()=>optRows(false)},lay("d")); // optRows: the app's one SETTINGS-rows predicate (the MENU pane counts them)
-  const ns=menu(true), sk=menu(false);
-  check("O2 the first MENU frame after a natural end: 0.12 dim, no fade, logo at logoScale*1.35",
-    ns.fills[0]==="rgba(7,10,18,0.12)"&&ns.fills[1]!=="rgba(7,10,18,1)"&&ns.scales.includes(L.logoScale*1.35),
+  const ns=menu(true), sk=menu(false), alphaOf=(app)=>{ const a=[]; const c=new Proxy({},{get:(t,p)=>p in t?t[p]:p==="measureText"?()=>({width:0}):()=>{},set:(t,p,v)=>{ if(p==="globalAlpha")a.push(v); t[p]=v; return true; }}); drawShell(c,app,createWorld(1,1),lay("d"),"2d"); return a; };
+  /* v202 Task 3.1: the room look covers the board from MENU's first frame (main passes covered), so the show's blast no longer reads first and the
+     slam is gone: a natural end and a skip land the same, the room opaque at once and the plate, logo and foot fading in over 0.25 s */
+  check("O2 the first MENU frame after a natural end: the room look paints first, one opaque world colour, no veil and no 1.35 slam",
+    /^#[0-9a-f]{6}$/.test(ns.fills[0])&&!ns.fills.some((f)=>/^rgba\(7,10,18,/.test(f))&&!ns.scales.some((k)=>Math.abs(k-L.logoScale*1.35)<1e-9),
     ns.fills.slice(0,2)+" / "+ns.scales.slice(0,3));
-  const late=shot({screen:SCREEN.MENU,fromShow:true,subT:0.7,cursor:0,heat:0,dailyTag:"",optRows:()=>optRows(false)},lay("d"));
-  check("eye-check: after a natural end the blast reads first: no rows on the downbeat frame, PLAY once the 2S hold is over",
-    !ns.texts.includes("PLAY")&&late.texts.includes("PLAY")&&sk.texts.includes("PLAY"), ns.texts.join("|"));
-  check("O2 the first MENU frame after a skip: 0.62 dim, then the opaque fade, logo at logoScale",
-    sk.fills[0]==="rgba(7,10,18,0.62)"&&sk.fills[1]==="rgba(7,10,18,1)"&&sk.scales.includes(L.logoScale)
-    &&!sk.scales.includes(L.logoScale*1.35), sk.fills.slice(0,2)+" / "+sk.scales.slice(0,3));
+  check("eye-check: a natural end and a skip land alike: the rows are painted from the first frame, the plate's fade starting at alpha 0",
+    ns.texts.includes("PLAY")&&sk.texts.includes("PLAY")&&alphaOf({screen:SCREEN.MENU,fromShow:true,subT:0,cursor:0,heat:0,dailyTag:""})[0]===0&&alphaOf({screen:SCREEN.MENU,fromShow:false,subT:0.7,cursor:0,heat:0,dailyTag:""})[0]===1, ns.texts.join("|"));
+  check("O2 the first MENU frame after a skip is the natural end's frame (same fills, same scales)",
+    JSON.stringify(sk.fills)===JSON.stringify(ns.fills)&&JSON.stringify(sk.scales)===JSON.stringify(ns.scales), sk.fills.slice(0,2)+" / "+sk.scales.slice(0,3));
   const g=createGame(null,{seed:18});
   g.loop(0); g.loop(250); g.loop(500);   // dt caps at 0.25 s
   const rv=shot(g.app,null,"2d",g.world);

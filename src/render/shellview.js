@@ -4,18 +4,17 @@
    nothing here. kindSize/dims are the one source of the logical box every
    screen measures against: a real canvas always wins, otherwise the render
    kind picks the classic box or the projected dimetric one. */
-import { CFG, biomeOf } from "../core/config.js";
+import { CFG } from "../core/config.js";
 import { clampHeat } from "../core/heat.js";
 import { clampPact } from "../core/pact.js";
 import { clampPace } from "../core/pace.js";
-import { LABEL, runWords } from "./words.js";
-import { SCREEN, ITEMS, LEVEL_ROWS } from "../app/menuapp.js";
+import { SCREEN, ITEMS, LEVEL_ROWS, GUIDE_ROWS } from "../app/menuapp.js";
+import { LABEL } from "./words.js";
 import { PROJ } from "./r3d/camera.js";
-import { drawLogo, overlayBox, touchLay, fmtTime, isRunEnd } from "./scenes.js";
+import { overlayBox, touchLay, fmtTime, isRunEnd } from "./scenes.js";
 import * as menudraw from "./menudraw.js";
 import { CACHE_NAME } from "../pwa/shell.js";
-import { hints } from "./hintcopy.js";
-import { deviceScale } from "./logo/draw2d.js";
+import { hints, tapMode } from "./hintcopy.js";
 
 export function kindSize(kind) {
   const iso = kind === "iso";
@@ -37,10 +36,6 @@ const layOf = (cv) => {
   return (b && b.getAttribute && b.getAttribute("data-lay")) || "d";
 };
 
-/* PLAY's tag is the whole setup it will start, worded like LEVEL SELECT's
-   START: the level (by its world name), difficulty, speed (+modifiers), each
-   named (words.js); drawMenu fits it to its slot from info. */
-const playTag = (app) => biomeOf(app.level | 0 || 1).name + " · " + runWords({ heat: app.heat, pace: app.pace, pact: app.pactUnlocked ? clampPact(app.pact) : 0 });
 /* The screens drawn on #sh's own box (fit.js shellGeo) on every layout that
    has one: MENU and every plated page. INTRO, ATTRACT and GAME (PAUSE and
    WIN/LOSE included) stay on the board canvas and its box. */
@@ -51,9 +46,14 @@ export const isShellScreen = (s) => SHELL_ON.has(s);
    overlay keeps #c until its own redesign); 0 = hidden (PLAY, PAUSE, a mid-run
    WIN, INTRO, ATTRACT). */
 export const shellMode = (s, world) => (SHELL_ON.has(s) ? 1 : s === SCREEN.GAME && isRunEnd(world) ? 2 : 0);
+/* The screens whose page paints the room look opaque over its whole canvas every frame it is up (v202 Task 3.1: MENU; each page task
+   adds its screen): main passes {covered: true} to the renderer while one holds, so no look rasters a board nobody sees. */
+const COVERS = new Set([SCREEN.MENU]);
+export const shellCovers = (s) => COVERS.has(s);
+/* css: CSS px per box unit, read only where a page needs it (a touch-portrait #sh box: the MENU phone column is laid out in CSS px). */
 export function dims(canvas, kind) {
   const s = kindSize(kind);
-  return { cw: canvas ? canvas.width : s.w, ch: canvas ? canvas.height : s.h, lg: canvas ? canvas.logo : undefined }; // lg: #sh's logo line (fit.js shellGeo)
+  return { cw: canvas ? canvas.width : s.w, ch: canvas ? canvas.height : s.h, lg: canvas ? canvas.logo : undefined, css: canvas && typeof canvas.logo === "number" && canvas.height > canvas.width * 1.3 ? cssScale(canvas) : undefined }; // lg: #sh's logo line (fit.js shellGeo)
 }
 
 /* GRAPHICS page data arrives finished from the app (gfx.js strings via
@@ -77,8 +77,9 @@ export function stepLookNote(app, now = nowS()) {
 /* index.html's loader (window.__load) paints the DOM chip. row: the RENDER row is
    on screen, so the docked plate stays down; off: live PLAY or the INTRO show,
    where no loading surface shows. The chip sits top-centre inside the drawn
-   stage (#c, or #sh's box), 4 css px under its top: clear of the MENU logo line
-   (its top is >= 37 logical px down on every box), and never over the PAUSE pill
+   stage (#c, or #sh's box), 4 css px under its top: clear of the MENU logo (the
+   MENU page's plate header, 70 CSS px down on #sh; renderrow.test checks the phone
+   board stage too), and never over the PAUSE pill
    or the touch pad, which live outside the stage. The rect is read only while the
    loader has something docked to place. */
 export function loaderSpot(app, world, canvas, host = globalThis) {
@@ -126,10 +127,10 @@ const gfxUi = (app, canvas, kicker) => ({
    the plate is drawn. The row floor is 44 CSS px, so it needs this box's real
    CSS scale; with no usable rect geoFor takes its worst case. paused = the
    inline pauseView 3, measured against overlayBox like the other PAUSE pages. */
-const cssScale = (cv) => {
+function cssScale(cv) {
   const r = cv && cv.width > 0 && cv.getBoundingClientRect ? cv.getBoundingClientRect().width / cv.width : 0;
   return r > 0 && Number.isFinite(r) ? r : undefined;
-};
+}
 const ctlLayout = (canvas, kind, paused) => {
   if (paused) { const B = overlayBox(kind); return menudraw.layout(B.w, B.h); }
   const { cw, ch, lg } = dims(canvas, kind);
@@ -228,6 +229,19 @@ function infoOf(app, kind, getScores, getCab) {
   };
 }
 
+/* MENU's names and values (pages/menu.js): the rows, the focused row's label (tap mode: PLAY, the lit main action; a tap has no focus),
+   the run PLAY starts, the teasers' facts (a score teaser reads only played runs: getCab's top), the build tag and the notes. */
+function menuUi(app, touch, getCab) {
+  if (cabFor !== app.screen) infoOf(app, "", null, getCab);
+  return {
+    rows: ITEMS, focus: tapMode(touch) ? ITEMS[0] : ITEMS[app.cursor | 0] || ITEMS[0], touch, level: app.level | 0 || 1,
+    run: { heat: app.heat, pace: app.pace, pact: app.pactUnlocked ? clampPact(app.pact) : 0, time: !!(app.pactUnlocked && app.timeAttack) },
+    daily: app.dailyTag === "PLAYED" ? ((cab.daily && cab.daily.played) | 0) : null, best: top3.length ? top3[0].s : null,
+    look: app.render3d ? 2 : app.pixel ? 1 : 0, pages: GUIDE_ROWS.length, rev: REV, note: app.soundNote || "", pad: app.padNote || "",
+    reduced: !!(app.settings && app.settings.flx), enterT: app.subT,
+  };
+}
+
 /* FPS METER (GRAPHICS row 7) paints after every screen's chrome, GAME
    included, against the same box that screen measures with. */
 export function drawShell(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
@@ -268,7 +282,7 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
     }
     return;
   }
-  const { cw, ch: chh, lg: logoY } = dims(canvas, kind);
+  const { cw, ch: chh, lg: logoY, css } = dims(canvas, kind);
   if (s === SCREEN.INTRO) // board alpha eases the veil from opaque once the board is ready (3D waits on three)
     return menudraw.drawIntroChrome(c, app.introStage, app.subT, cw, chh, layOf(canvas), app.boardReady ? Math.min(1, app.readyT / 0.4) : 0, { level: app.level, reduced: !!(app.settings && app.settings.flx) });
   if (s === SCREEN.ATTRACT) {
@@ -277,49 +291,7 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
     menudraw.drawAttractHint(c, L, app.subT);
     return;
   }
-  if (s === SCREEN.MENU) {
-    const L = menudraw.layout(cw, chh, logoY),
-      touch = touchLay(canvas), // the predicate main.js taps with
-      lg = menudraw.menuLogo(L); // one logo for both layouts: the touch hub sits under it
-    // the show's natural end slams the logo over a ramping dim; any other
-    // MENU entry (a skip included) keeps the 0.25s fade-out (spec §1)
-    const sl = app.fromShow ? menudraw.slamOf(app.subT) : null;
-    menudraw.drawDim(c, sl ? sl.dim : 0.62, cw, chh);
-    if (!sl && app.subT < 0.25) menudraw.drawFade(c, 1 - app.subT / 0.25, cw, chh);
-    // logo B (cream, the world of the next run) in the old wordmark's slot at logoScale via ctx.scale
-    c.save();
-    const ls = lg.s * (sl ? sl.s : 1), dpr = deviceScale(c);
-    c.translate(L.cx, touch ? Math.max(lg.cy, 4 + 83 * ls) : lg.cy); // the slam's 1.35x never clips the touch logo off the top
-    c.scale(ls, ls);
-    if (sl) c.globalAlpha = sl.a;
-    drawLogo(c, { level: app.level, place: "menu", box: menudraw.menuLogoBox(L), k: lg.s, dpr, touch, t: app.subT, reduced: !!(app.settings && app.settings.flx) });
-    c.restore();
-    menudraw.drawMenu(
-      c,
-      {
-        cursor: app.cursor,
-        enterT: sl ? app.subT - sl.hold : app.subT, // the show's blast plays out before the rows
-        items: [
-          ITEMS[0] + "|" + playTag(app),
-          ITEMS[1],
-          ITEMS[2] + "|" + app.dailyTag,
-          ITEMS[3],
-          ITEMS[4],
-          ITEMS[5],
-          ITEMS[6],
-        ],
-        touch,
-        kind,
-        rev: REV,
-        soundNote: app.soundNote,
-        padNote: app.padNote,
-        info: infoOf(app, kind, getScores, getCab),
-      },
-      L,
-      app.subT,
-    );
-    return;
-  }
+  if (s === SCREEN.MENU) return menudraw.drawMenu(c, menuUi(app, touchLay(canvas), getCab), menudraw.layout(cw, chh, logoY, css), app.subT);
   const L = menudraw.layout(cw, chh, logoY);
   if (s === SCREEN.LEVEL) {
     menudraw.drawDim(c, 0.72, cw, chh);

@@ -434,10 +434,10 @@ const rig3d = () => {
   check("REAL 3D covered WIN: a second covered WIN frame does not repeat it", J(builds) === J([1, 2]) && g.inits === 1, J(builds) + " inits " + g.inits);
 }
 
-/* ---- bookkeeping: the precache knows room.js ---- */
+/* ---- bookkeeping: the precache knows room.js; since MENU paints the room look (v202 Task 3.1) it is a boot module, out of LATER ---- */
 {
-  const shell = readFileSync(join(ROOT, "src/pwa/shell.js"), "utf8");
-  check("src/pwa/shell.js lists room.js in SRC and in LATER", /"src\/render\/kit\/room\.js"/.test(shell) && /"\.\/src\/render\/kit\/room\.js"/.test(shell));
+  const shell = readFileSync(join(ROOT, "src/pwa/shell.js"), "utf8"), { BOOT, LOOK_LATER } = await import("../src/pwa/shell.js");
+  check("src/pwa/shell.js lists room.js in SRC, in the boot set and not in LATER (MENU's backdrop)", /"src\/render\/kit\/room\.js"/.test(shell) && BOOT.includes("./src/render/kit/room.js") && !LOOK_LATER.includes("./src/render/kit/room.js"));
 }
 
 console.log(fail ? "KIT ROOM FAIL" : "KIT ROOM OK", pass + " PASS / " + fail + " FAIL");

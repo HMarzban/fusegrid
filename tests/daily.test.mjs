@@ -374,10 +374,12 @@ import { readFileSync } from "node:fs";
     createMenuApp().dailyTag,
   );
   const shell = readFileSync("src/render/shellview.js", "utf8");
+  const { drawShell } = await import("../src/render/shellview.js"), pg = await import("../src/render/pages/menu.js");
+  const teaser = (tag, cab) => { const a = createMenuApp({ dailyTag: tag, settings: {} }); a.screen = SCREEN.MENU; a.subT = 9; drawShell(new Proxy({}, { get: (t, p) => (p in t ? t[p] : p === "measureText" ? (q) => ({ width: String(q).length * 9 }) : () => {}), set: (t, p, v) => ((t[p] = v), true) }), a, { state: "PLAY" }, null, "2d", () => [], () => 0, () => cab); const z = pg._dbg.last.P.rows.DAILY.tz; return z ? z.lines.join(" ") : ""; };
   check(
-    "shellview renders the DAILY row with its tag, the label|value convention",
-    /ITEMS\[2\] \+ "\|" \+ app\.dailyTag/.test(shell),
-    (shell.match(/ITEMS\[2\][^\n]*/) || [])[0],
+    "shellview hands the DAILY row app.dailyTag's fact: NEW reads NEW · TODAY'S BOARD, PLAYED today's tries (v202 Task 3.1)",
+    /daily: app\.dailyTag === "PLAYED"/.test(shell) && teaser("PLAYED", { daily: { played: 3 } }) === "YOUR TRIES TODAY · 3" && teaser("NEW", {}) === "NEW · TODAY'S BOARD", // the cabinet is read once per MENU entry: PLAYED first
+    teaser("NEW", {}),
   );
 }
 

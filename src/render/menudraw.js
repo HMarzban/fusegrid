@@ -9,7 +9,7 @@ import { POWER, FOES, helpOf } from "../core/entities.js";
 import { HEAT_COL, HEAT_MARK, clampHeat, heatRoster, heatProfile } from "../core/heat.js";
 import { pactLabel } from "../core/pact.js";
 import { PACT_COL, applyPact } from "../core/pact.js";
-import { DIFF, SPEED, MOD, MOD_BITS, TIME_TRIAL, LABEL, RECORD_TABS, diffTag, speedTag, modWords, runWords, runParts, levelsOf } from "./words.js";
+import { DIFF, SPEED, MOD, MOD_BITS, TIME_TRIAL, LABEL, RECORD_TABS, diffTag, speedTag, runParts, levelsOf } from "./words.js";
 import { drawEnemyBody } from "./sprites.js";
 import { drawItemBody } from "./itemdraw.js";
 import { HOME, TILE_HELP, TILE_NAME } from "../core/feat.js";
@@ -19,6 +19,7 @@ import { pixelArt, itemCell, foeCell, pageScale, blitAnim, blitCell, foeAnim, it
 import { foeM, blinkAt } from "./motion.js";
 import { hints, tapMode } from "./hintcopy.js";
 import { drawLogo2d, deviceScale, TITLE_RUNUP } from "./logo/draw2d.js";
+import * as menuPage from "./pages/menu.js";
 const ACCENT = "#37f0d0",
   TEXT = "#dfe7f5",
   MUTED = "#7385ad";
@@ -492,41 +493,6 @@ function roomCard(c, P, d, touch, A, t) {
   c.fillText(clip(c, heatLine(d.heat, d.pact), P.w - 20), x0, hy2);
   c.shadowBlur = 0;
 }
-/* A two-line tile (GUIDE doors, the touch MENU hub): label + sub, the kit's
-   selection idiom. o = {hero, ext, door, touch, subCol}. */
-function paintTile(c, r, label, sub, sel, o) {
-  const p = o || {},
-    cy = r.y + r.h / 2,
-    two = !!sub && !p.hero && !p.flat;
-  cell(c, r, 0.5);
-  if (sel) {
-    selBand(c, r);
-    caret(c, r.x + 11, cy, Math.min(r.h, 30));
-  }
-  c.textBaseline = "middle";
-  c.textAlign = "left";
-  c.fillStyle = sel ? TEXT : p.hero ? TEXT : "#b6c2dc";
-  c.font = sans(p.hero ? (p.touch ? 24 : 20) : p.touch ? 17 : 15, p.hero ? "800" : "700");
-  c.fillText(label, r.x + 24, two ? cy - 9 : cy);
-  const mark = p.ext ? "↗" : p.door ? "›" : "";
-  if (mark) {
-    c.textAlign = "right";
-    c.font = sans(p.ext ? 14 : 18, "600");
-    c.fillStyle = sel ? TEXT : MUTED;
-    c.fillText(mark, r.x + r.w - 10, cy);
-  }
-  if (sub) {
-    c.font = font(p.touch && r.w >= 220 ? 13 : 11, "700"); // a narrow-box hub tile (~185) keeps its teaser whole
-    c.fillStyle = p.subCol || (sel ? TEXT : MUTED);
-    if (two) {
-      c.textAlign = "left";
-      c.fillText(clip(c, sub, r.w - 40), r.x + 24, cy + 11);
-    } else {
-      c.textAlign = "right";
-      c.fillText(p.fit ? clip(c, sub, r.w - (mark ? 30 : 12) - 94) : sub, r.x + r.w - (mark ? 30 : 12), cy); // 94: the label's own 24 + 70
-    }
-  }
-}
 /* A MODIFIERS chip: segs' own frame and type; a name too wide for its chip
    (NO FLOOR ITEMS) breaks at a space onto two lines, then steps down until both
    lines fit its width and height (the iso guard's chip is ~19 px tall). */
@@ -558,11 +524,6 @@ function chip(c, r, label, on, col, touch, fs) {
 export function setupVals(world, run) {
   const j = (a) => [world].concat(a).join(" · "), terse = runParts(run, { count: true, terse: true });
   return [j(runParts(run, { all: true })), j(runParts(run, { all: true, count: true })), j(runParts(run, { count: true })), j(terse), terse.join(" · ") || world];
-}
-/* fitVal for any type: the first candidate that fits w in the font already set, else the last one clipped. */
-function fitIn(c, cands, w) {
-  for (const s of cands) if (mw(c, s) <= w) return s;
-  return clip(c, cands[cands.length - 1], w);
 }
 /* The value slot beside a hero row's label (PLAY, START): paintRow's hero type. */
 function heroRoom(c, w, h, label, touch) {
@@ -623,8 +584,12 @@ function capCell(c, r, name, keyStr, touch, keyPx) {
    instead of pinning to the floor) and narrow any box under 560 wide
    (pages re-flow: LEVEL SELECT stacks its card under the grid, MEDALS goes to
    one column). Neither ever holds at 600x520 or 608x352. */
-export function layout(W, H, lg) {
+export function layout(W, H, lg, css) {
   return Object.freeze({
+    W,
+    H,
+    shell: typeof lg === "number", // dims hands lg only for #sh's shell box
+    css: css > 0 ? css : 1, // CSS px per box unit (the MENU phone column is laid out in CSS px)
     cx: W / 2,
     tall: H > W * 1.3,
     narrow: W < 560,
@@ -644,12 +609,9 @@ export function layout(W, H, lg) {
 /* The title's logo box (logo B on the kit plate, logo/draw2d.js): the board
    canvas inside a 12 px margin, above the prompt's backing by 10 px, centred
    on the old wordmark's line (logoCy - 35.5 x logoScale); the stacked build on
-   touch portrait, the line build elsewhere. MENU's slot is the old wordmark's
-   (81 above the logo line to 10 below, 16 in from each side), in its own
-   units around (cx, logo line) before logoScale. Both keep their last answer,
-   so a steady frame allocates no box. */
-export const LOGO_SLOT = Object.freeze({ top: -81, bot: 10, side: 16 });
-let tlb = null, mlb = null;
+   touch portrait, the line build elsewhere. It keeps its last answer, so a
+   steady frame allocates no box. MENU's logo is the page header's (pages/menu.js). */
+let tlb = null;
 export function titleLogoBox(W, H, lay) {
   if (tlb && tlb.W === W && tlb.H === H && tlb.lay === lay) return tlb.v;
   const L = layout(W, H),
@@ -657,12 +619,6 @@ export function titleLogoBox(W, H, lay) {
     m = 12;
   tlb = { W, H, lay, v: Object.freeze({ box: Object.freeze({ x: m, y: m, w: W - 2 * m, h: L.footY - (px + 12) / 2 - 10 - m }), cy: L.logoCy - 35.5 * L.logoScale, dev: lay === "p" ? "p" : "d" }) };
   return tlb.v;
-}
-export function menuLogoBox(L) {
-  if (mlb && mlb.cx === L.cx && mlb.s === L.logoScale) return mlb.v;
-  const hw = (L.cx - LOGO_SLOT.side) / L.logoScale;
-  mlb = { cx: L.cx, s: L.logoScale, v: Object.freeze({ x: -hw, y: LOGO_SLOT.top, w: 2 * hw, h: LOGO_SLOT.bot - LOGO_SLOT.top }) };
-  return mlb.v;
 }
 /* INTRO chrome (opening spec §3/§7). Title (stage 0): logo reveal (fade +
    slide 0.9 s, a 0.92 -> 1 pop over 0.45 s: the old GRID letters' pop, on
@@ -735,197 +691,13 @@ function backing(c, cx, cy, w, h) {
   c.lineWidth = 1;
   c.strokeRect(cx - w / 2 + 0.5, cy - h / 2 + 0.5, w - 1, h - 1);
 }
-/* MENU entered at the show's natural end: the logo slams on the downbeat
-   (1.35 -> 1, alpha 0 -> 1, easeOutBack, 0.12 s) while the blast plays
-   unobstructed for 2S (hold): the plate and rows enter after it (enterT =
-   subT - hold) and the dim ramps 0.12 -> 0.62 over the 0.35 s that follow.
-   No white flash of its own. */
-export function slamOf(t) {
-  const hold = 2 * SHOW_STEP;
-  return { dim: 0.12 + 0.5 * seg(t, hold, hold + 0.35), s: 1.35 - 0.35 * easeOutBack(seg(t, 0, 0.12)), a: seg(t, 0, 0.12), hold };
-}
-
-/* MAIN MENU over the dimmed frozen arena (ATLAS, r2 direction B): pick on
-   the left, see it on the right. ui={cursor,items,enterT,touch,info,kind};
-   item entries may carry a value token ("PLAY|JUNGLE · NORMAL DIFFICULTY · …"). The row
-   SHAPE (PLAY hero, group gaps before OPTIONS / HIGH SCORES / SOURCE) is a
-   constant here, never read from items: main.js hit-tests with only n, so the
-   painted and tapped rows come from the same table.
-   Keyboard: one 560 plate under the logo, a 272 list (pitch 26 / hero 40 /
-   gap 6) beside a preview pane that follows the cursor (menuPane).
-   Touch (body[data-lay] p/l): a hub of tiles in the pinned reading order —
-   PLAY bar, LEVEL SELECT | DAILY, RECORDS | SETTINGS, the GUIDE bar, the
-   SOURCE foot link — so ↑↓ stays the linear walk and every index the
-   headless confirms use still names the same row (Task 2.2: the approved
-   phone hub reaches LEVEL SELECT through a next-run card, which a later task
-   builds; until then the hub keeps its LEVEL SELECT tile). menuLogo is the one source
-   for shellview's logo and the list top. ui.rev is the build tag shellview
-   derives from CACHE_NAME: keyboard prints it in the foot hint; touch hangs it
-   under the hub where the box has room (#sh), else on the SOURCE tile.
-   Keyboard groups (seven rows): PLAY, LEVEL SELECT, DAILY | RECORDS |
-   SETTINGS, GUIDE | SOURCE; the plate keeps the eight-row list's body
-   (MENU_BODY), so the preview pane keeps the room every pane is laid out for. */
-const MENU_DOOR = [LABEL.LEVEL_SELECT, LABEL.RECORDS, LABEL.SETTINGS, "GUIDE"];
-const menuShape = (n, touch) => Array.from({ length: n }, (_, i) => ({ hero: i === 0, gapBefore: !touch && n === 7 && (i === 3 || i === 4 || i === 6) }));
-export const MENU_PITCH = 26, MENU_PITCH_T = 66;
-const MENU_W = 560, MENU_LIST = 272, HUB = [70, 66, 66, 66, 50], HUB_N = [1, 2, 2, 1, 1]; // tiles per hub row; SOURCE 50 = the 32 CSS px floor on a 393 px phone
-const MENU_BODY = 40 + 7 * MENU_PITCH + 3 * 6; // 240: the hero, seven rows and three gaps the panes were laid out for
-export function menuLogo(L) {
-  return { cy: L.logoCy, s: L.logoScale };
-}
-function hubGeom(L, top) {
-  const w = Math.min(L.cx * 2 - 40, 540),
-    x = Math.round(L.cx - w / 2),
-    pad = 10,
-    g = 6,
-    bot = L.footY + 12,
-    body = HUB.reduce((a, b) => a + b, 0) + g * 4,
-    f = Math.min(1, (bot - top - pad * 2) / body),
-    h = Math.round(pad * 2 + body * f),
-    y = Math.round(L.tall ? top : top + Math.max(0, (bot - top - h) / 2)),
-    iw = w - pad * 2,
-    cw = (iw - g) / 2,
-    cells = [];
-  let yy = y + pad;
-  for (let r = 0; r < HUB.length; r++) {
-    const rh = HUB[r] * f;
-    if (HUB_N[r] === 1) cells.push({ x: x + pad, y: yy, w: iw, h: rh });
-    else cells.push({ x: x + pad, y: yy, w: cw, h: rh }, { x: x + pad + cw + g, y: yy, w: cw, h: rh });
-    yy += rh + g * f;
-  }
-  const rows = cells.map((q) => ({ ...q, y0: q.y, y1: q.y + q.h, h: q.h, cy: q.y + q.h / 2, a: Math.max(y, q.y - (g * f) / 2), b: Math.min(y + h, q.y + q.h + (g * f) / 2), l: Math.max(x, q.x - g / 2), r: Math.min(x + w, q.x + q.w + g / 2) }));
-  return { x, y, w, h, f, pad, rows, mid: x + w / 2, span: HUB[1] * f, hub: true };
-}
-export function menuList(L, n, touch) {
-  const lg = menuLogo(L),
-    top = Math.max(lg.cy + 10 * lg.s + 8, 8);
-  if (touch && n === 7) return hubGeom(L, top);
-  const w = Math.min(L.cx * 2 - 40, MENU_W),
-    x = Math.round(L.cx - w / 2),
-    g = listGeom(L, menuShape(n), { top, bot: L.footY - 14, w: MENU_LIST, x, pitch: MENU_PITCH, hero: 40, gap: 6, pad: 10, body: MENU_BODY });
-  g.px = x;
-  g.pw = w;
-  g.pane = { x: x + MENU_LIST + 2, y: g.y + 10, w: w - MENU_LIST - 12, h: g.h - 20 };
-  return g;
-}
-export function menuGeom(L, n, touch) {
-  const g = menuList(L, n, touch);
-  return { bx: g.x, y0: g.y, rw: g.w, h: g.h, span: g.span, padY: g.pad, rows: g.rows, hub: !!g.hub };
-}
-/* Keyboard: contiguous full-stage-width bands (a side tap is its row).
-   Touch hub: each tile owns half of every gutter beside it; the plate's
-   rim and anything off it is -1, and main does nothing with -1. */
-export function menuHit(x, y, L, n, touch) {
-  const g = menuList(L, n, touch);
-  if (!g.hub) return listHit(x, y, g, true);
-  for (let i = 0; i < g.rows.length; i++) {
-    const r = g.rows[i];
-    if (x >= r.l && x < r.r && y >= r.a && y < r.b) return i;
-  }
-  return -1;
-}
-/* MENU teasers (the hub's second line), from info shellview hands in; an
-   array is longest first, fitted to its tile (a bare NORMAL never shows). */
-const LOOK = ["CLASSIC 2D", "PIXEL", "REAL 3D"];
-function teaser(label, val, I) {
-  const i = I || {};
-  switch (label) {
-    case "PLAY": return val;
-    case LABEL.LEVEL_SELECT: return i.unlocked ? "8 " + LABEL.LEVELS + " · " + LABEL.MODIFIERS + " OPEN" : "5 " + LABEL.LEVELS + " · 3 LOCKED";
-    case "DAILY": return val === "NEW" ? "NEW · TODAY'S BOARD" : "PLAYED · " + ((i.daily && i.daily.played) | 0) + " TODAY";
-    case LABEL.SETTINGS: return "LOOK · " + LOOK[i.look | 0];
-    case "GUIDE": return POWER.length + " " + LABEL.POWER_UPS + " · " + FOES.length + " FOES";
-    case LABEL.RECORDS: return i.top && i.top.length ? ["TOP " + i.top[0].s + " · " + diffTag(0), "TOP " + i.top[0].s] : "NO RUNS YET"; // played runs only (main drops the seeded table)
-    case "SOURCE": return "github.com/HMarzban/fusegrid";
-  }
-  return val;
-}
-/* A controller just arrived: the words that send its player to CONTROLS. LOST has its own place, the PAUSE kicker. */
-const PAD_SIGN = "CONTROLLER READY · " + LABEL.SETTINGS + " › CONTROLS";
-const VIB_NOTE = /^(CONTROLLER READY · VIBRATION \w+)$/;
-const padSign = (n) => (n === "CONTROLLER READY" || n === "CONTROLLER BACK" || VIB_NOTE.test(n || "") ? PAD_SIGN : "");
-/* The note that names the level, only where it measures inside room; else today's words stand. */
-const vibSign = (c, sign, padNote, rev, room, f) => {
-  if (!sign || !VIB_NOTE.test(padNote || "")) return sign;
-  const s = padNote + " · " + LABEL.SETTINGS + " › CONTROLS" + (rev ? " · " + rev : "");
-  c.font = f || font(10);
-  return Math.max(mw(c, s), s.length * 6) + 24 <= room ? s : sign; // footTag's own plate width
-};
-export function drawMenu(c, ui, L, t) {
-  const cur = (ui && ui.cursor) | 0;
-  const items = (ui && ui.items) || [];
-  const et = ui && typeof ui.enterT === "number" ? ui.enterT : t;
-  const touch = !!(ui && ui.touch);
-  const n = items.length;
-  const g = menuList(L, n, touch),
-    shape = menuShape(n, touch),
-    I = (ui && ui.info) || {};
-  // enterT < 0 holds the menu back (the show's blast reads first): nothing,
-  // then the plate fades in over the last 0.12 s before the rows enter
-  const pa = et < 0 ? clamp01(1 + et / 0.12) : 1;
-  if (pa <= 0) return;
-  c.globalAlpha = pa;
-  const rows = items.map((it, i) => {
-    const str = String(it),
-      pipe = str.indexOf("|"),
-      label = pipe > 0 ? str.slice(0, pipe) : str,
-      val = pipe > 0 ? str.slice(pipe + 1) : "",
-      ext = label === "SOURCE",
-      cands = label === "PLAY" && I.level ? setupVals(BIOMES[(I.level - 1) % BIOMES.length].name, { heat: I.heat, pace: I.pace, pact: I.pact }) : null; // the run PLAY starts, longest first
-    return { label, val, cands, hero: shape[i].hero, door: MENU_DOOR.indexOf(label) >= 0, ext, vc: label === "DAILY" && val === "NEW" ? ACCENT : null };
-  });
-  const rev = (ui && ui.rev) || "",
-    note = (ui && ui.soundNote) || "",
-    padNote = ui && ui.padNote;
-  let sign = note || !padSign(ui && ui.padNote) ? "" : PAD_SIGN + (rev ? " · " + rev : ""), // the owner's build tag stays visible
-    tag = note || sign;
-  if (g.hub) {
-    const under = !!(rev || tag) && L.footY - (g.y + g.h) >= 10, // off every tile: a root list ignores an off-plate tap
-      sw = g.rows[n - 1].w; // the SOURCE tile, the last row
-    sign = vibSign(c, sign, padNote, rev, under ? L.cx * 2 - 16 : sw - 124 + 24, under ? null : font(touch && sw >= 220 ? 13 : 11, "700")); // on the tile: paintTile's fit, at its type
-    tag = note || sign;
-    plate(c, g.x, g.y, g.w, g.h);
-    for (let i = 0; i < rows.length; i++) {
-      const r = rows[i],
-        k = easeOutCubic(clamp01((et - i * 0.03) / 0.12)),
-        tz = r.cands || teaser(r.label, r.val, I),
-        sub = Array.isArray(tz) ? (c.font = font(touch && g.rows[i].w >= 220 ? 13 : 11, "700"), fitIn(c, tz, g.rows[i].w - (r.hero ? 12 + 94 : 40))) : tz; // paintTile's type and room (hero: one line, else under the label)
-      c.globalAlpha = pa * k;
-      const q = g.rows[i],
-        rr2 = { x: q.x, y: q.y + 6 * (1 - k), w: q.w, h: q.h };
-      paintTile(c, rr2, r.label, r.ext && tag && !under ? tag : r.ext && rev && !under ? rev + " · " + sub : sub, i === cur, { hero: r.hero, ext: r.ext, door: r.door, touch, flat: i === n - 1, subCol: r.ext && sign && !under ? ACCENT : r.vc, fit: r.ext && !!sign && !under });
-    }
-    if (under) {
-      c.globalAlpha = pa;
-      footTag(c, L.cx, g.y + g.h + 16, tag || rev, sign ? ACCENT : null);
-    }
-    c.globalAlpha = 1;
-    return;
-  }
-  plate(c, g.px, g.y, g.pw, g.h);
-  rows.forEach((r, i) => { if (r.cands) r.val = fitVal(c, r.cands, heroRoom(c, g.w - 16, g.rows[i].h - 4, r.label, touch)); });
-  drawList(c, g, rows, cur, t, { et, touch, alpha: pa });
-  const pk = easeOutCubic(clamp01((et - 0.08) / 0.12));
-  c.globalAlpha = pa * pk;
-  menuPane(c, { ...g.pane, y: g.pane.y + 6 * (1 - pk) }, rows[cur] || rows[0], I, ui.kind, t);
-  c.globalAlpha = pa;
-  sign = vibSign(c, sign, padNote, rev, L.cx * 2 - 16);
-  footTag(c, L.cx, L.footY, sign || (note ? note + " · " : "") + "↑↓ MOVE · " + hints().ok + " CONFIRM" + (rev ? " · " + rev : ""), sign ? ACCENT : null);
-  c.globalAlpha = 1;
-}
-/* A muted line below a plate: give it the plate's own ground, never bare board. */
-function footTag(c, x, y, s, col) {
-  const bw = s.length * 6 + 24;
-  c.fillStyle = PLATE;
-  c.fillRect(Math.round(x - bw / 2), Math.round(y - 11), Math.round(bw), 22);
-  c.fillStyle = col || MUTED;
-  c.font = font(10);
-  c.textAlign = "center";
-  c.textBaseline = "middle";
-  c.fillText(s, x, y);
-}
-/* The preview pane: what the cursor row holds, from read-only info
-   (shellview's getters; this file never imports src/app). */
+/* MAIN MENU: the page is src/render/pages/menu.js (UI upgrade v202 Task 3.1): one geometry for draw and tap, rows by name. These keep the
+   entry names shellview, the pointer and the tests call; L is layout(W, H, lg, css) for the box the page draws on, touch body[data-lay] p / l. */
+const frameOf = (L, touch) => ({ W: L.W, H: L.H, touch: !!touch, shell: !!L.shell, css: L.css });
+export const menuGeom = (L, _n, touch) => menuPage.menuGeom(frameOf(L, touch));
+export const menuHit = (x, y, L, _n, touch) => menuPage.menuHit(x, y, frameOf(L, touch));
+export const drawMenu = (c, ui, L, t) => menuPage.drawMenuPage(c, frameOf(L, ui && ui.touch), ui || {}, t);
+/* A pane's head line and a pane line (the CONTROLS page's preview pane). */
 function paneHead(c, P, title, right, rc) {
   c.textBaseline = "middle";
   c.textAlign = "left";
@@ -945,152 +717,6 @@ function paneLine(c, P, y, s, col, size, align) {
   c.fillStyle = col || MUTED;
   c.font = font(size || 10, "700");
   c.fillText(clip(c, s, P.w - 20), align === "center" ? P.x + P.w / 2 : P.x + 10, y);
-}
-function menuPane(c, P, row, I, kind, t) {
-  const A = pxArt(kind),
-    lab = row.label,
-    a0 = c.globalAlpha;
-  if (lab === "PLAY" || lab === "DAILY") {
-    const d = lab === "DAILY";
-    roomCard(c, { x: P.x, y: P.y, w: P.w, h: 172 }, d ? { room: 1, heat: 0, pact: 0, title: "TODAY'S BOARD" } : { room: I.level || 1, heat: I.heat | 0, pact: I.pact | 0, best: I.best && I.best[(I.level || 1) - 1], open: !!I.unlocked }, false, A, t);
-    const y = P.y + 190;
-    if (d) {
-      const D = I.daily || {},
-        played = (D.played | 0) > 0;
-      paneLine(c, P, y, "JUNGLE · " + runWords({}), TEXT); // the daily's pinned settings, each named (it ignores the player's own)
-      paneLine(c, P, y + 16, "YOUR TRIES TODAY " + (D.played | 0) + (played ? " · YOUR BEST " + (D.best | 0) : ""), played ? ACCENT : MUTED);
-      paneLine(c, P, y + 32, "SAME BOARD ON EVERY TRY TODAY", MUTED);
-    } else {
-      c.font = font(10, "700");
-      paneLine(c, P, y, fitIn(c, (row.cands || [row.val || ""]).map((v) => "NEXT RUN · " + v), P.w - 20), TEXT);
-      paneLine(c, P, y + 16, hints().ok + " STARTS IT · LEVEL SELECT CHANGES IT", MUTED);
-      paneLine(c, P, y + 32, "8 " + LABEL.LEVELS + " · 3 DIFFICULTIES · 3 SPEEDS", MUTED);
-    }
-    return;
-  }
-  cell(c, P);
-  if (lab === LABEL.LEVEL_SELECT) {
-    paneHead(c, P, (I.unlocked ? "8 " : "5 ") + LABEL.LEVELS, I.unlocked ? "ALL OPEN" : "3 LOCKED", I.unlocked ? ACCENT : MUTED);
-    const tw = 60, tg = 5, x0 = P.x + (P.w - (4 * tw + 3 * tg)) / 2;
-    for (let i = 0; i < 8; i++) {
-      const r = { x: x0 + (i % 4) * (tw + tg), y: P.y + 30 + (i >> 2) * 58, w: tw, h: 54 },
-        lock = !I.unlocked && i >= 5;
-      cell(c, r, 0.5);
-      c.globalAlpha = a0 * (lock ? 0.25 : 1);
-      schem(c, r.x + 7, r.y + 4, 3, BIOMES[i]);
-      c.globalAlpha = a0;
-      if (lock) lockGlyph(c, r.x + r.w / 2, r.y + 22, 14, TEXT);
-      c.textAlign = "center";
-      c.fillStyle = lock ? MUTED : TEXT;
-      c.font = font(9, "700");
-      c.fillText(BIOMES[i].name, r.x + r.w / 2, r.y + 48);
-    }
-    paneLine(c, P, P.y + 160, LABEL.DIFFICULTY + "  " + DIFF.join(" · "), TEXT);
-    paneLine(c, P, P.y + 176, LABEL.GAME_SPEED + "  " + SPEED.join(" · "), TEXT);
-    if (I.unlocked) {
-      c.font = font(10, "700");
-      wrap(c, LABEL.MODIFIERS + " " + modWords(15).concat(TIME_TRIAL).join(" · "), P.w - 20, P.h >= 216 ? 2 : 1).forEach((l, i) => paneLine(c, P, P.y + 192 + 16 * i, l, TEXT)); // a second line only where the pane has it (the iso guard's pane does not, as SETTINGS' pad line)
-    } else paneLine(c, P, P.y + 192, "CLEAR " + LABEL.LEVEL + " 5: " + LABEL.LEVELS + " 6–8 + " + LABEL.MODIFIERS, ACCENT);
-    paneLine(c, P, P.y + P.h - 14, "EVERY LEVEL SHOWS ITS FOES + YOUR BEST", MUTED);
-  } else if (lab === LABEL.SETTINGS) {
-    paneHead(c, P, "THREE LOOKS", LABEL.ART_STYLE + " ROW");
-    const bw = (P.w - 28) / 3;
-    for (let i = 0; i < 3; i++) {
-      const r = { x: P.x + 10 + i * (bw + 4), y: P.y + 30, w: bw, h: 70 },
-        on = (I.look | 0) === i;
-      cell(c, r, 0.5);
-      if (on) selBand(c, r);
-      const b = BIOMES[0];
-      c.globalAlpha = a0 * (on ? 1 : 0.55);
-      if (i === 0) schem(c, r.x + (r.w - 45) / 2, r.y + 8, 3, b);
-      else if (i === 1) {
-        const q0 = r.x + (r.w - 54) / 2;
-        for (let q = 0; q < 9; q++) for (let s = 0; s < 6; s++) {
-          c.fillStyle = (q + s) % 3 === 0 ? b.brickA : (q + s) & 1 ? b.floor1 : b.floor0;
-          c.fillRect(q0 + q * 6, r.y + 10 + s * 6, 6, 6);
-        }
-      } else {
-        c.fillStyle = b.floor0;
-        c.beginPath();
-        c.moveTo(r.x + 18, r.y + 12);
-        c.lineTo(r.x + r.w - 18, r.y + 12);
-        c.lineTo(r.x + r.w - 6, r.y + 44);
-        c.lineTo(r.x + 6, r.y + 44);
-        c.closePath();
-        c.fill();
-        c.fillStyle = b.wall;
-        c.fillRect(r.x + 28, r.y + 22, 10, 12);
-        c.fillRect(r.x + r.w - 38, r.y + 22, 10, 12);
-      }
-      c.globalAlpha = a0;
-      c.textAlign = "center";
-      c.fillStyle = on ? ACCENT : MUTED;
-      c.font = font(9, on ? "900" : "700");
-      c.fillText(LOOK[i], r.x + r.w / 2, r.y + 60);
-    }
-    paneLine(c, P, P.y + 116, "CLASSIC 2D → PIXEL → REAL 3D, YOUR PICK", TEXT);
-    paneLine(c, P, P.y + 140, "SOUND " + (I.snd ? "ON" : "OFF") + " · MUSIC " + (I.mus | 0) + " · SFX " + (I.sfx | 0));
-    const O = I.opt || []; // the SETTINGS rows the page will show (the app's optRows): CAMERA and BRIGHTNESS only in REAL 3D
-    paneLine(c, P, P.y + 156, (O.includes("CAMERA") ? "CAMERA · BRIGHTNESS · " : "") + "SHAKE · FLASH");
-    paneLine(c, P, P.y + 172, "GRAPHICS " + (I.gfx || "AUTO") + " · FRAME RATE · RESOLUTION");
-    if (P.h >= 216) paneLine(c, P, P.y + 188, I.pad ? "CONTROLS · CONTROLLER READY" : "CONTROLS · KEYS + CONTROLLER");
-    paneLine(c, P, P.y + P.h - 14, hints().ok + " OPENS ALL " + (({ 10: "TEN", 12: "TWELVE" })[O.length] || O.length) + " ROWS", MUTED);
-  } else if (lab === "GUIDE") {
-    paneHead(c, P, "FIELD GUIDE", POWER.length + " " + LABEL.POWER_UPS + " · " + FOES.length + " FOES");
-    const sw = (P.w - 20) / 6;
-    for (let i = 0; i < 6; i++) {
-      const p = POWER[i], cx = P.x + 10 + sw * (i + 0.5);
-      well(c, cx, P.y + 48, 26, p.col);
-      itemAt(c, A, p, cx, P.y + 48, 18, t);
-      c.textAlign = "center";
-      c.fillStyle = MUTED;
-      c.font = font(8, "700");
-      c.fillText(p.name, cx, P.y + 72);
-    }
-    const fw = (P.w - 20) / 3;
-    for (let i = 0; i < 3; i++) {
-      const f = FOES[[0, 3, 4][i]], cx = P.x + 10 + fw * (i + 0.5);
-      well(c, cx, P.y + 108, 34);
-      foeAt(c, A, f.t, cx, P.y + 108, 26, t);
-      c.textAlign = "center";
-      c.fillStyle = TEXT;
-      c.font = font(9, "700");
-      c.fillText(f.name, cx, P.y + 136);
-    }
-    paneLine(c, P, P.y + 166, "HOW TO PLAY · " + LABEL.POWER_UPS + " · ENEMIES", TEXT, 10, "center");
-    paneLine(c, P, P.y + P.h - 14, "EVERY POWER-UP + FOE, WITH WHAT IT DOES", MUTED, 10, "center");
-  } else if (lab === LABEL.RECORDS) {
-    paneHead(c, P, "YOUR TOP 3", diffTag(0));
-    const top = I.top || [];
-    if (!top.length) paneLine(c, P, P.y + 90, "NO " + diffTag(0) + " RUNS YET", MUTED, 12, "center");
-    for (let i = 0; i < Math.min(3, top.length); i++) {
-      const r = { x: P.x + 10, y: P.y + 30 + i * 46, w: P.w - 20, h: 40 }, s = top[i];
-      cell(c, r, 0.5);
-      if (i === 0) selBand(c, r);
-      c.textBaseline = "middle";
-      c.textAlign = "left";
-      c.fillStyle = i ? MUTED : ACCENT;
-      c.font = font(13, "900");
-      c.fillText(String(i + 1), r.x + 12, r.y + 20);
-      c.fillStyle = TEXT;
-      c.font = font(18, "900");
-      c.fillText(String(s.s), r.x + 34, r.y + 20);
-      c.textAlign = "right";
-      c.fillStyle = MUTED;
-      c.font = font(10, "700");
-      c.fillText(LABEL.LEVEL + " " + s.l + " · " + s.d, r.x + r.w - 10, r.y + 20);
-    }
-    paneLine(c, P, P.y + 186, "×2 ON " + DIFF[1] + " · ×3 ON " + DIFF[2] + " " + LABEL.DIFFICULTY, TEXT); // the setting named on the line (ruling 7)
-    if (P.h >= 216) paneLine(c, P, P.y + 202, LABEL.TABS + ": " + RECORD_TABS.join(" · "), MUTED); // where the pane has the line (the iso guard's does not)
-    paneLine(c, P, P.y + P.h - 14, hints().ok + ": ALL TEN · BY " + LABEL.DIFFICULTY, MUTED);
-  } else if (lab === "SOURCE") {
-    paneHead(c, P, "OPEN SOURCE", "↗");
-    paneLine(c, P, P.y + 60, "github.com/HMarzban/fusegrid", ACCENT, 12);
-    paneLine(c, P, P.y + 90, "PLAIN ES MODULES · NO BUILD STEP", TEXT);
-    paneLine(c, P, P.y + 106, "ZERO NPM DEPENDENCIES", TEXT);
-    paneLine(c, P, P.y + 122, "THE SAME SIM RUNS IN NODE AND THE BROWSER", MUTED);
-    paneLine(c, P, P.y + P.h - 14, hints().dev === "pad" ? "NEEDS A CLICK OR ENTER" : "ENTER OPENS IT IN A NEW TAB", MUTED);
-  }
 }
 
 /* MODIFIERS are a PRESENTATION relabel of the four Pact bits: their names come
@@ -2230,9 +1856,5 @@ export function drawAttractHint(c, L, t) {
 /* Full-canvas veil washes. */
 export function drawDim(c, alpha, W, H) {
   c.fillStyle = "rgba(7,10,18," + Math.max(0, Math.min(1, alpha)) + ")";
-  c.fillRect(0, 0, W, H);
-}
-export function drawFade(c, k, W, H) {
-  c.fillStyle = "rgba(7,10,18," + Math.max(0, Math.min(1, k)) + ")";
   c.fillRect(0, 0, W, H);
 }

@@ -9,7 +9,8 @@
    world-independent masks (faces, side, outline, bomb, cord) are one "logo.mask" layer per build, version, cap and dpr, so a world change only
    re-tints; the spark frames (A, B, reduced) are one "logo.spark" layer whose cell is the spark parts' own reach. A steady frame is the memo check,
    one getTransform, two blits: the placement, plan and both layer canvases are kept per place until an input changes or the cache frees a canvas
-   (it shrinks a freed one to 0x0, so a 0-wide held canvas is asked for again, never drawn). o: {level, place "title" | "menu", dev "d" | "p" (the
+   (it shrinks a freed one to 0x0, so a 0-wide held canvas is asked for again, never drawn); a steady frame touch()es the world and spark
+   layers it blits, so the cache's LRU never takes the logo on screen before a stale layer. o: {level, place "title" | "menu", dev "d" | "p" (the
    title's build), box {x, y, w, h} in the caller's units, cy (the title's centre line), k (box units per caller unit), dpr (device px per box unit,
    read before any transient transform), css (CSS px per box unit, 1 when the caller does not know it), touch, t (page clock s), run (0..1: the
    run-up along the cord, which nothing asks for today; TITLE_RUNUP says whether the title's exit runs it), reduced (REDUCE FLASH), spark (false:
@@ -18,7 +19,7 @@
    _seam.plan is the plan the painter calls (a test spies on it). */
 import {P, BD, BOMB, SPARK, glyph, layout, cord, bomb, spark, sparkAt, fit, flat} from "./glyphs.js";
 import {PLATE, plan, motif, worldOf} from "./worlds.js";
-import {layer, capDpr} from "../kit/cache.js";
+import {layer, capDpr, touch, keyOf} from "../kit/cache.js";
 import {plate as kitPlate} from "../kit/paint.js";
 import {worldTokens} from "../kit/tokens.js";
 
@@ -129,6 +130,7 @@ function geo(o) {
   G.mk = {layer: "logo.mask" + name, biome: "", level: 0, W: G.Wd, H: G.Hd * N, dpr: dprB, ...K0};
   G.wk = {layer: "logo." + o.place + "." + dev + name, biome: w.name, level: w.level, W: G.Wc, H: G.Hc, dpr: dprL, ...K0};
   G.sk = {layer: "logo.spark." + tier + name, biome: "", level: 0, W: 3 * G.cell, H: G.cell, dpr: dprB, ...K0};
+  G.wkS = keyOf(G.wk); G.skS = keyOf(G.sk);
   G.out = {cap: capB, capL, tier, build: G.build, ver: G.ver, dev, place: o.place, dpr: dprB, css, cell: G.cell, w: G.Wc / dprL, h: G.Hc / dprL, x: 0, y: 0, lx: 0, ly: 0, spark: null};
   G.world = G.sprite = null;
   return G;
@@ -252,8 +254,10 @@ export function drawLogo2d(c, o) {
   let G = MEMO[o.place];
   if (!same(G, o)) G = MEMO[o.place] = geo(o);
   if (!G.world || !G.world.width) G.world = layer(G.wk, G.Wc, G.Hc, (x) => fillWorld(x, G));
+  else touch(G.wkS);
   const sk = G.hasSpark && o.spark !== false;
   if (sk && (!G.sprite || !G.sprite.width)) G.sprite = layer(G.sk, 3 * G.cell, G.cell, (x) => fillSpark(x, G));
+  else if (sk) touch(G.skS);
   if (_dbg.on) _dbg.last = {world: G.world, spark: sk ? G.sprite : null, atlas: G.atlas};
   const sc = o.scale > 0 ? o.scale : 1, m = sc === 1 && typeof c.getTransform === "function" ? c.getTransform() : null;
   const ok = !!m && m.b === 0 && m.c === 0 && m.a > 0 && m.d > 0, snx = (v) => (ok ? (Math.round(m.a * v + m.e) - m.e) / m.a : v), sny = (v) => (ok ? (Math.round(m.d * v + m.f) - m.f) / m.d : v);

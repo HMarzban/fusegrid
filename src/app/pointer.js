@@ -56,11 +56,11 @@ export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: {
       const menu = app.screen === SCREEN.MENU, gx = app.screen === SCREEN.GRAPHICS, gd = app.screen === SCREEN.GUIDE;
       const r = cv.getBoundingClientRect();
       const k = cv.width / (r.width || cv.width);
-      const { cw, ch, lg } = dims(cv, kind());
+      const { cw, ch, lg, css } = dims(cv, kind());
       const row = (menu ? menuHit : gx ? graphicsHit : gd ? guideHit : settingsHit)(
         (ev.clientX - r.left) * k,
         (ev.clientY - r.top) * k,
-        menuLayout(cw, ch, lg),
+        menuLayout(cw, ch, lg, css), // css: the MENU phone column's CSS px per box unit (shellview dims)
         app.screen === SCREEN.SETTINGS ? app.optRows() : ITEMS.length, // SETTINGS maps into the visible rows (R11)
         touchLay(cv),
       );

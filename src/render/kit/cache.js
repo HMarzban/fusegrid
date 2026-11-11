@@ -2,7 +2,8 @@
    by (layer, biome, level, W, H, dpr, look, textScale), so a resize, dpr, world, look or text-scale change misses once. Bytes are w*h*4 per live layer, the total
    stays <= BUDGET (24 MB) by freeing the least recently USED layers first (a hit refreshes recency); one layer larger than BUDGET is still made, and goes first.
    Freed canvases are shrunk to 0x0 so the browser returns the memory. The caller puts capDpr(dpr, touch) into the key. No DOM at import: the canvas factory is
-   injectable (tests) and defaults lazily to OffscreenCanvas, else a canvas element. */
+   injectable (tests) and defaults lazily to OffscreenCanvas, else a canvas element. touch(key) (the key or its keyOf string) moves a held
+   layer a memoized painter blits without asking layer() to the recent end, so a stale layer always goes first. */
 export const BUDGET = 24 * 1024 * 1024;
 export const _dbg = { misses: 0, bytes: 0, reason: "" };
 const live = new Map();
@@ -52,6 +53,12 @@ export function layer(key, w, h, paint) {
     throw e;
   }
   return canvas;
+}
+
+export function touch(k) {
+  const s = typeof k === "string" ? k : keyOf(k), e = live.get(s);
+  if (e) { live.delete(s); live.set(s, e); }
+  return !!e;
 }
 
 export function release() {

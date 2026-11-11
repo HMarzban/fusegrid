@@ -219,7 +219,7 @@ if (D) {
     for (const [Wd, Hd] of [[600, 520], [608, 352]]) for (const lay of ["d", "l", "p"]) for (const dpr of [1, 2]) { const T = md.titleLogoBox(Wd, Hd, lay); cases.push(["title " + Wd + "x" + Hd + " " + lay + " dpr " + dpr, { level: 2, place: "title", box: T.box, cy: T.cy, dev: T.dev, dpr }]); }
     const { shellGeo } = await import("../src/app/fit.js");
     const boxes = [["#c 600x520", 600, 520, 1, false], ["iso 608x352", 608, 352, 1, false], ["#sh desktop 1366x768", 1366, 768, 2, false], ...[[393, 852], [360, 640], [430, 932]].map(([w, h]) => { const g = shellGeo(w, h, 600, 520, "p"); return ["#sh phone " + w + "x" + h, g.w, g.h, 3, true, g.logo]; })];
-    for (const [nm, bw, bh, dpr, touch, lg] of boxes) { const L = md.layout(bw, bh, lg), m = md.menuLogo(L); cases.push(["MENU " + nm, { level: 8, place: "menu", box: md.menuLogoBox(L), k: m.s, dpr, touch }]); }
+    for (const [nm, bw, bh, dpr, touch, lg] of boxes) { const L = md.layout(bw, bh, lg, touch ? 0.9 : undefined), m = md.menuGeom(L, 7, touch); cases.push(["MENU " + nm, { level: 8, place: "menu", box: m.lbox, k: m.lk, dpr, touch }]); } // the MENU page's header (v202 Task 3.1)
     for (const [nm, o] of cases) {
       cache.release();
       const t = target(), q = drawLogo2d(t.ctx, o), b = blits(t), B = o.box, logo = destOf(b[0]), sp = destOf(b[1]), c = [sp.x + sp.w / 2, sp.y + sp.h / 2];
@@ -291,7 +291,7 @@ if (D) {
   md.drawIntroChrome(target().ctx, 1, 0.1, 600, 520, "p", 1, { level: 3 });
   md.drawIntroChrome(target().ctx, 1, 0.5, 600, 520, "p", 1, { level: 3 });
   check("drawIntroChrome draws the logo through the painter on the title and inside the 0.3 s exit, not after it", !!D && D._dbg.ran === n + 2, D && D._dbg.ran - n);
-  check("titleLogoBox and menuLogoBox keep their last answer (a steady frame allocates no box)", md.titleLogoBox(600, 520, "d") === md.titleLogoBox(600, 520, "d") && md.menuLogoBox(md.layout(600, 520)) === md.menuLogoBox(md.layout(600, 520)));
+  check("titleLogoBox keeps its last answer and MENU's logo box is its geometry's own (a steady frame allocates no box)", md.titleLogoBox(600, 520, "d") === md.titleLogoBox(600, 520, "d") && md.menuGeom(md.layout(600, 520), 7, false).lbox === md.menuGeom(md.layout(600, 520), 7, false).lbox);
 }
 
 console.log("\n  LOGO-2D RESULT: " + pass + " PASS / " + fail + " FAIL");

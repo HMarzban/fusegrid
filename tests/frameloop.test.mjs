@@ -273,5 +273,38 @@ function rig(o = {}) {
   check("a player's lower cap still wins", low <= 31 && R.F.knobs().fpsCap < K0, low);
 }
 
+/* v202 Task 3.1: the menu kit's layers are freed after KIT_FREE ms of GAME PLAY (a PLAY-only clock that any other screen resets; PAUSE holds it)
+   and on pagehide, through the release main hands in (cache.release) */
+{
+  const { KIT_FREE } = await import("../src/app/frameloop.js");
+  const app = { screen: SCREEN.MENU, pauseView: 0 };
+  let freed = 0;
+  const R2 = (() => { const q = [], clock = { t: 0 }, win = Object.assign(target(), { devicePixelRatio: 1 }), doc = Object.assign(target(), { body: { dataset: { lay: "d" } } }); const st = { idle: true };
+    const F = mountFrames(() => {}, { running: () => true, idle: () => st.idle, kind: () => "2d", app: () => app, win, doc, raf: (f) => q.push(f), now: () => clock.t, release: () => freed++ });
+    F.apply(AUTO()); F.kick();
+    const run = (ms, per = 16) => { for (let t = 0; t < ms; t += per) { clock.t += per; const f = q.shift(); if (f) f(clock.t); } };
+    return { run, st, win }; })();
+  check("KIT_FREE is 10 s", KIT_FREE === 10000);
+  R2.run(20000);
+  check("MENU for 20 s: the kit's layers stay", freed === 0, freed);
+  app.screen = SCREEN.GAME; R2.st.idle = false;
+  R2.run(9000);
+  check("9 s of GAME PLAY: still held", freed === 0, freed);
+  R2.st.idle = true; R2.run(5000); R2.st.idle = false; // PAUSE (idle in GAME) holds the clock
+  R2.run(800);
+  check("PAUSE holds the PLAY clock (9.8 s of PLAY): still held", freed === 0, freed);
+  R2.run(400);
+  check("past 10 s of GAME PLAY: released once", freed === 1, freed);
+  R2.run(20000);
+  check("a long run releases only once", freed === 1, freed);
+  app.screen = SCREEN.MENU; R2.st.idle = true; R2.run(100);
+  app.screen = SCREEN.GAME; R2.st.idle = false; R2.run(9000);
+  check("back to MENU resets the clock: 9 s into the next run, no second release yet", freed === 1, freed);
+  R2.run(1200);
+  check("then 10 s into it: released again", freed === 2, freed);
+  R2.win.fire("pagehide");
+  check("pagehide releases at once", freed === 3, freed);
+}
+
 console.log("\n  FRAMELOOP RESULT: " + pass + " PASS / " + fail + " FAIL");
 process.exit(fail ? 1 : 0);

@@ -8,6 +8,7 @@ import { shellGeo } from "../src/app/fit.js";
 import { overlayBox, pauseHit, touchLay } from "../src/render/scenes.js";
 import { controlsHit, dims, drawShell } from "../src/render/shellview.js";
 import * as md from "../src/render/menudraw.js";
+import * as pg from "../src/render/pages/menu.js";
 import { RECORD_TABS, LABEL } from "../src/render/words.js";
 import * as W from "../src/render/words.js";
 import { setHints } from "../src/render/hintcopy.js";
@@ -205,27 +206,29 @@ for (const [nm, L, touch] of BOXES) for (let p = 0; p < 3; p++) {
   }
 }
 
-/* ---- MENU: the keyboard list, its pane, and the touch hub ---- */
+/* ---- MENU (v202 Task 3.1, the world kit page): the desk list beside the card's slot, the RECORDS teaser, the phone column ---- */
 {
-  const L = md.layout(600, 520), g = md.menuList(L, ITEMS.length, false);
-  const old8 = 20 + 40 + 7 * 26 + 3 * 6;
-  check("keyboard MENU: the plate and pane keep today's room at 600x520 (h 260, pane 240), so every pane still fits", g.h === old8 && g.pane.h === 240, g.h + "/" + g.pane.h);
-  check("keyboard MENU: group gaps before RECORDS, SETTINGS and SOURCE; rows keep pitch 26 and the hero 40", g.rows[0].h === 40 && g.rows[1].h === 26 && g.rows[3].y0 === g.rows[2].y1 + 6 && g.rows[4].y0 === g.rows[3].y1 + 6 && g.rows[5].y0 === g.rows[4].y1 && g.rows[6].y0 === g.rows[5].y1 + 6, J(g.rows.map((r) => [r.y0, r.y1])));
+  const L = md.layout(600, 520), g = md.menuGeom(L, ITEMS.length, false), u = g.u, r = (l) => g.rows[l];
+  const gap = (a, b) => +((r(b).y - (r(a).y + r(a).h)) / u).toFixed(6);
+  check("keyboard MENU (600x520, the desk geometry scaled as one piece): the card's slot beside the list keeps the list's height (420 design px) for Task 3.2", near(g.card.h / u, 420) && near(g.card.y, r("PLAY").y) && g.card.x > r("PLAY").x + r("PLAY").w, J(g.card));
+  check("keyboard MENU: 24 px breaks after PLAY and before GUIDE, 8 px between the doors; PLAY 64, the doors 46 (design px)", gap("PLAY", "LEVEL SELECT") === 24 && gap("SETTINGS", "GUIDE") === 24 && gap("LEVEL SELECT", "DAILY") === 8 && gap("RECORDS", "SETTINGS") === 8 && gap("GUIDE", "SOURCE") === 8 && near(r("PLAY").h / u, 64) && near(r("RECORDS").h / u, 46), J(ITEMS.map((l) => [r(l).y, r(l).h])));
   const R = rec();
-  md.drawMenu(R.ctx, { cursor: ITEMS.indexOf("RECORDS"), enterT: 9, items: ITEMS.slice(), touch: false, kind: "2d", info: { level: 1, top: TOP } }, L, 9);
-  const s = R.texts.map((t) => t.s), P = g.pane;
-  check("the RECORDS pane is today's HIGH SCORES pane plus the tabs line", s.includes("YOUR TOP 3") && s.includes("4210") && s.includes(W.LABEL.TABS + ": SCORES · STATS · MEDALS") && s.some((x) => /ALL TEN · BY DIFFICULTY/.test(x)), s.join("|"));
-  check("every RECORDS pane text sits inside the pane", R.texts.filter((t) => t.x >= P.x && t.x <= P.x + P.w && t.y !== L.footY).every((t) => t.y > P.y && t.y < P.y + P.h), J(P));
+  md.drawMenu(R.ctx, { rows: ITEMS, focus: "RECORDS", touch: false, level: 1, best: TOP[0].s, enterT: 9 }, L, 9);
+  const s = R.texts.map((t) => t.s), tz = pg._dbg.last.P.rows.RECORDS.tz;
+  check("the RECORDS row's teaser names the best played NORMAL run: BEST 4,210 (with NORMAL DIFFICULTY where it fits)", !!tz && /^BEST 4,210( · NORMAL DIFFICULTY)?$/.test(tz.lines[0]) && s.includes(tz.lines[0]), s.join("|"));
+  const lab = pg._dbg.last.P.rows.RECORDS;
+  check("the RECORDS teaser sits inside its key, right of its label (focused: past the bomb)", tz.x <= lab.r.x + lab.r.w - 2 && tz.x - tz.w >= lab.foc.x + lab.label.w + 12, J({ tz: [tz.x - tz.w, tz.x], label: lab.foc.x + lab.label.w }));
   const R0 = rec();
-  md.drawMenu(R0.ctx, { cursor: 3, enterT: 9, items: ITEMS.slice(), touch: false, kind: "2d", info: { level: 1, top: [] } }, L, 9);
-  check("hooks never lie: no played run, no score in the RECORDS pane", R0.texts.some((t) => t.s === "NO NORMAL DIFFICULTY RUNS YET") && !R0.texts.some((t) => /^\d{3,}$/.test(t.s)));
+  md.drawMenu(R0.ctx, { rows: ITEMS, focus: "RECORDS", touch: false, level: 1, best: null, enterT: 9 }, L, 9);
+  check("hooks never lie: no played run, no score: RECORDS reads NO RUNS YET and MENU prints no score", R0.texts.some((t) => t.s === "NO RUNS YET") && !R0.texts.some((t) => /\d{3,}|\d,\d{3}/.test(t.s) && !/^v\d+$/.test(t.s)));
   check("the STATS pane is gone with its row", !R0.texts.some((t) => t.s === "YOUR CABINET"));
 }
-for (const [nm, W, H, lg] of [["600x520 #c", 600, 520], ["portrait #sh", sgP.w, sgP.h, sgP.logo], ["landscape #sh", sgL.w, sgL.h, sgL.logo]]) {
-  const L = md.layout(W, H, lg), g = md.menuList(L, ITEMS.length, true), r = g.rows;
-  check(`touch hub (${nm}): seven tiles in reading order: the PLAY bar; LEVEL SELECT | DAILY; RECORDS | SETTINGS; the GUIDE bar; the SOURCE bar`,
-    g.hub && r.length === 7 && r[1].y === r[2].y && r[1].x < r[2].x && r[3].y === r[4].y && r[3].x < r[4].x && r[0].w === r[5].w && r[5].w === r[6].w && r[1].w < r[0].w / 2 && r[5].y > r[4].y && r[6].y > r[5].y, J(r.map((q) => [q.x, q.y, q.w])));
-  check(`touch hub (${nm}): today's height (the rows keep 70 / 66 / 66 / 66 / 50)`, g.h === Math.round(20 + 318 * g.f + 24 * g.f), g.h);
+for (const [nm, W, H, lg, css] of [["600x520 #c", 600, 520], ["portrait #sh", sgP.w, sgP.h, sgP.logo, sgP.s], ["landscape #sh", sgL.w, sgL.h, sgL.logo, sgL.s]]) {
+  const L = md.layout(W, H, lg, css), g = md.menuGeom(L, ITEMS.length, true), r = (l) => g.rows[l];
+  if (g.mode === "phone") check(`touch MENU (${nm}): the phone column in reading order: PLAY; LEVEL SELECT; the card's slot; DAILY | RECORDS; SETTINGS | GUIDE; SOURCE`,
+    r("LEVEL SELECT").y > r("PLAY").y && g.card.y > r("LEVEL SELECT").y && r("DAILY").y > g.card.y && r("DAILY").y === r("RECORDS").y && r("DAILY").x < r("RECORDS").x && r("SETTINGS").y === r("GUIDE").y && r("SETTINGS").y > r("DAILY").y && r("SOURCE").y > r("GUIDE").y && r("SOURCE").w === r("PLAY").w && r("DAILY").w < r("PLAY").w / 2, J(ITEMS.map((l) => [r(l).x, r(l).y, r(l).w])));
+  else check(`touch MENU (${nm}): the desk list in ITEMS order, one column`, ITEMS.every((l, i) => !i || r(l).y > r(ITEMS[i - 1]).y) && ITEMS.every((l) => r(l).x === r("PLAY").x), J(ITEMS.map((l) => r(l).y)));
+  check(`touch MENU (${nm}): the mock's sizes (phone: PLAY 62, doors 50, tiles 58 CSS px; desk: PLAY 64, doors 46 design px)`, g.mode === "phone" ? near(r("PLAY").h * css, 62, 0.01) && near(r("SOURCE").h * css, 50, 0.01) && near(r("DAILY").h * css, 58, 0.01) : near(r("PLAY").h / g.u, 64) && near(r("DAILY").h / g.u, 46), g.mode + " " + r("PLAY").h);
 }
 
 /* ---- taps through the real mountPointer (main's hit bag), on #c and on #sh boxes ---- */
@@ -294,16 +297,16 @@ for (const kind of ["d", "l", "p"]) {
   check(`tap (${kind}): STATS still taps its T MEDALS foot label (the tab row's foot)`, a.screen === SCREEN.TROPHIES, a.screen);
 }
 {
-  /* hub taps open their tile in the hub's order (touch portrait #sh) */
+  /* the phone column's taps open their row (touch portrait #sh, the MENU page's geometry) */
   const want = { PLAY: SCREEN.GAME, "LEVEL SELECT": SCREEN.LEVEL, DAILY: SCREEN.GAME, RECORDS: SCREEN.SCORES, SETTINGS: SCREEN.SETTINGS, GUIDE: SCREEN.GUIDE, SOURCE: SCREEN.MENU };
   const bad = [];
   for (let i = 0; i < ITEMS.length; i++) {
     let src = 0;
-    const t = tapRig("p", { onSource: () => src++, dailySeed: () => ({ seed: 7, date: "2026-11-11", gen: 3 }) }), L = md.layout(t.surf.width, t.surf.height, t.surf.logo), q = md.menuList(L, ITEMS.length, true).rows[i];
+    const t = tapRig("p", { onSource: () => src++, dailySeed: () => ({ seed: 7, date: "2026-11-11", gen: 3 }) }), L = md.layout(t.surf.width, t.surf.height, t.surf.logo, sgP.s), q = md.menuGeom(L, ITEMS.length, true).rows[ITEMS[i]];
     t.tapAt(q.x + q.w / 2, q.y + q.h / 2);
     if (t.app.screen !== want[ITEMS[i]] || (ITEMS[i] === "SOURCE" && src !== 1) || (want[ITEMS[i]] !== SCREEN.GAME && t.app.cursor !== i)) bad.push(ITEMS[i] + " -> " + t.app.screen + "@" + t.app.cursor);
   }
-  check("hub taps open their own tile: PLAY; LEVEL SELECT | DAILY; RECORDS | SETTINGS; GUIDE; SOURCE", bad.length === 0, bad.join(" | "));
+  check("phone taps open their own row: PLAY; LEVEL SELECT; DAILY | RECORDS; SETTINGS | GUIDE; SOURCE", bad.length === 0, bad.join(" | "));
 }
 
 /* ---- an armed STATS reset (fix round 1): R arms, and anything but a second R cancels it. Every tap cell through the real

@@ -74,6 +74,11 @@ check("menudraw builds the RECORDS leads from words.js (keycap glyphs stay with 
 check("PAUSE rows: RESUME, SETTINGS, RESTART, QUIT TO MENU (design record §4, Task 2.4); scenes' copy mirrors it", J(PAUSE_ITEMS) === J(["RESUME", W.LABEL.SETTINGS, "RESTART", "QUIT TO MENU"]) && J(PAUSE_ROWS) === J(PAUSE_ITEMS));
 check("SETTINGS row RENDER is ART STYLE: twelve rows in order, ten on screen outside REAL 3D (no CAMERA / BRIGHTNESS), no render-side copy", OPT_ROWS.length === 12 && OPT_ROWS[3] === W.LABEL.ART_STYLE && optRows(false).length === 10 && optRows(false)[3] === W.LABEL.ART_STYLE && !optRows(false).includes("CAMERA") && !optRows(false).includes("BRIGHTNESS") && optRows(true) === OPT_ROWS && md.OPT_N === undefined);
 check("GUIDE door ITEMS is POWER-UPS", J(GUIDE_ROWS) === J(["HOW TO PLAY", W.LABEL.POWER_UPS, "ENEMIES", "FLOOR"]));
+{
+  const { LOOK_LABEL } = await import("../src/app/jobs.js");
+  check("MENU (v202 Task 3.1): words.js MENU_ROWS is menuapp ITEMS, ART_STYLES the app's look labels (jobs.js LOOK_LABEL) by RENDER value", J(W.MENU_ROWS) === J(ITEMS) && J(W.ART_STYLES) === J([LOOK_LABEL["2d"], LOOK_LABEL.px, LOOK_LABEL["3d"]]) && Object.isFrozen(W.MENU_ROWS) && Object.isFrozen(W.ART_STYLES));
+  check("MENU words: the teasers and the foot name settings with LABEL's words; frozen", W.MENU_WORDS.LEVEL_TEASE === W.LABEL.LEVEL + " · " + W.LABEL.DIFFICULTY + " · SPEED" && W.MENU_WORDS.START === W.LABEL.START && Object.isFrozen(W.MENU_WORDS) && Object.values(W.MENU_WORDS).every((v) => typeof v === "string" && v === v.toUpperCase()));
+}
 check("LEVEL SELECT rows (Task 2.3): LEVEL, DIFFICULTY, GAME SPEED, MODIFIERS from words.js, then START", J(LEVEL_ROWS) === J([W.LABEL.LEVEL, W.LABEL.DIFFICULTY, W.LABEL.GAME_SPEED, W.LABEL.MODIFIERS, W.LABEL.START]) && W.LABEL.START === "START" && W.LABEL.CLOSE === "CLOSE" && md.LEVEL_TAP_LIST.endsWith(" " + W.LABEL.CLOSE));
 check("POWER (the pickup) is POWER BOMB in POWER[].name, still the one source", POWER.find((p) => p.t === "power").name === "POWER BOMB");
 
@@ -266,10 +271,10 @@ check("ruling 7: a bare NORMAL or HARD only where its own line or row names its 
   /* one marker per branch the sweep must reach, so a narrowed sweep cannot pass by seeing less */
   const SEEN = ["SETTINGS", "ART STYLE", "POWER-UPS", "NORMAL", "EXPERT", "GAME SPEED", "DIFFICULTY", "MODIFIERS", "ONE LIFE", "NO FLOOR ITEMS", "TIME TRIAL", "POWER BOMB", "IRON CROWN",
     "FURTHEST LEVEL YET", "MATCHED YOUR", "FROM YOUR", "DAILY 2026-11-10 · NORMAL SPEED", "PAUSED · LEVEL 3", "LEVEL ENDS", "THROW POWER-UP", "CLEAR LEVEL 5 TO OPEN", "REBIND IN SETTINGS",
-    "KEEPS SETTINGS", "replaces POWER BOMB", "NO NORMAL DIFFICULTY RUNS YET", "TOP 4210", "LEVELS 1-5 IN ONE RUN", "BESTS · NO MODIFIERS", "NEXT RUN", "MODIFIERS ONE LIFE", "CHANGE ART STYLE",
+    "KEEPS SETTINGS", "replaces POWER BOMB", "NO NORMAL DIFFICULTY RUNS YET", "BEST 4,210", "LEVELS 1-5 IN ONE RUN", "BESTS · NO MODIFIERS", "YOUR TRIES TODAY", "4 PAGES", "GITHUB", "CHANGE ART STYLE",
     "LEVEL 8 · CROWN", "the level you reach", "DID NOT LOAD · SETTINGS", "· next level", "8 LEVELS", "5 LEVELS · 3 LOCKED", "NO VIBRATION AT ALL", "LIVES 1",
-    "UNDER 3:00 · DEFAULT RULES", "DAILY 2026-11-10 · LEVEL 3 · 1840", "RECORDS", "←→ TAB · ↓ DIFFICULTY", "←→ TAB · T MEDALS", "←→ TAB · ENTER / ESC BACK", "TABS: SCORES · STATS · MEDALS", "↑ TABS · ← → DIFFICULTY", "↑ TABS · T MEDALS", "×2 ON HARD · ×3 ON EXPERT DIFFICULTY", "ALL TEN · BY DIFFICULTY", "BEST RUNS BY DIFFICULTY", "SPD MAX", "FRAME RATE MAX", "SENSITIVITY MAX", "LEVEL 8", "↑↓ ROW · ←→ ADJUST · ENTER START", "↑↓ ROW · ENTER OPEN", "↑↓ ROW · ENTER START", "↑↓ PICK · ENTER TOGGLE · ESC CLOSE", "↑↓ PICK · SOUTH TOGGLE · EAST CLOSE", "↑↓ ROW · ←→ ADJUST · SOUTH START", "TAP OUTSIDE TO CLOSE",
-    "STANDARD", "ENTER OPENS ALL TEN ROWS", "ENTER OPENS ALL TWELVE ROWS", "CAMERA · BRIGHTNESS · SHAKE · FLASH"]; // Task 2.4: only the REAL 3D rows draw STANDARD (CAMERA's value); the MENU pane counts each row set
+    "UNDER 3:00 · DEFAULT RULES", "DAILY 2026-11-10 · LEVEL 3 · 1840", "RECORDS", "←→ TAB · ↓ DIFFICULTY", "←→ TAB · T MEDALS", "←→ TAB · ENTER / ESC BACK", "↑ TABS · ← → DIFFICULTY", "↑ TABS · T MEDALS", "BEST RUNS BY DIFFICULTY", "SPD MAX", "FRAME RATE MAX", "SENSITIVITY MAX", "LEVEL 8", "↑↓ ROW · ←→ ADJUST · ENTER START", "↑↓ ROW · ENTER OPEN", "↑↓ ROW · ENTER START", "↑↓ PICK · ENTER TOGGLE · ESC CLOSE", "↑↓ PICK · SOUTH TOGGLE · EAST CLOSE", "↑↓ ROW · ←→ ADJUST · SOUTH START", "TAP OUTSIDE TO CLOSE",
+    "STANDARD", "CONTROLLER READY · VIBRATION MEDIUM · SETTINGS › CONTROLS", "NEEDS A CLICK OR ENTER", "TAP A ROW", "LEVEL 1 · JUNGLE"]; // Task 2.4: only the REAL 3D rows draw STANDARD (CAMERA's value); Task 3.1: the MENU page's teasers, foot and signpost (its old preview panes are gone)
   const all = [...found.keys()], miss = SEEN.filter((w) => !all.some((s) => s.indexOf(w) >= 0));
   check("the sweep reached every branch it claims (one marker each)", miss.length === 0, miss.join(" | "));
   check("ENEMIES: one level reads LEVEL 8, a span LEVELS 1-8 (words.js levelsOf); no LEVELS n for a single level", found.has("LEVEL 8") && found.has("LEVELS 1-8") && ![...found.keys()].some((k) => /^LEVELS \d+$/.test(k) && !/^LEVELS \d+ ·/.test(k) && !/RUN|KILLS/.test(k)) && W.levelsOf("8") === "LEVEL 8" && W.levelsOf("1-3, 5-8") === "LEVELS 1-3, 5-8");
@@ -301,14 +306,19 @@ check("ruling 7: a bare NORMAL or HARD only where its own line or row names its 
 
 /* ---- fit, fix round 1: the iso MENU pane and the ability bar ---- */
 {
-  /* MENU keyboard, LEVEL SELECT row: the MODIFIERS list wraps to a second line only where the pane has room for it; in the iso
-     guard's short pane every text stays inside the plate (the second line once landed under it, over the foot) */
-  for (const [name, W0, H0, two] of [["608x352 (iso)", 608, 352, false], ["600x520", 600, 520, true]]) {
-    const L = md.layout(W0, H0), R = rec({ widthK: 0.648 }), g = md.menuList(L, 8, false), P = g.pane;
-    /* the pane's texts: every text over the pane's columns but the MENU foot hint, which sits under the plate by design */
-    md.drawMenu(R.ctx, { cursor: ITEMS.indexOf(W.LABEL.LEVEL_SELECT), enterT: 9, items: ITEMS.slice(), touch: false, kind: "2d", info: { level: 1, heat: 0, pace: 0, pact: 0, unlocked: true } }, L, 9);
-    const pane = R.texts.filter((t) => t.x >= P.x && t.x <= P.x + P.w && t.y !== L.footY), out = pane.filter((t) => t.y < g.y || t.y > g.y + g.h), mods = pane.filter((t) => /^MODIFIERS ONE LIFE|^NO FLOOR ITEMS|FEWER ITEMS · SHRINK/.test(t.s));
-    check(`MENU LEVEL SELECT pane (${name}): every text inside the plate; the MODIFIERS list on ${two ? "two lines" : "one line"}`, pane.length > 5 && out.length === 0 && mods.length === (two ? 2 : 1), J(out.map((t) => [t.s, t.y])) + " plate " + g.y + ".." + (g.y + g.h) + " " + J(mods.map((t) => t.s)));
+  /* MENU (v202 Task 3.1; the preview pane and its MODIFIERS list are gone, LEVEL SELECT prints them): with LEVEL SELECT focused and a heavy run,
+     in the iso guard and at 600x520, every MENU word lies inside its key and the plate, PLAY's tag one whole candidate, the foot under the plate */
+  const pgm = await import("../src/render/pages/menu.js");
+  for (const [name, W0, H0] of [["608x352 (iso)", 608, 352], ["600x520", 600, 520]]) {
+    const L = md.layout(W0, H0), R = rec({ widthK: 0.648 }), run = { heat: 2, pace: 1, pact: 15, time: true };
+    md.drawMenu(R.ctx, { rows: ITEMS, focus: W.LABEL.LEVEL_SELECT, touch: false, level: 7, run, rev: "v0", enterT: 9 }, L, 9);
+    const { G, P } = pgm._dbg.last, d = G.d, out = [];
+    for (const l of ITEMS) {
+      const o = P.rows[l], r = o.r, sp = o.k === "main" ? [[o.word.rest, o.word.w], o.tag && [o.tag.x - o.tag.w, o.tag.w]] : [[l === W.LABEL.LEVEL_SELECT ? o.foc.x : o.rest.x, o.label.w], o.tz && [o.tz.x - o.tz.w, o.tz.w]];
+      for (const q of sp.filter(Boolean)) if (q[0] < r.x || q[0] + q[1] > r.x + r.w || r.x < d.plate.x || r.y + r.h > d.plate.y + d.plate.h) out.push(l + "@" + q[0].toFixed(1));
+    }
+    const tag = P.rows.PLAY.tag, F = P.foot.OPEN;
+    check(`MENU, LEVEL SELECT focused, a heavy run (${name}): every word inside its key and the plate; PLAY's tag one whole candidate; the foot under the plate`, out.length === 0 && !!tag && pgm.playTags({ run, level: 7 }).includes(tag.lines.join(" ")) && tag.lines.every((t) => R.texts.some((q) => q.s === t)) && F.y > d.plate.y + d.plate.h, out.join(" | ") + " " + J(tag && tag.lines));
   }
   /* the ability bar with every ability held fits the overlay (ABAR.x in from each side) at the recorder's +8 % width, in the
      CLASSIC / REAL 3D vector form and with PIXEL's icon painter; only a row that may overflow measures itself and shrinks */

@@ -191,9 +191,10 @@ setHints(null);
   const q = at({ screen: SCREEN.MENU }, {});
   check("nothing docked: no rect read", q.x === null && q.y === null);
   check("no loader (Node, hosts): nothing", loaderSpot({ screen: SCREEN.MENU }, {}, cv, {}) === null);
-  /* chip height 28 css + 4 inset, in logical px at the phone's ~0.63 board scale, stays above the MENU logo's top */
-  const L = md.layout(600, 520), lg = md.menuLogo(L), logoTop = lg.cy - 81 * lg.s;
-  check("the chip clears the MENU logo line on a phone board stage (0.63)", (4 + 28) / 0.63 < logoTop, (32 / 0.63).toFixed(1) + " < " + logoTop.toFixed(1));
+  /* chip height 28 css + 4 inset, in logical px at the phone's ~0.63 board scale, stays above the MENU logo's top (the MENU page's header, v202
+     Task 3.1); on the phone's #sh box (~0.9) the logo's top is 70 CSS px down */
+  const L = md.layout(600, 520), logoTop = md.menuGeom(L, 7, true).logo.y, { shellGeo } = await import("../src/app/fit.js"), g = shellGeo(393, 852), P = md.menuGeom(md.layout(g.w, g.h, g.logo, g.s), 7, true);
+  check("the chip clears the MENU logo on a phone board stage (0.63) and on the phone's #sh box", (4 + 28) / 0.63 < logoTop && 4 + 28 < P.logo.y * g.s, (32 / 0.63).toFixed(1) + " < " + logoTop.toFixed(1) + "; 32 < " + (P.logo.y * g.s).toFixed(1));
 }
 
 console.log("\n  RENDERROW RESULT: " + pass + " PASS / " + fail + " FAIL");

@@ -106,7 +106,6 @@ function check(name, cond, detail) {
   const md = await import("../src/render/menudraw.js");
   const { DEFAULT_SCORES } = await import("../src/app/highscores.js");
   const { ITEMS } = await import("../src/app/menuapp.js");
-  const { heatToken } = await import("../src/core/heat.js");
   initFx();
   const stub = new Proxy(function () {}, {
     get: (t, p) => (p === Symbol.toPrimitive ? () => "" : stub),
@@ -123,26 +122,9 @@ function check(name, cond, detail) {
       md.drawIntroChrome(stub, 0, 0.3, W, H, "d"); // title: logo reveal beat
       md.drawIntroChrome(stub, 0, 2.0, W, H, "p", 0); // title: board not ready
       md.drawIntroChrome(stub, 1, 2.0, W, H, "l"); // show: mid-sweep
-      md.drawMenu(
-        stub,
-        {
-          cursor: 2,
-          enterT: 0.5,
-          // real shipped rows: shellview.js's own MENU items array
-          // (PLAY/LEVEL SELECT carry a heatToken suffix, the rest don't).
-          items: [
-            ITEMS[0] + "|" + heatToken(0),
-            ITEMS[1] + "|" + heatToken(0),
-            ITEMS[2],
-            ITEMS[3],
-            ITEMS[4],
-            ITEMS[5],
-            ITEMS[6],
-          ],
-        },
-        L,
-        0.5,
-      );
+      // the MENU page (pages/menu.js) with shellview's names and values: the shipped rows, a focused door, a non-default run, a played daily
+      md.drawMenu(stub, { rows: ITEMS, focus: ITEMS[2], level: 1, run: { heat: 1, pace: 1, pact: 3 }, daily: 2, best: 1234, look: 1, pages: 4, rev: "v0", enterT: 0.5 }, L, 0.5);
+      md.drawMenu(stub, { rows: ITEMS, focus: ITEMS[0], touch: true, level: 8, enterT: 0 }, L, 0.5);
       md.drawLevelSelect(stub, 3, L, 0.4, 1);
       md.drawHowTo(stub, L, 0.4);
       md.drawItemsHelp(stub, L, 0.4);
@@ -156,7 +138,6 @@ function check(name, cond, detail) {
       md.drawTrophies(stub, L, 0.4, undefined);
       md.drawTrophies(stub, L, 0.4, [["A", "B", true]]);
       md.drawDim(stub, 0.62, W, H);
-      md.drawFade(stub, 0.5, W, H);
     } catch (e) {
       ok = false;
       console.log(W + "x" + H + " smoke:", e.message);
@@ -291,39 +272,14 @@ function check(name, cond, detail) {
   ]) {
     const L = md.layout(W, H);
     {
-      const { c, texts, rects } = rec();
-      md.drawMenu(
-        c,
-        {
-          cursor: 0,
-          enterT: 1,
-          items: [
-            "PLAY|NORMAL DIFFICULTY",
-            "LEVEL SELECT|NORMAL DIFFICULTY",
-            "DAILY",
-            "RECORDS",
-            "SETTINGS",
-            "GUIDE",
-            "SOURCE",
-          ],
-        },
-        L,
-        1,
-      );
-      const p = plateOf(rects);
-      const start = texts.find((t) => t.s === "PLAY");
-      const src = texts.find((t) => t.s === "SOURCE");
-      const move = texts.find((t) => t.s.indexOf("MOVE") >= 0);
+      /* the MENU page (v202 Task 3.1): its plan's PLAY word and SOURCE label sit inside the plate's bed, 8+ px in; the foot (MOVE) under the plate */
+      const { c } = rec(), { ITEMS } = await import("../src/app/menuapp.js"), pg = await import("../src/render/pages/menu.js");
+      md.drawMenu(c, { rows: ITEMS, focus: "PLAY", level: 1, rev: "v0", enterT: 1 }, L, 1);
+      const { G, P } = pg._dbg.last, d = G.d, p = d.plate, start = P.rows.PLAY.word, src = P.rows.SOURCE, move = P.foot.START.parts.find((q) => q.t === "MOVE");
       check(
         `menu plate+rows inset at ${W}x${H}`,
-        !!p &&
-          !!start &&
-          !!src &&
-          !!move &&
-          start.y > p.y + 8 &&
-          src.y < p.y + p.h - 8 &&
-          move.y > p.y + p.h,
-        JSON.stringify({ p, start, src, move }),
+        !!start && !!src && !!move && start.y > p.y + 8 && src.label.y < p.y + p.h - 8 && P.foot.START.mid > p.y + p.h && G.mode === "desk",
+        JSON.stringify({ p, start: start && start.y, src: src && src.label.y, move: P.foot.START.mid }),
       );
     }
     {
@@ -1098,45 +1054,41 @@ function check(name, cond, detail) {
     drawShell(R.c, a, { state: "PLAY", time: 0 }, null, "2d", fresh, gp);
     check("scores memo: a different getter is never served stale data", n === 13, n);
   }
-  // build tag on MENU (owner 2026-10-21: "a game version in some where in the display or menue"):
-  // painted once, inside the box, off every tile / row, under the plate's fade
+  // build tag on MENU (owner 2026-10-21: "a game version in some where in the display or menue"; v202 Task 3.1, the round 7 frames):
+  // the keyboard foot ends with | vREV, the touch-landscape foot too; the phone carries it as SOURCE's teaser; painted once, inside the box, off
+  // every key but SOURCE's, under the plate's fade (enterT 0 paints the plate at alpha 0); no rev, no tag
   {
     const { CACHE_NAME } = await import("../src/pwa/shell.js");
     const { shellGeo } = await import("../src/app/fit.js");
+    const { ITEMS } = await import("../src/app/menuapp.js");
+    const pg = await import("../src/render/pages/menu.js");
     const want = "v" + CACHE_NAME.match(/(\d+)$/)[1];
-    const items = ["PLAY|X", "LEVEL SELECT", "DAILY|NEW", "RECORDS", "SETTINGS", "GUIDE", "SOURCE"];
     const sg = shellGeo(393, 852);
-    for (const [nm, W, H, touch, lg] of [["600x520 d", 600, 520, false], ["608x352 d", 608, 352, false], ["600x520 l", 600, 520, true], ["608x352 l", 608, 352, true], ["phone #sh p", sg.w, sg.h, true, sg.logo]]) {
-      const L = md.layout(W, H, lg), g = md.menuList(L, 7, touch);
-      const paint = (rev, et = 9) => { const R = rec(); md.drawMenu(R.c, { cursor: 0, enterT: et, items, touch, rev, info: { level: 1, best: [] } }, L, 9); return R; };
-      const R = paint("v99"), hit = R.texts.filter((t) => t.s.indexOf("v99") >= 0), t = hit[0] || {};
-      const src = g.rows[6], inSource = touch && t.s === "v99 · github.com/HMarzban/fusegrid" && t.y > src.y && t.y < src.y + src.h && t.x - t.s.length * t.px * 0.6 > src.x + 24 + 80; // clear of the SOURCE label
-      check(`MENU build tag painted once, inside the box, never on a row (${nm})`,
-        hit.length === 1 && t.x > 0 && t.x < W && t.y > 0 && t.y < H - 18 &&
-          (inSource || t.y > g.y + g.h || t.y < g.y) &&
-          (touch ? true : t.s === "↑↓ MOVE · ENTER CONFIRM · v99"),
-        JSON.stringify({ t, plate: [g.y, g.y + g.h] }));
-      check(`MENU without rev paints no build tag (${nm})`, !paint("").texts.some((x) => /\bv\d+\b/.test(x.s)));
-      check(`MENU build tag waits for the plate (enterT < -0.12 paints nothing) (${nm})`, paint("v99", -0.5).texts.length === 0);
+    for (const [nm, W, H, touch, lg, css] of [["600x520 d", 600, 520, false], ["608x352 d", 608, 352, false], ["600x520 l", 600, 520, true], ["1366x768 #sh d", 1366, 768, false, 200, 1], ["phone #sh p", sg.w, sg.h, true, sg.logo, sg.s]]) {
+      const L = md.layout(W, H, lg, css);
+      const paint = (rev, et = 9) => { const R = textrec({ widthK: 0.6 }); md.drawMenu(R.ctx, { rows: ITEMS, focus: "PLAY", touch, rev, level: 1, enterT: et }, L, 9); return { R, last: pg._dbg.last }; };
+      const { R, last } = paint("v99"), hit = R.texts.filter((t) => t.s.indexOf("v99") >= 0), G = last.G, u = G.u, phone = G.mode === "phone";
+      const where = phone ? last.P.rows.SOURCE.tz : last.P.foot[last.verb], tagY = phone ? where.ys[0] : where.mid, inBox = tagY * u > 0 && tagY * u < H;
+      const onKey = !phone && ITEMS.some((l) => { const r = G.rows[l]; return tagY * u >= r.y && tagY * u <= r.y + r.h; });
+      check(`MENU build tag painted once, inside the box, ${phone ? "as SOURCE's teaser" : "at the foot's end after a bar, off every key"} (${nm})`,
+        hit.length === 1 && hit[0].s === "v99" && inBox && !onKey && (phone ? where.lines[0] === "v99" : where.parts[where.parts.length - 1].t === "v99" && where.parts[where.parts.length - 2].sep === "|"), JSON.stringify({ n: hit.length, tagY, u }));
+      check(`MENU without rev paints no build tag (${nm})`, !paint("").R.texts.some((x) => /\bv\d+\b/.test(x.s)));
+      const fade = paint("v99", 0), alphas = fade.R.writes.filter((w) => w.k === "globalAlpha").map((w) => w.v);
+      check(`MENU build tag waits for the plate: at enterT 0 the plate, foot and logo draw at alpha 0 (${nm})`, alphas.includes(0), JSON.stringify(alphas));
     }
-    const Lp = md.layout(sg.w, sg.h, sg.logo), gp2 = md.menuList(Lp, 7, true);
-    const Rp = rec(); md.drawMenu(Rp.c, { cursor: 0, enterT: 9, items, touch: true, rev: "v99" }, Lp, 9);
-    const tp = Rp.texts.find((x) => x.s === "v99");
-    check("phone #sh: the tag hangs under the hub on its own line, the SOURCE tile keeps the bare URL",
-      !!tp && tp.y > gp2.y + gp2.h && tp.y < Lp.footY && Rp.texts.some((x) => x.s === "github.com/HMarzban/fusegrid"));
-    const Rl = rec(); md.drawMenu(Rl.c, { cursor: 0, enterT: 9, items, touch: true, rev: "v99" }, md.layout(600, 520), 9);
-    check("touch landscape (no room under the hub): the tag rides the SOURCE tile", Rl.texts.some((x) => x.s === "v99 · github.com/HMarzban/fusegrid"));
     const a = createMenuApp({ settings: {} });
     a.screen = SCREEN.MENU;
-    const Rs = rec(); drawShell(Rs.c, a, { state: "PLAY", time: 0 }, null, "2d", () => [], () => 0);
-    check("shellview: MENU foot carries the CACHE_NAME build tag end to end", Rs.texts.some((x) => x.s === "↑↓ MOVE · ENTER CONFIRM · " + want), want);
+    const Rs = textrec({ widthK: 0.6 }); drawShell(Rs.ctx, a, { state: "PLAY", time: 0 }, null, "2d", () => [], () => 0);
+    check("shellview: MENU foot carries the CACHE_NAME build tag end to end", Rs.texts.some((x) => x.s === want) && pg._dbg.last.P.foot[pg._dbg.last.verb].parts.some((q) => q.t === want), want);
   }
 }
 
-// 13f) menuHit: the MENU tap map shares drawMenu's geometry — every painted
-//      label lands on its own row, the plate edges are -1, bands contiguous.
+// 13f) menuHit: the MENU tap map is the page's one geometry (pages/menu.js menuGeom): every painted label lands on its own row; the logo above the
+//      rows and the plate's foot padding below them are -1; a tap on the plate's bed beside a row is that row; the next-run card's slot is -1; a
+//      row owns half of each gap beside it (no dead gutter), the 24 px breaks included.
 {
   const md = await import("../src/render/menudraw.js");
+  const pg = await import("../src/render/pages/menu.js");
   const items = ["PLAY", "LEVEL SELECT", "DAILY", "RECORDS", "SETTINGS", "GUIDE", "SOURCE"];
   const n = items.length;
   for (const [W, H] of [
@@ -1144,22 +1096,17 @@ function check(name, cond, detail) {
     [608, 352],
   ]) {
     const L = md.layout(W, H);
-    const at = {};
-    const rc = new Proxy({}, {
-      get: (t, p) => (p === "fillText" ? (s, x, y) => (at[s] = [x, y]) : () => {}),
-      set: () => true,
-    });
-    md.drawMenu(rc, { cursor: 0, items, enterT: 9 }, L, 9);
+    md.drawMenu(textrec().ctx, { rows: items, focus: "PLAY", level: 1, enterT: 9 }, L, 9);
+    const { G, P } = pg._dbg.last, u = G.u, at = Object.fromEntries(items.map((l) => { const o = P.rows[l]; return [l, o.k === "main" ? [o.word.foc * u, o.word.y * u] : [o.rest.x * u + 2, o.label.y * u]]; }));
     check(`menuHit maps every painted label to its row at ${W}x${H}`,
-      items.every((s, i) => at[s] && md.menuHit(at[s][0], at[s][1], L, n) === i), JSON.stringify(at));
-    const g = md.menuGeom(L, n), R = g.rows;
-    const mid = g.bx + g.rw / 2;
-    check(`menuHit above the rows is -1 at ${W}x${H}`, md.menuHit(mid, R[0].y0 - 1, L, n) === -1);
-    check(`menuHit below the rows is -1 at ${W}x${H}`, md.menuHit(mid, R[n - 1].y1 + 1, L, n) === -1);
-    check(`menuHit bands run the full stage width (a side tap is its row) at ${W}x${H}`,
-      md.menuHit(2, R[0].cy, L, n) === 0 && md.menuHit(W - 2, R[n - 1].cy, L, n) === n - 1);
-    check(`menuHit rows are contiguous across group gaps — no dead gutter at ${W}x${H}`,
-      R.slice(0, -1).every((r, i) => md.menuHit(mid, r.b - 0.001, L, n) === i && md.menuHit(mid, r.b, L, n) === i + 1));
+      items.every((s, i) => md.menuHit(at[s][0], at[s][1], L, n) === i), JSON.stringify(at));
+    const g = md.menuGeom(L, n), R = items.map((l) => g.rows[l]), mid = R[0].x + R[0].w / 2;
+    check(`menuHit above the rows (the logo) is -1 at ${W}x${H}`, md.menuHit(mid, R[0].y - 13 * u, L, n) === -1 && md.menuHit(mid, g.logo.y + g.logo.h / 2, L, n) === -1);
+    check(`menuHit below the rows is -1 at ${W}x${H}`, md.menuHit(mid, R[n - 1].y + R[n - 1].h + 14 * u, L, n) === -1);
+    check(`menuHit: a tap on the plate's bed beside a row is that row; the card's slot and off the plate are -1 at ${W}x${H}`,
+      md.menuHit(g.plate.x + 2, R[0].y + R[0].h / 2, L, n) === 0 && md.menuHit(g.plate.x + 2, R[n - 1].y + R[n - 1].h / 2, L, n) === n - 1 && md.menuHit(g.card.x + g.card.w / 2, R[2].y + R[2].h / 2, L, n) === -1 && md.menuHit(1, R[2].y + R[2].h / 2, L, n) === -1);
+    check(`menuHit rows are contiguous across gaps and breaks — no dead gutter at ${W}x${H}`,
+      R.slice(0, -1).every((r, i) => { const m = (r.y + r.h + R[i + 1].y) / 2; return md.menuHit(mid, m - 0.01, L, n) === i && md.menuHit(mid, m + 0.01, L, n) === i + 1; }));
     check(`menu hero row (PLAY) is taller than the rest at ${W}x${H}`, R[0].h > R[1].h);
   }
 }
@@ -1529,18 +1476,16 @@ function check(name, cond, detail) {
     check(`title veil is opaque while the board is not ready, 0.45 once it is (${W}x${H})`,
       nr.fills[0] === "rgba(7,10,18,1)" && rd.fills[0] === "rgba(7,10,18,0.45)", nr.fills[0] + " / " + rd.fills[0]);
   }
-  const a = md.slamOf(0), b = md.slamOf(0.12), h = md.slamOf(2 * md.SHOW_STEP), e = md.slamOf(2 * md.SHOW_STEP + 0.35);
-  check("MENU slam after the show: logo 1.35 -> 1, alpha 0 -> 1 over 0.12 s on the downbeat; the dim holds 0.12 for 2S, then 0.62 over 0.35 s",
-    a.s === 1.35 && a.a === 0 && a.dim === 0.12 && b.s === 1 && b.a === 1 && h.dim === 0.12 && e.dim === 0.62 && a.hold === 2 * md.SHOW_STEP,
-    JSON.stringify([a, b, h, e]));
   {
-    // the blast reads first: with enterT held back the plate and rows are not painted, then fade in
-    const L = md.layout(600, 520), items = ["PLAY|NORMAL DIFFICULTY", "LEVEL SELECT|NORMAL DIFFICULTY", "DAILY", "RECORDS", "SETTINGS", "GUIDE", "SOURCE"];
-    const paint = (et) => { const r = rec(); md.drawMenu(r.c, { cursor: 0, enterT: et, items }, L, 0); return r; };
-    const held = paint(-0.2), mid = paint(-0.06), set = paint(1);
-    check("MENU held behind the blast: enterT < -0.12 paints no plate and no rows; the plate fades in over the last 0.12 s",
-      held.fills.length === 0 && !held.texts.some((t) => t.a > 0) && mid.fills.length > 0 && set.texts.some((t) => t.s === "PLAY" && t.a === 1),
-      held.fills.length + " fills / " + mid.fills.length);
+    /* MENU entry (v202 Task 3.1; the slam over the show's blast is gone: the room look covers the board from MENU's first frame): every entry,
+       the show's end and a skip alike, paints the room opaque at once and fades the plate, logo and foot in over 0.25 s */
+    const L = md.layout(600, 520), { ITEMS } = await import("../src/app/menuapp.js");
+    const paint = (et) => { const r = textrec(); md.drawMenu(r.ctx, { rows: ITEMS, focus: "PLAY", level: 1, enterT: et }, L, 0); return r; };
+    const first = paint(0), mid = paint(0.125), set = paint(1);
+    const fill0 = first.paints[0], alpha = (r) => r.writes.filter((w) => w.k === "globalAlpha").map((w) => w.v);
+    check("MENU entry: the first frame's first paint is the room, opaque over the whole box; the plate starts at alpha 0, is at 0.5 by 0.125 s and 1 from 0.25 s",
+      !!fill0 && fill0.alpha === 1 && fill0.box && fill0.box.w >= 600 && fill0.box.h >= 520 && alpha(first)[0] === 0 && alpha(mid)[0] === 0.5 && alpha(set)[0] === 1,
+      JSON.stringify({ fill0, a0: alpha(first), a1: alpha(mid) }));
   }
 }
 
@@ -1587,9 +1532,10 @@ function check(name, cond, detail) {
   const L = md.layout(600, 520), lv = (U, best) => { const r = rec(); md.drawLevelSelect(r.c, 2, L, 1, 0, 0, U, 0, false, false, { best: best ? [null, "0:38.9"] : [] }); return r.texts.map((t) => t.s); };
   check("LEVEL SELECT: no NO TIME YET before MODES / TIME open; it shows once open; a saved best shows either way",
     !lv(false).includes("NO TIME YET") && lv(true).includes("NO TIME YET") && lv(false, true).includes("✓ BEST 0:38.9") && lv(true, true).includes("✓ BEST 0:38.9"));
-  const mn = (row, U) => { const r = rec(); md.drawMenu(r.c, { cursor: row, items: ["PLAY|X", "LEVEL SELECT", "DAILY|NEW", "RECORDS", "SETTINGS", "GUIDE", "SOURCE"], info: { level: 1, unlocked: U, best: [] } }, L, 1); return r.texts.map((t) => t.s); };
-  check("MENU pane: PLAY card follows the same rule, DAILY never says NO TIME YET",
-    !mn(0, false).includes("NO TIME YET") && mn(0, true).includes("NO TIME YET") && !mn(2, true).includes("NO TIME YET") && !mn(2, false).includes("NO TIME YET"));
+  /* MENU (v202 Task 3.1) prints no time at all: the run's BEST line belongs to the next-run card (Task 3.2), which takes LEVEL SELECT's rule above */
+  const mn = (row) => { const r = rec(); md.drawMenu(r.c, { rows: ["PLAY", "LEVEL SELECT", "DAILY", "RECORDS", "SETTINGS", "GUIDE", "SOURCE"], focus: ["PLAY", "LEVEL SELECT", "DAILY"][row], level: 1, enterT: 1 }, L, 1); return r.texts.map((t) => t.s); };
+  check("MENU: PLAY, LEVEL SELECT or DAILY focused, no time claim (NO TIME YET never shows; the card takes LEVEL SELECT's rule in Task 3.2)",
+    [0, 1, 2].every((i) => mn(i).length > 10 && !mn(i).includes("NO TIME YET") && !mn(i).some((t) => /BEST \d+:\d/.test(t))));
 }
 
 // touch-portrait shell box (polish 2026-10-19, fit.js shellGeo): at the phone
@@ -1606,11 +1552,10 @@ function check(name, cond, detail) {
     const inPlate = (r, S) => r.x >= S.x && r.y >= S.y && r.x + r.w <= S.x + S.w + 0.01 && r.y + r.h <= S.y + S.h + 0.01;
     const ctr = (r) => [r.x + r.w / 2, r.y + r.h / 2];
     check(`shell layout is tall + narrow, logo on the board line (${tg})`, L.tall && L.narrow && L.logoCy === g.logo);
-    const hub = md.menuGeom(L, 7, true);
-    const lg = md.menuLogo(L);
-    check(`MENU hub hangs under the logo, inside the box, every tile taps to itself (${tg})`,
-      hub.hub && hub.h === 362 && Math.abs(hub.y0 - Math.round(lg.cy + 10 * lg.s + 8)) <= 1 && hub.y0 + hub.h <= g.h &&
-        hub.rows.every((r, i) => md.menuHit(r.x + r.w / 2, r.cy, L, 7, true) === i), hub.y0 + "+" + hub.h);
+    const hub = md.menuGeom(md.layout(g.w, g.h, g.logo, g.s), 7, true), HR = ["PLAY", "LEVEL SELECT", "DAILY", "RECORDS", "SETTINGS", "GUIDE", "SOURCE"].map((l) => hub.rows[l]);
+    check(`MENU phone column (v202 Task 3.1): the logo heads the plate, the rows hang under it, inside the box, every row taps to itself (${tg})`,
+      hub.mode === "phone" && hub.logo.y + hub.logo.h < HR[0].y && hub.plate.y >= 0 && hub.plate.y + hub.plate.h <= g.h &&
+        HR.every((r, i) => md.menuHit(r.x + r.w / 2, r.y + r.h / 2, md.layout(g.w, g.h, g.logo, g.s), 7, true) === i), JSON.stringify(hub.plate));
     for (const U of [false, true]) {
       const G = md.levelGeom(L, U, true), S = G.S, rects = [...G.room, G.pane, G.heatCap, ...G.heat, G.paceCap, ...G.pace, ...(U ? [G.modeCap, ...G.mode, G.help] : []), G.start, ...Object.values(G.rows).filter(Boolean)]; // + the focus rows the mark is drawn at, keyed by row name (v202 Task 2.3)
       check(`LEVEL SELECT narrow${U ? " (modes open)" : ""}: plate in the box, every rect in the plate (${tg})`, G.narrow && inBox(S) && rects.every((r) => inPlate(r, { ...S, x: S.x - 1, w: S.w + 2 })));
@@ -1860,34 +1805,32 @@ function check(name, cond, detail) {
     b.screen = SCREEN.SETTINGS;
     check("an answered card shows ON/OFF, no note", !has(draw(b, PLAY), NOTE) && has(draw(b, PLAY), "OFF"));
   }
-  // MENU's OPTIONS pane: twelve rows, and the pad line from info.pad
+  // MENU's SETTINGS row (v202 Task 3.1: the preview pane is gone; the rows it counted live on the SETTINGS page, Task 2.4): its teaser is the art
+  // style the visible rows follow, whatever the controller's state; the controller's arrival is the foot's signpost while the note lives
   {
-    const paneText = (state) => {
+    const tease = (state, look) => {
       const a = state ? mk(state) : createMenuApp({ settings: {} });
+      if (look) a._optRender(look);
       a.screen = SCREEN.MENU; a.cursor = ITEMS.indexOf("SETTINGS");
       return draw(a, PLAY).texts;
     };
-    const T = paneText("ready"), n = T.find((t) => t.s === "ENTER OPENS ALL TEN ROWS"), l = T.find((t) => t.s === "CONTROLS · CONTROLLER READY"), g = T.find((t) => t.s.startsWith("GRAPHICS "));
-    check("OPTIONS pane: the count follows the visible rows: ENTER OPENS ALL TEN ROWS outside REAL 3D, drawn whole, no TWELVE, no CAMERA · BRIGHTNESS", !!n && !T.some((t) => t.s === "ENTER OPENS ALL TWELVE ROWS") && T.some((t) => t.s === "SHAKE · FLASH") && !T.some((t) => /CAMERA/.test(t.s)));
-    { const a3 = mk("ready"); a3._optRender(2); a3.screen = SCREEN.MENU; a3.cursor = ITEMS.indexOf("SETTINGS"); const T3 = draw(a3, PLAY).texts;
-      check("OPTIONS pane in REAL 3D: ENTER OPENS ALL TWELVE ROWS and CAMERA · BRIGHTNESS · SHAKE · FLASH", T3.some((t) => t.s === "ENTER OPENS ALL TWELVE ROWS") && T3.some((t) => t.s === "CAMERA · BRIGHTNESS · SHAKE · FLASH") && !T3.some((t) => t.s === "ENTER OPENS ALL TEN ROWS")); }
-    check("OPTIONS pane: a ready pad reads CONTROLLER READY, between GRAPHICS and the bottom line, overlapping neither", !!l && !!g && l.y >= g.y + 12 && l.y <= n.y - 12, l && [g.y, l.y, n.y].join());
+    check("SETTINGS row: outside REAL 3D its teaser is CLASSIC 2D (the ten-row look), never a row count or CAMERA · BRIGHTNESS", tease("ready").some((t) => t.s === "CLASSIC 2D") && !tease("ready").some((t) => /ROWS$|CAMERA/.test(t.s)));
+    check("SETTINGS row in REAL 3D: its teaser is REAL 3D (CAMERA and BRIGHTNESS are on the page it opens)", tease("ready", 2).some((t) => t.s === "REAL 3D"));
     {
       const R = rec();
-      md.drawMenu(R.c, { cursor: ITEMS.indexOf("SETTINGS"), enterT: 9, items: ITEMS.slice(), touch: false, kind: "iso", rev: "v", info: { pad: true, level: 1, opt: OPT_ROWS } }, md.layout(608, 352), 9);
-      check("OPTIONS pane: the short iso box drops the pad line rather than print it over the bottom line", R.texts.some((t) => t.s === "ENTER OPENS ALL TWELVE ROWS") && !R.texts.some((t) => t.s.startsWith("CONTROLS ·")));
+      md.drawMenu(R.c, { rows: ITEMS, focus: "SETTINGS", rev: "v", level: 1, look: 2, pad: "CONTROLLER READY", enterT: 9 }, md.layout(608, 352), 9);
+      check("iso 608x352: the controller's signpost fits the foot whole, and the SETTINGS teaser stays", R.texts.some((t) => t.s === "CONTROLLER READY · SETTINGS › CONTROLS") && R.texts.some((t) => t.s === "REAL 3D") && !R.texts.some((t) => /…/.test(t.s)));
     }
     {
-      /* The signpost owns the foot only while the note lives; the pane line stays a pane line. */
+      /* The signpost owns the foot only while the note lives; the build tag stays at the foot's end. */
       const a = mk("ready");
       a.screen = SCREEN.MENU; a.cursor = ITEMS.indexOf("SETTINGS"); a.padNote = "CONTROLLER READY · VIBRATION MEDIUM";
       const S = draw(a, PLAY).texts;
-      check("MENU foot: CONTROLLER READY signposts SETTINGS › CONTROLS, and the SETTINGS pane keeps its line", S.some((t) => /^CONTROLLER READY · VIBRATION MEDIUM · SETTINGS › CONTROLS( · v\d+)?$/.test(t.s)) && S.some((t) => t.s === "CONTROLS · CONTROLLER READY"));
+      check("MENU foot: CONTROLLER READY signposts SETTINGS › CONTROLS with the vibration level, the build tag after it", S.some((t) => /^CONTROLLER READY · VIBRATION MEDIUM · SETTINGS › CONTROLS$/.test(t.s)) && S.some((t) => /^v\d+$/.test(t.s)) && S.some((t) => t.s === "CLASSIC 2D"));
       a.padNote = "CONTROLLER LOST";
       check("MENU foot: CONTROLLER LOST is no signpost", !draw(a, PLAY).texts.some((t) => t.s.includes("SETTINGS › CONTROLS")));
     }
-    check("OPTIONS pane: a non-standard pad is ready too", paneText("nonstd").some((t) => t.s === "CONTROLS · CONTROLLER READY"));
-    for (const st of ["none", "lost", null]) check(`OPTIONS pane: ${st} reads KEYS + CONTROLLER`, paneText(st).some((t) => t.s === "CONTROLS · KEYS + CONTROLLER"));
+    for (const st of ["nonstd", "none", "lost", null]) check(`SETTINGS row: a ${st} controller leaves the teaser on the art style`, tease(st).some((t) => t.s === "CLASSIC 2D"));
   }
 }
 

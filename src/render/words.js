@@ -57,3 +57,13 @@ export function runParts(run, o) {
 }
 export const runWords = (run) => runParts(run, { all: true }).join(" · ");
 export const tagFor = (run) => runParts(run).join(" · ");
+/* MENU (v202 Task 3.1): the rows in order (menuapp ITEMS is pinned equal), the art styles by RENDER value 0..2, and the page's
+   teaser and foot words (round 7 S7-menu). */
+export const MENU_ROWS = Object.freeze(["PLAY", LABEL.LEVEL_SELECT, "DAILY", LABEL.RECORDS, LABEL.SETTINGS, "GUIDE", "SOURCE"]);
+export const ART_STYLES = Object.freeze(["CLASSIC 2D", "PIXEL", "REAL 3D"]);
+export const MENU_WORDS = Object.freeze({
+  LEVEL_TEASE: LABEL.LEVEL + " · " + LABEL.DIFFICULTY + " · SPEED", NEW: "NEW · TODAY'S BOARD", NEW_SHORT: "NEW TODAY",
+  TRIES: "YOUR TRIES TODAY", TRIES_SHORT: "TRIES TODAY", TRIES_MIN: "TRIES", BEST: "BEST", NO_RUNS: "NO RUNS YET", PAGES: "PAGES",
+  GITHUB: "GITHUB", MOVE: "MOVE", START: "START", OPEN: "OPEN", TAP: "TAP A ROW",
+  SOURCE_PAD: "NEEDS A CLICK OR ENTER", // a controller press opens no browser tab: SOURCE's foot says so while a controller drives MENU
+});

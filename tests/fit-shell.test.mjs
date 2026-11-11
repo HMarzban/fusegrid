@@ -49,15 +49,15 @@ const mkCv = (w = 600, h = 520) => {
   const L = {};
   return { width: w, height: h, style: {}, getBoundingClientRect: () => ({ left: 0, top: 0, width: w, height: h }), addEventListener: (t, f) => { (L[t] = L[t] || []).push(f); }, fire: (t, ev) => (L[t] || []).slice().forEach((f) => f(ev || {})) };
 };
-/* A text recorder: fillText at a 0.6 em mono advance, through translate / scale. */
+/* A text recorder: fillText at a 0.6 em mono advance, through translate / scale with a save / restore stack (the MENU page draws under its scale). */
 const rec = () => {
-  const texts = [];
+  const texts = [], stack = [];
   const o = {
     font: "10px x", textAlign: "left", globalAlpha: 1, _t: [1, 0, 0, 1, 0, 0],
     fillText(s, x, y) { const w = o.measureText(s).width, a = o.textAlign, x0 = a === "center" ? x - w / 2 : a === "right" || a === "end" ? x - w : x; texts.push({ s: String(s), x: x0 * o._t[0] + o._t[4], w: w * o._t[0], y: y * o._t[3] + o._t[5] }); },
     measureText(s) { const m = /(\d+(?:\.\d+)?)px/.exec(o.font); return { width: String(s).length * 0.6 * (m ? +m[1] : 10) }; },
     createLinearGradient: () => ({ addColorStop() {} }), createRadialGradient: () => ({ addColorStop() {} }),
-    save() {}, restore() { o._t = [1, 0, 0, 1, 0, 0]; }, translate(x, y) { o._t[4] += x; o._t[5] += y; }, scale(a, b) { o._t[0] *= a; o._t[3] *= b; },
+    save() { stack.push(o._t.slice()); }, restore() { o._t = stack.pop() || [1, 0, 0, 1, 0, 0]; }, translate(x, y) { o._t[4] += x * o._t[0]; o._t[5] += y * o._t[3]; }, scale(a, b) { o._t[0] *= a; o._t[3] *= b; },
   };
   return { texts, c: new Proxy(o, { get: (t, p) => (p in t ? t[p] : () => {}), set: (t, p, v) => ((t[p] = v), true) }) };
 };
@@ -189,8 +189,8 @@ for (const [lay, W, H, touch, dpr, q] of [["d", 1366, 768, false, 2, 2], ["d", 1
   try {
     const cv = mkCv(), fit = mountFit(cv), app = mkApp(SCREEN.MENU), L0 = md.layout(600, 520);
     mountPointer({ canvas: cv, fit, input: { _intent: { fire: true }, onUiKey() {} }, app, world: { state: "PLAY" }, kind: () => "2d", ctl: () => null, hit: HIT });
-    const row = md.menuGeom(L0, 7, false).rows[ITEMS.indexOf("GUIDE")];
-    cv.fire("pointerdown", { clientX: 300, clientY: row.cy, button: 2, pointerType: "mouse", currentTarget: cv });
+    const row = md.menuGeom(L0, 7, false).rows.GUIDE; // the MENU page's geometry, rows by name (v202 Task 3.1)
+    cv.fire("pointerdown", { clientX: row.x + row.w / 2, clientY: row.y + row.h / 2, button: 2, pointerType: "mouse", currentTarget: cv });
     check("#c with no shell box (the pre-task path): the same right-click confirms the row, so #sh matches it", fit.shell(1) === null && app.cursor === ITEMS.indexOf("GUIDE") && app.screen === SCREEN.GUIDE, app.cursor + "/" + app.screen);
   } finally { undo(); }
 }
@@ -245,8 +245,8 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
     const inBox = (S) => S.x >= 0 && S.y >= 0 && S.x + S.w <= g.w && S.y + S.h <= g.h && S.f === 1;
     const inPlate = (r, S) => r.x >= S.x - 1 && r.y >= S.y && r.x + r.w <= S.x + S.w + 1.01 && r.y + r.h <= S.y + S.h + 0.01;
     const ctr = (r) => [r.x + r.w / 2, r.y + r.h / 2];
-    const mg = md.menuGeom(L, 7, touch);
-    check(`MENU: inside the box, every row taps to itself (${tg})`, mg.y0 >= 0 && mg.y0 + mg.h <= g.h && mg.rows.every((r, i) => md.menuHit(r.x != null ? r.x + r.w / 2 : g.w / 2, r.cy, L, 7, touch) === i));
+    const mg = md.menuGeom(L, 7, touch); // the MENU page's geometry (v202 Task 3.1): the plate and its ring inside the box, every row's centre taps to it
+    check(`MENU: inside the box, every row taps to itself (${tg})`, mg.plate.y - mg.T >= 0 && mg.plate.y + mg.plate.h + mg.T <= g.h && mg.plate.x - mg.T >= 0 && mg.plate.x + mg.plate.w + mg.T <= g.w && ITEMS.every((l, i) => md.menuHit(mg.rows[l].x + mg.rows[l].w / 2, mg.rows[l].y + mg.rows[l].h / 2, L, 7, touch) === i));
     for (const U of [false, true]) {
       const G = md.levelGeom(L, U, touch), rects = [...G.room, G.pane, G.heatCap, ...G.heat, G.paceCap, ...G.pace, ...(U ? [G.modeCap, ...G.mode, G.help] : []), G.start, ...Object.values(G.rows).filter(Boolean)]; // + the focus rows the mark is drawn at, keyed by row name (v202 Task 2.3)
       const hits = [...G.room.map((r, i) => [r, i < G.cap ? "room" : "lock", i]), ...G.heat.map((r, i) => [r, "heat", i]), ...G.pace.map((r, i) => [r, "pace", i]), ...G.mode.map((r, i) => [r, "mode", i]), [G.start, "start"]];

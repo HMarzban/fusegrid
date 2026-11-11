@@ -54,15 +54,17 @@ cap; cap 67.93 at 600x520, 119.34 stacked). The reveal fades, slides and pops th
 whole logo (0.92 -> 1 over 0.45 s, the old GRID letters' pop). The title waits lit,
 the spark flickering at the tip, and keeps it there through the show's 0.3 s exit:
 `TITLE_RUNUP` (false, lead ruling; one constant the owner may flip) would run it
-up the cord instead; the run-up stays reachable as the painter's `o.run`. MENU
-(`scenes.drawLogo` delegates) is the cream build, no plate, cap 36 x logoScale in
-the old wordmark's slot (`menudraw.LOGO_SLOT` / `menuLogoBox`): apart from the
-spark the logo paints no `#ffd447` on MENU. Static parts are `kit/cache.js` layers:
+up the cord instead; the run-up stays reachable as the painter's `o.run`. MENU's
+is the cream build, no plate, cap 36 design px in the MENU page's plate header
+(`pages/menu.js` `G.lbox` at scale `G.lk` = max(u, 20 / 36): under a 20-unit cap the
+plan has no MENU build; Task 3.1): apart from the spark the logo paints no `#ffd447`
+on MENU. Static parts are `kit/cache.js` layers:
 one world-independent `logo.mask` atlas per build, version, cap and dpr, one tinted
 layer per world, one `logo.spark` sprite of frames A / B / reduced whose cell is the
 spark parts' own reach. A steady frame is a memo check, one `getTransform` and two
 blits: the placement, plan and both layer canvases are kept per place until an
-input changes or the cache frees one (0x0, asked for again, never drawn). The spark
+input changes or the cache frees one (0x0, asked for again, never drawn); it
+`touch()`es the two layers it blits, so the cache's LRU takes a stale layer first. The spark
 is `floor(t * SPARK.hz) & 1` on the page clock, frozen on the reduced frame under
 prefers-reduced-motion or REDUCE FLASH. CSS minimums take `o.css` (CSS px per box
 unit, default 1; `shellview` has no stage scale at hand, so it passes none). Masks
@@ -119,24 +121,20 @@ params are byte-identical, identifiers keep the old names (`heat`, `pace`,
 hash): the HUD's `LV` chip and heat token. Medal proper names stay (IRON CROWN).
 The paragraphs below use the internal names (heat, pace, pact, room) for code.
 
-Menu look (owner pick 2026-10-19, direction A "CONSOLE PANEL"): MENU, the
-PAUSE list and every plated page share ONE kit in `menudraw.js` — `plate`
+Menu look (owner pick 2026-10-19, direction A "CONSOLE PANEL"): the
+PAUSE list and every plated page but MENU share ONE kit in `menudraw.js` — `plate`
 (one 0.94 fill, one `#2a3550` border, radius 6, even-px snapped), `head`
 (sans title, muted spaced kicker), `foot`, and `paintRow` (selected = 0.12
 band + 3px notch + caret; `danger` rows select red). Labels are system-ui
 sans (OS-dependent, owner-accepted), values / tags / hints mono. Lists go
 through `listGeom` / `listHit` (pitches are caps that scale down in a short
-box); MENU has a PLAY hero row whose tag is the run it starts and group gaps
-before RECORDS / SETTINGS / SOURCE (the plate keeps the eight-row list's body,
-`MENU_BODY` 240, so the preview pane keeps its room); the SOURCE URL shows only on its
-selected row. Build tag (owner 2026-10-21: "a game version in some where in
+box). MENU is on the world kit since UI upgrade Task 3.1 (MENU page, below). Build tag (owner 2026-10-21: "a game version in some where in
 the display or menue"): `v202` (today) = `CACHE_NAME` minus `fusegrid-shell-`,
 derived ONLY in `shellview.js` (`REV`, handed to `drawMenu` / `drawSettings`
 as `rev`) and `update.js` (the card's "You are on v202", the running build,
-never a guessed next one) — never a second literal. Keyboard MENU appends
-it to the foot hint; the touch hub hangs it under the plate when the box has
->= 10 units below it (`#sh`), else on the SOURCE tile's teaser (a landscape
-phone, on the board canvas); SETTINGS keeps its `BUILD v202` kicker. Never on the HUD.
+never a guessed next one) — never a second literal. The desk MENU's foot ends
+`| v202`; the phone column carries it as SOURCE's teaser (the round 7 frame);
+SETTINGS keeps its `BUILD v202` kicker. Never on the HUD.
 PAUSE draws `pauseGeom(overlayBox, touch)`: touch (`touchLay`,
 data-lay p/l) caps pitch at `PAUSE_ROW_H` 70 / hero 76 / width 380, a keyboard
 screen at the compact `PAUSE_ROW_D` 44 / hero 54 / width 340 (owner: "too
@@ -144,8 +142,9 @@ fat"); `pauseHit` takes the same flag. Rows `PAUSE_ITEMS` RESUME, SETTINGS, REST
 RESUME hero, SETTINGS the door, a 1 px rule at `pauseGeom`'s `div` (the divider; no gap, so pitches and plate stay), then RESTART / QUIT danger;
 the shape is derived from the labels once (`scenes.js` `PAUSE_SHAPE` over `PAUSE_ROWS`, which `words.test` pins equal to `PAUSE_ITEMS`) and every reader dispatches by label;
 kicker = `LEVEL n · world` + difficulty, speed and modifiers, each named (+ DAILY), stepped down to fit by `pauseKickers` (a modifier count, then only what differs from a default run, so a default run reads `LEVEL 3 · FACTORY`; DAILY kept), cue `ESC · P RESUME · … · M QUIT`.
-Touch rule: a tap on a row = Enter on it; keyboard MENU and PAUSE bands span
-the full width of their box (MENU's `#sh` where there is a shell box, else the stage, as under the floor; PAUSE's stage; the touch MENU hub's tiles own half of each gutter);
+Touch rule: a tap on a row = Enter on it; keyboard PAUSE bands span
+the full width of the stage; a MENU row owns its key and half of each gap round it, out to the plate's bed edge (the next-run card's slot, the logo
+and off the plate are no row);
 off the rows a root list (MENU, PAUSE list) does nothing; on a page
 (SETTINGS, GRAPHICS, GUIDE, LEVEL SELECT, SCORES) a miss ON the plate is inert
 (hit -2) and only a tap OFF the plate backs out (-1). `guideHit`,
@@ -168,12 +167,12 @@ and drawing nothing, so WIN/LOSE keep `#c`, its overlay and its taps.
 smoothing off) and returns `{ctx, box}`; `box` is the logical canvas
 stand-in (`width/height/logo`, its rect) that `drawShell` measures and the
 one pointer handler (bound on `#c` and `#sh`) maps through, so a tap lands
-where it is drawn. `layout(W,H,lg)`: `lg` = the centred board's 0.27 logo
-line in box units (MENU's logo B stays on the board; the hub hangs under it),
+where it is drawn. `layout(W,H,lg,css)`: `W`, `H`, `shell` (an `lg` was handed: #sh's box) and `css` (CSS px per box unit, which
+shellview `dims` reads only for a touch-portrait #sh box: the MENU phone column is laid out in CSS px); `lg` = the centred board's 0.27 logo
+line in box units,
 `tall` / `narrow` (< 560) flags; narrow re-flows: `levelNarrow` (card under
 the grid, DIFFICULTY / GAME SPEED rows, digit-free touch MODIFIERS chips, 2-line help), HOW
-TO stacked rules, ENEMIES 2 cols, MEDALS 1 col, SCORES tab width, 11px hub
-teasers; STATS is centred (not floor-pinned) in a tall box. LEVEL / HIGH SCORES chip
+TO stacked rules, ENEMIES 2 cols, MEDALS 1 col, SCORES tab width; STATS is centred (not floor-pinned) in a tall box. LEVEL / HIGH SCORES chip
 taps are ONE call through the cued key path (`app.move` with a delta on the row the tap
 focused, `app.adjustPace`), so a change plays one `uiMove` and the chip already set is
 silent; `[ ]` pace keys cue too.
@@ -195,13 +194,7 @@ getter, `LIVES · FUSE · SCORE ×n` from `heatProfile`/`applyPact`, pulsing on 
 heat change); then DIFFICULTY | GAME SPEED segments, MODIFIERS (ONE LIFE,
 NO FLOOR ITEMS, FEWER ITEMS, SHRINK + TIME TRIAL; a name too wide for its chip
 breaks onto two lines; help says what each does), and a START hero. No start-on-miss: a tap starts only on
-START (keys and controller: LEVEL SELECT rows, below). MENU keyboard: a 272 list beside a preview pane that follows
-the cursor (one mini-page per row; RECORDS shows the top three and its
-tabs); MENU touch: a tile HUB in the pinned reading order (PLAY bar, LEVEL
-SELECT | DAILY, RECORDS | SETTINGS, the GUIDE bar, SOURCE 50 logical = 32 CSS px;
-a later MENU task replaces it with the approved phone layout, which reaches
-LEVEL SELECT through its next-run card) — the one MENU idiom whose bands are
-tiles, not full-width rows; ↑↓ stays the linear walk. One vocabulary: MODIFIERS
+START (keys and controller: LEVEL SELECT rows, below). MENU: see MENU page below; ↑↓ stays the linear walk. One vocabulary: MODIFIERS
 (never MODES or PACT) on screens and in copy; pact.js and `nb.pact.v1` keep their
 names. Hooks never lie: a score teaser reads only played runs
 (`highscores.isPlaceholder` drops the seeded table; main hands `getCab().top`),
@@ -228,7 +221,7 @@ only while ART STYLE is REAL 3D, ten otherwise; ANALYTICS, then the GRAPHICS and
 backs out to SETTINGS on the door. `optRow` indexes the visible list (R11): `app.optRows()` is the one predicate (r3d = the ART
 STYLE row's selected value, `app.render3d`, never the live renderer: a REAL 3D pick shows the two rows at once while the look
 loads), shellview hands `drawSettings` that list and the focused row's LABEL (`app.optLabel()`), `settingsGeom` / `settingsHit`
-size to it, the MENU SETTINGS pane counts and names it (`info.opt`), and every reader acts by `optLabel()`. Every ART STYLE write
+size to it, and every reader acts by `optLabel()`. Every ART STYLE write
 (a pick, RESET DEFAULTS, `lookFailed` from a failed load or a lost context that cannot be rebuilt) goes through `_setR3d` before
 `onSettings`: the cursor keeps its label, or lands on ART STYLE when its row went away. `SCREEN.FLOOR = 15` is appended too
 (2026-10-25): the fourth GUIDE door (`GUIDE_ROWS` HOW TO PLAY, POWER-UPS, ENEMIES,
@@ -237,12 +230,38 @@ GUIDE. `drawFloorHelp` lists the eight floor tiles at CORE / PLUS / MAX in the
 current look (`featdraw.drawSpec`, PIXEL `atlas.feat`), each with its rule line
 (`TILE_HELP`). `SCREEN.CONTROLS = 16` is appended too (v201): the SETTINGS `CONTROLS` door row, backs out to
 SETTINGS on the door; see the CONTROLS paragraph under `src/`.
-The GUIDE pages and the MENU preview draw the live foe and pickup animation
+The GUIDE pages draw the live foe and pickup animation
 (CLASSIC: `drawEnemyBody` / `drawItemBody`; PIXEL: `hudart.js` `foeAnim` /
 `itemAnim`, a pure function of the page clock). From PAUSE the same page is
 inline `pauseView 2` (0 list / 1 SETTINGS / 2 GRAPHICS / 3 CONTROLS; Esc steps 2 → 1 and 3 → 1, onto
 the door, and 1 → 0 onto the SETTINGS row), never a SCREEN. WIN/LOSE run summaries are **not** a SCREEN — they
 live in `drawOverlay`.
+
+MENU page (UI upgrade v202 Task 3.1, `src/render/pages/menu.js`; the round 7 S7-menu / L7-logo frames). The world dresses it: the room look of
+`app.level` (kit `room.js` `roomLayer`) opaque over the whole canvas from MENU's first frame, the plate in that room's rampart; PLAY the one yellow
+key (bare bomb + 3 px cream ring when focused); the doors are keys, a focused one wears the kit `band` + bomb + ring; no cord or spark but the logo's.
+Desk (every box but a touch-portrait shell box; the 1366 x 768 frame at 1 box unit per CSS px): the logo in the plate's header, a 480 list (PLAY 64,
+doors 46, 8 px pitch, 24 px breaks after PLAY and before GUIDE; 125 %: 520, 72, 49) beside the next-run card's slot (Task 3.2), the foot under
+the plate (`MOVE ▲▼ · START ENTER | v201`, label first, keycap last; the verb follows focus: START on PLAY, OPEN on a door, and with a controller
+on SOURCE `NEEDS A CLICK OR ENTER`, no keycap; a touch layout reads `TAP A ROW`; a note leads it, the controller's signpost replaces it in cream).
+The plate keeps the mock's size and centres; a narrower window narrows only the card's column, the 70 px top margin gives way to a short one,
+then the page scales as one piece (#c with no shell box, the iso guard; text floors not held there, and landscape phones get ~16-23 CSS px rows).
+Phone (`p` with a shell box): the 393 x 852 column in CSS px (`css` from `dims`), capped 600 wide: PLAY 62, LEVEL SELECT 50, the card's slot
+(the height left), DAILY | RECORDS and SETTINGS | GUIDE tiles (58; 84 at 125 %, a teaser may break once), SOURCE 50 with the build tag (a note
+or the signpost rides it instead). Teasers (one quiet `#bcad9a` voice; words.js `MENU_WORDS`): DAILY `NEW · TODAY'S BOARD` or `YOUR TRIES
+TODAY · n`, RECORDS `BEST n` (played runs only) or `NO RUNS YET`, SETTINGS the art style, GUIDE `4 PAGES`, SOURCE `GITHUB`; each steps down
+or drops, never clipped. PLAY's tag: a default run `LEVEL n · WORLD`, else `tagFor(run)`, its modifier count, EXPERT bare, the level line
+last, on one or two lines. Tap mode (`tapMode`) focuses PLAY. Entry (the show's end and a skip alike): the plate, logo and foot fade in over
+0.25 s; the slam is gone. Page plumbing, for every page task: a page module exports one `*Geom` (rects by name, box units; `G.d` design px)
+for draw and hit, a painter fed names and values by shellview (never indices), and its hit; menudraw keeps the entry names and delegates.
+Static parts are `kit/cache.js` layers keyed by content (`roomLayer` shared by every page of a box; its dpr gives way so the page's layers and
+a 3 MiB logo reserve fit `BUDGET`), made at once so a cursor move never misses, `touch()`ed on a steady frame (`cache.touch(key)`: a held layer
+goes LRU-recent, so a stale one is freed first); live on top: focus, ring, the logo's spark. `shellview.shellCovers(screen)` (MENU today; each
+page task adds its screen) makes main pass `{covered: true}` to the renderer: no look rasters a board a page covers. `frameloop` frees the kit's
+layers (`release`, handed in by main) after `KIT_FREE` 10 s of GAME PLAY on a PLAY-only clock and on `pagehide`; the next shell frame refills.
+Under the probe a page records `begin(page, {w, h, dpr, el})`, its rects (touch, set, focus, fill), texts (role, cap height, colour) and
+squint pairs outside any layer paint; its `tools/ui/lib/screens.mjs` row exempts what it has none of (MENU: chosen, locked). With no canvas
+source (Node) it paints straight onto the target over a flat fill; a context with no clip or rect (the headless renderer's) gets the plan only.
 
 The sim ticks only while the shell is GAME. PAUSE/WIN/LOSE are `world.state`,
 not shell screens. Do not add them as `SCREEN` values.
@@ -250,12 +269,12 @@ not shell screens. Do not add them as `SCREEN` values.
 - `src/main.js` — **browser entry only**, pinned `<=799` lines
   (`tests/headless.test.mjs`; raised 808→812 once in wave 3 for `ro.ghost`,
   tightened to 799 when C2 moved `fit()` out; 733 by split-length at v178 after
-  GRAPHICS moved the frame gate and renderer cache out; 784 at v201; 716 once the pointer router moved out, UI upgrade Task 0.4). RAF loop, fixed-step
+  GRAPHICS moved the frame gate and renderer cache out; 784 at v201; 716 once the pointer router moved out, UI upgrade Task 0.4; 722 with Task 3.1's covered flag and kit release). RAF loop, fixed-step
   accumulator, kind switch, and the handler wiring that binds them. Never
   imported by sim or renderer. Its seams live beside it and must stay OUT of
   `main.js`: `src/app/flags.js` (URL/opts, pure over a search string),
   `src/app/attract.js` (demo world + `stepDemo`), `src/app/frameloop.js`
-  (`mountFrames`: the rAF owner, frame gate, knob push), `src/app/rcache.js`
+  (`mountFrames`: the rAF owner, frame gate, knob push, the kit layer release), `src/app/rcache.js`
   (`mountRenderers`: per-kind renderer cache, lazy/eager three, release),
   `src/app/audiopower.js` (`mountAudioPower`), `src/app/renderkind.js`
   (`bootRender` / `kindOf` / `renderVal` / `renderBits`),
@@ -1054,8 +1073,8 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   (`src/render/kit/probe.js`, handed in by main; only `shots.mjs` switches the probe on).
   `gates.mjs <dir>` judges the latest run only: no probe data is `skipped`, never a pass;
   `--strict` fails skips; `tools/ui/lib/screens.mjs` lists each screen's required gates
-  (default-deny, a page cannot exempt itself); a probe fault, a page error or a missing
-  capture fails. `compare.mjs` (`refmap.json`), `sheet.html`.
+  (default-deny, a page cannot exempt itself; MENU is the first instrumented screen, Task 3.1); a probe fault, a page error or a missing
+  capture fails. `compare.mjs` (`refmap.json`; MENU's frames are the L7 ones, logo B in the header), `sheet.html`.
 - Blender is driven through the blender-mcp add-on socket `127.0.0.1:9876`
   with a small Python client (`.superpowers/sdd/2026-10-11-bible/blender/bl.py`,
   local only); the session `mcp__Blender__` tools time out.

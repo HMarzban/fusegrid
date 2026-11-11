@@ -320,10 +320,12 @@ const TODAY = "2026-09-07";
       b.cursor = ITEMS.indexOf("RECORDS"); return b.confirm() === true && b.recTab(1) === true &&
       b.screen === SCREEN.STATS; })());
   const src2 = readFileSync("src/render/shellview.js", "utf8");
+  const { menuGeom } = await import("../src/render/pages/menu.js");
+  const G = menuGeom({ W: 1366, H: 768, touch: false, shell: true, css: 1 }, ITEMS);
   check(
-    "shellview's MENU items literal renders every shipped row",
-    (src2.match(/ITEMS\[\d\]/g) || []).length === ITEMS.length,
-    (src2.match(/ITEMS\[\d\]/g) || []).join(","),
+    "shellview hands MENU every shipped row (rows: ITEMS) and the page lays out a key for each (v202 Task 3.1)",
+    /rows: ITEMS\b/.test(src2) && ITEMS.every((l) => G.rows[l] && G.rows[l].h > 0) && G.order.join() === ITEMS.join(),
+    G.order.join(","),
   );
 }
 

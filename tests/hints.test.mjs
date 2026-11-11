@@ -36,8 +36,12 @@ const rec = () => {
 const paint = (f) => { const r = rec(); f(r.c); return r; };
 const L = md.layout(600, 520);
 const INFO = { level: 1, best: [], unlocked: true, daily: null, top: [], opt: OPT_ROWS }; // opt: the SETTINGS rows the pane counts (REAL 3D: twelve)
-const ITEMS = ["PLAY|JUNGLE · NORMAL DIFFICULTY · NORMAL SPEED", "LEVEL SELECT", "DAILY|TODAY", "RECORDS", "SETTINGS", "GUIDE", "SOURCE"];
-const menu = (cur, touch, rev = "") => (c) => md.drawMenu(c, { cursor: cur, enterT: 9, items: ITEMS, touch: !!touch, kind: "2d", rev, info: INFO }, L, 9);
+const ITEMS = ["PLAY", "LEVEL SELECT", "DAILY", "RECORDS", "SETTINGS", "GUIDE", "SOURCE"];
+/* MENU (v202 Task 3.1, pages/menu.js): shellview's names and values; the foot is label first, keycap last, read back from the page's plan */
+const menu = (cur, touch, rev = "", o = {}, L2) => (c) => md.drawMenu(c, { rows: ITEMS, focus: ITEMS[cur], touch: !!touch, level: 1, rev, pages: 4, enterT: 9, ...o }, L2 || L, 9);
+const pg = await import("../src/render/pages/menu.js");
+const CAPG = { up: "▲", dn: "▼" };
+const footOf = () => { const { P, verb } = pg._dbg.last, F = verb != null && P.foot[verb]; return F ? F.parts.map((q) => q.t || q.sep || (Array.isArray(q.cap) ? CAPG[q.cap[0]] : "[" + q.cap + "]")).join(" ") : ""; };
 const STATS_UI = { rows: [], notes: [], trophies: [] };
 const GFX = { rows: [] };
 /* Every page with a foot, keyboard or touch geometry. */
@@ -166,10 +170,10 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
     ["STATS foot", (c) => md.drawStats(c, L, 9, STATS_UI, false, null), "↑ TABS · T MEDALS · C COPY MY STATS · R RESET · ESC BACK"],
     ["STATS armed foot", (c) => md.drawStats(c, L, 9, STATS_UI, true, null), "R AGAIN ERASES · OTHER KEYS CANCEL · KEEPS SETTINGS + GAME SPEED · C COPY"],
     ["MEDALS foot", (c) => md.drawTrophies(c, L, 9, []), "←→ TAB · ENTER / ESC BACK"],
-    ["PLAY pane", menu(0), "ENTER STARTS IT · LEVEL SELECT CHANGES IT"],
-    ["OPTIONS pane", menu(4), "ENTER OPENS ALL TWELVE ROWS"],
-    ["RECORDS pane", menu(3), "ENTER: ALL TEN · BY DIFFICULTY"],
-    ["SOURCE pane", menu(6), "ENTER OPENS IT IN A NEW TAB"],
+    ["MENU foot verb on PLAY", menu(0), "START"],
+    ["MENU foot verb on a door", menu(4), "OPEN"],
+    ["MENU PLAY keycap", menu(0), "ENTER"],
+    ["MENU SOURCE teaser", menu(6), "GITHUB"],
     ["ATTRACT", (c) => md.drawAttractHint(c, L, 200), "DEMO — TAP TO PLAY"],
     ["show skip", (c) => md.drawIntroChrome(c, 1, 0.6, 600, 520, "d"), "ANY KEY TO SKIP"],
     ["show skip, touch", (c) => md.drawIntroChrome(c, 1, 0.6, 600, 520, "p"), "TAP TO SKIP"],
@@ -196,9 +200,10 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
 
 /* ---- the named word changes ---- */
 {
-  const r = paint(menu(0, false, "v99"));
-  check("MENU foot reads ENTER CONFIRM", r.has("↑↓ MOVE · ENTER CONFIRM · v99") && !r.strs().some((s) => /ENTER SELECT/.test(s)), r.strs().join("|"));
-  check("MENU foot without a build tag", paint(menu(0)).has("↑↓ MOVE · ENTER CONFIRM"));
+  const r = paint(menu(0, false, "v99")), f0 = footOf();
+  check("MENU foot reads MOVE ▲▼ · START ENTER | v99: label first, keycap last, every word drawn", f0 === "MOVE ▲ ▼ · START [ENTER] | v99" && ["MOVE", "START", "ENTER", "v99"].every((s) => r.has(s)) && !r.strs().some((s) => /ENTER SELECT/.test(s)), f0 + " / " + r.strs().join("|"));
+  paint(menu(0));
+  check("MENU foot without a build tag", footOf() === "MOVE ▲ ▼ · START [ENTER]", footOf());
   for (const [W, H] of [[600, 520], [608, 352]]) {
     const t = paint((c) => md.drawIntroChrome(c, 0, 1, W, H, "d"));
     check(`title reads PRESS ANY KEY OR BUTTON on keyboard layouts ${W}x${H}`, t.has("PRESS ANY KEY OR BUTTON") && !t.has("PRESS ANY KEY"));
@@ -232,11 +237,10 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
     ["GRAPHICS foot", PAGES.GRAPHICS(false), "↑↓ ROW · ←→ ADJUST · SOUTH CYCLE · EAST BACK"],
     ["STATS foot offers no reset", (c) => md.drawStats(c, L, 9, STATS_UI, false, null), "↑ TABS · NORTH MEDALS · WEST COPY MY STATS · EAST BACK"],
     ["MEDALS foot", (c) => md.drawTrophies(c, L, 9, []), "←→ TAB · SOUTH / EAST BACK"],
-    ["MENU foot", menu(0, false, "v99"), "↑↓ MOVE · SOUTH CONFIRM · v99"],
-    ["PLAY pane", menu(0), "SOUTH STARTS IT · LEVEL SELECT CHANGES IT"],
-    ["OPTIONS pane", menu(4), "SOUTH OPENS ALL TWELVE ROWS"],
-    ["RECORDS pane", menu(3), "SOUTH: ALL TEN · BY DIFFICULTY"],
-    ["SOURCE pane", menu(6), "NEEDS A CLICK OR ENTER"],
+    ["MENU foot's D-PAD keycap", menu(0, false, "v99"), "D-PAD"],
+    ["MENU PLAY keycap", menu(0), "SOUTH"],
+    ["MENU foot on a door", menu(4), "OPEN"],
+    ["MENU foot on SOURCE: a controller press opens no tab", menu(6), "NEEDS A CLICK OR ENTER"],
     ["ATTRACT", (c) => md.drawAttractHint(c, L, 200), "DEMO — PRESS ANY BUTTON"],
     ["show skip", (c) => md.drawIntroChrome(c, 1, 0.6, 600, 520, "d"), "ANY BUTTON TO SKIP"],
     ["LEVEL pace cap", PAGES.LEVEL(false), "SHOULDERS"],
@@ -251,6 +255,10 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
     ["pad words on a touch layout: show skip", (c) => md.drawIntroChrome(c, 1, 0.6, 600, 520, "p"), "ANY BUTTON TO SKIP"],
   ];
   for (const [nm, f, s] of PADWANT) { const r = paint(f); check("pad: " + nm + " = \"" + s + "\"", r.has(s), r.strs().join("|")); }
+  paint(menu(0, false, "v99"));
+  check("pad: MENU foot = MOVE D-PAD · START SOUTH | v99 (label first, keycap last)", footOf() === "MOVE [D-PAD] · START [SOUTH] | v99", footOf());
+  paint(menu(6, false, "v99"));
+  check("pad: MENU foot on SOURCE says it needs a click or Enter, with no SOUTH keycap (never a claim the press keeps)", footOf() === "MOVE [D-PAD] · NEEDS A CLICK OR ENTER | v99", footOf());
   const lv = paint(PAGES.LEVEL(false));
   check("pad: LEVEL has no [ ] or 1–5 cap and no key digits on MODIFIERS", !lv.has("[ ]") && !lv.has("1–5") && lv.has("ONE LIFE") && !lv.has("1 ONE LIFE"), lv.strs().join("|"));
   const gd = paint(PAGES.GUIDE(false));
@@ -278,10 +286,15 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
   const flat = (r) => r.rects.filter((x) => x[0] !== "rgba(4,7,14,0.9)");
   const pages = { ...PAGES, MENU0: () => menu(0, false, "v99"), MENU3: () => menu(3, false, "v99"), MENU4: () => menu(4, false, "v99"), STATS: () => (c) => md.drawStats(c, L, 9, STATS_UI, false, null), MEDALS: () => (c) => md.drawTrophies(c, L, 9, []),
     SCORES_TABS: (T) => (c) => md.drawScores(c, [], L, 9, 0, 0, T, true), STATS_TABS: (T) => (c) => md.drawStats(c, L, 9, STATS_UI, false, null, T, true), MEDALS_TABS: (T) => (c) => md.drawTrophies(c, L, 9, [], T, true) }; // MENU3 is RECORDS since v202 Task 2.2, MENU4 SETTINGS; *_TABS: RECORDS' tab row
+  /* MENU (v202 Task 3.1): the foot's keycaps and PLAY's keycap are keys now, sized by their legend (▲▼ + ENTER vs D-PAD + SOUTH): outside them
+     every rect stays; inside them only the caps move */
+  const inR = (q, x) => x[1] >= q.x - 0.5 && x[2] >= q.y - 0.5 && x[1] + x[3] <= q.x + q.w + 0.5 && x[2] + x[4] <= q.y + q.h + 6.5;
+  const capsOf = () => { const { P, verb } = pg._dbg.last, F = verb != null && P.foot[verb]; return [F, P.rows.PLAY.cap].filter(Boolean); };
   for (const T of [false, true]) for (const [nm, p] of Object.entries(pages)) {
-    setHints(null); const a = paint(p(T));
-    setHints(PAD); const b = paint(p(T));
+    setHints(null); const a = paint(p(T)), qa = /^MENU/.test(nm) ? capsOf() : [];
+    setHints(PAD); const b = paint(p(T)), qb = /^MENU/.test(nm) ? capsOf() : [];
     setHints(null);
+    if (/^MENU/.test(nm)) { const keep = (r, q) => flat(r).filter((x) => !q.some((z) => inR(z, x))); check(`a flip changes words only: ${nm}${T ? " touch" : ""} keeps every rect outside its keycaps (the foot's and PLAY's follow the device)`, J(keep(a, [...qa, ...qb])) === J(keep(b, [...qa, ...qb])) && keep(a, qa).length > 0, J(keep(a, [...qa, ...qb])).length + " vs " + J(keep(b, [...qa, ...qb])).length); continue; }
     if (nm === "LEVEL" && T) { // v202 Task 2.3 fix round 1: tap mode lights START (keys / touch words on a touch layout), a controller runs the focus model (the LEVEL row's ring, a stroke): the flip moves only START's band + notch
       const sb = md.levelGeom(L, true, true).rows.START, lit = (x) => (x[0] === "rgba(55,240,208,0.12)" && J(x.slice(1)) === J([sb.x, sb.y, sb.w, sb.h])) || (x[0] === "#37f0d0" && J(x.slice(1)) === J([sb.x, sb.y, 3, sb.h]));
       check("a flip changes words only: LEVEL touch keeps every rect but START's lit band and notch (tap mode lights START, a controller does not)", J(flat(a).filter((x) => !lit(x))) === J(flat(b)) && flat(a).filter(lit).length === 2 && flat(b).filter(lit).length === 0, J(flat(a)).length + " vs " + J(flat(b)).length);
@@ -390,64 +403,62 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
     check("ITEMS on a narrow touch box (" + nw + ") loses no word of the two tips", whole(narrowItems, "tap tosses a bomb") && whole(narrowItems, "tap detonates your bombs"), narrowItems.strs().join("|"));
   }
 
-  const NOTE = "NO SOUND YET · PRESS A KEY OR TAP";
-  const noted = (touch, note, L2) => { const r = rec(); md.drawMenu(r.c, { cursor: 0, enterT: 9, items: ITEMS, touch, kind: "2d", rev: "v99", info: INFO, soundNote: note }, L2 || L, 9); return r; };
-  check("MENU foot: no note, today's foot", noted(false, "").has("↑↓ MOVE · ENTER CONFIRM · v99") && !noted(false, "").strs().some((s) => /NO SOUND/.test(s)));
-  check("MENU foot: the note joins the foot", noted(false, NOTE).has(NOTE + " · ↑↓ MOVE · ENTER CONFIRM · v99"), noted(false, NOTE).strs().join("|"));
-  check("MENU foot: the keyboard note fits the stage", (NOTE + " · ↑↓ MOVE · SOUTH CONFIRM · v99").length * 6 + 24 <= 600);
-  for (const [n, h] of [["short box", 520], ["tall box", 860]]) {
-    const LT = md.layout(420, h, h > 600 ? 0.27 * 420 : undefined), r = noted(true, NOTE, LT);
-    check("touch hub paints the note (" + n + ")", r.strs().some((s) => s.includes(NOTE)), r.strs().join("|"));
-    check("touch hub without a note paints none (" + n + ")", !noted(true, "", LT).strs().some((s) => /NO SOUND/.test(s)));
+  /* v202 Task 3.1: MENU's notes. On a desk layout (the keyboard foot, the touch-landscape foot) a note leads the foot; on the phone column it rides
+     SOURCE's teaser, whole where it fits, else its first part. The controller's signpost is the foot's one cream word; the rest is t2. */
+  const NOTE = "NO SOUND YET · PRESS A KEY OR TAP", INK = "#fff2df", T2 = "#dccbb8";
+  const TODAY = "MOVE ▲ ▼ · START [ENTER] | v99", SIGN = "CONTROLLER READY · SETTINGS › CONTROLS";
+  const drawn = (touch, o, L2) => { const r = rec(), cols = []; const c = new Proxy(r.c, { get: (t, p) => (p === "fillText" ? (s, x, y) => { cols.push({ s: String(s), col: t.fillStyle, x }); t.fillText(s, x, y); } : t[p]), set: (t, p, v) => { t[p] = v; return true; } }); menu(0, touch, "v99", o, L2)(c); return { r, cols, col: (s) => (cols.find((x) => x.s === s) || {}).col, foot: footOf(), last: pg._dbg.last }; };
+  const PH = [["narrow tall box", 420, 860, 113], ["wide tall box", 600, 900, 162]];
+  const tease = (k) => k.last.P.rows.SOURCE.tz && k.last.P.rows.SOURCE.tz.lines.join(" ");
+  check("MENU foot: no note, today's foot", drawn(false, {}).foot === TODAY && !drawn(false, {}).r.strs().some((s) => /NO SOUND/.test(s)));
+  check("MENU foot: the note leads the foot", drawn(false, { note: NOTE }).foot === NOTE + " · " + TODAY && drawn(false, { note: NOTE }).r.has(NOTE), drawn(false, { note: NOTE }).foot);
+  { const k = drawn(false, { note: NOTE }), F = k.last.P.foot.START, u = k.last.G.u; check("MENU foot: the keyboard note fits the stage", F.x * u >= 0 && (F.x + F.w) * u <= 600, J([F.x * u, (F.x + F.w) * u])); }
+  check("touch landscape (short box, the desk foot): the note leads TAP A ROW", drawn(true, { note: NOTE }).foot === NOTE + " · TAP A ROW | v99", drawn(true, { note: NOTE }).foot);
+  for (const [n, W, H, lg] of PH) {
+    const LT = md.layout(W, H, lg), k = drawn(true, { note: NOTE }, LT);
+    check("phone (" + n + "): SOURCE's teaser carries the note, whole or its first part", k.last.G.mode === "phone" && /^NO SOUND YET( · PRESS A KEY OR TAP)?$/.test(tease(k)) && k.r.has(tease(k)), tease(k));
+    check("phone without a note (" + n + "): no note, the build tag", tease(drawn(true, {}, LT)) === "v99" && !drawn(true, {}, LT).r.strs().some((s) => /NO SOUND/.test(s)));
   }
-  const shot = (note) => { const r = rec(); const app = createMenuApp({ settings: {} }); app.screen = SCREEN.MENU; app.subT = 9; app.soundNote = note; drawShell(r.c, app, {}, null, "2d", () => [], () => 0); return r; };
-  check("shellview hands app.soundNote to the MENU foot", shot(NOTE).strs().some((s) => s.startsWith(NOTE)), shot(NOTE).strs().join("|"));
-  check("no note on app: no note drawn", !shot("").strs().some((s) => /NO SOUND/.test(s)));
-  /* A controller arrives: the MENU signposts CONTROLS, in accent, for the note's lifetime. */
-  const SIGN = "CONTROLLER READY · SETTINGS › CONTROLS · v99", ACC = "#37f0d0";
-  const padded = (touch, pad, sound = "", L2) => { const r = rec(), cols = []; const c = new Proxy(r.c, { get: (t, p) => (p === "fillText" ? (s, x, y) => { cols.push({ s: String(s), col: t.fillStyle, x }); t.fillText(s, x, y); } : t[p]), set: (t, p, v) => { t[p] = v; return true; } }); md.drawMenu(c, { cursor: 0, enterT: 9, items: ITEMS, touch, kind: "2d", rev: "v99", info: INFO, soundNote: sound, padNote: pad }, L2 || L, 9); return { r, cols, col: (s) => (cols.find((x) => x.s === s) || {}).col }; };
-  const TODAY = "↑↓ MOVE · ENTER CONFIRM · v99";
+  const shot = (note) => { const r = rec(); const app = createMenuApp({ settings: {} }); app.screen = SCREEN.MENU; app.subT = 9; app.soundNote = note; drawShell(r.c, app, {}, null, "2d", () => [], () => 0); return { r, foot: footOf() }; };
+  check("shellview hands app.soundNote to the MENU foot", shot(NOTE).foot.startsWith(NOTE + " · MOVE") && shot(NOTE).r.has(NOTE), shot(NOTE).foot);
+  check("no note on app: no note drawn", !shot("").r.strs().some((s) => /NO SOUND/.test(s)));
+  /* A controller arrives: the MENU signposts CONTROLS, in cream, for the note's lifetime. */
   for (const pad of ["CONTROLLER READY", "CONTROLLER BACK"]) {
-    const k = padded(false, pad);
-    check("MENU foot: " + pad + " reads the signpost, in accent", k.col(SIGN) === ACC, J(k.cols.slice(-2)));
-    check("MENU foot: " + pad + " replaces the hint", !k.r.has(TODAY));
+    const k = drawn(false, { pad });
+    check("MENU foot: " + pad + " reads the signpost, in cream, the build tag after it", k.foot === SIGN + " | v99" && k.col(SIGN) === INK, k.foot + " " + J(k.cols.slice(-3)));
+    check("MENU foot: " + pad + " replaces the hint", k.foot.indexOf("MOVE") < 0);
   }
   for (const pad of ["", "CONTROLLER LOST", undefined]) {
-    const k = padded(false, pad);
-    check("MENU foot: padNote " + J(pad) + " keeps today's foot, muted", k.r.has(TODAY) && k.col(TODAY) !== ACC && !k.r.strs().includes(SIGN));
+    const k = drawn(false, { pad });
+    check("MENU foot: padNote " + J(pad) + " keeps today's foot, its words t2", k.foot === TODAY && k.col("MOVE") === T2 && !k.r.strs().includes(SIGN));
   }
-  check("MENU foot: the signpost fits the stage", SIGN.length * 6 + 24 <= 600);
-  const both = padded(false, "CONTROLLER READY", NOTE);
-  check("MENU foot: soundNote wins over the signpost", both.r.has(NOTE + " · " + TODAY) && !both.r.has(SIGN), both.r.strs().join("|"));
-  for (const [n, W, h, lg] of [["short box", 600, 520], ["narrow tall box", 420, 860, 113], ["wide tall box", 600, 900, 162]]) {
-    const LT = md.layout(W, h, lg), r = padded(true, "CONTROLLER READY", "", LT);
-    check("touch hub: the signpost, whole, in accent (" + n + ")", r.col(SIGN) === ACC, r.r.strs().join("|"));
-    check("touch hub: soundNote wins (" + n + ")", (() => { const x = padded(true, "CONTROLLER READY", NOTE, LT); return x.r.strs().some((s) => s.includes(NOTE)) && !x.r.strs().includes(SIGN); })());
-    check("touch hub: LOST paints no signpost (" + n + ")", !padded(true, "CONTROLLER LOST", "", LT).r.strs().includes(SIGN));
+  { const k = drawn(false, { pad: "CONTROLLER READY" }), F = k.last.P.foot[""], u = k.last.G.u; check("MENU foot: the signpost fits the stage", F.x * u >= 0 && (F.x + F.w) * u <= 600); }
+  check("MENU foot: the sound note wins over the signpost", drawn(false, { pad: "CONTROLLER READY", note: NOTE }).foot === NOTE + " · " + TODAY, drawn(false, { pad: "CONTROLLER READY", note: NOTE }).foot);
+  {
+    const k = drawn(true, { pad: "CONTROLLER READY" });
+    check("touch landscape (short box): the signpost, whole, in cream", k.foot === SIGN + " | v99" && k.col(SIGN) === INK, k.foot);
+    check("touch landscape: the sound note wins", drawn(true, { pad: "CONTROLLER READY", note: NOTE }).foot === NOTE + " · TAP A ROW | v99");
+    check("touch landscape: LOST paints no signpost", !drawn(true, { pad: "CONTROLLER LOST" }).r.strs().includes(SIGN));
+  }
+  for (const [n, W, H, lg] of PH) {
+    const LT = md.layout(W, H, lg), k = drawn(true, { pad: "CONTROLLER READY" }, LT), o = k.last.P.rows.SOURCE;
+    check("phone (" + n + "): SOURCE's teaser carries the signpost in cream, whole where it fits, else CONTROLLER READY; never over the label", /^CONTROLLER READY( · SETTINGS › CONTROLS)?$/.test(tease(k)) && o.tz.col === INK && o.tz.x - o.tz.w >= o.foc.x + o.label.w + 12, tease(k));
+    check("phone (" + n + "): the sound note wins", /^NO SOUND YET/.test(tease(drawn(true, { pad: "CONTROLLER READY", note: NOTE }, LT))));
+    check("phone (" + n + "): LOST paints no signpost", tease(drawn(true, { pad: "CONTROLLER LOST" }, LT)) === "v99");
   }
   {
-    const LT = md.layout(600, 520), S = md.menuList(LT, 7, true).rows[6], tile = padded(true, "CONTROLLER BACK", "", LT).cols.find((x) => x.s === SIGN);
-    check("touch hub: on the SOURCE tile the signpost clears the SOURCE label", !!tile && tile.x - SIGN.length * 0.6 * 13 >= S.x + 24 + 70, tile && tile.x);
-    const LN = md.layout(400, 520), N = padded(true, "CONTROLLER READY", "", LN).cols.find((x) => /^CONTROLLER READY/.test(x.s));
-    const LP = md.layout(400, 800, 108), P = padded(true, "CONTROLLER READY", "", LP), URL0 = "github.com/HMarzban/fusegrid";
-    check("touch hub, signpost under the plate: the SOURCE tile keeps its URL whole, in its own colour", P.col(SIGN) === ACC && P.r.has(URL0) && P.col(URL0) !== ACC, P.r.strs().join("|"));
-    check("touch hub: a tile too narrow clips rather than run over the label", !!N && N.s !== SIGN, N && N.s);
+    const LONG = "CONTROLLER READY · VIBRATION MEDIUM · SETTINGS › CONTROLS", VN = "CONTROLLER READY · VIBRATION MEDIUM";
+    check("MENU foot: the level joins the signpost where it fits", drawn(false, { pad: VN }).foot === LONG + " | v99", drawn(false, { pad: VN }).foot);
+    { const k = drawn(false, { pad: VN }), F = k.last.P.foot[""], u = k.last.G.u; check("the long signpost fits the stage it is drawn on", F.x * u >= 0 && (F.x + F.w) * u <= 600); }
+    check("MENU foot: no level, today's signpost", drawn(false, { pad: "CONTROLLER READY" }).foot === SIGN + " | v99" && drawn(false, { pad: "CONTROLLER BACK" }).foot === SIGN + " | v99");
+    for (const [n, W, H, lg] of PH) { const t = tease(drawn(true, { pad: VN }, md.layout(W, H, lg))); check("phone (" + n + "): the long signpost steps down whole (" + t + ")", [LONG, SIGN, "CONTROLLER READY"].includes(t), t); }
   }
-  {
-    const LONG = "CONTROLLER READY · VIBRATION MEDIUM · SETTINGS › CONTROLS · v99", VN = "CONTROLLER READY · VIBRATION MEDIUM", sh = (touch, LT, padNote = VN) => { const r = rec(); md.drawMenu(r.c, { cursor: 0, enterT: 9, items: ITEMS, touch, kind: "2d", rev: "v99", info: INFO, padNote }, LT, 9); return r; };
-    check("MENU foot: the level joins the note where it fits", sh(false, L).has(LONG) && !sh(false, L).has(SIGN));
-    check("the long note fits the stage it is drawn on", LONG.length * 6 + 24 <= 600 - 16);
-    check("MENU foot: no level, today's note", sh(false, L, "CONTROLLER READY").has(SIGN) && sh(false, L, "CONTROLLER BACK").has(SIGN) && !sh(false, L, "CONTROLLER BACK").has(LONG));
-    check("touch hub, wide tall box: it fits under the plate", sh(true, md.layout(600, 900, 162)).has(LONG));
-    check("touch hub, 400 wide tall box: too wide, today's note stands whole", sh(true, md.layout(400, 800, 108)).has(SIGN) && !sh(true, md.layout(400, 800, 108)).has(LONG));
-    check("touch hub, on the SOURCE tile: too wide, today's note stands", !sh(true, md.layout(600, 520)).has(LONG) && sh(true, md.layout(600, 520)).has(SIGN));
-  }
-  const padShot = (n) => { const r = rec(); const app = createMenuApp({ settings: {} }); app.screen = SCREEN.MENU; app.subT = 9; app.padNote = n; drawShell(r.c, app, {}, null, "2d", () => [], () => 0); return r; };
-  const SIGN0 = /^CONTROLLER READY · SETTINGS › CONTROLS · v\d+$/;
-  check("shellview hands app.padNote to the MENU foot, the live build tag kept", padShot("CONTROLLER READY").strs().some((s) => SIGN0.test(s)), padShot("CONTROLLER READY").strs().join("|"));
-  check("no padNote on app: no signpost", !padShot("").strs().some((s) => s.startsWith("CONTROLLER READY")));
-  { const r = rec(); md.drawMenu(r.c, { cursor: 0, enterT: 9, items: ITEMS, touch: false, kind: "2d", rev: "", info: INFO, padNote: "CONTROLLER READY" }, L, 9); check("no tag to keep: the sign alone, no dangling dot", r.has("CONTROLLER READY · SETTINGS › CONTROLS")); }
-  check("the note gone, the normal foot is back with its tag", padded(false, "").r.has(TODAY));
+  const padShot = (n) => { const r = rec(); const app = createMenuApp({ settings: {} }); app.screen = SCREEN.MENU; app.subT = 9; app.padNote = n; drawShell(r.c, app, {}, null, "2d", () => [], () => 0); return { r, foot: footOf() }; };
+  const SIGN0 = /^CONTROLLER READY · SETTINGS › CONTROLS \| v\d+$/;
+  check("shellview hands app.padNote to the MENU foot, the live build tag kept", SIGN0.test(padShot("CONTROLLER READY").foot), padShot("CONTROLLER READY").foot);
+  check("no padNote on app: no signpost", !padShot("").r.strs().some((s) => s.startsWith("CONTROLLER READY")));
+  { const r = rec(); md.drawMenu(r.c, { rows: ITEMS, focus: "PLAY", touch: false, rev: "", level: 1, pad: "CONTROLLER READY", enterT: 9 }, L, 9); check("no tag to keep: the signpost alone, no dangling bar", footOf() === SIGN && r.has(SIGN)); }
+  check("the note gone, the normal foot is back with its tag", drawn(false, { pad: "" }).foot === TODAY);
   setHints(PAD);
   check("HOW TO on a pad: the foot names CONTROLS, whole, and fits its plate", paint(PAGES.HOWTO(false)).has("REBIND IN SETTINGS › CONTROLS · EAST / SOUTH BACK") && "REBIND IN SETTINGS › CONTROLS · EAST / SOUTH BACK".length * 6 <= 520);
   setHints(null);

@@ -15,12 +15,12 @@
             tap targets of its own, the title's tap-anywhere, PLAY's DOM touch strip) this screen has nothing for, each with a one-line reason.
             DEFAULT-DENY: every other EXEMPTABLE gate is in the screen's `need`, so once the page records into the probe, a required gate it does not
             declare is skipped ("required, not declared") and fails --strict. Only this tracked table exempts, in review, when a page task instruments
-            its page; the page under test cannot exempt itself. No screen is instrumented yet, so no row exempts anything yet. */
+            its page; the page under test cannot exempt itself. MENU (v202 Task 3.1) is the first instrumented screen. */
 import { EXEMPTABLE } from "./gatelib.mjs";
 
 const ROWS = {
   title: { state: "INTRO", settle: 1200 },
-  menu: { state: "MENU", settle: 1200 },
+  menu: { state: "MENU", settle: 1200, exempt: { chosen: "MENU shows no chosen / unchosen values: every row is a door or the PLAY key", locked: "MENU shows no locked value: every row is open" } },
   level: { menu: ["LEVEL SELECT"], state: "LEVEL" },
   options: { menu: ["OPTIONS", "SETTINGS"], state: "SETTINGS" },
   graphics: { menu: ["OPTIONS", "SETTINGS"], key: ["ArrowUp", "ArrowUp", "ArrowUp", "Enter"], state: "GRAPHICS" }, // ↑ from the top wraps: RESET DEFAULTS, CONTROLS, GRAPHICS (the last three rows in every look)

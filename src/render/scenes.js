@@ -7,12 +7,10 @@ import { LABEL, diffTag, speedTag, runParts } from "./words.js";
 import { abilityList, abilityText, abilityOrd, getStrip } from "./fx.js";
 import { layout, listGeom, listHit, drawList, plate, fitKicker, setupVals, head as plateHead, foot as plateFoot, LINE } from "./menudraw.js";
 import { hints } from "./hintcopy.js";
-import { drawLogo2d } from "./logo/draw2d.js";
 
-/* Scene UI: menu logo, HUD, and the CLEARED / GAME OVER / PAUSED overlays.
-   Pure draw; reads world + (optionally) DOM for HUD. The MENU logo is logo B
-   through its one painter (logo/draw2d.js), o as drawLogo2d takes it. */
-export const drawLogo = (c, o) => drawLogo2d(c, o);
+/* Scene UI: HUD, and the CLEARED / GAME OVER / PAUSED overlays.
+   Pure draw; reads world + (optionally) DOM for HUD. The MENU logo is the MENU
+   page header's (pages/menu.js). */
 export function winHeadline(world) {
   return isFinale(world.level) || world.finale
     ? "FUSE/GRID CLEAR"

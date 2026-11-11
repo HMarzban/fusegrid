@@ -3,6 +3,9 @@ import { resolve } from "./gfx.js";
 import { SCREEN } from "./menuapp.js";
 
 const HELD_FPS = 60;
+/* the menu kit's offscreen layers (render/kit/cache.js release, handed in by main as env.release): freed after KIT_FREE ms of GAME PLAY on a
+   PLAY-only clock (reset by any other screen; PAUSE and a run end hold it) and on pagehide; the next shell frame refills them */
+export const KIT_FREE = 10000;
 const DEV0 = Object.freeze({ lay: "d", dpr: 1, scale: 1 });
 const on = (o, t, f, opt) => { if (o && typeof o.addEventListener === "function") o.addEventListener(t, f, opt); };
 const same = (a, b) => { if (!a || !b) return false; for (const k in b) if (k !== "epoch" && a[k] !== b[k]) return false; return true; };
@@ -16,7 +19,8 @@ export function mountFrames(loop, env = {}) {
   const gate = createGate(), gov = createGovernor();
   let S = null, base = null, K = null, epoch = 0, pushed = -1, fold = false, pending = false;
   let tPrev = null, tRun = null, runs = 0, fps = 0, infoT = null, raw = [], rawSum = 0;
-  let lk = null, ll = null, aaEp = -1, prevAA = null, wasIdle = true, gc = null;
+  let lk = null, ll = null, aaEp = -1, prevAA = null, wasIdle = true, gc = null, playMs = 0, freed = false;
+  const free = () => { if (typeof env.release === "function") env.release(); };
   const readDev = () => {
     try {
       const c = env.canvas, b = doc && doc.body, r = c && typeof c.getBoundingClientRect === "function" ? c.getBoundingClientRect() : null;
@@ -80,6 +84,8 @@ export function mountFrames(loop, env = {}) {
     if (env.pre && env.pre(t)) gate.poke(); // the pad polls on every rAF: the idle floor of 20 fps can miss a tap
     const a = env.app ? env.app() : null, r = rc();
     const idle = (wasIdle = !!(env.idle && env.idle()));
+    if (!a || a.screen !== SCREEN.GAME) { playMs = 0; freed = false; }
+    else if (!idle && !freed && iv > 0 && iv <= IV_STALL && (playMs += iv) >= KIT_FREE) { freed = true; free(); }
     /* A held menu direction repeats on the frames app.update gets: 60 Hz while it is held, or the repeat lands on idle frames. */
     const cap = !K ? Infinity : idle && a && a.repDir ? Math.min(HELD_FPS, K.fpsCap) : idle ? K.idleFps : K.fpsCap;
     if (gate.tick(t, cap)) tick(t, a, r, idle, cap);
@@ -97,6 +103,7 @@ export function mountFrames(loop, env = {}) {
     const r = rc();
     if (r && typeof r.invalidate === "function") r.invalidate();
   });
+  on(win, "pagehide", free);
   on(win, "resize", redev);
   on(win, "orientationchange", redev);
   const watchDpr = () => {
