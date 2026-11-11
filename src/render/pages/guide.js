@@ -659,7 +659,7 @@ function record(G, P, ui, foc, dpr, el, pg) {
   const u = G.u, D = G.d, b = (r) => [r.x * u, r.y * u, r.w * u, r.h * u], tok = worldTokens(ui.level), ts = textScale();
   probe.begin(SHOT[G.page], {w: G.W, h: G.H, dpr, el});
   probe.rect("plate", ...b(D.plate), {plate: G.T, fill: tok.bedA});
-  const tg = G.page === EN && ui.tip && foc != null && D.tips ? D.tips[foc] : null, hidden = tg ? tg.cover.map((j) => D.items[D.order[j]].r) : [];
+  const tg = G.page === EN && ui.tip && foc != null && D.tips ? D.tips[foc] : null, hidden = tg ? [...tg.cover.map((j) => D.items[D.order[j]].r), tg.r] : []; // the tooltip plate covers the pager strip too
   const under = (x, y, w2, h2) => hidden.some((r) => x < r.x + r.w && x + w2 > r.x && y < r.y + r.h && y + h2 > r.y);
   const text = (p, dx = 0, dy = 0) => {
     const px = p.px * ts, capH = px * CAP_K, wd = Math.max(0.01, p.mw || 1), x0 = (p.align === "right" ? p.x - wd : p.align === "center" ? p.x - wd / 2 : p.x) + dx, y0 = p.y + dy - capH / 2;
