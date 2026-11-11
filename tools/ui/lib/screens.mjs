@@ -11,6 +11,7 @@
      wait   "controls": the lazy CONTROLS page must be in (app.controls.loading false) before the frames are stepped; "records": the lazy RECORDS
             page (pages/lazy.js) must be in
      run    a run screen: play, pause, win or lose
+     tags   (a pause screen) the run's rules seeded through the debug hook before PAUSE: EXPERT, FAST, every modifier, TIME TRIAL (the tag row)
      state  what window.__GAME__.state() must read before the capture; a mismatch is an error and no PNG
      settle virtual ms stepped before the capture (default 600)
      exempt {gate: "reason"}: an EXEMPTABLE gate (tools/ui/lib/gatelib.mjs: the ten REQUIRED ones, plus touch and gap for a phone screen with no
@@ -56,6 +57,7 @@ const ROWS = {
   statsfull: { menu: ["RECORDS"], seed: "records", key: "KeyE", wait: "records", state: "STATS", exemptPhone: { ring: "a phone capture is tap mode (touch hints, no controller): the page shows no focus, as LEVEL SELECT (v202 fix round 1)", band: "a phone capture is tap mode: no focus band" }, exemptIfNo: { locked: { rect: "^level \\d locked$", why: "no locked level drawn: world 8 opens levels 6-8, and a phone at its step 2 or a later STATS page draws no course" } } },
   play: { run: "play", state: "PLAY", settle: 900 },
   pause: { run: "pause", state: "PAUSE", settle: 300, exempt: { chosen: "PAUSE shows no chosen / unchosen values: every row is a verb or a door", locked: "PAUSE shows no locked value: every row is open" } },
+  pausetags: { run: "pause", tags: true, state: "PAUSE", settle: 300, exempt: { chosen: "PAUSE shows no chosen / unchosen values: every row is a verb or a door", locked: "PAUSE shows no locked value: every row is open" } },
   win: { run: "win", state: "WIN", settle: 1800 },
   lose: { run: "lose", state: "LOSE", settle: 1600 },
 };

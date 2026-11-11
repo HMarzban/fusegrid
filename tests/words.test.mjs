@@ -342,7 +342,7 @@ check("ruling 7: a bare NORMAL or HARD only where its own line or row names its 
 {
   /* PAUSE (v202 Task 5.1: the kicker is LEVEL n · world, the run's rules ride the tag row): a daily keeps DAILY (a daily is always a default run), a
      heavy run keeps every rule (the named tags and the +N count them all); the kicker fits the plate. The page plans on its own measuring context. */
-  const { setMeasure } = await import("../src/render/pages/pause.js");
+  const { setMeasure, pauseGeom } = await import("../src/render/pages/pause.js");
   setMeasure(rec({ widthK: 0.7 }).ctx);
   for (const [name, B, touch] of [["keyboard", overlayBox("2d"), false], ["touch", overlayBox("2d"), true], ["iso", overlayBox("iso"), false]]) {
     const paint = (w, run) => { const R = rec({ widthK: 0.7 }); drawOverlay(R.ctx, { state: "PAUSE", ...w }, B.w, B.h, B.cx, B.cy, { view: 0, cursor: 0, touch }, null, run); return R.texts; };
@@ -351,7 +351,14 @@ check("ruling 7: a bare NORMAL or HARD only where its own line or row names its 
     const all = W.runParts({ heat: 2, pace: 1, pact: 15 }), tags = paint({ level: 8, heat: 2, pace: 1, pact: 15 }, null).filter((t) => all.includes(t.s) || W.runParts({ heat: 2, pace: 1, pact: 15 }, { terse: true }).includes(t.s) || /^\+\d+$/.test(t.s)).map((t) => t.s);
     const counted = tags.reduce((n, s) => n + (/^\+(\d+)$/.test(s) ? +s.slice(1) : 1), 0);
     check(`PAUSE kicker (${name}): a daily keeps DAILY, a heavy run keeps every rule (its tags and +N), a default run reads LEVEL n · world`,
-      !!d && /^LEVEL 1 · (JUNGLE · )?DAILY$/.test(d.s) && !!h && h.s === "LEVEL 8 · CROWN" && counted === all.length && !!plain && plain.s === "LEVEL 3 · FACTORY", J([d && d.s, h && h.s, tags, plain && plain.s]));
+      !!d && /DAILY$/.test(d.s) && !!h && h.s === "LEVEL 8 · CROWN" && counted === all.length && !!plain && plain.s === "LEVEL 3 · FACTORY", J([d && d.s, h && h.s, tags, plain && plain.s]));
+    /* the daily's exact kicker: LEVEL 1 · JUNGLE · DAILY whole at a real glyph width (0.6 em); the world drops (LEVEL 1 · DAILY) only where the full
+       form measures over the plate's content width, which at this test's wide 0.7 em is decided by the same arithmetic */
+    const full = "LEVEL 1 · JUNGLE · DAILY", px = touch ? 16 : 21, cw = pauseGeom(B, touch).d.cw, got = {};
+    for (const k of [0.6, 0.7]) { setMeasure(rec({ widthK: k }).ctx); got[k] = kick({ level: 1, heat: 0, pace: 0, pact: 0 }, { daily: "2026-11-10" }).s; }
+    setMeasure(rec({ widthK: 0.7 }).ctx);
+    check(`PAUSE daily kicker (${name}): exactly ${full} at a real glyph width; the world drops only when the full form does not fit`,
+      got[0.6] === full && got[0.7] === (full.length * 0.7 * px <= cw ? full : "LEVEL 1 · DAILY"), J(got));
   }
   setMeasure(null);
   /* LEVEL SELECT (v202 Task 3.3): a MODIFIERS list entry's name, broken over two lines where one will not fit, stays inside its key, in the iso

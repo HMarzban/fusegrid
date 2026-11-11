@@ -355,19 +355,24 @@ const HUD_W = {
     L.texts.join("|") === L2.texts.join("|"),
     L.texts.join("|"),
   );
-  const P = rec();
-  const Pw = { state: "PAUSE", level: 3, finale: false, score: 10, heat: 0 };
-  drawOverlay(P.c, Pw, 600, 520, 300, 260, { view: 0, cursor: 0 }, {
+  /* v202 Task 5.1: PAUSE reads tm for one thing, the run's rules. A timed run shows a TIME TRIAL tag (words.js runParts) and nothing else of tm
+     (no room time, no best); an untimed one shows no tag. A full recorder (clip and rect) so the page paints, never the plan-only path. */
+  const { rec: full } = await import("./lib/textrec.mjs");
+  const P = full();
+  const Pw = { state: "PAUSE", level: 3, finale: false, score: 10, heat: 0, pace: 0, pact: 0 };
+  drawOverlay(P.ctx, Pw, 600, 520, 300, 260, { view: 0, cursor: 0 }, {
     on: true,
     t: 41.23,
     best: null,
   });
-  const P2 = rec();
-  drawOverlay(P2.c, Pw, 600, 520, 300, 260, { view: 0, cursor: 0 });
+  const P2 = full();
+  drawOverlay(P2.ctx, Pw, 600, 520, 300, 260, { view: 0, cursor: 0 });
+  const ps = P.texts.map((t) => t.s), p2 = P2.texts.map((t) => t.s);
   check(
-    "drawOverlay PAUSE ignores tm entirely",
-    P.texts.join("|") === P2.texts.join("|"),
-    P.texts.join("|"),
+    "drawOverlay PAUSE reads tm only for the TIME TRIAL tag: timed, the tag and nothing else of tm; untimed, no tag",
+    p2.length > 8 && p2.includes("PAUSED") && !p2.includes("TIME TRIAL") && ps.filter((s) => s === "TIME TRIAL").length === 1 &&
+      ps.filter((s) => s !== "TIME TRIAL").join("|") === p2.join("|") && !ps.some((s) => /\d:\d\d\.\d/.test(s)),
+    ps.join("|"),
   );
 }
 

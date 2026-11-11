@@ -208,15 +208,18 @@ touch), RESUME (the one yellow key; the back key's cap at its end on a keyboard 
 `div`, RESTART and QUIT TO MENU (coral at rest, cream on the focus band; QUIT's `M` cap on a keyboard layout, a back glyph on touch or a
 controller), the foot `MOVE ↑↓ · CONFIRM ENTER` (a controller `MOVE D-PAD · CONFIRM SOUTH`, touch `TAP A ROW`). Focus: RESUME the bare bomb +
 the 3 px cream ring, a row the band + the bare bomb. `pauseGeom(B, touch, {css, world, time})` / `pauseHit(x, y, B, touch, o)`: css = #c's stage
-scale (`canvas.css`, fit.js), world + time decide the tag row; `pointer.js` hands the same. The plate keeps the HUD band (y < 42) and the ability
+scale (`canvas.css`, fit.js; main hands it in `opts.pause.css`, the painter reads no canvas), world + time decide the tag row; `pointer.js` hands
+the same. A tap on a seam (a list midpoint, the grid's divider) is the row above's; the grid's middle seam is the left tile's. The plate keeps the HUD band (y < 42) and the ability
 bar (>= 482 of 520) clear. Keyboard: the S7 metrics in box units (`PAUSE_ROW_D` 44 / hero 54 / width 340, 420 at 125 %), scaled as one piece in a
 short box (pitches are caps; a run with a tag row scales 600 x 520 to ~0.96). Touch: design px are CSS px (u = 1 / css), rows floored at 45 CSS (44 + #c's border)
-px and grown toward the `PAUSE_ROW_H` 70 / hero 76 box caps (width 380 box); the first arrangement that fits wins (`TRIES`): one list with the foot;
+px, never closer than 8 CSS px to another row (a touch list's RESTART / QUIT gap is 9; the keyboard list keeps the mock's 2), and grown toward the
+`PAUSE_ROW_H` 70 / hero 76 box caps (width 380 box); the first arrangement that fits wins (`TRIES`): one list with the foot;
 the 2 x 2 grid (RESUME | SETTINGS, divider, RESTART | QUIT TO MENU) with the foot; without it; the tag row folded into the kicker; `TIGHT` clear
 space; past that it scales and the floors give way (no listed phone reaches it). A 393 px phone and every landscape phone get the grid. The
 shape is derived from the labels once (`PAUSE_SHAPE` over `PAUSE_ROWS`, which `words.test` pins equal to `PAUSE_ITEMS`) and every reader
 dispatches by label. Measuring never touches `#c` (the page's own 1 x 1 context, `setMeasure` the tests' seam), so the first PAUSE frame makes
-the calls every later one does; the plate is a `kit/cache.js` layer, the veil and the focused row paint live.
+the calls every later one does; the plate is a `kit/cache.js` layer, the veil and the focused row paint live. `tools/ui` captures `pause` (a
+default run) and `pausetags` (every rule seeded through the debug hook before PAUSE: the tag row).
 Touch rule: a tap on a row = Enter on it; keyboard PAUSE bands span
 the full width of the stage (a touch grid tile owns its half); a MENU row owns its key and half of each gap round it, out to the plate's bed edge (the next-run card's slot, the logo
 and off the plate are no row);

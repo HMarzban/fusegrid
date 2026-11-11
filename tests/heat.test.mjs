@@ -311,8 +311,8 @@ check(
     pauseGeom(b2, true, { css: s393 }).rows.map((r) => r.h * s393).join(),
   );
   check(
-    "keyboard pause rows are compact (pitch PAUSE_ROW_D 44, hero 54) and the plate stays short (<= 400 of 520: the S7 title block, divider and foot)",
-    PAUSE_ROW_D === 44 && pauseGeom(b2).rows.slice(1).every((r) => r.h === 44) && pauseGeom(b2).rows[0].h === 54 && pauseGeom(b2).h <= 400,
+    "keyboard pause rows are compact (pitch PAUSE_ROW_D 44, hero 54) and the plate stays short (<= 390 of 520: the S7 title block, divider and foot measure 385.2)",
+    PAUSE_ROW_D === 44 && pauseGeom(b2).rows.slice(1).every((r) => r.h === 44) && pauseGeom(b2).rows[0].h === 54 && pauseGeom(b2).h <= 390,
     pauseGeom(b2).rows.map((r) => r.h).join() + " / " + pauseGeom(b2).h,
   );
   for (const B of [b2, bi]) {

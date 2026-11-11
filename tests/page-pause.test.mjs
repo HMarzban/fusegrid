@@ -73,8 +73,8 @@ for (const ts of [1, 1.25]) {
     if (X.touch) {
       const k = X.css, R = G.rows.map((r) => ({ x: r.x0 * k, y: r.y0 * k, w: r.w * k, h: r.h * k })), small = R.filter((r) => r.w < 43.95 || r.h < 43.95);
       const gap = (i, j) => { const p = R[i], o = R[j]; return Math.max(o.x - (p.x + p.w), p.x - (o.x + o.w), o.y - (p.y + p.h), p.y - (o.y + o.h)); };
-      const gaps = [[0, 1], [0, 2], [0, 3], [1, 2]].map(([i, j]) => gap(i, j));
-      check(`touch floors (${tag}, ${G.mode}${G.foot ? "" : ", no foot"}${G.fold ? ", folded" : ""}): every row >= 44 x 44 CSS px; RESUME >= 8 px from every row, SETTINGS >= 8 px from RESTART across the divider`,
+      const gaps = [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]].map(([i, j]) => gap(i, j)); // every pair: on touch no two rows abut, a list's included
+      check(`touch floors (${tag}, ${G.mode}${G.foot ? "" : ", no foot"}${G.fold ? ", folded" : ""}): every row >= 44 x 44 CSS px; every two rows >= 8 px apart (RESTART and QUIT TO MENU too)`,
         G.floored && small.length === 0 && gaps.every((g) => g >= 8 - 1e-9), J({ small, gaps, floored: G.floored }));
     }
   }
@@ -100,6 +100,10 @@ for (const b of Object.keys(BOX)) for (const world of [PLAIN, HEAVY]) {
   const off = hit(X.B.w / 2, G.rows[0].y0 - 2) === -1 && hit(X.B.w / 2, Math.max(...G.rows.map((r) => r.y1)) + 2) === -1;
   check(`taps (${b} ${world === HEAVY ? "tags" : "plain"}, ${G.mode}): every row's centre and corners map to it, no tap between two rows falls through, above and below the rows is -1`, centres && between && off);
   if (G.mode === "list") check(`taps (${b}): a list band spans the whole stage`, hit(2, G.rows[0].cy) === 0 && hit(X.B.w - 2, G.rows[3].cy) === 3);
+  /* a tap exactly on a seam is the row above's: a list's midpoints, the grid's divider (both halves: RESUME, SETTINGS); the grid's middle seam is the left tile's */
+  const seam = G.mode === "list" ? [0, 1, 2].every((i) => { const a = G.rows[i].b; return hit(X.B.w / 2, a) === i && hit(X.B.w / 2, a + 1e-6) === i + 1; })
+    : hit(G.rows[0].cx, G.div) === 0 && hit(G.rows[1].cx, G.div) === 1 && hit(G.rows[2].cx, G.div + 1e-6) === 2 && hit(G.rows[3].cx, G.div + 1e-6) === 3 && hit(G.rows[0].hx1, G.rows[0].cy) === 0;
+  check(`taps (${b} ${world === HEAVY ? "tags" : "plain"}, ${G.mode}): a tap on a seam resolves to the row above, the same in both halves`, seam);
 }
 
 /* ---- the painted page: one painter, centre axis, one yellow, divider, focus, words ---- */
@@ -112,7 +116,9 @@ for (const b of ["kb", "p393", "iso"]) for (let cur = 0; cur < 4; cur++) {
     const cx = (G.x + G.w / 2) / u;
     check(`centre axis (${b}): the kicker, PAUSED and the tag row share the plate's centre x`, !!kick && kick.align === "center" && Math.abs(kick.x - cx) < 1e-6 && title.align === "center" && Math.abs(title.x - cx) < 1e-6 &&
       (G.fold || (tags.length > 0 && Math.abs((Math.min(...tags.map((t) => t.x - t.w / 2)) + Math.max(...tags.map((t) => t.x + t.w / 2))) / 2 - cx) < 12)), J([kick, title.x, cx, tags.map((t) => t.s)]));
-    check(`kicker (${b}): LEVEL n · WORLD, the daily's DAILY kept (folded: right after it, the rules after), drawn whole`, !!kick && (G.fold ? /^LEVEL 8 · (CROWN · )?DAILY · / : /^LEVEL 8 · (CROWN · )?DAILY$/).test(kick.s) && kick.w <= G.d.cw + 1e-9, kick && kick.s);
+    const full = "LEVEL 8 · CROWN · DAILY", fits = full.length * K8 * (G.dev === "p" ? 16 : 21) <= G.d.cw; // the world drops only where the full form does not fit
+    check(`kicker (${b}): LEVEL n · WORLD · DAILY whole where it fits, LEVEL n · DAILY only where it does not (folded: the rules after DAILY), drawn whole`,
+      !!kick && (G.fold ? kick.s.startsWith((fits ? full : "LEVEL 8 · DAILY") + " · ") : kick.s === (fits ? full : "LEVEL 8 · DAILY")) && kick.w <= G.d.cw + 1e-9, J([kick && kick.s, fits]));
     if (!G.fold) check(`tags (${b}): only non-default rules, at most 3 named, then +N`, tags.length >= 1 && tags.length <= 4 && tags.every((t) => /^\+\d$/.test(t.s) || W.runParts({ heat: 2, pace: 1, pact: 15, time: true }).concat(W.runParts({ heat: 2, pace: 1, pact: 15, time: true }, { terse: true })).includes(t.s)), J(tags.map((t) => t.s)));
   }
   const yel = f.t.paints.filter((p) => typeof p.style === "string" && p.style.toLowerCase() === YEL && p.op !== "stroke");
@@ -170,6 +176,9 @@ for (const ts of [1, 1.25]) {
   check("CLASSIC, PIXEL and REAL 3D call scenes.js drawOverlay for PAUSE, and its PAUSE branch is pages/pause.js drawPause (no second painter)",
     /drawOverlay\(ctx, world, B\.w/.test(src("renderer.js")) && /drawOverlay\(ovCtx, world, B\.w/.test(src("pixel/renderer.js")) && /drawOverlay\(ovCtx,world,B\.w/.test(src("three/wrapper.js")) &&
     /drawPause\(c, world, \{ w, h \}/.test(src("scenes.js")) && !/PAUSED/.test(src("scenes.js").replace(/\/\*[\s\S]*?\*\//g, "")));
+  const code = (f) => src(f).replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, ""), main = readFileSync(new URL("../src/main.js", import.meta.url), "utf8"), ptr = readFileSync(new URL("../src/app/pointer.js", import.meta.url), "utf8");
+  check("css reaches the painter through opts.pause (main hands #c's canvas.css), the very value pointer.js taps with; no painter reads canvas.css",
+    /pause: \{[^}]*css: canvas && canvas\.css \}/.test(main) && /pauseHit\(px, py, B, touchLay\(canvas\), \{ css: canvas\.css,/.test(ptr) && !/canvas\.css|\.css\b/.test(code("scenes.js")) && !/canvas\.css/.test(code("pages/pause.js")));
   const { createRenderer } = await import("../src/render/renderer.js");
   const { createWorld, loadLevel } = await import("../src/core/world.js");
   const w = createWorld(11, 1); loadLevel(w, 3, false); w.state = "PAUSE";
@@ -205,8 +214,8 @@ for (const ts of [1, 1.25]) {
   probe.setOn(false);
   const rows = P.PAUSE_ROWS.map((l) => s.rects.find((r) => r.name === l));
   const yel = s.rects.filter((r) => r.fill && r.fill.toLowerCase() === YEL);
-  check("probe: page pause on #c, the plate with its ring, four touch rows in one set (the three flat rows a list), one yellow (RESUME)", s.page === "pause" && s.box.el === "c" && s.rects.some((r) => r.name === "plate" && r.plate > 0) &&
-    rows.every((r) => r && r.touch && r.set === "pause") && rows.slice(1).every((r) => r.kind === "list") && !rows[0].kind && yel.length === 1 && yel[0].name === "RESUME", J(s.rects));
+  check("probe: page pause on #c, the plate with its ring, four touch rows in one set with no kind (the gap gate measures every pair), one yellow (RESUME)", s.page === "pause" && s.box.el === "c" && s.rects.some((r) => r.name === "plate" && r.plate > 0) &&
+    rows.every((r) => r && r.touch && r.set === "pause" && !r.kind) && yel.length === 1 && yel[0].name === "RESUME", J(s.rects));
   check("probe: the focus band and ring pairs on the focused row, text roles and colours for every string", s.pairs.some((p) => p.kind === "band") && s.pairs.some((p) => p.kind === "ring") && s.texts.length >= 6 && s.texts.every((t) => t.col && t.role));
   const row = SCREENS.pause;
   check("tools/ui screens: PAUSE exempts only what it has none of (chosen, locked), each with a reason", row && !row.need.includes("chosen") && !row.need.includes("locked") && ["band", "ring", "info", "text", "cap", "inside", "plate", "yellow", "touch", "gap"].every((g) => row.need.includes(g)), J(row && row.need));

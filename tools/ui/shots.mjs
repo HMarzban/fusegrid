@@ -5,7 +5,7 @@
    node tools/ui/shots.mjs [flags]
      --screens a,b    screens to capture (default all): title, menu, level, options (alias settings), graphics, controls, guide, howto, items,
                       enemies, floor, scores, stats, statsreset (STATS armed), medals, scoresfull / statsfull (a seeded cabinet,
-                      __GAME__.seedRecords()), statspage2 (STATS' second page on a paged phone), scoresidle (RECORDS through the real lazy.idle() load: no want()), pause, win, lose,
+                      __GAME__.seedRecords()), statspage2 (STATS' second page on a paged phone), scoresidle (RECORDS through the real lazy.idle() load: no want()), pause, pausetags (PAUSE with the run's rules seeded: the tag row), win, lose,
                       play; optionskeys / graphicskeys / guidekeys (SETTINGS, GRAPHICS, GUIDE reached by real key presses, so a phone capture
                       shows the keyboard focus); captured in that canonical order
                       whatever the order given
@@ -180,7 +180,11 @@ async function group(c, port, a, look, world, rep) {
         await confirm();
         if (!(await poll("window.__GAME__.app.screen===6&&window.__GAME__.G.state==='PLAY'", 5000))) { L.fail(base, "the run did not start"); L.close(base); continue; }
         if (a.seed != null) for (const w of await ev(loadExpr({ seed: a.seed, heat: null, pace: null, gen: null }, world))) warn(w);
-        if (s === "pause") { await P.adv(600); await ev("window.__pause&&window.__pause()"); }
+        if (R.run === "pause") {
+          await P.adv(600);
+          if (R.tags) await ev("(Object.assign(window.__GAME__.G,{heat:2,pace:1,pact:15}),window.__GAME__.app.timeAttack=true,true)"); // the tag row: every rule on, for the capture only
+          await ev("window.__pause&&window.__pause()");
+        }
         if (s === "lose" || s === "win") {
           await P.adv(300);
           await ev(s === "lose" ? LOSE : "window.__GAME__.clearAllEnemies()");

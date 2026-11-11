@@ -246,8 +246,7 @@ export function drawOverlay(
        drawShell's plate never lands on top of a live PAUSED headline. */
     if ((u.view | 0) >= 1) return;
     /* Static (R16: PAUSE freezes everything) — no entry timer. Every look calls this one painter (pages/pause.js). */
-    const cv = c && c.canvas, css = u.css != null ? u.css : cv && typeof cv.css === "number" ? cv.css : undefined;
-    drawPause(c, world, { w, h }, { ...u, touch: u.touch == null ? touchOf(c) : !!u.touch, css }, tm, run);
+    drawPause(c, world, { w, h }, { ...u, touch: u.touch == null ? touchOf(c) : !!u.touch }, tm, run); // css (#c's stage scale) arrives in ui from main, the value pointer.js taps with
   }
 }
 

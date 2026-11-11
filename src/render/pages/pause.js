@@ -5,7 +5,7 @@
    layout), SETTINGS (a door), the wall-course divider, RESTART and QUIT TO MENU (danger; M's cap at its end on a keyboard layout), the foot hint.
    pauseGeom(B, touch, o) is the one geometry for draw and tap, o = {css, world, time}: B the overlay box (600 x 520, or iso 608 x 352), touch the layout
    (data-lay p / l), css the CSS px per box unit (#c's stage scale, fit.js; 1 when unknown), world + time only for whether a tag row shows. Rows by
-   index in PAUSE_ROWS order, box units; d holds the same in design px (u box units per design px). The plate keeps the HUD band (y < 44) and the
+   index in PAUSE_ROWS order, box units; d holds the same in design px (u box units per design px). The plate keeps the HUD band (y < 42) and the
    ability bar (y >= 482 on a 520 box) clear. keyboard: the S7 desktop metrics in box units (u 1: RESUME 54, rows 44, plate 340, 420 at 125 %),
    scaled as one piece when a box is short (pitches are caps). touch: design px are CSS px (u = 1 / css) on the phone type; RESUME and the rows are
    floored at 44 CSS px and grow toward their box caps (76 / 70) with the room left; arrangements in turn, the first that fits wins: one list with
@@ -38,7 +38,7 @@ const RULE_AT = PAUSE_SHAPE.findIndex((r) => r.rule);
 export const PAUSE_ROW_H = 70, PAUSE_ROW_D = 44, PAUSE_HERO_H = 76, PAUSE_HERO_D = 54, PAUSE_W_H = 380, PAUSE_W_D = 340;
 export const PZ = deep({
   d: {w: PAUSE_W_D, w125: 420, pad: [11, 18, 14, 18], top: 6, gap: 6, title: 34, below: 30, below125: 34, hero: PAUSE_HERO_D, row: PAUSE_ROW_D, heroGap: 12, div: 19, rowGap: 2, footTop: 14, gs: 16},
-  p: {w: PAUSE_W_H, pad: [11, 14, 14, 14], top: 6, gap: 6, title: 26, below: 24, below125: 26, hero: PAUSE_HERO_H, row: PAUSE_ROW_H, heroGap: 12, div: 19, rowGap: 2, footTop: 14, gs: 18, tileGap: 12, gridMax: 560},
+  p: {w: PAUSE_W_H, pad: [11, 14, 14, 14], top: 6, gap: 6, title: 26, below: 24, below125: 26, hero: PAUSE_HERO_H, row: PAUSE_ROW_H, heroGap: 12, div: 19, rowGap: 9, footTop: 14, gs: 18, tileGap: 12, gridMax: 560},
 });
 /* the touch floors in CSS px (44 x 44, 8 apart), and the row floor the plan holds: 45, since #c's 1 px border leaves its content box ~0.5 %
    under the stage scale (canvas.css) on a phone; the box rows the plate keeps clear (the HUD band ends at 40, the ability bar starts at 486);
@@ -114,10 +114,16 @@ export function pauseGeom(B, touch, o) {
   gm = {w: B.w, h: B.h, touch: touchy, css, ts, tags, G};
   return G;
 }
-/** The PAUSE row under (x, y) in box units, -1 off the rows; o as pauseGeom's. */
+/** The PAUSE row under (x, y) in box units, -1 off the rows; o as pauseGeom's. A row owns [a, b]; a y on the seam with the row above it (a list
+    midpoint, the grid's divider) is the row above's, and an x on the grid's middle seam the left tile's. */
 export function pauseHit(x, y, B, touch, o) {
   const G = pauseGeom(B, touch, o), r = G.rows;
-  for (let i = 0; i < r.length; i++) if (x >= r[i].hx0 && x <= r[i].hx1 && y >= r[i].a && (y < r[i].b || (y === r[i].b && (i === r.length - 1 || r[i].b !== r[i + 1].a)))) return i;
+  for (let i = 0; i < r.length; i++) {
+    const q = r[i];
+    if (x < q.hx0 || x > q.hx1 || y < q.a || y > q.b) continue;
+    if (y === q.a && r.some((p) => p !== q && p.b === q.a && p.hx0 < q.hx1 && p.hx1 > q.hx0)) continue;
+    return i;
+  }
   return -1;
 }
 
@@ -301,7 +307,7 @@ function record(G, Pl, cur, tok, dpr) {
   if (Pl.tags) for (const q of Pl.tags.chips) txt(q.s, q.x + q.w / 2 - q.tw / 2, Pl.tags.y, q.tw, Pl.tags.px, CONST.t2, "secondary");
   Pl.rows.forEach((o, i) => {
     const r = o.r, f = i === cur;
-    probe.rect(o.label, ...b(r), {touch: G.touch, set: "pause", ...(o.hero ? {} : {kind: "list"}), focus: f, ...(o.hero ? {fill: CONST.yel} : f ? {fill: tok.band} : {})});
+    probe.rect(o.label, ...b(r), {touch: G.touch, set: "pause", focus: f, ...(o.hero ? {fill: CONST.yel} : f ? {fill: tok.band} : {})});
     o.lines.forEach((s, k) => txt(s, f ? o.foc : o.rest, o.ys[k], o.ws[k], o.px, o.hero ? CONST.yelInk : o.danger && !f ? CONST.cor : CONST.ink, "primary"));
     if (o.cap) { probe.rect(o.label + " cap", ...b(R(o.cap.x, o.cap.y, o.cap.w, o.cap.h))); const w = Pl.caps[i]; txt(o.cap.s, o.cap.x + o.cap.w / 2 - w / 2, o.cap.y + o.cap.h / 2, w, DEV[d.dev].sec, o.hero ? CONST.yel : CONST.t2, "secondary"); }
     if (o.glyph && !(f && o.glyph.hide)) { const g = o.glyph, p = 6; probe.pair("info", b(R(g.x, g.y, g.s, g.s)), b(R(g.x - p, g.y - p, g.s + 2 * p, g.s + 2 * p)), {col: g.col, name: o.label + " " + g.n}); }
