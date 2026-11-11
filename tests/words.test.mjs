@@ -29,12 +29,21 @@ lazyPages._set("settings", settingsPage); // the lazy SETTINGS / GRAPHICS page, 
 import * as kitCache from "../src/render/kit/cache.js";
 /* A recorder layer factory (v202 Task 3.4 fix round 1, for speed): the kit pages paint their static parts into layer canvases, once per distinct
    state, and blit them on repeats. Each layer's texts join the draw that made it (same design px frame as the live texts), so every distinct
-   page state is still read word for word, exactly once, instead of being painted in full on every one of the sweep's 8000 draws. */
+   page state is still read word for word, exactly once, instead of being painted in full on every one of the sweep's 8000 draws. Opt-in (R1 kit
+   harmonisation): only a block run inside inLayers has a layer source, and it reads its words through withLayers, which throws outside one; every
+   other check paints straight onto its own target, as Node does, so no check can read the wrong recorder. */
 const made = [];
 class LayerCv { constructor(w, h) { this.width = w; this.height = h; this.r = rec({ widthK: 0.648 }); made.push(this); } getContext() { return this.r.ctx; } }
-globalThis.OffscreenCanvas = LayerCv;
-kitCache.setFactory((w, h) => new LayerCv(w, h));
-const withLayers = (R, n0) => { const T = R.texts.slice(); for (const cv of made.slice(n0)) T.push(...cv.r.texts); made.length = n0; return T; };
+let layersOn = false;
+function inLayers(fn) {
+  const had = "OffscreenCanvas" in globalThis, OC = globalThis.OffscreenCanvas;
+  globalThis.OffscreenCanvas = LayerCv; kitCache.setFactory((w, h) => new LayerCv(w, h)); layersOn = true;
+  try { return fn(); } finally { layersOn = false; kitCache.setFactory(null); if (had) globalThis.OffscreenCanvas = OC; else delete globalThis.OffscreenCanvas; made.length = 0; }
+}
+const withLayers = (R, n0) => {
+  if (!layersOn) throw new Error("withLayers outside inLayers: this check has no recorder layers");
+  const T = R.texts.slice(); for (const cv of made.slice(n0)) T.push(...cv.r.texts); made.length = n0; return T;
+};
 import { drawShell, loadControlsArt } from "../src/render/shellview.js";
 import { want as wantPage } from "../src/render/pages/lazy.js";
 const RP = await wantPage("records"); // RECORDS is a lazy page (R20): the sweep paints it, not its LOADING plate
@@ -221,7 +230,7 @@ APPS.push(["INTRO", { introStage: 0 }], ["INTRO", { introStage: 1, subT: 1 }], [
 const LAYS = [["d", 600, 520], ["d", 1366, 768], ["l", 1024, 768], ["p", 436, 946], ["d", 608, 352]];
 const DEVS = [["key", null], ["pad", wordsOf("pad", DEF_CONTROLS)], ["touch", wordsOf("touch", DEF_CONTROLS)]];
 let draws = 0;
-for (const kind of ["2d", "px", "3d"]) {
+inLayers(() => { for (const kind of ["2d", "px", "3d"]) {
   setPixelArt(kind === "px" ? PX : null);
   for (const [lay, w, h] of LAYS) for (const [dev, words] of DEVS) {
     setHints(words);
@@ -255,7 +264,7 @@ for (const kind of ["2d", "px", "3d"]) {
       }
     }
   }
-}
+} });
 setHints(null);
 setPixelArt(null);
 /* CONTROLS rows that only a pad view reaches (VIBRATION's rule, THROW / REMOTE help), and the HUD + ability bar + pickup labels + coach tips */
@@ -334,7 +343,7 @@ check("ruling 7: a bare NORMAL or HARD only where its own line or row names its 
      guard, the touch boxes and the narrow phone, at text scale 1 and 1.25 (the two-line path is reached at least once) */
   const { setTextScale } = await import("../src/render/kit/type.js");
   const lvp = await import("../src/render/pages/level.js");
-  const OC = globalThis.OffscreenCanvas; delete globalThis.OffscreenCanvas; // this check reads the list's words where they land on the target: no layer source here, as in Node without the sweep's recorder layers (merge of Task 3.3 and 3.4)
+  check("MODIFIERS list: this check reads the list's words where they land on the target (no layer source outside inLayers)", typeof globalThis.OffscreenCanvas !== "function" && !layersOn);
   let two = 0;
   for (const ts of [1, 1.25]) for (const [name, L, T] of [["iso 608x352", md.layout(608, 352), false], ["iso touch", md.layout(608, 352), true], ["narrow touch", md.layout(436, 946, 255, 0.9), true], ["600x520", md.layout(600, 520), false], ["landscape phone", md.layout(600, 520, undefined, 0.725), true]]) {
     setTextScale(ts);
@@ -351,7 +360,6 @@ check("ruling 7: a bare NORMAL or HARD only where its own line or row names its 
     check(`MODIFIERS list (${name}, x${ts}): every entry's name drawn whole inside its key, on one line or two`, out.length === 0 && n.length === 5 && n.every((k) => k === 1 || k === 2), out.join(" | ") + " " + J(n));
   }
   setTextScale(1);
-  globalThis.OffscreenCanvas = OC;
   check("MODIFIERS list: the two-line path is reached (a name too wide for its key breaks once, never cut)", two > 0, two);
 }
 
