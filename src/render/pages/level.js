@@ -34,8 +34,7 @@ import {key, cap, capW, plate, band, focusBomb, glyph, plaque, rpath as rp} from
 import {T, DEV, measure, textScale, measurer as mOf, measures as canCap, text, CAP_K} from "../kit/type.js";
 import {deep, R, sc, okBox, inR, big} from "../kit/geom.js";
 import {layer, capDpr, touch, keyOf, canMake} from "../kit/cache.js";
-import {roomLayer} from "../kit/room.js";
-import {roomDpr} from "./menu.js";
+import {roomLayer, roomDpr} from "../kit/room.js";
 import * as probe from "../kit/probe.js";
 import {deviceScale} from "../logo/draw2d.js";
 import {hints, tapMode} from "../hintcopy.js";

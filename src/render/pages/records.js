@@ -35,10 +35,9 @@ import {worldTokens, CONST, toL} from "../kit/tokens.js";
 import {key, cap, capW, plate, focusBomb, wallCell, plaque, rpath as sp, rfill as rf} from "../kit/paint.js";
 import {T, DEV, measure, textScale, nums, measurer as mOf, measures as canCap, text, CAP_K} from "../kit/type.js";
 import {deep, R, sc, okBox, inR, big} from "../kit/geom.js";
-import {layer, capDpr, touch, keyOf, canMake, BUDGET} from "../kit/cache.js";
-import {roomLayer} from "../kit/room.js";
+import {layer, capDpr, touch, keyOf, canMake} from "../kit/cache.js";
+import {roomLayer, pageRoomDpr} from "../kit/room.js";
 import * as probe from "../kit/probe.js";
-import {roomDpr as menuRoomDpr} from "./menu.js";
 import {deviceScale} from "../logo/draw2d.js";
 import {hints, tapMode} from "../hintcopy.js";
 
@@ -986,7 +985,6 @@ const J = JSON.stringify;
 /* the room: MENU's own room layer at MENU's room dpr (menu.js roomDpr, the one rule MENU, LEVEL SELECT, SETTINGS and GUIDE use; R1 train), so a
    MENU / RECORDS hop never refills it; this page's own give-way (its page layer and feet inside the budget; no logo reserve, RECORDS shows no logo)
    is the floor, and only where that is under MENU's dpr does the room take its own key */
-const roomDpr = (c, F, ui, dpr, bytes) => Math.min(menuRoomDpr(c, F, {rev: ui.rev}, dpr), +Math.max(0.5, Math.min(dpr, Math.sqrt(Math.max(0, BUDGET - bytes) / (4 * F.W * F.H)))).toFixed(3));
 function sizes(S0, G, F, level, tok, ui) {
   const d = G.d, u = G.u, dpr = S0.dpr, T0 = d.T, ob = R(d.plate.x - T0 - 2, d.plate.y - T0 - 2, d.plate.w + 2 * T0 + 4, d.plate.h + 2 * T0 + 6), pb = sc(ob, u);
   const id = [ui.page, G.mode, +u.toFixed(6), J(d.plate), ui.page === "scores" ? ui.plaques | 0 : "", J(ui.rows || null), ui.page === "stats" ? J([ui.view || null, ui.notes || null, ui.arm ? S0.P.stats.confirm.sentence : "", !!ui.unlocked]) : "", S0.P.pg ? S0.P.pg.page : 0].join("|");
@@ -998,7 +996,7 @@ function sizes(S0, G, F, level, tok, ui) {
     return {v, fp, fr, b: bb, w, h, key, k: keyOf(key)};
   });
   const bytes = S0.pw * S0.ph * 4 + S0.feet.reduce((a, q) => a + q.w * q.h * 4, 0);
-  S0.rd = roomDpr(S0.c, F, ui, dpr, bytes);
+  S0.rd = pageRoomDpr(S0.c, F, {rev: ui.rev}, dpr, bytes);
   S0.box = {w: F.W, h: F.H};
   S0.roomK = keyOf({layer: "room", biome: tok.name, level, W: F.W, H: F.H, dpr: S0.rd, look: "2d", textScale: 1});
 }

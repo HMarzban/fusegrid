@@ -23,7 +23,7 @@ import { worldTokens, CONST, toL } from "./kit/tokens.js";
 import { plate as kitPlate } from "./kit/paint.js";
 import { dsp as kitDsp, lbl as kitLbl, lbl } from "./kit/type.js";
 import { canMake, capDpr } from "./kit/cache.js";
-import { roomLayer } from "./kit/room.js";
+import { roomLayer, roomDpr } from "./kit/room.js";
 import { FOOT_TAP, LOOK_NAME, lookVal } from "./kit/copy.js";
 const ACCENT = "#37f0d0",
   TEXT = "#dfe7f5",
@@ -473,7 +473,7 @@ function backing(c, cx, cy, w, h) {
 /* MAIN MENU: the page is src/render/pages/menu.js (UI upgrade v202 Task 3.1): one geometry for draw and tap, rows by name. These keep the
    entry names shellview, the pointer and the tests call; L is layout(W, H, lg, css) for the box the page draws on (css: CSS px per box unit, the
    touch floors' scale), touch body[data-lay] p / l, the same argument for draw and tap. */
-const frameOf = (L, touch) => ({ W: L.W, H: L.H, touch: !!touch, shell: !!L.shell, css: L.css, paused: !!L.paused, focus: L.focus }); // paused / focus: a PAUSE view's box, the focused row (the SETTINGS page's page on screen)
+const frameOf = (L, touch) => ({ W: L.W, H: L.H, touch: !!touch, shell: !!L.shell, css: L.css });
 export const menuGeom = (L, _n, touch) => menuPage.menuGeom(frameOf(L, touch));
 export const menuHit = (x, y, L, _n, touch) => menuPage.menuHit(x, y, frameOf(L, touch));
 export const drawMenu = (c, ui, L, t, touch) => menuPage.drawMenuPage(c, frameOf(L, touch), ui || {}, t);
@@ -589,7 +589,7 @@ export const recPageHit = (x, y, L, touch, page, rows) => { const m = recMod(); 
 function recLoading(c, F, ui) { // RECORDS' LOADING stand-in (named apart from the SETTINGS / GRAPHICS loadingPage below; one plate is the R1 kit harmonisation's)
   if (!F || !(F.W > 0 && F.H > 0) || typeof c.fillRect !== "function") return;
   const lv = ui.level | 0 || 1, tok = worldTokens(lv);
-  if (canMake() && typeof c.drawImage === "function") c.drawImage(roomLayer({ w: F.W, h: F.H }, lv, tok, { dpr: menuPage.roomDpr(c, F, { rev: ui.rev }, capDpr(deviceScale(c), !!F.touch)), look: "2d", textScale: 1 }), 0, 0, F.W, F.H); // MENU's own room at MENU's room dpr
+  if (canMake() && typeof c.drawImage === "function") c.drawImage(roomLayer({ w: F.W, h: F.H }, lv, tok, { dpr: roomDpr(c, F, { rev: ui.rev }, capDpr(deviceScale(c), !!F.touch)), look: "2d", textScale: 1 }), 0, 0, F.W, F.H); // MENU's own room at MENU's room dpr
   else { c.fillStyle = tok.bg1; c.fillRect(0, 0, F.W, F.H); }
   if (typeof c.rect !== "function") return;
   const w = Math.min(320, F.W - 40), h = 80, x = (F.W - w) / 2, y = (F.H - h) / 2;
@@ -603,6 +603,7 @@ function recLoading(c, F, ui) { // RECORDS' LOADING stand-in (named apart from t
    Until the module is in, the page is one plate on the room that says LOADING (want() starts the import), a tap on it is inert (-2) and a tap off
    it backs out (-1); once in, every call is synchronous. *Geom answers null until then. ui is the page's (see its header); rows the visible list. */
 const page = () => lazy.get("settings");
+const setFrame = (L, touch) => ({ ...frameOf(L, touch), paused: !!L.paused, focus: L.focus }); // a PAUSE view's box, the focused row (the page on screen)
 /* one ask in flight; a failed import shows DID NOT LOAD and is asked again at most every RETRY_MS, never every frame */
 let failAt = -Infinity;
 const RETRY_MS = 3000, nowMs = () => (globalThis.performance && typeof performance.now === "function" ? performance.now() : 0);
@@ -623,7 +624,7 @@ export function loadingPage(c, F, title, ui) {
   const u = ui || {}, level = u.level | 0 || 1, tok = worldTokens(level), B = loadBox(F);
   if (!(F.W > 0 && F.H > 0) || typeof c.clip !== "function") return;
   if (!u.paused) {
-    if (canMake()) c.drawImage(roomLayer({ w: F.W, h: F.H }, level, tok, { dpr: menuPage.roomDpr(c, F, { rev: u.rev }, capDpr(deviceScale(c), !!F.touch)), look: "2d", textScale: 1 }), 0, 0, F.W, F.H); // MENU's own room at MENU's room dpr (pages/menu.js roomDpr): the room MENU left, the one the page finds
+    if (canMake()) c.drawImage(roomLayer({ w: F.W, h: F.H }, level, tok, { dpr: roomDpr(c, F, { rev: u.rev }, capDpr(deviceScale(c), !!F.touch)), look: "2d", textScale: 1 }), 0, 0, F.W, F.H); // MENU's own room at MENU's room dpr (pages/menu.js roomDpr): the room MENU left, the one the page finds
     else { c.fillStyle = toL(tok.bg1, 0.004); c.fillRect(0, 0, F.W, F.H); }
   }
   c.save(); c.translate(B.x, B.y); c.scale(B.k, B.k);
@@ -634,13 +635,13 @@ export function loadingPage(c, F, title, ui) {
 }
 const loadHit = (x, y, F) => { const B = loadBox(F); return x >= B.x && x < B.x + B.w && y >= B.y && y < B.y + B.h ? -2 : -1; };
 /** SETTINGS' geometry for the visible rows (pages/settings.js settingsGeom on this box); null until the page is in. */
-export const settingsGeom = (L, touch, rows) => { const m = page(); return m ? m.settingsGeom(frameOf(L, touch), rows) : null; };
-export const graphicsGeom = (L, touch) => { const m = page(); return m ? m.graphicsGeom(frameOf(L, touch)) : null; };
+export const settingsGeom = (L, touch, rows) => { const m = page(); return m ? m.settingsGeom(setFrame(L, touch), rows) : null; };
+export const graphicsGeom = (L, touch) => { const m = page(); return m ? m.graphicsGeom(setFrame(L, touch)) : null; };
 /** A tap's index into rows (the visible list optRow indexes, R11); -2 inert on the plate, -1 off it (or on the phone's BACK). */
-export const settingsHit = (x, y, L, rows, touch) => { const m = page(), F = frameOf(L, touch); return m ? m.settingsHit(x, y, F, rows) : loadHit(x, y, F); };
-export const graphicsHit = (x, y, L, _n, touch) => { const m = page(), F = frameOf(L, touch); return m ? m.graphicsHit(x, y, F) : loadHit(x, y, F); };
+export const settingsHit = (x, y, L, rows, touch) => { const m = page(), F = setFrame(L, touch); return m ? m.settingsHit(x, y, F, rows) : loadHit(x, y, F); };
+export const graphicsHit = (x, y, L, _n, touch) => { const m = page(), F = setFrame(L, touch); return m ? m.graphicsHit(x, y, F) : loadHit(x, y, F); };
 export function drawSettings(c, L, t, ui) {
-  const u = ui || {}, F = frameOf(L, u.touch), m = page();
+  const u = ui || {}, F = setFrame(L, u.touch), m = page();
   if (m) return m.drawSettingsPage(c, F, u, t);
   loadingPage(c, F, LABEL.SETTINGS, { ...u, failed: want() });
 }
@@ -692,7 +693,7 @@ export function fitVal(c, cands, room) {
    touch, level, paused}; the page draws them (pages/settings.js drawGraphicsPage). */
 export const GFX_N = 8; // pinned equal to gfx.js GFX_ROWS.length
 export function drawGraphics(c, L, t, ui) {
-  const u = ui || {}, F = frameOf(L, u.touch), m = page();
+  const u = ui || {}, F = setFrame(L, u.touch), m = page();
   if (m) return m.drawGraphicsPage(c, F, u, t);
   loadingPage(c, F, "GRAPHICS", { ...u, failed: want() });
 }

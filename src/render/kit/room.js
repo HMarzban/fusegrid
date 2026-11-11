@@ -14,7 +14,12 @@
               top border: the bed, the cells, the tile (featdraw drawSpec, CORE, a lone cell), MAKO and the foe at rest at the appendix 6 scales, a 2 px
               #0b0609 frame on the box edge. Returns the height. No clock: the page animates its focused cell itself.
    foeCell    (c, x, y, s, type, level) a foe at rest on a floor cell of level's world, s px square: a 2 px #0b0609 outline, radius 3, a hard 3 px drop.
-   tileCell   (c, x, y, s, level) level's floor tile (core/feat.js HOME, CORE, a lone cell) in the same frame; a world with no tile paints its floor. */
+   tileCell   (c, x, y, s, level) level's floor tile (core/feat.js HOME, CORE, a lone cell) in the same frame; a world with no tile paints its floor.
+   SHARED ROOM (R1 kit): every page with a room blits MENU's own roomLayer at MENU's room dpr, so a hop between pages never refills it.
+   roomFit    (F, dpr, held) the dpr left once held bytes sit in BUDGET, never above dpr nor under 0.5 (3 places).
+   shareRoom  (rule) MENU installs its rule (its plate, foot reserve and ROOM_RESERVE for the logo; pages/menu.js roomDpr) when it loads.
+   roomDpr    (c, F, ui, dpr) that rule's dpr for the box F; throws until it is installed, so no page can fall back to a different room.
+   pageRoomDpr (c, F, ui, dpr, held) the lower of MENU's and the page's own fit (its layers held, no logo reserve): the room gives way only there. */
 import {CFG, T, key, biomeOf} from "../../core/config.js";
 import {stampStart} from "../../core/fair.js";
 import {heatRoster} from "../../core/heat.js";
@@ -27,7 +32,7 @@ import {floorVar} from "../floorart.js";
 import {borderCode} from "../wallvar.js";
 import {wallCell, floorCell, brickCell} from "./paint.js";
 import {CONST, toL} from "./tokens.js";
-import {layer} from "./cache.js";
+import {layer, BUDGET} from "./cache.js";
 
 const C = CFG.COLS, R = CFG.ROWS, TS = 40, BW = C * TS, BH = R * TS, SEED = 7;
 export const LANE_COLS = 14;
@@ -67,6 +72,16 @@ export function roomLayer(box, level, tok, o = {}) {
   return layer({layer: name, biome: tok.name, level, W: w, H: h, dpr, look: o.look || "2d", textScale: o.textScale || 1}, Math.round(w * dpr), Math.round(h * dpr),
     (g) => { g.scale(dpr, dpr); roomLook(g, {x: 0, y: 0, w, h}, level, tok, {veil, k}); });
 }
+
+export const ROOM_RESERVE = 3 * 1024 * 1024;
+export const roomFit = (F, dpr, held) => +Math.max(0.5, Math.min(dpr, Math.sqrt(Math.max(0, BUDGET - held) / (4 * F.W * F.H)))).toFixed(3);
+let rule = null;
+export const shareRoom = (fn) => { rule = fn; };
+export function roomDpr(c, F, ui, dpr) {
+  if (!rule) throw new Error("kit roomDpr: no shared room rule (pages/menu.js installs it)");
+  return rule(c, F, ui, dpr);
+}
+export const pageRoomDpr = (c, F, ui, dpr, held) => Math.min(roomDpr(c, F, ui, dpr), roomFit(F, dpr, held));
 
 export function laneGrid(level) {
   const g = new Uint8Array(C * R), b = biomeOf(level), [fx, fy] = FOE_AT, [tx, ty] = TILE_AT;

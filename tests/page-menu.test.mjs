@@ -469,5 +469,16 @@ logo._dbg.on = true;
   check("fix round 1: glyph is a kit part (kit/paint.js) and canMake the kit cache's one copy; neither page nor logo keeps its own", typeof kp.glyph === "function" && typeof cache.canMake === "function" && !/function\s+(glyph|canMake)\b/.test(src) && !/function\s+canMake\b/.test(logoSrc) && /canMake/.test(logoSrc));
 }
 
+/* ---- R1 kit harmonisation: the shared room rule lives in kit/room.js; MENU installs it, every page asks the kit ---- */
+{
+  const room = await import("../src/render/kit/room.js"), { readFileSync } = await import("node:fs");
+  const t = rec({ widthK: K8 }), box = { W: 1366, H: 768, touch: false, shell: true, css: 1 }, ui = { rev: "v201" };
+  const m = P.roomDpr(t.ctx, box, ui, 2), k = room.roomDpr(t.ctx, box, ui, 2);
+  check("kit roomDpr is MENU's rule (installed by pages/menu.js), 1366 x 768 @2", k === m && m > 0.5 && m < 2, J([k, m]));
+  check("pageRoomDpr: MENU's dpr where the page's own fit holds it, the page's fit where that is lower", room.pageRoomDpr(t.ctx, box, ui, 2, 0) === m && room.pageRoomDpr(t.ctx, box, ui, 2, cache.BUDGET) === 0.5 && room.roomFit(box, 2, cache.BUDGET) === 0.5);
+  const src = ["level", "settings", "guide", "records"].map((n) => readFileSync(new URL("../src/render/pages/" + n + ".js", import.meta.url), "utf8")).join("\n");
+  check("no page imports the room rule from pages/menu.js (kit room.js is the one source)", !/import\s*\{[^}]*\broomDpr\b[^}]*\}\s*from\s*"\.\/menu\.js"/.test(src) && !/\bmenuRoomDpr\b/.test(src));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

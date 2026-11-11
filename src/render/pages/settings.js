@@ -29,13 +29,12 @@ import {worldTokens, CONST, toL} from "../kit/tokens.js";
 import {key, plate, band, focusBomb, glyph, wallCell, capW, cap, plaque, rfill as rr} from "../kit/paint.js";
 import {T, DEV, measure, textScale, dsp, measurer as mOf, text, CAP_K} from "../kit/type.js";
 import {deep, R, sc, okBox, inR, big} from "../kit/geom.js";
-import {layer, capDpr, touch as touchK, keyOf, canMake, BUDGET} from "../kit/cache.js";
-import {roomLayer} from "../kit/room.js";
+import {layer, capDpr, touch as touchK, keyOf, canMake} from "../kit/cache.js";
+import {roomLayer, pageRoomDpr} from "../kit/room.js";
 import * as probe from "../kit/probe.js";
 import {deviceScale} from "../logo/draw2d.js";
 import {hints, tapMode} from "../hintcopy.js";
 import {lookVal, FOOT_TAP} from "../kit/copy.js";
-import {roomDpr} from "./menu.js";
 
 export const DESK = deep({
   d: {pad: [16, 22, 20, 22], list: 480, pane: 400, gap: 20, row: 38, grp: 12, kick: true, below: 12, paneMin: 452},
@@ -691,7 +690,7 @@ function frame(c, F, ui, t, page, rows, specs, foc, fks, gRow) {
     const Pl = plan(c, G, ui, specs, touchy, words), ob = outer(G.d), pb = sc(ob, u);
     const K = {biome: tok.name, level, W: F.W, H: F.H, look: "2d", textScale: ts, dpr};
     const pageKey = {...K, layer: page + ".page|" + sig}, pw = Math.round(pb.w * dpr), ph = Math.round(pb.h * dpr);
-    const rd = Math.min(roomDpr(c, F, {rev: ui.rev}, dpr), +Math.max(0.5, Math.min(dpr, Math.sqrt(Math.max(0, BUDGET - pw * ph * 4) / (4 * F.W * F.H)))).toFixed(3)); // MENU's room dpr (menu.js roomDpr: MENU's own room layer, the LOADING plate's too) unless this page needs less (no logo reserve: SETTINGS and GRAPHICS show no logo; lead ruling, R1 train)
+    const rd = pageRoomDpr(c, F, {rev: ui.rev}, dpr, pw * ph * 4); // MENU's room dpr (kit room.js: MENU's own room layer, the LOADING plate's too) unless this page needs less (no logo reserve: SETTINGS and GRAPHICS show no logo; lead ruling, R1 train)
     s = S[page] = {sig, G, c, Pl, ob, pb, pw, ph, pageKey, pageK: keyOf(pageKey), rd, roomK: keyOf({layer: "room", biome: tok.name, level, W: F.W, H: F.H, dpr: rd, look: "2d", textScale: 1}), room: null, page: null, subs: s ? s.subs : []};
     _dbg.plans++;
   }

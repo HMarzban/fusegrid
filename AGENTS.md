@@ -106,7 +106,7 @@ RECORDS page (UI upgrade v202 Task 4.1; `src/render/pages/records.js`, LAZY: one
 after MENU's first frame; until it lands menudraw paints `loadingPage` (the room, a small plate, LOADING) and every RECORDS hit is -2, inert,
 so a tap never backs out of a page still loading; every LOADING frame asks `want("records")` again (menudraw `_rec`, the test seam), so a failed
 import is retried and a network blip recovers; tests `want` / `_set` it). The room of `app.level` opaque under it (MENU's own room layer
-at MENU's room dpr (`pages/menu.js` `roomDpr`, with `rev`; R1 train: the one rule of MENU, LEVEL SELECT, SETTINGS and GUIDE, no logo reserve, the page's own fit the floor), whatever MENU last painted: no re-raster on a MENU <-> RECORDS trip; `shellCovers` SCORES, STATS and TROPHIES). `recordsGeom(F)`
+at MENU's room dpr (`kit/room.js` `roomDpr`, MENU's rule, with `rev`; R1 train: the one rule of MENU, LEVEL SELECT, SETTINGS and GUIDE, no logo reserve, the page's own fit the floor), whatever MENU last painted: no re-raster on a MENU <-> RECORDS trip; `shellCovers` SCORES, STATS and TROPHIES). `recordsGeom(F)`
 (F = MENU's frame: W, H, touch, shell, css, ts; the pointer hands RECORDS `layout(cw, ch, lg, css)`) is one plate for every tab: desk
 (keyboard boxes; the S7-pages frame, plate 980 wide, 1080 at 125 %, kicker MENU over the RECORDS title, tabs 150 x 36 over an 11 px trough,
 the pane as tall as the tallest body, the foot under the plate, label first, keycaps last; a shorter window gives way before it scales, fix
@@ -357,9 +357,11 @@ for draw and hit, a painter fed names and values by shellview (never indices), a
 The kit (`src/render/kit/`, R1 kit harmonisation): `tokens` (world colours), `type` (faces, `measure`, `measurer` / `measures` (a 0.6 em estimate
 for a context that cannot measure), `text`, `CAP_K`), `geom` (`deep`, `R`, `sc`, `okBox`, `inR`, `big`), `paint` (key, cap, plate, band, `plaque` the
 foot's sign plaque, `rpath` / `rfill`, glyph, the cell painters), `copy` (`FOOT_TAP`, `LOOK_NAME`, `lookVal`: words two pages paint; menudraw
-re-exports them), `cache`, `room`, `probe`. A part two or more pages use lives here; a part one page uses stays in its page.
+re-exports them), `cache`, `room` (the room look, the lane, and the ONE shared room rule: `shareRoom` / `roomDpr` / `pageRoomDpr` /
+`roomFit`; `frameOf` in menudraw hands every page the bare box, SETTINGS' delegates add `paused` / `focus`), `probe`. A part two or more pages use lives here; a part one page uses stays in its page.
 Static parts are `kit/cache.js` layers keyed by content (`roomLayer` shared by every page of a box, LEVEL SELECT's included, at one room dpr:
-MENU's rule, `pages/menu.js` `roomDpr`, its dpr giving way so MENU's plate, its foot reserve and a 3 MiB logo reserve fit `BUDGET`; so a MENU /
+MENU's rule (`pages/menu.js` installs it with `kit/room.js` `shareRoom`; every page asks `kit/room.js` `roomDpr`, or `pageRoomDpr` with its own
+fit as the floor; it throws until installed), its dpr giving way so MENU's plate, its foot reserve and a 3 MiB logo reserve fit `BUDGET`; so a MENU /
 LEVEL SELECT switch never refills the room; a page keeps its plate out of the room layer), made at once so a cursor move never misses, `touch()`ed on a steady frame (`cache.touch(key)`: a held layer
 goes LRU-recent, so a stale one is freed first); live on top: focus, ring, the logo's spark. `shellview.shellCovers(screen)` (MENU, LEVEL SELECT,
 SETTINGS and GRAPHICS, GUIDE with its four pages since Task 3.5, SCORES, STATS and TROPHIES since Tasks 4.1 / 4.2; each page task adds its screen) makes main pass `{covered: true}` to the renderer: no look rasters a board a page covers. `frameloop` frees the kit's
@@ -402,7 +404,7 @@ rows note; GRAPHICS the focused row's name and help; the foot in the pane, label
 kicker `BUILD vREV` hidden at 125 % on the desk, where the foot carries the tag), col (#c, PAUSE, the iso guard, a short or narrow window: the
 list alone, rows 34 on keys, courses 10, GRAPHICS' two help lines under the rows, the foot at the plate's bottom, or the page keys' strip where
 it pages) and phone (a touch-portrait shell box: the column in CSS px, BACK beside the title, rows 44 8 apart (the mock's 52 pitch), ART STYLE
-and CAMERA as door rows, the foot under the plate). Cached: the room (MENU's own `roomLayer` at MENU's room dpr, `pages/menu.js` `roomDpr`, for
+and CAMERA as door rows, the foot under the plate). Cached: the room (MENU's own `roomLayer` at MENU's room dpr, `kit/room.js` `roomDpr`, MENU's rule, for
 the page and its LOADING plate alike, so MENU -> SETTINGS / GRAPHICS -> MENU never refills it; the page's own fit, its full-dpr page layer inside
 `BUDGET` with no logo reserve (these pages show no logo; lead ruling, R1 train), is the floor, and every box tested holds MENU's dpr, the touch
 tablet 1024 x 768 included; shellview hands both pages `rev`, which MENU's dpr reads), one page layer per page shown (plate, head, its rows at rest, courses, pane, foot or

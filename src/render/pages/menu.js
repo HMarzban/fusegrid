@@ -29,8 +29,8 @@ import {worldTokens, CONST, toL} from "../kit/tokens.js";
 import {key, cap, capW, plate, band, focusBomb, glyph, plaque} from "../kit/paint.js";
 import {T, DEV, measure, textScale, measurer as mOf, measures as canCap, text, CAP_K} from "../kit/type.js";
 import {R, sc, okBox, big, deep} from "../kit/geom.js";
-import {layer, capDpr, touch, keyOf, canMake, BUDGET} from "../kit/cache.js";
-import {roomLayer} from "../kit/room.js";
+import {layer, capDpr, touch, keyOf, canMake} from "../kit/cache.js";
+import {roomLayer, roomFit, shareRoom, ROOM_RESERVE} from "../kit/room.js";
 import * as probe from "../kit/probe.js";
 import {drawLogo2d, deviceScale} from "../logo/draw2d.js";
 import {PLATE as LOGO} from "../logo/worlds.js";
@@ -61,7 +61,7 @@ export const COMPACT = deep({
   c: {min: {top: 12, pad: 4, lp: 2, cap: 20, lp2: 2, below: 8, hero: 44, gap: 9, tile: 44, pad2: 8, bot: 13}, max: {top: 40, pad: 12, lp: 18, cap: 36, lp2: 10, below: 10, hero: 62, gap: 10, tile: 58, pad2: 14, bot: 20}, side: 12, padX: 10, wmax: 600},
   c125: {min: {top: 12, pad: 4, lp: 2, cap: 20, lp2: 2, below: 8, hero: 50, gap: 9, tile: 58, pad2: 8, bot: 13}, max: {top: 40, pad: 12, lp: 18, cap: 36, lp2: 10, below: 10, hero: 62, gap: 10, tile: 84, pad2: 14, bot: 20}, side: 12, padX: 10, wmax: 600},
 });
-const LOGO_CAP = LOGO.menu.cap, ENV = logoLay(LOGO.menu.build).env, LOGO_H = ENV.h * LOGO_CAP, EDGE = 2, RESERVE = 3 * 1024 * 1024;
+const LOGO_CAP = LOGO.menu.cap, ENV = logoLay(LOGO.menu.build).env, LOGO_H = ENV.h * LOGO_CAP, EDGE = 2;
 const LOGO_MIN = 20;
 const PLAY = MENU_ROWS[0], LS = LABEL.LEVEL_SELECT, GUIDE = "GUIDE", SOURCE = "SOURCE";
 /* fl (a touch box): the floors in box units ({h, g}); a row's height and a gap in design px are then max(design, floor / u), and u is the largest
@@ -374,9 +374,9 @@ function sizes(S, G, F, level, tok) {
   S.roomK = keyOf({layer: "room", biome: tok.name, level, W: F.W, H: F.H, dpr: S.rd, look: "2d", textScale: 1});
 }
 /* the room's dpr: what is left of the budget once the plate, the foot reserve and the logo reserve are held, never above the device's */
-const rdOf = (F, dpr, plate, feet) => +Math.max(0.5, Math.min(dpr, Math.sqrt(Math.max(0, BUDGET - RESERVE - plate - feet) / (4 * F.W * F.H)))).toFixed(3);
-/** MENU's room dpr for the box F at the capped dpr: the one rule every page that shares MENU's room layer uses (v202 Task 3.3 fix round 1:
-    LEVEL SELECT fills the same roomLayer, so its key is MENU's and a MENU / LEVEL SELECT switch never refills the room). ui: {rows, rev}. */
+const rdOf = (F, dpr, plate, feet) => roomFit(F, dpr, ROOM_RESERVE + plate + feet);
+/** MENU's room dpr for the box F at the capped dpr: the shared room rule (kit room.js shareRoom / roomDpr) every page that blits MENU's room layer
+    uses, so a hop between them never refills the room. ui: {rows, rev}. */
 export function roomDpr(c0, F, ui, dpr) {
   if (!okBox(F)) return 1;
   const c = mOf(c0), G = menuGeom(F, (ui && ui.rows) || MENU_ROWS), u = G.u, Gt = Object.assign(Object.create(G), {touch: !!F.touch}), words = hints(), bare = {...(ui || {}), note: "", pad: ""};
@@ -384,6 +384,7 @@ export function roomDpr(c0, F, ui, dpr) {
   const pb = sc(outer(G.d), u), feet = Math.ceil(reserve.reduce((n, w) => n + Math.round(w * u * dpr), 0) / FEET_STEP) * FEET_STEP * Math.round((FOOT_H + 6) * u * dpr) * 4;
   return rdOf(F, dpr, Math.round(pb.w * dpr) * Math.round(pb.h * dpr) * 4, feet);
 }
+shareRoom(roomDpr);
 const J = JSON.stringify;
 export const _dbg = {plans: 0, last: null};
 let S = null;
