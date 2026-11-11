@@ -27,6 +27,8 @@ test("summarize: frames the gate skipped do not flatter the work median", () => 
   assert.equal(s.work.med, 2);
   assert.equal(s.work.max, 4);
   assert.equal(s.interval.max, 33.4);
+  assert.equal(s.long, 0);
+  assert.equal(summarize([16.7, 50, 49.9, 120], [1, 1, 1, 1], 16.7).long, 2);
   assert.ok(Math.abs(s.workMean - 1.505) < 0.01);
   assert.ok(WORK_MIN > 0.01);
 });
@@ -38,7 +40,10 @@ test("parseArgs: defaults and flags, unknown ones refused", () => {
   assert.match(d.out, /\.superpowers\//);
   const a = parseArgs(["--looks", "3d", "--only", "flush", "--tile", "1", "--fps", "2", "--at", "-1450,160", "--throttle", "6", "--secs", "3"]);
   assert.deepEqual([a.looks, a.only, a.tile, a.fps, a.at, a.throttle, a.secs], [["3d"], ["flush"], 1, 2, "-1450,160", 6, 3]);
+  assert.deepEqual(parseArgs(["--only", "desk,phone,hitch"]).only, ["desk", "phone", "hitch"]);
   assert.throws(() => parseArgs(["--only", "uncapped"]));
+  assert.throws(() => parseArgs(["--only", "desk,bogus"]));
+  assert.throws(() => parseArgs(["--only", "desk,"]));
   assert.throws(() => parseArgs(["--bogus"]));
 });
 

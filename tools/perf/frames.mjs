@@ -6,24 +6,44 @@
    time. It refuses to report if the page is hidden, the rAF clock is not at the
    display rate, or WebGL / 2D canvas are not GPU backed.
 
-   node tools/perf/frames.mjs [flags]       about 5 min for the default matrix
-                                            (100 s per look; sweep 1 min per look);
+   node tools/perf/frames.mjs [flags]       about 8 min for the default matrix
+                                            (sweep 1 min per look);
                                             it takes the owner's focus meanwhile
      --looks 2d,px,3d    looks to run (default all three)
-     --only smoke|desk|phone|rate|sweep|flush|hitch   one block (default desk,phone,rate)
+     --only smoke|desk|phone|rate|sweep|flush|hitch   blocks, a comma list
+                         (default desk,phone,rate; e.g. desk,phone,hitch)
        smoke     5 s check of the clock, the GPU and the staging; prints and stops
-       desk      MENU, busy gen-2 room, fat world, worst gen-3 room, PAUSE
+       desk      the title (settled, before the press; on builds before the v202
+                 logo there is no spark, it is the title as shipped), MENU, LEVEL
+                 SELECT cycling, RECORDS, busy gen-2 room, worst gen-3 room, fat
+                 world, PAUSE, GAME OVER
                  (gen 3 is what ordinary runs deal since v198; gen 2 is an F2 link's
                  tile-free board, so read the gen-3 row as the live game's)
+         LEVEL SELECT cycling  arrows walk the levels 1 -> 8 -> 1, one tap per
+                 CYCLE_MS 250 (keyup 50 ms after keydown), never past either end;
+                 the window reports the levels it reached and fails short of 8
+         RECORDS   the page MENU's RECORDS row opens (HIGH SCORES on builds that
+                 have no RECORDS row: the same SCORES screen), idle
+         GAME OVER a gen-3 room 1, lives set to 1, then the sim's own hurtPlayer:
+                 the LOSE overlay at a run end, with main's run-end write
+         Every menu page is reached from MENU by its row LABEL (menuapp ITEMS read
+         in the page) and Enter, then checked by __GAME__.state(); a wrong screen
+         is an error and records nothing. Each page open keeps its longest frame
+         (openHitch). Rooms 6-8 are opened by seeding nb.pact.v1 = "1" (the first
+         CLEAR's own store) with the settings on every page.
        sweep     the desk rooms alone, every world at gen 2 and gen 3
-       phone     393x852 @3 mobile emulation of the same scenes (M5 GPU, not a phone)
+       phone     393x852 @3 mobile emulation of the same scenes (M5 GPU, not a phone),
+                 title included, all at --throttle
        rate      the busy room at FRAME RATE 30 / 60 / MAX
-       hitch     each first (room, lock-on, blast, kill) alone on a fresh page, then
+       hitch     on a fresh page, each alone: MENU -> LEVEL SELECT open, each room
+                 change 2..8, back to MENU, RECORDS open, back; then each first (room,
+                 lock-on, blast, kill), then
                  every other world once (each after a WIN overlay but the last, cold) and two
-                 again (revisit), with
+                 again (revisit), then the GAME OVER edge, with
                  the longest frame, the 3D program count, and a second pass under
                  the CPU profiler naming the top self-time functions; --throttle N
-                 adds a third pass at that CPU rate (a JS-only proxy, not a phone)
+                 adds a third pass at that CPU rate (a JS-only proxy, not a phone).
+                 Desk is never throttled.
        flush     render + a GPU readback, at the real backing size, every gen-3 room,
                  gen-2 room 8 and the fat world: the GPU cost the 60 Hz clock hides.
                  Vsync off is no use for this: the rAF outruns the fixed step, so
@@ -36,13 +56,17 @@
                          measured, never assumed)
      --throttle N        CDP CPU throttle on the page for phone and hitch (a JS-only
                          proxy: the GPU stays an M5, so it is no phone number)
-     --out DIR           JSON + table (default .superpowers/sdd/perf, git-ignored)
+     --out DIR           JSON report, with the commit and flags (default
+                         .superpowers/sdd/perf, git-ignored)
      --keep              keep the Chrome profile dir
    Binary: $CHROME if set, else the newest ms-playwright chromium-<N>.
 
    Each window is one awaited in-page promise, with no CDP traffic inside it:
      interval  plain rAF timestamp deltas; dropped = missed vsyncs at the measured
-               display period (saturates at the period: it cannot show headroom)
+               display period (saturates at the period: it cannot show headroom);
+               long = intervals >= LONG_MS 50
+     drive     a menu window's keys run in the page (window KeyboardEvents on a
+               timer started in the same evaluate), so they add no CDP traffic
      work      time inside the game's own rAF callback, through a pass-through
                wrapper that changes no timing; drawn = frames over WORK_MIN, so the
                gate's skipped frames do not flatter the median. JS only: canvas
@@ -52,7 +76,7 @@
    The staged foes are pinned so the lock-on chevrons really show; the report
    carries the locks, blast share, foes and pickups read back in the window.
    Every child is stopped by PID, also on a crash or Ctrl-C. */
-import {spawn} from "node:child_process";
+import {spawn, execFileSync} from "node:child_process";
 import {mkdtempSync, mkdirSync, writeFileSync, rmSync, readdirSync, existsSync} from "node:fs";
 import {tmpdir, loadavg, cpus} from "node:os";
 import {resolve, dirname, join} from "node:path";
@@ -66,7 +90,8 @@ const round = (v) => +v.toFixed(2);
 
 /* nearest-rank; a is sorted ascending */
 export const pct = (a, p) => (a.length ? a[Math.min(a.length - 1, Math.max(0, Math.ceil((p / 100) * a.length) - 1))] : 0);
-const spread = (v) => { const s = v.slice().sort((x, y) => x - y); return {n: s.length, min: round(s.length ? s[0] : 0), med: round(pct(s, 50)), p95: round(pct(s, 95)), p99: round(pct(s, 99)), max: round(s.length ? s[s.length - 1] : 0)}; };
+const spread = (v) => { const s = v.slice().sort((x, y) => x - y); return {n: s.length, min: round(s.length ? s[0] : 0), med: round(pct(s, 50)), p90: round(pct(s, 90)), p95: round(pct(s, 95)), p99: round(pct(s, 99)), max: round(s.length ? s[s.length - 1] : 0)}; };
+export const LONG_MS = 50;
 /* the vsync period from a blank page's intervals */
 export const periodOf = (iv) => pct(iv.slice().sort((x, y) => x - y), 50);
 /* an interval covers round(iv/period) vsyncs; every one past the first was missed */
@@ -77,15 +102,16 @@ export function dropped(iv, period) {
 }
 export function summarize(iv, wk, period) {
   const drawn = wk.filter((v) => v >= WORK_MIN), sum = wk.reduce((a, b) => a + b, 0);
-  return {interval: spread(iv), dropped: dropped(iv, period), work: spread(drawn), workMean: round(iv.length ? sum / iv.length : 0), drawnFrames: drawn.length};
+  return {interval: spread(iv), dropped: dropped(iv, period), long: iv.filter((v) => v >= LONG_MS).length, work: spread(drawn), workMean: round(iv.length ? sum / iv.length : 0), drawnFrames: drawn.length};
 }
+const BLOCKS = ["smoke", "desk", "phone", "rate", "sweep", "flush", "hitch"];
 
 export function parseArgs(argv) {
   const a = {looks: ["2d", "px", "3d"], only: ["desk", "phone", "rate"], rooms: [8], tile: 8, secs: 6, fps: 1, throttle: 1, at: "40,40", out: join(ROOT, ".superpowers/sdd/perf"), keep: false};
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i], v = argv[i + 1];
     if (k === "--looks") { if (!/^(2d|px|3d)(,(2d|px|3d))*$/.test(v || "")) throw new Error("--looks wants 2d,px,3d, got " + v); a.looks = v.split(","); i++; }
-    else if (k === "--only") { if (!/^(smoke|desk|phone|rate|sweep|flush|hitch)$/.test(v || "")) throw new Error("--only wants smoke|desk|phone|rate|sweep|flush|hitch, got " + v); a.only = [v]; i++; }
+    else if (k === "--only") { const l = String(v || "").split(","); if (!v || !l.every((b) => BLOCKS.includes(b))) throw new Error("--only wants a list of " + BLOCKS.join("|") + ", got " + v); a.only = l; i++; }
     else if (k === "--rooms") { if (!/^[1-8](,[1-8])*$/.test(v || "")) throw new Error("--rooms wants a list of 1..8, got " + v); a.rooms = v.split(",").map(Number); i++; }
     else if (k === "--tile") { if (!/^[1-8]$/.test(v || "")) throw new Error("--tile wants 1..8, got " + v); a.tile = +v; i++; }
     else if (k === "--secs") { if (!/^\d+(\.\d+)?$/.test(v || "")) throw new Error("--secs wants a number, got " + v); a.secs = +v; i++; }
@@ -211,10 +237,29 @@ window.__rec.nr(tick);
 const bombAt=(x,y)=>G.bombs.push({x:cen(x),y:cen(y),tx:x,ty:y,timer:0.02,radius:2,variant:'normal',dead:false});
 const H4=['fast','chaser','knight','fast'];
 window.__stage={busy,fat,stop(){on=null;},win(){on=null;G.state='WIN';},
+lose(){on=null;const p=G.players[0];p.shield=false;G.lives=1;E.hurtPlayer(G,()=>{});return G.state;},
 lock(){opts.noLock=false;const k=G.enemies.filter((e)=>e.lane).length;if(!k){G.enemies=G.enemies.slice(0,Math.max(0,9-lanes.length));lanes.forEach((l,i)=>G.enemies.push(hunter(H4[i%4],l)));}},
 plant(){buildFree();const near=(f)=>G.enemies.some((e)=>!e.dead&&Math.abs(e.tx-f[0])+Math.abs(e.ty-f[1])<5);const f=free.find((q)=>!near(q))||free[0];bombAt(f[0],f[1]);return f;},
 kill(){const e=G.enemies.find((q)=>!q.lane&&!q.dead&&q.type!=='stationary')||G.enemies.find((q)=>!q.lane&&!q.dead);if(e)bombAt(e.tx,e.ty);return !!e;},reset(){if(marks){marks.locks=[];marks.blast=0;marks.frames=0;marks.foes=0;marks.items=0;}},
 read(){if(!marks||!marks.frames)return null;const l=marks.locks.slice().sort((a,b)=>a-b),n=marks.frames;return {lockMin:l[0],lockMax:l[l.length-1],lockMed:l[l.length>>1],blastShare:+(marks.blast/n).toFixed(2),foes:+(marks.foes/n).toFixed(1),items:+(marks.items/n).toFixed(1)};}};
+return true;})`;
+
+/* Page-side menu driver: window.__menu. Screens are addressed by their MENU
+   label (menuapp ITEMS, read live), never by row index; keys are window
+   KeyboardEvents, the same listeners a real key reaches, so a window that drives
+   the menu needs no CDP traffic. cycle(ms) walks LEVEL SELECT 1 -> 8 -> 1 by
+   arrows, one tap per ms, never pressing past either end. */
+export const CYCLE_MS = 250;
+const MENU = `import('/src/app/menuapp.js').then((M)=>{const g=window.__GAME__,a=g.app;
+const key=(code,up)=>window.dispatchEvent(new KeyboardEvent(up?'keyup':'keydown',{code,key:code,bubbles:true,cancelable:true}));
+const tap=(code)=>{key(code);setTimeout(()=>key(code,true),50);};
+let marks=null;
+window.__menu={tap,label(ls){return ls.find((l)=>M.ITEMS.includes(l))||null;},
+open(ls){const l=this.label(ls);if(!l)return null;a.cursor=M.ITEMS.indexOf(l);tap('Enter');return l;},
+cycle(ms){let dir=1;marks={n:0,lv:new Set([a.level])};const id=setInterval(()=>{if(a.level>=8)dir=-1;else if(a.level<=1)dir=1;tap(dir>0?'ArrowRight':'ArrowLeft');marks.n++;marks.lv.add(a.level);},ms);return ()=>clearInterval(id);},
+home(){for(let i=0;i<16&&a.level>1;i++){key('ArrowLeft');key('ArrowLeft',true);}return a.level;},
+read(){return marks?{moves:marks.n,levels:[...marks.lv].sort((x,y)=>x-y)}:null;},
+at(){return {state:g.state(),stage:a.introStage,subT:a.subT,level:a.level,label:M.ITEMS[a.cursor]};}};
 return true;})`;
 
 const READ = `(()=>{const g=window.__GAME__,a=g.app,i=a.gfx||{},r=g.renderer,d=r&&r._dbg;const three=d&&d.gl;return {state:g.state(),level:g.G.level,gen:g.G.gen,biome:null,fps:i.fps,hz:i.hz,d:i.d,kind:i.kind,dpr3d:i.dpr3d,dprPx:i.dprPx,gov:i.gov,limit:i.limit,calls:three&&three.info?three.info.render.calls:null,tris:three&&three.info?three.info.render.triangles:null,glCanvas:three&&three.domElement?[three.domElement.width,three.domElement.height]:null,feat:g.G.feat?g.G.feat.filter((v)=>v>0).length:0,lay:document.body.getAttribute('data-lay'),inner:[innerWidth,innerHeight],dpr:devicePixelRatio};})()`;
@@ -241,24 +286,29 @@ export function topSelf(profile, n = 8) {
   return [...ms].filter(([k]) => !/^\((idle|root|program)\)/.test(k)).sort((a, b) => b[1] - a[1]).slice(0, n).map(([k, v]) => k.trim() + " " + v.toFixed(1));
 }
 
-const settingsSeed = (o) => `try{localStorage.setItem('nb.settings.v1',JSON.stringify(${JSON.stringify(o)}));}catch(e){}`;
+/* settings, and rooms 6-8 open (nb.pact.v1 "1", the first CLEAR's own store) */
+const settingsSeed = (o) => `try{localStorage.setItem('nb.settings.v1',JSON.stringify(${JSON.stringify(o)}));localStorage.setItem('nb.pact.v1','1');}catch(e){}`;
 
 export async function run(a) {
   const bin = findHeaded();
   if (!bin || !existsSync(bin)) throw new Error(bin ? "no browser at CHROME=" + bin : "no headed Chromium: set CHROME or install chromium-<N> under " + PW_DIR);
   mkdirSync(a.out, {recursive: true});
-  const report = {when: new Date().toISOString(), cpu: cpus()[0].model, load0: loadavg(), env: {}, windows: [], errors: []};
+  let commit = null;
+  try { commit = execFileSync("git", ["rev-parse", "--short", "HEAD"], {cwd: ROOT, encoding: "utf8"}).trim(); } catch {}
+  const report = {when: new Date().toISOString(), commit, args: process.argv.slice(2), cpu: cpus()[0].model, load0: loadavg(), env: {}, windows: [], errors: []};
   let srv = null, chr = null, c = null, sid = null, seedId = null;
   const S = (m, p) => c.send(m, p, sid);
   const ev = async (expr) => { const r = await S("Runtime.evaluate", {expression: expr, awaitPromise: true, returnByValue: true}); if (r.exceptionDetails) throw new Error(expr.slice(0, 80) + ": " + JSON.stringify(r.exceptionDetails).slice(0, 400)); return r.result.value; };
   const cpuNow = async () => { const r = await c.send("SystemInfo.getProcessInfo"); const o = {}; for (const p of r.processInfo) o[p.type] = (o[p.type] || 0) + p.cpuTime; return o; };
   const key = async (code, k) => { for (const type of ["keyDown", "keyUp"]) await S("Input.dispatchKeyEvent", {type, code, key: k || code, windowsVirtualKeyCode: code === "Enter" ? 13 : 0}); };
   let period = 0, lastLoaf = [];
-  const record = async (label, look, cfg, ms) => {
+  /* drive: an in-page expression started in the same evaluate as the window,
+     returning its stop function (the menu driver), so no CDP call lands inside */
+  const record = async (label, look, cfg, ms, drive) => {
     await S("Page.bringToFront");
     const m0 = (await S("Performance.getMetrics")).metrics, c0 = await cpuNow(), t0 = performance.now();
     await ev("window.__stage&&window.__stage.reset()");
-    const r = await ev(`window.__rec.record(${ms})`);
+    const r = await ev(drive ? `(()=>{const s=(${drive});return window.__rec.record(${ms}).then((r)=>{if(typeof s==='function')s();return r;});})()` : `window.__rec.record(${ms})`);
     const wall = (performance.now() - t0) / 1000, c1 = await cpuNow(), m1 = (await S("Performance.getMetrics")).metrics;
     const met = (l, n) => (l.find((x) => x.name === n) || {}).value || 0;
     const cpu = {};
@@ -266,15 +316,17 @@ export async function run(a) {
     const w = {label, look, ...cfg, ...summarize(r.iv, r.wk, period), hidden: r.hidden, focus: r.focus, loaf: r.loaf.slice(0, 6), loafN: r.loaf.length,
       cpuMsPerS: cpu, taskMsPerS: Math.round(((met(m1, "TaskDuration") - met(m0, "TaskDuration")) * 1000) / wall), scriptMsPerS: Math.round(((met(m1, "ScriptDuration") - met(m0, "ScriptDuration")) * 1000) / wall),
       read: await ev(READ), stage: await ev("window.__stage?window.__stage.read():null")};
+    if (drive) w.drive = await ev("window.__menu.read()");
     if (look === "3d" && w.read.state !== "INTRO") w.read.sceneCalls = await ev(SCENE_CALLS).catch(() => null);
     report.windows.push(w);
     const x = w.interval, y = w.work, s = w.stage ? " locks " + w.stage.lockMin + ".." + w.stage.lockMax + " blast " + w.stage.blastShare : "";
-    console.error(`${look} ${label}: iv ${x.med}/${x.p95}/${x.p99}/${x.max} drop ${w.dropped}/${x.n} work ${y.med}/${y.p95}/${y.max} fps ${w.read.fps} hz ${w.read.hz}${s}${w.hidden ? " HIDDEN" : ""}`);
+    console.error(`${look} ${label}: iv ${x.med}/${x.p95}/${x.p99}/${x.max} drop ${w.dropped}/${x.n} long ${w.long} work ${y.med}/${y.p90}/${y.p95}/${y.max} fps ${w.read.fps} hz ${w.read.hz}${s}${w.drive ? " levels " + w.drive.levels.join("") + " moves " + w.drive.moves : ""}${w.hidden ? " HIDDEN" : ""}`);
     if (r.hidden) report.errors.push(label + ": page hidden during the window");
     return w;
   };
-  /* a fresh page on this look with these settings, walked to MENU the real way */
-  const open = async (look, cfg) => {
+  /* a fresh page on this look with these settings, walked to MENU the real way;
+     atTitle runs on the settled title (INTRO stage 0, logo faded in) first */
+  const open = async (look, cfg, atTitle) => {
     if (seedId) await S("Page.removeScriptToEvaluateOnNewDocument", {identifier: seedId});
     seedId = (await S("Page.addScriptToEvaluateOnNewDocument", {source: settingsSeed({fps: cfg.fps == null ? 1 : cfg.fps, res: 1, shd: 2, aa: 1, fxq: 1, dmo: 1, ...(look === "3d" ? {r3d: 1} : look === "px" ? {px: 1} : {})})})).identifier;
     if (cfg.phone) { await S("Emulation.setDeviceMetricsOverride", {width: 393, height: 852, deviceScaleFactor: 3, mobile: true}); await S("Emulation.setTouchEmulationEnabled", {enabled: true, maxTouchPoints: 5}); }
@@ -282,9 +334,43 @@ export async function run(a) {
     await S("Page.navigate", {url: "http://127.0.0.1:" + srv.port + "/index.html?render=" + look + "&debug=1"});
     for (let i = 0; i < 100; i++) { await sleep(100); if (await ev("!!(window.__GAME__&&document.readyState==='complete'&&window.__GAME__.app.boardReady!==false)").catch(() => false)) break; }
     await S("Page.bringToFront");
+    if (atTitle) {
+      await ev(MENU);
+      let at = null;
+      for (let i = 0; i < 60; i++) { at = await ev("window.__menu.at()"); if (at.state === "INTRO" && at.stage === 0 && at.subT >= 1.2) break; await sleep(100); }
+      if (at.state === "INTRO" && at.stage === 0) await atTitle(); else report.errors.push(look + " title: not on the title (" + JSON.stringify(at) + ")");
+    }
     await sleep(400); await key("Enter"); await sleep(700); await key("Enter");
     for (let i = 0; i < 80; i++) { await sleep(100); if ((await ev("window.__GAME__.state()")) === "MENU") break; }
-    await ev(STAGE);
+    await ev(STAGE); await ev(MENU);
+  };
+  const at = () => ev("window.__menu.at()");
+  /* wait for a screen by its state name(s); a miss is an error, never a window on the wrong screen */
+  const expect = async (what, names) => {
+    let s = null;
+    for (let i = 0; i < 20; i++) { s = await at(); if (names.includes(s.state)) return true; await sleep(50); }
+    report.errors.push(what + ": wanted " + names.join("|") + ", got " + JSON.stringify(s));
+    console.error("perf: " + what + " wanted " + names.join("|") + ", got " + JSON.stringify(s));
+    return false;
+  };
+  const RECORDS = "['RECORDS','HIGH SCORES']", REC_STATES = ["SCORES", "STATS", "TROPHIES"];
+  const LOSE_ROOM = "window.__stage.busy({room:1,gen:3,seed:4242,noBomb:true,noLock:true})";
+  /* MENU -> LEVEL SELECT (cycling) -> MENU -> RECORDS -> MENU, each open's longest frame kept */
+  const menuPages = async (look, cfg, ms) => {
+    const lh = await staged("window.__menu.open(['LEVEL SELECT'])", look, cfg, 800);
+    if (await expect(look + " LEVEL SELECT", ["LEVEL"])) {
+      const w = await record("LEVEL SELECT cycling", look, cfg, ms, "window.__menu.cycle(" + CYCLE_MS + ")");
+      w.openHitch = lh; w.openLoaf = lastLoaf.slice(0, 3);
+      if (!w.drive || w.drive.levels.length !== 8) report.errors.push(look + " " + cfg.view + " LEVEL SELECT cycling reached " + JSON.stringify(w.drive));
+      await sleep(100);
+      if ((await ev("window.__menu.home()")) !== 1) report.errors.push(look + " LEVEL SELECT: could not walk back to level 1");
+      await ev("window.__menu.tap('Escape')"); await expect(look + " back to MENU", ["MENU"]);
+    }
+    const rh = await staged("window.__menu.open(" + RECORDS + ")", look, cfg, 800);
+    if (await expect(look + " RECORDS", REC_STATES)) {
+      const w = await record("RECORDS", look, cfg, ms); w.openHitch = rh; w.openLoaf = lastLoaf.slice(0, 3);
+      await ev("window.__menu.tap('Escape')"); await expect(look + " back to MENU", ["MENU"]);
+    }
   };
   const toRun = async () => { await ev("window.__GAME__.begin()"); await sleep(300); };
   /* stage, and the warmup: its longest interval is the room-load hitch */
@@ -300,6 +386,8 @@ export async function run(a) {
   const scene = async (look, cfg, secs, rooms, tile) => {
     const ms = secs * 1000;
     await record("MENU", look, cfg, ms);
+    await menuPages(look, cfg, ms);
+    if ((await at()).level !== 1) report.errors.push(look + " " + cfg.view + ": MENU left on level " + (await at()).level);
     report.windows.push({label: "first room after MENU", look, ...cfg, firstRoomHitch: await staged("window.__GAME__.begin()", look, cfg, 1000)});
     await sleep(300);
     for (const r of rooms) {
@@ -315,6 +403,14 @@ export async function run(a) {
     await ev("window.__pause()"); await sleep(600);
     await record("PAUSE", look, cfg, ms);
     await ev("window.__resume()");
+    await staged(LOSE_ROOM, look, cfg, 800);
+    const gh = await staged("window.__stage.lose()", look, cfg, 1000);
+    if (await expect(look + " GAME OVER", ["LOSE"])) { const g = await record("GAME OVER", look, cfg, ms); g.openHitch = gh; g.openLoaf = lastLoaf.slice(0, 3); }
+  };
+  /* the settled title, before the press that starts the show */
+  const title = (look, cfg, secs) => async () => {
+    if (cfg.throttle > 1) await S("Emulation.setCPUThrottlingRate", {rate: cfg.throttle});
+    await record("title", look, cfg, secs * 1000);
   };
   try {
     srv = await startServer();
@@ -342,31 +438,53 @@ export async function run(a) {
     if (!/enabled/.test(report.env.feature.canvas2d || "")) bad.push("2D canvas not accelerated: " + report.env.feature.canvas2d);
     if (!(period > 4 && period < 34)) bad.push("rAF period " + round(period) + " ms is not a display clock");
     if (bad.length) { report.errors.push(...bad); throw new Error("no real-GPU foreground clock: " + bad.join("; ")); }
-    const blk = a.only[0];
+    const has = (b) => a.only.includes(b);
     for (const look of a.looks) {
-      if (blk === "smoke") {
+      if (has("smoke")) {
         await open(look, {});
         await toRun();
         await staged(busy(a.rooms[0], 2), look, {});
         await record("smoke busy gen-2 room " + a.rooms[0], look, {}, 2000);
         writeFileSync(join(a.out, "smoke-" + look + ".png"), Buffer.from((await S("Page.captureScreenshot", {format: "png"})).data, "base64"));
       }
-      if (a.only.includes("desk")) { await open(look, {fps: a.fps}); await scene(look, {view: "desk"}, a.secs, a.rooms, a.tile); }
-      if (blk === "sweep") {
+      if (has("desk")) { const cfg = {view: "desk"}; await open(look, {fps: a.fps}, title(look, cfg, a.secs)); await scene(look, cfg, a.secs, a.rooms, a.tile); }
+      if (has("sweep")) {
         await open(look, {}); await toRun();
         for (const gen of [2, 3]) for (let r = 1; r <= 8; r++) { const h = await staged(busy(r, gen), look, {}, 800); const w = await record("sweep gen-" + gen + " room " + r, look, {view: "sweep"}, (a.secs === 6 ? 3 : a.secs) * 1000); w.loadHitch = h; }
       }
-      if (a.only.includes("phone")) { await open(look, {phone: true, fps: a.fps}); await S("Emulation.setCPUThrottlingRate", {rate: a.throttle}); await scene(look, {view: "phone", throttle: a.throttle}, Math.min(a.secs, 5), a.rooms, a.tile); await S("Emulation.setCPUThrottlingRate", {rate: 1}); }
-      if (a.only.includes("rate")) for (const [fps, n] of [[0, "30"], [1, "60"], [2, "MAX"]]) {
+      if (has("phone")) { const cfg = {view: "phone", throttle: a.throttle}, secs = Math.min(a.secs, 5); await open(look, {phone: true, fps: a.fps}, title(look, cfg, secs)); await S("Emulation.setCPUThrottlingRate", {rate: a.throttle}); await scene(look, cfg, secs, a.rooms, a.tile); await S("Emulation.setCPUThrottlingRate", {rate: 1}); }
+      if (has("rate")) for (const [fps, n] of [[0, "30"], [1, "60"], [2, "MAX"]]) {
         await open(look, {fps}); await toRun();
         await staged(busy(a.rooms[0], 2), look, {});
         await record("FRAME RATE " + n + " busy room " + a.rooms[0], look, {view: "rate", fps: n}, Math.min(a.secs, 5) * 1000);
       }
-      if (blk === "hitch") for (const prof of a.throttle > 1 ? [false, true, "x"] : [false, true]) {
-        await open(look, {}); await toRun();
+      if (has("hitch")) for (const prof of a.throttle > 1 ? [false, true, "x"] : [false, true]) {
+        await open(look, {});
         if (prof === "x") await S("Emulation.setCPUThrottlingRate", {rate: a.throttle});
         const profiled = prof === true, tag = prof === "x" ? "x" + a.throttle + " " : profiled ? "prof " : "";
         if (profiled) { await S("Profiler.enable"); await S("Profiler.setSamplingInterval", {interval: 100}); }
+        const view = profiled ? "hitch-profiled" : prof === "x" ? "hitch-x" + a.throttle : "hitch";
+        const step = async (label, expr, want) => {
+          await sleep(700);
+          const p0 = await ev(PROGRAMS);
+          if (profiled) await S("Profiler.start");
+          const hitch = await staged(expr, look, {}, 1200);
+          const top = profiled ? topSelf((await S("Profiler.stop")).profile) : null;
+          const p1 = await ev(PROGRAMS);
+          if (want && !(await expect(look + " " + tag + label, want))) return false;
+          report.windows.push({label, look, view, hitch, programs: [p0, p1], loaf: lastLoaf.slice(0, 3), top});
+          console.error(`${look} ${tag}${label}: longest ${hitch} ms, programs ${p0} -> ${p1}, loaf ${JSON.stringify(lastLoaf.slice(0, 2))}${top ? "\n   " + top.join(" | ") : ""}`);
+          return true;
+        };
+        /* menu pages first: each open and each LEVEL SELECT room change alone */
+        if (await step("open LEVEL SELECT", "window.__menu.open(['LEVEL SELECT'])", ["LEVEL"])) {
+          for (let r = 2; r <= 8; r++) await step("LEVEL SELECT room " + r, "window.__menu.tap('ArrowRight')");
+          if ((await at()).level !== 8) report.errors.push(look + " " + tag + "LEVEL SELECT stopped at level " + (await at()).level);
+          await ev("window.__menu.home()");
+          await step("LEVEL SELECT back to MENU", "window.__menu.tap('Escape')", ["MENU"]);
+        }
+        if (await step("open RECORDS", "window.__menu.open(" + RECORDS + ")", REC_STATES)) await step("RECORDS back to MENU", "window.__menu.tap('Escape')", ["MENU"]);
+        await toRun();
         const room = a.rooms[0], ST = "window.__stage.";
         const steps = [["room, no bomb, no lock", ST + `busy({room:${room},gen:2,seed:${4242 + room},noBomb:true,noLock:true})`], ["first lock-on", ST + "lock()"], ["first blast", ST + "plant()"], ["second blast", ST + "plant()"], ["first kill", ST + "kill()"], ["second kill", ST + "kill()"], ["third blast", ST + "plant()"], ["room again, no bomb, no lock", ST + `busy({room:${room},gen:2,seed:${4243 + room},noBomb:true,noLock:true})`], ["other biome, no bomb, no lock", ST + `busy({room:${room === 1 ? 2 : 1},gen:2,seed:${4244 + room},noBomb:true,noLock:true})`]];
         const world = (r, kind) => [kind + " world " + r, ST + `busy({room:${r},gen:2,seed:${4300 + r},noBomb:true,noLock:true})`];
@@ -374,20 +492,13 @@ export async function run(a) {
         /* the real order: WIN overlay, then the next room; the last one jumps there cold (LEVEL SELECT) */
         for (const r of unseen.slice(0, -1)) steps.push(["WIN overlay before world " + r, ST + "win()"], world(r, "new, after WIN,"));
         steps.push(world(unseen[unseen.length - 1], "new, cold,"), world(unseen[0], "revisit"), world(room, "revisit"));
-        for (const [label, expr] of steps) {
-          await sleep(700);
-          const p0 = await ev(PROGRAMS);
-          if (profiled) await S("Profiler.start");
-          const hitch = await staged(expr, look, {}, 1200);
-          const top = profiled ? topSelf((await S("Profiler.stop")).profile) : null;
-          const p1 = await ev(PROGRAMS);
-          report.windows.push({label, look, view: profiled ? "hitch-profiled" : prof === "x" ? "hitch-x" + a.throttle : "hitch", hitch, programs: [p0, p1], loaf: lastLoaf.slice(0, 3), top});
-          console.error(`${look} ${tag}${label}: longest ${hitch} ms, programs ${p0} -> ${p1}, loaf ${JSON.stringify(lastLoaf.slice(0, 2))}${top ? "\n   " + top.join(" | ") : ""}`);
-        }
+        for (const [label, expr] of steps) await step(label, expr);
+        await staged(LOSE_ROOM, look, {}, 800);
+        await step("GAME OVER", "window.__stage.lose()", ["LOSE"]);
         if (profiled) await S("Profiler.disable");
         if (prof === "x") await S("Emulation.setCPUThrottlingRate", {rate: 1});
       }
-      if (blk === "flush") for (const phone of [false, true]) {
+      if (has("flush")) for (const phone of [false, true]) {
         const view = phone ? "phone" : "desk", cfg = {view: "flush-" + view};
         await open(look, {phone}); await toRun();
         const sample = async (label, expr) => {
@@ -407,7 +518,7 @@ export async function run(a) {
     if (chr) dirs.delete(chr.dir);
     if (srv) await stop(srv.proc);
   }
-  const f = join(a.out, "frames-" + a.only[0] + "-" + a.looks.join("") + "-" + Math.round(report.env.hz) + "hz-fps" + a.fps + (a.throttle > 1 ? "-x" + a.throttle : "") + ".json");
+  const f = join(a.out, "frames-" + a.only.join("-") + "-" + a.looks.join("") + "-" + Math.round(report.env.hz) + "hz-fps" + a.fps + (a.throttle > 1 ? "-x" + a.throttle : "") + ".json");
   writeFileSync(f, JSON.stringify(report, null, 1));
   console.error("perf: wrote " + f);
   return report;
