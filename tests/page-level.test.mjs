@@ -89,7 +89,7 @@ check("the old painter is gone from menudraw (roomCard, schem, heroRoom, chip, s
   setTextScale(1.25);
   const H = P.levelGeom(BOX.d1366, { unlocked: true });
   setTextScale(1);
-  check("desktop at 125 %: the plate 1220 wide, the list column 700, rows 58, level keys 50 wide, bank cells 140, START 84", near(H.S.w, 1220, 0.01) && H.rows[N_LEVEL].w === 700 && H.rows[N_LEVEL].h === 58 && H.room[0].w === 50 && near(H.heat[0].w, 140, 1e-9) && H.start.h === 84, J([H.S, H.rows[N_LEVEL]]));
+  check("desktop at 125 %: the plate 1220 wide, the list column 700, rows 58, level keys 50 wide, bank cells 140 x 44 (fix round 1: room for the legend, chosen >= 3:1 at 125 %), START 84", near(H.S.w, 1220, 0.01) && H.rows[N_LEVEL].w === 700 && H.rows[N_LEVEL].h === 58 && H.room[0].w === 50 && near(H.heat[0].w, 140, 1e-9) && H.heat[0].h === 44 && H.start.h === 84, J([H.S, H.rows[N_LEVEL]]));
   const Q = P.levelGeom(BOX.p393, { unlocked: true }), s = BOX.p393.css, q = (r) => css(r, s);
   check("phone 393x852: the plate at (12, 20, 369, 812) CSS px, BACK 117 x 44 in its head, 4 x 2 level keys 46 tall 10 apart across 345", nearR(q(Q.S), { x: 12, y: 20, w: 369, h: 812 }, 1.2) && near(q(Q.back).w, 117, 0.6) && near(q(Q.back).h, 44, 0.6) && near(q(Q.room[0]).h, 46, 0.6) && near(q(Q.room[4]).y - q(Q.room[0]).y, 56, 0.6) && near(q(Q.room[3]).x + q(Q.room[3]).w - q(Q.room[0]).x, 345, 1.2), J([q(Q.S), q(Q.room[0])]));
   check("phone: the banks 50 tall across the column, the door 52, START 66 at the plate's foot, the card's slot between (>= 234 CSS px)", near(q(Q.heat[0]).h, 44, 0.6) && near(q(Q.mods).h, 52, 0.6) && near(q(Q.start).h, 66, 0.6) && near(q(Q.start).y + q(Q.start).h, 820, 1.2) && q(Q.pane).h >= 234 && Q.pane.y > Q.mods.y + Q.mods.h && Q.start.y > Q.pane.y + Q.pane.h, J([q(Q.mods), q(Q.pane), q(Q.start)]));
@@ -200,7 +200,7 @@ const HITS = async () => { const sc = await import("../src/render/scenes.js"); r
 }
 
 /* ---- paint: focus, one yellow, the kit ring, no cord ---- */
-const pageCvs = () => { const S = P._dbg.last.S, out = []; if (S.roomL && S.roomL.cv) out.push({ cv: S.roomL.cv, b: S.roomL.b }); for (const q of Object.values(S.L)) if (q.cv) out.push({ cv: q.cv, b: q.b }); return out; };
+const pageCvs = () => { const S = P._dbg.last.S, out = []; if (S.room) out.push({ cv: S.room, b: { x: 0, y: 0, w: P._dbg.last.G.W, h: P._dbg.last.G.H } }); for (const q of Object.values(S.L)) if (q.cv) out.push({ cv: q.cv, b: q.b }); return out; };
 const back = (q, L) => q && { x: L.b.x + q.x * L.b.w / L.cv.width, y: L.b.y + q.y * L.b.h / L.cv.height, w: q.w * L.b.w / L.cv.width, h: q.h * L.b.h / L.cv.height };
 /* the focused part's paints in box units: LEVEL's from its focus layer, every other part's live on the target (drawn under scale(u)) */
 const focusPaints = (f) => { const L = P._dbg.last; if (L.foc === N_LEVEL) { const q = L.S.L.focL; return q.cv.r.paints.map((p) => ({ ...p, box: back(p.box, { cv: q.cv, b: q.b }) })); } return f.t.paints; };
@@ -259,7 +259,12 @@ const focusPaints = (f) => { const L = P._dbg.last; if (L.foc === N_LEVEL) { con
   check("CROWN copy on both pages' cards (level 8, NORMAL)", lc.includes("ALL NINE · ONE OF EACH") && mc.includes("ALL NINE · ONE OF EACH"), J([lc, mc]));
 }
 {
-  check("door teaser: the names that are on, then their count; NONE with none; the phone the count", J(P.doorTeasers({ pact: PACT.LAST | PACT.SHRINK, time: true })) === J(["ONE LIFE · SHRINK · TIME TRIAL", "3 ON"]) && J(P.doorTeasers({ pact: 0 })) === J(["NONE"]) && J(P.doorTeasers({ pact: PACT.BARE }, true)) === J(["1 ON"]));
+  check("door teaser: the names that are on, then their count; NONE with none (one list on every device: the measure picks)", J(P.doorTeasers({ pact: PACT.LAST | PACT.SHRINK, time: true })) === J(["ONE LIFE · SHRINK · TIME TRIAL", "3 ON"]) && J(P.doorTeasers({ pact: 0 })) === J(["NONE"]) && J(P.doorTeasers({ pact: PACT.BARE })) === J(["NO FLOOR ITEMS", "1 ON"]));
+  frame(BOX.p393, UI({ pact: PACT.LAST }));
+  const ptz = P._dbg.last.P.rows[N_MODS].tz;
+  frame(BOX.p393, UI({ pact: 15, time: true }));
+  const ptz5 = P._dbg.last.P.rows[N_MODS].tz;
+  check("door teaser by measure on the phone (fix round 1): a name that fits its door is named (ONE LIFE), five fall back to the count", !!ptz && ptz.lines.join(" ") === "ONE LIFE" && !!ptz5 && ptz5.lines.join(" ") === "5 ON", J([ptz && ptz.lines, ptz5 && ptz5.lines]));
   check("door teaser: a controller's TRIGGER cursor with the list shut names its entry and state", J(P.doorTeasers({ pact: PACT.THIN, trig: 2 })) === J(["FEWER ITEMS · ON"]) && J(P.doorTeasers({ pact: 0, trig: 4 })) === J(["TIME TRIAL · OFF"]));
   check("START's tag: each setting named (never a bare NORMAL), then the modifier count, then EXPERT bare; DEFAULT RULES for a default run", J(P.startTags({ heat: 1, pace: 1, pact: PACT.LAST | PACT.SHRINK, time: true })) === J(["HARD DIFFICULTY · FAST SPEED · ONE LIFE · SHRINK · TIME TRIAL", "HARD DIFFICULTY · FAST SPEED · 2 MODIFIERS · TIME TRIAL"]) && J(P.startTags({})) === J(["DEFAULT RULES"]) && P.startTags({ heat: 2, pact: 15 }).includes("EXPERT · 4 MODIFIERS"));
   const kw = wordsOf("key", DEF_CONTROLS), pw = wordsOf("pad", DEF_CONTROLS);
@@ -419,7 +424,7 @@ const focusPaints = (f) => { const L = P._dbg.last; if (L.foc === N_LEVEL) { con
     const menuRd = MP._dbg.last.S.rd;
     let peak = 0;
     for (let i = 0; i < 3; i++) { P.drawLevelPage(t.ctx, BOX.d1366, UI({ row: LEVEL_ROWS[i] }), i * 0.1); peak = Math.max(peak, cache._dbg.bytes); }
-    const S = P._dbg.last.S, mine = [S.roomL.cv, ...Object.values(S.L).map((q) => q.cv)];
+    const S = P._dbg.last.S, mine = [S.room, ...Object.values(S.L).map((q) => q.cv)];
     setTextScale(1);
     return { rd: S.rd, menuRd, peak, gone: mine.filter((cv) => !cv || !cv.width).length, bytes: mine.reduce((n, cv) => n + (cv ? cv.width * cv.height * 4 : 0), 0) };
   };
@@ -433,6 +438,23 @@ const focusPaints = (f) => { const L = P._dbg.last; if (L.foc === N_LEVEL) { con
   check("phone at dpr 2.7 (capped 2 on touch), list open: <= 24 MiB", cache._dbg.bytes <= cache.BUDGET, cache._dbg.bytes);
 }
 
+/* fix round 1, ruling (c): LEVEL SELECT fills MENU's own roomLayer at MENU's room dpr (menu.js roomDpr), so MENU -> LEVEL SELECT -> MENU never
+   refills the room: the same canvas each way, 0 room misses; the plate is its own layer (not baked into the room) */
+for (const [b, dpr] of [["d1366", 2], ["p393", 2.7], ["d1024", 2]]) for (const ts of [1, 1.25]) {
+  setTextScale(ts); fresh();
+  const F = BOX[b], t = rec({ widthK: K8 }); t.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const MUI = { rows: ITEMS, focus: "PLAY", level: 2, run: {}, rev: "v201", enterT: 9 };
+  MP.drawMenuPage(t.ctx, F, MUI, 0);
+  const room0 = MP._dbg.last.S.room, made0 = made.length;
+  P.drawLevelPage(t.ctx, F, UI({ level: 2, rev: "v201" }), 0);
+  const lv = P._dbg.last.S, roomsMade = made.slice(made0).filter((cv) => cv === lv.room).length;
+  const m0 = made.length;
+  MP.drawMenuPage(t.ctx, F, MUI, 0.1);
+  const back = MP._dbg.last.S.room, remade = made.slice(m0).includes(back);
+  setTextScale(1);
+  check(`shared room (${b} @${dpr}, x${ts}): LEVEL SELECT blits MENU's room canvas (same dpr ${lv.rd}), and back on MENU the same canvas again: 0 room refills; the plate is its own layer`,
+    lv.room === room0 && roomsMade === 0 && back === room0 && !remade && room0.width > 0 && !!lv.L.bed && lv.rd === MP._dbg.last.S.rd, J({ same: lv.room === room0, rd: [lv.rd, MP._dbg.last.S.rd], remade }));
+}
 /* ---- covered (ruling 1), tap mode (ruling 4), the real drawShell path ---- */
 {
   check("shellCovers: MENU and LEVEL SELECT cover; GAME, SETTINGS, INTRO and ATTRACT do not", SV.shellCovers(SCREEN.MENU) && SV.shellCovers(SCREEN.LEVEL) && ![SCREEN.GAME, SCREEN.SETTINGS, SCREEN.INTRO, SCREEN.ATTRACT, SCREEN.GUIDE].some(SV.shellCovers));
@@ -486,6 +508,17 @@ const focusPaints = (f) => { const L = P._dbg.last; if (L.foc === N_LEVEL) { con
     const want = ["chosen", "band", "info", ...(ui.unlocked === false ? ["locked"] : []), ...(ui.tap || ui.row === N_START || ui.open ? ["ring"] : [])];
     check(`probe (${b}): ${want.join(", ")} pairs; every text with its colour; the plate rect with its ring width`, want.every((k) => kinds.has(k)) && s.texts.every((t) => !!t.col) && s.rects.some((r) => r.name === "plate" && r.plate > 0), J([...kinds]));
   }
+  /* fix round 1, ruling (a): chosen >= 3:1 binds at every text scale, so the course and both banks declare their chosen pairs at 1 and 1.25, on desk,
+     phone and compact */
+  const miss = [];
+  for (const ts of [1, 1.25]) for (const b of ["d1366", "p393", "c852x393"]) {
+    setTextScale(ts); fresh(); probe.setOn(true);
+    frame(BOX[b], UI({ heat: 1, pace: 0 }), { dpr: 2 });
+    const names = probe.snapshot().pairs.filter((q) => q.kind === "chosen").map((q) => q.name); probe.setOn(false);
+    for (const n of ["level chosen vs not", "heat chosen vs not", "pace chosen vs not"]) if (!names.includes(n) && !(b === "c852x393" && n !== "level chosen vs not" && P.levelGeom(BOX[b], { unlocked: true }).pages > 1)) miss.push(b + " x" + ts + " " + n);
+  }
+  setTextScale(1);
+  check("chosen pairs at every text scale (ruling (a)): the level course, DIFFICULTY and GAME SPEED declared at 1 and 1.25 (a paged compact: the banks on their own page)", miss.length === 0, miss.join(" | "));
   const m = SCREENS.level;
   check("screens.mjs level row: exempts ring and locked, each with a reason; needs chosen, band, info, text, cap, inside, plate, yellow, touch, gap", J(Object.keys(m.exempt).sort()) === J(["locked", "ring"]) && Object.values(m.exempt).every((v) => v.length > 20) && ["chosen", "band", "info", "text", "cap", "inside", "plate", "yellow", "touch", "gap"].every((g) => m.need.includes(g)));
 }

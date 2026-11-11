@@ -496,8 +496,12 @@ function mkCanvas(){
   g.app.cabinetSeen=true; g.app.skip(); g.app.cursor=ITEMS.indexOf("LEVEL SELECT"); g.app.confirm();
   cv.calls.length=0; g.loop(16); g.loop(32);
   const foot=cv.calls.filter(c=>c[0]==="fillText").map(c=>String(c[1][0]));
-  const ws=foot.filter(t=>/^(ROW|CHANGE|START|BACK)$/.test(t)), at=(w)=>ws.indexOf(w);
-  check("M1 desktop LEVEL SELECT foot keeps the key list (the focused row's, label first: ROW · CHANGE · START · BACK)", at("ROW")>=0&&at("ROW")<at("CHANGE")&&at("CHANGE")<ws.lastIndexOf("START")&&ws.lastIndexOf("START")<ws.lastIndexOf("BACK")&&!foot.includes(LEVEL_TAP), ws.join("|"));
+  /* the exact ordered foot (v202 Task 3.3, fix round 1): this canvas cannot measure, so the painted words come back without their text keycaps; the
+     frame's own plan gives the whole sequence, keycaps included, and the painted words must be its words in the same order, contiguous */
+  const lvp=(await import("../src/render/pages/level.js"))._dbg.last, F=lvp.P.foot[lvp.verb], ARW={up:"↑",dn:"↓",lf:"←",rt:"→"};
+  const seq=F?F.parts.map(q=>q.t||q.sep||(Array.isArray(q.cap)?ARW[q.cap[0]]:q.cap)).join(" "):"", words=F?F.parts.filter(q=>!q.cap).map(q=>q.t||q.sep):[], k=foot.indexOf("ROW");
+  check("M1 desktop LEVEL SELECT foot keeps the key list, exact and in order: ROW ↑ ↓ · CHANGE ← → · START ENTER · BACK ESC (the painted words that sequence's, contiguous)",
+    lvp.verb==="value"&&seq==="ROW ↑ ↓ · CHANGE ← → · START ENTER · BACK ESC"&&k>=0&&JSON.stringify(foot.slice(k,k+words.length))===JSON.stringify(words)&&!foot.includes(LEVEL_TAP), seq+" / "+foot.slice(k,k+9).join("|"));
 }
 {
   const plays=[];

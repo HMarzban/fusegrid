@@ -152,7 +152,7 @@ off the rows a root list (MENU, PAUSE list) does nothing; on a page
 (hit -2) and only a tap OFF the plate backs out (-1; LEVEL SELECT's phone and compact plates also carry a BACK key). `guideHit`,
 `levelHit` / `levelGeom`, `scoresHit` and `recTabHit` share the geometry their pages
 draw. Hints follow `data-lay` (keys vs taps; LEVEL SELECT's touch foot is
-`LEVEL_TAP`). SHELL BOX (owner GO 2026-10-19, shell v181, touch portrait; every
+`LEVEL_TAP` on the touch desk, the landscape tablets; its phone and compact plates have no foot, a BACK key, and a controller's cue line). SHELL BOX (owner GO 2026-10-19, shell v181, touch portrait; every
 layout since UI upgrade Task 1.0, owner pick "Full window"): MENU and every plated page
 (`isShellScreen`, shellview) draw on `#sh`, a fixed canvas over the whole
 viewport (`fit.js` `shellGeo(W,H,cw,ch,lay)`). `d` and `l`: the window at scale 1
@@ -275,9 +275,9 @@ same room key (Task 3.2; was three feet as wide as the box); feet wider in all (
 1.5 there leaves room for under one foot), the cache <= 23.99 MB of 24 MiB. A zero or non-finite box draws
 nothing (`menuHit` -1). `glyph` (chev, ext, up, dn, flag) is a kit part (`kit/paint.js`), `canMake` the kit cache's one copy (the logo painter's too). Page plumbing, for every page task: a page module exports one `*Geom` (rects by name, box units; `G.d` design px)
 for draw and hit, a painter fed names and values by shellview (never indices), and its hit; menudraw keeps the entry names and delegates.
-Static parts are `kit/cache.js` layers keyed by content (`roomLayer` shared by every page of a box, except LEVEL SELECT, whose room layer also
-holds its plate, so MENU and LEVEL SELECT never share one and each switch refills; its dpr gives way so the page's layers and a 3 MiB logo reserve
-(LEVEL SELECT: 1 MiB) fit `BUDGET`), made at once so a cursor move never misses, `touch()`ed on a steady frame (`cache.touch(key)`: a held layer
+Static parts are `kit/cache.js` layers keyed by content (`roomLayer` shared by every page of a box, LEVEL SELECT's included, at one room dpr:
+MENU's rule, `pages/menu.js` `roomDpr`, its dpr giving way so MENU's plate, its foot reserve and a 3 MiB logo reserve fit `BUDGET`; so a MENU /
+LEVEL SELECT switch never refills the room; a page keeps its plate out of the room layer), made at once so a cursor move never misses, `touch()`ed on a steady frame (`cache.touch(key)`: a held layer
 goes LRU-recent, so a stale one is freed first); live on top: focus, ring, the logo's spark. `shellview.shellCovers(screen)` (MENU, LEVEL SELECT; each
 page task adds its screen) makes main pass `{covered: true}` to the renderer: no look rasters a board a page covers. `frameloop` frees the kit's
 layers (`release`, handed in by main) after `KIT_FREE` 10 s of GAME PLAY on a PLAY-only clock and on `pagehide`; the next shell frame refills.
@@ -296,7 +296,7 @@ The inline list is five toggle keys (on lit, off well) in a region reserved unde
 LEVEL..GAME SPEED rows (compact); opening it moves nothing. Focus: a row its band and bare bomb, no ring (the d-03 frame); START, the phone /
 compact door and a list entry are keys (bomb + 3 px ring). Desk help line: the level's sentence, a list entry's, a controller's TRIGGER / NORTH
 how-to (`words.js` `LEVEL_WORDS`). Arrangements as MENU's: desk (plate 1110, list column 640, rows 64 / pitch 74, keys 48 x 44, bank cells 112 x
-36, START 74, card slot 360; 125 %: 1220, 700, 58, 50, 140, 84, 400; centred; a narrower window gives way first (the card's column to 360, its slot
+36, START 74, card slot 360; 125 %: 1220, 700, 58, 50, 140 x 44 (room for the legend: chosen >= 3:1 at every text scale), 84, 400; centred; a narrower window gives way first (the card's column to 360, its slot
 then 380, the column gap, the side pads, the list column to 572 / 680), a shorter one the gap over the foot then the MENU kicker, and only then
 does the page scale, so 1366 x 657, 1280 x 720 and 1024 x 768 keep the text floors; a touch box floors every target at 44 CSS px while u x css
 holds 0.8), phone (the p-03 column in CSS px: BACK + title, labels over their controls, 4 x 2 keys 46, banks 50, door 52, the card the height
@@ -304,10 +304,11 @@ left, a reserved cue line, START 66) and compact (any other touch box: the phone
 it PAGES them, whole groups a page, MODIFIERS its own group, the page the one holding the focused row (START: the last), page keys beside START
 that focus the first row of the page before or after, never under 44 CSS px). Phone and compact have no foot: a controller gets a cue line
 (`footItems`, stepping down by whole items). `levelGeom(F, {unlocked, open, row})` / `levelHit` take the
-list's state from `app.modOpen` and the page from the focused row (pointer.js passes both with the box's lg and css). Layers (kit cache): the room layer holds the room look AND the plate
-at the room's dpr (the bed is flat rects), the rampart's four strips, the head, the rows at rest, START at rest, the card, the LEVEL row's focus, the
-list and the desk feet are full-dpr layers of their own rects, all made at once; the room's dpr gives way to them and a 1 MiB reserve (>= 1.5 at
-1366 x 768 @2, >= 1.41 at 125 %). Live: the other rows' focus, the door's teaser, the help line, START's tag and keycap, the lock plaque.
+list's state from `app.modOpen` and the page from the focused row (pointer.js passes both with the box's lg and css). Layers (kit cache): the room is MENU's
+own `roomLayer` at MENU's room dpr (`roomDpr`, one key: 1.549 at 1366 x 768 @2, 1.421 at 125 %, with the build tag in the foot; 0 room refills
+MENU -> LEVEL SELECT -> MENU); the plate (rampart and bed) is its own layer at 1 device px per box unit under the rampart's four full-dpr strips; the
+head, the rows at rest (one per page), START at rest, the card, the LEVEL row's focus, the list and the desk feet are full-dpr layers of their own
+rects, all made at once, within the budget beside MENU's room. Live: the other rows' focus, the door's teaser, the help line, START's tag and keycap, the lock plaque.
 
 The sim ticks only while the shell is GAME. PAUSE/WIN/LOSE are `world.state`,
 not shell screens. Do not add them as `SCREEN` values.

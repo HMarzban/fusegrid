@@ -309,17 +309,22 @@ for (const [nm, L, T] of BOXES) for (const U of [false, true]) for (const heat o
     const touch = lay !== "d", tap = touch && dev === "touch", tag = `drawShell (${nm}, ${tap ? "tap mode" : dev === "pad" ? "a controller: the focus model" : "keys: the focus model"})`;
     const a = createMenuApp({ pactUnlocked: true, settings: { fpm: 0 } }), cv = box(w, h, lay, logo, s);
     a.screen = SCREEN.LEVEL; a.heat = 1; a.lastDev = dev;
-    const shot = () => { drawShell(rec({ widthK: 0.648 }).ctx, a, { state: "PLAY", time: 1, level: 1 }, cv, kind, () => [], () => 0, () => ({})); return lv._dbg.last; };
+    /* the real path paints what it focuses (fix round 1): the band's rect is rows[n] (a row), the 3 px ring's rect rows[n] or START or the entry out
+       3 px (a key), read from the painted ops as the drawLv section reads them */
+    let r = null;
+    const shot = () => { r = rec({ widthK: 0.648 }); drawShell(r.ctx, a, { state: "PLAY", time: 1, level: 1 }, cv, kind, () => [], () => 0, () => ({})); return lv._dbg.last; };
+    const tok1 = worldTokens(a.level | 0 || 1);
     for (let row = 0; row < 5; row++) {
       a.levelRow = row;
-      const d = shot(), n = LEVEL_ROWS[row];
-      check(`${tag} app.levelRow ${row} (${n}): the focus is ${tap ? "START (tap mode)" : n}`, d.foc === (tap ? N_START : n), d.foc);
+      const d = shot(), n = LEVEL_ROWS[row], G = d.G, u = G.u, rg = ringsOf(r), bd = bandsOf(r, tok1), key = tap || n === N_START || (n === N_MODS && G.lay !== "desk");
+      const want = tap ? G.start : G.rows[n], door = !tap && n === N_MODS && G.lay !== "desk", paintOk = key ? rg.length === 1 && near(rg[0], ringAt(want, u), 0.6 * u + 0.05) && (door ? bd.length === 1 && near(bd[0], want, 0.05) : bd.length === 0) : rg.length === 0 && bd.length === 1 && near(bd[0], want, 0.05);
+      check(`${tag} app.levelRow ${row} (${n}): the focus is ${tap ? "START (tap mode)" : n}, painted where the geometry puts it (${key ? "its ring" : "its band"})`, d.foc === (tap ? N_START : n) && paintOk, J([d.foc, rg, bd, want]));
     }
     a.levelRow = ROW.MODS; a.modOpen = true;
     for (let cur = 0; cur < 5; cur++) {
       a.modeCur = cur;
-      const d = shot();
-      check(`${tag} app.modOpen, app.modeCur ${cur}: the focus is that entry`, d.foc === "M" + cur && d.G.mode.length === 5, d.foc);
+      const d = shot(), rg = ringsOf(r), u = d.G.u;
+      check(`${tag} app.modOpen, app.modeCur ${cur}: the focus is that entry, its ring painted round it, no band`, d.foc === "M" + cur && d.G.mode.length === 5 && rg.length === 1 && near(rg[0], ringAt(d.G.mode[cur], u), 0.6 * u + 0.05) && bandsOf(r, tok1).length === 0, J([d.foc, rg]));
     }
     a.modOpen = false; a.modeCur = -1;
     setHints(null);
@@ -444,8 +449,8 @@ for (const kind of ["d", "l", "p"]) for (const U of [false, true]) {
     const miss = G.pane || { x: G.S.x + G.S.w / 2, y: G.S.y + 1, w: 1, h: 1 };
     t.ctr(miss);
     check(`${tag}: a miss on the plate (${G.pane ? "the card" : "the head"}) is inert: no change, no focus move, no cue`, same(t, want({ row: ROW.SPEED })), J(stOf(t)));
-    t.tapAt(G.S.x - G.T - 6, G.S.y + G.S.h / 2);
-    if (G.S.x - G.T - 6 > 0) check(`${tag}: a tap off the plate backs out to MENU on LEVEL SELECT`, same(t, want({ scr: SCREEN.MENU, row: ROW.SPEED, cues: "uiBack" })) && a.cursor === ITEMS.indexOf("LEVEL SELECT"), J(stOf(t)));
+    t.tapAt(1, 1); // off the plate and its ring on every box (the phone's margin included)
+    check(`${tag}: a tap off the plate backs out to MENU on LEVEL SELECT`, same(t, want({ scr: SCREEN.MENU, row: ROW.SPEED, cues: "uiBack" })) && a.cursor === ITEMS.indexOf("LEVEL SELECT"), J(stOf(t)));
     if (G.back) { const b = tapRig(kind, { pactUnlocked: U }); prep(b, ROW.SPEED); b.ctr(b.G().back); check(`${tag}: BACK backs out to MENU`, same(b, want({ scr: SCREEN.MENU, row: ROW.SPEED, cues: "uiBack" })), J(stOf(b))); }
   }
   if (U) {

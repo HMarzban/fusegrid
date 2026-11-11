@@ -385,9 +385,20 @@ function sizes(S, G, F, level, tok) {
   });
   const feet = Math.ceil(P.reserve.reduce((n, w) => n + Math.round(w * u * dpr), 0) / FEET_STEP) * FEET_STEP * Math.round((FOOT_H + 6) * u * dpr) * 4;
   S.live = S.feet.reduce((n, q) => n + q.w * q.h * 4, 0) > feet;
-  S.rd = +Math.max(0.5, Math.min(dpr, Math.sqrt(Math.max(0, BUDGET - RESERVE - S.pw * S.ph * 4 - feet) / (4 * F.W * F.H)))).toFixed(3);
+  S.rd = rdOf(F, dpr, S.pw * S.ph * 4, feet);
   S.box = {w: F.W, h: F.H};
   S.roomK = keyOf({layer: "room", biome: tok.name, level, W: F.W, H: F.H, dpr: S.rd, look: "2d", textScale: 1});
+}
+/* the room's dpr: what is left of the budget once the plate, the foot reserve and the logo reserve are held, never above the device's */
+const rdOf = (F, dpr, plate, feet) => +Math.max(0.5, Math.min(dpr, Math.sqrt(Math.max(0, BUDGET - RESERVE - plate - feet) / (4 * F.W * F.H)))).toFixed(3);
+/** MENU's room dpr for the box F at the capped dpr: the one rule every page that shares MENU's room layer uses (v202 Task 3.3 fix round 1:
+    LEVEL SELECT fills the same roomLayer, so its key is MENU's and a MENU / LEVEL SELECT switch never refills the room). ui: {rows, rev}. */
+export function roomDpr(c0, F, ui, dpr) {
+  if (!okBox(F)) return 1;
+  const c = mOf(c0), G = menuGeom(F, (ui && ui.rows) || MENU_ROWS), u = G.u, Gt = Object.assign(Object.create(G), {touch: !!F.touch}), words = hints(), bare = {...(ui || {}), note: "", pad: ""};
+  const reserve = G.mode === "desk" ? [M.START, M.OPEN, M.SOURCE_PAD].map((v) => footPlan(c, Gt, bare, words, v, "").w + 2) : [];
+  const pb = sc(outer(G.d), u), feet = Math.ceil(reserve.reduce((n, w) => n + Math.round(w * u * dpr), 0) / FEET_STEP) * FEET_STEP * Math.round((FOOT_H + 6) * u * dpr) * 4;
+  return rdOf(F, dpr, Math.round(pb.w * dpr) * Math.round(pb.h * dpr) * 4, feet);
 }
 const J = JSON.stringify;
 export const _dbg = {plans: 0, last: null};

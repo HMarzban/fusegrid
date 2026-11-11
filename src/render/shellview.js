@@ -303,7 +303,7 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
        controller press (app.lastDev, raw, no dwell) leaves it and shows the focus, a tap re-enters it */
     const t = touchLay(canvas);
     menudraw.drawLevelSelect(c, app.level, menudraw.layout(cw, chh, logoY, css), app.subT, app.heat, app.pact, app.pactUnlocked, app.pace, app.timeAttack, t,
-      { ...infoOf(app, kind, getScores, getCab), tap: t && app.lastDev === "touch", enterT: app.subT });
+      { ...infoOf(app, kind, getScores, getCab), tap: t && app.lastDev === "touch", enterT: app.subT, rev: REV }); // rev: MENU's foot reserve, so the room dpr (and key) is MENU's
   } else if (s === SCREEN.HOWTO) {
     menudraw.drawDim(c, 0.72, cw, chh);
     menudraw.drawHowTo(c, L, app.subT, kind, touchLay(canvas));

@@ -5,16 +5,18 @@
    DIFFICULTY and GAME SPEED (banks: chosen lit, the rest wells), MODIFIERS (one door row, once modifiers are offered; its list opens inline), then the
    one next-run card (pages/card.js, with BEST) and the START hero (the one yellow part).
    levelGeom(F, o) is the one geometry for draw and tap: rects by NAME in box units (G.d: the same in design px, the mock's CSS px; u box units per design
-   px). F = {W, H, touch, shell, css, ts} as menu.js; o = {unlocked (rooms 6-8 and MODIFIERS open), open (the MODIFIERS list is open)}. Fields: plate (S,
+   px). F = {W, H, touch, shell, css, ts} as menu.js; o = {unlocked (rooms 6-8 and MODIFIERS open), open (the MODIFIERS list is open), row (the
+   focused row's name: a paged compact's page)}. Fields: plate (S,
    with mid), rows (the focus band per LEVEL_ROWS name; MODIFIERS null until offered), room[8] (the level keys), heat[3], pace[3], mods (the door), mode[5]
    (the open list's entries, [] when shut), start, pane (the card's slot; null in compact), back (the BACK key; phone and compact), list (the list's region,
    reserved whether open or not, so opening it moves nothing), help (desk), foot (desk). Three arrangements, as MENU's: desk (every keyboard box, the 1366
-   x 768 frame at u 1: list column 640 beside the card's column, centred; a narrower window narrows only the card's column, then the page scales as one
-   piece; a touch box floors every target at 44 CSS px and stays the desk while u x css holds TOUCH_U), phone (a touch-portrait shell box: the 393 x 852
-   column in CSS px, labels over their controls, the card's slot the height left, the open list in the card's place) and compact (any other touch box:
-   the phone's grammar across the box, no card, the open list over the LEVEL..GAME SPEED rows; under its least size it scales as one piece).
+   x 768 frame at u 1: list column 640 beside the card's column, centred; a narrower or shorter window gives way first (see desk()), then the page scales
+   as one piece; a touch box floors every target at 44 CSS px and stays the desk while u x css holds TOUCH_U), phone (a touch-portrait shell box: the
+   393 x 852 column in CSS px, labels over their controls, the card's slot the height left, a reserved cue line, the open list in the card's place) and
+   compact (any other touch box: the phone's grammar across the box in CSS px, no card; it never scales: groups that do not fit PAGE, whole groups a
+   page, with page keys beside START; the open list covers the head and the groups).
    levelHit(x, y, F, o): {k: "room"|"lock", i} a level key (6-8 locked: lock, never a selection), {k: "heat"|"pace", i}, {k: "mods"} the door, {k: "mode",
-   i} an open list's entry, {k: "start"}, {k: "back"} off the plate or the BACK key, {k: "none"} on the plate off every target (inert). A key owns half
+   i} an open list's entry, {k: "page", i: -1|1, row} a page key (the first row of that page; a key at the end is none), {k: "start"}, {k: "back"} off the plate or the BACK key, {k: "none"} on the plate off every target (inert). A key owns half
    of each gap beside it, out to its row's band.
    drawLevelPage(c, F, ui, t): ui = {level, heat, pace, pact, time, unlocked, best (a formatted time or null), row (the focused row's name), open, cur
    (the list's cursor), trig (a controller's TRIGGER cursor with the list shut, -1 none), tap (tap mode: no focus model, START focused as the page's one
@@ -29,8 +31,9 @@ import {LABEL, DIFF, SPEED, MOD, MOD_BITS, TIME_TRIAL, DEFAULT_RULES, modWords, 
 import {worldTokens, CONST, toL} from "../kit/tokens.js";
 import {key, cap, capW, plate, band, focusBomb, glyph} from "../kit/paint.js";
 import {T, DEV, measure, textScale} from "../kit/type.js";
-import {layer, capDpr, touch, keyOf, canMake, BUDGET} from "../kit/cache.js";
-import {roomLook} from "../kit/room.js";
+import {layer, capDpr, touch, keyOf, canMake} from "../kit/cache.js";
+import {roomLayer} from "../kit/room.js";
+import {roomDpr} from "./menu.js";
 import * as probe from "../kit/probe.js";
 import {deviceScale} from "../logo/draw2d.js";
 import {hints, tapMode} from "../hintcopy.js";
@@ -45,7 +48,7 @@ const ORDER = [LV.LEVEL, LV.DIFF, LV.SPEED, LV.MODS, LV.START];
    to the foot. A narrower window scales the page as one piece (the card's column never narrows: CROWN's two foe rows need its width). */
 export const DESK = deep({
   d: {w: 1110, pad: [16, 22, 20, 22], kick: 18, kgap: 6, title: 45, below: 12, left: 640, col: 22, row: 64, rgap: 10, labx: 50, rpad: 12, kw: 48, kh: 44, kg: 6, bkw: 112, bkh: 36, lh: 36, hero: 74, cgap: 16, card: 360, cardTall: 380, cardMin: 360, colMin: 14, padMin: 14, leftMin: 572, foot: 30},
-  d125: {w: 1220, pad: [12, 22, 14, 22], kick: 0, kgap: 0, title: 53, below: 12, left: 700, col: 22, row: 58, rgap: 10, labx: 50, rpad: 12, kw: 50, kh: 44, kg: 6, bkw: 140, bkh: 36, lh: 36, hero: 84, cgap: 16, card: 400, cardTall: 425, cardMin: 380, colMin: 14, padMin: 14, leftMin: 680, foot: 20},
+  d125: {w: 1220, pad: [12, 22, 14, 22], kick: 0, kgap: 0, title: 53, below: 12, left: 700, col: 22, row: 58, rgap: 10, labx: 50, rpad: 12, kw: 50, kh: 44, kg: 6, bkw: 140, bkh: 44, lh: 36, hero: 84, cgap: 16, card: 400, cardTall: 425, cardMin: 380, colMin: 14, padMin: 14, leftMin: 680, foot: 20},
 });
 /* phone (CSS px, the p-03 frame): the plate's top / bottom / side margins, its pad, the BACK key, the gaps, the label line's top margin and the gap
    under it, level keys (h, gap; 4 x 2), a bank, the door, the gap over the card, START */
@@ -55,7 +58,7 @@ export const PHONE = deep({
 });
 /* compact (CSS px): every target at the 44 px floor, the least gaps that keep them 8 apart across sets; under these the page scales as one piece */
 export const COMPACT = deep({side: 12, padX: 8, top: 12, bot: 13, pad: 8, back: [104, 44], cue: 22, g: 6, lg: 4, kh: 44, kgMax: 6, bank: 50, door: 44, dgap: 8, wmax: 600, lh: 44, lgap: 8});
-export const TOUCH = Object.freeze({h: 44, g: 8}), TOUCH_U = 0.8, FOOT_H = 54, GUT = 8, RESERVE = 1024 * 1024;
+export const TOUCH = Object.freeze({h: 44, g: 8}), TOUCH_U = 0.8, FOOT_H = 54, GUT = 8;
 const big = (ts) => ts > 1.1;
 const R = (x, y, w, h) => ({x, y, w, h});
 const sc = (r, u) => (r ? {x: r.x * u, y: r.y * u, w: r.w * u, h: r.h * u} : null);
@@ -252,11 +255,12 @@ function fitLines(c, f, cands, room, two) {
 }
 const onNames = (ui) => [...modWords(ui.pact), ...(ui.time ? [TIME_TRIAL] : [])];
 export const entryOn = (ui, i) => (i < 4 ? ((ui.pact | 0) & MOD_BITS[i]) !== 0 : !!ui.time);
-/** The MODIFIERS door's teaser, longest first: the names that are on, then their count; NONE with none; a controller's TRIGGER cursor (list shut) names its entry. */
-export function doorTeasers(ui, phoneish) {
+/** The MODIFIERS door's teaser, longest first, the first that fits by measure: the names that are on, then their count; NONE with none; a controller's
+    TRIGGER cursor (list shut) names its entry. */
+export function doorTeasers(ui) {
   if (ui.trig >= 0 && !ui.open) return [ENTRIES[ui.trig] + " · " + (entryOn(ui, ui.trig) ? LW.ON : LW.OFF)];
   const on = onNames(ui);
-  return !on.length ? [LW.NONE] : phoneish ? [on.length + " " + LW.ON] : [on.join(" · "), on.length + " " + LW.ON];
+  return !on.length ? [LW.NONE] : [on.join(" · "), on.length + " " + LW.ON];
 }
 /** START's tag, longest first: what differs from a default run, each setting named (tagFor), then the modifiers as a count, then EXPERT bare; DEFAULT RULES for a default run. */
 export function startTags(ui) {
@@ -307,7 +311,7 @@ function plan(c0, G, ui, words, showCap) {
     const r = d.mods, desk = d.mode === "desk", lab = desk ? {s: LV.MODS, f: fL, px: dv.pri, x: r.x + d.labx, fx: r.x + d.labx, y: r.y + r.h / 2, w: W(c, fL, LV.MODS), col: CONST.ink} : {s: LV.MODS, f: fL, px: dv.pri, x: r.x + 16, fx: r.x + 8 + dv.bombs + 8, y: r.y + r.h / 2, w: W(c, fL, LV.MODS), col: CONST.ink};
     const gs = 16, gx = r.x + r.w - (desk ? d.labx - 34 : 12) - gs;
     /* the teaser: one line, or two on a phone or compact door (a controller's TRIGGER entry and its state); dropped where neither fits */
-    const room = gx - 10 - (lab.fx + lab.w + 12), lines = fitLines(c, fS, doorTeasers(ui, !desk), room, !desk && r.h >= 2 * dv.sec * ts * 1.15 + 6), lh = dv.sec * ts * 1.15;
+    const room = gx - 10 - (lab.fx + lab.w + 12), lines = fitLines(c, fS, doorTeasers(ui), room, !desk && r.h >= 2 * dv.sec * ts * 1.15 + 6), lh = dv.sec * ts * 1.15;
     P.rows[LV.MODS] = {label: lab, door: !desk, glyph: {n: "rt", x: gx, y: r.y + r.h / 2 - gs / 2, s: gs},
       tz: lines.length ? {s: lines.join(" "), lines, f: fS, px: dv.sec, x: gx - 10, y: r.y + r.h / 2, ys: lines.map((_, i) => r.y + r.h / 2 + (i - (lines.length - 1) / 2) * lh), ws: lines.map((q) => W(c, fS, q)), w: Math.max(...lines.map((q) => W(c, fS, q)))} : null};
   }
@@ -515,9 +519,7 @@ function record(G, P, ui, foc, dpr, el, touchy, verb, tipR, tok) {
     if (q.set === "level" && q.kind === "well" && !wellK) wellK = q;
     if (q.fin && !q.lock) probe.pair("info", b(R(q.x + q.nw + 3, q.y - (lit ? 2 : 0) - q.gs / 2, q.gs, q.gs)), b(R(q.x + q.nw - 2, q.y - q.gs, q.gs + 10, 2 * q.gs)), {col: KEY_INK[q.kind], name: "flag " + q.s});
   }
-  /* squint pairs are a 100 % test (the round 7 mock measures them at text scale 1 only): at 125 % the banks' bigger legends fill the cells, so only
-     the level course (its legend small in a big key) is declared there */
-  for (const s of ts > 1.1 ? ["level"] : ["level", "heat", "pace"]) if (chosen[s] && unchosen[s]) probe.pair("chosen", b(chosen[s].r), b(unchosen[s].r), {name: s + " chosen vs not"});
+  for (const s of ["level", "heat", "pace"]) if (chosen[s] && unchosen[s]) probe.pair("chosen", b(chosen[s].r), b(unchosen[s].r), {name: s + " chosen vs not"});
   /* the locked key against the chosen one; its texture against an open well's own lip (the same sub-rect the gate reads, clear of the legend) */
   if (lockedK && chosen.level) probe.pair("locked", b(lockedK.r), b(chosen.level.r), wellK ? {name: "locked level " + lockedK.s, floor: b(R(wellK.r.x + 3, wellK.r.y + 3, Math.max(4, wellK.r.w * 0.2), wellK.r.h - 6))} : {name: "locked level " + lockedK.s});
   const o = P.start, fs = foc === LV.START;
@@ -561,7 +563,7 @@ function record(G, P, ui, foc, dpr, el, touchy, verb, tipR, tok) {
 const J = JSON.stringify;
 export const _dbg = {plans: 0, last: null};
 let S = null;
-const FIELDS = ["level", "heat", "pace", "pact", "time", "unlocked", "best", "open", "tap", "trig", "cur", "row"];
+const FIELDS = ["level", "heat", "pace", "pact", "time", "unlocked", "best", "open", "tap", "trig", "cur", "row", "rev"];
 function same(S, G, ui, w, touchy, dpr, ts, c) {
   if (!S || S.G !== G || S.w !== w || S.touch !== touchy || S.dpr !== dpr || S.ts !== ts || S.c !== c) return false;
   for (const k of FIELDS) if (S.ui[k] !== ui[k]) return false;
@@ -569,11 +571,11 @@ function same(S, G, ui, w, touchy, dpr, ts, c) {
 }
 const grow = (r, e) => R(r.x - e, r.y - e, r.w + 2 * e, r.h + 2 * e);
 const union = (rs) => { const q = rs.filter(Boolean), x = Math.min(...q.map((r) => r.x)), y = Math.min(...q.map((r) => r.y)); return R(x, y, Math.max(...q.map((r) => r.x + r.w)) - x, Math.max(...q.map((r) => r.y + r.h)) - y); };
-/* The layers, each keyed by what it shows. The room layer holds the room look AND the plate (rampart and bed) at the room's dpr: the bed is flat
-   rects, so the plate's crisp parts are its four rampart strips, each a full-dpr layer over it; the head, the rows at rest, the card and START at rest
-   are full-dpr layers of their own rects, so the plate's empty bed costs no full-dpr bytes. The LEVEL row's focus (eight keys) is a layer; the other
-   rows, START and a list entry focus live (a band, a bomb, at most three keys). The feet (desk keyboard) are one layer per verb, all made at once.
-   The room's dpr gives way to everything else and RESERVE (the card's wall cell and the cache's slack; this page has no logo). */
+/* The layers, each keyed by what it shows (fix round 1, ruling (c)). The room is MENU's own kit roomLayer at MENU's room dpr (menu.js roomDpr: one
+   rule, one key), so a MENU / LEVEL SELECT switch never refills it. The plate (rampart and bed) is its own layer at 1 device px per box unit (the
+   bed is flat rects) under the four rampart strips at full dpr; the head, the rows at rest, the card and START at rest are full-dpr layers of their
+   own rects, so the plate's empty bed costs no full-dpr bytes. The LEVEL row's focus (eight keys) is a layer; the other rows, START and a list entry
+   focus live (a band, a bomb, at most three keys). The feet (desk keyboard) are one layer per verb, all made at once. */
 function sizes(S, G, F, level, tok) {
   const d = G.d, u = G.u, dpr = S.dpr, P = S.P, ui = S.ui, J6 = (v) => +v.toFixed(6), T0 = d.T, pl = d.plate;
   const lay = [level, G.lay, J6(u), J(pl), S.ts].join("|"), vals = [ui.heat, ui.pace, ui.unlocked ? ui.pact : 0, ui.unlocked ? +!!ui.time : 0, !!ui.unlocked].join("|");
@@ -596,9 +598,11 @@ function sizes(S, G, F, level, tok) {
   if (P.list.length) S.L.list = mk("list", grow(d.listR, 4), P.list.map((q) => +q.on).join(""));
   for (const v of P.verbs) { const fp = P.foot[v]; S.L["foot " + v] = {...mk("foot " + v, R(fp.x - 1, fp.y - 1, fp.w + 2, fp.h + 6), ""), fp, key: {...K, layer: "level.foot|" + J([J6(u), fp.x, fp.y, fp.w, fp.parts.map((p) => [p.t || p.sep || "", p.cap || ""])])}}; }
   /* the list's layer is reserved whether the list is open or not, so opening it never moves the room's dpr (a room re-raster) */
-  const listB = d.listR && !S.L.list ? mk("list", grow(d.listR, 4), "") : null, held = Object.values(S.L).reduce((n, q) => n + q.w * q.h * 4, 0) + (listB ? listB.w * listB.h * 4 : 0);
-  S.rd = +Math.max(0.5, Math.min(dpr, Math.sqrt(Math.max(0, BUDGET - RESERVE - held) / (4 * F.W * F.H)))).toFixed(3);
-  S.roomL = {r: R(0, 0, F.W / u, F.H / u), b: {x: 0, y: 0, w: F.W, h: F.H}, w: Math.round(F.W * S.rd), h: Math.round(F.H * S.rd), key: {...K, dpr: S.rd, layer: "level.room|" + lay}};
+  const ob = R(ox, oy, ow, oh), bb = sc(ob, u);
+  S.L.bed = {r: ob, b: bb, w: Math.max(1, Math.round(bb.w)), h: Math.max(1, Math.round(bb.h)), key: {...K, dpr: 1, layer: "level.bed|" + lay}};
+  S.rd = roomDpr(S.c, F, {rev: ui.rev}, dpr);
+  S.box = {w: F.W, h: F.H};
+  S.roomK = keyOf({layer: "room", biome: tok.name, level, W: F.W, H: F.H, dpr: S.rd, look: "2d", textScale: 1});
 }
 const blit = (c, q) => c.drawImage(q.cv, q.b.x, q.b.y, q.b.w, q.b.h);
 function want(q, paint, u, dpr) {
@@ -620,7 +624,7 @@ export function drawLevelPage(c, F, ui0, t = 0) {
     /* a layer whose key did not change keeps its canvas */
     if (K) {
       for (const [n, q] of Object.entries(S.L)) { const o = K.L && K.L[n]; if (o && o.cv && keyOf(o.key) === keyOf(q.key)) q.cv = o.cv; }
-      if (K.roomL && K.roomL.cv && keyOf(K.roomL.key) === keyOf(S.roomL.key)) S.roomL.cv = K.roomL.cv;
+      if (K.room && K.roomK === S.roomK) S.room = K.room;
     }
     _dbg.plans++;
   }
@@ -631,9 +635,9 @@ export function drawLevelPage(c, F, ui0, t = 0) {
   if (typeof c.clip !== "function" || typeof c.rect !== "function") return;
   const L = S.L, dp = dpr;
   if (canMake()) {
-    const rl = S.roomL;
-    if (rl.cv && rl.cv.width) touch(rl.key);
-    else rl.cv = layer(rl.key, rl.w, rl.h, (g) => { g.scale(S.rd, S.rd); roomLook(g, {x: 0, y: 0, w: F.W, h: F.H}, level, tok); g.scale(u, u); paintPlate(g, G, tok); });
+    if (!S.room || !S.room.width) S.room = roomLayer(S.box, level, tok, {dpr: S.rd, look: "2d", textScale: 1}); // MENU's call, MENU's key
+    else touch(S.roomK);
+    want(L.bed, (g) => paintPlate(g, G, tok), u, 1);
     for (const n of ["rT", "rB", "rL", "rR"]) want(L[n], (g) => paintPlate(g, G, tok), u, dp);
     want(L.head, (g) => paintHead(g, G, P, tok), u, dp);
     S.PG.forEach((q, p) => want(L["rows" + p], (g) => paintRows(g, q.G, q.P, tok), u, dp));
@@ -643,9 +647,9 @@ export function drawLevelPage(c, F, ui0, t = 0) {
     if (L.card) want(L.card, (g) => paintCard(g, P.card, tok, {dpr: dp * u}), u, dp);
     if (L.list) want(L.list, (g) => { if (d.cover) coverBed(g, d.listR, tok); for (const q of P.list) paintEntry(g, G, q, tok, false); }, u, dp);
     for (const v of P.verbs) want(L["foot " + v], (g) => paintFoot(g, L["foot " + v].fp, tok), u, dp);
-    c.save(); c.imageSmoothingEnabled = true; c.drawImage(rl.cv, 0, 0, F.W, F.H); c.restore();
+    c.save(); c.imageSmoothingEnabled = true; c.drawImage(S.room, 0, 0, F.W, F.H); c.restore();
     c.save(); c.globalAlpha = a0 * a; c.imageSmoothingEnabled = true;
-    for (const n of ["rT", "rB", "rL", "rR", "head", "rows" + (d.page | 0), "start", ...(L.card ? ["card"] : []), ...(L.list ? ["list"] : [])]) blit(c, L[n]);
+    for (const n of ["bed", "rT", "rB", "rL", "rR", "head", "rows" + (d.page | 0), "start", ...(L.card ? ["card"] : []), ...(L.list ? ["list"] : [])]) blit(c, L[n]);
     if (foc === LV.LEVEL) blit(c, L.focL);
     if (verb && L["foot " + verb]) blit(c, L["foot " + verb]);
     c.restore();
