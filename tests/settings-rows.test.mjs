@@ -15,6 +15,8 @@ import { mountPointer } from "../src/app/pointer.js";
 import { shellGeo } from "../src/app/fit.js";
 import { createControlsPage } from "../src/app/controlspage.js";
 import { DEF_CONTROLS } from "../src/app/controls.js";
+import { wordsOf } from "../src/app/hints.js";
+import { setHints } from "../src/render/hintcopy.js";
 import { overlayBox, pauseGeom, pauseHit, touchLay, drawOverlay, PAUSE_ROWS, PAUSE_SHAPE } from "../src/render/scenes.js";
 import * as md from "../src/render/menudraw.js";
 import * as lazyPages from "../src/render/pages/lazy.js";
@@ -308,6 +310,44 @@ for (const lay of ["d", "l", "p"]) for (const r3d of [false, true]) for (const w
     }
     const G = md.settingsGeom(md.layout(g6.w, g6.h, g6.logo, g6.s), true, rows);
     check(`paging on ${dev} (${look}, 360x640 phone, ${G.pages.length} pages): moving past a page's last row turns the page; every row is shown and focused once`, G.pages.length > 1 && bad.length === 0 && seen.size === rows.length, bad.join(" | "));
+  }
+  /* R1 kit leftover: GRAPHICS pages the same way (the kit pager): by keys and by a controller, moving past a page's last row turns the page, and
+     every row is shown and focused once */
+  for (const [dev, step] of [["keys", (g) => press(g, "ArrowDown")], ["controller", (g) => padTap(g, "dD")]]) {
+    const g = game("2d"), { fitBox } = await import("../src/app/fit.js"), k = fitBox(852, 393, true, 600, 520).s; // a landscape phone's #c: GRAPHICS pages there
+    const boxL = { width: 600, height: 520, ownerDocument: { body: { getAttribute: (q) => (q === "data-lay" ? "l" : null) } }, getBoundingClientRect: () => ({ left: 0, top: 0, width: 600 * k, height: 520 * k }) };
+    toPage(g);
+    g.app.optRow = g.app.optRows().indexOf("GRAPHICS"); g.app.confirm(); g.tick();
+    const seen = new Set(), bad = [], gfx = sp.GFX_LABELS;
+    let G = null;
+    if (g.app.screen !== SCREEN.GRAPHICS) bad.push("not on GRAPHICS");
+    for (let i = 0; i < gfx.length; i++) {
+      const R = shellDraw(g.app, g.world, boxL), lab = gfx[g.app.gfxRow];
+      G = sp._dbg.last.G;
+      const on = [...new Set(R.texts.filter((t) => gfx.includes(t.s)).sort((p, q) => p.y - q.y).map((t) => t.s))];
+      if (J(on) !== J(G.pages[G.pageOf[lab]]) || !on.includes(lab)) bad.push(lab + " " + J(on));
+      on.forEach((l) => seen.add(l));
+      step(g);
+    }
+    check(`GRAPHICS paging on ${dev} (a landscape phone's #c, ${G.pages.length} pages): moving past a page's last row turns the page; every row is shown and focused once`, G.pages.length > 1 && bad.length === 0 && seen.size === gfx.length, bad.join(" | "));
+  }
+  /* R1 kit leftover: a paged touch column keeps a way back (the foot drops there): a hint line under the page keys, the tap rule's words, or BACK
+     and its keycap for a controller, inside the plate */
+  {
+    const { fitBox } = await import("../src/app/fit.js");
+    const css = fitBox(852, 393, true, 600, 520).s, F = { W: 600, H: 520, touch: true, shell: false, css }, rows = optRows(false), bad = [];
+    for (const [nm, words] of [["touch", wordsOf("touch", DEF_CONTROLS)], ["pad", wordsOf("pad", DEF_CONTROLS)], ["keys", wordsOf("key", DEF_CONTROLS)]]) {
+      setHints(words);
+      const R = rec({ widthK: 0.648 });
+      sp.drawSettingsPage(R.ctx, F, { rows, row: rows[0], level: 1 }, 0);
+      const Pl = sp._dbg.last.Pl, G = sp._dbg.last.G, H = Pl.hint, pl = G.d.plate;
+      const want = nm === "pad" ? ["BACK", words.back] : ["TAP OUTSIDE TO GO BACK"]; // keys on a touch layout keep tap mode (hintcopy tapMode), as the foot does
+      const got = H ? H.ps.map((p) => p.t || p.cap) : [];
+      if (G.pages.length < 2 || G.d.foot || J(got) !== J(want) || !H.ps.every((p) => p.x >= pl.x && p.x + p.w <= pl.x + pl.w && H.y < pl.y + pl.h && H.y > G.d.keys.up.y + G.d.keys.up.h)) bad.push(nm + " " + J({ got, pages: G.pages.length, foot: !!G.d.foot }));
+      if (nm === "touch" && !R.texts.some((t) => t.s === "TAP OUTSIDE TO GO BACK")) bad.push("touch hint not painted");
+    }
+    setHints(null);
+    check("paged touch column (a landscape phone's #c): no foot, and a back-out hint under the page keys inside the plate (the tap words; BACK + its keycap for a controller)", bad.length === 0, bad.join(" | "));
   }
   for (const r3d of [false, true]) {
     const t = tapRig("p", r3d, "PAUSE view 1"), rows = t.app.optRows(), css = dims(t.surf, "2d").css, L = { ...md.layout(600, 520, undefined, css), paused: true, focus: 0 };

@@ -159,7 +159,12 @@ setTextScale(1);
 { // fix round 1, Important 5: desk ENEMIES at 125 % follows the t125 frame: one page, no kicker, the points key on the name's line wherever the measure fits it
   setTextScale(1.25);
   const G = P.guideGeom(BOX.d1366, "ENEMIES"), D = G.d, inl = D.order.filter((n) => D.items[n].pts.y < D.items[n].nameY);
-  check("d1366 x1.25 ENEMIES: one page, u 1, no kicker; the points key rides the name's line (" + inl.length + " of 9 by the Node estimate; the browser measures)", G.pages === 1 && G.u === 1 && !D.head.kick && inl.length >= 5, J(inl));
+  check("d1366 x1.25 ENEMIES: one page, u 1, no kicker; the points key rides the name's line (" + inl.length + " of 9 by the recorder's 0.648 em; the browser measures)", G.pages === 1 && G.u === 1 && !D.head.kick && inl.length >= 5, J(inl));
+  /* R1 kit leftover: with a measurer near the system sans (0.55 em, the Chrome captures' width) at least 8 of the 9 points keys ride the name's line */
+  P._measureWith(rec({ widthK: 0.55 }).ctx);
+  const G55 = P.guideGeom(BOX.d1366, "ENEMIES"), D55 = G55.d, inl55 = D55.order.filter((n) => D55.items[n].pts.y < D55.items[n].nameY);
+  check("d1366 x1.25 ENEMIES at a realistic 0.55 em: one page, u 1, and >= 8 of 9 points keys inline", G55.pages === 1 && G55.u === 1 && inl55.length >= 8, inl55.length + " " + J(inl55));
+  P._measureWith(undefined);
   /* minor: an unfocused points key under the name starts at the name's left edge (the focused key's bomb pushes only the focused digits) */
   const off = D.order.filter((n) => { const q = D.items[n]; return !(q.pts.y < q.nameY) && Math.abs(q.dig.x - q.tx) > 1e-6; });
   check("desk ENEMIES: an unfocused points key under the name lines up with the name's left edge", off.length === 0, J(off));

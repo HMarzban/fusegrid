@@ -1,5 +1,6 @@
 /* KIT COPY: the words more than one page paints and that no store owns (R1 kit harmonisation: SETTINGS read them from menudraw).
    LOAD_WORDS a lazy page's LOADING plate line: loading, or failed after an import did not land.
+   BACK_TAP   the back-out half of it, alone (a paged touch column has no foot: its hint line under the page keys says it).
    FOOT_TAP   the tap model OPTIONS, GRAPHICS and CONTROLS share on a touch layout (a row = Enter, off the plate = back).
    LOOK_NAME  the looks a RENDER job prepares, by kind.
    lookVal    (n, touch) the RENDER row's job words, longest first (the row keeps the first that fits its slot): n = menudraw lookNote's note
@@ -7,7 +8,8 @@
 import {hints, tapMode} from "../hintcopy.js";
 
 export const LOAD_WORDS = Object.freeze({loading: "LOADING", failed: "DID NOT LOAD"});
-export const FOOT_TAP = "TAP A ROW TO CHANGE IT · TAP OUTSIDE TO GO BACK";
+export const BACK_TAP = "TAP OUTSIDE TO GO BACK";
+export const FOOT_TAP = "TAP A ROW TO CHANGE IT · " + BACK_TAP;
 export const LOOK_NAME = Object.freeze({px: "PIXEL", "3d": "REAL 3D"});
 const PH_WORD = {bake: "ART", build: "BUILDING", shaders: "SHADERS"};
 export function lookVal(n, touch) {

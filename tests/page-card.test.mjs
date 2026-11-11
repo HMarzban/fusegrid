@@ -180,6 +180,12 @@ const RUNS = [{ heat: 0, pace: 0, pact: 0 }, { heat: 1, pace: -1, pact: 0 }, { h
   fresh(); frame(BOX.d1366, UI({ level: 8, run: { heat: 2, pace: 0, pact: PACT.LAST } }));
   const c8 = P._dbg.last.P.card, s8 = c8.texts.map((t) => t.s);
   check("desk card (CROWN, EXPERT, ONE LIFE): THE LAST FINALE, one heart, FUSE 2.1s, SCORE ×3, nine foes", s8.includes("THE LAST FINALE") && c8.hearts.length === 1 && s8.includes("2.1s") && s8.includes("×3") && c8.foes.length === 9, J(s8));
+  for (const ts of [1, 1.25]) { // R1 kit leftover: the MENU phone's finale line is the flag + FINALE, never THE LAST FINALE (the desk's kicker words)
+    setTextScale(ts); fresh(); frame(BOX.p393, UI({ level: 8, run: { heat: 2, pace: 0, pact: PACT.LAST } }));
+    const p8 = P._dbg.last.P.card, t8 = p8.texts.map((t) => t.s), fl = p8.glyphs.filter((g) => g.n === "flag");
+    check(`phone card x${ts} (CROWN, EXPERT, ONE LIFE): the finale line is the flag and FINALE, never THE LAST FINALE`, p8.dev === "p" && !t8.some((q) => /LAST FINALE/.test(q)) && t8.filter((q) => q === "FINALE").length === 1 && fl.length === 1 && t8.includes("LEVEL 8 · CROWN"), J(t8));
+  }
+  setTextScale(1);
   fresh(); frame(BOX.p393, UI({ level: 1 }));
   const cp = P._dbg.last.P.card, sp = cp.texts.map((t) => t.s);
   check("phone card: the lane on top (9 cells across), LEVEL 1 · JUNGLE, the foes, the floor tile, LIVES and FUSE", cp.lane.cols === 9 && cp.lane.y < Math.min(...cp.foes.map((q) => q.y)) && sp.includes("LEVEL 1 · JUNGLE") && sp.includes("BOOSTER") && sp.includes("LIVES") && sp.includes("2.5s"), J(sp));

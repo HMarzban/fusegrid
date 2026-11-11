@@ -35,7 +35,7 @@ import * as probe from "../kit/probe.js";
 import {paginate as pagesOf, pagerKeys, pageLabel, pagerHit, paintPager as kitPager, keySide, pageOfFocus} from "../kit/pager.js";
 import {deviceScale} from "../logo/draw2d.js";
 import {hints, tapMode} from "../hintcopy.js";
-import {lookVal, FOOT_TAP} from "../kit/copy.js";
+import {lookVal, FOOT_TAP, BACK_TAP} from "../kit/copy.js";
 
 export const DESK = deep({
   d: {pad: [16, 22, 20, 22], list: 480, pane: 400, gap: 20, row: 38, grp: 12, kick: true, below: 12, paneMin: 452},
@@ -114,6 +114,7 @@ function desk(F, rows, ts, fl) {
 }
 /* GRAPHICS off the desk has no pane: its two help lines sit under the rows */
 const helpH = (dv, ts) => 2 * DEV[dv].sec * ts * 1.3 + 8;
+const HINT_H = DEV.d.caph + 6; // a paged column's back-out hint line under its page keys
 /* PAUSE keeps the HUD strip (y < 40) clear, and on a keyboard box the old CONSOLE band (H x 0.16 - 10 .. H - 28) */
 const pauseBand = (F) => [44, F.touch ? F.H - 8 : F.H - 28];
 function col(F, rows, ts, fl, help) {
@@ -122,23 +123,26 @@ function col(F, rows, ts, fl, help) {
   const chrome = C.pad[0] + head + C.below + hh + C.pad[2];
   const all = (u) => { const S = run(rows, C.row, C.grp, fl, u); return {S, ph: chrome + S.h + 8 + FOOT1}; };
   let u = solve(u0, (v) => v * (all(v).ph + 2 * my) <= Hb), S, ph, pages, keys = null, cap = Infinity, kh = 0;
+  const kgOf = (v) => Math.max(8, fl ? fl.g / v : 0); // the rows to the page keys: 8 CSS px on a touch box
   if (!fl || u >= PAGE_U) ({S, ph} = all(u)), (pages = paginate(S, Infinity));
-  else { /* page: the rows that fit under the head, the page keys' strip under them, no foot (the strip carries the page) */
-    const capOf = (v) => Hb / v - 2 * my - chrome - 8 - keyH(dv, fl, v);
+  else { /* page: the rows that fit under the head, the page keys' strip under them, no foot (the strip carries the page), and under the strip
+             one hint line that keeps the way back (BACK and its keycap, or the tap rule's back-out words; R1 kit leftover) */
+    const capOf = (v) => Hb / v - 2 * my - chrome - kgOf(v) - keyH(dv, fl, v) - HINT_H;
     const rowsAt = (v) => paginate(run(rows, C.row, C.grp, fl, v), capOf(v))[0].length;
     u = u0;
     if (rowsAt(u) < Math.min(MIN_ROWS, rows.length)) u = Math.max(FLOOR_U, solve(u0, (v) => capOf(v) > 0 && rowsAt(v) >= Math.min(MIN_ROWS, rows.length)));
     S = run(rows, C.row, C.grp, fl, u); kh = keyH(dv, fl, u); cap = Math.max(capOf(u), S.hs[0]); pages = paginate(S, cap);
     if (pages.length < 2) { cap = Infinity; pages = [pages.flat()]; }
-    ph = chrome + (pages.length > 1 ? cap + 8 + kh : S.h + 8 + FOOT1);
+    ph = chrome + (pages.length > 1 ? cap + kgOf(u) + kh + HINT_H : S.h + 8 + FOOT1);
   }
   const Wd = F.W / u, px = (Wd - pw) / 2, py = Math.max(b0 / u + my, (b0 + Hb / 2) / u - ph / 2);
   const hy = py + C.pad[0], top = hy + head + C.below, lx = px + C.pad[3], paged = pages.length > 1;
   const L = lay(rows, pages, S, lx, top, C.list, px, px + pw, C.below / 2, 4), lb = paged ? top + cap : L.bot;
-  if (paged) keys = pagerKeys(lx, lb + hh + 8, C.list, kh);
+  if (paged) keys = pagerKeys(lx, lb + hh + kgOf(u), C.list, kh);
   return {mode: "col", dev: dv, u, ts, T: T0, plate: R(px, py, pw, ph), head: R(lx, hy, C.list, head), kick: true, ttl: C.ttl,
     rows: L.out, hit: L.hit, divs: L.divs, pageOf: L.pageOf, pages: pages.map((pg) => pg.map((i) => rows[i])), keys, pane: null,
-    help: hh ? R(lx, lb + 4, C.list, hh - 4) : null, foot: paged ? null : R(px + 8, lb + hh + 8, pw - 16, FOOT1), back: null, list: R(lx, top, C.list, lb - top)}; // the foot may use the plate's sides
+    help: hh ? R(lx, lb + 4, C.list, hh - 4) : null, foot: paged ? null : R(px + 8, lb + hh + 8, pw - 16, FOOT1), back: null, list: R(lx, top, C.list, lb - top), // the foot may use the plate's sides
+    hint: paged ? R(lx, lb + hh + kgOf(u) + kh + 6, C.list, DEV[dv].caph) : null};
 }
 function phone(F, rows, ts, help) {
   const P = PHONE[big(ts) ? "p125" : "p"], css = F.css > 0 ? F.css : 1, hh = help ? helpH("p", ts) : 0, u = 1 / css, Hd = F.H / u, Wd = F.W / u;
@@ -379,6 +383,14 @@ function footPlan(c, G, touchy, words, rev) {
   }
   return null;
 }
+/* a paged column's back-out hint: the tap rule's words, or BACK and its keycap (label first, keycap last) */
+function hintPlan(c, G, touchy, words) {
+  const H = G.d.hint, dv = DEV.d, f = T.label(dv.sec);
+  if (!H) return null;
+  const y = H.y + H.h / 2, tw = W(c, f, tapMode(touchy) ? BACK_TAP : COPY.back);
+  if (tapMode(touchy)) return {f, px: dv.sec, y, ps: [{t: BACK_TAP, x: H.x, w: tw}]};
+  return {f, px: dv.sec, y, ps: [{t: COPY.back, x: H.x, w: tw}, {cap: words.back, x: H.x + tw + 8, w: capW(c, words.back)}]};
+}
 function panePlan(c, G, u, words) {
   const d = G.d, P = d.pane;
   if (!P) return null;
@@ -445,7 +457,7 @@ function plan(c0, G, u, specs, touchy, words) {
   const c = mOf(c0), d = G.d, dv = DEV[d.dev], ts = d.ts, rows = {};
   for (const l of G.order) rows[l] = rowPlan(c, G, l, specs[l], dv, ts);
   const title = G.page === "settings" ? LABEL.SETTINGS : "GRAPHICS";
-  return {rows, head: headPlan(c, G, u, title), pane: panePlan(c, G, u, words), foot: footPlan(c, G, touchy, words, u.rev || ""), c};
+  return {rows, head: headPlan(c, G, u, title), pane: panePlan(c, G, u, words), foot: footPlan(c, G, touchy, words, u.rev || ""), hint: hintPlan(c, G, touchy, words), c};
 }
 
 /* ---- painting ---- */
@@ -583,6 +595,7 @@ function paintStatic(g, G, Pl, tok, u, p) {
     for (const b of P.body) text(g, b.s, b.x, b.y, b.f, CONST.t2);
   }
   if (Pl.foot) paintFoot(g, Pl.foot, tok, ph);
+  if (Pl.hint) for (const p of Pl.hint.ps) { if (p.cap) cap(g, p.x, Pl.hint.y - DEV.d.caph / 2, p.cap, {tok}); else text(g, p.t, p.x, Pl.hint.y, Pl.hint.f, CONST.t2); }
 }
 function paintGfxPane(c, P) {
   if (!P) return;
@@ -645,6 +658,7 @@ function record(G, Pl, foc, ui, dpr, el, touchy, gp, pg) {
     for (const q of P.body) txt(q.s, q.x, q.y, q.w, q.px, CONST.t2, "body");
   }
   if (gp) { if (gp.head) txt(gp.head.s, gp.head.x, gp.head.y, gp.head.w, gp.head.px, CONST.ink, "primary"); for (const q of gp.lines) txt(q.s, q.x, q.y, q.w, q.px, q.col, q.role || "body"); }
+  if (Pl.hint) for (const p of Pl.hint.ps) { if (p.cap) { probe.rect("foot cap", ...b(R(p.x, Pl.hint.y - DEV.d.caph / 2, p.w, DEV.d.caph))); txt(p.cap, p.x + (p.w - measure(Pl.c, Pl.hint.f, p.cap)) / 2, Pl.hint.y, measure(Pl.c, Pl.hint.f, p.cap), Pl.hint.px, CONST.t2, "secondary"); } else txt(p.t, p.x, Pl.hint.y, p.w, Pl.hint.px, CONST.t2, "secondary"); }
   const F = Pl.foot;
   if (F) {
     probe.rect("foot", ...b(F));

@@ -1,6 +1,6 @@
 /* KIT LAYER CACHE: static menu parts are painted once into an offscreen canvas and blitted every frame; animated parts draw live on top. A layer is keyed
    by (layer, biome, level, W, H, dpr, look, textScale), so a resize, dpr, world, look or text-scale change misses once. Bytes are w*h*4 per live layer, the total
-   stays <= BUDGET (24 MB) by freeing the least recently USED layers first (a hit refreshes recency); one layer larger than BUDGET is still made, and goes first.
+   stays <= BUDGET (24 MiB) by freeing the least recently USED layers first (a hit refreshes recency); one layer larger than BUDGET is still made, and goes first.
    Freed canvases are shrunk to 0x0 so the browser returns the memory. The caller puts capDpr(dpr, touch) into the key. No DOM at import: the canvas factory is
    injectable (tests) and defaults lazily to OffscreenCanvas, else a canvas element. touch(key) (the key or its keyOf string) moves a held
    layer a memoized painter blits without asking layer() to the recent end, so a stale layer always goes first. */

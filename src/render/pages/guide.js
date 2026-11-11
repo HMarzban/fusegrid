@@ -96,6 +96,8 @@ function mctx() {
   return MC;
 }
 const mw = (face, px, s) => { const c = mctx(); return c ? measure(c, face(px), String(s)) : est(s, px * textScale()); };
+/** Test seam: the geometry's measuring context (undefined: find one again), and the geometry memo dropped. */
+export const _measureWith = (c) => { MC = c; gm = null; };
 /* lines a string takes at width w (a word wider than w counts as a line of its own) */
 function linesOf(face, px, s, w) {
   let n = 1, line = "";

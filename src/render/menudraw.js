@@ -21,7 +21,7 @@ import { rosterOf } from "./pages/card.js";
 import * as lazy from "./pages/lazy.js";
 import { capDpr } from "./kit/cache.js";
 import { loadingPlate, loadBox } from "./kit/room.js";
-import { FOOT_TAP, LOOK_NAME, lookVal, LOAD_WORDS } from "./kit/copy.js";
+import { FOOT_TAP, BACK_TAP, LOOK_NAME, lookVal, LOAD_WORDS } from "./kit/copy.js";
 const ACCENT = "#37f0d0",
   TEXT = "#dfe7f5",
   MUTED = "#7385ad";
@@ -544,7 +544,6 @@ export function loadingPage(c, F, title, ui, name) {
 /* GUIDE art in PIXEL (W5, R19): kind "px" swaps only the scaled vector glyph
    for the atlas cell (hudart.js); LEVEL SELECT's room card reads it. */
 const pxArt = (kind) => (kind === "px" ? pixelArt() : null);
-const BACK_TAP = "TAP OUTSIDE TO GO BACK";
 
 /* GUIDE and its four pages are src/render/pages/guide.js (UI upgrade v202 Task 3.5), lazy (pages/lazy.js "guide"): one geometry for draw and
    tap, names by label. These keep the entry names shellview, the pointer and the tests call; L is layout(W, H, lg, css) for the box the page draws

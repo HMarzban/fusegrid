@@ -350,7 +350,7 @@ room's dpr gives way to a foot reserve sized from the real feet: the three verbs
 or sign at the text scale in force, their layer widths summed and rounded up to `FEET_STEP` 256 device px, so key and controller words land on the
 same room key (Task 3.2; was three feet as wide as the box); feet wider in all (a note, the signpost, long rebound caps) paint live. 1366 x 768
 @2 with the logo (recorder widths): room dpr 1.549 at text scale 1, 1.421 at 1.25 (was 1.323 / below that; the 125 % plate is 1180 wide, and
-1.5 there leaves room for under one foot), the cache <= 23.99 MB of 24 MiB. A zero or non-finite box draws
+1.5 there leaves room for under one foot), the cache <= 23.99 MiB of the 24 MiB `BUDGET` (24 x 1024 x 1024 bytes; every budget figure here is MiB). A zero or non-finite box draws
 nothing (`menuHit` -1). `glyph` (chev, ext, up, dn, flag) is a kit part (`kit/paint.js`), `canMake` the kit cache's one copy (the logo painter's too). Page plumbing, for every page task: a page module exports one `*Geom` (rects by name, box units; `G.d` design px)
 for draw and hit, a painter fed names and values by shellview (never indices), and its hit; menudraw keeps the entry names and delegates.
 The kit (`src/render/kit/`, R1 kit harmonisation): `tokens` (world colours), `type` (faces, `measure`, `measurer` / `measures` (a 0.6 em estimate
@@ -401,7 +401,8 @@ every row a preset wrote. The ANALYTICS pad note replaces the rocker, or takes t
 turns ART STYLE's value into one well window over the value's room with `lookVal`'s first words that fit whole and the fill line at its foot
 (no line on a failure, its words coral). TOUCH FLOOR (lead ruling, fix round 1): on every touch layout, SETTINGS, GRAPHICS and their PAUSE views,
 rows are >= 44 CSS px and >= 8 apart; where they do not all fit (a 640-tall phone, landscape phones' #c, a phone's PAUSE view), the list PAGES:
-as many whole rows as fit, a strip of `PAGE n OF m` and two page keys ▲ ▼ (the kit pager's: 46 CSS px, 10 apart; a key with no page is a well) under them;
+as many whole rows as fit, a strip of `PAGE n OF m` and two page keys ▲ ▼ (the kit pager's: 46 CSS px, 8 CSS px under the rows, 10 apart; a key with no page is a well) under them, and
+under those a back-out hint line where a column's foot drops (`kit/copy.js` `BACK_TAP`, or BACK and its keycap for a controller; R1 kit);
 the page on screen is always the focused row's, so keys and a controller turn the page by moving past its last row, and a page key's tap
 focuses the first row of the page it opens (nothing confirmed); no drag scroll. Three arrangements: desk (a keyboard box, or a touch shell box,
 holding both columns at u >= 0.8: list 480 (540 at 125 %) beside a 400 (440) pane, rows 38 (36), courses 12, the plate centred 944 wide; the
