@@ -15,13 +15,13 @@
             tap targets of its own, the title's tap-anywhere, PLAY's DOM touch strip) this screen has nothing for, each with a one-line reason.
             DEFAULT-DENY: every other EXEMPTABLE gate is in the screen's `need`, so once the page records into the probe, a required gate it does not
             declare is skipped ("required, not declared") and fails --strict. Only this tracked table exempts, in review, when a page task instruments
-            its page; the page under test cannot exempt itself. MENU (v202 Task 3.1) is the first instrumented screen. */
+            its page; the page under test cannot exempt itself. MENU (v202 Task 3.1) is the first instrumented screen, LEVEL SELECT (Task 3.3) the second. */
 import { EXEMPTABLE } from "./gatelib.mjs";
 
 const ROWS = {
   title: { state: "INTRO", settle: 1200 },
   menu: { state: "MENU", settle: 1200, exempt: { chosen: "MENU shows no chosen / unchosen values: every row is a door or the PLAY key", locked: "MENU shows no locked value: every row is open" } },
-  level: { menu: ["LEVEL SELECT"], state: "LEVEL" },
+  level: { menu: ["LEVEL SELECT"], state: "LEVEL", exempt: { ring: "LEVEL SELECT's rows take the band and bomb with no key ring (the d-03 frame's focused LEVEL row); the ring is START's, a door key's or an open list entry's, measured whenever one is focused (the phone's tap mode)", locked: "after the first CLEAR (the world 6-8 captures open rooms 6-8) no level is locked; before it the wall keys record locked pairs, measured when present" } },
   options: { menu: ["OPTIONS", "SETTINGS"], state: "SETTINGS" },
   graphics: { menu: ["OPTIONS", "SETTINGS"], key: ["ArrowUp", "ArrowUp", "ArrowUp", "Enter"], state: "GRAPHICS" }, // ↑ from the top wraps: RESET DEFAULTS, CONTROLS, GRAPHICS (the last three rows in every look)
   controls: { menu: ["OPTIONS", "SETTINGS"], key: ["ArrowUp", "ArrowUp", "Enter"], wait: "controls", state: "CONTROLS" },

@@ -11,7 +11,7 @@ import { shellGeo } from "../src/app/fit.js";
 import { overlayBox, pauseHit, touchLay } from "../src/render/scenes.js";
 import { controlsHit, dims, drawShell } from "../src/render/shellview.js";
 import * as md from "../src/render/menudraw.js";
-import { setHints, tapMode } from "../src/render/hintcopy.js";
+import { setHints } from "../src/render/hintcopy.js";
 import { wordsOf } from "../src/app/hints.js";
 import { DEF_CONTROLS } from "../src/app/controls.js";
 import { rec } from "./lib/textrec.mjs";
@@ -221,145 +221,143 @@ for (const U of [false, true]) {
   check("from the last entry too (a first L TRIGGER lands on TIME TRIAL): the list opens on ONE LIFE", p.modOpen && p.modeCur === 0, p.modeCur);
 }
 
-/* ---- geometry: the focus rects, keyed by the row's name (draw = the mark, the same levelGeom taps read) ---- */
+/* ---- geometry (v202 Task 3.3, pages/level.js on the world kit): the focus rects keyed by the row's name (a row's band; START and the phone's
+   MODIFIERS door are keys), the same levelGeom taps read ---- */
 const sgP = shellGeo(393, 852), sgL = shellGeo(1024, 768, 600, 520, "l");
 const BOXES = [["600x520 keys", md.layout(600, 520), false], ["600x520 touch", md.layout(600, 520), true], ["iso 608x352", md.layout(608, 352), false], ["iso touch", md.layout(608, 352), true],
-  ["1366x768", md.layout(1366, 768, 300), false], ["landscape #sh " + sgL.w + "x" + sgL.h, md.layout(sgL.w, sgL.h, sgL.logo), true], ["portrait #sh " + sgP.w + "x" + sgP.h, md.layout(sgP.w, sgP.h, sgP.logo), true]];
+  ["1366x768", md.layout(1366, 768, 300), false], ["landscape #sh " + sgL.w + "x" + sgL.h, md.layout(sgL.w, sgL.h, sgL.logo, sgL.s), true], ["portrait #sh " + sgP.w + "x" + sgP.h, md.layout(sgP.w, sgP.h, sgP.logo, sgP.s), true]];
 const [N_LEVEL, N_DIFF, N_SPEED, N_MODS, N_START] = LEVEL_ROWS;
-const ring = (r, o) => ({ x: r.x - o, y: r.y - o, w: r.w + 2 * o, h: r.h + 2 * o });
-const span = (a, b, c) => ({ x: a.x, y: a.y, w: b.x + b.w - a.x, h: (c || b).y + (c || b).h - a.y });
 const r3 = (q) => q && { x: +q.x.toFixed(3), y: +q.y.toFixed(3), w: +q.w.toFixed(3), h: +q.h.toFixed(3) };
-const inside = (r, S) => r.x >= S.x && r.y >= S.y && r.x + r.w <= S.x + S.w && r.y + r.h <= S.y + S.h;
+const inside = (r, S) => r.x >= S.x - 1e-9 && r.y >= S.y - 1e-9 && r.x + r.w <= S.x + S.w + 1e-9 && r.y + r.h <= S.y + S.h + 1e-9;
 const meets = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
-const paintOf = (r) => ({ x: r.x - 1, y: r.y - 1, w: r.w + 2, h: r.h + 2 }); // a 2 px ring paints 1 px each side of its rect
-/* a ring's paint crosses q unless q lies clear outside its band or wholly inside its hole */
-const crosses = (r, q) => meets(paintOf(r), q) && !inside(q, { x: r.x + 1, y: r.y + 1, w: r.w - 2, h: r.h - 2 });
-for (const [nm, L, T] of BOXES) for (const U of [false, true]) {
-  const G = md.levelGeom(L, U, T), S = G.S, rows = G.rows, o = Math.min(3, 3 * G.f), tag = `rows (${nm}${U ? ", offered" : ""})`;
-  check(`${tag}: keyed by the row names (LEVEL_ROWS), frozen, MODIFIERS null until offered`, J(Object.keys(rows)) === J(LEVEL_ROWS) && Object.isFrozen(rows) && (rows[N_MODS] === null) === !U, J(Object.keys(rows)));
-  const want = { [N_LEVEL]: ring(G.grid, o), [N_DIFF]: ring(span(G.heatCap, G.heat[2]), o), [N_SPEED]: ring(span(G.paceCap, G.pace[2]), o), [N_MODS]: U ? ring(span(G.modeCap, G.mode[4], G.help), o) : null, [N_START]: { x: G.start.x + 8, y: G.start.y + 2, w: G.start.w - 16, h: G.start.h - 4 } };
-  check(`${tag}: rings ${o.toFixed(2)} px out (min(3, 3f)) round the level grid, the DIFFICULTY and GAME SPEED groups and the MODIFIERS cap, chips and help line; START's painted band`, J(LEVEL_ROWS.map((n) => r3(rows[n]))) === J(LEVEL_ROWS.map((n) => r3(want[n]))), J(rows));
-  const content = { [N_LEVEL]: [...G.room, G.grid], [N_DIFF]: [G.heatCap, ...G.heat], [N_SPEED]: [G.paceCap, ...G.pace], [N_MODS]: U ? [G.modeCap, ...G.mode, G.help] : [], [N_START]: [rows[N_START]] };
-  const rings0 = LEVEL_ROWS.filter((n) => n !== N_START && rows[n]);
-  check(`${tag}: every mark's paint inside the plate; a ring's paint crosses no other row's tiles, segments, chips or START, and never the help line or the card`,
-    rings0.every((n) => inside(paintOf(rows[n]), S)) && inside(rows[N_START], S) && rings0.every((n) => LEVEL_ROWS.every((m) => m === n || content[m].every((q) => !crosses(rows[n], q))) && [G.pane, ...(U ? [G.help] : [])].every((q) => !crosses(rows[n], q))),
-    J(rings0.map((n) => [n, [...LEVEL_ROWS.filter((m) => m !== n).flatMap((m) => content[m]), G.pane, G.help].filter((q) => q && crosses(rows[n], q)).length])));
-  check(`${tag}: each row holds what it marks (tiles, segments, chips, the MODIFIERS help line)`, G.room.every((r) => inside(r, rows[N_LEVEL])) && G.heat.every((r) => inside(r, rows[N_DIFF])) && G.pace.every((r) => inside(r, rows[N_SPEED])) && (!U || [...G.mode, G.help].every((r) => inside(r, rows[N_MODS]))));
-  if (G.f === 1) check(`${tag}: a group ring's paint stands 2 px off its segments' own 2 px stroke (no double frame at NORMAL)`, rows[N_DIFF].y + 1 <= G.heat[0].y - 2 && rows[N_DIFF].y + rows[N_DIFF].h - 1 >= G.heat[0].y + G.heat[0].h + 2, J([rows[N_DIFF], G.heat[0]]));
-  if (U) check(`chip rings (${nm}): each inside the plate, none meets a neighbour chip`, G.mode.every((r, i) => inside(ring(r, 2), S) && G.mode.every((q, j) => i === j || !meets(ring(r, 2), q))));
-  for (const n of LEVEL_ROWS) for (const open of U && n === N_MODS ? [false, true] : [false]) for (const cur of open ? [0, 1, 2, 3, 4] : [-1]) {
-    const m = md.levelMark(G, n, open, cur);
-    check(`levelMark (${nm}${U ? ", offered" : ""}) ${n}${open ? " list " + cur : ""}`, J(r3(m)) === J(r3(open ? ring(G.mode[cur], 2) : rows[n])), J(m));
+/* a paged compact (the least touch boxes, lane lessons 2026-11-11) shows the page holding the focused row: every page is checked, each row on one */
+const firstRows = (L, U, T) => { const G = md.levelGeom(L, U, T); return G.pages > 1 ? G.d.pages.map((q) => q[0]) : [N_LEVEL]; };
+for (const [nm, L, T] of BOXES) for (const U of [false, true]) for (const fr of firstRows(L, U, T)) {
+  const G = md.levelGeom(L, U, T, false, fr), S = G.S, rows = G.rows, tag = `rows (${nm}${U ? ", offered" : ""}, ${G.lay}${G.pages > 1 ? ", page " + (G.page + 1) : ""})`;
+  const onPage = (l) => G.pages === 1 || G.d.pages[G.page].includes(l);
+  check(`${tag}: keyed by the row names (LEVEL_ROWS), frozen, MODIFIERS null until offered (and off its page)`, J(Object.keys(rows)) === J(LEVEL_ROWS) && Object.isFrozen(rows) && (rows[N_MODS] === null) === (!U || !onPage(N_MODS)), J(Object.keys(rows)));
+  check(`${tag}: START's mark is its key; the MODIFIERS mark is its door`, J(r3(rows[N_START])) === J(r3(G.start)) && (!U || !onPage(N_MODS) || J(r3(rows[N_MODS])) === J(r3(G.mods))));
+  const content = { [N_LEVEL]: G.room, [N_DIFF]: G.heat, [N_SPEED]: G.pace, [N_MODS]: G.mods ? [G.mods] : [], [N_START]: [G.start] };
+  const marks = LEVEL_ROWS.filter((n) => rows[n]);
+  check(`${tag}: every mark inside the plate; each row holds what it marks (the level keys, the bank cells, the door, START)`, marks.every((n) => inside(rows[n], S)) && G.room.every((r) => inside(r, rows[N_LEVEL])) && G.heat.every((r) => inside(r, rows[N_DIFF])) && G.pace.every((r) => inside(r, rows[N_SPEED])), J(marks.filter((n) => !inside(rows[n], S))));
+  check(`${tag}: a row's mark crosses no other row's controls, nor the card`, marks.every((n) => LEVEL_ROWS.every((m) => m === n || content[m].every((q) => !meets(rows[n], q))) && (!G.pane || !meets(rows[n], G.pane))),
+    J(marks.map((n) => [n, LEVEL_ROWS.filter((m) => m !== n).flatMap((m) => content[m]).filter((q) => meets(rows[n], q)).length])));
+  if (U && fr === firstRows(L, U, T)[0]) {
+    const O = md.levelGeom(L, U, T, true, N_MODS), Sh = md.levelGeom(L, U, T, false, N_MODS);
+    check(`the open list (${nm}): five entries in the list's region, inside the plate, none meeting another; the rows do not move${O.d.cover ? " (compact: the list covers its page's door)" : ""}`, O.mode.length === 5 && O.mode.every((r, i) => inside(r, O.list) && inside(r, S) && O.mode.every((q, j) => i === j || !meets(r, q))) && (O.d.cover ? J(O.start) === J(Sh.start) : J(O.rows) === J(Sh.rows)) && G.mode.length === 0, J(O.mode));
   }
 }
 
-/* ---- the page draws the mark from levelGeom. The focus model (keys on a keyboard layout, a controller anywhere): one ring on the
-   focused row, START lit only while focused. Tap mode (a touch layout read by touch or keys, tapMode): no row ring at all, START
-   lit as the page's one action; the open list (only keys or a controller open it) still rings its chip. Both difficulties, so
-   NORMAL's own TEXT stroke is in the picture. ---- */
-const TEXT = "#dfe7f5", BAND = "rgba(55,240,208,0.12)";
-const drawLv = (L, T, U, info, o = {}) => { const r = rec({ widthK: 0.648 }); md.drawLevelSelect(r.ctx, o.level || 3, L, 2, o.heat == null ? 1 : o.heat, o.pact || 0, U, 0, false, T, { kind: "2d", best: [], ...info }); return r; };
-const inset1 = (q) => r3({ x: q.x + 1, y: q.y + 1, w: q.w - 2, h: q.h - 2 });
-/* the TEXT 2 px strokeRects that are focus rings: NORMAL's own selected-segment stroke (TEXT, 2 px, its rect inset 1) is not one */
-const rings = (r, G) => r.paints.filter((p) => p.op === "strokeRect" && p.style === TEXT && p.lw === 2).map((p) => p.box).filter((b) => !G.heat.some((q) => J(b) === J(inset1(q))));
-const bands = (r, rect) => r.paints.filter((p) => p.op === "fillRect" && p.style === BAND && J(p.box) === J(r3(rect)));
+/* ---- the page draws the focus from levelGeom (OffscreenCanvas is absent here, so every part paints on the target). The focus model (keys on a
+   keyboard layout, keys or a controller on a touch one): a row's band (tok.band) on the focused row, no ring; START (a key) its 3 px cream ring.
+   Tap mode (a touch layout last driven by touch): START focused as the page's one action, its ring, no band. The open list: its entry's ring. ---- */
+const lv = await import("../src/render/pages/level.js");
+const { worldTokens, CONST } = await import("../src/render/kit/tokens.js");
+const drawLv = (L, T, U, info, o = {}) => { const r = rec({ widthK: 0.648 }); md.drawLevelSelect(r.ctx, o.level || 3, L, 2, o.heat == null ? 1 : o.heat, o.pact || 0, U, 0, false, T, { best: [], ...info }); return r; };
+const unit = (L, T, U, open) => md.levelGeom(L, U, T, open).u;
+const div = (b, u) => b && { x: b.x / u, y: b.y / u, w: b.w / u, h: b.h / u };
+const ringsOf = (r, u) => r.paints.filter((p) => p.op === "stroke" && String(p.style).toLowerCase() === CONST.ink && p.lw === 3).map((p) => p.box);
+const bandsOf = (r, tok) => r.paints.filter((p) => p.op === "fill" && p.style === tok.band).map((p) => p.box);
+const near = (a, b, e) => !!a && !!b && Math.abs(a.x - b.x) <= e && Math.abs(a.y - b.y) <= e && Math.abs(a.w - b.w) <= e && Math.abs(a.h - b.h) <= e;
+const ringAt = (k, u) => ({ x: k.x - 4.5 * u, y: k.y - 4.5 * u, w: k.w + 9 * u, h: k.h + 9 * u });
 const PADW = wordsOf("pad", DEF_CONTROLS);
-for (const [nm, L, T] of BOXES) for (const U of [false, true]) for (const heat of [0, 1]) for (const [dev, words] of T ? [["tap mode", null], ["tap mode, touch words", wordsOf("touch", DEF_CONTROLS)], ["controller", PADW]] : [["keys", null], ["controller", PADW]]) {
+for (const [nm, L, T] of BOXES) for (const U of [false, true]) for (const heat of [0, 1]) for (const [dev, words, tap] of T ? [["tap mode", null, true], ["keys on a touch layout", null, false], ["controller", PADW, false]] : [["keys", null, false], ["controller", PADW, false]]) {
   setHints(words);
-  const G = md.levelGeom(L, U, T), focus = !tapMode(T), tag = `draw (${nm}${U ? ", offered" : ""}, ${heat ? "HARD" : "NORMAL"}, ${dev})`;
+  const u = md.levelGeom(L, U, T).u, tok = worldTokens(3), tag = `draw (${nm}${U ? ", offered" : ""}, ${heat ? "HARD" : "NORMAL"}, ${dev})`;
   for (const n of LEVEL_ROWS) {
     if (n === N_MODS && !U) continue;
-    const r = drawLv(L, T, U, { row: n }, { heat }), rg = rings(r, G), lit = bands(r, G.rows[N_START]).length === 1;
-    if (!focus) check(`${tag} ${n} focused: tap mode draws no ring and lights START`, rg.length === 0 && lit, J(rg));
-    else if (n === N_START) check(`${tag} START focused: START lit (its band = rows START), no ring`, lit && rg.length === 0, J([lit, rg]));
-    else check(`${tag} ${n} focused: one ring, = rows[${n}]; START not lit`, rg.length === 1 && J(rg[0]) === J(r3(G.rows[n])) && !lit, J([rg, r3(G.rows[n]), lit]));
-    if (focus && n === N_DIFF && !heat && G.f === 1) {
-      const normal = r.paints.find((p) => p.op === "strokeRect" && p.style === TEXT && J(p.box) === J(inset1(G.heat[0])));
-      check(`${tag} DIFFICULTY at NORMAL: the ring's paint ends 2 px before NORMAL's own stroke paint begins (no double frame)`, !!normal && rg[0].y + 1 <= normal.box.y - 1 - 2, J([rg[0], normal && normal.box]));
-    }
+    const G = md.levelGeom(L, U, T, false, n), r = drawLv(L, T, U, { row: n, tap }, { heat }), rg = ringsOf(r), bd = bandsOf(r, tok), key = n === N_START || (n === N_MODS && G.lay !== "desk");
+    if (tap) check(`${tag} ${n} focused: tap mode rings START (the page's one action), no band`, rg.length === 1 && near(rg[0], ringAt(G.start, u), 0.6 * u + 0.05) && bd.length === 0, J([rg, bd]));
+    else if (key) check(`${tag} ${n} focused: its key's ring, = rows[${n}] out 3 px`, rg.length === 1 && near(rg[0], ringAt(G.rows[n], u), 0.6 * u + 0.05), J([rg, G.rows[n]]));
+    else check(`${tag} ${n} focused: one band, = rows[${n}]; no ring`, rg.length === 0 && bd.length === 1 && near(bd[0], G.rows[n], 0.05), J([rg, bd, G.rows[n]]));
   }
   if (U) for (let cur = 0; cur < 5; cur++) {
-    const r = drawLv(L, T, U, { row: N_MODS, open: true, cur }, { heat }), rg = rings(r, G), lit = bands(r, G.rows[N_START]).length === 1;
-    check(`${tag} the open list on entry ${cur}: one ring, on that chip (levelMark), no row ring, START ${focus ? "not lit" : "lit (tap mode)"}`, rg.length === 1 && J(rg[0]) === J(r3(md.levelMark(G, N_MODS, true, cur))) && lit === !focus, J([rg, lit]));
+    const O = md.levelGeom(L, U, T, true, N_MODS), r = drawLv(L, T, U, { row: N_MODS, open: true, cur, tap }, { heat }), rg = ringsOf(r);
+    check(`${tag} the open list on entry ${cur}: one ring, on that entry; no band`, rg.length === 1 && near(rg[0], ringAt(O.mode[cur], u), 0.6 * u + 0.05) && bandsOf(r, tok).length === 0, J(rg));
   }
   setHints(null);
 }
 {
-  const L = md.layout(600, 520), G = md.levelGeom(L, true, false);
+  const L = md.layout(600, 520), G = md.levelGeom(L, true, false), tok = worldTokens(3);
   const r = drawLv(L, false, true, {});
-  check("draw with no row in info: the LEVEL row is focused (the app's default)", J(rings(r, G)) === J([r3(G.rows[N_LEVEL])]), J(rings(r, G)));
+  check("draw with no row in info: the LEVEL row is focused (the app's default)", near(bandsOf(r, tok)[0], G.rows[N_LEVEL], 0.05), J(bandsOf(r, tok)));
+  /* a controller's TRIGGER cursor with the list shut: the MODIFIERS door names its entry and state (T14), beside the focused row's band */
   setHints(PADW); md.setModeFocus(() => 2);
-  const p = drawLv(L, false, true, { row: N_DIFF }), q = drawLv(L, false, true, { row: N_MODS });
+  drawLv(L, false, true, { row: N_DIFF }, { pact: PACT.THIN });
+  const tz = lv._dbg.last.P.rows[N_MODS].tz;
   md.setModeFocus(null); setHints(null);
-  const byY = (xs) => J([...xs].sort((a, b) => a.y - b.y));
-  check("a controller's TRIGGER cursor with the list shut keeps today's chip ring beside the focused row's ring (T14)", byY(rings(p, G)) === byY([r3(G.rows[N_DIFF]), r3(ring(G.mode[2], 2))]), J(rings(p, G)));
-  check("on MODIFIERS with the list shut the TRIGGER chip ring is not drawn over the row's own ring (they share edges): one ring", J(rings(q, G)) === J([r3(G.rows[N_MODS])]), J(rings(q, G)));
+  check("a controller's TRIGGER cursor with the list shut: the door reads its entry and state (FEWER ITEMS · ON)", !!tz && tz.s === "FEWER ITEMS · ON", tz && tz.s);
   /* the open list's help line describes the focused entry, on keys as on a controller */
-  const WANT = ["ONE LIFE", "NO FLOOR ITEMS", "FEWER ITEMS in bricks", "SHRINK walls close in from 25s", "TIME TRIAL timer + per-level best"];
-  for (const [dev, words, lead] of [["keys", null, ""], ["controller", PADW, "TRIGGERS PICK · NORTH TOGGLES · "]]) {
+  const WANT = ["One life for the whole run.", "No power-ups wait on the floor.", "Fewer power-ups hide in bricks.", "Walls close in from 25s.", "A timer and a best time for each level."];
+  for (const [dev, words] of [["keys", null], ["controller", PADW]]) {
     setHints(words);
-    const got = WANT.map((_, cur) => { const d = drawLv(L, false, true, { row: N_MODS, open: true, cur }, { pact: 0 }); return (d.texts.find((t) => t.y >= G.help.y - 2 && t.y <= G.help.y + G.help.h + 2 && t.x === G.S.mid) || {}).s; });
+    const got = WANT.map((_, cur) => { const d = drawLv(L, false, true, { row: N_MODS, open: true, cur }, { pact: 0 }); return lv._dbg.last.P.help && lv._dbg.last.P.help.lines.join(" "); });
     setHints(null);
-    check(`the open list's help line (${dev}) describes the focused entry`, J(got) === J(WANT.map((w) => lead + w)), J(got));
+    check(`the open list's help line (${dev}) describes the focused entry`, J(got) === J(WANT), J(got));
   }
-  const shut = drawLv(L, false, true, { row: N_MODS }, { pact: PACT.LAST });
-  check("with the list shut (keys) the help line still describes the modifiers that are on", shut.texts.some((t) => t.s === md.modeHelp(PACT.LAST, false)));
+  drawLv(L, false, true, { row: N_MODS }, { pact: PACT.LAST });
+  check("with the list shut the door's teaser names the modifiers that are on", lv._dbg.last.P.rows[N_MODS].tz.s === "ONE LIFE");
 }
 
-/* ---- the real path: app.levelRow / modOpen / modeCur reach the painter through shellview's infoOf (drawShell): desktop, a
+/* ---- the real path: app.levelRow / modOpen / modeCur / lastDev reach the painter through shellview's infoOf (drawShell): desktop, a
    landscape and a portrait #sh box (with their logo line), and the PIXEL and REAL 3D kinds on the desktop box ---- */
 {
-  const box = (w, h, lay, logo) => ({ width: w, height: h, logo, ownerDocument: { body: { getAttribute: (k) => (k === "data-lay" ? lay : null) } }, getBoundingClientRect: () => ({ left: 0, top: 0, width: w, height: h }) });
-  for (const [nm, w, h, lay, logo, kind] of [["600x520 d", 600, 520, "d", undefined, "2d"], ["600x520 d, PIXEL", 600, 520, "d", undefined, "px"], ["600x520 d, REAL 3D", 600, 520, "d", undefined, "3d"],
-    ["landscape #sh " + sgL.w + "x" + sgL.h, sgL.w, sgL.h, "l", sgL.logo, "2d"], ["portrait #sh " + sgP.w + "x" + sgP.h, sgP.w, sgP.h, "p", sgP.logo, "2d"]]) for (const words of lay === "d" ? [null] : [null, PADW]) {
-    setHints(words);
-    const touch = lay !== "d", focus = !tapMode(touch), tag = `drawShell (${nm}, ${touch ? (focus ? "a controller: the focus model" : "tap mode") : "keys"})`;
-    const a = createMenuApp({ pactUnlocked: true, settings: { fpm: 0 } }), cv = box(w, h, lay, logo), G = md.levelGeom(md.layout(w, h, logo), true, touch);
-    a.screen = SCREEN.LEVEL; a.heat = 1;
-    const shot = () => { const r = rec({ widthK: 0.648 }); drawShell(r.ctx, a, { state: "PLAY", time: 1, level: 1 }, cv, kind, () => [], () => 0, () => ({})); return r; };
+  const box = (w, h, lay, logo, s) => ({ width: w, height: h, logo, css: s, ownerDocument: { body: { getAttribute: (k) => (k === "data-lay" ? lay : null) } }, getBoundingClientRect: () => ({ left: 0, top: 0, width: w * s, height: h * s }) });
+  for (const [nm, w, h, lay, logo, kind, s] of [["600x520 d", 600, 520, "d", undefined, "2d", 1], ["600x520 d, PIXEL", 600, 520, "d", undefined, "px", 1], ["600x520 d, REAL 3D", 600, 520, "d", undefined, "3d", 1],
+    ["landscape #sh " + sgL.w + "x" + sgL.h, sgL.w, sgL.h, "l", sgL.logo, "2d", sgL.s], ["portrait #sh " + sgP.w + "x" + sgP.h, sgP.w, sgP.h, "p", sgP.logo, "2d", sgP.s]]) for (const dev of lay === "d" ? ["key"] : ["touch", "key", "pad"]) {
+    setHints(dev === "pad" ? PADW : null);
+    const touch = lay !== "d", tap = touch && dev === "touch", tag = `drawShell (${nm}, ${tap ? "tap mode" : dev === "pad" ? "a controller: the focus model" : "keys: the focus model"})`;
+    const a = createMenuApp({ pactUnlocked: true, settings: { fpm: 0 } }), cv = box(w, h, lay, logo, s);
+    a.screen = SCREEN.LEVEL; a.heat = 1; a.lastDev = dev;
+    const shot = () => { drawShell(rec({ widthK: 0.648 }).ctx, a, { state: "PLAY", time: 1, level: 1 }, cv, kind, () => [], () => 0, () => ({})); return lv._dbg.last; };
     for (let row = 0; row < 5; row++) {
       a.levelRow = row;
-      const r = shot(), rg = rings(r, G), lit = bands(r, G.rows[N_START]).length === 1, n = LEVEL_ROWS[row];
-      if (!focus) check(`${tag} app.levelRow ${row} (${n}): no ring, START lit`, rg.length === 0 && lit, J([rg, lit]));
-      else if (n === N_START) check(`${tag} app.levelRow ${row} (START): no ring, START lit (its band = rows START)`, rg.length === 0 && lit, J([rg, lit]));
-      else check(`${tag} app.levelRow ${row} (${n}): one ring, = levelGeom rows[${n}], START not lit`, J(rg) === J([r3(G.rows[n])]) && !lit, J(rg));
+      const d = shot(), n = LEVEL_ROWS[row];
+      check(`${tag} app.levelRow ${row} (${n}): the focus is ${tap ? "START (tap mode)" : n}`, d.foc === (tap ? N_START : n), d.foc);
     }
     a.levelRow = ROW.MODS; a.modOpen = true;
     for (let cur = 0; cur < 5; cur++) {
       a.modeCur = cur;
-      const r = shot();
-      check(`${tag} app.modOpen, app.modeCur ${cur}: one ring, on that chip (levelMark)`, J(rings(r, G)) === J([r3(md.levelMark(G, N_MODS, true, cur))]), J(rings(r, G)));
+      const d = shot();
+      check(`${tag} app.modOpen, app.modeCur ${cur}: the focus is that entry`, d.foc === "M" + cur && d.G.mode.length === 5, d.foc);
     }
+    a.modOpen = false; a.modeCur = -1;
     setHints(null);
   }
 }
 
 /* ---- the foot follows the focus and the device; no hint names a key that does nothing there ---- */
-const footOf = (r, L, T, U) => { const S = md.levelGeom(L, U, T).S; return (r.texts.find((t) => Math.abs(t.y - S.footY) < 0.01 && t.x === S.mid) || {}).s; };
 {
   const L = md.layout(600, 520);
-  const KEY = { [N_LEVEL]: "↑↓ ROW · ←→ ADJUST · ENTER START · ESC BACK", [N_DIFF]: "↑↓ ROW · ←→ ADJUST · ENTER START · ESC BACK", [N_SPEED]: "↑↓ ROW · ←→ ADJUST · ENTER START · ESC BACK", [N_MODS]: "↑↓ ROW · ENTER OPEN · ESC BACK", [N_START]: "↑↓ ROW · ENTER START · ESC BACK" };
-  const PADF = Object.fromEntries(Object.entries(KEY).map(([k, s]) => [k, s.replace("ENTER", "SOUTH").replace("ESC", "EAST")]));
-  for (const [dev, words, want, list] of [["keys", null, KEY, "↑↓ PICK · ENTER TOGGLE · ESC CLOSE"], ["controller", PADW, PADF, "↑↓ PICK · SOUTH TOGGLE · EAST CLOSE"]]) {
+  const KEY = { [N_LEVEL]: "ROW ↑↓ · CHANGE ←→ · START ENTER · BACK ESC", [N_DIFF]: "ROW ↑↓ · CHANGE ←→ · START ENTER · BACK ESC", [N_SPEED]: "ROW ↑↓ · CHANGE ←→ · START ENTER · BACK ESC", [N_MODS]: "ROW ↑↓ · OPEN ENTER · BACK ESC", [N_START]: "ROW ↑↓ · START ENTER · BACK ESC" };
+  const PADF = Object.fromEntries(Object.entries(KEY).map(([k, s]) => [k, s.replace("↑↓", "D-PAD").replace("←→", "D-PAD").replace("ENTER", "SOUTH").replace("ESC", "EAST")]));
+  const footOf = () => { const d = lv._dbg.last; return d.verb && d.P.foot[d.verb] ? d.P.foot[d.verb].parts.map((p) => p.t || p.sep || (Array.isArray(p.cap) ? { up: "↑", dn: "↓", lf: "←", rt: "→" }[p.cap[0]] : p.cap)) : null; };
+  const joined = (parts) => parts && parts.join(" ").replace(/ ([↑↓←→]) ([↑↓←→])/g, " $1$2").replace(/ · /g, " · ");
+  for (const [dev, words, want, list] of [["keys", null, KEY, "PICK ↑↓ · TOGGLE ENTER · CLOSE ESC"], ["controller", PADW, PADF, "PICK D-PAD · TOGGLE SOUTH · CLOSE EAST"]]) {
     setHints(words);
     for (const n of LEVEL_ROWS) {
-      const f = footOf(drawLv(L, false, true, { row: n }), L, false, true);
+      drawLv(L, false, true, { row: n });
+      const f = joined(footOf());
       check(`foot (${dev}) on ${n}: "${want[n]}"`, f === want[n] && md.levelFoot(n, false) === want[n], f);
     }
-    const f = footOf(drawLv(L, false, true, { row: N_MODS, open: true, cur: 1 }), L, false, true);
+    drawLv(L, false, true, { row: N_MODS, open: true, cur: 1 });
+    const f = joined(footOf());
     check(`foot (${dev}) in the open list: "${list}"`, f === list && md.levelFoot(N_MODS, true) === list, f);
-    const t = footOf(drawLv(L, true, true, { row: N_DIFF }), L, true, true);
-    check(`foot (${dev}) on a touch layout: ${dev === "keys" ? "the tap rule" : "the controller's words"}`, t === (dev === "keys" ? md.LEVEL_TAP : PADF[N_DIFF]), t);
-    const tl = footOf(drawLv(L, true, true, { row: N_MODS, open: true, cur: 0 }), L, true, true);
+    const sgl = md.layout(1024, 768, 200);
+    drawLv(sgl, true, true, { row: N_DIFF, tap: dev === "keys" });
+    const t = joined(footOf());
+    check(`foot (${dev}) on a touch layout: ${dev === "keys" ? "the tap rule (tap mode)" : "the controller's words"}`, t === (dev === "keys" ? md.LEVEL_TAP : PADF[N_DIFF]), t);
+    drawLv(sgl, true, true, { row: N_MODS, open: true, cur: 0, tap: dev === "keys" });
+    const tl = joined(footOf());
     check(`foot (${dev}) on a touch layout with the list open: ${dev === "keys" ? "TAP OUTSIDE TO CLOSE (a tap off the plate closes it first)" : "the controller's list words"}`, tl === (dev === "keys" ? md.LEVEL_TAP_LIST : list) && md.LEVEL_TAP_LIST === "TAP START TO PLAY · TAP OUTSIDE TO CLOSE", tl);
     setHints(null);
   }
   check("no foot names ←→ on MODIFIERS, START or in the open list", ![md.levelFoot(N_MODS, false), md.levelFoot(N_START, false), md.levelFoot(N_MODS, true)].some((s) => s.includes("←→")));
-  /* caps name only keys that work from any row ([ ] and 1–5); the arrows live in the foot alone */
+  /* the arrows live in the foot alone: no row label or legend carries an arrow; the LEVEL label is the word alone */
   for (const n of LEVEL_ROWS) {
-    const r = drawLv(L, false, true, { row: n }), G = md.levelGeom(L, true, false), S = G.S, notFoot = r.texts.filter((t) => !(Math.abs(t.y - S.footY) < 0.01));
-    const cap = notFoot.find((t) => t.x === G.grid.x && Math.abs(t.y - G.capY) < 0.01);
-    check(`no arrow keycap off the foot (${n}): the LEVEL caption over the grid is the word alone, DIFFICULTY's cap has no key`, !notFoot.some((t) => /[←→↑↓]/.test(t.s)) && !!cap && cap.s === "LEVEL" && notFoot.some((t) => t.s === "[ ]") && notFoot.some((t) => t.s === "1–5"), cap && cap.s);
+    const r = drawLv(L, false, true, { row: n }), d = lv._dbg.last, foot = d.P.foot[d.verb], fy = foot.mid * d.G.u;
+    const notFoot = r.texts.filter((t) => Math.abs(t.y - fy) > 1 && !(t.y > foot.y * d.G.u - 1));
+    check(`no arrow off the foot (${n}): the LEVEL row's label is the word alone`, !notFoot.some((t) => /[←→↑↓]/.test(t.s)) && d.P.rows[N_LEVEL].label.s === "LEVEL", J(notFoot.filter((t) => /[←→↑↓]/.test(t.s)).map((t) => t.s)));
   }
 }
 
@@ -376,10 +374,11 @@ function tapRig(kind, o = {}) {
   const b0 = app.back.bind(app); app.back = () => { const r = b0(); if (r) cues.push("uiBack"); return r; };
   const c0 = app.confirm.bind(app); app.confirm = () => { const tog = app.screen === SCREEN.LEVEL && app.modOpen, r = c0(); if (r) cues.push(tog ? "uiTog" : "uiSel"); return r; }; // main's: a toggle in the open list is uiTog
   const input = { _intent: { fire: false }, onUiKey: (c) => app.key(c) };
-  let cv, fit = null, box = null, sh = null;
+  let cv, fit = null, box = null, sh = null, s = 1;
   if (kind === "d") cv = mkEl(600, 520, { left: 0, top: 0, width: 300, height: 260 }, "d");
   else {
     const g = kind === "p" ? sgP : sgL, rect = { left: 5, top: 9, width: g.w * g.s, height: g.h * g.s };
+    s = g.s;
     sh = mkEl(Math.round(g.w * 2), Math.round(g.h * 2), rect, kind);
     box = { width: g.w, height: g.h, logo: g.logo, ownerDocument: sh.ownerDocument, getBoundingClientRect: () => rect };
     cv = mkEl(600, 520, { left: 0, top: 0, width: 300, height: 260 }, kind);
@@ -390,7 +389,7 @@ function tapRig(kind, o = {}) {
   const tapAt = (x, y, pointerType = "mouse") => { const r = surf.getBoundingClientRect(); el.fire("pointerdown", { clientX: r.left + (x * r.width) / surf.width, clientY: r.top + (y * r.height) / surf.height, currentTarget: el, pointerType }); el.fire("pointerup", {}); };
   const ctr = (q) => tapAt(q.x + q.w / 2, q.y + q.h / 2);
   app.cursor = ITEMS.indexOf("LEVEL SELECT"); c0();
-  return { app, cues, tapAt, ctr, surf, G: () => md.levelGeom(md.layout(surf.width, surf.height), app.pactUnlocked, kind !== "d") };
+  return { app, cues, tapAt, ctr, surf, G: () => md.levelGeom(md.layout(surf.width, surf.height, box ? box.logo : undefined, kind === "d" ? undefined : s), app.pactUnlocked, kind !== "d", app.modOpen) };
 }
 const prep = (t, row, open) => { const a = t.app; a.level = 2; a.heat = 1; a.pace = 0; a.pact = 0; a.timeAttack = false; a.subT = 1.75; a.levelFocus(row); if (open) { a.levelFocus(ROW.MODS); a.confirm(); } t.cues.length = 0; a.got.feels.length = 0; a.got.started.length = 0; };
 /* every tap check compares the whole state: screen, focused row, the list and its cursor, level, difficulty, speed, the modifier
@@ -405,23 +404,31 @@ for (const kind of ["d", "l", "p"]) for (const U of [false, true]) {
     prep(t, ROW.START);
     t.ctr(t.G().room[i]);
     const open = i < (U ? 8 : 5), set = i + 1 === 2;
-    if (open) check(`${tag}: level tile ${i + 1} selects it, the LEVEL row focused, ${set ? "silent (already set)" : "one uiMove"}`, same(t, want({ level: i + 1, cues: set ? "" : "uiMove" })), J(stOf(t)));
-    else check(`${tag}: locked tile ${i + 1} only flashes its card (lockR ${i + 1}, lockT = subT), the LEVEL row focused, level unchanged, no cue`, same(t, want({})) && a.lockR === i + 1 && a.lockT === 1.75, J([stOf(t), a.lockR, a.lockT]));
+    if (open) check(`${tag}: level key ${i + 1} selects it, the LEVEL row focused, ${set ? "silent (already set)" : "one uiMove"}`, same(t, want({ level: i + 1, cues: set ? "" : "uiMove" })), J(stOf(t)));
+    else check(`${tag}: locked key ${i + 1} only flashes its refusal (lockR ${i + 1}, lockT = subT), the LEVEL row focused, level unchanged, no cue`, same(t, want({})) && a.lockR === i + 1 && a.lockT === 1.75, J([stOf(t), a.lockR, a.lockT]));
   }
   for (let i = 0; i < 3; i++) {
     const t = tapRig(kind, { pactUnlocked: U });
     prep(t, ROW.START); t.ctr(t.G().heat[i]);
-    check(`${tag}: DIFFICULTY segment ${i} sets it, the DIFFICULTY row focused, ${i === 1 ? "silent" : "one uiMove"}`, same(t, want({ row: ROW.DIFFICULTY, heat: i, cues: i === 1 ? "" : "uiMove" })), J(stOf(t)));
+    check(`${tag}: DIFFICULTY cell ${i} sets it, the DIFFICULTY row focused, ${i === 1 ? "silent" : "one uiMove"}`, same(t, want({ row: ROW.DIFFICULTY, heat: i, cues: i === 1 ? "" : "uiMove" })), J(stOf(t)));
     const p = tapRig(kind, { pactUnlocked: U });
     prep(p, ROW.LEVEL); p.ctr(p.G().pace[i]);
-    check(`${tag}: GAME SPEED segment ${i} sets it (saved), the GAME SPEED row focused, ${i === 1 ? "silent" : "one uiMove"}`, same(p, want({ row: ROW.SPEED, pace: i - 1, cues: i === 1 ? "" : "uiMove" })) && J(p.app.got.paces) === (i === 1 ? "[]" : "[" + (i - 1) + "]"), J(stOf(p)));
+    check(`${tag}: GAME SPEED cell ${i} sets it (saved), the GAME SPEED row focused, ${i === 1 ? "silent" : "one uiMove"}`, same(p, want({ row: ROW.SPEED, pace: i - 1, cues: i === 1 ? "" : "uiMove" })) && J(p.app.got.paces) === (i === 1 ? "[]" : "[" + (i - 1) + "]"), J(stOf(p)));
   }
-  if (U) for (let i = 0; i < 5; i++) for (const open of [false, true]) {
+  if (U) {
     const t = tapRig(kind, { pactUnlocked: U });
-    prep(t, open ? ROW.MODS : ROW.DIFFICULTY, open);
-    t.ctr(t.G().mode[i]);
-    check(`${tag}: chip ${i} ${open ? "in the open list" : "with the list shut"} toggles it (the digit path, no cue), the MODIFIERS row focused, ${open ? "the list cursor on it" : "the list stays shut"}`,
-      same(t, want({ row: ROW.MODS, open, cur: open ? i : -1, pact: i < 4 ? MOD_BITS[i] : 0, time: i === 4 })), J(stOf(t)));
+    prep(t, ROW.DIFFICULTY);
+    t.ctr(t.G().mods);
+    check(`${tag}: the MODIFIERS door opens the list on its first entry, the MODIFIERS row focused, one uiSel`, same(t, want({ row: ROW.MODS, open: true, cur: 0, cues: "uiSel" })), J(stOf(t)));
+    t.cues.length = 0;
+    t.ctr(t.G().mods);
+    check(`${tag}: the door again closes the list (one level, as Esc)`, same(t, want({ row: ROW.MODS, cues: "uiBack" })), J(stOf(t)));
+    for (let i = 0; i < 5; i++) {
+      const q = tapRig(kind, { pactUnlocked: U });
+      prep(q, ROW.MODS, true);
+      q.ctr(q.G().mode[i]);
+      check(`${tag}: list entry ${i} toggles it (the digit path, no cue), the list cursor on it`, same(q, want({ row: ROW.MODS, open: true, cur: i, pact: i < 4 ? MOD_BITS[i] : 0, time: i === 4 })), J(stOf(q)));
+    }
   }
   for (const row of U ? [ROW.LEVEL, ROW.MODS, "open"] : [ROW.LEVEL, ROW.SPEED]) {
     const t = tapRig(kind, { pactUnlocked: U });
@@ -434,28 +441,34 @@ for (const kind of ["d", "l", "p"]) for (const U of [false, true]) {
   {
     const t = tapRig(kind, { pactUnlocked: U }), a = t.app, G = t.G();
     prep(t, ROW.SPEED);
-    t.ctr(G.pane);
-    check(`${tag}: a miss on the plate (the card) is inert: no change, no focus move, no cue`, same(t, want({ row: ROW.SPEED })), J(stOf(t)));
-    t.tapAt(G.S.x - 6, G.S.y + G.S.h / 2);
-    check(`${tag}: a tap off the plate backs out to MENU on LEVEL SELECT`, same(t, want({ scr: SCREEN.MENU, row: ROW.SPEED, cues: "uiBack" })) && a.cursor === ITEMS.indexOf("LEVEL SELECT"), J(stOf(t)));
+    const miss = G.pane || { x: G.S.x + G.S.w / 2, y: G.S.y + 1, w: 1, h: 1 };
+    t.ctr(miss);
+    check(`${tag}: a miss on the plate (${G.pane ? "the card" : "the head"}) is inert: no change, no focus move, no cue`, same(t, want({ row: ROW.SPEED })), J(stOf(t)));
+    t.tapAt(G.S.x - G.T - 6, G.S.y + G.S.h / 2);
+    if (G.S.x - G.T - 6 > 0) check(`${tag}: a tap off the plate backs out to MENU on LEVEL SELECT`, same(t, want({ scr: SCREEN.MENU, row: ROW.SPEED, cues: "uiBack" })) && a.cursor === ITEMS.indexOf("LEVEL SELECT"), J(stOf(t)));
+    if (G.back) { const b = tapRig(kind, { pactUnlocked: U }); prep(b, ROW.SPEED); b.ctr(b.G().back); check(`${tag}: BACK backs out to MENU`, same(b, want({ scr: SCREEN.MENU, row: ROW.SPEED, cues: "uiBack" })), J(stOf(b))); }
   }
   if (U) {
-    const t = tapRig(kind, { pactUnlocked: U }), G = t.G();
+    const t = tapRig(kind, { pactUnlocked: U });
     prep(t, ROW.MODS, true);
-    t.tapAt(G.S.x - 6, G.S.y + G.S.h / 2);
-    check(`${tag}: with the list open a tap off the plate closes the list first (one level, as Esc)`, same(t, want({ row: ROW.MODS, cues: "uiBack" })), J(stOf(t)));
+    const G = t.G();
+    if (G.back) t.ctr(G.back); else t.tapAt(G.S.x - G.T - 6, G.S.y + G.S.h / 2);
+    check(`${tag}: with the list open a tap ${G.back ? "on BACK" : "off the plate"} closes the list first (one level, as Esc)`, same(t, want({ row: ROW.MODS, cues: "uiBack" })), J(stOf(t)));
     prep(t, ROW.MODS, true);
-    t.ctr(G.heat[2]);
-    check(`${tag}: with the list open a tap on another row closes it and acts there`, same(t, want({ row: ROW.DIFFICULTY, heat: 2, cues: "uiMove" })), J(stOf(t)));
+    const O = t.G();
+    if (O.lay !== "compact") {
+      t.ctr(O.heat[2]);
+      check(`${tag}: with the list open a tap on another row closes it and acts there`, same(t, want({ row: ROW.DIFFICULTY, heat: 2, cues: "uiMove" })), J(stOf(t)));
+    }
     prep(t, ROW.START, false);
-    t.ctr(G.room[6]);
-    check(`${tag}: no tap starts a run but START (a tile tap stays on the page)`, same(t, want({ level: 7, cues: "uiMove" })), J(stOf(t)));
+    t.ctr(t.G().room[6]);
+    check(`${tag}: no tap starts a run but START (a level key tap stays on the page)`, same(t, want({ level: 7, cues: "uiMove" })), J(stOf(t)));
   }
   if (!U) {
     const t = tapRig(kind, { pactUnlocked: false }), G = t.G();
     prep(t, ROW.LEVEL); t.app.level = 5;
     t.ctr(G.room[7]); t.ctr(G.start);
-    check(`${tag}: a locked tile then START starts the selected level (5), never the locked one`, same(t, want({ scr: SCREEN.GAME, row: ROW.START, level: 5, run: { level: 5, heat: 1, pact: 0, pace: 0 }, cues: "uiSel" })), J(stOf(t)));
+    check(`${tag}: a locked key then START starts the selected level (5), never the locked one`, same(t, want({ scr: SCREEN.GAME, row: ROW.START, level: 5, run: { level: 5, heat: 1, pact: 0, pace: 0 }, cues: "uiSel" })), J(stOf(t)));
   }
 }
 

@@ -669,14 +669,15 @@ const HUD_W = {
   const shellSrc = readFileSync("src/render/shellview.js", "utf8");
   check(
     "shellview passes app.timeAttack as drawLevelSelect's ninth arg",
-    /app\.pace,\s*\n\s*app\.timeAttack,/.test(shellSrc),
+    /app\.pace,\s*app\.timeAttack,/.test(shellSrc),
     (shellSrc.match(/drawLevelSelect\([^;]*\);/s) || [])[0],
   );
   const mdSrc = readFileSync("src/render/menudraw.js", "utf8");
+  const lvSrc = readFileSync("src/render/pages/level.js", "utf8");
   check(
-    "menudraw keeps MODE_NAME render-side and never touches core PACT_NAME",
-    /MODE_NAME\s*=\s*MODE_BIT\.map\(\(b\) => MOD\[b\]\)/.test(mdSrc) && /from "\.\/words\.js"/.test(mdSrc) && !/PACT_NAME/.test(mdSrc),
-    (mdSrc.match(/MODE_NAME[^\n]*/) || [])[0],
+    "LEVEL SELECT (pages/level.js, v202 Task 3.3) keeps the modifier names render-side (words.js MOD by MOD_BITS) and never touches core PACT_NAME; neither does menudraw",
+    /ENTRIES = Object\.freeze\(\[\.\.\.MOD_BITS\.map\(\(b\) => MOD\[b\]\), TIME_TRIAL\]\)/.test(lvSrc) && /from "\.\.\/words\.js"/.test(lvSrc) && !/PACT_NAME/.test(lvSrc) && !/PACT_NAME/.test(mdSrc),
+    (lvSrc.match(/ENTRIES = [^\n]*/) || [])[0],
   );
   const pactSrc = readFileSync("src/core/pact.js", "utf8");
   check(

@@ -13,6 +13,7 @@ import { overlayBox, pauseHit, touchLay } from "../src/render/scenes.js";
 import { controlsGeo, controlsHit, dims, drawShell, isShellScreen, loadControlsArt, shellMode } from "../src/render/shellview.js";
 import * as md from "../src/render/menudraw.js";
 import * as menuPage from "../src/render/pages/menu.js";
+import * as levelPage from "../src/render/pages/level.js";
 import { geoFor, geomOf, hitPage } from "../src/render/controlsgeo.js";
 import { createGame } from "../src/main.js";
 import "../src/core/board3.js"; // an ordinary run deals gen 3; with the seam empty the start holds
@@ -243,14 +244,16 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
      level mark dropped, a help line broken): its strings leave the 600x520 comparison and are held below on their own. Fix round 1 (review item 3):
      the strings drawn inside the card's rect are exactly the plan's (a dropped quiet line is a plan decision the check sees), each inside the card
      and the box, whole, and the facts always there */
-  const cardOut = { s: [] };
+  /* v202 Task 3.3: LEVEL SELECT's card is the same card in the card's column a narrower window narrows (pages/level.js): held the same way */
+  const cardOut = { s: [] }, cardOutL = { s: [] };
   const shot = (nm, box, cur) => {
     const a = mkApp(SCREEN[nm]); if (cur != null) a.cursor = cur; const R = rec(); drawShell(R.c, a, { state: "PLAY", time: 1 }, box, "2d", () => [], () => 0, () => ({}));
-    if (nm !== "MENU" || !menuPage._dbg.last.P.card) return R.texts;
-    const C = menuPage._dbg.last.P.card.texts.map((t) => t.s), left = R.texts.slice(), K = menuPage._dbg.last.G.card, Wb = box.width, Hb = box.height;
+    const pg = nm === "MENU" ? menuPage : nm === "LEVEL" ? levelPage : null;
+    if (!pg || !pg._dbg.last.P.card) return R.texts;
+    const C = pg._dbg.last.P.card.texts.map((t) => t.s), left = R.texts.slice(), K = nm === "MENU" ? pg._dbg.last.G.card : pg._dbg.last.G.pane, Wb = box.width, Hb = box.height, out0 = nm === "MENU" ? cardOut : cardOutL;
     const inR = (q, r) => q.x >= r.x - 0.5 && q.x + q.w <= r.x + r.w + 0.5 && q.y >= r.y - 0.5 && q.y <= r.y + r.h + 0.5;
     const inCard = R.texts.filter((q) => inR(q, K)), mine = R.texts.filter((q) => C.includes(q.s));
-    cardOut.s.push({ box: Wb + "x" + Hb, cur, card: C, drawn: R.texts.map((q) => q.s), inCard: [...new Set(inCard.map((q) => q.s))].sort(), plan: [...new Set(C)].sort(),
+    out0.s.push({ box: Wb + "x" + Hb, cur, card: C, drawn: R.texts.map((q) => q.s), inCard: [...new Set(inCard.map((q) => q.s))].sort(), plan: [...new Set(C)].sort(),
       out: mine.filter((q) => !inR(q, K) || !inR(q, { x: 0, y: 0, w: Wb, h: Hb })).map((q) => q.s) });
     for (const s of C) { const i = left.findIndex((q) => q.s === s); if (i >= 0) left.splice(i, 1); }
     return left;
@@ -261,8 +264,11 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
      floored desk would scale under TOUCH_U), whose tiles carry the phone's teasers and the build tag, so the tablets' MENU (the desk, its foot) is held
      to the 1024x768 tablet's words by " · " token, order-free (an ellipsis still changes a token), and the compact one prints every row whole */
   const exact = (T) => T.map((q) => q.s).join("|"), words = (T) => T.flatMap((q) => q.s.split(" · ")).sort().join("|");
+  /* LEVEL SELECT (v202 Task 3.3): its help sentence may break once onto two lines where the columns gave way, so it is held word for word, in
+     order (an elided or dropped word still fails) */
+  const stream = (T) => T.flatMap((q) => q.s.split(" ")).join(" ");
   for (const lay of ["d", "l"]) each((nm, cur) => { base[lay + nm + cur] = shot(nm, boxOf({ w: 600, h: 520, s: 1 }, lay), cur); });
-  each((nm, cur) => { if (nm === "MENU") base["lDesk" + cur] = shot(nm, boxOf(shellGeo(1024, 768, 600, 520, "l"), "l"), cur); });
+  each((nm, cur) => { if (nm === "MENU" || nm === "LEVEL") base["lDesk" + nm + cur] = shot(nm, boxOf(shellGeo(1024, 768, 600, 520, "l"), "l"), cur); }); // LEVEL SELECT too (v202 Task 3.3): a 600x520 touch box is its compact arrangement (no card, the BACK key), the tablets its desk
   {
     const bad = [];
     each((nm, cur) => {
@@ -275,29 +281,34 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
   for (const [lay, W, H] of [["d", 600, 520], ["d", 1366, 768], ["d", 1920, 1080], ["d", 3840, 2160], ["l", 600, 520], ["l", 1024, 768], ["l", 1180, 820], ["l", 1194, 834], ["l", 1366, 1024]]) {
     const g = shellGeo(W, H, 600, 520, lay), box = boxOf(g, lay), touch = lay !== "d", L = md.layout(g.w, g.h, g.logo), tg = `${lay} ${W}x${H} box ${g.w}x${g.h}`;
     const out = [], same = [], tab = lay === "l" && W > 600;
-    cardOut.s.length = 0;
+    cardOut.s.length = 0; cardOutL.s.length = 0;
     each((nm, cur) => {
-      const T = shot(nm, box, cur), cmp = tab && nm === "MENU" ? words : exact;
+      const T = shot(nm, box, cur), cmp = tab && nm === "MENU" ? words : nm === "LEVEL" ? stream : exact, desk = tab && (nm === "MENU" || nm === "LEVEL");
       if (T.some((q) => q.x < -0.5 || q.x + q.w > g.w + 0.5 || q.y < 0 || q.y > g.h)) out.push(nm + cur);
-      if (cmp(T) !== cmp(base[(tab && nm === "MENU" ? "lDesk" : lay + nm) + cur])) same.push(nm + cur);
+      if (cmp(T) !== cmp(base[desk ? "lDesk" + nm + cur : lay + nm + cur])) same.push(nm + cur);
     });
     check(`every page's text sits inside the box (${tg})`, out.length === 0, out.join());
     check(`every page prints exactly its 600x520 strings, in order${tab ? " (MENU: the 1024x768 tablet's words by token)" : ""}: nothing elided (${tg})`, same.length === 0, same.join());
     const cbad = cardOut.s.filter((q) => q.card.some((t) => /…/.test(t)) || !q.card.every((t) => q.drawn.includes(t)) || J(q.inCard) !== J(q.plan) || q.out.length || !["JUNGLE", "×2", "BOOSTER", "LIVES", "FUSE", "2.5s", "SCORE"].every((w) => q.card.includes(w)));
     const compact = lay === "l" && W === 600; // MENU's compact arrangement: no card slot, PLAY's tag carries the run
     check(`MENU's card (${tg}): ${compact ? "none (compact)" : "drawn in every MENU frame; the strings inside its rect are exactly its plan's, each inside the card and the box, whole; the world, WALKER's ×2, the floor tile and LIVES / FUSE / SCORE"}`, compact ? cardOut.s.length === 0 : cardOut.s.length === ITEMS.length && cbad.length === 0, JSON.stringify([cardOut.s.length, cbad.slice(0, 1)]));
-    cardOut.s.length = 0;
+    const lbad = cardOutL.s.filter((q) => q.card.some((t) => /…/.test(t)) || !q.card.every((t) => q.drawn.includes(t)) || J(q.inCard) !== J(q.plan) || q.out.length || !["JUNGLE", "×2", "BOOSTER", "LIVES", "FUSE", "2.5s", "SCORE"].every((w) => q.card.includes(w)));
+    check(`LEVEL SELECT's card (${tg}): ${compact ? "none (compact)" : "drawn; the strings inside its rect are exactly its plan's, each inside the card and the box, whole; the world, WALKER's ×2, the floor tile and LIVES / FUSE / SCORE"}`, compact ? cardOutL.s.length === 0 : cardOutL.s.length === 1 && lbad.length === 0, JSON.stringify([cardOutL.s.length, lbad.slice(0, 1)]));
+    cardOut.s.length = 0; cardOutL.s.length = 0;
     const inBox = (S) => S.x >= 0 && S.y >= 0 && S.x + S.w <= g.w && S.y + S.h <= g.h && S.f === 1;
     const inPlate = (r, S) => r.x >= S.x - 1 && r.y >= S.y && r.x + r.w <= S.x + S.w + 1.01 && r.y + r.h <= S.y + S.h + 0.01;
     const ctr = (r) => [r.x + r.w / 2, r.y + r.h / 2];
     const mg = md.menuGeom(L, 7, touch); // the MENU page's geometry (v202 Task 3.1): the plate and its ring inside the box, every row's centre taps to it
     check(`MENU: inside the box, every row taps to itself (${tg})`, mg.plate.y - mg.T >= 0 && mg.plate.y + mg.plate.h + mg.T <= g.h && mg.plate.x - mg.T >= 0 && mg.plate.x + mg.plate.w + mg.T <= g.w && ITEMS.every((l, i) => md.menuHit(mg.rows[l].x + mg.rows[l].w / 2, mg.rows[l].y + mg.rows[l].h / 2, L, 7, touch) === i));
-    for (const U of [false, true]) {
-      const G = md.levelGeom(L, U, touch), rects = [...G.room, G.pane, G.heatCap, ...G.heat, G.paceCap, ...G.pace, ...(U ? [G.modeCap, ...G.mode, G.help] : []), G.start, ...Object.values(G.rows).filter(Boolean)]; // + the focus rows the mark is drawn at, keyed by row name (v202 Task 2.3)
-      const hits = [...G.room.map((r, i) => [r, i < G.cap ? "room" : "lock", i]), ...G.heat.map((r, i) => [r, "heat", i]), ...G.pace.map((r, i) => [r, "pace", i]), ...G.mode.map((r, i) => [r, "mode", i]), [G.start, "start"]];
-      check(`LEVEL SELECT${U ? " (modes open)" : ""}: plate in the box, every rect in it, each taps to itself, card inert, off-plate backs (${tg})`,
-        inBox(G.S) && rects.every((r) => inPlate(r, G.S)) && hits.every(([r, k, i]) => { const h = md.levelHit(...ctr(r), L, U, touch); return h.k === k && (i == null || h.i === i); }) &&
-          md.levelHit(...ctr(G.pane), L, U, touch).k === "none" && md.levelHit(4, 4, L, U, touch).k === "back");
+    for (const U of [false, true]) for (const open of U ? [false, true] : [false]) {
+      /* LEVEL SELECT on the world kit (v202 Task 3.3, pages/level.js): its plate and ring in the box, every rect in the plate, each target taps to
+         itself, the card (or, in compact, the head) inert, off the plate backs out */
+      const G = md.levelGeom(L, U, touch, open), S = G.S, over = open && G.lay === "compact", rects = [...G.room, ...G.heat, ...G.pace, ...(G.pane ? [G.pane] : []), ...(U ? [G.mods, G.list] : []), ...G.mode, G.start, ...(G.back ? [G.back] : []), ...Object.values(G.rows).filter(Boolean)];
+      const hits = [...(over ? [] : [...G.room.map((r, i) => [r, i < G.cap ? "room" : "lock", i]), ...G.heat.map((r, i) => [r, "heat", i]), ...G.pace.map((r, i) => [r, "pace", i])]), ...G.mode.map((r, i) => [r, "mode", i]), ...(U ? [[G.mods, "mods"]] : []), [G.start, "start"], ...(G.back ? [[G.back, "back"]] : [])];
+      const inert = G.pane && !(open && G.lay === "phone") ? ctr(G.pane) : [S.x + S.w - 4, S.y + 4];
+      check(`LEVEL SELECT${U ? " (modifiers offered)" : ""}${open ? ", the list open" : ""} (${G.lay}): plate and ring in the box, every rect in it, each taps to itself, ${G.pane ? "the card" : "the head"} inert, off-plate backs (${tg})`,
+        S.x - G.T >= 0 && S.y - G.T >= 0 && S.x + S.w + G.T <= g.w && S.y + S.h + G.T <= g.h && rects.every((r) => inPlate(r, S)) && hits.every(([r, k, i]) => { const h = md.levelHit(...ctr(r), L, U, touch, open); return h.k === k && (i == null || h.i === i); }) &&
+          md.levelHit(...inert, L, U, touch, open).k === "none" && md.levelHit(1, 1, L, U, touch, open).k === "back");
     }
     const sc = md.scoresGeom(L, touch);
     check(`HIGH SCORES: tabs in the plate, each taps to itself (${tg})`, inBox(sc.S) && sc.tabs.every((r, i) => inPlate(r, sc.S) && md.scoresHit(...ctr(r), L, touch) === i));

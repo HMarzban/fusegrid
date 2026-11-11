@@ -149,7 +149,7 @@ the full width of the stage; a MENU row owns its key and half of each gap round 
 and off the plate are no row);
 off the rows a root list (MENU, PAUSE list) does nothing; on a page
 (SETTINGS, GRAPHICS, GUIDE, LEVEL SELECT, SCORES) a miss ON the plate is inert
-(hit -2) and only a tap OFF the plate backs out (-1). `guideHit`,
+(hit -2) and only a tap OFF the plate backs out (-1; LEVEL SELECT's phone and compact plates also carry a BACK key). `guideHit`,
 `levelHit` / `levelGeom`, `scoresHit` and `recTabHit` share the geometry their pages
 draw. Hints follow `data-lay` (keys vs taps; LEVEL SELECT's touch foot is
 `LEVEL_TAP`). SHELL BOX (owner GO 2026-10-19, shell v181, touch portrait; every
@@ -174,8 +174,7 @@ shellview `dims` hands on every touch layout, none on a keyboard one: fit.js wri
 stand-in and the stage scale it applied on `#c`, so paint and tap read one number and no frame measures a rect; MENU's touch floors, phone
 column and compact tiles are laid out in CSS px); `lg` = the centred board's 0.27 logo
 line in box units,
-`tall` / `narrow` (< 560) flags; narrow re-flows: `levelNarrow` (card under
-the grid, DIFFICULTY / GAME SPEED rows, digit-free touch MODIFIERS chips, 2-line help), HOW
+`tall` / `narrow` (< 560) flags; narrow re-flows: HOW
 TO stacked rules, ENEMIES 2 cols, MEDALS 1 col, SCORES tab width; STATS is centred (not floor-pinned) in a tall box. LEVEL / HIGH SCORES chip
 taps are ONE call through the cued key path (`app.move` with a delta on the row the tap
 focused, `app.adjustPace`), so a change plays one `uiMove` and the chip already set is
@@ -188,16 +187,7 @@ left, see it on the right. Every plate HUGS its content through `pageBox`
 (band keyboard 73..492 / touch 8..512; pitches are caps, scale only in the
 iso 608x352 guard; `shellBox` is gone, no page divides its band by a row
 count). Pitches: list 26 keyboard / 52 touch, SETTINGS 27 keyboard (37 touch, 34 where 37 does not fit: the ten rows fit 37 on the 600x520 board box, the twelve take 34), GRAPHICS 28, hero
-40 / 70. LEVEL SELECT (`levelGeom(L, unlocked, touch)` = draw + tap): a 4x2
-grid of room tiles (biome schematic, finale pip, ✓ when a time is saved at
-this heat/pace/modes; 6–8 dim + locked until the first CLEAR, a locked tap
-returns `{k:"lock"}` and only flashes CLEAR LEVEL 5 TO OPEN, never sets
-`app.level`; `→` from level 5 does the same) beside a ROOM CARD pane (world name, schematic, YOU'LL MEET from
-`heatRoster` with FOES names ×n, BEST time (NO TIME YET only once TIME is open, `d.open`; never on DAILY) via the `getCab`
-getter, `LIVES · FUSE · SCORE ×n` from `heatProfile`/`applyPact`, pulsing on a
-heat change); then DIFFICULTY | GAME SPEED segments, MODIFIERS (ONE LIFE,
-NO FLOOR ITEMS, FEWER ITEMS, SHRINK + TIME TRIAL; a name too wide for its chip
-breaks onto two lines; help says what each does), and a START hero. No start-on-miss: a tap starts only on
+40 / 70. LEVEL SELECT: see the LEVEL SELECT page below (UI upgrade v202 Task 3.3, on the world kit). No start-on-miss: a tap starts only on
 START (keys and controller: LEVEL SELECT rows, below). MENU: see MENU page below; ↑↓ stays the linear walk. One vocabulary: MODIFIERS
 (never MODES or PACT) on screens and in copy; pact.js and `nb.pact.v1` keep their
 names. Hooks never lie: a score teaser reads only played runs
@@ -209,14 +199,13 @@ START; `→` past the last open level only flashes CLEAR LEVEL 5 TO OPEN (deny, 
 the BOMB alias / SOUTH start the run, except on MODIFIERS: there they open the inline list (`app.modOpen`, no
 SCREEN; `modeCur` its cursor, always from ONE LIFE: `↑↓` pick, confirm toggles through the entry's digit with a
 `uiTog`; Esc / Backspace / EAST close it first, then leave for MENU). A controller's START always starts. `[ ]`, the shoulders, `1–5`
-and TRIGGER / NORTH (T14) work from any row and move no focus. A tap focuses its row (`levelFocus`) and acts as
-before; only START starts; off the plate backs out (an open list closes first). Tap mode (`tapMode`) shows no
-focus: START lit, no ring; otherwise the focused row gets a TEXT ring (`levelGeom(...).rows`, keyed by row
-name, `levelMark`) or START its band, the foot is `levelFoot`, and caps name only `[ ]` / `1–5`. Read-only pages (HOW TO / POWER-UPS / ENEMIES /
-FLOOR / MEDALS) back out on any tap (MEDALS: off its tabs); STATS taps its foot labels. PLAY's tag names the
-world (`FACTORY · EXPERT DIFFICULTY · FAST SPEED`), the same words as START,
-stepped down to the slot by `setupVals` (a modifier count, then only what differs
-from a default run). `SCREEN.STATS = 12` is **appended** (the `SCREEN` enum's own rule in
+and TRIGGER / NORTH (T14) work from any row and move no focus (no cap names them: the approved frame has none). A tap focuses its row (`levelFocus`) and acts as
+before; only START starts; the MODIFIERS door opens the list (and closes it, open); off the plate or BACK backs out (an open list closes first). Tap mode
+(Task 3.3, ruling 4: a touch layout whose `app.lastDev` is `touch`; any key or controller press leaves it, a tap re-enters it) focuses START as the
+page's one action; otherwise the focused row shows (see the page below), the foot is `levelFoot` (label first, keycap last). Read-only pages (HOW TO / POWER-UPS / ENEMIES /
+FLOOR / MEDALS) back out on any tap (MEDALS: off its tabs); STATS taps its foot labels. PLAY's and START's
+tags name what differs from a default run, each setting named (`tagFor`: `EXPERT DIFFICULTY · FAST SPEED`), then a modifier
+count, stepped down to the slot; PAUSE's kicker steps down through menudraw `setupVals`. `SCREEN.STATS = 12` is **appended** (the `SCREEN` enum's own rule in
 `menuapp.js`: appended, never inserted). `SCREEN.TROPHIES = 13` (the MEDALS page) is
 appended too: RECORDS' third tab (STATS' `T` or a tap on its `T MEDALS` label is the same
 tab step), backs out to MENU on RECORDS, never a MENU row. `SCREEN.GRAPHICS = 14` is appended too: opened by the
@@ -286,14 +275,39 @@ same room key (Task 3.2; was three feet as wide as the box); feet wider in all (
 1.5 there leaves room for under one foot), the cache <= 23.99 MB of 24 MiB. A zero or non-finite box draws
 nothing (`menuHit` -1). `glyph` (chev, ext, up, dn, flag) is a kit part (`kit/paint.js`), `canMake` the kit cache's one copy (the logo painter's too). Page plumbing, for every page task: a page module exports one `*Geom` (rects by name, box units; `G.d` design px)
 for draw and hit, a painter fed names and values by shellview (never indices), and its hit; menudraw keeps the entry names and delegates.
-Static parts are `kit/cache.js` layers keyed by content (`roomLayer` shared by every page of a box; its dpr gives way so the page's layers and
-a 3 MiB logo reserve fit `BUDGET`), made at once so a cursor move never misses, `touch()`ed on a steady frame (`cache.touch(key)`: a held layer
-goes LRU-recent, so a stale one is freed first); live on top: focus, ring, the logo's spark. `shellview.shellCovers(screen)` (MENU today; each
+Static parts are `kit/cache.js` layers keyed by content (`roomLayer` shared by every page of a box, except LEVEL SELECT, whose room layer also
+holds its plate, so MENU and LEVEL SELECT never share one and each switch refills; its dpr gives way so the page's layers and a 3 MiB logo reserve
+(LEVEL SELECT: 1 MiB) fit `BUDGET`), made at once so a cursor move never misses, `touch()`ed on a steady frame (`cache.touch(key)`: a held layer
+goes LRU-recent, so a stale one is freed first); live on top: focus, ring, the logo's spark. `shellview.shellCovers(screen)` (MENU, LEVEL SELECT; each
 page task adds its screen) makes main pass `{covered: true}` to the renderer: no look rasters a board a page covers. `frameloop` frees the kit's
 layers (`release`, handed in by main) after `KIT_FREE` 10 s of GAME PLAY on a PLAY-only clock and on `pagehide`; the next shell frame refills.
 Under the probe a page records `begin(page, {w, h, dpr, el})`, its rects (touch, set, focus, fill), texts (role, cap height, colour) and
 squint pairs outside any layer paint; its `tools/ui/lib/screens.mjs` row exempts what it has none of (MENU: chosen, locked). With no canvas
 source (Node) it paints straight onto the target over a flat fill; a context with no clip or rect (the headless renderer's) gets the plan only.
+
+LEVEL SELECT page (UI upgrade v202 Task 3.3, `src/render/pages/level.js`; the round 7 S7-menu d-03 / p-03 frames, refmap `level`). Opaque on the
+world kit like MENU (`shellCovers`): the room the next run starts in (the selected level's world) and its tokens, so the page changes world as LEVEL
+changes. One path: rows LEVEL (8 level keys in one course: chosen lit, the rest wells, a flag on 5 and 8, 6-8 wall keys with a lock until the first
+CLEAR; a locked tap or `→` shows a CLEAR LEVEL 5 TO OPEN plaque under the key for 1.8 s), DIFFICULTY and GAME SPEED (banks), MODIFIERS (one door
+row once offered; its teaser names what is on, a controller's TRIGGER entry and state with the list shut), then the one next-run card
+(`pages/card.js` with BEST: `✓ BEST t` for a saved time, NO TIME YET only once TIME is open, else the level's mark; ALL NINE · ONE OF EACH where the
+roster is every foe once, on both pages' cards) and the START hero (its tag `tagFor`, then counts, else DEFAULT RULES; dropped where it cannot fit).
+The inline list is five toggle keys (on lit, off well) in a region reserved under MODIFIERS (desk), in the card's place (phone) or over the
+LEVEL..GAME SPEED rows (compact); opening it moves nothing. Focus: a row its band and bare bomb, no ring (the d-03 frame); START, the phone /
+compact door and a list entry are keys (bomb + 3 px ring). Desk help line: the level's sentence, a list entry's, a controller's TRIGGER / NORTH
+how-to (`words.js` `LEVEL_WORDS`). Arrangements as MENU's: desk (plate 1110, list column 640, rows 64 / pitch 74, keys 48 x 44, bank cells 112 x
+36, START 74, card slot 360; 125 %: 1220, 700, 58, 50, 140, 84, 400; centred; a narrower window gives way first (the card's column to 360, its slot
+then 380, the column gap, the side pads, the list column to 572 / 680), a shorter one the gap over the foot then the MENU kicker, and only then
+does the page scale, so 1366 x 657, 1280 x 720 and 1024 x 768 keep the text floors; a touch box floors every target at 44 CSS px while u x css
+holds 0.8), phone (the p-03 column in CSS px: BACK + title, labels over their controls, 4 x 2 keys 46, banks 50, door 52, the card the height
+left, a reserved cue line, START 66) and compact (any other touch box: the phone's grammar across the box, no card; where the groups do not fit
+it PAGES them, whole groups a page, MODIFIERS its own group, the page the one holding the focused row (START: the last), page keys beside START
+that focus the first row of the page before or after, never under 44 CSS px). Phone and compact have no foot: a controller gets a cue line
+(`footItems`, stepping down by whole items). `levelGeom(F, {unlocked, open, row})` / `levelHit` take the
+list's state from `app.modOpen` and the page from the focused row (pointer.js passes both with the box's lg and css). Layers (kit cache): the room layer holds the room look AND the plate
+at the room's dpr (the bed is flat rects), the rampart's four strips, the head, the rows at rest, START at rest, the card, the LEVEL row's focus, the
+list and the desk feet are full-dpr layers of their own rects, all made at once; the room's dpr gives way to them and a 1 MiB reserve (>= 1.5 at
+1366 x 768 @2, >= 1.41 at 125 %). Live: the other rows' focus, the door's teaser, the help line, START's tag and keycap, the lock plaque.
 
 The sim ticks only while the shell is GAME. PAUSE/WIN/LOSE are `world.state`,
 not shell screens. Do not add them as `SCREEN` values.
@@ -1106,7 +1120,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   (`src/render/kit/probe.js`, handed in by main; only `shots.mjs` switches the probe on).
   `gates.mjs <dir>` judges the latest run only: no probe data is `skipped`, never a pass;
   `--strict` fails skips; `tools/ui/lib/screens.mjs` lists each screen's required gates
-  (default-deny, a page cannot exempt itself; MENU is the first instrumented screen, Task 3.1); a probe fault, a page error or a missing
+  (default-deny, a page cannot exempt itself; MENU is the first instrumented screen, Task 3.1; LEVEL SELECT the second, Task 3.3, exempting ring and locked with reasons); a probe fault, a page error or a missing
   capture fails. `compare.mjs` (`refmap.json`; MENU's frames are the L7 ones, logo B in the header), `sheet.html`.
 - Blender is driven through the blender-mcp add-on socket `127.0.0.1:9876`
   with a small Python client (`.superpowers/sdd/2026-10-11-bible/blender/bl.py`,

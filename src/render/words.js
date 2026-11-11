@@ -72,4 +72,15 @@ export const MENU_WORDS = Object.freeze({
 export const CARD_WORDS = Object.freeze({
   NEXT: "NEXT RUN", FIRST: "YOUR FIRST LEVEL", FINALE: "FINALE", LAST: "THE LAST FINALE", MEET: "YOU'LL MEET", ENEMIES: "ENEMIES",
   TILE: "FLOOR TILE", LIVES: "LIVES", FUSE: "FUSE", SCORE: "SCORE",
+  ALL_EACH: "ALL NINE · ONE OF EACH", // YOU'LL MEET where the roster is every foe kind once (the approved CROWN mock, NORMAL only)
+});
+/* LEVEL SELECT (v202 Task 3.3, the round 7 S7-menu d-03 / p-03 frames): the foot's verbs (label first, keycap last), the MODIFIERS door's teaser
+   words, the lock tip, the card's BEST mark, the touch foot and the desk's help line (one sentence, sentence case; units unspaced). */
+const MOD_SENT = Object.freeze(["One life for the whole run.", "No power-ups wait on the floor.", "Fewer power-ups hide in bricks.", "Walls close in from 25s.", "A timer and a best time for each level."]);
+export const LEVEL_WORDS = Object.freeze({
+  ROW: "ROW", CHANGE: "CHANGE", PICK: "PICK", TOGGLE: "TOGGLE", OPEN: "OPEN", BACK: "BACK", ON: "ON", OFF: "OFF", NONE: "NONE",
+  LOCKED: "CLEAR LEVEL 5 TO OPEN", BEST: "BEST", NO_TIME: "NO TIME YET",
+  TAP: "TAP START TO PLAY · TAP OUTSIDE TO GO BACK", TAP_LIST: "TAP START TO PLAY · TAP OUTSIDE TO " + LABEL.CLOSE,
+  MOD_HELP: MOD_SENT, PAD_HELP: "TRIGGERS pick a modifier, NORTH toggles it.", // a controller's shortcut: TRIGGERS walk the list shut, NORTH toggles // by list entry: the four modifier bits in MOD_BITS order, then TIME TRIAL
+  help: (n, open) => "Level " + n + " of 8. " + (open ? "Levels 5 and 8 end in a finale." : "Clear level 5 to open 6 to 8."),
 });

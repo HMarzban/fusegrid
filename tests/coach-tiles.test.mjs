@@ -428,43 +428,29 @@ function rec() {
   });
   return { c, log, texts };
 }
+/* v202 Task 3.3: LEVEL SELECT's card is the one next-run card (pages/card.js): the floor tile cell, FLOOR TILE, the tile's name and its one help
+   string at this heat, drawn whole on one or two lines inside the card (was the ROOM CARD's FLOOR line; the heat-line pulse used shadowBlur, banned
+   on the kit, and the schematic is gone: no schem call). Every board since v198 is a tile board, so the card always names the tile, as MENU's. */
 const LAYOUTS = [["keyboard", 600, 520, false], ["touch", 600, 520, true], ["phone 393 box", 400, 760, true], ["phone wide box", 420, 760, true]];
-const drawn = (W, H, T, rm, h, tiles, extra) => { const r = rec(); const L = md.layout(W, H, 140); md.drawLevelSelect(r.c, rm, L, 1.5, h, 0, true, 0, false, T, { kind: "2d", best: [], ...(tiles === undefined ? {} : { tiles }), ...extra }); return { ...r, L, G: md.levelGeom(L, true, T) }; };
+const drawn = (W, H, T, rm, h, extra) => { const r = rec(); const L = md.layout(W, H, 140); md.drawLevelSelect(r.c, rm, L, 1.5, h, 0, true, 0, false, T, { best: [], ...extra }); return { ...r, L, G: md.levelGeom(L, true, T) }; };
 for (const [name, W, H, T] of LAYOUTS) {
   for (const rm of [1, 2, 3, 4, 5, 6, 7, 8]) for (const h of [0, 1, 2]) {
-    const { texts, G } = drawn(W, H, T, rm, h, true), P = G.pane, want = md.floorLine(rm, h);
+    const { texts, G } = drawn(W, H, T, rm, h), P = G.pane, u = G.u;
+    if (!P) { check(`${name} room ${rm} heat ${h}: the compact arrangement (a short touch box) has no card; FLOOR's guide page and the tile tip teach the tile`, G.lay === "compact"); continue; }
     const kind = { 1: "BLOOM", 2: "GLIDE", 3: "BELT", 4: "STREAM", 5: "PLATE", 6: "QUICK", 7: "PORTAL", 8: "GATE" }[rm];
-    check(`${name} room ${rm} heat ${h}: the line is its name and its one help string`, want === "FLOOR " + TILE_NAME[kind] + " · " + TILE_HELP[kind][h], want);
-    const fl = texts.filter((x) => x.y >= P.y + 30 && x.y <= P.y + P.h && x.x === P.x + 10 && want.includes(x.s) && !/^(LIVES|✓|NO TIME)/.test(x.s) && x.s !== "");
-    const joined = fl.map((x) => x.s).join(" · ");
-    check(`${name} room ${rm} heat ${h}: drawn whole, never clipped`, joined === want && !fl.some((x) => x.s.includes("…")), joined);
-    if (fl.length > 1) check(`${name} room ${rm} heat ${h}: two rows break between the name and its whole help string`, fl.length === 2 && fl[0].s === "FLOOR " + TILE_NAME[kind] && fl[1].s === TILE_HELP[kind][h], joined);
-    for (const x of fl) {
-      const px = +/(\d+)px/.exec(x.font)[1];
-      check(`${name} room ${rm} heat ${h}: inside the pane`, x.x + x.s.length * px * 0.6 <= P.x + P.w - 8, x.s);
-    }
-    const heatY = texts.find((x) => x.s.startsWith("LIVES ")).y;
-    const fTop = Math.min(...fl.map((x) => x.y));
-    check(`${name} room ${rm} heat ${h}: sits above the heat line`, Math.max(...fl.map((x) => x.y)) <= heatY - 10);
-    const others = texts.filter((x) => x.y > P.y + 30 && x.y < fTop && x.x >= P.x && x.x < P.x + P.w);
-    check(`${name} room ${rm} heat ${h}: nothing crowds it from above`, others.every((x) => x.y <= fTop - 8), others.filter((x) => x.y > fTop - 8).map((x) => x.s + "@" + x.y).join());
-    check(`${name} room ${rm} heat ${h}: the MODES / START rows are untouched (one geometry)`, JSON.stringify(G) === JSON.stringify(md.levelGeom(md.layout(W, H, 140), true, T)));
+    const inPane = (x) => x.x >= P.x - 0.01 && x.x <= P.x + P.w + 0.01 && x.y >= P.y && x.y <= P.y + P.h;
+    const tx = texts.map((x) => ({ ...x, x: x.x * u, y: x.y * u })).filter(inPane), help = TILE_HELP[kind][h];
+    check(`${name} room ${rm} heat ${h}: the card names the floor tile (FLOOR TILE, ${TILE_NAME[kind]})`, tx.some((x) => x.s === "FLOOR TILE") && tx.some((x) => x.s === TILE_NAME[kind]), tx.map((x) => x.s).join("|"));
+    const rx = P.x + P.w - (G.d.dev === "p" ? 14 : 22) * u, hl = tx.filter((x) => help.includes(x.s) && Math.abs(x.x - rx) < 0.01), joined = hl.map((x) => x.s).join(" ");
+    check(`${name} room ${rm} heat ${h}: its one help string drawn whole on one or two lines, never clipped`, joined === help && hl.length <= 2 && !tx.some((x) => x.s.includes("…")), joined + " / " + help);
+    check(`${name} room ${rm} heat ${h}: the help inside the card`, hl.every((x) => x.x <= P.x + P.w + 0.01 && x.x - x.s.length * +/(\d+(?:\.\d+)?)px/.exec(x.font)[1] * 0.6 * u >= P.x - 1), hl.map((x) => x.s + "@" + x.x).join());
+    check(`${name} room ${rm} heat ${h}: one geometry (the card's slot does not move with the tile)`, JSON.stringify(G) === JSON.stringify(md.levelGeom(md.layout(W, H, 140), true, T)));
   }
-  for (const rm of [1, 2, 3, 4, 5, 6, 7, 8]) {
-    const off = drawn(W, H, T, rm, 0, false), none = drawn(W, H, T, rm, 0, undefined);
-    check(`${name} room ${rm}: tiles off draws no FLOOR line`, !off.texts.some((x) => /^FLOOR /.test(x.s)));
-    check(`${name} room ${rm}: tiles off equals the old call (no field)`, off.log.join() === none.log.join());
-  }
-  const lock = drawn(W, H, T, 2, 1, true, { lockR: 7, lockT: 1.4 });
-  check(`${name}: the locked peek card shows no FLOOR line`, !lock.texts.some((x) => x.s.startsWith("FLOOR ")));
+  const lock = drawn(W, H, T, 2, 1, { lockR: 7, lockT: 1.4 });
+  if (lock.G.pane) check(`${name}: a locked level's refusal (CLEAR LEVEL 5 TO OPEN) leaves the card on the selected level's tile`, lock.texts.some((x) => x.s === TILE_NAME.GLIDE));
 }
 {
-  const pulse = drawn(600, 520, false, 3, 2, true, { heatT: 1.4 }), still = drawn(600, 520, false, 3, 2, true);
-  const hot = pulse.texts.find((x) => x.s.startsWith("FLOOR ")), cold = still.texts.find((x) => x.s.startsWith("FLOOR "));
-  check("the FLOOR line pulses on a heat change, like the heat line", hot.blur > 0 && cold.blur === 0, hot.blur);
   const help = Object.values(TILE_HELP).flat();
-  const sch = (rm) => drawn(600, 520, false, rm, 0, true).log.find((l) => l.startsWith("strokeRect(") && l.includes(",106,92)")) || "";
-  check("keyboard: the schematic keeps one size across a tile page's rooms", !!sch(3) && !!sch(4), sch(3) + " / " + sch(4));
   check("every help string stays <= 28 chars (the card's budget)", help.every((s) => s.length <= 28), Math.max(...help.map((s) => s.length)));
 }
 {

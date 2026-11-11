@@ -3,7 +3,7 @@
    d.kick (a kicker in place of NEXT RUN · LEVEL n) and d.best (a word in place of the level's mark, LEVEL SELECT's BEST) where a page wants them.
    What it shows is true of every run it starts: the world, the lane (kit room.js: the representative start corner, MAKO on his spawn FLOOR cell, the
    room's first foe and its floor tile; never the dealt board, which every ordinary run deals anew), every roster foe (heatRoster), ×n beside a foe
-   met more than once (the mock: a lone foe has no count), the floor tile (core feat HOME / TILE_NAME / TILE_HELP at the run's heat), LIVES / FUSE /
+   met more than once (the mock: a lone foe has no count; a roster of every foe kind once reads ALL NINE · ONE OF EACH, the approved CROWN copy), the floor tile (core feat HOME / TILE_NAME / TILE_HELP at the run's heat), LIVES / FUSE /
    SCORE (heatProfile through applyPact), and on a finale level the kit flag glyph with FINALE (appendix 7.2 mark()).
    cardPlan(c, box, d, dev) lays it out in box (design px; dev "d" desk, "p" phone) and measures through c: desk is the mock's stack (kicker, the world in
    display type and its finale flag, the lane 14 cells across, YOU'LL MEET with the names, the foe cells, the floor tile with its help, three stat cells
@@ -46,7 +46,7 @@ export function cardFacts(d) {
   const level = d.level | 0 || 1, h = clampHeat(d.heat), b = biomeOf(level), p = applyPact(heatProfile(h), d.pact | 0), k = HOME[b.name], fin = isFinale(level), roster = rosterOf(level, h);
   return {level, heat: h, world: b.name, fin, mark: level === 1 ? CW.FIRST : level >= 8 ? CW.LAST : "", roster,
     names: roster.map((e) => (FOES.find((f) => f.t === e.t) || {name: e.t}).name), tile: {kind: k, name: TILE_NAME[k] || "", help: (TILE_HELP[k] || [])[h] || ""},
-    lives: p.lives, fuse: p.fuse + "s", score: "×" + (h + 1)};
+    each: roster.length === FOES.length && roster.every((e) => e.n === 1), lives: p.lives, fuse: p.fuse + "s", score: "×" + (h + 1)};
 }
 
 const W = (c, f, s) => measure(c, f, s);
@@ -128,7 +128,7 @@ export function cardPlan(c, box, d, dev = "d") {
     y += laneAt(y, S.rows) + S.g;
     const ml = tx(CW.MEET, x0, y + lS / 2, fS, dv.sec, CONST.t2);
     tpart(ml);
-    const nm = fit(c, fS, [F.names.join(" · "), F.roster.length + " " + CW.ENEMIES], iw - ml.w - 12)[0];
+    const nm = fit(c, fS, [F.each ? CW.ALL_EACH : "", F.names.join(" · "), F.roster.length + " " + CW.ENEMIES], iw - ml.w - 12)[0];
     if (nm) tpart(tx(nm, x0 + iw, y + lS / 2, fS, dv.sec, TZ, {align: "right"}));
     y += lS + 8;
     foesAt(y);

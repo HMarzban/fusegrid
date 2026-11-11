@@ -4,7 +4,7 @@
 import { ITEMS, LEVEL_ROWS, RECORD_SCREENS, SCREEN, isRecords } from "./menuapp.js";
 
 /* LEVEL SELECT: the row each levelHit kind belongs to (a locked tile is on the LEVEL row too). */
-const LEVEL_TAP_ROW = Object.freeze({ room: "LEVEL", lock: "LEVEL", heat: "DIFFICULTY", pace: "GAME SPEED", mode: "MODIFIERS", start: "START" });
+const LEVEL_TAP_ROW = Object.freeze({ room: "LEVEL", lock: "LEVEL", heat: "DIFFICULTY", pace: "GAME SPEED", mode: "MODIFIERS", mods: "MODIFIERS", start: "START" });
 
 /* pointer outside GAME = skip (INTRO) / confirm (menus) / play (ATTRACT).
    C1 single-fire: Input's fire latch listens on the SAME event (registered
@@ -68,8 +68,8 @@ export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: {
       app[menu ? "cursor" : gx ? "gfxRow" : gd ? "guideRow" : "optRow"] = row;
       app.confirm();
     } else if (app.screen === SCREEN.LEVEL || isRecords(app.screen)) {
-      /* A chip / tab tap sets it (modifiers ride their 1–5 keys); LEVEL: the tap first focuses the row it touched (levelFocus), only START starts, a locked level shows its card, the rest of the plate is inert, outside backs out (an open list closes first). */
-      const r = cv.getBoundingClientRect(), k = cv.width / (r.width || cv.width), { cw, ch } = dims(cv, kind()), x = (ev.clientX - r.left) * k, y = (ev.clientY - r.top) * k, L = menuLayout(cw, ch);
+      /* A chip / tab tap sets it (modifiers ride their 1–5 keys); LEVEL: the tap first focuses the row it touched (levelFocus), only START starts, a locked level flashes its refusal, the MODIFIERS door opens or closes the list, the rest of the plate is inert, outside or BACK backs out (an open list closes first). */
+      const r = cv.getBoundingClientRect(), k = cv.width / (r.width || cv.width), { cw, ch, lg, css } = dims(cv, kind()), x = (ev.clientX - r.left) * k, y = (ev.clientY - r.top) * k, L = menuLayout(cw, ch);
       // every chip is ONE call through the cued key path: one uiMove per change, none on the chip already set
       const p = RECORD_SCREENS.indexOf(app.screen), ti = p < 0 ? -1 : recTabHit(x, y, L, p, touchLay(cv));
       if (ti >= 0) return void app.recTab(ti - p); // a RECORDS tab: that tab, the tab row focused; recTab disarms an armed STATS, the tab shown included
@@ -80,9 +80,9 @@ export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: {
         return;
       }
       if (app.screen === SCREEN.TROPHIES) return void app.confirm(); // read-only: off a tab, any tap backs out
-      const h = levelHit(x, y, L, app.pactUnlocked, touchLay(cv)), row = LEVEL_TAP_ROW[h.k];
+      const h = levelHit(x, y, menuLayout(cw, ch, lg, css), app.pactUnlocked, touchLay(cv), app.modOpen, LEVEL_ROWS[app.levelRow | 0]), row = LEVEL_TAP_ROW[h.k], was = app.modOpen; // the page's own geometry: its box's css (the touch floors) and the list open or shut
       if (row) app.levelFocus(LEVEL_ROWS.indexOf(row), h.k === "mode" ? h.i : -1);
-      if (h.k === "room") app.move(h.i + 1 - app.level, 0); else if (h.k === "heat") app.move(h.i - app.heat, 0); else if (h.k === "pace") app.adjustPace(h.i - 1 - app.pace); else if (h.k === "mode") input.onUiKey("Digit" + (h.i + 1)); else if (h.k === "lock") { app.lockR = h.i + 1; app.lockT = app.subT; } else if (h.k === "back") app.back(); else if (h.k === "start") app.confirm();
+      if (h.k === "room") app.move(h.i + 1 - app.level, 0); else if (h.k === "heat") app.move(h.i - app.heat, 0); else if (h.k === "pace") app.adjustPace(h.i - 1 - app.pace); else if (h.k === "mode") input.onUiKey("Digit" + (h.i + 1)); else if (h.k === "mods") { if (was) app.back(); else app.confirm(); } else if (h.k === "page") app.levelFocus(LEVEL_ROWS.indexOf(h.row)); else if (h.k === "lock") { app.lockR = h.i + 1; app.lockT = app.subT; } else if (h.k === "back") app.back(); else if (h.k === "start") app.confirm();
     } else app.confirm();
   };
   for (const el of [canvas, fit && fit.sh]) if (el) {

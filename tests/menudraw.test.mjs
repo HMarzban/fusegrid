@@ -282,92 +282,65 @@ function check(name, cond, detail) {
         JSON.stringify({ p, start: start && start.y, src: src && src.label.y, move: P.foot.START.mid }),
       );
     }
+    /* LEVEL SELECT (v202 Task 3.3, pages/level.js): this recorder has no clip, so the page hands back its plan; the checks read what it would paint */
+    const lvp = await import("../src/render/pages/level.js"), J = JSON.stringify;
     {
-      const { c, texts } = rec();
-      md.drawLevelSelect(c, 3, L, 1, 1);
+      md.drawLevelSelect(rec().c, 3, L, 1, 1);
+      const P = lvp._dbg.last.P, heat = P.keys.filter((q) => q.set === "heat");
       check(
-        `level select heat chips at ${W}x${H}`,
-        ["NORMAL", "HARD", "EXPERT"].every((n) =>
-          texts.some((t) => t.s.indexOf(n) >= 0),
-        ) && texts.some((t) => t.s.indexOf("DIFFICULTY") >= 0),
-        texts.map((t) => t.s).join("|"),
+        `level select difficulty bank at ${W}x${H}`,
+        J(heat.map((q) => q.s)) === J(["NORMAL", "HARD", "EXPERT"]) && heat[1].kind === "lit" && P.rows.DIFFICULTY.label.s === "DIFFICULTY",
+        J(heat.map((q) => q.s + ":" + q.kind)),
       );
     }
     {
-      /* LOCKED (no first CLEAR): no MODES cap, no mode chip, no help line and
-         no mode rects in the shared geometry. The room card's own "NO TIME
-         YET" best-time line is not the rail. */
-      const { c, texts } = rec();
-      md.drawLevelSelect(c, 3, L, 1, 1);
-      const all = texts.map((t) => t.s);
-      const G = md.levelGeom(L, false);
+      /* LOCKED (no first CLEAR): no MODIFIERS row, door or list in the shared geometry; levels 6-8 wall keys; the help says how to open them */
+      md.drawLevelSelect(rec().c, 3, L, 1, 1);
+      const { P } = lvp._dbg.last, G = md.levelGeom(L, false);
       check(
-        `level select LOCKED draws no MODIFIERS rail at ${W}x${H}`,
-        !all.includes("MODIFIERS") && !all.includes("1–5") &&
-          !all.some((s) => /^\d (ONE LIFE|NO FLOOR|FEWER|SHRINK|TIME TRIAL)/.test(s)) &&
-          !all.includes(md.modeHelp(0, false)) && !all.includes(md.modeHelp(0, true)) &&
-          G.mode.length === 0 && G.modeCap === null && G.help === null &&
-          all.includes("5 LEVELS · 3 LOCKED"),
-        all.join("|"),
+        `level select LOCKED draws no MODIFIERS row at ${W}x${H}`,
+        !P.rows.MODIFIERS && G.mods === null && G.mode.length === 0 && G.list === null && G.rows.MODIFIERS === null &&
+          P.keys.filter((q) => q.set === "level" && q.lock).length === 3 && P.help.lines.join(" ") === "Level 3 of 8. Clear level 5 to open 6 to 8.",
+        J([P.help && P.help.lines, G.rows.MODIFIERS]),
       );
     }
     {
-      const { c, texts, rects } = rec();
-      md.drawLevelSelect(c, 3, L, 1, 1, 0, true, 0, true);
-      const all = texts.map((t) => t.s);
-      const p = plateOf(rects);
-      const G = md.levelGeom(L, true);
-      const gloss = texts.find((t) => t.s === md.modeHelp(0, true));
-      const time = texts.find((t) => t.s === "5 TIME TRIAL");
-      const two = (a, b) => all.includes(a + " " + b) || all.some((s, i) => s === a && all[i + 1] === b); // a chip too narrow for its name breaks it over two lines
+      md.drawLevelSelect(rec().c, 3, L, 1, 1, 0, true, 0, true, false, { row: "MODIFIERS", open: true, cur: 4 });
+      const { P, G, verb } = lvp._dbg.last, d = G.d, p = d.plate, names = P.list.map((q) => q.lines.join(" "));
       check(
-        `level select UNLOCKED shows the five MODIFIERS chips at ${W}x${H}`,
-        all.includes("1 ONE LIFE") &&
-          two("2 NO FLOOR", "ITEMS") &&
-          two("3 FEWER", "ITEMS") &&
-          all.includes("4 SHRINK") &&
-          all.includes("5 TIME TRIAL") &&
-          !all.includes("1 LAST") &&
-          G.mode.length === 5,
-        all.join("|"),
+        `level select UNLOCKED, the list open: the five MODIFIERS entries, TIME TRIAL on at ${W}x${H}`,
+        J(names) === J(["ONE LIFE", "NO FLOOR ITEMS", "FEWER ITEMS", "SHRINK", "TIME TRIAL"]) && P.list[4].on && !P.list[0].on && G.mode.length === 5,
+        J(names),
       );
       check(
-        `modes help + head + cap copy at ${W}x${H}`,
-        !!gloss &&
-          gloss.s === "TIME TRIAL timer + per-level best" &&
-          all.includes("8 LEVELS · MODIFIERS OPEN") &&
-          all.includes("MODIFIERS") && all.includes("1–5") &&
-          all.includes("↑↓ ROW · ←→ ADJUST · ENTER START · ESC BACK"), // the LEVEL row focused (v202 Task 2.3)
-        all.join("|"),
+        `the list's help, the head and the foot at ${W}x${H}`,
+        P.help.lines.join(" ") === "A timer and a best time for each level." && P.title.s === "LEVEL SELECT" && P.rows.MODIFIERS.label.s === "MODIFIERS" && verb === "list" && md.levelFoot("MODIFIERS", true) === "PICK ↑↓ · TOGGLE ENTER · CLOSE ESC",
+        J([P.help.lines, verb]),
       );
-      const inR = (r, t) => t.x >= r.x && t.x <= r.x + r.w && t.y >= r.y && t.y <= r.y + r.h;
+      const inside = (r, q) => r.x >= q.x && r.y >= q.y && r.x + r.w <= q.x + q.w && r.y + r.h <= q.y + q.h;
       check(
-        `modes chips + help stay inside the plate, between the mode row and START at ${W}x${H}`,
-        !!p && !!time && !!gloss &&
-          inR(G.mode[4], time) &&
-          time.y > p.y + 8 &&
-          gloss.y > time.y &&
-          gloss.y >= G.help.y && gloss.y <= G.help.y + G.help.h + 1 &&
-          gloss.y < G.start.y &&
-          G.start.y + G.start.h < p.y + p.h - 8 &&
-          G.mode.every((r) => r.x >= p.x && r.x + r.w <= p.x + p.w),
-        JSON.stringify({ py: p && p.y, ph: p && p.h, time, gloss, help: G.help, start: G.start }),
+        `the list stays inside the plate, under the MODIFIERS row, its help under it; START inside the plate at ${W}x${H}`,
+        d.mode5.every((r) => inside(r, p) && r.y >= d.mods.y + d.mods.h) && P.help.ys[0] > d.mode5[4].y && inside(d.start, p),
+        J({ p, list: d.listR, help: P.help.ys, start: d.start }),
       );
     }
-    /* levelHit is levelGeom's own table: every painted rect's centre maps to
-       its target (rooms past the cap read lock), a blank spot on the plate is
-       inert and only a tap off the plate backs out. */
-    for (const U of [false, true]) for (const T of [false, true]) {
-      const G = md.levelGeom(L, U, T), S = G.S, ctr = (r) => [r.x + r.w / 2, r.y + r.h / 2];
-      const hit = (r) => md.levelHit(...ctr(r), L, U, T);
-      const bad = [];
-      G.room.forEach((r, i) => { const h = hit(r); if (h.k !== (i < G.cap ? "room" : "lock") || h.i !== i) bad.push("room" + i); });
-      for (const k of ["heat", "pace", "mode"]) G[k].forEach((r, i) => { const h = hit(r); if (h.k !== k || h.i !== i) bad.push(k + i); });
+    /* levelHit is levelGeom's own table: every painted rect's centre maps to its target (levels past the cap read lock), a blank spot on the
+       plate is inert and only a tap off the plate backs out */
+    for (const U of [false, true]) for (const T of [false, true]) for (const open of U ? [false, true] : [false]) for (const fr of open ? ["MODIFIERS"] : (() => { const G0 = md.levelGeom(L, U, T); return G0.pages > 1 ? G0.d.pages.map((q) => q[0]) : ["LEVEL"]; })()) {
+      /* a paged compact (608x352 touch): every page, its row's geometry */
+      const G = md.levelGeom(L, U, T, open, fr), S = G.S, ctr = (r) => [r.x + r.w / 2, r.y + r.h / 2];
+      const hit = (r) => md.levelHit(...ctr(r), L, U, T, open, fr);
+      const bad = [], over = open && G.lay === "compact";
+      if (!over) G.room.forEach((r, i) => { const h = hit(r); if (h.k !== (i < G.cap ? "room" : "lock") || h.i !== i) bad.push("room" + i); });
+      for (const k of over ? ["mode"] : ["heat", "pace", "mode"]) G[k].forEach((r, i) => { const h = hit(r); if (h.k !== k || h.i !== i) bad.push(k + i); });
+      if (G.mods && hit(G.mods).k !== "mods") bad.push("mods");
+      if (G.pageKeys) G.pageKeys.forEach((r, i) => { const p = G.page + (i ? 1 : -1), h = hit(r); if (p >= 0 && p < G.pages ? h.k !== "page" || h.row !== G.d.pages[p][0] : h.k !== "none") bad.push("page" + i); });
       if (hit(G.start).k !== "start") bad.push("start");
-      if (md.levelHit(S.x + 4, S.y + 4, L, U, T).k !== "none") bad.push("blank");
-      if (md.levelHit(S.x - 2, S.y + S.h / 2, L, U, T).k !== "back" || md.levelHit(S.mid, S.y + S.h + 2, L, U, T).k !== "back") bad.push("back");
-      if (G.mode.length !== (U ? 5 : 0) || G.cap !== (U ? 8 : 5)) bad.push("shape");
-      check(`levelHit round-trips levelGeom (${U ? "unlocked" : "locked"}${T ? " touch" : ""}) at ${W}x${H}`, bad.length === 0, bad.join());
+      if (G.back && hit(G.back).k !== "back") bad.push("BACK");
+      if (md.levelHit(S.x + S.w - 4, S.y + 4, L, U, T, open, fr).k !== "none") bad.push("blank");
+      if (md.levelHit(S.x - G.T - 2, S.y + S.h / 2, L, U, T, open, fr).k !== "back" && S.x - G.T - 2 > 0) bad.push("back");
+      if (G.mode.length !== (open ? 5 : 0) || G.cap !== (U ? 8 : 5)) bad.push("shape");
+      check(`levelHit round-trips levelGeom (${U ? "unlocked" : "locked"}${T ? " touch" : ""}${open ? ", list open" : ""}) at ${W}x${H}`, bad.length === 0, bad.join());
     }
     {
       const { c, texts, rects } = rec();
@@ -1556,13 +1529,14 @@ function check(name, cond, detail) {
     check(`MENU phone column (v202 Task 3.1): the logo heads the plate, the rows hang under it, inside the box, every row taps to itself (${tg})`,
       hub.mode === "phone" && hub.logo.y + hub.logo.h < HR[0].y && hub.plate.y >= 0 && hub.plate.y + hub.plate.h <= g.h &&
         HR.every((r, i) => md.menuHit(r.x + r.w / 2, r.y + r.h / 2, md.layout(g.w, g.h, g.logo, g.s), 7, true) === i), JSON.stringify(hub.plate));
-    for (const U of [false, true]) {
-      const G = md.levelGeom(L, U, true), S = G.S, rects = [...G.room, G.pane, G.heatCap, ...G.heat, G.paceCap, ...G.pace, ...(U ? [G.modeCap, ...G.mode, G.help] : []), G.start, ...Object.values(G.rows).filter(Boolean)]; // + the focus rows the mark is drawn at, keyed by row name (v202 Task 2.3)
-      check(`LEVEL SELECT narrow${U ? " (modes open)" : ""}: plate in the box, every rect in the plate (${tg})`, G.narrow && inBox(S) && rects.every((r) => inPlate(r, { ...S, x: S.x - 1, w: S.w + 2 })));
-      const hits = [...G.room.map((r, i) => [r, i < G.cap ? "room" : "lock", i]), ...G.heat.map((r, i) => [r, "heat", i]), ...G.pace.map((r, i) => [r, "pace", i]), ...G.mode.map((r, i) => [r, "mode", i]), [G.start, "start"]];
-      check(`LEVEL SELECT narrow${U ? " (modes open)" : ""}: every chip / tile / START taps to itself, card inert, off-plate backs (${tg})`,
-        hits.every(([r, k, i]) => { const h = md.levelHit(...ctr(r), L, U, true); return h.k === k && (i == null || h.i === i); }) &&
-          md.levelHit(...ctr(G.pane), L, U, true).k === "none" && md.levelHit(4, 4, L, U, true).k === "back");
+    for (const U of [false, true]) for (const open of U ? [false, true] : [false]) {
+      /* LEVEL SELECT (v202 Task 3.3): the phone column on the page's own box (the touch floors need the shell box's css) */
+      const LP = md.layout(g.w, g.h, g.logo, g.s), G = md.levelGeom(LP, U, true, open), S = G.S, rects = [...G.room, G.pane, ...G.heat, ...G.pace, ...(U ? [G.mods, G.list] : []), ...G.mode, G.start, G.back, ...Object.values(G.rows).filter(Boolean)];
+      check(`LEVEL SELECT phone${U ? " (modifiers offered)" : ""}${open ? ", the list open" : ""}: the phone column, its plate in the box, every rect in the plate (${tg})`, G.lay === "phone" && S.x >= 0 && S.y >= 0 && S.x + S.w <= g.w && S.y + S.h <= g.h && rects.every((r) => inPlate(r, { ...S, x: S.x - 1, w: S.w + 2 })));
+      const hits = [...G.room.map((r, i) => [r, i < G.cap ? "room" : "lock", i]), ...G.heat.map((r, i) => [r, "heat", i]), ...G.pace.map((r, i) => [r, "pace", i]), ...G.mode.map((r, i) => [r, "mode", i]), ...(U ? [[G.mods, "mods"]] : []), [G.start, "start"], [G.back, "back"]];
+      check(`LEVEL SELECT phone${U ? " (modifiers offered)" : ""}${open ? ", the list open" : ""}: every key / cell / entry / START / BACK taps to itself, the card inert, off-plate backs (${tg})`,
+        hits.every(([r, k, i]) => { const h = md.levelHit(...ctr(r), LP, U, true, open); return h.k === k && (i == null || h.i === i); }) &&
+          (open || md.levelHit(...ctr(G.pane), LP, U, true, open).k === "none") && md.levelHit(1, 1, LP, U, true, open).k === "back");
     }
     const sc = md.scoresGeom(L, true);
     check(`HIGH SCORES: tabs inside the plate, each taps to itself (${tg})`, inBox(sc.S) && sc.tabs.every((r, i) => inPlate(r, sc.S) && md.scoresHit(...ctr(r), L, true) === i));

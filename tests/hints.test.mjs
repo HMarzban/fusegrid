@@ -40,6 +40,7 @@ const ITEMS = ["PLAY", "LEVEL SELECT", "DAILY", "RECORDS", "SETTINGS", "GUIDE", 
 /* MENU (v202 Task 3.1, pages/menu.js): shellview's names and values; the foot is label first, keycap last, read back from the page's plan */
 const menu = (cur, touch, rev = "", o = {}, L2) => (c) => md.drawMenu(c, { rows: ITEMS, focus: ITEMS[cur], level: 1, rev, pages: 4, enterT: 9, ...o }, L2 || L, 9, !!touch);
 const pg = await import("../src/render/pages/menu.js");
+const lvp = await import("../src/render/pages/level.js");
 const CAPG = { up: "▲", dn: "▼" };
 const footOf = () => { const { P, verb } = pg._dbg.last, F = verb != null && P.foot[verb]; return F ? F.parts.map((q) => q.t || q.sep || (Array.isArray(q.cap) ? CAPG[q.cap[0]] : "[" + q.cap + "]")).join(" ") : ""; };
 const STATS_UI = { rows: [], notes: [], trophies: [] };
@@ -158,7 +159,7 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
 /* ---- default copy, byte for byte ---- */
 {
   const WANT = [
-    ["LEVEL foot", PAGES.LEVEL(false), "↑↓ ROW · ←→ ADJUST · ENTER START · ESC BACK"], // the LEVEL row focused (v202 Task 2.3: the foot follows the row)
+    ["LEVEL foot", PAGES.LEVEL(false), "CHANGE"], // the LEVEL row focused (v202 Task 2.3: the foot follows the row; Task 3.3: label first, keycap last, checked whole below)
     ["HOW TO foot", PAGES.HOWTO(false), "ESC / ENTER BACK"],
     ["ITEMS foot", PAGES.ITEMS(false), "WALK OVER A POWER-UP TO COLLECT · ESC BACK"],
     ["ENEMIES foot", PAGES.ENEMIES(false), "ESC BACK"],
@@ -178,20 +179,18 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
     ["show skip", (c) => md.drawIntroChrome(c, 1, 0.6, 600, 520, "d"), "ANY KEY TO SKIP"],
     ["show skip, touch", (c) => md.drawIntroChrome(c, 1, 0.6, 600, 520, "p"), "TAP TO SKIP"],
     ["title, touch", (c) => md.drawIntroChrome(c, 0, 1, 600, 520, "p"), "TAP TO START"],
-    ["LEVEL room cap", PAGES.LEVEL(false), "LEVEL"], // caps name only keys that work from any row; ←→ live in the foot (Task 2.3)
-    ["LEVEL pace cap", PAGES.LEVEL(false), "[ ]"],
-    ["LEVEL modes cap", PAGES.LEVEL(false), "1–5"],
-    ["LEVEL modes chip keeps its digit", PAGES.LEVEL(false), "1 ONE LIFE"],
+    ["LEVEL row label", PAGES.LEVEL(false), "LEVEL"], // the row's label (Task 3.3: the approved d-03 frame names no shortcut cap; ←→ live in the foot)
     ["GUIDE sub", PAGES.GUIDE(false), "2 RULES · 6 KEYS"],
     ["GUIDE sub, touch", PAGES.GUIDE(true), "2 RULES · 6 CONTROLS"],
-    ["LEVEL foot, touch", PAGES.LEVEL(true), md.LEVEL_TAP],
+    ["LEVEL touch (compact, 600x520: no foot, its BACK key)", PAGES.LEVEL(true), "BACK"],
+    ["LEVEL foot, touch (a landscape tablet in tap mode)", (c) => md.drawLevelSelect(c, 1, md.layout(1024, 768, 200), 9, 0, 0, true, 0, false, true, { ...INFO, tap: true }), md.LEVEL_TAP],
     ["OPTIONS foot, touch", PAGES.OPTIONS(true), md.FOOT_TAP],
     ["HOW TO foot, touch", PAGES.HOWTO(true), "TAP OUTSIDE TO GO BACK"],
     ["GUIDE foot, touch", PAGES.GUIDE(true), "TAP A DOOR · TAP OUTSIDE TO GO BACK"],
   ];
   for (const [nm, f, s] of WANT) { const r = paint(f); check("default: " + nm + " stays \"" + s + "\"", r.has(s), r.strs().join("|")); }
-  { const G = md.levelGeom(L, true, false), cap = paint(PAGES.LEVEL(false)).texts.filter((t) => t.x === G.grid.x && Math.abs(t.y - G.capY) < 0.01); // the caption itself, by its place over the grid
-    check("default: the LEVEL caption over the grid reads \"LEVEL\", no keycap", cap.length === 1 && cap[0].s === "LEVEL", JSON.stringify(cap)); }
+  { const r = paint(PAGES.LEVEL(false)), d = lvp._dbg.last; // the LEVEL row's own label, and the foot whole (label first, keycap last)
+    check("default: the LEVEL row's label reads \"LEVEL\", no keycap; the foot reads ROW ↑↓ · CHANGE ←→ · START ENTER · BACK ESC", d.P.rows.LEVEL.label.s === "LEVEL" && !r.has("[ ]") && md.levelFoot("LEVEL", false) === "ROW ↑↓ · CHANGE ←→ · START ENTER · BACK ESC" && d.verb === "value", JSON.stringify(d.P.rows.LEVEL.label)); }
   check("FOOT_KEYS keeps its default bytes", md.FOOT_KEYS === "↑↓ ROW · ←→ ADJUST · ENTER CYCLE · ESC BACK");
   const how = paint(PAGES.HOWTO(false));
   for (const s of ["WASD / ARROWS", "SPACE", "E", "Q", "WALK INTO BOMB", "P"]) check("HOW TO row reads " + s, how.has(s));
@@ -226,7 +225,8 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
 {
   setHints(PAD);
   const PADWANT = [
-    ["LEVEL foot", PAGES.LEVEL(false), "↑↓ ROW · ←→ ADJUST · SOUTH START · EAST BACK"],
+    ["LEVEL foot", PAGES.LEVEL(false), "D-PAD"],
+    ["LEVEL foot's confirm", PAGES.LEVEL(false), "SOUTH"],
     ["HOW TO foot", PAGES.HOWTO(false), "REBIND IN SETTINGS › CONTROLS · EAST / SOUTH BACK"],
     ["ITEMS foot", PAGES.ITEMS(false), "WALK OVER A POWER-UP TO COLLECT · EAST BACK"],
     ["ENEMIES foot", PAGES.ENEMIES(false), "EAST BACK"],
@@ -243,13 +243,12 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
     ["MENU foot on SOURCE: a controller press opens no tab", menu(6), "NEEDS A CLICK OR ENTER"],
     ["ATTRACT", (c) => md.drawAttractHint(c, L, 200), "DEMO — PRESS ANY BUTTON"],
     ["show skip", (c) => md.drawIntroChrome(c, 1, 0.6, 600, 520, "d"), "ANY BUTTON TO SKIP"],
-    ["LEVEL pace cap", PAGES.LEVEL(false), "SHOULDERS"],
     ["GUIDE sub, whole beside the key strip", PAGES.GUIDE(false), "6 CONTROLS"],
     ["GUIDE sub, touch door", PAGES.GUIDE(true), "2 RULES · 6 CONTROLS"],
     ["HOW TO move", PAGES.HOWTO(false), "D-PAD / L-STICK"],
     ["HOW TO throw", PAGES.HOWTO(false), "WEST"],
     ["HOW TO pause", PAGES.HOWTO(false), "START"],
-    ["pad words on a touch layout: LEVEL", PAGES.LEVEL(true), "↑↓ ROW · ←→ ADJUST · SOUTH START · EAST BACK"],
+    ["pad words on a touch layout: LEVEL (a landscape tablet)", (c) => md.drawLevelSelect(c, 1, md.layout(1024, 768, 200), 9, 0, 0, true, 0, false, true, INFO), "SOUTH"],
     ["pad words on a touch layout: OPTIONS", PAGES.OPTIONS(true), "↑↓ ROW · ←→ ADJUST · SOUTH CYCLE · EAST BACK"],
     ["pad words on a touch layout: HOW TO", PAGES.HOWTO(true), "REBIND IN SETTINGS › CONTROLS · EAST / SOUTH BACK"],
     ["pad words on a touch layout: show skip", (c) => md.drawIntroChrome(c, 1, 0.6, 600, 520, "p"), "ANY BUTTON TO SKIP"],
@@ -260,16 +259,16 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
   paint(menu(6, false, "v99"));
   check("pad: MENU foot on SOURCE says it needs a click or Enter, with no SOUTH keycap (never a claim the press keeps)", footOf() === "MOVE [D-PAD] · NEEDS A CLICK OR ENTER | v99", footOf());
   const lv = paint(PAGES.LEVEL(false));
-  check("pad: LEVEL has no [ ] or 1–5 cap and no key digits on MODIFIERS", !lv.has("[ ]") && !lv.has("1–5") && lv.has("ONE LIFE") && !lv.has("1 ONE LIFE"), lv.strs().join("|"));
+  check("pad: LEVEL has no [ ] or 1–5 cap and no key digits on MODIFIERS; its foot reads ROW D-PAD · CHANGE D-PAD · START SOUTH · BACK EAST", !lv.has("[ ]") && !lv.has("1–5") && lv.has("MODIFIERS") && !lv.has("1 ONE LIFE") && md.levelFoot("LEVEL", false) === "ROW D-PAD · CHANGE D-PAD · START SOUTH · BACK EAST", lv.strs().join("|"));
+  paint(PAGES.LEVEL(true));
+  check("pad on a touch layout (compact): the focus model (the LEVEL row), never tap mode", lvp._dbg.last.foc === "LEVEL", lvp._dbg.last.foc);
   const gd = paint(PAGES.GUIDE(false));
   check("pad: GUIDE preview names pad buttons, no key caps", gd.has("D-PAD") && gd.has("SOUTH") && gd.has("WEST") && gd.has("EAST") && !gd.has("WASD") && !gd.has("SPACE"), gd.strs().join("|"));
   const noLetter = /(^|[ ·/])(A|B|X|Y) (CONFIRM|BACK|OPEN|START|CYCLE|STARTS|OPENS|MEDALS|COPY)|(^|[ ·/])(LB|RB|LT|RT)( |$)/;
   const every = [...Object.values(PAGES).map((p) => p(false)), menu(0), menu(4), menu(3), menu(6)].flatMap((f) => paint(f).strs());
   check("no face-button letter on a pad hint", !every.some((s) => noLetter.test(s)), every.filter((s) => noLetter.test(s)).join("|"));
 
-  check("pad: SHOULDERS fits its 44 px cap at the cap's 8 px face", "SHOULDERS".length * 8 * 0.6 <= 44);
-  const capT = lv.texts.find((x) => x.s === "SHOULDERS");
-  check("pad: the SHOULDERS cap is drawn at 8 px", !!capT && /\b8px/.test(capT.font), capT && capT.font);
+  check("pad: LEVEL SELECT draws no SHOULDERS cap (v202 Task 3.3: the approved frame names no shortcut cap; the foot names the controls)", !lv.has("SHOULDERS"));
 
   const G = md.guideGeom ? md.guideGeom(L, false) : null;
   const caps = paint(PAGES.GUIDE(false));
@@ -299,8 +298,10 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
   };
   const norm = (r, q) => flat(r).filter((x) => !q.caps.some((z) => inR(z, x))).map((x) => (q.F && inR(q.F, x) ? ["plaque", x[0], x[1] - q.F.x, x[2], q.F.x + q.F.w - (x[1] + x[3]), x[4]] : x));
   for (const T of [false, true]) for (const [nm, p] of Object.entries(pages)) {
-    setHints(null); const a = paint(p(T)), qa = /^MENU/.test(nm) ? capsOf() : null;
-    setHints(PAD); const b = paint(p(T)), qb = /^MENU/.test(nm) ? capsOf() : null;
+    /* LEVEL SELECT's foot (v202 Task 3.3): its caps, their advance, its plaque and its words, read back from the page's plan as MENU's */
+    const lvFoot = () => { const { P, verb } = lvp._dbg.last, F = verb != null && P.foot[verb] ? P.foot[verb] : null; return { F, caps: F ? F.parts.filter((q) => q.cap).map((q) => ({ x: q.x, y: F.mid - CAPH / 2, w: q.w, h: CAPH })) : [], adv: F ? F.parts.reduce((n, q) => n + (q.cap ? q.gap + q.w : 0), 0) : 0, words: F ? F.parts.filter((q) => !q.cap).map((q) => q.t || q.sep) : [] }; };
+    setHints(null); const a = paint(p(T)), qa = /^MENU/.test(nm) ? capsOf() : nm === "LEVEL" ? lvFoot() : null;
+    setHints(PAD); const b = paint(p(T)), qb = /^MENU/.test(nm) ? capsOf() : nm === "LEVEL" ? lvFoot() : null;
     setHints(null);
     if (/^MENU/.test(nm)) {
       const na = norm(a, qa), nb = norm(b, qb), d = qb.adv - qa.adv, moved = !qa.F === !qb.F && (!qa.F || (Math.abs(qb.F.w - qa.F.w - d) < 1e-9 && Math.abs(qb.F.x - qa.F.x + d / 2) < 1e-9));
@@ -308,9 +309,16 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
         J(na) === J(nb) && na.length > 0 && moved && J(qa.words) === J(qb.words) && (T || (qa.F && na.some((x) => x[0] === "plaque"))), J({ n: [na.length, nb.length], d, F: [qa.F && [qa.F.x, qa.F.w], qb.F && [qb.F.x, qb.F.w]], words: [qa.words, qb.words] }));
       continue;
     }
-    if (nm === "LEVEL" && T) { // v202 Task 2.3 fix round 1: tap mode lights START (keys / touch words on a touch layout), a controller runs the focus model (the LEVEL row's ring, a stroke): the flip moves only START's band + notch
-      const sb = md.levelGeom(L, true, true).rows.START, lit = (x) => (x[0] === "rgba(55,240,208,0.12)" && J(x.slice(1)) === J([sb.x, sb.y, sb.w, sb.h])) || (x[0] === "#37f0d0" && J(x.slice(1)) === J([sb.x, sb.y, 3, sb.h]));
-      check("a flip changes words only: LEVEL touch keeps every rect but START's lit band and notch (tap mode lights START, a controller does not)", J(flat(a).filter((x) => !lit(x))) === J(flat(b)) && flat(a).filter(lit).length === 2 && flat(b).filter(lit).length === 0, J(flat(a)).length + " vs " + J(flat(b)).length);
+    if (nm === "LEVEL" && !T) { // v202 Task 3.3: the keyboard foot, MENU's rule: every rect but the caps the same, the plaque moved by the caps' advance alone, its words in order
+      const na = norm(a, qa), nb = norm(b, qb), d = qb.adv - qa.adv, moved = !!qa.F && !!qb.F && Math.abs(qb.F.w - qa.F.w - d) < 1e-9 && Math.abs(qb.F.x - qa.F.x + d / 2) < 1e-9;
+      check(`a flip changes words only: LEVEL keeps every rect but its keycaps; the foot's plaque moves by the caps' advance alone (${d.toFixed(1)}), its words in order`,
+        J(na) === J(nb) && na.length > 0 && moved && J(qa.words) === J(qb.words) && na.some((x) => x[0] === "plaque"), J({ n: [na.length, nb.length], d, words: [qa.words, qb.words] }));
+      continue;
+    }
+    if (nm === "LEVEL") { // touch (600x520: compact, no foot): tap mode focuses START, a controller the LEVEL row, and a controller gets its cue line; every other rect stays
+      const G = md.levelGeom(L, true, T).d, out = (x, r) => !(r && x[1] >= r.x - 10 && x[2] >= r.y - 10 && x[1] + x[3] <= r.x + r.w + 10 && x[2] + x[4] <= r.y + r.h + 10);
+      const keep = (x) => out(x, G.start) && out(x, G.rows.LEVEL);
+      check("a flip changes the focus only: LEVEL touch keeps every rect but the focus (tap mode START, a controller the LEVEL row)", J(flat(a).filter(keep)) === J(flat(b).filter(keep)) && flat(a).filter(keep).length > 20 && !qa.F && !qb.F, J(flat(a)).length + " vs " + J(flat(b)).length);
       continue;
     }
     check(`a flip changes words only: ${nm}${T ? " touch" : ""} keeps every rect`, J(flat(a)) === J(flat(b)), J(flat(a)).length + " vs " + J(flat(b)).length);
@@ -505,27 +513,24 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
   for (const k of ["throw", "remote"]) check("coach on keys unchanged by default words: " + k, coachTip(k, "d", null, keyW) === coachTip(k, "d"));
   check("coach on touch still names the button", /^THROW · the THROW button/.test(coachTip("throw", "p", null, touchW)), coachTip("throw", "p", null, touchW));
 }
-// ---- T14: LEVEL MODES on a pad: the help line carries the words, the ring follows the cursor ----
+// ---- T14: LEVEL MODIFIERS on a controller (v202 Task 3.3): the help line says how, a TRIGGER cursor (list shut) is named on the door and in the help ----
 {
-  const lvl = (W, H, T, cur, mask = 0, time = false, U = true, lg) => { const LL = md.layout(W, H, lg); md.setModeFocus(() => cur); const r = rec(), strokes = []; const c0 = r.c; const c = new Proxy(c0, { get: (t, p) => (p === "strokeRect" ? (x, y, w, h) => strokes.push({ col: t.strokeStyle, x, y, w, h }) : t[p]), set: (t, p, v) => { t[p] = v; return true; } }); md.drawLevelSelect(c, 1, LL, 9, 0, mask, U, 0, time, T, INFO); md.setModeFocus(null); return { r, strokes, G: md.levelGeom(LL, U, T) }; };
-  const ringOf = (x) => x.strokes.filter((s) => s.col === "#dfe7f5" && s.y + s.h > x.G.mode[0].y && s.y < x.G.mode[0].y + x.G.mode[0].h);
-  const inHelp = (x) => x.r.texts.filter((t) => t.y >= x.G.help.y - 2 && t.y <= x.G.help.y + x.G.help.h + 2).map((t) => t.s).join(" ");
+  const lvl = (W, H, T, cur, mask = 0, time = false, U = true, lg, css) => { const LL = md.layout(W, H, lg, css); md.setModeFocus(() => cur); const r = paint((c) => md.drawLevelSelect(c, 1, LL, 9, 0, mask, U, 0, time, T, INFO)); md.setModeFocus(null); return { r, d: lvp._dbg.last }; };
+  const help = (x) => (x.d.P.help ? x.d.P.help.lines.join(" ") : ""), door = (x) => (x.d.P.rows.MODIFIERS && x.d.P.rows.MODIFIERS.tz ? x.d.P.rows.MODIFIERS.tz.lines.join(" ") : "");
   const k = lvl(600, 520, false, 2);
-  check("keys: help line and chips unchanged, no ring", !inHelp(k).includes("TRIGGERS") && k.r.has("4 SHRINK") && ringOf(k).length === 0, inHelp(k));
+  check("keys: no TRIGGERS words, the door names what is on (NONE)", !help(k).includes("TRIGGERS") && door(k) === "NONE", help(k) + " / " + door(k));
   setHints(wordsOf("pad", DEF_CONTROLS));
   const a = lvl(600, 520, false, -1);
-  check("pad, no cursor: the help line says how, no ring", inHelp(a) === "TRIGGERS PICK · NORTH TOGGLES" && ringOf(a).length === 0, inHelp(a));
-  const b = lvl(600, 520, false, 3), ring = ringOf(b), m = b.G.mode[3];
-  check("pad, cursor: one ring, on the focused chip, outside its edge", ring.length === 1 && ring[0].x < m.x && ring[0].x + ring[0].w > m.x + m.w && ring[0].y < m.y && ring[0].y + ring[0].h > m.y + m.h, J(ring));
-  check("pad, cursor: the help line names the focused mode", inHelp(b) === "TRIGGERS PICK · NORTH TOGGLES · SHRINK walls close in from 25s", inHelp(b));
-  check("pad, cursor on the fifth chip: TIME TRIAL", inHelp(lvl(600, 520, false, 4)).endsWith("TIME TRIAL timer + per-level best"));
-  const clipped = (x) => /…|\.\.\./.test(inHelp(x));
-  for (const [W, H, T, lg, tag] of [[600, 520, false, undefined, "keyboard"], [600, 520, true, undefined, "touch"], [608, 352, false, undefined, "iso guard"], [400, 800, true, 140, "narrow touch"], [440, 760, true, 140, "narrow touch wide"]])
+  check("pad, no cursor: the help line says how", help(a) === "TRIGGERS pick a modifier, NORTH toggles it." && door(a) === "NONE", help(a));
+  const b = lvl(600, 520, false, 3);
+  check("pad, cursor on SHRINK: the door names it and its state, the help line says what it does", door(b) === "SHRINK · OFF" && help(b) === "Walls close in from 25s.", door(b) + " / " + help(b));
+  check("pad, cursor on the fifth entry: TIME TRIAL", door(lvl(600, 520, false, 4, 0, true)) === "TIME TRIAL · ON");
+  for (const [W, H, T, lg, css, tag] of [[1366, 768, false, 200, 1, "desk"], [608, 352, false, undefined, 1, "iso guard"], [393, 852, true, 300, 0.9, "phone"]])
     for (let i = 0; i < 5; i++) {
-      const x = lvl(W, H, T, i), words = inHelp(x).replace(/\s+/g, " "), S = x.G.S;
-      check("pad help fits, whole: " + tag + " chip " + i, words.startsWith("TRIGGERS PICK · NORTH TOGGLES") && !clipped(x) && words.endsWith(i === 4 ? "per-level best" : ["ONE LIFE", "NO FLOOR ITEMS", "in bricks", "from 25s"][i]), words + " / " + S.iw);
+      const x = lvl(W, H, T, i, 0, false, true, lg, css), words = door(x);
+      check("pad door fits, whole (on one line, or two on the phone's door): " + tag + " entry " + i, words === ["ONE LIFE", "NO FLOOR ITEMS", "FEWER ITEMS", "SHRINK", "TIME TRIAL"][i] + " · OFF" && !/…/.test(words), words);
     }
-  check("no MODIFIERS row before the first CLEAR: no help, no ring", !lvl(600, 520, false, 2, 0, false, false).r.has("TRIGGERS PICK · NORTH TOGGLES"));
+  check("no MODIFIERS row before the first CLEAR: no door, no TRIGGERS help", !lvl(600, 520, false, 2, 0, false, false).r.has("TRIGGERS pick a modifier, NORTH toggles it."));
   setHints(null);
   check("setModeFocus(null) restores no cursor", md.modeFocusOf() === -1);
 }

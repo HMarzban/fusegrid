@@ -4,12 +4,11 @@
    accent #37f0d0, text #dfe7f5, muted #7385ad, veils rgba(7,10,18,a).
    Easing helpers duplicated from the intro beat table (spec §3) — this file
    must not import from src/app. */
-import { CFG, roomCap, BIOMES, isFinale } from "../core/config.js";
+import { CFG, BIOMES } from "../core/config.js";
 import { POWER, FOES, helpOf } from "../core/entities.js";
-import { HEAT_COL, HEAT_MARK, clampHeat, heatProfile } from "../core/heat.js";
+import { HEAT_COL, HEAT_MARK, clampHeat } from "../core/heat.js";
 import { pactLabel } from "../core/pact.js";
-import { PACT_COL, applyPact } from "../core/pact.js";
-import { DIFF, SPEED, MOD, MOD_BITS, TIME_TRIAL, LABEL, RECORD_TABS, diffTag, speedTag, runParts, levelsOf } from "./words.js";
+import { DIFF, TIME_TRIAL, LABEL, RECORD_TABS, diffTag, speedTag, runParts, levelsOf } from "./words.js";
 import { drawEnemyBody } from "./sprites.js";
 import { drawItemBody } from "./itemdraw.js";
 import { HOME, TILE_HELP, TILE_NAME } from "../core/feat.js";
@@ -20,6 +19,7 @@ import { foeM, blinkAt } from "./motion.js";
 import { hints, tapMode } from "./hintcopy.js";
 import { drawLogo2d, deviceScale, TITLE_RUNUP } from "./logo/draw2d.js";
 import * as menuPage from "./pages/menu.js";
+import * as levelPage from "./pages/level.js";
 import { rosterOf } from "./pages/card.js";
 const ACCENT = "#37f0d0",
   TEXT = "#dfe7f5",
@@ -299,30 +299,6 @@ function selBand(c, r, col) {
   c.fillStyle = col || ACCENT;
   c.fillRect(r.x, r.y, 3, r.h);
 }
-/* Biome SCHEMATIC, never the room's layout (bricks are seeded): border and
-   the fixed pillar lattice in wall, a floor0/floor1 checker and a fixed brickA
-   scatter, all BIOMES hexes; 15x13 cells of ts px. */
-const SCATTER = (q, r) => (q * 73 + r * 151 + q * r * 7) % 11 < 5 && q + r > 3;
-export function schem(c, x, y, ts, b) {
-  const a0 = c.globalAlpha;
-  for (let r = 0; r < 13; r++)
-    for (let q = 0; q < 15; q++) {
-      const wall = q === 0 || r === 0 || q === 14 || r === 12 || (q % 2 === 0 && r % 2 === 0),
-        brick = !wall && SCATTER(q, r);
-      c.fillStyle = wall ? b.wall : brick ? b.brickA : (q + r) & 1 ? b.floor1 : b.floor0;
-      c.fillRect(x + q * ts, y + r * ts, ts, ts);
-      if (ts >= 6 && (wall || brick)) {
-        c.globalAlpha = a0 * 0.55;
-        c.fillStyle = wall ? b.wallHi : b.brickHi;
-        c.fillRect(x + q * ts, y + r * ts, ts, 1);
-        c.globalAlpha = a0;
-        if (brick) {
-          c.fillStyle = b.brickB;
-          c.fillRect(x + q * ts, y + (r + 1) * ts - 2, ts, 2);
-        }
-      }
-    }
-}
 function lockGlyph(c, x, y, s, col) {
   c.strokeStyle = col;
   c.fillStyle = col;
@@ -373,142 +349,6 @@ function itemAt(c, A, p, cx, cy, s, time, ps) {
 }
 /* heatRoster deduped to [{t, n}] in first-seen order: the next-run card's (pages/card.js), the one roster. */
 export { rosterOf };
-/* The heat line, from heatProfile through applyPact (IRON reads LIVES 1). */
-export function heatLine(heat, pact) {
-  const h = clampHeat(heat),
-    p = applyPact(heatProfile(h), pact | 0);
-  return "LIVES " + p.lives + " · FUSE " + p.fuse + "s · SCORE ×" + (h + 1);
-}
-/* The FLOOR line (#24): the room's tile at this heat from the one copy source,
-   "" in a room whose tile has no rule yet. Worded as the room's floor: a board
-   may rarely drop its tile (V23). */
-export function floorLine(room, heat) {
-  const k = HOME[BIOMES[(room - 1) % BIOMES.length].name],
-    help = TILE_HELP[k];
-  return help ? "FLOOR " + TILE_NAME[k] + " · " + help[clampHeat(heat)] : "";
-}
-/* The ROOM CARD: what a room is, read-only, in a pane P. d = {room, heat,
-   pact, best, k (heat pulse 0..1), locked, floor, tiles}. One card for LEVEL SELECT's
-   pane and MENU's PLAY / LEVEL SELECT pane. d.floor (LEVEL SELECT, tile boards
-   only) makes its room inside the card, never by moving a tap rect: keyboard
-   gives the row by one schematic scale step (d.tiles, the page's flag, so the
-   schematic keeps one size room to room), touch by a tighter foe list. */
-function roomCard(c, P, d, touch, A, t) {
-  const b = BIOMES[(d.room - 1) % BIOMES.length],
-    fin = isFinale(d.room),
-    x0 = P.x + 10,
-    hy = P.y + (touch ? 16 : 14);
-  cell(c, P);
-  c.textBaseline = "middle";
-  c.textAlign = "left";
-  c.fillStyle = TEXT;
-  c.font = sans(touch ? 18 : 15, "800");
-  c.fillText(d.title || b.name, x0, hy);
-  c.textAlign = "right";
-  c.font = font(touch ? 12 : 10, "700");
-  c.fillStyle = fin ? DANGER : MUTED;
-  c.fillText(LABEL.LEVEL + " " + d.room + (fin ? " · FINALE" : ""), P.x + P.w - 10, hy);
-  const ts = touch ? 6 : d.tiles ? 7 : 8,
-    ty = P.y + (touch ? 32 : 28),
-    tw = 15 * ts,
-    th = 13 * ts;
-  c.globalAlpha = d.locked ? 0.28 : 1;
-  schem(c, x0, ty, ts, b);
-  c.globalAlpha = 1;
-  c.strokeStyle = EDGE;
-  c.lineWidth = 1;
-  c.strokeRect(x0 - 0.5, ty - 0.5, tw + 1, th + 1);
-  const rx = x0 + tw + 10,
-    rw = P.x + P.w - 10 - rx,
-    hy2 = P.y + P.h - (touch ? 12 : 10),
-    fp = touch ? 13 : 12,
-    flFont = font(touch ? 11 : 9, "700");
-  if (d.floor) c.font = flFont;
-  const fcut = d.floor ? d.floor.indexOf(" · ") : -1,
-    fl = !d.floor ? [] : mw(c, d.floor) <= P.w - 20 ? [d.floor] : [d.floor.slice(0, fcut), d.floor.slice(fcut + 3)], // too long for one row: the name, then its whole help string
-    fy = hy2 - fl.length * fp;
-  c.textAlign = "left";
-  if (d.locked) {
-    lockGlyph(c, x0 + tw / 2, ty + th / 2, touch ? 22 : 20, TEXT);
-    c.fillStyle = TEXT;
-    c.font = sans(touch ? 15 : 12, "700");
-    wrap(c, "CLEAR LEVEL 5 TO OPEN", rw, 2).forEach((l, i) => c.fillText(l, rx, ty + 8 + i * (touch ? 18 : 15)));
-    c.fillStyle = MUTED;
-    c.font = font(touch ? 12 : 10, "700");
-    c.fillText("SAND · VOID · CROWN", rx, ty + (touch ? 52 : 44));
-    c.fillText("+ " + LABEL.MODIFIERS, rx, ty + (touch ? 70 : 59));
-  } else {
-    const ros = rosterOf(d.room, d.heat),
-      cap = 5,
-      show = ros.length > cap ? ros.slice(0, cap - 1) : ros,
-      y0 = ty + (touch ? 26 : 22),
-      lh = Math.min(touch ? 22 : 19, fl.length ? (fy - 12 - y0) / Math.max(1, show.length - (show.length < ros.length ? 0 : 1)) : 99);
-    c.fillStyle = MUTED;
-    c.font = font(touch ? 11 : 9, "700");
-    c.fillText("YOU'LL MEET", rx, ty + 5);
-    let yy = y0;
-    for (const e of show) {
-      foeAt(c, A, e.t, rx + 8, yy, Math.min(touch ? 20 : 17, lh), t);
-      c.textAlign = "left";
-      c.textBaseline = "middle";
-      c.fillStyle = TEXT;
-      c.font = sans(touch ? 14 : 12, "600");
-      c.fillText(clip(c, FOE_OF[e.t].name, rw - 46), rx + 22, yy);
-      c.textAlign = "right";
-      c.fillStyle = MUTED;
-      c.font = font(touch ? 13 : 11, "700");
-      c.fillText("×" + e.n, rx + rw, yy);
-      yy += lh;
-    }
-    if (show.length < ros.length) {
-      c.textAlign = "left";
-      c.fillStyle = MUTED;
-      c.font = font(touch ? 12 : 10, "700");
-      c.fillText("+" + (ros.length - show.length) + " MORE", rx + 22, yy);
-    }
-  }
-  c.textAlign = "left";
-  c.font = font(touch ? 13 : 11, "700");
-  c.fillStyle = d.locked ? MUTED : d.best ? ACCENT : MUTED;
-  const bl = d.locked ? "LOCKED" : d.best ? "✓ BEST " + d.best : d.open ? "NO TIME YET" : ""; // the empty-time line waits for TIME (MODES open); a saved best is a real record and always shows
-  if (bl) c.fillText(bl, x0, ty + th + (touch ? 14 : 12));
-  const k = d.k || 0;
-  c.fillStyle = k > 0 ? ACCENT : TEXT;
-  if (k > 0) {
-    c.shadowColor = ACCENT;
-    c.shadowBlur = 12 * k;
-  }
-  if (fl.length) {
-    c.font = flFont;
-    fl.forEach((l, i) => c.fillText(l, x0, fy + i * fp));
-  }
-  c.font = font(touch ? 13 : 10, "700");
-  c.fillText(clip(c, heatLine(d.heat, d.pact), P.w - 20), x0, hy2);
-  c.shadowBlur = 0;
-}
-/* A MODIFIERS chip: segs' own frame and type; a name too wide for its chip
-   (NO FLOOR ITEMS) breaks at a space onto two lines, then steps down until both
-   lines fit its width and height (the iso guard's chip is ~19 px tall). */
-function chip(c, r, label, on, col, touch, fs) {
-  const px = fs || (touch ? 14 : 11), wt = on ? "900" : "700", room = r.w - 6;
-  c.font = font(px, wt);
-  if (mw(c, label) <= room || label.indexOf(" ") < 0) return segs(c, [r], [label], on ? 0 : -1, [col], touch, fs);
-  segs(c, [r], [""], on ? 0 : -1, [col], touch, fs);
-  let best = null;
-  for (let i = label.indexOf(" "); i > 0; i = label.indexOf(" ", i + 1)) {
-    const two = [label.slice(0, i), label.slice(i + 1)], w = Math.max(mw(c, two[0]), mw(c, two[1]));
-    if (!best || w < best.w) best = { two, w };
-  }
-  const L2 = best.two;
-  fitFont(c, L2[0].length > L2[1].length ? L2[0] : L2[1], room, px, 8, wt);
-  let k = parseFloat(/(\d+(?:\.\d+)?)px/.exec(c.font)[1]) || px;
-  while (k > 8 && 2 * k + 1 > r.h - 2) c.font = font(--k, wt);
-  const lh = k + 1;
-  c.fillStyle = on ? col : MUTED;
-  c.textAlign = "center";
-  c.textBaseline = "middle";
-  L2.forEach((l, i) => c.fillText(l, r.x + r.w / 2, r.y + r.h / 2 + (i - 0.5) * lh));
-}
 /* A run's setup for one value slot, longest first (fitVal / fitIn keep the
    first that fits): every setting named; the modifiers as a count; only what
    differs from a default run (the approved PLAY tag); the same with EXPERT
@@ -517,11 +357,6 @@ function chip(c, r, label, on, col, touch, fs) {
 export function setupVals(world, run) {
   const j = (a) => [world].concat(a).join(" · "), terse = runParts(run, { count: true, terse: true });
   return [j(runParts(run, { all: true })), j(runParts(run, { all: true, count: true })), j(runParts(run, { count: true })), j(terse), terse.join(" · ") || world];
-}
-/* The value slot beside a hero row's label (PLAY, START): paintRow's hero type. */
-function heroRoom(c, w, h, label, touch) {
-  c.font = sans(rowSize(h, { hero: true, touch }), "800");
-  return w - 12 - 26 - mw(c, label) - 12;
 }
 /* Segmented control: one outer frame, abutting segments, the selected one
    banded and stroked in its colour. */
@@ -549,25 +384,6 @@ function fitFont(c, s, w, px, min, weight, f) {
   let k = px;
   for (c.font = mk(k, weight); k > min && mw(c, s) > w; ) c.font = mk(--k, weight);
   return c.font;
-}
-/* The key / name cell at a control's left: keyboard prints its key under the
-   name ("GAME SPEED [ ]"), touch only the name, each stepped down to fit the
-   44 px cell (DIFFICULTY and GAME SPEED outgrew it; LEVEL SELECT's own redraw
-   gives them room). */
-function capCell(c, r, name, keyStr, touch, keyPx) {
-  c.textAlign = "center";
-  c.textBaseline = "middle";
-  c.fillStyle = MUTED;
-  if (touch || !keyStr) {
-    fitFont(c, name, r.w - 2, touch ? 13 : 10, 7, "700", sans);
-    c.fillText(name, r.x + r.w / 2, r.y + r.h / 2);
-    return;
-  }
-  fitFont(c, name, r.w - 2, 8, 6, "700");
-  c.fillText(name, r.x + r.w / 2, r.y + r.h / 2 - 6);
-  c.fillStyle = TEXT;
-  c.font = font(keyPx || 11, "900");
-  c.fillText(keyStr, r.x + r.w / 2, r.y + r.h / 2 + 6);
 }
 
 /* lg: the shell box's logo line (fit.js shellGeo, the board's own 0.27 in #sh
@@ -713,266 +529,26 @@ function paneLine(c, P, y, s, col, size, align) {
   c.fillText(clip(c, s, P.w - 20), align === "center" ? P.x + P.w / 2 : P.x + 10, y);
 }
 
-/* MODIFIERS are a PRESENTATION relabel of the four Pact bits: their names come
-   from words.js (MOD, keyed by PACT bit), and core/pact.js keeps its own frozen
-   name table and pactLabel's L/B/T/S letters — the HIGH SCORES p column and
-   every pact.js pin depend on them. ONE LIFE is PACT.LAST (applyPact sets
-   lives = 1). TIME_COL is deliberately OUTSIDE PACT_COL so the fifth chip
-   cannot read as a fifth Pact bit — that plus the 12px double gap are the two
-   devices that enforce it. #ff8a3c is already the palette's FLAME colour.
-   MODE_HELP says what the sim does with each bit (applyPact / sim.js
-   advanceShrink). */
-const MODE_BIT = MOD_BITS;
-const MODE_NAME = MODE_BIT.map((b) => MOD[b]);
-const MODE_HELP = [MOD[MODE_BIT[0]], MOD[MODE_BIT[1]], MOD[MODE_BIT[2]] + " in bricks", MOD[MODE_BIT[3]] + " walls close in from 25s"];
-const TIME_HELP = TIME_TRIAL + " timer + per-level best"; // "stopwatch" no longer fits the pad help line on touch
-const TIME_COL = "#ff8a3c";
+/* LEVEL SELECT: the page is src/render/pages/level.js (UI upgrade v202 Task 3.3): one geometry for draw and tap, rects by name. These keep the
+   entry names shellview, the pointer and the tests call; L is layout(W, H, lg, css) for the box the page draws on, touch body[data-lay] p / l, open
+   the MODIFIERS list (app.modOpen): the same arguments for draw and tap. */
 const NO_FOCUS = () => -1;
 let modeFocus = NO_FOCUS;
-/** The LEVEL SELECT MODIFIERS chip a pad has focused, as a getter: -1 = none. Set once by main; shellview's info does not carry it. */
+/** The LEVEL SELECT MODIFIERS entry a controller's TRIGGER has focused, as a getter: -1 = none. Set once by main; shellview's info does not carry it. */
 export function setModeFocus(f) { modeFocus = f || NO_FOCUS; }
 export function modeFocusOf() { return modeFocus(); }
-/* The MODIFIERS cap has no room for TRIGGERS + NORTH (44 px), so a pad reads them here. */
-const PAD_MODE = "TRIGGERS PICK · NORTH TOGGLES";
-const modeOne = (i) => (i < 4 ? MODE_HELP[i] : TIME_HELP); // one chip's help, in chip order
-const padModeHelp = (i) => (i < 0 ? PAD_MODE : PAD_MODE + " · " + modeOne(i));
-export function modeHelp(pact, time) {
-  const on = MODE_HELP.filter((_, i) => (pact | 0) & MODE_BIT[i]);
-  if (time) on.push(TIME_HELP);
-  return on.length ? on.join(" · ") : "ONE LIFE · NO FLOOR ITEMS · FEWER ITEMS · WALLS CLOSE IN · STOPWATCH";
-}
-
-/* LEVEL SELECT (ATLAS): ONE table for draw and tap (levelHit). Top block: a
-   4x2 grid of room tiles (always all 8; 6–8 dim + locked until the first
-   CLEAR) beside the ROOM CARD pane. Then the HEAT | PACE segmented row, MODES
-   + its help line once unlocked, and the START hero. heat / pace / mode stay
-   separate rect arrays (the headless taps read them). Keyboard: top 168,
-   rows 30, hero 40, gaps 6; touch: 180 / 52 / 70. */
-export function levelGeom(L, unlocked, touch) {
-  if (L.narrow) return levelNarrow(L, !!unlocked, !!touch);
-  const T = !!touch,
-    U = !!unlocked,
-    top = T ? 180 : 168,
-    segH = T ? 52 : 30,
-    heroH = T ? 70 : 40,
-    gap = 6,
-    helpH = U ? (T ? 20 : 14) : 0,
-    capH = T ? 18 : 14,
-    body = top + gap + segH + (U ? gap + segH + helpH : 0) + gap + heroH,
-    S = pageBox(L, 560, body, T),
-    f = S.f,
-    tw = 62,
-    tg = 4,
-    th = ((top - capH - tg) / 2) * f,
-    by = S.by;
-  const room = Array.from({ length: 8 }, (_, i) => ({ x: S.ix + (i % 4) * (tw + tg), y: by + capH * f + (i >> 2) * (th + tg * f), w: tw, h: th }));
-  const grid = { x: S.ix, y: by, w: 4 * tw + 3 * tg, h: top * f },
-    pane = { x: S.ix + grid.w + 8, y: by, w: S.iw - grid.w - 8, h: top * f };
-  let y = by + (top + gap) * f;
-  const sh = segH * f,
-    sw = 70,
-    heatCap = { x: S.ix, y, w: 44, h: sh },
-    heat = [0, 1, 2].map((i) => ({ x: S.ix + 48 + i * sw, y, w: sw, h: sh })),
-    paceCap = { x: S.ix + 48 + 3 * sw + 12, y, w: 44, h: sh },
-    pace = [0, 1, 2].map((i) => ({ x: paceCap.x + 48 + i * sw, y, w: sw, h: sh }));
-  y += (segH + gap) * f;
-  let mode = [],
-    modeCap = null,
-    help = null;
-  if (U) {
-    const mw2 = (S.iw - 48 - 4 * 4 - 12) / 5;
-    modeCap = { x: S.ix, y, w: 44, h: sh };
-    mode = [0, 1, 2, 3, 4].map((i) => ({ x: S.ix + 48 + i * (mw2 + 4) + (i >= 4 ? 12 : 0), y, w: mw2, h: sh }));
-    help = { x: S.ix, y: y + sh, w: S.iw, h: helpH * f };
-    y += (segH + helpH + gap) * f;
-  }
-  const start = { x: S.ix - 8, y, w: S.iw + 16, h: heroH * f };
-  return { S, f, grid, pane, room, heatCap, heat, paceCap, pace, modeCap, mode, help, start, rows: focusRows(f, grid, heatCap, heat, paceCap, pace, modeCap, mode, help, start), capY: by + (capH * f) / 2, cap: roomCap(U) };
-}
-/* LEVEL SELECT's rows by name: menuapp LEVEL_ROWS, which words.test pins equal to these words (this file may not import
-   src/app). shellview hands drawLevelSelect the focused row's name, never an index. */
-const LV = Object.freeze({ LEVEL: LABEL.LEVEL, DIFF: LABEL.DIFFICULTY, SPEED: LABEL.GAME_SPEED, MODS: LABEL.MODIFIERS, START: LABEL.START });
-/* The focus mark's rect per LEVEL SELECT row, keyed by its name (v202 Task 2.3). A group's ring sits half the row gap outside
-   it, at most 3 px, so its 2 px paint stays 2 px clear of a selected segment's own 2 px stroke and clear of every neighbour
-   row: the level grid with its caption, a cap and its segments, the MODIFIERS cap, chips and their help line (null until
-   modifiers are offered); START is its painted hero band. A chip's ring stays today's 2 px. */
-const ringOf = (r, o) => ({ x: r.x - o, y: r.y - o, w: r.w + 2 * o, h: r.h + 2 * o });
-const spanOf = (a, b, c) => ({ x: a.x, y: a.y, w: b.x + b.w - a.x, h: (c || b).y + (c || b).h - a.y });
-function focusRows(f, grid, heatCap, heat, paceCap, pace, modeCap, mode, help, start) {
-  const o = Math.min(3, 3 * f);
-  return Object.freeze({
-    [LV.LEVEL]: ringOf(grid, o),
-    [LV.DIFF]: ringOf(spanOf(heatCap, heat[2]), o),
-    [LV.SPEED]: ringOf(spanOf(paceCap, pace[2]), o),
-    [LV.MODS]: modeCap ? ringOf(spanOf(modeCap, mode[4], help), o) : null,
-    [LV.START]: { x: start.x + 8, y: start.y + 2, w: start.w - 16, h: start.h - 4 },
-  });
-}
-/** Where LEVEL SELECT's focus mark is drawn: the open list's chip (a ring like a row's), else the named row's rect. */
-export function levelMark(G, row, open, cur) {
-  return open && G.mode[cur] ? ringOf(G.mode[cur], 2) : G.rows[row] || null;
-}
-/* The ring: today's chip-focus outline, 2 px TEXT, on every focus target but START (its own hero band). */
-function focusRing(c, r) {
-  c.strokeStyle = TEXT;
-  c.lineWidth = 2;
-  c.strokeRect(r.x, r.y, r.w, r.h);
-}
-/** LEVEL SELECT's foot follows the focus: ↑↓ walk the rows, ←→ change LEVEL / DIFFICULTY / GAME SPEED, confirm starts the run
-    (opens the list on MODIFIERS); in the open list ↑↓ pick, confirm toggles, back closes it. Keys and controller words. */
-export function levelFoot(row, open) {
-  const W = hints();
-  if (open) return "↑↓ PICK · " + W.ok + " TOGGLE · " + W.back + " " + LABEL.CLOSE;
-  const value = row !== LV.MODS && row !== LV.START; // LEVEL, DIFFICULTY, GAME SPEED change on ←→
-  return "↑↓ ROW · " + (value ? "←→ ADJUST · " : "") + W.ok + (row === LV.MODS ? " OPEN" : " " + LV.START) + " · " + W.back + " BACK";
-}
-/* The narrow box (touch-portrait shell, < 560 wide): the same rects
-   stacked — the room grid across the plate, the ROOM CARD under it, HEAT and
-   PACE on their own rows, MODES (5 chips, cap cell kept), help, START. */
-function levelNarrow(L, U, T) {
-  const capH = T ? 18 : 14, th = T ? 70 : 56, tg = 4, cardH = T ? 172 : 150, segH = T ? 52 : 30, heroH = T ? 70 : 40, gap = 6, helpH = U ? 32 : 0, capW = 60,
-    body = capH + 2 * th + tg + gap + cardH + gap + segH + gap + segH + (U ? gap + segH + helpH : 0) + gap + heroH,
-    S = pageBox(L, 560, body, T),
-    f = S.f,
-    by = S.by,
-    tw = (S.iw - 3 * tg) / 4,
-    room = Array.from({ length: 8 }, (_, i) => ({ x: S.ix + (i % 4) * (tw + tg), y: by + capH * f + (i >> 2) * (th + tg) * f, w: tw, h: th * f })),
-    grid = { x: S.ix, y: by, w: S.iw, h: (capH + 2 * th + tg) * f };
-  let y = grid.y + grid.h + gap * f;
-  const pane = { x: S.ix, y, w: S.iw, h: cardH * f },
-    sh = segH * f,
-    row = (n, yy) => { const w = (S.iw - capW - 4 - (n - 1) * 4) / n; return Array.from({ length: n }, (_, i) => ({ x: S.ix + capW + 4 + i * (w + 4), y: yy, w, h: sh })); };
-  y += (cardH + gap) * f;
-  const heatCap = { x: S.ix, y, w: capW, h: sh }, heat = row(3, y);
-  y += (segH + gap) * f;
-  const paceCap = { x: S.ix, y, w: capW, h: sh }, pace = row(3, y);
-  y += (segH + gap) * f;
-  let mode = [], modeCap = null, help = null;
-  if (U) {
-    modeCap = { x: S.ix, y, w: capW, h: sh };
-    mode = row(5, y);
-    help = { x: S.ix, y: y + sh, w: S.iw, h: helpH * f };
-    y += (segH + helpH + gap) * f;
-  }
-  const start = { x: S.ix - 8, y, w: S.iw + 16, h: heroH * f };
-  return { S, f, grid, pane, room, heatCap, heat, paceCap, pace, modeCap, mode, help, start, rows: focusRows(f, grid, heatCap, heat, paceCap, pace, modeCap, mode, help, start), capY: by + (capH * f) / 2, cap: roomCap(U), narrow: true };
-}
-/* A tap on LEVEL SELECT: {k:"room"|"heat"|"pace"|"mode", i}, {k:"lock", i}
-   on a locked room (main shows its card, never sets app.level), {k:"start"}
-   on START, {k:"back"} off the plate, {k:"none"} anywhere else on it — a
-   miss never starts a run (C3). Gutters split half to each neighbour. */
-export function levelHit(x, y, L, unlocked, touch) {
-  const g = levelGeom(L, unlocked, touch);
-  for (let i = 0; i < 8; i++) if (inR(g.room[i], x, y, 2)) return i < g.cap ? { k: "room", i } : { k: "lock", i };
-  for (const k of ["heat", "pace", "mode"]) for (let i = 0; i < g[k].length; i++) if (inR(g[k][i], x, y, 3)) return { k, i };
-  if (inR(g.start, x, y, 3)) return { k: "start" };
-  const S = g.S;
-  return x >= S.x && x <= S.x + S.w && y >= S.y && y <= S.y + S.h ? { k: "none" } : { k: "back" };
-}
-/* touch swaps the key foot for the tap rule levelHit implements (main.js). */
-export const LEVEL_TAP = "TAP START TO PLAY · TAP OUTSIDE TO GO BACK";
-/* the same with the MODIFIERS list open (opened by keys on a touch layout): a tap off the plate closes it first */
-export const LEVEL_TAP_LIST = "TAP START TO PLAY · TAP OUTSIDE TO " + LABEL.CLOSE;
-/* info = {kind, best:[8 strings|null] at this heat/pace/modes, heatT, lockR,
-   lockT, row, open, cur} from shellview (times arrive formatted; this file never reads a
-   store). row / open / cur: the focused row (LEVEL when absent), the MODIFIERS list open and its cursor (v202 Task 2.3). */
+const lvOpt = (unlocked, open, row) => ({ unlocked: !!unlocked, open: !!open, row: row || LABEL.LEVEL });
+/* row: the focused row's name (app.levelRow), which picks a paged compact's page */
+export const levelGeom = (L, unlocked, touch, open, row) => levelPage.levelGeom(frameOf(L, touch), lvOpt(unlocked, open, row));
+export const levelHit = (x, y, L, unlocked, touch, open, row) => levelPage.levelHit(x, y, frameOf(L, touch), lvOpt(unlocked, open, row));
+export const LEVEL_TAP = levelPage.LEVEL_TAP, LEVEL_TAP_LIST = levelPage.LEVEL_TAP_LIST;
+/** LEVEL SELECT's foot words for the focused row (or the open list), label first and keycap last: the page's footItems as one line. */
+export const levelFoot = (row, open) => levelPage.footText(levelPage.footItems(row || LABEL.LEVEL, !!open));
+/* info = {best: [8 formatted times or null] at this difficulty, speed and modifiers, row (the focused row's name), open, cur (the list), tap (tap mode,
+   ruling 4: shellview's app.lastDev; absent = hintcopy tapMode), lockR, lockT, enterT} from shellview (times arrive formatted; this file never reads a store). */
 export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked, pace, timeAttack, touch, info) {
-  const I = info || {},
-    T = !!touch,
-    W = hints(),
-    onPad = W.dev === "pad",
-    U = !!unlocked,
-    G = levelGeom(L, U, T),
-    S = G.S,
-    h = clampHeat(heat),
-    mask = U ? pact | 0 : 0,
-    A = pxArt(I.kind),
-    best = I.best || [],
-    row = I.row || LV.LEVEL,
-    open = !!I.open && U,
-    tap = tapMode(T); // tap mode: no focus is shown (a tap has none); keys, or a controller on a touch layout, run the focus model
-  let p = pace | 0;
-  if (p < -1) p = -1;
-  else if (p > 1) p = 1;
-  boxPlate(c, S);
-  head(c, S, LABEL.LEVEL_SELECT, U ? "8 " + LABEL.LEVELS + " · " + LABEL.MODIFIERS + " OPEN" : "5 " + LABEL.LEVELS + " · 3 LOCKED");
-  c.textAlign = "left";
-  c.textBaseline = "middle";
-  c.fillStyle = MUTED;
-  c.font = T ? sans(13, "700") : font(9, "700");
-  c.fillText(tapMode(T) ? "TAP A LEVEL" : LABEL.LEVEL, G.grid.x, G.capY); // a cap names only keys that work from any row ([ ], 1–5); ←→ live in the foot
-  const ts = G.f < 0.8 ? 2 : 3;
-  for (let i = 0; i < 8; i++) {
-    const r = G.room[i],
-      on = i + 1 === sel,
-      lock = i >= G.cap,
-      b = BIOMES[i];
-    cell(c, r, 0.6);
-    if (on) {
-      c.fillStyle = "rgba(55,240,208,0.12)";
-      c.fillRect(r.x, r.y, r.w, r.h);
-    }
-    c.globalAlpha = lock ? 0.25 : 1;
-    schem(c, r.x + (r.w - 15 * ts) / 2, r.y + 6, ts, b);
-    c.globalAlpha = 1;
-    const ny = r.y + 6 + 13 * ts + (r.h - 6 - 13 * ts) / 2;
-    if (lock) lockGlyph(c, r.x + r.w / 2, r.y + 6 + 6.5 * ts, 16, TEXT);
-    c.textAlign = "center";
-    c.fillStyle = on ? ACCENT : lock ? MUTED : TEXT;
-    c.font = font(T ? 16 : 14, "900");
-    c.fillText(String(i + 1), r.x + r.w / 2, ny);
-    if (isFinale(i + 1)) {
-      c.fillStyle = DANGER;
-      c.fillRect(r.x + 6, ny - 2, 4, 4);
-    }
-    if (best[i] && !lock) {
-      c.textAlign = "right";
-      c.fillStyle = ACCENT;
-      c.font = font(11, "900");
-      c.fillText("✓", r.x + r.w - 6, ny);
-    }
-    c.strokeStyle = on ? ACCENT : LINE;
-    c.lineWidth = on ? 2 : 1;
-    c.strokeRect(r.x + (on ? 1 : 0.5), r.y + (on ? 1 : 0.5), r.w - (on ? 2 : 1), r.h - (on ? 2 : 1));
-    if (on) {
-      c.fillStyle = ACCENT;
-      c.fillRect(r.x, r.y + r.h - 3, r.w, 3);
-    }
-  }
-  const peek = I.lockR && typeof I.lockT === "number" && t - I.lockT >= 0 && t - I.lockT < 1.8 ? I.lockR : 0,
-    hk = typeof I.heatT === "number" && t - I.heatT >= 0 ? 1 - clamp01((t - I.heatT) / 0.45) : 0;
-  roomCard(c, G.pane, peek ? { room: peek, heat: h, pact: mask, locked: true, tiles: !!I.tiles } : { room: sel, heat: h, pact: mask, best: best[sel - 1], k: hk, open: U, tiles: !!I.tiles, floor: I.tiles ? floorLine(sel, h) : "" }, T, A, t);
-  capCell(c, G.heatCap, LABEL.DIFFICULTY, "", T);
-  segs(c, G.heat, DIFF, h, HEAT_COL.map((x, i) => (i ? x : TEXT)), T);
-  capCell(c, G.paceCap, LABEL.GAME_SPEED, W.tab, T, onPad ? 8 : 0); // SHOULDERS only fits the 44 px cap at 8 px
-  segs(c, G.pace, SPEED, p + 1, null, T);
-  if (U) {
-    capCell(c, G.modeCap, LABEL.MODIFIERS, onPad ? "" : "1–5", T);
-    for (let i = 0; i < 5; i++) {
-      const r = G.mode[i],
-        on = i < 4 ? (mask & MODE_BIT[i]) !== 0 : !!timeAttack;
-      chip(c, r, ((G.narrow && T) || onPad ? "" : i + 1 + " ") + (i < 4 ? MODE_NAME[i] : TIME_TRIAL), on, i < 4 ? PACT_COL[i] : TIME_COL, T, G.narrow ? 12 : 0); // a narrow touch chip drops the key digit
-    }
-    const cur = open ? I.cur | 0 : -1, trig = onPad ? modeFocus() : -1,
-      help = open ? (onPad ? padModeHelp(cur) : modeOne(cur)) : onPad ? padModeHelp(trig) : modeHelp(mask, timeAttack), // the open list describes its focused entry
-      ring = open ? cur : row !== LV.MODS ? trig : -1; // the open list's cursor; a controller's TRIGGER cursor, unless the MODIFIERS row's own ring is on (they share edges)
-    if (ring >= 0 && G.mode[ring]) focusRing(c, ringOf(G.mode[ring], 2)); // a shape, so it reads apart from an on chip's own outline
-    c.textAlign = "center";
-    c.fillStyle = MUTED;
-    if (G.narrow) {
-      c.font = font(11, "700");
-      const hl = wrap(c, help, S.iw, 2);
-      hl.forEach((l, i) => c.fillText(l, S.mid, G.help.y + G.help.h / 2 + 1 + (i - (hl.length - 1) / 2) * 13));
-    } else {
-      c.font = font(T ? 13 : 10, "700");
-      c.fillText(clip(c, help, S.iw), S.mid, G.help.y + G.help.h / 2 + 1);
-    }
-  }
-  const st = G.start,
-    tag = fitVal(c, setupVals(BIOMES[sel - 1].name, { heat: h, pace: p, pact: mask, time: U && timeAttack }), heroRoom(c, st.w - 16, st.h - 4, "START", T));
-  paintRow(c, st.x + 8, st.y + 2, st.w - 16, st.h - 4, LV.START, tag, tap || (!open && row === LV.START), { hero: true, touch: T }); // lit in tap mode (the page's one action), else only while focused
-  if (!tap && !open && row !== LV.START && G.rows[row]) focusRing(c, G.rows[row]);
-  foot(c, S, tap ? (open ? LEVEL_TAP_LIST : LEVEL_TAP) : levelFoot(row, open));
+  const I = info || {}, U = !!unlocked, lv = sel | 0 || 1;
+  levelPage.drawLevelPage(c, frameOf(L, touch), { level: lv, heat, pace, pact: U ? pact | 0 : 0, time: U && !!timeAttack, unlocked: U, best: (I.best || [])[lv - 1] || null, row: I.row || LABEL.LEVEL, open: !!I.open, cur: I.cur, trig: modeFocus(), tap: I.tap, lockR: I.lockR, lockT: I.lockT, enterT: I.enterT }, t);
 }
 
 /* GUIDE art in PIXEL (W5, R19): kind "px" swaps only the scaled vector glyph

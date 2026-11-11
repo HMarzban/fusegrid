@@ -46,9 +46,9 @@ export const isShellScreen = (s) => SHELL_ON.has(s);
    overlay keeps #c until its own redesign); 0 = hidden (PLAY, PAUSE, a mid-run
    WIN, INTRO, ATTRACT). */
 export const shellMode = (s, world) => (SHELL_ON.has(s) ? 1 : s === SCREEN.GAME && isRunEnd(world) ? 2 : 0);
-/* The screens whose page paints the room look opaque over its whole canvas every frame it is up (v202 Task 3.1: MENU; each page task
-   adds its screen): main passes {covered: true} to the renderer while one holds, so no look rasters a board nobody sees. */
-const COVERS = new Set([SCREEN.MENU]);
+/* The screens whose page paints the room look opaque over its whole canvas every frame it is up (v202 Task 3.1: MENU; Task 3.3: LEVEL
+   SELECT; each page task adds its screen): main passes {covered: true} to the renderer while one holds, so no look rasters a board nobody sees. */
+const COVERS = new Set([SCREEN.MENU, SCREEN.LEVEL]);
 export const shellCovers = (s) => COVERS.has(s);
 /* css: CSS px per box unit on a touch layout (MENU's touch floors, its phone column and its compact tiles are in CSS px); undefined on a keyboard
    layout, whose pages never read it. fit.js hands it in as the box's own css: #sh's stand-in carries shellGeo's scale and fit writes #c's stage scale
@@ -299,20 +299,11 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
   if (s === SCREEN.MENU) { const t = touchLay(canvas); return menudraw.drawMenu(c, menuUi(app, t, getCab), menudraw.layout(cw, chh, logoY, css), app.subT, t); }
   const L = menudraw.layout(cw, chh, logoY);
   if (s === SCREEN.LEVEL) {
-    menudraw.drawDim(c, 0.72, cw, chh);
-    menudraw.drawLevelSelect(
-      c,
-      app.level,
-      L,
-      app.subT,
-      app.heat,
-      app.pact,
-      app.pactUnlocked,
-      app.pace,
-      app.timeAttack,
-      touchLay(canvas),
-      infoOf(app, kind, getScores, getCab),
-    );
+    /* opaque on the world kit (pages/level.js): the selected level's room; tap mode (ruling 4) is a touch layout last driven by touch: any key or
+       controller press (app.lastDev, raw, no dwell) leaves it and shows the focus, a tap re-enters it */
+    const t = touchLay(canvas);
+    menudraw.drawLevelSelect(c, app.level, menudraw.layout(cw, chh, logoY, css), app.subT, app.heat, app.pact, app.pactUnlocked, app.pace, app.timeAttack, t,
+      { ...infoOf(app, kind, getScores, getCab), tap: t && app.lastDev === "touch", enterT: app.subT });
   } else if (s === SCREEN.HOWTO) {
     menudraw.drawDim(c, 0.72, cw, chh);
     menudraw.drawHowTo(c, L, app.subT, kind, touchLay(canvas));

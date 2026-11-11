@@ -121,6 +121,7 @@ const ALLOW_HUD = new Set(["LV", heatToken(0), heatToken(1), heatToken(2)]); // 
 /* the narrow allow: the medal name; the two modifier names that hold ITEMS; MAX beside the power-up it caps (the pickup label
    FLAME / BOMB / SPEED MAX, the ability bar's SPD MAX, the catalogue's "(max 8)"); and FRAME RATE's own MAX value and help line
    on GRAPHICS (a frame rate, not a difficulty) */
+const ENTRIES_NAME = (i) => ["ONE LIFE", "NO FLOOR ITEMS", "FEWER ITEMS", "SHRINK", "TIME TRIAL"][i];
 const scrub = (s) => s.replace(/IRON CROWN/g, "").replace(/NO FLOOR ITEMS|FEWER ITEMS/gi, "").replace(/\b(FLAME|BOMB|SPEED|SPD) MAX\b/g, "").replace(/\(max \d+\)/g, "").replace(/^30 SAVES MOST BATTERY · MAX IS UP TO YOUR SCREEN, HOTTE(ST|…)$/, "").replace(/^(FRAME RATE|SENSITIVITY) MAX$/, "");
 const bad = (s) => OLD.test(scrub(s)) || /\bITEMS?\b/i.test(scrub(s)) || /\b[LR]\d\b/.test(s) || /\bHARD\W{0,3}(SPEED|PACE)\b|\b(SPEED|PACE)\W{0,3}HARD\b/i.test(s);
 const found = new Map();
@@ -128,7 +129,7 @@ const found = new Map();
    it sits on (a text within ROW px of its baseline, as a segmented control's caption cell), names the setting. EXEMPT: the
    two table pages Phase 3 redraws (HIGH SCORES' difficulty tabs and plaques under BEST RUNS BY DIFFICULTY; FLOOR's columns
    and row prefixes under ONE PER WORLD · BY DIFFICULTY), exactly those tokens */
-const bare = [], ROW = 10;
+const bare = [], ROW = 10, CAP = 64;
 const EXEMPT = [[/^SCORES /, /^(NORMAL|HARD)$/], [/^FLOOR /, /^(NORMAL|HARD)$|^NORMAL · /]];
 const named = (where, texts) => {
   const T = texts.filter((t) => t && typeof t.s === "string");
@@ -137,6 +138,9 @@ const named = (where, texts) => {
     if (!b) continue;
     const need = b[1] === "HARD" ? /DIFFICULTY/ : /DIFFICULTY|SPEED/;
     if (need.test(t.s) || T.some((u) => u !== t && typeof u.y === "number" && Math.abs(u.y - t.y) <= ROW && need.test(u.s))) continue;
+    /* LEVEL SELECT's phone and compact rows (v202 Task 3.3, the approved p-03 frame): the setting's label sits on the line over its bank, inside the
+       one focus band; a bare value is named by the caption directly over its bank (within CAP px above, never below) */
+    if (/^LEVEL /.test(where) && T.some((u) => u !== t && typeof u.y === "number" && u.y < t.y && t.y - u.y <= CAP && /^(DIFFICULTY|GAME SPEED)$/.test(u.s) && need.test(u.s) && !T.some((v) => v !== u && /^(DIFFICULTY|GAME SPEED)$/.test(v.s) && v.y > u.y && v.y < t.y))) continue;
     if (EXEMPT.some(([w, r]) => w.test(where) && r.test(t.s))) continue;
     bare.push(where + " :: " + t.s);
   }
@@ -173,6 +177,7 @@ APPS.push(["MENU", { soundNote: "NO SOUND YET · PRESS A KEY OR TAP" }], ["MENU"
 for (const o of [{}, { pactUnlocked: true }, { pactUnlocked: true, heat: 1, pace: -1, pact: 15, timeAttack: true, level: 8 }, { pactUnlocked: false, lockR: 7, lockT: 4.9 }]) APPS.push(["LEVEL", o]);
 for (const U of [false, true]) for (const r of U ? [0, 1, 2, 3, 4] : [0, 1, 2, 4]) APPS.push(["LEVEL", { pactUnlocked: U, levelRow: r }]); // every row focused (Task 2.3)
 for (let c = 0; c < 5; c++) APPS.push(["LEVEL", { pactUnlocked: true, levelRow: 3, modOpen: true, modeCur: c, pact: 5 }]); // the MODIFIERS list open, each entry
+APPS.push(["LEVEL", { pactUnlocked: true, lastDev: "touch" }], ["LEVEL", { pactUnlocked: true, levelRow: 3, modOpen: true, modeCur: 0, lastDev: "touch" }]); // tap mode (ruling 4, Task 3.3): the tap rule's foot
 for (const s of ["HOWTO", "ITEMS", "ENEMIES", "FLOOR", "TROPHIES", "CONTROLS"]) APPS.push([s, {}]);
 for (let r = 0; r < 4; r++) APPS.push(["GUIDE", { guideRow: r }]);
 for (let h = 0; h < 3; h++) APPS.push(["SCORES", { scoreHeat: h }], ["SCORES", { scoreHeat: h, recFocus: 1 }]); // RECORDS: the tab row (an app's default), then the page body
@@ -272,8 +277,8 @@ check("ruling 7: a bare NORMAL or HARD only where its own line or row names its 
   const SEEN = ["SETTINGS", "ART STYLE", "POWER-UPS", "NORMAL", "EXPERT", "GAME SPEED", "DIFFICULTY", "MODIFIERS", "ONE LIFE", "NO FLOOR ITEMS", "TIME TRIAL", "POWER BOMB", "IRON CROWN",
     "FURTHEST LEVEL YET", "MATCHED YOUR", "FROM YOUR", "DAILY 2026-11-10 · NORMAL SPEED", "PAUSED · LEVEL 3", "LEVEL ENDS", "THROW POWER-UP", "CLEAR LEVEL 5 TO OPEN", "REBIND IN SETTINGS",
     "KEEPS SETTINGS", "replaces POWER BOMB", "NO NORMAL DIFFICULTY RUNS YET", "BEST 4,210", "LEVELS 1-5 IN ONE RUN", "BESTS · NO MODIFIERS", "YOUR TRIES TODAY", "4 PAGES", "GITHUB", "CHANGE ART STYLE",
-    "LEVEL 8 · CROWN", "the level you reach", "DID NOT LOAD · SETTINGS", "· next level", "8 LEVELS", "5 LEVELS · 3 LOCKED", "NO VIBRATION AT ALL", "LIVES 1",
-    "UNDER 3:00 · DEFAULT RULES", "DAILY 2026-11-10 · LEVEL 3 · 1840", "RECORDS", "←→ TAB · ↓ DIFFICULTY", "←→ TAB · T MEDALS", "←→ TAB · ENTER / ESC BACK", "↑ TABS · ← → DIFFICULTY", "↑ TABS · T MEDALS", "BEST RUNS BY DIFFICULTY", "SPD MAX", "FRAME RATE MAX", "SENSITIVITY MAX", "LEVEL 8", "↑↓ ROW · ←→ ADJUST · ENTER START", "↑↓ ROW · ENTER OPEN", "↑↓ ROW · ENTER START", "↑↓ PICK · ENTER TOGGLE · ESC CLOSE", "↑↓ PICK · SOUTH TOGGLE · EAST CLOSE", "↑↓ ROW · ←→ ADJUST · SOUTH START", "TAP OUTSIDE TO CLOSE",
+    "LEVEL 8 · CROWN", "the level you reach", "DID NOT LOAD · SETTINGS", "· next level", "Levels 5 and 8 end in a finale.", "Clear level 5 to open 6 to 8.", "NO VIBRATION AT ALL", "NO TIME YET", "Walls close in from 25s.", "ONE LIFE · FEWER ITEMS",
+    "UNDER 3:00 · DEFAULT RULES", "DAILY 2026-11-10 · LEVEL 3 · 1840", "RECORDS", "←→ TAB · ↓ DIFFICULTY", "←→ TAB · T MEDALS", "←→ TAB · ENTER / ESC BACK", "↑ TABS · ← → DIFFICULTY", "↑ TABS · T MEDALS", "BEST RUNS BY DIFFICULTY", "SPD MAX", "FRAME RATE MAX", "SENSITIVITY MAX", "LEVEL 8", "ROW", "CHANGE", "OPEN", "PICK", "TOGGLE", "SOUTH", "TAP OUTSIDE TO CLOSE", "TAP OUTSIDE TO GO BACK",
     "STANDARD", "CONTROLLER READY · VIBRATION MEDIUM · SETTINGS › CONTROLS", "NEEDS A CLICK OR ENTER", "TAP A ROW", "LEVEL 1 · JUNGLE"]; // Task 2.4: only the REAL 3D rows draw STANDARD (CAMERA's value); Task 3.1: the MENU page's teasers, foot and signpost (its old preview panes are gone)
   const all = [...found.keys()], miss = SEEN.filter((w) => !all.some((s) => s.indexOf(w) >= 0));
   check("the sweep reached every branch it claims (one marker each)", miss.length === 0, miss.join(" | "));
@@ -289,19 +294,27 @@ check("ruling 7: a bare NORMAL or HARD only where its own line or row names its 
     check(`PAUSE kicker (${name}): a daily keeps DAILY, a heavy run keeps its modifier count, a default run reads LEVEL n · world`,
       !!d && d.s === "LEVEL 1 · JUNGLE · DAILY" && !!h && /4 MODIFIERS$/.test(h.s) && /^LEVEL 8 · /.test(h.s) && !!plain && plain.s === "LEVEL 3 · FACTORY", J([d && d.s, h && h.s, plain && plain.s]));
   }
-  /* LEVEL SELECT: a MODIFIERS name broken over two lines stays inside its chip, in the iso guard and on a narrow touch box */
-  const px = (t) => +/(\d+(?:\.\d+)?)px/.exec(t.font)[1];
-  for (const [name, L, T] of [["iso 608x352", md.layout(608, 352), false], ["iso touch", md.layout(608, 352), true], ["narrow touch", md.layout(436, 946, 255), true], ["600x520", md.layout(600, 520), false]]) {
-    const R = rec({ widthK: 0.648 }), G = md.levelGeom(L, true, T);
-    md.drawLevelSelect(R.ctx, 3, L, 1, 1, 15, true, 1, true, T, {});
-    const out = [];
-    G.mode.forEach((r, i) => {
-      const lines = R.texts.filter((t) => t.s && Math.abs(t.x - (r.x + r.w / 2)) < 0.01 && t.y >= r.y - 4 && t.y <= r.y + r.h + 4 && t.align === "center"); // this chip's own centred lines
-      for (const t of lines) if (t.y - px(t) / 2 < r.y - 0.01 || t.y + px(t) / 2 > r.y + r.h + 0.01 || t.w > r.w) out.push(i + ":" + t.s + "@" + px(t));
+  /* LEVEL SELECT (v202 Task 3.3): a MODIFIERS list entry's name, broken over two lines where one will not fit, stays inside its key, in the iso
+     guard, the touch boxes and the narrow phone, at text scale 1 and 1.25 (the two-line path is reached at least once) */
+  const { setTextScale } = await import("../src/render/kit/type.js");
+  const lvp = await import("../src/render/pages/level.js");
+  let two = 0;
+  for (const ts of [1, 1.25]) for (const [name, L, T] of [["iso 608x352", md.layout(608, 352), false], ["iso touch", md.layout(608, 352), true], ["narrow touch", md.layout(436, 946, 255, 0.9), true], ["600x520", md.layout(600, 520), false], ["landscape phone", md.layout(600, 520, undefined, 0.725), true]]) {
+    setTextScale(ts);
+    const R = rec({ widthK: 0.648 }), G = md.levelGeom(L, true, T, true), u = G.u;
+    md.drawLevelSelect(R.ctx, 3, L, 1, 1, 15, true, 1, true, T, { open: true, cur: 0, row: W.LABEL.MODIFIERS });
+    const out = [], n = [];
+    lvp._dbg.last.P.list.forEach((q) => {
+      const r = q.r, lines = R.texts.filter((t) => q.lines.includes(t.s) && t.y >= r.y - 4 && t.y <= r.y + r.h + 4);
+      n.push(q.lines.length);
+      q.lines.forEach((s0, i) => { const w = q.ws[i], x = r.x + 8 + 28 + 6; if (x + w > r.x + r.w - 2 || q.lines.length * q.px * ts * 1.1 > r.h) out.push(ENTRIES_NAME(q.i) + ":" + s0); });
+      if (!lines.length) out.push(q.i + " not drawn");
     });
-    const n = G.mode.map((r) => R.texts.filter((t) => t.s && Math.abs(t.x - (r.x + r.w / 2)) < 0.01 && t.y >= r.y && t.y <= r.y + r.h).length);
-    check(`MODIFIERS chips (${name}): every line inside its chip, two-line names included`, out.length === 0 && n.every((k) => k >= 1) && n.some((k) => k === 2), out.join(" | ") + " " + J(n));
+    two += n.filter((k) => k === 2).length;
+    check(`MODIFIERS list (${name}, x${ts}): every entry's name drawn whole inside its key, on one line or two`, out.length === 0 && n.length === 5 && n.every((k) => k === 1 || k === 2), out.join(" | ") + " " + J(n));
   }
+  setTextScale(1);
+  check("MODIFIERS list: the two-line path is reached (a name too wide for its key breaks once, never cut)", two > 0, two);
 }
 
 /* ---- fit, fix round 1: the iso MENU pane and the ability bar ---- */

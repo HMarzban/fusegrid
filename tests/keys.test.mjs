@@ -1363,6 +1363,18 @@ for (const code of ["Space", "Enter"]) {
     check("T14: TIME too", g.app.timeAttack === !t0);
     tap(g, "N");
     g.app.timeAttack = t0; }
+  /* v202 Task 3.3 (ruling 5): the MODIFIERS list by controller too: D-PAD down to the door, SOUTH opens it, SOUTH toggles the entry, EAST closes */
+  { const g = pLevel(); g.app.pact = 0; g.app.timeAttack = false;
+    while (g.app.levelRow < 3) tap(g, "dD");
+    tap(g, "S");
+    check("controller: SOUTH on MODIFIERS opens the list on ONE LIFE", g.app.modOpen === true && g.app.modeCur === 0 && g.app.screen === SCREEN.LEVEL, [g.app.levelRow, g.app.modOpen, g.app.modeCur].join());
+    tap(g, "S");
+    check("controller: SOUTH in the list toggles ONE LIFE", (g.app.pact & PACT.LAST) !== 0 && g.app.modOpen, g.app.pact);
+    tap(g, "dD"); tap(g, "S");
+    check("controller: D-PAD down, SOUTH toggles NO FLOOR ITEMS", (g.app.pact & PACT.BARE) !== 0 && g.app.modeCur === 1, g.app.pact);
+    tap(g, "E");
+    check("controller: EAST closes the list, still on LEVEL SELECT", !g.app.modOpen && g.app.screen === SCREEN.LEVEL);
+    g.app.pact = 0; }
   { const g = page("LEVEL SELECT")(); g.app.pactUnlocked = false; tap(g, "TRR"); tap(g, "N");
     check("T14: MODES stay shut before the first CLEAR", g.app.modeCur === -1 && g.app.pact === 0); }
   { const g = page("RECORDS", (g) => tap(g, "dR"))(), c0 = clip.length; tap(g, "W"); await flush(); g.tick();
