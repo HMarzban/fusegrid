@@ -215,6 +215,19 @@ const U = (n) => "http://x/g/src/m" + n + ".js";
   c.winOn.error({ filename: "http://x/g/src/main.js" });
   check("after the title, a runtime error is not a load failure", c.el("load").hidden);
 }
+/* R1 release (b): hudart.js sits in the PIXEL tree and GUIDE's lazy tree; GUIDE's idle load fetching it first (an entry older than the PIXEL job) is
+   never counted, and rcache's fetch of the whole tree after begin() reaches the full count (headless Chrome: 27 / 27 FILES with GUIDE first and cold) */
+{
+  const b = boot1(), P = lookPlan("px"), url = (u) => "http://x/g/" + u;
+  b.L.end("boot");
+  b.time(50);
+  b.files([url("src/render/hudart.js")], 50);
+  b.time(100);
+  b.L.begin("px", P);
+  check("PIXEL: an entry from before the job (GUIDE's idle hudart.js) is not counted", b.el("loadmsg").textContent === "LOADING PIXEL", b.el("loadmsg").textContent);
+  b.files(P.urls.map(url), 200);
+  check("PIXEL: the tree fetched after begin() counts every file, hudart.js included (" + P.files + " / " + P.files + ")", P.urls.includes("src/render/hudart.js") && b.el("loadmsg").textContent === "PIXEL · " + P.files + " / " + P.files + " FILES", b.el("loadmsg").textContent);
+}
 {
   const b = boot1();
   b.time(9000);
