@@ -51,7 +51,7 @@ export const PTS = deep({walker: 100, stationary: 100, fast: 100, chaser: 100, b
 export const POINTS = GW.POINTS, PTS_W = GW.PTS, APPEARS = GW.APPEARS, tipText = GW.tip;
 export const HINT = deep({key: GW.HINT_KEY, tap: GW.HINT_TAP});
 export {BACK_TAP};
-const FLOOR_HEAD = LABEL.DIFFICULTY + " · " + DIFF.join(" · "), RULES = GW.RULES, NOTE_KEY = GW.NOTE_KEY, NOTE_TAP = GW.NOTE_TAP, NEEDS = " *";
+const RULES = GW.RULES, NOTE_KEY = GW.NOTE_KEY, NOTE_TAP = GW.NOTE_TAP, NEEDS = " *";
 const howRows = (W) => [
   [[W.move, W.moveAlt], GW.MOVE, null],
   [[W.bomb], GW.BOMB, "bomb"],
@@ -189,9 +189,12 @@ function body(page, m, iw) {
   const lvl = (q) => LABEL.LEVEL + " " + q.room + " · " + BIOMES[q.room - 1].name, two = (q) => { const h = TILE_HELP[q.k]; return h ? [DIFF[0] + " · " + h[0], DIFF[2] + " · " + h[2]] : [GW.LOOK_ONLY, GW.RULE_LATER]; };
   const inl = FLOOR_ROWS.every((q) => L(q.name, P) + 12 + L(lvl(q), Sx) <= nameW), side = desk && FLOOR_ROWS.every((q) => { const [a, b] = two(q); return L(a, Sx) + 24 + L(b, Sx) <= tw; });
   const nl = FLOOR_ROWS.map((q) => (side ? 1 : two(q).reduce((n, x) => n + linesOf(T.label, Sx, x, tw), 0)));
-  const hn = desk ? 1 : partsOf((x) => L(x, Sx), FLOOR_HEAD, iw).length, hd = hn * lhS + 6, rowH = (i) => (desk ? Math.max(s + 12, 6 + lhP + (inl ? 0 : lhS) + nl[i] * lhS + 6) : 5 + Math.max(s, lhP + (inl ? 0 : lhS)) + 4 + nl[i] * lhS + 5);
+  /* off the desk the setting's name rides the title row, right-aligned beside FLOOR, where it fits (no added height); where it does not it drops (the
+     words.js step-down), so the head never costs a line */
+  const bwT = m.hk ? BACK_H : BACK_W, roomT = iw - bwT - 16 - (m.hk ? 2 * PAGE_KEY + PAGE_GAP + 12 : 0), dk = m.mode !== "desk" && mw(T.display, dv.ttl, FL) + 24 + L(LABEL.DIFFICULTY, Sx) <= roomT;
+  const hl = DIFF.join(" · "), hn = 1, hd = hn * lhS + 6, rowH = (i) => (desk ? Math.max(s + 12, 6 + lhP + (inl ? 0 : lhS) + nl[i] * lhS + 6) : 5 + Math.max(s, lhP + (inl ? 0 : lhS)) + 4 + nl[i] * lhS + 5);
   const g = grid(FLOOR_ROWS.length, colsF, gap, iw, (i) => rowH(i), desk ? 6 : 4);
-  return {h: hd + g.h, top: hd, bands: g.rows.map((q) => ({y: q.y + hd, h: q.h})), items: FLOOR_ROWS.map((q, i) => ({name: q.name, r: R(g.rects[i].x, g.rects[i].y + hd, g.rects[i].w, g.rects[i].h), band: g.ri[i], s, cg, cellsW, tw, nl: nl[i], side, inl, wide: desk, lvl: lvl(q), lines: two(q), k: q.k, room: q.room})), head: R(0, 0, iw, hn * lhS), desk};
+  return {h: hd + g.h, top: hd, bands: g.rows.map((q) => ({y: q.y + hd, h: q.h})), items: FLOOR_ROWS.map((q, i) => ({name: q.name, r: R(g.rects[i].x, g.rects[i].y + hd, g.rects[i].w, g.rects[i].h), band: g.ri[i], s, cg, cellsW, tw, nl: nl[i], side, inl, wide: desk, lvl: lvl(q), lines: two(q), k: q.k, room: q.room})), head: R(0, 0, iw, hn * lhS), desk, dk, hl};
 }
 /* the tooltip's head: pad, the title row (36: POINTS and the value), then 6, the body lines and the bottom pad; a compact box (a landscape phone)
    has no room for the value's keys, so its title row is the POINTS word alone (the value sits ringed on the row it points at) */
@@ -263,7 +266,7 @@ function lay(F, page, mode, fr) {
   const side = 12, cp = mode === "compact", top = cp ? DEV.p.T + 2 : 20, bot = cp ? DEV.p.T + 3 : 20, hg = cp ? 8 : 12, max = mode === "phone" ? PHONE_MAX : COMPACT_MAX;
   let u = 1 / fr.css, mb = m;
   if (cp && fr.hkEN) hk = true; // ENEMIES' tooltip asked for the body's foot (guideGeom)
-  const build = (uu) => { const pw = Math.min(F.W / uu - 2 * side, max), iw = pw - P0[1] - P0[3]; return {pw, iw, hd: headOf(page, {...m, hk}, iw), bd: body(page, mb, iw), gap: hg}; };
+  const build = (uu) => { const pw = Math.min(F.W / uu - 2 * side, max), iw = pw - P0[1] - P0[3]; return {pw, iw, hd: headOf(page, {...m, hk}, iw), bd: body(page, {...mb, hk}, iw), gap: hg}; };
   let R0 = fit(u, F.H, top, bot, build);
   /* compact (#c, R1 landscape): where the bands do not page whole at 1 / css the page steps down, never scales: ENEMIES drops a foe's help from its row
      (as at 125 %: the tooltip still says it), then the phone's one-column body, then BACK steps down to its chevron and the page keys ride the head's
@@ -302,7 +305,7 @@ export function guideGeom(F, page = GUIDE, hkEN = false) {
   };
   for (const it of B.items) { D.items[it.name] = place(it); D.order.push(it.name); }
   if (B.note) D.note = {r: off(B.note.r, x0, y0 + dy[B.note.band]), page: pOf[B.note.band]};
-  if (B.head) D.fhead = off(B.head, x0, y0);
+  if (B.head) { D.fhead = off(B.head, x0, y0); D.fdk = !!B.dk; D.fhl = B.hl; }
   if (pages.length > 1) {
     D.pager = d.hk ? {...pagerKeys(d.ix, d.iy, d.iw, PAGE_KEY), head: true} : pagerKeys(x0, y0 + d.pg.h - PAGE_KEY, d.iw, PAGE_KEY);
   }
@@ -586,7 +589,10 @@ function floorPlan(c, G, on) {
   /* the head names its setting (a difficulty value is printed with DIFFICULTY wherever nothing beside it names it): desk, over the name column
      beside the three column heads; else the setting first on the one line */
   if (desk) { DIFF.forEach((s, j) => on(null, head(s, f0.r.x + 16 + j * (f0.s + f0.cg) + f0.s / 2, D.fhead.y + D.fhead.h / 2, "center"))); on(null, head(LABEL.DIFFICULTY, f0.r.x + 16 + f0.cellsW + 16, D.fhead.y + D.fhead.h / 2)); }
-  else partsOf((x) => Wm(c, T.label(sec), x), FLOOR_HEAD, D.fhead.w).forEach((l, j) => on(null, head(l, D.fhead.x, D.fhead.y + lhS * (j + 0.5))));
+  else {
+    if (D.fdk) on(null, head(LABEL.DIFFICULTY, D.head.title.x + D.head.title.w, D.head.title.y + D.head.title.h / 2, "right")); // the title row names the setting
+    on(null, head(D.fhl, D.fhead.x, D.fhead.y + D.fhead.h / 2));
+  }
   for (const n of D.order) {
     const q = D.items[n], r = q.r, pg = q.page;
     on(pg, {op: "lane", r});
