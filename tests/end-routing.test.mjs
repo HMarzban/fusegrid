@@ -81,6 +81,20 @@ for (const code of ["Enter", "Space"]) {
   press(g, "Enter"); g.tick(5);
   check("mid-run WIN + Enter -> the next level", mid && g.app.screen === SCREEN.GAME && g.world.state === "PLAY" && g.world.level === 2, g.world.state + "/" + g.world.level);
 }
+// ---- a paged run end (a short box: Node's #c has no stage scale, css 1, and the finale does not fit 600 x 520 whole) ----
+{
+  const g = finale(), at5 = g.world.state === "WIN";
+  const n = endGeom(overlayBox("2d"), endFacts(g.world, g.ro.run, g.ro.time), { lay: "d", css: 1 }).pages;
+  press(g, "ArrowDown"); g.tick();
+  const p1 = g.ro.run.page;
+  press(g, "ArrowUp"); press(g, "ArrowUp"); g.tick();
+  const p0 = g.ro.run.page;
+  for (let i = 0; i < n + 3; i++) press(g, "ArrowDown");
+  g.tick();
+  check("↓ / ↑ turn a paged finale's page, clamped to its pages; the run end stays", at5 && n > 1 && p1 === 1 && p0 === 0 && g.ro.run.page === n - 1 && g.world.state === "WIN", J([n, p1, p0, g.ro.run.page]));
+  press(g, "Enter"); g.tick(5);
+  check("paged: Enter still goes to MENU", g.app.screen === SCREEN.MENU);
+}
 // ---- Esc: MENU at a run end, nothing on a mid-run WIN ----
 {
   const g = lose(run());

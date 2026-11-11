@@ -23,6 +23,10 @@ import { getFlash, getShake } from "../src/render/fx.js";
 import { copyPayload, drawOverlay, overlayBox, overlayCue } from "../src/render/scenes.js";
 import { createToast, copyText, toastOf, toastTick, TOAST_T } from "../src/app/endkeys.js";
 import "../src/app/demobot.js";
+import { rec as krec } from "./lib/textrec.mjs";
+import * as kprobe from "../src/render/kit/probe.js";
+import * as lazyPages from "../src/render/pages/lazy.js";
+import * as endWin from "../src/render/pages/endwin.js";
 await preloadControls(loadControlsArt); // the CONTROLS page, its paint and rumble are lazy (v202): in before the first mount
 const RECP = await (await import("../src/render/pages/lazy.js")).want("records"); // RECORDS is a lazy page (R20): in before its taps
 
@@ -1260,11 +1264,14 @@ for (const code of ["Space", "Enter"]) {
       check("cue names ENTER for " + st.state + " L" + st.level, /SPACE \/ ENTER \/ TAP/.test(cue));
     }
     for (const s of ["COPIED", "BOARD LINK COPIED", "COPY FAILED"]) {
-      const R = rec();
-      drawOverlay(R.c, { state: "WIN", level: 3, score: 1 }, B.w, B.h, B.cx, B.cy, undefined, undefined, undefined, { s, ok: s !== "COPY FAILED" });
-      const row = R.rows.find(([t]) => t === s);
+      // v202 Task 5.3: the WIN page (lazy, handed in) drops the note as a brick tag at its plate's top, above the headline
+      lazyPages._set("endwin", endWin);
+      const R = krec(); kprobe.setOn(true);
+      drawOverlay(R.ctx, { state: "WIN", level: 3, score: 1 }, B.w, B.h, B.cx, B.cy, undefined, undefined, undefined, { s, ok: s !== "COPY FAILED", t: 1 });
+      const S = kprobe.snapshot(); kprobe.setOn(false);
+      const row = S.texts.find((t) => t.s === s), hd = S.texts.find((t) => t.s === "LEVEL 3 CLEAR");
       check(tag + ": '" + s + "' is drawn above the headline, inside the box",
-        !!row && row[1] < B.cy - 36 && row[1] > 24 && [...s].length * 15 * 0.6 <= B.w - 48, row && row[1]);
+        !!row && !!hd && row.y + row.capH < hd.y && row.y > 24 && row.x >= 0 && row.x + row.w <= B.w, row && row.y);
     }
     const P = rec();
     drawOverlay(P.c, { state: "PAUSE" }, B.w, B.h, B.cx, B.cy, { view: 0, cursor: 0 }, undefined, undefined, { s: "COPIED", ok: true });
@@ -1481,7 +1488,10 @@ for (const code of ["Space", "Enter"]) {
     check("T14: " + nm + " WEST copies the result, with the same toast", g.world.state === st && clip.length === c0 + 1 && clip.at(-1) === copyPayload(g.world) && g.ro.toast && g.ro.toast.s === "COPIED", JSON.stringify(g.ro.toast));
     tap(g, "N"); await flush(); g.tick();
     check("T14: " + nm + " NORTH copies the board link", g.world.state === st && /\?code=F3/.test(clip.at(-1)) && g.ro.toast && g.ro.toast.s === "BOARD LINK COPIED", JSON.stringify(g.ro.toast));
-    check("T14: the cue names them", /WEST copy · NORTH board/.test((() => { const lines = []; const r = { font: "", fillText: (s) => lines.push(s), measureText: () => ({ width: 0 }) }; const c = new Proxy(r, { get: (t, p) => (p in t ? t[p] : () => {}), set: (t, p, v) => { t[p] = v; return true; } }); drawOverlay(c, g.world, 600, 520, 300, 260, {}); return lines.join("|"); })()));
+    if (nm === "WIN") { // v202 Task 5.3: the WIN page's copy keys (on the finale; a level clear shows NEXT LEVEL only) read COPY RESULT … WEST, COPY MAP … NORTH
+      const R = krec(); drawOverlay(R.ctx, { ...g.world, level: 5 }, 600, 520, 300, 260, {}, undefined, { r: 5, et: 9 }); const ws = R.texts.map((t) => t.s);
+      check("T14: the keycaps name them", ws.indexOf("WEST") === ws.indexOf("COPY RESULT") + 1 && ws.indexOf("NORTH") === ws.indexOf("COPY MAP") + 1, ws.join("|"));
+    } else check("T14: the cue names them", /WEST copy · NORTH board/.test((() => { const lines = []; const r = { font: "", fillText: (s) => lines.push(s), measureText: () => ({ width: 0 }) }; const c = new Proxy(r, { get: (t, p) => (p in t ? t[p] : () => {}), set: (t, p, v) => { t[p] = v; return true; } }); drawOverlay(c, g.world, 600, 520, 300, 260, {}); return lines.join("|"); })()));
   }
   { const g = pMenu(), log = [], c = { on: true, live() { return this.on; }, press(id) { log.push(id); } };
     g.app.padCards = [c, ...g.app.padCards]; g.tick();

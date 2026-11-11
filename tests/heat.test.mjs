@@ -7,6 +7,9 @@ import { winHeadline, overlayCue, runStamp, copyPayload, drawOverlay,
 import { scoreEntry } from "../src/app/highscores.js";
 import { PACT_KEY, loadPactUnlocked, savePactUnlocked } from "../src/app/pactstore.js";
 import { readFileSync } from "node:fs";
+import * as lazyPages from "../src/render/pages/lazy.js";
+import * as endWin from "../src/render/pages/endwin.js";
+lazyPages._set("endwin", endWin); // WIN is a lazy page (v202 Task 5.3): handed in as if its import had landed
 
 let pass = 0,
   fail = 0;
@@ -359,7 +362,7 @@ check(
   );
   check(
     "drawOverlay WIN/LOSE branches ignore ui entirely",
-    texts.some((s) => s.indexOf("CLEARED") >= 0),
+    texts.some((s) => s === "LEVEL 3 CLEAR"),
     texts.join("|"),
   );
 }

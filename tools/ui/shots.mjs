@@ -6,9 +6,10 @@
      --screens a,b    screens to capture (default all): title, menu, level, options (alias settings), graphics, controls, guide, howto, items,
                       enemies, floor, scores, stats, statsreset (STATS armed), medals, scoresfull / statsfull (a seeded cabinet,
                       __GAME__.seedRecords()), statspage2 (STATS' second page on a paged phone), scoresidle (RECORDS through the real lazy.idle() load: no want()), pause, pausetags (PAUSE with the run's rules seeded: the tag row), win, lose,
+                      loseshort (a saved best: the shortfall), losedaily (today's DAILY),
                       play; optionskeys / graphicskeys / guidekeys (SETTINGS, GRAPHICS, GUIDE reached by real key presses, so a phone capture
                       shows the keyboard focus); captured in that canonical order
-                      whatever the order given
+                      whatever the order given (win at --world 5 or 8 is the finale)
      --look 2d,px,3d  art styles (default 2d); one page load per look and world
      --world 1,2,8    worlds, levels 1..8 (default 1): app.level before the title (6..8 also open rooms 6-8, app.pactUnlocked, as after a first CLEAR);
                       a run screen plays that level
@@ -176,7 +177,9 @@ async function group(c, port, a, look, world, rep) {
       const base = capName({ screen: s, ...ctx });
       if (R.run) {
         await ev(RUN0);
-        if (!(await pick("cursor", "m.ITEMS", ["PLAY"]))) { L.fail(base, "no PLAY row on MENU"); L.close(base); continue; }
+        for (const [k, v] of Object.entries(R.store || {})) await ev(`(localStorage.setItem(${JSON.stringify(k)},${JSON.stringify(v)}),true)`);
+        const row = R.daily ? "DAILY" : "PLAY";
+        if (!(await pick("cursor", "m.ITEMS", [row]))) { L.fail(base, "no " + row + " row on MENU"); L.close(base); continue; }
         await confirm();
         if (!(await poll("window.__GAME__.app.screen===6&&window.__GAME__.G.state==='PLAY'", 5000))) { L.fail(base, "the run did not start"); L.close(base); continue; }
         if (a.seed != null) for (const w of await ev(loadExpr({ seed: a.seed, heat: null, pace: null, gen: null }, world))) warn(w);
@@ -185,10 +188,10 @@ async function group(c, port, a, look, world, rep) {
           if (R.tags) await ev("(Object.assign(window.__GAME__.G,{heat:2,pace:1,pact:15}),window.__GAME__.app.timeAttack=true,true)"); // the tag row: every rule on, for the capture only
           await ev("window.__pause&&window.__pause()");
         }
-        if (s === "lose" || s === "win") {
+        if (R.run === "lose" || R.run === "win") {
           await P.adv(300);
-          await ev(s === "lose" ? LOSE : "window.__GAME__.clearAllEnemies()");
-          const end = s === "lose" ? "LOSE" : "WIN";
+          await ev(R.run === "lose" ? LOSE : "window.__GAME__.clearAllEnemies()");
+          const end = R.run === "lose" ? "LOSE" : "WIN";
           for (let i = 0; i < 80 && (await ev("window.__GAME__.G.state")) !== end; i++) await P.adv(50);
         }
         await shoot(s, R.settle);

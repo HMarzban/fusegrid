@@ -563,7 +563,7 @@ test("screens: exemptPhone exempts on .phone captures only, on the same rules (R
 });
 
 test("screens: every name has a recipe and a state; aliases; capture names round trip", () => {
-  assert.deepEqual(ORDER, ["title", "menu", "level", "options", "graphics", "controls", "guide", "howto", "items", "enemies", "floor", "optionskeys", "graphicskeys", "guidekeys", "scoresidle", "scores", "stats", "statsreset", "statspage2", "medals", "scoresfull", "statsfull", "play", "pause", "pausetags", "win", "lose"]); // pausetags: v202 Task 5.1, PAUSE with the tag row
+  assert.deepEqual(ORDER, ["title", "menu", "level", "options", "graphics", "controls", "guide", "howto", "items", "enemies", "floor", "optionskeys", "graphicskeys", "guidekeys", "scoresidle", "scores", "stats", "statsreset", "statspage2", "medals", "scoresfull", "statsfull", "play", "pause", "pausetags", "win", "lose", "loseshort", "losedaily"]); // pausetags: v202 Task 5.1, PAUSE with the tag row; v202 Task 5.4: GAME OVER with a saved best, and on a DAILY
   for (const n of ORDER) assert.ok(SCREENS[n] && SCREENS[n].state, n);
   /* R1 release (c): the key-driven twins of SETTINGS / GRAPHICS / GUIDE press real keys on a phone and gate the focus there (no exemptPhone) */
   for (const [k, base, gates] of [["optionskeys", "options", ["band"]], ["graphicskeys", "graphics", ["band"]], ["guidekeys", "guide", ["band", "ring"]]]) {

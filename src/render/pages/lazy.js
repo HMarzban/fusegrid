@@ -9,6 +9,7 @@ const LOAD = {
   settings: () => import("./settings.js"),
   guide: () => import("./guide.js"),
   records: () => import("./records.js"),
+  endwin: () => import("./endwin.js"),
 };
 const mods = {}, wait = {};
 

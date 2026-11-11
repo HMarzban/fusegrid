@@ -8,15 +8,15 @@
    time ribbon reads the times store's own record (recordTime ran at the WIN edge, tm.best is the record before it). No run (ATTRACT) = no claim.
    endGeom(B, F, o) is the geometry in box units, rects by NAME (plate, the sections, and the keys main / menu / copy / map): o = {lay ("d" desk,
    "p" touch portrait, "l" touch landscape), css (CSS px per box unit, fit.js's stage scale on #c; 1 when unknown), ts (the kit text scale)}.
-   Sizes are the mock's CSS px (design px, appendix 10); u = box units per design px = 1 / css, then the gaps give way to a short box (down to
-   their floor), then the page scales as one piece. Desk: the mock's plates (level clear 560, finale 840, GAME OVER 200 | 400 two columns over a
+   Sizes are the mock's CSS px (design px, appendix 10) at u = 1 / css box units per design px, never scaled under the floors: a short box
+   closes the gaps, then pages the content (see endGeom). The page sits under the HUD band (HUD_TOP). Desk: the mock's plates (level clear 560, finale 840, GAME OVER 200 | 400 two columns over a
    foot row); a touch-portrait box: the phone's one column, every key inside the plate (the board box has no window bottom to dock to).
-   endHit(x, y, G) names the key under a tap (main, menu, copy, map) or null: off the keys a tap does nothing (it skips the motion). endTap is
+   endHit(x, y, G) names the key under a tap (main, menu, copy, map; up / down the pager's) or null: off the keys a tap does nothing (it skips the motion). endTap is
    main's whole tap path: while the page for this mode is not in (LOADING), null; where no page is registered yet, today's tap, the main key. */
 import {isFinale, biomeOf} from "../../core/config.js";
 import {LABEL, diffTag, multTag, runParts} from "../words.js";
 import {fmtTime, fmtSpan, bestLabel, dailyLine, pauseKickers, isRunEnd} from "../scenes.js";
-import {textScale} from "../kit/type.js";
+import {T, measure, textScale} from "../kit/type.js";
 
 const deep = (o) => { for (const v of Object.values(o)) if (v && typeof v === "object") deep(v); return Object.freeze(o); };
 /* design px by device (d desk, p phone): L the label cap, the type px (sec pri hud bod), key heights, the course cell, the plate ring T */
@@ -24,8 +24,8 @@ export const END = deep({
   d: {L: 14.8, sec: 16, pri: 21, hud: 27, bod: 18, btnh: 50, cell: 40, T: 16, gap: 1.6, side: 24, clearW: 560, finW: 770, loseL: 200, loseR: 400, loseGap: 20, hClear: 50, hFin: 66, hLose: 54},
   p: {L: 11.3, sec: 13.5, pri: 16, hud: 20, bod: 15, btnh: 52, cell: 37, T: 10, gap: 1.2, side: 12, hClear: 38, hFin: 33, hLose: 40},
 });
-export const KEYS = Object.freeze(["main", "menu", "copy", "map"]);
-export const MARGIN = 6, GAP_MIN = 0.5, MOTION = Object.freeze({win: 1.6, lose: 1.4});
+export const KEYS = Object.freeze(["main", "menu", "copy", "map", "up", "down"]);
+export const MARGIN = 6, HUD_TOP = 42, GAP_MIN = 0.5, MOTION = Object.freeze({win: 1.6, lose: 1.4});
 export const fmtN = (n) => String(Math.max(0, Math.round(+n || 0))).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 export const endMode = (w) => (!w ? null : w.state === "LOSE" ? "lose" : w.state === "WIN" ? (isFinale(w.level) || w.finale ? "fin" : "clear") : null);
 const runFin = (lv) => (lv <= 5 ? 5 : 8);
@@ -61,7 +61,7 @@ export function endFacts(world, run, tm) {
   F.course = course(mode, lv, run);
   if (mode === "fin") {
     F.head = "FUSE/GRID CLEAR";
-    F.score = {digits: fmtN(s * k), sub: "SCORE · " + multTag(h)};
+    F.score = {digits: fmtN(s * k), sub: "SCORE · " + multTag(h), subs: ["SCORE · " + multTag(h), multTag(h)]};
     F.stats = [["foe", "ENEMIES", String(run ? run.k | 0 : 0)], ["item", LABEL.POWER_UPS, String(run ? run.p | 0 : 0)], ["clock", "TIME", fmtSpan(run ? run.t : 0)]];
     if (end && F.daily) F.note = dailyLine(w, run);
     const p = [];
@@ -87,93 +87,149 @@ export function endFacts(world, run, tm) {
   return deep(F);
 }
 
-/* body lines a sentence takes in w design px at body size px: a conservative estimate (0.6 em a character), so the painter's measured wrap fits */
-export const lineCount = (s, w, px) => { let n = 1, at = 0; for (const word of String(s).split(" ")) { const ww = (word.length + 1) * 0.6 * px; if (at && at + ww > w) { n++; at = ww; } else at += ww; } return n; };
+/* body lines a sentence takes in w design px at px: the real measure (m, a 2D context: the page's own, or scenes' measuring context for a tap);
+   with no context (Node with no recorder) a 0.6 em estimate, which only a test without a context ever sees */
+export function lineCount(s, w, px, m, face = "body") {
+  const font = T[face](px), wd = m ? (t) => measure(m, font, t) : (t) => t.length * 0.6 * px * textScale();
+  let n = 1, line = "";
+  for (const word of String(s).split(" ")) { const t = line ? line + " " + word : word; if (line && wd(t) > w) { n++; line = word; } else line = t; }
+  return n;
+}
 
-/* the sections of one mode as a column: [name, height, width or null (the column), x offset or null (centred)], design px, top to bottom */
-function column(F, D, ph, ts, W) {
+/* the course cell: the device's size, smaller where eight cells and their gaps would not fit the column (cells are no touch targets) */
+export const cellOf = (D, ph, W) => Math.min(D.cell, Math.floor((W - 7 * (ph ? 3 : 6)) / 8));
+/* a text's width in design px: the real measure on m, else the 0.6 em estimate (Node with no context) */
+const wOf = (m, face, s, px) => (m ? measure(m, T[face](px), String(s)) : String(s).length * 0.6 * px * textScale());
+const wrapW = (m, face, s, px, w) => { const out = []; let line = ""; for (const word of String(s).split(" ")) { const t = line ? line + " " + word : word; if (line && wOf(m, face, t, px) > w) { out.push(line); line = word; } else line = t; } if (line) out.push(line); return out; };
+/* a record piece's name, the first of its candidates within 18 L (a whole statement, never a cut one), and its width in design px (the painter
+   draws at exactly this: endkit pieceW calls it). A ribbon is at least 9 L wide; a medal its octagon, name + NEW tag and two lines of rule (19 L) */
+export const pieceName = (q, L, ph, m) => (q.kind === "more" ? "+" + q.n + " MORE" : q.kind === "medal" ? q.name : [].concat(q.name).find((s) => wOf(m, "label", s, END[ph ? "p" : "d"].pri) <= 18 * L) || [].concat(q.name).pop());
+export function pieceWidth(q, L, ph, m) {
+  const D = END[ph ? "p" : "d"], pad = ph ? 9 : 16, name = pieceName(q, L, ph, m);
+  if (q.kind !== "medal") return Math.max(9 * L, wOf(m, "label", "NEW BEST", D.sec) + 2 * pad, wOf(m, "label", name, D.pri) + 2 * pad, wOf(m, "num", q.value || "", (1.6 * L) / 0.72) + 2 * pad);
+  const nw = wOf(m, "label", name, D.pri) + 8 + wOf(m, "label", "NEW", D.sec) + 26, bw = Math.min(19 * L, Math.max(...wrapW(m, "body", q.desc, D.bod, 19 * L).slice(0, 2).map((t) => wOf(m, "body", t, D.bod))));
+  return ph ? 4 * L + 12 + Math.max(nw, bw) : Math.max(4 * L + 4, nw, bw);
+}
+/* the shelves: the pieces packed into rows of W at 1.6 L gaps (0.9 L on a phone), in order; each row is its own wall course (a phone's medal on a
+   shelf of its own, as the mock) and its own section, so a page holds whole shelves */
+export function shelvesOf(pieces, L, ph, m, W) {
+  const gp = (ph ? 0.9 : 1.6) * L, out = [];
+  let cur = [], at = 0;
+  pieces.forEach((q, i) => { const w = pieceWidth(q, L, ph, m); if (cur.length && at + gp + w > W) { out.push(cur); cur = []; at = 0; } at += (cur.length ? gp : 0) + w; cur.push(i); });
+  if (cur.length) out.push(cur);
+  return out;
+}
+
+/* the phone's ledger of stats: one row "LABEL value" thirds, stacked one a line where the three do not fit W (text 1.25) */
+export const ledgerStacked = (stats, D, W, m) => stats.reduce((a, [, l, v]) => a + wOf(m, "label", l, D.sec) + 6 + wOf(m, "num", v, D.sec + 2), 0) + 8 * (stats.length - 1) > W - 16;
+/* the content sections of one mode, top to bottom: [name, height in design px] (the key rows are endGeom's) */
+function content(F, D, ph, ts, W, m) {
   const L = D.L, t = (v) => v * ts, line = (px) => t(px * 1.25), rows = [];
-  const kick = line(D.sec), head = t((F.mode === "fin" ? D.hFin : F.mode === "lose" ? D.hLose : D.hClear) * 1.08);
-  const card = ph ? t(D.sec * 1.25) + 10 : Math.max(3.4 * L, t(D.sec * 1.25 + 5 + D.hud * 1.15)) + 16;
+  if (F.mode === "lose") {
+    const rw = ph ? W : W - D.loseL - D.loseGap, tail = !F.tail ? 0 : F.tail.kind === "plaque" ? 2.6 * L + 4 : t(D.bod * 1.35) * lineCount(F.tail.text, rw - 8, D.bod, m);
+    rows.push(["kick", line(D.sec)], ["head", ph ? Math.max(5 * L, t(D.hLose * 1.08)) : t(D.hLose * 1.08)], ["reached", t((1.3 * L) / 0.72 * 1.2)], ["course", cellOf(D, ph, rw) + 4], ["score", t((1.6 * L) / 0.72 * 1.15)]);
+    if (tail) rows.push(["tail", tail]);
+    return rows;
+  }
+  const kick = line(D.sec), head = t((F.mode === "fin" ? D.hFin : D.hClear) * 1.08), dig = (ph ? 2.6 : 3.4) * L;
+  const card = ph ? (ledgerStacked(F.stats, D, W, m) ? 3 * t(D.sec * 1.25 + 4) + 10 : t(D.sec * 1.25) + 10) : Math.max(3.4 * L, t(D.sec * 1.25 + 5 + D.hud * 1.15)) + 16;
   const rib = (ph ? 15 : 17) + t(D.sec * 1.2 + 3 + D.pri * 1.2 + 3 + (1.6 * L) / 0.72), med = ph ? Math.max(4 * L + 18, t(D.pri * 1.2 + 4 + 2 * D.bod * 1.35)) : 1.2 * L + 4 * L + 4 + 6 + t(D.pri * 1.2 + 4 + 2 * D.bod * 1.35);
-  const piece = (p) => (p.kind === "medal" ? med : rib + 1.4 * L + 4);
-  if (F.mode === "lose") return null;
   rows.push(["band", kick + 6 + head + (F.mode === "fin" && !ph ? Math.max(0, 5 * L - kick - 6 - head) : 0)]);
   if (F.mode === "fin") {
-    rows.push(["score", 3.4 * L + 0.8 * L + line(D.sec) + (F.note ? 6 + line(D.sec) * lineCount(F.note, W, D.sec * ts) : 0)]);
-    rows.push(["course", D.cell + 4]);
+    rows.push(["score", dig + (ph ? 0.6 : 0.8) * L + line(D.sec) + (F.note ? 6 + line(D.sec) * lineCount(F.note, W, D.sec, m, "label") : 0)]);
+    rows.push(["course", cellOf(D, ph, W) + 4]);
   }
   rows.push(["tally", card]);
-  if (F.pieces.length) rows.push(["shelf", 0.9 * L + 0.5 * L + Math.max(...F.pieces.map(piece))]);
-  rows.push(["keys", F.mode === "fin" && ph ? D.btnh + 8 + 46 : D.btnh]);
+  shelvesOf(F.pieces, L, ph, m, W).forEach((ix, i) => rows.push(["shelf" + (i || ""), 0.9 * L + 0.5 * L + Math.max(...ix.map((j) => (F.pieces[j].kind === "medal" ? med : rib + 1.4 * L + 4))), ix]));
   return rows;
 }
 
-function solve(B, rows, D, o, plateW, pad) {
-  const gap = D.gap * D.L, gaps = rows.map((r, i) => (i ? gap : 0)), fixed = rows.reduce((a, r) => a + r[1], 0) + pad[0] + pad[2];
-  const T = D.T, u0 = 1 / (o.css > 0 ? o.css : 1), avW = B.w - 2 * MARGIN, avH = B.h - 2 * MARGIN, ring = 2 * (T + 3);
-  const natural = fixed + gaps.reduce((a, g) => a + g, 0);
-  let g = 1;
-  if ((natural + ring) * u0 > avH) g = Math.max(GAP_MIN, (avH / u0 - ring - fixed) / Math.max(1, natural - fixed));
-  const H = fixed + (natural - fixed) * g;
-  const u = Math.min(u0, avW / (plateW + ring), avH / (H + ring));
-  return {u, g, H};
-}
-
+/* The page never scales under its text and touch floors (lane rule): u = 1 / css always (design px = CSS px). The plate narrows to the box (a
+   desk plate's columns give way: its cards and keys share what is left); a short box first closes the content gaps (to GAP_MIN of their size),
+   then PAGES the content: whole sections a page, the key rows on every page, a pager column at the content's right (▲ at its top, ▼ at its
+   foot, 44 tall, the page as "1 / 2" between); ↑ / ↓, the D-PAD and a tap on ▲ / ▼ turn it (main holds the page, run.page). Only a box too small for one section and the keys
+   scales (the iso guard on its smallest windows): G.scaled says so. The touch key rows keep 8 CSS px from what is above them. */
+export const PAGER_H = 44, PAGER_W = 52;
 export function endGeom(B, F, o = {}) {
   if (!F || !F.mode || !(B && B.w > 0 && B.h > 0)) return null;
-  const ph = o.lay === "p", D = END[ph ? "p" : "d"], ts = o.ts > 0 ? o.ts : textScale(), css = o.css > 0 ? o.css : 1, L = D.L;
-  const G = {mode: F.mode, ph, ts, d: D, rects: {}, keys: {}};
-  const side = F.mode === "lose" ? (ph ? 14 : D.loseGap) : ph ? 12 : D.side, ring = 2 * (D.T + 3);
-  const build = (plateW) => {
-    const inW = plateW - 2 * side;
-    let rows, pad;
-    if (F.mode === "lose") {
-      const t = (v) => v * ts, rw = ph ? inW : inW - D.loseL - D.loseGap, tail = !F.tail ? 0 : F.tail.kind === "plaque" ? 2.6 * L + 4 : t(D.bod * 1.35) * lineCount(F.tail.text, rw, D.bod * ts);
-      const head = ph ? Math.max(5 * L, t(D.hLose * 1.08)) : t(D.hLose * 1.08), tryH = ph ? 64 : 1.32 * D.btnh, foot = ph ? 46 : 0.85 * D.btnh;
-      rows = [["kick", t(D.sec * 1.25)], ["head", head], ["reached", t((1.3 * L) / 0.72 * 1.2)], ["course", D.cell + 4], ["score", t((1.6 * L) / 0.72 * 1.15)]];
-      if (tail) rows.push(["tail", tail]);
-      rows.push(["try", tryH + (ph ? 0 : 0.4 * L)], ["foot", foot]);
-      pad = ph ? [16, 14, 18, 14] : [1.4 * L, side, 1.3 * L, side];
-    } else {
-      rows = column(F, D, ph, ts, inW);
-      pad = [1.3 * L, side, 1.5 * L, side];
-    }
-    return {plateW, inW, rows, pad, ...solve(B, rows, D, {css}, plateW, pad)};
-  };
-  /* desk: the mock's plate; phone: the column across the box, re-solved at the width the scale leaves (a scaled page takes the width back) */
-  let S = build(ph ? Math.min(600, B.w * css - 2 * MARGIN * css) - ring : F.mode === "clear" ? D.clearW * (ts > 1.1 ? 1.18 : 1) : F.mode === "fin" ? D.finW * (ts > 1.1 ? 1.07 : 1) : D.loseL + D.loseR * (ts > 1.1 ? 1.2 : 1) + 3 * D.loseGap);
-  if (ph) for (let i = 0; i < 3; i++) { const w = Math.min(600, (B.w - 2 * MARGIN) / S.u - ring); if (Math.abs(w - S.plateW) < 0.5) break; S = build(w); }
-  const {plateW, inW, rows, pad, u, g, H} = S;
-  const pw = plateW * u, phh = H * u, px = Math.round((B.w - pw) / 2), py = Math.round((B.h - phh) / 2);
-  G.u = u; G.T = D.T * u; G.L = L * u; G.cssK = css;
+  const ph = o.lay === "p" || o.lay === "l", D = END[ph ? "p" : "d"], ts = o.ts > 0 ? o.ts : textScale(), css = o.css > 0 ? o.css : 1, L = D.L, lose = F.mode === "lose";
+  const G = {mode: F.mode, ph, ts, d: D, rects: {}, keys: {}, page: 0, pages: 1, scaled: false};
+  const side = lose ? (ph ? 14 : D.loseGap) : ph ? 12 : D.side, ring = 2 * (D.T + 3);
+  const nominal = ph ? 600 : F.mode === "clear" ? D.clearW * (ts > 1.1 ? 1.18 : 1) : F.mode === "fin" ? D.finW * (ts > 1.1 ? 1.07 : 1) : D.loseL + D.loseR * (ts > 1.1 ? 1.2 : 1) + 3 * D.loseGap;
+  const availW = (B.w - 2 * MARGIN) * css - ring, availH = (B.h - HUD_TOP - 2 * MARGIN) * css - ring;
+  let plateW = Math.min(nominal, availW);
+  const pad = lose ? (ph ? [16, 14, 18, 14] : [1.4 * L, side, 1.3 * L, side]) : [1.3 * L, side, 1.5 * L, side], inW = plateW - 2 * side;
+  const gap = (n) => D.gap * L * (lose && !ph ? (n === "foot" ? 1 : 1.4 / 1.6) : 1), kgap = Math.max(8, GAP_MIN * D.gap * L);
+  const colX = lose && !ph ? side + D.loseL + D.loseGap : side, colW0 = lose && !ph ? inW - D.loseL - D.loseGap : inW;
+  /* a narrow desk finale stacks its keys: MENU over COPY RESULT | COPY MAP */
+  const fin2 = F.mode === "fin" && !ph && inW < 600 * ts;
+  const keys = lose ? [["try", ph ? 64 : 1.32 * D.btnh + 0.4 * L], ["foot", ph ? 46 : 0.85 * D.btnh]] : [["keys", F.mode === "fin" && ph ? 46 : fin2 ? D.btnh + 8 + 0.85 * D.btnh : D.btnh]];
+  const keysH = keys.reduce((a, [n, h], i) => a + h + (i ? Math.max(kgap, gap(n)) : 0), 0);
+  /* the content's height at gap factor k (the first section's top gap is the pad) */
+  const span = (rs, k) => rs.reduce((a, [n, h], i) => a + h + (i ? gap(n) * k : 0), 0);
+  const fit1 = (rs, room) => { if (span(rs, 1) <= room) return 1; const n = span(rs, 0), g = span(rs, 1) - n; return g > 0 && n + g * GAP_MIN <= room ? Math.max(GAP_MIN, (room - n) / g) : null; };
+  const kTop = (k) => Math.max(kgap, gap(keys[0][0]) * k), room = availH - pad[0] - pad[2] - keysH;
+  let rows = content(F, D, ph, ts, colW0, o.m), pages = [rows], k = fit1(rows, room - kTop(1)), colW = colW0, tight = false;
+  if (k == null && (k = fit1(rows, room - kgap)) != null) tight = true; // the gap above the keys closes to its 8 px floor too
+  if (k == null) {
+    tight = true;
+    /* pages: the content column gives a PAGER_W column at its right to the ▲ / ▼ keys (44 tall, the page between them); whole sections a page */
+    colW = colW0 - PAGER_W - 8;
+    rows = content(F, D, ph, ts, colW, o.m);
+    const rm = Math.max(room - kgap, 2 * PAGER_H + 28);
+    pages = [];
+    let cur = [];
+    for (const r of rows) { if (cur.length && fit1([...cur, r], rm) == null) { pages.push(cur); cur = []; } cur.push(r); }
+    if (cur.length) pages.push(cur);
+    k = Math.min(...pages.map((q) => fit1(q, rm) || GAP_MIN));
+  }
+  const paged = pages.length > 1, pg = Math.max(0, Math.min(pages.length - 1, o.page | 0)), mine = pages[pg];
+  G.page = pg; G.pages = pages.length;
+  const body = paged ? Math.max(2 * PAGER_H + 28, ...pages.map((q) => span(q, k))) : span(mine, k);
+  const H = pad[0] + body + (tight ? kgap : kTop(k)) + keysH + pad[2];
+  let u = 1 / css;
+  if (H > availH + 0.5) { u = (B.h - HUD_TOP - 2 * MARGIN) / (H + ring); G.scaled = true; }
+  const pw = plateW * u, phh = H * u, px = Math.round((B.w - pw) / 2), py = HUD_TOP + Math.round((B.h - HUD_TOP - phh) / 2);
+  G.u = u; G.T = D.T * u; G.L = L * u; G.cssK = css; G.k = k; G.H = H; G.availH = availH;
   G.plate = {x: px, y: py, w: pw, h: phh};
   const R = (x, y, w, h) => ({x: px + x * u, y: py + y * u, w: w * u, h: h * u});
   let y = pad[0];
-  const colX = F.mode === "lose" && !ph ? side + D.loseL + D.loseGap : side, colW = F.mode === "lose" && !ph ? inW - D.loseL - D.loseGap : inW;
-  rows.forEach(([name, h], i) => {
-    if (i) y += D.gap * L * g * (F.mode === "lose" && !ph && name === "foot" ? 1 : F.mode === "lose" && !ph ? 1.4 / 1.6 : 1);
-    if (F.mode === "lose" && !ph && name === "foot") G.rects.foot = R(side, y, inW, h);
-    else G.rects[name] = R(colX, y, colW, h);
-    y += h;
+  G.shelves = {};
+  G.cell = cellOf(D, ph, colW);
+  mine.forEach(([name, h, ix], i) => { if (i) y += gap(name) * k; G.rects[name] = R(colX, y, colW, h); if (ix) G.shelves[name] = ix; y += h; });
+  if (paged) {
+    const x = colX + colW0 - PAGER_W, top = pad[0];
+    G.rects.pager = R(x, top, PAGER_W, body);
+    G.keys.up = R(x, top, PAGER_W, PAGER_H);
+    G.keys.down = R(x, top + body - PAGER_H, PAGER_W, PAGER_H);
+  }
+  let ky = H - pad[2] - keysH;
+  keys.forEach(([name, h], i) => {
+    if (i) ky += Math.max(kgap, gap(name));
+    G.rects[name] = lose && !ph && name === "foot" ? R(side, ky, inW, h) : R(colX, ky, colW0, h);
+    ky += h;
   });
-  if (F.mode === "lose" && !ph) G.rects.bomb = R(side, pad[0] + 1.2 * L, D.loseL, Math.min(260, G.rects.try.y / u - py / u - pad[0]));
-  const kr = G.rects;
-  if (F.mode === "lose") {
-    const t0 = kr.try, th = ph ? 64 : 1.32 * D.btnh;
-    G.keys.main = {x: t0.x, y: t0.y + t0.h - th * u, w: t0.w, h: th * u};
-    const f = kr.foot, gp = 12 * u, n = 3, wt = ph ? [1, 1.3, 1.1] : [1, 1.35, 1.25], sum = wt.reduce((a, b) => a + b, 0);
+  if (lose && !ph) G.rects.bomb = R(side, pad[0] + 1.2 * L, D.loseL, Math.min(260, (G.rects.try.y - py) / u - pad[0] - 1.2 * L));
+  const kr = G.rects, gp = Math.max(12 * u, 8 / css);
+  if (lose) {
+    const t0 = kr.try, th = ph ? t0.h : 1.32 * D.btnh * u;
+    G.keys.main = {x: t0.x, y: t0.y + t0.h - th, w: t0.w, h: th};
+    const f = kr.foot, wt = ph ? [1, 1.3, 1.1] : [1, 1.35, 1.25], sum = wt.reduce((a, b) => a + b, 0);
     let x = f.x;
-    ["menu", "copy", "map"].forEach((name, i) => { const w = (f.w - (n - 1) * gp) * wt[i] / sum; G.keys[name] = {x, y: f.y, w, h: f.h}; x += w + gp; });
+    ["menu", "copy", "map"].forEach((name, i) => { const w = ((f.w - 2 * gp) * wt[i]) / sum; G.keys[name] = {x, y: f.y, w, h: f.h}; x += w + gp; });
   } else if (F.mode === "fin") {
-    const r = kr.keys, gp = (ph ? 8 : 12) * u, ch = (ph ? 46 : 0.85 * D.btnh) * u;
+    const r = kr.keys;
     if (ph) {
+      const wt = [1.1, 1.3, 1.1], sum = 3.5;
+      let x = r.x;
+      ["main", "copy", "map"].forEach((name, i) => { const w = ((r.w - 2 * gp) * wt[i]) / sum; G.keys[name] = {x, y: r.y, w, h: r.h}; x += w + gp; });
+    } else if (fin2) {
+      const ch = 0.85 * D.btnh * u, kw = (r.w - gp) / 2;
       G.keys.main = {x: r.x, y: r.y, w: r.w, h: D.btnh * u};
-      const kw = (r.w - gp) / 2;
       G.keys.copy = {x: r.x, y: r.y + r.h - ch, w: kw, h: ch};
       G.keys.map = {x: r.x + kw + gp, y: r.y + r.h - ch, w: kw, h: ch};
     } else {
-      const mw = Math.min(r.w * 0.42, 300 * u * (ts > 1.1 ? 1 : 1.1)), rest = r.w - mw - 16 * u, kw = (rest - gp) / 2, cy = r.y + (r.h - ch) / 2;
+      const ch = 0.85 * D.btnh * u, mw = Math.min(r.w * 0.42, 300 * u * (ts > 1.1 ? 1 : 1.1)), rest = r.w - mw - 16 * u, kw = (rest - gp) / 2, cy = r.y + (r.h - ch) / 2;
       G.keys.main = {x: r.x, y: r.y, w: mw, h: r.h};
       G.keys.copy = {x: r.x + mw + 16 * u, y: cy, w: kw * 1.06, h: ch};
       G.keys.map = {x: r.x + mw + 16 * u + kw * 1.06 + gp, y: cy, w: kw * 0.94, h: ch};
@@ -195,3 +251,5 @@ export function endTap(x, y, B, world, run, tm, o, ready) {
   if (!r) return null;
   return endHit(x, y, endGeom(B, endFacts(world, run, tm), o));
 }
+/* how many pages the run end shows in box B (main clamps its page with it) */
+export const endPagesOf = (B, world, run, tm, o) => { const G = endMode(world) ? endGeom(B, endFacts(world, run, tm), o) : null; return G ? G.pages : 1; };

@@ -76,6 +76,9 @@ append an entry when it makes a non-trivial change.
 
 ## 2026-11-11 — UI upgrade Task 3.3: LEVEL SELECT on the world kit
 - `src/render/pages/level.js` (one levelGeom, opaque, the selected level's room; level keys, banks, MODIFIERS door + inline list, the one card with BEST, START); old painter deleted from menudraw; tap mode follows app.lastDev (ruling 4); CROWN card copy ALL NINE · ONE OF EACH. Compact pages its groups on the least landscape phones (never under 44 px); a controller gets a cue line on phone and compact.
+## 2026-11-11 — UI upgrade Task 5.3: WIN on the world kit (lane-5-ends)
+- `src/render/pages/endwin.js` + `endkit.js` (lazy), `pages/lazy.js` created from the seed; old WIN summary deleted; tests renegotiated (bests, times, code, heat, three, keys, words, headless). Run ends page on short boxes (never scaled under floors); on a phone's `#c` the finale takes about 3 pages, which #sh (plan R1) would avoid.
+
 ## 2026-11-11 — UI upgrade Task 5.2: end-screen routing (lane-5-ends, held for R2)
 - `src/render/pages/endgeom.js` (draw / tap contract of WIN and GAME OVER, boot), Esc / EAST → MENU at a run end (finale via the fire edge), run-end taps on endgeom keys on pointerup; main's `runInfo` / `timeInfo`. The old summary stays until 5.3 / 5.4 register their pages.
 

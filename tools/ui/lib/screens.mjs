@@ -10,7 +10,7 @@
      real   press the keys as real key events on a phone capture too (else a phone capture calls app.key, which keeps tap mode)
      wait   "controls": the lazy CONTROLS page must be in (app.controls.loading false) before the frames are stepped; "records": the lazy RECORDS
             page (pages/lazy.js) must be in
-     run    a run screen: play, pause, win or lose
+     run    a run screen: play, pause, win or lose (store: localStorage items set before the run, e.g. a saved best; daily: the run is MENU's DAILY)
      tags   (a pause screen) the run's rules seeded through the debug hook before PAUSE: EXPERT, FAST, every modifier, TIME TRIAL (the tag row)
      state  what window.__GAME__.state() must read before the capture; a mismatch is an error and no PNG
      settle virtual ms stepped before the capture (default 600)
@@ -58,8 +58,10 @@ const ROWS = {
   play: { run: "play", state: "PLAY", settle: 900 },
   pause: { run: "pause", state: "PAUSE", settle: 300, exempt: { chosen: "PAUSE shows no chosen / unchosen values: every row is a verb or a door", locked: "PAUSE shows no locked value: every row is open" } },
   pausetags: { run: "pause", tags: true, state: "PAUSE", settle: 300, exempt: { chosen: "PAUSE shows no chosen / unchosen values: every row is a verb or a door", locked: "PAUSE shows no locked value: every row is open" } },
-  win: { run: "win", state: "WIN", settle: 1800 },
-  lose: { run: "lose", state: "LOSE", settle: 1600 },
+  win: { run: "win", state: "WIN", settle: 3400, exempt: { chosen: "a level clear has no chosen / unchosen value (the finale records its course: won vs locked)", locked: "a level clear and a finale with levels 6-8 open show no locked part (a first finale records its locked levels)" } },
+  lose: { run: "lose", state: "LOSE", settle: 1600, exempt: { locked: "levels 6-8 open (world 6-8 captures) show no locked level; a first-run capture records its locked levels" } },
+  loseshort: { run: "lose", store: { "nb.bests.v1": '{"b":{"0:0:1":{"s":5000,"r":5}}}' }, state: "LOSE", settle: 1600, exempt: { locked: "levels 6-8 open (world 6-8 captures) show no locked level; a first-run capture records its locked levels" } }, // a saved NORMAL best of 5000: the shortfall line
+  losedaily: { run: "lose", daily: true, state: "LOSE", settle: 1600 }, // today's DAILY (level 1, JUNGLE, whatever --world): Same board and the day's line
 };
 /* a row's need from its exemptions: EXEMPTABLE minus each exempt gate, which must be EXEMPTABLE and carry a non-empty reason */
 export function needOf(name, exempt = {}) {

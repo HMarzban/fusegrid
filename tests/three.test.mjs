@@ -35,6 +35,9 @@ import {createRig, orbitBy, dollBy, resetOrbit, applyOrbit,
   SHAKE_3D_K, DRAG_K, DIST_MIN, DIST_MAX, WHEEL_DOLLY_K, CAM_FOV,
   CAM_PRESET, CAM_NAME, camPreset} from "../src/render/three/camrig.js";
 import {createRenderer3D} from "../src/render/three/wrapper.js";
+import * as lazyPages from "../src/render/pages/lazy.js";
+import * as endWin from "../src/render/pages/endwin.js";
+lazyPages._set("endwin", endWin); // WIN is a lazy page (v202 Task 5.3): handed in as if its import had landed
 import {createRenderer} from "../src/render/renderer.js";
 import {createPixelRenderer} from "../src/render/pixel/renderer.js";
 import {overlayBox, pauseHit, pauseGeom, PAUSE_ROWS} from "../src/render/scenes.js";
@@ -2099,7 +2102,7 @@ await sec("S4.E",async()=>{
 await sec("S5.overlay",async()=>{
   const textsOf=(ops)=>ops.filter(o=>o[0]==="fillText")
     .map(o=>String(o[1][0]));
-  const OV_HEADS=["LEVEL 1 CLEARED","GAME OVER","PAUSED"];
+  const OV_HEADS=["LEVEL 1 CLEAR","GAME OVER","PAUSED"]; // v202 Task 5.3: the WIN page's headline
   const frame=(state,o,hud)=>{
     const cv=hudRecorder();
     const r=createRenderer3D(null,{getContext:()=>cv.rec},

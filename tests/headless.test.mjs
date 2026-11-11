@@ -22,6 +22,8 @@ import "../src/render/r3d/scene3d.js";
 import { createLocalPair } from "../src/net/localpair.js";
 import { _set as setLazyPage } from "../src/render/pages/lazy.js";
 setLazyPage("guide", await import("../src/render/pages/guide.js")); // the lazy GUIDE pages (v202 Task 3.5), as if their import had landed
+import * as endWin from "../src/render/pages/endwin.js";
+setLazyPage("endwin", endWin); // WIN is a lazy page (v202 Task 5.3): handed in as if its import had landed
 // tab centres found through scoresHit itself (the one tap map), scanning the tab row band
 await (await import("../src/render/pages/lazy.js")).want("records"); // RECORDS' SCORES page is lazy (R20): in before any tap on it
 const mdScoreTabs=(L,t)=>{ let y0=-1,y1=-1; for(let y=8;y<520;y++){ let hit=false; for(let x=0;x<600&&!hit;x++) hit=scoresHit(x,y,L,t)>=0; if(hit){ if(y0<0)y0=y; y1=y; } else if(y0>=0)break; } if(y0<0) return null; const y=(y0+y1)/2, xs=[]; for(let x=0;x<600;x++) if(scoresHit(x,y,L,t)>=0) xs.push([x,scoresHit(x,y,L,t)]); return {y,x:(i)=>{const r=xs.filter(p=>p[1]===i).map(p=>p[0]);return (r[0]+r[r.length-1])/2;}}; }; // the difficulty band's middle (pages/records.js, v202 Task 4.1)
@@ -1879,8 +1881,8 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
         g.world.state+"/"+g.world.level+"/"+g.world.heat);
       check("R6 a 6->8 MAX finale WIN with one life lost writes exactly IRON CROWN (bit 128)",
         mem[K]==="128",String(mem[K]));
-      check("R6 the overlay announces MEDAL · IRON CROWN",
-        fill.includes("MEDAL · IRON CROWN"),fill.filter(s=>/MEDAL|ROOMS/.test(s)).slice(-4).join("|"));
+      check("R6 the WIN page hangs the IRON CROWN medal, tagged NEW (v202 Task 5.3: a medal piece on the shelf)",
+        fill.includes("IRON CROWN")&&fill.includes("NEW"),fill.filter(s=>/IRON|NEW|MEDAL/.test(s)).slice(-4).join("|"));
     }
   }finally{ delete globalThis.window; }
 }

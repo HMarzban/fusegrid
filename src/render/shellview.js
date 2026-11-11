@@ -262,6 +262,7 @@ export function recPagesOf(canvas, kind, screen, rows) {
 export function drawShell(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
   const s = app.screen;
   stepLookNote(app);
+  if (s === SCREEN.MENU || s === SCREEN.GAME) lazy.idle(); // the lazy pages load in the first idle after MENU's (or a deep link's run's) first frame
   shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab);
   loaderSpot(app, world, canvas);
   prevScreen = s;

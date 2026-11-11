@@ -8,7 +8,8 @@
    Esc (R19, v202 Task 5.2) goes to MENU at a run end only: a finale WIN takes
    the same fire edge as Enter (the sim's MENU edge is where main saves the
    finale), GAME OVER calls main's toMenu (the LOSE edge already saved the run);
-   a mid-run WIN is no run end, so Esc does nothing there. */
+   a mid-run WIN is no run end, so Esc does nothing there. ↑ / ↓ turn a paged
+   end screen's page (act.page; the D-PAD and the ▲ / ▼ taps send the same). */
 import { SCREEN } from "./menuapp.js";
 import { encodeChallenge } from "./code.js";
 import { isFinale } from "../core/config.js";
@@ -26,14 +27,15 @@ export function copyText(text, toast, okMsg) {
 }
 const ended = (world) => world.state === "WIN" || world.state === "LOSE";
 const finale = (world) => world.state === "WIN" && (isFinale(world.level) || !!world.finale);
-export function endKey(code, app, world, input, toast, resultLine, toMenu) {
+export function endKey(code, app, world, input, toast, resultLine, act = {}) {
   if (app.screen !== SCREEN.GAME || !ended(world)) return false;
   if (code === "Enter" || code === "NumpadEnter") { input.pulse(); return true; }
   if (code === "Escape") {
-    if (world.state === "LOSE") { if (toMenu) toMenu(); return true; }
+    if (world.state === "LOSE") { if (act.menu) act.menu(); return true; }
     if (finale(world)) { input.pulse(); return true; }
     return false;
   }
+  if (code === "ArrowUp" || code === "ArrowDown") { if (act.page) act.page(code === "ArrowUp" ? -1 : 1); return true; } // a paged run end (endgeom on a short box)
   if (code === "KeyC") { copyText(resultLine(), toast, "COPIED"); return true; }
   if (code === "KeyB") {
     copyText(BOARD_URL + encodeChallenge({ seed: world.seed, heat: world.heat, pact: world.pact, pace: world.pace, gen: world.gen }), toast, "BOARD LINK COPIED");

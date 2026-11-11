@@ -23,6 +23,11 @@ import {
 import { readFileSync } from "node:fs";
 import { createGame } from "../src/main.js";
 import { PAUSE_ITEMS } from "../src/app/menuapp.js";
+import { rec as krec } from "./lib/textrec.mjs";
+import * as kprobe from "../src/render/kit/probe.js";
+import * as lazyPages from "../src/render/pages/lazy.js";
+import * as endWin from "../src/render/pages/endwin.js";
+lazyPages._set("endwin", endWin); // WIN is a lazy page (v202 Task 5.3): handed in as if its import had landed
 import "../src/core/board3.js";
 
 let pass = 0,
@@ -524,26 +529,27 @@ const rec = () => {
 // ---- 11. drawOverlay: the 9th arg is optional; absent is byte-identical ----
 {
   const W = { state: "WIN", level: 3, finale: false, score: 10, heat: 0 };
-  const a = rec();
-  drawOverlay(a.c, W, 600, 520, 300, 260, undefined, undefined);
-  const b = rec();
-  drawOverlay(b.c, W, 600, 520, 300, 260);
+  const ks = (R) => R.texts.map((t) => t.s);
+  const a = krec();
+  drawOverlay(a.ctx, W, 600, 520, 300, 260, undefined, undefined);
+  const b = krec();
+  drawOverlay(b.ctx, W, 600, 520, 300, 260);
   check(
-    "drawOverlay WIN with no run records today's exact fillText list",
-    a.texts.join("|") === b.texts.join("|") &&
-      a.texts.some((s) => s.indexOf("CLEARED") >= 0) &&
-      !a.texts.some((s) => s.indexOf("LEVELS ") === 0),
-    a.texts.join("|"),
+    "drawOverlay WIN with no run (ATTRACT) draws the level clear and no claim: no NEW BEST, no record piece",
+    ks(a).join("|") === ks(b).join("|") &&
+      ks(a).includes("LEVEL 3 CLEAR") &&
+      !ks(a).includes("NEW BEST"),
+    ks(a).join("|"),
   );
-  const r = rec();
-  drawOverlay(r.c, W, 600, 520, 300, 260, undefined, undefined, {
-    r: 2, k: 5, p: 1, t: 90, best: null,
+  const r = krec();
+  drawOverlay(r.ctx, W, 600, 520, 300, 260, undefined, undefined, {
+    r: 2, k: 5, p: 1, t: 90, best: null, lk: 3, lp: 1,
   });
   check(
-    "drawOverlay WIN with a run adds the tally line and nothing else mid-room",
-    r.texts.includes("LEVELS 2 · KILLS 5 · POWER-UPS 1 · 1:30") &&
-      r.texts.length === a.texts.length + 1,
-    r.texts.join("|"),
+    "drawOverlay WIN with a run shows this level's ENEMIES / POWER-UPS and claims nothing mid-room",
+    ks(r).includes("ENEMIES") && ks(r).includes("3") && ks(r).includes("POWER-UPS") && ks(r).includes("1") &&
+      !ks(r).includes("NEW BEST"),
+    ks(r).join("|"),
   );
   const L = rec();
   drawOverlay(L.c, { state: "LOSE", level: 3, score: 1000, heat: 0 },
@@ -565,12 +571,13 @@ const rec = () => {
     P.texts.join("|") === P2.texts.join("|"),
     P.texts.join("|"),
   );
+  const f = krec();
+  drawOverlay(f.ctx, { ...W, level: 5 }, 600, 520, 300, 260, undefined, undefined, { r: 5, k: 5, p: 1, t: 90, best: null, et: 9 });
   check(
-    // R8 deviation: this pin named its own future — COPY_HINT's stage 2
-    // (" · C copy · B board") has now landed, so the assertion flips to match.
-    "the copy hint reads ' · C copy · B board' now that R8 has landed",
-    a.texts.some((s) => s.indexOf(" · C copy · B board") > 0),
-    a.texts.join("|"),
+    // R8, then v202 Task 5.3: the copy keys are keys now, label first, keycap last
+    "the finale's copy keys read COPY RESULT … C and COPY MAP … B",
+    ["COPY RESULT", "C", "COPY MAP", "B"].every((q) => ks(f).includes(q)) && ks(f).indexOf("C") > ks(f).indexOf("COPY RESULT") && ks(f).indexOf("B") > ks(f).indexOf("COPY MAP"),
+    ks(f).join("|"),
   );
 }
 
@@ -600,19 +607,28 @@ const rec = () => {
       JSON.stringify(lDy) === JSON.stringify([20, 44, 68, 92]),
       JSON.stringify(lDy) + " / " + JSON.stringify(L.rows),
     );
-    // finale WIN + TIME ATTACK on: runStamp, tally, delta, timeLine, cue —
-    // the one path that reaches all five dy slots (spec §2.4's worst case).
-    const F = rec();
-    drawOverlay(
-      F.c,
-      { state: "WIN", level: 5, score: 1000, heat: 0, pact: 0, pace: 0, finale: false },
-      B.w, B.h, B.cx, B.cy, undefined, { on: true, t: 59, best: 40 }, run,
-    );
-    const fDy = F.rows.filter(([, y]) => y > B.cy).map(([, y]) => y - B.cy);
+    // finale WIN, its fullest form (a score record, a time record, a medal): v202 Task 5.3 moved the stack onto endgeom's sections, so the pin
+    // is now the order and the box: kicker, headline, score, its multiplier, the stats, the shelf, the keys, top to bottom, all inside the box
+    // a short box pages the finale (whole sections a page, v202 Task 5.3): the order holds across its pages, (page, y) top to bottom
+    const at = {}, inside = [];
+    for (let page = 0; page < 8; page++) {
+      const F = krec();
+      kprobe.setOn(true);
+      drawOverlay(
+        F.ctx,
+        { state: "WIN", level: 5, score: 1000, heat: 0, pact: 0, pace: 0, finale: false },
+        B.w, B.h, B.cx, B.cy, undefined, { on: true, t: 39, best: 40 }, { ...run, r: 5, et: 9, page, medals: [["FLAWLESS", "LEVELS 1-5 IN ONE RUN · NO LIFE LOST"]] },
+      );
+      const S = kprobe.snapshot(); kprobe.setOn(false);
+      for (const t of S.texts) { if (!(t.s in at)) at[t.s] = [page, t.y]; if (!(t.y >= 0 && t.y + t.capH <= B.h && t.x >= 0 && t.x + t.w <= B.w)) inside.push(t.s); }
+      const pg = S.texts.find((t) => / \/ \d+$/.test(t.s));
+      if (!pg || +pg.s.split(" / ")[0] === +pg.s.split(" / ")[1]) break;
+    }
+    const order = ["FUSE/GRID CLEAR", "SCORE · ×1 NORMAL DIFFICULTY", "ENEMIES", "NEW BEST", "FLAWLESS"].map((q) => at[q]);
     check(
-      "Minor-1 finale WIN @ " + tag + ": dy stack is 20/44/68/92/116 under runStamp",
-      JSON.stringify(fDy) === JSON.stringify([20, 44, 68, 92, 116]),
-      JSON.stringify(fDy) + " / " + JSON.stringify(F.rows),
+      "Minor-1 finale WIN @ " + tag + ": the sections stack top to bottom across its pages, every text inside the box",
+      order.every((v, i) => v && (i === 0 || v[0] > order[i - 1][0] || (v[0] === order[i - 1][0] && v[1] > order[i - 1][1]))) && inside.length === 0,
+      JSON.stringify(order),
     );
   }
 }

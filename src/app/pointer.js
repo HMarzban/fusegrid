@@ -14,7 +14,7 @@ const LEVEL_TAP_ROW = Object.freeze({ room: "LEVEL", lock: "LEVEL", heat: "DIFFI
 /* WIN / LOSE (R19, v202 Task 5.2): a tap on a drawn key is that key's own path (main ENTER, MENU ESC, COPY RESULT C, COPY MAP B through
    input.onUiKey), acted on its pointerup on the same key: Input's own pointerup drops a fire raised before the tick, and a touch pointerdown
    carries no clipboard activation. Off the keys a tap does nothing. */
-const END_KEY = Object.freeze({ main: "Enter", menu: "Escape", copy: "KeyC", map: "KeyB" });
+const END_KEY = Object.freeze({ main: "Enter", menu: "Escape", copy: "KeyC", map: "KeyB", up: "ArrowUp", down: "ArrowDown" });
 export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit, settingsHit, graphicsHit, guideHit, enemiesHit, guideReadHit, levelHit, scoresHit, statsHit, recTabHit, recPageHit = () => null, endHit, layout: menuLayout } }) {
   let statsC = false; // a touch pointerdown carries no activation, so a touch C tap copies on its pointerup
   /* THE page-key branch (R1 cohesion): every page answers a ▲ / ▼ tap with the kit's {k: "page", d, to}; one app.pageKey step, one sound and feel */

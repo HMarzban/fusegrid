@@ -8,7 +8,7 @@ import { createWorld, loadLevel, step } from "./core/sim.js";
 import { runSeed } from "./core/rng.js";
 import { createRenderer } from "./render/renderer.js";
 import { loadRendererPx } from "./render/pixel/load.js";
-import { copyPayload, isRunEnd, overlayBox, pauseHit, touchLay, endHitAt } from "./render/scenes.js";
+import { copyPayload, isRunEnd, overlayBox, pauseHit, touchLay, endHitAt, endPagesAt } from "./render/scenes.js";
 import { paintBombPad } from "./render/sprites.js";
 import { controlsHit, dims, drawShell, guidePageCount, kindSize, loadControlsArt, shellMode, shellCovers, recPagesOf, tapOf } from "./render/shellview.js";
 import { menuHit, settingsHit, statsHit, graphicsHit, guideHit, enemiesHit, guideReadHit, levelHit, scoresHit, recTabHit, recPageHit, layout as menuLayout, setModeFocus } from "./render/menudraw.js";
@@ -163,7 +163,7 @@ export function createGame(canvas, opts = {}) {
      for a run that BEGINS at room 1 (the sim's retry after LOSE and RESTART
      both reload room 1, so only onStart can begin above it) — endRun
      withholds the room from recordBest otherwise; the score still records. */
-  let tally = newTally(), runT = 0, bestRun = null, runEnded = true, runFromStart = true, runMode = "run", roomK0 = 0, roomP0 = 0, endT = 0; // roomK0 / roomP0: the tally at the room start (a level clear's own counts); endT: seconds on WIN / LOSE (the end page's motion clock)
+  let tally = newTally(), runT = 0, bestRun = null, runEnded = true, runFromStart = true, runMode = "run", roomK0 = 0, roomP0 = 0, endT = 0, endPg = 0; // roomK0 / roomP0: the tally at the room start (a level clear's own counts); endT: seconds on WIN / LOSE (the end page's motion clock)
   const startRunState = (fromStart) => {
     tally = newTally(); runT = 0; runEnded = false; runFromStart = fromStart; coach2 = { kind: null, t: 0 }; roomK0 = roomP0 = 0;
     bestRun = bestOfRun(loadBests(), bestKey(world));
@@ -412,7 +412,7 @@ export function createGame(canvas, opts = {}) {
      time, DAILY / fixed board, the level cap, the medals settled at the end, the end clock, REDUCE FLASH, and the layout and stage scale of #c */
   const layNow = () => { const b = typeof document !== "undefined" && document && document.body, l = b && b.getAttribute && b.getAttribute("data-lay"); return l === "p" || l === "l" ? l : "d"; };
   const runInfo = () => ({ r: tally.r, k: tally.k, p: tally.p, t: runT, best: bestRun, fromStart: runFromStart, daily: dailyDate, tries: dailyRec.played, dbest: dailyRec.best, md: medalLine(tally.mn),
-    medals: medalRows(tally.mn).filter((m) => m[2]), lk: tally.k - roomK0, lp: tally.p - roomP0, fixed: runFixed, cap: roomCap(app.pactUnlocked), et: endT, reduced: !!settings.flx, lay: layNow(), css: canvas && canvas.css > 0 ? canvas.css : 1 });
+    medals: medalRows(tally.mn).filter((m) => m[2]), lk: tally.k - roomK0, lp: tally.p - roomP0, fixed: runFixed, cap: roomCap(app.pactUnlocked), et: endT, page: endPg, reduced: !!settings.flx, lay: layNow(), css: canvas && canvas.css > 0 ? canvas.css : 1 });
   const timeInfo = () => ({ on: !!app.timeAttack, t: roomT, best: bestPrev });
   const toast = app.toast = createToast(); // C / B note on the WIN / LOSE overlay, C on STATS (src/app/endkeys.js)
   app.padCards = [upd.padCard, loadCard()]; setModeFocus(() => app.modeCur); // what a pad may answer (src/app/padroute.js); the MODES ring (menudraw.js)
@@ -430,7 +430,7 @@ export function createGame(canvas, opts = {}) {
     }
     if (code === "KeyC" && app.screen === SCREEN.STATS) { copyText(statsPayload(loadStats(), loadBests(), loadTimes(), dateStr()), toast, "COPIED"); return; }
     // WIN / LOSE: Enter = Space, C / B copy with a note; elsewhere C still reaches app.key (ATTRACT plays)
-    if (endKey(code, app, world, input, toast, () => dailyDate ? dailyStamp(dailyDate, world.level | 0, world.score | 0) : copyPayload(world), () => { world.state = "MENU"; app.toMenu(); prevSt = null; })) return; // Esc on GAME OVER: MENU (the LOSE edge saved the run)
+    if (endKey(code, app, world, input, toast, () => dailyDate ? dailyStamp(dailyDate, world.level | 0, world.score | 0) : copyPayload(world), { menu: () => { world.state = "MENU"; app.toMenu(); prevSt = null; }, page: (d) => { endPg = Math.max(0, Math.min(endPagesAt(curKind, world, runInfo(), timeInfo()) - 1, endPg + d)); } })) return; // Esc on GAME OVER: MENU (the LOSE edge saved the run); ↑↓ a paged end
     if (code === "KeyM" && app.screen !== SCREEN.INTRO && app.screen !== SCREEN.ATTRACT) { // INTRO / ATTRACT: M and R fall through to app.key (show: skip; title: no-op; ATTRACT: a run)
       if (app.screen === SCREEN.GAME && app.worldState === "PAUSE") {
         persistScore();
@@ -553,7 +553,7 @@ export function createGame(canvas, opts = {}) {
       }
       if (!runFixed && world.nextSeed == null) world.nextSeed = runSeed(bootSeed, ++runI); // the sim's startGame (GAME OVER / finale restart) dealt the armed seed: re-arm
       prevSt = world.state;
-      endT = world.state === "WIN" || world.state === "LOSE" ? endT + dt : 0;
+      if (world.state === "WIN" || world.state === "LOSE") endT += dt; else endT = endPg = 0;
       /* The shell machine runs during GAME too — unconditionally, not only
          while paused. prevConfirm is only written inside update(), so skipping
          PLAY frames would leave it false and a player holding fire when they

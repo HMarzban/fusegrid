@@ -6,6 +6,10 @@ import { SCREEN, createMenuApp } from "../src/app/menuapp.js";
 import { createGame } from "../src/main.js";
 import { drawOverlay } from "../src/render/scenes.js";
 import "../src/core/board3.js";
+import { rec as krec } from "./lib/textrec.mjs";
+import * as lazyPages from "../src/render/pages/lazy.js";
+import * as endWin from "../src/render/pages/endwin.js";
+lazyPages._set("endwin", endWin); // WIN is a lazy page (v202 Task 5.3): handed in as if its import had landed
 
 let pass = 0,
   fail = 0;
@@ -376,12 +380,14 @@ function check(name, cond, detail) {
     stroke: noop, fillRect: noop, strokeRect: noop,
     fillText: (s) => texts.push(String(s)), strokeText: (s) => texts.push(String(s)),
   };
-  drawOverlay(c, { state: "WIN", level: 3, finale: false, score: 10, heat: 0 },
-    600, 520, 300, 260);
+  const kw = krec();
+  drawOverlay(kw.ctx, { state: "WIN", level: 5, finale: false, score: 10, heat: 0 },
+    600, 520, 300, 260, undefined, undefined, { r: 5, et: 9 });
+  const ws = kw.texts.map((t) => t.s);
   check(
-    "the WIN cue line now offers both keys",
-    texts.some((s) => s === "SPACE / ENTER / TAP · next level · C copy · B board"),
-    texts.join("|"),
+    "the WIN page (the finale) offers both keys, label first: COPY RESULT … C, COPY MAP … B (v202 Task 5.3)",
+    ws.indexOf("C") === ws.indexOf("COPY RESULT") + 1 && ws.indexOf("B") === ws.indexOf("COPY MAP") + 1,
+    ws.join("|"),
   );
   texts.length = 0;
   drawOverlay(c, { state: "LOSE", level: 3, score: 10, heat: 0 }, 600, 520, 300, 260);

@@ -13,6 +13,10 @@ import { readFileSync } from "node:fs";
 import { createGame } from "../src/main.js";
 import { SCREEN } from "../src/app/menuapp.js";
 import "../src/core/board3.js";
+import { rec as krec } from "./lib/textrec.mjs";
+import * as lazyPages from "../src/render/pages/lazy.js";
+import * as endWin from "../src/render/pages/endwin.js";
+lazyPages._set("endwin", endWin); // WIN is a lazy page (v202 Task 5.3): handed in as if its import had landed
 
 let pass = 0,
   fail = 0;
@@ -324,26 +328,23 @@ const HUD_W = {
 // ---- 8. drawOverlay: the eighth arg is optional; LOSE and PAUSE untouched ----
 {
   const W = { state: "WIN", level: 3, finale: false, score: 10, heat: 0 };
-  const a = rec();
-  drawOverlay(a.c, W, 600, 520, 300, 260, undefined, undefined);
+  const ks = (R) => R.texts.map((t) => t.s);
+  const a = krec();
+  drawOverlay(a.ctx, W, 600, 520, 300, 260, undefined, undefined);
   check(
-    "drawOverlay WIN with no tm records today's lines and no time line",
-    a.texts.some((s) => s.indexOf("CLEARED") >= 0) &&
-      !a.texts.some((s) => /^LEVEL 3 · \d+:\d\d\.\d/.test(s)),
-    a.texts.join("|"),
+    "drawOverlay WIN with no tm: the level clear, no record piece (v202 Task 5.3: the TIME card reads 0:00.0)",
+    ks(a).includes("LEVEL 3 CLEAR") && !ks(a).includes("NEW BEST") && !ks(a).includes("LEVEL 3 TIME"),
+    ks(a).join("|"),
   );
-  const b = rec();
-  drawOverlay(b.c, W, 600, 520, 300, 260, undefined, {
-    on: true,
-    t: 41.23,
-    best: 38.9,
-  });
+  const b = krec();
+  drawOverlay(b.ctx, W, 600, 520, 300, 260, undefined, { on: true, t: 41.23, best: 38.9 });
+  const b2 = krec();
+  drawOverlay(b2.ctx, W, 600, 520, 300, 260, undefined, { on: true, t: 37.06, best: 38.9 });
   check(
-    "drawOverlay WIN with tm.on adds exactly the timeLine string",
-    b.texts.includes("LEVEL 3 · 0:41.2 · BEST 0:38.9") &&
-      b.texts.some((s) => s.indexOf("CLEARED") >= 0) &&
-      b.texts.length === a.texts.length + 1,
-    b.texts.join("|"),
+    "drawOverlay WIN with tm: the room time on the TIME card; a time slower than the saved best hangs no ribbon, a faster one hangs NEW BEST LEVEL 3 TIME",
+    ks(b).includes("0:41.2") && !ks(b).includes("NEW BEST") &&
+      ks(b2).includes("NEW BEST") && ks(b2).includes("LEVEL 3 TIME") && ks(b2).filter((s) => s === "0:37.0").length === 2,
+    ks(b).join("|") + " / " + ks(b2).join("|"),
   );
   const L = rec();
   const Lw = { state: "LOSE", level: 3, finale: false, score: 10, heat: 0 };
