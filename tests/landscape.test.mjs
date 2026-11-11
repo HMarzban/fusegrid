@@ -123,6 +123,23 @@ const worst = (fs, k) => Math.min(...fs.map((f) => (f.g[k] && f.g[k].value != nu
   if (process.env.LAND_PRINT) console.log(J(pages));
 }
 
+/* ---- a controller on a landscape phone (lane lesson 6): the paged SETTINGS / GRAPHICS strip keeps BACK + its keycap under PAGE n OF m, at the floors ---- */
+{
+  const bad = [];
+  setHints(wordsOf("pad", DEF_CONTROLS));
+  for (const ts of [1, 1.25]) for (const wh of LAND) {
+    setTextScale(ts);
+    const B = boxOf(wh);
+    for (const [scr, o] of [[SCREEN.SETTINGS, { optRow: 0, lastDev: "pad" }], [SCREEN.GRAPHICS, { gfxRow: 0, lastDev: "pad" }]]) {
+      const f = frame(B, scr, o), at = wh.join("x") + " " + ts + " " + scr, H = MODS.settings._dbg.last.Pl.hint;
+      if (!H || J(H.ps.map((q) => q.t || q.cap)) !== J(["BACK", wordsOf("pad", DEF_CONTROLS).back])) bad.push(at + " no strip hint");
+      for (const k of GATES) if (f.g[k].status !== "pass") bad.push(at + " " + k + " " + f.g[k].on + " " + f.g[k].value);
+    }
+  }
+  setTextScale(1); setHints(wordsOf("touch", DEF_CONTROLS));
+  check("a controller on the landscape phones: SETTINGS / GRAPHICS keep BACK + its keycap on the pager strip, every gate passing", bad.length === 0, bad.slice(0, 8).join(" | "));
+}
+
 /* ---- the one named exemption: a 568 x 320 phone (#c 236 x 204 CSS px; three RECORDS tabs and BACK do not fit 44 CSS px across, nor one GUIDE
    band a page): there the pages that cannot page whole scale as one piece, their last give-way. Asserted at their measured best (today's values,
    floored to 0.1: a regression fails), and never a throw, an overflow (inside, plate) or a LOADING plate under the floors ---- */

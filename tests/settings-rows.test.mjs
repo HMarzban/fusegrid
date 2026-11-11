@@ -340,13 +340,16 @@ for (const lay of ["d", "l", "p"]) for (const r3d of [false, true]) for (const w
       setHints(words);
       const R = rec({ widthK: 0.648 });
       sp.drawSettingsPage(R.ctx, F, { rows, row: rows[0], level: 1 }, 0);
-      const Pl = sp._dbg.last.Pl, G = sp._dbg.last.G, pl = G.plate, bk = G.back;
-      if (G.pages.length < 2 || G.d.foot || Pl.hint || !bk || bk.h * css < 44 - 1e-9 || bk.x < pl.x || bk.y < pl.y || bk.x + bk.w > pl.x + pl.w || bk.y + bk.h > G.keys.up.y) bad.push(nm + " " + J({ pages: G.pages.length, foot: !!G.d.foot, hint: !!Pl.hint, back: bk }));
+      const Pl = sp._dbg.last.Pl, G = sp._dbg.last.G, pl = G.plate, bk = G.back, H = Pl.hint, L = G.d.keys && G.d.keys.label, got = H ? H.ps.map((q) => q.t || q.cap) : [];
+      /* a controller keeps its BACK and keycap cue (lane lesson 6): on the strip's lower line, left of the page keys, inside the plate; tap mode: the BACK key */
+      if (nm === "pad" ? J(got) !== J(["BACK", words.back]) || !H.ps.every((q) => q.x >= L.x - 0.01 && q.x + q.w <= L.x + L.w + 0.01) || H.y - H.ch / 2 < L.y || H.y + H.ch / 2 > L.y + L.h + 0.01 || L.y + L.h > G.d.plate.y + G.d.plate.h : H) bad.push(nm + " hint " + J(got));
+      if (nm === "pad" && !R.texts.some((t) => t.s === "BACK" && Math.abs(t.y - H.y) < 0.01)) bad.push("pad strip hint not painted");
+      if (G.pages.length < 2 || G.d.foot || !bk || bk.h * css < 44 - 1e-9 || bk.x < pl.x || bk.y < pl.y || bk.x + bk.w > pl.x + pl.w || bk.y + bk.h > G.keys.up.y) bad.push(nm + " " + J({ pages: G.pages.length, foot: !!G.d.foot, hint: !!Pl.hint, back: bk }));
       if (sp.settingsHit(bk.x + bk.w / 2, bk.y + bk.h / 2, { ...F, focus: rows[0] }, rows) !== -1) bad.push(nm + " BACK does not back out");
       if (!R.texts.some((t) => t.s === "BACK")) bad.push(nm + " BACK not painted");
     }
     setHints(null);
-    check("paged touch #c (a landscape phone's): no foot, no hint row; the BACK key beside the title keeps the way back (>= 44 CSS px, inside the plate, painted, a tap backs out)", bad.length === 0, bad.join(" | "));
+    check("paged touch #c (a landscape phone's): no foot, no hint row; the BACK key beside the title keeps the way back (>= 44 CSS px, inside the plate, painted, a tap backs out); a controller's BACK + keycap on the strip's lower line, under PAGE n OF m", bad.length === 0, bad.join(" | "));
   }
   for (const r3d of [false, true]) {
     const t = tapRig("p", r3d, "PAUSE view 1"), rows = t.app.optRows(), css = dims(t.surf, "2d").css, L = { ...md.layout(600, 520, undefined, css), paused: true, focus: 0 };
