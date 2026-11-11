@@ -174,8 +174,8 @@ shellview `dims` hands on every touch layout, none on a keyboard one: fit.js wri
 stand-in and the stage scale it applied on `#c`, so paint and tap read one number and no frame measures a rect; MENU's touch floors, phone
 column and compact tiles are laid out in CSS px); `lg` = the centred board's 0.27 logo
 line in box units,
-`tall` / `narrow` (< 560) flags; narrow re-flows: HOW
-TO stacked rules, ENEMIES 2 cols, MEDALS 1 col, SCORES tab width; STATS is centred (not floor-pinned) in a tall box. LEVEL / HIGH SCORES chip
+`tall` / `narrow` (< 560) flags; narrow re-flows: MEDALS 1 col, SCORES tab width (the GUIDE
+pages re-flow by their own measured widths and page instead: see GUIDE pages below); STATS is centred (not floor-pinned) in a tall box. LEVEL / HIGH SCORES chip
 taps are ONE call through the cued key path (`app.move` with a delta on the row the tap
 focused, `app.adjustPace`), so a change plays one `uiMove` and the chip already set is
 silent; `[ ]` pace keys cue too.
@@ -203,8 +203,8 @@ and TRIGGER / NORTH (T14) work from any row and move no focus (no cap names them
 before; only START starts; the MODIFIERS door opens the list (and closes it, open); off the plate or BACK backs out (an open list closes first). Tap mode
 (Task 3.3, ruling 4: a touch layout whose `app.lastDev` is `touch`; any key or controller press leaves it, a tap re-enters it) focuses START as the
 page's one action; otherwise the focused row shows (see the page below), the foot is `levelFoot` (label first, keycap last). Read-only pages (HOW TO / POWER-UPS / ENEMIES /
-FLOOR / MEDALS) back out on any tap (MEDALS: off its tabs; ENEMIES: off its points values, a tap on one opens its tooltip, and with a tooltip open
-the next tap only closes it); STATS taps its foot labels. PLAY's and START's
+FLOOR / MEDALS) back out on any tap (MEDALS: off its tabs; HOW TO / POWER-UPS / FLOOR: off their page keys where they page; ENEMIES: off its
+points values and page keys, a tap on one opens its tooltip, and with a tooltip open the next tap only closes it); STATS taps its foot labels. PLAY's and START's
 tags name what differs from a default run, each setting named (`tagFor`: `EXPERT DIFFICULTY · FAST SPEED`), then a modifier
 count, stepped down to the slot; PAUSE's kicker steps down through menudraw `setupVals`. `SCREEN.STATS = 12` is **appended** (the `SCREEN` enum's own rule in
 `menuapp.js`: appended, never inserted). `SCREEN.TROPHIES = 13` (the MEDALS page) is
@@ -227,18 +227,33 @@ paints the kit plate with LOADING and its hits are -2), on the world kit: the ro
 from MENU's rule, `roomDpr`, so a hop never re-rasters the world), the rampart plate, a head (kicker GUIDE / MENU and the display title; a phone
 or compact page a BACK key that stays 44 CSS px), the foot under the plate (label first, keycap last: `PICK ▲▼◀▶ · OPEN ENTER · BACK ESC`,
 `MOVE … · POINTS ENTER · BACK ESC`, HOW TO `BACK ESC ENTER`; a touch desk `TAP A DOOR · TAP OUTSIDE TO GO BACK`). Desk, phone (one column, CSS
-px) and compact (every other touch box, two columns) as MENU; heights from a fixed string estimate, the painter wraps by measure into them and
-steps down or drops (APPEARS IN LEVELS n, then LEVELS n; ENEMIES' one-line help on the phone; POWER-UPS' help where it cannot fit at 0.75
-of its size), never an ellipsis. GUIDE's doors are keys with a quiet teaser and a strip of what is behind them (HOW TO's door: whole label-first
+px) and compact (every other touch box) as MENU. Fix round 1 (lead rulings R1 / R2 / R3): every height is the real measure
+(`measureText` on a 1x1 canvas; Node, with no canvas, a 0.66 em estimate), one wrap rule (words break only at their spaces, a slot grows to
+hold every line, never an ellipsis, never a drop: the documented step-downs are APPEARS IN LEVELS n to LEVELS n, ENEMIES' help on the phone
+and compact at 125 %, a door teaser breaking at its " · ", a HOW TO row's second keycap). A box whose text cannot hold its floors at one page
+PAGES the content like SETTINGS (whole rows, `paginate`; ▲ / ▼ page keys 44 px with `PAGE n / m` at the body's foot, a touch target on every
+layout): desk windows keep u = 1 wherever MENU does (1366 x 768, 1280 x 720, 1024 x 768 and the landscape tablet, 1366 x 657, at 1 and
+1.25) and page instead of scaling under 14 / 11 / 17.9 px; a desk plate under 700 wide stacks FLOOR's rows and runs ENEMIES in one column;
+compact pages at 1 box unit per CSS px (its margins just clear the ring, pads 8 / 10); `#c` with no shell box (a keyboard window under
+600 x 520, the iso guard) still scales as one piece, as MENU does there. The page on screen is the focused door's or foe's; HOW TO,
+POWER-UPS and FLOOR keep menuapp `infoPg` (every arrival 0; ↑↓ / ←→ / the controller step it, clamped, through `opts.pageCount`, which main
+reads from shellview `guidePageCount`); a page key tap is `guideFocus(i)` / `foeFocus(i)` (that page's first door or foe) or `infoStep(±1)`
+(`guideReadHit`). FLOOR keeps both rule lines of every tile and its level line on every row (beside the name on all rows or under it on
+all). On a phone or compact page a controller adds a cue line under the head (`hints().dev === "pad"`; label first, keycap last: OPEN /
+POINTS / PAGE, BACK, HOW TO's `REBIND IN SETTINGS › CONTROLS` signpost where it fits), so a flip re-lays the page once. GUIDE's doors are keys with a quiet teaser and a strip of what is behind them (HOW TO's door: whole label-first
 key pairs, `MOVE [WASD] BOMB [SPACE]`); tap mode shows the cursor door focused, as MENU shows PLAY. ENEMIES: a slab per foe (3 x 3 on the desk,
 rows on the phone, two columns compact) with the foe on a floor cell of the world it first appears in, its points as brick digits + PTS (`PTS`,
 pinned to `sim.js` killEnemy by a real kill per type), level pips and `APPEARS IN LEVELS …`, help from `FOES[].help` without its trailing points;
-the focused points value is a key (band, bare bomb, ring) and its tooltip (`tipText`: "What you score each time your blast takes out a KNIGHT.
-Saved scores count ×2 on HARD and ×3 on EXPERT.") covers whole slots (desk: two cards of the next row toward the middle; phone: whole rows on
-the side with room; compact: the other column), never the foe it explains. ENEMIES' focus is menuapp `foeRow` (every arrival the first foe)
-and `foeTip`: the arrows walk the foes in one wrapping line (like GUIDE's doors); a key move opens the tooltip on the new foe, a controller's
-move closes it; Enter / SOUTH opens it; EAST closes it first, Esc / Backspace leave at once; a tap on a points value (a touch layout's whole
-slot) is `foeTap(i)`, any other tap `foeClose()` then backs out. HOW TO, POWER-UPS and FLOOR back out on any tap or Enter. `SCREEN.CONTROLS = 16` is appended too (v201): the SETTINGS `CONTROLS` door row, backs out to
+the focused points value is a key (band, bare bomb, ring; an unfocused key under the name starts at its left edge; at 125 % the desk drops the
+kicker and widens the plate to 1300 so the key rides the name's line, the t125 frame) and its tooltip (`tipText`: "What you score each time your
+blast takes out a KNIGHT. Saved scores count ×2 on HARD and ×3 on EXPERT.") covers the fewest whole rows its measured words need (desk: two
+cards of the rows toward the middle; else the page body above or below the row, full width, the pager's strip included), never the foe it
+explains; ENEMIES off the desk pages so every row keeps that room (a landscape phone: one foe a page), and a compact tooltip is the POINTS word
+and its words, no digits. ENEMIES' focus is menuapp `foeRow` (every arrival the first foe) and `foeTip`: the arrows walk the foes in one
+wrapping line (like GUIDE's doors); on keys the tooltip follows focus, arrival included (R3; a mouse counts as keys); a controller's move
+closes it; Enter / SOUTH opens it; Esc / Backspace / EAST close an open one first, a second leaves; a tap on a points value (a touch
+layout's whole slot) is `foeTap(i)`, a tap on the open tooltip or anywhere else `foeClose()`, then backs out. HOW TO, POWER-UPS and FLOOR
+back out on any tap off their page keys, or Enter. `SCREEN.CONTROLS = 16` is appended too (v201): the SETTINGS `CONTROLS` door row, backs out to
 SETTINGS on the door; see the CONTROLS paragraph under `src/`.
 The GUIDE pages draw foes, pickups and tiles with the board's own painters (CLASSIC: `drawEnemyBody` / `drawItemBody` / `drawSpec`; PIXEL:
 `hudart.js` cells when the atlas is in), baked into the page's layers at a fixed time; only ENEMIES' focused foe animates live (`foeAnim` in

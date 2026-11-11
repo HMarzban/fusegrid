@@ -69,8 +69,9 @@ const PW_MIN = 520, PAD = deep({d: [18, 22, 22, 22], p: [12, 12, 14, 12], c: [8,
 const CP = 9;
 /* the tooltip's side padding: the mock's 16, 10 in the compact arrangement's narrow column */
 const TIP_PAD = deep({d: 16, c: 10});
-/* the pager: two 44 px page keys under the body (a touch target on every layout), PAGER its height with the gap above it */
-export const PAGE_KEY = 44, PAGER = PAGE_KEY + 10, PAGE = "PAGE";
+/* the pager: two page keys under the body (a touch target on every layout), PAGER its height with the gap above it */
+/* touch keys (BACK, the page keys) take 46: 2 over the 44 CSS px floor, so a stage's whole-px snap never lands them under it */
+export const PAGE_KEY = 46, BACK_H = 46, PAGER = PAGE_KEY + 10, PAGE = "PAGE";
 export const TOP = 70, FOOT_GAP = 18, EST = 0.66, TIP_T = deep({d: 8, p: 6}), SLAB_T = 8, PHONE_MAX = 600, COMPACT_MAX = 960, BACK_W = 112, CUE_H = 34;
 /* the text floors (appendix 11): the least desk scale that keeps primary 14, secondary 11 and body 17.9 px at this text scale */
 export const uFloor = (ts) => Math.max(17.9 / (DEV.d.bod * ts), 11 / (DEV.d.sec * ts * CAP_K), 14 / (DEV.d.pri * ts * CAP_K));
@@ -206,9 +207,9 @@ function headOf(page, m, iw) {
     const kick = m.ts > 1.1 ? 0 : sec * 1.25, k2 = kick ? kick + 2 : 0, tt = dv.ttl * ts * 1.1, inline = !hint || mw(T.label, Sx, hint) + D(page) + 24 <= iw;
     return {h: k2 + tt + (inline ? 0 : 4 + sec * 1.3), kick: kick ? R(0, 0, iw, kick) : null, title: R(0, k2, iw, tt), hint: hint ? (inline ? R(0, k2, iw, tt) : R(0, k2 + 4 + tt, iw, sec * 1.3)) : null, s: hint};
   }
-  const hn = hint ? linesOf(T.label, Sx, hint, iw) : 0, tt = dv.ttl * ts * 1.1, below = D(page) > iw - BACK_W - 16, ty = below ? 44 + 6 : 0, th = below ? tt : 44;
+  const hn = hint ? linesOf(T.label, Sx, hint, iw) : 0, tt = dv.ttl * ts * 1.1, below = D(page) > iw - BACK_W - 16, ty = below ? BACK_H + 6 : 0, th = below ? tt : BACK_H;
   const hy = ty + th + 8, cy = hy + (hint ? hn * sec * 1.3 + 6 : 0), ch = m.cue ? CUE_H : 0;
-  return {h: ty + th + (hint ? 8 + hn * sec * 1.3 : 0) + (m.cue ? (hint ? 6 : 8) + ch : 0), back: R(0, 0, BACK_W, 44), title: below ? R(0, ty, iw, tt) : R(BACK_W + 16, 0, iw - BACK_W - 16, 44),
+  return {h: ty + th + (hint ? 8 + hn * sec * 1.3 : 0) + (m.cue ? (hint ? 6 : 8) + ch : 0), back: R(0, 0, BACK_W, BACK_H), title: below ? R(0, ty, iw, tt) : R(BACK_W + 16, 0, iw - BACK_W - 16, BACK_H),
     hint: hint ? R(0, hy, iw, hn * sec * 1.3) : null, cue: m.cue ? R(0, hint ? cy : ty + th + 8, iw, ch) : null, s: hint, hn};
 }
 function frameOf(F) {
@@ -494,7 +495,7 @@ function plan(c0, G, ui) {
       on(q.page, {op: "lane", r}, {op: "well", r: R(x, cy - q.cell / 2, q.cell, q.cell)}, {op: "item", t: p.t, x, y: cy - q.cell / 2, s: q.cell});
       nl.forEach((s, j) => on(q.page, txt(s, tx, cy + (j - (nl.length - 1) / 2) * lh, pri, {name: p.name})));
       wrap(c, fS(sec), hs, r.w - 16).forEach((s, j) => on(q.page, txt(s, x, r.y + 8 + q.hh + 6 + sec * ts * 1.25 * (j + 0.5), sec, {col: CONST.t2, role: "secondary"})));
-      if (p.permanent) { on(q.page, {op: "fill", r: R(r.x + r.w - 7, r.y + 6, 3, q.hh + 4), col: CONST.ink}); info.push({name: p.name + " keeps", r: R(r.x + r.w - 7, r.y + 6, 3, q.hh + 4), col: CONST.ink, pg: q.page}); }
+      if (p.permanent) { on(q.page, {op: "fill", r: R(r.x + r.w - 7, r.y + 6, 3, q.hh + 4), col: CONST.ink}); info.push({name: p.name + " keeps", r: R(r.x + r.w - 8, r.y + 5, 5, q.hh + 6), col: CONST.ink, pg: q.page}); } /* the info rect pads the bar by 1, so the gate's mask takes its soft edges at any scale */
     }
   } else if (G.page === PU) {
     for (const p of POWER) {
@@ -504,7 +505,7 @@ function plan(c0, G, ui) {
       on(q.page, {op: "lane", r}, {op: "well", r: R(x, cy - q.cell / 2, q.cell, q.cell)}, {op: "item", t: p.t, x, y: cy - q.cell / 2, s: q.cell});
       on(q.page, txt(p.name, tx, top + pri * ts * 0.575, pri, {name: p.name}));
       hl.forEach((s, j) => on(q.page, txt(s, tx, top + pri * ts * 1.15 + 2 + bod * ts * 1.4 * (j + 0.5), bod, {face: fB, col: CONST.t2, role: "body"})));
-      if (p.permanent) { on(q.page, {op: "fill", r: R(r.x + r.w - 7, r.y + 6, 3, r.h - 12), col: CONST.ink}); info.push({name: p.name + " keeps", r: R(r.x + r.w - 7, r.y + 6, 3, r.h - 12), col: CONST.ink, pg: q.page}); }
+      if (p.permanent) { on(q.page, {op: "fill", r: R(r.x + r.w - 7, r.y + 6, 3, r.h - 12), col: CONST.ink}); info.push({name: p.name + " keeps", r: R(r.x + r.w - 8, r.y + 5, 5, r.h - 10), col: CONST.ink, pg: q.page}); }
     }
   } else if (G.page === EN) enemies(c, G, ui, on, focus, tips, info);
   else floorPlan(c, G, on);
