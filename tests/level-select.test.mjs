@@ -15,6 +15,8 @@ import { setHints } from "../src/render/hintcopy.js";
 import { wordsOf } from "../src/app/hints.js";
 import { DEF_CONTROLS } from "../src/app/controls.js";
 import { rec } from "./lib/textrec.mjs";
+import { _set as setLazyPage } from "../src/render/pages/lazy.js";
+setLazyPage("guide", await import("../src/render/pages/guide.js")); // the lazy GUIDE pages (v202 Task 3.5), as if their import had landed
 
 let pass = 0, fail = 0;
 function check(name, cond, detail) {
@@ -372,7 +374,7 @@ function mkEl(w, h, rect, lay) {
   return { width: w, height: h, style: {}, getBoundingClientRect: () => rect, ownerDocument: { body: { getAttribute: (k) => (k === "data-lay" ? lay : null) } },
     addEventListener(ty, fn) { (Lr[ty] = Lr[ty] || []).push(fn); }, fire(ty, ev) { (Lr[ty] || []).slice().forEach((fn) => fn(ev || {})); } };
 }
-const HIT = { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit: md.menuHit, settingsHit: md.settingsHit, graphicsHit: md.graphicsHit, guideHit: md.guideHit, levelHit: md.levelHit, scoresHit: md.scoresHit, statsHit: md.statsHit, recTabHit: md.recTabHit, layout: md.layout };
+const HIT = { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit: md.menuHit, settingsHit: md.settingsHit, graphicsHit: md.graphicsHit, guideHit: md.guideHit, enemiesHit: md.enemiesHit, levelHit: md.levelHit, scoresHit: md.scoresHit, statsHit: md.statsHit, recTabHit: md.recTabHit, layout: md.layout };
 function tapRig(kind, o = {}) {
   const app = mk(o), cues = [], world = { state: "PLAY", time: 0, level: 1 };
   for (const k of ["move", "adjustPace"]) { const f = app[k].bind(app); app[k] = (...a) => { const r = f(...a); if (r) cues.push("uiMove"); return r; }; } // main's cue wrappers

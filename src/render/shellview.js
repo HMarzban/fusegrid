@@ -48,9 +48,12 @@ export const isShellScreen = (s) => SHELL_ON.has(s);
    WIN, INTRO, ATTRACT). */
 export const shellMode = (s, world) => (SHELL_ON.has(s) ? 1 : s === SCREEN.GAME && isRunEnd(world) ? 2 : 0);
 /* The screens whose page paints the room look opaque over its whole canvas every frame it is up (v202 Task 3.1: MENU; Task 3.3: LEVEL
-   SELECT; Task 3.4: SETTINGS and GRAPHICS, their LOADING plate included; each page task adds its screen): main passes {covered: true} to the
-   renderer while one holds, so no look rasters a board nobody sees. PAUSE's views sit over the board and never cover it. */
-const COVERS = new Set([SCREEN.MENU, SCREEN.LEVEL, SCREEN.SETTINGS, SCREEN.GRAPHICS]);
+   SELECT; Task 3.4: SETTINGS and GRAPHICS, their LOADING plate included; Task 3.5: the GUIDE pages; each page task adds its screen): main passes
+   {covered: true} to the renderer while one holds, so no look rasters a board nobody sees. PAUSE's views sit over the board and never cover it. */
+const COVERS = new Set([SCREEN.MENU, SCREEN.LEVEL, SCREEN.SETTINGS, SCREEN.GRAPHICS, SCREEN.GUIDE, SCREEN.HOWTO, SCREEN.ITEMS, SCREEN.ENEMIES, SCREEN.FLOOR]);
+/* the GUIDE pages (v202 Task 3.5) are lazy (pages/lazy.js): asked for on every GUIDE frame until they are in, and with the rest in MENU's first idle */
+const GUIDE_ON = new Set([SCREEN.GUIDE, SCREEN.HOWTO, SCREEN.ITEMS, SCREEN.ENEMIES, SCREEN.FLOOR]);
+const guideO = (app) => ({ level: app.level | 0 || 1, foe: app.foeRow | 0, tip: !!app.foeTip, rev: REV }); // rev: MENU's foot reserve, so the room dpr (and key) is MENU's
 export const shellCovers = (s) => COVERS.has(s);
 /* css: CSS px per box unit on a touch layout (MENU's touch floors, its phone column and its compact tiles are in CSS px); undefined on a keyboard
    layout, whose pages never read it. fit.js hands it in as the box's own css: #sh's stand-in carries shellGeo's scale and fit writes #c's stage scale
@@ -309,6 +312,12 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
   if (s === SCREEN.MENU) { const t = touchLay(canvas); lazy.idle(); return menudraw.drawMenu(c, menuUi(app, t, getCab), menudraw.layout(cw, chh, logoY, css), app.subT, t); } // the lazy pages load in the first idle after MENU's first frame
   if (s === SCREEN.SETTINGS) return menudraw.drawSettings(c, menudraw.layout(cw, chh, logoY, css), app.subT, optUi(app, canvas)); // css: the box the pointer maps a tap through
   if (s === SCREEN.GRAPHICS) return menudraw.drawGraphics(c, menudraw.layout(cw, chh, logoY, css), app.subT, gfxUi(app, canvas));
+  if (GUIDE_ON.has(s)) {
+    if (!lazy.get("guide")) lazy.want("guide").catch(() => {});
+    const t = touchLay(canvas), LG = menudraw.layout(cw, chh, logoY, css), o = guideO(app);
+    if (s === SCREEN.GUIDE) return menudraw.drawGuide(c, LG, app.subT, app.guideRow, kind, t, o);
+    return (s === SCREEN.HOWTO ? menudraw.drawHowTo : s === SCREEN.ITEMS ? menudraw.drawItemsHelp : s === SCREEN.ENEMIES ? menudraw.drawEnemiesHelp : menudraw.drawFloorHelp)(c, LG, app.subT, kind, t, o);
+  }
   const L = menudraw.layout(cw, chh, logoY);
   if (s === SCREEN.LEVEL) {
     /* opaque on the world kit (pages/level.js): the selected level's room; tap mode (ruling 4) is a touch layout last driven by touch: any key or
@@ -316,21 +325,6 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
     const t = touchLay(canvas);
     menudraw.drawLevelSelect(c, app.level, menudraw.layout(cw, chh, logoY, css), app.subT, app.heat, app.pact, app.pactUnlocked, app.pace, app.timeAttack, t,
       { ...infoOf(app, kind, getScores, getCab), tap: t && app.lastDev === "touch", enterT: app.subT, rev: REV }); // rev: MENU's foot reserve, so the room dpr (and key) is MENU's
-  } else if (s === SCREEN.HOWTO) {
-    menudraw.drawDim(c, 0.72, cw, chh);
-    menudraw.drawHowTo(c, L, app.subT, kind, touchLay(canvas));
-  } else if (s === SCREEN.ITEMS) {
-    menudraw.drawDim(c, 0.72, cw, chh);
-    menudraw.drawItemsHelp(c, L, app.subT, kind, touchLay(canvas));
-  } else if (s === SCREEN.ENEMIES) {
-    menudraw.drawDim(c, 0.72, cw, chh);
-    menudraw.drawEnemiesHelp(c, L, app.subT, kind, touchLay(canvas));
-  } else if (s === SCREEN.FLOOR) {
-    menudraw.drawDim(c, 0.72, cw, chh);
-    menudraw.drawFloorHelp(c, L, app.subT, kind, touchLay(canvas));
-  } else if (s === SCREEN.GUIDE) {
-    menudraw.drawDim(c, 0.72, cw, chh);
-    menudraw.drawGuide(c, L, app.subT, app.guideRow, kind, touchLay(canvas));
   } else if (s === SCREEN.SCORES) { // RECORDS' three pages: recFocus 0 = the tab row has the focus
     menudraw.drawDim(c, 0.72, cw, chh);
     const sd = scoreData(app, getScores, getPlaques);

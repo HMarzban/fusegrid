@@ -7,6 +7,7 @@
    so tests import what they use. */
 const LOAD = {
   settings: () => import("./settings.js"),
+  guide: () => import("./guide.js"),
 };
 const mods = {}, wait = {};
 

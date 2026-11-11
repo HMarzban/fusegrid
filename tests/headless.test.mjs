@@ -20,6 +20,8 @@ import "../src/core/board3.js";
 import "../src/app/demobot.js";
 import "../src/render/r3d/scene3d.js";
 import { createLocalPair } from "../src/net/localpair.js";
+import { _set as setLazyPage } from "../src/render/pages/lazy.js";
+setLazyPage("guide", await import("../src/render/pages/guide.js")); // the lazy GUIDE pages (v202 Task 3.5), as if their import had landed
 // tab centres found through scoresHit itself (the one tap map), scanning the tab row band
 const mdScoreTabs=(L,t)=>{ for(let y=8;y<200;y++){ const xs=[]; for(let x=0;x<600;x++) if(scoresHit(x,y,L,t)>=0) xs.push([x,scoresHit(x,y,L,t)]); if(xs.length) return {y:y+12,x:(i)=>{const r=xs.filter(p=>p[1]===i).map(p=>p[0]);return (r[0]+r[r.length-1])/2;}}; } return null; };
 // MENU taps land on the painted row (an off-row MENU tap is a no-op since the menu redesign)
@@ -407,8 +409,8 @@ function mkCanvas(){
     g.app.screen===SCREEN.MENU&&g.world.time===0&&g.app.cursor===0, g.app.screen);
   cv.fire("pointerdown",{clientX:MG.plate.x+2,clientY:R[ITEMS.indexOf("GUIDE")].cy});        // the plate's bed left of GUIDE
   check("M1 a MENU side tap on the plate's bed beside a row opens that row", g.app.screen===SCREEN.GUIDE&&g.app.cursor===ITEMS.indexOf("GUIDE"), g.app.screen+"/"+g.app.cursor);
-  const G=mdGuideGeom(L);
-  cv.fire("pointerdown",{clientX:G.tiles[2].x+G.tiles[2].w/2,clientY:G.tiles[2].y+G.tiles[2].h/2}); // ATLAS: GUIDE doors are tiles
+  const G=mdGuideGeom(L), E=G.items.ENEMIES; // v202 Task 3.5: pages/guide.js, the doors by name
+  cv.fire("pointerdown",{clientX:E.x+E.w/2,clientY:E.y+E.h/2}); // ATLAS: GUIDE doors are tiles
   check("M1 GUIDE tap on ENEMIES opens ENEMIES (GUIDE no longer traps touch)", g.app.screen===SCREEN.ENEMIES&&g.app.guideRow===2, g.app.screen+"/"+g.app.guideRow);
   g.app.back();
   cv.fire("pointerdown",{clientX:300,clientY:4});

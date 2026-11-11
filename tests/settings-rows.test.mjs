@@ -22,6 +22,8 @@ import * as sp from "../src/render/pages/settings.js";
 import { worldTokens } from "../src/render/kit/tokens.js";
 lazyPages._set("settings", sp); // the lazy SETTINGS page, in as if its import had landed (R20)
 import { rec } from "./lib/textrec.mjs";
+import { _set as setLazyPage } from "../src/render/pages/lazy.js";
+setLazyPage("guide", await import("../src/render/pages/guide.js")); // the lazy GUIDE pages (v202 Task 3.5), as if their import had landed
 await preloadControls(loadControlsArt); // the CONTROLS page and its paint are lazy: in before the first mount
 
 let pass = 0, fail = 0;
@@ -229,7 +231,7 @@ function mkEl(w, h, rect, lay) {
   return { width: w, height: h, style: {}, getBoundingClientRect: () => rect, ownerDocument: { body: { getAttribute: (k) => (k === "data-lay" ? lay : null) } },
     addEventListener(ty, fn) { (Lr[ty] = Lr[ty] || []).push(fn); }, fire(ty, ev) { (Lr[ty] || []).slice().forEach((fn) => fn(ev || {})); } };
 }
-const HIT = { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit: md.menuHit, settingsHit: md.settingsHit, graphicsHit: md.graphicsHit, guideHit: md.guideHit, levelHit: md.levelHit, scoresHit: md.scoresHit, statsHit: md.statsHit, recTabHit: md.recTabHit, layout: md.layout };
+const HIT = { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit: md.menuHit, settingsHit: md.settingsHit, graphicsHit: md.graphicsHit, guideHit: md.guideHit, enemiesHit: md.enemiesHit, levelHit: md.levelHit, scoresHit: md.scoresHit, statsHit: md.statsHit, recTabHit: md.recTabHit, layout: md.layout };
 const sgP = shellGeo(393, 852), sgL = shellGeo(1024, 768, 600, 520, "l");
 function tapRig(lay, r3d, where) {
   const cmds = [], app = createMenuApp({ render3d: r3d, controls: page(), onPauseCmd: (c) => cmds.push(c) });

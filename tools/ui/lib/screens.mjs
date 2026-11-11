@@ -25,11 +25,11 @@ const ROWS = {
   options: { menu: ["OPTIONS", "SETTINGS"], state: "SETTINGS", exempt: { ring: "SETTINGS has no focused key: the focused row wears the band and the bomb", locked: "SETTINGS shows no locked value: CAMERA and BRIGHTNESS are hidden outside REAL 3D, never locked" } },
   graphics: { menu: ["OPTIONS", "SETTINGS"], key: ["ArrowUp", "ArrowUp", "ArrowUp", "Enter"], state: "GRAPHICS", exempt: { ring: "GRAPHICS has no focused key: the focused row wears the band and the bomb", locked: "REAL 3D locks no GRAPHICS row (CLASSIC 2D and PIXEL declare their locked pair and are measured)" } }, // ↑ from the top wraps: RESET DEFAULTS, CONTROLS, GRAPHICS (the last three rows in every look)
   controls: { menu: ["OPTIONS", "SETTINGS"], key: ["ArrowUp", "ArrowUp", "Enter"], wait: "controls", state: "CONTROLS" },
-  guide: { menu: ["GUIDE"], state: "GUIDE" },
-  howto: { menu: ["GUIDE"], guide: ["HOW TO PLAY"], state: "HOWTO" },
-  items: { menu: ["GUIDE"], guide: ["ITEMS", "POWER-UPS"], state: "ITEMS" },
-  enemies: { menu: ["GUIDE"], guide: ["ENEMIES"], state: "ENEMIES" },
-  floor: { menu: ["GUIDE"], guide: ["FLOOR"], state: "FLOOR" },
+  guide: { menu: ["GUIDE"], state: "GUIDE", exempt: { chosen: "GUIDE pages show no chosen / unchosen values: doors, foes and read-only rows", locked: "GUIDE pages show no locked value" } }, // v202 Task 3.5: GUIDE and its four pages on the world kit
+  howto: { menu: ["GUIDE"], guide: ["HOW TO PLAY"], state: "HOWTO", exempt: { chosen: "GUIDE pages show no chosen / unchosen values: doors, foes and read-only rows", locked: "GUIDE pages show no locked value", band: "a read-only page has no focus: any tap or key backs out", ring: "a read-only page has no focus, so no ring", gap: "one tap target at most (the phone BACK key)", info: "no non-text mark carries information: each icon and keycap repeats its row's word" } },
+  items: { menu: ["GUIDE"], guide: ["ITEMS", "POWER-UPS"], state: "ITEMS", exempt: { chosen: "GUIDE pages show no chosen / unchosen values: doors, foes and read-only rows", locked: "GUIDE pages show no locked value", band: "a read-only page has no focus: any tap or key backs out", ring: "a read-only page has no focus, so no ring", gap: "one tap target at most (the phone BACK key)" } },
+  enemies: { menu: ["GUIDE"], guide: ["ENEMIES"], key: ["ArrowLeft", "Enter"], state: "ENEMIES", exempt: { chosen: "GUIDE pages show no chosen / unchosen values: doors, foes and read-only rows", locked: "GUIDE pages show no locked value" } }, // ← from WALKER wraps to KNIGHT and Enter opens its points tooltip (the round 6 frame; a key move alone opens it on a keyboard)
+  floor: { menu: ["GUIDE"], guide: ["FLOOR"], state: "FLOOR", exempt: { chosen: "GUIDE pages show no chosen / unchosen values: doors, foes and read-only rows", locked: "GUIDE pages show no locked value", band: "a read-only page has no focus: any tap or key backs out", ring: "a read-only page has no focus, so no ring", gap: "one tap target at most (the phone BACK key)", info: "no non-text mark carries information: the tile cells are pictures, each row's words name them" } },
   scores: { menu: ["RECORDS"], state: "SCORES" },
   stats: { menu: ["RECORDS"], key: "KeyE", state: "STATS" },
   medals: { menu: ["RECORDS"], key: ["KeyE", "KeyE"], state: "TROPHIES" },

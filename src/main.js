@@ -11,7 +11,7 @@ import { loadRendererPx } from "./render/pixel/load.js";
 import { copyPayload, isRunEnd, overlayBox, pauseHit, touchLay } from "./render/scenes.js";
 import { paintBombPad } from "./render/sprites.js";
 import { controlsHit, dims, drawShell, kindSize, loadControlsArt, shellMode, shellCovers } from "./render/shellview.js";
-import { menuHit, settingsHit, statsHit, graphicsHit, guideHit, levelHit, scoresHit, recTabHit, layout as menuLayout, setModeFocus } from "./render/menudraw.js";
+import { menuHit, settingsHit, statsHit, graphicsHit, guideHit, enemiesHit, levelHit, scoresHit, recTabHit, layout as menuLayout, setModeFocus } from "./render/menudraw.js";
 import { setFxOpts } from "./render/fx.js";
 import { hints, setHints } from "./render/hintcopy.js";
 import { SCREEN, SOURCE_URL, createMenuApp } from "./app/menuapp.js";
@@ -447,7 +447,7 @@ export function createGame(canvas, opts = {}) {
   };
   input.onPause = onPause;
 
-  if (canvas) mountPointer({ canvas, fit, input, app, world, kind: () => curKind, ctl: () => ctl, hit: { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit, settingsHit, graphicsHit, guideHit, levelHit, scoresHit, statsHit, recTabHit, layout: menuLayout } }); // taps on #c and #sh: skip / confirm / play, the PAUSE rows, the C1 fire swallow (src/app/pointer.js)
+  if (canvas) mountPointer({ canvas, fit, input, app, world, kind: () => curKind, ctl: () => ctl, hit: { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit, settingsHit, graphicsHit, guideHit, enemiesHit, levelHit, scoresHit, statsHit, recTabHit, layout: menuLayout } }); // taps on #c and #sh: skip / confirm / play, the PAUSE rows, the C1 fire swallow (src/app/pointer.js)
   /* pad taps bubble to #stage: play from ATTRACT too (spec §4 tap-to-play). */
   {
     const stageEl =

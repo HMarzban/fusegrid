@@ -11,7 +11,7 @@ const LEVEL_TAP_ROW = Object.freeze({ room: "LEVEL", lock: "LEVEL", heat: "DIFFI
    first, in the constructor), so swallow it here — otherwise the latched
    intent.fire re-enters as a rising-edge confirm on the next frame
    (auto-start after skip, toggles bouncing back, subscreens bouncing). */
-export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit, settingsHit, graphicsHit, guideHit, levelHit, scoresHit, statsHit, recTabHit, layout: menuLayout } }) {
+export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit, settingsHit, graphicsHit, guideHit, enemiesHit, levelHit, scoresHit, statsHit, recTabHit, layout: menuLayout } }) {
   let statsC = false; // a touch pointerdown carries no activation, so a touch C tap copies on its pointerup
   const onDown = (ev) => {
     if (app.screen === SCREEN.GAME) {
@@ -72,6 +72,12 @@ export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: {
       if (row < 0) return menu || row < -1 ? undefined : app.back(); // -2: on the plate, off the rows (inert)
       app[menu ? "cursor" : gx ? "gfxRow" : gd ? "guideRow" : "optRow"] = row;
       app.confirm();
+    } else if (app.screen === SCREEN.ENEMIES) {
+      /* a points value (a touch layout's whole foe slot) focuses that foe and opens its tooltip; any other tap closes an open one, else backs out
+         (a read-only page); -2: the page is still loading, inert */
+      const r = cv.getBoundingClientRect(), k = cv.width / (r.width || cv.width), { cw, ch, lg, css } = dims(cv, kind());
+      const i = enemiesHit((ev.clientX - r.left) * k, (ev.clientY - r.top) * k, menuLayout(cw, ch, lg, css), touchLay(cv));
+      if (i >= 0) app.foeTap(i); else if (i !== -2 && !app.foeClose()) app.back();
     } else if (app.screen === SCREEN.LEVEL || isRecords(app.screen)) {
       /* A chip / tab tap sets it (modifiers ride their 1–5 keys); LEVEL: the tap first focuses the row it touched (levelFocus), only START starts, a locked level flashes its refusal, the MODIFIERS door opens or closes the list, the rest of the plate is inert, outside or BACK backs out (an open list closes first). */
       const r = cv.getBoundingClientRect(), k = cv.width / (r.width || cv.width), { cw, ch, lg, css } = dims(cv, kind()), x = (ev.clientX - r.left) * k, y = (ev.clientY - r.top) * k, L = menuLayout(cw, ch);

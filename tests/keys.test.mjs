@@ -708,11 +708,34 @@ for (let i = 0; i < GUIDE_ROWS.length; i++) {
   const want = [SCREEN.HOWTO, SCREEN.ITEMS, SCREEN.ENEMIES, SCREEN.FLOOR][i];
   const opened = g.app.screen === want;
   press(g, "Escape"); const esc = g.app.screen;
-  press(g, "Enter"); press(g, "Enter");
-  check("GUIDE ↓ + Enter opens " + GUIDE_ROWS[i] + "; Escape and Enter both go back to GUIDE",
-    opened && esc === SCREEN.GUIDE && g.app.screen === SCREEN.GUIDE, opened + "/" + esc + "/" + g.app.screen);
+  press(g, "Enter");
+  if (want === SCREEN.ENEMIES) { // v202 Task 3.5: ENEMIES has a focus; its Enter opens the points tooltip, Escape leaves
+    const back = g.app.screen === SCREEN.ENEMIES && !g.app.foeTip; // GUIDE's Enter opened it again, tooltip shut
+    press(g, "Enter");
+    const tip = back && g.app.screen === SCREEN.ENEMIES && g.app.foeTip;
+    press(g, "Enter"); const stay = g.app.screen === SCREEN.ENEMIES;
+    press(g, "Escape");
+    check("GUIDE ↓ + Enter opens ENEMIES; Escape goes back to GUIDE; on ENEMIES Enter opens the tooltip (a second Enter stays), Escape leaves",
+      opened && esc === SCREEN.GUIDE && tip && stay && g.app.screen === SCREEN.GUIDE, opened + "/" + esc + "/" + tip + "/" + stay + "/" + g.app.screen);
+  } else {
+    press(g, "Enter");
+    check("GUIDE ↓ + Enter opens " + GUIDE_ROWS[i] + "; Escape and Enter both go back to GUIDE",
+      opened && esc === SCREEN.GUIDE && g.app.screen === SCREEN.GUIDE, opened + "/" + esc + "/" + g.app.screen);
+  }
   press(g, "Escape");
   check("GUIDE Escape -> MENU (" + GUIDE_ROWS[i] + ")", g.app.screen === SCREEN.MENU);
+}
+/* ENEMIES (v202 Task 3.5): the arrows walk the foes in order (all four, wrapping) and a key move opens the tooltip on the foe it lands on;
+   Backspace leaves like Escape */
+{
+  const g = menu(); toRow(g, ITEMS.indexOf("GUIDE")); press(g, "Enter"); toRow(g, GUIDE_ROWS.indexOf("ENEMIES")); press(g, "Enter");
+  const at0 = g.app.screen === SCREEN.ENEMIES && g.app.foeRow === 0 && !g.app.foeTip;
+  press(g, "ArrowRight"); const r1 = g.app.foeRow, t1 = g.app.foeTip;
+  press(g, "ArrowDown"); const r2 = g.app.foeRow;
+  press(g, "ArrowUp"); press(g, "ArrowLeft"); press(g, "ArrowLeft"); const r3 = g.app.foeRow;
+  check("ENEMIES: arrives on WALKER, tooltip shut; → / ↓ step on, ↑ / ← step back and wrap to KNIGHT; a key move opens the tooltip", at0 && r1 === 1 && t1 === true && r2 === 2 && r3 === 8 && g.app.foeTip, [at0, r1, t1, r2, r3].join("/"));
+  press(g, "Backspace");
+  check("ENEMIES: Backspace -> GUIDE", g.app.screen === SCREEN.GUIDE);
 }
 
 // ---- RECORDS: SCORES (its difficulty filter is the page body, under the tab row) ----
@@ -1283,7 +1306,8 @@ for (const code of ["Space", "Enter"]) {
     "GRAPHICS": { boot: () => { const g = pOpt(); rowTo(g, optAt(g, "GRAPHICS")); tap(g, "S"); return g; }, E: onScr(SCREEN.SETTINGS) },
     "CONTROLS": { boot: pCtl, E: onScr(SCREEN.SETTINGS) },
     "ITEMS": { boot: page("GUIDE", guided(GUIDE_ROWS.indexOf("POWER-UPS"))), E: onScr(SCREEN.GUIDE), S: onScr(SCREEN.GUIDE) },
-    "ENEMIES": { boot: page("GUIDE", guided(GUIDE_ROWS.indexOf("ENEMIES"))), E: onScr(SCREEN.GUIDE), S: onScr(SCREEN.GUIDE) },
+    "ENEMIES": { boot: page("GUIDE", guided(GUIDE_ROWS.indexOf("ENEMIES"))), E: onScr(SCREEN.GUIDE), S: (g) => g.app.screen === SCREEN.ENEMIES && g.app.foeTip }, // v202 Task 3.5: SOUTH opens the points tooltip
+    "ENEMIES tooltip open": { boot: page("GUIDE", (g) => { guided(GUIDE_ROWS.indexOf("ENEMIES"))(g); tap(g, "S"); }), E: (g) => g.app.screen === SCREEN.ENEMIES && !g.app.foeTip, dR: (g) => g.app.screen === SCREEN.ENEMIES && g.app.foeRow === 1 && !g.app.foeTip }, // EAST closes it first; a D-PAD move walks on and closes it
     "FLOOR": { boot: page("GUIDE", guided(GUIDE_ROWS.indexOf("FLOOR"))), E: onScr(SCREEN.GUIDE), S: onScr(SCREEN.GUIDE) },
     "MEDALS": { boot: page("RECORDS", (g) => { tap(g, "dR"); g.app.key("KeyT"); g.tick(); }), E: onScr(SCREEN.MENU) },
     "PAUSE GRAPHICS": { boot: () => { const g = pPause(); rowTo(g, PAUSE_ITEMS.indexOf("SETTINGS")); tap(g, "S"); rowTo(g, optAt(g, "GRAPHICS")); tap(g, "S"); return g; }, E: paused(1), START: paused(1) },
@@ -1294,7 +1318,7 @@ for (const code of ["Space", "Enter"]) {
     "GAME LOSE": { boot: () => { const g = pRun(); g.world.state = "LOSE"; g.tick(); return g; }, E: (g) => g.world.state === "LOSE", S: (g) => g.world.state !== "LOSE" },
     "ATTRACT": { boot: () => { const g = pMenu(); g.app.enterAttract(); g.tick(); return g; }, E: onScr(SCREEN.MENU), S: onScr(SCREEN.GAME), START: onScr(SCREEN.GAME) },
   };
-  for (const [name, row] of Object.entries(MATRIX)) for (const [LK, blob] of LOOKS) for (const id of ["S", "E", "START", "SELECT"]) {
+  for (const [name, row] of Object.entries(MATRIX)) for (const [LK, blob] of LOOKS) for (const id of ["S", "E", "START", "SELECT", "dR"]) {
     if (!row[id] || (blob && !["SETTINGS", "GRAPHICS", "CONTROLS", "PAUSE GRAPHICS", "GAME PAUSE OPTIONS"].includes(name))) continue;
     withSettings(blob, () => {
       const g = row.boot();

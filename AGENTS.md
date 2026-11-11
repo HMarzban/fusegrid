@@ -124,7 +124,7 @@ hash): the HUD's `LV` chip and heat token. Medal proper names stay (IRON CROWN).
 The paragraphs below use the internal names (heat, pace, pact, room) for code.
 
 Menu look (owner pick 2026-10-19, direction A "CONSOLE PANEL"): the
-PAUSE list and every plated page but MENU, SETTINGS and GRAPHICS (the world kit: MENU page, SETTINGS page below) share ONE kit in `menudraw.js` — `plate`
+PAUSE list and every plated page but MENU, SETTINGS, GRAPHICS and GUIDE's pages (the world kit: MENU page, SETTINGS page below; GUIDE since UI upgrade Task 3.5) share ONE kit in `menudraw.js` — `plate`
 (one 0.94 fill, one `#2a3550` border, radius 6, even-px snapped), `head`
 (sans title, muted spaced kicker), `foot`, and `paintRow` (selected = 0.12
 band + 3px notch + caret; `danger` rows select red). Labels are system-ui
@@ -149,7 +149,7 @@ the full width of the stage; a MENU row owns its key and half of each gap round 
 and off the plate are no row);
 off the rows a root list (MENU, PAUSE list) does nothing; on a page
 (SETTINGS, GRAPHICS, GUIDE, LEVEL SELECT, SCORES) a miss ON the plate is inert
-(hit -2) and only a tap OFF the plate backs out (-1; LEVEL SELECT's phone and compact plates also carry a BACK key). `guideHit`,
+(hit -2) and only a tap OFF the plate (or on a phone page's BACK key) backs out (-1; LEVEL SELECT's phone and compact plates also carry a BACK key). `guideHit`, `enemiesHit`,
 `levelHit` / `levelGeom`, `scoresHit` and `recTabHit` share the geometry their pages
 draw. Hints follow `data-lay` (keys vs taps; LEVEL SELECT's touch foot is
 `LEVEL_TAP` on the touch desk, the landscape tablets; its phone and compact plates have no foot, a BACK key, and a controller's cue line). SHELL BOX (owner GO 2026-10-19, shell v181, touch portrait; every
@@ -183,7 +183,7 @@ silent; `[ ]` pace keys cue too.
 Menu pages (owner pick 2026-10-19 round 2, direction B "ATLAS", over the
 CONSOLE PANEL skin; owner: "why all buttons are soo fat", "make the select
 lever more intractive", "put hooks … to see what we deliver"): pick on the
-left, see it on the right. Every plate HUGS its content through `pageBox`
+left, see it on the right. Every CONSOLE PANEL plate HUGS its content through `pageBox` (GUIDE's pages: `pages/guide.js` `guideGeom`)
 (band keyboard 73..492 / touch 8..512; pitches are caps, scale only in the
 iso 608x352 guard; `shellBox` is gone, no page divides its band by a row
 count). Pitches: list 26 keyboard / 52 touch (SETTINGS and GRAPHICS: their page's own, see SETTINGS page below), hero
@@ -203,7 +203,8 @@ and TRIGGER / NORTH (T14) work from any row and move no focus (no cap names them
 before; only START starts; the MODIFIERS door opens the list (and closes it, open); off the plate or BACK backs out (an open list closes first). Tap mode
 (Task 3.3, ruling 4: a touch layout whose `app.lastDev` is `touch`; any key or controller press leaves it, a tap re-enters it) focuses START as the
 page's one action; otherwise the focused row shows (see the page below), the foot is `levelFoot` (label first, keycap last). Read-only pages (HOW TO / POWER-UPS / ENEMIES /
-FLOOR / MEDALS) back out on any tap (MEDALS: off its tabs); STATS taps its foot labels. PLAY's and START's
+FLOOR / MEDALS) back out on any tap (MEDALS: off its tabs; ENEMIES: off its points values, a tap on one opens its tooltip, and with a tooltip open
+the next tap only closes it); STATS taps its foot labels. PLAY's and START's
 tags name what differs from a default run, each setting named (`tagFor`: `EXPERT DIFFICULTY · FAST SPEED`), then a modifier
 count, stepped down to the slot; PAUSE's kicker steps down through menudraw `setupVals`. `SCREEN.STATS = 12` is **appended** (the `SCREEN` enum's own rule in
 `menuapp.js`: appended, never inserted). `SCREEN.TROPHIES = 13` (the MEDALS page) is
@@ -221,11 +222,27 @@ size to it, and every reader acts by `optLabel()`. Every ART STYLE write
 FLOOR; keyboard GUIDE is a 2x2 of doors, touch four stacked rows), backs out to
 GUIDE. `drawFloorHelp` lists the eight floor tiles at CORE / PLUS / MAX in the
 current look (`featdraw.drawSpec`, PIXEL `atlas.feat`), each with its rule line
-(`TILE_HELP`). `SCREEN.CONTROLS = 16` is appended too (v201): the SETTINGS `CONTROLS` door row, backs out to
+(`TILE_HELP`). GUIDE pages (UI upgrade v202 Task 3.5) are `src/render/pages/guide.js`, lazy (`pages/lazy.js` `guide`; until it is in a page
+paints the kit plate with LOADING and its hits are -2), on the world kit: the room of `app.level` opaque behind (MENU's own room layer: its dpr
+from MENU's rule, `roomDpr`, so a hop never re-rasters the world), the rampart plate, a head (kicker GUIDE / MENU and the display title; a phone
+or compact page a BACK key that stays 44 CSS px), the foot under the plate (label first, keycap last: `PICK ▲▼◀▶ · OPEN ENTER · BACK ESC`,
+`MOVE … · POINTS ENTER · BACK ESC`, HOW TO `BACK ESC ENTER`; a touch desk `TAP A DOOR · TAP OUTSIDE TO GO BACK`). Desk, phone (one column, CSS
+px) and compact (every other touch box, two columns) as MENU; heights from a fixed string estimate, the painter wraps by measure into them and
+steps down or drops (APPEARS IN LEVELS n, then LEVELS n; ENEMIES' one-line help on the phone; POWER-UPS' help where it cannot fit at 0.75
+of its size), never an ellipsis. GUIDE's doors are keys with a quiet teaser and a strip of what is behind them (HOW TO's door: whole label-first
+key pairs, `MOVE [WASD] BOMB [SPACE]`); tap mode shows the cursor door focused, as MENU shows PLAY. ENEMIES: a slab per foe (3 x 3 on the desk,
+rows on the phone, two columns compact) with the foe on a floor cell of the world it first appears in, its points as brick digits + PTS (`PTS`,
+pinned to `sim.js` killEnemy by a real kill per type), level pips and `APPEARS IN LEVELS …`, help from `FOES[].help` without its trailing points;
+the focused points value is a key (band, bare bomb, ring) and its tooltip (`tipText`: "What you score each time your blast takes out a KNIGHT.
+Saved scores count ×2 on HARD and ×3 on EXPERT.") covers whole slots (desk: two cards of the next row toward the middle; phone: whole rows on
+the side with room; compact: the other column), never the foe it explains. ENEMIES' focus is menuapp `foeRow` (every arrival the first foe)
+and `foeTip`: the arrows walk the foes in one wrapping line (like GUIDE's doors); a key move opens the tooltip on the new foe, a controller's
+move closes it; Enter / SOUTH opens it; EAST closes it first, Esc / Backspace leave at once; a tap on a points value (a touch layout's whole
+slot) is `foeTap(i)`, any other tap `foeClose()` then backs out. HOW TO, POWER-UPS and FLOOR back out on any tap or Enter. `SCREEN.CONTROLS = 16` is appended too (v201): the SETTINGS `CONTROLS` door row, backs out to
 SETTINGS on the door; see the CONTROLS paragraph under `src/`.
-The GUIDE pages draw the live foe and pickup animation
-(CLASSIC: `drawEnemyBody` / `drawItemBody`; PIXEL: `hudart.js` `foeAnim` /
-`itemAnim`, a pure function of the page clock). From PAUSE the same page is
+The GUIDE pages draw foes, pickups and tiles with the board's own painters (CLASSIC: `drawEnemyBody` / `drawItemBody` / `drawSpec`; PIXEL:
+`hudart.js` cells when the atlas is in), baked into the page's layers at a fixed time; only ENEMIES' focused foe animates live (`foeAnim` in
+PIXEL, a pure function of the page clock). From PAUSE the same page is
 inline `pauseView 2` (0 list / 1 SETTINGS / 2 GRAPHICS / 3 CONTROLS; Esc steps 2 → 1 and 3 → 1, onto
 the door, and 1 → 0 onto the SETTINGS row), never a SCREEN. WIN/LOSE run summaries are **not** a SCREEN — they
 live in `drawOverlay`.
@@ -279,10 +296,11 @@ Static parts are `kit/cache.js` layers keyed by content (`roomLayer` shared by e
 MENU's rule, `pages/menu.js` `roomDpr`, its dpr giving way so MENU's plate, its foot reserve and a 3 MiB logo reserve fit `BUDGET`; so a MENU /
 LEVEL SELECT switch never refills the room; a page keeps its plate out of the room layer), made at once so a cursor move never misses, `touch()`ed on a steady frame (`cache.touch(key)`: a held layer
 goes LRU-recent, so a stale one is freed first); live on top: focus, ring, the logo's spark. `shellview.shellCovers(screen)` (MENU, LEVEL SELECT,
-SETTINGS and GRAPHICS today; each page task adds its screen) makes main pass `{covered: true}` to the renderer: no look rasters a board a page covers. `frameloop` frees the kit's
+SETTINGS and GRAPHICS, and GUIDE with its four pages since Task 3.5; each page task adds its screen) makes main pass `{covered: true}` to the renderer: no look rasters a board a page covers. `frameloop` frees the kit's
 layers (`release`, handed in by main) after `KIT_FREE` 10 s of GAME PLAY on a PLAY-only clock and on `pagehide`; the next shell frame refills.
 Under the probe a page records `begin(page, {w, h, dpr, el})`, its rects (touch, set, focus, fill), texts (role, cap height, colour) and
-squint pairs outside any layer paint; its `tools/ui/lib/screens.mjs` row exempts what it has none of (MENU: chosen, locked). With no canvas
+squint pairs outside any layer paint; its `tools/ui/lib/screens.mjs` row exempts what it has none of (MENU: chosen, locked; GUIDE and ENEMIES:
+chosen, locked; HOW TO, POWER-UPS, FLOOR also band, ring and gap, HOW TO and FLOOR info). Text under an open tooltip is not recorded. With no canvas
 source (Node) it paints straight onto the target over a flat fill; a context with no clip or rect (the headless renderer's) gets the plan only.
 Lazy pages (R20): `src/render/pages/lazy.js` is the ONE loader (boot; `LOAD` has one line per page, `want(name)` imports, `get(name)` is the
 module or null, `idle()` asks for every page in the first idle after MENU's first frame: shellview calls it on MENU). A lazy page is in
@@ -486,7 +504,7 @@ not shell screens. Do not add them as `SCREEN` values.
     reveal / slam / kick / throw / pickup sparkle; MAKO's show pop is the 3 materialize
     frames (R17, no stepped zoom). Ghost = MAKO frames at `GHOST_A` 0.4. HUD
     chips and GUIDE ITEMS/ENEMIES/HOW TO/FLOOR show the board's own cells
-    (`hudart.js`, x1 in chips, x2 on a GUIDE page only if every cell fits;
+    (`hudart.js`, x1 in chips, x2 on a GUIDE page where the cell is 40 px or more;
     text stays the vector font). px JS cap **160 KB** uncompressed for the
     lazy tree (`tests/pixel-render.test.mjs`; R24's 120, then 122 on
     2026-10-11, 152 for the board look, 160 for the hand-drawn tiles; the tree

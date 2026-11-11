@@ -17,9 +17,13 @@ import * as levelPage from "../src/render/pages/level.js";
 import * as lazyPages from "../src/render/pages/lazy.js";
 import * as settingsPage from "../src/render/pages/settings.js";
 lazyPages._set("settings", settingsPage); // the lazy SETTINGS / GRAPHICS page, in as if its import had landed (R20)
+import { POWER, FOES } from "../src/core/entities.js";
+import { TILE_NAME } from "../src/core/feat.js";
 import { geoFor, geomOf, hitPage } from "../src/render/controlsgeo.js";
 import { createGame } from "../src/main.js";
 import "../src/core/board3.js"; // an ordinary run deals gen 3; with the seam empty the start holds
+import { _set as setLazyPage } from "../src/render/pages/lazy.js";
+setLazyPage("guide", await import("../src/render/pages/guide.js")); // the lazy GUIDE pages (v202 Task 3.5), as if their import had landed
 
 let pass = 0, fail = 0;
 function check(name, cond, detail) {
@@ -71,7 +75,7 @@ const mkApp = (screen) => {
   a.screen = screen; a.subT = 5; a.stats = { rows: [["RUNS", 3]], notes: ["NOTE"], trophies: [] };
   return a;
 };
-const HIT = { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit: md.menuHit, settingsHit: md.settingsHit, graphicsHit: md.graphicsHit, guideHit: md.guideHit, levelHit: md.levelHit, scoresHit: md.scoresHit, statsHit: md.statsHit, recTabHit: md.recTabHit, layout: md.layout };
+const HIT = { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit: md.menuHit, settingsHit: md.settingsHit, graphicsHit: md.graphicsHit, guideHit: md.guideHit, enemiesHit: md.enemiesHit, levelHit: md.levelHit, scoresHit: md.scoresHit, statsHit: md.statsHit, recTabHit: md.recTabHit, layout: md.layout };
 const SHELL_SCREENS = ["MENU", "LEVEL", "HOWTO", "SCORES", "ITEMS", "ENEMIES", "SETTINGS", "GUIDE", "STATS", "TROPHIES", "GRAPHICS", "FLOOR", "CONTROLS"];
 
 // ---- shellGeo per layout: d and l are the window at scale 1, p follows PORT_SHELL ----
@@ -278,6 +282,10 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
      plan too, in order, and nothing is drawn with an ellipsis; the desk may add its pane's and foot's words, it may lose none of the column's */
   const sub = (a, b) => { let i = 0; for (const w of b) if (w === a[i]) i++; return i === a.length; };
   const planOk = (T, B) => !!T.plan && !!B.plan && sub(B.plan, T.plan) && !T.some((q) => /…/.test(q.s));
+  /* the GUIDE pages (v202 Task 3.5) wrap to the box they draw in, so their lines differ box to box: on every box each prints its title and every
+     door, power-up, foe or tile name whole, and no ellipsis (tests/page-guide.test.mjs joins every wrapped string back to its source) */
+  const GUIDE_PAGES = { GUIDE: ["HOW TO PLAY", "POWER-UPS", "ENEMIES", "FLOOR"], HOWTO: ["CLEAR EVERY ENEMY", "GOLD WALL NEVER BREAKS", "MOVE", "PAUSE"], ITEMS: POWER.map((p) => p.name), ENEMIES: FOES.map((f) => f.name), FLOOR: Object.values(TILE_NAME) };
+  const guideWhole = (nm, T) => { const S = T.map((q) => q.s), all = " " + S.join(" ") + " "; return !S.some((x) => /…/.test(x)) && GUIDE_PAGES[nm].every((n) => all.includes(" " + n + " ")); }; // a rule that breaks onto two lines reads whole joined
   for (const lay of ["d", "l"]) each((nm, cur) => { base[lay + nm + cur] = shot(nm, boxOf({ w: 600, h: 520, s: 1 }, lay), cur); });
   each((nm, cur) => { if (nm === "MENU" || nm === "LEVEL") base["lDesk" + nm + cur] = shot(nm, boxOf(shellGeo(1024, 768, 600, 520, "l"), "l"), cur); }); // LEVEL SELECT too (v202 Task 3.3): a 600x520 touch box is its compact arrangement (no card, the BACK key), the tablets its desk
   {
@@ -296,6 +304,7 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
     each((nm, cur) => {
       const T = shot(nm, box, cur), cmp = tab && nm === "MENU" ? words : nm === "LEVEL" ? stream : exact, desk = tab && (nm === "MENU" || nm === "LEVEL"), B = base[desk ? "lDesk" + nm + cur : lay + nm + cur];
       if (T.some((q) => q.x < -0.5 || q.x + q.w > g.w + 0.5 || q.y < 0 || q.y > g.h)) out.push(nm + cur);
+      if (GUIDE_PAGES[nm]) { if (!guideWhole(nm, T)) same.push(nm + cur); return; } // v202 Task 3.5: a GUIDE page wraps to its box (tests/page-guide holds every string whole)
       if (nm === "SETTINGS" || nm === "GRAPHICS" ? !planOk(T, B) : cmp(T) !== cmp(B)) same.push(nm + cur);
     });
     check(`every page's text sits inside the box (${tg})`, out.length === 0, out.join());
@@ -330,8 +339,8 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
         inBox({ ...q.plate, f: 1 }) && n > 0 && q.order.length === n && q.order.every((l, i) => inPlate(q.rows[l], q.plate) && hit(...ctr(q.rows[l]), Lf(l), R, touch) === i) &&
           q.plate.y + 4 < first.y && hit(q.plate.x + 4, q.plate.y + 4, L, R, touch) === -2 && hit(4, 4, L, R, touch) === -1 && hit(g.w - 4, g.h - 4, L, R, touch) === -1);
     }
-    const gd = md.guideGeom(L, touch);
-    check(`GUIDE: doors in the box, each taps to itself (${tg})`, inBox(gd.S) && gd.tiles.every((r, i) => md.guideHit(...ctr(r), L, 0, touch) === i));
+    const gd = md.guideGeom(L, touch), tiles = gd.order.map((n) => gd.items[n]), gp = gd.plate; // v202 Task 3.5: pages/guide.js, doors by name; the plate and its ring in the box
+    check(`GUIDE: doors in the box, each taps to itself (${tg})`, gp.x - gd.T >= 0 && gp.y - gd.T >= 0 && gp.x + gp.w + gd.T <= g.w && gp.y + gp.h + gd.T <= g.h && tiles.length === 4 && tiles.every((r, i) => inPlate(r, gp) && md.guideHit(...ctr(r), L, 0, touch) === i));
     const st = md.statsGeom(L).S;
     check(`STATS: in the box, foot T taps KeyT (${tg})`, inBox(st) && md.statsHit(st.mid - 47 * 3 + 24, st.footY, L, false) === "KeyT");
     check(`RECORDS: the tab strip of SCORES, STATS and MEDALS sits in each plate and each tab taps to itself (${tg})`,

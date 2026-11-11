@@ -8,10 +8,11 @@ import { ITEMS, SCREEN, PAUSE_ITEMS, optRows } from "../src/app/menuapp.js";
 import { shellGeo } from "../src/app/fit.js";
 import { overlayBox, pauseGeom, pauseHit, touchLay } from "../src/render/scenes.js";
 import { controlsHit, dims } from "../src/render/shellview.js";
-import { graphicsHit, guideHit, layout, levelGeom, levelHit, menuHit, scoresHit, settingsHit, statsHit, recTabHit, recTabsGeom, recPlate } from "../src/render/menudraw.js";
+import { graphicsHit, guideHit, enemiesHit, guideGeom, layout, levelGeom, levelHit, menuHit, scoresHit, settingsHit, statsHit, recTabHit, recTabsGeom, recPlate } from "../src/render/menudraw.js";
 import * as lazyPages from "../src/render/pages/lazy.js";
 import * as settingsPage from "../src/render/pages/settings.js";
 lazyPages._set("settings", settingsPage); // the lazy SETTINGS / GRAPHICS page, in as if its import had landed (R20)
+lazyPages._set("guide", await import("../src/render/pages/guide.js")); // the lazy GUIDE pages, as if their import had landed
 
 let pass = 0,
   fail = 0;
@@ -33,13 +34,13 @@ function mkEl(w, h, rect, lay) {
   if (lay) el.ownerDocument = { body: { getAttribute: (k) => (k === "data-lay" ? lay : null) } }; // body[data-lay] as fit.js writes it
   return el;
 }
-const REAL = { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit, settingsHit, graphicsHit, guideHit, levelHit, scoresHit, statsHit, recTabHit, layout };
+const REAL = { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit, settingsHit, graphicsHit, guideHit, enemiesHit, levelHit, scoresHit, statsHit, recTabHit, layout };
 function mkHit(over = {}) {
   const calls = [], hit = {};
   for (const [k, f] of Object.entries(REAL)) hit[k] = (...a) => { const r = (over[k] || f)(...a); calls.push({ f: k, a, r }); return r; };
   return { hit, calls, of: (k) => calls.filter((c) => c.f === k), last: (k) => calls.filter((c) => c.f === k).pop() };
 }
-const SHELL = ["confirm", "back", "pauseBack", "playFromAttract", "skipShow", "move", "adjustPace", "recTab", "levelFocus"];
+const SHELL = ["confirm", "back", "pauseBack", "playFromAttract", "skipShow", "move", "adjustPace", "recTab", "levelFocus", "foeTap", "foeClose"];
 function rig(o = {}) {
   const log = [], taps = [];
   const VIS = o.rows || optRows(false); // the app's visible SETTINGS rows (menuapp optRows), what settingsHit maps into
@@ -285,10 +286,28 @@ for (const [scr, fn, field, row, offAct, R] of [[SCREEN.MENU, "menuHit", "cursor
 }
 
 // ---- read-only pages: any tap confirms (backs out) ----
-for (const s of ["HOWTO", "ITEMS", "ENEMIES", "FLOOR"]) {
+for (const s of ["HOWTO", "ITEMS", "FLOOR"]) {
   const r = rig({ app: { screen: SCREEN[s] } });
   r.down(300, 260);
   check(s + ": any tap confirms, no hit test", J(r.log) === J([["confirm"]]) && r.H.calls.length === 0 && r.input._intent.fire === false, J(r.log));
+}
+/* ENEMIES (v202 Task 3.5): a points value = foeTap(i) (focus + the tooltip); any other tap closes an open tooltip (foeClose), else backs out */
+{
+  const G = guideGeom(L0, false, "ENEMIES"), c = (q) => [q.x + q.w / 2, q.y + q.h / 2];
+  const r = rig({ app: { screen: SCREEN.ENEMIES } });
+  r.app.foeClose = (...a) => { r.log.push(["foeClose", ...a]); return false; };
+  r.down(...c(G.hit.KNIGHT));
+  const h = r.H.last("enemiesHit"), lc = r.H.last("layout");
+  check("ENEMIES: a tap on KNIGHT's points value is foeTap(8), fire swallowed", J(r.log) === J([["foeTap", 8]]) && r.input._intent.fire === false, J(r.log));
+  check("ENEMIES: enemiesHit(x, y, layout(cw, ch, lg, css), touchLay(cv))", J(h.a[2]) === J(L0) && h.a[3] === false && lc.a.length === 4, J(lc.a));
+  r.log.length = 0; r.down(2, 2);
+  check("ENEMIES: off the values with no tooltip open: foeClose finds none, then back", J(r.log) === J([["foeClose"], ["back"]]), J(r.log));
+  r.app.foeClose = (...a) => { r.log.push(["foeClose", ...a]); return true; };
+  r.log.length = 0; r.down(...c(G.items.WALKER));
+  check("ENEMIES: with a tooltip open, any other tap only closes it", J(r.log) === J([["foeClose"]]), J(r.log));
+  const q = rig({ app: { screen: SCREEN.ENEMIES }, over: { enemiesHit: () => -2 } });
+  q.down(300, 260);
+  check("ENEMIES: -2 (the page still loading) is inert", q.log.length === 0, J(q.log));
 }
 {
   /* MEDALS (TROPHIES) is read-only too, but its head carries RECORDS' tab strip (v202 Task 2.2): the strip is its one hit test */

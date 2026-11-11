@@ -24,6 +24,9 @@ append an entry when it makes a non-trivial change.
 
 ## 2026-11-07 — v201 pushed: controller play, rebinding, CONTROLS page
 - Owner: "make it ready and push it up", a day before the planned Sunday. Released as one squashed commit on `origin/main`'s v200 tip (`feature/controls` and `feature/delivery` are never pushed); CHANGELOG and sitemap dated 2026-11-07; the brand of the test controller left the tracked docs (A5). 578 tests; the stubbed-pad browser pass re-run on the release tree, its leftover fails all stale against `e1384f5` or timing (record's go/no-go). M1-M7 ship open by the owner's call. The new share card (`og.png` + alt text) ships beside it as its own commit; the owner re-uploads Social preview by hand.
+## 2026-11-11 — UI upgrade Task 3.5: GUIDE pages on the world kit (lane-3.5-guide)
+- `src/render/pages/guide.js` (lazy via `pages/lazy.js`): GUIDE doors, HOW TO, POWER-UPS, ENEMIES (foe cells on their home floor, brick-digit points pinned to a real kill, the KNIGHT tooltip) and FLOOR on the kit; menuapp `foeRow` / `foeTip`, pointer `enemiesHit`; old CONSOLE PANEL painters deleted. Open: compact landscape pages scale under the touch / text floors like MENU's; desk ENEMIES and FLOOR at 125 % scale to ~0.84.
+
 ## 2026-11-11 — R1 train: SETTINGS on MENU's room dpr (branch `r1-train`)
 - SETTINGS, GRAPHICS and their LOADING plate now fill MENU's own room at `pages/menu.js` `roomDpr` (as LEVEL SELECT since its fix round): 0 room refills MENU <-> SETTINGS / GRAPHICS; menudraw's own `roomDpr` deleted. Open: the touch tablet 1024x768 at text 1 still gives way on SETTINGS (page 1.892 vs MENU 1.925; a lead call: page dpr or room).
 

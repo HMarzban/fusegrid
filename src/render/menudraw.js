@@ -5,16 +5,14 @@
    Easing helpers duplicated from the intro beat table (spec §3) — this file
    must not import from src/app. */
 import { CFG, BIOMES } from "../core/config.js";
-import { POWER, FOES, helpOf } from "../core/entities.js";
+import { FOES } from "../core/entities.js";
 import { HEAT_COL, HEAT_MARK, clampHeat } from "../core/heat.js";
 import { pactLabel } from "../core/pact.js";
-import { DIFF, TIME_TRIAL, LABEL, RECORD_TABS, diffTag, speedTag, runParts, levelsOf } from "./words.js";
+import { DIFF, TIME_TRIAL, LABEL, RECORD_TABS, diffTag, speedTag, runParts } from "./words.js";
 import { drawEnemyBody } from "./sprites.js";
-import { drawItemBody } from "./itemdraw.js";
 import { HOME, TILE_HELP, TILE_NAME } from "../core/feat.js";
-import { drawSpec } from "./featdraw.js";
 import { rr } from "./icons.js";
-import { pixelArt, itemCell, foeCell, pageScale, blitAnim, blitCell, foeAnim, itemAnim, seedOf as pxSeed, SLOT_PAD } from "./hudart.js";
+import { pixelArt, blitAnim, foeAnim, seedOf as pxSeed } from "./hudart.js";
 import { foeM, blinkAt } from "./motion.js";
 import { hints, tapMode } from "./hintcopy.js";
 import { drawLogo2d, deviceScale, TITLE_RUNUP } from "./logo/draw2d.js";
@@ -24,7 +22,7 @@ import { rosterOf } from "./pages/card.js";
 import * as lazy from "./pages/lazy.js";
 import { worldTokens, CONST, toL } from "./kit/tokens.js";
 import { plate as kitPlate } from "./kit/paint.js";
-import { dsp as kitDsp, lbl as kitLbl } from "./kit/type.js";
+import { dsp as kitDsp, lbl as kitLbl, lbl } from "./kit/type.js";
 import { canMake, capDpr } from "./kit/cache.js";
 import { roomLayer } from "./kit/room.js";
 const ACCENT = "#37f0d0",
@@ -76,19 +74,6 @@ export function plate(c, x, y, w, h) {
   c.lineWidth = 1;
   rr(c, x + 0.5, y + 0.5, w - 1, h - 1, 6);
   c.stroke();
-}
-function well(c, x, y, s, col) {
-  c.fillStyle = "rgba(4,7,14,0.95)";
-  c.fillRect(x - s / 2, y - s / 2, s, s);
-  if (col) {
-    c.fillStyle = col;
-    c.globalAlpha = 0.14;
-    c.fillRect(x - s / 2 + 2, y - s / 2 + 2, s - 4, s - 4);
-    c.globalAlpha = 1;
-  }
-  c.strokeStyle = col || LINE;
-  c.lineWidth = 1.5;
-  c.strokeRect(x - s / 2 + 0.5, y - s / 2 + 0.5, s - 1, s - 1);
 }
 const spaced = (c, on) => {
   if ("letterSpacing" in c) c.letterSpacing = on ? "0.12em" : "0px";
@@ -299,12 +284,6 @@ function cell(c, r, a) {
   c.strokeRect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1);
 }
 /* A tile's selection is paintRow's: the 0.12 band, the 3px notch, the caret. */
-function selBand(c, r, col) {
-  c.fillStyle = col === DANGER ? "rgba(255,93,115,0.12)" : "rgba(55,240,208,0.12)";
-  c.fillRect(r.x, r.y, r.w, r.h);
-  c.fillStyle = col || ACCENT;
-  c.fillRect(r.x, r.y, 3, r.h);
-}
 function lockGlyph(c, x, y, s, col) {
   c.strokeStyle = col;
   c.fillStyle = col;
@@ -336,21 +315,6 @@ function foeAt(c, A, t, cx, cy, s, time, ps) {
   c.translate(cx, cy);
   c.scale(s / 30, s / 30);
   drawEnemyBody(c, GW, DUMMY, GX);
-  c.restore();
-}
-const ITEM = { t: "", col: "#fff", x: 0, y: 0 };
-function itemAt(c, A, p, cx, cy, s, time, ps) {
-  if (A) return blitAnim(c, itemAnim(A, p.t, time), cx, cy, ps || (s >= 36 ? 2 : 1));
-  ITEM.t = p.t;
-  ITEM.col = p.col;
-  ITEM.x = seedOf(p.t);
-  ITEM.y = seedOf(p.t + "y");
-  GW.time = time;
-  c.save();
-  c.translate(cx, cy);
-  const k = (s * 1.43) / CFG.TILE;
-  c.scale(k, k);
-  drawItemBody(c, GW, ITEM, 1, null);
   c.restore();
 }
 /* heatRoster deduped to [{t, n}] in first-seen order: the next-run card's (pages/card.js), the one roster. */
@@ -558,326 +522,39 @@ export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked, pace, timeAt
 }
 
 /* GUIDE art in PIXEL (W5, R19): kind "px" swaps only the scaled vector glyph
-   for the atlas cell (hudart.js); wells, rows and text are the same
-   calls in every kind. */
+   for the atlas cell (hudart.js); LEVEL SELECT's room card reads it. */
 const pxArt = (kind) => (kind === "px" ? pixelArt() : null);
 const BACK_TAP = "TAP OUTSIDE TO GO BACK";
 
-/* HOW TO PLAY: the two rules first, then the control grid mirroring the
-   page .hint (power-gate asterisks). */
-const howRows = (W) => [
-  [W.move + " / " + W.moveAlt, "MOVE", null],
-  [W.bomb, "BOMB", "bomb"],
-  [W.throw, "THROW *", "throw"],
-  [W.remote, "REMOTE *", "remote"],
-  ["WALK INTO BOMB", "KICK *", "kick"],
-  [W.pause, "PAUSE", null],
-];
-export function drawHowTo(c, L, t, kind, touch) {
-  const T = !!touch,
-    rule = T ? 44 : 34,
-    rh = T ? 52 : 40,
-    note = T ? 20 : 16,
-    nr = L.narrow ? 2 : 1, // the narrow box stacks the two rules
-    rules = nr * rule + (nr - 1) * 6,
-    S = pageBox(L, 520, rules + 8 + 3 * rh + 6 + note, T),
-    f = S.f;
-  boxPlate(c, S);
-  head(c, S, "HOW TO PLAY", "TWO RULES · SIX CONTROLS");
-  const rw = nr === 2 ? S.iw : (S.iw - 8) / 2;
-  ["CLEAR EVERY ENEMY", "GOLD WALL NEVER BREAKS"].forEach((s, i) => {
-    const r = nr === 2 ? { x: S.ix, y: S.by + i * (rule + 6) * f, w: rw, h: rule * f } : { x: S.ix + i * (rw + 8), y: S.by, w: rw, h: rule * f };
-    cell(c, r, 0.5);
-    c.fillStyle = i ? "#ffd447" : ACCENT;
-    c.fillRect(r.x, r.y, 3, r.h);
-    c.textAlign = "center";
-    c.textBaseline = "middle";
-    c.font = sans(T ? 15 : 13, "800");
-    c.fillText(s, r.x + r.w / 2, r.y + r.h / 2);
-  });
-  const y0 = S.by + (rules + 8) * f,
-    cw = (S.iw - 8) / 2,
-    ws = T ? 26 : 22,
-    A = pxArt(kind);
-  const W = hints(), rows = howRows(W);
-  for (let i = 0; i < rows.length; i++) {
-    const [k, v, kd] = rows[i],
-      r = { x: S.ix + (i % 2) * (cw + 8), y: y0 + ((i >> 1) * rh) * f, w: cw, h: (rh - 4) * f },
-      cy = r.y + r.h / 2;
-    cell(c, r);
-    let tx = r.x + 10;
-    if (kd) {
-      const p = POWER.find((d) => d.t === kd);
-      well(c, r.x + 10 + ws / 2, cy, ws, p && p.col);
-      itemAt(c, A, p, r.x + 10 + ws / 2, cy, ws * 0.72, t);
-      tx = r.x + ws + 18;
-    }
-    c.textAlign = "left";
-    c.textBaseline = "middle";
-    c.fillStyle = ACCENT;
-    c.font = font(T ? 12 : 10, "900");
-    c.fillText(k, tx, cy - (T ? 9 : 7));
-    c.fillStyle = TEXT;
-    c.font = sans(T ? 16 : 13, "700");
-    c.fillText(v, tx, cy + (T ? 10 : 8));
-  }
-  c.textAlign = "center";
-  c.fillStyle = MUTED;
-  c.font = font(T ? 12 : 10);
-  c.fillText(tapMode(T) ? "TOUCH · LEFT PAD MOVES · RIGHT BUTTON BOMBS" : "* NEEDS ITS POWER-UP", S.mid, y0 + (3 * rh + 6 + note / 2) * f - 4);
-  foot(c, S, tapMode(T) ? BACK_TAP : (W.dev === "pad" ? "REBIND IN " + LABEL.SETTINGS + " › CONTROLS · " : "") + W.back + " / " + W.ok + " BACK");
+/* GUIDE and its four pages are src/render/pages/guide.js (UI upgrade v202 Task 3.5), lazy (pages/lazy.js "guide"): one geometry for draw and
+   tap, names by label. These keep the entry names shellview, the pointer and the tests call; L is layout(W, H, lg, css) for the box the page draws
+   on, touch body[data-lay] p / l, o = {level (the world), foe (ENEMIES' focused foe), tip (its tooltip open)}. Until the module is in, a page
+   paints the kit plate with LOADING over its world and its hits find nothing (-2: inert, so a tap while it loads never backs out). */
+const guideMod = () => lazy.get("guide");
+const gui = (page, kind, L, o, focus) => ({ page, focus, tip: !!(o && o.tip), level: (o && o.level) | 0 || 1, look: kind === "px" ? "px" : "2d", narrow: !!L.narrow, rev: o && o.rev });
+function guideLoading(c, L, title, o) {
+  const tok = worldTokens((o && o.level) | 0 || 1), w = Math.min(360, L.W - 60), h = 120, x = (L.W - w) / 2, y = (L.H - h) / 2;
+  if (typeof c.rect !== "function" || !(w > 0)) return; // the headless renderer's context: the plan only
+  c.fillStyle = tok.bed;
+  c.fillRect(0, 0, L.W, L.H);
+  kitPlate(c, x, y, w, h, tok, { T: Math.min(16, L.W / 40) });
+  lbl(c, title, x + 22, y + 40, 21);
+  lbl(c, "LOADING", x + 22, y + 80, 16, { col: "#dccbb8" });
 }
-
-/* POWER-UPS (SCREEN.ITEMS): two-column catalogue of every POWER pickup; help wraps (≤2 lines). */
-/* A narrow touch column cannot hold "the REMOTE button detonates your bombs" in two lines; the row's title already names the button. */
-const NARROW_TAP = Object.freeze({ throw: "tap", remote: "tap" });
-export function drawItemsHelp(c, L, t, kind, touch) {
-  const T = !!touch,
-    n = POWER.length,
-    rows = Math.ceil(n / 2),
-    rh = T ? 54 : 38,
-    S = pageBox(L, 560, rows * rh + (rows - 1) * 4, T),
-    f = S.f,
-    cw = (S.iw - 8) / 2,
-    ws = T ? 28 : 24,
-    A = pxArt(kind),
-    ps = A ? pageScale(POWER.map((p) => itemCell(A, p.t)), ws + SLOT_PAD) : 1;
-  boxPlate(c, S);
-  head(c, S, LABEL.POWER_UPS, n + " " + LABEL.POWER_UPS);
-  for (let i = 0; i < n; i++) {
-    const p = POWER[i],
-      r = { x: S.ix + (i % 2) * (cw + 8), y: S.by + (i >> 1) * (rh + 4) * f, w: cw, h: rh * f },
-      cy = r.y + r.h / 2,
-      tx = r.x + ws + 18,
-      tw = r.x + r.w - 8 - tx;
-    cell(c, r);
-    well(c, r.x + 10 + ws / 2, cy, ws, p.col);
-    itemAt(c, A, p, r.x + 10 + ws / 2, cy, ws * 0.72, t, ps);
-    c.textAlign = "left";
-    c.textBaseline = "middle";
-    c.font = font(T ? 12 : 10);
-    const hl = wrap(c, tapMode(T) && L.narrow ? helpOf(p, NARROW_TAP) : helpOf(p, hints(), tapMode(T)), tw, T ? 2 : 1);
-    const top = cy - ((hl.length - 1) * (T ? 7 : 6)) - (T ? 9 : 6);
-    c.fillStyle = TEXT;
-    c.font = sans(T ? 15 : 12, "800");
-    c.fillText(p.name, tx, top);
-    c.fillStyle = MUTED;
-    c.font = font(T ? 12 : 10);
-    hl.forEach((l, j) => c.fillText(l, tx, top + (T ? 17 : 13) + j * (T ? 14 : 12)));
-    if (p.permanent) {
-      c.fillStyle = ACCENT;
-      c.globalAlpha = 0.7;
-      c.fillRect(r.x + r.w - 3, r.y + 4, 2, r.h - 8);
-      c.globalAlpha = 1;
-    }
-  }
-  foot(c, S, tapMode(T) ? BACK_TAP : "WALK OVER A POWER-UP TO COLLECT · " + hints().back + " BACK");
+const guidePage = (page) => (c, L, t, kind, touch, o) => { const g = guideMod(); if (!g) return guideLoading(c, L, page, o); g.drawGuidePage(c, frameOf(L, touch), gui(page, kind, L, o, o && o.foe != null ? o.foe : null), t); };
+export const drawHowTo = guidePage("HOW TO PLAY");
+export const drawItemsHelp = guidePage(LABEL.POWER_UPS);
+export const drawEnemiesHelp = guidePage("ENEMIES");
+export const drawFloorHelp = guidePage("FLOOR");
+export function drawGuide(c, L, t, cursor, kind, touch, o) {
+  const g = guideMod();
+  if (!g) return guideLoading(c, L, "GUIDE", o);
+  g.drawGuidePage(c, frameOf(L, touch), gui("GUIDE", kind, L, o, g.DOORS[cursor | 0]), t);
 }
-
-/* ENEMIES: 3x3 field guide; name, a 2-line measured help and its LEVELS. */
-export function drawEnemiesHelp(c, L, t, kind, touch) {
-  const T = !!touch,
-    n = FOES.length,
-    nc = L.narrow ? 2 : 3, // the narrow box: two columns, so names and help read whole
-    rows = Math.ceil(n / nc),
-    rh = T ? 86 : 64,
-    S = pageBox(L, 560, rows * rh + (rows - 1) * 6, T),
-    f = S.f,
-    cw = (S.iw - 6 * (nc - 1)) / nc,
-    ws = T ? 34 : 32,
-    A = pxArt(kind),
-    ps = A ? pageScale(FOES.map((e) => foeCell(A, e.t)), ws + SLOT_PAD) : 1;
-  boxPlate(c, S);
-  head(c, S, "ENEMIES", "FIELD GUIDE · " + n + " FOES");
-  for (let i = 0; i < n; i++) {
-    const e = FOES[i],
-      r = { x: S.ix + (i % nc) * (cw + 6), y: S.by + Math.floor(i / nc) * (rh + 6) * f, w: cw, h: rh * f },
-      tx = r.x + ws + 16,
-      tw = r.x + r.w - 6 - tx;
-    cell(c, r);
-    well(c, r.x + 8 + ws / 2, r.y + r.h / 2, ws);
-    foeAt(c, A, e.t, r.x + 8 + ws / 2, r.y + r.h / 2, ws * 0.8, t, ps);
-    c.textAlign = "left";
-    c.textBaseline = "middle";
-    c.fillStyle = TEXT;
-    c.font = sans(T ? 15 : 12, "800");
-    c.fillText(clip(c, e.name, tw), tx, r.y + (T ? 16 : 12));
-    c.fillStyle = MUTED;
-    c.font = font(T ? 12 : 9);
-    wrap(c, e.help, tw, 2).forEach((l, j) => c.fillText(l, tx, r.y + (T ? 36 : 26) + j * (T ? 15 : 11)));
-    c.fillStyle = ACCENT;
-    c.font = font(T ? 11 : 8, "900");
-    c.fillText(levelsOf(e.rooms), tx, r.y + r.h - (T ? 11 : 8)); // LEVEL 8 for one
-  }
-  foot(c, S, tapMode(T) ? BACK_TAP : hints().back + " BACK");
-}
-
-/* GUIDE (ATLAS): four door tiles in a 2x2 on keyboard (←/→ or ↑/↓
-   walk them in order), stacked 70-tall rows with the strip inline on touch. Each door
-   shows what is behind it. guideHit shares guideGeom; a tile owns half of
-   each gutter, the rest of the plate is inert (-2), off it backs out (-1). */
-const GUIDE_LABEL = ["HOW TO PLAY", LABEL.POWER_UPS, "ENEMIES", "FLOOR"];
-export function guideGeom(L, touch) {
-  const T = !!touch,
-    S = pageBox(L, T ? 520 : 552, T ? 4 * 70 + 18 : 2 * 64 + 8, T),
-    f = S.f,
-    tw = T ? S.iw : (S.iw - 8) / 2;
-  const tiles = [0, 1, 2, 3].map((i) => (T ? { x: S.ix, y: S.by + i * 76 * f, w: tw, h: 70 * f } : { x: S.ix + (i & 1) * (tw + 8), y: S.by + (i >> 1) * 72 * f, w: tw, h: 64 * f }));
-  return { S, tiles, T };
-}
-export function guideHit(x, y, L, _n, touch) {
-  const g = guideGeom(L, touch),
-    p = g.T ? 3 : 4;
-  for (let i = 0; i < 4; i++) if (inR(g.tiles[i], x, y, p)) return i;
-  const S = g.S;
-  return x >= S.x && x <= S.x + S.w && y >= S.y && y <= S.y + S.h ? -2 : -1;
-}
-function keyCap(c, x, y, s, T) {
-  c.font = font(T ? 12 : 10, "900");
-  const w = mw(c, s) + 12,
-    h = T ? 22 : 18;
-  c.fillStyle = "rgba(4,7,14,0.9)";
-  c.fillRect(x, y - h / 2, w, h);
-  c.strokeStyle = MUTED;
-  c.lineWidth = 1;
-  c.strokeRect(x + 0.5, y - h / 2 + 0.5, w - 1, h - 1);
-  c.fillStyle = TEXT;
-  c.textAlign = "center";
-  c.textBaseline = "middle";
-  c.fillText(s, x + w / 2, y + 1);
-  return w;
-}
-/* FLOOR: the eight tiles, one per world (core/feat.js HOME), painted by the look's own painter at each difficulty (heat 0..2). All eight have rules since v196; every ordinary run and the DAILY play them since v198. */
-const FLOOR_ROWS = [
-  { k: "BLOOM", name: TILE_NAME.BLOOM, room: 1 },
-  { k: "GLIDE", name: TILE_NAME.GLIDE, room: 2 },
-  { k: "BELT", name: TILE_NAME.BELT, room: 3 },
-  { k: "STREAM", name: TILE_NAME.STREAM, room: 4 },
-  { k: "PLATE", name: TILE_NAME.PLATE, room: 5 },
-  { k: "QUICK", name: TILE_NAME.QUICK, room: 6 },
-  { k: "PORTAL", name: TILE_NAME.PORTAL, room: 7 },
-  { k: "GATE", name: TILE_NAME.GATE, room: 8 },
-];
-const SIDES4 = ["N", "E", "S", "W"];
-const floorSpec = (k, h, t) => ({ kind: k, h, par: 0, dir: 0, outer: SIDES4, exit: true, entry: true, phase: ((Math.floor(t * 28) % 8) * 5) | 0, state: 0, lit: 0, pair: 1, gx: 3, gy: 4 });
-function floorAt(c, A, row, h, cx, cy, size, t) {
-  const sp = floorSpec(row.k, h, t || 0), bi = row.room - 1;
-  if (A && A.feat) return blitCell(c, [A.feat(bi, sp, t || 0)], cx, cy, size >= 40 ? 2 : 1);
-  drawSpec(c, BIOMES[bi % BIOMES.length], sp, Math.round(cx - size / 2), Math.round(cy - size / 2), size);
-}
-export function drawFloorHelp(c, L, t, kind, touch) {
-  const T = !!touch,
-    n = FLOOR_ROWS.length,
-    rh = T ? 54 : 44,
-    hd = T ? 16 : 14,
-    sw = L.narrow ? 28 : 40,
-    S = pageBox(L, 560, hd + n * rh + (n - 1) * 4, T),
-    f = S.f,
-    A = pxArt(kind),
-    gx = S.ix + 8,
-    tx = gx + 3 * sw + 2 * 4 + 14;
-  boxPlate(c, S);
-  head(c, S, "FLOOR", n + " TILES · ONE PER WORLD · BY " + LABEL.DIFFICULTY); // its columns are the three difficulties
-  c.textAlign = "center";
-  c.textBaseline = "middle";
-  c.fillStyle = MUTED;
-  c.font = font(T ? 10 : 8, "900");
-  for (let j = 0; j < 3; j++) { c.font = fitFont(c, DIFF[j], sw + 2, T ? 10 : 8, 6, "900"); c.fillText(DIFF[j], gx + j * (sw + 4) + sw / 2, S.by + hd / 2 - 1); } // EXPERT outgrows a narrow 28 px column
-  for (let i = 0; i < n; i++) {
-    const row = FLOOR_ROWS[i],
-      r = { x: S.ix, y: S.by + (hd + i * (rh + 4)) * f, w: S.iw, h: rh * f },
-      cy = r.y + r.h / 2,
-      tw = r.x + r.w - 8 - tx,
-      rules = !!TILE_HELP[row.k];
-    cell(c, r);
-    for (let j = 0; j < 3; j++) floorAt(c, A, row, j, gx + j * (sw + 4) + sw / 2, cy, sw, t);
-    c.textAlign = "left";
-    c.textBaseline = "middle";
-    c.fillStyle = TEXT;
-    c.font = sans(T ? 15 : 12, "800");
-    c.fillText(row.name, tx, cy - (T ? 14 : 11));
-    const nw = mw(c, row.name);
-    c.fillStyle = ACCENT;
-    c.font = font(T ? 10 : 8, "900");
-    c.fillText(clip(c, LABEL.LEVEL + " " + row.room + " · " + BIOMES[row.room - 1].name, tw - nw - 10), tx + nw + 10, cy - (T ? 14 : 11));
-    c.fillStyle = MUTED;
-    c.font = font(T ? 11 : 9);
-    const l1 = rules ? DIFF[0] + " · " + TILE_HELP[row.k][0] : "LOOK ONLY FOR NOW",
-      l2 = rules ? DIFF[2] + " · " + TILE_HELP[row.k][2] : "ITS RULE COMES LATER";
-    c.fillText(clip(c, l1, tw), tx, cy + (T ? 4 : 3));
-    c.fillText(clip(c, l2, tw), tx, cy + (T ? 19 : 14));
-    if (rules) {
-      c.fillStyle = ACCENT;
-      c.globalAlpha = 0.7;
-      c.fillRect(r.x + r.w - 3, r.y + 4, 2, r.h - 8);
-      c.globalAlpha = 1;
-    }
-  }
-  foot(c, S, tapMode(T) ? BACK_TAP : hints().back + " BACK");
-}
-
-export function drawGuide(c, L, t, cursor, kind, touch) {
-  const cur = cursor | 0,
-    g = guideGeom(L, touch),
-    S = g.S,
-    T = g.T,
-    A = pxArt(kind);
-  boxPlate(c, S);
-  head(c, S, "GUIDE", "HOW TO · " + LABEL.POWER_UPS + " · ENEMIES · FLOOR");
-  const W = hints(), subs = [T || W.dev === "pad" ? "2 RULES · 6 CONTROLS" : "2 RULES · 6 KEYS", POWER.length + " " + LABEL.POWER_UPS, FOES.length + " FOES", FLOOR_ROWS.length + " TILES"];
-  for (let i = 0; i < 4; i++) {
-    const r = g.tiles[i],
-      sel = i === cur;
-    cell(c, r, 0.5);
-    if (sel) selBand(c, r);
-    c.textBaseline = "middle";
-    c.textAlign = "left";
-    c.fillStyle = sel ? TEXT : "#b6c2dc";
-    c.font = sans(T ? 17 : 14, "800");
-    const lx = r.x + 24,
-      strip = T || r.w >= 230, // a narrow keyboard door (2x2 in a < 560 box) drops the preview strip so its words stay whole
-      sx = T ? r.x + r.w - 40 : strip ? r.x + r.w - 118 : r.x + r.w - 18; // the strip ends left of the chevron; label and sub stop 8 px before it
-    c.fillText(clip(c, GUIDE_LABEL[i], T ? r.w : sx - 8 - lx), lx, T ? r.y + r.h / 2 - 10 : r.y + 20);
-    c.fillStyle = sel ? TEXT : MUTED;
-    c.font = font(T ? 13 : 10, "700");
-    c.fillText(clip(c, !T && !i && strip && W.dev === "pad" ? "6 CONTROLS" : subs[i], (T ? r.x + r.w - 150 : sx - 8) - lx), lx, T ? r.y + r.h / 2 + 12 : r.y + r.h - 16);
-    c.textAlign = "right";
-    c.font = sans(18, "600");
-    c.fillText("›", r.x + r.w - 10, T ? r.y + r.h / 2 : r.y + 20);
-    if (sel) caret(c, r.x + 11, T ? r.y + r.h / 2 : r.y + 20, 30);
-    const sy = T ? r.y + r.h / 2 : r.y + r.h / 2 + 2;
-    if (!strip) continue;
-    if (i === 0) {
-      if (T) {
-        c.font = font(12, "900");
-        let x = sx;
-        for (const k of ["PAUSE", "BOMB", "PAD"]) x -= keyCap(c, x - (mw(c, k) + 12), sy, k, T) + 4; // the touch controls, never keyboard caps on a phone
-      } else {
-        const end = r.x + r.w - 22; // the chevron's edge: a cap that would cross it (a long rebound name, a third pad word) is dropped whole
-        for (const [ky, list] of [[sy - 12, [W.move, W.bomb]], [sy + 10, [W.throw, W.remote, W.pause]]]) {
-          let x = sx;
-          for (const k of list) {
-            c.font = font(10, "900");
-            if (x + mw(c, k) + 12 > end) break;
-            x += keyCap(c, x, ky, k, T) + 4;
-          }
-        }
-      }
-    } else {
-      const list = i === 1 ? POWER.slice(0, T ? 4 : 3) : i === 2 ? [FOES[0], FOES[3], FOES[4]] : [FLOOR_ROWS[2], FLOOR_ROWS[1], FLOOR_ROWS[0]],
-        s = T ? 30 : 28,
-        x0 = sx;
-      list.forEach((e, j) => {
-        const cx = T ? x0 - (list.length - 1 - j) * (s + 4) - s / 2 : x0 + s / 2 + j * (s + 4);
-        if (i === 3) return floorAt(c, A, e, 1, cx, sy, s, t);
-        well(c, cx, sy, s, i === 1 ? e.col : null);
-        if (i === 1) itemAt(c, A, e, cx, sy, s * 0.72, t);
-        else foeAt(c, A, e.t, cx, sy, s * 0.82, t);
-      });
-    }
-  }
-  foot(c, S, tapMode(T) ? "TAP A DOOR · " + BACK_TAP : "← → / ↑↓ PICK · " + W.ok + " OPEN · " + W.back + " BACK");
-}
+/** The GUIDE page's geometry (pages/guide.js guideGeom), null until the module is in. */
+export const guideGeom = (L, touch, page) => { const g = guideMod(); return g ? g.guideGeom(frameOf(L, touch), page || "GUIDE") : null; };
+export const guideHit = (x, y, L, _n, touch) => { const g = guideMod(); return g ? g.guideHit(x, y, frameOf(L, touch)) : -2; };
+export const enemiesHit = (x, y, L, touch) => { const g = guideMod(); return g ? g.enemiesHit(x, y, frameOf(L, touch)) : -2; };
 
 /* Local cabinet plaques (plan 5): bit order matches src/app/plaques.js
    PLAQUE = {CLEAR:1,PLUS:2,MAX:4,CROWN:8} — this file must not import

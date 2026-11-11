@@ -11,6 +11,8 @@ import { helpOf } from "../src/app/hints.js";
 import { POWER } from "../src/core/entities.js";
 import { coachTip } from "../src/app/coach.js";
 import { drawCoach, drawOverlay, overlayCue } from "../src/render/scenes.js";
+import { _set as setLazyPage } from "../src/render/pages/lazy.js";
+setLazyPage("guide", await import("../src/render/pages/guide.js")); // the lazy GUIDE pages (v202 Task 3.5), as if their import had landed
 
 let pass = 0, fail = 0;
 function check(name, cond, detail) {
@@ -48,6 +50,12 @@ const sp = await import("../src/render/pages/settings.js");
 (await import("../src/render/pages/lazy.js"))._set("settings", sp);
 const sfootOf = () => { const F = sp._dbg.last.Pl.foot; return F ? F.lines.map((L) => L.ps.map((q) => q.t || q.sep || (Array.isArray(q.cap) ? CAPG[q.cap[0]] : "[" + q.cap + "]")).join(" ")).join(" · ") : ""; }; // the words in order, whether the foot takes one line or two
 const sfoot = (f, want) => (c) => { f(c); const s = sfootOf(); if (s === want) c.fillText(want, 0, 0); }; // the foot's words as one line, so r.has() reads them
+/* the GUIDE pages' foot (v202 Task 3.5, pages/guide.js): label first, keycap last, read back from the page's plan; "" where the box has no foot (touch) */
+const gpg = await import("../src/render/pages/guide.js");
+const GCAP = { up: "▲", dn: "▼", lf: "◀", rt: "▶" };
+const gfoot = () => { const F = gpg._dbg.last && gpg._dbg.last.P.foot; return F ? F.parts.map((q) => q.t || q.sep || (Array.isArray(q.cap) ? GCAP[q.cap[0]] : "[" + q.cap + "]")).join(" ") : ""; };
+const GFOOT = (f) => { const r = paint(f); return { r, foot: gfoot() }; };
+const GPAGE = { HOWTO: "HOW TO PLAY", ITEMS: "POWER-UPS", ENEMIES: "ENEMIES", FLOOR: "FLOOR", GUIDE: "GUIDE" };
 const STATS_UI = { rows: [], notes: [], trophies: [] };
 const LT = md.layout(1024, 768, 207);
 const GFX = { rows: [] };
@@ -168,11 +176,6 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
 {
   const WANT = [
     ["LEVEL foot", PAGES.LEVEL(false), "CHANGE"], // the LEVEL row focused (v202 Task 2.3: the foot follows the row; Task 3.3: label first, keycap last, checked whole below)
-    ["HOW TO foot", PAGES.HOWTO(false), "ESC / ENTER BACK"],
-    ["ITEMS foot", PAGES.ITEMS(false), "WALK OVER A POWER-UP TO COLLECT · ESC BACK"],
-    ["ENEMIES foot", PAGES.ENEMIES(false), "ESC BACK"],
-    ["FLOOR foot", PAGES.FLOOR(false), "ESC BACK"],
-    ["GUIDE foot", PAGES.GUIDE(false), "← → / ↑↓ PICK · ENTER OPEN · ESC BACK"],
     ["SCORES foot", PAGES.SCORES(false), "↑ TABS · ← → DIFFICULTY · ESC BACK"], // the page body's foot (no tab-row flag): RECORDS' ↑ TABS lead
     ["OPTIONS foot", sfoot(PAGES.OPTIONS(false), "ROW ▲ ▼ · CHANGE ◀ ▶ · BACK [ESC]"), "ROW ▲ ▼ · CHANGE ◀ ▶ · BACK [ESC]"],
     ["GRAPHICS foot", sfoot(PAGES.GRAPHICS(false), "ROW ▲ ▼ · CHANGE ◀ ▶ · BACK [ESC]"), "ROW ▲ ▼ · CHANGE ◀ ▶ · BACK [ESC]"],
@@ -193,15 +196,22 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
     ["LEVEL touch (compact, 600x520: no foot, its BACK key)", PAGES.LEVEL(true), "BACK"],
     ["LEVEL foot, touch (a landscape tablet in tap mode)", (c) => md.drawLevelSelect(c, 1, md.layout(1024, 768, 200), 9, 0, 0, true, 0, false, true, { ...INFO, tap: true }), md.LEVEL_TAP],
     ["OPTIONS foot, touch", PAGES.OPTIONS(true), sp.COPY.tapRow], // the tablet desk's pane foot: FOOT_TAP's step-down (FOOT_TAP itself is wider than the pane)
-    ["HOW TO foot, touch", PAGES.HOWTO(true), "TAP OUTSIDE TO GO BACK"],
-    ["GUIDE foot, touch", PAGES.GUIDE(true), "TAP A DOOR · TAP OUTSIDE TO GO BACK"],
   ];
   for (const [nm, f, s] of WANT) { const r = paint(f); check("default: " + nm + " stays \"" + s + "\"", r.has(s), r.strs().join("|")); }
+  /* v202 Task 3.5: the GUIDE pages' feet are label first, keycap last (the MENU page's grammar); every key the old foot named is still named */
+  for (const [nm, f, s] of [["HOW TO foot", PAGES.HOWTO(false), "BACK [ESC] [ENTER]"], ["ITEMS foot", PAGES.ITEMS(false), "WALK OVER A POWER-UP TO COLLECT · BACK [ESC]"],
+    ["ENEMIES foot", PAGES.ENEMIES(false), "MOVE ▲ ▼ ◀ ▶ · POINTS [ENTER] · BACK [ESC]"], ["FLOOR foot", PAGES.FLOOR(false), "BACK [ESC]"], ["GUIDE foot", PAGES.GUIDE(false), "PICK ▲ ▼ ◀ ▶ · OPEN [ENTER] · BACK [ESC]"]]) {
+    const g = GFOOT(f);
+    check("default: " + nm + " reads \"" + s + "\"", g.foot === s, g.foot);
+  }
+  { const g = GFOOT(PAGES.HOWTO(true)); check("default: HOW TO, touch (600x520 goes compact): no foot, the BACK key in the head (any tap backs out)", g.foot === "" && g.r.has("BACK"), g.r.strs().join("|")); }
+  { const g = GFOOT(PAGES.GUIDE(true)); check("default: GUIDE foot, touch (the desk holds at 600x520) stays \"TAP A DOOR · TAP OUTSIDE TO GO BACK\"", g.foot === "TAP A DOOR · TAP OUTSIDE TO GO BACK", g.foot); }
   { const r = paint(PAGES.LEVEL(false)), d = lvp._dbg.last; // the LEVEL row's own label, and the foot whole (label first, keycap last)
     check("default: the LEVEL row's label reads \"LEVEL\", no keycap; the foot reads ROW ↑↓ · CHANGE ←→ · START ENTER · BACK ESC", d.P.rows.LEVEL.label.s === "LEVEL" && !r.has("[ ]") && md.levelFoot("LEVEL", false) === "ROW ↑↓ · CHANGE ←→ · START ENTER · BACK ESC" && d.verb === "value", JSON.stringify(d.P.rows.LEVEL.label)); }
   check("FOOT_TAP keeps its default bytes (CONTROLS reads it too); the key foot is the page's parts, no one string", md.FOOT_TAP === "TAP A ROW TO CHANGE IT · TAP OUTSIDE TO GO BACK" && md.FOOT_KEYS === undefined);
   const how = paint(PAGES.HOWTO(false));
-  for (const s of ["WASD / ARROWS", "SPACE", "E", "Q", "WALK INTO BOMB", "P"]) check("HOW TO row reads " + s, how.has(s));
+  for (const s of ["WASD", "ARROWS", "SPACE", "E", "Q", "WALK INTO BOMB", "P"]) check("HOW TO row reads " + s, how.has(s)); // MOVE's two keycaps (v202 Task 3.5: one cap each)
+  check("HOW TO on touch: MOVE reads WASD / ARROWS (no keycaps on touch)", paint(PAGES.HOWTO(true)).has("WASD / ARROWS"));
   check("HOW TO never advertises the old THROW chord", !how.has("SHIFT + SPACE"));
 }
 
@@ -220,13 +230,17 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
   const tp = paint((c) => md.drawIntroChrome(c, 0, 1, 600, 520, "p"));
   setHints(null);
   check("a touch title keeps its own words whatever the device", tp.has("TAP TO START"));
-  const g = paint(PAGES.GUIDE(false));
-  check("GUIDE preview draws the THROW key, no K", g.has("E") && g.has("Q") && g.has("P") && !g.has("K"), g.strs().join("|"));
-  check("GUIDE preview keeps WASD and SPACE", g.has("WASD") && g.has("SPACE"));
+  /* v202 Task 3.5: the HOW TO door's preview is label-first key pairs, whole pairs only: the desktop window's door keeps MOVE and BOMB (a 600 x 520
+     board box's narrower door keeps MOVE alone); the THROW, REMOTE and PAUSE keys moved to the page itself, which follows a rebound THROW */
+  const g = paint((c) => md.drawGuide(c, md.layout(1366, 768, 200, 1), 9, 0, "2d", false)), g6 = paint(PAGES.GUIDE(false));
+  check("GUIDE preview: MOVE [WASD] then BOMB [SPACE], label first; no K (1366 x 768)", g.has("MOVE") && g.has("WASD") && g.has("BOMB") && g.has("SPACE") && !g.has("K"), g.strs().join("|"));
+  check("GUIDE preview at 600 x 520: MOVE [WASD], whole", g6.has("MOVE") && g6.has("WASD") && !g6.has("K"), g6.strs().join("|"));
+  const hw = paint(PAGES.HOWTO(false));
+  check("HOW TO draws the THROW key, no K", hw.has("E") && hw.has("Q") && hw.has("P") && !hw.has("K"), hw.strs().join("|"));
   setHints(wordsOf("key", bindKey(DEF_CONTROLS, "THROW", "KeyZ").c));
-  const g2 = paint(PAGES.GUIDE(false));
+  const g2 = paint(PAGES.HOWTO(false));
   setHints(null);
-  check("GUIDE preview follows a rebound THROW", g2.has("Z") && !g2.has("E"));
+  check("HOW TO follows a rebound THROW", g2.has("Z") && !g2.has("E"));
 }
 
 /* ---- pad words, and geometry that never moves ---- */
@@ -235,11 +249,6 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
   const PADWANT = [
     ["LEVEL foot", PAGES.LEVEL(false), "D-PAD"],
     ["LEVEL foot's confirm", PAGES.LEVEL(false), "SOUTH"],
-    ["HOW TO foot", PAGES.HOWTO(false), "REBIND IN SETTINGS › CONTROLS · EAST / SOUTH BACK"],
-    ["ITEMS foot", PAGES.ITEMS(false), "WALK OVER A POWER-UP TO COLLECT · EAST BACK"],
-    ["ENEMIES foot", PAGES.ENEMIES(false), "EAST BACK"],
-    ["FLOOR foot", PAGES.FLOOR(false), "EAST BACK"],
-    ["GUIDE foot", PAGES.GUIDE(false), "← → / ↑↓ PICK · SOUTH OPEN · EAST BACK"],
     ["SCORES foot", PAGES.SCORES(false), "↑ TABS · ← → DIFFICULTY · EAST BACK"],
     ["OPTIONS foot", sfoot(PAGES.OPTIONS(false), "ROW [D-PAD] · CHANGE [D-PAD] · BACK [EAST]"), "ROW [D-PAD] · CHANGE [D-PAD] · BACK [EAST]"],
     ["GRAPHICS foot", sfoot(PAGES.GRAPHICS(false), "ROW [D-PAD] · CHANGE [D-PAD] · BACK [EAST]"), "ROW [D-PAD] · CHANGE [D-PAD] · BACK [EAST]"],
@@ -251,17 +260,23 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
     ["MENU foot on SOURCE: a controller press opens no tab", menu(6), "NEEDS A CLICK OR ENTER"],
     ["ATTRACT", (c) => md.drawAttractHint(c, L, 200), "DEMO — PRESS ANY BUTTON"],
     ["show skip", (c) => md.drawIntroChrome(c, 1, 0.6, 600, 520, "d"), "ANY BUTTON TO SKIP"],
-    ["GUIDE sub, whole beside the key strip", PAGES.GUIDE(false), "6 CONTROLS"],
+    ["GUIDE sub, whole beside the key strip", PAGES.GUIDE(false), "2 RULES · 6 CONTROLS"],
     ["GUIDE sub, touch door", PAGES.GUIDE(true), "2 RULES · 6 CONTROLS"],
-    ["HOW TO move", PAGES.HOWTO(false), "D-PAD / L-STICK"],
+    ["HOW TO move", PAGES.HOWTO(false), "D-PAD"],
+    ["HOW TO move, its second cap", PAGES.HOWTO(false), "L-STICK"],
     ["HOW TO throw", PAGES.HOWTO(false), "WEST"],
     ["HOW TO pause", PAGES.HOWTO(false), "START"],
     ["pad words on a touch layout: LEVEL (a landscape tablet)", (c) => md.drawLevelSelect(c, 1, md.layout(1024, 768, 200), 9, 0, 0, true, 0, false, true, INFO), "SOUTH"],
     ["pad words on a touch layout: OPTIONS", sfoot(PAGES.OPTIONS(true), "ROW [D-PAD] · CHANGE [D-PAD] · BACK [EAST]"), "ROW [D-PAD] · CHANGE [D-PAD] · BACK [EAST]"],
-    ["pad words on a touch layout: HOW TO", PAGES.HOWTO(true), "REBIND IN SETTINGS › CONTROLS · EAST / SOUTH BACK"],
+    ["pad words on a touch layout: HOW TO", PAGES.HOWTO(true), "D-PAD / L-STICK"],
     ["pad words on a touch layout: show skip", (c) => md.drawIntroChrome(c, 1, 0.6, 600, 520, "p"), "ANY BUTTON TO SKIP"],
   ];
   for (const [nm, f, s] of PADWANT) { const r = paint(f); check("pad: " + nm + " = \"" + s + "\"", r.has(s), r.strs().join("|")); }
+  for (const [nm, f, s] of [["HOW TO foot", PAGES.HOWTO(false), "REBIND IN SETTINGS › CONTROLS · BACK [EAST] [SOUTH]"], ["ITEMS foot", PAGES.ITEMS(false), "WALK OVER A POWER-UP TO COLLECT · BACK [EAST]"],
+    ["ENEMIES foot", PAGES.ENEMIES(false), "MOVE [D-PAD] · POINTS [SOUTH] · BACK [EAST]"], ["FLOOR foot", PAGES.FLOOR(false), "BACK [EAST]"], ["GUIDE foot", PAGES.GUIDE(false), "PICK [D-PAD] · OPEN [SOUTH] · BACK [EAST]"]]) {
+    const g = GFOOT(f);
+    check("pad: " + nm + " = \"" + s + "\"", g.foot === s, g.foot);
+  }
   paint(menu(0, false, "v99"));
   check("pad: MENU foot = MOVE D-PAD · START SOUTH | v99 (label first, keycap last)", footOf() === "MOVE [D-PAD] · START [SOUTH] | v99", footOf());
   paint(menu(6, false, "v99"));
@@ -270,24 +285,24 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
   check("pad: LEVEL has no [ ] or 1–5 cap and no key digits on MODIFIERS; its foot reads ROW D-PAD · CHANGE D-PAD · START SOUTH · BACK EAST", !lv.has("[ ]") && !lv.has("1–5") && lv.has("MODIFIERS") && !lv.has("1 ONE LIFE") && md.levelFoot("LEVEL", false) === "ROW D-PAD · CHANGE D-PAD · START SOUTH · BACK EAST", lv.strs().join("|"));
   paint(PAGES.LEVEL(true));
   check("pad on a touch layout (compact): the focus model (the LEVEL row), never tap mode", lvp._dbg.last.foc === "LEVEL", lvp._dbg.last.foc);
-  const gd = paint(PAGES.GUIDE(false));
-  check("pad: GUIDE preview names pad buttons, no key caps", gd.has("D-PAD") && gd.has("SOUTH") && gd.has("WEST") && gd.has("EAST") && !gd.has("WASD") && !gd.has("SPACE"), gd.strs().join("|"));
+  const gd = paint(PAGES.GUIDE(false)), hp = paint(PAGES.HOWTO(false));
+  check("pad: GUIDE preview names pad buttons, no key caps (THROW WEST and REMOTE EAST on the HOW TO page)", gd.has("D-PAD") && gd.has("SOUTH") && hp.has("WEST") && hp.has("EAST") && !gd.has("WASD") && !gd.has("SPACE") && !hp.has("WASD"), gd.strs().join("|"));
   const noLetter = /(^|[ ·/])(A|B|X|Y) (CONFIRM|BACK|OPEN|START|CYCLE|STARTS|OPENS|MEDALS|COPY)|(^|[ ·/])(LB|RB|LT|RT)( |$)/;
   const every = [...Object.values(PAGES).map((p) => p(false)), menu(0), menu(4), menu(3), menu(6)].flatMap((f) => paint(f).strs());
   check("no face-button letter on a pad hint", !every.some((s) => noLetter.test(s)), every.filter((s) => noLetter.test(s)).join("|"));
 
   check("pad: LEVEL SELECT draws no SHOULDERS cap (v202 Task 3.3: the approved frame names no shortcut cap; the foot names the controls)", !lv.has("SHOULDERS"));
 
-  const G = md.guideGeom ? md.guideGeom(L, false) : null;
-  const caps = paint(PAGES.GUIDE(false));
-  const right = Math.max(...caps.rects.filter((r) => r[0] === "rgba(4,7,14,0.9)").map((r) => r[1] + r[3]));
-  const door = G && G.tiles ? G.tiles[0] : null;
-  check("pad: GUIDE caps stop before the door's chevron", !door || right <= door.x + door.w - 22, J({ right, door }));
+  /* the HOW TO door's strip (pages/guide.js): every pair ends inside the strip, which ends 10 px before the door's chevron */
+  const stripEnd = () => { const S = gpg._dbg.last.P.strips["HOW TO PLAY"]; return { w: S.w, right: Math.max(0, ...S.ops.map((o) => (o.op === "cap" ? o.x + o.w : o.op === "text" ? o.x + (o.mw || 0) : 0))) }; };
+  paint(PAGES.GUIDE(false));
+  const se = stripEnd();
+  check("pad: GUIDE caps stop before the door's chevron", se.right > 0 && se.right <= se.w + 1e-9, J(se));
 
   setHints(wordsOf("key", bindMoveSet(bindKey(bindKey(DEF_CONTROLS, "THROW", "PageDown").c, "BOMB", "Insert").c, ["PageUp", "End", "Home", "Delete"]).c));
-  const wide = paint(PAGES.GUIDE(false));
-  const wr = Math.max(...wide.rects.filter((r) => r[0] === "rgba(4,7,14,0.9)").map((r) => r[1] + r[3]));
-  check("long key names never run a GUIDE cap past the chevron", !door || wr <= door.x + door.w - 22, J({ wr, door }));
+  paint(PAGES.GUIDE(false));
+  const sw = stripEnd();
+  check("long key names never run a GUIDE cap past the chevron", sw.right <= sw.w + 1e-9, J(sw));
 
   setHints(null);
   const flat = (r) => r.rects.filter((x) => x[0] !== "rgba(4,7,14,0.9)");
@@ -344,6 +359,12 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
       const G = md.levelGeom(L, true, T).d, out = (x, r) => !(r && x[1] >= r.x - 10 && x[2] >= r.y - 10 && x[1] + x[3] <= r.x + r.w + 10 && x[2] + x[4] <= r.y + r.h + 10);
       const keep = (x) => out(x, G.start) && out(x, G.rows.LEVEL);
       check("a flip changes the focus only: LEVEL touch keeps every rect but the focus (tap mode START, a controller the LEVEL row)", J(flat(a).filter(keep)) === J(flat(b).filter(keep)) && flat(a).filter(keep).length > 20 && !qa.F && !qb.F, J(flat(a)).length + " vs " + J(flat(b)).length);
+      continue;
+    }
+    if (GPAGE[nm]) { // v202 Task 3.5: a GUIDE page's caps and key pairs are keys sized by their legend; its geometry (plate, every slot, its hits, the foot's row) never moves
+      const geo = () => { const G = md.guideGeom(L, T, GPAGE[nm]); return J([G.plate, G.items, G.hit, G.back, G.foot && G.foot.y, G.mode]); };
+      setHints(null); const ga = geo(); setHints(PAD); const gb = geo(); setHints(null);
+      check(`a flip changes words only: ${nm}${T ? " touch" : ""} keeps its geometry (plate, slots, hits)`, ga === gb, ga.length + " vs " + gb.length);
       continue;
     }
     check(`a flip changes words only: ${nm}${T ? " touch" : ""} keeps every rect`, J(flat(a)) === J(flat(b)), J(flat(a)).length + " vs " + J(flat(b)).length);
@@ -511,9 +532,9 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
   { const r = rec(); md.drawMenu(r.c, { rows: ITEMS, focus: "PLAY", rev: "", level: 1, pad: "CONTROLLER READY", enterT: 9 }, L, 9); check("no tag to keep: the signpost alone, no dangling bar", footOf() === SIGN && r.has(SIGN)); }
   check("the note gone, the normal foot is back with its tag", drawn(false, { pad: "" }).foot === TODAY);
   setHints(PAD);
-  check("HOW TO on a pad: the foot names CONTROLS, whole, and fits its plate", paint(PAGES.HOWTO(false)).has("REBIND IN SETTINGS › CONTROLS · EAST / SOUTH BACK") && "REBIND IN SETTINGS › CONTROLS · EAST / SOUTH BACK".length * 6 <= 520);
+  { const g = GFOOT(PAGES.HOWTO(false)), F = gpg._dbg.last.P.foot, G = gpg._dbg.last.G; check("HOW TO on a pad: the foot names CONTROLS, whole, and fits its box", g.r.has("REBIND IN SETTINGS › CONTROLS") && F.x * G.u >= 0 && (F.x + F.w) * G.u <= 600, g.foot); }
   setHints(null);
-  check("HOW TO on keys: the foot stays today's bytes", paint(PAGES.HOWTO(false)).has("ESC / ENTER BACK") && !paint(PAGES.HOWTO(false)).strs().some((s) => s.includes("REBIND")));
+  check("HOW TO on keys: the foot reads BACK [ESC] [ENTER] and never REBIND", GFOOT(PAGES.HOWTO(false)).foot === "BACK [ESC] [ENTER]" && !paint(PAGES.HOWTO(false)).strs().some((s) => s.includes("REBIND")));
   const src = (p) => readFileSync(new URL("../src/" + p, import.meta.url), "utf8");
   check("core/entities.js still has no src/app import", !/from\s+"[^"]*app\//.test(src("core/entities.js")));
   check("coach.js keeps no second key rule", !/KEY_HINT\s*=/.test(src("app/coach.js")));

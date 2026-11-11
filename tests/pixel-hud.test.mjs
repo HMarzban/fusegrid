@@ -25,6 +25,8 @@ import { createPixelRenderer } from "../src/render/pixel/renderer.js";
 import { setPixelArt, pixelArt, hudIcon, opaqueBox, itemCell, foeCell, foeAnim, itemAnim, pageScale, HUD_S, GUIDE_S, SLOT_PAD } from "../src/render/hudart.js";
 import { surfRGBA } from "../tools/pixel/rgba.mjs";
 import { PRECACHE } from "../src/pwa/shell.js";
+import { _set as setLazyPage } from "../src/render/pages/lazy.js";
+setLazyPage("guide", await import("../src/render/pages/guide.js")); // the lazy GUIDE pages (v202 Task 3.5), as if their import had landed
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 let pass = 0, fail = 0;
@@ -51,22 +53,18 @@ const HUDS = [[0, null], [3, {on: true, t: 12.3}], [8, null]];
 const PAGES = ["drawHowTo", "drawItemsHelp", "drawEnemiesHelp"], BOXES = [[600, 520], [600, 360]];
 const PIN = {
   hud0: "7c298753:175", hud3: "60b2bf24:349", hud8: "2aa8d78c:508",
-  drawHowTo520: "a99f5726:556", drawItemsHelp520: "d79aa7bf:1484", drawEnemiesHelp520: "98b566a8:1387",
-  drawHowTo360: "cd6f58c0:556", drawItemsHelp360: "105d7a3a:1484", drawEnemiesHelp360: "86a5212c:1387",
-  drawHowTo520T: "07a1b49a:556", drawItemsHelp520T: "f726aa19:1488", drawEnemiesHelp520T: "2d9467fb:1387",
-  drawHowTo360T: "66bb2955:556", drawItemsHelp360T: "1c66a2e4:1488", drawEnemiesHelp360T: "d5c1208d:1387",
-  "shell.2d.HOWTO": "f02911b5:558", "shell.2d.ITEMS": "810ff31c:1486", "shell.2d.ENEMIES": "ff407daf:1389",
-  "shell.3d.HOWTO": "f02911b5:558", "shell.3d.ITEMS": "810ff31c:1486", "shell.3d.ENEMIES": "ff407daf:1389",
-  "shell.iso.HOWTO": "d7739ff2:558", "shell.iso.ITEMS": "f4e3714e:1486", "shell.iso.ENEMIES": "7e63d213:1389",
 };
+/* v202 Task 3.5: the GUIDE pages are pages/guide.js; their pinned call logs went with the deleted CONSOLE PANEL painters. The pin is now relational:
+   every non-PIXEL kind (none, 2d, 3d, iso) paints the identical call log, with or without a px atlas registered, and the shell's 2d and 3d match */
+const GPIN = {};
 const hud = (lv, tm, ico) => { const r = rec(); drawHudChips(r.c, HUDW(lv), tm, ico); return r; };
 const page = (f, w, h, kind, touch) => { const r = rec(); md[f](r.c, md.layout(w, h), 1.25, kind, touch); return r; };
 const shell = (k, s) => { const r = rec(); drawShell(r.c, {screen: SCREEN[s], subT: 1.25}, {}, null, k, () => [], () => 0); return r; };
 function unchanged(tag) {
   const bad = [];
   for (const [lv, tm] of HUDS) if (H(hud(lv, tm).log) !== PIN["hud" + lv]) bad.push("hud" + lv);
-  for (const [w, h] of BOXES) for (const f of PAGES) for (const t of [false, true]) for (const k of [undefined, "2d", "3d", "iso"]) if (H(page(f, w, h, k, t).log) !== PIN[f + h + (t ? "T" : "")]) bad.push(f + h + (t ? "T" : "") + ":" + k);
-  for (const k of ["2d", "3d", "iso"]) for (const s of ["HOWTO", "ITEMS", "ENEMIES"]) if (H(shell(k, s).log) !== PIN["shell." + k + "." + s]) bad.push(k + "." + s);
+  for (const [w, h] of BOXES) for (const f of PAGES) for (const t of [false, true]) for (const k of [undefined, "2d", "3d", "iso"]) { const id = f + h + (t ? "T" : ""), v = H(page(f, w, h, k, t).log); if (!(id in GPIN)) GPIN[id] = v; else if (GPIN[id] !== v) bad.push(id + ":" + k); }
+  for (const s of ["HOWTO", "ITEMS", "ENEMIES"]) { const a = H(shell("2d", s).log); if (H(shell("3d", s).log) !== a || !(+a.split(":")[1] > 50)) bad.push("3d." + s); }
   check("CLASSIC 2D / REAL 3D / iso HUD chips (pre-W5) and GUIDE pages (ATLAS, keyboard + touch) match their pins (" + tag + ")", bad.length === 0, bad.join());
 }
 const text = (log) => log.filter((l) => /^(fillText|font=|textAlign=|textBaseline=)/.test(l)).join("\n");
@@ -78,7 +76,7 @@ setPixelArt(null);
 unchanged("no px art");
 {
   const r = page("drawItemsHelp", 600, 520, "px");
-  check("kind px with nothing registered falls back to the vector page, never throws", H(r.log) === PIN.drawItemsHelp520);
+  check("kind px with nothing registered falls back to the vector page, never throws", H(r.log) === GPIN.drawItemsHelp520 && H(r.log) === H(page("drawItemsHelp", 600, 520, "2d").log));
 }
 const A = createAtlas(surfRGBA);
 setPixelArt(A);
@@ -125,18 +123,21 @@ unchanged("px art registered: it never leaks into another kind");
 // ---- GUIDE pages in PIXEL ----
 {
   const cellsOf = {drawHowTo: () => ["bomb", "throw", "remote", "kick"].map((t) => itemCell(A, t)), drawItemsHelp: () => POWER.map((p) => itemCell(A, p.t)), drawEnemiesHelp: () => FOES.map((f) => foeCell(A, f.t))};
-  const N = {drawHowTo: 8, drawItemsHelp: POWER.length * 2, drawEnemiesHelp: FOES.length + FOES.filter((f) => f.t === "shade" || f.t === "burrow").length};
+  /* v202 Task 3.5: the cells are baked at a fixed time (only ENEMIES' focused foe animates), so a pickup is its glyph alone; HOW TO adds the walker on
+     its first rule's slab */
+  const N = {drawHowTo: 5, drawItemsHelp: POWER.length, drawEnemiesHelp: FOES.length + FOES.filter((f) => f.t === "shade" || f.t === "burrow").length};
   const imsOf = (o, out = new Set(), seen = new Set()) => { if (!o || typeof o !== "object" || seen.has(o)) return out; seen.add(o); if (o.im) out.add(o.im); for (const k in o) imsOf(o[k], out, seen); return out; };
   const seen = {};
   for (const [w, h] of BOXES) for (const f of PAGES) {
     const px = page(f, w, h, "px"), v = page(f, w, h, "2d"), d = draws(px);
-    const allowed = imsOf(f === "drawEnemiesHelp" ? A.foe : A.items);
+    const allowed = imsOf(f === "drawEnemiesHelp" ? A.foe : f === "drawHowTo" ? [A.items, A.foe] : A.items);
     const scales = new Set(d.map((o) => o[1][3] / o[1][0].width));
     seen[f + h] = [...scales].join();
     check(f + "@" + h + " px: every cell drawn from the live atlas (" + d.length + ")", d.length === N[f] && d.every((o) => allowed.has(o[1][0])), d.length + "/" + N[f]);
     check(f + "@" + h + " px: one integer scale for the page, whole logical px, smoothing off", scales.size === 1 && [1, 2].includes([...scales][0]) && d.every((o) => integral(o) && o[1][4] === o[1][0].height * [...scales][0] && o[2] === false), seen[f + h]);
     check(f + "@" + h + " px: text and row chrome calls identical to CLASSIC", text(px.log) === text(v.log) && px.log.filter((l) => /^strokeRect\(/.test(l)).join() === v.log.filter((l) => /^strokeRect\(/.test(l)).join());
-    check(f + "@" + h + " px: no scaled vector glyph block (CLASSIC has one scale( per row, px none)", !px.log.some((l) => /^scale\(/.test(l)) && v.log.some((l) => /^scale\(/.test(l)));
+    const sc = (r) => r.log.filter((l) => /^scale\(/.test(l)).length; // the floor and wall cells under the art stay the board's vector painters in every look
+    check(f + "@" + h + " px: no scaled vector glyph block (CLASSIC scales once per art cell, px blits instead)", sc(v) - sc(px) >= N[f] - FOES.filter((q) => f === "drawEnemiesHelp" && (q.t === "shade" || q.t === "burrow")).length, sc(v) + " vs " + sc(px));
   }
   check("ENEMIES at 600x520 reaches x2 (a 20-px cell at x2 fits its 32-px well + 8 slot)", seen.drawEnemiesHelp520 === "2", seen.drawEnemiesHelp520);
   console.log("  GUIDE px scales: " + JSON.stringify(seen));
@@ -168,7 +169,7 @@ unchanged("px art registered: it never leaks into another kind");
   check("scenes.js stays atlas-free (painter arrives as a parameter)", !/pixel\//.test(src("src/render/scenes.js")));
   check("hudart.js imports nothing (no bake at boot, no atlas pull)", !/^import /m.test(src("src/render/hudart.js")));
   check("hudart.js is in the PWA precache", PRECACHE.includes("./src/render/hudart.js"));
-  check("shellview passes kind (and the touch layout) to the three GUIDE pages", ["drawHowTo", "drawItemsHelp", "drawEnemiesHelp"].every((f) => new RegExp("menudraw\\." + f + "\\(c, L, app\\.subT, kind, touchLay\\(canvas\\)\\)").test(src("src/render/shellview.js"))));
+  check("shellview passes kind (and the touch layout) to the GUIDE pages", ["drawHowTo", "drawItemsHelp", "drawEnemiesHelp", "drawFloorHelp"].every((f) => new RegExp("menudraw\\." + f + "\\b").test(src("src/render/shellview.js"))) && /\(c, LG, app\.subT, kind, t, o\)/.test(src("src/render/shellview.js")) && /const t = touchLay\(canvas\), LG = /.test(src("src/render/shellview.js")));
 }
 
 console.log("\n  PIXEL HUD/GUIDE RESULT: " + pass + " PASS / " + fail + " FAIL");

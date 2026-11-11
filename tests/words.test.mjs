@@ -45,6 +45,8 @@ import { surfRGBA } from "../tools/pixel/rgba.mjs";
 import { drawControls } from "../src/render/controlsdraw.js";
 import { DEF_KEY, DEF_PAD } from "../src/render/controlsgeo.js";
 import { heatToken } from "../src/core/heat.js";
+import { _set as setLazyPage } from "../src/render/pages/lazy.js";
+setLazyPage("guide", await import("../src/render/pages/guide.js")); // the lazy GUIDE pages (v202 Task 3.5), as if their import had landed
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 let pass = 0, fail = 0;

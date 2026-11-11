@@ -6,6 +6,7 @@ import * as lazyPages from "../src/render/pages/lazy.js";
 import { worldTokens } from "../src/render/kit/tokens.js";
 import * as settingsPage from "../src/render/pages/settings.js";
 lazyPages._set("settings", settingsPage); // the lazy SETTINGS / GRAPHICS page (v202 Task 3.4), in as if its import had landed (R20)
+lazyPages._set("guide", await import("../src/render/pages/guide.js")); // the lazy GUIDE pages (v202 Task 3.5), as if their import had landed
 /* The console-panel plate is a rounded path (icons.js rr): a filled path that
    used arcTo is recorded as its bbox rect, so the plate checks keep reading
    rects. Carets and glyphs (no arcTo) are not recorded. */
@@ -387,115 +388,22 @@ function check(name, cond, detail) {
         texts.map((t) => t.s).join("|"),
       );
     }
+    /* v202 Task 3.5: ENEMIES, HOW TO and GUIDE are pages/guide.js on the world kit (one geometry by name); their words sit inside the plate and the
+       foot (label first, keycap last) under it, inside the box */
     {
-      const { c, texts, rects } = rec();
-      md.drawEnemiesHelp(c, L, 1);
-      const p = plateOf(rects);
-      const names = [
-        "WALKER",
-        "SENTRY",
-        "FAST",
-        "CHASER",
-        "PHANTOM",
-        "ROCKET",
-        "BURROW",
-        "SHADE",
-        "KNIGHT",
-      ];
-      const hits = names.map((n) => texts.find((t) => t.s === n));
-      const esc = texts.find((t) => t.s.indexOf("ESC BACK") >= 0);
-      const cards = rects.filter((r) => r.fill === "rgba(4,7,14,0.72)");
-      const textEnd = (t) => {
-        const w = t.s.length * t.px * 0.62;
-        return t.align === "center" ? t.x + w / 2 : t.x + w;
-      };
-      const inPlate = (t) =>
-        t.y > p.y + 8 &&
-        t.y < p.y + p.h - 4 &&
-        t.x > p.x + 4 &&
-        textEnd(t) < p.x + p.w - 8;
-      const cardIn = cards.every(
-        (r) =>
-          r.x >= p.x + 8 &&
-          r.y >= p.y + 8 &&
-          r.x + r.w <= p.x + p.w - 8 &&
-          r.y + r.h <= p.y + p.h - 8,
-      );
-      const rooms = texts.filter((t) => /^LEVELS? \d/.test(t.s)); // LEVEL 8 for KNIGHT's one level
-      check(
-        `enemies 9 + ESC inside plate at ${W}x${H}`,
-        !!p &&
-          !!esc &&
-          hits.every((h) => !!h) &&
-          hits.every((h) => inPlate(h)) &&
-          rooms.length === 9 &&
-          rooms.every((t) => inPlate(t)) &&
-          cards.length === 9 &&
-          cardIn &&
-          inPlate(esc) &&
-          esc.s === "ESC BACK" &&
-          cards.every((r) => r.y + r.h < esc.y - 4),
-        JSON.stringify({
-          py: p && p.y,
-          ph: p && p.h,
-          pw: p && p.w,
-          px: p && p.x,
-          esc,
-          hits,
-          rooms: rooms.map((t) => ({ s: t.s, x: t.x, y: t.y, end: textEnd(t) })),
-          cards: cards.map((r) => ({ x: r.x, y: r.y, w: r.w, h: r.h })),
-        }),
-      );
-    }
-    {
-      const recd = rec();
-      md.drawHowTo(recd.c, L, 1);
-      const { texts, rects, quads } = recd;
-      const p = plateOf(rects);
-      const names = ["BOMB", "THROW", "REMOTE", "KICK"];
-      const hits = names.map((n) =>
-        texts.find((t) => t.s === n || t.s.indexOf(n) === 0),
-      );
-      const title = texts.find((t) => t.s === "HOW TO PLAY");
-      const esc = texts.find((t) => t.s.indexOf("ESC") >= 0);
-      check(
-        `how to catalog glyphs + plate at ${W}x${H}`,
-        !!p &&
-          !!title &&
-          !!esc &&
-          hits.every((h) => !!h) &&
-          hits.every((h) => h.y > p.y + 8 && h.y < p.y + p.h - 8) &&
-          title.y > p.y &&
-          title.y < p.y + p.h &&
-          esc.y < p.y + p.h - 4 &&
-          quads >= 1 &&
-          !texts.some((t) => t.s === "bomb") &&
-          !texts.some((t) => t.s.indexOf("5 rooms") >= 0),
-        JSON.stringify({
-          py: p && p.y,
-          ph: p && p.h,
-          quads,
-          labels: texts.map((t) => t.s),
-          hits: hits.map((h) => h && h.y),
-        }),
-      );
-    }
-    {
-      const { c, texts, rects } = rec();
-      md.drawGuide(c, L, 1, 1);
-      const p = plateOf(rects);
-      const rows = ["HOW TO PLAY", "POWER-UPS", "ENEMIES"];
-      const hits = rows.map((n) => texts.find((t) => t.s === n));
-      const esc = texts.find((t) => t.s.indexOf("ESC BACK") >= 0);
-      check(
-        `guide: three rows + ESC inside the plate at ${W}x${H}`,
-        !!p &&
-          !!esc &&
-          hits.every((h) => !!h) &&
-          hits.every((h) => h.y > p.y + 8 && h.y < p.y + p.h - 8) &&
-          esc.y < p.y + p.h - 4,
-        JSON.stringify({ py: p && p.y, ph: p && p.h, hits, esc }),
-      );
+      const gpg = await import("../src/render/pages/guide.js");
+      const page = (fn, nm, ...a) => { const r = textrec(); md[fn](r.ctx, L, 1, ...a); const G = md.guideGeom(L, false, nm), u = G.u, P = gpg._dbg.last.P; return { texts: r.texts, G, u, P, p: G.d.plate }; }; // texts and P in design px (the page paints under scale(u))
+      const inP = (t, p) => t.y > p.y && t.y < p.y + p.h && t.x >= p.x && t.x <= p.x + p.w;
+      const foot = (P) => P.foot && P.foot.parts.map((q) => q.t || q.sep || (Array.isArray(q.cap) ? q.cap[0] : "[" + q.cap + "]")).join(" ");
+      const footIn = (P, u) => !!P.foot && P.foot.x * u >= 0 && (P.foot.x + P.foot.w) * u <= W && (P.foot.y + P.foot.h) * u <= H;
+      const e = page("drawEnemiesHelp", "ENEMIES");
+      const names = ["WALKER", "SENTRY", "FAST", "CHASER", "PHANTOM", "ROCKET", "BURROW", "SHADE", "KNIGHT"], hits = names.map((n) => e.texts.find((t) => t.s === n));
+      const rooms = e.texts.filter((t) => /LEVELS? \d/.test(t.s)); // APPEARS IN LEVEL 8 for KNIGHT's one level
+      check(`enemies 9 + their levels inside the plate, the foot BACK [ESC] under it at ${W}x${H}`, hits.every((h) => !!h && inP(h, e.p)) && rooms.length === 9 && rooms.every((t) => inP(t, e.p)) && e.G.order.length === 9 && e.G.order.every((n) => e.G.d.items[n].r.y >= e.p.y && e.G.d.items[n].r.y + e.G.d.items[n].r.h <= e.p.y + e.p.h) && /BACK \[ESC\]$/.test(foot(e.P)) && footIn(e.P, e.u), JSON.stringify({ hits: hits.map((h) => h && [h.x, h.y]), p: e.p, foot: foot(e.P) }));
+      const h = page("drawHowTo", "HOW TO PLAY"), hn = ["BOMB", "THROW", "REMOTE", "KICK"].map((n) => h.texts.find((t) => t.s === n || t.s.indexOf(n) === 0)), title = h.texts.find((t) => t.s === "HOW TO PLAY");
+      check(`how to catalog glyphs + plate at ${W}x${H}`, hn.every((q) => !!q && inP(q, h.p)) && !!title && inP(title, h.p) && h.P.rest.filter((o) => o.op === "item").length === 4 && !h.texts.some((t) => t.s === "bomb") && !h.texts.some((t) => t.s.indexOf("5 rooms") >= 0) && footIn(h.P, h.u), JSON.stringify(h.texts.map((t) => t.s)));
+      const g = page("drawGuide", "GUIDE", 1), gn = ["HOW TO PLAY", "POWER-UPS", "ENEMIES", "FLOOR"].map((n) => g.texts.find((t) => t.s === n && t.y > g.p.y + 50));
+      check(`guide: four doors + the foot inside the box at ${W}x${H}`, gn.every((q) => !!q && inP(q, g.p)) && /OPEN \[ENTER\] · BACK \[ESC\]$/.test(foot(g.P)) && footIn(g.P, g.u), JSON.stringify({ gn, foot: foot(g.P) }));
     }
     /* v202 Task 3.4: SETTINGS is the world-kit page (pages/settings.js); this box is its single column (no pane), scaled as one piece. Read with
        the shared recorder (it clips, so the page paints; texts are design px, the geometry's G.d). */
@@ -1508,8 +1416,8 @@ function check(name, cond, detail) {
       cg.x >= 0 && cg.y >= 0 && cg.x + cg.w <= g.w && cg.y + cg.h <= g.h &&
         Array.from({ length: 8 }, (_, i) => geomOf(i, cg)).every((r, i) => inPlate(r, cg) && hitPage({}, ...ctr(r), cg).row === i) &&
         hitPage({}, 1, 1, cg).off === 1);
-    const gd = md.guideGeom(L, true);
-    check(`GUIDE: doors inside the box, each taps to itself (${tg})`, inBox(gd.S) && gd.tiles.every((r, i) => md.guideHit(...ctr(r), L, 0, true) === i));
+    const gd = md.guideGeom(L, true), gt = gd.order.map((n) => gd.items[n]), gp = gd.plate; // v202 Task 3.5: pages/guide.js, the doors by name
+    check(`GUIDE: doors inside the box, each taps to itself (${tg})`, gp.x >= 0 && gp.y >= 0 && gp.x + gp.w <= g.w && gp.y + gp.h <= g.h && gt.every((r, i) => inPlate(r, gp) && md.guideHit(...ctr(r), L, 0, true) === i));
     const st = md.statsGeom(L).S;
     check(`STATS: centred in the tall box (not pinned to its floor), foot T taps KeyT (${tg})`,
       inBox(st) && st.y + st.h < g.h - 20 && md.statsHit(st.mid - 47 * 3 + 24, st.footY, L, false) === "KeyT");
@@ -1530,10 +1438,12 @@ function check(name, cond, detail) {
     for (const touch of [false, true]) {
       const h = rec();
       md.drawHowTo(h.c, L, 1, "2d", touch);
-      const walk = h.texts.find((t) => t.s === "WALK INTO BOMB"), pk = h.texts.find((t) => t.s === "P");
+      /* v202 Task 3.5: HOW TO is pages/guide.js; its KICK row (design px) holds the label, then the key at its right end, label first */
+      const walk = h.texts.find((t) => t.s === "WALK INTO BOMB"), kick = h.texts.find((t) => t.s === "KICK *"), row = md.guideGeom(L, touch, "HOW TO PLAY").d.items["KICK *"].r;
+      const wl = walk && (walk.align === "right" ? walk.x - walk.w : walk.align === "center" ? walk.x - walk.w / 2 : walk.x);
       check(`HOW TO says WALK INTO BOMB beside KICK *, never K + MOVE, and the key fits its cell (${tg}${touch ? " touch" : ""})`,
-        !!walk && !!pk && h.texts.some((t) => t.s === "KICK *") && !h.texts.some((t) => K.test(t.s)) && walk.x + walk.w < pk.x - 8,
-        walk && pk && walk.x + walk.w + " < " + pk.x);
+        !!walk && !!kick && !h.texts.some((t) => K.test(t.s)) && kick.x + kick.w < wl && wl + walk.w <= row.x + row.w + 0.01 && kick.x >= row.x,
+        walk && kick && JSON.stringify([kick.x + kick.w, wl, wl + walk.w, row.x + row.w]));
       for (const r3d of [false, true]) {
         const o = rec();
         md.drawSettings(o.c, L, 1, { rows: optRows(r3d), row: "RESET DEFAULTS", touch, rev: "v0" }); // RESET DEFAULTS focused: its page on screen where the rows page
@@ -1548,16 +1458,7 @@ function check(name, cond, detail) {
 // FLOOR page + the fourth GUIDE door: every tile named once, only the four tiles with rules claim a rule, the doors tile the plate without overlap, taps hit them
 {
   const md = await import("../src/render/menudraw.js"), { shellGeo } = await import("../src/app/fit.js"), { TILE_HELP } = await import("../src/core/feat.js");
-  const rec = () => {
-    const texts = [], o = {
-      font: "10px x", textAlign: "left",
-      fillText(s, x, y) { texts.push({ s: String(s), x, y, w: o.measureText(s).width, align: o.textAlign }); },
-      measureText(s) { const m = /(\d+(?:\.\d+)?)px/.exec(o.font); return { width: String(s).length * 0.6 * (m ? +m[1] : 10) }; },
-      createLinearGradient: () => ({ addColorStop() {} }),
-      createRadialGradient: () => ({ addColorStop() {} }),
-    };
-    return { texts, c: new Proxy(o, { get: (t, p) => (p in t ? t[p] : () => {}), set: (t, p, v) => ((t[p] = v), true) }) };
-  };
+  const rec = () => { const r = textrec(); return { texts: r.texts, c: r.ctx }; }; // v202 Task 3.5: the shared recorder (the page paints only on a context with clip and rect)
   const g = shellGeo(393, 852, 600, 520), NAMES = ["BOOSTER", "ICE PATCH", "CONVEYOR", "STREAM", "TRAP", "QUICKSAND", "PORTAL", "GATE"];
   for (const [tg, L] of [["600x520", md.layout(600, 520)], ["608x352", md.layout(608, 352)], ["narrow", md.layout(g.w, g.h, g.logo)]]) {
     for (const touch of [false, true]) {
@@ -1566,18 +1467,19 @@ function check(name, cond, detail) {
       const ts = h.texts.map((t) => t.s), tag = `${tg}${touch ? " touch" : ""}`;
       check(`FLOOR names all eight tiles once (${tag})`, NAMES.every((n) => ts.filter((x) => x === n).length === 1), ts.length);
       check(`FLOOR claims a rule only for the ${Object.keys(TILE_HELP).length} tiles that have one (${tag})`,
-        ts.filter((x) => /^NORMAL · /.test(x)).length === Object.keys(TILE_HELP).length && ts.filter((x) => /^LOOK ONLY/.test(x)).length === NAMES.length - Object.keys(TILE_HELP).length);
-      for (const [k, help] of Object.entries(TILE_HELP)) check(`FLOOR draws ${k}'s NORMAL and EXPERT help whole, never clipped (${tag})`, ts.includes("NORMAL · " + help[0]) && ts.includes("EXPERT · " + help[2]), ts.filter((x) => /^(NORMAL|EXPERT) · /.test(x)).join(" | "));
-      const gd = md.guideGeom(L, touch), T = gd.tiles;
-      const inside =T.every((r) => r.x >= gd.S.x && r.x + r.w <= gd.S.x + gd.S.w && r.y >= gd.S.y && r.y + r.h <= gd.S.y + gd.S.h);
+        ts.filter((x) => /^NORMAL · [A-Z]/.test(x) && x !== "NORMAL · HARD · EXPERT").length === Object.keys(TILE_HELP).length && ts.filter((x) => /^LOOK ONLY/.test(x)).length === NAMES.length - Object.keys(TILE_HELP).length);
+      const all = " " + ts.join(" ") + " "; // a line the page wraps reads whole when its lines are joined in draw order (v202 Task 3.5)
+      for (const [k, help] of Object.entries(TILE_HELP)) check(`FLOOR draws ${k}'s NORMAL and EXPERT help whole, never clipped (${tag})`, all.includes(" NORMAL · " + help[0] + " ") && all.includes(" EXPERT · " + help[2] + " ") && !ts.some((x) => /…/.test(x)), ts.filter((x) => /(NORMAL|EXPERT) · /.test(x)).join(" | "));
+      const gd = md.guideGeom(L, touch), T = gd.order.map((n) => gd.items[n]), S = gd.plate;
+      const inside = T.every((r) => r.x >= S.x && r.x + r.w <= S.x + S.w && r.y >= S.y && r.y + r.h <= S.y + S.h);
       const apart = T.every((a, i) => T.every((b, j) => i >= j || a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y));
       check(`GUIDE has four doors inside the plate that never overlap (${tag})`, T.length === 4 && inside && apart);
       check(`GUIDE taps hit each door, off it backs out (${tag})`, T.every((r, i) => md.guideHit(r.x + r.w / 2, r.y + r.h / 2, L, 8, touch) === i) && md.guideHit(1, 1, L, 8, touch) === -1);
       const d = rec();
       md.drawGuide(d.c, L, 1.25, 3, "2d", touch);
       if (!touch && !L.narrow) {
-        const left = d.texts.filter((t) => t.align !== "right" && t.align !== "center" && t.s !== "›");
-        check(`GUIDE keyboard door words stop before the preview strip (${tag})`, T.every((r) => left.filter((t) => t.x >= r.x && t.x < r.x + r.w && t.y >= r.y && t.y <= r.y + r.h).every((t) => t.x + t.w <= r.x + r.w - 118 - 4)));
+        const left = d.texts.filter((t) => t.align !== "right" && t.align !== "center");
+        check(`GUIDE keyboard door words and the preview strip stop before the door's chevron (${tag})`, gd.order.map((n) => gd.d.items[n].r).every((r) => left.filter((t) => t.x >= r.x && t.x < r.x + r.w && t.y >= r.y && t.y <= r.y + r.h).every((t) => t.x + t.w <= r.x + r.w - 18 - 16 - 4)));
       }
       check(`GUIDE draws the FLOOR door and its label (${tag})`, d.texts.some((t) => t.s === "FLOOR") && d.texts.some((t) => /^8/.test(t.s)));
     }

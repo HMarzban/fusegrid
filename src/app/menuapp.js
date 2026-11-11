@@ -13,6 +13,7 @@ import { roomCap, ROOM_MAX } from "../core/config.js";
 import { clampHeat } from "../core/heat.js";
 import { clampPact, PACT, togglePact } from "../core/pact.js";
 import { clampPace } from "../core/pace.js";
+import { FOES } from "../core/entities.js";
 import { clampSettings, DEFAULTS } from "./settings.js";
 import { RENDER_KINDS, renderBits, renderVal } from "./renderkind.js";
 import { LOOK_LABEL } from "./jobs.js";
@@ -124,6 +125,8 @@ export function createMenuApp(opts = {}) {
     optRow: 0, // SETTINGS row cursor, an index into optRows() — its OWN field, so the MENU cursor
     // survives a round trip through the page
     guideRow: 0, // GUIDE row cursor — its OWN field too, same reason
+    foeRow: 0, // ENEMIES: the focused foe (core FOES order); every arrival lands on the first
+    foeTip: false, // ENEMIES: its points tooltip is open (a key move opens it on the new foe, a pad move closes it; Enter / SOUTH or a tap opens it, EAST closes it)
     recFocus: 0, // RECORDS: 0 the tab row, 1 the page body; every arrival lands on the tab row
     levelRow: 0, // LEVEL SELECT's focused row (LEVEL_ROWS); every entry lands on LEVEL
     modOpen: false, // LEVEL SELECT's MODIFIERS list is open inline, modeCur its cursor
@@ -238,8 +241,8 @@ export function createMenuApp(opts = {}) {
       const ax = (input && input.input) || {};
       let dir = 0,
         axis = 0;
-      if (this.screen === SCREEN.MENU || this.screen === SCREEN.GUIDE) {
-        const g = this.screen === SCREEN.GUIDE; // GUIDE's doors sit side by side: ←/→ walk them too
+      if (this.screen === SCREEN.MENU || this.screen === SCREEN.GUIDE || this.screen === SCREEN.ENEMIES) {
+        const g = this.screen !== SCREEN.MENU; // GUIDE's doors and ENEMIES' foes sit side by side: ←/→ walk them too
         dir = ax.up || (g && ax.left) ? -1 : ax.down || (g && ax.right) ? 1 : 0;
       }
       else if (this.screen === SCREEN.LEVEL || this.screen === SCREEN.SETTINGS || this.screen === SCREEN.GRAPHICS || this.screen === SCREEN.CONTROLS) {
@@ -387,7 +390,7 @@ export function createMenuApp(opts = {}) {
         this._taps[dir + ":0"] = true;
         return true;
       }
-      if (this.screen === SCREEN.GUIDE && this.move(dir, 0)) {
+      if ((this.screen === SCREEN.GUIDE || this.screen === SCREEN.ENEMIES) && this.move(dir, 0)) {
         this._taps[dir + ":0"] = true;
         return true;
       }
@@ -457,15 +460,20 @@ export function createMenuApp(opts = {}) {
             case "POWER-UPS":
               return this._push(SCREEN.ITEMS);
             case "ENEMIES":
+              this.foeRow = 0;
+              this.foeTip = false;
               return this._push(SCREEN.ENEMIES);
             case "FLOOR":
               return this._push(SCREEN.FLOOR);
           }
           return false;
+        case SCREEN.ENEMIES: // Enter / SOUTH opens the focused foe's points tooltip; Esc / EAST leaves (back)
+          if (this.foeTip) return false;
+          this.foeTip = true;
+          return this._feel("confirm");
         case SCREEN.HOWTO:
         case SCREEN.SCORES:
         case SCREEN.ITEMS:
-        case SCREEN.ENEMIES:
         case SCREEN.FLOOR:
         case SCREEN.STATS:
         case SCREEN.TROPHIES:
@@ -483,6 +491,10 @@ export function createMenuApp(opts = {}) {
       if (this.screen === SCREEN.GRAPHICS) {
         this._optTo("GRAPHICS");
         return this._push(SCREEN.SETTINGS, 1);
+      }
+      if (this.screen === SCREEN.ENEMIES && this.foeTip && this.lastDev === "pad") { // EAST closes the tooltip first; a key's Esc leaves at once
+        this.foeTip = false;
+        return this._feel("back");
       }
       if (
         this.screen === SCREEN.HOWTO ||
@@ -582,6 +594,11 @@ export function createMenuApp(opts = {}) {
       if (this.screen === SCREEN.GUIDE) {
         this.guideRow =
           (this.guideRow + dir + GUIDE_ROWS.length) % GUIDE_ROWS.length;
+        return true;
+      }
+      if (this.screen === SCREEN.ENEMIES) { // one walk over the foes in order, wrapping; the tooltip follows a key's focus, a pad's move closes it
+        this.foeRow = (this.foeRow + (dir < 0 ? -1 : 1) + FOES.length) % FOES.length;
+        this.foeTip = this.lastDev === "key";
         return true;
       }
       if (this.screen === SCREEN.LEVEL) {
@@ -1235,6 +1252,19 @@ export function createMenuApp(opts = {}) {
       this._taps = {};
       this.togT = -1;
       return true;
+    },
+    /* ENEMIES taps (pointer.js): a points value focuses its foe and opens the tooltip; any other tap closes an open one. */
+    foeTap(i) {
+      if (this.screen !== SCREEN.ENEMIES || !(i >= 0 && i < FOES.length)) return false;
+      this.idleT = 0;
+      this.foeRow = i | 0;
+      this.foeTip = true;
+      return this._feel("confirm");
+    },
+    foeClose() {
+      if (this.screen !== SCREEN.ENEMIES || !this.foeTip) return false;
+      this.foeTip = false;
+      return this._feel("back");
     },
     /* §1 score edge, frame-polled: returns true once on PLAY|WIN→LOSE.
        Caller persists via scoreEntry(world). Latches worldState for KeyM. */

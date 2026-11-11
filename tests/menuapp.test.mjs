@@ -691,13 +691,34 @@ for (const r3d of [false, true]) {
   i.screen = SCREEN.ITEMS;
   i.back();
   check("back(): ITEMS->GUIDE", i.screen === SCREEN.GUIDE);
+  /* v202 Task 3.5 (brief): ENEMIES has a focus now; Enter / SOUTH opens the focused foe's points tooltip instead of backing out */
   const f = createMenuApp();
   f.screen = SCREEN.ENEMIES;
   f.confirm();
-  check("Enter/confirm in ENEMIES = back", f.screen === SCREEN.GUIDE);
-  f.screen = SCREEN.ENEMIES;
+  check("Enter/confirm in ENEMIES opens the focused foe's tooltip (stays on ENEMIES); a second Enter does nothing", f.screen === SCREEN.ENEMIES && f.foeTip === true && f.confirm() === false && f.screen === SCREEN.ENEMIES);
   f.back();
-  check("back(): ENEMIES->GUIDE", f.screen === SCREEN.GUIDE);
+  check("back(): ENEMIES->GUIDE (a key's Esc leaves at once, the tooltip open or not)", f.screen === SCREEN.GUIDE);
+  const g = createMenuApp();
+  g.screen = SCREEN.GUIDE; g.guideRow = 2; g.foeRow = 5; g.foeTip = true;
+  g.confirm();
+  check("GUIDE ENEMIES door: every arrival lands on the first foe, tooltip shut", g.screen === SCREEN.ENEMIES && g.foeRow === 0 && g.foeTip === false);
+  g.move(1, 0);
+  check("a key move walks the foes and opens the tooltip on the new one (keyboard focus shows it)", g.foeRow === 1 && g.foeTip === true);
+  g.move(-1, 1); g.move(-1, 1);
+  check("↑ / ← walk back and wrap (one linear walk, like GUIDE's doors)", g.foeRow === 8);
+  g.lastDev = "pad";
+  g.move(1, 0);
+  check("a controller's move closes the tooltip", g.foeRow === 0 && g.foeTip === false);
+  g.confirm();
+  check("SOUTH (confirm) opens it", g.foeTip === true);
+  g.back();
+  check("EAST (back) on a controller closes it first and stays", g.screen === SCREEN.ENEMIES && g.foeTip === false);
+  g.back();
+  check("a second EAST leaves for GUIDE", g.screen === SCREEN.GUIDE && g.guideRow === 2);
+  const h = createMenuApp();
+  h.screen = SCREEN.ENEMIES; h.lastDev = "touch";
+  check("a tap on a points value focuses that foe and opens its tooltip; foeClose closes it once", h.foeTap(7) === true && h.foeRow === 7 && h.foeTip && h.foeClose() === true && !h.foeTip && h.foeClose() === false);
+  check("foeTap refuses an index off the list and works only on ENEMIES", h.foeTap(9) === false && h.foeTap(-1) === false && (h.screen = SCREEN.GUIDE, h.foeTap(1)) === false);
 }
 
 // ---- SCORES: scoreHeat is display-only, cycled by move(dir,0) ----
