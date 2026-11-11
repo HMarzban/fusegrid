@@ -249,8 +249,11 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
      and the box, whole, and the facts always there */
   /* v202 Task 3.3: LEVEL SELECT's card is the same card in the card's column a narrower window narrows (pages/level.js): held the same way */
   const cardOut = { s: [] }, cardOutL = { s: [] };
+  /* SETTINGS / GRAPHICS also hand back their plan's words (every row's label and value, on every page: a paged column draws one page) */
+  const planWords = () => Object.values(settingsPage._dbg.last.Pl.rows).flatMap((o) => [o.label.s, ...o.val.P.filter((q) => q.s != null).map((q) => q.s)]);
   const shot = (nm, box, cur) => {
     const a = mkApp(SCREEN[nm]); if (cur != null) a.cursor = cur; const R = rec(); drawShell(R.c, a, { state: "PLAY", time: 1 }, box, "2d", () => [], () => 0, () => ({}));
+    if (nm === "SETTINGS" || nm === "GRAPHICS") R.texts.plan = planWords();
     const pg = nm === "MENU" ? menuPage : nm === "LEVEL" ? levelPage : null;
     if (!pg || !pg._dbg.last.P.card) return R.texts;
     const C = pg._dbg.last.P.card.texts.map((t) => t.s), left = R.texts.slice(), K = nm === "MENU" ? pg._dbg.last.G.card : pg._dbg.last.G.pane, Wb = box.width, Hb = box.height, out0 = nm === "MENU" ? cardOut : cardOutL;
@@ -270,10 +273,11 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
   /* LEVEL SELECT (v202 Task 3.3): its help sentence may break once onto two lines where the columns gave way, so it is held word for word, in
      order (an elided or dropped word still fails) */
   const stream = (T) => T.flatMap((q) => q.s.split(" ")).join(" ");
-  /* SETTINGS / GRAPHICS (v202 Task 3.4): a window box is the desk (the list beside a preview pane, the foot in the pane), 600 x 520 the single column
-     (the foot under the rows, GRAPHICS' help there): the same rows, labels in order, every one printed whole; no ellipsis anywhere */
-  const ROWL = new Set([...optRows(true), "QUALITY", "FRAME RATE", "RESOLUTION", "SHADOWS", "ANTI-ALIAS", "EFFECTS", "DEMO", "FPS METER"]);
-  const rowsOnly = (T) => [...new Set(T.filter((q) => ROWL.has(q.s)).map((q) => q.s))].join("|") // first draws in order (the pane's head and the live focused row repeat a label) + (T.some((q) => /…/.test(q.s)) ? "|…" : "");
+  /* SETTINGS / GRAPHICS (v202 Task 3.4; fix round 1, narrowed assertion 7): a window box is the desk (the list beside a preview pane, the foot in
+     the pane), 600 x 520 the single column (a touch one pages its rows): every label and value word the 600x520 plan holds is in the larger box's
+     plan too, in order, and nothing is drawn with an ellipsis; the desk may add its pane's and foot's words, it may lose none of the column's */
+  const sub = (a, b) => { let i = 0; for (const w of b) if (w === a[i]) i++; return i === a.length; };
+  const planOk = (T, B) => !!T.plan && !!B.plan && sub(B.plan, T.plan) && !T.some((q) => /…/.test(q.s));
   for (const lay of ["d", "l"]) each((nm, cur) => { base[lay + nm + cur] = shot(nm, boxOf({ w: 600, h: 520, s: 1 }, lay), cur); });
   each((nm, cur) => { if (nm === "MENU" || nm === "LEVEL") base["lDesk" + nm + cur] = shot(nm, boxOf(shellGeo(1024, 768, 600, 520, "l"), "l"), cur); }); // LEVEL SELECT too (v202 Task 3.3): a 600x520 touch box is its compact arrangement (no card, the BACK key), the tablets its desk
   {
@@ -290,9 +294,9 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
     const out = [], same = [], tab = lay === "l" && W > 600;
     cardOut.s.length = 0; cardOutL.s.length = 0;
     each((nm, cur) => {
-      const T = shot(nm, box, cur), cmp = tab && nm === "MENU" ? words : nm === "LEVEL" ? stream : nm === "SETTINGS" || nm === "GRAPHICS" ? rowsOnly : exact, desk = tab && (nm === "MENU" || nm === "LEVEL");
+      const T = shot(nm, box, cur), cmp = tab && nm === "MENU" ? words : nm === "LEVEL" ? stream : exact, desk = tab && (nm === "MENU" || nm === "LEVEL"), B = base[desk ? "lDesk" + nm + cur : lay + nm + cur];
       if (T.some((q) => q.x < -0.5 || q.x + q.w > g.w + 0.5 || q.y < 0 || q.y > g.h)) out.push(nm + cur);
-      if (cmp(T) !== cmp(base[desk ? "lDesk" + nm + cur : lay + nm + cur])) same.push(nm + cur);
+      if (nm === "SETTINGS" || nm === "GRAPHICS" ? !planOk(T, B) : cmp(T) !== cmp(B)) same.push(nm + cur);
     });
     check(`every page's text sits inside the box (${tg})`, out.length === 0, out.join());
     check(`every page prints exactly its 600x520 strings, in order${tab ? " (MENU: the 1024x768 tablet's words by token)" : ""}: nothing elided (${tg})`, same.length === 0, same.join());
@@ -320,9 +324,10 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
     const sc = md.scoresGeom(L, touch);
     check(`HIGH SCORES: tabs in the plate, each taps to itself (${tg})`, inBox(sc.S) && sc.tabs.every((r, i) => inPlate(r, sc.S) && md.scoresHit(...ctr(r), L, touch) === i));
     for (const [nm, geo, hit, n, R] of [["SETTINGS (ten rows)", md.settingsGeom, md.settingsHit, 10, optRows(false)], ["SETTINGS (twelve rows)", md.settingsGeom, md.settingsHit, 12, optRows(true)], ["GRAPHICS", md.graphicsGeom, md.graphicsHit, md.GFX_N, 0]]) {
-      const q = geo(L, touch, R), first = q.rows[q.order[0]]; // v202 Task 3.4: the page's geometry, rows by name (pages/settings.js)
+      const q = geo(L, touch, R), first = q.rows[q.order[0]]; // v202 Task 3.4: the page's geometry, rows by name (pages/settings.js); a row taps to itself with its page on screen (the focus)
+      const Lf = (l) => ({ ...L, focus: q.order.indexOf(q.pages[q.pageOf[l]][0]) });
       check(`${nm}: rows in the box, each taps to itself, a miss on the plate is inert (-2), off the plate at either corner backs out (-1) (${tg})`,
-        inBox({ ...q.plate, f: 1 }) && n > 0 && q.order.length === n && q.order.every((l, i) => inPlate(q.rows[l], q.plate) && hit(...ctr(q.rows[l]), L, R, touch) === i) &&
+        inBox({ ...q.plate, f: 1 }) && n > 0 && q.order.length === n && q.order.every((l, i) => inPlate(q.rows[l], q.plate) && hit(...ctr(q.rows[l]), Lf(l), R, touch) === i) &&
           q.plate.y + 4 < first.y && hit(q.plate.x + 4, q.plate.y + 4, L, R, touch) === -2 && hit(4, 4, L, R, touch) === -1 && hit(g.w - 4, g.h - 4, L, R, touch) === -1);
     }
     const gd = md.guideGeom(L, touch);

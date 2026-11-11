@@ -8,11 +8,12 @@
    settingsGeom(F, rows) / graphicsGeom(F, rows) are the one geometry for draw and tap: rects by ROW NAME in box units (G.d: design px; u box units
    per design px). F = {W, H, touch, shell, css, ts} as the MENU page's. Three arrangements. desk: a keyboard box (or a touch landscape shell box)
    that holds the two columns at u >= DESK_U: list beside the preview pane (SETTINGS: the three art styles; GRAPHICS: the focused row's help), the
-   foot in the pane; on a touch box the rows are floored at 44 CSS px. col: any other box (#c with no shell box, PAUSE's overlayBox, the iso guard):
-   the list alone, the foot at the plate's bottom, scaled as one piece to fit (there the touch floors give way). phone: a touch-portrait shell box,
-   the column in CSS px (u = 1 / css) with a BACK key beside the title, steppers as door rows, the foot under the plate; rows 52 down to 44.
+   foot in the pane. col: any other box (#c with no shell box, PAUSE's overlayBox, the iso guard): the list alone, the foot at the plate's bottom,
+   scaled as one piece on keys. phone: a touch-portrait shell box, the column in CSS px (u = 1 / css) with a BACK key beside the title, steppers as
+   door rows, the foot under the plate. On every touch box rows are >= 44 CSS px and >= 8 apart; where they do not fit the list pages (PAGING
+   below). F.paused (a PAUSE view) keeps the plate off the HUD strip; F.focus (the focused row) picks the page on screen for a tap.
    A row owns its rect and half of each gap round it, out to the plate's edge; *Hit returns the index into rows (the visible list optRow indexes,
-   R11), -1 on BACK or off the plate, -2 on the plate off the rows (inert); a zero box is -1.
+   R11), -1 on BACK or off the plate, -2 on the plate off the rows (inert), {k: "page", row} on a page key; a zero box is -1.
    drawSettingsPage(c, F, ui, t): ui = {rows, row (the focused LABEL), vals (nb.settings.v1), r3d, px, togT, rev, kicker, door ("AUTO ›"), ctlDoor
    ("KEYBOARD ›"), padVib (the VIBRATION level or ""), ana, anaNote, job (menudraw lookNote's note), level, paused}. drawGraphicsPage(c, F, ui, t):
    ui = {row (an index), view {rows [{label, val, locked, help1, help2}]}, togT, chg, kicker, level, paused}. Values are words; a door's trailing ›
@@ -31,7 +32,7 @@ import {roomLayer} from "../kit/room.js";
 import * as probe from "../kit/probe.js";
 import {deviceScale} from "../logo/draw2d.js";
 import {hints, tapMode} from "../hintcopy.js";
-import {lookVal, FOOT_TAP} from "../menudraw.js";
+import {lookVal, FOOT_TAP, roomDpr} from "../menudraw.js";
 
 const deep = (o) => { for (const v of Object.values(o)) if (v && typeof v === "object") deep(v); return Object.freeze(o); };
 export const DESK = deep({
@@ -49,7 +50,7 @@ export const COPY = deep({
   looks: "The same game in three looks. PIXEL and REAL 3D download the first time you pick them.",
   add3d: "REAL 3D adds two rows here: CAMERA and BRIGHTNESS.",
   on3d: "CAMERA and BRIGHTNESS are on the list while REAL 3D is your art style.",
-  of: "OF", row: "ROW", change: "CHANGE", back: "BACK", tapRow: "TAP A ROW TO CHANGE IT", loading: "LOADING", build: "BUILD", perf: "PERFORMANCE · BATTERY",
+  of: "OF", row: "ROW", change: "CHANGE", back: "BACK", tapRow: "TAP A ROW TO CHANGE IT", loading: "LOADING", build: "BUILD", perf: "PERFORMANCE · BATTERY", page: "PAGE",
 });
 const CAM_NAME = ["STANDARD", "WIDE", "FAR"];
 const big = (ts) => ts > 1.1;
@@ -58,25 +59,43 @@ const sc = (r, u) => (r ? {x: r.x * u, y: r.y * u, w: r.w * u, h: r.h * u} : nul
 const okBox = (F) => !!F && F.W > 0 && F.H > 0 && Number.isFinite(F.W) && Number.isFinite(F.H);
 const inR = (r, x, y) => !!r && x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
 
-/* the rows' vertical run: heights hs and the gap before each (a course before a GROUP row) */
+/* the rows' vertical run: heights hs and the gap before each (a course before a GROUP row), design px; on a touch box (fl, the floors in box
+   units) every row is >= 44 CSS px and every gap >= 8 (lead ruling, fix round 1) */
 function run(rows, row, grp, fl, u) {
-  const hs = rows.map(() => (fl ? Math.max(row, fl.h / u) : row)), gs = rows.map((l, i) => (i && GROUP.includes(l) ? Math.max(grp, fl ? fl.g / u : 0) : 0));
+  const hs = rows.map(() => (fl ? Math.max(row, fl.h / u) : row)), gs = rows.map((l, i) => (!i ? 0 : GROUP.includes(l) ? Math.max(grp, fl ? fl.g / u : 0) : fl ? fl.g / u : 0));
   return {hs, gs, h: hs.reduce((a, h, i) => a + h + gs[i], 0)};
 }
-function lay(rows, x, y0, w, S) {
-  const out = {}, divs = [];
-  let y = y0;
-  rows.forEach((l, i) => { if (S.gs[i]) { divs.push(R(x, y + S.gs[i] / 2 - 1, w, 2)); y += S.gs[i]; } out[l] = R(x, y, w, S.hs[i]); y += S.hs[i]; });
-  return {out, divs, bot: y};
-}
-/* a row's tap rect: half of each gap round it, out to x0..x1; the first from top0 above, the last to bot1 below */
-function hits(rows, out, S, x0, x1, top0, bot1) {
-  const hit = {};
-  rows.forEach((l, i) => {
-    const r = out[l], up = i ? S.gs[i] / 2 : top0, dn = i === rows.length - 1 ? bot1 : S.gs[i + 1] / 2;
-    hit[l] = R(x0, r.y - up, x1 - x0, r.h + up + dn);
+/* pages of row indices, each at most cap tall (a course at a page's top is dropped); one page holds everything when cap is Infinity */
+function paginate(S, cap) {
+  const pages = [];
+  let cur = [], used = 0;
+  S.hs.forEach((h, i) => {
+    const add = (cur.length ? S.gs[i] : 0) + h;
+    if (cur.length && used + add > cap + 1e-6) { pages.push(cur); cur = [i]; used = h; } else { cur.push(i); used += add; }
   });
-  return hit;
+  if (cur.length) pages.push(cur);
+  return pages;
+}
+/* every row's rect on its own page (each page laid from y0), its tap rect (half of each gap round it on that page, out to x0..x1; a page's first
+   row from top0 above, its last to bot1 below) and the courses, each with its page */
+function lay(rows, pages, S, x, y0, w, x0, x1, top0, bot1) {
+  const out = {}, hit = {}, divs = [], pageOf = {};
+  let bot = y0;
+  pages.forEach((pg, p) => {
+    let y = y0;
+    pg.forEach((i, k) => {
+      const l = rows[i], g = k ? S.gs[i] : 0;
+      if (g && GROUP.includes(l)) divs.push({r: R(x, y + g / 2 - 1, w, 2), p}); // a course between groups; the touch floor's 8 px between rows is bare bed
+      y += g;
+      out[l] = R(x, y, w, S.hs[i]); pageOf[l] = p; y += S.hs[i];
+    });
+    pg.forEach((i, k) => {
+      const l = rows[i], r = out[l], up = k ? S.gs[i] / 2 : top0, dn = k === pg.length - 1 ? bot1 : S.gs[pg[k + 1]] / 2;
+      hit[l] = R(x0, r.y - up, x1 - x0, r.h + up + dn);
+    });
+    bot = Math.max(bot, y);
+  });
+  return {out, hit, divs, pageOf, bot};
 }
 const headH = (ts, kick, ttl) => (kick ? DEV.d.sec * ts * 1.2 + 6 : 0) + ttl * ts * 1.1;
 /* the largest u at which fits(u) holds, from u0 down (fits is monotone in u: the floored part is fixed in box units); 0 when none does */
@@ -86,61 +105,85 @@ function solve(u0, fits) {
   for (let i = 0; i < 48; i++) { const m = (lo + hi) / 2; if (fits(m)) lo = m; else hi = m; }
   return lo;
 }
-/* the floored solve, or, where keeping the floors would shrink the rest of the page under FLOOR_U (a phone's PAUSE: twelve 44 CSS px rows on a
-   600 x 520 board; a landscape phone's #c), the page scaled as one piece with the floors given way */
-const FLOOR_U = 0.5;
-const solveFl = (u0, at, fl, my, H) => {
-  const u = solve(u0, (v) => v * (at(v, fl).ph + 2 * my) <= H);
-  return u >= FLOOR_U ? {u, fl} : {u: solve(u0, (v) => v * (at(v, null).ph + 2 * my) <= H), fl: null};
-};
+/* PAGING (lead ruling, fix round 1): on a touch box the rows keep >= 44 CSS px and the courses >= 8 (fl, in box units). Where every row does not
+   fit at a scale >= PAGE_U the list pages: as many whole rows as fit, and a strip of two page keys (>= 44 CSS px each, >= 8 apart) under them;
+   at least MIN_ROWS rows a page (the page shrinks toward FLOOR_U for them). Keys and a controller turn the page with the focus (the page shown is
+   the focused row's); a tap on a page key focuses the first row of the page it opens. */
+export const PAGE_U = 0.7, FLOOR_U = 0.5, MIN_ROWS = 3;
+const keyH = (dv, fl, u) => Math.max(DEV[dv].keyh, fl ? fl.h / u : 0);
+function pageKeys(x, y, w, kh, kg) {
+  const kw = Math.max(kh, 64);
+  return {strip: R(x, y, w, kh), up: R(x + w - 2 * kw - kg, y, kw, kh), dn: R(x + w - kw, y, kw, kh)};
+}
 function desk(F, rows, ts, fl) {
   const D = DESK[big(ts) ? "d125" : "d"], T0 = DEV.d.T, head = headH(ts, D.kick, DEV.d.ttl), mx = T0 + 2 + GUT, my = T0 + 3 + GUT;
   const at = (u, q) => { const S = run(rows, D.row, D.grp, q, u), colH = Math.max(S.h, D.paneMin); return {S, colH, ph: D.pad[0] + head + D.below + colH + D.pad[2]}; };
   const pw = D.pad[3] + D.list + D.gap + D.pane + D.pad[1];
-  const {u, fl: f2} = solveFl(Math.min(1, F.W / (pw + 2 * mx)), at, fl, my, F.H);
-  const {S, colH, ph} = at(u, f2), Wd = F.W / u, Hd = F.H / u, px = (Wd - pw) / 2, py = Math.max(my, (Hd - ph) / 2);
-  const hy = py + D.pad[0], top = hy + head + D.below, lx = px + D.pad[3], L = lay(rows, lx, top, D.list, S);
+  const u = solve(Math.min(1, F.W / (pw + 2 * mx)), (v) => v * (at(v, fl).ph + 2 * my) <= F.H);
+  const {S, colH, ph} = at(u, fl), Wd = F.W / u, Hd = F.H / u, px = (Wd - pw) / 2, py = Math.max(my, (Hd - ph) / 2);
+  const hy = py + D.pad[0], top = hy + head + D.below, lx = px + D.pad[3], pages = paginate(S, Infinity);
+  const L = lay(rows, pages, S, lx, top, D.list, px, lx + D.list + D.gap / 2, D.below / 2, D.pad[2] / 2);
   const pane = R(lx + D.list + D.gap, top, D.pane, colH);
   return {mode: "desk", dev: "d", u, ts, T: T0, plate: R(px, py, pw, ph), head: R(lx, hy, pw - D.pad[1] - D.pad[3], head), kick: D.kick, ttl: DEV.d.ttl,
-    rows: L.out, divs: L.divs, hit: hits(rows, L.out, S, px, lx + D.list + D.gap / 2, D.below / 2, Math.min(D.pad[2], ph - (L.bot - py)) / 2), pane,
+    rows: L.out, hit: L.hit, divs: L.divs, pageOf: L.pageOf, pages: pages.map((pg) => pg.map((i) => rows[i])), keys: null, pane,
     foot: R(pane.x + SLAB + 12, pane.y + pane.h - SLAB - 12 - FOOT2, pane.w - 2 * (SLAB + 12), FOOT2), back: null, list: R(lx, top, D.list, L.bot - top)};
 }
 /* GRAPHICS off the desk has no pane: its two help lines sit under the rows */
 const helpH = (dv, ts) => 2 * DEV[dv].sec * ts * 1.3 + 8;
+/* PAUSE keeps the HUD strip (y < 40) clear, and on a keyboard box the old CONSOLE band (H x 0.16 - 10 .. H - 28) */
+const pauseBand = (F) => [44, F.touch ? F.H - 8 : F.H - 28];
 function col(F, rows, ts, fl, help) {
-  const C = COL[big(ts) ? "c125" : "c"], dv = F.dev || "d", T0 = DEV[dv].T, head = headH(ts, true, C.ttl), mx = T0 + 2 + GUT / 2, my = T0 + 3 + GUT / 2, hh = help ? helpH(dv, ts) : 0;
-  const at = (u, q) => { const S = run(rows, C.row, C.grp, q, u); return {S, ph: C.pad[0] + head + C.below + S.h + hh + 8 + FOOT1 + C.pad[2]}; };
-  const pw = C.pad[3] + C.list + C.pad[1];
-  const {u, fl: f2} = solveFl(Math.min(1, F.W / (pw + 2 * mx)), at, fl, my, F.H);
-  const {S, ph} = at(u, f2), Wd = F.W / u, Hd = F.H / u, px = (Wd - pw) / 2, py = Math.max(my, (Hd - ph) / 2);
-  const hy = py + C.pad[0], top = hy + head + C.below, lx = px + C.pad[3], L = lay(rows, lx, top, C.list, S);
+  const C = COL[big(ts) ? "c125" : "c"], dv = "d", T0 = DEV[dv].T, head = headH(ts, true, C.ttl), mx = T0 + 2 + GUT / 2, my = T0 + 3 + GUT / 2, hh = help ? helpH(dv, ts) : 0;
+  const [b0, b1] = F.paused ? pauseBand(F) : [0, F.H], Hb = b1 - b0, pw = C.pad[3] + C.list + C.pad[1], u0 = Math.min(1, F.W / (pw + 2 * mx));
+  const chrome = C.pad[0] + head + C.below + hh + C.pad[2];
+  const all = (u) => { const S = run(rows, C.row, C.grp, fl, u); return {S, ph: chrome + S.h + 8 + FOOT1}; };
+  let u = solve(u0, (v) => v * (all(v).ph + 2 * my) <= Hb), S, ph, pages, keys = null, cap = Infinity, kh = 0;
+  if (!fl || u >= PAGE_U) ({S, ph} = all(u)), (pages = paginate(S, Infinity));
+  else { /* page: the rows that fit under the head, the page keys' strip under them, no foot (the strip carries the page) */
+    const capOf = (v) => Hb / v - 2 * my - chrome - 8 - keyH(dv, fl, v);
+    const rowsAt = (v) => paginate(run(rows, C.row, C.grp, fl, v), capOf(v))[0].length;
+    u = u0;
+    if (rowsAt(u) < Math.min(MIN_ROWS, rows.length)) u = Math.max(FLOOR_U, solve(u0, (v) => capOf(v) > 0 && rowsAt(v) >= Math.min(MIN_ROWS, rows.length)));
+    S = run(rows, C.row, C.grp, fl, u); kh = keyH(dv, fl, u); cap = Math.max(capOf(u), S.hs[0]); pages = paginate(S, cap);
+    if (pages.length < 2) { cap = Infinity; pages = [pages.flat()]; }
+    ph = chrome + (pages.length > 1 ? cap + 8 + kh : S.h + 8 + FOOT1);
+  }
+  const Wd = F.W / u, px = (Wd - pw) / 2, py = Math.max(b0 / u + my, (b0 + Hb / 2) / u - ph / 2);
+  const hy = py + C.pad[0], top = hy + head + C.below, lx = px + C.pad[3], paged = pages.length > 1;
+  const L = lay(rows, pages, S, lx, top, C.list, px, px + pw, C.below / 2, 4), lb = paged ? top + cap : L.bot;
+  if (paged) keys = pageKeys(lx, lb + hh + 8, C.list, kh, Math.max(8, fl.g / u));
   return {mode: "col", dev: dv, u, ts, T: T0, plate: R(px, py, pw, ph), head: R(lx, hy, C.list, head), kick: true, ttl: C.ttl,
-    rows: L.out, divs: L.divs, hit: hits(rows, L.out, S, px, px + pw, C.below / 2, 4), pane: null, help: hh ? R(lx, L.bot + 4, C.list, hh - 4) : null,
-    foot: R(px + 8, L.bot + hh + 8, pw - 16, FOOT1), back: null, list: R(lx, top, C.list, L.bot - top)}; // the foot may use the plate's sides
+    rows: L.out, hit: L.hit, divs: L.divs, pageOf: L.pageOf, pages: pages.map((pg) => pg.map((i) => rows[i])), keys, pane: null,
+    help: hh ? R(lx, lb + 4, C.list, hh - 4) : null, foot: paged ? null : R(px + 8, lb + hh + 8, pw - 16, FOOT1), back: null, list: R(lx, top, C.list, lb - top)}; // the foot may use the plate's sides
 }
 function phone(F, rows, ts, help) {
-  const P = PHONE[big(ts) ? "p125" : "p"], css = F.css > 0 ? F.css : 1, n = rows.length, grps = rows.filter((l, i) => i && GROUP.includes(l)).length * P.grp, hh = help ? helpH("p", ts) : 0;
-  const fixed = P.top + P.pad[0] + DEV.p.btnh + P.below + grps + hh + P.pad[2] + P.fgap + FOOT1 + 4 + P.bot;
-  const u = Math.min(1 / css, F.H / (fixed + n * TOUCH.h)), Hd = F.H / u, Wd = F.W / u;
-  const rh = Math.max(TOUCH.h, Math.min(P.row, (Hd - fixed) / n)), S = run(rows, rh, P.grp, null, 1);
-  const pw = Math.min(Wd - 2 * P.side, P.max), px = (Wd - pw) / 2, ph = P.pad[0] + DEV.p.btnh + P.below + S.h + hh + P.pad[2];
-  const py = Math.max(P.top, (Hd - P.bot - FOOT1 - 4 - P.fgap - ph) / 2), ix = px + P.pad[3], iw = pw - P.pad[1] - P.pad[3], hy = py + P.pad[0];
-  const L = lay(rows, ix, hy + DEV.p.btnh + P.below, iw, S);
+  const P = PHONE[big(ts) ? "p125" : "p"], css = F.css > 0 ? F.css : 1, hh = help ? helpH("p", ts) : 0, u = 1 / css, Hd = F.H / u, Wd = F.W / u;
+  const fixed = P.top + P.pad[0] + DEV.p.btnh + P.below + hh + P.pad[2] + P.fgap + FOOT1 + 4 + P.bot;
+  const S = run(rows, TOUCH.h, P.grp, TOUCH, 1); // 44 CSS px rows 8 apart: the mock's 52 pitch
+  let pages, cap = Infinity, keys = null;
+  if (fixed + S.h <= Hd) pages = paginate(S, Infinity);
+  else { cap = Hd - fixed - 8 - TOUCH.h; pages = paginate(S, Math.max(cap, S.hs[0])); }
+  const paged = pages.length > 1, lh = paged ? cap : S.h, ph = P.pad[0] + DEV.p.btnh + P.below + lh + hh + (paged ? 8 + TOUCH.h : 0) + P.pad[2];
+  const side = P.side, padX = Wd < 380 ? 8 : P.pad[3]; // a phone under 380 CSS px keeps the 125 % rows whole: a thinner bed inside the ring
+  const pw = Math.min(Wd - 2 * side, P.max), px = (Wd - pw) / 2, py = Math.max(P.top, (Hd - P.bot - FOOT1 - 4 - P.fgap - ph) / 2), ix = px + padX, iw = pw - 2 * padX, hy = py + P.pad[0];
+  const top = hy + DEV.p.btnh + P.below, L = lay(rows, pages, S, ix, top, iw, px, px + pw, P.below / 2, hh || paged ? 4 : P.pad[2] / 2), lb = top + lh;
+  if (paged) keys = pageKeys(ix, lb + hh + 8, iw, TOUCH.h, TOUCH.g);
   return {mode: "phone", dev: "p", u, ts, T: DEV.p.T, plate: R(px, py, pw, ph), head: R(ix, hy, iw, DEV.p.btnh), kick: false, ttl: DEV.p.ttl,
-    rows: L.out, divs: L.divs, hit: hits(rows, L.out, S, px, px + pw, P.below / 2, hh ? 4 : P.pad[2] / 2), pane: null, help: hh ? R(ix, L.bot + 4, iw, hh - 4) : null,
-    foot: R(px, py + ph + P.fgap, pw, FOOT1), back: R(ix, hy, P.back, DEV.p.btnh), list: R(ix, L.out[rows[0]].y, iw, L.bot - L.out[rows[0]].y)};
+    rows: L.out, hit: L.hit, divs: L.divs, pageOf: L.pageOf, pages: pages.map((pg) => pg.map((i) => rows[i])), keys, pane: null,
+    help: hh ? R(ix, lb + 4, iw, hh - 4) : null, foot: R(px, py + ph + P.fgap, pw, FOOT1), back: R(ix, hy, P.back, DEV.p.btnh), list: R(ix, top, iw, lh)};
 }
 const memo = new Map();
 function geom(F, rows, page) {
-  const ts = F.ts > 0 ? F.ts : textScale(), touchy = !!F.touch, shell = !!F.shell, css = F.css > 0 ? F.css : 1, isPhone = shell && touchy && F.H > F.W * 1.3;
-  const id = [page, F.W, F.H, touchy, shell, css, ts, ...rows].join("|");
+  const ts = F.ts > 0 ? F.ts : textScale(), touchy = !!F.touch, shell = !!F.shell, css = F.css > 0 ? F.css : 1, paused = !!F.paused, isPhone = !paused && shell && touchy && F.H > F.W * 1.3;
+  const id = [page, F.W, F.H, touchy, shell, css, ts, paused, ...rows].join("|");
   let G = memo.get(id);
   if (G) return G;
   const fl = touchy ? {h: TOUCH.h / css, g: TOUCH.g / css} : null;
-  let d = isPhone ? phone(F, rows, ts, page === "graphics") : desk(F, rows, ts, fl);
-  if (!isPhone && !(d.u >= DESK_U)) d = col(F, rows, ts, fl, page === "graphics"); // the desk's part sizes: a col row is the desk's height or the touch floor, never under a part
-  const u = d.u;
-  G = {page, mode: d.mode, dev: d.dev, u, ts, t125: big(ts), W: F.W, H: F.H, d, T: d.T * u, order: rows.slice(), plate: sc(d.plate, u), pane: sc(d.pane, u), back: sc(d.back, u), rows: {}, hit: {}};
+  let d = isPhone ? phone(F, rows, ts, page === "graphics") : paused ? null : desk(F, rows, ts, fl);
+  if (!d || (!isPhone && !(d.u >= DESK_U))) d = col({...F, touch: touchy, paused}, rows, ts, fl, page === "graphics"); // the desk's part sizes: a col row is the desk's height or the touch floor, never under a part
+  const u = d.u, ks = d.keys;
+  G = {page, mode: d.mode, dev: d.dev, u, ts, t125: big(ts), W: F.W, H: F.H, d, T: d.T * u, order: rows.slice(), plate: sc(d.plate, u), pane: sc(d.pane, u), back: sc(d.back, u),
+    pages: d.pages.length ? d.pages : [[]], pageOf: d.pageOf, keys: ks ? {up: sc(ks.up, u), dn: sc(ks.dn, u), strip: sc(ks.strip, u)} : null, rows: {}, hit: {}};
   for (const l of rows) { G.rows[l] = sc(d.rows[l], u); G.hit[l] = sc(d.hit[l], u); }
   if (memo.size > 64) memo.clear();
   memo.set(id, (G = deep(G)));
@@ -149,14 +192,22 @@ function geom(F, rows, page) {
 const rowsOr = (rows, dflt) => (Array.isArray(rows) && rows.length ? rows : dflt);
 export const settingsGeom = (F, rows) => geom(F, rowsOr(rows, []), "settings");
 export const graphicsGeom = (F, rows) => geom(F, rowsOr(rows, GFX_LABELS), "graphics");
-function hitOf(G, x, y) {
+/** The page on screen: the focused row's (focus a label or an index into the rows); 0 without one. */
+export const pageAt = (G, focus) => { const l = typeof focus === "number" ? G.order[focus] : focus; return (l != null && G.pageOf[l]) | 0; };
+function hitOf(G, x, y, focus) {
   if (G.back && inR(G.back, x, y)) return -1;
-  for (let i = 0; i < G.order.length; i++) if (inR(G.hit[G.order[i]], x, y)) return i;
+  const p = pageAt(G, focus), n = G.pages.length;
+  if (G.keys) {
+    if (inR(G.keys.up, x, y)) return p > 0 ? {k: "page", row: G.order.indexOf(G.pages[p - 1][0])} : -2;
+    if (inR(G.keys.dn, x, y)) return p < n - 1 ? {k: "page", row: G.order.indexOf(G.pages[p + 1][0])} : -2;
+  }
+  for (const l of G.pages[p] || []) if (inR(G.hit[l], x, y)) return G.order.indexOf(l);
   return inR(G.plate, x, y) ? -2 : -1;
 }
-/** A tap's index into rows (the visible SETTINGS list optRow indexes, R11); -2 on the plate off the rows (inert), -1 on BACK or off the plate. */
-export const settingsHit = (x, y, F, rows) => (okBox(F) && rowsOr(rows, []).length ? hitOf(settingsGeom(F, rows), x, y) : -1);
-export const graphicsHit = (x, y, F, rows) => (okBox(F) ? hitOf(graphicsGeom(F, rows), x, y) : -1);
+/** A tap's index into rows (the visible SETTINGS list optRow indexes, R11); -2 on the plate off the rows (inert), -1 on BACK or off the plate;
+    a page key answers {k: "page", row} (focus that row: its page opens). F.focus is the focused row (label or index): the page on screen. */
+export const settingsHit = (x, y, F, rows) => (okBox(F) && rowsOr(rows, []).length ? hitOf(settingsGeom(F, rows), x, y, F.focus) : -1);
+export const graphicsHit = (x, y, F, rows) => (okBox(F) ? hitOf(graphicsGeom(F, rows), x, y, F.focus) : -1);
 
 /* ---- values: the words of each row by its label (SETTINGS), and the part that shows them ---- */
 const onOff = (b) => (b ? "ON" : "OFF");
@@ -195,8 +246,9 @@ function gfxSpec(r, phoneM) {
   if (!r) return {t: "none"};
   if (r.locked) return {t: "lock"};
   const s = String(r.val == null ? "" : r.val);
-  if (s === "ON" || s === "OFF") return {t: "rocker", on: s.toLowerCase()};
-  return phoneM ? {t: "door", cands: [s]} : {t: "step", cands: [s], free: true};
+  const [i, n] = Array.isArray(r.at) ? r.at : [-1, 0]; // gfx.js's position on the row's own list: an arrow that cannot move is a well (CUSTOM has none)
+  if ((s === "ON" || s === "OFF") && n === 2) return {t: "rocker", on: s.toLowerCase()}; // a two-way row (FPS METER); DEMO and ANTI-ALIAS have three values: steppers
+  return phoneM ? {t: "door", cands: [s]} : {t: "step", cands: [s], free: true, cl: i === 0, cr: i >= 0 && i === n - 1};
 }
 
 /* ---- the plan: every part's place and words, measured once per change ---- */
@@ -218,14 +270,19 @@ function wrap(c, f, s, w) {
 /* a value's parts, right-aligned at xr on the row's centre cy */
 function valParts(c, s, xr, cy, dv, ts) {
   const P = [];
-  if (s.t === "meter") {
-    const nf = T.num(dv.pri), nw = 2.2 * dv.pri * ts, x1 = xr - nw - 10, cw = dv.mcw, g = 3, w = s.n * cw + (s.n - 1) * g, x0 = x1 - w, y = cy - dv.mch / 2;
+  if (s.t === "meter") { /* a narrow row (a 360 phone at 125 %) tightens the number's cell, then the cells, never under 6 px a cell */
+    const nf = T.num(dv.pri), numW = W(c, nf, s.num), need = (nw0, cw0, g0) => nw0 + 10 + s.n * cw0 + (s.n - 1) * g0, room = s.room > 0 ? s.room : Infinity;
+    let nw = 2.2 * dv.pri * ts, cw = dv.mcw, g = 3;
+    if (need(nw, cw, g) > room) nw = Math.max(numW, room - 10 - (s.n * cw + (s.n - 1) * g));
+    if (need(nw, cw, g) > room) { g = 2; cw = Math.max(6, Math.floor((room - nw - 10 - (s.n - 1) * g) / s.n)); }
+    const x1 = xr - nw - 10, w = s.n * cw + (s.n - 1) * g, x0 = x1 - w, y = cy - dv.mch / 2;
     for (let i = 1; i <= s.n; i++) P.push({k: "cell", kind: i < s.v ? "mid" : i === s.v ? "lit" : "well", r: R(x0 + (i - 1) * (cw + g), y, cw, dv.mch), head: i === s.v, empty: i === s.n && i > s.v});
     P.push({k: "num", s: s.num, f: nf, px: dv.pri, x: xr, y: cy, w: W(c, nf, s.num)});
     return {P, x: x0, w: xr - x0};
   }
-  if (s.t === "rocker") {
-    const cw = dv.rkw, h = dv.keyh - 2, w = 3 + cw + 4 + cw + 3, x0 = xr - w, y = cy - (h + 6) / 2;
+  if (s.t === "rocker") { /* a narrow row narrows the two cells, never under their widest legend + 4 (the row, not a cell, is the tap target) */
+    const lf = T.label(dv.pri), lw = Math.max(W(c, lf, "OFF"), W(c, lf, "ON")) + 4, room = s.room > 0 ? s.room : Infinity;
+    const cw = Math.max(lw, Math.min(dv.rkw, Math.floor((room - 11) / 2))), h = dv.keyh - 2, w = 3 + cw + 4 + cw + 3, x0 = xr - w, y = cy - (h + 6) / 2;
     P.push({k: "trough", r: R(x0, y, w, h + 6)});
     ["off", "on"].forEach((q, i) => P.push({k: "key", kind: s.on === q ? "lit" : "well", r: R(x0 + 3 + i * (cw + 4), y + 3, cw, h), s: q.toUpperCase(), px: dv.pri, chosen: s.on === q}));
     return {P, x: x0, w};
@@ -263,6 +320,8 @@ function valParts(c, s, xr, cy, dv, ts) {
   }
   return {P, x: xr, w: 0};
 }
+/* a row of two lines (the label, then its words under it): their centres, the two lines' em boxes touching 2 px apart round the row's centre */
+const twoLines = (cy, dv, ts) => { const a = dv.pri * ts, b = dv.sec * ts; return {h: a + b + 2, y1: cy - b / 2 - 1, y2: cy + a / 2 + 1}; };
 function rowPlan(c, G, l, spec, dv, ts) {
   const r = G.d.rows[l], cy = r.y + r.h / 2, labx = dv.labx, lf = T.label(dv.pri), lw = W(c, lf, l), xr = r.x + r.w - 12, room = xr - (r.x + labx + lw + 12);
   const o = {l, r, spec, label: {s: l, f: lf, px: dv.pri, x: r.x + labx, y: cy, w: lw, col: spec.t === "reset" ? CONST.cor : CONST.ink}};
@@ -270,6 +329,14 @@ function rowPlan(c, G, l, spec, dv, ts) {
     const f = T.label(dv.sec), s = spec.cands.find((q) => W(c, f, q) + 24 <= room) || spec.cands[spec.cands.length - 1];
     o.word = s; o.val = valParts(c, {...spec, word: s, win: Math.max(room, W(c, f, s) + 24)}, xr, cy, dv, ts);
     return o;
+  }
+  if (spec.t === "door" && spec.cands.length) { /* a door whose first words do not fit beside the label take the row's second line, whole (QA #8) */
+    const f = T.label(dv.sec), s0 = spec.cands[0], w0 = W(c, f, s0), gl = valParts(c, {...spec, word: ""}, xr, cy, dv, ts), two = twoLines(cy, dv, ts);
+    if (valParts(c, {...spec, word: s0}, xr, cy, dv, ts).w > room && r.h >= two.h && r.x + labx + w0 <= gl.x - 8) {
+      o.label.y = two.y1; o.word = s0; o.two = true;
+      o.val = {P: [...gl.P, {k: "text", s: s0, f, px: dv.sec, x: r.x + labx, y: two.y2, w: w0, col: CONST.t2}], x: gl.x, w: gl.w};
+      return o;
+    }
   }
   if (spec.cands) {
     let pick = null;
@@ -281,15 +348,15 @@ function rowPlan(c, G, l, spec, dv, ts) {
     return o;
   }
   if (spec.t === "note") {
-    const f = T.label(dv.sec), nw = W(c, f, spec.s), lh = dv.pri * ts * 1.15;
+    const f = T.label(dv.sec), nw = W(c, f, spec.s), two = twoLines(cy, dv, ts);
     if (nw <= room) o.val = valParts(c, {t: "note", word: spec.s}, xr, cy, dv, ts);
     else { /* a note too wide for the row's right: it takes a second line under its label, whole */
-      o.label.y = cy - lh / 2;
-      o.val = {P: [{k: "text", s: spec.s, f, px: dv.sec, x: r.x + labx, y: cy + dv.sec * ts * 0.65, w: nw, col: CONST.ink}], x: r.x + labx, w: nw};
+      o.label.y = two.y1;
+      o.val = {P: [{k: "text", s: spec.s, f, px: dv.sec, x: r.x + labx, y: two.y2, w: nw, col: CONST.ink}], x: r.x + labx, w: nw};
     }
     return o;
   }
-  o.val = valParts(c, spec, xr, cy, dv, ts);
+  o.val = valParts(c, {...spec, room}, xr, cy, dv, ts);
   return o;
 }
 /* the foot's word sets, longest first: each item is a label and its keycaps (label first, keycap last); a touch layout names the tap model */
@@ -300,6 +367,7 @@ function footSets(touchy, words) {
 }
 /* units (an item with its caps, or the build tag) packed greedily into at most maxL lines of maxW; a line break eats the separator */
 function footPlan(c, G, touchy, words, rev) {
+  if (!G.d.foot) return null; // a paged column: the page keys' strip stands where the foot was
   const d = G.d, dv = DEV[d.dev], ph = d.dev === "p", f = T.label(dv.sec), box = d.foot, maxW = box.w - 32, maxL = d.mode === "desk" ? 2 : 1, sw = W(c, f, "·");
   const unit = (it) => {
     const ps = [{t: it.t, w: W(c, f, it.t), x: 0}];
@@ -517,14 +585,27 @@ function paintFoot(c, F, tok, ph) {
     } else text(c, p.t, p.x, p.y, F.f, CONST.t2);
   }
 }
-function paintStatic(g, G, Pl, tok, u) {
+/* the page keys' strip: PAGE n OF m, then ▲ and ▼ (a key with no page to open is a well) */
+function pagerOf(c, G, p) {
+  const k = G.d.keys, dv = DEV[G.d.dev];
+  if (!k) return null;
+  const f = T.label(dv.sec), s = COPY.page + " " + (p + 1) + " " + COPY.of + " " + G.pages.length;
+  return {s, f, px: dv.sec, x: k.strip.x, y: k.strip.y + k.strip.h / 2, w: measure(c, f, s), up: k.up, dn: k.dn, upOn: p > 0, dnOn: p < G.pages.length - 1};
+}
+function paintPager(g, Q, tok, ph) {
+  if (!Q) return;
+  text(g, Q.s, Q.x, Q.y, Q.f, CONST.t2);
+  for (const [r, on, n] of [[Q.up, Q.upOn, "up"], [Q.dn, Q.dnOn, "dn"]]) { key(g, r.x, r.y, r.w, r.h, on ? "key" : "well", {tok, phone: ph}); mark(g, n, r.x + r.w / 2 - 10, r.y + r.h / 2 - 10, 20, on ? CONST.ink : CONST.off); }
+}
+function paintStatic(g, G, Pl, tok, u, p) {
   const d = G.d, ph = d.dev === "p", dv = DEV[d.dev], H = Pl.head;
   plate(g, d.plate.x, d.plate.y, d.plate.w, d.plate.h, tok, {phone: ph});
   if (H.kick) text(g, H.kick.s, H.kick.x, H.kick.y, H.kick.f, CONST.t2);
   if (H.back) { const r = H.back.r; key(g, r.x, r.y, r.w, r.h, "key", {tok, phone: ph}); mark(g, "chl", r.x + 16, r.y + r.h / 2 - 9, 18, CONST.ink); text(g, H.back.s, r.x + 44, r.y + r.h / 2, T.label(dv.pri), CONST.ink); }
   dsp(g, H.title.s, H.title.x, H.title.y, H.title.px);
-  for (const r of d.divs) course(g, r, tok);
-  for (const l of G.order) paintRow(g, Pl.rows[l], tok, dv, false, 0);
+  for (const q of d.divs) if (q.p === p) course(g, q.r, tok);
+  for (const l of G.pages[p]) paintRow(g, Pl.rows[l], tok, dv, false, 0);
+  paintPager(g, pagerOf(g, G, p), tok, ph);
   if (d.pane) slab(g, d.pane, tok);
   const P = Pl.pane;
   if (P && P.head) {
@@ -544,7 +625,7 @@ function paintGfxPane(c, P) {
 
 /* ---- the probe record (outside any layer paint) ---- */
 const CAP_K = 0.705;
-function record(G, Pl, foc, ui, dpr, el, touchy, gp) {
+function record(G, Pl, foc, ui, dpr, el, touchy, gp, pg) {
   const u = G.u, d = G.d, b = (r) => [r.x * u, r.y * u, r.w * u, r.h * u], tok = worldTokens(ui.level), ts = textScale(), dv = DEV[d.dev];
   const txt = (s, x, y, w, px, col, role, o = {}) => probe.text(s, x * u, (y - px * ts * CAP_K / 2) * u, Math.max(0.01, w * u), px * ts * CAP_K * u, {role, col, px: px * u, ...o});
   probe.begin(G.page, {w: G.W, h: G.H, dpr, el});
@@ -553,7 +634,15 @@ function record(G, Pl, foc, ui, dpr, el, touchy, gp) {
   if (H.kick) txt(H.kick.s, H.kick.x, H.kick.y, H.kick.w, H.kick.px, CONST.t2, "secondary");
   if (H.back) { probe.rect("BACK", ...b(H.back.r), {touch: touchy, fill: tok.key}); txt(H.back.s, H.back.r.x + 44, H.back.r.y + H.back.r.h / 2, measure(Pl.c, T.label(dv.pri), H.back.s), dv.pri, CONST.ink, "primary"); }
   let chosen = false, meterP = false, lockP = null, litR = null, winR = null;
-  for (const l of G.order) {
+  const Q = pagerOf(Pl.c, G, pg);
+  if (Q) {
+    txt(Q.s, Q.x, Q.y, Q.w, Q.px, CONST.t2, "secondary");
+    for (const [nm, r, on] of [["PAGE UP", Q.up, Q.upOn], ["PAGE DOWN", Q.dn, Q.dnOn]]) {
+      probe.rect(nm, ...b(r), {touch: touchy, set: G.page + " pages", kind: "step", fill: on ? tok.key : tok.well});
+      probe.pair("info", b(R(r.x + r.w / 2 - 11, r.y + r.h / 2 - 11, 22, 22)), b(R(r.x + 4, r.y + 5, r.w - 8, r.h - 9)), {col: on ? CONST.ink : CONST.off, name: nm, ...(on ? {} : {lock: true})});
+    }
+  }
+  for (const l of G.pages[pg]) {
     const o = Pl.rows[l], f = l === foc;
     probe.rect(l, ...b(o.r), {touch: touchy, set: G.page, kind: "list", focus: f, fill: f ? tok.band : tok.bedA});
     txt(o.label.s, o.label.x, o.label.y, o.label.w, o.label.px, f && o.spec.t === "reset" ? CONST.ink : o.label.col, "primary");
@@ -572,7 +661,7 @@ function record(G, Pl, foc, ui, dpr, el, touchy, gp) {
     if (!meterP && cells.length) { const h = cells.find((p) => p.head), e = cells.find((p) => p.empty); if (h && e) { meterP = true; probe.pair("chosen", b(R(h.r.x + 2, h.r.y, h.r.w - 4, h.r.h - 4)), b(R(e.r.x + 2, e.r.y + 2, e.r.w - 4, e.r.h - 4)), {name: "meter head vs empty " + l}); } }
   }
   if (lockP && litR) { // floor: a plain bed sample in a row at rest, between its label and its value
-    const o = G.order.map((l) => Pl.rows[l]).find((q) => q.l !== foc && q.val.x - (q.label.x + q.label.w) >= 40), fl = o && R(o.label.x + o.label.w + 12, o.r.y + 6, Math.min(40, o.val.x - (o.label.x + o.label.w) - 24), o.r.h - 12);
+    const o = G.pages[pg].map((l) => Pl.rows[l]).find((q) => q.l !== foc && q.val.x - (q.label.x + q.label.w) >= 40), fl = o && R(o.label.x + o.label.w + 12, o.r.y + 6, Math.min(40, o.val.x - (o.label.x + o.label.w) - 24), o.r.h - 12);
     probe.pair("locked", b(lockP), b(litR), {name: "locked vs chosen", ...(fl ? {floor: b(fl)} : {})});
   }
   const k = d.rows[foc];
@@ -609,20 +698,20 @@ export const _dbg = {plans: 0, last: null};
 const S = {settings: null, graphics: null};
 function frame(c, F, ui, t, page, rows, specs, foc, fks, gRow) {
   if (!okBox(F)) return;
-  const level = ui.level | 0 || 1, tok = worldTokens(level), G = geom(F, rows, page), u = G.u, words = hints(), ts = textScale(), touchy = !!F.touch, paused = !!ui.paused;
+  const level = ui.level | 0 || 1, tok = worldTokens(level), G = geom(F, rows, page), u = G.u, words = hints(), ts = textScale(), touchy = !!F.touch, paused = !!(ui.paused || F.paused), pg = pageAt(G, foc);
   const dev = deviceScale(c), dpr = capDpr(dev, touchy), tap = tapMode(touchy);
-  const sig = JSON.stringify([level, G.mode, +u.toFixed(6), rows, JSON.stringify(specs, (k, v) => (k === "job" ? (v ? v.st : null) : v)), ui.kicker == null ? null : ui.kicker, ui.rev || "", words.dev, words.back, words.move, tap, ui.r3d ? 2 : ui.px ? 1 : 0, ts, dpr, paused]);
+  const sig = JSON.stringify([level, G.mode, +u.toFixed(6), rows, JSON.stringify(specs, (k, v) => (k === "job" ? (v ? v.st : null) : v)), ui.kicker == null ? null : ui.kicker, ui.rev || "", words.dev, words.back, words.move, tap, ui.r3d ? 2 : ui.px ? 1 : 0, ts, dpr, paused, pg]);
   let s = S[page];
   if (!s || s.sig !== sig || s.G !== G || s.c !== c) {
     const Pl = plan(c, G, ui, specs, touchy, words), ob = outer(G.d), pb = sc(ob, u);
     const K = {biome: tok.name, level, W: F.W, H: F.H, look: "2d", textScale: ts, dpr};
     const pageKey = {...K, layer: page + ".page|" + sig}, pw = Math.round(pb.w * dpr), ph = Math.round(pb.h * dpr);
-    const rd = +Math.max(0.5, Math.min(dpr, Math.sqrt(Math.max(0, BUDGET - pw * ph * 4 - 3 * 1024 * 1024) / (4 * F.W * F.H)))).toFixed(3);
+    const rd = Math.min(roomDpr(F.W, F.H, dpr), +Math.max(0.5, Math.min(dpr, Math.sqrt(Math.max(0, BUDGET - pw * ph * 4 - 3 * 1024 * 1024) / (4 * F.W * F.H)))).toFixed(3)); // the LOADING plate's room dpr unless this page needs less
     s = S[page] = {sig, G, c, Pl, ob, pb, pw, ph, pageKey, pageK: keyOf(pageKey), rd, roomK: keyOf({layer: "room", biome: tok.name, level, W: F.W, H: F.H, dpr: rd, look: "2d", textScale: 1}), room: null, page: null, subs: s ? s.subs : []};
     _dbg.plans++;
   }
   const Pl = s.Pl, d = G.d, dv = DEV[d.dev], focus = Pl.rows[foc] ? foc : null, gp = page === "graphics" ? gfxPane(mOf(c), G, gRow) : null;
-  _dbg.last = {G, Pl, foc: focus, s, gp};
+  _dbg.last = {G, Pl, foc: focus, s, gp, pg};
   if (typeof c.clip !== "function" || typeof c.rect !== "function") return;
   if (canMake()) {
     for (const k of s.subs) touchK(k); // the small layers and the page before the room: a value change frees the stale page, never the room
@@ -631,7 +720,7 @@ function frame(c, F, ui, t, page, rows, specs, foc, fks, gRow) {
       if (!s.room || !s.room.width) s.room = roomLayer({w: F.W, h: F.H}, level, tok, {dpr: s.rd, look: "2d", textScale: 1});
       else touchK(s.roomK);
     }
-    if (!s.page || !s.page.width) s.page = layer(s.pageKey, s.pw, s.ph, (g) => { subs = s.subs = []; try { g.scale(dpr * u, dpr * u); g.translate(-s.ob.x, -s.ob.y); paintStatic(g, G, Pl, tok, u); } finally { subs = null; } });
+    if (!s.page || !s.page.width) s.page = layer(s.pageKey, s.pw, s.ph, (g) => { subs = s.subs = []; try { g.scale(dpr * u, dpr * u); g.translate(-s.ob.x, -s.ob.y); paintStatic(g, G, Pl, tok, u, pg); } finally { subs = null; } });
     c.save(); c.imageSmoothingEnabled = true;
     if (!paused) c.drawImage(s.room, 0, 0, F.W, F.H);
     c.drawImage(s.page, s.pb.x, s.pb.y, s.pb.w, s.pb.h);
@@ -639,10 +728,10 @@ function frame(c, F, ui, t, page, rows, specs, foc, fks, gRow) {
   } else {
     c.save();
     if (!paused) { c.fillStyle = toL(tok.bg1, 0.004); c.fillRect(0, 0, F.W, F.H); }
-    c.scale(u, u); paintStatic(c, G, Pl, tok, u); c.restore();
+    c.scale(u, u); paintStatic(c, G, Pl, tok, u, pg); c.restore();
   }
   c.save(); c.scale(u, u);
-  for (const l of G.order) {
+  for (const l of G.pages[pg]) {
     const o = Pl.rows[l];
     if (l === focus) paintRow(c, o, tok, dv, true, fks[l] || 0);
     else if (fks[l] > 0) paintVal(c, {...o, val: {P: [], x: o.val.x, w: o.val.w}}, tok, dv, fks[l]);
@@ -650,7 +739,7 @@ function frame(c, F, ui, t, page, rows, specs, foc, fks, gRow) {
   }
   paintGfxPane(c, gp);
   c.restore();
-  if (probe.probe.on) record(G, Pl, focus, {...ui, level}, dpr, F.shell ? "sh" : "c", touchy, gp);
+  if (probe.probe.on) record(G, Pl, focus, {...ui, level}, dpr, F.shell ? "sh" : "c", touchy, gp, pg);
 }
 const flash = (ui, t) => (typeof ui.togT === "number" && ui.togT >= 0 ? 1 - clamp((t - ui.togT) / 0.12, 0, 1) : 0);
 /** Paints SETTINGS for the frame F; see the header for ui. */

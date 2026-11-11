@@ -26,7 +26,7 @@ const mdScoreTabs=(L,t)=>{ for(let y=8;y<200;y++){ const xs=[]; for(let x=0;x<60
 const menuTap=(i,k=1)=>{const r=menuGeom(menuLayout(600,520),7).rows[ITEMS[i]];return {clientX:(r.x+r.w/2)/k,clientY:(r.y+r.h/2)/k};}; // a row's centre (the MENU page's geometry, rows by name)
 const menuU=()=>menuGeom(menuLayout(600,520),7).u; // box units per design px: the page paints under this scale, so a raw fillText x / y maps through it
 /* a SETTINGS row's centre by LABEL in the ten rows CLASSIC 2D shows (v202 Task 2.4): page and PAUSE view 1 share the 600x520 box */
-const OPT10=optRows(false), optG=()=>settingsGeom(menuLayout(600,520),false,OPT10), optY=(lab,k=1)=>(optG().rows[lab].y+optG().rows[lab].h/2)/k; // v202 Task 3.4: rows by name (pages/settings.js, lazy: set below)
+const OPT10=optRows(false), optG=(p)=>settingsGeom(p?{...menuLayout(600,520),paused:true}:menuLayout(600,520),false,OPT10), optY=(lab,k=1,p=false)=>(optG(p).rows[lab].y+optG(p).rows[lab].h/2)/k; // v202 Task 3.4: rows by name (pages/settings.js, lazy: set below); p: a PAUSE view (the HUD band kept clear, fix round 1)
 lazyPages._set("settings",settingsPage);
 
 const ROOT=dirname(fileURLToPath(import.meta.url))+"/..";
@@ -341,7 +341,7 @@ function mkCanvas(){
   check("PAUSE tap glue setup: pauseView 1 at row 0",
     g.app.pauseView===1&&g.app.optRow===0,
     g.app.pauseView+"/"+g.app.optRow);
-  cv.fire("pointerdown",{clientX:300,clientY:optY("SCREEN SHAKE")});   // the SCREEN SHAKE band
+  cv.fire("pointerdown",{clientX:300,clientY:optY("SCREEN SHAKE",1,true)});   // the SCREEN SHAKE band
   check("PAUSE tap glue: a SCREEN SHAKE row tap toggles the same knob code",
     g.app.optRow===OPT10.indexOf("SCREEN SHAKE")&&g.app.optLabel()==="SCREEN SHAKE"&&g.app.settings.shk===0,
     "optRow="+g.app.optRow+" shk="+g.app.settings.shk);
@@ -361,7 +361,7 @@ function mkCanvas(){
   check("D1 scaled tap: pause OPTIONS row opens the inline page",
     g.app.pauseCursor===PAUSE_ITEMS.indexOf("SETTINGS")&&g.app.pauseView===1,
     g.app.pauseCursor+"/"+g.app.pauseView);
-  cv.fire("pointerdown",{clientX:150,clientY:optY("SCREEN SHAKE",2)});   // the SCREEN SHAKE row, client px = buffer / 2
+  cv.fire("pointerdown",{clientX:150,clientY:optY("SCREEN SHAKE",2,true)});   // the SCREEN SHAKE row, client px = buffer / 2
   check("D1 scaled tap: pause OPTIONS SCREEN SHAKE row toggles SCREEN SHAKE",
     g.app.pauseView===1&&g.app.optLabel()==="SCREEN SHAKE"&&g.app.settings.shk===0,
     g.app.pauseView+"/"+g.app.optRow+"/"+g.app.settings.shk);

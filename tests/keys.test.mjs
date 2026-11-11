@@ -666,10 +666,11 @@ for (const [LK, blob] of LOOKS) withSettings(blob, () => {
   wired("GRAPHICS tap off the rows backs out to OPTIONS on the door (" + LK + ")", g.app.screen === SCREEN.SETTINGS && g.app.optRow === gdoor(g) && g.app.optLabel() === "GRAPHICS", g.app.screen);
   const B = mkEl(), o = menu(B.el); press(o, "Enter");
   press(o, "KeyP"); toRow(o, PAUSE_ITEMS.indexOf("SETTINGS")); press(o, "Enter"); toRow(o, gdoor(o)); press(o, "Enter");
-  B.tap(o, 300, at(5));
+  const PG = graphicsGeom({ ...menuLayout(600, 520), paused: true }), atP = (r) => PG.rows[PG.order[r]].y + PG.rows[PG.order[r]].h / 2; // a PAUSE view: the HUD band kept clear (fix round 1)
+  B.tap(o, 300, atP(5));
   wired("pause view 2 tap on EFFECTS = Enter on it (FULL -> LOW), still PAUSE", o.app.pauseView === 2 && o.app.gfxRow === 5 && o.app.settings.fxq === 0 && o.world.state === "PAUSE",
     o.app.pauseView + "/" + o.app.gfxRow + "/" + o.app.settings.fxq);
-  B.tap(o, 300, 20);
+  B.tap(o, 4, 4); // off the plate (v202 Task 3.4 fix round 1: was (300, 20), ~2 px from the world-kit ring)
   wired("pause view 2 tap off the rows backs to OPTIONS (view 1), still PAUSE", o.app.pauseView === 1 && o.world.state === "PAUSE", o.app.pauseView + "/" + o.world.state);
 });
 // 12 (close-out review): the rest of the documented keys on SCREEN.GRAPHICS and in pauseView 2.

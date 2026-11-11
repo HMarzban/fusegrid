@@ -46,9 +46,10 @@ const footOf = () => { const { P, verb } = pg._dbg.last, F = verb != null && P.f
 /* SETTINGS / GRAPHICS (v202 Task 3.4, pages/settings.js, lazy: in as if its import had landed): the foot is label first, keycap last, read back from the page's plan */
 const sp = await import("../src/render/pages/settings.js");
 (await import("../src/render/pages/lazy.js"))._set("settings", sp);
-const sfootOf = () => { const F = sp._dbg.last.Pl.foot; return F ? F.lines.map((L) => L.ps.map((q) => q.t || q.sep || (Array.isArray(q.cap) ? CAPG[q.cap[0]] : "[" + q.cap + "]")).join(" ")).join(" / ") : ""; };
+const sfootOf = () => { const F = sp._dbg.last.Pl.foot; return F ? F.lines.map((L) => L.ps.map((q) => q.t || q.sep || (Array.isArray(q.cap) ? CAPG[q.cap[0]] : "[" + q.cap + "]")).join(" ")).join(" · ") : ""; }; // the words in order, whether the foot takes one line or two
 const sfoot = (f, want) => (c) => { f(c); const s = sfootOf(); if (s === want) c.fillText(want, 0, 0); }; // the foot's words as one line, so r.has() reads them
 const STATS_UI = { rows: [], notes: [], trophies: [] };
+const LT = md.layout(1024, 768, 207);
 const GFX = { rows: [] };
 /* Every page with a foot, keyboard or touch geometry. */
 const PAGES = {
@@ -59,8 +60,10 @@ const PAGES = {
   FLOOR: (T) => (c) => md.drawFloorHelp(c, L, 9, "2d", T),
   GUIDE: (T) => (c) => md.drawGuide(c, L, 9, 0, "2d", T),
   SCORES: (T) => (c) => md.drawScores(c, [], L, 9, 0, 0, T),
-  OPTIONS: (T) => (c) => md.drawSettings(c, L, 9, { rows: optRows(false), row: "MUSIC", vals: {}, touch: T }),
-  GRAPHICS: (T) => (c) => md.drawGraphics(c, L, 9, { row: 0, view: GFX, touch: T }),
+  /* SETTINGS / GRAPHICS on touch: the tablet's desk (#sh 1024x768), where the page has a foot; a touch 600x520 column pages its 44 CSS px rows
+     and its page keys' strip stands where the foot was (v202 Task 3.4 fix round 1) */
+  OPTIONS: (T) => (c) => md.drawSettings(c, T ? LT : L, 9, { rows: optRows(false), row: "MUSIC", vals: {}, touch: T }),
+  GRAPHICS: (T) => (c) => md.drawGraphics(c, T ? LT : L, 9, { row: 0, view: GFX, touch: T }),
 };
 const PAD = wordsOf("pad", DEF_CONTROLS);
 
@@ -189,7 +192,7 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
     ["GUIDE sub, touch", PAGES.GUIDE(true), "2 RULES · 6 CONTROLS"],
     ["LEVEL touch (compact, 600x520: no foot, its BACK key)", PAGES.LEVEL(true), "BACK"],
     ["LEVEL foot, touch (a landscape tablet in tap mode)", (c) => md.drawLevelSelect(c, 1, md.layout(1024, 768, 200), 9, 0, 0, true, 0, false, true, { ...INFO, tap: true }), md.LEVEL_TAP],
-    ["OPTIONS foot, touch", PAGES.OPTIONS(true), md.FOOT_TAP],
+    ["OPTIONS foot, touch", PAGES.OPTIONS(true), sp.COPY.tapRow], // the tablet desk's pane foot: FOOT_TAP's step-down (FOOT_TAP itself is wider than the pane)
     ["HOW TO foot, touch", PAGES.HOWTO(true), "TAP OUTSIDE TO GO BACK"],
     ["GUIDE foot, touch", PAGES.GUIDE(true), "TAP A DOOR · TAP OUTSIDE TO GO BACK"],
   ];
@@ -318,7 +321,17 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
       const fa = (setHints(null), paint(p(T)), sp._dbg.last.Pl.foot), wa = sfootOf(), fb = (setHints(PAD), paint(p(T)), sp._dbg.last.Pl.foot), wb = sfootOf(), out = () => (x) => ![fa, fb].some((F) => F && inR({ x: F.x, y: F.y, w: F.w, h: F.h }, x)); // either plaque's rect: the bed's tiles under a plaque that moved
       setHints(null);
       const words = (s) => s.replace(/ ?(\[[^\]]*\]|[▲▼◀▶])/g, "");
-      check(`a flip changes words only: ${nm}${T ? " touch" : ""} keeps every rect but its foot's keycaps; the foot's words in order (touch: the tap model's words become the controller's, as before)`, J(flat(a).filter(out(fa))) === J(flat(b).filter(out(fb))) && flat(a).filter(out(fa)).length > 0 && (T || words(wa) === words(wb)), J([words(wa), words(wb)]));
+      /* MENU's rule, per line (fix round 1): each line's width moves by its own keycaps' advance alone (each cap's gap + width) and its words keep
+         their order; the plaque's width moves by the widest line's change, its x by nothing (the pane's foot is left-aligned) or by half of it
+         (a centred foot) */
+      const lineOf = (F) => F.lines.map((L) => ({ w: L.ps.at(-1).x + L.ps.at(-1).w - L.ps[0].x, adv: L.ps.reduce((n, q, i) => n + (q.cap ? q.w + (i ? q.x - (L.ps[i - 1].x + L.ps[i - 1].w) : 0) : 0), 0), words: L.ps.filter((q) => !q.cap).map((q) => q.t || q.sep) }));
+      let moved = true;
+      if (!T) {
+        const la = lineOf(fa), lb = lineOf(fb), dW = Math.max(...lb.map((q) => q.w)) - Math.max(...la.map((q) => q.w)), left = Math.abs(fb.x - fa.x) < 1e-9, centred = Math.abs(fb.x - fa.x + dW / 2) < 1e-9;
+        moved = la.length === lb.length && la.every((q, i) => Math.abs(lb[i].w - q.w - (lb[i].adv - q.adv)) < 1e-6 && J(q.words) === J(lb[i].words)) && Math.abs(fb.w - fa.w - dW) < 1e-6 && (left || centred);
+      }
+      const touchWords = !T || (words(wa) === sp.COPY.tapRow && words(wb) === "ROW · CHANGE · BACK"); // touch: the tap model's words become the controller's keys, both feet present
+      check(`a flip changes words only: ${nm}${T ? " touch" : ""} keeps every rect but its foot's keycaps; the foot's plaque moves by the keycaps' advance alone, its words in order`, J(flat(a).filter(out(fa))) === J(flat(b).filter(out(fb))) && flat(a).filter(out(fa)).length > 0 && !!fa && !!fb && moved && touchWords && (T || words(wa) === words(wb)), J([words(wa), words(wb)]));
       continue;
     }
     if (nm === "LEVEL" && !T) { // v202 Task 3.3: the keyboard foot, MENU's rule: every rect but the caps the same, the plaque moved by the caps' advance alone, its words in order

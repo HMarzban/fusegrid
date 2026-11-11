@@ -290,29 +290,38 @@ module or null, `idle()` asks for every page in the first idle after MENU's firs
 hit is -2 on that plate, -1 off it. Tests import the page or hand it in with `lazy._set`. `src/app` never imports it.
 
 SETTINGS page (UI upgrade v202 Task 3.4, `src/render/pages/settings.js`, lazy; the round 7 S7-menu 04-settings / 04-settings-3d frames): SETTINGS and
-GRAPHICS, and PAUSE views 1 / 2 inside `overlayBox` (`ui.paused`: no room, the plate over the board under PAUSE's veil, the `PAUSED · LEVEL n`
-kicker; a view whose page is not in asks `want("settings")` and shows LOADING). The room of `app.level` dresses it, opaque (SETTINGS and GRAPHICS
-cover). Rows by label (`settingsGeom(F, rows)` over the visible `optRows`, `graphicsGeom(F)` over `GFX_LABELS`, pinned equal to gfx.js
-`GFX_ROWS`); `*Hit` is the index into the visible rows (R11), -2 on the plate, -1 off it or on the phone's BACK. Each row is label left, one game
-part right: MUSIC / SFX a ten-cell meter of bricks (the head lit, the number right, `70`), BRIGHTNESS seven cells (`100%`); SOUND, SCREEN SHAKE,
-REDUCE FLASH, ANALYTICS and GRAPHICS' ON / OFF rows a two-cell rocker; ART STYLE, CAMERA and GRAPHICS' other values a stepper (stepped keys round
-a well window; ART STYLE / CAMERA carry position pips, an arrow that cannot move is a well); GRAPHICS and CONTROLS doors (the word in the quiet
-voice and the chevron: a trailing ` ›` in a value is the glyph; CONTROLS reads `VIBRATION <level>` where it fits, else the device word); RESET
-DEFAULTS coral with the reset glyph; a GRAPHICS locked row is the wall key reading `—` with the lock. Wall courses split audio · look · comfort ·
-privacy · doors · reset (GRAPHICS: preset · rows · meter). Focus is the band + the bare bomb, no ring (no key takes focus). A changed value
-flashes 120 ms as a hard cream overlay (no blur); GRAPHICS flashes every row a preset wrote. The ANALYTICS pad note replaces the rocker, or takes
-the row's second line where it does not fit. A look being prepared turns ART STYLE's value into one well window over the value's room with
-`lookVal`'s first words that fit whole and the fill line at its foot (no line on a failure, its words coral). Three arrangements: desk (a
-keyboard box, or a touch shell box, holding both columns at u >= 0.8: list 480 (540 at 125 %) beside a 400 (440) pane, rows 38 (36), courses
-12, the plate centred 944 wide; the pane is a slab of floor framed in wall cells: SETTINGS shows ART STYLE `n OF 3`, the three looks as keys
-(the chosen one lit) and the REAL 3D rows note; GRAPHICS the focused row's name and help; the foot in the pane, label first, keycap last,
-`ROW ▲▼ · CHANGE ◀▶ · BACK ESC | vREV`; the kicker `BUILD vREV` hidden at 125 % on the desk, where the foot carries the tag), col (#c, PAUSE, the
-iso guard, a short or narrow window: the list alone, rows 34, courses 10, GRAPHICS' two help lines under the rows, the foot at the plate's
-bottom, scaled as one piece) and phone (a touch-portrait shell box: the column in CSS px, BACK beside the title, rows 52 down to 44, ART STYLE
-and CAMERA as door rows, the foot under the plate). A touch box floors rows at 44 CSS px while the rest keeps u >= 0.5, else the floors give
-way (PAUSE on a phone, landscape phones' #c, a 640-tall phone). Cached: the room, one page layer (plate, head, every row at rest, courses,
-pane, foot; keyed by what it shows, so a cursor move never misses and a value change re-rasters once), and two small sub-layers it blits (a
-slab wall cell, the locked key), kept recent with it. `screens.mjs` exempts ring (both) and locked (SETTINGS has none; REAL 3D locks no
+GRAPHICS, and PAUSE views 1 / 2 inside `overlayBox` (a paused box: no room, the plate over the board under PAUSE's veil, kept off the HUD strip
+(its ring under y 40) and, on keys, off the ability bar (over H - 28); the `PAUSED · LEVEL n` kicker; the room being played, `world.level`,
+dresses it, never the menu's `app.level`; a view whose page is not in asks `want("settings")` and shows LOADING on the same tokens). On the
+screens the room of `app.level` dresses it, opaque (SETTINGS and GRAPHICS cover). Rows by label (`settingsGeom(F, rows)` over the visible
+`optRows`, `graphicsGeom(F)` over `GFX_LABELS`, pinned equal to gfx.js `GFX_ROWS`); `*Hit` is the index into the visible rows (R11), -2 on the
+plate, -1 off it or on the phone's BACK, `{k: "page", row}` on a page key. The box the pointer and shellview hand in names the focused row
+(`L.focus`, an index) and, in PAUSE, `paused` and #c's CSS scale (`dims(canvas).css`). Each row is label left, one game part right: MUSIC / SFX a
+ten-cell meter of bricks (the head lit, the number right, `70`), BRIGHTNESS seven cells (`100%`); SOUND, SCREEN SHAKE, REDUCE FLASH, ANALYTICS and
+GRAPHICS' two-way rows (FPS METER) a two-cell rocker; ART STYLE, CAMERA and GRAPHICS' other values a stepper (stepped keys round a well window;
+ART STYLE / CAMERA carry position pips; an arrow that cannot move is a well: GRAPHICS reads the place from gfx.js `gfxView` rows' `at` [i, n],
+CUSTOM none); GRAPHICS and CONTROLS doors (the word in the quiet voice and the chevron: a trailing ` ›` in a value is the glyph; CONTROLS reads
+`VIBRATION <level>` beside its label, or whole on the row's second line where one line does not fit, QA string #8); RESET DEFAULTS coral with the
+reset glyph; a GRAPHICS locked row is the wall key reading `—` with the lock. A narrow phone row narrows its rocker cells and meter (never under
+the legend) rather than drop a word. Wall courses split audio · look · comfort · privacy · doors · reset (GRAPHICS: preset · rows · meter). Focus
+is the band + the bare bomb, no ring (no key takes focus). A changed value flashes 120 ms as a hard cream overlay (no blur); GRAPHICS flashes
+every row a preset wrote. The ANALYTICS pad note replaces the rocker, or takes the row's second line where it does not fit. A look being prepared
+turns ART STYLE's value into one well window over the value's room with `lookVal`'s first words that fit whole and the fill line at its foot
+(no line on a failure, its words coral). TOUCH FLOOR (lead ruling, fix round 1): on every touch layout, SETTINGS, GRAPHICS and their PAUSE views,
+rows are >= 44 CSS px and >= 8 apart; where they do not all fit (a 640-tall phone, landscape phones' #c, a phone's PAUSE view), the list PAGES:
+as many whole rows as fit, a strip of `PAGE n OF m` and two page keys ▲ ▼ (>= 44 CSS px, >= 8 apart; a key with no page is a well) under them;
+the page on screen is always the focused row's, so keys and a controller turn the page by moving past its last row, and a page key's tap
+focuses the first row of the page it opens (nothing confirmed); no drag scroll. Three arrangements: desk (a keyboard box, or a touch shell box,
+holding both columns at u >= 0.8: list 480 (540 at 125 %) beside a 400 (440) pane, rows 38 (36), courses 12, the plate centred 944 wide; the
+pane is a slab of floor framed in wall cells: SETTINGS shows ART STYLE `n OF 3`, the three looks as keys (the chosen one lit) and the REAL 3D
+rows note; GRAPHICS the focused row's name and help; the foot in the pane, label first, keycap last, `ROW ▲▼ · CHANGE ◀▶ · BACK ESC | vREV`; the
+kicker `BUILD vREV` hidden at 125 % on the desk, where the foot carries the tag), col (#c, PAUSE, the iso guard, a short or narrow window: the
+list alone, rows 34 on keys, courses 10, GRAPHICS' two help lines under the rows, the foot at the plate's bottom, or the page keys' strip where
+it pages) and phone (a touch-portrait shell box: the column in CSS px, BACK beside the title, rows 44 8 apart (the mock's 52 pitch), ART STYLE
+and CAMERA as door rows, the foot under the plate). Cached: the room (`menudraw.roomDpr`, the one budget give-way the LOADING plate and the
+page share, so the page that lands finds the plate's room), one page layer per page shown (plate, head, its rows at rest, courses, pane, foot or
+page keys; keyed by what it shows, so a cursor move on a page never misses and a value change re-rasters once), and two small sub-layers it
+blits (a slab wall cell, the locked key), kept recent with it. `screens.mjs` exempts ring (both) and locked (SETTINGS has none; REAL 3D locks no
 GRAPHICS row).
 
 LEVEL SELECT page (UI upgrade v202 Task 3.3, `src/render/pages/level.js`; the round 7 S7-menu d-03 / p-03 frames, refmap `level`). Opaque on the
@@ -745,7 +754,7 @@ not shell screens. Do not add them as `SCREEN` values.
   on `d`, touch `min(1.5, scale·dpr)`; PIXEL backing 2 / 1.5 — density only,
   board size never changes); FULL 3D may reach 3×. Locks: CLASSIC locks
   RESOLUTION/SHADOWS/ANTI-ALIAS, PIXEL locks SHADOWS/ANTI-ALIAS, 3D none (a
-  locked row shows `—`). Value strings show resolved truth (`AUTO 1.5X`).
+  locked row shows `—`). Value strings show resolved truth (`AUTO 1.5X`); each `gfxView` row also carries `at` [i, n], its place on its own list (QUALITY: the preset, -1 for CUSTOM), so the page marks the arrow that cannot move.
   FRAME RATE 30 / 60 / MAX is a **vsync divisor** (`perf.js` gate: median rAF
   interval snapped to `HZ_SNAP`, render every d-th rAF; 120 Hz → 60, 144 →
   72) — never uneven frame-debt pacing; game speed never changes (fixed-step
@@ -791,7 +800,7 @@ not shell screens. Do not add them as `SCREEN` values.
   `hintcopy.js` (the setter that keeps `menudraw.js` free of `src/app/`). All static in the boot graph (111,107
   bytes raw at `ee2a34e`, boot graph +137,052 since `8853efc`; 12 files, on purpose; lazy paint is a later job). `SCREEN.CONTROLS = 16`; from PAUSE `pauseView 3`. The door
   sits between GRAPHICS and RESET DEFAULTS; SETTINGS is twelve rows in REAL 3D and ten otherwise, at its page's pitches (v202 Task 3.4: see SETTINGS page).
-  **CONTROLS is in the CONSOLE PANEL kit like every other menu (lead ruling 2026-11-02, on the owner's ask for one cohesive menu): list on the left, preview pane on the right, HEAT-style tabs, kit band, notch and caret; ↑↓ rows, ←→ tab, ←→ on SENSITIVITY or VIBRATION adjusts.** The other menus do not change, and the all-menus restyle is not planned for this release. MENU carries the note `CONTROLLER READY · SETTINGS › CONTROLS`, naming the VIBRATION level where it fits, and the SETTINGS door reads `VIBRATION MEDIUM ›` the same way; no SETTINGS or PAUSE row of its own. Tap rule exception: on CONTROLS a tap off the
+  **CONTROLS is in the CONSOLE PANEL kit like every other menu (lead ruling 2026-11-02, on the owner's ask for one cohesive menu): list on the left, preview pane on the right, HEAT-style tabs, kit band, notch and caret; ↑↓ rows, ←→ tab, ←→ on SENSITIVITY or VIBRATION adjusts.** The other menus do not change, and the all-menus restyle is not planned for this release. MENU carries the note `CONTROLLER READY · SETTINGS › CONTROLS`, naming the VIBRATION level where it fits, and the SETTINGS door reads `VIBRATION MEDIUM ›` the same way (the `›` is the door's chevron glyph; on a narrow touch row the words take the row's second line, whole); no SETTINGS or PAUSE row of its own. Tap rule exception: on CONTROLS a tap off the
   plate backs out anywhere in the viewport, not only on the canvas. Store `nb.controls.v1` (KEEP); invalid data
   loads that device's defaults, an off-level SENSITIVITY value snaps to the nearest level, a bad `vib` never touches the binds. Keyboard defaults: BOMB SPACE (J, X silent
   aliases until BOMB moves), **THROW E** (SHIFT + BOMB still throws, never advertised), REMOTE Q, PAUSE P, ESC

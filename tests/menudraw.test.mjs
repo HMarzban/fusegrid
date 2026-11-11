@@ -504,7 +504,7 @@ function check(name, cond, detail) {
     {
       const K = opt(optRows(true), { row: "CAMERA", r3d: true }), texts = K.r.texts, d = K.G.d, F = K.Pl.foot;
       const first = texts.find((t) => t.s === "MUSIC"), lastRow = texts.find((t) => t.s === "RESET DEFAULTS"), kick = texts.find((t) => t.s === "BUILD v99");
-      const T = opt(optRows(true), { row: "CAMERA", r3d: true }, true), dT = T.G.d, FT = T.Pl.foot, ftT = T.r.texts.find((t) => t.s === md.FOOT_TAP); // the tap model, whole (the column's foot may use the plate's sides)
+      const T = opt(optRows(true), { row: "CAMERA", r3d: true }, true), dT = T.G.d, FT = T.Pl.foot, pgT = T.G.pageOf.CAMERA, ftT = T.r.texts.find((t) => t.s === "PAGE " + (pgT + 1) + " OF " + T.G.pages.length); // a touch column pages its 44 CSS px rows (fix round 1): the page keys' strip where the foot was
       /* Twelve rows and the foot, no line of key chords on either layout: a fixed line would lie after a rebind (HOW TO keeps the long form).
          Touch names the tap model in the foot. */
       check(
@@ -515,22 +515,26 @@ function check(name, cond, detail) {
         JSON.stringify({ p: d.plate, first, lastRow, F }),
       );
       const bed = T.r.paints.find((q) => q.op === "fillRect" && q.style === worldTokens(1).bedA);
+      const lastOn = T.G.pages[pgT].at(-1), K2 = dT.keys;
       check(
-        `options touch: no controls line, the tap foot inside the touch plate, the plate where the geometry puts it at ${W}x${H}`,
-        !!ftT && !!FT && !T.r.texts.some((t) => /BOMB SPACE|TAP PAUSE PILL/.test(t.s)) && !T.r.texts.some((t) => t.s === "CHANGE") && !texts.some((t) => t.s === md.FOOT_TAP) &&
-          ftT.y > T.r.texts.find((t) => t.s === "RESET DEFAULTS").y && FT.y + FT.h < dT.plate.y + dT.plate.h - 8 + 0.01 &&
+        `options touch: no controls line, the page keys' strip (PAGE n OF m, ▲ ▼) under the focused row's page, inside the touch plate, the plate where the geometry puts it at ${W}x${H}`,
+        !!ftT && !FT && !!K2 && T.G.pages.length > 1 && !T.r.texts.some((t) => /BOMB SPACE|TAP PAUSE PILL/.test(t.s)) && !T.r.texts.some((t) => t.s === "CHANGE") && !texts.some((t) => t.s === md.FOOT_TAP) &&
+          ftT.y > T.r.texts.find((t) => t.s === lastOn).y && K2.up.y + K2.up.h < dT.plate.y + dT.plate.h - 8 + 0.01 &&
           !!bed && Math.abs(bed.box.x - T.G.plate.x) <= 0.01 && Math.abs(bed.box.y - T.G.plate.y) <= 0.01 && Math.abs(bed.box.h - T.G.plate.h) <= 0.01,
         JSON.stringify({ plate: T.G.plate, bed: bed && bed.box, FT }),
       );
       /* The single column's rows are 34 design px, its courses 10 (a touch box floors them at 44 CSS px while the page keeps FLOOR_U, else they give
          way); the page scales as one piece to the box, its plate and ring inside; the drawn labels sit on the geometry's row centres (draw ->
          settingsHit share one table). */
-      const rowsOk = (G, touch) => G.mode === "col" && G.u <= 1 && G.order.length === 12 && G.order.every((l) => (touch ? G.d.rows[l].h >= 34 : G.d.rows[l].h === 34)) &&
+      /* keyboard: the single column's rows are 34 design px, its courses 10, scaled as one piece; touch (fix round 1): every row >= 44 CSS px (css 1
+         here: box px) and >= 8 apart, paged; the plate and ring inside the box; the drawn labels (the shown page) sit on the geometry's row centres */
+      const rowsOk = (G, touch) => G.mode === "col" && G.u <= 1 && G.order.length === 12 && G.order.every((l) => (touch ? G.rows[l].h >= 43.99 : G.d.rows[l].h === 34)) &&
+        (!touch || G.pages.every((pr) => pr.every((l, i) => !i || G.rows[l].y - G.rows[pr[i - 1]].y - G.rows[pr[i - 1]].h >= 7.99))) &&
         G.plate.x - G.T >= -0.01 && G.plate.y - G.T >= -0.01 && G.plate.x + G.plate.w + G.T <= W + 0.01 && G.plate.y + G.plate.h + G.T <= H + 0.01;
-      const centred = (r, G) => G.order.every((l) => { const t = r.texts.find((q) => q.s === l); return t && Math.abs(t.y - (G.d.rows[l].y + G.d.rows[l].h / 2)) < 0.01; });
+      const centred = (r, G, pg) => G.pages[pg].every((l) => { const t = r.texts.find((q) => q.s === l); return t && Math.abs(t.y - (G.d.rows[l].y + G.d.rows[l].h / 2)) < 0.01; });
       check(
-        `options rows: 34 design px (touch: floored or 34), courses between groups, scaled as one piece, plate inside the box at ${W}x${H}`,
-        rowsOk(K.G, false) && rowsOk(T.G, true) && centred(K.r, K.G) && centred(T.r, T.G) && d.divs.length === 5,
+        `options rows: 34 design px on keys, >= 44 CSS px 8 apart on touch (paged), courses between groups, plate inside the box at ${W}x${H}`,
+        rowsOk(K.G, false) && rowsOk(T.G, true) && centred(K.r, K.G, 0) && centred(T.r, T.G, pgT) && d.divs.length === 5,
         JSON.stringify([K.G.u, T.G.u, d.divs.length]),
       );
       check(`3D rows show a real value in REAL 3D at ${W}x${H}`, texts.some((t) => t.s === "FAR") && texts.some((t) => t.s === "130%"), texts.map((t) => t.s).join("|"));
@@ -804,18 +808,20 @@ function check(name, cond, detail) {
     const L = md.layout(W, H);
     for (const touch of [false, true]) for (const R of [optRows(false), optRows(true)]) {
       const n = R.length, tag = `${W}x${H}${touch ? " touch" : ""}, ${n} rows`;
-      const g = md.settingsGeom(L, touch, R), S = g.plate, rr = (l) => g.rows[l], hr = (l) => g.hit[l];
-      const mid = rr(R[0]).x + rr(R[0]).w / 2, cy = rr(R[0]).y + rr(R[0]).h / 2, last = rr(R[n - 1]);
-      const hit = (x, y) => md.settingsHit(x, y, L, R, touch);
-      check(`settingsHit maps every row centre at ${tag}`, R.every((l, i) => hit(mid, rr(l).y + rr(l).h / 2) === i) && g.order.length === n);
+      const g = md.settingsGeom(L, touch, R), S = g.plate, rr = (l) => g.rows[l], hr = (l) => g.hit[l], last = rr(R[n - 1]);
+      const mid = rr(R[0]).x + rr(R[0]).w / 2, cy = rr(R[0]).y + rr(R[0]).h / 2;
+      /* the page on screen is the focused row's (L.focus, an index into R; fix round 1): each page is tapped with its own first row focused */
+      const hitOn = (l) => (x, y) => md.settingsHit(x, y, { ...L, focus: R.indexOf(g.pages[g.pageOf[l]][0]) }, R, touch), hit = hitOn(R[0]), hitL = hitOn(R[n - 1]);
+      check(`settingsHit maps every row centre at ${tag} (${g.pages.length} page(s))`, R.every((l, i) => hitOn(l)(mid, rr(l).y + rr(l).h / 2) === i) && g.order.length === n);
       check(`settingsHit on the plate above the rows (head) is -2, inert at ${tag}`, hit(mid, hr(R[0]).y - 0.5) === -2 && hit(mid, S.y + 4) === -2);
-      check(`settingsHit the last row (${n - 1}) is RESET DEFAULTS' band, its whole height at ${tag}`, R[n - 1] === "RESET DEFAULTS" && hit(mid, last.y + last.h / 2) === n - 1 && hit(mid, last.y + last.h - 0.001) === n - 1);
-      check(`settingsHit on the plate below the rows (foot) is -2, inert at ${tag}`, hit(mid, hr(R[n - 1]).y + hr(R[n - 1]).h + 0.5) === -2 && hit(mid, S.y + S.h - 4) === -2);
+      check(`settingsHit the last row (${n - 1}) is RESET DEFAULTS' band, its whole height at ${tag}`, R[n - 1] === "RESET DEFAULTS" && hitL(mid, last.y + last.h / 2) === n - 1 && hitL(mid, last.y + last.h - 0.001) === n - 1);
+      check(`settingsHit on the plate below the rows (foot / page keys' strip off its keys) is -2, inert at ${tag}`, hitL(mid, hr(R[n - 1]).y + hr(R[n - 1]).h + 0.5) === -2 && hitL(S.x + 6, S.y + S.h - 4) === -2);
       check(`settingsHit off the plate is -1 (back) at ${tag}`,
         hit(S.x - 2, cy) === -1 && hit(S.x + S.w + 2, cy) === -1 && hit(mid, S.y - 2) === -1 && hit(mid, S.y + S.h + 2) === -1);
+      check(`settingsHit: the plate's side margin beside a row is that row (a row owns its lane out to the plate's edge) at ${tag}`, hit(S.x + 4, cy) === 0 && hit(S.x + S.w - 4, cy) === 0);
       check(
-        `settingsHit rows are contiguous — no dead gutter, a course owned half by each side at ${tag}`,
-        R.every((l, i) => !i || Math.abs(hr(l).y - (hr(R[i - 1]).y + hr(R[i - 1]).h)) < 1e-6) && hit(mid, hr(R[1]).y - 0.001) === 0 && hit(mid, hr(R[1]).y + 0.001) === 1,
+        `settingsHit rows are contiguous on each page — no dead gutter, a gap owned half by each side at ${tag}`,
+        g.pages.every((pr) => pr.every((l, i) => !i || Math.abs(hr(l).y - (hr(pr[i - 1]).y + hr(pr[i - 1]).h)) < 1e-6)) && hit(mid, hr(R[1]).y - 0.001) === 0 && hit(mid, hr(R[1]).y + 0.001) === 1,
         String(hit(mid, hr(R[1]).y)),
       );
     }
@@ -856,14 +862,16 @@ function check(name, cond, detail) {
     for (const touch of [false, true]) {
       /* v202 Task 3.4: the single column in this box (rows 34 design px, touch floored or 34), scaled as one piece; the help sits under the rows */
       const g = md.graphicsGeom(L, touch), S = g.plate, rr = (i) => g.rows[g.order[i]], mid = rr(0).x + rr(0).w / 2, cy = rr(0).y + rr(0).h / 2, tg = `${W}x${H}${touch ? " touch" : ""}`;
-      const hit = (x, y) => md.graphicsHit(x, y, L, 0, touch);
-      check(`graphics rows: 34 design px (touch: floored or 34), u <= 1, the help under row 8, plate and ring inside the box (${tg})`,
-        g.mode === "col" && g.u <= 1 && g.order.every((l) => (touch ? g.d.rows[l].h >= 34 : g.d.rows[l].h === 34)) && !!g.d.help && g.d.help.y > g.d.rows[g.order[7]].y + g.d.rows[g.order[7]].h &&
+      const hitOn = (i) => (x, y) => md.graphicsHit(x, y, { ...L, focus: g.order.indexOf(g.pages[g.pageOf[g.order[i]]][0]) }, 0, touch), hit = hitOn(0), hit7 = hitOn(7);
+      const lastOf = (i) => g.pages[g.pageOf[g.order[i]]].at(-1);
+      check(`graphics rows: 34 design px on keys, >= 44 CSS px 8 apart on touch (paged), the help under the shown page's last row, plate and ring inside the box (${tg})`,
+        g.mode === "col" && g.u <= 1 && g.order.every((l) => (touch ? g.rows[l].h >= 43.99 : g.d.rows[l].h === 34)) && !!g.d.help && g.d.help.y >= g.d.rows[lastOf(7)].y + g.d.rows[lastOf(7)].h &&
           S.x - g.T >= -0.01 && S.y - g.T >= -0.01 && S.x + S.w + g.T <= W + 0.01 && S.y + S.h + g.T <= H + 0.01, J([g.u, g.d.help]));
-      check(`graphicsHit maps every row centre at ${tg}`, g.order.every((l, i) => hit(mid, rr(i).y + rr(i).h / 2) === i));
+      check(`graphicsHit maps every row centre at ${tg} (${g.pages.length} page(s))`, g.order.every((l, i) => hitOn(i)(mid, rr(i).y + rr(i).h / 2) === i));
       check(`graphicsHit on the plate off the rows is -2 (inert), off the plate -1 (back) at ${tg}`,
-        hit(mid, g.hit[g.order[0]].y - 0.5) === -2 && hit(mid, g.hit[g.order[7]].y + g.hit[g.order[7]].h + 0.5) === -2 &&
+        hit(mid, g.hit[g.order[0]].y - 0.5) === -2 && hit7(S.x + 6, S.y + S.h - 4) === -2 &&
           hit(S.x - 2, cy) === -1 && hit(S.x + S.w + 2, cy) === -1 && hit(mid, S.y - 2) === -1 && hit(mid, S.y + S.h + 2) === -1);
+      check(`graphicsHit: the plate's side margin beside a row is that row at ${tg}`, hit(S.x + 4, cy) === 0 && hit(S.x + S.w - 4, cy) === 0);
       check(`graphicsHit rows are contiguous at ${tg}`, hit(mid, g.hit[g.order[1]].y - 0.001) === 0 && hit(mid, g.hit[g.order[1]].y + 0.001) === 1);
     }
     for (const touch of [false, true]) for (const kind of ["2d", "px", "3d"]) {
@@ -872,16 +880,17 @@ function check(name, cond, detail) {
       const view = gfx.gfxView(S({ fxq: 0 }), kind, { dpr3d: 1.5, dprPx: 1.5, limit: true, pendingAA: true });
       md.drawGraphics(c, L, 1, { row: 1, view, togT: 0.95, chg: 0b11, touch });
       const tag = `${kind}${touch ? " touch" : ""} ${W}x${H}`, d = g.d, Pl = settingsPage._dbg.last.Pl, gp = settingsPage._dbg.last.gp;
-      const labels = gfx.GFX_ROWS.map((n) => texts.find((t) => t.s === n));
-      check(`graphics: eight labels in the label face at the desk primary size inside the plate (${tag})`, labels.every((t) => t && t.px === 21 && /^700 /.test(t.font) && /system-ui/.test(t.font) && t.y > d.plate.y + 8 && t.y < d.plate.y + d.plate.h - 8));
+      const shown = g.pages[g.pageOf[gfx.GFX_ROWS[1]]], labels = shown.map((n) => texts.find((t) => t.s === n)), lastL = labels.at(-1); // the focused row's page (a touch column pages: fix round 1)
+      check(`graphics: the shown page's labels (${shown.length} of 8) in the label face at the desk primary size inside the plate, no other row's (${tag})`, labels.every((t) => t && t.px === 21 && /^700 /.test(t.font) && /system-ui/.test(t.font) && t.y > d.plate.y + 8 && t.y < d.plate.y + d.plate.h - 8) && !gfx.GFX_ROWS.filter((n) => !shown.includes(n)).some((n) => texts.some((t) => t.s === n)) && (touch || shown.length === 8));
       check(`graphics: the title + its kicker (${tag})`, texts.some((t) => t.s === "GRAPHICS" && /^900 /.test(t.font)) && texts.some((t) => t.s === "PERFORMANCE · BATTERY"));
       const hs = gp.lines.map((q) => q.s), F = Pl.foot;
       check(`graphics: the selected row's help under the rows (the limit line kept first), then the foot (${tag})`, hs.length >= 1 && hs.length <= 2 && hs.join(" ").includes(gfx.HELP_LIMIT) && gp.lines.every((q) => texts.some((t) => t.s === q.s && t.y === q.y)) &&
-        labels[7].y < gp.lines[0].y && gp.lines.at(-1).y < F.y && F.y + F.h <= d.plate.y + d.plate.h + 0.01, J(hs));
+        lastL.y < gp.lines[0].y && (F ? gp.lines.at(-1).y < F.y && F.y + F.h <= d.plate.y + d.plate.h + 0.01 : gp.lines.at(-1).y < d.keys.up.y), J(hs));
       check(`graphics: help lines fit the list width, whole (${tag})`, gp.lines.every((q) => q.w <= d.help.w + 0.01) && !texts.some((t) => /…/.test(t.s)));
       const lk = view.rows.filter((r) => r.locked).map((r) => r.label);
-      const lockR = Object.values(Pl.rows).filter((o) => o.spec.t === "lock").map((o) => o.l), dash = texts.filter((t) => t.s === "—");
-      check(`graphics: locked rows are the wall key reading — (${tag})`, J(lockR) === J(lk) && dash.length >= lk.length);
+      const lockR = Object.values(Pl.rows).filter((o) => o.spec.t === "lock").map((o) => o.l), dash = texts.filter((t) => t.s === "—"), lkShown = lk.filter((n) => shown.includes(n));
+      const lockParts = shown.reduce((n, l) => n + Pl.rows[l].val.P.filter((q) => q.k === "lock").length, 0);
+      check(`graphics: locked rows are the wall key reading —, one lock part and one — each, drawn on the shown page (${tag})`, J(lockR) === J(lk) && dash.length === lkShown.length && lockParts === lkShown.length && lk.every((n) => Pl.rows[n].val.P.filter((q) => q.k === "lock").length === 1), J([dash.length, lkShown.length, lockParts]));
       const fl = rects.filter((r) => r.fill === "#fff2df" && r.a > 0 && r.a < 1);
       check(`graphics: the togT flash lights every changed row (chg mask), a hard overlay, no blur (${tag})`, fl.length === 2 && texts.every((t) => !t.blur), fl.length);
     }
@@ -903,10 +912,12 @@ function check(name, cond, detail) {
   check("OPTIONS / GRAPHICS foot: keys on desktop (label first, keycap last: the page's parts), the tap model on touch (one string, <=60)", md.FOOT_KEYS === undefined &&
     md.FOOT_TAP === "TAP A ROW TO CHANGE IT · TAP OUTSIDE TO GO BACK" && [...md.FOOT_TAP].length <= 60);
   for (const touch of [false, true]) {
-    const { c, texts } = rec();
+    const { c, texts } = rec(), T2 = rec();
     md.drawSettings(c, md.layout(600, 520), 1, { rows: optRows(false), row: "MUSIC", vals: {}, touch });
-    const tap = texts.some((t) => t.s === md.FOOT_TAP), keys = ["ROW", "CHANGE", "BACK"].every((s) => texts.some((t) => t.s === s));
-    check(`OPTIONS foot ${touch ? "touch" : "desktop"}`, touch ? tap && !keys : keys && !tap);
+    md.drawSettings(T2.c, md.layout(1024, 768, 207), 1, { rows: optRows(false), row: "MUSIC", vals: {}, touch }); // the tablet's desk: a foot in the pane
+    const tapW = (q) => q.some((t) => t.s === md.FOOT_TAP || t.s === settingsPage.COPY.tapRow), keys = (q) => ["ROW", "CHANGE", "BACK"].every((s) => q.some((t) => t.s === s));
+    check(`OPTIONS foot ${touch ? "touch: the tap model on the desk, the page keys' strip on a paged 600x520 column (fix round 1)" : "desktop"}`,
+      touch ? tapW(T2.texts) && !keys(T2.texts) && texts.some((t) => /^PAGE 1 OF \d$/.test(t.s)) && !keys(texts) && !tapW(texts) : keys(texts) && !tapW(texts) && keys(T2.texts));
   }
   check("meter density format matches gfx.xOf", [1, 1.25, 1.5, 1.75, 2, 3].every((v) => md.meterText({ fps: 1, kind: "3d", dpr3d: v }) === "1 FPS · " + gfx.xOf(v)));
   {
@@ -1480,13 +1491,18 @@ function check(name, cond, detail) {
     check(`HIGH SCORES: tabs inside the plate, each taps to itself (${tg})`, inBox(sc.S) && sc.tabs.every((r, i) => inPlate(r, sc.S) && md.scoresHit(...ctr(r), L, true) === i));
     for (const [nm, geo, hit, n, R] of [["SETTINGS (ten)", md.settingsGeom, md.settingsHit, 10, optRows(false)], ["SETTINGS (twelve)", md.settingsGeom, md.settingsHit, 12, optRows(true)], ["GRAPHICS", md.graphicsGeom, md.graphicsHit, md.GFX_N, 0]]) {
       /* v202 Task 3.4: the phone column in CSS px (css: the box's scale, as shellview's dims hands it to the draw and the pointer), rows by name */
-      const Lc = md.layout(g.w, g.h, g.logo, g.s), q = geo(Lc, true, R);
-      check(`${nm}: rows inside the box, each taps to itself (${tg})`, inBox({ ...q.plate, f: 1 }) && q.order.length === n && q.order.every((l, i) => inPlate(q.rows[l], q.plate) && hit(...ctr(q.rows[l]), Lc, R, true) === i));
+      const Lc = md.layout(g.w, g.h, g.logo, g.s), q = geo(Lc, true, R), Lf = (l) => ({ ...Lc, focus: q.order.indexOf(q.pages[q.pageOf[l]][0]) }); // its page on screen (paged: fix round 1)
+      check(`${nm}: rows inside the box, each taps to itself (${tg})`, inBox({ ...q.plate, f: 1 }) && q.order.length === n && q.order.every((l, i) => inPlate(q.rows[l], q.plate) && hit(...ctr(q.rows[l]), Lf(l), R, true) === i));
     }
-    /* rows 44..52 CSS px; a phone too short for the floors (640 tall: the BACK head, twelve rows, five courses and the foot need ~760) scales the
-       column as one piece, every row the same height (the floors give way, disclosed in the Task 3.4 report) */
-    const pitch = (R) => { const q = md.settingsGeom(md.layout(g.w, g.h, g.logo, g.s), true, R), hs = q.order.map((l) => q.rows[l].h * g.s); return q.mode === "phone" && (VH >= 800 ? hs.every((h) => h >= 43.99 && h <= 52.01) : hs.every((h) => Math.abs(h - hs[0]) < 1e-6 && h >= 30)) ? true : hs.join(); };
-    check(`OPTIONS on the phone column: rows 44..52 CSS px (a 640-tall phone: one scaled height), ten or twelve rows (${tg})`, pitch(optRows(true)) === true && pitch(optRows(false)) === true, [pitch(optRows(true)), pitch(optRows(false))].join(" / "));
+    /* rows 44 CSS px, 8 apart, on every phone (fix round 1, lead ruling): a phone too short for every row (640 tall) pages them, with the page keys
+       >= 44 CSS px under them; the 852 / 932 phones hold all of them on one page */
+    const pitch = (R) => {
+      const q = md.settingsGeom(md.layout(g.w, g.h, g.logo, g.s), true, R), hs = q.order.map((l) => q.rows[l].h * g.s);
+      const gaps = q.pages.flatMap((pr) => pr.slice(1).map((l, i) => (q.rows[l].y - q.rows[pr[i]].y - q.rows[pr[i]].h) * g.s));
+      const keysOk = q.pages.length === 1 ? VH >= 800 : !!q.keys && q.keys.up.h * g.s >= 43.99 && q.keys.dn.w * g.s >= 43.99 && VH < 800;
+      return q.mode === "phone" && hs.every((h) => Math.abs(h - 44) < 0.01) && gaps.every((v) => v >= 7.99) && keysOk ? true : hs.join() + " | " + q.pages.length;
+    };
+    check(`OPTIONS on the phone column: rows 44 CSS px 8 apart, paged on a 640-tall phone, ten or twelve rows (${tg})`, pitch(optRows(true)) === true && pitch(optRows(false)) === true, [pitch(optRows(true)), pitch(optRows(false))].join(" / "));
     const cg = geoFor(L, true, L.narrow, g.s);
     check(`CONTROLS: plate inside the box, every row inside it and tapping to itself, off the plate backs out (${tg})`,
       cg.x >= 0 && cg.y >= 0 && cg.x + cg.w <= g.w && cg.y + cg.h <= g.h &&
@@ -1520,7 +1536,7 @@ function check(name, cond, detail) {
         walk && pk && walk.x + walk.w + " < " + pk.x);
       for (const r3d of [false, true]) {
         const o = rec();
-        md.drawSettings(o.c, L, 1, { rows: optRows(r3d), row: "MUSIC", touch, rev: "v0" });
+        md.drawSettings(o.c, L, 1, { rows: optRows(r3d), row: "RESET DEFAULTS", touch, rev: "v0" }); // RESET DEFAULTS focused: its page on screen where the rows page
         const line = o.texts.find((t) => t.s.indexOf("MOVE WASD") === 0);
         check(`OPTIONS never says K+MOVE and prints no fixed key line (${tg}${touch ? " touch" : ""}, ${optRows(r3d).length} rows drawn)`,
           !o.texts.some((t) => K.test(t.s)) && !line && o.texts.some((t) => t.s === "RESET DEFAULTS"), line && line.s);
@@ -1689,13 +1705,14 @@ function check(name, cond, detail) {
     a.lastDev = "pad";
     check("door reads CONTROLLER on a pad", door(draw(a, PLAY)) === "CONTROLLER");
     a.lastDev = "key";
-    check("door reads CONTROLLER on a touch layout", door(draw(a, PLAY, boxOf(600, 520, 378, "p"))) === "CONTROLLER");
+    const ctlRow = (q) => { q.optRow = q.optRows().indexOf("CONTROLS"); return q; }; // a touch 600x520 column pages its rows (fix round 1): the CONTROLS row's page on screen
+    check("door reads CONTROLLER on a touch layout", door(draw(ctlRow(a), PLAY, boxOf(600, 520, 378, "p"))) === "CONTROLLER");
     a.screen = SCREEN.GAME; a.pauseView = 1; a.lastDev = "pad";
     check("PAUSE OPTIONS carries the same door", door(draw(a, PAUSE)) === "CONTROLLER");
     const v = mk(), vd = (R) => R.texts.some((t) => t.s === "VIBRATION MEDIUM");
     v.screen = SCREEN.SETTINGS;
     check("a pad with an actuator: the door reads the level, on keys and on a pad", vd(draw(v, PLAY)) && (v.lastDev = "pad", vd(draw(v, PLAY))) && !has(draw(v, PLAY), "CONTROLLER"));
-    check("and on a touch layout", vd(draw(v, PLAY, boxOf(600, 520, 378, "p"))));
+    check("and on a touch layout", vd(draw(ctlRow(v), PLAY, boxOf(600, 520, 378, "p"))));
     v.screen = SCREEN.GAME; v.pauseView = 1;
     check("and in PAUSE OPTIONS", vd(draw(v, PAUSE)));
     const gone = mk("lost"); gone.screen = SCREEN.SETTINGS;

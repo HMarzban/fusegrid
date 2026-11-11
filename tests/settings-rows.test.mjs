@@ -256,10 +256,12 @@ const tsnap = (a) => { const s = a.settings; return { scr: a.screen, pv: a.pause
 for (const lay of ["d", "l", "p"]) for (const r3d of [false, true]) for (const where of ["page", "PAUSE view 1"]) {
   const tag = `tap (${lay}, ${r3d ? "REAL 3D" : "CLASSIC 2D"}, ${where})`;
   const t0 = tapRig(lay, r3d, where), rows = t0.app.optRows(), R = t0.draw(), drawn = rowTexts(R);
-  const L = where === "page" ? md.layout(t0.surf.width, t0.surf.height, t0.surf.logo, dims(t0.surf, "2d").css) : md.layout(overlayBox("2d").w, overlayBox("2d").h); // css: the phone column's scale, as the draw and the pointer read it (v202 Task 3.4)
+  /* css: the box's CSS scale, as the draw and the pointer read it (v202 Task 3.4); a PAUSE view is paused (the HUD band clear) and pages its rows on a touch #c (fix round 1) */
+  const css = dims(t0.surf, "2d").css, L = where === "page" ? md.layout(t0.surf.width, t0.surf.height, t0.surf.logo, css) : { ...md.layout(overlayBox("2d").w, overlayBox("2d").h, undefined, css), paused: true };
   const G = md.settingsGeom(L, t0.touch, rows), ctr = (r) => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 }); // rows by name, box units (G.d: design px, the drawn texts' own)
-  check(`${tag}: drawn rows = optRows(${r3d}); each label sits on its geometry row's centre line`, J(drawn.map((t) => t.s)) === J(rows) && drawn.every((t) => Math.abs(t.y - (G.d.rows[t.s].y + G.d.rows[t.s].h / 2)) < 1e-6) && G.order.length === rows.length, J(drawn.map((t) => [t.s, +t.y.toFixed(2)])));
-  { const bad = [], tok = worldTokens(1);
+  check(`${tag}: drawn rows = the focused row's page of optRows(${r3d}) (${G.pages.length} page(s)); each label sits on its geometry row's centre line`, J(drawn.map((t) => t.s)) === J(G.pages[0]) && J(G.pages.flat()) === J(rows) && drawn.every((t) => Math.abs(t.y - (G.d.rows[t.s].y + G.d.rows[t.s].h / 2)) < 1e-6) && G.order.length === rows.length, J(drawn.map((t) => [t.s, +t.y.toFixed(2)])));
+  if (lay !== "d" && where !== "page") check(`${tag}: a phone's PAUSE view pages its 44 CSS px rows`, G.pages.length > 1 && G.order.every((l) => G.rows[l].h * css >= 43.99));
+  { const bad = [], tok = worldTokens(where === "page" ? 1 : 3); // a PAUSE view wears the room being played (the rig's world.level 3), the page app.level's
     for (let i = 0; i < rows.length; i++) {
       const t = tapRig(lay, r3d, where); t.app.optRow = i;
       const band = (t.draw().paints.find((q) => q.op === "fill" && q.style === tok.band) || {}).box, want = G.rows[rows[i]];
@@ -269,6 +271,7 @@ for (const lay of ["d", "l", "p"]) for (const r3d of [false, true]) for (const w
   let bad = [];
   for (let i = 0; i < rows.length; i++) {
     const t = tapRig(lay, r3d, where), lab = rows[i], d = ctr(G.rows[lab]);
+    t.app.optRow = rows.indexOf(G.pages[G.pageOf[lab]][0]); // its page on screen (the focus carries the page)
     t.app.settings.mus = 30;
     const b = tsnap(t.app); t.tapAt(d.x, d.y); const s = tsnap(t.app);
     if (!(t.app.optLabel() === lab && did(lab, b, s))) bad.push(lab + " " + J([t.app.optRow, b, s])); // RESET DEFAULTS in REAL 3D drops to ten rows: same label, a new index
@@ -279,10 +282,44 @@ for (const lay of ["d", "l", "p"]) for (const r3d of [false, true]) for (const w
     const t = tapRig(lay, true, where), camY = ctr(G.rows.CAMERA);
     t.app.optRow = t.app.optRows().indexOf("CAMERA");
     t.app.lookJob = { k: "3d", state: "failed", fails: 1 }; t.app.lookFailed("3d", "2d");
-    const G2 = md.settingsGeom(L, t.touch, t.app.optRows()), lab2 = G2.order.find((l) => { const r = G2.hit[l]; return camY.y >= r.y && camY.y < r.y + r.h; }), under = lab2 ? { s: lab2 } : null; // the row whose tap rect holds the old spot
+    const G2 = md.settingsGeom(L, t.touch, t.app.optRows()), lab2 = G2.pages[sp.pageAt(G2, t.app.optLabel())].find((l) => { const r = G2.hit[l]; return camY.y >= r.y && camY.y < r.y + r.h; }), under = lab2 ? { s: lab2 } : null; // the row on the page now shown whose tap rect holds the old spot
     t.app.settings.mus = 30;
     const b = tsnap(t.app); t.tapAt(camY.x + 4, camY.y); const s = tsnap(t.app);
     check(`${tag}: after REAL 3D is lost the cursor is on ART STYLE, and a tap at CAMERA's old spot acts on the row drawn there now (${under && under.s})`, !!under && t.app.optLabel() === under.s && did(under.s, b, s) && s.cam === b.cam, J([under && under.s, t.app.optLabel(), b, s]));
+  }
+}
+
+// ---- 4b. paging (fix round 1, lead ruling): where 44 CSS px rows do not fit, every row is reachable by keys, a controller and taps ----
+{
+  const g6 = shellGeo(360, 640), rect6 = { left: 0, top: 0, width: g6.w * g6.s, height: g6.h * g6.s };
+  const box6 = { width: g6.w, height: g6.h, logo: g6.logo, ownerDocument: { body: { getAttribute: (k) => (k === "data-lay" ? "p" : null) } }, getBoundingClientRect: () => rect6 };
+  const shown = (R) => rowTexts(R).map((t) => t.s);
+  for (const [dev, step] of [["keys", (g) => press(g, "ArrowDown")], ["controller", (g) => padTap(g, "dD")]]) for (const look of ["2d", "3d"]) {
+    const g = game(look);
+    toPage(g);
+    const rows = g.app.optRows(), seen = new Set(), bad = [];
+    for (let i = 0; i < rows.length; i++) {
+      const R = shellDraw(g.app, g.world, box6), G = sp._dbg.last.G, lab = g.app.optLabel(), on = shown(R);
+      if (J(on) !== J(G.pages[G.pageOf[lab]]) || !on.includes(lab)) bad.push(lab + " " + J(on));
+      on.forEach((l) => seen.add(l));
+      step(g);
+    }
+    const G = md.settingsGeom(md.layout(g6.w, g6.h, g6.logo, g6.s), true, rows);
+    check(`paging on ${dev} (${look}, 360x640 phone, ${G.pages.length} pages): moving past a page's last row turns the page; every row is shown and focused once`, G.pages.length > 1 && bad.length === 0 && seen.size === rows.length, bad.join(" | "));
+  }
+  for (const r3d of [false, true]) {
+    const t = tapRig("p", r3d, "PAUSE view 1"), rows = t.app.optRows(), css = dims(t.surf, "2d").css, L = { ...md.layout(600, 520, undefined, css), paused: true, focus: 0 };
+    const G = md.settingsGeom(L, true, rows), ctr = (r) => [r.x + r.w / 2, r.y + r.h / 2], seen = [], bad = [];
+    for (let p = 0; p < G.pages.length; p++) {
+      const on = shown(t.draw());
+      if (J(on) !== J(G.pages[p])) bad.push("page " + p + " " + J(on));
+      seen.push(...on);
+      if (p < G.pages.length - 1) { t.tapAt(...ctr(G.keys.dn)); if (t.app.optLabel() !== G.pages[p + 1][0] || t.app.pauseView !== 1) bad.push("▼ on page " + p + " -> " + t.app.optLabel()); }
+    }
+    for (let p = G.pages.length - 1; p > 0; p--) { t.tapAt(...ctr(G.keys.up)); if (t.app.optLabel() !== G.pages[p - 1][0]) bad.push("▲ on page " + p + " -> " + t.app.optLabel()); }
+    const s0 = tsnap(t.app); t.tapAt(...ctr(G.keys.up)); // page 1 has no page before it: inert
+    check(`paging on taps (a phone's PAUSE view 1, ${rows.length} rows, ${G.pages.length} pages): ▼ opens each page in turn (its first row focused, nothing confirmed), ▲ walks back, every row shown once`,
+      G.pages.length > 1 && bad.length === 0 && J(seen) === J(rows) && J(tsnap(t.app)) === J(s0) && t.app.optRow === 0, bad.join(" | "));
   }
 }
 

@@ -3,6 +3,7 @@
    nothing reflows; the words fit the slot at every layout. shellview hands
    index.html's loader where the chip may show. */
 import * as md from "../src/render/menudraw.js";
+import { rec as textrec } from "./lib/textrec.mjs";
 import { loaderSpot, stepLookNote } from "../src/render/shellview.js";
 import { overlayBox } from "../src/render/scenes.js";
 import { setHints } from "../src/render/hintcopy.js";
@@ -127,12 +128,15 @@ for (const dev of ["key", "touch", "pad"]) for (const R of [optRows(false), optR
       const { c, o } = job(L, touch, R, n), cands = md.lookVal(n, touch), t = o.val.P.find((q) => q.k === "text"), win = o.val.P.find((q) => q.win);
       const right = o.val.x >= o.label.x + o.label.w + 6, inWin = !win || (t && t.x >= win.r.x && t.x + t.w <= win.r.x + win.r.w + 0.01);
       if (!cands.includes(o.word) || !right || !inWin || !t) { ok = false; worst = o.word + " " + JSON.stringify([o.val.x, o.label.x + o.label.w]); }
+      /* fix round 1 (narrowed assertion 1): the word is exactly the rule's: the first of lookVal's words that fits the room whole, else the last
+         (the window: word + 24 inside the value's room; a phone's door: word + 10 + chevron + 4, or the whole first words on the row's second line) */
       c.font = t ? t.f : "";
-      const room = win ? win.r.w - 24 : Infinity, fits0 = c.measureText(cands[0]).width <= room;
-      if (fits0 && o.word !== cands[0]) first = false;
+      const room = o.r.x + o.r.w - 12 - (o.label.x + o.label.w + 12), mw = (q) => c.measureText(q).width, gs = o.val.P.find((q) => q.k === "glyph");
+      const need = (q) => (win ? mw(q) + 24 : mw(q) + 10 + (gs ? gs.r.w : 16) + 4), exp = o.two ? cands[0] : cands.find((q) => need(q) <= room) ?? cands.at(-1);
+      if (o.word !== exp || (o.two && need(cands[0]) <= room)) { first = false; worst = worst || o.word + " vs " + exp; }
     }
     check("fits the slot whole, clear of the label, never clipped: " + name + " · " + dev, ok, worst);
-    check("the longest words that fit (the full words, look named, wherever they fit): " + name + " · " + dev, first);
+    check("the words are exactly the first of lookVal's that fits whole, else the last (the full words, look named, wherever they fit): " + name + " · " + dev, first, worst);
   }
 }
 setHints(null);
@@ -162,7 +166,13 @@ setHints(null);
   md.drawSettings(f, L, 1, { rows: V, row: "ART STYLE", vals: {}, job: { k: "px", st: "fail", fill: -1 } });
   const fw = sp._dbg.last.Pl.rows["ART STYLE"].word;
   check("failure: the danger colour plus words, no line", md.lookVal({ k: "px", st: "fail" }, false).includes(fw) && f.texts.some((t) => t.s === fw && t.col === "#ff5d73") && !f.rects.some((r) => r.h === 2 && r.y > y && r.y + 2 <= y + h), fw);
-  check("failure on the selected row: the band, and the words keep the danger colour on it", f.rects.length > 0 && f.texts.filter((t) => t.s === fw).every((t) => t.col === "#ff5d73"));
+  { /* fix round 1 (narrowed assertion 2): the world's band fill sits exactly at ART STYLE's rect and the coral words are drawn inside it */
+    const tr = textrec();
+    md.drawSettings(tr.ctx, L, 1, { rows: V, row: "ART STYLE", vals: {}, job: { k: "px", st: "fail", fill: -1 } });
+    const G = sp._dbg.last.G, r = G.rows["ART STYLE"], u = G.u, fw2 = sp._dbg.last.Pl.rows["ART STYLE"].word, bandP = tr.paints.find((q) => q.op === "fill" && q.style === tok0.band), w = tr.texts.find((t) => t.s === fw2 && t.fill === "#ff5d73");
+    const inBand = !!w && w.x * u >= r.x && (w.x + w.w) * u <= r.x + r.w && w.y * u > r.y && w.y * u < r.y + r.h;
+    check("failure on the selected row: the world's band at ART STYLE's rect, the coral words inside it", !!bandP && ["x", "y", "w", "h"].every((k) => Math.abs(bandP.box[k] - r[k]) < 0.01) && inBand, JSON.stringify([bandP && bandP.box, r, w]));
+  }
   const p = recCtx();
   md.drawSettings(p, md.layout(overlayBox("2d").w, overlayBox("2d").h), 1, { kicker: "PAUSED · LEVEL 2", paused: true, rows: optRows(true), row: "MUSIC", vals: {}, r3d: true, job: { k: "3d", st: "preparing", phase: "shaders", done: 18, total: 31 } });
   check("PAUSE's SETTINGS view draws the same row", p.texts.some((t) => t.s === "REAL 3D · SHADERS 18 / 31" || t.s === "SHADERS 18 / 31"));

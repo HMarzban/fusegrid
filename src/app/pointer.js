@@ -26,7 +26,10 @@ export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: {
       const B = overlayBox(kind());
       if (app.pauseView === 3) return void ctl().tap(controlsHit(app.controls.view(app.ctlT), px, py, canvas, kind(), true));
       if (app.pauseView) {
-        const row = app.pauseView === 2 ? graphicsHit(px, py, menuLayout(B.w, B.h), 0, touchLay(canvas)) : settingsHit(px, py, menuLayout(B.w, B.h), app.optRows(), touchLay(canvas)); // an index into the visible rows, what optRow is (R11)
+        /* the PAUSE view's box: overlayBox at #c's CSS scale (the touch floors), paused (the HUD band kept clear) and the focused row (its page is the one on screen) */
+        const g2 = app.pauseView === 2, PL = { ...menuLayout(B.w, B.h, undefined, dims(canvas, kind()).css), paused: true, focus: g2 ? app.gfxRow : app.optRow };
+        const row = g2 ? graphicsHit(px, py, PL, 0, touchLay(canvas)) : settingsHit(px, py, PL, app.optRows(), touchLay(canvas)); // an index into the visible rows, what optRow is (R11)
+        if (row && typeof row === "object") { app[g2 ? "gfxRow" : "optRow"] = row.row; return; } // a page key: focus the first row of the page it opens
         if (row < 0) { if (row === -1) app.pauseBack(); } // -2: on the plate, off the rows (inert)
         else {
           app[app.pauseView === 2 ? "gfxRow" : "optRow"] = row;
@@ -57,13 +60,15 @@ export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: {
       const r = cv.getBoundingClientRect();
       const k = cv.width / (r.width || cv.width);
       const { cw, ch, lg, css } = dims(cv, kind());
+      const L = menuLayout(cw, ch, lg, css); // css: the MENU phone column's CSS px per box unit (shellview dims)
       const row = (menu ? menuHit : gx ? graphicsHit : gd ? guideHit : settingsHit)(
         (ev.clientX - r.left) * k,
         (ev.clientY - r.top) * k,
-        menuLayout(cw, ch, lg, css), // css: the MENU phone column's CSS px per box unit (shellview dims)
+        menu || gd ? L : { ...L, focus: gx ? app.gfxRow : app.optRow }, // SETTINGS / GRAPHICS: the focused row, whose page is on screen
         app.screen === SCREEN.SETTINGS ? app.optRows() : ITEMS.length, // SETTINGS maps into the visible rows (R11)
         touchLay(cv),
       );
+      if (row && typeof row === "object") return void (app[gx ? "gfxRow" : "optRow"] = row.row); // a page key: focus the first row of the page it opens
       if (row < 0) return menu || row < -1 ? undefined : app.back(); // -2: on the plate, off the rows (inert)
       app[menu ? "cursor" : gx ? "gfxRow" : gd ? "guideRow" : "optRow"] = row;
       app.confirm();

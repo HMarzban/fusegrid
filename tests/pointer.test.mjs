@@ -102,11 +102,12 @@ for (const st of ["PLAY", "WIN", "LOSE"]) {
 // ---- PAUSE inline pages: OPTIONS (view 1) and GRAPHICS (view 2) ----
 for (const [pv, fn, other, field, row, R] of [[1, "settingsHit", "graphicsHit", "optRow", 6, optRows(false)], [1, "settingsHit", "graphicsHit", "optRow", 11, optRows(true)], [2, "graphicsHit", "settingsHit", "gfxRow", 3, null]]) {
   const r = rig({ app: { screen: SCREEN.GAME, pauseView: pv }, state: "PAUSE", rows: R });
-  const n4 = pv === 1 ? R : 0, F = (x, y) => REAL[fn](x, y, L0, n4, false), on = mid((x, y) => F(x, y) === row), plate = spot((x, y) => F(x, y) === -2), off = spot((x, y) => F(x, y) === -1);
+  const PL0 = { ...L0, paused: true, focus: 0 }; // v202 Task 3.4 fix round 1: a PAUSE view's box is paused (the HUD band clear) and names the focused row (its page)
+  const n4 = pv === 1 ? R : 0, F = (x, y) => REAL[fn](x, y, PL0, n4, false), on = mid((x, y) => F(x, y) === row), plate = spot((x, y) => F(x, y) === -2), off = spot((x, y) => F(x, y) === -1);
   r.down(on.x, on.y);
   const c = r.H.last(fn), lc = r.H.last("layout");
   check("PAUSE view " + pv + (R ? " (" + R.length + " rows)" : "") + ": a tap on row " + row + " sets " + field + " and confirms", r.app[field] === row && J(r.log) === J([["confirm"]]) && r.input._intent.fire === false, r.app[field] + " " + J(r.log));
-  check("PAUSE view " + pv + ": " + fn + "(px, py, layout(B.w, B.h), " + (pv === 1 ? "app.optRows()" : "0") + ", touchLay(#c)), never " + other, c.a[0] === on.x && c.a[1] === on.y && J(c.a[2]) === J(L0) && c.a[3] === n4 && c.a[4] === false && lc.a.length === 2 && lc.a[0] === 600 && lc.a[1] === 520 && r.H.of(other).length === 0, J(lc.a));
+  check("PAUSE view " + pv + ": " + fn + "(px, py, layout(B.w, B.h), " + (pv === 1 ? "app.optRows()" : "0") + ", touchLay(#c)), never " + other, c.a[0] === on.x && c.a[1] === on.y && J(c.a[2]) === J(PL0) && c.a[3] === n4 && c.a[4] === false && lc.a.length === 4 && lc.a[0] === 600 && lc.a[1] === 520 && lc.a[2] === undefined && r.H.last("dims").a[0] === r.canvas && r.H.of(other).length === 0, J(lc.a));
   r.log.length = 0; r.down(plate.x, plate.y);
   check("PAUSE view " + pv + ": -2 (on the plate, off the rows) is inert", r.log.length === 0 && r.app[field] === row, J(r.log));
   r.down(off.x, off.y);
@@ -150,6 +151,13 @@ for (const [pv, fn, other, field, row, R] of [[1, "settingsHit", "graphicsHit", 
   check("CONTROLS: ctl.tap(controlsHit(app.controls.view(app.ctlT), x, y, cv, kind, false))", r.taps[0] === SENT && c.a[0].view === 2 && c.a[1] === 100 && c.a[2] === 100 && c.a[3] === cv && c.a[4] === "2d" && c.a[5] === false && r.log.length === 0 && r.input._intent.fire === false, J(c.a.slice(0, 3)));
 }
 
+// ---- a page key (v202 Task 3.4 fix round 1): {k: "page", row} focuses that row (its page opens), confirms nothing, on the page and in PAUSE ----
+for (const [scr, pv, fn, field] of [[SCREEN.SETTINGS, 0, "settingsHit", "optRow"], [SCREEN.GRAPHICS, 0, "graphicsHit", "gfxRow"], [SCREEN.GAME, 1, "settingsHit", "optRow"], [SCREEN.GAME, 2, "graphicsHit", "gfxRow"]]) {
+  const r = rig({ app: { screen: scr, pauseView: pv }, state: pv ? "PAUSE" : "PLAY", over: { [fn]: () => ({ k: "page", row: 5 }) } });
+  r.down(100, 100);
+  check(`a page key on ${pv ? "PAUSE view " + pv : scr === SCREEN.SETTINGS ? "SETTINGS" : "GRAPHICS"}: ${field} = its row, nothing confirmed or backed`, r.app[field] === 5 && r.log.length === 0, J(r.log));
+}
+
 // ---- MENU / OPTIONS / GRAPHICS / GUIDE: a row tap = Enter on it; off the rows a page backs out, MENU does nothing ----
 for (const [scr, fn, field, row, offAct, R] of [[SCREEN.MENU, "menuHit", "cursor", 4, null], [SCREEN.SETTINGS, "settingsHit", "optRow", 6, "back", optRows(false)], [SCREEN.SETTINGS, "settingsHit", "optRow", 11, "back", optRows(true)], [SCREEN.GRAPHICS, "graphicsHit", "gfxRow", 2, "back"], [SCREEN.GUIDE, "guideHit", "guideRow", 3, "back"]]) {
   const r = rig({ app: { screen: scr }, rows: R }), n4 = R || ITEMS.length, F = (x, y) => REAL[fn](x, y, L0, n4, false);
@@ -157,7 +165,7 @@ for (const [scr, fn, field, row, offAct, R] of [[SCREEN.MENU, "menuHit", "cursor
   r.down(on.x, on.y);
   const c = r.H.last(fn), lc = r.H.last("layout");
   check(fn + (R ? " (" + R.length + " rows)" : "") + ": a tap on row " + row + " sets " + field + " and confirms, fire swallowed", r.app[field] === row && J(r.log) === J([["confirm"]]) && r.input._intent.fire === false, r.app[field] + " " + J(r.log));
-  check(fn + "(x, y, layout(cw, ch, lg, css), " + (R ? "app.optRows()" : "ITEMS.length") + ", touchLay(cv)) with dims(cv, kind) (css: the MENU phone column's scale, none on #c)", c.a[0] === on.x && c.a[1] === on.y && J(c.a[2]) === J(L0) && c.a[3] === n4 && c.a[4] === false && lc.a.length === 4 && lc.a[2] === undefined && lc.a[3] === undefined && r.H.last("dims").a[0] === r.canvas && r.H.last("dims").a[1] === "2d", J(lc.a));
+  check(fn + "(x, y, layout(cw, ch, lg, css), " + (R ? "app.optRows()" : "ITEMS.length") + ", touchLay(cv)) with dims(cv, kind) (css: the MENU phone column's scale, none on #c)", c.a[0] === on.x && c.a[1] === on.y && J(c.a[2]) === J(scr === SCREEN.SETTINGS || scr === SCREEN.GRAPHICS ? { ...L0, focus: 0 } : L0) && c.a[3] === n4 && c.a[4] === false && lc.a.length === 4 && lc.a[2] === undefined && lc.a[3] === undefined && r.H.last("dims").a[0] === r.canvas && r.H.last("dims").a[1] === "2d", J(lc.a));
   r.log.length = 0;
   r.down(off.x, off.y);
   check(fn + ": -1 " + (offAct ? "backs out" : "does nothing (a root list)"), J(r.log) === J(offAct ? [[offAct]] : []), J(r.log));

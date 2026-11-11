@@ -288,9 +288,11 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
         menudraw.drawDim(c, 0.72, B.w, B.h);
         return paintControls(c, app, canvas, kind, true);
       }
-      if (app.pauseView === 2)
-        return menudraw.drawGraphics(c, menudraw.layout(B.w, B.h), app.subT, gfxUi(app, canvas, kicker));
-      menudraw.drawSettings(c, menudraw.layout(B.w, B.h), app.subT, optUi(app, canvas, kicker));
+      /* the same box the pointer maps a PAUSE tap through: overlayBox at #c's CSS scale (the touch floors), paused (the HUD band kept clear), the
+         focused row (its page is on screen); the room being played dresses the plate (world.level, never the menu's app.level) */
+      const g2 = app.pauseView === 2, PL = { ...menudraw.layout(B.w, B.h, undefined, dims(canvas, kind).css), paused: true, focus: g2 ? app.gfxRow : app.optRow }, lv = world.level | 0 || 1;
+      if (g2) return menudraw.drawGraphics(c, PL, app.subT, { ...gfxUi(app, canvas, kicker), level: lv });
+      menudraw.drawSettings(c, PL, app.subT, { ...optUi(app, canvas, kicker), level: lv });
     }
     return;
   }

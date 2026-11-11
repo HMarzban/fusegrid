@@ -26,6 +26,15 @@ import * as md from "../src/render/menudraw.js";
 import * as lazyPages from "../src/render/pages/lazy.js";
 import * as settingsPage from "../src/render/pages/settings.js";
 lazyPages._set("settings", settingsPage); // the lazy SETTINGS / GRAPHICS page, in as if its import had landed (R20)
+import * as kitCache from "../src/render/kit/cache.js";
+/* A recorder layer factory (v202 Task 3.4 fix round 1, for speed): the kit pages paint their static parts into layer canvases, once per distinct
+   state, and blit them on repeats. Each layer's texts join the draw that made it (same design px frame as the live texts), so every distinct
+   page state is still read word for word, exactly once, instead of being painted in full on every one of the sweep's 8000 draws. */
+const made = [];
+class LayerCv { constructor(w, h) { this.width = w; this.height = h; this.r = rec({ widthK: 0.648 }); made.push(this); } getContext() { return this.r.ctx; } }
+globalThis.OffscreenCanvas = LayerCv;
+kitCache.setFactory((w, h) => new LayerCv(w, h));
+const withLayers = (R, n0) => { const T = R.texts.slice(); for (const cv of made.slice(n0)) T.push(...cv.r.texts); made.length = n0; return T; };
 import { drawShell, loadControlsArt } from "../src/render/shellview.js";
 import { drawOverlay, overlayBox, drawHudChips, drawAbilityBar, PAUSE_ROWS, runStamp, copyPayload, pauseKicker } from "../src/render/scenes.js";
 import { pickupLabel, labelText } from "../src/render/fx.js";
@@ -200,8 +209,9 @@ for (const kind of ["2d", "px", "3d"]) {
     CABS.forEach((cab, ci) => APPS.forEach(([scr, o]) => {
       const a = mkApp(SCREEN[scr], o), R = rec({ widthK: 0.648 });
       if (scr === "GRAPHICS") a.gfxView = () => gfxView(a.settings, kind, {});
+      const n0 = made.length;
       drawShell(R.ctx, a, { state: "PLAY", time: 1, level: 1 }, box(w, h, lay), kind, SCORES[ci], () => 0b0110, cab);
-      note(scr + " " + kind + " " + lay + w + " " + dev, R.texts, true);
+      note(scr + " " + kind + " " + lay + w + " " + dev, withLayers(R, n0), true);
       draws++;
     }));
     /* GAME: PAUSE views 1-3 through drawShell, view 0 and WIN / LOSE through drawOverlay (every look calls it with its overlayBox) */
@@ -211,8 +221,9 @@ for (const kind of ["2d", "px", "3d"]) {
           const a = mkApp(SCREEN.GAME, { pauseView: v, gfxRow: 1, render3d: r3d }), R = rec({ widthK: 0.648 });
           a.optRow = a.optRows().indexOf(W.LABEL.ART_STYLE);
           a.gfxView = () => gfxView(a.settings, kind, {});
+          const n0 = made.length;
           drawShell(R.ctx, a, { state: "PAUSE", time: 1, ...wo }, box(w, h, lay), kind, SCORES[0], () => 0, CABS[0]);
-          note("PAUSE view " + v + " " + kind, R.texts, true);
+          note("PAUSE view " + v + " " + kind, withLayers(R, n0), true);
         }
       }
       const B = overlayBox(kind), touch = lay !== "d";
@@ -301,6 +312,7 @@ check("ruling 7: a bare NORMAL or HARD only where its own line or row names its 
      guard, the touch boxes and the narrow phone, at text scale 1 and 1.25 (the two-line path is reached at least once) */
   const { setTextScale } = await import("../src/render/kit/type.js");
   const lvp = await import("../src/render/pages/level.js");
+  const OC = globalThis.OffscreenCanvas; delete globalThis.OffscreenCanvas; // this check reads the list's words where they land on the target: no layer source here, as in Node without the sweep's recorder layers (merge of Task 3.3 and 3.4)
   let two = 0;
   for (const ts of [1, 1.25]) for (const [name, L, T] of [["iso 608x352", md.layout(608, 352), false], ["iso touch", md.layout(608, 352), true], ["narrow touch", md.layout(436, 946, 255, 0.9), true], ["600x520", md.layout(600, 520), false], ["landscape phone", md.layout(600, 520, undefined, 0.725), true]]) {
     setTextScale(ts);
@@ -317,6 +329,7 @@ check("ruling 7: a bare NORMAL or HARD only where its own line or row names its 
     check(`MODIFIERS list (${name}, x${ts}): every entry's name drawn whole inside its key, on one line or two`, out.length === 0 && n.length === 5 && n.every((k) => k === 1 || k === 2), out.join(" | ") + " " + J(n));
   }
   setTextScale(1);
+  globalThis.OffscreenCanvas = OC;
   check("MODIFIERS list: the two-line path is reached (a name too wide for its key breaks once, never cut)", two > 0, two);
 }
 

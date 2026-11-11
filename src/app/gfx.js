@@ -79,7 +79,8 @@ export function gfxView(s, kind, info) {
     if (key === "fps" && i.limit) help2 = helpLimit(i.fps > 0 ? Math.round(i.fps) : 30);
     if (key === "res" && k === "px") help2 = HELP_PX_RES;
     if (lk) { val = "—"; help2 = key === "res" ? LOCK_RES : LOCK_3D; }
-    return { label, val: val === undefined ? "" : val, locked: lk, help1: h[0], help2 };
+    const at = !key ? [PRESET_NAMES.indexOf(preset), PRESET_NAMES.length] : [v[key] | 0, VALUES[key].length]; // the value's place on its list (←/→ clamp at the ends; CUSTOM is -1)
+    return { label, val: val === undefined ? "" : val, locked: lk, help1: h[0], help2, at };
   });
   return { preset, door: preset + " ›", rows };
 }
