@@ -518,9 +518,7 @@ export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked, pace, timeAt
   levelPage.drawLevelPage(c, frameOf(L, touch), { level: lv, heat, pace, pact: U ? pact | 0 : 0, time: U && !!timeAttack, unlocked: U, best: (I.best || [])[lv - 1] || null, row: I.row || LABEL.LEVEL, open: !!I.open, cur: I.cur, trig: modeFocus(), tap: I.tap, lockR: I.lockR, lockT: I.lockT, enterT: I.enterT, rev: I.rev }, t);
 }
 
-/* LAZY PAGES (R20; R1 kit: one plate, one ask). lazyMod(name) is the module once it is in; until then every LOADING frame asks again (lazy.want
-   keeps one import in flight), a failed import is asked again on the next frame (a blip before the worker caches the file recovers), then at
-   most every RETRY_MS, never every frame, and the plate says DID NOT LOAD while the last import failed. _rec.want is the test seam (every page). */
+/* LAZY PAGES (R20, R1: one plate, one ask; AGENTS.md "Lazy pages"). _rec.want: the test seam. */
 export const _rec = { want: (n) => lazy.want(n) };
 const RETRY_MS = 3000, nowMs = () => (globalThis.performance && typeof performance.now === "function" ? performance.now() : 0), asks = {};
 function lazyMod(name) {
@@ -534,8 +532,7 @@ function lazyMod(name) {
     });
   return null;
 }
-/** THE LOADING plate every lazy page paints until its module lands (kit room.js loadingPlate): MENU's room (none on a PAUSE view), the kit plate,
-    the title and LOADING, or DID NOT LOAD while name's last import failed (ui.failed forces it). ui: {level, rev, paused, failed}. */
+/** THE LOADING plate (kit room.js loadingPlate); DID NOT LOAD while name's last import failed. ui: {level, rev, paused, failed}. */
 export function loadingPage(c, F, title, ui, name) {
   const u = ui || {}, a = asks[name];
   loadingPlate(c, F, { level: u.level, rev: u.rev, paused: u.paused, title, dpr: capDpr(deviceScale(c), !!F.touch), line: u.failed || (a && a.fails > 0) ? LOAD_WORDS.failed : LOAD_WORDS.loading });
@@ -595,11 +592,10 @@ export const recPageHit = (x, y, L, touch, page, rows) => { const m = recMod(); 
 /* SETTINGS and GRAPHICS (SCREEN.SETTINGS / GRAPHICS; PAUSE views 1 and 2): the page is src/render/pages/settings.js (UI upgrade v202 Task 3.4),
    lazy (R20) through pages/lazy.js. These keep the entry names shellview, the pointer and the tests call, with the same arguments for draw and
    tap: L is layout(W, H, lg, css) for the box the page draws on (PAUSE: overlayBox's), touch body[data-lay] p / l (the draw reads ui.touch).
-   Until the module is in, the page is one plate on the room that says LOADING (want() starts the import), a tap on it is inert (-2) and a tap off
-   it backs out (-1); once in, every call is synchronous. *Geom answers null until then. ui is the page's (see its header); rows the visible list. */
+   Until the module is in: THE LOADING plate, -2 on it, -1 off it, *Geom null. ui is the page's (see its header); rows the visible list. */
 const page = () => lazy.get("settings");
-const setFrame = (L, touch) => ({ ...frameOf(L, touch), paused: !!L.paused, focus: L.focus }); // a PAUSE view's box, the focused row (the page on screen)
-/* OPTIONS and GRAPHICS share the tap model on a touch layout (row = Enter, off the plate = back); CONTROLS' foot reads it too (kit/copy.js). */
+const setFrame = (L, touch) => ({ ...frameOf(L, touch), paused: !!L.paused, focus: L.focus });
+/* kit/copy.js words (CONTROLS' foot reads FOOT_TAP too) */
 export { FOOT_TAP, LOOK_NAME, lookVal };
 const loadHit = (x, y, F) => { const B = loadBox(F); return x >= B.x && x < B.x + B.w && y >= B.y && y < B.y + B.h ? -2 : -1; };
 /** SETTINGS' geometry for the visible rows (pages/settings.js settingsGeom on this box); null until the page is in. */

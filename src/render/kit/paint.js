@@ -11,8 +11,7 @@
           size x size box (a row puts it 8 px in), cy = the row's centre (the box top sits 46 % of size above it).
    glyph  a row's small mark in col, top-left x y, s px square: chev (a door's chevron), ext (a link out), up / dn (the arrow keycaps' legends),
           flag (a finale level's mark, appendix 7.2 mark()).
-   plaque the foot's sign plaque: radius 8, a 2 px #0b0609 outline over a hard 4 px drop, the bed inside, a 2 px keyhi strip along its top.
-   rpath rfill  the rounded-rect path and its fill (every page's own rounded parts).
+   plaque the foot's sign plaque (radius 8, outline, hard 4 px drop, bed, keyhi strip).  rpath rfill  the rounded-rect path and its fill.
    wallCell floorCell brickCell  the board's own cell painters (wallart, floorart, sprites paintBrick) on tok.biome, scaled to s. Hard edges only.
    A painter scales the caller's globalAlpha and leaves it as it found it. A missing tok (or focusBomb size) throws a named error; a degenerate size
    (a ring T, bed tile or wall-tile step under 1 px, or a span that is not finite) skips that part, so no loop can run away. */

@@ -15,14 +15,8 @@
               #0b0609 frame on the box edge. Returns the height. No clock: the page animates its focused cell itself.
    foeCell    (c, x, y, s, type, level) a foe at rest on a floor cell of level's world, s px square: a 2 px #0b0609 outline, radius 3, a hard 3 px drop.
    tileCell   (c, x, y, s, level) level's floor tile (core/feat.js HOME, CORE, a lone cell) in the same frame; a world with no tile paints its floor.
-   SHARED ROOM (R1 kit): every page with a room blits MENU's own roomLayer at MENU's room dpr, so a hop between pages never refills it.
-   roomFit    (F, dpr, held) the dpr left once held bytes sit in BUDGET, never above dpr nor under 0.5 (3 places).
-   shareRoom  (rule) MENU installs its rule (its plate, foot reserve and ROOM_RESERVE for the logo; pages/menu.js roomDpr) when it loads.
-   roomDpr    (c, F, ui, dpr) that rule's dpr for the box F; throws until it is installed, so no page can fall back to a different room.
-   pageRoomDpr (c, F, ui, dpr, held) the lower of MENU's and the page's own fit (its layers held, no logo reserve): the room gives way only there.
-   loadingPlate (c, F, o) THE stand-in every lazy page paints until its module lands (R20): MENU's room at roomDpr (o.dpr, o.rev; none on a PAUSE
-              view, o.paused; a flat veil with no canvas source), then a 360 x 128 kit plate scaled into the box (loadBox) with o.title and one line
-              (o.line). A context with no clip gets nothing. */
+   R1: the shared room rule (MENU installs it: shareRoom; roomDpr throws until then; pageRoomDpr floors it at a page's own fit) and THE
+   LOADING plate (loadingPlate, its box loadBox); AGENTS.md "Lazy pages". */
 import {CFG, T, key, biomeOf} from "../../core/config.js";
 import {stampStart} from "../../core/fair.js";
 import {heatRoster} from "../../core/heat.js";

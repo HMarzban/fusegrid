@@ -27,7 +27,7 @@ import {biomeOf} from "../../core/config.js";
 import {LABEL, MENU_ROWS, MENU_WORDS as M, ART_STYLES, DIFF, tagFor, runParts} from "../words.js";
 import {worldTokens, CONST, toL} from "../kit/tokens.js";
 import {key, cap, capW, plate, band, focusBomb, glyph, plaque} from "../kit/paint.js";
-import {T, DEV, measure, textScale, measurer as mOf, measures as canCap, text, CAP_K} from "../kit/type.js";
+import {T, DEV, measure as W, textScale, measurer as mOf, measures as canCap, text, CAP_K} from "../kit/type.js";
 import {R, sc, okBox, big, deep} from "../kit/geom.js";
 import {layer, capDpr, touch, keyOf, canMake} from "../kit/cache.js";
 import {roomLayer, roomFit, shareRoom, ROOM_RESERVE} from "../kit/room.js";
@@ -192,7 +192,7 @@ export function playTags(ui) {
   if (!t) return [lv];
   return [...new Set([t, runParts(run, {count: true}).join(" · "), runParts(run, {count: true, terse: true}).join(" · "), lv])];
 }
-const lblF = (px) => T.label(px), W = (c, f, s) => measure(c, f, s);
+const lblF = (px) => T.label(px);
 function fitCands(c, f, cands, room, two) {
   for (const s of cands) {
     if (W(c, f, s) <= room) return [s];

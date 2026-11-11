@@ -21,7 +21,7 @@ import {FOES} from "../../core/entities.js";
 import {LABEL, CARD_WORDS as CW} from "../words.js";
 import {CONST} from "../kit/tokens.js";
 import {wallCell, glyph} from "../kit/paint.js";
-import {T, DEV, measure, textScale} from "../kit/type.js";
+import {T, DEV, measure as W, textScale} from "../kit/type.js";
 import {lane, laneGrid, foeCell, tileCell} from "../kit/room.js";
 import {layer, canMake} from "../kit/cache.js";
 import {drawIcon, rr} from "../icons.js";
@@ -49,7 +49,6 @@ export function cardFacts(d) {
     each: roster.length === FOES.length && roster.every((e) => e.n === 1), lives: p.lives, fuse: p.fuse + "s", score: "×" + (h + 1)};
 }
 
-const W = (c, f, s) => measure(c, f, s);
 function fit(c, f, cands, room, two) {
   for (const s of cands) {
     if (!s) continue;

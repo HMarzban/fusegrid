@@ -27,7 +27,7 @@
 import {LABEL, ART_STYLES} from "../words.js";
 import {worldTokens, CONST, toL} from "../kit/tokens.js";
 import {key, plate, band, focusBomb, glyph, wallCell, capW, cap, plaque, rfill as rr} from "../kit/paint.js";
-import {T, DEV, measure, textScale, dsp, measurer as mOf, text, CAP_K} from "../kit/type.js";
+import {T, DEV, measure, measure as W, textScale, dsp, measurer as mOf, text, CAP_K} from "../kit/type.js";
 import {deep, R, sc, okBox, inR, big} from "../kit/geom.js";
 import {layer, capDpr, touch as touchK, keyOf, canMake} from "../kit/cache.js";
 import {roomLayer, pageRoomDpr} from "../kit/room.js";
@@ -238,7 +238,6 @@ function gfxSpec(r, phoneM) {
 }
 
 /* ---- the plan: every part's place and words, measured once per change ---- */
-const W = (c, f, s) => measure(c, f, s);
 function wrap(c, f, s, w) {
   const out = [];
   let line = "";

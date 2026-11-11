@@ -31,7 +31,7 @@ import {isFinale, roomCap} from "../../core/config.js";
 import {LABEL, DIFF, SPEED, MOD, MOD_BITS, TIME_TRIAL, DEFAULT_RULES, modWords, tagFor, runParts, LEVEL_WORDS as LW} from "../words.js";
 import {worldTokens, CONST, toL} from "../kit/tokens.js";
 import {key, cap, capW, plate, band, focusBomb, glyph, plaque, rpath as rp} from "../kit/paint.js";
-import {T, DEV, measure, textScale, measurer as mOf, measures as canCap, text, CAP_K} from "../kit/type.js";
+import {T, DEV, measure as W, textScale, measurer as mOf, measures as canCap, text, CAP_K} from "../kit/type.js";
 import {deep, R, sc, okBox, inR, big} from "../kit/geom.js";
 import {layer, capDpr, touch, keyOf, canMake} from "../kit/cache.js";
 import {roomLayer, roomDpr} from "../kit/room.js";
@@ -227,7 +227,6 @@ export function levelHit(x, y, F, o = {}) {
 }
 
 /* ---- words ---- */
-const W = (c, f, s) => measure(c, f, s);
 /* the first candidate that fits room; two: one break, at a " · " first, else at a space, into two lines that each fit */
 function fitLines(c, f, cands, room, two) {
   for (const s of cands) {

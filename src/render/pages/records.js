@@ -33,7 +33,7 @@ import {drawEnemyBody} from "../sprites.js";
 import {drawIcon} from "../icons.js";
 import {worldTokens, CONST, toL} from "../kit/tokens.js";
 import {key, cap, capW, plate, focusBomb, wallCell, plaque, rpath as sp, rfill as rf} from "../kit/paint.js";
-import {T, DEV, measure, textScale, nums, measurer as mOf, measures as canCap, text, CAP_K} from "../kit/type.js";
+import {T, DEV, measure, measure as W, textScale, nums, measurer as mOf, measures as canCap, text, CAP_K} from "../kit/type.js";
 import {deep, R, sc, okBox, inR, big} from "../kit/geom.js";
 import {layer, capDpr, touch, keyOf, canMake} from "../kit/cache.js";
 import {roomLayer, pageRoomDpr} from "../kit/room.js";
@@ -379,7 +379,6 @@ export function plateHit(x, y, F) {
 }
 
 /* measuring: a context that cannot measure plans on a 0.6 em estimate */
-const W = (c, f, s) => measure(c, f, s);
 const sep3 = (n) => String(n | 0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 /* fit: the first candidate that fits room, else "" (a word steps down or drops, never clipped) */
 const fit = (c, f, cands, room) => { for (const s of cands) if (s === "" || W(c, f, s) <= room) return s; return ""; };

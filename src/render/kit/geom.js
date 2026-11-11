@@ -1,9 +1,4 @@
-/* KIT GEOMETRY: the shapes every page measures with (R1 kit harmonisation). Pure.
-   deep   freezes an object and every object inside it (a page's frozen size tables).
-   R      a rect {x, y, w, h}.  sc  a rect scaled by u (design px to box units), null stays null.
-   okBox  a frame with a finite, non-zero box (a zero or non-finite box draws nothing and hits nothing).
-   inR    (r, x, y, ex = 0, ey = ex) the point inside r grown by ex / ey; right and bottom edges open; a missing r is never hit.
-   big    a text scale over 1.1 takes a page's 125 % sizes. */
+/* KIT GEOMETRY (R1): deep freeze, rects, a finite box, a hit (grown by ex / ey, right and bottom open), the 125 % switch. */
 export const deep = (o) => { for (const v of Object.values(o)) if (v && typeof v === "object") deep(v); return Object.freeze(o); };
 export const R = (x, y, w, h) => ({x, y, w, h});
 export const sc = (r, u) => (r ? {x: r.x * u, y: r.y * u, w: r.w * u, h: r.h * u} : null);

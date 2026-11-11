@@ -2,8 +2,7 @@
    labels 700, body 400, numbers 800 in fixed-width digit cells (nums: canvas has no tabular-nums, so every digit takes the widest digit's cell), units unspaced.
    DEV is the appendix section 2 device table (d desktop, p phone; pri sec hud bod ttl are type px before the text scale, tile is the plate bed tile). The text scale
    (R14) is module level, default 1, set only by tests and shots.mjs --t125; it is not a player setting. measure memoizes per context on (font, text, text scale);
-   a hit does not set c.font. measurer(c) is c when it can measure, else a 0.6 em estimate (a context with no measureText plans on it); text paints
-   one string middle-aligned (the pages' one text call); CAP_K is the cap height per em the probe records a text box with. */
+   a hit does not set c.font. measurer(c): c, or a 0.6 em estimate where c cannot measure; CAP_K: the probe's cap height per em. */
 import {CONST} from "./tokens.js";
 import {deep} from "./geom.js";
 
