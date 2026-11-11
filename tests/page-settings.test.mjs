@@ -428,7 +428,16 @@ check("shellCovers: SETTINGS and GRAPHICS (and MENU), never GAME", SV.shellCover
   check("probe (phone): BACK and the rows are touch targets >= 44 CSS px", p.rects.filter((r) => r.touch).every((r) => r.h * PG.s >= 43.99 && r.w * PG.s >= 43.99) && p.rects.some((r) => r.name === "BACK" && r.touch));
   probe.setOn(false);
 }
-check("tools/ui screens: options and graphics exempt only what they have none of (ring: no key takes focus; graphics locked: REAL 3D locks no row)", !SCREENS.options.need.includes("ring") && !SCREENS.graphics.need.includes("ring") && !SCREENS.graphics.need.includes("locked") && SCREENS.options.need.includes("chosen") && SCREENS.graphics.need.includes("chosen"));
+/* R1 landscape: GRAPHICS may lack a chosen pair only on a page with no two-state part (a landscape phone's paged column, its steppers door rows); every
+   page that draws the FPS METER rocker declares its pair, on the desk, the phone and the landscape column's page that holds it */
+{
+  const bad = [];
+  probe.setOn(true);
+  for (const b of ["d1366", "p393", "c852", "c667"]) { const G = P.graphicsGeom(BOX[b]); frame(BOX[b], { row: 7, view: GV("2d"), togT: -1, chg: 0, level: 1, rev: "v201" }, { g: true }); const q = probe.snapshot(); if (!q.pairs.some((x) => x.kind === "chosen" && /FPS METER/.test(x.name || ""))) bad.push(b + " " + G.pages.length + " pages"); }
+  probe.setOn(false);
+  check("GRAPHICS: the page holding FPS METER declares its rocker's chosen pair on every box (desk, phone, the landscape column's last page)", bad.length === 0, bad.join(" | "));
+}
+check("tools/ui screens: options and graphics exempt only what they have none of (ring: no key takes focus; graphics locked: REAL 3D locks no row; graphics chosen: a landscape page with no two-state part, with its reason)", !SCREENS.options.need.includes("ring") && !SCREENS.graphics.need.includes("ring") && !SCREENS.graphics.need.includes("locked") && SCREENS.options.need.includes("chosen") && !SCREENS.graphics.need.includes("chosen") && /FPS METER/.test(SCREENS.graphics.exempt.chosen) && ["band", "info", "text", "cap", "inside", "plate", "yellow", "touch", "gap"].every((g) => SCREENS.graphics.need.includes(g)));
 
 /* ---- a box with no canvas source or no clip: the plan only, no throw ---- */
 {

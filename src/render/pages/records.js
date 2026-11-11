@@ -894,8 +894,7 @@ function record(G, P, ui, foc, dpr, el, F0, tok, touchy, tap) {
     if (bdg) for (const t of S.badges) {
       const x = B.badges.x + t.x * k, y = B.badges.y + t.ln * (th + 6 * k), col = t.on ? CONST.medal : CONST.off;
       txt(t.s, x + 30 * k, y + th / 2, measureOr(t.s, dv.sec) * k, dv.sec * k, t.on ? CONST.ink : col, "secondary", t.on ? {} : {lock: true});
-      /* a: the glyph with its stroke's bleed (an earned medal is a stroked outline now); b: the chip around it, inside the tag's own outline */
-      probe.pair("info", b(R(x + 6 * k, y + th / 2 - 10 * k, 20 * k, 20 * k)), b(R(x + 3 * k, y + 3 * k, 27 * k, th - 6 * k)), {col, name: "badge " + t.s, ...(t.on ? {} : {lock: true})});
+      probe.pair("info", b(R(x + 7 * k, y + th / 2 - 9 * k, 18 * k, 18 * k)), b(R(x + 4 * k, y + 3 * k, 26 * k, th - 6 * k)), {col, name: "badge " + t.s, ...(t.on ? {} : {lock: true})}); // a: the 16 px glyph and its stroke's 1 px bleed; b: inside the tag's 2 px outline by 2 more, so a squint block never takes the outline (a #c's half-px offset)
     }
     const rr = B.rows, rp = B.rp * k;
     if (tpg < 0) {}
