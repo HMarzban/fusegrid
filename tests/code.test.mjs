@@ -10,6 +10,8 @@ import { rec as krec } from "./lib/textrec.mjs";
 import * as lazyPages from "../src/render/pages/lazy.js";
 import * as endWin from "../src/render/pages/endwin.js";
 lazyPages._set("endwin", endWin); // WIN is a lazy page (v202 Task 5.3): handed in as if its import had landed
+import * as endLose from "../src/render/pages/endlose.js";
+lazyPages._set("endlose", endLose); // GAME OVER is a lazy page (v202 Task 5.4)
 
 let pass = 0,
   fail = 0;
@@ -389,12 +391,13 @@ function check(name, cond, detail) {
     ws.indexOf("C") === ws.indexOf("COPY RESULT") + 1 && ws.indexOf("B") === ws.indexOf("COPY MAP") + 1,
     ws.join("|"),
   );
-  texts.length = 0;
-  drawOverlay(c, { state: "LOSE", level: 3, score: 10, heat: 0 }, 600, 520, 300, 260);
+  const kl = krec();
+  drawOverlay(kl.ctx, { state: "LOSE", level: 3, score: 10, heat: 0 }, 600, 520, 300, 260, undefined, undefined, { r: 2, css: 1.38 });
+  const ls = kl.texts.map((t) => t.s);
   check(
-    "and so does the LOSE cue line",
-    texts.some((s) => s === "SPACE / ENTER / TAP · new run · C copy · B board"),
-    texts.join("|"),
+    "and so does GAME OVER (v202 Task 5.4): MENU … ESC, COPY RESULT … C, COPY MAP … B, TRY AGAIN … ENTER",
+    ls.indexOf("ESC") === ls.indexOf("MENU") + 1 && ls.indexOf("C") === ls.indexOf("COPY RESULT") + 1 && ls.indexOf("B") === ls.indexOf("COPY MAP") + 1 && ls.indexOf("ENTER") > ls.indexOf("TRY AGAIN"),
+    ls.join("|"),
   );
   /* R8 deviation: written by concatenation, not as a literal regex — this
      file is scoped by tests/banned-name.test.mjs's new R8 gate, and the

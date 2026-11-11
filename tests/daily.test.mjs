@@ -385,6 +385,10 @@ import { readFileSync } from "node:fs";
 
 import { createGame } from "../src/main.js";
 import "../src/core/board3.js";
+import * as lazyPages from "../src/render/pages/lazy.js";
+import * as endWin from "../src/render/pages/endwin.js";
+import * as endLose from "../src/render/pages/endlose.js";
+lazyPages._set("endwin", endWin); lazyPages._set("endlose", endLose); // the run-end pages are lazy (v202 Tasks 5.3 / 5.4): handed in as if their imports had landed
 
 // ---- 9. main.js: the seed reaches the world, and a retry is another TRY ----
 {
@@ -612,9 +616,10 @@ import "../src/core/board3.js";
     apply: () => rec,
     set: () => true,
   });
-  const fake = { getContext: () => rec, addEventListener() {}, style: {} };
+  const fake = { getContext: () => rec, addEventListener() {}, style: {}, css: 1.38 }; // a 1366 x 768 stage: GAME OVER on one page
   try {
     const g = createGame(fake, { seed: 777 });
+    fake.css = 1.38; // fit.js wrote its own stage scale at the mount
     g.app.cabinetSeen = true;
     g.app.skip();
     g.app.cursor = ITEMS.indexOf("DAILY");

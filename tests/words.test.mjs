@@ -60,6 +60,8 @@ import { _set as setLazyPage } from "../src/render/pages/lazy.js";
 setLazyPage("guide", await import("../src/render/pages/guide.js")); // the lazy GUIDE pages (v202 Task 3.5), as if their import had landed
 import * as endWin from "../src/render/pages/endwin.js";
 setLazyPage("endwin", endWin); // WIN is a lazy page (v202 Task 5.3): handed in as if its import had landed
+import * as endLose from "../src/render/pages/endlose.js";
+setLazyPage("endlose", endLose); // GAME OVER is a lazy page (v202 Task 5.4)
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 let pass = 0, fail = 0;
@@ -269,7 +271,7 @@ inLayers(() => { for (const kind of ["2d", "px", "3d"]) {
         { r: 2, k: 4, p: 1, t: 90, best: null }, { r: 1, k: 1, p: 0, t: 60, daily: "2026-11-10", tries: 3, dbest: 1840 }, { r: 3, k: 1, p: 0, t: 60, best: { s: 1234, r: 3 } }];
       for (const run of RUNS) for (const [state, lv] of [["PAUSE", wo.level], ["WIN", 3], ["WIN", 5], ["WIN", 8], ["LOSE", wo.level]]) for (const ui of [{ view: 0, cursor: PAUSE_ITEMS.indexOf("RESTART"), touch }, { view: 0, cursor: PAUSE_ITEMS.indexOf("RESUME"), touch, note: "CONTROLLER LOST" }, { view: 0, cursor: PAUSE_ITEMS.indexOf(W.LABEL.SETTINGS), touch, next: "REAL 3D NEXT" }]) {
         const R = rec({ widthK: 0.648 }), world = { ...wo, state, level: lv, score: 1234, players: [{}] };
-        drawOverlay(R.ctx, world, B.w, B.h, B.cx, B.cy, ui, { on: true, t: 41.2, best: 38.9 }, run, { s: "COPIED", ok: true });
+        drawOverlay(R.ctx, world, B.w, B.h, B.cx, B.cy, ui, { on: true, t: 41.2, best: 38.9 }, run && { ...run, css: 1.38 }, { s: "COPIED", ok: true }); // a 1366 x 768 stage: the run ends on one page (v202 Tasks 5.3 / 5.4)
         note(state + " " + lv + " " + kind + " " + lay + w + " " + dev, R.texts, true);
       }
     }
@@ -327,7 +329,7 @@ check("ruling 7: a bare NORMAL or HARD only where its own line or row names its 
 {
   /* one marker per branch the sweep must reach, so a narrowed sweep cannot pass by seeing less */
   const SEEN = ["SETTINGS", "ART STYLE", "POWER-UPS", "NORMAL", "EXPERT", "GAME SPEED", "DIFFICULTY", "MODIFIERS", "ONE LIFE", "NO FLOOR ITEMS", "TIME TRIAL", "POWER BOMB", "IRON CROWN",
-    "FURTHEST LEVEL YET", "MATCHED YOUR", "FROM YOUR", "DAILY 2026-11-10 · NORMAL SPEED", "PAUSED · LEVEL 3", "LEVEL ENDS", "THROW POWER-UP", "CLEAR LEVEL 5 TO OPEN", "REBIND IN SETTINGS",
+    "FURTHEST LEVEL YET", "Matched", "points short", "Reached level", "DAILY 2026-11-10 · NORMAL SPEED", "PAUSED · LEVEL 3", "LEVEL ENDS", "THROW POWER-UP", "CLEAR LEVEL 5 TO OPEN", "REBIND IN SETTINGS",
     "ANY OTHER KEY CANCELS", "replaces POWER BOMB", "NO NORMAL DIFFICULTY RUNS YET", "BEST 4,210", "LEVELS 1-5 IN ONE RUN", "BESTS · NO MODIFIERS", "YOUR TRIES TODAY", "4 PAGES", "GITHUB", "CHANGE ART STYLE",
     "LEVEL 8 · CROWN", "the level you reach", "DID NOT LOAD · SETTINGS", "NEXT LEVEL", "FUSE/GRID CLEAR", "Levels 5 and 8 end in a finale.", "Clear level 5 to open 6 to 8.", "NO VIBRATION AT ALL", "NO TIME YET", "Walls close in from 25s.", "ONE LIFE · FEWER ITEMS",
     "DEFAULT RULES", "UNDER 3:00", "DAILY 2026-11-10 · LEVEL 3 · 1840", "RECORDS", "BADGES", "EARNED", "COPY MY STATS", "BEST BY DIFFICULTY", "SPD MAX", "FRAME RATE MAX", "SENSITIVITY MAX", "LEVEL 8", "ROW", "CHANGE", "OPEN", "PICK", "TOGGLE", "SOUTH", "TAP OUTSIDE TO CLOSE", "TAP OUTSIDE TO GO BACK",

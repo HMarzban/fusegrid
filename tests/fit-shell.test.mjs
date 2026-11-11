@@ -9,7 +9,7 @@ import { mountPointer } from "../src/app/pointer.js";
 import { ITEMS, SCREEN, optRows, createMenuApp } from "../src/app/menuapp.js";
 import { createControlsPage } from "../src/app/controlspage.js";
 import { DEF_CONTROLS } from "../src/app/controls.js";
-import { overlayBox, pauseHit, touchLay } from "../src/render/scenes.js";
+import { overlayBox, pauseHit, touchLay, endHitAt } from "../src/render/scenes.js";
 import { controlsGeo, controlsHit, dims, drawShell, isShellScreen, loadControlsArt, shellMode } from "../src/render/shellview.js";
 import * as md from "../src/render/menudraw.js";
 import * as menuPage from "../src/render/pages/menu.js";
@@ -25,6 +25,9 @@ import { createGame } from "../src/main.js";
 import "../src/core/board3.js"; // an ordinary run deals gen 3; with the seam empty the start holds
 import { _set as setLazyPage } from "../src/render/pages/lazy.js";
 setLazyPage("guide", await import("../src/render/pages/guide.js")); // the lazy GUIDE pages (v202 Task 3.5), as if their import had landed
+import * as endWin from "../src/render/pages/endwin.js";
+import * as endLose from "../src/render/pages/endlose.js";
+setLazyPage("endwin", endWin); setLazyPage("endlose", endLose); // the run-end pages are lazy (v202 Tasks 5.3 / 5.4): handed in as if their imports had landed
 
 let pass = 0, fail = 0;
 function check(name, cond, detail) {
@@ -404,6 +407,7 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
   D.doc.addEventListener = () => {};
   try {
     const g = createGame(cv, { seed: 7 });
+    { const r0 = g.renderer.render.bind(g.renderer); g.renderer.render = (w, dt, ro) => { g.ro = ro; return r0(w, dt, ro); }; } // the run facts the page and the tap read
     let t = 0;
     const tick = (n = 1) => { for (let i = 0; i < n; i++) { t += 16; g.loop(t); } };
     const frame = () => { shText.length = 0; cText.length = 0; tick(); };
@@ -422,10 +426,12 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
     check("a mid-run WIN (room 1): #sh hidden", g.world.level === 1 && g.world.state === "WIN" && D.sh.hidden);
     g.world.state = "LOSE"; frame();
     check("LOSE (a run end): #sh shown, click-through, nothing drawn on it; the end overlay on #c", !D.sh.hidden && D.sh.style.pointerEvents === "none" && shText.length === 0 && cText.length > 0, J([D.sh.hidden, D.sh.style.pointerEvents, shText.length]));
-    cv.fire("pointerdown", { clientX: 700, clientY: 300, button: 0, pointerType: "mouse", preventDefault() {} });
-    cv.fire("pointerup", { clientX: 700, clientY: 300, button: 0, pointerType: "mouse", preventDefault() {} }); // a run-end tap acts on its pointerup (v202 Task 5.2)
+    let hx = 0, hy = 0; // v202 Task 5.4: a tap on TRY AGAIN (found through the hit main taps with), in client px over #c's 720 x 624 CSS box
+    for (let y = 0; y < 520 && !hx; y += 4) for (let x = 0; x < 600; x += 4) if (endHitAt(x, y, "2d", g.world, g.ro.run, g.ro.time) === "main") { hx = 383 + (x + 6) * 1.2; hy = 24 + (y + 6) * 1.2; break; }
+    cv.fire("pointerdown", { clientX: hx, clientY: hy, button: 0, pointerType: "mouse", preventDefault() {} });
+    cv.fire("pointerup", { clientX: hx, clientY: hy, button: 0, pointerType: "mouse", preventDefault() {} }); // a run-end tap acts on its pointerup (v202 Task 5.2)
     tick(3);
-    check("LOSE: a tap on #c is the game's Space, as today: a fresh run at room 1", g.world.state === "PLAY" && g.world.level === 1 && D.sh.hidden, g.world.state + "/" + g.world.level);
+    check("LOSE: a tap on TRY AGAIN on #c is the game's Space: a fresh run at room 1", g.world.state === "PLAY" && g.world.level === 1 && D.sh.hidden, g.world.state + "/" + g.world.level);
     cv.fire("pointerup", { pointerType: "mouse" }); tick(3);
     g.world.state = "LOSE"; frame();
     g.input.onUiKey("Enter"); tick(3);

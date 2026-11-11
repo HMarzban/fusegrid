@@ -25,9 +25,12 @@ import { createGame } from "../src/main.js";
 import { PAUSE_ITEMS } from "../src/app/menuapp.js";
 import { rec as krec } from "./lib/textrec.mjs";
 import * as kprobe from "../src/render/kit/probe.js";
+import { endGeom, endFacts } from "../src/render/pages/endgeom.js";
 import * as lazyPages from "../src/render/pages/lazy.js";
 import * as endWin from "../src/render/pages/endwin.js";
 lazyPages._set("endwin", endWin); // WIN is a lazy page (v202 Task 5.3): handed in as if its import had landed
+import * as endLose from "../src/render/pages/endlose.js";
+lazyPages._set("endlose", endLose); // GAME OVER is a lazy page (v202 Task 5.4)
 import "../src/core/board3.js";
 
 let pass = 0,
@@ -551,15 +554,16 @@ const rec = () => {
       !ks(r).includes("NEW BEST"),
     ks(r).join("|"),
   );
-  const L = rec();
-  drawOverlay(L.c, { state: "LOSE", level: 3, score: 1000, heat: 0 },
+  const L = krec();
+  drawOverlay(L.ctx, { state: "LOSE", level: 3, score: 1000, heat: 0 },
     600, 520, 300, 260, undefined, undefined,
-    { r: 2, k: 5, p: 1, t: 90, best: { s: 500, r: 3 } });
+    { r: 2, k: 5, p: 1, t: 90, best: { s: 500, r: 3 }, css: 1.38 });
   check(
-    "drawOverlay LOSE with a run adds BOTH the tally line and the delta line",
-    L.texts.includes("LEVELS 2 · KILLS 5 · POWER-UPS 1 · 1:30") &&
-      L.texts.includes("NEW BEST"),
-    L.texts.join("|"),
+    // v202 Task 5.4: GAME OVER reads "Reached level n of m." (the run's reach) and a record is its quiet plaque
+    "drawOverlay LOSE with a run shows how far it reached AND the record it set (the NEW BEST plaque)",
+    ks(L).includes("Reached level 3 of 5.") &&
+      ks(L).some((s) => s === "NEW BEST · NORMAL DIFFICULTY" || s === "NEW BEST"),
+    ks(L).join("|"),
   );
   const P = rec();
   drawOverlay(P.c, { state: "PAUSE" }, 600, 520, 300, 260, { view: 0, cursor: 0 },
@@ -593,19 +597,27 @@ const rec = () => {
   const run = { r: 2, k: 5, p: 1, t: 90, best: { s: 500, r: 3 } };
   for (const B of boxes) {
     const tag = B.w + "x" + B.h;
-    // LOSE: runStamp, tally, delta, cue — dy 20/44/68/92. LOSE has no
-    // timeLine slot (WIN-only, tm.on-gated), so it never reaches dy 116.
-    const L = rec();
-    drawOverlay(
-      L.c,
-      { state: "LOSE", level: 3, score: 1000, heat: 0, pact: 0, pace: 0 },
-      B.w, B.h, B.cx, B.cy, undefined, undefined, run,
-    );
-    const lDy = L.rows.filter(([, y]) => y > B.cy).map(([, y]) => y - B.cy);
+    // LOSE (v202 Task 5.4: endgeom's sections, paged on a short box): kicker, headline, reached, score, the plaque, TRY AGAIN, top to bottom
+    // across its pages, every text inside the box
+    const lat = {}, lin = [];
+    for (let page = 0; page < 8; page++) {
+      const L = krec(); kprobe.setOn(true);
+      drawOverlay(L.ctx, { state: "LOSE", level: 3, score: 1000, heat: 0, pact: 0, pace: 0 }, B.w, B.h, B.cx, B.cy, undefined, undefined, { ...run, page });
+      const S = kprobe.snapshot(); kprobe.setOn(false);
+      for (const t of S.texts) { if (!(t.s in lat)) lat[t.s] = [page, t.y]; if (!(t.y >= 0 && t.y + t.capH <= B.h && t.x >= 0 && t.x + t.w <= B.w)) lin.push(t.s); }
+      const G = endGeom(B, endFacts({ state: "LOSE", level: 3, score: 1000, heat: 0, pact: 0, pace: 0 }, { ...run, page }), { page, m: krec().ctx });
+      for (const [sec, q] of [["head", "GAME OVER"], ["reached", "Reached level 3 of 5."], ["score", "SCORE"], ["tail", null]]) {
+        const r = G.rects[sec], ts = S.texts.filter((t) => (q ? t.s === q : /^NEW BEST/.test(t.s)));
+        if (r && !ts.some((t) => t.y >= r.y - 0.5 && t.y + t.capH <= r.y + r.h + 0.5)) lin.push(sec + " off its section");
+      }
+      const pg = S.texts.find((t) => / \/ \d+$/.test(t.s));
+      if (!pg || +pg.s.split(" / ")[0] === +pg.s.split(" / ")[1]) break;
+    }
+    const lord = ["GAME OVER", "Reached level 3 of 5.", "SCORE", lat["NEW BEST · NORMAL DIFFICULTY"] ? "NEW BEST · NORMAL DIFFICULTY" : "NEW BEST"].map((q) => lat[q]); // TRY AGAIN rides every page, under its content
     check(
-      "Minor-1 LOSE @ " + tag + ": dy stack is 20/44/68/92 under runStamp",
-      JSON.stringify(lDy) === JSON.stringify([20, 44, 68, 92]),
-      JSON.stringify(lDy) + " / " + JSON.stringify(L.rows),
+      "Minor-1 LOSE @ " + tag + ": the sections stack top to bottom across its pages, each text inside its endGeom section on its page, every text inside the box",
+      lord.every((v, i) => v && (i === 0 || v[0] > lord[i - 1][0] || (v[0] === lord[i - 1][0] && v[1] > lord[i - 1][1]))) && lin.length === 0,
+      JSON.stringify(lord) + " " + JSON.stringify(lin),
     );
     // finale WIN, its fullest form (a score record, a time record, a medal): v202 Task 5.3 moved the stack onto endgeom's sections, so the pin
     // is now the order and the box: kicker, headline, score, its multiplier, the stats, the shelf, the keys, top to bottom, all inside the box
@@ -621,12 +633,17 @@ const rec = () => {
       );
       const S = kprobe.snapshot(); kprobe.setOn(false);
       for (const t of S.texts) { if (!(t.s in at)) at[t.s] = [page, t.y]; if (!(t.y >= 0 && t.y + t.capH <= B.h && t.x >= 0 && t.x + t.w <= B.w)) inside.push(t.s); }
+      const G = endGeom(B, endFacts({ state: "WIN", level: 5, score: 1000, heat: 0, pact: 0, pace: 0, finale: false }, { ...run, r: 5, et: 9, page, medals: [["FLAWLESS", "LEVELS 1-5 IN ONE RUN · NO LIFE LOST"]] }, { on: true, t: 39, best: 40 }), { page, m: krec().ctx });
+      for (const [sec, q] of [["band", "FUSE/GRID CLEAR"], ["score", "SCORE · ×1 NORMAL DIFFICULTY"], ["tally", "ENEMIES"], ["shelf", "NEW BEST"]]) {
+        const r = G.rects[sec], ts = S.texts.filter((t) => t.s === q);
+        if (r && !ts.some((t) => t.y >= r.y - 0.5 && t.y + t.capH <= r.y + r.h + 0.5)) inside.push(sec + " off its section");
+      }
       const pg = S.texts.find((t) => / \/ \d+$/.test(t.s));
       if (!pg || +pg.s.split(" / ")[0] === +pg.s.split(" / ")[1]) break;
     }
     const order = ["FUSE/GRID CLEAR", "SCORE · ×1 NORMAL DIFFICULTY", "ENEMIES", "NEW BEST", "FLAWLESS"].map((q) => at[q]);
     check(
-      "Minor-1 finale WIN @ " + tag + ": the sections stack top to bottom across its pages, every text inside the box",
+      "Minor-1 finale WIN @ " + tag + ": the sections stack top to bottom across its pages, each text inside its endGeom section on its page, every text inside the box",
       order.every((v, i) => v && (i === 0 || v[0] > order[i - 1][0] || (v[0] === order[i - 1][0] && v[1] > order[i - 1][1]))) && inside.length === 0,
       JSON.stringify(order),
     );
@@ -735,17 +752,13 @@ const rec = () => {
     deltaLine(Z, { best: { s: 500, r: 3 } }) === "+500 FROM YOUR NORMAL DIFFICULTY BEST",
     deltaLine(Z, { best: { s: 500, r: 3 } }),
   );
-  const z0 = rec();
-  drawOverlay(z0.c, Z, 600, 520, 300, 260, undefined, undefined,
-    { r: 0, k: 0, p: 0, t: 2, best: null });
-  const z1 = rec();
-  drawOverlay(z1.c, { ...Z, score: 1 }, 600, 520, 300, 260, undefined, undefined,
-    { r: 0, k: 0, p: 0, t: 2, best: null });
-  const cueY = (rows) => (rows.find(([s]) => s.indexOf("C copy") >= 0) || [])[1];
+  // v202 Task 5.4: the skipped line is GAME OVER's tail section; the plate is shorter by exactly that section and its gap
+  const zr = { r: 0, k: 0, p: 0, t: 2, best: null, css: 1.38 }, zG0 = endGeom({ w: 600, h: 520 }, endFacts(Z, zr), { lay: "d", css: 1.38 }), zG1 = endGeom({ w: 600, h: 520 }, endFacts({ ...Z, score: 1 }, zr), { lay: "d", css: 1.38 });
+  const zt = zG1.rects.tail, zg = zG1.rects.tail ? zG1.rects.tail.y - (zG1.rects.score.y + zG1.rects.score.h) : 0;
   check(
-    "R10N6(f): the cue row moves up exactly one 24px row when the delta line is skipped",
-    cueY(z0.rows) === cueY(z1.rows) - 24,
-    cueY(z0.rows) + " vs " + cueY(z1.rows),
+    "R10N6(f): the tail section is skipped on a first zero run: no tail, the plate shorter by exactly the tail and its gap",
+    !zG0.rects.tail && !!zt && zG0.pages === 1 && zG1.pages === 1 && Math.abs(zG1.plate.h - zG0.plate.h - (zt.h + zg)) < 0.01,
+    JSON.stringify([zG0.plate.h, zG1.plate.h, zt && zt.h, zg]),
   );
 }
 
@@ -793,12 +806,13 @@ const rec = () => {
       clearRect: noop, setTransform: noop, transform: noop, drawImage: noop,
       createLinearGradient: () => ({ addColorStop: noop }),
       createRadialGradient: () => ({ addColorStop: noop }),
-      measureText: () => ({ width: 0 }),
+      measureText: () => ({ width: 0 }), rect: noop, clip: noop, // v202 Task 5.4: the GAME OVER page clips (the engraved headline)
       fillText: (s) => texts.push(String(s)),
       strokeText: (s) => texts.push(String(s)),
     };
-    const fake = { getContext: () => rc, addEventListener() {}, style: {} };
+    const fake = { getContext: () => rc, addEventListener() {}, style: {}, css: 1.38 }; // fit.js's stage scale on a 1366 x 768 window: GAME OVER on one page
     const g = createGame(fake, { autoplay: true, seed: 41 });
+    fake.css = 1.38; // fit.js wrote its own stage scale at the mount: a 1366 x 768 window's, so GAME OVER is one page
     let t = 1000;
     g.loop(t); // establishes main's `last`; prevSt latches PLAY
     // --- run 1: a 500-point death ---
@@ -829,8 +843,8 @@ const rec = () => {
       texts.join("|"),
     );
     check(
-      "A: it prints the gap to the record run 1 just wrote",
-      texts.some((s) => s === "+200 FROM YOUR NORMAL DIFFICULTY BEST"),
+      "A: it prints the gap to the record run 1 just wrote, saved to saved",
+      texts.join("").includes("200 points short of your NORMAL DIFFICULTY best (500)."),
       texts.join("|"),
     );
     check(
@@ -839,8 +853,9 @@ const rec = () => {
       ls.getItem(BESTS_KEY),
     );
     check(
-      "A: the tally line paints on both WIN and LOSE",
-      texts.some((s) => s.indexOf("LEVELS ") === 0),
+      // v202 Task 5.4: GAME OVER says how far the run got ("Reached level n of m.") and its saved score; the run's tally moved to the copy result
+      "A: the run's reach and saved score paint on LOSE",
+      texts.includes("Reached level 1 of 5.") && texts.includes("SCORE") && texts.includes("300"),
       texts.join("|"),
     );
   } finally {
@@ -967,12 +982,13 @@ const rec = () => {
       clearRect: noop, setTransform: noop, transform: noop, drawImage: noop,
       createLinearGradient: () => ({ addColorStop: noop }),
       createRadialGradient: () => ({ addColorStop: noop }),
-      measureText: () => ({ width: 0 }),
+      measureText: () => ({ width: 0 }), rect: noop, clip: noop, // v202 Task 5.4: the GAME OVER page clips (the engraved headline)
       fillText: (s) => texts.push(String(s)),
       strokeText: (s) => texts.push(String(s)),
     };
-    const fake = { getContext: () => rc, addEventListener() {}, style: {} };
+    const fake = { getContext: () => rc, addEventListener() {}, style: {}, css: 1.38 }; // fit.js's stage scale on a 1366 x 768 window: GAME OVER on one page
     const g = createGame(fake, { seed: 49 });
+    fake.css = 1.38; // fit.js wrote its own stage scale at the mount: a 1366 x 768 window's, so GAME OVER is one page
     g.app.level = 5; // LEVEL SELECT depth
     g.app.startRun(); // onStart: (args.level|0)<=1 is false -> runFromStart=false
     check(
@@ -996,7 +1012,7 @@ const rec = () => {
     );
     check(
       "C(a): the overlay never prints FURTHEST LEVEL YET on a LEVEL SELECT death — plain NEW BEST",
-      texts.includes("NEW BEST") && !texts.some((s) => s.indexOf("FURTHEST") >= 0),
+      texts.includes("NEW BEST · NORMAL DIFFICULTY") && !texts.some((s) => s.indexOf("FURTHEST") >= 0), // v202 Task 5.4: the plaque names its bucket
       texts.join("|"),
     );
     // --- retry after the LEVEL SELECT death: the sim's LOSE fire edge always

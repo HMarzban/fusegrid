@@ -9,6 +9,10 @@ import { encodeChallenge } from "../src/app/code.js";
 import { updVisible } from "../src/app/update.js";
 import { isRunEnd, overlayBox, endHitAt } from "../src/render/scenes.js";
 import { endMode, endFacts, endGeom, endHit, KEYS } from "../src/render/pages/endgeom.js";
+import * as lazyPages from "../src/render/pages/lazy.js";
+import * as endWin from "../src/render/pages/endwin.js";
+import * as endLose from "../src/render/pages/endlose.js";
+lazyPages._set("endwin", endWin); lazyPages._set("endlose", endLose); // the run-end pages are lazy (v202 Tasks 5.3 / 5.4): handed in as if their imports had landed
 
 let pass = 0, fail = 0;
 function check(name, cond, detail) {
@@ -150,9 +154,9 @@ for (const code of ["Enter", "Space"]) {
   const G = endGeom(overlayBox("2d"), endFacts(worlds[0], run0), { lay: "d", css: 1.38 });
   check("endHit: a tap off the keys (the plate's top corner, outside the box) names nothing", endHit(G.plate.x + 2, G.plate.y + 2, G) === null && endHit(-5, -5, G) === null);
   check("keys by mode: GAME OVER main / menu / copy / map, finale main / copy / map, level clear main only",
-    J(KEYS.filter((n) => G.keys[n])) === J(["main", "menu", "copy", "map"]) &&
-    J(KEYS.filter((n) => endGeom(overlayBox("2d"), endFacts(worlds[1], run0), { lay: "d", css: 1.38 }).keys[n])) === J(["main", "copy", "map"]) &&
-    J(KEYS.filter((n) => endGeom(overlayBox("2d"), endFacts(worlds[2], run0), { lay: "d", css: 1.38 }).keys[n])) === J(["main"]));
+    J(KEYS.filter((n) => G.keys[n] && n !== "up" && n !== "down")) === J(["main", "menu", "copy", "map"]) &&
+    J(KEYS.filter((n) => endGeom(overlayBox("2d"), endFacts(worlds[1], run0), { lay: "d", css: 1.38 }).keys[n] && n !== "up" && n !== "down")) === J(["main", "copy", "map"]) &&
+    J(KEYS.filter((n) => endGeom(overlayBox("2d"), endFacts(worlds[2], run0), { lay: "d", css: 1.38 }).keys[n] && n !== "up" && n !== "down")) === J(["main"])); // the pager's ▲ / ▼ are there only on a paged box
 }
 
 delete globalThis.window; delete globalThis.location;

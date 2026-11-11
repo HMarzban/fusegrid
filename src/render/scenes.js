@@ -166,7 +166,6 @@ export function dailyLine(world, run) {
     " · TRY " + (r.tries | 0) + " · YOUR BEST " + (r.dbest | 0)
   );
 }
-const copyHint = () => (hints().dev === "pad" ? " · WEST copy · NORTH board" : " · C copy · B board");
 /* PAUSE (v202 Task 5.1) is a page on the world kit, src/render/pages/pause.js: its rows, shape, geometry, tap map and look tail live there and are
    re-exported here, where the overlay and its readers have always found them. */
 export { PAUSE_ROWS, PAUSE_SHAPE, PAUSE_ROW_H, PAUSE_ROW_D, pauseGeom, pauseHit, pauseKick, pauseKickers, pauseKicker } from "./pages/pause.js";
@@ -192,7 +191,7 @@ const touchOf = (c) => touchLay(c && c.canvas);
    its page once the lazy module is in, a LOADING plate until then, and its taps go through endgeom's keys. endReady(mode) is that state for
    endTap: null (no page), false (loading), true. */
 const lazyEnd = (n) => () => { const m = lazy.get(n); if (!m && typeof document !== "undefined") lazy.want(n).catch(() => {}); return m; }; // Node never imports: tests hand the page in (lazy._set)
-const END_PAGES = Object.freeze({ clear: lazyEnd("endwin"), fin: lazyEnd("endwin") });
+const END_PAGES = Object.freeze({ clear: lazyEnd("endwin"), fin: lazyEnd("endwin"), lose: lazyEnd("endlose") });
 const endPage = (mode) => (END_PAGES[mode] ? END_PAGES[mode]() : undefined);
 /* a run-end page not in yet: the veil and a kit plate in the room's world with one LOADING line; its taps find nothing (endReady false) */
 function endLoading(c, world, w, h) {
@@ -226,6 +225,7 @@ export function drawOverlay(
   const mode = endMode(world), page = mode ? endPage(mode) : undefined;
   if (page === null) return endLoading(c, world, w, h);
   if (page) return void (mode === "lose" ? page.drawLose : page.drawWin)(c, { w, h }, world, run, tm, toast);
+  if (world.state !== "PAUSE") return;
   c.fillStyle = world.state !== "PAUSE" ? "rgba(6,10,20,0.80)" : ui && ui.view | 0 ? "rgba(7,10,18,0.72)" : PAUSE_VEIL; // the PAUSE list wears the kit's veil (.6); the inline pages keep theirs
   c.fillRect(0, 0, w, h);
   c.textAlign = "center";
@@ -233,33 +233,7 @@ export function drawOverlay(
   c.lineWidth = 5;
   c.strokeStyle = "#0a0d14";
   c.lineJoin = "round";
-  function head(txt, col) {
-    c.font = "900 40px ui-monospace,monospace";
-    c.strokeText(txt, cx, cy - 16);
-    c.fillStyle = col;
-    c.fillText(txt, cx, cy - 16);
-  }
-  function sub(txt, col, dy = 20) {
-    c.font = "15px ui-monospace,monospace";
-    c.fillStyle = col || "#c3d2ee";
-    c.fillText(txt, cx, cy + dy);
-  }
-  /* C / B copy note (main's endkeys toast): above the headline, so it never
-     moves the dy stack below it and never reaches the PAUSE veil. */
-  function note() {
-    if (!toast || !toast.s) return;
-    c.font = "900 15px ui-monospace,monospace";
-    c.fillStyle = toast.ok ? "#37f0d0" : "#ff5d73";
-    c.fillText(toast.s, cx, cy - 60);
-  }
-  if (world.state === "LOSE") {
-    head("GAME OVER", "#ff5d73");
-    let dy = 20;
-    sub(runStamp(world), "#9fb3d8", dy);
-    for (const [s, col] of summaryLines(world, run)) sub(s, col, (dy += 24));
-    sub(overlayCue(world) + copyHint(), "#9fb3d8", (dy += 24));
-    note();
-  } else if (world.state === "PAUSE") {
+  {
     const u = ui || {};
     /* view 1 / 2 / 3 = the inline SETTINGS / GRAPHICS / CONTROLS page: veil only, so
        drawShell's plate never lands on top of a live PAUSED headline. */

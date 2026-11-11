@@ -38,6 +38,8 @@ import {createRenderer3D} from "../src/render/three/wrapper.js";
 import * as lazyPages from "../src/render/pages/lazy.js";
 import * as endWin from "../src/render/pages/endwin.js";
 lazyPages._set("endwin", endWin); // WIN is a lazy page (v202 Task 5.3): handed in as if its import had landed
+import * as endLose from "../src/render/pages/endlose.js";
+lazyPages._set("endlose", endLose); // GAME OVER is a lazy page (v202 Task 5.4)
 import {createRenderer} from "../src/render/renderer.js";
 import {createPixelRenderer} from "../src/render/pixel/renderer.js";
 import {overlayBox, pauseHit, pauseGeom, PAUSE_ROWS} from "../src/render/scenes.js";

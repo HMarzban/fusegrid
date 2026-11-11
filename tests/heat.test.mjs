@@ -10,6 +10,8 @@ import { readFileSync } from "node:fs";
 import * as lazyPages from "../src/render/pages/lazy.js";
 import * as endWin from "../src/render/pages/endwin.js";
 lazyPages._set("endwin", endWin); // WIN is a lazy page (v202 Task 5.3): handed in as if its import had landed
+import * as endLose from "../src/render/pages/endlose.js";
+lazyPages._set("endlose", endLose); // GAME OVER is a lazy page (v202 Task 5.4)
 
 let pass = 0,
   fail = 0;

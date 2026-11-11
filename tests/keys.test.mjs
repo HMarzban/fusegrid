@@ -27,6 +27,8 @@ import { rec as krec } from "./lib/textrec.mjs";
 import * as kprobe from "../src/render/kit/probe.js";
 import * as lazyPages from "../src/render/pages/lazy.js";
 import * as endWin from "../src/render/pages/endwin.js";
+import * as endLose from "../src/render/pages/endlose.js";
+lazyPages._set("endlose", endLose); // GAME OVER is a lazy page (v202 Task 5.4)
 await preloadControls(loadControlsArt); // the CONTROLS page, its paint and rumble are lazy (v202): in before the first mount
 const RECP = await (await import("../src/render/pages/lazy.js")).want("records"); // RECORDS is a lazy page (R20): in before its taps
 
@@ -1276,10 +1278,10 @@ for (const code of ["Space", "Enter"]) {
     const P = rec();
     drawOverlay(P.c, { state: "PAUSE" }, B.w, B.h, B.cx, B.cy, { view: 0, cursor: 0 }, undefined, undefined, { s: "COPIED", ok: true });
     check(tag + ": the copy note never lands on the PAUSE veil", !P.rows.some(([t]) => t === "COPIED"));
-    const F = rec();
-    drawOverlay(F.c, { state: "LOSE", level: 2, score: 1 }, B.w, B.h, B.cx, B.cy, undefined, undefined, undefined, { s: "COPY FAILED", ok: false });
-    const fr = F.rows.find(([t]) => t === "COPY FAILED");
-    check(tag + ": COPY FAILED is drawn in the warning red", !!fr && fr[2] === "#ff5d73", fr && fr[2]);
+    const F = krec(); // v202 Task 5.4: the GAME OVER page's toast tag (the coral danger key)
+    drawOverlay(F.ctx, { state: "LOSE", level: 2, score: 1 }, B.w, B.h, B.cx, B.cy, undefined, undefined, undefined, { s: "COPY FAILED", ok: false, t: 1 });
+    const fr = F.texts.find((t) => t.s === "COPY FAILED");
+    check(tag + ": COPY FAILED is drawn in the warning red", !!fr && fr.fill === "#ff5d73", fr && fr.fill);
   }
 }
 
@@ -1488,10 +1490,10 @@ for (const code of ["Space", "Enter"]) {
     check("T14: " + nm + " WEST copies the result, with the same toast", g.world.state === st && clip.length === c0 + 1 && clip.at(-1) === copyPayload(g.world) && g.ro.toast && g.ro.toast.s === "COPIED", JSON.stringify(g.ro.toast));
     tap(g, "N"); await flush(); g.tick();
     check("T14: " + nm + " NORTH copies the board link", g.world.state === st && /\?code=F3/.test(clip.at(-1)) && g.ro.toast && g.ro.toast.s === "BOARD LINK COPIED", JSON.stringify(g.ro.toast));
-    if (nm === "WIN") { // v202 Task 5.3: the WIN page's copy keys (on the finale; a level clear shows NEXT LEVEL only) read COPY RESULT … WEST, COPY MAP … NORTH
-      const R = krec(); drawOverlay(R.ctx, { ...g.world, level: 5 }, 600, 520, 300, 260, {}, undefined, { r: 5, et: 9 }); const ws = R.texts.map((t) => t.s);
-      check("T14: the keycaps name them", ws.indexOf("WEST") === ws.indexOf("COPY RESULT") + 1 && ws.indexOf("NORTH") === ws.indexOf("COPY MAP") + 1, ws.join("|"));
-    } else check("T14: the cue names them", /WEST copy · NORTH board/.test((() => { const lines = []; const r = { font: "", fillText: (s) => lines.push(s), measureText: () => ({ width: 0 }) }; const c = new Proxy(r, { get: (t, p) => (p in t ? t[p] : () => {}), set: (t, p, v) => { t[p] = v; return true; } }); drawOverlay(c, g.world, 600, 520, 300, 260, {}); return lines.join("|"); })()));
+    { // v202 Tasks 5.3 / 5.4: the run-end pages' copy keys read COPY RESULT … WEST, COPY MAP … NORTH (WIN: on the finale; a level clear shows NEXT LEVEL only)
+      const R = krec(); drawOverlay(R.ctx, nm === "WIN" ? { ...g.world, level: 5 } : g.world, 600, 520, 300, 260, {}, undefined, { r: 5, et: 9, css: 1.38 }); const ws = R.texts.map((t) => t.s);
+      check("T14: " + nm + " the keycaps name them", ws.indexOf("WEST") === ws.indexOf("COPY RESULT") + 1 && ws.indexOf("NORTH") === ws.indexOf("COPY MAP") + 1, ws.join("|"));
+    }
   }
   { const g = pMenu(), log = [], c = { on: true, live() { return this.on; }, press(id) { log.push(id); } };
     g.app.padCards = [c, ...g.app.padCards]; g.tick();

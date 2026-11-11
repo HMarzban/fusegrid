@@ -10,7 +10,8 @@
      real   press the keys as real key events on a phone capture too (else a phone capture calls app.key, which keeps tap mode)
      wait   "controls": the lazy CONTROLS page must be in (app.controls.loading false) before the frames are stepped; "records": the lazy RECORDS
             page (pages/lazy.js) must be in
-     run    a run screen: play, pause, win or lose (store: localStorage items set before the run, e.g. a saved best; daily: the run is MENU's DAILY)
+     run    a run screen: play, pause, win or lose (store: localStorage items set before the run, e.g. a saved best; daily: the run is MENU's DAILY;
+            key: keys sent through input.onUiKey at the run end, e.g. ArrowDown for a paged end's second page)
      tags   (a pause screen) the run's rules seeded through the debug hook before PAUSE: EXPERT, FAST, every modifier, TIME TRIAL (the tag row)
      state  what window.__GAME__.state() must read before the capture; a mismatch is an error and no PNG
      settle virtual ms stepped before the capture (default 600)
@@ -58,10 +59,12 @@ const ROWS = {
   play: { run: "play", state: "PLAY", settle: 900 },
   pause: { run: "pause", state: "PAUSE", settle: 300, exempt: { chosen: "PAUSE shows no chosen / unchosen values: every row is a verb or a door", locked: "PAUSE shows no locked value: every row is open" } },
   pausetags: { run: "pause", tags: true, state: "PAUSE", settle: 300, exempt: { chosen: "PAUSE shows no chosen / unchosen values: every row is a verb or a door", locked: "PAUSE shows no locked value: every row is open" } },
-  win: { run: "win", state: "WIN", settle: 3400, exempt: { chosen: "a level clear has no chosen / unchosen value (the finale records its course: won vs locked)", locked: "a level clear and a finale with levels 6-8 open show no locked part (a first finale records its locked levels)" } },
-  lose: { run: "lose", state: "LOSE", settle: 1600, exempt: { locked: "levels 6-8 open (world 6-8 captures) show no locked level; a first-run capture records its locked levels" } },
-  loseshort: { run: "lose", store: { "nb.bests.v1": '{"b":{"0:0:1":{"s":5000,"r":5}}}' }, state: "LOSE", settle: 1600, exempt: { locked: "levels 6-8 open (world 6-8 captures) show no locked level; a first-run capture records its locked levels" } }, // a saved NORMAL best of 5000: the shortfall line
-  losedaily: { run: "lose", daily: true, state: "LOSE", settle: 1600 }, // today's DAILY (level 1, JUNGLE, whatever --world): Same board and the day's line
+  win: { run: "win", state: "WIN", settle: 3400, exempt: { info: "a phone's tally is a ledger with no glyph (the desk stat cards record their glyphs)", chosen: "a level clear has no chosen / unchosen value (the finale records its course: won vs locked)", locked: "a level clear and a finale with levels 6-8 open show no locked part (a first finale records its locked levels)" } },
+  win2: { run: "win", key: "ArrowDown", state: "WIN", settle: 3400, exempt: { info: "a phone's tally is a ledger with no glyph", chosen: "a level clear has no chosen / unchosen value; a paged finale's second page shows its stats and shelf, not its course", locked: "the second page of a paged run end shows no course" } }, // a paged run end's second page (a short box: the phone, a small window)
+  lose: { run: "lose", state: "LOSE", settle: 1600, exempt: { info: "a death on levels 6-8 (open) shows no finale flag ahead; the other worlds record theirs", chosen: "a death on level 8 leaves no level ahead to compare", locked: "levels 6-8 open (world 6-8 captures) show no locked level; a first-run capture records its locked levels" } },
+  loseshort: { run: "lose", store: { "nb.bests.v1": '{"b":{"0:0:1":{"s":5000,"r":5}}}' }, state: "LOSE", settle: 1600, exempt: { info: "a death on levels 6-8 (open) shows no finale flag ahead; the other worlds record theirs", chosen: "a death on level 8 leaves no level ahead to compare", locked: "levels 6-8 open (world 6-8 captures) show no locked level; a first-run capture records its locked levels" } }, // a saved NORMAL best of 5000: the shortfall line
+  losedaily: { run: "lose", daily: true, state: "LOSE", settle: 1600, exempt: { chosen: "a phone's paged GAME OVER shows its course on the second page (lose2 judges it); the desk records its pairs", locked: "a phone's paged GAME OVER shows its course on the second page; the desk records it", info: "a phone's paged GAME OVER shows its course's flag on the second page; the desk records it" } },
+  lose2: { run: "lose", key: "ArrowDown", state: "LOSE", settle: 1600, exempt: { chosen: "the second page of a paged GAME OVER shows its score and line, not its course", locked: "the second page of a paged GAME OVER shows no course" } }, // today's DAILY (level 1, JUNGLE, whatever --world): Same board and the day's line
 };
 /* a row's need from its exemptions: EXEMPTABLE minus each exempt gate, which must be EXEMPTABLE and carry a non-empty reason */
 export function needOf(name, exempt = {}) {

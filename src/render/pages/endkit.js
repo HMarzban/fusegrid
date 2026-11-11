@@ -13,7 +13,7 @@ import * as probe from "../kit/probe.js";
 import {layer, canMake} from "../kit/cache.js";
 import {deviceScale} from "../logo/draw2d.js";
 import {hints, tapMode} from "../hintcopy.js";
-import {pieceWidth, ledgerStacked, END} from "./endgeom.js";
+import {pieceWidth, ledgerStacked, tokensOf, RULE_L, END} from "./endgeom.js";
 import {drawEnemyBody} from "../enemybody.js";
 import {drawItemBody} from "../itemdraw.js";
 import {FOES, POWER} from "../../core/entities.js";
@@ -47,7 +47,7 @@ export const fitOf = (p, face, cands, px, w) => [].concat(cands).find((s) => tex
 export function wrap(p, face, s, px, w) {
   const out = [];
   let line = "";
-  for (const word of String(s).split(" ")) { const t = line ? line + " " + word : word; if (line && textW(p, face, t, px) > w) { out.push(line); line = word; } else line = t; }
+  for (const word of tokensOf(s)) { const t = line ? line + " " + word : word; if (line && textW(p, face, t, px) > w) { out.push(line); line = word; } else line = t; }
   if (line) out.push(line);
   return out;
 }
@@ -58,8 +58,11 @@ export function wrap(p, face, s, px, w) {
 export function keyPart(p, name, r, kind, label, o = {}) {
   const d = DEV[o.phone ? "p" : "d"], tok = o.tok, main = kind === "main", px = o.big ? (o.phone ? 26 : 28) : d.pri;
   if (p.c) key(p.c, r.x, r.y, r.w, r.h, kind, {tok, phone: o.phone});
-  const cw = o.cap ? capW(p.m, o.cap, {phone: o.phone}) : 0, lx = r.x + (main ? 8 + d.bombs + 12 : 16), ink = main ? CONST.yelInk : CONST.ink, cy = r.y + r.h / 2;
-  const room = r.x + r.w - (o.cap ? cw + 14 : 12) - lx, face = o.big ? "display" : "label";
+  const face = o.big ? "display" : "label", lx = r.x + (main ? 8 + d.bombs + 12 : 16), ink = main ? CONST.yelInk : CONST.ink, cy = r.y + r.h / 2;
+  const lw = Math.max(textW(p, face, label, px), o.sub ? textW(p, "label", o.sub, d.sec) : 0), cw0 = o.cap ? capW(p.m, o.cap, {phone: o.phone}) : 0;
+  /* a key too narrow for its label and its keycap keeps the label (the keycap is a hint the label does not need) */
+  if (o.cap && lx + lw + 14 + cw0 > r.x + r.w - 12) o = {...o, cap: null};
+  const cw = o.cap ? cw0 : 0, room = r.x + r.w - (o.cap ? cw + 14 : 12) - lx;
   if (o.sub) {
     const sp = d.sec, cx = o.center ? lx + room / 2 : lx, al = o.center ? "center" : "left";
     text(p, face, label, cx, cy - sp * 0.62, px, {col: ink, align: al});
@@ -102,7 +105,7 @@ export function statTile(p, name, r, st, o = {}) {
   rrect(p, name, r.x, r.y, r.w, r.h);
   const so = Math.min(r.h - 16, (o.L || 14.8) * 2.7), sx = r.x + 8, sy = r.y + (r.h - so) / 2;
   if (p.c) { key(p.c, sx, sy, so, so, "key", {tok}); statGlyph(p.c, g, sx + so / 2, sy + so / 2, so * 0.62); }
-  rpair(p, "info", [sx + so * 0.15, sy + so * 0.1, so * 0.7, so * 0.68], [sx + 4, sy + so * 0.8, so - 8, so * 0.12], {col: g === "foe" ? FOES[0].col : g === "item" ? POWER[0].col : CONST.t2, name: name + " glyph"});
+  rpair(p, "info", [sx + so * 0.15, sy + so * 0.1, so * 0.7, so * 0.68], [sx + so + 3, sy + 4, 6, so - 8], {col: g === "foe" ? FOES[0].col : g === "item" ? POWER[0].col : CONST.t2, name: name + " glyph"}); // b: the slab's well beside the socket
   const tx = sx + so + 12, K = textScale();
   text(p, "label", label, tx, r.y + r.h / 2 - d.hud * K * 0.45, d.sec, {col: CONST.t2, role: "secondary"});
   text(p, "num", value, tx, r.y + r.h / 2 + d.sec * K * 0.55, d.hud, {role: "hud"});
@@ -162,6 +165,7 @@ export function cell(p, x, y, s, cl, o = {}) {
     else if (cl.fin && cl.st === "won") oct(c, x + s * 0.76, ty + s * 0.62, s * 0.13, Math.max(1.5, s * 0.05), {col: CONST.dk});
     else if (cl.fin && cl.st === "ahead") glyph(c, "flag", x + s * 0.6, y + s * 0.32, s * 0.32, CONST.t2);
   }
+  if (cl.fin && cl.st === "ahead") rpair(p, "info", [x + s * 0.6, y + s * 0.32, s * 0.32, s * 0.32], [x + 3, y + 3, s - 6, s - 6], {col: CONST.t2, name: "finale flag"});
   const ty = kind === "lit" ? y - 2 : y, nx = cl.st === "crack" ? x + s / 2 + 7 * (s / 40) : cl.fin && cl.st !== "locked" ? x + s * 0.32 : x + s / 2;
   if (cl.st !== "locked") text(p, "num", n, nx, ty + s / 2, px, {align: "center", col: kind === "lit" ? CONST.dk : CONST.t2, role: "secondary"});
   rrect(p, "cell " + n, x, y, s, s);
@@ -231,7 +235,7 @@ export function medal(p, x, y, w, piece, L, o = {}) {
   const tgx = n0 + nw + 8, tgh = d.sec * K + 8;
   if (c) { c.fillStyle = OL; c.fillRect(tgx, ny - tgh / 2, tagW, tgh); c.strokeStyle = CONST.medal; c.lineWidth = 2; c.strokeRect(tgx + 1, ny - tgh / 2 + 1, tagW - 2, tgh - 2); }
   text(p, "label", "NEW", tgx + 9, ny, d.sec, {col: CONST.medal, role: "secondary"});
-  wrap(p, "body", piece.desc, d.bod, ph ? w - D - 12 : w).slice(0, 2).forEach((s, i) => text(p, "body", s, tx, ny + d.pri * K * 0.6 + 6 + d.bod * K * (0.65 + 1.35 * i), d.bod, {align: al, role: "body"}));
+  wrap(p, "body", piece.desc, d.bod, Math.min(ph ? w - D - 12 : w, RULE_L * L)).slice(0, 2).forEach((s, i) => text(p, "body", s, tx, ny + d.pri * K * 0.6 + 6 + d.bod * K * (0.65 + 1.35 * i), d.bod, {align: al, role: "body"}));
 }
 export const pieceW = (p, piece, L, ph) => pieceWidth(piece, L, ph, p.m);
 

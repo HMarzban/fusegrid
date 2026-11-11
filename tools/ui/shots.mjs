@@ -5,8 +5,8 @@
    node tools/ui/shots.mjs [flags]
      --screens a,b    screens to capture (default all): title, menu, level, options (alias settings), graphics, controls, guide, howto, items,
                       enemies, floor, scores, stats, statsreset (STATS armed), medals, scoresfull / statsfull (a seeded cabinet,
-                      __GAME__.seedRecords()), statspage2 (STATS' second page on a paged phone), scoresidle (RECORDS through the real lazy.idle() load: no want()), pause, pausetags (PAUSE with the run's rules seeded: the tag row), win, lose,
-                      loseshort (a saved best: the shortfall), losedaily (today's DAILY),
+                      __GAME__.seedRecords()), statspage2 (STATS' second page on a paged phone), scoresidle (RECORDS through the real lazy.idle() load: no want()), pause, pausetags (PAUSE with the run's rules seeded: the tag row), win, win2 (a paged run end's second
+                      page), lose, loseshort (a saved best: the shortfall), losedaily (today's DAILY), lose2,
                       play; optionskeys / graphicskeys / guidekeys (SETTINGS, GRAPHICS, GUIDE reached by real key presses, so a phone capture
                       shows the keyboard focus); captured in that canonical order
                       whatever the order given (win at --world 5 or 8 is the finale)
@@ -193,6 +193,7 @@ async function group(c, port, a, look, world, rep) {
           await ev(R.run === "lose" ? LOSE : "window.__GAME__.clearAllEnemies()");
           const end = R.run === "lose" ? "LOSE" : "WIN";
           for (let i = 0; i < 80 && (await ev("window.__GAME__.G.state")) !== end; i++) await P.adv(50);
+          for (const k of [].concat(R.key || [])) { await P.adv(100); await ev(`(window.__GAME__.input.onUiKey(${JSON.stringify(k)}),true)`); } // a run end's keys (a paged end's ▼)
         }
         await shoot(s, R.settle);
         continue;

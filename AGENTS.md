@@ -367,6 +367,16 @@ prefers-reduced-motion: the end state with one fade. A touch box lays out the ph
 and touch floors (u = 1 / css): the plate narrows to the box, a short box closes the gaps, then PAGES the content (whole
 sections, the keys on every page, a ▲ / ▼ pager column; ↑ / ↓, the D-PAD and the ▲ / ▼ taps turn it, main holds
 `run.page`, `scenes.endPagesAt` clamps it); a phone's medals hang on shelves of their own.
+GAME OVER is its page since Task 5.4: `src/render/pages/endlose.js` (lazy, `endlose`): a cool grey veil (R18,
+`VEIL`), the burnt-out bomb (no spark once out, a charred stub, a soot ring by gradient, live smoke), the engraved
+headline, "Reached level n of m." (m the run's finale, 5 or 8), the course (cleared, cracked on the level fallen,
+ahead, locked past `roomCap`), SCORE as saved (score × difficulty, `multTag`), then one line: the shortfall saved to
+saved against the run-start best of the same bucket, `Matched your …`, a quiet plaque (NEW BEST · bucket, or
+FURTHEST LEVEL YET from level 1 only), or the DAILY line; nothing on a first run scoring 0. TRY AGAIN (the one
+yellow; `New board · level 1`, or `Same board` on a DAILY / code run), MENU / COPY RESULT / COPY MAP sharing their
+row by what label and keycap need (a key too narrow drops its keycap, never its label). Two columns while the facts
+keep 330 px, else one with the bomb beside the headline. The old WIN / LOSE summary painter is gone; `drawOverlay`
+paints only PAUSE itself. Wrapped lines never split a setting's name (`endgeom.tokensOf`).
 
 MENU page (UI upgrade v202 Task 3.1, `src/render/pages/menu.js`; the round 7 S7-menu / L7-logo frames). The world dresses it: the room look of
 `app.level` (kit `room.js` `roomLayer`) opaque over the whole canvas from MENU's first frame, the plate in that room's rampart; PLAY the one yellow

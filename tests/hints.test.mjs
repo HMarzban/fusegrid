@@ -16,6 +16,10 @@ import { coachTip } from "../src/app/coach.js";
 import { drawCoach, drawOverlay, overlayCue } from "../src/render/scenes.js";
 import { _set as setLazyPage } from "../src/render/pages/lazy.js";
 setLazyPage("guide", await import("../src/render/pages/guide.js")); // the lazy GUIDE pages (v202 Task 3.5), as if their import had landed
+import * as endWin from "../src/render/pages/endwin.js";
+import * as endLose from "../src/render/pages/endlose.js";
+setLazyPage("endwin", endWin); setLazyPage("endlose", endLose); // the run-end pages are lazy (v202 Tasks 5.3 / 5.4): handed in as if their imports had landed
+import { rec as krec } from "./lib/textrec.mjs";
 
 let pass = 0, fail = 0;
 function check(name, cond, detail) {
@@ -488,10 +492,11 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
   }
   check("an empty note keeps the level kicker", over({ state: "PAUSE" }, { view: 0, cursor: 0, touch: false, note: "" }).strs().some((s) => s.startsWith("LEVEL 1 · ")));
   check("an inline page draws no note", !over({ state: "PAUSE" }, { view: 3, cursor: 0, touch: false, note: "CONTROLLER LOST" }).has("CONTROLLER LOST"));
-  const endText = () => over({ state: "LOSE" }).strs().join("|");
-  check("run end keeps the copy hint on keys", /new run · C copy · B board/.test(endText()), endText());
+  // v202 Task 5.4: GAME OVER's keys carry the words, label first, keycap last
+  const endText = () => { const R = krec(); drawOverlay(R.ctx, { level: 1, heat: 0, pace: 0, score: 0, players: [{}], state: "LOSE" }, 600, 520, 300, 260, undefined, undefined, { r: 0, css: 1.38 }); return R.texts.map((t) => t.s).join("|"); };
+  check("run end keeps the copy hint on keys", /TRY AGAIN\|New board · level 1\|ENTER\|MENU\|ESC\|COPY RESULT\|C\|COPY MAP\|B/.test(endText()), endText());
   setHints(padW);
-  check("run end on a pad names its copy buttons", /SOUTH · new run · WEST copy · NORTH board/.test(endText()), endText());
+  check("run end on a pad names its copy buttons", /TRY AGAIN\|New board · level 1\|SOUTH\|MENU\|EAST\|COPY RESULT\|WEST\|COPY MAP\|NORTH/.test(endText()), endText());
   setHints(null);
 
   const coach = () => { const r = rec(); drawCoach(r.c, 1); return r; };

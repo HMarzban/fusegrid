@@ -72,9 +72,10 @@ function scene(p, F, G, tok, caps, A) {
     text(p, "label", fitOf(p, "label", F.kick, kpx, inner), cx, ky, kpx, {align: "center", col: CONST.t2, role: "secondary"});
     if (!A || A.head != null) text(p, "display", head, cx, hy + (A ? -0.5 * hpx * (1 - A.head) : 0), hpx, {align: "center", outline: true});
   }
+  let dw = 0;
   if (has("score")) {
     const s = R("score"), dh = (ph ? 2.6 : 3.4) * L;
-    digits(p, F.score.digits, cx, s.y, L, tok, A, ph);
+    dw = digits(p, F.score.digits, cx, s.y, L, tok, A, ph);
     let sy = s.y + dh + (ph ? 0.6 : 0.8) * L + (dd.sec * ts * 1.25) / 2;
     text(p, "label", fitOf(p, "label", F.score.subs, dd.sec, inner), cx, sy, dd.sec, {align: "center", col: CONST.t2, role: "secondary"});
     if (F.note) for (const ln of wrap(p, "label", F.note, dd.sec, inner)) text(p, "label", ln, cx, (sy += dd.sec * ts * 1.25 + (sy === s.y ? 6 : 0)), dd.sec, {align: "center", col: CONST.t2, role: "secondary"});
@@ -88,7 +89,8 @@ function scene(p, F, G, tok, caps, A) {
     const won = F.course.findIndex((q) => q.st === "won"), other = F.course.findIndex((q) => q.st === "ahead" || q.st === "locked");
     if (won >= 0 && other >= 0) rpair(p, "chosen", [x0 + won * (cs + gap), co.y + 2, cs, cs], [x0 + other * (cs + gap), co.y + 2, cs, cs], {name: "won vs " + F.course[other].st});
     const lk = F.course.findIndex((q) => q.st === "locked");
-    if (lk >= 0 && won >= 0) rpair(p, "locked", [x0 + lk * (cs + gap), co.y + 2, cs, cs], [x0 + won * (cs + gap), co.y + 2, cs, cs], {name: "locked level", floor: G.rects.tally && !ph ? ((t) => [t.x + t.w - 26, t.y + 6, 18, t.h - 12])(R("tally")) : [x0 - 34, co.y + 2, 28, cs]}); // a plain floor well (the last stat card's empty end)
+    const sr = G.rects.score ? R("score") : null; // a plain floor: the bed at the score row's left end (beside the digits, never under them)
+    if (lk >= 0 && won >= 0) rpair(p, "locked", [x0 + lk * (cs + gap), co.y + 2, cs, cs], [x0 + won * (cs + gap) + 2, co.y + 2, cs * 0.5, cs * 0.5], {name: "locked level", floor: sr && dw ? [sr.x + 2, sr.y + 2, Math.max(6, Math.min(24, (sr.w - dw) / 2 - 8)), 3.4 * L * 0.6] : [x0 - 34, co.y + 2, 28, cs]}); // the won brick's lit top, clear of its notch
   }
   if (has("tally")) {
     const ta = R("tally");
