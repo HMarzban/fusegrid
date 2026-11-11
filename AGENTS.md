@@ -147,8 +147,12 @@ is quiet at rest (the foot on a keyboard, `COPY STATS` / `RESET` keys under the 
 confirm plate (ERASE ALL RECORDS?, one sentence = words.js `resetSentence(CLEAR_KEYS, KEEP_KEYS)`, the lists main hands in as
 `app.stats.wipe`; `RESET_GROUP` names each store key and words.test pins it equal to reset.js's lists), AGAIN ERASES focused (the
 band face, cream label, the R keycap last) beside COPY MY STATS; its foot `ERASE R · COPY C · ANY OTHER KEY CANCELS` (ERASE is no
-tap target: only AGAIN ERASES erases, so a double tap on RESET never does; on a touch box the plate ends above the COPY STATS /
-RESET keys for the same reason, shrinking its words on a short box). `statsHit` returns KeyC / KeyR / KeyT (a foot label
+tap target: only AGAIN ERASES erases, so a double tap on RESET never does; on a touch box AGAIN ERASES never touches the COPY STATS /
+RESET keys for the same reason). A landscape phone's #c (compact, R1 release ruling): armed, the confirm plate IS the page's plate, the head
+and tabs hidden under it, with words.js `resetShort` (every group still named, `RESET_SHORT`), the title, sentence and cancel line above the
+keys, AGAIN ERASES >= 8 from the idle COPY STATS / RESET keys (at the plate's foot under them, else above them), lines counted with the real
+measure (records.js `gctx`, test seam `_measureWith`); the words keep their size, else shrink to the phone floors, then (667 x 375 only,
+where the keys stack: a named exemption in `tests/landscape.test.mjs`) to a 9 px cap, never under. `statsHit` returns KeyC / KeyR / KeyT (a foot label
 from the painted foot's zones, or a touch key), "back", "plate" (inert) or, armed, "cancel". COPIED / COPY FAILED is a tag at the
 right end of the title row.
 

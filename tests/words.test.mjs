@@ -109,6 +109,14 @@ check("RECORDS' tabs: SCORES · STATS · MEDALS, frozen, in tab order; the hint 
     if (!kp || !word.test(kp) || !/^Keeps your /.test(kp)) quiet.push("KEEP " + k);
   }
   check("resetSentence names every group whichever list it is in (no silent drop); every RESET_GROUP group has words", quiet.length === 0 && groups.every((g) => W.RESET_WORDED.includes(g)), quiet.join(" | "));
+  /* R1 release ruling: the short form (a landscape phone's armed plate) names every group too, in either list, and is the shorter sentence */
+  const qs = [];
+  for (const [k, gr] of Object.entries(W.RESET_GROUP)) {
+    const c = W.resetShort([k], []), kp = W.resetShort([], [k]), word = gr === "tips" ? /seen tips/ : gr === "locks" ? /unlocks/ : gr === "daily try" ? /daily tries/ : new RegExp(gr);
+    if (!c || !word.test(c) || !/^[A-Z]/.test(c)) qs.push("CLEAR " + k);
+    if (!kp || !word.test(kp) || !/^Keeps /.test(kp)) qs.push("KEEP " + k);
+  }
+  check("resetShort names every group whichever list it is in; RESET_SHORT is it over reset.js's lists and shorter than RESET_DEFAULT", qs.length === 0 && W.RESET_SHORT === W.resetShort(CLEAR_KEYS, KEEP_KEYS) && W.RESET_SHORT.length < W.RESET_DEFAULT.length && W.RESET_SHORT === "Erases scores, bests, times, daily tries, ghosts, medals, badges, stats, seen tips and unlocks. Keeps settings, game speed, analytics choice and controls.", qs.join(" | ") + " " + W.RESET_SHORT);
 }
 check("the RECORDS feet build their TAB and DIFFICULTY words from words.js (keycap glyphs stay with the painter)", RP.footItems("scores", "tabs", wordsOf("key", DEF_CONTROLS))[0].t === W.LABEL.TAB && RP.footItems("scores", "body", wordsOf("key", DEF_CONTROLS))[0].t === W.LABEL.DIFFICULTY && RP.footItems("stats", "tabs", wordsOf("key", DEF_CONTROLS))[2].t === W.LABEL.TAB);
 check("PAUSE rows: RESUME, SETTINGS, RESTART, QUIT TO MENU (design record §4, Task 2.4); scenes' copy mirrors it", J(PAUSE_ITEMS) === J(["RESUME", W.LABEL.SETTINGS, "RESTART", "QUIT TO MENU"]) && J(PAUSE_ROWS) === J(PAUSE_ITEMS));

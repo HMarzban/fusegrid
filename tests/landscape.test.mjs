@@ -55,8 +55,8 @@ const app = (B, scr, o) => {
   return a;
 };
 /* one frame through the real routing; its probe record and the gates over it (no image: the measuring gates only) */
-function frame(B, scr, o) {
-  const R = rec({ widthK: 0.6 * 1.08 });
+function frame(B, scr, o, widthK = 0.6 * 1.08) {
+  const R = rec({ widthK });
   probe.setOn(true);
   let err = null;
   try { SV.drawShell(R.ctx, app(B, scr, o), { state: "PLAY", time: 1, level: 1 }, B.cv, "2d", () => TOP, () => 0, CAB); } catch (e) { err = e; }
@@ -138,6 +138,45 @@ const worst = (fs, k) => Math.min(...fs.map((f) => (f.g[k] && f.g[k].value != nu
   }
   setTextScale(1); setHints(wordsOf("touch", DEF_CONTROLS));
   check("a controller on the landscape phones: SETTINGS / GRAPHICS keep BACK + its keycap on the pager strip, every gate passing", bad.length === 0, bad.slice(0, 8).join(" | "));
+}
+
+/* ---- R1 release (a), lead ruling: the armed STATS confirm plate on the landscape phones, text 1 and 1.25, every page under it. The plate IS the page's
+   plate (the head and the tabs hidden under it, not read), words.js resetShort over reset.js's real CLEAR / KEEP lists word for word (every group named),
+   the keys BELOW the sentence, AGAIN ERASES never over (>= 8 apart from) RESET or COPY STATS (a double tap never erases), AGAIN taps KeyR, COPY KeyC,
+   anything else on the box cancels; touch, gap, inside and plate pass everywhere; cap passes at the phone floors except on the NAMED exemptions below,
+   held at their measured best and never under a 9 px cap. Measured at 0.5 em (the geometry's lines through _measureWith and the painter's at the same
+   width: real Chrome's macOS system-ui measures 0.433-0.446 em on this sentence, so 0.5 is the stricter side); the real-Chrome captures confirm. ---- */
+const ARMED_EX = { "667x375 1": 9.0, "667x375 1.25": 9.0 }; // box + text scale -> the least cap allowed (CSS px): on 667x375 AGAIN ERASES and COPY STATS do not fit side by side (real Chrome: 117 + 99 design px of legend in 281), the keys stack and the title and sentence shrink; measured best in Chrome 9.41 (text 1) and 9.38 (1.25) px, here 9.0 at 1.25
+{
+  const { CLEAR_KEYS, KEEP_KEYS } = await import("../src/app/reset.js"), RP = MODS.records, bad = [], got = {}, K = 0.5;
+  const sentence = W.resetShort(CLEAR_KEYS, KEEP_KEYS), ov = (a, b, g = 0) => a && b && a.x < b.x + b.w + g && b.x < a.x + a.w + g && a.y < b.y + b.h + g && b.y < a.y + a.h + g;
+  RP._measureWith(rec({ widthK: K }).ctx);
+  for (const ts of [1, 1.25]) for (const wh of LAND) {
+    setTextScale(ts);
+    const B = boxOf(wh), at = wh.join("x") + " " + ts, n = SV.recPagesOf(B.cv, "2d", SCREEN.STATS, TOP.length), ex = ARMED_EX[at];
+    for (let p = 0; p < n; p++) {
+      const f = frame(B, SCREEN.STATS, { resetArm: true, recFocus: 1, recPage: p, stats: { ...STATS, wipe: [CLEAR_KEYS, KEEP_KEYS] } }, K), w = at + " page " + p;
+      if (f.err || f.snap.fault) { bad.push(w + " threw " + (f.err ? f.err.message : f.snap.fault)); continue; }
+      for (const k of GATES) if (f.g[k].status !== "pass" && !(k === "cap" && ex !== undefined)) bad.push(w + " " + k + " " + f.g[k].status + " " + f.g[k].on + " " + f.g[k].value);
+      const sy = B.content.w / 600, low = Math.min(...f.snap.texts.map((t) => (t.role === "body" ? t.px * 0.705 : t.capH) * sy)); // the cap in CSS px (a body text: its font px x the kit CAP_K)
+      got[at] = Math.min(got[at] ?? Infinity, low);
+      if (ex !== undefined && (low < 9 - 0.05 || low < ex - 0.05)) bad.push(w + " under its named best " + low.toFixed(2) + " < " + Math.max(9, ex));
+      const body = f.snap.texts.filter((t) => t.role === "body").map((t) => t.s).join(" ");
+      if (body !== sentence) bad.push(w + " sentence " + JSON.stringify(body));
+      if (f.snap.texts.some((t) => /^(RECORDS|SCORES|STATS|MEDALS|BACK)$/.test(t.s))) bad.push(w + " the head or a tab is read under the plate");
+      const F = { W: 600, H: 520, touch: true, shell: false, css: B.css }, G = RP.recordsGeom(F), d = G.d, u = G.u, cf = d.confirm, a = d.bodies.stats.acts, mid = (r) => [(r.x + r.w / 2) * u, (r.y + r.h / 2) * u];
+      if (!cf.cover || J(cf.box.x) !== J(d.plate.x) || cf.box.y !== d.plate.y) bad.push(w + " the confirm plate is not the page's plate");
+      if (!(cf.again.y >= cf.body.y + cf.body.h && cf.copy.y >= cf.body.y + cf.body.h)) bad.push(w + " a key above the sentence");
+      if (!a || ov(cf.again, a.reset, 8 - 1e-6) || ov(cf.again, a.copy, 8 - 1e-6)) bad.push(w + " AGAIN ERASES within 8 of RESET / COPY STATS");
+      if (RP.statsHit(...mid(cf.again), F, true) !== "KeyR" || RP.statsHit(...mid(cf.copy), F, true) !== "KeyC" || RP.statsHit(...mid(d.back), F, true) !== "cancel" || RP.statsHit(...mid(d.tabs[0]), F, true) !== "cancel") bad.push(w + " hits");
+    }
+  }
+  RP._measureWith(undefined);
+  setTextScale(1);
+  if (process.env.LAND_PRINT) console.log("armed caps", J(got));
+  const exGot = Object.keys(ARMED_EX).every((k) => got[k] >= Math.max(9, ARMED_EX[k]) - 0.05), exOnly = Object.keys(got).filter((k) => got[k] < 9 - 0.05);
+  check("the armed STATS confirm plate on the landscape phones (" + LAND.map((b) => b.join("x")).join(", ") + ") at text 1 and 1.25: the page's plate, the short sentence whole, keys below it, AGAIN ERASES >= 8 from RESET / COPY STATS, taps; touch / gap / inside / plate pass, cap at the floors outside the named exemptions (" + J(ARMED_EX) + "), never under 9 px",
+    bad.length === 0 && exGot && exOnly.length === 0, bad.slice(0, 12).join(" | ") + " (" + bad.length + ") " + J(got));
 }
 
 /* ---- lead ruling (R1 landscape leftovers): ENEMIES' compact tooltip holds its words inside its own plate for every foe at 667x375 and 852x393, text 1

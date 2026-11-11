@@ -11,8 +11,8 @@
           DIFFICULTY bank floored to 44 CSS px, STATS' COPY STATS / RESET keys under its body, the touch confirm plate, the tap foot in tap mode.
    compact any other touch box (the landscape phones' #c, a short tablet window): one header row (BACK, the title where it fits, the tabs; BACK steps down
           to its chevron where three tabs would not hold their word), the plate at most 980 wide. On a touch box a body taller than its pane is
-          scaled into it (k; SCORES' bank and STATS' keys keep their size), floors giving way only there (the landscape phones' #c); the armed
-          confirm plate shrinks its words the same way (fk).
+          scaled into it (k; SCORES' bank and STATS' keys keep their size), floors giving way only there (the landscape phones' #c); armed,
+          the confirm plate is the page's plate (confirmCompact, R1 release ruling).
    Tabs are bricks in a wall trough: the open tab the world's brick standing 2 px up, the others floor wells. SCORES: the DIFFICULTY bank (the filter,
    R7: ←/→ and the shoulders in the body, a tap anywhere), the four badges (src/app/plaques.js bits CLEAR, PLUS, MAX, CROWN; earned = the medal outline
    tag, not yet = the lock tag) and the ten-slot table (RANK, SCORE, LEVEL, MODIFIERS as a count by words.js modsCount (R10; no modifier glyph exists in
@@ -28,7 +28,7 @@
    tab or the chosen difficulty), SCORES' chosen difficulty and its rows. A tab step paints its own layer once; a focus move or a filter step paints none.
    With no canvas source (Node) everything paints straight onto the target over one flat fill; a context with no clip or rect gets the plan only.
    Under the probe the page records its rects, texts and squint pairs outside any layer paint. */
-import {LABEL, DIFF, RECORD_TABS, REC_WORDS as RW, BADGE_NAMES, STATS_WORDS as ST, RESET_DEFAULT, modsCount, noRunsYet, pickToSet, diffTag, speedTag, resetSentence} from "../words.js";
+import {LABEL, DIFF, RECORD_TABS, REC_WORDS as RW, BADGE_NAMES, STATS_WORDS as ST, RESET_DEFAULT, RESET_SHORT, resetShort, modsCount, noRunsYet, pickToSet, diffTag, speedTag, resetSentence} from "../words.js";
 import {biomeOf} from "../../core/config.js";
 import {FOES, POWER} from "../../core/entities.js";
 import {drawEnemyBody} from "../sprites.js";
@@ -161,6 +161,46 @@ function confirmGeom(pane, dv, ts, touch, T0, t125, plateR, tall, floorY) {
   const x = pane.x + (pane.w - cw) / 2, y = touch ? Math.max(top, Math.min(bot - h, bot - (h - keysH - can - pad[0] + kh))) : Math.max(top, pane.y + (pane.h - h) / 2), ky = y + pad[0] + th + 14 + bh + 18, kw = stack ? iw : (iw - 14) / 2;
   const again = R(x + pad[1], ky, kw, kh), copy = stack ? R(x + pad[1], ky + kh + 12, iw, kh) : R(x + pad[1] + kw + 14, ky, kw, kh);
   return {box: R(x, y, cw, h), title: R(x + pad[1], y + pad[0], iw, th), tl, body: R(x + pad[1], y + pad[0] + th + 14, iw, bh), bl, fk, again, copy, cancel: touch ? R(x + pad[1], (stack ? copy.y : again.y) + kh + 12, iw, dv.sec * ts * fk * 1.2) : null};
+}
+/* compact (a landscape phone's #c; R1 release ruling): armed, the confirm plate IS the page's plate, the head and the tabs hidden under it (it is modal),
+   with words.js resetShort (every group still named). Top down: the warn title, the sentence, TAP ANYWHERE ELSE TO CANCEL, then the keys, AGAIN ERASES
+   never over the idle COPY STATS / RESET keys (>= 8 apart): at the plate's foot under them where it has the room, else above them. Lines are counted
+   with the real measure (gctx). The words keep their size, else shrink to the phone floors (fk 0.946 / text scale: the cancel line's 9 px cap,
+   body 14.1 px), then the title and the sentence alone down to a 9 px cap (a named test exemption), never under. */
+let GMC;
+function gctx() {
+  if (GMC !== undefined) return GMC;
+  try { GMC = typeof OffscreenCanvas === "function" ? new OffscreenCanvas(1, 1).getContext("2d") : typeof document !== "undefined" && document.createElement ? document.createElement("canvas").getContext("2d") : null; } catch (e) { GMC = null; }
+  if (GMC && typeof GMC.measureText !== "function") GMC = null;
+  return GMC;
+}
+const gw = (f, s) => { const c = gctx(); return c ? W(c, f, String(s)) : String(s).length * 0.66 * +(/([\d.]+)px/.exec(f) || [0, 10])[1]; };
+const gLines = (f, s, room) => { let n = 1, cur = ""; for (const w of String(s).split(" ")) { const t = cur ? cur + " " + w : w; if (!cur || gw(f, t) <= room) cur = t; else { n++; cur = w; } } return n; };
+/** Test seam: the geometry's measuring context (undefined: find one again), and the geometry memo dropped. */
+export const _measureWith = (c) => { GMC = c; gm = null; };
+export const CONFIRM_C = Object.freeze({pad: [10, 14, 8, 14], gap: 8, kgap: 12, guard: 8, floor: 9 / (CAP_K * DEV.p.sec), cap9: 9 / (CAP_K * DEV.p.bod)});
+function confirmCompact(plateR, cueR, acts, ts) {
+  const dv = DEV.p, C = CONFIRM_C, pad = C.pad, x = plateR.x, y = plateR.y, w = plateR.w, bot = cueR ? cueR.y - 6 : plateR.y + plateR.h, iw = w - pad[1] - pad[3], kh = PAGE_KEY;
+  /* side by side where both legends fit, the spare width shared; AGAIN ERASES (bomb + legend) takes the wider share. Else stacked, full width */
+  const na = gw(T.label(dv.pri), ST.AGAIN) + dv.bombs + 26, nc = gw(T.label(dv.pri), ST.COPY_SHORT) + 24, spare = iw - C.kgap - na - nc, side = spare >= 0;
+  const kwA = side ? na + spare / 2 : iw, kwC = side ? nc + spare / 2 : iw, keysH = side ? kh : 2 * kh + C.kgap;
+  const clear = (r) => !acts || [acts.copy, acts.reset].every((a) => r.y + r.h + C.guard <= a.y || r.y >= a.y + a.h + C.guard || r.x + r.w + C.guard <= a.x || r.x >= a.x + a.w + C.guard);
+  const keysAt = (ky, againFirst) => { const a = side ? R(x + pad[3], ky, kwA, kh) : R(x + pad[3], againFirst ? ky : ky + kh + C.kgap, iw, kh), c = side ? R(x + pad[3] + kwA + C.kgap, ky, kwC, kh) : R(x + pad[3], againFirst ? ky + kh + C.kgap : ky, iw, kh); return {again: a, copy: c}; };
+  const fkMin = Math.min(1, C.cap9 / ts), fcMin = Math.min(1, C.floor / ts);
+  let best = null;
+  for (let fk = 1; ; fk = Math.max(fkMin, fk - 0.01)) {
+    const fc = Math.max(fk, fcMin), tpx = dv.ttl * 0.72 * fk, bpx = dv.bod * fk;
+    const tl = gLines(T.display(tpx), ST.TITLE, iw - 34), th = tl * tpx * ts * 1.1, bl = gLines(T.body(bpx), RESET_SHORT, iw), bh = bl * bpx * ts * 1.5, ch = dv.sec * ts * fc * 1.2;
+    const above = pad[0] + th + C.gap + bh + C.gap + ch + C.gap, kyLow = bot - pad[2] - keysH;
+    /* the keys at the plate's foot (AGAIN ERASES first, else COPY first), then the keys above the idle keys */
+    const cands = [keysAt(kyLow, true), keysAt(kyLow, false)];
+    if (acts) { const top = Math.min(acts.copy.y, acts.reset.y) - C.guard - kh; cands.push(keysAt(top, true)); }
+    const k = cands.find((q) => clear(q.again) && Math.min(q.again.y, q.copy.y) >= y + above - 0.01 && Math.max(q.again.y + q.again.h, q.copy.y + q.copy.h) <= bot - pad[2] + 0.01);
+    best = {fk, fc, tl, bl, th, bh, ch, k, ky: k ? Math.min(k.again.y, k.copy.y) : kyLow};
+    if (k || fk <= fkMin) break;
+  }
+  const {fk, fc, tl, bl, th, bh, ch} = best, k = best.k || keysAt(Math.min(acts ? Math.min(acts.copy.y, acts.reset.y) - C.guard - kh : Infinity, bot - pad[2] - keysH), true), ky = Math.min(k.again.y, k.copy.y);
+  return {box: R(x, y, w, bot - y), title: R(x + pad[3], y + pad[0], iw, th), tl, body: R(x + pad[3], y + pad[0] + th + C.gap, iw, bh), bl, fk, fc, again: k.again, copy: k.copy, cancel: R(x + pad[3], ky - C.gap - ch, iw, ch), cover: true, fit: !!best.k};
 }
 /* STATS PAGES (lead ruling, fix round 1b; lane rules lesson 1, SETTINGS' paginate is the reference): a narrow touch body that does not fit unscaled
    after the tight steps pages instead of scaling. Whole sections per page, in order: the hero (BEST SCORE, its digits, the course, FURTHEST LEVEL),
@@ -349,7 +389,7 @@ function touchFrame(F, t125) {
   const iw = pane.w - 4 - P.pane[1] - P.pane[3], bh = pane.h - 4 - P.pane[0] - P.pane[2], bx = pane.x + 2 + P.pane[3], by = pane.y + 2 + P.pane[0];
   const bodies = bodiesAt(dv, ts, iw, {...P, kick: DESK.d.kick, bank: DESK.d.bank, statL: DESK.d.statL}, iw >= 520, bx, by, bh, 0, 0, land);
   return {mode: tall ? "phone" : "compact", dev: "p", u, t125, T: T0, plate: R(px, py, pw, ph), kick: null, title, back, tabs, trough, pane, cue, body: R(bx, by, iw, bh),
-    bodies, foot: null, confirm: confirmGeom(pane, dv, ts, true, 6, t125, R(px, py, pw, ph), tall, (bodies.stats.acts ? bodies.stats.acts.copy.y : by + bh - DEV.p.btnh) - 12)};
+    bodies, foot: null, confirm: tall ? confirmGeom(pane, dv, ts, true, 6, t125, R(px, py, pw, ph), tall, (bodies.stats.acts ? bodies.stats.acts.copy.y : by + bh - DEV.p.btnh) - 12) : confirmCompact(R(px, py, pw, ph), cue, bodies.stats.acts, ts)};
 }
 let gm = null;
 /** The one geometry for draw and tap; see the header. */
@@ -692,7 +732,7 @@ function statsPlan(c, G, ui) {
   const bests = [0, 1, 2].map((i) => { const e = (v.bests || [])[i] || null; return {l: diffTag(i), sub: e ? LABEL.LEVEL + " " + e.r : "", n: e ? sep3(e.s) : RW.NONE, s: e ? e.s : -1}; });
   const top = Math.max(...bests.map((q) => q.s)), notes = [];
   if (b.notes) for (const n of ui.notes || []) { const ls = wrap(c, sf, String(n), b.notes.w / k, 3) || []; for (const l of ls) if (notes.length < 3) notes.push(l); }
-  const conf = d.confirm, fk = conf.fk, cf = T.body(dv.bod * fk), sentence = resetSentence(ui.wipe ? ui.wipe[0] : null, ui.wipe ? ui.wipe[1] : null) || RESET_DEFAULT;
+  const conf = d.confirm, fk = conf.fk, cf = T.body(dv.bod * fk), sentence = (conf.cover ? resetShort : resetSentence)(ui.wipe ? ui.wipe[0] : null, ui.wipe ? ui.wipe[1] : null) || (conf.cover ? RESET_SHORT : RESET_DEFAULT);
   const titleF = T.display(dv.ttl * 0.72 * fk), tl = wrap(c, titleF, ST.TITLE, conf.title.w - 34, conf.tl) || [ST.TITLE];
   const bk2 = bestKick(), bk = bk2.join(" · "), bestK = W(c, sf, bk) <= b.bestK.w / k ? [bk] : bk2;
   const spage = b.pg ? Math.max(0, Math.min(b.pages - 1, ui.spage | 0)) : 0, on = (q) => { const v = b.pg ? b.pg[q] ?? b.pg[secOf(q)] : null; return v == null || v === spage; }; // a part, or its section where the body pages by sections
@@ -792,7 +832,8 @@ function wallCourse(c, r, tok) {
 /* the armed reset: the page dimmed under the confirm plate (static, in the armed page's layer), the AGAIN ERASES key live */
 function confirmStatic(c, G, P, tok) {
   const d = G.d, f = d.confirm, S = P.stats.confirm, dv = DEV[G.dev], ph = G.dev === "p", ts = G.ts;
-  c.fillStyle = "rgba(4,3,6,0.8)"; c.fillRect(d.pane.x + 2, d.pane.y + 2, d.pane.w - 4, d.pane.h - 4);
+  const dim = f.cover ? d.plate : R(d.pane.x + 2, d.pane.y + 2, d.pane.w - 4, d.pane.h - 4); // compact: the plate covers the head and the tabs too
+  c.fillStyle = "rgba(4,3,6,0.8)"; c.fillRect(dim.x, dim.y, dim.w, dim.h);
   plate(c, f.box.x, f.box.y, f.box.w, f.box.h, tok, {phone: ph, T: ph ? 6 : 8});
   const fk = f.fk, tp = dv.ttl * 0.72 * fk;
   ic(c, "warn", f.title.x, f.title.y + tp * ts * 0.55 - 11, 22, CONST.cor);
@@ -801,7 +842,7 @@ function confirmStatic(c, G, P, tok) {
   const cp = f.copy;
   key(c, cp.x, cp.y, cp.w, cp.h, "key", {tok, label: ph ? ST.COPY_SHORT : ST.COPY, phone: ph});
   if (!ph && canCap(c)) { const w = capW(c, "C"); cap(c, cp.x + cp.w - w - 12, cp.y + cp.h / 2 - DEV.d.caph / 2, "C", {tok}); }
-  if (f.cancel) text(c, ST.TAP_CANCEL, f.cancel.x, f.cancel.y + f.cancel.h / 2, T.label(dv.sec * fk), CONST.t2);
+  if (f.cancel) text(c, ST.TAP_CANCEL, f.cancel.x, f.cancel.y + f.cancel.h / 2, T.label(dv.sec * (f.fc || fk)), CONST.t2);
 }
 function confirmLive(c, G, tok) {
   const f = G.d.confirm, r = f.again, dv = DEV[G.dev], ph = G.dev === "p";
@@ -907,11 +948,12 @@ function record(G, P, ui, foc, dpr, el, F0, tok, touchy, tap) {
   probe.begin("records." + page, {w: G.W, h: G.H, dpr, el});
   probe.rect("plate", ...b(d.plate), {plate: G.T});
   const txt = (s, x, y, w, px, col, role, o = {}) => { if (s && w > 0) probe.text(s, x * u, (y - px * ts * CAP_K / 2) * u, w * u, px * ts * CAP_K * u, {role, col, px: px * ts * u, ...o}); };
-  if (d.back) { probe.rect(RW.BACK, ...b(d.back), {touch: touchy, set: "head", fill: tok.key}); const gx = d.back.x + (d.back.w > 60 ? 14 : (d.back.w - 16) / 2); if (d.back.w > 60) txt(RW.BACK, d.back.x + 40, d.back.y + d.back.h / 2, measureOr(RW.BACK, dv.pri), dv.pri, CONST.ink, "primary"); probe.pair("info", b(R(gx, d.back.y + d.back.h / 2 - 8, 16, 16)), b(R(gx - 6, d.back.y + 8, 28, d.back.h - 16)), {col: CONST.ink, name: "back chevron"}); }
+  const cover = page === "stats" && ui.arm && d.confirm.cover; // compact, armed: the head and the tabs are under the confirm plate, not read
+  if (d.back && !cover) { probe.rect(RW.BACK, ...b(d.back), {touch: touchy, set: "head", fill: tok.key}); const gx = d.back.x + (d.back.w > 60 ? 14 : (d.back.w - 16) / 2); if (d.back.w > 60) txt(RW.BACK, d.back.x + 40, d.back.y + d.back.h / 2, measureOr(RW.BACK, dv.pri), dv.pri, CONST.ink, "primary"); probe.pair("info", b(R(gx, d.back.y + d.back.h / 2 - 8, 16, 16)), b(R(gx - 6, d.back.y + 8, 28, d.back.h - 16)), {col: CONST.ink, name: "back chevron"}); }
   if (d.kick) txt(RW.MENU, d.kick.x, d.kick.y + d.kick.h / 2, measureOr(RW.MENU, dv.sec), dv.sec, CONST.t2, "secondary");
   if (P.cue) for (const p of P.cue.parts) { if (p.cap) probe.rect("cue cap", ...b(R(p.x, P.cue.cy - DEV.p.caph / 2, p.w, DEV.p.caph))); else txt(p.sep || p.t, p.x, P.cue.cy, p.w, P.cue.px, p.sep ? CONST.off : CONST.t2, "secondary", p.sep ? {lock: true} : {}); }
-  if (d.title) txt(P.title.s, d.title.x, d.title.y + d.title.h / 2, measureOr(P.title.s, P.title.px, true), P.title.px, CONST.ink, "primary");
-  P.tabs.forEach((t, i) => {
+  if (d.title && !cover) txt(P.title.s, d.title.x, d.title.y + d.title.h / 2, measureOr(P.title.s, P.title.px, true), P.title.px, CONST.ink, "primary");
+  if (!cover) P.tabs.forEach((t, i) => {
     const on = i === pi, r = on ? R(t.r.x, t.r.y - 2, t.r.w, t.r.h) : t.r;
     const fo = on && foc === "tabs" && !tap;
     probe.rect("tab " + t.s, ...b(r), {touch: touchy, set: "tabs", kind: "tab", focus: fo, fill: on ? tok.lit : tok.well});
@@ -921,7 +963,7 @@ function record(G, P, ui, foc, dpr, el, F0, tok, touchy, tap) {
   const on = P.tabs[pi].r, off = P.tabs[pi === 0 ? 1 : 0].r;
   /* a squint pair samples the face beside the legend (the right end of each key), so a bigger legend at 125 % never stands in for the face */
   const face = (r, lift) => R(r.x + r.w - 26, r.y + 4 - lift, 20, r.h - 10);
-  probe.pair("chosen", b(face(on, 2)), b(face(off, 0)), {name: "open tab vs not"});
+  if (!cover) probe.pair("chosen", b(face(on, 2)), b(face(off, 0)), {name: "open tab vs not"});
   let fr = null;
   if (foc === "tabs" && !tap) fr = R(on.x, on.y - 2, on.w, on.h);
   if (page === "scores") {
@@ -1016,7 +1058,7 @@ function record(G, P, ui, foc, dpr, el, F0, tok, touchy, tap) {
       txt(ST.AGAIN, ax, f.again.y + f.again.h / 2, aw, dv.pri, CONST.ink, "primary");
       const cl = G.dev === "p" ? ST.COPY_SHORT : ST.COPY, cwl = measureOr(cl, dv.pri);
       txt(cl, f.copy.x + f.copy.w / 2 - cwl / 2, f.copy.y + f.copy.h / 2, cwl, dv.pri, CONST.ink, "primary");
-      if (f.cancel) txt(ST.TAP_CANCEL, f.cancel.x, f.cancel.y + f.cancel.h / 2, measureOr(ST.TAP_CANCEL, dv.sec * fk), dv.sec * fk, CONST.t2, "secondary");
+      if (f.cancel) txt(ST.TAP_CANCEL, f.cancel.x, f.cancel.y + f.cancel.h / 2, measureOr(ST.TAP_CANCEL, dv.sec * (f.fc || fk)), dv.sec * (f.fc || fk), CONST.t2, "secondary");
     }
   }
   if (page === "medals") {
@@ -1131,7 +1173,8 @@ export function drawRecordsPage(c, F, ui, t = 0) {
   }
   c.save(); c.scale(u, u);
   const pi = PAGES.indexOf(ui.page), tr = G.d.tabs[pi];
-  { const t0 = P.tabs[pi]; focusKey(c, tr, t0.s, {fit: t0.bomb, lp: t0.lp, lw: t0.lw}, foc === "tabs" && !tap, tok, DEV[G.dev], G.dev === "p"); }
+  const cover = ui.page === "stats" && ui.arm && G.d.confirm.cover; // compact, armed: the confirm plate covers the head and the tabs
+  if (!cover) { const t0 = P.tabs[pi]; focusKey(c, tr, t0.s, {fit: t0.bomb, lp: t0.lp, lw: t0.lw}, foc === "tabs" && !tap, tok, DEV[G.dev], G.dev === "p"); }
   if (ui.page === "scores") scoresLive(c, G, P, ui, tok, foc === "body" && !tap);
   if (P.pg && !(ui.page === "stats" && ui.arm)) paintPager(c, G.d.bodies[ui.page].pager, P.pg, tok, DEV[G.dev]); // armed, the confirm plate is the one page
   if (ui.page === "stats" && ui.arm) confirmLive(c, G, tok);

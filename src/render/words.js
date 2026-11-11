@@ -163,5 +163,19 @@ export function resetSentence(clear, keep) {
   const s = parts.length ? parts[0][0].toUpperCase() + andList(parts).slice(1) + "." : "";
   return (s + (kp.length ? " Keeps your " + andList(kp) + "." : "")).trim();
 }
+/* the short form (R1 release ruling: a landscape phone's armed plate): the same groups, each still named, as plural nouns ("seen tips", "unlocks") */
+const PLURAL = Object.freeze({score: "scores", best: "bests", time: "times", "daily try": "daily tries", ghost: "ghosts", medal: "medals", badge: "badges", stat: "stats", tips: "seen tips", locks: "unlocks"});
+/** The armed reset's short sentence: every group resetSentence names, in fewer words. */
+export function resetShort(clear, keep) {
+  const g = (l) => new Set((l || []).map((k) => RESET_GROUP[k]).filter(Boolean)), C = g(clear), K = g(keep);
+  for (const x of [...C, ...K]) if (!RESET_WORDED.includes(x)) throw new Error("resetShort: no words for the group " + x + " (add it to the noun lists)");
+  const pl = (n) => PLURAL[n] || n, er = [...ERASE_NOUNS, "tips", "locks"].filter((n) => C.has(n)).map(pl), rs = KEEP_NOUNS.filter((n) => C.has(n));
+  const kp = [...KEEP_NOUNS, ...ERASE_NOUNS, "tips", "locks"].filter((n) => K.has(n)).map(pl), parts = [];
+  if (er.length) parts.push("erases " + andList(er));
+  if (rs.length) parts.push("resets " + andList(rs));
+  const s = parts.length ? parts[0][0].toUpperCase() + andList(parts).slice(1) + "." : "";
+  return (s + (kp.length ? " Keeps " + andList(kp) + "." : "")).trim();
+}
 /** The sentence for every store this table knows (CLEAR = every group not kept): what the confirm plate is sized for. */
-export const RESET_DEFAULT = resetSentence(Object.keys(RESET_GROUP).filter((k) => !KEEP_NOUNS.includes(RESET_GROUP[k])), Object.keys(RESET_GROUP).filter((k) => KEEP_NOUNS.includes(RESET_GROUP[k])));
+const ALL_CLEAR = Object.keys(RESET_GROUP).filter((k) => !KEEP_NOUNS.includes(RESET_GROUP[k])), ALL_KEEP = Object.keys(RESET_GROUP).filter((k) => KEEP_NOUNS.includes(RESET_GROUP[k]));
+export const RESET_DEFAULT = resetSentence(ALL_CLEAR, ALL_KEEP), RESET_SHORT = resetShort(ALL_CLEAR, ALL_KEEP);

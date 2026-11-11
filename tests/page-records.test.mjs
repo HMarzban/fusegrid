@@ -472,8 +472,8 @@ for (const b of ALL) for (const ts of [1, 1.25]) {
   /* fix round 1: at 100 % too, measured at the recorder's +8 % width: each kicker line ends before the wall course and inside its column */
   if (B.div) check(`STATS (${b}${ts > 1 ? " t125" : ""}): the BEST BY DIFFICULTY kicker breaks once where one line would pass its column; each line ends before the wall course`, kt.every((t) => t && t.x + t.w <= B.div.x * G.u + 0.01 && t.x + t.w <= (B.bestK.x + B.bestK.w) * G.u + 0.01) && (kl.length === 2 || kt[0].w <= B.bestK.w * G.u), J({ kl, kt, div: B.div.x * G.u }));
   const a = snap(F, SUI({ arm: true })).s, f = a.rects.find((r) => r.name === "confirm"), body = a.texts.filter((t) => t.role === "body");
-  check(`STATS armed (${b}${ts > 1 ? " t125" : ""}): ERASE ALL RECORDS? and the whole sentence inside the confirm plate, AGAIN ERASES focused, COPY beside it`,
-    !!f && body.map((t) => t.s).join(" ") === W.RESET_DEFAULT && body.every((t) => inside(t, f, 0.6)) && a.texts.some((t) => /ERASE ALL/.test(t.s)) && a.rects.some((r) => r.name === "AGAIN ERASES" && r.focus) && a.rects.some((r) => /^COPY/.test(r.name)), J({ f, body: body.map((t) => t.s) }));
+  check(`STATS armed (${b}${ts > 1 ? " t125" : ""}): ERASE ALL RECORDS? and the whole sentence (a landscape phone's plate: the words.js short form, R1 release ruling) inside the confirm plate, AGAIN ERASES focused, COPY beside it`,
+    !!f && body.map((t) => t.s).join(" ") === (G.d.confirm.cover ? W.RESET_SHORT : W.RESET_DEFAULT) && body.every((t) => inside(t, f, 0.6)) && a.texts.some((t) => /ERASE ALL/.test(t.s)) && a.rects.some((r) => r.name === "AGAIN ERASES" && r.focus) && a.rects.some((r) => /^COPY/.test(r.name)), J({ f, body: body.map((t) => t.s) }));
   setTextScale(1);
 }
 /* a phone at 100 %: the STATS body steps down (closer gaps, no level course, a 27 LIFETIME pitch, then one-line bests) instead of shrinking its
