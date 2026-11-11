@@ -52,6 +52,14 @@ check("ALLOW and NO THANKS share ONE rule (same size, weight, border, fill)", eq
 check("on touch they are one rule too, 44px", /body\[data-lay=p\] #ana \.yes,body\[data-lay=l\] #ana \.yes,body\[data-lay=p\] #ana \.no,body\[data-lay=l\] #ana \.no\{height:44px\}/.test(css));
 const upd = readFileSync(new URL("../src/app/update.js", import.meta.url), "utf8"), ana = readFileSync(new URL("../src/app/analytics.js", import.meta.url), "utf8");
 check("label first, keycap last on RELOAD, LATER, ALLOW, NO THANKS", /RELOAD <kbd>U<\/kbd>/.test(upd) && /LATER <kbd>EAST<\/kbd>/.test(upd) && /ALLOW <kbd>Y<\/kbd>/.test(ana) && /NO THANKS <kbd>N<\/kbd>/.test(ana) && !/<kbd>[^<]*<\/kbd>(RELOAD|LATER|ALLOW|NO THANKS)/.test(upd + ana));
+const markup = html.slice(html.indexOf('<div id="load"'), html.indexOf('id="loadjs"'));
+check("the load card: label first, keycap last (RETRY ENTER, USE CLASSIC 2D ESC), the keycaps a keyboard layout's only", /<span id="loadretryw">RETRY<\/span><kbd id="loadretryk">ENTER<\/kbd>/.test(markup) && /<span id="loadkeepw">USE CLASSIC 2D<\/span><kbd id="loadkeepk">ESC<\/kbd>/.test(markup) &&
+  /body\[data-lay=p\] #loadretryk,body\[data-lay=l\] #loadretryk,body\[data-lay=p\] #loadkeepk,body\[data-lay=l\] #loadkeepk\{display:none\}/.test(css));
+/* spec §3 type rule: no monospace for words, letter-spacing 0 on sentences; mono only inside a kbd */
+const mono = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].filter((m) => /monospace/.test(m[2]) && /#(upd|ana|load)/.test(m[1]) && !/kbd|#loadretryk|#loadkeepk/.test(m[1])).map((m) => m[1].trim());
+check("the DOM cards set no word in monospace (only a kbd keycap is mono)", mono.length === 0, mono.join(" | "));
+const spaced = ["#upd i", "#upd .later", "#ana i", "#loadmsg", "#load b"].filter((s) => !rules(new RegExp("^" + s.replace(/[.#]/g, "\\$&") + "$")).some((r) => /letter-spacing:0(;|$)/.test(r)));
+check("the cards' sentences, LATER and the load card's wordmark sit at letter-spacing 0", spaced.length === 0, spaced.join(","));
 const { LABEL } = await import("../src/render/words.js");
 const { lum } = await import("../src/render/kit/tokens.js");
 check("hover fill is visibly lighter than the resting band", lum(K.hover) > 2 * lum(K.band) && !/--k-keyhi/.test(css), lum(K.hover) + " vs " + lum(K.band));

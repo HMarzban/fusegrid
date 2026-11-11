@@ -143,12 +143,12 @@
   #updbg{position:fixed;inset:0;z-index:19;background:rgba(11,6,9,.5);
     -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);animation:updFade .16s linear both}
   #upd b{flex-basis:100%}
-  #upd i{flex-basis:100%;margin-top:-6px;font:400 12px ui-monospace,monospace;font-style:normal;color:var(--k-off);letter-spacing:0}
+  #upd i{flex-basis:100%;margin-top:-6px;font:400 12px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-style:normal;color:var(--k-off);letter-spacing:0}
   #upd .go{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 14px;border:1px solid var(--k-frame);
     border-radius:4px;background:var(--k-band);color:var(--k-ink);font-size:14px;letter-spacing:.1em;cursor:pointer}
   #upd kbd,#ana kbd{font:900 11px ui-monospace,monospace;padding:2px 6px;background:var(--k-dk);border:1px solid var(--k-off);
     border-radius:3px;color:var(--k-ink);letter-spacing:0}
-  #upd .later{font:12px ui-monospace,monospace;color:var(--k-off);letter-spacing:.06em;padding:0 12px;line-height:40px;cursor:pointer}
+  #upd .later{font:12px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--k-off);letter-spacing:0;padding:0 12px;line-height:40px;cursor:pointer}
   #upd .later kbd{display:none;margin-left:8px}
   #upd[data-pad="1"] kbd{display:inline}
   #upd .go:hover{background:var(--k-hover)}#upd .later:hover{color:var(--k-ink)}
@@ -163,7 +163,7 @@
     font:700 13px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.12em;
     animation:updIn .16s steps(4) both;user-select:none;-webkit-user-select:none}
   #ana b{flex-basis:100%}
-  #ana i{flex-basis:100%;margin-top:-4px;font:400 11px/1.45 ui-monospace,monospace;font-style:normal;color:var(--k-off);letter-spacing:0}
+  #ana i{flex-basis:100%;margin-top:-4px;font:400 11px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-style:normal;color:var(--k-off);letter-spacing:0}
   #ana .yes,#ana .no{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;height:34px;padding:0 8px;border:1px solid var(--k-frame);
     border-radius:4px;background:var(--k-band);color:var(--k-ink);font-size:12px;letter-spacing:.1em;cursor:pointer;white-space:nowrap}
   #ana .yes:hover,#ana .no:hover{background:var(--k-hover)}
@@ -195,7 +195,7 @@
   #load[hidden]{display:none}
   /* until the title paints, the unsized #c would draw an empty framed box behind the plate */
   #load[data-boot]~#wrap{visibility:hidden}
-  #load b{font:700 18px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.14em}
+  #load b{font:700 18px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:0}
   /* the chip (v202): a look's job after boot, only while its RENDER row is off screen and never in live PLAY.
      One line, a 3 px bar along its bottom, no wordmark, no pointer, no keys. shellview hands the drawn stage's
      top-centre (--chip-x/-y/-w): inside the stage, so never over the PAUSE pill or the touch pad. data-note: the
@@ -210,7 +210,7 @@
   #load[data-note=bad] #loadmsg{color:var(--k-cor)}
   #load[data-dock] b{display:none}
   #load[data-act]{pointer-events:auto}
-  #loadmsg{font:400 12px/1.45 ui-monospace,"SF Mono",Menlo,Consolas,monospace;color:var(--k-off);letter-spacing:.04em}
+  #loadmsg{font:400 12px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--k-off);letter-spacing:0}
   #loadbar{position:relative;height:6px;overflow:hidden;background:var(--k-well);border-radius:2px}
   #loadbar[hidden]{display:none}
   #loadfill{position:absolute;inset:0;background:var(--k-lit);transform:scaleX(0);transform-origin:0 50%;transition:transform .18s linear;will-change:transform}
@@ -225,6 +225,9 @@
   #loadact button:hover{background:var(--k-hover)}
   #loadact button:focus-visible{outline:2px solid var(--k-ink);outline-offset:2px}
   #loadkeep[hidden]{display:none}
+  /* a keyboard layout's keycaps, label first: Enter is RETRY, Escape USE CLASSIC 2D (a pad's words replace them; touch layouts show none) */
+  #loadretryk,#loadkeepk{display:inline-block;margin-left:8px;font:900 11px ui-monospace,monospace;padding:2px 6px;background:var(--k-dk);border:1px solid var(--k-off);border-radius:3px;color:var(--k-ink);letter-spacing:0}
+  #loadretryk[hidden],#loadkeepk[hidden],body[data-lay=p] #loadretryk,body[data-lay=l] #loadretryk,body[data-lay=p] #loadkeepk,body[data-lay=l] #loadkeepk{display:none}
   /* reduced motion: no glint and no glide; a wait with no number keeps a still striped track, never an empty one */
   @media (prefers-reduced-motion:reduce){#loadrun{animation:none;opacity:0}#loadfill{transition:none}#loadbar[data-ind]{background:repeating-linear-gradient(-45deg,var(--k-well) 0 4px,var(--k-key) 4px 8px)}}
   .muted{opacity:.45}
@@ -232,7 +235,7 @@
 </style>
 </head>
 <body>
-<div id="load" hidden data-boot><b>FUSE/GRID</b><div id="loadbar" role="progressbar" aria-label="Loading" aria-valuemin="0" aria-valuemax="100" data-ind><div id="loadfill"></div><div id="loadrun"></div></div><span id="loadmsg">LOADING</span><div id="loadact" hidden><button id="loadretry" type="button">RETRY</button><button id="loadkeep" type="button" hidden>USE CLASSIC 2D</button></div></div>
+<div id="load" hidden data-boot><b>FUSE/GRID</b><div id="loadbar" role="progressbar" aria-label="Loading" aria-valuemin="0" aria-valuemax="100" data-ind><div id="loadfill"></div><div id="loadrun"></div></div><span id="loadmsg">LOADING</span><div id="loadact" hidden><button id="loadretry" type="button"><span id="loadretryw">RETRY</span><kbd id="loadretryk">ENTER</kbd></button><button id="loadkeep" type="button" hidden><span id="loadkeepw">USE CLASSIC 2D</span><kbd id="loadkeepk">ESC</kbd></button></div></div>
 <div id="loadsay" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 <!-- The one loader. It runs before any module, so it is plain inline JS, and the
      first-load job counts finished files against data-files, which
@@ -244,7 +247,7 @@
      Escape with the other button, the keyboard twin of a pad's SOUTH and EAST. -->
 <script id="loadjs" data-files="118">
 (function(w,d){
-  var $=function(i){return d.getElementById(i)},E=$("load"),bar=$("loadbar"),fill=$("loadfill"),msg=$("loadmsg"),act=$("loadact"),retry=$("loadretry"),keep=$("loadkeep");
+  var $=function(i){return d.getElementById(i)},E=$("load"),bar=$("loadbar"),fill=$("loadfill"),msg=$("loadmsg"),act=$("loadact"),retry=$("loadretry"),keep=$("loadkeep"),retryW=$("loadretryw"),keepW=$("loadkeepw"),retryK=$("loadretryk"),keepK=$("loadkeepk");
   var SLOW=10000,STALL=30000,say0=$("loadsay"),jobs={},cur=null,failed=null,drop=null,again=null,shown=null,words=false,iv=0,base=new URL("./",d.baseURI).href;
   /* sp: where the game says the chip may show (shellview loaderSpot); cn: the chip's READY / DID NOT LOAD line */
   var sp={row:false,off:false,x:null,y:null,w:null},cn=null;
@@ -361,7 +364,7 @@
       if(k==="boot")retry.focus();
     },
     /* a pad's route to a look's failure card (src/app/loadbar.js loadCard); pad = last used, so the buttons name its words */
-    padLive:function(pad){var on=!!failed&&failed!=="boot";if(on&&words!==!!pad){words=!!pad;retry.textContent="RETRY"+(pad?" SOUTH":"");keep.textContent="USE CLASSIC 2D"+(pad?" EAST":"")}return on},
+    padLive:function(pad){var on=!!failed&&failed!=="boot";if(on&&words!==!!pad){words=!!pad;retryW.textContent="RETRY"+(pad?" SOUTH":"");keepW.textContent="USE CLASSIC 2D"+(pad?" EAST":"");retryK.hidden=keepK.hidden=!!pad}return on},
     padPress:function(id){if(!failed||failed==="boot")return;if(id==="S")retry.onclick();else if(id==="E"&&drop)keep.onclick()}
   };
   /* the flag form of spot().row, for a reader or a writer that only knows the row */
