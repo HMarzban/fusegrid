@@ -58,6 +58,16 @@ export function runParts(run, o) {
 }
 export const runWords = (run) => runParts(run, { all: true }).join(" · ");
 export const tagFor = (run) => runParts(run).join(" · ");
+/* SHELL WORDS (R1 cohesion): the verbs and touch lines more than one page reads, each defined once (kit/copy.js re-exports the kit's). */
+export const BACK = "BACK", OPEN = "OPEN", PAGE = "PAGE", OF = "OF", ROW = "ROW", CHANGE = "CHANGE", ON = "ON", OFF = "OFF", MENU = "MENU";
+export const BACK_TAP = "TAP OUTSIDE TO GO " + BACK;
+export const TAP_ROW = "TAP A ROW TO CHANGE IT";
+export const FOOT_TAP = TAP_ROW + " · " + BACK_TAP;
+export const LOAD_WORDS = Object.freeze({loading: "LOADING", failed: "DID NOT LOAD"});
+export const TO_CONTROLS = LABEL.SETTINGS + " › CONTROLS"; // the controller's signpost: where rebinding lives
+/* the RENDER row's job words (kit/copy.js lookVal): a failure's retry, READY, a slow fetch, the prepare phases */
+export const LOOK_WORDS = Object.freeze({RETRY: "RETRY", TAP_RETRY: "TAP TO RETRY", READY: "READY", SLOW: "SLOW, STILL TRYING", PREPARING: "PREPARING",
+  PH: Object.freeze({bake: "ART", build: "BUILDING", shaders: "SHADERS"})});
 /* MENU (v202 Task 3.1): the rows in order (menuapp ITEMS is pinned equal), the art styles by RENDER value 0..2, and the page's
    teaser and foot words (round 7 S7-menu). */
 export const MENU_ROWS = Object.freeze(["PLAY", LABEL.LEVEL_SELECT, "DAILY", LABEL.RECORDS, LABEL.SETTINGS, "GUIDE", "SOURCE"]);
@@ -65,8 +75,9 @@ export const ART_STYLES = Object.freeze(["CLASSIC 2D", "PIXEL", "REAL 3D"]);
 export const MENU_WORDS = Object.freeze({
   LEVEL_TEASE: LABEL.LEVEL + " · " + LABEL.DIFFICULTY + " · SPEED", NEW: "NEW · TODAY'S BOARD", NEW_SHORT: "NEW TODAY",
   TRIES: "YOUR TRIES TODAY", TRIES_SHORT: "TRIES TODAY", TRIES_MIN: "TRIES", BEST: "BEST", NO_RUNS: "NO RUNS YET", PAGES: "PAGES",
-  GITHUB: "GITHUB", MOVE: "MOVE", START: "START", OPEN: "OPEN", TAP: "TAP A ROW",
+  GITHUB: "GITHUB", MOVE: "MOVE", START: "START", OPEN, TAP: "TAP A ROW",
   SOURCE_PAD: "NEEDS A CLICK OR ENTER", // a controller press opens no browser tab: SOURCE's foot says so while a controller drives MENU
+  PAD_READY: "CONTROLLER READY", PAD_BACK: "CONTROLLER BACK", // the app's pad notes (controlswire), read back to make the signpost
 });
 /* The next-run card (v202 Task 3.2, MENU; LEVEL SELECT reuses it): its kicker, the level's mark (level 1, a finale, the last one), its
    section labels and its stat cells. ENEMIES counts the kinds when their names do not fit (the GUIDE page's word). */
@@ -79,17 +90,41 @@ export const CARD_WORDS = Object.freeze({
    words, the lock tip, the card's BEST mark, the touch foot and the desk's help line (one sentence, sentence case; units unspaced). */
 const MOD_SENT = Object.freeze(["One life for the whole run.", "No power-ups wait on the floor.", "Fewer power-ups hide in bricks.", "Walls close in from 25s.", "A timer and a best time for each level."]);
 export const LEVEL_WORDS = Object.freeze({
-  ROW: "ROW", CHANGE: "CHANGE", PICK: "PICK", TOGGLE: "TOGGLE", OPEN: "OPEN", BACK: "BACK", ON: "ON", OFF: "OFF", NONE: "NONE",
+  ROW, CHANGE, PICK: "PICK", TOGGLE: "TOGGLE", OPEN, BACK, ON, OFF, NONE: "NONE",
   LOCKED: "CLEAR LEVEL 5 TO OPEN", BEST: "BEST", NO_TIME: "NO TIME YET",
-  TAP: "TAP START TO PLAY · TAP OUTSIDE TO GO BACK", TAP_LIST: "TAP START TO PLAY · TAP OUTSIDE TO " + LABEL.CLOSE,
+  TAP: "TAP START TO PLAY · " + BACK_TAP, TAP_LIST: "TAP START TO PLAY · TAP OUTSIDE TO " + LABEL.CLOSE,
   MOD_HELP: MOD_SENT, PAD_HELP: "TRIGGERS pick a modifier, NORTH toggles it.", // a controller's shortcut: TRIGGERS walk the list shut, NORTH toggles // by list entry: the four modifier bits in MOD_BITS order, then TIME TRIAL
   help: (n, open) => "Level " + n + " of 8. " + (open ? "Levels 5 and 8 end in a finale." : "Clear level 5 to open 6 to 8."),
 });
 /* RECORDS (v202 Tasks 4.1 / 4.2, pages/records.js): the page's own words. Badges are the four plaques (src/app/plaques.js bit order CLEAR, PLUS, MAX,
    CROWN), the two difficulty ones read as their difficulty. */
 export const REC_WORDS = Object.freeze({
-  MENU: "MENU", BACK: "BACK", TAB: LABEL.TAB, BADGES: "BADGES", RANK: "RANK", SCORE: "SCORE", DATE: "DATE",
-  NONE: "—", NO_MODS: "NO " + LABEL.MODIFIERS, EARNED: "EARNED", TAP: "TAP A TAB · TAP OUTSIDE TO GO BACK",
+  MENU, BACK, TAB: LABEL.TAB, BADGES: "BADGES", RANK: "RANK", SCORE: "SCORE", DATE: "DATE",
+  NONE: "—", NO_MODS: "NO " + LABEL.MODIFIERS, EARNED: "EARNED", TAP: "TAP A TAB · " + BACK_TAP,
+  WEST: "WEST", NORTH: "NORTH", // STATS' controller keys (src/app/controls.js BTN names): COPY and MEDALS
+});
+/* SETTINGS and GRAPHICS (v202 Task 3.4, pages/settings.js): the page's own words; the row labels are menuapp OPT_ROWS / gfx.js GFX_ROWS (pinned). */
+export const SETTINGS_WORDS = Object.freeze({
+  looks: "The same game in three looks. PIXEL and REAL 3D download the first time you pick them.",
+  add3d: "REAL 3D adds two rows here: CAMERA and BRIGHTNESS.",
+  on3d: "CAMERA and BRIGHTNESS are on the list while REAL 3D is your art style.",
+  of: OF, row: ROW, change: CHANGE, back: BACK, tapRow: TAP_ROW, build: "BUILD", perf: "PERFORMANCE · BATTERY", on: ON, off: OFF,
+  cam: Object.freeze(["STANDARD", "WIDE", "FAR"]), vib: "VIBRATION",
+});
+/* GUIDE (v202 Task 3.5, pages/guide.js): the page titles, the doors' teasers, HOW TO's rules, controls and note, the foot's verbs, ENEMIES'
+   points words, hint and tooltip, FLOOR's head and its placeholder lines. */
+export const GUIDE_WORDS = Object.freeze({
+  GUIDE: "GUIDE", HOW: "HOW TO PLAY", ENEMIES: "ENEMIES", FLOOR: "FLOOR", MENU,
+  POINTS: "POINTS", PTS: "PTS", APPEARS: "APPEARS IN ",
+  RULES: Object.freeze(["CLEAR EVERY ENEMY", "GOLD WALL NEVER BREAKS"]),
+  NOTE_KEY: "* NEEDS ITS POWER-UP", NOTE_TAP: "TOUCH · D-PAD MOVES · RIGHT BUTTON BOMBS",
+  MOVE: "MOVE", BOMB: "BOMB", THROW: "THROW", REMOTE: "REMOTE", KICK: "KICK", PAUSE: "PAUSE", WALK_INTO: "WALK INTO BOMB",
+  PICK: "PICK", OPEN, BACK, PAGE, TAP_DOOR: "TAP A DOOR", TAP_POINTS: "TAP A POINTS VALUE", COLLECT: "WALK OVER A POWER-UP TO COLLECT",
+  REBIND: "REBIND IN " + TO_CONTROLS,
+  RULES_N: "2 RULES", CONTROLS_N: "6 CONTROLS", KEYS_N: "6 KEYS", FOES: "FOES", TILES: "TILES",
+  LOOK_ONLY: "LOOK ONLY FOR NOW", RULE_LATER: "ITS RULE COMES LATER",
+  HINT_KEY: "Move to a points value to see what it means.", HINT_TAP: "Tap a points value to see what it means.",
+  tip: (name) => "What you score each time your blast takes out a " + name + ". Saved scores count ×2 on " + DIFF[1] + " and ×3 on " + DIFF[2] + ".",
 });
 export const BADGE_NAMES = Object.freeze(["CLEAR", DIFF[1], DIFF[2], "CROWN"]);
 export const noRunsYet = (h) => "NO " + diffTag(h) + " RUNS YET";

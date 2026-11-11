@@ -24,7 +24,7 @@
 import {CFG, biomeOf, BIOMES} from "../../core/config.js";
 import {POWER, FOES, helpOf} from "../../core/entities.js";
 import {TILE_HELP, TILE_NAME} from "../../core/feat.js";
-import {LABEL, DIFF, levelsOf, POINTS_RULE} from "../words.js";
+import {LABEL, DIFF, levelsOf, POINTS_RULE, GUIDE_WORDS as GW, BACK_TAP} from "../words.js";
 import {worldTokens, CONST, toL} from "../kit/tokens.js";
 import {key, cap, capW, plate, band, focusBomb, glyph, wallCell, floorCell, plaque, rpath as rp} from "../kit/paint.js";
 import {T, DEV, dsp, measure, textScale, measurer as mOf, CAP_K} from "../kit/type.js";
@@ -42,24 +42,23 @@ import {pixelArt, itemCell, foeCell as pxFoe, blitCell, blitAnim, foeAnim, seedO
 import {foeM, blinkAt} from "../motion.js";
 import {hints, tapMode} from "../hintcopy.js";
 
-export const GUIDE = "GUIDE", HOW = "HOW TO PLAY", PU = LABEL.POWER_UPS, EN = "ENEMIES", FL = "FLOOR";
+export const GUIDE = GW.GUIDE, HOW = GW.HOW, PU = LABEL.POWER_UPS, EN = GW.ENEMIES, FL = GW.FLOOR;
 /* the doors in menuapp GUIDE_ROWS order (tests/page-guide pins it equal) */
 export const DOORS = Object.freeze([HOW, PU, EN, FL]);
 export const SHOT = deep({[GUIDE]: "guide", [HOW]: "howto", [PU]: "items", [EN]: "enemies", [FL]: "floor"});
 /* a foe's points: sim.js killEnemy (tests/page-guide drives a real kill per type and pins each) */
 export const PTS = deep({walker: 100, stationary: 100, fast: 100, chaser: 100, boomerang: 250, rocket: 300, burrow: 150, shade: 250, knight: 200});
-export const POINTS = "POINTS", PTS_W = "PTS", APPEARS = "APPEARS IN ";
-export const tipText = (name) => "What you score each time your blast takes out a " + name + ". Saved scores count ×2 on " + DIFF[1] + " and ×3 on " + DIFF[2] + ".";
-export const HINT = deep({key: "Move to a points value to see what it means.", tap: "Tap a points value to see what it means."});
-export const BACK_TAP = "TAP OUTSIDE TO GO BACK";
-const RULES = ["CLEAR EVERY ENEMY", "GOLD WALL NEVER BREAKS"], NOTE_KEY = "* NEEDS ITS POWER-UP", NOTE_TAP = "TOUCH · LEFT PAD MOVES · RIGHT BUTTON BOMBS";
+export const POINTS = GW.POINTS, PTS_W = GW.PTS, APPEARS = GW.APPEARS, tipText = GW.tip;
+export const HINT = deep({key: GW.HINT_KEY, tap: GW.HINT_TAP});
+export {BACK_TAP};
+const FLOOR_HEAD = LABEL.DIFFICULTY + " · " + DIFF.join(" · "), RULES = GW.RULES, NOTE_KEY = GW.NOTE_KEY, NOTE_TAP = GW.NOTE_TAP, NEEDS = " *";
 const howRows = (W) => [
-  [[W.move, W.moveAlt], "MOVE", null],
-  [[W.bomb], "BOMB", "bomb"],
-  [[W.throw], "THROW *", "throw"],
-  [[W.remote], "REMOTE *", "remote"],
-  [["WALK INTO BOMB"], "KICK *", "kick"],
-  [[W.pause], "PAUSE", null],
+  [[W.move, W.moveAlt], GW.MOVE, null],
+  [[W.bomb], GW.BOMB, "bomb"],
+  [[W.throw], GW.THROW + NEEDS, "throw"],
+  [[W.remote], GW.REMOTE + NEEDS, "remote"],
+  [[GW.WALK_INTO], GW.KICK + NEEDS, "kick"],
+  [[W.pause], GW.PAUSE, null],
 ];
 const NARROW_TAP = deep({throw: "tap", remote: "tap"});
 export const FLOOR_ROWS = deep([["BLOOM", 1], ["GLIDE", 2], ["BELT", 3], ["STREAM", 4], ["PLATE", 5], ["QUICK", 6], ["PORTAL", 7], ["GATE", 8]].map(([k, room]) => ({k, name: TILE_NAME[k], room})));
@@ -72,7 +71,7 @@ const CP = 9;
 const TIP_PAD = deep({d: 16, c: 10});
 /* the pager: two page keys under the body (a touch target on every layout), PAGER its height with the gap above it */
 /* touch keys (BACK, the page keys) take 46: 2 over the 44 CSS px floor, so a stage's whole-px snap never lands them under it */
-export const BACK_H = 46, PAGER = PAGE_KEY + PAGE_GAP, PAGE = "PAGE";
+export const BACK_H = 46, PAGER = PAGE_KEY + PAGE_GAP, PAGE = GW.PAGE;
 export {PAGE_KEY};
 export const TOP = 70, FOOT_GAP = 18, EST = 0.66, TIP_T = deep({d: 8, p: 6}), SLAB_T = 8, PHONE_MAX = 600, COMPACT_MAX = 960, BACK_W = 112, CUE_H = 34;
 /* the text floors (appendix 11): the least desk scale that keeps primary 14, secondary 11 and body 17.9 px at this text scale */
@@ -82,7 +81,7 @@ const firstLevel = (rooms) => +String(rooms).match(/\d+/)[0];
 const inRooms = (rooms, n) => String(rooms).split(",").some((p) => { const [a, b] = p.trim().split("-").map(Number); return n >= a && n <= (b || a); });
 /* a teaser breaks only at its " · " (each part whole on its line), the words.js step-down for a "2 RULES · 6 CONTROLS" pair */
 const partsOf = (meas, s, w) => { const out = []; let line = ""; for (const p of String(s).split(" · ")) { const t = line ? line + " · " + p : p; if (!line || meas(t) <= w) line = t; else { out.push(line); line = p; } } if (line) out.push(line); return out; };
-const subsOf = (tap, ph, W) => [tap || ph || W.dev === "pad" ? "2 RULES · 6 CONTROLS" : "2 RULES · 6 KEYS", POWER.length + " " + LABEL.POWER_UPS, FOES.length + " FOES", FLOOR_ROWS.length + " TILES"];
+const subsOf = (tap, ph, W) => [GW.RULES_N + " · " + (tap || ph || W.dev === "pad" ? GW.CONTROLS_N : GW.KEYS_N), POWER.length + " " + LABEL.POWER_UPS, FOES.length + " " + GW.FOES, FLOOR_ROWS.length + " " + GW.TILES];
 const helpOfFoe = (e) => { const s = e.help.replace(/\s*·\s*\d+$/, ""); return s.charAt(0).toUpperCase() + s.slice(1); };
 /* a string's break points: spaces, but never inside a bracket ("(max 8)" stays whole) */
 const words = (s) => String(s).match(/\([^)]*\)|[^\s(]+/g) || [""];
@@ -187,12 +186,12 @@ function body(page, m, iw) {
      cells and the name on top, the rules under them at the full width), so its rules wrap less */
   const desk = m.mode === "desk" && iw >= 700, s = desk ? 44 : m.mode === "desk" ? 36 : 30, cg = desk ? Math.max(6, Math.ceil(L(DIFF[2], Sx) - s + 6)) : 4, cellsW = 3 * s + 2 * cg;
   const colsF = desk || m.mode === "phone" || (iw - gap) / 2 < 300 ? 1 : 2, cwF = (iw - (colsF - 1) * gap) / colsF, tw = desk ? cwF - 16 - cellsW - 16 : cwF - 16, nameW = desk ? tw : cwF - 8 - cellsW - 10 - 8;
-  const lvl = (q) => LABEL.LEVEL + " " + q.room + " · " + BIOMES[q.room - 1].name, two = (q) => { const h = TILE_HELP[q.k]; return h ? [DIFF[0] + " · " + h[0], DIFF[2] + " · " + h[2]] : ["LOOK ONLY FOR NOW", "ITS RULE COMES LATER"]; };
+  const lvl = (q) => LABEL.LEVEL + " " + q.room + " · " + BIOMES[q.room - 1].name, two = (q) => { const h = TILE_HELP[q.k]; return h ? [DIFF[0] + " · " + h[0], DIFF[2] + " · " + h[2]] : [GW.LOOK_ONLY, GW.RULE_LATER]; };
   const inl = FLOOR_ROWS.every((q) => L(q.name, P) + 12 + L(lvl(q), Sx) <= nameW), side = desk && FLOOR_ROWS.every((q) => { const [a, b] = two(q); return L(a, Sx) + 24 + L(b, Sx) <= tw; });
   const nl = FLOOR_ROWS.map((q) => (side ? 1 : two(q).reduce((n, x) => n + linesOf(T.label, Sx, x, tw), 0)));
-  const hd = lhS + 6, rowH = (i) => (desk ? Math.max(s + 12, 6 + lhP + (inl ? 0 : lhS) + nl[i] * lhS + 6) : 5 + Math.max(s, lhP + (inl ? 0 : lhS)) + 4 + nl[i] * lhS + 5);
+  const hn = desk ? 1 : partsOf((x) => L(x, Sx), FLOOR_HEAD, iw).length, hd = hn * lhS + 6, rowH = (i) => (desk ? Math.max(s + 12, 6 + lhP + (inl ? 0 : lhS) + nl[i] * lhS + 6) : 5 + Math.max(s, lhP + (inl ? 0 : lhS)) + 4 + nl[i] * lhS + 5);
   const g = grid(FLOOR_ROWS.length, colsF, gap, iw, (i) => rowH(i), desk ? 6 : 4);
-  return {h: hd + g.h, top: hd, bands: g.rows.map((q) => ({y: q.y + hd, h: q.h})), items: FLOOR_ROWS.map((q, i) => ({name: q.name, r: R(g.rects[i].x, g.rects[i].y + hd, g.rects[i].w, g.rects[i].h), band: g.ri[i], s, cg, cellsW, tw, nl: nl[i], side, inl, wide: desk, lvl: lvl(q), lines: two(q), k: q.k, room: q.room})), head: R(0, 0, iw, lhS), desk};
+  return {h: hd + g.h, top: hd, bands: g.rows.map((q) => ({y: q.y + hd, h: q.h})), items: FLOOR_ROWS.map((q, i) => ({name: q.name, r: R(g.rects[i].x, g.rects[i].y + hd, g.rects[i].w, g.rects[i].h), band: g.ri[i], s, cg, cellsW, tw, nl: nl[i], side, inl, wide: desk, lvl: lvl(q), lines: two(q), k: q.k, room: q.room})), head: R(0, 0, iw, hn * lhS), desk};
 }
 /* the tooltip's head: pad, the title row (36: POINTS and the value), then 6, the body lines and the bottom pad; a compact box (a landscape phone)
    has no room for the value's keys, so its title row is the POINTS word alone (the value sits ringed on the row it points at) */
@@ -425,11 +424,11 @@ function homeArt(level) { return {biome: biomeOf(level)}; }
    first, then PAGE */
 function cueOps(c, G, r) {
   const W = hints(), dv = DEV.p, f = T.label(dv.sec), many = G.pages > 1, items = [];
-  if (G.page === HOW) items.push({t: "REBIND IN " + LABEL.SETTINGS + " › CONTROLS", drop: 1});
+  if (G.page === HOW) items.push({t: GW.REBIND, drop: 1});
   if (many && G.page !== EN && G.page !== GUIDE) items.push({t: PAGE, caps: [W.move], drop: 2});
-  if (G.page === GUIDE) items.push({t: "OPEN", caps: [W.ok]});
+  if (G.page === GUIDE) items.push({t: GW.OPEN, caps: [W.ok]});
   if (G.page === EN) items.push({t: POINTS, caps: [W.ok]});
-  items.push({t: "BACK", caps: G.page === HOW ? [W.back, W.ok] : [W.back]});
+  items.push({t: GW.BACK, caps: G.page === HOW ? [W.back, W.ok] : [W.back]});
   const widthOf = (list) => list.reduce((n, it, i) => n + (i ? 12 + Wm(c, f, "·") + 12 : 0) + Wm(c, f, it.t) + (it.caps || []).reduce((a, q, j) => a + (j ? 5 : 8) + capW(c, q, {phone: true}), 0), 0);
   let list = items;
   for (const lvl of [1, 2]) if (widthOf(list) > r.w) list = list.filter((it) => it.drop !== lvl);
@@ -453,10 +452,10 @@ function plan(c0, G, ui) {
   /* head */
   const H = D.head;
   if (H.back) {
-    rest.push({op: "key", r: H.back, kind: "key", name: "BACK"}, {op: "glyph", n: "back", x: H.back.x + 16, y: H.back.y + H.back.h / 2 - 8, s: 16, col: CONST.ink});
+    rest.push({op: "key", r: H.back, kind: "key", name: GW.BACK}, {op: "glyph", n: "back", x: H.back.x + 16, y: H.back.y + H.back.h / 2 - 8, s: 16, col: CONST.ink});
     info.push({name: "BACK chevron", r: R(H.back.x + 16, H.back.y + H.back.h / 2 - 8, 16, 16), col: CONST.ink});
-    if (H.back.w > BACK_H) rest.push(txt("BACK", H.back.x + 42, H.back.y + H.back.h / 2, pri, {name: "BACK"}));
-  } else if (H.kick) rest.push(txt(G.page === GUIDE ? "MENU" : GUIDE, H.kick.x, H.kick.y + H.kick.h / 2, sec, {col: CONST.t2, role: "secondary"}));
+    if (H.back.w > BACK_H) rest.push(txt(GW.BACK, H.back.x + 42, H.back.y + H.back.h / 2, pri, {name: GW.BACK}));
+  } else if (H.kick) rest.push(txt(G.page === GUIDE ? GW.MENU : GUIDE, H.kick.x, H.kick.y + H.kick.h / 2, sec, {col: CONST.t2, role: "secondary"}));
   rest.push({op: "dsp", s: G.page, x: H.title.x, y: H.title.y + H.title.h / 2, px: H.tpx || dv.ttl});
   if (H.hint && !H.back) rest.push(txt(D.hintS, H.hint.x + H.hint.w, H.hint.y + H.hint.h / 2, sec, {col: CONST.t2, role: "secondary", align: "right"}));
   else if (H.hint) wrap(c, fS(sec), D.hintS, H.hint.w).forEach((l, j) => rest.push(txt(l, H.hint.x, H.hint.y + sec * ts * 1.3 * (j + 0.5), sec, {col: CONST.t2, role: "secondary"})));
@@ -534,7 +533,7 @@ function stripOf(c, i, sw, sh, ph, tap, W) {
   const ops = [], s = sh, g = 6, dv = DEV[ph ? "p" : "d"];
   if (i === 0 && !ph && !tap) {
     let x = 0;
-    for (const [lab, k] of [["MOVE", W.move], ["BOMB", W.bomb], ["THROW", W.throw], ["REMOTE", W.remote], ["PAUSE", W.pause]]) {
+    for (const [lab, k] of [[GW.MOVE, W.move], [GW.BOMB, W.bomb], [GW.THROW, W.throw], [GW.REMOTE, W.remote], [GW.PAUSE, W.pause]]) {
       const lw = Wm(c, T.label(dv.sec), lab), cw = capW(c, k), need = (x ? 14 : 0) + lw + 8 + cw;
       if (x + need > sw) break;
       x += x ? 14 : 0;
@@ -582,8 +581,10 @@ function digitsOps(q, v, ph, dv) {
 function floorPlan(c, G, on) {
   const D = G.d, dv = DEV[D.dev], ts = textScale(), f0 = D.items[D.order[0]], desk = !!f0.wide, pri = dv.pri, sec = dv.sec, lhP = pri * ts * 1.15, lhS = sec * ts * 1.25;
   const head = (s, x, y, align) => txt(s, x, y, sec, {col: CONST.t2, role: "secondary", align});
-  if (desk) DIFF.forEach((s, j) => on(null, head(s, f0.r.x + 16 + j * (f0.s + f0.cg) + f0.s / 2, D.fhead.y + D.fhead.h / 2, "center")));
-  else on(null, head(DIFF.join(" · "), D.fhead.x, D.fhead.y + D.fhead.h / 2));
+  /* the head names its setting (a difficulty value is printed with DIFFICULTY wherever nothing beside it names it): desk, over the name column
+     beside the three column heads; else the setting first on the one line */
+  if (desk) { DIFF.forEach((s, j) => on(null, head(s, f0.r.x + 16 + j * (f0.s + f0.cg) + f0.s / 2, D.fhead.y + D.fhead.h / 2, "center"))); on(null, head(LABEL.DIFFICULTY, f0.r.x + 16 + f0.cellsW + 16, D.fhead.y + D.fhead.h / 2)); }
+  else partsOf((x) => Wm(c, T.label(sec), x), FLOOR_HEAD, D.fhead.w).forEach((l, j) => on(null, head(l, D.fhead.x, D.fhead.y + lhS * (j + 0.5))));
   for (const n of D.order) {
     const q = D.items[n], r = q.r, pg = q.page;
     on(pg, {op: "lane", r});
@@ -602,15 +603,15 @@ function floorPlan(c, G, on) {
 
 /* ---- paint ---- */
 const BOMB_W = (ph) => DEV[ph ? "p" : "d"].bombs;
-const GW = {time: 0.4}, ITEM = {t: "", col: "#fff", x: 0, y: 0}, ITEMS_BY = Object.fromEntries(POWER.map((p) => [p.t, p]));
+const GWD = {time: 0.4}, ITEM = {t: "", col: "#fff", x: 0, y: 0}, ITEMS_BY = Object.fromEntries(POWER.map((p) => [p.t, p]));
 const FOE_E = {type: "walker", color: "#8affc1", r: 14, home: {x: 3, y: 7}, invuln: false, dir: {x: 0, y: 1}}, FX = {a: 1, gl: 0, fl: 0, bl: null};
 function foeArt(c, t, x, y, s, level, time, A, floor) {
   const f = FOES.find((q) => q.t === t) || FOES[0];
   if (floor) floorCell(c, x, y, s, homeArt(level), {par: 0, v: 0});
   if (A && A.foe) return blitAnim(c, foeAnim(A, f.t, time, {idleW: foeM(f.t).idleW, blink: blinkAt(f.t, pxSeed(f.t), time || 0) > 0.5}), x + s / 2, y + s / 2, s >= 40 ? 2 : 1);
-  FOE_E.type = f.t; FOE_E.color = f.col; GW.time = time;
+  FOE_E.type = f.t; FOE_E.color = f.col; GWD.time = time;
   c.save(); c.translate(x + s / 2, y + s / 2 + s * 0.04); c.scale(s / 34, s / 34);
-  drawEnemyBody(c, GW, FOE_E, FX);
+  drawEnemyBody(c, GWD, FOE_E, FX);
   c.restore();
   c.globalAlpha = 1;
 }
@@ -618,9 +619,9 @@ function itemArt(c, t, x, y, s, A) {
   const p = ITEMS_BY[t];
   if (!p) return;
   if (A && A.items) return blitCell(c, itemCell(A, t), x + s / 2, y + s / 2, s >= 40 ? 2 : 1);
-  ITEM.t = p.t; ITEM.col = p.col; GW.time = 0.4;
+  ITEM.t = p.t; ITEM.col = p.col; GWD.time = 0.4;
   c.save(); c.translate(x + s / 2, y + s / 2); const k = (s * 0.72 * 1.43) / CFG.TILE; c.scale(k, k);
-  drawItemBody(c, GW, ITEM, 1, null);
+  drawItemBody(c, GWD, ITEM, 1, null);
   c.restore();
 }
 const SIDES4 = Object.freeze(["N", "E", "S", "W"]);
@@ -728,15 +729,15 @@ function widths(c, ops, strips) { for (const p of ops) { if (p.op === "text" && 
 function footPlan(c, G, ui) {
   const D = G.d, dv = DEV.d, f = T.label(dv.sec), W = hints(), tap = tapMode(!!G.touch), items = [], pad = W.dev === "pad";
   const mv = G.page !== GUIDE && G.page !== EN ? null : pad ? [W.move] : [["up"], ["dn"], ["lf"], ["rt"]];
-  if (tap) items.push({t: G.page === GUIDE ? "TAP A DOOR · " + BACK_TAP : G.page === EN ? "TAP A POINTS VALUE · " + BACK_TAP : BACK_TAP});
+  if (tap) items.push({t: G.page === GUIDE ? GW.TAP_DOOR + " · " + BACK_TAP : G.page === EN ? GW.TAP_POINTS + " · " + BACK_TAP : BACK_TAP});
   else {
-    if (G.page === HOW && pad) items.push({t: "REBIND IN " + LABEL.SETTINGS + " › CONTROLS"});
-    if (G.page === PU) items.push({t: "WALK OVER A POWER-UP TO COLLECT"});
-    if (mv) items.push({t: G.page === GUIDE ? "PICK" : "MOVE", caps: mv});
+    if (G.page === HOW && pad) items.push({t: GW.REBIND});
+    if (G.page === PU) items.push({t: GW.COLLECT});
+    if (mv) items.push({t: G.page === GUIDE ? GW.PICK : GW.MOVE, caps: mv});
     if (!mv && G.pages > 1) items.push({t: PAGE, caps: pad ? [W.move] : [["up"], ["dn"]]});
-    if (G.page === GUIDE) items.push({t: "OPEN", caps: [W.ok]});
+    if (G.page === GUIDE) items.push({t: GW.OPEN, caps: [W.ok]});
     if (G.page === EN) items.push({t: POINTS, caps: [W.ok]});
-    items.push({t: "BACK", caps: G.page === HOW ? [W.back, W.ok] : [W.back]});
+    items.push({t: GW.BACK, caps: G.page === HOW ? [W.back, W.ok] : [W.back]});
   }
   const parts = [];
   items.forEach((it, i) => {

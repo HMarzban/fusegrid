@@ -353,9 +353,10 @@ for (const b of TOUCHB) for (const page of ["GUIDE", "ENEMIES", "HOW TO PLAY"]) 
       if (D.mode !== "desk" && !(ts > 1.1) && q.helpY == null) bad.push("help dropped at x1 " + e.name);
     }
     /* HOW TO: both rules, the six rows and the note, whole */
-    if (page === "HOW TO PLAY") for (const t of ["CLEAR EVERY ENEMY", "GOLD WALL NEVER BREAKS", "MOVE", "BOMB", "THROW *", "REMOTE *", "KICK *", "PAUSE", F.touch && dev !== "pad" ? "TOUCH · LEFT PAD MOVES · RIGHT BUTTON BOMBS" : "* NEEDS ITS POWER-UP"]) if (!joined.includes(" " + t + " ")) bad.push("how " + t);
+    if (page === "HOW TO PLAY") for (const t of ["CLEAR EVERY ENEMY", "GOLD WALL NEVER BREAKS", "MOVE", "BOMB", "THROW *", "REMOTE *", "KICK *", "PAUSE", F.touch && dev !== "pad" ? "TOUCH · D-PAD MOVES · RIGHT BUTTON BOMBS" : "* NEEDS ITS POWER-UP"]) if (!joined.includes(" " + t + " ")) bad.push("how " + t);
     /* FLOOR: every tile's NORMAL and EXPERT lines, never a drop (fix round 1, Important 1), and its level line on every row */
     if (page === "FLOOR") {
+      if (!tx.some((o) => o.s === "DIFFICULTY" || /^DIFFICULTY · NORMAL( · |$)/.test(o.s))) bad.push("the head names DIFFICULTY");
       for (const [k, h] of Object.entries(TILE_HELP)) { if (!joined.includes(" " + TILE_NAME[k] + " ")) bad.push("tile " + k); for (const s of [DIFF[0] + " · " + h[0], DIFF[2] + " · " + h[2]]) if (!joined.includes(" " + s + " ")) bad.push(s); }
       const lv = tx.filter((o) => /^LEVEL \d · /.test(o.s));
       if (lv.length !== 8 || new Set(lv.map((o) => o.s)).size !== 8) bad.push("level lines " + lv.length);

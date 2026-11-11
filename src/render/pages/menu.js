@@ -24,7 +24,7 @@
    gets no keycap; with no canvas source (Node) the plate and foot paint straight onto the target over one flat fill; a context with no clip or rect (the
    headless renderer's) gets the plan only. Under the probe it records its rects, texts and squint pairs outside any layer paint. */
 import {biomeOf} from "../../core/config.js";
-import {LABEL, MENU_ROWS, MENU_WORDS as M, ART_STYLES, DIFF, tagFor, runParts} from "../words.js";
+import {LABEL, MENU_ROWS, MENU_WORDS as M, SETTINGS_WORDS, TO_CONTROLS, ART_STYLES, DIFF, tagFor, runParts} from "../words.js";
 import {worldTokens, CONST, toL} from "../kit/tokens.js";
 import {key, cap, capW, plate, band, focusBomb, glyph, plaque} from "../kit/paint.js";
 import {T, DEV, measure as W, textScale, measurer as mOf, measures as canCap, text, CAP_K} from "../kit/type.js";
@@ -63,7 +63,7 @@ export const COMPACT = deep({
 });
 const LOGO_CAP = LOGO.menu.cap, ENV = logoLay(LOGO.menu.build).env, LOGO_H = ENV.h * LOGO_CAP, EDGE = 2;
 const LOGO_MIN = 20;
-const PLAY = MENU_ROWS[0], LS = LABEL.LEVEL_SELECT, GUIDE = "GUIDE", SOURCE = "SOURCE";
+const PLAY = MENU_ROWS[0], LS = LABEL.LEVEL_SELECT, DAILY = MENU_ROWS[2], GUIDE = MENU_ROWS[5], SOURCE = MENU_ROWS[6];
 /* fl (a touch box): the floors in box units ({h, g}); a row's height and a gap in design px are then max(design, floor / u), and u is the largest
    scale whose floored page fits the box (the floored part is fixed in box units, so the fit is monotone in u: a bisection finds it) */
 function desk(F, rows, t125, fl) {
@@ -175,7 +175,7 @@ function teasers(l, ui, phoneMode) {
   const n = ui.daily, b = ui.best;
   switch (l) {
     case LS: return phoneMode ? [] : [M.LEVEL_TEASE];
-    case "DAILY": return n == null ? [phoneMode ? M.NEW_SHORT : M.NEW, M.NEW_SHORT] : phoneMode ? [M.TRIES_SHORT + " · " + n, M.TRIES_MIN + " · " + n] : [M.TRIES + " · " + n, M.TRIES_SHORT + " · " + n, M.TRIES_MIN + " · " + n];
+    case DAILY: return n == null ? [phoneMode ? M.NEW_SHORT : M.NEW, M.NEW_SHORT] : phoneMode ? [M.TRIES_SHORT + " · " + n, M.TRIES_MIN + " · " + n] : [M.TRIES + " · " + n, M.TRIES_SHORT + " · " + n, M.TRIES_MIN + " · " + n];
     case LABEL.RECORDS: return b == null ? [M.NO_RUNS] : phoneMode ? [M.BEST + " " + sep3(b), sep3(b)] : [M.BEST + " " + sep3(b) + " · " + DIFF[0] + " " + LABEL.DIFFICULTY, M.BEST + " " + sep3(b), sep3(b)];
     case LABEL.SETTINGS: return [ART_STYLES[ui.look | 0] || ART_STYLES[0]];
     case GUIDE: return [(ui.pages | 0) + " " + M.PAGES];
@@ -183,12 +183,12 @@ function teasers(l, ui, phoneMode) {
   }
   return [];
 }
-const PAD_SIGN = "CONTROLLER READY · " + LABEL.SETTINGS + " › CONTROLS", VIB = /^CONTROLLER READY · VIBRATION \w+$/;
-export const padSign = (n) => (n === "CONTROLLER READY" || n === "CONTROLLER BACK" || VIB.test(n || "") ? PAD_SIGN : "");
+const PAD_SIGN = M.PAD_READY + " · " + TO_CONTROLS, VIB = new RegExp("^" + M.PAD_READY + " · " + SETTINGS_WORDS.vib + " \\w+$");
+export const padSign = (n) => (n === M.PAD_READY || n === M.PAD_BACK || VIB.test(n || "") ? PAD_SIGN : "");
 function noteCands(ui) {
   if (ui.note) return [ui.note, ui.note.split(" · ")[0]];
   const s = padSign(ui.pad);
-  return !s ? [] : VIB.test(ui.pad) ? [ui.pad + " · " + LABEL.SETTINGS + " › CONTROLS", s, "CONTROLLER READY"] : [s, "CONTROLLER READY"];
+  return !s ? [] : VIB.test(ui.pad) ? [ui.pad + " · " + TO_CONTROLS, s, M.PAD_READY] : [s, M.PAD_READY];
 }
 export function playTags(ui) {
   const run = ui.run || {}, t = tagFor(run), lv = LABEL.LEVEL + " " + (ui.level | 0 || 1) + " · " + biomeOf(ui.level | 0 || 1).name;
@@ -271,7 +271,7 @@ function footPlan(c, G, ui, words, verb, sign) {
 export function plan(c0, G, ui) {
   const c = mOf(c0), words = hints(), showCap = G.mode === "desk" && !tapMode(!!G.touch) && !G.touch, rows = {};
   for (const l of G.order) rows[l] = rowPlan(c, G, ui, l, words, showCap);
-  const sign = !ui.note && padSign(ui.pad) ? (VIB.test(ui.pad) ? ui.pad + " · " + LABEL.SETTINGS + " › CONTROLS" : PAD_SIGN) : "";
+  const sign = !ui.note && padSign(ui.pad) ? (VIB.test(ui.pad) ? ui.pad + " · " + TO_CONTROLS : PAD_SIGN) : "";
   const verbs = G.mode === "desk" ? (tapMode(!!G.touch) || sign ? [""] : words.dev === "pad" ? [M.START, M.OPEN, M.SOURCE_PAD] : [M.START, M.OPEN]) : [];
   const foot = {};
   for (const v of verbs) foot[v] = footPlan(c, G, ui, words, v, sign);

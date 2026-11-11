@@ -28,7 +28,7 @@
    0.6 em estimate; with no canvas source (Node) everything paints straight onto the target over one flat fill; a context with no clip or rect gets the
    plan only. Under the probe it records its rects, texts and pairs outside any layer paint. */
 import {isFinale, roomCap} from "../../core/config.js";
-import {LABEL, DIFF, SPEED, MOD, MOD_BITS, TIME_TRIAL, DEFAULT_RULES, modWords, tagFor, runParts, LEVEL_WORDS as LW} from "../words.js";
+import {LABEL, DIFF, SPEED, MOD, MOD_BITS, TIME_TRIAL, DEFAULT_RULES, modWords, tagFor, runParts, LEVEL_WORDS as LW, MENU} from "../words.js";
 import {worldTokens, CONST, toL} from "../kit/tokens.js";
 import {key, cap, capW, plate, band, focusBomb, glyph, plaque, rpath as rp} from "../kit/paint.js";
 import {T, DEV, measure as W, textScale, measurer as mOf, measures as canCap, text, CAP_K} from "../kit/type.js";
@@ -280,7 +280,7 @@ function plan(c0, G, ui, words, showCap) {
   const fL = T.label(dv.pri), fS = T.label(dv.sec), fN = T.num(dv.pri);
   P.title = {s: LABEL.LEVEL_SELECT, f: T.display(ph ? 28 : dv.ttl), px: ph ? 28 : dv.ttl, x: d.title.x, y: d.title.y + (ph ? d.title.h / 2 : d.title.h / 2 + 2), w: W(c, T.display(ph ? 28 : dv.ttl), LABEL.LEVEL_SELECT)};
   if (ph && P.title.w > d.title.w) { const px = Math.max(16, (ph ? 28 : dv.ttl) * d.title.w / P.title.w); P.title.f = T.display(px); P.title.px = px; P.title.w = W(c, P.title.f, LABEL.LEVEL_SELECT); }
-  P.kick = d.kick ? {s: "MENU", f: fS, px: dv.sec, x: d.head.x, y: d.head.y + d.kick / 2, w: W(c, fS, "MENU")} : null;
+  P.kick = d.kick ? {s: MENU, f: fS, px: dv.sec, x: d.head.x, y: d.head.y + d.kick / 2, w: W(c, fS, MENU)} : null;
   if (d.back) P.back = {r: d.back, s: LW.BACK, f: fL, px: dv.pri, w: W(c, fL, LW.BACK)};
   /* the row labels: desk at labx in the band, phone / compact on the line over the control */
   const labelOf = (l) => {
@@ -492,7 +492,7 @@ function record(G, P, ui, foc, dpr, el, touchy, verb, tipR, tok) {
       probe.rect(l, ...b(d.mods), {touch: touchy, set: "mods door", focus: f, fill: f ? tok.band : tok.key});
       if (o.tz) o.tz.lines.forEach((q, i) => txt(q, o.tz.x - o.tz.ws[i], o.tz.ys[i], o.tz.ws[i], o.tz.px, CONST.t2, "secondary"));
       const g = o.glyph;
-      probe.pair("info", b(R(g.x, g.y, g.s, g.s)), b(R(g.x - 6, g.y - 6, g.s + 12, g.s + 12)), {col: CONST.t2, name: "MODIFIERS " + g.n});
+      probe.pair("info", b(R(g.x, g.y, g.s, g.s)), b(R(g.x - 6, g.y - 6, g.s + 12, g.s + 12)), {col: CONST.t2, name: LABEL.MODIFIERS + " " + g.n});
     } else if (f) probe.rect(l + " band", ...b(d.rows[l]), {focus: true, fill: tok.band});
   }
   let chosen = {}, unchosen = {}, lockedK = null, wellK = null;

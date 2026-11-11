@@ -24,7 +24,7 @@
    ART STYLE row's load line, GRAPHICS' pane text. A context that cannot measure plans on a 0.6 em estimate; with no canvas source (Node) the page
    paints straight onto the target; a context with no clip or rect gets the plan only. Under the probe it records its rects, texts and squint pairs
    outside any layer paint. */
-import {LABEL, ART_STYLES} from "../words.js";
+import {LABEL, ART_STYLES, SETTINGS_WORDS as COPY} from "../words.js";
 import {worldTokens, CONST, toL} from "../kit/tokens.js";
 import {key, plate, band, focusBomb, glyph, wallCell, capW, cap, plaque, rfill as rr} from "../kit/paint.js";
 import {T, DEV, measure, measure as W, textScale, dsp, measurer as mOf, text, CAP_K} from "../kit/type.js";
@@ -48,13 +48,8 @@ export const TOUCH = Object.freeze({h: 44, g: 8}), DESK_U = 0.8, GUT = 8, SLAB =
 export const GFX_LABELS = Object.freeze(["QUALITY", "FRAME RATE", "RESOLUTION", "SHADOWS", "ANTI-ALIAS", "EFFECTS", "DEMO", "FPS METER"]);
 /* a wall course before each of these rows: audio · look · comfort · privacy · doors · reset; GRAPHICS: preset · rows · meter */
 export const GROUP = Object.freeze(["ART STYLE", "SCREEN SHAKE", "ANALYTICS", "GRAPHICS", "RESET DEFAULTS", "FRAME RATE", "FPS METER"]);
-export const COPY = deep({
-  looks: "The same game in three looks. PIXEL and REAL 3D download the first time you pick them.",
-  add3d: "REAL 3D adds two rows here: CAMERA and BRIGHTNESS.",
-  on3d: "CAMERA and BRIGHTNESS are on the list while REAL 3D is your art style.",
-  of: "OF", row: "ROW", change: "CHANGE", back: "BACK", tapRow: "TAP A ROW TO CHANGE IT", build: "BUILD", perf: "PERFORMANCE · BATTERY",
-});
-const CAM_NAME = ["STANDARD", "WIDE", "FAR"];
+export {COPY}; // words.js SETTINGS_WORDS (the one table)
+const CAM_NAME = COPY.cam;
 
 /* the rows' vertical run: heights hs and the gap before each (a course before a GROUP row), design px; on a touch box (fl, the floors in box
    units) every row is >= 44 CSS px and every gap >= 8 (lead ruling, fix round 1) */
@@ -208,7 +203,7 @@ export const settingsHit = (x, y, F, rows) => (okBox(F) && rowsOr(rows, []).leng
 export const graphicsHit = (x, y, F, rows) => (okBox(F) ? hitOf(graphicsGeom(F, rows), x, y, F.focus) : -1);
 
 /* ---- values: the words of each row by its label (SETTINGS), and the part that shows them ---- */
-const onOff = (b) => (b ? "ON" : "OFF");
+const onOff = (b) => (b ? COPY.on : COPY.off);
 /** Each visible row's value word by its label, aligned with rows; a label it does not know reads empty. */
 export function settingsRows(rows, vals, r3d, px, door, ana, ctlDoor) {
   const v = vals || {};
@@ -235,7 +230,7 @@ function settingSpec(l, u, phoneM) {
     }
     case "CAMERA": { const i = clamp(v.cam | 0, 0, 2); return phoneM ? {t: "door", cands: [CAM_NAME[i]]} : {t: "step", cands: [CAM_NAME[i]], i, n: 3, cl: i === 0, cr: i === 2}; }
     case "GRAPHICS": return {t: "door", cands: [word(u.door)].filter(Boolean)};
-    case "CONTROLS": { const d = word(u.ctlDoor); return {t: "door", cands: [u.padVib ? "VIBRATION " + u.padVib : "", d].filter(Boolean)}; }
+    case "CONTROLS": { const d = word(u.ctlDoor); return {t: "door", cands: [u.padVib ? COPY.vib + " " + u.padVib : "", d].filter(Boolean)}; }
     case "RESET DEFAULTS": return {t: "reset"};
   }
   return {t: "none"};
@@ -245,7 +240,7 @@ function gfxSpec(r, phoneM) {
   if (r.locked) return {t: "lock"};
   const s = String(r.val == null ? "" : r.val);
   const [i, n] = Array.isArray(r.at) ? r.at : [-1, 0]; // gfx.js's position on the row's own list: an arrow that cannot move is a well (CUSTOM has none)
-  if ((s === "ON" || s === "OFF") && n === 2) return {t: "rocker", on: s.toLowerCase()}; // a two-way row (FPS METER); DEMO and ANTI-ALIAS have three values: steppers
+  if ((s === COPY.on || s === COPY.off) && n === 2) return {t: "rocker", on: s.toLowerCase()}; // a two-way row (FPS METER); DEMO and ANTI-ALIAS have three values: steppers
   return phoneM ? {t: "door", cands: [s]} : {t: "step", cands: [s], free: true, cl: i === 0, cr: i >= 0 && i === n - 1};
 }
 
@@ -271,7 +266,7 @@ function valParts(c, s, xr, cy, dv, ts) {
     return {P, x: x0, w: xr - x0};
   }
   if (s.t === "rocker") { /* a narrow row narrows the two cells, never under their widest legend + 4 (the row, not a cell, is the tap target) */
-    const lf = T.label(dv.pri), lw = Math.max(W(c, lf, "OFF"), W(c, lf, "ON")) + 4, room = s.room > 0 ? s.room : Infinity;
+    const lf = T.label(dv.pri), lw = Math.max(W(c, lf, COPY.off), W(c, lf, COPY.on)) + 4, room = s.room > 0 ? s.room : Infinity;
     const cw = Math.max(lw, Math.min(dv.rkw, Math.floor((room - 11) / 2))), h = dv.keyh - 2, w = 3 + cw + 4 + cw + 3, x0 = xr - w, y = cy - (h + 6) / 2;
     P.push({k: "trough", r: R(x0, y, w, h + 6)});
     ["off", "on"].forEach((q, i) => P.push({k: "key", kind: s.on === q ? "lit" : "well", r: R(x0 + 3 + i * (cw + 4), y + 3, cw, h), s: q.toUpperCase(), px: dv.pri, chosen: s.on === q}));

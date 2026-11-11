@@ -519,7 +519,7 @@ export function plan(c0, G, ui) {
     };
     const lab = W(c, bf, RW.BADGES) + 14, badges = lay(lab) || lay(0) || [];
     out.scores = {h, bank: DIFF.slice(), bleg: d.bodies.scores.keys.map((r, i) => leg(r, DIFF[i])), badges, bf, label: badges.length && badges[0].x > 0, table: list.length ? tablePlan(c, G, b, list, ts) : null, n: Math.min(10, list.length),
-      empty: list.length ? null : [fit(c, T.label(dv.pri), [noRunsYet(h), "NO RUNS YET"], b.rows.w / b.k), fit(c, T.body(dv.bod), [pickToSet(h), ""], b.rows.w / b.k)]};
+      empty: list.length ? null : [fit(c, T.label(dv.pri), [noRunsYet(h), ST.NO_BEST], b.rows.w / b.k), fit(c, T.body(dv.bod), [pickToSet(h), ""], b.rows.w / b.k)]};
   }
   if (ui.page === "stats") out.stats = statsPlan(c, G, ui);
   if (ui.page === "medals") {
@@ -821,7 +821,7 @@ export function footItems(page, foc, words) {
   const pad = words.dev === "pad", A = (n) => [n];
   if (page === "stats") {
     if (foc === "arm") return [{t: ST.ERASE, caps: ["R"]}, {t: ST.COPY_ARMED, caps: ["C"], key: "KeyC"}, {t: ST.CANCEL, caps: []}];
-    if (pad) return [{t: ST.COPY, caps: ["WEST"], key: "KeyC"}, {t: ST.MEDALS_T, caps: ["NORTH"], key: "KeyT"}, {t: RW.TAB, caps: [words.move]}, {t: RW.BACK, caps: [words.back], key: "back"}];
+    if (pad) return [{t: ST.COPY, caps: [RW.WEST], key: "KeyC"}, {t: ST.MEDALS_T, caps: [RW.NORTH], key: "KeyT"}, {t: RW.TAB, caps: [words.move]}, {t: RW.BACK, caps: [words.back], key: "back"}];
     return [{t: ST.COPY, caps: ["C"], key: "KeyC"}, {t: ST.RESET, caps: ["R"], key: "KeyR"}, {t: RW.TAB, caps: foc === "body" ? ["Q", "E"] : [A("lf"), A("rt")]}, {t: RW.BACK, caps: [words.back], key: "back"}];
   }
   if (pad) return page === "scores" && foc === "body" ? [{t: LABEL.DIFFICULTY, caps: [words.move]}, {t: RW.BACK, caps: [words.back], key: "back"}] : [{t: RW.TAB, caps: [words.move]}, {t: RW.BACK, caps: [words.back], key: "back"}];

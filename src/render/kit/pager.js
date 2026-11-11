@@ -4,6 +4,7 @@ import {R, inR} from "./geom.js";
 import {key, glyph} from "./paint.js";
 import {text} from "./type.js";
 import {CONST} from "./tokens.js";
+import {PAGE, OF} from "../words.js";
 
 export const PAGE_KEY = 46, PAGE_GAP = 10;
 export const keySide = (css, u) => PAGE_KEY / ((css > 0 ? css : 1) * (u > 0 ? u : 1));
@@ -22,7 +23,7 @@ export function pagerKeys(x, y, w, k) {
   const up = R(x + w - 2 * k - k * PAGE_GAP / PAGE_KEY, y, k, k);
   return {strip: R(x, y, w, k), up, dn: R(x + w - k, y, k, k), label: R(x, y, up.x - 12 - x, k)};
 }
-export const pageLabel = (p, n) => "PAGE " + (p + 1) + " OF " + n;
+export const pageLabel = (p, n) => PAGE + " " + (p + 1) + " " + OF + " " + n;
 export const pagerHit = (Q, x, y) => (!Q ? 0 : inR(Q.up, x, y) ? -1 : inR(Q.dn, x, y) ? 1 : 0);
 export function paintPager(c, Q, p, n, tok, o = {}) {
   if (o.f) text(c, pageLabel(p, n), Q.label.x, Q.label.y + Q.label.h / 2, o.f, CONST.t2);

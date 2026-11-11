@@ -448,6 +448,39 @@ for (const f of walk(join(ROOT, "src"))) {
 }
 check("PACE_NAME and paceToken are unread outside src/core/pace.js (dead tables, kept there by the no-core-change rule)", unread.length === 0, unread.join());
 check("source grep (tripwire): no string literal in src/ carries an old word outside the allow-list", srcHits.length === 0, srcHits.join("\n      "));
+/* ---- R1 cohesion: the pages and the kit hold no player word of their own. Any CAPS literal (two capitals, no lowercase) in src/render/pages or
+   src/render/kit must come from words.js; the reviewed exceptions are identifiers that are not this table's words: the SETTINGS / GRAPHICS row
+   labels (src/app OPT_ROWS / gfx.js GFX_ROWS, pinned equal above and in settings-rows), the probe's rect names the UI gates read, core's floor-tile
+   keys (TILE_NAME's keys) and BIOMES' name keys. ---- */
+{
+  const ROWS = new Set([...OPT_ROWS, ...settingsPage.GFX_LABELS]);
+  const PAGE_ALLOW = new Map([
+    ["BACK", /probe\.rect\("BACK"|name: "BACK"|\["BACK", /], ["PAGE UP", /"PAGE UP"/], ["PAGE DOWN", /"PAGE DOWN"/], // probe rect names (tools/ui/lib/screens.mjs)
+    ...["BLOOM", "GLIDE", "BELT", "STREAM", "PLATE", "QUICK", "PORTAL", "GATE"].map((k) => [k, /^export const FLOOR_ROWS = /]), // TILE_NAME's keys (core/feat.js)
+    ["ICE", /b\.name === "ICE"/], // a BIOMES name key (core/config.js)
+  ]);
+  const hits = [];
+  for (const d of ["src/render/pages", "src/render/kit"]) for (const f of walk(join(ROOT, d))) {
+    const rel = relative(ROOT, f).split("\\").join("/"), text = readFileSync(f, "utf8"), lines = text.split("\n");
+    for (const [ln, s] of literals(text)) {
+      if (!/[A-Z]{2,}/.test(s) || /[a-z]/.test(s) || /^#/.test(s)) continue;
+      if (ROWS.has(s)) continue;
+      const a = PAGE_ALLOW.get(s);
+      if (a && a.test(lines[ln - 1] || "")) continue;
+      hits.push(rel + ":" + ln + " " + J(s));
+    }
+  }
+  check("words.js is the one table: no CAPS player literal in src/render/pages or src/render/kit outside the reviewed identifiers", hits.length === 0, hits.join("\n      "));
+  check("BACK, OPEN, PAGE and OF are defined once and every table reuses them; the touch lines are built from BACK_TAP",
+    W.LEVEL_WORDS.BACK === W.BACK && W.REC_WORDS.BACK === W.BACK && W.SETTINGS_WORDS.back === W.BACK && W.GUIDE_WORDS.BACK === W.BACK &&
+    W.LEVEL_WORDS.OPEN === W.OPEN && W.MENU_WORDS.OPEN === W.OPEN && W.GUIDE_WORDS.OPEN === W.OPEN && W.GUIDE_WORDS.PAGE === W.PAGE && W.SETTINGS_WORDS.of === W.OF &&
+    W.LEVEL_WORDS.TAP === "TAP START TO PLAY · " + W.BACK_TAP && W.REC_WORDS.TAP === "TAP A TAB · " + W.BACK_TAP && W.FOOT_TAP === W.TAP_ROW + " · " + W.BACK_TAP && W.BACK_TAP === "TAP OUTSIDE TO GO BACK");
+  const kc = await import("../src/render/kit/copy.js"), gp = await import("../src/render/pages/guide.js"), kp = await import("../src/render/kit/pager.js");
+  check("kit/copy.js and the GUIDE page re-export words.js's own words (one object each), and the pager's label is PAGE n OF m from it",
+    kc.BACK_TAP === W.BACK_TAP && kc.FOOT_TAP === W.FOOT_TAP && kc.LOAD_WORDS === W.LOAD_WORDS && gp.BACK_TAP === W.BACK_TAP && settingsPage.COPY === W.SETTINGS_WORDS && kp.pageLabel(1, 3) === W.PAGE + " 2 " + W.OF + " 3" &&
+    kc.LOOK_NAME.px === W.ART_STYLES[1] && kc.LOOK_NAME["3d"] === W.ART_STYLES[2]);
+  check("HOW TO's touch note names the touch D-PAD (never PAD alone: a controller is CONTROLLER)", W.GUIDE_WORDS.NOTE_TAP === "TOUCH · D-PAD MOVES · RIGHT BUTTON BOMBS" && !/(^|[^-])\bPAD\b/.test(W.GUIDE_WORDS.NOTE_TAP));
+}
 
 /* ---- analytics: event names and params byte-identical to v202 before the renames (captured at 4677b8e) ---- */
 {

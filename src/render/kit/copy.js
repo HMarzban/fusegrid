@@ -1,17 +1,15 @@
-/* KIT COPY (R1): words more than one page paints. lookVal: the RENDER row's job words, longest first (n = menudraw lookNote's note). */
+/* KIT COPY (R1): words more than one page paints, all from words.js (the one table). lookVal: the RENDER row's job words, longest first (n = menudraw
+   lookNote's note). */
 import {hints, tapMode} from "../hintcopy.js";
-import {ART_STYLES} from "../words.js";
+import {ART_STYLES, LOAD_WORDS, BACK_TAP, FOOT_TAP, LOOK_WORDS as LW} from "../words.js";
 
-export const LOAD_WORDS = Object.freeze({loading: "LOADING", failed: "DID NOT LOAD"});
-export const BACK_TAP = "TAP OUTSIDE TO GO BACK";
-export const FOOT_TAP = "TAP A ROW TO CHANGE IT · " + BACK_TAP;
+export {LOAD_WORDS, BACK_TAP, FOOT_TAP};
 export const LOOK_NAME = Object.freeze({px: ART_STYLES[1], "3d": ART_STYLES[2]});
-const PH_WORD = {bake: "ART", build: "BUILDING", shaders: "SHADERS"};
 export function lookVal(n, touch) {
-  const L = LOOK_NAME[n.k] || "";
-  if (n.st === "fail") { const r = tapMode(touch) ? "TAP TO RETRY" : hints().ok + " RETRY"; return [L + " · DID NOT LOAD · " + r, "DID NOT LOAD · " + r, r]; } // r alone, in the danger colour: the narrowest box, where ART STYLE (longer than RENDER) leaves less room
-  if (n.st === "ready") return [L + " · READY", "READY"];
+  const L = LOOK_NAME[n.k] || "", F = LOAD_WORDS.failed;
+  if (n.st === "fail") { const r = tapMode(touch) ? LW.TAP_RETRY : hints().ok + " " + LW.RETRY; return [L + " · " + F + " · " + r, F + " · " + r, r]; } // r alone, in the danger colour: the narrowest box, where ART STYLE (longer than RENDER) leaves less room
+  if (n.st === "ready") return [L + " · " + LW.READY, LW.READY];
   const cnt = n.total > 0 ? n.done + " / " + n.total : "";
-  const s = n.st === "loading" ? (n.slow ? "SLOW, STILL TRYING" : cnt || "LOADING") : PH_WORD[n.phase] && cnt ? PH_WORD[n.phase] + " " + cnt : "PREPARING";
+  const s = n.st === "loading" ? (n.slow ? LW.SLOW : cnt || LOAD_WORDS.loading) : LW.PH[n.phase] && cnt ? LW.PH[n.phase] + " " + cnt : LW.PREPARING;
   return [L + " · " + s, s];
 }
