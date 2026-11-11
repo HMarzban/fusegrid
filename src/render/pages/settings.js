@@ -8,7 +8,7 @@
    settingsGeom(F, rows) / graphicsGeom(F, rows) are the one geometry for draw and tap: rects by ROW NAME in box units (G.d: design px; u box units
    per design px). F = {W, H, touch, shell, css, ts} as the MENU page's. Three arrangements. desk: a keyboard box (or a touch landscape shell box)
    that holds the two columns at u >= DESK_U: list beside the preview pane (SETTINGS: the three art styles; GRAPHICS: the focused row's help), the
-   foot in the pane. col: any other box (#c with no shell box, PAUSE's overlayBox, the iso guard): the list alone, the foot at the plate's bottom,
+   foot in the pane. col: any other box (a keyboard #c, PAUSE's overlayBox, the iso guard; a touch #c takes the phone column, R1 landscape): the list alone, the foot at the plate's bottom,
    scaled as one piece on keys. phone: a touch-portrait shell box, the column in CSS px (u = 1 / css) with a BACK key beside the title, steppers as
    door rows, the foot under the plate. On every touch box rows are >= 44 CSS px and >= 8 apart; where they do not fit the list pages (PAGING
    below). F.paused (a PAUSE view) keeps the plate off the HUD strip; F.focus (the focused row) picks the page on screen for a tap.
@@ -114,6 +114,8 @@ function desk(F, rows, ts, fl) {
 }
 /* GRAPHICS off the desk has no pane: its two help lines sit under the rows */
 const helpH = (dv, ts) => 2 * DEV[dv].sec * ts * 1.3 + 8;
+/* a touch board canvas too short for one row a page: the plate's ring 12 off the box (its 10 px ring inside), the head and the pads closed */
+const LAND_TIGHT = Object.freeze({top: 12, bot: 12, pad: Object.freeze([6, 12, 8, 12]), below: 8});
 const HINT_H = DEV.d.caph + 6; // a paged column's back-out hint line under its page keys
 /* PAUSE keeps the HUD strip (y < 40) clear, and on a keyboard box the old CONSOLE band (H x 0.16 - 10 .. H - 28) */
 const pauseBand = (F) => [44, F.touch ? F.H - 8 : F.H - 28];
@@ -144,21 +146,27 @@ function col(F, rows, ts, fl, help) {
     help: hh ? R(lx, lb + 4, C.list, hh - 4) : null, foot: paged ? null : R(px + 8, lb + hh + 8, pw - 16, FOOT1), back: null, list: R(lx, top, C.list, lb - top), // the foot may use the plate's sides
     hint: paged ? R(lx, lb + hh + kgOf(u) + kh + 6, C.list, DEV[dv].caph) : null};
 }
-function phone(F, rows, ts, help) {
-  const P = PHONE[big(ts) ? "p125" : "p"], css = F.css > 0 ? F.css : 1, hh = help ? helpH("p", ts) : 0, u = 1 / css, Hd = F.H / u, Wd = F.W / u;
-  const fixed = P.top + P.pad[0] + DEV.p.btnh + P.below + hh + P.pad[2] + P.fgap + FOOT1 + 4 + P.bot;
-  const S = run(rows, TOUCH.h, P.grp, TOUCH, 1); // 44 CSS px rows 8 apart: the mock's 52 pitch
+/* phone: the column in CSS px. Also every touch board canvas (#c with no shell box: a landscape phone; R1 landscape, land): there it
+   pages where the rows do not fit (the kit pager's strip under them) and, paged, drops the foot: the BACK key beside the title keeps the way back, so
+   the strip holds only PAGE n OF m and its keys (a PAUSE view keeps its column) */
+function phone(F, rows, ts, help, land) {
+  let P = PHONE[big(ts) ? "p125" : "p"];
+  const css = F.css > 0 ? F.css : 1, hh = help ? helpH("p", ts) : 0, u = 1 / css, Hd = F.H / u, Wd = F.W / u;
+  const b0 = 0, Hb = Hd, footH = P.fgap + FOOT1 + 4;
+  const fixedOf = (q) => q.top + q.pad[0] + DEV.p.btnh + q.below + hh + q.pad[2] + footH + q.bot, S = run(rows, TOUCH.h, P.grp, TOUCH, 1); // 44 CSS px rows 8 apart: the mock's 52 pitch
+  const capOf = (q) => Hb - fixedOf(q) + (land ? footH : 0) - 8 - keySide(css, u);
+  if (land && fixedOf(P) + S.h > Hb && capOf(P) < S.hs[0]) P = {...P, ...LAND_TIGHT}; // a page short of one row: the margins and pads close first
   let pages, cap = Infinity, keys = null;
-  if (fixed + S.h <= Hd) pages = paginate(S, Infinity);
-  else { cap = Hd - fixed - 8 - keySide(css, u); pages = paginate(S, Math.max(cap, S.hs[0])); }
-  const paged = pages.length > 1, lh = paged ? cap : S.h, ph = P.pad[0] + DEV.p.btnh + P.below + lh + hh + (paged ? 8 + keySide(css, u) : 0) + P.pad[2];
+  if (fixedOf(P) + S.h <= Hb) pages = paginate(S, Infinity);
+  else { cap = Math.max(capOf(P), S.hs[0]); pages = paginate(S, cap); }
+  const paged = pages.length > 1, foot = !(land && paged), lh = paged ? cap : S.h, ph = P.pad[0] + DEV.p.btnh + P.below + lh + hh + (paged ? 8 + keySide(css, u) : 0) + P.pad[2];
   const side = P.side, padX = Wd < 380 ? 8 : P.pad[3]; // a phone under 380 CSS px keeps the 125 % rows whole: a thinner bed inside the ring
-  const pw = Math.min(Wd - 2 * side, P.max), px = (Wd - pw) / 2, py = Math.max(P.top, (Hd - P.bot - FOOT1 - 4 - P.fgap - ph) / 2), ix = px + padX, iw = pw - 2 * padX, hy = py + P.pad[0];
+  const pw = Math.min(Wd - 2 * side, P.max), px = (Wd - pw) / 2, py = b0 + Math.max(P.top, (Hb - P.bot - (foot ? footH : 0) - ph) / 2), ix = px + padX, iw = pw - 2 * padX, hy = py + P.pad[0];
   const top = hy + DEV.p.btnh + P.below, L = lay(rows, pages, S, ix, top, iw, px, px + pw, P.below / 2, hh || paged ? 4 : P.pad[2] / 2), lb = top + lh;
   if (paged) keys = pagerKeys(ix, lb + hh + 8, iw, keySide(css, u));
   return {mode: "phone", dev: "p", u, ts, T: DEV.p.T, plate: R(px, py, pw, ph), head: R(ix, hy, iw, DEV.p.btnh), kick: false, ttl: DEV.p.ttl,
     rows: L.out, hit: L.hit, divs: L.divs, pageOf: L.pageOf, pages: pages.map((pg) => pg.map((i) => rows[i])), keys, pane: null,
-    help: hh ? R(ix, lb + 4, iw, hh - 4) : null, foot: R(px, py + ph + P.fgap, pw, FOOT1), back: R(ix, hy, P.back, DEV.p.btnh), list: R(ix, top, iw, lh)};
+    help: hh ? R(ix, lb + 4, iw, hh - 4) : null, foot: foot ? R(px, py + ph + P.fgap, pw, FOOT1) : null, back: R(ix, hy, P.back, DEV.p.btnh), list: R(ix, top, iw, lh)};
 }
 const memo = new Map();
 function geom(F, rows, page) {
@@ -167,7 +175,11 @@ function geom(F, rows, page) {
   let G = memo.get(id);
   if (G) return G;
   const fl = touchy ? {h: TOUCH.h / css, g: TOUCH.g / css} : null;
-  let d = isPhone ? phone(F, rows, ts, page === "graphics") : paused ? null : desk(F, rows, ts, fl);
+  const land = touchy && !shell && !paused; // a touch board canvas (#c, a landscape phone): the phone's CSS px column, paged, never scaled under the floors (R1 landscape; a PAUSE view keeps its column)
+  const ph = (q) => phone(q, rows, ts, page === "graphics", land);
+  let d = isPhone || land ? ph(F) : paused ? null : desk(F, rows, ts, fl);
+  /* a board canvas too small for even one row a page at its CSS scale (a 568 x 320 phone): the column scales as one piece, the one give-way left */
+  for (let i = 0, k = 1; land && i < 16 && (d.plate.y + d.plate.h + d.T) * d.u > F.H + 0.5; i++) d = ph({...F, css: css / (k *= 0.96)});
   if (!d || (!isPhone && !(d.u >= DESK_U))) d = col({...F, touch: touchy, paused}, rows, ts, fl, page === "graphics"); // the desk's part sizes: a col row is the desk's height or the touch floor, never under a part
   const u = d.u, ks = d.keys;
   G = {page, mode: d.mode, dev: d.dev, u, ts, t125: big(ts), W: F.W, H: F.H, d, T: d.T * u, order: rows.slice(), plate: sc(d.plate, u), pane: sc(d.pane, u), back: sc(d.back, u),
@@ -301,8 +313,16 @@ function valParts(c, s, xr, cy, dv, ts) {
 /* a row of two lines (the label, then its words under it): their centres, the two lines' em boxes touching 2 px apart round the row's centre */
 const twoLines = (cy, dv, ts) => { const a = dv.pri * ts, b = dv.sec * ts; return {h: a + b + 2, y1: cy - b / 2 - 1, y2: cy + a / 2 + 1}; };
 function rowPlan(c, G, l, spec, dv, ts) {
-  const r = G.d.rows[l], cy = r.y + r.h / 2, labx = dv.labx, lf = T.label(dv.pri), lw = W(c, lf, l), xr = r.x + r.w - 12, room = xr - (r.x + labx + lw + 12);
-  const o = {l, r, spec, label: {s: l, f: lf, px: dv.pri, x: r.x + labx, y: cy, w: lw, col: spec.t === "reset" ? CONST.cor : CONST.ink}};
+  const r = G.d.rows[l], cy = r.y + r.h / 2, labx = dv.labx, xr = r.x + r.w - 12;
+  let lp = dv.pri, lf = T.label(lp), lw = W(c, lf, l), room = xr - (r.x + labx + lw + 12);
+  /* a rocker or meter that would run into its label at 125 % on the narrowest column (a 667 x 375 phone's #c): the label steps down to its 100 %
+     size, still over the floors (R1 landscape) */
+  if (ts > 1 && r.x + labx + lw > xr) { const p1 = dv.pri / ts; lp = p1; lf = T.label(p1); lw = W(c, lf, l); room = xr - (r.x + labx + lw + 12); } // a label that alone overruns its row (568 x 320 at 125 %)
+  else if (ts > 1 && (spec.t === "rocker" || spec.t === "meter") && valParts(c, {...spec, room}, xr, cy, dv, ts).w > room) {
+    const p1 = dv.pri / ts, w1 = W(c, T.label(p1), l), r1 = xr - (r.x + labx + w1 + 12);
+    if (valParts(c, {...spec, room: r1}, xr, cy, dv, ts).w <= r1) { lp = p1; lf = T.label(p1); lw = w1; room = r1; }
+  }
+  const o = {l, r, spec, label: {s: l, f: lf, px: lp, x: r.x + labx, y: cy, w: lw, col: spec.t === "reset" ? CONST.cor : CONST.ink}};
   if (spec.job && spec.t === "step") { /* the first of the job's words that fits the room's window whole; the last (the shortest) else */
     const f = T.label(dv.sec), s = spec.cands.find((q) => W(c, f, q) + 24 <= room) || spec.cands[spec.cands.length - 1];
     o.word = s; o.val = valParts(c, {...spec, word: s, win: Math.max(room, W(c, f, s) + 24)}, xr, cy, dv, ts);

@@ -189,6 +189,8 @@ export function levelGeom(F, o = {}) {
   if (hit) return hit;
   let d = isPhone ? phone(F, U, t125) : desk(F, U, t125, touchy ? {h: TOUCH.h / css} : null);
   if (touchy && !isPhone && !(d.u * css >= TOUCH_U)) d = compact(F, U, t125, row, open);
+  /* a board canvas too small for one group a page at its CSS scale (a 568 x 320 phone): compact scales as one piece, the one give-way left */
+  for (let i = 0, k = 1; d.mode === "compact" && i < 16 && (d.plate.y + d.plate.h + d.T) * d.u > F.H + 0.5; i++) d = compact({...F, css: css / (k *= 0.96)}, U, t125, row, open);
   d.mode5 = open ? listIn(d.listR, d.cols, d.lh, d.mode === "desk" ? 8 : d.mode === "phone" ? PHONE.p.lg : COMPACT.lgap) : [];
   const u = d.u, S = sc(d.plate, u);
   S.mid = S.x + S.w / 2;

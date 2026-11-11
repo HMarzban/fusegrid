@@ -29,7 +29,8 @@ import {floorVar} from "../floorart.js";
 import {borderCode} from "../wallvar.js";
 import {wallCell, floorCell, brickCell, plate} from "./paint.js";
 import {CONST, toL, worldTokens} from "./tokens.js";
-import {dsp, lbl} from "./type.js";
+import {dsp, lbl, measure, T as TY, textScale, CAP_K} from "./type.js";
+import * as probe from "./probe.js";
 import {canMake} from "./cache.js";
 import {layer, BUDGET} from "./cache.js";
 
@@ -82,23 +83,34 @@ export function roomDpr(c, F, ui, dpr) {
 }
 export const pageRoomDpr = (c, F, ui, dpr, held) => Math.min(roomDpr(c, F, ui, dpr), roomFit(F, dpr, held));
 
-const LOAD_W = 360, LOAD_H = 128;
+/* the plate is 360 x 128 design px; on a touch board canvas (#c, no shell box: a landscape phone, a PAUSE view) a design px is a CSS px where it fits
+   and never under LOAD_FLOOR CSS px (its 16 px line at the phone's 9 px secondary cap), the plate narrowing to the box there and the title fitting it */
+const LOAD_W = 360, LOAD_H = 128, LOAD_FLOOR = 0.8, LOAD_TTL = 34, LOAD_LINE = 16;
 export function loadBox(F) {
-  const k = Math.min(1, (F.W - 52) / LOAD_W, (F.H - 52) / LOAD_H), w = LOAD_W * k, h = LOAD_H * k;
-  return {x: (F.W - w) / 2, y: (F.H - h) / 2, w, h, k};
+  const fit = Math.min((F.W - 52) / LOAD_W, (F.H - 52) / LOAD_H), css = F.touch && !F.shell && F.css > 0 ? F.css : 0;
+  const m = css ? 12 / css : 12, k = css ? Math.max(Math.min(1 / css, fit), Math.min(LOAD_FLOOR / css, (F.H - 2 * m) / LOAD_H)) : Math.min(1, fit), lw = Math.min(LOAD_W, (F.W - 2 * m) / k), w = lw * k, h = LOAD_H * k; // m: the phone's 10 px ring and 2 clear
+  return {x: (F.W - w) / 2, y: (F.H - h) / 2, w, h, k, lw};
 }
 export function loadingPlate(c, F, o) {
-  const level = o.level | 0 || 1, tok = worldTokens(level), B = loadBox(F);
+  const level = o.level | 0 || 1, tok = worldTokens(level), B = loadBox(F), lw = B.lw;
   if (!(F.W > 0 && F.H > 0) || typeof c.clip !== "function") return;
   if (!o.paused) {
     if (canMake()) c.drawImage(roomLayer({w: F.W, h: F.H}, level, tok, {dpr: roomDpr(c, F, {rev: o.rev}, o.dpr), look: "2d", textScale: 1}), 0, 0, F.W, F.H);
     else { c.fillStyle = toL(tok.bg1, 0.004); c.fillRect(0, 0, F.W, F.H); }
   }
+  const tw = measure(c, TY.display(LOAD_TTL), String(o.title)), tp = tw > lw - 32 ? LOAD_TTL * (lw - 32) / tw : LOAD_TTL;
   c.save(); c.translate(B.x, B.y); c.scale(B.k, B.k);
-  plate(c, 0, 0, LOAD_W, LOAD_H, tok);
-  dsp(c, o.title, LOAD_W / 2, 50, 34, {align: "center"});
-  lbl(c, o.line, LOAD_W / 2, 96, 16, {align: "center", col: CONST.t2});
+  plate(c, 0, 0, lw, LOAD_H, tok);
+  dsp(c, o.title, lw / 2, 50, tp, {align: "center"});
+  lbl(c, o.line, lw / 2, 96, LOAD_LINE, {align: "center", col: CONST.t2});
   c.restore();
+  if (probe.probe.on) {
+    const k = B.k, ts = textScale(), lnw = measure(c, TY.label(LOAD_LINE), String(o.line));
+    probe.begin("loading", {w: F.W, h: F.H, dpr: o.dpr || 1, el: F.shell ? "sh" : "c"});
+    probe.rect("plate", B.x, B.y, B.w, B.h, {plate: true});
+    probe.text(String(o.title), B.x + (lw - Math.min(tw, lw - 32)) / 2 * k, B.y + (50 - tp * ts * CAP_K / 2) * k, Math.min(tw, lw - 32) * k, tp * ts * CAP_K * k, {role: "primary", col: CONST.ink, px: tp * k});
+    probe.text(String(o.line), B.x + (lw - lnw) / 2 * k, B.y + (96 - LOAD_LINE * ts * CAP_K / 2) * k, lnw * k, LOAD_LINE * ts * CAP_K * k, {role: "secondary", col: CONST.t2, px: LOAD_LINE * k});
+  }
 }
 
 export function laneGrid(level) {

@@ -331,23 +331,22 @@ for (const lay of ["d", "l", "p"]) for (const r3d of [false, true]) for (const w
     }
     check(`GRAPHICS paging on ${dev} (a landscape phone's #c, ${G.pages.length} pages): moving past a page's last row turns the page; every row is shown and focused once`, G.pages.length > 1 && bad.length === 0 && seen.size === gfx.length, bad.join(" | "));
   }
-  /* R1 kit leftover: a paged touch column keeps a way back (the foot drops there): a hint line under the page keys, the tap rule's words, or BACK
-     and its keycap for a controller, inside the plate */
+  /* R1 kit leftover, R1 landscape: a paged landscape phone's #c keeps a way back (the foot drops there): the BACK key beside the title (the phone's
+     column), >= 44 CSS px, inside the plate, painted with its word, and a tap on it backs out (-1); no hint row under the page keys (it took a row) */
   {
-    const { fitBox } = await import("../src/app/fit.js");
-    const css = fitBox(852, 393, true, 600, 520).s, F = { W: 600, H: 520, touch: true, shell: false, css }, rows = optRows(false), bad = [];
+    const { fitBox, stageCss } = await import("../src/app/fit.js");
+    const css = stageCss(fitBox(852, 393, true, 600, 520).s, 600, 520, 1, 1), F = { W: 600, H: 520, touch: true, shell: false, css }, rows = optRows(false), bad = [];
     for (const [nm, words] of [["touch", wordsOf("touch", DEF_CONTROLS)], ["pad", wordsOf("pad", DEF_CONTROLS)], ["keys", wordsOf("key", DEF_CONTROLS)]]) {
       setHints(words);
       const R = rec({ widthK: 0.648 });
       sp.drawSettingsPage(R.ctx, F, { rows, row: rows[0], level: 1 }, 0);
-      const Pl = sp._dbg.last.Pl, G = sp._dbg.last.G, H = Pl.hint, pl = G.d.plate;
-      const want = nm === "pad" ? ["BACK", words.back] : ["TAP OUTSIDE TO GO BACK"]; // keys on a touch layout keep tap mode (hintcopy tapMode), as the foot does
-      const got = H ? H.ps.map((p) => p.t || p.cap) : [];
-      if (G.pages.length < 2 || G.d.foot || J(got) !== J(want) || !H.ps.every((p) => p.x >= pl.x && p.x + p.w <= pl.x + pl.w && H.y < pl.y + pl.h && H.y > G.d.keys.up.y + G.d.keys.up.h)) bad.push(nm + " " + J({ got, pages: G.pages.length, foot: !!G.d.foot }));
-      if (nm === "touch" && !R.texts.some((t) => t.s === "TAP OUTSIDE TO GO BACK")) bad.push("touch hint not painted");
+      const Pl = sp._dbg.last.Pl, G = sp._dbg.last.G, pl = G.plate, bk = G.back;
+      if (G.pages.length < 2 || G.d.foot || Pl.hint || !bk || bk.h * css < 44 - 1e-9 || bk.x < pl.x || bk.y < pl.y || bk.x + bk.w > pl.x + pl.w || bk.y + bk.h > G.keys.up.y) bad.push(nm + " " + J({ pages: G.pages.length, foot: !!G.d.foot, hint: !!Pl.hint, back: bk }));
+      if (sp.settingsHit(bk.x + bk.w / 2, bk.y + bk.h / 2, { ...F, focus: rows[0] }, rows) !== -1) bad.push(nm + " BACK does not back out");
+      if (!R.texts.some((t) => t.s === "BACK")) bad.push(nm + " BACK not painted");
     }
     setHints(null);
-    check("paged touch column (a landscape phone's #c): no foot, and a back-out hint under the page keys inside the plate (the tap words; BACK + its keycap for a controller)", bad.length === 0, bad.join(" | "));
+    check("paged touch #c (a landscape phone's): no foot, no hint row; the BACK key beside the title keeps the way back (>= 44 CSS px, inside the plate, painted, a tap backs out)", bad.length === 0, bad.join(" | "));
   }
   for (const r3d of [false, true]) {
     const t = tapRig("p", r3d, "PAUSE view 1"), rows = t.app.optRows(), css = dims(t.surf, "2d").css, L = { ...md.layout(600, 520, undefined, css), paused: true, focus: 0 };

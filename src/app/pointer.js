@@ -95,9 +95,9 @@ export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: {
       if (ti >= 0) return void app.recTab(ti - p); // a RECORDS tab: that tab, the tab row focused; recTab disarms an armed STATS, the tab shown included
       const pk = p >= 0 && !(app.screen === SCREEN.STATS && app.resetArm) ? recPageHit(x, y, L, touchLay(cv), ["scores", "stats", "medals"][p]) : 0;
       if (pk) return void app.recPageStep(pk); // a small phone's page keys (records.js PAGER), any RECORDS tab; tap mode keeps them
-      if (app.screen === SCREEN.SCORES) { const i = scoresHit(x, y, L, touchLay(cv)); if (i >= 0) app.recFocus = 1; return i >= 0 ? void app.move(i - app.scoreHeat, 0) : i === -1 ? app.confirm() : null; } // a difficulty tab is in the body
+      if (app.screen === SCREEN.SCORES) { const i = scoresHit(x, y, L, touchLay(cv), app.recPage); if (i >= 0) app.recFocus = 1; return i >= 0 ? void app.move(i - app.scoreHeat, 0) : i === -1 ? app.confirm() : null; } // a difficulty tab is in the body
       if (app.screen === SCREEN.STATS) {
-        const hit = statsHit(x, y, L, app.resetArm, app.recFocus === 0, touchLay(cv)); // KeyC / KeyR / KeyT, "back", "plate" (inert) or, armed, "cancel"
+        const hit = statsHit(x, y, L, app.resetArm, app.recFocus === 0, touchLay(cv), app.recPage); // KeyC / KeyR / KeyT, "back", "plate" (inert) or, armed, "cancel"
         if (hit === "KeyC" && ev.pointerType && ev.pointerType !== "mouse") { statsC = true; app.resetArm = false; } // copies on pointerup; disarmed now, so a cancelled C still cancels
         else if (/^Key/.test(hit)) input.onUiKey(hit); // a label or key tap IS its key (C copies + notes, R arms or erases)
         else if (app.resetArm) app.resetArm = false;

@@ -118,7 +118,10 @@ check("CAMERA and BRIGHTNESS exist only in the twelve", !P.settingsGeom(BOX.d136
   const Q = P.settingsGeom(BOX.p393, R12), css = (r) => r.h * PG.s;
   check("phone: one column in CSS px, a BACK key beside the title, rows 44 CSS px 8 apart (the mock's 52 pitch), one page, the foot under the plate", Q.mode === "phone" && !!Q.back && Q.pages.length === 1 && R12.every((l) => near(css(Q.rows[l]), 44, 0.01)) && near((Q.rows.SFX.y - Q.rows.MUSIC.y) * PG.s, 52, 0.01) && Q.d.foot.y > Q.d.plate.y + Q.d.plate.h, J(R12.map((l) => css(Q.rows[l]))));
   check("phone: the BACK key is >= 44 CSS px and >= 8 CSS px above the first row", css(Q.back) >= 44 && (Q.rows.MUSIC.y - Q.back.y - Q.back.h) * PG.s >= 8);
-  for (const b of ["c600", "iso", "c600t", "c852", "c667", "pauseK", "pauseT"]) { const C = P.settingsGeom(BOX[b], R12); check(`#c box (${b}): the single column, plate and ring inside`, C.mode === "col" && C.u <= 1 && C.plate.x - C.T >= 0 && C.plate.y - C.T >= 0 && C.plate.x + C.plate.w + C.T <= BOX[b].W + 0.5 && C.plate.y + C.plate.h + C.T <= BOX[b].H + 0.5, J([C.u, C.plate])); }
+  for (const b of ["c600", "iso", "pauseK", "pauseT"]) { const C = P.settingsGeom(BOX[b], R12); check(`#c box (${b}): the single column, plate and ring inside`, C.mode === "col" && C.u <= 1 && C.plate.x - C.T >= 0 && C.plate.y - C.T >= 0 && C.plate.x + C.plate.w + C.T <= BOX[b].W + 0.5 && C.plate.y + C.plate.h + C.T <= BOX[b].H + 0.5, J([C.u, C.plate])); }
+  /* R1 landscape: a TOUCH board canvas (#c with no shell box: the landscape phones) takes the phone's column in CSS px (u = 1 / css, never scaled
+     under the floors), a BACK key beside the title, paged; plate and ring inside */
+  for (const b of ["c600t", "c852", "c667"]) { const C = P.settingsGeom(BOX[b], R12), F = BOX[b], y1 = F.paused ? F.H - 8 : F.H; check(`touch #c box (${b}): the phone column at 1 / css, a BACK key, plate and ring inside`, C.mode === "phone" && Math.abs(C.u * F.css - 1) < 1e-9 && !!C.back && C.plate.x - C.T >= 0 && C.plate.y - C.T >= (F.paused ? 44 : 0) && C.plate.x + C.plate.w + C.T <= F.W + 0.5 && C.plate.y + C.plate.h + C.T <= y1 + 0.5, J([C.u, C.plate])); }
   const Lt = P.settingsGeom(BOX.l1024, R12);
   check("touch landscape shell box: the desk with rows floored at 44 CSS px", Lt.mode === "desk" && R12.every((l) => Lt.rows[l].h >= 43.99));
   /* the touch floor (lead ruling, fix round 1): every touch box, both scales, both pages: rows >= 44 CSS px, gaps >= 8, page keys >= 44 and >= 8 apart */
@@ -190,7 +193,7 @@ for (const ts of [1, 1.25]) {
     const fr = G.rows["ART STYLE"];
     check(`the band is the focused row's geometry rect (${tag})`, !!band && near(band.box.x, fr.x, 0.6) && near(band.box.y, fr.y, 0.6) && near(band.box.w, fr.w, 0.6) && near(band.box.h, fr.h, 0.6), J([band && band.box, fr]));
     const F2 = S.Pl.foot;
-    if (G.pages.length > 1) check(`paged (${tag}): the page keys' strip and PAGE n OF m under the rows (a column: where the foot was; the phone keeps its foot under the plate)`, (G.mode === "phone" ? !!F2 : !F2) && !!G.keys && t.texts.some((q) => q.s === "PAGE " + (G.pageOf["ART STYLE"] + 1) + " OF " + G.pages.length));
+    if (G.pages.length > 1) check(`paged (${tag}): the page keys' strip and PAGE n OF m under the rows (a column or a touch #c: where the foot was; the phone keeps its foot under the plate)`, (G.mode === "phone" && F.shell ? !!F2 : !F2) && !!G.keys && t.texts.some((q) => q.s === "PAGE " + (G.pageOf["ART STYLE"] + 1) + " OF " + G.pages.length));
     if (!F2) continue;
     check(`the foot (${tag}): inside the box, every key reads label first, keycap last`, !!F2 && F2.x >= 0 && F2.x + F2.w <= G.d.plate.x + G.d.plate.w + 30 && F2.lines.every((L) => L.ps.every((p, i) => !p.cap || (i > 0 && !L.ps[i - 1].sep))), J(F2 && F2.lines.map((L) => L.ps.map((p) => p.t || p.sep || (Array.isArray(p.cap) ? p.cap[0] : p.cap)))));
   }

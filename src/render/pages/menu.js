@@ -58,8 +58,8 @@ export const TOUCH = Object.freeze({h: 44, g: 8}), TOUCH_U = 0.8;
    pad / lp / cap / lp2 / below the logo's header, hero PLAY, tile the six doors, gap every pitch (9 at the least, so a gap the gate measures through a
    fractional stage scale still reads >= 8). side and padX are fixed; the column is capped at wmax wide and centred. */
 export const COMPACT = deep({
-  c: {min: {top: 12, pad: 4, lp: 2, cap: 20, lp2: 2, below: 8, hero: 44, gap: 9, tile: 44, pad2: 8, bot: 13}, max: {top: 40, pad: 12, lp: 18, cap: 36, lp2: 10, below: 10, hero: 62, gap: 10, tile: 58, pad2: 14, bot: 20}, side: 12, padX: 10, wmax: 600},
-  c125: {min: {top: 12, pad: 4, lp: 2, cap: 20, lp2: 2, below: 8, hero: 50, gap: 9, tile: 58, pad2: 8, bot: 13}, max: {top: 40, pad: 12, lp: 18, cap: 36, lp2: 10, below: 10, hero: 62, gap: 10, tile: 84, pad2: 14, bot: 20}, side: 12, padX: 10, wmax: 600},
+  c: {least: {}, min: {top: 12, pad: 4, lp: 2, cap: 20, lp2: 2, below: 8, hero: 44, gap: 9, tile: 44, pad2: 8, bot: 13}, max: {top: 40, pad: 12, lp: 18, cap: 36, lp2: 10, below: 10, hero: 62, gap: 10, tile: 58, pad2: 14, bot: 20}, side: 12, padX: 10, wmax: 600},
+  c125: {least: {lp: 0, cap: 0, lp2: 0, gap: 8, pad2: 4, bot: 12, padX: 6}, min: {top: 12, pad: 4, lp: 2, cap: 20, lp2: 2, below: 8, hero: 50, gap: 9, tile: 58, pad2: 8, bot: 13}, max: {top: 40, pad: 12, lp: 18, cap: 36, lp2: 10, below: 10, hero: 62, gap: 10, tile: 84, pad2: 14, bot: 20}, side: 12, padX: 10, wmax: 600},
 });
 const LOGO_CAP = LOGO.menu.cap, ENV = logoLay(LOGO.menu.build).env, LOGO_H = ENV.h * LOGO_CAP, EDGE = 2;
 const LOGO_MIN = 20;
@@ -132,17 +132,20 @@ function hitTiles(rows, out, kind, ix, iw, e, gap, top0, pad2) {
 function compact(F, rows, t125) {
   const C = COMPACT[t125 ? "c125" : "c"], css = F.css > 0 ? F.css : 1, n = Math.ceil((rows.length - 1) / 2);
   const tot = (q) => q.top + q.pad + q.lp + ENV.h * q.cap + q.lp2 + q.below + q.hero + q.gap + n * q.tile + (n - 1) * q.gap + q.pad2 + q.bot;
-  const lo = tot(C.min), hi = tot(C.max), Hc = F.H * css;
-  const u = Hc >= lo ? 1 / css : F.H / lo, Hd = F.H / u, t = Math.max(0, Math.min(1, (Hd - lo) / (hi - lo)));
-  const q = Object.fromEntries(Object.keys(C.min).map((k) => [k, C.min[k] + t * (C.max[k] - C.min[k])]));
-  const Wd = F.W / u, pw = Math.min(Wd - 2 * C.side, C.wmax), px = (Wd - pw) / 2, ix = px + C.padX, iw = pw - 2 * C.padX;
+  const lo = tot(C.min), hi = tot(C.max), Hc = F.H * css, lo2 = tot({...C.min, ...C.least});
+  /* under min, a 125 % box first takes its least sizes (the wordmark steps out of the header, the gaps close to 8: R1 landscape, never under the
+     floors; every row keeps its words); only under those does the whole scale */
+  const least = Hc < lo, M = least ? {...C.min, ...C.least} : C.min;
+  const u = Hc >= lo2 ? 1 / css : F.H / lo2, Hd = F.H / u, t = least ? 0 : Math.max(0, Math.min(1, (Hd - lo) / (hi - lo)));
+  const q = Object.fromEntries(Object.keys(C.min).map((k) => [k, M[k] + t * (C.max[k] - M[k])]));
+  const pX = least && C.least.padX != null ? C.least.padX : C.padX, Wd = F.W / u, pw = Math.min(Wd - 2 * C.side, C.wmax), px = (Wd - pw) / 2, ix = px + pX, iw = pw - 2 * pX;
   const ph = tot(q) - q.top - q.bot, py = q.top + Math.max(0, Hd - tot(q)) / 2, hy = py + q.pad, lh = ENV.h * q.cap, head = q.lp + lh + q.lp2;
   const out = {}, kind = {}, tw = (iw - q.gap) / 2;
   let y = hy + head + q.below;
   out[rows[0]] = R(ix, y, iw, q.hero); kind[rows[0]] = "main"; y += q.hero + q.gap;
   rows.slice(1).forEach((l, i) => { out[l] = R(ix + (i & 1) * (tw + q.gap), y + (i >> 1) * (q.tile + q.gap), tw, q.tile); kind[l] = "tile"; });
-  return {mode: "compact", dev: "p", u, t125, t, T: DEV.p.T, cap: q.cap, gap: q.gap, plate: R(px, py, pw, ph), head: R(ix, hy, iw, head), logo: R(ix, hy + q.lp, iw, lh), rows: out,
-    hit: hitTiles(rows, out, kind, ix, iw, C.padX / 2, q.gap, Math.min(q.gap, q.below), q.pad2), kind, card: null, foot: null};
+  return {mode: "compact", dev: "p", u, t125, t, T: DEV.p.T, cap: q.cap, gap: q.gap, plate: R(px, py, pw, ph), head: R(ix, hy, iw, head), logo: q.cap > 0 ? R(ix, hy + q.lp, iw, lh) : null, rows: out,
+    hit: hitTiles(rows, out, kind, ix, iw, pX / 2, q.gap, Math.min(q.gap, q.below), q.pad2), kind, card: null, foot: null};
 }
 let gm = null;
 const sameRows = (a, b) => a === b || (a.length === b.length && a.every((l, i) => l === b[i]));
@@ -155,8 +158,8 @@ export function menuGeom(F, rows = MENU_ROWS) {
     lk: Math.max(u * d.cap / LOGO_CAP, LOGO_MIN / LOGO_CAP),
     plate: sc(d.plate, u), head: sc(d.head, u), logo: sc(d.logo, u), card: sc(d.card, u), foot: sc(d.foot, u), kind: d.kind, rows: {}, hit: {}};
   for (const l of rows) { G.rows[l] = sc(d.rows[l], u); G.hit[l] = sc(d.hit[l], u); }
-  const k = G.lk / u, cy = d.logo.y + d.logo.h / 2, cx = d.logo.x + d.logo.w / 2, bw = Math.max(d.logo.w, ENV.w * LOGO_CAP * k + 2 * EDGE * k) / k;
-  G.lbox = R(cx * u / G.lk - bw / 2, cy * u / G.lk - (LOGO_H + 2 * EDGE) / 2, bw, LOGO_H + 2 * EDGE);
+  const k = G.lk / u, cy = d.logo && d.logo.y + d.logo.h / 2, cx = d.logo && d.logo.x + d.logo.w / 2, bw = d.logo && Math.max(d.logo.w, ENV.w * LOGO_CAP * k + 2 * EDGE * k) / k;
+  G.lbox = d.logo ? R(cx * u / G.lk - bw / 2, cy * u / G.lk - (LOGO_H + 2 * EDGE) / 2, bw, LOGO_H + 2 * EDGE) : null; // null: compact's least step, no wordmark
   gm = {W: F.W, H: F.H, touch: touchy, shell, t125, css, rows, G: deep(G)};
   return gm.G;
 }
@@ -227,7 +230,9 @@ function rowPlan(c, G, ui, l, words, showCap) {
   }
   /* a tile: the label breaks once at a space where one line will not fit (a compact LEVEL SELECT); the teaser takes the lines the tile has left */
   const lx = r.x + 16, fx = r.x + 8 + dv.bombs + 8, gx = r.x + r.w - 12 - gs, room = Math.min(gx - 6 - lx, r.x + r.w - 14 - fx);
-  const lab = lw <= room ? [l] : fitCands(c, lf, [l], room, true), ll = lab.length ? lab : [l], lhL = dv.pri * ts * 1.15, lhT = dv.sec * ts * 1.2;
+  /* a one-word label too wide for its tile at 125 % (SETTINGS on a 667 x 375 phone's least tiles) steps down to its 100 % size, still over the floors */
+  if (lw > room && ts > 1 && !/ /.test(l) && W(c, lblF(dv.pri / ts), l) <= room) { o.label.f = lblF(dv.pri / ts); o.label.px = dv.pri / ts; o.label.w = o.label.ws[0] = W(c, o.label.f, l); }
+  const lab = o.label.w <= room ? [l] : fitCands(c, lf, [l], room, true), ll = lab.length ? lab : [l], lhL = dv.pri * ts * 1.15, lhT = dv.sec * ts * 1.2;
   const nT = Math.floor((r.h - 4 - ll.length * lhL - 4) / lhT), lines = nT >= 1 ? fitCands(c, tf, teasers(l, ui, ph), room, big(ts) && nT >= 2) : [];
   const bh = ll.length * lhL + (lines.length ? 4 + lines.length * lhT : 0), top = r.y + r.h / 2 - bh / 2;
   o.glyph.x = gx; o.glyph.y = r.y + r.h / 2 - gs / 2; o.glyph.focHide = true;
@@ -431,7 +436,7 @@ export function drawMenuPage(c, F, ui, t = 0) {
   }
   c.save(); c.globalAlpha = a0 * a;
   c.save(); c.scale(G.lk, G.lk);
-  drawLogo2d(c, {level, place: "menu", box: G.lbox, k: G.lk, dpr: dev, css: F.css > 0 ? F.css : 1, touch: touchy, t, reduced: !!ui.reduced});
+  if (G.lbox) drawLogo2d(c, {level, place: "menu", box: G.lbox, k: G.lk, dpr: dev, css: F.css > 0 ? F.css : 1, touch: touchy, t, reduced: !!ui.reduced});
   c.restore();
   c.scale(u, u);
   if (S.live && canMake() && verb != null && P.foot[verb]) paintFoot(c, P.foot[verb], tok);

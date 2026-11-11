@@ -495,13 +495,16 @@ const { readFileSync } = await import("node:fs");
     if (sg.keys) size("settings " + b, sg.keys.up, sg.keys.dn, c);
     if (gg.keys) size("graphics " + b, gg.keys.up, gg.keys.dn, c);
     if (F.paused) continue;
-    /* GUIDE: 46 CSS px, except where the whole page scales as one piece under its floors (a 667 x 375 phone's #c): there the keys are BACK's size */
-    for (const pg of ["ENEMIES", "HOW TO PLAY", "GUIDE"]) { const g = GP.guideGeom(F, pg); if (g.pager) size("guide " + b + " " + pg, g.pager.up, g.pager.dn, c, g.d.u * c < 1 - 1e-9 ? g.back.h * c : kp.PAGE_KEY); }
+    /* GUIDE: 46 CSS px on every box here, a 667 x 375 phone's #c included (R1 landscape: it pages, never scales; was BACK's size there) */
+    for (const pg of ["ENEMIES", "HOW TO PLAY", "GUIDE"]) { const g = GP.guideGeom(F, pg); if (g.d.u * c < 1 - 1e-9) out.push("guide " + b + " " + pg + " scales " + (g.d.u * c).toFixed(3)); if (g.pager) size("guide " + b + " " + pg, g.pager.up, g.pager.dn, c); }
     const RG = RP.recordsGeom(F);
     for (const t of ["scores", "stats", "medals"]) { const q = RG.d.bodies[t] && RG.d.bodies[t].pager; if (q) size("records " + b + " " + t, q.up, q.dn, RG.u * c); }
-    for (const H of [340, 393, 520]) { const lg = LP.levelGeom({ ...F, H }, { unlocked: true, open: false, row: W.LABEL.LEVEL }); if (lg.pageKeys) size("level " + b + " H" + H, lg.pageKeys[0], lg.pageKeys[1], c); }
+    /* LEVEL SELECT's compact: 46 CSS px, except a box too short for one group a page at its CSS scale (H 340 / 393 at a 667 x 375 phone's scale:
+       synthetic boxes shorter than any phone's #c), where compact scales as one piece, its last give-way (R1 landscape), keys and all at that
+       scale; the real #c (H 520) never scales */
+    for (const H of [340, 393, 520]) { const lg = LP.levelGeom({ ...F, H }, { unlocked: true, open: false, row: W.LABEL.LEVEL }), k = lg.u * c; if (k < 1 - 1e-9) { if (H === 520 || !lg.pageKeys || Math.abs(lg.pageKeys[0].h * c - kp.PAGE_KEY * k) > 0.01) out.push("level " + b + " H" + H + " scales " + k.toFixed(3)); } else if (lg.pageKeys) size("level " + b + " H" + H, lg.pageKeys[0], lg.pageKeys[1], c); }
   }
-  check("one pager: every page's ▲ / ▼ keys are PAGE_KEY (46) CSS px square and >= 8 CSS px apart on every touch box that pages (SETTINGS, GRAPHICS, GUIDE, RECORDS, LEVEL SELECT's compact; GUIDE scaled as one piece keeps them at BACK's size)", out.length === 0 && kp.PAGE_KEY === 46 && ["settings", "graphics", "guide", "records", "level"].every((n) => seen.has(n)), out.join(" | ") + " " + J([...seen]));
+  check("one pager: every page's ▲ / ▼ keys are PAGE_KEY (46) CSS px square and >= 8 CSS px apart on every touch box that pages (SETTINGS, GRAPHICS, GUIDE, RECORDS, LEVEL SELECT's compact; no page scales on a real box; LEVEL SELECT's synthetic short boxes scale whole)", out.length === 0 && kp.PAGE_KEY === 46 && ["settings", "graphics", "guide", "records", "level"].every((n) => seen.has(n)), out.join(" | ") + " " + J([...seen]));
   check("one label: PAGE n OF m", kp.pageLabel(0, 3) === "PAGE 1 OF 3" && kp.pageLabel(2, 3) === "PAGE 3 OF 3");
   check("one break rule: whole items, at most cap tall, a page's first item drops its gap", J(kp.paginate([10, 10, 10, 10], [0, 4, 4, 4], 24)) === J([[0, 1], [2, 3]]) && J(kp.paginate([30, 10], [0, 4], 20)) === J([[0], [1]]) && J(kp.paginate([10, 10], [0, 4], Infinity)) === J([[0, 1]]));
   const Q = kp.pagerKeys(0, 0, 300, 46);

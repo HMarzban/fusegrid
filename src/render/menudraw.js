@@ -581,9 +581,9 @@ export const drawScores = recDraw("scores"), drawStats = recDraw("stats"), drawT
 /* The RECORDS tab under a tap, else -1; -2 while the page module is still loading (inert). */
 export const recTabHit = (x, y, L, _page, touch) => { const m = recMod(); return m ? m.tabHit(x, y, frameOf(L, touch)) : -2; };
 /* SCORES: the difficulty under a tap, -2 on the plate (inert), -1 off it or on the BACK key (main backs out). */
-export const scoresHit = (x, y, L, touch) => { const m = recMod(); return m ? m.scoresHit(x, y, frameOf(L, touch)) : -2; };
+export const scoresHit = (x, y, L, touch, spage) => { const m = recMod(); return m ? m.scoresHit(x, y, frameOf(L, touch), spage | 0) : -2; }; // spage: the page shown (a split SCORES' bank answers on its first only)
 /* STATS: a key code (KeyC / KeyR / KeyT), "back", "plate" (inert) or, armed, "cancel" (records.js statsHit); "plate" while loading. */
-export const statsHit = (x, y, L, arm, _tabs, touch) => { const m = recMod(); return m ? m.statsHit(x, y, frameOf(L, touch), arm) : "plate"; };
+export const statsHit = (x, y, L, arm, _tabs, touch, spage) => { const m = recMod(); return m ? m.statsHit(x, y, frameOf(L, touch), arm, spage | 0) : "plate"; }; // spage: the page shown (a paged #c STATS keeps COPY / RESET on its last)
 /* A RECORDS tab's page count on this box (records.js recPages: 1 where its body fits unpaged, and while the module loads); page scores | stats | medals. */
 export const recPages = (L, touch, page, rows) => { const m = recMod(); return m ? m.recPages(frameOf(L, touch), page, rows) : 1; };
 /* A RECORDS tab's page keys under a tap: -1 (▲), 1 (▼), else 0 (rows: SCORES' rows, whose count sets its pages). */

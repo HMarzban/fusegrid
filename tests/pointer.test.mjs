@@ -217,7 +217,7 @@ for (const [scr, fn, field, row, offAct, R] of [[SCREEN.MENU, "menuHit", "cursor
   const t1 = mid((x, y) => F(x, y) === 1), off = spot((x, y) => F(x, y) === -1), plate = spot((x, y) => F(x, y) === -2);
   r.down(t1.x, t1.y);
   check("SCORES tab 1: app.move(1 - scoreHeat, 0)", J(r.log) === J([["move", -1, 0]]) && r.input._intent.fire === false, J(r.log));
-  check("SCORES: scoresHit(x, y, layout(cw, ch, lg, css), touchLay(cv)) (RECORDS taps on the page's own frame, v202 Task 4.1)", J(r.H.last("scoresHit").a) === J([t1.x, t1.y, L0, false]) && r.H.last("layout").a.length === 4);
+  check("SCORES: scoresHit(x, y, layout(cw, ch, lg, css), touchLay(cv), app.recPage) (RECORDS taps on the page's own frame, v202 Task 4.1; the page shown, R1 landscape)", J(r.H.last("scoresHit").a) === J([t1.x, t1.y, L0, false, r.app.recPage]) && r.H.last("layout").a.length === 4);
   r.log.length = 0; r.down(plate.x, plate.y);
   check("SCORES: -2 (the table) is inert", r.log.length === 0, J(r.log));
   r.down(off.x, off.y);

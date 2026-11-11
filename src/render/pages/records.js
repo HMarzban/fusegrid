@@ -57,27 +57,34 @@ export const TROUGH = 11, PANE_GAP = 10, FOOT_H = 54, GUT = 8, TAB_GAP = 6, BANK
    bank stay at their size (they are touch targets); under them the badges and the table take the height left (avail), scaled by tk where they need
    more, the badges dropping first on a short touch box (tk under BADGE_K with them). row: the kicker left of the bank, else above it. */
 export const BADGE_K = 0.8;
-function scoresBody(dv, ts, iw, D, row, avail, c = 0) {
+function scoresBody(dv, ts, iw, D, row, avail, c = 0, land = false) {
   const kick = dv.sec * ts * 1.2, bh = dv.bkh + 6, x0 = row ? D.kick : 0, bw = row ? Math.min(iw - x0, 3 * D.bank + 2 * BANK_GAP + 6) : iw, y0 = row ? 0 : kick + 6;
   const bank = R(x0, y0, bw, bh), kw = (bw - 6 - 2 * BANK_GAP) / 3, keys = [0, 1, 2].map((i) => R(x0 + 3 + i * (kw + BANK_GAP), y0 + 3, kw, dv.bkh));
   const stack = iw < 520, top = y0 + bh, hh = Math.round(dv.sec * ts * 1.5), rp = stack ? Math.round(dv.pri * ts * 1.15 + dv.sec * ts * 1.2 + 8) : Math.max(c ? 22 : D.row, Math.round(dv.pri * ts * 1.15)), tbl = hh + 10 * rp, bl = stack ? 2 : 1, bH = bl * dv.tg + (bl - 1) * 6, bg = c ? 8 : 14, withB = bg + bH + bg + tbl;
-  let badges = true, tk = 1, per = 10, pages = 1, pagerY = null;
+  let badges = true, tk = 1, per = 10, pages = 1, pagerY = null, split = false;
   if (avail > 0 && top + withB > avail) {
     /* a touch body too short pages its table instead of scaling it (fix round 1b): whole rows per page, the header on each, the badges kept; only a
-       box that cannot hold MIN_ROWS rows a page still scales (the landscape phones' #c) */
-    const n = Math.floor((avail - PAGER.h - PAGER.g - top - bg - bH - bg - hh + 1e-6) / rp);
-    if (n >= MIN_ROWS) { per = Math.min(10, n); pages = Math.ceil(10 / per); pagerY = avail - PAGER.h; }
+       box that cannot hold MIN_ROWS rows a page still scales. On a touch board canvas (land: #c, R1 landscape) one row a page is enough, and where
+       not even one fits beside the badges (or that takes fewer pages), the bank and the badges take page 1 (split 1; split 2: the bank page 1, the
+       badges page 2 in its place) and the table the pages after, in the bank's place under the kicker, which names the difficulty shown there
+       (words.js diffTag); the bank's keys answer on page 1 only */
+    const free = avail - PAGER.h - PAGER.g - top, n = Math.floor((free - bg - bH - bg - hh + 1e-6) / rp);
+    const n3 = Math.floor((avail - PAGER.h - PAGER.g - y0 - hh + 1e-6) / rp);
+    const lead = bg + bH + bg <= free + 1e-6 ? 1 : bg + bH + bg <= avail - PAGER.h - PAGER.g - y0 + 1e-6 ? 2 : 0; // the split's pages before the table: the bank (and the badges where they fit beside it), else the badges' own
+    if (n >= (land ? 1 : MIN_ROWS) && !(land && !row && n3 >= 1 && lead && lead + Math.ceil(10 / n3) < Math.ceil(10 / n))) { per = Math.min(10, n); pages = Math.ceil(10 / per); pagerY = avail - PAGER.h; }
+    else if (land && !row && n3 >= 1 && lead) { split = lead; per = Math.min(10, n3); pages = lead + Math.ceil(10 / per); pagerY = avail - PAGER.h; }
     else { tk = (avail - top) / withB; if (tk < BADGE_K) { badges = false; tk = Math.min(1, (avail - top) / (bg + tbl)); } }
   }
-  const lw = iw / tk, by = bg, hy = badges ? by + bH + bg : bg, at = (r) => R(r.x * tk, top + r.y * tk, r.w * tk, r.h * tk);
-  return {kick: row ? R(0, 0, x0 - 12, bh) : R(0, 0, iw, kick), bank, keys, badges: badges ? at(R(0, by, lw, bH)) : null, bl, head: at(R(0, hy, lw, hh)), rp, stack, rows: at(R(0, hy + hh, lw, per * rp)), tk, top, per, pages, pagerY, h: pagerY != null ? avail : top + (hy + hh + per * rp) * tk};
+  const lw = iw / tk, by = bg, hy = badges && !split ? by + bH + bg : bg, at = (r) => R(r.x * tk, top + r.y * tk, r.w * tk, r.h * tk);
+  return {kick: row ? R(0, 0, x0 - 12, bh) : R(0, 0, iw, kick), bank, keys, badges: badges ? (split === 2 ? R(0, y0 + bg, lw, bH) : at(R(0, by, lw, bH))) : null, bl, head: split ? R(0, y0, lw, hh) : at(R(0, hy, lw, hh)), rp, stack,
+    rows: split ? R(0, y0 + hh, lw, per * rp) : at(R(0, hy + hh, lw, per * rp)), tk, top, per, pages, pagerY, split, h: pagerY != null ? avail : top + (hy + hh + per * rp) * tk};
 }
 /* MEDALS paged (fix round 1b): the tiles that fit in cap, whole, per page (each laid from y0), at least MIN_TILES a page; null where they cannot */
 export const MIN_ROWS = 3, MIN_TILES = 2;
-function medalsPaged(dv, ts, iw, cols, lines, c, cap) {
+function medalsPaged(dv, ts, iw, cols, lines, c, cap, minT = MIN_TILES) {
   const m = medalsBody(dv, ts, iw, cols, lines, c), th = m.tiles[0].h, gap = cols > 1 ? (c ? 4 : 8) : (c ? 4 : 6), y0 = m.tiles[0].y;
   const rowsFit = Math.floor((cap - y0 + gap + 1e-6) / (th + gap)), per = rowsFit * cols;
-  if (per < MIN_TILES) return null;
+  if (per < minT) return null;
   const tp = [], tiles = m.tiles.map((r, i) => { const p = Math.floor(i / per), j = i % per; tp.push(p); return R(r.x, y0 + Math.floor(j / cols) * (th + gap), r.w, r.h); });
   return {...m, tiles, tp, pages: Math.ceil(8 / per), per, h: cap};
 }
@@ -177,26 +184,53 @@ function pageStats(dv, ts, iw, D, cap) {
   }
   return out;
 }
+/* a touch board canvas (#c, R1 landscape): STATS pages by its PARTS (whole items: a kicker kept with its first line, every ledger line, the stat
+   tiles as one row) and its COPY STATS / RESET keys are the last item, so no page holds a part under its floors; each part keeps the gap above it
+   from statsBody inside its section (10 between sections). pg maps a part (kick qual digits course reached tiles lifeK life0..4 bestK best0..2 acts)
+   to its page */
+const SEC_OF = {kick: "hero", qual: "hero", digits: "hero", course: "hero", reached: "hero", tiles: "tiles", lifeK: "life", bestK: "bests"};
+const secOf = (p) => SEC_OF[p] || (/^life/.test(p) ? "life" : /^best/.test(p) ? "bests" : p);
+function pageStatsLand(dv, ts, iw, D, cap, actH) {
+  const b = statsBody(dv, ts, iw, D, true, 1), at = (p) => (/^life\d/.test(p) ? b.life[+p.slice(4)] : /^best\d/.test(p) ? b.best[+p.slice(4)] : p === "tiles" ? R(0, b.tiles[0].y, iw, b.tiles[0].h) : b[p]);
+  const items = [["kick", "qual"], ["digits"], [b.course ? "course" : null, "reached"].filter(Boolean), ["tiles"], ["lifeK", "life0"], ["life1"], ["life2"], ["life3"], ["life4"], ["bestK", "best0"], ["best1"], ["best2"]];
+  const pg = {}, dy = {}, out = {};
+  let p = 0, used = 0, prev = null, top = 0, acts = null;
+  for (const it of [...items, ["acts"]]) {
+    const rs = it[0] === "acts" ? [R(0, 0, iw, actH)] : it.map(at), y0 = Math.min(...rs.map((r) => r.y)), h = Math.max(...rs.map((r) => r.y + r.h)) - y0;
+    const g = prev == null ? 0 : it[0] !== "acts" && secOf(it[0]) === secOf(prev.p) ? Math.max(0, y0 - prev.y1) : 10;
+    if (prev != null && used + g + h > cap + 1e-6) { p++; used = 0; prev = null; }
+    const yy = it[0] === "acts" ? cap - h : prev == null ? 0 : used + g; // COPY / RESET stand at their page's foot (the armed plate keeps AGAIN ERASES above them)
+    for (const q of it) { pg[q] = p; dy[q] = yy - y0; }
+    if (it[0] === "acts") acts = {y: yy, p};
+    used = yy + h; top = Math.max(top, used); prev = {p: it[it.length - 1], y1: y0 + h};
+  }
+  for (const n of ["kick", "qual", "digits", "course", "reached", "lifeK", "bestK"]) out[n] = b[n] ? R(b[n].x, b[n].y + dy[n], b[n].w, b[n].h) : b[n];
+  out.tiles = b.tiles.map((r) => R(r.x, r.y + dy.tiles, r.w, r.h));
+  out.life = b.life.map((r, i) => R(r.x, r.y + dy["life" + i], r.w, r.h));
+  out.best = b.best.map((r, i) => R(r.x, r.y + dy["best" + i], r.w, r.h));
+  return {...b, ...out, pg, pages: p + 1, h: top, actY: acts.y, actP: acts.p};
+}
 /* a body placed at (x, y) scaled by k: every rect in it made absolute; k, x, y the scaled region's scale and origin (SCORES: tk at the table's top) */
 function place(b, x, y, k) {
   const out = {k, x, y};
   for (const [n, v] of Object.entries(b)) out[n] = Array.isArray(v) ? v.map((r) => (r && typeof r === "object" ? R(x + r.x * k, y + r.y * k, r.w * k, r.h * k) : r)) : v && typeof v === "object" && "w" in v ? R(x + v.x * k, y + v.y * k, v.w * k, v.h * k) : v;
   return out;
 }
-function bodiesAt(dv, ts, iw, D, row, bx, by, avail, c = 0, st0 = 0) {
-  const out = {}, s = scoresBody(dv, ts, iw, D, row, avail, c), pagerAt = (y) => pagerKeys(bx, y, iw, PAGER.h);
+function bodiesAt(dv, ts, iw, D, row, bx, by, avail, c = 0, st0 = 0, land = false) {
+  const out = {}, s = scoresBody(dv, ts, iw, D, row, avail, c, land), pagerAt = (y) => pagerKeys(bx, y, iw, PAGER.h);
   out.scores = place(s, bx, by, 1);
   Object.assign(out.scores, {k: s.tk, y: by + s.top});
   if (s.pagerY != null) out.scores.pager = pagerAt(by + s.pagerY);
+  const cm = land ? 1 : c; // a touch board canvas: MEDALS' tight gaps and pads (each tile keeps its words at size)
   const opts = [[iw >= 640 ? 2 : 1, 2], ...(iw < 640 && iw >= 340 ? [[2, 3]] : [])].map(([cl, ln]) => {
-    let m = medalsBody(dv, ts, iw, cl, ln, c), k = 1;
-    if (avail > 0 && m.h > avail) { k = avail / m.h; m = medalsBody(dv, ts, iw / k, cl, ln, c); }
+    let m = medalsBody(dv, ts, iw, cl, ln, cm), k = 1;
+    if (avail > 0 && m.h > avail) { k = avail / m.h; m = medalsBody(dv, ts, iw / k, cl, ln, cm); }
     return {m, k};
   });
   const best = opts.reduce((a, o) => (o.k > a.k + 1e-9 ? o : a));
   /* a touch body too short pages the medals (whole tiles) instead of scaling them: the column count that puts the most on a page */
   /* paged, a goal must stay whole in its tile at full size: one column (the widest tile), two goal lines (three at 125 %), or two columns from 640 */
-  const mp = avail > 0 && best.k < 1 - 1e-9 ? medalsPaged(dv, ts, iw, iw >= 640 ? 2 : 1, big(ts) ? 3 : 2, c, avail - PAGER.h - PAGER.g) : null;
+  const mp = avail > 0 && best.k < 1 - 1e-9 ? medalsPaged(dv, ts, iw, iw >= 640 ? 2 : 1, big(ts) ? 3 : 2, cm, avail - PAGER.h - PAGER.g, land ? 1 : MIN_TILES) : null; // a touch board canvas: one tile a page is enough
   out.medals = mp ? place(mp, bx, by, 1) : place(best.m, bx, by, best.k);
   if (mp) out.medals.pager = pagerAt(by + avail - PAGER.h);
   /* STATS: on a touch box COPY STATS and RESET sit under the body at their size; the body above them scales into what is left */
@@ -206,7 +240,16 @@ function bodiesAt(dv, ts, iw, D, row, bx, by, avail, c = 0, st0 = 0) {
   /* step 5 (one-line bests) only where it makes the body fit; a body that must scale anyway keeps its two-line bests and every level */
   if (room > 0 && st.h > room) { const s5 = statsBody(dv, ts, iw, D, narrow, 5); if (s5.h <= room) st = s5; }
   let pager = null;
-  if (room > 0 && st.h > room && narrow) {
+  if (land && room > 0 && st.h > room) { /* a touch board canvas: the parts page, COPY / RESET the last item */
+    const cap = avail - PAGER.h - PAGER.g, L = pageStatsLand(dv, ts, iw, D, cap, actH);
+    if (L.h <= cap + 1e-6) {
+      const cw = Math.round((iw - 12) * 0.58);
+      out.stats = place(L, bx, by, 1);
+      Object.assign(out.stats, {pager: pagerAt(by + avail - PAGER.h), acts: {copy: R(bx, by + L.actY, cw, actH), reset: R(bx + cw + 12, by + L.actY, iw - cw - 12, actH), p: L.actP}});
+      return out;
+    }
+  }
+  if (room > 0 && st.h > room && narrow && room - PAGER.h - PAGER.g > 0) {
     const cap = room - PAGER.h - PAGER.g;
     st = pageStats(dv, ts, iw, D, cap);
     if (st.h > cap) sk = cap / st.h; // a section taller than a page: the landscape phones' #c only
@@ -267,10 +310,11 @@ function desk(F, t125) {
    across under them. compact (any other touch box, the landscape phones' #c included): one header row, BACK, the title where it fits (else it drops: the
    open tab names the page), the tabs; the plate at most the desk's 980 wide, centred */
 const TITLE_W = 150, TAB_MIN = 96;
+const LAND = Object.freeze({top: 12, bot: 13, pad: Object.freeze([9, 10, 6, 10]), pane: Object.freeze([4, 6, 4, 6]), gap: 4});
 function touchFrame(F, t125) {
-  const P = PHONE[t125 ? "p125" : "p"], dv = DEV.p, ts = F.ts, css = F.css > 0 ? F.css : 1, T0 = dv.T, tall = !!F.shell && F.H > F.W * 1.3;
-  const head = tall ? dv.keyh + 12 + 2 + dv.bkh : dv.keyh;
-  const fixed = P.top + P.pad[0] + head + TROUGH + PANE_GAP + 4 + P.pane[0] + P.pane[2] + P.pad[2] + P.bot, minBody = tall ? 120 : 90;
+  const land = !F.shell, P = land ? {...PHONE[t125 ? "p125" : "p"], ...LAND} : PHONE[t125 ? "p125" : "p"], dv = DEV.p, ts = F.ts, css = F.css > 0 ? F.css : 1, T0 = dv.T, tall = !!F.shell && F.H > F.W * 1.3;
+  const head = tall ? dv.keyh + 12 + 2 + dv.bkh : dv.keyh, PG = land ? LAND.gap : PANE_GAP;
+  const fixed = P.top + P.pad[0] + head + TROUGH + PG + 4 + P.pane[0] + P.pane[2] + P.pad[2] + P.bot, minBody = tall ? 120 : 90;
   const u = Math.min(1 / css, F.H / (fixed + minBody)), Wd = F.W / u, Hd = F.H / u;
   const pw = Math.min(Wd - 2 * P.side, tall ? P.max : DESK.d.w), px = (Wd - pw) / 2, py = P.top, ph = Hd - P.top - P.bot;
   const ix = px + P.pad[3], iwP = pw - P.pad[1] - P.pad[3], hy = py + P.pad[0];
@@ -288,10 +332,11 @@ function touchFrame(F, t125) {
     if (withT >= TAB_MIN) title = R(ix + back.w + 14, hy, x0 - 12 - (ix + back.w + 14), dv.keyh);
   }
   const tb = tabs[0].y + dv.bkh, tx = tall ? ix : tabs[0].x, trough = R(tx, tb, ix + iwP - tx, TROUGH);
-  const pane = R(ix, tb + TROUGH + PANE_GAP, iwP, py + ph - P.pad[2] - (tb + TROUGH + PANE_GAP));
+  const pane = R(ix, tb + TROUGH + PG, iwP, py + ph - P.pad[2] - (tb + TROUGH + PG));
   const iw = pane.w - 4 - P.pane[1] - P.pane[3], bh = pane.h - 4 - P.pane[0] - P.pane[2], bx = pane.x + 2 + P.pane[3], by = pane.y + 2 + P.pane[0];
+  const bodies = bodiesAt(dv, ts, iw, {...P, kick: DESK.d.kick, bank: DESK.d.bank, statL: DESK.d.statL}, iw >= 520, bx, by, bh, 0, 0, land);
   return {mode: tall ? "phone" : "compact", dev: "p", u, t125, T: T0, plate: R(px, py, pw, ph), kick: null, title, back, tabs, trough, pane, body: R(bx, by, iw, bh),
-    bodies: bodiesAt(dv, ts, iw, {...P, kick: DESK.d.kick, bank: DESK.d.bank, statL: DESK.d.statL}, iw >= 520, bx, by, bh), foot: null, confirm: confirmGeom(pane, dv, ts, true, 6, t125, R(px, py, pw, ph), tall, by + bh - DEV.p.btnh - 12)};
+    bodies, foot: null, confirm: confirmGeom(pane, dv, ts, true, 6, t125, R(px, py, pw, ph), tall, (bodies.stats.acts ? bodies.stats.acts.copy.y : by + bh - DEV.p.btnh) - 12)};
 }
 let gm = null;
 /** The one geometry for draw and tap; see the header. */
@@ -322,11 +367,11 @@ const onPlate = (G, dx, dy) => {
   return inR(q ? R(q.fp.x, q.fp.y, q.fp.w, q.fp.h) : G.d.foot, dx, dy);
 };
 /** SCORES: the difficulty under (x, y); -2 on the plate (inert), -1 off it or on the BACK key (main backs out). */
-export function scoresHit(x, y, F) {
+export function scoresHit(x, y, F, spage = 0) {
   if (!okBox(F)) return -1;
   const G = recordsGeom(F), [dx, dy] = toD(G, x, y), b = G.d.bodies.scores;
   if (inR(G.d.back, dx, dy)) return -1;
-  for (let i = 0; i < 3; i++) { const r = b.keys[i]; if (inR(R(r.x - BANK_GAP / 2, b.bank.y, r.w + BANK_GAP, b.bank.h), dx, dy)) return i; }
+  if (!(b.split && spage >= 1)) for (let i = 0; i < 3; i++) { const r = b.keys[i]; if (inR(R(r.x - BANK_GAP / 2, b.bank.y, r.w + BANK_GAP, b.bank.h), dx, dy)) return i; }
   if (footHit(G, dx, dy) === "back") return -1; // the foot's BACK label (its words and keycap) backs out; the rest of the plaque is inert
   return onPlate(G, dx, dy) ? -2 : -1;
 }
@@ -340,12 +385,12 @@ function footHit(G, dx, dy, arm = false) {
 }
 /** STATS: a key code (KeyC / KeyR / KeyT: a foot label, a touch key, or armed AGAIN ERASES / COPY), "back" (BACK, off the plate), "plate" (on it, inert),
     or, armed, "cancel" for anything else (the confirm plate is modal). */
-export function statsHit(x, y, F, arm) {
+export function statsHit(x, y, F, arm, spage = 0) {
   if (!okBox(F)) return arm ? "cancel" : "back";
   const G = recordsGeom(F), [dx, dy] = toD(G, x, y), d = G.d;
   if (arm) return inR(d.confirm.again, dx, dy) ? "KeyR" : inR(d.confirm.copy, dx, dy) ? "KeyC" : footHit(G, dx, dy, true) || "cancel";
   if (inR(d.back, dx, dy)) return "back";
-  const a = d.bodies.stats.acts;
+  const a0 = d.bodies.stats.acts, a = a0 && (a0.p == null || a0.p === spage) ? a0 : null; // a paged #c STATS: COPY / RESET on their page only
   if (a && inR(a.copy, dx, dy)) return "KeyC";
   if (a && inR(a.reset, dx, dy)) return "KeyR";
   const pg = d.bodies.stats.pager; // the page keys (a key with no page to open is a well: inert)
@@ -356,7 +401,11 @@ export function statsHit(x, y, F, arm) {
   return onPlate(G, dx, dy) ? "plate" : "back";
 }
 /* SCORES' pages follow the rows it draws (an empty table is one page, so no PAGE 1 OF n and no header-only page) */
-const scoresPages = (b, rows) => (b && b.pager ? Math.max(1, Math.ceil(Math.max(0, Math.min(10, rows | 0)) / b.per)) : 1);
+const scoresPages = (b, rows) => (b && b.pager ? (b.split | 0) + Math.max(1, Math.ceil(Math.max(0, Math.min(10, rows | 0)) / b.per)) : 1); // split: the badges' page first
+/* the table's page (split: page 1 is the badges' alone, -1) and an empty table's two lines, centred in its first rows */
+const tpage = (b, P) => (P.pg ? P.pg.page : 0) - (b.split | 0);
+const bankOn = (b, P) => !b.split || !(P.pg && P.pg.page), badgeOn = (b, P) => !b.split || (P.pg ? P.pg.page : 0) === b.split - 1;
+const emptyY = (per, j) => (j ? Math.min(4.2, Math.max(0.75, per - 0.5)) : Math.min(3, Math.max(0.3, per - 1.5)));
 /** A tab's page count on this box (1 where its body fits unpaged): what the app's ↑ / ↓ and the page keys clamp to. page: scores | stats | medals;
     rows: SCORES' rows for the difficulty shown (its pages follow them). */
 export function recPages(F, page, rows) {
@@ -547,10 +596,12 @@ function paintPage(c, G, P, ui, tok) {
 const dspText = (c, s, x, y, px) => dspCol(c, s, x, y, px, CONST.ink);
 function scoresStatic(c, G, P, tok) {
   const b = G.d.bodies.scores, S = P.scores, dv = DEV[G.dev], k = b.k, ph = G.dev === "p", kr = b.kick, br = b.bank;
-  text(c, LABEL.DIFFICULTY, kr.x, kr.y + kr.h / 2, T.label(dv.sec), CONST.t2);
-  rf(c, br.x, br.y, br.w, br.h, 8, CONST.ol);
-  b.keys.forEach((r, i) => key(c, r.x, r.y, r.w, r.h, "well", {tok, label: S.bank[i], phone: ph}));
-  if (!b.badges) return;
+  if (bankOn(b, P)) { // a split's later pages: the kicker is live (it names the difficulty), no bank
+    text(c, LABEL.DIFFICULTY, kr.x, kr.y + kr.h / 2, T.label(dv.sec), CONST.t2);
+    rf(c, br.x, br.y, br.w, br.h, 8, CONST.ol);
+    b.keys.forEach((r, i) => key(c, r.x, r.y, r.w, r.h, "well", {tok, label: S.bank[i], phone: ph}));
+  }
+  if (!b.badges || !badgeOn(b, P)) return;
   c.save(); c.translate(b.x, b.y); c.scale(k, k); c.translate(-b.x, -b.y);
   const gr = R(b.x + (b.badges.x - b.x) / k, b.y + (b.badges.y - b.y) / k, b.badges.w / k, b.badges.h / k);
   const th = (gr.h - (b.bl - 1) * 6) / b.bl;
@@ -570,13 +621,15 @@ function focusKey(c, r, label, L, focused, tok, dv, ph) {
 const paintPager = (c, Q, Qp, tok, dv) => kitPager(c, Q, Qp.page, Qp.n, tok, {f: T.label(dv.sec), phone: true});
 function scoresLive(c, G, P, ui, tok, foc) {
   const b = G.d.bodies.scores, S = P.scores, dv = DEV[G.dev], k = b.k, ph = G.dev === "p", r = b.keys[S.h];
-  focusKey(c, r, S.bank[S.h], S.bleg[S.h], foc, tok, dv, ph);
+  if (!bankOn(b, P)) text(c, diffTag(S.h), b.kick.x, b.kick.y + b.kick.h / 2, T.label(dv.sec), CONST.t2);
+  else focusKey(c, r, S.bank[S.h], S.bleg[S.h], foc, tok, dv, ph);
   c.save(); c.translate(b.x, b.y); c.scale(k, k); c.translate(-b.x, -b.y);
   const rr = R(b.x, b.y + (b.rows.y - b.y) / k, b.rows.w / k, b.rows.h / k), rp = b.rp;
-  const pg = P.pg ? P.pg.page : 0, i0 = pg * b.per, i1 = Math.min(S.n, i0 + b.per); // a paged table draws its page's rows
-  if (S.empty) {
-    if (!pg) text(c, S.empty[0], rr.x + rr.w / 2, rr.y + rp * Math.min(3, b.per - 1.5), T.label(dv.pri), CONST.ink, "center");
-    if (!pg && S.empty[1]) text(c, S.empty[1], rr.x + rr.w / 2, rr.y + rp * Math.min(4.2, b.per - 0.5), T.body(dv.bod), CONST.t2, "center");
+  const pg = tpage(b, P), i0 = pg * b.per, i1 = Math.min(S.n, i0 + b.per); // a paged table draws its page's rows (split: none on the badges' page)
+  if (pg < 0) {}
+  else if (S.empty) {
+    if (!pg) text(c, S.empty[0], rr.x + rr.w / 2, rr.y + rp * emptyY(b.per, 0), T.label(dv.pri), CONST.ink, "center");
+    if (!pg && S.empty[1]) text(c, S.empty[1], rr.x + rr.w / 2, rr.y + rp * emptyY(b.per, 1), T.body(dv.bod), CONST.t2, "center");
   } else if (S.table) {
     const tp = S.table, hr = R(b.x, b.y + (b.head.y - b.y) / k, b.head.w / k, b.head.h / k);
     for (const col of tp.cols) text(c, col.n, col.right ? hr.x + col.x + col.w : hr.x + col.x, hr.y + hr.h / 2, tp.fS, CONST.t2, col.right ? "right" : "left");
@@ -625,7 +678,7 @@ function statsPlan(c, G, ui) {
   const conf = d.confirm, fk = conf.fk, cf = T.body(dv.bod * fk), sentence = resetSentence(ui.wipe ? ui.wipe[0] : null, ui.wipe ? ui.wipe[1] : null) || RESET_DEFAULT;
   const titleF = T.display(dv.ttl * 0.72 * fk), tl = wrap(c, titleF, ST.TITLE, conf.title.w - 34, conf.tl) || [ST.TITLE];
   const bk2 = bestKick(), bk = bk2.join(" · "), bestK = W(c, sf, bk) <= b.bestK.w / k ? [bk] : bk2;
-  const spage = b.pg ? Math.max(0, Math.min(b.pages - 1, ui.spage | 0)) : 0, on = (sec) => !b.pg || b.pg[sec] === spage;
+  const spage = b.pg ? Math.max(0, Math.min(b.pages - 1, ui.spage | 0)) : 0, on = (q) => { const v = b.pg ? b.pg[q] ?? b.pg[secOf(q)] : null; return v == null || v === spage; }; // a part, or its section where the body pages by sections
   const pager = b.pager ? {s: RW.PAGE + " " + (spage + 1) + " " + RW.OF + " " + b.pages, upOn: spage > 0, dnOn: spage < b.pages - 1} : null;
   return {spage, on, pager, bestK, hero: h, qual, digits: h ? [...sep3(h.s)] : [], far: h && v.far >= 1 ? v.far | 0 : 0, reached: h && v.far >= 1 ? ST.FURTHEST + " " + (v.far | 0) + " · " + biomeOf(v.far | 0).name : "", life, bests, top, notes,
     tiles: [[ST.RUNS, sep3(v.runs | 0), "bomb"], [ST.PLAY_TIME, hm(v.secs), "clock"], [ST.MEDALS, (v.medals | 0) + "/8", "medal"]],
@@ -644,20 +697,19 @@ function statsStatic(c, G, P, ui, tok) {
   c.save(); c.translate(b.x, b.y); c.scale(k, k); c.translate(-b.x, -b.y);
   const L = (r) => R(b.x + (r.x - b.x) / k, b.y + (r.y - b.y) / k, r.w / k, r.h / k), sf = T.label(dv.sec), pf = T.label(dv.pri);
   const kr = L(b.kick);
-  if (S.on("hero")) text(c, ST.BEST_SCORE, kr.x, kr.y + kr.h / 2, sf, CONST.t2);
+  if (S.on("kick")) text(c, ST.BEST_SCORE, kr.x, kr.y + kr.h / 2, sf, CONST.t2);
   const qr = L(b.qual);
-  if (!S.on("hero")) {}
-  else if (!S.hero) text(c, ST.NO_BEST, qr.x, qr.y + dv.pri * ts * 0.6, pf, CONST.t2);
+  if (!S.hero) { if (S.on("qual")) text(c, ST.NO_BEST, qr.x, qr.y + dv.pri * ts * 0.6, pf, CONST.t2); }
   else {
-    S.qual.forEach((l, i) => text(c, l, qr.x, qr.y + dv.pri * ts * (0.6 + 1.2 * i), pf, CONST.ink));
+    if (S.on("qual")) S.qual.forEach((l, i) => text(c, l, qr.x, qr.y + dv.pri * ts * (0.6 + 1.2 * i), pf, CONST.ink));
     const dr = L(b.digits);
     let x = dr.x;
-    for (const ch of S.digits) {
+    if (S.on("digits")) for (const ch of S.digits) {
       const w = ch === "," ? Math.round(dv.sdw * 0.6) : dv.sdw;
       key(c, x, dr.y + 2, w, dv.sdh, ch === "," ? "well" : "lit", {tok, label: ch, px: dv.sdf, phone: ph});
       x += w + 4;
     }
-    const cr = b.course && S.far && L(b.course); // the course shows the furthest level only (no run is implied by the score above it)
+    const cr = b.course && S.far && S.on("course") && L(b.course); // the course shows the furthest level only (no run is implied by the score above it)
     if (cr) for (let r = 1; r <= 8; r++) {
       const x0 = cr.x + (r - 1) * (dv.lcw + 5), kind = r < S.far ? "lit" : r === S.far ? "key" : r > 5 && !ui.unlocked ? "wall" : "well";
       key(c, x0, cr.y + 2, dv.lcw, dv.lch, kind, {tok, label: kind === "wall" ? null : String(r), px: dv.pri, phone: ph});
@@ -665,7 +717,7 @@ function statsStatic(c, G, P, ui, tok) {
       if (r === 5 || r === 8) ic(c, "flag", x0 + dv.lcw - 13, cr.y + 4, 10, kind === "lit" ? CONST.dk : CONST.t2);
     }
     const rr = L(b.reached);
-    if (S.reached) text(c, S.reached, rr.x, rr.y + rr.h / 2, sf, CONST.t2);
+    if (S.reached && S.on("reached")) text(c, S.reached, rr.x, rr.y + rr.h / 2, sf, CONST.t2);
   }
   if (S.on("tiles")) S.tiles.forEach(([name, val, g], i) => {
     const r = L(b.tiles[i]);
@@ -676,17 +728,16 @@ function statsStatic(c, G, P, ui, tok) {
     text(c, name, r.x + q.pad, r.y + r.h - 8 - dv.sec * ts * 0.6, sf, CONST.t2);
   });
   const lk = L(b.lifeK);
-  if (S.on("life")) { text(c, ST.LIFETIME, lk.x, lk.y + lk.h / 2, sf, CONST.t2); S.life.forEach((q, i) => ledger(c, L(b.life[i]), q.g, q.l, "", q.n, dv, ts, false)); }
+  if (S.on("lifeK")) text(c, ST.LIFETIME, lk.x, lk.y + lk.h / 2, sf, CONST.t2);
+  S.life.forEach((q, i) => { if (S.on("life" + i)) ledger(c, L(b.life[i]), q.g, q.l, "", q.n, dv, ts, false); });
   const bk = L(b.bestK);
-  if (S.on("bests")) {
-    S.bestK.forEach((l, i) => text(c, l, bk.x, bk.y + dv.sec * ts * (0.6 + 1.2 * i), sf, CONST.t2));
-    S.bests.forEach((q, i) => ledger(c, L(b.best[i]), {pip: i + 1, lit: q.s >= 0 && q.s === S.top}, q.l, q.sub, q.n, dv, ts, !b.one, tok));
-  }
+  if (S.on("bestK")) S.bestK.forEach((l, i) => text(c, l, bk.x, bk.y + dv.sec * ts * (0.6 + 1.2 * i), sf, CONST.t2));
+  S.bests.forEach((q, i) => { if (S.on("best" + i)) ledger(c, L(b.best[i]), {pip: i + 1, lit: q.s >= 0 && q.s === S.top}, q.l, q.sub, q.n, dv, ts, !b.one, tok); });
   if (b.div) wallCourse(c, L(b.div), tok);
   if (b.notes) S.notes.forEach((l, i) => text(c, l, L(b.notes).x, L(b.notes).y + dv.sec * ts * (0.6 + 1.2 * i), sf, CONST.t2));
   c.restore();
   const a = b.acts;
-  if (a) {
+  if (a && S.on("acts")) {
     key(c, a.copy.x, a.copy.y, a.copy.w, a.copy.h, "key", {tok, label: ST.COPY_SHORT, phone: true});
     key(c, a.reset.x, a.reset.y, a.reset.w, a.reset.h, "key", {tok});
     const lw = W(mOf(c), pf, ST.RESET), x0 = a.reset.x + a.reset.w / 2 - (lw + 26) / 2;
@@ -832,26 +883,27 @@ function record(G, P, ui, foc, dpr, el, F0, tok, touchy, tap) {
   let fr = null;
   if (foc === "tabs" && !tap) fr = R(on.x, on.y - 2, on.w, on.h);
   if (page === "scores") {
-    const B = d.bodies.scores, S = P.scores, k = B.k;
-    B.keys.forEach((r, i) => { const ch = i === S.h, rr = ch ? R(r.x, r.y - 2, r.w, r.h) : r; const fo = ch && foc === "body" && !tap; probe.rect("difficulty " + S.bank[i], ...b(rr), {touch: touchy, set: "filter", kind: "bank", focus: fo, fill: ch ? tok.lit : tok.well}); const Lg = S.bleg[i], lw = fo ? Lg.lw : measureOr(S.bank[i], dv.pri); txt(S.bank[i], legX(rr, lw, dv, fo, Lg.fit) - lw / 2, rr.y + rr.h / 2, lw, fo ? Lg.lp : dv.pri, ch ? CONST.dk : CONST.t2, "primary"); });
-    const kc = B.keys[S.h], ko = B.keys[(S.h + 1) % 3];
-    probe.pair("chosen", b(R(kc.x + kc.w - 20, kc.y + 2, 14, kc.h - 10)), b(R(ko.x + ko.w - 20, ko.y + 4, 14, ko.h - 10)), {name: "chosen difficulty vs not"});
-    if (foc === "body" && !tap) fr = R(kc.x, kc.y - 2, kc.w, kc.h);
-    txt(LABEL.DIFFICULTY, B.kick.x, B.kick.y + B.kick.h / 2, measureOr(LABEL.DIFFICULTY, dv.sec), dv.sec, CONST.t2, "secondary");
-    const th = B.badges ? (B.badges.h - (B.bl - 1) * 6 * k) / B.bl : 0;
-    if (B.badges && S.label) txt(RW.BADGES, B.badges.x, B.badges.y + th / 2, measureOr(RW.BADGES, dv.sec) * k, dv.sec * k, CONST.t2, "secondary");
-    if (B.badges) for (const t of S.badges) {
+    const B = d.bodies.scores, S = P.scores, k = B.k, tpg = tpage(B, P), tbl = !bankOn(B, P);
+    if (!tbl) B.keys.forEach((r, i) => { const ch = i === S.h, rr = ch ? R(r.x, r.y - 2, r.w, r.h) : r; const fo = ch && foc === "body" && !tap; probe.rect("difficulty " + S.bank[i], ...b(rr), {touch: touchy, set: "filter", kind: "bank", focus: fo, fill: ch ? tok.lit : tok.well}); const Lg = S.bleg[i], lw = fo ? Lg.lw : measureOr(S.bank[i], dv.pri); txt(S.bank[i], legX(rr, lw, dv, fo, Lg.fit) - lw / 2, rr.y + rr.h / 2, lw, fo ? Lg.lp : dv.pri, ch ? CONST.dk : CONST.t2, "primary"); });
+    const kc = B.keys[S.h], ko = B.keys[(S.h + 1) % 3], kick = tbl ? diffTag(S.h) : LABEL.DIFFICULTY;
+    if (!tbl) probe.pair("chosen", b(R(kc.x + kc.w - 20, kc.y + 2, 14, kc.h - 10)), b(R(ko.x + ko.w - 20, ko.y + 4, 14, ko.h - 10)), {name: "chosen difficulty vs not"});
+    if (foc === "body" && !tap && !tbl) fr = R(kc.x, kc.y - 2, kc.w, kc.h);
+    txt(kick, B.kick.x, B.kick.y + B.kick.h / 2, measureOr(kick, dv.sec), dv.sec, CONST.t2, "secondary");
+    const bdg = B.badges && badgeOn(B, P), th = bdg ? (B.badges.h - (B.bl - 1) * 6 * k) / B.bl : 0;
+    if (bdg && S.label) txt(RW.BADGES, B.badges.x, B.badges.y + th / 2, measureOr(RW.BADGES, dv.sec) * k, dv.sec * k, CONST.t2, "secondary");
+    if (bdg) for (const t of S.badges) {
       const x = B.badges.x + t.x * k, y = B.badges.y + t.ln * (th + 6 * k), col = t.on ? CONST.medal : CONST.off;
       txt(t.s, x + 30 * k, y + th / 2, measureOr(t.s, dv.sec) * k, dv.sec * k, t.on ? CONST.ink : col, "secondary", t.on ? {} : {lock: true});
       /* a: the glyph with its stroke's bleed (an earned medal is a stroked outline now); b: the chip around it, inside the tag's own outline */
       probe.pair("info", b(R(x + 6 * k, y + th / 2 - 10 * k, 20 * k, 20 * k)), b(R(x + 3 * k, y + 3 * k, 27 * k, th - 6 * k)), {col, name: "badge " + t.s, ...(t.on ? {} : {lock: true})});
     }
     const rr = B.rows, rp = B.rp * k;
-    if (S.empty && !(P.pg && P.pg.page)) S.empty.forEach((s, j) => { if (!s) return; const w = (j ? W(MC, T.body(dv.bod), s) : measureOr(s, dv.pri)) * k; txt(s, rr.x + rr.w / 2 - w / 2, rr.y + rp * (j ? Math.min(4.2, B.per - 0.5) : Math.min(3, B.per - 1.5)), w, (j ? dv.bod : dv.pri) * k, j ? CONST.t2 : CONST.ink, j ? "body" : "primary"); });
+    if (tpg < 0) {}
+    else if (S.empty && !tpg) S.empty.forEach((s, j) => { if (!s) return; const w = (j ? W(MC, T.body(dv.bod), s) : measureOr(s, dv.pri)) * k; txt(s, rr.x + rr.w / 2 - w / 2, rr.y + rp * emptyY(B.per, j), w, (j ? dv.bod : dv.pri) * k, j ? CONST.t2 : CONST.ink, j ? "body" : "primary"); });
     else if (S.table) {
       const tp = S.table;
       for (const col of tp.cols) { const w = measureOr(col.n, dv.sec) * k, x = rr.x + (col.x + (col.right ? col.w : 0)) * k - (col.right ? w : 0); txt(col.n, x, B.head.y + B.head.h / 2, w, dv.sec * k, CONST.t2, "secondary"); }
-      const pg = P.pg ? P.pg.page : 0, i0 = pg * B.per, i1 = Math.min(S.n, i0 + B.per);
+      const i0 = tpg * B.per, i1 = Math.min(S.n, i0 + B.per);
       for (let i = i0; i < i1; i++) {
         for (const col of tp.cols) {
           const s = col.cells[i], px = col.f === tp.fP ? dv.pri : dv.sec, w = (col.num ? nWOr(s, px) : measureOr(s, px)) * k, x = rr.x + (col.x + (col.right ? col.w : 0)) * k - (col.right ? w : 0);
@@ -864,23 +916,24 @@ function record(G, P, ui, foc, dpr, el, F0, tok, touchy, tap) {
   if (page === "stats") {
     const B = d.bodies.stats, S = P.stats, k = B.k, sw = (s, px) => measureOr(s, px) * k;
     if (!ui.arm) { // armed, the page under the confirm plate is dimmed and inert: not read (the mock's data-ng)
-    if (S.on("hero")) { // a paged body records only the sections on the page shown
-    txt(ST.BEST_SCORE, B.kick.x, B.kick.y + B.kick.h / 2, sw(ST.BEST_SCORE, dv.sec), dv.sec * k, CONST.t2, "secondary");
-    if (!S.hero) txt(ST.NO_BEST, B.qual.x, B.qual.y + dv.pri * ts * 0.6 * k, sw(ST.NO_BEST, dv.pri), dv.pri * k, CONST.t2, "primary");
+    { // a paged body records only the parts on the page shown
+    if (S.on("kick")) txt(ST.BEST_SCORE, B.kick.x, B.kick.y + B.kick.h / 2, sw(ST.BEST_SCORE, dv.sec), dv.sec * k, CONST.t2, "secondary");
+    if (!S.hero) { if (S.on("qual")) txt(ST.NO_BEST, B.qual.x, B.qual.y + dv.pri * ts * 0.6 * k, sw(ST.NO_BEST, dv.pri), dv.pri * k, CONST.t2, "primary"); }
     else {
-      S.qual.forEach((l, i) => txt(l, B.qual.x, B.qual.y + dv.pri * ts * (0.6 + 1.2 * i) * k, sw(l, dv.pri), dv.pri * k, CONST.ink, "primary"));
+      if (S.on("qual")) S.qual.forEach((l, i) => txt(l, B.qual.x, B.qual.y + dv.pri * ts * (0.6 + 1.2 * i) * k, sw(l, dv.pri), dv.pri * k, CONST.ink, "primary"));
       let x = B.digits.x;
       const cells = [];
-      for (const ch of S.digits) { const w = (ch === "," ? Math.round(dv.sdw * 0.6) : dv.sdw) * k; cells.push(R(x, B.digits.y + 2 * k - (ch === "," ? 0 : 2 * k), w, dv.sdh * k)); x += w + 4 * k; }
+      if (S.on("digits")) for (const ch of S.digits) { const w = (ch === "," ? Math.round(dv.sdw * 0.6) : dv.sdw) * k; cells.push(R(x, B.digits.y + 2 * k - (ch === "," ? 0 : 2 * k), w, dv.sdh * k)); x += w + 4 * k; }
       cells.forEach((r, i) => { probe.rect("digit " + i, ...b(r), {fill: S.digits[i] === "," ? tok.well : tok.lit}); const w = measureOr(S.digits[i], dv.sdf) * k; txt(S.digits[i], r.x + r.w / 2 - w / 2, r.y + r.h / 2, w, dv.sdf * k, S.digits[i] === "," ? CONST.t2 : CONST.dk, "hud"); });
       const cell = (r) => R(B.course.x + (r - 1) * (dv.lcw + 5) * k, B.course.y + 2 * k, dv.lcw * k, dv.lch * k);
-      if (B.course && S.far) for (let r = 1; r <= 8; r++) probe.rect("level " + r + (r > S.far && r > 5 && !ui.unlocked ? " locked" : ""), ...b(cell(r)), {fill: r < S.far ? tok.lit : r === S.far ? tok.key : tok.well});
+      const crs = B.course && S.far && S.on("course");
+      if (crs) for (let r = 1; r <= 8; r++) probe.rect("level " + r + (r > S.far && r > 5 && !ui.unlocked ? " locked" : ""), ...b(cell(r)), {fill: r < S.far ? tok.lit : r === S.far ? tok.key : tok.well});
       /* a locked level (a wall cell, 6-8 before the first CLEAR) against the first level (lit or the raised key); its texture against a flat floor: the
          PLAY TIME tile's empty top right (fix round 1: the filled STATS capture draws locked cells) */
-      const lk = B.course && S.far && S.on("tiles") ? [6, 7, 8].find((r) => r > S.far && !ui.unlocked) : null;
+      const lk = crs && S.on("tiles") ? [6, 7, 8].find((r) => r > S.far && !ui.unlocked) : null;
       if (lk) { const t1 = B.tiles[1]; probe.pair("locked", b(cell(lk)), b(cell(1)), {name: "locked level " + lk, floor: b(R(t1.x + t1.w - 24 * k, t1.y + 6 * k, 16 * k, 18 * k))}); }
-      if (B.course && S.far > 1 && S.far < 8) probe.pair("chosen", b(R(cell(1).x + 3 * k, cell(1).y + 2 * k, cell(1).w - 6 * k, 6 * k)), b(R(cell(8).x + 3 * k, cell(8).y + 6 * k, cell(8).w - 6 * k, 6 * k)), {name: "cleared vs ahead level"});
-      if (S.reached) txt(S.reached, B.reached.x, B.reached.y + B.reached.h / 2, sw(S.reached, dv.sec), dv.sec * k, CONST.t2, "secondary");
+      if (crs && S.far > 1 && S.far < 8) probe.pair("chosen", b(R(cell(1).x + 3 * k, cell(1).y + 2 * k, cell(1).w - 6 * k, 6 * k)), b(R(cell(8).x + 3 * k, cell(8).y + 6 * k, cell(8).w - 6 * k, 6 * k)), {name: "cleared vs ahead level"});
+      if (S.reached && S.on("reached")) txt(S.reached, B.reached.x, B.reached.y + B.reached.h / 2, sw(S.reached, dv.sec), dv.sec * k, CONST.t2, "secondary");
     }
     }
     if (S.on("tiles")) S.tiles.forEach(([name, val, g], i) => {
@@ -891,7 +944,7 @@ function record(G, P, ui, foc, dpr, el, F0, tok, touchy, tap) {
       txt(name, r.x + q.pad * k, r.y + r.h - (8 + dv.sec * ts * 0.6) * k, sw(name, dv.sec), dv.sec * k, CONST.t2, "secondary");
       probe.pair("info", b(R(r.x + (q.pad - 4) * k, r.y + (q.top - 2) * k, (q.gs + 4) * k, (q.gs + 4) * k)), b(R(r.x + (q.pad - 9) * k, r.y + (q.top - 7) * k, (q.gs + 14) * k, (q.gs + 14) * k)), {col: g === "medal" ? (S.tiles && (ui.view && ui.view.medals) > 0 ? CONST.medal : CONST.t2) : g === "clock" ? CONST.t2 : CONST.ink, name: "tile glyph " + name});
     });
-    if (S.on("life")) txt(ST.LIFETIME, B.lifeK.x, B.lifeK.y + B.lifeK.h / 2, sw(ST.LIFETIME, dv.sec), dv.sec * k, CONST.t2, "secondary");
+    if (S.on("lifeK")) txt(ST.LIFETIME, B.lifeK.x, B.lifeK.y + B.lifeK.h / 2, sw(ST.LIFETIME, dv.sec), dv.sec * k, CONST.t2, "secondary");
     const line = (r, label, sub, num, two) => {
       const cy = two ? r.y + (4 + dv.pri * ts * 0.575) * k : r.y + r.h / 2, lx = r.x + 40 * k;
       if (sub && !two && lx + sw(label, dv.pri) + sw(sub, dv.sec) + 22 * k > r.x + r.w - (nWOr(num, dv.pri) + 12) * k) sub = "";
@@ -900,15 +953,13 @@ function record(G, P, ui, foc, dpr, el, F0, tok, touchy, tap) {
       const w = nWOr(num, dv.pri) * k;
       txt(num, r.x + r.w - w, cy, w, dv.pri * k, num === RW.NONE ? CONST.t2 : CONST.ink, "primary");
     };
-    if (S.on("life")) S.life.forEach((q, i) => line(B.life[i], q.l, "", q.n, false));
-    if (S.on("bests")) {
-      S.bestK.forEach((l, i) => txt(l, B.bestK.x, B.bestK.y + dv.sec * ts * (0.6 + 1.2 * i) * k, sw(l, dv.sec), dv.sec * k, CONST.t2, "secondary"));
-      S.bests.forEach((q, i) => line(B.best[i], q.l, q.sub, q.n, !B.one));
-    }
+    S.life.forEach((q, i) => { if (S.on("life" + i)) line(B.life[i], q.l, "", q.n, false); });
+    if (S.on("bestK")) S.bestK.forEach((l, i) => txt(l, B.bestK.x, B.bestK.y + dv.sec * ts * (0.6 + 1.2 * i) * k, sw(l, dv.sec), dv.sec * k, CONST.t2, "secondary"));
+    S.bests.forEach((q, i) => { if (S.on("best" + i)) line(B.best[i], q.l, q.sub, q.n, !B.one); });
 
     if (B.notes) S.notes.forEach((l, i) => txt(l, B.notes.x, B.notes.y + dv.sec * ts * (0.6 + 1.2 * i) * k, sw(l, dv.sec), dv.sec * k, CONST.t2, "secondary"));
     const a = B.acts;
-    if (a) { probe.rect(ST.COPY_SHORT, ...b(a.copy), {touch: touchy, set: "acts", fill: tok.key}); probe.rect(ST.RESET, ...b(a.reset), {touch: touchy, set: "acts", fill: tok.key}); txt(ST.COPY_SHORT, a.copy.x + a.copy.w / 2 - measureOr(ST.COPY_SHORT, dv.pri) / 2, a.copy.y + a.copy.h / 2, measureOr(ST.COPY_SHORT, dv.pri), dv.pri, CONST.ink, "primary"); }
+    if (a && S.on("acts")) { probe.rect(ST.COPY_SHORT, ...b(a.copy), {touch: touchy, set: "acts", fill: tok.key}); probe.rect(ST.RESET, ...b(a.reset), {touch: touchy, set: "acts", fill: tok.key}); txt(ST.COPY_SHORT, a.copy.x + a.copy.w / 2 - measureOr(ST.COPY_SHORT, dv.pri) / 2, a.copy.y + a.copy.h / 2, measureOr(ST.COPY_SHORT, dv.pri), dv.pri, CONST.ink, "primary"); const rw = measureOr(ST.RESET, dv.pri), rx = a.reset.x + a.reset.w / 2 - (rw + 26) / 2 + 26; txt(ST.RESET, rx, a.reset.y + a.reset.h / 2, rw, dv.pri, CONST.t2, "primary"); }
     }
     if (ui.arm) {
       const f = d.confirm, C = S.confirm, fk = f.fk, tpx = dv.ttl * 0.72 * fk;

@@ -145,9 +145,10 @@ setHints(null);
 {
   const L = md.layout(600, 520), tok = worldTokens(1);
   for (const touch of [false, true]) {
+    const LT = touch ? md.layout(600, 520, 200) : L; // touch: a 600 x 520 shell box (R1 landscape: a touch #c takes the phone's column, where ART STYLE is a door, as on a phone)
     const a = recCtx(), b = recCtx();
-    md.drawSettings(a, L, 1, { rows: V, row: "ART STYLE", vals: {}, px: true, touch });
-    md.drawSettings(b, L, 1, { rows: V, row: "ART STYLE", vals: {}, px: true, touch, job: { k: "px", st: "preparing", phase: "bake", done: 140, total: 255, fill: 0.6 } });
+    md.drawSettings(a, LT, 1, { rows: V, row: "ART STYLE", vals: {}, px: true, touch });
+    md.drawSettings(b, LT, 1, { rows: V, row: "ART STYLE", vals: {}, px: true, touch, job: { k: "px", st: "preparing", phase: "bake", done: 140, total: 255, fill: 0.6 } });
     const G = sp._dbg.last.G.d, r = G.rows["ART STYLE"], y = r.y, h = r.h, o = sp._dbg.last.Pl.rows["ART STYLE"];
     const lab = (q) => q.texts.filter((t) => t.s !== "PIXEL" && !/PIXEL|ART 140/.test(t.s)).map((t) => t.s + "@" + t.x + "," + t.y).join("|");
     check("no reflow: every other text lands where it did" + (touch ? " (touch)" : ""), lab(a) === lab(b));

@@ -146,9 +146,9 @@ function body(page, m, iw) {
     const hs = (p) => helpOf(p, m.narrow && m.tap ? NARROW_TAP : m.W, m.tap);
     if (m.mode !== "desk") {
       /* phone and compact: two tiles a row, the cell and the name across the top, the help under them in the secondary size, as many lines as it needs */
-      const cell = 32, tw = (iw - gap) / 2 - 16, nl = Math.max(...POWER.map((p) => linesOf(T.label, Sx, hs(p), tw))), nw = (iw - gap) / 2 - 8 - cell - 10 - 10;
+      const k2 = m.one ? 1 : 2, cell = 32, tw = (iw - gap) / k2 - 16, nl = Math.max(...POWER.map((p) => linesOf(T.label, Sx, hs(p), tw))), nw = (iw - gap) / k2 - 8 - cell - 10 - 10;
       const hh = Math.max(cell, Math.max(...POWER.map((p) => linesOf(T.label, P, p.name, nw))) * lhP); /* a name too wide for its tile breaks at its space (POWER BOMB at 125 %) */
-      const g = grid(POWER.length, 2, gap, iw, () => 8 + hh + 6 + nl * lhS + 8, 8);
+      const g = grid(POWER.length, k2, gap, iw, () => 8 + hh + 6 + nl * lhS + 8, 8); // m.one: the compact fallback's one column
       return {h: g.h, top: 0, bands: g.rows, items: POWER.map((p, i) => ({name: p.name, r: g.rects[i], band: g.ri[i], cell, hh, nw, lines: nl, t: p.t, tile: true}))};
     }
     const cols = iw >= 900 ? 2 : 1, cell = 44, tw0 = (cw) => cw - 8 - cell - 12 - 14, lines = (cw) => Math.max(...POWER.map((p) => linesOf(T.body, Bd, hs(p), tw0(cw))));
@@ -176,7 +176,7 @@ function body(page, m, iw) {
     /* phone: one column, PTS under the digits; compact: two columns, PTS beside them. The help takes the lines it needs; at 125 % the phone and
        compact drop it (the round 6 phone frame's step-down) */
     const side = m.mode === "compact", pth = side ? 40 : 58, ptw = 8 + dv.bombs + 6 + 67 + (side ? 6 + pts : 0) + 8, cols = side && (iw - gap) / 2 >= 330 ? 2 : 1, cw = (iw - (cols - 1) * gap) / cols, tw = cw - 12 - 44 - 10 - ptw - 10;
-    const help = !(ts > 1.1), hl = FOES.map((e) => (help ? linesOf(T.body, Bd, helpOfFoe(e), tw) : 0)), need = (i) => Math.max(side ? 48 : 64, 6 + lhP + lhS + hl[i] * lhB + 6);
+    const help = !(ts > 1.1) && !m.nohelp, hl = FOES.map((e) => (help ? linesOf(T.body, Bd, helpOfFoe(e), tw) : 0)), need = (i) => Math.max(side ? 48 : 64, 6 + lhP + lhS + hl[i] * lhB + 6);
     const g = grid(FOES.length, cols, gap, iw, (i) => need(i), 0);
     const items = FOES.map((e, i) => { const r = g.rects[i], x0 = r.x + 6, tx = x0 + 54, ptx = r.x + r.w - 6 - ptw, top = r.y + (r.h - (lhP + lhS + hl[i] * lhB)) / 2, py = r.y + (r.h - pth) / 2, dig = R(ptx + 8 + dv.bombs + 6, py + 6, 67, 28);
       return {name: e.name, t: e.t, r, band: g.ri[i], ri: g.ri[i], col: i % cols, cell: R(x0, r.y + (r.h - 44) / 2, 44, 44), tx, tw, nameY: top + lhP / 2, levY: top + lhP + lhS / 2, helpY: help ? top + lhP + lhS : null, hl: hl[i], pts: R(ptx, py, ptw, pth), dig, digF: dig, side}; });
@@ -208,11 +208,15 @@ function headOf(page, m, iw) {
     const kick = m.ts > 1.1 ? 0 : sec * 1.25, k2 = kick ? kick + 2 : 0, tt = dv.ttl * ts * 1.1, inline = !hint || mw(T.label, Sx, hint) + D(page) + 24 <= iw;
     return {h: k2 + tt + (inline ? 0 : 4 + sec * 1.3), kick: kick ? R(0, 0, iw, kick) : null, title: R(0, k2, iw, tt), hint: hint ? (inline ? R(0, k2, iw, tt) : R(0, k2 + 4 + tt, iw, sec * 1.3)) : null, s: hint};
   }
-  const hn = hint ? linesOf(T.label, Sx, hint, iw) : 0, tt = dv.ttl * ts * 1.1, below = D(page) > iw - BACK_W - 16, ty = below ? BACK_H + 6 : 0, th = below ? tt : BACK_H;
+  /* compact (#c, R1 landscape): a title too wide beside BACK steps down to fit there while its cap holds the phone's primary floor, so the head
+     keeps one row; else (and on a phone) it goes under BACK */
+  const bw = m.hk ? BACK_H : BACK_W, room = iw - bw - 16 - (m.hk ? 2 * PAGE_KEY + PAGE_GAP + 12 : 0), fitPx = dv.ttl * room / D(page), inl = m.mode === "compact" && D(page) > room && fitPx * ts * CAP_K >= TTL_CAP;
+  const hn = hint ? linesOf(T.label, Sx, hint, iw) : 0, tt = dv.ttl * ts * 1.1, below = D(page) > room && !inl, ty = below ? BACK_H + 6 : 0, th = below ? tt : BACK_H;
   const hy = ty + th + 8, cy = hy + (hint ? hn * sec * 1.3 + 6 : 0), ch = m.cue ? CUE_H : 0;
-  return {h: ty + th + (hint ? 8 + hn * sec * 1.3 : 0) + (m.cue ? (hint ? 6 : 8) + ch : 0), back: R(0, 0, BACK_W, BACK_H), title: below ? R(0, ty, iw, tt) : R(BACK_W + 16, 0, iw - BACK_W - 16, BACK_H),
-    hint: hint ? R(0, hy, iw, hn * sec * 1.3) : null, cue: m.cue ? R(0, hint ? cy : ty + th + 8, iw, ch) : null, s: hint, hn};
+  return {h: ty + th + (hint ? 8 + hn * sec * 1.3 : 0) + (m.cue ? (hint ? 6 : 8) + ch : 0), back: R(0, 0, bw, BACK_H), title: below ? R(0, ty, iw, tt) : R(bw + 16, 0, room, BACK_H),
+    hint: hint ? R(0, hy, iw, hn * sec * 1.3) : null, cue: m.cue ? R(0, hint ? cy : ty + th + 8, iw, ch) : null, s: hint, hn, tpx: inl ? fitPx : dv.ttl};
 }
+const TTL_CAP = 11.5; // the phone's primary cap floor (11) with a margin over the measured width
 function frameOf(F) {
   const ts = F.ts > 0 ? F.ts : textScale(), touch = !!F.touch, shell = !!F.shell, css = F.css > 0 ? F.css : 1;
   return {ts, touch, shell, css, t125: ts > 1.1, phone: shell && touch && F.H > F.W * 1.3};
@@ -220,7 +224,7 @@ function frameOf(F) {
 /* page breaks: whole bands, greedy, each page as tall as `room` holds (its header included); null when one band is taller than a page. With `need`
    (ENEMIES off the desk: the tooltip's height) every band also keeps that much room above or below it on its page (the pager's strip counts), and
    the body grows toward `room` until it does */
-function paginate(B, room, need = 0) {
+function paginate(B, room, need = 0, PAGER = PAGE_KEY + PAGE_GAP) {
   const n = B.bands.length, req = (b0, k) => { const y = B.bands[k].y - B.bands[b0].y; return !need || y >= need ? 0 : y + B.bands[k].h + need; };
   if (B.h <= room) { const r = Math.max(0, ...B.bands.map((_, k) => req(0, k))); if (B.top + r <= room) return {pages: [{b0: 0, b1: n, y0: B.top, h: B.h - B.top}], h: Math.max(B.h, B.top + r)}; }
   const per = room - PAGER - B.top, pages = [];
@@ -237,8 +241,9 @@ function paginate(B, room, need = 0) {
 function lay(F, page, mode, fr) {
   const dev = mode === "desk" ? "d" : "p", dv = DEV[dev], W = hints(), m = {mode, dev, dv, ts: fr.ts, W, tap: tapMode(fr.touch), narrow: F.W < 560, cue: mode !== "desk" && W.dev === "pad"}, P0 = PAD[mode === "compact" ? "c" : dev];
   const tipNeed0 = (iw) => (page === EN && mode !== "desk" ? tipNeed(m, iw - 2 * TIP_T[dev] - 4 - 2 * (mode === "compact" ? TIP_PAD.c : TIP_PAD.d)).h + 2 * TIP_T[dev] + 5 : 0);
+  let hk = false; // the page keys ride the head's row (compact's last step)
   const fit = (u, H, top0, tail, build) => {
-    const S = build(u), fixed = top0 + P0[0] + S.hd.h + S.gap + P0[2] + tail, pg = paginate(S.bd, H / u - fixed, tipNeed0(S.iw));
+    const S = build(u), fixed = top0 + P0[0] + S.hd.h + S.gap + P0[2] + tail, pg = paginate(S.bd, H / u - fixed, tipNeed0(S.iw), hk ? 0 : PAGER);
     return pg ? {S, pg, u} : null;
   };
   if (mode === "desk") {
@@ -257,12 +262,22 @@ function lay(F, page, mode, fr) {
   }
   /* compact (a landscape phone's #c): margins just clear the plate's ring, tighter pads and head gap, so a foe's row keeps its tooltip's room */
   const side = 12, cp = mode === "compact", top = cp ? DEV.p.T + 2 : 20, bot = cp ? DEV.p.T + 3 : 20, hg = cp ? 8 : 12, max = mode === "phone" ? PHONE_MAX : COMPACT_MAX;
-  let u = 1 / fr.css;
-  const build = (uu) => { const pw = Math.min(F.W / uu - 2 * side, max), iw = pw - P0[1] - P0[3]; return {pw, iw, hd: headOf(page, m, iw), bd: body(page, m, iw), gap: hg}; };
+  let u = 1 / fr.css, mb = m;
+  const build = (uu) => { const pw = Math.min(F.W / uu - 2 * side, max), iw = pw - P0[1] - P0[3]; return {pw, iw, hd: headOf(page, {...m, hk}, iw), bd: body(page, mb, iw), gap: hg}; };
   let R0 = fit(u, F.H, top, bot, build);
-  if (!R0) { const S = build(u), pg = paginate(S.bd, Infinity), band = Math.max(...S.bd.bands.map((b) => b.h)); u = Math.min(u, F.H / (top + P0[0] + S.hd.h + hg + S.bd.top + band + PAGER + P0[2] + bot)); R0 = fit(u, F.H, top, bot, build) || {S: build(u), pg, u}; }
+  /* compact (#c, R1 landscape): where the bands do not page whole at 1 / css the page steps down, never scales: ENEMIES drops a foe's help from its row
+     (as at 125 %: the tooltip still says it), then the phone's one-column body, then BACK steps down to its chevron and the page keys ride the head's
+     row (no PAGE n OF m label there: the keys' wells say where the ends are) */
+  if (!R0 && cp) for (const o of [page === EN ? {nohelp: true} : null, {mode: "phone", one: true}, {mode: "phone", one: true, nohelp: true}, {mode: "phone", one: true, nohelp: true, hk: true}]) {
+    if (!o) continue;
+    mb = {...m, ...o}; hk = !!o.hk; R0 = fit(u, F.H, top, bot, build);
+    if (R0) break;
+    mb = m; hk = false;
+  }
+  for (let i = 0; !R0 && i < 12; i++) { const S = build(u), band = Math.max(...S.bd.bands.map((b) => b.h)); u = Math.min(u * 0.98, F.H / (top + P0[0] + S.hd.h + hg + S.bd.top + band + PAGER + P0[2] + bot)); R0 = fit(u, F.H, top, bot, build); } // the iso guard's last resort: the page scales as one piece (a narrower body reflows, so it re-fits)
+  if (!R0) { const S = build(u); R0 = {S, pg: paginate(S.bd, Infinity), u}; }
   const {S, pg} = R0, plateH = P0[0] + S.hd.h + hg + pg.h + P0[2], px = (F.W / u - S.pw) / 2, py = top + Math.max(0, F.H / u - top - bot - plateH) * (mode === "phone" ? 0 : 0.5);
-  return {mode, dev, u, m, plate: R(px, py, S.pw, plateH), ix: px + P0[3], iy: py + P0[0], iw: S.iw, hd: S.hd, bd: S.bd, pg, by: py + P0[0] + S.hd.h + hg, foot: null};
+  return {mode, dev, u, m, plate: R(px, py, S.pw, plateH), ix: px + P0[3], iy: py + P0[0], iw: S.iw, hd: S.hd, bd: S.bd, pg, by: py + P0[0] + S.hd.h + hg, foot: null, hk};
 }
 const off = (r, x, y) => (r ? R(r.x + x, r.y + y, r.w, r.h) : null);
 const RECTS = ["cell", "pts", "dig", "digF", "pips"], YS = ["nameY", "helpY", "appY", "levY"];
@@ -274,7 +289,7 @@ export function guideGeom(F, page = GUIDE) {
   if (!fr.phone && fr.touch && !(d.u * fr.css >= Math.max(TOUCH_U, uFloor(fr.ts)) - 1e-9)) d = lay(F, page, "compact", fr);
   const u = d.u, x0 = d.ix, y0 = d.by, B = d.bd, pages = d.pg.pages, D = {mode: d.mode, dev: d.dev, u, plate: d.plate, foot: d.foot, T: DEV[d.dev].T, head: {}, items: {}, order: [], hit: {}, tips: null, pages: pages.length, pager: null};
   for (const k of ["kick", "title", "hint", "back", "cue"]) D.head[k] = off(d.hd[k], d.ix, d.iy);
-  D.hintS = d.hd.s; D.hintN = d.hd.hn || 1;
+  D.hintS = d.hd.s; D.hintN = d.hd.hn || 1; D.head.tpx = d.hd.tpx;
   /* every band to its page: a page's first band starts under the repeated header */
   const pOf = [], dy = [];
   pages.forEach((p, i) => { for (let b = p.b0; b < p.b1; b++) { pOf[b] = i; dy[b] = B.top - p.y0; } });
@@ -289,7 +304,7 @@ export function guideGeom(F, page = GUIDE) {
   if (B.note) D.note = {r: off(B.note.r, x0, y0 + dy[B.note.band]), page: pOf[B.note.band]};
   if (B.head) D.fhead = off(B.head, x0, y0);
   if (pages.length > 1) {
-    D.pager = pagerKeys(x0, y0 + d.pg.h - PAGE_KEY, d.iw, PAGE_KEY);
+    D.pager = d.hk ? {...pagerKeys(d.ix, d.iy, d.iw, PAGE_KEY), head: true} : pagerKeys(x0, y0 + d.pg.h - PAGE_KEY, d.iw, PAGE_KEY);
   }
   const bottomOf = (p) => y0 + B.top + pages[p].h;
   /* hits: a door owns half of each gap round it out to half the plate's pad; ENEMIES on a touch layout taps a foe's whole slot, else its points key */
@@ -429,17 +444,17 @@ function plan(c0, G, ui) {
   if (H.back) {
     rest.push({op: "key", r: H.back, kind: "key", name: "BACK"}, {op: "glyph", n: "back", x: H.back.x + 16, y: H.back.y + H.back.h / 2 - 8, s: 16, col: CONST.ink});
     info.push({name: "BACK chevron", r: R(H.back.x + 16, H.back.y + H.back.h / 2 - 8, 16, 16), col: CONST.ink});
-    rest.push(txt("BACK", H.back.x + 42, H.back.y + H.back.h / 2, pri, {name: "BACK"}));
+    if (H.back.w > BACK_H) rest.push(txt("BACK", H.back.x + 42, H.back.y + H.back.h / 2, pri, {name: "BACK"}));
   } else if (H.kick) rest.push(txt(G.page === GUIDE ? "MENU" : GUIDE, H.kick.x, H.kick.y + H.kick.h / 2, sec, {col: CONST.t2, role: "secondary"}));
-  rest.push({op: "dsp", s: G.page, x: H.title.x, y: H.title.y + H.title.h / 2, px: dv.ttl});
+  rest.push({op: "dsp", s: G.page, x: H.title.x, y: H.title.y + H.title.h / 2, px: H.tpx || dv.ttl});
   if (H.hint && !H.back) rest.push(txt(D.hintS, H.hint.x + H.hint.w, H.hint.y + H.hint.h / 2, sec, {col: CONST.t2, role: "secondary", align: "right"}));
   else if (H.hint) wrap(c, fS(sec), D.hintS, H.hint.w).forEach((l, j) => rest.push(txt(l, H.hint.x, H.hint.y + sec * ts * 1.3 * (j + 0.5), sec, {col: CONST.t2, role: "secondary"})));
   if (H.cue) rest.push(...cueOps(c, G, H.cue));
   /* the kit pager (kit pager.js): PAGE n OF m, then the two page keys (label first, keycap last) */
   if (D.pager) for (let p = 0; p < D.pages; p++) {
     const Q = D.pager, k = (r) => [r.x + r.w / 2 - 10, r.y + r.h / 2 - 10];
-    on(p, txt(pageLabel(p, D.pages), Q.label.x, Q.label.y + Q.label.h / 2, sec, {col: CONST.t2, role: "secondary"}),
-      {op: "key", r: Q.up, kind: p > 0 ? "key" : "well", name: "page up"}, {op: "glyph", n: "up", x: k(Q.up)[0], y: k(Q.up)[1], s: 20, col: p > 0 ? CONST.ink : CONST.off},
+    if (!Q.head) on(p, txt(pageLabel(p, D.pages), Q.label.x, Q.label.y + Q.label.h / 2, sec, {col: CONST.t2, role: "secondary"}));
+    on(p, {op: "key", r: Q.up, kind: p > 0 ? "key" : "well", name: "page up"}, {op: "glyph", n: "up", x: k(Q.up)[0], y: k(Q.up)[1], s: 20, col: p > 0 ? CONST.ink : CONST.off},
       {op: "key", r: Q.dn, kind: p < D.pages - 1 ? "key" : "well", name: "page down"}, {op: "glyph", n: "dn", x: k(Q.dn)[0], y: k(Q.dn)[1], s: 20, col: p < D.pages - 1 ? CONST.ink : CONST.off});
   }
   const items = D.items;

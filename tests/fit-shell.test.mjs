@@ -294,7 +294,7 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
      door, power-up, foe or tile name whole, and no ellipsis (tests/page-guide.test.mjs joins every wrapped string back to its source) */
   const GUIDE_PAGES = { GUIDE: ["HOW TO PLAY", "POWER-UPS", "ENEMIES", "FLOOR"], HOWTO: ["CLEAR EVERY ENEMY", "GOLD WALL NEVER BREAKS", "MOVE", "PAUSE"], ITEMS: POWER.map((p) => p.name), ENEMIES: FOES.map((f) => f.name), FLOOR: Object.values(TILE_NAME) };
   const guideWhole = (nm, T) => { const S = T.map((q) => q.s), all = " " + S.join(" ") + " "; return !S.some((x) => /…/.test(x)) && GUIDE_PAGES[nm].every((n) => all.includes(" " + n + " ")); }; // a rule that breaks onto two lines reads whole joined
-  for (const lay of ["d", "l"]) each((nm, cur) => { base[lay + nm + cur] = shot(nm, boxOf({ w: 600, h: 520, s: 1 }, lay), cur); });
+  for (const lay of ["d", "l"]) each((nm, cur) => { base[lay + nm + cur] = shot(nm, boxOf({ w: 600, h: 520, s: 1, logo: shellGeo(600, 520, 600, 520, lay).logo }, lay), cur); }); // the 600x520 SHELL box (R1 landscape: a touch #c of that size pages RECORDS finer, inside its border)
   const TAB_BASE = new Set(["MENU", "LEVEL", "SCORES", "STATS", "TROPHIES"]); // pages whose 600x520 touch box is a compact arrangement (MENU; LEVEL SELECT since Task 3.3; RECORDS' SCORES / MEDALS since v202 Task 4.1, the title dropped there): the tablet reads the 1024x768 tablet's
   each((nm, cur) => { if (TAB_BASE.has(nm)) base["lDesk" + nm + cur] = shot(nm, boxOf(shellGeo(1024, 768, 600, 520, "l"), "l"), cur); }); // a 600x520 touch box is their compact arrangement (LEVEL SELECT: no card, the BACK key), the tablets their desk
   {

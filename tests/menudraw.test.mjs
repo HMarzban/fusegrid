@@ -397,7 +397,8 @@ function check(name, cond, detail) {
          settingsHit share one table). */
       /* keyboard: the single column's rows are 34 design px, its courses 10, scaled as one piece; touch (fix round 1): every row >= 44 CSS px (css 1
          here: box px) and >= 8 apart, paged; the plate and ring inside the box; the drawn labels (the shown page) sit on the geometry's row centres */
-      const rowsOk = (G, touch) => G.mode === "col" && G.u <= 1 && G.order.length === 12 && G.order.every((l) => (touch ? G.rows[l].h >= 43.99 : G.d.rows[l].h === 34)) &&
+      /* R1 landscape: a touch #c (no shell box; css 1 here) takes the phone's column at 1 / css, paged, never scaled; keys keep the column */
+      const rowsOk = (G, touch) => G.mode === (touch ? "phone" : "col") && (touch ? G.u === 1 && !!G.back : G.u <= 1) && G.order.length === 12 && G.order.every((l) => (touch ? G.rows[l].h >= 43.99 : G.d.rows[l].h === 34)) &&
         (!touch || G.pages.every((pr) => pr.every((l, i) => !i || G.rows[l].y - G.rows[pr[i - 1]].y - G.rows[pr[i - 1]].h >= 7.99))) &&
         G.plate.x - G.T >= -0.01 && G.plate.y - G.T >= -0.01 && G.plate.x + G.plate.w + G.T <= W + 0.01 && G.plate.y + G.plate.h + G.T <= H + 0.01;
       const centred = (r, G, pg) => G.pages[pg].every((l) => { const t = r.texts.find((q) => q.s === l); return t && Math.abs(t.y - (G.d.rows[l].y + G.d.rows[l].h / 2)) < 0.01; });
@@ -507,7 +508,7 @@ function check(name, cond, detail) {
       const hitOn = (i) => (x, y) => md.graphicsHit(x, y, { ...L, focus: g.order.indexOf(g.pages[g.pageOf[g.order[i]]][0]) }, 0, touch), hit = hitOn(0), hit7 = hitOn(7);
       const lastOf = (i) => g.pages[g.pageOf[g.order[i]]].at(-1);
       check(`graphics rows: 34 design px on keys, >= 44 CSS px 8 apart on touch (paged), the help under the shown page's last row, plate and ring inside the box (${tg})`,
-        g.mode === "col" && g.u <= 1 && g.order.every((l) => (touch ? g.rows[l].h >= 43.99 : g.d.rows[l].h === 34)) && !!g.d.help && g.d.help.y >= g.d.rows[lastOf(7)].y + g.d.rows[lastOf(7)].h &&
+        g.mode === (touch ? "phone" : "col") && (touch ? g.u === 1 && !!g.back : g.u <= 1) && g.order.every((l) => (touch ? g.rows[l].h >= 43.99 : g.d.rows[l].h === 34)) && !!g.d.help && g.d.help.y >= g.d.rows[lastOf(7)].y + g.d.rows[lastOf(7)].h &&
           S.x - g.T >= -0.01 && S.y - g.T >= -0.01 && S.x + S.w + g.T <= W + 0.01 && S.y + S.h + g.T <= H + 0.01, J([g.u, g.d.help]));
       check(`graphicsHit maps every row centre at ${tg} (${g.pages.length} page(s))`, g.order.every((l, i) => hitOn(i)(mid, rr(i).y + rr(i).h / 2) === i));
       check(`graphicsHit on the plate off the rows is -2 (inert), off the plate -1 (back) at ${tg}`,
@@ -523,8 +524,8 @@ function check(name, cond, detail) {
       md.drawGraphics(c, L, 1, { row: 1, view, togT: 0.95, chg: 0b11, touch });
       const tag = `${kind}${touch ? " touch" : ""} ${W}x${H}`, d = g.d, Pl = settingsPage._dbg.last.Pl, gp = settingsPage._dbg.last.gp;
       const shown = g.pages[g.pageOf[gfx.GFX_ROWS[1]]], labels = shown.map((n) => texts.find((t) => t.s === n)), lastL = labels.at(-1); // the focused row's page (a touch column pages: fix round 1)
-      check(`graphics: the shown page's labels (${shown.length} of 8) in the label face at the desk primary size inside the plate, no other row's (${tag})`, labels.every((t) => t && t.px === 21 && /^700 /.test(t.font) && /system-ui/.test(t.font) && t.y > d.plate.y + 8 && t.y < d.plate.y + d.plate.h - 8) && !gfx.GFX_ROWS.filter((n) => !shown.includes(n)).some((n) => texts.some((t) => t.s === n)) && (touch || shown.length === 8));
-      check(`graphics: the title + its kicker (${tag})`, texts.some((t) => t.s === "GRAPHICS" && /^900 /.test(t.font)) && texts.some((t) => t.s === "PERFORMANCE · BATTERY"));
+      check(`graphics: the shown page's labels (${shown.length} of 8) in the label face at the desk primary size (a touch #c: the phone's) inside the plate, no other row's (${tag})`, labels.every((t) => t && t.px === (touch ? 16 : 21) && /^700 /.test(t.font) && /system-ui/.test(t.font) && t.y > d.plate.y + 8 && t.y < d.plate.y + d.plate.h - 8) && !gfx.GFX_ROWS.filter((n) => !shown.includes(n)).some((n) => texts.some((t) => t.s === n)) && (touch || shown.length === 8));
+      check(`graphics: the title + its kicker (${tag}; a touch #c: the title beside its BACK key, the phone's head)`, texts.some((t) => t.s === "GRAPHICS" && /^900 /.test(t.font)) && texts.some((t) => t.s === (touch ? "BACK" : "PERFORMANCE · BATTERY")));
       const hs = gp.lines.map((q) => q.s), F = Pl.foot;
       check(`graphics: the selected row's help under the rows (the limit line kept first), then the foot (${tag})`, hs.length >= 1 && hs.length <= 2 && hs.join(" ").includes(gfx.HELP_LIMIT) && gp.lines.every((q) => texts.some((t) => t.s === q.s && t.y === q.y)) &&
         lastL.y < gp.lines[0].y && (F ? gp.lines.at(-1).y < F.y && F.y + F.h <= d.plate.y + d.plate.h + 0.01 : gp.lines.at(-1).y < d.keys.up.y), J(hs));

@@ -120,7 +120,10 @@ the ten-row table RANK · SCORE · LEVEL · MODIFIERS (a count by `modsCount`, R
 count, then the month and day; under 520 design px wide each row stacks its modifiers (NO MODIFIERS for none) and full date under the score.
 The rows arrive with `highscores.isPlaceholder` rows dropped (main's getter), so a fresh profile reads NO NORMAL DIFFICULTY RUNS YET. MEDALS:
 eight sunk tiles (earned: the medal outline and its centre ring, both strokes; a goal: the outline in t2 with a small lock), each goal whole (wrapped, never cut), `n/8 EARNED`. A body taller
-than its pane on a touch box scales into it (`k`; text floors give way only there, the landscape phones' #c). Cached: one page layer per tab
+than its pane on a touch box pages (R1 landscape: on a touch `#c` one row / tile a page is enough, the frame's margins and pads close (`LAND`), SCORES
+splits where not one row fits beside the badges: the bank and badges first, the table after under a kicker naming the difficulty (`diffTag`), the
+bank answering on page 1 only (`scoresHit` / `statsHit` take the page shown); STATS pages by parts (a kicker with its first line, every ledger line,
+the tiles) with COPY STATS / RESET as the last page's foot); it scales only on a 568 x 320 phone (the named exemption, `tests/landscape.test.mjs`). Cached: one page layer per tab
 and data (plate, header, trough, tabs at rest, pane, body at rest), one foot layer per focus, the room; live: the open tab (lit brick), the
 focus (bare bomb + 3 px ring on the open tab, or on the chosen difficulty in the body; never in tap mode, as LEVEL SELECT; the bomb is never
 dropped: a legend that will not fit beside it steps down to its 100 % size, then, on the landscape phones' #c only, to what fits), the chosen
@@ -282,8 +285,10 @@ and compact at 125 %, a door teaser breaking at its " · ", a HOW TO row's secon
 PAGES the content like SETTINGS (whole rows, `paginate`; the kit pager's ▲ / ▼ keys and `PAGE n OF m` at the body's foot, a touch target on every
 layout): desk windows keep u = 1 wherever MENU does (1366 x 768, 1280 x 720, 1024 x 768 and the landscape tablet, 1366 x 657, at 1 and
 1.25) and page instead of scaling under 14 / 11 / 17.9 px; a desk plate under 700 wide stacks FLOOR's rows and runs ENEMIES in one column;
-compact pages at 1 box unit per CSS px (its margins just clear the ring, pads 8 / 10); `#c` with no shell box (a keyboard window under
-600 x 520, the iso guard) still scales as one piece, as MENU does there. The page on screen is the focused door's or foe's; HOW TO,
+compact pages at 1 box unit per CSS px (its margins just clear the ring, pads 8 / 10) and never scales (R1 landscape): a title too wide beside BACK
+steps down there while it holds the primary cap floor, then where bands do not page whole ENEMIES drops a foe's help (as at 125 %), then the phone's
+one-column body (`one`: POWER-UPS one tile a row), then BACK steps down to its chevron and the page keys ride the head's row (no label there); only a
+568 x 320 phone's #c still scales (the named exemption). A keyboard `#c` (a window under 600 x 520, the iso guard) still scales as one piece, as MENU does there. The page on screen is the focused door's or foe's; HOW TO,
 POWER-UPS and FLOOR keep menuapp `infoPg` (every arrival 0; ↑↓ / ←→ / the controller step it, clamped, through `opts.pageCount`, which main
 reads from shellview `guidePageCount`); a page key tap is `guideFocus(i)` / `foeFocus(i)` (that page's first door or foe) or `infoStep(±1)`
 (`guideReadHit`). FLOOR keeps both rule lines of every tile and its level line on every row (beside the name on all rows or under it on
@@ -326,8 +331,10 @@ while that scale keeps `TOUCH_U` 0.8 CSS px per design px (the desk's text at th
 grammar across the box in CSS px, the logo then PLAY across the top, the six doors as tiles two wide and three deep in ITEMS order, no card slot
 (PLAY's tag carries the run), no foot (SOURCE's tile carries the build tag, a note or the signpost; a label too wide for its tile, LEVEL SELECT on
 a 667 px phone, breaks once at its space, and a teaser takes the lines the tile has left); one t steps every size between `COMPACT` max (logo cap
-36, PLAY 62, tiles 58, gaps 10) and min (cap 20, PLAY 44, tiles 44, gaps 9) with the height: 852x393 tiles 51.6, 667x375 44.3. Under min the
-arrangement scales as one piece and the floors give way (a 568x320 phone; 667x375 at 125 % text), disclosed.
+36, PLAY 62, tiles 58, gaps 10) and min (cap 20, PLAY 44, tiles 44, gaps 9) with the height: 852x393 tiles 51.6, 667x375 44.3; at 125 % under min
+the `least` step first (R1 landscape: the wordmark steps out of the header, gaps 8, a one-word label too wide for its tile drops to its 100 % size),
+so a 667 x 375 phone holds its floors at 125 %. Under min the
+arrangement scales as one piece and the floors give way (a 568x320 phone only since R1 landscape: the named exemption), disclosed.
 Phone (`p` with a shell box): the 393 x 852 column in CSS px (`css` from `dims`), capped 600 wide: PLAY 62, LEVEL SELECT 50, the card's slot
 (the height left), DAILY | RECORDS and SETTINGS | GUIDE tiles (58; 84 at 125 %, a teaser may break once), SOURCE 50 with the build tag (a note
 or the signpost rides it instead). Next-run card (Task 3.2, `src/render/pages/card.js`, the one module LEVEL SELECT reuses; fed names and
@@ -358,8 +365,7 @@ for draw and hit, a painter fed names and values by shellview (never indices), a
 The kit (`src/render/kit/`, R1 kit harmonisation): `tokens` (world colours), `type` (faces, `measure`, `measurer` / `measures` (a 0.6 em estimate
 for a context that cannot measure), `text`, `CAP_K`), `geom` (`deep`, `R`, `sc`, `okBox`, `inR`, `big`), `paint` (key, cap, plate, band, `plaque` the
 foot's sign plaque, `rpath` / `rfill`, glyph, the cell painters), `copy` (`FOOT_TAP`, `LOOK_NAME`, `lookVal`: words two pages paint; menudraw
-re-exports them), `pager` (THE pager every page that pages uses: `PAGE_KEY` 46 CSS px square keys `PAGE_GAP` 10 apart (GUIDE, where it scales as one
-piece under its floors, a 667 x 375 phone's #c, keeps them at its BACK key's size, 40.8 - 43.1 CSS px: a give-way the R1 kit left as it was), `keySide` (CSS
+re-exports them), `pager` (THE pager every page that pages uses: `PAGE_KEY` 46 CSS px square keys `PAGE_GAP` 10 apart (every page, a 667 x 375 phone's #c included since R1 landscape), `keySide` (CSS
 px to a page's design px), `paginate` (whole items per page), `pageOfFocus` (the page on screen is the focused item's, so keys and a controller turn
 it), `pagerKeys` (the strip, ▲ ▼ at its right end, the label left of them), `pageLabel` (`PAGE n OF m`), `pagerHit`, `paintPager`; a page keeps
 only what an item is; tap mode keeps the keys), `cache`, `room` (the room look, the lane, and the ONE shared room rule: `shareRoom` / `roomDpr` / `pageRoomDpr` /
@@ -379,7 +385,9 @@ Lazy pages (R20): `src/render/pages/lazy.js` is the ONE loader (boot; `LOAD` has
 module or null, `idle()` asks for every page in the first idle after MENU's first frame: shellview calls it on MENU). A lazy page is in
 `src/pwa/shell.js` SRC and `LATER`, never BOOT; until it lands its menudraw entry names paint THE LOADING plate (R1 kit: one painter, kit
 `room.js` `loadingPlate` through menudraw `loadingPage`: MENU's room at `roomDpr`, none on a PAUSE view, then a 360 x 128 kit plate scaled into
-the box with the page's title and one line, LOADING, or DID NOT LOAD while its last import failed). Every LOADING frame asks for the module
+the box with the page's title and one line, LOADING, or DID NOT LOAD while its last import failed; on a touch `#c` its design px is a CSS px where it
+fits and never under 0.8 CSS px, the plate narrowing to the box and the title fitting it, so its line holds the phone's floor; it records the probe
+as page `loading`). Every LOADING frame asks for the module
 again (menudraw `lazyMod`; `lazy.want` keeps one import in flight): a failed import is asked again on the next frame (a blip recovers), then at most
 every 3 s, never every frame; `_rec.want` is the test seam for every lazy page. Hits keep each page's rule: SETTINGS / GRAPHICS -2 on the plate,
 -1 off it; GUIDE and RECORDS -2 everywhere. Tests import the page or hand it in with `lazy._set`. `src/app` never imports it.
@@ -405,15 +413,18 @@ turns ART STYLE's value into one well window over the value's room with `lookVal
 (no line on a failure, its words coral). TOUCH FLOOR (lead ruling, fix round 1): on every touch layout, SETTINGS, GRAPHICS and their PAUSE views,
 rows are >= 44 CSS px and >= 8 apart; where they do not all fit (a 640-tall phone, landscape phones' #c, a phone's PAUSE view), the list PAGES:
 as many whole rows as fit, a strip of `PAGE n OF m` and two page keys ▲ ▼ (the kit pager's: 46 CSS px, 8 CSS px under the rows, 10 apart; a key with no page is a well) under them, and
-under those a back-out hint line where a column's foot drops (`kit/copy.js` `BACK_TAP`, or BACK and its keycap for a controller; R1 kit);
+under those, where a PAUSE column's foot drops, a back-out hint line (`kit/copy.js` `BACK_TAP`, or BACK and its keycap for a controller; R1 kit).
+A landscape phone's `#c` (R1 landscape) takes the phone's column in CSS px (`land`), never the scaled column: paged, its foot drops and the BACK key
+beside the title keeps the way back (no hint row, so it keeps its rows a page); a label that overruns its row, or a rocker / meter that would run
+into it, at 125 % steps down to its 100 % size; a page short of one row closes the margins (`LAND_TIGHT`); only a 568 x 320 phone scales (GRAPHICS);
 the page on screen is always the focused row's, so keys and a controller turn the page by moving past its last row, and a page key's tap
 focuses the first row of the page it opens (nothing confirmed); no drag scroll. Three arrangements: desk (a keyboard box, or a touch shell box,
 holding both columns at u >= 0.8: list 480 (540 at 125 %) beside a 400 (440) pane, rows 38 (36), courses 12, the plate centred 944 wide; the
 pane is a slab of floor framed in wall cells: SETTINGS shows ART STYLE `n OF 3`, the three looks as keys (the chosen one lit) and the REAL 3D
 rows note; GRAPHICS the focused row's name and help; the foot in the pane, label first, keycap last, `ROW ▲▼ · CHANGE ◀▶ · BACK ESC | vREV`; the
-kicker `BUILD vREV` hidden at 125 % on the desk, where the foot carries the tag), col (#c, PAUSE, the iso guard, a short or narrow window: the
+kicker `BUILD vREV` hidden at 125 % on the desk, where the foot carries the tag), col (a keyboard #c, PAUSE, the iso guard, a short or narrow window: the
 list alone, rows 34 on keys, courses 10, GRAPHICS' two help lines under the rows, the foot at the plate's bottom, or the page keys' strip where
-it pages) and phone (a touch-portrait shell box: the column in CSS px, BACK beside the title, rows 44 8 apart (the mock's 52 pitch), ART STYLE
+it pages) and phone (a touch-portrait shell box, and a landscape phone's touch #c: the column in CSS px, BACK beside the title, rows 44 8 apart (the mock's 52 pitch), ART STYLE
 and CAMERA as door rows, the foot under the plate). Cached: the room (MENU's own `roomLayer` at MENU's room dpr, `kit/room.js` `roomDpr`, MENU's rule, for
 the page and its LOADING plate alike, so MENU -> SETTINGS / GRAPHICS -> MENU never refills it; the page's own fit, its full-dpr page layer inside
 `BUDGET` with no logo reserve (these pages show no logo; lead ruling, R1 train), is the floor, and every box tested holds MENU's dpr, the touch
