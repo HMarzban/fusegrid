@@ -13,7 +13,8 @@
    door rows, the foot under the plate. On every touch box rows are >= 44 CSS px and >= 8 apart; where they do not fit the list pages (PAGING
    below). F.paused (a PAUSE view) keeps the plate off the HUD strip; F.focus (the focused row) picks the page on screen for a tap.
    A row owns its rect and half of each gap round it, out to the plate's edge; *Hit returns the index into rows (the visible list optRow indexes,
-   R11), -1 on BACK or off the plate, -2 on the plate off the rows (inert), {k: "page", row} on a page key; a zero box is -1.
+   R11), -1 on BACK or off the plate, -2 on the plate off the rows (inert), {k: "page", d, to: the row its page opens on} on a page key (kit pager
+   pageKeyAt; to null at an end: inert); a zero box is -1.
    drawSettingsPage(c, F, ui, t): ui = {rows, row (the focused LABEL), vals (nb.settings.v1), r3d, px, togT, rev, kicker, door ("AUTO ›"), ctlDoor
    ("KEYBOARD ›"), padVib (the VIBRATION level or ""), ana, anaNote, job (menudraw lookNote's note), level, paused}. drawGraphicsPage(c, F, ui, t):
    ui = {row (an index), view {rows [{label, val, locked, help1, help2}]}, togT, chg, kicker, level, paused, rev (MENU's build tag: the shared room's dpr)}. Values are words; a door's trailing ›
@@ -32,7 +33,7 @@ import {deep, R, sc, okBox, inR, big} from "../kit/geom.js";
 import {layer, capDpr, touch as touchK, keyOf, canMake} from "../kit/cache.js";
 import {roomLayer, pageRoomDpr} from "../kit/room.js";
 import * as probe from "../kit/probe.js";
-import {paginate as pagesOf, pagerKeys, pageLabel, pagerHit, paintPager as kitPager, keySide, pageOfFocus} from "../kit/pager.js";
+import {paginate as pagesOf, pagerKeys, pageLabel, pageKeyAt, paintPager as kitPager, keySide, pageOfFocus} from "../kit/pager.js";
 import {deviceScale} from "../logo/draw2d.js";
 import {hints, tapMode} from "../hintcopy.js";
 import {lookVal, FOOT_TAP, BACK_TAP} from "../kit/copy.js";
@@ -192,13 +193,13 @@ export const pageAt = (G, focus) => pageOfFocus(G.pageOf, typeof focus === "numb
 function hitOf(G, x, y, focus) {
   if (G.back && inR(G.back, x, y)) return -1;
   const p = pageAt(G, focus), n = G.pages.length;
-  const k = pagerHit(G.keys, x, y);
-  if (k) return p + k >= 0 && p + k < n ? {k: "page", row: G.order.indexOf(G.pages[p + k][0])} : -2;
+  const k = pageKeyAt(G.keys, x, y, (d) => (p + d >= 0 && p + d < n ? G.order.indexOf(G.pages[p + d][0]) : null));
+  if (k) return k;
   for (const l of G.pages[p] || []) if (inR(G.hit[l], x, y)) return G.order.indexOf(l);
   return inR(G.plate, x, y) ? -2 : -1;
 }
 /** A tap's index into rows (the visible SETTINGS list optRow indexes, R11); -2 on the plate off the rows (inert), -1 on BACK or off the plate;
-    a page key answers {k: "page", row} (focus that row: its page opens). F.focus is the focused row (label or index): the page on screen. */
+    a page key answers {k: "page", d, to} (to: the row to focus, its page opens). F.focus is the focused row (label or index): the page on screen. */
 export const settingsHit = (x, y, F, rows) => (okBox(F) && rowsOr(rows, []).length ? hitOf(settingsGeom(F, rows), x, y, F.focus) : -1);
 export const graphicsHit = (x, y, F, rows) => (okBox(F) ? hitOf(graphicsGeom(F, rows), x, y, F.focus) : -1);
 

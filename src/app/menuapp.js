@@ -1301,20 +1301,21 @@ export function createMenuApp(opts = {}) {
       return this._feel("confirm");
     },
     _isInfo() { return this.screen === SCREEN.HOWTO || this.screen === SCREEN.ITEMS || this.screen === SCREEN.FLOOR; },
-    /* a tap on a read-only page's ▲ / ▼ key: one page step, cued as a move */
-    infoStep(d) { return this._isInfo() && this.move(d < 0 ? -1 : 1, 0); },
-    /* a tap on a GUIDE page key: the first door of the page it shows, focused */
-    guideFocus(i) {
-      if (this.screen !== SCREEN.GUIDE || !(i >= 0 && i < GUIDE_ROWS.length) || (i | 0) === this.guideRow) return false;
-      this.guideRow = i | 0;
-      this.idleT = 0;
-      return this._feel("move");
-    },
-    /* a tap on an ENEMIES page key: the first foe of the page it shows, focused, its tooltip shut */
-    foeFocus(i) {
-      if (this.screen !== SCREEN.ENEMIES || !(i >= 0 && i < FOES.length) || (i | 0) === this.foeRow) return false;
-      this.foeRow = i | 0;
-      this.foeTip = false;
+    /* THE page-key tap (pointer.js, every page, R1 cohesion): the kit's {k: "page", d, to} hit. to is what the page it opens focuses: a SETTINGS /
+       GRAPHICS row index (on the page or a PAUSE view), a GUIDE door, an ENEMIES foe (its tooltip shut), a LEVEL SELECT row name; a read-only GUIDE
+       page and RECORDS step their page by d. One step is one move feel, and main wraps this for the one uiMove; false (silent) where nothing moves. */
+    pageKey(d, to) {
+      if (this.capturing) return false;
+      const s = this.screen, pv = s === SCREEN.GAME ? this.pauseView | 0 : 0, at = (k, n) => to != null && to >= 0 && to < n && to !== this[k] && ((this[k] = to), true);
+      let r = false;
+      if (s === SCREEN.SETTINGS || pv === 1) r = at("optRow", this.optRows().length);
+      else if (s === SCREEN.GRAPHICS || pv === 2) r = at("gfxRow", GFX_ROWS.length);
+      else if (s === SCREEN.GUIDE) r = at("guideRow", GUIDE_ROWS.length);
+      else if (s === SCREEN.ENEMIES) { r = at("foeRow", FOES.length); if (r) this.foeTip = false; }
+      else if (s === SCREEN.LEVEL) { const i = LEVEL_ROWS.indexOf(to); r = i >= 0 && i !== this.levelRow && this.levelFocus(i); }
+      else if (this._isInfo()) r = to != null && this._move(d < 0 ? -1 : 1, 0);
+      else if (isRecords(s)) r = this.recPageStep(d);
+      if (!r) return false;
       this.idleT = 0;
       return this._feel("move");
     },

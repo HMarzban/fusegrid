@@ -294,8 +294,8 @@ BACK, the page keys or its row; where the full copy fits nowhere it is the one-l
 tooltips fit nowhere moves the page keys to the head row; LEVEL SELECT's finale flag is cream on an open level (`FLAG_INK`), >= 4.5 in every world;
 SETTINGS' `chosen` is exempt only on a page whose probe records no `two-state` part (screens.mjs `exemptIfNo`). A keyboard `#c` (a window under 600 x 520, the iso guard) still scales as one piece, as MENU does there. The page on screen is the focused door's or foe's; HOW TO,
 POWER-UPS and FLOOR keep menuapp `infoPg` (every arrival 0; ↑↓ / ←→ / the controller step it, clamped, through `opts.pageCount`, which main
-reads from shellview `guidePageCount`); a page key tap is `guideFocus(i)` / `foeFocus(i)` (that page's first door or foe) or `infoStep(±1)`
-(`guideReadHit`). FLOOR keeps both rule lines of every tile and its level line on every row (beside the name on all rows or under it on
+reads from shellview `guidePageCount`); a page key tap is the kit's `{k: "page", d, to}` (that page's first door or foe; the page itself on a
+read-only page), painted with the kit's `paintPager`. FLOOR keeps both rule lines of every tile and its level line on every row (beside the name on all rows or under it on
 all). On a phone or compact page a controller adds a cue line under the head (`hints().dev === "pad"`; label first, keycap last: OPEN /
 POINTS / PAGE, BACK, HOW TO's `REBIND IN SETTINGS › CONTROLS` signpost where it fits), so a flip re-lays the page once. GUIDE's doors are keys with a quiet teaser and a strip of what is behind them (HOW TO's door: whole label-first
 key pairs, `MOVE [WASD] BOMB [SPACE]`); tap mode shows the cursor door focused, as MENU shows PLAY. ENEMIES: a slab per foe (3 x 3 on the desk,
@@ -371,7 +371,10 @@ for a context that cannot measure), `text`, `CAP_K`), `geom` (`deep`, `R`, `sc`,
 foot's sign plaque, `rpath` / `rfill`, glyph, the cell painters), `copy` (`FOOT_TAP`, `LOOK_NAME`, `lookVal`: words two pages paint; menudraw
 re-exports them), `pager` (THE pager every page that pages uses: `PAGE_KEY` 46 CSS px square keys `PAGE_GAP` 10 apart (every page, a 667 x 375 phone's #c included since R1 landscape), `keySide` (CSS
 px to a page's design px), `paginate` (whole items per page), `pageOfFocus` (the page on screen is the focused item's, so keys and a controller turn
-it), `pagerKeys` (the strip, ▲ ▼ at its right end, the label left of them), `pageLabel` (`PAGE n OF m`), `pagerHit`, `paintPager`; a page keeps
+it), `pagerKeys` (the strip, ▲ ▼ at its right end, the label left of them), `pageLabel` (`PAGE n OF m`), `pagerHit`, `pageKeyAt` (THE page-key hit,
+R1 cohesion: every page answers a ▲ / ▼ tap with `{k: "page", d, to}`, to = what the page it opens focuses, null at an end; pointer.js maps it in
+ONE branch to `app.pageKey(d, to)`, one step, one `move` feel and the one `uiMove` main wraps it with, the same on every page and PAUSE view),
+`paintPager`; a page keeps
 only what an item is; tap mode keeps the keys), `cache`, `room` (the room look, the lane, and the ONE shared room rule: `shareRoom` / `roomDpr` / `pageRoomDpr` /
 `roomFit`; `frameOf` in menudraw hands every page the bare box, SETTINGS' delegates add `paused` / `focus`), `probe`. A part two or more pages use lives here; a part one page uses stays in its page.
 Static parts are `kit/cache.js` layers keyed by content (`roomLayer` shared by every page of a box, LEVEL SELECT's included, at one room dpr:
@@ -403,7 +406,7 @@ GRAPHICS, and PAUSE views 1 / 2 inside `overlayBox` (a paused box: no room, the 
 dresses it, never the menu's `app.level`; a view whose page is not in asks `want("settings")` and shows LOADING on the same tokens). On the
 screens the room of `app.level` dresses it, opaque (SETTINGS and GRAPHICS cover). Rows by label (`settingsGeom(F, rows)` over the visible
 `optRows`, `graphicsGeom(F)` over `GFX_LABELS`, pinned equal to gfx.js `GFX_ROWS`); `*Hit` is the index into the visible rows (R11), -2 on the
-plate, -1 off it or on the phone's BACK, `{k: "page", row}` on a page key. The box the pointer and shellview hand in names the focused row
+plate, -1 off it or on the phone's BACK, the kit's `{k: "page", d, to}` on a page key. The box the pointer and shellview hand in names the focused row
 (`L.focus`, an index) and, in PAUSE, `paused` and #c's CSS scale (`dims(canvas).css`). Each row is label left, one game part right: MUSIC / SFX a
 ten-cell meter of bricks (the head lit, the number right, `70`), BRIGHTNESS seven cells (`100%`); SOUND, SCREEN SHAKE, REDUCE FLASH, ANALYTICS and
 GRAPHICS' two-way rows (FPS METER) a two-cell rocker; ART STYLE, CAMERA and GRAPHICS' other values a stepper (stepped keys round a well window;

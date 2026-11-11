@@ -602,7 +602,7 @@ for (const b of ALL) for (const ts of [1, 1.25]) {
   const noPager = (q) => !q.rects.some((r) => /^PAGE /.test(r.name)) && !q.texts.some((t) => /^PAGE \d/.test(t.s));
   check(`SCORES on a 375x667 phone (${per} rows a page): an empty table and a ${per}-row table are one page with no page keys and no PAGE 1 OF n; ten rows take ${Math.ceil(10 / per)} pages`,
     !!B.pager && RP.recPages(F, "scores", 0) === 1 && RP.recPages(F, "scores", per) === 1 && RP.recPages(F, "scores", 10) === Math.ceil(10 / per) && noPager(empty) && noPager(few) &&
-      RP.pageKeyHit(...mid(B.pager.dn), F, "scores", per) === 0 && RP.pageKeyHit(...mid(B.pager.dn), F, "scores", 10) === 1, J({ per, pages: [0, per, 10].map((r) => RP.recPages(F, "scores", r)) }));
+      RP.pageKeyHit(...mid(B.pager.dn), F, "scores", per) === null && J(RP.pageKeyHit(...mid(B.pager.dn), F, "scores", 10)) === J({ k: "page", d: 1, to: 1 }), J({ per, pages: [0, per, 10].map((r) => RP.recPages(F, "scores", r)) }));
   const last = pagesOf(F, UI({ scores: LONG.slice(0, per + 1) })), rowsOn = last.map((q) => q.texts.filter((t) => /^\d{1,3}(,\d{3})+$/.test(t.s)).length);
   check("SCORES: every page draws at least one row (one past a page: two pages, the second with its one row)", last.length === 2 && rowsOn[0] === per && rowsOn[1] === 1, J(rowsOn));
 }
@@ -621,7 +621,7 @@ for (const b of ALL) for (const ts of [1, 1.25]) {
       if (items !== (page === "scores" ? 10 : 8)) bad.push([page, "items", items]);
       if (n > 1) {
         const b = G.d.bodies[page].pager, mid = (r) => [(r.x + r.w / 2) * u, (r.y + r.h / 2) * u];
-        if (RP.pageKeyHit(...mid(b.up), F, page, 10) !== -1 || RP.pageKeyHit(...mid(b.dn), F, page, 10) !== 1 || b.up.h * u / u < 43.95) bad.push([page, "keys"]);
+        if (J(RP.pageKeyHit(...mid(b.up), F, page, 10)) !== J({ k: "page", d: -1, to: -1 }) || J(RP.pageKeyHit(...mid(b.dn), F, page, 10)) !== J({ k: "page", d: 1, to: 1 }) || b.up.h * u / u < 43.95) bad.push([page, "keys"]);
       }
       rep.push(`${page} ${w}x${h}@${ts}: ${n}`);
     }
@@ -631,13 +631,13 @@ for (const b of ALL) for (const ts of [1, 1.25]) {
   }
   console.log("  (report pages) " + rep.join(" | "));
 }
-/* the pointer: a tap on a page key (any RECORDS tab) is app.recPageStep, never a back-out */
+/* the pointer: a tap on a page key (any RECORDS tab) is app.pageKey (which steps recPageStep), never a back-out */
 {
   const { mountPointer } = await import("../src/app/pointer.js"), sc = await import("../src/render/scenes.js"), log = [];
   for (const [scr, k] of [[SCREEN.STATS, -1], [SCREEN.SCORES, 1], [SCREEN.TROPHIES, 1]]) {
-    const HIT = { overlayBox: sc.overlayBox, pauseHit: sc.pauseHit, touchLay: sc.touchLay, controlsHit: SV.controlsHit, dims: SV.dims, menuHit: md.menuHit, settingsHit: md.settingsHit, graphicsHit: md.graphicsHit, guideHit: md.guideHit, levelHit: md.levelHit, scoresHit: () => -1, statsHit: () => "back", recTabHit: () => -1, recPageHit: () => k, layout: md.layout };
+    const HIT = { overlayBox: sc.overlayBox, pauseHit: sc.pauseHit, touchLay: sc.touchLay, controlsHit: SV.controlsHit, dims: SV.dims, menuHit: md.menuHit, settingsHit: md.settingsHit, graphicsHit: md.graphicsHit, guideHit: md.guideHit, levelHit: md.levelHit, scoresHit: () => -1, statsHit: () => "back", recTabHit: () => -1, recPageHit: () => ({ k: "page", d: k, to: k }), layout: md.layout };
     const LL = {}, cv = { width: 600, height: 520, getBoundingClientRect: () => ({ left: 0, top: 0, width: 600, height: 520 }), addEventListener(ty, fn) { (LL[ty] = LL[ty] || []).push(fn); } };
-    const app = { screen: scr, recFocus: 1, resetArm: false, confirm: () => log.push("confirm"), back: () => log.push("back"), recPageStep: (d) => log.push("page " + d) };
+    const app = { screen: scr, recFocus: 1, resetArm: false, confirm: () => log.push("confirm"), back: () => log.push("back"), pageKey: (d) => log.push("page " + d) }; // THE page-key step (R1 cohesion 9)
     mountPointer({ canvas: cv, fit: null, input: { _intent: { fire: false }, onUiKey: (c) => log.push(c) }, app, world: { state: "PLAY" }, kind: () => "2d", ctl: () => null, hit: HIT });
     LL.pointerdown.forEach((fn) => fn({ clientX: 300, clientY: 300 }));
   }

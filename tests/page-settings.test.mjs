@@ -156,8 +156,8 @@ for (const b of ALL) for (const [pg, R] of [["settings", R10], ["settings", R12]
     else { const r0 = G.rows[on[0]], cy = r0.y + r0.h / 2; check(`hit (${tg}): the plate's left margin and the list's right side beside a row are that row`, hit(G.plate.x + 4, cy) === R.indexOf(on[0]) && hit(r0.x + r0.w + 4, cy) === R.indexOf(on[0])); }
     if (G.keys) {
       const c = (r) => [r.x + r.w / 2, r.y + r.h / 2], up = hit(...c(G.keys.up)), dn = hit(...c(G.keys.dn));
-      check(`page keys (${tg}): ▲ opens the page before (focus its first row), ▼ the page after; a key with no page is inert (-2)`,
-        (p > 0 ? up.k === "page" && up.row === R.indexOf(G.pages[p - 1][0]) : up === -2) && (p < G.pages.length - 1 ? dn.k === "page" && dn.row === R.indexOf(G.pages[p + 1][0]) : dn === -2), J([up, dn]));
+      check(`page keys (${tg}): ▲ opens the page before (focus its first row), ▼ the page after; a key with no page answers to null (inert)`,
+        J(up) === J({ k: "page", d: -1, to: p > 0 ? R.indexOf(G.pages[p - 1][0]) : null }) && J(dn) === J({ k: "page", d: 1, to: p < G.pages.length - 1 ? R.indexOf(G.pages[p + 1][0]) : null }), J([up, dn])); // R1 cohesion 9: the kit's one form, to null at an end (inert: app.pageKey moves nothing)
     }
   }
 }

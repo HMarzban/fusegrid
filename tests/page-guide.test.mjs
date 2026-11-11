@@ -140,12 +140,12 @@ setTextScale(1);
     check("c852 ENEMIES pages: the focused foe's page on screen, its foes alone, PAGE n OF m", G.pages > 1 && pg === G.pageOf.PHANTOM && J(on) === J(G.order.filter((n) => G.pageOf[n] === pg)) && L.P.rest.some((o) => o.pg === pg && o.s === "PAGE " + (pg + 1) + " OF " + G.pages), J({ pages: G.pages, pg, on }));
   }
 }
-{ // page keys tap: GUIDE on a landscape phone pages its doors; ▼ is -10 - the next page's first door, ▲ on the first page stays on it
+{ // page keys tap: GUIDE on a landscape phone pages its doors; ▼ is the kit's {k: "page", d: 1, to: the next page's first door}, a key with no page that way to null (inert)
   const F = BOX.c852, G = P.guideGeom(F, "GUIDE"), c = (r) => [r.x + r.w / 2, r.y + r.h / 2], nx = GUIDE_ROWS.findIndex((n) => G.pageOf[n] === 1);
-  check("c852 GUIDE pages its doors; its ▼ key taps -10 - the next page's first door, its ▲ on page 1 the first door", G.pages > 1 && nx > 0 && P.guideHit(...c(G.pager.dn), F, 0) === -10 - nx && P.guideHit(...c(G.pager.up), F, 0) === -10 && P.guideHit(...c(G.pager.dn), F, nx) === -10 - nx, J({ pages: G.pages, nx }));
+  check("c852 GUIDE pages its doors; its ▼ key opens the next page on its first door, its ▲ on page 1 and its ▼ on the last answer to null (inert)", G.pages === 2 && nx > 0 && J(P.guideHit(...c(G.pager.dn), F, 0)) === J({ k: "page", d: 1, to: nx }) && J(P.guideHit(...c(G.pager.up), F, 0)) === J({ k: "page", d: -1, to: null }) && J(P.guideHit(...c(G.pager.dn), F, nx)) === J({ k: "page", d: 1, to: null }) && J(P.guideHit(...c(G.pager.up), F, nx)) === J({ k: "page", d: -1, to: 0 }), J({ pages: G.pages, nx }));
   /* ENEMIES with its tooltip open: a tap inside the tooltip (the slots or page keys under it included) only closes it (-1) */
   const E = P.guideGeom(F, "ENEMIES"), t = E.tips[0].U;
-  check("ENEMIES c852: a tap inside the open tooltip is -1 (it closes), even over a page key; shut, the same spot taps what is under it", P.enemiesHit(t.x + t.w / 2, t.y + t.h - 2, F, 0, true) === -1 && P.enemiesHit(...c(E.pager.dn), F, 0, false) <= -10, J(t));
+  check("ENEMIES c852: a tap inside the open tooltip is -1 (it closes), even over a page key; shut, the same spot taps what is under it", P.enemiesHit(t.x + t.w / 2, t.y + t.h - 2, F, 0, true) === -1 && P.enemiesHit(...c(E.pager.dn), F, 0, false).k === "page", J(t));
 }
 { // the controller cue on a touch layout: a flip re-lays the page (its layers miss once, never a stale blit) and every cue keycap sits inside the plate
   setTextScale(1.25); fresh();

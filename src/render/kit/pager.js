@@ -24,7 +24,10 @@ export function pagerKeys(x, y, w, k) {
   return {strip: R(x, y, w, k), up, dn: R(x + w - k, y, k, k), label: R(x, y, up.x - 12 - x, k)};
 }
 export const pageLabel = (p, n) => PAGE + " " + (p + 1) + " " + OF + " " + n;
-export const pagerHit = (Q, x, y) => (!Q ? 0 : inR(Q.up, x, y) ? -1 : inR(Q.dn, x, y) ? 1 : 0);
+export const pagerHit = (Q, x, y, p = 0) => (!Q ? 0 : inR(Q.up, x, y, p) ? -1 : inR(Q.dn, x, y, p) ? 1 : 0);
+/** THE page-key hit every page answers (R1 cohesion): {k: "page", d (-1 ▲ / 1 ▼), to (what the page it opens focuses: toOf(d), null = no page that
+    way, inert)} on a key, else null. p: a page's hit slop round the keys. The pointer maps it in one branch to app.pageKey(d, to). */
+export const pageKeyAt = (Q, x, y, toOf, p = 0) => { const d = pagerHit(Q, x, y, p); return d ? {k: "page", d, to: toOf ? toOf(d) : d} : null; };
 export function paintPager(c, Q, p, n, tok, o = {}) {
   if (o.f) text(c, pageLabel(p, n), Q.label.x, Q.label.y + Q.label.h / 2, o.f, CONST.t2);
   for (const [r, on, g] of [[Q.up, p > 0, "up"], [Q.dn, p < n - 1, "dn"]]) {

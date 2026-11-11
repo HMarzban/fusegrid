@@ -713,13 +713,21 @@ for (const r3d of [false, true]) {
     check("read-only " + GUIDE_ROWS[row] + ": arrives on page 1; ↓ / → step on (a cued move), clamped at the last (no wrap), ↑ / ← back", q.screen === scr && p0 === 0 && m1 === true && p1 === 1 && m3 === false && p2 === 2 && m4 === true && p3 === 1, [p0, p1, p2, p3].join("/"));
     const one = createMenuApp(); one.screen = scr;
     check("read-only " + GUIDE_ROWS[row] + ": with one page (no pageCount) a move does nothing", one.move(1, 0) === false && one.infoPg === 0);
-    q.infoStep(-1);
-    check("read-only " + GUIDE_ROWS[row] + ": infoStep (a tapped page key) is the same step", q.infoPg === 0);
+    q.feel = null; const pk = q.pageKey(-1, 0), f0 = q.feel;
+    check("read-only " + GUIDE_ROWS[row] + ": pageKey (a tapped page key) is the same step, one move feel", pk === true && q.infoPg === 0 && f0 === "move" && q.pageKey(-1, null) === false);
   }
   const fz = createMenuApp(); fz.screen = SCREEN.ENEMIES; fz.foeRow = 2; fz.foeTip = true;
-  check("ENEMIES foeFocus (a tapped page key): that page's first foe, the tooltip shut; the foe already focused is a no-op", fz.foeFocus(4) === true && fz.foeRow === 4 && fz.foeTip === false && fz.foeFocus(4) === false);
+  check("ENEMIES pageKey (a tapped page key): that page's first foe, the tooltip shut; the foe already focused is a no-op", fz.pageKey(1, 4) === true && fz.foeRow === 4 && fz.foeTip === false && fz.pageKey(1, 4) === false);
   const gf = createMenuApp(); gf.screen = SCREEN.GUIDE; gf.guideRow = 0;
-  check("GUIDE guideFocus (a tapped page key): that page's first door, focused, no confirm; the door already focused is a no-op", gf.guideFocus(2) === true && gf.guideRow === 2 && gf.screen === SCREEN.GUIDE && gf.guideFocus(2) === false);
+  check("GUIDE pageKey (a tapped page key): that page's first door, focused, no confirm; the door already focused is a no-op", gf.pageKey(1, 2) === true && gf.guideRow === 2 && gf.screen === SCREEN.GUIDE && gf.pageKey(1, 2) === false);
+  /* R1 cohesion 8: one page step on every page: the same move feel, nothing at an end */
+  const all = [];
+  for (const [scr, set, d, to] of [[SCREEN.SETTINGS, (a) => { a.optRow = 0; }, 1, 5], [SCREEN.GRAPHICS, (a) => { a.gfxRow = 0; }, 1, 4], [SCREEN.GUIDE, (a) => { a.guideRow = 0; }, 1, 2], [SCREEN.ENEMIES, (a) => { a.foeRow = 0; }, 1, 3],
+    [SCREEN.LEVEL, (a) => { a.levelRow = 0; }, 1, "MODIFIERS"], [SCREEN.SCORES, (a) => { a.recPage = 0; }, 1, 1]]) {
+    const a = createMenuApp({ pageCount: () => 3, recPages: () => 3 }); a.pactUnlocked = true; a.screen = scr; set(a); a.feel = null;
+    all.push([scr, a.pageKey(d, to) === true && a.feel === "move", a.pageKey(d, null) === false || scr === SCREEN.SCORES]);
+  }
+  check("pageKey on SETTINGS, GRAPHICS, GUIDE, ENEMIES, LEVEL SELECT and RECORDS: one step, the move feel (main adds the one uiMove); a key with no page (to null) moves nothing", all.every((q) => q[1] && q[2]), JSON.stringify(all));
   const g2 = createMenuApp();
   g2.screen = SCREEN.GUIDE; g2.guideRow = 2; g2.foeRow = 5; g2.foeTip = true; g2.lastDev = "touch";
   g2.confirm();

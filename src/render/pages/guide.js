@@ -32,7 +32,7 @@ import {deep, R, sc, okBox, inR} from "../kit/geom.js";
 import {layer, capDpr, touch as hold, keyOf, canMake, BUDGET} from "../kit/cache.js";
 import {roomLayer, roomDpr} from "../kit/room.js";
 import * as probe from "../kit/probe.js";
-import {PAGE_KEY, PAGE_GAP, pagerKeys, pageLabel, pageOfFocus as pageOfName} from "../kit/pager.js";
+import {PAGE_KEY, PAGE_GAP, pagerKeys, pageLabel, pageKeyAt, paintPager, pageOfFocus as pageOfName} from "../kit/pager.js";
 import {menuGeom, FOOT_H, TZ, TOUCH_U, TOP_MIN, GUT} from "./menu.js";
 import {deviceScale} from "../logo/draw2d.js";
 import {drawEnemyBody} from "../sprites.js";
@@ -379,31 +379,34 @@ const onPlate = (G, x, y) => { const p = G.plate; return x >= p.x && x <= p.x + 
 const clampPg = (G, pg) => Math.max(0, Math.min(G.pages - 1, pg | 0));
 /** The page a focused door or foe shows on (0 when nothing is focused). */
 export const pageOfFocus = (G, name) => pageOfName(G.pageOf, name);
-/** A tap on the GUIDE door page: the door's index, -2 on the plate (inert), -1 off it or on the BACK key. focus: the focused door's index. */
+/* the kit's page-key hit (pager pageKeyAt): {k: "page", d, to}, to the first of names on the page it opens (an index into names), null at an end */
+const pageKey = (G, x, y, pg, names) => pageKeyAt(G.pager, x, y, (d) => (pg + d >= 0 && pg + d < G.pages ? names.findIndex((n) => G.pageOf[n] === pg + d) : null));
+/** A tap on the GUIDE door page: the door's index, a page key's {k: "page", d, to} (to: that page's first door), -2 on the plate (inert), -1 off it
+    or on the BACK key. focus: the focused door's index. */
 export function guideHit(x, y, F, focus = 0) {
   if (!okBox(F)) return -1;
   const G = guideGeom(F, GUIDE), pg = pageOfFocus(G, DOORS[focus | 0]);
   for (let i = 0; i < DOORS.length; i++) if (G.pageOf[DOORS[i]] === pg && inR(G.hit[DOORS[i]], x, y)) return i;
-  if (G.pager) for (const [k, d] of [["up", -1], ["dn", 1]]) if (inR(G.pager[k], x, y)) { const to = clampPg(G, pg + d); return -10 - DOORS.findIndex((n) => G.pageOf[n] === to); } /* a page key: -10 - that page's first door */
+  const k = pageKey(G, x, y, pg, DOORS);
+  if (k) return k;
   if (inR(G.back, x, y)) return -1;
   return onPlate(G, x, y) ? -2 : -1;
 }
-/** A tap on ENEMIES (focus: the focused foe's index, whose page shows): a foe's index (its points value; a touch layout's whole slot); a page key,
-    -10 - the first foe of the page it shows; else -1 (any other tap closes an open tooltip, or backs out). */
+/** A tap on ENEMIES (focus: the focused foe's index, whose page shows): a foe's index (its points value; a touch layout's whole slot); a page key's
+    {k: "page", d, to} (to: the first foe of the page it opens); else -1 (any other tap closes an open tooltip, or backs out). */
 export function enemiesHit(x, y, F, focus = 0, tip = false) {
   if (!okBox(F)) return -1;
   const G = guideGeom(F, EN), pg = pageOfFocus(G, G.order[focus | 0]);
   if (tip && G.tips && inR(G.tips[focus | 0].U, x, y)) return -1; /* a tap on the open tooltip (the slots and keys under it included) only closes it */
   for (let i = 0; i < G.order.length; i++) if (G.pageOf[G.order[i]] === pg && inR(G.hit[G.order[i]], x, y)) return i;
-  if (G.pager) for (const [k, d] of [["up", -1], ["dn", 1]]) if (inR(G.pager[k], x, y)) { const to = clampPg(G, pg + d); return -10 - G.order.findIndex((n) => G.pageOf[n] === to); }
-  return -1;
+  return pageKey(G, x, y, pg, G.order) || -1;
 }
-/** A tap on a read-only page (HOW TO PLAY, POWER-UPS, FLOOR) showing page pg: "up" / "down" on a page key, else -1 (backs out). */
+/** A tap on a read-only page (HOW TO PLAY, POWER-UPS, FLOOR) showing page pg: a page key's {k: "page", d, to} (to: the page it opens, null at an
+    end), else -1 (backs out). */
 export function readHit(x, y, F, page, pg = 0) {
   if (!okBox(F)) return -1;
-  const G = guideGeom(F, page);
-  if (G.pager) { if (inR(G.pager.up, x, y)) return "up"; if (inR(G.pager.dn, x, y)) return "down"; }
-  return -1;
+  const G = guideGeom(F, page), p = clampPg(G, pg);
+  return pageKeyAt(G.pager, x, y, (d) => (p + d >= 0 && p + d < G.pages ? p + d : null)) || -1;
 }
 
 /* ---- plan: every part as a display list in design px; the plate layer of each page paints `rest` (ops with no page, and that page's), the frame
@@ -460,12 +463,11 @@ function plan(c0, G, ui) {
   if (H.hint && !H.back) rest.push(txt(D.hintS, H.hint.x + H.hint.w, H.hint.y + H.hint.h / 2, sec, {col: CONST.t2, role: "secondary", align: "right"}));
   else if (H.hint) wrap(c, fS(sec), D.hintS, H.hint.w).forEach((l, j) => rest.push(txt(l, H.hint.x, H.hint.y + sec * ts * 1.3 * (j + 0.5), sec, {col: CONST.t2, role: "secondary"})));
   if (H.cue) rest.push(...cueOps(c, G, H.cue));
-  /* the kit pager (kit pager.js): PAGE n OF m, then the two page keys (label first, keycap last) */
+  /* the kit pager (kit pager.js): PAGE n OF m, then the two page keys painted by the kit's paintPager (label first, keycap last) */
   if (D.pager) for (let p = 0; p < D.pages; p++) {
-    const Q = D.pager, k = (r) => [r.x + r.w / 2 - 10, r.y + r.h / 2 - 10];
+    const Q = D.pager;
     if (!Q.head) on(p, txt(pageLabel(p, D.pages), Q.label.x, Q.label.y + Q.label.h / 2, sec, {col: CONST.t2, role: "secondary"}));
-    on(p, {op: "key", r: Q.up, kind: p > 0 ? "key" : "well", name: "page up"}, {op: "glyph", n: "up", x: k(Q.up)[0], y: k(Q.up)[1], s: 20, col: p > 0 ? CONST.ink : CONST.off},
-      {op: "key", r: Q.dn, kind: p < D.pages - 1 ? "key" : "well", name: "page down"}, {op: "glyph", n: "dn", x: k(Q.dn)[0], y: k(Q.dn)[1], s: 20, col: p < D.pages - 1 ? CONST.ink : CONST.off});
+    on(p, {op: "pager", Q, p, n: D.pages});
   }
   const items = D.items;
   if (G.page === GUIDE) {
@@ -661,6 +663,7 @@ function paintOps(c, ops, tok, o) {
       case "lane": if (p.alt || !ph) { c.fillStyle = tok.bed; c.beginPath(); rp(c, p.r.x, p.r.y, p.r.w, p.r.h, 4); c.fill(); } break;
       case "well": key(c, p.r.x, p.r.y, p.r.w, p.r.h, "well", {tok}); break;
       case "key": key(c, p.r.x, p.r.y, p.r.w, p.r.h, p.kind, {tok, ring: p.ring}); break;
+      case "pager": paintPager(c, p.Q, p.p, p.n, tok); break;
       case "band": band(c, p.r.x, p.r.y, p.r.w, p.r.h, tok); break;
       case "bomb": focusBomb(c, p.x, p.cy, BOMB_W(ph)); break;
       case "ring": c.strokeStyle = CONST.ink; c.lineWidth = 3; c.beginPath(); rp(c, p.r.x - 4.5, p.r.y - 4.5, p.r.w + 9, p.r.h + 9, 10.5); c.stroke(); break;

@@ -149,7 +149,7 @@ for (const b of ALLB) for (const U of [false, true]) for (const open of U ? [fal
 /* ---- hit: the centre of every target is that target; off the plate backs out; the card and the head are inert ---- */
 for (const b of ALLB) for (const U of [false, true]) for (const open of U ? [false, true] : [false]) {
   const F = BOX[b], o = { unlocked: U, open }, G = P.levelGeom(F, o);
-  const bad = targets(G).filter(([r, k, i]) => { const h = P.levelHit(...ctr(r), F, o); return h.k !== k || (i != null && h.i !== i); }).filter(([, k]) => !(open && G.d.mode === "compact" && /room|lock|heat|pace/.test(k)));
+  const bad = targets(G).filter(([r, k, i]) => { const h = P.levelHit(...ctr(r), F, o); return h.k !== k || (i != null && (k === "page" ? h.d : h.i) !== i); }).filter(([, k]) => !(open && G.d.mode === "compact" && /room|lock|heat|pace/.test(k)));
   const inert = [...(G.pane && !(open && G.d.mode === "phone") ? [ctr(G.pane)] : []), [G.S.x + G.S.w / 2, G.S.y + 2 * G.u]].filter(([x, y]) => P.levelHit(x, y, F, o).k !== "none");
   const off = [[1, 1], [G.W - 1, G.H - 1]].filter(([x, y]) => P.levelHit(x, y, F, o).k !== "back");
   const L = md.layout(F.W, F.H, F.shell ? 200 : undefined, F.css), dg = targets(G).every(([r, k]) => md.levelHit(...ctr(r), L, U, F.touch, open).k === k || (open && G.d.mode === "compact" && /room|lock|heat|pace/.test(k)));

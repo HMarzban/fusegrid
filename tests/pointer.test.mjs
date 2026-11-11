@@ -43,7 +43,7 @@ function mkHit(over = {}) {
   for (const [k, f] of Object.entries(REAL)) hit[k] = (...a) => { const r = (over[k] || f)(...a); calls.push({ f: k, a, r }); return r; };
   return { hit, calls, of: (k) => calls.filter((c) => c.f === k), last: (k) => calls.filter((c) => c.f === k).pop() };
 }
-const SHELL = ["confirm", "back", "pauseBack", "playFromAttract", "skipShow", "move", "adjustPace", "recTab", "levelFocus", "foeTap", "foeClose", "foeFocus", "infoStep", "guideFocus"];
+const SHELL = ["confirm", "back", "pauseBack", "playFromAttract", "skipShow", "move", "adjustPace", "recTab", "levelFocus", "foeTap", "foeClose", "pageKey"];
 function rig(o = {}) {
   const log = [], taps = [];
   const VIS = o.rows || optRows(false); // the app's visible SETTINGS rows (menuapp optRows), what settingsHit maps into
@@ -155,11 +155,12 @@ for (const [pv, fn, other, field, row, R] of [[1, "settingsHit", "graphicsHit", 
   check("CONTROLS: ctl.tap(controlsHit(app.controls.view(app.ctlT), x, y, cv, kind, false))", r.taps[0] === SENT && c.a[0].view === 2 && c.a[1] === 100 && c.a[2] === 100 && c.a[3] === cv && c.a[4] === "2d" && c.a[5] === false && r.log.length === 0 && r.input._intent.fire === false, J(c.a.slice(0, 3)));
 }
 
-// ---- a page key (v202 Task 3.4 fix round 1): {k: "page", row} focuses that row (its page opens), confirms nothing, on the page and in PAUSE ----
-for (const [scr, pv, fn, field] of [[SCREEN.SETTINGS, 0, "settingsHit", "optRow"], [SCREEN.GRAPHICS, 0, "graphicsHit", "gfxRow"], [SCREEN.GAME, 1, "settingsHit", "optRow"], [SCREEN.GAME, 2, "graphicsHit", "gfxRow"]]) {
-  const r = rig({ app: { screen: scr, pauseView: pv }, state: pv ? "PAUSE" : "PLAY", over: { [fn]: () => ({ k: "page", row: 5 }) } });
+// ---- a page key (R1 cohesion 9): every page answers the kit's {k: "page", d, to}; the pointer's ONE branch is app.pageKey(d, to), nothing confirmed or backed ----
+for (const [scr, pv, fn] of [[SCREEN.SETTINGS, 0, "settingsHit"], [SCREEN.GRAPHICS, 0, "graphicsHit"], [SCREEN.GAME, 1, "settingsHit"], [SCREEN.GAME, 2, "graphicsHit"], [SCREEN.GUIDE, 0, "guideHit"], [SCREEN.ENEMIES, 0, "enemiesHit"],
+  [SCREEN.HOWTO, 0, "guideReadHit"], [SCREEN.ITEMS, 0, "guideReadHit"], [SCREEN.FLOOR, 0, "guideReadHit"], [SCREEN.LEVEL, 0, "levelHit"]]) {
+  const r = rig({ app: { screen: scr, pauseView: pv }, state: pv ? "PAUSE" : "PLAY", over: { [fn]: () => ({ k: "page", d: 1, to: 5 }) } });
   r.down(100, 100);
-  check(`a page key on ${pv ? "PAUSE view " + pv : scr === SCREEN.SETTINGS ? "SETTINGS" : "GRAPHICS"}: ${field} = its row, nothing confirmed or backed`, r.app[field] === 5 && r.log.length === 0, J(r.log));
+  check(`a page key on ${pv ? "PAUSE view " + pv : Object.keys(SCREEN).find((k) => SCREEN[k] === scr)}: app.pageKey(1, 5), nothing confirmed or backed`, J(r.log) === J([["pageKey", 1, 5]]), J(r.log));
 }
 
 // ---- MENU / OPTIONS / GRAPHICS / GUIDE: a row tap = Enter on it; off the rows a page backs out, MENU does nothing ----
@@ -307,9 +308,9 @@ for (const [s, label] of [["HOWTO", "HOW TO PLAY"], ["ITEMS", "POWER-UPS"], ["FL
   const h = r.H.last("guideReadHit");
   check(s + ": a tap off the page keys confirms, through guideReadHit(x, y, layout(cw, ch, lg, css), touchLay(cv), its label, app.infoPg)", J(r.log) === J([["confirm"]]) && r.input._intent.fire === false && !!h && J(h.a.slice(2)) === J([L0, false, label, 1]) && r.H.last("layout").a.length === 4, J(r.log) + " " + J(h && h.a));
   for (const [k, d] of [["up", -1], ["down", 1]]) {
-    const q = rig({ app: { screen: SCREEN[s] }, over: { guideReadHit: () => k } });
+    const q = rig({ app: { screen: SCREEN[s] }, over: { guideReadHit: () => ({ k: "page", d, to: 1 + d }) } });
     q.down(300, 260);
-    check(s + ": its " + k + " page key is infoStep(" + d + "), nothing else", J(q.log) === J([["infoStep", d]]), J(q.log));
+    check(s + ": its " + k + " page key is pageKey(" + d + "), nothing else", J(q.log) === J([["pageKey", d, 1 + d]]), J(q.log));
   }
   const z = rig({ app: { screen: SCREEN[s] }, over: { guideReadHit: () => -2 } });
   z.down(300, 260);
@@ -332,12 +333,12 @@ for (const [s, label] of [["HOWTO", "HOW TO PLAY"], ["ITEMS", "POWER-UPS"], ["FL
   const q = rig({ app: { screen: SCREEN.ENEMIES }, over: { enemiesHit: () => -2 } });
   q.down(300, 260);
   check("ENEMIES: -2 (the page still loading) is inert", q.log.length === 0, J(q.log));
-  const pk = rig({ app: { screen: SCREEN.ENEMIES }, over: { enemiesHit: () => -10 - 4 } });
+  const pk = rig({ app: { screen: SCREEN.ENEMIES }, over: { enemiesHit: () => ({ k: "page", d: 1, to: 4 }) } });
   pk.down(300, 260);
-  check("ENEMIES: a page key (-10 - i) is foeFocus(i), onto that page's first foe, nothing else", J(pk.log) === J([["foeFocus", 4]]), J(pk.log));
-  const gk = rig({ app: { screen: SCREEN.GUIDE }, over: { guideHit: () => -10 - 2 } });
+  check("ENEMIES: a page key is pageKey(d, i), onto that page's first foe, nothing else", J(pk.log) === J([["pageKey", 1, 4]]), J(pk.log));
+  const gk = rig({ app: { screen: SCREEN.GUIDE }, over: { guideHit: () => ({ k: "page", d: 1, to: 2 }) } });
   gk.down(300, 260);
-  check("GUIDE: a page key (-10 - i) is guideFocus(i), onto that page's first door, no confirm", J(gk.log) === J([["guideFocus", 2]]), J(gk.log));
+  check("GUIDE: a page key is pageKey(d, i), onto that page's first door, no confirm", J(gk.log) === J([["pageKey", 1, 2]]), J(gk.log));
 }
 {
   /* MEDALS (TROPHIES) is read-only too, but its head carries RECORDS' tab strip (v202 Task 2.2): the strip is its one hit test */

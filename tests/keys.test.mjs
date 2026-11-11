@@ -1698,6 +1698,18 @@ for (const code of ["Space", "Enter"]) {
     check("no pad: the key path still reaches MENU", g.app.screen === SCREEN.MENU, g.app.screen); }
 }
 
+/* R1 cohesion 8: a page-key tap is ONE step on every page, cued the same: main wraps app.pageKey with the one uiMove (and none where nothing moves) */
+{
+  const got = [];
+  for (const [scr, set, to] of [[SCREEN.SETTINGS, (a) => { a.optRow = 0; }, 4], [SCREEN.GUIDE, (a) => { a.guideRow = 0; }, 2], [SCREEN.ENEMIES, (a) => { a.foeRow = 0; }, 3], [SCREEN.LEVEL, (a) => { a.levelRow = 0; }, "START"], [SCREEN.SCORES, (a) => { a.recPage = 0; }, 1]]) {
+    const g = mk({ audio: RECAUD }); g.app.cabinetSeen = true; g.app.skip(); g.tick(2);
+    g.app.screen = scr; set(g.app); recPlays.length = 0;
+    const r = g.app.pageKey(1, to), one = recPlays.join(), n0 = recPlays.length; g.app.pageKey(1, null);
+    got.push([scr, scr === SCREEN.SCORES ? one === "" : r === true && one === UM, recPlays.length === n0]); // SCORES: one page on this box, so its step moves nothing and stays silent
+  }
+  check("a page-key tap sounds one uiMove on SETTINGS, GUIDE, ENEMIES and LEVEL SELECT, and a key with no page (or a RECORDS tab with one page) is silent", got.every((q) => q[1] && q[2]), JSON.stringify(got));
+}
+
 delete globalThis.window; delete globalThis.location; delete navigator.clipboard;
 console.log(fail ? "KEYS FAIL " + fail + "/" + (pass + fail) : "KEYS OK " + pass);
 process.exit(fail ? 1 : 0);

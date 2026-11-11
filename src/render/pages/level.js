@@ -16,7 +16,7 @@
    compact (any other touch box: the phone's grammar across the box in CSS px, no card; it never scales: groups that do not fit PAGE, whole groups a
    page, with page keys beside START; the open list covers the head and the groups).
    levelHit(x, y, F, o): {k: "room"|"lock", i} a level key (6-8 locked: lock, never a selection), {k: "heat"|"pace", i}, {k: "mods"} the door, {k: "mode",
-   i} an open list's entry, {k: "page", i: -1|1, row} a page key (the first row of that page; a key at the end is none), {k: "start"}, {k: "back"} off the plate or the BACK key, {k: "none"} on the plate off every target (inert). A key owns half
+   i} an open list's entry, {k: "page", d: -1|1, to} a page key (kit pager pageKeyAt; to: the first row of that page, null at the end: inert), {k: "start"}, {k: "back"} off the plate or the BACK key, {k: "none"} on the plate off every target (inert). A key owns half
    of each gap beside it, out to its row's band.
    drawLevelPage(c, F, ui, t): ui = {level, heat, pace, pact, time, unlocked, best (a formatted time or null), row (the focused row's name), open, cur
    (the list's cursor), trig (a controller's TRIGGER cursor with the list shut, -1 none), tap (tap mode: no focus model, START focused as the page's one
@@ -36,7 +36,7 @@ import {deep, R, sc, okBox, inR, big} from "../kit/geom.js";
 import {layer, capDpr, touch, keyOf, canMake} from "../kit/cache.js";
 import {roomLayer, roomDpr} from "../kit/room.js";
 import * as probe from "../kit/probe.js";
-import {PAGE_KEY, PAGE_GAP, paintPager} from "../kit/pager.js";
+import {pageKeyAt, PAGE_KEY, PAGE_GAP, paintPager} from "../kit/pager.js";
 import {deviceScale} from "../logo/draw2d.js";
 import {hints, tapMode} from "../hintcopy.js";
 import {cardPlan, paintCard, recordCard} from "./card.js";
@@ -211,7 +211,8 @@ export function levelHit(x, y, F, o = {}) {
   const G = levelGeom(F, o), d = G.d, u = G.u, over = G.mode.length > 0 && d.mode === "compact";
   if (G.mode.length) for (let i = 0; i < G.mode.length; i++) if (inR(G.mode[i], x, y, 4 * u)) return {k: "mode", i};
   /* the page keys: the first row of the page before or after (a key at its end is inert) */
-  if (G.pageKeys) for (const [i, dir] of [[0, -1], [1, 1]]) if (inR(G.pageKeys[i], x, y, 3 * u)) { const p = G.page + dir; return p >= 0 && p < G.pages ? {k: "page", i: dir, row: d.pages[p][0]} : {k: "none"}; }
+  const pk = G.pageKeys ? pageKeyAt({up: G.pageKeys[0], dn: G.pageKeys[1]}, x, y, (dir) => { const p = G.page + dir; return p >= 0 && p < G.pages ? d.pages[p][0] : null; }, 3 * u) : null;
+  if (pk) return pk;
   const band = G.rows[LV.LEVEL];
   if (!over && band) {
     const kg = (d.room[1].x - d.room[0].x - d.room[0].w) * u, two = d.room[4].y > d.room[0].y;

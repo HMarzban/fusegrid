@@ -38,7 +38,7 @@ import {deep, R, sc, okBox, inR, big} from "../kit/geom.js";
 import {layer, capDpr, touch, keyOf, canMake} from "../kit/cache.js";
 import {roomLayer, pageRoomDpr} from "../kit/room.js";
 import * as probe from "../kit/probe.js";
-import {PAGE_KEY, pagerKeys, pageLabel, pagerHit, paintPager as kitPager} from "../kit/pager.js";
+import {PAGE_KEY, pagerKeys, pageLabel, pageKeyAt, paintPager as kitPager} from "../kit/pager.js";
 import {deviceScale} from "../logo/draw2d.js";
 import {hints, tapMode} from "../hintcopy.js";
 
@@ -414,11 +414,12 @@ export function recPages(F, page, rows) {
   return page === "scores" ? scoresPages(b, rows) : b.pages;
 }
 export const statsPages = (F) => recPages(F, "stats");
-/** The page keys under (x, y): -1 (▲), 1 (▼), else 0 (no pager, or off its keys; SCORES: no keys where its rows fit one page). */
+/** The page keys under (x, y): kit pager pageKeyAt's {k: "page", d, to: d} (the app's recPageStep clamps), else null (no pager, or off its keys;
+    SCORES: no keys where its rows fit one page). */
 export function pageKeyHit(x, y, F, page, rows) {
-  if (!okBox(F) || recPages(F, page, rows) < 2) return 0;
+  if (!okBox(F) || recPages(F, page, rows) < 2) return null;
   const G = recordsGeom(F), [dx, dy] = toD(G, x, y), b = G.d.bodies[page], q = b && b.pager;
-  return pagerHit(q, dx, dy);
+  return pageKeyAt(q, dx, dy);
 }
 /** MEDALS and any page with no body hit: -2 on the plate, -1 off it or on the BACK key. */
 export function plateHit(x, y, F) {

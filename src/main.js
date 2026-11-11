@@ -340,6 +340,7 @@ export function createGame(canvas, opts = {}) {
     };
     const w0 = app.modeWalk.bind(app); app.modeWalk = (d) => { const r = w0(d); if (r) audio.play("uiMove"); return r; };
     const t0 = app.recTab.bind(app); app.recTab = (d) => { const r = t0(d); if (r) audio.play("uiMove"); return r; }; // Q / E / T and a tab tap; ←/→ step through move()
+    const k0 = app.pageKey.bind(app); app.pageKey = (d, to) => { const r = k0(d, to); if (r) audio.play("uiMove"); return r; }; // a page-key tap, the same on every page
     const p0 = app.adjustPace.bind(app);
     app.adjustPace = (d) => {
       const r = p0(d);

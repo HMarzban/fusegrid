@@ -340,7 +340,7 @@ function check(name, cond, detail) {
       if (!over) G.room.forEach((r, i) => { const h = hit(r); if (h.k !== (i < G.cap ? "room" : "lock") || h.i !== i) bad.push("room" + i); });
       for (const k of over ? ["mode"] : ["heat", "pace", "mode"]) G[k].forEach((r, i) => { const h = hit(r); if (h.k !== k || h.i !== i) bad.push(k + i); });
       if (G.mods && hit(G.mods).k !== "mods") bad.push("mods");
-      if (G.pageKeys) G.pageKeys.forEach((r, i) => { const p = G.page + (i ? 1 : -1), h = hit(r); if (p >= 0 && p < G.pages ? h.k !== "page" || h.row !== G.d.pages[p][0] : h.k !== "none") bad.push("page" + i); });
+      if (G.pageKeys) G.pageKeys.forEach((r, i) => { const p = G.page + (i ? 1 : -1), h = hit(r); if (h.k !== "page" || h.d !== (i ? 1 : -1) || h.to !== (p >= 0 && p < G.pages ? G.d.pages[p][0] : null)) bad.push("page" + i); }); // R1 cohesion 9: the kit's {k: "page", d, to}, to null at an end (inert)
       if (hit(G.start).k !== "start") bad.push("start");
       if (G.back && hit(G.back).k !== "back") bad.push("BACK");
       if (md.levelHit(S.x + S.w - 4, S.y + 4, L, U, T, open, fr).k !== "none") bad.push("blank");

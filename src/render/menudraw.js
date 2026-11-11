@@ -521,7 +521,7 @@ export function drawGuide(c, L, t, cursor, kind, touch, o) {
 export const guideGeom = (L, touch, page) => { const g = guideMod(); return g ? g.guideGeom(frameOf(L, touch), page || "GUIDE") : null; };
 export const guideHit = (x, y, L, _n, touch, focus) => { const g = guideMod(), F = frameOf(L, touch); return g ? g.guideHit(x, y, F, focus | 0) : lazyHit("guide", x, y, F); };
 export const enemiesHit = (x, y, L, touch, focus, tip) => { const g = guideMod(), F = frameOf(L, touch); return g ? g.enemiesHit(x, y, F, focus | 0, !!tip) : lazyHit("guide", x, y, F); };
-/** A read-only page (HOW TO PLAY, POWER-UPS, FLOOR) showing page pg: "up" / "down" on its page keys, else -1 (backs out); -2 while it loads (DID NOT LOAD: -1 off the plate). */
+/** A read-only page (HOW TO PLAY, POWER-UPS, FLOOR) showing page pg: the kit's {k: "page", d, to} on its page keys, else -1 (backs out); -2 while it loads (DID NOT LOAD: -1 off the plate). */
 export const guideReadHit = (x, y, L, touch, page, pg) => { const g = guideMod(), F = frameOf(L, touch); return g ? g.readHit(x, y, F, page, pg | 0) : lazyHit("guide", x, y, F); };
 /** How many pages a GUIDE page takes on this box (1 until the module is in). */
 export const guidePages = (L, touch, page) => { const g = guideMod(); return g ? g.guideGeom(frameOf(L, touch), page).pages : 1; };
@@ -544,8 +544,8 @@ export const scoresHit = (x, y, L, touch, spage) => { const m = recMod(), F = fr
 export const statsHit = (x, y, L, arm, _tabs, touch, spage) => { const m = recMod(), F = frameOf(L, touch); return m ? m.statsHit(x, y, F, arm, spage | 0) : lazyHit("records", x, y, F) === -1 ? "back" : "plate"; }; // spage: the page shown (a paged #c STATS keeps COPY / RESET on its last)
 /* A RECORDS tab's page count on this box (records.js recPages: 1 where its body fits unpaged, and while the module loads); page scores | stats | medals. */
 export const recPages = (L, touch, page, rows) => { const m = recMod(); return m ? m.recPages(frameOf(L, touch), page, rows) : 1; };
-/* A RECORDS tab's page keys under a tap: -1 (▲), 1 (▼), else 0 (rows: SCORES' rows, whose count sets its pages). */
-export const recPageHit = (x, y, L, touch, page, rows) => { const m = recMod(); return m ? m.pageKeyHit(x, y, frameOf(L, touch), page, rows) : 0; };
+/* A RECORDS tab's page keys under a tap: the kit's {k: "page", d, to}, else null (rows: SCORES' rows, whose count sets its pages). */
+export const recPageHit = (x, y, L, touch, page, rows) => { const m = recMod(); return m ? m.pageKeyHit(x, y, frameOf(L, touch), page, rows) : null; };
 
 /* SETTINGS and GRAPHICS (SCREEN.SETTINGS / GRAPHICS; PAUSE views 1 and 2): the page is src/render/pages/settings.js (UI upgrade v202 Task 3.4),
    lazy (R20) through pages/lazy.js. These keep the entry names shellview, the pointer and the tests call, with the same arguments for draw and
