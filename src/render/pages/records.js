@@ -771,7 +771,8 @@ function record(G, P, ui, foc, dpr, el, F0, tok, touchy, tap) {
     if (B.badges) for (const t of S.badges) {
       const x = B.badges.x + t.x * k, y = B.badges.y + t.ln * (th + 6 * k), col = t.on ? CONST.medal : CONST.off;
       txt(t.s, x + 30 * k, y + th / 2, measureOr(t.s, dv.sec) * k, dv.sec * k, t.on ? CONST.ink : col, "secondary", t.on ? {} : {lock: true});
-      probe.pair("info", b(R(x + 8 * k, y + th / 2 - 8 * k, 16 * k, 16 * k)), b(R(x + 4 * k, y + 4 * k, 24 * k, th - 8 * k)), {col, name: "badge " + t.s, ...(t.on ? {} : {lock: true})});
+      /* a: the glyph with its stroke's bleed (an earned medal is a stroked outline now); b: the chip around it, inside the tag's own outline */
+      probe.pair("info", b(R(x + 6 * k, y + th / 2 - 10 * k, 20 * k, 20 * k)), b(R(x + 3 * k, y + 3 * k, 27 * k, th - 6 * k)), {col, name: "badge " + t.s, ...(t.on ? {} : {lock: true})});
     }
     const rr = B.rows, rp = B.rp * k;
     if (S.empty) S.empty.forEach((s, j) => { if (!s) return; const w = (j ? W(MC, T.body(dv.bod), s) : measureOr(s, dv.pri)) * k; txt(s, rr.x + rr.w / 2 - w / 2, rr.y + rp * (j ? 4.2 : 3), w, (j ? dv.bod : dv.pri) * k, j ? CONST.t2 : CONST.ink, j ? "body" : "primary"); });
@@ -800,6 +801,10 @@ function record(G, P, ui, foc, dpr, el, F0, tok, touchy, tap) {
       cells.forEach((r, i) => { probe.rect("digit " + i, ...b(r), {fill: S.digits[i] === "," ? tok.well : tok.lit}); const w = measureOr(S.digits[i], dv.sdf) * k; txt(S.digits[i], r.x + r.w / 2 - w / 2, r.y + r.h / 2, w, dv.sdf * k, S.digits[i] === "," ? CONST.t2 : CONST.dk, "hud"); });
       const cell = (r) => R(B.course.x + (r - 1) * (dv.lcw + 5) * k, B.course.y + 2 * k, dv.lcw * k, dv.lch * k);
       if (B.course && S.far) for (let r = 1; r <= 8; r++) probe.rect("level " + r, ...b(cell(r)), {fill: r < S.far ? tok.lit : r === S.far ? tok.key : tok.well});
+      /* a locked level (a wall cell, 6-8 before the first CLEAR) against the first level (lit or the raised key); its texture against a flat floor: the
+         PLAY TIME tile's empty top right (fix round 1: the filled STATS capture draws locked cells) */
+      const lk = B.course && S.far ? [6, 7, 8].find((r) => r > S.far && !ui.unlocked) : null;
+      if (lk) { const t1 = B.tiles[1]; probe.pair("locked", b(cell(lk)), b(cell(1)), {name: "locked level " + lk, floor: b(R(t1.x + t1.w - 24 * k, t1.y + 6 * k, 16 * k, 18 * k))}); }
       if (B.course && S.far > 1 && S.far < 8) probe.pair("chosen", b(R(cell(1).x + 3 * k, cell(1).y + 2 * k, cell(1).w - 6 * k, 6 * k)), b(R(cell(8).x + 3 * k, cell(8).y + 6 * k, cell(8).w - 6 * k, 6 * k)), {name: "cleared vs ahead level"});
       if (S.reached) txt(S.reached, B.reached.x, B.reached.y + B.reached.h / 2, sw(S.reached, dv.sec), dv.sec * k, CONST.t2, "secondary");
     }
