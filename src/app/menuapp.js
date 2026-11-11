@@ -65,8 +65,9 @@ const LV_MODS = LEVEL_ROWS.indexOf("MODIFIERS"),
 /* GUIDE rows, frozen and index-addressed: guideRow, drawGuide and confirm's
    GUIDE dispatch all count this array. */
 export const GUIDE_ROWS = Object.freeze(["HOW TO PLAY", "POWER-UPS", "ENEMIES", "FLOOR"]);
-/* SETTINGS rows, frozen and index-addressed: optRow, drawSettings and
-   settingsHit all agree because they all count this array. */
+/* SETTINGS rows (design record §4, plan R11). OPT_ROWS is every row in order; the rows on screen are optRows(r3d): all twelve
+   while ART STYLE is REAL 3D, the ten without CAMERA and BRIGHTNESS otherwise. optRow indexes that visible list, the one list
+   shellview hands drawSettings (as labels) and settingsHit maps a tap into, so every reader acts by the label drawn there. */
 export const OPT_ROWS = Object.freeze([
   "MUSIC",
   "SFX",
@@ -81,13 +82,17 @@ export const OPT_ROWS = Object.freeze([
   "CONTROLS",
   "RESET DEFAULTS",
 ]);
+const OPT_3D = Object.freeze(["CAMERA", "BRIGHTNESS"]),
+  OPT_FLAT = Object.freeze(OPT_ROWS.filter((r) => OPT_3D.indexOf(r) < 0));
+/** The SETTINGS rows on screen, in OPT_ROWS order: all twelve when r3d (ART STYLE is REAL 3D), else the ten without CAMERA and BRIGHTNESS. */
+export const optRows = (r3d) => (r3d ? OPT_ROWS : OPT_FLAT);
 /* PAUSE list (spec §3). world.state stays PAUSE and the shell stays GAME —
    that is what keeps the room's track playing, the HUD gate open, the touch
    gate honest and every screen===GAME guard true. */
-export const PAUSE_ITEMS = Object.freeze([
+export const PAUSE_ITEMS = Object.freeze([ // design record §4: RESUME, SETTINGS, then (past the divider) the two danger rows; read by label
   "RESUME",
-  "RESTART",
   "SETTINGS",
+  "RESTART",
   "QUIT TO MENU",
 ]);
 export const SOURCE_URL = "https://github.com/HMarzban/fusegrid";
@@ -116,7 +121,7 @@ export function createMenuApp(opts = {}) {
     scoreHeat: 0,
     settings: clampSettings(o.settings),
     analytics: !!o.analytics, // SETTINGS ANALYTICS: its truth lives in nb.analytics.v1 (src/app/analytics.js), like SOUND's in audio
-    optRow: 0, // SETTINGS row cursor — its OWN field, so the MENU cursor
+    optRow: 0, // SETTINGS row cursor, an index into optRows() — its OWN field, so the MENU cursor
     // survives a round trip through the page
     guideRow: 0, // GUIDE row cursor — its OWN field too, same reason
     recFocus: 0, // RECORDS: 0 the tab row, 1 the page body; every arrival lands on the tab row
@@ -423,7 +428,7 @@ export function createMenuApp(opts = {}) {
             case "DAILY":
               return this.startDaily();
             case "SETTINGS":
-              this.optRow = 0;
+              this.optRow = 0; // the top row of either list (MUSIC)
               return this._push(SCREEN.SETTINGS);
             case "GUIDE":
               this.guideRow = 0;
@@ -472,11 +477,11 @@ export function createMenuApp(opts = {}) {
       this.parked = false;
       if (this.screen === SCREEN.CONTROLS) {
         if (this.controls && this.controls.back() !== "page") return true; // a capture or an armed reset ends first
-        this.optRow = OPT_ROWS.indexOf("CONTROLS");
+        this._optTo("CONTROLS");
         return this._push(SCREEN.SETTINGS, 1);
       }
       if (this.screen === SCREEN.GRAPHICS) {
-        this.optRow = OPT_ROWS.indexOf("GRAPHICS");
+        this._optTo("GRAPHICS");
         return this._push(SCREEN.SETTINGS, 1);
       }
       if (
@@ -722,14 +727,36 @@ export function createMenuApp(opts = {}) {
     optMove(dir) {
       this.idleT = 0;
       this._anaSaid = false;
-      const n = OPT_ROWS.length;
-      this.optRow = (this.optRow + (dir < 0 ? -1 : 1) + n) % n;
+      const L = this.optRows(), n = L.length;
+      this.optRow = (L.indexOf(this.optLabel()) + (dir < 0 ? -1 : 1) + n) % n;
       return true;
+    },
+    /* The visible SETTINGS rows: r3d is the ART STYLE row's value (render3d, what the row shows and what a pick sets at once,
+       while the look may still load), never the live renderer; one predicate for every reader. */
+    optRows() {
+      return optRows(this.render3d);
+    },
+    /* The focused row's label, what every optRow reader acts on (clamped into the list as a last guard; _setR3d keeps it in). */
+    optLabel() {
+      const L = this.optRows();
+      return L[Math.max(0, Math.min(L.length - 1, this.optRow | 0))];
+    },
+    /* optRow onto a label of the visible list; a label not in it (CAMERA, BRIGHTNESS outside REAL 3D) lands on ART STYLE. */
+    _optTo(label) {
+      const L = this.optRows(), i = L.indexOf(label);
+      this.optRow = i >= 0 ? i : L.indexOf("ART STYLE");
+    },
+    /* Every ART STYLE write goes through here, before onSettings: the list may change, so the cursor keeps its label, or lands
+       on ART STYLE when its row went away (lead ruling, refining R11). */
+    _setR3d(v) {
+      const lab = this.optLabel();
+      this.render3d = !!v;
+      this._optTo(lab);
     },
     _optSet(key, v) {
       if (this.settings[key] === v) return false;
       this.settings[key] = v;
-      if (key === "r3d") this.render3d = !!v;
+      if (key === "r3d") this._setR3d(v);
       this.togT = this.subT;
       if (onSettings) onSettings(this.settings, key);
       return true;
@@ -776,7 +803,7 @@ export function createMenuApp(opts = {}) {
       if (this.settings.r3d === b.r3d && this.settings.px === b.px) return false;
       this.settings.r3d = b.r3d;
       this.settings.px = b.px;
-      this.render3d = !!b.r3d;
+      this._setR3d(b.r3d);
       this.pixel = !!b.px;
       this.togT = this.subT;
       if (onSettings) onSettings(this.settings, "render");
@@ -800,7 +827,7 @@ export function createMenuApp(opts = {}) {
     },
     /* warm on intent (Q3): the cursor resting WARM_T on the ART STYLE row (SETTINGS, or PAUSE's SETTINGS view) warms the next look of the cycle once per rest; live PLAY never */
     _warmTick(d) {
-      const on = OPT_ROWS[this.optRow] === "ART STYLE" && (this.screen === SCREEN.SETTINGS || (this.screen === SCREEN.GAME && this.worldState === "PAUSE" && this.pauseView === 1));
+      const on = this.optLabel() === "ART STYLE" && (this.screen === SCREEN.SETTINGS || (this.screen === SCREEN.GAME && this.worldState === "PAUSE" && this.pauseView === 1));
       if (!on) { this.warmT = 0; this._warmA = this._warmK = null; return; }
       const nx = RENDER_KINDS[(renderVal(this) + 1) % RENDER_KINDS.length];
       if (nx !== this._warmA) { this._warmA = nx; this.warmT = 0; }
@@ -812,14 +839,10 @@ export function createMenuApp(opts = {}) {
       const s = this.screen;
       return s === SCREEN.SETTINGS || s === SCREEN.GRAPHICS || s === SCREEN.CONTROLS || (s === SCREEN.GAME && this.worldState === "PAUSE" && this.pauseView >= 1);
     },
-    _opt3dLocked(r) {
-      return (r === "CAMERA" || r === "BRIGHTNESS") && !this.render3d;
-    },
     optAdjust(dir) {
       this.idleT = 0;
-      const r = OPT_ROWS[this.optRow],
+      const r = this.optLabel(),
         d = dir < 0 ? -1 : 1;
-      if (this._opt3dLocked(r)) return false;
       if (r === "MUSIC" || r === "SFX") {
         const k = r === "MUSIC" ? "mus" : "sfx";
         return this._optSet(k, Math.min(100, Math.max(0, this.settings[k] + d * 10)));
@@ -837,8 +860,7 @@ export function createMenuApp(opts = {}) {
     },
     optCycle() {
       this.idleT = 0;
-      const r = OPT_ROWS[this.optRow];
-      if (this._opt3dLocked(r)) return false;
+      const r = this.optLabel();
       if (r === "MUSIC" || r === "SFX") {
         const k = r === "MUSIC" ? "mus" : "sfx";
         return this._optSet(k, this.settings[k] >= 100 ? 0 : this.settings[k] + 10);
@@ -990,7 +1012,7 @@ export function createMenuApp(opts = {}) {
       }
       for (const k in d) this.settings[k] = d[k];
       this.settings.snd = this.sound ? 1 : 0;
-      this.render3d = !!this.settings.r3d;
+      this._setR3d(this.settings.r3d); // the cursor stays on RESET DEFAULTS, the list may have lost CAMERA and BRIGHTNESS
       this.pixel = !this.render3d && !!this.settings.px;
       this.togT = this.subT;
       if (onSettings) onSettings(this.settings, "reset");
@@ -1007,7 +1029,7 @@ export function createMenuApp(opts = {}) {
       const cmd = PAUSE_ITEMS[this.pauseCursor];
       if (cmd === "SETTINGS") {
         this.pauseView = 1;
-        this.optRow = 0;
+        this.optRow = 0; // the top row of either list (MUSIC)
         this.togT = -1;
         return this._feel("enter");
       }
@@ -1021,19 +1043,21 @@ export function createMenuApp(opts = {}) {
         if (this.controls && this.controls.back() !== "page") return true; // a capture or an armed reset ends first
         this.pauseView = 1; // 3 -> 1 on the door, never 3 -> 2
         this._feel("back");
-        this.optRow = OPT_ROWS.indexOf("CONTROLS");
+        this._optTo("CONTROLS");
         this.togT = -1;
         return true;
       }
       if (this.pauseView !== 1 && this.pauseView !== 2) return false;
       this._anaSaid = false;
-      this.pauseView--; // 2 -> 1 keeps optRow on the GRAPHICS door
+      if (this.pauseView === 2) this._optTo("GRAPHICS"); // 2 -> 1 on the GRAPHICS door
+      else this.pauseCursor = PAUSE_ITEMS.indexOf("SETTINGS"); // 1 -> 0 on the row that opened it
+      this.pauseView--;
       this.togT = -1;
       return this._feel("back");
     },
     enterPause() {
       this._ctlCancel();
-      this.pauseCursor = 0;
+      this.pauseCursor = PAUSE_ITEMS.indexOf("RESUME");
       this.pauseView = 0;
       this.togT = -1;
       return this._feel("enter");

@@ -94,10 +94,12 @@ export function loaderSpot(app, world, canvas, host = globalThis) {
   L.spot(o);
   return o;
 }
+/* rows: the visible SETTINGS list (menuapp optRows through the app's one predicate), row: the focused row's label (R11). */
 const optUi = (app, canvas, kicker) => ({
   kicker,
   job: lookN,
-  row: app.optRow,
+  rows: app.optRows(),
+  row: app.optLabel(),
   vals: app.settings,
   r3d: app.render3d,
   px: app.pixel,
@@ -221,7 +223,7 @@ function infoOf(app, kind, getScores, getCab) {
     row: LEVEL_ROWS[app.levelRow | 0], open: !!app.modOpen, cur: app.modeCur, // LEVEL SELECT's focus: the row's name, the MODIFIERS list and its cursor (v202 Task 2.3)
     best: Array.from({ length: 8 }, (_, i) => { const d = tb[i + 1 + ":" + h + ":" + pact + ":" + pz]; return d > 0 ? fmtTime(d / 10) : null; }),
     daily: cab.daily || null, // the STATS row's medals / lifetime counters left MENU with it (RECORDS, v202 Task 2.2)
-    top: top3, look: app.render3d ? 2 : app.pixel ? 1 : 0, snd: st.snd !== 0, mus: st.mus, sfx: st.sfx, gfx: app.gfxPreset ? app.gfxPreset() : "", pad: padOn(app),
+    top: top3, look: app.render3d ? 2 : app.pixel ? 1 : 0, opt: app.optRows(), snd: st.snd !== 0, mus: st.mus, sfx: st.sfx, gfx: app.gfxPreset ? app.gfxPreset() : "", pad: padOn(app),
   };
 }
 

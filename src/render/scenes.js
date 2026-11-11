@@ -5,7 +5,7 @@ import { rr } from "./icons.js";
 import { PROJ } from "./r3d/camera.js";
 import { LABEL, diffTag, speedTag, runParts } from "./words.js";
 import { abilityList, abilityText, abilityOrd, getStrip } from "./fx.js";
-import { layout, listGeom, listHit, drawList, plate, fitKicker, setupVals, head as plateHead, foot as plateFoot } from "./menudraw.js";
+import { layout, listGeom, listHit, drawList, plate, fitKicker, setupVals, head as plateHead, foot as plateFoot, LINE } from "./menudraw.js";
 import { hints } from "./hintcopy.js";
 
 /* Scene UI: menu logo, HUD, and the CLEARED / GAME OVER / PAUSED overlays.
@@ -185,23 +185,28 @@ export function dailyLine(world, run) {
   );
 }
 const copyHint = () => (hints().dev === "pad" ? " · WEST copy · NORTH board" : " · C copy · B board");
-/* Pause-list row copy mirrors src/app/menuapp.js PAUSE_ITEMS — render/ must
-   not import src/app (only shellview.js may), so the labels are duplicated
-   here the way menudraw's PLAQUE_NAME is. */
+/* Pause-list row copy mirrors src/app/menuapp.js PAUSE_ITEMS (words.test pins
+   them equal) — render/ must not import src/app (only shellview.js may), so the
+   labels are duplicated here the way menudraw's PLAQUE_NAME is. */
 export const PAUSE_ROWS = Object.freeze([
   "RESUME",
-  "RESTART",
   LABEL.SETTINGS,
+  "RESTART",
   "QUIT TO MENU",
 ]);
 /* PAUSE is the MENU's own plate (menudraw listGeom/drawList): RESUME is the
-   hero row, RESTART / QUIT select in red. Pitch caps follow the layout: touch
+   hero row, SETTINGS the door, RESTART / QUIT select in red below a divider. Pitch caps follow the layout: touch
    (data-lay p/l) gets PAUSE_ROW_H 70 (~46 CSS px on a phone), a keyboard
    screen the compact PAUSE_ROW_D 44; a short box (iso 352) scales both down
    to fit. Hit bands run the full stage width, so no side tap falls through. */
 export const PAUSE_ROW_H = 70,
   PAUSE_ROW_D = 44;
-const PAUSE_SHAPE = Object.freeze(PAUSE_ROWS.map((label, i) => ({ label, hero: i === 0, danger: i === 1 || i === 3, door: i === 2 })));
+/* The shape by LABEL, never by position, the one place draw and tap read it (design record §4): RESUME the hero, SETTINGS
+   the door, RESTART and QUIT TO MENU danger, a rule before the first danger row (the wall-course divider, a 1 px line in
+   today's look: no gap, so the pitches and the plate stay). */
+const PAUSE_DANGER = ["RESTART", "QUIT TO MENU"];
+export const PAUSE_SHAPE = Object.freeze(PAUSE_ROWS.map((label, i) => Object.freeze({ label, hero: label === "RESUME", door: label === LABEL.SETTINGS, danger: PAUSE_DANGER.includes(label), rule: i > 0 && PAUSE_DANGER.includes(label) && !PAUSE_DANGER.includes(PAUSE_ROWS[i - 1]) })));
+const RULE_AT = PAUSE_SHAPE.findIndex((r) => r.rule);
 /* The ONE named coordinate space for pause chrome: it feeds both drawOverlay
    call sites and both hit tests, so the list, the inline SETTINGS page and the
    tap map can never disagree by a pixel. */
@@ -213,8 +218,10 @@ export function overlayBox(kind) {
   return { w, h, cx: w / 2, cy: h / 2 };
 }
 export function pauseGeom(B, touch) {
-  const top = Math.round(B.h * 0.115);
-  return listGeom(layout(B.w, B.h), PAUSE_SHAPE, { top, bot: B.h - Math.round(top * 0.67), w: touch ? 380 : 340, pitch: touch ? PAUSE_ROW_H : PAUSE_ROW_D, hero: touch ? 76 : 54, pad: 10, head: 46, foot: 28 });
+  const top = Math.round(B.h * 0.115),
+    g = listGeom(layout(B.w, B.h), PAUSE_SHAPE, { top, bot: B.h - Math.round(top * 0.67), w: touch ? 380 : 340, pitch: touch ? PAUSE_ROW_H : PAUSE_ROW_D, hero: touch ? 76 : 54, pad: 10, head: 46, foot: 28 });
+  g.div = RULE_AT > 0 ? (g.rows[RULE_AT - 1].y1 + g.rows[RULE_AT].y0) / 2 : null; // the divider's y: the seam between SETTINGS and RESTART
+  return g;
 }
 export function pauseHit(x, y, box, touch) {
   return listHit(x, y, pauseGeom(box || overlayBox("2d"), touch), true);
@@ -325,6 +332,10 @@ export function drawOverlay(
     const base = u.note || pauseKicker(world, run);
     plateHead(c, g, "PAUSED", u.next ? pauseKick(c, base, u.next, g.w - 24) : pauseFit(c, u.note ? [u.note] : pauseKickers(world, run), g.w - 24));
     drawList(c, g, PAUSE_SHAPE, u.cursor | 0, 0, { touch });
+    if (g.div != null) {
+      c.fillStyle = LINE;
+      c.fillRect(g.x + 16, Math.round(g.div), g.w - 32, 1);
+    }
     plateFoot(c, g, overlayCue(world, touch));
   }
 }

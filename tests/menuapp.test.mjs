@@ -2,6 +2,8 @@ import {
   SCREEN,
   ITEMS,
   OPT_ROWS,
+  PAUSE_ITEMS,
+  optRows,
   GUIDE_ROWS,
   SOURCE_URL,
   IDLE_T,
@@ -533,7 +535,7 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
   check("MUSIC Enter wraps 0 -> 10", a.optCycle() === true && a.settings.mus === 10, a.settings.mus);
   a.settings.mus = 100;
   check("MUSIC Enter wraps 100 -> 0", a.optCycle() === true && a.settings.mus === 0, a.settings.mus);
-  a.optRow = OPT_ROWS.indexOf("RESET DEFAULTS");
+  a.optRow = a.optRows().indexOf("RESET DEFAULTS");
   check(
     "RESET DEFAULTS restores every field",
     a.optCycle() === true && a.settings.mus === 100 && a.settings.bri === 100 && a.settings.shk === 1,
@@ -548,34 +550,35 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
 {
   const a = createMenuApp();
   a.screen = SCREEN.SETTINGS;
-  a.optRow = OPT_ROWS.indexOf("CAMERA");
-  check("CAMERA rejects adjust in CLASSIC 2D", a.move(1, 0) === false && a.settings.cam === 0);
-  check("CAMERA rejects Enter in CLASSIC 2D", a.optCycle() === false && a.settings.cam === 0);
-  a.optRow = OPT_ROWS.indexOf("BRIGHTNESS");
-  check("BRIGHTNESS rejects adjust in CLASSIC 2D", a.move(1, 0) === false && a.settings.bri === 100);
-  a.optRow = OPT_ROWS.indexOf("ART STYLE");
+  /* v202 Task 2.4: outside REAL 3D, CAMERA and BRIGHTNESS are not rows at all (design record §4). Every visible row, by ← → and
+     Enter, leaves cam and bri alone (ART STYLE and the doors / RESET DEFAULTS are skipped: they change the list or the page). */
+  const sweep = (how) => { const c0 = a.settings.cam, b0 = a.settings.bri; let n = 0;
+    for (let i = 0; i < a.optRows().length; i++) { a.optRow = i; if (["ART STYLE", "GRAPHICS", "CONTROLS", "RESET DEFAULTS"].includes(a.optLabel())) continue; n++; if (how === "adjust") { a.move(1, 0); a.move(-1, 0); } else a.optCycle(); }
+    return n === 6 && a.settings.cam === c0 && a.settings.bri === b0; };
+  check("CAMERA rejects adjust in CLASSIC 2D: not a row, and → / ← on every visible row leave cam alone", !a.optRows().includes("CAMERA") && sweep("adjust") && a.settings.cam === 0);
+  check("CAMERA rejects Enter in CLASSIC 2D: Enter on every visible row leaves cam alone", sweep("enter") && a.settings.cam === 0);
+  check("BRIGHTNESS rejects adjust in CLASSIC 2D: not a row, and the sweep leaves bri alone", !a.optRows().includes("BRIGHTNESS") && sweep("adjust") && a.settings.bri === 100);
+  a.optRow = a.optRows().indexOf("ART STYLE");
   a.optCycle();
   check("RENDER Enter CLASSIC 2D -> PIXEL sets pixel and px together", a.pixel === true && a.render3d === false && a.settings.px === 1 && a.settings.r3d === 0);
-  a.optRow = OPT_ROWS.indexOf("CAMERA");
-  check("CAMERA rejects Enter in PIXEL", a.optCycle() === false && a.settings.cam === 0);
-  a.optRow = OPT_ROWS.indexOf("BRIGHTNESS");
-  check("BRIGHTNESS rejects adjust in PIXEL", a.move(1, 0) === false && a.settings.bri === 100);
-  a.optRow = OPT_ROWS.indexOf("ART STYLE");
+  check("CAMERA rejects Enter in PIXEL: not a row, and Enter on every visible row leaves cam alone", !a.optRows().includes("CAMERA") && sweep("enter") && a.settings.cam === 0 && a.pixel === true);
+  check("BRIGHTNESS rejects adjust in PIXEL: not a row, and the sweep leaves bri alone", !a.optRows().includes("BRIGHTNESS") && sweep("adjust") && a.settings.bri === 100 && a.pixel === true);
+  a.optRow = a.optRows().indexOf("ART STYLE");
   a.optCycle();
   check("RENDER flips render3d and r3d together", a.render3d === true && a.settings.r3d === 1);
   check("RENDER PIXEL -> REAL 3D clears pixel and px", a.pixel === false && a.settings.px === 0);
-  a.optRow = OPT_ROWS.indexOf("CAMERA");
+  a.optRow = a.optRows().indexOf("CAMERA");
   check("CAMERA cycles STANDARD -> WIDE in REAL 3D", a.optCycle() === true && a.settings.cam === 1);
   a.move(1, 0);
   check("CAMERA adjusts to FAR then clamps", a.settings.cam === 2 && a.move(1, 0) === false, a.settings.cam);
   check("CAMERA Enter wraps FAR -> STANDARD", a.optCycle() === true && a.settings.cam === 0);
-  a.optRow = OPT_ROWS.indexOf("BRIGHTNESS");
+  a.optRow = a.optRows().indexOf("BRIGHTNESS");
   for (let i = 0; i < 10; i++) a.move(1, 0);
   check("BRIGHTNESS clamps at 130", a.settings.bri === 130 && a.move(1, 0) === false, a.settings.bri);
   check("BRIGHTNESS Enter wraps 130 -> 70", a.optCycle() === true && a.settings.bri === 70, a.settings.bri);
-  a.optRow = OPT_ROWS.indexOf("ART STYLE");
+  a.optRow = a.optRows().indexOf("ART STYLE");
   a.optCycle();
-  check("RENDER back to CLASSIC 2D re-locks the two 3D rows", a.render3d === false && a.settings.r3d === 0);
+  check("RENDER back to CLASSIC 2D hides the two 3D rows again, the cursor still on ART STYLE", a.render3d === false && a.settings.r3d === 0 && !a.optRows().includes("CAMERA") && !a.optRows().includes("BRIGHTNESS") && a.optLabel() === "ART STYLE");
   check("RENDER Enter wraps REAL 3D -> CLASSIC 2D (px stays 0)", a.pixel === false && a.settings.px === 0);
 }
 // ---- R4/R5: RENDER is three-way, ←/→ clamp 0..2, onSettings fires once ----
@@ -583,7 +586,7 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
   const seen = [];
   const a = createMenuApp({ onSettings: (s, k) => seen.push(k + ":" + s.r3d + s.px) });
   a.screen = SCREEN.SETTINGS;
-  a.optRow = OPT_ROWS.indexOf("ART STYLE");
+  a.optRow = a.optRows().indexOf("ART STYLE");
   const val = () => (a.render3d ? 2 : a.pixel ? 1 : 0);
   check("RENDER ← at CLASSIC 2D clamps (no change, no report)", a.move(-1, 0) === false && val() === 0 && seen.length === 0);
   a.move(1, 0);
@@ -593,7 +596,7 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
   check("RENDER → at REAL 3D clamps", a.move(1, 0) === false && val() === 2 && seen.length === 2);
   a.move(-1, 0);
   check("RENDER ← REAL 3D -> PIXEL", val() === 1 && a.settings.px === 1 && a.settings.r3d === 0);
-  a.optRow = OPT_ROWS.indexOf("RESET DEFAULTS");
+  a.optRow = a.optRows().indexOf("RESET DEFAULTS");
   a.optCycle();
   check("RESET DEFAULTS from PIXEL drops pixel live and in the blob", a.pixel === false && a.render3d === false && a.settings.px === 0);
   const b = createMenuApp({ pixel: true, settings: { px: 1 } });
@@ -612,7 +615,7 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
     },
   });
   a.screen = SCREEN.SETTINGS;
-  a.optRow = OPT_ROWS.indexOf("SOUND");
+  a.optRow = a.optRows().indexOf("SOUND");
   a.optCycle();
   check(
     "SOUND row drives audio.toggle() and syncs both flags",
@@ -621,14 +624,14 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
   );
   check("SOUND left is a no-op when already OFF", a.move(-1, 0) === false && toggles === 1);
 }
-{
-  const a = createMenuApp();
+for (const r3d of [false, true]) {
+  const a = createMenuApp({ render3d: r3d }), last = a.optRows().length - 1;
   a.screen = SCREEN.SETTINGS;
-  a.optRow = 11;
+  a.optRow = last;
   a.optMove(1);
-  check("optMove wraps 11 -> 0", a.optRow === 0, a.optRow);
+  check("optMove wraps the last row -> 0 (" + (last + 1) + " rows)", a.optRow === 0 && last === (r3d ? 11 : 9), a.optRow);
   a.optMove(-1);
-  check("optMove wraps 0 -> 11", a.optRow === 11 && OPT_ROWS[11] === "RESET DEFAULTS", a.optRow);
+  check("optMove wraps 0 -> the last row, RESET DEFAULTS (" + (last + 1) + " rows)", a.optRow === last && a.optLabel() === "RESET DEFAULTS", a.optRow);
   a.optRow = 0;
   a.key("ArrowDown");
   check("ArrowDown tap moves the row (axis 1)", a.optRow === 1, a.optRow);
@@ -1264,7 +1267,7 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
   check("togT exposed, sentinel -1 before any change", a.togT === -1, a.togT);
   frames(a, 10, DT);
   const tAt = a.subT;
-  a.optRow = 6;
+  a.optRow = a.optRows().indexOf("SCREEN SHAKE");
   a.optCycle();
   check(
     "knob change stamps togT=subT",
@@ -1276,7 +1279,7 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
   a.optMove(1);
   check("row moves leave togT untouched", a.togT === hold, a.togT);
   frames(a, 5, DT);
-  a.optRow = 7;
+  a.optRow = a.optRows().indexOf("REDUCE FLASH");
   a.optCycle();
   check("second change re-stamps togT to the new subT", a.togT === a.subT && a.togT > hold, a.togT + "/" + hold);
   a.back();
@@ -1285,10 +1288,10 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
 {
   const a = createMenuApp();
   a.screen = SCREEN.SETTINGS;
-  a.optRow = 4;
+  a.optRow = a.optRows().indexOf("ANALYTICS"); a.lastDev = "pad"; // v202 Task 2.4: no 3D-only row to reject outside REAL 3D; a refused Enter is ANALYTICS on a controller, consent unanswered
   frames(a, 10, DT);
   a.optCycle();
-  check("a REJECTED 3D-only change never stamps togT", a.togT === -1, a.togT);
+  check("a REJECTED change (a controller on the unanswered ANALYTICS row) never stamps togT", a.togT === -1 && a.analytics === false, a.togT);
 }
 
 {
@@ -1375,12 +1378,13 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
   const seen = [];
   const a = createMenuApp({ settings: {}, onSettings: (s, k) => seen.push(k) });
   a.screen = SCREEN.MENU; a.cursor = ITEMS.indexOf("SETTINGS"); a.confirm();
-  a.optRow = OPT_ROWS.indexOf("GRAPHICS");
-  check("GRAPHICS door sits at optRow 9, CONTROLS then RESET below it", a.optRow === 9 && OPT_ROWS[10] === "CONTROLS" && OPT_ROWS[11] === "RESET DEFAULTS");
+  const GD = a.optRows().indexOf("GRAPHICS");
+  a.optRow = GD;
+  check("GRAPHICS door sits at optRow 7 of the ten (9 of all twelve), CONTROLS then RESET below it", GD === 7 && a.optRows()[8] === "CONTROLS" && a.optRows()[9] === "RESET DEFAULTS" && OPT_ROWS.indexOf("GRAPHICS") === 9 && OPT_ROWS[10] === "CONTROLS" && OPT_ROWS[11] === "RESET DEFAULTS");
   const s0 = JSON.stringify(a.settings);
   check("door ←/→ do nothing", a.move(-1, 0) === false && a.move(1, 0) === false && JSON.stringify(a.settings) === s0);
   a.gfxRow = 5;
-  check("door Enter opens SCREEN.GRAPHICS at row 0, optRow kept", a.confirm() === true && a.screen === SCREEN.GRAPHICS && a.gfxRow === 0 && a.optRow === 9 && a.togT === -1);
+  check("door Enter opens SCREEN.GRAPHICS at row 0, optRow kept", a.confirm() === true && a.screen === SCREEN.GRAPHICS && a.gfxRow === 0 && a.optRow === GD && a.togT === -1);
   check("door value is the preset: AUTO ›", a.gfxView().door === "AUTO ›" && a.gfxPreset() === "AUTO");
   a.move(-1, 1);
   check("↑ wraps 0 -> 7", a.gfxRow === 7);
@@ -1413,14 +1417,14 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
   a.gfxRow = 0; a.confirm();
   check("a preset never writes the meter", a.settings.fpm === 1 && a.gfxPreset() === "BATTERY");
   a.key("Escape");
-  check("Esc -> OPTIONS on the GRAPHICS door", a.screen === SCREEN.SETTINGS && a.optRow === 9);
+  check("Esc -> OPTIONS on the GRAPHICS door", a.screen === SCREEN.SETTINGS && a.optRow === GD && a.optLabel() === "GRAPHICS");
   a.key("Escape");
   check("second Esc -> MENU", a.screen === SCREEN.MENU);
-  a.screen = SCREEN.SETTINGS; a.optRow = 9; a.confirm(); a.key("Backspace");
-  check("Backspace backs out like Esc", a.screen === SCREEN.SETTINGS && a.optRow === 9);
-  a.optRow = OPT_ROWS.indexOf("RESET DEFAULTS"); a.confirm();
+  a.screen = SCREEN.SETTINGS; a.optRow = GD; a.confirm(); a.key("Backspace");
+  check("Backspace backs out like Esc", a.screen === SCREEN.SETTINGS && a.optRow === GD);
+  a.optRow = a.optRows().indexOf("RESET DEFAULTS"); a.confirm();
   check("RESET DEFAULTS returns GRAPHICS to AUTO, meter off", a.gfxPreset() === "AUTO" && a.settings.fpm === 0);
-  a.optRow = 9; a.confirm();
+  a.optRow = GD; a.confirm();
   check("digits and pace keys do nothing on GRAPHICS", ["Digit1", "Digit5", "BracketLeft", "BracketRight", "KeyT", "KeyR"].every((k) => a.key(k) === false) && a.screen === SCREEN.GRAPHICS);
   a.gfxRow = 1;
   a.update(1 / 60, mkInput({ right: true }));
@@ -1463,17 +1467,18 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
 {
   const a = createMenuApp({ settings: {} });
   a.screen = SCREEN.GAME; a.worldState = "PAUSE"; a.enterPause();
-  a.pauseCursor = 2; a.confirm();
-  a.optRow = 9;
+  a.pauseCursor = PAUSE_ITEMS.indexOf("SETTINGS"); a.confirm();
+  const GP = a.optRows().indexOf("GRAPHICS");
+  a.optRow = GP;
   check("PAUSE OPTIONS door opens inline pauseView 2, shell stays GAME", a.confirm() === true && a.pauseView === 2 && a.screen === SCREEN.GAME && a.gfxRow === 0);
   a.move(1, 1);
-  check("pause view 2: ↓ moves gfxRow, never optRow", a.gfxRow === 1 && a.optRow === 9);
+  check("pause view 2: ↓ moves gfxRow, never optRow", a.gfxRow === 1 && a.optRow === GP);
   a.update(1 / 60, mkInput({ left: true }));
   check("pause view 2: held ← adjusts FRAME RATE", a.settings.fps === 0, a.settings.fps);
   a.confirm();
   check("pause view 2: Enter cycles the row", a.settings.fps === 1);
-  check("pauseBack 2 -> 1 keeps optRow on the door", a.pauseBack() === true && a.pauseView === 1 && a.optRow === 9);
-  check("pauseBack 1 -> 0", a.pauseBack() === true && a.pauseView === 0);
+  check("pauseBack 2 -> 1 keeps optRow on the door", a.pauseBack() === true && a.pauseView === 1 && a.optRow === GP);
+  check("pauseBack 1 -> 0, on the SETTINGS row of the list", a.pauseBack() === true && a.pauseView === 0 && a.pauseCursor === PAUSE_ITEMS.indexOf("SETTINGS"));
   check("pauseBack on the list is false", a.pauseBack() === false);
   a.pauseView = 2; a.enterPause();
   check("a new PAUSE resets the view", a.pauseView === 0);
@@ -1523,7 +1528,7 @@ check("menuapp's DEF_MOVE is controls.js DEF_KEY.MOVE", JSON.stringify(createMen
     box.page = createControlsPage({ get: () => box.c, set: (c) => { box.c = c; box.sets++; }, padView: () => ({ state: st, name: "CONTROLLER 1 · STANDARD" }), say: () => {} });
     return box;
   };
-  const DOOR = OPT_ROWS.indexOf("CONTROLS");
+  const DOOR = optRows(false).indexOf("CONTROLS"); // every app here is CLASSIC 2D: the ten rows
   const opened = (o) => {
     const b = mkPage(), a = createMenuApp({ controls: b.page, ...o });
     a.screen = SCREEN.SETTINGS;
@@ -1532,7 +1537,7 @@ check("menuapp's DEF_MOVE is controls.js DEF_KEY.MOVE", JSON.stringify(createMen
   };
   const paused = () => {
     const { a, b } = opened();
-    a.screen = SCREEN.GAME; a.worldState = "PAUSE"; a.pauseCursor = 2; a.pauseView = 1; a.optRow = DOOR;
+    a.screen = SCREEN.GAME; a.worldState = "PAUSE"; a.pauseCursor = PAUSE_ITEMS.indexOf("SETTINGS"); a.pauseView = 1; a.optRow = DOOR;
     return { a, b, ok: a.confirm() };
   };
   const quiet = (a, ms = 300) => a.update(ms / 1000, mkInput());
@@ -1750,16 +1755,16 @@ check("menuapp's DEF_MOVE is controls.js DEF_KEY.MOVE", JSON.stringify(createMen
     check("no page: MOVE keys read WASD", a.moveKeys.join() === "KeyW,KeyD,KeyS,KeyA");
     a.screen = SCREEN.GAME; a.worldState = "PAUSE"; a.pauseView = 1;
     check("no page: the PAUSE door is inert too", a.confirm() === false && a.pauseView === 1);
-    a.screen = SCREEN.SETTINGS; a.optRow = OPT_ROWS.indexOf("RESET DEFAULTS"); a.settings.mus = 10;
+    a.screen = SCREEN.SETTINGS; a.optRow = a.optRows().indexOf("RESET DEFAULTS"); a.settings.mus = 10;
     check("no page: RESET DEFAULTS still resets", a.confirm() === true && a.settings.mus !== 10);
-    a.optRow = OPT_ROWS.indexOf("GRAPHICS");
+    a.optRow = a.optRows().indexOf("GRAPHICS");
     check("no page: GRAPHICS still opens", a.confirm() === true && a.screen === SCREEN.GRAPHICS);
     a.pauseView = 3; a.screen = SCREEN.GAME;
     check("no page: a view 3 still backs out to the door", a.pauseBack() === true && a.pauseView === 1 && a.optRow === DOOR);
   }
   // Consent ruling: a pad can never turn analytics on from an unanswered state.
   {
-    const ANA = OPT_ROWS.indexOf("ANALYTICS"), NOTE = "ANSWER THE CARD WITH Y OR N";
+    const ANA = optRows(false).indexOf("ANALYTICS"), NOTE = "ANSWER THE CARD WITH Y OR N";
     const mk = (open, dev) => {
       const calls = [];
       const a = createMenuApp({ onAnalytics: (v) => calls.push(v), anaOpen: () => open.v });
@@ -1822,7 +1827,7 @@ check("menuapp's DEF_MOVE is controls.js DEF_KEY.MOVE", JSON.stringify(createMen
   const s = createMenuApp({ autoplay: false, onWarm: (k) => warms.push(k) });
   s.skip();
   s.screen = SCREEN.SETTINGS;
-  s.optRow = OPT_ROWS.indexOf("ART STYLE");
+  s.optRow = s.optRows().indexOf("ART STYLE");
   s.update(0.2, mkInput({}, false));
   check("warm: nothing before 0.4 s on the RENDER row", warms.length === 0);
   s.update(0.25, mkInput({}, false));
@@ -1834,10 +1839,10 @@ check("menuapp's DEF_MOVE is controls.js DEF_KEY.MOVE", JSON.stringify(createMen
   check("a new value restarts the rest", warms.length === 1);
   s.update(0.15, mkInput({}, false));
   check("then warms ITS next (PIXEL -> REAL 3D)", warms.join() === "px,3d", warms.join());
-  s.optRow = OPT_ROWS.indexOf("MUSIC");
+  s.optRow = s.optRows().indexOf("MUSIC");
   s.update(1, mkInput({}, false));
   check("off the RENDER row: no warm", warms.length === 2);
-  s.screen = SCREEN.GAME; s.worldState = "PLAY"; s.pauseView = 1; s.optRow = OPT_ROWS.indexOf("ART STYLE"); s._optRender(0);
+  s.screen = SCREEN.GAME; s.worldState = "PLAY"; s.pauseView = 1; s.optRow = s.optRows().indexOf("ART STYLE"); s._optRender(0);
   s.update(1, mkInput({}, false));
   check("live PLAY never warms", warms.length === 2);
   s.worldState = "PAUSE";
@@ -1847,7 +1852,7 @@ check("menuapp's DEF_MOVE is controls.js DEF_KEY.MOVE", JSON.stringify(createMen
 {
   const cmds = [];
   const s = createMenuApp({ autoplay: false, onPauseCmd: (c) => cmds.push(c) });
-  s.screen = SCREEN.GAME; s.worldState = "PAUSE"; s.pauseView = 0; s.pauseCursor = 0;
+  s.screen = SCREEN.GAME; s.worldState = "PAUSE"; s.pauseView = 0; s.pauseCursor = PAUSE_ITEMS.indexOf("RESUME");
   s.lookJob = { k: "3d", state: "preparing", restore: true, rebuild: true, on: false };
   check("a lost context: app.restoring, the kicker tail REAL 3D · RESTORING", s.restoring === true && s.lookNext === "REAL 3D · RESTORING");
   check("RESUME waits for the rebuild (no blind play)", s.confirmPause() === false && cmds.length === 0);

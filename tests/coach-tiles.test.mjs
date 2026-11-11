@@ -8,7 +8,7 @@ import { FEAT_PROFILE, TILE_HELP, TILE_NAME, featKindOf, isBelt, tileTip } from 
 import { createWorld, loadLevel } from "../src/core/sim.js";
 import { CFG, T, key } from "../src/core/config.js";
 import { createGame } from "../src/main.js";
-import { SCREEN } from "../src/app/menuapp.js";
+import { SCREEN, PAUSE_ITEMS } from "../src/app/menuapp.js";
 import * as md from "../src/render/menudraw.js";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
@@ -332,7 +332,7 @@ function fakeCanvasTexts() {
     check("the tip paints through the real loop", seeTip(), texts.filter((s) => s.includes("·")).join("|"));
     // PAUSE RESTART
     g.world.state = "PAUSE"; g.loop((t += 16));
-    g.app.pauseCursor = 1;
+    g.app.pauseCursor = PAUSE_ITEMS.indexOf("RESTART");
     g.app.pauseView = 0;
     g.app.confirm();
     g.loop((t += 16));

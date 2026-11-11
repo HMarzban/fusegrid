@@ -6,7 +6,7 @@ import * as md from "../src/render/menudraw.js";
 import { loaderSpot, stepLookNote } from "../src/render/shellview.js";
 import { overlayBox } from "../src/render/scenes.js";
 import { setHints } from "../src/render/hintcopy.js";
-import { SCREEN } from "../src/app/menuapp.js";
+import { SCREEN, optRows } from "../src/app/menuapp.js";
 
 let pass = 0, fail = 0;
 const check = (name, ok, detail) => { ok ? pass++ : fail++; console.log((ok ? "  PASS " : "  FAIL ") + name + (detail !== undefined ? " -> " + detail : "")); };
@@ -100,9 +100,9 @@ const NOTES = [
   { k: "3d", st: "ready" },
   { k: "3d", st: "fail" },
 ];
-const RI = 3; // ART STYLE
-function slot(c, L, touch) {
-  const g = md.settingsGeom(L, touch), S = g.S;
+const RI = optRows(false).indexOf("ART STYLE"), V = optRows(false); // ART STYLE: row 3 in the ten (CLASSIC 2D / PIXEL) and in the twelve
+function slot(c, L, touch, R) {
+  const g = md.settingsGeom(L, touch, R), S = g.S;
   return md.valueRoom(c, S.iw + 16, g.rowH - 2, "ART STYLE", touch);
 }
 const boxes = [
@@ -113,10 +113,10 @@ const boxes = [
   ["PAUSE iso", md.layout(overlayBox("iso").w, overlayBox("iso").h), false, true],
 ];
 for (const w of [400, 444, 480, 520, 560, 600]) boxes.push(["touch shell box " + w + "x" + Math.round(w * 2), md.layout(w, Math.round(w * 2), w * 0.6), true, false]);
-for (const dev of ["key", "touch", "pad"]) {
+for (const dev of ["key", "touch", "pad"]) for (const R of [optRows(false), optRows(true)]) {
   setHints(dev === "pad" ? { dev: "pad", ok: "SOUTH", back: "EAST" } : null);
-  for (const [name, L, touch, full] of boxes) {
-    const c = recCtx(), room = slot(c, L, touch);
+  for (const [name0, L, touch, full] of boxes) {
+    const name = name0 + " (" + R.length + " rows)", c = recCtx(), room = slot(c, L, touch, R);
     let worst = "", ok = true, fullOk = true;
     for (const n of NOTES) {
       const cands = md.lookVal(n, touch), v = md.fitVal(c, cands, room);
@@ -134,10 +134,10 @@ setHints(null);
 {
   const L = md.layout(600, 520);
   for (const touch of [false, true]) {
-    const g = md.settingsGeom(L, touch), y = g.y0 + RI * g.rowH + 1, h = g.rowH - 2;
+    const g = md.settingsGeom(L, touch, V), y = g.y0 + RI * g.rowH + 1, h = g.rowH - 2;
     const a = recCtx(), b = recCtx();
-    md.drawSettings(a, L, 1, { row: RI, vals: {}, px: true, touch });
-    md.drawSettings(b, L, 1, { row: RI, vals: {}, px: true, touch, job: { k: "px", st: "preparing", phase: "bake", done: 140, total: 255, fill: 0.6 } });
+    md.drawSettings(a, L, 1, { rows: V, row: "ART STYLE", vals: {}, px: true, touch });
+    md.drawSettings(b, L, 1, { rows: V, row: "ART STYLE", vals: {}, px: true, touch, job: { k: "px", st: "preparing", phase: "bake", done: 140, total: 255, fill: 0.6 } });
     const lab = (r) => r.texts.filter((t) => t.s !== "PIXEL" && !/^PIXEL ·/.test(t.s)).map((t) => t.s + "@" + t.x + "," + t.y).join("|");
     check("no reflow: every other text lands where it did" + (touch ? " (touch)" : ""), lab(a) === lab(b));
     check("the value slot reads the job" + (touch ? " (touch)" : ""), b.texts.some((t) => t.s === "PIXEL · ART 140 / 255" && Math.abs(t.y - (y + h / 2)) < 0.01 && /monospace/.test(t.font)));
@@ -146,19 +146,19 @@ setHints(null);
     check("a 2 px line along the band bottom: track + honest fill" + (touch ? " (touch)" : ""), tr && fl && Math.abs(fl.w - Math.round(tr.w * 0.6)) <= 1 && fl.x === tr.x, JSON.stringify(line));
     check("the line stays inside the band" + (touch ? " (touch)" : ""), tr && tr.y >= y && tr.y + 2 <= y + h);
   }
-  const c = recCtx(), g = md.settingsGeom(L, false), y = g.y0 + RI * g.rowH + 1, h = g.rowH - 2;
-  md.drawSettings(c, L, 1, { row: 0, vals: {}, px: true, job: { k: "px", st: "loading", total: 0, fill: -1 } });
+  const c = recCtx(), g = md.settingsGeom(L, false, V), y = g.y0 + RI * g.rowH + 1, h = g.rowH - 2;
+  md.drawSettings(c, L, 1, { rows: V, row: "MUSIC", vals: {}, px: true, job: { k: "px", st: "loading", total: 0, fill: -1 } });
   const st = c.rects.filter((r) => r.h === 2 && Math.abs(r.y - (y + h - 2)) < 0.01 && r.col === md.ACCENT);
   check("no count: still stripes, many short dashes, no single fill", st.length > 20 && st.every((r) => r.w <= 4));
   const f = recCtx();
-  md.drawSettings(f, L, 1, { row: RI, vals: {}, job: { k: "px", st: "fail", fill: -1 } });
+  md.drawSettings(f, L, 1, { rows: V, row: "ART STYLE", vals: {}, job: { k: "px", st: "fail", fill: -1 } });
   check("failure: the danger colour plus words, no line", f.texts.some((t) => t.s === "PIXEL · DID NOT LOAD · ENTER RETRY" && t.col === md.DANGER) && !f.rects.some((r) => r.h === 2 && Math.abs(r.y - (y + h - 2)) < 0.01));
   check("failure on the selected row: the band selects red", f.rects.some((r) => r.col === "rgba(255,93,115,0.12)"));
   const p = recCtx();
-  md.drawSettings(p, md.layout(overlayBox("2d").w, overlayBox("2d").h), 1, { kicker: "PAUSED · ROOM 2", row: 0, vals: {}, r3d: true, job: { k: "3d", st: "preparing", phase: "shaders", done: 18, total: 31 } });
+  md.drawSettings(p, md.layout(overlayBox("2d").w, overlayBox("2d").h), 1, { kicker: "PAUSED · ROOM 2", rows: optRows(true), row: "MUSIC", vals: {}, r3d: true, job: { k: "3d", st: "preparing", phase: "shaders", done: 18, total: 31 } });
   check("PAUSE's OPTIONS view draws the same row", p.texts.some((t) => t.s === "REAL 3D · SHADERS 18 / 31"));
   const z = recCtx();
-  md.drawSettings(z, L, 1, { row: 0, vals: {}, px: true });
+  md.drawSettings(z, L, 1, { rows: V, row: "MUSIC", vals: {}, px: true });
   check("no job: the plain value and no line", z.texts.some((t) => t.s === "PIXEL") && !z.rects.some((r) => r.h === 2 && Math.abs(r.y - (y + h - 2)) < 0.01));
 }
 

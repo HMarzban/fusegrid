@@ -4,7 +4,7 @@
 // handler with the same arguments it did inside main.js.
 import { readFileSync } from "node:fs";
 import { mountPointer } from "../src/app/pointer.js";
-import { ITEMS, SCREEN } from "../src/app/menuapp.js";
+import { ITEMS, SCREEN, PAUSE_ITEMS, optRows } from "../src/app/menuapp.js";
 import { shellGeo } from "../src/app/fit.js";
 import { overlayBox, pauseGeom, pauseHit, touchLay } from "../src/render/scenes.js";
 import { controlsHit, dims } from "../src/render/shellview.js";
@@ -39,7 +39,8 @@ function mkHit(over = {}) {
 const SHELL = ["confirm", "back", "pauseBack", "playFromAttract", "skipShow", "move", "adjustPace", "recTab", "levelFocus"];
 function rig(o = {}) {
   const log = [], taps = [];
-  const app = { screen: SCREEN.MENU, pauseView: 0, pauseCursor: 0, cursor: 0, optRow: 0, gfxRow: 0, guideRow: 0, level: 1, heat: 1, pace: 0, scoreHeat: 0, pactUnlocked: true, resetArm: false, subT: 1.25, ctlT: 0.5, controls: { view: (t) => ({ view: t }) }, ...o.app };
+  const VIS = o.rows || optRows(false); // the app's visible SETTINGS rows (menuapp optRows), what settingsHit maps into
+  const app = { optRows: () => VIS, screen: SCREEN.MENU, pauseView: 0, pauseCursor: 0, cursor: 0, optRow: 0, gfxRow: 0, guideRow: 0, level: 1, heat: 1, pace: 0, scoreHeat: 0, pactUnlocked: true, resetArm: false, subT: 1.25, ctlT: 0.5, controls: { view: (t) => ({ view: t }) }, ...o.app };
   for (const m of SHELL) app[m] = (...a) => { log.push([m, ...a]); return true; };
   const input = { _intent: { fire: true }, keys: [], onUiKey(c) { this.keys.push(c); } };
   const world = { state: o.state || "PLAY" }, canvas = o.canvas || mkEl(600, 520), H = mkHit(o.over);
@@ -76,33 +77,33 @@ for (const st of ["PLAY", "WIN", "LOSE"]) {
 {
   const cv = mkEl(600, 520, { left: 0, top: 0, width: 300, height: 260 });
   const r = rig({ app: { screen: SCREEN.GAME }, state: "PAUSE", canvas: cv });
-  const R = pauseGeom(overlayBox("2d"), false).rows;
-  r.down(150, R[2].cy / 2);
+  const R = pauseGeom(overlayBox("2d"), false).rows, RS = PAUSE_ITEMS.indexOf("RESTART");
+  r.down(150, R[RS].cy / 2);
   const p = r.H.last("pauseHit");
-  check("PAUSE list: a scaled tap on row 2 sets pauseCursor 2 and confirms once, fire swallowed", r.app.pauseCursor === 2 && J(r.log) === J([["confirm"]]) && r.input._intent.fire === false, r.app.pauseCursor + " " + J(r.log));
-  check("PAUSE list: pauseHit(px, py, overlayBox(kind), touchLay(#c)) in buffer px", p.a[0] === 300 && p.a[1] === R[2].cy && p.a[2] === r.H.last("overlayBox").r && p.a[3] === false && r.H.last("overlayBox").a[0] === "2d" && r.H.last("touchLay").a[0] === cv, J(p.a));
+  check("PAUSE list: a scaled tap on RESTART's row sets pauseCursor to it and confirms once, fire swallowed", r.app.pauseCursor === RS && J(r.log) === J([["confirm"]]) && r.input._intent.fire === false, r.app.pauseCursor + " " + J(r.log));
+  check("PAUSE list: pauseHit(px, py, overlayBox(kind), touchLay(#c)) in buffer px", p.a[0] === 300 && p.a[1] === R[RS].cy && p.a[2] === r.H.last("overlayBox").r && p.a[3] === false && r.H.last("overlayBox").a[0] === "2d" && r.H.last("touchLay").a[0] === cv, J(p.a));
   const off = spot((x, y) => pauseHit(x, y, overlayBox("2d"), false) < 0);
   r.log.length = 0; r.input._intent.fire = true;
   r.down(off.x / 2, off.y / 2);
-  check("PAUSE list: a tap off the rows only swallows the fire", r.log.length === 0 && r.app.pauseCursor === 2 && r.input._intent.fire === false, J(r.log));
+  check("PAUSE list: a tap off the rows only swallows the fire", r.log.length === 0 && r.app.pauseCursor === RS && r.input._intent.fire === false, J(r.log));
   r.setKind("iso"); r.down(150, 2);
   check("PAUSE list: the look is read at the tap (overlayBox gets the kind set after mount)", r.H.last("overlayBox").a[0] === "iso");
 }
 {
   const R = pauseGeom(overlayBox("2d"), true).rows, cv = mkEl(600, 520, null, "p");
   const r = rig({ app: { screen: SCREEN.GAME }, state: "PAUSE", canvas: cv });
-  r.down(300, R[1].cy);
-  check("PAUSE list on a touch layout: touchLay(#c) is true and the touch pitch lands row 1", r.app.pauseCursor === 1 && r.H.last("pauseHit").a[3] === true, r.app.pauseCursor);
+  r.down(300, R[PAUSE_ITEMS.indexOf("SETTINGS")].cy);
+  check("PAUSE list on a touch layout: touchLay(#c) is true and the touch pitch lands the SETTINGS row", r.app.pauseCursor === PAUSE_ITEMS.indexOf("SETTINGS") && r.H.last("pauseHit").a[3] === true, r.app.pauseCursor);
 }
 
 // ---- PAUSE inline pages: OPTIONS (view 1) and GRAPHICS (view 2) ----
-for (const [pv, fn, other, field, row] of [[1, "settingsHit", "graphicsHit", "optRow", 6], [2, "graphicsHit", "settingsHit", "gfxRow", 3]]) {
-  const r = rig({ app: { screen: SCREEN.GAME, pauseView: pv }, state: "PAUSE" });
-  const F = (x, y) => REAL[fn](x, y, L0, 0, false), on = mid((x, y) => F(x, y) === row), plate = spot((x, y) => F(x, y) === -2), off = spot((x, y) => F(x, y) === -1);
+for (const [pv, fn, other, field, row, R] of [[1, "settingsHit", "graphicsHit", "optRow", 6, optRows(false)], [1, "settingsHit", "graphicsHit", "optRow", 11, optRows(true)], [2, "graphicsHit", "settingsHit", "gfxRow", 3, null]]) {
+  const r = rig({ app: { screen: SCREEN.GAME, pauseView: pv }, state: "PAUSE", rows: R });
+  const n4 = pv === 1 ? R : 0, F = (x, y) => REAL[fn](x, y, L0, n4, false), on = mid((x, y) => F(x, y) === row), plate = spot((x, y) => F(x, y) === -2), off = spot((x, y) => F(x, y) === -1);
   r.down(on.x, on.y);
   const c = r.H.last(fn), lc = r.H.last("layout");
-  check("PAUSE view " + pv + ": a tap on row " + row + " sets " + field + " and confirms", r.app[field] === row && J(r.log) === J([["confirm"]]) && r.input._intent.fire === false, r.app[field] + " " + J(r.log));
-  check("PAUSE view " + pv + ": " + fn + "(px, py, layout(B.w, B.h), 0, touchLay(#c)), never " + other, c.a[0] === on.x && c.a[1] === on.y && J(c.a[2]) === J(L0) && c.a[3] === 0 && c.a[4] === false && lc.a.length === 2 && lc.a[0] === 600 && lc.a[1] === 520 && r.H.of(other).length === 0, J(lc.a));
+  check("PAUSE view " + pv + (R ? " (" + R.length + " rows)" : "") + ": a tap on row " + row + " sets " + field + " and confirms", r.app[field] === row && J(r.log) === J([["confirm"]]) && r.input._intent.fire === false, r.app[field] + " " + J(r.log));
+  check("PAUSE view " + pv + ": " + fn + "(px, py, layout(B.w, B.h), " + (pv === 1 ? "app.optRows()" : "0") + ", touchLay(#c)), never " + other, c.a[0] === on.x && c.a[1] === on.y && J(c.a[2]) === J(L0) && c.a[3] === n4 && c.a[4] === false && lc.a.length === 2 && lc.a[0] === 600 && lc.a[1] === 520 && r.H.of(other).length === 0, J(lc.a));
   r.log.length = 0; r.down(plate.x, plate.y);
   check("PAUSE view " + pv + ": -2 (on the plate, off the rows) is inert", r.log.length === 0 && r.app[field] === row, J(r.log));
   r.down(off.x, off.y);
@@ -125,8 +126,8 @@ for (const [pv, fn, other, field, row] of [[1, "settingsHit", "graphicsHit", "op
   const box = { width: g.w, height: g.h, logo: g.logo, ownerDocument: sh.ownerDocument, rects: 0, getBoundingClientRect: () => { box.rects++; return sh.getBoundingClientRect(); } };
   const r = rig({ app: { screen: SCREEN.GAME }, state: "PAUSE", fit: { sh, box: () => box } });
   const R = pauseGeom(overlayBox("2d"), false).rows;
-  sh.fire("pointerdown", { clientX: 300, clientY: R[2].cy, currentTarget: sh });
-  check("PAUSE on #sh: maps through #c's rect and touchLay(#c), the box is never read", r.app.pauseCursor === 2 && box.rects === 0 && r.H.last("touchLay").a[0] === r.canvas, r.app.pauseCursor + " " + box.rects);
+  sh.fire("pointerdown", { clientX: 300, clientY: R[PAUSE_ITEMS.indexOf("RESTART")].cy, currentTarget: sh });
+  check("PAUSE on #sh: maps through #c's rect and touchLay(#c), the box is never read", r.app.pauseCursor === PAUSE_ITEMS.indexOf("RESTART") && box.rects === 0 && r.H.last("touchLay").a[0] === r.canvas, r.app.pauseCursor + " " + box.rects);
 }
 
 // ---- off GAME: every tap swallows the fire first ----
@@ -147,13 +148,13 @@ for (const [pv, fn, other, field, row] of [[1, "settingsHit", "graphicsHit", "op
 }
 
 // ---- MENU / OPTIONS / GRAPHICS / GUIDE: a row tap = Enter on it; off the rows a page backs out, MENU does nothing ----
-for (const [scr, fn, field, row, offAct] of [[SCREEN.MENU, "menuHit", "cursor", 4, null], [SCREEN.SETTINGS, "settingsHit", "optRow", 6, "back"], [SCREEN.GRAPHICS, "graphicsHit", "gfxRow", 2, "back"], [SCREEN.GUIDE, "guideHit", "guideRow", 3, "back"]]) {
-  const r = rig({ app: { screen: scr } }), F = (x, y) => REAL[fn](x, y, L0, ITEMS.length, false);
+for (const [scr, fn, field, row, offAct, R] of [[SCREEN.MENU, "menuHit", "cursor", 4, null], [SCREEN.SETTINGS, "settingsHit", "optRow", 6, "back", optRows(false)], [SCREEN.SETTINGS, "settingsHit", "optRow", 11, "back", optRows(true)], [SCREEN.GRAPHICS, "graphicsHit", "gfxRow", 2, "back"], [SCREEN.GUIDE, "guideHit", "guideRow", 3, "back"]]) {
+  const r = rig({ app: { screen: scr }, rows: R }), n4 = R || ITEMS.length, F = (x, y) => REAL[fn](x, y, L0, n4, false);
   const on = mid((x, y) => F(x, y) === row), off = spot((x, y) => F(x, y) === -1), plate = spot((x, y) => F(x, y) === -2);
   r.down(on.x, on.y);
   const c = r.H.last(fn), lc = r.H.last("layout");
-  check(fn + ": a tap on row " + row + " sets " + field + " and confirms, fire swallowed", r.app[field] === row && J(r.log) === J([["confirm"]]) && r.input._intent.fire === false, r.app[field] + " " + J(r.log));
-  check(fn + "(x, y, layout(cw, ch, lg), ITEMS.length, touchLay(cv)) with dims(cv, kind)", c.a[0] === on.x && c.a[1] === on.y && J(c.a[2]) === J(L0) && c.a[3] === ITEMS.length && c.a[4] === false && lc.a.length === 3 && lc.a[2] === undefined && r.H.last("dims").a[0] === r.canvas && r.H.last("dims").a[1] === "2d", J(lc.a));
+  check(fn + (R ? " (" + R.length + " rows)" : "") + ": a tap on row " + row + " sets " + field + " and confirms, fire swallowed", r.app[field] === row && J(r.log) === J([["confirm"]]) && r.input._intent.fire === false, r.app[field] + " " + J(r.log));
+  check(fn + "(x, y, layout(cw, ch, lg), " + (R ? "app.optRows()" : "ITEMS.length") + ", touchLay(cv)) with dims(cv, kind)", c.a[0] === on.x && c.a[1] === on.y && J(c.a[2]) === J(L0) && c.a[3] === n4 && c.a[4] === false && lc.a.length === 3 && lc.a[2] === undefined && r.H.last("dims").a[0] === r.canvas && r.H.last("dims").a[1] === "2d", J(lc.a));
   r.log.length = 0;
   r.down(off.x, off.y);
   check(fn + ": -1 " + (offAct ? "backs out" : "does nothing (a root list)"), J(r.log) === J(offAct ? [[offAct]] : []), J(r.log));

@@ -6,7 +6,7 @@
 import { createGame } from "../src/main.js";
 import "../src/core/board3.js";
 import { createPixelRenderer } from "../src/render/pixel/renderer.js";
-import { SCREEN, OPT_ROWS } from "../src/app/menuapp.js";
+import { SCREEN } from "../src/app/menuapp.js";
 import { drawShell, controlsHit, controlsGeo } from "../src/render/shellview.js";
 import { Input } from "../src/input.js";
 import { createWorld } from "../src/core/sim.js";
@@ -65,7 +65,7 @@ const draw = (g) => { const R = rec(); drawShell(R.c, g.app, g.world, null, "2d"
   const a = g.app;
   check("cold mount: the page stands in, loading", a.controls && a.controls.loading === true && a.controls.failed === false);
   check("cold mount: no idle warm in Node (no document), nothing is fetched yet", a.controls.loading === true);
-  a.screen = SCREEN.SETTINGS; a.optRow = OPT_ROWS.indexOf("CONTROLS");
+  a.screen = SCREEN.SETTINGS; a.optRow = a.optRows().indexOf("CONTROLS");
   check("the OPTIONS door still opens CONTROLS", a.confirm() === true && a.screen === SCREEN.CONTROLS && a.onControls());
   const t0 = draw(g);
   check("one frame of the plate: CONTROLS + LOADING, no rows", t0.includes("CONTROLS") && t0.includes("LOADING") && !t0.includes("BOMB"), t0.join("|"));
@@ -75,7 +75,7 @@ const draw = (g) => { const R = rec(); drawShell(R.c, g.app, g.world, null, "2d"
   check("keys on the LOADING page do nothing: no move, no tab, no capture", keys.every((r) => !r) && !a.capturing && a.controls.view(a.ctlT).row === row0 && a.ctlTab === "key" && a.screen === SCREEN.CONTROLS, keys.join());
   g.ctl.tap(null);
   check("a tap on the canvas is inert while loading", a.screen === SCREEN.CONTROLS);
-  check("the way out stays live: ESC backs out onto the door", a.key("Escape") === true && a.screen === SCREEN.SETTINGS && a.optRow === OPT_ROWS.indexOf("CONTROLS"));
+  check("the way out stays live: ESC backs out onto the door", a.key("Escape") === true && a.screen === SCREEN.SETTINGS && a.optRow === a.optRows().indexOf("CONTROLS") && a.optLabel() === "CONTROLS");
   a.lastDev = "pad";
   a.confirm();
   check("re-opened by a pad player: still loading, the stand-in reads the pad tab", a.screen === SCREEN.CONTROLS && a.controls.loading && a.ctlTab === "pad");

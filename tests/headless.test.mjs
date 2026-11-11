@@ -4,7 +4,7 @@ import {fileURLToPath} from "node:url";
 import {createGame} from "../src/main.js";
 import {createRenderer} from "../src/render/renderer.js";
 import {createWorld, loadLevel} from "../src/core/sim.js";
-import {SCREEN, IDLE_T, ITEMS, PAUSE_ITEMS, OPT_ROWS} from "../src/app/menuapp.js";
+import {SCREEN, IDLE_T, ITEMS, PAUSE_ITEMS, OPT_ROWS, optRows} from "../src/app/menuapp.js";
 import {SHOW_DUR} from "../src/app/intro.js";
 import {encodeChallenge} from "../src/app/code.js";
 import {CFG, BIOMES, biomeOf} from "../src/core/config.js";
@@ -22,6 +22,8 @@ import { createLocalPair } from "../src/net/localpair.js";
 const mdScoreTabs=(L,t)=>{ for(let y=8;y<200;y++){ const xs=[]; for(let x=0;x<600;x++) if(scoresHit(x,y,L,t)>=0) xs.push([x,scoresHit(x,y,L,t)]); if(xs.length) return {y:y+12,x:(i)=>{const r=xs.filter(p=>p[1]===i).map(p=>p[0]);return (r[0]+r[r.length-1])/2;}}; } return null; };
 // MENU taps land on the painted row (an off-row MENU tap is a no-op since the menu redesign)
 const menuTap=(i,k=1)=>({clientX:300/k,clientY:menuGeom(menuLayout(600,520),8).rows[i].cy/k});
+/* a SETTINGS row's centre by LABEL in the ten rows CLASSIC 2D shows (v202 Task 2.4): page and PAUSE view 1 share the 600x520 box */
+const OPT10=optRows(false), optG=()=>settingsGeom(menuLayout(600,520),false,OPT10), optY=(lab,k=1)=>(optG().y0+(OPT10.indexOf(lab)+0.5)*optG().rowH)/k;
 
 const ROOT=dirname(fileURLToPath(import.meta.url))+"/..";
 
@@ -227,7 +229,7 @@ function mkCanvas(){
   tick(10);
   check("C1 push is not re-fired by rising edge next frame",
     g.app.screen===SCREEN.SETTINGS&&g.app.optRow===0);
-  g.app.optRow=OPT_ROWS.indexOf("ART STYLE"); g.app.confirm();              // RENDER row
+  g.app.optRow=g.app.optRows().indexOf("ART STYLE"); g.app.confirm();              // RENDER row
   check("C1 RENDER row toggles exactly once",
     g.app.pixel===true&&g.app.render3d===false&&g.app.settings.px===1&&g.app.settings.r3d===0,
     "pixel="+g.app.pixel+" render3d="+g.app.render3d);
@@ -307,14 +309,13 @@ function mkCanvas(){
   check("tap glue: OPTIONS push lands on SETTINGS row 0",
     g.app.screen===SCREEN.SETTINGS&&g.app.optRow===0,
     g.app.screen+"/"+g.app.optRow);
-  const SG=settingsGeom(menuLayout(600,520));         // ATLAS: the hugging plate moved row 0
-  cv.fire("pointerdown",{clientX:300,clientY:SG.y0+0.5*SG.rowH});   // row 0 MUSIC band
+  cv.fire("pointerdown",{clientX:300,clientY:optY("MUSIC")});   // the MUSIC band (row 0)
   check("tap glue: row 0 tap sets optRow and cycles MUSIC",
-    g.app.optRow===0&&g.app.settings.mus===0,
+    g.app.optRow===0&&g.app.optLabel()==="MUSIC"&&g.app.settings.mus===0,
     "optRow="+g.app.optRow+" mus="+g.app.settings.mus);
-  cv.fire("pointerdown",{clientX:300,clientY:316});   // row 6 SCREEN SHAKE band
-  check("tap glue: row 6 tap sets optRow and toggles the knob",
-    g.app.optRow===6&&g.app.settings.shk===0,
+  cv.fire("pointerdown",{clientX:300,clientY:optY("SCREEN SHAKE")});   // the SCREEN SHAKE band
+  check("tap glue: a tap on the SCREEN SHAKE row sets optRow to it and toggles the knob",
+    g.app.optRow===OPT10.indexOf("SCREEN SHAKE")&&g.app.optLabel()==="SCREEN SHAKE"&&g.app.settings.shk===0,
     "optRow="+g.app.optRow+" shk="+g.app.settings.shk);
   cv.fire("pointerdown",{clientX:10,clientY:200});    // outside the plate (x<ix)
   check("tap glue: tap outside the plate backs out to MENU",
@@ -329,9 +330,9 @@ function mkCanvas(){
   check("PAUSE tap glue setup: pauseView 1 at row 0",
     g.app.pauseView===1&&g.app.optRow===0,
     g.app.pauseView+"/"+g.app.optRow);
-  cv.fire("pointerdown",{clientX:300,clientY:316});   // row 6 SCREEN SHAKE band
-  check("PAUSE tap glue: row 6 tap toggles the same knob code",
-    g.app.optRow===6&&g.app.settings.shk===0,
+  cv.fire("pointerdown",{clientX:300,clientY:optY("SCREEN SHAKE")});   // the SCREEN SHAKE band
+  check("PAUSE tap glue: a SCREEN SHAKE row tap toggles the same knob code",
+    g.app.optRow===OPT10.indexOf("SCREEN SHAKE")&&g.app.optLabel()==="SCREEN SHAKE"&&g.app.settings.shk===0,
     "optRow="+g.app.optRow+" shk="+g.app.settings.shk);
   cv.fire("pointerdown",{clientX:10,clientY:200});    // outside the plate
   check("PAUSE tap glue: tap outside the plate backs to the LIST, not play",
@@ -345,22 +346,22 @@ function mkCanvas(){
   cv.el.getBoundingClientRect=()=>({left:0,top:0,width:300,height:260});
   const g=createGame(cv.el,{autoplay:true,seed:73});
   g.input.onPause(); g.loop(16);
-  cv.fire("pointerdown",{clientX:150,clientY:pauseGeom(overlayBox("2d")).rows[2].cy/2}); // OPTIONS row (keyboard layout: no data-lay in Node)
+  cv.fire("pointerdown",{clientX:150,clientY:pauseGeom(overlayBox("2d")).rows[PAUSE_ITEMS.indexOf("SETTINGS")].cy/2}); // the SETTINGS row (keyboard layout: no data-lay in Node)
   check("D1 scaled tap: pause OPTIONS row opens the inline page",
-    g.app.pauseCursor===2&&g.app.pauseView===1,
+    g.app.pauseCursor===PAUSE_ITEMS.indexOf("SETTINGS")&&g.app.pauseView===1,
     g.app.pauseCursor+"/"+g.app.pauseView);
-  cv.fire("pointerdown",{clientX:150,clientY:158});   // row 6 (buf 300,316)
-  check("D1 scaled tap: pause OPTIONS row 6 toggles SCREEN SHAKE",
-    g.app.pauseView===1&&g.app.optRow===6&&g.app.settings.shk===0,
+  cv.fire("pointerdown",{clientX:150,clientY:optY("SCREEN SHAKE",2)});   // the SCREEN SHAKE row, client px = buffer / 2
+  check("D1 scaled tap: pause OPTIONS SCREEN SHAKE row toggles SCREEN SHAKE",
+    g.app.pauseView===1&&g.app.optLabel()==="SCREEN SHAKE"&&g.app.settings.shk===0,
     g.app.pauseView+"/"+g.app.optRow+"/"+g.app.settings.shk);
   const cs=mkCamCanvas(600,520);
   cs.el.getBoundingClientRect=()=>({left:0,top:0,width:300,height:260});
   const h=createGame(cs.el,{seed:74});
   h.app.cabinetSeen=true; h.app.skip(); h.app.cursor=ITEMS.indexOf("SETTINGS");
   cs.fire("pointerdown",menuTap(ITEMS.indexOf("SETTINGS"),2));
-  cs.fire("pointerdown",{clientX:150,clientY:158});   // row 6 (buf 300,316)
-  check("D1 scaled tap: SETTINGS row 6 toggles SCREEN SHAKE",
-    h.app.screen===SCREEN.SETTINGS&&h.app.optRow===6&&h.app.settings.shk===0,
+  cs.fire("pointerdown",{clientX:150,clientY:optY("SCREEN SHAKE",2)});   // the SCREEN SHAKE row, client px = buffer / 2
+  check("D1 scaled tap: the SETTINGS SCREEN SHAKE row toggles SCREEN SHAKE",
+    h.app.screen===SCREEN.SETTINGS&&h.app.optLabel()==="SCREEN SHAKE"&&h.app.settings.shk===0,
     h.app.screen+"/"+h.app.optRow+"/"+h.app.settings.shk);
 }
 // D2: MENU taps land on the TAPPED row, not the cursor. Same scaled canvas;
@@ -504,7 +505,7 @@ function mkCanvas(){
   check("I1 OPTIONS confirm -> uiSel + SETTINGS",
     plays.join()==="uiSel"&&g.app.screen===SCREEN.SETTINGS,
     JSON.stringify(plays));
-  g.app.optRow=OPT_ROWS.indexOf("SCREEN SHAKE"); plays.length=0;
+  g.app.optRow=g.app.optRows().indexOf("SCREEN SHAKE"); plays.length=0;
   g.app.confirm();                              // SCREEN SHAKE knob
   check("I1 SETTINGS knob confirm -> uiTog (never uiSel)",
     plays.join()==="uiTog"&&g.app.settings.shk===0,JSON.stringify(plays));
@@ -1637,7 +1638,7 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
       const g=createGame(null,{autoplay:true});
       g.input.onPause();
       check("P1 P pauses inside GAME and resets the list",
-        g.world.state==="PAUSE"&&g.app.pauseCursor===0&&g.app.pauseView===0,
+        g.world.state==="PAUSE"&&g.app.pauseCursor===PAUSE_ITEMS.indexOf("RESUME")&&g.app.pauseView===0,
         g.world.state+"/"+g.app.pauseCursor+"/"+g.app.pauseView);
       check("P1 the shell stays GAME through PAUSE (music/HUD/touch gates)",
         g.app.screen===SCREEN.GAME,String(g.app.screen));
@@ -1687,7 +1688,7 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
         g.app.pauseView===1&&g.app.screen===SCREEN.GAME
         &&g.world.state==="PAUSE",
         g.app.pauseView+"/"+g.app.screen+"/"+g.world.state);
-      g.app.optRow=OPT_ROWS.indexOf("SCREEN SHAKE"); g.app.confirm();
+      g.app.optRow=g.app.optRows().indexOf("SCREEN SHAKE"); g.app.confirm();
       check("P1 the paused page drives the SAME knob code",
         g.app.settings.shk===0,String(g.app.settings.shk));
       g.input.onPause();
@@ -1701,11 +1702,11 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
       const g=createGame(null,{autoplay:true});
       g.input.onPause(); g.loop(16);
       g.input._onKey({code:"ArrowDown",preventDefault(){}});
-      check("P1 ArrowDown taps down the pause list",g.app.pauseCursor===1,
+      check("P1 ArrowDown taps down the pause list",g.app.pauseCursor===PAUSE_ITEMS.indexOf("SETTINGS"),
         String(g.app.pauseCursor));
-      g.app.pauseCursor=0;
+      g.app.pauseCursor=PAUSE_ITEMS.indexOf("RESUME");
       g.input._onKey({code:"ArrowUp",preventDefault(){}});
-      check("P1 ArrowUp wraps to the last row",g.app.pauseCursor===3,
+      check("P1 ArrowUp wraps to the last row",g.app.pauseCursor===PAUSE_ITEMS.length-1&&PAUSE_ITEMS[g.app.pauseCursor]==="QUIT TO MENU",
         String(g.app.pauseCursor));
       g.app.pauseView=1;
       g.input.onUiKey("KeyM");
@@ -1965,12 +1966,12 @@ const camTriple=(calls,cam,cw,ch)=>calls.some((c,i,a)=>
   }
   check("O2 body[data-lay]=d title paints PRESS ANY KEY OR BUTTON",shot(intro(0,1),lay("d")).texts.includes("PRESS ANY KEY OR BUTTON"));
   const L=layout(600,520);
-  const menu=(fromShow)=>shot({screen:SCREEN.MENU,fromShow,subT:0,cursor:0,heat:0,dailyTag:""},lay("d"));
+  const menu=(fromShow)=>shot({screen:SCREEN.MENU,fromShow,subT:0,cursor:0,heat:0,dailyTag:"",optRows:()=>optRows(false)},lay("d")); // optRows: the app's one SETTINGS-rows predicate (the MENU pane counts them)
   const ns=menu(true), sk=menu(false);
   check("O2 the first MENU frame after a natural end: 0.12 dim, no fade, logo at logoScale*1.35",
     ns.fills[0]==="rgba(7,10,18,0.12)"&&ns.fills[1]!=="rgba(7,10,18,1)"&&ns.scales.includes(L.logoScale*1.35),
     ns.fills.slice(0,2)+" / "+ns.scales.slice(0,3));
-  const late=shot({screen:SCREEN.MENU,fromShow:true,subT:0.7,cursor:0,heat:0,dailyTag:""},lay("d"));
+  const late=shot({screen:SCREEN.MENU,fromShow:true,subT:0.7,cursor:0,heat:0,dailyTag:"",optRows:()=>optRows(false)},lay("d"));
   check("eye-check: after a natural end the blast reads first: no rows on the downbeat frame, PLAY once the 2S hold is over",
     !ns.texts.includes("PLAY")&&late.texts.includes("PLAY")&&sk.texts.includes("PLAY"), ns.texts.join("|"));
   check("O2 the first MENU frame after a skip: 0.62 dim, then the opaque fade, logo at logoScale",

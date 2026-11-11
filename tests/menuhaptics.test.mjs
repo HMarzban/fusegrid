@@ -180,23 +180,24 @@ const at = (g, label) => { g.app.cursor = ITEMS.indexOf(label); g.tick(2); };
   at(g, "SETTINGS");
   let f = feel(g, () => tap(g, "S"));
   check("MENU -> OPTIONS: enter", g.app.screen === SCREEN.SETTINGS && f === "enter", f);
-  g.app.optRow = OPT_ROWS.indexOf("GRAPHICS"); g.tick(2);
+  g.app.optRow = g.app.optRows().indexOf("GRAPHICS"); g.tick(2);
   f = feel(g, () => tap(g, "S"));
   check("OPTIONS -> GRAPHICS: enter", g.app.screen === SCREEN.GRAPHICS && f === "enter", f);
   f = feel(g, () => tap(g, "E"));
   check("GRAPHICS -> OPTIONS: back", g.app.screen === SCREEN.SETTINGS && f === "back", f);
-  g.app.optRow = OPT_ROWS.indexOf("REDUCE FLASH"); g.tick(2);
+  g.app.optRow = g.app.optRows().indexOf("REDUCE FLASH"); g.tick(2);
   f = feel(g, () => tap(g, "S"));
   check("Enter that writes a value on the same page: confirm", g.app.screen === SCREEN.SETTINGS && f === "confirm", f);
-  g.app.optRow = OPT_ROWS.indexOf("MUSIC"); g.tick(10);
+  g.app.optRow = g.app.optRows().indexOf("MUSIC"); g.tick(10);
   f = feel(g, () => tap(g, "dL"));
   check("←→ that writes an OPTIONS value: confirm", f === "confirm", f);
   f = feel(g, () => tap(g, "dD"));
   check("a real cursor change: move", g.app.optRow === 1 && f === "move", f);
-  g.app.optRow = OPT_ROWS.indexOf("CAMERA"); g.tick(10);
+  g.app.optRow = OPT_ROWS.indexOf("CAMERA"); g.tick(10); // CAMERA's index in all twelve: outside REAL 3D it is SCREEN SHAKE's row (v202 Task 2.4)
+  const shk0 = g.app.settings.shk;
   f = feel(g, () => tap(g, "S"));
-  check("a dimmed 3D-only OPTIONS row (no reason painted): nothing", g.app.screen === SCREEN.SETTINGS && f === "", f);
-  g.app.optRow = OPT_ROWS.indexOf("SCREEN SHAKE"); g.app.settings.shk = 1; g.tick(10);
+  check("a 3D-only OPTIONS row is not a row in CLASSIC 2D: SOUTH at its old index acts on the row drawn there (SCREEN SHAKE: confirm), cam untouched", !g.app.optRows().includes("CAMERA") && g.app.optLabel() === "SCREEN SHAKE" && g.app.settings.shk !== shk0 && g.app.settings.cam === 0 && g.app.screen === SCREEN.SETTINGS && f === "confirm", f);
+  g.app.optRow = g.app.optRows().indexOf("SCREEN SHAKE"); g.app.settings.shk = 1; g.tick(10);
   f = feel(g, () => tap(g, "dL"));
   const f2 = feel(g, () => tap(g, "dL"));
   check("a clamped edge is silent", f === "confirm" && f2 === "", f + "|" + f2);
@@ -275,19 +276,19 @@ const at = (g, label) => { g.app.cursor = ITEMS.indexOf(label); g.tick(2); };
 // ---- deny, and refusals that show nothing ----
 {
   const g = menu(); at(g, "SETTINGS"); tap(g, "S");
-  g.app.optRow = OPT_ROWS.indexOf("ANALYTICS"); g.tick(2);
+  g.app.optRow = g.app.optRows().indexOf("ANALYTICS"); g.tick(2);
   let f = feel(g, () => tap(g, "S"));
   check("ANALYTICS on a pad before the card is answered: deny", g.app.anaNote !== "" && f === "deny", f);
   f = feel(g, () => tap(g, "dR"));
   check("and ←→ there: deny", g.app.analytics === false && f === "deny", f);
-  g.app.optRow = OPT_ROWS.indexOf("GRAPHICS"); g.tick(2); tap(g, "S");
+  g.app.optRow = g.app.optRows().indexOf("GRAPHICS"); g.tick(2); tap(g, "S");
   g.app.gfxRow = GFX_KEYS.indexOf("res"); g.tick(2);
   f = feel(g, () => tap(g, "S"));
   check("a locked GRAPHICS row in CLASSIC: deny", g.app.gfxView().rows[g.app.gfxRow].locked && f === "deny", f);
 }
 {
   const g = menu(); at(g, "SETTINGS"); tap(g, "S");
-  g.app.optRow = OPT_ROWS.indexOf("CONTROLS"); g.tick(2);
+  g.app.optRow = g.app.optRows().indexOf("CONTROLS"); g.tick(2);
   let f = feel(g, () => tap(g, "S"));
   check("OPTIONS -> CONTROLS: enter", g.app.screen === SCREEN.CONTROLS && f === "enter", f);
   g.app.controls.tab("key"); g.app.controls.pick(5); g.tick(2);

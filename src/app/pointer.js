@@ -26,7 +26,7 @@ export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: {
       const B = overlayBox(kind());
       if (app.pauseView === 3) return void ctl().tap(controlsHit(app.controls.view(app.ctlT), px, py, canvas, kind(), true));
       if (app.pauseView) {
-        const row = (app.pauseView === 2 ? graphicsHit : settingsHit)(px, py, menuLayout(B.w, B.h), 0, touchLay(canvas));
+        const row = app.pauseView === 2 ? graphicsHit(px, py, menuLayout(B.w, B.h), 0, touchLay(canvas)) : settingsHit(px, py, menuLayout(B.w, B.h), app.optRows(), touchLay(canvas)); // an index into the visible rows, what optRow is (R11)
         if (row < 0) { if (row === -1) app.pauseBack(); } // -2: on the plate, off the rows (inert)
         else {
           app[app.pauseView === 2 ? "gfxRow" : "optRow"] = row;
@@ -61,7 +61,7 @@ export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: {
         (ev.clientX - r.left) * k,
         (ev.clientY - r.top) * k,
         menuLayout(cw, ch, lg),
-        ITEMS.length,
+        app.screen === SCREEN.SETTINGS ? app.optRows() : ITEMS.length, // SETTINGS maps into the visible rows (R11)
         touchLay(cv),
       );
       if (row < 0) return menu || row < -1 ? undefined : app.back(); // -2: on the plate, off the rows (inert)

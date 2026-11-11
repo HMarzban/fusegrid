@@ -43,6 +43,7 @@ import {CFG, T, BIOMES} from "../src/core/config.js";
 import {PACT} from "../src/core/pact.js";
 import {spawnEnemy, POWER} from "../src/core/entities.js";
 import {createGame} from "../src/main.js";
+import {SCREEN, PAUSE_ITEMS} from "../src/app/menuapp.js";
 import * as THREE from "../vendor/three.module.js";
 import {readdirSync, readFileSync} from "node:fs";
 import "../src/render/r3d/scene3d.js";
@@ -532,17 +533,18 @@ function scan(grid){
       .find(o=>o[1][0]===PAUSE_ROWS[i]);
     return op&&op[1][2];
   };
-  const y0=rowY(0);
+  const RE=PAUSE_ITEMS.indexOf("RESUME"), QT=PAUSE_ITEMS.indexOf("QUIT TO MENU");
+  const y0=rowY(RE);
   check("iso pause overlay: RESUME draws at pauseGeom(overlayBox('iso')) row-0 y "
       +"(not the CFG box's)",
-    Math.abs(y0-pauseGeom(B).rows[0].cy)<0.01, "y0="+y0+" row0="+pauseGeom(B).rows[0].cy);
+    RE===0&&PAUSE_ROWS[RE]==="RESUME"&&Math.abs(y0-pauseGeom(B).rows[RE].cy)<0.01, "y0="+y0+" row0="+pauseGeom(B).rows[RE].cy);
   check("iso pause overlay: drawn row-0 y maps back to pauseHit row 0 "
       +"against overlayBox('iso')",
-    pauseHit(B.cx, y0, B)===0, "y0="+y0);
-  const y3=rowY(3);
-  check("iso pause overlay: drawn row-3 (QUIT TO MENU) y maps back to "
-      +"pauseHit row 3, never row 0",
-    pauseHit(B.cx, y3, B)===3, "y3="+y3);
+    pauseHit(B.cx, y0, B)===RE, "y0="+y0);
+  const y3=rowY(QT);
+  check("iso pause overlay: drawn QUIT TO MENU y maps back to "
+      +"pauseHit on its row ("+QT+"), never row 0",
+    PAUSE_ROWS[QT]==="QUIT TO MENU"&&pauseHit(B.cx, y3, B)===QT, "y3="+y3);
 }
 
 // ---- headless createGame surface: render3d seam + live toggle swap ----
@@ -568,7 +570,7 @@ function mkCanvas(){
   g.input._onKey({code:"KeyR"});
   check("KeyR inside GAME with 3D rig does not throw (resetOrbit route)",
     g.world.state==="PLAY");
-  g.app.screen=10; g.app.optRow=3; g.app.confirm();  // OPTIONS RENDER row -> 2D
+  g.app.screen=SCREEN.SETTINGS; g.app.optRow=g.app.optRows().indexOf("ART STYLE"); g.app.confirm();  // SETTINGS ART STYLE row -> 2D
   t+=16; g.loop(t);
   check("RENDER toggle swaps to classic surface (no overlay key)",
     !("overlay"in g.renderer), String(Object.keys(g.renderer)));
@@ -682,7 +684,7 @@ function mkCanvas(){
       const {cv,g}=boot(86);
       cv.out();
       g.input.onPause(); g.loop(1016);
-      g.app.pauseCursor=1; g.app.confirm();          // RESTART
+      g.app.pauseCursor=PAUSE_ITEMS.indexOf("RESTART"); g.app.confirm();
       check("§CAM pause RESTART restores the selected preset",
         g.rig.dist===1503, String(g.rig.dist));
      }
@@ -690,7 +692,7 @@ function mkCanvas(){
       const {cv,g}=boot(87);
       cv.out();
       g.input.onPause(); g.loop(1016);
-      g.app.pauseCursor=0; g.app.confirm();          // RESUME
+      g.app.pauseCursor=PAUSE_ITEMS.indexOf("RESUME"); g.app.confirm();
       g.loop(1032); g.loop(1048);
       check("§CAM PAUSE->PLAY resume keeps the dolly (the room continues)",
         g.world.state==="PLAY"&&g.rig.dist===2529,
@@ -731,7 +733,7 @@ function mkCanvas(){
       const {cv,g}=boot(91);
       cv.out();
       g.input.onPause(); g.loop(1016);
-      g.app.pauseCursor=1; g.app.confirm();          // RESTART
+      g.app.pauseCursor=PAUSE_ITEMS.indexOf("RESTART"); g.app.confirm();
       g.loop(1032);
       check("§CAM pause RESTART: first rendered frame sits at the preset",
         g.world.state==="PLAY"&&Math.abs(camD(g)-1503)<1e-6, "d="+camD(g));

@@ -1035,10 +1035,11 @@ function menuPane(c, P, row, I, kind, t) {
     }
     paneLine(c, P, P.y + 116, "CLASSIC 2D → PIXEL → REAL 3D, YOUR PICK", TEXT);
     paneLine(c, P, P.y + 140, "SOUND " + (I.snd ? "ON" : "OFF") + " · MUSIC " + (I.mus | 0) + " · SFX " + (I.sfx | 0));
-    paneLine(c, P, P.y + 156, "CAMERA · BRIGHTNESS · SHAKE · FLASH");
+    const O = I.opt || []; // the SETTINGS rows the page will show (the app's optRows): CAMERA and BRIGHTNESS only in REAL 3D
+    paneLine(c, P, P.y + 156, (O.includes("CAMERA") ? "CAMERA · BRIGHTNESS · " : "") + "SHAKE · FLASH");
     paneLine(c, P, P.y + 172, "GRAPHICS " + (I.gfx || "AUTO") + " · FRAME RATE · RESOLUTION");
     if (P.h >= 216) paneLine(c, P, P.y + 188, I.pad ? "CONTROLS · CONTROLLER READY" : "CONTROLS · KEYS + CONTROLLER");
-    paneLine(c, P, P.y + P.h - 14, hints().ok + " OPENS ALL TWELVE ROWS", MUTED);
+    paneLine(c, P, P.y + P.h - 14, hints().ok + " OPENS ALL " + (({ 10: "TEN", 12: "TWELVE" })[O.length] || O.length) + " ROWS", MUTED);
   } else if (lab === "GUIDE") {
     paneHead(c, P, "FIELD GUIDE", POWER.length + " " + LABEL.POWER_UPS + " · " + FOES.length + " FOES");
     const sw = (P.w - 20) / 6;
@@ -1986,64 +1987,49 @@ export function drawTrophies(c, L, t, rows, touch, tabs) {
   foot(c, S, tapMode(touch) ? BACK_TAP : TAB_LEAD + hints().ok + " / " + hints().back + " BACK"); // no body: the tab row always has the focus; back is MENU
 }
 
-/* SETTINGS (SCREEN.SETTINGS, spec §2): twelve rows on LEVEL SELECT's adjust model — eight live
-   knobs, ANALYTICS (the GA consent, its own store), the GRAPHICS and CONTROLS
-   doors and RESET DEFAULTS.
-   ui = {row, vals, r3d, px, togT, rev, door, ctlDoor, ana, anaNote, touch}; vals is the nb.settings.v1 blob,
+/* SETTINGS (SCREEN.SETTINGS, spec §2; design record §4): the rows on LEVEL SELECT's adjust model — the live knobs,
+   ANALYTICS (the GA consent, its own store), the GRAPHICS and CONTROLS doors and RESET DEFAULTS.
+   ui = {rows, row, vals, r3d, px, togT, rev, door, ctlDoor, ana, anaNote, touch}; rows is the visible list the app hands
+   in (menuapp optRows: CAMERA and BRIGHTNESS only while ART STYLE is REAL 3D) and row the focused row's LABEL, never an
+   index (this file cannot import src/app); vals is the nb.settings.v1 blob,
    rev is the build tag shellview derives from CACHE_NAME, door is the
    GRAPHICS preset value (`AUTO ›`) the app derives, ctlDoor is the last-used
    device (`KEYBOARD ›`), padVib is the VIBRATION level while a pad with an
    actuator is connected (the door reads it where it fits) and anaNote is why the ANALYTICS row did nothing on a
-   pad, shown as that row's value. Rows NEVER hide or
-   reflow — the two 3D-only rows dim to 0.45 and read an em dash in CLASSIC 2D
-   and PIXEL, so the list is the same twelve lines in every kind. CAM_NAME
+   pad, shown as that row's value. CAM_NAME
    mirrors camrig.js's CAM_PRESET order; this file must not import from
    src/render/three (the 2D path never loads three), so the names are
    duplicated here the way PLAQUE_NAME is. */
 const CAM_NAME = ["STANDARD", "WIDE", "FAR"];
-const OPT_LABEL = [
-  "MUSIC",
-  "SFX",
-  "SOUND",
-  LABEL.ART_STYLE,
-  "CAMERA",
-  "BRIGHTNESS",
-  "SCREEN SHAKE",
-  "REDUCE FLASH",
-  "ANALYTICS",
-  "GRAPHICS",
-  "CONTROLS",
-  "RESET DEFAULTS",
-];
-export const OPT_N = OPT_LABEL.length; // pinned equal to menuapp OPT_ROWS.length
 /* OPTIONS and GRAPHICS share one foot; a touch layout has none of those keys,
    so it names the tap model both pages use (row = Enter, off the plate = back). */
 export const FOOT_KEYS = "↑↓ ROW · ←→ ADJUST · ENTER CYCLE · ESC BACK", FOOT_TAP = "TAP A ROW TO CHANGE IT · TAP OUTSIDE TO GO BACK";
 const footKeys = () => "↑↓ ROW · ←→ ADJUST · " + hints().ok + " CYCLE · " + hints().back + " BACK";
-const OPT_3D = OPT_LABEL.map((s) => s === "CAMERA" || s === "BRIGHTNESS");
-export function settingsRows(vals, r3d, px, door, ana, ctlDoor) {
+/* Each row's value by its label, aligned with rows (the visible list); a label it does not know reads empty. */
+export function settingsRows(rows, vals, r3d, px, door, ana, ctlDoor) {
   const v = vals || {};
   const on = (b) => (b ? "ON" : "OFF");
-  return [
-    String(v.mus | 0),
-    String(v.sfx | 0),
-    on(v.snd),
-    r3d ? "REAL 3D" : px ? "PIXEL" : "CLASSIC 2D",
-    CAM_NAME[Math.min(2, Math.max(0, v.cam | 0))],
-    String(v.bri | 0),
-    on(v.shk),
-    on(v.flx),
-    on(ana),
-    door || "›",
-    ctlDoor || "›",
-    "",
-  ];
+  const by = {
+    MUSIC: String(v.mus | 0),
+    SFX: String(v.sfx | 0),
+    SOUND: on(v.snd),
+    [LABEL.ART_STYLE]: r3d ? "REAL 3D" : px ? "PIXEL" : "CLASSIC 2D",
+    CAMERA: CAM_NAME[Math.min(2, Math.max(0, v.cam | 0))],
+    BRIGHTNESS: String(v.bri | 0),
+    "SCREEN SHAKE": on(v.shk),
+    "REDUCE FLASH": on(v.flx),
+    ANALYTICS: on(ana),
+    GRAPHICS: door || "›",
+    CONTROLS: ctlDoor || "›",
+    "RESET DEFAULTS": "",
+  };
+  return (rows || []).map((r) => by[r] || "");
 }
 /* One source for the layout budget (a hugging plate, default pitch 28 keyboard
-   / 41 touch; OPTIONS is 27 keyboard and, touch, 37 where its twelve rows fit
-   the band, else 34 so they fit the 520 band unscaled): the page draws it and settingsHit / graphicsHit read it, so a tap
+   / 41 touch; SETTINGS is 27 keyboard and, touch, 37 where its rows fit
+   the band, else 34 so twelve fit the 520 band unscaled): the page draws it and settingsHit / graphicsHit read it, so a tap
    can never land on a row the plate did not paint. note = the line under the
-   rows (GRAPHICS' two-line help). */
+   rows (GRAPHICS' two-line help). SETTINGS sizes to the visible list it is handed. */
 function rowsGeom(L, n, note, touch, tp, kp) {
   const T = !!touch,
     pitch = T ? tp || 41 : kp || 28,
@@ -2051,8 +2037,10 @@ function rowsGeom(L, n, note, touch, tp, kp) {
     rowH = pitch * S.f;
   return { S, y0: S.by, rowH, noteY: S.by + n * rowH + 6, n };
 }
-const optTouchPitch = (L) => { const B = bandOf(L, true); return OPT_N * 37 <= B.bot - B.top - CHROME ? 37 : 34; };
-export const settingsGeom = (L, touch) => rowsGeom(L, OPT_N, 0, touch, optTouchPitch(L), 27);
+const rowsN = (rows) => (rows && rows.length) | 0;
+const optTouchPitch = (L, n) => { const B = bandOf(L, true); return n * 37 <= B.bot - B.top - CHROME ? 37 : 34; };
+/** SETTINGS' geometry for the visible rows (the app's optRows): the page draws it, settingsHit reads it. */
+export const settingsGeom = (L, touch, rows) => rowsGeom(L, rowsN(rows), 0, touch, optTouchPitch(L, rowsN(rows)), 27);
 export const graphicsGeom = (L, touch) => rowsGeom(L, GFX_N, 32, touch);
 /* Row index under a tap; -2 = on the plate but off the rows (inert), -1 =
    off the plate (main backs out). Bands are contiguous: +1e-9 keeps a
@@ -2065,7 +2053,8 @@ function rowsHit(x, y, g) {
   }
   return x >= S.x && x <= S.x + S.w && y >= S.y && y <= S.y + S.h ? -2 : -1;
 }
-export const settingsHit = (x, y, L, _n, touch) => rowsHit(x, y, settingsGeom(L, touch));
+/** A tap's index into rows (the visible list optRow indexes, R11); -2 inert on the plate, -1 off it. */
+export const settingsHit = (x, y, L, rows, touch) => rowsHit(x, y, settingsGeom(L, touch, rows));
 export const graphicsHit = (x, y, L, _n, touch) => rowsHit(x, y, graphicsGeom(L, touch));
 /* RENDER row job states (v202 delivery, design 2026-11-06 "What the player
    sees"). The value slot carries the job of the look being prepared and a 2 px
@@ -2132,14 +2121,14 @@ function jobLine(c, x, y, w, f) {
   if (f < 0) for (let xx = x; xx < x + w; xx += 8) c.fillRect(xx, y, Math.min(4, x + w - xx), 2);
   else if (f > 0) c.fillRect(x, y, Math.round(w * Math.min(1, f)), 2);
 }
-const RENDER_ROW = OPT_LABEL.indexOf(LABEL.ART_STYLE);
 export function drawSettings(c, L, t, ui) {
   const u = ui || {};
-  const cur = u.row | 0,
-    r3d = !!u.r3d;
-  const vals = settingsRows(u.vals, r3d, !!u.px, u.door, u.ana, u.ctlDoor);
-  if (u.anaNote) vals[OPT_LABEL.indexOf("ANALYTICS")] = u.anaNote;
-  const g = settingsGeom(L, u.touch),
+  const rows = u.rows || [],
+    cur = rows.indexOf(u.row),
+    at = (r) => rows.indexOf(r);
+  const vals = settingsRows(rows, u.vals, !!u.r3d, !!u.px, u.door, u.ana, u.ctlDoor);
+  if (u.anaNote && at("ANALYTICS") >= 0) vals[at("ANALYTICS")] = u.anaNote;
+  const g = settingsGeom(L, u.touch, rows),
     S = g.S;
   boxPlate(c, S);
   head(c, S, LABEL.SETTINGS, u.kicker || "BUILD " + (u.rev || ""));
@@ -2148,21 +2137,20 @@ export function drawSettings(c, L, t, ui) {
     c.font = sans(17, "600");
     const lab = mw(c, "CONTROLS");
     c.font = font(12);
-    if (mw(c, s) <= S.iw + 16 - 38 - lab - 12) vals[OPT_LABEL.indexOf("CONTROLS")] = s;
+    if (mw(c, s) <= S.iw + 16 - 38 - lab - 12 && at("CONTROLS") >= 0) vals[at("CONTROLS")] = s;
   }
   const fk =
     typeof u.togT === "number" && u.togT >= 0 ? 1 - clamp01((t - u.togT) / 0.12) : 0;
   const n = u.job || null, rx = S.ix - 8, rw = S.iw + 16, rh = g.rowH - 2;
-  for (let i = 0; i < OPT_N; i++) {
+  for (let i = 0; i < rows.length; i++) {
     const sel = i === cur,
-      dim = OPT_3D[i] && !r3d,
       ry = g.y0 + i * g.rowH + 1;
-    c.globalAlpha = dim ? 0.45 : 1;
-    if (i === RENDER_ROW && n) {
-      const bad = n.st === "fail", v = fitVal(c, lookVal(n, u.touch), valueRoom(c, rw, rh, OPT_LABEL[i], u.touch));
-      paintRow(c, rx, ry, rw, rh, OPT_LABEL[i], v, sel, { touch: u.touch, danger: bad, vc: bad ? DANGER : TEXT, glow: sel ? fk : 0 });
+    c.globalAlpha = 1;
+    if (rows[i] === LABEL.ART_STYLE && n) {
+      const bad = n.st === "fail", v = fitVal(c, lookVal(n, u.touch), valueRoom(c, rw, rh, rows[i], u.touch));
+      paintRow(c, rx, ry, rw, rh, rows[i], v, sel, { touch: u.touch, danger: bad, vc: bad ? DANGER : TEXT, glow: sel ? fk : 0 });
       if (!bad) jobLine(c, rx + 3, ry + rh - 2, rw - 3, n.fill);
-    } else paintRow(c, rx, ry, rw, rh, OPT_LABEL[i], dim ? "—" : vals[i], sel, { touch: u.touch, vc: TEXT, glow: sel ? fk : 0 });
+    } else paintRow(c, rx, ry, rw, rh, rows[i], vals[i], sel, { touch: u.touch, vc: TEXT, glow: sel ? fk : 0 });
     c.globalAlpha = 1;
   }
   foot(c, S, tapMode(u.touch) ? FOOT_TAP : footKeys());

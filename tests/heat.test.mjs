@@ -250,7 +250,7 @@ check(
   check(
     "PAUSE_ROWS is the four-verb list, frozen, pitch cap 70",
     Object.isFrozen(PAUSE_ROWS) &&
-      PAUSE_ROWS.join("|") === "RESUME|RESTART|SETTINGS|QUIT TO MENU" &&
+      PAUSE_ROWS.join("|") === "RESUME|SETTINGS|RESTART|QUIT TO MENU" &&
       PAUSE_ROW_H === 70,
     PAUSE_ROWS.join("|"),
   );

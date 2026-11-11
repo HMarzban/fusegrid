@@ -22,6 +22,7 @@ import {
 } from "../src/render/scenes.js";
 import { readFileSync } from "node:fs";
 import { createGame } from "../src/main.js";
+import { PAUSE_ITEMS } from "../src/app/menuapp.js";
 import "../src/core/board3.js";
 
 let pass = 0,
@@ -1044,7 +1045,7 @@ const rec = () => {
     g2.world.score = 888;
     g2.input.onPause();
     g2.loop(16);
-    g2.app.pauseCursor = 1; // RESTART
+    g2.app.pauseCursor = PAUSE_ITEMS.indexOf("RESTART");
     g2.app.confirm();
     check(
       "D2: pause RESTART writes nb.bests.v1 the same way KeyM does",
@@ -1057,7 +1058,7 @@ const rec = () => {
     g3.world.score = 999;
     g3.input.onPause();
     g3.loop(16);
-    g3.app.pauseCursor = 3; // QUIT TO MENU
+    g3.app.pauseCursor = PAUSE_ITEMS.indexOf("QUIT TO MENU");
     g3.app.confirm();
     check(
       "D3: pause QUIT TO MENU writes nb.bests.v1 the same way KeyM does",

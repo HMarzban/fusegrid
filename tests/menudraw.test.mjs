@@ -1,6 +1,7 @@
 import { initFx } from "../src/render/fx.js";
 import { readFileSync } from "node:fs";
 import { rec as textrec } from "./lib/textrec.mjs";
+import { OPT_ROWS as ALL_OPT, optRows } from "../src/app/menuapp.js";
 /* The console-panel plate is a rounded path (icons.js rr): a filled path that
    used arcTo is recorded as its bbox rect, so the plate checks keep reading
    rects. Carets and glyphs (no arcTo) are not recorded. */
@@ -149,8 +150,8 @@ function check(name, cond, detail) {
       md.drawGuide(stub, L, 0.4, 0);
       md.drawScores(stub, DEFAULT_SCORES, L, 0.4);
       const sv = { mus: 100, sfx: 100, snd: 1, r3d: 0, cam: 0, bri: 100, shk: 1, flx: 0 };
-      md.drawSettings(stub, L, 0.4, { row: 0, vals: sv, r3d: false, togT: -1, rev: "v0" });
-      md.drawSettings(stub, L, 0.4, { row: 8, vals: sv, r3d: true, togT: 0.3, rev: "v0" });
+      md.drawSettings(stub, L, 0.4, { rows: optRows(false), row: "MUSIC", vals: sv, r3d: false, togT: -1, rev: "v0" });
+      md.drawSettings(stub, L, 0.4, { rows: optRows(true), row: "ANALYTICS", vals: sv, r3d: true, togT: 0.3, rev: "v0" });
       md.drawSettings(stub, L, 0.4, {});
       md.drawTrophies(stub, L, 0.4, undefined);
       md.drawTrophies(stub, L, 0.4, [["A", "B", true]]);
@@ -184,7 +185,7 @@ function check(name, cond, detail) {
   };
   {
     const { stub, sets } = mk();
-    md.drawSettings(stub, L, 1.0, { row: 0, vals, r3d: true, togT: 0.97, rev: "v0" });
+    md.drawSettings(stub, L, 1.0, { rows: optRows(true), row: "MUSIC", vals, r3d: true, togT: 0.97, rev: "v0" });
     check(
       "toggle-flash: mid-window glow on the changed row",
       sets.some((v) => v > 0 && v <= 14) && !sets.some((v) => v < 0),
@@ -193,12 +194,12 @@ function check(name, cond, detail) {
   }
   {
     const { stub, sets } = mk();
-    md.drawSettings(stub, L, 1.0, { row: 0, vals, r3d: true, togT: -1, rev: "v0" });
+    md.drawSettings(stub, L, 1.0, { rows: optRows(true), row: "MUSIC", vals, r3d: true, togT: -1, rev: "v0" });
     check("toggle-flash: idle sentinel (-1) never glows", sets.length === 0, JSON.stringify(sets));
   }
   {
     const { stub, sets } = mk();
-    md.drawSettings(stub, L, 1.0, { row: 0, vals, r3d: true, togT: 0.85, rev: "v0" });
+    md.drawSettings(stub, L, 1.0, { rows: optRows(true), row: "MUSIC", vals, r3d: true, togT: 0.85, rev: "v0" });
     check("toggle-flash: window closed after 120ms", sets.length === 0, JSON.stringify(sets));
   }
   {
@@ -565,9 +566,10 @@ function check(name, cond, detail) {
     }
     {
       const { c, texts, rects } = rec();
-      const g = md.settingsGeom(L);
+      const g = md.settingsGeom(L, false, optRows(true));
       md.drawSettings(c, L, 1, {
-        row: 4,
+        rows: optRows(true),
+        row: "CAMERA",
         vals: { mus: 100, sfx: 100, snd: 1, r3d: 1, cam: 2, bri: 130, shk: 1, flx: 0 },
         r3d: true,
         togT: -1,
@@ -578,8 +580,8 @@ function check(name, cond, detail) {
       const lastRow = texts.find((t) => t.s === "RESET DEFAULTS");
       const note = texts.find((t) => t.s.indexOf("BOMB SPACE") >= 0);
       const T2 = rec();
-      md.drawSettings(T2.c, L, 1, { row: 4, vals: { mus: 100, sfx: 100, snd: 1, r3d: 1, cam: 2, bri: 130, shk: 1, flx: 0 }, r3d: true, togT: -1, rev: "v99", touch: true });
-      const gT = md.settingsGeom(L, true), pT = plateOf(T2.rects);
+      md.drawSettings(T2.c, L, 1, { rows: optRows(true), row: "CAMERA", vals: { mus: 100, sfx: 100, snd: 1, r3d: 1, cam: 2, bri: 130, shk: 1, flx: 0 }, r3d: true, togT: -1, rev: "v99", touch: true });
+      const gT = md.settingsGeom(L, true, optRows(true)), pT = plateOf(T2.rects);
       const ftT = T2.texts.find((t) => t.s === md.FOOT_TAP);
       const ft = texts.find((t) => t.s.indexOf("ENTER CYCLE") >= 0);
       const kick = texts.find((t) => t.s === "BUILD v99");
@@ -615,11 +617,12 @@ function check(name, cond, detail) {
          in the shell box below, ATLAS "not fat"); a short box scales it by the plate's f. Rows start under the head (S.by), the
          note line sits 6 under the last row, and the drawn labels sit on the
          geometry's row centres (draw -> settingsHit share one table). */
-      const pitchOk = (G, pitch, B) =>
+      const pitchOk = (G, pitch, B, n = 12) =>
         Math.abs(G.rowH - pitch * G.S.f) < 1e-9 &&
         (H === 520 ? G.S.f === 1 : G.S.f > 0.5 && G.S.f < 1) &&
         G.y0 === G.S.by &&
-        Math.abs(G.noteY - (G.y0 + md.OPT_N * G.rowH + 6)) < 1e-9 &&
+        G.n === n &&
+        Math.abs(G.noteY - (G.y0 + n * G.rowH + 6)) < 1e-9 &&
         G.S.y >= B.top - 0.5 && G.S.y + G.S.h <= B.bot + 0.5;
       const firstT = T2.texts.find((t) => t.s === "MUSIC"), lastT = T2.texts.find((t) => t.s === "RESET DEFAULTS");
       check(
@@ -641,42 +644,45 @@ function check(name, cond, detail) {
     {
       const { c, texts } = rec();
       md.drawSettings(c, L, 1, {
-        row: 0,
+        rows: optRows(false),
+        row: "MUSIC",
         vals: { mus: 100, sfx: 100, snd: 1, r3d: 0, cam: 2, bri: 130, shk: 1, flx: 0 },
         r3d: false,
         togT: -1,
         rev: "v99",
       });
       check(
-        `3D-only rows read an em dash in CLASSIC 2D at ${W}x${H}`,
-        texts.filter((t) => t.s === "—").length === 2 && !texts.some((t) => t.s === "FAR"),
+        `3D-only rows are not drawn in CLASSIC 2D (no em dash, no CAMERA / BRIGHTNESS value) at ${W}x${H}`,
+        texts.filter((t) => t.s === "—").length === 0 && !texts.some((t) => t.s === "FAR" || t.s === "130"),
         texts.map((t) => t.s).join("|"),
       );
+      const g10 = md.settingsGeom(L, false, optRows(false));
       check(
-        `CLASSIC 2D still draws all ten labels — rows never hide at ${W}x${H}`,
-        [
+        `CLASSIC 2D draws its ten labels in order, CAMERA and BRIGHTNESS hidden, each on its row centre at ${W}x${H}`,
+        JSON.stringify(texts.filter((t) => ALL_OPT.includes(t.s)).map((t) => t.s)) === JSON.stringify([
           "MUSIC",
           "SFX",
           "SOUND",
           "ART STYLE",
-          "CAMERA",
-          "BRIGHTNESS",
           "SCREEN SHAKE",
           "REDUCE FLASH",
+          "ANALYTICS",
           "GRAPHICS",
+          "CONTROLS",
           "RESET DEFAULTS",
-        ].every((n) => texts.some((t) => t.s === n)),
+        ]) && texts.filter((t) => ALL_OPT.includes(t.s)).every((t, i) => Math.abs(t.y - (g10.y0 + (i + 0.5) * g10.rowH)) < 0.01) && g10.n === 10 && Math.abs(g10.rowH - 27 * g10.S.f) < 1e-9,
         texts.map((t) => t.s).join("|"),
       );
       check(`RENDER reads CLASSIC 2D with px unset at ${W}x${H}`, texts.some((t) => t.s === "CLASSIC 2D") && !texts.some((t) => t.s === "PIXEL"));
     }
     {
       const { c, texts } = rec();
-      md.drawSettings(c, L, 1, { row: 3, vals: { mus: 100, sfx: 100, snd: 1, r3d: 0, cam: 2, bri: 130, shk: 1, flx: 0, px: 1 }, r3d: false, px: true, togT: -1, rev: "v99" });
-      check(`RENDER reads PIXEL and the two 3D-only rows dim to an em dash at ${W}x${H}`,
-        texts.some((t) => t.s === "PIXEL") && !texts.some((t) => t.s === "CLASSIC 2D") && texts.filter((t) => t.s === "—").length === 2 && !texts.some((t) => t.s === "FAR"),
+      md.drawSettings(c, L, 1, { rows: optRows(false), row: "ART STYLE", vals: { mus: 100, sfx: 100, snd: 1, r3d: 0, cam: 2, bri: 130, shk: 1, flx: 0, px: 1 }, r3d: false, px: true, togT: -1, rev: "v99" });
+      check(`RENDER reads PIXEL and the two 3D-only rows are not drawn at ${W}x${H}`,
+        texts.some((t) => t.s === "PIXEL") && !texts.some((t) => t.s === "CLASSIC 2D") && texts.filter((t) => t.s === "—").length === 0 && !texts.some((t) => t.s === "FAR" || t.s === "CAMERA" || t.s === "BRIGHTNESS"),
         texts.map((t) => t.s).join("|"));
-      check("settingsRows three-way label, r3d wins", md.settingsRows({}, false, false)[3] === "CLASSIC 2D" && md.settingsRows({}, false, true)[3] === "PIXEL" && md.settingsRows({}, true, true)[3] === "REAL 3D");
+      const AS = (r3d, px) => md.settingsRows(optRows(r3d), {}, r3d, px)[optRows(r3d).indexOf("ART STYLE")];
+      check("settingsRows three-way label, r3d wins", AS(false, false) === "CLASSIC 2D" && AS(false, true) === "PIXEL" && AS(true, true) === "REAL 3D");
     }
     {
       const { c, texts, rects, lines } = rec();
@@ -923,17 +929,17 @@ function check(name, cond, detail) {
     [608, 352],
   ]) {
     const L = md.layout(W, H);
-    for (const touch of [false, true]) {
-      const tag = `${W}x${H}${touch ? " touch" : ""}`;
-      const g = md.settingsGeom(L, touch), S = g.S;
+    for (const touch of [false, true]) for (const R of [optRows(false), optRows(true)]) {
+      const n = R.length, tag = `${W}x${H}${touch ? " touch" : ""}, ${n} rows`;
+      const g = md.settingsGeom(L, touch, R), S = g.S;
       const mid = S.ix + S.iw / 2, cy = g.y0 + g.rowH / 2;
-      const hit = (x, y) => md.settingsHit(x, y, L, 0, touch);
+      const hit = (x, y) => md.settingsHit(x, y, L, R, touch);
       let all = true;
-      for (let i = 0; i < md.OPT_N; i++) if (hit(mid, g.y0 + i * g.rowH + g.rowH / 2) !== i) all = false;
-      check(`settingsHit maps every row centre at ${tag}`, all);
+      for (let i = 0; i < n; i++) if (hit(mid, g.y0 + i * g.rowH + g.rowH / 2) !== i) all = false;
+      check(`settingsHit maps every row centre at ${tag}`, all && g.n === n);
       check(`settingsHit on the plate above the rows (head) is -2, inert at ${tag}`, hit(mid, g.y0 - 1) === -2 && hit(mid, S.y + 4) === -2);
-      check(`settingsHit row 11 is RESET DEFAULTS' band, just below it -2 at ${tag}`, hit(mid, g.y0 + 11.5 * g.rowH) === 11 && hit(mid, g.y0 + 12 * g.rowH - 0.001) === 11);
-      check(`settingsHit on the plate below the rows (foot) is -2, inert at ${tag}`, hit(mid, g.y0 + md.OPT_N * g.rowH + 1) === -2 && hit(mid, S.y + S.h - 4) === -2);
+      check(`settingsHit the last row (${n - 1}) is RESET DEFAULTS' band, just below it -2 at ${tag}`, R[n - 1] === "RESET DEFAULTS" && hit(mid, g.y0 + (n - 0.5) * g.rowH) === n - 1 && hit(mid, g.y0 + n * g.rowH - 0.001) === n - 1);
+      check(`settingsHit on the plate below the rows (foot) is -2, inert at ${tag}`, hit(mid, g.y0 + n * g.rowH + 1) === -2 && hit(mid, S.y + S.h - 4) === -2);
       check(`settingsHit in the plate's outer margin is -2, inert at ${tag}`, hit(S.x + 4, cy) === -2 && hit(S.x + S.w - 4, cy) === -2);
       check(`settingsHit off the plate is -1 (back) at ${tag}`,
         hit(S.x - 2, cy) === -1 && hit(S.x + S.w + 2, cy) === -1 && hit(mid, S.y - 2) === -1 && hit(mid, S.y + S.h + 2) === -1);
@@ -964,11 +970,14 @@ function check(name, cond, detail) {
     pathRects(c, rects);
     return { c, texts, rects };
   };
-  check("OPT_N === OPT_ROWS.length (12)", md.OPT_N === OPT_ROWS.length && md.OPT_N === 12);
+  check("no render-side copy of the SETTINGS rows: OPT_N is gone, the geometry sizes to the visible list it is handed (12 / 10)", md.OPT_N === undefined && md.settingsGeom(md.layout(600, 520), false, OPT_ROWS).n === 12 && md.settingsGeom(md.layout(600, 520), false, optRows(false)).n === 10);
   check("GFX_N === GFX_ROWS.length (8)", md.GFX_N === gfx.GFX_ROWS.length && md.GFX_N === 8);
-  check("settingsRows carries the door value at the GRAPHICS row", md.settingsRows({}, false, false, "CUSTOM ›")[OPT_ROWS.indexOf("GRAPHICS")] === "CUSTOM ›" && md.settingsRows({}, false, false)[9] === "›");
-  check("settingsRows carries the CONTROLS door at row 10, RESET DEFAULTS has no value", md.settingsRows({}, false, false, "AUTO ›", false, "CONTROLLER ›")[OPT_ROWS.indexOf("CONTROLS")] === "CONTROLLER ›" && md.settingsRows({}, false, false)[10] === "›" && md.settingsRows({}, false, false)[9] === "›" && md.settingsRows({}, false, false)[11] === "" && md.settingsRows({}, false, false).length === 12);
-  check("settingsRows shows ANALYTICS ON/OFF from its own flag", md.settingsRows({}, false, false, "", true)[OPT_ROWS.indexOf("ANALYTICS")] === "ON" && md.settingsRows({}, false, false)[8] === "OFF");
+  for (const R of [optRows(false), optRows(true)]) {
+    const v = (lab, ...a) => md.settingsRows(R, {}, ...a)[R.indexOf(lab)], n = R.length;
+    check("settingsRows carries the door value at the GRAPHICS row (" + n + " rows)", v("GRAPHICS", false, false, "CUSTOM ›") === "CUSTOM ›" && v("GRAPHICS", false, false) === "›");
+    check("settingsRows carries the CONTROLS door, RESET DEFAULTS has no value, one value per visible row (" + n + " rows)", v("CONTROLS", false, false, "AUTO ›", false, "CONTROLLER ›") === "CONTROLLER ›" && v("CONTROLS", false, false) === "›" && v("GRAPHICS", false, false) === "›" && v("RESET DEFAULTS", false, false) === "" && md.settingsRows(R, {}, false, false).length === n);
+    check("settingsRows shows ANALYTICS ON/OFF from its own flag (" + n + " rows)", v("ANALYTICS", false, false, "", true) === "ON" && v("ANALYTICS", false, false) === "OFF");
+  }
   const S = (o) => ({ ...(gfx.PRESETS.AUTO), fpm: 0, ...o });
   for (const [W, H] of [[600, 520], [608, 352]]) {
     const L = md.layout(W, H);
@@ -1029,7 +1038,7 @@ function check(name, cond, detail) {
     md.FOOT_TAP === "TAP A ROW TO CHANGE IT · TAP OUTSIDE TO GO BACK" && [...md.FOOT_TAP].length <= 60);
   for (const touch of [false, true]) {
     const { c, texts } = rec();
-    md.drawSettings(c, md.layout(600, 520), 1, { row: 0, vals: {}, touch });
+    md.drawSettings(c, md.layout(600, 520), 1, { rows: optRows(false), row: "MUSIC", vals: {}, touch });
     check(`OPTIONS foot ${touch ? "touch" : "desktop"}`, texts.some((t) => t.s === (touch ? md.FOOT_TAP : md.FOOT_KEYS)) && !texts.some((t) => t.s === (touch ? md.FOOT_KEYS : md.FOOT_TAP)));
   }
   check("meter density format matches gfx.xOf", [1, 1.25, 1.5, 1.75, 2, 3].every((v) => md.meterText({ fps: 1, kind: "3d", dpr3d: v }) === "1 FPS · " + gfx.xOf(v)));
@@ -1449,9 +1458,11 @@ function check(name, cond, detail) {
     shellSrc.match(/const REV[^\n]*/)?.[0],
   );
   check(
-    "shellview routes SCREEN.SETTINGS to drawSettings with app.optRow + app.settings",
+    "shellview routes SCREEN.SETTINGS to drawSettings with the visible rows (app.optRows()), the focused label (app.optLabel()) + app.settings",
     /SCREEN\.SETTINGS/.test(shellSrc) &&
-      /row:\s*app\.optRow/.test(shellSrc) &&
+      /rows:\s*app\.optRows\(\)/.test(shellSrc) &&
+      /row:\s*app\.optLabel\(\)/.test(shellSrc) &&
+      !/row:\s*app\.optRow\b/.test(shellSrc) &&
       /vals:\s*app\.settings/.test(shellSrc),
     shellSrc.match(/menudraw\.drawSettings\([^;]*\);/s)?.[0],
   );
@@ -1610,11 +1621,11 @@ function check(name, cond, detail) {
     }
     const sc = md.scoresGeom(L, true);
     check(`HIGH SCORES: tabs inside the plate, each taps to itself (${tg})`, inBox(sc.S) && sc.tabs.every((r, i) => inPlate(r, sc.S) && md.scoresHit(...ctr(r), L, true) === i));
-    for (const [nm, geo, hit, n] of [["SETTINGS", md.settingsGeom, md.settingsHit, md.OPT_N], ["GRAPHICS", md.graphicsGeom, md.graphicsHit, md.GFX_N]]) {
-      const q = geo(L, true);
-      check(`${nm}: rows inside the box, each taps to itself (${tg})`, inBox(q.S) && Array.from({ length: n }, (_, i) => hit(q.S.mid, q.y0 + (i + 0.5) * q.rowH, L, 0, true) === i).every(Boolean));
+    for (const [nm, geo, hit, n, R] of [["SETTINGS (ten)", md.settingsGeom, md.settingsHit, 10, optRows(false)], ["SETTINGS (twelve)", md.settingsGeom, md.settingsHit, 12, optRows(true)], ["GRAPHICS", md.graphicsGeom, md.graphicsHit, md.GFX_N, 0]]) {
+      const q = geo(L, true, R);
+      check(`${nm}: rows inside the box, each taps to itself (${tg})`, inBox(q.S) && Array.from({ length: n }, (_, i) => hit(q.S.mid, q.y0 + (i + 0.5) * q.rowH, L, R, true) === i).every(Boolean));
     }
-    check(`OPTIONS keeps pitch 37 in the shell box (${tg})`, md.settingsGeom(L, true).rowH === 37);
+    check(`OPTIONS keeps pitch 37 in the shell box, ten or twelve rows (${tg})`, md.settingsGeom(L, true, optRows(true)).rowH === 37 && md.settingsGeom(L, true, optRows(false)).rowH === 37);
     const cg = geoFor(L, true, L.narrow, g.s);
     check(`CONTROLS: plate inside the box, every row inside it and tapping to itself, off the plate backs out (${tg})`,
       cg.x >= 0 && cg.y >= 0 && cg.x + cg.w <= g.w && cg.y + cg.h <= g.h &&
@@ -1646,11 +1657,13 @@ function check(name, cond, detail) {
       check(`HOW TO says WALK INTO BOMB beside KICK *, never K + MOVE, and the key fits its cell (${tg}${touch ? " touch" : ""})`,
         !!walk && !!pk && h.texts.some((t) => t.s === "KICK *") && !h.texts.some((t) => K.test(t.s)) && walk.x + walk.w < pk.x - 8,
         walk && pk && walk.x + walk.w + " < " + pk.x);
-      const o = rec();
-      md.drawSettings(o.c, L, 1, { touch, rev: "v0" });
-      const line = o.texts.find((t) => t.s.indexOf("MOVE WASD") === 0);
-      check(`OPTIONS never says K+MOVE and prints no fixed key line (${tg}${touch ? " touch" : ""})`,
-        !o.texts.some((t) => K.test(t.s)) && !line, line && line.s);
+      for (const r3d of [false, true]) {
+        const o = rec();
+        md.drawSettings(o.c, L, 1, { rows: optRows(r3d), row: "MUSIC", touch, rev: "v0" });
+        const line = o.texts.find((t) => t.s.indexOf("MOVE WASD") === 0);
+        check(`OPTIONS never says K+MOVE and prints no fixed key line (${tg}${touch ? " touch" : ""}, ${optRows(r3d).length} rows drawn)`,
+          !o.texts.some((t) => K.test(t.s)) && !line && o.texts.some((t) => t.s === "RESET DEFAULTS"), line && line.s);
+      }
     }
   }
 }
@@ -1830,15 +1843,15 @@ function check(name, cond, detail) {
   // Q11: the ANALYTICS row says why it did nothing, whole, on its own row
   {
     const a = mk("ready", { anaOpen: () => true }), NOTE = "ANSWER THE CARD WITH Y OR N";
-    a.screen = SCREEN.SETTINGS; a.lastDev = "pad"; a.optRow = OPT_ROWS.indexOf("ANALYTICS");
+    a.screen = SCREEN.SETTINGS; a.lastDev = "pad"; a.optRow = a.optRows().indexOf("ANALYTICS");
     check("no note before the press", !has(draw(a, PLAY), NOTE));
     a.optCycle();
     check("app holds the note after a pad press", a.anaNote === NOTE);
     const row = (R, s) => R.texts.find((t) => t.s === s);
     const shG = shellGeo(360, 640, 600, 520);
     for (const [tg, cv, Lx] of [["600x520", null, md.layout(600, 520)], ["400-wide shell", boxOf(shG.w, shG.h, shG.w * shG.s, "p", shG.logo), md.layout(shG.w, shG.h, shG.logo)]]) {
-      const R = draw(a, PLAY, cv), n = row(R, NOTE), lab = row(R, "ANALYTICS"), g = md.settingsGeom(Lx, !!cv);
-      check(`the note is the ANALYTICS row's value, unclipped, clear of its label (${tg})`, !!n && !!lab && n.y === lab.y && Math.abs(n.y - (g.y0 + 8.5 * g.rowH)) < 0.01 && n.x - n.w > lab.x + lab.w, n && [n.x, n.w, lab.x, lab.w].join());
+      const R = draw(a, PLAY, cv), n = row(R, NOTE), lab = row(R, "ANALYTICS"), g = md.settingsGeom(Lx, !!cv, a.optRows());
+      check(`the note is the ANALYTICS row's value, unclipped, clear of its label (${tg})`, !!n && !!lab && n.y === lab.y && Math.abs(n.y - (g.y0 + (a.optRows().indexOf("ANALYTICS") + 0.5) * g.rowH)) < 0.01 && n.x - n.w > lab.x + lab.w, n && [n.x, n.w, lab.x, lab.w].join());
     }
     a.screen = SCREEN.GAME; a.pauseView = 1;
     check("PAUSE OPTIONS shows it too", has(draw(a, PAUSE), NOTE));
@@ -1854,12 +1867,14 @@ function check(name, cond, detail) {
       a.screen = SCREEN.MENU; a.cursor = ITEMS.indexOf("SETTINGS");
       return draw(a, PLAY).texts;
     };
-    const T = paneText("ready"), n = T.find((t) => t.s === "ENTER OPENS ALL TWELVE ROWS"), l = T.find((t) => t.s === "CONTROLS · CONTROLLER READY"), g = T.find((t) => t.s.startsWith("GRAPHICS "));
-    check("OPTIONS pane: ENTER OPENS ALL TWELVE ROWS drawn whole, ALL TEN gone", !!n && !T.some((t) => t.s === "ENTER OPENS ALL TEN ROWS"));
+    const T = paneText("ready"), n = T.find((t) => t.s === "ENTER OPENS ALL TEN ROWS"), l = T.find((t) => t.s === "CONTROLS · CONTROLLER READY"), g = T.find((t) => t.s.startsWith("GRAPHICS "));
+    check("OPTIONS pane: the count follows the visible rows: ENTER OPENS ALL TEN ROWS outside REAL 3D, drawn whole, no TWELVE, no CAMERA · BRIGHTNESS", !!n && !T.some((t) => t.s === "ENTER OPENS ALL TWELVE ROWS") && T.some((t) => t.s === "SHAKE · FLASH") && !T.some((t) => /CAMERA/.test(t.s)));
+    { const a3 = mk("ready"); a3._optRender(2); a3.screen = SCREEN.MENU; a3.cursor = ITEMS.indexOf("SETTINGS"); const T3 = draw(a3, PLAY).texts;
+      check("OPTIONS pane in REAL 3D: ENTER OPENS ALL TWELVE ROWS and CAMERA · BRIGHTNESS · SHAKE · FLASH", T3.some((t) => t.s === "ENTER OPENS ALL TWELVE ROWS") && T3.some((t) => t.s === "CAMERA · BRIGHTNESS · SHAKE · FLASH") && !T3.some((t) => t.s === "ENTER OPENS ALL TEN ROWS")); }
     check("OPTIONS pane: a ready pad reads CONTROLLER READY, between GRAPHICS and the bottom line, overlapping neither", !!l && !!g && l.y >= g.y + 12 && l.y <= n.y - 12, l && [g.y, l.y, n.y].join());
     {
       const R = rec();
-      md.drawMenu(R.c, { cursor: ITEMS.indexOf("SETTINGS"), enterT: 9, items: ITEMS.slice(), touch: false, kind: "iso", rev: "v", info: { pad: true, level: 1 } }, md.layout(608, 352), 9);
+      md.drawMenu(R.c, { cursor: ITEMS.indexOf("SETTINGS"), enterT: 9, items: ITEMS.slice(), touch: false, kind: "iso", rev: "v", info: { pad: true, level: 1, opt: OPT_ROWS } }, md.layout(608, 352), 9);
       check("OPTIONS pane: the short iso box drops the pad line rather than print it over the bottom line", R.texts.some((t) => t.s === "ENTER OPENS ALL TWELVE ROWS") && !R.texts.some((t) => t.s.startsWith("CONTROLS ·")));
     }
     {

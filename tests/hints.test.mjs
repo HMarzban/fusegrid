@@ -6,7 +6,7 @@ import { hints, setHints, tapMode } from "../src/render/hintcopy.js";
 import * as md from "../src/render/menudraw.js";
 import { drawShell, loadControlsArt } from "../src/render/shellview.js";
 await loadControlsArt(); // the CONTROLS paint is lazy (v202): in before any CONTROLS draw
-import { SCREEN, createMenuApp } from "../src/app/menuapp.js";
+import { SCREEN, OPT_ROWS, optRows, createMenuApp } from "../src/app/menuapp.js";
 import { helpOf } from "../src/app/hints.js";
 import { POWER } from "../src/core/entities.js";
 import { coachTip } from "../src/app/coach.js";
@@ -35,7 +35,7 @@ const rec = () => {
 };
 const paint = (f) => { const r = rec(); f(r.c); return r; };
 const L = md.layout(600, 520);
-const INFO = { level: 1, best: [], unlocked: true, daily: null, top: [] };
+const INFO = { level: 1, best: [], unlocked: true, daily: null, top: [], opt: OPT_ROWS }; // opt: the SETTINGS rows the pane counts (REAL 3D: twelve)
 const ITEMS = ["PLAY|JUNGLE · NORMAL DIFFICULTY · NORMAL SPEED", "LEVEL SELECT", "DAILY|TODAY", "RECORDS", "SETTINGS", "GUIDE", "SOURCE"];
 const menu = (cur, touch, rev = "") => (c) => md.drawMenu(c, { cursor: cur, enterT: 9, items: ITEMS, touch: !!touch, kind: "2d", rev, info: INFO }, L, 9);
 const STATS_UI = { rows: [], notes: [], trophies: [] };
@@ -49,7 +49,7 @@ const PAGES = {
   FLOOR: (T) => (c) => md.drawFloorHelp(c, L, 9, "2d", T),
   GUIDE: (T) => (c) => md.drawGuide(c, L, 9, 0, "2d", T),
   SCORES: (T) => (c) => md.drawScores(c, [], L, 9, 0, 0, T),
-  OPTIONS: (T) => (c) => md.drawSettings(c, L, 9, { row: 0, vals: {}, touch: T }),
+  OPTIONS: (T) => (c) => md.drawSettings(c, L, 9, { rows: optRows(false), row: "MUSIC", vals: {}, touch: T }),
   GRAPHICS: (T) => (c) => md.drawGraphics(c, L, 9, { row: 0, view: GFX, touch: T }),
 };
 const PAD = wordsOf("pad", DEF_CONTROLS);

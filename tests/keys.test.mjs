@@ -8,7 +8,7 @@ import { preloadControls } from "../src/app/controlswire.js";
 import { loadControlsArt } from "../src/render/shellview.js";
 import "../src/core/board3.js";
 import { createPixelRenderer } from "../src/render/pixel/renderer.js";
-import { SCREEN, ITEMS, GUIDE_ROWS, PAUSE_ITEMS, OPT_ROWS, IDLE_T, FEELS } from "../src/app/menuapp.js";
+import { SCREEN, ITEMS, GUIDE_ROWS, PAUSE_ITEMS, IDLE_T, FEELS } from "../src/app/menuapp.js";
 import { PACT } from "../src/core/pact.js";
 import { GFX_ROWS, DEMO_T } from "../src/app/gfx.js";
 import { graphicsGeom, layout as menuLayout, modeFocusOf } from "../src/render/menudraw.js";
@@ -46,9 +46,10 @@ navigator.clipboard = clipStub;
 
 /* One live game at a time: each mk() drops the previous game's listeners so a
    keydown reaches exactly one Input + main pair. */
+let BOOT = {}; // extra createGame opts while a look is booted (withSettings: REAL 3D gets a fake 3D renderer)
 function mk(o = {}, cv = null) {
   for (const k in L) delete L[k];
-  const g = createGame(cv, { seed: 42, createPixelRenderer, ...o });
+  const g = createGame(cv, { seed: 42, createPixelRenderer, ...BOOT, ...o });
   g.t = 0;
   g.tick = (n = 1) => { for (let i = 0; i < n; i++) { g.t += 1000 / 60; g.loop(g.t); } };
   const r = g.renderer, r0 = r.render.bind(r);
@@ -68,6 +69,19 @@ const menu = (cv) => { const g = show(mk({}, cv)); press(g, "Enter"); return g; 
 const toRow = (g, i) => { for (let k = 0; k < i; k++) press(g, "ArrowDown"); };
 const run = (o) => { const g = menu(); if (o && o.unlock) g.app.pactUnlocked = true; press(g, "Enter"); return g; };
 const clearRoom = (g) => { g.world.enemies.forEach((e) => { e.dead = true; }); g.tick(150); };
+/* v202 Task 2.4: SETTINGS shows CAMERA and BRIGHTNESS only while ART STYLE is REAL 3D, so every SETTINGS / GRAPHICS / pause-view
+   case runs in both row sets (LOOKS), the row looked up by its label in the app's visible list (optAt), never a fixed number. */
+const FAKE3D = (() => { const rec = new Proxy(function () {}, { get: (t, p) => (p === Symbol.toPrimitive ? () => "" : () => rec), apply: () => rec, set: () => true });
+  return () => ({ ctx: rec, overlay: null, canvas: null, render() {}, consumeEvents() {}, getShake: () => ({ x: 0, y: 0 }) }); })();
+/* the look a game boots in comes from nb.settings.v1; the blob (and BOOT) are restored after fn, so nothing leaks to later cases */
+const withSettings = (blob, fn) => {
+  const s0 = mem["nb.settings.v1"], b0 = BOOT;
+  if (blob) mem["nb.settings.v1"] = JSON.stringify(blob); else delete mem["nb.settings.v1"];
+  BOOT = blob && blob.r3d ? { createRenderer3D: FAKE3D } : {};
+  try { return fn(); } finally { BOOT = b0; if (s0 === undefined) delete mem["nb.settings.v1"]; else mem["nb.settings.v1"] = s0; }
+};
+const LOOKS = [["CLASSIC 2D", null], ["REAL 3D", { r3d: 1 }]];
+const optAt = (g, lab) => g.app.optRows().indexOf(lab);
 const live = (w) => w.bombs.filter((b) => !b.dead).length;
 
 // ---- U (NEW VERSION READY, src/app/update.js): the reload key lives on the
@@ -482,19 +496,22 @@ const lvMem = () => { const s = { p: mem["nb.pace.v1"], t: mem["nb.times.v1"] };
     g.world.seed + " vs " + dailySeed(today));
 }
 
-// ---- OPTIONS ----
-{
+// ---- OPTIONS (both row sets) ----
+for (const [LK, blob] of LOOKS) withSettings(blob, () => {
   const g = menu(); toRow(g, ITEMS.indexOf("SETTINGS")); press(g, "Enter");
+  check("OPTIONS (" + LK + "): the rows on screen", g.app.optRows().length === (blob ? 12 : 10) && g.app.optRows().includes("CAMERA") === !!blob, g.app.optRows().length);
   const m0 = g.app.settings.mus;
   press(g, "ArrowLeft"); const m1 = g.app.settings.mus; press(g, "ArrowRight");
-  press(g, "ArrowDown"); const r1 = g.app.optRow; press(g, "ArrowUp");
+  press(g, "ArrowDown"); const r1 = g.app.optLabel(); press(g, "ArrowUp");
   press(g, "Enter"); const m2 = g.app.settings.mus;
-  check("OPTIONS ← / → adjust the row", m1 === m0 - 10 && g.app.settings.mus !== m1, m0 + "," + m1);
-  check("OPTIONS ↓ / ↑ move the row", r1 === 1 && g.app.optRow === 0, r1 + "," + g.app.optRow);
-  check("OPTIONS Enter cycles the row once", m2 === (m0 >= 100 ? 0 : m0 + 10), m0 + "->" + m2);
+  check("OPTIONS ← / → adjust the row (" + LK + ")", m1 === m0 - 10 && g.app.settings.mus !== m1, m0 + "," + m1);
+  check("OPTIONS ↓ / ↑ move the row (" + LK + ")", r1 === "SFX" && g.app.optLabel() === "MUSIC", r1 + "," + g.app.optRow);
+  check("OPTIONS Enter cycles the row once (" + LK + ")", m2 === (m0 >= 100 ? 0 : m0 + 10), m0 + "->" + m2);
+  press(g, "ArrowUp"); const last = g.app.optLabel(); press(g, "ArrowDown");
+  check("OPTIONS ↑ from the top wraps to the last row, RESET DEFAULTS, and ↓ back (" + LK + ")", last === "RESET DEFAULTS" && g.app.optRow === 0);
   press(g, "Escape");
-  check("OPTIONS Escape -> MENU", g.app.screen === SCREEN.MENU);
-}
+  check("OPTIONS Escape -> MENU (" + LK + ")", g.app.screen === SCREEN.MENU);
+});
 // ---- OPTIONS RENDER: three values (R4), persisted in nb.settings.v1 (R5) ----
 {
   const rec = new Proxy(function () {}, { get: (t, p) => (p === Symbol.toPrimitive ? () => "" : () => rec), apply: () => rec, set: () => true });
@@ -511,8 +528,8 @@ const lvMem = () => { const s = { p: mem["nb.pace.v1"], t: mem["nb.times.v1"] };
   check("OPTIONS RENDER → / ← clamp at REAL 3D and CLASSIC 2D", lr.join() === "1:01,2:10,2:10,2:10,1:01,0:00,0:00,0:00", lr.join());
   press(g, "ArrowRight");
   const kinds = [g.app.pixel, g.renderer && g.renderer._dbg ? "px" : "?"].join();
-  press(g, "ArrowDown"); const cam0 = g.app.settings.cam; press(g, "Enter"); press(g, "ArrowRight");
-  check("OPTIONS CAMERA is locked in PIXEL (Enter and → change nothing)", g.app.settings.cam === cam0 && g.app.optRow === OPT_ROWS.indexOf("CAMERA"), g.app.settings.cam);
+  press(g, "ArrowDown"); const cam0 = g.app.settings.cam, lab0 = g.app.optLabel(); press(g, "Enter"); press(g, "ArrowRight");
+  check("OPTIONS CAMERA is locked in PIXEL (Enter and → change nothing): not a row, ↓ from ART STYLE lands on SCREEN SHAKE, and Enter / → there leave cam alone", g.app.settings.cam === cam0 && lab0 === "SCREEN SHAKE" && g.app.optLabel() === "SCREEN SHAKE" && !g.app.optRows().includes("CAMERA"), g.app.settings.cam + " " + lab0);
   check("OPTIONS RENDER PIXEL swaps the live renderer and saves px:1, r3d:0", kinds === "true,px" && /"r3d":0,.*"px":1[,}]/.test(mem["nb.settings.v1"] || ""), kinds + " " + mem["nb.settings.v1"]);
   g = mk({ createRenderer3D: fake3d });
   check("RENDER PIXEL survives a reload: boots pixel, px renderer, blob unchanged", g.app.pixel === true && g.app.render3d === false && !!g.renderer._dbg && g.app.settings.px === 1, v(g));
@@ -525,20 +542,15 @@ const lvMem = () => { const s = { p: mem["nb.pace.v1"], t: mem["nb.times.v1"] };
    graphicsHit import lands those rows log as SKIP, never as a silent pass. */
 const WIRED = /graphicsHit/.test(readFileSync(new URL("../src/main.js", import.meta.url), "utf8"));
 const wired = (name, cond, detail) => (WIRED ? check(name, cond, detail) : console.log("  SKIP " + name + " (awaiting main.js GRAPHICS wiring)"));
-const GDOOR = OPT_ROWS.indexOf("GRAPHICS");
-const withSettings = (blob, fn) => {
-  const s0 = mem["nb.settings.v1"];
-  if (blob) mem["nb.settings.v1"] = JSON.stringify(blob); else delete mem["nb.settings.v1"];
-  try { fn(); } finally { if (s0 === undefined) delete mem["nb.settings.v1"]; else mem["nb.settings.v1"] = s0; }
-};
-const gfxPage = (g) => { toRow(g, ITEMS.indexOf("SETTINGS")); press(g, "Enter"); toRow(g, GDOOR); press(g, "Enter"); return g; };
+const gdoor = (g) => optAt(g, "GRAPHICS"); // the GRAPHICS door in the rows on screen: 7 of the ten, 9 of the twelve
+const gfxPage = (g) => { toRow(g, ITEMS.indexOf("SETTINGS")); press(g, "Enter"); toRow(g, gdoor(g)); press(g, "Enter"); return g; };
 const six = (s) => [s.fps, s.res, s.shd, s.aa, s.fxq, s.dmo].join("");
-withSettings(null, () => {
+for (const [LK, blob] of LOOKS) withSettings(blob, () => {
   // 1: the door
-  const g = menu(); toRow(g, ITEMS.indexOf("SETTINGS")); press(g, "Enter"); toRow(g, GDOOR);
+  const g = menu(); toRow(g, ITEMS.indexOf("SETTINGS")); press(g, "Enter"); toRow(g, gdoor(g));
   const s0 = JSON.stringify(g.app.settings);
   press(g, "ArrowLeft"); press(g, "ArrowRight");
-  check("GRAPHICS door: OPTIONS ↓ x9 lands on it, ←/→ change nothing", g.app.optRow === 9 && OPT_ROWS[9] === "GRAPHICS" && g.app.screen === SCREEN.SETTINGS && JSON.stringify(g.app.settings) === s0, g.app.optRow);
+  check("GRAPHICS door (" + LK + "): OPTIONS ↓ x" + (blob ? 9 : 7) + " lands on it, ←/→ change nothing", g.app.optRow === (blob ? 9 : 7) && g.app.optLabel() === "GRAPHICS" && g.app.screen === SCREEN.SETTINGS && JSON.stringify(g.app.settings) === s0, g.app.optRow);
   press(g, "Enter");
   check("GRAPHICS door Enter opens SCREEN.GRAPHICS at row 0", g.app.screen === SCREEN.GRAPHICS && g.app.gfxRow === 0, g.app.screen + "/" + g.app.gfxRow);
   // 2: wrap
@@ -566,14 +578,14 @@ withSettings(null, () => {
   for (const k of ["Digit1", "Digit5", "BracketLeft", "BracketRight", "KeyM", "KeyT"]) press(g, k);
   check("digits, pace keys, M and T do nothing on GRAPHICS", g.app.screen === SCREEN.GRAPHICS && JSON.stringify(g.app.settings) === sx);
   press(g, "Escape");
-  check("Escape -> OPTIONS on the GRAPHICS door", g.app.screen === SCREEN.SETTINGS && g.app.optRow === GDOOR, g.app.screen + "/" + g.app.optRow);
+  check("Escape -> OPTIONS on the GRAPHICS door (" + LK + ")", g.app.screen === SCREEN.SETTINGS && g.app.optRow === gdoor(g) && g.app.optLabel() === "GRAPHICS", g.app.screen + "/" + g.app.optRow);
   press(g, "Enter"); press(g, "Backspace");
-  check("Backspace -> OPTIONS on the GRAPHICS door", g.app.screen === SCREEN.SETTINGS && g.app.optRow === GDOOR);
+  check("Backspace -> OPTIONS on the GRAPHICS door (" + LK + ")", g.app.screen === SCREEN.SETTINGS && g.app.optRow === gdoor(g));
   press(g, "Escape");
   check("a second Escape -> MENU", g.app.screen === SCREEN.MENU);
   // RESET DEFAULTS returns GRAPHICS to AUTO
   check("MENU kept its cursor on OPTIONS", g.app.cursor === ITEMS.indexOf("SETTINGS"));
-  press(g, "Enter"); toRow(g, OPT_ROWS.indexOf("RESET DEFAULTS")); press(g, "Enter");
+  press(g, "Enter"); toRow(g, optAt(g, "RESET DEFAULTS")); press(g, "Enter");
   check("RESET DEFAULTS returns GRAPHICS to AUTO", g.app.gfxPreset() === "AUTO" && /"fps":1,"res":1,"shd":2,"aa":1,"fxq":1,"dmo":1,"fpm":0/.test(mem["nb.settings.v1"] || ""), mem["nb.settings.v1"]);
 });
 // 6: locks per RENDER (presets still write locked rows)
@@ -613,28 +625,28 @@ withSettings({ dmo: 0 }, () => {
   const m = menu(); m.tick(60 * (IDLE_T + 5));
   check("DEMO OFF: 15 s idle on MENU never enters ATTRACT", m.app.screen === SCREEN.MENU, m.app.screen);
 });
-// 9: PAUSE -> OPTIONS -> GRAPHICS is the inline pauseView 2
-withSettings(null, () => {
-  const o = run(); press(o, "KeyP"); toRow(o, PAUSE_ITEMS.indexOf("SETTINGS")); press(o, "Enter"); toRow(o, GDOOR); press(o, "Enter");
+// 9: PAUSE -> OPTIONS -> GRAPHICS is the inline pauseView 2 (both row sets)
+for (const [LK, blob] of LOOKS) withSettings(blob, () => {
+  const o = run(); press(o, "KeyP"); toRow(o, PAUSE_ITEMS.indexOf("SETTINGS")); press(o, "Enter"); toRow(o, gdoor(o)); press(o, "Enter");
   check("PAUSE OPTIONS GRAPHICS door opens inline pauseView 2 (shell GAME, still PAUSE)", o.app.pauseView === 2 && o.app.screen === SCREEN.GAME && o.world.state === "PAUSE" && o.app.gfxRow === 0,
     o.app.pauseView + "/" + o.app.screen + "/" + o.world.state);
   press(o, "ArrowDown"); press(o, "ArrowLeft");
-  check("pause view 2: ↓ moves gfxRow, ← adjusts FRAME RATE", o.app.gfxRow === 1 && o.app.settings.fps === 0 && o.app.optRow === GDOOR);
+  check("pause view 2: ↓ moves gfxRow, ← adjusts FRAME RATE (" + LK + ")", o.app.gfxRow === 1 && o.app.settings.fps === 0 && o.app.optRow === gdoor(o));
   press(o, "Enter");
   check("pause view 2: Enter cycles the row, still PAUSE", o.app.settings.fps === 1 && o.world.state === "PAUSE" && o.app.pauseView === 2);
   press(o, "KeyP");
-  wired("pause view 2: P backs to OPTIONS on the door, still PAUSE", o.app.pauseView === 1 && o.app.optRow === GDOOR && o.world.state === "PAUSE", o.app.pauseView + "/" + o.world.state);
+  wired("pause view 2: P backs to OPTIONS on the door, still PAUSE (" + LK + ")", o.app.pauseView === 1 && o.app.optRow === gdoor(o) && o.app.optLabel() === "GRAPHICS" && o.world.state === "PAUSE", o.app.pauseView + "/" + o.world.state);
   if (WIRED) {
     press(o, "Enter"); press(o, "Escape");
     wired("pause view 2: Escape backs to OPTIONS", o.app.pauseView === 1 && o.world.state === "PAUSE", o.app.pauseView);
     press(o, "Escape");
-    wired("pause OPTIONS: Escape backs to the list", o.app.pauseView === 0 && o.world.state === "PAUSE");
+    wired("pause OPTIONS: Escape backs to the list, on SETTINGS (" + LK + ")", o.app.pauseView === 0 && o.app.pauseCursor === PAUSE_ITEMS.indexOf("SETTINGS") && o.world.state === "PAUSE");
     press(o, "KeyP");
     wired("pause list: P resumes", o.world.state === "PLAY");
   }
 });
-// 10: taps — a row tap = Enter on it, off the rows backs out one level (600x520 buffer, k=1)
-withSettings(null, () => {
+// 10: taps — a row tap = Enter on it, off the rows backs out one level (600x520 buffer, k=1); both row sets
+for (const [LK, blob] of LOOKS) withSettings(blob, () => {
   const mkEl = () => {
     const PL = {};
     const ctx = new Proxy(function () {}, { get: (t, p) => (p === Symbol.toPrimitive ? () => "" : () => ctx), apply: () => ctx, set: () => true });
@@ -648,9 +660,9 @@ withSettings(null, () => {
   A.tap(g, 300, at(1));
   wired("GRAPHICS tap on FRAME RATE = Enter on it (60 -> MAX)", g.app.screen === SCREEN.GRAPHICS && g.app.gfxRow === 1 && g.app.settings.fps === 2, g.app.gfxRow + "/" + g.app.settings.fps);
   A.tap(g, 300, 20);
-  wired("GRAPHICS tap off the rows backs out to OPTIONS on the door", g.app.screen === SCREEN.SETTINGS && g.app.optRow === GDOOR, g.app.screen);
+  wired("GRAPHICS tap off the rows backs out to OPTIONS on the door (" + LK + ")", g.app.screen === SCREEN.SETTINGS && g.app.optRow === gdoor(g) && g.app.optLabel() === "GRAPHICS", g.app.screen);
   const B = mkEl(), o = menu(B.el); press(o, "Enter");
-  press(o, "KeyP"); toRow(o, PAUSE_ITEMS.indexOf("SETTINGS")); press(o, "Enter"); toRow(o, GDOOR); press(o, "Enter");
+  press(o, "KeyP"); toRow(o, PAUSE_ITEMS.indexOf("SETTINGS")); press(o, "Enter"); toRow(o, gdoor(o)); press(o, "Enter");
   B.tap(o, 300, at(5));
   wired("pause view 2 tap on EFFECTS = Enter on it (FULL -> LOW), still PAUSE", o.app.pauseView === 2 && o.app.gfxRow === 5 && o.app.settings.fxq === 0 && o.world.state === "PAUSE",
     o.app.pauseView + "/" + o.app.gfxRow + "/" + o.app.settings.fxq);
@@ -660,12 +672,12 @@ withSettings(null, () => {
 // 12 (close-out review): the rest of the documented keys on SCREEN.GRAPHICS and in pauseView 2.
 // Space / J / X are fire = Enter (cycle the row, never a bomb); the play-only and other-screen
 // keys change nothing; in pauseView 2 M is still PAUSE's quit-to-MENU and Backspace is a no-op as in view 1.
-withSettings(null, () => {
+for (const [LK, blob] of LOOKS) withSettings(blob, () => {
   const gs = (g) => JSON.stringify([g.app.screen, g.app.pauseView, g.world.state, g.app.gfxRow, g.app.settings, live(g.world)]);
   for (const code of ["Space", "KeyJ", "KeyX"]) {
     const g = gfxPage(menu()); g.app.gfxRow = 5; const f0 = g.app.settings.fxq; press(g, code);
     check("GRAPHICS " + code + " = Enter: cycles EFFECTS, stays on the page", g.app.screen === SCREEN.GRAPHICS && g.app.settings.fxq === 1 - f0 && live(g.world) === 0, f0 + "->" + g.app.settings.fxq);
-    const o = run(); press(o, "KeyP"); toRow(o, PAUSE_ITEMS.indexOf("SETTINGS")); press(o, "Enter"); toRow(o, GDOOR); press(o, "Enter");
+    const o = run(); press(o, "KeyP"); toRow(o, PAUSE_ITEMS.indexOf("SETTINGS")); press(o, "Enter"); toRow(o, gdoor(o)); press(o, "Enter");
     o.app.gfxRow = 5; const q0 = o.app.settings.fxq; press(o, code);
     check("pause view 2 " + code + " = Enter: cycles EFFECTS, still PAUSE view 2, no bomb", o.app.pauseView === 2 && o.world.state === "PAUSE" && o.app.settings.fxq === 1 - q0 && live(o.world) === 0, q0 + "->" + o.app.settings.fxq);
   }
@@ -674,11 +686,11 @@ withSettings(null, () => {
     check("GRAPHICS " + code + " does nothing", gs(g) === s0, gs(g));
   }
   for (const code of ["KeyQ", "KeyN", "KeyC", "KeyB", "KeyR", "KeyT", "KeyK", "ShiftLeft", "Digit1", "BracketLeft", "Backspace"]) {
-    const o = run(); press(o, "KeyP"); toRow(o, PAUSE_ITEMS.indexOf("SETTINGS")); press(o, "Enter"); toRow(o, GDOOR); press(o, "Enter");
+    const o = run(); press(o, "KeyP"); toRow(o, PAUSE_ITEMS.indexOf("SETTINGS")); press(o, "Enter"); toRow(o, gdoor(o)); press(o, "Enter");
     const s0 = gs(o); press(o, code);
     check("pause view 2 " + code + " does nothing (still PAUSE view 2)", gs(o) === s0, gs(o));
   }
-  const o = run(); press(o, "KeyP"); toRow(o, PAUSE_ITEMS.indexOf("SETTINGS")); press(o, "Enter"); toRow(o, GDOOR); press(o, "Enter");
+  const o = run(); press(o, "KeyP"); toRow(o, PAUSE_ITEMS.indexOf("SETTINGS")); press(o, "Enter"); toRow(o, gdoor(o)); press(o, "Enter");
   press(o, "KeyM");
   check("pause view 2 M quits to MENU like the PAUSE list (score recorded by the same path)", o.app.screen === SCREEN.MENU && !o.app.inGame, o.app.screen);
 });
@@ -1026,7 +1038,7 @@ for (const code of ["KeyP", "Escape"]) {
 {
   const g = run(); press(g, "KeyP");
   press(g, "ArrowDown"); const c1 = g.app.pauseCursor; press(g, "ArrowUp"); press(g, "KeyW");
-  check("PAUSE ↓ / ↑ / W move the list cursor and wrap", c1 === 1 && g.app.pauseCursor === PAUSE_ITEMS.length - 1, c1 + "," + g.app.pauseCursor);
+  check("PAUSE ↓ / ↑ / W move the list cursor and wrap", c1 === PAUSE_ITEMS.indexOf("SETTINGS") && g.app.pauseCursor === PAUSE_ITEMS.length - 1, c1 + "," + g.app.pauseCursor);
 }
 for (const code of ["Enter", "Space"]) {
   const g = run(); press(g, "KeyP");
@@ -1034,20 +1046,22 @@ for (const code of ["Enter", "Space"]) {
   check("PAUSE " + code + " on RESUME -> PLAY, nothing planted, fire not latched",
     g.world.state === "PLAY" && live(g.world) === 0 && g.input._intent.fire === false, g.world.state + "/" + live(g.world));
 }
-{
-  const g = run(); g.world.score = 77; press(g, "KeyP"); toRow(g, 1); press(g, "Enter"); g.tick(10);
-  check("PAUSE Enter on RESTART -> room 1, score 0, PLAY, nothing planted",
+for (const [LK, blob] of LOOKS) withSettings(blob, () => {
+  const g = run(); g.world.score = 77; press(g, "KeyP"); toRow(g, PAUSE_ITEMS.indexOf("RESTART")); press(g, "Enter"); g.tick(10);
+  check("PAUSE Enter on RESTART -> room 1, score 0, PLAY, nothing planted (" + LK + ")",
     g.world.state === "PLAY" && g.world.level === 1 && g.world.score === 0 && live(g.world) === 0);
-  const o = run(); press(o, "KeyP"); toRow(o, 2); const s0 = JSON.stringify(o.app.settings); press(o, "Enter");
-  check("PAUSE Enter on OPTIONS opens the inline page and changes no knob",
-    o.app.pauseView === 1 && o.world.state === "PAUSE" && JSON.stringify(o.app.settings) === s0, o.app.pauseView);
-  press(o, "ArrowDown"); const r = o.app.optRow; press(o, "Escape");
-  check("PAUSE OPTIONS ↓ moves the row; Escape backs to the list, still paused",
-    r === 1 && o.app.pauseView === 0 && o.world.state === "PAUSE", r + "/" + o.app.pauseView);
+  const o = run(); press(o, "KeyP"); toRow(o, PAUSE_ITEMS.indexOf("SETTINGS")); const s0 = JSON.stringify(o.app.settings); press(o, "Enter");
+  check("PAUSE Enter on OPTIONS opens the inline page and changes no knob (" + LK + ": " + o.app.optRows().length + " rows)",
+    o.app.pauseView === 1 && o.world.state === "PAUSE" && JSON.stringify(o.app.settings) === s0 && o.app.optRows().length === (blob ? 12 : 10), o.app.pauseView);
+  press(o, "ArrowDown"); const r = o.app.optLabel(); press(o, "Escape");
+  check("PAUSE OPTIONS ↓ moves the row; Escape backs to the list on SETTINGS, still paused (" + LK + ")",
+    r === "SFX" && o.app.pauseView === 0 && o.app.pauseCursor === PAUSE_ITEMS.indexOf("SETTINGS") && o.world.state === "PAUSE", r + "/" + o.app.pauseView);
   press(o, "KeyP");
-  check("PAUSE P from the list resumes", o.world.state === "PLAY");
-  const q = run(); press(q, "KeyP"); toRow(q, 3); press(q, "Enter");
-  check("PAUSE Enter on QUIT TO MENU -> MENU", q.app.screen === SCREEN.MENU, q.app.screen);
+  check("PAUSE P from the list resumes (" + LK + ")", o.world.state === "PLAY");
+  const q = run(); press(q, "KeyP"); toRow(q, PAUSE_ITEMS.indexOf("QUIT TO MENU")); press(q, "Enter");
+  check("PAUSE Enter on QUIT TO MENU -> MENU (" + LK + ")", q.app.screen === SCREEN.MENU, q.app.screen);
+});
+{
   const m = run(); press(m, "KeyP"); press(m, "KeyM");
   check("PAUSE M -> MENU", m.app.screen === SCREEN.MENU, m.app.screen);
 }
@@ -1178,7 +1192,7 @@ for (const code of ["Space", "Enter"]) {
 // shell and world state it does exactly what Z, bound to nothing anywhere, does. ----
 {
   const at = (scr) => (g) => { g.app.screen = scr; };
-  const pauseOn = (view) => (g) => { press(g, "Enter"); press(g, "KeyP"); if (view) { toRow(g, PAUSE_ITEMS.indexOf("SETTINGS")); press(g, "Enter"); } if (view === 2) { toRow(g, OPT_ROWS.indexOf("GRAPHICS")); press(g, "Enter"); } };
+  const pauseOn = (view) => (g) => { press(g, "Enter"); press(g, "KeyP"); if (view) { toRow(g, PAUSE_ITEMS.indexOf("SETTINGS")); press(g, "Enter"); } if (view === 2) { toRow(g, optAt(g, "GRAPHICS")); press(g, "Enter"); } };
   const STATES = {
     "INTRO title": { boot: mk },
     "INTRO show": { boot: () => show(mk()) },
@@ -1203,12 +1217,14 @@ for (const code of ["Space", "Enter"]) {
     LOSE: { boot: run, go: (g) => { g.world.state = "LOSE"; } },
   };
   const sig = (g) => { const a = g.app, w = g.world; return JSON.stringify([a.screen, a.introStage, a.cursor, a.pauseCursor, a.pauseView, a.optRow, a.gfxRow, a.level, a.heat, a.pace, a.settings, w.state, w.level, w.seed, w.score, w.lives, live(w), g.input._intent]); };
-  for (const [name, s] of Object.entries(STATES)) {
-    const after = (code) => { const g = s.boot(); if (s.go) s.go(g); g.tick();
-      if (code === "KeyK" && name.startsWith("PAUSE")) check(name + " is really reached", g.world.state === "PAUSE" && g.app.pauseView === ["list", "OPTIONS", "GRAPHICS"].indexOf(name.slice(6)), g.app.pauseView);
-      press(g, code); return sig(g); };
+  for (const [name, s] of Object.entries(STATES)) for (const [LK, blob] of LOOKS) {
+    if (blob && !["OPTIONS", "GRAPHICS", "PAUSE OPTIONS", "PAUSE GRAPHICS"].includes(name)) continue; // the row sets matter on the SETTINGS / GRAPHICS / pause views only
+    const tag = blob ? " (" + LK + ")" : "";
+    const after = (code) => withSettings(blob, () => { const g = s.boot(); if (s.go) s.go(g); g.tick();
+      if (code === "KeyK" && name.startsWith("PAUSE")) check(name + tag + " is really reached", g.world.state === "PAUSE" && g.app.pauseView === ["list", "OPTIONS", "GRAPHICS"].indexOf(name.slice(6)) && g.app.render3d === !!blob, g.app.pauseView);
+      press(g, code); return sig(g); });
     const k = after("KeyK"), z = after("KeyZ");
-    check("K = an unbound key on " + name, k === z, k === z ? undefined : k + " vs " + z);
+    check("K = an unbound key on " + name + tag, k === z, k === z ? undefined : k + " vs " + z);
   }
   const g = run(); down("KeyK");
   check("K held in PLAY latches nothing: the intent has no kick field", !("kick" in g.input._intent) && !("kick" in g.input.intent()), JSON.stringify(g.input._intent));
@@ -1234,7 +1250,7 @@ for (const code of ["Space", "Enter"]) {
   const pPause = () => { const g = pRun(); tap(g, "START"); return g; };
   const rowTo = (g, i) => { for (let k = 0; k < i; k++) tap(g, "dD"); };
   const pOpt = () => { const g = pMenu(); rowTo(g, ITEMS.indexOf("SETTINGS")); tap(g, "S"); return g; };
-  const pCtl = () => { const g = pOpt(); rowTo(g, OPT_ROWS.indexOf("CONTROLS")); tap(g, "S"); return g; };
+  const pCtl = () => { const g = pOpt(); rowTo(g, optAt(g, "CONTROLS")); tap(g, "S"); return g; };
 
   { const g = pk();
     check("pad: the title waits for a press", g.app.screen === SCREEN.INTRO && g.app.introStage === 0);
@@ -1260,13 +1276,13 @@ for (const code of ["Space", "Enter"]) {
     "SCORES": { boot: page("RECORDS"), E: onScr(SCREEN.MENU), S: onScr(SCREEN.MENU) },
     "STATS": { boot: page("RECORDS", (g) => tap(g, "dR")), E: onScr(SCREEN.MENU) },
     "HOW TO": { boot: page("GUIDE", (g) => tap(g, "S")), E: onScr(SCREEN.GUIDE), S: onScr(SCREEN.GUIDE) },
-    "GRAPHICS": { boot: () => { const g = pOpt(); rowTo(g, OPT_ROWS.indexOf("GRAPHICS")); tap(g, "S"); return g; }, E: onScr(SCREEN.SETTINGS) },
+    "GRAPHICS": { boot: () => { const g = pOpt(); rowTo(g, optAt(g, "GRAPHICS")); tap(g, "S"); return g; }, E: onScr(SCREEN.SETTINGS) },
     "CONTROLS": { boot: pCtl, E: onScr(SCREEN.SETTINGS) },
     "ITEMS": { boot: page("GUIDE", guided(GUIDE_ROWS.indexOf("POWER-UPS"))), E: onScr(SCREEN.GUIDE), S: onScr(SCREEN.GUIDE) },
     "ENEMIES": { boot: page("GUIDE", guided(GUIDE_ROWS.indexOf("ENEMIES"))), E: onScr(SCREEN.GUIDE), S: onScr(SCREEN.GUIDE) },
     "FLOOR": { boot: page("GUIDE", guided(GUIDE_ROWS.indexOf("FLOOR"))), E: onScr(SCREEN.GUIDE), S: onScr(SCREEN.GUIDE) },
     "MEDALS": { boot: page("RECORDS", (g) => { tap(g, "dR"); g.app.key("KeyT"); g.tick(); }), E: onScr(SCREEN.MENU) },
-    "PAUSE GRAPHICS": { boot: () => { const g = pPause(); rowTo(g, PAUSE_ITEMS.indexOf("SETTINGS")); tap(g, "S"); rowTo(g, OPT_ROWS.indexOf("GRAPHICS")); tap(g, "S"); return g; }, E: paused(1), START: paused(1) },
+    "PAUSE GRAPHICS": { boot: () => { const g = pPause(); rowTo(g, PAUSE_ITEMS.indexOf("SETTINGS")); tap(g, "S"); rowTo(g, optAt(g, "GRAPHICS")); tap(g, "S"); return g; }, E: paused(1), START: paused(1) },
     "GAME PLAY": { boot: pRun, E: (g) => g.world.state === "PLAY" && g.app.screen === SCREEN.GAME, START: paused(0), SELECT: paused(0) },
     "GAME PAUSE": { boot: pPause, E: (g) => g.world.state === "PLAY", START: (g) => g.world.state === "PLAY", S: (g) => g.world.state === "PLAY" },
     "GAME PAUSE OPTIONS": { boot: () => { const g = pPause(); rowTo(g, PAUSE_ITEMS.indexOf("SETTINGS")); tap(g, "S"); return g; }, E: paused(0), START: paused(0) },
@@ -1274,11 +1290,14 @@ for (const code of ["Space", "Enter"]) {
     "GAME LOSE": { boot: () => { const g = pRun(); g.world.state = "LOSE"; g.tick(); return g; }, E: (g) => g.world.state === "LOSE", S: (g) => g.world.state !== "LOSE" },
     "ATTRACT": { boot: () => { const g = pMenu(); g.app.enterAttract(); g.tick(); return g; }, E: onScr(SCREEN.MENU), S: onScr(SCREEN.GAME), START: onScr(SCREEN.GAME) },
   };
-  for (const [name, row] of Object.entries(MATRIX)) for (const id of ["S", "E", "START", "SELECT"]) {
-    if (!row[id]) continue;
-    const g = row.boot();
-    tap(g, id);
-    check("pad matrix: " + name + " + " + id, row[id](g), "screen " + g.app.screen + " state " + g.world.state + " view " + g.app.pauseView);
+  for (const [name, row] of Object.entries(MATRIX)) for (const [LK, blob] of LOOKS) for (const id of ["S", "E", "START", "SELECT"]) {
+    if (!row[id] || (blob && !["SETTINGS", "GRAPHICS", "CONTROLS", "PAUSE GRAPHICS", "GAME PAUSE OPTIONS"].includes(name))) continue;
+    withSettings(blob, () => {
+      const g = row.boot();
+      const rows = g.app.optRows().length;
+      tap(g, id);
+      check("pad matrix: " + name + (blob ? " (" + LK + ")" : "") + " + " + id, row[id](g) && rows === (blob ? 12 : 10), "screen " + g.app.screen + " state " + g.world.state + " view " + g.app.pauseView);
+    });
   }
 
   { const g = page("LEVEL SELECT")(); const p0 = g.app.pace;
@@ -1377,11 +1396,11 @@ for (const code of ["Space", "Enter"]) {
   { const g = pMenu(), k = Object.keys(mem).length, a0 = mem["nb.analytics.v1"];
     for (const id of Object.keys(IDX)) { tap(g, id); tap(g, id); if (g.app.screen !== SCREEN.MENU) { g.app.screen = SCREEN.MENU; g.world.state = "PLAY"; g.tick(); } }
     check("T14: no pad button on MENU writes a consent answer", a0 === undefined && mem["nb.analytics.v1"] === undefined, mem["nb.analytics.v1"]); }
-  { delete mem["nb.analytics.v1"];
-    const g = pOpt(); rowTo(g, OPT_ROWS.indexOf("ANALYTICS"));
-    check("T14: on the ANALYTICS row", g.app.screen === SCREEN.SETTINGS && OPT_ROWS[g.app.optRow] === "ANALYTICS", g.app.optRow);
+  for (const [LK, blob] of LOOKS) withSettings(blob, () => { delete mem["nb.analytics.v1"];
+    const g = pOpt(); rowTo(g, optAt(g, "ANALYTICS"));
+    check("T14: on the ANALYTICS row (" + LK + ", row " + g.app.optRow + ")", g.app.screen === SCREEN.SETTINGS && g.app.optLabel() === "ANALYTICS" && g.app.optRow === (blob ? 8 : 6), g.app.optRow);
     for (const id of ["S", "START", "dL", "dR", "W", "N", "SELECT", "SHL", "SHR", "TRL", "TRR", "S"]) tap(g, id);
-    check("T14: the consent row: a pad mash on an unanswered card never answers it", mem["nb.analytics.v1"] === undefined && g.app.anaNote !== "", mem["nb.analytics.v1"] + " / " + g.app.anaNote); }
+    check("T14: the consent row: a pad mash on an unanswered card never answers it (" + LK + ")", mem["nb.analytics.v1"] === undefined && g.app.anaNote !== "", mem["nb.analytics.v1"] + " / " + g.app.anaNote); });
   { const plays = [], g = pk({ audio: { play: (n) => plays.push(n), toggle: () => false, duck: noop, pump: noop, unlocked: () => false } });
     g.app.screen = SCREEN.LEVEL; g.app.pactUnlocked = true; plays.length = 0;
     g.app.modeWalk(1); const one = plays.join(); g.app.modeWalk(-1);
@@ -1530,15 +1549,15 @@ for (const code of ["Space", "Enter"]) {
     check("pad capture: open", g.app.capturing);
     tap(g, "START");
     check("pad capture: START cancels and writes nothing", !g.app.capturing && !mem["nb.controls.v1"] && g.app.screen === SCREEN.CONTROLS); }
-  { const g = pPause(); rowTo(g, PAUSE_ITEMS.indexOf("SETTINGS")); tap(g, "S"); rowTo(g, OPT_ROWS.indexOf("CONTROLS")); tap(g, "S");
+  for (const [LK, blob] of LOOKS) withSettings(blob, () => { const g = pPause(); rowTo(g, PAUSE_ITEMS.indexOf("SETTINGS")); tap(g, "S"); rowTo(g, optAt(g, "CONTROLS")); tap(g, "S");
     check("pad: PAUSE CONTROLS is pauseView 3", g.app.pauseView === 3 && g.world.state === "PAUSE", g.app.pauseView);
     tap(g, "S"); g.tick(20);
     check("pauseView 3: a capture is open", g.app.capturing);
     press(g, "Escape");
     check("ESC in capture never pauses or backs out", !g.app.capturing && g.app.pauseView === 3 && g.world.state === "PAUSE", g.app.pauseView);
     tap(g, "E");
-    check("pauseView 3 steps back to OPTIONS on the door", g.app.pauseView === 1 && g.app.optRow === OPT_ROWS.indexOf("CONTROLS"), g.app.pauseView); }
-  { const g = mk(); show(g); press(g, "Enter"); toRow(g, ITEMS.indexOf("SETTINGS")); press(g, "Enter"); toRow(g, OPT_ROWS.indexOf("CONTROLS")); press(g, "Enter");
+    check("pauseView 3 steps back to OPTIONS on the door (" + LK + ")", g.app.pauseView === 1 && g.app.optRow === optAt(g, "CONTROLS") && g.app.optLabel() === "CONTROLS", g.app.pauseView); });
+  for (const [LK, blob] of LOOKS) withSettings(blob, () => { const g = mk(); show(g); press(g, "Enter"); toRow(g, ITEMS.indexOf("SETTINGS")); press(g, "Enter"); toRow(g, optAt(g, "CONTROLS")); press(g, "Enter");
     check("keys: CONTROLS opens on the keyboard tab", g.app.screen === SCREEN.CONTROLS && g.app.ctlTab === "key", g.app.ctlTab);
     press(g, "ArrowRight");
     check("keys: → changes tab", g.app.ctlTab === "pad", g.app.ctlTab);
@@ -1554,8 +1573,8 @@ for (const code of ["Space", "Enter"]) {
     const c1 = JSON.parse(mem["nb.controls.v1"] || "{}");
     check("keys capture: Z binds BOMB", !g.app.capturing && c1.key && c1.key.BOMB === "KeyZ", mem["nb.controls.v1"]);
     press(g, "Escape");
-    check("keys: back on OPTIONS", g.app.screen === SCREEN.SETTINGS, g.app.screen);
-    delete mem["nb.controls.v1"]; }
+    check("keys: back on OPTIONS, on the CONTROLS door (" + LK + ")", g.app.screen === SCREEN.SETTINGS && g.app.optLabel() === "CONTROLS", g.app.screen);
+    delete mem["nb.controls.v1"]; });
   { mem["nb.controls.v1"] = JSON.stringify({ v: 1, key: { BOMB: "Space", THROW: "KeyE", REMOTE: "KeyQ", PAUSE: "KeyP", MOVE: ["KeyI", "KeyL", "KeyO", "KeyK"] }, pad: { BOMB: "S", THROW: "W", REMOTE: "E", PAUSE: "SELECT" }, stick: "L", dead: 25, rumble: 0 });
     const g = menu(); const c0 = g.app.cursor;
     press(g, "KeyO");

@@ -16,7 +16,7 @@ import {
 import { CFG, T, key } from "../src/core/config.js";
 import { drawCoach, drawCoach2 } from "../src/render/scenes.js";
 import { createGame } from "../src/main.js";
-import { SCREEN } from "../src/app/menuapp.js";
+import { SCREEN, PAUSE_ITEMS } from "../src/app/menuapp.js";
 import { POWER } from "../src/core/entities.js";
 import { loadStats, setStatsOn } from "../src/app/stats.js";
 import { readFileSync } from "node:fs";
@@ -266,8 +266,8 @@ check("round-trip", loadCoachSeen(store) === true);
   g.input.onPause();
   t += 20;
   g.loop(t);
-  g.app.pauseCursor = 1;
-  g.app.confirm(); // RESTART
+  g.app.pauseCursor = PAUSE_ITEMS.indexOf("RESTART");
+  g.app.confirm();
   check("pause RESTART reloads L1 PLAY", g.world.level === 1 && g.world.state === "PLAY");
   t += 20;
   g.loop(t);
@@ -768,7 +768,7 @@ check("round-trip", loadCoachSeen(store) === true);
     );
     g.input.onPause();
     g.loop((t += 16));
-    g.app.pauseCursor = 3; // QUIT TO MENU
+    g.app.pauseCursor = PAUSE_ITEMS.indexOf("QUIT TO MENU");
     g.app.confirm();
     check("Major-1 setup: quitting mid-tip lands on MENU", g.app.screen === SCREEN.MENU, String(g.app.screen));
     check(

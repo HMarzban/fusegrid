@@ -165,8 +165,8 @@ function stateHash(w) {
 {
   const g = menu(); // the fake store has no answer, and the card logic reads ga.consent === -1
   const opt = g.app;
-  opt.screen = SCREEN.SETTINGS; opt.optRow = 8;
-  check("row 8 is ANALYTICS", opt.analytics === false);
+  opt.screen = SCREEN.SETTINGS; opt.optRow = opt.optRows().indexOf("ANALYTICS");
+  check("the cursor is on ANALYTICS (row 8 of twelve, 6 of the ten CLASSIC 2D shows), still off", opt.optLabel() === "ANALYTICS" && opt.analytics === false);
   tap(g, "S");
   check("SOUTH on the unanswered row leaves analytics off", opt.analytics === false && mem["nb.analytics.v1"] === undefined, String(opt.analytics));
   check("and the row says why", opt.anaNote !== "", opt.anaNote);
@@ -181,7 +181,7 @@ const HIT = () => [{ t: "hurt", x: 0, y: 0 }];
   const g = menu();
   check("no actuator: the page reads no rumble", g.app.controls.view(g.app.ctlT).pad.rumble === false);
   check("no actuator: rumbleInfo says so", g.ctl.rumbleInfo().route === null && g.ctl.rumbleInfo().actuator === null && g.ctl.rumbleInfo().hapticActuators === 0, JSON.stringify(g.ctl.rumbleInfo()));
-  g.app.screen = SCREEN.SETTINGS; g.app.optRow = 10; g.app.confirm();
+  g.app.screen = SCREEN.SETTINGS; g.app.optRow = g.app.optRows().indexOf("CONTROLS"); g.app.confirm();
   g.ctl.tap({ tab: "pad" }); g.ctl.tap({ row: 6 });
   check("no actuator: the row refuses, in the page's words", g.app.controls.view(g.app.ctlT).status === "NO VIBRATION ON THIS CONTROLLER OR BROWSER" && g.app.controls.view(g.app.ctlT).vib === 2 && !("nb.controls.v1" in mem), g.app.controls.view(g.app.ctlT).status);
   setHints(null);
@@ -350,7 +350,7 @@ const VIBROW = 6, SENSROW = 5;
   g.pad.vibrationActuator = buzzer(calls);
   g.tick(2);
   check("boot never pulses, stored OFF", calls.length === 0, calls.length);
-  g.app.screen = SCREEN.SETTINGS; g.app.optRow = 10; g.app.confirm();
+  g.app.screen = SCREEN.SETTINGS; g.app.optRow = g.app.optRows().indexOf("CONTROLS"); g.app.confirm();
   g.ctl.tap({ tab: "pad" });
   check("the page shows it off", g.app.controls.view(g.app.ctlT).vib === 0);
   g.ctl.tap({ row: VIBROW });
@@ -387,7 +387,7 @@ const VIBROW = 6, SENSROW = 5;
   const h = run();
   h.pad.vibrationActuator = buzzer(calls);
   tap(h, "START");
-  h.app.pauseView = 1; h.app.optRow = 10; h.app.confirm();
+  h.app.pauseView = 1; h.app.optRow = h.app.optRows().indexOf("CONTROLS"); h.app.confirm();
   h.ctl.tap({ tab: "pad" });
   calls.length = 0;
   h.ctl.tap({ row: VIBROW });
@@ -403,7 +403,7 @@ const VIBROW = 6, SENSROW = 5;
   const calls = [];
   const g = menu();
   g.pad.vibrationActuator = buzzer(calls);
-  g.app.screen = SCREEN.SETTINGS; g.app.optRow = 10; g.app.confirm();
+  g.app.screen = SCREEN.SETTINGS; g.app.optRow = g.app.optRows().indexOf("CONTROLS"); g.app.confirm();
   g.ctl.tap({ tab: "pad" }); g.app.controls.pick(VIBROW);
   g.tick(2); calls.length = 0;
   kd("ArrowRight");
@@ -419,7 +419,7 @@ const VIBROW = 6, SENSROW = 5;
   mem["nb.controls.v1"] = STORED(0);
   const o = menu();
   o.pad.vibrationActuator = buzzer(calls);
-  o.app.screen = SCREEN.SETTINGS; o.app.optRow = 10; o.app.confirm();
+  o.app.screen = SCREEN.SETTINGS; o.app.optRow = o.app.optRows().indexOf("CONTROLS"); o.app.confirm();
   o.ctl.tap({ tab: "pad" }); o.app.controls.pick(SENSROW); o.app.controls.adjust(1); o.app.controls.pick(7);
   o.tick(2); calls.length = 0;
   o.app.confirm(); o.tick(2); o.app.confirm(); o.tick(30);
@@ -520,7 +520,7 @@ const VIBROW = 6, SENSROW = 5;
   g.pad.set("dD", true); g.tick(1); g.pad.set("dD", false); g.tick(1); g.pad.set("dU", true); g.tick(1); g.pad.set("dU", false); g.tick(1);
   check("two steps inside 100 ms: one tick", calls.length === 1, calls.length);
   g.tick(12); calls.length = 0;
-  g.app.screen = SCREEN.SETTINGS; g.app.optRow = 0; g.tick(2);
+  g.app.screen = SCREEN.SETTINGS; g.app.optRow = g.app.optRows().indexOf("MUSIC"); g.tick(2);
   tap(g, "dL"); tap(g, "dR"); g.tick(12);
   check("a value write on OPTIONS: one 70 ms confirm, the second inside 100 ms dropped", calls.length === 1 && calls[0].duration === 70, JSON.stringify(calls));
   g.app.screen = SCREEN.MENU; g.app.cursor = 4; g.tick(12); calls.length = 0; // SETTINGS (row 4 since RECORDS, v202 Task 2.2)
@@ -529,7 +529,7 @@ const VIBROW = 6, SENSROW = 5;
   calls.length = 0;
   tap(g, "E"); g.tick(12);
   check("a back: one 70 ms back on the strong motor alone", g.app.screen === SCREEN.MENU && calls.length === 1 && calls[0].duration === 70 && calls[0].weakMagnitude === 0, JSON.stringify(calls));
-  g.app.screen = SCREEN.SETTINGS; g.app.optRow = 7; g.tick(4); calls.length = 0;
+  g.app.screen = SCREEN.SETTINGS; g.app.optRow = g.app.optRows().indexOf("REDUCE FLASH"); g.tick(4); calls.length = 0;
   tap(g, "S"); g.tick(12);
   check("a row confirm that stays on the page: one 70 ms tick", g.app.screen === SCREEN.SETTINGS && calls.length === 1 && calls[0].duration === 70, JSON.stringify(calls));
   g.app.screen = SCREEN.MENU; g.app.lastDev = "key"; g.tick(4); calls.length = 0;
@@ -652,7 +652,7 @@ check("updVisible stands down while capturing", updVisible(SCREEN.MENU, "PLAY", 
 // ---- taps: a row is Enter on it, off the plate cancels a capture, else backs out ----
 {
   const g = menu();
-  g.app.screen = SCREEN.SETTINGS; g.app.optRow = 10; g.app.confirm();
+  g.app.screen = SCREEN.SETTINGS; g.app.optRow = g.app.optRows().indexOf("CONTROLS"); g.app.confirm();
   check("door opens CONTROLS", g.app.screen === SCREEN.CONTROLS);
   g.ctl.tap({ tab: "key" });
   check("a tab tap switches tab", g.app.ctlTab === "key", g.app.ctlTab);
@@ -665,10 +665,10 @@ check("updVisible stands down while capturing", updVisible(SCREEN.MENU, "PLAY", 
   g.ctl.tap({});
   check("a miss on the plate is inert", g.app.screen === SCREEN.CONTROLS && !g.app.capturing);
   g.ctl.tap({ off: 1 });
-  check("off the plate backs out to OPTIONS on the door", g.app.screen === SCREEN.SETTINGS && g.app.optRow === 10, g.app.screen);
+  check("off the plate backs out to OPTIONS on the door", g.app.screen === SCREEN.SETTINGS && g.app.optLabel() === "CONTROLS", g.app.screen);
   const h = run();
   tap(h, "START");
-  h.app.pauseView = 1; h.app.optRow = 10; h.app.confirm();
+  h.app.pauseView = 1; h.app.optRow = h.app.optRows().indexOf("CONTROLS"); h.app.confirm();
   check("from PAUSE the door is pauseView 3", h.app.pauseView === 3);
   h.ctl.tap({ off: 1 });
   check("off the plate in view 3 steps back to view 1, never to play", h.app.pauseView === 1 && h.world.state === "PAUSE", h.app.pauseView);
@@ -683,7 +683,7 @@ check("updVisible stands down while capturing", updVisible(SCREEN.MENU, "PLAY", 
   const C = elOf("#c", "canvas", "#stage", "#wrap", "body"), SH = elOf("#sh", "canvas", "body");
   const PILL = elOf("#tpause", "#touchpad", "#stage", "#wrap", "body"), PADEL = elOf("#tpad", "#touchpad", "#stage", "#wrap", "body");
   const down = (target, o = {}) => (L.pointerdown || []).forEach((f) => f({ pointerType: "touch", button: 0, target, ...o }));
-  const page = () => { const g = menu(); g.app.screen = SCREEN.SETTINGS; g.app.optRow = 10; g.app.confirm(); return g; };
+  const page = () => { const g = menu(); g.app.screen = SCREEN.SETTINGS; g.app.optRow = g.app.optRows().indexOf("CONTROLS"); g.app.confirm(); return g; };
   {
     const g = page();
     g.ctl.tap({ tab: "key" }); g.ctl.tap({ row: 3 });
@@ -698,7 +698,7 @@ check("updVisible stands down while capturing", updVisible(SCREEN.MENU, "PLAY", 
     check("852x393 step: an off-canvas tap cancels the capture, the page stays", !g.app.capturing && g.app.screen === SCREEN.CONTROLS, g.app.screen);
     for (const t of [C, SH, PILL]) { down(t); check("no capture: a press on a canvas or the pad never backs out here", g.app.screen === SCREEN.CONTROLS); }
     down(BODY);
-    check("no capture: an off-canvas tap backs out to OPTIONS on the door", g.app.screen === SCREEN.SETTINGS && g.app.optRow === 10, g.app.screen);
+    check("no capture: an off-canvas tap backs out to OPTIONS on the door", g.app.screen === SCREEN.SETTINGS && g.app.optLabel() === "CONTROLS", g.app.screen);
     down(BODY);
     check("other pages keep their behaviour: OPTIONS ignores an off-canvas tap", g.app.screen === SCREEN.SETTINGS, g.app.screen);
     setHints(null);
@@ -708,7 +708,7 @@ check("updVisible stands down while capturing", updVisible(SCREEN.MENU, "PLAY", 
     down(WRAP);
     check("live PLAY: an off-canvas tap does nothing", h.app.screen === SCREEN.GAME && h.world.state === "PLAY" && !h.app.pauseView);
     tap(h, "START");
-    h.app.pauseView = 1; h.app.optRow = 10; h.app.confirm();
+    h.app.pauseView = 1; h.app.optRow = h.app.optRows().indexOf("CONTROLS"); h.app.confirm();
     check("the view 3 door", h.app.pauseView === 3 && h.world.state === "PAUSE", h.app.pauseView);
     for (const t of [C, PILL, PADEL]) { down(t); check("view 3: a press on the canvas or the pad is not this seam's", h.app.pauseView === 3); }
     down(WRAP);
@@ -744,7 +744,7 @@ check("updVisible stands down while capturing", updVisible(SCREEN.MENU, "PLAY", 
   const audio = { play: (c) => cues.push(c), unlock: () => false, unlocked: () => false, duck: noop, pump: noop, setTrack: noop, cue: () => "menu" };
   const g = menu({ audio });
   const take = () => cues.splice(0).filter((c) => c.startsWith("ui") && c !== "uiJingle").join();
-  g.app.screen = SCREEN.SETTINGS; g.app.optRow = 10; g.tick(); take();
+  g.app.screen = SCREEN.SETTINGS; g.app.optRow = g.app.optRows().indexOf("CONTROLS"); g.tick(); take();
   g.app.confirm();
   check("the door plays one uiSel", take() === "uiSel" && g.app.screen === SCREEN.CONTROLS);
   g.ctl.tap({ tab: "key" }); g.ctl.tap({ tab: "pad" });
@@ -778,7 +778,7 @@ check("updVisible stands down while capturing", updVisible(SCREEN.MENU, "PLAY", 
   delete mem["nb.controls.v1"];
   const h = run({ audio });
   tap(h, "START");
-  h.app.pauseView = 1; h.app.optRow = 10; take();
+  h.app.pauseView = 1; h.app.optRow = h.app.optRows().indexOf("CONTROLS"); take();
   h.app.confirm();
   check("view 3's door plays one uiSel", take() === "uiSel" && h.app.pauseView === 3);
   h.app.controls.pick(5); take();
@@ -793,7 +793,7 @@ check("updVisible stands down while capturing", updVisible(SCREEN.MENU, "PLAY", 
   const kd = (code) => (L.keydown || []).forEach((f) => f({ code, key: code, repeat: false, preventDefault: noop }));
   const ku = (code) => (L.keyup || []).forEach((f) => f({ code, key: code, preventDefault: noop }));
   const g = menu();
-  g.app.screen = SCREEN.SETTINGS; g.app.optRow = 10; g.app.confirm();
+  g.app.screen = SCREEN.SETTINGS; g.app.optRow = g.app.optRows().indexOf("CONTROLS"); g.app.confirm();
   g.ctl.tap({ tab: "pad" }); g.app.controls.pick(5);
   let binds = 0;
   const sb = g.input.setKeyBinds.bind(g.input);
@@ -828,7 +828,7 @@ check("updVisible stands down while capturing", updVisible(SCREEN.MENU, "PLAY", 
   const ku = (code) => (L.keyup || []).forEach((f) => f({ code, key: code, preventDefault: noop }));
   mem["nb.controls.v1"] = JSON.stringify({ v: 1, key: { ...DEF_CONTROLS.key, THROW: "KeyZ" }, pad: DEF_CONTROLS.pad, stick: "L", dead: 25, rumble: 1 });
   const g = menu();
-  g.app.screen = SCREEN.SETTINGS; g.app.optRow = 10; g.app.confirm();
+  g.app.screen = SCREEN.SETTINGS; g.app.optRow = g.app.optRows().indexOf("CONTROLS"); g.app.confirm();
   g.ctl.tap({ tab: "key" }); g.app.controls.pick(7);
   kd("Space"); g.tick(2); ku("Space"); g.tick(2);
   check("SPACE arms RESET", g.app.controls.view(g.app.ctlT).armed === true && g.input._kb.THROW === "KeyZ");
@@ -841,7 +841,7 @@ check("updVisible stands down while capturing", updVisible(SCREEN.MENU, "PLAY", 
 // ---- a pad player in a keyboard capture: EAST cancels, the same press never backs out ----
 {
   const g = menu();
-  g.app.screen = SCREEN.SETTINGS; g.app.optRow = 10; g.app.confirm();
+  g.app.screen = SCREEN.SETTINGS; g.app.optRow = g.app.optRows().indexOf("CONTROLS"); g.app.confirm();
   g.ctl.tap({ tab: "key" }); g.app.controls.pick(2); g.app.confirm();
   check("a keyboard capture is open", g.app.capturing && g.app.controls.view(g.app.ctlT).capture.dev === "key");
   g.tick(30);
@@ -885,7 +885,7 @@ check("updVisible stands down while capturing", updVisible(SCREEN.MENU, "PLAY", 
   setHints(null);
   const p = menu();
   p.pad.vibrationActuator = buzzer(calls);
-  p.app.screen = SCREEN.SETTINGS; p.app.optRow = 10; p.app.confirm();
+  p.app.screen = SCREEN.SETTINGS; p.app.optRow = p.app.optRows().indexOf("CONTROLS"); p.app.confirm();
   p.ctl.tap({ tab: "pad" });
   kd("KeyG"); calls.length = 0;
   p.ctl.tap({ row: 6 }); p.ctl.tap({ row: 6 });

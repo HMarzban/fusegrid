@@ -6,7 +6,7 @@
 import { readFileSync } from "node:fs";
 import { WIN_SHELL, FIT_RES, PORT_SHELL, fitBox, mountFit, portraitGeo, shellGeo } from "../src/app/fit.js";
 import { mountPointer } from "../src/app/pointer.js";
-import { ITEMS, SCREEN, createMenuApp } from "../src/app/menuapp.js";
+import { ITEMS, SCREEN, optRows, createMenuApp } from "../src/app/menuapp.js";
 import { createControlsPage } from "../src/app/controlspage.js";
 import { DEF_CONTROLS } from "../src/app/controls.js";
 import { overlayBox, pauseHit, touchLay } from "../src/render/scenes.js";
@@ -256,11 +256,11 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
     }
     const sc = md.scoresGeom(L, touch);
     check(`HIGH SCORES: tabs in the plate, each taps to itself (${tg})`, inBox(sc.S) && sc.tabs.every((r, i) => inPlate(r, sc.S) && md.scoresHit(...ctr(r), L, touch) === i));
-    for (const [nm, geo, hit, n] of [["SETTINGS", md.settingsGeom, md.settingsHit, md.OPT_N], ["GRAPHICS", md.graphicsGeom, md.graphicsHit, md.GFX_N]]) {
-      const q = geo(L, touch);
+    for (const [nm, geo, hit, n, R] of [["SETTINGS (ten rows)", md.settingsGeom, md.settingsHit, 10, optRows(false)], ["SETTINGS (twelve rows)", md.settingsGeom, md.settingsHit, 12, optRows(true)], ["GRAPHICS", md.graphicsGeom, md.graphicsHit, md.GFX_N, 0]]) {
+      const q = geo(L, touch, R);
       check(`${nm}: rows in the box, each taps to itself, a miss on the plate is inert (-2), off the plate at either corner backs out (-1) (${tg})`,
-        inBox(q.S) && Array.from({ length: n }, (_, i) => hit(q.S.mid, q.y0 + (i + 0.5) * q.rowH, L, 0, touch) === i).every(Boolean) &&
-          q.S.y + 4 < q.y0 && hit(q.S.mid, q.S.y + 4, L, 0, touch) === -2 && hit(4, 4, L, 0, touch) === -1 && hit(g.w - 4, g.h - 4, L, 0, touch) === -1);
+        inBox(q.S) && n > 0 && Array.from({ length: n }, (_, i) => hit(q.S.mid, q.y0 + (i + 0.5) * q.rowH, L, R, touch) === i).every(Boolean) &&
+          q.S.y + 4 < q.y0 && hit(q.S.mid, q.S.y + 4, L, R, touch) === -2 && hit(4, 4, L, R, touch) === -1 && hit(g.w - 4, g.h - 4, L, R, touch) === -1);
     }
     const gd = md.guideGeom(L, touch);
     check(`GUIDE: doors in the box, each taps to itself (${tg})`, inBox(gd.S) && gd.tiles.every((r, i) => md.guideHit(...ctr(r), L, 0, touch) === i));

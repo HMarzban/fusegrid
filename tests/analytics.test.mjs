@@ -228,13 +228,13 @@ check("cookiePath keeps the cookies on the game's own directory",
   const calls = [];
   const a = createMenuApp({ analytics: false, onAnalytics: (v) => calls.push(v) });
   a.screen = SCREEN.SETTINGS;
-  a.optRow = OPT_ROWS.indexOf("ANALYTICS");
-  check("ANALYTICS sits right after REDUCE FLASH", OPT_ROWS[a.optRow - 1] === "REDUCE FLASH" && OPT_ROWS[a.optRow + 1] === "GRAPHICS");
+  a.optRow = a.optRows().indexOf("ANALYTICS"); // an index into the visible rows (v202 Task 2.4, R11)
+  check("ANALYTICS sits right after REDUCE FLASH", a.optRows()[a.optRow - 1] === "REDUCE FLASH" && a.optRows()[a.optRow + 1] === "GRAPHICS" && OPT_ROWS[OPT_ROWS.indexOf("ANALYTICS") - 1] === "REDUCE FLASH");
   check("Enter cycles OFF -> ON and reports it", a.optCycle() === true && a.analytics === true && calls.join() === "true");
   check("→ at ON is a no-op", a.optAdjust(1) === false && calls.length === 1);
   check("← turns it OFF and reports it", a.optAdjust(-1) === true && a.analytics === false && calls.join() === "true,false");
   a.optCycle();
-  a.optRow = OPT_ROWS.indexOf("RESET DEFAULTS");
+  a.optRow = a.optRows().indexOf("RESET DEFAULTS");
   a.optCycle();
   check("RESET DEFAULTS never touches the consent", a.analytics === true && calls.length === 3);
   check("the app boots with the stored consent", createMenuApp({ analytics: true }).analytics === true && createMenuApp().analytics === false);

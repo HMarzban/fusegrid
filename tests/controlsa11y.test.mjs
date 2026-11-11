@@ -5,7 +5,7 @@ import { createGame } from "../src/main.js";
 import { loadControlsArt } from "../src/render/shellview.js";
 import "../src/core/board3.js";
 import { createPixelRenderer } from "../src/render/pixel/renderer.js";
-import { SCREEN, OPT_ROWS } from "../src/app/menuapp.js";
+import { SCREEN } from "../src/app/menuapp.js";
 import { mountControls, preloadControls } from "../src/app/controlswire.js";
 import { ACCENT, DANGER, MUTED, TEXT, WARM, layout, lockGlyph } from "../src/render/menudraw.js";
 import { DEF_KEY, DEF_PAD, geoFor, geomOf, rowsOf } from "../src/render/controlsgeo.js";
@@ -74,7 +74,7 @@ function mk() {
   g.btn("S"); g.tick(15); g.btn("S");
   return g;
 }
-const openPage = (g) => { g.app._push(SCREEN.SETTINGS); g.app.optRow = OPT_ROWS.indexOf("CONTROLS"); g.app.confirm(); g.tick(16); };
+const openPage = (g) => { g.app._push(SCREEN.SETTINGS); g.app.optRow = g.app.optRows().indexOf("CONTROLS"); g.app.confirm(); g.tick(16); };
 {
   const g = mk();
   check("the shell reached the menu", g.app.screen === SCREEN.MENU, g.app.screen);

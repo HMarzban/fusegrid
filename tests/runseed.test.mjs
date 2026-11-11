@@ -10,7 +10,7 @@ import { createGame } from "../src/main.js";
 import { createWorld, loadLevel, step } from "../src/core/sim.js";
 import { runSeed } from "../src/core/rng.js";
 import { CFG, T, key } from "../src/core/config.js";
-import { SCREEN, ITEMS, IDLE_T } from "../src/app/menuapp.js";
+import { SCREEN, ITEMS, IDLE_T, PAUSE_ITEMS } from "../src/app/menuapp.js";
 import { dailySeed } from "../src/app/daily.js";
 import { encodeChallenge, decodeChallenge } from "../src/app/code.js";
 import "../src/core/board3.js";
@@ -68,7 +68,7 @@ const walls = (w) => {
 const board = (g) => ({ seed: g.world.seed, b: bricks(g.world), w: walls(g.world) });
 const play = (g) => { g.app.cursor = ITEMS.indexOf("PLAY"); press(g, "Enter"); return board(g); };
 const quit = (g) => { press(g, "KeyP"); press(g, "KeyM"); };
-const restart = (g) => { press(g, "KeyP"); toRow(g, 1); press(g, "Enter"); g.tick(5); return board(g); };
+const restart = (g) => { press(g, "KeyP"); toRow(g, PAUSE_ITEMS.indexOf("RESTART")); press(g, "Enter"); g.tick(5); return board(g); };
 const gameOver = (g) => { g.world.state = "LOSE"; g.tick(3); press(g, "Enter"); g.tick(5); return board(g); };
 const daily = (g) => { g.app.cursor = ITEMS.indexOf("DAILY"); press(g, "Enter"); return board(g); };
 const p2 = (n) => (n < 10 ? "0" + n : "" + n);

@@ -11,7 +11,7 @@ import {
   fmtLong,
 } from "../src/app/stats.js";
 import { newTally, feedTally, recordBest } from "../src/app/bests.js";
-import { SCREEN, ITEMS, createMenuApp } from "../src/app/menuapp.js";
+import { SCREEN, ITEMS, PAUSE_ITEMS, createMenuApp } from "../src/app/menuapp.js";
 import { statsRows, statsNotes, statsPayload } from "../src/app/stats.js";
 import * as md from "../src/render/menudraw.js";
 import { createGame } from "../src/main.js";
@@ -593,7 +593,7 @@ const TODAY = "2026-09-07";
     const before = loadStats(ls).e.filter((x) => x.t === "room_enter").length;
     g.input.onPause();
     g.loop(16);
-    g.app.pauseCursor = 1; // RESTART
+    g.app.pauseCursor = PAUSE_ITEMS.indexOf("RESTART");
     g.app.confirm();
     const after = loadStats(ls).e.filter((x) => x.t === "room_enter").length;
     check(
@@ -620,7 +620,7 @@ const TODAY = "2026-09-07";
     g.world.score = 99999; // well above the seeded defaults' 10th (250)
     g.input.onPause();
     g.loop(16);
-    g.app.pauseCursor = 3; // QUIT TO MENU
+    g.app.pauseCursor = PAUSE_ITEMS.indexOf("QUIT TO MENU");
     g.app.confirm();
     check(
       "a qualifying score banked via QUIT TO MENU emits exactly one score_set (Minor-2)",

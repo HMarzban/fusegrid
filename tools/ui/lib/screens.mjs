@@ -3,7 +3,8 @@
    MENU and left with the debug hook's reset), then the run screens, each on a run of its own (a run writes stores, so they go last).
    A recipe names MENU rows, OPTIONS rows and GUIDE doors by LABEL (any label in the list; Task 2.2 renames OPTIONS to SETTINGS), never by index:
      menu   MENU row labels (app.cursor over menuapp ITEMS), then confirm
-     opt    OPTIONS row labels (app.optRow over OPT_ROWS), then confirm
+     opt    OPTIONS row labels (app.optRow over OPT_ROWS), then confirm. optRow indexes the rows on screen (v202 Task 2.4: CAMERA and
+            BRIGHTNESS only in REAL 3D), so only a row above CAMERA has the same index in every look; the doors are reached by keys
      guide  GUIDE door labels (app.guideRow over GUIDE_ROWS), then confirm
      key    a key code, or a list of them pressed in order, on the page reached (RECORDS opens on SCORES; E steps one tab: STATS, then MEDALS)
      wait   "controls": the lazy CONTROLS page must be in (app.controls.loading false) before the frames are stepped
@@ -22,8 +23,8 @@ const ROWS = {
   menu: { state: "MENU", settle: 1200 },
   level: { menu: ["LEVEL SELECT"], state: "LEVEL" },
   options: { menu: ["OPTIONS", "SETTINGS"], state: "SETTINGS" },
-  graphics: { menu: ["OPTIONS", "SETTINGS"], opt: ["GRAPHICS"], state: "GRAPHICS" },
-  controls: { menu: ["OPTIONS", "SETTINGS"], opt: ["CONTROLS"], wait: "controls", state: "CONTROLS" },
+  graphics: { menu: ["OPTIONS", "SETTINGS"], key: ["ArrowUp", "ArrowUp", "ArrowUp", "Enter"], state: "GRAPHICS" }, // ↑ from the top wraps: RESET DEFAULTS, CONTROLS, GRAPHICS (the last three rows in every look)
+  controls: { menu: ["OPTIONS", "SETTINGS"], key: ["ArrowUp", "ArrowUp", "Enter"], wait: "controls", state: "CONTROLS" },
   guide: { menu: ["GUIDE"], state: "GUIDE" },
   howto: { menu: ["GUIDE"], guide: ["HOW TO PLAY"], state: "HOWTO" },
   items: { menu: ["GUIDE"], guide: ["ITEMS", "POWER-UPS"], state: "ITEMS" },

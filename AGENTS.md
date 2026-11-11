@@ -112,7 +112,9 @@ phone, on the board canvas); SETTINGS keeps its `BUILD v202` kicker. Never on th
 PAUSE draws `pauseGeom(overlayBox, touch)`: touch (`touchLay`,
 data-lay p/l) caps pitch at `PAUSE_ROW_H` 70 / hero 76 / width 380, a keyboard
 screen at the compact `PAUSE_ROW_D` 44 / hero 54 / width 340 (owner: "too
-fat"); `pauseHit` takes the same flag. RESUME hero, RESTART/QUIT danger,
+fat"); `pauseHit` takes the same flag. Rows `PAUSE_ITEMS` RESUME, SETTINGS, RESTART, QUIT TO MENU (design record §4, Task 2.4):
+RESUME hero, SETTINGS the door, a 1 px rule at `pauseGeom`'s `div` (the divider; no gap, so pitches and plate stay), then RESTART / QUIT danger;
+the shape is derived from the labels once (`scenes.js` `PAUSE_SHAPE` over `PAUSE_ROWS`, which `words.test` pins equal to `PAUSE_ITEMS`) and every reader dispatches by label;
 kicker = `LEVEL n · world` + difficulty, speed and modifiers, each named (+ DAILY), stepped down to fit by `pauseKickers` (a modifier count, then only what differs from a default run, so a default run reads `LEVEL 3 · FACTORY`; DAILY kept), cue `ESC · P RESUME · … · M QUIT`.
 Touch rule: a tap on a row = Enter on it; keyboard MENU and PAUSE bands span
 the full width of their box (MENU's `#sh` where there is a shell box, else the stage, as under the floor; PAUSE's stage; the touch MENU hub's tiles own half of each gutter);
@@ -154,7 +156,7 @@ lever more intractive", "put hooks … to see what we deliver"): pick on the
 left, see it on the right. Every plate HUGS its content through `pageBox`
 (band keyboard 73..492 / touch 8..512; pitches are caps, scale only in the
 iso 608x352 guard; `shellBox` is gone, no page divides its band by a row
-count). Pitches: list 26 keyboard / 52 touch, SETTINGS 27 keyboard (37 touch, 34 where 37 does not fit), GRAPHICS 28, hero
+count). Pitches: list 26 keyboard / 52 touch, SETTINGS 27 keyboard (37 touch, 34 where 37 does not fit: the ten rows fit 37 on the 600x520 board box, the twelve take 34), GRAPHICS 28, hero
 40 / 70. LEVEL SELECT (`levelGeom(L, unlocked, touch)` = draw + tap): a 4x2
 grid of room tiles (biome schematic, finale pip, ✓ when a time is saved at
 this heat/pace/modes; 6–8 dim + locked until the first CLEAR, a locked tap
@@ -193,8 +195,14 @@ from a default run). `SCREEN.STATS = 12` is **appended** (the `SCREEN` enum's ow
 `menuapp.js`: appended, never inserted). `SCREEN.TROPHIES = 13` (the MEDALS page) is
 appended too: RECORDS' third tab (STATS' `T` or a tap on its `T MEDALS` label is the same
 tab step), backs out to MENU on RECORDS, never a MENU row. `SCREEN.GRAPHICS = 14` is appended too: opened by the
-SETTINGS `GRAPHICS` door row (`OPT_ROWS` twelve rows, ANALYTICS, then the GRAPHICS and CONTROLS doors
-before RESET DEFAULTS), backs out to SETTINGS on the door. `SCREEN.FLOOR = 15` is appended too
+SETTINGS `GRAPHICS` door row (`OPT_ROWS` is all twelve rows; the rows on screen are `optRows(r3d)`, CAMERA and BRIGHTNESS
+only while ART STYLE is REAL 3D, ten otherwise; ANALYTICS, then the GRAPHICS and CONTROLS doors before RESET DEFAULTS in both),
+backs out to SETTINGS on the door. `optRow` indexes the visible list (R11): `app.optRows()` is the one predicate (r3d = the ART
+STYLE row's selected value, `app.render3d`, never the live renderer: a REAL 3D pick shows the two rows at once while the look
+loads), shellview hands `drawSettings` that list and the focused row's LABEL (`app.optLabel()`), `settingsGeom` / `settingsHit`
+size to it, the MENU SETTINGS pane counts and names it (`info.opt`), and every reader acts by `optLabel()`. Every ART STYLE write
+(a pick, RESET DEFAULTS, `lookFailed` from a failed load or a lost context that cannot be rebuilt) goes through `_setR3d` before
+`onSettings`: the cursor keeps its label, or lands on ART STYLE when its row went away. `SCREEN.FLOOR = 15` is appended too
 (2026-10-25): the fourth GUIDE door (`GUIDE_ROWS` HOW TO PLAY, POWER-UPS, ENEMIES,
 FLOOR; keyboard GUIDE is a 2x2 of doors, touch four stacked rows), backs out to
 GUIDE. `drawFloorHelp` lists the eight floor tiles at CORE / PLUS / MAX in the
@@ -205,7 +213,7 @@ The GUIDE pages and the MENU preview draw the live foe and pickup animation
 (CLASSIC: `drawEnemyBody` / `drawItemBody`; PIXEL: `hudart.js` `foeAnim` /
 `itemAnim`, a pure function of the page clock). From PAUSE the same page is
 inline `pauseView 2` (0 list / 1 SETTINGS / 2 GRAPHICS / 3 CONTROLS; Esc steps 2 → 1 and 3 → 1, onto
-the door), never a SCREEN. WIN/LOSE run summaries are **not** a SCREEN — they
+the door, and 1 → 0 onto the SETTINGS row), never a SCREEN. WIN/LOSE run summaries are **not** a SCREEN — they
 live in `drawOverlay`.
 
 The sim ticks only while the shell is GAME. PAUSE/WIN/LOSE are `world.state`,
@@ -658,7 +666,7 @@ not shell screens. Do not add them as `SCREEN` values.
   (the one geometry for draw and tap), `controlsdraw.js`, `padart.js`,
   `hintcopy.js` (the setter that keeps `menudraw.js` free of `src/app/`). All static in the boot graph (111,107
   bytes raw at `ee2a34e`, boot graph +137,052 since `8853efc`; 12 files, on purpose; lazy paint is a later job). `SCREEN.CONTROLS = 16`; from PAUSE `pauseView 3`. The door
-  sits between GRAPHICS and RESET DEFAULTS; SETTINGS is twelve rows at keyboard pitch 27 (note line removed), touch 37 or 34.
+  sits between GRAPHICS and RESET DEFAULTS; SETTINGS is twelve rows in REAL 3D and ten otherwise, at keyboard pitch 27 (note line removed), touch 37 or 34.
   **CONTROLS is in the CONSOLE PANEL kit like every other menu (lead ruling 2026-11-02, on the owner's ask for one cohesive menu): list on the left, preview pane on the right, HEAT-style tabs, kit band, notch and caret; ↑↓ rows, ←→ tab, ←→ on SENSITIVITY or VIBRATION adjusts.** The other menus do not change, and the all-menus restyle is not planned for this release. MENU carries the note `CONTROLLER READY · SETTINGS › CONTROLS`, naming the VIBRATION level where it fits, and the SETTINGS door reads `VIBRATION MEDIUM ›` the same way; no SETTINGS or PAUSE row of its own. Tap rule exception: on CONTROLS a tap off the
   plate backs out anywhere in the viewport, not only on the canvas. Store `nb.controls.v1` (KEEP); invalid data
   loads that device's defaults, an off-level SENSITIVITY value snaps to the nearest level, a bad `vib` never touches the binds. Keyboard defaults: BOMB SPACE (J, X silent
@@ -760,7 +768,7 @@ not shell screens. Do not add them as `SCREEN` values.
   `cardClears` (it sits beside or under the `#c` stage); never INTRO /
   ATTRACT, never a touch run (the bomb button's corner); it waits while NEW
   VERSION READY is up. It stays until answered (no snooze).
-  SETTINGS `ANALYTICS` ON/OFF sits after REDUCE FLASH (row 8; SETTINGS touch
+  SETTINGS `ANALYTICS` ON/OFF sits after REDUCE FLASH (row 8 of the twelve, 6 of the ten outside REAL 3D; SETTINGS touch
   pitch 37 or 34 so twelve rows fit unscaled); OFF sets `ga-disable-<ID>`, denies
   consent and expires the `_ga*` cookies. Cookies live on the game's own path
   (`cookie_path`, shared `github.io` origin); every ad signal is denied. Events:

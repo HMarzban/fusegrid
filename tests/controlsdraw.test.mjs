@@ -7,6 +7,7 @@ import { CAPTION, geomOf, geoFor, hitPage, rowsOf, statusOf, footOf, padStates, 
 import { PARTS, BODY_PATH, KB_ROWS, trace, glyph, drawPad, drawKeys } from "../src/render/padart.js";
 import { drawControls } from "../src/render/controlsdraw.js";
 import * as model from "../src/app/controls.js";
+import { optRows } from "../src/app/menuapp.js";
 import { shellGeo, fitBox } from "../src/app/fit.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -290,7 +291,7 @@ const paint = (v, ui, Lx = L600) => { const r = recCtx(); drawControls(r.c, Lx, 
 /* The page paints through the kit: the same plate and selected-row ops OPTIONS makes, on one recorder. */
 {
   const opts = recCtx();
-  drawSettings(opts.c, L600, 0, { row: 0, vals: {} });
+  drawSettings(opts.c, L600, 0, { rows: optRows(false), row: "MUSIC", vals: {} });
   const ctl = paint(keyV({ row: 0 }));
   const plateOps = (log) => log.filter((x) => x === "f" + PLATE || x === "k#2a3550" || x === "frgba(0,0,0,0.35)").slice(0, 3);
   check("plate: the same shadow, fill and border as OPTIONS", ctl.log.includes("f" + PLATE) && ctl.log.includes("k#2a3550") && plateOps(ctl.log).join() === plateOps(opts.log).join(), plateOps(ctl.log).join());
@@ -441,15 +442,15 @@ const paint = (v, ui, Lx = L600) => { const r = recCtx(); drawControls(r.c, Lx, 
 }
 
 // the OPTIONS door reads the level where it fits the row, at both pitches
-for (const [nm, Lx, touch] of [["keyboard 27", L600, false], ["touch 37", L600, true], ["touch 400 wide", layout(400, 700), true], ["guard 608x352", layout(608, 352), false]]) {
+for (const [nm, Lx, touch] of [["keyboard 27", L600, false], ["touch 37", L600, true], ["touch 400 wide", layout(400, 700), true], ["guard 608x352", layout(608, 352), false]]) for (const r3d of [false, true]) {
   const r = recCtx();
-  drawSettings(r.c, Lx, 1, { row: 10, vals: {}, ctlDoor: "CONTROLLER ›", padVib: "MEDIUM", touch });
+  drawSettings(r.c, Lx, 1, { rows: optRows(r3d), row: "CONTROLS", vals: {}, ctlDoor: "CONTROLLER ›", padVib: "MEDIUM", touch });
   const v = r.texts.find((t) => t.s === "VIBRATION MEDIUM ›"), lab = r.texts.find((t) => t.s === "CONTROLS");
-  check("the door fits beside its label: " + nm, !!v && !!lab && v.left >= lab.right + 12 && v.y === lab.y, v && [lab.right, v.left].join());
+  check("the door fits beside its label: " + nm + (r3d ? " (twelve rows)" : " (ten rows)"), !!v && !!lab && v.left >= lab.right + 12 && v.y === lab.y, v && [lab.right, v.left].join());
 }
 {
   const r = recCtx();
-  drawSettings(r.c, L600, 1, { row: 10, vals: {}, ctlDoor: "KEYBOARD ›", touch: false });
+  drawSettings(r.c, L600, 1, { rows: optRows(false), row: "CONTROLS", vals: {}, ctlDoor: "KEYBOARD ›", touch: false });
   check("no level, the door stays as today", r.texts.some((t) => t.s === "KEYBOARD ›") && !r.texts.some((t) => t.s.startsWith("VIBRATION")));
 }
 
