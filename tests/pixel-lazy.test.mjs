@@ -39,7 +39,7 @@ check("CLASSIC boot never reaches vendor/three or the three wrapper", !g.files.s
 
 const seam = (f) => strip(readFileSync(join(ROOT, f), "utf8"));
 check("pixel/load.js is the one dynamic import of renderer.js and statically imports nothing", /import\("\.\/renderer\.js"\)/.test(seam("src/render/pixel/load.js")) && [...seam("src/render/pixel/load.js").matchAll(EDGE)].length === 0);
-check("hudart.js (the shared registry menudraw reads) imports nothing", [...seam("src/render/hudart.js").matchAll(EDGE)].length === 0);
+check("hudart.js (the shared registry the PIXEL renderer and the GUIDE page read) imports nothing", [...seam("src/render/hudart.js").matchAll(EDGE)].length === 0);
 check("main.js has no inline import()", !/\bimport\(/.test(seam("src/main.js")));
 
 const full = staticGraph("src/render/pixel/renderer.js");

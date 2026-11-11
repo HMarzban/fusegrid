@@ -471,8 +471,8 @@ export const levelHit = (x, y, L, unlocked, touch, open, row) => levelPage.level
 export const LEVEL_TAP = levelPage.LEVEL_TAP, LEVEL_TAP_LIST = levelPage.LEVEL_TAP_LIST;
 /** LEVEL SELECT's foot words for the focused row (or the open list), label first and keycap last: the page's footItems as one line. */
 export const levelFoot = (row, open) => levelPage.footText(levelPage.footItems(row || LABEL.LEVEL, !!open));
-/* info = {best: [8 formatted times or null] at this difficulty, speed and modifiers, row (the focused row's name), open, cur (the list), tap (tap mode,
-   ruling 4: shellview's app.lastDev; absent = hintcopy tapMode), lockR, lockT, enterT, rev (MENU's build tag: the shared room's dpr)} from shellview (times arrive formatted; this file never reads a store). */
+/* info = {best: [8 formatted times or null] at this difficulty, speed and modifiers, row (the focused row's name), open, cur (the list), tap (THE tap mode,
+   shellview tapOf; absent = the mode the last page frame was drawn in, else hintcopy tapAt), lockR, lockT, enterT, rev (MENU's build tag: the shared room's dpr)} from shellview (times arrive formatted; this file never reads a store). */
 export function drawLevelSelect(c, sel, L, t, heat, pact, unlocked, pace, timeAttack, touch, info) {
   const I = info || {}, U = !!unlocked, lv = sel | 0 || 1;
   levelPage.drawLevelPage(c, frameOf(L, touch, drawn(I.tap)), { level: lv, heat, pace, pact: U ? pact | 0 : 0, time: U && !!timeAttack, unlocked: U, best: (I.best || [])[lv - 1] || null, row: I.row || LABEL.LEVEL, open: !!I.open, cur: I.cur, trig: modeFocus(), tap: I.tap, lockR: I.lockR, lockT: I.lockT, enterT: I.enterT, rev: I.rev }, t);

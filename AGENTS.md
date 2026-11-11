@@ -96,7 +96,7 @@ already shown included; R arms and any input that is not the second plain R canc
 a chorded R (Ctrl / Cmd / Alt / Shift, `controlswire` guard: never arms or erases), Y / N answering the consent card and its
 taps, its body and Privacy link included (`analytics.js`), the update card's LATER and backdrop taps (`update.js`), the inline
 load-failure card's Enter / Escape, RETRY / USE CLASSIC 2D taps and a controller's SOUTH / EAST (`reset.js` `guardLoadCard`, wired by main:
-a document capture listener for a target in `#load` and the two buttons' `onclick` wrapped, index.html unchanged), any controller press or fresh direction in
+a document capture listener for a target in `#load` and the two buttons' `onclick` wrapped; it keys off the ids `loadretry` / `loadkeep`, which index.html keeps), any controller press or fresh direction in
 `padroute.route`, a swallowed first press after a connect and a card's answer included, and any tap but AGAIN ERASES (a
 touch C disarms at its pointerdown, so a cancelled C still cancels). Armed, the confirm plate is modal: a tab tap only
 cancels. A desk foot zone answers only in the armed state it was painted in (`footHit`), so a second click before the armed frame
