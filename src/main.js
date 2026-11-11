@@ -431,7 +431,7 @@ export function createGame(canvas, opts = {}) {
     }
     if (code === "KeyC" && app.screen === SCREEN.STATS) { copyText(statsPayload(loadStats(), loadBests(), loadTimes(), dateStr()), toast, "COPIED"); return; }
     // WIN / LOSE: Enter = Space, C / B copy with a note; elsewhere C still reaches app.key (ATTRACT plays)
-    if (endKey(code, app, world, input, toast, () => dailyDate ? dailyStamp(dailyDate, world.level | 0, world.score | 0) : copyPayload(world), { menu: () => { world.state = "MENU"; app.toMenu(); prevSt = null; }, page: (d) => { endPg = Math.max(0, Math.min(endPagesAt(curKind, world, runInfo(), timeInfo()) - 1, endPg + d)); } })) return; // Esc on GAME OVER: MENU (the LOSE edge saved the run); ↑↓ a paged end
+    if (endKey(code, app, world, input, toast, () => dailyDate ? dailyStamp(dailyDate, world.level | 0, world.score | 0) : copyPayload(world), { menu: () => { world.state = "MENU"; app.leaveRun(); prevSt = null; }, page: (d) => { endPg = Math.max(0, Math.min(endPagesAt(curKind, world, runInfo(), timeInfo()) - 1, endPg + d)); } })) return; // Esc on GAME OVER: MENU (the LOSE edge saved the run); ↑↓ a paged end
     if (code === "KeyM" && app.screen !== SCREEN.INTRO && app.screen !== SCREEN.ATTRACT) { // INTRO / ATTRACT: M and R fall through to app.key (show: skip; title: no-op; ATTRACT: a run)
       if (app.screen === SCREEN.GAME && app.worldState === "PAUSE") {
         persistScore();

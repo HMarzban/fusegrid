@@ -13,7 +13,7 @@ import { createRGBA, png, unpng } from "../tools/pixel/rgba.mjs";
 import { PRECACHE } from "../src/pwa/shell.js";
 import * as P from "../src/render/kit/probe.js";
 import { squint, stat, evaluate, tally, colOf, FLOOR, CAP, GATES, REQUIRED, EXEMPTABLE, MIN_SAMPLE } from "../tools/ui/lib/gatelib.mjs";
-import { ORDER, SCREENS, canon, capName, parseCapName, needOf, needFor } from "../tools/ui/lib/screens.mjs";
+import { ORDER, SCREENS, canon, capName, parseCapName, needOf, needFor, whyOf } from "../tools/ui/lib/screens.mjs";
 import { refKeys, findRef, compareHtml } from "../tools/ui/lib/refs.mjs";
 import { parseArgs as shotsArgs, intended, manifest, ledger } from "../tools/ui/shots.mjs";
 import { SCREEN, ITEMS, OPT_ROWS, GUIDE_ROWS, createMenuApp } from "../src/app/menuapp.js";
@@ -225,8 +225,17 @@ test("gates: REQUIRED is default-deny; n/a only for touch and gap on a desktop c
   for (const n of ORDER) {
     const s = SCREENS[n];
     assert.deepEqual(s.need, EXEMPTABLE.filter((k) => !s.exempt[k]), n);
-    for (const [k, why] of Object.entries(s.exempt)) assert.ok(EXEMPTABLE.includes(k) && why.trim(), n + " exempts " + k + " with a reason");
+    for (const [k, v] of Object.entries(s.exempt)) assert.ok(EXEMPTABLE.includes(k) && whyOf(v).trim(), n + " exempts " + k + " with a reason");
   }
+  /* scoped exemptions (fix round 1): a gate exempt only on the captures its `when` names is required on every other capture of the row */
+  const nf = (n, f) => needFor(SCREENS[n], { flags: f }); // the one needFor: a row and a capture (its flags)
+  assert.ok(!nf("win", { world: 1 }).includes("chosen") && nf("win", { world: 5 }).includes("chosen") && !nf("win", { world: 5, phone: true }).includes("chosen"), "win: chosen exempt on a level clear and a phone finale page 1 only");
+  assert.ok(nf("win2", { world: 5, phone: true }).includes("chosen"), "win2: a paged finale's second page records its course");
+  assert.ok(nf("lose", { world: 1 }).includes("locked") && nf("lose", { world: 1 }).includes("chosen") && nf("lose", { world: 1 }).includes("info"), "lose: a desk first run is held to its course pairs and flag");
+  assert.ok(!nf("lose", { world: 8 }).includes("locked") && !nf("lose", { world: 1, phone: true }).includes("locked") && nf("lose", { world: 8, phone: true }).includes("info"), "lose: levels 6-8 and a phone's first page exempt the course, never a phone's info");
+  assert.ok(nf("losedaily", { world: 1 }).includes("chosen") && !nf("losedaily", { world: 1, phone: true }).includes("chosen"), "losedaily: the desk records its course");
+  assert.deepEqual(nf("menu", {}), SCREENS.menu.need, "a row with only plain exemptions: needFor = need");
+  assert.throws(() => needOf("t", { chosen: { why: "x" } }), /when/, "a scoped exemption needs a when");
   assert.deepEqual(REQUIRED, ["chosen", "band", "ring", "locked", "info", "text", "cap", "inside", "plate", "yellow"]);
   assert.deepEqual(EXEMPTABLE, [...REQUIRED, "touch", "gap"]);
   assert.deepEqual(needOf("title", { touch: "tap anywhere starts", gap: "no tap targets of its own" }), REQUIRED, "a row can exempt touch and gap");
@@ -563,7 +572,7 @@ test("screens: exemptPhone exempts on .phone captures only, on the same rules (R
 });
 
 test("screens: every name has a recipe and a state; aliases; capture names round trip", () => {
-  assert.deepEqual(ORDER, ["title", "menu", "level", "options", "graphics", "controls", "guide", "howto", "items", "enemies", "floor", "optionskeys", "graphicskeys", "guidekeys", "scoresidle", "scores", "stats", "statsreset", "statspage2", "medals", "scoresfull", "statsfull", "play", "pause", "pausetags", "win", "win2", "lose", "loseshort", "losedaily", "lose2"]); // pausetags: v202 Task 5.1, PAUSE with the tag row; v202 Task 5.4: GAME OVER with a saved best, and on a DAILY
+  assert.deepEqual(ORDER, ["title", "menu", "level", "options", "graphics", "controls", "guide", "howto", "items", "enemies", "floor", "optionskeys", "graphicskeys", "guidekeys", "scoresidle", "scores", "stats", "statsreset", "statspage2", "medals", "scoresfull", "statsfull", "play", "pause", "pausetags", "win", "winrun", "win2", "lose", "loseshort", "losedaily", "lose2"]); // pausetags: v202 Task 5.1, PAUSE with the tag row; v202 Task 5.4: GAME OVER with a saved best, and on a DAILY
   for (const n of ORDER) assert.ok(SCREENS[n] && SCREENS[n].state, n);
   /* R1 release (c): the key-driven twins of SETTINGS / GRAPHICS / GUIDE press real keys on a phone and gate the focus there (no exemptPhone) */
   for (const [k, base, gates] of [["optionskeys", "options", ["band"]], ["graphicskeys", "graphics", ["band"]], ["guidekeys", "guide", ["band", "ring"]]]) {

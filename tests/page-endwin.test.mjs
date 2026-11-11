@@ -19,7 +19,7 @@ const cache = await import("../src/render/kit/cache.js");
 const lazy = await import("../src/render/pages/lazy.js");
 const W = await import("../src/render/pages/endwin.js");
 const { drawOverlay, overlayBox } = await import("../src/render/scenes.js");
-const { endFacts, endGeom, KEYS } = await import("../src/render/pages/endgeom.js");
+const { endFacts, endGeom, endPlan, KEYS } = await import("../src/render/pages/endgeom.js");
 const { setTextScale } = await import("../src/render/kit/type.js");
 const probe = await import("../src/render/kit/probe.js");
 const { setHints } = await import("../src/render/hintcopy.js");
@@ -70,6 +70,20 @@ check("the course: the run's levels won (with the finale's medal), 6-8 locked wh
     check("the line is drawn on one of the pages (" + lay + " " + box.w + "x" + box.h + ")", seen);
   }
   check("a later finale (already open) draws no line", !S(draw(fin(), { ...RUN, cap: 8 })).includes(OPEN));
+  /* intended (the mock): on the finale that opens them, 6-8 show as plain wells in the same frame as the line; the locked pair records whenever a
+     locked level is drawn (a finale whose run is still capped at 5: no run end yet, or a run handed in without the unlock) and never otherwise */
+  const lockedOf = (run) => { probe.setOn(true); draw(fin(), run); const sn = probe.snapshot(); probe.setOn(false); return { pair: sn.pairs.find((q) => q.kind === "locked"), texts: sn.texts.map((t) => t.s) }; };
+  const capped = lockedOf({ ...RUN, cap: 5 }), opening = lockedOf({ ...RUN, cap: 8, opened: true }), later = lockedOf({ ...RUN, cap: 8 });
+  check("a finale still capped at 5 records the locked pair, its floor sample mapped into the box", !!capped.pair && !!capped.pair.floor && capped.pair.floor.x >= 0 && capped.pair.floor.x + capped.pair.floor.w <= B.w && !capped.texts.includes(OPEN), J(capped.pair));
+  check("the opening finale: the line and no locked level in the same frame; a later finale: neither", opening.texts.includes(OPEN) && !opening.pair && !later.pair && !later.texts.includes(OPEN), J([!!opening.pair, !!later.pair]));
+}
+// ---- the finale plate is the mock's 840 where the box holds it; a medal's rule reads in sentence case (appendix 10.3) ----
+{
+  const G = endGeom(B, endFacts(fin(), RUN), { lay: "d", css: 1.6 }), G0 = endGeom(B, endFacts(fin(), RUN), { lay: "d", css: 1.38 });
+  check("finale plate: 840 design px wide on a box that holds it, narrower only where the box is", Math.abs(G.plate.w * 1.6 - 840) < 0.5, G.plate.w * 1.6);
+  check("finale plate on the 1366 x 768 frame (css 1.38): the box's width, under 840", G0.plate.w * 1.38 < 840 && G0.plate.w <= B.w, G0.plate.w * 1.38);
+  const md = endFacts(fin({ score: 2000 }), { ...RUN, medals: [["FLAWLESS", "LEVELS 1-5 IN ONE RUN · NO LIFE LOST"], ["IRON CROWN", "LEVELS 6-8 IN ONE RUN ON EXPERT DIFFICULTY"]] }).pieces.filter((q) => q.kind === "medal").map((q) => q.desc);
+  check("a medal's rule in sentence case, a setting's name kept in caps", J(md) === J(["Levels 1 to 5 in one run, no life lost.", "Levels 6 to 8 in one run on EXPERT DIFFICULTY."]), J(md));
 }
 // ---- the toast ----
 for (const [s, ok] of [["COPIED", true], ["COPY FAILED", false], ["BOARD LINK COPIED", true]]) {
@@ -134,8 +148,16 @@ setTextScale(1);
   cache.setFactory((w, h) => new Cv(w, h));
   const m0 = cache._dbg.misses, a = draw(fin(), RUN), m1 = cache._dbg.misses, b = draw(fin(), RUN), c2 = draw(fin(), RUN), m2 = cache._dbg.misses;
   check("the first frame at rest makes its layer (one miss)", m1 - m0 === 1, m1 - m0);
-  check("a steady frame: 0 misses, <= 400 canvas calls, a blit", m2 === m1 && b.calls.length <= 400 && b.calls.some((x) => x.op === "drawImage"), m2 - m1 + " misses, " + b.calls.length + " calls");
+  const mtW = b.calls.filter((x) => x.op === "measureText").length;
+  check("a steady frame: 0 misses, <= 400 canvas calls, <= 20 measureText, a blit", m2 === m1 && b.calls.length <= 400 && mtW <= 20 && b.calls.some((x) => x.op === "drawImage"), m2 - m1 + " misses, " + b.calls.length + " calls, " + mtW + " measureText");
   check("two idle frames: equal call logs", J(b.calls) === J(c2.calls));
+  /* the real loop: ONE context frame after frame: the facts and geometry are kept per run end (endPlan), so a steady frame measures (almost) nothing */
+  const Rs = rec({ widthK: 0.6 * 1.08 }), one = () => drawOverlay(Rs.ctx, fin(), B.w, B.h, B.w / 2, B.h / 2, undefined, null, { ...RUN, et: 9 }, null);
+  one(); const n0 = Rs.calls.length, mm0 = cache._dbg.misses; one(); const fr = Rs.calls.slice(n0), mt = fr.filter((x) => x.op === "measureText").length;
+  check("a steady frame on the loop's one context: 0 misses, <= 400 calls, <= 20 measureText", cache._dbg.misses === mm0 && fr.length <= 400 && mt <= 20, fr.length + " calls, " + mt + " measureText");
+  const pa = endPlan(B, fin(), { ...RUN, et: 1 }, null, { lay: RUN.lay, css: RUN.css, m: Rs.ctx }), pb = endPlan(B, fin(), { ...RUN, et: 2.5 }, null, { lay: RUN.lay, css: RUN.css, m: Rs.ctx });
+  const pc = endPlan(B, fin({ score: 7 }), { ...RUN, et: 2.5 }, null, { lay: RUN.lay, css: RUN.css, m: Rs.ctx }), pd = endPlan(B, fin(), { ...RUN, et: 2.5 }, null, { lay: RUN.lay, css: RUN.css, m: rec().ctx });
+  check("endPlan: kept across the motion clock; a new score or another measuring context makes a new plan", pa === pb && pc !== pa && pd !== pa && pc.F.score.digits === "7");
   const d = draw(fin({ score: 5000 }), RUN), m3 = cache._dbg.misses;
   check("a page showing something else is another layer (one miss)", m3 - m2 === 1);
   void a; void d;

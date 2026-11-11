@@ -532,11 +532,12 @@ const rec = () => {
   drawOverlay(r.ctx, W, 600, 520, 300, 260, undefined, undefined, {
     r: 2, k: 5, p: 1, t: 90, best: null, lk: 3, lp: 1,
   });
+  // equal strength with the old "+1 line, nothing else mid-room": the run's list IS the no-run list but for the two stat values (0 -> 3, 0 -> 1)
+  const want = ks(a).map((s, i, A) => (A[i - 1] === "ENEMIES" && s === "0" ? "3" : A[i - 1] === "POWER-UPS" && s === "0" ? "1" : s));
   check(
-    "drawOverlay WIN with a run shows this level's ENEMIES / POWER-UPS and claims nothing mid-room",
-    ks(r).includes("ENEMIES") && ks(r).includes("3") && ks(r).includes("POWER-UPS") && ks(r).includes("1") &&
-      !ks(r).includes("NEW BEST"),
-    ks(r).join("|"),
+    "drawOverlay WIN with a run differs from no run ONLY by this level's ENEMIES 3 / POWER-UPS 1: nothing else mid-room",
+    ks(r).join("|") === want.join("|") && want.join("|") !== ks(a).join("|"),
+    ks(r).join("|") + " vs " + want.join("|"),
   );
   const L = krec();
   drawOverlay(L.ctx, { state: "LOSE", level: 3, score: 1000, heat: 0 },

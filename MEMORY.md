@@ -76,6 +76,9 @@ append an entry when it makes a non-trivial change.
 
 ## 2026-11-11 — UI upgrade Task 3.3: LEVEL SELECT on the world kit
 - `src/render/pages/level.js` (one levelGeom, opaque, the selected level's room; level keys, banks, MODIFIERS door + inline list, the one card with BEST, START); old painter deleted from menudraw; tap mode follows app.lastDev (ruling 4); CROWN card copy ALL NINE · ONE OF EACH. Compact pages its groups on the least landscape phones (never under 44 px); a controller gets a cue line on phone and compact.
+## 2026-11-11 — End screens: fix round 1 (lane-5-ends)
+Drawn WIN / GAME OVER keys tapped through createGame (end-routing, keys.test rows); bests §11 equal strength; endPlan memo; back feel leaving GAME OVER; no confetti under REDUCE FLASH; medal rules in sentence case; finale plate 840; cord / crack / dust beats; scoped gate exemptions (`needFor`); `winrun` from-start finale capture.
+
 ## 2026-11-11 — End screens: gates, confetti, unlock line (lane-5-ends, pre-review)
 Locked floor sample now mapped to the box (endkit `rpair` transforms `o.floor`; it was raw design px) and moved inside a reached-not cell under its number; confetti on a finale only; `endRun` saves 6-8 open at the run end and that finale says LEVELS 6 TO 8 NOW OPEN; dead WIN/LOSE helpers in scenes.js deleted, their pins moved onto `endFacts`.
 

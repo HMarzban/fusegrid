@@ -12,7 +12,7 @@
 import {worldTokens, CONST, rgba} from "../kit/tokens.js";
 import {plate, key} from "../kit/paint.js";
 import {DEV, textScale} from "../kit/type.js";
-import {endFacts, endGeom, pieceWidth, pieceName, MOTION} from "./endgeom.js";
+import {endPlan, pieceWidth, pieceName, MOTION} from "./endgeom.js";
 import {capsOf, pager, wrap, scaledPen, text, textW, fitOf, keyPart, focusKey, statTile, ledger, course, shelf, ribbon, medal, pieceW, rrect, rpair, frame, live, prefersReduced, ease, toastTag, WARM} from "./endkit.js";
 
 const OL = CONST.ol;
@@ -124,13 +124,13 @@ function scene(p, F, G, tok, caps, A) {
 
 /** Paints WIN over the board: c drawOverlay's context, B its box {w, h}; run / tm / toast as drawOverlay hands them. */
 export function drawWin(c, B, world, run, tm, toast) {
-  const r = run || {}, F = endFacts(world, run, tm), G = endGeom(B, F, {lay: r.lay, css: r.css, page: r.page, m: typeof c.measureText === "function" ? c : null});
+  const r = run || {}, plan = endPlan(B, world, run, tm, {lay: r.lay, css: r.css, page: r.page, m: typeof c.measureText === "function" ? c : null}), F = plan.F, G = plan.G; // kept per run end (endPlan), not rebuilt each frame
   if (!G) return;
   const tok = worldTokens(world.level | 0 || 1), touch = r.lay === "p" || r.lay === "l", caps = capsOf(touch), reduced = !!r.reduced || prefersReduced();
   const t = run && Number.isFinite(r.et) ? r.et : MOTION.win, anim = !reduced && t < MOTION.win, A = anim ? beats(t) : null, ph = G.ph;
   c.save(); c.fillStyle = rgba(OL, 0.45); c.fillRect(0, 0, B.w, B.h); c.restore();
   if (typeof c.rect !== "function" || typeof c.clip !== "function") return; // a context with no clip or rect (the headless renderer's): the veil only
-  const key = JSON.stringify([F, G.plate, G.u, G.page, caps]);
+  const key = plan.sig + JSON.stringify(caps);
   if (anim) {
     const P = G.plate, s = A.plate;
     c.save(); c.translate(P.x + P.w / 2, P.y + P.h / 2); c.scale(s, s); c.translate(-(P.x + P.w / 2), -(P.y + P.h / 2));

@@ -22,7 +22,7 @@ import {hints} from "../hintcopy.js";
 const deep = (o) => { for (const v of Object.values(o)) if (v && typeof v === "object") deep(v); return Object.freeze(o); };
 /* design px by device (d desk, p phone): L the label cap, the type px (sec pri hud bod), key heights, the course cell, the plate ring T */
 export const END = deep({
-  d: {L: 14.8, sec: 16, pri: 21, hud: 27, bod: 18, btnh: 50, cell: 40, T: 16, gap: 1.6, side: 24, clearW: 560, finW: 770, loseL: 200, loseR: 400, loseGap: 20, hClear: 50, hFin: 66, hLose: 54},
+  d: {L: 14.8, sec: 16, pri: 21, hud: 27, bod: 18, btnh: 50, cell: 40, T: 16, gap: 1.6, side: 24, clearW: 560, finW: 840, loseL: 200, loseR: 400, loseGap: 20, hClear: 50, hFin: 66, hLose: 54},
   p: {L: 11.3, sec: 13.5, pri: 16, hud: 20, bod: 15, btnh: 52, cell: 37, T: 10, gap: 1.2, side: 12, hClear: 38, hFin: 33, hLose: 40},
 });
 export const KEYS = Object.freeze(["main", "menu", "copy", "map", "up", "down"]);
@@ -46,6 +46,15 @@ function course(mode, lv, run) {
 }
 const timeRib = (lv, tm) => (tm && Number.isFinite(tm.t) && (tm.best == null || tm.t < tm.best) ? {kind: "rib", name: [LABEL.LEVEL + " " + lv + " TIME"], value: fmtTime(tm.t)} : null);
 
+/* a medal's rule as the end page's body copy (appendix 10.3: sentence case, "Levels 1 to 5 in one run, no life lost."): the MEDALS page keeps the
+   caps row (medals.js MEDAL_ROWS); a setting's name stays in caps as everywhere in body copy (NORMAL DIFFICULTY, FAST SPEED, DEFAULT RULES) */
+const KEEP = /^(?:(?:NORMAL|HARD|EXPERT) DIFFICULTY|(?:SLOW|NORMAL|FAST) SPEED|DEFAULT RULES)$/;
+export function ruleSentence(s) {
+  const parts = String(s || "").replace(/(\d)-(\d)/g, "$1 to $2").split(/\s*·\s*/).filter(Boolean);
+  if (!parts.length) return "";
+  const out = parts.map((q) => q.split(/((?:NORMAL|HARD|EXPERT) DIFFICULTY|(?:SLOW|NORMAL|FAST) SPEED|DEFAULT RULES)/).map((t) => (KEEP.test(t) ? t : t.toLowerCase())).join("")).join(", ");
+  return out.charAt(0).toUpperCase() + out.slice(1) + ".";
+}
 export function endFacts(world, run, tm) {
   const w = world || {}, mode = endMode(w), lv = w.level | 0 || 1, h = Math.max(0, Math.min(2, w.heat | 0)), k = h + 1, s = w.score | 0;
   const end = !!run && isRunEnd(w), b = run && run.best, lvw = LABEL.LEVEL + " " + lv + " · " + biomeOf(lv).name, dly = run && run.daily ? " · DAILY" : "";
@@ -71,7 +80,7 @@ export function endFacts(world, run, tm) {
     if (end && !F.daily && (b ? s > (b.s | 0) : s > 0)) p.push({kind: "rib", name: ["SCORE · " + bestLabel(w), "SCORE"], value: fmtN(s * k)});
     const t = run ? timeRib(lv, tm) : null;
     if (t) p.push(t);
-    for (const m of (end && run.medals) || []) p.push({kind: "medal", name: m[0], desc: m[1]});
+    for (const m of (end && run.medals) || []) p.push({kind: "medal", name: m[0], desc: ruleSentence(m[1])});
     F.pieces = p.length > 3 ? [p[0], p[1], {kind: "more", n: p.length - 2}] : p;
     F.keys = {main: "MENU", copy: true};
     return deep(F);
@@ -264,13 +273,33 @@ export function endHit(x, y, G) {
   for (const n of KEYS) { const r = G.keys[n]; if (r && x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) return n; }
   return null;
 }
+/* the run end's facts and geometry, kept per run end instead of rebuilt each frame (fix round 1): keyed by what endFacts and endGeom read (the
+   world's run-end fields, the run minus its motion clock, the room time, the box, the layout, stage scale and page, the text scale, the device the
+   keys name, and WHICH context measures: a context id, so a page measured by one canvas is never reused for another). A few entries (the page's
+   own and the tap path's). sig: the facts and the plate as one string, the painters' cache-layer key */
+const ctxId = new WeakMap();
+let ctxN = 0, plans = new Map();
+const idOf = (m) => { if (!m || typeof m !== "object" && typeof m !== "function") return 0; let i = ctxId.get(m); if (!i) ctxId.set(m, (i = ++ctxN)); return i; };
+export function endPlan(B, world, run, tm, o = {}) {
+  const w = world || {}, r = run ? {...run, et: 0, reduced: 0} : null, W = hints();
+  const key = JSON.stringify([B && B.w, B && B.h, w.state, w.level, w.score, w.heat, w.pace, w.pact, !!w.finale, r, tm || null, o.lay, o.css, o.page | 0, textScale(), W.dev, W.ok, W.back, idOf(o.m)]);
+  let P = plans.get(key);
+  if (!P) {
+    const F = endFacts(world, run, tm), G = endMode(w) ? endGeom(B, F, o) : null;
+    P = {F, G, sig: G ? JSON.stringify([F, G.plate, G.u, G.page]) : ""};
+    if (plans.size >= 6) plans.delete(plans.keys().next().value);
+    plans.set(key, P);
+  }
+  return P;
+}
+export const _plans = () => plans.size; // tests: the memo's size
 /* main's tap: ready(mode) is true once that mode's page is in, false while it loads, null where no page is registered (today's tap: the main key) */
 export function endTap(x, y, B, world, run, tm, o, ready) {
   const mode = endMode(world), r = ready ? ready(mode) : null;
   if (!mode) return null;
   if (r == null) return "main";
   if (!r) return null;
-  return endHit(x, y, endGeom(B, endFacts(world, run, tm), o));
+  return endHit(x, y, endPlan(B, world, run, tm, o).G);
 }
 /* how many pages the run end shows in box B (main clamps its page with it) */
-export const endPagesOf = (B, world, run, tm, o) => { const G = endMode(world) ? endGeom(B, endFacts(world, run, tm), o) : null; return G ? G.pages : 1; };
+export const endPagesOf = (B, world, run, tm, o) => { const G = endMode(world) ? endPlan(B, world, run, tm, o).G : null; return G ? G.pages : 1; };

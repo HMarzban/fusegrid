@@ -369,7 +369,12 @@ prefers-reduced-motion: the end state with one fade. A touch box lays out the ph
 and touch floors (u = 1 / css): the plate narrows to the box, a short box closes the gaps, then PAGES the content (whole
 sections, the keys on every page, a ▲ / ▼ pager column; ↑ / ↓, the D-PAD and the ▲ / ▼ taps turn it, main holds
 `run.page`, `scenes.endPagesAt` clamps it); a phone's medals hang on shelves of their own. Confetti (`fx.js` `win`) falls on a
-FUSE/GRID CLEAR only (appendix 10.4); a level clear shakes and throws none. The old summary helpers (`winHeadline`, `timeLine`,
+FUSE/GRID CLEAR only, never under REDUCE FLASH or prefers-reduced-motion (appendix 10.4); a level clear shakes and throws none. The finale
+plate is the mock's 840 where the box holds it; a medal's rule reads in sentence case there (`endgeom.ruleSentence`; MEDALS keeps the caps
+row). The facts and geometry are kept per run end (`endgeom.endPlan`, keyed by what they read plus the measuring context), not rebuilt each
+frame; a steady frame is 0 misses, <= 400 calls, <= 20 measureText. Esc / EAST / a tap on MENU at GAME OVER plays the `back` feel
+(`app.leaveRun`, as the PAUSE quit). GAME OVER's motion draws the cord burning down (0.3-0.8 s, `cordK`) and the crack stroking in with a
+6-particle `#c9793f` dust puff (0.8-1.0 s, `crackK`); reduced motion: the end state. The old summary helpers (`winHeadline`, `timeLine`,
 `deltaLine`, `summaryLines`, `runLine`, overlayCue's WIN / LOSE lines) are gone: `endgeom.endFacts` is the one source of every
 run-end claim and key; `overlayCue` is PAUSE's.
 GAME OVER is its page since Task 5.4: `src/render/pages/endlose.js` (lazy, `endlose`): a cool grey veil (R18,
@@ -1342,7 +1347,9 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   (`src/render/kit/probe.js`, handed in by main; only `shots.mjs` switches the probe on).
   `gates.mjs <dir>` judges the latest run only: no probe data is `skipped`, never a pass;
   `--strict` fails skips; `tools/ui/lib/screens.mjs` lists each screen's required gates
-  (default-deny, a page cannot exempt itself; MENU is the first instrumented screen, Task 3.1; LEVEL SELECT the second, Task 3.3, exempting ring and locked with reasons); a probe fault, a page error or a missing
+  (default-deny, a page cannot exempt itself; MENU is the first instrumented screen, Task 3.1; LEVEL SELECT the second, Task 3.3, exempting ring and locked with reasons; an exemption may be scoped to the captures it
+  covers, `{why, when: [{phone, world}]}`, and `needFor` holds every other capture of the row to the gate; `winrun` `from1` captures a
+  from-start run's finale through the debug hook); a probe fault, a page error or a missing
   capture fails. `compare.mjs` (`refmap.json`; MENU's frames are the L7 ones, logo B in the header), `sheet.html`.
   `scoresfull` / `statsfull` (v202 fix round 1) capture a played-looking cabinet: `__GAME__.seedRecords()` (debughook.js, `?debug=1`
   only) writes ten played rows, badges, medals and bests through the stores' own savers, after the fresh-profile pages. A row's

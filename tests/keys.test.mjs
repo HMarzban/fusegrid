@@ -28,6 +28,7 @@ import * as kprobe from "../src/render/kit/probe.js";
 import * as lazyPages from "../src/render/pages/lazy.js";
 import * as endWin from "../src/render/pages/endwin.js";
 import * as endLose from "../src/render/pages/endlose.js";
+import { endFacts, endGeom } from "../src/render/pages/endgeom.js";
 lazyPages._set("endlose", endLose); // GAME OVER is a lazy page (v202 Task 5.4)
 await preloadControls(loadControlsArt); // the CONTROLS page, its paint and rumble are lazy (v202): in before the first mount
 const RECP = await (await import("../src/render/pages/lazy.js")).want("records"); // RECORDS is a lazy page (R20): in before its taps
@@ -1228,6 +1229,38 @@ for (const code of ["Space", "Enter"]) {
   check("finale WIN Esc -> MENU through the sim's own edge: Pact unlocked, the score saved", won && g.app.screen === SCREEN.MENU && g.app.pactUnlocked === true && "nb.highscores.v1" in mem, won + "/" + g.app.screen);
 }
 
+// ---- run ends: Space on the finale, and taps (v202 Tasks 5.2-5.4, brief: Enter, Space, SOUTH, START, tap, Esc) ----
+{
+  const g = menu(); toRow(g, 1); press(g, "Enter");
+  for (let i = 0; i < 4; i++) press(g, "ArrowRight");
+  press(g, "Enter"); clearRoom(g);
+  const won = g.world.state === "WIN" && g.world.level === 5;
+  press(g, "Space"); g.tick(5);
+  check("finale WIN Space -> MENU (the same fire edge as Enter)", won && g.app.screen === SCREEN.MENU, won + "/" + g.app.screen);
+}
+{
+  lazyPages._set("endwin", endWin); lazyPages._set("endlose", endLose);
+  const mkTapEl = () => { let font = "10px sans-serif"; const PL = {}, ctx = new Proxy(function () {}, { get: (t, p) => (p === Symbol.toPrimitive ? () => "" : p === "font" ? font : p === "measureText" ? (s) => ({ width: String(s).length * 0.6 * (+(/(\d+(?:\.\d+)?)px/.exec(font) || [0, 10])[1]) }) : () => ctx), apply: () => ctx, set: (t, p, v) => { if (p === "font") font = v; return true; } });
+    const el = { width: 600, height: 520, style: {}, getContext: () => ctx, getBoundingClientRect: () => ({ left: 0, top: 0, width: 600, height: 520 }), addEventListener: (ty, fn) => { (PL[ty] = PL[ty] || []).push(fn); }, removeEventListener: noop };
+    return { el, tap: (g, x, y) => { (PL.pointerdown || []).forEach((f) => f({ clientX: x, clientY: y, button: 0, pointerType: "mouse" })); g.tick(); (PL.pointerup || []).forEach((f) => f({ clientX: x, clientY: y, button: 0, pointerType: "mouse" })); g.tick(3); } }; };
+  const keyAt = (g, n) => { const G = endGeom(overlayBox("2d"), endFacts(g.world, g.ro.run, g.ro.time), { lay: g.ro.run.lay, css: g.ro.run.css, page: g.ro.run.page }), r = G && G.keys[n]; return r ? [r.x + r.w / 2, r.y + r.h / 2] : null; };
+  { const A = mkTapEl(), g = menu(A.el); press(g, "Enter"); g.tick(5); g.world.state = "LOSE"; g.tick(100);
+    const m = keyAt(g, "main"); A.tap(g, ...m); g.tick(10);
+    check("LOSE tap on TRY AGAIN -> a new run at level 1", g.world.state === "PLAY" && g.world.level === 1, g.world.state); }
+  { const A = mkTapEl(), g = menu(A.el); press(g, "Enter"); g.tick(5); g.world.state = "LOSE"; g.tick(100);
+    A.tap(g, ...keyAt(g, "menu")); g.tick(5);
+    check("LOSE tap on MENU -> MENU", g.app.screen === SCREEN.MENU && g.world.state === "MENU", g.app.screen + "/" + g.world.state); }
+  { const A = mkTapEl(), g = menu(A.el); toRow(g, 1); press(g, "Enter"); for (let i = 0; i < 4; i++) press(g, "ArrowRight"); press(g, "Enter"); clearRoom(g); g.tick(100);
+    const won = g.world.state === "WIN" && g.world.level === 5;
+    A.tap(g, ...keyAt(g, "main")); g.tick(5);
+    check("finale tap on MENU (its main key) -> MENU", won && g.app.screen === SCREEN.MENU, won + "/" + g.app.screen); }
+  { const A = mkTapEl(), g = menu(A.el); press(g, "Enter"); clearRoom(g); g.tick(100);
+    for (const [x, y] of [[300, 40], [20, 500]]) A.tap(g, x, y);
+    const off = g.world.state === "WIN" && g.app.screen === SCREEN.GAME;
+    A.tap(g, ...keyAt(g, "main")); g.tick(10);
+    check("mid-run WIN: a tap off its key is inert, a tap on NEXT LEVEL goes on (never MENU)", off && g.app.screen === SCREEN.GAME && g.world.state === "PLAY" && g.world.level === 2, off + "/" + g.world.state + "/" + g.world.level); }
+}
+
 // ---- seam units: copyText / toastTick ----
 {
   const t = createToast();
@@ -1389,7 +1422,8 @@ for (const code of ["Space", "Enter"]) {
     "GAME PAUSE": { boot: pPause, E: (g) => g.world.state === "PLAY", START: (g) => g.world.state === "PLAY", S: (g) => g.world.state === "PLAY" },
     "GAME PAUSE OPTIONS": { boot: () => { const g = pPause(); rowTo(g, PAUSE_ITEMS.indexOf("SETTINGS")); tap(g, "S"); return g; }, E: paused(0), START: paused(0) },
     "GAME WIN": { boot: () => { const g = pRun(); clearRoom(g); return g; }, E: (g) => g.world.state === "WIN", S: (g) => g.world.state !== "WIN", START: (g) => g.world.state !== "WIN" },
-    "GAME LOSE": { boot: () => { const g = pRun(); g.world.state = "LOSE"; g.tick(); return g; }, E: (g) => g.app.screen === SCREEN.MENU && g.world.state === "MENU", S: (g) => g.world.state !== "LOSE" }, // EAST = Esc: MENU at a run end (R19)
+    "GAME LOSE": { boot: () => { const g = pRun(); g.world.state = "LOSE"; g.tick(); return g; }, E: (g) => g.app.screen === SCREEN.MENU && g.world.state === "MENU", S: (g) => g.world.state === "PLAY" && g.world.level === 1, START: (g) => g.world.state === "PLAY" && g.world.level === 1 }, // EAST = Esc: MENU at a run end (R19); START = SOUTH = Enter: TRY AGAIN
+    "GAME FINALE": { boot: () => { const g = page("LEVEL SELECT")(); for (let i = 0; i < 4; i++) tap(g, "dR"); tap(g, "START"); clearRoom(g); return g; }, E: onScr(SCREEN.MENU), S: onScr(SCREEN.MENU), START: onScr(SCREEN.MENU) }, // a finale WIN: SOUTH / START = its main key MENU, EAST = Esc MENU
     "ATTRACT": { boot: () => { const g = pMenu(); g.app.enterAttract(); g.tick(); return g; }, E: onScr(SCREEN.MENU), S: onScr(SCREEN.GAME), START: onScr(SCREEN.GAME) },
   };
   for (const [name, row] of Object.entries(MATRIX)) for (const [LK, blob] of LOOKS) for (const id of ["S", "E", "START", "SELECT", "dR"]) {

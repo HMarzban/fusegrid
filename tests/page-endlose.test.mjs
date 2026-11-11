@@ -105,7 +105,8 @@ setTextScale(1);
   globalThis.OffscreenCanvas = Cv;
   cache.setFactory((w, h) => new Cv(w, h));
   const m0 = cache._dbg.misses; draw(lose(), RUN); const m1 = cache._dbg.misses, b = draw(lose(), RUN), c2 = draw(lose(), RUN), m2 = cache._dbg.misses;
-  check("rest: one layer, then a steady frame with 0 misses and <= 400 calls; two idle frames differ only in the smoke's clock", m1 - m0 === 1 && m2 === m1 && b.calls.length <= 400 && J(b.calls) === J(c2.calls), (m1 - m0) + " / " + (m2 - m1) + " / " + b.calls.length);
+  const mtL = b.calls.filter((x) => x.op === "measureText").length;
+  check("rest: one layer, then a steady frame with 0 misses, <= 400 calls and <= 20 measureText; two idle frames differ only in the smoke's clock", m1 - m0 === 1 && m2 === m1 && b.calls.length <= 400 && mtL <= 20 && J(b.calls) === J(c2.calls), (m1 - m0) + " / " + (m2 - m1) + " / " + b.calls.length + " / " + mtL + " measureText");
   delete globalThis.OffscreenCanvas;
 }
 // ---- the probe ----
@@ -117,6 +118,17 @@ setTextScale(1);
   check("probe: page lose on #c, no fault, its squint pairs", s.page === "lose" && s.box.el === "c" && !s.fault && ["chosen", "locked", "band", "ring"].every((k) => s.pairs.some((p) => p.kind === k)), J(s.pairs.map((p) => p.kind + " " + (p.name || ""))));
 }
 
+/* appendix 10.6 beats that draw (fix round 1): the cord burns down to the stub over 0.3-0.8 s, the crack strokes in over 0.8-1.0 s with one dust
+   puff of 6 particles #c9793f; reduced motion: the end state (stub, crack, no dust) */
+{
+  check("cordK: the whole cord until 0.3 s, the stub from 0.8 s and at rest", P.cordK(0) === 1 && P.cordK(0.3) === 1 && Math.abs(P.cordK(0.8) - P.CORD_K) < 1e-9 && P.cordK(null) === P.CORD_K && P.cordK(0.55) < 1 && P.cordK(0.55) > P.CORD_K);
+  check("crackK: none before 0.8 s, half at 0.9, whole from 1.0 and at rest", P.crackK(0.7) === 0 && Math.abs(P.crackK(0.9) - 0.5) < 1e-9 && P.crackK(1) === 1 && P.crackK(null) === 1);
+  const dust = (R) => R.paints.filter((q) => q.op === "fill" && /201,\s*121,\s*63/.test(String(q.style))).length, cord = (R) => R.paints.some((q) => q.op === "stroke" && /^#b8582a$/i.test(String(q.style)));
+  const w = lose({ level: 3 }), r = { ...RUN, r: 2 };
+  const at5 = draw(w, { ...r, et: 0.5 }), at9 = draw(w, { ...r, et: 0.9 }), rest = draw(w, { ...r, et: 9 }), red = draw(w, { ...r, et: 0.9, reduced: true });
+  check("0.5 s: the cord still burns (the live cord colour); at rest only the stub", cord(at5) && !cord(rest));
+  check("0.9 s: one dust puff of 6 particles in #c9793f; at rest and under reduced motion none", dust(at9) === 6 && dust(rest) === 0 && dust(red) === 0, dust(at9) + "/" + dust(rest) + "/" + dust(red));
+}
 /* the locked pair's floor sample (the texture gate's plain floor): mapped to the box like its pair, inside a reached-not cell, clear of its number,
    at least 4 x 4 CSS px (desk, phone, and a death on level 1 and on the finale) */
 for (const [lay, css, w] of [["d", 1.38, lose({ level: 1 })], ["d", 1.38, lose({ level: 4 })], ["p", 2.4, lose({ level: 1 })], ["p", 2.4, lose({ level: 5 })]]) {

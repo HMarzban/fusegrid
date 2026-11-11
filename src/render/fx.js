@@ -21,6 +21,7 @@ let tag=null, tagRng=null;
    site. NOT reset by initFx(): these are user preference, and every renderer
    construction calls initFx() — a RENDER toggle would otherwise drop them. */
 let flashK=1, shakeK=1, partK=1;
+const reducedMotion=()=>{ try{ return typeof matchMedia==="function"&&!!matchMedia("(prefers-reduced-motion: reduce)").matches; }catch(e){ return false; } };
 const k01=(v,d)=>(typeof v==="number"&&isFinite(v)?Math.max(0,Math.min(1,v)):d);
 export function setFxOpts(o){
   if(o){ if(o.flashK!=null)flashK=k01(o.flashK,flashK);
@@ -179,8 +180,8 @@ export function onEvent(world, ev, time, look){
                    addParticles(ev.x, ev.y, 2, "#fff8d8"); break;
     case "remote":addParticles(ev.x, ev.y, 7, "#7fe0ff"); break;
     case "lose":  fx.shakeT=Math.min(0.7,fx.shakeT+0.28); break;
-    /* confetti on a FUSE/GRID CLEAR only (v202 appendix 10.4): a level clear is a step on the way, its shake stays */
-    case "win":   if(world&&(isFinale(world.level)||world.finale))addConfetti(60); fx.shakeT=Math.max(fx.shakeT,0.15); break;
+    /* confetti on a FUSE/GRID CLEAR only, and never under REDUCE FLASH or prefers-reduced-motion (v202 appendix 10.4); the shake stays */
+    case "win":   if(world&&(isFinale(world.level)||world.finale)&&flashK>=1&&!reducedMotion())addConfetti(60); fx.shakeT=Math.max(fx.shakeT,0.15); break;
   }
 }
 /* EFFECTS LOW (partK<1) thins only these decorative spawns; at partK 1 the

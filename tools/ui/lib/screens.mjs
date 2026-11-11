@@ -11,11 +11,15 @@
      wait   "controls": the lazy CONTROLS page must be in (app.controls.loading false) before the frames are stepped; "records": the lazy RECORDS
             page (pages/lazy.js) must be in
      run    a run screen: play, pause, win or lose (store: localStorage items set before the run, e.g. a saved best; daily: the run is MENU's DAILY;
+            from1: the run starts at level 1 and every room up to --world is cleared through the debug hook, NEXT LEVEL between them, so the
+            capture is a from-start run's end, e.g. winrun --world 5: the finale of a run from level 1 with its won course and run tally;
             key: keys sent through input.onUiKey at the run end, e.g. ArrowDown for a paged end's second page)
      tags   (a pause screen) the run's rules seeded through the debug hook before PAUSE: EXPERT, FAST, every modifier, TIME TRIAL (the tag row)
      state  what window.__GAME__.state() must read before the capture; a mismatch is an error and no PNG
      settle virtual ms stepped before the capture (default 600)
-     exempt {gate: "reason"}: an EXEMPTABLE gate (tools/ui/lib/gatelib.mjs: the ten REQUIRED ones, plus touch and gap for a phone screen with no
+     exempt {gate: "reason"} or {gate: {why, when: [{phone?, world?: [n..]}, ..]}}: a scoped exemption holds only on the captures one `when` names
+            (phone: the --phone flag; world: the --world numbers), and the gate is required on every other capture of the row (needFor). An
+            EXEMPTABLE gate (tools/ui/lib/gatelib.mjs: the ten REQUIRED ones, plus touch and gap for a phone screen with no
             tap targets of its own, the title's tap-anywhere, PLAY's DOM touch strip) this screen has nothing for, each with a one-line reason.
             DEFAULT-DENY: every other EXEMPTABLE gate is in the screen's `need`, so once the page records into the probe, a required gate it does not
             declare is skipped ("required, not declared") and fails --strict. Only this tracked table exempts, in review, when a page task instruments
@@ -59,16 +63,38 @@ const ROWS = {
   play: { run: "play", state: "PLAY", settle: 900 },
   pause: { run: "pause", state: "PAUSE", settle: 300, exempt: { chosen: "PAUSE shows no chosen / unchosen values: every row is a verb or a door", locked: "PAUSE shows no locked value: every row is open" } },
   pausetags: { run: "pause", tags: true, state: "PAUSE", settle: 300, exempt: { chosen: "PAUSE shows no chosen / unchosen values: every row is a verb or a door", locked: "PAUSE shows no locked value: every row is open" } },
-  win: { run: "win", state: "WIN", settle: 3400, exempt: { info: "a phone's tally is a ledger with no glyph (the desk stat cards record their glyphs)", chosen: "a level clear has no chosen / unchosen value (the finale records its course: won vs locked)", locked: "a level clear and a finale with levels 6-8 open show no locked part (a first finale records its locked levels)" } },
-  win2: { run: "win", key: "ArrowDown", state: "WIN", settle: 3400, exempt: { info: "a phone's tally is a ledger with no glyph", chosen: "a level clear has no chosen / unchosen value; a paged finale's second page shows its stats and shelf, not its course", locked: "the second page of a paged run end shows no course" } }, // a paged run end's second page (a short box: the phone, a small window)
-  lose: { run: "lose", state: "LOSE", settle: 1600, exempt: { info: "a death on levels 6-8 (open) shows no finale flag ahead; the other worlds record theirs", chosen: "a death on level 8 leaves no level ahead to compare", locked: "levels 6-8 open (world 6-8 captures) show no locked level; a first-run capture records its locked levels" } },
-  loseshort: { run: "lose", store: { "nb.bests.v1": '{"b":{"0:0:1":{"s":5000,"r":5}}}' }, state: "LOSE", settle: 1600, exempt: { info: "a death on levels 6-8 (open) shows no finale flag ahead; the other worlds record theirs", chosen: "a death on level 8 leaves no level ahead to compare", locked: "levels 6-8 open (world 6-8 captures) show no locked level; a first-run capture records its locked levels" } }, // a saved NORMAL best of 5000: the shortfall line
-  losedaily: { run: "lose", daily: true, state: "LOSE", settle: 1600, exempt: { chosen: "a phone's paged GAME OVER shows its course on the second page (lose2 judges it); the desk records its pairs", locked: "a phone's paged GAME OVER shows its course on the second page; the desk records it", info: "a phone's paged GAME OVER shows its course's flag on the second page; the desk records it" } },
-  lose2: { run: "lose", key: "ArrowDown", state: "LOSE", settle: 1600, exempt: { chosen: "the second page of a paged GAME OVER shows its score and line, not its course", locked: "the second page of a paged GAME OVER shows no course" } }, // today's DAILY (level 1, JUNGLE, whatever --world): Same board and the day's line
+  win: { run: "win", state: "WIN", settle: 3400, exempt: {
+    chosen: { why: "a level clear (worlds other than 5 and 8) has no course; a phone finale shows its course on its second page (win2 judges it)", when: [{ world: [1, 2, 3, 4, 6, 7] }, { phone: true }] },
+    locked: "no WIN shows a locked level in play: a finale opens 6-8 on its own run-end edge (LEVELS 6 TO 8 NOW OPEN), and a level clear has no course; page-endwin pins the pair where one is drawn" } },
+  winrun: { run: "win", from1: true, state: "WIN", settle: 3400, exempt: {
+    chosen: { why: "a level clear (worlds other than 5 and 8) has no course; a phone finale shows its course on its second page", when: [{ world: [1, 2, 3, 4, 6, 7] }, { phone: true }] },
+    locked: "no WIN shows a locked level in play: a finale opens 6-8 on its own run-end edge, and a level clear has no course" } }, // O2: the from-start finale (levels 1-4 won on the course), as the E7 frame
+  win2: { run: "win", key: "ArrowDown", state: "WIN", settle: 3400, exempt: {
+    chosen: { why: "a level clear (worlds other than 5 and 8) has no course", when: [{ world: [1, 2, 3, 4, 6, 7] }] },
+    locked: "no WIN shows a locked level in play: a finale opens 6-8 on its own run-end edge, and a level clear has no course" } }, // a paged run end's second page (a short box: the phone, a small window)
+  lose: { run: "lose", state: "LOSE", settle: 1600, exempt: {
+    info: { why: "a desk death on levels 6-8 (open) shows no finale flag ahead and no pager; the other worlds, and every phone page (its pager), record one", when: [{ world: [6, 7, 8], phone: false }] },
+    chosen: { why: "a death on levels 6-8 (open) leaves no reached-not level beside a cleared one; a phone shows its course on the second page (lose2)", when: [{ world: [6, 7, 8] }, { phone: true }] },
+    locked: { why: "levels 6-8 open (world 6-8 captures) show no locked level; a phone shows its course on the second page (lose2)", when: [{ world: [6, 7, 8] }, { phone: true }] } } },
+  loseshort: { run: "lose", store: { "nb.bests.v1": '{"b":{"0:0:1":{"s":5000,"r":5}}}' }, state: "LOSE", settle: 1600, exempt: {
+    info: { why: "a desk death on levels 6-8 (open) shows no finale flag ahead and no pager", when: [{ world: [6, 7, 8], phone: false }] },
+    chosen: { why: "a death on levels 6-8 leaves no reached-not level; a phone shows its course on the second page", when: [{ world: [6, 7, 8] }, { phone: true }] },
+    locked: { why: "levels 6-8 open show no locked level; a phone shows its course on the second page", when: [{ world: [6, 7, 8] }, { phone: true }] } } }, // a saved best over the run's score: the shortfall line
+  losedaily: { run: "lose", daily: true, state: "LOSE", settle: 1600, exempt: {
+    chosen: { why: "a phone's paged GAME OVER shows its course on the second page (lose2 judges it)", when: [{ phone: true }] },
+    locked: { why: "a phone's paged GAME OVER shows its course on the second page", when: [{ phone: true }] } } }, // today's DAILY (level 1, JUNGLE, whatever --world): Same board and the day's line
+  lose2: { run: "lose", key: "ArrowDown", state: "LOSE", settle: 1600, exempt: {
+    chosen: { why: "a death on levels 6-8 (open) leaves no reached-not level beside a cleared one", when: [{ world: [6, 7, 8] }] },
+    locked: { why: "levels 6-8 open show no locked level", when: [{ world: [6, 7, 8] }] } } }, // a paged GAME OVER's second page (the phone): its course
 };
 /* a row's need from its exemptions: EXEMPTABLE minus each exempt gate, which must be EXEMPTABLE and carry a non-empty reason */
+export const whyOf = (v) => (typeof v === "string" ? v : v && typeof v.why === "string" ? v.why : "");
+const scoped = (v) => v && typeof v === "object" && Array.isArray(v.when);
 export function needOf(name, exempt = {}) {
-  for (const [g, why] of Object.entries(exempt)) if (!EXEMPTABLE.includes(g) || typeof why !== "string" || !why.trim()) throw new Error("screens: " + name + " exempts " + g + " without a reason, or it is not an EXEMPTABLE gate");
+  for (const [g, v] of Object.entries(exempt)) {
+    if (!EXEMPTABLE.includes(g) || !whyOf(v).trim()) throw new Error("screens: " + name + " exempts " + g + " without a reason, or it is not an EXEMPTABLE gate");
+    if (typeof v !== "string" && !(scoped(v) && v.when.length && v.when.every((c) => c && (c.phone != null || Array.isArray(c.world))))) throw new Error("screens: " + name + " scopes " + g + " without a when");
+  }
   return Object.freeze(EXEMPTABLE.filter((g) => !exempt[g]));
 }
 for (const [n, r] of Object.entries(ROWS)) {
@@ -80,9 +106,13 @@ for (const [n, r] of Object.entries(ROWS)) {
   Object.freeze(r);
 }
 export const SCREENS = Object.freeze(ROWS);
-/* a capture's need: its row's (needPhone on a .phone capture), less each exemptIfNo gate whose part the probe did not record */
+/* a capture's need: its row's (needPhone on a .phone capture), with each scoped exemption whose `when` misses it, less each exemptIfNo gate whose part the probe did not record */
 export function needFor(row, d) {
-  let need = d && d.flags && d.flags.phone ? row.needPhone : row.need;
+  const flags = (d && d.flags) || {}, hit = (c) => (c.phone == null || !!flags.phone === c.phone) && (!Array.isArray(c.world) || c.world.includes(flags.world | 0));
+  let need = flags.phone ? row.needPhone : row.need;
+  /* a scoped exemption (exempt {gate: {why, when}}) counts only where one of its `when`s matches the capture's flags (phone, world) */
+  const back = EXEMPTABLE.filter((g) => { const v = row.exempt && row.exempt[g]; return scoped(v) && !v.when.some(hit) && !(flags.phone && row.exemptPhone && row.exemptPhone[g]); });
+  if (back.length) need = EXEMPTABLE.filter((g) => need.includes(g) || back.includes(g));
   const rects = (d && d.ui && d.ui.rects) || [];
   for (const [g, c] of Object.entries(row.exemptIfNo || {})) { const re = new RegExp(c.rect); if (!rects.some((r) => re.test(r.name || ""))) need = need.filter((x) => x !== g); }
   return need;

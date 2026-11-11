@@ -159,13 +159,13 @@ export function cell(p, x, y, s, cl, o = {}) {
   if (c) {
     key(c, x, y, s, s, kind, {tok});
     const ty = kind === "lit" ? y - 2 : y;
-    if (cl.st === "crack") { c.save(); c.beginPath(); c.rect(x + 2, ty + 2, s - 4, s - 4); c.clip(); crack(c, x + 2, ty + 2, s - 4); c.restore(); }
+    if (cl.st === "crack") { const g = cl.grow == null ? 1 : Math.max(0, Math.min(1, cl.grow)); c.save(); c.beginPath(); c.rect(x + 2, ty + 2, s - 4, (s - 4) * g); c.clip(); crack(c, x + 2, ty + 2, s - 4); c.restore(); } // grow: a crack stroking in, top down (GAME OVER 0.8-1.0 s)
     if (cl.st === "won") { const q = s * 0.44; c.fillStyle = OL; c.beginPath(); c.moveTo(x + s - q, ty); c.lineTo(x + s, ty); c.lineTo(x + s, ty + q); c.closePath(); c.fill(); CHECK(c, x + s - q * 0.62, ty + q * 0.02, q * 0.6, CONST.ink); }
     if (cl.st === "locked") LOCK(c, x + s / 2, y + s / 2, s * 0.42, CONST.off);
     else if (cl.fin && cl.st === "won") oct(c, x + s * 0.76, ty + s * 0.62, s * 0.13, Math.max(1.5, s * 0.05), {col: CONST.dk});
-    else if (cl.fin && cl.st === "ahead") glyph(c, "flag", x + s * 0.6, y + s * 0.32, s * 0.32, CONST.t2);
+    else if (cl.fin && cl.st === "ahead") glyph(c, "flag", x + s * 0.6, y + s * 0.32, s * 0.32, CONST.ink); // cream: >= 4.5:1 on every world's well (t2 read 4.26 on ARENA)
   }
-  if (cl.fin && cl.st === "ahead") rpair(p, "info", [x + s * 0.6, y + s * 0.32, s * 0.32, s * 0.32], [x + 3, y + 3, s - 6, s - 6], {col: CONST.t2, name: "finale flag"});
+  if (cl.fin && cl.st === "ahead") rpair(p, "info", [x + s * 0.6, y + s * 0.32, s * 0.32, s * 0.32], [x + 3, y + 3, s - 6, s - 6], {col: CONST.ink, name: "finale flag"});
   const ty = kind === "lit" ? y - 2 : y, nx = cl.st === "crack" ? x + s / 2 + 7 * (s / 40) : cl.fin && cl.st !== "locked" ? x + s * 0.32 : x + s / 2;
   if (cl.st !== "locked") text(p, "num", n, nx, ty + s / 2, px, {align: "center", col: kind === "lit" ? CONST.dk : CONST.t2, role: "secondary"});
   rrect(p, "cell " + n, x, y, s, s);

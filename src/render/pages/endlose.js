@@ -12,17 +12,24 @@
 import {worldTokens, CONST, rgba, toL} from "../kit/tokens.js";
 import {plate, key} from "../kit/paint.js";
 import {DEV, textScale} from "../kit/type.js";
-import {endFacts, endGeom, scoreSplit, MOTION} from "./endgeom.js";
+import {endPlan, scoreSplit, MOTION} from "./endgeom.js";
 import {capsOf, pager, text, textW, fitOf, wrap, keyPart, focusKey, course, rrect, rpair, frame, live, prefersReduced, ease, toastTag, CAP_K} from "./endkit.js";
 
+/* the motion beats of appendix 10.6 that draw (times in s): the cord burns down to the stub over 0.3-0.8, the crack strokes in over 0.8-1.0 with
+   one dust puff of 6 particles #c9793f (out over 0.45 s); reduced motion: the end state (the stub, the crack drawn, no dust) */
+export const CORD_K = 0.3, DUST = Object.freeze({n: 6, col: "#c9793f", t0: 0.8, dur: 0.45});
+export const cordK = (t) => (t == null ? CORD_K : CORD_K + (1 - CORD_K) * (1 - ease(Math.max(0, Math.min(1, (t - 0.3) / 0.5)))));
+export const crackK = (t) => (t == null || t >= 1 ? 1 : Math.max(0, Math.min(1, (t - 0.8) / 0.2)));
 const OL = CONST.ol, CHAR = "#15181f", CHAR2 = "#07080b", STUB = "#3a302c", STUB2 = "#1a1614";
 export const VEIL = Object.freeze({col: toL("#7f8794", 0.01), a0: 0.45, a: 0.65});
 const dr = (G, r) => ({x: (r.x - G.plate.x) / G.u, y: (r.y - G.plate.y) / G.u, w: r.w / G.u, h: r.h / G.u});
 
 /* the burnt-out bomb (appendix 10.5): the game bomb shape tipped 12 degrees onto its contact point, charred, cracked with cold lit edges, its cross
    dulled and sooted, a burnt stub of cord (no spark, no orange), a soot ring with the one soft edge (a radial gradient, never a filter), ash flecks.
-   R the radius; cx, base the contact point. The tip of the stub is returned (the smoke rises from it). */
-export function burnt(c, cx, base, R) {
+   R the radius; cx, base the contact point; k the cord's burnt end along its curve (0.3 the stub at rest; 1 the whole cord, appendix 10.6: it
+   burns down 1 -> 0.3 over 0.3-0.8 s, the live length in the cord's colours, the last 0.08 charred #15181f). The tip is returned (the spark and
+   the smoke sit on it). */
+export function burnt(c, cx, base, R, k = CORD_K) {
   const cy = base - R * 1.0, by = cy + R * 0.08, u = R / 12;
   if (c) {
     const g = typeof c.createRadialGradient === "function" ? c.createRadialGradient(cx, base, 0, cx, base, R * 1.3) : null;
@@ -58,13 +65,16 @@ export function burnt(c, cx, base, R) {
     c.fillStyle = "rgba(7,8,11,0.78)"; c.beginPath(); c.ellipse(cx + R * 0.25, by + R * 0.12, R * 0.17, R * 0.13, 0.4, 0, 7); c.fill();
   }
   const P0 = [cx + R * 0.22, cy - R * 0.62], P1 = [cx + R * 0.48, cy - R * 0.95], P2 = [cx + R * 0.58, cy - R * 1.22];
-  const B = (t) => [0, 1].map((i) => (1 - t) ** 2 * P0[i] + 2 * (1 - t) * t * P1[i] + t * t * P2[i]), tp = B(0.3);
+  const B = (t) => [0, 1].map((i) => (1 - t) ** 2 * P0[i] + 2 * (1 - t) * t * P1[i] + t * t * P2[i]), tp = B(Math.max(CORD_K, Math.min(1, k)));
   if (c) {
     const seg = (t0, t1, col, w) => { c.strokeStyle = col; c.lineWidth = w; c.lineCap = "round"; c.beginPath(); for (let i = 0; i <= 12; i++) { const p = B(t0 + ((t1 - t0) * i) / 12); i ? c.lineTo(...p) : c.moveTo(...p); } c.stroke(); };
-    seg(0, 0.3, OL, 2.6 * u + 3); seg(0, 0.3, STUB, 2.6 * u); seg(0.14, 0.3, STUB2, 2.6 * u);
-    c.strokeStyle = STUB2; c.lineWidth = 0.9 * u; c.lineCap = "round";
-    for (const [dx, dy] of [[0.13, -0.12], [0.02, -0.17], [0.16, -0.02]]) { c.beginPath(); c.moveTo(...tp); c.lineTo(tp[0] + dx * R, tp[1] + dy * R); c.stroke(); }
-    c.fillStyle = rgba("#8f8476", 0.8); c.beginPath(); c.arc(tp[0] + 0.02 * R, tp[1] - 0.02 * R, 0.07 * R, 0, 7); c.fill();
+    seg(0, k, OL, 2.6 * u + 3); seg(0, CORD_K, STUB, 2.6 * u); seg(0.14, CORD_K, STUB2, 2.6 * u);
+    if (k > CORD_K) { seg(CORD_K, k, CONST.cord2, 2.6 * u); seg(Math.max(CORD_K, k - 0.08), k, CHAR, 2.6 * u); } // still burning: the live cord, its tip charred
+    else {
+      c.strokeStyle = STUB2; c.lineWidth = 0.9 * u; c.lineCap = "round";
+      for (const [dx, dy] of [[0.13, -0.12], [0.02, -0.17], [0.16, -0.02]]) { c.beginPath(); c.moveTo(...tp); c.lineTo(tp[0] + dx * R, tp[1] + dy * R); c.stroke(); }
+      c.fillStyle = rgba("#8f8476", 0.8); c.beginPath(); c.arc(tp[0] + 0.02 * R, tp[1] - 0.02 * R, 0.07 * R, 0, 7); c.fill();
+    }
     c.restore();
   }
   const a = -0.21, dx = tp[0] - cx, dy = tp[1] - base;
@@ -118,7 +128,7 @@ function scene(p, F, G, tok, caps, A) {
   if (has("head")) {
     const hd = R("head"), hpx0 = D.hLose;
     if (!G.two) {
-      burnt(c, x0 + BR + 2, hd.y + hd.h - 2, BR);
+      burnt(c, x0 + BR + 2, hd.y + hd.h - 2, BR, cordK(A ? A.t : null));
       const hx = x0 + 2 * BR + 14, room = rw - (hx - x0), hpx = Math.min(hpx0, (hpx0 * room) / textW(p, "display", F.head, hpx0));
       sunk(p, F.head, hx, hd.y + hd.h / 2 - 0.25 * hpx * (1 - a(0.2, 0.3)), hpx);
     } else {
@@ -126,11 +136,17 @@ function scene(p, F, G, tok, caps, A) {
       sunk(p, F.head, x0, hd.y + hd.h / 2 - 0.25 * hpx * (1 - a(0.2, 0.3)), hpx);
     }
   }
-  if (G.two && has("bomb") && G.page === 0) { const bb = R("bomb"); burnt(c, bb.x + bb.w / 2 - BR * 0.05, bb.y + Math.min(bb.h, 3.2 * BR), BR); }
+  if (G.two && has("bomb") && G.page === 0) { const bb = R("bomb"); burnt(c, bb.x + bb.w / 2 - BR * 0.05, bb.y + Math.min(bb.h, 3.2 * BR), BR, cordK(A ? A.t : null)); }
   if (has("reached")) { const rc = R("reached"), px0 = (1.3 * L) / 0.72, w0 = textW(p, "label", F.reached, px0); text(p, "label", F.reached, x0, rc.y + rc.h / 2, w0 <= rw ? px0 : Math.max(dd.pri, (px0 * rw) / w0), {}); } // a narrow column sets it smaller, never under the primary size
   if (has("course")) {
-    const co = R("course"), cs = G.cell, gap = ph ? 3 : 6, cells = F.course.map((q) => (q.st === "crack" && A && A.t < 0.8 ? {...q, st: "clear"} : q));
+    const ck = crackK(A ? A.t : null), co = R("course"), cs = G.cell, gap = ph ? 3 : 6, cells = F.course.map((q) => (q.st === "crack" && ck < 1 ? (ck > 0 ? {...q, grow: ck} : {...q, st: "clear"}) : q));
     course(p, x0, co.y + 2, cs, gap, cells, {tok, phone: ph});
+    const ci = F.course.findIndex((q) => q.st === "crack");
+    if (c && A && ci >= 0 && A.t >= DUST.t0 && A.t < DUST.t0 + DUST.dur) { // one dust puff as the crack strokes in: 6 particles out from the cell's foot, fading
+      const f = (A.t - DUST.t0) / DUST.dur, bx = x0 + ci * (cs + gap) + cs / 2, by = co.y + 2 + cs;
+      c.fillStyle = rgba(DUST.col, 0.85 * (1 - f));
+      for (let i = 0; i < DUST.n; i++) { const an = Math.PI * (1.08 + (0.84 * i) / (DUST.n - 1)), d = cs * (0.12 + 0.42 * ease(f)); c.beginPath(); c.arc(bx + Math.cos(an) * d, by + Math.sin(an) * d * 0.7, Math.max(1, cs * 0.05 * (1 - 0.5 * f)), 0, 7); c.fill(); }
+    }
     const at = (st) => F.course.findIndex((q) => q.st === st), cl = (i) => [x0 + i * (cs + gap), co.y + 2, cs, cs];
     if (at("clear") >= 0 && at("ahead") >= 0) rpair(p, "chosen", cl(at("clear")), cl(at("ahead")), {name: "cleared vs not reached"});
     if (at("crack") >= 0 && at("ahead") >= 0) rpair(p, "chosen", cl(at("crack")), cl(at("ahead")), {name: "cracked vs not reached"});
@@ -169,17 +185,17 @@ function scene(p, F, G, tok, caps, A) {
 
 /** Paints GAME OVER over the board: c drawOverlay's context, B its box {w, h}; run / tm / toast as drawOverlay hands them. */
 export function drawLose(c, B, world, run, tm, toast) {
-  const r = run || {}, F = endFacts(world, run, tm), G = endGeom(B, F, {lay: r.lay, css: r.css, page: r.page, m: typeof c.measureText === "function" ? c : null});
+  const r = run || {}, plan = endPlan(B, world, run, tm, {lay: r.lay, css: r.css, page: r.page, m: typeof c.measureText === "function" ? c : null}), F = plan.F, G = plan.G; // kept per run end (endPlan), not rebuilt each frame
   if (!G) return;
   const tok = worldTokens(world.level | 0 || 1), touch = r.lay === "p" || r.lay === "l", caps = capsOf(touch), reduced = !!r.reduced || prefersReduced();
   const t = run && Number.isFinite(r.et) ? r.et : 9, anim = !reduced && t < MOTION.lose, A = anim ? {t} : null, ph = G.ph, L = G.d.L;
   c.save(); c.fillStyle = rgba(VEIL.col, anim ? VEIL.a0 + (VEIL.a - VEIL.a0) * ease(t / 0.5) : VEIL.a); c.fillRect(0, 0, B.w, B.h); c.restore();
   if (typeof c.rect !== "function" || typeof c.clip !== "function") return; // a context with no clip or rect (the headless renderer's): the veil only
-  const key = JSON.stringify([F, G.plate, G.u, G.page, caps]);
+  const key = plan.sig + JSON.stringify(caps);
   frame(c, "lose", B, G, tok, anim ? {anim: true, A, key, alpha: ease(t / 0.3)} : {alpha: reduced ? Math.min(1, t / 0.2) : 1, key}, (p, a) => scene(p, F, G, tok, caps, a));
   live(c, G, (p) => {
     const BR = G.two ? 4.5 * L : 2.5 * L, bb = G.two && G.page === 0 ? dr(G, G.rects.bomb) : null, hd = G.rects.head ? dr(G, G.rects.head) : null, kk = G.rects.kick ? dr(G, G.rects.kick) : null;
-    const tip = bb ? burnt(null, bb.x + bb.w / 2 - BR * 0.05, bb.y + Math.min(bb.h, 3.2 * BR), BR) : !G.two && hd && kk ? burnt(null, kk.x + BR + 2, hd.y + hd.h - 2, BR) : null;
+    const ck = cordK(A ? A.t : null), tip = bb ? burnt(null, bb.x + bb.w / 2 - BR * 0.05, bb.y + Math.min(bb.h, 3.2 * BR), BR, ck) : !G.two && hd && kk ? burnt(null, kk.x + BR + 2, hd.y + hd.h - 2, BR, ck) : null; // the spark gutters on the burning tip
     if (tip && A && A.t >= 0.3 && A.t < 0.8) { const g = A.t - 0.3, on = g < 0.08 || (g >= 0.2 && g < 0.26) || (g >= 0.46 && g < 0.5); if (on && p.c) { p.c.fillStyle = CONST.cord; p.c.beginPath(); p.c.arc(tip[0], tip[1], 0.12 * BR, 0, 7); p.c.fill(); } }
     if (tip && (!A || A.t >= 1.1) && p.c) {
       const top = kk ? kk.y + kk.h : 0;

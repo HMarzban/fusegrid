@@ -12,6 +12,7 @@ import { endMode, endFacts, endGeom, endHit, KEYS } from "../src/render/pages/en
 import * as lazyPages from "../src/render/pages/lazy.js";
 import * as endWin from "../src/render/pages/endwin.js";
 import * as endLose from "../src/render/pages/endlose.js";
+import * as kprobe from "../src/render/kit/probe.js";
 lazyPages._set("endwin", endWin); lazyPages._set("endlose", endLose); // the run-end pages are lazy (v202 Tasks 5.3 / 5.4): handed in as if their imports had landed
 
 let pass = 0, fail = 0;
@@ -26,8 +27,8 @@ globalThis.window = { addEventListener: (ty, fn) => { (L[ty] = L[ty] || []).push
 globalThis.location = { search: "", reload: noop };
 
 /* a fake #c (600 x 520 buffer at 1 CSS px a unit) whose pointer listeners the test fires */
-function mkCv() {
-  const PL = {}, ctx = new Proxy(function () {}, { get: (t, p) => (p === Symbol.toPrimitive ? () => "" : () => ctx), apply: () => ctx, set: () => true });
+function mkCv(real) {
+  const PL = {}, ctx = real || new Proxy(function () {}, { get: (t, p) => (p === Symbol.toPrimitive ? () => "" : () => ctx), apply: () => ctx, set: () => true });
   const el = { width: 600, height: 520, style: {}, getContext: () => ctx, getBoundingClientRect: () => ({ left: 0, top: 0, width: 600, height: 520 }),
     addEventListener: (ty, fn) => { (PL[ty] = PL[ty] || []).push(fn); }, removeEventListener: noop };
   el.tap = (g, x, y, up = true) => { (PL.pointerdown || []).forEach((f) => f({ clientX: x, clientY: y, button: 0, pointerType: "mouse" })); if (up) (PL.pointerup || []).forEach((f) => f({ clientX: x, clientY: y, button: 0, pointerType: "mouse" })); g.tick(3); };
@@ -115,9 +116,11 @@ for (const code of ["Enter", "Space"]) {
 }
 // ---- Esc: MENU at a run end, nothing on a mid-run WIN ----
 {
-  const g = lose(run());
+  const g = lose(run()), feels = [], f0 = g.app._feel.bind(g.app);
+  g.app._feel = (n) => (feels.push(n), f0(n));
   press(g, "Escape"); g.tick(5);
   check("LOSE + Esc -> MENU", g.app.screen === SCREEN.MENU && g.world.state === "MENU", g.app.screen + "/" + g.world.state);
+  check("LOSE + Esc plays the back feel, as the PAUSE quit does", feels.includes("back"), J(feels));
   check("LOSE + Esc: the board is gone from the overlay (isRunEnd false once on MENU)", !isRunEnd(g.world));
 }
 {
@@ -147,6 +150,59 @@ for (const code of ["Enter", "Space"]) {
   cv.tap(g, 300, 300); g.tick(5);
   check("mid-run WIN: a tap never reaches MENU", g.app.screen === SCREEN.GAME, g.app.screen);
 }
+/* ---- the DRAWN keys, tapped through the real game (fix round 1): the pages are in (lazy _set above), #c's context measures text (a recorder), the
+   kit probe records what each page drew, and every key is tapped at the centre of ITS DRAWN rect (pointerdown + pointerup through createGame) ---- */
+/* a measuring #c context that keeps nothing (a recorder would hold every board frame): measureText is the recorder's 0.6 em x 1.08, the rest no-ops */
+const mctxOf = () => { let font = "10px sans-serif"; const px = () => { const r = /(\d+(?:\.\d+)?)px/.exec(font); return r ? +r[1] : 10; };
+  const ctx = new Proxy(function () {}, { get: (t, p) => (p === Symbol.toPrimitive ? () => "" : p === "font" ? font : p === "measureText" ? (s) => ({ width: String(s).length * 0.6 * 1.08 * px() }) : () => ctx), apply: () => ctx, set: (t, p, v) => { if (p === "font") font = v; return true; } });
+  return ctx; };
+const copied = [];
+navigator.clipboard = { writeText: (s) => (copied.push(s), Promise.resolve()) };
+const drawn = (g) => { kprobe.setOn(true); g.tick(); const S = kprobe.snapshot(); kprobe.setOn(false); const out = {}; for (const r of S.rects) if (["main", "menu", "copy", "map"].includes(r.name)) out[r.name] = r; return { page: S.page, keys: out }; };
+const tapKey = (cv, g, r) => cv.tap(g, r.x + r.w / 2, r.y + r.h / 2);
+const settle = (g) => { g.tick(130); return g; }; // past the entrance beats (run.et 1.6 s / 1.4 s): the keys rest where they are drawn
+const drawnLose = () => { const cv = mkCv(mctxOf()), g = settle(lose(run(cv))); return { cv, g, D: drawn(g) }; };
+const drawnFin = () => { const cv = mkCv(mctxOf()), g = settle(finale(cv)); return { cv, g, D: drawn(g) }; };
+const drawnClear = () => { const cv = mkCv(mctxOf()), g = run(cv); clearRoom(g); settle(g); return { cv, g, D: drawn(g) }; };
+{
+  const { cv, g, D } = drawnLose();
+  check("GAME OVER draws its four keys (probe)", D.page === "lose" && ["main", "menu", "copy", "map"].every((n) => D.keys[n]), J(D));
+  check("every drawn GAME OVER key centre is that key for the tap path (endHitAt)", ["main", "menu", "copy", "map"].every((n) => { const r = D.keys[n]; return r && endHitAt(r.x + r.w / 2, r.y + r.h / 2, "2d", g.world, g.ro.run, g.ro.time) === n; }), J(D.keys));
+  tapKey(cv, g, D.keys.main); g.tick(10);
+  check("tap the drawn TRY AGAIN -> a new run at level 1", g.world.state === "PLAY" && g.world.level === 1 && g.app.screen === SCREEN.GAME, g.world.state + "/" + g.world.level);
+}
+{
+  const { cv, g, D } = drawnLose();
+  tapKey(cv, g, D.keys.menu); g.tick(5);
+  check("tap the drawn MENU on GAME OVER -> MENU", g.app.screen === SCREEN.MENU && g.world.state === "MENU", g.app.screen + "/" + g.world.state);
+}
+for (const [n, label] of [["copy", "COPY RESULT"], ["map", "COPY MAP"]]) {
+  const { cv, g, D } = drawnLose(), n0 = copied.length;
+  tapKey(cv, g, D.keys[n]); await Promise.resolve(); await Promise.resolve(); g.tick(2);
+  check("tap the drawn " + label + " on GAME OVER: one clipboard write and its note, the run end stays", copied.length === n0 + 1 && /COPIED/.test(g.app.toast.s || "") && g.world.state === "LOSE", J([copied.length - n0, g.app.toast.s, g.world.state]));
+}
+{
+  const { cv, g, D } = drawnFin();
+  check("the finale draws MENU, COPY RESULT, COPY MAP and no other key (probe)", D.page === "win" && D.keys.main && D.keys.copy && D.keys.map && !D.keys.menu, J(D));
+  check("every drawn finale key centre is that key for the tap path", ["main", "copy", "map"].every((n) => endHitAt(D.keys[n].x + D.keys[n].w / 2, D.keys[n].y + D.keys[n].h / 2, "2d", g.world, g.ro.run, g.ro.time) === n), J(D.keys));
+  const n0 = copied.length;
+  tapKey(cv, g, D.keys.copy); await Promise.resolve(); await Promise.resolve(); g.tick(2);
+  check("tap the drawn COPY RESULT on the finale: one write, the finale stays", copied.length === n0 + 1 && g.world.state === "WIN", J([copied.length - n0, g.world.state]));
+  tapKey(cv, g, D.keys.main); g.tick(5);
+  check("tap the drawn MENU (the finale's main key) -> MENU", g.app.screen === SCREEN.MENU, g.app.screen);
+}
+{
+  const { cv, g, D } = drawnClear();
+  check("a level clear draws NEXT LEVEL as its one key (probe)", D.page === "win" && D.keys.main && !D.keys.menu && !D.keys.copy && !D.keys.map, J(D));
+  check("its drawn centre is the main key for the tap path", endHitAt(D.keys.main.x + D.keys.main.w / 2, D.keys.main.y + D.keys.main.h / 2, "2d", g.world, g.ro.run, g.ro.time) === "main");
+  const P = D.keys.main;
+  for (const [x, y] of [[P.x - 30, P.y + P.h / 2], [300, 40], [5, 515]]) cv.tap(g, x, y);
+  g.tick(5);
+  check("a mid-run WIN: taps off its drawn key do nothing (never MENU)", g.app.screen === SCREEN.GAME && g.world.state === "WIN" && g.world.level === 1, g.app.screen + "/" + g.world.state);
+  tapKey(cv, g, P); g.tick(10);
+  check("tap the drawn NEXT LEVEL -> level 2, never MENU", g.app.screen === SCREEN.GAME && g.world.state === "PLAY" && g.world.level === 2, g.app.screen + "/" + g.world.state + "/" + g.world.level);
+}
+delete navigator.clipboard;
 // ---- updVisible unchanged: a run end on GAME, never PLAY / PAUSE / a mid-run WIN ----
 {
   const S = SCREEN, rows = [[S.GAME, "LOSE", true, true], [S.GAME, "WIN", true, true], [S.GAME, "WIN", false, false], [S.GAME, "PLAY", false, false], [S.GAME, "PAUSE", false, false], [S.MENU, "MENU", false, true], [S.INTRO, "PLAY", false, false], [S.ATTRACT, "PLAY", false, false]];

@@ -1252,6 +1252,12 @@ export function createMenuApp(opts = {}) {
       this._toMenuInner();
       return true;
     },
+    /* GAME OVER -> MENU (Esc, EAST, a tap on MENU; R19): the same back feel as the PAUSE quit */
+    leaveRun() {
+      this._feel("back");
+      this._toMenuInner();
+      return true;
+    },
     /* Debug/reset hook target: force back to MENU from anywhere. */
     toMenu() {
       const was = this.screen !== SCREEN.MENU;

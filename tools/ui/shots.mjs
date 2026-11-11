@@ -179,9 +179,21 @@ async function group(c, port, a, look, world, rep) {
         await ev(RUN0);
         for (const [k, v] of Object.entries(R.store || {})) await ev(`(localStorage.setItem(${JSON.stringify(k)},${JSON.stringify(v)}),true)`);
         const row = R.daily ? "DAILY" : "PLAY";
+        if (R.from1) await ev("(window.__GAME__.app.level=1,true)"); // the run starts at level 1 whatever --world (the room the run ends on)
         if (!(await pick("cursor", "m.ITEMS", [row]))) { L.fail(base, "no " + row + " row on MENU"); L.close(base); continue; }
         await confirm();
         if (!(await poll("window.__GAME__.app.screen===6&&window.__GAME__.G.state==='PLAY'", 5000))) { L.fail(base, "the run did not start"); L.close(base); continue; }
+        if (R.from1) { // a from-start run: clear every room below --world through the debug hook, NEXT LEVEL (Enter at the run end) between them
+          let ok = true;
+          for (let lv = await ev("window.__GAME__.G.level"); ok && lv < world; lv = await ev("window.__GAME__.G.level")) {
+            await P.adv(300); await ev("window.__GAME__.clearAllEnemies()");
+            for (let i = 0; i < 80 && (await ev("window.__GAME__.G.state")) !== "WIN"; i++) await P.adv(50);
+            await P.adv(400); await ev("(window.__GAME__.input.onUiKey('Enter'),true)");
+            for (let i = 0; i < 80 && !(await ev(`window.__GAME__.G.state==='PLAY'&&window.__GAME__.G.level===${lv + 1}`)); i++) await P.adv(50);
+            if ((await ev("window.__GAME__.G.level")) !== lv + 1) { L.fail(base, "level " + lv + " never went on to " + (lv + 1)); ok = false; }
+          }
+          if (!ok) { L.close(base); continue; }
+        }
         if (a.seed != null) for (const w of await ev(loadExpr({ seed: a.seed, heat: null, pace: null, gen: null }, world))) warn(w);
         if (R.run === "pause") {
           await P.adv(600);

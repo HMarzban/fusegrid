@@ -683,6 +683,15 @@ const chainW = (n, px, py, blades) => {
       onEvent(w, { t: "win" }, 0, lk);
       check("a FUSE/GRID CLEAR (" + tag + ") throws confetti (" + look + ")", getFx().length === 60 && getFx().every((q) => q.confetti), getFx().length);
     }
+    /* appendix 10.4: REDUCE FLASH (main: flashK 0.25) and prefers-reduced-motion throw none, even on a finale; the shake keeps its own knob */
+    setFxOpts({ flashK: 0.25 }); initFx();
+    onEvent({ seed: 9, level: 5 }, { t: "win" }, 0, lk);
+    check("REDUCE FLASH: a finale throws no confetti (" + look + ")", getFx().length === 0, getFx().length);
+    setFxOpts({ flashK: 1 });
+    const mm = globalThis.matchMedia; globalThis.matchMedia = (q) => ({ matches: /reduce/.test(q) }); initFx();
+    onEvent({ seed: 9, level: 5 }, { t: "win" }, 0, lk);
+    check("prefers-reduced-motion: a finale throws no confetti (" + look + ")", getFx().length === 0, getFx().length);
+    if (mm) globalThis.matchMedia = mm; else delete globalThis.matchMedia;
   }
   initFx();
 }
