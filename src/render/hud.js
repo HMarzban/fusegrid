@@ -386,9 +386,11 @@ function bar(c, G, st, tok, o, rec) {
     if (a.a !== al) c.globalAlpha = al = a.a;
     rf(c, r, L.r, tok.pane);
     const capOn = st.keys && a.cap && G.lay !== "l", cw = capOn ? capWOf(c, G.lay, a.cap) : 0;
-    if (!B.px) { glyph(c, a.k, r.x + (r.w - Bs.icon) / 2 - (capOn ? (cw + Bs.capg) / 2 : 0), cy, Bs.icon, o.px); }
-    else {
-      glyph(c, a.k, r.x + Bs.cx, cy, Bs.icon, o.px);
+    const gx = !B.px ? r.x + (r.w - Bs.icon) / 2 - (capOn ? (cw + Bs.capg) / 2 : 0) : r.x + Bs.cx;
+    glyph(c, a.k, gx, cy, Bs.icon, o.px);
+    /* a live power's glyph is an info pair against its pane, like a chip's glyphs (the tip may cover every chip) */
+    if (rec && a.a === 1) P.pair("info", [gx - 5, cy - Bs.icon / 2 - 5, Bs.icon + 10, Bs.icon + 10], [r.x, r.y, r.w, r.h], {name: "power " + a.k, col: PCOL[a.k] || CONST.ink});
+    if (B.px) {
       c.font = T.label(B.px); c.fillStyle = CONST.ink; c.textAlign = "left"; c.textBaseline = "middle";
       const tx = r.x + Bs.cx + Bs.icon + Bs.ig;
       c.fillText(a.s, tx, cy);
