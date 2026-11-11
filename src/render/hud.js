@@ -23,7 +23,7 @@
    (PAUSE, a still TIME) makes no canvas call; the plate's ring is a kit cache layer. The probe records page "hud" while the world PLAYs. */
 import {FOES, POWER} from "../core/entities.js";
 import {CFG, key as cell} from "../core/config.js";
-import {TILE_NAME, featKindOf} from "../core/feat.js";
+import {TILE_NAME, featKindOf, featProfile, tileTip} from "../core/feat.js";
 import {CONST, worldTokens} from "./kit/tokens.js";
 import {plate, key as kkey} from "./kit/paint.js";
 import {T, DEV, measure, textScale} from "./kit/type.js";
@@ -82,7 +82,9 @@ export function tipState(world, o) {
     const d = Math.hypot((x + 0.5) * T0 - p.x, (y + 0.5) * T0 - p.y);
     if (d < bd) { bd = d; t = [x, y]; }
   }
-  return {s: String(c2.s), a: Math.round(Math.min(1, c2.a) * 10) / 10, t}; // alpha in tenths: a fade repaints ten times, not every frame
+  let short = "";
+  try { short = tileTip(k, featProfile(world), true); } catch (_) { short = ""; }
+  return {s: String(c2.s), short, a: Math.round(Math.min(1, c2.a) * 10) / 10, t}; // alpha in tenths: a fade repaints ten times, not every frame
 }
 /* the tip's words: the tile's name, then the rest */
 export const tipOf = (s) => { const i = String(s).indexOf(" · "); return i < 0 ? [String(s), ""] : [s.slice(0, i), s.slice(i + 3)]; };
@@ -159,45 +161,72 @@ function stripOf(geo) {
   return {keys: {up: at(1, 0), lf: at(0, 1), rt: at(2, 1), dn: at(1, 2)}, well: at(1, 1), bomb: S.bomb, thr: S.thr, rem: S.rem};
 }
 const TIPT = 8;
+/* words into lines of at most w; a break at a " · " drops the separator, so no line starts or ends with one */
 function wrap(c, s, font, w) {
-  const out = [];
+  const out = [], end = (l) => l.replace(/ ·$/, "");
   let line = "";
-  for (const wd of String(s).split(" ")) { const t = line ? line + " " + wd : wd; if (line && measure(c, font, t) > w) { out.push(line); line = wd; } else line = t; }
-  if (line) out.push(line);
+  for (const wd of String(s).split(" ")) {
+    if (wd === "·" && !line) continue;
+    const t = line ? line + " " + wd : wd;
+    if (line && measure(c, font, t) > w) { out.push(end(line)); line = wd === "·" ? "" : wd; } else line = t;
+  }
+  if (line) out.push(end(line));
   return out;
 }
+/* the tile tip's place and words. It never covers the board or a live control (the PAUSE key, the D-PAD, BOMB, THROW, REMOTE: the strip sits
+   outside every slot) and its words always fit its plate, by the real measure. Words step down: the whole tip, the body at its floor, the
+   short line (feat.js tileTip(.., true)) at size then floor, at most two body lines; the slots are tried in order with every step but the
+   last, and only when none takes any words does the name alone go in the first slot it fits. Slots: d the column beside the board (a leader
+   to the tile), then over the chip plate inside the top reserve; p the band under the board below the power-ups, then the whole band, then
+   over plate columns 1-3 (never the PAUSE column); l the left gutter above the D-PAD. */
+const TIP_FLOOR = {d: 17.9, p: 14.1}; // the kit's body font px floors (tools/ui/lib/gatelib.mjs cap: desktop 17.9, phone 14.1), whatever the text scale
 function tipGeom(c, G, geo, st, box) {
-  const lay = geo.lay, D = DEV[lay === "d" ? "d" : "p"], K = textScale(), [name, rest] = tipOf(st.tip.s), pad = 12, ST = geo.stage;
-  const size = (w) => { const lines = rest ? wrap(c, rest, T.body(D.bod), w - 2 * pad) : []; return {lines, h: 10 + D.pri * K + (lines.length ? 6 + lines.length * D.bod * K * 1.25 : 0) + 12}; };
-  const fits = (w) => measure(c, T.label(D.pri), name) + 2 * pad <= w && size(w).lines.every((l) => measure(c, T.body(D.bod), l) + 2 * pad <= w);
+  const lay = geo.lay, D = DEV[lay === "d" ? "d" : "p"], K = textScale(), [name, rest] = tipOf(st.tip.s), [, low] = tipOf(st.tip.short || ""), pad = 12, ST = geo.stage;
+  const fl = Math.min(D.bod, TIP_FLOOR[lay === "d" ? "d" : "p"] / K);
+  const words = [[rest, D.bod], [rest, fl], [low, D.bod], [low, fl]].filter(([b, px], i, a) => b && !a.slice(0, i).some(([b2, p2]) => b2 === b && p2 === px));
+  const size = (w, body, px) => { const lines = body ? wrap(c, body, T.body(px), w - 2 * pad) : []; return {lines, px, body, h: 10 + D.pri * K + (lines.length ? 6 + lines.length * px * K * 1.25 : 0) + 12}; };
+  /* the first step of `steps` that fits a w x maxH inner box, or null */
+  const pick = (w, maxH, steps) => {
+    if (!(w >= 2 * pad) || !(maxH > 0) || measure(c, T.label(D.pri), name) + 2 * pad > w) return null;
+    for (const [body, px] of steps) {
+      const z = size(w, body, px);
+      if (z.lines.length <= 2 && z.h <= maxH + 1e-6 && z.lines.every((l) => measure(c, T.body(px), l) + 2 * pad <= w + 1e-6)) return z;
+    }
+    return null;
+  };
   const at = st.tip.t ? box.at || [ST.x + (st.tip.t[0] + 0.5) * CFG.TILE * geo.s, ST.y + (st.tip.t[1] + 0.5) * CFG.TILE * geo.s] : null;
   const ring = (r) => R4(r.x - TIPT, r.y - TIPT, r.w + 2 * TIPT, r.h + 2 * TIPT + 3);
-  let inner = null, lead = null;
-  /* over the chip plate (d, p), or the whole left gutter column on a landscape phone: what it covers is not drawn while it shows */
-  const over = () => {
-    if (G.plate) return R4(G.plate.x, G.plate.y, G.plate.w, size(G.plate.w).h);
-    if (!geo.left) return null;
-    const a = R4(geo.left.x + TIPT, geo.left.y + TIPT, geo.left.w - 2 * TIPT, geo.left.h - 2 * TIPT - 3);
-    return R4(a.x, a.y, a.w, Math.min(a.h, Math.max(size(a.w).h, G.cols[0].h - 2 * TIPT - 3)));
-  };
+  /* slots: w and the inner height it may take (its ring then stays inside the slot), place(z) -> [inner box, leader] */
+  const slots = [];
+  const top = (x, y, w, maxH, grow) => slots.push({w, maxH, place: (z) => [R4(x, y, w, grow ? Math.min(maxH, Math.max(z.h, grow)) : z.h), null]});
   if (lay === "d") {
     const rx = ST.x + ST.w + 30, rw = Math.min(360, box.w - 22 - rx - TIPT), lw = Math.min(360, ST.x - 30 - 22 - TIPT), right = rw >= lw, w = right ? rw : lw;
-    if (w >= 120 && fits(w)) {
-      const h = size(w).h, cy = at ? at[1] : ST.y + ST.h / 2, y0 = (G.plate ? G.plate.y + G.plate.h + 10 + TIPT : TIPT), y1 = Math.min(ST.y + ST.h, box.h - 184) - TIPT - 3;
-      const y = Math.max(y0, Math.min(y1 - h, cy - h / 2)), x = right ? rx + TIPT : ST.x - 30 - TIPT - w;
-      inner = R4(x, y, w, h);
+    const y0 = (G.plate ? G.plate.y + G.plate.h + 10 + TIPT : TIPT), y1 = Math.min(ST.y + ST.h, box.h - 184) - TIPT - 3;
+    if (w >= 120) slots.push({w, maxH: y1 - y0, place: (z) => {
+      const h = z.h, cy = at ? at[1] : ST.y + ST.h / 2, y = Math.max(y0, Math.min(y1 - h, cy - h / 2)), x = right ? rx + TIPT : ST.x - 30 - TIPT - w;
+      let lead = null;
       if (at) {
         const ex = right ? x - TIPT : x + w + TIPT, ky = Math.max(y + 12, Math.min(y + h - 12, at[1])), kx = right ? ST.x + ST.w + 12 : ST.x - 12;
         lead = Math.abs(ky - at[1]) < 0.5 ? [at, [ex, ky]] : [at, [kx, at[1]], [kx, ky], [ex, ky]];
       }
-    } else inner = over();
+      return [R4(x, y, w, h), lead];
+    }});
+    if (G.plate) { const y = G.plate.y - HUD.d.ring + TIPT; top(G.plate.x, y, G.plate.w, ST.y - y - TIPT - 3); } // over the chips: its ring on the plate's own ring, stopping at the board's top edge
   } else if (lay === "p") {
-    const b = geo.band, w = b.w - 2 * TIPT, h = size(w).h, y = b.y + b.h - h - TIPT - 3;
-    inner = fits(w) && y - TIPT >= ST.y + ST.h + 8 ? R4(b.x + TIPT, y, w, h) : over();
-  } else inner = over();
-  if (!inner) return null;
-  const sz = size(inner.w);
-  return {name, lines: sz.lines, in: inner, box: ring(inner), lead, a: st.tip.a, D};
+    const b = geo.band, x = b.x + TIPT, w = b.w - 2 * TIPT, foot = b.y + b.h - TIPT - 3, y0 = ST.y + ST.h + 8 + TIPT;
+    for (const yt of G.bar ? [Math.max(y0, G.bar.y + G.bar.h + 8 + TIPT), y0] : [y0]) slots.push({w, maxH: foot - yt, place: (z) => [R4(x, foot - z.h, w, z.h), null]});
+    if (G.plate) { const y = G.plate.y - HUD.p.ring + TIPT; top(G.plate.x, y, (G.pause ? G.pause.x - 6 - TIPT : G.plate.x + G.plate.w) - G.plate.x, ST.y - y - TIPT - 3); }
+  } else if (geo.left && G.cols) {
+    const a = R4(geo.left.x + TIPT, geo.left.y + TIPT, geo.left.w - 2 * TIPT, geo.left.h - 2 * TIPT - 3);
+    top(a.x, a.y, a.w, a.h, G.cols[0].h - 2 * TIPT - 3);
+  }
+  for (const steps of [words, [["", D.bod]]]) for (const sl of slots) {
+    const z = pick(sl.w, sl.maxH, steps);
+    if (!z) continue;
+    const [inner, lead] = sl.place(z);
+    return {name, lines: z.lines, px: z.px, body: z.body === rest ? "whole" : z.body ? "short" : "name", in: inner, box: ring(inner), lead, a: st.tip.a, D};
+  }
+  return null;
 }
 function layout(c, geo, st, box) {
   const lay = geo.lay, L = HUD[lay], R = (x, y, w, h) => ({x, y, w, h}), G = {lay, chips: {}, bar: null, pause: null, plate: null, cols: null};
@@ -441,8 +470,9 @@ function strip(c, G, st, tok, o, rec) {
   tr("BOMB", b, {fill: CONST.yel});
   const act = (r, k, name) => {
     kkey(c, r.x, r.y, r.w, r.h, "key", {tok, phone: true});
-    /* the name at the primary size, else the secondary, else its floor (cap 9), else none: the key's glyph names it */
-    const px = [D.pri, D.sec, Math.min(D.sec, 12.8 / K)].find((q) => measure(c, T.label(q), name) + 8 <= r.w) || 0;
+    /* the name at the primary size, else the secondary, else its floor (cap 9), else none: the key's glyph names it; 2 px air a side (REMOTE at
+       the floor fits the 61 px half key of the 393x852 frame) */
+    const px = [D.pri, D.sec, Math.min(D.sec, 12.8 / K)].find((q) => measure(c, T.label(q), name) + 4 <= r.w) || 0;
     const gs = Math.min(26, px ? r.h - px * K - 14 : r.h - 16), ly = r.y + r.h - 6 - px * K / 2, lw = px ? measure(c, T.label(px), name) : 0;
     glyph(c, k, r.x + r.w / 2 - gs / 2, px ? r.y + 6 + gs / 2 : r.y + r.h / 2, gs, o.px);
     if (px) lab(name, r.x + r.w / 2, ly, px, CONST.ink);
@@ -470,11 +500,12 @@ function tip(c, G, tok, rec, q, look) {
   const ly = r.y + 10 + D.pri * K / 2;
   c.font = T.label(D.pri); c.fillStyle = CONST.ink; c.fillText(t.name, r.x + 12, ly);
   if (rec) P.text(t.name, r.x + 12, ly - D.pri * K * CAPR.label / 2, measure(c, T.label(D.pri), t.name), D.pri * K * CAPR.label, {role: "primary", col: CONST.ink});
-  c.font = T.body(D.bod); c.fillStyle = CONST.t2;
+  const bp = t.px || D.bod;
+  c.font = T.body(bp); c.fillStyle = CONST.t2;
   t.lines.forEach((l, i) => {
-    const y = ly + D.pri * K / 2 + 6 + (i + 0.5) * D.bod * K * 1.25;
+    const y = ly + D.pri * K / 2 + 6 + (i + 0.5) * bp * K * 1.25;
     c.fillText(l, r.x + 12, y);
-    if (rec) P.text(l, r.x + 12, y - D.bod * K * 0.36, measure(c, T.body(D.bod), l), D.bod * K * 0.72, {role: "body", px: D.bod * K, col: CONST.t2});
+    if (rec) P.text(l, r.x + 12, y - bp * K * 0.36, measure(c, T.body(bp), l), bp * K * 0.72, {role: "body", px: bp * K, col: CONST.t2});
   });
   if (rec) P.rect("tip", r.x, r.y, r.w, r.h, {plate: TIPT, fill: tok.bedA});
   c.globalAlpha = a0;

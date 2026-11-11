@@ -6,15 +6,18 @@ import {POWER} from "./core/entities.js";
    setIntent/padFire, Node-testable with zero DOM. DOM mounting lives behind a
    document guard; desktop builds nothing. NO canvas listeners anywhere — the
    menu-shell pointer swallow stays intact. */
-const DEAD=0.2;   // 20% center dead zone (§2)
+/* the D-PAD is painted as a cross of four keys on a 3x3 grid (hud.js strip, UI upgrade Task 8.3): the centre third is the well and the four
+   corner cells are empty, so both are inert (fix round 1: a tap does what it shows); each arm is the middle third of its side */
+const THIRD=1/6;
 
 export function hasTouch(w){ return !!w&&("ontouchstart" in w); }
 
 /* 4-way cross quadrants from clientX/Y inside the element rect */
 function zoneOf(x,y,r){
   const fx=(x-r.left)/r.width-.5, fy=(y-r.top)/r.height-.5;
-  if(Math.abs(fx)<DEAD/2&&Math.abs(fy)<DEAD/2)return null;
-  return Math.abs(fx)>Math.abs(fy)?{x:fx>0?1:-1,y:0}:{x:0,y:fy>0?1:-1};
+  const ax=Math.abs(fx), ay=Math.abs(fy);
+  if((ax<THIRD)===(ay<THIRD))return null;   // the well (both inside) or an empty corner (both outside)
+  return ax>ay?{x:fx>0?1:-1,y:0}:{x:0,y:fy>0?1:-1};
 }
 
 /* Per-control single-pointer claims (§4): pad and bomb each track ONE pid;

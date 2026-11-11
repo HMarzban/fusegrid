@@ -10,7 +10,8 @@ import { drawHud, hudGeom, hudState, tipOf, createHud } from "../src/render/hud.
 import { worldTokens } from "../src/render/kit/tokens.js";
 import { createWorld, loadLevel } from "../src/core/sim.js";
 import { CFG, key } from "../src/core/config.js";
-import { F } from "../src/core/feat.js";
+import { F, FEAT_PROFILE, tileTip } from "../src/core/feat.js";
+import { setTextScale } from "../src/render/kit/type.js";
 import * as P from "../src/render/kit/probe.js";
 import { release, _dbg } from "../src/render/kit/cache.js";
 
@@ -66,6 +67,23 @@ test("the strip's DOM: #tpad, #tbomb, #tthrow, #tremote and #tpause are transpar
   assert.equal(HUD_RES.l.pad, 152);
 });
 
+test("landscape: index.html places #tpad, #tbomb, #tthrow and #tremote with HUD_RES.l's own numbers, which the HUD paints (one source, cross-checked)", () => {
+  const html = readFileSync(new URL("../index.html", import.meta.url), "utf8"), L = HUD_RES.l;
+  const rule = (id) => (html.match(new RegExp("body\\[data-lay=l\\] #" + id + "\\{[^}]*\\}")) || [""])[0], base = (id) => (html.match(new RegExp("\\n\\s*#" + id + "\\{[^}]*\\}")) || [""])[0];
+  const num = (re, t) => +((t.match(re) || [])[1]);
+  const pad = rule("tpad");
+  assert.deepEqual([num(/right:calc\(100% \+ (\d+)px\)/, pad), num(/bottom:(\d+)/, pad), num(/width:(\d+)px/, pad), num(/height:(\d+)px/, pad)], [L.padR, 0, L.pad, L.pad], "the D-PAD");
+  for (const [id, v] of [["tbomb", L.bomb], ["tthrow", L.thr], ["tremote", L.rem]]) {
+    const r = rule(id), w = num(/width:(\d+)px/, base(id));
+    assert.deepEqual([num(/left:calc\(100% \+ (\d+)px\)/, r), num(/bottom:(\d+)px/, r), w, num(/height:(\d+)px/, base(id))], [v[0], v[1], v[2], v[2]], id + " left gap, bottom, size");
+  }
+  for (const [W, H] of L_BOX) {
+    const geo = hudGeo(W, H, 600, 520, "l", true), st = geo.stage, sr = st.x + st.w, sb = st.y + st.h, S = geo.strip;
+    assert.deepEqual([S.pad.x, S.pad.y, S.pad.w], [st.x - L.padR - L.pad, sb - L.pad, L.pad], `l ${W}x${H}: the painted D-PAD is the CSS one`);
+    for (const [k, v] of [["bomb", L.bomb], ["thr", L.thr], ["rem", L.rem]]) assert.deepEqual([S[k].x, S[k].y, S[k].w, S[k].h], [sr + v[0], sb - v[1] - v[2], v[2], v[2]], `l ${W}x${H}: the painted ${k} is the CSS one`);
+  }
+});
+
 test("createHud docks #tpause on the PAUSE key it paints (stage-relative CSS), once per change", () => {
   const r = rec(), geo = hudGeo(393, 852, 600, 520, "p", true), el = { style: {} }, writes = [];
   const style = new Proxy(el.style, { set: (o, k, v) => { writes.push(k); o[k] = v; return true; } });
@@ -109,6 +127,48 @@ test("the floor-tile tip sits beside the board on a leader to the nearest tile o
   assert.deepEqual(tipOf("CONVEYOR · CARRIES YOUR BOMBS, NOT YOU"), ["CONVEYOR", "CARRIES YOUR BOMBS, NOT YOU"]);
   const st = hudState(w, { time: { t: 1 }, coach2: { a: 1, s: "KICK · WALK INTO A BOMB", k: "kick" } }), G = hudGeom(rec().ctx, hudGeo(1366, 768, 600, 520, "d"), st, { w: 1366, h: 768 });
   assert.equal(G.tip, null, "a power-up's coach tip stays the board's own panel");
+});
+
+/* R4 (fix round 1): the longest tips (GATE, TRAP) at every heat, on the windows where the tip once covered the board (4:3 / 5:4 desks), spilled
+   onto the D-PAD (small landscape phones) or hid the PAUSE key (short / wide portraits), at text 1 and 1.25, with every power-up and THROW /
+   REMOTE held: the tip names its tile, never covers the board or a live control, stays in the viewport, and every word sits inside its plate by
+   the painter's own measure (the recorder at a wide 0.648 em per char); no line starts or ends with a separator; the body never under its floor */
+test("R4: the tile tip never covers the board or a live control and never spills, GATE and TRAP, at text 1 and 1.25", () => {
+  const BOX = [["d", 1024, 768], ["d", 1152, 864], ["d", 1280, 1024], ["d", 1366, 768], ["l", 667, 375], ["l", 740, 360], ["p", 375, 667], ["p", 360, 740], ["p", 768, 1024], ["p", 393, 852]];
+  const ALLP = { bombs: 2, range: 3, throw: true, remote: true, shield: true, kick: true, passing: true, bombKind: "pierce", speed: 999 };
+  const used = {};
+  for (const K of [1, 1.25]) {
+    setTextScale(K);
+    try {
+      for (const [kind, k, code] of [["GATE", "GATE", F.GATE], ["TRAP", "PLATE", F.PLATE]]) for (const heat of [0, 1, 2]) for (const [lay, W, H] of BOX) {
+        const w = createWorld(4242, 3);
+        w.gen = 1; loadLevel(w, 3); w.state = "PLAY"; w.heat = heat;
+        w.feat = {}; w.feat[key(9, 7)] = code;
+        Object.assign(w.players[0], ALLP, { x: 2.5 * CFG.TILE, y: 2.5 * CFG.TILE });
+        const text = tileTip(k, FEAT_PROFILE[heat]), tag = `${kind} heat ${heat} ${lay} ${W}x${H} @${K}`;
+        const r = rec({ widthK: 0.648 }), geo = hudGeo(W, H, 600, 520, lay, true), st = hudState(w, { time: { t: 1 }, coach2: { a: 1, s: text, k } }), G = hudGeom(r.ctx, geo, st, { w: W, h: H });
+        drawHud(r.ctx, G, st, worldTokens(3), {});
+        const t = G.tip;
+        assert.ok(t, tag + ": a tip");
+        assert.ok(r.texts.some((q) => q.s === kind), tag + ": names the tile");
+        assert.ok(off(t.box, geo.stage), `${tag}: never over the board ${JSON.stringify(t.box)}`);
+        const live = G.strip ? [geo.strip.pad, G.strip.bomb, G.strip.thr, G.strip.rem] : [];
+        if (G.pause) live.push(G.pause);
+        for (const c of live) assert.ok(off(t.box, c), `${tag}: never over a live control ${JSON.stringify(c)}`);
+        assert.ok(t.box.x >= 0 && t.box.y >= 0 && t.box.x + t.box.w <= W + 0.5 && t.box.y + t.box.h <= H + 0.5, tag + ": in the viewport");
+        const mine = r.texts.filter((q) => q.s === t.name || t.lines.includes(q.s));
+        assert.equal(mine.length, 1 + t.lines.length, tag + ": the name and every line drawn");
+        for (const q of mine) assert.ok(q.x >= t.in.x && q.x + q.w <= t.in.x + t.in.w + 0.5 && q.y >= t.in.y && q.y <= t.in.y + t.in.h, `${tag}: "${q.s}" inside the plate ${JSON.stringify(t.in)} (x ${q.x} w ${q.w} y ${q.y})`);
+        const last = t.lines.length ? (t.in.y + 10 + t.D.pri * K + 6 + t.lines.length * t.px * K * 1.25) : t.in.y + 10 + t.D.pri * K;
+        assert.ok(last <= t.in.y + t.in.h + 0.5, `${tag}: the last line ends inside the plate`);
+        assert.ok(t.lines.length <= 2 && t.lines.every((l) => !/^·|·$/.test(l.trim())), `${tag}: one or two lines, no separator at an edge: ${JSON.stringify(t.lines)}`);
+        if (t.lines.length) assert.ok(t.px * K >= (lay === "d" ? 17.9 : 14.1) - 1e-6, `${tag}: body at ${t.px * K}px`);
+        const step = t.body;
+        used[lay + " " + W + "x" + H + " @" + K] = (used[lay + " " + W + "x" + H + " @" + K] || new Set()).add(step);
+      }
+    } finally { setTextScale(1); }
+  }
+  console.log("tip steps:", Object.entries(used).map(([k, v]) => k + " " + [...v].join("/")).join("; "));
 });
 
 test("the renderers leave a floor-tile tip to the HUD and keep every other coach tip", async () => {

@@ -35,15 +35,28 @@ check("hasTouch({ontouchstart:null}) true", hasTouch({ontouchstart:null})===true
   m.down(4,164,224,R);                       // bottom edge center
   check("zone bottom edge -> down held", inp.input.down===true&&inp.input.up===false);
   m.up(4);
-  m.down(5,196,110,R);                       // NE corner -> resolves to nearest axis
-  check("corner resolves to one axis (cross quadrants)",
-    (inp.input.up===true&&inp.input.right===false)||(inp.input.right===true&&inp.input.up===false));
+  m.down(5,196,110,R);                       // NE corner: an empty cell of the painted cross
+  check("an empty corner cell is inert (the D-PAD is a painted cross, fix round 1)",
+    !inp.input.up&&!inp.input.down&&!inp.input.left&&!inp.input.right);
+  m.up(5);
+  for(const [x,y] of [[110,110],[220,110],[110,220],[220,220],[100+128*0.67,100+128*0.33]]){
+    m.down(5,x,y,R);
+    check("corner "+x+","+y+" is inert",!inp.input.up&&!inp.input.down&&!inp.input.left&&!inp.input.right);
+    m.up(5);
+  }
+  for(const [x,y,k] of [[164,100+128*0.17,"up"],[100+128*0.83,164,"right"],[164,100+128*0.83,"down"],[100+128*0.17,164,"left"],[100+128*0.6,100+128*0.1,"up"]]){
+    m.down(5,x,y,R);
+    check("the "+k+" arm (its middle third) moves "+k,inp.input[k]===true&&["up","down","left","right"].filter((q)=>inp.input[q]).length===1);
+    m.up(5);
+  }
+  m.down(5,100+128*0.6,100+128*0.6,R);
+  check("the centre well (the middle third both ways) is inert",!inp.input.up&&!inp.input.down&&!inp.input.left&&!inp.input.right);
   m.up(5);
   m.down(6,164,164,R);                       // exact dead center
   check("dead center -> no axis",
     !inp.input.up&&!inp.input.down&&!inp.input.left&&!inp.input.right);
   m.up(6);
-  m.down(7,170,166,R);                       // inside 20% center dead zone
+  m.down(7,170,166,R);                       // inside the centre well
   check("inner ring inside dead zone -> no axis",
     !inp.input.up&&!inp.input.down&&!inp.input.left&&!inp.input.right);
   m.up(7);

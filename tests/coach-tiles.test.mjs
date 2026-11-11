@@ -36,7 +36,14 @@ const worldOn = (kind, heat = 0, seed = 4242) => { const w = room(3, seed, ROOM[
 // ---- the copy: one source, right at each heat, one panel line, every layout ----
 {
   const tips = {};
-  for (const k of KINDS) tips[k] = FEAT_PROFILE.map((pr) => tileTip(k, pr));
+  // the copy's facts are checked in caps (the literals' own case); the tip itself reads "NAME · Sentence case body" (UI upgrade Task 8.3 fix round 1)
+  for (const k of KINDS) tips[k] = FEAT_PROFILE.map((pr) => tileTip(k, pr).toUpperCase());
+  const casedOK = (t) => { const [n, b] = [t.slice(0, t.indexOf(" · ")), t.slice(t.indexOf(" · ") + 3)]; return n === n.toUpperCase() && b.length > 0 && b === b.charAt(0).toUpperCase() + b.slice(1).toLowerCase(); };
+  for (const k of KINDS) FEAT_PROFILE.forEach((pr, h) => {
+    const t = tileTip(k, pr), sh = tileTip(k, pr, true);
+    check(`${k} heat ${h}: the name in caps, the body in sentence case`, casedOK(t), t);
+    check(`${k} heat ${h}: a short step-down line, its name first, sentence case, never longer, at most 30 chars of body`, casedOK(sh) && sh.startsWith(TILE_NAME[k] + " · ") && sh.length <= t.length && sh.length - TILE_NAME[k].length - 3 <= 30, sh);
+  });
   console.log(JSON.stringify(tips, null, 1));
   for (const k of KINDS) tips[k].forEach((s, h) => {
     check(`${k} heat ${h} starts with its name`, s.startsWith(TILE_NAME[k] + " · "), s);
@@ -55,13 +62,13 @@ const worldOn = (kind, heat = 0, seed = 4242) => { const w = room(3, seed, ROOM[
   check("BOOSTER spreads sideways at PLUS / MAX only, and warns at every heat", !/EACH SIDE/.test(tips.BLOOM[0]) && /1 EACH SIDE/.test(tips.BLOOM[1]) && /2 EACH SIDE/.test(tips.BLOOM[2]) && tips.BLOOM.every((s) => /CAN HURT YOU/.test(s)));
   // facts follow the profile, so a parallel retune cannot strand the copy
   const prof = FEAT_PROFILE.map((r) => ({ ...r, plate: { ...r.plate, inert: 5 } }));
-  check("a retuned profile moves the tip's number", /5 S SAFE AT START/.test(tileTip("PLATE", prof[2])));
+  check("a retuned profile moves the tip's number", /5 S SAFE AT START/.test(tileTip("PLATE", prof[2]).toUpperCase()));
   const w = worldOn("PLATE", 2);
   w.featProf = prof;
-  check("coachTip reads the run's own profile", /5 S SAFE AT START/.test(coachTip("PLATE", "d", w)));
+  check("coachTip reads the run's own profile", /5 S SAFE AT START/.test(coachTip("PLATE", "d", w).toUpperCase()));
   for (const k of KINDS) for (const h of [0, 1, 2]) {
     const wk = worldOn(k, h);
-    check(`${k} heat ${h}: touch and keyboard read the same line`, coachTip(k, "p", wk) === coachTip(k, "d", wk) && coachTip(k, "l", wk) === tips[k][h]);
+    check(`${k} heat ${h}: touch and keyboard read the same line`, coachTip(k, "p", wk) === coachTip(k, "d", wk) && coachTip(k, "l", wk).toUpperCase() === tips[k][h]);
   }
   check("no world, no tip: a tile line is never guessed", coachTip("BELT", "d") === "");
   // the 6 s window at 3 words/s (an action game, the tip competes with play); a "·" is not a word
@@ -168,7 +175,7 @@ for (const k of KINDS) {
   // first ICE at MAX: one tip covering the brake, never two in a row
   let s = memStore(), a = iceRun(s, 2);
   const first = coachTip(a.st.kind, "d", a.w);
-  check("first ICE at MAX: the tip names the brake", a.st.kind === "BRAKE" && /PRESS THE OTHER WAY/.test(first), first);
+  check("first ICE at MAX: the tip names the brake", a.st.kind === "BRAKE" && /PRESS THE OTHER WAY/.test(first.toUpperCase()), first);
   check("no second string: it IS the GLIDE line of this heat", first === tileTip("GLIDE", FEAT_PROFILE[2]));
   check("touch and keyboard read the same brake line", coachTip("BRAKE", "p", a.w) === first && coachTip("BRAKE", "l", a.w) === first);
   drain(a, s);
@@ -179,7 +186,7 @@ for (const k of KINDS) {
   // seen at CORE / PLUS, then MAX: the brake still comes, once
   for (const h of [0, 1]) {
     s = memStore(); a = iceRun(s, h);
-    check(`ICE at heat ${h}: the plain tip, no brake in it`, a.st.kind === "GLIDE" && !/PRESS THE OTHER WAY/.test(coachTip(a.st.kind, "d", a.w)));
+    check(`ICE at heat ${h}: the plain tip, no brake in it`, a.st.kind === "GLIDE" && !/PRESS THE OTHER WAY/.test(coachTip(a.st.kind, "d", a.w).toUpperCase()));
     drain(a, s);
     const v = loadCoach2(s);
     check(`ICE at heat ${h}: GLIDE's bit only, the brake still owed`, v.g === 1 && v.z === 0, JSON.stringify(v));
@@ -196,7 +203,7 @@ for (const k of KINDS) {
   // the profile decides, never the heat index
   const noBrake = FEAT_PROFILE.map((r) => ({ ...r, glide: { ...r.glide, stop: undefined } }));
   s = memStore(); a = iceRun(s, 2, noBrake);
-  check("a profile without the brake never tips it", a.st.kind === "GLIDE" && !/PRESS THE OTHER WAY/.test(coachTip(a.st.kind, "d", a.w)));
+  check("a profile without the brake never tips it", a.st.kind === "GLIDE" && !/PRESS THE OTHER WAY/.test(coachTip(a.st.kind, "d", a.w).toUpperCase()));
   drain(a, s);
   check("and leaves its bit at 0", loadCoach2(s).z === 0 && loadCoach2(s).g === 1);
   const plusBrake = FEAT_PROFILE.map((r, i) => (i === 1 ? { ...r, glide: { ...r.glide, coast: 3, stop: "brake" } } : r));
@@ -204,7 +211,7 @@ for (const k of KINDS) {
   check("a retuned profile with the brake at PLUS tips it at PLUS", iceRun(s, 1, plusBrake).st.kind === "BRAKE");
   const stepBrake = FEAT_PROFILE.map((r, i) => (i === 2 ? { ...r, glide: { ...r.glide, coast: 1, stop: "brake" } } : r));
   s = memStore(); a = iceRun(s, 2, stepBrake);
-  check("a brake on a one-step coast: its line names no brake, so the plain tip, the bit kept", a.st.kind === "GLIDE" && !/PRESS THE OTHER WAY/.test(coachTip(a.st.kind, "d", a.w)));
+  check("a brake on a one-step coast: its line names no brake, so the plain tip, the bit kept", a.st.kind === "GLIDE" && !/PRESS THE OTHER WAY/.test(coachTip(a.st.kind, "d", a.w).toUpperCase()));
   drain(a, s);
   check("and the brake is still owed", loadCoach2(s).z === 0);
   // same close rules as every tile tip

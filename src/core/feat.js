@@ -42,35 +42,55 @@ export const TILE_NAME = Object.freeze({ BLOOM: "BOOSTER", GLIDE: "ICE PATCH", B
 /* The first-contact coach tip (#24): TILE_HELP's short line says what a tile is,
    this says what to do about it, one panel line (<= 80 chars, the 600 board) and
    no key names, so every layout reads the same. Facts come from the live
-   profile row, so a retuned knob cannot leave the copy behind. */
+   profile row, so a retuned knob cannot leave the copy behind. It reads
+   "NAME · body": the name in caps (the tip's title), the body in sentence case
+   (the tooltip row, UI upgrade Task 8.3 fix round 1); the literals stay caps,
+   one source with TILE_HELP. short: the HUD's step-down line, for a slot too
+   small for the whole tip (never the coach's own line). */
 /* The one test for "this heat's ICE line teaches the brake", V19's nostop case */
 export const glideBrakes = (pr) => pr.glide.coast >= 2 && pr.glide.stop === "brake";
-export function tileTip(kind, pr) {
-  const n = TILE_NAME[kind] + " · ";
+export const sentence = (s) => { const l = String(s).toLowerCase(); return l.charAt(0).toUpperCase() + l.slice(1); };
+export function tileTip(kind, pr, short) {
+  const b = short ? tipShort(kind, pr) : tipBody(kind, pr);
+  return b ? TILE_NAME[kind] + " · " + sentence(b) : "";
+}
+function tipBody(kind, pr) {
   if (kind === "BLOOM") {
     const b = pr.bloom;
-    return n + "THROWS YOUR BLAST " + b.fwd + " FURTHER" + (b.side ? ", " + b.side + " EACH SIDE" : "") + (b.delay ? ", LATE" : "") + (b.safe ? "" : " · CAN HURT YOU");
+    return "THROWS YOUR BLAST " + b.fwd + " FURTHER" + (b.side ? ", " + b.side + " EACH SIDE" : "") + (b.delay ? ", LATE" : "") + (b.safe ? "" : " · CAN HURT YOU");
   }
   if (kind === "GLIDE") {
     const g = pr.glide;
-    if (!g.coast) return n + TILE_HELP.GLIDE[0];
-    if (g.coast === 1) return n + "FAST ICE · LET GO AND YOU SLIDE A STEP";
-    return n + "FAST ICE, YOU SLIDE ON · " + (glideBrakes(pr) ? "STOP EARLY: PRESS THE OTHER WAY" : "ONLY A BLOCK STOPS YOU");
+    if (!g.coast) return TILE_HELP.GLIDE[0];
+    if (g.coast === 1) return "FAST ICE · LET GO AND YOU SLIDE A STEP";
+    return "FAST ICE, YOU SLIDE ON · " + (glideBrakes(pr) ? "STOP EARLY: PRESS THE OTHER WAY" : "ONLY A BLOCK STOPS YOU");
   }
   if (kind === "BELT") {
     const b = pr.belt;
-    return n + "CARRIES " + (!b.actors ? "YOUR BOMBS, NOT YOU" : b.foes === false ? "BOMBS AND YOU, NOT FOES" : "BOMBS, YOU AND FOES") + (b.actors && b.snap ? " · HOLD A SIDE TO STEP OFF" : "");
+    return "CARRIES " + (!b.actors ? "YOUR BOMBS, NOT YOU" : b.foes === false ? "BOMBS AND YOU, NOT FOES" : "BOMBS, YOU AND FOES") + (b.actors && b.snap ? " · HOLD A SIDE TO STEP OFF" : "");
   }
   if (kind === "PLATE") {
     const p = pr.plate, chain = p.chain === false ? " · NO BOMB CHAIN" : "";
-    if (p.kill === false) return n + "FOES SET IT OFF · MARKS HURT ONLY YOU · " + p.inert + " S SAFE AT START" + chain;
-    if (p.spare) return n + "THE FOE THAT SETS IT OFF LIVES · MARKS HURT YOU" + chain;
-    return n + "LURE A FOE ON · MARKS KILL IT, CAN HURT YOU" + chain;
+    if (p.kill === false) return "FOES SET IT OFF · MARKS HURT ONLY YOU · " + p.inert + " S SAFE AT START" + chain;
+    if (p.spare) return "THE FOE THAT SETS IT OFF LIVES · MARKS HURT YOU" + chain;
+    return "LURE A FOE ON · MARKS KILL IT, CAN HURT YOU" + chain;
   }
-  if (kind === "STREAM") return n + "FLOATS YOUR BOMBS" + (pr.stream.wade < 1 ? " · SLOWS YOU AND FOES" : " · WALK THROUGH FREELY");
-  if (kind === "QUICK") return n + (pr.quick.max === 1 ? "A BRICK GROWS BACK ONCE · FOES SINK SLOW" : "BRICKS GROW BACK · WATCH THE RIPPLES");
-  if (kind === "GATE") return n + (pr.gate.cross ? "SHUTS BEHIND YOU · STOPS FOES · WAITS IF A FOE OR BLAST HAS YOU" : "SHUTS ON A CLOCK · WATCH THE WARNING · WAITS IF A FOE OR BLAST HAS YOU");
-  if (kind === "PORTAL") return n + (pr.portal.foes ? "YOU, BOMBS, BLASTS AND FOES JUMP" : pr.portal.blast ? "YOU, BOMBS AND BLASTS JUMP" : "YOU AND BOMBS JUMP · BLASTS STOP");
+  if (kind === "STREAM") return "FLOATS YOUR BOMBS" + (pr.stream.wade < 1 ? " · SLOWS YOU AND FOES" : " · WALK THROUGH FREELY");
+  if (kind === "QUICK") return pr.quick.max === 1 ? "A BRICK GROWS BACK ONCE · FOES SINK SLOW" : "BRICKS GROW BACK · WATCH THE RIPPLES";
+  if (kind === "GATE") return pr.gate.cross ? "SHUTS BEHIND YOU · STOPS FOES · WAITS IF A FOE OR BLAST HAS YOU" : "SHUTS ON A CLOCK · WATCH THE WARNING · WAITS IF A FOE OR BLAST HAS YOU";
+  if (kind === "PORTAL") return pr.portal.foes ? "YOU, BOMBS, BLASTS AND FOES JUMP" : pr.portal.blast ? "YOU, BOMBS AND BLASTS JUMP" : "YOU AND BOMBS JUMP · BLASTS STOP";
+  return "";
+}
+/* the short line: the one fact a player must not miss, from the same profile row (at most 30 chars) */
+function tipShort(kind, pr) {
+  if (kind === "BLOOM") return "BLAST " + pr.bloom.fwd + " FURTHER" + (pr.bloom.side ? ", " + pr.bloom.side + " EACH SIDE" : "");
+  if (kind === "GLIDE") return !pr.glide.coast ? TILE_HELP.GLIDE[0] : pr.glide.coast === 1 ? "FAST ICE, YOU SLIDE A STEP" : glideBrakes(pr) ? "SLIDES ON · TURN BACK TO STOP" : "SLIDES ON TO A BLOCK";
+  if (kind === "BELT") return "CARRIES " + (!pr.belt.actors ? "YOUR BOMBS" : pr.belt.foes === false ? "BOMBS AND YOU" : "BOMBS, YOU AND FOES");
+  if (kind === "PLATE") return pr.plate.kill === false ? "MARKS HURT ONLY YOU" : pr.plate.spare ? "MARKS HURT YOU" : "LURE A FOE ON";
+  if (kind === "STREAM") return "FLOATS YOUR BOMBS";
+  if (kind === "QUICK") return pr.quick.max === 1 ? "A BRICK GROWS BACK ONCE" : "BRICKS GROW BACK";
+  if (kind === "GATE") return pr.gate.cross ? "SHUTS BEHIND YOU" : "SHUTS ON A CLOCK";
+  if (kind === "PORTAL") return pr.portal.foes ? "FOES JUMP TOO" : pr.portal.blast ? "BLASTS JUMP TOO" : "YOU AND BOMBS JUMP";
   return "";
 }
 /* the pair lookup: twin cell per cell, -1 off a portal */

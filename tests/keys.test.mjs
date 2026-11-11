@@ -326,7 +326,7 @@ for (const at of [1.0, 2.0, 3.0, 4.0]) {
   w.bombs = [];
   p.x = 3.5 * F; p.y = (y + 0.5) * F; p.tx = 3; p.ty = y;
   g.tick(2);
-  check("first ICE at MAX paints the brake line", /PRESS THE OTHER WAY/.test(g.ro.coach2.s) && g.ro.coach2.k === "BRAKE", g.ro.coach2.s);
+  check("first ICE at MAX paints the brake line", /PRESS THE OTHER WAY/.test(g.ro.coach2.s.toUpperCase()) && g.ro.coach2.k === "BRAKE", g.ro.coach2.s); // the tip body is sentence case (fix round 1)
   down("ArrowRight"); g.tick(4); up("ArrowRight"); g.tick(2);
   const moving = p.x; g.tick(2);
   check("let go on MAX ice: the slide goes on", p.x > moving && !!p.gl, moving + " -> " + p.x);

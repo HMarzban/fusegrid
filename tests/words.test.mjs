@@ -301,7 +301,7 @@ setPixelArt(null);
   note("ABILITY BAR", bar.texts);
   for (const p of POWER) for (const prev of [null, "line", "power", "pierce"]) { const l = pickupLabel(p.t, { range: 8, bombs: 8, speed: 999 }, prev); note("PICKUP LABEL", [labelText(l), l.sub].filter(Boolean)); const m = pickupLabel(p.t, {}, prev); note("PICKUP LABEL", [labelText(m), m.sub].filter(Boolean)); }
   for (const k of ["kick", "throw", "remote", "pass", "line", "power", "pierce", "shield"]) for (const lay of ["d", "p"]) note("COACH", [coachTip(k, lay, null, wordsOf(lay === "p" ? "touch" : "key", DEF_CONTROLS))]);
-  for (const k of Object.keys(TILE_NAME)) for (const pr of FEAT_PROFILE) note("TILE TIP", [tileTip(k, pr)]);
+  for (const k of Object.keys(TILE_NAME)) for (const pr of FEAT_PROFILE) note("TILE TIP", [tileTip(k, pr), tileTip(k, pr, true)]);
   for (const k of Object.keys(TILE_HELP)) note("TILE HELP", TILE_HELP[k]);
   for (const p of POWER) note("POWER", [p.name, p.help]);
   for (const f of FOES) note("FOES", [f.name, f.help]);
