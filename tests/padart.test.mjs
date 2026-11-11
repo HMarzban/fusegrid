@@ -18,7 +18,7 @@ function check(name, cond, detail) {
 const ROOT = new URL("..", import.meta.url);
 /* A recorder: every call by name, every colour set, gradients as objects that keep their stops; uniform scale tracked for text sizes. */
 function rec(o = {}) {
-  const log = [], colours = [], texts = [], stack = [];
+  const log = [], colours = [], texts = [], rects = [], stack = [];
   let sx = 1, tx = 0, ty = 0;
   const grad = (kind) => () => { const g = { kind, stops: [], addColorStop(at, col) { g.stops.push([at, col]); colours.push(col); }, toString() { return "grad"; } }; log.push(kind); return g; };
   const set = (k) => ({ get() { return this["_" + k]; }, set(v) { this["_" + k] = v; if (typeof v === "string") colours.push(v); } });
@@ -31,7 +31,7 @@ function rec(o = {}) {
     arc(x, y, r) { log.push("a" + (tx + sx * x).toFixed(1) + "," + (ty + sx * y).toFixed(1) + "," + (sx * r).toFixed(2)); }, arcTo() { log.push("at"); }, ellipse() { log.push("el"); },
     bezierCurveTo() { log.push("bz"); }, quadraticCurveTo() { log.push("q"); },
     fill() { log.push("f" + (typeof c.fillStyle === "string" ? c.fillStyle : "grad")); }, stroke() { log.push("k" + (typeof c.strokeStyle === "string" ? c.strokeStyle : "grad")); },
-    fillRect() { log.push("fr"); }, strokeRect() { log.push("sr"); }, drawImage() { log.push("img"); },
+    fillRect(x, y, w, h) { log.push("fr"); rects.push({ x: tx + sx * x, y: ty + sx * y, w: sx * w, h: sx * h, fill: c.fillStyle }); }, strokeRect() { log.push("sr"); }, drawImage() { log.push("img"); },
     measureText(s) { log.push("mt"); return { width: String(s).length * (+/([\d.]+)px/.exec(c.font)[1]) * 0.6 }; },
     fillText(s, x, y) { texts.push({ s: String(s), x: tx + sx * x, y: ty + sx * y, px: +/([\d.]+)px/.exec(c.font)[1] * sx, fill: c.fillStyle }); log.push("x" + s); },
   };
@@ -40,7 +40,7 @@ function rec(o = {}) {
   if (o.grad) { c.createLinearGradient = grad("lg"); c.createRadialGradient = grad("rg"); }
   if (o.getTransform) c.getTransform = () => ({ a: o.getTransform, b: 0 });
   if (o.img === false) delete c.drawImage;
-  return { c, log, colours, texts };
+  return { c, log, colours, texts, rects };
 }
 const PR = { state: "ready", name: "CONTROLLER 1", rumble: true };
 const keyV = (o) => ({ tab: "key", device: "key", row: 1, pad: { state: "none" }, key: DEF_KEY, binds: DEF_PAD, stick: "L", dead: 25, vib: 2, stickVal: [0, 0], reads: "", drift: 0, armed: false, swap: null, status: "", capture: null, echo: null, ...o });
@@ -202,8 +202,9 @@ check("the drawing routes a leader for every button the model accepts", BINDABLE
 
 // ---- a steady frame blits the cached drawing ----
 /* the page chrome's own measureText per steady frame (CONSOLE PANEL rows, kicker, foot, rule), measured on base c1f9bd9 with one context drawn twice:
-   34 (controller) / 26 (keyboard). The drawings measure only when their fit changes and the rule lines are memoised, so a steady frame stays at or under it. */
-const MT_BASE = { controller: 34, keyboard: 26 };
+   34 (controller) / 26 (keyboard). The drawings measure only when their fit changes and the rule lines are memoised: a steady frame measures exactly
+   these, the page chrome's own (pinned; a change either way is a decision). */
+const MT_BASE = { controller: 34, keyboard: 26 }, MT_NOW = { controller: 32, keyboard: 25 };
 {
   const made = [];
   globalThis.OffscreenCanvas = class { constructor(w, h) { this.width = w; this.height = h; made.push(this); } getContext() { return rec({ grad: true }).c; } };
@@ -217,7 +218,7 @@ const MT_BASE = { controller: 34, keyboard: 26 };
       const log = r0.log.slice(n0), mt = log.filter((q) => q === "mt").length;
       console.log("    (" + tab + " steady frame: " + log.length + " calls, " + mt + " measureText)");
       check("a steady CONTROLS frame, " + tab + " tab: 0 cache misses, the drawing one blit, <= 400 canvas calls", cache._dbg.misses === m0 && log.filter((q) => q === "img").length === 1 && log.length <= 400, log.length);
-      check("the drawing measures nothing on a steady frame (" + tab + "): no more measureText than base's chrome (" + MT_BASE[tab] + ")", mt <= MT_BASE[tab], mt);
+      check("the drawing measures nothing on a steady frame (" + tab + "): exactly " + MT_NOW[tab] + " measureText, all the chrome's (base " + MT_BASE[tab] + ")", mt === MT_NOW[tab], mt);
     }
     const m1 = cache._dbg.misses, w = rec({ grad: true, getTransform: 2 }); drawControls(w.c, DESK, padV({ row: 2 }), { level: 1 });
     check("a row move re-blits the same layer: the ring is live, no miss", cache._dbg.misses === m1);
@@ -323,10 +324,21 @@ for (const [nm, Lx, touch, narrow, scale] of [["desk 1366x768", DESK, false, fal
   check("armed RESET CONTROLLER: the row says PRESS AGAIN (or AGAIN), else the rule line carries it: " + nm, row.includes("RESET CONTROLLER") && (row.includes("PRESS AGAIN") || row.includes("AGAIN") || rule) && rule, row.join());
 }
 
+// ---- the rule-line memo keys on the text scale: the same context at another scale measures its rule again ----
+{
+  const r0 = rec(), v = padV({ row: 6 });
+  drawControls(r0.c, L600, v, { level: 1 }); drawControls(r0.c, L600, v, { level: 1 });
+  const n0 = r0.log.length; drawControls(r0.c, L600, v, { level: 1 }); const same = r0.log.slice(n0).filter((q) => q === "mt").length;
+  setTextScale(1.25); const n1 = r0.log.length; drawControls(r0.c, L600, v, { level: 1 }); const other = r0.log.slice(n1).filter((q) => q === "mt").length; setTextScale(1);
+  check("the rule-line memo keys on the text scale (a new scale measures again on the same context)", other > same, same + "/" + other);
+}
+
 // ---- small parts: the FIXED plaque in the world's wall tone, a press covers the face at rest ----
 {
   const t = worldTokens(1), r = rec({ grad: true }); drawControls(r.c, DESK, padV(), { level: 1 });
-  check("the FIXED tag is a plaque in the world's band tone with t2 legend", r.colours.includes(t.band) && r.texts.some((x) => x.s === "FIXED" && x.fill === CONST.t2));
+  const k = rec({ grad: true }); drawControls(k.c, DESK, keyV(), { level: 1 });
+  const fixed = (R) => R.texts.filter((x) => x.s === "FIXED").map((q) => q.fill === CONST.t2 && R.rects.some((b) => b.fill === t.band && q.x >= b.x && q.x + q.s.length * q.px * 0.6 <= b.x + b.w && q.y >= b.y && q.y <= b.y + b.h));
+  check("each FIXED tag sits on its own plaque in the world's band tone, its legend in t2 (START on the controller; ESC and the arrows on the keyboard)", fixed(r).length === 1 && fixed(k).length === 2 && [...fixed(r), ...fixed(k)].every(Boolean), fixed(r).concat(fixed(k)).join());
   const W = 300, p = rec(); drawPad(p.c, 0, 0, W, { tok: t, lit: padStates(padV()), press: "S" });
   const [x, y] = PART_AT.S.map((v) => v * W), rest = p.log.lastIndexOf("a" + x.toFixed(1) + "," + y.toFixed(1) + "," + (PADG.br * W + 1).toFixed(2)), drop = p.log.lastIndexOf("a" + x.toFixed(1) + "," + (y + 2).toFixed(1) + "," + (PADG.br * W).toFixed(2));
   check("a press: the well covers the face at rest, then the face drops 2 px (no crescent of the old face)", rest > 0 && drop > rest && p.log[rest + 1] === "f#050304", [rest, drop, p.log[rest + 1]].join());

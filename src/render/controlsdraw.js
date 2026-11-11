@@ -104,7 +104,7 @@ const ruleMemo = new WeakMap(); // per context: the lines of (text, width), so a
 function ruleLines(c, s, w) {
   let M = ruleMemo.get(c);
   if (!M) ruleMemo.set(c, (M = new Map()));
-  const k = s + "|" + w;
+  const k = s + "|" + w + "|" + textScale(); // the text scale too, should the rule's type ever follow it
   if (!M.has(k)) { if (M.size > 32) M.clear(); M.set(k, ruleLines0(c, s, w)); }
   return M.get(k);
 }
