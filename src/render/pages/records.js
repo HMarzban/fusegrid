@@ -7,7 +7,9 @@
           trough, the pane (one height, the tallest tab's body), the foot under the plate; a smaller box scales the page as one piece (#c, the iso guard).
    phone  a touch-portrait shell box: the 393 x 852 column in CSS px (u = 1 / css, capped 600 CSS px and centred): a BACK key and the title, the tabs
           as three equal keys over the trough, the pane filling the plate; no foot.
-   compact any other touch box (landscape tablets, the landscape phones' #c): one header row (BACK, the title where it fits, the tabs; BACK steps down
+   touch-desk any other touch shell box (a landscape tablet) while its scale holds TOUCH_U (R1 cohesion 3, as every page): the desk, its tabs and
+          DIFFICULTY bank floored to 44 CSS px, STATS' COPY STATS / RESET keys under its body, the touch confirm plate, the tap foot in tap mode.
+   compact any other touch box (the landscape phones' #c, a short tablet window): one header row (BACK, the title where it fits, the tabs; BACK steps down
           to its chevron where three tabs would not hold their word), the plate at most 980 wide. On a touch box a body taller than its pane is
           scaled into it (k; SCORES' bank and STATS' keys keep their size), floors giving way only there (the landscape phones' #c); the armed
           confirm plate shrinks its words the same way (fk).
@@ -40,6 +42,7 @@ import {roomLayer, pageRoomDpr} from "../kit/room.js";
 import * as probe from "../kit/probe.js";
 import {PAGE_KEY, pagerKeys, pageLabel, pageKeyAt, paintPager as kitPager} from "../kit/pager.js";
 import {deviceScale} from "../logo/draw2d.js";
+import {TOUCH, TOUCH_U} from "./menu.js";
 import {hints, tapMode} from "../hintcopy.js";
 
 export const PAGES = Object.freeze(["scores", "stats", "medals"]);
@@ -281,33 +284,41 @@ const SHORT = deep([
   {top: 18, foot: 10, bot: 4, pad: [10, 12], gap: 6, pg: 6, pane: [12, 12], c: 1, st: 5, kick: false},
 ]);
 export const PW_GIVE = 40, FIT_U = 0.995, KEEP_SL = 3;
-function deskAt(F, t125, sl) {
-  const D = DESK[t125 ? "d125" : "d"], K = SHORT[sl], dv = DEV.d, ts = F.ts, T0 = dv.T, side = T0 + 2 + GUT;
+function deskAt(F, t125, sl, fl = 0) {
+  const D = DESK[t125 ? "d125" : "d"], K = SHORT[sl], dv = fl ? {...DEV.d, bkh: Math.max(DEV.d.bkh, fl)} : DEV.d, ts = F.ts, T0 = dv.T, side = T0 + 2 + GUT;
   const pad = [K.pad ? K.pad[0] : D.pad[0], D.pad[1], K.pad ? K.pad[1] : D.pad[2], D.pad[3]], pp = [K.pane ? K.pane[0] : D.pane[0], D.pane[1], K.pane ? K.pane[1] : D.pane[2], D.pane[3]];
   const pw0 = Math.max(D.w - PW_GIVE, Math.min(D.w, F.W - 2 * side)), uw = Math.min(1, F.W / (pw0 + 2 * side));
   const kick = K.kick ? dv.sec * ts * 1.2 : 0, ttl = dv.ttl * ts * 1.05, head = (K.kick ? kick + 2 : 0) + ttl, tabsH = 2 + dv.bkh + TROUGH;
   const iw = pw0 - pad[1] - pad[3] - 4 - pp[1] - pp[3];
-  const bh = Math.max(scoresBody(dv, ts, iw, D, true, 0, K.c).h, medalsBody(dv, ts, iw, undefined, 2, K.c).h, statsBody(dv, ts, iw, D, iw < 700, K.st).h), paneH = 4 + pp[0] + bh + pp[2];
+  const bh = Math.max(scoresBody(dv, ts, iw, D, true, 0, K.c).h, medalsBody(dv, ts, iw, undefined, 2, K.c).h, statsBody(dv, ts, iw, D, iw < 700, K.st).h + (fl ? DEV.p.btnh + 14 : 0)), paneH = 4 + pp[0] + bh + pp[2];
   const ph = pad[0] + head + K.gap + tabsH + K.pg + paneH + pad[2], top = K.top || side, below = K.foot + FOOT_H + (K.top ? K.bot : side + 4);
   const u = Math.min(uw, F.H / (top + ph + below));
-  return {D, K, dv, ts, T0, side, pad, pp, pw0, kick, ttl, head, tabsH, iw, bh, paneH, ph, top, below, u};
+  return {D, K, dv, ts, T0, side, pad, pp, pw0, kick, ttl, head, tabsH, iw, bh, paneH, ph, top, below, u, fl};
 }
-function desk(F, t125) {
-  let A = deskAt(F, t125, 0);
-  for (let sl = 1; A.u < 1 && sl < SHORT.length; sl++) { const B = deskAt(F, t125, sl); if (B.u > A.u + 1e-6) A = B; } // a step that gains nothing is not taken
-  if (A.u < FIT_U) { A = deskAt(F, t125, KEEP_SL); }
-  else if (A.u < 1) { for (let sl = 1; sl <= KEEP_SL; sl++) { const B = deskAt(F, t125, sl); if (B.u >= 1 - 1e-9) { A = B; break; } } }
+/* fl (a touch shell box: the touch-desk form, as MENU's, GUIDE's and SETTINGS' desks on a landscape tablet): the tabs and the DIFFICULTY bank floored
+   to fl design px (44 CSS px at the page's scale), STATS' COPY STATS / RESET keys under its body (the touch keys), the touch confirm plate */
+function desk(F, t125, fl = 0) {
+  let A = deskAt(F, t125, 0, fl);
+  for (let sl = 1; A.u < 1 && sl < SHORT.length; sl++) { const B = deskAt(F, t125, sl, fl); if (B.u > A.u + 1e-6) A = B; } // a step that gains nothing is not taken
+  if (A.u < FIT_U) { A = deskAt(F, t125, KEEP_SL, fl); }
+  else if (A.u < 1) { for (let sl = 1; sl <= KEEP_SL; sl++) { const B = deskAt(F, t125, sl, fl); if (B.u >= 1 - 1e-9) { A = B; break; } } }
   const {D, K, dv, ts, T0, pad, pp, kick, ttl, head, iw, bh, paneH, ph, top, below, u} = A;
   const Wd = F.W / u, Hd = F.H / u, pw = A.pw0, px = (Wd - pw) / 2, py = Math.max(top, (Hd - ph - K.foot - FOOT_H) / 2);
   const ix = px + pad[3], iwP = pw - pad[1] - pad[3], hy = py + pad[0], ty = hy + head + K.gap + 2;
   const tabs = [0, 1, 2].map((i) => R(ix + i * (D.tabW + TAB_GAP), ty, D.tabW, dv.bkh));
-  const pane = R(ix, ty + dv.bkh + TROUGH + K.pg, iwP, paneH), bx = pane.x + 2 + pp[3], by = pane.y + 2 + pp[0];
+  const pane = R(ix, ty + dv.bkh + TROUGH + K.pg, iwP, paneH), bx = pane.x + 2 + pp[3], by = pane.y + 2 + pp[0], bodies = bodiesAt(dv, ts, iw, D, true, bx, by, fl ? bh : 0, K.c, K.st);
   return {mode: "desk", dev: "d", u, t125, sl: SHORT.indexOf(K), T: T0, plate: R(px, py, pw, ph), kick: K.kick ? R(ix, hy, iwP, kick) : null, title: R(ix, hy + (K.kick ? kick + 2 : 0), iwP, ttl), back: null,
-    tabs, trough: R(ix, ty + dv.bkh, iwP, TROUGH), pane, body: R(bx, by, iw, bh), bodies: bodiesAt(dv, ts, iw, D, true, bx, by, 0, K.c, K.st), foot: R(px, py + ph + K.foot, pw, FOOT_H),
-    confirm: confirmGeom(pane, dv, ts, false, 8, t125, R(px, py, pw, ph))};
+    tabs, trough: R(ix, ty + dv.bkh, iwP, TROUGH), pane, body: R(bx, by, iw, bh), bodies, foot: R(px, py + ph + K.foot, pw, FOOT_H),
+    confirm: fl ? confirmGeom(pane, dv, ts, true, 8, t125, R(px, py, pw, ph), false, bodies.stats.acts.copy.y - 12) : confirmGeom(pane, dv, ts, false, 8, t125, R(px, py, pw, ph))};
+}
+/* the touch-desk form: the floors re-solved at the page's own scale (twice: a scale under 1 grows them), then kept only while that scale holds TOUCH_U */
+function deskTouch(F, t125, css) {
+  let d = desk(F, t125, TOUCH.h / css);
+  for (let i = 0; i < 2 && d.u < 1 - 1e-9; i++) d = desk(F, t125, TOUCH.h / (css * d.u));
+  return d.u * css >= TOUCH_U - 1e-9 ? d : null;
 }
 /* every touch box, in CSS px (u = 1 / css, or less where the frame itself does not fit). phone (a touch-portrait shell box): BACK and the title, the tabs
-   across under them. compact (any other touch box, the landscape phones' #c included): one header row, BACK, the title where it fits (else it drops: the
+   across under them. compact (any other touch box the touch-desk form does not hold, the landscape phones' #c included): one header row, BACK, the title where it fits (else it drops: the
    open tab names the page), the tabs; the plate at most the desk's 980 wide, centred */
 const TITLE_W = 150, TAB_MIN = 96;
 const LAND = Object.freeze({top: 12, bot: 13, pad: Object.freeze([9, 10, 6, 10]), pane: Object.freeze([4, 6, 4, 6]), gap: 4});
@@ -344,8 +355,10 @@ export function recordsGeom(F) {
   const ts = F.ts > 0 ? F.ts : textScale(), t125 = big(ts), touchy = !!F.touch, css = F.css > 0 ? F.css : 1;
   const shell = !!F.shell;
   if (gm && gm.W === F.W && gm.H === F.H && gm.touch === touchy && gm.ts === ts && gm.css === css && gm.shell === shell) return gm.G;
-  const d = touchy ? touchFrame({...F, ts}, t125) : desk({...F, ts}, t125), u = d.u;
-  const G = {mode: d.mode, dev: d.dev, u, t125, ts, W: F.W, H: F.H, d, T: d.T * u, plate: sc(d.plate, u), tabs: d.tabs.map((r) => sc(r, u)), back: sc(d.back, u), foot: sc(d.foot, u), keys: d.bodies.scores.keys.map((r) => sc(r, u)), pane: sc(d.pane, u)};
+  /* the arrangement rule every page keeps (R1 cohesion 3): desk on a keyboard box; phone on a touch-portrait shell box; the touch-desk form on any
+     other touch shell box (a landscape tablet) while its scale holds TOUCH_U; else compact */
+  const tall = shell && touchy && F.H > F.W * 1.3, d = !touchy ? desk({...F, ts}, t125) : (!tall && shell && deskTouch({...F, ts}, t125, css)) || touchFrame({...F, ts}, t125), u = d.u;
+  const G = {mode: d.mode, dev: d.dev, u, t125, ts, W: F.W, H: F.H, d, touch: touchy, T: d.T * u, plate: sc(d.plate, u), tabs: d.tabs.map((r) => sc(r, u)), back: sc(d.back, u), foot: sc(d.foot, u), keys: d.bodies.scores.keys.map((r) => sc(r, u)), pane: sc(d.pane, u)};
   gm = {W: F.W, H: F.H, touch: touchy, ts, css, shell, G: deep(G)};
   return gm.G;
 }
@@ -818,8 +831,9 @@ function dspCol(c, s, x, y, px, col) {
 }
 
 /* ---------- the foot (desk): label first, keycap last ---------- */
-export function footItems(page, foc, words) {
+export function footItems(page, foc, words, tap = false) {
   const pad = words.dev === "pad", A = (n) => [n];
+  if (tap) return [{t: page === "stats" && foc === "arm" ? ST.TAP_CANCEL : RW.TAP}]; // the touch-desk form in tap mode: the tap model, no keycaps
   if (page === "stats") {
     if (foc === "arm") return [{t: ST.ERASE, caps: ["R"]}, {t: ST.COPY_ARMED, caps: ["C"], key: "KeyC"}, {t: ST.CANCEL, caps: []}];
     if (pad) return [{t: ST.COPY, caps: [RW.WEST], key: "KeyC"}, {t: ST.MEDALS_T, caps: [RW.NORTH], key: "KeyT"}, {t: RW.TAB, caps: [words.move]}, {t: RW.BACK, caps: [words.back], key: "back"}];
@@ -1057,7 +1071,7 @@ export function drawRecordsPage(c, F, ui, t = 0) {
   if (!same(S, G, ui, words, dpr, c, tap)) {
     const P = plan(c, G, ui);
     P.feet = {};
-    if (G.mode === "desk") for (const f of ui.page === "medals" ? ["tabs"] : ui.page === "stats" && ui.arm ? ["arm"] : ["tabs", "body"]) P.feet[f] = footPlan(MC, G, footItems(ui.page, f, ui.page === "stats" && ui.arm ? hints() : words));
+    if (G.mode === "desk") for (const f of ui.page === "medals" ? ["tabs"] : ui.page === "stats" && ui.arm ? ["arm"] : ["tabs", "body"]) P.feet[f] = footPlan(MC, G, footItems(ui.page, f, ui.page === "stats" && ui.arm ? hints() : words, tap && G.touch));
     S = {G, w: words, dpr, c, tap, ui: {...ui}, P, room: null, page: null, foot: {}};
     sizes(S, G, F, level, tok, ui);
     _dbg.plans++;

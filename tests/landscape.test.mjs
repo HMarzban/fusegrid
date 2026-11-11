@@ -190,5 +190,27 @@ const EX568 = { touch: { menu: 31, level: 30.4, options: 43.9, graphics: 35.8, g
   check("568x320 (the named exemption): no throw, no overflow, every page at or over its measured best touch and cap", bad.length === 0, bad.slice(0, 10).join(" | "));
 }
 
+/* ---- R1 cohesion 3: one arrangement rule on a touch landscape shell box (a landscape tablet, AGENTS "a landscape tablet is the desktop form with
+   touch pitches"): MENU, LEVEL SELECT, SETTINGS, GUIDE and RECORDS all take the desk form at clear tablet sizes, and RECORDS' touch-desk keeps the
+   touch floors (tabs, the DIFFICULTY bank, STATS' COPY STATS / RESET keys >= 44 CSS px) and taps its keys ---- */
+{
+  const MP = await import("../src/render/pages/menu.js"), LP = await import("../src/render/pages/level.js"), RP = MODS.records, out = [];
+  for (const [w, h] of [[1366, 1024], [1280, 800], [1180, 820], [1024, 768], [1366, 768]]) for (const css of [1, 1.25]) {
+    const F = { W: w / css, H: h / css, touch: true, shell: true, css };
+    const modes = { menu: MP.menuGeom(F).mode, level: LP.levelGeom(F, { unlocked: true }).d.mode, settings: MODS.settings.settingsGeom(F, optRows(false)).mode, guide: MODS.guide.guideGeom(F, "GUIDE").mode, records: RP.recordsGeom(F).mode };
+    if (Object.values(modes).some((m) => m !== "desk")) out.push(w + "x" + h + "@" + css + " " + J(modes));
+  }
+  check("a landscape tablet (a touch l shell box at 1366x1024, 1280x800, 1180x820, 1024x768, 1366x768, CSS scale 1 and 1.25): MENU, LEVEL SELECT, SETTINGS, GUIDE and RECORDS all take the desk form", out.length === 0, out.join(" | "));
+  const bad = [];
+  for (const [w, h] of [[1366, 1024], [1024, 768]]) {
+    const F = { W: w, H: h, touch: true, shell: true, css: 1 }, G = RP.recordsGeom(F), d = G.d, u = G.u, a = d.bodies.stats.acts, mid = (r) => [(r.x + r.w / 2) * u, (r.y + r.h / 2) * u];
+    for (const [n, r] of [["tab", d.tabs[1]], ["bank", d.bodies.scores.keys[0]], ["copy", a && a.copy], ["reset", a && a.reset]]) if (!r || r.h * u * F.css < 43.95) bad.push(w + "x" + h + " " + n + " " + J(r));
+    if (!a || RP.statsHit(...mid(a.copy), F, false) !== "KeyC" || RP.statsHit(...mid(a.reset), F, false) !== "KeyR" || RP.tabHit(...mid(d.tabs[2]), F) !== 2 || RP.scoresHit(...mid(d.bodies.scores.keys[2]), F) !== 2) bad.push(w + "x" + h + " hits");
+    if (J(RP.footItems("scores", "tabs", wordsOf("touch", DEF_CONTROLS), true)) !== J([{ t: W.REC_WORDS.TAP }]) || J(RP.footItems("stats", "arm", wordsOf("touch", DEF_CONTROLS), true)) !== J([{ t: W.STATS_WORDS.TAP_CANCEL }])) bad.push("tap foot");
+    if (G.mode !== "desk" || !G.foot) bad.push(w + "x" + h + " not the desk form with a foot");
+  }
+  check("RECORDS' touch-desk: tabs, DIFFICULTY bank and STATS' COPY STATS / RESET keys >= 44 CSS px and tapped (C, R, a tab, a difficulty); its tap-mode foot is REC_WORDS.TAP (armed: TAP ANYWHERE ELSE TO CANCEL)", bad.length === 0, bad.join(" | "));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

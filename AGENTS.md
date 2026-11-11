@@ -113,8 +113,12 @@ the pane as tall as the tallest body, the foot under the plate, label first, key
 round 1: `SHORT` steps 1 margins, 2 pads and gaps, 3 tighter bodies, then 4 STATS' course, 5 the MENU kicker and LIFETIME pitch, 6 one-line
 bests, 4-6 only where they make it fit at `FIT_U` 0.995; the plate narrows by up to `PW_GIVE` 40 first; 1366x657, 1280x650 and 1024x600 keep
 every floor at 100 %; #c's 600x520 and the iso guard scale at step 3, every word kept; the foot plaque is inert, its BACK backs out), phone (a
-touch-portrait shell box, CSS px: BACK key and title, three equal 44 px tabs, the pane to the plate's foot; no foot) and compact (any other
-touch box: BACK, the title where it fits, the tabs in one header row; the plate at most 980 wide). SCORES: the DIFFICULTY bank (the R7 filter;
+touch-portrait shell box, CSS px: BACK key and title, three equal 44 px tabs, the pane to the plate's foot; no foot), the touch-desk form (R1
+cohesion 3: any other touch shell box, a landscape tablet, while its scale holds `TOUCH_U`, as MENU, LEVEL SELECT, SETTINGS and GUIDE: the desk with
+the tabs and the DIFFICULTY bank floored to 44 CSS px, STATS' COPY STATS / RESET keys under its body, the touch confirm plate, and in tap mode the
+foot `REC_WORDS.TAP`, armed `TAP ANYWHERE ELSE TO CANCEL`; `tests/landscape.test.mjs` sweeps the five pages' arrangement on a tablet) and compact
+(any other touch box, the landscape phones' #c and a short tablet window: BACK, the title where it fits, the tabs in one header row; the plate at
+most 980 wide). SCORES: the DIFFICULTY bank (the R7 filter;
 its keys stay 44 CSS px on touch), BADGES (the four plaques, bits CLEAR / PLUS / MAX / CROWN as words.js `BADGE_NAMES`: earned = an ink word
 in the medal-colour outline (a stroke: the medal colour is never a fill), not yet a lock tag; two lines on a narrow table, dropped first where a short touch box would shrink the table under `BADGE_K` 0.8),
 the ten-row table RANK · SCORE · LEVEL · MODIFIERS (a count by `modsCount`, R10; no modifier glyph exists) · DATE, stepped down to a bare
