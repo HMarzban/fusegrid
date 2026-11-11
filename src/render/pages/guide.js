@@ -64,7 +64,7 @@ const NARROW_TAP = deep({throw: "tap", remote: "tap"});
 export const FLOOR_ROWS = deep([["BLOOM", 1], ["GLIDE", 2], ["BELT", 3], ["STREAM", 4], ["PLATE", 5], ["QUICK", 6], ["PORTAL", 7], ["GATE", 8]].map(([k, room]) => ({k, name: TILE_NAME[k], room})));
 
 /* desk plate widths [text scale 1, 1.25]; under PW_MIN the box narrows the plate no further (only #c's 600 wide box and the iso guard scale); pads [top, right, bottom, left] */
-const PWD = deep({[GUIDE]: [860, 960], [HOW]: [960, 1060], [PU]: [1250, 1250], [EN]: [1250, 1250], [FL]: [1250, 1250]});
+const PWD = deep({[GUIDE]: [860, 960], [HOW]: [960, 1060], [PU]: [1250, 1250], [EN]: [1250, 1300], [FL]: [1250, 1250]});
 const PW_MIN = 520, PAD = deep({d: [18, 22, 22, 22], p: [12, 12, 14, 12], c: [8, 12, 10, 12]});
 const CP = 9;
 /* the tooltip's side padding: the mock's 16, 10 in the compact arrangement's narrow column */
@@ -158,7 +158,7 @@ function body(page, m, iw) {
     if (m.mode === "desk") {
       /* the points key sits on the name's line, right-aligned (the round 7 frame), where the name and the focused key fit it by the measure; else under
          the name, its digits on the name's left edge (the focused key's bomb pushes them right, as a focused row's words move past MENU's bomb) */
-      const cols = iw >= 1100 ? 3 : iw >= 700 ? 2 : 1, cw = (iw - (cols - 1) * gap) / cols, tw = cw - 2 * (SLAB_T + 2) - CP - 56 - 14, twK = tw, wF = dv.bombs + 10 + 85 + 6 + pts + 10;
+      const cols = iw >= 1100 ? 3 : iw >= 700 ? 2 : 1, cw = (iw - (cols - 1) * gap) / cols, tw = cw - 2 * (SLAB_T + 2) - 2 * CP - 56 - 14, twK = tw, wF = dv.bombs + 10 + 85 + 6 + pts + 10;
       const one = FOES.map((e) => {
         const inl = L(e.name, P) + 10 + wF <= twK, nh = inl ? 44 : lhP + 4 + 44, hl = linesOf(T.body, Bd, helpOfFoe(e), tw);
         const ap = [APPEARS + levelsOf(e.rooms), levelsOf(e.rooms)].find((s) => L(s, Sx) <= tw) || levelsOf(e.rooms), an = linesOf(T.label, Sx, ap, tw);
@@ -307,7 +307,7 @@ export function guideGeom(F, page = GUIDE) {
   const G = {page, mode: d.mode, dev: d.dev, u, W: F.W, H: F.H, t125: fr.t125, touch: fr.touch, T: D.T * u, d: D, order: D.order.slice(), plate: sc(D.plate, u), foot: sc(D.foot, u), back: sc(D.head.back, u),
     pages: pages.length, pageOf: {}, pager: D.pager ? {up: sc(D.pager.up, u), dn: sc(D.pager.dn, u)} : null, items: {}, hit: {}, tips: null};
   for (const n of D.order) { G.items[n] = sc(D.items[n].r, u); G.pageOf[n] = D.items[n].page; if (D.hit[n]) G.hit[n] = sc(D.hit[n], u); }
-  if (D.tips) G.tips = D.tips.map((q) => ({r: sc(q.r, u), up: q.up, cover: q.cover.slice()}));
+  if (D.tips) G.tips = D.tips.map((q) => ({r: sc(q.r, u), U: sc(q.U, u), up: q.up, cover: q.cover.slice()}));
   gm = {W: F.W, H: F.H, page, touch: fr.touch, shell: fr.shell, css: fr.css, ts: fr.ts, words: W, G: deep(G)};
   return gm.G;
 }
@@ -359,14 +359,16 @@ export function guideHit(x, y, F, focus = 0) {
   if (!okBox(F)) return -1;
   const G = guideGeom(F, GUIDE), pg = pageOfFocus(G, DOORS[focus | 0]);
   for (let i = 0; i < DOORS.length; i++) if (G.pageOf[DOORS[i]] === pg && inR(G.hit[DOORS[i]], x, y)) return i;
+  if (G.pager) for (const [k, d] of [["up", -1], ["dn", 1]]) if (inR(G.pager[k], x, y)) { const to = clampPg(G, pg + d); return -10 - DOORS.findIndex((n) => G.pageOf[n] === to); } /* a page key: -10 - that page's first door */
   if (inR(G.back, x, y)) return -1;
   return onPlate(G, x, y) ? -2 : -1;
 }
 /** A tap on ENEMIES (focus: the focused foe's index, whose page shows): a foe's index (its points value; a touch layout's whole slot); a page key,
     -10 - the first foe of the page it shows; else -1 (any other tap closes an open tooltip, or backs out). */
-export function enemiesHit(x, y, F, focus = 0) {
+export function enemiesHit(x, y, F, focus = 0, tip = false) {
   if (!okBox(F)) return -1;
   const G = guideGeom(F, EN), pg = pageOfFocus(G, G.order[focus | 0]);
+  if (tip && G.tips && inR(G.tips[focus | 0].U, x, y)) return -1; /* a tap on the open tooltip (the slots and keys under it included) only closes it */
   for (let i = 0; i < G.order.length; i++) if (G.pageOf[G.order[i]] === pg && inR(G.hit[G.order[i]], x, y)) return i;
   if (G.pager) for (const [k, d] of [["up", -1], ["dn", 1]]) if (inR(G.pager[k], x, y)) { const to = clampPg(G, pg + d); return -10 - G.order.findIndex((n) => G.pageOf[n] === to); }
   return -1;

@@ -55,13 +55,13 @@ const PIN = {
   hud0: "7c298753:175", hud3: "60b2bf24:349", hud8: "2aa8d78c:508",
   /* v202 Task 3.5 fix round 1: pages/guide.js's call logs, re-pinned (a 600 x 520 / 600 x 360 #c box, keyboard and touch; the shell through drawShell
      on the classic box per kind: iso keeps its own box, so its own pins) */
-  drawHowTo520: "37cf363d:21065", drawItemsHelp520: "4b731a9a:13296", drawEnemiesHelp520: "e1a4c519:93094",
-  drawHowTo360: "1df6ba7e:21237", drawItemsHelp360: "eb60eb99:13283", drawEnemiesHelp360: "f792502d:76240",
+  drawHowTo520: "37cf363d:21065", drawItemsHelp520: "4b731a9a:13296", drawEnemiesHelp520: "daf197f6:93094",
+  drawHowTo360: "1df6ba7e:21237", drawItemsHelp360: "eb60eb99:13283", drawEnemiesHelp360: "c6e3a685:78040",
   drawHowTo520T: "bfd67ce4:28035", drawItemsHelp520T: "158a7309:11758", drawEnemiesHelp520T: "98a7f186:13883",
   drawHowTo360T: "f73cd230:25946", drawItemsHelp360T: "8b883c65:10369", drawEnemiesHelp360T: "38b3e036:10316",
-  "shell.2d.HOWTO": "37cf363d:21065", "shell.2d.ITEMS": "4b731a9a:13296", "shell.2d.ENEMIES": "f3963322:93529",
-  "shell.3d.HOWTO": "37cf363d:21065", "shell.3d.ITEMS": "4b731a9a:13296", "shell.3d.ENEMIES": "f3963322:93529",
-  "shell.iso.HOWTO": "ccc7496f:21777", "shell.iso.ITEMS": "d9f28577:13470", "shell.iso.ENEMIES": "8d5b7f1d:76675",
+  "shell.2d.HOWTO": "37cf363d:21065", "shell.2d.ITEMS": "4b731a9a:13296", "shell.2d.ENEMIES": "3018d168:93529",
+  "shell.3d.HOWTO": "37cf363d:21065", "shell.3d.ITEMS": "4b731a9a:13296", "shell.3d.ENEMIES": "3018d168:93529",
+  "shell.iso.HOWTO": "ccc7496f:21777", "shell.iso.ITEMS": "d9f28577:13470", "shell.iso.ENEMIES": "7e158d1a:78475",
 };
 /* and relational: every non-PIXEL kind (none, 2d, 3d, iso) paints the identical page call log, with or without a px atlas registered */
 const GPIN = {};

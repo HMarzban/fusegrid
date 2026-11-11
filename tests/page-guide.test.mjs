@@ -45,6 +45,8 @@ const BOX = {
   l1024: { W: 1024, H: 768, touch: true, shell: true, css: 1 },
   p393: { W: PG.w, H: PG.h, touch: true, shell: true, css: PG.s },
   c600: { W: 600, H: 520, touch: false, shell: false, css: 1 },
+  d1280: { W: 1280, H: 720, touch: false, shell: true, css: 1 }, // fix round 1 (R2): desk windows that page rather than scale
+  d1366s: { W: 1366, H: 657, touch: false, shell: true, css: 1 },
   iso: { W: 608, H: 352, touch: false, shell: false, css: 1 },
   c852: { W: 600, H: 520, touch: true, shell: false, css: fitBox(852, 393, true, 600, 520).s },
 };
@@ -137,6 +139,22 @@ setTextScale(1);
     const L = P._dbg.last, pg = L.pg, on = L.P.rest.filter((o) => o.pg === pg && o.op === "text" && FOES.some((e) => e.name === o.s)).map((o) => o.s);
     check("c852 ENEMIES pages: the focused foe's page on screen, its foes alone, PAGE n / m", G.pages > 1 && pg === G.pageOf.PHANTOM && J(on) === J(G.order.filter((n) => G.pageOf[n] === pg)) && L.P.rest.some((o) => o.pg === pg && o.s === "PAGE " + (pg + 1) + " / " + G.pages), J({ pages: G.pages, pg, on }));
   }
+}
+{ // page keys tap: GUIDE on a landscape phone pages its doors; ▼ is -10 - the next page's first door, ▲ on the first page stays on it
+  const F = BOX.c852, G = P.guideGeom(F, "GUIDE"), c = (r) => [r.x + r.w / 2, r.y + r.h / 2], nx = GUIDE_ROWS.findIndex((n) => G.pageOf[n] === 1);
+  check("c852 GUIDE pages its doors; its ▼ key taps -10 - the next page's first door, its ▲ on page 1 the first door", G.pages > 1 && nx > 0 && P.guideHit(...c(G.pager.dn), F, 0) === -10 - nx && P.guideHit(...c(G.pager.up), F, 0) === -10 && P.guideHit(...c(G.pager.dn), F, nx) === -10 - nx, J({ pages: G.pages, nx }));
+  /* ENEMIES with its tooltip open: a tap inside the tooltip (the slots or page keys under it included) only closes it (-1) */
+  const E = P.guideGeom(F, "ENEMIES"), t = E.tips[0].U;
+  check("ENEMIES c852: a tap inside the open tooltip is -1 (it closes), even over a page key; shut, the same spot taps what is under it", P.enemiesHit(t.x + t.w / 2, t.y + t.h - 2, F, 0, true) === -1 && P.enemiesHit(...c(E.pager.dn), F, 0, false) <= -10, J(t));
+}
+{ // the controller cue on a touch layout: a flip re-lays the page (its layers miss once, never a stale blit) and every cue keycap sits inside the plate
+  setTextScale(1.25); fresh();
+  frame(BOX.p393, UI("ENEMIES", { focus: 0, tip: false }));
+  const a = P._dbg.last.G; setHints(wordsOf("pad", DEF_CONTROLS));
+  const f = frame(BOX.p393, UI("ENEMIES", { focus: 0, tip: false })), b = P._dbg.last.G, pl = b.d.plate, cue = b.d.head.cue;
+  const caps = P._dbg.last.P.rest.filter((o) => o.op === "cap" && cue && o.y >= cue.y - 1 && o.y <= cue.y + cue.h);
+  check("p393 x1.25: the pad's cue line re-lays ENEMIES (a miss, the new geometry) and its keycaps sit inside the plate", !a.d.head.cue && !!cue && f.miss > 0 && caps.length >= 2 && caps.every((o) => o.x >= pl.x && o.x + o.w <= pl.x + pl.w), J({ miss: f.miss, caps: caps.map((o) => [o.s, o.x, o.w]) }));
+  setHints(null); setTextScale(1);
 }
 { // fix round 1, Important 5: desk ENEMIES at 125 % follows the t125 frame: one page, no kicker, the points key on the name's line wherever the measure fits it
   setTextScale(1.25);

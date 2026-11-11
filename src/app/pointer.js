@@ -69,6 +69,7 @@ export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: {
         touchLay(cv),
         ...(gd ? [app.guideRow] : []), // GUIDE: the focused door's page is the one on screen
       );
+      if (gd && row <= -10) return void app.guideFocus(-10 - row); // a GUIDE page key: that page's first door, focused (no confirm)
       if (row && typeof row === "object") return void (app[gx ? "gfxRow" : "optRow"] = row.row); // a page key: focus the first row of the page it opens
       if (row < 0) return menu || row < -1 ? undefined : app.back(); // -2: on the plate, off the rows (inert)
       app[menu ? "cursor" : gx ? "gfxRow" : gd ? "guideRow" : "optRow"] = row;
@@ -77,7 +78,7 @@ export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: {
       /* a points value (a touch layout's whole foe slot) focuses that foe and opens its tooltip; any other tap closes an open one, else backs out
          (a read-only page); -2: the page is still loading, inert */
       const r = cv.getBoundingClientRect(), k = cv.width / (r.width || cv.width), { cw, ch, lg, css } = dims(cv, kind());
-      const i = enemiesHit((ev.clientX - r.left) * k, (ev.clientY - r.top) * k, menuLayout(cw, ch, lg, css), touchLay(cv), app.foeRow);
+      const i = enemiesHit((ev.clientX - r.left) * k, (ev.clientY - r.top) * k, menuLayout(cw, ch, lg, css), touchLay(cv), app.foeRow, app.foeTip);
       if (i >= 0) app.foeTap(i); else if (i <= -10) app.foeFocus(-10 - i); else if (i !== -2 && !app.foeClose()) app.back(); // -10 - i: a page key, onto that page's first foe
     } else if (app.screen === SCREEN.HOWTO || app.screen === SCREEN.ITEMS || app.screen === SCREEN.FLOOR) {
       /* read-only: a ▲ / ▼ page key steps the pages where the box pages it; any other tap backs out; -2: still loading, inert */

@@ -40,7 +40,7 @@ function mkHit(over = {}) {
   for (const [k, f] of Object.entries(REAL)) hit[k] = (...a) => { const r = (over[k] || f)(...a); calls.push({ f: k, a, r }); return r; };
   return { hit, calls, of: (k) => calls.filter((c) => c.f === k), last: (k) => calls.filter((c) => c.f === k).pop() };
 }
-const SHELL = ["confirm", "back", "pauseBack", "playFromAttract", "skipShow", "move", "adjustPace", "recTab", "levelFocus", "foeTap", "foeClose", "foeFocus", "infoStep"];
+const SHELL = ["confirm", "back", "pauseBack", "playFromAttract", "skipShow", "move", "adjustPace", "recTab", "levelFocus", "foeTap", "foeClose", "foeFocus", "infoStep", "guideFocus"];
 function rig(o = {}) {
   const log = [], taps = [];
   const VIS = o.rows || optRows(false); // the app's visible SETTINGS rows (menuapp optRows), what settingsHit maps into
@@ -309,7 +309,7 @@ for (const [s, label] of [["HOWTO", "HOW TO PLAY"], ["ITEMS", "POWER-UPS"], ["FL
   r.down(...c(G.hit.KNIGHT));
   const h = r.H.last("enemiesHit"), lc = r.H.last("layout");
   check("ENEMIES: a tap on KNIGHT's points value is foeTap(8), fire swallowed", J(r.log) === J([["foeTap", 8]]) && r.input._intent.fire === false, J(r.log));
-  check("ENEMIES: enemiesHit(x, y, layout(cw, ch, lg, css), touchLay(cv), app.foeRow)", J(h.a[2]) === J(L0) && h.a[3] === false && h.a.length === 5 && lc.a.length === 4, J(lc.a));
+  check("ENEMIES: enemiesHit(x, y, layout(cw, ch, lg, css), touchLay(cv), app.foeRow, app.foeTip)", J(h.a[2]) === J(L0) && h.a[3] === false && h.a.length === 6 && lc.a.length === 4, J(lc.a));
   r.log.length = 0; r.down(2, 2);
   check("ENEMIES: off the values with no tooltip open: foeClose finds none, then back", J(r.log) === J([["foeClose"], ["back"]]), J(r.log));
   r.app.foeClose = (...a) => { r.log.push(["foeClose", ...a]); return true; };
@@ -321,6 +321,9 @@ for (const [s, label] of [["HOWTO", "HOW TO PLAY"], ["ITEMS", "POWER-UPS"], ["FL
   const pk = rig({ app: { screen: SCREEN.ENEMIES }, over: { enemiesHit: () => -10 - 4 } });
   pk.down(300, 260);
   check("ENEMIES: a page key (-10 - i) is foeFocus(i), onto that page's first foe, nothing else", J(pk.log) === J([["foeFocus", 4]]), J(pk.log));
+  const gk = rig({ app: { screen: SCREEN.GUIDE }, over: { guideHit: () => -10 - 2 } });
+  gk.down(300, 260);
+  check("GUIDE: a page key (-10 - i) is guideFocus(i), onto that page's first door, no confirm", J(gk.log) === J([["guideFocus", 2]]), J(gk.log));
 }
 {
   /* MEDALS (TROPHIES) is read-only too, but its head carries RECORDS' tab strip (v202 Task 2.2): the strip is its one hit test */

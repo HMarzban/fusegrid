@@ -554,7 +554,7 @@ export function drawGuide(c, L, t, cursor, kind, touch, o) {
 /** The GUIDE page's geometry (pages/guide.js guideGeom), null until the module is in. */
 export const guideGeom = (L, touch, page) => { const g = guideMod(); return g ? g.guideGeom(frameOf(L, touch), page || "GUIDE") : null; };
 export const guideHit = (x, y, L, _n, touch, focus) => { const g = guideMod(); return g ? g.guideHit(x, y, frameOf(L, touch), focus | 0) : -2; };
-export const enemiesHit = (x, y, L, touch, focus) => { const g = guideMod(); return g ? g.enemiesHit(x, y, frameOf(L, touch), focus | 0) : -2; };
+export const enemiesHit = (x, y, L, touch, focus, tip) => { const g = guideMod(); return g ? g.enemiesHit(x, y, frameOf(L, touch), focus | 0, !!tip) : -2; };
 /** A read-only page (HOW TO PLAY, POWER-UPS, FLOOR) showing page pg: "up" / "down" on its page keys, else -1 (backs out); -2 while it loads. */
 export const guideReadHit = (x, y, L, touch, page, pg) => { const g = guideMod(); return g ? g.readHit(x, y, frameOf(L, touch), page, pg | 0) : -2; };
 /** How many pages a GUIDE page takes on this box (1 until the module is in). */

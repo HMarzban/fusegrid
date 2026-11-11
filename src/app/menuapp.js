@@ -1274,6 +1274,13 @@ export function createMenuApp(opts = {}) {
     _isInfo() { return this.screen === SCREEN.HOWTO || this.screen === SCREEN.ITEMS || this.screen === SCREEN.FLOOR; },
     /* a tap on a read-only page's ▲ / ▼ key: one page step, cued as a move */
     infoStep(d) { return this._isInfo() && this.move(d < 0 ? -1 : 1, 0); },
+    /* a tap on a GUIDE page key: the first door of the page it shows, focused */
+    guideFocus(i) {
+      if (this.screen !== SCREEN.GUIDE || !(i >= 0 && i < GUIDE_ROWS.length) || (i | 0) === this.guideRow) return false;
+      this.guideRow = i | 0;
+      this.idleT = 0;
+      return this._feel("move");
+    },
     /* a tap on an ENEMIES page key: the first foe of the page it shows, focused, its tooltip shut */
     foeFocus(i) {
       if (this.screen !== SCREEN.ENEMIES || !(i >= 0 && i < FOES.length) || (i | 0) === this.foeRow) return false;

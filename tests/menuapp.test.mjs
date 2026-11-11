@@ -718,6 +718,8 @@ for (const r3d of [false, true]) {
   }
   const fz = createMenuApp(); fz.screen = SCREEN.ENEMIES; fz.foeRow = 2; fz.foeTip = true;
   check("ENEMIES foeFocus (a tapped page key): that page's first foe, the tooltip shut; the foe already focused is a no-op", fz.foeFocus(4) === true && fz.foeRow === 4 && fz.foeTip === false && fz.foeFocus(4) === false);
+  const gf = createMenuApp(); gf.screen = SCREEN.GUIDE; gf.guideRow = 0;
+  check("GUIDE guideFocus (a tapped page key): that page's first door, focused, no confirm; the door already focused is a no-op", gf.guideFocus(2) === true && gf.guideRow === 2 && gf.screen === SCREEN.GUIDE && gf.guideFocus(2) === false);
   const g2 = createMenuApp();
   g2.screen = SCREEN.GUIDE; g2.guideRow = 2; g2.foeRow = 5; g2.foeTip = true; g2.lastDev = "touch";
   g2.confirm();
