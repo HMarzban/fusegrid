@@ -346,6 +346,23 @@ for (const b of ALL) for (const ts of [1, 1.25]) {
     !!f && body.map((t) => t.s).join(" ") === W.RESET_DEFAULT && body.every((t) => inside(t, f, 0.6)) && a.texts.some((t) => /ERASE ALL/.test(t.s)) && a.rects.some((r) => r.name === "AGAIN ERASES" && r.focus) && a.rects.some((r) => /^COPY/.test(r.name)), J({ f, body: body.map((t) => t.s) }));
   setTextScale(1);
 }
+/* a phone at 100 %: the STATS body steps down (closer gaps, no level course, a 27 LIFETIME pitch, then one-line bests) instead of shrinking its
+   words below their floors. The 393x852 reference keeps two-line bests; a shorter phone's one-line level sits between difficulty and score,
+   overlapping neither, or steps out */
+{
+  const G = RP.recordsGeom(BOX.p393), B = G.d.bodies.stats, { s } = snap(BOX.p393, SUI({}));
+  check("STATS on the 393x852 phone at 100 %: the body is not scaled (k 1), the course dropped, the bests keep two lines and every level",
+    B.k === 1 && B.course === null && B.one === false && !s.rects.some((r) => /^level /.test(r.name)) && ["REACHED LEVEL 5 · ARENA", "LEVEL 3"].every((w) => s.texts.some((t) => t.s === w)), J({ k: B.k, one: B.one }));
+  const PS = shellGeo(390, 844), F = { W: PS.w, H: PS.h, touch: true, shell: true, css: PS.s }, B2 = RP.recordsGeom(F).d.bodies.stats, s2 = snap(F, SUI({})).s;
+  const cy = (t) => t.y + (t.h != null ? t.h : t.capH) / 2, row = (n) => s2.texts.find((t) => t.s === n);
+  const bad = [["NORMAL DIFFICULTY", "4,820"], ["HARD DIFFICULTY", "8,120"], ["EXPERT DIFFICULTY", "3,100"]].filter(([l, n]) => {
+    const a = row(l), z = a && s2.texts.filter((t) => /^LEVEL \d$/.test(t.s)).find((t) => Math.abs(cy(t) - cy(a)) < 4), m = a && s2.texts.filter((t) => t.s === n).find((t) => Math.abs(cy(t) - cy(a)) < 4);
+    return !a || !m || (z && (z.x < a.x + a.w || z.x + z.w > m.x));
+  });
+  check("STATS on a 390x844 phone at 100 %: k 1 with one-line bests; a level drawn on a best's line sits clear of its difficulty and its score", B2.k === 1 && B2.one === true && bad.length === 0, J({ k: B2.k, one: B2.one, bad }));
+  const D = RP.recordsGeom(BOX.d1366).d.bodies.stats;
+  check("STATS on the desk keeps the mock's layout: two-line bests and the level course", D.one === false && !!D.course && D.k === 1, J({ one: D.one, k: D.k }));
+}
 /* no best run yet: the hero says so and shows no score or course */
 {
   const { s } = snap(BOX.d1366, SUI({ view: { ...SV0, hero: null } }));

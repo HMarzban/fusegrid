@@ -124,7 +124,7 @@ from its key, the three plain-bucket bests), worded on the page: the hero (BEST 
 in brick digits, the 8-level course: cleared lit, the level reached a raised key, 6–8 wall cells while locked, flags on 5 and
 8, REACHED LEVEL n · WORLD; NO RUNS YET with none), three sunk stat tiles (RUNS, PLAY TIME as `3h12m`, MEDALS n/8), the LIFETIME
 ledger, BEST BY DIFFICULTY · NO MODIFIERS · NORMAL SPEED (its kicker breaks once at 125 % and on a narrow body; two-line rows, the level under the difficulty, the best one's pip a
-brick), the cabinet notes (desk only; on the phone they drop, their facts ride the copy payload and MENU's DAILY teaser). RESET
+brick), the cabinet notes (desk only; on the phone they drop, their facts ride the copy payload and MENU's DAILY teaser). A touch body too short steps down before it scales (`statsBody` tight: gaps 10, the level course drops, LIFETIME pitch 27, then one-line bests only where that makes it fit; the 393 x 852 phone at 100 % is unscaled at step 3). RESET
 is quiet at rest (the foot on a keyboard, `COPY STATS` / `RESET` keys under the pane on touch). Armed: the page dims under a
 confirm plate (ERASE ALL RECORDS?, one sentence = words.js `resetSentence(CLEAR_KEYS, KEEP_KEYS)`, the lists main hands in as
 `app.stats.wipe`; `RESET_GROUP` names each store key and words.test pins it equal to reset.js's lists), AGAIN ERASES focused (the

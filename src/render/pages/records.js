@@ -83,14 +83,17 @@ function medalsBody(dv, ts, iw, cols = iw >= 640 ? 2 : 1, lines = 2) {
    level under the difficulty) and the cabinet's notes. Two columns from 700 wide (the hero and the bests left of a wall course; the tiles, LIFETIME and
    the notes right), one column below it (there the notes drop: their facts ride the copy payload and MENU's DAILY teaser). */
 export const LEDGER = Object.freeze({d: 35, p: 30});
-function statsBody(dv, ts, iw, D, narrow) {
-  const sec = dv.sec * ts * 1.2, pri = dv.pri * ts * 1.2, lh = Math.max(narrow ? LEDGER.p : LEDGER.d, Math.round(dv.pri * ts * 1.5)), lh2 = Math.round(dv.pri * ts * 1.15 + sec + 4), g = narrow ? 14 : 18;
+/* tight (a touch body too short for it, steps in order so its words keep their size): 1 the gaps close to 10, 2 the level course drops (REACHED
+   LEVEL n · WORLD still says it), 3 the LIFETIME pitch closes to 27, 4 the bests take one line each (the level after the difficulty, stepping out
+   where it would touch the score) */
+function statsBody(dv, ts, iw, D, narrow, tight = 0) {
+  const sec = dv.sec * ts * 1.2, pri = dv.pri * ts * 1.2, lh = Math.max(tight >= 3 ? 27 : narrow ? LEDGER.p : LEDGER.d, Math.round(dv.pri * ts * 1.5)), one = tight >= 4, lh2 = one ? lh : Math.round(dv.pri * ts * 1.15 + sec + 4), g = tight >= 1 ? 10 : narrow ? 14 : 18;
   const L = narrow ? iw : D.statL, rx = narrow ? 0 : L + 40, rw = narrow ? iw : iw - rx;
   let y = 0;
   const kick = R(0, y, L, sec); y += sec + 4;
   const qual = R(0, y, L, 2 * pri); y += 2 * pri + 8;
   const digits = R(0, y, L, dv.sdh + 4); y += dv.sdh + 4 + 8;
-  const course = R(0, y, L, dv.lch + 4); y += dv.lch + 4 + 6;
+  const course = tight >= 2 ? null : R(0, y, L, dv.lch + 4); if (course) y += dv.lch + 4 + 6;
   const reached = R(0, y, L, sec); y += sec;
   const tileH = Math.round(12 + 28 + 6 + dv.hud * ts + 6 + sec), tw = (rw - 20) / 3;
   let ry = narrow ? y + g : 0;
@@ -104,7 +107,7 @@ function statsBody(dv, ts, iw, D, narrow) {
   const bk = narrow || ts > 1 ? 2 : 1, bestK = R(0, by, L, bk * sec); by += bk * sec + 6;
   const best = [0, 1, 2].map((i) => R(0, by + i * lh2, L, lh2)); by += 3 * lh2;
   const notes = narrow ? null : R(rx, ry + 12, rw, 3 * sec), h = narrow ? by : Math.max(by, ry + 12 + 3 * sec);
-  return {kick, qual, digits, course, reached, tiles, lifeK, life, bestK, bk, best, notes, lh, lh2, div: narrow ? null : R(L + 18, 0, 3, h), narrow, h};
+  return {kick, qual, digits, course, reached, tiles, lifeK, life, bestK, bk, best, one, notes, lh, lh2, div: narrow ? null : R(L + 18, 0, 3, h), narrow, h};
 }
 const bestKick = () => [ST.BY_DIFF, RW.NO_MODS + " · " + speedTag(0)];
 /* the armed reset's confirm plate (appendix 7.3) inside the pane: desk centred, 700 wide (680 at 125 %), its keys side by side (stacked at 125 %); touch at
@@ -148,7 +151,11 @@ function bodiesAt(dv, ts, iw, D, row, bx, by, avail) {
   /* STATS: on a touch box COPY STATS and RESET sit under the body at their size; the body above them scales into what is left */
   const actH = avail > 0 ? DEV.p.btnh : 0, room = avail > 0 ? avail - actH - 14 : 0, narrow = iw < 700;
   let st = statsBody(dv, ts, iw, D, narrow), sk = 1;
-  if (room > 0 && st.h > room) { sk = room / st.h; st = statsBody(dv, ts, iw / sk, D, (iw / sk) < 700); }
+  let tt = 0;
+  for (let t = 1; room > 0 && st.h > room && t <= 3; t++) st = statsBody(dv, ts, iw, D, narrow, tt = t);
+  /* step 4 (one-line bests) only where it makes the body fit; a body that must scale anyway keeps its two-line bests and every level */
+  if (room > 0 && st.h > room) { const s4 = statsBody(dv, ts, iw, D, narrow, 4); if (s4.h <= room) st = s4; }
+  if (room > 0 && st.h > room) { sk = room / st.h; st = statsBody(dv, ts, iw / sk, D, (iw / sk) < 700, tt); }
   out.stats = place(st, bx, by, sk);
   if (actH) { const cw = Math.round((iw - 12) * 0.58); out.stats.acts = {copy: R(bx, by + avail - actH, cw, actH), reset: R(bx + cw + 12, by + avail - actH, iw - cw - 12, actH)}; }
   return out;
@@ -513,8 +520,8 @@ function statsStatic(c, G, P, ui, tok) {
       key(c, x, dr.y + 2, w, dv.sdh, ch === "," ? "well" : "lit", {tok, label: ch, px: dv.sdf, phone: ph});
       x += w + 4;
     }
-    const cr = L(b.course);
-    for (let r = 1; r <= 8; r++) {
+    const cr = b.course && L(b.course);
+    if (cr) for (let r = 1; r <= 8; r++) {
       const x0 = cr.x + (r - 1) * (dv.lcw + 5), kind = r < S.hero.r ? "lit" : r === S.hero.r ? "key" : r > 5 && !ui.unlocked ? "wall" : "well";
       key(c, x0, cr.y + 2, dv.lcw, dv.lch, kind, {tok, label: kind === "wall" ? null : String(r), px: dv.pri, phone: ph});
       if (kind === "wall") ic(c, "lock", x0 + dv.lcw / 2 - 7, cr.y + 2 + dv.lch / 2 - 7, 14, CONST.off);
@@ -535,7 +542,7 @@ function statsStatic(c, G, P, ui, tok) {
   S.life.forEach((q, i) => ledger(c, L(b.life[i]), q.g, q.l, "", q.n, dv, ts, false));
   const bk = L(b.bestK);
   S.bestK.forEach((l, i) => text(c, l, bk.x, bk.y + dv.sec * ts * (0.6 + 1.2 * i), sf, CONST.t2));
-  S.bests.forEach((q, i) => ledger(c, L(b.best[i]), {pip: i + 1, lit: q.s >= 0 && q.s === S.top}, q.l, q.sub, q.n, dv, ts, true, tok));
+  S.bests.forEach((q, i) => ledger(c, L(b.best[i]), {pip: i + 1, lit: q.s >= 0 && q.s === S.top}, q.l, q.sub, q.n, dv, ts, !b.one, tok));
   if (b.div) wallCourse(c, L(b.div), tok);
   if (b.notes) S.notes.forEach((l, i) => text(c, l, L(b.notes).x, L(b.notes).y + dv.sec * ts * (0.6 + 1.2 * i), sf, CONST.t2));
   c.restore();
@@ -562,6 +569,7 @@ function ledger(c, r, g, label, sub, num, dv, ts, two, tok) {
   const lx = r.x + gw + 12;
   text(c, label, lx, cy, pf, CONST.ink);
   const lw = W(mc, pf, label), nw = nW(mc, T.num(dv.pri), num);
+  if (sub && !two && lx + lw + 10 + W(mc, sf, sub) + 12 > r.x + r.w - nw - 12) sub = ""; // one line: the level steps out before it would touch the score
   if (sub) two ? text(c, sub, lx, cy + dv.pri * ts * 0.575 + 4 + dv.sec * ts * 0.6, sf, CONST.t2) : text(c, sub, lx + lw + 10, cy, sf, CONST.t2);
   const d0 = lx + lw + (sub && !two ? W(mc, sf, sub) + 10 : 0) + 12, d1 = r.x + r.w - nw - 12;
   c.fillStyle = "#5a5047";
@@ -725,8 +733,8 @@ function record(G, P, ui, foc, dpr, el, F0, tok, touchy) {
       for (const ch of S.digits) { const w = (ch === "," ? Math.round(dv.sdw * 0.6) : dv.sdw) * k; cells.push(R(x, B.digits.y + 2 * k - (ch === "," ? 0 : 2 * k), w, dv.sdh * k)); x += w + 4 * k; }
       cells.forEach((r, i) => { probe.rect("digit " + i, ...b(r), {fill: S.digits[i] === "," ? tok.well : tok.lit}); const w = measureOr(S.digits[i], dv.sdf) * k; txt(S.digits[i], r.x + r.w / 2 - w / 2, r.y + r.h / 2, w, dv.sdf * k, S.digits[i] === "," ? CONST.t2 : CONST.dk, "hud"); });
       const cell = (r) => R(B.course.x + (r - 1) * (dv.lcw + 5) * k, B.course.y + 2 * k, dv.lcw * k, dv.lch * k);
-      for (let r = 1; r <= 8; r++) probe.rect("level " + r, ...b(cell(r)), {fill: r < S.hero.r ? tok.lit : r === S.hero.r ? tok.key : tok.well});
-      if (S.hero.r > 1 && S.hero.r < 8) probe.pair("chosen", b(R(cell(1).x + 3 * k, cell(1).y + 2 * k, cell(1).w - 6 * k, 6 * k)), b(R(cell(8).x + 3 * k, cell(8).y + 6 * k, cell(8).w - 6 * k, 6 * k)), {name: "cleared vs ahead level"});
+      if (B.course) for (let r = 1; r <= 8; r++) probe.rect("level " + r, ...b(cell(r)), {fill: r < S.hero.r ? tok.lit : r === S.hero.r ? tok.key : tok.well});
+      if (B.course && S.hero.r > 1 && S.hero.r < 8) probe.pair("chosen", b(R(cell(1).x + 3 * k, cell(1).y + 2 * k, cell(1).w - 6 * k, 6 * k)), b(R(cell(8).x + 3 * k, cell(8).y + 6 * k, cell(8).w - 6 * k, 6 * k)), {name: "cleared vs ahead level"});
       txt(S.reached, B.reached.x, B.reached.y + B.reached.h / 2, sw(S.reached, dv.sec), dv.sec * k, CONST.t2, "secondary");
     }
     S.tiles.forEach(([name, val, g], i) => {
@@ -739,6 +747,7 @@ function record(G, P, ui, foc, dpr, el, F0, tok, touchy) {
     txt(ST.LIFETIME, B.lifeK.x, B.lifeK.y + B.lifeK.h / 2, sw(ST.LIFETIME, dv.sec), dv.sec * k, CONST.t2, "secondary");
     const line = (r, label, sub, num, two) => {
       const cy = two ? r.y + (4 + dv.pri * ts * 0.575) * k : r.y + r.h / 2, lx = r.x + 40 * k;
+      if (sub && !two && lx + sw(label, dv.pri) + sw(sub, dv.sec) + 22 * k > r.x + r.w - (nWOr(num, dv.pri) + 12) * k) sub = "";
       txt(label, lx, cy, sw(label, dv.pri), dv.pri * k, CONST.ink, "primary");
       if (sub) txt(sub, two ? lx : lx + sw(label, dv.pri) + 10 * k, two ? cy + (dv.pri * ts * 0.575 + 4 + dv.sec * ts * 0.6) * k : cy, sw(sub, dv.sec), dv.sec * k, CONST.t2, "secondary");
       const w = nWOr(num, dv.pri) * k;
@@ -746,7 +755,7 @@ function record(G, P, ui, foc, dpr, el, F0, tok, touchy) {
     };
     S.life.forEach((q, i) => line(B.life[i], q.l, "", q.n, false));
     S.bestK.forEach((l, i) => txt(l, B.bestK.x, B.bestK.y + dv.sec * ts * (0.6 + 1.2 * i) * k, sw(l, dv.sec), dv.sec * k, CONST.t2, "secondary"));
-    S.bests.forEach((q, i) => line(B.best[i], q.l, q.sub, q.n, true));
+    S.bests.forEach((q, i) => line(B.best[i], q.l, q.sub, q.n, !B.one));
     if (B.notes) S.notes.forEach((l, i) => txt(l, B.notes.x, B.notes.y + dv.sec * ts * (0.6 + 1.2 * i) * k, sw(l, dv.sec), dv.sec * k, CONST.t2, "secondary"));
     const a = B.acts;
     if (a) { probe.rect(ST.COPY_SHORT, ...b(a.copy), {touch: touchy, set: "acts", fill: tok.key}); probe.rect(ST.RESET, ...b(a.reset), {touch: touchy, set: "acts", fill: tok.key}); txt(ST.COPY_SHORT, a.copy.x + a.copy.w / 2 - measureOr(ST.COPY_SHORT, dv.pri) / 2, a.copy.y + a.copy.h / 2, measureOr(ST.COPY_SHORT, dv.pri), dv.pri, CONST.ink, "primary"); }
