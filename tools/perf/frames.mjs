@@ -7,6 +7,7 @@
    display rate, or WebGL / 2D canvas are not GPU backed.
 
    node tools/perf/frames.mjs [flags]       about 8 min for the default matrix
+                                            (desk,phone,hitch on 3 looks: 13-17 min)
                                             (sweep 1 min per look);
                                             it takes the owner's focus meanwhile
      --looks 2d,px,3d    looks to run (default all three)

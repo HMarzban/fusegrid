@@ -8,6 +8,10 @@ measure against.
 
 - **Code:** commit `c4e7598` (the frozen delivery head, shell v201 code), with only
   `tools/perf/frames.mjs` extended for this task. The game files are the ones at `c4e7598`.
+  The extension changes how the older windows run: `nb.pact.v1` is seeded on every page, record
+  stores carry over between windows, and the hitch block runs its menu steps before the first room,
+  so the "room, no bomb, no lock" step no longer comes straight after a fresh MENU. Compare later
+  builds with this file, not with frames output from before it.
 - **Machine, as the tool reports it:** Apple M5 Max (CPU model), GPU "ANGLE Metal Renderer: Apple
   M5 Max", Chrome for Testing 156.0.8078.4, headed, real GPU (2D canvas, WebGL and raster all
   `enabled`), page visible and focused in both runs, viewport 1450x757 at dpr 2.
@@ -346,8 +350,9 @@ used to count hitches.
   REAL 3D 2.1 ms and PIXEL 2.0 ms in run 1, then 1.7 and 1.6 ms in run 2. Unthrottled phone is
   0.5–1.9 ms, except the CLASSIC 2D title at 2.1 ms.
 - **Menu work p90 <= 5 ms at `--throttle 4`:** passes. The highest are the PIXEL title at 2.7 ms and
-  REAL 3D GAME OVER at 2.2 ms, both on phone x4. Desk is never throttled by the tool, so the x4 menu numbers come from the phone block
-  (393x852 layout) and the hitch x4 pass, not from the desk layout.
+  REAL 3D GAME OVER at 2.2 ms, both on phone x4. Desk is never throttled by the tool, so the x4 work
+  p90 comes from the phone block (393x852 layout); the hitch x4 pass gives the longest frame per step,
+  not a p90.
 - **0 long frames >= 50 ms on any page open:** passes. Every menu open, LEVEL SELECT room change,
   back to MENU and GAME OVER edge is 18–19 ms in all three looks, with and without x4. No menu
   window has a long interval.
@@ -369,7 +374,8 @@ used to count hitches.
    60 Hz display (or re-run this baseline on the display you use).
 2. Check the JSON's `env` first: `hz`, `gpu`, and `visible` / `focus` true. Also check that
    `errors` is empty, because a screen check or a short LEVEL SELECT cycle is listed there.
-3. Menu work p90, per window and look: <= 2 ms desk, <= 5 ms phone x4 and hitch x4.
+3. Menu work p90, per window and look: <= 2 ms desk, <= 5 ms phone x4 (the hitch x4 pass has no p90:
+   read its longest frame per step against step 4).
 4. Long frames: 0 `long` in every menu window, and every menu step in the hitch tables under
    50 ms with no LoAF entry. REAL 3D room changes: compare with the numbers above, not with 0.
 5. CPU: for each menu window, the new build's higher run against "Baseline (higher)", within
