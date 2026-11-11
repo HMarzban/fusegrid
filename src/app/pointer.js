@@ -39,7 +39,7 @@ export function mountPointer({ canvas, fit, input, app, world, kind, ctl, hit: {
         }
         return;
       }
-      const row = pauseHit(px, py, B, touchLay(canvas));
+      const row = pauseHit(px, py, B, touchLay(canvas), { css: canvas.css, world, time: !!app.timeAttack }); // the paint's own inputs: #c's stage scale, and whether a tag row shows
       if (row >= 0) {
         app.pauseCursor = row;
         app.confirm();

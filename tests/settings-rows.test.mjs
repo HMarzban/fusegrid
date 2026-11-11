@@ -21,7 +21,7 @@ import { overlayBox, pauseGeom, pauseHit, touchLay, drawOverlay, PAUSE_ROWS, PAU
 import * as md from "../src/render/menudraw.js";
 import * as lazyPages from "../src/render/pages/lazy.js";
 import * as sp from "../src/render/pages/settings.js";
-import { worldTokens } from "../src/render/kit/tokens.js";
+import { worldTokens, CONST } from "../src/render/kit/tokens.js";
 lazyPages._set("settings", sp); // the lazy SETTINGS page, in as if its import had landed (R20)
 import { rec } from "./lib/textrec.mjs";
 import { _set as setLazyPage } from "../src/render/pages/lazy.js";
@@ -374,18 +374,19 @@ check("PAUSE_SHAPE from the labels: RESUME the hero (row 0), SETTINGS the door (
   J(PAUSE_SHAPE.map((r) => [r.label, !!r.hero, !!r.door, !!r.danger, !!r.rule])) === J([["RESUME", true, false, false, false], ["SETTINGS", false, true, false, false], ["RESTART", false, false, true, true], ["QUIT TO MENU", false, false, true, false]]), J(PAUSE_SHAPE));
 for (const kind of ["2d", "iso"]) for (const touch of [false, true]) {
   const B = overlayBox(kind), g = pauseGeom(B, touch), tag = `${kind} ${touch ? "touch" : "keyboard"}`;
-  check(`PAUSE divider (${tag}): one rule between SETTINGS and RESTART, from pauseGeom (no gap: the pitches and plate stay)`, g.div === g.rows[2].y0 && g.rows[1].y1 === g.rows[2].y0, g.div + " / " + g.rows[1].y1 + " / " + g.rows[2].y0);
-  const bad = [];
+  check(`PAUSE divider (${tag}): one rule between SETTINGS and RESTART, from pauseGeom (the wall course in the gap between the two rows)`, g.rows[1].y1 < g.div && g.div < g.rows[2].y0, g.div + " / " + g.rows[1].y1 + " / " + g.rows[2].y0);
+  const bad = [], tok = worldTokens(3), u = g.u;
   for (let cur = 0; cur < 4; cur++) {
     const R = rec({ widthK: 0.6 });
     drawOverlay(R.ctx, { state: "PAUSE", level: 3, heat: 0, pace: 0, pact: 0 }, B.w, B.h, B.cx, B.cy, { view: 0, cursor: cur, touch });
-    const rule = R.rects.filter((r) => r.h === 1 && r.fill === md.LINE && Math.abs(r.y - Math.round(g.div)) <= 0.5 && r.w >= g.w - 40);
-    const band = R.rects.find((r) => /rgba\((255,93,115|55,240,208),0\.12\)/.test(r.fill));
-    const red = band && /255,93,115/.test(band.fill);
-    if (rule.length !== 1 || !band || red !== (cur >= 2)) bad.push(cur + ": " + J([rule.length, band && band.fill]));
+    const rule = R.paints.filter((p) => p.op === "fillRect" && p.style === tok.band && p.box && Math.abs(p.box.h - u) < 2e-3 && Math.abs(p.box.y + p.box.h / 2 - (g.div + u)) <= u && p.box.w >= g.w - 40 * u);
+    const band = R.paints.find((p) => p.op === "fill" && p.style === tok.band), ring = R.paints.find((p) => p.op === "stroke" && p.style === CONST.ink && p.lw === 3);
+    const last = (l) => R.texts.filter((t) => t.s === l).pop(); // the focused row is painted last, over its row at rest
+    const red = PAUSE_ITEMS.filter((l) => last(l) && last(l).fill === CONST.cor); // a danger label at rest reads coral; on its band it turns cream
+    if (rule.length !== 1 || !!band !== cur > 0 || !!ring !== (cur === 0) || J(red) !== J(["RESTART", "QUIT TO MENU"].filter((l) => PAUSE_ITEMS.indexOf(l) !== cur))) bad.push(cur + ": " + J([rule.length, !!band, !!ring, red]));
   }
-  check(`PAUSE (${tag}): the rule is drawn once at pauseGeom's div on every cursor; RESTART and QUIT TO MENU select red, RESUME and SETTINGS do not`, bad.length === 0, bad.join(" | "));
-  check(`PAUSE (${tag}): pauseHit maps each drawn row back to its index`, g.rows.every((r, i) => pauseHit(B.cx, r.cy, B, touch) === i));
+  check(`PAUSE (${tag}): the rule is drawn once at pauseGeom's div on every cursor; RESTART and QUIT TO MENU read in danger coral (cream on the focus band), RESUME and SETTINGS never; RESUME's focus is the ring, a row's the band`, bad.length === 0, bad.join(" | "));
+  check(`PAUSE (${tag}): pauseHit maps each drawn row back to its index`, g.rows.every((r, i) => pauseHit(r.cx, r.cy, B, touch) === i));
 }
 const pauseEffect = (lab, g, cmds) => (lab === "RESUME" ? g.world.state === "PLAY" : lab === "SETTINGS" ? g.app.pauseView === 1 && g.world.state === "PAUSE" : lab === "RESTART" ? g.world.state === "PLAY" && g.world.level === 1 && g.world.score === 0 : g.app.screen === SCREEN.MENU);
 for (const lab of PAUSE_ITEMS) for (const dev of ["key", "pad"]) {

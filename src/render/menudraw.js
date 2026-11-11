@@ -81,15 +81,6 @@ export function head(c, S, title, kicker) {
   c.font = sans(18, "700");
   c.fillText(title, S.mid, S.headY + 8);
 }
-/* The kicker's first candidate that fits room (head's own type), else the last: PAUSE's look tail (v202). */
-export function fitKicker(c, cands, room) {
-  c.font = sans(10, "600");
-  spaced(c, true);
-  let s = cands[cands.length - 1];
-  for (const t of cands) if (mw(c, t) <= room) { s = t; break; }
-  spaced(c, false);
-  return s;
-}
 export function foot(c, S, s, col) {
   c.fillStyle = col || MUTED;
   c.font = font(10);

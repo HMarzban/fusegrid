@@ -2,6 +2,7 @@
 // "· REAL 3D NEXT" while it builds, "· REAL 3D READY" parked for the swap, "· REAL 3D · RESTORING"
 // for a lost context; run context drops from the end until it fits; no tail = today's draw.
 import { drawOverlay, pauseKick, pauseKicker, pauseGeom, overlayBox } from "../src/render/scenes.js";
+import { setMeasure } from "../src/render/pages/pause.js";
 
 let pass = 0, fail = 0;
 function check(name, cond, detail) {
@@ -27,14 +28,19 @@ const longest = pauseKicker(W, { daily: true });
   const c = ctx();
   check("no tail: the kicker is today's, with no font set and nothing measured", pauseKick(c, longest, "", 316) === longest && c.log.length === 0);
 }
+/* v202 Task 5.1: the kicker is LEVEL n · WORLD (· DAILY) and the run's rules ride the tag row; the page plans on its own measuring context (here
+   the same 7 px a glyph), so the fit is checked against the plate's content width in design px (d.cw) */
+const base = "LEVEL 8 · CROWN · DAILY";
 for (const [name, B, touch] of [["keyboard 600x520", overlayBox("2d"), false], ["touch 600x520", overlayBox("2d"), true], ["iso", overlayBox("iso"), false]]) {
-  const g = pauseGeom(B, touch), c = ctx();
+  const g = pauseGeom(B, touch, { world: W }), c = ctx();
   c.canvas = null;
+  setMeasure(ctx());
   drawOverlay(c, W, B.w, B.h, B.cx, B.cy, { view: 0, cursor: 0, touch, next: "REAL 3D NEXT" }, null, { daily: true });
+  setMeasure(null);
   const texts = c.log.filter((e) => e[0] === "fillText").map((e) => e[1]);
   const k = texts.find((s) => /REAL 3D NEXT$/.test(s));
-  check(name + ": the longest real kicker keeps the tail and fits the plate (" + g.w + " wide)", !!k && k.length * 7 <= g.w - 24, k);
-  check(name + ": what stays is the kicker's own start (room, then biome ...), dropped from the end", !!k && longest.startsWith(k.replace(/ · REAL 3D NEXT$/, "")) && /^LEVEL 8/.test(k), k);
+  check(name + ": the longest real kicker keeps the tail and fits the plate (" + g.d.cw + " wide)", !!k && k.length * 7 <= g.d.cw, k);
+  check(name + ": what stays is the kicker's own start (level, then world, then DAILY), dropped from the end", !!k && base.startsWith(k.replace(/ · REAL 3D NEXT$/, "")) && /^LEVEL 8/.test(k) && longest.startsWith("LEVEL 8 · CROWN"), k);
 }
 {
   const c = ctx();

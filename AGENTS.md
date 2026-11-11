@@ -182,9 +182,9 @@ params are byte-identical, identifiers keep the old names (`heat`, `pace`,
 hash): the HUD's `LV` chip and heat token. Medal proper names stay (IRON CROWN).
 The paragraphs below use the internal names (heat, pace, pact, room) for code.
 
-Menu look (owner pick 2026-10-19, direction A "CONSOLE PANEL"): the
-PAUSE list and CONTROLS (every other plated page is on the world kit: MENU, LEVEL SELECT, SETTINGS / GRAPHICS, GUIDE's pages and RECORDS; values,
-tags and hints there are sans, keycaps mono) share ONE kit in `menudraw.js` — `plate`
+Menu look (owner pick 2026-10-19, direction A "CONSOLE PANEL"): CONTROLS
+(every other plated page is on the world kit: MENU, LEVEL SELECT, SETTINGS / GRAPHICS, GUIDE's pages, RECORDS and the PAUSE list; values,
+tags and hints there are sans, keycaps mono) shares ONE kit in `menudraw.js` — `plate`
 (one 0.94 fill, one `#2a3550` border, radius 6, even-px snapped), `head`
 (sans title, muted spaced kicker), `foot`, and `paintRow` (selected = 0.12
 band + 3px notch + caret; `danger` rows select red). Labels are system-ui
@@ -197,15 +197,28 @@ as `rev`) and `update.js` (the card's "You are on v203", the running build,
 never a guessed next one) — never a second literal. The desk MENU's foot ends
 `| v203`; the phone column carries it as SOURCE's teaser (the round 7 frame);
 SETTINGS keeps its `BUILD v203` kicker. Never on the HUD.
-PAUSE draws `pauseGeom(overlayBox, touch)`: touch (`touchLay`,
-data-lay p/l) caps pitch at `PAUSE_ROW_H` 70 / hero 76 / width 380, a keyboard
-screen at the compact `PAUSE_ROW_D` 44 / hero 54 / width 340 (owner: "too
-fat"); `pauseHit` takes the same flag. Rows `PAUSE_ITEMS` RESUME, SETTINGS, RESTART, QUIT TO MENU (design record §4, Task 2.4):
-RESUME hero, SETTINGS the door, a 1 px rule at `pauseGeom`'s `div` (the divider; no gap, so pitches and plate stay), then RESTART / QUIT danger;
-the shape is derived from the labels once (`scenes.js` `PAUSE_SHAPE` over `PAUSE_ROWS`, which `words.test` pins equal to `PAUSE_ITEMS`) and every reader dispatches by label;
-kicker = `LEVEL n · world` + difficulty, speed and modifiers, each named (+ DAILY), stepped down to fit by `pauseKickers` (a modifier count, then only what differs from a default run, so a default run reads `LEVEL 3 · FACTORY`; DAILY kept), cue `ESC · P RESUME · … · M QUIT`.
+PAUSE is on the world kit since UI upgrade Task 5.1 (`src/render/pages/pause.js`, boot; `scenes.js` re-exports `PAUSE_ROWS`, `PAUSE_SHAPE`,
+`PAUSE_ROW_H` / `_D`, `pauseGeom`, `pauseHit`, `pauseKick`, `pauseKickers` / `pauseKicker`; the round 7 S7-pages 10-pause frame). It stays on `#c`
+over the frozen board in all three looks, through the one painter `drawPause` that `drawOverlay`'s PAUSE branch calls (view 0 only; views 1-3
+keep their own painters and the old 0.72 veil), in the tokens of the room being PLAYED (`world.level`), under the kit veil (`#0b0609` at .6).
+Top to bottom on the kit plate: a centred kicker `LEVEL n · WORLD` (` · DAILY` on a daily; a controller note replaces it, the look tail rides it
+through `pauseKick`), `PAUSED` (display 34 desk / 26 touch), a tag row from words.js `runParts` (only non-default rules, each naming its setting,
+TIME TRIAL when timed; at most 3 then `+N`, EXPERT bare where that shows more; none for a default run), 30 px clear (34 at 125 %, 24 / 26
+touch), RESUME (the one yellow key; the back key's cap at its end on a keyboard layout), SETTINGS (door), the wall-course divider at `pauseGeom`'s
+`div`, RESTART and QUIT TO MENU (coral at rest, cream on the focus band; QUIT's `M` cap on a keyboard layout, a back glyph on touch or a
+controller), the foot `MOVE ↑↓ · CONFIRM ENTER` (a controller `MOVE D-PAD · CONFIRM SOUTH`, touch `TAP A ROW`). Focus: RESUME the bare bomb +
+the 3 px cream ring, a row the band + the bare bomb. `pauseGeom(B, touch, {css, world, time})` / `pauseHit(x, y, B, touch, o)`: css = #c's stage
+scale (`canvas.css`, fit.js), world + time decide the tag row; `pointer.js` hands the same. The plate keeps the HUD band (y < 42) and the ability
+bar (>= 482 of 520) clear. Keyboard: the S7 metrics in box units (`PAUSE_ROW_D` 44 / hero 54 / width 340, 420 at 125 %), scaled as one piece in a
+short box (pitches are caps; a run with a tag row scales 600 x 520 to ~0.96). Touch: design px are CSS px (u = 1 / css), rows floored at 45 CSS (44 + #c's border)
+px and grown toward the `PAUSE_ROW_H` 70 / hero 76 box caps (width 380 box); the first arrangement that fits wins (`TRIES`): one list with the foot;
+the 2 x 2 grid (RESUME | SETTINGS, divider, RESTART | QUIT TO MENU) with the foot; without it; the tag row folded into the kicker; `TIGHT` clear
+space; past that it scales and the floors give way (no listed phone reaches it). A 393 px phone and every landscape phone get the grid. The
+shape is derived from the labels once (`PAUSE_SHAPE` over `PAUSE_ROWS`, which `words.test` pins equal to `PAUSE_ITEMS`) and every reader
+dispatches by label. Measuring never touches `#c` (the page's own 1 x 1 context, `setMeasure` the tests' seam), so the first PAUSE frame makes
+the calls every later one does; the plate is a `kit/cache.js` layer, the veil and the focused row paint live.
 Touch rule: a tap on a row = Enter on it; keyboard PAUSE bands span
-the full width of the stage; a MENU row owns its key and half of each gap round it, out to the plate's bed edge (the next-run card's slot, the logo
+the full width of the stage (a touch grid tile owns its half); a MENU row owns its key and half of each gap round it, out to the plate's bed edge (the next-run card's slot, the logo
 and off the plate are no row);
 off the rows a root list (MENU, PAUSE list) does nothing; on a page
 (SETTINGS, GRAPHICS, GUIDE, LEVEL SELECT, SCORES) a miss ON the plate is inert

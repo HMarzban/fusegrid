@@ -269,12 +269,12 @@ check(
     JSON.stringify(bi),
   );
   for (const k of ["2d", "iso"]) {
-    const cue = overlayCue({ state: "PAUSE" }),
-      w = [...cue].length * 10 * 0.6;
+    const cue = "MOVE ↑↓ · CONFIRM ENTER", // the PAUSE page's foot hint (v202 Task 5.1), at the kit's secondary size (16 design px)
+      w = [...cue].length * 16 * 0.6;
     check(
       "PAUSE cue fits the plate foot in the " + k + " box",
-      w <= pauseGeom(overlayBox(k)).w - 32,
-      w + " vs " + (pauseGeom(overlayBox(k)).w - 32),
+      w <= pauseGeom(overlayBox(k)).d.cw,
+      w + " vs " + pauseGeom(overlayBox(k)).d.cw,
     );
   }
   /* Draw -> hit round trip: pauseGeom is the one table drawOverlay paints and
@@ -304,20 +304,21 @@ check(
       g.y + ".." + (g.y + g.h),
     );
   }
+  const s393 = (await import("../src/app/fit.js")).fitBox(393, 852, true, 600, 520).s; // #c's stage scale on a 393 px phone (CSS px per box unit)
   check(
-    "touch pause rows are a phone-sized pitch (>= 66 logical px, ~44 CSS on a 393px phone) in 600x520",
-    pauseGeom(b2, true).rows.every((r) => r.h >= 66),
-    pauseGeom(b2, true).rows.map((r) => r.h).join(),
+    "touch pause rows are a phone-sized pitch (>= 44 CSS px on a 393px phone) in 600x520",
+    pauseGeom(b2, true, { css: s393 }).rows.every((r) => r.h * s393 >= 43.95),
+    pauseGeom(b2, true, { css: s393 }).rows.map((r) => r.h * s393).join(),
   );
   check(
-    "keyboard pause rows are compact (pitch PAUSE_ROW_D 44, hero 54) and the plate stays short (<= 280 of 520)",
-    PAUSE_ROW_D === 44 && pauseGeom(b2).rows.slice(1).every((r) => r.h === 44) && pauseGeom(b2).rows[0].h === 54 && pauseGeom(b2).h <= 280,
+    "keyboard pause rows are compact (pitch PAUSE_ROW_D 44, hero 54) and the plate stays short (<= 400 of 520: the S7 title block, divider and foot)",
+    PAUSE_ROW_D === 44 && pauseGeom(b2).rows.slice(1).every((r) => r.h === 44) && pauseGeom(b2).rows[0].h === 54 && pauseGeom(b2).h <= 400,
     pauseGeom(b2).rows.map((r) => r.h).join() + " / " + pauseGeom(b2).h,
   );
   for (const B of [b2, bi]) {
     const g = pauseGeom(B, true);
     check("touch pause geometry round-trips through pauseHit(…, true) in " + B.w + "x" + B.h,
-      g.rows.every((r, i) => pauseHit(B.cx, r.cy, B, true) === i) && g.y > 0 && g.y + g.h < B.h);
+      g.rows.every((r, i) => pauseHit(r.cx, r.cy, B, true) === i) && g.y > 0 && g.y + g.h < B.h);
   }
 }
 {
@@ -339,7 +340,7 @@ check(
     "drawOverlay PAUSE defaults to the list at cursor 0",
     texts.includes("PAUSED") &&
       PAUSE_ROWS.every((r) => texts.includes(r)) &&
-      texts.includes("ESC · P RESUME · ↑↓ MOVE · ENTER CONFIRM · M QUIT"),
+      texts.includes("MOVE ↑↓ · CONFIRM ENTER"),
     texts.join("|"),
   );
   texts.length = 0;

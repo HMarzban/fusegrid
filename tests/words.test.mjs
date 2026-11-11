@@ -340,13 +340,20 @@ check("ruling 7: a bare NORMAL or HARD only where its own line or row names its 
 
 /* ---- fit: the longer words keep what the old slots said ---- */
 {
-  /* PAUSE: a daily keeps DAILY (a daily is always a default run), a heavy run keeps its modifier count; the kicker fits the plate */
+  /* PAUSE (v202 Task 5.1: the kicker is LEVEL n · world, the run's rules ride the tag row): a daily keeps DAILY (a daily is always a default run), a
+     heavy run keeps every rule (the named tags and the +N count them all); the kicker fits the plate. The page plans on its own measuring context. */
+  const { setMeasure } = await import("../src/render/pages/pause.js");
+  setMeasure(rec({ widthK: 0.7 }).ctx);
   for (const [name, B, touch] of [["keyboard", overlayBox("2d"), false], ["touch", overlayBox("2d"), true], ["iso", overlayBox("iso"), false]]) {
-    const kick = (w, run) => { const R = rec({ widthK: 0.7 }); drawOverlay(R.ctx, { state: "PAUSE", ...w }, B.w, B.h, B.cx, B.cy, { view: 0, cursor: 0, touch }, null, run); return R.texts.find((t) => /^LEVEL \d/.test(t.s)); };
+    const paint = (w, run) => { const R = rec({ widthK: 0.7 }); drawOverlay(R.ctx, { state: "PAUSE", ...w }, B.w, B.h, B.cx, B.cy, { view: 0, cursor: 0, touch }, null, run); return R.texts; };
+    const kick = (w, run) => paint(w, run).find((t) => /^LEVEL \d/.test(t.s));
     const d = kick({ level: 1, heat: 0, pace: 0, pact: 0 }, { daily: "2026-11-10" }), h = kick({ level: 8, heat: 2, pace: 1, pact: 15 }, null), plain = kick({ level: 3, heat: 0, pace: 0, pact: 0 }, null);
-    check(`PAUSE kicker (${name}): a daily keeps DAILY, a heavy run keeps its modifier count, a default run reads LEVEL n · world`,
-      !!d && d.s === "LEVEL 1 · JUNGLE · DAILY" && !!h && /4 MODIFIERS$/.test(h.s) && /^LEVEL 8 · /.test(h.s) && !!plain && plain.s === "LEVEL 3 · FACTORY", J([d && d.s, h && h.s, plain && plain.s]));
+    const all = W.runParts({ heat: 2, pace: 1, pact: 15 }), tags = paint({ level: 8, heat: 2, pace: 1, pact: 15 }, null).filter((t) => all.includes(t.s) || W.runParts({ heat: 2, pace: 1, pact: 15 }, { terse: true }).includes(t.s) || /^\+\d+$/.test(t.s)).map((t) => t.s);
+    const counted = tags.reduce((n, s) => n + (/^\+(\d+)$/.test(s) ? +s.slice(1) : 1), 0);
+    check(`PAUSE kicker (${name}): a daily keeps DAILY, a heavy run keeps every rule (its tags and +N), a default run reads LEVEL n · world`,
+      !!d && /^LEVEL 1 · (JUNGLE · )?DAILY$/.test(d.s) && !!h && h.s === "LEVEL 8 · CROWN" && counted === all.length && !!plain && plain.s === "LEVEL 3 · FACTORY", J([d && d.s, h && h.s, tags, plain && plain.s]));
   }
+  setMeasure(null);
   /* LEVEL SELECT (v202 Task 3.3): a MODIFIERS list entry's name, broken over two lines where one will not fit, stays inside its key, in the iso
      guard, the touch boxes and the narrow phone, at text scale 1 and 1.25 (the two-line path is reached at least once) */
   const { setTextScale } = await import("../src/render/kit/type.js");

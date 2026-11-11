@@ -534,14 +534,15 @@ function scan(grid){
     return op&&op[1][2];
   };
   const RE=PAUSE_ITEMS.indexOf("RESUME"), QT=PAUSE_ITEMS.indexOf("QUIT TO MENU");
-  const y0=rowY(RE);
+  const u=pauseGeom(B).u; // v202 Task 5.1: the PAUSE page paints in design px under scale(u): a drawn y is y * u in box units
+  const y0=rowY(RE)*u;
   check("iso pause overlay: RESUME draws at pauseGeom(overlayBox('iso')) row-0 y "
       +"(not the CFG box's)",
     RE===0&&PAUSE_ROWS[RE]==="RESUME"&&Math.abs(y0-pauseGeom(B).rows[RE].cy)<0.01, "y0="+y0+" row0="+pauseGeom(B).rows[RE].cy);
   check("iso pause overlay: drawn row-0 y maps back to pauseHit row 0 "
       +"against overlayBox('iso')",
     pauseHit(B.cx, y0, B)===RE, "y0="+y0);
-  const y3=rowY(QT);
+  const y3=rowY(QT)*u;
   check("iso pause overlay: drawn QUIT TO MENU y maps back to "
       +"pauseHit on its row ("+QT+"), never row 0",
     PAUSE_ROWS[QT]==="QUIT TO MENU"&&pauseHit(B.cx, y3, B)===QT, "y3="+y3);

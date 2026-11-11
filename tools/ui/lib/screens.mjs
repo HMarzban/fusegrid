@@ -55,7 +55,7 @@ const ROWS = {
   scoresfull: { menu: ["RECORDS"], seed: "records", wait: "records", state: "SCORES", exemptPhone: { ring: "a phone capture is tap mode (touch hints, no controller): the page shows no focus, as LEVEL SELECT (v202 fix round 1)", band: "a phone capture is tap mode: no focus band" }, exempt: { locked: "SCORES shows no locked value: the badges not yet earned are lock tags on a dark chip, not wall cells, and every key is open" } },
   statsfull: { menu: ["RECORDS"], seed: "records", key: "KeyE", wait: "records", state: "STATS", exemptPhone: { ring: "a phone capture is tap mode (touch hints, no controller): the page shows no focus, as LEVEL SELECT (v202 fix round 1)", band: "a phone capture is tap mode: no focus band" }, exemptIfNo: { locked: { rect: "^level \\d locked$", why: "no locked level drawn: world 8 opens levels 6-8, and a phone at its step 2 or a later STATS page draws no course" } } },
   play: { run: "play", state: "PLAY", settle: 900 },
-  pause: { run: "pause", state: "PAUSE", settle: 300 },
+  pause: { run: "pause", state: "PAUSE", settle: 300, exempt: { chosen: "PAUSE shows no chosen / unchosen values: every row is a verb or a door", locked: "PAUSE shows no locked value: every row is open" } },
   win: { run: "win", state: "WIN", settle: 1800 },
   lose: { run: "lose", state: "LOSE", settle: 1600 },
 };

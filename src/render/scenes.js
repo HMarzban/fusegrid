@@ -5,7 +5,7 @@ import { rr } from "./icons.js";
 import { PROJ } from "./r3d/camera.js";
 import { LABEL, diffTag, speedTag, runParts } from "./words.js";
 import { abilityList, abilityText, abilityOrd, getStrip } from "./fx.js";
-import { layout, listGeom, listHit, drawList, plate, fitKicker, setupVals, head as plateHead, foot as plateFoot, LINE } from "./menudraw.js";
+import { drawPause, VEIL as PAUSE_VEIL } from "./pages/pause.js";
 import { hints } from "./hintcopy.js";
 
 /* Scene UI: HUD, and the CLEARED / GAME OVER / PAUSED overlays.
@@ -162,28 +162,9 @@ export function dailyLine(world, run) {
   );
 }
 const copyHint = () => (hints().dev === "pad" ? " · WEST copy · NORTH board" : " · C copy · B board");
-/* Pause-list row copy mirrors src/app/menuapp.js PAUSE_ITEMS (words.test pins
-   them equal) — render/ must not import src/app (only shellview.js may), so the
-   labels are duplicated here the way menudraw's PLAQUE_NAME is. */
-export const PAUSE_ROWS = Object.freeze([
-  "RESUME",
-  LABEL.SETTINGS,
-  "RESTART",
-  "QUIT TO MENU",
-]);
-/* PAUSE is the MENU's own plate (menudraw listGeom/drawList): RESUME is the
-   hero row, SETTINGS the door, RESTART / QUIT select in red below a divider. Pitch caps follow the layout: touch
-   (data-lay p/l) gets PAUSE_ROW_H 70 (~46 CSS px on a phone), a keyboard
-   screen the compact PAUSE_ROW_D 44; a short box (iso 352) scales both down
-   to fit. Hit bands run the full stage width, so no side tap falls through. */
-export const PAUSE_ROW_H = 70,
-  PAUSE_ROW_D = 44;
-/* The shape by LABEL, never by position, the one place draw and tap read it (design record §4): RESUME the hero, SETTINGS
-   the door, RESTART and QUIT TO MENU danger, a rule before the first danger row (the wall-course divider, a 1 px line in
-   today's look: no gap, so the pitches and the plate stay). */
-const PAUSE_DANGER = ["RESTART", "QUIT TO MENU"];
-export const PAUSE_SHAPE = Object.freeze(PAUSE_ROWS.map((label, i) => Object.freeze({ label, hero: label === "RESUME", door: label === LABEL.SETTINGS, danger: PAUSE_DANGER.includes(label), rule: i > 0 && PAUSE_DANGER.includes(label) && !PAUSE_DANGER.includes(PAUSE_ROWS[i - 1]) })));
-const RULE_AT = PAUSE_SHAPE.findIndex((r) => r.rule);
+/* PAUSE (v202 Task 5.1) is a page on the world kit, src/render/pages/pause.js: its rows, shape, geometry, tap map and look tail live there and are
+   re-exported here, where the overlay and its readers have always found them. */
+export { PAUSE_ROWS, PAUSE_SHAPE, PAUSE_ROW_H, PAUSE_ROW_D, pauseGeom, pauseHit, pauseKick, pauseKickers, pauseKicker } from "./pages/pause.js";
 /* The ONE named coordinate space for pause chrome: it feeds both drawOverlay
    call sites and both hit tests, so the list, the inline SETTINGS page and the
    tap map can never disagree by a pixel. */
@@ -193,44 +174,6 @@ export function overlayBox(kind) {
   const w = CFG.COLS * CFG.TILE,
     h = CFG.ROWS * CFG.TILE;
   return { w, h, cx: w / 2, cy: h / 2 };
-}
-export function pauseGeom(B, touch) {
-  const top = Math.round(B.h * 0.115),
-    g = listGeom(layout(B.w, B.h), PAUSE_SHAPE, { top, bot: B.h - Math.round(top * 0.67), w: touch ? 380 : 340, pitch: touch ? PAUSE_ROW_H : PAUSE_ROW_D, hero: touch ? 76 : 54, pad: 10, head: 46, foot: 28 });
-  g.div = RULE_AT > 0 ? (g.rows[RULE_AT - 1].y1 + g.rows[RULE_AT].y0) / 2 : null; // the divider's y: the seam between SETTINGS and RESTART
-  return g;
-}
-export function pauseHit(x, y, box, touch) {
-  return listHit(x, y, pauseGeom(box || overlayBox("2d"), touch), true);
-}
-/* Run context for the PAUSE kicker, longest first: level, world, difficulty,
-   speed (+modifiers, +DAILY), each setting named; then menudraw's setupVals
-   forms (a modifier count, only what differs from a default run, EXPERT bare),
-   then the same without the world, DAILY kept on every one. pauseKicker is the
-   first. */
-export function pauseKickers(world, run) {
-  const w = world || {}, lv = LABEL.LEVEL + " " + (w.level | 0), d = run && run.daily ? " · DAILY" : "", r = { heat: w.heat, pace: w.pace, pact: w.pact };
-  const t = setupVals(lv, r)[3];
-  return setupVals(lv + " · " + biomeOf(w.level | 0).name, r).slice(0, 4).concat(t === lv ? [] : [t]).map((s) => s + d);
-}
-export const pauseKicker = (world, run) => pauseKickers(world, run)[0];
-/* v202 Q1: the look the player picked mid-run (app.lookNext: REAL 3D NEXT / READY /
-   · RESTORING) rides the kicker's end; run context drops from the end (DAILY,
-   modifiers, speed, difficulty) until it fits. No tail = the kicker, no measuring:
-   drawOverlay fits a kicker with no tail itself (pauseFit). */
-export function pauseKick(c, base, next, room) {
-  if (!next) return base;
-  const p = String(base).split(" · "), cands = [];
-  for (let n = p.length; n >= 1; n--) cands.push(p.slice(0, n).join(" · ") + " · " + next);
-  cands.push(next);
-  return fitKicker(c, cands, room);
-}
-/* A kicker with no tail: the first of cands that fits, else the last dropped
-   from the end until it does (the named settings outgrew the plate). */
-export function pauseFit(c, cands, room) {
-  const L = [].concat(cands), p = String(L[L.length - 1]).split(" · ");
-  for (let n = p.length - 1; n >= 1; n--) L.push(p.slice(0, n).join(" · "));
-  return fitKicker(c, L, room);
 }
 /* body[data-lay] p / l (fit.js) = a touch layout: the one predicate the
    pause draw (through its ctx's canvas) and main's tap map both read. */
@@ -252,7 +195,7 @@ export function drawOverlay(
   run,
   toast,
 ) {
-  c.fillStyle = world.state === "PAUSE" ? "rgba(7,10,18,0.72)" : "rgba(6,10,20,0.80)";
+  c.fillStyle = world.state !== "PAUSE" ? "rgba(6,10,20,0.80)" : ui && ui.view | 0 ? "rgba(7,10,18,0.72)" : PAUSE_VEIL; // the PAUSE list wears the kit's veil (.6); the inline pages keep theirs
   c.fillRect(0, 0, w, h);
   c.textAlign = "center";
   c.textBaseline = "middle";
@@ -299,21 +242,12 @@ export function drawOverlay(
     note();
   } else if (world.state === "PAUSE") {
     const u = ui || {};
-    /* view 1 / 2 = the inline SETTINGS / GRAPHICS page: veil only, so
+    /* view 1 / 2 / 3 = the inline SETTINGS / GRAPHICS / CONTROLS page: veil only, so
        drawShell's plate never lands on top of a live PAUSED headline. */
     if ((u.view | 0) >= 1) return;
-    /* Static (R16: PAUSE freezes everything) — no entry timer. */
-    const touch = u.touch == null ? touchOf(c) : !!u.touch,
-      g = pauseGeom({ w, h }, touch);
-    plate(c, g.x, g.y, g.w, g.h);
-    const base = u.note || pauseKicker(world, run);
-    plateHead(c, g, "PAUSED", u.next ? pauseKick(c, base, u.next, g.w - 24) : pauseFit(c, u.note ? [u.note] : pauseKickers(world, run), g.w - 24));
-    drawList(c, g, PAUSE_SHAPE, u.cursor | 0, 0, { touch });
-    if (g.div != null) {
-      c.fillStyle = LINE;
-      c.fillRect(g.x + 16, Math.round(g.div), g.w - 32, 1);
-    }
-    plateFoot(c, g, overlayCue(world, touch));
+    /* Static (R16: PAUSE freezes everything) — no entry timer. Every look calls this one painter (pages/pause.js). */
+    const cv = c && c.canvas, css = u.css != null ? u.css : cv && typeof cv.css === "number" ? cv.css : undefined;
+    drawPause(c, world, { w, h }, { ...u, touch: u.touch == null ? touchOf(c) : !!u.touch, css }, tm, run);
   }
 }
 

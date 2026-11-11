@@ -108,6 +108,7 @@ const SRC = Object.freeze([
   "src/render/pages/settings.js",
   "src/render/pages/guide.js",
   "src/render/pages/records.js",
+  "src/render/pages/pause.js",
   "src/render/pixel/anim.js",
   "src/render/pixel/art/walls.js",
   "src/render/pixel/art/blast.js",
