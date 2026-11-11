@@ -279,7 +279,7 @@ for (const pv of [1, 2]) {
   const loadRooms = room0(made.slice(n0)), n1 = made.length, m1 = cache._dbg.misses;
   md.drawSettings(t.ctx, md.layout(1366, 768, 207), 0, UI({ rows: R10, row: "MUSIC" }));
   const landed = made.slice(n1), roomAgain = landed.filter((cv) => cv.width === loadRooms[0].width && cv.height === loadRooms[0].height);
-  const MRD = (await import("../src/render/pages/menu.js")).roomDpr(t.ctx, BOX.d1366, { rev: "v201" }, 2); // MENU's room dpr (R1 train: one rule for MENU, LEVEL SELECT, SETTINGS and the LOADING plate)
+  const MRD = (await import("../src/render/kit/room.js")).roomDpr(t.ctx, BOX.d1366, { rev: "v201" }, 2); // MENU's room dpr (R1 train: one rule for MENU, LEVEL SELECT, SETTINGS and the LOADING plate)
   check("LOADING's room at the page's dpr (MENU's roomDpr, under the budget), and the page that lands finds it: no second room", loadRooms.length === 1 && loadRooms[0].width === Math.round(1366 * MRD) && loadRooms[0].width * loadRooms[0].height * 4 < 16e6 && roomAgain.length === 0 && P._dbg.last.s.rd === MRD, J([loadRooms.map((c) => [c.width, c.height]), landed.map((c) => [c.width, c.height]), cache._dbg.misses - m1, MRD]));
 }
 

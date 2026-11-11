@@ -679,8 +679,7 @@ function statsPlan(c, G, ui) {
   const titleF = T.display(dv.ttl * 0.72 * fk), tl = wrap(c, titleF, ST.TITLE, conf.title.w - 34, conf.tl) || [ST.TITLE];
   const bk2 = bestKick(), bk = bk2.join(" · "), bestK = W(c, sf, bk) <= b.bestK.w / k ? [bk] : bk2;
   const spage = b.pg ? Math.max(0, Math.min(b.pages - 1, ui.spage | 0)) : 0, on = (q) => { const v = b.pg ? b.pg[q] ?? b.pg[secOf(q)] : null; return v == null || v === spage; }; // a part, or its section where the body pages by sections
-  const pager = b.pager ? {s: RW.PAGE + " " + (spage + 1) + " " + RW.OF + " " + b.pages, upOn: spage > 0, dnOn: spage < b.pages - 1} : null;
-  return {spage, on, pager, bestK, hero: h, qual, digits: h ? [...sep3(h.s)] : [], far: h && v.far >= 1 ? v.far | 0 : 0, reached: h && v.far >= 1 ? ST.FURTHEST + " " + (v.far | 0) + " · " + biomeOf(v.far | 0).name : "", life, bests, top, notes,
+  return {spage, on, bestK, hero: h, qual, digits: h ? [...sep3(h.s)] : [], far: h && v.far >= 1 ? v.far | 0 : 0, reached: h && v.far >= 1 ? ST.FURTHEST + " " + (v.far | 0) + " · " + biomeOf(v.far | 0).name : "", life, bests, top, notes,
     tiles: [[ST.RUNS, sep3(v.runs | 0), "bomb"], [ST.PLAY_TIME, hm(v.secs), "clock"], [ST.MEDALS, (v.medals | 0) + "/8", "medal"]],
     confirm: {title: tl, body: wrap(c, cf, sentence, conf.body.w, conf.bl) || [sentence], sentence, tf: titleF}};
 }
@@ -1029,7 +1028,7 @@ function same(S0, G, ui, w, dpr, c, tap) {
   return true;
 }
 const J = JSON.stringify;
-/* the room: MENU's own room layer at MENU's room dpr (menu.js roomDpr, the one rule MENU, LEVEL SELECT, SETTINGS and GUIDE use; R1 train), so a
+/* the room: MENU's own room layer at MENU's room dpr (menu.js roomRule, the one rule MENU, LEVEL SELECT, SETTINGS and GUIDE use; R1 train), so a
    MENU / RECORDS hop never refills it; this page's own give-way (its page layer and feet inside the budget; no logo reserve, RECORDS shows no logo)
    is the floor, and only where that is under MENU's dpr does the room take its own key */
 function sizes(S0, G, F, level, tok, ui) {

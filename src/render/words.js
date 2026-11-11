@@ -88,9 +88,8 @@ export const LEVEL_WORDS = Object.freeze({
 /* RECORDS (v202 Tasks 4.1 / 4.2, pages/records.js): the page's own words. Badges are the four plaques (src/app/plaques.js bit order CLEAR, PLUS, MAX,
    CROWN), the two difficulty ones read as their difficulty. */
 export const REC_WORDS = Object.freeze({
-  MENU: "MENU", BACK: "BACK", TAB: LABEL.TAB, TABS: LABEL.TABS, LOADING: "LOADING", BADGES: "BADGES", RANK: "RANK", SCORE: "SCORE", DATE: "DATE",
+  MENU: "MENU", BACK: "BACK", TAB: LABEL.TAB, BADGES: "BADGES", RANK: "RANK", SCORE: "SCORE", DATE: "DATE",
   NONE: "—", NO_MODS: "NO " + LABEL.MODIFIERS, EARNED: "EARNED", TAP: "TAP A TAB · TAP OUTSIDE TO GO BACK",
-  PAGE: "PAGE", OF: "OF",
 });
 export const BADGE_NAMES = Object.freeze(["CLEAR", DIFF[1], DIFF[2], "CROWN"]);
 export const noRunsYet = (h) => "NO " + diffTag(h) + " RUNS YET";

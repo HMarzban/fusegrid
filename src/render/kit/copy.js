@@ -1,10 +1,11 @@
 /* KIT COPY (R1): words more than one page paints. lookVal: the RENDER row's job words, longest first (n = menudraw lookNote's note). */
 import {hints, tapMode} from "../hintcopy.js";
+import {ART_STYLES} from "../words.js";
 
 export const LOAD_WORDS = Object.freeze({loading: "LOADING", failed: "DID NOT LOAD"});
 export const BACK_TAP = "TAP OUTSIDE TO GO BACK";
 export const FOOT_TAP = "TAP A ROW TO CHANGE IT · " + BACK_TAP;
-export const LOOK_NAME = Object.freeze({px: "PIXEL", "3d": "REAL 3D"});
+export const LOOK_NAME = Object.freeze({px: ART_STYLES[1], "3d": ART_STYLES[2]});
 const PH_WORD = {bake: "ART", build: "BUILDING", shaders: "SHADERS"};
 export function lookVal(n, touch) {
   const L = LOOK_NAME[n.k] || "";

@@ -380,16 +380,16 @@ function sizes(S, G, F, level, tok) {
 }
 /* the room's dpr: what is left of the budget once the plate, the foot reserve and the logo reserve are held, never above the device's */
 const rdOf = (F, dpr, plate, feet) => roomFit(F, dpr, ROOM_RESERVE + plate + feet);
-/** MENU's room dpr for the box F at the capped dpr: the shared room rule (kit room.js shareRoom / roomDpr) every page that blits MENU's room layer
-    uses, so a hop between them never refills the room. ui: {rows, rev}. */
-export function roomDpr(c0, F, ui, dpr) {
+/** MENU's room dpr for the box F at the capped dpr: the shared room rule, installed in kit room.js (shareRoom), whose roomDpr every page that
+    blits MENU's room layer asks, so a hop between them never refills the room. ui: {rows, rev}. */
+export function roomRule(c0, F, ui, dpr) {
   if (!okBox(F)) return 1;
   const c = mOf(c0), G = menuGeom(F, (ui && ui.rows) || MENU_ROWS), u = G.u, Gt = Object.assign(Object.create(G), {touch: !!F.touch}), words = hints(), bare = {...(ui || {}), note: "", pad: ""};
   const reserve = G.mode === "desk" ? [M.START, M.OPEN, M.SOURCE_PAD].map((v) => footPlan(c, Gt, bare, words, v, "").w + 2) : [];
   const pb = sc(outer(G.d), u), feet = Math.ceil(reserve.reduce((n, w) => n + Math.round(w * u * dpr), 0) / FEET_STEP) * FEET_STEP * Math.round((FOOT_H + 6) * u * dpr) * 4;
   return rdOf(F, dpr, Math.round(pb.w * dpr) * Math.round(pb.h * dpr) * 4, feet);
 }
-shareRoom(roomDpr);
+shareRoom(roomRule);
 const J = JSON.stringify;
 export const _dbg = {plans: 0, last: null};
 let S = null;

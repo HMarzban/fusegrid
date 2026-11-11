@@ -1,18 +1,9 @@
-/* MENU DRAWING LAYER — all menu/intro pixels as pure functions over a
-   normalized layout valid at both 600x520 (2D) and 608x352 (3D). Reads only
-   its args; never touches world/app state. Palette locked (spec §0/§2):
-   accent #37f0d0, text #dfe7f5, muted #7385ad, veils rgba(7,10,18,a).
-   Easing helpers duplicated from the intro beat table (spec §3) — this file
-   must not import from src/app. */
-import { CFG, BIOMES } from "../core/config.js";
-import { FOES } from "../core/entities.js";
-import { HEAT_COL, clampHeat } from "../core/heat.js";
-import { DIFF, TIME_TRIAL, LABEL, runParts } from "./words.js";
-import { drawEnemyBody } from "./sprites.js";
-import { HOME, TILE_HELP, TILE_NAME } from "../core/feat.js";
+/* MENU DRAWING LAYER: the entry names shellview, the pointer and the tests call. The pages are src/render/pages/ (the world kit, kit/); this
+   file keeps the INTRO chrome, the ATTRACT hint, the FPS meter, the RENDER row's job note and THE LOADING plate's ask, and the CONSOLE PANEL
+   kit (plate, head, foot, paintRow, listGeom) that the PAUSE list and CONTROLS still wear: accent #37f0d0, text #dfe7f5, muted #7385ad, veils
+   rgba(7,10,18,a). Easing helpers duplicated from the intro beat table (spec §3): this file must not import from src/app. */
+import { LABEL, runParts } from "./words.js";
 import { rr } from "./icons.js";
-import { pixelArt, blitAnim, foeAnim, seedOf as pxSeed } from "./hudart.js";
-import { foeM, blinkAt } from "./motion.js";
 import { hints, tapMode } from "./hintcopy.js";
 import { drawLogo2d, deviceScale, TITLE_RUNUP } from "./logo/draw2d.js";
 import * as menuPage from "./pages/menu.js";
@@ -21,7 +12,7 @@ import { rosterOf } from "./pages/card.js";
 import * as lazy from "./pages/lazy.js";
 import { capDpr } from "./kit/cache.js";
 import { loadingPlate, loadBox } from "./kit/room.js";
-import { FOOT_TAP, BACK_TAP, LOOK_NAME, lookVal, LOAD_WORDS } from "./kit/copy.js";
+import { FOOT_TAP, LOOK_NAME, lookVal, LOAD_WORDS } from "./kit/copy.js";
 const ACCENT = "#37f0d0",
   TEXT = "#dfe7f5",
   MUTED = "#7385ad";
@@ -239,8 +230,6 @@ export function pageBox(L, maxW, body, touch, o) {
     y = Math.round(p.bottom ? B.bot - h : B.top + Math.max(0, (B.bot - B.top - h) / 2));
   return { x, y, w, h, f, ix: x + 16, iw: w - 32, mid: x + w / 2, headY: y + 26, footY: y + h - 16, by: y + PAD + HEAD };
 }
-const boxPlate = (c, S) => plate(c, S.x, S.y, S.w, S.h);
-const inR = (r, x, y, p) => x >= r.x - p && x <= r.x + r.w + p && y >= r.y - p && y <= r.y + r.h + p;
 const mw = (c, s) => {
   const m = c.measureText && c.measureText(s);
   return m && typeof m.width === "number" ? m.width : String(s).length * 6;
@@ -291,33 +280,9 @@ function lockGlyph(c, x, y, s, col) {
   c.fillRect(x - s * 0.26, y - s * 0.4, s * 0.52, k);
   c.fillRect(x - s * 0.38, y - s * 0.12, s * 0.76, s * 0.55);
 }
-const DUMMY = { type: "walker", color: "#8affc1", r: 14, home: { x: 0, y: 0 }, invuln: false };
-const FOE_OF = Object.fromEntries(FOES.map((f) => [f.t, f]));
-const GX = { a: 1, gl: 0, fl: 0, bl: null };
-const GW = { time: 0 };
-const seedOf = (k) => {
-  let h = 0;
-  for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) | 0;
-  return (h & 255) * 9;
-};
-function foeAt(c, A, t, cx, cy, s, time, ps) {
-  const f = FOE_OF[t] || FOES[0];
-  if (A) return blitAnim(c, foeAnim(A, f.t, time, { idleW: foeM(f.t).idleW, blink: blinkAt(f.t, pxSeed(f.t), time || 0) > 0.5 }), cx, cy, ps || (s >= 36 ? 2 : 1));
-  DUMMY.type = f.t;
-  DUMMY.color = f.col;
-  DUMMY.home.x = seedOf(f.t);
-  DUMMY.home.y = seedOf(f.t + "y");
-  GW.time = time;
-  c.save();
-  c.translate(cx, cy);
-  c.scale(s / 30, s / 30);
-  drawEnemyBody(c, GW, DUMMY, GX);
-  c.restore();
-}
 /* heatRoster deduped to [{t, n}] in first-seen order: the next-run card's (pages/card.js), the one roster. */
 export { rosterOf };
-/* A run's setup for one value slot, longest first (fitVal / fitIn keep the
-   first that fits): every setting named; the modifiers as a count; only what
+/* A run's setup for one value slot, longest first (the first that fits is kept): every setting named; the modifiers as a count; only what
    differs from a default run (the approved PLAY tag); the same with EXPERT
    bare; the same without the world, which the MENU pane beside the list
    already names. The words and the non-default filter are words.js runParts. */
@@ -344,15 +309,6 @@ function segs(c, rs, labels, on, cols, touch, fs) {
     c.fillText(labels[i], r.x + r.w / 2, r.y + r.h / 2 + 1);
   }
 }
-/* The largest size from px down to min whose s fits w (the font is left set);
-   a word that outgrows its old slot keeps its whole spelling, smaller. */
-function fitFont(c, s, w, px, min, weight, f) {
-  const mk = f || font;
-  let k = px;
-  for (c.font = mk(k, weight); k > min && mw(c, s) > w; ) c.font = mk(--k, weight);
-  return c.font;
-}
-
 /* lg: the shell box's logo line (fit.js shellGeo, the board's own 0.27 in #sh
    units, on every layout that has a shell box); tall marks a box over 1.3x as
    tall as wide (a portrait phone's #sh or a tall window: the touch MENU hub
@@ -538,10 +494,6 @@ export function loadingPage(c, F, title, ui, name) {
   loadingPlate(c, F, { level: u.level, rev: u.rev, paused: u.paused, title, dpr: capDpr(deviceScale(c), !!F.touch), line: u.failed || (a && a.fails > 0) ? LOAD_WORDS.failed : LOAD_WORDS.loading });
 }
 
-/* GUIDE art in PIXEL (W5, R19): kind "px" swaps only the scaled vector glyph
-   for the atlas cell (hudart.js); LEVEL SELECT's room card reads it. */
-const pxArt = (kind) => (kind === "px" ? pixelArt() : null);
-
 /* GUIDE and its four pages are src/render/pages/guide.js (UI upgrade v202 Task 3.5), lazy (pages/lazy.js "guide"): one geometry for draw and
    tap, names by label. These keep the entry names shellview, the pointer and the tests call; L is layout(W, H, lg, css) for the box the page draws
    on, touch body[data-lay] p / l, o = {level (the world), foe (ENEMIES' focused foe), tip (its tooltip open)}. Until the module is in, a page
@@ -646,12 +598,6 @@ export function lookNote(m, job, now, pick) {
     if (now - m.readyT < READY_T) return { m, n: { k: m.k, st: "ready", fill: 1 } };
   }
   return { m: null, n: null };
-}
-/* LEVEL SELECT's START tag: the first of cands that fits room at the value type, else the last one clipped. */
-export function fitVal(c, cands, room) {
-  c.font = font(12);
-  for (const s of cands) if (mw(c, s) <= room) return s;
-  return clip(c, cands[cands.length - 1], room);
 }
 /* GRAPHICS' rows arrive finished from the app (gfx.js owns every string; this file must not import src/app): ui = {row, view, togT, chg, kicker,
    touch, level, paused}; the page draws them (pages/settings.js drawGraphicsPage). */

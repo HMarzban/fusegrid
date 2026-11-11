@@ -770,7 +770,7 @@ let S = null;
 const outer = (D) => R(D.plate.x - D.T - 2, D.plate.y - D.T - 2, D.plate.w + 2 * D.T + 4, D.plate.h + 2 * D.T + 5);
 function sizes(S, G, F, level, tok, look) {
   const D = G.d, u = G.u, dpr = S.dpr, ob = outer(D), K = {biome: tok.name, level, W: F.W, H: F.H, look, textScale: S.ts};
-  S.rd = canMake() ? roomDpr(S.c, F, {rev: S.ui.rev}, dpr) : 1; // the room's dpr: MENU's own rule (kit room.js roomDpr), so MENU and GUIDE share one room layer; with no canvas source there is no room layer to size
+  S.rd = roomDpr(S.c, F, {rev: S.ui.rev}, dpr); // the room's dpr: MENU's own rule (kit room.js roomDpr, which guards the ask), so MENU and GUIDE share one room layer
   S.roomK = keyOf({layer: "room", biome: tok.name, level, W: F.W, H: F.H, dpr: S.rd, look: "2d", textScale: 1});
   const roomB = Math.round(F.W * S.rd) * Math.round(F.H * S.rd) * 4, area = ob.w * u * ob.h * u;
   const tipA = D.tips ? Math.max(...D.tips.map((q) => (q.r.w + 2 * q.Tt + 4) * (q.r.h + 2 * q.Tt + 12))) * u * u * 2 : 0, footA = D.foot ? (D.plate.w + 4) * (FOOT_H + 8) * u * u : 0;

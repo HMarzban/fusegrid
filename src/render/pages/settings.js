@@ -52,7 +52,7 @@ export const COPY = deep({
   looks: "The same game in three looks. PIXEL and REAL 3D download the first time you pick them.",
   add3d: "REAL 3D adds two rows here: CAMERA and BRIGHTNESS.",
   on3d: "CAMERA and BRIGHTNESS are on the list while REAL 3D is your art style.",
-  of: "OF", row: "ROW", change: "CHANGE", back: "BACK", tapRow: "TAP A ROW TO CHANGE IT", loading: "LOADING", build: "BUILD", perf: "PERFORMANCE · BATTERY", page: "PAGE",
+  of: "OF", row: "ROW", change: "CHANGE", back: "BACK", tapRow: "TAP A ROW TO CHANGE IT", build: "BUILD", perf: "PERFORMANCE · BATTERY",
 });
 const CAM_NAME = ["STANDARD", "WIDE", "FAR"];
 

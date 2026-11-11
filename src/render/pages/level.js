@@ -21,7 +21,7 @@
    drawLevelPage(c, F, ui, t): ui = {level, heat, pace, pact, time, unlocked, best (a formatted time or null), row (the focused row's name), open, cur
    (the list's cursor), trig (a controller's TRIGGER cursor with the list shut, -1 none), tap (tap mode: no focus model, START focused as the page's one
    action), lockR, lockT (the locked level a refusal named and when), reduced, enterT, rev (MENU's build tag: the shared room's dpr)}. Cached (kit
-   cache.js, recency touched on a steady frame; see sizes()): MENU's own room layer at MENU's room dpr (menu.js roomDpr, one key, so a MENU / LEVEL
+   cache.js, recency touched on a steady frame; see sizes()): MENU's own room layer at MENU's room dpr (menu.js roomRule, one key, so a MENU / LEVEL
    SELECT switch never refills it), the plate (rampart and bed) as its own layer at 1 device px per box unit, the rampart's strips, the head, the rows
    at rest, START at rest, the card, the LEVEL row's focus, the list and the desk feet, all made at once so a focus move never misses, keyed by what
    they show. Live: the other rows', START's and a list entry's focus, the door's teaser, the help line, START's tag and keycap, the lock tip. A context that cannot measure plans on a
@@ -561,7 +561,7 @@ function same(S, G, ui, w, touchy, dpr, ts, c) {
 }
 const grow = (r, e) => R(r.x - e, r.y - e, r.w + 2 * e, r.h + 2 * e);
 const union = (rs) => { const q = rs.filter(Boolean), x = Math.min(...q.map((r) => r.x)), y = Math.min(...q.map((r) => r.y)); return R(x, y, Math.max(...q.map((r) => r.x + r.w)) - x, Math.max(...q.map((r) => r.y + r.h)) - y); };
-/* The layers, each keyed by what it shows (fix round 1, ruling (c)). The room is MENU's own kit roomLayer at MENU's room dpr (menu.js roomDpr: one
+/* The layers, each keyed by what it shows (fix round 1, ruling (c)). The room is MENU's own kit roomLayer at MENU's room dpr (menu.js roomRule: one
    rule, one key), so a MENU / LEVEL SELECT switch never refills it. The plate (rampart and bed) is its own layer at 1 device px per box unit (the
    bed is flat rects) under the four rampart strips at full dpr; the head, the rows at rest, the card and START at rest are full-dpr layers of their
    own rects, so the plate's empty bed costs no full-dpr bytes. The LEVEL row's focus (eight keys) is a layer; the other rows, START and a list entry

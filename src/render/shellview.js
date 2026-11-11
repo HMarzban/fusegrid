@@ -51,7 +51,7 @@ export const shellMode = (s, world) => (SHELL_ON.has(s) ? 1 : s === SCREEN.GAME 
    SELECT; Task 3.4: SETTINGS and GRAPHICS, their LOADING plate included; Task 3.5: the GUIDE pages; Tasks 4.1 / 4.2: RECORDS' SCORES, STATS and MEDALS; each page task adds its screen): main passes
    {covered: true} to the renderer while one holds, so no look rasters a board nobody sees. PAUSE's views sit over the board and never cover it. */
 const COVERS = new Set([SCREEN.MENU, SCREEN.LEVEL, SCREEN.SETTINGS, SCREEN.GRAPHICS, SCREEN.GUIDE, SCREEN.HOWTO, SCREEN.ITEMS, SCREEN.ENEMIES, SCREEN.FLOOR, SCREEN.SCORES, SCREEN.STATS, SCREEN.TROPHIES]);
-/* the GUIDE pages (v202 Task 3.5) are lazy (pages/lazy.js): asked for on every GUIDE frame until they are in, and with the rest in MENU's first idle */
+/* the GUIDE pages (v202 Task 3.5) are lazy (pages/lazy.js): menudraw's ask (every 3 s after a failure) and MENU's first idle bring them in */
 const GUIDE_ON = new Set([SCREEN.GUIDE, SCREEN.HOWTO, SCREEN.ITEMS, SCREEN.ENEMIES, SCREEN.FLOOR]);
 const guideO = (app) => ({ level: app.level | 0 || 1, foe: app.foeRow | 0, tip: !!app.foeTip, pg: app.infoPg | 0, rev: REV }); // rev: MENU's foot reserve, so the room dpr (and key) is MENU's
 let guidePg = 1;
@@ -204,45 +204,27 @@ function scoreData(app, getScores, getPlaques) {
   return memo;
 }
 
-/* ATLAS info (MENU pane + hub teasers, LEVEL SELECT card + room ticks).
-   getCab hands main's read-only stores {times, daily, top}; they
-   are read once per screen entry (nothing writes them while a menu page is
-   open) and formatted here, so menudraw never reads a store. heatT stamps
-   every heat change (the card's heat-line pulse); lockT is honoured only
-   when main stamped it on THIS visit. */
+/* LEVEL SELECT's info and MENU's teasers. getCab hands main's read-only stores {times, daily, top}; they are read once per screen entry (nothing
+   writes them while a menu page is open) and formatted here, so menudraw never reads a store. lockT is honoured only when main stamped it on THIS visit. */
 let cab = null,
   cabFor = -1,
-  heatSeen = null,
-  heatT = -1,
   lockSeen = null,
   top3 = [];
-/* Read live: a pad can wake while MENU is open. */
-const padOn = (app) => { const st = app.controls ? app.controls.view(app.ctlT).pad.state : "none"; return st === "ready" || st === "nonstd"; };
-function infoOf(app, kind, getScores, getCab) {
+function infoOf(app, getCab) {
   if (cabFor !== app.screen) {
     cabFor = app.screen;
     cab = (getCab && getCab()) || {};
     top3 = Array.isArray(cab.top) ? cab.top : []; // played runs only (main drops the seeded placeholders)
-    heatSeen = app.heat;
-    heatT = -1;
     lockSeen = app.lockT;
-  }
-  if (app.heat !== heatSeen) {
-    heatSeen = app.heat;
-    heatT = app.subT;
   }
   const h = clampHeat(app.heat),
     pact = app.pactUnlocked ? clampPact(app.pact) : 0,
     pz = clampPace(app.pace) + 1,
-    tb = (cab.times && cab.times.b) || {},
-    st = app.settings || {};
+    tb = (cab.times && cab.times.b) || {};
   return {
-    kind, heatT, tiles: !!cab.tiles, level: app.level | 0 || 1, heat: h, pace: pz - 1, pact, unlocked: !!app.pactUnlocked,
     lockR: app.lockR, lockT: app.lockT !== lockSeen ? app.lockT : null,
     row: LEVEL_ROWS[app.levelRow | 0], open: !!app.modOpen, cur: app.modeCur, // LEVEL SELECT's focus: the row's name, the MODIFIERS list and its cursor (v202 Task 2.3)
     best: Array.from({ length: 8 }, (_, i) => { const d = tb[i + 1 + ":" + h + ":" + pact + ":" + pz]; return d > 0 ? fmtTime(d / 10) : null; }),
-    daily: cab.daily || null, // the STATS row's medals / lifetime counters left MENU with it (RECORDS, v202 Task 2.2)
-    top: top3, look: app.render3d ? 2 : app.pixel ? 1 : 0, opt: app.optRows(), snd: st.snd !== 0, mus: st.mus, sfx: st.sfx, gfx: app.gfxPreset ? app.gfxPreset() : "", pad: padOn(app),
   };
 }
 
@@ -251,7 +233,7 @@ function infoOf(app, kind, getScores, getCab) {
    again on every arrival from another screen (a run played from PLAY or DAILY never passes LEVEL SELECT's read), so a teaser never shows the
    cabinet as it was before the run. */
 function menuUi(app, touch, getCab) {
-  if (cabFor !== app.screen || prevScreen !== SCREEN.MENU) { cabFor = -1; infoOf(app, "", null, getCab); }
+  if (cabFor !== app.screen || prevScreen !== SCREEN.MENU) { cabFor = -1; infoOf(app, getCab); }
   return {
     rows: ITEMS, focus: tapMode(touch) ? ITEMS[0] : ITEMS[app.cursor | 0] || ITEMS[0], level: app.level | 0 || 1,
     run: { heat: app.heat, pace: app.pace, pact: app.pactUnlocked ? clampPact(app.pact) : 0, time: !!(app.pactUnlocked && app.timeAttack) },
@@ -323,7 +305,6 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
   if (s === SCREEN.SETTINGS) return menudraw.drawSettings(c, menudraw.layout(cw, chh, logoY, css), app.subT, optUi(app, canvas)); // css: the box the pointer maps a tap through
   if (s === SCREEN.GRAPHICS) return menudraw.drawGraphics(c, menudraw.layout(cw, chh, logoY, css), app.subT, gfxUi(app, canvas));
   if (GUIDE_ON.has(s)) {
-    if (!lazy.get("guide")) lazy.want("guide").catch(() => {});
     const t = touchLay(canvas), LG = menudraw.layout(cw, chh, logoY, css), o = guideO(app);
     if (s === SCREEN.GUIDE) return menudraw.drawGuide(c, LG, app.subT, app.guideRow, kind, t, o);
     if (s !== SCREEN.ENEMIES) guidePg = menudraw.guidePages(LG, t, s === SCREEN.HOWTO ? "HOW TO PLAY" : s === SCREEN.ITEMS ? "POWER-UPS" : "FLOOR");
@@ -335,13 +316,12 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
     if (s === SCREEN.STATS) { const st = app.stats || {}; return menudraw.drawStats(c, { level: app.level, rev: REV, focus, view: st.view, notes: st.notes, wipe: st.wipe, arm: !!app.resetArm, toast: app.toast && app.toast.t > 0 ? app.toast : null, unlocked: !!app.pactUnlocked, spage: app.recPage | 0 }, Lr, app.subT, t); }
     return menudraw.drawTrophies(c, { level: app.level, rev: REV, focus, rows: app.stats && app.stats.trophies, spage: app.recPage | 0 }, Lr, app.subT, t);
   }
-  const L = menudraw.layout(cw, chh, logoY);
   if (s === SCREEN.LEVEL) {
     /* opaque on the world kit (pages/level.js): the selected level's room; tap mode (ruling 4) is a touch layout last driven by touch: any key or
        controller press (app.lastDev, raw, no dwell) leaves it and shows the focus, a tap re-enters it */
     const t = touchLay(canvas);
     menudraw.drawLevelSelect(c, app.level, menudraw.layout(cw, chh, logoY, css), app.subT, app.heat, app.pact, app.pactUnlocked, app.pace, app.timeAttack, t,
-      { ...infoOf(app, kind, getScores, getCab), tap: t && app.lastDev === "touch", enterT: app.subT, rev: REV }); // rev: MENU's foot reserve, so the room dpr (and key) is MENU's
+      { ...infoOf(app, getCab), tap: t && app.lastDev === "touch", enterT: app.subT, rev: REV }); // rev: MENU's foot reserve, so the room dpr (and key) is MENU's
   } else if (s === SCREEN.CONTROLS) {
     menudraw.drawDim(c, 0.72, cw, chh);
     if (app.controls) paintControls(c, app, canvas, kind, false);

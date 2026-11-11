@@ -15,7 +15,7 @@
               #0b0609 frame on the box edge. Returns the height. No clock: the page animates its focused cell itself.
    foeCell    (c, x, y, s, type, level) a foe at rest on a floor cell of level's world, s px square: a 2 px #0b0609 outline, radius 3, a hard 3 px drop.
    tileCell   (c, x, y, s, level) level's floor tile (core/feat.js HOME, CORE, a lone cell) in the same frame; a world with no tile paints its floor.
-   R1: the shared room rule (MENU installs it: shareRoom; roomDpr throws until then; pageRoomDpr floors it at a page's own fit) and THE
+   R1: the shared room rule (MENU installs it: shareRoom; roomDpr throws until then; pageRoomDpr caps it at a page's own fit) and THE
    LOADING plate (loadingPlate, its box loadBox); AGENTS.md "Lazy pages". */
 import {CFG, T, key, biomeOf} from "../../core/config.js";
 import {stampStart} from "../../core/fair.js";
@@ -77,11 +77,12 @@ export const ROOM_RESERVE = 3 * 1024 * 1024;
 export const roomFit = (F, dpr, held) => +Math.max(0.5, Math.min(dpr, Math.sqrt(Math.max(0, BUDGET - held) / (4 * F.W * F.H)))).toFixed(3);
 let rule = null;
 export const shareRoom = (fn) => { rule = fn; };
+/* every page's room ask comes here, guarded once: with no canvas source (Node) there is no room layer to size */
 export function roomDpr(c, F, ui, dpr) {
   if (!rule) throw new Error("kit roomDpr: no shared room rule (pages/menu.js installs it)");
-  return rule(c, F, ui, dpr);
+  return canMake() ? rule(c, F, ui, dpr) : 1;
 }
-export const pageRoomDpr = (c, F, ui, dpr, held) => Math.min(roomDpr(c, F, ui, dpr), roomFit(F, dpr, held));
+export const pageRoomDpr = (c, F, ui, dpr, held) => (canMake() ? Math.min(roomDpr(c, F, ui, dpr), roomFit(F, dpr, held)) : 1);
 
 /* the plate is 360 x 128 design px; on a touch board canvas (#c, no shell box: a landscape phone, a PAUSE view) a design px is a CSS px where it fits
    and never under LOAD_FLOOR CSS px (its 16 px line at the phone's 9 px secondary cap), the plate narrowing to the box there and the title fitting it */
