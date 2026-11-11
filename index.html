@@ -125,6 +125,10 @@
   body[data-lay=l] #tthrow{right:auto;left:calc(100% + 40px);bottom:90px}
   body[data-lay=l] #tremote{right:auto;left:calc(100% + 100px);bottom:90px}
   body[data-lay=l] #tpause{right:auto;bottom:auto;left:calc(100% + 54px);top:0}
+  /* world-1 (JUNGLE) kit tokens as custom properties: the DOM cards cannot import render/kit at boot, so these are static and
+     tests/hidden-css.test.mjs pins every value equal to worldTokens(1) in src/render/kit/tokens.js (frame = wall, the flat stand-in) */
+  :root{--k-pane:#04160d;--k-well:#051709;--k-key:#34270c;--k-keyhi:rgba(255,232,120,0.22);--k-band:#524b27;--k-lit:#87f674;--k-frame:#d4a030;
+    --k-ink:#fff2df;--k-off:#8f8476;--k-dk:#1e1216;--k-cor:#ff5d73}
   /* NEW VERSION READY card (src/app/update.js): the CONSOLE PANEL plate as a
      DOM card, centred on the screen (owner 2026-10-19: "must appear in center
      of the page") over a blurred, dimmed backdrop (#updbg; a tap on it = LATER),
@@ -132,38 +136,38 @@
      wide RELOAD and a LATER; touch grows the buttons to 44px. */
   #upd{position:fixed;z-index:20;left:50%;top:50%;translate:-50% -50%;width:min(420px,calc(100vw - 32px));
     box-sizing:border-box;display:flex;flex-wrap:wrap;align-items:center;gap:12px 10px;padding:18px 18px 16px 22px;
-    background:rgba(10,14,24,.97);border:1px solid #2a3550;border-radius:6px;
-    box-shadow:0 4px 0 rgba(0,0,0,.35),inset 3px 0 0 #37f0d0;color:#dfe7f5;
+    background:var(--k-pane);border:1px solid var(--k-frame);border-radius:6px;
+    box-shadow:0 4px 0 rgba(0,0,0,.35),inset 3px 0 0 var(--k-lit);color:var(--k-ink);
     font:700 16px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.12em;
     animation:updIn .16s steps(4) both;user-select:none;-webkit-user-select:none}
-  #updbg{position:fixed;inset:0;z-index:19;background:rgba(4,7,14,.45);
+  #updbg{position:fixed;inset:0;z-index:19;background:rgba(11,6,9,.5);
     -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);animation:updFade .16s linear both}
   #upd b{flex-basis:100%}
-  #upd i{flex-basis:100%;margin-top:-6px;font:400 12px ui-monospace,monospace;font-style:normal;color:#7385ad;letter-spacing:0}
-  #upd .go{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 14px;border:1px solid #37f0d0;
-    border-radius:4px;background:rgba(55,240,208,.14);color:#37f0d0;font-size:14px;letter-spacing:.1em;cursor:pointer}
-  #upd kbd,#ana kbd{font:900 11px ui-monospace,monospace;padding:2px 6px;background:rgba(4,7,14,.95);border:1px solid #26324a;
-    border-radius:3px;color:#dfe7f5;letter-spacing:0}
-  #upd .later{font:12px ui-monospace,monospace;color:#7385ad;letter-spacing:.06em;padding:0 12px;line-height:40px;cursor:pointer}
-  #upd .later kbd{display:none;margin-right:8px}
+  #upd i{flex-basis:100%;margin-top:-6px;font:400 12px ui-monospace,monospace;font-style:normal;color:var(--k-off);letter-spacing:0}
+  #upd .go{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 14px;border:1px solid var(--k-frame);
+    border-radius:4px;background:var(--k-band);color:var(--k-ink);font-size:14px;letter-spacing:.1em;cursor:pointer}
+  #upd kbd,#ana kbd{font:900 11px ui-monospace,monospace;padding:2px 6px;background:var(--k-dk);border:1px solid var(--k-off);
+    border-radius:3px;color:var(--k-ink);letter-spacing:0}
+  #upd .later{font:12px ui-monospace,monospace;color:var(--k-off);letter-spacing:.06em;padding:0 12px;line-height:40px;cursor:pointer}
+  #upd .later kbd{display:none;margin-left:8px}
   #upd[data-pad="1"] kbd{display:inline}
-  #upd .go:hover{background:rgba(55,240,208,.22)}#upd .later:hover{color:#dfe7f5}
+  #upd .go:hover{background:var(--k-keyhi)}#upd .later:hover{color:var(--k-ink)}
   /* consent card (src/app/analytics.js): the same plate, small, docked bottom
      right with no backdrop, so the game plays on behind it (owner 2026-10-26);
      ALLOW and NO THANKS carry equal weight — one size, one border, one fill.
      Touch portrait docks it across the bottom; it waits out a touch run. */
   #ana{position:fixed;z-index:20;right:16px;bottom:16px;width:min(330px,calc(100vw - 32px));
     box-sizing:border-box;display:flex;flex-wrap:wrap;align-items:center;gap:10px 8px;padding:12px 12px 12px 16px;
-    background:rgba(10,14,24,.97);border:1px solid #2a3550;border-radius:6px;
-    box-shadow:0 4px 0 rgba(0,0,0,.35),inset 3px 0 0 #37f0d0;color:#dfe7f5;
+    background:var(--k-pane);border:1px solid var(--k-frame);border-radius:6px;
+    box-shadow:0 4px 0 rgba(0,0,0,.35),inset 3px 0 0 var(--k-lit);color:var(--k-ink);
     font:700 13px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.12em;
     animation:updIn .16s steps(4) both;user-select:none;-webkit-user-select:none}
   #ana b{flex-basis:100%}
-  #ana i{flex-basis:100%;margin-top:-4px;font:400 11px/1.45 ui-monospace,monospace;font-style:normal;color:#7385ad;letter-spacing:0}
-  #ana .yes,#ana .no{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;height:34px;padding:0 8px;border:1px solid #37f0d0;
-    border-radius:4px;background:rgba(55,240,208,.14);color:#37f0d0;font-size:12px;letter-spacing:.1em;cursor:pointer;white-space:nowrap}
-  #ana .yes:hover,#ana .no:hover{background:rgba(55,240,208,.22)}
-  #ana a{color:#dfe7f5}
+  #ana i{flex-basis:100%;margin-top:-4px;font:400 11px/1.45 ui-monospace,monospace;font-style:normal;color:var(--k-off);letter-spacing:0}
+  #ana .yes,#ana .no{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;height:34px;padding:0 8px;border:1px solid var(--k-frame);
+    border-radius:4px;background:var(--k-band);color:var(--k-ink);font-size:12px;letter-spacing:.1em;cursor:pointer;white-space:nowrap}
+  #ana .yes:hover,#ana .no:hover{background:var(--k-keyhi)}
+  #ana a{color:var(--k-ink)}
   /* an author display:flex beats the UA [hidden] rule, so each card needs its own:
      without it the NEW VERSION card and the consent card never hide */
   #upd[hidden],#ana[hidden]{display:none}
@@ -185,8 +189,8 @@
      pointer unless its buttons are up. */
   #load{position:fixed;z-index:21;left:50%;top:50%;translate:-50% -50%;width:min(340px,calc(100vw - 32px));
     display:flex;flex-direction:column;gap:10px;padding:16px 18px 16px 22px;
-    background:rgba(10,14,24,.97);border:1px solid #2a3550;border-radius:6px;
-    box-shadow:0 4px 0 rgba(0,0,0,.35),inset 3px 0 0 #37f0d0;color:#dfe7f5;pointer-events:none;
+    background:var(--k-pane);border:1px solid var(--k-frame);border-radius:6px;
+    box-shadow:0 4px 0 rgba(0,0,0,.35),inset 3px 0 0 var(--k-lit);color:var(--k-ink);pointer-events:none;
     user-select:none;-webkit-user-select:none;animation:updFade .16s linear 150ms both}
   #load[hidden]{display:none}
   /* until the title paints, the unsized #c would draw an empty framed box behind the plate */
@@ -202,27 +206,27 @@
     flex-direction:row;align-items:center;gap:0;box-sizing:border-box;height:28px;width:auto;max-width:min(380px,var(--chip-w,calc(100vw - 32px)));padding:0 14px 3px 17px;overflow:hidden}
   #load[data-dock]:not([data-act]) #loadmsg{font-size:11px;line-height:25px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #load[data-dock]:not([data-act]) #loadbar{position:absolute;left:0;right:0;bottom:0;height:3px;border-radius:0}
-  #load[data-note=bad]{box-shadow:0 4px 0 rgba(0,0,0,.35),inset 3px 0 0 #ff5d73}
-  #load[data-note=bad] #loadmsg{color:#ff5d73}
+  #load[data-note=bad]{box-shadow:0 4px 0 rgba(0,0,0,.35),inset 3px 0 0 var(--k-cor)}
+  #load[data-note=bad] #loadmsg{color:var(--k-cor)}
   #load[data-dock] b{display:none}
   #load[data-act]{pointer-events:auto}
-  #loadmsg{font:400 12px/1.45 ui-monospace,"SF Mono",Menlo,Consolas,monospace;color:#7385ad;letter-spacing:.04em}
-  #loadbar{position:relative;height:6px;overflow:hidden;background:#141a2b;border-radius:2px}
+  #loadmsg{font:400 12px/1.45 ui-monospace,"SF Mono",Menlo,Consolas,monospace;color:var(--k-off);letter-spacing:.04em}
+  #loadbar{position:relative;height:6px;overflow:hidden;background:var(--k-well);border-radius:2px}
   #loadbar[hidden]{display:none}
-  #loadfill{position:absolute;inset:0;background:#37f0d0;transform:scaleX(0);transform-origin:0 50%;transition:transform .18s linear;will-change:transform}
+  #loadfill{position:absolute;inset:0;background:var(--k-lit);transform:scaleX(0);transform-origin:0 50%;transition:transform .18s linear;will-change:transform}
   #loadbar[data-ind] #loadfill{opacity:0}
   #loadrun{position:absolute;top:0;bottom:0;left:0;width:30%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.7),transparent);
     transform:translateX(-100%);animation:loadRun 1.1s linear infinite;will-change:transform}
   @keyframes loadRun{from{transform:translateX(-100%)}to{transform:translateX(334%)}}
   #loadact{display:flex;align-items:center;gap:8px}
   #loadact[hidden]{display:none}
-  #loadact button{flex:1;height:44px;padding:0 10px;border:1px solid #37f0d0;border-radius:4px;background:rgba(55,240,208,.14);color:#37f0d0;
-    font:700 13px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.1em;cursor:pointer}
-  #loadact button:hover{background:rgba(55,240,208,.22)}
-  #loadact button:focus-visible{outline:2px solid #dfe7f5;outline-offset:2px}
+  #loadact button{flex:1;height:44px;padding:0 10px;border:1px solid var(--k-frame);border-radius:4px;background:var(--k-band);color:var(--k-ink);
+    font:700 13px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.06em;white-space:nowrap;cursor:pointer}
+  #loadact button:hover{background:var(--k-keyhi)}
+  #loadact button:focus-visible{outline:2px solid var(--k-ink);outline-offset:2px}
   #loadkeep[hidden]{display:none}
   /* reduced motion: no glint and no glide; a wait with no number keeps a still striped track, never an empty one */
-  @media (prefers-reduced-motion:reduce){#loadrun{animation:none;opacity:0}#loadfill{transition:none}#loadbar[data-ind]{background:repeating-linear-gradient(-45deg,#141a2b 0 4px,#2a3550 4px 8px)}}
+  @media (prefers-reduced-motion:reduce){#loadrun{animation:none;opacity:0}#loadfill{transition:none}#loadbar[data-ind]{background:repeating-linear-gradient(-45deg,var(--k-well) 0 4px,var(--k-key) 4px 8px)}}
   .muted{opacity:.45}
   .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 </style>
@@ -273,7 +277,7 @@
     if(j.dock)E.setAttribute("data-dock","");else E.removeAttribute("data-dock");
     if(failed){
       msg.setAttribute("role","alert");
-      msg.textContent=(j.k==="boot"?"COULD NOT LOAD THE GAME. CHECK YOUR CONNECTION, THEN RETRY.":j.label+(again?" COULD NOT LOAD. CHECK YOUR CONNECTION, THEN RETRY.":" STILL WILL NOT LOAD. RETRY RELOADS THE PAGE; A RUN IN PROGRESS ENDS."));
+      msg.textContent=(j.k==="boot"?"COULD NOT LOAD THE GAME. CHECK YOUR CONNECTION, THEN RETRY.":j.label+(again?" COULD NOT LOAD. CHECK YOUR CONNECTION, THEN RETRY, OR CHANGE ART STYLE IN SETTINGS.":" STILL WILL NOT LOAD. RETRY RELOADS THE PAGE; A RUN IN PROGRESS ENDS. ART STYLE IS IN SETTINGS."));
       bar.hidden=true;act.hidden=false;keep.hidden=!drop;E.setAttribute("data-act","");return
     }
     bar.hidden=false;msg.removeAttribute("role");
@@ -357,7 +361,7 @@
       if(k==="boot")retry.focus();
     },
     /* a pad's route to a look's failure card (src/app/loadbar.js loadCard); pad = last used, so the buttons name its words */
-    padLive:function(pad){var on=!!failed&&failed!=="boot";if(on&&words!==!!pad){words=!!pad;retry.textContent=(pad?"SOUTH ":"")+"RETRY";keep.textContent=(pad?"EAST ":"")+"USE CLASSIC 2D"}return on},
+    padLive:function(pad){var on=!!failed&&failed!=="boot";if(on&&words!==!!pad){words=!!pad;retry.textContent="RETRY"+(pad?" SOUTH":"");keep.textContent="USE CLASSIC 2D"+(pad?" EAST":"")}return on},
     padPress:function(id){if(!failed||failed==="boot")return;if(id==="S")retry.onclick();else if(id==="E"&&drop)keep.onclick()}
   };
   /* the flag form of spot().row, for a reader or a writer that only knows the row */

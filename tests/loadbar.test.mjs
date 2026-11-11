@@ -110,7 +110,7 @@ check("loadbar.js is precached and in the boot graph (rcache reads it)", PRECACH
 // CSS: compositor only, reduced motion, the hidden rule
 const css = strip(html.slice(html.indexOf("<style"), html.indexOf("</style>")));
 const rule = (sel) => (new RegExp("(?:^|\\n|\\})\\s*" + sel + "\\{([^}]*)\\}").exec(css) || [])[1] || "";
-check("the plate is the CONSOLE PANEL plate, centred, off the pointer", /border:1px solid #2a3550/.test(rule("#load")) && /border-radius:6px/.test(rule("#load")) && /pointer-events:none/.test(rule("#load")));
+check("the plate is the CONSOLE PANEL plate, centred, off the pointer", /border:1px solid var\(--k-frame\)/.test(rule("#load")) && /border-radius:6px/.test(rule("#load")) && /pointer-events:none/.test(rule("#load")));
 check("it appears only after 150 ms, with no JS involved", /150ms/.test(rule("#load")));
 check("it is hidden in markup (no JS, no bar)", /<div id="load" hidden data-boot>/.test(html));
 check("fill and glint move by transform only", /transition:transform/.test(rule("#loadfill")) && !/width|left/.test(rule("#loadfill").replace(/inset:0/, "")) && /@keyframes loadRun\{from\{transform:[^}]*\}to\{transform:[^}]*\}\}/.test(css));
@@ -124,7 +124,7 @@ check("prefers-reduced-motion stops the glint and the fill's glide", /prefers-re
   const chip = rule("#load\\[data-dock\\]:not\\(\\[data-act\\]\\)");
   check("chip: one slim line (28 px) placed by --chip-x/-y, sized inside the stage", /height:28px/.test(chip) && /flex-direction:row/.test(chip) && /var\(--chip-y/.test(chip) && /var\(--chip-x/.test(chip) && /var\(--chip-w/.test(chip), chip);
   check("chip: its bar is 3 px along the bottom", /height:3px/.test(rule("#load\\[data-dock\\]:not\\(\\[data-act\\]\\) #loadbar")) && /bottom:0/.test(rule("#load\\[data-dock\\]:not\\(\\[data-act\\]\\) #loadbar")));
-  check("chip: the failure note is the danger colour plus words", /#ff5d73/.test(rule("#load\\[data-note=bad\\] #loadmsg")));
+  check("chip: the failure note is the danger colour plus words", /var\(--k-cor\)/.test(rule("#load\\[data-note=bad\\] #loadmsg")));
   check("chip: no pointer (no data-act rule reaches it)", /pointer-events:none/.test(rule("#load")) && !/pointer-events/.test(chip));
 }
 check("the failure card's buttons show keyboard focus", /#loadact button:focus-visible\{outline:/.test(css));
@@ -406,7 +406,7 @@ const U = (n) => "http://x/g/src/m" + n + ".js";
   b.L.fail("px", () => dropped++, () => again++);
   check("a look failure is live for a pad; keys leave the labels alone", c.live(false) === true && !/SOUTH/.test(b.el("loadretry").textContent) && !/EAST/.test(b.el("loadkeep").textContent));
   c.live(true);
-  check("pad last used: the buttons name their pad words", b.el("loadretry").textContent === "SOUTH RETRY" && b.el("loadkeep").textContent === "EAST USE CLASSIC 2D");
+  check("pad last used: the buttons name their pad words", b.el("loadretry").textContent === "RETRY SOUTH" && b.el("loadkeep").textContent === "USE CLASSIC 2D EAST");
   c.live(false);
   check("back on keys: the plain labels", b.el("loadretry").textContent === "RETRY" && b.el("loadkeep").textContent === "USE CLASSIC 2D");
   c.press("W"); c.press("N"); c.press("START");

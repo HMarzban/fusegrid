@@ -47,8 +47,8 @@ export function mountUpdate(get, env) {
     card.setAttribute("role", "status");
     card.setAttribute("aria-live", "polite");
     card.innerHTML = '<b>NEW VERSION READY</b><i>You are on ' + REV + '. Reload to play the latest build. Your scores stay.</i>' +
-      '<span class="go" role="button" tabindex="-1" aria-label="Reload to update"><kbd>U</kbd>RELOAD</span>' +
-      '<span class="later" role="button" tabindex="-1" aria-label="Later"><kbd>EAST</kbd>LATER</span>';
+      '<span class="go" role="button" tabindex="-1" aria-label="Reload to update">RELOAD <kbd>U</kbd></span>' +
+      '<span class="later" role="button" tabindex="-1" aria-label="Later">LATER <kbd>EAST</kbd></span>';
     const tap = (sel, fn) => {
       const el = card.querySelector(sel);
       el.addEventListener("pointerdown", (e) => e.stopPropagation());

@@ -854,6 +854,7 @@ not shell screens. Do not add them as `SCREEN` values.
   `days_played` (STATS `a.days` bucket at boot) and `look`. `src/app` never
   calls `Date`: main injects `now`. GA reports need the params registered as
   custom definitions (owner step).
+- DOM cards on the world kit (UI upgrade v202 Task 3.6): `#upd`, `#ana` and `#load` (plate, chip, failure card) take their colours from `--k-*` custom properties in `index.html`'s `:root`, the static world-1 (JUNGLE) values of `worldTokens(1)` (`pane well key keyhi band lit frame ink off dk cor`; `frame` = wall, the flat stand-in), never a raw hex; `tests/hidden-css.test.mjs` pins each equal to `src/render/kit/tokens.js`, so they cannot drift, and the boot graph grows by nothing. Keycaps come last (`RELOAD U`, `LATER EAST`, `ALLOW Y`, `NO THANKS N`, `RETRY SOUTH`); ALLOW and NO THANKS are one CSS rule; a look's failure card names ART STYLE. `#updbg`'s blur stays (CSS on a DOM element).
 - `src/pwa/` — Node-testable app-shell list + SW register. `src/main.js`
   registers `./sw.js` (module, scope `./`). Precache lives in `shell.js`
   (`fusegrid-shell-vN`). Must include `vendor/three.module.js` and the whole
