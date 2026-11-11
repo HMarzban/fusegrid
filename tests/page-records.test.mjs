@@ -337,6 +337,32 @@ for (const b of ["d1366", "p393", "c600", "c600t", "c740x360"]) {
   check("shellview: SCORES and MEDALS cover the board (main passes covered); STATS joins with Task 4.2", SV.shellCovers(SCREEN.SCORES) && SV.shellCovers(SCREEN.TROPHIES));
 }
 
+/* ---- R1 train: RECORDS (SCORES, STATS, MEDALS and their LOADING plate) fill MENU's own roomLayer at MENU's room dpr (pages/menu.js roomDpr, the one
+   rule LEVEL SELECT, SETTINGS and GUIDE use; no logo reserve: RECORDS shows no logo), so MENU -> RECORDS -> MENU never refills the room, whichever
+   page MENU last painted; the whole cache stays inside the budget ---- */
+{
+  const bad = [];
+  for (const [b, dpr] of [["d1366", 2], ["d1920", 2], ["d1024", 2], ["l1024", 2], ["p393", 2.7]]) for (const ts of [1, 1.25]) for (const page of ["scores", "stats", "medals"]) for (const loading of [false, true]) {
+    setTextScale(ts); cache.release(); cache._dbg.misses = 0;
+    const F = BOX[b], t = rec({ widthK: K8 }); t.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const MUI = { rows: ITEMS, focus: "RECORDS", level: 2, run: {}, rev: "v201", pages: 4, enterT: 9 };
+    MP.drawMenuPage(t.ctx, F, MUI, 0);
+    const room0 = MP._dbg.last.S.room, mrd = MP._dbg.last.S.rd, n0 = made.length;
+    MP._dbg.last = null; // RECORDS may not lean on MENU's last frame: the rule itself must land on MENU's key
+    const ui = UI({ page, level: 2, rev: "v201" });
+    if (loading) { const w0 = md._rec.want; md._rec.want = () => new Promise(() => {}); lazy._set("records", null); md.drawScores(t.ctx, ui, { ...md.layout(F.W, F.H, 300, F.css), shell: true }, 0, F.touch); lazy._set("records", RP); md._rec.want = w0; }
+    RP.drawRecordsPage(t.ctx, F, ui, 0);
+    const S = RP._dbg.last.S, rooms = made.slice(n0).filter((cv) => cv.width === room0.width && cv.height === room0.height), peak = cache._dbg.bytes;
+    const n1 = made.length;
+    MP.drawMenuPage(t.ctx, F, MUI, 0.1);
+    const back = MP._dbg.last.S.room, remade = made.slice(n1).includes(back);
+    if (!(S.room === room0 && S.rd === mrd && rooms.length === 0 && back === room0 && !remade && room0.width > 0 && peak <= cache.BUDGET))
+      bad.push(J({ b, dpr, ts, page, loading, same: S.room === room0, rd: [S.rd, mrd], rooms: rooms.length, back: back === room0, remade, peak }));
+  }
+  setTextScale(1);
+  check("shared room: SCORES, STATS and MEDALS (and their LOADING plate) blit MENU's room canvas at MENU's room dpr without reading MENU's last frame, and MENU finds the same canvas again: 0 room refills, within the budget, on every box (desk 1366 / 1920 / 1024, the touch tablet 1024 x 768, the phone @2.7; text 1 and 1.25)", bad.length === 0, bad.slice(0, 3).join(" | "));
+}
+
 /* ---- the lazy page: LOADING until it lands, every hit inert ---- */
 {
   const w00 = md._rec.want;
@@ -344,8 +370,8 @@ for (const b of ["d1366", "p393", "c600", "c600t", "c740x360"]) {
   lazy._set("records", null);
   const t = rec({ widthK: K8 }), L = md.layout(1366, 768, 300, 1);
   md.drawScores(t.ctx, UI({}), L, 0, false);
-  const G = RP.recordsGeom(BOX.d1366);
-  check("before the module lands: SCORES paints the room and a LOADING plate, and every RECORDS hit is inert (-2)", t.texts.some((x) => x.s === "LOADING") && t.calls[0] && t.calls[0].op === "drawImage" && J(t.calls[0].a.slice(1)) === J([0, 0, 1366, 768]) &&
+  const G = RP.recordsGeom(BOX.d1366), p0 = t.calls.find((c) => c.op !== "getTransform" && c.op !== "measureText"); // the first call that paints (R1 train: MENU's room rule measures MENU's feet first, painting nothing)
+  check("before the module lands: SCORES paints the room and a LOADING plate, and every RECORDS hit is inert (-2)", t.texts.some((x) => x.s === "LOADING") && p0 && p0.op === "drawImage" && J(p0.a.slice(1)) === J([0, 0, 1366, 768]) &&
     md.scoresHit(...mid(G.keys[1]), L, false) === -2 && md.recTabHit(...mid(G.tabs[1]), L, 0, false) === -2 && md.recTabHit(...mid(G.tabs[1]), L, 2, false) === -2);
   const { mountPointer } = await import("../src/app/pointer.js"), sc = await import("../src/render/scenes.js"), log = [];
   const HIT = { overlayBox: sc.overlayBox, pauseHit: sc.pauseHit, touchLay: sc.touchLay, controlsHit: SV.controlsHit, dims: SV.dims, menuHit: md.menuHit, settingsHit: md.settingsHit, graphicsHit: md.graphicsHit, guideHit: md.guideHit, levelHit: md.levelHit, scoresHit: md.scoresHit, statsHit: md.statsHit, recTabHit: md.recTabHit, layout: md.layout };

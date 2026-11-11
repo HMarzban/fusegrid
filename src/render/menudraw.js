@@ -570,7 +570,7 @@ const recDraw = (page) => (c, ui, L, t, touch) => {
   const m = recMod(), F = frameOf(L, touch);
   if (m) return m.drawRecordsPage(c, F, { ...ui, page }, t);
   Promise.resolve().then(() => _rec.want("records")).catch(() => {});
-  return recLoading(c, F, ui && ui.level);
+  return recLoading(c, F, ui || {});
 };
 export const drawScores = recDraw("scores"), drawStats = recDraw("stats"), drawTrophies = recDraw("medals");
 /* The RECORDS tab under a tap, else -1; -2 while the page module is still loading (inert). */
@@ -585,10 +585,10 @@ export const recPages = (L, touch, page, rows) => { const m = recMod(); return m
 export const recPageHit = (x, y, L, touch, page, rows) => { const m = recMod(); return m ? m.pageKeyHit(x, y, frameOf(L, touch), page, rows) : 0; };
 /* A lazy page's stand-in (R20): the room of level opaque over the box (MENU's own layer when MENU last painted this box), one small kit plate and
    LOADING, so a covered frame never shows a frozen board. */
-function recLoading(c, F, level) { // RECORDS' LOADING stand-in (named apart from the SETTINGS / GRAPHICS loadingPage below; one plate is the R1 kit harmonisation's)
+function recLoading(c, F, ui) { // RECORDS' LOADING stand-in (named apart from the SETTINGS / GRAPHICS loadingPage below; one plate is the R1 kit harmonisation's)
   if (!F || !(F.W > 0 && F.H > 0) || typeof c.fillRect !== "function") return;
-  const lv = level | 0 || 1, tok = worldTokens(lv), m = menuPage._dbg.last, ms = m && m.S, room = ms && ms.box && ms.box.w === F.W && ms.box.h === F.H && (ms.ui.level | 0 || 1) === lv;
-  if (canMake() && typeof c.drawImage === "function") c.drawImage(roomLayer({ w: F.W, h: F.H }, lv, tok, { dpr: room ? ms.rd : 1, look: "2d", textScale: 1 }), 0, 0, F.W, F.H);
+  const lv = ui.level | 0 || 1, tok = worldTokens(lv);
+  if (canMake() && typeof c.drawImage === "function") c.drawImage(roomLayer({ w: F.W, h: F.H }, lv, tok, { dpr: menuPage.roomDpr(c, F, { rev: ui.rev }, capDpr(deviceScale(c), !!F.touch)), look: "2d", textScale: 1 }), 0, 0, F.W, F.H); // MENU's own room at MENU's room dpr
   else { c.fillStyle = tok.bg1; c.fillRect(0, 0, F.W, F.H); }
   if (typeof c.rect !== "function") return;
   const w = Math.min(320, F.W - 40), h = 80, x = (F.W - w) / 2, y = (F.H - h) / 2;

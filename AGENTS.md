@@ -106,7 +106,7 @@ RECORDS page (UI upgrade v202 Task 4.1; `src/render/pages/records.js`, LAZY: one
 after MENU's first frame; until it lands menudraw paints `loadingPage` (the room, a small plate, LOADING) and every RECORDS hit is -2, inert,
 so a tap never backs out of a page still loading; every LOADING frame asks `want("records")` again (menudraw `_rec`, the test seam), so a failed
 import is retried and a network blip recovers; tests `want` / `_set` it). The room of `app.level` opaque under it (MENU's own room layer
-when MENU last painted the box and level: no re-raster on a MENU <-> RECORDS trip; `shellCovers` SCORES and TROPHIES). `recordsGeom(F)`
+at MENU's room dpr (`pages/menu.js` `roomDpr`, with `rev`; R1 train: the one rule of MENU, LEVEL SELECT, SETTINGS and GUIDE, no logo reserve, the page's own fit the floor), whatever MENU last painted: no re-raster on a MENU <-> RECORDS trip; `shellCovers` SCORES, STATS and TROPHIES). `recordsGeom(F)`
 (F = MENU's frame: W, H, touch, shell, css, ts; the pointer hands RECORDS `layout(cw, ch, lg, css)`) is one plate for every tab: desk
 (keyboard boxes; the S7-pages frame, plate 980 wide, 1080 at 125 %, kicker MENU over the RECORDS title, tabs 150 x 36 over an 11 px trough,
 the pane as tall as the tallest body, the foot under the plate, label first, keycaps last; a shorter window gives way before it scales, fix

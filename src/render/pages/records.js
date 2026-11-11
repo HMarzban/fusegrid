@@ -37,7 +37,7 @@ import {T, DEV, measure, textScale, nums} from "../kit/type.js";
 import {layer, capDpr, touch, keyOf, canMake, BUDGET} from "../kit/cache.js";
 import {roomLayer} from "../kit/room.js";
 import * as probe from "../kit/probe.js";
-import {_dbg as menuDbg} from "./menu.js";
+import {roomDpr as menuRoomDpr} from "./menu.js";
 import {deviceScale} from "../logo/draw2d.js";
 import {hints, tapMode} from "../hintcopy.js";
 
@@ -992,7 +992,7 @@ const measureOr = (s, px, disp) => W(MC, disp ? T.display(px) : T.label(px), s);
 const nWOr = (s, px) => nW(MC, T.num(px), s);
 
 /* ---------- the page ---------- */
-const FIELDS = ["page", "spage", "level", "heat", "plaques", "scores", "rows", "view", "notes", "wipe", "arm", "unlocked"];
+const FIELDS = ["page", "spage", "level", "heat", "plaques", "scores", "rows", "view", "notes", "wipe", "arm", "unlocked", "rev"];
 let S = null;
 export const _dbg = {plans: 0, last: null, foci: new Set()}; // foci: every page:focus painted (a sweep proves it reached each branch)
 function same(S0, G, ui, w, dpr, c, tap) {
@@ -1001,13 +1001,10 @@ function same(S0, G, ui, w, dpr, c, tap) {
   return true;
 }
 const J = JSON.stringify;
-/* the room: MENU's layer when MENU last painted this box and level (its dpr gave way to MENU's own layers, so the key is the same and the layer is
-   shared); else this page's own give-way: the room shrinks so the page layer, its feet and the logo reserve fit the budget */
-function roomDpr(F, level, dpr, bytes) {
-  const m = menuDbg.last, ms = m && m.S;
-  if (ms && ms.box && ms.box.w === F.W && ms.box.h === F.H && (ms.ui.level | 0 || 1) === level && ms.dpr === dpr) return ms.rd;
-  return +Math.max(0.5, Math.min(dpr, Math.sqrt(Math.max(0, BUDGET - 3 * 1024 * 1024 - bytes) / (4 * F.W * F.H)))).toFixed(3);
-}
+/* the room: MENU's own room layer at MENU's room dpr (menu.js roomDpr, the one rule MENU, LEVEL SELECT, SETTINGS and GUIDE use; R1 train), so a
+   MENU / RECORDS hop never refills it; this page's own give-way (its page layer and feet inside the budget; no logo reserve, RECORDS shows no logo)
+   is the floor, and only where that is under MENU's dpr does the room take its own key */
+const roomDpr = (c, F, ui, dpr, bytes) => Math.min(menuRoomDpr(c, F, {rev: ui.rev}, dpr), +Math.max(0.5, Math.min(dpr, Math.sqrt(Math.max(0, BUDGET - bytes) / (4 * F.W * F.H)))).toFixed(3));
 function sizes(S0, G, F, level, tok, ui) {
   const d = G.d, u = G.u, dpr = S0.dpr, T0 = d.T, ob = R(d.plate.x - T0 - 2, d.plate.y - T0 - 2, d.plate.w + 2 * T0 + 4, d.plate.h + 2 * T0 + 6), pb = sc(ob, u);
   const id = [ui.page, G.mode, +u.toFixed(6), J(d.plate), ui.page === "scores" ? ui.plaques | 0 : "", J(ui.rows || null), ui.page === "stats" ? J([ui.view || null, ui.notes || null, ui.arm ? S0.P.stats.confirm.sentence : "", !!ui.unlocked]) : "", S0.P.pg ? S0.P.pg.page : 0].join("|");
@@ -1019,7 +1016,7 @@ function sizes(S0, G, F, level, tok, ui) {
     return {v, fp, fr, b: bb, w, h, key, k: keyOf(key)};
   });
   const bytes = S0.pw * S0.ph * 4 + S0.feet.reduce((a, q) => a + q.w * q.h * 4, 0);
-  S0.rd = roomDpr(F, level, dpr, bytes);
+  S0.rd = roomDpr(S0.c, F, ui, dpr, bytes);
   S0.box = {w: F.W, h: F.H};
   S0.roomK = keyOf({layer: "room", biome: tok.name, level, W: F.W, H: F.H, dpr: S0.rd, look: "2d", textScale: 1});
 }
