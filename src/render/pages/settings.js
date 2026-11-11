@@ -708,7 +708,7 @@ function frame(c, F, ui, t, page, rows, specs, foc, fks, gRow) {
     const Pl = plan(c, G, ui, specs, touchy, words), ob = outer(G.d), pb = sc(ob, u);
     const K = {biome: tok.name, level, W: F.W, H: F.H, look: "2d", textScale: ts, dpr};
     const pageKey = {...K, layer: page + ".page|" + sig}, pw = Math.round(pb.w * dpr), ph = Math.round(pb.h * dpr);
-    const rd = Math.min(roomDpr(c, F, {rev: ui.rev}, dpr), +Math.max(0.5, Math.min(dpr, Math.sqrt(Math.max(0, BUDGET - pw * ph * 4 - 3 * 1024 * 1024) / (4 * F.W * F.H)))).toFixed(3)); // MENU's room dpr (menu.js roomDpr: MENU's own room layer, the LOADING plate's too) unless this page needs less
+    const rd = Math.min(roomDpr(c, F, {rev: ui.rev}, dpr), +Math.max(0.5, Math.min(dpr, Math.sqrt(Math.max(0, BUDGET - pw * ph * 4) / (4 * F.W * F.H)))).toFixed(3)); // MENU's room dpr (menu.js roomDpr: MENU's own room layer, the LOADING plate's too) unless this page needs less (no logo reserve: SETTINGS and GRAPHICS show no logo; lead ruling, R1 train)
     s = S[page] = {sig, G, c, Pl, ob, pb, pw, ph, pageKey, pageK: keyOf(pageKey), rd, roomK: keyOf({layer: "room", biome: tok.name, level, W: F.W, H: F.H, dpr: rd, look: "2d", textScale: 1}), room: null, page: null, subs: s ? s.subs : []};
     _dbg.plans++;
   }

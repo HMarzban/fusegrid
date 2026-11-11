@@ -352,9 +352,9 @@ kicker `BUILD vREV` hidden at 125 % on the desk, where the foot carries the tag)
 list alone, rows 34 on keys, courses 10, GRAPHICS' two help lines under the rows, the foot at the plate's bottom, or the page keys' strip where
 it pages) and phone (a touch-portrait shell box: the column in CSS px, BACK beside the title, rows 44 8 apart (the mock's 52 pitch), ART STYLE
 and CAMERA as door rows, the foot under the plate). Cached: the room (MENU's own `roomLayer` at MENU's room dpr, `pages/menu.js` `roomDpr`, for
-the page and its LOADING plate alike, so MENU -> SETTINGS / GRAPHICS -> MENU never refills it; the page's own fit, its full-dpr page layer and the
-3 MiB reserve inside `BUDGET`, is the floor: where that is under MENU's dpr the room gives way, today only the touch tablet 1024 x 768 at text 1,
-SETTINGS, 1.892 vs 1.925; shellview hands both pages `rev`, which MENU's dpr reads), one page layer per page shown (plate, head, its rows at rest, courses, pane, foot or
+the page and its LOADING plate alike, so MENU -> SETTINGS / GRAPHICS -> MENU never refills it; the page's own fit, its full-dpr page layer inside
+`BUDGET` with no logo reserve (these pages show no logo; lead ruling, R1 train), is the floor, and every box tested holds MENU's dpr, the touch
+tablet 1024 x 768 included; shellview hands both pages `rev`, which MENU's dpr reads), one page layer per page shown (plate, head, its rows at rest, courses, pane, foot or
 page keys; keyed by what it shows, so a cursor move on a page never misses and a value change re-rasters once), and two small sub-layers it
 blits (a slab wall cell, the locked key), kept recent with it. `screens.mjs` exempts ring (both) and locked (SETTINGS has none; REAL 3D locks no
 GRAPHICS row).

@@ -286,7 +286,7 @@ for (const pv of [1, 2]) {
 {
   const MP = await import("../src/render/pages/menu.js");
   const { ITEMS } = await import("../src/app/menuapp.js");
-  const bad = [], gave = [];
+  const bad = [];
   for (const [b, dpr] of [["d1366", 2], ["d1920", 2], ["d1024", 2], ["l1024", 2], ["p393", 2.7]]) for (const ts of [1, 1.25]) for (const g of [false, true]) for (const loading of [false, true]) {
     setTextScale(ts); fresh();
     const F = BOX[b], t = rec({ widthK: K8 }); t.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -300,16 +300,11 @@ for (const pv of [1, 2]) {
     const n1 = made.length;
     MP.drawMenuPage(t.ctx, F, MUI, 0.1);
     const back = MP._dbg.last.S.room, remade = made.slice(n1).includes(back);
-    /* the page's own fit (its full-dpr page layer and the 3 MiB reserve inside the budget) is the floor: where it is under MENU's dpr the room gives
-       way to exactly it (a refill, never over the budget) */
-    const own = +Math.max(0.5, Math.min(cache.capDpr(dpr, !!F.touch), Math.sqrt(Math.max(0, cache.BUDGET - s.pw * s.ph * 4 - 3 * 1024 * 1024) / (4 * F.W * F.H)))).toFixed(3);
-    if (own < mrd) { gave.push(b + " x" + ts + (g ? " GRAPHICS" : " SETTINGS")); if (!(s.rd === own && peak <= cache.BUDGET)) bad.push(J({ b, ts, g, gaveWay: [s.rd, own, mrd], peak })); continue; }
     if (!(s.room === room0 && s.rd === mrd && rooms.length === 0 && back === room0 && !remade && room0.width > 0 && peak <= cache.BUDGET))
       bad.push(J({ b, dpr, ts, g, loading, same: s.room === room0, rd: [s.rd, mrd], rooms: rooms.length, back: back === room0, remade, peak }));
   }
   setTextScale(1);
-  check("shared room: SETTINGS and GRAPHICS (and their LOADING plate) blit MENU's room canvas at MENU's room dpr, and MENU finds the same canvas again: 0 room refills, within the budget (desk 1366 / 1920 / 1024, the touch tablet, the phone @2.7; text 1 and 1.25); where the page's own layer cannot sit beside MENU's room the room gives way to the page's fit, inside the budget", bad.length === 0, bad.slice(0, 3).join(" | "));
-  check("shared room: the only box whose page cannot hold MENU's room dpr is the touch tablet 1024 x 768 at text 1, SETTINGS (its touch rows; 1.892 vs MENU's 1.925)", J([...new Set(gave)]) === J(["l1024 x1 SETTINGS"]), J([...new Set(gave)]));
+  check("shared room: SETTINGS and GRAPHICS (and their LOADING plate) blit MENU's room canvas at MENU's room dpr, and MENU finds the same canvas again: 0 room refills, within the budget, on every box (desk 1366 / 1920 / 1024, the touch tablet 1024 x 768, the phone @2.7; text 1 and 1.25: no logo reserve on these pages, lead ruling R1 train)", bad.length === 0, bad.slice(0, 3).join(" | "));
 }
 
 /* ---- the ART STYLE row's load job: the words in the window, the fill line live, no reflow ---- */
