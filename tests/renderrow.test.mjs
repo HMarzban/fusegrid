@@ -7,6 +7,11 @@ import { loaderSpot, stepLookNote } from "../src/render/shellview.js";
 import { overlayBox } from "../src/render/scenes.js";
 import { setHints } from "../src/render/hintcopy.js";
 import { SCREEN, optRows } from "../src/app/menuapp.js";
+import { worldTokens } from "../src/render/kit/tokens.js";
+import * as lazyPages from "../src/render/pages/lazy.js";
+import * as sp from "../src/render/pages/settings.js";
+lazyPages._set("settings", sp); // the lazy SETTINGS page, in as if its import had landed (R20)
+const tok0 = worldTokens(1);
 
 let pass = 0, fail = 0;
 const check = (name, ok, detail) => { ok ? pass++ : fail++; console.log((ok ? "  PASS " : "  FAIL ") + name + (detail !== undefined ? " -> " + detail : "")); };
@@ -101,65 +106,69 @@ const NOTES = [
   { k: "3d", st: "fail" },
 ];
 const RI = optRows(false).indexOf("ART STYLE"), V = optRows(false); // ART STYLE: row 3 in the ten (CLASSIC 2D / PIXEL) and in the twelve
-function slot(c, L, touch, R) {
-  const g = md.settingsGeom(L, touch, R), S = g.S;
-  return md.valueRoom(c, S.iw + 16, g.rowH - 2, "ART STYLE", touch);
-}
+/* v202 Task 3.4: the SETTINGS page (pages/settings.js) plans the ART STYLE row's job: a well window over the value's whole room, the first of
+   lookVal's words that fits it whole (the shortest else), never clipped. Read back from the page's plan. */
+const job = (L, touch, R, n) => { const c = recCtx(); md.drawSettings(c, L, 1, { rows: R, row: "MUSIC", vals: {}, px: n.k === "px", r3d: n.k === "3d" && R.length === 12, touch, job: n }); return { c, o: sp._dbg.last.Pl.rows["ART STYLE"], G: sp._dbg.last.G }; };
 const boxes = [
-  ["keyboard 600x520", md.layout(600, 520), false, true],
-  ["keyboard iso 608x352", md.layout(608, 352), false, true],
-  ["touch landscape 600x520", md.layout(600, 520), true, true],
-  ["PAUSE 2D", md.layout(overlayBox("2d").w, overlayBox("2d").h), true, true],
-  ["PAUSE iso", md.layout(overlayBox("iso").w, overlayBox("iso").h), false, true],
+  ["keyboard 600x520", md.layout(600, 520), false],
+  ["keyboard iso 608x352", md.layout(608, 352), false],
+  ["touch landscape 600x520", md.layout(600, 520), true],
+  ["PAUSE 2D", md.layout(overlayBox("2d").w, overlayBox("2d").h), true],
+  ["PAUSE iso", md.layout(overlayBox("iso").w, overlayBox("iso").h), false],
+  ["desk 1366x768", md.layout(1366, 768, 207), false],
 ];
-for (const w of [400, 444, 480, 520, 560, 600]) boxes.push(["touch shell box " + w + "x" + Math.round(w * 2), md.layout(w, Math.round(w * 2), w * 0.6), true, false]);
+for (const w of [400, 444, 480, 520, 560, 600]) boxes.push(["touch shell box " + w + "x" + Math.round(w * 2), md.layout(w, Math.round(w * 2), w * 0.6), true]);
 for (const dev of ["key", "touch", "pad"]) for (const R of [optRows(false), optRows(true)]) {
   setHints(dev === "pad" ? { dev: "pad", ok: "SOUTH", back: "EAST" } : null);
-  for (const [name0, L, touch, full] of boxes) {
-    const name = name0 + " (" + R.length + " rows)", c = recCtx(), room = slot(c, L, touch, R);
-    let worst = "", ok = true, fullOk = true;
+  for (const [name0, L, touch] of boxes) {
+    const name = name0 + " (" + R.length + " rows)";
+    let worst = "", ok = true, first = true;
     for (const n of NOTES) {
-      const cands = md.lookVal(n, touch), v = md.fitVal(c, cands, room);
-      c.font = md.font(12);
-      if (!cands.includes(v) || md.mw(c, v) > room) { ok = false; worst = v; }
-      if (v !== cands[0]) fullOk = false;
+      const { c, o } = job(L, touch, R, n), cands = md.lookVal(n, touch), t = o.val.P.find((q) => q.k === "text"), win = o.val.P.find((q) => q.win);
+      const right = o.val.x >= o.label.x + o.label.w + 6, inWin = !win || (t && t.x >= win.r.x && t.x + t.w <= win.r.x + win.r.w + 0.01);
+      if (!cands.includes(o.word) || !right || !inWin || !t) { ok = false; worst = o.word + " " + JSON.stringify([o.val.x, o.label.x + o.label.w]); }
+      c.font = t ? t.f : "";
+      const room = win ? win.r.w - 24 : Infinity, fits0 = c.measureText(cands[0]).width <= room;
+      if (fits0 && o.word !== cands[0]) first = false;
     }
-    check("fits the slot, never clipped: " + name + " · " + dev, ok, worst + " in " + Math.round(room));
-    if (full) check("the full words, look named: " + name + " · " + dev, fullOk);
+    check("fits the slot whole, clear of the label, never clipped: " + name + " · " + dev, ok, worst);
+    check("the longest words that fit (the full words, look named, wherever they fit): " + name + " · " + dev, first);
   }
 }
 setHints(null);
 
 // ---- drawSettings: the row in place, no reflow ----
 {
-  const L = md.layout(600, 520);
+  const L = md.layout(600, 520), tok = worldTokens(1);
   for (const touch of [false, true]) {
-    const g = md.settingsGeom(L, touch, V), y = g.y0 + RI * g.rowH + 1, h = g.rowH - 2;
     const a = recCtx(), b = recCtx();
     md.drawSettings(a, L, 1, { rows: V, row: "ART STYLE", vals: {}, px: true, touch });
     md.drawSettings(b, L, 1, { rows: V, row: "ART STYLE", vals: {}, px: true, touch, job: { k: "px", st: "preparing", phase: "bake", done: 140, total: 255, fill: 0.6 } });
-    const lab = (r) => r.texts.filter((t) => t.s !== "PIXEL" && !/^PIXEL ·/.test(t.s)).map((t) => t.s + "@" + t.x + "," + t.y).join("|");
+    const G = sp._dbg.last.G.d, r = G.rows["ART STYLE"], y = r.y, h = r.h, o = sp._dbg.last.Pl.rows["ART STYLE"];
+    const lab = (q) => q.texts.filter((t) => t.s !== "PIXEL" && !/PIXEL|ART 140/.test(t.s)).map((t) => t.s + "@" + t.x + "," + t.y).join("|");
     check("no reflow: every other text lands where it did" + (touch ? " (touch)" : ""), lab(a) === lab(b));
-    check("the value slot reads the job" + (touch ? " (touch)" : ""), b.texts.some((t) => t.s === "PIXEL · ART 140 / 255" && Math.abs(t.y - (y + h / 2)) < 0.01 && /monospace/.test(t.font)));
-    const line = b.rects.filter((r) => r.h === 2 && Math.abs(r.y - (y + h - 2)) < 0.01);
-    const tr = line.find((r) => r.col === md.LINE), fl = line.find((r) => r.col === md.ACCENT);
-    check("a 2 px line along the band bottom: track + honest fill" + (touch ? " (touch)" : ""), tr && fl && Math.abs(fl.w - Math.round(tr.w * 0.6)) <= 1 && fl.x === tr.x, JSON.stringify(line));
-    check("the line stays inside the band" + (touch ? " (touch)" : ""), tr && tr.y >= y && tr.y + 2 <= y + h);
+    check("the value slot reads the job" + (touch ? " (touch)" : ""), b.texts.some((t) => (t.s === "PIXEL · ART 140 / 255" || t.s === "ART 140 / 255") && Math.abs(t.y - (y + h / 2)) < 0.01 && !/monospace/.test(t.font)), o.word);
+    const line = b.rects.filter((q) => q.h === 2 && q.y > y && q.y + 2 <= y + h);
+    const tr = line.find((q) => q.col === "#0b0609"), fl = line.find((q) => q.col === tok.lit);
+    check("a 2 px line along the window's foot: track + honest fill" + (touch ? " (touch)" : ""), tr && fl && Math.abs(fl.w - Math.round(tr.w * 0.6)) <= 1 && fl.x === tr.x, JSON.stringify(line));
+    check("the line stays inside the row" + (touch ? " (touch)" : ""), tr && tr.y >= y && tr.y + 2 <= y + h);
   }
-  const c = recCtx(), g = md.settingsGeom(L, false, V), y = g.y0 + RI * g.rowH + 1, h = g.rowH - 2;
+  const c = recCtx();
   md.drawSettings(c, L, 1, { rows: V, row: "MUSIC", vals: {}, px: true, job: { k: "px", st: "loading", total: 0, fill: -1 } });
-  const st = c.rects.filter((r) => r.h === 2 && Math.abs(r.y - (y + h - 2)) < 0.01 && r.col === md.ACCENT);
+  const r0 = sp._dbg.last.G.d.rows["ART STYLE"], y = r0.y, h = r0.h;
+  const st = c.rects.filter((r) => r.h === 2 && r.y > y && r.y + 2 <= y + h && r.col === tok0.lit);
   check("no count: still stripes, many short dashes, no single fill", st.length > 20 && st.every((r) => r.w <= 4));
   const f = recCtx();
   md.drawSettings(f, L, 1, { rows: V, row: "ART STYLE", vals: {}, job: { k: "px", st: "fail", fill: -1 } });
-  check("failure: the danger colour plus words, no line", f.texts.some((t) => t.s === "PIXEL · DID NOT LOAD · ENTER RETRY" && t.col === md.DANGER) && !f.rects.some((r) => r.h === 2 && Math.abs(r.y - (y + h - 2)) < 0.01));
-  check("failure on the selected row: the band selects red", f.rects.some((r) => r.col === "rgba(255,93,115,0.12)"));
+  const fw = sp._dbg.last.Pl.rows["ART STYLE"].word;
+  check("failure: the danger colour plus words, no line", md.lookVal({ k: "px", st: "fail" }, false).includes(fw) && f.texts.some((t) => t.s === fw && t.col === "#ff5d73") && !f.rects.some((r) => r.h === 2 && r.y > y && r.y + 2 <= y + h), fw);
+  check("failure on the selected row: the band, and the words keep the danger colour on it", f.rects.length > 0 && f.texts.filter((t) => t.s === fw).every((t) => t.col === "#ff5d73"));
   const p = recCtx();
-  md.drawSettings(p, md.layout(overlayBox("2d").w, overlayBox("2d").h), 1, { kicker: "PAUSED · ROOM 2", rows: optRows(true), row: "MUSIC", vals: {}, r3d: true, job: { k: "3d", st: "preparing", phase: "shaders", done: 18, total: 31 } });
-  check("PAUSE's OPTIONS view draws the same row", p.texts.some((t) => t.s === "REAL 3D · SHADERS 18 / 31"));
+  md.drawSettings(p, md.layout(overlayBox("2d").w, overlayBox("2d").h), 1, { kicker: "PAUSED · LEVEL 2", paused: true, rows: optRows(true), row: "MUSIC", vals: {}, r3d: true, job: { k: "3d", st: "preparing", phase: "shaders", done: 18, total: 31 } });
+  check("PAUSE's SETTINGS view draws the same row", p.texts.some((t) => t.s === "REAL 3D · SHADERS 18 / 31" || t.s === "SHADERS 18 / 31"));
   const z = recCtx();
   md.drawSettings(z, L, 1, { rows: V, row: "MUSIC", vals: {}, px: true });
-  check("no job: the plain value and no line", z.texts.some((t) => t.s === "PIXEL") && !z.rects.some((r) => r.h === 2 && Math.abs(r.y - (y + h - 2)) < 0.01));
+  check("no job: the plain value and no line", z.texts.some((t) => t.s === "PIXEL") && !z.rects.some((r) => r.h === 2 && r.y > y && r.y + 2 <= y + h && r.col === tok0.lit));
 }
 
 // ---- shellview: the job note through app.lookJob, and the loader spot ----

@@ -17,6 +17,10 @@ import { createControlsPage } from "../src/app/controlspage.js";
 import { DEF_CONTROLS } from "../src/app/controls.js";
 import { overlayBox, pauseGeom, pauseHit, touchLay, drawOverlay, PAUSE_ROWS, PAUSE_SHAPE } from "../src/render/scenes.js";
 import * as md from "../src/render/menudraw.js";
+import * as lazyPages from "../src/render/pages/lazy.js";
+import * as sp from "../src/render/pages/settings.js";
+import { worldTokens } from "../src/render/kit/tokens.js";
+lazyPages._set("settings", sp); // the lazy SETTINGS page, in as if its import had landed (R20)
 import { rec } from "./lib/textrec.mjs";
 await preloadControls(loadControlsArt); // the CONTROLS page and its paint are lazy: in before the first mount
 
@@ -51,8 +55,10 @@ check("optRows answers by truthiness and returns the same two arrays every call"
 
 // ---- 2. what is drawn is the visible list, on the SETTINGS page and in PAUSE view 1, in all three looks ----
 const box = (w, h, lay) => ({ width: w, height: h, ownerDocument: { body: { getAttribute: () => lay } }, getBoundingClientRect: () => ({ left: 0, top: 0, width: w, height: h }) });
-const rowTexts = (R) => R.texts.filter((t) => OPT_ROWS.includes(t.s)).sort((p, q) => p.y - q.y);
-const selOf = (R) => { const s = rowTexts(R).filter((t) => t.fill === md.TEXT); return s.length === 1 ? s[0].s : J(s.map((t) => t.s)); };
+/* v202 Task 3.4 (pages/settings.js): every row is painted at rest, then the focused row again, live, on its band: the drawn rows are each label's
+   first draw, the selected one the label drawn twice (Node paints straight onto the target: no layer canvas) */
+const rowTexts = (R) => { const seen = new Set(); return R.texts.filter((t) => OPT_ROWS.includes(t.s) && !seen.has(t.s) && seen.add(t.s)).sort((p, q) => p.y - q.y); };
+const selOf = (R) => { const n = {}; for (const t of R.texts) if (OPT_ROWS.includes(t.s)) n[t.s] = (n[t.s] || 0) + 1; const s = Object.keys(n).filter((k) => n[k] === 2); return s.length === 1 ? s[0] : J(n); };
 const shellDraw = (a, world, cv, kind = "2d") => { const R = rec({ widthK: 0.6 }); drawShell(R.ctx, a, world, cv, kind, () => [], () => 0, () => ({})); return R; };
 for (const kind of ["2d", "px", "3d"]) for (const r3d of [false, true]) {
   const a = createMenuApp({ render3d: r3d, controls: page() }), bad = [];
@@ -250,30 +256,30 @@ const tsnap = (a) => { const s = a.settings; return { scr: a.screen, pv: a.pause
 for (const lay of ["d", "l", "p"]) for (const r3d of [false, true]) for (const where of ["page", "PAUSE view 1"]) {
   const tag = `tap (${lay}, ${r3d ? "REAL 3D" : "CLASSIC 2D"}, ${where})`;
   const t0 = tapRig(lay, r3d, where), rows = t0.app.optRows(), R = t0.draw(), drawn = rowTexts(R);
-  const L = where === "page" ? md.layout(t0.surf.width, t0.surf.height, t0.surf.logo) : md.layout(overlayBox("2d").w, overlayBox("2d").h);
-  const G = md.settingsGeom(L, t0.touch, rows);
-  check(`${tag}: drawn rows = optRows(${r3d}); each label sits on its geometry row centre (y0 + (i + 0.5) * rowH)`, J(drawn.map((t) => t.s)) === J(rows) && drawn.every((t, i) => Math.abs(t.y - (G.y0 + (i + 0.5) * G.rowH)) < 1e-6) && G.n === rows.length, J(drawn.map((t) => [t.s, +t.y.toFixed(2)])) + " vs y0 " + G.y0 + " rowH " + G.rowH);
-  { const bad = [];
+  const L = where === "page" ? md.layout(t0.surf.width, t0.surf.height, t0.surf.logo, dims(t0.surf, "2d").css) : md.layout(overlayBox("2d").w, overlayBox("2d").h); // css: the phone column's scale, as the draw and the pointer read it (v202 Task 3.4)
+  const G = md.settingsGeom(L, t0.touch, rows), ctr = (r) => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 }); // rows by name, box units (G.d: design px, the drawn texts' own)
+  check(`${tag}: drawn rows = optRows(${r3d}); each label sits on its geometry row's centre line`, J(drawn.map((t) => t.s)) === J(rows) && drawn.every((t) => Math.abs(t.y - (G.d.rows[t.s].y + G.d.rows[t.s].h / 2)) < 1e-6) && G.order.length === rows.length, J(drawn.map((t) => [t.s, +t.y.toFixed(2)])));
+  { const bad = [], tok = worldTokens(1);
     for (let i = 0; i < rows.length; i++) {
       const t = tapRig(lay, r3d, where); t.app.optRow = i;
-      const band = t.draw().rects.find((q) => q.fill === "rgba(55,240,208,0.12)"), want = { x: G.S.ix - 8, y: G.y0 + i * G.rowH + 1, w: G.S.iw + 16, h: G.rowH - 2 };
-      if (!band || ["x", "y", "w", "h"].some((k) => Math.abs(band[k] - want[k]) > 1e-6)) bad.push(rows[i] + " " + J([band, want]));
+      const band = (t.draw().paints.find((q) => q.op === "fill" && q.style === tok.band) || {}).box, want = G.rows[rows[i]];
+      if (!band || ["x", "y", "w", "h"].some((k) => Math.abs(band[k] - want[k]) > 0.01)) bad.push(rows[i] + " " + J([band, want]));
     }
     check(`${tag}: the selected row's drawn band is the geometry's row rect, every row`, bad.length === 0, bad.join(" | ")); }
   let bad = [];
   for (let i = 0; i < rows.length; i++) {
-    const t = tapRig(lay, r3d, where), lab = rows[i], d = rowTexts(t.draw())[i];
+    const t = tapRig(lay, r3d, where), lab = rows[i], d = ctr(G.rows[lab]);
     t.app.settings.mus = 30;
-    const b = tsnap(t.app); t.tapAt(d.x + 4, d.y); const s = tsnap(t.app);
+    const b = tsnap(t.app); t.tapAt(d.x, d.y); const s = tsnap(t.app);
     if (!(t.app.optLabel() === lab && did(lab, b, s))) bad.push(lab + " " + J([t.app.optRow, b, s])); // RESET DEFAULTS in REAL 3D drops to ten rows: same label, a new index
   }
   check(`${tag}: a tap at the centre of each drawn row acts on that row's label`, bad.length === 0, bad.join(" | "));
   /* the list shrinks under the page (REAL 3D lost): a tap where CAMERA was drawn acts on the row drawn there now */
   if (r3d) {
-    const t = tapRig(lay, true, where), camY = rowTexts(t.draw())[OPT_ROWS.indexOf("CAMERA")];
+    const t = tapRig(lay, true, where), camY = ctr(G.rows.CAMERA);
     t.app.optRow = t.app.optRows().indexOf("CAMERA");
     t.app.lookJob = { k: "3d", state: "failed", fails: 1 }; t.app.lookFailed("3d", "2d");
-    const G2 = md.settingsGeom(L, t.touch, t.app.optRows()), now = rowTexts(t.draw()), under = now.find((q) => Math.abs(q.y - camY.y) < G2.rowH / 2); // the drawn row whose band holds the old spot
+    const G2 = md.settingsGeom(L, t.touch, t.app.optRows()), lab2 = G2.order.find((l) => { const r = G2.hit[l]; return camY.y >= r.y && camY.y < r.y + r.h; }), under = lab2 ? { s: lab2 } : null; // the row whose tap rect holds the old spot
     t.app.settings.mus = 30;
     const b = tsnap(t.app); t.tapAt(camY.x + 4, camY.y); const s = tsnap(t.app);
     check(`${tag}: after REAL 3D is lost the cursor is on ART STYLE, and a tap at CAMERA's old spot acts on the row drawn there now (${under && under.s})`, !!under && t.app.optLabel() === under.s && did(under.s, b, s) && s.cam === b.cam, J([under && under.s, t.app.optLabel(), b, s]));

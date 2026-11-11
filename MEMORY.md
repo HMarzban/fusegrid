@@ -24,11 +24,15 @@ append an entry when it makes a non-trivial change.
 
 ## 2026-11-07 — v201 pushed: controller play, rebinding, CONTROLS page
 - Owner: "make it ready and push it up", a day before the planned Sunday. Released as one squashed commit on `origin/main`'s v200 tip (`feature/controls` and `feature/delivery` are never pushed); CHANGELOG and sitemap dated 2026-11-07; the brand of the test controller left the tracked docs (A5). 578 tests; the stubbed-pad browser pass re-run on the release tree, its leftover fails all stale against `e1384f5` or timing (record's go/no-go). M1-M7 ship open by the owner's call. The new share card (`og.png` + alt text) ships beside it as its own commit; the owner re-uploads Social preview by hand.
+## 2026-11-11 — UI upgrade Task 3.4: SETTINGS and GRAPHICS on the world kit (lane `lane-3.4-settings`)
+- `src/render/pages/settings.js` (lazy through the new `src/render/pages/lazy.js`): meters, rockers, steppers, doors, courses, the ART STYLE pane, desk / col / phone; PAUSE views 1 / 2 reuse it in `overlayBox`; SETTINGS and GRAPHICS cover the board. Open: PAUSE on a phone and landscape phones' #c cannot hold twelve 44 CSS px rows (floors give way); the pane's look keys stand in for the mock's photo thumbnails.
+
 ## 2026-11-11 — UI upgrade Task 3.3: LEVEL SELECT on the world kit
 - `src/render/pages/level.js` (one levelGeom, opaque, the selected level's room; level keys, banks, MODIFIERS door + inline list, the one card with BEST, START); old painter deleted from menudraw; tap mode follows app.lastDev (ruling 4); CROWN card copy ALL NINE · ONE OF EACH. Compact pages its groups on the least landscape phones (never under 44 px); a controller gets a cue line on phone and compact.
 
 ## 2026-11-11 — UI upgrade Task 3.6: DOM cards on the world kit
 - `#upd`, `#ana`, `#load` now use `--k-*` world-1 kit properties (pinned to `tokens.js` in hidden-css.test); keycaps last; failure copy names ART STYLE. Left: the REAL 3D/PIXEL row copy `SOUTH RETRY` in menudraw (renderrow.test:87) still keycap-first, for the SETTINGS lane.
+
 
 ## 2026-11-11 — UI upgrade: words and structure (Phase 2) and the CLASSIC logo (7.1, 7.2) done
 - On local `feature/ui-upgrade`, all reviewed, suite 646: player words (`src/render/words.js`; DAILY stamp says LEVEL; SPRINT `UNDER 3:00 · DEFAULT RULES`), MENU seven rows with RECORDS tabs (`recTab`, `recFocus`, `onMedals`; a tap on the current tab disarms the STATS reset), LEVEL SELECT row walk (`LEVEL_ROWS`, modifiers list flag; tap mode draws no ring and keeps START lit), SETTINGS visible list `optRows(r3d)` by label (10 / 12 rows) and PAUSE order RESUME, SETTINGS, RESTART, QUIT TO MENU; logo B geometry (`src/render/logo/glyphs.js`, `worlds.js`, `plan()`) and the CLASSIC painter `draw2d.js` on title and MENU (lit title, no run-up; no pixel reads). Open for later tasks: four pre-existing STATS wipe-guard gaps (cancelled touch C, consent Y/N, pad card answers, Ctrl/Cmd+R) go to Task 4.2; boot graph +79 KB for the logo, judged at R1; perf baseline 0.3 still needs headed Chrome; owner asked about the title fuse (lit while waiting is the current ruling).

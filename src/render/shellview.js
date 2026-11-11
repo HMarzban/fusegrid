@@ -13,6 +13,7 @@ import { LABEL } from "./words.js";
 import { PROJ } from "./r3d/camera.js";
 import { overlayBox, touchLay, fmtTime, isRunEnd } from "./scenes.js";
 import * as menudraw from "./menudraw.js";
+import * as lazy from "./pages/lazy.js";
 import { CACHE_NAME } from "../pwa/shell.js";
 import { hints, tapMode } from "./hintcopy.js";
 
@@ -47,8 +48,9 @@ export const isShellScreen = (s) => SHELL_ON.has(s);
    WIN, INTRO, ATTRACT). */
 export const shellMode = (s, world) => (SHELL_ON.has(s) ? 1 : s === SCREEN.GAME && isRunEnd(world) ? 2 : 0);
 /* The screens whose page paints the room look opaque over its whole canvas every frame it is up (v202 Task 3.1: MENU; Task 3.3: LEVEL
-   SELECT; each page task adds its screen): main passes {covered: true} to the renderer while one holds, so no look rasters a board nobody sees. */
-const COVERS = new Set([SCREEN.MENU, SCREEN.LEVEL]);
+   SELECT; Task 3.4: SETTINGS and GRAPHICS, their LOADING plate included; each page task adds its screen): main passes {covered: true} to the
+   renderer while one holds, so no look rasters a board nobody sees. PAUSE's views sit over the board and never cover it. */
+const COVERS = new Set([SCREEN.MENU, SCREEN.LEVEL, SCREEN.SETTINGS, SCREEN.GRAPHICS]);
 export const shellCovers = (s) => COVERS.has(s);
 /* css: CSS px per box unit on a touch layout (MENU's touch floors, its phone column and its compact tiles are in CSS px); undefined on a keyboard
    layout, whose pages never read it. fit.js hands it in as the box's own css: #sh's stand-in carries shellGeo's scale and fit writes #c's stage scale
@@ -99,9 +101,12 @@ export function loaderSpot(app, world, canvas, host = globalThis) {
   L.spot(o);
   return o;
 }
-/* rows: the visible SETTINGS list (menuapp optRows through the app's one predicate), row: the focused row's label (R11). */
+/* rows: the visible SETTINGS list (menuapp optRows through the app's one predicate), row: the focused row's label (R11); level: the room whose
+   world dresses the page; paused: a PAUSE view (the plate over the board, no room). */
 const optUi = (app, canvas, kicker) => ({
   kicker,
+  level: app.level | 0 || 1,
+  paused: kicker != null,
   job: lookN,
   rows: app.optRows(),
   row: app.optLabel(),
@@ -119,6 +124,8 @@ const optUi = (app, canvas, kicker) => ({
 });
 const gfxUi = (app, canvas, kicker) => ({
   kicker,
+  level: app.level | 0 || 1,
+  paused: kicker != null,
   row: app.gfxRow,
   view: app.gfxView ? app.gfxView() : null,
   togT: app.togT,
@@ -296,7 +303,9 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
     menudraw.drawAttractHint(c, L, app.subT);
     return;
   }
-  if (s === SCREEN.MENU) { const t = touchLay(canvas); return menudraw.drawMenu(c, menuUi(app, t, getCab), menudraw.layout(cw, chh, logoY, css), app.subT, t); }
+  if (s === SCREEN.MENU) { const t = touchLay(canvas); lazy.idle(); return menudraw.drawMenu(c, menuUi(app, t, getCab), menudraw.layout(cw, chh, logoY, css), app.subT, t); } // the lazy pages load in the first idle after MENU's first frame
+  if (s === SCREEN.SETTINGS) return menudraw.drawSettings(c, menudraw.layout(cw, chh, logoY, css), app.subT, optUi(app, canvas)); // css: the box the pointer maps a tap through
+  if (s === SCREEN.GRAPHICS) return menudraw.drawGraphics(c, menudraw.layout(cw, chh, logoY, css), app.subT, gfxUi(app, canvas));
   const L = menudraw.layout(cw, chh, logoY);
   if (s === SCREEN.LEVEL) {
     /* opaque on the world kit (pages/level.js): the selected level's room; tap mode (ruling 4) is a touch layout last driven by touch: any key or
@@ -329,12 +338,6 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
   } else if (s === SCREEN.TROPHIES) {
     menudraw.drawDim(c, 0.72, cw, chh);
     menudraw.drawTrophies(c, L, app.subT, app.stats && app.stats.trophies, touchLay(canvas), app.recFocus === 0);
-  } else if (s === SCREEN.SETTINGS) {
-    menudraw.drawDim(c, 0.72, cw, chh);
-    menudraw.drawSettings(c, L, app.subT, optUi(app, canvas));
-  } else if (s === SCREEN.GRAPHICS) {
-    menudraw.drawDim(c, 0.72, cw, chh);
-    menudraw.drawGraphics(c, L, app.subT, gfxUi(app, canvas));
   } else if (s === SCREEN.CONTROLS) {
     menudraw.drawDim(c, 0.72, cw, chh);
     if (app.controls) paintControls(c, app, canvas, kind, false);

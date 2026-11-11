@@ -124,7 +124,7 @@ hash): the HUD's `LV` chip and heat token. Medal proper names stay (IRON CROWN).
 The paragraphs below use the internal names (heat, pace, pact, room) for code.
 
 Menu look (owner pick 2026-10-19, direction A "CONSOLE PANEL"): the
-PAUSE list and every plated page but MENU share ONE kit in `menudraw.js` — `plate`
+PAUSE list and every plated page but MENU, SETTINGS and GRAPHICS (the world kit: MENU page, SETTINGS page below) share ONE kit in `menudraw.js` — `plate`
 (one 0.94 fill, one `#2a3550` border, radius 6, even-px snapped), `head`
 (sans title, muted spaced kicker), `foot`, and `paintRow` (selected = 0.12
 band + 3px notch + caret; `danger` rows select red). Labels are system-ui
@@ -186,7 +186,7 @@ lever more intractive", "put hooks … to see what we deliver"): pick on the
 left, see it on the right. Every plate HUGS its content through `pageBox`
 (band keyboard 73..492 / touch 8..512; pitches are caps, scale only in the
 iso 608x352 guard; `shellBox` is gone, no page divides its band by a row
-count). Pitches: list 26 keyboard / 52 touch, SETTINGS 27 keyboard (37 touch, 34 where 37 does not fit: the ten rows fit 37 on the 600x520 board box, the twelve take 34), GRAPHICS 28, hero
+count). Pitches: list 26 keyboard / 52 touch (SETTINGS and GRAPHICS: their page's own, see SETTINGS page below), hero
 40 / 70. LEVEL SELECT: see the LEVEL SELECT page below (UI upgrade v202 Task 3.3, on the world kit). No start-on-miss: a tap starts only on
 START (keys and controller: LEVEL SELECT rows, below). MENU: see MENU page below; ↑↓ stays the linear walk. One vocabulary: MODIFIERS
 (never MODES or PACT) on screens and in copy; pact.js and `nb.pact.v1` keep their
@@ -278,12 +278,42 @@ for draw and hit, a painter fed names and values by shellview (never indices), a
 Static parts are `kit/cache.js` layers keyed by content (`roomLayer` shared by every page of a box, LEVEL SELECT's included, at one room dpr:
 MENU's rule, `pages/menu.js` `roomDpr`, its dpr giving way so MENU's plate, its foot reserve and a 3 MiB logo reserve fit `BUDGET`; so a MENU /
 LEVEL SELECT switch never refills the room; a page keeps its plate out of the room layer), made at once so a cursor move never misses, `touch()`ed on a steady frame (`cache.touch(key)`: a held layer
-goes LRU-recent, so a stale one is freed first); live on top: focus, ring, the logo's spark. `shellview.shellCovers(screen)` (MENU, LEVEL SELECT; each
-page task adds its screen) makes main pass `{covered: true}` to the renderer: no look rasters a board a page covers. `frameloop` frees the kit's
+goes LRU-recent, so a stale one is freed first); live on top: focus, ring, the logo's spark. `shellview.shellCovers(screen)` (MENU, LEVEL SELECT,
+SETTINGS and GRAPHICS today; each page task adds its screen) makes main pass `{covered: true}` to the renderer: no look rasters a board a page covers. `frameloop` frees the kit's
 layers (`release`, handed in by main) after `KIT_FREE` 10 s of GAME PLAY on a PLAY-only clock and on `pagehide`; the next shell frame refills.
 Under the probe a page records `begin(page, {w, h, dpr, el})`, its rects (touch, set, focus, fill), texts (role, cap height, colour) and
 squint pairs outside any layer paint; its `tools/ui/lib/screens.mjs` row exempts what it has none of (MENU: chosen, locked). With no canvas
 source (Node) it paints straight onto the target over a flat fill; a context with no clip or rect (the headless renderer's) gets the plan only.
+Lazy pages (R20): `src/render/pages/lazy.js` is the ONE loader (boot; `LOAD` has one line per page, `want(name)` imports, `get(name)` is the
+module or null, `idle()` asks for every page in the first idle after MENU's first frame: shellview calls it on MENU). A lazy page is in
+`src/pwa/shell.js` SRC and `LATER`, never BOOT; until it lands its menudraw entry names paint a LOADING plate on the room (`loadingPage`) and its
+hit is -2 on that plate, -1 off it. Tests import the page or hand it in with `lazy._set`. `src/app` never imports it.
+
+SETTINGS page (UI upgrade v202 Task 3.4, `src/render/pages/settings.js`, lazy; the round 7 S7-menu 04-settings / 04-settings-3d frames): SETTINGS and
+GRAPHICS, and PAUSE views 1 / 2 inside `overlayBox` (`ui.paused`: no room, the plate over the board under PAUSE's veil, the `PAUSED · LEVEL n`
+kicker; a view whose page is not in asks `want("settings")` and shows LOADING). The room of `app.level` dresses it, opaque (SETTINGS and GRAPHICS
+cover). Rows by label (`settingsGeom(F, rows)` over the visible `optRows`, `graphicsGeom(F)` over `GFX_LABELS`, pinned equal to gfx.js
+`GFX_ROWS`); `*Hit` is the index into the visible rows (R11), -2 on the plate, -1 off it or on the phone's BACK. Each row is label left, one game
+part right: MUSIC / SFX a ten-cell meter of bricks (the head lit, the number right, `70`), BRIGHTNESS seven cells (`100%`); SOUND, SCREEN SHAKE,
+REDUCE FLASH, ANALYTICS and GRAPHICS' ON / OFF rows a two-cell rocker; ART STYLE, CAMERA and GRAPHICS' other values a stepper (stepped keys round
+a well window; ART STYLE / CAMERA carry position pips, an arrow that cannot move is a well); GRAPHICS and CONTROLS doors (the word in the quiet
+voice and the chevron: a trailing ` ›` in a value is the glyph; CONTROLS reads `VIBRATION <level>` where it fits, else the device word); RESET
+DEFAULTS coral with the reset glyph; a GRAPHICS locked row is the wall key reading `—` with the lock. Wall courses split audio · look · comfort ·
+privacy · doors · reset (GRAPHICS: preset · rows · meter). Focus is the band + the bare bomb, no ring (no key takes focus). A changed value
+flashes 120 ms as a hard cream overlay (no blur); GRAPHICS flashes every row a preset wrote. The ANALYTICS pad note replaces the rocker, or takes
+the row's second line where it does not fit. A look being prepared turns ART STYLE's value into one well window over the value's room with
+`lookVal`'s first words that fit whole and the fill line at its foot (no line on a failure, its words coral). Three arrangements: desk (a
+keyboard box, or a touch shell box, holding both columns at u >= 0.8: list 480 (540 at 125 %) beside a 400 (440) pane, rows 38 (36), courses
+12, the plate centred 944 wide; the pane is a slab of floor framed in wall cells: SETTINGS shows ART STYLE `n OF 3`, the three looks as keys
+(the chosen one lit) and the REAL 3D rows note; GRAPHICS the focused row's name and help; the foot in the pane, label first, keycap last,
+`ROW ▲▼ · CHANGE ◀▶ · BACK ESC | vREV`; the kicker `BUILD vREV` hidden at 125 % on the desk, where the foot carries the tag), col (#c, PAUSE, the
+iso guard, a short or narrow window: the list alone, rows 34, courses 10, GRAPHICS' two help lines under the rows, the foot at the plate's
+bottom, scaled as one piece) and phone (a touch-portrait shell box: the column in CSS px, BACK beside the title, rows 52 down to 44, ART STYLE
+and CAMERA as door rows, the foot under the plate). A touch box floors rows at 44 CSS px while the rest keeps u >= 0.5, else the floors give
+way (PAUSE on a phone, landscape phones' #c, a 640-tall phone). Cached: the room, one page layer (plate, head, every row at rest, courses,
+pane, foot; keyed by what it shows, so a cursor move never misses and a value change re-rasters once), and two small sub-layers it blits (a
+slab wall cell, the locked key), kept recent with it. `screens.mjs` exempts ring (both) and locked (SETTINGS has none; REAL 3D locks no
+GRAPHICS row).
 
 LEVEL SELECT page (UI upgrade v202 Task 3.3, `src/render/pages/level.js`; the round 7 S7-menu d-03 / p-03 frames, refmap `level`). Opaque on the
 world kit like MENU (`shellCovers`): the room the next run starts in (the selected level's world) and its tokens, so the page changes world as LEVEL
@@ -760,7 +790,7 @@ not shell screens. Do not add them as `SCREEN` values.
   (the one geometry for draw and tap), `controlsdraw.js`, `padart.js`,
   `hintcopy.js` (the setter that keeps `menudraw.js` free of `src/app/`). All static in the boot graph (111,107
   bytes raw at `ee2a34e`, boot graph +137,052 since `8853efc`; 12 files, on purpose; lazy paint is a later job). `SCREEN.CONTROLS = 16`; from PAUSE `pauseView 3`. The door
-  sits between GRAPHICS and RESET DEFAULTS; SETTINGS is twelve rows in REAL 3D and ten otherwise, at keyboard pitch 27 (note line removed), touch 37 or 34.
+  sits between GRAPHICS and RESET DEFAULTS; SETTINGS is twelve rows in REAL 3D and ten otherwise, at its page's pitches (v202 Task 3.4: see SETTINGS page).
   **CONTROLS is in the CONSOLE PANEL kit like every other menu (lead ruling 2026-11-02, on the owner's ask for one cohesive menu): list on the left, preview pane on the right, HEAT-style tabs, kit band, notch and caret; ↑↓ rows, ←→ tab, ←→ on SENSITIVITY or VIBRATION adjusts.** The other menus do not change, and the all-menus restyle is not planned for this release. MENU carries the note `CONTROLLER READY · SETTINGS › CONTROLS`, naming the VIBRATION level where it fits, and the SETTINGS door reads `VIBRATION MEDIUM ›` the same way; no SETTINGS or PAUSE row of its own. Tap rule exception: on CONTROLS a tap off the
   plate backs out anywhere in the viewport, not only on the canvas. Store `nb.controls.v1` (KEEP); invalid data
   loads that device's defaults, an off-level SENSITIVITY value snaps to the nearest level, a bad `vib` never touches the binds. Keyboard defaults: BOMB SPACE (J, X silent
@@ -862,8 +892,7 @@ not shell screens. Do not add them as `SCREEN` values.
   `cardClears` (it sits beside or under the `#c` stage); never INTRO /
   ATTRACT, never a touch run (the bomb button's corner); it waits while NEW
   VERSION READY is up. It stays until answered (no snooze).
-  SETTINGS `ANALYTICS` ON/OFF sits after REDUCE FLASH (row 8 of the twelve, 6 of the ten outside REAL 3D; SETTINGS touch
-  pitch 37 or 34 so twelve rows fit unscaled); OFF sets `ga-disable-<ID>`, denies
+  SETTINGS `ANALYTICS` ON/OFF (a rocker) sits after REDUCE FLASH (row 8 of the twelve, 6 of the ten outside REAL 3D); OFF sets `ga-disable-<ID>`, denies
   consent and expires the `_ga*` cookies. Cookies live on the game's own path
   (`cookie_path`, shared `github.io` origin); every ad signal is denied. Events:
   GA's page_view = an open; `run_start` from `startRunState` and `run_end` from

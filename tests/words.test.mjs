@@ -23,6 +23,9 @@ import { LOCK_3D, gfxView } from "../src/app/gfx.js";
 import { mountAnalytics, GA_HOST } from "../src/app/analytics.js";
 import { coachTip } from "../src/app/coach.js";
 import * as md from "../src/render/menudraw.js";
+import * as lazyPages from "../src/render/pages/lazy.js";
+import * as settingsPage from "../src/render/pages/settings.js";
+lazyPages._set("settings", settingsPage); // the lazy SETTINGS / GRAPHICS page, in as if its import had landed (R20)
 import { drawShell, loadControlsArt } from "../src/render/shellview.js";
 import { drawOverlay, overlayBox, drawHudChips, drawAbilityBar, PAUSE_ROWS, runStamp, copyPayload, pauseKicker } from "../src/render/scenes.js";
 import { pickupLabel, labelText } from "../src/render/fx.js";
@@ -122,7 +125,7 @@ const ALLOW_HUD = new Set(["LV", heatToken(0), heatToken(1), heatToken(2)]); // 
    FLAME / BOMB / SPEED MAX, the ability bar's SPD MAX, the catalogue's "(max 8)"); and FRAME RATE's own MAX value and help line
    on GRAPHICS (a frame rate, not a difficulty) */
 const ENTRIES_NAME = (i) => ["ONE LIFE", "NO FLOOR ITEMS", "FEWER ITEMS", "SHRINK", "TIME TRIAL"][i];
-const scrub = (s) => s.replace(/IRON CROWN/g, "").replace(/NO FLOOR ITEMS|FEWER ITEMS/gi, "").replace(/\b(FLAME|BOMB|SPEED|SPD) MAX\b/g, "").replace(/\(max \d+\)/g, "").replace(/^30 SAVES MOST BATTERY · MAX IS UP TO YOUR SCREEN, HOTTE(ST|…)$/, "").replace(/^(FRAME RATE|SENSITIVITY) MAX$/, "");
+const scrub = (s) => s.replace(/IRON CROWN/g, "").replace(/NO FLOOR ITEMS|FEWER ITEMS/gi, "").replace(/\b(FLAME|BOMB|SPEED|SPD) MAX\b/g, "").replace(/\(max \d+\)/g, "").replace(/^30 SAVES MOST BATTERY · MAX IS(?: UP(?: TO(?: YOUR(?: SCREEN,(?: HOTTEST)?)?)?)?)?$/, "").replace(/^(FRAME RATE|SENSITIVITY) MAX$/, "");
 const bad = (s) => OLD.test(scrub(s)) || /\bITEMS?\b/i.test(scrub(s)) || /\b[LR]\d\b/.test(s) || /\bHARD\W{0,3}(SPEED|PACE)\b|\b(SPEED|PACE)\W{0,3}HARD\b/i.test(s);
 const found = new Map();
 /* ruling 7: a bare NORMAL (a difficulty and a speed) or HARD (a speed before v202) only where its own drawn line, or the row

@@ -9,6 +9,9 @@ import { shellGeo } from "../src/app/fit.js";
 import { overlayBox, pauseGeom, pauseHit, touchLay } from "../src/render/scenes.js";
 import { controlsHit, dims } from "../src/render/shellview.js";
 import { graphicsHit, guideHit, layout, levelGeom, levelHit, menuHit, scoresHit, settingsHit, statsHit, recTabHit, recTabsGeom, recPlate } from "../src/render/menudraw.js";
+import * as lazyPages from "../src/render/pages/lazy.js";
+import * as settingsPage from "../src/render/pages/settings.js";
+lazyPages._set("settings", settingsPage); // the lazy SETTINGS / GRAPHICS page, in as if its import had landed (R20)
 
 let pass = 0,
   fail = 0;

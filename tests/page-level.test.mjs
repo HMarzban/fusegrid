@@ -457,7 +457,7 @@ for (const [b, dpr] of [["d1366", 2], ["p393", 2.7], ["d1024", 2]]) for (const t
 }
 /* ---- covered (ruling 1), tap mode (ruling 4), the real drawShell path ---- */
 {
-  check("shellCovers: MENU and LEVEL SELECT cover; GAME, SETTINGS, INTRO and ATTRACT do not", SV.shellCovers(SCREEN.MENU) && SV.shellCovers(SCREEN.LEVEL) && ![SCREEN.GAME, SCREEN.SETTINGS, SCREEN.INTRO, SCREEN.ATTRACT, SCREEN.GUIDE].some(SV.shellCovers));
+  check("shellCovers: MENU and LEVEL SELECT cover (SETTINGS and GRAPHICS too, Task 3.4); GAME, INTRO and ATTRACT do not", SV.shellCovers(SCREEN.MENU) && SV.shellCovers(SCREEN.LEVEL) && SV.shellCovers(SCREEN.SETTINGS) && SV.shellCovers(SCREEN.GRAPHICS) && ![SCREEN.GAME, SCREEN.INTRO, SCREEN.ATTRACT, SCREEN.GUIDE].some(SV.shellCovers));
   const box = (w, h, lay, logo, s) => ({ width: w, height: h, logo, css: s, ownerDocument: { body: { getAttribute: (k) => (k === "data-lay" ? lay : null) } }, getBoundingClientRect: () => ({ left: 0, top: 0, width: w * s, height: h * s }) });
   const a = createMenuApp({ pactUnlocked: true, settings: { fpm: 0 } });
   a.screen = SCREEN.LEVEL; a.levelRow = LEVEL_ROWS.indexOf(N_DIFF); a.heat = 1; a.subT = 9;

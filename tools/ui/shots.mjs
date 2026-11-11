@@ -118,7 +118,9 @@ async function group(c, port, a, look, world, rep) {
   const ev = P.ev, poll = async (expr, ms) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await ev(expr).catch(() => false)) return true; await sleep(50); } return false; };
   const key = (code, k) => P.key(code, k);
   const confirm = () => (a.phone ? ev("(window.__GAME__.app.confirm(),true)") : key("Enter"));
-  const pick = (field, rows, labels) => ev(`import('/src/app/menuapp.js').then((m)=>{const a=window.__GAME__.app,L=${JSON.stringify(labels)},i=m.${rows}.findIndex((x)=>L.includes(x));if(i<0)return false;a.${field}=i;return true;})`);
+  /* rows: the list the field indexes, an expression over the menu module m and the app a: m.ITEMS, m.GUIDE_ROWS, and a.optRows() for optRow (the
+     rows on screen, v202 Task 2.4: an OPT_ROWS index is wrong outside REAL 3D) */
+  const pick = (field, rows, labels) => ev(`import('/src/app/menuapp.js').then((m)=>{const a=window.__GAME__.app,L=${JSON.stringify(labels)},i=(${rows}).findIndex((x)=>L.includes(x));if(i<0)return false;a.${field}=i;return true;})`);
   const press = async () => {
     if (!a.phone) return key("Enter");
     const r = await ev("(()=>{const b=document.getElementById('c').getBoundingClientRect();return [b.left+b.width/2,b.top+b.height/2];})()");
@@ -170,7 +172,7 @@ async function group(c, port, a, look, world, rep) {
       const base = capName({ screen: s, ...ctx });
       if (R.run) {
         await ev(RUN0);
-        if (!(await pick("cursor", "ITEMS", ["PLAY"]))) { L.fail(base, "no PLAY row on MENU"); L.close(base); continue; }
+        if (!(await pick("cursor", "m.ITEMS", ["PLAY"]))) { L.fail(base, "no PLAY row on MENU"); L.close(base); continue; }
         await confirm();
         if (!(await poll("window.__GAME__.app.screen===6&&window.__GAME__.G.state==='PLAY'", 5000))) { L.fail(base, "the run did not start"); L.close(base); continue; }
         if (a.seed != null) for (const w of await ev(loadExpr({ seed: a.seed, heat: null, pace: null, gen: null }, world))) warn(w);
@@ -186,7 +188,7 @@ async function group(c, port, a, look, world, rep) {
       }
       await ev("(window.__GAME__.reset(),true)");
       let ok = true;
-      for (const [field, rows, labels] of [["cursor", "ITEMS", R.menu], ["optRow", "OPT_ROWS", R.opt], ["guideRow", "GUIDE_ROWS", R.guide]]) {
+      for (const [field, rows, labels] of [["cursor", "m.ITEMS", R.menu], ["optRow", "a.optRows()", R.opt], ["guideRow", "m.GUIDE_ROWS", R.guide]]) {
         if (!labels || !ok) continue;
         if (!(await pick(field, rows, labels))) { L.fail(base, "no " + labels.join(" / ") + " row"); ok = false; continue; }
         await confirm(); await P.adv(50);

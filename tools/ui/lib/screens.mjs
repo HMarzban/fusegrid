@@ -22,8 +22,8 @@ const ROWS = {
   title: { state: "INTRO", settle: 1200 },
   menu: { state: "MENU", settle: 1200, exempt: { chosen: "MENU shows no chosen / unchosen values: every row is a door or the PLAY key", locked: "MENU shows no locked value: every row is open" } },
   level: { menu: ["LEVEL SELECT"], state: "LEVEL", exempt: { ring: "LEVEL SELECT's rows take the band and bomb with no key ring (the d-03 frame's focused LEVEL row); the ring is START's, a door key's or an open list entry's, measured whenever one is focused (the phone's tap mode)", locked: "after the first CLEAR (the world 6-8 captures open rooms 6-8) no level is locked; before it the wall keys record locked pairs, measured when present" } },
-  options: { menu: ["OPTIONS", "SETTINGS"], state: "SETTINGS" },
-  graphics: { menu: ["OPTIONS", "SETTINGS"], key: ["ArrowUp", "ArrowUp", "ArrowUp", "Enter"], state: "GRAPHICS" }, // ↑ from the top wraps: RESET DEFAULTS, CONTROLS, GRAPHICS (the last three rows in every look)
+  options: { menu: ["OPTIONS", "SETTINGS"], state: "SETTINGS", exempt: { ring: "SETTINGS has no focused key: the focused row wears the band and the bomb", locked: "SETTINGS shows no locked value: CAMERA and BRIGHTNESS are hidden outside REAL 3D, never locked" } },
+  graphics: { menu: ["OPTIONS", "SETTINGS"], key: ["ArrowUp", "ArrowUp", "ArrowUp", "Enter"], state: "GRAPHICS", exempt: { ring: "GRAPHICS has no focused key: the focused row wears the band and the bomb", locked: "REAL 3D locks no GRAPHICS row (CLASSIC 2D and PIXEL declare their locked pair and are measured)" } }, // ↑ from the top wraps: RESET DEFAULTS, CONTROLS, GRAPHICS (the last three rows in every look)
   controls: { menu: ["OPTIONS", "SETTINGS"], key: ["ArrowUp", "ArrowUp", "Enter"], wait: "controls", state: "CONTROLS" },
   guide: { menu: ["GUIDE"], state: "GUIDE" },
   howto: { menu: ["GUIDE"], guide: ["HOW TO PLAY"], state: "HOWTO" },

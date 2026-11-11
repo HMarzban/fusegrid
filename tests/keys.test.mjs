@@ -12,6 +12,9 @@ import { SCREEN, ITEMS, GUIDE_ROWS, PAUSE_ITEMS, IDLE_T, FEELS } from "../src/ap
 import { PACT } from "../src/core/pact.js";
 import { GFX_ROWS, DEMO_T } from "../src/app/gfx.js";
 import { graphicsGeom, layout as menuLayout, modeFocusOf } from "../src/render/menudraw.js";
+import * as lazyPages from "../src/render/pages/lazy.js";
+import * as settingsPage from "../src/render/pages/settings.js";
+lazyPages._set("settings", settingsPage); // the lazy SETTINGS / GRAPHICS page, in as if its import had landed (R20)
 import { readFileSync } from "node:fs";
 import { SHOW_STEP, SHOW_DUR, popOf } from "../src/app/intro.js";
 import { CFG } from "../src/core/config.js";
@@ -655,11 +658,11 @@ for (const [LK, blob] of LOOKS) withSettings(blob, () => {
       addEventListener: (ty, fn) => { (PL[ty] = PL[ty] || []).push(fn); }, removeEventListener: noop };
     return { el, tap: (g, x, y) => { (PL.pointerdown || []).forEach((f) => f({ clientX: x, clientY: y })); g.tick(); (PL.pointerup || []).forEach((f) => f({ clientX: x, clientY: y })); g.tick(); } };
   };
-  const G = graphicsGeom(menuLayout(600, 520)), at = (r) => G.y0 + (r + 0.5) * G.rowH;
+  const G = graphicsGeom(menuLayout(600, 520)), at = (r) => G.rows[G.order[r]].y + G.rows[G.order[r]].h / 2; // v202 Task 3.4: rows by name (pages/settings.js)
   const A = mkEl(), g = gfxPage(menu(A.el));
   A.tap(g, 300, at(1));
   wired("GRAPHICS tap on FRAME RATE = Enter on it (60 -> MAX)", g.app.screen === SCREEN.GRAPHICS && g.app.gfxRow === 1 && g.app.settings.fps === 2, g.app.gfxRow + "/" + g.app.settings.fps);
-  A.tap(g, 300, 20);
+  A.tap(g, 4, 4); // off the plate (v202 Task 3.4: the world-kit plate reaches higher than the old one's y 20)
   wired("GRAPHICS tap off the rows backs out to OPTIONS on the door (" + LK + ")", g.app.screen === SCREEN.SETTINGS && g.app.optRow === gdoor(g) && g.app.optLabel() === "GRAPHICS", g.app.screen);
   const B = mkEl(), o = menu(B.el); press(o, "Enter");
   press(o, "KeyP"); toRow(o, PAUSE_ITEMS.indexOf("SETTINGS")); press(o, "Enter"); toRow(o, gdoor(o)); press(o, "Enter");

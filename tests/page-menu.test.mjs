@@ -425,7 +425,7 @@ logo._dbg.on = true;
 
 /* ---- covered: one predicate, MENU only today; main passes it to the renderer ---- */
 {
-  check("shellCovers: MENU and LEVEL SELECT (Task 3.3) cover; GAME, SETTINGS, INTRO and ATTRACT do not (each page task adds its screen)", SV.shellCovers(SCREEN.MENU) && SV.shellCovers(SCREEN.LEVEL) && ![SCREEN.GAME, SCREEN.SETTINGS, SCREEN.INTRO, SCREEN.ATTRACT, SCREEN.GUIDE].some(SV.shellCovers));
+  check("shellCovers: MENU, LEVEL SELECT (Task 3.3), SETTINGS and GRAPHICS (Task 3.4) cover; GAME, INTRO and ATTRACT do not (each page task adds its screen)", SV.shellCovers(SCREEN.MENU) && SV.shellCovers(SCREEN.LEVEL) && SV.shellCovers(SCREEN.SETTINGS) && SV.shellCovers(SCREEN.GRAPHICS) && ![SCREEN.GAME, SCREEN.INTRO, SCREEN.ATTRACT, SCREEN.GUIDE].some(SV.shellCovers));
   const { createGame } = await import("../src/main.js");
   const ctx = rec().ctx;
   const g = createGame({ getContext: () => ctx, addEventListener() {}, style: {}, width: 600, height: 520 }, { seed: 7 });

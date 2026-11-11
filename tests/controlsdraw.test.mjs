@@ -2,7 +2,10 @@
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { layout, bandOf, drawSettings, lockGlyph, ACCENT, TEXT, MUTED, DANGER, WARM, PLATE, LINE } from "../src/render/menudraw.js";
+import { layout, bandOf, drawSettings, lockGlyph, ACCENT, TEXT, MUTED, DANGER, WARM, PLATE, LINE, plate as kitPlate, head as kitHead, paintRow as kitRow, pageBox } from "../src/render/menudraw.js";
+import * as lazyPages from "../src/render/pages/lazy.js";
+import * as settingsPage from "../src/render/pages/settings.js";
+lazyPages._set("settings", settingsPage); // the lazy SETTINGS page, in as if its import had landed (R20)
 import { CAPTION, geomOf, geoFor, hitPage, rowsOf, statusOf, footOf, padStates, keyStates, padLabels, keyLabels, keyName, moveLabel, softAliasesOf, BTN, DEF_KEY, DEF_PAD, DEF_VIB, VIB_LEVELS, SENS_LEVELS, sensIdx, vibWord, NO_VIB, FEEL_NOTHING, STATUS } from "../src/render/controlsgeo.js";
 import { PARTS, BODY_PATH, KB_ROWS, trace, glyph, drawPad, drawKeys } from "../src/render/padart.js";
 import { drawControls } from "../src/render/controlsdraw.js";
@@ -288,10 +291,11 @@ const paint = (v, ui, Lx = L600) => { const r = recCtx(); drawControls(r.c, Lx, 
   }
   check("no two words in a row overlap", !clash.length, [...new Set(clash)].slice(0, 6).join(" "));
 }
-/* The page paints through the kit: the same plate and selected-row ops OPTIONS makes, on one recorder. */
+/* The page paints through the CONSOLE PANEL kit: the same plate and selected-row ops the kit's own plate / head / paintRow make (v202 Task 3.4:
+   SETTINGS, the old reference, moved to the world kit; CONTROLS moves in its own task), on one recorder. */
 {
-  const opts = recCtx();
-  drawSettings(opts.c, L600, 0, { rows: optRows(false), row: "MUSIC", vals: {} });
+  const opts = recCtx(), S0 = pageBox(L600, 500, 10 * 27, false);
+  kitPlate(opts.c, S0.x, S0.y, S0.w, S0.h); kitHead(opts.c, S0, "SETTINGS", "BUILD v0"); kitRow(opts.c, S0.ix - 8, S0.by + 1, S0.iw + 16, 25, "MUSIC", "100", true, { vc: TEXT });
   const ctl = paint(keyV({ row: 0 }));
   const plateOps = (log) => log.filter((x) => x === "f" + PLATE || x === "k#2a3550" || x === "frgba(0,0,0,0.35)").slice(0, 3);
   check("plate: the same shadow, fill and border as OPTIONS", ctl.log.includes("f" + PLATE) && ctl.log.includes("k#2a3550") && plateOps(ctl.log).join() === plateOps(opts.log).join(), plateOps(ctl.log).join());
@@ -445,13 +449,15 @@ const paint = (v, ui, Lx = L600) => { const r = recCtx(); drawControls(r.c, Lx, 
 for (const [nm, Lx, touch] of [["keyboard 27", L600, false], ["touch 37", L600, true], ["touch 400 wide", layout(400, 700), true], ["guard 608x352", layout(608, 352), false]]) for (const r3d of [false, true]) {
   const r = recCtx();
   drawSettings(r.c, Lx, 1, { rows: optRows(r3d), row: "CONTROLS", vals: {}, ctlDoor: "CONTROLLER ›", padVib: "MEDIUM", touch });
-  const v = r.texts.find((t) => t.s === "VIBRATION MEDIUM ›"), lab = r.texts.find((t) => t.s === "CONTROLS");
-  check("the door fits beside its label: " + nm + (r3d ? " (twelve rows)" : " (ten rows)"), !!v && !!lab && v.left >= lab.right + 12 && v.y === lab.y, v && [lab.right, v.left].join());
+  /* v202 Task 3.4: the page's plan (pages/settings.js; this recorder has no clip, so the page plans and paints nothing); the › is the door's chevron */
+  const o = settingsPage._dbg.last.Pl.rows.CONTROLS, v = o.val.P.find((p) => p.k === "text" && p.s === "VIBRATION MEDIUM"), lab = o.label;
+  check("the door fits beside its label: " + nm + (r3d ? " (twelve rows)" : " (ten rows)"), !!v && !!lab && v.x >= lab.x + lab.w + 12 && v.y === lab.y, v && [lab.x + lab.w, v.x].join());
 }
 {
   const r = recCtx();
   drawSettings(r.c, L600, 1, { rows: optRows(false), row: "CONTROLS", vals: {}, ctlDoor: "KEYBOARD ›", touch: false });
-  check("no level, the door stays as today", r.texts.some((t) => t.s === "KEYBOARD ›") && !r.texts.some((t) => t.s.startsWith("VIBRATION")));
+  const P = settingsPage._dbg.last.Pl.rows.CONTROLS.val.P.filter((p) => p.k === "text").map((p) => p.s);
+  check("no level, the door stays as today", P.includes("KEYBOARD") && !P.some((s) => s.startsWith("VIBRATION")));
 }
 
 // art primitives on a context with no Path2D

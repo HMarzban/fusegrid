@@ -21,6 +21,12 @@ import { drawLogo2d, deviceScale, TITLE_RUNUP } from "./logo/draw2d.js";
 import * as menuPage from "./pages/menu.js";
 import * as levelPage from "./pages/level.js";
 import { rosterOf } from "./pages/card.js";
+import * as lazy from "./pages/lazy.js";
+import { worldTokens, CONST, toL } from "./kit/tokens.js";
+import { plate as kitPlate } from "./kit/paint.js";
+import { dsp as kitDsp, lbl as kitLbl } from "./kit/type.js";
+import { canMake } from "./kit/cache.js";
+import { roomLayer } from "./kit/room.js";
 const ACCENT = "#37f0d0",
   TEXT = "#dfe7f5",
   MUTED = "#7385ad";
@@ -1178,75 +1184,54 @@ export function drawTrophies(c, L, t, rows, touch, tabs) {
   foot(c, S, tapMode(touch) ? BACK_TAP : TAB_LEAD + hints().ok + " / " + hints().back + " BACK"); // no body: the tab row always has the focus; back is MENU
 }
 
-/* SETTINGS (SCREEN.SETTINGS, spec §2; design record §4): the rows on LEVEL SELECT's adjust model — the live knobs,
-   ANALYTICS (the GA consent, its own store), the GRAPHICS and CONTROLS doors and RESET DEFAULTS.
-   ui = {rows, row, vals, r3d, px, togT, rev, door, ctlDoor, ana, anaNote, touch}; rows is the visible list the app hands
-   in (menuapp optRows: CAMERA and BRIGHTNESS only while ART STYLE is REAL 3D) and row the focused row's LABEL, never an
-   index (this file cannot import src/app); vals is the nb.settings.v1 blob,
-   rev is the build tag shellview derives from CACHE_NAME, door is the
-   GRAPHICS preset value (`AUTO ›`) the app derives, ctlDoor is the last-used
-   device (`KEYBOARD ›`), padVib is the VIBRATION level while a pad with an
-   actuator is connected (the door reads it where it fits) and anaNote is why the ANALYTICS row did nothing on a
-   pad, shown as that row's value. CAM_NAME
-   mirrors camrig.js's CAM_PRESET order; this file must not import from
-   src/render/three (the 2D path never loads three), so the names are
-   duplicated here the way PLAQUE_NAME is. */
-const CAM_NAME = ["STANDARD", "WIDE", "FAR"];
-/* OPTIONS and GRAPHICS share one foot; a touch layout has none of those keys,
-   so it names the tap model both pages use (row = Enter, off the plate = back). */
-export const FOOT_KEYS = "↑↓ ROW · ←→ ADJUST · ENTER CYCLE · ESC BACK", FOOT_TAP = "TAP A ROW TO CHANGE IT · TAP OUTSIDE TO GO BACK";
-const footKeys = () => "↑↓ ROW · ←→ ADJUST · " + hints().ok + " CYCLE · " + hints().back + " BACK";
-/* Each row's value by its label, aligned with rows (the visible list); a label it does not know reads empty. */
-export function settingsRows(rows, vals, r3d, px, door, ana, ctlDoor) {
-  const v = vals || {};
-  const on = (b) => (b ? "ON" : "OFF");
-  const by = {
-    MUSIC: String(v.mus | 0),
-    SFX: String(v.sfx | 0),
-    SOUND: on(v.snd),
-    [LABEL.ART_STYLE]: r3d ? "REAL 3D" : px ? "PIXEL" : "CLASSIC 2D",
-    CAMERA: CAM_NAME[Math.min(2, Math.max(0, v.cam | 0))],
-    BRIGHTNESS: String(v.bri | 0),
-    "SCREEN SHAKE": on(v.shk),
-    "REDUCE FLASH": on(v.flx),
-    ANALYTICS: on(ana),
-    GRAPHICS: door || "›",
-    CONTROLS: ctlDoor || "›",
-    "RESET DEFAULTS": "",
-  };
-  return (rows || []).map((r) => by[r] || "");
+/* SETTINGS and GRAPHICS (SCREEN.SETTINGS / GRAPHICS; PAUSE views 1 and 2): the page is src/render/pages/settings.js (UI upgrade v202 Task 3.4),
+   lazy (R20) through pages/lazy.js. These keep the entry names shellview, the pointer and the tests call, with the same arguments for draw and
+   tap: L is layout(W, H, lg, css) for the box the page draws on (PAUSE: overlayBox's), touch body[data-lay] p / l (the draw reads ui.touch).
+   Until the module is in, the page is one plate on the room that says LOADING (want() starts the import), a tap on it is inert (-2) and a tap off
+   it backs out (-1); once in, every call is synchronous. *Geom answers null until then. ui is the page's (see its header); rows the visible list. */
+const page = () => lazy.get("settings");
+/* one ask in flight; a failed import shows DID NOT LOAD and is asked again at most every RETRY_MS, never every frame */
+let failAt = -Infinity;
+const RETRY_MS = 3000, nowMs = () => (globalThis.performance && typeof performance.now === "function" ? performance.now() : 0);
+let asking = false;
+const want = () => {
+  if (!asking && nowMs() - failAt >= RETRY_MS) { asking = true; lazy.want("settings").then(() => { asking = false; failAt = -Infinity; }, () => { asking = false; failAt = nowMs(); }); }
+  return failAt > -Infinity;
+};
+/* OPTIONS and GRAPHICS share the tap model on a touch layout (row = Enter, off the plate = back); CONTROLS' foot reads it too. */
+export const FOOT_TAP = "TAP A ROW TO CHANGE IT · TAP OUTSIDE TO GO BACK";
+const LOAD_W = 360, LOAD_H = 128;
+function loadBox(F) {
+  const k = Math.min(1, (F.W - 52) / LOAD_W, (F.H - 52) / LOAD_H), w = LOAD_W * k, h = LOAD_H * k;
+  return { x: (F.W - w) / 2, y: (F.H - h) / 2, w, h, k };
 }
-/* One source for the layout budget (a hugging plate, default pitch 28 keyboard
-   / 41 touch; SETTINGS is 27 keyboard and, touch, 37 where its rows fit
-   the band, else 34 so twelve fit the 520 band unscaled): the page draws it and settingsHit / graphicsHit read it, so a tap
-   can never land on a row the plate did not paint. note = the line under the
-   rows (GRAPHICS' two-line help). SETTINGS sizes to the visible list it is handed. */
-function rowsGeom(L, n, note, touch, tp, kp) {
-  const T = !!touch,
-    pitch = T ? tp || 41 : kp || 28,
-    S = pageBox(L, 500, n * pitch + note, T),
-    rowH = pitch * S.f;
-  return { S, y0: S.by, rowH, noteY: S.by + n * rowH + 6, n };
-}
-const rowsN = (rows) => (rows && rows.length) | 0;
-const optTouchPitch = (L, n) => { const B = bandOf(L, true); return n * 37 <= B.bot - B.top - CHROME ? 37 : 34; };
-/** SETTINGS' geometry for the visible rows (the app's optRows): the page draws it, settingsHit reads it. */
-export const settingsGeom = (L, touch, rows) => rowsGeom(L, rowsN(rows), 0, touch, optTouchPitch(L, rowsN(rows)), 27);
-export const graphicsGeom = (L, touch) => rowsGeom(L, GFX_N, 32, touch);
-/* Row index under a tap; -2 = on the plate but off the rows (inert), -1 =
-   off the plate (main backs out). Bands are contiguous: +1e-9 keeps a
-   boundary computed as y0 + n*rowH (float sum error) on the row below it. */
-function rowsHit(x, y, g) {
-  const S = g.S;
-  if (x >= S.ix - 8 && x <= S.ix + S.iw + 8) { // the painted row band (paintRow at S.ix-8 .. +8)
-    const i = Math.floor((y - g.y0) / g.rowH + 1e-9);
-    if (i >= 0 && i < g.n) return i;
+/** The LOADING plate a lazy page shows until its module lands: the room (none over PAUSE's board), the kit plate, the title, one line. */
+export function loadingPage(c, F, title, ui) {
+  const u = ui || {}, level = u.level | 0 || 1, tok = worldTokens(level), B = loadBox(F);
+  if (!(F.W > 0 && F.H > 0) || typeof c.clip !== "function") return;
+  if (!u.paused) {
+    if (canMake()) c.drawImage(roomLayer({ w: F.W, h: F.H }, level, tok, { dpr: Math.min(2, deviceScale(c)), look: "2d", textScale: 1 }), 0, 0, F.W, F.H);
+    else { c.fillStyle = toL(tok.bg1, 0.004); c.fillRect(0, 0, F.W, F.H); }
   }
-  return x >= S.x && x <= S.x + S.w && y >= S.y && y <= S.y + S.h ? -2 : -1;
+  c.save(); c.translate(B.x, B.y); c.scale(B.k, B.k);
+  kitPlate(c, 0, 0, LOAD_W, LOAD_H, tok);
+  kitDsp(c, title, LOAD_W / 2, 50, 34, { align: "center" });
+  kitLbl(c, u.failed ? "DID NOT LOAD" : "LOADING", LOAD_W / 2, 96, 16, { align: "center", col: CONST.t2 });
+  c.restore();
 }
-/** A tap's index into rows (the visible list optRow indexes, R11); -2 inert on the plate, -1 off it. */
-export const settingsHit = (x, y, L, rows, touch) => rowsHit(x, y, settingsGeom(L, touch, rows));
-export const graphicsHit = (x, y, L, _n, touch) => rowsHit(x, y, graphicsGeom(L, touch));
+const loadHit = (x, y, F) => { const B = loadBox(F); return x >= B.x && x < B.x + B.w && y >= B.y && y < B.y + B.h ? -2 : -1; };
+/** SETTINGS' geometry for the visible rows (pages/settings.js settingsGeom on this box); null until the page is in. */
+export const settingsGeom = (L, touch, rows) => { const m = page(); return m ? m.settingsGeom(frameOf(L, touch), rows) : null; };
+export const graphicsGeom = (L, touch) => { const m = page(); return m ? m.graphicsGeom(frameOf(L, touch)) : null; };
+/** A tap's index into rows (the visible list optRow indexes, R11); -2 inert on the plate, -1 off it (or on the phone's BACK). */
+export const settingsHit = (x, y, L, rows, touch) => { const m = page(), F = frameOf(L, touch); return m ? m.settingsHit(x, y, F, rows) : loadHit(x, y, F); };
+export const graphicsHit = (x, y, L, _n, touch) => { const m = page(), F = frameOf(L, touch); return m ? m.graphicsHit(x, y, F) : loadHit(x, y, F); };
+export function drawSettings(c, L, t, ui) {
+  const u = ui || {}, F = frameOf(L, u.touch), m = page();
+  if (m) return m.drawSettingsPage(c, F, u, t);
+  loadingPage(c, F, LABEL.SETTINGS, { ...u, failed: want() });
+}
+
 /* RENDER row job states (v202 delivery, design 2026-11-06 "What the player
    sees"). The value slot carries the job of the look being prepared and a 2 px
    line along the band's bottom its honest fill; nothing reflows. app.lookJob =
@@ -1294,94 +1279,21 @@ export function lookVal(n, touch) {
   const s = n.st === "loading" ? (n.slow ? "SLOW, STILL TRYING" : cnt || "LOADING") : PH_WORD[n.phase] && cnt ? PH_WORD[n.phase] + " " + cnt : "PREPARING";
   return [L + " · " + s, s];
 }
-/* The value slot beside a label: paintRow's own type, no door mark. */
-export function valueRoom(c, w, h, label, touch) {
-  c.font = sans(rowSize(h, { touch }), "600");
-  return w - 12 - 26 - mw(c, label) - 12;
-}
+/* LEVEL SELECT's START tag: the first of cands that fits room at the value type, else the last one clipped. */
 export function fitVal(c, cands, room) {
   c.font = font(12);
   for (const s of cands) if (mw(c, s) <= room) return s;
   return clip(c, cands[cands.length - 1], room);
 }
-/* 2 px along the band's bottom, past the notch: the fill, or still stripes. */
-function jobLine(c, x, y, w, f) {
-  c.fillStyle = LINE;
-  c.fillRect(x, y, w, 2);
-  c.fillStyle = ACCENT;
-  if (f < 0) for (let xx = x; xx < x + w; xx += 8) c.fillRect(xx, y, Math.min(4, x + w - xx), 2);
-  else if (f > 0) c.fillRect(x, y, Math.round(w * Math.min(1, f)), 2);
-}
-export function drawSettings(c, L, t, ui) {
-  const u = ui || {};
-  const rows = u.rows || [],
-    cur = rows.indexOf(u.row),
-    at = (r) => rows.indexOf(r);
-  const vals = settingsRows(rows, u.vals, !!u.r3d, !!u.px, u.door, u.ana, u.ctlDoor);
-  if (u.anaNote && at("ANALYTICS") >= 0) vals[at("ANALYTICS")] = u.anaNote;
-  const g = settingsGeom(L, u.touch, rows),
-    S = g.S;
-  boxPlate(c, S);
-  head(c, S, LABEL.SETTINGS, u.kicker || "BUILD " + (u.rev || ""));
-  if (u.padVib) { // the door reads the level, only where it fits beside the label at the row's largest type
-    const s = "VIBRATION " + u.padVib + " ›";
-    c.font = sans(17, "600");
-    const lab = mw(c, "CONTROLS");
-    c.font = font(12);
-    if (mw(c, s) <= S.iw + 16 - 38 - lab - 12 && at("CONTROLS") >= 0) vals[at("CONTROLS")] = s;
-  }
-  const fk =
-    typeof u.togT === "number" && u.togT >= 0 ? 1 - clamp01((t - u.togT) / 0.12) : 0;
-  const n = u.job || null, rx = S.ix - 8, rw = S.iw + 16, rh = g.rowH - 2;
-  for (let i = 0; i < rows.length; i++) {
-    const sel = i === cur,
-      ry = g.y0 + i * g.rowH + 1;
-    c.globalAlpha = 1;
-    if (rows[i] === LABEL.ART_STYLE && n) {
-      const bad = n.st === "fail", v = fitVal(c, lookVal(n, u.touch), valueRoom(c, rw, rh, rows[i], u.touch));
-      paintRow(c, rx, ry, rw, rh, rows[i], v, sel, { touch: u.touch, danger: bad, vc: bad ? DANGER : TEXT, glow: sel ? fk : 0 });
-      if (!bad) jobLine(c, rx + 3, ry + rh - 2, rw - 3, n.fill);
-    } else paintRow(c, rx, ry, rw, rh, rows[i], vals[i], sel, { touch: u.touch, vc: TEXT, glow: sel ? fk : 0 });
-    c.globalAlpha = 1;
-  }
-  foot(c, S, tapMode(u.touch) ? FOOT_TAP : footKeys());
-}
-
-/* GRAPHICS (unified spec 2026-10-10 §5): the OPTIONS look with eight rows
-   and a two-line help area. ui = {row, view, togT, chg, touch}; view =
-   {rows:[{label,val,locked,help1,help2}]} arrives finished from the app
-   (gfx.js owns every string — this file must not import src/app). chg is the
-   bitmask of rows the last change touched, so a preset glows on every row it
-   wrote. Locked rows dim to 0.45, read an em dash and stay focusable. */
+/* GRAPHICS' rows arrive finished from the app (gfx.js owns every string; this file must not import src/app): ui = {row, view, togT, chg, kicker,
+   touch, level, paused}; the page draws them (pages/settings.js drawGraphicsPage). */
 export const GFX_N = 8; // pinned equal to gfx.js GFX_ROWS.length
 export function drawGraphics(c, L, t, ui) {
-  const u = ui || {},
-    rows = (u.view && u.view.rows) || [],
-    cur = u.row | 0,
-    chg = u.chg | 0,
-    big = !!u.touch;
-  const g = graphicsGeom(L, big),
-    S = g.S;
-  boxPlate(c, S);
-  head(c, S, "GRAPHICS", u.kicker || "PERFORMANCE · BATTERY");
-  const fk =
-    typeof u.togT === "number" && u.togT >= 0 ? 1 - clamp01((t - u.togT) / 0.12) : 0;
-  for (let i = 0; i < GFX_N; i++) {
-    const r = rows[i] || { label: "", val: "" };
-    c.globalAlpha = r.locked ? 0.45 : 1;
-    paintRow(c, S.ix - 8, g.y0 + i * g.rowH + 1, S.iw + 16, g.rowH - 2, r.label, r.locked ? "—" : String(r.val), i === cur, { touch: big, vc: TEXT, glow: fk > 0 && (chg >> i) & 1 ? fk : 0 });
-    c.globalAlpha = 1;
-  }
-  const h = rows[cur] || {};
-  c.textAlign = "center";
-  c.textBaseline = "middle";
-  c.fillStyle = MUTED;
-  c.font = font(big && !L.narrow ? 11 : 10);
-  c.fillText(clip(c, h.help1 || "", S.iw), S.mid, g.noteY + 6);
-  c.fillStyle = TEXT;
-  c.fillText(clip(c, h.help2 || "", S.iw), S.mid, g.noteY + 20);
-  foot(c, S, tapMode(big) ? FOOT_TAP : footKeys());
+  const u = ui || {}, F = frameOf(L, u.touch), m = page();
+  if (m) return m.drawGraphicsPage(c, F, u, t);
+  loadingPage(c, F, "GRAPHICS", { ...u, failed: want() });
 }
+
 
 /* FPS METER chip (GRAPHICS row 7): bottom-right of the box on every screen.
    info is app.gfx {fps, kind, dpr3d, dprPx, limit} or null before the frame

@@ -11,6 +11,9 @@ import { drawShell, controlsHit, controlsGeo } from "../src/render/shellview.js"
 import { Input } from "../src/input.js";
 import { createWorld } from "../src/core/sim.js";
 import { setHints } from "../src/render/hintcopy.js";
+import * as lazyPages from "../src/render/pages/lazy.js";
+import * as settingsPage from "../src/render/pages/settings.js";
+lazyPages._set("settings", settingsPage); // the lazy SETTINGS page, in as if its import had landed (R20)
 
 let pass = 0, fail = 0;
 function check(name, cond, detail) {
@@ -100,7 +103,7 @@ const draw = (g) => { const R = rec(); drawShell(R.c, g.app, g.world, null, "2d"
   check("pad seen, rumble.js not in: nothing buzzed yet", g.calls.length === 0, g.calls.length);
   check("the READY note names the stored level without rumble.js", a.padNote === "CONTROLLER READY · VIBRATION MEDIUM", a.padNote);
   a.screen = SCREEN.SETTINGS;
-  check("the OPTIONS door reads VIBRATION MEDIUM › without rumble.js", draw(g).includes("VIBRATION MEDIUM ›"));
+  check("the OPTIONS door reads VIBRATION MEDIUM (its › the door's chevron) without rumble.js", draw(g).includes("VIBRATION MEDIUM"));
   a.screen = SCREEN.MENU;
   await import("../src/app/rumble.js");
   await sleep(0);

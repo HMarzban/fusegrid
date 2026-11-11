@@ -519,7 +519,9 @@ test("gates: only the latest run is judged; a stale capture or a failed one can 
    of menu / opt / guide picks the first row in that table whose label the recipe lists and confirms, then the keys are pressed in order
    (the phone path's app.key); the screen reached must be the recipe's state. A run screen starts from MENU PLAY. No browser. */
 test("screens: every recipe reaches its state through the real menu app", () => {
-  const PICK = [["menu", "cursor", ITEMS], ["opt", "optRow", OPT_ROWS], ["guide", "guideRow", GUIDE_ROWS]];
+  const PICK = [["menu", "cursor", () => ITEMS], ["opt", "optRow", (a) => a.optRows()], ["guide", "guideRow", () => GUIDE_ROWS]]; // optRow indexes the rows on screen (v202 Task 2.4), never OPT_ROWS
+  assert.match(readFileSync(join(ROOT, "tools/ui/shots.mjs"), "utf8"), /\["optRow", "a\.optRows\(\)", R\.opt\]/, "shots.mjs picks optRow by label in the rows on screen, never by an OPT_ROWS index");
+  assert.ok(OPT_ROWS.length === 12 && createMenuApp().optRows().length === 10, "outside REAL 3D the rows on screen are not OPT_ROWS: an index pick would land a row off");
   const nameOf = (s) => Object.keys(SCREEN).find((k) => SCREEN[k] === s);
   const page = () => createControlsPage({ get: () => DEF_CONTROLS, set() {}, padView: () => ({ state: "none" }), say() {} });
   for (const n of ORDER) {
@@ -535,9 +537,9 @@ test("screens: every recipe reaches its state through the real menu app", () => 
       continue;
     }
     a.toMenu();
-    for (const [f, field, rows] of PICK) {
+    for (const [f, field, rowsOf] of PICK) {
       if (!R[f]) continue;
-      const i = rows.findIndex((x) => R[f].includes(x));
+      const rows = rowsOf(a), i = rows.findIndex((x) => R[f].includes(x));
       assert.ok(i >= 0, n + ": no " + R[f].join(" / ") + " row in " + f);
       a[field] = i;
       a.confirm();

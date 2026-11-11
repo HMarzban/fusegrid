@@ -13,6 +13,8 @@ import {loadScores} from "../src/app/highscores.js";
 import {loadStats} from "../src/app/stats.js";
 import {copyPayload, pauseGeom, overlayBox} from "../src/render/scenes.js";
 import {menuGeom, menuHit, guideGeom as mdGuideGeom, levelGeom, scoresHit, settingsGeom, LEVEL_TAP, layout as menuLayout} from "../src/render/menudraw.js";
+import * as lazyPages from "../src/render/pages/lazy.js";
+import * as settingsPage from "../src/render/pages/settings.js";
 import {fitBox, shellGeo} from "../src/app/fit.js";
 import "../src/core/board3.js";
 import "../src/app/demobot.js";
@@ -24,7 +26,8 @@ const mdScoreTabs=(L,t)=>{ for(let y=8;y<200;y++){ const xs=[]; for(let x=0;x<60
 const menuTap=(i,k=1)=>{const r=menuGeom(menuLayout(600,520),7).rows[ITEMS[i]];return {clientX:(r.x+r.w/2)/k,clientY:(r.y+r.h/2)/k};}; // a row's centre (the MENU page's geometry, rows by name)
 const menuU=()=>menuGeom(menuLayout(600,520),7).u; // box units per design px: the page paints under this scale, so a raw fillText x / y maps through it
 /* a SETTINGS row's centre by LABEL in the ten rows CLASSIC 2D shows (v202 Task 2.4): page and PAUSE view 1 share the 600x520 box */
-const OPT10=optRows(false), optG=()=>settingsGeom(menuLayout(600,520),false,OPT10), optY=(lab,k=1)=>(optG().y0+(OPT10.indexOf(lab)+0.5)*optG().rowH)/k;
+const OPT10=optRows(false), optG=()=>settingsGeom(menuLayout(600,520),false,OPT10), optY=(lab,k=1)=>(optG().rows[lab].y+optG().rows[lab].h/2)/k; // v202 Task 3.4: rows by name (pages/settings.js, lazy: set below)
+lazyPages._set("settings",settingsPage);
 
 const ROOT=dirname(fileURLToPath(import.meta.url))+"/..";
 
