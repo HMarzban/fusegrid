@@ -445,8 +445,8 @@ const inShow = (o) => { const a = createMenuApp(o); a.beginShow(); frames(a, 13,
       String(g.screen),
     );
     check(
-      "back() from " + GUIDE_ROWS[row] + " returns to GUIDE, not MENU",
-      g.back() === true && g.screen === SCREEN.GUIDE && g.guideRow === row,
+      "back() from " + GUIDE_ROWS[row] + " returns to GUIDE, not MENU (ENEMIES: the first closes the tooltip a key's arrival opened, ruling R3)",
+      (GUIDE_ROWS[row] !== "ENEMIES" || (g.foeTip === true && g.back() === true && g.screen === SCREEN.ENEMIES && g.foeTip === false)) && g.back() === true && g.screen === SCREEN.GUIDE && g.guideRow === row,
       String(g.screen),
     );
   }
@@ -697,11 +697,31 @@ for (const r3d of [false, true]) {
   f.confirm();
   check("Enter/confirm in ENEMIES opens the focused foe's tooltip (stays on ENEMIES); a second Enter does nothing", f.screen === SCREEN.ENEMIES && f.foeTip === true && f.confirm() === false && f.screen === SCREEN.ENEMIES);
   f.back();
-  check("back(): ENEMIES->GUIDE (a key's Esc leaves at once, the tooltip open or not)", f.screen === SCREEN.GUIDE);
+  check("back() on ENEMIES with the tooltip open closes it first and stays (Esc / Backspace, ruling R3)", f.screen === SCREEN.ENEMIES && f.foeTip === false);
+  f.back();
+  check("back(): ENEMIES->GUIDE once the tooltip is shut", f.screen === SCREEN.GUIDE);
   const g = createMenuApp();
-  g.screen = SCREEN.GUIDE; g.guideRow = 2; g.foeRow = 5; g.foeTip = true;
+  g.screen = SCREEN.GUIDE; g.guideRow = 2; g.foeRow = 5; g.foeTip = false;
   g.confirm();
-  check("GUIDE ENEMIES door: every arrival lands on the first foe, tooltip shut", g.screen === SCREEN.ENEMIES && g.foeRow === 0 && g.foeTip === false);
+  check("GUIDE ENEMIES door on keys: every arrival lands on the first foe, its tooltip open (the tip follows key focus, ruling R3)", g.screen === SCREEN.ENEMIES && g.foeRow === 0 && g.foeTip === true);
+  /* fix round 1 (R1 / R2): a read-only page steps its pages where the box pages it (opts.pageCount), clamped, every arrival on the first */
+  for (const [row, scr] of [[0, SCREEN.HOWTO], [1, SCREEN.ITEMS], [3, SCREEN.FLOOR]]) {
+    const q = createMenuApp({ pageCount: () => 3 });
+    q.screen = SCREEN.GUIDE; q.guideRow = row; q.infoPg = 2;
+    q.confirm();
+    const p0 = q.infoPg, m1 = q.move(1, 0), p1 = q.infoPg; q.move(1, 0); const m3 = q.move(1, 0), p2 = q.infoPg, m4 = q.move(-1, 0), p3 = q.infoPg;
+    check("read-only " + GUIDE_ROWS[row] + ": arrives on page 1; ↓ / → step on (a cued move), clamped at the last (no wrap), ↑ / ← back", q.screen === scr && p0 === 0 && m1 === true && p1 === 1 && m3 === false && p2 === 2 && m4 === true && p3 === 1, [p0, p1, p2, p3].join("/"));
+    const one = createMenuApp(); one.screen = scr;
+    check("read-only " + GUIDE_ROWS[row] + ": with one page (no pageCount) a move does nothing", one.move(1, 0) === false && one.infoPg === 0);
+    q.infoStep(-1);
+    check("read-only " + GUIDE_ROWS[row] + ": infoStep (a tapped page key) is the same step", q.infoPg === 0);
+  }
+  const fz = createMenuApp(); fz.screen = SCREEN.ENEMIES; fz.foeRow = 2; fz.foeTip = true;
+  check("ENEMIES foeFocus (a tapped page key): that page's first foe, the tooltip shut; the foe already focused is a no-op", fz.foeFocus(4) === true && fz.foeRow === 4 && fz.foeTip === false && fz.foeFocus(4) === false);
+  const g2 = createMenuApp();
+  g2.screen = SCREEN.GUIDE; g2.guideRow = 2; g2.foeRow = 5; g2.foeTip = true; g2.lastDev = "touch";
+  g2.confirm();
+  check("GUIDE ENEMIES door by touch or controller: the first foe, tooltip shut", g2.screen === SCREEN.ENEMIES && g2.foeRow === 0 && g2.foeTip === false);
   g.move(1, 0);
   check("a key move walks the foes and opens the tooltip on the new one (keyboard focus shows it)", g.foeRow === 1 && g.foeTip === true);
   g.move(-1, 1); g.move(-1, 1);

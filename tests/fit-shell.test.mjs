@@ -268,6 +268,10 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
     for (const s of C) { const i = left.findIndex((q) => q.s === s); if (i >= 0) left.splice(i, 1); }
     return left;
   };
+  /* a GUIDE page where the box pages it (fix round 1, rulings R1 / R2): every page's texts, in page order (GUIDE through its doors, ENEMIES its
+     foes, a read-only page its infoPg; the page shown repeats once the index runs past the last) */
+  const PAGED = { GUIDE: ["guideRow", 4], ENEMIES: ["foeRow", 9], HOWTO: ["infoPg", 9], ITEMS: ["infoPg", 9], FLOOR: ["infoPg", 9] };
+  const shotAll = (nm, box, cur) => { if (!PAGED[nm]) return shot(nm, box, cur); const [k, n] = PAGED[nm], out = []; for (let i = 0; i < n; i++) { const a = mkApp(SCREEN[nm]); a[k] = i; const R = rec(); drawShell(R.c, a, { state: "PLAY", time: 1 }, box, "2d", () => [], () => 0, () => ({})); out.push(...R.texts); } return out; };
   const boxOf = (g, lay) => ({ width: g.w, height: g.h, logo: g.logo, ownerDocument: { body: { getAttribute: () => lay } }, getBoundingClientRect: () => ({ left: 0, top: 0, width: g.w * g.s, height: g.h * g.s }) });
   const each = (f) => { for (const nm of SHELL_SCREENS) for (let cur = 0; cur < (nm === "MENU" ? ITEMS.length : 1); cur++) f(nm, nm === "MENU" ? cur : null); };
   /* exact strings in order, except the landscape tablets' MENU. A 600x520 touch box is MENU's compact arrangement (pages/menu.js, fix round 1: its
@@ -302,7 +306,7 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
     const out = [], same = [], tab = lay === "l" && W > 600;
     cardOut.s.length = 0; cardOutL.s.length = 0;
     each((nm, cur) => {
-      const T = shot(nm, box, cur), cmp = tab && nm === "MENU" ? words : nm === "LEVEL" ? stream : exact, desk = tab && (nm === "MENU" || nm === "LEVEL"), B = base[desk ? "lDesk" + nm + cur : lay + nm + cur];
+      const T = shotAll(nm, box, cur), cmp = tab && nm === "MENU" ? words : nm === "LEVEL" ? stream : exact, desk = tab && (nm === "MENU" || nm === "LEVEL"), B = base[desk ? "lDesk" + nm + cur : lay + nm + cur];
       if (T.some((q) => q.x < -0.5 || q.x + q.w > g.w + 0.5 || q.y < 0 || q.y > g.h)) out.push(nm + cur);
       if (GUIDE_PAGES[nm]) { if (!guideWhole(nm, T)) same.push(nm + cur); return; } // v202 Task 3.5: a GUIDE page wraps to its box (tests/page-guide holds every string whole)
       if (nm === "SETTINGS" || nm === "GRAPHICS" ? !planOk(T, B) : cmp(T) !== cmp(B)) same.push(nm + cur);

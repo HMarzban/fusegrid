@@ -10,8 +10,8 @@ import { createRenderer } from "./render/renderer.js";
 import { loadRendererPx } from "./render/pixel/load.js";
 import { copyPayload, isRunEnd, overlayBox, pauseHit, touchLay } from "./render/scenes.js";
 import { paintBombPad } from "./render/sprites.js";
-import { controlsHit, dims, drawShell, kindSize, loadControlsArt, shellMode, shellCovers } from "./render/shellview.js";
-import { menuHit, settingsHit, statsHit, graphicsHit, guideHit, enemiesHit, levelHit, scoresHit, recTabHit, layout as menuLayout, setModeFocus } from "./render/menudraw.js";
+import { controlsHit, dims, drawShell, guidePageCount, kindSize, loadControlsArt, shellMode, shellCovers } from "./render/shellview.js";
+import { menuHit, settingsHit, statsHit, graphicsHit, guideHit, enemiesHit, guideReadHit, levelHit, scoresHit, recTabHit, layout as menuLayout, setModeFocus } from "./render/menudraw.js";
 import { setFxOpts } from "./render/fx.js";
 import { hints, setHints } from "./render/hintcopy.js";
 import { SCREEN, SOURCE_URL, createMenuApp } from "./app/menuapp.js";
@@ -282,6 +282,7 @@ export function createGame(canvas, opts = {}) {
     autoplay,
     onStart, canAttract: demoReady,
     onSource, onWarm: (k) => rc.warm(k), // v202 warm on intent: the rest on the RENDER row
+    pageCount: guidePageCount, // a read-only GUIDE page's pages on this box (shellview, last drawn)
     onStats: () => { setStatsOn(); const sv = loadStats();
       app.stats = { rows: statsRows(sv, loadBests()), notes: statsNotes(sv, dailyRec, todayStr()), trophies: medalRows(loadMedals()) }; },
     onMedals: () => { app.stats = { rows: [], notes: [], ...app.stats, trophies: medalRows(loadMedals()) }; }, // a RECORDS tab tap may reach MEDALS without STATS: its rows only, never the opt-in
@@ -447,7 +448,7 @@ export function createGame(canvas, opts = {}) {
   };
   input.onPause = onPause;
 
-  if (canvas) mountPointer({ canvas, fit, input, app, world, kind: () => curKind, ctl: () => ctl, hit: { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit, settingsHit, graphicsHit, guideHit, enemiesHit, levelHit, scoresHit, statsHit, recTabHit, layout: menuLayout } }); // taps on #c and #sh: skip / confirm / play, the PAUSE rows, the C1 fire swallow (src/app/pointer.js)
+  if (canvas) mountPointer({ canvas, fit, input, app, world, kind: () => curKind, ctl: () => ctl, hit: { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit, settingsHit, graphicsHit, guideHit, enemiesHit, guideReadHit, levelHit, scoresHit, statsHit, recTabHit, layout: menuLayout } }); // taps on #c and #sh: skip / confirm / play, the PAUSE rows, the C1 fire swallow (src/app/pointer.js)
   /* pad taps bubble to #stage: play from ATTRACT too (spec §4 tap-to-play). */
   {
     const stageEl =

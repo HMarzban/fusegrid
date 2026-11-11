@@ -35,7 +35,7 @@ const SV = await import("../src/render/shellview.js");
 const { SCREENS } = await import("../tools/ui/lib/screens.mjs");
 const { FOES, POWER, helpOf } = await import("../src/core/entities.js");
 const { TILE_HELP, TILE_NAME } = await import("../src/core/feat.js");
-const { DIFF } = await import("../src/render/words.js");
+const { DIFF, levelsOf } = await import("../src/render/words.js");
 
 const PG = shellGeo(393, 852);
 const BOX = {
@@ -116,6 +116,46 @@ setTextScale(1);
   check("desktop 1366x768: GUIDE is a 2 x 2 of doors; the phone stacks the four", D.items["HOW TO PLAY"].y === D.items["POWER-UPS"].y && D.items.ENEMIES.y > D.items["HOW TO PLAY"].y && (() => { const Q = P.guideGeom(BOX.p393, "GUIDE"); return Q.order.every((n, i, a) => !i || Q.items[n].y > Q.items[a[i - 1]].y); })());
 }
 
+/* ---- fix round 1, rulings R1 / R2: desk windows hold u = 1 where MENU does by letting margins, columns and the pane give way, and page (never
+   scale under the desktop floors) where they still cannot hold; compact boxes page at their own scale; the ▲ / ▼ page keys are >= 44 CSS px ---- */
+{
+  const DESK = { "d1366x768": [1366, 768, false], "d1280x720": [1280, 720, false], "d1024x768": [1024, 768, false], "l1024x768": [1024, 768, true], "d1366x657": [1366, 657, false] };
+  for (const ts of [1, 1.25]) for (const [nm, [W, H, touch]] of Object.entries(DESK)) {
+    setTextScale(ts);
+    const F = { W, H, touch, shell: true, css: 1 }, rows = PAGES.map((page) => { const G = P.guideGeom(F, page); return [page, G.mode, +G.u.toFixed(4), G.pages]; });
+    check(`desk floors (${nm}, x${ts}): every GUIDE page holds u = 1 (primary cap >= 14, secondary >= 11, body >= 17.9 px), paging where it must`, rows.every((r) => r[1] === "desk" && r[2] === 1) && P.uFloor(ts) <= 1, J(rows));
+  }
+  for (const ts of [1, 1.25]) for (const b of ["c852", "p393"]) {
+    setTextScale(ts);
+    const F = BOX[b], rows = PAGES.map((page) => { const G = P.guideGeom(F, page), k = G.u * F.css; return { page, k: +k.toFixed(4), pages: G.pages, keys: G.pager ? [G.pager.up, G.pager.dn].map((r) => [r.w / F.css, r.h / F.css].map((v) => +v.toFixed(1))) : null }; });
+    check(`compact / phone floors (${b}, x${ts}): every page at its own scale (1 box unit per CSS px, never under), its page keys >= 44 x 44 CSS px`, rows.every((r) => r.k >= 1 - 1e-6 && (!r.keys || r.keys.every(([w, h]) => w >= 43.95 && h >= 43.95))), J(rows));
+  }
+  setTextScale(1);
+  { // a landscape phone pages; each page draws only its own slots, and the pager reads PAGE n / m with its two keys
+    const G = P.guideGeom(BOX.c852, "ENEMIES");
+    fresh(); frame(BOX.c852, UI("ENEMIES", { focus: 4, tip: false }));
+    const L = P._dbg.last, pg = L.pg, on = L.P.rest.filter((o) => o.pg === pg && o.op === "text" && FOES.some((e) => e.name === o.s)).map((o) => o.s);
+    check("c852 ENEMIES pages: the focused foe's page on screen, its foes alone, PAGE n / m", G.pages > 1 && pg === G.pageOf.PHANTOM && J(on) === J(G.order.filter((n) => G.pageOf[n] === pg)) && L.P.rest.some((o) => o.pg === pg && o.s === "PAGE " + (pg + 1) + " / " + G.pages), J({ pages: G.pages, pg, on }));
+  }
+}
+{ // fix round 1, Important 5: desk ENEMIES at 125 % follows the t125 frame: one page, no kicker, the points key on the name's line wherever the measure fits it
+  setTextScale(1.25);
+  const G = P.guideGeom(BOX.d1366, "ENEMIES"), D = G.d, inl = D.order.filter((n) => D.items[n].pts.y < D.items[n].nameY);
+  check("d1366 x1.25 ENEMIES: one page, u 1, no kicker; the points key rides the name's line (" + inl.length + " of 9 by the Node estimate; the browser measures)", G.pages === 1 && G.u === 1 && !D.head.kick && inl.length >= 5, J(inl));
+  /* minor: an unfocused points key under the name starts at the name's left edge (the focused key's bomb pushes only the focused digits) */
+  const off = D.order.filter((n) => { const q = D.items[n]; return !(q.pts.y < q.nameY) && Math.abs(q.dig.x - q.tx) > 1e-6; });
+  check("desk ENEMIES: an unfocused points key under the name lines up with the name's left edge", off.length === 0, J(off));
+  setTextScale(1);
+}
+{ // minor: the phone tooltip is sized by the measured words: the fewest whole rows that hold them (the frame's two at the browser's measure)
+  const G = P.guideGeom(BOX.p393, "ENEMIES"), D = G.d, bad = [];
+  D.tips.forEach((t, i) => {
+    const need = 12 + 36 + 6 + t.n * 15 * 1.4 + 14 + 2 * t.Tt + 5, rows = t.cover.map((j) => D.items[D.order[j]].r), far = rows.reduce((a, r) => (Math.abs(r.y - D.items[D.order[i]].r.y) > Math.abs(a.y - D.items[D.order[i]].r.y) ? r : a), rows[0]);
+    if (!rows.length || t.U.h < need - 1e-6 || (rows.length > 1 && t.U.h - far.h >= need)) bad.push([D.order[i], rows.length, +t.U.h.toFixed(1), +need.toFixed(1)]);
+  });
+  check("p393 ENEMIES: each tooltip covers the fewest whole rows its measured words need", bad.length === 0, J(bad));
+}
+
 /* ---- the tooltip: whole slots, inside the plate, its text inside it, never over the focused foe; for every foe on every box ---- */
 for (const ts of [1, 1.25]) for (const b of ALL) {
   setTextScale(ts); fresh();
@@ -144,13 +184,13 @@ setTextScale(1);
 /* ---- hits: every drawn rect taps to itself; off the plate backs out; GUIDE's plate is inert; ENEMIES elsewhere is -1 ---- */
 for (const b of ALL) {
   const F = BOX[b], G = P.guideGeom(F, "GUIDE"), E = P.guideGeom(F, "ENEMIES"), ctr = (r) => [r.x + r.w / 2, r.y + r.h / 2];
-  const doors = G.order.every((n, i) => P.guideHit(...ctr(G.items[n]), F) === i && P.guideHit(...ctr(G.hit[n]), F) === i);
-  const foes = E.order.every((n, i) => P.enemiesHit(...ctr(E.hit[n]), F) === i);
+  const doors = G.order.every((n, i) => P.guideHit(...ctr(G.items[n]), F, i) === i && P.guideHit(...ctr(G.hit[n]), F, i) === i);
+  const foes = E.order.every((n, i) => P.enemiesHit(...ctr(E.hit[n]), F, i) === i);
   const L = md.layout(F.W, F.H, F.shell ? 200 : undefined, F.css);
   const off = P.guideHit(1, 1, F) === -1 && P.enemiesHit(1, 1, F) === -1 && md.guideHit(1, 1, L, 4, F.touch) === -1;
   const plateMiss = P.guideHit(G.plate.x + 4, G.plate.y + 4, F) === -2;
   const back = !G.back || (P.guideHit(...ctr(G.back), F) === -1 && P.enemiesHit(...ctr(E.back), F) === -1);
-  check(`hit (${b}): each door's and each foe's centre taps it (menudraw agrees); off the plate is -1, GUIDE's plate inert (-2), the BACK key -1`, doors && foes && off && plateMiss && back && G.order.every((n, i) => md.guideHit(...ctr(G.items[n]), L, 4, F.touch) === i) && E.order.every((n, i) => md.enemiesHit(...ctr(E.hit[n]), L, F.touch) === i), J({ doors, foes, off, plateMiss, back }));
+  check(`hit (${b}): each door's and each foe's centre taps it (menudraw agrees); off the plate is -1, GUIDE's plate inert (-2), the BACK key -1`, doors && foes && off && plateMiss && back && G.order.every((n, i) => md.guideHit(...ctr(G.items[n]), L, 4, F.touch, i) === i) && E.order.every((n, i) => md.enemiesHit(...ctr(E.hit[n]), L, F.touch, i) === i), J({ doors, foes, off, plateMiss, back }));
   /* doors own half of each gap: the midpoint between two neighbours belongs to one of them, never to nothing */
   const gaps = [];
   for (const a of G.order) for (const c of G.order) { const A = G.items[a], C = G.items[c]; if (C.x > A.x + A.w && near(C.y, A.y)) gaps.push([(A.x + A.w + C.x) / 2, A.y + A.h / 2, 1, 0]); if (C.y > A.y + A.h && near(C.x, A.x)) gaps.push([A.x + A.w / 2, (A.y + A.h + C.y) / 2, 0, 1]); }
@@ -160,7 +200,7 @@ for (const b of ALL) {
 {
   const { mountPointer } = await import("../src/app/pointer.js");
   const sc0 = await import("../src/render/scenes.js");
-  const HIT = { overlayBox: sc0.overlayBox, pauseHit: sc0.pauseHit, touchLay: sc0.touchLay, controlsHit: SV.controlsHit, dims: SV.dims, menuHit: md.menuHit, settingsHit: md.settingsHit, graphicsHit: md.graphicsHit, guideHit: md.guideHit, enemiesHit: md.enemiesHit, levelHit: md.levelHit, scoresHit: md.scoresHit, statsHit: md.statsHit, recTabHit: md.recTabHit, layout: md.layout };
+  const HIT = { overlayBox: sc0.overlayBox, pauseHit: sc0.pauseHit, touchLay: sc0.touchLay, controlsHit: SV.controlsHit, dims: SV.dims, menuHit: md.menuHit, settingsHit: md.settingsHit, graphicsHit: md.graphicsHit, guideHit: md.guideHit, enemiesHit: md.enemiesHit, guideReadHit: md.guideReadHit, levelHit: md.levelHit, scoresHit: md.scoresHit, statsHit: md.statsHit, recTabHit: md.recTabHit, layout: md.layout };
   const el = (w, h, rect, lay) => { const L = {}; return { width: w, height: h, style: {}, ownerDocument: { body: { getAttribute: (k) => (k === "data-lay" ? lay : null) } }, getBoundingClientRect: () => rect, addEventListener(t, f) { (L[t] = L[t] || []).push(f); }, fire(t, ev) { (L[t] || []).slice().forEach((f) => f(ev)); } }; };
   for (const [nm, lay, w, h, touch] of [["desktop #sh 1366x768", "d", 1366, 768, false], ["phone #sh", "p", PG.w, PG.h, true]]) {
     const rect = { left: 0, top: 0, width: w * (touch ? PG.s : 1), height: h * (touch ? PG.s : 1) }, k = rect.width / w;
@@ -239,7 +279,7 @@ for (const b of TOUCHB) for (const page of ["GUIDE", "ENEMIES", "HOW TO PLAY"]) 
     const a = T[i].r, c = T[j].r, dx = Math.max(c.x - (a.x + a.w), a.x - (c.x + c.w)), dy = Math.max(c.y - (a.y + a.h), a.y - (c.y + c.h));
     gap = Math.min(gap, page === "GUIDE" && T[i].set === T[j].set ? Infinity : Math.max(dx, dy));
   }
-  const doorGap = page === "GUIDE" ? Math.min(...G.order.flatMap((a, i) => G.order.slice(i + 1).map((c) => { const A = sc(G.items[a], s), C = sc(G.items[c], s); return Math.max(C.x - (A.x + A.w), A.x - (C.x + C.w), C.y - (A.y + A.h), A.y - (C.y + C.h)); }))) : Infinity;
+  const doorGap = page === "GUIDE" ? Math.min(...G.order.flatMap((a, i) => G.order.slice(i + 1).filter((c) => G.pageOf[c] === G.pageOf[a]).map((c) => { const A = sc(G.items[a], s), C = sc(G.items[c], s); return Math.max(C.x - (A.x + A.w), A.x - (C.x + C.w), C.y - (A.y + A.h), A.y - (C.y + C.h)); }))) : Infinity;
   check(`touch (${b}, ${page}, ${G.mode}): every target >= 44 x 44 CSS px, the BACK key >= 8 px from the rest, the doors >= 8 apart`, small.length === 0 && gap >= 8 - 1e-9 && doorGap >= 8 - 1e-9, J({ small: small.map((t) => [t.n, t.r.w.toFixed(1), t.r.h.toFixed(1)]), gap, doorGap }));
 }
 
@@ -278,10 +318,30 @@ for (const b of TOUCHB) for (const page of ["GUIDE", "ENEMIES", "HOW TO PLAY"]) 
       const tap = !!F.touch && dev !== "pad", lines = D.items[D.order[0]].lines;
       for (const p of POWER) { if (!joined.includes(" " + p.name + " ")) bad.push("name " + p.name); const h = tap && F.W < 560 ? helpOf(p, { throw: "tap", remote: "tap" }) : helpOf(p, words || wordsOf("key", DEF_CONTROLS), tap); if (lines && !joined.includes(" " + h + " ")) bad.push("help " + h); }
     }
-    if (page === "ENEMIES") for (const e of FOES) if (!joined.includes(" " + e.name + " ")) bad.push("foe " + e.name);
-    if (page === "FLOOR") { const lean = D.items[D.order[0]].lean; for (const [k, h] of Object.entries(TILE_HELP)) { if (!joined.includes(" " + TILE_NAME[k] + " ")) bad.push("tile " + k); for (const s of lean ? [DIFF[0] + " · " + h[0]] : [DIFF[0] + " · " + h[0], DIFF[2] + " · " + h[2]]) if (!joined.includes(" " + s + " ")) bad.push(s); } } // lean: the step-down where a touch box cannot hold both lines (NORMAL kept)
+    /* ENEMIES: every name, its levels line (APPEARS IN dropped where the card is too narrow: the documented step-down) and its help (dropped only on
+       the phone / compact at 125 %, the round 6 phone frame's step-down), each whole */
+    if (page === "ENEMIES") for (const e of FOES) {
+      const q = D.items[e.name], help = e.help.replace(/\s*·\s*\d+$/, ""), hs = help.charAt(0).toUpperCase() + help.slice(1);
+      if (!joined.includes(" " + e.name + " ")) bad.push("foe " + e.name);
+      if (!joined.includes(" " + levelsOf(e.rooms) + " ")) bad.push("levels " + e.name);
+      if ((D.mode === "desk" || q.helpY != null) && !joined.includes(" " + hs + " ")) bad.push("help " + e.name);
+      if (D.mode !== "desk" && !(ts > 1.1) && q.helpY == null) bad.push("help dropped at x1 " + e.name);
+    }
+    /* HOW TO: both rules, the six rows and the note, whole */
+    if (page === "HOW TO PLAY") for (const t of ["CLEAR EVERY ENEMY", "GOLD WALL NEVER BREAKS", "MOVE", "BOMB", "THROW *", "REMOTE *", "KICK *", "PAUSE", F.touch && dev !== "pad" ? "TOUCH · LEFT PAD MOVES · RIGHT BUTTON BOMBS" : "* NEEDS ITS POWER-UP"]) if (!joined.includes(" " + t + " ")) bad.push("how " + t);
+    /* FLOOR: every tile's NORMAL and EXPERT lines, never a drop (fix round 1, Important 1), and its level line on every row */
+    if (page === "FLOOR") {
+      for (const [k, h] of Object.entries(TILE_HELP)) { if (!joined.includes(" " + TILE_NAME[k] + " ")) bad.push("tile " + k); for (const s of [DIFF[0] + " · " + h[0], DIFF[2] + " · " + h[2]]) if (!joined.includes(" " + s + " ")) bad.push(s); }
+      const lv = tx.filter((o) => /^LEVEL \d · /.test(o.s));
+      if (lv.length !== 8 || new Set(lv.map((o) => o.s)).size !== 8) bad.push("level lines " + lv.length);
+      if (D.order.some((n) => "lean" in D.items[n])) bad.push("a lean row");
+    }
     if (page === "GUIDE") for (const l of GUIDE_ROWS) if (!joined.includes(" " + l + " ")) bad.push("door " + l);
-    check(`drawn whole (${b}, x${ts}, ${dev}, ${page}): no ellipsis, every name / help / tile line whole, every word inside the plate`, ell.length === 0 && bad.length === 0, J({ ell: ell.map((t) => t.s), bad: bad.slice(0, 6) }));
+    /* the one wrap rule: words break only at their spaces and a slot grows (or the page pages) to hold every line, so every page-body text sits
+       inside its own slot (or the note, or the pager's strip), never past it */
+    const inS = (r, x0, o) => !!r && x0 >= r.x - 0.01 && x0 + o.mw <= r.x + r.w + 0.01 && o.y >= r.y - 0.01 && o.y <= r.y + r.h + 0.01;
+    for (const o of tx) if (o.pg != null) { const x0 = o.align === "right" ? o.x - o.mw : o.align === "center" ? o.x - o.mw / 2 : o.x; if (!D.order.some((n) => D.items[n].page === o.pg && inS(D.items[n].r, x0, o)) && !inS(D.note && D.note.r, x0, o) && !inS(D.pager && D.pager.label, x0, o)) bad.push("past its slot: " + o.s); }
+    check(`drawn whole (${b}, x${ts}, ${dev}, ${page}): no ellipsis, every name / help / tile line whole, every word inside its slot and the plate`, ell.length === 0 && bad.length === 0, J({ ell: ell.map((t) => t.s), bad: bad.slice(0, 6) }));
   }
   setTextScale(1); setHints(null);
   const units = PAGES.flatMap((page) => { fresh(); frame(BOX.d1366, UI(page)); return P._dbg.last.P.rest.filter((o) => o.op === "text" && /\d\s(s|ms|px)\b/.test(o.s)).map((o) => o.s); });

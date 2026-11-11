@@ -1437,7 +1437,7 @@ function check(name, cond, detail) {
   for (const [tg, L] of [["600x520", md.layout(600, 520)], ["608x352", md.layout(608, 352)], ["narrow " + g.w + "x" + g.h, md.layout(g.w, g.h, g.logo)]]) {
     for (const touch of [false, true]) {
       const h = rec();
-      md.drawHowTo(h.c, L, 1, "2d", touch);
+      md.drawHowTo(h.c, L, 1, "2d", touch, { pg: md.guideGeom(L, touch, "HOW TO PLAY").pageOf["KICK *"] }); // the page KICK sits on where the box pages HOW TO (fix round 1)
       /* v202 Task 3.5: HOW TO is pages/guide.js; its KICK row (design px) holds the label, then the key at its right end, label first */
       const walk = h.texts.find((t) => t.s === "WALK INTO BOMB"), kick = h.texts.find((t) => t.s === "KICK *"), row = md.guideGeom(L, touch, "HOW TO PLAY").d.items["KICK *"].r;
       const wl = walk && (walk.align === "right" ? walk.x - walk.w : walk.align === "center" ? walk.x - walk.w / 2 : walk.x);
@@ -1463,7 +1463,7 @@ function check(name, cond, detail) {
   for (const [tg, L] of [["600x520", md.layout(600, 520)], ["608x352", md.layout(608, 352)], ["narrow", md.layout(g.w, g.h, g.logo)]]) {
     for (const touch of [false, true]) {
       const h = rec();
-      md.drawFloorHelp(h.c, L, 1.25, "2d", touch);
+      for (let p = 0; p < md.guidePages(L, touch, "FLOOR"); p++) md.drawFloorHelp(h.c, L, 1.25, "2d", touch, { pg: p }); // every page where the box pages FLOOR (fix round 1)
       const ts = h.texts.map((t) => t.s), tag = `${tg}${touch ? " touch" : ""}`;
       check(`FLOOR names all eight tiles once (${tag})`, NAMES.every((n) => ts.filter((x) => x === n).length === 1), ts.length);
       check(`FLOOR claims a rule only for the ${Object.keys(TILE_HELP).length} tiles that have one (${tag})`,
@@ -1472,9 +1472,9 @@ function check(name, cond, detail) {
       for (const [k, help] of Object.entries(TILE_HELP)) check(`FLOOR draws ${k}'s NORMAL and EXPERT help whole, never clipped (${tag})`, all.includes(" NORMAL · " + help[0] + " ") && all.includes(" EXPERT · " + help[2] + " ") && !ts.some((x) => /…/.test(x)), ts.filter((x) => /(NORMAL|EXPERT) · /.test(x)).join(" | "));
       const gd = md.guideGeom(L, touch), T = gd.order.map((n) => gd.items[n]), S = gd.plate;
       const inside = T.every((r) => r.x >= S.x && r.x + r.w <= S.x + S.w && r.y >= S.y && r.y + r.h <= S.y + S.h);
-      const apart = T.every((a, i) => T.every((b, j) => i >= j || a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y));
-      check(`GUIDE has four doors inside the plate that never overlap (${tag})`, T.length === 4 && inside && apart);
-      check(`GUIDE taps hit each door, off it backs out (${tag})`, T.every((r, i) => md.guideHit(r.x + r.w / 2, r.y + r.h / 2, L, 8, touch) === i) && md.guideHit(1, 1, L, 8, touch) === -1);
+      const pgOf = (i) => gd.pageOf[gd.order[i]], apart = T.every((a, i) => T.every((b, j) => i >= j || pgOf(i) !== pgOf(j) || a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y));
+      check(`GUIDE has four doors inside the plate that never overlap on a page (${tag})`, T.length === 4 && inside && apart);
+      check(`GUIDE taps hit each door (on its page), off it backs out (${tag})`, T.every((r, i) => md.guideHit(r.x + r.w / 2, r.y + r.h / 2, L, 8, touch, i) === i) && md.guideHit(1, 1, L, 8, touch) === -1);
       const d = rec();
       md.drawGuide(d.c, L, 1.25, 3, "2d", touch);
       if (!touch && !L.narrow) {

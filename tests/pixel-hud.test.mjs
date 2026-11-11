@@ -53,9 +53,17 @@ const HUDS = [[0, null], [3, {on: true, t: 12.3}], [8, null]];
 const PAGES = ["drawHowTo", "drawItemsHelp", "drawEnemiesHelp"], BOXES = [[600, 520], [600, 360]];
 const PIN = {
   hud0: "7c298753:175", hud3: "60b2bf24:349", hud8: "2aa8d78c:508",
+  /* v202 Task 3.5 fix round 1: pages/guide.js's call logs, re-pinned (a 600 x 520 / 600 x 360 #c box, keyboard and touch; the shell through drawShell
+     on the classic box per kind: iso keeps its own box, so its own pins) */
+  drawHowTo520: "37cf363d:21065", drawItemsHelp520: "4b731a9a:13296", drawEnemiesHelp520: "e1a4c519:93094",
+  drawHowTo360: "1df6ba7e:21237", drawItemsHelp360: "eb60eb99:13283", drawEnemiesHelp360: "f792502d:76240",
+  drawHowTo520T: "bfd67ce4:28035", drawItemsHelp520T: "158a7309:11758", drawEnemiesHelp520T: "98a7f186:13883",
+  drawHowTo360T: "f73cd230:25946", drawItemsHelp360T: "8b883c65:10369", drawEnemiesHelp360T: "38b3e036:10316",
+  "shell.2d.HOWTO": "37cf363d:21065", "shell.2d.ITEMS": "4b731a9a:13296", "shell.2d.ENEMIES": "f3963322:93529",
+  "shell.3d.HOWTO": "37cf363d:21065", "shell.3d.ITEMS": "4b731a9a:13296", "shell.3d.ENEMIES": "f3963322:93529",
+  "shell.iso.HOWTO": "ccc7496f:21777", "shell.iso.ITEMS": "d9f28577:13470", "shell.iso.ENEMIES": "8d5b7f1d:76675",
 };
-/* v202 Task 3.5: the GUIDE pages are pages/guide.js; their pinned call logs went with the deleted CONSOLE PANEL painters. The pin is now relational:
-   every non-PIXEL kind (none, 2d, 3d, iso) paints the identical call log, with or without a px atlas registered, and the shell's 2d and 3d match */
+/* and relational: every non-PIXEL kind (none, 2d, 3d, iso) paints the identical page call log, with or without a px atlas registered */
 const GPIN = {};
 const hud = (lv, tm, ico) => { const r = rec(); drawHudChips(r.c, HUDW(lv), tm, ico); return r; };
 const page = (f, w, h, kind, touch) => { const r = rec(); md[f](r.c, md.layout(w, h), 1.25, kind, touch); return r; };
@@ -63,8 +71,8 @@ const shell = (k, s) => { const r = rec(); drawShell(r.c, {screen: SCREEN[s], su
 function unchanged(tag) {
   const bad = [];
   for (const [lv, tm] of HUDS) if (H(hud(lv, tm).log) !== PIN["hud" + lv]) bad.push("hud" + lv);
-  for (const [w, h] of BOXES) for (const f of PAGES) for (const t of [false, true]) for (const k of [undefined, "2d", "3d", "iso"]) { const id = f + h + (t ? "T" : ""), v = H(page(f, w, h, k, t).log); if (!(id in GPIN)) GPIN[id] = v; else if (GPIN[id] !== v) bad.push(id + ":" + k); }
-  for (const s of ["HOWTO", "ITEMS", "ENEMIES"]) { const a = H(shell("2d", s).log); if (H(shell("3d", s).log) !== a || !(+a.split(":")[1] > 50)) bad.push("3d." + s); }
+  for (const [w, h] of BOXES) for (const f of PAGES) for (const t of [false, true]) for (const k of [undefined, "2d", "3d", "iso"]) { const id = f + h + (t ? "T" : ""), v = H(page(f, w, h, k, t).log); if (!(id in GPIN)) GPIN[id] = v; if (GPIN[id] !== v || PIN[id] !== v) bad.push(id + ":" + k + "=" + v); }
+  for (const k of ["2d", "3d", "iso"]) for (const s of ["HOWTO", "ITEMS", "ENEMIES"]) { const v = H(shell(k, s).log); if (PIN["shell." + k + "." + s] !== v) bad.push(k + "." + s + "=" + v); }
   check("CLASSIC 2D / REAL 3D / iso HUD chips (pre-W5) and GUIDE pages (ATLAS, keyboard + touch) match their pins (" + tag + ")", bad.length === 0, bad.join());
 }
 const text = (log) => log.filter((l) => /^(fillText|font=|textAlign=|textBaseline=)/.test(l)).join("\n");

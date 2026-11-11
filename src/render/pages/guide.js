@@ -63,237 +63,324 @@ const howRows = (W) => [
 const NARROW_TAP = deep({throw: "tap", remote: "tap"});
 export const FLOOR_ROWS = deep([["BLOOM", 1], ["GLIDE", 2], ["BELT", 3], ["STREAM", 4], ["PLATE", 5], ["QUICK", 6], ["PORTAL", 7], ["GATE", 8]].map(([k, room]) => ({k, name: TILE_NAME[k], room})));
 
-/* desk plate widths [text scale 1, 1.25] and the least width before the page scales; pads [top, right, bottom, left] */
-const PWD = deep({[GUIDE]: [860, 960, 640], [HOW]: [960, 1060, 760], [PU]: [1250, 1250, 900], [EN]: [1250, 1250, 960], [FL]: [1250, 1250, 900]});
-const PAD = deep({d: [18, 22, 22, 22], p: [12, 12, 14, 12]});
+/* desk plate widths [text scale 1, 1.25]; under PW_MIN the box narrows the plate no further (only #c's 600 wide box and the iso guard scale); pads [top, right, bottom, left] */
+const PWD = deep({[GUIDE]: [860, 960], [HOW]: [960, 1060], [PU]: [1250, 1250], [EN]: [1250, 1250], [FL]: [1250, 1250]});
+const PW_MIN = 520, PAD = deep({d: [18, 22, 22, 22], p: [12, 12, 14, 12], c: [8, 12, 10, 12]});
 const CP = 9;
 /* the tooltip's side padding: the mock's 16, 10 in the compact arrangement's narrow column */
 const TIP_PAD = deep({d: 16, c: 10});
-export const TOP = 70, FOOT_GAP = 18, EST = 0.66, TIP_T = deep({d: 8, p: 6}), SLAB_T = 8, PHONE_MAX = 600, COMPACT_MAX = 960, BACK_W = 112;
+/* the pager: two 44 px page keys under the body (a touch target on every layout), PAGER its height with the gap above it */
+export const PAGE_KEY = 44, PAGER = PAGE_KEY + 10, PAGE = "PAGE";
+export const TOP = 70, FOOT_GAP = 18, EST = 0.66, TIP_T = deep({d: 8, p: 6}), SLAB_T = 8, PHONE_MAX = 600, COMPACT_MAX = 960, BACK_W = 112, CUE_H = 34;
+/* the text floors (appendix 11): the least desk scale that keeps primary 14, secondary 11 and body 17.9 px at this text scale */
+export const uFloor = (ts) => Math.max(17.9 / (DEV.d.bod * ts), 11 / (DEV.d.sec * ts * CAP_K), 14 / (DEV.d.pri * ts * CAP_K));
 const est = (s, px) => String(s).length * EST * px;
 const R = (x, y, w, h) => ({x, y, w, h});
 const sc = (r, u) => (r ? {x: r.x * u, y: r.y * u, w: r.w * u, h: r.h * u} : null);
 const okBox = (F) => !!F && F.W > 0 && F.H > 0 && Number.isFinite(F.W) && Number.isFinite(F.H);
 const firstLevel = (rooms) => +String(rooms).match(/\d+/)[0];
 const inRooms = (rooms, n) => String(rooms).split(",").some((p) => { const [a, b] = p.trim().split("-").map(Number); return n >= a && n <= (b || a); });
+/* a teaser breaks only at its " · " (each part whole on its line), the words.js step-down for a "2 RULES · 6 CONTROLS" pair */
+const partsOf = (meas, s, w) => { const out = []; let line = ""; for (const p of String(s).split(" · ")) { const t = line ? line + " · " + p : p; if (!line || meas(t) <= w) line = t; else { out.push(line); line = p; } } if (line) out.push(line); return out; };
+const subsOf = (tap, ph, W) => [tap || ph || W.dev === "pad" ? "2 RULES · 6 CONTROLS" : "2 RULES · 6 KEYS", POWER.length + " " + LABEL.POWER_UPS, FOES.length + " FOES", FLOOR_ROWS.length + " TILES"];
 const helpOfFoe = (e) => { const s = e.help.replace(/\s*·\s*\d+$/, ""); return s.charAt(0).toUpperCase() + s.slice(1); };
 /* a string's break points: spaces, but never inside a bracket ("(max 8)" stays whole) */
 const words = (s) => String(s).match(/\([^)]*\)|[^\s(]+/g) || [""];
-/* lines a string takes at width w by the estimate (a word wider than w counts as one line of its own) */
-function estLines(s, px, w) {
-  let n = 1, x = 0;
-  for (const word of words(s)) { const ww = est(word, px), sp = x ? est(" ", px) : 0; if (x && x + sp + ww > w) { n++; x = ww; } else x += sp + ww; }
+/* the geometry measures with the real text measure (a 1 x 1 canvas of its own, the same font strings the painter sets); with no canvas source
+   (Node without a factory) it falls back to EST em per character, wider than the system sans, so the painter's wrap never needs more lines */
+let MC;
+function mctx() {
+  if (MC !== undefined) return MC;
+  try { MC = typeof OffscreenCanvas === "function" ? new OffscreenCanvas(1, 1).getContext("2d") : typeof document !== "undefined" && document.createElement ? document.createElement("canvas").getContext("2d") : null; } catch (e) { MC = null; }
+  if (MC && typeof MC.measureText !== "function") MC = null;
+  return MC;
+}
+const mw = (face, px, s) => { const c = mctx(); return c ? measure(c, face(px), String(s)) : est(s, px * textScale()); };
+/* lines a string takes at width w (a word wider than w counts as a line of its own) */
+function linesOf(face, px, s, w) {
+  let n = 1, line = "";
+  for (const word of words(s)) { const t = line ? line + " " + word : word; if (!line || mw(face, px, t) <= w) line = t; else { n++; line = word; } }
   return n;
 }
 
 /* ---- geometry ---- */
-/* items in grid order, row-major; a row is as tall as its tallest; returns {h, rects} */
+/* items in grid order, row-major; a row is as tall as its tallest; returns {h, rects, rows [{y, h}], ri (each item's row), cw} */
 function grid(n, cols, gap, w, hOf, gy = gap) {
-  const cw = (w - (cols - 1) * gap) / cols, rects = [];
+  const cw = (w - (cols - 1) * gap) / cols, rects = [], rows = [], ri = [];
   let y = 0;
   for (let r = 0; r * cols < n; r++) {
     let rh = 0;
     for (let c = 0; c < cols && r * cols + c < n; c++) rh = Math.max(rh, hOf(r * cols + c, cw));
-    for (let c = 0; c < cols && r * cols + c < n; c++) rects.push(R(c * (cw + gap), y, cw, rh));
+    for (let c = 0; c < cols && r * cols + c < n; c++) { rects.push(R(c * (cw + gap), y, cw, rh)); ri.push(r); }
+    rows.push({y, h: rh});
     y += rh + gy;
   }
-  return {h: Math.max(0, y - gy), rects, cw};
+  return {h: Math.max(0, y - gy), rects, rows, ri, cw, cols};
 }
-/* each page's body in design px from (0, 0) at width iw: {h, items: [{name, r, ...}], ...} */
+/* each page's body in design px from (0, 0) at width iw: {h, top (a header repeated on every page), bands [{y, h}] (the rows a page break may fall
+   between), items [{name, r, band, ...}], ...} */
 function body(page, m, iw) {
-  const {dv, ts, dev} = m, ph = dev === "p", cols = m.mode === "phone" ? 1 : 2, gap = ph ? 10 : 12;
-  const pri = dv.pri * ts, sec = dv.sec * ts, bod = dv.bod * ts, lhP = pri * 1.15, lhS = sec * 1.25, lhB = bod * 1.4;
+  const {dv, ts, dev} = m, ph = dev === "p", gap = ph ? 10 : 12, P = dv.pri, Sx = dv.sec, Bd = dv.bod;
+  const lhP = P * ts * 1.15, lhS = Sx * ts * 1.25, lhB = Bd * ts * 1.4, L = (s, px) => mw(T.label, px, s);
   if (page === GUIDE) {
-    const strip = ph ? 30 : 32, dh = 14 + lhP + 2 + lhS + 8 + strip + 14, g = grid(4, cols, gap, iw, () => dh);
-    return {h: g.h, gap, items: DOORS.map((l, i) => ({name: l, r: g.rects[i], strip}))};
+    /* a door's name and teaser take the lines they need beside the focused bomb and the chevron (the one wrap rule: a slot grows, never clips) */
+    const strip = ph ? 30 : 32, cols = m.mode === "phone" ? 1 : 2, cw = (iw - (cols - 1) * gap) / cols, tw = cw - (8 + dv.bombs + 8) - 18 - 16 - 10, subs = subsOf(m.tap, ph, m.W);
+    const nL = Math.max(...DOORS.map((l) => linesOf(T.label, P, l, tw))), nS = Math.max(...subs.map((t) => partsOf((x) => mw(T.label, Sx, x), t, tw).length));
+    const dh = 14 + nL * lhP + 2 + nS * lhS + 8 + strip + 14, g = grid(4, cols, gap, iw, () => dh);
+    return {h: g.h, top: 0, bands: g.rows, gap, items: DOORS.map((l, i) => ({name: l, r: g.rects[i], band: g.ri[i], ri: g.ri[i], strip, tw}))};
   }
   if (page === HOW) {
-    /* a rule slab takes a second line where its words will not fit one (the estimate); the note too */
-    const rh0 = ph ? 52 : 60, ch = ph ? 48 : 52, cs = (h) => h - 2 * (SLAB_T + 2) - 12, rl = (cw) => Math.max(...RULES.map((s) => estLines(s, pri, cw - 2 * (SLAB_T + 2) - 12 - cs(rh0) - 12)));
+    /* a rule slab takes the lines its words need; the note too */
+    const cols = m.mode === "phone" || iw < 700 ? 1 : 2, rh0 = ph ? 52 : 60, ch = ph ? 48 : 52, cs = rh0 - 2 * (SLAB_T + 2) - 12;
+    const rl = (cw) => Math.max(...RULES.map((s) => linesOf(T.label, P, s, cw - 2 * (SLAB_T + 2) - 12 - cs - 12)));
     const rg = grid(2, cols, gap, iw, (i, cw) => Math.max(rh0, 2 * (SLAB_T + 2) + 12 + rl(cw) * lhP)), cg = grid(6, cols, 8, iw, () => ch, 8), y1 = rg.h + gap;
-    const items = RULES.map((s, i) => ({name: s, r: rg.rects[i], kind: "rule", cs: cs(rh0), lines: rl(rg.cw)}));
-    howRows(m.W).forEach((q, i) => { const r = cg.rects[i]; items.push({name: q[1], r: R(r.x, r.y + y1, r.w, r.h), kind: "ctl", keys: q[0], icon: q[2]}); });
-    const nl = Math.min(2, estLines(m.tap ? NOTE_TAP : NOTE_KEY, sec, iw)), nh = nl * sec * 1.4;
-    return {h: y1 + cg.h + 8 + nh, items, note: R(0, y1 + cg.h + 8, iw, nh), nl};
+    const items = RULES.map((s, i) => ({name: s, r: rg.rects[i], band: rg.ri[i], kind: "rule", cs, lines: rl(rg.cw)}));
+    howRows(m.W).forEach((q, i) => { const r = cg.rects[i]; items.push({name: q[1], r: R(r.x, r.y + y1, r.w, r.h), band: rg.rows.length + cg.ri[i], kind: "ctl", keys: q[0], icon: q[2]}); });
+    const nl = linesOf(T.label, Sx, m.tap ? NOTE_TAP : NOTE_KEY, iw), nh = nl * Sx * ts * 1.4, ny = y1 + cg.h + 8;
+    const bands = [...rg.rows, ...cg.rows.map((q) => ({y: q.y + y1, h: q.h})), {y: ny, h: nh}];
+    return {h: ny + nh, top: 0, bands, items, note: {r: R(0, ny, iw, nh), band: bands.length - 1}, nl};
   }
   if (page === PU) {
+    const hs = (p) => helpOf(p, m.narrow && m.tap ? NARROW_TAP : m.W, m.tap);
     if (m.mode !== "desk") {
-      /* phone and compact: two tiles a row, the cell and the name across the top, the help under them in the secondary size */
-      const cell = 32, tw = (iw - gap) / 2 - 16, hs = (p) => helpOf(p, m.narrow && m.tap ? NARROW_TAP : m.W, m.tap);
-      const nl = m.help === false ? 0 : Math.min(4, Math.max(...POWER.map((p) => estLines(hs(p), sec, tw))));
-      const g = grid(POWER.length, 2, gap, iw, () => 8 + cell + (nl ? 6 + nl * lhS : 0) + 8, 8);
-      return {h: g.h, items: POWER.map((p, i) => ({name: p.name, r: g.rects[i], cell, lines: nl, t: p.t, tile: true}))};
+      /* phone and compact: two tiles a row, the cell and the name across the top, the help under them in the secondary size, as many lines as it needs */
+      const cell = 32, tw = (iw - gap) / 2 - 16, nl = Math.max(...POWER.map((p) => linesOf(T.label, Sx, hs(p), tw))), nw = (iw - gap) / 2 - 8 - cell - 10 - 10;
+      const hh = Math.max(cell, Math.max(...POWER.map((p) => linesOf(T.label, P, p.name, nw))) * lhP); /* a name too wide for its tile breaks at its space (POWER BOMB at 125 %) */
+      const g = grid(POWER.length, 2, gap, iw, () => 8 + hh + 6 + nl * lhS + 8, 8);
+      return {h: g.h, top: 0, bands: g.rows, items: POWER.map((p, i) => ({name: p.name, r: g.rects[i], band: g.ri[i], cell, hh, nw, lines: nl, t: p.t, tile: true}))};
     }
-    const cell = 44, tw0 = (cw) => cw - 8 - cell - 12 - 14, lines = (cw) => Math.min(2, Math.max(...POWER.map((p) => estLines(helpOf(p, m.W, m.tap), bod, tw0(cw)))));
+    const cols = iw >= 900 ? 2 : 1, cell = 44, tw0 = (cw) => cw - 8 - cell - 12 - 14, lines = (cw) => Math.max(...POWER.map((p) => linesOf(T.body, Bd, hs(p), tw0(cw))));
     const g = grid(POWER.length, cols, gap, iw, (i, cw) => Math.max(cell + 12, 8 + lhP + 2 + lines(cw) * lhB + 8), 8);
-    return {h: g.h, items: POWER.map((p, i) => ({name: p.name, r: g.rects[i], cell, lines: lines(g.cw), t: p.t}))};
+    return {h: g.h, top: 0, bands: g.rows, items: POWER.map((p, i) => ({name: p.name, r: g.rects[i], band: g.ri[i], cell, lines: lines(g.cw), t: p.t}))};
   }
   if (page === EN) {
+    const pts = L(PTS_W, Sx);
     if (m.mode === "desk") {
-      /* the points key sits on the name's line, right-aligned (the round 7 frame), where every name and key fit it by the estimate; else under the name */
-      const cw = (iw - 2 * gap) / 3, tw = cw - 2 * (SLAB_T + 2) - 2 * CP - 56 - 14, hl = Math.min(2, Math.max(...FOES.map((e) => estLines(helpOfFoe(e), bod, tw))));
-      const pw = dv.bombs + 10 + 85 + 6 + est(PTS_W, sec) + 10, inl = FOES.every((e) => est(e.name, pri) + 10 + pw <= tw), nh = inl ? 44 : lhP + 4 + 44;
-      const ch = (SLAB_T + 2) * 2 + 1 + 2 * CP + nh + 6 + hl * lhB + 4 + lhS, g = grid(FOES.length, 3, gap, iw, () => ch);
-      const items = FOES.map((e, i) => { const r = g.rects[i], x0 = r.x + SLAB_T + 2 + CP, y0 = r.y + SLAB_T + 2 + CP, tx = x0 + 70, px = inl ? tx + tw - pw : tx, py = inl ? y0 : y0 + lhP + 4;
-        return {name: e.name, t: e.t, r, cell: R(x0, y0, 56, 56), tx, tw, nameY: inl ? y0 + 22 : y0 + lhP / 2, pts: R(px, py, pw, 44), dig: R(px + dv.bombs + 10, py + 4, 85, 36), helpY: y0 + nh + 6, hl, appY: y0 + nh + 6 + hl * lhB + 4, pips: R(x0 + 1, y0 + 66, 54, 12)}; });
-      return {h: g.h, items, cols: 3, gap, tipH: (w) => tipNeed(m, w)};
+      /* the points key sits on the name's line, right-aligned (the round 7 frame), where the name and the focused key fit it by the measure; else under
+         the name, its digits on the name's left edge (the focused key's bomb pushes them right, as a focused row's words move past MENU's bomb) */
+      const cols = iw >= 1100 ? 3 : iw >= 700 ? 2 : 1, cw = (iw - (cols - 1) * gap) / cols, tw = cw - 2 * (SLAB_T + 2) - CP - 56 - 14, twK = tw, wF = dv.bombs + 10 + 85 + 6 + pts + 10;
+      const one = FOES.map((e) => {
+        const inl = L(e.name, P) + 10 + wF <= twK, nh = inl ? 44 : lhP + 4 + 44, hl = linesOf(T.body, Bd, helpOfFoe(e), tw);
+        const ap = [APPEARS + levelsOf(e.rooms), levelsOf(e.rooms)].find((s) => L(s, Sx) <= tw) || levelsOf(e.rooms), an = linesOf(T.label, Sx, ap, tw);
+        return {inl, nh, hl, ap, an, h: (SLAB_T + 2) * 2 + 1 + 2 * CP + Math.max(78, nh + 6 + hl * lhB + 4 + an * lhS)};
+      });
+      const g = grid(FOES.length, cols, gap, iw, (i) => one[i].h);
+      const items = FOES.map((e, i) => { const r = g.rects[i], o = one[i], x0 = r.x + SLAB_T + 2 + CP, y0 = r.y + SLAB_T + 2 + CP, tx = x0 + 70, px = o.inl ? tx + twK - wF : tx, py = o.inl ? y0 : y0 + lhP + 4;
+        const dig = o.inl ? R(px + dv.bombs + 10, py + 4, 85, 36) : R(tx, py + 4, 85, 36);
+        return {name: e.name, t: e.t, r, band: g.ri[i], ri: g.ri[i], col: i % cols, cell: R(x0, y0, 56, 56), tx, tw, nameY: o.inl ? y0 + 22 : y0 + lhP / 2, pts: R(px, py, wF, 44), dig, digF: R(px + dv.bombs + 10, py + 4, 85, 36),
+          helpY: y0 + o.nh + 6, hl: o.hl, appY: y0 + o.nh + 6 + o.hl * lhB + 4, ap: o.ap, an: o.an, pips: R(x0 + 1, y0 + 66, 54, 12)}; });
+      return {h: g.h, top: 0, bands: g.rows, items, cols, gap, tipH: (w) => tipNeed(m, w), tipHd: tipHead(m)};
     }
-    /* phone: one column, PTS under the digits; compact: two columns, PTS beside them, so five rows fit a landscape phone */
-    const side = m.mode === "compact", pth = side ? 40 : 58, ptw = 8 + dv.bombs + 6 + 67 + (side ? 6 + est(PTS_W, sec) : 0) + 8, cols2 = side ? 2 : 1, cw = (iw - (cols2 - 1) * gap) / cols2, tw = cw - 12 - 44 - 10 - ptw - 10;
-    const help = m.help !== false && !(ts > 1.1); /* the help line is kept where the row has room; a help the measure says will not fit its line is dropped */
-    const rh = Math.max(side ? 48 : 64, 6 + lhP + lhS + (help ? lhB : 0) + 6), g = grid(FOES.length, cols2, gap, iw, () => rh, 0);
-    const items = FOES.map((e, i) => { const r = g.rects[i], x0 = r.x + 6, tx = x0 + 54, ptx = r.x + r.w - 6 - ptw, top = r.y + (rh - (lhP + lhS + (help ? lhB : 0))) / 2, py = r.y + (rh - pth) / 2;
-      return {name: e.name, t: e.t, r, cell: R(x0, r.y + (rh - 44) / 2, 44, 44), tx, tw, nameY: top + lhP / 2, levY: top + lhP + lhS / 2, helpY: help ? top + lhP + lhS + lhB / 2 : null, pts: R(ptx, py, ptw, pth), dig: R(ptx + 8 + dv.bombs + 6, py + 6, 67, 28), side}; });
-    return {h: g.h, items, cols: cols2, gap, rh, help, iw, tipH: (w) => tipNeed(m, w)};
+    /* phone: one column, PTS under the digits; compact: two columns, PTS beside them. The help takes the lines it needs; at 125 % the phone and
+       compact drop it (the round 6 phone frame's step-down) */
+    const side = m.mode === "compact", pth = side ? 40 : 58, ptw = 8 + dv.bombs + 6 + 67 + (side ? 6 + pts : 0) + 8, cols = side && (iw - gap) / 2 >= 330 ? 2 : 1, cw = (iw - (cols - 1) * gap) / cols, tw = cw - 12 - 44 - 10 - ptw - 10;
+    const help = !(ts > 1.1), hl = FOES.map((e) => (help ? linesOf(T.body, Bd, helpOfFoe(e), tw) : 0)), need = (i) => Math.max(side ? 48 : 64, 6 + lhP + lhS + hl[i] * lhB + 6);
+    const g = grid(FOES.length, cols, gap, iw, (i) => need(i), 0);
+    const items = FOES.map((e, i) => { const r = g.rects[i], x0 = r.x + 6, tx = x0 + 54, ptx = r.x + r.w - 6 - ptw, top = r.y + (r.h - (lhP + lhS + hl[i] * lhB)) / 2, py = r.y + (r.h - pth) / 2, dig = R(ptx + 8 + dv.bombs + 6, py + 6, 67, 28);
+      return {name: e.name, t: e.t, r, band: g.ri[i], ri: g.ri[i], col: i % cols, cell: R(x0, r.y + (r.h - 44) / 2, 44, 44), tx, tw, nameY: top + lhP / 2, levY: top + lhP + lhS / 2, helpY: help ? top + lhP + lhS : null, hl: hl[i], pts: R(ptx, py, ptw, pth), dig, digF: dig, side}; });
+    return {h: g.h, top: 0, bands: g.rows, items, cols, gap, help, iw, tipH: (w) => tipNeed(m, w), tipHd: tipHead(m)};
   }
-  /* FLOOR: three tile cells (by difficulty) then the tile's name, its world and two help lines; desk one column under a header of the three names */
-  const desk = m.mode === "desk", s = desk ? 44 : 30, cg = desk ? Math.max(6, Math.ceil(est(DIFF[2], sec) - s + 6)) : 4, cellsW = 3 * s + 2 * cg;
-  const colsF = desk ? 1 : cols, cwF = (iw - (colsF - 1) * gap) / colsF, tw = desk ? cwF - 16 - cellsW - 16 : cwF - 16;
-  const lean = m.mode === "phone" && m.help === false;
-  const lines = (r) => { const h = TILE_HELP[r.k] || ["", "", ""], a = DIFF[0] + " · " + h[0], b = DIFF[2] + " · " + h[2];
-    if (desk) return est(a, sec) + 24 + est(b, sec) <= tw ? 1 : 2;
-    return estLines(a, sec, tw) + (lean ? 0 : estLines(b, sec, tw)); };
-  const hd = lhS + 6, nl = Math.max(...FLOOR_ROWS.map(lines)), rowH = desk ? Math.max(s + 12, 6 + lhP + nl * lhS + 6) : 5 + Math.max(s, lhP + (lean ? 0 : lhS)) + 4 + nl * lhS + 5;
-  const g = grid(FLOOR_ROWS.length, colsF, gap, iw, () => rowH, desk ? 6 : 4);
-  return {h: hd + g.h, items: FLOOR_ROWS.map((q, i) => ({name: q.name, r: R(g.rects[i].x, g.rects[i].y + hd, g.rects[i].w, rowH), s, cg, cellsW, tw, nl, k: q.k, room: q.room, lean})), head: R(0, 0, iw, lhS), desk};
+  /* FLOOR: three tile cells (by difficulty) then the tile's name, its world and the NORMAL and EXPERT lines, every one whole; the level line on every row
+     (beside the name where it fits on all of them, else under it), never on some. A desk plate under 700 wide stacks a row as the phone does (the
+     cells and the name on top, the rules under them at the full width), so its rules wrap less */
+  const desk = m.mode === "desk" && iw >= 700, s = desk ? 44 : m.mode === "desk" ? 36 : 30, cg = desk ? Math.max(6, Math.ceil(L(DIFF[2], Sx) - s + 6)) : 4, cellsW = 3 * s + 2 * cg;
+  const colsF = desk || m.mode === "phone" || (iw - gap) / 2 < 300 ? 1 : 2, cwF = (iw - (colsF - 1) * gap) / colsF, tw = desk ? cwF - 16 - cellsW - 16 : cwF - 16, nameW = desk ? tw : cwF - 8 - cellsW - 10 - 8;
+  const lvl = (q) => LABEL.LEVEL + " " + q.room + " · " + BIOMES[q.room - 1].name, two = (q) => { const h = TILE_HELP[q.k]; return h ? [DIFF[0] + " · " + h[0], DIFF[2] + " · " + h[2]] : ["LOOK ONLY FOR NOW", "ITS RULE COMES LATER"]; };
+  const inl = FLOOR_ROWS.every((q) => L(q.name, P) + 12 + L(lvl(q), Sx) <= nameW), side = desk && FLOOR_ROWS.every((q) => { const [a, b] = two(q); return L(a, Sx) + 24 + L(b, Sx) <= tw; });
+  const nl = FLOOR_ROWS.map((q) => (side ? 1 : two(q).reduce((n, x) => n + linesOf(T.label, Sx, x, tw), 0)));
+  const hd = lhS + 6, rowH = (i) => (desk ? Math.max(s + 12, 6 + lhP + (inl ? 0 : lhS) + nl[i] * lhS + 6) : 5 + Math.max(s, lhP + (inl ? 0 : lhS)) + 4 + nl[i] * lhS + 5);
+  const g = grid(FLOOR_ROWS.length, colsF, gap, iw, (i) => rowH(i), desk ? 6 : 4);
+  return {h: hd + g.h, top: hd, bands: g.rows.map((q) => ({y: q.y + hd, h: q.h})), items: FLOOR_ROWS.map((q, i) => ({name: q.name, r: R(g.rects[i].x, g.rects[i].y + hd, g.rects[i].w, g.rects[i].h), band: g.ri[i], s, cg, cellsW, tw, nl: nl[i], side, inl, wide: desk, lvl: lvl(q), lines: two(q), k: q.k, room: q.room})), head: R(0, 0, iw, lhS), desk};
 }
-/* the tooltip's content height at text width w: pad 12, the title row (36: the digits), 6, the body lines, pad 14 */
+/* the tooltip's head: pad, the title row (36: POINTS and the value), then 6, the body lines and the bottom pad; a compact box (a landscape phone)
+   has no room for the value's keys, so its title row is the POINTS word alone (the value sits ringed on the row it points at) */
+const tipHead = (m) => (m.mode === "compact" ? {top: 8, th: m.dv.pri * m.ts * 1.15, bot: 8, dig: false} : {top: 12, th: 36, bot: 14, dig: true});
 function tipNeed(m, w) {
-  const bod = m.dv.bod * m.ts, n = Math.max(...FOES.map((e) => estLines(tipText(e.name), bod, w)));
-  return {h: 12 + 36 + 6 + n * bod * 1.4 + 14, n};
+  const n = Math.max(...FOES.map((e) => linesOf(T.body, m.dv.bod, tipText(e.name), w))), q = tipHead(m);
+  return {h: q.top + q.th + 6 + n * m.dv.bod * m.ts * 1.4 + q.bot, n};
 }
-function headOf(page, m, iw, bk = 44) {
-  const {dv, ts} = m, sec = dv.sec * ts, hint = page === EN ? (m.tap ? HINT.tap : HINT.key) : "";
+function headOf(page, m, iw) {
+  const {dv, ts} = m, Sx = dv.sec, sec = Sx * ts, hint = page === EN ? (m.tap ? HINT.tap : HINT.key) : "", D = (s) => mw(T.display, dv.ttl, s);
   if (m.mode === "desk") {
-    const kick = sec * 1.25, tt = dv.ttl * ts * 1.1, inline = !hint || est(hint, sec) + est(page, dv.ttl * ts) * 1.15 + 24 <= iw;
-    return {h: kick + 2 + tt + (inline ? 0 : 4 + sec * 1.3), kick: R(0, 0, iw, kick), title: R(0, kick + 2, iw, tt), hint: hint ? (inline ? R(0, kick + 2, iw, tt) : R(0, kick + 6 + tt, iw, sec * 1.3)) : null, s: hint};
+    /* at 125 % the kicker goes (the round 7 t125 frame) and the hint rides the title's line where it fits */
+    const kick = m.ts > 1.1 ? 0 : sec * 1.25, k2 = kick ? kick + 2 : 0, tt = dv.ttl * ts * 1.1, inline = !hint || mw(T.label, Sx, hint) + D(page) + 24 <= iw;
+    return {h: k2 + tt + (inline ? 0 : 4 + sec * 1.3), kick: kick ? R(0, 0, iw, kick) : null, title: R(0, k2, iw, tt), hint: hint ? (inline ? R(0, k2, iw, tt) : R(0, k2 + 4 + tt, iw, sec * 1.3)) : null, s: hint};
   }
-  const hn = hint ? Math.min(2, estLines(hint, sec, iw)) : 0, hh = hint ? 8 + hn * sec * 1.3 : 0;
-  const bw = BACK_W * bk / 44, tt = dv.ttl * ts * 1.1, below = est(page, dv.ttl * ts) * 1.15 > iw - bw - 16, ty = below ? bk + 6 : 0, th = below ? tt : bk;
-  return {h: ty + th + hh, back: R(0, 0, bw, bk), title: below ? R(0, ty, iw, tt) : R(bw + 16, (bk - 44) / 2, iw - bw - 16, 44), hint: hint ? R(0, ty + th + 8, iw, hn * sec * 1.3) : null, s: hint, hn};
+  const hn = hint ? linesOf(T.label, Sx, hint, iw) : 0, tt = dv.ttl * ts * 1.1, below = D(page) > iw - BACK_W - 16, ty = below ? 44 + 6 : 0, th = below ? tt : 44;
+  const hy = ty + th + 8, cy = hy + (hint ? hn * sec * 1.3 + 6 : 0), ch = m.cue ? CUE_H : 0;
+  return {h: ty + th + (hint ? 8 + hn * sec * 1.3 : 0) + (m.cue ? (hint ? 6 : 8) + ch : 0), back: R(0, 0, BACK_W, 44), title: below ? R(0, ty, iw, tt) : R(BACK_W + 16, 0, iw - BACK_W - 16, 44),
+    hint: hint ? R(0, hy, iw, hn * sec * 1.3) : null, cue: m.cue ? R(0, hint ? cy : ty + th + 8, iw, ch) : null, s: hint, hn};
 }
 function frameOf(F) {
   const ts = F.ts > 0 ? F.ts : textScale(), touch = !!F.touch, shell = !!F.shell, css = F.css > 0 ? F.css : 1;
   return {ts, touch, shell, css, t125: ts > 1.1, phone: shell && touch && F.H > F.W * 1.3};
 }
-function lay(F, page, mode, fr) {
-  const dev = mode === "desk" ? "d" : "p", dv = DEV[dev], m = {mode, dev, dv, ts: fr.ts, W: hints(), tap: tapMode(fr.touch), narrow: F.W < 560}, P0 = PAD[dev];
-  if (mode === "desk") {
-    const [w1, w2, wmin] = PWD[page], side = 2 * (DEV.d.T + 2 + GUT), want = fr.t125 ? w2 : w1;
-    let u = Math.min(1, F.W / (wmin + side));
-    const pw = Math.min(want, F.W / u - side), iw = pw - P0[1] - P0[3], hd = headOf(page, m, iw), bd = body(page, m, iw);
-    const plateH = P0[0] + hd.h + 14 + bd.h + P0[2], tail = FOOT_GAP + FOOT_H + 4 + 12;
-    u = Math.min(u, F.H / (TOP_MIN + plateH + tail));
-    const Wd = F.W / u, Hd = F.H / u, px = (Wd - pw) / 2, py = Math.max(TOP_MIN, Math.min(TOP, Hd - plateH - tail));
-    return {mode, dev, u, m, plate: R(px, py, pw, plateH), ix: px + P0[3], iy: py + P0[0], iw, hd, bd, by: py + P0[0] + hd.h + 14, foot: R(px, py + plateH + FOOT_GAP, pw, FOOT_H)};
+/* page breaks: whole bands, greedy, each page as tall as `room` holds (its header included); null when one band is taller than a page. With `need`
+   (ENEMIES off the desk: the tooltip's height) every band also keeps that much room above or below it on its page (the pager's strip counts), and
+   the body grows toward `room` until it does */
+function paginate(B, room, need = 0) {
+  const n = B.bands.length, req = (b0, k) => { const y = B.bands[k].y - B.bands[b0].y; return !need || y >= need ? 0 : y + B.bands[k].h + need; };
+  if (B.h <= room) { const r = Math.max(0, ...B.bands.map((_, k) => req(0, k))); if (B.top + r <= room) return {pages: [{b0: 0, b1: n, y0: B.top, h: B.h - B.top}], h: Math.max(B.h, B.top + r)}; }
+  const per = room - PAGER - B.top, pages = [];
+  let b0 = 0, r = 0;
+  while (b0 < n) {
+    let b1 = b0;
+    while (b1 < n && B.bands[b1].y + B.bands[b1].h - B.bands[b0].y <= per && (b1 === b0 || req(b0, b1) <= room - B.top)) { r = Math.max(r, Math.min(room - B.top, req(b0, b1))); b1++; }
+    if (b1 === b0) return null;
+    pages.push({b0, b1, y0: B.bands[b0].y, h: B.bands[b1 - 1].y + B.bands[b1 - 1].h - B.bands[b0].y});
+    b0 = b1;
   }
-  const side = 12, top = 20, bot = 20, max = mode === "phone" ? PHONE_MAX : COMPACT_MAX;
-  let u = 1 / fr.css;
-  const build = (uu, help) => {
-    const Wd = F.W / uu, pw = Math.min(Wd - 2 * side, max), iw = pw - P0[1] - P0[3], mm = {...m, help}, hd = headOf(page, mm, iw, Math.max(44, 44 / (uu * fr.css))), bd = body(page, mm, iw);
-    return {pw, iw, hd, bd, mm, plateH: P0[0] + hd.h + 12 + bd.h + P0[2], Wd};
+  return {pages, h: B.top + Math.max(Math.max(...pages.map((p) => p.h)) + PAGER, r)};
+}
+function lay(F, page, mode, fr) {
+  const dev = mode === "desk" ? "d" : "p", dv = DEV[dev], W = hints(), m = {mode, dev, dv, ts: fr.ts, W, tap: tapMode(fr.touch), narrow: F.W < 560, cue: mode !== "desk" && W.dev === "pad"}, P0 = PAD[mode === "compact" ? "c" : dev];
+  const tipNeed0 = (iw) => (page === EN && mode !== "desk" ? tipNeed(m, iw - 2 * TIP_T[dev] - 4 - 2 * (mode === "compact" ? TIP_PAD.c : TIP_PAD.d)).h + 2 * TIP_T[dev] + 5 : 0);
+  const fit = (u, H, top0, tail, build) => {
+    const S = build(u), fixed = top0 + P0[0] + S.hd.h + S.gap + P0[2] + tail, pg = paginate(S.bd, H / u - fixed, tipNeed0(S.iw));
+    return pg ? {S, pg, u} : null;
   };
-  let S = build(u, true);
-  /* too tall: POWER-UPS scales down to 0.75 of its size before it drops its help lines; ENEMIES drops its one-line help first (round 6 phone) */
-  if (page === PU && top + S.plateH + bot > F.H / u && F.H / (top + S.plateH + bot) < 0.75 * u) S = build(u, false);
-  if ((page === EN || page === FL) && top + S.plateH + bot > F.H / u) S = build(u, false);
-  for (let k = 0; k < 4 && top + S.plateH + bot > F.H / u + 0.01; k++) { u = F.H / (top + S.plateH + bot); S = build(u, S.mm.help); }
-  const px = (S.Wd - S.pw) / 2, py = top + Math.max(0, F.H / u - top - bot - S.plateH) * (mode === "phone" ? 0 : 0.5);
-  return {mode, dev, u, m: S.mm, plate: R(px, py, S.pw, S.plateH), ix: px + P0[3], iy: py + P0[0], iw: S.iw, hd: S.hd, bd: S.bd, by: py + P0[0] + S.hd.h + 12, foot: null};
+  if (mode === "desk") {
+    const want = PWD[page][fr.t125 ? 1 : 0], side = 2 * (DEV.d.T + 2 + GUT), tail = FOOT_GAP + FOOT_H + 4 + 12;
+    let u = Math.min(1, F.W / (PW_MIN + side));
+    const build = (uu) => { const pw = Math.max(PW_MIN, Math.min(want, F.W / uu - side)), iw = pw - P0[1] - P0[3]; return {pw, iw, hd: headOf(page, m, iw), bd: body(page, m, iw), gap: 14}; };
+    /* #c with no shell box (a keyboard window under 600 x 520, the iso guard) scales as one piece, as MENU does there; a shell box pages instead */
+    if (!fr.shell) {
+      const ok = (uu) => { const S = build(uu); return (TOP_MIN + P0[0] + S.hd.h + 14 + S.bd.h + P0[2] + tail) * uu <= F.H; };
+      if (!ok(u)) { let lo = 0.25, hi = u; for (let k = 0; k < 24; k++) { const mid = (lo + hi) / 2; if (ok(mid)) lo = mid; else hi = mid; } u = lo; }
+    }
+    let R0 = fit(u, F.H, TOP_MIN, tail, build);
+    if (!R0) { const S = build(u), pg = paginate(S.bd, Infinity), band = Math.max(...S.bd.bands.map((b) => b.h)); u = Math.min(u, F.H / (TOP_MIN + P0[0] + S.hd.h + 14 + S.bd.top + band + PAGER + P0[2] + tail)); R0 = fit(u, F.H, TOP_MIN, tail, build) || {S: build(u), pg, u}; }
+    const {S, pg} = R0, Wd = F.W / u, Hd = F.H / u, plateH = P0[0] + S.hd.h + 14 + pg.h + P0[2], px = (Wd - S.pw) / 2, py = Math.max(TOP_MIN, Math.min(TOP, Hd - plateH - tail));
+    return {mode, dev, u, m, plate: R(px, py, S.pw, plateH), ix: px + P0[3], iy: py + P0[0], iw: S.iw, hd: S.hd, bd: S.bd, pg, by: py + P0[0] + S.hd.h + 14, foot: R(px, py + plateH + FOOT_GAP, S.pw, FOOT_H)};
+  }
+  /* compact (a landscape phone's #c): margins just clear the plate's ring, tighter pads and head gap, so a foe's row keeps its tooltip's room */
+  const side = 12, cp = mode === "compact", top = cp ? DEV.p.T + 2 : 20, bot = cp ? DEV.p.T + 3 : 20, hg = cp ? 8 : 12, max = mode === "phone" ? PHONE_MAX : COMPACT_MAX;
+  let u = 1 / fr.css;
+  const build = (uu) => { const pw = Math.min(F.W / uu - 2 * side, max), iw = pw - P0[1] - P0[3]; return {pw, iw, hd: headOf(page, m, iw), bd: body(page, m, iw), gap: hg}; };
+  let R0 = fit(u, F.H, top, bot, build);
+  if (!R0) { const S = build(u), pg = paginate(S.bd, Infinity), band = Math.max(...S.bd.bands.map((b) => b.h)); u = Math.min(u, F.H / (top + P0[0] + S.hd.h + hg + S.bd.top + band + PAGER + P0[2] + bot)); R0 = fit(u, F.H, top, bot, build) || {S: build(u), pg, u}; }
+  const {S, pg} = R0, plateH = P0[0] + S.hd.h + hg + pg.h + P0[2], px = (F.W / u - S.pw) / 2, py = top + Math.max(0, F.H / u - top - bot - plateH) * (mode === "phone" ? 0 : 0.5);
+  return {mode, dev, u, m, plate: R(px, py, S.pw, plateH), ix: px + P0[3], iy: py + P0[0], iw: S.iw, hd: S.hd, bd: S.bd, pg, by: py + P0[0] + S.hd.h + hg, foot: null};
 }
 const off = (r, x, y) => (r ? R(r.x + x, r.y + y, r.w, r.h) : null);
+const RECTS = ["cell", "pts", "dig", "digF", "pips"], YS = ["nameY", "helpY", "appY", "levY"];
 let gm = null;
 export function guideGeom(F, page = GUIDE) {
   const fr = frameOf(F), W = hints();
   if (gm && gm.W === F.W && gm.H === F.H && gm.page === page && gm.touch === fr.touch && gm.shell === fr.shell && gm.css === fr.css && gm.ts === fr.ts && gm.words === W) return gm.G;
   let d = lay(F, page, fr.phone ? "phone" : "desk", fr);
-  if (!fr.phone && fr.touch && !(d.u * fr.css >= TOUCH_U)) d = lay(F, page, "compact", fr);
-  const u = d.u, x0 = d.ix, y0 = d.by, D = {mode: d.mode, dev: d.dev, u, plate: d.plate, foot: d.foot, T: DEV[d.dev].T, head: {}, items: {}, order: [], hit: {}, tips: null};
-  for (const k of ["kick", "title", "hint", "back"]) D.head[k] = off(d.hd[k], d.ix, d.iy);
+  if (!fr.phone && fr.touch && !(d.u * fr.css >= Math.max(TOUCH_U, uFloor(fr.ts)) - 1e-9)) d = lay(F, page, "compact", fr);
+  const u = d.u, x0 = d.ix, y0 = d.by, B = d.bd, pages = d.pg.pages, D = {mode: d.mode, dev: d.dev, u, plate: d.plate, foot: d.foot, T: DEV[d.dev].T, head: {}, items: {}, order: [], hit: {}, tips: null, pages: pages.length, pager: null};
+  for (const k of ["kick", "title", "hint", "back", "cue"]) D.head[k] = off(d.hd[k], d.ix, d.iy);
   D.hintS = d.hd.s; D.hintN = d.hd.hn || 1;
-  const B = d.bd;
-  for (const it of B.items) {
-    const q = {...it, r: off(it.r, x0, y0)};
-    for (const k of ["cell", "pts", "dig", "pips"]) if (it[k] && typeof it[k] === "object") q[k] = off(it[k], x0, y0);
-    for (const k of ["nameY", "helpY", "appY", "levY"]) if (it[k] != null) q[k] = it[k] + y0;
+  /* every band to its page: a page's first band starts under the repeated header */
+  const pOf = [], dy = [];
+  pages.forEach((p, i) => { for (let b = p.b0; b < p.b1; b++) { pOf[b] = i; dy[b] = B.top - p.y0; } });
+  const place = (it) => {
+    const q = {...it, page: pOf[it.band], r: off(it.r, x0, y0 + dy[it.band])};
+    for (const k of RECTS) if (it[k] && typeof it[k] === "object") q[k] = off(it[k], x0, y0 + dy[it.band]);
+    for (const k of YS) if (it[k] != null) q[k] = it[k] + y0 + dy[it.band];
     if (it.tx != null) q.tx = it.tx + x0;
-    D.items[it.name] = q;
-    D.order.push(it.name);
-  }
-  if (B.note) D.note = off(B.note, x0, y0);
+    return q;
+  };
+  for (const it of B.items) { D.items[it.name] = place(it); D.order.push(it.name); }
+  if (B.note) D.note = {r: off(B.note.r, x0, y0 + dy[B.note.band]), page: pOf[B.note.band]};
   if (B.head) D.fhead = off(B.head, x0, y0);
+  if (pages.length > 1) {
+    const py = y0 + d.pg.h - PAGE_KEY, kx = x0 + d.iw - 2 * PAGE_KEY - 10;
+    D.pager = {up: R(kx, py, PAGE_KEY, PAGE_KEY), dn: R(kx + PAGE_KEY + 10, py, PAGE_KEY, PAGE_KEY), label: R(x0, py, kx - 12 - x0, PAGE_KEY)};
+  }
+  const bottomOf = (p) => y0 + B.top + pages[p].h;
   /* hits: a door owns half of each gap round it out to half the plate's pad; ENEMIES on a touch layout taps a foe's whole slot, else its points key */
   if (page === GUIDE || page === EN) {
-    const gx = B.gap, gy = page === GUIDE || d.mode === "desk" ? B.gap : 0, e = PAD[d.dev][3] / 2;
+    const gx = B.gap, gy = page === GUIDE || d.mode === "desk" ? B.gap : 0, e = PAD[d.dev][3] / 2, hg = d.by - (d.iy + d.hd.h); /* a first row's hit keeps 8 clear of the BACK key */
     for (const n of D.order) {
       const q = D.items[n], r = q.r;
       if (page === EN && !fr.touch && d.mode === "desk") { D.hit[n] = R(q.pts.x - 3, q.pts.y - 3, q.pts.w + 6, q.pts.h + 6); continue; }
       const L = Math.abs(r.x - x0) < 1e-6 ? r.x - e : r.x - gx / 2, Rt = Math.abs(r.x + r.w - (x0 + d.iw)) < 1e-6 ? r.x + r.w + e : r.x + r.w + gx / 2;
-      const Tp = Math.abs(r.y - y0) < 1e-6 ? r.y - Math.min(gy / 2, 4) : r.y - gy / 2, Bt = Math.abs(r.y + r.h - (y0 + B.h)) < 1e-6 ? r.y + r.h + PAD[d.dev][2] / 2 : r.y + r.h + gy / 2;
+      const Tp = Math.abs(r.y - (y0 + B.top)) < 1e-6 ? r.y - Math.max(0, Math.min(gy / 2, 4, hg - 8)) : r.y - gy / 2, last = Math.abs(r.y + r.h - bottomOf(q.page)) < 1e-6;
+      const Bt = last ? r.y + r.h + (D.pager ? Math.min(gy / 2, 4) : PAD[d.dev][2] / 2) : r.y + r.h + gy / 2;
       D.hit[n] = R(L, Tp, Rt - L, Bt - Tp);
     }
   }
-  if (page === EN) D.tips = FOES.map((e, i) => tipGeom(D, B, i, d));
-  const G = {page, mode: d.mode, dev: d.dev, u, W: F.W, H: F.H, t125: fr.t125, touch: fr.touch, T: D.T * u, d: D, order: D.order.slice(), plate: sc(D.plate, u), foot: sc(D.foot, u), back: sc(D.head.back, u), items: {}, hit: {}, tips: null};
-  for (const n of D.order) { G.items[n] = sc(D.items[n].r, u); if (D.hit[n]) G.hit[n] = sc(D.hit[n], u); }
+  if (page === EN) D.tips = FOES.map((e, i) => tipGeom(D, B, i, d, {x0, w: d.iw, y0, top: B.top, h: d.pg.h}));
+  const G = {page, mode: d.mode, dev: d.dev, u, W: F.W, H: F.H, t125: fr.t125, touch: fr.touch, T: D.T * u, d: D, order: D.order.slice(), plate: sc(D.plate, u), foot: sc(D.foot, u), back: sc(D.head.back, u),
+    pages: pages.length, pageOf: {}, pager: D.pager ? {up: sc(D.pager.up, u), dn: sc(D.pager.dn, u)} : null, items: {}, hit: {}, tips: null};
+  for (const n of D.order) { G.items[n] = sc(D.items[n].r, u); G.pageOf[n] = D.items[n].page; if (D.hit[n]) G.hit[n] = sc(D.hit[n], u); }
   if (D.tips) G.tips = D.tips.map((q) => ({r: sc(q.r, u), up: q.up, cover: q.cover.slice()}));
   gm = {W: F.W, H: F.H, page, touch: fr.touch, shell: fr.shell, css: fr.css, ts: fr.ts, words: W, G: deep(G)};
   return gm.G;
 }
-/* the tooltip for foe i: the box it covers (whole slots), its plaque inside that by its ring, the pointer from the plaque toward the points value */
-function tipGeom(D, B, i, d) {
-  const n = D.order.length, it = D.items[D.order[i]], Tt = TIP_T[d.dev];
-  let cover, up, U, need;
-  if (d.mode === "desk") {
-    const r = Math.floor(i / 3), c = i % 3, r2 = r > 0 ? r - 1 : r + 1, cs = c > 0 ? [c - 1, c] : [0, 1];
-    cover = cs.map((cc) => r2 * 3 + cc); up = r > 0;
-    const rs = cover.map((j) => D.items[D.order[j]].r), x = Math.min(...rs.map((q) => q.x)), y = Math.min(...rs.map((q) => q.y));
-    U = R(x, y, Math.max(...rs.map((q) => q.x + q.w)) - x, Math.max(...rs.map((q) => q.y + q.h)) - y);
-    need = B.tipH(U.w - 2 * Tt - 4 - 2 * TIP_PAD.d);
-  } else if (B.cols > 1) {
-    /* compact: the other column, top to bottom (a landscape phone has no rows to spare above or below); the pointer points across */
-    const x0 = D.items[D.order[0]].r.x, y0 = D.items[D.order[0]].r.y, cw = (B.iw - B.gap) / 2, oc = i % 2 ? 0 : 1, rows = Math.ceil(n / 2);
-    cover = D.order.map((_, j) => j).filter((j) => j % 2 === oc);
-    U = R(x0 + oc * (cw + B.gap), y0, cw, rows * B.rh);
-    need = B.tipH(U.w - 2 * Tt - 4 - 2 * TIP_PAD.c);
-    up = oc ? "r" : "l";
-  } else {
-    /* phone: whole rows on the side of the focused row with room, as many as the words need */
-    const row = i, rows = n, x0 = D.items[D.order[0]].r.x, y0 = D.items[D.order[0]].r.y;
-    need = B.tipH(B.iw - 2 * Tt - 4 - 2 * TIP_PAD.d);
-    const k = Math.max(1, Math.ceil((need.h + 2 * Tt + 5) / B.rh)), below = rows - 1 - row, above = row, dn = below >= k || below >= above, cnt = Math.min(k, dn ? below : above), r0 = dn ? row + 1 : row - cnt;
-    up = !dn;
-    cover = [];
-    for (let j = r0; j < r0 + cnt; j++) cover.push(j);
-    U = R(x0, y0 + r0 * B.rh, B.iw, cnt * B.rh);
+/* the tooltip for foe i, on its own page; the first place its measured words fit: desk with columns, whole row bands of two cards toward the middle
+   (an empty slot of a short row included), above the focused row unless it is its page's first; then the page's body under or over the focused row,
+   full width (the pager's strip under the last row included: a one-row page); never the foe's own card. Its plaque sits inside that box by its
+   ring; the pointer runs from the plaque toward the points value. */
+function tipGeom(D, B, i, d, body) {
+  const it = D.items[D.order[i]], Tt = TIP_T[d.dev], pad = d.mode === "compact" ? TIP_PAD.c : TIP_PAD.d, onPg = (j) => D.items[D.order[j]].page === it.page, all = D.order.map((_, j) => j);
+  const fits = (U) => U.h >= B.tipH(U.w - 2 * Tt - 4 - 2 * pad).h + 2 * Tt + 5;
+  const across = (U) => all.filter((j) => { const q = D.items[D.order[j]].r; return j !== i && onPg(j) && q.y < U.y + U.h - 1e-6 && q.y + q.h > U.y + 1e-6 && q.x < U.x + U.w - 1e-6 && q.x + q.w > U.x + 1e-6; });
+  const cands = [];
+  if (d.mode === "desk" && B.cols > 1) {
+    const cols = B.cols, c = it.col, cs = cols === 3 ? (c > 0 ? [c - 1, c] : [0, 1]) : [0, 1], cw = it.r.w, x0 = it.r.x - c * (cw + B.gap);
+    const ux = x0 + cs[0] * (cw + B.gap), uw = cs.length * cw + (cs.length - 1) * B.gap, rowOf = (rr) => all.filter((j) => onPg(j) && D.items[D.order[j]].ri === rr);
+    const run = (dir) => {
+      let U = null;
+      for (let rr = it.ri + dir; rowOf(rr).length; rr += dir) {
+        const r = D.items[D.order[rowOf(rr)[0]]].r, y = U ? Math.min(U.y, r.y) : r.y;
+        U = R(ux, y, uw, Math.max(U ? U.y + U.h : 0, r.y + r.h) - y);
+        if (fits(U)) break;
+      }
+      return U;
+    };
+    const a = run(-1), b = run(1);
+    if (it.ri > 0 || !b) { if (a) cands.push({U: a, up: true}); if (b) cands.push({U: b, up: false}); }
+    else { cands.push({U: b, up: false}); if (a) cands.push({U: a, up: true}); }
   }
-  const box = R(U.x + Tt + 2, U.y + Tt + 2, U.w - 2 * Tt - 4, U.h - 2 * Tt - 5), p = it.pts, pw = d.dev === "p" ? 16 : 18, phh = d.dev === "p" ? 10 : 14;
-  const cx = Math.max(box.x + 14 + pw / 2, Math.min(box.x + box.w - 14 - pw / 2, p.x + p.w / 2)), cy = Math.max(box.y + 14 + pw / 2, Math.min(box.y + box.h - 14 - pw / 2, p.y + p.h / 2));
-  const ptr = up === "r" ? {x: box.x - Tt - 2, y: cy, w: pw, h: phh, dir: -2} : up === "l" ? {x: box.x + box.w + Tt + 2, y: cy, w: pw, h: phh, dir: 2} : up ? {x: cx, y: box.y + box.h + Tt + 3, w: pw, h: phh, dir: 1} : {x: cx, y: box.y - Tt - 2, w: pw, h: phh, dir: -1};
-  return {r: box, U, up, cover, ptr, n: need.n, Tt, pad: d.mode === "compact" ? TIP_PAD.c : TIP_PAD.d};
+  /* the body region grows by whole rows (to the body's edge last) until the words fit */
+  const top = body.y0 + body.top, bot = body.y0 + body.h, y1 = it.r.y + it.r.h, mine = all.filter((j) => j !== i && onPg(j)).map((j) => D.items[D.order[j]].r);
+  const grow = (ends, mk) => { let U = null; for (const e of ends) { U = mk(e); if (fits(U)) break; } return U || mk(ends[ends.length - 1]); };
+  const below = grow([...new Set([...mine.filter((r) => r.y >= y1 - 1e-6).map((r) => r.y + r.h), bot])].sort((a, b) => a - b), (e) => R(body.x0, y1, body.w, e - y1));
+  const over = grow([...new Set([...mine.filter((r) => r.y + r.h <= it.r.y + 1e-6).map((r) => r.y), top])].sort((a, b) => b - a), (e) => R(body.x0, e, body.w, it.r.y - e));
+  if (below.h >= over.h) cands.push({U: below, up: false}, {U: over, up: true}); else cands.push({U: over, up: true}, {U: below, up: false});
+  const pick = cands.find((q) => q.U.h > 0 && fits(q.U)) || cands.filter((q) => q.U.h > 0).sort((p, q) => q.U.h - p.U.h)[0] || {U: R(body.x0, it.r.y + it.r.h, body.w, 1), up: false};
+  const U = pick.U, up = pick.up, need = B.tipH(U.w - 2 * Tt - 4 - 2 * pad), cover = across(U);
+  const box = R(U.x + Tt + 2, U.y + Tt + 2, U.w - 2 * Tt - 4, Math.max(1, U.h - 2 * Tt - 5)), p = it.pts, pw = d.dev === "p" ? 16 : 18, phh = d.dev === "p" ? 10 : 14;
+  const cx = Math.max(box.x + 14 + pw / 2, Math.min(box.x + box.w - 14 - pw / 2, p.x + p.w / 2));
+  const ptr = up ? {x: cx, y: box.y + box.h + Tt + 3, w: pw, h: phh, dir: 1} : {x: cx, y: box.y - Tt - 2, w: pw, h: phh, dir: -1};
+  return {r: box, U, up, cover, ptr, n: need.n, Tt, pad, page: it.page, hd: B.tipHd};
 }
 const inR = (r, x, y) => !!r && x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
 const onPlate = (G, x, y) => { const p = G.plate; return x >= p.x && x <= p.x + p.w && y >= p.y && y <= p.y + p.h; };
-/** A tap on the GUIDE door page: the door's index, -2 on the plate (inert), -1 off it or on the BACK key. */
-export function guideHit(x, y, F) {
+const clampPg = (G, pg) => Math.max(0, Math.min(G.pages - 1, pg | 0));
+/** The page a focused door or foe shows on (0 when nothing is focused). */
+export const pageOfFocus = (G, name) => (name != null && G.pageOf[name] != null ? G.pageOf[name] : 0);
+/** A tap on the GUIDE door page: the door's index, -2 on the plate (inert), -1 off it or on the BACK key. focus: the focused door's index. */
+export function guideHit(x, y, F, focus = 0) {
   if (!okBox(F)) return -1;
-  const G = guideGeom(F, GUIDE);
-  for (let i = 0; i < DOORS.length; i++) if (inR(G.hit[DOORS[i]], x, y)) return i;
+  const G = guideGeom(F, GUIDE), pg = pageOfFocus(G, DOORS[focus | 0]);
+  for (let i = 0; i < DOORS.length; i++) if (G.pageOf[DOORS[i]] === pg && inR(G.hit[DOORS[i]], x, y)) return i;
   if (inR(G.back, x, y)) return -1;
   return onPlate(G, x, y) ? -2 : -1;
 }
-/** A tap on ENEMIES: the foe's index (its points value; a touch layout's whole slot), else -1 (a read-only page: any other tap closes an open
-    tooltip, or backs out). */
-export function enemiesHit(x, y, F) {
+/** A tap on ENEMIES (focus: the focused foe's index, whose page shows): a foe's index (its points value; a touch layout's whole slot); a page key,
+    -10 - the first foe of the page it shows; else -1 (any other tap closes an open tooltip, or backs out). */
+export function enemiesHit(x, y, F, focus = 0) {
   if (!okBox(F)) return -1;
-  const G = guideGeom(F, EN);
-  for (let i = 0; i < G.order.length; i++) if (inR(G.hit[G.order[i]], x, y)) return i;
+  const G = guideGeom(F, EN), pg = pageOfFocus(G, G.order[focus | 0]);
+  for (let i = 0; i < G.order.length; i++) if (G.pageOf[G.order[i]] === pg && inR(G.hit[G.order[i]], x, y)) return i;
+  if (G.pager) for (const [k, d] of [["up", -1], ["dn", 1]]) if (inR(G.pager[k], x, y)) { const to = clampPg(G, pg + d); return -10 - G.order.findIndex((n) => G.pageOf[n] === to); }
   return -1;
 }
-/** A read-only page (HOW TO PLAY, POWER-UPS, FLOOR) backs out on any tap: -1 everywhere. */
-export const readHit = () => -1;
+/** A tap on a read-only page (HOW TO PLAY, POWER-UPS, FLOOR) showing page pg: "up" / "down" on a page key, else -1 (backs out). */
+export function readHit(x, y, F, page, pg = 0) {
+  if (!okBox(F)) return -1;
+  const G = guideGeom(F, page);
+  if (G.pager) { if (inR(G.pager.up, x, y)) return "up"; if (inR(G.pager.dn, x, y)) return "down"; }
+  return -1;
+}
 
-/* ---- plan: every part as a display list in design px; the plate layer paints `rest`, the frame paints the focused part and the tip live ---- */
+/* ---- plan: every part as a display list in design px; the plate layer of each page paints `rest` (ops with no page, and that page's), the frame
+   paints the focused part and the tip live ---- */
 const EST_C = {font: "", measureText(s) { const m = /(\d+(?:\.\d+)?)px/.exec(this.font); return {width: String(s).length * 0.6 * (m ? +m[1] : 10)}; }};
 const mOK = new WeakMap(), mOf = (c) => {
   if (!c || (typeof c !== "object" && typeof c !== "function")) return EST_C;
@@ -302,25 +389,45 @@ const mOK = new WeakMap(), mOf = (c) => {
   return v ? c : EST_C;
 };
 const Wm = (c, f, s) => measure(c, f, s);
-/* greedy wrap by the real measure into at most n lines, or null (a word too wide, or more lines) */
-function wrap(c, f, s, w, n) {
+/* the one wrap rule: greedy by the real measure into as many lines as the string needs. The geometry gave the slot those lines with the same
+   measure (or a wider estimate), so a wrapped string is never dropped and never runs out of its slot. */
+function wrap(c, f, s, w) {
   const out = [];
   let line = "";
-  for (const word of words(s)) {
-    const t = line ? line + " " + word : word;
-    if (Wm(c, f, t) <= w) line = t;
-    else { if (!line || Wm(c, f, word) > w) return null; out.push(line); line = word; }
-  }
+  for (const word of words(s)) { const t = line ? line + " " + word : word; if (!line || Wm(c, f, t) <= w) line = t; else { out.push(line); line = word; } }
   if (line) out.push(line);
-  return out.length <= n ? out : null;
+  return out;
 }
 const txt = (s, x, y, px, o = {}) => ({op: "text", s, x, y, px, f: (o.face || T.label)(px), col: o.col || CONST.ink, align: o.align || "left", role: o.role || "primary", lock: o.lock, name: o.name});
 function homeArt(level) { return {biome: biomeOf(level)}; }
+/* the controller's cue on a phone or compact page (no foot there): label first, keycap last; a part that does not fit is dropped whole, the signpost
+   first, then PAGE */
+function cueOps(c, G, r) {
+  const W = hints(), dv = DEV.p, f = T.label(dv.sec), many = G.pages > 1, items = [];
+  if (G.page === HOW) items.push({t: "REBIND IN " + LABEL.SETTINGS + " › CONTROLS", drop: 1});
+  if (many && G.page !== EN && G.page !== GUIDE) items.push({t: PAGE, caps: [W.move], drop: 2});
+  if (G.page === GUIDE) items.push({t: "OPEN", caps: [W.ok]});
+  if (G.page === EN) items.push({t: POINTS, caps: [W.ok]});
+  items.push({t: "BACK", caps: G.page === HOW ? [W.back, W.ok] : [W.back]});
+  const widthOf = (list) => list.reduce((n, it, i) => n + (i ? 12 + Wm(c, f, "·") + 12 : 0) + Wm(c, f, it.t) + (it.caps || []).reduce((a, q, j) => a + (j ? 5 : 8) + capW(c, q, {phone: true}), 0), 0);
+  let list = items;
+  for (const lvl of [1, 2]) if (widthOf(list) > r.w) list = list.filter((it) => it.drop !== lvl);
+  const ops = [], cy = r.y + r.h / 2;
+  let x = r.x;
+  list.forEach((it, i) => {
+    if (i) { x += 12; ops.push(txt("·", x, cy, dv.sec, {col: CONST.off, role: "secondary", lock: true})); x += Wm(c, f, "·") + 12; }
+    ops.push(txt(it.t, x, cy, dv.sec, {col: CONST.t2, role: "secondary"}));
+    x += Wm(c, f, it.t);
+    (it.caps || []).forEach((q, j) => { x += j ? 5 : 8; const w = capW(c, q, {phone: true}); ops.push({op: "cap", s: q, x, y: cy - dv.caph / 2, w}); x += w; });
+  });
+  return ops;
+}
 function plan(c0, G, ui) {
   const c = mOf(c0), D = G.d, dv = DEV[D.dev], ts = textScale(), W = hints(), tap = tapMode(!!G.touch), ph = D.dev === "p";
   const pri = dv.pri, sec = dv.sec, bod = dv.bod, rest = [], focus = {}, tips = [], strips = {}, info = [];
   const fS = (px) => T.label(px), fB = (px) => T.body(px);
   const w = (f, s) => Wm(c, f, s);
+  const on = (pg, ...ops) => { for (const o of ops) { if (pg != null) o.pg = pg; rest.push(o); } };
   rest.push({op: "plate", r: D.plate});
   /* head */
   const H = D.head;
@@ -328,72 +435,77 @@ function plan(c0, G, ui) {
     rest.push({op: "key", r: H.back, kind: "key", name: "BACK"}, {op: "glyph", n: "back", x: H.back.x + 16, y: H.back.y + H.back.h / 2 - 8, s: 16, col: CONST.ink});
     info.push({name: "BACK chevron", r: R(H.back.x + 16, H.back.y + H.back.h / 2 - 8, 16, 16), col: CONST.ink});
     rest.push(txt("BACK", H.back.x + 42, H.back.y + H.back.h / 2, pri, {name: "BACK"}));
-    rest.push({op: "dsp", s: G.page, x: H.title.x, y: H.title.y + H.title.h / 2, px: dv.ttl});
-  } else {
-    rest.push(txt(G.page === GUIDE ? "MENU" : GUIDE, H.kick.x, H.kick.y + H.kick.h / 2, sec, {col: CONST.t2, role: "secondary"}));
-    rest.push({op: "dsp", s: G.page, x: H.title.x, y: H.title.y + H.title.h / 2, px: dv.ttl});
-  }
+  } else if (H.kick) rest.push(txt(G.page === GUIDE ? "MENU" : GUIDE, H.kick.x, H.kick.y + H.kick.h / 2, sec, {col: CONST.t2, role: "secondary"}));
+  rest.push({op: "dsp", s: G.page, x: H.title.x, y: H.title.y + H.title.h / 2, px: dv.ttl});
   if (H.hint && !H.back) rest.push(txt(D.hintS, H.hint.x + H.hint.w, H.hint.y + H.hint.h / 2, sec, {col: CONST.t2, role: "secondary", align: "right"}));
-  else if (H.hint) { const ls = wrap(c, fS(sec), D.hintS, H.hint.w, D.hintN) || [D.hintS]; ls.forEach((l, j) => rest.push(txt(l, H.hint.x, H.hint.y + sec * textScale() * 1.3 * (j + 0.5), sec, {col: CONST.t2, role: "secondary"}))); }
+  else if (H.hint) wrap(c, fS(sec), D.hintS, H.hint.w).forEach((l, j) => rest.push(txt(l, H.hint.x, H.hint.y + sec * ts * 1.3 * (j + 0.5), sec, {col: CONST.t2, role: "secondary"})));
+  if (H.cue) rest.push(...cueOps(c, G, H.cue));
+  /* the pager: PAGE n / m, then the two page keys (label first, keycap last) */
+  if (D.pager) for (let p = 0; p < D.pages; p++) {
+    const s = PAGE + " " + (p + 1) + " / " + D.pages;
+    on(p, txt(s, D.pager.label.x + D.pager.label.w, D.pager.label.y + D.pager.label.h / 2, sec, {col: CONST.t2, role: "secondary", align: "right"}),
+      {op: "key", r: D.pager.up, kind: p > 0 ? "key" : "well", name: "page up"}, {op: "glyph", n: "up", x: D.pager.up.x + 12, y: D.pager.up.y + 12, s: 20, col: p > 0 ? CONST.ink : CONST.off},
+      {op: "key", r: D.pager.dn, kind: p < D.pages - 1 ? "key" : "well", name: "page down"}, {op: "glyph", n: "dn", x: D.pager.dn.x + 12, y: D.pager.dn.y + 12, s: 20, col: p < D.pages - 1 ? CONST.ink : CONST.off});
+  }
   const items = D.items;
   if (G.page === GUIDE) {
-    const subs = [tap || ph || W.dev === "pad" ? "2 RULES · 6 CONTROLS" : "2 RULES · 6 KEYS", POWER.length + " " + LABEL.POWER_UPS, FOES.length + " FOES", FLOOR_ROWS.length + " TILES"];
+    const subs = subsOf(tap, ph, W), lhP = pri * ts * 1.15, lhS = sec * ts * 1.25;
     DOORS.forEach((l, i) => {
-      const q = items[l], r = q.r, gs = 16, gx = r.x + r.w - 18 - gs, lx = r.x + 24, fx = r.x + 8 + dv.bombs + 8, ly = r.y + 14 + pri * ts * 0.575, ty = ly + pri * ts * 0.575 + 2 + sec * ts * 0.625, sy = r.y + r.h - 14 - q.strip;
-      const label = txt(l, lx, ly, pri, {name: l}), tz = txt(subs[i], lx, ty, sec, {col: TZ, role: "secondary"}), chev = {op: "glyph", n: "chev", x: gx, y: r.y + r.h / 2 - gs / 2, s: gs, col: CONST.t2};
+      const q = items[l], r = q.r, gs = 16, gx = r.x + r.w - 18 - gs, lx = r.x + 24, fx = r.x + 8 + dv.bombs + 8, sy = r.y + r.h - 14 - q.strip;
+      const nl = wrap(c, T.label(pri), l, q.tw), sl = partsOf((x) => Wm(c, T.label(sec), x), subs[i], q.tw), ty0 = r.y + 14 + nl.length * lhP + 2;
+      const label = nl.map((s2, j) => txt(s2, lx, r.y + 14 + lhP * (j + 0.5), pri, {name: l})), tz = sl.map((s2, j) => txt(s2, lx, ty0 + lhS * (j + 0.5), sec, {col: TZ, role: "secondary"})), chev = {op: "glyph", n: "chev", x: gx, y: r.y + r.h / 2 - gs / 2, s: gs, col: CONST.t2};
       const sw = gx - 10 - fx, st = stripOf(c, i, sw, q.strip, ph, tap, W);
       strips[l] = {w: Math.max(1, sw), h: q.strip, ops: st};
-      rest.push({op: "key", r, kind: "key", name: l}, {...label, door: l}, {...tz, door: l}, chev, {op: "strip", l, x: lx, y: sy, door: l});
-      focus[l] = [{op: "key", r, kind: "key", ring: true}, {op: "band", r}, {op: "bomb", x: r.x + 8, cy: r.y + r.h / 2}, {...label, x: fx}, {...tz, x: fx, col: CONST.t2}, chev, {op: "strip", l, x: fx, y: sy}];
-      info.push({name: l + " chev", r: R(gx, chev.y, gs, gs), col: CONST.t2});
+      on(q.page, {op: "key", r, kind: "key", name: l}, ...label.map((o) => ({...o, door: l})), ...tz.map((o) => ({...o, door: l})), chev, {op: "strip", l, x: lx, y: sy, door: l});
+      focus[l] = [{op: "key", r, kind: "key", ring: true}, {op: "band", r}, {op: "bomb", x: r.x + 8, cy: r.y + r.h / 2}, ...label.map((o) => ({...o, x: fx})), ...tz.map((o) => ({...o, x: fx, col: CONST.t2})), chev, {op: "strip", l, x: fx, y: sy}];
+      info.push({name: l + " chev", r: R(gx, chev.y, gs, gs), col: CONST.t2, pg: q.page});
     });
   } else if (G.page === HOW) {
     for (const [i, s] of RULES.entries()) {
-      const q = items[s], r = q.r, cs = q.cs, tx = r.x + SLAB_T + 8 + cs + 12, lh = pri * ts * 1.15;
-      rest.push({op: "slab", r, name: s}, i ? {op: "wall", x: r.x + SLAB_T + 8, y: r.y + (r.h - cs) / 2, s: cs, level: 1} : {op: "foe", t: "walker", x: r.x + SLAB_T + 8, y: r.y + (r.h - cs) / 2, s: cs, level: 1});
-      const ls = wrap(c, fS(pri), s, r.x + r.w - SLAB_T - 10 - tx, q.lines) || [s];
-      ls.forEach((l, j) => rest.push(txt(l, tx, r.y + r.h / 2 + (j - (ls.length - 1) / 2) * lh, pri, {name: j ? undefined : s})));
+      const q = items[s], r = q.r, cs = q.cs, tx = r.x + SLAB_T + 8 + cs + 12, lh = pri * ts * 1.15, ls = wrap(c, fS(pri), s, r.x + r.w - SLAB_T - 10 - tx);
+      on(q.page, {op: "slab", r, name: s}, i ? {op: "wall", x: r.x + SLAB_T + 8, y: r.y + (r.h - cs) / 2, s: cs, level: 1} : {op: "foe", t: "walker", x: r.x + SLAB_T + 8, y: r.y + (r.h - cs) / 2, s: cs, level: 1});
+      ls.forEach((l, j) => on(q.page, txt(l, tx, r.y + r.h / 2 + (j - (ls.length - 1) / 2) * lh, pri, {name: j ? undefined : s})));
     }
     for (const n of D.order.slice(2)) {
       const q = items[n], r = q.r, cs = Math.min(36, r.h - 12), cy = r.y + r.h / 2;
-      rest.push({op: "lane", r});
+      on(q.page, {op: "lane", r});
       let x = r.x + 10;
-      if (q.icon) { rest.push({op: "well", r: R(x, cy - cs / 2, cs, cs)}, {op: "item", t: q.icon, x, y: cy - cs / 2, s: cs}); x += cs + 12; }
-      rest.push(txt(n, x, cy, pri, {name: n}));
+      if (q.icon) { on(q.page, {op: "well", r: R(x, cy - cs / 2, cs, cs)}, {op: "item", t: q.icon, x, y: cy - cs / 2, s: cs}); x += cs + 12; }
+      on(q.page, txt(n, x, cy, pri, {name: n}));
       const room = r.x + r.w - 10 - (x + w(fS(pri), n) + 16);
       if (!ph && !tap) {
         let keys = q.keys.filter(Boolean), ws = keys.map((k) => capW(c, k));
         while (keys.length > 1 && ws.reduce((a, b) => a + b, 0) + 6 * (keys.length - 1) > room) { keys = keys.slice(0, -1); ws = ws.slice(0, -1); }
         let cx = r.x + r.w - 10 - (ws.reduce((a, b) => a + b, 0) + 6 * (keys.length - 1));
-        keys.forEach((k, j) => { rest.push({op: "cap", s: k, x: cx, y: cy - dv.caph / 2, w: ws[j]}); cx += ws[j] + 6; });
+        keys.forEach((k, j) => { on(q.page, {op: "cap", s: k, x: cx, y: cy - dv.caph / 2, w: ws[j]}); cx += ws[j] + 6; });
       } else {
         const s = q.keys.filter(Boolean).join(" / "), s2 = w(fS(sec), s) <= room ? s : q.keys[0];
-        if (w(fS(sec), s2) <= room) rest.push(txt(s2, r.x + r.w - 10, cy, sec, {col: CONST.t2, role: "secondary", align: "right"}));
+        on(q.page, txt(s2, r.x + r.w - 10, cy, sec, {col: CONST.t2, role: "secondary", align: "right"}));
       }
     }
-    const nt = tap ? NOTE_TAP : NOTE_KEY, nn = Math.max(1, Math.round(D.note.h / (sec * ts * 1.4))), ls = wrap(c, fS(sec), nt, D.note.w, nn) || [nt];
-    ls.forEach((l, j) => rest.push(txt(l, D.note.x + D.note.w / 2, D.note.y + sec * ts * 1.4 * (j + 0.5), sec, {col: CONST.t2, role: "secondary", align: "center"})));
+    const nt = tap ? NOTE_TAP : NOTE_KEY;
+    wrap(c, fS(sec), nt, D.note.r.w).forEach((l, j) => on(D.note.page, txt(l, D.note.r.x + D.note.r.w / 2, D.note.r.y + sec * ts * 1.4 * (j + 0.5), sec, {col: CONST.t2, role: "secondary", align: "center"})));
   } else if (G.page === PU && items[POWER[0].name].tile) {
     for (const p of POWER) {
       const q = items[p.name], r = q.r, x = r.x + 8, tx = x + q.cell + 10, hs = tap && ui.narrow ? helpOf(p, NARROW_TAP) : helpOf(p, W, tap);
-      rest.push({op: "lane", r}, {op: "well", r: R(x, r.y + 8, q.cell, q.cell)}, {op: "item", t: p.t, x, y: r.y + 8, s: q.cell});
-      rest.push(txt(p.name, tx, r.y + 8 + q.cell / 2, pri, {name: p.name}));
-      const hl = q.lines ? wrap(c, fS(sec), hs, r.w - 16, q.lines) || [] : [];
-      hl.forEach((s, j) => rest.push(txt(s, x, r.y + 8 + q.cell + 6 + sec * ts * 1.25 * (j + 0.5), sec, {col: CONST.t2, role: "secondary"})));
-      if (p.permanent) { rest.push({op: "fill", r: R(r.x + r.w - 7, r.y + 6, 3, q.cell + 4), col: CONST.ink}); info.push({name: p.name + " keeps", r: R(r.x + r.w - 7, r.y + 6, 3, q.cell + 4), col: CONST.ink}); }
+      const cy = r.y + 8 + q.hh / 2, nl = wrap(c, T.label(pri), p.name, q.nw), lh = pri * ts * 1.15;
+      on(q.page, {op: "lane", r}, {op: "well", r: R(x, cy - q.cell / 2, q.cell, q.cell)}, {op: "item", t: p.t, x, y: cy - q.cell / 2, s: q.cell});
+      nl.forEach((s, j) => on(q.page, txt(s, tx, cy + (j - (nl.length - 1) / 2) * lh, pri, {name: p.name})));
+      wrap(c, fS(sec), hs, r.w - 16).forEach((s, j) => on(q.page, txt(s, x, r.y + 8 + q.hh + 6 + sec * ts * 1.25 * (j + 0.5), sec, {col: CONST.t2, role: "secondary"})));
+      if (p.permanent) { on(q.page, {op: "fill", r: R(r.x + r.w - 7, r.y + 6, 3, q.hh + 4), col: CONST.ink}); info.push({name: p.name + " keeps", r: R(r.x + r.w - 7, r.y + 6, 3, q.hh + 4), col: CONST.ink, pg: q.page}); }
     }
   } else if (G.page === PU) {
     for (const p of POWER) {
       const q = items[p.name], r = q.r, cy = r.y + r.h / 2, x = r.x + 8, tx = x + q.cell + 12, tw = r.x + r.w - 14 - 12 - tx;
-      const hs = tap && ui.narrow ? helpOf(p, NARROW_TAP) : helpOf(p, W, tap), hl = wrap(c, fB(bod), hs, tw, q.lines) || [];
+      const hs = tap && ui.narrow ? helpOf(p, NARROW_TAP) : helpOf(p, W, tap), hl = wrap(c, fB(bod), hs, tw);
       const bh = pri * ts * 1.15 + (hl.length ? 2 + hl.length * bod * ts * 1.4 : 0), top = cy - bh / 2;
-      rest.push({op: "lane", r}, {op: "well", r: R(x, cy - q.cell / 2, q.cell, q.cell)}, {op: "item", t: p.t, x, y: cy - q.cell / 2, s: q.cell});
-      rest.push(txt(p.name, tx, top + pri * ts * 0.575, pri, {name: p.name}));
-      hl.forEach((s, j) => rest.push(txt(s, tx, top + pri * ts * 1.15 + 2 + bod * ts * 1.4 * (j + 0.5), bod, {face: fB, col: CONST.t2, role: "body"})));
-      if (p.permanent) { rest.push({op: "fill", r: R(r.x + r.w - 7, r.y + 6, 3, r.h - 12), col: CONST.ink}); info.push({name: p.name + " keeps", r: R(r.x + r.w - 7, r.y + 6, 3, r.h - 12), col: CONST.ink}); }
+      on(q.page, {op: "lane", r}, {op: "well", r: R(x, cy - q.cell / 2, q.cell, q.cell)}, {op: "item", t: p.t, x, y: cy - q.cell / 2, s: q.cell});
+      on(q.page, txt(p.name, tx, top + pri * ts * 0.575, pri, {name: p.name}));
+      hl.forEach((s, j) => on(q.page, txt(s, tx, top + pri * ts * 1.15 + 2 + bod * ts * 1.4 * (j + 0.5), bod, {face: fB, col: CONST.t2, role: "body"})));
+      if (p.permanent) { on(q.page, {op: "fill", r: R(r.x + r.w - 7, r.y + 6, 3, r.h - 12), col: CONST.ink}); info.push({name: p.name + " keeps", r: R(r.x + r.w - 7, r.y + 6, 3, r.h - 12), col: CONST.ink, pg: q.page}); }
     }
-  } else if (G.page === EN) enemies(c, G, ui, rest, focus, tips, info);
-  else floorPlan(c, G, rest, info);
+  } else if (G.page === EN) enemies(c, G, ui, on, focus, tips, info);
+  else floorPlan(c, G, on);
   return {rest, focus, tips, strips, info};
 }
 /* a GUIDE door's strip in strip px from (0, 0): label-first key pairs on HOW TO's door (keyboard and controller), else cells; whole parts only */
@@ -414,62 +526,56 @@ function stripOf(c, i, sw, sh, ph, tap, W) {
   list.forEach((o, j) => { const x = j * (s + g); if (x + s > sw) return; if (o.op === "item") ops.push({op: "well", r: R(x, 0, s, s)}); ops.push({...o, x, y: 0, s}); });
   return ops;
 }
-function enemies(c, G, ui, rest, focus, tips, info) {
+function enemies(c, G, ui, on, focus, tips, info) {
   const D = G.d, dv = DEV[D.dev], ts = textScale(), ph = D.dev === "p", desk = D.mode === "desk", pri = dv.pri, sec = dv.sec, bod = dv.bod;
   FOES.forEach((e, i) => {
-    const q = D.items[e.name], r = q.r, home = firstLevel(e.rooms), v = PTS[e.t] || 100;
-    if (desk) rest.push({op: "slab", r, name: e.name});
-    else rest.push({op: "lane", r, alt: i % 2 === 1});
-    rest.push({op: "foe", t: e.t, x: q.cell.x, y: q.cell.y, s: q.cell.w, level: home, floor: true});
-    rest.push(txt(e.name, q.tx, q.nameY, pri, {name: e.name}));
-    const pts = digitsOps(q, v, ph, false, dv);
-    rest.push(...pts.rest);
+    const q = D.items[e.name], r = q.r, home = firstLevel(e.rooms), v = PTS[e.t] || 100, pg = q.page;
+    if (desk) on(pg, {op: "slab", r, name: e.name});
+    else on(pg, {op: "lane", r, alt: i % 2 === 1});
+    on(pg, {op: "foe", t: e.t, x: q.cell.x, y: q.cell.y, s: q.cell.w, level: home, floor: true}, txt(e.name, q.tx, q.nameY, pri, {name: e.name}));
+    const pts = digitsOps(q, v, ph, dv);
+    on(pg, ...pts.rest);
     focus[i] = pts.focus;
     if (desk) {
-      const hl = wrap(c, T.body(bod), helpOfFoe(e), q.tw, q.hl) || [];
-      hl.forEach((s, j) => rest.push(txt(s, q.tx, q.helpY + bod * ts * 1.4 * (j + 0.5), bod, {face: T.body, col: CONST.t2, role: "body"})));
-      const ap = [APPEARS + levelsOf(e.rooms), levelsOf(e.rooms)].find((s) => Wm(c, T.label(sec), s) <= q.tw);
-      if (ap) rest.push(txt(ap, q.tx, q.appY + sec * ts * 0.625, sec, {col: CONST.t2, role: "secondary"}));
-      for (let n = 1; n <= 8; n++) rest.push({op: "pip", r: R(q.pips.x + (n - 1) * 7, q.pips.y, 5, 12), on: inRooms(e.rooms, n)});
-      info.push({name: e.name + " levels", r: q.pips, col: worldTokens(ui.level).lit});
+      wrap(c, T.body(bod), helpOfFoe(e), q.tw).forEach((s, j) => on(pg, txt(s, q.tx, q.helpY + bod * ts * 1.4 * (j + 0.5), bod, {face: T.body, col: CONST.t2, role: "body"})));
+      wrap(c, T.label(sec), q.ap, q.tw).forEach((s, j) => on(pg, txt(s, q.tx, q.appY + sec * ts * 1.25 * (j + 0.5), sec, {col: CONST.t2, role: "secondary"})));
+      for (let n = 1; n <= 8; n++) on(pg, {op: "pip", r: R(q.pips.x + (n - 1) * 7, q.pips.y, 5, 12), on: inRooms(e.rooms, n)});
+      info.push({name: e.name + " levels", r: q.pips, col: worldTokens(ui.level).lit, pg});
     } else {
-      rest.push(txt(levelsOf(e.rooms), q.tx, q.levY, sec, {col: CONST.t2, role: "secondary"}));
-      if (q.helpY != null) { const hs = helpOfFoe(e); if (Wm(c, T.body(bod), hs) <= q.tw) rest.push(txt(hs, q.tx, q.helpY, bod, {face: T.body, col: CONST.t2, role: "body"})); }
+      on(pg, txt(levelsOf(e.rooms), q.tx, q.levY, sec, {col: CONST.t2, role: "secondary"}));
+      if (q.helpY != null) wrap(c, T.body(bod), helpOfFoe(e), q.tw).forEach((s, j) => on(pg, txt(s, q.tx, q.helpY + bod * ts * 1.4 * (j + 0.5), bod, {face: T.body, col: CONST.t2, role: "body"})));
     }
-    const tg = D.tips[i], tp = tg.pad, tw = tg.r.w - 2 * tp, lines = wrap(c, T.body(bod), tipText(e.name), tw, Math.max(tg.n, 6)) || [tipText(e.name)];
-    const ty = tg.r.y + 12, top = [{op: "tipPlate", r: tg.r, U: tg.U, Tt: tg.Tt}, {op: "wedge", ...tg.ptr}, txt(POINTS, tg.r.x + tp, ty + 18, pri, {name: "tip"})];
-    const dr = R(tg.r.x + tg.r.w - tp - (ph ? 67 : 85), ty, ph ? 67 : 85, ph ? 28 : 36);
-    top.push({op: "digits", v, r: dr, ph});
-    lines.forEach((s, j) => top.push(txt(s, tg.r.x + tp, ty + 36 + 6 + bod * ts * 1.4 * (j + 0.5), bod, {face: T.body, col: CONST.t2, role: "body"})));
+    const tg = D.tips[i], tp = tg.pad, tw = tg.r.w - 2 * tp, lines = wrap(c, T.body(bod), tipText(e.name), tw);
+    const th = tg.hd.th, ty = tg.r.y + tg.hd.top, top = [{op: "tipPlate", r: tg.r, U: tg.U, Tt: tg.Tt}, {op: "wedge", ...tg.ptr}, txt(POINTS, tg.r.x + tp, ty + th / 2, pri, {name: "tip"})];
+    if (tg.hd.dig) top.push({op: "digits", v, r: R(tg.r.x + tg.r.w - tp - (ph ? 67 : 85), ty, ph ? 67 : 85, ph ? 28 : 36), ph});
+    lines.forEach((s, j) => top.push(txt(s, tg.r.x + tp, ty + th + 6 + bod * ts * 1.4 * (j + 0.5), bod, {face: T.body, col: CONST.t2, role: "body"})));
     tips[i] = top;
   });
 }
-function digitsOps(q, v, ph, foc, dv) {
-  const p = q.pts, d = q.dig, sec = dv.sec, ts = textScale();
-  const word = ph && !q.side ? txt(PTS_W, d.x + d.w / 2, d.y + d.h + 3 + sec * ts * 0.6, sec, {col: CONST.t2, role: "secondary", align: "center"}) : txt(PTS_W, d.x + d.w + 6, d.y + d.h / 2, sec, {col: CONST.t2, role: "secondary"});
-  const dig = {op: "digits", v, r: d, ph};
-  return {rest: [dig, word], focus: [{op: "band", r: p}, {op: "bomb", x: p.x + 8, cy: p.y + p.h / 2}, dig, word, {op: "ring", r: p}]};
+/* a points value at rest (digits + PTS where the geometry puts them) and focused (the band, the bare bomb at its start, the digits past it, the ring) */
+function digitsOps(q, v, ph, dv) {
+  const sec = dv.sec, ts = textScale(), word = (d) => (ph && !q.side ? txt(PTS_W, d.x + d.w / 2, d.y + d.h + 3 + sec * ts * 0.6, sec, {col: CONST.t2, role: "secondary", align: "center"}) : txt(PTS_W, d.x + d.w + 6, d.y + d.h / 2, sec, {col: CONST.t2, role: "secondary"}));
+  const p = q.pts;
+  return {rest: [{op: "digits", v, r: q.dig, ph}, word(q.dig)], focus: [{op: "band", r: p}, {op: "bomb", x: p.x + 8, cy: p.y + p.h / 2}, {op: "digits", v, r: q.digF, ph}, word(q.digF), {op: "ring", r: p}]};
 }
-function floorPlan(c, G, rest, info) {
-  const D = G.d, dv = DEV[D.dev], ts = textScale(), desk = D.mode === "desk", pri = dv.pri, sec = dv.sec;
-  const f0 = D.items[D.order[0]];
-  if (desk) DIFF.forEach((s, j) => rest.push(txt(s, f0.r.x + 16 + j * (f0.s + f0.cg) + f0.s / 2, D.fhead.y + D.fhead.h / 2, sec, {col: CONST.t2, role: "secondary", align: "center"})));
-  else rest.push(txt(DIFF.join(" · "), D.fhead.x, D.fhead.y + D.fhead.h / 2, sec, {col: CONST.t2, role: "secondary"}));
+function floorPlan(c, G, on) {
+  const D = G.d, dv = DEV[D.dev], ts = textScale(), f0 = D.items[D.order[0]], desk = !!f0.wide, pri = dv.pri, sec = dv.sec, lhP = pri * ts * 1.15, lhS = sec * ts * 1.25;
+  const head = (s, x, y, align) => txt(s, x, y, sec, {col: CONST.t2, role: "secondary", align});
+  if (desk) DIFF.forEach((s, j) => on(null, head(s, f0.r.x + 16 + j * (f0.s + f0.cg) + f0.s / 2, D.fhead.y + D.fhead.h / 2, "center")));
+  else on(null, head(DIFF.join(" · "), D.fhead.x, D.fhead.y + D.fhead.h / 2));
   for (const n of D.order) {
-    const q = D.items[n], r = q.r, help = TILE_HELP[q.k], lvl = LABEL.LEVEL + " " + q.room + " · " + BIOMES[q.room - 1].name;
-    rest.push({op: "lane", r});
-    const cy = desk ? r.y + r.h / 2 : r.y + 8 + q.s / 2;
-    for (let j = 0; j < 3; j++) rest.push({op: "tile", k: q.k, room: q.room, heat: j, x: r.x + (desk ? 16 : 8) + j * (q.s + q.cg), y: cy - q.s / 2, s: q.s});
-    const tx = desk ? r.x + 16 + q.cellsW + 16 : r.x + 8 + q.cellsW + 10, all = help ? [DIFF[0] + " · " + help[0], DIFF[2] + " · " + help[2]] : ["LOOK ONLY FOR NOW", "ITS RULE COMES LATER"], lines = q.lean ? all.slice(0, 1) : all;
-    const nw = Wm(c, T.label(pri), q.name), inl = tx + nw + 12 + Wm(c, T.label(sec), lvl) <= r.x + r.w - 12;
-    const lhP = pri * ts * 1.15, lhS = sec * ts * 1.25, top = desk ? r.y + (r.h - (lhP + q.nl * lhS)) / 2 : r.y + 5;
-    rest.push(txt(q.name, tx, top + lhP / 2, pri, {name: q.name}));
-    if (inl) rest.push(txt(lvl, tx + nw + 12, top + lhP / 2, sec, {col: CONST.t2, role: "secondary"}));
-    else if (!desk && !q.lean) rest.push(txt(lvl, tx, top + lhP + lhS / 2, sec, {col: CONST.t2, role: "secondary"}));
-    let y = desk ? top + lhP : r.y + 5 + Math.max(q.s, lhP + (q.lean ? 0 : lhS)) + 4;
-    const lx = desk ? tx : r.x + 8, lw = desk ? q.tw : r.w - 16;
-    if (desk && q.nl === 1) { rest.push(txt(lines[0], lx, y + lhS / 2, sec, {col: CONST.t2, role: "secondary"}), txt(lines[1], lx + Wm(c, T.label(sec), lines[0]) + 24, y + lhS / 2, sec, {col: CONST.t2, role: "secondary"})); continue; }
-    for (const s of lines) { const ls = wrap(c, T.label(sec), s, lw, 2) || [s]; for (const l of ls) { rest.push(txt(l, lx, y + lhS / 2, sec, {col: CONST.t2, role: "secondary"})); y += lhS; } }
+    const q = D.items[n], r = q.r, pg = q.page;
+    on(pg, {op: "lane", r});
+    const cy = desk ? r.y + r.h / 2 : r.y + 5 + q.s / 2;
+    for (let j = 0; j < 3; j++) on(pg, {op: "tile", k: q.k, room: q.room, heat: j, x: r.x + (desk ? 16 : 8) + j * (q.s + q.cg), y: cy - q.s / 2, s: q.s});
+    const tx = desk ? r.x + 16 + q.cellsW + 16 : r.x + 8 + q.cellsW + 10, nw = Wm(c, T.label(pri), q.name);
+    const top = desk ? r.y + (r.h - (lhP + (q.inl ? 0 : lhS) + q.nl * lhS)) / 2 : r.y + 5;
+    on(pg, txt(q.name, tx, top + lhP / 2, pri, {name: q.name}));
+    if (q.inl) on(pg, head(q.lvl, tx + nw + 12, top + lhP / 2)); else on(pg, head(q.lvl, tx, top + lhP + lhS / 2));
+    let y = desk ? top + lhP + (q.inl ? 0 : lhS) : r.y + 5 + Math.max(q.s, lhP + (q.inl ? 0 : lhS)) + 4;
+    const lx = desk ? tx : r.x + 8, lw = q.tw;
+    if (q.side) { on(pg, head(q.lines[0], lx, y + lhS / 2), head(q.lines[1], lx + Wm(c, T.label(sec), q.lines[0]) + 24, y + lhS / 2)); continue; }
+    for (const s of q.lines) for (const l of wrap(c, T.label(sec), s, lw)) { on(pg, head(l, lx, y + lhS / 2)); y += lhS; }
   }
 }
 
@@ -554,7 +660,8 @@ function paintOps(c, ops, tok, o) {
 }
 
 /* ---- the probe record ---- */
-function record(G, P, ui, foc, dpr, el) {
+const onPage = (o, pg) => o.pg == null || o.pg === pg;
+function record(G, P, ui, foc, dpr, el, pg) {
   const u = G.u, D = G.d, b = (r) => [r.x * u, r.y * u, r.w * u, r.h * u], tok = worldTokens(ui.level), ts = textScale();
   probe.begin(SHOT[G.page], {w: G.W, h: G.H, dpr, el});
   probe.rect("plate", ...b(D.plate), {plate: G.T, fill: tok.bedA});
@@ -567,15 +674,17 @@ function record(G, P, ui, foc, dpr, el) {
   };
   const all = (ops, dx = 0, dy = 0) => { for (const p of ops) if (p.door && p.door === ui.focus) continue; else if (p.op === "text") text(p, dx, dy); else if (p.op === "dsp") text({...p, f: T.display(p.px), role: "primary", col: CONST.ink, align: "left", mw: p.mw}, dx, dy); else if (p.op === "strip") all(P.strips[p.l].ops, p.x + dx, p.y + dy); };
   if (D.head.back) probe.rect("BACK", ...b(D.head.back), {touch: !!G.touch, set: "back"});
+  if (D.pager) for (const k of ["up", "dn"]) probe.rect("page " + k, ...b(D.pager[k]), {touch: !!G.touch, set: "pager", kind: "step"});
   for (const n of G.order) {
     const q = D.items[n];
+    if (q.page !== pg) continue;
     if (G.page === GUIDE) probe.rect(n, ...b(q.r), {touch: !!G.touch, set: "doors", kind: "list", focus: n === ui.focus, fill: n === ui.focus ? tok.band : tok.key});
     else if (G.page === EN) { const i = G.order.indexOf(n), r = G.touch ? D.hit[n] : q.pts; if (!under(r.x, r.y, r.w, r.h) || i === foc) probe.rect(n, ...b(r), {touch: !!G.touch, set: "foes", kind: "list", focus: i === foc, fill: i === foc ? tok.band : tok.key}); }
   }
-  all(P.rest);
+  all(P.rest.filter((o) => onPage(o, pg)));
   if (G.page === GUIDE && ui.focus && P.focus[ui.focus]) all(P.focus[ui.focus].filter((p) => p.op === "text" || p.op === "strip"));
   if (tg) { probe.rect("tip", ...b(tg.r), {plate: tg.Tt * u}); for (const p of P.tips[foc]) if (p.op === "text") { const px = p.px * ts, capH = px * CAP_K; probe.text(p.s, (p.align === "right" ? p.x - p.mw : p.x) * u, (p.y - capH / 2) * u, Math.max(0.01, p.mw) * u, capH * u, {role: p.role, col: p.col, px: p.px * ts * u}); } }
-  for (const m of P.info) if (!under(m.r.x, m.r.y, m.r.w, m.r.h)) { const pad = m.pad || 6; probe.pair("info", b(m.r), b(R(m.r.x - pad, m.r.y - pad, m.r.w + 2 * pad, m.r.h + 2 * pad)), {col: m.col, name: m.name}); }
+  for (const m of P.info) if (onPage(m, pg) && !under(m.r.x, m.r.y, m.r.w, m.r.h)) { const pad = m.pad || 6; probe.pair("info", b(m.r), b(R(m.r.x - pad, m.r.y - pad, m.r.w + 2 * pad, m.r.h + 2 * pad)), {col: m.col, name: m.name}); }
   const fr = G.page === GUIDE ? (ui.focus && D.items[ui.focus] ? D.items[ui.focus].r : null) : G.page === EN && foc != null ? D.items[D.order[foc]].pts : null;
   if (fr) {
     const bed = R(D.plate.x + 1, fr.y, Math.max(1, Math.min(6, fr.x - 7 - D.plate.x - 1)), fr.h);
@@ -604,6 +713,7 @@ function footPlan(c, G, ui) {
     if (G.page === HOW && pad) items.push({t: "REBIND IN " + LABEL.SETTINGS + " › CONTROLS"});
     if (G.page === PU) items.push({t: "WALK OVER A POWER-UP TO COLLECT"});
     if (mv) items.push({t: G.page === GUIDE ? "PICK" : "MOVE", caps: mv});
+    if (!mv && G.pages > 1) items.push({t: PAGE, caps: pad ? [W.move] : [["up"], ["dn"]]});
     if (G.page === GUIDE) items.push({t: "OPEN", caps: [W.ok]});
     if (G.page === EN) items.push({t: POINTS, caps: [W.ok]});
     items.push({t: "BACK", caps: G.page === HOW ? [W.back, W.ok] : [W.back]});
@@ -642,14 +752,14 @@ let S = null;
 const outer = (D) => R(D.plate.x - D.T - 2, D.plate.y - D.T - 2, D.plate.w + 2 * D.T + 4, D.plate.h + 2 * D.T + 5);
 function sizes(S, G, F, level, tok, look) {
   const D = G.d, u = G.u, dpr = S.dpr, ob = outer(D), K = {biome: tok.name, level, W: F.W, H: F.H, look, textScale: S.ts};
-  S.rd = roomDpr(S.c, F, {rev: S.ui.rev}, dpr); // the room's dpr: MENU's own rule (pages/menu.js roomDpr), so MENU and GUIDE share one room layer
+  S.rd = canMake() ? roomDpr(S.c, F, {rev: S.ui.rev}, dpr) : 1; // the room's dpr: MENU's own rule (pages/menu.js roomDpr), so MENU and GUIDE share one room layer; with no canvas source there is no room layer to size
   S.roomK = keyOf({layer: "room", biome: tok.name, level, W: F.W, H: F.H, dpr: S.rd, look: "2d", textScale: 1});
   const roomB = Math.round(F.W * S.rd) * Math.round(F.H * S.rd) * 4, area = ob.w * u * ob.h * u;
   const tipA = D.tips ? Math.max(...D.tips.map((q) => (q.r.w + 2 * q.Tt + 4) * (q.r.h + 2 * q.Tt + 12))) * u * u * 2 : 0, footA = D.foot ? (D.plate.w + 4) * (FOOT_H + 8) * u * u : 0;
-  const pd = +Math.max(0.5, Math.min(dpr, Math.sqrt(Math.max(0, BUDGET - 1024 * 1024 - roomB) / (4 * (area + tipA + footA + 4 * 400 * 40 * u * u))))).toFixed(3);
+  const pd = +Math.max(0.5, Math.min(dpr, Math.sqrt(Math.max(0, BUDGET - 1024 * 1024 - roomB) / (4 * (area * D.pages + tipA + footA + 4 * 400 * 40 * u * u))))).toFixed(3);
   S.pd = pd; S.ob = ob; S.pb = sc(ob, u);
   const id = [G.page, G.mode, +u.toFixed(6), JSON.stringify(D.plate), S.A ? "px" : "2d", JSON.stringify(hints()), S.tap, S.ui.narrow ? 1 : 0].join("|");
-  S.plateKey = {...K, dpr: pd, layer: "guide.plate|" + id}; S.plateK = keyOf(S.plateKey);
+  S.plateKeys = Array.from({length: D.pages}, (_, p) => ({...K, dpr: pd, layer: "guide.plate|" + id + "|" + p}));
   S.pw = Math.max(1, Math.round(S.pb.w * pd)); S.ph = Math.max(1, Math.round(S.pb.h * pd));
   if (S.P.foot) { const fp = S.P.foot, fr = R(fp.x - 1, fp.y - 1, fp.w + 2, fp.h + 6); S.footR = fr; S.footB = sc(fr, u); S.footKey = {...K, dpr: pd, layer: "guide.foot|" + JSON.stringify([+u.toFixed(6), fp.x, fp.y, fp.w, fp.parts.map((p) => [p.t || p.sep || "", p.cap || ""])])}; S.footK = keyOf(S.footKey); }
   S.stripKeys = {};
@@ -674,13 +784,15 @@ export function drawGuidePage(c, F, ui, t = 0) {
     const P = plan(c, G, ui), mc = mOf(c);
     widths(mc, P.rest, P.strips); for (const k in P.focus) widths(mc, P.focus[k], P.strips); for (const q of P.tips) widths(mc, q, P.strips);
     P.foot = G.d.foot ? footPlan(mc, G, ui) : null;
-    S = {G, w: words, touch: touchy, dpr, ts, c, tap, A, ui: {...ui}, P, plate: null, foot: null, strips: {}, tipL: {}, dig: {}};
+    S = {G, w: words, touch: touchy, dpr, ts, c, tap, A, ui: {...ui}, P, plates: [], foot: null, strips: {}, tipL: {}, dig: {}};
     sizes(S, G, F, level, tok, A ? "px" : "2d");
     _dbg.plans++;
   }
   const P = S.P, foc = page === GUIDE ? (DOORS.includes(ui.focus) ? ui.focus : null) : page === EN && ui.focus != null && ui.focus >= 0 && ui.focus < FOES.length && (!tap || ui.tip) ? ui.focus | 0 : null;
   const tipOn = page === EN && foc != null && !!ui.tip, o = {ph, A, strips: P.strips, time: 0.4};
-  _dbg.last = {G, P, foc, tipOn, S};
+  /* the page on screen: the focused door's or foe's (a foe in tap mode keeps its page with no focus shown), a read-only page's ui.pg */
+  const pg = page === GUIDE ? pageOfFocus(G, foc || DOORS[0]) : page === EN ? pageOfFocus(G, G.order[ui.focus | 0]) : clampPg(G, ui.pg);
+  _dbg.last = {G, P, foc, tipOn, S, pg};
   if (typeof c.clip !== "function" || typeof c.rect !== "function") return;
   if (canMake()) {
     const room = (S.room && S.room.width) ? (hold(S.roomK), S.room) : (S.room = roomLayer({w: F.W, h: F.H}, level, tok, {dpr: S.rd, look: "2d", textScale: 1}));
@@ -689,8 +801,10 @@ export function drawGuidePage(c, F, ui, t = 0) {
       if (!S.strips[l] || !S.strips[l].width) S.strips[l] = layer(k, Math.max(1, Math.round(st.w * u * S.pd)), Math.max(1, Math.round(st.h * u * S.pd)), (g) => { g.scale(S.pd * u, S.pd * u); paintOps(g, st.ops, tok, {...o, blit: null}); });
       else hold(k);
     }
-    if (!S.plate || !S.plate.width) S.plate = layer(S.plateKey, S.pw, S.ph, (g) => { g.scale(S.pd * u, S.pd * u); g.translate(-S.ob.x, -S.ob.y); paintOps(g, P.rest, tok, {...o, blit: S.strips}); });
-    else hold(S.plateK);
+    for (let p = 0; p < G.d.pages; p++) {
+      if (!S.plates[p] || !S.plates[p].width) S.plates[p] = layer(S.plateKeys[p], S.pw, S.ph, (g) => { g.scale(S.pd * u, S.pd * u); g.translate(-S.ob.x, -S.ob.y); paintOps(g, P.rest.filter((x) => onPage(x, p)), tok, {...o, blit: S.strips}); });
+      else hold(S.plateKeys[p]);
+    }
     if (P.foot) { if (!S.foot || !S.foot.width) S.foot = layer(S.footKey, Math.round(S.footB.w * S.pd), Math.round(S.footB.h * S.pd), (g) => { g.scale(S.pd * u, S.pd * u); g.translate(-S.footR.x, -S.footR.y); paintFoot(g, P.foot, tok); }); else hold(S.footK); }
     if (G.d.tips) for (const q of G.d.tips) {
       const k = tipKeyOf(q), K = S.tipKeys[k], pad = q.Tt + 3, pr = R(q.r.x - pad, q.r.y - pad, q.r.w + 2 * pad, q.r.h + 2 * pad + 6);
@@ -703,12 +817,12 @@ export function drawGuidePage(c, F, ui, t = 0) {
       else hold(q.key);
     }
     o.dig = S.dig;
-    c.save(); c.imageSmoothingEnabled = true; c.drawImage(room, 0, 0, F.W, F.H); c.drawImage(S.plate, S.pb.x, S.pb.y, S.pb.w, S.pb.h);
+    c.save(); c.imageSmoothingEnabled = true; c.drawImage(room, 0, 0, F.W, F.H); c.drawImage(S.plates[pg], S.pb.x, S.pb.y, S.pb.w, S.pb.h);
     if (P.foot) c.drawImage(S.foot, S.footB.x, S.footB.y, S.footB.w, S.footB.h);
     c.restore();
   } else {
     c.save(); c.fillStyle = toL(tok.bg1, 0.004); c.fillRect(0, 0, F.W, F.H); c.scale(u, u);
-    paintOps(c, P.rest, tok, o);
+    paintOps(c, P.rest.filter((x) => onPage(x, pg)), tok, o);
     if (P.foot) paintFoot(c, P.foot, tok);
     c.restore();
   }
@@ -725,5 +839,5 @@ export function drawGuidePage(c, F, ui, t = 0) {
     }
   }
   c.restore();
-  if (probe.probe.on) record(G, P, {...ui, level, focus: page === GUIDE ? foc : ui.focus}, foc, dpr, F.shell ? "sh" : "c");
+  if (probe.probe.on) record(G, P, {...ui, level, focus: page === GUIDE ? foc : ui.focus}, foc, dpr, F.shell ? "sh" : "c", pg);
 }

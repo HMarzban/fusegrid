@@ -531,7 +531,7 @@ const BACK_TAP = "TAP OUTSIDE TO GO BACK";
    on, touch body[data-lay] p / l, o = {level (the world), foe (ENEMIES' focused foe), tip (its tooltip open)}. Until the module is in, a page
    paints the kit plate with LOADING over its world and its hits find nothing (-2: inert, so a tap while it loads never backs out). */
 const guideMod = () => lazy.get("guide");
-const gui = (page, kind, L, o, focus) => ({ page, focus, tip: !!(o && o.tip), level: (o && o.level) | 0 || 1, look: kind === "px" ? "px" : "2d", narrow: !!L.narrow, rev: o && o.rev });
+const gui = (page, kind, L, o, focus) => ({ page, focus, tip: !!(o && o.tip), pg: (o && o.pg) | 0, level: (o && o.level) | 0 || 1, look: kind === "px" ? "px" : "2d", narrow: !!L.narrow, rev: o && o.rev });
 function guideLoading(c, L, title, o) {
   const tok = worldTokens((o && o.level) | 0 || 1), w = Math.min(360, L.W - 60), h = 120, x = (L.W - w) / 2, y = (L.H - h) / 2;
   if (typeof c.rect !== "function" || !(w > 0)) return; // the headless renderer's context: the plan only
@@ -553,8 +553,12 @@ export function drawGuide(c, L, t, cursor, kind, touch, o) {
 }
 /** The GUIDE page's geometry (pages/guide.js guideGeom), null until the module is in. */
 export const guideGeom = (L, touch, page) => { const g = guideMod(); return g ? g.guideGeom(frameOf(L, touch), page || "GUIDE") : null; };
-export const guideHit = (x, y, L, _n, touch) => { const g = guideMod(); return g ? g.guideHit(x, y, frameOf(L, touch)) : -2; };
-export const enemiesHit = (x, y, L, touch) => { const g = guideMod(); return g ? g.enemiesHit(x, y, frameOf(L, touch)) : -2; };
+export const guideHit = (x, y, L, _n, touch, focus) => { const g = guideMod(); return g ? g.guideHit(x, y, frameOf(L, touch), focus | 0) : -2; };
+export const enemiesHit = (x, y, L, touch, focus) => { const g = guideMod(); return g ? g.enemiesHit(x, y, frameOf(L, touch), focus | 0) : -2; };
+/** A read-only page (HOW TO PLAY, POWER-UPS, FLOOR) showing page pg: "up" / "down" on its page keys, else -1 (backs out); -2 while it loads. */
+export const guideReadHit = (x, y, L, touch, page, pg) => { const g = guideMod(); return g ? g.readHit(x, y, frameOf(L, touch), page, pg | 0) : -2; };
+/** How many pages a GUIDE page takes on this box (1 until the module is in). */
+export const guidePages = (L, touch, page) => { const g = guideMod(); return g ? g.guideGeom(frameOf(L, touch), page).pages : 1; };
 
 /* Local cabinet plaques (plan 5): bit order matches src/app/plaques.js
    PLAQUE = {CLEAR:1,PLUS:2,MAX:4,CROWN:8} — this file must not import

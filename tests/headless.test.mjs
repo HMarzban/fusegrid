@@ -412,7 +412,7 @@ function mkCanvas(){
   const G=mdGuideGeom(L), E=G.items.ENEMIES; // v202 Task 3.5: pages/guide.js, the doors by name
   cv.fire("pointerdown",{clientX:E.x+E.w/2,clientY:E.y+E.h/2}); // ATLAS: GUIDE doors are tiles
   check("M1 GUIDE tap on ENEMIES opens ENEMIES (GUIDE no longer traps touch)", g.app.screen===SCREEN.ENEMIES&&g.app.guideRow===2, g.app.screen+"/"+g.app.guideRow);
-  g.app.back();
+  g.app.back(); g.app.back(); // ruling R3: a mouse arrival is a key's, so its tooltip opened; the first back shuts it, the second leaves
   cv.fire("pointerdown",{clientX:300,clientY:4});
   check("M1 GUIDE tap off the rows backs out to MENU", g.app.screen===SCREEN.MENU, g.app.screen);
   cv.fire("pointerdown",{clientX:R[1].x+R[1].w/2,clientY:R[1].cy});

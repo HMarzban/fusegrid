@@ -36,6 +36,8 @@ const rec = () => {
   return { c, texts, rects, has: (s) => texts.some((x) => x.s === s), strs: () => texts.map((x) => x.s) };
 };
 const paint = (f) => { const r = rec(); f(r.c); return r; };
+/* a GUIDE door's teaser may break at its " · " onto two lines where its door is narrow (fix round 1: the words.js step-down, never a clip) */
+const hasT = (r, s) => r.has(s) || r.strs().some((x, i, a) => x + " · " + a[i + 1] === s);
 const L = md.layout(600, 520);
 const INFO = { level: 1, best: [], unlocked: true, daily: null, top: [], opt: OPT_ROWS }; // opt: the SETTINGS rows the pane counts (REAL 3D: twelve)
 const ITEMS = ["PLAY", "LEVEL SELECT", "DAILY", "RECORDS", "SETTINGS", "GUIDE", "SOURCE"];
@@ -197,7 +199,7 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
     ["LEVEL foot, touch (a landscape tablet in tap mode)", (c) => md.drawLevelSelect(c, 1, md.layout(1024, 768, 200), 9, 0, 0, true, 0, false, true, { ...INFO, tap: true }), md.LEVEL_TAP],
     ["OPTIONS foot, touch", PAGES.OPTIONS(true), sp.COPY.tapRow], // the tablet desk's pane foot: FOOT_TAP's step-down (FOOT_TAP itself is wider than the pane)
   ];
-  for (const [nm, f, s] of WANT) { const r = paint(f); check("default: " + nm + " stays \"" + s + "\"", r.has(s), r.strs().join("|")); }
+  for (const [nm, f, s] of WANT) { const r = paint(f); check("default: " + nm + " stays \"" + s + "\"", /^GUIDE sub/.test(nm) ? hasT(r, s) : r.has(s), r.strs().join("|")); }
   /* v202 Task 3.5: the GUIDE pages' feet are label first, keycap last (the MENU page's grammar); every key the old foot named is still named */
   for (const [nm, f, s] of [["HOW TO foot", PAGES.HOWTO(false), "BACK [ESC] [ENTER]"], ["ITEMS foot", PAGES.ITEMS(false), "WALK OVER A POWER-UP TO COLLECT · BACK [ESC]"],
     ["ENEMIES foot", PAGES.ENEMIES(false), "MOVE ▲ ▼ ◀ ▶ · POINTS [ENTER] · BACK [ESC]"], ["FLOOR foot", PAGES.FLOOR(false), "BACK [ESC]"], ["GUIDE foot", PAGES.GUIDE(false), "PICK ▲ ▼ ◀ ▶ · OPEN [ENTER] · BACK [ESC]"]]) {
@@ -271,11 +273,18 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
     ["pad words on a touch layout: HOW TO", PAGES.HOWTO(true), "D-PAD / L-STICK"],
     ["pad words on a touch layout: show skip", (c) => md.drawIntroChrome(c, 1, 0.6, 600, 520, "p"), "ANY BUTTON TO SKIP"],
   ];
-  for (const [nm, f, s] of PADWANT) { const r = paint(f); check("pad: " + nm + " = \"" + s + "\"", r.has(s), r.strs().join("|")); }
+  for (const [nm, f, s] of PADWANT) { const r = paint(f); check("pad: " + nm + " = \"" + s + "\"", /^GUIDE sub/.test(nm) ? hasT(r, s) : r.has(s), r.strs().join("|")); }
   for (const [nm, f, s] of [["HOW TO foot", PAGES.HOWTO(false), "REBIND IN SETTINGS › CONTROLS · BACK [EAST] [SOUTH]"], ["ITEMS foot", PAGES.ITEMS(false), "WALK OVER A POWER-UP TO COLLECT · BACK [EAST]"],
     ["ENEMIES foot", PAGES.ENEMIES(false), "MOVE [D-PAD] · POINTS [SOUTH] · BACK [EAST]"], ["FLOOR foot", PAGES.FLOOR(false), "BACK [EAST]"], ["GUIDE foot", PAGES.GUIDE(false), "PICK [D-PAD] · OPEN [SOUTH] · BACK [EAST]"]]) {
     const g = GFOOT(f);
     check("pad: " + nm + " = \"" + s + "\"", g.foot === s, g.foot);
+  }
+  /* a touch layout has no foot: a controller there gets the cue line under the head (fix round 1, Important 4), label first, keycap last; HOW TO
+     names CONTROLS where it fits (600 x 520 touch: it does) */
+  for (const [nm, f, want, sign] of [["HOW TO", PAGES.HOWTO(true), ["BACK"], "REBIND IN SETTINGS › CONTROLS"], ["ENEMIES", PAGES.ENEMIES(true), ["POINTS", "BACK"]], ["FLOOR", PAGES.FLOOR(true), ["BACK"]], ["POWER-UPS", PAGES.ITEMS(true), ["PAGE", "BACK"]]]) {
+    const r = paint(f), cue = gpg._dbg.last.G.d.head.cue, ops = gpg._dbg.last.P.rest.filter((o) => (o.op === "text" || o.op === "cap") && cue && o.y >= cue.y - 1 && o.y <= cue.y + cue.h + 1);
+    const seq = ops.map((o) => (o.op === "cap" ? "[" + o.s + "]" : o.s)).filter((s) => s !== "·"), at = (s) => seq.indexOf(s);
+    check("pad on a touch layout: " + nm + " has the controller cue line, " + want.join(", ") + ", each label before its keycap" + (sign ? ", and the " + sign + " signpost" : ""), !!cue && r.has("BACK") && want.every((s) => at(s) >= 0 && /^\[/.test(seq[at(s) + 1] || "")) && (!sign || at(sign) === 0), J(seq));
   }
   paint(menu(0, false, "v99"));
   check("pad: MENU foot = MOVE D-PAD · START SOUTH | v99 (label first, keycap last)", footOf() === "MOVE [D-PAD] · START [SOUTH] | v99", footOf());
@@ -362,9 +371,12 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
       continue;
     }
     if (GPAGE[nm]) { // v202 Task 3.5: a GUIDE page's caps and key pairs are keys sized by their legend; its geometry (plate, every slot, its hits, the foot's row) never moves
-      const geo = () => { const G = md.guideGeom(L, T, GPAGE[nm]); return J([G.plate, G.items, G.hit, G.back, G.foot && G.foot.y, G.mode]); };
-      setHints(null); const ga = geo(); setHints(PAD); const gb = geo(); setHints(null);
-      check(`a flip changes words only: ${nm}${T ? " touch" : ""} keeps its geometry (plate, slots, hits)`, ga === gb, ga.length + " vs " + gb.length);
+      /* a touch layout adds the controller's cue line under the head when a pad is in use (fix round 1, Important 4): the plate's x and width, the
+         BACK key and every slot's x, width and height hold; the slots may only move down by that band (or onto the next page) */
+      const cueOn = T && md.guideGeom(L, T, GPAGE[nm]).mode !== "desk"; // the phone and compact arrangements have no foot: the cue line is theirs
+      const geo = () => { const G = md.guideGeom(L, T, GPAGE[nm]), k = (r) => (cueOn && r ? [r.x, r.w, r.h] : r); return J([cueOn ? [G.plate.x, G.plate.w] : G.plate, Object.values(G.items).map(k), cueOn ? 0 : G.hit, k(G.back), G.foot && G.foot.y, G.mode]); };
+      setHints(null); const ga = geo(), ca = md.guideGeom(L, T, GPAGE[nm]).d.head.cue; setHints(PAD); const gb = geo(), cb = md.guideGeom(L, T, GPAGE[nm]).d.head.cue; setHints(null);
+      check(`a flip changes words only: ${nm}${T ? " touch" : ""} keeps its geometry (plate, slots, hits${cueOn ? "; plus the controller cue band only: every x and width holds, every slot's height" : ""})`, ga === gb && !ca && !!cb === cueOn, ga.length + " vs " + gb.length);
       continue;
     }
     check(`a flip changes words only: ${nm}${T ? " touch" : ""} keeps every rect`, J(flat(a)) === J(flat(b)), J(flat(a)).length + " vs " + J(flat(b)).length);
@@ -455,7 +467,8 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
   check("ghost coach: a long BOMB word stays inside the board", r6.has("R SHOULDER") && r6.texts.every((t) => t.x > 0 && t.x < 600), J(r6.texts));
   setHints(null);
 
-  const items = (T) => { const r = rec(); md.drawItemsHelp(r.c, md.layout(600, 520), 1, "2d", T); return r; };
+  /* every page of POWER-UPS where the box pages it (fix round 1, ruling R1) */
+  const items = (T) => { const r = rec(), L6 = md.layout(600, 520); for (let p = 0; p < md.guidePages(L6, T, "POWER-UPS"); p++) md.drawItemsHelp(r.c, L6, 1, "2d", T, { pg: p }); return r; };
   const whole = (r, s) => r.strs().join(" ").includes(s);
   check("ITEMS default: E tosses a bomb", items(false).has("E tosses a bomb"), items(false).strs().join("|"));
   setHints(wordsOf("key", bindKey(DEF_CONTROLS, "THROW", "KeyZ").c));

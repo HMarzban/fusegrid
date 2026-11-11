@@ -8,7 +8,7 @@ import { ITEMS, SCREEN, PAUSE_ITEMS, optRows } from "../src/app/menuapp.js";
 import { shellGeo } from "../src/app/fit.js";
 import { overlayBox, pauseGeom, pauseHit, touchLay } from "../src/render/scenes.js";
 import { controlsHit, dims } from "../src/render/shellview.js";
-import { graphicsHit, guideHit, enemiesHit, guideGeom, layout, levelGeom, levelHit, menuHit, scoresHit, settingsHit, statsHit, recTabHit, recTabsGeom, recPlate } from "../src/render/menudraw.js";
+import { graphicsHit, guideHit, enemiesHit, guideReadHit, guideGeom, layout, levelGeom, levelHit, menuHit, scoresHit, settingsHit, statsHit, recTabHit, recTabsGeom, recPlate } from "../src/render/menudraw.js";
 import * as lazyPages from "../src/render/pages/lazy.js";
 import * as settingsPage from "../src/render/pages/settings.js";
 lazyPages._set("settings", settingsPage); // the lazy SETTINGS / GRAPHICS page, in as if its import had landed (R20)
@@ -34,13 +34,13 @@ function mkEl(w, h, rect, lay) {
   if (lay) el.ownerDocument = { body: { getAttribute: (k) => (k === "data-lay" ? lay : null) } }; // body[data-lay] as fit.js writes it
   return el;
 }
-const REAL = { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit, settingsHit, graphicsHit, guideHit, enemiesHit, levelHit, scoresHit, statsHit, recTabHit, layout };
+const REAL = { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit, settingsHit, graphicsHit, guideHit, enemiesHit, guideReadHit, levelHit, scoresHit, statsHit, recTabHit, layout };
 function mkHit(over = {}) {
   const calls = [], hit = {};
   for (const [k, f] of Object.entries(REAL)) hit[k] = (...a) => { const r = (over[k] || f)(...a); calls.push({ f: k, a, r }); return r; };
   return { hit, calls, of: (k) => calls.filter((c) => c.f === k), last: (k) => calls.filter((c) => c.f === k).pop() };
 }
-const SHELL = ["confirm", "back", "pauseBack", "playFromAttract", "skipShow", "move", "adjustPace", "recTab", "levelFocus", "foeTap", "foeClose"];
+const SHELL = ["confirm", "back", "pauseBack", "playFromAttract", "skipShow", "move", "adjustPace", "recTab", "levelFocus", "foeTap", "foeClose", "foeFocus", "infoStep"];
 function rig(o = {}) {
   const log = [], taps = [];
   const VIS = o.rows || optRows(false); // the app's visible SETTINGS rows (menuapp optRows), what settingsHit maps into
@@ -166,7 +166,8 @@ for (const [scr, fn, field, row, offAct, R] of [[SCREEN.MENU, "menuHit", "cursor
   r.down(on.x, on.y);
   const c = r.H.last(fn), lc = r.H.last("layout");
   check(fn + (R ? " (" + R.length + " rows)" : "") + ": a tap on row " + row + " sets " + field + " and confirms, fire swallowed", r.app[field] === row && J(r.log) === J([["confirm"]]) && r.input._intent.fire === false, r.app[field] + " " + J(r.log));
-  check(fn + "(x, y, layout(cw, ch, lg, css), " + (R ? "app.optRows()" : "ITEMS.length") + ", touchLay(cv)) with dims(cv, kind) (css: the MENU phone column's scale, none on #c)", c.a[0] === on.x && c.a[1] === on.y && J(c.a[2]) === J(scr === SCREEN.SETTINGS || scr === SCREEN.GRAPHICS ? { ...L0, focus: 0 } : L0) && c.a[3] === n4 && c.a[4] === false && lc.a.length === 4 && lc.a[2] === undefined && lc.a[3] === undefined && r.H.last("dims").a[0] === r.canvas && r.H.last("dims").a[1] === "2d", J(lc.a));
+  const gd = fn === "guideHit"; // GUIDE also hands the focused door (app.guideRow), whose page is the one on screen
+  check(fn + "(x, y, layout(cw, ch, lg, css), " + (R ? "app.optRows()" : "ITEMS.length") + ", touchLay(cv)" + (gd ? ", app.guideRow" : "") + ") with dims(cv, kind) (css: the MENU phone column's scale, none on #c)", c.a[0] === on.x && c.a[1] === on.y && J(c.a[2]) === J(scr === SCREEN.SETTINGS || scr === SCREEN.GRAPHICS ? { ...L0, focus: 0 } : L0) && c.a[3] === n4 && c.a[4] === false && c.a.length === (gd ? 6 : 5) && (!gd || c.a[5] === 0) && lc.a.length === 4 && lc.a[2] === undefined && lc.a[3] === undefined && r.H.last("dims").a[0] === r.canvas && r.H.last("dims").a[1] === "2d", J(c.a.length) + " " + J(lc.a));
   r.log.length = 0;
   r.down(off.x, off.y);
   check(fn + ": -1 " + (offAct ? "backs out" : "does nothing (a root list)"), J(r.log) === J(offAct ? [[offAct]] : []), J(r.log));
@@ -285,11 +286,20 @@ for (const [scr, fn, field, row, offAct, R] of [[SCREEN.MENU, "menuHit", "cursor
   }
 }
 
-// ---- read-only pages: any tap confirms (backs out) ----
-for (const s of ["HOWTO", "ITEMS", "FLOOR"]) {
-  const r = rig({ app: { screen: SCREEN[s] } });
+// ---- read-only pages: a ▲ / ▼ page key steps the pages (infoStep), any other tap confirms (backs out), -2 (loading) is inert ----
+for (const [s, label] of [["HOWTO", "HOW TO PLAY"], ["ITEMS", "POWER-UPS"], ["FLOOR", "FLOOR"]]) {
+  const r = rig({ app: { screen: SCREEN[s], infoPg: 1 } });
   r.down(300, 260);
-  check(s + ": any tap confirms, no hit test", J(r.log) === J([["confirm"]]) && r.H.calls.length === 0 && r.input._intent.fire === false, J(r.log));
+  const h = r.H.last("guideReadHit");
+  check(s + ": a tap off the page keys confirms, through guideReadHit(x, y, layout(cw, ch, lg, css), touchLay(cv), its label, app.infoPg)", J(r.log) === J([["confirm"]]) && r.input._intent.fire === false && !!h && J(h.a.slice(2)) === J([L0, false, label, 1]) && r.H.last("layout").a.length === 4, J(r.log) + " " + J(h && h.a));
+  for (const [k, d] of [["up", -1], ["down", 1]]) {
+    const q = rig({ app: { screen: SCREEN[s] }, over: { guideReadHit: () => k } });
+    q.down(300, 260);
+    check(s + ": its " + k + " page key is infoStep(" + d + "), nothing else", J(q.log) === J([["infoStep", d]]), J(q.log));
+  }
+  const z = rig({ app: { screen: SCREEN[s] }, over: { guideReadHit: () => -2 } });
+  z.down(300, 260);
+  check(s + ": -2 (the page still loading) is inert", z.log.length === 0, J(z.log));
 }
 /* ENEMIES (v202 Task 3.5): a points value = foeTap(i) (focus + the tooltip); any other tap closes an open tooltip (foeClose), else backs out */
 {
@@ -299,7 +309,7 @@ for (const s of ["HOWTO", "ITEMS", "FLOOR"]) {
   r.down(...c(G.hit.KNIGHT));
   const h = r.H.last("enemiesHit"), lc = r.H.last("layout");
   check("ENEMIES: a tap on KNIGHT's points value is foeTap(8), fire swallowed", J(r.log) === J([["foeTap", 8]]) && r.input._intent.fire === false, J(r.log));
-  check("ENEMIES: enemiesHit(x, y, layout(cw, ch, lg, css), touchLay(cv))", J(h.a[2]) === J(L0) && h.a[3] === false && lc.a.length === 4, J(lc.a));
+  check("ENEMIES: enemiesHit(x, y, layout(cw, ch, lg, css), touchLay(cv), app.foeRow)", J(h.a[2]) === J(L0) && h.a[3] === false && h.a.length === 5 && lc.a.length === 4, J(lc.a));
   r.log.length = 0; r.down(2, 2);
   check("ENEMIES: off the values with no tooltip open: foeClose finds none, then back", J(r.log) === J([["foeClose"], ["back"]]), J(r.log));
   r.app.foeClose = (...a) => { r.log.push(["foeClose", ...a]); return true; };
@@ -308,6 +318,9 @@ for (const s of ["HOWTO", "ITEMS", "FLOOR"]) {
   const q = rig({ app: { screen: SCREEN.ENEMIES }, over: { enemiesHit: () => -2 } });
   q.down(300, 260);
   check("ENEMIES: -2 (the page still loading) is inert", q.log.length === 0, J(q.log));
+  const pk = rig({ app: { screen: SCREEN.ENEMIES }, over: { enemiesHit: () => -10 - 4 } });
+  pk.down(300, 260);
+  check("ENEMIES: a page key (-10 - i) is foeFocus(i), onto that page's first foe, nothing else", J(pk.log) === J([["foeFocus", 4]]), J(pk.log));
 }
 {
   /* MEDALS (TROPHIES) is read-only too, but its head carries RECORDS' tab strip (v202 Task 2.2): the strip is its one hit test */

@@ -126,7 +126,8 @@ export function createMenuApp(opts = {}) {
     // survives a round trip through the page
     guideRow: 0, // GUIDE row cursor — its OWN field too, same reason
     foeRow: 0, // ENEMIES: the focused foe (core FOES order); every arrival lands on the first
-    foeTip: false, // ENEMIES: its points tooltip is open (a key move opens it on the new foe, a pad move closes it; Enter / SOUTH or a tap opens it, EAST closes it)
+    foeTip: false, // ENEMIES: its points tooltip is open (on keys it follows focus, arrival included; a pad move closes it; Enter / SOUTH or a tap opens it; Esc / Backspace / EAST close it before leaving)
+    infoPg: 0, // HOW TO PLAY, POWER-UPS, FLOOR: the page shown where the box pages them (opts.pageCount); every arrival lands on the first
     recFocus: 0, // RECORDS: 0 the tab row, 1 the page body; every arrival lands on the tab row
     levelRow: 0, // LEVEL SELECT's focused row (LEVEL_ROWS); every entry lands on LEVEL
     modOpen: false, // LEVEL SELECT's MODIFIERS list is open inline, modeCur its cursor
@@ -241,8 +242,8 @@ export function createMenuApp(opts = {}) {
       const ax = (input && input.input) || {};
       let dir = 0,
         axis = 0;
-      if (this.screen === SCREEN.MENU || this.screen === SCREEN.GUIDE || this.screen === SCREEN.ENEMIES) {
-        const g = this.screen !== SCREEN.MENU; // GUIDE's doors and ENEMIES' foes sit side by side: ←/→ walk them too
+      if (this.screen === SCREEN.MENU || this.screen === SCREEN.GUIDE || this.screen === SCREEN.ENEMIES || this._isInfo()) {
+        const g = this.screen !== SCREEN.MENU; // GUIDE's doors and ENEMIES' foes sit side by side: ←/→ walk them too (a read-only page's pages too)
         dir = ax.up || (g && ax.left) ? -1 : ax.down || (g && ax.right) ? 1 : 0;
       }
       else if (this.screen === SCREEN.LEVEL || this.screen === SCREEN.SETTINGS || this.screen === SCREEN.GRAPHICS || this.screen === SCREEN.CONTROLS) {
@@ -390,7 +391,7 @@ export function createMenuApp(opts = {}) {
         this._taps[dir + ":0"] = true;
         return true;
       }
-      if ((this.screen === SCREEN.GUIDE || this.screen === SCREEN.ENEMIES) && this.move(dir, 0)) {
+      if ((this.screen === SCREEN.GUIDE || this.screen === SCREEN.ENEMIES || this._isInfo()) && this.move(dir, 0)) {
         this._taps[dir + ":0"] = true;
         return true;
       }
@@ -456,14 +457,17 @@ export function createMenuApp(opts = {}) {
         case SCREEN.GUIDE:
           switch (GUIDE_ROWS[this.guideRow]) {
             case "HOW TO PLAY":
+              this.infoPg = 0;
               return this._push(SCREEN.HOWTO);
             case "POWER-UPS":
+              this.infoPg = 0;
               return this._push(SCREEN.ITEMS);
             case "ENEMIES":
               this.foeRow = 0;
-              this.foeTip = false;
+              this.foeTip = this.lastDev === "key"; // on keys the tooltip follows focus from the first foe (ruling R3)
               return this._push(SCREEN.ENEMIES);
             case "FLOOR":
+              this.infoPg = 0;
               return this._push(SCREEN.FLOOR);
           }
           return false;
@@ -492,7 +496,7 @@ export function createMenuApp(opts = {}) {
         this._optTo("GRAPHICS");
         return this._push(SCREEN.SETTINGS, 1);
       }
-      if (this.screen === SCREEN.ENEMIES && this.foeTip && this.lastDev === "pad") { // EAST closes the tooltip first; a key's Esc leaves at once
+      if (this.screen === SCREEN.ENEMIES && this.foeTip) { // Esc / Backspace / EAST close an open tooltip first; a second leaves
         this.foeTip = false;
         return this._feel("back");
       }
@@ -599,6 +603,12 @@ export function createMenuApp(opts = {}) {
       if (this.screen === SCREEN.ENEMIES) { // one walk over the foes in order, wrapping; the tooltip follows a key's focus, a pad's move closes it
         this.foeRow = (this.foeRow + (dir < 0 ? -1 : 1) + FOES.length) % FOES.length;
         this.foeTip = this.lastDev === "key";
+        return true;
+      }
+      if (this._isInfo()) { // a read-only page steps its pages, clamped (never wraps), where the box pages it
+        const n = Math.max(1, (o.pageCount ? o.pageCount() : 1) | 0), p = Math.max(0, Math.min(n - 1, this.infoPg + (dir < 0 ? -1 : 1)));
+        if (p === this.infoPg) return false;
+        this.infoPg = p;
         return true;
       }
       if (this.screen === SCREEN.LEVEL) {
@@ -1260,6 +1270,17 @@ export function createMenuApp(opts = {}) {
       this.foeRow = i | 0;
       this.foeTip = true;
       return this._feel("confirm");
+    },
+    _isInfo() { return this.screen === SCREEN.HOWTO || this.screen === SCREEN.ITEMS || this.screen === SCREEN.FLOOR; },
+    /* a tap on a read-only page's ▲ / ▼ key: one page step, cued as a move */
+    infoStep(d) { return this._isInfo() && this.move(d < 0 ? -1 : 1, 0); },
+    /* a tap on an ENEMIES page key: the first foe of the page it shows, focused, its tooltip shut */
+    foeFocus(i) {
+      if (this.screen !== SCREEN.ENEMIES || !(i >= 0 && i < FOES.length) || (i | 0) === this.foeRow) return false;
+      this.foeRow = i | 0;
+      this.foeTip = false;
+      this.idleT = 0;
+      return this._feel("move");
     },
     foeClose() {
       if (this.screen !== SCREEN.ENEMIES || !this.foeTip) return false;

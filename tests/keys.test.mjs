@@ -709,14 +709,16 @@ for (let i = 0; i < GUIDE_ROWS.length; i++) {
   const opened = g.app.screen === want;
   press(g, "Escape"); const esc = g.app.screen;
   press(g, "Enter");
-  if (want === SCREEN.ENEMIES) { // v202 Task 3.5: ENEMIES has a focus; its Enter opens the points tooltip, Escape leaves
-    const back = g.app.screen === SCREEN.ENEMIES && !g.app.foeTip; // GUIDE's Enter opened it again, tooltip shut
-    press(g, "Enter");
-    const tip = back && g.app.screen === SCREEN.ENEMIES && g.app.foeTip;
-    press(g, "Enter"); const stay = g.app.screen === SCREEN.ENEMIES;
-    press(g, "Escape");
-    check("GUIDE ↓ + Enter opens ENEMIES; Escape goes back to GUIDE; on ENEMIES Enter opens the tooltip (a second Enter stays), Escape leaves",
-      opened && esc === SCREEN.GUIDE && tip && stay && g.app.screen === SCREEN.GUIDE, opened + "/" + esc + "/" + tip + "/" + stay + "/" + g.app.screen);
+  if (want === SCREEN.ENEMIES) { // v202 Task 3.5 + fix round 1 ruling R3: on keys the tooltip follows focus, arrival included; Escape shuts it first, a second leaves
+    const shut = esc === SCREEN.ENEMIES && g.app.foeTip; // the first Escape only shut the arrival's tooltip; the Enter after it opened it again
+    press(g, "Escape"); press(g, "Escape"); const left = g.app.screen === SCREEN.GUIDE;
+    press(g, "Enter"); const again = g.app.screen === SCREEN.ENEMIES && g.app.foeTip; // GUIDE's Enter: back on ENEMIES, the tooltip open
+    press(g, "Enter"); const stay = g.app.screen === SCREEN.ENEMIES && g.app.foeTip; // Enter on an open tooltip does nothing
+    press(g, "Escape"); const off = g.app.screen === SCREEN.ENEMIES && !g.app.foeTip;
+    press(g, "Enter"); const tip = g.app.foeTip; // Enter opens it
+    press(g, "Escape"); press(g, "Escape");
+    check("GUIDE ↓ + Enter opens ENEMIES with the tooltip on WALKER; Escape shuts it, a second Escape goes back to GUIDE; Enter opens a shut tooltip, a second Enter stays",
+      opened && shut && left && again && stay && off && tip && g.app.screen === SCREEN.GUIDE, [opened, shut, left, again, stay, off, tip, g.app.screen].join("/"));
   } else {
     press(g, "Enter");
     check("GUIDE ↓ + Enter opens " + GUIDE_ROWS[i] + "; Escape and Enter both go back to GUIDE",
@@ -729,13 +731,25 @@ for (let i = 0; i < GUIDE_ROWS.length; i++) {
    Backspace leaves like Escape */
 {
   const g = menu(); toRow(g, ITEMS.indexOf("GUIDE")); press(g, "Enter"); toRow(g, GUIDE_ROWS.indexOf("ENEMIES")); press(g, "Enter");
-  const at0 = g.app.screen === SCREEN.ENEMIES && g.app.foeRow === 0 && !g.app.foeTip;
+  const at0 = g.app.screen === SCREEN.ENEMIES && g.app.foeRow === 0 && g.app.foeTip;
   press(g, "ArrowRight"); const r1 = g.app.foeRow, t1 = g.app.foeTip;
   press(g, "ArrowDown"); const r2 = g.app.foeRow;
   press(g, "ArrowUp"); press(g, "ArrowLeft"); press(g, "ArrowLeft"); const r3 = g.app.foeRow;
-  check("ENEMIES: arrives on WALKER, tooltip shut; → / ↓ step on, ↑ / ← step back and wrap to KNIGHT; a key move opens the tooltip", at0 && r1 === 1 && t1 === true && r2 === 2 && r3 === 8 && g.app.foeTip, [at0, r1, t1, r2, r3].join("/"));
+  check("ENEMIES: arrives on WALKER, its tooltip open (keys, R3); → / ↓ step on, ↑ / ← step back and wrap to KNIGHT; the tooltip follows", at0 && r1 === 1 && t1 === true && r2 === 2 && r3 === 8 && g.app.foeTip, [at0, r1, t1, r2, r3].join("/"));
+  press(g, "Backspace"); const b1 = g.app.screen === SCREEN.ENEMIES && !g.app.foeTip;
   press(g, "Backspace");
-  check("ENEMIES: Backspace -> GUIDE", g.app.screen === SCREEN.GUIDE);
+  check("ENEMIES: Backspace shuts the open tooltip first, a second Backspace -> GUIDE", b1 && g.app.screen === SCREEN.GUIDE);
+}
+/* HOW TO / POWER-UPS / FLOOR (fix round 1, R1 / R2): the arrows step the pages where the box pages them, clamped, and never leave; Escape leaves */
+for (const [row, scr] of [["HOW TO PLAY", SCREEN.HOWTO], ["POWER-UPS", SCREEN.ITEMS], ["FLOOR", SCREEN.FLOOR]]) {
+  const g = menu(); toRow(g, ITEMS.indexOf("GUIDE")); press(g, "Enter"); toRow(g, GUIDE_ROWS.indexOf(row)); press(g, "Enter");
+  const p0 = g.app.infoPg;
+  for (const k of ["ArrowDown", "ArrowRight", "ArrowDown", "ArrowRight", "ArrowDown", "ArrowRight", "ArrowDown", "ArrowRight", "ArrowDown", "ArrowRight"]) press(g, k);
+  const hi = g.app.infoPg, stay = g.app.screen === scr;
+  for (let n = 0; n < 12; n++) press(g, n % 2 ? "ArrowUp" : "ArrowLeft");
+  const lo = g.app.infoPg;
+  press(g, "Escape");
+  check(row + ": the arrows step its pages (0 .. pages - 1, clamped) and never leave; Escape -> GUIDE", p0 === 0 && stay && hi >= 0 && lo === 0 && g.app.screen === SCREEN.GUIDE, [p0, hi, lo, g.app.screen].join("/"));
 }
 
 // ---- RECORDS: SCORES (its difficulty filter is the page body, under the tab row) ----

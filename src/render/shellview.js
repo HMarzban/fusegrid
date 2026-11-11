@@ -53,7 +53,10 @@ export const shellMode = (s, world) => (SHELL_ON.has(s) ? 1 : s === SCREEN.GAME 
 const COVERS = new Set([SCREEN.MENU, SCREEN.LEVEL, SCREEN.SETTINGS, SCREEN.GRAPHICS, SCREEN.GUIDE, SCREEN.HOWTO, SCREEN.ITEMS, SCREEN.ENEMIES, SCREEN.FLOOR]);
 /* the GUIDE pages (v202 Task 3.5) are lazy (pages/lazy.js): asked for on every GUIDE frame until they are in, and with the rest in MENU's first idle */
 const GUIDE_ON = new Set([SCREEN.GUIDE, SCREEN.HOWTO, SCREEN.ITEMS, SCREEN.ENEMIES, SCREEN.FLOOR]);
-const guideO = (app) => ({ level: app.level | 0 || 1, foe: app.foeRow | 0, tip: !!app.foeTip, rev: REV }); // rev: MENU's foot reserve, so the room dpr (and key) is MENU's
+const guideO = (app) => ({ level: app.level | 0 || 1, foe: app.foeRow | 0, tip: !!app.foeTip, pg: app.infoPg | 0, rev: REV }); // rev: MENU's foot reserve, so the room dpr (and key) is MENU's
+let guidePg = 1;
+/** How many pages the read-only GUIDE page last drawn takes (menuapp's opts.pageCount: ↑↓ / ←→ step them, clamped). */
+export const guidePageCount = () => guidePg;
 export const shellCovers = (s) => COVERS.has(s);
 /* css: CSS px per box unit on a touch layout (MENU's touch floors, its phone column and its compact tiles are in CSS px); undefined on a keyboard
    layout, whose pages never read it. fit.js hands it in as the box's own css: #sh's stand-in carries shellGeo's scale and fit writes #c's stage scale
@@ -316,6 +319,7 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
     if (!lazy.get("guide")) lazy.want("guide").catch(() => {});
     const t = touchLay(canvas), LG = menudraw.layout(cw, chh, logoY, css), o = guideO(app);
     if (s === SCREEN.GUIDE) return menudraw.drawGuide(c, LG, app.subT, app.guideRow, kind, t, o);
+    if (s !== SCREEN.ENEMIES) guidePg = menudraw.guidePages(LG, t, s === SCREEN.HOWTO ? "HOW TO PLAY" : s === SCREEN.ITEMS ? "POWER-UPS" : "FLOOR");
     return (s === SCREEN.HOWTO ? menudraw.drawHowTo : s === SCREEN.ITEMS ? menudraw.drawItemsHelp : s === SCREEN.ENEMIES ? menudraw.drawEnemiesHelp : menudraw.drawFloorHelp)(c, LG, app.subT, kind, t, o);
   }
   const L = menudraw.layout(cw, chh, logoY);
