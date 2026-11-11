@@ -356,7 +356,8 @@ for draw and hit, a painter fed names and values by shellview (never indices), a
 The kit (`src/render/kit/`, R1 kit harmonisation): `tokens` (world colours), `type` (faces, `measure`, `measurer` / `measures` (a 0.6 em estimate
 for a context that cannot measure), `text`, `CAP_K`), `geom` (`deep`, `R`, `sc`, `okBox`, `inR`, `big`), `paint` (key, cap, plate, band, `plaque` the
 foot's sign plaque, `rpath` / `rfill`, glyph, the cell painters), `copy` (`FOOT_TAP`, `LOOK_NAME`, `lookVal`: words two pages paint; menudraw
-re-exports them), `pager` (THE pager every page that pages uses: `PAGE_KEY` 46 CSS px square keys `PAGE_GAP` 10 apart, `keySide` (CSS
+re-exports them), `pager` (THE pager every page that pages uses: `PAGE_KEY` 46 CSS px square keys `PAGE_GAP` 10 apart (GUIDE, where it scales as one
+piece under its floors, a 667 x 375 phone's #c, keeps them at its BACK key's size, 40.8 - 43.1 CSS px: a give-way the R1 kit left as it was), `keySide` (CSS
 px to a page's design px), `paginate` (whole items per page), `pageOfFocus` (the page on screen is the focused item's, so keys and a controller turn
 it), `pagerKeys` (the strip, ▲ ▼ at its right end, the label left of them), `pageLabel` (`PAGE n OF m`), `pagerHit`, `paintPager`; a page keeps
 only what an item is; tap mode keeps the keys), `cache`, `room` (the room look, the lane, and the ONE shared room rule: `shareRoom` / `roomDpr` / `pageRoomDpr` /

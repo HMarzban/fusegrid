@@ -486,17 +486,22 @@ const { readFileSync } = await import("node:fs");
 {
   const kp = await import("../src/render/kit/pager.js"), SP = await import("../src/render/pages/settings.js"), GP = await import("../src/render/pages/guide.js");
   const RP = await import("../src/render/pages/records.js"), LP = await import("../src/render/pages/level.js");
-  const css = fitBox(852, 393, true, 600, 520).s, c852 = { W: 600, H: 520, touch: true, shell: false, css }, out = [];
-  const size = (nm, up, dn, k) => { const a = [up.w * k, up.h * k, dn.w * k, dn.h * k]; if (a.some((v) => Math.abs(v - kp.PAGE_KEY) > 0.01) || (dn.x - up.x - up.w) * k < 7.99) out.push(nm + " " + J(a.map((v) => +v.toFixed(2)))); };
-  const sg = SP.settingsGeom(c852, ["MUSIC", "SFX", "SOUND", "ART STYLE", "SCREEN SHAKE", "REDUCE FLASH", "ANALYTICS", "GRAPHICS", "CONTROLS", "RESET DEFAULTS"]);
-  if (sg.keys) size("settings", sg.keys.up, sg.keys.dn, css); else out.push("settings: no pager");
-  const gg = SP.graphicsGeom(c852);
-  if (gg.keys) size("graphics", gg.keys.up, gg.keys.dn, css); else out.push("graphics: no pager");
-  const eg = GP.guideGeom(c852, "ENEMIES");
-  if (eg.pager) size("guide", eg.pager.up, eg.pager.dn, css); else out.push("guide: no pager");
-  const lg = LP.levelGeom({ ...c852, W: 600, H: 340 }, { unlocked: true, open: false, row: W.LABEL.LEVEL });
-  if (lg.pageKeys) size("level", lg.pageKeys[0], lg.pageKeys[1], css); else out.push("level: no page keys");
-  check("one pager: every page's ▲ / ▼ keys are PAGE_KEY (46) CSS px square and >= 8 CSS px apart (SETTINGS, GRAPHICS, GUIDE ENEMIES, LEVEL SELECT compact on a landscape phone's #c)", out.length === 0 && kp.PAGE_KEY === 46, out.join(" | "));
+  const P640 = shellGeo(360, 640), BX = { p360: { W: P640.w, H: P640.h, touch: true, shell: true, css: P640.s }, l1024: { W: 1024, H: 768, touch: true, shell: true, css: 1 }, pauseT: { W: 600, H: 520, touch: true, shell: false, css: 0.63, paused: true } };
+  for (const [w, h] of [[852, 393], [667, 375]]) BX["c" + w] = { W: 600, H: 520, touch: true, shell: false, css: fitBox(w, h, true, 600, 520).s };
+  const R10 = ["MUSIC", "SFX", "SOUND", "ART STYLE", "SCREEN SHAKE", "REDUCE FLASH", "ANALYTICS", "GRAPHICS", "CONTROLS", "RESET DEFAULTS"], out = [], seen = new Set();
+  const size = (nm, up, dn, k, want = kp.PAGE_KEY) => { seen.add(nm.split(" ")[0]); const a = [up.w * k, up.h * k, dn.w * k, dn.h * k]; if (a.some((v) => Math.abs(v - want) > 0.01) || (dn.x - up.x - up.w) * k < 7.99) out.push(nm + " " + J(a.map((v) => +v.toFixed(2)))); };
+  for (const [b, F] of Object.entries(BX)) {
+    const c = F.css, sg = SP.settingsGeom(F, R10), gg = SP.graphicsGeom(F);
+    if (sg.keys) size("settings " + b, sg.keys.up, sg.keys.dn, c);
+    if (gg.keys) size("graphics " + b, gg.keys.up, gg.keys.dn, c);
+    if (F.paused) continue;
+    /* GUIDE: 46 CSS px, except where the whole page scales as one piece under its floors (a 667 x 375 phone's #c): there the keys are BACK's size */
+    for (const pg of ["ENEMIES", "HOW TO PLAY", "GUIDE"]) { const g = GP.guideGeom(F, pg); if (g.pager) size("guide " + b + " " + pg, g.pager.up, g.pager.dn, c, g.d.u * c < 1 - 1e-9 ? g.back.h * c : kp.PAGE_KEY); }
+    const RG = RP.recordsGeom(F);
+    for (const t of ["scores", "stats", "medals"]) { const q = RG.d.bodies[t] && RG.d.bodies[t].pager; if (q) size("records " + b + " " + t, q.up, q.dn, RG.u * c); }
+    for (const H of [340, 393, 520]) { const lg = LP.levelGeom({ ...F, H }, { unlocked: true, open: false, row: W.LABEL.LEVEL }); if (lg.pageKeys) size("level " + b + " H" + H, lg.pageKeys[0], lg.pageKeys[1], c); }
+  }
+  check("one pager: every page's ▲ / ▼ keys are PAGE_KEY (46) CSS px square and >= 8 CSS px apart on every touch box that pages (SETTINGS, GRAPHICS, GUIDE, RECORDS, LEVEL SELECT's compact; GUIDE scaled as one piece keeps them at BACK's size)", out.length === 0 && kp.PAGE_KEY === 46 && ["settings", "graphics", "guide", "records", "level"].every((n) => seen.has(n)), out.join(" | ") + " " + J([...seen]));
   check("one label: PAGE n OF m", kp.pageLabel(0, 3) === "PAGE 1 OF 3" && kp.pageLabel(2, 3) === "PAGE 3 OF 3");
   check("one break rule: whole items, at most cap tall, a page's first item drops its gap", J(kp.paginate([10, 10, 10, 10], [0, 4, 4, 4], 24)) === J([[0, 1], [2, 3]]) && J(kp.paginate([30, 10], [0, 4], 20)) === J([[0], [1]]) && J(kp.paginate([10, 10], [0, 4], Infinity)) === J([[0, 1]]));
   const Q = kp.pagerKeys(0, 0, 300, 46);
