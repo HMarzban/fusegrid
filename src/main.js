@@ -682,7 +682,7 @@ export function createGame(canvas, opts = {}) {
     if (curKind === "3d") ro = { ...(ro || {}), bright: settings.bri / 100 };
     renderer.render(attract && demo ? demo.world : show ? show.world : world, dt, ro);
     c.restore();
-    hud.frame(fit, app.screen === SCREEN.GAME ? world : null, ro, curKind); // chips + power-ups on #hud, off the board; paints only on a change
+    hud.frame(fit, app.screen === SCREEN.GAME ? world : null, ro, curKind, { proj: renderer.proj, cam }); // chips, power-ups, strip, tile tip on #hud; paints on a change
     const sh = fit && fit.shell(shellMode(app.screen, world)); // MENU + plated pages on #sh's own box; a run end shows it click-through (shellview shellMode)
     shBox = sh ? sh.box : null;
     drawShell(sh ? sh.ctx : c, app, world, sh ? sh.box : canvas, curKind, getScoresForHeat, getPlaquesFn, getCab);

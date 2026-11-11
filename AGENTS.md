@@ -620,6 +620,16 @@ not shell screens. Do not add them as `SCREEN` values.
   44; a 130 column 16 from its right: BOMB 90/176 of the band at its foot,
   THROW and REMOTE as two fixed halves of one row above it), written as
   `--st/--tp/--tpl/--tpt/--tbw/--tbh/--tbr/--tbt/--taw/--tah/--tthr/--ttht/--trem/--tret`.
+  The strip's keys are painted by the HUD on `#hud` (Task 8.3: the D-PAD as
+  four kit keys round a well, BOMB the yellow main key and the frame's one
+  yellow, THROW / REMOTE keys only while held, all in PLAY only; the PAUSE
+  key in the plate's grid on `p`, at the right gutter's head on `l`, reading
+  RESUME while paused, painted in PLAY and PAUSE only); on `p` and `l` the
+  `#touchpad` children are transparent hit areas over them (`:active` a
+  cream wash, their inner icons hidden), and `createHud` docks `#tpause` on
+  its painted key (stage-relative CSS, written on a change). `l` keeps its
+  gutter controls (`HUD_RES.l`: pad 152 at 8 from the stage, so the D-PAD
+  keys stay 44; bomb 72, THROW / REMOTE 52), `hudGeo` mirrors them.
   INTRO/MENU/ATTRACT keep the centred stage.
   `shellGeo` sizes the shell box `#sh` on every layout that has one (see Menu look).
 - `src/core/` — deterministic simulation, no DOM, no browser globals.
@@ -1103,7 +1113,16 @@ not shell screens. Do not add them as `SCREEN` values.
   changes, so a held PAUSE or a still TIME makes no canvas call; the plate's
   ring is a kit cache layer; the probe records page `hud`. `scenes.js` keeps
   `ABAR` (the strip's fade, dim and the ghost coach's bottom lane) and
-  `abilityChips`. Touch `#tthrow` / `#tremote`
+  `abilityChips`. Floor-tile tips (coach v2's tile kinds, Task 8.3) are the
+  HUD's: a kit plate beside the board on a leader (1.5 px t2 over 3.5 px ol,
+  a dot on the tile) to the nearest tile of that kind to the player, through
+  the live look (REAL 3D's `renderer.proj`, a non-enumerable wrapper field;
+  the 2D user camera), on the wider side on a desktop, at the band's foot
+  over the controls on a portrait phone, in the left gutter on a landscape
+  one, else over the chip plate, never over the board; `scenes.js`
+  `boardTip` keeps every other tip on the board. The plate, chip bases,
+  strip and glyphs are kit cache layers, so a phone repaint with every part
+  live stays under 400 calls (`touch-strip.test`). Touch `#tthrow` / `#tremote`
   (`touch.js`): shown only while the player holds that power, a tap is a
   one-tick `pulseThrow` / `pulseRemote` intent, fixed slots. Every idle
   frame paints nothing new. All three looks (PIXEL uses its own cells for
@@ -1313,7 +1332,7 @@ Node v26, `"type": "module"`. No build step, no bundler.
   because the spec names the term to refuse it.
 - A tile may not close your only way out (v199, gen 3 only, every heat, no profile knob): `sim.js` `carryPins` holds a carried bomb, `tilegate.js` `gatePins` holds a gate at its last warning step (`GATE_ROOM` 10). `tests/tile-foe-lane.test.mjs`. `makeSnapshot` adds a `tiles` key only when `world.feat` is set; `determinism.test` replays all eight tile rooms.
 - Coach v2 (`nb.coach.v2`) also carries nine tile bits (`b g c x f q y o z`, gen 3 only,
-  17 bits in all; `z` is the ICE brake, kind `BRAKE`, gated by `glideBrakes`, closing it also sets `g`; copy `feat.js` `tileTip`, 6 s, a tip whose room is left closes
+  17 bits in all; `z` is the ICE brake, kind `BRAKE`, gated by `glideBrakes`, closing it also sets `g`; copy `feat.js` `tileTip`, 6 s, drawn by the HUD beside the board since UI upgrade Task 8.3, a tip whose room is left closes
   `rn:"room"`). It shows **one first-use tip per verb**, once ever,
   for EIGHT verbs (owner ruling 2026-10-10 widened the original three): KICK /
   THROW / REMOTE / PASS / LINE / POWER / PIERCE / SHIELD, one bit each

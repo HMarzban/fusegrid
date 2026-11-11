@@ -19,7 +19,7 @@ import {createParticles} from "./particles.js";
 import {ambientClock} from "../ambient.js";
 import {buildSpriteAtlas, buildWorldAtlas, spriteSteps, worldSteps, wrapTex} from "./textures.js";
 import {stageGlow, stageBack} from "../frame.js";
-import {drawOverlay, overlayBox, drawCoach, drawCoach2} from "../scenes.js";
+import {drawOverlay, overlayBox, drawCoach, drawCoach2, boardTip} from "../scenes.js";
 import {onEvent, updateFx, getFxOpts, getShake, getFlash, getFx, feedFx, drawFxOverlay, drawPickupFx, syncFx, initFx} from "../fx.js";
 
 const W=CFG.COLS*CFG.TILE, H=CFG.ROWS*CFG.TILE;
@@ -446,7 +446,7 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
       if(o&&o.hud===true&&world.state==="PLAY")drawFxOverlay(ovCtx);
       if(o&&o.hud===true&&world.state==="PLAY"){camera.updateMatrixWorld();drawPickupFx(ovCtx,{coach:o.coach2,proj});}
       if(o&&o.hud===true)drawCoach(ovCtx,(o&&o.coach)||0);
-      if(o&&o.hud===true)drawCoach2(ovCtx,(o&&o.coach2&&o.coach2.a)||0,(o&&o.coach2&&o.coach2.s)||"");
+      if(o&&o.hud===true)drawCoach2(ovCtx,boardTip(o&&o.coach2),(o&&o.coach2&&o.coach2.s)||"");
      }
    }
 
@@ -492,6 +492,7 @@ export function createRenderer3D(glCanvas, overlayCanvas, opts={}){
      DPR, GL render / shadow-map update counters and the context attributes. */
   Object.defineProperties(surface,{
     setPerf:{enumerable:false,value:setPerf},
+    proj:{enumerable:false,value:proj},
     prepare:{enumerable:false,value:prepare},
     activate:{enumerable:false,value:activate},
     invalidate:{enumerable:false,value:(re)=>{ inv=true; if(re)pzT=null; }},

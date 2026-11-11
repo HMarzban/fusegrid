@@ -110,6 +110,9 @@ Locked floor sample now mapped to the box (endkit `rpair` transforms `o.floor`; 
 
 ## 2026-11-11 — UI upgrade Task 7.3: logo B in PIXEL and REAL 3D (held lane, R3)
 - Look seam in `logo/draw2d.js` (`setLogoLook` from shellview, `registerLogo` from `pixel/logo.js` and `logo/draw3d.js`); title and MENU gated in Chrome (logo faces as locked info pairs). PIXEL logo 9,148 B (pixel/logo.js 7,398 + art/logo.js 1,750; R3 carry-in, was misstated 8,858) inside its 9 KB sub-budget (lead ruling); the REAL 3D loading bar counts and warms draw3d.js (fix round 1). Open: O3 owner checkpoint
+## 2026-11-11 — UI upgrade Task 8.3: phone touch strip and tile tips (lane-8-hud, held for R4)
+- The HUD paints the round 5 strip (D-PAD keys, yellow BOMB, THROW / REMOTE halves while held, PAUSE in the grid) under transparent DOM hit areas; `#tpause` docked on its key; floor-tile tips leave the board for a plate on a leader beside it (`scenes.js` `boardTip`, REAL 3D `renderer.proj`); HUD static parts are cache layers (< 400 calls a phone repaint). Open: owner checkpoint O4 on a real phone.
+
 ## 2026-11-11 — UI upgrade Task 8.2: the HUD on the world kit (lane-8-hud, held for R4)
 - `src/render/hud.js` draws the seven chips (LEVEL, difficulty word off NORMAL: R9) and the power-ups bar on `#hud`, off the board, in every look; `drawHudChips`, `drawAbilityBar`, `hudPlate`, `hudPlate3` deleted; CLASSIC pins re-pinned by ruling (`238a30af:71940`, tile world `cef5c020:70998`: the diff is only the old HUD segment removed). TIME now shows in every run (the mock's seven chips).
 

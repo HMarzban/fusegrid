@@ -13,11 +13,18 @@
    The bar lists the powers held now (fx abilityList order) and the ones a hit just took, dimmed and fading (ABAR.dim, ABAR.fade); THROW and
    REMOTE carry their key cap (the controller's button with a controller) on a desktop or portrait layout. A changed BOMBS / FLAME / LIVES value pulses a ring just inside its chip for LBL.pulse (fx
    getPulse), so two pulses never meet across the 4 px gap.
+   The phone's touch strip (Task 8.3; fit.js hudGeo strip, the DOM hit areas sit over it): the D-PAD as four keys round a well, BOMB the yellow
+   main key (the frame's one yellow), THROW and REMOTE keys only while held, all in PLAY only; the PAUSE key in its slot (RESUME while paused),
+   where createHud docks #tpause. The floor-tile tip (coach v2's tile kinds; the board keeps every other tip): a plate beside the board on a
+   leader to the nearest tile of its kind (desktop, on the wider side), at the band's foot over the controls (portrait phone), in the left
+   gutter (landscape), else over the chip plate, never over the board; its words are the tip's own, split at the first " · ".
    createHud() is main's one call per frame: it paints only when what the HUD shows changed (hudState, the slots, the look), so an idle frame
    (PAUSE, a still TIME) makes no canvas call; the plate's ring is a kit cache layer. The probe records page "hud" while the world PLAYs. */
 import {FOES, POWER} from "../core/entities.js";
+import {CFG, key as cell} from "../core/config.js";
+import {TILE_NAME, featKindOf} from "../core/feat.js";
 import {CONST, worldTokens} from "./kit/tokens.js";
-import {plate} from "./kit/paint.js";
+import {plate, key as kkey} from "./kit/paint.js";
 import {T, DEV, measure, textScale} from "./kit/type.js";
 import {layer, canMake, keyOf, touch as touchLayer} from "./kit/cache.js";
 import * as P from "./kit/probe.js";
@@ -26,7 +33,7 @@ import {drawEnemyBody} from "./sprites.js";
 import {pixelArt, itemCell, foeCell, blitCell, opaqueBox} from "./hudart.js";
 import {abilityText, getStrip, getPulse, LBL} from "./fx.js";
 import {abilityChips, fmtTime} from "./scenes.js";
-import {DIFF, HUD_CHIPS} from "./words.js";
+import {DIFF, HUD_CHIPS, HUD_WORDS} from "./words.js";
 import {hints} from "./hintcopy.js";
 
 const deep = (o) => { for (const v of Object.values(o)) if (v && typeof v === "object") deep(v); return Object.freeze(o); };
@@ -34,9 +41,9 @@ const deep = (o) => { for (const v of Object.values(o)) if (v && typeof v === "o
 export const CAPR = deep({num: 0.744, label: 0.704});
 export const HUD = deep({
   d: {pad: 4, gap: 4, ch: 66, cx: 10, ct: 8, lg: 6, icon: 22, ig: 6, heart: 4, r: 5, hud: DEV.d.hud, sec: DEV.d.sec, floor: {hud: 24.2, sec: 15.7}, edge: 12, ring: 10,
-    bar: {pad: 4, gap: 4, cx: 10, icon: 22, ig: 8, px: DEV.d.pri, floor: 15.7, capg: 8}},
+    bar: {pad: 4, gap: 4, cx: 10, icon: 22, ig: 8, px: DEV.d.pri, floor: 19.9, capg: 8}},
   p: {pad: 4, gap: 4, ch: 57, cx: 10, ct: 8, lg: 6, icon: 20, ig: 6, heart: 4, r: 5, hud: DEV.p.hud, sec: DEV.p.sec, floor: {hud: 14.8, sec: 12.8}, ring: 10, pause: 72,
-    bar: {pad: 4, gap: 4, row: 30, cx: 10, icon: 18, ig: 8, px: DEV.p.pri, floor: 12.8, capg: 8}},
+    bar: {pad: 4, gap: 4, row: 30, cx: 10, icon: 18, ig: 8, px: DEV.p.pri, floor: 15.7, capg: 8}},
   l: {pad: 4, gap: 4, ch: 30, cx: 8, icon: 18, ig: 6, heart: 3, r: 5, hud: DEV.p.hud, sec: DEV.p.sec, floor: {hud: 14.8, sec: 12.8}, pause: 44, bargap: 6, cell: 26, ci: 18},
 });
 const COL = deep({heart: "#ff3b5c", bomb: "#ff5d73", fire: "#ff8a3c"}), PCOL = Object.freeze(Object.fromEntries(POWER.map((q) => [q.t, q.col])));
@@ -58,8 +65,25 @@ export function hudState(world, o) {
   const u = getPulse();
   return {lives: Math.max(0, world.lives | 0), bombs: p.bombs | 0, flame: p.range | 0, level: world.level | 0, heat: Math.max(0, Math.min(2, world.heat | 0)),
     enemies: Array.isArray(world.enemies) ? world.enemies.length : 0, time: fmtTime(tm ? tm.t : 0), score: world.score | 0,
-    ab, pu: {b: r3(u.b), r: r3(u.r), l: r3(u.l)}, keys: H.dev === "key" || H.dev === "pad", play: world.state === "PLAY"};
+    ab, pu: {b: r3(u.b), r: r3(u.r), l: r3(u.l)}, keys: H.dev === "key" || H.dev === "pad", play: world.state === "PLAY", paused: world.state === "PAUSE",
+    hold: [!!p.throw, !!p.remote], tip: tipState(world, o)};
 }
+/* a floor-tile coach tip and its nearest tile of that kind (grid coords) to the player; null for any other tip */
+const TILEK = (k) => (k === "BRAKE" ? "GLIDE" : k && TILE_NAME[k] ? k : null);
+export function tipState(world, o) {
+  const c2 = o && o.coach2, k = c2 && c2.a > 0 && c2.s ? TILEK(c2.k) : null;
+  if (!k || world.state !== "PLAY") return null;
+  const p = world.players && world.players[0], f = world.feat, T0 = CFG.TILE;
+  let t = null, bd = Infinity;
+  if (f && p) for (let y = 0; y < CFG.ROWS; y++) for (let x = 0; x < CFG.COLS; x++) {
+    if (featKindOf(f[cell(x, y)]) !== k) continue;
+    const d = Math.hypot((x + 0.5) * T0 - p.x, (y + 0.5) * T0 - p.y);
+    if (d < bd) { bd = d; t = [x, y]; }
+  }
+  return {s: String(c2.s), a: Math.round(Math.min(1, c2.a) * 10) / 10, t}; // alpha in tenths: a fade repaints ten times, not every frame
+}
+/* the tip's words: the tile's name, then the rest */
+export const tipOf = (s) => { const i = String(s).indexOf(" · "); return i < 0 ? [String(s), ""] : [s.slice(0, i), s.slice(i + 3)]; };
 
 const DIG = "0123456789";
 function numW(c, s, px) {
@@ -105,7 +129,8 @@ function barItems(c, st, B, w, keys, max) {
   const n = st.ab.length;
   if (!n) return null;
   const capw = (it) => (keys && it.cap ? capWOf(c, "d", it.cap) + B.capg : 0);
-  for (const [px, lim] of [[B.px, w], [B.floor, w], [B.px, max], [B.floor, max], [0, w]]) {
+  const fl = Math.min(B.px, B.floor / textScale()); // a power's name is primary text: its floor is the primary cap (14 desktop / 11 phone)
+  for (const [px, lim] of [[B.px, w], [B.px, max], [fl, w], [fl, max], [0, w]]) {
     const ws = st.ab.map((it) => B.cx + B.icon + (px ? B.ig + measure(c, T.label(px), it.m ? it.s + " " + it.m : it.s) : 0) + capw(it) + B.cx);
     const tot = ws.reduce((a, v) => a + v, 0) + (n - 1) * B.gap, W = Math.max(w, Math.min(lim, tot));
     if (tot <= lim || !px) {
@@ -116,8 +141,63 @@ function barItems(c, st, B, w, keys, max) {
   return null;
 }
 
-/* every rect the HUD paints, by name, in viewport CSS px; c measures (memoized) */
+/* every rect the HUD paints, by name, in viewport CSS px; c measures (memoized); box = {w, h, at}: at the tip's tile point in CSS px
+   (createHud projects it through the live look; absent, the board's own linear map) */
 export function hudGeom(c, geo, st, box) {
+  const G = layout(c, geo, st, box);
+  G.strip = stripOf(geo);
+  G.tip = st.tip ? tipGeom(c, G, geo, st, box) : null;
+  return G;
+}
+const R4 = (x, y, w, h) => ({x, y, w, h});
+function stripOf(geo) {
+  const S = geo.strip;
+  if (!S) return null;
+  const k = S.pad.key, g = S.pad.gap, x = S.pad.x + (S.pad.w - 3 * k - 2 * g) / 2, y = S.pad.y + (S.pad.h - 3 * k - 2 * g) / 2, at = (i, j) => R4(x + i * (k + g), y + j * (k + g), k, k);
+  return {keys: {up: at(1, 0), lf: at(0, 1), rt: at(2, 1), dn: at(1, 2)}, well: at(1, 1), bomb: S.bomb, thr: S.thr, rem: S.rem};
+}
+const TIPT = 8;
+function wrap(c, s, font, w) {
+  const out = [];
+  let line = "";
+  for (const wd of String(s).split(" ")) { const t = line ? line + " " + wd : wd; if (line && measure(c, font, t) > w) { out.push(line); line = wd; } else line = t; }
+  if (line) out.push(line);
+  return out;
+}
+function tipGeom(c, G, geo, st, box) {
+  const lay = geo.lay, D = DEV[lay === "d" ? "d" : "p"], K = textScale(), [name, rest] = tipOf(st.tip.s), pad = 12, ST = geo.stage;
+  const size = (w) => { const lines = rest ? wrap(c, rest, T.body(D.bod), w - 2 * pad) : []; return {lines, h: 10 + D.pri * K + (lines.length ? 6 + lines.length * D.bod * K * 1.25 : 0) + 12}; };
+  const fits = (w) => measure(c, T.label(D.pri), name) + 2 * pad <= w && size(w).lines.every((l) => measure(c, T.body(D.bod), l) + 2 * pad <= w);
+  const at = st.tip.t ? box.at || [ST.x + (st.tip.t[0] + 0.5) * CFG.TILE * geo.s, ST.y + (st.tip.t[1] + 0.5) * CFG.TILE * geo.s] : null;
+  const ring = (r) => R4(r.x - TIPT, r.y - TIPT, r.w + 2 * TIPT, r.h + 2 * TIPT + 3);
+  let inner = null, lead = null;
+  /* over the chip plate (d, p), or the whole left gutter column on a landscape phone: what it covers is not drawn while it shows */
+  const over = () => {
+    if (G.plate) return R4(G.plate.x, G.plate.y, G.plate.w, size(G.plate.w).h);
+    if (!geo.left) return null;
+    const a = R4(geo.left.x + TIPT, geo.left.y + TIPT, geo.left.w - 2 * TIPT, geo.left.h - 2 * TIPT - 3);
+    return R4(a.x, a.y, a.w, Math.min(a.h, Math.max(size(a.w).h, G.cols[0].h - 2 * TIPT - 3)));
+  };
+  if (lay === "d") {
+    const rx = ST.x + ST.w + 30, rw = Math.min(360, box.w - 22 - rx - TIPT), lw = Math.min(360, ST.x - 30 - 22 - TIPT), right = rw >= lw, w = right ? rw : lw;
+    if (w >= 120 && fits(w)) {
+      const h = size(w).h, cy = at ? at[1] : ST.y + ST.h / 2, y0 = (G.plate ? G.plate.y + G.plate.h + 10 + TIPT : TIPT), y1 = Math.min(ST.y + ST.h, box.h - 184) - TIPT - 3;
+      const y = Math.max(y0, Math.min(y1 - h, cy - h / 2)), x = right ? rx + TIPT : ST.x - 30 - TIPT - w;
+      inner = R4(x, y, w, h);
+      if (at) {
+        const ex = right ? x - TIPT : x + w + TIPT, ky = Math.max(y + 12, Math.min(y + h - 12, at[1])), kx = right ? ST.x + ST.w + 12 : ST.x - 12;
+        lead = Math.abs(ky - at[1]) < 0.5 ? [at, [ex, ky]] : [at, [kx, at[1]], [kx, ky], [ex, ky]];
+      }
+    } else inner = over();
+  } else if (lay === "p") {
+    const b = geo.band, w = b.w - 2 * TIPT, h = size(w).h, y = b.y + b.h - h - TIPT - 3;
+    inner = fits(w) && y - TIPT >= ST.y + ST.h + 8 ? R4(b.x + TIPT, y, w, h) : over();
+  } else inner = over();
+  if (!inner) return null;
+  const sz = size(inner.w);
+  return {name, lines: sz.lines, in: inner, box: ring(inner), lead, a: st.tip.a, D};
+}
+function layout(c, geo, st, box) {
   const lay = geo.lay, L = HUD[lay], R = (x, y, w, h) => ({x, y, w, h}), G = {lay, chips: {}, bar: null, pause: null, plate: null, cols: null};
   if (lay === "d") {
     const pl = geo.plate, maxW = box.w - 2 * (L.edge + L.ring), F = forms(L);
@@ -150,13 +230,16 @@ export function hudGeom(c, geo, st, box) {
     G.plate = R(pl.x, pl.y, pl.w, pl.h); G.f = f;
     rows.forEach((row, j) => { let x = pl.x + L.pad; for (let i = 0; i < 4; i++) { const r = R(x, pl.y + L.pad + j * (L.ch + L.gap), cw[i], L.ch); if (row[i]) G.chips[row[i]] = r; else G.pause = R(r.x, r.y, r.w, r.h - 4); x += cw[i] + L.gap; } });
     const B = L.bar, n = st.ab.length;
+    /* two columns as in the frame; more (and then glyphs only) when the band under the board cannot hold the rows, never into the strip */
     if (n) {
-      const w2 = (geo.band.w - 2 * B.pad - B.gap) / 2, rws = Math.ceil(n / 2);
+      const cap = (a) => (st.keys && a.cap ? capWOf(c, "p", a.cap) + B.capg : 0), hOf = (r) => r * B.row + (r - 1) * B.gap + 2 * B.pad;
+      let cols = 2;
+      while (cols < n && hOf(Math.ceil(n / cols)) > geo.band.h) cols++;
+      const w2 = (geo.band.w - 2 * B.pad - (cols - 1) * B.gap) / cols, rws = Math.ceil(n / cols);
       let px = B.px;
-      const cap = (a) => (st.keys && a.cap ? capWOf(c, "p", a.cap) + B.capg : 0);
-      for (const q of [B.px, B.floor, 0]) { px = q; if (!q || st.ab.every((a) => B.cx + B.icon + B.ig + measure(c, T.label(q), a.m ? a.s + " " + a.m : a.s) + cap(a) + B.cx <= w2)) break; }
-      G.bar = {x: geo.band.x, y: geo.band.y, w: geo.band.w, h: rws * B.row + (rws - 1) * B.gap + 2 * B.pad, px,
-        items: st.ab.map((a, i) => R(geo.band.x + B.pad + (i % 2) * (w2 + B.gap), geo.band.y + B.pad + Math.floor(i / 2) * (B.row + B.gap), w2, B.row))};
+      for (const q of [B.px, Math.min(B.px, B.floor / textScale()), 0]) { px = q; if (!q || st.ab.every((a) => B.cx + B.icon + B.ig + measure(c, T.label(q), a.m ? a.s + " " + a.m : a.s) + cap(a) + B.cx <= w2)) break; }
+      G.bar = {x: geo.band.x, y: geo.band.y, w: geo.band.w, h: hOf(rws), px,
+        items: st.ab.map((a, i) => R(geo.band.x + B.pad + (i % cols) * (w2 + B.gap), geo.band.y + B.pad + Math.floor(i / cols) * (B.row + B.gap), w2, B.row))};
     }
     return G;
   }
@@ -189,7 +272,17 @@ const sp = (c, x, y, w, h, r) => { c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, 
 const rf = (c, q, r, col) => { c.fillStyle = col; c.beginPath(); sp(c, q.x, q.y, q.w, q.h, r); c.fill(); };
 /* a PIXEL cell's whole-number scale: as large as fits the glyph's box by its opaque rect (a 10-px heart doubles in a 22-px slot) */
 export const pxScale = (f, s) => { const b = opaqueBox(f); return Math.max(1, Math.floor(s / Math.max(1, b.w, b.h))); };
+/* a glyph is a cached sprite (one layer per kind, size, look and backing scale), blitted on whole device px; with no canvas source it draws straight */
+let curQ = 1, curLook = "";
 function glyph(c, g, x, cy, s, px) {
+  if (!canMake()) { glyphNow(c, g, x, cy, s, px); return; }
+  const A = px && pixelArt(), b = s + 12, key = {layer: "hud.glyph", biome: "", level: g + (A ? ":px" : ""), W: b, H: b, dpr: curQ, look: curLook, textScale: 1};
+  const img = layer(key, Math.ceil(b * curQ), Math.ceil(b * curQ), (x2) => { x2.scale(curQ, curQ); glyphNow(x2, g, 6, b / 2, s, px); });
+  touchLayer(keyOf(key));
+  const sx = Math.round((x - 6) * curQ) / curQ, sy = Math.round((cy - b / 2) * curQ) / curQ;
+  c.drawImage(img, sx, sy, b, b);
+}
+function glyphNow(c, g, x, cy, s, px) {
   const A = px && pixelArt();
   if (A) { const fs = g === "foe" ? foeCell(A, WALKER.t) : itemCell(A, g); if (fs.length) blitCell(c, fs, x + s / 2, cy, pxScale(fs[0], s)); return; }
   c.save(); c.translate(x + s / 2, cy);
@@ -220,21 +313,26 @@ function nums(c, s, x, cy, px) {
   c.font = f; c.fillStyle = CONST.ink; c.textAlign = "center"; c.textBaseline = "middle";
   for (const q of String(s)) { const w = DIG.includes(q) ? cell : measure(c, f, q); c.fillText(q, x + w / 2, cy); x += w; }
 }
-function chip(c, name, r, st, f, L, tok, o, rec) {
+/* a chip's two lines: the label's middle and the value row's middle (one-line chips share one) */
+function rowsOf(r, f, L, one) {
+  if (one) return [r.y + r.h / 2, r.y + r.h / 2];
+  const K = textScale(), sl = f.sec * K, hl = f.hud * K, k = Math.min(1, (r.h - sl - hl) / (L.ct + L.lg + 9));
+  return [r.y + L.ct * k + sl / 2, r.y + (L.ct + L.lg) * k + sl + hl / 2];
+}
+/* the static half of a chip (pane, inset, label: it lives in the plate's layer) and the live half (glyph and value) */
+function chipBase(c, name, r, f, L, tok, one) {
   rf(c, r, L.r, tok.pane);
   c.fillStyle = "rgba(0,0,0,0.4)"; c.fillRect(r.x + L.r, r.y, r.w - 2 * L.r, 2);
-  const ps = parts(name, st, f, L), K = textScale(), lw = labW(c, name, f);
-  if (o.one) {
-    const cy = r.y + r.h / 2, rw = rowW(c, ps, L);
-    if (lw) { c.font = T.label(f.sec); c.fillStyle = CONST.t2; c.textAlign = "left"; c.textBaseline = "middle"; c.fillText(LABEL[name], r.x + L.cx, cy);
-      if (rec) P.text(LABEL[name], r.x + L.cx, cy - f.sec * K * CAPR.label / 2, lw, f.sec * K * CAPR.label, {role: "secondary", col: CONST.t2}); }
-    drawParts(c, ps, r.x + r.w - L.cx - rw, cy, L, o, rec && r);
-    return;
-  }
-  const sl = f.sec * K, hl = f.hud * K, room = r.h - sl - hl, k = Math.min(1, room / (L.ct + L.lg + 9)), ly = r.y + L.ct * k + sl / 2, vy = r.y + (L.ct + L.lg) * k + sl + hl / 2;
-  c.font = T.label(f.sec); c.fillStyle = CONST.t2; c.textAlign = "left"; c.textBaseline = "middle"; c.fillText(LABEL[name], r.x + L.cx, ly);
-  if (rec) P.text(LABEL[name], r.x + L.cx, ly - f.sec * K * CAPR.label / 2, lw, f.sec * K * CAPR.label, {role: "secondary", col: CONST.t2});
-  drawParts(c, ps, r.x + L.cx, vy, L, o, rec && r);
+  if (!labW(c, name, f)) return;
+  c.font = T.label(f.sec); c.fillStyle = CONST.t2; c.textAlign = "left"; c.textBaseline = "middle"; c.fillText(LABEL[name], r.x + L.cx, rowsOf(r, f, L, one)[0]);
+}
+function chipLabelRec(c, name, r, f, L, one) {
+  const lw = labW(c, name, f), K = textScale();
+  if (lw) P.text(LABEL[name], r.x + L.cx, rowsOf(r, f, L, one)[0] - f.sec * K * CAPR.label / 2, lw, f.sec * K * CAPR.label, {role: "secondary", col: CONST.t2});
+}
+function chipValue(c, name, r, st, f, L, o, rec) {
+  const ps = parts(name, st, f, L), vy = rowsOf(r, f, L, o.one)[1];
+  drawParts(c, ps, o.one ? r.x + r.w - L.cx - rowW(c, ps, L) : r.x + L.cx, vy, L, o, rec && r);
 }
 function pulse(c, G, st) {
   for (const [k, n, col] of [["l", "lives", COL.heart], ["b", "bombs", COL.bomb], ["r", "flame", COL.fire]]) {
@@ -252,6 +350,7 @@ function bar(c, G, st, tok, o, rec) {
   rf(c, B, 8, CONST.ol);
   st.ab.forEach((a, i) => {
     const r = B.items[i], cy = r.y + r.h / 2, txt = a.m ? a.s + " " + a.m : a.s;
+    if (o.hid && o.hid(r)) return;
     c.globalAlpha = a.a;
     rf(c, r, L.r, tok.pane);
     const capOn = st.keys && a.cap && G.lay !== "l", cw = capOn ? capWOf(c, G.lay, a.cap) : 0;
@@ -274,35 +373,158 @@ function bar(c, G, st, tok, o, rec) {
   c.globalAlpha = 1;
 }
 /* the plate: the kit rampart ring and bed around the chips' ol band; a cache layer at the backing scale q where a canvas can be made */
-function plateOf(c, G, tok, q, look) {
-  const L = HUD[G.lay], T0 = L.ring, p = G.plate, w = Math.ceil(p.w + 2 * T0 + 4), h = Math.ceil(p.h + 2 * T0 + 6);
-  const paint = (x) => { plate(x, T0 + 2, T0 + 2, p.w, p.h, tok, {T: T0, tile: 40, phone: G.lay !== "d"}); };
-  if (!canMake()) { c.save(); c.translate(p.x - T0 - 2, p.y - T0 - 2); paint(c); c.restore(); return; }
-  const key = {layer: "hud.plate", biome: tok.biome.name, level: 0, W: w, H: h, dpr: q, look, textScale: 1};
-  const img = layer(key, Math.ceil(w * q), Math.ceil(h * q), (x) => { x.scale(q, q); paint(x); });
+/* a static part as a kit cache layer: region r (CSS px) at the backing scale q, keyed by its name, world, size, look, text scale and what (the
+   content that is not its size); paint draws in CSS px. With no canvas source (Node) it paints straight. */
+function cached(c, name, r, tok, q, look, what, paint) {
+  if (!canMake()) { paint(c); return; }
+  const w = Math.ceil(r.w), h = Math.ceil(r.h), key = {layer: "hud." + name, biome: tok.biome.name, level: what, W: w, H: h, dpr: q, look, textScale: textScale()};
+  const img = layer(key, Math.ceil(w * q), Math.ceil(h * q), (x) => { x.scale(q, q); x.translate(-r.x, -r.y); paint(x); });
   touchLayer(keyOf(key));
-  c.drawImage(img, p.x - T0 - 2, p.y - T0 - 2, w, h);
+  c.drawImage(img, r.x, r.y, w, h);
+}
+const ringed = (p, T0) => R4(p.x - T0 - 2, p.y - T0 - 2, p.w + 2 * T0 + 4, p.h + 2 * T0 + 6);
+/* the static HUD: the rampart plate, its ol band and the chips' bases (d, p), or each landscape column's band and bases, one layer each */
+function baseOf(c, G, tok, q, look) {
+  const L = HUD[G.lay], f = G.f, what = (names) => JSON.stringify([G.lay, f.sec, f.nolab || 0, names.map((n) => [n, G.chips[n].x, G.chips[n].y, G.chips[n].w, G.chips[n].h])]);
+  if (G.plate) {
+    const p = G.plate;
+    cached(c, "plate", ringed(p, L.ring), tok, q, look, what(NAME), (x) => {
+      plate(x, p.x, p.y, p.w, p.h, tok, {T: L.ring, tile: 40, phone: G.lay !== "d"});
+      rf(x, p, 0, CONST.ol);
+      for (const n of NAME) chipBase(x, n, G.chips[n], f, L, tok, false);
+    });
+  }
+  if (G.cols) G.cols.forEach((r, i) => {
+    const names = i ? ["enemies", "time", "score"] : ["lives", "bombs", "flame", "level"];
+    cached(c, "col" + i, r, tok, q, look, what(names), (x) => { rf(x, r, 8, CONST.ol); for (const n of names) chipBase(x, n, G.chips[n], f, L, tok, true); });
+  });
+}
+
+/* the strip's arrow (dir 0 up, 1 right, 2 down, 3 left) and the PAUSE / RESUME marks, filled in col, centred on cx cy, s px */
+function mark(c, m, cx, cy, s, col) {
+  c.fillStyle = col; c.beginPath();
+  if (m === "pause") { c.rect(cx - s * 0.36, cy - s / 2, s * 0.26, s); c.rect(cx + s * 0.1, cy - s / 2, s * 0.26, s); }
+  else { const r = [[0, -1], [1, 0], [0, 1], [-1, 0]][m === "play" ? 1 : m], h = s / 2, px = -r[1], py = r[0];
+    c.moveTo(cx + r[0] * h, cy + r[1] * h); c.lineTo(cx - r[0] * h * 0.6 + px * h, cy - r[1] * h * 0.6 + py * h); c.lineTo(cx - r[0] * h * 0.6 - px * h, cy - r[1] * h * 0.6 - py * h); c.closePath(); }
+  c.fill();
+}
+const NAMEOF = Object.fromEntries(POWER.map((q) => [q.t, q.name]));
+function strip(c, G, st, tok, o, rec) {
+  const q = o.q || 1, look = o.look || "";
+  const S = G.strip, D = DEV.p, K = textScale(), lab = (s, cx, cy, px, col) => { c.font = T.label(px); c.fillStyle = col; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(s, cx, cy); };
+  const tr = (n, r, o2) => { if (rec) P.rect(n, r.x, r.y, r.w, r.h, {touch: true, set: "strip", ...o2}); };
+  if (G.pause && (st.play || st.paused)) {
+    const r = G.pause, w = st.paused ? HUD_WORDS.RESUME : HUD_WORDS.PAUSE, lw = measure(c, T.label(D.pri), w), ic = 14;
+    kkey(c, r.x, r.y, r.w, r.h, "key", {tok, phone: true});
+    const one = lw + ic + 10 <= r.w - 16, cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+    if (one) { mark(c, st.paused ? "play" : "pause", cx - (lw + 10) / 2, cy, ic, CONST.ink); lab(w, cx + (ic + 10) / 2, cy, D.pri, CONST.ink); }
+    else lab(w, cx, cy, Math.min(D.pri, D.sec), CONST.ink);
+    if (rec) P.text(w, (one ? cx + (ic + 10) / 2 : cx) - lw / 2, cy - D.pri * K * CAPR.label / 2, lw, D.pri * K * CAPR.label, {role: "primary", col: CONST.ink});
+    tr("PAUSE", r);
+  }
+  if (!S || !st.play) return;
+  /* the D-PAD and BOMB are static: one cached layer over both (their drops included) */
+  const b = S.bomb, bs = Math.min(40, b.h - D.pri * K - 14), ks = Object.values(S.keys), x0 = Math.min(S.well.x, ...ks.map((r) => r.x), b.x) - 2, y0 = Math.min(...ks.map((r) => r.y), b.y) - 4;
+  const box = R4(x0, y0, Math.max(...ks.map((r) => r.x + r.w), b.x + b.w) + 2 - x0, Math.max(...ks.map((r) => r.y + r.h), b.y + b.h) + 8 - y0);
+  cached(c, "strip", box, tok, q, look, JSON.stringify([ks, b].flat().map((r) => [r.x - x0, r.y - y0, r.w, r.h])) + (o.px && pixelArt() ? "px" : ""), (x) => {
+    const lx = (s, cx, cy, px, col) => { x.font = T.label(px); x.fillStyle = col; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(s, cx, cy); };
+    for (const [n, d] of [["up", 0], ["rt", 1], ["dn", 2], ["lf", 3]]) { const r = S.keys[n]; kkey(x, r.x, r.y, r.w, r.h, "key", {tok, phone: true}); mark(x, d, r.x + r.w / 2, r.y + r.h / 2, Math.round(r.w * 0.36), CONST.ink); }
+    kkey(x, S.well.x, S.well.y, S.well.w, S.well.h, "well", {tok, phone: true});
+    kkey(x, b.x, b.y, b.w, b.h, "main", {tok, phone: true});
+    glyph(x, "bomb", b.x + b.w / 2 - bs / 2, b.y + 6 + bs / 2, bs, o.px);
+    lx(HUD_WORDS.BOMB, b.x + b.w / 2, b.y + b.h - 8 - D.pri * K / 2, D.pri, CONST.yelInk);
+  });
+  for (const [n, r] of Object.entries(S.keys)) tr("D-PAD " + n, r);
+  tr("BOMB", b, {fill: CONST.yel});
+  const act = (r, k, name) => {
+    kkey(c, r.x, r.y, r.w, r.h, "key", {tok, phone: true});
+    /* the name at the primary size, else the secondary, else its floor (cap 9), else none: the key's glyph names it */
+    const px = [D.pri, D.sec, Math.min(D.sec, 12.8 / K)].find((q) => measure(c, T.label(q), name) + 8 <= r.w) || 0;
+    const gs = Math.min(26, px ? r.h - px * K - 14 : r.h - 16), ly = r.y + r.h - 6 - px * K / 2, lw = px ? measure(c, T.label(px), name) : 0;
+    glyph(c, k, r.x + r.w / 2 - gs / 2, px ? r.y + 6 + gs / 2 : r.y + r.h / 2, gs, o.px);
+    if (px) lab(name, r.x + r.w / 2, ly, px, CONST.ink);
+    if (rec && px) P.text(name, r.x + r.w / 2 - lw / 2, ly - px * K * CAPR.label / 2, lw, px * K * CAPR.label, {role: px === D.pri ? "primary" : "secondary", col: CONST.ink});
+    tr(name, r);
+  };
+  if (st.hold[0]) act(S.thr, "throw", NAMEOF.throw);
+  if (st.hold[1]) act(S.rem, "remote", NAMEOF.remote);
+}
+function tip(c, G, tok, rec, q, look) {
+  const t = G.tip;
+  if (!t) return;
+  const K = textScale(), D = t.D, r = t.in, a0 = c.globalAlpha;
+  c.globalAlpha = a0 * t.a;
+  if (t.lead) {
+    c.lineJoin = c.lineCap = "round";
+    const path = () => { c.beginPath(); t.lead.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); };
+    path(); c.strokeStyle = CONST.ol; c.lineWidth = 3.5; c.stroke();
+    path(); c.strokeStyle = CONST.t2; c.lineWidth = 1.5; c.stroke();
+    const [x, y] = t.lead[0];
+    c.beginPath(); c.arc(x, y, 3, 0, Math.PI * 2); c.fillStyle = CONST.t2; c.fill(); c.lineWidth = 1.2; c.strokeStyle = CONST.ol; c.stroke();
+  }
+  cached(c, "tip", ringed(r, TIPT), tok, q, look, "", (x) => plate(x, r.x, r.y, r.w, r.h, tok, {T: TIPT, tile: 40, phone: G.lay !== "d"}));
+  c.textAlign = "left"; c.textBaseline = "middle";
+  const ly = r.y + 10 + D.pri * K / 2;
+  c.font = T.label(D.pri); c.fillStyle = CONST.ink; c.fillText(t.name, r.x + 12, ly);
+  if (rec) P.text(t.name, r.x + 12, ly - D.pri * K * CAPR.label / 2, measure(c, T.label(D.pri), t.name), D.pri * K * CAPR.label, {role: "primary", col: CONST.ink});
+  c.font = T.body(D.bod); c.fillStyle = CONST.t2;
+  t.lines.forEach((l, i) => {
+    const y = ly + D.pri * K / 2 + 6 + (i + 0.5) * D.bod * K * 1.25;
+    c.fillText(l, r.x + 12, y);
+    if (rec) P.text(l, r.x + 12, y - D.bod * K * 0.36, measure(c, T.body(D.bod), l), D.bod * K * 0.72, {role: "body", px: D.bod * K, col: CONST.t2});
+  });
+  if (rec) P.rect("tip", r.x, r.y, r.w, r.h, {plate: TIPT, fill: tok.bedA});
+  c.globalAlpha = a0;
 }
 
 /* one full paint of G (tests call it straight; createHud calls it on a change) */
 export function drawHud(c, G, st, tok, o = {}) {
   const rec = !!o.rec, L = HUD[G.lay];
-  if (G.plate) { plateOf(c, G, tok, o.q || 1, o.look || ""); rf(c, G.plate, 0, CONST.ol); if (rec) P.rect("plate", G.plate.x, G.plate.y, G.plate.w, G.plate.h, {plate: L.ring, fill: CONST.ol}); }
-  if (G.cols) for (const r of G.cols) { rf(c, r, 8, CONST.ol); if (rec) P.rect("gutter", r.x + L.pad, r.y + L.pad, r.w - 2 * L.pad, r.h - 2 * L.pad, {plate: L.pad, fill: CONST.ol}); } // a landscape gutter column: its ol band is the chips' ring
-  for (const n of NAME) { const r = G.chips[n]; chip(c, n, r, st, G.f, L, tok, {px: o.px, one: G.one}, rec); if (rec) P.rect("chip " + n, r.x, r.y, r.w, r.h, {fill: tok.pane}); }
+  curQ = o.q || 1; curLook = o.look || "";
+  baseOf(c, G, tok, curQ, curLook);
+  if (rec && G.plate) P.rect("plate", G.plate.x, G.plate.y, G.plate.w, G.plate.h, {plate: L.ring, fill: CONST.ol});
+  if (rec && G.cols) for (const r of G.cols) P.rect("gutter", r.x + L.pad, r.y + L.pad, r.w - 2 * L.pad, r.h - 2 * L.pad, {plate: L.pad, fill: CONST.ol}); // a landscape gutter column: its ol band is the chips' ring
+  const cov = G.tip && G.tip.box, hid = (r) => !!cov && !(r.x + r.w <= cov.x || cov.x + cov.w <= r.x || r.y + r.h <= cov.y || cov.y + cov.h <= r.y); // under the tip: not drawn, not recorded
+  for (const n of NAME) {
+    const r = G.chips[n];
+    if (hid(r)) continue;
+    chipValue(c, n, r, st, G.f, L, {px: o.px, one: G.one}, rec);
+    if (rec) { chipLabelRec(c, n, r, G.f, L, G.one); P.rect("chip " + n, r.x, r.y, r.w, r.h, {fill: tok.pane}); }
+  }
   pulse(c, G, st);
-  bar(c, G, st, tok, {px: o.px}, rec);
+  bar(c, G, st, tok, {px: o.px, hid}, rec);
+  strip(c, G, st, tok, {px: o.px, q: o.q, look: o.look}, rec);
+  tip(c, G, tok, rec, o.q || 1, o.look || "");
 }
 
-/* main's seam: frame(fit, world, o, look) each frame; world null (off GAME) hides #hud once */
+/* a board point (logical px) in CSS px through the live look: REAL 3D's camera (view.proj), else the 2D user camera (view.cam) */
+function pointOf(geo, view, bx, by) {
+  const v = view || {}, W = CFG.COLS * CFG.TILE, H = CFG.ROWS * CFG.TILE, cam = v.cam;
+  const q = typeof v.proj === "function" ? v.proj(bx, by, 0) : cam ? {x: W / 2 + (cam.x || 0) + (bx - W / 2) * (cam.zoom || 1), y: H / 2 + (cam.y || 0) + (by - H / 2) * (cam.zoom || 1)} : {x: bx, y: by};
+  return [Math.round((geo.stage.x + q.x * geo.s) * 2) / 2, Math.round((geo.stage.y + q.y * geo.s) * 2) / 2];
+}
+/* #tpause over the PAUSE key it paints (stage-relative CSS px, the stage is its container); written on a change only */
+let dock = "";
+function dockPause(G, geo) {
+  const el = G.pause && typeof document !== "undefined" && document && document.getElementById ? document.getElementById("tpause") : null;
+  if (!el || !el.style) return;
+  const v = [G.pause.x - geo.stage.x, G.pause.y - geo.stage.y, G.pause.w, G.pause.h], k = v.join();
+  if (k === dock) return;
+  dock = k;
+  el.style.left = v[0] + "px"; el.style.top = v[1] + "px"; el.style.width = v[2] + "px"; el.style.height = v[3] + "px"; el.style.right = "auto"; el.style.bottom = "auto";
+}
+
+/* main's seam: frame(fit, world, o, look, view) each frame; world null (off GAME) hides #hud once; view = {proj, cam} places the tip's leader */
 export function createHud() {
   let shown = false, last = "";
+  dock = "";
   return {
-    frame(fit, world, o, look) {
+    frame(fit, world, o, look, view) {
       if (!fit || typeof fit.hud !== "function") return;
       if (!world) { if (shown) fit.hud(0); shown = false; last = ""; return; }
       const geo = fit.hudGeo && fit.hudGeo(), st = hudState(world, o), rec = P.probe.on && st.play;
       if (!geo) { if (shown) fit.hud(0); shown = false; last = ""; return; }
+      if (st.tip && st.tip.t) st.tip.at = pointOf(geo, view, (st.tip.t[0] + 0.5) * CFG.TILE, (st.tip.t[1] + 0.5) * CFG.TILE);
       const key = JSON.stringify([geo, st, look, textScale(), look === "px" && !!pixelArt(), world.level | 0, fit.hudGen ? fit.hudGen() : 0]);
       if (shown && key === last && !rec) return; // under the probe (tools/ui/shots.mjs only) a PLAY frame repaints, so the text-hidden twin is real
       const h = fit.hud(1);
@@ -310,9 +532,10 @@ export function createHud() {
       shown = true; last = key;
       const c = h.ctx, q = h.el && h.w ? h.el.width / h.w : 1;
       c.clearRect(0, 0, h.w, h.h);
-      const G = hudGeom(c, geo, st, {w: h.w, h: h.h});
+      const G = hudGeom(c, geo, st, {w: h.w, h: h.h, at: st.tip && st.tip.at});
       if (rec) P.begin("hud", {w: h.w, h: h.h, dpr: q, el: "hud"});
       drawHud(c, G, st, worldTokens(world.level), {px: look === "px", q, look, rec});
+      dockPause(G, geo);
     },
   };
 }

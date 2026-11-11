@@ -5,7 +5,7 @@ import {
   drawItems, drawEnemies, drawPlayer, drawPlayerBody, drawBombs, drawBlades, drawGhost, drawLanes
 } from "./sprites.js";
 import {onEvent, updateFx, drawFx, drawBursts, drawFxOverlay, drawPickupFx, feedFx, getShake, getFlash, getFx, getFxOpts, initFx, syncFx} from "./fx.js";
-import {drawOverlay, overlayBox, drawCoach, drawCoach2} from "./scenes.js";
+import {drawOverlay, overlayBox, drawCoach, drawCoach2, boardTip} from "./scenes.js";
 import {PROJ, project} from "./r3d/camera.js";
 import {wellBoard, stageGlow} from "./frame.js";
 import {drawDepth} from "./depth2d.js";
@@ -182,7 +182,7 @@ export function createRenderer(canvas, opts={}){
        the fade alpha precomputed in main.js from coachOpen(...) + COACH_DUR
        + world.state==="PLAY" (0 when closed), never re-derived here. */
     if(o&&o.hud===true) drawCoach(ctx, (o&&o.coach)||0);
-    if(o&&o.hud===true) drawCoach2(ctx, (o&&o.coach2&&o.coach2.a)||0, (o&&o.coach2&&o.coach2.s)||"");
+    if(o&&o.hud===true) drawCoach2(ctx, boardTip(o&&o.coach2), (o&&o.coach2&&o.coach2.s)||"");
   }
   const surface={canvas, ctx, render, consumeEvents, getShake};
   Object.defineProperties(surface,{

@@ -386,7 +386,8 @@ check("hasTouch({ontouchstart:null}) true", hasTouch({ontouchstart:null})===true
     let ok;
     if(l==="l"){
       const gut=(W-sw)/2;
-      ok=gut>=lPadG+padW&&gut>=lBombG+bombW&&gut>=lPillG+pillW
+      const lPadW=num(/width:(\d+)px/,lay("l","tpad"))||padW;
+      ok=gut>=lPadG+lPadW&&lPadW>=152&&gut>=lBombG+bombW&&gut>=lPillG+pillW
         &&sh>=lPillT+pillW+lBombB+bombW&&(H+sh)/2-lPadB-padW>=0
         &&gut>=lRemG+actW&&lRemG>=lThrG+actW+8&&lThrB===lRemB&&lThrB>=lBombB+bombW+8
         &&sh-lPillT-pillW-8>=lThrB+actW&&base("tthrow").includes("width:"+actW+"px")&&base("tremote").includes("width:"+actW+"px");

@@ -10,6 +10,10 @@ import { CFG, T, key } from "../src/core/config.js";
 import { createGame } from "../src/main.js";
 import { SCREEN, PAUSE_ITEMS } from "../src/app/menuapp.js";
 import * as md from "../src/render/menudraw.js";
+import { drawHud, hudGeom, hudState } from "../src/render/hud.js";
+import { hudGeo } from "../src/app/fit.js";
+import { worldTokens } from "../src/render/kit/tokens.js";
+import { rec as hrec } from "./lib/textrec.mjs";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
@@ -322,14 +326,20 @@ function fakeCanvasTexts() {
   const ls = memStore([["nb.coach.v1", "1"]]);
   globalThis.window = { localStorage: ls, addEventListener() {} };
   try {
-    const { texts, canvas } = fakeCanvasTexts();
+    /* the tile tip is the HUD's since UI upgrade Task 8.3 (hud.js, beside the board on a leader): texts collects what the HUD paints each
+       frame (its own painter on a recorder, fed the renderer's render options, desktop 1366x768: the tip's name is a line of its own), board
+       what the board canvas paints */
+    const { texts: board, canvas } = fakeCanvasTexts(), texts = [], HG = hudGeo(1366, 768, 600, 520, "d");
     const g = createGame(canvas, { autoplay: true, seed: 4242 });
+    { const r0 = g.renderer, render = r0.render.bind(r0); r0.render = (w, dt, o) => { const out = render(w, dt, o); if (o && o.hud === true) { const R = hrec(), st = hudState(w, o); drawHud(R.ctx, hudGeom(R.ctx, HG, st, { w: 1366, h: 768 }), st, worldTokens(w.level), {}); texts.push(...R.texts.map((q) => q.s)); } return out; }; }
     let t = 1000;
     g.loop(t);
     check("an ordinary run deals gen 3 with a tile layer", g.world.gen === 3 && !!g.world.feat, g.world.gen);
     const put = () => { const k = tileCell(g.world, "BLOOM"), p = g.world.players[0]; p.x = ((k % CFG.COLS) + 0.5) * CFG.TILE; p.y = (((k / CFG.COLS) | 0) + 0.5) * CFG.TILE; p.tx = k % CFG.COLS; p.ty = (k / CFG.COLS) | 0; };
-    const seeTip = () => { put(); texts.length = 0; g.loop((t += 16)); g.loop((t += 16)); return texts.some((s) => s.startsWith("BOOSTER · ")); };
+    const seeTip = () => { put(); texts.length = 0; g.loop((t += 16)); g.loop((t += 16)); return texts.includes("BOOSTER"); };
+    board.length = 0;
     check("the tip paints through the real loop", seeTip(), texts.filter((s) => s.includes("·")).join("|"));
+    check("the board paints no tile tip: the HUD has it", !board.some((s) => s.startsWith("BOOSTER")), board.filter((s) => s.includes("·")).join("|"));
     // PAUSE RESTART
     g.world.state = "PAUSE"; g.loop((t += 16));
     g.app.pauseCursor = PAUSE_ITEMS.indexOf("RESTART");
@@ -340,7 +350,7 @@ function fakeCanvasTexts() {
     check("mid-tip restart: bit still 0", !coach2Seen(loadCoach2(ls), "BLOOM"));
     texts.length = 0;
     g.loop((t += 16));
-    check("the latch reset on PAUSE RESTART: no carried panel", !texts.some((s) => s.startsWith("BOOSTER · ")), texts.join("|"));
+    check("the latch reset on PAUSE RESTART: no carried panel", !texts.includes("BOOSTER"), texts.join("|"));
     check("and contact opens it again", seeTip());
     // onStart
     g.app.startRun();
@@ -349,7 +359,7 @@ function fakeCanvasTexts() {
     const p = g.world.players[0];
     p.tx = 1; p.ty = 1; p.x = 1.5 * CFG.TILE; p.y = 1.5 * CFG.TILE;
     g.loop((t += 16));
-    check("the latch reset on MENU START (onStart)", !texts.some((s) => s.startsWith("BOOSTER · ")), texts.join("|"));
+    check("the latch reset on MENU START (onStart)", !texts.includes("BOOSTER"), texts.join("|"));
     // the sim's LOSE retry, which never calls onStart
     check("contact before a LOSE retry", seeTip());
     g.world.state = "LOSE";
@@ -358,7 +368,7 @@ function fakeCanvasTexts() {
     { const q = g.world.players[0]; q.tx = 1; q.ty = 1; q.x = 1.5 * CFG.TILE; q.y = 1.5 * CFG.TILE; }
     texts.length = 0;
     g.loop((t += 16));
-    check("the latch reset on a LOSE retry", !texts.some((s) => s.startsWith("BOOSTER · ")), texts.join("|"));
+    check("the latch reset on a LOSE retry", !texts.includes("BOOSTER"), texts.join("|"));
     // the window closes through the real loop and marks the bit
     check("contact after a retry reopens", seeTip());
     for (let i = 0; i < 480 && !coach2Seen(loadCoach2(ls), "BLOOM"); i++) g.loop((t += 16));

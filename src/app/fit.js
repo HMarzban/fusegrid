@@ -80,7 +80,7 @@ import { hasTouch } from "../touch.js";
 export const HUD_RES = Object.freeze({
   d: Object.freeze({ top: 106, bot: 57, air: 9, ring: 10, box: 74, gap: 8, bar: 42, tip: Object.freeze({ gap: 30, edge: 22, min: 220, max: 360, card: 184 }) }),
   p: Object.freeze({ top: 164, air: 12, ring: 10, box: 126, gap: 10, bar: 38, side: 12 }),
-  l: Object.freeze({ edge: 8, gap: 12, pad: 128, act: 142 }),
+  l: Object.freeze({ edge: 8, gap: 12, pad: 152, padR: 8, act: 142, bomb: Object.freeze([40, 10, 72]), thr: Object.freeze([40, 90, 52]), rem: Object.freeze([100, 90, 52]) }),
 });
 
 export const FIT_RES = Object.freeze({ d: [40, 163], p: [16, 396], l: [332, 16] });
@@ -120,8 +120,9 @@ export function portraitGeo(W, H, cw, ch, game) {
 /* The HUD's slots in viewport CSS px (null off GAME on p, where no HUD shows). stage: the board's CSS box. d: plate = the
    chip plate's box (its ring and drop outside it, above the stage), bar = the power-ups bar, tip = the tile tip's column
    right of the board (y0..y1 the room it may take; null when the window is too narrow), kept above the analytics card's
-   corner. p: plate, band (bar on top, tip at its foot) and ctl (the controls' band). l: left and right gutter columns from
-   the viewport's top, above the pad (left) and above THROW / REMOTE and the bomb (right; the PAUSE key heads it). */
+   corner. p: plate, band (bar on top, tip at its foot), ctl (the controls' band) and strip (stripGeo in viewport px: the D-PAD box with
+   its key size, BOMB, THROW, REMOTE). l: left and right gutter columns from the viewport's top, above the pad (left) and above THROW /
+   REMOTE and the bomb (right; the PAUSE key heads it), and strip (the gutter controls index.html places with HUD_RES.l's numbers). */
 export function hudGeo(W, H, cw, ch, lay, game) {
   const { s } = fitBox(W, H, lay !== "d", cw, ch), sw = cw * s, sh = ch * s, sx = (W - sw) / 2, R = (x, y, w, h) => ({ x, y, w, h });
   if (lay === "d") {
@@ -133,12 +134,15 @@ export function hudGeo(W, H, cw, ch, lay, game) {
   if (lay === "p") {
     if (!game) return null;
     const P = HUD_RES.p, g = portraitGeo(W, H, cw, ch, true), sy = g.top, sb = sy + sh, ct = sb + g.padTop;
+    const a = stripGeo(W, H, cw, ch), sr = sx + sw, k = (o) => R(sr - o.r - o.w, sb + o.t, o.w, o.h);
     return { lay, s, stage: R(sx, sy, sw, sh), plate: R(P.side + P.ring, P.air + P.ring, W - 2 * (P.side + P.ring), P.box),
-      band: R(P.side, sb + P.gap, W - 2 * P.side, ct - 8 - sb - P.gap), ctl: R(0, ct, W, g.pad) };
+      band: R(P.side, sb + P.gap, W - 2 * P.side, ct - 8 - sb - P.gap), ctl: R(0, ct, W, g.pad),
+      strip: { pad: { ...R(sx + a.pad.l, sb + a.pad.t, a.pad.s, a.pad.s), key: a.pad.key, gap: a.pad.gap }, bomb: k(a.bomb), thr: k(a.thr), rem: k(a.rem) } };
   }
-  const L = HUD_RES.l, sy = (H - sh) / 2, rx = sx + sw + L.gap;
+  const L = HUD_RES.l, sy = (H - sh) / 2, rx = sx + sw + L.gap, sb = sy + sh, sr = sx + sw, k = ([l, b, w]) => R(sr + l, sb - b - w, w, w);
   return { lay, s, stage: R(sx, sy, sw, sh), left: R(L.edge, L.edge, sx - L.gap - L.edge, sy + sh - L.pad - 8 - L.edge),
-    right: R(rx, L.edge, W - L.edge - rx, sy + sh - L.act - 8 - L.edge) };
+    right: R(rx, L.edge, W - L.edge - rx, sy + sh - L.act - 8 - L.edge),
+    strip: { pad: { ...R(sx - L.padR - L.pad, sb - L.pad, L.pad, L.pad), key: Math.floor((L.pad - 2 * STRIP.gap) / 3), gap: STRIP.gap }, bomb: k(L.bomb), thr: k(L.thr), rem: k(L.rem) } };
 }
 
 /* the right / bottom reach of the stage and its HUD rows (the plate's ring, the bar), never the tip's column: the analytics

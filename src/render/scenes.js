@@ -2,6 +2,7 @@ import { CFG, isFinale, biomeOf } from "../core/config.js";
 import { rr } from "./icons.js";
 import { PROJ } from "./r3d/camera.js";
 import { LABEL, diffTag, speedTag, runParts } from "./words.js";
+import { TILE_NAME } from "../core/feat.js";
 import { abilityList, abilityOrd } from "./fx.js";
 import { drawPause, VEIL as PAUSE_VEIL } from "./pages/pause.js";
 import { hints } from "./hintcopy.js";
@@ -232,6 +233,8 @@ export function drawCoach(c, alpha) {
    re-derives it, exactly as it never re-derives COACH_DUR. A fade and nothing
    else — no blink, no scale-pop, no colour cycling — so REDUCE FLASH players
    get the same panel rather than no panel. */
+/* the board's share of coach v2: every tip but a floor tile's, which the HUD draws beside the board on a leader (hud.js, UI upgrade Task 8.3) */
+export const boardTip = (c2) => (c2 && c2.a > 0 && !(c2.k === "BRAKE" || (c2.k && TILE_NAME[c2.k])) ? c2.a : 0);
 export function drawCoach2(c, alpha, text) {
   if (!(alpha > 0) || !text) return;
   const s = String(text);

@@ -396,7 +396,7 @@ const HUD_W = {
     );
   }
   const main = readFileSync("src/main.js", "utf8"), hl = (main.match(/.*hud\.frame\(.*/) || [""])[0];
-  check("main hands the HUD the frame's render options (o.time) in GAME", /hud\.frame\(fit, app\.screen === SCREEN\.GAME \? world : null, ro, curKind\)/.test(hl) && /time: \{ on: !!app\.timeAttack, t: roomT/.test(main), hl.trim());
+  check("main hands the HUD the frame's render options (o.time) in GAME", /hud\.frame\(fit, app\.screen === SCREEN\.GAME \? world : null, ro, curKind, \{ proj: renderer\.proj, cam \}\)/.test(hl) && /time: \{ on: !!app\.timeAttack, t: roomT/.test(main), hl.trim());
 }
 
 /* ---- SELF-REVIEW PIN A: the stopwatch is roomT, NOT world.time.
@@ -405,14 +405,18 @@ const HUD_W = {
    climbing through a pause. This pin fails if anyone ever "simplifies" roomT
    back to world.time, because it asserts the two clocks DISAGREE. ---- */
 {
-  /* the TIME chip is on #hud (hud.js, UI upgrade Task 8.2) and reads fmtTime(o.time.t) from the frame's render options (hudState): the stamp is
-     the TIME the HUD is handed, read off the renderer's own render call */
+  /* the TIME chip is on #hud (hud.js, UI upgrade Task 8.2): the stamp is the TIME the HUD paints (its own painter on a recorder, fed the
+     renderer's render options; the digits sit in fixed cells, one fillText each, inside the TIME chip) */
   const { c: rc } = rec();
   const fake = { getContext: () => rc, addEventListener() {}, style: {} };
   const g = createGame(fake, { autoplay: true, seed: 41 });
   let last = null;
   const r0 = g.renderer, render = r0.render.bind(r0);
-  r0.render = (w, dt, o) => { if (o && o.hud === true) last = hudState(w, o).time; return render(w, dt, o); };
+  const HG = hudGeo(1366, 768, 600, 520, "d");
+  r0.render = (w, dt, o) => {
+    if (o && o.hud === true) { const R = krec(), st = hudState(w, o), G = hudGeom(R.ctx, HG, st, { w: 1366, h: 768 }), c = G.chips.time; drawHud(R.ctx, G, st, worldTokens(w.level), {}); last = R.texts.filter((q) => /^800 /.test(q.font) && q.y >= c.y && q.y <= c.y + c.h && q.x >= c.x && q.x <= c.x + c.w).map((q) => q.s).join(""); }
+    return render(w, dt, o);
+  };
   const loop = (t) => { g.loop(t); };
   /* app.timeAttack is added for real in Task 4; ro.time reads !!app.timeAttack
      dynamically, so setting it here is exactly what the shipped toggle will do

@@ -98,7 +98,7 @@ const UIRESET = "(()=>{const u=window.__GAME__.ui;if(u){u.on(false);u.on(true);}
 const NOTEXT = (on) => `(window.__uiNoText=${on},import('/src/render/kit/cache.js').then((m)=>{m.invalidate('notext');return true;}))`;
 /* the hud screen: every power held (THROW and REMOTE among them), the player made safe and set on the room's first floor tile, so coach v2's
    tile tip opens once the ghost coach's 3 s are up (shots.mjs steps the screen's settle, 3.6 s) */
-const HUD_RUN = `(()=>{const G=window.__GAME__.G,p=G.players[0];Object.assign(p,{shield:true,kick:true,throw:true,remote:true,bombKind:'line',iFrames:99});const f=G.feat||{};let k=null;for(const q in f)if(f[q]){k=+q;break;}if(k!=null){p.x=(k%15+0.5)*40;p.y=(Math.floor(k/15)+0.5)*40;}return k;})()`;
+const HUD_RUN = `(()=>{const G=window.__GAME__.G,p=G.players[0];Object.assign(p,{shield:true,kick:true,throw:true,remote:true,bombKind:'line',iFrames:99});const f=G.feat||{};let k=null;for(const q in f)if(f[q]){k=+q;break;}if(k!=null){p.tx=k%15;p.ty=Math.floor(k/15);p.x=(p.tx+0.5)*40;p.y=(p.ty+0.5)*40;}return k;})()`;
 const LOSE = `(()=>{const G=window.__GAME__.G,p=G.players[0];G.lives=1;p.iFrames=0;p.shield=false;G.bombs.push({x:p.x,y:p.y,tx:Math.floor(p.x/40),ty:Math.floor(p.y/40),timer:0.05,radius:1,variant:'normal',dead:false});return true;})()`;
 const TWIN_MS = 1000 / 30;
 /* a standard-mapping controller in slot 0 (headless Chrome has none), no button down, for the CONTROLS frames that need one; false takes it away */

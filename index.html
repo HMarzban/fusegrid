@@ -127,11 +127,17 @@
   body[data-lay=p] #tbomb canvas{width:calc(var(--tbh,78px)*4/9);height:calc(var(--tbh,78px)*4/9)}
   body[data-lay=p] #tthrow{top:calc(100% + var(--ttht,26px));bottom:auto;right:var(--tthr,77px);width:var(--taw,61px);height:var(--tah,52px)}
   body[data-lay=p] #tremote{top:calc(100% + var(--tret,26px));bottom:auto;right:var(--trem,16px);width:var(--taw,61px);height:var(--tah,52px)}
-  body[data-lay=l] #tpad{left:auto;right:calc(100% + 22px);bottom:0}
+  body[data-lay=l] #tpad{left:auto;right:calc(100% + 8px);bottom:0;width:152px;height:152px}
   body[data-lay=l] #tbomb{right:auto;left:calc(100% + 40px);bottom:10px}
   body[data-lay=l] #tthrow{right:auto;left:calc(100% + 40px);bottom:90px}
   body[data-lay=l] #tremote{right:auto;left:calc(100% + 100px);bottom:90px}
   body[data-lay=l] #tpause{right:auto;bottom:auto;left:calc(100% + 54px);top:0}
+  /* the round 5 touch strip (UI upgrade Task 8.3): the HUD canvas paints the keys (D-PAD keys round a well, THROW / REMOTE, the yellow BOMB,
+     PAUSE in the HUD), so on a touch layout these are transparent hit areas over them; #tpause is docked on its painted key by the HUD */
+  body[data-lay=p] #touchpad>div,body[data-lay=l] #touchpad>div{background:transparent;border:0;opacity:1;border-radius:6px}
+  body[data-lay=p] #touchpad>div:active,body[data-lay=l] #touchpad>div:active{background:rgba(255,242,223,.16)}
+  body[data-lay=p] #touchpad>div>*,body[data-lay=l] #touchpad>div>*{visibility:hidden}
+  body[data-lay=p] #tpause::before,body[data-lay=p] #tpause::after,body[data-lay=l] #tpause::before,body[data-lay=l] #tpause::after{content:none}
   /* world-1 (JUNGLE) kit tokens as custom properties: the DOM cards cannot import render/kit at boot, so these are static and
      tests/hidden-css.test.mjs pins every value equal to worldTokens(1) in src/render/kit/tokens.js (frame = wall, the flat stand-in) */
   :root{--k-pane:#04160d;--k-well:#051709;--k-key:#34270c;--k-hover:#139516;--k-band:#524b27;--k-lit:#87f674;--k-frame:#d4a030;

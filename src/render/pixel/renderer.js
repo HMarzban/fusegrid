@@ -45,7 +45,7 @@
    so main's shell path never throws. */
 import {CFG, biomeOf} from "../../core/config.js";
 import {sfxOf} from "../../audio/item.js";
-import {drawOverlay, overlayBox, drawCoach, drawCoach2} from "../scenes.js";
+import {drawOverlay, overlayBox, drawCoach, drawCoach2, boardTip} from "../scenes.js";
 import {onEvent, updateFx, getShake as fxShake, getFlash, getFx, feedFx, drawFxOverlay, drawPickupFx, syncFx, initFx} from "../fx.js";
 import {createAtlas, atlasBuilder} from "./atlas.js";
 import {setPixelArt, hudIcon} from "../hudart.js";
@@ -270,7 +270,7 @@ export function createPixelRenderer(pxCanvas, overlayCanvas, opts = {}) {
     if (o && o.hud === true && world.state === "PLAY") drawFxOverlay(ovCtx);
     if (o && o.hud === true && world.state === "PLAY") drawPickupFx(ovCtx, {coach: o.coach2, ico: hudIco});
     if (o && o.hud === true) drawCoach(ovCtx, (o && o.coach) || 0);
-    if (o && o.hud === true) drawCoach2(ovCtx, (o && o.coach2 && o.coach2.a) || 0, (o && o.coach2 && o.coach2.s) || "");
+    if (o && o.hud === true) drawCoach2(ovCtx, boardTip(o && o.coach2), (o && o.coach2 && o.coach2.s) || "");
   }
 
   if (opts.perf) setPerf(opts.perf);

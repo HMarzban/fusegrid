@@ -32,7 +32,7 @@ test("an ATTRACT frame draws no HUD chips: no board frame does (the HUD is #hud,
   assert.deepEqual(g, a);
   assert.ok(!g.some((l) => /^fillText\((LIVES|BOMBS?|FLAME|LV|LEVEL|ENEMIES|SCORE),/.test(l)));
   const src = readFileSync(new URL("../src/main.js", import.meta.url), "utf8");
-  assert.match(src, /hud\.frame\(fit, app\.screen === SCREEN\.GAME \? world : null, ro, curKind\)/);
+  assert.match(src, /hud\.frame\(fit, app\.screen === SCREEN\.GAME \? world : null, ro, curKind, \{ proj: renderer\.proj, cam \}\)/);
   setFxOpts({ partK: 1 });
 });
 test("main.js hands amb:true to the ATTRACT frame only", () => {

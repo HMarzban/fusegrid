@@ -17,7 +17,7 @@ import { hints, setHints } from "../src/render/hintcopy.js";
 const W0 = (o = {}) => ({ state: "PLAY", lives: 3, level: 3, heat: 0, score: 1240, enemies: [1, 2, 3, 4], players: [{ bombs: 2, range: 3, speed: 0 }], ...o });
 const ALL = { shield: true, kick: true, throw: true, passing: true, bombKind: "pierce", remote: true, speed: 999 };
 const LONG = (o = {}) => W0({ lives: 9, heat: 2, score: 1234567, enemies: Array.from({ length: 12 }, (_, i) => i), players: [{ bombs: 8, range: 8, ...ALL }], ...o });
-const BOXES = [["d", 1366, 768], ["d", 1366, 657], ["d", 1280, 720], ["d", 1024, 768], ["d", 1920, 1080], ["d", 1024, 640], ["p", 393, 852], ["p", 375, 667], ["p", 430, 932], ["l", 844, 390], ["l", 667, 375], ["l", 932, 430]];
+const BOXES = [["d", 1366, 768], ["d", 1366, 657], ["d", 1280, 720], ["d", 1024, 768], ["d", 1920, 1080], ["d", 1024, 640], ["p", 393, 852], ["p", 375, 667], ["p", 430, 932], ["l", 844, 390], ["l", 667, 375], ["l", 932, 430], ["l", 1024, 600], ["l", 800, 600]];
 const geoOf = (lay, W, H) => hudGeo(W, H, 600, 520, lay, true);
 const paint = (lay, W, H, world, o = {}) => {
   const r = rec(o.rec || {}), geo = geoOf(lay, W, H), st = hudState(world, { time: { t: o.t ?? 31.4 } }), G = hudGeom(r.ctx, geo, st, { w: W, h: H });
@@ -71,6 +71,10 @@ test("HUD values at the HUD size: cap >= 18 desktop, >= 11 phone, at text scale 
         assert.ok(all.every((q) => q.x >= 0 && q.y >= 0 && q.x + q.w <= W + 0.5 && q.y + q.h <= H + 0.5), `${lay} ${W}x${H} @${k}: in the viewport`);
         assert.ok(all.every((q) => off(q, geo.stage)), `${lay} ${W}x${H} @${k}: nothing on the board`);
         if (G.bar) assert.ok(G.bar.items.every((q) => inside(q, G.bar)), `${lay} ${W}x${H} @${k}: power-ups inside the bar`);
+        if (G.bar && G.bar.px) for (const t of r.texts.filter((q) => /^700 /.test(q.font) && G.bar.items.some((b) => q.y >= b.y && q.y <= b.y + b.h && q.x >= b.x && q.x < b.x + b.w) && /^[A-Z]{3,}/.test(q.s))) {
+          const px = +/(\d+(?:\.\d+)?)px/.exec(t.font)[1], cap = t.s.length <= 2 || /^(E|Q|WEST|EAST|NORTH|SOUTH)$/.test(t.s) ? (lay === "d" ? 11 : 9) : (lay === "d" ? 14 : 11);
+          assert.ok(px * CAPR.label >= cap - 0.05, `${lay} ${W}x${H} @${k}: power-up word ${t.s} at ${px}px`);
+        }
         if (lay === "d") assert.ok(G.plate.y + G.plate.h + HUD.d.ring <= geo.stage.y + 1e-6 && (!G.bar || G.bar.y >= geo.stage.y + geo.stage.h), `${lay} ${W}x${H}: chips above, power-ups below`);
       }
     } finally { setTextScale(1); }
@@ -122,11 +126,12 @@ test("the pulse: a changed BOMBS value rings its chip for the pulse time, then n
   initFx();
 });
 
-test("no yellow part: #ffd447 appears only as a glyph's own accent (a flame tongue, a fuse spark), never a chip, plate or bar fill", () => {
+test("one yellow part at most: the phone strip's BOMB key; elsewhere #ffd447 is only a glyph's own accent (a flame tongue, a fuse spark)", () => {
   for (const [lay, W, H] of BOXES) {
-    const { r, G } = paint(lay, W, H, LONG()), parts = [...Object.values(G.chips), ...(G.bar ? G.bar.items : [])];
-    const y = r.paints.filter((q) => /ffd447/i.test(String(q.style)));
-    assert.ok(y.every((q) => q.box && q.box.w <= 26 && q.box.h <= 26 && parts.some((c) => inside(q.box, c))), lay + " " + W + " " + JSON.stringify(y.find((q) => !(q.box && q.box.w <= 26)) || null));
+    const { r, G } = paint(lay, W, H, LONG()), parts = [...Object.values(G.chips), ...(G.bar ? G.bar.items : []), ...(G.strip ? [G.strip.thr, G.strip.rem] : [])], bomb = G.strip && G.strip.bomb;
+    const y = r.paints.filter((q) => /ffd447/i.test(String(q.style))), big = y.filter((q) => q.box && (q.box.w > 26 || q.box.h > 26));
+    assert.ok(y.every((q) => q.box && (bomb && inside(q.box, bomb) || q.box.w <= 26 && q.box.h <= 26 && parts.some((c) => inside(q.box, c)))), lay + " " + W + " " + JSON.stringify(y.find((q) => !(q.box && q.box.w <= 26)) || null));
+    assert.equal(big.length, bomb ? 1 : 0, lay + " " + W + ": the touch strip's BOMB is the one yellow part, the desktop HUD has none");
   }
 });
 
@@ -220,4 +225,4 @@ test("the HUD painter's call log is pinned (the CLASSIC hash no longer covers th
   for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
   assert.equal(h.toString(16).padStart(8, "0") + ":" + r.paints.length, HUD_PIN);
 });
-const HUD_PIN = "c9343aa8:2906"; // the HUD painter (LONG world, 1366x768, CLASSIC glyphs); a change here is a HUD art change, re-pinned by ruling like the CLASSIC hash
+const HUD_PIN = "76fe60be:2906"; // the HUD painter (LONG world, 1366x768, CLASSIC glyphs); a change here is a HUD art change, re-pinned by ruling like the CLASSIC hash
