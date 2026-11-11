@@ -127,7 +127,7 @@
   body[data-lay=l] #tpause{right:auto;bottom:auto;left:calc(100% + 54px);top:0}
   /* world-1 (JUNGLE) kit tokens as custom properties: the DOM cards cannot import render/kit at boot, so these are static and
      tests/hidden-css.test.mjs pins every value equal to worldTokens(1) in src/render/kit/tokens.js (frame = wall, the flat stand-in) */
-  :root{--k-pane:#04160d;--k-well:#051709;--k-key:#34270c;--k-keyhi:rgba(255,232,120,0.22);--k-band:#524b27;--k-lit:#87f674;--k-frame:#d4a030;
+  :root{--k-pane:#04160d;--k-well:#051709;--k-key:#34270c;--k-hover:#139516;--k-band:#524b27;--k-lit:#87f674;--k-frame:#d4a030;
     --k-ink:#fff2df;--k-off:#8f8476;--k-dk:#1e1216;--k-cor:#ff5d73}
   /* NEW VERSION READY card (src/app/update.js): the CONSOLE PANEL plate as a
      DOM card, centred on the screen (owner 2026-10-19: "must appear in center
@@ -151,7 +151,7 @@
   #upd .later{font:12px ui-monospace,monospace;color:var(--k-off);letter-spacing:.06em;padding:0 12px;line-height:40px;cursor:pointer}
   #upd .later kbd{display:none;margin-left:8px}
   #upd[data-pad="1"] kbd{display:inline}
-  #upd .go:hover{background:var(--k-keyhi)}#upd .later:hover{color:var(--k-ink)}
+  #upd .go:hover{background:var(--k-hover)}#upd .later:hover{color:var(--k-ink)}
   /* consent card (src/app/analytics.js): the same plate, small, docked bottom
      right with no backdrop, so the game plays on behind it (owner 2026-10-26);
      ALLOW and NO THANKS carry equal weight — one size, one border, one fill.
@@ -166,7 +166,7 @@
   #ana i{flex-basis:100%;margin-top:-4px;font:400 11px/1.45 ui-monospace,monospace;font-style:normal;color:var(--k-off);letter-spacing:0}
   #ana .yes,#ana .no{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;height:34px;padding:0 8px;border:1px solid var(--k-frame);
     border-radius:4px;background:var(--k-band);color:var(--k-ink);font-size:12px;letter-spacing:.1em;cursor:pointer;white-space:nowrap}
-  #ana .yes:hover,#ana .no:hover{background:var(--k-keyhi)}
+  #ana .yes:hover,#ana .no:hover{background:var(--k-hover)}
   #ana a{color:var(--k-ink)}
   /* an author display:flex beats the UA [hidden] rule, so each card needs its own:
      without it the NEW VERSION card and the consent card never hide */
@@ -222,7 +222,7 @@
   #loadact[hidden]{display:none}
   #loadact button{flex:1;height:44px;padding:0 10px;border:1px solid var(--k-frame);border-radius:4px;background:var(--k-band);color:var(--k-ink);
     font:700 13px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.06em;white-space:nowrap;cursor:pointer}
-  #loadact button:hover{background:var(--k-keyhi)}
+  #loadact button:hover{background:var(--k-hover)}
   #loadact button:focus-visible{outline:2px solid var(--k-ink);outline-offset:2px}
   #loadkeep[hidden]{display:none}
   /* reduced motion: no glint and no glide; a wait with no number keeps a still striped track, never an empty one */

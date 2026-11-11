@@ -42,7 +42,7 @@ const { worldTokens } = await import("../src/render/kit/tokens.js");
 const T = worldTokens(1), root = /:root\{([^}]*--k-[^}]*)\}/.exec(css);
 const K = {};
 if (root) for (const m of root[1].matchAll(/--k-([\w]+):([^;}]+)/g)) K[m[1]] = m[2].trim();
-const WANT = { pane: T.pane, well: T.well, key: T.key, keyhi: T.keyhi, band: T.band, lit: T.lit, frame: T.frame, ink: T.ink, off: T.off, dk: T.dk, cor: T.cor };
+const WANT = { pane: T.pane, well: T.well, key: T.key, hover: T.lip, band: T.band, lit: T.lit, frame: T.frame, ink: T.ink, off: T.off, dk: T.dk, cor: T.cor };
 for (const [k, v] of Object.entries(WANT)) check("--k-" + k + " equals worldTokens(1)." + k, K[k] === v, K[k] + " vs " + v);
 const rules = (re) => [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].filter((m) => re.test(m[1].trim())).map((m) => m[2]);
 const cards = css.slice(css.indexOf("#upd{"), css.indexOf(".muted{"));
@@ -53,6 +53,8 @@ check("on touch they are one rule too, 44px", /body\[data-lay=p\] #ana \.yes,bod
 const upd = readFileSync(new URL("../src/app/update.js", import.meta.url), "utf8"), ana = readFileSync(new URL("../src/app/analytics.js", import.meta.url), "utf8");
 check("label first, keycap last on RELOAD, LATER, ALLOW, NO THANKS", /RELOAD <kbd>U<\/kbd>/.test(upd) && /LATER <kbd>EAST<\/kbd>/.test(upd) && /ALLOW <kbd>Y<\/kbd>/.test(ana) && /NO THANKS <kbd>N<\/kbd>/.test(ana) && !/<kbd>[^<]*<\/kbd>(RELOAD|LATER|ALLOW|NO THANKS)/.test(upd + ana));
 const { LABEL } = await import("../src/render/words.js");
+const { lum } = await import("../src/render/kit/tokens.js");
+check("hover fill is visibly lighter than the resting band", lum(K.hover) > 2 * lum(K.band) && !/--k-keyhi/.test(css), lum(K.hover) + " vs " + lum(K.band));
 const loadjs = html.slice(html.indexOf('id="loadjs"'), html.indexOf("</script>", html.indexOf('id="loadjs"')));
 check("the load failure copy names ART STYLE (the player word)", loadjs.includes(LABEL.ART_STYLE + " IN SETTINGS") && loadjs.includes(LABEL.ART_STYLE + " IS IN SETTINGS"));
 check("#updbg blurs through CSS on a DOM element, not a canvas", /#updbg\{[^}]*backdrop-filter:blur/.test(css));
