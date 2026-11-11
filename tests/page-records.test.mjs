@@ -71,7 +71,7 @@ function frame(F, ui, o = {}) {
 }
 const snap = (F, ui) => { probe.setOn(true); const f = frame(F, ui); const s = probe.snapshot(); probe.setOn(false); return { ...f, s }; };
 /* a paged tab (fix round 1b) read over every page: one probe snapshot per page, in page order */
-const pagesOf = (F, ui) => Array.from({ length: RP.recPages(F, ui.page) }, (_, p) => snap(F, { ...ui, spage: p }).s);
+const pagesOf = (F, ui) => Array.from({ length: RP.recPages(F, ui.page, (ui.scores || []).length) }, (_, p) => snap(F, { ...ui, spage: p }).s);
 
 /* ---- the frame: the mock's metrics (round 7 S7-pages d-08-records-stats: plate 980 wide centred, tabs 150 x 36 in the trough, the foot under it) ---- */
 {
@@ -130,6 +130,7 @@ for (const b of ["d1366", "p393", "c600"]) {
 }
 
 /* ---- SCORES: the table, the modifiers count (R10), the badges, the empty state; the longest strings whole at 1 and 1.25 ---- */
+const PIN_SHORT = { "p393 t125": [2] }, SHORT_DATES = {}; // box (+ t125) -> the stacked rows whose date stepped down to MM-DD (pinned: fix round 1b review)
 for (const b of ALL) for (const ts of [1, 1.25]) {
   setTextScale(ts);
   const F = BOX[b], G = RP.recordsGeom(F), Ps = pagesOf(F, UI({ focus: "body", heat: 2 })), s = Ps[0], T = Ps.flatMap((q) => q.texts), B = G.d.bodies.scores, u = G.u;
@@ -143,9 +144,12 @@ for (const b of ALL) for (const ts of [1, 1.25]) {
   check(`SCORES strings whole (${b}${ts > 1 ? " t125" : ""}): ten 7-digit scores, every table cell inside the table and every text inside the plate (or the foot); no ellipsis; the columns never overlap`,
     scoresTx.length === 10 && tbl.every((t) => inside(t, rowsBox, 0.6)) && allIn && !T.some((t) => /…/.test(t.s)) && noOverlap, J({ n: scoresTx.length, out: tbl.filter((t) => !inside(t, rowsBox, 0.6)).slice(0, 3), level: plan.level }));
   check(`SCORES modifiers (${b}${ts > 1 ? " t125" : ""}): a count by words.js modsCount (4 MODIFIERS, 1 MODIFIER; — for none in a column, a bare count where it steps down; a narrow table's second line names them, NO MODIFIERS, then the full date, or its month and day where a page at full size cannot hold the year: fix round 1b), never the old L/B/T/S letters`,
+    (plan.stack && modsTx.forEach((t, i) => { if (t.s.split(" · ")[1] === LONG[i].d.slice(5)) (SHORT_DATES[b + (ts > 1 ? " t125" : "")] ||= []).push(i); }), true) &&
     modsTx.length === 10 && (plan.stack ? J(modsTx.map((t) => t.s.split(" · ")[0])) === J(["4 MODIFIERS", "1 MODIFIER", "NO MODIFIERS", "2 MODIFIERS", "3 MODIFIERS", "1 MODIFIER", "2 MODIFIERS", "1 MODIFIER", "2 MODIFIERS", "4 MODIFIERS"]) && modsTx.every((t, i) => t.s.split(" · ")[1] === LONG[i].d || t.s.split(" · ")[1] === LONG[i].d.slice(5)) : plan.level >= 1 ? modsTx.map((t) => t.s).join() === "4,1,—,2,3,1,2,1,2,4" : modsTx.map((t) => t.s).join() === ["4 MODIFIERS", "1 MODIFIER", "—", "2 MODIFIERS", "3 MODIFIERS", "1 MODIFIER", "2 MODIFIERS", "1 MODIFIER", "2 MODIFIERS", "4 MODIFIERS"].join()) && !T.some((t) => /^[LBTS]+$/.test(t.s)), J(modsTx.map((t) => t.s)));
   setTextScale(1);
 }
+/* the boxes where a full-size page cannot hold a stacked row's year, pinned exactly (every other box keeps the full date) */
+check("SCORES: the date steps down to month and day only on the pinned boxes and rows", J(SHORT_DATES) === J(PIN_SHORT), J(SHORT_DATES));
 {
   const F = BOX.d1366, G = RP.recordsGeom(F), B = G.d.bodies.scores;
   check("desktop: the table keeps its full words (MODIFIERS counts and full dates) at text scale 1", (snap(F, UI({ focus: "body" })), RP._dbg.last.P.scores.table.level === 0));
@@ -545,6 +549,37 @@ for (const b of ALL) for (const ts of [1, 1.25]) {
   n = 1; a.recFocus = 1; const one = a.move(1, 1);
   check("an unpaged tab: ↓ in the body does nothing, ↑ returns to the tabs", one === false && a.recPage === 0 && (a.move(-1, 1), a.recFocus === 0));
 }
+/* page state (fix round 1b review): re-opening RECORDS through the MENU row opens page 0 (not only a tab step), and a resize that unpages or shortens
+   the body clamps the page on the next update */
+{
+  const { createMenuApp, ITEMS: IT } = await import("../src/app/menuapp.js");
+  let n = 3;
+  const a = createMenuApp({ recPages: () => n, onStats() {} });
+  a.screen = SCREEN.MENU; a.cursor = IT.indexOf("RECORDS"); a.confirm();
+  a.move(1, 1); a.move(1, 1); a.move(1, 1);
+  const deep = [a.screen, a.recFocus, a.recPage];
+  a.key("Escape");
+  const out = a.screen;
+  a.cursor = IT.indexOf("RECORDS"); a.confirm();
+  check("RECORDS re-opened through the MENU row from page 3 opens page 0 on the tab row", J(deep) === J([SCREEN.SCORES, 1, 2]) && out === SCREEN.MENU && a.screen === SCREEN.SCORES && a.recPage === 0 && a.recFocus === 0, J({ deep, out, now: [a.screen, a.recPage] }));
+  a.move(1, 1); a.move(1, 1); a.move(1, 1);
+  n = 2; a.update(0.016);
+  const shorter = a.recPage;
+  n = 1; a.update(0.016);
+  check("a resize that shortens the body clamps the page (3 -> 2 pages: page 2), and one that unpages it opens page 1", shorter === 1 && a.recPage === 0, J({ shorter, now: a.recPage }));
+}
+/* SCORES' pages follow the rows it draws (fix round 1b review): an empty table is one page (no pager, no PAGE 1 OF n), a table that fits one page
+   has no keys, and a full one has exactly the pages its rows fill (never a header-only page) */
+{
+  const PS = shellGeo(375, 667), F = { W: PS.w, H: PS.h, touch: true, shell: true, css: PS.s }, B = RP.recordsGeom(F).d.bodies.scores, per = B.per;
+  const empty = snap(F, UI({ scores: [] })).s, few = snap(F, UI({ scores: LONG.slice(0, per) })).s, mid = (r) => [(r.x + r.w / 2) * RP.recordsGeom(F).u, (r.y + r.h / 2) * RP.recordsGeom(F).u];
+  const noPager = (q) => !q.rects.some((r) => /^PAGE /.test(r.name)) && !q.texts.some((t) => /^PAGE \d/.test(t.s));
+  check(`SCORES on a 375x667 phone (${per} rows a page): an empty table and a ${per}-row table are one page with no page keys and no PAGE 1 OF n; ten rows take ${Math.ceil(10 / per)} pages`,
+    !!B.pager && RP.recPages(F, "scores", 0) === 1 && RP.recPages(F, "scores", per) === 1 && RP.recPages(F, "scores", 10) === Math.ceil(10 / per) && noPager(empty) && noPager(few) &&
+      RP.pageKeyHit(...mid(B.pager.dn), F, "scores", per) === 0 && RP.pageKeyHit(...mid(B.pager.dn), F, "scores", 10) === 1, J({ per, pages: [0, per, 10].map((r) => RP.recPages(F, "scores", r)) }));
+  const last = pagesOf(F, UI({ scores: LONG.slice(0, per + 1) })), rowsOn = last.map((q) => q.texts.filter((t) => /^\d{1,3}(,\d{3})+$/.test(t.s)).length);
+  check("SCORES: every page draws at least one row (one past a page: two pages, the second with its one row)", last.length === 2 && rowsOn[0] === per && rowsOn[1] === 1, J(rowsOn));
+}
 /* SCORES and MEDALS on the small phones page too (fix round 1b): unscaled, every text at the phone floors on every page, ten rows and eight medals
    across the pages, each once; the page keys tap -1 / +1 through pageKeyHit */
 {
@@ -560,7 +595,7 @@ for (const b of ALL) for (const ts of [1, 1.25]) {
       if (items !== (page === "scores" ? 10 : 8)) bad.push([page, "items", items]);
       if (n > 1) {
         const b = G.d.bodies[page].pager, mid = (r) => [(r.x + r.w / 2) * u, (r.y + r.h / 2) * u];
-        if (RP.pageKeyHit(...mid(b.up), F, page) !== -1 || RP.pageKeyHit(...mid(b.dn), F, page) !== 1 || b.up.h * u / u < 43.95) bad.push([page, "keys"]);
+        if (RP.pageKeyHit(...mid(b.up), F, page, 10) !== -1 || RP.pageKeyHit(...mid(b.dn), F, page, 10) !== 1 || b.up.h * u / u < 43.95) bad.push([page, "keys"]);
       }
       rep.push(`${page} ${w}x${h}@${ts}: ${n}`);
     }

@@ -23,7 +23,7 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { unpng } from "../pixel/rgba.mjs";
 import { evaluate, tally, EXEMPTABLE } from "./lib/gatelib.mjs";
-import { SCREENS, parseCapName } from "./lib/screens.mjs";
+import { SCREENS, parseCapName, needFor } from "./lib/screens.mjs";
 
 export function parseArgs(argv) {
   const a = { dir: null, strict: false };
@@ -64,7 +64,7 @@ export function gateDir(a) {
       if (!existsSync(pf)) throw new Error("no PNG " + pf);
       const nt = d.notext ? join(a.dir, d.notext) : null;
       if (nt && !existsSync(nt)) throw new Error("no text-hidden twin " + nt);
-      const need = SCREENS[d.screen] ? (d.flags && d.flags.phone ? SCREENS[d.screen].needPhone : SCREENS[d.screen].need) : EXEMPTABLE, gates = evaluate(d, png(pf), nt ? png(nt) : null, need);
+      const need = SCREENS[d.screen] ? needFor(SCREENS[d.screen], d) : EXEMPTABLE, gates = evaluate(d, png(pf), nt ? png(nt) : null, need);
       screens[base] = { screen: d.screen, flags: d.flags, page: d.ui ? d.ui.page : null, need, gates };
       caps.push({ gates });
     } catch (e) {

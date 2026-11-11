@@ -18,7 +18,9 @@
             declare is skipped ("required, not declared") and fails --strict. Only this tracked table exempts, in review, when a page task instruments
             its page; the page under test cannot exempt itself. MENU (v202 Task 3.1) is the first instrumented screen, LEVEL SELECT (Task 3.3) the second.
      exemptPhone {gate: "reason"}: more exemptions for the .phone captures only (needPhone), on the same rules (RECORDS, v202 fix round 1: a phone
-            capture is tap mode, where the page shows no focus). */
+            capture is tap mode, where the page shows no focus).
+     exemptIfNo {gate: {rect: "regex", why: "reason"}}: the gate is exempt on a capture only where the page's probe recorded no rect whose name
+            matches (needFor): where the part the gate measures is drawn, the gate is required (RECORDS' filled STATS, locked: a locked level). */
 import { EXEMPTABLE } from "./gatelib.mjs";
 
 const ROWS = {
@@ -45,7 +47,7 @@ const ROWS = {
   /* v202 fix round 1: a played-looking cabinet (window.__GAME__.seedRecords(), debug only) for a FILLED SCORES table, badges and a STATS hero; after
      the fresh-profile pages, since the seeded storage stays for the rest of the page load */
   scoresfull: { menu: ["RECORDS"], seed: "records", wait: "records", state: "SCORES", exemptPhone: { ring: "a phone capture is tap mode (touch hints, no controller): the page shows no focus, as LEVEL SELECT (v202 fix round 1)", band: "a phone capture is tap mode: no focus band" }, exempt: { locked: "SCORES shows no locked value: the badges not yet earned are lock tags on a dark chip, not wall cells, and every key is open" } },
-  statsfull: { menu: ["RECORDS"], seed: "records", key: "KeyE", wait: "records", state: "STATS", exemptPhone: { ring: "a phone capture is tap mode (touch hints, no controller): the page shows no focus, as LEVEL SELECT (v202 fix round 1)", band: "a phone capture is tap mode: no focus band" }, exempt: { locked: "declared and measured wherever the course draws a locked level (worlds 1-7 before the first CLEAR); world 8 opens levels 6-8 and the 393 x 852 phone drops the course (its step 2)" } },
+  statsfull: { menu: ["RECORDS"], seed: "records", key: "KeyE", wait: "records", state: "STATS", exemptPhone: { ring: "a phone capture is tap mode (touch hints, no controller): the page shows no focus, as LEVEL SELECT (v202 fix round 1)", band: "a phone capture is tap mode: no focus band" }, exemptIfNo: { locked: { rect: "^level \\d locked$", why: "no locked level drawn: world 8 opens levels 6-8, and a phone at its step 2 or a later STATS page draws no course" } } },
   play: { run: "play", state: "PLAY", settle: 900 },
   pause: { run: "pause", state: "PAUSE", settle: 300 },
   win: { run: "win", state: "WIN", settle: 1800 },
@@ -59,11 +61,19 @@ export function needOf(name, exempt = {}) {
 for (const [n, r] of Object.entries(ROWS)) {
   r.need = needOf(n, r.exempt);
   r.needPhone = r.exemptPhone ? needOf(n, { ...r.exempt, ...r.exemptPhone }) : r.need;
+  for (const [g, c] of Object.entries(r.exemptIfNo || {})) if (!EXEMPTABLE.includes(g) || !c || typeof c.rect !== "string" || !String(c.why || "").trim()) throw new Error("screens: " + n + " exemptIfNo " + g + " wants an EXEMPTABLE gate, a rect pattern and a reason");
   r.exempt = Object.freeze({ ...(r.exempt || {}) });
   if (r.exemptPhone) r.exemptPhone = Object.freeze({ ...r.exemptPhone });
   Object.freeze(r);
 }
 export const SCREENS = Object.freeze(ROWS);
+/* a capture's need: its row's (needPhone on a .phone capture), less each exemptIfNo gate whose part the probe did not record */
+export function needFor(row, d) {
+  let need = d && d.flags && d.flags.phone ? row.needPhone : row.need;
+  const rects = (d && d.ui && d.ui.rects) || [];
+  for (const [g, c] of Object.entries(row.exemptIfNo || {})) { const re = new RegExp(c.rect); if (!rects.some((r) => re.test(r.name || ""))) need = need.filter((x) => x !== g); }
+  return need;
+}
 export const ORDER = Object.freeze(Object.keys(SCREENS));
 export const ALIAS = Object.freeze({ settings: "options" });
 export const LOOKS = Object.freeze(["2d", "px", "3d"]);

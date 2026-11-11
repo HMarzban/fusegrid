@@ -360,12 +360,19 @@ export function statsHit(x, y, F, arm) {
   if (f) return f;
   return onPlate(G, dx, dy) ? "plate" : "back";
 }
-/** A tab's page count on this box (1 where its body fits unpaged): what the app's ↑ / ↓ and the page keys clamp to. page: scores | stats | medals. */
-export function recPages(F, page) { const b = okBox(F) ? recordsGeom(F).d.bodies[page] : null; return (b && b.pager && b.pages) || 1; }
+/* SCORES' pages follow the rows it draws (an empty table is one page, so no PAGE 1 OF n and no header-only page) */
+const scoresPages = (b, rows) => (b && b.pager ? Math.max(1, Math.ceil(Math.max(0, Math.min(10, rows | 0)) / b.per)) : 1);
+/** A tab's page count on this box (1 where its body fits unpaged): what the app's ↑ / ↓ and the page keys clamp to. page: scores | stats | medals;
+    rows: SCORES' rows for the difficulty shown (its pages follow them). */
+export function recPages(F, page, rows) {
+  const b = okBox(F) ? recordsGeom(F).d.bodies[page] : null;
+  if (!b || !b.pager) return 1;
+  return page === "scores" ? scoresPages(b, rows) : b.pages;
+}
 export const statsPages = (F) => recPages(F, "stats");
-/** The page keys under (x, y): -1 (▲), 1 (▼), else 0 (no pager, or off its keys). */
-export function pageKeyHit(x, y, F, page) {
-  if (!okBox(F)) return 0;
+/** The page keys under (x, y): -1 (▲), 1 (▼), else 0 (no pager, or off its keys; SCORES: no keys where its rows fit one page). */
+export function pageKeyHit(x, y, F, page, rows) {
+  if (!okBox(F) || recPages(F, page, rows) < 2) return 0;
   const G = recordsGeom(F), [dx, dy] = toD(G, x, y), b = G.d.bodies[page], q = b && b.pager;
   return !q ? 0 : inR(q.up, dx, dy) ? -1 : inR(q.dn, dx, dy) ? 1 : 0;
 }
@@ -489,7 +496,8 @@ export function plan(c0, G, ui) {
   }
   /* a paged body (fix round 1b): the page shown (ui.spage, clamped), PAGE n OF m and which of ▲ / ▼ has a page to open */
   const bp = d.bodies[ui.page];
-  if (bp && bp.pager) { const n = bp.pages, p = Math.max(0, Math.min(n - 1, ui.spage | 0)); out.pg = {page: p, n, s: RW.PAGE + " " + (p + 1) + " " + RW.OF + " " + n, upOn: p > 0, dnOn: p < n - 1}; }
+  const n0 = bp && bp.pager ? (ui.page === "scores" ? scoresPages(bp, out.scores.n) : bp.pages) : 1; // SCORES: the rows drawn, never a header-only page
+  if (n0 > 1) { const n = n0, p = Math.max(0, Math.min(n - 1, ui.spage | 0)); out.pg = {page: p, n, s: RW.PAGE + " " + (p + 1) + " " + RW.OF + " " + n, upOn: p > 0, dnOn: p < n - 1}; }
   return out;
 }
 
@@ -888,7 +896,7 @@ function record(G, P, ui, foc, dpr, el, F0, tok, touchy, tap) {
       for (const ch of S.digits) { const w = (ch === "," ? Math.round(dv.sdw * 0.6) : dv.sdw) * k; cells.push(R(x, B.digits.y + 2 * k - (ch === "," ? 0 : 2 * k), w, dv.sdh * k)); x += w + 4 * k; }
       cells.forEach((r, i) => { probe.rect("digit " + i, ...b(r), {fill: S.digits[i] === "," ? tok.well : tok.lit}); const w = measureOr(S.digits[i], dv.sdf) * k; txt(S.digits[i], r.x + r.w / 2 - w / 2, r.y + r.h / 2, w, dv.sdf * k, S.digits[i] === "," ? CONST.t2 : CONST.dk, "hud"); });
       const cell = (r) => R(B.course.x + (r - 1) * (dv.lcw + 5) * k, B.course.y + 2 * k, dv.lcw * k, dv.lch * k);
-      if (B.course && S.far) for (let r = 1; r <= 8; r++) probe.rect("level " + r, ...b(cell(r)), {fill: r < S.far ? tok.lit : r === S.far ? tok.key : tok.well});
+      if (B.course && S.far) for (let r = 1; r <= 8; r++) probe.rect("level " + r + (r > S.far && r > 5 && !ui.unlocked ? " locked" : ""), ...b(cell(r)), {fill: r < S.far ? tok.lit : r === S.far ? tok.key : tok.well});
       /* a locked level (a wall cell, 6-8 before the first CLEAR) against the first level (lit or the raised key); its texture against a flat floor: the
          PLAY TIME tile's empty top right (fix round 1: the filled STATS capture draws locked cells) */
       const lk = B.course && S.far && S.on("tiles") ? [6, 7, 8].find((r) => r > S.far && !ui.unlocked) : null;

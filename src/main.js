@@ -263,7 +263,7 @@ export function createGame(canvas, opts = {}) {
   /* GA4, opt-in (src/app/analytics.js): nothing is sent before ALLOW; opens are its page_view */
   const ga = mountAnalytics({ get: () => ({ app, SCREEN, busy: () => upd.shown }), dry: flags.debug, now: () => new Date(), days: loadStats().a.days, look: () => urlKind || (settings.r3d ? "3d" : settings.px ? "px" : "2d"), onChange: (v) => { app.analytics = v; } });
   const app = createMenuApp({
-    recPages: (scr) => recPagesOf(shBox || canvas, curKind, scr), // a RECORDS tab's pages on the box it is drawn on (a small phone pages it, records.js PAGER)
+    recPages: (scr) => recPagesOf(shBox || canvas, curKind, scr, getScoresForHeat(app.scoreHeat).length), // a RECORDS tab's pages on the box it is drawn on (a small phone pages it; SCORES' follow its rows)
     level: 1,
     sound: settings.snd !== 0,
     pactUnlocked: loadPactUnlocked(),
@@ -450,7 +450,7 @@ export function createGame(canvas, opts = {}) {
   };
   input.onPause = onPause;
 
-  if (canvas) mountPointer({ canvas, fit, input, app, world, kind: () => curKind, ctl: () => ctl, hit: { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit, settingsHit, graphicsHit, guideHit, enemiesHit, guideReadHit, levelHit, scoresHit, statsHit, recTabHit, recPageHit, layout: menuLayout } }); // taps on #c and #sh: skip / confirm / play, the PAUSE rows, the C1 fire swallow (src/app/pointer.js)
+  if (canvas) mountPointer({ canvas, fit, input, app, world, kind: () => curKind, ctl: () => ctl, hit: { overlayBox, pauseHit, touchLay, controlsHit, dims, menuHit, settingsHit, graphicsHit, guideHit, enemiesHit, guideReadHit, levelHit, scoresHit, statsHit, recTabHit, recPageHit: (x, y, L, t, pg) => recPageHit(x, y, L, t, pg, getScoresForHeat(app.scoreHeat).length), layout: menuLayout } }); // taps on #c and #sh: skip / confirm / play, the PAUSE rows, the C1 fire swallow (src/app/pointer.js)
   /* pad taps bubble to #stage: play from ATTRACT too (spec §4 tap-to-play). */
   {
     const stageEl =

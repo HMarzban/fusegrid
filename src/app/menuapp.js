@@ -191,6 +191,7 @@ export function createMenuApp(opts = {}) {
       this.prevConfirm = ch;
       this.subT += d;
       this.ctlT += d * 1000;
+      if (this.recPage && isRecords(this.screen)) { const n = Math.max(1, recPages(this.screen) | 0); if (this.recPage > n - 1) this.recPage = n - 1; } // a resize that unpages (or shortens) the body clamps the page
       this._warmTick(d);
       if (this.boardReady) this.readyT += d;
       if (this.onControls()) {
@@ -441,6 +442,7 @@ export function createMenuApp(opts = {}) {
               return this._push(SCREEN.GUIDE);
             case "RECORDS":
               this.recFocus = 0;
+              this.recPage = 0; // every entry opens page 0, as every tab arrival does
               return this._push(SCREEN.SCORES);
             case "SOURCE":
               if (onSource) onSource();

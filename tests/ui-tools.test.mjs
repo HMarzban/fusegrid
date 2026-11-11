@@ -13,7 +13,7 @@ import { createRGBA, png, unpng } from "../tools/pixel/rgba.mjs";
 import { PRECACHE } from "../src/pwa/shell.js";
 import * as P from "../src/render/kit/probe.js";
 import { squint, stat, evaluate, tally, colOf, FLOOR, CAP, GATES, REQUIRED, EXEMPTABLE, MIN_SAMPLE } from "../tools/ui/lib/gatelib.mjs";
-import { ORDER, SCREENS, canon, capName, parseCapName, needOf } from "../tools/ui/lib/screens.mjs";
+import { ORDER, SCREENS, canon, capName, parseCapName, needOf, needFor } from "../tools/ui/lib/screens.mjs";
 import { refKeys, findRef, compareHtml } from "../tools/ui/lib/refs.mjs";
 import { parseArgs as shotsArgs, intended, manifest, ledger } from "../tools/ui/shots.mjs";
 import { SCREEN, ITEMS, OPT_ROWS, GUIDE_ROWS, createMenuApp } from "../src/app/menuapp.js";
@@ -555,7 +555,11 @@ test("screens: exemptPhone exempts on .phone captures only, on the same rules (R
     assert.ok(!SCREENS[n].needPhone.includes("ring") && !SCREENS[n].needPhone.includes("band"), n + " phone exempts them");
   }
   assert.strictEqual(SCREENS.menu.needPhone, SCREENS.menu.need);
-  assert.ok(!SCREENS.statsfull.needPhone.includes("locked") && /measured wherever/.test(SCREENS.statsfull.exempt.locked));
+  /* fix round 1b review: statsfull exempts locked only where no locked level is drawn (exemptIfNo), never by a blanket exemption */
+  assert.ok(SCREENS.statsfull.need.includes("locked") && !SCREENS.statsfull.exempt.locked);
+  const withLocked = { flags: {}, ui: { rects: [{ name: "level 6 locked" }] } }, without = { flags: {}, ui: { rects: [{ name: "level 5" }] } };
+  assert.ok(needFor(SCREENS.statsfull, withLocked).includes("locked") && !needFor(SCREENS.statsfull, without).includes("locked"));
+  assert.ok(needFor(SCREENS.statsfull, { flags: { phone: true }, ui: { rects: [] } }).every((g) => g !== "ring" && g !== "band"));
 });
 
 test("screens: every name has a recipe and a state; aliases; capture names round trip", () => {

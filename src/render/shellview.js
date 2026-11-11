@@ -265,10 +265,10 @@ function menuUi(app, touch, getCab) {
    included, against the same box that screen measures with. */
 const REC_PAGE = { [SCREEN.SCORES]: "scores", [SCREEN.STATS]: "stats", [SCREEN.TROPHIES]: "medals" };
 /** A RECORDS tab's page count on the box drawShell paints it on (the same frame as the RECORDS branch below): the app's ↑ / ↓ and page keys clamp to it. */
-export function recPagesOf(canvas, kind, screen) {
+export function recPagesOf(canvas, kind, screen, rows) {
   if (!REC_PAGE[screen]) return 1;
   const { cw, ch, lg, css } = dims(canvas, kind);
-  return menudraw.recPages(menudraw.layout(cw, ch, lg, css), touchLay(canvas), REC_PAGE[screen]);
+  return menudraw.recPages(menudraw.layout(cw, ch, lg, css), touchLay(canvas), REC_PAGE[screen], rows);
 }
 export function drawShell(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
   const s = app.screen;
