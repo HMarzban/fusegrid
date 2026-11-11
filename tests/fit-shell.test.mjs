@@ -133,6 +133,19 @@ for (const [lay, W, H, touch, dpr, q] of [["d", 1366, 768, false, 2, 2], ["d", 1
     check("orientationchange to a landscape tablet brings the window box", D.attrs["data-lay"] === "l" && !!fit.shell(1) && D.sh.style.width === "1024px" && D.sh.style.height === "768px" && fit.box().width === 1024);
   } finally { undo(); }
 }
+/* fix round 1: the box's CSS px per unit, handed in by fit for paint and tap alike (MENU's touch floors): #c carries the stage scale fit applied, the
+   #sh stand-in shellGeo's s; shellview dims hands it on touch layouts only (no rect read when it is there) */
+for (const [W, H, lay] of [[852, 393, "l"], [667, 375, "l"], [393, 852, "p"], [1024, 600, "l"], [1366, 768, "d"]]) {
+  const D = mkDom(W, H, lay !== "d", 2);
+  try {
+    const cv = mkCv(), fit = mountFit(cv), s = fitBox(W, H, lay !== "d", 600, 520).s, g = shellGeo(W, H, 600, 520, lay), box = (fit.shell(1), fit.box());
+    let reads = 0;
+    const el = { ...cv, ownerDocument: { body: { getAttribute: (k) => (k === "data-lay" ? lay : null) } }, getBoundingClientRect: () => { reads++; return { width: 1, height: 1 }; } };
+    const dc = dims(el, "2d"), db = box && dims({ ...box, ownerDocument: el.ownerDocument }, "2d");
+    check(`${lay} ${W}x${H}: fit writes the stage scale on #c (canvas.css ${s.toFixed(3)}) and the shell box carries its own (${g ? g.s.toFixed(3) : "no box"}); dims hands it on a touch layout without reading a rect, none on a keyboard one`,
+      cv.css === s && (!g || box.css === g.s) && (lay === "d" ? dc.css === undefined && (!db || db.css === undefined) : dc.css === s && (!db || db.css === g.s)) && reads === 0, J({ css: cv.css, s, box: box && box.css, dc: dc.css, db: db && db.css, reads }));
+  } finally { undo(); }
+}
 
 // ---- fit.shell modes: 1 draws, 2 (a run end) shows it click-through and hands back nothing, 0 hides ----
 {
@@ -228,20 +241,31 @@ for (const [lay, W, H, touch, dpr] of [["d", 1366, 768, false, 2], ["d", 3840, 2
   const shot = (nm, box, cur) => { const a = mkApp(SCREEN[nm]); if (cur != null) a.cursor = cur; const R = rec(); drawShell(R.c, a, { state: "PLAY", time: 1 }, box, "2d", () => [], () => 0, () => ({})); return R.texts; };
   const boxOf = (g, lay) => ({ width: g.w, height: g.h, logo: g.logo, ownerDocument: { body: { getAttribute: () => lay } }, getBoundingClientRect: () => ({ left: 0, top: 0, width: g.w * g.s, height: g.h * g.s }) });
   const each = (f) => { for (const nm of SHELL_SCREENS) for (let cur = 0; cur < (nm === "MENU" ? ITEMS.length : 1); cur++) f(nm, nm === "MENU" ? cur : null); };
-  /* exact strings in order, except the landscape tablets' MENU: a tall touch box hangs the hub's build tag under the plate instead of on the SOURCE tile
-     (menudraw drawMenu), so there the words are compared by " · " token, order-free; an ellipsis still changes a token */
+  /* exact strings in order, except the landscape tablets' MENU. A 600x520 touch box is MENU's compact arrangement (pages/menu.js, fix round 1: its
+     floored desk would scale under TOUCH_U), whose tiles carry the phone's teasers and the build tag, so the tablets' MENU (the desk, its foot) is held
+     to the 1024x768 tablet's words by " · " token, order-free (an ellipsis still changes a token), and the compact one prints every row whole */
   const exact = (T) => T.map((q) => q.s).join("|"), words = (T) => T.flatMap((q) => q.s.split(" · ")).sort().join("|");
   for (const lay of ["d", "l"]) each((nm, cur) => { base[lay + nm + cur] = shot(nm, boxOf({ w: 600, h: 520, s: 1 }, lay), cur); });
+  each((nm, cur) => { if (nm === "MENU") base["lDesk" + cur] = shot(nm, boxOf(shellGeo(1024, 768, 600, 520, "l"), "l"), cur); });
+  {
+    const bad = [];
+    each((nm, cur) => {
+      if (nm !== "MENU") return;
+      const S = base["lMENU" + cur].map((q) => q.s), whole = (l) => S.includes(l) || l.split(" ").every((w) => S.includes(w));
+      if (!ITEMS.every(whole) || S.some((x) => /…/.test(x)) || !S.some((x) => /^v\d+$/.test(x))) bad.push(cur);
+    });
+    check("l 600x520 MENU (compact): every row's label printed whole (LEVEL SELECT may break at its space), no ellipsis, the build tag on SOURCE's tile", bad.length === 0, bad.join());
+  }
   for (const [lay, W, H] of [["d", 600, 520], ["d", 1366, 768], ["d", 1920, 1080], ["d", 3840, 2160], ["l", 600, 520], ["l", 1024, 768], ["l", 1180, 820], ["l", 1194, 834], ["l", 1366, 1024]]) {
     const g = shellGeo(W, H, 600, 520, lay), box = boxOf(g, lay), touch = lay !== "d", L = md.layout(g.w, g.h, g.logo), tg = `${lay} ${W}x${H} box ${g.w}x${g.h}`;
     const out = [], same = [], tab = lay === "l" && W > 600;
     each((nm, cur) => {
       const T = shot(nm, box, cur), cmp = tab && nm === "MENU" ? words : exact;
       if (T.some((q) => q.x < -0.5 || q.x + q.w > g.w + 0.5 || q.y < 0 || q.y > g.h)) out.push(nm + cur);
-      if (cmp(T) !== cmp(base[lay + nm + cur])) same.push(nm + cur);
+      if (cmp(T) !== cmp(base[(tab && nm === "MENU" ? "lDesk" : lay + nm) + cur])) same.push(nm + cur);
     });
     check(`every page's text sits inside the box (${tg})`, out.length === 0, out.join());
-    check(`every page prints exactly its 600x520 strings, in order${tab ? " (MENU: the same words by token, its build tag hung under the hub)" : ""}: nothing elided (${tg})`, same.length === 0, same.join());
+    check(`every page prints exactly its 600x520 strings, in order${tab ? " (MENU: the 1024x768 tablet's words by token)" : ""}: nothing elided (${tg})`, same.length === 0, same.join());
     const inBox = (S) => S.x >= 0 && S.y >= 0 && S.x + S.w <= g.w && S.y + S.h <= g.h && S.f === 1;
     const inPlate = (r, S) => r.x >= S.x - 1 && r.y >= S.y && r.x + r.w <= S.x + S.w + 1.01 && r.y + r.h <= S.y + S.h + 0.01;
     const ctr = (r) => [r.x + r.w / 2, r.y + r.h / 2];

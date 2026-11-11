@@ -124,7 +124,7 @@ function check(name, cond, detail) {
       md.drawIntroChrome(stub, 1, 2.0, W, H, "l"); // show: mid-sweep
       // the MENU page (pages/menu.js) with shellview's names and values: the shipped rows, a focused door, a non-default run, a played daily
       md.drawMenu(stub, { rows: ITEMS, focus: ITEMS[2], level: 1, run: { heat: 1, pace: 1, pact: 3 }, daily: 2, best: 1234, look: 1, pages: 4, rev: "v0", enterT: 0.5 }, L, 0.5);
-      md.drawMenu(stub, { rows: ITEMS, focus: ITEMS[0], touch: true, level: 8, enterT: 0 }, L, 0.5);
+      md.drawMenu(stub, { rows: ITEMS, focus: ITEMS[0], level: 8, enterT: 0 }, L, 0.5, true);
       md.drawLevelSelect(stub, 3, L, 0.4, 1);
       md.drawHowTo(stub, L, 0.4);
       md.drawItemsHelp(stub, L, 0.4);
@@ -1066,8 +1066,8 @@ function check(name, cond, detail) {
     const sg = shellGeo(393, 852);
     for (const [nm, W, H, touch, lg, css] of [["600x520 d", 600, 520, false], ["608x352 d", 608, 352, false], ["600x520 l", 600, 520, true], ["1366x768 #sh d", 1366, 768, false, 200, 1], ["phone #sh p", sg.w, sg.h, true, sg.logo, sg.s]]) {
       const L = md.layout(W, H, lg, css);
-      const paint = (rev, et = 9) => { const R = textrec({ widthK: 0.6 }); md.drawMenu(R.ctx, { rows: ITEMS, focus: "PLAY", touch, rev, level: 1, enterT: et }, L, 9); return { R, last: pg._dbg.last }; };
-      const { R, last } = paint("v99"), hit = R.texts.filter((t) => t.s.indexOf("v99") >= 0), G = last.G, u = G.u, phone = G.mode === "phone";
+      const paint = (rev, et = 9) => { const R = textrec({ widthK: 0.6 }); md.drawMenu(R.ctx, { rows: ITEMS, focus: "PLAY", rev, level: 1, enterT: et }, L, 9, touch); return { R, last: pg._dbg.last }; };
+      const { R, last } = paint("v99"), hit = R.texts.filter((t) => t.s.indexOf("v99") >= 0), G = last.G, u = G.u, phone = G.dev === "p"; // the phone column and the compact tiles carry it on SOURCE
       const where = phone ? last.P.rows.SOURCE.tz : last.P.foot[last.verb], tagY = phone ? where.ys[0] : where.mid, inBox = tagY * u > 0 && tagY * u < H;
       const onKey = !phone && ITEMS.some((l) => { const r = G.rows[l]; return tagY * u >= r.y && tagY * u <= r.y + r.h; });
       check(`MENU build tag painted once, inside the box, ${phone ? "as SOURCE's teaser" : "at the foot's end after a bar, off every key"} (${nm})`,

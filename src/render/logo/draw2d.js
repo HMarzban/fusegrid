@@ -19,7 +19,7 @@
    _seam.plan is the plan the painter calls (a test spies on it). */
 import {P, BD, BOMB, SPARK, glyph, layout, cord, bomb, spark, sparkAt, fit, flat} from "./glyphs.js";
 import {PLATE, plan, motif, worldOf} from "./worlds.js";
-import {layer, capDpr, touch, keyOf} from "../kit/cache.js";
+import {layer, capDpr, touch, keyOf, canMake} from "../kit/cache.js";
 import {plate as kitPlate} from "../kit/paint.js";
 import {worldTokens} from "../kit/tokens.js";
 
@@ -28,14 +28,6 @@ export const _dbg = {on: false, ran: 0, place: "", run: undefined, last: null};
 export const _seam = {plan};
 const TAU = 2 * Math.PI, N = 7, F0 = 0, F1 = 1, SIDE = 2, INK = 3, BOMBC = 4, CINK = 5, ROPE = 6, EDGE = 2, K0 = {look: "2d", textScale: 1};
 
-let probeDoc = null, probeOK = false;
-function canMake() {
-  if (typeof OffscreenCanvas === "function") return true;
-  const d = typeof document !== "undefined" ? document : null;
-  if (!d || typeof d.createElement !== "function") return false;
-  if (d !== probeDoc) { probeDoc = d; const el = d.createElement("canvas"); probeOK = !!el && typeof el.getContext === "function"; }
-  return probeOK;
-}
 const mk = (w, h) => { if (typeof OffscreenCanvas === "function") return new OffscreenCanvas(w, h); const c = document.createElement("canvas"); c.width = w; c.height = h; return c; };
 let mqf = null, mql = null;
 export function reduceMotion() {

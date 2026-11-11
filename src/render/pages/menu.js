@@ -2,25 +2,32 @@
    in (ui.level) dresses the stage: its room look (kit room.js) opaque over the whole canvas, its rampart round the plate; the arcade bomber is the keys.
    menuGeom(F, rows) is the one geometry for draw and tap: rects by ROW NAME in box units (G.d: the same in design px, the mock's CSS px; u box units
    per design px). F = {W, H, touch, shell, css, ts}: the box (#sh's shell box, else #c's 600 x 520 / 608 x 352), touch (data-lay p / l), shell, css (CSS
-   px per box unit, read on a phone), ts (the kit text scale). desk: every box but a touch-portrait shell box, the 1366 x 768 frame at u 1: the mock's
-   plate centred, a narrower window narrows only the card's column (the list keeps 480), the 70 px top margin gives way to a short window, then the
-   page scales as one piece (#c, the iso guard). phone: the 393 x 852 column in CSS px (u = 1 / css), capped at 600 CSS px and centred; the card's slot
-   takes the height left. G.card is Task 3.2's slot, bare bed here. A row owns its key and half of each gap round it, out to the plate's bed edge;
-   menuHit returns its ITEMS index, -1 off the rows. The logo (drawLogo2d, place menu) sits in the header at scale lk = max(u, 20 / 36): under a
+   px per box unit, handed in by fit.js for #sh's box and #c on a touch layout; 1 when unknown), ts (the kit text scale). Three arrangements.
+   desk: every keyboard box, the 1366 x 768 frame at u 1: the mock's plate centred, a narrower window narrows only the card's column (the list keeps
+   480), the 70 px top margin gives way to a short window, then the page scales as one piece (#c, the iso guard). On a touch layout its rows and gaps
+   are floored in CSS px (>= 44 tall, >= 8 apart, never scaled below) and the page re-solved round them; it stays the desk while its own scale holds
+   TOUCH_U (0.8 CSS px per design px, its text at the phone's cap floors), else the box goes compact. phone: a touch-portrait shell box, the 393 x 852
+   column in CSS px (u = 1 / css), capped at 600 CSS px and centred; the card's slot takes the height left. compact: any other touch box (every
+   landscape phone, which has no shell box, and a short landscape window): the phone's grammar across the box in CSS px, the logo and PLAY across the
+   top, the six doors as tiles two wide and three deep, no card slot (PLAY's tag carries the run) and no foot (SOURCE's tile carries the build tag and
+   the notes); its sizes step from COMPACT max down to min with the height, and under min it scales as one piece (there the floors give way).
+   G.card is Task 3.2's slot, bare bed here. A row owns its key and half of each gap round it, out to the plate's bed edge; menuHit returns its ITEMS
+   index, -1 off the rows or on a zero box. The logo (drawLogo2d, place menu) sits in the header at scale lk = max(u x cap / 36, 20 / 36): under a
    20-unit cap the plan has no MENU build. drawMenuPage(c, F, ui, t): ui = {rows, focus (a label; tap mode hands PLAY), level, run, daily (null or
-   today's tries), best (the top played NORMAL score or null), look, pages, rev, note, pad, reduced, enterT}. Cached (kit cache.js, recency touched on
-   a steady frame): the room (roomLayer, its dpr giving way so the plate, the foot verbs and a 3 MiB logo reserve fit the 24 MiB budget), the plate
-   (rampart, bed, every row at rest), one foot per verb (START on PLAY, OPEN on a door, a controller's SOURCE line), all made at once so a cursor move
-   never misses. Live: the logo, the focused row (key, band on a door, the bare bomb, its words, the cream ring), the 0.25 s fade of plate, logo and
-   foot over the opaque room. A context that cannot measure plans on a 0.6 em estimate and gets no keycap; with no canvas source (Node) the plate and
-   foot paint straight onto the target over one flat fill; a context with no clip or rect (the headless renderer's) gets the plan only. Under the
-   probe it records its rects, texts and squint pairs outside any layer paint. */
+   today's tries), best (the top played NORMAL score or null), look, pages, rev, note, pad, reduced, enterT}; a zero or non-finite box draws nothing.
+   Cached (kit cache.js, recency touched on a steady frame): the room (roomLayer, its dpr giving way so the plate, a fixed reserve for three foot verbs
+   and a 3 MiB logo reserve fit the 24 MiB budget), the plate (rampart, bed, every row at rest but PLAY's tag and keycap; keyed by what it shows, so a
+   device flip or a note on the desk never re-rasters it), one foot per verb (START on PLAY, OPEN on a door, a controller's SOURCE line, keyed by its
+   words), all made at once so a cursor move never misses. Live: the logo, PLAY's tag and keycap, the focused row (key, band on a door, the bare bomb,
+   its words, the cream ring), the 0.25 s fade of plate, logo and foot over the opaque room. A context that cannot measure plans on a 0.6 em estimate and
+   gets no keycap; with no canvas source (Node) the plate and foot paint straight onto the target over one flat fill; a context with no clip or rect (the
+   headless renderer's) gets the plan only. Under the probe it records its rects, texts and squint pairs outside any layer paint. */
 import {biomeOf} from "../../core/config.js";
 import {LABEL, MENU_ROWS, MENU_WORDS as M, ART_STYLES, DIFF, tagFor, runParts} from "../words.js";
 import {worldTokens, CONST, toL} from "../kit/tokens.js";
-import {key, cap, capW, plate, band, focusBomb} from "../kit/paint.js";
+import {key, cap, capW, plate, band, focusBomb, glyph} from "../kit/paint.js";
 import {T, DEV, measure, textScale} from "../kit/type.js";
-import {layer, capDpr, touch, keyOf, BUDGET} from "../kit/cache.js";
+import {layer, capDpr, touch, keyOf, canMake, BUDGET} from "../kit/cache.js";
 import {roomLayer} from "../kit/room.js";
 import * as probe from "../kit/probe.js";
 import {drawLogo2d, deviceScale} from "../logo/draw2d.js";
@@ -38,6 +45,15 @@ export const PHONE = deep({
   p125: {top: 26, bot: 20, side: 12, pad: [12, 12, 14, 12], hero: 62, door: 50, tile: 84, card: 120, max: 600},
 });
 export const PITCH = 8, BRK = 24, GAP = 10, FOOT_H = 54, TOP_MIN = 26, GUT = 8, CARD_MIN = 360, TZ = "#bcad9a", CAP_K = 0.705;
+/* the touch floors in CSS px (a target's least side, the least gap between two), and the least desk scale a touch box keeps the desk at */
+export const TOUCH = Object.freeze({h: 44, g: 8}), TOUCH_U = 0.8;
+/* compact: each vertical size steps between min and max with the height (one t for all); in CSS px. top / bot clear the plate's ring (T + 2, T + 3),
+   pad / lp / cap / lp2 / below the logo's header, hero PLAY, tile the six doors, gap every pitch (9 at the least, so a gap the gate measures through a
+   fractional stage scale still reads >= 8). side and padX are fixed; the column is capped at wmax wide and centred. */
+export const COMPACT = deep({
+  c: {min: {top: 12, pad: 4, lp: 2, cap: 20, lp2: 2, below: 8, hero: 44, gap: 9, tile: 44, pad2: 8, bot: 13}, max: {top: 40, pad: 12, lp: 18, cap: 36, lp2: 10, below: 10, hero: 62, gap: 10, tile: 58, pad2: 14, bot: 20}, side: 12, padX: 10, wmax: 600},
+  c125: {min: {top: 12, pad: 4, lp: 2, cap: 20, lp2: 2, below: 8, hero: 50, gap: 9, tile: 58, pad2: 8, bot: 13}, max: {top: 40, pad: 12, lp: 18, cap: 36, lp2: 10, below: 10, hero: 62, gap: 10, tile: 84, pad2: 14, bot: 20}, side: 12, padX: 10, wmax: 600},
+});
 const LOGO_CAP = LOGO.menu.cap, ENV = logoLay(LOGO.menu.build).env, LOGO_H = ENV.h * LOGO_CAP, EDGE = 2, RESERVE = 3 * 1024 * 1024;
 const LOGO_MIN = 20;
 const PLAY = MENU_ROWS[0], LS = LABEL.LEVEL_SELECT, GUIDE = "GUIDE", SOURCE = "SOURCE";
@@ -45,24 +61,35 @@ const big = (ts) => ts > 1.1;
 
 const R = (x, y, w, h) => ({x, y, w, h});
 const sc = (r, u) => (r ? {x: r.x * u, y: r.y * u, w: r.w * u, h: r.h * u} : null);
-function desk(F, rows, t125) {
+/* fl (a touch box): the floors in box units ({h, g}); a row's height and a gap in design px are then max(design, floor / u), and u is the largest
+   scale whose floored page fits the box (the floored part is fixed in box units, so the fit is monotone in u: a bisection finds it) */
+function desk(F, rows, t125, fl) {
   const D = DESK[t125 ? "d125" : "d"], Lp = LOGO.menu[t125 ? "d125" : "d"], T0 = DEV.d.T, head = Lp.pad[0] + LOGO_H + Lp.pad[2];
-  const gaps = rows.map((l, i) => (i === 0 ? 0 : i === 1 || l === GUIDE ? BRK : PITCH));
-  const listH = rows.reduce((a, l, i) => a + gaps[i] + (i === 0 ? D.hero : D.door), 0), colH = Math.max(listH, D.card);
-  const plateH = D.pad[0] + head + Lp.below + colH + D.pad[2], tail = D.foot + FOOT_H + 4 + 12, side = 2 * (T0 + 2 + GUT);
-  const minW = side + D.pad[3] + D.list + D.col + CARD_MIN + D.pad[1];
-  const u = Math.min(1, F.W / minW, F.H / (TOP_MIN + plateH + tail)), Wd = F.W / u, Hd = F.H / u;
+  const base = rows.map((l, i) => (i === 0 ? D.hero : D.door)), gap0 = rows.map((l, i) => (i === 0 ? 0 : i === 1 || l === GUIDE ? BRK : PITCH));
+  const at = (u) => {
+    const hs = fl ? base.map((h) => Math.max(h, fl.h / u)) : base, gs = fl ? gap0.map((g, i) => (i ? Math.max(g, fl.g / u) : 0)) : gap0;
+    const colH = Math.max(rows.reduce((a, l, i) => a + gs[i] + hs[i], 0), D.card);
+    return {hs, gs, colH, plateH: D.pad[0] + head + Lp.below + colH + D.pad[2]};
+  };
+  const tail = D.foot + FOOT_H + 4 + 12, side = 2 * (T0 + 2 + GUT), minW = side + D.pad[3] + D.list + D.col + CARD_MIN + D.pad[1];
+  let S = at(1), u = Math.min(1, F.W / minW, F.H / (TOP_MIN + S.plateH + tail));
+  if (fl) {
+    const fits = (v) => v * (TOP_MIN + at(v).plateH + tail) <= F.H;
+    if (!fits(u)) { let lo = 0, hi = u; for (let i = 0; i < 48; i++) { const m = (lo + hi) / 2; if (fits(m)) lo = m; else hi = m; } u = lo; }
+    S = at(u);
+  }
+  const {hs, gs, colH, plateH} = S, Wd = F.W / u, Hd = F.H / u;
   const pw = Math.min(D.w, Wd - side), px = (Wd - pw) / 2, py = Math.max(TOP_MIN, Math.min(D.top, Hd - plateH - tail));
   const hy = py + D.pad[0], ly = hy + Lp.pad[0], top = hy + head + Lp.below, lx = px + D.pad[3];
   const out = {}, hit = {};
   let y = top;
-  rows.forEach((l, i) => { y += gaps[i]; const h = i === 0 ? D.hero : D.door; out[l] = R(lx, y, D.list, h); y += h; });
+  rows.forEach((l, i) => { y += gs[i]; out[l] = R(lx, y, D.list, hs[i]); y += hs[i]; });
   rows.forEach((l, i) => {
-    const r = out[l], up = i === 0 ? Math.min(12, Lp.below / 2) : gaps[i] / 2, dn = i === rows.length - 1 ? D.pad[2] / 2 : gaps[i + 1] / 2;
+    const r = out[l], up = i === 0 ? Math.min(12, Lp.below / 2) : gs[i] / 2, dn = i === rows.length - 1 ? D.pad[2] / 2 : gs[i + 1] / 2;
     hit[l] = R(px, r.y - up, lx + D.list + D.col / 2 - px, r.h + up + dn);
   });
   const cx = lx + D.list + D.col;
-  return {mode: "desk", dev: "d", u, t125, T: T0, plate: R(px, py, pw, plateH), head: R(px + D.pad[3], hy, pw - D.pad[1] - D.pad[3], head),
+  return {mode: "desk", dev: "d", u, t125, T: T0, cap: LOGO_CAP, plate: R(px, py, pw, plateH), head: R(px + D.pad[3], hy, pw - D.pad[1] - D.pad[3], head),
     logo: R(px + D.pad[3], ly, pw - D.pad[1] - D.pad[3], LOGO_H), rows: out, hit, kind: Object.fromEntries(rows.map((l, i) => [l, i === 0 ? "main" : "door"])),
     card: R(cx, top, px + pw - D.pad[1] - cx, colH), foot: R(px, py + plateH + D.foot, pw, FOOT_H)};
 }
@@ -84,42 +111,58 @@ function phone(F, rows, t125) {
   y += tilesH + GAP;
   const last = rows[rows.length - 1];
   out[last] = R(ix, y, iw, P.door); kind[last] = "door";
-  const hit = {}, e = P.pad[3] / 2, x0 = ix - e, x1 = ix + iw + e;
+  return {mode: "phone", dev: "p", u, t125, T: DEV.p.T, cap: LOGO_CAP, gap: GAP, plate: R(px, py, pw, ph), head: R(ix, hy, iw, head), logo: R(ix, hy + Lp.pad[0], iw, LOGO_H), rows: out,
+    hit: hitTiles(rows, out, kind, ix, iw, P.pad[3] / 2, GAP, Math.min(GAP, Lp.below), P.pad[2]), kind, card, foot: null};
+}
+/* a phone-grammar row owns half of each gap round it; the outer column out to half the plate's side pad, PLAY from half its top gap, the last row half
+   the plate's bottom pad */
+function hitTiles(rows, out, kind, ix, iw, e, gap, top0, pad2) {
+  const hit = {}, x0 = ix - e, x1 = ix + iw + e, lastY = Math.max(...rows.map((l) => out[l].y));
   for (const l of rows) {
-    const r = out[l], top = l === rows[0] ? r.y - Math.min(GAP, Lp.below) / 2 : r.y - GAP / 2, bot = l === last ? r.y + r.h + P.pad[2] / 2 : r.y + r.h + GAP / 2;
-    const left = kind[l] === "tile" && r.x > ix ? r.x - GAP / 2 : x0, right = kind[l] === "tile" && r.x === ix ? r.x + r.w + GAP / 2 : x1;
+    const r = out[l], top = l === rows[0] ? r.y - top0 / 2 : r.y - gap / 2, bot = r.y === lastY ? r.y + r.h + pad2 / 2 : r.y + r.h + gap / 2;
+    const left = kind[l] === "tile" && r.x > ix ? r.x - gap / 2 : x0, right = kind[l] === "tile" && r.x + r.w < ix + iw - 1e-9 ? r.x + r.w + gap / 2 : x1;
     hit[l] = R(left, top, right - left, bot - top);
   }
-  return {mode: "phone", dev: "p", u, t125, T: DEV.p.T, plate: R(px, py, pw, ph), head: R(ix, hy, iw, head), logo: R(ix, hy + Lp.pad[0], iw, LOGO_H), rows: out, hit, kind, card, foot: null};
+  return hit;
+}
+/* the compact arrangement: one t steps every size between COMPACT min and max (CSS px, u = 1 / css); under min the whole scales (u = H / min) */
+function compact(F, rows, t125) {
+  const C = COMPACT[t125 ? "c125" : "c"], css = F.css > 0 ? F.css : 1, n = Math.ceil((rows.length - 1) / 2);
+  const tot = (q) => q.top + q.pad + q.lp + ENV.h * q.cap + q.lp2 + q.below + q.hero + q.gap + n * q.tile + (n - 1) * q.gap + q.pad2 + q.bot;
+  const lo = tot(C.min), hi = tot(C.max), Hc = F.H * css;
+  const u = Hc >= lo ? 1 / css : F.H / lo, Hd = F.H / u, t = Math.max(0, Math.min(1, (Hd - lo) / (hi - lo)));
+  const q = Object.fromEntries(Object.keys(C.min).map((k) => [k, C.min[k] + t * (C.max[k] - C.min[k])]));
+  const Wd = F.W / u, pw = Math.min(Wd - 2 * C.side, C.wmax), px = (Wd - pw) / 2, ix = px + C.padX, iw = pw - 2 * C.padX;
+  const ph = tot(q) - q.top - q.bot, py = q.top + Math.max(0, Hd - tot(q)) / 2, hy = py + q.pad, lh = ENV.h * q.cap, head = q.lp + lh + q.lp2;
+  const out = {}, kind = {}, tw = (iw - q.gap) / 2;
+  let y = hy + head + q.below;
+  out[rows[0]] = R(ix, y, iw, q.hero); kind[rows[0]] = "main"; y += q.hero + q.gap;
+  rows.slice(1).forEach((l, i) => { out[l] = R(ix + (i & 1) * (tw + q.gap), y + (i >> 1) * (q.tile + q.gap), tw, q.tile); kind[l] = "tile"; });
+  return {mode: "compact", dev: "p", u, t125, t, T: DEV.p.T, cap: q.cap, gap: q.gap, plate: R(px, py, pw, ph), head: R(ix, hy, iw, head), logo: R(ix, hy + q.lp, iw, lh), rows: out,
+    hit: hitTiles(rows, out, kind, ix, iw, C.padX / 2, q.gap, Math.min(q.gap, q.below), q.pad2), kind, card: null, foot: null};
 }
 let gm = null;
 const sameRows = (a, b) => a === b || (a.length === b.length && a.every((l, i) => l === b[i]));
+const okBox = (F) => !!F && F.W > 0 && F.H > 0 && Number.isFinite(F.W) && Number.isFinite(F.H);
 export function menuGeom(F, rows = MENU_ROWS) {
-  const ts = F.ts > 0 ? F.ts : textScale(), t125 = big(ts), isPhone = !!(F.shell && F.touch && F.H > F.W * 1.3);
-  if (gm && gm.W === F.W && gm.H === F.H && gm.phone === isPhone && gm.t125 === t125 && gm.css === (F.css || 1) && sameRows(gm.rows, rows)) return gm.G;
-  const d = (isPhone ? phone : desk)(F, rows, t125), u = d.u, G = {mode: d.mode, dev: d.dev, u, t125, W: F.W, H: F.H, d, T: d.T * u, order: rows.slice(),
-    lk: Math.max(u, LOGO_MIN / LOGO_CAP),
+  const ts = F.ts > 0 ? F.ts : textScale(), t125 = big(ts), touchy = !!F.touch, shell = !!F.shell, css = F.css > 0 ? F.css : 1, isPhone = shell && touchy && F.H > F.W * 1.3;
+  if (gm && gm.W === F.W && gm.H === F.H && gm.touch === touchy && gm.shell === shell && gm.t125 === t125 && gm.css === css && sameRows(gm.rows, rows)) return gm.G;
+  let d = isPhone ? phone(F, rows, t125) : desk(F, rows, t125, touchy ? {h: TOUCH.h / css, g: TOUCH.g / css} : null);
+  if (touchy && !isPhone && !(d.u * css >= TOUCH_U)) d = compact(F, rows, t125);
+  const u = d.u, G = {mode: d.mode, dev: d.dev, u, t125, W: F.W, H: F.H, d, T: d.T * u, order: rows.slice(),
+    lk: Math.max(u * d.cap / LOGO_CAP, LOGO_MIN / LOGO_CAP),
     plate: sc(d.plate, u), head: sc(d.head, u), logo: sc(d.logo, u), card: sc(d.card, u), foot: sc(d.foot, u), kind: d.kind, rows: {}, hit: {}};
   for (const l of rows) { G.rows[l] = sc(d.rows[l], u); G.hit[l] = sc(d.hit[l], u); }
   const k = G.lk / u, cy = d.logo.y + d.logo.h / 2, cx = d.logo.x + d.logo.w / 2, bw = Math.max(d.logo.w, ENV.w * LOGO_CAP * k + 2 * EDGE * k) / k;
   G.lbox = R(cx * u / G.lk - bw / 2, cy * u / G.lk - (LOGO_H + 2 * EDGE) / 2, bw, LOGO_H + 2 * EDGE);
-  gm = {W: F.W, H: F.H, phone: isPhone, t125, css: F.css || 1, rows, G: deep(G)};
+  gm = {W: F.W, H: F.H, touch: touchy, shell, t125, css, rows, G: deep(G)};
   return gm.G;
 }
 export function menuHit(x, y, F, rows = MENU_ROWS) {
+  if (!okBox(F)) return -1;
   const G = menuGeom(F, rows);
   for (let i = 0; i < rows.length; i++) { const h = G.hit[rows[i]]; if (x >= h.x && x < h.x + h.w && y >= h.y && y < h.y + h.h) return i; }
   return -1;
-}
-
-export function glyph(c, name, x, y, s, col) {
-  c.save(); c.translate(x, y); c.scale(s / 16, s / 16);
-  c.strokeStyle = c.fillStyle = col; c.lineCap = c.lineJoin = "round"; c.beginPath();
-  if (name === "chev") { c.lineWidth = 2.4; c.moveTo(6, 3); c.lineTo(11, 8); c.lineTo(6, 13); c.stroke(); }
-  else if (name === "ext") { c.lineWidth = 2; c.moveTo(9, 2); c.lineTo(14, 2); c.lineTo(14, 7); c.moveTo(14, 2); c.lineTo(7, 9); c.moveTo(12, 10); c.lineTo(12, 14); c.lineTo(2, 14); c.lineTo(2, 4); c.lineTo(6, 4); c.stroke(); }
-  else if (name === "up") { c.moveTo(3, 11); c.lineTo(8, 5); c.lineTo(13, 11); c.closePath(); c.fill(); }
-  else if (name === "dn") { c.moveTo(3, 5); c.lineTo(8, 11); c.lineTo(13, 5); c.closePath(); c.fill(); }
-  c.restore();
 }
 
 const sep3 = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -164,7 +207,7 @@ function fitCands(c, f, cands, room, two) {
 }
 const HERO_PX = 38;
 function rowPlan(c, G, ui, l, words, showCap) {
-  const d = G.d, r = d.rows[l], k = d.kind[l], ph = d.mode === "phone", dv = DEV[d.dev], ts = textScale(), o = {l, k, r, rest: {}, foc: {}};
+  const d = G.d, r = d.rows[l], k = d.kind[l], ph = d.dev === "p", dv = DEV[d.dev], ts = textScale(), o = {l, k, r, rest: {}, foc: {}};
   if (k === "main") {
     const wf = T.display(HERO_PX / textScale()), ww = W(c, wf, PLAY), capS = showCap ? words.ok : "", cw = capS ? capW(c, capS, {phone: ph}) : 0, right = r.x + r.w - 16;
     o.cap = capS ? {s: capS, x: right - cw, y: r.y + r.h / 2 - dv.caph / 2, w: cw, h: dv.caph} : null;
@@ -175,22 +218,27 @@ function rowPlan(c, G, ui, l, words, showCap) {
     return o;
   }
   const lf = lblF(dv.pri), lw = W(c, lf, l), gs = ph ? 18 : 16, tile = k === "tile", sh = dv.bombs + 6;
-  o.label = {s: l, f: lf, px: dv.pri, w: lw, col: l === SOURCE ? CONST.t2 : CONST.ink};
+  const tzCol = l === SOURCE && (ui.note || padSign(ui.pad)) ? CONST.ink : TZ;
+  o.label = {s: l, f: lf, px: dv.pri, w: lw, col: l === SOURCE ? CONST.t2 : CONST.ink, lines: [l], ws: [lw]};
   o.glyph = {n: l === SOURCE ? "ext" : "chev", s: gs};
   const tf = lblF(dv.sec);
   if (!tile) {
     const gx = r.x + r.w - (ph ? 16 : 18) - gs, lx = r.x + 24, room = gx - 10 - (lx + sh + lw + 12);
     o.glyph.x = gx; o.glyph.y = r.y + r.h / 2 - gs / 2;
-    o.rest.x = lx; o.foc.x = lx + sh; o.label.y = r.y + r.h / 2;
+    o.rest.x = lx; o.foc.x = lx + sh; o.label.y = r.y + r.h / 2; o.label.ys = [o.label.y];
     const tz = fitCands(c, tf, teasers(l, ui, ph), room)[0] || "";
-    o.tz = tz ? {lines: [tz], f: tf, px: dv.sec, x: gx - 10, ys: [r.y + r.h / 2], align: "right", w: W(c, tf, tz), col: l === SOURCE && (ui.note || padSign(ui.pad)) ? CONST.ink : TZ} : null;
+    o.tz = tz ? {lines: [tz], f: tf, px: dv.sec, x: gx - 10, ys: [r.y + r.h / 2], align: "right", w: W(c, tf, tz), col: tzCol} : null;
     return o;
   }
+  /* a tile: the label breaks once at a space where one line will not fit (a compact LEVEL SELECT); the teaser takes the lines the tile has left */
   const lx = r.x + 16, fx = r.x + 8 + dv.bombs + 8, gx = r.x + r.w - 12 - gs, room = Math.min(gx - 6 - lx, r.x + r.w - 14 - fx);
-  const lines = fitCands(c, tf, teasers(l, ui, ph), room, big(ts)), lhL = dv.pri * ts * 1.15, lhT = dv.sec * ts * 1.2, bh = lhL + (lines.length ? 4 + lines.length * lhT : 0), top = r.y + r.h / 2 - bh / 2;
+  const lab = lw <= room ? [l] : fitCands(c, lf, [l], room, true), ll = lab.length ? lab : [l], lhL = dv.pri * ts * 1.15, lhT = dv.sec * ts * 1.2;
+  const nT = Math.floor((r.h - 4 - ll.length * lhL - 4) / lhT), lines = nT >= 1 ? fitCands(c, tf, teasers(l, ui, ph), room, big(ts) && nT >= 2) : [];
+  const bh = ll.length * lhL + (lines.length ? 4 + lines.length * lhT : 0), top = r.y + r.h / 2 - bh / 2;
   o.glyph.x = gx; o.glyph.y = r.y + r.h / 2 - gs / 2; o.glyph.focHide = true;
-  o.rest.x = lx; o.foc.x = fx; o.label.y = top + lhL / 2;
-  o.tz = lines.length ? {lines, f: tf, px: dv.sec, x: lx, fx, ys: lines.map((_, i) => top + lhL + 4 + lhT * (i + 0.5)), align: "left", w: Math.max(...lines.map((s) => W(c, tf, s))), col: TZ} : null;
+  o.rest.x = lx; o.foc.x = fx; o.label.lines = ll; o.label.ys = ll.map((_, i) => top + lhL * (i + 0.5)); o.label.y = o.label.ys[0];
+  if (ll.length > 1) { o.label.ws = ll.map((q) => W(c, lf, q)); o.label.w = Math.max(...o.label.ws); }
+  o.tz = lines.length ? {lines, f: tf, px: dv.sec, x: lx, fx, ys: lines.map((_, i) => top + ll.length * lhL + 4 + lhT * (i + 0.5)), align: "left", w: Math.max(...lines.map((s) => W(c, tf, s))), col: tzCol} : null;
   return o;
 }
 function footPlan(c, G, ui, words, verb, sign) {
@@ -232,19 +280,23 @@ export function plan(c0, G, ui) {
 
 const canCap = (c) => mOf(c) === c;
 function text(c, s, x, y, f, col, align) { c.font = f; c.fillStyle = col; c.textAlign = align || "left"; c.textBaseline = "middle"; c.fillText(s, x, y); }
-function paintRow(c, o, tok, ph, foc) {
+/* part: "bare" paints PLAY's key and word only (the plate layer), "dev" its tag and keycap only (live: they follow the device and the run); else all */
+function paintRow(c, o, tok, ph, foc, part) {
   const r = o.r, dv = DEV[ph ? "p" : "d"];
   if (o.k === "main") {
-    key(c, r.x, r.y, r.w, r.h, "main", {tok, ring: foc});
-    if (foc) focusBomb(c, r.x + 8, r.y + r.h / 2, dv.bombs);
-    text(c, o.word.s, foc ? o.word.foc : o.word.rest, o.word.y, o.word.f, CONST.yelInk);
+    if (part !== "dev") {
+      key(c, r.x, r.y, r.w, r.h, "main", {tok, ring: foc});
+      if (foc) focusBomb(c, r.x + 8, r.y + r.h / 2, dv.bombs);
+      text(c, o.word.s, foc ? o.word.foc : o.word.rest, o.word.y, o.word.f, CONST.yelInk);
+    }
+    if (part === "bare") return;
     if (o.tag) o.tag.lines.forEach((q, i) => text(c, q, o.tag.x, o.tag.ys[i], o.tag.f, CONST.yelInk, "right"));
     if (o.cap && canCap(c)) cap(c, o.cap.x, o.cap.y, o.cap.s, {main: true, tok, phone: ph});
     return;
   }
   key(c, r.x, r.y, r.w, r.h, "key", {tok, ring: foc});
   if (foc) { band(c, r.x, r.y, r.w, r.h, tok); focusBomb(c, r.x + 8, r.y + r.h / 2, dv.bombs); }
-  text(c, o.label.s, foc ? o.foc.x : o.rest.x, o.label.y, o.label.f, o.label.col);
+  o.label.lines.forEach((s, i) => text(c, s, foc ? o.foc.x : o.rest.x, o.label.ys[i], o.label.f, o.label.col));
   if (o.tz) o.tz.lines.forEach((s, i) => text(c, s, o.tz.align === "left" && foc ? o.tz.fx : o.tz.x, o.tz.ys[i], o.tz.f, o.tz.col, o.tz.align));
   if (!(foc && o.glyph.focHide)) glyph(c, o.glyph.n, o.glyph.x, o.glyph.y, o.glyph.s, CONST.t2);
 }
@@ -264,7 +316,7 @@ function paintFoot(c, P, tok) {
 }
 
 function record(G, P, ui, foc, dpr, el, verb, touchy) {
-  const u = G.u, d = G.d, b = (r) => [r.x * u, r.y * u, r.w * u, r.h * u], ph = G.mode === "phone", tok = worldTokens(ui.level);
+  const u = G.u, d = G.d, b = (r) => [r.x * u, r.y * u, r.w * u, r.h * u], tok = worldTokens(ui.level);
   probe.begin("menu", {w: G.W, h: G.H, dpr, el});
   probe.rect("plate", ...b(d.plate), {plate: G.T});
   const txt = (s, x, y, w, px, col, role, o = {}) => probe.text(s, x * u, (y - px * textScale() * CAP_K / 2) * u, Math.max(0.01, w * u), px * textScale() * CAP_K * u, {role, col, px: px * u, ...o});
@@ -277,14 +329,14 @@ function record(G, P, ui, foc, dpr, el, verb, touchy) {
       if (o.cap) { probe.rect(l + " cap", ...b(o.cap)); txt(o.cap.s, o.cap.x + 10, o.cap.y + o.cap.h / 2, o.cap.w - 20, DEV[d.dev].sec, CONST.yel, "secondary"); }
       continue;
     }
-    txt(o.label.s, f ? o.foc.x : o.rest.x, o.label.y, o.label.w, o.label.px, o.label.col, "primary");
+    o.label.lines.forEach((s, i) => txt(s, f ? o.foc.x : o.rest.x, o.label.ys[i], o.label.ws[i], o.label.px, o.label.col, "primary"));
     if (o.tz) o.tz.lines.forEach((s, i) => { const x = o.tz.align === "left" ? (f ? o.tz.fx : o.tz.x) : o.tz.x - o.tz.w; txt(s, x, o.tz.ys[i], o.tz.w, o.tz.px, o.tz.col, "secondary"); });
     if (!(f && o.glyph.focHide)) {
       const g = o.glyph, pad = 6, bx = R(Math.max(r.x + 2, g.x - pad), g.y - pad, g.s + 2 * pad, g.s + 2 * pad);
       probe.pair("info", b(R(g.x, g.y, g.s, g.s)), b(bx), {col: CONST.t2, name: l + " " + g.n});
     }
   }
-  const k = d.rows[foc], x0 = d.kind[foc] === "tile" && k.x > d.rows[G.order[0]].x ? k.x - GAP + 1 : d.plate.x + 1, bed = R(x0, k.y, Math.max(1, k.x - 7 - x0), k.h);
+  const k = d.rows[foc], x0 = d.kind[foc] === "tile" && k.x > d.rows[G.order[0]].x ? k.x - d.gap + 1 : d.plate.x + 1, bed = R(x0, k.y, Math.max(1, k.x - 7 - x0), k.h);
   probe.pair("band", b(k), b(bed), {name: "focus " + foc});
   probe.pair("ring", b(R(k.x - 6, k.y - 6, k.w + 12, k.h + 12)), b(bed), {name: "ring " + foc});
   const F = verb != null && P.foot[verb];
@@ -298,14 +350,6 @@ function record(G, P, ui, foc, dpr, el, verb, touchy) {
   }
 }
 
-let probeDoc = null, probeOK = false;
-function canMake() {
-  if (typeof OffscreenCanvas === "function") return true;
-  const d = typeof document !== "undefined" ? document : null;
-  if (!d || typeof d.createElement !== "function") return false;
-  if (d !== probeDoc) { probeDoc = d; const el = d.createElement("canvas"); probeOK = !!el && typeof el.getContext === "function"; }
-  return probeOK;
-}
 const outer = (d) => R(d.plate.x - d.T - 2, d.plate.y - d.T - 2, d.plate.w + 2 * d.T + 4, d.plate.h + 2 * d.T + 5);
 const FIELDS = ["level", "look", "pages", "daily", "best", "rev", "note", "pad"];
 function same(S, G, ui, w, touchy, dpr, ts, c, tap) {
@@ -314,13 +358,22 @@ function same(S, G, ui, w, touchy, dpr, ts, c, tap) {
   const a = S.ui.run || {}, b = ui.run || {};
   return a.heat === b.heat && a.pace === b.pace && a.pact === b.pact && a.time === b.time;
 }
+/* The plate's key names what it shows: the box's arrangement, the world and the teasers; the notes only where SOURCE's teaser carries them (phone and
+   compact). The hint words, tap mode and the run are not in it (PLAY's tag and keycap paint live), so on the desk a device flip, a note or a
+   controller's arrival re-rasters only the feet. A foot's key is its own words. The room's dpr gives way to a FIXED foot reserve (three verbs as wide
+   as the box), never to the feet of the moment, so the room's key never moves with the words either. */
 function sizes(S, G, F, level, tok) {
-  const d = G.d, u = G.u, dpr = S.dpr, P = S.P, ob = outer(d), pb = sc(ob, u), id = [level, G.mode, ...FIELDS.map((k) => S.ui[k]), J(S.ui.run || {}), S.w.dev, S.w.ok, S.w.move, S.tap].join("|");
+  const d = G.d, u = G.u, dpr = S.dpr, P = S.P, ob = outer(d), pb = sc(ob, u), ui = S.ui;
+  const id = [level, G.mode, +u.toFixed(6), J(d.plate), ui.look, ui.pages, ui.daily, ui.best, ui.rev, ...(d.dev === "p" ? [ui.note, ui.pad] : [])].join("|");
   const K = {biome: tok.name, level, W: F.W, H: F.H, look: "2d", textScale: S.ts, dpr};
   S.ob = ob; S.pb = pb; S.pw = Math.round(pb.w * dpr); S.ph = Math.round(pb.h * dpr); S.plateKey = {...K, layer: "menu.plate|" + id}; S.plateK = keyOf(S.plateKey);
-  let bytes = S.pw * S.ph * 4;
-  S.feet = P.verbs.map((v) => { const fp = P.foot[v], fr = R(fp.x - 1, fp.y - 1, fp.w + 2, fp.h + 6), b = sc(fr, u), w = Math.round(b.w * dpr), h = Math.round(b.h * dpr), key = {...K, layer: "menu.foot|" + v + "|" + id}; bytes += w * h * 4; return {v, fp, fr, b, w, h, key, k: keyOf(key)}; });
-  S.rd = +Math.max(0.5, Math.min(dpr, Math.sqrt(Math.max(0, BUDGET - RESERVE - bytes) / (4 * F.W * F.H)))).toFixed(3);
+  S.feet = P.verbs.map((v) => {
+    const fp = P.foot[v], fr = R(fp.x - 1, fp.y - 1, fp.w + 2, fp.h + 6), b = sc(fr, u), w = Math.round(b.w * dpr), h = Math.round(b.h * dpr);
+    const key = {...K, layer: "menu.foot|" + J([+u.toFixed(6), fp.x, fp.y, fp.w, fp.parts.map((p) => [p.t || p.sep || "", p.cap || "", p.col || ""])])};
+    return {v, fp, fr, b, w, h, key, k: keyOf(key)};
+  });
+  const feet = G.mode === "desk" ? 3 * Math.round((F.W + 2 * u) * dpr) * Math.round((FOOT_H + 8) * u * dpr) * 4 : 0;
+  S.rd = +Math.max(0.5, Math.min(dpr, Math.sqrt(Math.max(0, BUDGET - RESERVE - S.pw * S.ph * 4 - feet) / (4 * F.W * F.H)))).toFixed(3);
   S.box = {w: F.W, h: F.H};
   S.roomK = keyOf({layer: "room", biome: tok.name, level, W: F.W, H: F.H, dpr: S.rd, look: "2d", textScale: 1});
 }
@@ -328,12 +381,13 @@ const J = JSON.stringify;
 export const _dbg = {plans: 0, last: null};
 let S = null;
 function paintPlate(g, G, P, tok) {
-  const d = G.d, ph = G.mode === "phone";
+  const d = G.d, ph = d.dev === "p";
   plate(g, d.plate.x, d.plate.y, d.plate.w, d.plate.h, tok, {phone: ph});
-  for (const l of G.order) paintRow(g, P.rows[l], tok, ph, false);
+  for (const l of G.order) paintRow(g, P.rows[l], tok, ph, false, "bare");
 }
 /** Paints MENU on c (#sh's context, or #c's when there is no shell box) for the frame F; see the header for ui. */
 export function drawMenuPage(c, F, ui, t = 0) {
+  if (!okBox(F)) return;
   const level = ui.level | 0 || 1, tok = worldTokens(level), G = menuGeom(F, ui.rows || MENU_ROWS), u = G.u, words = hints(), ts = textScale(), touchy = !!F.touch;
   const dev = deviceScale(c), dpr = capDpr(dev, touchy), tap = tapMode(touchy);
   if (!same(S, G, ui, words, touchy, dpr, ts, c, tap)) {
@@ -341,7 +395,7 @@ export function drawMenuPage(c, F, ui, t = 0) {
     sizes(S, G, F, level, tok);
     _dbg.plans++;
   }
-  const P = S.P, d = G.d, ph = G.mode === "phone", a = Math.max(0, Math.min(1, (ui.enterT == null ? 1 : ui.enterT) / 0.25)), a0 = typeof c.globalAlpha === "number" ? c.globalAlpha : 1;
+  const P = S.P, ph = G.d.dev === "p", a = Math.max(0, Math.min(1, (ui.enterT == null ? 1 : ui.enterT) / 0.25)), a0 = typeof c.globalAlpha === "number" ? c.globalAlpha : 1;
   const verb = G.mode === "desk" ? (P.verbs.length > 1 ? (ui.focus === G.order[0] ? M.START : ui.focus === SOURCE && P.verbs.includes(M.SOURCE_PAD) ? M.SOURCE_PAD : M.OPEN) : "") : null;
   const foc = P.rows[ui.focus] ? ui.focus : G.order[0];
   _dbg.last = {G, P, foc, verb, S};
@@ -371,6 +425,7 @@ export function drawMenuPage(c, F, ui, t = 0) {
   drawLogo2d(c, {level, place: "menu", box: G.lbox, k: G.lk, dpr: dev, css: F.css > 0 ? F.css : 1, touch: touchy, t, reduced: !!ui.reduced});
   c.restore();
   c.scale(u, u);
+  if (foc !== G.order[0]) paintRow(c, P.rows[G.order[0]], tok, ph, false, "dev");
   paintRow(c, P.rows[foc], tok, ph, true);
   c.restore();
   c.globalAlpha = a0;

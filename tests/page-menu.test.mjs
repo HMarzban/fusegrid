@@ -1,5 +1,6 @@
 /* UI upgrade v202 Task 3.1: MENU on the world kit (src/render/pages/menu.js). One geometry for draw and tap (rows by name), the round 7 S7-menu /
-   L7-logo frames' metrics (desktop 1366 x 768 at 1 box unit per CSS px; phone 393 x 852 in CSS px on the PORT_SHELL box), the focus (bare bomb, band on a
+   L7-logo frames' metrics (desktop 1366 x 768 at 1 box unit per CSS px; phone 393 x 852 in CSS px on the PORT_SHELL box), the touch floors on every
+   touch box (fix round 1: the floored desk on a short landscape window, the compact arrangement on every landscape phone), the focus (bare bomb, band on a
    door, the 3 px cream ring), one yellow fill, no cord or spark colour outside the logo, the longest strings whole at text scale 1 and 1.25, the
    cached static parts (0 misses on a steady frame or a cursor move, one refill on a world or text-scale change), the covered render flag, the
    cache's recency touch and its budget with the title's layers present, and the probe record the gates read. Every canvas is a textrec stub; the
@@ -26,7 +27,7 @@ const { worldTokens, CONST } = await import("../src/render/kit/tokens.js");
 const probe = await import("../src/render/kit/probe.js");
 const logo = await import("../src/render/logo/draw2d.js");
 const { ITEMS, SCREEN, createMenuApp } = await import("../src/app/menuapp.js");
-const { shellGeo } = await import("../src/app/fit.js");
+const { shellGeo, fitBox } = await import("../src/app/fit.js");
 const { setHints } = await import("../src/render/hintcopy.js");
 const { wordsOf } = await import("../src/app/hints.js");
 const { DEF_CONTROLS } = await import("../src/app/controls.js");
@@ -44,6 +45,10 @@ const BOX = {
   c600t: { W: 600, H: 520, touch: true, shell: false, css: 1 },
   iso: { W: 608, H: 352, touch: false, shell: false, css: 1 },
 };
+/* fix round 1: the short touch-landscape windows (a shell box at 1 CSS px per unit) and the landscape phones (no shell box: #c at the stage's own scale) */
+for (const [w, h] of [[1024, 600], [800, 600], [600, 520], [1280, 650]]) BOX["l" + w + "x" + h] = { W: w, H: h, touch: true, shell: true, css: 1 };
+for (const [w, h] of [[852, 393], [932, 430], [740, 360], [667, 375]]) BOX["c" + w + "x" + h] = { W: 600, H: 520, touch: true, shell: false, css: fitBox(w, h, true, 600, 520).s };
+const SHORT = ["l1024x600", "l800x600", "l600x520", "l1280x650"], LAND = ["c852x393", "c932x430", "c740x360", "c667x375"], TOUCHB = ["p393", "l1024", ...SHORT, ...LAND, "c600t"];
 const SIX = ["d1366", "d1920", "d1024", "p393", "c600", "iso"];
 const UI = (o) => ({ rows: ITEMS, focus: "PLAY", level: 1, run: { heat: 0, pace: 0, pact: 0 }, daily: null, best: null, look: 0, pages: 4, rev: "v201", note: "", pad: "", enterT: 9, ...o });
 const near = (a, b, e = 0.51) => Math.abs(a - b) <= e;
@@ -64,6 +69,7 @@ const fresh = () => { cache.release(); cache._dbg.misses = 0; };
 check("rows: words.js MENU_ROWS is menuapp ITEMS, PLAY, LEVEL SELECT, DAILY, RECORDS, SETTINGS, GUIDE, SOURCE", J(W.MENU_ROWS) === J(ITEMS) && J(ITEMS) === J(["PLAY", "LEVEL SELECT", "DAILY", "RECORDS", "SETTINGS", "GUIDE", "SOURCE"]));
 for (const b of SIX) {
   const G = P.menuGeom(BOX[b]), ys = ITEMS.map((l) => G.rows[l].y);
+  if (G.mode === "compact") continue;
   if (G.mode === "desk") check(`order (${b}): one list top to bottom in ITEMS order, one column`, ys.every((y, i) => !i || y > ys[i - 1]) && ITEMS.every((l) => G.rows[l].x === G.rows.PLAY.x), J(ys));
   else {
     const r = G.rows;
@@ -103,30 +109,49 @@ for (const b of SIX) {
   check("600x520 board and 608x352 iso: the desk geometry scaled as one piece (u < 1)", g("c600").u < 1 && g("iso").u < 1 && g("c600").mode === "desk" && g("iso").mode === "desk", J([g("c600").u, g("iso").u]));
 }
 /* every rect inside the plate, the plate's ring inside the box, on the six boxes (and touch #c, landscape tablet) */
-for (const b of [...SIX, "c600t", "l1024"]) {
+for (const b of [...SIX, "c600t", "l1024", ...SHORT, ...LAND]) {
   const G = P.menuGeom(BOX[b]), T = G.T, ring = { x: G.plate.x - T - 2 * G.u, y: G.plate.y - T - 2 * G.u, w: G.plate.w + 2 * T + 4 * G.u, h: G.plate.h + 2 * T + 5 * G.u };
   const out = ITEMS.filter((l) => !inside({ x: G.rows[l].x - 6 * G.u, y: G.rows[l].y - 6 * G.u, w: G.rows[l].w + 12 * G.u, h: G.rows[l].h + 12 * G.u }, G.plate));
   const lb = { x: G.lbox.x * G.lk, y: G.lbox.y * G.lk, w: G.lbox.w * G.lk, h: G.lbox.h * G.lk }, P0 = G.rows.PLAY;
-  check(`inside (${b}): every row and its focus ring inside the plate, the plate's ring inside the box${G.foot ? ", the foot too" : ""}; the logo's box inside the plate, clear of PLAY's ring`, out.length === 0 && inside(ring, { x: 0, y: 0, w: G.W, h: G.H }) && (!G.foot || inside(G.foot, { x: 0, y: 0, w: G.W, h: G.H })) && inside(lb, G.plate) && lb.y + lb.h <= P0.y - 6 * G.u && inside(G.card, G.plate), J({ out, ring, W: G.W, H: G.H, foot: G.foot, lb }));
+  check(`inside (${b}): every row and its focus ring inside the plate, the plate's ring inside the box${G.foot ? ", the foot too" : ""}; the logo's box inside the plate, clear of PLAY's ring`, out.length === 0 && inside(ring, { x: 0, y: 0, w: G.W, h: G.H }) && (!G.foot || inside(G.foot, { x: 0, y: 0, w: G.W, h: G.H })) && inside(lb, G.plate) && lb.y + lb.h <= P0.y - 6 * G.u && (!G.card || inside(G.card, G.plate)), J({ out, ring, W: G.W, H: G.H, foot: G.foot, lb }));
 }
-/* touch targets >= 44 CSS px with >= 8 px gaps, on the touch boxes that have a shell box */
-for (const b of ["p393", "l1024"]) {
-  const G = P.menuGeom(BOX[b]), s = BOX[b].css, R = ITEMS.map((l) => css(G.rows[l], s));
-  const small = R.filter((r) => r.w < 43.95 || r.h < 43.95);
-  let gap = Infinity;
-  for (let i = 0; i < R.length; i++) for (let j = i + 1; j < R.length; j++) { const a = R[i], c = R[j], dx = Math.max(c.x - (a.x + a.w), a.x - (c.x + c.w)), dy = Math.max(c.y - (a.y + a.h), a.y - (c.y + c.h)); gap = Math.min(gap, Math.max(dx, dy)); }
-  check(`touch (${b}): every row >= 44 x 44 CSS px, >= 8 px apart`, small.length === 0 && gap >= 8 - 1e-9, J({ small, gap }));
+/* touch targets >= 44 CSS px with >= 8 px gaps on EVERY touch box (fix round 1): the phone column, the landscape tablet, the short landscape windows
+   (the desk floored, or compact under TOUCH_U) and the landscape phones on #c (compact); the measured CSS sizes are reported */
+{
+  const sizes = {};
+  for (const b of TOUCHB) {
+    const G = P.menuGeom(BOX[b]), s = BOX[b].css, R = ITEMS.map((l) => css(G.rows[l], s));
+    const small = R.filter((r) => r.w < 43.95 || r.h < 43.95);
+    let gap = Infinity;
+    for (let i = 0; i < R.length; i++) for (let j = i + 1; j < R.length; j++) { const a = R[i], c = R[j], dx = Math.max(c.x - (a.x + a.w), a.x - (c.x + c.w)), dy = Math.max(c.y - (a.y + a.h), a.y - (c.y + c.h)); gap = Math.min(gap, Math.max(dx, dy)); }
+    sizes[b] = G.mode + " PLAY " + R[0].h.toFixed(1) + " doors " + Math.min(...R.slice(1).map((r) => r.h)).toFixed(1) + (G.mode === "compact" ? "x" + R[2].w.toFixed(1) : "") + " gap " + gap.toFixed(1);
+    check(`touch (${b}, ${G.mode}): every row >= 44 x 44 CSS px, >= 8 px apart`, small.length === 0 && gap >= 8 - 1e-9, J({ small, gap }));
+  }
+  console.log("  NOTE touch MENU in CSS px " + J(sizes));
+  const mode = (b) => P.menuGeom(BOX[b]).mode;
+  check("arrangement: the landscape phones (#c) and the 600x520 landscape window go compact; 1024x600, 800x600 and 1280x650 keep the floored desk; the keyboard boxes keep the desk", LAND.every((b) => mode(b) === "compact") && mode("l600x520") === "compact" && mode("c600t") === "compact" && ["l1024x600", "l800x600", "l1280x650", "l1024"].every((b) => mode(b) === "desk") && SIX.filter((b) => b !== "p393").every((b) => mode(b) === "desk"), J(Object.fromEntries(Object.keys(BOX).map((b) => [b, mode(b)]))));
+  const D = (b) => P.menuGeom(BOX[b]);
+  check("the floored desk keeps its scale at or above TOUCH_U (its text at the phone cap floors) and never scales a row below 44 or a gap below 8 CSS px", ["l1024x600", "l800x600", "l1280x650"].every((b) => D(b).u * BOX[b].css >= P.TOUCH_U), J(["l1024x600", "l800x600", "l1280x650"].map((b) => D(b).u)));
+  check("keyboard boxes: the desk geometry is untouched by the floors (1366x768 at the mock, 600x520 #c and the iso guard scaled as one piece, the same rects as before touch existed)", J(P.menuGeom({ ...BOX.c600 }).rows) === J(P.menuGeom({ ...BOX.c600, H: 520.0 }).rows) && P.menuGeom(BOX.c600).u < 1 && P.menuGeom(BOX.d1366).u === 1);
+  for (const b of [...LAND, "l600x520"]) {
+    const G = D(b), r = G.rows, tiles = ITEMS.slice(1);
+    check(`compact (${b}): the logo then PLAY across the top, the six doors as tiles two wide, three deep, in ITEMS order; no card slot, no foot`,
+      r.PLAY.w > 2 * r.DAILY.w && G.lbox.y * G.lk + G.lbox.h * G.lk <= r.PLAY.y && tiles.every((l, i) => r[l].y > r.PLAY.y && (i % 2 ? r[l].x > r[tiles[i - 1]].x && r[l].y === r[tiles[i - 1]].y : r[l].x === r.PLAY.x)) && r.GUIDE.y > r.RECORDS.y && r.RECORDS.y > r["LEVEL SELECT"].y && !G.card && !G.foot, J(ITEMS.map((l) => [r[l].x, r[l].y, r[l].w])));
+  }
 }
 
 /* ---- hit: the centre of every drawn row is that row; off the rows is -1 ---- */
-for (const b of [...SIX, "c600t", "l1024"]) {
+for (const b of [...SIX, "c600t", "l1024", ...SHORT, ...LAND]) {
   const G = P.menuGeom(BOX[b]), F = BOX[b];
   const bad = ITEMS.filter((l, i) => P.menuHit(G.rows[l].x + G.rows[l].w / 2, G.rows[l].y + G.rows[l].h / 2, F) !== i);
-  const off = [[2, 2], [G.W - 2, G.H - 2], [G.card.x + G.card.w / 2, G.card.y + G.card.h / 2], [G.logo.x + G.logo.w / 2, G.logo.y + G.logo.h / 2], [G.plate.x + G.plate.w / 2, G.plate.y + 4 * G.u]].filter(([x, y]) => P.menuHit(x, y, F) !== -1);
+  const off = [[2, 2], [G.W - 2, G.H - 2], ...(G.card ? [[G.card.x + G.card.w / 2, G.card.y + G.card.h / 2]] : []), [G.logo.x + G.logo.w / 2, G.logo.y + G.logo.h / 2], [G.plate.x + G.plate.w / 2, G.plate.y + 4 * G.u]].filter(([x, y]) => P.menuHit(x, y, F) !== -1);
   const L = md.layout(F.W, F.H, F.shell ? 200 : undefined, F.css);
-  check(`hit (${b}): each row's centre taps it; the card's slot, the logo, the plate's top and off the plate are -1; menudraw.menuHit agrees`, bad.length === 0 && off.length === 0 && ITEMS.every((l, i) => md.menuHit(G.rows[l].x + 2, G.rows[l].y + 2, L, 7, F.touch) === i), J({ bad, off }));
-  const gaps = ITEMS.slice(0, -1).every((l, i) => { const r = G.rows[l], nx = G.rows[ITEMS[i + 1]]; if (G.mode !== "desk") return true; const yMid = (r.y + r.h + nx.y) / 2; return P.menuHit(r.x + 10, yMid - 0.5, F) === i && P.menuHit(r.x + 10, yMid + 0.5, F) === i + 1; });
-  check(`hit (${b}): a row owns half of each gap beside it (no dead gutter between rows)`, gaps);
+  check(`hit (${b}): each row's centre taps it; ${G.card ? "the card's slot, " : ""}the logo, the plate's top and off the plate are -1; menudraw.menuHit agrees`, bad.length === 0 && off.length === 0 && ITEMS.every((l, i) => md.menuHit(G.rows[l].x + 2, G.rows[l].y + 2, L, 7, F.touch) === i), J({ bad, off }));
+  /* every pair of neighbours (one above the other, or side by side) splits the gap between them: no dead gutter */
+  const pairs = [];
+  for (const a of ITEMS) for (const c of ITEMS) { const A = G.rows[a], C = G.rows[c]; if (C.y > A.y + A.h && C.y - (A.y + A.h) <= 25 * G.u && C.x < A.x + A.w && A.x < C.x + C.w && !ITEMS.some((m) => { const M = G.rows[m]; return M.y > A.y + A.h - 1e-9 && M.y + M.h < C.y + 1e-9 && M.x < A.x + A.w && A.x < M.x + M.w; })) pairs.push([a, c, "y"]); if (C.x > A.x + A.w && C.y === A.y) pairs.push([a, c, "x"]); }
+  const dead = pairs.filter(([a, c, ax]) => { const A = G.rows[a], C = G.rows[c], ia = ITEMS.indexOf(a), ic = ITEMS.indexOf(c); if (ax === "y") { const m = (A.y + A.h + C.y) / 2, x = Math.max(A.x, C.x) + 10 * G.u; return P.menuHit(x, m - 0.01, F) !== ia || P.menuHit(x, m + 0.01, F) !== ic; } const m = (A.x + A.w + C.x) / 2, y = A.y + A.h / 2; return P.menuHit(m - 0.01, y, F) !== ia || P.menuHit(m + 0.01, y, F) !== ic; });
+  check(`hit (${b}): a row owns half of each gap beside it (no dead gutter between rows${G.mode === "desk" ? "" : " or tiles"}; ${pairs.length} neighbour pairs)`, dead.length === 0 && pairs.length >= 6, J(dead));
 }
 
 /* ---- taps through the real mountPointer: desktop and landscape with a shell box, the phone's #sh, the board canvas with none ---- */
@@ -141,21 +166,23 @@ for (const b of [...SIX, "c600t", "l1024"]) {
     ["landscape #sh 1024x768", "l", 1024, 768, { left: 0, top: 0, width: 1024, height: 768 }, true],
     ["phone #sh 393x852", "p", g.w, g.h, { left: 0, top: 0, width: g.w * g.s, height: g.h * g.s }, true],
     ["board #c 600x520 (no shell box, scaled x0.5)", "l", 600, 520, { left: 10, top: 20, width: 300, height: 260 }, false],
+    ...[[852, 393], [667, 375]].map(([w, h]) => { const k = fitBox(w, h, true, 600, 520).s; return [`landscape phone ${w}x${h} (#c at fit's ${k.toFixed(3)}, compact)`, "l", 600, 520, { left: 166, top: 8, width: 600 * k, height: 520 * k }, false, k]; }),
   ];
-  for (const [nm, lay, w, h, rect, shell] of CASES) {
+  for (const [nm, lay, w, h, rect, shell, fitS] of CASES) {
     const cv = el(600, 520, shell ? { left: 0, top: 0, width: 600, height: 520 } : rect, lay), sh = shell ? el(Math.round(w * 2), Math.round(h * 2), rect, lay) : null;
+    if (fitS) cv.css = fitS; // fit.js writes the stage scale it applied on #c
     const box = shell ? { width: w, height: h, logo: 200, ownerDocument: sh.ownerDocument, getBoundingClientRect: () => rect } : null;
     const app = createMenuApp({ settings: {} }), opened = [];
     app.screen = SCREEN.MENU;
     app.confirm = function () { opened.push(this.cursor); };
     mountPointer({ canvas: cv, fit: shell ? { sh, box: () => box } : null, input: { _intent: { fire: false }, onUiKey() {} }, app, world: { state: "PLAY" }, kind: () => "2d", ctl: () => null, hit: HIT });
     const tgt = shell ? sh : cv, kx = rect.width / w, ky = rect.height / h;
-    const L = md.layout(w, h, shell ? 200 : undefined, shell ? rect.width / w : undefined), G = md.menuGeom(L, 7, lay !== "d");
+    const L = md.layout(w, h, shell ? 200 : undefined, lay !== "d" ? rect.width / w : undefined), G = md.menuGeom(L, 7, lay !== "d");
     for (const l of ITEMS) { const r = G.rows[l]; tgt.fire("pointerdown", { clientX: rect.left + (r.x + r.w / 2) * kx, clientY: rect.top + (r.y + r.h / 2) * ky, currentTarget: tgt }); }
     check(`tap (${nm}): the centre of every drawn row opens that row (Enter on it)`, J(opened) === J(ITEMS.map((_, i) => i)), J(opened));
     opened.length = 0;
-    for (const [x, y] of [[1, 1], [G.card.x + G.card.w / 2, G.card.y + G.card.h / 2], [G.logo.x + G.logo.w / 2, G.logo.y + G.logo.h / 2]]) tgt.fire("pointerdown", { clientX: rect.left + x * kx, clientY: rect.top + y * ky, currentTarget: tgt });
-    check(`tap (${nm}): off the plate, the card's slot and the logo do nothing (a root list)`, opened.length === 0 && app.screen === SCREEN.MENU, J(opened));
+    for (const [x, y] of [[1, 1], ...(G.card ? [[G.card.x + G.card.w / 2, G.card.y + G.card.h / 2]] : []), [G.logo.x + G.logo.w / 2, G.logo.y + G.logo.h / 2]]) tgt.fire("pointerdown", { clientX: rect.left + x * kx, clientY: rect.top + y * ky, currentTarget: tgt });
+    check(`tap (${nm}): off the plate, ${G.card ? "the card's slot " : ""}and the logo do nothing (a root list)`, opened.length === 0 && app.screen === SCREEN.MENU, J(opened));
   }
 }
 /* the band: a focused door's band rect is the geometry's row rect, in the paint and in the probe */
@@ -203,12 +230,12 @@ logo._dbg.on = true;
 /* the longest strings MENU can show, drawn whole at text scale 1 and 1.25 (recorder width +8 %), inside their keys and the plate */
 {
   const RUNS = [{}, { heat: 2, pace: 1, pact: 15, time: true }, { heat: 1, pace: -1, pact: 0 }, { heat: 0, pace: 0, pact: 1 }];
-  for (const ts of [1, 1.25]) for (const b of ["d1366", "p393", "l1024", "d1024"]) for (const run of RUNS) for (const [daily, best] of [[null, null], [12, 1234567]]) {
+  for (const ts of [1, 1.25]) for (const b of ["d1366", "p393", "l1024", "d1024", "l1024x600", "l600x520", "c852x393", "c667x375"]) for (const run of RUNS) for (const [daily, best] of [[null, null], [12, 1234567]]) {
     setTextScale(ts); fresh();
     const F = BOX[b], G = P.menuGeom(F), f = frame(F, UI({ run, daily, best, level: 8 })), texts = [f.t, ...pageCvs().map((L) => L.cv.r)].flatMap((r) => r.texts);
     const ell = texts.filter((t) => /…/.test(t.s));
     const tl = P._dbg.last.P.rows.PLAY.tag, tag = tl && P.playTags({ run, level: 8 }).includes(tl.lines.join(" ")) && tl.lines.every((q) => texts.some((t) => t.s === q));
-    const want = b === "p393" ? null : "NEW · TODAY'S BOARD";
+    const want = G.dev === "p" ? null : "NEW · TODAY'S BOARD";
     check(`drawn whole (${b}, x${ts}, run ${J(run)}, daily ${daily}): no ellipsis; PLAY's tag is one whole candidate${want && daily == null ? "; " + want : ""}`, ell.length === 0 && !!tag && (!want || daily != null || texts.some((t) => t.s === want)), J({ ell: ell.map((t) => t.s), tags: P.playTags({ run, level: 8 }), drawn: texts.map((t) => t.s) }));
     const last = P._dbg.last, outs = [];
     for (const l of ITEMS) {
@@ -217,6 +244,11 @@ logo._dbg.on = true;
       for (const [x0, x1] of spans) if (x0 < r.x + 2 || x1 > r.x + r.w - 2) outs.push(l + " " + x0.toFixed(1) + ".." + x1.toFixed(1));
       if (o.k !== "main" && o.tz && o.tz.align === "right" && o.foc.x + o.label.w + 12 > o.tz.x - o.tz.w + 0.01) outs.push(l + ": label meets its teaser");
       if (o.k === "main" && o.tag && o.word.foc + o.word.w + 12 > o.tag.x - o.tag.w + 0.01) outs.push("PLAY meets its tag");
+      /* and in y: every line (label, teaser, tag) inside its key by half an em each side, a tile's or the tag's stacked lines never overlapping (a compact tile at 44 CSS px) */
+      const L2 = o.k === "main" ? (o.tag ? o.tag.lines.map((_, i) => [o.tag.ys[i], o.tag.px]) : []) : [...o.label.lines.map((_, i) => [o.label.ys[i], o.label.px]), ...(o.tz ? o.tz.lines.map((_, i) => [o.tz.ys[i], o.tz.px]) : [])];
+      const ext = L2.map(([y, px]) => [y - px * ts * 0.5, y + px * ts * 0.5]).sort((a, c) => a[0] - c[0]);
+      if (ext.some(([a, c]) => a < r.y + 1 || c > r.y + r.h - 1)) outs.push(l + " runs out of its key in y");
+      if (o.k !== "door" && ext.some((e, i) => i && e[0] < ext[i - 1][1] - 0.01)) outs.push(l + " lines overlap"); // a door's teaser shares its label's line, right-aligned
     }
     check(`every word inside its key, label never meets value, focused or not (${b}, x${ts}, ${J(run)})`, outs.length === 0, outs.join(" | "));
   }
@@ -295,6 +327,58 @@ logo._dbg.on = true;
   check("first MENU frame: the room blitted first, opaque (alpha 1) over the whole box; the plate drawn at alpha 0 (it fades in, not the backdrop)", J(alphas[0]) === J([1, [0, 0, 1366, 768]]) && alphas[1][0] === 0, J(alphas.slice(0, 2)));
   const room = made.find((cv) => cv.width === Math.round(1366 * cv.width / 1366) && cv.r.paints.some((p) => p.op === "fillRect" && p.box && p.box.w >= cv.width - 1 && p.box.h >= cv.height - 1 && p.alpha === 1));
   check("the room layer starts with one opaque fill of the whole layer (no hole for the board to show through)", !!room);
+}
+
+/* fix round 1: on the desk the plate's key holds no hint words, notes or tap mode and the room's dpr gives way to a FIXED foot reserve, so a key ->
+   controller flip, a note appearing or a controller's arrival re-rasters only the feet; on the phone (SOURCE's teaser carries the note) the plate
+   follows the note but the room still never moves */
+{
+  const flipRun = (F) => {
+    fresh();
+    const t = rec({ widthK: K8 }); t.ctx.setTransform(2, 0, 0, 2, 0, 0);
+    const draw = (ui) => { const m0 = cache._dbg.misses, n0 = made.length; P.drawMenuPage(t.ctx, F, ui, 0.5); const S = P._dbg.last.S; return { room: S.room, plate: S.plate, rd: S.rd, miss: cache._dbg.misses - m0, feet: S.feet.length, made: made.slice(n0) }; };
+    setHints(null); const a = draw(UI());
+    setHints(wordsOf("pad", DEF_CONTROLS)); const b = draw(UI());
+    setHints(null); const c = draw(UI({ note: "NO SOUND YET · PRESS A KEY OR TAP" }));
+    const d = draw(UI({ pad: "CONTROLLER READY" }));
+    const e = draw(UI());
+    return { a, b, c, d, e };
+  };
+  const { a, b, c, d, e } = flipRun(BOX.d1366), same = (x) => x.room === a.room && x.plate === a.plate && x.rd === a.rd;
+  check("desk: a key -> controller flip, a note and a controller's arrival keep the room and the plate (the same canvases, 0 misses each) and the room's dpr; only new feet miss",
+    [b, c, d, e].every(same) && b.miss === 3 && c.miss === 2 && d.miss === 1 && e.miss === 0 && [b, c, d].every((x) => x.made.every((cv) => cv.width < a.room.width && cv.height <= 2 * 80)), J([b, c, d, e].map((x) => [same(x), x.miss, x.feet, x.made.map((cv) => cv.width + "x" + cv.height)])));
+  const q = flipRun(BOX.p393);
+  check("phone: the note re-rasters the plate (SOURCE's teaser), never the room; a device flip re-rasters nothing", q.b.room === q.a.room && q.b.plate === q.a.plate && q.b.miss === 0 && q.c.room === q.a.room && q.c.plate !== q.a.plate && q.c.rd === q.a.rd, J([q.b.miss, q.c.miss]));
+  setHints(null);
+}
+/* fix round 1: a zero, negative or non-finite box draws nothing, throws nothing, and taps nothing */
+{
+  const bad = [];
+  for (const F of [{ W: 0, H: 0 }, { W: 0, H: 520 }, { W: 600, H: 0 }, { W: NaN, H: 520 }, { W: 600, H: NaN }, { W: -5, H: 520 }, { W: Infinity, H: 520 }]) {
+    const t = rec({ widthK: K8 });
+    let threw = null;
+    try { P.drawMenuPage(t.ctx, { ...F, touch: false, shell: true, css: 1 }, UI(), 0); P.drawMenuPage(t.ctx, { ...F, touch: true, shell: false, css: NaN }, UI(), 0); } catch (err) { threw = err; }
+    if (threw || t.calls.length || P.menuHit(1, 1, F) !== -1 || md.menuHit(1, 1, md.layout(F.W, F.H), 7, true) !== -1) bad.push(J(F) + (threw ? " " + threw.message : " " + t.calls.length));
+  }
+  check("a zero / NaN / negative / infinite box: drawMenuPage draws and throws nothing, menuHit is -1", bad.length === 0, bad.join(" | "));
+}
+/* fix round 1: the teasers re-read the cabinet on every arrival at MENU (the reviewer's repro through the real drawShell): MENU, a GAME frame, MENU */
+{
+  const app = createMenuApp({ settings: {} });
+  let cab = { top: [], daily: null };
+  const shot = (screen) => { app.screen = screen; app.subT = 9; SV.drawShell(rec({ widthK: K8 }).ctx, app, { state: "PLAY", time: 1 }, null, "2d", () => [], () => 0, () => cab); return P._dbg.last.P.rows; };
+  const tz = (R, l) => R[l].tz && R[l].tz.lines.join(" ");
+  const r0 = shot(SCREEN.MENU);
+  check("before a run: RECORDS NO RUNS YET, DAILY NEW · TODAY'S BOARD", tz(r0, "RECORDS") === "NO RUNS YET" && tz(r0, "DAILY") === "NEW · TODAY'S BOARD", J([tz(r0, "RECORDS"), tz(r0, "DAILY")]));
+  cab = { top: [{ s: 4210 }], daily: { played: 1 } }; app.dailyTag = "PLAYED";
+  shot(SCREEN.GAME);
+  const r1 = shot(SCREEN.MENU);
+  check("after a run started from PLAY or DAILY (a GAME frame between two MENU frames): RECORDS BEST 4,210 and DAILY YOUR TRIES TODAY · 1, read again on arrival", /^BEST 4,210/.test(tz(r1, "RECORDS")) && tz(r1, "DAILY") === "YOUR TRIES TODAY · 1", J([tz(r1, "RECORDS"), tz(r1, "DAILY")]));
+  cab = { top: [{ s: 9999 }], daily: { played: 2 } };
+  const r2 = shot(SCREEN.MENU);
+  check("while MENU stays up the cabinet is read once (nothing writes it there)", /^BEST 4,210/.test(tz(r2, "RECORDS")) && tz(r2, "DAILY") === "YOUR TRIES TODAY · 1");
+  shot(SCREEN.SETTINGS); const r3 = shot(SCREEN.MENU);
+  check("back from any other screen: read again", /^BEST 9,999/.test(tz(r3, "RECORDS")) && tz(r3, "DAILY") === "YOUR TRIES TODAY · 2", J([tz(r3, "RECORDS"), tz(r3, "DAILY")]));
 }
 
 /* ---- the cache: recency touch and the 24 MB budget beside the title's layers ---- */
@@ -378,6 +462,9 @@ logo._dbg.on = true;
   check("pages/menu.js: no ctx.filter, shadowBlur, shadowColor, getImageData or toDataURL", !/\.filter\s*=|shadowBlur|shadowColor|getImageData|putImageData|toDataURL/.test(src));
   const imps = [...src.matchAll(/from\s+"([^"]+)"/g)].map((x) => x[1]);
   check("pages/menu.js imports no src/app, board3, vendor or three", imps.length > 5 && !imps.some((p) => /\/app\/|board3|vendor|three/.test(p)), J(imps));
+  const logoSrc = readFileSync(new URL("../src/render/logo/draw2d.js", import.meta.url), "utf8");
+  const kp = await import("../src/render/kit/paint.js");
+  check("fix round 1: glyph is a kit part (kit/paint.js) and canMake the kit cache's one copy; neither page nor logo keeps its own", typeof kp.glyph === "function" && typeof cache.canMake === "function" && !/function\s+(glyph|canMake)\b/.test(src) && !/function\s+canMake\b/.test(logoSrc) && /canMake/.test(logoSrc));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

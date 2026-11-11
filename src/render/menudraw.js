@@ -589,7 +589,7 @@ export function layout(W, H, lg, css) {
     W,
     H,
     shell: typeof lg === "number", // dims hands lg only for #sh's shell box
-    css: css > 0 ? css : 1, // CSS px per box unit (the MENU phone column is laid out in CSS px)
+    css: css > 0 ? css : 1, // CSS px per box unit on a touch layout (the MENU's touch floors and its phone column and compact tiles are in CSS px)
     cx: W / 2,
     tall: H > W * 1.3,
     narrow: W < 560,
@@ -692,11 +692,12 @@ function backing(c, cx, cy, w, h) {
   c.strokeRect(cx - w / 2 + 0.5, cy - h / 2 + 0.5, w - 1, h - 1);
 }
 /* MAIN MENU: the page is src/render/pages/menu.js (UI upgrade v202 Task 3.1): one geometry for draw and tap, rows by name. These keep the
-   entry names shellview, the pointer and the tests call; L is layout(W, H, lg, css) for the box the page draws on, touch body[data-lay] p / l. */
+   entry names shellview, the pointer and the tests call; L is layout(W, H, lg, css) for the box the page draws on (css: CSS px per box unit, the
+   touch floors' scale), touch body[data-lay] p / l, the same argument for draw and tap. */
 const frameOf = (L, touch) => ({ W: L.W, H: L.H, touch: !!touch, shell: !!L.shell, css: L.css });
 export const menuGeom = (L, _n, touch) => menuPage.menuGeom(frameOf(L, touch));
 export const menuHit = (x, y, L, _n, touch) => menuPage.menuHit(x, y, frameOf(L, touch));
-export const drawMenu = (c, ui, L, t) => menuPage.drawMenuPage(c, frameOf(L, ui && ui.touch), ui || {}, t);
+export const drawMenu = (c, ui, L, t, touch) => menuPage.drawMenuPage(c, frameOf(L, touch), ui || {}, t);
 /* A pane's head line and a pane line (the CONTROLS page's preview pane). */
 function paneHead(c, P, title, right, rc) {
   c.textBaseline = "middle";

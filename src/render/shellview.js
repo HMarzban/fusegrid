@@ -50,10 +50,13 @@ export const shellMode = (s, world) => (SHELL_ON.has(s) ? 1 : s === SCREEN.GAME 
    adds its screen): main passes {covered: true} to the renderer while one holds, so no look rasters a board nobody sees. */
 const COVERS = new Set([SCREEN.MENU]);
 export const shellCovers = (s) => COVERS.has(s);
-/* css: CSS px per box unit, read only where a page needs it (a touch-portrait #sh box: the MENU phone column is laid out in CSS px). */
+/* css: CSS px per box unit on a touch layout (MENU's touch floors, its phone column and its compact tiles are in CSS px); undefined on a keyboard
+   layout, whose pages never read it. fit.js hands it in as the box's own css: #sh's stand-in carries shellGeo's scale and fit writes #c's stage scale
+   on #c, so the paint and the tap read one number and no frame measures a rect; a canvas without it (a test's) falls back to its rect. */
+const cssOf = (cv) => (cv.css > 0 ? cv.css : cssScale(cv));
 export function dims(canvas, kind) {
   const s = kindSize(kind);
-  return { cw: canvas ? canvas.width : s.w, ch: canvas ? canvas.height : s.h, lg: canvas ? canvas.logo : undefined, css: canvas && typeof canvas.logo === "number" && canvas.height > canvas.width * 1.3 ? cssScale(canvas) : undefined }; // lg: #sh's logo line (fit.js shellGeo)
+  return { cw: canvas ? canvas.width : s.w, ch: canvas ? canvas.height : s.h, lg: canvas ? canvas.logo : undefined, css: canvas && layOf(canvas) !== "d" ? cssOf(canvas) : undefined }; // lg: #sh's logo line (fit.js shellGeo)
 }
 
 /* GRAPHICS page data arrives finished from the app (gfx.js strings via
@@ -230,11 +233,13 @@ function infoOf(app, kind, getScores, getCab) {
 }
 
 /* MENU's names and values (pages/menu.js): the rows, the focused row's label (tap mode: PLAY, the lit main action; a tap has no focus),
-   the run PLAY starts, the teasers' facts (a score teaser reads only played runs: getCab's top), the build tag and the notes. */
+   the run PLAY starts, the teasers' facts (a score teaser reads only played runs: getCab's top), the build tag and the notes. The cabinet is read
+   again on every arrival from another screen (a run played from PLAY or DAILY never passes LEVEL SELECT's read), so a teaser never shows the
+   cabinet as it was before the run. */
 function menuUi(app, touch, getCab) {
-  if (cabFor !== app.screen) infoOf(app, "", null, getCab);
+  if (cabFor !== app.screen || prevScreen !== SCREEN.MENU) { cabFor = -1; infoOf(app, "", null, getCab); }
   return {
-    rows: ITEMS, focus: tapMode(touch) ? ITEMS[0] : ITEMS[app.cursor | 0] || ITEMS[0], touch, level: app.level | 0 || 1,
+    rows: ITEMS, focus: tapMode(touch) ? ITEMS[0] : ITEMS[app.cursor | 0] || ITEMS[0], level: app.level | 0 || 1,
     run: { heat: app.heat, pace: app.pace, pact: app.pactUnlocked ? clampPact(app.pact) : 0, time: !!(app.pactUnlocked && app.timeAttack) },
     daily: app.dailyTag === "PLAYED" ? ((cab.daily && cab.daily.played) | 0) : null, best: top3.length ? top3[0].s : null,
     look: app.render3d ? 2 : app.pixel ? 1 : 0, pages: GUIDE_ROWS.length, rev: REV, note: app.soundNote || "", pad: app.padNote || "",
@@ -291,7 +296,7 @@ function shellBody(c, app, world, canvas, kind, getScores, getPlaques, getCab) {
     menudraw.drawAttractHint(c, L, app.subT);
     return;
   }
-  if (s === SCREEN.MENU) return menudraw.drawMenu(c, menuUi(app, touchLay(canvas), getCab), menudraw.layout(cw, chh, logoY, css), app.subT);
+  if (s === SCREEN.MENU) { const t = touchLay(canvas); return menudraw.drawMenu(c, menuUi(app, t, getCab), menudraw.layout(cw, chh, logoY, css), app.subT, t); }
   const L = menudraw.layout(cw, chh, logoY);
   if (s === SCREEN.LEVEL) {
     menudraw.drawDim(c, 0.72, cw, chh);

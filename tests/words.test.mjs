@@ -311,7 +311,7 @@ check("ruling 7: a bare NORMAL or HARD only where its own line or row names its 
   const pgm = await import("../src/render/pages/menu.js");
   for (const [name, W0, H0] of [["608x352 (iso)", 608, 352], ["600x520", 600, 520]]) {
     const L = md.layout(W0, H0), R = rec({ widthK: 0.648 }), run = { heat: 2, pace: 1, pact: 15, time: true };
-    md.drawMenu(R.ctx, { rows: ITEMS, focus: W.LABEL.LEVEL_SELECT, touch: false, level: 7, run, rev: "v0", enterT: 9 }, L, 9);
+    md.drawMenu(R.ctx, { rows: ITEMS, focus: W.LABEL.LEVEL_SELECT, level: 7, run, rev: "v0", enterT: 9 }, L, 9);
     const { G, P } = pgm._dbg.last, d = G.d, out = [];
     for (const l of ITEMS) {
       const o = P.rows[l], r = o.r, sp = o.k === "main" ? [[o.word.rest, o.word.w], o.tag && [o.tag.x - o.tag.w, o.tag.w]] : [[l === W.LABEL.LEVEL_SELECT ? o.foc.x : o.rest.x, o.label.w], o.tz && [o.tz.x - o.tz.w, o.tz.w]];

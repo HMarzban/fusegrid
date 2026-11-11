@@ -38,7 +38,7 @@ const L = md.layout(600, 520);
 const INFO = { level: 1, best: [], unlocked: true, daily: null, top: [], opt: OPT_ROWS }; // opt: the SETTINGS rows the pane counts (REAL 3D: twelve)
 const ITEMS = ["PLAY", "LEVEL SELECT", "DAILY", "RECORDS", "SETTINGS", "GUIDE", "SOURCE"];
 /* MENU (v202 Task 3.1, pages/menu.js): shellview's names and values; the foot is label first, keycap last, read back from the page's plan */
-const menu = (cur, touch, rev = "", o = {}, L2) => (c) => md.drawMenu(c, { rows: ITEMS, focus: ITEMS[cur], touch: !!touch, level: 1, rev, pages: 4, enterT: 9, ...o }, L2 || L, 9);
+const menu = (cur, touch, rev = "", o = {}, L2) => (c) => md.drawMenu(c, { rows: ITEMS, focus: ITEMS[cur], level: 1, rev, pages: 4, enterT: 9, ...o }, L2 || L, 9, !!touch);
 const pg = await import("../src/render/pages/menu.js");
 const CAPG = { up: "▲", dn: "▼" };
 const footOf = () => { const { P, verb } = pg._dbg.last, F = verb != null && P.foot[verb]; return F ? F.parts.map((q) => q.t || q.sep || (Array.isArray(q.cap) ? CAPG[q.cap[0]] : "[" + q.cap + "]")).join(" ") : ""; };
@@ -284,17 +284,30 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
 
   setHints(null);
   const flat = (r) => r.rects.filter((x) => x[0] !== "rgba(4,7,14,0.9)");
-  const pages = { ...PAGES, MENU0: () => menu(0, false, "v99"), MENU3: () => menu(3, false, "v99"), MENU4: () => menu(4, false, "v99"), STATS: () => (c) => md.drawStats(c, L, 9, STATS_UI, false, null), MEDALS: () => (c) => md.drawTrophies(c, L, 9, []),
+  const pages = { ...PAGES, MENU0: (T) => menu(0, T, "v99"), MENU3: (T) => menu(3, T, "v99"), MENU4: (T) => menu(4, T, "v99"), STATS: () => (c) => md.drawStats(c, L, 9, STATS_UI, false, null), MEDALS: () => (c) => md.drawTrophies(c, L, 9, []),
     SCORES_TABS: (T) => (c) => md.drawScores(c, [], L, 9, 0, 0, T, true), STATS_TABS: (T) => (c) => md.drawStats(c, L, 9, STATS_UI, false, null, T, true), MEDALS_TABS: (T) => (c) => md.drawTrophies(c, L, 9, [], T, true) }; // MENU3 is RECORDS since v202 Task 2.2, MENU4 SETTINGS; *_TABS: RECORDS' tab row
-  /* MENU (v202 Task 3.1): the foot's keycaps and PLAY's keycap are keys now, sized by their legend (▲▼ + ENTER vs D-PAD + SOUTH): outside them
-     every rect stays; inside them only the caps move */
+  /* MENU (v202 Task 3.1; fix round 1): the foot's keycaps and PLAY's keycap are keys, sized by their legend (▲ ▼ + ENTER vs D-PAD + SOUTH). Only
+     those cap rects are exempt. The foot's plaque is centred, so it moves by exactly the caps' advance (each cap's gap + width) that changed: its x by
+     minus half of it, its w by all of it; every rect of the plaque compares by its offsets from the plaque's two edges, every other rect as it is, and
+     the plaque's words (everything but its caps) keep their order. */
   const inR = (q, x) => x[1] >= q.x - 0.5 && x[2] >= q.y - 0.5 && x[1] + x[3] <= q.x + q.w + 0.5 && x[2] + x[4] <= q.y + q.h + 6.5;
-  const capsOf = () => { const { P, verb } = pg._dbg.last, F = verb != null && P.foot[verb]; return [F, P.rows.PLAY.cap].filter(Boolean); };
+  const CAPH = 30; // DEV.d.caph: a foot cap's height
+  const capsOf = () => {
+    const { P, verb } = pg._dbg.last, F = (verb != null && P.foot[verb]) || null;
+    return { F, caps: [...(F ? F.parts.filter((q) => q.cap).map((q) => ({ x: q.x, y: F.mid - CAPH / 2, w: q.w, h: CAPH })) : []), ...(P.rows.PLAY.cap ? [P.rows.PLAY.cap] : [])],
+      adv: F ? F.parts.reduce((n, q) => n + (q.cap ? q.gap + q.w : 0), 0) : 0, words: F ? F.parts.filter((q) => !q.cap).map((q) => q.t || q.sep) : [] };
+  };
+  const norm = (r, q) => flat(r).filter((x) => !q.caps.some((z) => inR(z, x))).map((x) => (q.F && inR(q.F, x) ? ["plaque", x[0], x[1] - q.F.x, x[2], q.F.x + q.F.w - (x[1] + x[3]), x[4]] : x));
   for (const T of [false, true]) for (const [nm, p] of Object.entries(pages)) {
-    setHints(null); const a = paint(p(T)), qa = /^MENU/.test(nm) ? capsOf() : [];
-    setHints(PAD); const b = paint(p(T)), qb = /^MENU/.test(nm) ? capsOf() : [];
+    setHints(null); const a = paint(p(T)), qa = /^MENU/.test(nm) ? capsOf() : null;
+    setHints(PAD); const b = paint(p(T)), qb = /^MENU/.test(nm) ? capsOf() : null;
     setHints(null);
-    if (/^MENU/.test(nm)) { const keep = (r, q) => flat(r).filter((x) => !q.some((z) => inR(z, x))); check(`a flip changes words only: ${nm}${T ? " touch" : ""} keeps every rect outside its keycaps (the foot's and PLAY's follow the device)`, J(keep(a, [...qa, ...qb])) === J(keep(b, [...qa, ...qb])) && keep(a, qa).length > 0, J(keep(a, [...qa, ...qb])).length + " vs " + J(keep(b, [...qa, ...qb])).length); continue; }
+    if (/^MENU/.test(nm)) {
+      const na = norm(a, qa), nb = norm(b, qb), d = qb.adv - qa.adv, moved = !qa.F === !qb.F && (!qa.F || (Math.abs(qb.F.w - qa.F.w - d) < 1e-9 && Math.abs(qb.F.x - qa.F.x + d / 2) < 1e-9));
+      check(`a flip changes words only: ${nm}${T ? " touch" : ""} keeps every rect but its keycaps; the foot's plaque moves by the caps' advance alone (${d.toFixed(1)}), its words in order`,
+        J(na) === J(nb) && na.length > 0 && moved && J(qa.words) === J(qb.words) && (T || (qa.F && na.some((x) => x[0] === "plaque"))), J({ n: [na.length, nb.length], d, F: [qa.F && [qa.F.x, qa.F.w], qb.F && [qb.F.x, qb.F.w]], words: [qa.words, qb.words] }));
+      continue;
+    }
     if (nm === "LEVEL" && T) { // v202 Task 2.3 fix round 1: tap mode lights START (keys / touch words on a touch layout), a controller runs the focus model (the LEVEL row's ring, a stroke): the flip moves only START's band + notch
       const sb = md.levelGeom(L, true, true).rows.START, lit = (x) => (x[0] === "rgba(55,240,208,0.12)" && J(x.slice(1)) === J([sb.x, sb.y, sb.w, sb.h])) || (x[0] === "#37f0d0" && J(x.slice(1)) === J([sb.x, sb.y, 3, sb.h]));
       check("a flip changes words only: LEVEL touch keeps every rect but START's lit band and notch (tap mode lights START, a controller does not)", J(flat(a).filter((x) => !lit(x))) === J(flat(b)) && flat(a).filter(lit).length === 2 && flat(b).filter(lit).length === 0, J(flat(a)).length + " vs " + J(flat(b)).length);
@@ -413,7 +426,12 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
   check("MENU foot: no note, today's foot", drawn(false, {}).foot === TODAY && !drawn(false, {}).r.strs().some((s) => /NO SOUND/.test(s)));
   check("MENU foot: the note leads the foot", drawn(false, { note: NOTE }).foot === NOTE + " · " + TODAY && drawn(false, { note: NOTE }).r.has(NOTE), drawn(false, { note: NOTE }).foot);
   { const k = drawn(false, { note: NOTE }), F = k.last.P.foot.START, u = k.last.G.u; check("MENU foot: the keyboard note fits the stage", F.x * u >= 0 && (F.x + F.w) * u <= 600, J([F.x * u, (F.x + F.w) * u])); }
-  check("touch landscape (short box, the desk foot): the note leads TAP A ROW", drawn(true, { note: NOTE }).foot === NOTE + " · TAP A ROW | v99", drawn(true, { note: NOTE }).foot);
+  const LS = md.layout(1024, 600, 200, 1); // a short touch-landscape window: the floored desk keeps its foot (fix round 1)
+  check("touch landscape (short box, the desk foot): the note leads TAP A ROW", drawn(true, { note: NOTE }, LS).last.G.mode === "desk" && drawn(true, { note: NOTE }, LS).foot === NOTE + " · TAP A ROW | v99", drawn(true, { note: NOTE }, LS).foot);
+  {
+    const LC = md.layout(600, 520), k = drawn(true, { note: NOTE }, LC);
+    check("compact (a landscape phone's #c): no foot; SOURCE's tile carries the note, whole or its first part, in cream; without one, the build tag", k.last.G.mode === "compact" && k.foot === "" && /^NO SOUND YET( · PRESS A KEY OR TAP)?$/.test(tease(k)) && k.r.has(tease(k)) && k.last.P.rows.SOURCE.tz.col === INK && tease(drawn(true, {}, LC)) === "v99", tease(k));
+  }
   for (const [n, W, H, lg] of PH) {
     const LT = md.layout(W, H, lg), k = drawn(true, { note: NOTE }, LT);
     check("phone (" + n + "): SOURCE's teaser carries the note, whole or its first part", k.last.G.mode === "phone" && /^NO SOUND YET( · PRESS A KEY OR TAP)?$/.test(tease(k)) && k.r.has(tease(k)), tease(k));
@@ -435,10 +453,10 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
   { const k = drawn(false, { pad: "CONTROLLER READY" }), F = k.last.P.foot[""], u = k.last.G.u; check("MENU foot: the signpost fits the stage", F.x * u >= 0 && (F.x + F.w) * u <= 600); }
   check("MENU foot: the sound note wins over the signpost", drawn(false, { pad: "CONTROLLER READY", note: NOTE }).foot === NOTE + " · " + TODAY, drawn(false, { pad: "CONTROLLER READY", note: NOTE }).foot);
   {
-    const k = drawn(true, { pad: "CONTROLLER READY" });
+    const k = drawn(true, { pad: "CONTROLLER READY" }, LS);
     check("touch landscape (short box): the signpost, whole, in cream", k.foot === SIGN + " | v99" && k.col(SIGN) === INK, k.foot);
-    check("touch landscape: the sound note wins", drawn(true, { pad: "CONTROLLER READY", note: NOTE }).foot === NOTE + " · TAP A ROW | v99");
-    check("touch landscape: LOST paints no signpost", !drawn(true, { pad: "CONTROLLER LOST" }).r.strs().includes(SIGN));
+    check("touch landscape: the sound note wins", drawn(true, { pad: "CONTROLLER READY", note: NOTE }, LS).foot === NOTE + " · TAP A ROW | v99");
+    check("touch landscape: LOST paints no signpost", !drawn(true, { pad: "CONTROLLER LOST" }, LS).r.strs().includes(SIGN));
   }
   for (const [n, W, H, lg] of PH) {
     const LT = md.layout(W, H, lg), k = drawn(true, { pad: "CONTROLLER READY" }, LT), o = k.last.P.rows.SOURCE;
@@ -457,7 +475,7 @@ const PAD = wordsOf("pad", DEF_CONTROLS);
   const SIGN0 = /^CONTROLLER READY · SETTINGS › CONTROLS \| v\d+$/;
   check("shellview hands app.padNote to the MENU foot, the live build tag kept", SIGN0.test(padShot("CONTROLLER READY").foot), padShot("CONTROLLER READY").foot);
   check("no padNote on app: no signpost", !padShot("").r.strs().some((s) => s.startsWith("CONTROLLER READY")));
-  { const r = rec(); md.drawMenu(r.c, { rows: ITEMS, focus: "PLAY", touch: false, rev: "", level: 1, pad: "CONTROLLER READY", enterT: 9 }, L, 9); check("no tag to keep: the signpost alone, no dangling bar", footOf() === SIGN && r.has(SIGN)); }
+  { const r = rec(); md.drawMenu(r.c, { rows: ITEMS, focus: "PLAY", rev: "", level: 1, pad: "CONTROLLER READY", enterT: 9 }, L, 9); check("no tag to keep: the signpost alone, no dangling bar", footOf() === SIGN && r.has(SIGN)); }
   check("the note gone, the normal foot is back with its tag", drawn(false, { pad: "" }).foot === TODAY);
   setHints(PAD);
   check("HOW TO on a pad: the foot names CONTROLS, whole, and fits its plate", paint(PAGES.HOWTO(false)).has("REBIND IN SETTINGS › CONTROLS · EAST / SOUTH BACK") && "REBIND IN SETTINGS › CONTROLS · EAST / SOUTH BACK".length * 6 <= 520);

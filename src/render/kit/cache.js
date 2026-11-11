@@ -10,6 +10,16 @@ const live = new Map();
 let make = null;
 
 export const setFactory = (fn) => (make = fn);
+/* true where a layer canvas can be made here (an OffscreenCanvas, or a document whose canvas has a context); a painter that gets false paints straight
+   onto its target (Node). The factory seam is not consulted, so a test's factory never flips a suite from direct paint to layers. */
+let probeDoc = null, probeOK = false;
+export function canMake() {
+  if (typeof OffscreenCanvas === "function") return true;
+  const d = typeof document !== "undefined" ? document : null;
+  if (!d || typeof d.createElement !== "function") return false;
+  if (d !== probeDoc) { probeDoc = d; const el = d.createElement("canvas"); probeOK = !!el && typeof el.getContext === "function"; }
+  return probeOK;
+}
 export const capDpr = (dpr, touch) => (touch ? Math.min(dpr, 2) : dpr);
 export const keyOf = (k) => JSON.stringify([k.layer, k.biome, k.level, k.W, k.H, k.dpr, k.look, k.textScale]);
 

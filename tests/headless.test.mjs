@@ -12,7 +12,7 @@ import {PROJ} from "../src/render/r3d/camera.js";
 import {loadScores} from "../src/app/highscores.js";
 import {loadStats} from "../src/app/stats.js";
 import {copyPayload, pauseGeom, overlayBox} from "../src/render/scenes.js";
-import {menuGeom, guideGeom as mdGuideGeom, levelGeom, scoresHit, settingsGeom, LEVEL_TAP, layout as menuLayout} from "../src/render/menudraw.js";
+import {menuGeom, menuHit, guideGeom as mdGuideGeom, levelGeom, scoresHit, settingsGeom, LEVEL_TAP, layout as menuLayout} from "../src/render/menudraw.js";
 import {fitBox, shellGeo} from "../src/app/fit.js";
 import "../src/core/board3.js";
 import "../src/app/demobot.js";
@@ -441,15 +441,40 @@ function mkCanvas(){
 // LEVEL / HIGH SCORES chip taps cue one uiMove per change, none on the chip
 // already set.
 {
-  /* v202 Task 3.1: a portrait phone's MENU is the #sh shell box's phone column (rows >= 44 CSS px, page-menu.test); a landscape phone has no shell
-     box, so the desk geometry scales into #c as one piece (lead ruling 2): every row stays tappable, its hit band contiguous; the sizes are reported */
+  /* v202 Task 3.1 fix round 1, the touch floors at full strength: on EVERY touch layout MENU's doors and PLAY are >= 44 CSS px and >= 8 CSS px apart,
+     never scaled below: the 393x852 phone's #sh column; the landscape phones, which have no shell box (#c at fit's stage scale: the compact
+     arrangement); the short landscape windows' #sh (the desk floored, or compact under TOUCH_U); each row's hit band contiguous with its neighbours' */
   const L=menuLayout(600,520), MG=menuGeom(L,7,true), R=ITEMS.map(l=>{const r=MG.rows[l],h=MG.hit[l];return {...r,y0:r.y,y1:r.y+r.h,cy:r.y+r.h/2,a:h.y,b:h.y+h.h};});
-  const sg=shellGeo(393,852), PG=menuGeom(menuLayout(sg.w,sg.h,sg.logo,sg.s),7,true), sl=fitBox(852,393,true,600,520).s;
-  const pmin=Math.min(...ITEMS.map(l=>PG.rows[l].h*sg.s)), lband=Math.min(...R.map(r=>r.b-r.a))*sl;
-  console.log("  NOTE landscape 852x393 (no shell box): MENU hit bands "+lband.toFixed(1)+" CSS px, doors "+(R[1].h*sl).toFixed(1)+"; portrait phone rows >= "+pmin.toFixed(1));
-  check("M1 touch MENU: a 393x852 phone's rows are >= 44 CSS px (its #sh phone column); landscape #c rows tile the list with no gap (hit bands contiguous) inside the canvas",
-    pmin>=43.95&&R.every((r,i)=>!i||Math.abs(r.a-R[i-1].b)<1e-9)&&R[0].a>=0&&R[6].b<=520&&PG.mode==="phone"&&MG.mode==="desk", [pmin.toFixed(1),lband.toFixed(1)].join("|"));
-  check("M1 desktop MENU geometry is the same with or without touch on the board canvas (one desk geometry; touch changes words only)", ITEMS.every(l=>JSON.stringify(menuGeom(L,7,false).rows[l])===JSON.stringify(MG.rows[l])));
+  const sg=shellGeo(393,852), boxes=[["393x852 #sh",menuLayout(sg.w,sg.h,sg.logo,sg.s),sg.s]];
+  for(const [w,h] of [[852,393],[932,430],[740,360],[667,375]]){const k=fitBox(w,h,true,600,520).s; boxes.push([w+"x"+h+" #c",menuLayout(600,520,undefined,k),k]);}
+  for(const [w,h] of [[1024,600],[800,600],[600,520],[1280,650]]){const g0=shellGeo(w,h,600,520,"l"); boxes.push([w+"x"+h+" #sh",menuLayout(g0.w,g0.h,g0.logo,g0.s),g0.s]);}
+  const rep=[], bad=[];
+  for(const [nm,LB,k] of boxes){
+    const G=menuGeom(LB,7,true), C=ITEMS.map(l=>{const r=G.rows[l];return {x:r.x*k,y:r.y*k,w:r.w*k,h:r.h*k};});
+    let gap=Infinity; for(let i=0;i<C.length;i++)for(let j=i+1;j<C.length;j++){const a=C[i],c=C[j];gap=Math.min(gap,Math.max(c.x-(a.x+a.w),a.x-(c.x+c.w),c.y-(a.y+a.h),a.y-(c.y+c.h)));}
+    const least=Math.min(...C.map(r=>Math.min(r.w,r.h))), lit=ITEMS.every((l,i)=>menuHit(G.rows[l].x+G.rows[l].w/2,G.rows[l].y+G.rows[l].h/2,LB,7,true)===i);
+    rep.push(nm+" "+G.mode+" "+least.toFixed(1)+"/"+gap.toFixed(1));
+    if(!(least>=44-1e-9&&gap>=8-1e-9&&lit))bad.push(nm+" "+least.toFixed(1)+"/"+gap.toFixed(1));
+  }
+  console.log("  NOTE touch MENU, least side / least gap in CSS px: "+rep.join("; "));
+  check("M1 touch MENU: doors and PLAY >= 44 CSS px, >= 8 CSS px apart, every row taps to itself: the 393x852 phone, the landscape phones on #c (852x393, 932x430, 740x360, 667x375) and the short landscape windows (1024x600, 800x600, 600x520, 1280x650)",
+    bad.length===0&&boxes.length===9, bad.join("|"));
+  const KG=menuGeom(L,7,false), ku=KG.u;
+  check("M1 keyboard MENU on the board canvas keeps the desk scaled as one piece (PLAY 64, doors 46, 8 px pitch, design px); touch there is the compact arrangement (fix round 1: the desk's rows would fall under 44 CSS px)",
+    KG.mode==="desk"&&ku<1&&Math.abs(KG.rows.PLAY.h-64*ku)<1e-9&&Math.abs(KG.rows.DAILY.h-46*ku)<1e-9&&Math.abs(KG.rows.DAILY.y-(KG.rows["LEVEL SELECT"].y+46*ku+8*ku))<1e-9&&MG.mode==="compact", KG.mode+"/"+MG.mode);
+  {
+    /* the whole path on a 667x375 landscape phone: fit's stage scale on #c, main's drawShell paints the compact MENU, a tap on the painted label opens it */
+    const k=fitBox(667,375,true,600,520).s, lc=mkCamCanvas(600,520,"l");
+    lc.el.css=k; lc.el.getBoundingClientRect=()=>({left:166,top:8,width:600*k,height:520*k});
+    const h=createGame(lc.el,{seed:78});
+    h.app.cabinetSeen=true; h.app.skip();
+    for(let i=1;i<=40;i++)h.loop(i*16);
+    const pg=(await import("../src/render/pages/menu.js"))._dbg.last, at=lc.calls.filter(c=>c[0]==="fillText"&&c[1][0]==="RECORDS").pop(), u=pg.G.u;
+    check("M1 landscape phone 667x375 (#c, fit's stage scale): main paints the compact MENU, its rows >= 44 CSS px", pg.G.mode==="compact"&&Math.min(...ITEMS.map(l=>pg.G.rows[l].h*k))>=44-1e-9&&!!at, pg.G.mode);
+    lc.fire("pointerdown",{clientX:166+at[1][1]*u*k,clientY:8+at[1][2]*u*k});
+    check("M1 landscape phone 667x375: a tap on the painted RECORDS label opens RECORDS", h.app.screen===SCREEN.SCORES&&h.app.cursor===ITEMS.indexOf("RECORDS"), h.app.screen+"/"+h.app.cursor);
+    h.stop&&h.stop();
+  }
   const cv=mkCamCanvas(600,520,"p");
   const g=createGame(cv.el,{seed:77});
   g.app.cabinetSeen=true; g.app.skip();

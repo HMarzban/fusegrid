@@ -38,8 +38,10 @@ clock) lands MENU at cursor 0. Every visit, the first included (ruling
 Gestures go through the gated `skipShow()` (no-op on the title and inside the
 0.2 s `SKIP_GUARD`); `skip()` stays the ungated programmatic jump to MENU. The
 show world is its own throwaway (`src/app/intro.js` `createShow`/`stepShow`,
-main's `let show`, never `demo`), backs MENU after the reveal and is dropped
-for good at GAME / ATTRACT. In 3D the title paints an opaque veil until three
+main's `let show`, never `demo`), plays under the title and the show and is
+dropped for good at GAME / ATTRACT; MENU covers the board (the room look opaque
+from its first frame, the plate, logo and foot fading in over 0.25 s), so no
+blast is seen under it. In 3D the title paints an opaque veil until three
 settles (`app.boardReady`, set on resolve or reject).
 
 The wordmark is logo B (LIT FUSE), drawn by ONE painter, `src/render/logo/draw2d.js`
@@ -168,7 +170,9 @@ smoothing off) and returns `{ctx, box}`; `box` is the logical canvas
 stand-in (`width/height/logo`, its rect) that `drawShell` measures and the
 one pointer handler (bound on `#c` and `#sh`) maps through, so a tap lands
 where it is drawn. `layout(W,H,lg,css)`: `W`, `H`, `shell` (an `lg` was handed: #sh's box) and `css` (CSS px per box unit, which
-shellview `dims` reads only for a touch-portrait #sh box: the MENU phone column is laid out in CSS px); `lg` = the centred board's 0.27 logo
+shellview `dims` hands on every touch layout, none on a keyboard one: fit.js writes it as the box's own `css`, shellGeo's `s` on the #sh
+stand-in and the stage scale it applied on `#c`, so paint and tap read one number and no frame measures a rect; MENU's touch floors, phone
+column and compact tiles are laid out in CSS px); `lg` = the centred board's 0.27 logo
 line in box units,
 `tall` / `narrow` (< 560) flags; narrow re-flows: `levelNarrow` (card under
 the grid, DIFFICULTY / GAME SPEED rows, digit-free touch MODIFIERS chips, 2-line help), HOW
@@ -240,19 +244,33 @@ live in `drawOverlay`.
 MENU page (UI upgrade v202 Task 3.1, `src/render/pages/menu.js`; the round 7 S7-menu / L7-logo frames). The world dresses it: the room look of
 `app.level` (kit `room.js` `roomLayer`) opaque over the whole canvas from MENU's first frame, the plate in that room's rampart; PLAY the one yellow
 key (bare bomb + 3 px cream ring when focused); the doors are keys, a focused one wears the kit `band` + bomb + ring; no cord or spark but the logo's.
-Desk (every box but a touch-portrait shell box; the 1366 x 768 frame at 1 box unit per CSS px): the logo in the plate's header, a 480 list (PLAY 64,
+Desk (every keyboard box; the 1366 x 768 frame at 1 box unit per CSS px): the logo in the plate's header, a 480 list (PLAY 64,
 doors 46, 8 px pitch, 24 px breaks after PLAY and before GUIDE; 125 %: 520, 72, 49) beside the next-run card's slot (Task 3.2), the foot under
 the plate (`MOVE ▲▼ · START ENTER | v201`, label first, keycap last; the verb follows focus: START on PLAY, OPEN on a door, and with a controller
 on SOURCE `NEEDS A CLICK OR ENTER`, no keycap; a touch layout reads `TAP A ROW`; a note leads it, the controller's signpost replaces it in cream).
 The plate keeps the mock's size and centres; a narrower window narrows only the card's column, the 70 px top margin gives way to a short one,
-then the page scales as one piece (#c with no shell box, the iso guard; text floors not held there, and landscape phones get ~16-23 CSS px rows).
+then the page scales as one piece (#c with no shell box, the iso guard; text floors not held there).
+Touch floors (fix round 1, every touch layout): MENU's rows are >= 44 CSS px and >= 8 CSS px apart, never scaled below. A touch box takes the
+desk with its rows and gaps floored in CSS px (`TOUCH` 44 / 8) and the page re-solved round them (the largest scale that fits, by bisection),
+while that scale keeps `TOUCH_U` 0.8 CSS px per design px (the desk's text at the phone cap floors: 1024x600, 800x600 at 0.814, 1280x650 at
+0.948); under it the box goes compact. Compact (every landscape phone, which has no shell box, and a short window such as 600x520): the phone's
+grammar across the box in CSS px, the logo then PLAY across the top, the six doors as tiles two wide and three deep in ITEMS order, no card slot
+(PLAY's tag carries the run), no foot (SOURCE's tile carries the build tag, a note or the signpost; a label too wide for its tile, LEVEL SELECT on
+a 667 px phone, breaks once at its space, and a teaser takes the lines the tile has left); one t steps every size between `COMPACT` max (logo cap
+36, PLAY 62, tiles 58, gaps 10) and min (cap 20, PLAY 44, tiles 44, gaps 9) with the height: 852x393 tiles 51.6, 667x375 44.3. Under min the
+arrangement scales as one piece and the floors give way (a 568x320 phone; 667x375 at 125 % text), disclosed.
 Phone (`p` with a shell box): the 393 x 852 column in CSS px (`css` from `dims`), capped 600 wide: PLAY 62, LEVEL SELECT 50, the card's slot
 (the height left), DAILY | RECORDS and SETTINGS | GUIDE tiles (58; 84 at 125 %, a teaser may break once), SOURCE 50 with the build tag (a note
 or the signpost rides it instead). Teasers (one quiet `#bcad9a` voice; words.js `MENU_WORDS`): DAILY `NEW · TODAY'S BOARD` or `YOUR TRIES
 TODAY · n`, RECORDS `BEST n` (played runs only) or `NO RUNS YET`, SETTINGS the art style, GUIDE `4 PAGES`, SOURCE `GITHUB`; each steps down
 or drops, never clipped. PLAY's tag: a default run `LEVEL n · WORLD`, else `tagFor(run)`, its modifier count, EXPERT bare, the level line
 last, on one or two lines. Tap mode (`tapMode`) focuses PLAY. Entry (the show's end and a skip alike): the plate, logo and foot fade in over
-0.25 s; the slam is gone. Page plumbing, for every page task: a page module exports one `*Geom` (rects by name, box units; `G.d` design px)
+0.25 s; the slam is gone. The cabinet (`getCab`: played runs, today's tries) is read again on every arrival at MENU from another screen, so a run
+started from PLAY or DAILY never leaves a stale teaser. The plate layer is keyed by what it shows (the arrangement, the world, the teasers; the
+notes only on phone and compact, where SOURCE's teaser carries them), never by the hint words, tap mode or the run: PLAY's tag and keycap paint
+live, so on the desk a key / controller flip, a note or a controller's arrival re-rasters only the feet (each keyed by its own words), and the
+room's dpr gives way to a FIXED reserve of three feet as wide as the box, so the room never moves with them. A zero or non-finite box draws
+nothing (`menuHit` -1). `glyph` (chev, ext, up, dn) is a kit part (`kit/paint.js`), `canMake` the kit cache's one copy (the logo painter's too). Page plumbing, for every page task: a page module exports one `*Geom` (rects by name, box units; `G.d` design px)
 for draw and hit, a painter fed names and values by shellview (never indices), and its hit; menudraw keeps the entry names and delegates.
 Static parts are `kit/cache.js` layers keyed by content (`roomLayer` shared by every page of a box; its dpr gives way so the page's layers and
 a 3 MiB logo reserve fit `BUDGET`), made at once so a cursor move never misses, `touch()`ed on a steady frame (`cache.touch(key)`: a held layer
@@ -995,7 +1013,7 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
 - Promotion and posts: rules, plans and the log live in the git-ignored `.superpowers/sdd/marketing/` (README.md, LOG.md). Never in a tracked file.
 - Keep a visible path to the public repo: menu SOURCE opens https://github.com/HMarzban/fusegrid.
 - Keep POWER-UPS (the GUIDE door once named ITEMS), ENEMIES, and HOW TO as in-menu help so power-ups and foes are explained in the shell, not only as HUD chips.
-- Opening (2026-10-09): title, then press, then a ~4 s show (camera sweep, MAKO pop-in, fuse, blast reveals MENU), with music from the press. Any key skips the show (the title waits for a press). First visits land on MENU at PLAY, not in a run. The title follows RENDER; the show plays the MENU theme throughout, and the `intro` track is kept unused.
+- Opening (2026-10-09): title, then press, then a ~4 s show (camera sweep, MAKO pop-in, fuse, the blast lands MENU: since v202 Task 3.1 the room look covers the board from MENU's first frame and the plate, logo and foot fade in over 0.25 s), with music from the press. Any key skips the show (the title waits for a press). First visits land on MENU at PLAY, not in a run. The title follows RENDER; the show plays the MENU theme throughout, and the `intro` track is kept unused.
 - Difficulty is Heat on LEVEL SELECT (CORE / PLUS / MAX). Global **pace** (EASY / NORM / HARD) is a separate LEVEL SELECT control (`[`/`]`), persisted in `nb.pace.v1`, scaling player/enemy move speed on `world.pace` — not frozen `CFG`. Pact (`1–4`) and rooms 6–8 unlock after the first FUSE/GRID CLEAR. Score × heat is persist-only; HIGH SCORES fifth column tags pact bitmask (`p`). Music uses WebAudio stereo panning on the oscillator engine (zero npm deps). Mid-run heat, always-on Sudden Death, and internet play stay parked.
 - Foes must read as arcade characters (distinct silhouette, face or lens, shading, facing) in CLASSIC 2D, PIXEL and REAL 3D, not flat colored tokens. `enemybody.js` is the 2D five-beat build; 3D matches via merged hulls in the four-mesh slot. Art only — do not retune AI.
 - Do not commit `.cursor/` or `e2e-artifacts/` (both gitignored).

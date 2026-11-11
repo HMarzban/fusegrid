@@ -9,6 +9,7 @@
           from the game's own frameart railOf / bossOf and wallart paintShapes (appendix 6 steps 1-6). It reaches T + 2 past the box, T + 3 below it.
    band   the focused row's band with its 2 px inner outline.  focusBomb  the game's bomb body, bare (R8: no cord, spark, pulse or clock), x = the left of its
           size x size box (a row puts it 8 px in), cy = the row's centre (the box top sits 46 % of size above it).
+   glyph  a row's small mark in col, top-left x y, s px square: chev (a door's chevron), ext (a link out), up / dn (the arrow keycaps' legends).
    wallCell floorCell brickCell  the board's own cell painters (wallart, floorart, sprites paintBrick) on tok.biome, scaled to s. Hard edges only.
    A painter scales the caller's globalAlpha and leaves it as it found it. A missing tok (or focusBomb size) throws a named error; a degenerate size
    (a ring T, bed tile or wall-tile step under 1 px, or a span that is not finite) skips that part, so no loop can run away. */
@@ -120,6 +121,16 @@ export function focusBomb(c, x, cy, size) {
   if (!(size > 0)) throw new Error("kit focusBomb: size must be > 0 (DEV.bombs)");
   c.save(); c.translate(x + size / 2, cy + size * 0.08); c.scale(size / 30, size / 30);
   drawBombBody(c, null, BOMB, BARE);
+  c.restore();
+}
+
+export function glyph(c, name, x, y, s, col) {
+  c.save(); c.translate(x, y); c.scale(s / 16, s / 16);
+  c.strokeStyle = c.fillStyle = col; c.lineCap = c.lineJoin = "round"; c.beginPath();
+  if (name === "chev") { c.lineWidth = 2.4; c.moveTo(6, 3); c.lineTo(11, 8); c.lineTo(6, 13); c.stroke(); }
+  else if (name === "ext") { c.lineWidth = 2; c.moveTo(9, 2); c.lineTo(14, 2); c.lineTo(14, 7); c.moveTo(14, 2); c.lineTo(7, 9); c.moveTo(12, 10); c.lineTo(12, 14); c.lineTo(2, 14); c.lineTo(2, 4); c.lineTo(6, 4); c.stroke(); }
+  else if (name === "up") { c.moveTo(3, 11); c.lineTo(8, 5); c.lineTo(13, 11); c.closePath(); c.fill(); }
+  else if (name === "dn") { c.moveTo(3, 5); c.lineTo(8, 11); c.lineTo(13, 5); c.closePath(); c.fill(); }
   c.restore();
 }
 
