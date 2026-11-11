@@ -1242,7 +1242,8 @@ need headed real-GPU Chrome, never the rAF shim or SwiftShader.
   (default-deny, a page cannot exempt itself; MENU is the first instrumented screen, Task 3.1; LEVEL SELECT the second, Task 3.3, exempting ring and locked with reasons); a probe fault, a page error or a missing
   capture fails. `compare.mjs` (`refmap.json`; MENU's frames are the L7 ones, logo B in the header), `sheet.html`.
   `scoresfull` / `statsfull` (v202 fix round 1) capture a played-looking cabinet: `__GAME__.seedRecords()` (debughook.js, `?debug=1`
-  only) writes ten played rows, badges, medals and bests through the stores' own savers, after the fresh-profile pages. Wrap every
+  only) writes ten played rows, badges, medals and bests through the stores' own savers, after the fresh-profile pages. A row's
+  `exemptPhone` adds exemptions for the `.phone` captures only (RECORDS: a phone capture is tap mode, which shows no focus). Wrap every
   capture run in a watchdog (kill it by PID past 10 minutes, or when its `--out` dir stops growing for 3 minutes; a REAL 3D run once
   hung 1.5 h).
 - Blender is driven through the blender-mcp add-on socket `127.0.0.1:9876`

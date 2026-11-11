@@ -16,7 +16,9 @@
             tap targets of its own, the title's tap-anywhere, PLAY's DOM touch strip) this screen has nothing for, each with a one-line reason.
             DEFAULT-DENY: every other EXEMPTABLE gate is in the screen's `need`, so once the page records into the probe, a required gate it does not
             declare is skipped ("required, not declared") and fails --strict. Only this tracked table exempts, in review, when a page task instruments
-            its page; the page under test cannot exempt itself. MENU (v202 Task 3.1) is the first instrumented screen, LEVEL SELECT (Task 3.3) the second. */
+            its page; the page under test cannot exempt itself. MENU (v202 Task 3.1) is the first instrumented screen, LEVEL SELECT (Task 3.3) the second.
+     exemptPhone {gate: "reason"}: more exemptions for the .phone captures only (needPhone), on the same rules (RECORDS, v202 fix round 1: a phone
+            capture is tap mode, where the page shows no focus). */
 import { EXEMPTABLE } from "./gatelib.mjs";
 
 const ROWS = {
@@ -31,14 +33,14 @@ const ROWS = {
   items: { menu: ["GUIDE"], guide: ["ITEMS", "POWER-UPS"], state: "ITEMS", exempt: { chosen: "GUIDE pages show no chosen / unchosen values: doors, foes and read-only rows", locked: "GUIDE pages show no locked value", band: "a read-only page has no focus: any tap or key backs out", ring: "a read-only page has no focus, so no ring", gap: "one tap target at most (the phone BACK key)" } },
   enemies: { menu: ["GUIDE"], guide: ["ENEMIES"], key: ["ArrowLeft", "Enter"], state: "ENEMIES", exempt: { chosen: "GUIDE pages show no chosen / unchosen values: doors, foes and read-only rows", locked: "GUIDE pages show no locked value" } }, // ← from WALKER wraps to KNIGHT and Enter opens its points tooltip (the round 6 frame; a key move alone opens it on a keyboard)
   floor: { menu: ["GUIDE"], guide: ["FLOOR"], state: "FLOOR", exempt: { chosen: "GUIDE pages show no chosen / unchosen values: doors, foes and read-only rows", locked: "GUIDE pages show no locked value", band: "a read-only page has no focus: any tap or key backs out", ring: "a read-only page has no focus, so no ring", gap: "one tap target at most (the phone BACK key)", info: "no non-text mark carries information: the tile cells are pictures, each row's words name them" } },
-  scores: { menu: ["RECORDS"], wait: "records", state: "SCORES", exempt: { locked: "SCORES shows no locked value: the badges not yet earned are lock tags on a dark chip, not wall cells, and every key is open" } }, // v202 Task 4.1
-  stats: { menu: ["RECORDS"], key: "KeyE", wait: "records", state: "STATS", exempt: { locked: "STATS from a fresh profile draws no level course (no run is saved), the one place a locked level shows as a wall cell" } }, // v202 Task 4.2
+  scores: { menu: ["RECORDS"], wait: "records", state: "SCORES", exemptPhone: { ring: "a phone capture is tap mode (touch hints, no controller): the page shows no focus, as LEVEL SELECT (v202 fix round 1)", band: "a phone capture is tap mode: no focus band" }, exempt: { locked: "SCORES shows no locked value: the badges not yet earned are lock tags on a dark chip, not wall cells, and every key is open" } }, // v202 Task 4.1
+  stats: { menu: ["RECORDS"], key: "KeyE", wait: "records", state: "STATS", exemptPhone: { ring: "a phone capture is tap mode (touch hints, no controller): the page shows no focus, as LEVEL SELECT (v202 fix round 1)", band: "a phone capture is tap mode: no focus band" }, exempt: { locked: "STATS from a fresh profile draws no level course (no run is saved), the one place a locked level shows as a wall cell" } }, // v202 Task 4.2
   statsreset: { menu: ["RECORDS"], key: ["KeyE", "KeyR"], wait: "records", state: "STATS", exempt: { locked: "the armed STATS page from a fresh profile draws no level course (no run is saved)" } }, // STATS armed: the confirm plate
-  medals: { menu: ["RECORDS"], key: ["KeyE", "KeyE"], wait: "records", state: "TROPHIES", exempt: { locked: "MEDALS shows no locked value: a medal not yet earned is a goal tile, read-only, never a wall cell" } },
+  medals: { menu: ["RECORDS"], key: ["KeyE", "KeyE"], wait: "records", state: "TROPHIES", exemptPhone: { ring: "a phone capture is tap mode (touch hints, no controller): the page shows no focus, as LEVEL SELECT (v202 fix round 1)", band: "a phone capture is tap mode: no focus band" }, exempt: { locked: "MEDALS shows no locked value: a medal not yet earned is a goal tile, read-only, never a wall cell" } },
   /* v202 fix round 1: a played-looking cabinet (window.__GAME__.seedRecords(), debug only) for a FILLED SCORES table, badges and a STATS hero; after
      the fresh-profile pages, since the seeded storage stays for the rest of the page load */
-  scoresfull: { menu: ["RECORDS"], seed: "records", wait: "records", state: "SCORES", exempt: { locked: "SCORES shows no locked value: the badges not yet earned are lock tags on a dark chip, not wall cells, and every key is open" } },
-  statsfull: { menu: ["RECORDS"], seed: "records", key: "KeyE", wait: "records", state: "STATS" },
+  scoresfull: { menu: ["RECORDS"], seed: "records", wait: "records", state: "SCORES", exemptPhone: { ring: "a phone capture is tap mode (touch hints, no controller): the page shows no focus, as LEVEL SELECT (v202 fix round 1)", band: "a phone capture is tap mode: no focus band" }, exempt: { locked: "SCORES shows no locked value: the badges not yet earned are lock tags on a dark chip, not wall cells, and every key is open" } },
+  statsfull: { menu: ["RECORDS"], seed: "records", key: "KeyE", wait: "records", state: "STATS", exemptPhone: { ring: "a phone capture is tap mode (touch hints, no controller): the page shows no focus, as LEVEL SELECT (v202 fix round 1)", band: "a phone capture is tap mode: no focus band" }, exempt: { locked: "declared and measured wherever the course draws a locked level (worlds 1-7 before the first CLEAR); world 8 opens levels 6-8 and the 393 x 852 phone drops the course (its step 2)" } },
   play: { run: "play", state: "PLAY", settle: 900 },
   pause: { run: "pause", state: "PAUSE", settle: 300 },
   win: { run: "win", state: "WIN", settle: 1800 },
@@ -51,7 +53,9 @@ export function needOf(name, exempt = {}) {
 }
 for (const [n, r] of Object.entries(ROWS)) {
   r.need = needOf(n, r.exempt);
+  r.needPhone = r.exemptPhone ? needOf(n, { ...r.exempt, ...r.exemptPhone }) : r.need;
   r.exempt = Object.freeze({ ...(r.exempt || {}) });
+  if (r.exemptPhone) r.exemptPhone = Object.freeze({ ...r.exemptPhone });
   Object.freeze(r);
 }
 export const SCREENS = Object.freeze(ROWS);

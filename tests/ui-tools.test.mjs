@@ -549,6 +549,15 @@ test("screens: every recipe reaches its state through the real menu app", () => 
   }
 });
 
+test("screens: exemptPhone exempts on .phone captures only, on the same rules (RECORDS: a phone capture is tap mode, no focus)", () => {
+  for (const n of ["scores", "stats", "medals", "scoresfull", "statsfull"]) {
+    assert.ok(SCREENS[n].need.includes("ring") && SCREENS[n].need.includes("band"), n + " desk needs the focus gates");
+    assert.ok(!SCREENS[n].needPhone.includes("ring") && !SCREENS[n].needPhone.includes("band"), n + " phone exempts them");
+  }
+  assert.strictEqual(SCREENS.menu.needPhone, SCREENS.menu.need);
+  assert.ok(!SCREENS.statsfull.needPhone.includes("locked") && /measured wherever/.test(SCREENS.statsfull.exempt.locked));
+});
+
 test("screens: every name has a recipe and a state; aliases; capture names round trip", () => {
   assert.deepEqual(ORDER, ["title", "menu", "level", "options", "graphics", "controls", "guide", "howto", "items", "enemies", "floor", "scores", "stats", "statsreset", "medals", "scoresfull", "statsfull", "play", "pause", "win", "lose"]);
   for (const n of ORDER) assert.ok(SCREENS[n] && SCREENS[n].state, n);

@@ -64,7 +64,7 @@ export function gateDir(a) {
       if (!existsSync(pf)) throw new Error("no PNG " + pf);
       const nt = d.notext ? join(a.dir, d.notext) : null;
       if (nt && !existsSync(nt)) throw new Error("no text-hidden twin " + nt);
-      const need = SCREENS[d.screen] ? SCREENS[d.screen].need : EXEMPTABLE, gates = evaluate(d, png(pf), nt ? png(nt) : null, need);
+      const need = SCREENS[d.screen] ? (d.flags && d.flags.phone ? SCREENS[d.screen].needPhone : SCREENS[d.screen].need) : EXEMPTABLE, gates = evaluate(d, png(pf), nt ? png(nt) : null, need);
       screens[base] = { screen: d.screen, flags: d.flags, page: d.ui ? d.ui.page : null, need, gates };
       caps.push({ gates });
     } catch (e) {
